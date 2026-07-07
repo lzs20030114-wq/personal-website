@@ -1,0 +1,427 @@
+# LINKAGE_SPEC.md — 平面连杆机构交互组件规格
+
+**版本**：v1.1（2026-07-07，Session 1 产出 + 同日评审修订：§2.3 初始化分支断言与共线不可达论证、§3.3 稳态取样规则与 settle 备选、§8.0 环境决策）
+**地位**：本组件所有实现工作的唯一权威来源。执行 Session 2–4 的模型：先通读全文，再按 §8 里程碑顺序动手。凡实现与 §3 公式不符，改实现，不改公式。凡想加范围之外的功能，停下，见 §1.2。
+
+---
+
+## 0. 这份文档怎么用
+
+- **Session 2** 实现 §4.1 的 `LinkageSolver` + §8.1 M1 的测试 + 最小 SVG 渲染。
+- **Session 3** 逐条消化 §5 边界情况清单，每条带测试。
+- **Session 4** 实现耦合曲线描绘、工程标注、松手→自转衔接（§4.2 状态机的 release 态），并把架构写回 CLAUDE.md。
+- §6（教学模式）与 §7（SVG 导出）是**预留接口**：Session 2 实现求解器时必须让这些接口能自然长出来（详见各节），但 UI 与导出本身不在 4 个 session 范围内。
+
+---
+
+## 1. 目标与范围
+
+### 1.1 战略定位
+
+一句话：在 Grasshopper 里我是 Kangaroo 的**使用者**，这个组件证明我是求解器的**实现者**。它是 CMU MSCD 申请材料中「独立计算产出」的关键一块，最终以两种形态出现：主页的可交互机构图，与 case study 页的教学图示。因此：代码要能被我本人脱稿讲解，数学要经得起面试追问。
+
+### 1.2 范围锁死
+
+**做**：距离约束（刚性杆）、锚点（固定铰）、软拖拽目标、曲柄位置驱动的自转、耦合曲线描绘、工程图纸式标注。
+
+**明确不做**（发现自己在写以下任何东西时立即停手）：
+- 通用 goal 系统（不需要 Kangaroo 那几十种 goal）
+- 弹簧、碰撞、重力、摩擦
+- 带速度/惯性的物理时间积分（本系统是拟静力学的，见 §3.5）
+- Canvas / WebGL（渲染只用 SVG）
+- 3D
+
+### 1.3 技术底座与纪律
+
+- Next.js + TypeScript + Tailwind，部署 Vercel。
+- **求解器零依赖、框架无关**：`solver.ts` 里不许出现 React、DOM、window。
+- 渲染用 SVG（元素少、线条锐利、贴合 editorial 气质）。
+- 测试与求解器同步写（Vitest），不事后补。
+- 每个里程碑 git commit（仓库尚未初始化，首次 commit 前先 `git init`）。
+
+---
+
+## 2. 数据结构
+
+### 2.1 类型定义
+
+```ts
+// types.ts —— 全部是纯数据，无方法
+export interface NodeState {
+  x: number;
+  y: number;
+  fixed: boolean;   // true = 锚点，逆质量 w = 0（质量无穷大）
+}
+
+export interface Bar {
+  a: number;        // 节点索引
+  b: number;        // 节点索引
+  rest: number;     // 原长，px（viewBox 单位）
+}
+
+export interface LinkageDef {
+  nodes: { x: number; y: number; fixed?: boolean }[];
+  bars:  { a: number; b: number; rest?: number }[];  // rest 缺省 = 按初始坐标算的距离
+}
+```
+
+约定：
+- 坐标系 = SVG viewBox 坐标，**y 向下为正**。所有「上方」指 y 更小。
+- 长度单位 = viewBox 像素。viewBox 初定 `0 0 700 520`，Session 4 看耦合曲线实际包络后可调。
+- 逆质量只取 {0, 1} 两档（fixed 与否），不做连续质量——范围锁死。
+
+### 2.2 规范实例：Grashof 曲柄摇杆（已验证几何）
+
+| 项 | 值 |
+|---|---|
+| 固定铰 A | (250, 380)，fixed |
+| 固定铰 D | (470, 380)，fixed |
+| 曲柄 AB | rest = 66 |
+| 连杆 BC | rest = 178 |
+| 摇杆 CD | rest = 127 |
+| 机架 AD | 220（**不建 Bar**——两端都 fixed，投影是空操作，机架是隐式的） |
+| 耦合点 P | BP = 132，CP = 100，与 B、C 构成刚性三角板 |
+
+节点索引约定：`0=A, 1=B, 2=C, 3=D, 4=P`。Bars：AB、BC、CD、BP、CP 共 5 根。
+
+**Grashof 校验**（教学模式 B 也要用，见 §6.2）：设四杆长 s ≤ p ≤ q ≤ l。
+- s + l ≤ p + q 且最短杆为曲柄（与机架相邻的输入杆）⇒ 曲柄摇杆，曲柄可整周回转。
+- 本实例：s=66(AB), l=220(AD), p=127, q=178 → 66+220=286 < 127+178=305 ✓，且最短杆 AB 是输入杆 ⇒ 曲柄摇杆成立。
+- 可装配性：|BD| ∈ [220−66, 220+66] = [154, 286]，而 BC+CD=305 > 286、|BC−CD|=51 < 154，任意曲柄角均可装配 ✓。
+
+### 2.3 初始化程序（决定解支，必须照做）
+
+```
+1. A、D 按表放置，fixed = true。
+2. 曲柄起始角 θ0 = −60°（可调参数）：B = A + 66·(cos θ0, sin θ0) ≈ (283, 322.8)。
+3. C、P 放种子坐标：C ≈ (430, 260)，P ≈ (360, 225)。
+   种子不必精确，只需落在目标解支的吸引域内：
+   —— C 在机架线上方（y < 380），P 在 BC 上方（远离机架一侧）。
+4. B 临时 fixed = true。
+5. iterate(240)。
+6. B.fixed = false。
+7. 立即断言两个分支不变量（见下）等于期望符号——把「种子选对了」从祈祷变成测试。
+```
+
+这一步选定了两个离散自由度：四杆环的装配支（C 在上）与三角板的朝向（P 在 BC 外侧、远离机架）。之后全靠 warm start 维持（§3.4）。分支不变量（供测试）：
+- 环支符号：`sign( cross(B−C, D−C) )`。**对本规范实例这不只是经验恒定，而是几何保证**：B、C、D 共线要求 |BD| = BC+CD = 305 或 |BC−CD| = 51，而 B 绕 A 整周回转时 |BD| ∈ [220−66, 220+66] = [154, 286]——两个奇异值物理上都不可达，符号全程非零。
+- 板朝向符号：`sign( cross(C−B, P−B) )` 永远恒定（BP、CP、BC 三根杆把三角板锁死，翻面需要穿过退化构型）。
+
+---
+
+## 3. 求解器数学
+
+这一节是整个项目的核心资产。实现时以此为准；讲解时（文书/面试）以此为稿。
+
+### 3.1 单约束投影：精确且最小位移
+
+距离约束：两点 a、b，原长 L，约束函数
+
+```
+C(a, b) = |b − a| − L        目标 C = 0
+```
+
+记当前距离 d = |b − a|，单位方向 n = (b − a)/d。
+
+**问题**：求满足约束的最小加权位移。即
+min ½(mₐ|Δa|² + m_b|Δb|²)，s.t. C(a+Δa, b+Δb) = 0。
+
+**推导**（拉格朗日乘子法，对约束一阶展开）：
+∇ₐC = −n，∇_bC = +n。驻点条件给出 Δa = λwₐn、Δb = −λw_b n（w = 1/m 为逆质量），代回约束：
+
+```
+λ = C / (wₐ + w_b)
+
+Δa = + C · (wₐ / (wₐ + w_b)) · n
+Δb = − C · (w_b / (wₐ + w_b)) · n
+```
+
+**三个要点**：
+
+1. **修正必须沿 n**——这是约束梯度方向，任何垂直分量都是浪费位移、不帮助满足约束。最小位移解自动只含 n 分量。
+2. **一步精确，不是逼近**：修正后 b′ − a′ = (d − C)·n = L·n，新长度**恰好** L。距离约束的特殊性：梯度方向在修正中不变，所以线性化解就是精确解。迭代（§3.2）的必要性完全来自约束之间**共享节点**，而非单约束不精确。
+3. **权重的身份**：fixed 节点 w = 0（质量无穷大），修正全落在另一端；两端都 fixed 则跳过。**这就是 Kangaroo 里 goal strength 的数学本质**——你在 GH 里调 strength，就是在调这里的 w。
+
+对应代码（已验证原型，逐行对照公式）：
+
+```ts
+// k = C/d，故 (dx,dy)·k = C·n —— 与公式一致
+for (const { a, b, rest } of bars) {
+  const A = nodes[a], B = nodes[b];
+  const dx = B.x - A.x, dy = B.y - A.y;
+  const d = Math.hypot(dx, dy) || 1e-6;      // 防除零，见 §3.5
+  const k = (d - rest) / d;
+  const wa = A.fixed ? 0 : 1, wb = B.fixed ? 0 : 1, ws = wa + wb;
+  if (!ws) continue;
+  A.x += dx * k * (wa / ws);  A.y += dy * k * (wa / ws);
+  B.x -= dx * k * (wb / ws);  B.y -= dy * k * (wb / ws);
+}
+```
+
+### 3.2 迭代格式：Gauss-Seidel 扫描
+
+单杆一步精确，但修 BC 会把刚修好的 AB 拉歪一点。解法：顺序扫过所有杆（就地更新），扫完一遍再来一遍。每遍把整体残差大致乘一个 < 1 的因子——**几何衰减**。收敛速率取决于约束图的耦合结构；四杆环 + 三角板的图直径很小，原型中 24–36 遍已让残差远低于视觉阈值。
+
+**残差度量**（求解器必须暴露，测试与教学模式都靠它）：
+
+```
+maxError = max over bars of | dᵢ − restᵢ |     （单位 px）
+```
+
+**与 Kangaroo 2 的准确对应**（面试可讲的差异点）：
+
+| | 本实现 | Kangaroo 2 |
+|---|---|---|
+| 聚合方式 | Gauss-Seidel：逐杆就地更新，后面的杆看到前面杆刚改过的位置 | Jacobi：每个 goal 先各自提案投影位置，再对每个点取 strength 加权平均，统一移动 |
+| 每遍收敛 | 链状结构更快 | 更慢，但顺序无关、易并行 |
+| 顺序依赖 | 有（像素精度下不可辨） | 无 |
+| 权重 | w ∈ {0,1}（锚点/自由） | 连续 strength |
+
+术语对照：Bar ↔ Length goal；fixed 节点 ↔ Anchor；软拖拽 ↔ Grab；w ↔ strength；一遍扫描 ↔ 一次 solver iteration。
+
+**诚实声明**（写进 case study 也这么写）：交替投影对凸集有收敛定理（von Neumann），但距离约束的解集是圆（非凸），**不存在全局收敛保证**。工程答案是 warm start（§3.4）：每帧从上一帧的解出发，始终待在当前解支的邻域内，局部表现为稳定的线性收敛。Session 2 的测试会量化「多大扰动、多少遍、收敛到多少像素」，数字回填本节。
+
+### 3.3 软拖拽目标
+
+每遍扫描的**开头**，把被拖节点向指针目标挪一个比例，然后照常投影全部杆：
+
+```ts
+drag.x += (target.x - drag.x) * α;   // α = 0.4
+drag.y += (target.y - drag.y) * α;
+// ……然后 project(bars)
+```
+
+**解释**：这等价于一个有限权重的 Grab goal 与（相对）无限权重的杆约束竞争同一个点。稳态分两种：
+- 目标在可行域内：投影位移趋于零，平衡点就是 x = target，节点贴着指针。
+- 目标在可行域外：每遍注入的拉力 α·|target − x| 被投影抵消，节点停在可行域边界上离指针最近的位置附近。**边界滑移是白送的**——不写任何「可行域检测」（§5 条目 5）。
+
+α 的语义 = 拖拽刚度。0.4 为验证值；调大更跟手但与约束打架更凶（微抖），调小更「肉」。合理区间约 0.2–0.6。α = 1（硬设置）明确禁止：会与约束剧烈冲突产生抖动，这正是软目标要解决的问题。
+
+**注意**：目标在可行域外期间，杆上存在与拉力平衡的**持续微小残差**（松手后几遍内消失）。测试容差要区分「拖拽中」与「静置后」两种状态，且拖拽态断言只在**指针静止后的稳态帧**上取样——快速甩动的瞬态帧残差没有稳定上界，对它断言测试会闪断（§8.2）。
+
+**备选改进（记录在案，Session 2 不做）**：拖拽模式 `iterate` 的结尾追加 2–3 遍不施加拉力的纯投影 settle 扫描，渲染帧可全程贴近刚性、拖拽中容差自 2px 收窄；代价是跟手性极轻微下降。仅当视觉上察觉杆长「呼吸感」时启用，不值得为它返工。
+
+### 3.4 收敛性、warm start 与分支
+
+- **正则构型附近**：约束雅可比满秩，Gauss-Seidel 在线性化系统上线性收敛，速率稳定。
+- **奇异构型附近**（死点：如曲柄与连杆共线，摇杆到达极限摆角）：雅可比降秩，收敛变慢，表现为机构短暂「变软」。位置驱动曲柄的自转模式**不受影响**（B 是被摆放的，不是被求解的）；用户把 C/P 拖向极限位置时软目标自然停驻。**文档化，不特判**。
+- **warm start**：每帧以上一帧结果为初值。这同时解决两件事：① 始终在解的吸引域内，收敛快；② 解支连续——机构不会无故跳到另一个装配支。
+- **分支翻转（elbow flip）**：用户暴力拖拽把构型甩过退化位置、落到另一个装配支，是**合法物理行为**，不是 bug（另一个支也是真实解）。自转模式靠 warm start 保持分支连续即可。三角板（BP/CP/BC 锁死）在连续运动中不会翻面。
+
+### 3.5 数值细节与时间语义
+
+| 事项 | 规定 | 理由 |
+|---|---|---|
+| 除零防护 | `d = Math.hypot(dx,dy) \|\| 1e-6` | 两点瞬间重合（暴力拖拽单帧压缩）时避免 NaN；NaN 会静默传染全部节点 |
+| dt clamp | rAF 回路里 `dt = min(dt, 0.05)` | 切后台回来 dt 可达数秒，自转角一步跨半圈 → 瞬移。**注意 dt 只进运动学层**（自转角速度、松手阻尼），求解器本体没有时间概念 |
+| 迭代预算 | 拖拽 36 遍/帧，自转 24 遍/帧（验证值） | 预算 = 刚性。遍数不足的症状是「橡皮筋感」，过多浪费（5 杆 × 36 遍 × 60fps ≈ 每秒 1 万次投影，量级完全无压力） |
+| 漂移 | 无累积漂移 | 投影是**绝对**修正（每次都以 rest 为目标），不是增量累加——浮点误差不积累。可作教学点 |
+| 拟静力学 | 系统无速度状态、无惯性 | 每帧从头解一次静力平衡。松手阻尼/自转是 Session 4 叠在上面的运动学层，不进求解器内核 |
+
+---
+
+## 4. 组件 API
+
+### 4.1 `LinkageSolver` 纯 TS 类（框架无关，目标 ~150 行）
+
+```ts
+// solver.ts —— 零依赖。不 import React/DOM，不引用 window。
+export class LinkageSolver {
+  constructor(def: LinkageDef);          // 深拷贝 def，rest 缺省按初始坐标计算
+
+  /** 只读快照视图，渲染层每帧读取。返回内部数组的引用即可（渲染只读）。 */
+  readonly nodes: ReadonlyArray<Readonly<NodeState>>;
+  readonly bars:  ReadonlyArray<Readonly<Bar>>;
+
+  /** 核心：n 遍 Gauss-Seidel 扫描。若有活跃拖拽，每遍开头先施加软目标（§3.3）。 */
+  iterate(n: number): void;
+
+  /** 残差：max |dᵢ − restᵢ|，px。 */
+  maxError(): number;
+
+  /** 拖拽生命周期。dragTo 只更新软目标，不直接动节点。 */
+  beginDrag(nodeIndex: number): void;    // fixed 节点上调用应 no-op 或 throw（实现二选一，测试锁定行为）
+  dragTo(x: number, y: number): void;
+  endDrag(): void;
+
+  /** 锚点控制 + 直接摆放：自转模式的曲柄驱动、初始化用。 */
+  setFixed(nodeIndex: number, fixed: boolean): void;
+  setNode(nodeIndex: number, x: number, y: number): void;
+
+  /** 教学模式 A 预留（§6.1）：逐遍快照。正常运行时不调用，零开销。 */
+  iterateWithHistory(n: number): IterationSnapshot[];
+}
+
+export interface IterationSnapshot {
+  positions: { x: number; y: number }[];   // 深拷贝
+  maxError: number;
+}
+```
+
+**行为契约**（测试逐条锁定）：
+1. `iterate` 后所有 fixed 节点坐标严格不变（`===` 级别，不是容差）。
+2. 无拖拽、从扰动构型 `iterate(36)` 后 `maxError() < 0.5`。
+3. 确定性：同一构型同一调用序列，两次运行输出逐位相同（内部禁用 `Math.random`）。
+4. `beginDrag` 期间目标不可达时机构不发散、无 NaN。
+
+**曲柄驱动不进 solver**（范围锁死的推论）：自转 = 「每帧把 B 摆到曲柄圆上并临时 fixed，iterate，再解锁」，这是调用方 4 行代码的事，用 `setFixed`/`setNode` 组合完成。solver 内核只认识距离约束、锚点、软拖拽三样东西。
+
+```ts
+// trace.ts —— 同样零依赖，教学模式 B（§6.2）与 SVG 导出（§7）共用
+export function solveStatic(def: LinkageDef, sweeps?: number): { x: number; y: number }[];
+
+export function traceCouplerCurve(
+  def: LinkageDef,
+  opts?: { steps?: number /* 默认 144 */ }
+): { points: { x: number; y: number }[]; grashof: boolean };
+// 实现：初始化 → 曲柄角步进 2π/steps，每步 B 摆位 + iterate(24)（warm start）→ 记录 P。
+// grashof=false 时曲柄不能整周回转，points 只覆盖可达段——调用方负责提示。
+```
+
+### 4.2 React 封装：所有权与状态机
+
+> 按 §8.0：Session 2–3 先在 vanilla 验收页（`src/demo/main.ts`）实现同一套所有权规则与状态机；本节的 React 封装在迁入 Next.js 时实施，规则不变。
+
+```
+src/components/linkage/LinkageFigure.tsx    // "use client"
+```
+
+**所有权规则**（违反即架构错误）：
+- `LinkageSolver` 实例放 `useRef`，创建一次。**React state 里永远不放节点坐标**。
+- rAF 循环在 `useEffect` 里启动/清理，每帧：① 按模式驱动（见下）② `iterate` ③ 触发重渲染。
+- 重渲染策略：`setFrame(n => n + 1)` 强制刷新，JSX 直接读 `solver.nodes`。约 20 个 SVG 元素，60fps 下 React 协调开销可忽略——选简单诚实的方案。若实测卡顿（不太可能），退路是 ref 直写 DOM 属性，但不预先优化。
+- 服务端安全：solver 构造是纯数学、确定性的，SSR 首帧 = 收敛后的初始构型，无 hydration 失配；rAF 只在 client 起。
+
+**模式状态机**：
+
+```
+        pointerdown 命中自由节点
+  spin ────────────────────────▶ drag
+   ▲                              │ pointerup / pointercancel
+   │        ω 缓升接回            ▼
+   └────────────────────────── release     （release 的阻尼手感 = Session 4）
+```
+
+- `spin`：θ += ω·dt（dt 已 clamp），B = A + 66·(cos θ, sin θ)，B 临时 fixed，`iterate(24)`，解锁。
+- `drag`：`iterate(36)`，软目标 = 指针位置。
+- `release`：Session 4 实现。意图：短暂自由阻尼后 ω 从 0 缓升到巡航值，从当前曲柄角无缝接回 spin。Session 2/3 期间 release 可直接跳回 spin（验收不含手感）。
+- `prefers-reduced-motion`：初始为静止（不自转），拖拽仍可用（用户主动发起的运动不属于「减少动画」的范畴）。
+
+### 4.3 指针与坐标
+
+- `<svg>` 上 `touch-action: none`（CSS），`pointerdown` 时 `setPointerCapture`——否则移动端拖拽和页面滚动打架（坑 4）。
+- 命中测试：在**自由**节点中找距指针最近者，viewBox 距离 ≤ 24px 才算命中（触屏友好的大热区；视觉圆圈可以小，热区必须大）。
+- 坐标换算：client 坐标 → viewBox 坐标必须走 `svg.getScreenCTM().inverse()`（或等价手动换算），保证 SVG 被 CSS 缩放到任何尺寸时拖拽都正确。
+- `pointercancel` 与 `pointerup` 同路处理（移动端来电、手势打断）。
+
+### 4.4 渲染约定（Session 2 极简版就要遵守的部分）
+
+- **坑 1（最高优先级）**：SVG presentation attribute 不解析 `var()`。`fill="var(--x)"` 静默渲染成黑。**所有颜色走 class 或 style 属性**。代码评审清单项，每次改渲染都查一遍。
+- 图层顺序（底→顶）：点阵网格衬底 → 耦合曲线轨迹 → 机架/接地符号 → 杆 → 三角板（发丝线勾边）→ 关节 → 标注/题栏。
+- 关节符号：固定铰 = 实心墨点 + 接地符号（三角 + 剖面线）；自由铰 = 白底蓝圈（可抓取示能）。
+- 轨迹「断笔」（坑 2）：轨迹存 React 层 ring buffer（长约 600 点），相邻点距 > 34px 时插入 null，路径字符串在 null 处重新 `M` 起笔。
+- 视觉 token（毛坯版，Session 4 细化但语言不变）：纸 `#FAFAF7` / 墨 `#1F1F1D` / 石墨灰 `#8A8A82` / 描线蓝 `#2456A6` / 发丝线 `#D9D9D1`；标注 ui-monospace 栈；正文 serif（Iowan Old Style / Palatino / Songti SC）；右下角题栏（FIG. 01 / 求解参数 / 实时 θ 读数，θ = atan2(B−A)）。
+
+### 4.5 文件布局
+
+```
+CLAUDE.md                       # 跨会话记忆（最小版）
+LINKAGE_SPEC.md                 # 本文档
+index.html                      # Vite 验收页（vanilla TS，非 React）
+src/demo/main.ts                # 验收页逻辑：rAF、指针、状态机（§4.2 规则的 vanilla 实现）
+src/lib/linkage/types.ts        # §2.1 类型
+src/lib/linkage/solver.ts       # LinkageSolver（~150 行，零依赖）
+src/lib/linkage/trace.ts        # solveStatic / traceCouplerCurve（零依赖）
+src/lib/linkage/solver.test.ts  # Vitest
+src/lib/linkage/presets.ts      # §2.2 规范实例 + §2.3 初始化种子
+```
+
+（环境决策见 §8.0：本目录即 Session 2–4 的工作仓库。Next.js 脚手架由弱模型后补，`src/lib/linkage/` 原样搬入，`LinkageFigure.tsx` 按 §4.2 规则届时实现。）
+
+---
+
+## 5. 边界情况清单（Session 3 主菜，每条带验证方式）
+
+| # | 症状 | 原因 | 对策 | 验证 |
+|---|---|---|---|---|
+| 1 | SVG 颜色静默变黑 | presentation attribute 不解析 `var()` | 颜色一律 class/style | 代码评审清单项（难以单测） |
+| 2 | 轨迹拉出难看直线 | 分支翻转/拖拽瞬移使相邻轨迹点跳变 | 距离 > 34px 插 null、重新 M 起笔 | 单测：喂入含跳变的合成序列，断言路径含两个 M |
+| 3 | 切后台回来机构瞬移 | rAF 暂停后 dt 巨大，自转角单步跨越 | dt clamp ≤ 0.05s（只影响运动学层） | 单测：dt=2s 时角增量 ≤ ω·0.05 |
+| 4 | 移动端拖拽和滚动打架 | 浏览器默认触摸手势 | `touch-action:none` + `setPointerCapture` + `pointercancel` 处理 | 真机手测（记录在 PR 描述） |
+| 5 | 拖出可行域 | ——（无需处理） | 软目标 + 投影天然滑到边界，**禁止**写可行域检测 | 单测：目标设 (10⁴, 380)，iterate 后无 NaN、静置后 maxError < 0.5、节点停在可达域边界附近 |
+| 6 | 暴力拖拽后构型「翻面」 | 分支翻转是合法解 | 不防护；自转靠 warm start 保持分支连续 | 单测：温和自转 360°，环支符号（§2.3）恒定、P 轨迹相邻采样距 < 阈值 |
+| 7 | 极限位置附近机构「变软」 | 死点处约束雅可比降秩，收敛变慢 | 文档化，不特判（§3.4） | 观察项：自转全程 maxError 有界（单测断言 < 2px） |
+| 8 | 两点重合 → 全体 NaN | 除以零 | `\|\| 1e-6` 防护 | 单测：重合节点 + 杆，project 后坐标有限 |
+| 9 | 页面缩放后拖拽错位 | client → viewBox 换算写死了比例 | 走 `getScreenCTM().inverse()` | 手测：缩放浏览器窗口后拖拽 |
+| 10 | 拖拽中杆长有微小残差 | 软目标持续注入拉力（§3.3） | 属预期行为；容差分级（拖拽中 ≤ 2px，静置 < 0.5px，数值 Session 2 实测后回填） | 单测：静置态 < 0.5；拖拽态 ≤ 2 且只在指针静止后的稳态帧取样，甩动瞬态帧不断言 |
+
+---
+
+## 6. 教学模式预留（case study 用，本期只定接口）
+
+### 6.1 模式 A：约束收敛逐步可视化
+
+- **接口**：`solver.iterateWithHistory(n)` 返回逐遍快照（位置深拷贝 + maxError）。
+- **UI 设想**（不实现）：滑块控制「显示第 k 遍后的构型」，旁边 log 尺度残差曲线。从一个故意扰动的构型出发，让读者亲眼看到几何衰减。
+- **对 Session 2 的约束**：`iterate` 的每遍逻辑必须收敛在一个私有方法里（如 `sweepOnce()`），`iterate` 和 `iterateWithHistory` 都只是它的循环外壳——否则教学路径和真实路径会分叉。
+
+### 6.2 模式 B：杆长参数化 → 耦合曲线族
+
+- **接口**：`traceCouplerCurve(def, {steps})`（§4.1）。调用方对某根杆长做参数扫描（如 BP ∈ [90, 170] 取 9 档），得 9 条闭合曲线叠画，看曲线族连续变形。
+- **Grashof 边界**：每个样本先做 §2.2 校验；`grashof=false` 的样本曲柄不能整周回转，曲线不闭合——UI 须视觉区分（如虚线），不许静默画错。若扫描对象是四杆环的杆长（AB/BC/CD），§2.3 的共线不可达论证需按新杆长重算；只动 BP/CP 不影响环支。
+- **对 Session 2 的约束**：`traceCouplerCurve` 必须是纯函数（自建 solver 实例，不碰组件状态），保证教学页、主页、导出三处可并行使用互不污染。
+
+### 6.3 模式 C：静态 SVG 导出 → 见 §7
+
+## 7. 静态 SVG 导出（仅思路，不实现）
+
+供 25–30 页 PDF 作品集回流用。思路：
+
+1. 一切渲染都源自纯数据（节点位置数组、轨迹点数组）——这是 §4.2 所有权规则的红利。
+2. 写一个 `renderStaticSVG(state, options): string`，输出**自包含** SVG 字符串：颜色内联为字面值（CSS 变量在独立 SVG 文件里不存在——坑 1 的推论）、字体声明降级为通用栈、线宽用绝对单位以便印刷缩放。
+3. 两类产出：① 定格帧——`solveStatic` 摆好指定曲柄角的构型 + 完整标注；② 曲线族——`traceCouplerCurve` 扫参数后的叠画。
+4. 触发方式最简：开发环境下一个隐藏按钮 / 一段 node 脚本把字符串写文件。不做产品化。
+
+---
+
+## 8. 里程碑与测试计划
+
+### 8.0 环境决策（Session 1 评审拍板）
+
+Session 2 不等 Next.js 脚手架：就在本目录 `git init` + Vite + Vitest 起最轻环境。验收页是 **vanilla TS 的 `index.html`**——不装 React、不装 Storybook（后者的安装配置时间够写好几个测试），顺带印证求解器零框架依赖。之后弱模型搭好 Next.js，`src/lib/linkage/` 整个文件夹原样搬入；§4.2 的 React 封装届时实施，指针/状态机逻辑先在 vanilla 验收页开发验证，迁移成本只是事件挂载点与 JSX。本目录根部放最小 CLAUDE.md 维持跨会话连续性。
+
+### 8.1 里程碑（每个结束时 git commit）
+
+| | 交付 | 验收线（一句话） |
+|---|---|---|
+| **M1**（Session 2） | `git init` + Vite/Vitest 环境（§8.0）+ `solver.ts` + `presets.ts` + 单测 + vanilla 验收页最小 SVG 渲染（杆=线、节点=圆，能拖） | 四杆机构，拖任一自由节点，整体刚性跟随，不抖；单测全绿 |
+| **M2**（Session 3） | §5 清单逐条落地 + 触屏 + 对应测试 | 暴力拖拽、拖出可行域、触屏、切后台往返，均无抽搐、无瞬移、无 NaN |
+| **M3**（Session 4） | 耦合曲线描绘 + 工程标注/题栏 + release 阻尼接自转 | 松手后平滑接回自转；P 曲线连续描绘、断笔正确；标注就位 |
+| **M4**（Session 4） | 架构与扩展方式写回 CLAUDE.md；（可选，时间紧第一个砍）SKILL.md | 换一个较弱模型读 CLAUDE.md 能定位并安全修改任一层 |
+
+### 8.2 单元测试清单（Vitest；容差为 viewBox px）
+
+| 测试 | 断言 |
+|---|---|
+| 杆长守恒 | 全部自由节点加确定性扰动（固定向量表，≤30px），`iterate(36)` 后 `maxError() < 0.5` |
+| 锚点不动 | 任意操作序列后 A、D 坐标与初始严格相等 |
+| 收敛预算 | 扰动幅度 5/15/30px 三档，记录达到 0.5px 所需遍数，断言 ≤ 36（实测数字回填 §3.2） |
+| 确定性 | 同一调用序列跑两遍，全部坐标逐位相等 |
+| 初始化分支断言 | §2.3 程序第 7 步：settle 完成后，环支符号与板朝向符号等于期望值 |
+| 除零防护 | 重合节点 + 杆，`iterate(1)` 后所有坐标 `Number.isFinite` |
+| 不可达拖拽 | 目标 (10⁴, 380)，`iterate(36)` 无 NaN；`endDrag` 后 `iterate(36)`，`maxError < 0.5` |
+| 拖拽中残差分级 | 指针静止后的稳态帧上 `maxError ≤ 2`（甩动瞬态帧不断言；Session 2 实测后可收紧） |
+| 分支连续 | 曲柄步进 360°（144 步，warm start），环支符号恒定；P 相邻采样距 < 34px |
+| 轨迹断笔 | 合成跳变序列 → 路径字符串含两个 `M` |
+| dt clamp | dt=2s 输入运动学层，角增量 ≤ ω·0.05 |
+| iterateWithHistory | 快照数 = n；maxError 序列单调不增（允许平台期）；最终状态与 `iterate(n)` 逐位一致 |
+
+### 8.3 测试基建说明
+
+- 求解器与 trace 零 DOM，直接 node 环境跑 Vitest，不需要 jsdom。
+- 指针/触屏交互（§5 条 4、9）以真机手测为准，结果记录在 commit/PR 描述里——不为它们搭 e2e，不值当。
+- 测试里禁止 `Math.random()` 裸用：扰动向量写成固定常量表，保证可复现。
+
+---
+
+*本文档由 Session 1 产出。修订规则：实现过程中发现规格错误 → 改本文档并在 git message 里注明「SPEC 修订」；发现规格之外的需求 → 先对照 §1.2，默认答案是「不做」。*
