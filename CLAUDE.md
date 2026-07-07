@@ -38,7 +38,7 @@
 
 - Session 1 完成：LINKAGE_SPEC.md v1.1（含评审修订）。
 - **Session 2 / M1 完成**：`src/lib/linkage/`（solver / presets / trace）+ 单测全绿 + typecheck 干净 + vanilla 验收页（`npm run dev`，脚手架落地后改名 `npm run demo`——见 SITE_SPEC §2）。实测数字与两处 spec 修订均已回填 LINKAGE_SPEC（数值一律以彼为准，此处不复制）。
-- **Session 3（M2）主体完成**：交互状态机抽为纯类 `LinkageController`（零 DOM、驱动参数化，vanilla 页与 React 封装共用）+ 23 项测试全绿（dt clamp / 命中 / 多点触控 / 松手接回 / reduced-motion）+ 浏览器验证（含 mobile 视口缩放拖拽，CTM 换算正确）。**M2 关闭前唯一余项：真机触屏手测（用户的活）**——手机上拖每个节点、双指乱按、切后台往返，无抽搐/瞬移/NaN 即通过，结果记入下一个 commit。
+- **Session 3（M2）关闭**：交互状态机抽为纯类 `LinkageController`（零 DOM、驱动参数化，vanilla 页与 React 封装共用）+ 23 项测试全绿 + 浏览器验证（含 mobile 视口缩放拖拽）。**真机触屏手测通过（2026-07-07，用户在 Vercel 部署页实测：拖拽/双指/切后台/暴力甩均无异常）**。已部署：GitHub `personal-website`（私有）→ Vercel 自动部署，push 即上线。
 - **下一步 Session 4（M3）**：耦合曲线描绘 + 工程标注/题栏 + release 阻尼接自转。**手感即论点**（THESIS_NOTES.md）——阻尼/衔接是轮回机器论点本身，优先级最高，不许当抛光砍。
 
 ## 纪律（spec §1 的摘要，冲突时以 spec 为准）
