@@ -161,6 +161,67 @@ describe('拖拽（SPEC §3.3 / §5 条 5、10）', () => {
   });
 });
 
+describe('镜像翻转压制（SPEC §5 条 6b，选项 B：注入限步）', () => {
+  /** 跨线按压目标：P 关于 BC 线的镜像方向再延伸。 */
+  function beyondTarget(s: LinkageSolver): { x: number; y: number } {
+    const b = s.nodes[N.B];
+    const c = s.nodes[N.C];
+    const p = s.nodes[N.P];
+    const ux = c.x - b.x;
+    const uy = c.y - b.y;
+    const t = ((p.x - b.x) * ux + (p.y - b.y) * uy) / (ux * ux + uy * uy);
+    const foot = { x: b.x + t * ux, y: b.y + t * uy };
+    return { x: foot.x + 1.6 * (foot.x - p.x), y: foot.y + 1.6 * (foot.y - p.y) };
+  }
+
+  it('瞬态划过（手一抖）：跨线目标 2 帧后收回，不翻面且恢复刚性', () => {
+    const s = createCrankRocker();
+    const home = { x: s.nodes[N.P].x, y: s.nodes[N.P].y };
+    const beyond = beyondTarget(s);
+    s.beginDrag(N.P);
+    s.dragTo(beyond.x, beyond.y);
+    s.iterate(36);
+    s.iterate(36); // 两帧误划
+    s.dragTo(home.x, home.y);
+    for (let f = 0; f < 5; f++) s.iterate(36);
+    expect(plateSign(s)).toBe(EXPECTED_PLATE_SIGN);
+    s.endDrag();
+    s.iterate(36);
+    expect(s.maxError()).toBeLessThan(0.5);
+  });
+
+  it('持续按压最终会翻面（接受行为）：翻后仍是合法构型，松手恢复刚性', () => {
+    const s = createCrankRocker();
+    const beyond = beyondTarget(s);
+    s.beginDrag(N.P);
+    s.dragTo(beyond.x, beyond.y);
+    let flipFrame = -1;
+    for (let f = 0; f < 120 && flipFrame < 0; f++) {
+      s.iterate(36);
+      if (plateSign(s) !== EXPECTED_PLATE_SIGN) flipFrame = f;
+    }
+    console.info(`持续按压 flipFrame=${flipFrame}（-1 = 120 帧内未翻）`);
+    expect(flipFrame).not.toBe(0); // 至少不能第 0 帧就翻——瞬态防护的底线
+    s.endDrag();
+    s.iterate(36);
+    expect(s.maxError()).toBeLessThan(0.5);
+    expect(loopSign(s)).not.toBe(0);
+  });
+
+  it('限步不回归可达目标收敛：C 拖到摇杆圆上一点，精确贴住', () => {
+    const s = createCrankRocker();
+    const c = s.nodes[N.C];
+    const ang = Math.atan2(c.y - 380, c.x - 470) - (18 * Math.PI) / 180;
+    const target = { x: 470 + 127 * Math.cos(ang), y: 380 + 127 * Math.sin(ang) };
+    s.beginDrag(N.C);
+    s.dragTo(target.x, target.y);
+    for (let f = 0; f < 10; f++) s.iterate(36);
+    const dist = Math.hypot(s.nodes[N.C].x - target.x, s.nodes[N.C].y - target.y);
+    expect(dist).toBeLessThan(0.1);
+    expect(s.maxError()).toBeLessThan(0.5);
+  });
+});
+
 describe('自转分支连续（SPEC §3.4 / §5 条 6、7）', () => {
   it('曲柄整周 144 步 warm start：两个符号恒定，P 连续，残差有界', () => {
     const s = createCrankRocker();

@@ -8,6 +8,17 @@ export interface IterationSnapshot {
 /** 软拖拽刚度 α（SPEC §3.3）。合理区间 0.2–0.6；α=1 等于硬设置、会与约束打架，禁止。 */
 const DRAG_ALPHA = 0.4;
 
+/**
+ * 软拖拽单帧可达半径，px（SPEC §5 条 6b，选项 B）：每次 iterate() 调用（= 渲染帧）
+ * 求解所用的有效目标被限制在距拖拽节点当前位置 MAX_DRAG_REACH 之内。
+ * 预算必须按帧定而非按遍定——一帧 36 遍、板压扁时投影的垂直恢复力趋零，
+ * 按遍限步挡不住单帧内的数值隧穿（实测第 0 帧即翻）。
+ * 40px/帧 × 60fps = 2400px/s，跟手性无感；但单帧压不穿三角板（板高 ≈73px），
+ * 瞬时划过不再误翻。持续按压仍会逐帧下沉并最终翻面（接受行为，见 SPEC §3.4）。
+ * 副作用（有益）：越界拖拽的稳态弹性伸长被此值封顶，不随越界距离增长。
+ */
+const MAX_DRAG_REACH = 40;
+
 /** 防除零（SPEC §3.5）：两点瞬间重合时避免 NaN 传染全部节点。 */
 const EPS = 1e-6;
 
@@ -22,6 +33,9 @@ export class LinkageSolver {
   private dragIndex = -1;
   private dragX = 0;
   private dragY = 0;
+  /** 本次 iterate 调用的有效目标（原始目标向节点方向收进 MAX_DRAG_REACH 内）。 */
+  private effX = 0;
+  private effY = 0;
 
   constructor(def: LinkageDef) {
     this.ns = def.nodes.map((n) => ({ x: n.x, y: n.y, fixed: n.fixed ?? false }));
@@ -42,8 +56,9 @@ export class LinkageSolver {
     return this.bs;
   }
 
-  /** n 遍 Gauss-Seidel 扫描（SPEC §3.2）。 */
+  /** n 遍 Gauss-Seidel 扫描（SPEC §3.2）。有效拖拽目标每调用重算一次（= 每帧预算）。 */
   iterate(n: number): void {
+    this.clampDragTarget();
     for (let i = 0; i < n; i++) this.sweepOnce();
   }
 
@@ -52,6 +67,7 @@ export class LinkageSolver {
    * 与 iterate 共用 sweepOnce——教学展示的必须是真算法本身，不许分叉出演示版。
    */
   iterateWithHistory(n: number): IterationSnapshot[] {
+    this.clampDragTarget();
     const out: IterationSnapshot[] = [];
     for (let i = 0; i < n; i++) {
       this.sweepOnce();
@@ -82,6 +98,8 @@ export class LinkageSolver {
     this.dragIndex = nodeIndex;
     this.dragX = n.x;
     this.dragY = n.y;
+    this.effX = n.x;
+    this.effY = n.y;
   }
 
   /** 只更新软目标，不直接动节点——拉力必须和投影逐遍交错（SPEC §3.3）。 */
@@ -103,13 +121,28 @@ export class LinkageSolver {
     this.ns[nodeIndex].y = y;
   }
 
+  /** 有效目标 = 原始目标收进以节点当前位置为心、MAX_DRAG_REACH 为半径的圆内。 */
+  private clampDragTarget(): void {
+    if (this.dragIndex < 0) return;
+    const d = this.ns[this.dragIndex];
+    let tx = this.dragX - d.x;
+    let ty = this.dragY - d.y;
+    const dist = Math.hypot(tx, ty);
+    if (dist > MAX_DRAG_REACH) {
+      tx *= MAX_DRAG_REACH / dist;
+      ty *= MAX_DRAG_REACH / dist;
+    }
+    this.effX = d.x + tx;
+    this.effY = d.y + ty;
+  }
+
   /** 一遍扫描：软拖拽注入 → 顺序投影全部杆。iterate / iterateWithHistory 的唯一实现体。 */
   private sweepOnce(): void {
     if (this.dragIndex >= 0) {
       const d = this.ns[this.dragIndex];
       if (!d.fixed) {
-        d.x += (this.dragX - d.x) * DRAG_ALPHA;
-        d.y += (this.dragY - d.y) * DRAG_ALPHA;
+        d.x += (this.effX - d.x) * DRAG_ALPHA;
+        d.y += (this.effY - d.y) * DRAG_ALPHA;
       }
     }
     for (const { a, b, rest } of this.bs) {
