@@ -290,7 +290,7 @@ export function traceCouplerCurve(
 
 ### 4.2 React 封装：所有权与状态机
 
-> 按 §8.0：Session 2–3 先在 vanilla 验收页（`src/demo/main.ts`）实现同一套所有权规则与状态机；本节的 React 封装在迁入 Next.js 时实施，规则不变。
+> **Session 3 修订**：状态机已抽为框架无关纯类 `LinkageController`（`controller.ts`，零 DOM、坐标只认 viewBox，驱动已参数化 `driver: {anchor, tip, radius, omega}`）。vanilla 验收页与将来的 React 封装**共用**它——React 层剩下的只有事件/CTM 接线与 JSX，交互规则与测试不再重复实现。
 
 ```
 src/components/linkage/LinkageFigure.tsx    // "use client"
@@ -338,12 +338,13 @@ src/components/linkage/LinkageFigure.tsx    // "use client"
 CLAUDE.md                       # 跨会话记忆（最小版）
 LINKAGE_SPEC.md                 # 本文档
 index.html                      # Vite 验收页（vanilla TS，非 React）
-src/demo/main.ts                # 验收页逻辑：rAF、指针、状态机（§4.2 规则的 vanilla 实现）
+src/demo/main.ts                # 薄 DOM 接线：CTM 变换、事件转发、rAF、SVG 渲染
 src/lib/linkage/types.ts        # §2.1 类型
 src/lib/linkage/solver.ts       # LinkageSolver（~150 行，零依赖）
+src/lib/linkage/controller.ts   # 交互状态机（§4.2，零 DOM；vanilla 页与 React 封装共用）
 src/lib/linkage/trace.ts        # solveStatic / traceCouplerCurve（零依赖）
-src/lib/linkage/solver.test.ts  # Vitest
 src/lib/linkage/presets.ts      # §2.2 规范实例 + §2.3 初始化种子
+src/lib/linkage/*.test.ts       # Vitest（solver / controller 各一份）
 ```
 
 （环境决策见 §8.0：本目录即 Session 2–4 的工作仓库。Next.js 脚手架由弱模型后补，`src/lib/linkage/` 原样搬入，`LinkageFigure.tsx` 按 §4.2 规则届时实现。）
@@ -356,9 +357,9 @@ src/lib/linkage/presets.ts      # §2.2 规范实例 + §2.3 初始化种子
 |---|---|---|---|---|
 | 1 | SVG 颜色静默变黑 | presentation attribute 不解析 `var()` | 颜色一律 class/style | 代码评审清单项（难以单测） |
 | 2 | 轨迹拉出难看直线 | 分支翻转/拖拽瞬移使相邻轨迹点跳变 | 距离 > 34px 插 null、重新 M 起笔 | 单测：喂入含跳变的合成序列，断言路径含两个 M |
-| 3 | 切后台回来机构瞬移 | rAF 暂停后 dt 巨大，自转角单步跨越 | dt clamp ≤ 0.05s（只影响运动学层） | 单测：dt=2s 时角增量 ≤ ω·0.05 |
+| 3 | 切后台回来机构瞬移 | rAF 暂停后 dt 巨大，自转角单步跨越 | dt clamp ≤ 0.05s（在 controller.frame 内，只影响运动学层） | **单测已实现**：dt=2s → 角增量 ≤ ω·0.05 且曲柄端点位移 <5px |
 | 4 | 移动端拖拽和滚动打架 | 浏览器默认触摸手势 | `touch-action:none` + `setPointerCapture` + `pointercancel` 处理 | 真机手测（记录在 PR 描述） |
-| 4b | 多点触控抢拖拽 | 第二根手指 pointerdown 会在未 endDrag 时重新 beginDrag，两路 pointermove 互相覆盖目标 | Session 3：锁定活跃 pointerId，拖拽期间忽略其它指针的 down/move | 单测/手测：双指先后按住两个节点，只有第一根生效 |
+| 4b | 多点触控抢拖拽 | 第二根手指 pointerdown 会在未 endDrag 时重新 beginDrag，两路 pointermove 互相覆盖目标 | **已实施（Session 3）**：controller 锁定活跃 pointerId，拖拽期间其它指针的 down/move/up 全部忽略 | **单测已实现**：第二指被拒、其 move 不篡改目标、其 up 不结束拖拽，第一指收敛精度不受扰 |
 | 5 | 拖出可行域 | ——（无需处理） | 软目标 + 投影天然滑到边界，**禁止**写可行域检测 | 单测：目标设 (10⁴, 380)，全程无 NaN；松手后逐帧恢复 <0.5px（实测 4 帧 ×36 遍——极端拉伸态近奇异构型，恢复以帧计，非单次调用） |
 | 6 | 暴力拖拽后环支翻转（elbow flip） | 合法物理：另一装配支也是真实解 | 不防护；自转靠 warm start 保持分支连续 | 单测：温和自转 360°，环支符号（§2.3）恒定、P 轨迹相邻采样距 < 阈值 |
 | 6b | 三角板被捏翻 180°（镜像） | 距离约束手性盲：{BP,CP,BC} 对给定 B、C 有两个镜像解；跨线注入后投影收敛到镜像支（非法物理，数值隧穿） | **已实施（B+A，用户拍板）**：有效目标按帧限步 `MAX_DRAG_REACH=40px`（按遍限步无效——板压扁时垂直恢复力趋零，单帧 36 遍照样穿）；瞬态划过不翻，持续按压 ≈3 帧仍翻、属接受行为（彩蛋）。选项 C（符号面积约束）留作日后教学内容升级 | 单测：瞬态 2 帧划过收回不翻 + 持续按压翻后仍为合法构型且松手恢复 + 可达目标收敛不回归（三条全有） |
@@ -426,7 +427,11 @@ Session 2 不等 Next.js 脚手架：就在本目录 `git init` + Vite + Vitest 
 | 镜像翻转压制 | 瞬态 2 帧跨线划过收回：板符号不变；持续按压翻面后：构型合法、松手 1 帧恢复刚性；C 拖到摇杆圆上可达点：精确贴住（<0.1px） |
 | 分支连续 | 曲柄步进 360°（144 步，warm start），环支符号恒定；P 相邻采样距 < 34px |
 | 轨迹断笔 | 合成跳变序列 → 路径字符串含两个 `M` |
-| dt clamp | dt=2s 输入运动学层，角增量 ≤ ω·0.05 |
+| dt clamp | dt=2s 输入 controller.frame，角增量 ≤ ω·0.05、曲柄端点位移 <5px（已实现） |
+| 命中测试 | 24px 内最近自由节点被抓；锚点与空白永不命中；30px 外不命中 |
+| 多点触控 | 拖拽中第二指 down/move/up 全忽略；第一指目标收敛 <0.1px 不受扰；先手独占直至松手 |
+| 松手接回自转 | endDrag 后 θ = atan2(tip−anchor)，下一帧曲柄端点位移 <2px（不瞬移） |
+| reduced-motion | 初始 idle；frame 后坐标逐位不变；拖拽仍可用；松手回 idle |
 | iterateWithHistory | 快照数 = n；残差 8 遍窗口内下降且最终 <0.5（实测证伪严格单调——GS 峰值可短暂回升，见 §3.2）；终态与 `iterate(n)` 逐位一致 |
 
 ### 8.3 测试基建说明

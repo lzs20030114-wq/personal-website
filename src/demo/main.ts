@@ -1,21 +1,19 @@
 import { CRANK, N, THETA0, createCrankRocker } from '../lib/linkage/presets';
+import { LinkageController } from '../lib/linkage/controller';
 
-// M1 验收页（SPEC §8.0）：vanilla TS，无 React。
-// 状态机（SPEC §4.2）：spin ⇄ drag；release 手感是 Session 4，此处直接接回 spin。
+// M1/M2 验收页（SPEC §8.0）：vanilla TS，无 React。
+// 状态机与全部交互规则在 LinkageController（可测），本文件只做 DOM 接线与渲染。
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const svg = document.getElementById('fig') as unknown as SVGSVGElement;
 
 const solver = createCrankRocker();
-
-const OMEGA = 0.9; // 自转角速度 rad/s
-const HIT_RADIUS = 24; // 命中热区（viewBox px）：视觉圆圈可以小，热区必须大（SPEC §4.3）
-const DT_MAX = 0.05; // SPEC §3.5 dt clamp（坑 3）：只作用于运动学层
-
-type Mode = 'spin' | 'drag' | 'idle';
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-let mode: Mode = reducedMotion ? 'idle' : 'spin';
-let theta = THETA0;
+const controller = new LinkageController(solver, {
+  driver: { anchor: N.A, tip: N.B, radius: CRANK.r, omega: 0.9 },
+  theta0: THETA0,
+  reducedMotion,
+});
 
 // —— 建元素（一次），rAF 里只改属性
 function el<K extends keyof SVGElementTagNameMap>(tag: K, cls: string): SVGElementTagNameMap[K] {
@@ -49,10 +47,10 @@ function render(): void {
   });
   const B = solver.nodes[N.B];
   const deg = ((Math.atan2(B.y - CRANK.cy, B.x - CRANK.cx) * 180) / Math.PI + 360) % 360;
-  hud.textContent = `FIG. 01   θ = ${deg.toFixed(1)}°   maxError = ${solver.maxError().toFixed(3)} px   [${mode}]`;
+  hud.textContent = `FIG. 01   θ = ${deg.toFixed(1)}°   maxError = ${solver.maxError().toFixed(3)} px   [${controller.mode}]`;
 }
 
-// —— 指针（SPEC §4.3）：client → viewBox 必须走 CTM 逆变换（坑 9）
+// —— 指针接线（SPEC §4.3）：client → viewBox 必须走 CTM 逆变换（坑 9）
 function toViewBox(ev: PointerEvent): { x: number; y: number } {
   const m = svg.getScreenCTM();
   if (!m) return { x: 0, y: 0 };
@@ -62,71 +60,41 @@ function toViewBox(ev: PointerEvent): { x: number; y: number } {
 
 svg.addEventListener('pointerdown', (ev) => {
   const p = toViewBox(ev);
-  let best = -1;
-  let bestD = HIT_RADIUS;
-  solver.nodes.forEach((n, i) => {
-    if (n.fixed) return;
-    const d = Math.hypot(n.x - p.x, n.y - p.y);
-    if (d < bestD) {
-      bestD = d;
-      best = i;
+  if (controller.pointerDown(ev.pointerId, p.x, p.y)) {
+    try {
+      svg.setPointerCapture(ev.pointerId);
+    } catch {
+      /* 合成事件（测试）没有活跃 pointerId */
     }
-  });
-  if (best < 0) return;
-  try {
-    svg.setPointerCapture(ev.pointerId);
-  } catch {
-    /* 合成事件（测试）没有活跃 pointerId */
   }
-  solver.beginDrag(best);
-  solver.dragTo(p.x, p.y);
-  mode = 'drag';
 });
-
 svg.addEventListener('pointermove', (ev) => {
-  if (mode !== 'drag') return;
   const p = toViewBox(ev);
-  solver.dragTo(p.x, p.y);
+  controller.pointerMove(ev.pointerId, p.x, p.y);
 });
+svg.addEventListener('pointerup', (ev) => controller.pointerUp(ev.pointerId));
+svg.addEventListener('pointercancel', (ev) => controller.pointerUp(ev.pointerId)); // 来电/系统手势与松手同路
 
-function endDrag(): void {
-  if (mode !== 'drag') return;
-  solver.endDrag();
-  // B 恒在曲柄圆上（AB 刚性 + A 锚定），θ 总有定义——从当前姿态接回自转
-  const B = solver.nodes[N.B];
-  theta = Math.atan2(B.y - CRANK.cy, B.x - CRANK.cx);
-  mode = reducedMotion ? 'idle' : 'spin';
-}
-svg.addEventListener('pointerup', endDrag);
-svg.addEventListener('pointercancel', endDrag); // 来电/系统手势打断与松手同路
-
-// —— rAF 主循环（拟静力学：dt 只进运动学层，SPEC §3.5）
+// —— rAF 主循环（dt clamp 在 controller.frame 内部）
 let last = performance.now();
-function frame(now: number): void {
-  const dt = Math.min((now - last) / 1000, DT_MAX);
+function frameLoop(now: number): void {
+  const dt = (now - last) / 1000;
   last = now;
-  if (mode === 'spin') {
-    theta += OMEGA * dt;
-    solver.setFixed(N.B, true);
-    solver.setNode(N.B, CRANK.cx + CRANK.r * Math.cos(theta), CRANK.cy + CRANK.r * Math.sin(theta));
-    solver.iterate(24);
-    solver.setFixed(N.B, false);
-  } else if (mode === 'drag') {
-    solver.iterate(36);
-  }
+  controller.frame(dt);
   render();
-  requestAnimationFrame(frame);
+  requestAnimationFrame(frameLoop);
 }
 render();
-requestAnimationFrame(frame);
+requestAnimationFrame(frameLoop);
 
 // 验收/调试探针（仅 dev 构建）
 if (import.meta.env.DEV) {
   (window as unknown as Record<string, unknown>).__linkage = {
     solver,
+    controller,
     N,
     get mode() {
-      return mode;
+      return controller.mode;
     },
   };
 }
