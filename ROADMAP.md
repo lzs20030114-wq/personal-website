@@ -12,7 +12,7 @@
 
 | # | 项 | 为什么 Fable-gated | 产出物 | 规模 |
 |---|---|---|---|---|
-| 1 | **SITE_SPEC.md 网站架构规格** | 内容池 schema、双轨（同一内容出网页+PDF 素材）、连杆 client island 的 SSR/hydration 边界、My Role/process 的结构化字段、性能预算——错误全部静默且 11 月才爆雷 | 一份弱模型可照做的 spec（同 LINKAGE_SPEC 规格） | ≈1 session |
+| 1 | **SITE_SPEC.md 网站架构规格** ✅ **完成（2026-07-07）** | 内容池 schema、双轨（同一内容出网页+PDF 素材）、连杆 client island 的 SSR/hydration 边界、My Role/process 的结构化字段、性能预算——错误全部静默且 11 月才爆雷 | SITE_SPEC.md v1.0，S1–S4 里程碑即刻可交弱模型 | ≈1 session |
 | 2 | **导出管线 spec（LINKAGE_SPEC §7 升级）** | 150dpi/A3 印刷换算、线宽绝对单位、颜色内联、确定性重放的接口设计——数值细节静默出错 | §7 从"思路"扩成可执行规格 + renderStaticSVG 接口契约；**边界：只出 SVG 素材，30 页 PDF 的排版是用户在自己工具里做** | ≈半 session |
 | 3 | **SKILL.md 工艺沉淀** | 把"spec 先行 → 测试同步 → 实测回填 → 修订入档"的工作流 + 视觉规范 + 坑清单写成可复用文档——它是所有后续弱模型 session 的乘数 | 原计划 M4 最低优先级 → **提前**，写完即可把 M3-减-阻尼 交给弱模型 | ≈半 session |
 | 4 | **Case study 骨架** | 技术声明清单（每条带实测数字）、图目录（哪张图证什么）、叙事结构（含 My Role / process 合规块）、60 秒视频分镜——跨领域综合 | 骨架 + 素材清单；**声音和文字必须是用户自己的** | ≈半 session |
