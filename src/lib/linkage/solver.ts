@@ -1,0 +1,133 @@
+import type { Bar, LinkageDef, NodeState, Point } from './types';
+
+export interface IterationSnapshot {
+  positions: Point[];
+  maxError: number;
+}
+
+/** 软拖拽刚度 α（SPEC §3.3）。合理区间 0.2–0.6；α=1 等于硬设置、会与约束打架，禁止。 */
+const DRAG_ALPHA = 0.4;
+
+/** 防除零（SPEC §3.5）：两点瞬间重合时避免 NaN 传染全部节点。 */
+const EPS = 1e-6;
+
+/**
+ * 平面连杆机构的 PBD 求解器（SPEC §3、§4.1）。
+ * 内核只有三样东西：距离约束（刚性杆）、锚点（fixed，逆质量 0）、软拖拽目标。
+ * 零依赖：本文件不得引用 React / DOM / window。
+ */
+export class LinkageSolver {
+  private readonly ns: NodeState[];
+  private readonly bs: Bar[];
+  private dragIndex = -1;
+  private dragX = 0;
+  private dragY = 0;
+
+  constructor(def: LinkageDef) {
+    this.ns = def.nodes.map((n) => ({ x: n.x, y: n.y, fixed: n.fixed ?? false }));
+    this.bs = def.bars.map((b) => ({
+      a: b.a,
+      b: b.b,
+      rest:
+        b.rest ??
+        Math.hypot(def.nodes[b.b].x - def.nodes[b.a].x, def.nodes[b.b].y - def.nodes[b.a].y),
+    }));
+  }
+
+  get nodes(): ReadonlyArray<Readonly<NodeState>> {
+    return this.ns;
+  }
+
+  get bars(): ReadonlyArray<Readonly<Bar>> {
+    return this.bs;
+  }
+
+  /** n 遍 Gauss-Seidel 扫描（SPEC §3.2）。 */
+  iterate(n: number): void {
+    for (let i = 0; i < n; i++) this.sweepOnce();
+  }
+
+  /**
+   * 教学模式 A（SPEC §6.1）：逐遍快照。
+   * 与 iterate 共用 sweepOnce——教学展示的必须是真算法本身，不许分叉出演示版。
+   */
+  iterateWithHistory(n: number): IterationSnapshot[] {
+    const out: IterationSnapshot[] = [];
+    for (let i = 0; i < n; i++) {
+      this.sweepOnce();
+      out.push({
+        positions: this.ns.map((p) => ({ x: p.x, y: p.y })),
+        maxError: this.maxError(),
+      });
+    }
+    return out;
+  }
+
+  /** 残差 max |dᵢ − restᵢ|，px（SPEC §3.2）。 */
+  maxError(): number {
+    let m = 0;
+    for (const { a, b, rest } of this.bs) {
+      const e = Math.abs(
+        Math.hypot(this.ns[b].x - this.ns[a].x, this.ns[b].y - this.ns[a].y) - rest,
+      );
+      if (e > m) m = e;
+    }
+    return m;
+  }
+
+  /** fixed 节点上调用是 no-op（SPEC §4.1 契约，测试锁定）。 */
+  beginDrag(nodeIndex: number): void {
+    const n = this.ns[nodeIndex];
+    if (n.fixed) return;
+    this.dragIndex = nodeIndex;
+    this.dragX = n.x;
+    this.dragY = n.y;
+  }
+
+  /** 只更新软目标，不直接动节点——拉力必须和投影逐遍交错（SPEC §3.3）。 */
+  dragTo(x: number, y: number): void {
+    this.dragX = x;
+    this.dragY = y;
+  }
+
+  endDrag(): void {
+    this.dragIndex = -1;
+  }
+
+  setFixed(nodeIndex: number, fixed: boolean): void {
+    this.ns[nodeIndex].fixed = fixed;
+  }
+
+  setNode(nodeIndex: number, x: number, y: number): void {
+    this.ns[nodeIndex].x = x;
+    this.ns[nodeIndex].y = y;
+  }
+
+  /** 一遍扫描：软拖拽注入 → 顺序投影全部杆。iterate / iterateWithHistory 的唯一实现体。 */
+  private sweepOnce(): void {
+    if (this.dragIndex >= 0) {
+      const d = this.ns[this.dragIndex];
+      if (!d.fixed) {
+        d.x += (this.dragX - d.x) * DRAG_ALPHA;
+        d.y += (this.dragY - d.y) * DRAG_ALPHA;
+      }
+    }
+    for (const { a, b, rest } of this.bs) {
+      const A = this.ns[a];
+      const B = this.ns[b];
+      const dx = B.x - A.x;
+      const dy = B.y - A.y;
+      const d = Math.hypot(dx, dy) || EPS;
+      const k = (d - rest) / d;
+      const wa = A.fixed ? 0 : 1;
+      const wb = B.fixed ? 0 : 1;
+      const ws = wa + wb;
+      if (!ws) continue;
+      // 最小位移投影（SPEC §3.1）：修正沿杆轴，按逆质量份额分配，单杆一步精确。
+      A.x += dx * k * (wa / ws);
+      A.y += dy * k * (wa / ws);
+      B.x -= dx * k * (wb / ws);
+      B.y -= dy * k * (wb / ws);
+    }
+  }
+}

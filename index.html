@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Linkage — M1 验收页</title>
+    <style>
+      body {
+        margin: 0;
+        background: #fafaf7;
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+      }
+      /* SPEC §5 条 1：SVG presentation attribute 不解析 var()，颜色一律走 class */
+      svg {
+        width: min(92vw, 760px);
+        touch-action: none; /* SPEC §4.3 坑 4 */
+      }
+      .bar {
+        stroke: #1f1f1d;
+        stroke-width: 2.5;
+        stroke-linecap: round;
+      }
+      .joint-fixed {
+        fill: #1f1f1d;
+      }
+      .joint-free {
+        fill: #ffffff;
+        stroke: #2456a6;
+        stroke-width: 2;
+        cursor: grab;
+      }
+      .hud {
+        font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        fill: #8a8a82;
+      }
+    </style>
+  </head>
+  <body>
+    <svg id="fig" viewBox="0 0 700 520" xmlns="http://www.w3.org/2000/svg"></svg>
+    <script type="module" src="/src/demo/main.ts"></script>
+  </body>
+</html>

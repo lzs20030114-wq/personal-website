@@ -10,9 +10,9 @@
 
 ## 当前状态（2026-07-07）
 
-- Session 1 完成：LINKAGE_SPEC.md v1.1（含评审修订），已获用户批准进入 Session 2。
-- **Session 2 待做**（spec §8.0 + §8.1 M1）：`git init` + Vite/Vitest 最轻环境 + `src/lib/linkage/` 零依赖求解器 + 单测 + vanilla TS 验收页。不装 React、不装 Storybook。验收线：四杆机构，拖任一自由节点，整体刚性跟随，不抖；单测全绿。
-- 尚未 `git init`——这是 Session 2 的第一个动作。
+- Session 1 完成：LINKAGE_SPEC.md v1.1（含评审修订）。
+- **Session 2 / M1 完成**：`src/lib/linkage/`（solver / presets / trace）+ 14 项单测全绿 + typecheck 干净 + vanilla 验收页（`npm run dev`，spin/drag 状态机）。实测数字已回填 spec §3.2/§3.3/§5/§8.2——注意两处 spec 修订：maxError **非**严格单调（GS 重分配鼓包）；越界拖拽稳态残差 ≈0.2×越界距离（弹性拉扯，属预期）。
+- **下一步 Session 3（M2）**：spec §5 清单逐条落地（触屏真机手测、切后台、缩放拖拽）+ 对应测试。验收线：暴力拖拽、拖出可行域、触屏、切后台往返，均无抽搐、无瞬移、无 NaN。
 
 ## 纪律（spec §1 的摘要，冲突时以 spec 为准）
 
