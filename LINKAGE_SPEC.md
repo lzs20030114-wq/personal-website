@@ -310,7 +310,7 @@ src/components/linkage/LinkageFigure.tsx    // "use client"
    └────────────────────────── release     （release 的阻尼手感 = Session 4）
 ```
 
-- `spin`：θ += ω·dt（dt 已 clamp），B = A + 66·(cos θ, sin θ)，B 临时 fixed，`iterate(24)`，解锁。
+- `spin`：θ += ω·dt（dt 已 clamp），B = A + 66·(cos θ, sin θ)，B 临时 fixed，`iterate(24)`，解锁。**Session 4 注意**：驱动参数应随 preset 配置化（`driver: {anchor, tip, radius, omega}`），为机构画廊铺路（见 IDEAS.md），不许硬编码进渲染层。
 - `drag`：`iterate(36)`，软目标 = 指针位置。
 - `release`：Session 4 实现。意图：短暂自由阻尼后 ω 从 0 缓升到巡航值，从当前曲柄角无缝接回 spin。Session 2/3 期间 release 可直接跳回 spin（验收不含手感）。
 - `prefers-reduced-motion`：初始为静止（不自转），拖拽仍可用（用户主动发起的运动不属于「减少动画」的范畴）。
