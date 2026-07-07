@@ -10,6 +10,7 @@
 | "申请调研"、"截止日期"、"哪些学校要 PDF" | ADMISSIONS_RESEARCH.md |
 | "论点"、"生命感"、"轮回机器笔记" | THESIS_NOTES.md |
 | "轮回机器盘点"、"装置档案"、"五环参数/硬件/研究方法" | 轮回机器_盘点.md |
+| "案例页骨架"、"轮回机器页面结构"、"图目录" | 轮回机器_案例页骨架.md |
 | "点子"、"发展方向"、"画廊/余族/反问题" | IDEAS.md |
 | "路线图"、"铺路计划"、"什么给强/弱模型做" | ROADMAP.md |
 | "spec"、"规格"、"数学推导/容差/里程碑" | LINKAGE_SPEC.md |
@@ -41,6 +42,10 @@
 - **Session 2 / M1 完成**：`src/lib/linkage/`（solver / presets / trace）+ 单测全绿 + typecheck 干净 + vanilla 验收页（`npm run dev`，脚手架落地后改名 `npm run demo`——见 SITE_SPEC §2）。实测数字与两处 spec 修订均已回填 LINKAGE_SPEC（数值一律以彼为准，此处不复制）。
 - **Session 3（M2）关闭**：交互状态机抽为纯类 `LinkageController`（零 DOM、驱动参数化，vanilla 页与 React 封装共用）+ 23 项测试全绿 + 浏览器验证（含 mobile 视口缩放拖拽）。**真机触屏手测通过（2026-07-07，用户在 Vercel 部署页实测：拖拽/双指/切后台/暴力甩均无异常）**。已部署：GitHub `personal-website`（私有）→ Vercel 自动部署，push 即上线。
 - **下一步 Session 4（M3）**：耦合曲线描绘 + 工程标注/题栏 + release 阻尼接自转。**手感即论点**（THESIS_NOTES.md）——阻尼/衔接是轮回机器论点本身，优先级最高，不许当抛光砍。
+
+## 分工边界（用户拍板 2026-07-08）
+
+模型只管：**形态展示、原理展示、网页展示设计与开发**。不管用户个人日程、IRB/研究运营、实体机建造排期——不主动给排期建议、不追问进度。
 
 ## 纪律（spec §1 的摘要，冲突时以 spec 为准）
 
