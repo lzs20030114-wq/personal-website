@@ -36,8 +36,66 @@ a {
   color: inherit;
 }
 
-/* 正文中栏（SITE_SPEC §8：max-width ≈ 68ch） */
+/* 正文中栏（窄页面用：archive/about） */
 .prose-col {
   max-width: 68ch;
   margin-inline: auto;
+}
+
+/* ============ 版式 v2：桌面横屏网格（SITE_SPEC §8 v2 / LAYOUT_NOTES.md）============ */
+
+/* 内容画布：宽度给区不给字 */
+.sheet {
+  max-width: 1360px;
+  margin-inline: auto;
+  padding-inline: 40px;
+}
+@media (max-width: 640px) {
+  .sheet {
+    padding-inline: 20px;
+  }
+}
+
+/* case study 三区之外层：左粘性元数据栏 + 内容区 */
+.case-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  column-gap: 56px;
+}
+.case-rail {
+  position: sticky;
+  top: 32px;
+  align-self: start;
+}
+@media (max-width: 1023px) {
+  .case-layout {
+    display: block;
+  }
+  .case-rail {
+    position: static;
+    margin-bottom: 2.5rem;
+  }
+}
+
+/* 内容区内层：正文列（行长恒定 66ch，flush-left）+ 边缘列 */
+.flow {
+  display: grid;
+  grid-template-columns:
+    [prose-start] minmax(0, 66ch)
+    [prose-end margin-start] minmax(0, 1fr)
+    [margin-end];
+  column-gap: 48px;
+}
+.flow > * {
+  grid-column: prose;
+  min-width: 0;
+}
+/* 图三档：inline = 正文列宽（默认）；wide = 正文 + 边缘列 */
+.flow > .fig-wide {
+  grid-column: prose-start / margin-end;
+}
+@media (max-width: 1279px) {
+  .flow {
+    display: block;
+  }
 }

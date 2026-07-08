@@ -1,51 +1,40 @@
 import type { WorkEntry } from '../../src/lib/site/content';
 
-/** My Role 块——跨校硬要求，首屏可见（SITE_SPEC §9 / ADMISSIONS_RESEARCH §三.1）。 */
-export function RoleBlock({ entry }: { entry: WorkEntry }) {
+/**
+ * 左侧粘性元数据栏（版式 v2，SITE_SPEC §8）：My Role 首屏可见的载体
+ * （跨校硬要求，ADMISSIONS_RESEARCH §三.1），滚动时常驻。
+ */
+export function MetaRail({ entry }: { entry: WorkEntry }) {
+  const label = (t: string) => (
+    <div className="mono mb-1 mt-5 text-[10px] tracking-widest first:mt-0" style={{ color: 'var(--graphite)' }}>
+      {t}
+    </div>
+  );
   return (
-    <section className="hairline-t mt-6 pt-4">
-      <div className="grid gap-4 text-sm sm:grid-cols-3">
-        <div>
-          <div className="mono mb-1 text-[10px] tracking-widest" style={{ color: 'var(--graphite)' }}>
-            MY ROLE
-          </div>
+    <div className="text-sm">
+      {label('MY ROLE')}
+      <ul className="list-none space-y-0.5 p-0">
+        {entry.role.map((r) => (
+          <li key={r}>{r}</li>
+        ))}
+      </ul>
+      {label('DATE')}
+      {entry.date}
+      {entry.credits && entry.credits.length > 0 && (
+        <>
+          {label('CREDITS')}
           <ul className="list-none space-y-0.5 p-0">
-            {entry.role.map((r) => (
-              <li key={r}>{r}</li>
+            {entry.credits.map((c) => (
+              <li key={c.name}>
+                {c.name} — {c.role}
+              </li>
             ))}
           </ul>
-        </div>
-        <div>
-          <div className="mono mb-1 text-[10px] tracking-widest" style={{ color: 'var(--graphite)' }}>
-            DATE
-          </div>
-          {entry.date}
-          {entry.credits && entry.credits.length > 0 && (
-            <>
-              <div
-                className="mono mt-3 mb-1 text-[10px] tracking-widest"
-                style={{ color: 'var(--graphite)' }}
-              >
-                CREDITS
-              </div>
-              <ul className="list-none space-y-0.5 p-0">
-                {entry.credits.map((c) => (
-                  <li key={c.name}>
-                    {c.name} — {c.role}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
-        <div>
-          <div className="mono mb-1 text-[10px] tracking-widest" style={{ color: 'var(--graphite)' }}>
-            TOOLS
-          </div>
-          {entry.tools?.join(' · ') ?? '—'}
-        </div>
-      </div>
-    </section>
+        </>
+      )}
+      {label('TOOLS')}
+      <div style={{ color: 'var(--graphite)' }}>{entry.tools?.join(' · ') ?? '—'}</div>
+    </div>
   );
 }
 

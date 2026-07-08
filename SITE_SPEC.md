@@ -95,7 +95,13 @@ const WorkEntry = z.object({
 
 - CSS 变量：`--paper #FAFAF7`、`--ink #1F1F1D`、`--graphite #8A8A82`、`--trace-blue #2456A6`、`--hairline #D9D9D1`。
 - 字体：标注/数据 = `ui-monospace` 栈；正文 = serif 栈（Iowan Old Style, Palatino, 'Songti SC', serif）；正文 17–18px / 行高 1.6。
-- 版式：单中栏 `max-width ≈ 68ch`；图框 = 发丝线边 + 点阵网格衬底（只用于 figure，不铺全页）；题栏（FIG. NN / 参数 / 读数）用 mono。
+- **版式 v2（2026-07-08 拍板：桌面横屏优先，依据 LAYOUT_NOTES.md）**：
+  - 第一定律：**行长恒定（62–68ch），宽度给区不给字**。
+  - 内容画布 max-width ≈ 1360px；case study 三区网格（≥1280px）：左粘性元数据栏 ~260px（My Role/date/tools）+ 正文列 flush-left + 边缘列（图注/旁注）；1024–1280 两区；<1024 单列回落（移动端必须仍可用）。
+  - 图三档宽度：`inline` / `wide`（正文+边缘）/ `full`（整内容区）；对比双图横向并置。
+  - 首页 hero 分屏（文 + FIG.01 左右分置）；项目索引 = 图纸清单式多列行。
+  - 横向滚动禁止用于主内容。动效克制条款不变——取桌面布局结构，弃 awwwards 式表演。
+- 图框 = 发丝线边 + 点阵网格衬底（只用于 figure，不铺全页）；题栏（FIG. NN / 参数 / 读数）用 mono。
 - ★ SVG 颜色坑（LINKAGE_SPEC §5 条 1）：presentation attribute 不解析 `var()`——SVG 内颜色一律 class/style。**站点模板同样受此约束。**
 
 ## 9. Case study 模板与合规结构（来自 ADMISSIONS_RESEARCH，模板级落实）

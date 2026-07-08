@@ -23,20 +23,27 @@ function StatusChip({ status }: { status: SlotStatus }) {
   );
 }
 
+/** 图宽三档（SITE_SPEC §8 v2）：inline = 正文列宽（默认）；wide = 正文 + 边缘列。 */
+export type SlotSize = 'inline' | 'wide';
+
+const sizeClass = (size?: SlotSize) => (size === 'wide' ? ' fig-wide' : '');
+
 /** 图插槽：FIG 编号 + 说明 + 状态。ratio 如 "700/520"。 */
 export function FigSlot({
   id,
   caption,
   status,
   ratio = '16/9',
+  size,
 }: {
   id: string;
   caption: string;
   status: SlotStatus;
   ratio?: string;
+  size?: SlotSize;
 }) {
   return (
-    <figure className="my-8">
+    <figure className={`my-8${sizeClass(size)}`}>
       <div
         className="figframe flex items-center justify-center"
         style={{ aspectRatio: ratio }}
@@ -60,14 +67,16 @@ export function VideoSlot({
   caption,
   status,
   src,
+  size,
 }: {
   id: string;
   caption: string;
   status: SlotStatus;
   src?: string;
+  size?: SlotSize;
 }) {
   return (
-    <figure className="my-8">
+    <figure className={`my-8${sizeClass(size)}`}>
       {src ? (
         <video controls preload="metadata" className="w-full" src={src} />
       ) : (
@@ -91,13 +100,15 @@ export function InteractiveSlot({
   id,
   caption,
   status = 'M3 后挂入',
+  size,
 }: {
   id: string;
   caption: string;
   status?: SlotStatus;
+  size?: SlotSize;
 }) {
   return (
-    <figure className="my-8">
+    <figure className={`my-8${sizeClass(size)}`}>
       <div
         className="figframe flex items-center justify-center border-dashed"
         style={{ aspectRatio: '700/520', borderStyle: 'dashed' }}
