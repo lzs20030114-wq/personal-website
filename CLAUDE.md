@@ -43,6 +43,7 @@
 - **Session 2 / M1 完成**：`src/lib/linkage/`（solver / presets / trace）+ 单测全绿 + typecheck 干净 + vanilla 验收页（`npm run dev`，脚手架落地后改名 `npm run demo`——见 SITE_SPEC §2）。实测数字与两处 spec 修订均已回填 LINKAGE_SPEC（数值一律以彼为准，此处不复制）。
 - **Session 3（M2）关闭**：交互状态机抽为纯类 `LinkageController`（零 DOM、驱动参数化，vanilla 页与 React 封装共用）+ 23 项测试全绿 + 浏览器验证（含 mobile 视口缩放拖拽）。**真机触屏手测通过（2026-07-07，用户在 Vercel 部署页实测：拖拽/双指/切后台/暴力甩均无异常）**。已部署：GitHub `personal-website`（私有）→ Vercel 自动部署，push 即上线。
 - **下一步 Session 4（M3）**：耦合曲线描绘 + 工程标注/题栏 + release 阻尼接自转。**手感即论点**（THESIS_NOTES.md）——阻尼/衔接是轮回机器论点本身，优先级最高，不许当抛光砍。
+- **网站 S1+S3 完成（2026-07-08）**：Next.js 16 脚手架落地（`npm run dev`=站点 :3000，`npm run demo`=连杆台架 :5173）。内容池（zod 校验、selected 恒 4 机器强制）+ 四路由 + 占位插槽系统（FigSlot/VideoSlot/InteractiveSlot/IntentNote/ProcessAside/概念卡）+ 轮回机器八段骨架页（结构=案例页骨架，论证=总框架，素材全为带状态插槽，正文全为意图占位——**不代写正文**）。构建/typecheck/23 测试全绿。vercel.json 声明 nextjs 框架，push 即部署。余项：S2（连杆 M3 后挂 FIG.01/FIG.12）、S4（OG/check-links）。
 
 ## 可用工具
 

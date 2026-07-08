@@ -1,0 +1,43 @@
+@import 'tailwindcss';
+
+/* SITE_SPEC §8 —— 视觉 token（毛坯锁定，语言不变、数值可微调） */
+:root {
+  --paper: #fafaf7;
+  --ink: #1f1f1d;
+  --graphite: #8a8a82;
+  --trace-blue: #2456a6;
+  --hairline: #d9d9d1;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Iowan Old Style', Palatino, 'Palatino Linotype', 'Songti SC', serif;
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* 图框：发丝线边 + 点阵网格衬底（只用于 figure，不铺全页） */
+.figframe {
+  border: 1px solid var(--hairline);
+  background-image: radial-gradient(var(--hairline) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.hairline-t {
+  border-top: 1px solid var(--hairline);
+}
+
+a {
+  color: inherit;
+}
+
+/* 正文中栏（SITE_SPEC §8：max-width ≈ 68ch） */
+.prose-col {
+  max-width: 68ch;
+  margin-inline: auto;
+}
