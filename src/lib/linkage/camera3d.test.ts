@@ -23,13 +23,22 @@ describe('OrbitCamera', () => {
     expect(p.depth).toBeCloseTo(-1, 12);
   });
 
-  it('单指拖 = 轨道（按灵敏度累加），俯仰钳位 ±1.5', () => {
+  it('单指横拖 = 绕屏幕竖轴（trackball）：拖 90° 后世界 x 轴转入深度', () => {
     const c = cam0();
-    c.pointerDown(1, 100, 100);
-    c.pointerMove(1, 150, 100);
-    expect(c.yaw).toBeCloseTo(50 * 0.008, 12);
-    c.pointerMove(1, 150, -10000); // 暴力上拖
-    expect(c.pitch).toBe(1.5);
+    c.pointerDown(1, 0, 0);
+    c.pointerMove(1, Math.PI / 2 / 0.008, 0);
+    const p = c.project({ x: 1, y: 0, z: 0 });
+    expect(p.x).toBeCloseTo(0, 9);
+    expect(Math.abs(p.depth)).toBeCloseTo(1, 9);
+    c.pointerUp(1);
+  });
+
+  it('竖拖无俯仰锁：拖满 180° 可翻转到倒置（左右上下全自由）', () => {
+    const c = cam0();
+    c.pointerDown(1, 0, 0);
+    c.pointerMove(1, 0, Math.PI / 0.006); // 竖拖 180°
+    const p = c.project({ x: 0, y: 1, z: 0 });
+    expect(p.y).toBeCloseTo(-1, 9); // 倒置——v1 的 ±86° 钳位已废除
     c.pointerUp(1);
   });
 
@@ -51,16 +60,16 @@ describe('OrbitCamera', () => {
   it('空闲自转：用户首次接管后永久停止；reset 复位姿态不复活自转', () => {
     const c = cam0({ autoYaw: 1 });
     c.tick(0.5);
-    expect(c.yaw).toBeCloseTo(0.5, 12);
+    expect(c.project({ x: 1, y: 0, z: 0 }).x).toBeCloseTo(Math.cos(0.5), 12);
     c.pointerDown(1, 0, 0);
     c.pointerUp(1);
     c.tick(0.5);
-    expect(c.yaw).toBeCloseTo(0.5, 12); // 不再自转
+    expect(c.project({ x: 1, y: 0, z: 0 }).x).toBeCloseTo(Math.cos(0.5), 12); // 不再自转
     c.reset();
-    expect(c.yaw).toBe(0);
+    expect(c.project({ x: 1, y: 0, z: 0 }).x).toBeCloseTo(1, 12);
     expect(c.zoom).toBe(1);
     c.tick(0.5);
-    expect(c.yaw).toBe(0); // 主权已交出
+    expect(c.project({ x: 1, y: 0, z: 0 }).x).toBeCloseTo(1, 12); // 主权已交出
   });
 });
 

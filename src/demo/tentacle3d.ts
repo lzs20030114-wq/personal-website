@@ -75,14 +75,17 @@ function drawables(): Drawable3[] {
 }
 
 function render(): void {
-  // 基座十字（不参与深度排序，恒在底层）
-  const o = cam.project({ x: 0, y: 0, z: 0 });
-  const ax = cam.project({ x: TENTACLE3D.discR + 10, y: 0, z: 0 });
-  const az = cam.project({ x: 0, y: 0, z: TENTACLE3D.discR + 10 });
-  mountEl.setAttribute(
-    'd',
-    `M${2 * o.x - ax.x} ${2 * o.y - ax.y}L${ax.x} ${ax.y}M${2 * o.x - az.x} ${2 * o.y - az.y}L${az.x} ${az.y}`,
-  );
+  // 基座参考环 + 方位刻度（不参与深度排序，恒在底层）——旋转的视觉锚点：
+  // 轴对称机构绕竖轴转动时机构本身几乎不变样，没有参考环会读作「转不动」
+  const R = TENTACLE3D.discR + 14;
+  let d = '';
+  for (let a = 0; a <= 24; a++) {
+    const p = cam.project({ x: R * Math.cos((a * Math.PI) / 12), y: 0, z: R * Math.sin((a * Math.PI) / 12) });
+    d += `${a === 0 ? 'M' : 'L'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+  }
+  const t0 = cam.project({ x: R, y: 0, z: 0 });
+  const t1 = cam.project({ x: R + 10, y: 0, z: 0 });
+  mountEl.setAttribute('d', `${d}M${t0.x.toFixed(1)} ${t0.y.toFixed(1)}L${t1.x.toFixed(1)} ${t1.y.toFixed(1)}`);
   for (const item of projectScene(cam, drawables())) {
     const e = elems.get(item.key);
     if (!e) continue;
@@ -99,7 +102,7 @@ function render(): void {
   }
   svg.appendChild(hud);
   const c = sliders.map((s) => `${s.value}%`).join(' / ');
-  hud.textContent = `T1/T2/T3 ${c}   err ${sim.solver.maxError().toFixed(2)} px   yaw ${((cam.yaw * 180) / Math.PI).toFixed(0)}°  ×${cam.zoom.toFixed(2)}`;
+  hud.textContent = `T1/T2/T3 ${c}   err ${sim.solver.maxError().toFixed(2)} px   ×${cam.zoom.toFixed(2)}`;
 }
 
 // —— 肌肉：临界阻尼缓动 ×3 + 联动组
