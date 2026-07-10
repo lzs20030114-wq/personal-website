@@ -9,6 +9,8 @@
 """
 import rhino3dm as r
 import json, math
+import numpy as np
+from scipy.spatial import ConvexHull
 
 M = r.File3dm.Read('模型求解器参考/11.3dm')
 AXIS_Y, AXIS_Z = 0.1, 6.9
@@ -114,10 +116,14 @@ def sample_edges(xmin, xmax, x0, cap, min_len=2.0):
         total += len(pts)
     return polys, total
 
-def sample_tris(xmin, xmax, x0, cap):
-    tris = []
+GRID = 1.0  # 凸包前顶点量化（mm）：细圆柱棱数锐减，形体误差 ≤0.5mm
+
+def sample_parts(xmin, xmax, x0):
+    """逐零件凸包（不透明哑光渲染的形体单元）：{v: 局部系顶点, t: 外向定向三角}"""
+    parts = []
     for o in region_objects(xmin, xmax):
         for brep, xf in expand(o):
+            pts = []
             for fi in range(len(brep.Faces)):
                 try:
                     mesh = brep.Faces[fi].GetMesh(r.MeshType.Any)
@@ -126,34 +132,38 @@ def sample_tris(xmin, xmax, x0, cap):
                 if not mesh:
                     continue
                 V = mesh.Vertices
-                for k in range(mesh.Faces.Count):
-                    f = mesh.Faces[k]
-                    fans = [[f[0], f[1], f[2]]] if f[2] == f[3] else [[f[0], f[1], f[2]], [f[0], f[2], f[3]]]
-                    for tri in fans:
-                        pts = [xpt(xf, V[j].X, V[j].Y, V[j].Z) for j in tri]
-                        ab = [pts[1][i] - pts[0][i] for i in range(3)]
-                        ac = [pts[2][i] - pts[0][i] for i in range(3)]
-                        cr = (ab[1] * ac[2] - ab[2] * ac[1],
-                              ab[2] * ac[0] - ab[0] * ac[2],
-                              ab[0] * ac[1] - ab[1] * ac[0])
-                        area = 0.5 * math.hypot(*cr)
-                        if area < 0.4:
-                            continue
-                        tris.append((area, [local(*p_, x0) for p_ in pts]))
-    tris.sort(key=lambda t: -t[0])
-    return [t[1] for t in tris[:cap]]
+                for j in range(len(V)):
+                    pts.append(xpt(xf, V[j].X, V[j].Y, V[j].Z))
+            if len(pts) < 4:
+                continue
+            arr = np.unique(np.round(np.array(pts) / GRID) * GRID, axis=0)
+            if len(arr) < 4:
+                continue
+            try:
+                h = ConvexHull(arr)
+            except Exception:
+                continue
+            vids = list(h.vertices)
+            remap = {v: i for i, v in enumerate(vids)}
+            verts = [local(*arr[v], x0) for v in vids]
+            tris = []
+            for si, simp in enumerate(h.simplices):
+                a, b, c = (arr[simp[0]], arr[simp[1]], arr[simp[2]])
+                n_geom = np.cross(b - a, c - a)
+                if np.dot(n_geom, h.equations[si][:3]) < 0:
+                    simp = [simp[0], simp[2], simp[1]]  # 统一外向定向
+                tris.append([remap[simp[0]], remap[simp[1]], remap[simp[2]]])
+            parts.append({'v': verts, 't': tris})
+    return parts
 
-cells = []
 tri_cells = []
 for i in range(len(SX)):
-    polys, n = sample_edges(BOUNDS[i], BOUNDS[i + 1], SX[i], 500)
-    tris = sample_tris(BOUNDS[i], BOUNDS[i + 1], SX[i], 550)
-    cells.append(polys)
-    tri_cells.append(tris)
-    print(f'站 {i} 元胞 [{BOUNDS[i]:.0f},{BOUNDS[i+1]:.0f}) 边 {len(polys)} 点 {n} 三角 {len(tris)}')
-mount_polys, n = sample_edges(MOUNT_X[0], MOUNT_X[1], SX[0], 520, min_len=8.0)
-mount_tris = sample_tris(MOUNT_X[0], MOUNT_X[1], SX[0], 800)
-print(f'基座 边 {len(mount_polys)} 点 {n} 三角 {len(mount_tris)}')
+    parts = sample_parts(BOUNDS[i], BOUNDS[i + 1], SX[i])
+    tri_cells.append(parts)
+    nt = sum(len(p['t']) for p in parts)
+    print(f'站 {i} 元胞 [{BOUNDS[i]:.0f},{BOUNDS[i+1]:.0f}) 零件 {len(parts)} 三角 {nt}')
+mount_parts = sample_parts(MOUNT_X[0], MOUNT_X[1], SX[0])
+print(f'基座 零件 {len(mount_parts)} 三角 {sum(len(p["t"]) for p in mount_parts)}')
 
 stations = [sim(x, AXIS_Y, AXIS_Z, SX[0]) for x in SX]
 chains = []
@@ -162,14 +172,19 @@ for az in AZ:
     chains.append([sim(x, AXIS_Y + rr * math.cos(a), AXIS_Z + rr * math.sin(a), SX[0])
                    for x, rr in zip(SX, HOLE_R)])
 
-def fmt(polys):
-    return '[\n' + ',\n'.join(
-        '  [' + ','.join(f'[{p[0]},{p[1]},{p[2]}]' for p in poly) + ']' for poly in polys) + '\n]'
+def fmt_parts(parts):
+    out = []
+    for p in parts:
+        v = ','.join(f'[{q[0]},{q[1]},{q[2]}]' for q in p['v'])
+        t = ','.join(f'[{a},{b},{c}]' for a, b, c in p['t'])
+        out.append('  {v:[' + v + '],t:[' + t + ']}')
+    return '[\n' + ',\n'.join(out) + '\n]'
 
 ts = f"""// 由 scripts/model-extract/gen_tentacle3d.py 生成——不要手改。
 // 数据源：模型求解器参考/11.3dm（干净版触手本体，用户提供 2026-07-10）。
 // 结构：基座舵机总成 + 7 方盒椎节（节距 72→47 收锥，孔半径 10.3→4.9，
 // 三腱方位 30°/150°/270°；站 0/6 孔按收锥外推）+ 节间盘轴联接 + 梢端盖。
+// 渲染单元 = 逐零件凸包（顶点量化 {GRID}mm，三角外向定向）——不透明哑光着色。
 // 单位 mm；站 0 心为原点。
 
 export const STATIONS: ReadonlyArray<readonly [number, number, number]> = {json.dumps(stations)} as const;
@@ -178,20 +193,18 @@ export const CHAINS: ReadonlyArray<ReadonlyArray<readonly [number, number, numbe
 
 export const RADII: ReadonlyArray<number> = {json.dumps(HOLE_R)} as const;
 
-/** 每站元胞真轮廓（局部系 [沿臂 ax, 腱1 方向 u, 副法向 w]），含节间联接与梢端盖 */
-export const CELL_OUTLINES: ReadonlyArray<ReadonlyArray<ReadonlyArray<readonly [number, number, number]>>> = [
-{','.join(fmt(c) for c in cells)}
+export interface HullPart {{
+  /** 局部系顶点 [沿臂 ax, 腱1 方向 u, 副法向 w] */
+  v: ReadonlyArray<readonly [number, number, number]>;
+  /** 外向定向三角（顶点下标） */
+  t: ReadonlyArray<readonly [number, number, number]>;
+}}
+
+export const CELL_PARTS: ReadonlyArray<ReadonlyArray<HullPart>> = [
+{','.join(fmt_parts(c) for c in tri_cells)}
 ] as const;
 
-/** 基座（舵机总成）轮廓：站 0 局部系，静态锚定 */
-export const MOUNT_OUTLINE: ReadonlyArray<ReadonlyArray<readonly [number, number, number]>> = {fmt(mount_polys)} as const;
-
-/** 着色三角面（嵌入渲染网格抽样，面积降序预算；局部系同轮廓） */
-export const CELL_TRIS: ReadonlyArray<ReadonlyArray<ReadonlyArray<readonly [number, number, number]>>> = [
-{','.join(fmt(t) for t in tri_cells)}
-] as const;
-
-export const MOUNT_TRIS: ReadonlyArray<ReadonlyArray<readonly [number, number, number]>> = {fmt(mount_tris)} as const;
+export const MOUNT_PARTS: ReadonlyArray<HullPart> = {fmt_parts(mount_parts)} as const;
 """
 open('src/lib/linkage/tentacle3d-shape.ts', 'w').write(ts)
 print('生成 tentacle3d-shape.ts', len(ts), '字节')

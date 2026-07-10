@@ -5,15 +5,14 @@ import {
   applyContraction3,
   createTentacle3,
 } from '../lib/linkage/tentacle3d-data';
-import { CELL_OUTLINES, CELL_TRIS, MOUNT_OUTLINE, MOUNT_TRIS, RADII } from '../lib/linkage/tentacle3d-shape';
-import { OrbitCamera } from '../lib/linkage/camera3d';
-import { projectScene, type Drawable3 } from '../lib/linkage/scene3d';
+import { CELL_PARTS, MOUNT_PARTS, RADII, type HullPart } from '../lib/linkage/tentacle3d-shape';
+import { OrbitCamera, type Projected } from '../lib/linkage/camera3d';
 import { CriticallyDamped } from '../lib/linkage/motion';
 
-// 立体触手台架（立体求解器 spec，交互 v2 / 架构 v3——空间机制复用化）：
-// 相机、场景投影、肌肉缓动全部来自 lib 公共装备（camera3d / scene3d / motion），
-// 本文件只剩：实例数据、滑块/联动/归位接线、SVG 元素贴附。
-// 加新 3D 机构 = 新数据实例 + 新台架页（对标 2D 的拱环先例），不改装备。
+// 立体触手台架（立体求解器 spec v5，渲染 v3——不透明哑光零件渲染）：
+// 形体单元 = 逐零件凸包（无洞、水密），不透明填充 + 逐零件画家排序 + 背面剔除
+// ——半透明三角汤的「破碎感」由此消除（用户实测否决，2026-07-10）。
+// 交互不变：trackball 相机 / 三肌腱滑块 + 联动 / 放松 / 归位 / 视角归位。
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const svg = document.getElementById('fig') as unknown as SVGSVGElement;
@@ -39,69 +38,34 @@ const cam = new OrbitCamera({
   autoYaw: reducedMotion ? 0 : 0.15,
 });
 
-// —— SVG 元素：按 drawable key 建一次，帧内只改属性与叠序
+// 视空间光源与哑光灰阶（纸-墨系）
+const LX = -0.42;
+const LY = -0.52;
+const LZ = 0.74;
+const RAMP = [
+  '#4e4e48', '#5d5d56', '#6c6c64', '#7b7b73', '#8b8b82', '#9a9a91',
+  '#a9a9a0', '#b8b8af', '#c7c7be', '#d6d6cd', '#e4e4dc', '#f2f2ea',
+];
+
 function el<K extends keyof SVGElementTagNameMap>(tag: K, cls = ''): SVGElementTagNameMap[K] {
   const e = document.createElementNS(SVG_NS, tag);
   if (cls) e.setAttribute('class', cls);
   svg.appendChild(e);
   return e;
 }
-const mountEl = el('path', 'ground');
-const elems = new Map<string, SVGElement>();
-for (let i = 0; i < N; i++) {
-  elems.set(`sp${i}`, el('line', 'spine'));
-  for (let k = 0; k < 3; k++) elems.set(`t${k}-${i}`, el('line', `tendon tendon-${k}`));
-}
-// 着色档（半透明平面着色，用户拍板 2026-07-10）：明暗 6 档 × (5 胞 + 基座)
-const BANDS = 6;
-const SHADE_COLORS = ['#3c3c38', '#5c5c55', '#7d7d75', '#a0a097', '#c4c4bb', '#e6e6de'];
-const shadeEls = new Map<string, SVGPathElement[]>();
-for (let i = 0; i <= N; i++) {
-  const arr: SVGPathElement[] = [];
-  for (let b = 0; b < BANDS; b++) {
-    const e = el('path', 'shade');
-    e.setAttribute('fill', SHADE_COLORS[b]);
-    arr.push(e);
-  }
-  shadeEls.set(`v${i}`, arr);
-}
-{
-  const arr: SVGPathElement[] = [];
-  for (let b = 0; b < BANDS; b++) {
-    const e = el('path', 'shade');
-    e.setAttribute('fill', SHADE_COLORS[b]);
-    arr.push(e);
-  }
-  shadeEls.set('mnt', arr);
-}
-for (let i = 0; i <= N; i++) elems.set(`v${i}`, el('path', 'disc'));
-elems.set('mnt', el('path', 'mount'));
-// 视空间光源（正交投影下 depth 越大越近）
-const LX = -0.42, LY = -0.52, LZ = 0.74;
+
+const ringEl = el('path', 'ground');
+const spineEls = Array.from({ length: N }, () => el('line', 'spine'));
+const tendonEls = [0, 1, 2].map((k) =>
+  Array.from({ length: N }, () => el('line', `tendon tendon-${k}`)),
+);
+// 零件 path：胞 × 零件 + 基座零件
+const partEls: SVGPathElement[][] = CELL_PARTS.map((parts) => parts.map(() => el('path', 'part')));
+const mountEls: SVGPathElement[] = MOUNT_PARTS.map(() => el('path', 'part'));
 const hud = el('text', 'hud');
 hud.setAttribute('x', '16');
 hud.setAttribute('y', '504');
 
-function drawables(): Drawable3[] {
-  const nodes = sim.solver.nodes;
-  const out: Drawable3[] = [];
-  for (let i = 0; i < N; i++) {
-    out.push({ key: `sp${i}`, points: [nodes[SPINE3(i)], nodes[SPINE3(i + 1)]] });
-    for (let k = 0; k < 3; k++) {
-      out.push({ key: `t${k}-${i}`, points: [nodes[GUIDE3(k, i)], nodes[GUIDE3(k, i + 1)]] });
-    }
-  }
-  // 椎节元胞线框：深度锚在站心（路径本体在 render 里按局部刚架变换生成）
-  for (let i = 0; i <= N; i++) out.push({ key: `v${i}`, points: [nodes[SPINE3(i)]] });
-  out.push({ key: 'mnt', points: [nodes[SPINE3(0)]] }); // 基座总成挂站 0（锚定）
-  return out;
-}
-
-/**
- * 椎节局部刚架 → 世界 → 投影路径。局部系 = 提取时的 [沿臂 ax, 腱1 方向 u, 副法向 w]；
- * 运行时刚架由求解器节点重建：û = 邻站切向，ê1 = 腱1 导点方向（去轴向分量），
- * ê2 = ê1 × û（坐标映射为奇置换，故用反手性叉积）。缩放 = 该站相对代表件的比例。
- */
 interface Frame {
   o: { x: number; y: number; z: number };
   ux: number; uy: number; uz: number;
@@ -134,13 +98,14 @@ function cellFrame(i: number): Frame {
   ex /= el2;
   ey /= el2;
   ez /= el2;
+  // 坐标映射为奇置换 → 反手性叉积
   const fx = ey * uz - ez * uy;
   const fy = ez * ux - ex * uz;
   const fz = ex * uy - ey * ux;
   return { o, ux, uy, uz, ex, ey, ez, fx, fy, fz };
 }
 
-function projLocal(fr: Frame, ax: number, u: number, w: number): ReturnType<typeof cam.project> {
+function projLocal(fr: Frame, ax: number, u: number, w: number): Projected {
   return cam.project({
     x: fr.o.x + (ax * fr.ux + u * fr.ex + w * fr.fx),
     y: fr.o.y + (ax * fr.uy + u * fr.ey + w * fr.fy),
@@ -148,75 +113,93 @@ function projLocal(fr: Frame, ax: number, u: number, w: number): ReturnType<type
   });
 }
 
-function discPath(i: number, fr: Frame): string {
-  const outline = i < 0 ? MOUNT_OUTLINE : CELL_OUTLINES[i];
-  let d = '';
-  for (const poly of outline) {
-    for (let j = 0; j < poly.length; j++) {
-      const [ax, u, w] = poly[j];
-      const p = projLocal(fr, ax, u, w);
-      d += `${j === 0 ? 'M' : 'L'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
-    }
-  }
-  return d;
+interface Item {
+  e: SVGElement;
+  depth: number;
 }
+const items: Item[] = [];
+const scratch: Projected[] = [];
 
-/** 半透明平面着色：三角面投影 → 视空间法向 |n·L| 分档合并（双面着色免翻面陷阱）。 */
-function shadeBands(i: number, fr: Frame): string[] {
-  const tris = i < 0 ? MOUNT_TRIS : CELL_TRIS[i];
-  const bands = new Array<string>(BANDS).fill('');
-  for (const t of tris) {
-    const p0 = projLocal(fr, t[0][0], t[0][1], t[0][2]);
-    const p1 = projLocal(fr, t[1][0], t[1][1], t[1][2]);
-    const p2 = projLocal(fr, t[2][0], t[2][1], t[2][2]);
+/** 零件：凸包投影 → 背面剔除 → 可见面拼 path + 面积加权 lambert 定灰阶。 */
+function renderPart(part: HullPart, fr: Frame, e: SVGPathElement): void {
+  const nv = part.v.length;
+  let depthSum = 0;
+  for (let i = 0; i < nv; i++) {
+    const p = projLocal(fr, part.v[i][0], part.v[i][1], part.v[i][2]);
+    scratch[i] = p;
+    depthSum += p.depth;
+  }
+  let d = '';
+  let areaSum = 0;
+  let lambSum = 0;
+  for (const t of part.t) {
+    const p0 = scratch[t[0]];
+    const p1 = scratch[t[1]];
+    const p2 = scratch[t[2]];
     const ax = p1.x - p0.x, ay = p1.y - p0.y, az = p1.depth - p0.depth;
     const bx = p2.x - p0.x, by = p2.y - p0.y, bz = p2.depth - p0.depth;
-    const nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx;
+    const nx = ay * bz - az * by;
+    const ny = az * bx - ax * bz;
+    const nz = ax * by - ay * bx;
+    if (nz <= 0) continue; // 背面剔除（凸包外向定向）
     const nl = Math.hypot(nx, ny, nz) || 1;
-    const lam = Math.abs((nx * LX + ny * LY + nz * LZ) / nl);
-    const b = Math.min(BANDS - 1, Math.floor((0.15 + 0.85 * lam) * BANDS));
-    bands[b] += `M${p0.x.toFixed(1)} ${p0.y.toFixed(1)}L${p1.x.toFixed(1)} ${p1.y.toFixed(1)}L${p2.x.toFixed(1)} ${p2.y.toFixed(1)}Z`;
+    const area = nl / 2;
+    lambSum += area * Math.abs((nx * LX + ny * LY + nz * LZ) / nl);
+    areaSum += area;
+    d += `M${p0.x.toFixed(1)} ${p0.y.toFixed(1)}L${p1.x.toFixed(1)} ${p1.y.toFixed(1)}L${p2.x.toFixed(1)} ${p2.y.toFixed(1)}Z`;
   }
-  return bands;
+  if (!d) {
+    e.setAttribute('d', 'M0 0');
+    return;
+  }
+  const lam = areaSum ? lambSum / areaSum : 0.5;
+  e.setAttribute('d', d);
+  e.setAttribute('fill', RAMP[Math.min(RAMP.length - 1, Math.round((0.12 + 0.88 * lam) * (RAMP.length - 1)))]);
+  items.push({ e, depth: depthSum / nv });
 }
 
 function render(): void {
-  // 基座参考环 + 方位刻度（不参与深度排序，恒在底层）——旋转的视觉锚点：
-  // 轴对称机构绕竖轴转动时机构本身几乎不变样，没有参考环会读作「转不动」
-  const R = RADII[0] + 14; // 根部真机孔半径外扩一圈
-  let d = '';
+  const nodes = sim.solver.nodes;
+  items.length = 0;
+  // 基座参考环（恒在底层）
+  const R = RADII[0] + 14;
+  let rd = '';
   for (let a = 0; a <= 24; a++) {
     const p = cam.project({ x: R * Math.cos((a * Math.PI) / 12), y: 0, z: R * Math.sin((a * Math.PI) / 12) });
-    d += `${a === 0 ? 'M' : 'L'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+    rd += `${a === 0 ? 'M' : 'L'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
   }
-  const t0 = cam.project({ x: R, y: 0, z: 0 });
-  const t1 = cam.project({ x: R + 10, y: 0, z: 0 });
-  mountEl.setAttribute('d', `${d}M${t0.x.toFixed(1)} ${t0.y.toFixed(1)}L${t1.x.toFixed(1)} ${t1.y.toFixed(1)}`);
-  for (const item of projectScene(cam, drawables())) {
-    const e = elems.get(item.key);
-    if (!e) continue;
-    if (item.key === 'mnt' || item.key[0] === 'v') {
-      const ci = item.key === 'mnt' ? -1 : Number(item.key.slice(1));
-      const fr = cellFrame(ci);
-      const bands = shadeBands(ci, fr);
-      const bandEls = shadeEls.get(item.key);
-      if (bandEls) {
-        for (let b = 0; b < BANDS; b++) {
-          bandEls[b].setAttribute('d', bands[b] || 'M0 0');
-          bandEls[b].setAttribute('opacity', String(item.opacity));
-          svg.appendChild(bandEls[b]);
-        }
-      }
-      e.setAttribute('d', discPath(ci, fr));
-    } else {
-      e.setAttribute('x1', String(item.pts[0].x));
-      e.setAttribute('y1', String(item.pts[0].y));
-      e.setAttribute('x2', String(item.pts[1].x));
-      e.setAttribute('y2', String(item.pts[1].y));
+  ringEl.setAttribute('d', rd);
+  // 线元素：脊柱 + 肌腱
+  for (let i = 0; i < N; i++) {
+    const a = cam.project(nodes[SPINE3(i)]);
+    const b = cam.project(nodes[SPINE3(i + 1)]);
+    spineEls[i].setAttribute('x1', String(a.x));
+    spineEls[i].setAttribute('y1', String(a.y));
+    spineEls[i].setAttribute('x2', String(b.x));
+    spineEls[i].setAttribute('y2', String(b.y));
+    items.push({ e: spineEls[i], depth: (a.depth + b.depth) / 2 });
+    for (let k = 0; k < 3; k++) {
+      const ga = cam.project(nodes[GUIDE3(k, i)]);
+      const gb = cam.project(nodes[GUIDE3(k, i + 1)]);
+      const e = tendonEls[k][i];
+      e.setAttribute('x1', String(ga.x));
+      e.setAttribute('y1', String(ga.y));
+      e.setAttribute('x2', String(gb.x));
+      e.setAttribute('y2', String(gb.y));
+      items.push({ e, depth: (ga.depth + gb.depth) / 2 });
     }
-    e.setAttribute('opacity', String(item.opacity));
-    svg.appendChild(e); // 远 → 近重排
   }
+  // 零件：7 胞 + 基座（基座挂站 0 刚架）
+  for (let ci = 0; ci <= N; ci++) {
+    const fr = cellFrame(ci);
+    const parts = CELL_PARTS[ci];
+    for (let j = 0; j < parts.length; j++) renderPart(parts[j], fr, partEls[ci][j]);
+  }
+  const mfr = cellFrame(-1);
+  for (let j = 0; j < MOUNT_PARTS.length; j++) renderPart(MOUNT_PARTS[j], mfr, mountEls[j]);
+  // 画家排序（远 → 近）
+  items.sort((a, b) => a.depth - b.depth);
+  for (const it of items) svg.appendChild(it.e);
   svg.appendChild(hud);
   const c = sliders.map((s) => `${s.value}%`).join(' / ');
   hud.textContent = `T1/T2/T3 ${c}   err ${sim.solver.maxError().toFixed(2)} px   ×${cam.zoom.toFixed(2)}`;
@@ -242,7 +225,6 @@ linkBtns.forEach((btn, i) => {
   btn.addEventListener('click', () => {
     linkPair = PAIRS[i];
     linkBtns.forEach((b, j) => b.classList.toggle('active', j === i));
-    // 选中即对齐：组内双腱同步到较大目标值，弯向夹角平分方向
     if (linkPair) {
       setTarget(linkPair[0], Math.max(muscles[linkPair[0]].target, muscles[linkPair[1]].target));
     }
