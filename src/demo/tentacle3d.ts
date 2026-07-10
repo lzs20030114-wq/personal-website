@@ -127,15 +127,31 @@ function render(): void {
   hud.textContent = `T1/T2/T3 ${c}   err ${solver.maxError().toFixed(2)} px   yaw ${((yaw * 180) / Math.PI).toFixed(0)}°`;
 }
 
-// —— 收缩控制
-function applySliders(): void {
-  sliders.forEach((s, k) => applyContraction3(solver, tendons[k], Number(s.value) / 100));
-}
-sliders.forEach((s) => s.addEventListener('input', applySliders));
+// —— 收缩控制：滑块只定目标，实际收缩值限速渐变（真肌肉不瞬移——
+// rest 跳变会给 Verlet 动量层注入冲击，表现为抽搐/过冲，用户实测拍板修正）
+const MUSCLE_RATE = 1.2; // 满程收缩 ≈0.83s
+const target = [0, 0, 0];
+const actual = [0, 0, 0];
+sliders.forEach((s, k) =>
+  s.addEventListener('input', () => {
+    target[k] = Number(s.value) / 100;
+  }),
+);
 relaxBtn.addEventListener('click', () => {
-  sliders.forEach((s) => (s.value = '0'));
-  applySliders();
+  sliders.forEach((s, k) => {
+    s.value = '0';
+    target[k] = 0;
+  });
 });
+function easeMuscles(dt: number): void {
+  for (let k = 0; k < 3; k++) {
+    const d = target[k] - actual[k];
+    if (d === 0) continue;
+    const step = Math.sign(d) * Math.min(Math.abs(d), MUSCLE_RATE * dt);
+    actual[k] += step;
+    applyContraction3(solver, tendons[k], actual[k]);
+  }
+}
 
 // —— 视角拖拽（不动模型）。pointer capture + pointercancel 同路（SPEC §4.3 惯例）
 let orbiting = -1;
@@ -171,6 +187,7 @@ function frameLoop(now: number): void {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
   if (orbiting < 0) yaw += AUTO_YAW * dt;
+  easeMuscles(dt);
   solver.step(dt, TENTACLE3D.sweeps);
   render();
   requestAnimationFrame(frameLoop);

@@ -18,7 +18,9 @@ export const TENTACLE3D = {
   tendonK: 0.12,
   tendonMult: [3.3, 1, 1, 1.2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3],
   contractionFloor: 0.4,
-  dynamics: { gravity: { x: 0, y: 900, z: 0 }, damping: 0.998 } satisfies Dynamics3Config,
+  /** fascia 抗扭斜杆刚度（3D-M3 修正：无它则扭转沿臂累积，单腱收缩卷成螺旋——用户实测） */
+  fasciaK: 0.1,
+  dynamics: { gravity: { x: 0, y: 900, z: 0 }, damping: 0.992 } satisfies Dynamics3Config,
   sweeps: 30,
 } as const;
 
@@ -81,6 +83,27 @@ export function makeTentacle3Model(): Tentacle3Model {
       bars.push({ a: GUIDE3(k, i), b: SPINE3(i), rest: discR });
       bars.push({ a: GUIDE3(k, i), b: SPINE3(ref), rest: hyp });
       bars.push({ a: GUIDE3(k, i), b: GUIDE3((k + 1) % N_TENDONS, i), rest: chord });
+    }
+  }
+  // fascia 抗扭斜杆（双手性交叉，每隙 6 根软杆）：扭转使全部斜杆同向变长/变短
+  // → 强抗扭；弯曲使其差动变化 → 弱且近各向同性的阻力。不加则扭转自由度
+  // 无约束，收缩的弯矩方向逐节旋转、单腱收缩卷成螺旋（用户实测，3D-M3）。
+  const diag = Math.hypot(chord, segLen);
+  for (let i = 0; i < segments; i++) {
+    for (let j = 0; j < N_TENDONS; j++) {
+      const k = (i + j) % N_TENDONS;
+      bars.push({
+        a: GUIDE3(k, i),
+        b: GUIDE3((k + 1) % N_TENDONS, i + 1),
+        rest: diag,
+        stiffness: TENTACLE3D.fasciaK,
+      });
+      bars.push({
+        a: GUIDE3(k, i),
+        b: GUIDE3((k + 2) % N_TENDONS, i + 1),
+        rest: diag,
+        stiffness: TENTACLE3D.fasciaK,
+      });
     }
   }
   // 肌腱：相邻椎盘同名导点间的软杆链，顺序逐段轮换

@@ -77,8 +77,10 @@ describe('立体肌腱触手', () => {
     const a = TENTACLE3D.azimuths[k];
     const along = Math.cos(a) * tip.x + Math.sin(a) * tip.z;
     const perp = -Math.sin(a) * tip.x + Math.cos(a) * tip.z;
-    expect(along).toBeGreaterThan(70); // 实测 83–126
-    expect(Math.abs(perp)).toBeLessThan(along); // 方位主导；横向漂移为已知 GS 扭转偏差
+    expect(along).toBeGreaterThan(70); // fascia 后实测 ≈126
+    // fascia 抗扭后单腱收缩必须是平面 C 弯（3D-M3 修正）：c=0.5 实测横向 ≈1px，
+    // 无 fascia 时为 −38~−44（螺旋，用户实测否决）
+    expect(Math.abs(perp)).toBeLessThan(20);
   });
 
   it('放松 15s 回直（|x|、|z| < 10，实测 ≈3）', () => {
