@@ -5,6 +5,7 @@ import {
   applyContraction3,
   createTentacle3,
 } from '../lib/linkage/tentacle3d-data';
+import { FAMILY, OUTLINE_BIG, OUTLINE_SMALL, RADII, SCALES } from '../lib/linkage/tentacle3d-shape';
 import { OrbitCamera } from '../lib/linkage/camera3d';
 import { projectScene, type Drawable3 } from '../lib/linkage/scene3d';
 import { CriticallyDamped } from '../lib/linkage/motion';
@@ -31,8 +32,8 @@ const N = TENTACLE3D.segments;
 const cam = new OrbitCamera({
   cx: 350,
   cy: 250,
-  pivot: { x: 0, y: 150, z: 0 },
-  scale: 1.25,
+  pivot: { x: 0, y: 125, z: 0 }, // 真机臂长 ≈250mm，枢轴取中段
+  scale: 1.4,
   yaw0: 0.6,
   pitch0: -0.28,
   autoYaw: reducedMotion ? 0 : 0.15,
@@ -51,7 +52,7 @@ for (let i = 0; i < N; i++) {
   elems.set(`sp${i}`, el('line', 'spine'));
   for (let k = 0; k < 3; k++) elems.set(`t${k}-${i}`, el('line', `tendon tendon-${k}`));
 }
-for (let i = 0; i <= N; i++) elems.set(`d${i}`, el('polygon', 'disc'));
+for (let i = 0; i <= N; i++) elems.set(`v${i}`, el('path', 'disc'));
 const hud = el('text', 'hud');
 hud.setAttribute('x', '16');
 hud.setAttribute('y', '504');
@@ -65,19 +66,64 @@ function drawables(): Drawable3[] {
       out.push({ key: `t${k}-${i}`, points: [nodes[GUIDE3(k, i)], nodes[GUIDE3(k, i + 1)]] });
     }
   }
-  for (let i = 0; i <= N; i++) {
-    out.push({
-      key: `d${i}`,
-      points: [nodes[GUIDE3(0, i)], nodes[GUIDE3(1, i)], nodes[GUIDE3(2, i)]],
-    });
-  }
+  // 椎节线框：深度锚在站心（路径本体在 render 里按局部刚架变换生成）
+  for (let i = 0; i <= N; i++) out.push({ key: `v${i}`, points: [nodes[SPINE3(i)]] });
   return out;
+}
+
+/**
+ * 椎节局部刚架 → 世界 → 投影路径。局部系 = 提取时的 [沿臂 ax, 腱1 方向 u, 副法向 w]；
+ * 运行时刚架由求解器节点重建：û = 邻站切向，ê1 = 腱1 导点方向（去轴向分量），
+ * ê2 = ê1 × û（坐标映射为奇置换，故用反手性叉积）。缩放 = 该站相对代表件的比例。
+ */
+function discPath(i: number): string {
+  const nodes = sim.solver.nodes;
+  const o = nodes[SPINE3(i)];
+  const nA = nodes[SPINE3(Math.max(0, i - 1))];
+  const nB = nodes[SPINE3(Math.min(N, i + 1))];
+  let ux = nB.x - nA.x;
+  let uy = nB.y - nA.y;
+  let uz = nB.z - nA.z;
+  const ul = Math.hypot(ux, uy, uz) || 1;
+  ux /= ul;
+  uy /= ul;
+  uz /= ul;
+  const g = nodes[GUIDE3(0, i)];
+  let ex = g.x - o.x;
+  let ey = g.y - o.y;
+  let ez = g.z - o.z;
+  const dot = ex * ux + ey * uy + ez * uz;
+  ex -= dot * ux;
+  ey -= dot * uy;
+  ez -= dot * uz;
+  const el2 = Math.hypot(ex, ey, ez) || 1;
+  ex /= el2;
+  ey /= el2;
+  ez /= el2;
+  const fx = ey * uz - ez * uy;
+  const fy = ez * ux - ex * uz;
+  const fz = ex * uy - ey * ux;
+  const s = SCALES[i];
+  const outline = FAMILY[i] === 'big' ? OUTLINE_BIG : OUTLINE_SMALL;
+  let d = '';
+  for (const poly of outline) {
+    for (let j = 0; j < poly.length; j++) {
+      const [ax, u, w] = poly[j];
+      const p = cam.project({
+        x: o.x + s * (ax * ux + u * ex + w * fx),
+        y: o.y + s * (ax * uy + u * ey + w * fy),
+        z: o.z + s * (ax * uz + u * ez + w * fz),
+      });
+      d += `${j === 0 ? 'M' : 'L'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+    }
+  }
+  return d;
 }
 
 function render(): void {
   // 基座参考环 + 方位刻度（不参与深度排序，恒在底层）——旋转的视觉锚点：
   // 轴对称机构绕竖轴转动时机构本身几乎不变样，没有参考环会读作「转不动」
-  const R = TENTACLE3D.discR + 14;
+  const R = RADII[0] + 14; // 根部真机孔半径外扩一圈
   let d = '';
   for (let a = 0; a <= 24; a++) {
     const p = cam.project({ x: R * Math.cos((a * Math.PI) / 12), y: 0, z: R * Math.sin((a * Math.PI) / 12) });
@@ -89,13 +135,13 @@ function render(): void {
   for (const item of projectScene(cam, drawables())) {
     const e = elems.get(item.key);
     if (!e) continue;
-    if (item.pts.length === 2) {
+    if (item.key[0] === 'v') {
+      e.setAttribute('d', discPath(Number(item.key.slice(1))));
+    } else {
       e.setAttribute('x1', String(item.pts[0].x));
       e.setAttribute('y1', String(item.pts[0].y));
       e.setAttribute('x2', String(item.pts[1].x));
       e.setAttribute('y2', String(item.pts[1].y));
-    } else {
-      e.setAttribute('points', item.pts.map((p) => `${p.x},${p.y}`).join(' '));
     }
     e.setAttribute('opacity', String(item.opacity));
     svg.appendChild(e); // 远 → 近重排
