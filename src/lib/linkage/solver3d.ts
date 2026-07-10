@@ -82,9 +82,10 @@ export class LinkageSolver3D {
     return this.dyn !== undefined;
   }
 
-  /** n 遍 Gauss-Seidel 扫描（公式 = SPEC §3.1 的 3D 版）。 */
+  /** n 遍对称 Gauss-Seidel（正反向交替）：削减顺序偏差——2D 内核为封盘资产
+   *  保持单向，3D 研究线实测单向扫描在深卷曲下累积可见扭转（v5 修订）。 */
   iterate(n: number): void {
-    for (let s = 0; s < n; s++) this.sweepOnce();
+    for (let s = 0; s < n; s++) this.sweepOnce(s % 2 === 1);
   }
 
   /** 残差 max |dᵢ − restᵢ|，px。 */
@@ -147,8 +148,10 @@ export class LinkageSolver3D {
     }
   }
 
-  private sweepOnce(): void {
-    for (const { a, b, rest, stiffness } of this.bs) {
+  private sweepOnce(reverse: boolean): void {
+    const m = this.bs.length;
+    for (let idx = 0; idx < m; idx++) {
+      const { a, b, rest, stiffness } = this.bs[reverse ? m - 1 - idx : idx];
       const A = this.ns[a];
       const B = this.ns[b];
       const dx = B.x - A.x;

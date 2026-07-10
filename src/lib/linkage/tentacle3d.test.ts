@@ -72,11 +72,11 @@ describe('立体肌腱触手', () => {
     const tip = s.nodes[SPINE3(TIP3)];
     expect(Math.abs(tip.x)).toBeLessThan(1);
     expect(Math.abs(tip.z)).toBeLessThan(2); // 真机中轴线本身有 ~1mm 摆动（大小盘交替）
-    expect(tip.y).toBeCloseTo(238.3, 0); // 迭代版真机臂长（站 0 → 站 4）
+    expect(tip.y).toBeCloseTo(357.8, 0); // 干净版真机臂长（7 站，11.3dm）
     expect(s.maxError()).toBeLessThan(0.5);
   });
 
-  it.each([0, 1, 2])('肌腱 %i 收缩 c=0.5：弯向自身方位（迭代版实测沿向 139–146）', (k) => {
+  it.each([0, 1, 2])('肌腱 %i 收缩 c=0.5：弯向自身方位（v5 实测沿向 177–184）', (k) => {
     const { solver: s, tendons } = createTentacle3();
     settle(s, 60);
     applyContraction3(s, tendons[k], 0.5);
@@ -85,11 +85,10 @@ describe('立体肌腱触手', () => {
     const [dx, dz] = TENDON_DIRS[k];
     const along = dx * tip.x + dz * tip.z;
     const perp = -dz * tip.x + dx * tip.z;
-    expect(along).toBeGreaterThan(100);
-    // 实测横向 1.5 / −16.7 / 30.5——真结构梢部小盘半径 2.7mm，抗扭力臂小，
-    // 残余扭转比等截面模型大，方位主导性仍成立
-    expect(Math.abs(perp)).toBeLessThan(40);
-    expect(Math.abs(perp)).toBeLessThan(along * 0.3);
+    expect(along).toBeGreaterThan(130);
+    // v5（对称扫描 + 双邻站对称锥）实测横向 −4~−11：扭转占比 <6%
+    expect(Math.abs(perp)).toBeLessThan(25);
+    expect(Math.abs(perp)).toBeLessThan(along * 0.12);
   });
 
   it('放松 15s 回真机静息位（实测残留 ≈0.1）', () => {
@@ -111,7 +110,7 @@ describe('立体肌腱触手', () => {
     settle(s, 400);
     expect(finite(s)).toBe(true);
     const tip = s.nodes[SPINE3(TIP3)];
-    expect(Math.hypot(tip.x, tip.y, tip.z)).toBeLessThan(300);
+    expect(Math.hypot(tip.x, tip.y, tip.z)).toBeLessThan(380); // ≤ 臂长 357.8 + 软腱余量
   });
 
   it('确定性：同一收缩脚本两次运行逐位一致', () => {

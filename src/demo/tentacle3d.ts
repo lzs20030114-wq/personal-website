@@ -32,8 +32,8 @@ const N = TENTACLE3D.segments;
 const cam = new OrbitCamera({
   cx: 350,
   cy: 250,
-  pivot: { x: 0, y: 110, z: 0 }, // 迭代版臂长 ≈238mm（5 站），枢轴取中段
-  scale: 1.45,
+  pivot: { x: 0, y: 179, z: 0 }, // 干净版臂长 ≈358mm（7 站），枢轴取中段
+  scale: 1.1,
   yaw0: 0.6,
   pitch0: -0.28,
   autoYaw: reducedMotion ? 0 : 0.15,
