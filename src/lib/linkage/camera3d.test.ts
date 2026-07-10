@@ -31,14 +31,13 @@ describe('OrbitCamera', () => {
     expect(p.depth).toBeCloseTo(0, 12);
   });
 
-  it('空闲自转绕世界 y 轴：横躺机位下臂轴不漂移，椎节自旋', () => {
+  it('空闲自转绕屏幕竖轴 = 整体横向环视：横躺臂沿水平线扫入深度、不竖漂', () => {
     const c = cam0({ roll0: -Math.PI / 2, autoYaw: 1 });
-    c.tick(0.9); // 自转 0.9 rad
+    c.tick(0.5); // 环视 0.5 rad
     const arm = c.project({ x: 0, y: 1, z: 0 });
-    expect(arm.x).toBeCloseTo(1, 12); // 臂轴仍横躺指右
-    expect(arm.y).toBeCloseTo(0, 12);
-    const rim = c.project({ x: 1, y: 0, z: 0 });
-    expect(Math.abs(rim.depth)).toBeGreaterThan(0.5); // 盘面在转（x̂ 转入深度）
+    expect(arm.x).toBeCloseTo(Math.cos(0.5), 12); // 横向收短（整体在转）
+    expect(arm.y).toBeCloseTo(0, 12); // 始终在水平线上
+    expect(Math.abs(arm.depth)).toBeCloseTo(Math.sin(0.5), 12); // 扫入深度
   });
 
   it('单指横拖 = 绕屏幕竖轴（trackball）：拖 90° 后世界 x 轴转入深度', () => {

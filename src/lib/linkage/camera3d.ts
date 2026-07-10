@@ -24,8 +24,8 @@ export interface OrbitCameraOpts {
   roll0?: number;
   zoomMin?: number;
   zoomMax?: number;
-  /** 空闲自转角速度 rad/s（绕**世界 y 轴**=机构对称轴，姿态不漂移——roll0 横躺
-   *  机位下依然横躺，只有椎节自旋；0 = 关；reduced-motion 由调用方传 0） */
+  /** 空闲自转角速度 rad/s（绕屏幕竖轴 = **整体横向环视**，用户拍板 2026-07-10：
+   *  曾试绕臂轴的椎节自旋被否——要整体转动；0 = 关；reduced-motion 传 0） */
   autoYaw?: number;
   /** 拖拽灵敏度：rad / 指针 px */
   yawPerPx?: number;
@@ -166,11 +166,10 @@ export class OrbitCamera {
     this._zoom = this.clampZoom(this._zoom * Math.exp(-deltaY * this.o.wheelRate));
   }
 
-  /** 每帧：空闲自转（**后乘 = 绕世界 y 轴**，turntable 语义——机位姿态不漂移；
-   *  拖拽旋转是前乘屏幕轴，两者不同域。用户接管后永不再动）。 */
+  /** 每帧：空闲自转（前乘屏幕竖轴 = 整体横向转动；用户接管后永不再动）。 */
   tick(dt: number): void {
     if (!this.userTookOver && this.pointers.size === 0) {
-      this.m = mul(this.m, rotY(this.o.autoYaw * dt));
+      this.m = mul(rotY(this.o.autoYaw * dt), this.m);
     }
   }
 

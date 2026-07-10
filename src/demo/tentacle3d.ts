@@ -36,9 +36,9 @@ const cam = new OrbitCamera({
   cy: 250,
   pivot: { x: 0, y: 179, z: 0 }, // 干净版臂长 ≈358mm（7 站），枢轴取中段
   scale: 1.1,
-  yaw0: 0.6,
-  pitch0: -0.28,
-  roll0: -Math.PI / 2, // 默认机位横躺（用户拍板 2026-07-10）：基座在左、臂指右
+  yaw0: 0,
+  pitch0: 0,
+  roll0: -Math.PI / 2, // 默认机位 = 正侧视（用户拍板 2026-07-10）：基座在左、臂指右、无斜倾
   autoYaw: reducedMotion ? 0 : 0.15,
 });
 
