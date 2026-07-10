@@ -75,13 +75,36 @@
         left: 50%;
         transform: translateX(-50%);
         display: flex;
-        gap: 14px;
-        align-items: center;
+        flex-direction: column;
+        gap: 8px;
         font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
         color: #1f1f1d;
         background: #fafaf7;
-        padding: 6px 12px;
+        padding: 8px 12px;
         border: 1px solid #d9d9d1;
+      }
+      #controls .row {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        justify-content: center;
+      }
+      #controls .seg {
+        display: flex;
+        border: 1px solid #d9d9d1;
+      }
+      #controls .seg button {
+        border: none;
+        border-right: 1px solid #d9d9d1;
+        color: #8a8a82;
+        padding: 2px 10px;
+      }
+      #controls .seg button:last-child {
+        border-right: none;
+      }
+      #controls .seg button.active {
+        color: #fafaf7;
+        background: #2456a6;
       }
       #controls label {
         display: flex;
@@ -115,13 +138,26 @@
       <a href="./index.html">← 四杆台架</a><a href="./arch.html">拱环台架</a
       ><a href="./tentacle.html">触手·平面</a>
     </nav>
-    <div id="hint">拖拽旋转视角 · 滑块收缩肌腱</div>
+    <div id="hint">拖拽旋转 · 滚轮/双指缩放 · 滑块收缩肌腱</div>
     <svg id="fig" viewBox="0 0 700 520" xmlns="http://www.w3.org/2000/svg"></svg>
     <div id="controls">
-      <label>肌腱1 <input id="tendon-0" type="range" min="0" max="100" value="0" /></label>
-      <label>肌腱2 <input id="tendon-1" type="range" min="0" max="100" value="0" /></label>
-      <label>肌腱3 <input id="tendon-2" type="range" min="0" max="100" value="0" /></label>
-      <button id="relax">放松</button>
+      <div class="row">
+        <label>肌腱1 <input id="tendon-0" type="range" min="0" max="100" value="0" /></label>
+        <label>肌腱2 <input id="tendon-1" type="range" min="0" max="100" value="0" /></label>
+        <label>肌腱3 <input id="tendon-2" type="range" min="0" max="100" value="0" /></label>
+      </div>
+      <div class="row">
+        <span>联动</span>
+        <span class="seg">
+          <button id="link-none" class="active">无</button>
+          <button id="link-01">1+2</button>
+          <button id="link-12">2+3</button>
+          <button id="link-02">1+3</button>
+        </span>
+        <button id="relax">放松</button>
+        <button id="home">归位</button>
+        <button id="view-home">视角归位</button>
+      </div>
     </div>
     <script type="module" src="/src/demo/tentacle3d.ts"></script>
   </body>
