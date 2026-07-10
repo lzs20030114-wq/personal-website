@@ -3,11 +3,11 @@ import { LinkageSolver3D } from './solver3d';
 import { CHAINS, STATIONS } from './tentacle3d-shape';
 
 /**
- * 立体肌腱触手 v2——真实结构（用户拍板 2026-07-10「用真实的结构而不是线段的模拟」）。
- * 几何不再手编：脊柱节点 = 真机 15 站心，导点 = 真机肌腱孔位（tentacle3d-shape.ts，
- * 提取自 触手模拟1.3dm + ghx 引用 GUID），全部杆长 = 真实初始距离（构造器缺省）。
- * 真结构特征：大/小椎节交替咬合、半径与间距向梢部收锥、三腱方位 90°/332°/208°。
- * 驱动机制同 v1（= GH GhPython 原文）：收缩按比例缩放肌腱段 rest。
+ * 立体肌腱触手 v3——迭代版真实结构（用户指定 2026-07-10：求解器结构演示.3dm 本体）。
+ * 几何提取自装配模型（tentacle3d-shape.ts）：基座舵机总成 + 5 方盒椎节
+ * （节距 67→52、孔半径 9.3→5.7 收锥，三腱方位 30°/150°/270°）+ 节间盘轴联接。
+ * 脊柱节点 = 真机站心，导点 = 真机孔位，全部杆长 = 真实初始距离（构造器缺省）。
+ * 驱动机制不变（= GH GhPython 原文）：收缩按比例缩放肌腱段 rest。
  */
 export const TENTACLE3D = {
   /** 段数 = 站数 − 1 */
@@ -16,7 +16,8 @@ export const TENTACLE3D = {
   bendRoot: 0.03,
   bendTip: 0.003,
   tendonK: 0.12,
-  tendonMult: [3.3, 1, 1, 1.2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3],
+  /** 逐段强度倍率（迭代版 4 段，无 GH 参考侧写，取均匀） */
+  tendonMult: [1, 1, 1, 1],
   contractionFloor: 0.4,
   /** fascia 抗扭斜杆刚度（无它则扭转累积、单腱收缩卷成螺旋——用户实测） */
   fasciaK: 0.1,

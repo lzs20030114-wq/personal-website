@@ -5,7 +5,7 @@ import {
   applyContraction3,
   createTentacle3,
 } from '../lib/linkage/tentacle3d-data';
-import { FAMILY, OUTLINE_BIG, OUTLINE_SMALL, RADII, SCALES } from '../lib/linkage/tentacle3d-shape';
+import { CELL_OUTLINES, MOUNT_OUTLINE, RADII } from '../lib/linkage/tentacle3d-shape';
 import { OrbitCamera } from '../lib/linkage/camera3d';
 import { projectScene, type Drawable3 } from '../lib/linkage/scene3d';
 import { CriticallyDamped } from '../lib/linkage/motion';
@@ -32,8 +32,8 @@ const N = TENTACLE3D.segments;
 const cam = new OrbitCamera({
   cx: 350,
   cy: 250,
-  pivot: { x: 0, y: 125, z: 0 }, // 真机臂长 ≈250mm，枢轴取中段
-  scale: 1.4,
+  pivot: { x: 0, y: 110, z: 0 }, // 迭代版臂长 ≈238mm（5 站），枢轴取中段
+  scale: 1.45,
   yaw0: 0.6,
   pitch0: -0.28,
   autoYaw: reducedMotion ? 0 : 0.15,
@@ -53,6 +53,7 @@ for (let i = 0; i < N; i++) {
   for (let k = 0; k < 3; k++) elems.set(`t${k}-${i}`, el('line', `tendon tendon-${k}`));
 }
 for (let i = 0; i <= N; i++) elems.set(`v${i}`, el('path', 'disc'));
+elems.set('mnt', el('path', 'mount'));
 const hud = el('text', 'hud');
 hud.setAttribute('x', '16');
 hud.setAttribute('y', '504');
@@ -66,8 +67,9 @@ function drawables(): Drawable3[] {
       out.push({ key: `t${k}-${i}`, points: [nodes[GUIDE3(k, i)], nodes[GUIDE3(k, i + 1)]] });
     }
   }
-  // 椎节线框：深度锚在站心（路径本体在 render 里按局部刚架变换生成）
+  // 椎节元胞线框：深度锚在站心（路径本体在 render 里按局部刚架变换生成）
   for (let i = 0; i <= N; i++) out.push({ key: `v${i}`, points: [nodes[SPINE3(i)]] });
+  out.push({ key: 'mnt', points: [nodes[SPINE3(0)]] }); // 基座总成挂站 0（锚定）
   return out;
 }
 
@@ -78,9 +80,10 @@ function drawables(): Drawable3[] {
  */
 function discPath(i: number): string {
   const nodes = sim.solver.nodes;
-  const o = nodes[SPINE3(i)];
-  const nA = nodes[SPINE3(Math.max(0, i - 1))];
-  const nB = nodes[SPINE3(Math.min(N, i + 1))];
+  const si = Math.max(0, i); // i = −1 表示基座（挂站 0 刚架）
+  const o = nodes[SPINE3(si)];
+  const nA = nodes[SPINE3(Math.max(0, si - 1))];
+  const nB = nodes[SPINE3(Math.min(N, si + 1))];
   let ux = nB.x - nA.x;
   let uy = nB.y - nA.y;
   let uz = nB.z - nA.z;
@@ -88,7 +91,7 @@ function discPath(i: number): string {
   ux /= ul;
   uy /= ul;
   uz /= ul;
-  const g = nodes[GUIDE3(0, i)];
+  const g = nodes[GUIDE3(0, si)];
   let ex = g.x - o.x;
   let ey = g.y - o.y;
   let ez = g.z - o.z;
@@ -103,16 +106,15 @@ function discPath(i: number): string {
   const fx = ey * uz - ez * uy;
   const fy = ez * ux - ex * uz;
   const fz = ex * uy - ey * ux;
-  const s = SCALES[i];
-  const outline = FAMILY[i] === 'big' ? OUTLINE_BIG : OUTLINE_SMALL;
+  const outline = i < 0 ? MOUNT_OUTLINE : CELL_OUTLINES[i];
   let d = '';
   for (const poly of outline) {
     for (let j = 0; j < poly.length; j++) {
       const [ax, u, w] = poly[j];
       const p = cam.project({
-        x: o.x + s * (ax * ux + u * ex + w * fx),
-        y: o.y + s * (ax * uy + u * ey + w * fy),
-        z: o.z + s * (ax * uz + u * ez + w * fz),
+        x: o.x + (ax * ux + u * ex + w * fx),
+        y: o.y + (ax * uy + u * ey + w * fy),
+        z: o.z + (ax * uz + u * ez + w * fz),
       });
       d += `${j === 0 ? 'M' : 'L'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
     }
@@ -135,7 +137,9 @@ function render(): void {
   for (const item of projectScene(cam, drawables())) {
     const e = elems.get(item.key);
     if (!e) continue;
-    if (item.key[0] === 'v') {
+    if (item.key === 'mnt') {
+      e.setAttribute('d', discPath(-1));
+    } else if (item.key[0] === 'v') {
       e.setAttribute('d', discPath(Number(item.key.slice(1))));
     } else {
       e.setAttribute('x1', String(item.pts[0].x));

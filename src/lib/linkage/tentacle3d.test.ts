@@ -72,11 +72,11 @@ describe('立体肌腱触手', () => {
     const tip = s.nodes[SPINE3(TIP3)];
     expect(Math.abs(tip.x)).toBeLessThan(1);
     expect(Math.abs(tip.z)).toBeLessThan(2); // 真机中轴线本身有 ~1mm 摆动（大小盘交替）
-    expect(tip.y).toBeCloseTo(249.5, 0); // 真机臂长
+    expect(tip.y).toBeCloseTo(238.3, 0); // 迭代版真机臂长（站 0 → 站 4）
     expect(s.maxError()).toBeLessThan(0.5);
   });
 
-  it.each([0, 1, 2])('肌腱 %i 收缩 c=0.5：弯向自身方位（真结构实测沿向 ≈147）', (k) => {
+  it.each([0, 1, 2])('肌腱 %i 收缩 c=0.5：弯向自身方位（迭代版实测沿向 139–146）', (k) => {
     const { solver: s, tendons } = createTentacle3();
     settle(s, 60);
     applyContraction3(s, tendons[k], 0.5);
