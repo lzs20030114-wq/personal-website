@@ -18,7 +18,7 @@
 - 角色：申请提交物 + 持续生长的个人工作全景（不是一次性作品集）。
 - 视觉：quiet editorial 容器 + 工程图纸式细节排印，参照 ciechanow.ski 的交互文章质感。
 - **语言：英文优先**（受众 = 评审），v1 不做 i18n。
-- 克制条款：全站唯一的动效是连杆活物本身。没有入场动画、没有滚动特效、没有暗色模式（v1）。
+- 克制条款（2026-07-10 修订，用户拍板，依据 SITE_REVIEW §五）：连杆活物是全站唯一的**表演级**动效；另放宽一个最小集——**hover/active 状态反馈**（链接下划线过渡、项目行 hover、按压 scale ≤0.97；150–200ms ease；`@media (hover:hover) and (pointer:fine)` 门控；逐属性声明、禁 `transition: all`）。仍然没有：入场动画、页面转场、滚动特效、暗色模式（v1）。
 
 ## 2. 技术栈
 
@@ -54,7 +54,7 @@ LINKAGE_SPEC.md 等文档       # 保留在根
 - `/` 首页：名字 + 一句定位 → **FIG. 01 连杆活物**（可交互 hero）→ selected 作品（恒 4 个，order 排序）→ 页脚（邮箱、GitHub、明文完整 URL）。
 - `/work/[slug]` case study 页（模板见 §9）。
 - `/archive` 全量索引：published 且非 selected 的条目，**只标 YYYY-MM**，无 last-updated。允许长期为空——**申请季前不为凑数填内容（防「第五个项目化」）**。
-- `/about` 一页：背景、方法、AI 披露席位（§9）。
+- `/about` 一页：背景、方法、**colophon 段**（「这个站怎么做的」——技术栈/自研求解器/性能与无障碍决策；2026-07-10 拍板新增，v1 只留席位，正文用户写）、AI 披露席位（§9）。
 - 另：404、sitemap、favicon、每页 OG 图。
 
 ## 5. 内容池 schema（zod 构建期强制）
@@ -94,7 +94,7 @@ const WorkEntry = z.object({
 ## 8. 视觉系统 v1（毛坯锁定，语言不变、可微调数值）
 
 - CSS 变量：`--paper #FAFAF7`、`--ink #1F1F1D`、`--graphite #8A8A82`、`--trace-blue #2456A6`、`--hairline #D9D9D1`。
-- 字体：标注/数据 = `ui-monospace` 栈；正文 = serif 栈（Iowan Old Style, Palatino, 'Songti SC', serif）；正文 17–18px / 行高 1.6。
+- 字体（2026-07-10 修订，用户拍板：正文换自托管——系统 serif 栈在 Windows/Linux 评审机上不可控）：正文 = `next/font/local` 自托管可变衬线，默认选型 **Source Serif 4 Variable**（latin 子集 woff2，文件 <100KB，`display: swap` + `adjustFontFallback` 防 CLS；选型可换、接口不变）；回退栈保留原 serif 栈（Iowan Old Style, Palatino, 'Songti SC', serif）；标注/数据 = `ui-monospace` 栈**不变**；正文 17–18px / 行高 1.6 不变。`--graphite` 微调至对纸白对比度 ≥4.5:1（#70706A 量级，属数值微调）。
 - **版式 v2（2026-07-08 拍板：桌面横屏优先，依据 LAYOUT_NOTES.md）**：
   - 第一定律：**行长恒定（62–68ch），宽度给区不给字**。
   - 内容画布 max-width ≈ 1360px；case study 三区网格（≥1280px）：左粘性元数据栏 ~260px（My Role/date/tools）+ 正文列 flush-left + 边缘列（图注/旁注）；1024–1280 两区；<1024 单列回落（移动端必须仍可用）。

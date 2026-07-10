@@ -101,16 +101,20 @@
 
 ## 九、弱模型工单（§八第一行的展开——随时可派，合计约 1–2 小时）
 
-**前置纪律**：不动 `src/lib/linkage/`；不动 Vite 台架；未拍板三项（字体换栈 / hover 微反馈 / colophon）**不做**；完成后 `npm run build` + `typecheck` + 全部测试绿，一次 commit，message 注明「SITE_REVIEW §九 工单」。
+**前置纪律**：不动 `src/lib/linkage/`；不动 Vite 台架；完成后 `npm run build` + `typecheck` + 全部测试绿，一次 commit，message 注明「SITE_REVIEW §九 工单」。
+**2026-07-10 更新**：原「三项待拍板」已全部拍板通过并写入 SITE_SPEC（§1 克制条款、§4 about、§8 字体）——对应新增工单 9–11。
 
 1. **graphite 加深**：`app/globals.css` 的 `--graphite: #8a8a82` 改到 `#70706a` 量级。验收：与 `--paper #FAFAF7` 对比度 ≥ 4.5:1；grep 确认全站无别处硬编码旧值。
-2. **正文链接下划线**：globals.css 给 `.flow` / `.prose-col` 内的 a 加 `text-decoration: underline` + `text-underline-offset: 0.15em`。导航、题栏、图纸清单行维持 no-underline。**不加 hover 过渡**（属未拍板的微反馈）。
+2. **正文链接下划线**：globals.css 给 `.flow` / `.prose-col` 内的 a 加 `text-decoration: underline` + `text-underline-offset: 0.15em`。导航、题栏、图纸清单行维持 no-underline。hover 过渡见第 9 条。
 3. **focus-visible + skip-link**：全局 `:focus-visible { outline: 2px solid var(--trace-blue); outline-offset: 2px }`；`app/layout.tsx` body 首子元素加视觉隐藏、聚焦显形的「Skip to content」链接，`<main>` 加对应 id。
 4. **about 页 h1 语义**：`app/about/page.tsx` 的 10px mono 标签改为非标题元素；真实 h1 另设（字号不小于正文）。
 5. **`getAllWork()` 缓存**：`src/lib/site/content.ts` 用 React `cache()` 包裹。验收：行为不变、build 过。
 6. **SlotSize 补 `full` 档**：`slots.tsx` 类型加 `'full'`，globals.css 加 `.fig-full`——≥1024px 时跨 `prose-start/margin-end` 并以负 margin（`-260px - 56px`）延伸到画布左边。**限制写进组件注释**：full 图会横越粘性 rail 列，只允许用于页首/页尾横幅位（与 rail 同读的图用 wide）。
 7. **next-project 尾链**：`app/work/[slug]/page.tsx` 按 selected 的 order 计算下一个 published 条目（末尾回绕到第一个），在 `DisclosureSlot` 后渲染 `hairline-t` 分隔的 mono 行「NEXT → 标题」。验收：每个 published 页有去处、不指向 draft。
 8. **备忘（素材期执行，现在不做）**：VideoSlot 的 `video.src` 落位时同步加 `<track kind="captions">` 字幕轨（评审可能静音看；GSD 60s 素材同源复用）。
+9. **hover/active 微反馈**（已拍板，SITE_SPEC §1 修订）：正文链接下划线颜色/offset 过渡；首页项目索引行 hover（题字或背景色过渡）；可点击元素 `:active` scale(0.97)。150–200ms ease；hover 全部包 `@media (hover:hover) and (pointer:fine)`；逐属性声明、禁 `transition: all`。验收：触屏无 hover 残留、键盘 focus 与 hover 表现互不干扰。
+10. **字体自托管**（已拍板，SITE_SPEC §8 修订）：Source Serif 4 Variable——官方仓库取可变字体、转 woff2、latin 子集；`next/font/local` 接入正文 serif，`display: 'swap'`，回退栈保留原 serif 栈；mono 维持 `ui-monospace` 不动。验收：woff2 <100KB、CLS 仍为 0、Windows 浏览器实测正文渲染与 mac 一致。
+11. **about 页 colophon 席位**（已拍板，SITE_SPEC §4 修订）：about 页加 COLOPHON 小节席位（IntentNote 占位：技术栈 / 自研 PBD 求解器 / 性能与无障碍决策——正文作者写），置于 AI 披露席位之前。
 
 S4 项（OG/sitemap/robots/JSON-LD/check-links）不在本工单——按 spec §10 节奏执行，做法见本文 §三（尤其 Satori 三条铁律）。
 
