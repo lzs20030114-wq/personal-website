@@ -5,9 +5,10 @@ import {
   applyContraction3,
   createTentacle3,
 } from '../lib/linkage/tentacle3d-data';
-import { CELL_PARTS, MOUNT_PARTS, RADII } from '../lib/linkage/tentacle3d-shape';
+import { MESH_GROUPS, RADII } from '../lib/linkage/tentacle3d-shape';
 import { OrbitCamera } from '../lib/linkage/camera3d';
-import { FlatRenderer, bakeMesh, type CellFrame } from '../lib/linkage/gl3d';
+import { FlatRenderer, bakeIndexed, type CellFrame } from '../lib/linkage/gl3d';
+import meshUrl from './assets/tentacle3d-mesh.bin?url';
 import { CriticallyDamped } from '../lib/linkage/motion';
 
 // 立体触手台架（立体求解器 spec，渲染 v5——WebGL 解锁，用户拍板 2026-07-10）：
@@ -41,8 +42,18 @@ const cam = new OrbitCamera({
 });
 
 const renderer = new FlatRenderer(canvas);
-for (let ci = 0; ci <= N; ci++) renderer.addMesh(`c${ci}`, bakeMesh(CELL_PARTS[ci]));
-renderer.addMesh('mnt', bakeMesh(MOUNT_PARTS));
+// 完整渲染网格（10.7 万三角）从二进制资产异步载入——「直接导入模型」（用户拍板）
+fetch(meshUrl)
+  .then((r) => r.arrayBuffer())
+  .then((buf) => {
+    for (const g of MESH_GROUPS) {
+      const verts = new Float32Array(buf, g.vOff, g.verts * 3);
+      const idx = g.idx32
+        ? new Uint32Array(buf, g.iOff, g.tris * 3)
+        : new Uint16Array(buf, g.iOff, g.tris * 3);
+      renderer.addMesh(g.name, bakeIndexed(verts, idx));
+    }
+  });
 
 // 线色（纸墨系）：脊柱 / 三腱 / 参考环
 const SPINE_C: [number, number, number] = [0.54, 0.54, 0.51];

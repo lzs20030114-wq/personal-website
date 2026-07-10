@@ -1,6 +1,5 @@
 import type { Vec3 } from './solver3d';
 import type { OrbitCamera } from './camera3d';
-import type { HullPart } from './tentacle3d-shape';
 
 // 零依赖裸 WebGL 平面着色渲染器（立体求解器 spec 渲染 v5——WebGL 解锁，
 // 用户拍板 2026-07-10：SVG 画家算法对互穿零件无像素级正确遮挡）。
@@ -82,28 +81,28 @@ function link(gl: WebGLRenderingContext, vs: string, fs: string): WebGLProgram {
   return p;
 }
 
-/** HullPart[] → 平面着色顶点流（逐面复制顶点、烘焙面法向；局部系坐标）。 */
-export function bakeMesh(parts: ReadonlyArray<HullPart>): Float32Array {
-  let n = 0;
-  for (const p of parts) n += p.t.length;
-  const out = new Float32Array(n * 3 * 6);
+/** 索引网格 → 平面着色顶点流（逐面复制顶点、烘焙面法向；局部系坐标）。 */
+export function bakeIndexed(verts: Float32Array, idx: Uint16Array | Uint32Array): Float32Array {
+  const nTri = idx.length / 3;
+  const out = new Float32Array(nTri * 3 * 6);
   let k = 0;
-  for (const p of parts) {
-    for (const t of p.t) {
-      const a = p.v[t[0]];
-      const b = p.v[t[1]];
-      const c = p.v[t[2]];
-      const abx = b[0] - a[0], aby = b[1] - a[1], abz = b[2] - a[2];
-      const acx = c[0] - a[0], acy = c[1] - a[1], acz = c[2] - a[2];
-      let nx = aby * acz - abz * acy;
-      let ny = abz * acx - abx * acz;
-      let nz = abx * acy - aby * acx;
-      const nl = Math.hypot(nx, ny, nz) || 1;
-      nx /= nl; ny /= nl; nz /= nl;
-      for (const v of [a, b, c]) {
-        out[k++] = v[0]; out[k++] = v[1]; out[k++] = v[2];
-        out[k++] = nx; out[k++] = ny; out[k++] = nz;
-      }
+  for (let t = 0; t < nTri; t++) {
+    const i0 = idx[t * 3] * 3;
+    const i1 = idx[t * 3 + 1] * 3;
+    const i2 = idx[t * 3 + 2] * 3;
+    const ax = verts[i0], ay = verts[i0 + 1], az = verts[i0 + 2];
+    const bx = verts[i1], by = verts[i1 + 1], bz = verts[i1 + 2];
+    const cx = verts[i2], cy = verts[i2 + 1], cz = verts[i2 + 2];
+    const ux = bx - ax, uy = by - ay, uz = bz - az;
+    const vx = cx - ax, vy = cy - ay, vz = cz - az;
+    let nx = uy * vz - uz * vy;
+    let ny = uz * vx - ux * vz;
+    let nz = ux * vy - uy * vx;
+    const nl = Math.hypot(nx, ny, nz) || 1;
+    nx /= nl; ny /= nl; nz /= nl;
+    for (const [px, py, pz] of [[ax, ay, az], [bx, by, bz], [cx, cy, cz]] as const) {
+      out[k++] = px; out[k++] = py; out[k++] = pz;
+      out[k++] = nx; out[k++] = ny; out[k++] = nz;
     }
   }
   return out;

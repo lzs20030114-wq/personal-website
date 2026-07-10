@@ -1,16 +1,16 @@
-"""触手迭代版提取：11.3dm（干净版，用户提供 2026-07-10）→ src/lib/linkage/tentacle3d-shape.ts
+"""触手提取 v3：11.3dm → 完整渲染网格（WebGL 全量导入，用户拍板 2026-07-10）
 
-结构：基座舵机总成（x −115..25）+ 7 方盒椎节（x 46.9/119.1/186/247.9/304.9/357.4/404.7，
-节距 72→47 收锥）+ 节间盘轴联接 + 梢端盖（→417）。
-肌腱孔方位 30°/150°/270°、半径 10.3→4.9 收锥（站 1–5 实测于 求解器结构演示.3dm，
-站 0 与站 6 按收锥外推——孔曲线未建模）；链轴心 (y,z)=(0.1,6.9)。
-坐标映射：真机臂轴 X → 模拟 +y；真机 (Y,Z) → 模拟 (x,z)；站 0 心为原点。
+产物：
+- src/lib/linkage/tentacle3d-shape.ts   站位/孔链/半径 + 网格分组元数据
+- src/demo/assets/tentacle3d-mesh.bin   逐组索引网格（Float32 顶点 + Uint16/32 索引）
+结构：7 方盒椎节（x 46.9→404.7）+ 基座舵机总成（干净文件全量，仅剔除远处遗留块）。
+网格：模型嵌入渲染网格全量导入，逐零件 0.05mm 焊接去重，剔除零面积三角。
+坐标：站局部系 [沿臂 ax, 腱1 方向 u, 副法向 w]；单位 mm。
 用法：python3 scripts/model-extract/gen_tentacle3d.py
 """
 import rhino3dm as r
-import json, math
+import json, math, struct
 import numpy as np
-from scipy.spatial import ConvexHull
 
 M = r.File3dm.Read('模型求解器参考/11.3dm')
 AXIS_Y, AXIS_Z = 0.1, 6.9
@@ -18,37 +18,25 @@ SX = [46.9, 119.1, 186.0, 247.9, 304.9, 357.4, 404.7]
 HOLE_R = [10.3, 9.3, 8.3, 7.3, 6.5, 5.7, 4.9]
 AZ = [30.0, 150.0, 270.0]
 BOUNDS = [25.0] + [(SX[i] + SX[i + 1]) / 2 for i in range(len(SX) - 1)] + [430.0]
-MOUNT_X = (-115.0, 25.0)
-YLIM = 120.0
-ZLIM = (-60.0, 50.0)
-
-IDEFS = {str(M.InstanceDefinitions[i].Id): M.InstanceDefinitions[i]
-         for i in range(len(M.InstanceDefinitions))}
-BYID = {str(o.Attributes.Id): o for o in M.Objects}
-
 a1 = math.radians(AZ[0])
 
 def sim(x, y, z, x0):
     return [round(y - AXIS_Y, 2), round(x - x0, 2), round(z - AXIS_Z, 2)]
 
-def local(x, y, z, x0):
-    """站局部系 [沿臂 ax, 腱1 方向 u, 副法向 w]（与运行时刚架约定一致）"""
-    ax = x - x0
-    dy = y - AXIS_Y
-    dz = z - AXIS_Z
+def local_np(pts, x0):
+    """N×3 真机坐标 → 站局部系"""
+    ax = pts[:, 0] - x0
+    dy = pts[:, 1] - AXIS_Y
+    dz = pts[:, 2] - AXIS_Z
     u = dy * math.cos(-a1) - dz * math.sin(-a1)
     w = dy * math.sin(-a1) + dz * math.cos(-a1)
-    return [round(ax, 2), round(u, 2), round(w, 2)]
+    return np.stack([ax, u, w], axis=1)
 
-def xpt(xf, x, y, z):
-    if xf is None:
-        return (x, y, z)
-    return (xf.M00 * x + xf.M01 * y + xf.M02 * z + xf.M03,
-            xf.M10 * x + xf.M11 * y + xf.M12 * z + xf.M13,
-            xf.M20 * x + xf.M21 * y + xf.M22 * z + xf.M23)
+IDEFS = {str(M.InstanceDefinitions[i].Id): M.InstanceDefinitions[i]
+         for i in range(len(M.InstanceDefinitions))}
+BYID = {str(o.Attributes.Id): o for o in M.Objects}
 
 def expand(o):
-    """对象 → [(brep, xform|None)]，块实例展开一层"""
     g = o.Geometry
     tn = type(g).__name__
     if tn in ('Brep', 'Extrusion'):
@@ -72,7 +60,59 @@ def expand(o):
         return out
     return []
 
-def region_objects(xmin, xmax):
+def xform_np(xf, pts):
+    if xf is None:
+        return pts
+    m = np.array([[xf.M00, xf.M01, xf.M02, xf.M03],
+                  [xf.M10, xf.M11, xf.M12, xf.M13],
+                  [xf.M20, xf.M21, xf.M22, xf.M23]])
+    return pts @ m[:, :3].T + m[:, 3]
+
+def part_mesh(brep, xf):
+    """一个零件的焊接网格 (verts N×3 真机坐标, tris M×3)"""
+    vs = []
+    ts = []
+    off = 0
+    for fi in range(len(brep.Faces)):
+        try:
+            mesh = brep.Faces[fi].GetMesh(r.MeshType.Any)
+        except Exception:
+            continue
+        if not mesh:
+            continue
+        V = mesh.Vertices
+        pv = np.array([[V[j].X, V[j].Y, V[j].Z] for j in range(len(V))])
+        for k in range(mesh.Faces.Count):
+            f = mesh.Faces[k]
+            if f[2] == f[3]:
+                ts.append([off + f[0], off + f[1], off + f[2]])
+            else:
+                ts.append([off + f[0], off + f[1], off + f[2]])
+                ts.append([off + f[0], off + f[2], off + f[3]])
+        vs.append(pv)
+        off += len(pv)
+    if not vs:
+        return None
+    verts = xform_np(xf, np.vstack(vs))
+    tris = np.array(ts, dtype=np.int64)
+    # 焊接（0.05mm）+ 去零面积
+    key = np.round(verts / 0.05).astype(np.int64)
+    _, first, inv = np.unique(key, axis=0, return_index=True, return_inverse=True)
+    verts = verts[first]
+    tris = inv[tris]
+    a = verts[tris[:, 1]] - verts[tris[:, 0]]
+    b = verts[tris[:, 2]] - verts[tris[:, 0]]
+    area = 0.5 * np.linalg.norm(np.cross(a, b), axis=1)
+    tris = tris[area > 0.02]
+    if len(tris) == 0:
+        return None
+    return verts, tris
+
+def collect_group(xmin, xmax, x0, ylim, zlim):
+    gv = []
+    gt = []
+    off = 0
+    nparts = 0
     for o in M.Objects:
         try:
             bb = o.Geometry.GetBoundingBox()
@@ -81,112 +121,51 @@ def region_objects(xmin, xmax):
         cx = (bb.Min.X + bb.Max.X) / 2
         cy = (bb.Min.Y + bb.Max.Y) / 2
         cz = (bb.Min.Z + bb.Max.Z) / 2
-        if xmin <= cx < xmax and abs(cy) < YLIM and ZLIM[0] < cz < ZLIM[1]:
-            yield o
-
-def sample_edges(xmin, xmax, x0, cap, min_len=2.0):
-    budget = []
-    for o in region_objects(xmin, xmax):
-        for brep, xf in expand(o):
-            edges = brep.Edges
-            for i in range(len(edges)):
-                e = edges[i]
-                try:
-                    dom = e.Domain
-                    probe = [e.PointAt(dom.T0 + (dom.T1 - dom.T0) * t / 4) for t in range(5)]
-                    L = sum(math.dist((probe[j].X, probe[j].Y, probe[j].Z),
-                                      (probe[j + 1].X, probe[j + 1].Y, probe[j + 1].Z)) for j in range(4))
-                    if L < min_len:
-                        continue
-                    n = max(2, min(6, int(L / 6)))
-                    pts = []
-                    for t in range(n + 1):
-                        p = e.PointAt(dom.T0 + (dom.T1 - dom.T0) * t / n)
-                        pts.append(local(*xpt(xf, p.X, p.Y, p.Z), x0))
-                    budget.append((L, pts))
-                except Exception:
-                    pass
-    budget.sort(key=lambda lp: -lp[0])
-    polys = []
-    total = 0
-    for L, pts in budget:
-        if total + len(pts) > cap:
+        if not (xmin <= cx < xmax and abs(cy) < ylim and zlim[0] < cz < zlim[1]):
             continue
-        polys.append(pts)
-        total += len(pts)
-    return polys, total
-
-GRID = 1.0  # 凸包前顶点量化（mm）：细圆柱棱数锐减，形体误差 ≤0.5mm
-
-def sample_parts(xmin, xmax, x0):
-    """逐零件凸包（不透明哑光渲染的形体单元）：{v: 局部系顶点, t: 外向定向三角}"""
-    parts = []
-    for o in region_objects(xmin, xmax):
         for brep, xf in expand(o):
-            pts = []
-            for fi in range(len(brep.Faces)):
-                try:
-                    mesh = brep.Faces[fi].GetMesh(r.MeshType.Any)
-                except Exception:
-                    continue
-                if not mesh:
-                    continue
-                V = mesh.Vertices
-                for j in range(len(V)):
-                    pts.append(xpt(xf, V[j].X, V[j].Y, V[j].Z))
-            if len(pts) < 4:
+            pm = part_mesh(brep, xf)
+            if pm is None:
                 continue
-            arr = np.unique(np.round(np.array(pts) / GRID) * GRID, axis=0)
-            if len(arr) < 4:
-                continue
-            # 长零件切段（>30mm 沿主轴切 25mm 片，含 1mm 搭接）——单一深度的
-            # 画家排序对互穿长件必错（用户实测），切段后深度跨度紧凑
-            ext = arr.max(axis=0) - arr.min(axis=0)
-            axis = int(np.argmax(ext))
-            if ext[axis] > 30.0:
-                nseg = int(math.ceil(ext[axis] / 25.0))
-                lo = arr[:, axis].min()
-                step = ext[axis] / nseg
-                chunks = []
-                for si in range(nseg):
-                    m0 = lo + si * step - 1.0
-                    m1 = lo + (si + 1) * step + 1.0
-                    sub = arr[(arr[:, axis] >= m0) & (arr[:, axis] <= m1)]
-                    # 切面补点：把跨越切面的贡献用边界平面上的极值近似（用包围盒角点）
-                    if len(sub) >= 4:
-                        chunks.append(sub)
-                arrs = chunks if chunks else [arr]
-            else:
-                arrs = [arr]
-            for sub in arrs:
-                try:
-                    h = ConvexHull(sub)
-                except Exception:
-                    try:
-                        h = ConvexHull(sub, qhull_options='QJ')  # 退化输入（共面板件）兜底
-                    except Exception:
-                        continue
-                vids = list(h.vertices)
-                remap = {v: i for i, v in enumerate(vids)}
-                verts = [local(*sub[v], x0) for v in vids]
-                tris = []
-                for si, simp in enumerate(h.simplices):
-                    a, b, c = (sub[simp[0]], sub[simp[1]], sub[simp[2]])
-                    n_geom = np.cross(b - a, c - a)
-                    if np.dot(n_geom, h.equations[si][:3]) < 0:
-                        simp = [simp[0], simp[2], simp[1]]  # 统一外向定向
-                    tris.append([remap[simp[0]], remap[simp[1]], remap[simp[2]]])
-                parts.append({'v': verts, 't': tris})
-    return parts
+            verts, tris = pm
+            gv.append(local_np(verts, x0))
+            gt.append(tris + off)
+            off += len(verts)
+            nparts += 1
+    if not gv:
+        return np.zeros((0, 3)), np.zeros((0, 3), dtype=np.int64), 0
+    return np.vstack(gv), np.vstack(gt), nparts
 
-tri_cells = []
+groups = []
 for i in range(len(SX)):
-    parts = sample_parts(BOUNDS[i], BOUNDS[i + 1], SX[i])
-    tri_cells.append(parts)
-    nt = sum(len(p['t']) for p in parts)
-    print(f'站 {i} 元胞 [{BOUNDS[i]:.0f},{BOUNDS[i+1]:.0f}) 零件 {len(parts)} 三角 {nt}')
-mount_parts = sample_parts(MOUNT_X[0], MOUNT_X[1], SX[0])
-print(f'基座 零件 {len(mount_parts)} 三角 {sum(len(p["t"]) for p in mount_parts)}')
+    v, t, nparts = collect_group(BOUNDS[i], BOUNDS[i + 1], SX[i], 120.0, (-60.0, 50.0))
+    groups.append((f'c{i}', v, t))
+    print(f'站 {i} [{BOUNDS[i]:.0f},{BOUNDS[i+1]:.0f}) 零件 {nparts} 顶点 {len(v)} 三角 {len(t)}')
+# 基座：干净文件全量（x<25 一侧），仅剔除 x<-300 的遗留块
+v, t, npar = collect_group(-300.0, 25.0, SX[0], 500.0, (-500.0, 500.0))
+groups.append(('mnt', v, t))
+print(f'基座 零件 {npar} 顶点 {len(v)} 三角 {len(t)}')
+
+# —— 二进制布局：逐组 [verts f4×3N | pad4 | idx u2/u4×3M | pad4]
+blob = b''
+meta = []
+for name, v, t in groups:
+    idx32 = len(v) > 65535
+    v32 = np.round(v, 3).astype('<f4')
+    idx = t.astype('<u4' if idx32 else '<u2')
+    v_off = len(blob)
+    blob += v32.tobytes()
+    while len(blob) % 4:
+        blob += b'\0'
+    i_off = len(blob)
+    blob += idx.tobytes()
+    while len(blob) % 4:
+        blob += b'\0'
+    meta.append({'name': name, 'verts': int(len(v)), 'tris': int(len(t)),
+                 'vOff': v_off, 'iOff': i_off, 'idx32': bool(idx32)})
+open('src/demo/assets/tentacle3d-mesh.bin', 'wb').write(blob)
+total_t = sum(m['tris'] for m in meta)
+print(f'mesh.bin {len(blob)} 字节，总三角 {total_t}')
 
 stations = [sim(x, AXIS_Y, AXIS_Z, SX[0]) for x in SX]
 chains = []
@@ -195,20 +174,11 @@ for az in AZ:
     chains.append([sim(x, AXIS_Y + rr * math.cos(a), AXIS_Z + rr * math.sin(a), SX[0])
                    for x, rr in zip(SX, HOLE_R)])
 
-def fmt_parts(parts):
-    out = []
-    for p in parts:
-        v = ','.join(f'[{q[0]},{q[1]},{q[2]}]' for q in p['v'])
-        t = ','.join(f'[{a},{b},{c}]' for a, b, c in p['t'])
-        out.append('  {v:[' + v + '],t:[' + t + ']}')
-    return '[\n' + ',\n'.join(out) + '\n]'
-
 ts = f"""// 由 scripts/model-extract/gen_tentacle3d.py 生成——不要手改。
 // 数据源：模型求解器参考/11.3dm（干净版触手本体，用户提供 2026-07-10）。
-// 结构：基座舵机总成 + 7 方盒椎节（节距 72→47 收锥，孔半径 10.3→4.9，
-// 三腱方位 30°/150°/270°；站 0/6 孔按收锥外推）+ 节间盘轴联接 + 梢端盖。
-// 渲染单元 = 逐零件凸包（顶点量化 {GRID}mm，三角外向定向）——不透明哑光着色。
-// 单位 mm；站 0 心为原点。
+// 结构：基座舵机总成（全量）+ 7 方盒椎节 + 节间盘轴联接 + 梢端盖。
+// 网格：嵌入渲染网格全量导入（{total_t} 三角，0.05mm 焊接）——WebGL 直接吃，
+// 细节不再做凸包减量（用户拍板「直接导入」）。载荷在 tentacle3d-mesh.bin。
 
 export const STATIONS: ReadonlyArray<readonly [number, number, number]> = {json.dumps(stations)} as const;
 
@@ -216,18 +186,17 @@ export const CHAINS: ReadonlyArray<ReadonlyArray<readonly [number, number, numbe
 
 export const RADII: ReadonlyArray<number> = {json.dumps(HOLE_R)} as const;
 
-export interface HullPart {{
-  /** 局部系顶点 [沿臂 ax, 腱1 方向 u, 副法向 w] */
-  v: ReadonlyArray<readonly [number, number, number]>;
-  /** 外向定向三角（顶点下标） */
-  t: ReadonlyArray<readonly [number, number, number]>;
+/** mesh.bin 分组布局（c0..c6 = 站元胞局部系，mnt = 基座挂站 0 刚架） */
+export interface MeshGroup {{
+  name: string;
+  verts: number;
+  tris: number;
+  vOff: number;
+  iOff: number;
+  idx32: boolean;
 }}
 
-export const CELL_PARTS: ReadonlyArray<ReadonlyArray<HullPart>> = [
-{','.join(fmt_parts(c) for c in tri_cells)}
-] as const;
-
-export const MOUNT_PARTS: ReadonlyArray<HullPart> = {fmt_parts(mount_parts)} as const;
+export const MESH_GROUPS: ReadonlyArray<MeshGroup> = {json.dumps(meta)} as const;
 """
 open('src/lib/linkage/tentacle3d-shape.ts', 'w').write(ts)
 print('生成 tentacle3d-shape.ts', len(ts), '字节')

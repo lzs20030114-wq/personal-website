@@ -11,7 +11,12 @@ WebGL，不引 three.js）——SVG 画家算法历经四版（边线框→半�
 剪影+切片）仍无法给互穿零件像素级正确遮挡，用户否决后拍板解锁。z-buffer 逐像素
 深度测试 = 物理精确遮挡；肌腱线同样参与深度测试。哑光纸墨风格不变。
 **2D 连杆线仍守 SVG 红线**（LINKAGE_SPEC §1.3 不动）。装备：`gl3d.ts`
-（FlatRenderer + bakeMesh，静态 VBO/胞 + 逐胞刚架 uniform，9 次 draw call）。
+（FlatRenderer + bakeIndexed，静态 VBO/胞 + 逐胞刚架 uniform，9 次 draw call）。
+**网格 v6（用户拍板「直接导入」）**：凸包减量废弃（SVG 时代遗产——无细节且复杂
+支架碎成方块），模型嵌入渲染网格**全量导入**：10.7 万三角 / 0.05mm 逐零件焊接 /
+剔除零面积，二进制资产 `tentacle3d-mesh.bin`（1.4MB，vite ?url 引入，运行时
+bakeIndexed 展开平面着色流）；基座取干净文件全量（含支腿底板，37 零件）。
+headless SwiftShader 软渲染 9fps（验证下限），真 GPU 满帧。
 
 **v0.1 做**：
 - **独立 3D 内核** `solver3d.ts`——距离约束 + 锚点 + stiffness + 门控 Verlet 的 3D 版。
