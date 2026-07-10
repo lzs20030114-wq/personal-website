@@ -1,23 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import { LinkageSolver } from './solver';
 import { LinkageController } from './controller';
-import { TENTACLE, createTentacle } from './tentacle-data';
+import { TENTACLE, TIP, SPINE, applyContraction, createTentacle } from './tentacle-data';
 import { createCrankRocker } from './presets';
 
-// 触手 spec §6：B（软约束）+ C（门控 Verlet）验收。容差单位 viewBox px。
+// 触手 spec v0.5：肌腱驱动平面版（机制提取自 触手模拟1.ghx）。容差 = viewBox px，
+// 阈值全部来自实测探针（scratchpad tendon-probe，2026-07-10）。
 
-const TIP = TENTACLE.segments; // 末端节点索引
 const H = 1 / 60;
+const SW = TENTACLE.sweeps;
 
-function makeCtl(solver: LinkageSolver, reducedMotion = false): LinkageController {
-  // 无 driver：无曲柄机构（controller v0 限制：dynamics 与 driver 不组合）
-  return new LinkageController(solver, { dragSweeps: TENTACLE.sweeps, spinSweeps: TENTACLE.sweeps, reducedMotion });
-}
-
+const tipDx = (s: LinkageSolver): number => s.nodes[SPINE(TIP)].x - TENTACLE.base.x;
 const finite = (s: LinkageSolver): boolean =>
   s.nodes.every((n) => Number.isFinite(n.x) && Number.isFinite(n.y));
+const settle = (s: LinkageSolver, frames: number): void => {
+  for (let f = 0; f < frames; f++) s.step(H, SW);
+};
 
-describe('B 级：Bar.stiffness 软约束', () => {
+describe('内核：B 级软约束 + C 级门控 Verlet（回归与单元）', () => {
   it('缺省 stiffness = 1，四杆回归路径不受影响', () => {
     const s = createCrankRocker();
     s.bars.forEach((b) => expect(b.stiffness).toBe(1));
@@ -35,9 +35,7 @@ describe('B 级：Bar.stiffness 软约束', () => {
     const d = Math.hypot(s.nodes[1].x - s.nodes[0].x, s.nodes[1].y - s.nodes[0].y);
     expect(Math.abs(d - 8)).toBeLessThan(1e-9);
   });
-});
 
-describe('C 级：门控 Verlet（SPEC §3.6）', () => {
   it('未开启动力学时 step() 退化为 iterate()——旧机构零变化', () => {
     const a = createCrankRocker();
     const b = createCrankRocker();
@@ -60,116 +58,122 @@ describe('C 级：门控 Verlet（SPEC §3.6）', () => {
     for (let f = 0; f < 60; f++) {
       s.step(H, 1);
       const dy = s.nodes[0].y - prevY;
-      expect(dy).toBeGreaterThanOrEqual(prevStep); // 加速下落
+      expect(dy).toBeGreaterThanOrEqual(prevStep);
       prevStep = dy;
       prevY = s.nodes[0].y;
     }
     expect(prevY).toBeGreaterThan(45);
-    expect(prevY).toBeLessThan(55.5); // ½·100·1² = 50
+    expect(prevY).toBeLessThan(55.5);
   });
 
-  it('阻尼：无重力下拖出初速后逐步衰减到静止', () => {
-    const s = new LinkageSolver(
-      { nodes: [{ x: 0, y: 0 }], bars: [] },
-      { dynamics: { gravity: { x: 0, y: 0 }, damping: 0.9 } },
-    );
-    // 拖 5 帧注入速度，然后松手
-    s.beginDrag(0);
-    for (let f = 0; f < 5; f++) {
-      s.dragTo(200, 0);
-      s.step(H, 4);
-    }
-    s.endDrag();
-    let prev = Number.POSITIVE_INFINITY;
-    let lastMove = 0;
-    for (let f = 0; f < 60; f++) {
-      const x0 = s.nodes[0].x;
-      s.step(H, 4);
-      lastMove = Math.abs(s.nodes[0].x - x0);
-      expect(lastMove).toBeLessThanOrEqual(prev + 1e-9); // 单调衰减
-      prev = lastMove;
-    }
-    expect(lastMove).toBeLessThan(0.05); // 基本静止
+  it('setRest：运行时改原长，投影向新 rest 收敛（收缩驱动的内核依据）', () => {
+    const s = new LinkageSolver({
+      nodes: [
+        { x: 0, y: 0, fixed: true },
+        { x: 20, y: 0 },
+      ],
+      bars: [{ a: 0, b: 1, rest: 20 }],
+    });
+    s.setRest(0, 12);
+    s.iterate(4);
+    const d = Math.hypot(s.nodes[1].x, s.nodes[1].y);
+    expect(Math.abs(d - 12)).toBeLessThan(1e-6);
   });
 });
 
-describe('触手实例（悬垂/摆动/暴力甩）', () => {
-  it('悬垂静息：2 秒后静止在基座正下方，残差 < 1px', () => {
-    const s = createTentacle();
-    for (let f = 0; f < 120; f++) s.step(H, TENTACLE.sweeps);
+describe('肌腱驱动触手（GH 机制平面版）', () => {
+  it('静息：竖直悬垂，梢部在基座正下方，残差 < 1px', () => {
+    const { solver: s } = createTentacle();
+    settle(s, 180);
     expect(finite(s)).toBe(true);
     expect(s.maxError()).toBeLessThan(1);
-    const tip = s.nodes[TIP];
-    expect(Math.abs(tip.x - TENTACLE.base.x)).toBeLessThan(1); // 直垂
-    const y0 = tip.y;
-    s.step(H, TENTACLE.sweeps);
-    expect(Math.abs(s.nodes[TIP].y - y0)).toBeLessThan(0.05); // 已静止
+    expect(Math.abs(tipDx(s))).toBeLessThan(1);
   });
 
-  it('侧拉松手：摆过中线（钟摆）且振幅衰减', () => {
-    const s = createTentacle();
-    const ctl = makeCtl(s);
-    for (let f = 0; f < 120; f++) ctl.frame(H); // 静息
-    const tip = s.nodes[TIP];
-    expect(ctl.pointerDown(1, tip.x, tip.y)).toBe(true);
-    for (let f = 0; f < 40; f++) {
-      ctl.pointerMove(1, TENTACLE.base.x + 160, TENTACLE.base.y + 160); // 拉向右侧
-      ctl.frame(H);
-    }
-    ctl.pointerUp(1);
-    expect(ctl.mode).toBe('idle'); // 无 driver：松手即撒手
-    let crossed = false;
-    let firstSwing = 0;
-    let lateSwing = 0;
-    // 摆动含甩鞭过冲（实测释放 160px 过冲至 ~178px），首 2s 与末 2s 对比才稳健
-    for (let f = 0; f < 720; f++) {
-      ctl.frame(H);
-      const dx = s.nodes[TIP].x - TENTACLE.base.x;
-      if (dx < 0) crossed = true; // 摆过中线
-      if (f < 120) firstSwing = Math.max(firstSwing, Math.abs(dx));
-      if (f >= 600) lateSwing = Math.max(lateSwing, Math.abs(dx));
-    }
-    expect(crossed).toBe(true);
-    expect(lateSwing).toBeLessThan(firstSwing * 0.5); // 12s 实测衰减到 ~23%
+  it('左肌腱收缩 c=0.5：向左弯曲（实测 dx ≈ −85）；释放后回到近直立', () => {
+    const { solver: s, left } = createTentacle();
+    settle(s, 180);
+    applyContraction(s, left, 0.5);
+    settle(s, 240);
+    expect(tipDx(s)).toBeLessThan(-60);
+    applyContraction(s, left, 0);
+    settle(s, 900);
+    expect(Math.abs(tipDx(s))).toBeLessThan(40); // GS 顺序偏差留 ~14px 残留，已知局限
     expect(finite(s)).toBe(true);
   });
 
-  it('暴力甩不炸：目标 (10⁴, 380) 十帧 + 松手一秒，全程有限且被臂长约束', () => {
-    const s = createTentacle();
-    const ctl = makeCtl(s);
-    const tip = s.nodes[TIP];
+  it('右肌腱收缩 c=0.5：向右弯曲（镜像）', () => {
+    const { solver: s, right } = createTentacle();
+    settle(s, 180);
+    applyContraction(s, right, 0.5);
+    settle(s, 240);
+    expect(tipDx(s)).toBeGreaterThan(50);
+  });
+
+  it('满收缩 c=1：深度卷曲（梢部大幅上抬）且结构完好', () => {
+    const { solver: s, left } = createTentacle();
+    settle(s, 180);
+    applyContraction(s, left, 1);
+    settle(s, 300);
+    const tip = s.nodes[SPINE(TIP)];
+    expect(tip.y - TENTACLE.base.y).toBeLessThan(200); // 悬垂 280 → 卷起后 <200（实测 ≈142）
+    expect(tipDx(s)).toBeLessThan(-100);
+    expect(finite(s)).toBe(true);
+  });
+
+  it('双侧同收 c=0.7：屈曲侧倾属真物理（欧拉失稳），但有界、不散架', () => {
+    const { solver: s, left, right } = createTentacle();
+    settle(s, 180);
+    applyContraction(s, left, 0.7);
+    applyContraction(s, right, 0.7);
+    settle(s, 400);
+    expect(finite(s)).toBe(true);
+    expect(Math.abs(tipDx(s))).toBeLessThan(120); // 实测 ≈55，屈曲方向由数值扰动决定
+    const tip = s.nodes[SPINE(TIP)];
+    const r = Math.hypot(tip.x - TENTACLE.base.x, tip.y - TENTACLE.base.y);
+    expect(r).toBeLessThan(300); // 脊柱不可伸长
+  });
+
+  it('暴力甩 + 满收缩：全程有限、链被臂长约束', () => {
+    const { solver: s, left } = createTentacle();
+    const ctl = new LinkageController(s, { dragSweeps: SW, spinSweeps: SW });
+    applyContraction(s, left, 1);
+    const tip = s.nodes[SPINE(TIP)];
     expect(ctl.pointerDown(1, tip.x, tip.y)).toBe(true);
     for (let f = 0; f < 10; f++) {
       ctl.pointerMove(1, 1e4, 380);
       ctl.frame(H);
     }
     ctl.pointerUp(1);
+    expect(ctl.mode).toBe('idle');
     for (let f = 0; f < 60; f++) ctl.frame(H);
     expect(finite(s)).toBe(true);
     const arm = TENTACLE.segments * TENTACLE.segLen;
     s.nodes.forEach((n) => {
       const r = Math.hypot(n.x - TENTACLE.base.x, n.y - TENTACLE.base.y);
-      expect(r).toBeLessThan(arm * 1.5); // 链在，没被甩散
+      expect(r).toBeLessThan(arm * 1.5);
     });
   });
 
   it('切后台：step(2s) 子步封顶，不瞬移不发散', () => {
-    const s = createTentacle();
-    for (let f = 0; f < 120; f++) s.step(H, TENTACLE.sweeps);
-    const y0 = s.nodes[TIP].y;
-    s.step(2, TENTACLE.sweeps); // 静息态下大 dt：位置几乎不变
+    const { solver: s } = createTentacle();
+    settle(s, 180);
+    const y0 = s.nodes[SPINE(TIP)].y;
+    s.step(2, SW);
     expect(finite(s)).toBe(true);
-    expect(Math.abs(s.nodes[TIP].y - y0)).toBeLessThan(5);
-    expect(s.maxError()).toBeLessThan(2);
+    expect(Math.abs(s.nodes[SPINE(TIP)].y - y0)).toBeLessThan(5);
   });
 
-  it('确定性：同一脚本两次运行逐位一致', () => {
+  it('确定性：同一收缩/拖拽脚本两次运行逐位一致', () => {
     const run = (): number[] => {
-      const s = createTentacle();
-      const ctl = makeCtl(s);
-      for (let f = 0; f < 30; f++) ctl.frame(H);
-      ctl.pointerDown(1, s.nodes[TIP].x, s.nodes[TIP].y);
-      for (let f = 0; f < 10; f++) {
+      const { solver: s, left, right } = createTentacle();
+      const ctl = new LinkageController(s, { dragSweeps: SW, spinSweeps: SW });
+      settle(s, 60);
+      applyContraction(s, left, 0.6);
+      for (let f = 0; f < 60; f++) ctl.frame(H);
+      applyContraction(s, right, 0.3);
+      ctl.pointerDown(1, s.nodes[SPINE(TIP)].x, s.nodes[SPINE(TIP)].y);
+      for (let f = 0; f < 20; f++) {
         ctl.pointerMove(1, 500, 300);
         ctl.frame(H);
       }

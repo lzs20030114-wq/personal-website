@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Tentacle — 轮回机器 触手台架</title>
+    <title>Tentacle — 轮回机器 肌腱驱动触手台架</title>
     <style>
       body {
         margin: 0;
@@ -14,7 +14,7 @@
       }
       /* SPEC §5 条 1：SVG presentation attribute 不解析 var()，颜色一律走 class */
       svg {
-        width: min(92vw, 760px);
+        width: min(92vw, 720px);
         touch-action: none; /* SPEC §4.3 坑 4 */
       }
       .ground {
@@ -22,12 +22,23 @@
         stroke-width: 1.2;
         fill: none;
       }
-      .arm {
-        stroke: #1f1f1d;
-        stroke-linecap: round;
+      .spine {
+        stroke: #8a8a82;
+        stroke-width: 2;
+        fill: none;
+        stroke-linejoin: round;
       }
-      .joint-fixed {
-        fill: #1f1f1d;
+      .tendon {
+        stroke: #2456a6;
+        stroke-width: 1.6;
+        fill: none;
+        stroke-linejoin: round;
+        opacity: 0.9;
+      }
+      .disc {
+        stroke: #1f1f1d;
+        stroke-width: 4;
+        stroke-linecap: round;
       }
       .joint-handle {
         fill: #ffffff;
@@ -49,11 +60,48 @@
         color: #2456a6;
         margin-right: 12px;
       }
+      /* 收缩控制条（GH contraction 滑块的对应物） */
+      #controls {
+        position: fixed;
+        bottom: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        color: #1f1f1d;
+        background: #fafaf7;
+        padding: 6px 12px;
+        border: 1px solid #d9d9d1;
+      }
+      #controls label {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      #controls input[type='range'] {
+        width: 130px;
+        accent-color: #2456a6;
+      }
+      #controls button {
+        font: inherit;
+        color: #2456a6;
+        background: none;
+        border: 1px solid #d9d9d1;
+        padding: 2px 10px;
+        cursor: pointer;
+      }
     </style>
   </head>
   <body>
     <nav><a href="./index.html">← 四杆台架</a><a href="./arch.html">拱环台架</a></nav>
     <svg id="fig" viewBox="0 0 700 520" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div id="controls">
+      <label>左肌腱 <input id="tendon-l" type="range" min="0" max="100" value="0" /></label>
+      <label>右肌腱 <input id="tendon-r" type="range" min="0" max="100" value="0" /></label>
+      <button id="relax">放松</button>
+    </div>
     <script type="module" src="/src/demo/tentacle.ts"></script>
   </body>
 </html>

@@ -1,13 +1,24 @@
-import { TENTACLE, createTentacle } from '../lib/linkage/tentacle-data';
+import {
+  LEFT,
+  RIGHT,
+  SPINE,
+  TENTACLE,
+  TIP,
+  applyContraction,
+  createTentacle,
+} from '../lib/linkage/tentacle-data';
 import { LinkageController } from '../lib/linkage/controller';
 
-// 触手台架（轮回机器_触手spec v0.2 B+C）：vanilla TS，无 React。
-// 无曲柄 driver——动力学（重力+阻尼）本身就是「驱动」；交互规则仍走 LinkageController。
+// 肌腱驱动触手台架（触手 spec v0.5，机制提取自 触手模拟1.ghx）：vanilla TS，无 React。
+// 左右滑块 = GH 的 contraction 滑块（差动收缩控弯曲）；拖拽 = GH 的 Grab。
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const svg = document.getElementById('fig') as unknown as SVGSVGElement;
+const sliderL = document.getElementById('tendon-l') as HTMLInputElement;
+const sliderR = document.getElementById('tendon-r') as HTMLInputElement;
+const relaxBtn = document.getElementById('relax') as HTMLButtonElement;
 
-const solver = createTentacle();
+const { solver, left, right } = createTentacle();
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const controller = new LinkageController(solver, {
   dragSweeps: TENTACLE.sweeps,
@@ -23,28 +34,20 @@ function el<K extends keyof SVGElementTagNameMap>(tag: K, cls = ''): SVGElementT
   return e;
 }
 
-// 悬挂座：横梁 + 剖面线（基座是机器的，不是触手的）
+// 悬挂座（基座椎板整块锚定 = 夹持）
 const b = TENTACLE.base;
 const mount = el('path', 'ground');
 mount.setAttribute(
   'd',
-  `M${b.x - 26} ${b.y}h52` + [-22, -14, -6, 2, 10, 18].map((k) => `M${b.x + k} ${b.y}l-6 -8`).join(''),
+  `M${b.x - TENTACLE.discR - 10} ${b.y}h${2 * TENTACLE.discR + 20}` +
+    [-24, -14, -4, 6, 16, 26].map((k) => `M${b.x + k} ${b.y}l-6 -8`).join(''),
 );
 
-// 脊柱段：由粗到细 taper（宽度是形态不是颜色，presentation attribute 合法）
-const W_ROOT = 13;
-const W_TIP = 3;
-const segEls = Array.from({ length: TENTACLE.segments }, (_, i) => {
-  const e = el('line', 'arm');
-  e.setAttribute('stroke-width', String(W_ROOT + ((W_TIP - W_ROOT) * i) / (TENTACLE.segments - 1)));
-  return e;
-});
-
-// 关节：基座实心墨点 + 末端可抓手柄（中间节点无视觉、有热区）
-const baseDot = el('circle', 'joint-fixed');
-baseDot.setAttribute('r', '5');
-baseDot.setAttribute('cx', String(b.x));
-baseDot.setAttribute('cy', String(b.y));
+// 图层：脊柱（浅）→ 肌腱（蓝，左右各一条折线）→ 椎板（深横杆）→ 末端手柄
+const spineEl = el('polyline', 'spine');
+const tendonL = el('polyline', 'tendon');
+const tendonR = el('polyline', 'tendon');
+const discEls = Array.from({ length: TENTACLE.segments + 1 }, () => el('line', 'disc'));
 const tipHandle = el('circle', 'joint-handle');
 tipHandle.setAttribute('r', '7');
 
@@ -52,22 +55,44 @@ const hud = el('text', 'hud');
 hud.setAttribute('x', '16');
 hud.setAttribute('y', '504');
 
-const TIP = TENTACLE.segments;
+const pts = (idx: (i: number) => number): string =>
+  Array.from({ length: TENTACLE.segments + 1 }, (_, i) => {
+    const n = solver.nodes[idx(i)];
+    return `${n.x},${n.y}`;
+  }).join(' ');
+
 function render(): void {
-  solver.bars.forEach((bar, i) => {
-    if (i >= TENTACLE.segments) return; // 弯曲杆不画——它们是刚度，不是形体
-    const pa = solver.nodes[bar.a];
-    const pb = solver.nodes[bar.b];
-    segEls[i].setAttribute('x1', String(pa.x));
-    segEls[i].setAttribute('y1', String(pa.y));
-    segEls[i].setAttribute('x2', String(pb.x));
-    segEls[i].setAttribute('y2', String(pb.y));
-  });
-  const tip = solver.nodes[TIP];
+  spineEl.setAttribute('points', pts(SPINE));
+  tendonL.setAttribute('points', pts(LEFT));
+  tendonR.setAttribute('points', pts(RIGHT));
+  for (let i = 0; i <= TENTACLE.segments; i++) {
+    const L = solver.nodes[LEFT(i)];
+    const R = solver.nodes[RIGHT(i)];
+    discEls[i].setAttribute('x1', String(L.x));
+    discEls[i].setAttribute('y1', String(L.y));
+    discEls[i].setAttribute('x2', String(R.x));
+    discEls[i].setAttribute('y2', String(R.y));
+  }
+  const tip = solver.nodes[SPINE(TIP)];
   tipHandle.setAttribute('cx', String(tip.x));
   tipHandle.setAttribute('cy', String(tip.y));
-  hud.textContent = `TENTACLE ${TENTACLE.segments}×${TENTACLE.segLen}   g ${TENTACLE.dynamics.gravity.y}   damp ${TENTACLE.dynamics.damping}   err ${solver.maxError().toFixed(2)} px   [${controller.mode}]`;
+  hud.textContent = `TENDON L ${Number(sliderL.value)}%  R ${Number(sliderR.value)}%   err ${solver
+    .maxError()
+    .toFixed(2)} px   [${controller.mode}]`;
 }
+
+// —— 收缩控制（GH contraction 滑块的对应物）
+function applySliders(): void {
+  applyContraction(solver, left, Number(sliderL.value) / 100);
+  applyContraction(solver, right, Number(sliderR.value) / 100);
+}
+sliderL.addEventListener('input', applySliders);
+sliderR.addEventListener('input', applySliders);
+relaxBtn.addEventListener('click', () => {
+  sliderL.value = '0';
+  sliderR.value = '0';
+  applySliders();
+});
 
 // —— 指针接线（SPEC §4.3）
 function toViewBox(ev: PointerEvent): { x: number; y: number } {
@@ -107,5 +132,5 @@ render();
 requestAnimationFrame(frameLoop);
 
 if (import.meta.env.DEV) {
-  (window as unknown as Record<string, unknown>).__linkage = { solver, controller };
+  (window as unknown as Record<string, unknown>).__linkage = { solver, controller, left, right };
 }

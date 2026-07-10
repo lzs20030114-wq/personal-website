@@ -170,6 +170,15 @@ export class LinkageSolver {
     this.ns[nodeIndex].fixed = fixed;
   }
 
+  /**
+   * 运行时改杆原长（SPEC §4.1 修订，触手肌腱收缩驱动）：纯数据变更，
+   * 投影算法不感知——下一遍扫描自然向新 rest 收敛（Kangaroo Spring 的
+   * target_length 对应物）。
+   */
+  setRest(barIndex: number, rest: number): void {
+    this.bs[barIndex].rest = rest;
+  }
+
   setNode(nodeIndex: number, x: number, y: number): void {
     this.ns[nodeIndex].x = x;
     this.ns[nodeIndex].y = y;
