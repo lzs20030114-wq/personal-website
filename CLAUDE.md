@@ -49,6 +49,7 @@
 - **网站 S1+S3 完成（2026-07-08）**：Next.js 16 脚手架落地（`npm run dev`=站点 :3000，`npm run demo`=连杆台架 :5173）。内容池（zod 校验、selected 恒 4 机器强制）+ 四路由 + 占位插槽系统（FigSlot/VideoSlot/InteractiveSlot/IntentNote/ProcessAside/概念卡）+ 轮回机器八段骨架页（结构=案例页骨架，论证=总框架，素材全为带状态插槽，正文全为意图占位——**不代写正文**）。构建/typecheck/23 测试全绿。vercel.json 声明 nextjs 框架，push 即部署。余项：S2（连杆 M3 后挂 FIG.01/FIG.12）、S4（OG/check-links）。
 - **拱环求解器实例完成（2026-07-10）**：真机 S4 环（角化剪式拱 + 曲柄滑块）从 `模型求解器参考/求解器结构演示.3dm` 提取为求解器实例——**内核零修改**（导轨=超长杆近似、扁板加支撑节点防镜像隧穿），复用 controller，台架 `/arch.html`（`npm run demo`），`arch.test.ts` 7 项 + 全套 30 项绿。决策与实测见 轮回机器_拱环求解器.md。触手模拟明确不做（软体，范围外）。
 - **网站 review 完成（2026-07-10）**：四路外部调研（获奖站/开源架构/动效/叙事）验证现有方向，无需推翻。产出 SITE_REVIEW_2026-07.md：§二 代码发现、§九 弱模型工单（11 条，随时可派）。三项拍板已通过并入 SITE_SPEC 修订（§1 hover/active 最小集放宽、§4 about colophon 席位、§8 字体换自托管 Source Serif 4）。
+- **台架静态上线（2026-07-10）**：`build`=`vite build && next build`（SITE_SPEC §2 修订），台架双页随 Vercel 部署上线——线上 `/demo/`=四杆、`/demo/arch.html`=拱环（产物落 `public/demo/`，.gitignore，构建时生成）。本地 `npm run demo` 行为不变。用户拍板推 master 上生产。
 
 ## 可用工具
 
