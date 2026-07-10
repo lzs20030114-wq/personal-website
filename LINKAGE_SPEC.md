@@ -314,7 +314,7 @@ src/components/linkage/LinkageFigure.tsx    // "use client"
 
 - `spin`：θ += ω·dt（dt 已 clamp），B = A + 66·(cos θ, sin θ)，B 临时 fixed，`iterate(24)`，解锁。**Session 4 注意**：驱动参数应随 preset 配置化（`driver: {anchor, tip, radius, omega}`），为机构画廊铺路（见 IDEAS.md），不许硬编码进渲染层。
 - `drag`：`iterate(36)`，软目标 = 指针位置。
-- `release`（M3 已实现；**SPEC 修订**：由「从 0 缓升」升级为**继承末速**，缓升成为其静置特例）：拖拽中对曲柄角速度做 EMA 估计（smoothing=0.5/帧，角差回卷防 ±2π 跳变），松手继承该初速（封顶 omegaMax=6 rad/s），以时间常数 τ=0.55s 指数松弛到巡航 ω——甩得快先快后缓「泄劲」，静置松手从 ≈0 缓升，同一条规律；反向甩经零平滑回正。|ω − ω_cruise| ≤ snapEps(5%) 时接回 spin。**τ=0 = 硬切**（THESIS_NOTES 生命感实验的对照开关）。参数 `ControllerOpts.release{tau, omegaMax, smoothing, snapEps}` 全部可调——具体数值待用户真机手感拍板，拍板后回填此处。
+- `release`（M3 已实现；**SPEC 修订**：由「从 0 缓升」升级为**继承末速**，缓升成为其静置特例）：拖拽中对曲柄角速度做 EMA 估计（smoothing=0.5/帧，角差回卷防 ±2π 跳变），松手继承该初速（封顶 omegaMax=6 rad/s），以时间常数 τ=0.55s 指数松弛到巡航 ω——甩得快先快后缓「泄劲」，静置松手从 ≈0 缓升，同一条规律；反向甩经零平滑回正。|ω − ω_cruise| ≤ snapEps(5%) 时接回 spin。**τ=0 = 硬切**（THESIS_NOTES 生命感实验的对照开关）。参数 `ControllerOpts.release{tau, omegaMax, smoothing, snapEps}` 全部可调——**2026-07-10 用户真机拍板通过，默认值（0.55s / 6 rad/s / 0.5 / 5%）即定版**。
 - `prefers-reduced-motion`：初始为静止（不自转），拖拽仍可用（用户主动发起的运动不属于「减少动画」的范畴）。
 
 ### 4.3 指针与坐标
