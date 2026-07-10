@@ -4,3 +4,7 @@ dist/
 next-env.d.ts
 *.local
 *.tsbuildinfo
+
+# 用户模型文件（30–40MB 二进制，权威副本在用户手里，不进 git）
+模型求解器参考/
+*.rhl
