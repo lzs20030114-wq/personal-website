@@ -35,6 +35,32 @@ describe('solver3d 内核', () => {
     expect(Math.abs(Math.hypot(B.x - A.x, B.y - A.y, B.z - A.z) - 3.5)).toBeLessThan(1e-9);
   });
 
+  it('缆线（穿环滑索）：总长收敛到目标；松弛时零作用力（单边）', () => {
+    const s = new LinkageSolver3D({
+      nodes: [
+        { x: 0, y: 0, z: 0, fixed: true },
+        { x: 10, y: 0, z: 0 },
+        { x: 20, y: 0, z: 0 },
+        { x: 30, y: 0, z: 0 },
+      ],
+      bars: [],
+      cables: [{ nodes: [0, 1, 2, 3] }], // 自然总长 30
+    });
+    s.setCableRest(0, 24); // 抽线 6
+    s.iterate(40);
+    expect(Math.abs(s.cableLength(0) - 24)).toBeLessThan(0.01);
+    expect([s.nodes[0].x, s.nodes[0].y, s.nodes[0].z]).toEqual([0, 0, 0]); // 锚点不动
+    // 单边：目标放长到 40（松弛）——绳不推，构型不再变化
+    s.setCableRest(0, 40);
+    const before = s.nodes.map((n) => [n.x, n.y, n.z]);
+    s.iterate(20);
+    s.nodes.forEach((n, i) => {
+      expect(n.x).toBe(before[i][0]);
+      expect(n.y).toBe(before[i][1]);
+      expect(n.z).toBe(before[i][2]);
+    });
+  });
+
   it('锚点严格不动；setRest 后向新原长收敛', () => {
     const s = new LinkageSolver3D({
       nodes: [
@@ -86,9 +112,9 @@ describe('立体肌腱触手', () => {
     const along = dx * tip.x + dz * tip.z;
     const perp = -dz * tip.x + dx * tip.z;
     expect(along).toBeGreaterThan(130);
-    // v5（对称扫描 + 双邻站对称锥）实测横向 −4~−11：扭转占比 <6%
-    expect(Math.abs(perp)).toBeLessThan(25);
-    expect(Math.abs(perp)).toBeLessThan(along * 0.12);
+    // 缆线机制实测横向 −11/+30/−8（张力自动分配后扭转分布与逐段版不同）
+    expect(Math.abs(perp)).toBeLessThan(40);
+    expect(Math.abs(perp)).toBeLessThan(along * 0.2);
   });
 
   it('放松 15s 回真机静息位（实测残留 ≈0.1）', () => {

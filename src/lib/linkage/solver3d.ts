@@ -24,6 +24,17 @@ export interface Bar3 {
 export interface Linkage3Def {
   nodes: { x: number; y: number; z: number; fixed?: boolean }[];
   bars: { a: number; b: number; rest?: number; stiffness?: number }[];
+  /** 缆线（穿环滑索，v6 触手真机制）：对整条路径 Σ|pᵢ₊₁−pᵢ| 的标量约束。
+   *  中间节点 = 无摩擦导孔，张力自动分配；oneSided 缺省 true——只拉不推，
+   *  路径短于 rest（松弛）时零作用力。rest 缺省 = 初始路径总长。 */
+  cables?: { nodes: number[]; rest?: number; stiffness?: number; oneSided?: boolean }[];
+}
+
+export interface Cable3 {
+  nodes: number[];
+  rest: number;
+  stiffness: number;
+  oneSided: boolean;
 }
 
 export interface Dynamics3Config {
@@ -43,6 +54,7 @@ const DT_MAX = 0.05;
 export class LinkageSolver3D {
   private readonly ns: Node3[];
   private readonly bs: Bar3[];
+  private readonly cs: Cable3[];
   private readonly dyn?: Dynamics3Config;
   private readonly prevX: number[] = [];
   private readonly prevY: number[] = [];
@@ -62,6 +74,20 @@ export class LinkageSolver3D {
         ),
       stiffness: b.stiffness ?? 1,
     }));
+    this.cs = (def.cables ?? []).map((c) => {
+      let L = 0;
+      for (let i = 0; i + 1 < c.nodes.length; i++) {
+        const A = def.nodes[c.nodes[i]];
+        const B = def.nodes[c.nodes[i + 1]];
+        L += Math.hypot(B.x - A.x, B.y - A.y, B.z - A.z);
+      }
+      return {
+        nodes: [...c.nodes],
+        rest: c.rest ?? L,
+        stiffness: c.stiffness ?? 1,
+        oneSided: c.oneSided ?? true,
+      };
+    });
     this.dyn = opts?.dynamics;
     if (this.dyn) {
       this.prevX = this.ns.map((n) => n.x);
@@ -97,6 +123,12 @@ export class LinkageSolver3D {
       const e = Math.abs(Math.hypot(B.x - A.x, B.y - A.y, B.z - A.z) - rest);
       if (e > m) m = e;
     }
+    for (let i = 0; i < this.cs.length; i++) {
+      const c = this.cs[i];
+      const over = this.cableLength(i) - c.rest;
+      const e = c.oneSided ? Math.max(0, over) : Math.abs(over);
+      if (e > m) m = e;
+    }
     return m;
   }
 
@@ -113,6 +145,27 @@ export class LinkageSolver3D {
   /** 运行时改杆原长（肌腱收缩驱动），纯数据变更。 */
   setRest(barIndex: number, rest: number): void {
     this.bs[barIndex].rest = rest;
+  }
+
+  get cables(): ReadonlyArray<Readonly<Cable3>> {
+    return this.cs;
+  }
+
+  /** 运行时改缆线目标总长（= 从根部抽线：rest = 自然长 − 抽线行程）。 */
+  setCableRest(cableIndex: number, rest: number): void {
+    this.cs[cableIndex].rest = rest;
+  }
+
+  /** 缆线当前路径总长。 */
+  cableLength(cableIndex: number): number {
+    const c = this.cs[cableIndex];
+    let L = 0;
+    for (let i = 0; i + 1 < c.nodes.length; i++) {
+      const A = this.ns[c.nodes[i]];
+      const B = this.ns[c.nodes[i + 1]];
+      L += Math.hypot(B.x - A.x, B.y - A.y, B.z - A.z);
+    }
+    return L;
   }
 
   /** 动力学一帧：dt 钳位 → 固定子步 Verlet 积分 + 投影（SPEC §3.6 的 3D 版）。 */
@@ -148,6 +201,45 @@ export class LinkageSolver3D {
     }
   }
 
+  /** 缆线投影（PBD 穿环滑索）：C = Σ段长 − rest；∇ᵢ = 相邻段单位向量之和，
+   *  λ = C·k / Σ wᵢ|∇ᵢ|²，Δpᵢ = −wᵢ·λ·∇ᵢ。oneSided 时仅 C>0（张紧）才作用。 */
+  private projectCable(c: Cable3): void {
+    const n = c.nodes.length;
+    if (n < 2) return;
+    const gx = new Array<number>(n).fill(0);
+    const gy = new Array<number>(n).fill(0);
+    const gz = new Array<number>(n).fill(0);
+    let L = 0;
+    for (let i = 0; i + 1 < n; i++) {
+      const A = this.ns[c.nodes[i]];
+      const B = this.ns[c.nodes[i + 1]];
+      let dx = B.x - A.x;
+      let dy = B.y - A.y;
+      let dz = B.z - A.z;
+      const d = Math.hypot(dx, dy, dz) || EPS;
+      L += d;
+      dx /= d; dy /= d; dz /= d;
+      gx[i] -= dx; gy[i] -= dy; gz[i] -= dz;
+      gx[i + 1] += dx; gy[i + 1] += dy; gz[i + 1] += dz;
+    }
+    const C = L - c.rest;
+    if (c.oneSided && C <= 0) return; // 松弛：绳不推
+    let denom = 0;
+    for (let i = 0; i < n; i++) {
+      if (this.ns[c.nodes[i]].fixed) continue;
+      denom += gx[i] * gx[i] + gy[i] * gy[i] + gz[i] * gz[i];
+    }
+    if (denom < EPS) return;
+    const lam = (C * c.stiffness) / denom;
+    for (let i = 0; i < n; i++) {
+      const node = this.ns[c.nodes[i]];
+      if (node.fixed) continue;
+      node.x -= lam * gx[i];
+      node.y -= lam * gy[i];
+      node.z -= lam * gz[i];
+    }
+  }
+
   private sweepOnce(reverse: boolean): void {
     const m = this.bs.length;
     for (let idx = 0; idx < m; idx++) {
@@ -170,5 +262,6 @@ export class LinkageSolver3D {
       B.y -= dy * k * (wb / ws);
       B.z -= dz * k * (wb / ws);
     }
+    for (const c of this.cs) this.projectCable(c);
   }
 }

@@ -7,7 +7,10 @@ import { CHAINS, STATIONS } from './tentacle3d-shape';
  * 几何提取自 tentacle3d-shape.ts：基座舵机总成 + 7 方盒椎节（节距 72→47、
  * 孔半径 10.3→4.9 收锥，三腱方位 30°/150°/270°）+ 节间盘轴联接 + 梢端盖。
  * 脊柱节点 = 真机站心，导点 = 真机孔位，全部杆长 = 真实初始距离（构造器缺省）。
- * 驱动机制不变（= GH GhPython 原文）：收缩按比例缩放肌腱段 rest。
+ * 肌腱 v2——真机制复活（用户还原设计意图 2026-07-10）：GH 的逐段等比收缩
+ * 是 Kangaroo 无滑索约束时的妥协；实物是**一根完整缆线**锚在梢节、穿过沿途
+ * 导孔、从根部抽线。本版用穿环滑索约束（solver3d cables）：只约束路径总长，
+ * 张力自动分配、弯曲发生在阻力最小处、松弛时零作用力（单边）。
  */
 export const TENTACLE3D = {
   /** 段数 = 站数 − 1 */
@@ -15,10 +18,9 @@ export const TENTACLE3D = {
   /** 背骨弯曲刚度（per-sweep 乘子）：根 → 梢 */
   bendRoot: 0.03,
   bendTip: 0.003,
-  tendonK: 0.12,
-  /** 逐段强度倍率（7 站 6 段，无 GH 参考侧写，取均匀） */
-  tendonMult: [1, 1, 1, 1, 1, 1],
-  contractionFloor: 0.4,
+  /** 抽线行程上限 mm（c=1 时从根部抽入的缆长）。全周卷曲所需 ≈ 2π·r̄ ≈ 47，
+   *  取 55 留出深卷余量——待用户手感拍板 */
+  pullMax: 55,
   /** fascia 抗扭斜杆刚度（无它则扭转累积、单腱收缩卷成螺旋——用户实测） */
   fasciaK: 0.2,
   /** 重力取消（用户拍板：被驱动机构非悬垂物）；动量+阻尼保留 */
@@ -42,8 +44,10 @@ export const TENDON_DIRS: ReadonlyArray<readonly [number, number]> = CHAINS.map(
 });
 
 export interface Tendon3Index {
-  bars: number[];
-  rests: number[];
+  /** solver3d 缆线下标 */
+  cable: number;
+  /** 自然路径总长（抽线行程的基准） */
+  rest0: number;
 }
 
 export interface Tentacle3Model {
@@ -56,7 +60,7 @@ const dist = (a: readonly number[], b: readonly number[]): number =>
 
 /** 初始构型 = 真机静息几何（全部约束天然满足）。 */
 export function makeTentacle3Model(): Tentacle3Model {
-  const { segments, bendRoot, bendTip, tendonK, tendonMult, fasciaK } = TENTACLE3D;
+  const { segments, bendRoot, bendTip, fasciaK } = TENTACLE3D;
   const nodes: Linkage3Def['nodes'] = [];
   // 脊柱 = 真实站心（基座站锚定）
   for (let i = 0; i < N_NODES; i++) {
@@ -98,27 +102,23 @@ export function makeTentacle3Model(): Tentacle3Model {
       bars.push({ a: GUIDE3(k, i), b: GUIDE3((k + 2) % N_TENDONS, i + 1), stiffness: fasciaK });
     }
   }
-  // 肌腱：相邻孔位间软杆链（真实原长入档，收缩驱动用），顺序逐段轮换
-  const tendons: Tendon3Index[] = CHAINS.map(() => ({ bars: [], rests: [] }));
-  for (let i = 0; i < segments; i++) {
-    const k = Math.min(1, tendonK * tendonMult[i]);
-    for (let j = 0; j < N_TENDONS; j++) {
-      const t = (i + j) % N_TENDONS;
-      tendons[t].bars.push(bars.length);
-      tendons[t].rests.push(dist(CHAINS[t][i], CHAINS[t][i + 1]));
-      bars.push({ a: GUIDE3(t, i), b: GUIDE3(t, i + 1), stiffness: k });
-    }
+  // 肌腱 = 穿环滑缆（真机制）：锚在梢节导孔（末节点）、穿沿途导孔、根部导孔
+  // 已随基座锚定——抽线 = setCableRest(rest0 − 行程)
+  const cables: Linkage3Def['cables'] = [];
+  const tendons: Tendon3Index[] = [];
+  for (let k = 0; k < N_TENDONS; k++) {
+    let rest0 = 0;
+    for (let i = 0; i < segments; i++) rest0 += dist(CHAINS[k][i], CHAINS[k][i + 1]);
+    tendons.push({ cable: k, rest0 });
+    cables.push({ nodes: Array.from({ length: N_NODES }, (_, i) => GUIDE3(k, i)) });
   }
-  return { def: { nodes, bars }, tendons };
+  return { def: { nodes, bars, cables }, tendons };
 }
 
-/** 肌腱收缩（GH GhPython 公式）：rest = 真实原长 × (1 − 0.6c)，c∈[0,1]。 */
+/** 抽线（真机制）：c∈[0,1] → 缆线目标总长 = 自然长 − c·pullMax。 */
 export function applyContraction3(solver: LinkageSolver3D, tendon: Tendon3Index, c: number): void {
-  const span = 1 - TENTACLE3D.contractionFloor;
-  const scale = 1 - span * Math.min(1, Math.max(0, c));
-  for (let j = 0; j < tendon.bars.length; j++) {
-    solver.setRest(tendon.bars[j], tendon.rests[j] * scale);
-  }
+  const pull = TENTACLE3D.pullMax * Math.min(1, Math.max(0, c));
+  solver.setCableRest(tendon.cable, tendon.rest0 - pull);
 }
 
 export function createTentacle3(): { solver: LinkageSolver3D; tendons: Tendon3Index[] } {
