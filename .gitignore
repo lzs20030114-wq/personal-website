@@ -8,3 +8,6 @@ next-env.d.ts
 # 用户模型文件（30–40MB 二进制，权威副本在用户手里，不进 git）
 模型求解器参考/
 *.rhl
+
+# Vite 台架构建产物（build 时生成，随部署上线，不进 git）
+public/demo/

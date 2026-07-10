@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "demo": "vite",
-    "build": "next build",
+    "build": "vite build && next build",
     "start": "next start",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
