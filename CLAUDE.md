@@ -60,6 +60,7 @@
 - 三层，上层只调下层公开 API：`solver.ts`（纯数学，零依赖）→ `controller.ts`（交互状态机，零 DOM）→ 台架页 `src/demo/*.ts`（DOM 接线与 SVG 渲染）/ 未来 React 封装（SITE_SPEC S2）。
 - 加新机构 = 新数据实例 + 台架页，**不改内核**（拱环先例：`arch-data.ts` + `arch.ts` + `arch.html`）。
 - 手感参数全部集中在 `ControllerOpts`（driver / release / sweeps / hitRadius），渲染层不藏参数；数值以 LINKAGE_SPEC 为准。
+- **3D 线同构（2026-07-10 复用化拍板）**：`solver3d`（3D 内核）→ `camera3d` OrbitCamera + `scene3d` projectScene + `motion` CriticallyDamped（公共装备，零 DOM 有测试）→ 台架页。加新 3D 机构 = 新数据实例 + 台架页，**不改装备**。详见 轮回机器_立体求解器spec.md §1.5。
 
 ## 可用工具
 

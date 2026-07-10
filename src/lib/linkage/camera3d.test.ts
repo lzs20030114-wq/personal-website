@@ -1,0 +1,119 @@
+import { describe, expect, it } from 'vitest';
+import { OrbitCamera } from './camera3d';
+import { projectScene } from './scene3d';
+import { CriticallyDamped } from './motion';
+
+// 3D 台架公共装备（立体求解器 spec）：相机 / 场景投影 / 肌肉缓动。
+
+const cam0 = (over: Partial<ConstructorParameters<typeof OrbitCamera>[0]> = {}): OrbitCamera =>
+  new OrbitCamera({ cx: 0, cy: 0, pivot: { x: 0, y: 0, z: 0 }, ...over });
+
+describe('OrbitCamera', () => {
+  it('零姿态正交投影：x→x，y→y，z→depth', () => {
+    const p = cam0().project({ x: 1, y: 2, z: 3 });
+    expect(p.x).toBeCloseTo(1, 12);
+    expect(p.y).toBeCloseTo(2, 12);
+    expect(p.depth).toBeCloseTo(3, 12);
+  });
+
+  it('yaw=90°：世界 x 轴转入深度方向', () => {
+    const c = cam0({ yaw0: Math.PI / 2 });
+    const p = c.project({ x: 1, y: 0, z: 0 });
+    expect(p.x).toBeCloseTo(0, 12);
+    expect(p.depth).toBeCloseTo(-1, 12);
+  });
+
+  it('单指拖 = 轨道（按灵敏度累加），俯仰钳位 ±1.5', () => {
+    const c = cam0();
+    c.pointerDown(1, 100, 100);
+    c.pointerMove(1, 150, 100);
+    expect(c.yaw).toBeCloseTo(50 * 0.008, 12);
+    c.pointerMove(1, 150, -10000); // 暴力上拖
+    expect(c.pitch).toBe(1.5);
+    c.pointerUp(1);
+  });
+
+  it('双指捏合 = 缩放（比值驱动，有上限）；wheel 同样钳位', () => {
+    const c = cam0();
+    c.pointerDown(1, 0, 0);
+    c.pointerDown(2, 100, 0); // 初始指距 100
+    c.pointerMove(2, 200, 0); // 指距 ×2
+    expect(c.zoom).toBeCloseTo(2, 12);
+    c.pointerMove(2, 10000, 0);
+    expect(c.zoom).toBe(3); // 上限
+    c.pointerUp(1);
+    c.pointerUp(2);
+    const w = cam0();
+    for (let i = 0; i < 100; i++) w.wheel(1000);
+    expect(w.zoom).toBe(0.5); // 下限
+  });
+
+  it('空闲自转：用户首次接管后永久停止；reset 复位姿态不复活自转', () => {
+    const c = cam0({ autoYaw: 1 });
+    c.tick(0.5);
+    expect(c.yaw).toBeCloseTo(0.5, 12);
+    c.pointerDown(1, 0, 0);
+    c.pointerUp(1);
+    c.tick(0.5);
+    expect(c.yaw).toBeCloseTo(0.5, 12); // 不再自转
+    c.reset();
+    expect(c.yaw).toBe(0);
+    expect(c.zoom).toBe(1);
+    c.tick(0.5);
+    expect(c.yaw).toBe(0); // 主权已交出
+  });
+});
+
+describe('projectScene', () => {
+  it('画家排序（远 → 近）+ 深度明暗（远淡近实）', () => {
+    const c = cam0();
+    const out = projectScene(c, [
+      { key: 'near', points: [{ x: 0, y: 0, z: 10 }] },
+      { key: 'far', points: [{ x: 0, y: 0, z: -10 }] },
+    ]);
+    expect(out.map((o) => o.key)).toEqual(['far', 'near']);
+    expect(out[0].opacity).toBeCloseTo(0.35, 12);
+    expect(out[1].opacity).toBeCloseTo(1, 12);
+  });
+
+  it('确定性：同输入两次投影逐位一致', () => {
+    const c = cam0({ yaw0: 0.7, pitch0: -0.3 });
+    const items = [
+      { key: 'a', points: [{ x: 1, y: 2, z: 3 }, { x: 4, y: 5, z: 6 }] },
+      { key: 'b', points: [{ x: -2, y: 0, z: 1 }] },
+    ];
+    const A = projectScene(c, items);
+    const B = projectScene(c, items);
+    expect(JSON.stringify(A)).toBe(JSON.stringify(B));
+  });
+});
+
+describe('CriticallyDamped（肌肉缓动）', () => {
+  it('零速起步：首帧位移远小于恒速版', () => {
+    const m = new CriticallyDamped(5);
+    m.target = 1;
+    m.update(1 / 60);
+    expect(m.value).toBeLessThan(0.01); // 恒速 1.2/s 版首帧 = 0.02
+    expect(m.value).toBeGreaterThan(0);
+  });
+
+  it('无过冲，最终静定（update 返回 false）', () => {
+    const m = new CriticallyDamped(5);
+    m.target = 1;
+    for (let f = 0; f < 300; f++) {
+      m.update(1 / 60);
+      expect(m.value).toBeLessThanOrEqual(1 + 1e-9);
+    }
+    expect(m.value).toBe(1);
+    expect(m.update(1 / 60)).toBe(false);
+  });
+
+  it('jumpTo 硬复位：值/目标/速度全清（归位语义）', () => {
+    const m = new CriticallyDamped(5);
+    m.target = 1;
+    for (let f = 0; f < 30; f++) m.update(1 / 60);
+    m.jumpTo(0);
+    expect(m.value).toBe(0);
+    expect(m.update(1 / 60)).toBe(false);
+  });
+});
