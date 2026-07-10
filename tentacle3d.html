@@ -12,44 +12,18 @@
         place-items: center;
         min-height: 100vh;
       }
-      /* SPEC §5 条 1：SVG presentation attribute 不解析 var()，颜色一律走 class */
-      svg {
+      canvas {
         width: min(92vw, 720px);
+        aspect-ratio: 700 / 520;
         touch-action: none;
         cursor: grab;
       }
-      .ground {
-        stroke: #8a8a82;
-        stroke-width: 1.2;
-        fill: none;
-        stroke-dasharray: 4 4;
-      }
-      .part {
-        stroke: rgba(31, 31, 29, 0.25);
-        stroke-width: 0.4;
-        stroke-linejoin: round;
-      }
-      .spine {
-        stroke: #8a8a82;
-        stroke-width: 2;
-      }
-      .tendon {
-        stroke-width: 1.8;
-        fill: none;
-        stroke-linecap: round;
-      }
-      .tendon-0 {
-        stroke: #2456a6;
-      }
-      .tendon-1 {
-        stroke: #b0682f;
-      }
-      .tendon-2 {
-        stroke: #4a7a52;
-      }
-      .hud {
+      #hud {
+        position: fixed;
+        left: 16px;
+        bottom: 108px;
         font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        fill: #8a8a82;
+        color: #8a8a82;
       }
       nav {
         position: fixed;
@@ -138,7 +112,8 @@
       ><a href="./tentacle.html">触手·平面</a>
     </nav>
     <div id="hint">拖拽旋转 · 滚轮/双指缩放 · 滑块收缩肌腱</div>
-    <svg id="fig" viewBox="0 0 700 520" xmlns="http://www.w3.org/2000/svg"></svg>
+    <canvas id="fig" width="1400" height="1040"></canvas>
+    <div id="hud"></div>
     <div id="controls">
       <div class="row">
         <label>肌腱1 <input id="tendon-0" type="range" min="0" max="100" value="0" /></label>

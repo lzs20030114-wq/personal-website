@@ -92,6 +92,20 @@ export class OrbitCamera {
     return this._zoom;
   }
 
+  /** 视图旋转矩阵（行主序 3×3）：view = M·(p − pivot)。WebGL 渲染层用（2026-07-10 解锁）。 */
+  get matrix(): readonly number[] {
+    return this.m;
+  }
+
+  get pivotPoint(): Vec3 {
+    return this.o.pivot;
+  }
+
+  /** 世界单位 → 屏幕逻辑 px 的总缩放 */
+  get viewScale(): number {
+    return this.o.scale * this._zoom;
+  }
+
   /** 正交投影：世界 → 屏幕 + 视深。 */
   project(p: Vec3): Projected {
     const x = p.x - this.o.pivot.x;

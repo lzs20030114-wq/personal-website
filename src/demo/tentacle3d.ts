@@ -5,18 +5,19 @@ import {
   applyContraction3,
   createTentacle3,
 } from '../lib/linkage/tentacle3d-data';
-import { CELL_PARTS, MOUNT_PARTS, RADII, type HullPart } from '../lib/linkage/tentacle3d-shape';
-import { OrbitCamera, type Projected } from '../lib/linkage/camera3d';
-import { hull2d } from '../lib/linkage/scene3d';
+import { CELL_PARTS, MOUNT_PARTS, RADII } from '../lib/linkage/tentacle3d-shape';
+import { OrbitCamera } from '../lib/linkage/camera3d';
+import { FlatRenderer, bakeMesh, type CellFrame } from '../lib/linkage/gl3d';
 import { CriticallyDamped } from '../lib/linkage/motion';
 
-// 立体触手台架（立体求解器 spec v5，渲染 v3——不透明哑光零件渲染）：
-// 形体单元 = 逐零件凸包（无洞、水密），不透明填充 + 逐零件画家排序 + 背面剔除
-// ——半透明三角汤的「破碎感」由此消除（用户实测否决，2026-07-10）。
+// 立体触手台架（立体求解器 spec，渲染 v5——WebGL 解锁，用户拍板 2026-07-10）：
+// 零依赖裸 WebGL + z-buffer = 物理精确逐像素遮挡（SVG 画家算法对互穿零件
+// 无正确顺序，历经四版后到顶——教训全档在 spec §1.6）。哑光纸墨风格不变；
+// 肌腱线参与深度测试，被零件正确遮挡。
 // 交互不变：trackball 相机 / 三肌腱滑块 + 联动 / 放松 / 归位 / 视角归位。
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
-const svg = document.getElementById('fig') as unknown as SVGSVGElement;
+const canvas = document.getElementById('fig') as HTMLCanvasElement;
+const hudEl = document.getElementById('hud') as HTMLDivElement;
 const sliders = [0, 1, 2].map((k) => document.getElementById(`tendon-${k}`) as HTMLInputElement);
 const relaxBtn = document.getElementById('relax') as HTMLButtonElement;
 const homeBtn = document.getElementById('home') as HTMLButtonElement;
@@ -39,42 +40,20 @@ const cam = new OrbitCamera({
   autoYaw: reducedMotion ? 0 : 0.15,
 });
 
-// 视空间光源与哑光灰阶（纸-墨系）
-const LX = -0.42;
-const LY = -0.52;
-const LZ = 0.74;
-const RAMP = [
-  '#4e4e48', '#5d5d56', '#6c6c64', '#7b7b73', '#8b8b82', '#9a9a91',
-  '#a9a9a0', '#b8b8af', '#c7c7be', '#d6d6cd', '#e4e4dc', '#f2f2ea',
+const renderer = new FlatRenderer(canvas);
+for (let ci = 0; ci <= N; ci++) renderer.addMesh(`c${ci}`, bakeMesh(CELL_PARTS[ci]));
+renderer.addMesh('mnt', bakeMesh(MOUNT_PARTS));
+
+// 线色（纸墨系）：脊柱 / 三腱 / 参考环
+const SPINE_C: [number, number, number] = [0.54, 0.54, 0.51];
+const TENDON_C: [number, number, number][] = [
+  [0.14, 0.34, 0.65],
+  [0.69, 0.41, 0.18],
+  [0.29, 0.48, 0.32],
 ];
+const RING_C: [number, number, number] = [0.75, 0.75, 0.7];
 
-function el<K extends keyof SVGElementTagNameMap>(tag: K, cls = ''): SVGElementTagNameMap[K] {
-  const e = document.createElementNS(SVG_NS, tag);
-  if (cls) e.setAttribute('class', cls);
-  svg.appendChild(e);
-  return e;
-}
-
-const ringEl = el('path', 'ground');
-const spineEls = Array.from({ length: N }, () => el('line', 'spine'));
-const tendonEls = [0, 1, 2].map((k) =>
-  Array.from({ length: N }, () => el('line', `tendon tendon-${k}`)),
-);
-// 零件 path：胞 × 零件 + 基座零件
-const partEls: SVGPathElement[][] = CELL_PARTS.map((parts) => parts.map(() => el('path', 'part')));
-const mountEls: SVGPathElement[] = MOUNT_PARTS.map(() => el('path', 'part'));
-const hud = el('text', 'hud');
-hud.setAttribute('x', '16');
-hud.setAttribute('y', '504');
-
-interface Frame {
-  o: { x: number; y: number; z: number };
-  ux: number; uy: number; uz: number;
-  ex: number; ey: number; ez: number;
-  fx: number; fy: number; fz: number;
-}
-
-function cellFrame(i: number): Frame {
+function cellFrame(i: number): CellFrame {
   const nodes = sim.solver.nodes;
   const si = Math.max(0, i); // i = −1 表示基座（挂站 0 刚架）
   const o = nodes[SPINE3(si)];
@@ -106,108 +85,35 @@ function cellFrame(i: number): Frame {
   return { o, ux, uy, uz, ex, ey, ez, fx, fy, fz };
 }
 
-function projLocal(fr: Frame, ax: number, u: number, w: number): Projected {
-  return cam.project({
-    x: fr.o.x + (ax * fr.ux + u * fr.ex + w * fr.fx),
-    y: fr.o.y + (ax * fr.uy + u * fr.ey + w * fr.fy),
-    z: fr.o.z + (ax * fr.uz + u * fr.ez + w * fr.fz),
-  });
-}
-
-interface Item {
-  e: SVGElement;
-  depth: number;
-}
-const items: Item[] = [];
-const scratch: Projected[] = [];
-
-/** 零件：凸包投影 → 可见面积加权 lambert 定灰阶 → **剪影多边形**填充。
- *  凸零件的投影轮廓 = 投影点 2D 凸包——无三角剖分线、无接缝（用户实测否决逐面绘制）。 */
-function renderPart(part: HullPart, fr: Frame, e: SVGPathElement): void {
-  const nv = part.v.length;
-  let depthSum = 0;
-  for (let i = 0; i < nv; i++) {
-    const p = projLocal(fr, part.v[i][0], part.v[i][1], part.v[i][2]);
-    scratch[i] = p;
-    depthSum += p.depth;
-  }
-  let areaSum = 0;
-  let lambSum = 0;
-  for (const t of part.t) {
-    const p0 = scratch[t[0]];
-    const p1 = scratch[t[1]];
-    const p2 = scratch[t[2]];
-    const ax = p1.x - p0.x, ay = p1.y - p0.y, az = p1.depth - p0.depth;
-    const bx = p2.x - p0.x, by = p2.y - p0.y, bz = p2.depth - p0.depth;
-    const nx = ay * bz - az * by;
-    const ny = az * bx - ax * bz;
-    const nz = ax * by - ay * bx;
-    if (nz <= 0) continue; // 只取朝向视点的面参与光照
-    const nl = Math.hypot(nx, ny, nz) || 1;
-    const area = nl / 2;
-    lambSum += area * Math.abs((nx * LX + ny * LY + nz * LZ) / nl);
-    areaSum += area;
-  }
-  const outline = hull2d(scratch.slice(0, nv));
-  if (outline.length < 3) {
-    e.setAttribute('d', 'M0 0');
-    return;
-  }
-  let d = '';
-  for (let i = 0; i < outline.length; i++) {
-    d += `${i === 0 ? 'M' : 'L'}${outline[i].x.toFixed(1)} ${outline[i].y.toFixed(1)}`;
-  }
-  const lam = areaSum ? lambSum / areaSum : 0.5;
-  e.setAttribute('d', d + 'Z');
-  e.setAttribute('fill', RAMP[Math.min(RAMP.length - 1, Math.round((0.12 + 0.88 * lam) * (RAMP.length - 1)))]);
-  items.push({ e, depth: depthSum / nv });
-}
-
 function render(): void {
   const nodes = sim.solver.nodes;
-  items.length = 0;
-  // 基座参考环（恒在底层）
+  renderer.beginFrame(cam);
+  // 体：7 胞 + 基座（基座挂站 0 刚架，锚定不动）
+  for (let ci = 0; ci <= N; ci++) renderer.drawMesh(`c${ci}`, cellFrame(ci));
+  renderer.drawMesh('mnt', cellFrame(-1));
+  // 参考环（站 0 平面）
   const R = RADII[0] + 14;
-  let rd = '';
-  for (let a = 0; a <= 24; a++) {
-    const p = cam.project({ x: R * Math.cos((a * Math.PI) / 12), y: 0, z: R * Math.sin((a * Math.PI) / 12) });
-    rd += `${a === 0 ? 'M' : 'L'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+  const ring: { a: { x: number; y: number; z: number }; b: { x: number; y: number; z: number } }[] = [];
+  for (let a = 0; a < 24; a++) {
+    const t0 = (a * Math.PI) / 12;
+    const t1 = ((a + 1) * Math.PI) / 12;
+    ring.push({
+      a: { x: R * Math.cos(t0), y: 0, z: R * Math.sin(t0) },
+      b: { x: R * Math.cos(t1), y: 0, z: R * Math.sin(t1) },
+    });
   }
-  ringEl.setAttribute('d', rd);
-  // 线元素：脊柱 + 肌腱
-  for (let i = 0; i < N; i++) {
-    const a = cam.project(nodes[SPINE3(i)]);
-    const b = cam.project(nodes[SPINE3(i + 1)]);
-    spineEls[i].setAttribute('x1', String(a.x));
-    spineEls[i].setAttribute('y1', String(a.y));
-    spineEls[i].setAttribute('x2', String(b.x));
-    spineEls[i].setAttribute('y2', String(b.y));
-    items.push({ e: spineEls[i], depth: (a.depth + b.depth) / 2 });
-    for (let k = 0; k < 3; k++) {
-      const ga = cam.project(nodes[GUIDE3(k, i)]);
-      const gb = cam.project(nodes[GUIDE3(k, i + 1)]);
-      const e = tendonEls[k][i];
-      e.setAttribute('x1', String(ga.x));
-      e.setAttribute('y1', String(ga.y));
-      e.setAttribute('x2', String(gb.x));
-      e.setAttribute('y2', String(gb.y));
-      items.push({ e, depth: (ga.depth + gb.depth) / 2 });
-    }
+  renderer.drawLines(ring, RING_C, 0);
+  // 脊柱与肌腱（参与深度测试——穿过零件的段被正确遮挡）
+  const spineSegs = [];
+  for (let i = 0; i < N; i++) spineSegs.push({ a: nodes[SPINE3(i)], b: nodes[SPINE3(i + 1)] });
+  renderer.drawLines(spineSegs, SPINE_C);
+  for (let k = 0; k < 3; k++) {
+    const segs = [];
+    for (let i = 0; i < N; i++) segs.push({ a: nodes[GUIDE3(k, i)], b: nodes[GUIDE3(k, i + 1)] });
+    renderer.drawLines(segs, TENDON_C[k]);
   }
-  // 零件：7 胞 + 基座（基座挂站 0 刚架）
-  for (let ci = 0; ci <= N; ci++) {
-    const fr = cellFrame(ci);
-    const parts = CELL_PARTS[ci];
-    for (let j = 0; j < parts.length; j++) renderPart(parts[j], fr, partEls[ci][j]);
-  }
-  const mfr = cellFrame(-1);
-  for (let j = 0; j < MOUNT_PARTS.length; j++) renderPart(MOUNT_PARTS[j], mfr, mountEls[j]);
-  // 画家排序（远 → 近）
-  items.sort((a, b) => a.depth - b.depth);
-  for (const it of items) svg.appendChild(it.e);
-  svg.appendChild(hud);
   const c = sliders.map((s) => `${s.value}%`).join(' / ');
-  hud.textContent = `T1/T2/T3 ${c}   err ${sim.solver.maxError().toFixed(2)} px   ×${cam.zoom.toFixed(2)}`;
+  hudEl.textContent = `T1/T2/T3 ${c}   err ${sim.solver.maxError().toFixed(2)} px   ×${cam.zoom.toFixed(2)}`;
 }
 
 // —— 肌肉：临界阻尼缓动 ×3 + 联动组
@@ -252,18 +158,18 @@ homeBtn.addEventListener('click', () => {
 viewHomeBtn.addEventListener('click', () => cam.reset());
 
 // —— 视角接线：事件 → 相机（逻辑全在 OrbitCamera，可测）
-svg.addEventListener('pointerdown', (ev) => {
+canvas.addEventListener('pointerdown', (ev) => {
   cam.pointerDown(ev.pointerId, ev.clientX, ev.clientY);
   try {
-    svg.setPointerCapture(ev.pointerId);
+    canvas.setPointerCapture(ev.pointerId);
   } catch {
     /* 合成事件无活跃 pointerId */
   }
 });
-svg.addEventListener('pointermove', (ev) => cam.pointerMove(ev.pointerId, ev.clientX, ev.clientY));
-svg.addEventListener('pointerup', (ev) => cam.pointerUp(ev.pointerId));
-svg.addEventListener('pointercancel', (ev) => cam.pointerUp(ev.pointerId));
-svg.addEventListener(
+canvas.addEventListener('pointermove', (ev) => cam.pointerMove(ev.pointerId, ev.clientX, ev.clientY));
+canvas.addEventListener('pointerup', (ev) => cam.pointerUp(ev.pointerId));
+canvas.addEventListener('pointercancel', (ev) => cam.pointerUp(ev.pointerId));
+canvas.addEventListener(
   'wheel',
   (ev) => {
     ev.preventDefault();
