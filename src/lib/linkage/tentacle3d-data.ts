@@ -20,7 +20,8 @@ export const TENTACLE3D = {
   contractionFloor: 0.4,
   /** fascia 抗扭斜杆刚度（3D-M3 修正：无它则扭转沿臂累积，单腱收缩卷成螺旋——用户实测） */
   fasciaK: 0.1,
-  dynamics: { gravity: { x: 0, y: 900, z: 0 }, damping: 0.992 } satisfies Dynamics3Config,
+  /** 重力取消（用户拍板 2026-07-10：触手是被驱动机构，非悬垂物）；动量+阻尼保留 */
+  dynamics: { gravity: { x: 0, y: 0, z: 0 }, damping: 0.992 } satisfies Dynamics3Config,
   sweeps: 30,
 } as const;
 

@@ -127,11 +127,13 @@ function render(): void {
   hud.textContent = `T1/T2/T3 ${c}   err ${solver.maxError().toFixed(2)} px   yaw ${((yaw * 180) / Math.PI).toFixed(0)}°`;
 }
 
-// —— 收缩控制：滑块只定目标，实际收缩值限速渐变（真肌肉不瞬移——
-// rest 跳变会给 Verlet 动量层注入冲击，表现为抽搐/过冲，用户实测拍板修正）
-const MUSCLE_RATE = 1.2; // 满程收缩 ≈0.83s
+// —— 收缩控制：滑块只定目标，实际收缩走**临界阻尼二阶跟踪**——
+// 速度从零起步、平滑加速再平滑刹住、无过冲（用户拍板：平滑地从零开始收缩）。
+// 恒速版起步有速度突跳；rest 直跳更是冲击动量层（抽搐），均已否决。
+const MUSCLE_OMEGA = 5; // rad/s：满程 ≈0.9s 到位
 const target = [0, 0, 0];
 const actual = [0, 0, 0];
+const vel = [0, 0, 0];
 sliders.forEach((s, k) =>
   s.addEventListener('input', () => {
     target[k] = Number(s.value) / 100;
@@ -145,10 +147,14 @@ relaxBtn.addEventListener('click', () => {
 });
 function easeMuscles(dt: number): void {
   for (let k = 0; k < 3; k++) {
-    const d = target[k] - actual[k];
-    if (d === 0) continue;
-    const step = Math.sign(d) * Math.min(Math.abs(d), MUSCLE_RATE * dt);
-    actual[k] += step;
+    if (target[k] === actual[k] && vel[k] === 0) continue;
+    const acc = (target[k] - actual[k]) * MUSCLE_OMEGA * MUSCLE_OMEGA - 2 * MUSCLE_OMEGA * vel[k];
+    vel[k] += acc * dt;
+    actual[k] += vel[k] * dt;
+    if (Math.abs(target[k] - actual[k]) < 1e-4 && Math.abs(vel[k]) < 1e-3) {
+      actual[k] = target[k];
+      vel[k] = 0;
+    }
     applyContraction3(solver, tendons[k], actual[k]);
   }
 }
