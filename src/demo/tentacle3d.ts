@@ -7,6 +7,7 @@ import {
 } from '../lib/linkage/tentacle3d-data';
 import { CELL_PARTS, MOUNT_PARTS, RADII, type HullPart } from '../lib/linkage/tentacle3d-shape';
 import { OrbitCamera, type Projected } from '../lib/linkage/camera3d';
+import { hull2d } from '../lib/linkage/scene3d';
 import { CriticallyDamped } from '../lib/linkage/motion';
 
 // 立体触手台架（立体求解器 spec v5，渲染 v3——不透明哑光零件渲染）：
@@ -120,7 +121,8 @@ interface Item {
 const items: Item[] = [];
 const scratch: Projected[] = [];
 
-/** 零件：凸包投影 → 背面剔除 → 可见面拼 path + 面积加权 lambert 定灰阶。 */
+/** 零件：凸包投影 → 可见面积加权 lambert 定灰阶 → **剪影多边形**填充。
+ *  凸零件的投影轮廓 = 投影点 2D 凸包——无三角剖分线、无接缝（用户实测否决逐面绘制）。 */
 function renderPart(part: HullPart, fr: Frame, e: SVGPathElement): void {
   const nv = part.v.length;
   let depthSum = 0;
@@ -129,7 +131,6 @@ function renderPart(part: HullPart, fr: Frame, e: SVGPathElement): void {
     scratch[i] = p;
     depthSum += p.depth;
   }
-  let d = '';
   let areaSum = 0;
   let lambSum = 0;
   for (const t of part.t) {
@@ -141,19 +142,23 @@ function renderPart(part: HullPart, fr: Frame, e: SVGPathElement): void {
     const nx = ay * bz - az * by;
     const ny = az * bx - ax * bz;
     const nz = ax * by - ay * bx;
-    if (nz <= 0) continue; // 背面剔除（凸包外向定向）
+    if (nz <= 0) continue; // 只取朝向视点的面参与光照
     const nl = Math.hypot(nx, ny, nz) || 1;
     const area = nl / 2;
     lambSum += area * Math.abs((nx * LX + ny * LY + nz * LZ) / nl);
     areaSum += area;
-    d += `M${p0.x.toFixed(1)} ${p0.y.toFixed(1)}L${p1.x.toFixed(1)} ${p1.y.toFixed(1)}L${p2.x.toFixed(1)} ${p2.y.toFixed(1)}Z`;
   }
-  if (!d) {
+  const outline = hull2d(scratch.slice(0, nv));
+  if (outline.length < 3) {
     e.setAttribute('d', 'M0 0');
     return;
   }
+  let d = '';
+  for (let i = 0; i < outline.length; i++) {
+    d += `${i === 0 ? 'M' : 'L'}${outline[i].x.toFixed(1)} ${outline[i].y.toFixed(1)}`;
+  }
   const lam = areaSum ? lambSum / areaSum : 0.5;
-  e.setAttribute('d', d);
+  e.setAttribute('d', d + 'Z');
   e.setAttribute('fill', RAMP[Math.min(RAMP.length - 1, Math.round((0.12 + 0.88 * lam) * (RAMP.length - 1)))]);
   items.push({ e, depth: depthSum / nv });
 }

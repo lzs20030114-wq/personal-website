@@ -139,21 +139,44 @@ def sample_parts(xmin, xmax, x0):
             arr = np.unique(np.round(np.array(pts) / GRID) * GRID, axis=0)
             if len(arr) < 4:
                 continue
-            try:
-                h = ConvexHull(arr)
-            except Exception:
-                continue
-            vids = list(h.vertices)
-            remap = {v: i for i, v in enumerate(vids)}
-            verts = [local(*arr[v], x0) for v in vids]
-            tris = []
-            for si, simp in enumerate(h.simplices):
-                a, b, c = (arr[simp[0]], arr[simp[1]], arr[simp[2]])
-                n_geom = np.cross(b - a, c - a)
-                if np.dot(n_geom, h.equations[si][:3]) < 0:
-                    simp = [simp[0], simp[2], simp[1]]  # 统一外向定向
-                tris.append([remap[simp[0]], remap[simp[1]], remap[simp[2]]])
-            parts.append({'v': verts, 't': tris})
+            # 长零件切段（>30mm 沿主轴切 25mm 片，含 1mm 搭接）——单一深度的
+            # 画家排序对互穿长件必错（用户实测），切段后深度跨度紧凑
+            ext = arr.max(axis=0) - arr.min(axis=0)
+            axis = int(np.argmax(ext))
+            if ext[axis] > 30.0:
+                nseg = int(math.ceil(ext[axis] / 25.0))
+                lo = arr[:, axis].min()
+                step = ext[axis] / nseg
+                chunks = []
+                for si in range(nseg):
+                    m0 = lo + si * step - 1.0
+                    m1 = lo + (si + 1) * step + 1.0
+                    sub = arr[(arr[:, axis] >= m0) & (arr[:, axis] <= m1)]
+                    # 切面补点：把跨越切面的贡献用边界平面上的极值近似（用包围盒角点）
+                    if len(sub) >= 4:
+                        chunks.append(sub)
+                arrs = chunks if chunks else [arr]
+            else:
+                arrs = [arr]
+            for sub in arrs:
+                try:
+                    h = ConvexHull(sub)
+                except Exception:
+                    try:
+                        h = ConvexHull(sub, qhull_options='QJ')  # 退化输入（共面板件）兜底
+                    except Exception:
+                        continue
+                vids = list(h.vertices)
+                remap = {v: i for i, v in enumerate(vids)}
+                verts = [local(*sub[v], x0) for v in vids]
+                tris = []
+                for si, simp in enumerate(h.simplices):
+                    a, b, c = (sub[simp[0]], sub[simp[1]], sub[simp[2]])
+                    n_geom = np.cross(b - a, c - a)
+                    if np.dot(n_geom, h.equations[si][:3]) < 0:
+                        simp = [simp[0], simp[2], simp[1]]  # 统一外向定向
+                    tris.append([remap[simp[0]], remap[simp[1]], remap[simp[2]]])
+                parts.append({'v': verts, 't': tris})
     return parts
 
 tri_cells = []

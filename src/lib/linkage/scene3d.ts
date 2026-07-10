@@ -46,3 +46,27 @@ export function projectScene(
   for (const o of out) o.opacity = oMin + (oMax - oMin) * ((o.depth - dMin) / span);
   return out;
 }
+
+/** 投影点集的 2D 凸包（Andrew 单调链，返回逆时针顶点序）。
+ *  凸包零件的正交投影轮廓必然是凸多边形——剪影填充由此免去三角剖分线。 */
+export function hull2d(pts: ReadonlyArray<Projected>): Projected[] {
+  const n = pts.length;
+  if (n < 3) return [...pts];
+  const s = [...pts].sort((a, b) => a.x - b.x || a.y - b.y);
+  const cross = (o: Projected, a: Projected, b: Projected): number =>
+    (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const lo: Projected[] = [];
+  for (const p of s) {
+    while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop();
+    lo.push(p);
+  }
+  const hi: Projected[] = [];
+  for (let i = s.length - 1; i >= 0; i--) {
+    const p = s[i];
+    while (hi.length >= 2 && cross(hi[hi.length - 2], hi[hi.length - 1], p) <= 0) hi.pop();
+    hi.push(p);
+  }
+  lo.pop();
+  hi.pop();
+  return lo.concat(hi);
+}
