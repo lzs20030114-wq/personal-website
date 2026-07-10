@@ -1,4 +1,4 @@
-import type { Bar, LinkageDef, NodeState, Point } from './types';
+import type { Bar, DynamicsConfig, LinkageDef, NodeState, Point } from './types';
 
 export interface IterationSnapshot {
   positions: Point[];
@@ -22,6 +22,11 @@ const MAX_DRAG_REACH = 40;
 /** 防除零（SPEC §3.5）：两点瞬间重合时避免 NaN 传染全部节点。 */
 const EPS = 1e-6;
 
+/** Verlet 固定子步（SPEC §3.6）：1/120 s——60/120Hz 屏同手感，动力学参数与帧率解耦。 */
+const SUBSTEP = 1 / 120;
+/** 单次 step 子步上限：dt clamp（0.05s）÷ SUBSTEP = 6，切后台回来不补几百步。 */
+const MAX_SUBSTEPS = 6;
+
 /**
  * 平面连杆机构的 PBD 求解器（SPEC §3、§4.1）。
  * 内核只有三样东西：距离约束（刚性杆）、锚点（fixed，逆质量 0）、软拖拽目标。
@@ -36,8 +41,13 @@ export class LinkageSolver {
   /** 本次 iterate 调用的有效目标（原始目标向节点方向收进 MAX_DRAG_REACH 内）。 */
   private effX = 0;
   private effY = 0;
+  /** 门控动力学（SPEC §3.6）。undefined = 拟静力学，一切照旧。 */
+  private readonly dyn?: DynamicsConfig;
+  /** Verlet 上一子步位置（仅动力学开启时存在）。 */
+  private readonly prevX: number[] = [];
+  private readonly prevY: number[] = [];
 
-  constructor(def: LinkageDef) {
+  constructor(def: LinkageDef, opts?: { dynamics?: DynamicsConfig }) {
     this.ns = def.nodes.map((n) => ({ x: n.x, y: n.y, fixed: n.fixed ?? false }));
     this.bs = def.bars.map((b) => ({
       a: b.a,
@@ -45,7 +55,18 @@ export class LinkageSolver {
       rest:
         b.rest ??
         Math.hypot(def.nodes[b.b].x - def.nodes[b.a].x, def.nodes[b.b].y - def.nodes[b.a].y),
+      stiffness: b.stiffness ?? 1,
     }));
+    this.dyn = opts?.dynamics;
+    if (this.dyn) {
+      this.prevX = this.ns.map((n) => n.x);
+      this.prevY = this.ns.map((n) => n.y);
+    }
+  }
+
+  /** 动力学是否开启（controller 据此选驱动路径）。 */
+  get dynamic(): boolean {
+    return this.dyn !== undefined;
   }
 
   get nodes(): ReadonlyArray<Readonly<NodeState>> {
@@ -60,6 +81,39 @@ export class LinkageSolver {
   iterate(n: number): void {
     this.clampDragTarget();
     for (let i = 0; i < n; i++) this.sweepOnce();
+  }
+
+  /**
+   * 动力学一帧（SPEC §3.6）：dt 切成固定子步（h=1/120，上限 6），每子步
+   * Verlet 积分（v=(x−px)·damping；px←x；x+=v+g·h²）后照常投影 iterate(sweeps)。
+   * 速度隐式含投影位移（PBD 标准形态，Müller 2007）——拖拽注入的位移下一子步
+   * 自动变成速度，甩得动、摔得响。动力学未开启时退化为纯 iterate(sweeps)。
+   */
+  step(dt: number, sweeps: number): void {
+    if (!this.dyn) {
+      this.iterate(sweeps);
+      return;
+    }
+    if (dt <= 0) return;
+    const { gravity, damping } = this.dyn;
+    const n = Math.max(1, Math.min(MAX_SUBSTEPS, Math.round(dt / SUBSTEP)));
+    for (let s = 0; s < n; s++) {
+      for (let i = 0; i < this.ns.length; i++) {
+        const node = this.ns[i];
+        if (node.fixed) {
+          this.prevX[i] = node.x;
+          this.prevY[i] = node.y;
+          continue;
+        }
+        const vx = (node.x - this.prevX[i]) * damping;
+        const vy = (node.y - this.prevY[i]) * damping;
+        this.prevX[i] = node.x;
+        this.prevY[i] = node.y;
+        node.x += vx + gravity.x * SUBSTEP * SUBSTEP;
+        node.y += vy + gravity.y * SUBSTEP * SUBSTEP;
+      }
+      this.iterate(sweeps);
+    }
   }
 
   /**
@@ -145,13 +199,13 @@ export class LinkageSolver {
         d.y += (this.effY - d.y) * DRAG_ALPHA;
       }
     }
-    for (const { a, b, rest } of this.bs) {
+    for (const { a, b, rest, stiffness } of this.bs) {
       const A = this.ns[a];
       const B = this.ns[b];
       const dx = B.x - A.x;
       const dy = B.y - A.y;
       const d = Math.hypot(dx, dy) || EPS;
-      const k = (d - rest) / d;
+      const k = ((d - rest) / d) * stiffness; // stiffness=1 时与 v1.2 算术逐位一致
       const wa = A.fixed ? 0 : 1;
       const wb = B.fixed ? 0 : 1;
       const ws = wa + wb;

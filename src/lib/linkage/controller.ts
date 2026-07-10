@@ -30,7 +30,12 @@ export interface ReleaseConfig {
 }
 
 export interface ControllerOpts {
-  driver: DriverConfig;
+  /**
+   * 曲柄驱动。可省略（触手等无曲柄机构）：省略时无 spin/release，
+   * 松手回 idle；动力学机构（solver.dynamic）idle 也照常推进时间。
+   * v0 限制：dynamics 与 driver 不组合——动力学机构的驱动路径只有 step()。
+   */
+  driver?: DriverConfig;
   theta0?: number;
   /** 命中热区半径，viewBox px（触屏友好：视觉圆圈可以小，热区必须大） */
   hitRadius?: number;
@@ -54,7 +59,7 @@ function wrapAngle(d: number): number {
  * vanilla 验收页与将来的 React 封装共用本类：规则只写一遍、测一遍。
  */
 export class LinkageController {
-  private readonly driver: DriverConfig;
+  private readonly driver: DriverConfig | null;
   private readonly hitRadius: number;
   private readonly dtMax: number;
   private readonly dragSweeps: number;
@@ -78,7 +83,7 @@ export class LinkageController {
     private readonly solver: LinkageSolver,
     opts: ControllerOpts,
   ) {
-    this.driver = opts.driver;
+    this.driver = opts.driver ?? null;
     this.hitRadius = opts.hitRadius ?? 24;
     this.dtMax = opts.dtMax ?? 0.05;
     this.dragSweeps = opts.dragSweeps ?? 36;
@@ -89,7 +94,7 @@ export class LinkageController {
     this.relSmoothing = opts.release?.smoothing ?? 0.5;
     this.relSnapEps = opts.release?.snapEps ?? 0.05;
     this._theta = opts.theta0 ?? -Math.PI / 3;
-    this._mode = this.reducedMotion ? 'idle' : 'spin';
+    this._mode = this.driver && !this.reducedMotion ? 'spin' : 'idle';
   }
 
   get mode(): Mode {
@@ -102,14 +107,16 @@ export class LinkageController {
 
   /** 当前有效角速度（HUD/调参用）：spin=巡航，release=松弛中，其余 0。 */
   get omegaNow(): number {
-    if (this._mode === 'spin') return this.driver.omega;
+    if (this._mode === 'spin' && this.driver) return this.driver.omega;
     if (this._mode === 'release') return this.omegaRel;
     return 0;
   }
 
+  /** 仅在 driver 存在的模式路径中调用。 */
   private crankAngle(): number {
-    const tip = this.solver.nodes[this.driver.tip];
-    const anchor = this.solver.nodes[this.driver.anchor];
+    const drv = this.driver as DriverConfig;
+    const tip = this.solver.nodes[drv.tip];
+    const anchor = this.solver.nodes[drv.anchor];
     return Math.atan2(tip.y - anchor.y, tip.x - anchor.x);
   }
 
@@ -132,7 +139,7 @@ export class LinkageController {
     this.solver.dragTo(x, y);
     this._mode = 'drag';
     this.omegaEst = 0;
-    this._theta = this.crankAngle(); // 拖拽中 θ 跟踪当前姿态，供角速度估计差分
+    if (this.driver) this._theta = this.crankAngle(); // 拖拽中 θ 跟踪当前姿态，供角速度估计差分
     return true;
   }
 
@@ -146,6 +153,10 @@ export class LinkageController {
     if (this._mode !== 'drag' || pointerId !== this.activePointer) return;
     this.solver.endDrag();
     this.activePointer = -1;
+    if (!this.driver) {
+      this._mode = 'idle'; // 无曲柄机构：松手即撒手，动力学（若有）在 frame 里继续演化
+      return;
+    }
     // 曲柄端点恒在曲柄圆上（tip-anchor 杆刚性 + anchor 锚定），θ 总有定义——
     // 从当前姿态接回，warm start 保证不瞬移
     this._theta = this.crankAngle();
@@ -165,22 +176,29 @@ export class LinkageController {
   /** 每帧驱动。dt 单位秒，内部 clamp——切后台回来不瞬移（SPEC §5 条 3、8）。 */
   frame(dt: number): void {
     const clamped = Math.min(dt, this.dtMax);
-    if (this._mode === 'spin') {
-      this.driveCrank(this.driver.omega * clamped);
+    if (this.solver.dynamic) {
+      // 动力学机构（SPEC §3.6）：时间总在流逝——idle 的链条也在摆。
+      // drag 的软目标注入发生在 step 内部的 iterate 里，路径不分叉。
+      this.solver.step(clamped, this._mode === 'drag' ? this.dragSweeps : this.spinSweeps);
+      return;
+    }
+    const drv = this.driver;
+    if (this._mode === 'spin' && drv) {
+      this.driveCrank(drv, drv.omega * clamped);
     } else if (this._mode === 'drag') {
       this.solver.iterate(this.dragSweeps);
       // 曲柄角速度 EMA 估计（release 初速）。dt=0 的帧不产生瞬时速度，跳过
-      if (clamped > 1e-6) {
+      if (drv && clamped > 1e-6) {
         const theta = this.crankAngle();
         const inst = wrapAngle(theta - this._theta) / clamped;
         this.omegaEst += (inst - this.omegaEst) * this.relSmoothing;
         this._theta = theta;
       }
-    } else if (this._mode === 'release') {
-      this.driveCrank(this.omegaRel * clamped);
+    } else if (this._mode === 'release' && drv) {
+      this.driveCrank(drv, this.omegaRel * clamped);
       // 指数松弛到巡航值：帧率无关（120Hz 与 60Hz 同手感）
-      this.omegaRel += (this.driver.omega - this.omegaRel) * (1 - Math.exp(-clamped / this.relTau));
-      if (Math.abs(this.omegaRel - this.driver.omega) <= this.relSnapEps * Math.abs(this.driver.omega)) {
+      this.omegaRel += (drv.omega - this.omegaRel) * (1 - Math.exp(-clamped / this.relTau));
+      if (Math.abs(this.omegaRel - drv.omega) <= this.relSnapEps * Math.abs(drv.omega)) {
         this._mode = 'spin';
       }
     }
@@ -188,16 +206,16 @@ export class LinkageController {
   }
 
   /** 位置驱动一帧：θ 前进 dTheta，B 摆上曲柄圆并临时锚定，iterate，解锁（SPEC §4.2 spin）。 */
-  private driveCrank(dTheta: number): void {
+  private driveCrank(drv: DriverConfig, dTheta: number): void {
     this._theta += dTheta;
-    const a = this.solver.nodes[this.driver.anchor];
-    this.solver.setFixed(this.driver.tip, true);
+    const a = this.solver.nodes[drv.anchor];
+    this.solver.setFixed(drv.tip, true);
     this.solver.setNode(
-      this.driver.tip,
-      a.x + this.driver.radius * Math.cos(this._theta),
-      a.y + this.driver.radius * Math.sin(this._theta),
+      drv.tip,
+      a.x + drv.radius * Math.cos(this._theta),
+      a.y + drv.radius * Math.sin(this._theta),
     );
     this.solver.iterate(this.spinSweeps);
-    this.solver.setFixed(this.driver.tip, false);
+    this.solver.setFixed(drv.tip, false);
   }
 }

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Arch — 轮回机器 S4 环求解器台架</title>
+    <title>Tentacle — 轮回机器 触手台架</title>
     <style>
       body {
         margin: 0;
@@ -17,30 +17,14 @@
         width: min(92vw, 760px);
         touch-action: none; /* SPEC §4.3 坑 4 */
       }
-      .plate {
-        fill: rgba(36, 86, 166, 0.06);
+      .ground {
         stroke: #1f1f1d;
-        stroke-width: 1.6;
-        stroke-linejoin: round;
-      }
-      .bar {
-        stroke: #1f1f1d;
-        stroke-width: 2.5;
-        stroke-linecap: round;
-      }
-      .decor {
-        stroke: #d9d9d1;
         stroke-width: 1.2;
         fill: none;
       }
-      .slot {
-        stroke: #8a8a82;
-        stroke-width: 3;
+      .arm {
+        stroke: #1f1f1d;
         stroke-linecap: round;
-        opacity: 0.5;
-      }
-      .joint-pin {
-        fill: #1f1f1d;
       }
       .joint-fixed {
         fill: #1f1f1d;
@@ -68,8 +52,8 @@
     </style>
   </head>
   <body>
-    <nav><a href="./index.html">← 四杆台架</a> <a href="./tentacle.html">触手台架</a></nav>
+    <nav><a href="./index.html">← 四杆台架</a><a href="./arch.html">拱环台架</a></nav>
     <svg id="fig" viewBox="0 0 700 520" xmlns="http://www.w3.org/2000/svg"></svg>
-    <script type="module" src="/src/demo/arch.ts"></script>
+    <script type="module" src="/src/demo/tentacle.ts"></script>
   </body>
 </html>

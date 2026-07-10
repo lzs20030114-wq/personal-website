@@ -33,6 +33,11 @@
 - Canvas / WebGL（渲染只用 SVG）
 - 3D
 
+> **2026-07-10 修订（触手 spec v0.2 用户拍板）**：上表第 2、3 条部分解锁——
+> ① 距离约束获得可选 `stiffness`（缺省 1 = 刚性，旧行为逐位不变，§2.1）；
+> ② 重力/惯性以**门控 Verlet** 扩展提供（§3.6），默认关闭，关闭时与 v1.2 逐字节一致。
+> 碰撞、摩擦、通用 goal、Canvas/WebGL、3D 仍锁死。
+
 ### 1.3 技术底座与纪律
 
 - Next.js + TypeScript + Tailwind，部署 Vercel。
@@ -59,11 +64,20 @@ export interface Bar {
   a: number;        // 节点索引
   b: number;        // 节点索引
   rest: number;     // 原长，px（viewBox 单位）
+  stiffness: number; // 2026-07-10 修订：投影乘子 0–1，缺省 1 = 刚性。
+                     // per-sweep 乘子随遍数复合：n 遍有效刚度 = 1−(1−k)ⁿ——
+                     // 迭代耦合是已知局限，软约束调参须连同遍数一起看（XPBD 是正解，见 IDEAS）
 }
 
 export interface LinkageDef {
   nodes: { x: number; y: number; fixed?: boolean }[];
-  bars:  { a: number; b: number; rest?: number }[];  // rest 缺省 = 按初始坐标算的距离
+  bars:  { a: number; b: number; rest?: number; stiffness?: number }[];
+}
+
+// 2026-07-10 修订（§3.6）：门控动力学。不传 = 拟静力学，行为与 v1.2 逐字节一致。
+export interface DynamicsConfig {
+  gravity: Point;   // px/s²，y 向下为正
+  damping: number;  // 每子步速度保留系数 0–1（子步固定 1/120 s，故帧率无关）
 }
 ```
 
@@ -228,6 +242,23 @@ drag.y += (target.y - drag.y) * α;
 | 漂移 | 无累积漂移 | 投影是**绝对**修正（每次都以 rest 为目标），不是增量累加——浮点误差不积累。可作教学点 |
 | 拟静力学 | 系统无速度状态、无惯性 | 每帧从头解一次静力平衡。松手阻尼/自转是 Session 4 叠在上面的运动学层，不进求解器内核 |
 
+### 3.6 门控 Verlet 动力学（2026-07-10 修订，触手 spec C 级）
+
+构造时传 `{dynamics: {gravity, damping}}` 才存在；不传时 `step()` 退化为 `iterate()`，一切照旧。
+
+```
+每子步（h = 1/120 s 固定，单帧上限 6 子步）：
+  v  = (x − x_prev) · damping     // 速度隐式存于位置差（Verlet）
+  x_prev ← x
+  x += v + g·h²                   // 积分
+  iterate(sweeps)                 // 照常投影——教学路径与动力学路径不分叉
+```
+
+- **速度含投影位移**（PBD 标准形态，Müller 2007）：约束修正和拖拽注入的位移，下一子步自动成为速度——甩得动、摔得响，软拖拽/限步/EPS 防护全部原样生效。
+- **固定子步 = 帧率无关**：60Hz 与 120Hz 屏同手感；dt 由 controller clamp（0.05s）+ 子步上限双重封顶，切后台回来不补步、不瞬移。
+- 现内核的拟静力学 = 本节 damping→0、g→0 的特例；「迭代刚性 vs 真实刚性」的教学叙事不受影响。
+- 实例先例：触手（轮回机器_触手spec.md）——刚性脊柱 + 跨节点软弯曲杆（stiffness 根粗梢细）+ 本节动力学。
+
 ---
 
 ## 4. 组件 API
@@ -237,7 +268,13 @@ drag.y += (target.y - drag.y) * α;
 ```ts
 // solver.ts —— 零依赖。不 import React/DOM，不引用 window。
 export class LinkageSolver {
-  constructor(def: LinkageDef);          // 深拷贝 def，rest 缺省按初始坐标计算
+  constructor(def: LinkageDef, opts?: { dynamics?: DynamicsConfig });
+  // 深拷贝 def，rest 缺省按初始坐标计算；opts.dynamics 见 §3.6（2026-07-10 修订）
+
+  /** §3.6：动力学一帧（子步积分+投影）。未开启动力学时 = iterate(sweeps)。 */
+  step(dt: number, sweeps: number): void;
+  /** 动力学是否开启（controller 据此选驱动路径）。 */
+  readonly dynamic: boolean;
 
   /** 只读快照视图，渲染层每帧读取。返回内部数组的引用即可（渲染只读）。 */
   readonly nodes: ReadonlyArray<Readonly<NodeState>>;
@@ -316,6 +353,7 @@ src/components/linkage/LinkageFigure.tsx    // "use client"
 - `drag`：`iterate(36)`，软目标 = 指针位置。
 - `release`（M3 已实现；**SPEC 修订**：由「从 0 缓升」升级为**继承末速**，缓升成为其静置特例）：拖拽中对曲柄角速度做 EMA 估计（smoothing=0.5/帧，角差回卷防 ±2π 跳变），松手继承该初速（封顶 omegaMax=6 rad/s），以时间常数 τ=0.55s 指数松弛到巡航 ω——甩得快先快后缓「泄劲」，静置松手从 ≈0 缓升，同一条规律；反向甩经零平滑回正。|ω − ω_cruise| ≤ snapEps(5%) 时接回 spin。**τ=0 = 硬切**（THESIS_NOTES 生命感实验的对照开关）。参数 `ControllerOpts.release{tau, omegaMax, smoothing, snapEps}` 全部可调——**2026-07-10 用户真机拍板通过，默认值（0.55s / 6 rad/s / 0.5 / 5%）即定版**。
 - `prefers-reduced-motion`：初始为静止（不自转），拖拽仍可用（用户主动发起的运动不属于「减少动画」的范畴）。
+- **driver 可选（2026-07-10 修订）**：无曲柄机构（触手）省略 driver——无 spin/release，松手回 idle；动力学机构（`solver.dynamic`）任何模式下 `frame()` 都走 `solver.step()`（idle 的链条也在摆）。v0 限制：dynamics 与 driver 不组合。
 
 ### 4.3 指针与坐标
 

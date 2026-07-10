@@ -13,6 +13,7 @@ export default defineConfig(({ command }) => ({
       input: {
         main: resolve(import.meta.dirname, "index.html"),
         arch: resolve(import.meta.dirname, "arch.html"),
+        tentacle: resolve(import.meta.dirname, "tentacle.html"),
       },
     },
   },
