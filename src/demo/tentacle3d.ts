@@ -5,7 +5,7 @@ import {
   applyContraction3,
   createTentacle3,
 } from '../lib/linkage/tentacle3d-data';
-import { CELL_OUTLINES, MOUNT_OUTLINE, RADII } from '../lib/linkage/tentacle3d-shape';
+import { CELL_OUTLINES, CELL_TRIS, MOUNT_OUTLINE, MOUNT_TRIS, RADII } from '../lib/linkage/tentacle3d-shape';
 import { OrbitCamera } from '../lib/linkage/camera3d';
 import { projectScene, type Drawable3 } from '../lib/linkage/scene3d';
 import { CriticallyDamped } from '../lib/linkage/motion';
@@ -52,8 +52,32 @@ for (let i = 0; i < N; i++) {
   elems.set(`sp${i}`, el('line', 'spine'));
   for (let k = 0; k < 3; k++) elems.set(`t${k}-${i}`, el('line', `tendon tendon-${k}`));
 }
+// 着色档（半透明平面着色，用户拍板 2026-07-10）：明暗 6 档 × (5 胞 + 基座)
+const BANDS = 6;
+const SHADE_COLORS = ['#3c3c38', '#5c5c55', '#7d7d75', '#a0a097', '#c4c4bb', '#e6e6de'];
+const shadeEls = new Map<string, SVGPathElement[]>();
+for (let i = 0; i <= N; i++) {
+  const arr: SVGPathElement[] = [];
+  for (let b = 0; b < BANDS; b++) {
+    const e = el('path', 'shade');
+    e.setAttribute('fill', SHADE_COLORS[b]);
+    arr.push(e);
+  }
+  shadeEls.set(`v${i}`, arr);
+}
+{
+  const arr: SVGPathElement[] = [];
+  for (let b = 0; b < BANDS; b++) {
+    const e = el('path', 'shade');
+    e.setAttribute('fill', SHADE_COLORS[b]);
+    arr.push(e);
+  }
+  shadeEls.set('mnt', arr);
+}
 for (let i = 0; i <= N; i++) elems.set(`v${i}`, el('path', 'disc'));
 elems.set('mnt', el('path', 'mount'));
+// 视空间光源（正交投影下 depth 越大越近）
+const LX = -0.42, LY = -0.52, LZ = 0.74;
 const hud = el('text', 'hud');
 hud.setAttribute('x', '16');
 hud.setAttribute('y', '504');
@@ -78,7 +102,14 @@ function drawables(): Drawable3[] {
  * 运行时刚架由求解器节点重建：û = 邻站切向，ê1 = 腱1 导点方向（去轴向分量），
  * ê2 = ê1 × û（坐标映射为奇置换，故用反手性叉积）。缩放 = 该站相对代表件的比例。
  */
-function discPath(i: number): string {
+interface Frame {
+  o: { x: number; y: number; z: number };
+  ux: number; uy: number; uz: number;
+  ex: number; ey: number; ez: number;
+  fx: number; fy: number; fz: number;
+}
+
+function cellFrame(i: number): Frame {
   const nodes = sim.solver.nodes;
   const si = Math.max(0, i); // i = −1 表示基座（挂站 0 刚架）
   const o = nodes[SPINE3(si)];
@@ -106,20 +137,47 @@ function discPath(i: number): string {
   const fx = ey * uz - ez * uy;
   const fy = ez * ux - ex * uz;
   const fz = ex * uy - ey * ux;
+  return { o, ux, uy, uz, ex, ey, ez, fx, fy, fz };
+}
+
+function projLocal(fr: Frame, ax: number, u: number, w: number): ReturnType<typeof cam.project> {
+  return cam.project({
+    x: fr.o.x + (ax * fr.ux + u * fr.ex + w * fr.fx),
+    y: fr.o.y + (ax * fr.uy + u * fr.ey + w * fr.fy),
+    z: fr.o.z + (ax * fr.uz + u * fr.ez + w * fr.fz),
+  });
+}
+
+function discPath(i: number, fr: Frame): string {
   const outline = i < 0 ? MOUNT_OUTLINE : CELL_OUTLINES[i];
   let d = '';
   for (const poly of outline) {
     for (let j = 0; j < poly.length; j++) {
       const [ax, u, w] = poly[j];
-      const p = cam.project({
-        x: o.x + (ax * ux + u * ex + w * fx),
-        y: o.y + (ax * uy + u * ey + w * fy),
-        z: o.z + (ax * uz + u * ez + w * fz),
-      });
+      const p = projLocal(fr, ax, u, w);
       d += `${j === 0 ? 'M' : 'L'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
     }
   }
   return d;
+}
+
+/** 半透明平面着色：三角面投影 → 视空间法向 |n·L| 分档合并（双面着色免翻面陷阱）。 */
+function shadeBands(i: number, fr: Frame): string[] {
+  const tris = i < 0 ? MOUNT_TRIS : CELL_TRIS[i];
+  const bands = new Array<string>(BANDS).fill('');
+  for (const t of tris) {
+    const p0 = projLocal(fr, t[0][0], t[0][1], t[0][2]);
+    const p1 = projLocal(fr, t[1][0], t[1][1], t[1][2]);
+    const p2 = projLocal(fr, t[2][0], t[2][1], t[2][2]);
+    const ax = p1.x - p0.x, ay = p1.y - p0.y, az = p1.depth - p0.depth;
+    const bx = p2.x - p0.x, by = p2.y - p0.y, bz = p2.depth - p0.depth;
+    const nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx;
+    const nl = Math.hypot(nx, ny, nz) || 1;
+    const lam = Math.abs((nx * LX + ny * LY + nz * LZ) / nl);
+    const b = Math.min(BANDS - 1, Math.floor((0.15 + 0.85 * lam) * BANDS));
+    bands[b] += `M${p0.x.toFixed(1)} ${p0.y.toFixed(1)}L${p1.x.toFixed(1)} ${p1.y.toFixed(1)}L${p2.x.toFixed(1)} ${p2.y.toFixed(1)}Z`;
+  }
+  return bands;
 }
 
 function render(): void {
@@ -137,10 +195,19 @@ function render(): void {
   for (const item of projectScene(cam, drawables())) {
     const e = elems.get(item.key);
     if (!e) continue;
-    if (item.key === 'mnt') {
-      e.setAttribute('d', discPath(-1));
-    } else if (item.key[0] === 'v') {
-      e.setAttribute('d', discPath(Number(item.key.slice(1))));
+    if (item.key === 'mnt' || item.key[0] === 'v') {
+      const ci = item.key === 'mnt' ? -1 : Number(item.key.slice(1));
+      const fr = cellFrame(ci);
+      const bands = shadeBands(ci, fr);
+      const bandEls = shadeEls.get(item.key);
+      if (bandEls) {
+        for (let b = 0; b < BANDS; b++) {
+          bandEls[b].setAttribute('d', bands[b] || 'M0 0');
+          bandEls[b].setAttribute('opacity', String(item.opacity));
+          svg.appendChild(bandEls[b]);
+        }
+      }
+      e.setAttribute('d', discPath(ci, fr));
     } else {
       e.setAttribute('x1', String(item.pts[0].x));
       e.setAttribute('y1', String(item.pts[0].y));

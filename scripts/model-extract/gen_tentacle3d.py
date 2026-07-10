@@ -63,13 +63,55 @@ def sample_cell(xmin, xmax, x0, cap, min_len=2.0):
         polys.append(pts); total += len(pts)
     return polys, total
 
+def sample_tris(xmin, xmax, x0, cap):
+    """嵌入渲染网格 → 局部系三角面（面积降序，预算截断）"""
+    tris = []
+    for o in M.Objects:
+        g = o.Geometry
+        tn = type(g).__name__
+        if tn not in ('Brep', 'Extrusion'): continue
+        try: bb = g.GetBoundingBox()
+        except Exception: continue
+        cx=(bb.Min.X+bb.Max.X)/2; cy=(bb.Min.Y+bb.Max.Y)/2; cz=(bb.Min.Z+bb.Max.Z)/2
+        if not (xmin <= cx < xmax and abs(cy) < 130 and -130 < cz < 130): continue
+        brep = g.ToBrep(True) if tn == 'Extrusion' else g
+        if brep is None: continue
+        for fi in range(len(brep.Faces)):
+            try:
+                mesh = brep.Faces[fi].GetMesh(r.MeshType.Any)
+            except Exception:
+                continue
+            if not mesh: continue
+            V = mesh.Vertices
+            for k in range(mesh.Faces.Count):
+                f = mesh.Faces[k]
+                idx = [f[0], f[1], f[2]] if f[2] == f[3] else None
+                quads = [[f[0], f[1], f[2]]] if idx else [[f[0], f[1], f[2]], [f[0], f[2], f[3]]]
+                for tri in quads:
+                    pts = [(V[j].X, V[j].Y, V[j].Z) for j in tri]
+                    ab = [pts[1][i]-pts[0][i] for i in range(3)]
+                    ac = [pts[2][i]-pts[0][i] for i in range(3)]
+                    cr = (ab[1]*ac[2]-ab[2]*ac[1], ab[2]*ac[0]-ab[0]*ac[2], ab[0]*ac[1]-ab[1]*ac[0])
+                    area = 0.5*math.hypot(*cr)
+                    if area < 0.4: continue
+                    tris.append((area, [local(*p_, x0) for p_ in pts]))
+    tris.sort(key=lambda t: -t[0])
+    return [t[1] for t in tris[:cap]]
+
+def fmt_tris(tris):
+    return '[\n' + ',\n'.join('  [' + ','.join(f'[{p[0]},{p[1]},{p[2]}]' for p in tri) + ']' for tri in tris) + '\n]'
+
 cells = []
+tri_cells = []
 for i in range(5):
     polys, n = sample_cell(BOUNDS[i], BOUNDS[i+1], SX[i], 520)
     cells.append(polys)
-    print(f'站 {i} 元胞 [{BOUNDS[i]:.0f},{BOUNDS[i+1]:.0f}) 边 {len(polys)} 点 {n}')
+    tris = sample_tris(BOUNDS[i], BOUNDS[i+1], SX[i], 700)
+    tri_cells.append(tris)
+    print(f'站 {i} 元胞 [{BOUNDS[i]:.0f},{BOUNDS[i+1]:.0f}) 边 {len(polys)} 点 {n} 三角 {len(tris)}')
 mount_polys, n = sample_cell(MOUNT[0], MOUNT[1], SX[0], 520, min_len=8.0)
-print(f'基座 边 {len(mount_polys)} 点 {n}')
+mount_tris = sample_tris(MOUNT[0], MOUNT[1], SX[0], 800)
+print(f'基座 边 {len(mount_polys)} 点 {n} 三角 {len(mount_tris)}')
 
 stations = [sim(x, AXIS_Y, AXIS_Z, SX[0]) for x in SX]
 chains = []
@@ -99,6 +141,13 @@ export const CELL_OUTLINES: ReadonlyArray<ReadonlyArray<ReadonlyArray<readonly [
 
 /** 基座（舵机总成）轮廓：站 0 局部系，静态锚定 */
 export const MOUNT_OUTLINE: ReadonlyArray<ReadonlyArray<readonly [number, number, number]>> = {fmt(mount_polys)} as const;
+
+/** 着色三角面（嵌入渲染网格抽样，面积降序预算；局部系同轮廓） */
+export const CELL_TRIS: ReadonlyArray<ReadonlyArray<ReadonlyArray<readonly [number, number, number]>>> = [
+{','.join(fmt_tris(t) for t in tri_cells)}
+] as const;
+
+export const MOUNT_TRIS: ReadonlyArray<ReadonlyArray<readonly [number, number, number]>> = {fmt_tris(mount_tris)} as const;
 """
 open('src/lib/linkage/tentacle3d-shape.ts', 'w').write(ts)
 print('生成 tentacle3d-shape.ts', len(ts), '字节')
