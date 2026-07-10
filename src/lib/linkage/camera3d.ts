@@ -19,9 +19,13 @@ export interface OrbitCameraOpts {
   /** 初始姿态（等价于旧 turntable 的 yaw/pitch 起始机位） */
   yaw0?: number;
   pitch0?: number;
+  /** 初始滚转（绕屏幕法向，最后施加）：把机构「放倒」用——臂轴机构默认横躺
+   *  时传 −π/2（世界 +y → 屏幕 +x）。拖拽旋转不受影响（trackball 屏幕轴） */
+  roll0?: number;
   zoomMin?: number;
   zoomMax?: number;
-  /** 空闲自转角速度 rad/s（绕屏幕竖轴；0 = 关；reduced-motion 由调用方传 0） */
+  /** 空闲自转角速度 rad/s（绕**世界 y 轴**=机构对称轴，姿态不漂移——roll0 横躺
+   *  机位下依然横躺，只有椎节自旋；0 = 关；reduced-motion 由调用方传 0） */
   autoYaw?: number;
   /** 拖拽灵敏度：rad / 指针 px */
   yawPerPx?: number;
@@ -58,6 +62,11 @@ const rotY = (t: number): Mat3 => {
   const s = Math.sin(t);
   return [c, 0, s, 0, 1, 0, -s, 0, c];
 };
+const rotZ = (t: number): Mat3 => {
+  const c = Math.cos(t);
+  const s = Math.sin(t);
+  return [c, -s, 0, s, c, 0, 0, 0, 1];
+};
 
 export class OrbitCamera {
   private readonly o: Required<OrbitCameraOpts>;
@@ -76,6 +85,7 @@ export class OrbitCamera {
       scale: 1,
       yaw0: 0,
       pitch0: 0,
+      roll0: 0,
       zoomMin: 0.5,
       zoomMax: 3,
       autoYaw: 0,
@@ -84,7 +94,7 @@ export class OrbitCamera {
       wheelRate: 0.0012,
       ...opts,
     };
-    this.m0 = mul(rotX(this.o.pitch0), rotY(this.o.yaw0));
+    this.m0 = mul(rotZ(this.o.roll0), mul(rotX(this.o.pitch0), rotY(this.o.yaw0)));
     this.m = this.m0;
   }
 
@@ -156,10 +166,11 @@ export class OrbitCamera {
     this._zoom = this.clampZoom(this._zoom * Math.exp(-deltaY * this.o.wheelRate));
   }
 
-  /** 每帧：空闲自转（绕屏幕竖轴；用户接管后永不再动）。 */
+  /** 每帧：空闲自转（**后乘 = 绕世界 y 轴**，turntable 语义——机位姿态不漂移；
+   *  拖拽旋转是前乘屏幕轴，两者不同域。用户接管后永不再动）。 */
   tick(dt: number): void {
     if (!this.userTookOver && this.pointers.size === 0) {
-      this.m = mul(rotY(this.o.autoYaw * dt), this.m);
+      this.m = mul(this.m, rotY(this.o.autoYaw * dt));
     }
   }
 

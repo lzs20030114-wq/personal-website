@@ -23,6 +23,24 @@ describe('OrbitCamera', () => {
     expect(p.depth).toBeCloseTo(-1, 12);
   });
 
+  it('roll0=−90°：世界 y 轴放倒到屏幕 +x（臂轴机构横躺机位）', () => {
+    const c = cam0({ roll0: -Math.PI / 2 });
+    const p = c.project({ x: 0, y: 1, z: 0 });
+    expect(p.x).toBeCloseTo(1, 12);
+    expect(p.y).toBeCloseTo(0, 12);
+    expect(p.depth).toBeCloseTo(0, 12);
+  });
+
+  it('空闲自转绕世界 y 轴：横躺机位下臂轴不漂移，椎节自旋', () => {
+    const c = cam0({ roll0: -Math.PI / 2, autoYaw: 1 });
+    c.tick(0.9); // 自转 0.9 rad
+    const arm = c.project({ x: 0, y: 1, z: 0 });
+    expect(arm.x).toBeCloseTo(1, 12); // 臂轴仍横躺指右
+    expect(arm.y).toBeCloseTo(0, 12);
+    const rim = c.project({ x: 1, y: 0, z: 0 });
+    expect(Math.abs(rim.depth)).toBeGreaterThan(0.5); // 盘面在转（x̂ 转入深度）
+  });
+
   it('单指横拖 = 绕屏幕竖轴（trackball）：拖 90° 后世界 x 轴转入深度', () => {
     const c = cam0();
     c.pointerDown(1, 0, 0);
