@@ -314,7 +314,7 @@ src/components/linkage/LinkageFigure.tsx    // "use client"
 
 - `spin`：θ += ω·dt（dt 已 clamp），B = A + 66·(cos θ, sin θ)，B 临时 fixed，`iterate(24)`，解锁。**Session 4 注意**：驱动参数应随 preset 配置化（`driver: {anchor, tip, radius, omega}`），为机构画廊铺路（见 IDEAS.md），不许硬编码进渲染层。
 - `drag`：`iterate(36)`，软目标 = 指针位置。
-- `release`：Session 4 实现。意图：短暂自由阻尼后 ω 从 0 缓升到巡航值，从当前曲柄角无缝接回 spin。Session 2/3 期间 release 可直接跳回 spin（验收不含手感）。
+- `release`（M3 已实现；**SPEC 修订**：由「从 0 缓升」升级为**继承末速**，缓升成为其静置特例）：拖拽中对曲柄角速度做 EMA 估计（smoothing=0.5/帧，角差回卷防 ±2π 跳变），松手继承该初速（封顶 omegaMax=6 rad/s），以时间常数 τ=0.55s 指数松弛到巡航 ω——甩得快先快后缓「泄劲」，静置松手从 ≈0 缓升，同一条规律；反向甩经零平滑回正。|ω − ω_cruise| ≤ snapEps(5%) 时接回 spin。**τ=0 = 硬切**（THESIS_NOTES 生命感实验的对照开关）。参数 `ControllerOpts.release{tau, omegaMax, smoothing, snapEps}` 全部可调——具体数值待用户真机手感拍板，拍板后回填此处。
 - `prefers-reduced-motion`：初始为静止（不自转），拖拽仍可用（用户主动发起的运动不属于「减少动画」的范畴）。
 
 ### 4.3 指针与坐标
@@ -431,6 +431,7 @@ Session 2 不等 Next.js 脚手架：就在本目录 `git init` + Vite + Vitest 
 | 命中测试 | 24px 内最近自由节点被抓；锚点与空白永不命中；30px 外不命中 |
 | 多点触控 | 拖拽中第二指 down/move/up 全忽略；第一指目标收敛 <0.1px 不受扰；先手独占直至松手 |
 | 松手接回自转 | endDrag 后 θ = atan2(tip−anchor)，下一帧曲柄端点位移 <2px（不瞬移） |
+| release 阻尼（M3） | 静置松手：ω 从 ≈0 单调缓升、全程无瞬移、终接回 spin；甩动松手：初速 > 巡航后单调衰减；反向甩：经零平滑升回；初速封顶 omegaMax；τ=0 硬切直达 spin；release 中 dt=2s 角增量 ≤ ω·0.05 |
 | reduced-motion | 初始 idle；frame 后坐标逐位不变；拖拽仍可用；松手回 idle |
 | iterateWithHistory | 快照数 = n；残差 8 遍窗口内下降且最终 <0.5（实测证伪严格单调——GS 峰值可短暂回升，见 §3.2）；终态与 `iterate(n)` 逐位一致 |
 

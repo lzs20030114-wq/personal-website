@@ -75,13 +75,13 @@ describe('多点触控防护（SPEC §5 条 4b）', () => {
     for (let f = 0; f < 10; f++) ctl.frame(1 / 60);
     const dist = Math.hypot(solver.nodes[N.C].x - target.x, solver.nodes[N.C].y - target.y);
     expect(dist).toBeLessThan(0.1);
-    // 指 1 松手才结束
+    // 指 1 松手才结束（M3 起松手先进 release 阻尼段）
     ctl.pointerUp(1);
-    expect(ctl.mode).toBe('spin');
+    expect(ctl.mode).toBe('release');
   });
 });
 
-describe('松手接回自转（SPEC §4.2 状态机）', () => {
+describe('松手接回自转（SPEC §4.2 状态机，M3 经 release 阻尼段）', () => {
   it('endDrag 后 θ 取自当前姿态，下一帧曲柄端点不跳', () => {
     const { solver, ctl } = makeCtl();
     const b = solver.nodes[N.B];
@@ -90,12 +90,112 @@ describe('松手接回自转（SPEC §4.2 状态机）', () => {
     ctl.pointerMove(1, CRANK.cx + CRANK.r, CRANK.cy - 10);
     for (let f = 0; f < 10; f++) ctl.frame(1 / 60);
     ctl.pointerUp(1);
-    expect(ctl.mode).toBe('spin');
+    expect(ctl.mode).toBe('release');
     const bx = solver.nodes[N.B].x;
     const by = solver.nodes[N.B].y;
     ctl.frame(1 / 60);
     const jump = Math.hypot(solver.nodes[N.B].x - bx, solver.nodes[N.B].y - by);
-    expect(jump).toBeLessThan(2); // 一帧正常自转位移 ≈ 66×0.9/60 ≈ 1px
+    expect(jump).toBeLessThan(2); // 静置松手初速 ≈ 0，位移低于一帧巡航自转 ≈ 1px
+  });
+});
+
+describe('release 阻尼（M3，手感即论点——THESIS_NOTES「呼吸/节律」）', () => {
+  /** 拖住 B 沿曲柄圆匀角速转动 n 帧（模拟甩动），返回结束时指针仍按住。 */
+  function whirl(ctl: LinkageController, omega: number, frames: number): void {
+    const b = { x: CRANK.cx + CRANK.r * Math.cos(THETA0), y: CRANK.cy + CRANK.r * Math.sin(THETA0) };
+    expect(ctl.pointerDown(1, b.x, b.y)).toBe(true);
+    let ang = THETA0;
+    for (let f = 0; f < frames; f++) {
+      ang += omega / 60;
+      ctl.pointerMove(1, CRANK.cx + CRANK.r * Math.cos(ang), CRANK.cy + CRANK.r * Math.sin(ang));
+      ctl.frame(1 / 60);
+    }
+  }
+
+  it('静置松手：ω 从 ≈0 单调缓升到巡航值，接回 spin，全程无瞬移', () => {
+    const { solver, ctl } = makeCtl();
+    const p = solver.nodes[N.P];
+    expect(ctl.pointerDown(1, p.x, p.y)).toBe(true);
+    for (let f = 0; f < 15; f++) ctl.frame(1 / 60); // 指针静止，速度估计衰减归零
+    ctl.pointerUp(1);
+    expect(ctl.mode).toBe('release');
+    expect(Math.abs(ctl.omegaNow)).toBeLessThan(0.1); // 不是硬切到 0.9
+    let prev = ctl.omegaNow;
+    let spun = false;
+    for (let f = 0; f < 200; f++) {
+      const bx = solver.nodes[N.B].x;
+      const by = solver.nodes[N.B].y;
+      ctl.frame(1 / 60);
+      expect(ctl.omegaNow).toBeGreaterThanOrEqual(prev - 1e-12); // 单调趋近，无回摆
+      prev = ctl.omegaNow;
+      const jump = Math.hypot(solver.nodes[N.B].x - bx, solver.nodes[N.B].y - by);
+      expect(jump).toBeLessThan(3); // 全程 |ω| ≤ 0.9 → 一帧 ≈1px，远低于断笔阈值
+      if (ctl.mode === 'spin') {
+        spun = true;
+        break;
+      }
+    }
+    expect(spun).toBe(true); // τ=0.55s，理论 ≈1.65s（99 帧）接回
+  });
+
+  it('甩动松手：继承拖拽末速（> 巡航），随后单调泄劲到巡航', () => {
+    const { ctl } = makeCtl();
+    whirl(ctl, 4, 60); // 4 rad/s 甩一圈量级
+    ctl.pointerUp(1);
+    expect(ctl.mode).toBe('release');
+    expect(ctl.omegaNow).toBeGreaterThan(2); // 明显快于巡航 0.9
+    let prev = ctl.omegaNow;
+    for (let f = 0; f < 300 && ctl.mode === 'release'; f++) {
+      ctl.frame(1 / 60);
+      expect(ctl.omegaNow).toBeLessThanOrEqual(prev + 1e-12); // 从上方单调衰减
+      prev = ctl.omegaNow;
+    }
+    expect(ctl.mode).toBe('spin');
+  });
+
+  it('反向甩：初速为负，经零点平滑升回正向巡航', () => {
+    const { ctl } = makeCtl();
+    whirl(ctl, -4, 60);
+    ctl.pointerUp(1);
+    expect(ctl.omegaNow).toBeLessThan(0);
+    let prev = ctl.omegaNow;
+    let spun = false;
+    for (let f = 0; f < 400; f++) {
+      ctl.frame(1 / 60);
+      expect(ctl.omegaNow).toBeGreaterThanOrEqual(prev - 1e-12);
+      prev = ctl.omegaNow;
+      if (ctl.mode === 'spin') {
+        spun = true;
+        break;
+      }
+    }
+    expect(spun).toBe(true);
+  });
+
+  it('暴力甩封顶：初速被 omegaMax 截断', () => {
+    const { ctl } = makeCtl();
+    whirl(ctl, 50, 30); // 荒谬角速度（受 MAX_DRAG_REACH 限步仍能积出巨大估计）
+    ctl.pointerUp(1);
+    expect(Math.abs(ctl.omegaNow)).toBeLessThanOrEqual(6 + 1e-12);
+  });
+
+  it('τ=0 硬切：松手直接回 spin（生命感实验的对照开关）', () => {
+    const { solver, ctl } = makeCtl({ release: { tau: 0 } });
+    const p = solver.nodes[N.P];
+    expect(ctl.pointerDown(1, p.x, p.y)).toBe(true);
+    ctl.frame(1 / 60);
+    ctl.pointerUp(1);
+    expect(ctl.mode).toBe('spin');
+  });
+
+  it('release 中 dt clamp 仍生效：切后台 2s 回来不瞬移', () => {
+    const { ctl } = makeCtl();
+    whirl(ctl, 4, 60);
+    ctl.pointerUp(1);
+    const omega = Math.abs(ctl.omegaNow);
+    const t0 = ctl.theta;
+    ctl.frame(2);
+    expect(Math.abs(ctl.theta - t0)).toBeLessThanOrEqual(omega * 0.05 + 1e-9);
   });
 });
 
