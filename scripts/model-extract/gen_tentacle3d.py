@@ -141,6 +141,7 @@ class Acc:
 # —— 触手区单遍收集（零件级分类）
 cells = [Acc() for _ in SX]
 joints = [Acc() for _ in GAP_M]
+tie_posts = []  # 梢节绑线柱：(方位角°, sim坐标质心)
 for o in M.Objects:
     try:
         bb = o.Geometry.GetBoundingBox()
@@ -175,6 +176,12 @@ for o in M.Objects:
             if math.hypot(pcy2, pcz2) < 4.0 and abs(pcx - SX[i]) < 8.0:
                 rr = np.hypot(verts[:, 1] - AXIS_Y, verts[:, 2] - AXIS_Z)
                 on_axis_r = float(rr.max())
+            # 梢节绑线柱（肌腱终点，用户圈定 2026-07-11）：梢节内三根短柱，
+            # 偏轴 ≈6mm、x 跨度 ~7.5mm、方位 ≈ 腱孔族——肌腱不穿梢节中间，
+            # 分别绑在各自柱上
+            if i == len(SX) - 1 and 4.0 < (vmax[0] - vmin[0]) < 12.0 and 3.0 < math.hypot(pcy2, pcz2) < 9.0:
+                tie_posts.append((math.degrees(math.atan2(pcz2, pcy2)) % 360.0,
+                                  [round(pcy2, 2), round(pcx - SX[0], 2), round(pcz2, 2)]))
             cells[i].add(local_np(verts, SX[i]), tris, vmin[0], vmax[0], on_axis_r)
 
 groups = []
@@ -251,6 +258,13 @@ for i in range(len(balls)):
     if balls[i] <= 0 and i >= 2:
         balls[i] = round(balls[i - 1] * balls[i - 1] / balls[i - 2], 2)
 print('中央球体半径', balls)
+# 绑线柱按腱孔方位（90/210/330）排序对齐腱序号
+TIE_AZ = [90.0, 210.0, 330.0]
+ties = []
+for az in TIE_AZ:
+    best = min(tie_posts, key=lambda t: min(abs(t[0] - az), 360 - abs(t[0] - az)))
+    ties.append(best[1])
+print('绑线柱（腱序）', ties, '方位实测', [round(t[0], 1) for t in tie_posts])
 chains = []
 for az in AZ:
     a = math.radians(az)
@@ -273,8 +287,12 @@ export const RADII: ReadonlyArray<number> = {json.dumps(HOLE_R)} as const;
 /** 每节两端板的沿臂位置（站局部 ax，[近端, 远端]）——肌腱 v3 真实走线的腱孔所在 */
 export const PLATES: ReadonlyArray<readonly [number, number]> = {json.dumps(plates)} as const;
 
-/** 每节中央球体导件的径向半径（轴上零件实测顶点最大径）——肌腱绕行其背面 */
+/** 每节中央球体导件的径向半径（轴上零件实测顶点最大径）——肌腱绕行其背面。
+ *  梢节（末位）无球体：肌腱终点绑在 TIES 柱上，不穿梢节中间。 */
 export const BALLS: ReadonlyArray<number> = {json.dumps(balls)} as const;
+
+/** 梢节绑线柱质心（sim 坐标，腱序 0/1/2 = 方位 90°/210°/330°）——肌腱终点锚 */
+export const TIES: ReadonlyArray<readonly [number, number, number]> = {json.dumps(ties)} as const;
 
 /** mesh.bin 分组布局：c0..c6 = 站元胞局部系（刚性）；j0..j5 = 节间 TPU 连接件
  *  （站 g 局部系，blend = [b0,b1] 裸露带，双骨蒙皮 g↔g+1）；mnt = 基座挂站 0。 */

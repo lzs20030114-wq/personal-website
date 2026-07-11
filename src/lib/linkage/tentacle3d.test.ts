@@ -9,7 +9,7 @@ import {
   createTentacle3,
   tendonVisual3,
 } from './tentacle3d-data';
-import { BALLS } from './tentacle3d-shape';
+import { BALLS, TIES } from './tentacle3d-shape';
 
 // 立体求解器 spec v0.1 / 3D-M1 验收。容差 px，阈值来自实测探针（probe3d，2026-07-10）。
 
@@ -165,14 +165,14 @@ describe('立体肌腱触手', () => {
     expect(Math.hypot(tip.x, tip.y, tip.z)).toBeLessThan(380); // ≤ 臂长 357.8 + 软腱余量
   });
 
-  it('视觉走线：绕点在本腱方位的**反向**、贴球体背面（半径 = 球 + 1mm 余隙）', () => {
+  it('视觉走线：绕点在本腱方位反向贴球背；梢节不穿中间、终点绑在自己的柱上', () => {
     const { solver: s } = createTentacle3();
     settle(s, 60);
     for (let k = 0; k < 3; k++) {
       const pts = tendonVisual3(s, k);
-      expect(pts.length).toBe(7 * 3);
+      expect(pts.length).toBe(6 * 3 + 2); // 节 0..5 三点 + 梢节 [板孔, 绑柱]
       const [dx, dz] = TENDON_DIRS[k];
-      for (let i = 0; i < 7; i++) {
+      for (let i = 0; i < 6; i++) {
         const w = pts[i * 3 + 1]; // 每节中点 = 绕点
         const sp = s.nodes[SPINE3(i)];
         const rx = w.x - sp.x;
@@ -180,6 +180,13 @@ describe('立体肌腱触手', () => {
         expect(rx * dx + rz * dz).toBeLessThan(0); // 越过轴线到背面
         expect(Math.hypot(rx, w.y - sp.y, rz)).toBeCloseTo(BALLS[i] + 1, 6);
       }
+      // 梢节终点 = 真机绑线柱实测位（静息）且在本腱方位一侧（不越轴）
+      const tie = pts[pts.length - 1];
+      expect(tie.x).toBeCloseTo(TIES[k][0], 1);
+      expect(tie.y).toBeCloseTo(TIES[k][1], 1);
+      expect(tie.z).toBeCloseTo(TIES[k][2], 1);
+      const sp6 = s.nodes[SPINE3(6)];
+      expect((tie.x - sp6.x) * dx + (tie.z - sp6.z) * dz).toBeGreaterThan(0);
     }
   });
 
