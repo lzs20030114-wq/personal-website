@@ -206,6 +206,7 @@ for g, acc in enumerate(joints):
 
 # 基座：干净文件全量（x<25 一侧），仅剔除 x<-300 的遗留块
 mnt = Acc()
+root_disc_ax = None  # 导线盘（基座侧固定导缆件，用户蓝圈 2026-07-11）沿臂位置
 for o in M.Objects:
     try:
         bb = o.Geometry.GetBoundingBox()
@@ -219,7 +220,17 @@ for o in M.Objects:
         if pm is None:
             continue
         verts, tris = pm
+        vmin = verts.min(0)
+        vmax = verts.max(0)
+        pcx = (vmin[0] + vmax[0]) / 2
+        pcy2 = (vmin[1] + vmax[1]) / 2 - AXIS_Y
+        pcz2 = (vmin[2] + vmax[2]) / 2 - AXIS_Z
+        if 15.0 < pcx < 30.0 and math.hypot(pcy2, pcz2) < 4.0:
+            rr = np.hypot(verts[:, 1] - AXIS_Y, verts[:, 2] - AXIS_Z)
+            if 17.0 < rr.max() < 23.0:
+                root_disc_ax = round(pcx - SX[0], 2)
         mnt.add(local_np(verts, SX[0]), tris, verts[:, 0].min(), verts[:, 0].max())
+print('导线盘沿臂位置（站0局部）', root_disc_ax)
 v, t = mnt.packed()
 groups.append(('mnt', v, t, None))
 print(f'基座 零件 {mnt.n} 顶点 {len(v)} 三角 {len(t)}')
@@ -293,6 +304,10 @@ export const BALLS: ReadonlyArray<number> = {json.dumps(balls)} as const;
 
 /** 梢节绑线柱质心（sim 坐标，腱序 0/1/2 = 方位 90°/210°/330°）——肌腱终点锚 */
 export const TIES: ReadonlyArray<readonly [number, number, number]> = {json.dumps(ties)} as const;
+
+/** 基座导线盘沿臂位置（站 0 局部 ax）——基座侧固定导缆件，缆线由此进入本体；
+ *  真正的不动锚在基座总成（用户纠偏 2026-07-11：根部第 0 节是活动关节） */
+export const ROOT_DISC_AX = {json.dumps(root_disc_ax)};
 
 /** mesh.bin 分组布局：c0..c6 = 站元胞局部系（刚性）；j0..j5 = 节间 TPU 连接件
  *  （站 g 局部系，blend = [b0,b1] 裸露带，双骨蒙皮 g↔g+1）；mnt = 基座挂站 0。 */

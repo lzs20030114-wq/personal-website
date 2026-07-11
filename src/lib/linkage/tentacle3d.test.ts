@@ -124,22 +124,27 @@ describe('立体肌腱触手', () => {
     settle(s, 60);
     applyContraction3(s, tendons[0], 1);
     settle(s, 600);
+    // 逐关节折角（含根部关节：静息臂向 +y 与首段的夹角——根关节自由后
+    // 卷曲从根部就开始，用户纠偏 2026-07-11）
+    const dir = (a: { x: number; y: number; z: number }, b: typeof a): number[] => [
+      b.x - a.x, b.y - a.y, b.z - a.z,
+    ];
+    const segs: number[][] = [[0, 1, 0]];
+    for (let j = 0; j < TENTACLE3D.segments; j++) {
+      segs.push(dir(s.nodes[SPINE3(j)], s.nodes[SPINE3(j + 1)]));
+    }
     const fold: number[] = [];
-    for (let j = 1; j < TENTACLE3D.segments; j++) {
-      const a = s.nodes[SPINE3(j - 1)];
-      const b = s.nodes[SPINE3(j)];
-      const c = s.nodes[SPINE3(j + 1)];
-      const v1 = [b.x - a.x, b.y - a.y, b.z - a.z];
-      const v2 = [c.x - b.x, c.y - b.y, c.z - b.z];
+    for (let j = 1; j < segs.length; j++) {
+      const [a, b] = [segs[j - 1], segs[j]];
       const dd =
-        (v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2]) /
-        (Math.hypot(v1[0], v1[1], v1[2]) * Math.hypot(v2[0], v2[1], v2[2]));
+        (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) /
+        (Math.hypot(a[0], a[1], a[2]) * Math.hypot(b[0], b[1], b[2]));
       fold.push((Math.acos(Math.max(-1, Math.min(1, dd))) * 180) / Math.PI);
     }
     const total = fold.reduce((a, b) => a + b, 0);
-    expect(total).toBeGreaterThan(70); // 深卷成立（v3 实测 ≈100°：[10,16,19,25,30]）
+    expect(total).toBeGreaterThan(70); // 深卷成立（根活化后实测 ≈75–90°）
     expect(total).toBeLessThan(160);
-    expect(fold[fold.length - 1]).toBeGreaterThan(fold[0]); // 曲率向软梢集中
+    expect(fold[fold.length - 1]).toBeGreaterThan(fold[1]); // 曲率向软梢集中
     expect(Math.max(...fold)).toBeLessThan(55); // 无死折（真机盘面接触上限内）
   });
 
@@ -170,10 +175,13 @@ describe('立体肌腱触手', () => {
     settle(s, 60);
     for (let k = 0; k < 3; k++) {
       const pts = tendonVisual3(s, k);
-      expect(pts.length).toBe(6 * 3 + 2); // 节 0..5 三点 + 梢节 [板孔, 绑柱]
+      expect(pts.length).toBe(1 + 6 * 3 + 2); // 盘孔入口 + 节 0..5 三点 + 梢节 [板孔, 绑柱]
       const [dx, dz] = TENDON_DIRS[k];
+      // 入口 = 基座导线盘腱孔（固定锚侧，在本腱方位、盘面沿臂位置）
+      expect(pts[0].y).toBeCloseTo(-23.79, 1);
+      expect(pts[0].x * dx + pts[0].z * dz).toBeGreaterThan(0);
       for (let i = 0; i < 6; i++) {
-        const w = pts[i * 3 + 1]; // 每节中点 = 绕点
+        const w = pts[1 + i * 3 + 1]; // 每节中点 = 绕点
         const sp = s.nodes[SPINE3(i)];
         const rx = w.x - sp.x;
         const rz = w.z - sp.z;

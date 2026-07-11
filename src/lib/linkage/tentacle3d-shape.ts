@@ -21,6 +21,10 @@ export const BALLS: ReadonlyArray<number> = [12.18, 10.9, 9.72, 8.63, 7.62, 6.69
 /** 梢节绑线柱质心（sim 坐标，腱序 0/1/2 = 方位 90°/210°/330°）——肌腱终点锚 */
 export const TIES: ReadonlyArray<readonly [number, number, number]> = [[0.01, 354.83, 6.24], [-5.17, 354.83, -2.67], [5.13, 354.83, -2.71]] as const;
 
+/** 基座导线盘沿臂位置（站 0 局部 ax）——基座侧固定导缆件，缆线由此进入本体；
+ *  真正的不动锚在基座总成（用户纠偏 2026-07-11：根部第 0 节是活动关节） */
+export const ROOT_DISC_AX = -23.79;
+
 /** mesh.bin 分组布局：c0..c6 = 站元胞局部系（刚性）；j0..j5 = 节间 TPU 连接件
  *  （站 g 局部系，blend = [b0,b1] 裸露带，双骨蒙皮 g↔g+1）；mnt = 基座挂站 0。 */
 export interface MeshGroup {

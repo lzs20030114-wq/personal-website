@@ -1,6 +1,6 @@
 import type { Dynamics3Config, Linkage3Def, Vec3 } from './solver3d';
 import { LinkageSolver3D } from './solver3d';
-import { BALLS, CHAINS, PLATES, STATIONS, TIES } from './tentacle3d-shape';
+import { BALLS, CHAINS, PLATES, ROOT_DISC_AX, STATIONS, TIES } from './tentacle3d-shape';
 
 /**
  * 立体肌腱触手 v5——干净版真实结构（用户提供 11.3dm，2026-07-10）。
@@ -49,6 +49,10 @@ export const PLATE3 = (k: number, i: number, end: 0 | 1): number =>
   N_NODES * (1 + N_TENDONS) + (k * N_NODES + i) * 2 + end;
 /** 梢节绑线柱（腱 k 的缆线终点锚，用户圈定 2026-07-11——肌腱不穿梢节中间） */
 export const TIE3 = (k: number): number => N_NODES * (1 + N_TENDONS) + N_TENDONS * N_NODES * 2 + k;
+/** 基座侧固定节点（真正的不动锚——用户纠偏 2026-07-11「锚是基座不是根关节」）：
+ *  ROOTC3 = 导线盘中心；ROOTG3(k) = 导线盘腱孔（缆线入口/根部抽线点） */
+export const ROOTC3 = (): number => TIE3(0) + N_TENDONS;
+export const ROOTG3 = (k: number): number => ROOTC3() + 1 + k;
 export const TIP3 = TENTACLE3D.segments;
 
 /** 腱孔方位 = 导盘孔位方位 + 60°（用户纠偏 2026-07-11：肌腱穿的是端板上
@@ -80,7 +84,8 @@ export interface Tendon3Index {
  *  实时计算（随节刚体运动）。约束路径仍只走端板孔（绕点刚挂本节 → 对刚体
  *  净扳矩为零，力学等价——见 makeTentacle3Model 注释）。 */
 export function tendonVisual3(solver: LinkageSolver3D, k: number): Vec3[] {
-  const pts: Vec3[] = [];
+  // 入口 = 基座导线盘腱孔（固定）
+  const pts: Vec3[] = [solver.nodes[ROOTG3(k)]];
   for (let i = 0; i < N_NODES - 1; i++) {
     const s = solver.nodes[SPINE3(i)];
     const p1 = solver.nodes[PLATE3(k, i, 0)];
@@ -113,27 +118,27 @@ const dist = (a: readonly number[], b: readonly number[]): number =>
 export function makeTentacle3Model(): Tentacle3Model {
   const { segments, bendRoot, bendTip, fasciaK } = TENTACLE3D;
   const nodes: Linkage3Def['nodes'] = [];
-  // 脊柱 = 真实站心（基座站锚定）
+  // 脊柱 = 真实站心。**全部活动**——真正的锚在基座（ROOT 节点），
+  // 根部第 0 节是柔性关节（真机：TPU 轴从基座穿导线盘插入节 0）
   for (let i = 0; i < N_NODES; i++) {
     const [x, y, z] = STATIONS[i];
-    nodes.push({ x, y, z, fixed: i === 0 });
+    nodes.push({ x, y, z });
   }
-  // 导点 = 真实孔位（基座盘整体锚定 = 夹持 + 扭转参考）
+  // 导点 = 真实孔位（全部活动，同上）
   for (let k = 0; k < N_TENDONS; k++) {
     for (let i = 0; i < N_NODES; i++) {
       const [x, y, z] = CHAINS[k][i];
-      nodes.push({ x, y, z, fixed: i === 0 });
+      nodes.push({ x, y, z });
     }
   }
   // 端板腱孔（肌腱 v3）：导盘孔半径 + 方位再转 60°（腱孔族），平移到两端板
-  // 沿臂位置；基座节整体锚定
   for (let k = 0; k < N_TENDONS; k++) {
     for (let i = 0; i < N_NODES; i++) {
       const [sx, sy, sz] = STATIONS[i];
       const [hx, , hz] = CHAINS[k][i];
       const [rx, rz] = ROT60(hx - sx, hz - sz);
       for (const end of [0, 1] as const) {
-        nodes.push({ x: sx + rx, y: sy + PLATES[i][end], z: sz + rz, fixed: i === 0 });
+        nodes.push({ x: sx + rx, y: sy + PLATES[i][end], z: sz + rz });
       }
     }
   }
@@ -141,6 +146,16 @@ export function makeTentacle3Model(): Tentacle3Model {
   for (let k = 0; k < N_TENDONS; k++) {
     const [x, y, z] = TIES[k];
     nodes.push({ x, y, z });
+  }
+  // 基座固定节点（唯一锚）：导线盘中心 + 三腱孔（方位 = 腱孔族，半径同站 0 孔
+  // ——舵机锚→盘孔→节 0 板孔的静息直线过盘面处 r≈10.4，与站 0 孔径一致）
+  const discY = STATIONS[0][1] + (ROOT_DISC_AX ?? -23.79);
+  nodes.push({ x: STATIONS[0][0], y: discY, z: STATIONS[0][2], fixed: true });
+  for (let k = 0; k < N_TENDONS; k++) {
+    const [sx, , sz] = STATIONS[0];
+    const [hx, , hz] = CHAINS[k][0];
+    const [rx, rz] = ROT60(hx - sx, hz - sz);
+    nodes.push({ x: sx + rx, y: discY, z: sz + rz, fixed: true });
   }
 
   // 杆 rest 一律缺省 = 真实初始距离
@@ -193,6 +208,16 @@ export function makeTentacle3Model(): Tentacle3Model {
     bars.push({ a: t, b: SPINE3(segments - 1) });
     for (let j = 0; j < N_TENDONS; j++) bars.push({ a: t, b: GUIDE3(j, segments) });
   }
+  // 根部柔性关节（基座导线盘 ↔ 节 0，镜像节间模式）：轴杆 + 软弯曲记忆 +
+  // 对称锥（含补全站 0 导点的后邻锥）+ 根部 fascia 抗扭
+  bars.push({ a: ROOTC3(), b: SPINE3(0) });
+  bars.push({ a: ROOTC3(), b: SPINE3(1), stiffness: bendRoot });
+  for (let k = 0; k < N_TENDONS; k++) {
+    bars.push({ a: ROOTG3(k), b: SPINE3(0) });
+    bars.push({ a: GUIDE3(k, 0), b: ROOTC3() });
+    bars.push({ a: ROOTG3(k), b: GUIDE3((k + 1) % N_TENDONS, 0), stiffness: fasciaK });
+    bars.push({ a: ROOTG3(k), b: GUIDE3((k + 2) % N_TENDONS, 0), stiffness: fasciaK });
+  }
   // 肌腱 = 穿环滑缆（v3 真实走线）：锚在梢节远端板孔、节间贴端板孔跨缝。
   // **约束路径只走端板孔**：节内穿心 V 腿两端同挂一节（长度恒定），对刚体节
   // 的净扳矩为零（内部走线不改变外部合力）——力学上与真实 V 走线严格等价；
@@ -202,8 +227,9 @@ export function makeTentacle3Model(): Tentacle3Model {
   const cables: Linkage3Def['cables'] = [];
   const tendons: Tendon3Index[] = [];
   for (let k = 0; k < N_TENDONS; k++) {
-    const path: number[] = [];
-    // 节 0..5 穿两端板孔；梢节只进近端板孔、终点绑在自己的柱上（不穿中间）
+    // 入口 = 基座导线盘腱孔（固定 = 根部抽线点）；节 0..5 穿两端板孔；
+    // 梢节只进近端板孔、终点绑在自己的柱上（不穿中间）
+    const path: number[] = [ROOTG3(k)];
     for (let i = 0; i < N_NODES - 1; i++) {
       path.push(PLATE3(k, i, 0), PLATE3(k, i, 1));
     }

@@ -6,7 +6,7 @@ import {
   createTentacle3,
   tendonVisual3,
 } from '../lib/linkage/tentacle3d-data';
-import { MESH_GROUPS, RADII, STATIONS } from '../lib/linkage/tentacle3d-shape';
+import { CHAINS, MESH_GROUPS, RADII, STATIONS } from '../lib/linkage/tentacle3d-shape';
 import { OrbitCamera } from '../lib/linkage/camera3d';
 import { FlatRenderer, bakeIndexed, bakeSkinned, type CellFrame } from '../lib/linkage/gl3d';
 import meshUrl from './assets/tentacle3d-mesh.bin?url';
@@ -104,12 +104,32 @@ function cellFrame(i: number): CellFrame {
   return { o, ux, uy, uz, ex, ey, ez, fx, fy, fz };
 }
 
+// 基座 = 真正的不动锚（用户纠偏 2026-07-11：根部节 0 是活动关节）——
+// 用常量静息刚架绘制，不随节 0 摆动
+const MNT_FRAME: CellFrame = (() => {
+  const g = CHAINS[0][0];
+  const o = STATIONS[0];
+  let ex = g[0] - o[0];
+  const ey = 0;
+  let ez = g[2] - o[2];
+  const el = Math.hypot(ex, ez) || 1;
+  ex /= el;
+  ez /= el;
+  // û = +y（静息臂向）；ê2 = 反手性叉积（同 cellFrame 公式代入 u=(0,1,0)）
+  return {
+    o: { x: o[0], y: o[1], z: o[2] },
+    ux: 0, uy: 1, uz: 0,
+    ex, ey, ez,
+    fx: -ez, fy: 0, fz: ex,
+  };
+})();
+
 function render(): void {
   const nodes = sim.solver.nodes;
   renderer.beginFrame(cam);
-  // 体：7 胞 + 基座（基座挂站 0 刚架，锚定不动）
+  // 体：7 胞（活动）+ 基座（常量静息刚架，锚定不动）
   for (let ci = 0; ci <= N; ci++) renderer.drawMesh(`c${ci}`, cellFrame(ci));
-  renderer.drawMesh('mnt', cellFrame(-1));
+  renderer.drawMesh('mnt', MNT_FRAME);
   // 节间 TPU 连接件：双骨蒙皮（插接段随盒刚动，裸露段吸收弯曲）
   for (const j of joints) {
     const dy = STATIONS[j.gap + 1][1] - STATIONS[j.gap][1];
