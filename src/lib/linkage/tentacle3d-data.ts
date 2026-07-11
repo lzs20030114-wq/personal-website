@@ -49,12 +49,20 @@ export const PLATE3 = (k: number, i: number, end: 0 | 1): number =>
   N_NODES * (1 + N_TENDONS) + (k * N_NODES + i) * 2 + end;
 export const TIP3 = TENTACLE3D.segments;
 
-/** 三腱在基座盘面 (x,z) 的单位方向（测试与 UI 用） */
+/** 腱孔方位 = 导盘孔位方位 + 60°（用户纠偏 2026-07-11：肌腱穿的是端板上
+ *  另一族孔 90°/210°/330°，不是导盘的 30°/150°/270°——后者留作结构导点）。 */
+const ROT60 = (dx: number, dz: number): [number, number] => [
+  dx * 0.5 - dz * Math.sin(Math.PI / 3),
+  dx * Math.sin(Math.PI / 3) + dz * 0.5,
+];
+
+/** 三腱在基座盘面 (x,z) 的单位方向（测试与 UI 用）——腱孔真实方位 */
 export const TENDON_DIRS: ReadonlyArray<readonly [number, number]> = CHAINS.map((c) => {
   const dx = c[0][0] - STATIONS[0][0];
   const dz = c[0][2] - STATIONS[0][2];
   const r = Math.hypot(dx, dz) || 1;
-  return [dx / r, dz / r] as const;
+  const [rx, rz] = ROT60(dx / r, dz / r);
+  return [rx, rz] as const;
 });
 
 export interface Tendon3Index {
@@ -73,15 +81,17 @@ export function tendonVisual3(solver: LinkageSolver3D, k: number): Vec3[] {
   const pts: Vec3[] = [];
   for (let i = 0; i < N_NODES; i++) {
     const s = solver.nodes[SPINE3(i)];
-    const g = solver.nodes[GUIDE3(k, i)];
-    const dx = g.x - s.x;
-    const dy = g.y - s.y;
-    const dz = g.z - s.z;
+    const p1 = solver.nodes[PLATE3(k, i, 0)];
+    const p2 = solver.nodes[PLATE3(k, i, 1)];
+    // 本腱孔径向方向 ≈ 两板孔中点 − 站心（轴向分量近抵消）；绕点在其反向
+    const dx = (p1.x + p2.x) / 2 - s.x;
+    const dy = (p1.y + p2.y) / 2 - s.y;
+    const dz = (p1.z + p2.z) / 2 - s.z;
     const L = Math.hypot(dx, dy, dz) || 1;
     const r = BALLS[i] + 1; // 球面 + 缆余隙
-    pts.push(solver.nodes[PLATE3(k, i, 0)]);
+    pts.push(p1);
     pts.push({ x: s.x - (dx / L) * r, y: s.y - (dy / L) * r, z: s.z - (dz / L) * r });
-    pts.push(solver.nodes[PLATE3(k, i, 1)]);
+    pts.push(p2);
   }
   return pts;
 }
@@ -110,12 +120,15 @@ export function makeTentacle3Model(): Tentacle3Model {
       nodes.push({ x, y, z, fixed: i === 0 });
     }
   }
-  // 端板腱孔（肌腱 v3）：站孔径向位置平移到两端板沿臂位置；基座节整体锚定
+  // 端板腱孔（肌腱 v3）：导盘孔半径 + 方位再转 60°（腱孔族），平移到两端板
+  // 沿臂位置；基座节整体锚定
   for (let k = 0; k < N_TENDONS; k++) {
     for (let i = 0; i < N_NODES; i++) {
-      const [x, y, z] = CHAINS[k][i];
+      const [sx, sy, sz] = STATIONS[i];
+      const [hx, , hz] = CHAINS[k][i];
+      const [rx, rz] = ROT60(hx - sx, hz - sz);
       for (const end of [0, 1] as const) {
-        nodes.push({ x, y: y + PLATES[i][end], z, fixed: i === 0 });
+        nodes.push({ x: sx + rx, y: sy + PLATES[i][end], z: sz + rz, fixed: i === 0 });
       }
     }
   }
@@ -148,8 +161,8 @@ export function makeTentacle3Model(): Tentacle3Model {
     }
   }
   // 端板腱孔刚性挂装：本节脊柱 + **前后双邻站**（对称——单侧拴结的前倾偏置
-  // 在深弯下耦合出系统性螺旋，同 v5 对称锥教训）+ 本方位导点 + **两侧**邻方位
-  // 导点（对称定方位——同方位导点切向零梯度退化，单侧拴结受载偏斜）
+  // 在深弯下耦合出系统性螺旋，同 v5 对称锥教训）+ 三导点（腱孔转 60° 后
+  // guide(k)/guide(k+1) 恰在其两侧 ±60° 对称夹持，guide(k+2) 在 180° 对面）
   for (let k = 0; k < N_TENDONS; k++) {
     for (let i = 0; i < N_NODES; i++) {
       for (const end of [0, 1] as const) {
