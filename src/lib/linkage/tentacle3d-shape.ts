@@ -1,8 +1,9 @@
 // 由 scripts/model-extract/gen_tentacle3d.py 生成——不要手改。
 // 数据源：模型求解器参考/11.3dm（干净版触手本体，用户提供 2026-07-10）。
-// 结构：基座舵机总成（全量）+ 7 方盒椎节 + 节间盘轴联接 + 梢端盖。
-// 网格：嵌入渲染网格全量导入（106633 三角，0.05mm 焊接）——WebGL 直接吃，
-// 细节不再做凸包减量（用户拍板「直接导入」）。载荷在 tentacle3d-mesh.bin。
+// 结构：基座舵机总成（全量）+ 7 方盒椎节 + 节间 TPU 盘轴联接（j 组）+ 梢端盖。
+// 网格：嵌入渲染网格全量导入（106633 三角，0.05mm 焊接）——WebGL 直接吃。
+// v4：连接件与方盒榫卯插接（刚盒 + TPU 软连接件）——j 组做双骨蒙皮，
+// blend = 裸露带（站 g 局部 ax），插接段随盒刚动。载荷在 tentacle3d-mesh.bin。
 
 export const STATIONS: ReadonlyArray<readonly [number, number, number]> = [[0.0, 0.0, 0.0], [0.0, 72.2, 0.0], [0.0, 139.1, 0.0], [0.0, 201.0, 0.0], [0.0, 258.0, 0.0], [0.0, 310.5, 0.0], [0.0, 357.8, 0.0]] as const;
 
@@ -10,7 +11,8 @@ export const CHAINS: ReadonlyArray<ReadonlyArray<readonly [number, number, numbe
 
 export const RADII: ReadonlyArray<number> = [10.3, 9.3, 8.3, 7.3, 6.5, 5.7, 4.9] as const;
 
-/** mesh.bin 分组布局（c0..c6 = 站元胞局部系，mnt = 基座挂站 0 刚架） */
+/** mesh.bin 分组布局：c0..c6 = 站元胞局部系（刚性）；j0..j5 = 节间 TPU 连接件
+ *  （站 g 局部系，blend = [b0,b1] 裸露带，双骨蒙皮 g↔g+1）；mnt = 基座挂站 0。 */
 export interface MeshGroup {
   name: string;
   verts: number;
@@ -18,6 +20,7 @@ export interface MeshGroup {
   vOff: number;
   iOff: number;
   idx32: boolean;
+  blend?: readonly [number, number];
 }
 
-export const MESH_GROUPS: ReadonlyArray<MeshGroup> = [{"name": "c0", "verts": 6749, "tris": 12450, "vOff": 0, "iOff": 80988, "idx32": false}, {"name": "c1", "verts": 8872, "tris": 16263, "vOff": 155688, "iOff": 262152, "idx32": false}, {"name": "c2", "verts": 8938, "tris": 16158, "vOff": 359732, "iOff": 466988, "idx32": false}, {"name": "c3", "verts": 8723, "tris": 15660, "vOff": 563936, "iOff": 668612, "idx32": false}, {"name": "c4", "verts": 8923, "tris": 15474, "vOff": 762572, "iOff": 869648, "idx32": false}, {"name": "c5", "verts": 9878, "tris": 15291, "vOff": 962492, "iOff": 1081028, "idx32": false}, {"name": "c6", "verts": 4449, "tris": 8464, "vOff": 1172776, "iOff": 1226164, "idx32": false}, {"name": "mnt", "verts": 9654, "tris": 6873, "vOff": 1276948, "iOff": 1392796, "idx32": false}] as const;
+export const MESH_GROUPS: ReadonlyArray<MeshGroup> = [{"name": "c0", "verts": 6749, "tris": 12450, "vOff": 0, "iOff": 80988, "idx32": false}, {"name": "c1", "verts": 8680, "tris": 15887, "vOff": 155688, "iOff": 259848, "idx32": false}, {"name": "c2", "verts": 8746, "tris": 15782, "vOff": 355172, "iOff": 460124, "idx32": false}, {"name": "c3", "verts": 8531, "tris": 15284, "vOff": 554816, "iOff": 657188, "idx32": false}, {"name": "c4", "verts": 8729, "tris": 15090, "vOff": 748892, "iOff": 853640, "idx32": false}, {"name": "c5", "verts": 9686, "tris": 14915, "vOff": 944180, "iOff": 1060412, "idx32": false}, {"name": "c6", "verts": 4257, "tris": 8088, "vOff": 1149904, "iOff": 1200988, "idx32": false}, {"name": "j0", "verts": 192, "tris": 376, "vOff": 1249516, "iOff": 1251820, "idx32": false, "blend": [27.3, 47.13]}, {"name": "j1", "verts": 192, "tris": 376, "vOff": 1254076, "iOff": 1256380, "idx32": false, "blend": [25.05, 43.93]}, {"name": "j2", "verts": 192, "tris": 376, "vOff": 1258636, "iOff": 1260940, "idx32": false, "blend": [22.99, 40.83]}, {"name": "j3", "verts": 194, "tris": 384, "vOff": 1263196, "iOff": 1265524, "idx32": false, "blend": [21.04, 37.75]}, {"name": "j4", "verts": 192, "tris": 376, "vOff": 1267828, "iOff": 1270132, "idx32": false, "blend": [19.32, 34.84]}, {"name": "j5", "verts": 192, "tris": 376, "vOff": 1272388, "iOff": 1274692, "idx32": false, "blend": [17.65, 33.65]}, {"name": "mnt", "verts": 9654, "tris": 6873, "vOff": 1276948, "iOff": 1392796, "idx32": false}] as const;

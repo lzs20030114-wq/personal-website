@@ -42,6 +42,34 @@ void main() {
   gl_FragColor = vec4(mix(uDark, uLite, 0.12 + 0.88 * vLam), 1.0);
 }`;
 
+// TPU 连接件双骨蒙皮（榫卯插接修正，2026-07-11）：顶点在骨 A（站 g）局部系，
+// 骨 B（站 g+1）局部 = A 局部 − (uDy,0,0)（静息各站同向，只差沿臂间距）。
+// w=0/1 = 插接段随盒刚动（榫卯不分离），中段平滑过渡 = 裸露 TPU 吸收弯曲。
+const SKIN_VS = `
+attribute vec3 aPos;
+attribute vec3 aNrm;
+attribute float aW;
+uniform mat3 uRA;
+uniform vec3 uTA;
+uniform mat3 uRB;
+uniform vec3 uTB;
+uniform float uDy;
+uniform mat3 uView;
+uniform vec3 uPivot;
+uniform vec2 uHalf;
+uniform float uScale;
+uniform float uDepthK;
+varying float vLam;
+uniform vec3 uLight;
+void main() {
+  vec3 pb = vec3(aPos.x - uDy, aPos.y, aPos.z);
+  vec3 world = mix(uRA * aPos + uTA, uRB * pb + uTB, aW);
+  vec3 q = uView * (world - uPivot);
+  gl_Position = vec4(q.x * uScale / uHalf.x, -q.y * uScale / uHalf.y, -q.z * uDepthK, 1.0);
+  vec3 nv = uView * mix(uRA * aNrm, uRB * aNrm, aW);
+  vLam = abs(dot(normalize(nv), uLight));
+}`;
+
 const LINE_VS = `
 attribute vec3 aPos;
 uniform mat3 uView;
@@ -108,11 +136,49 @@ export function bakeIndexed(verts: Float32Array, idx: Uint16Array | Uint32Array)
   return out;
 }
 
+/** 蒙皮版烘焙：同 bakeIndexed，另按顶点沿臂坐标 ax 附加骨 B 权重
+ *  （w = smoothstep(b0, b1, ax)：插接段 0/1，裸露带平滑过渡）。步长 7 float。 */
+export function bakeSkinned(
+  verts: Float32Array,
+  idx: Uint16Array | Uint32Array,
+  b0: number,
+  b1: number,
+): Float32Array {
+  const nTri = idx.length / 3;
+  const out = new Float32Array(nTri * 3 * 7);
+  const span = b1 - b0 || 1;
+  let k = 0;
+  for (let t = 0; t < nTri; t++) {
+    const i0 = idx[t * 3] * 3;
+    const i1 = idx[t * 3 + 1] * 3;
+    const i2 = idx[t * 3 + 2] * 3;
+    const ax = verts[i0], ay = verts[i0 + 1], az = verts[i0 + 2];
+    const bx = verts[i1], by = verts[i1 + 1], bz = verts[i1 + 2];
+    const cx = verts[i2], cy = verts[i2 + 1], cz = verts[i2 + 2];
+    const ux = bx - ax, uy = by - ay, uz = bz - az;
+    const vx = cx - ax, vy = cy - ay, vz = cz - az;
+    let nx = uy * vz - uz * vy;
+    let ny = uz * vx - ux * vz;
+    let nz = ux * vy - uy * vx;
+    const nl = Math.hypot(nx, ny, nz) || 1;
+    nx /= nl; ny /= nl; nz /= nl;
+    for (const [px, py, pz] of [[ax, ay, az], [bx, by, bz], [cx, cy, cz]] as const) {
+      const s = Math.min(1, Math.max(0, (px - b0) / span));
+      out[k++] = px; out[k++] = py; out[k++] = pz;
+      out[k++] = nx; out[k++] = ny; out[k++] = nz;
+      out[k++] = s * s * (3 - 2 * s);
+    }
+  }
+  return out;
+}
+
 export class FlatRenderer {
   private readonly gl: WebGLRenderingContext;
   private readonly meshProg: WebGLProgram;
+  private readonly skinProg: WebGLProgram;
   private readonly lineProg: WebGLProgram;
   private readonly meshes = new Map<string, { buf: WebGLBuffer; n: number }>();
+  private readonly skins = new Map<string, { buf: WebGLBuffer; n: number }>();
   private readonly lineBuf: WebGLBuffer;
   private readonly halfW: number;
   private readonly halfH: number;
@@ -124,6 +190,7 @@ export class FlatRenderer {
     if (!gl) throw new Error('WebGL 不可用');
     this.gl = gl;
     this.meshProg = link(gl, MESH_VS, MESH_FS);
+    this.skinProg = link(gl, SKIN_VS, MESH_FS);
     this.lineProg = link(gl, LINE_VS, LINE_FS);
     this.lineBuf = gl.createBuffer() as WebGLBuffer;
     this.halfW = logicalW / 2;
@@ -142,11 +209,20 @@ export class FlatRenderer {
     this.meshes.set(id, { buf, n: data.length / 6 });
   }
 
+  /** 蒙皮网格（bakeSkinned 产物，步长 7 float） */
+  addSkinnedMesh(id: string, data: Float32Array): void {
+    const gl = this.gl;
+    const buf = gl.createBuffer() as WebGLBuffer;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+    this.skins.set(id, { buf, n: data.length / 7 });
+  }
+
   beginFrame(cam: OrbitCamera): void {
     const gl = this.gl;
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    for (const prog of [this.meshProg, this.lineProg]) {
+    for (const prog of [this.meshProg, this.skinProg, this.lineProg]) {
       gl.useProgram(prog);
       gl.uniformMatrix3fv(gl.getUniformLocation(prog, 'uView'), false, transpose3(cam.matrix));
       const pv = cam.pivotPoint;
@@ -155,10 +231,12 @@ export class FlatRenderer {
       gl.uniform1f(gl.getUniformLocation(prog, 'uScale'), cam.viewScale);
       gl.uniform1f(gl.getUniformLocation(prog, 'uDepthK'), this.depthK);
     }
-    gl.useProgram(this.meshProg);
-    gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uLight'), -0.42, -0.52, 0.74);
-    gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uDark'), 0.29, 0.29, 0.27);
-    gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uLite'), 0.95, 0.95, 0.92);
+    for (const prog of [this.meshProg, this.skinProg]) {
+      gl.useProgram(prog);
+      gl.uniform3f(gl.getUniformLocation(prog, 'uLight'), -0.42, -0.52, 0.74);
+      gl.uniform3f(gl.getUniformLocation(prog, 'uDark'), 0.29, 0.29, 0.27);
+      gl.uniform3f(gl.getUniformLocation(prog, 'uLite'), 0.95, 0.95, 0.92);
+    }
   }
 
   drawMesh(id: string, fr: CellFrame): void {
@@ -180,6 +258,39 @@ export class FlatRenderer {
     gl.enableVertexAttribArray(aNrm);
     gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 24, 0);
     gl.vertexAttribPointer(aNrm, 3, gl.FLOAT, false, 24, 12);
+    gl.drawArrays(gl.TRIANGLES, 0, m.n);
+  }
+
+  /** TPU 连接件：双骨蒙皮绘制（frA = 站 g 刚架，frB = 站 g+1 刚架，
+   *  dy = 静息站间距——骨 B 局部坐标 = 骨 A 局部 − (dy,0,0)）。 */
+  drawSkinned(id: string, frA: CellFrame, frB: CellFrame, dy: number): void {
+    const gl = this.gl;
+    const m = this.skins.get(id);
+    if (!m) return;
+    gl.useProgram(this.skinProg);
+    gl.uniformMatrix3fv(gl.getUniformLocation(this.skinProg, 'uRA'), false, [
+      frA.ux, frA.uy, frA.uz,
+      frA.ex, frA.ey, frA.ez,
+      frA.fx, frA.fy, frA.fz,
+    ]);
+    gl.uniform3f(gl.getUniformLocation(this.skinProg, 'uTA'), frA.o.x, frA.o.y, frA.o.z);
+    gl.uniformMatrix3fv(gl.getUniformLocation(this.skinProg, 'uRB'), false, [
+      frB.ux, frB.uy, frB.uz,
+      frB.ex, frB.ey, frB.ez,
+      frB.fx, frB.fy, frB.fz,
+    ]);
+    gl.uniform3f(gl.getUniformLocation(this.skinProg, 'uTB'), frB.o.x, frB.o.y, frB.o.z);
+    gl.uniform1f(gl.getUniformLocation(this.skinProg, 'uDy'), dy);
+    gl.bindBuffer(gl.ARRAY_BUFFER, m.buf);
+    const aPos = gl.getAttribLocation(this.skinProg, 'aPos');
+    const aNrm = gl.getAttribLocation(this.skinProg, 'aNrm');
+    const aW = gl.getAttribLocation(this.skinProg, 'aW');
+    gl.enableVertexAttribArray(aPos);
+    gl.enableVertexAttribArray(aNrm);
+    gl.enableVertexAttribArray(aW);
+    gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 28, 0);
+    gl.vertexAttribPointer(aNrm, 3, gl.FLOAT, false, 28, 12);
+    gl.vertexAttribPointer(aW, 1, gl.FLOAT, false, 28, 24);
     gl.drawArrays(gl.TRIANGLES, 0, m.n);
   }
 

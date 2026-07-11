@@ -5,9 +5,9 @@ import {
   applyContraction3,
   createTentacle3,
 } from '../lib/linkage/tentacle3d-data';
-import { MESH_GROUPS, RADII } from '../lib/linkage/tentacle3d-shape';
+import { MESH_GROUPS, RADII, STATIONS } from '../lib/linkage/tentacle3d-shape';
 import { OrbitCamera } from '../lib/linkage/camera3d';
-import { FlatRenderer, bakeIndexed, type CellFrame } from '../lib/linkage/gl3d';
+import { FlatRenderer, bakeIndexed, bakeSkinned, type CellFrame } from '../lib/linkage/gl3d';
 import meshUrl from './assets/tentacle3d-mesh.bin?url';
 import { CriticallyDamped } from '../lib/linkage/motion';
 
@@ -43,6 +43,11 @@ const cam = new OrbitCamera({
 });
 
 const renderer = new FlatRenderer(canvas);
+// 节间 TPU 连接件（j 组）：与方盒榫卯插接、双骨蒙皮（用户纠偏 2026-07-11）
+const joints = MESH_GROUPS.filter((g) => g.blend).map((g) => ({
+  name: g.name,
+  gap: Number(g.name.slice(1)),
+}));
 // 完整渲染网格（10.7 万三角）从二进制资产异步载入——「直接导入模型」（用户拍板）
 fetch(meshUrl)
   .then((r) => r.arrayBuffer())
@@ -52,7 +57,8 @@ fetch(meshUrl)
       const idx = g.idx32
         ? new Uint32Array(buf, g.iOff, g.tris * 3)
         : new Uint16Array(buf, g.iOff, g.tris * 3);
-      renderer.addMesh(g.name, bakeIndexed(verts, idx));
+      if (g.blend) renderer.addSkinnedMesh(g.name, bakeSkinned(verts, idx, g.blend[0], g.blend[1]));
+      else renderer.addMesh(g.name, bakeIndexed(verts, idx));
     }
   });
 
@@ -103,6 +109,11 @@ function render(): void {
   // 体：7 胞 + 基座（基座挂站 0 刚架，锚定不动）
   for (let ci = 0; ci <= N; ci++) renderer.drawMesh(`c${ci}`, cellFrame(ci));
   renderer.drawMesh('mnt', cellFrame(-1));
+  // 节间 TPU 连接件：双骨蒙皮（插接段随盒刚动，裸露段吸收弯曲）
+  for (const j of joints) {
+    const dy = STATIONS[j.gap + 1][1] - STATIONS[j.gap][1];
+    renderer.drawSkinned(j.name, cellFrame(j.gap), cellFrame(j.gap + 1), dy);
+  }
   // 参考环（站 0 平面）
   const R = RADII[0] + 14;
   const ring: { a: { x: number; y: number; z: number }; b: { x: number; y: number; z: number } }[] = [];

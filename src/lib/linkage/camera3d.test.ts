@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { OrbitCamera } from './camera3d';
 import { projectScene } from './scene3d';
 import { CriticallyDamped } from './motion';
+import { bakeSkinned } from './gl3d';
 
 // 3D 台架公共装备（立体求解器 spec）：相机 / 场景投影 / 肌肉缓动。
 
@@ -111,6 +112,42 @@ describe('projectScene', () => {
     const A = projectScene(c, items);
     const B = projectScene(c, items);
     expect(JSON.stringify(A)).toBe(JSON.stringify(B));
+  });
+});
+
+describe('bakeSkinned（TPU 连接件双骨蒙皮烘焙）', () => {
+  it('插接段权重钉死 0/1（榫卯随盒刚动），裸露带中点 0.5，法向单位', () => {
+    // 一个三角：顶点沿臂 ax = 0（骨 A 插接段）/ 10（裸露带中点）/ 20（骨 B 插接段）
+    const verts = new Float32Array([0, 0, 0, 10, 3, 0, 20, 0, 4]);
+    const idx = new Uint16Array([0, 1, 2]);
+    const out = bakeSkinned(verts, idx, 5, 15);
+    expect(out.length).toBe(3 * 7);
+    expect(out[6]).toBe(0); // ax=0 < b0 → 全随骨 A
+    expect(out[13]).toBeCloseTo(0.5, 12); // 裸露带中点：smoothstep(0.5)
+    expect(out[20]).toBe(1); // ax=20 > b1 → 全随骨 B
+    for (const o of [0, 7, 14]) {
+      expect(Math.hypot(out[o + 3], out[o + 4], out[o + 5])).toBeCloseTo(1, 6);
+      expect([out[o], out[o + 1], out[o + 2]]).toEqual([
+        verts[(o / 7) * 3], verts[(o / 7) * 3 + 1], verts[(o / 7) * 3 + 2],
+      ]);
+    }
+  });
+
+  it('权重沿 ax 单调且平滑（无台阶跳变）', () => {
+    const n = 21;
+    const verts = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) verts[i * 3] = i; // ax = 0..20
+    const idx = new Uint16Array((n - 2) * 3);
+    for (let t = 0; t + 2 < n; t++) idx.set([t, t + 1, t + 2], t * 3);
+    const out = bakeSkinned(verts, idx, 5, 15);
+    // 每个三角第一顶点的 w 序列应单调不减，相邻差 < 0.2（平滑）
+    let prev = -1;
+    for (let t = 0; t + 2 < n; t++) {
+      const w = out[t * 21 + 6];
+      expect(w).toBeGreaterThanOrEqual(prev);
+      if (prev >= 0) expect(w - prev).toBeLessThan(0.2);
+      prev = w;
+    }
   });
 });
 

@@ -1,15 +1,19 @@
-"""触手提取 v3：11.3dm → 完整渲染网格（WebGL 全量导入，用户拍板 2026-07-10）
+"""触手提取 v4：11.3dm → 完整渲染网格 + TPU 连接件蒙皮分组（榫卯插接修正）
 
 产物：
-- src/lib/linkage/tentacle3d-shape.ts   站位/孔链/半径 + 网格分组元数据
+- src/lib/linkage/tentacle3d-shape.ts   站位/孔链/半径 + 网格分组元数据（含 blend）
 - src/demo/assets/tentacle3d-mesh.bin   逐组索引网格（Float32 顶点 + Uint16/32 索引）
-结构：7 方盒椎节（x 46.9→404.7）+ 基座舵机总成（干净文件全量，仅剔除远处遗留块）。
-网格：模型嵌入渲染网格全量导入，逐零件 0.05mm 焊接去重，剔除零面积三角。
+结构：7 方盒椎节（x 46.9→404.7）+ 节间 TPU 盘轴联接（j0..j5）+ 基座舵机总成。
+v4（用户纠偏 2026-07-11）：连接件与两侧方盒是**榫卯插接**——刚性方盒 + TPU 软
+连接件，弯曲全部发生在连接件裸露段，插接不分离。故跨越节间边界的零件按**零件级
+x 范围**判定为连接件、单独成组（j 组），blend = 两侧方盒端面之间的裸露带；渲染层
+对 j 组做双骨蒙皮（插接段权重恒 0/1 = 随盒刚动，裸露段平滑过渡）。
+v3 的按质心整箱分桶会把连接件塞进单侧盒里，弯曲时从对侧插槽拔出（用户否决）。
 坐标：站局部系 [沿臂 ax, 腱1 方向 u, 副法向 w]；单位 mm。
 用法：python3 scripts/model-extract/gen_tentacle3d.py
 """
 import rhino3dm as r
-import json, math, struct
+import json, math
 import numpy as np
 
 M = r.File3dm.Read('模型求解器参考/11.3dm')
@@ -18,6 +22,8 @@ SX = [46.9, 119.1, 186.0, 247.9, 304.9, 357.4, 404.7]
 HOLE_R = [10.3, 9.3, 8.3, 7.3, 6.5, 5.7, 4.9]
 AZ = [30.0, 150.0, 270.0]
 BOUNDS = [25.0] + [(SX[i] + SX[i + 1]) / 2 for i in range(len(SX) - 1)] + [430.0]
+GAP_M = BOUNDS[1:-1]          # 6 个内部边界（节间缝隙中点）
+MARGIN = 1.5                  # 零件越界超过此量（两侧都超）→ 判为连接件
 a1 = math.radians(AZ[0])
 
 def sim(x, y, z, x0):
@@ -108,48 +114,102 @@ def part_mesh(brep, xf):
         return None
     return verts, tris
 
-def collect_group(xmin, xmax, x0, ylim, zlim):
-    gv = []
-    gt = []
-    off = 0
-    nparts = 0
-    for o in M.Objects:
-        try:
-            bb = o.Geometry.GetBoundingBox()
-        except Exception:
+class Acc:
+    """一个网格组的累加器（局部系顶点 + 全局索引偏移 + 真机 x 范围）"""
+    def __init__(self):
+        self.v = []
+        self.t = []
+        self.off = 0
+        self.n = 0
+        self.x0 = 1e9
+        self.x1 = -1e9
+    def add(self, verts_local, tris, xmin, xmax):
+        self.v.append(verts_local)
+        self.t.append(tris + self.off)
+        self.off += len(verts_local)
+        self.n += 1
+        self.x0 = min(self.x0, xmin)
+        self.x1 = max(self.x1, xmax)
+    def packed(self):
+        if not self.v:
+            return np.zeros((0, 3)), np.zeros((0, 3), dtype=np.int64)
+        return np.vstack(self.v), np.vstack(self.t)
+
+# —— 触手区单遍收集（零件级分类）
+cells = [Acc() for _ in SX]
+joints = [Acc() for _ in GAP_M]
+for o in M.Objects:
+    try:
+        bb = o.Geometry.GetBoundingBox()
+    except Exception:
+        continue
+    ocx = (bb.Min.X + bb.Max.X) / 2
+    if not (BOUNDS[0] <= ocx < BOUNDS[-1]):
+        continue  # 基座区另收
+    for brep, xf in expand(o):
+        pm = part_mesh(brep, xf)
+        if pm is None:
             continue
-        cx = (bb.Min.X + bb.Max.X) / 2
-        cy = (bb.Min.Y + bb.Max.Y) / 2
-        cz = (bb.Min.Z + bb.Max.Z) / 2
-        if not (xmin <= cx < xmax and abs(cy) < ylim and zlim[0] < cz < zlim[1]):
+        verts, tris = pm
+        vmin = verts.min(0)
+        vmax = verts.max(0)
+        pcy = (vmin[1] + vmax[1]) / 2
+        pcz = (vmin[2] + vmax[2]) / 2
+        if not (abs(pcy) < 120.0 and -60.0 < pcz < 50.0):
             continue
-        for brep, xf in expand(o):
-            pm = part_mesh(brep, xf)
-            if pm is None:
-                continue
-            verts, tris = pm
-            gv.append(local_np(verts, x0))
-            gt.append(tris + off)
-            off += len(verts)
-            nparts += 1
-    if not gv:
-        return np.zeros((0, 3)), np.zeros((0, 3), dtype=np.int64), 0
-    return np.vstack(gv), np.vstack(gt), nparts
+        g = next((k for k, mx in enumerate(GAP_M)
+                  if vmin[0] < mx - MARGIN and vmax[0] > mx + MARGIN), None)
+        if g is not None:
+            joints[g].add(local_np(verts, SX[g]), tris, vmin[0], vmax[0])
+        else:
+            pcx = (vmin[0] + vmax[0]) / 2
+            i = max(0, min(len(SX) - 1, int(np.searchsorted(BOUNDS, pcx, side='right')) - 1))
+            cells[i].add(local_np(verts, SX[i]), tris, vmin[0], vmax[0])
 
 groups = []
-for i in range(len(SX)):
-    v, t, nparts = collect_group(BOUNDS[i], BOUNDS[i + 1], SX[i], 120.0, (-60.0, 50.0))
-    groups.append((f'c{i}', v, t))
-    print(f'站 {i} [{BOUNDS[i]:.0f},{BOUNDS[i+1]:.0f}) 零件 {nparts} 顶点 {len(v)} 三角 {len(t)}')
+for i, acc in enumerate(cells):
+    v, t = acc.packed()
+    groups.append((f'c{i}', v, t, None))
+    print(f'站 {i} 零件 {acc.n} 顶点 {len(v)} 三角 {len(t)} x[{acc.x0:.1f},{acc.x1:.1f}]')
+for g, acc in enumerate(joints):
+    v, t = acc.packed()
+    if acc.n == 0:
+        print(f'缝 {g} 无连接件零件——跳过（检查 MARGIN/模型）')
+        continue
+    # 蒙皮混合带 = 两侧方盒端面之间的裸露段（真机坐标 → 站 g 局部 ax）
+    b0m, b1m = cells[g].x1, cells[g + 1].x0
+    if b1m - b0m < 2.0:  # 端面几乎贴合：兜底给 ±3mm 混合带
+        mid = (b0m + b1m) / 2
+        b0m, b1m = mid - 3.0, mid + 3.0
+    blend = [round(b0m - SX[g], 2), round(b1m - SX[g], 2)]
+    groups.append((f'j{g}', v, t, blend))
+    print(f'缝 {g} 连接件 {acc.n} 顶点 {len(v)} 三角 {len(t)} '
+          f'x[{acc.x0:.1f},{acc.x1:.1f}] 裸露带 x[{b0m:.1f},{b1m:.1f}] blend {blend}')
+
 # 基座：干净文件全量（x<25 一侧），仅剔除 x<-300 的遗留块
-v, t, npar = collect_group(-300.0, 25.0, SX[0], 500.0, (-500.0, 500.0))
-groups.append(('mnt', v, t))
-print(f'基座 零件 {npar} 顶点 {len(v)} 三角 {len(t)}')
+mnt = Acc()
+for o in M.Objects:
+    try:
+        bb = o.Geometry.GetBoundingBox()
+    except Exception:
+        continue
+    ocx = (bb.Min.X + bb.Max.X) / 2
+    if not (-300.0 <= ocx < BOUNDS[0]):
+        continue
+    for brep, xf in expand(o):
+        pm = part_mesh(brep, xf)
+        if pm is None:
+            continue
+        verts, tris = pm
+        mnt.add(local_np(verts, SX[0]), tris, verts[:, 0].min(), verts[:, 0].max())
+v, t = mnt.packed()
+groups.append(('mnt', v, t, None))
+print(f'基座 零件 {mnt.n} 顶点 {len(v)} 三角 {len(t)}')
 
 # —— 二进制布局：逐组 [verts f4×3N | pad4 | idx u2/u4×3M | pad4]
 blob = b''
 meta = []
-for name, v, t in groups:
+for name, v, t, blend in groups:
     idx32 = len(v) > 65535
     v32 = np.round(v, 3).astype('<f4')
     idx = t.astype('<u4' if idx32 else '<u2')
@@ -161,8 +221,11 @@ for name, v, t in groups:
     blob += idx.tobytes()
     while len(blob) % 4:
         blob += b'\0'
-    meta.append({'name': name, 'verts': int(len(v)), 'tris': int(len(t)),
-                 'vOff': v_off, 'iOff': i_off, 'idx32': bool(idx32)})
+    m = {'name': name, 'verts': int(len(v)), 'tris': int(len(t)),
+         'vOff': v_off, 'iOff': i_off, 'idx32': bool(idx32)}
+    if blend is not None:
+        m['blend'] = blend
+    meta.append(m)
 open('src/demo/assets/tentacle3d-mesh.bin', 'wb').write(blob)
 total_t = sum(m['tris'] for m in meta)
 print(f'mesh.bin {len(blob)} 字节，总三角 {total_t}')
@@ -176,9 +239,10 @@ for az in AZ:
 
 ts = f"""// 由 scripts/model-extract/gen_tentacle3d.py 生成——不要手改。
 // 数据源：模型求解器参考/11.3dm（干净版触手本体，用户提供 2026-07-10）。
-// 结构：基座舵机总成（全量）+ 7 方盒椎节 + 节间盘轴联接 + 梢端盖。
-// 网格：嵌入渲染网格全量导入（{total_t} 三角，0.05mm 焊接）——WebGL 直接吃，
-// 细节不再做凸包减量（用户拍板「直接导入」）。载荷在 tentacle3d-mesh.bin。
+// 结构：基座舵机总成（全量）+ 7 方盒椎节 + 节间 TPU 盘轴联接（j 组）+ 梢端盖。
+// 网格：嵌入渲染网格全量导入（{total_t} 三角，0.05mm 焊接）——WebGL 直接吃。
+// v4：连接件与方盒榫卯插接（刚盒 + TPU 软连接件）——j 组做双骨蒙皮，
+// blend = 裸露带（站 g 局部 ax），插接段随盒刚动。载荷在 tentacle3d-mesh.bin。
 
 export const STATIONS: ReadonlyArray<readonly [number, number, number]> = {json.dumps(stations)} as const;
 
@@ -186,7 +250,8 @@ export const CHAINS: ReadonlyArray<ReadonlyArray<readonly [number, number, numbe
 
 export const RADII: ReadonlyArray<number> = {json.dumps(HOLE_R)} as const;
 
-/** mesh.bin 分组布局（c0..c6 = 站元胞局部系，mnt = 基座挂站 0 刚架） */
+/** mesh.bin 分组布局：c0..c6 = 站元胞局部系（刚性）；j0..j5 = 节间 TPU 连接件
+ *  （站 g 局部系，blend = [b0,b1] 裸露带，双骨蒙皮 g↔g+1）；mnt = 基座挂站 0。 */
 export interface MeshGroup {{
   name: string;
   verts: number;
@@ -194,6 +259,7 @@ export interface MeshGroup {{
   vOff: number;
   iOff: number;
   idx32: boolean;
+  blend?: readonly [number, number];
 }}
 
 export const MESH_GROUPS: ReadonlyArray<MeshGroup> = {json.dumps(meta)} as const;
