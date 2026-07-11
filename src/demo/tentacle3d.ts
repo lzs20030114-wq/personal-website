@@ -4,6 +4,7 @@ import {
   TENTACLE3D,
   applyContraction3,
   createTentacle3,
+  tendonVisual3,
 } from '../lib/linkage/tentacle3d-data';
 import { MESH_GROUPS, RADII, STATIONS } from '../lib/linkage/tentacle3d-shape';
 import { OrbitCamera } from '../lib/linkage/camera3d';
@@ -130,9 +131,11 @@ function render(): void {
   const spineSegs = [];
   for (let i = 0; i < N; i++) spineSegs.push({ a: nodes[SPINE3(i)], b: nodes[SPINE3(i + 1)] });
   renderer.drawLines(spineSegs, SPINE_C);
+  // 肌腱线 = 真实穿心走线（v3：端板孔 → 节心 → 端板孔 → 跨缝，V 形）
   for (let k = 0; k < 3; k++) {
+    const path = tendonVisual3(k);
     const segs = [];
-    for (let i = 0; i < N; i++) segs.push({ a: nodes[GUIDE3(k, i)], b: nodes[GUIDE3(k, i + 1)] });
+    for (let i = 0; i + 1 < path.length; i++) segs.push({ a: nodes[path[i]], b: nodes[path[i + 1]] });
     renderer.drawLines(segs, TENDON_C[k]);
   }
   const c = sliders.map((s) => `${s.value}%`).join(' / ');

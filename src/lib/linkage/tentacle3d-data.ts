@@ -1,16 +1,19 @@
 import type { Dynamics3Config, Linkage3Def } from './solver3d';
 import { LinkageSolver3D } from './solver3d';
-import { CHAINS, STATIONS } from './tentacle3d-shape';
+import { CHAINS, PLATES, STATIONS } from './tentacle3d-shape';
 
 /**
  * 立体肌腱触手 v5——干净版真实结构（用户提供 11.3dm，2026-07-10）。
  * 几何提取自 tentacle3d-shape.ts：基座舵机总成 + 7 方盒椎节（节距 72→47、
  * 孔半径 10.3→4.9 收锥，三腱方位 30°/150°/270°）+ 节间盘轴联接 + 梢端盖。
  * 脊柱节点 = 真机站心，导点 = 真机孔位，全部杆长 = 真实初始距离（构造器缺省）。
- * 肌腱 v2——真机制复活（用户还原设计意图 2026-07-10）：GH 的逐段等比收缩
- * 是 Kangaroo 无滑索约束时的妥协；实物是**一根完整缆线**锚在梢节、穿过沿途
- * 导孔、从根部抽线。本版用穿环滑索约束（solver3d cables）：只约束路径总长，
- * 张力自动分配、弯曲发生在阻力最小处、松弛时零作用力（单边）。
+ * 肌腱 v2（2026-07-10）：一根完整缆线 + 穿环滑索约束（只约束路径总长，
+ * 张力自动分配、松弛零力单边），替代 GH 的逐段等比收缩妥协。
+ * 肌腱 v3——真实走线（用户剖面图 2026-07-11）：v2 的「一站一孔直穿」也是
+ * GH 妥协；真实设计是缆线**每节经两端板腱孔、节内下潜穿主体几何中心**
+ * （中央导件），节间贴端板孔跨缝。滑动产生的推力：每个过孔处缆线折角的
+ * 张力合力压在件上（|F| = 2λsin(折角/2)，指向内凹侧）；三接触点/节把缆
+ * 按在结构上，深卷时不抄近道（弓弦效应），力臂不衰减——推力更有效率。
  */
 export const TENTACLE3D = {
   /** 段数 = 站数 − 1 */
@@ -18,11 +21,19 @@ export const TENTACLE3D = {
   /** 背骨弯曲刚度（per-sweep 乘子）：根 → 梢 */
   bendRoot: 0.03,
   bendTip: 0.003,
-  /** 抽线行程上限 mm（c=1 时从根部抽入的缆长）。全周卷曲所需 ≈ 2π·r̄ ≈ 47，
-   *  取 55 留出深卷余量——待用户手感拍板 */
-  pullMax: 55,
-  /** fascia 抗扭斜杆刚度（无它则扭转累积、单腱收缩卷成螺旋——用户实测） */
-  fasciaK: 0.2,
+  /** 抽线行程上限 mm（c=1 时缆目标长 = 自然长 − pullMax）。诚实走线下缩短
+   *  全部来自跨缝段：dL/dθ ≈ r̄ ≈ 7.5mm/rad·关节；~200° 总卷曲 ≈ 26mm，
+   *  取 32 留少量饱和余量（c=1 顶到拮抗绷紧 = 物理卷曲上限）——待手感拍板 */
+  pullMax: 32,
+  /** 装配松弛 mm：静息时每腱留的余量（真机装配必有）。弯向某腱时拮抗腱
+   *  路径变长 ≈ 0.5·r·θ——零松弛会把弯曲锁死在原地（v3 实测 err≈8 全是
+   *  拮抗缆被硬拉长）；12mm ≈ 容许 ~150° 总卷曲后拮抗才开始绷紧（物理上限） */
+  slack: 12,
+  /** fascia 抗扭斜杆刚度（无它则扭转累积、单腱收缩卷成螺旋——用户实测）。
+   *  v3 升到 1.0：诚实走线下深卷会滑进螺旋能量谷（实测梢端扭 50°、横漂
+   *  −154），刚性斜杆 = 真机盘轴联接抗扭刚度的等效；实测不吃弯曲力
+   *  （c=1 沿向 53→176）、横漂 −154→−43 */
+  fasciaK: 1.0,
   /** 重力取消（用户拍板：被驱动机构非悬垂物）；动量+阻尼保留 */
   dynamics: { gravity: { x: 0, y: 0, z: 0 }, damping: 0.992 } satisfies Dynamics3Config,
   sweeps: 36,
@@ -30,9 +41,12 @@ export const TENTACLE3D = {
 
 const N_NODES = STATIONS.length;
 const N_TENDONS = CHAINS.length;
-/** 节点索引：脊柱 0..14；导点 (k, i) = N_NODES·(k+1) + i */
+/** 节点索引：脊柱 0..6；导点 (k, i) = N_NODES·(k+1) + i；端板腱孔见 PLATE3 */
 export const SPINE3 = (i: number): number => i;
 export const GUIDE3 = (k: number, i: number): number => N_NODES * (k + 1) + i;
+/** 端板腱孔 (k, i, end)：节 i 的近端（end=0）/远端（end=1）板上腱 k 的孔 */
+export const PLATE3 = (k: number, i: number, end: 0 | 1): number =>
+  N_NODES * (1 + N_TENDONS) + (k * N_NODES + i) * 2 + end;
 export const TIP3 = TENTACLE3D.segments;
 
 /** 三腱在基座盘面 (x,z) 的单位方向（测试与 UI 用） */
@@ -48,6 +62,16 @@ export interface Tendon3Index {
   cable: number;
   /** 自然路径总长（抽线行程的基准） */
   rest0: number;
+}
+
+/** 肌腱的**视觉**路径（真实穿心走线：近端板孔 → 节心 → 远端板孔 → 跨缝）。
+ *  约束路径只走端板孔（见 makeTentacle3Model 注释），渲染按此画 V 形。 */
+export function tendonVisual3(k: number): number[] {
+  const path: number[] = [];
+  for (let i = 0; i < N_NODES; i++) {
+    path.push(PLATE3(k, i, 0), SPINE3(i), PLATE3(k, i, 1));
+  }
+  return path;
 }
 
 export interface Tentacle3Model {
@@ -72,6 +96,15 @@ export function makeTentacle3Model(): Tentacle3Model {
     for (let i = 0; i < N_NODES; i++) {
       const [x, y, z] = CHAINS[k][i];
       nodes.push({ x, y, z, fixed: i === 0 });
+    }
+  }
+  // 端板腱孔（肌腱 v3）：站孔径向位置平移到两端板沿臂位置；基座节整体锚定
+  for (let k = 0; k < N_TENDONS; k++) {
+    for (let i = 0; i < N_NODES; i++) {
+      const [x, y, z] = CHAINS[k][i];
+      for (const end of [0, 1] as const) {
+        nodes.push({ x, y: y + PLATES[i][end], z, fixed: i === 0 });
+      }
     }
   }
 
@@ -102,23 +135,55 @@ export function makeTentacle3Model(): Tentacle3Model {
       bars.push({ a: GUIDE3(k, i), b: GUIDE3((k + 2) % N_TENDONS, i + 1), stiffness: fasciaK });
     }
   }
-  // 肌腱 = 穿环滑缆（真机制）：锚在梢节导孔（末节点）、穿沿途导孔、根部导孔
-  // 已随基座锚定——抽线 = setCableRest(rest0 − 行程)
+  // 端板腱孔刚性挂装：本节脊柱 + **前后双邻站**（对称——单侧拴结的前倾偏置
+  // 在深弯下耦合出系统性螺旋，同 v5 对称锥教训）+ 本方位导点 + **两侧**邻方位
+  // 导点（对称定方位——同方位导点切向零梯度退化，单侧拴结受载偏斜）
+  for (let k = 0; k < N_TENDONS; k++) {
+    for (let i = 0; i < N_NODES; i++) {
+      for (const end of [0, 1] as const) {
+        const p = PLATE3(k, i, end);
+        bars.push({ a: p, b: SPINE3(i) });
+        if (i < N_NODES - 1) bars.push({ a: p, b: SPINE3(i + 1) });
+        if (i > 0) bars.push({ a: p, b: SPINE3(i - 1) });
+        bars.push({ a: p, b: GUIDE3(k, i) });
+        bars.push({ a: p, b: GUIDE3((k + 1) % N_TENDONS, i) });
+        bars.push({ a: p, b: GUIDE3((k + 2) % N_TENDONS, i) });
+      }
+    }
+  }
+  // 肌腱 = 穿环滑缆（v3 真实走线）：锚在梢节远端板孔、节间贴端板孔跨缝。
+  // **约束路径只走端板孔**：节内穿心 V 腿两端同挂一节（长度恒定），对刚体节
+  // 的净扳矩为零（内部走线不改变外部合力）——力学上与真实 V 走线严格等价；
+  // 若把 V 腿放进约束路径，其大折角节点会吃掉 PBD 梯度预算、肌力耗散在
+  // 「挤压刚性模态→被杆弹回」上（v3 首版实测卷曲锁死 45°）。穿心 V 形由
+  // 渲染层按 TENDON_VISUAL3 原样画出。静息 rest = 自然长 + slack（装配余量）。
   const cables: Linkage3Def['cables'] = [];
   const tendons: Tendon3Index[] = [];
   for (let k = 0; k < N_TENDONS; k++) {
+    const path: number[] = [];
+    for (let i = 0; i < N_NODES; i++) {
+      path.push(PLATE3(k, i, 0), PLATE3(k, i, 1));
+    }
     let rest0 = 0;
-    for (let i = 0; i < segments; i++) rest0 += dist(CHAINS[k][i], CHAINS[k][i + 1]);
+    for (let s = 0; s + 1 < path.length; s++) {
+      const a = nodes[path[s]];
+      const b = nodes[path[s + 1]];
+      rest0 += dist([a.x, a.y, a.z], [b.x, b.y, b.z]);
+    }
     tendons.push({ cable: k, rest0 });
-    cables.push({ nodes: Array.from({ length: N_NODES }, (_, i) => GUIDE3(k, i)) });
+    // maxStep 6mm ≈ 舵机力矩上限：深抽饱和（目标超出几何可达）时张力有界
+    cables.push({ nodes: path, rest: rest0 + TENTACLE3D.slack, maxStep: 6 });
   }
   return { def: { nodes, bars, cables }, tendons };
 }
 
-/** 抽线（真机制）：c∈[0,1] → 缆线目标总长 = 自然长 − c·pullMax。 */
+/** 抽线（真机制）：c∈[0,1] → 缆线目标总长从「自然长 + slack」（静息余量）
+ *  线性抽到「自然长 − pullMax」（满行程）。c 小段先吃掉自己的余量（真机的
+ *  空行程），随后开始施力。 */
 export function applyContraction3(solver: LinkageSolver3D, tendon: Tendon3Index, c: number): void {
-  const pull = TENTACLE3D.pullMax * Math.min(1, Math.max(0, c));
-  solver.setCableRest(tendon.cable, tendon.rest0 - pull);
+  const { pullMax, slack } = TENTACLE3D;
+  const cc = Math.min(1, Math.max(0, c));
+  solver.setCableRest(tendon.cable, tendon.rest0 + slack - cc * (pullMax + slack));
 }
 
 export function createTentacle3(): { solver: LinkageSolver3D; tendons: Tendon3Index[] } {

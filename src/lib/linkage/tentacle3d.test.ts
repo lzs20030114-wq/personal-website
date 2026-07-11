@@ -102,7 +102,7 @@ describe('立体肌腱触手', () => {
     expect(s.maxError()).toBeLessThan(0.5);
   });
 
-  it.each([0, 1, 2])('肌腱 %i 收缩 c=0.5：弯向自身方位（v5 实测沿向 177–184）', (k) => {
+  it.each([0, 1, 2])('肌腱 %i 收缩 c=0.5：弯向自身方位（v3 真实走线实测沿向 83–97）', (k) => {
     const { solver: s, tendons } = createTentacle3();
     settle(s, 60);
     applyContraction3(s, tendons[k], 0.5);
@@ -111,10 +111,34 @@ describe('立体肌腱触手', () => {
     const [dx, dz] = TENDON_DIRS[k];
     const along = dx * tip.x + dz * tip.z;
     const perp = -dz * tip.x + dx * tip.z;
-    expect(along).toBeGreaterThan(130);
-    // 缆线机制实测横向 −11/+30/−8（张力自动分配后扭转分布与逐段版不同）
-    expect(Math.abs(perp)).toBeLessThan(40);
-    expect(Math.abs(perp)).toBeLessThan(along * 0.2);
+    // 诚实走线（缩短全部来自跨缝段）同行程弯幅小于 v2 抄近道的假杠杆——真机量级
+    expect(along).toBeGreaterThan(70);
+    expect(Math.abs(perp)).toBeLessThan(30);
+    expect(Math.abs(perp)).toBeLessThan(along * 0.25);
+  });
+
+  it('深抽 c=1：J 形卷曲——曲率向软梢递增、总卷曲物理量级、无死折', () => {
+    const { solver: s, tendons } = createTentacle3();
+    settle(s, 60);
+    applyContraction3(s, tendons[0], 1);
+    settle(s, 600);
+    const fold: number[] = [];
+    for (let j = 1; j < TENTACLE3D.segments; j++) {
+      const a = s.nodes[SPINE3(j - 1)];
+      const b = s.nodes[SPINE3(j)];
+      const c = s.nodes[SPINE3(j + 1)];
+      const v1 = [b.x - a.x, b.y - a.y, b.z - a.z];
+      const v2 = [c.x - b.x, c.y - b.y, c.z - b.z];
+      const dd =
+        (v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2]) /
+        (Math.hypot(v1[0], v1[1], v1[2]) * Math.hypot(v2[0], v2[1], v2[2]));
+      fold.push((Math.acos(Math.max(-1, Math.min(1, dd))) * 180) / Math.PI);
+    }
+    const total = fold.reduce((a, b) => a + b, 0);
+    expect(total).toBeGreaterThan(70); // 深卷成立（v3 实测 ≈100°：[10,16,19,25,30]）
+    expect(total).toBeLessThan(160);
+    expect(fold[fold.length - 1]).toBeGreaterThan(fold[0]); // 曲率向软梢集中
+    expect(Math.max(...fold)).toBeLessThan(55); // 无死折（真机盘面接触上限内）
   });
 
   it('放松 15s 回真机静息位（实测残留 ≈0.1）', () => {

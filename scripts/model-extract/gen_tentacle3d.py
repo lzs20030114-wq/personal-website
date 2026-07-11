@@ -231,6 +231,9 @@ total_t = sum(m['tris'] for m in meta)
 print(f'mesh.bin {len(blob)} 字节，总三角 {total_t}')
 
 stations = [sim(x, AXIS_Y, AXIS_Z, SX[0]) for x in SX]
+# 端板沿臂位置（站局部 ax）：肌腱 v3 真实走线用——腱孔在两端板上，
+# 缆线节内穿几何中心、节间贴端板孔跨缝（用户剖面图 2026-07-11）
+plates = [[round(acc.x0 - SX[i], 2), round(acc.x1 - SX[i], 2)] for i, acc in enumerate(cells)]
 chains = []
 for az in AZ:
     a = math.radians(az)
@@ -249,6 +252,9 @@ export const STATIONS: ReadonlyArray<readonly [number, number, number]> = {json.
 export const CHAINS: ReadonlyArray<ReadonlyArray<readonly [number, number, number]>> = {json.dumps(chains)} as const;
 
 export const RADII: ReadonlyArray<number> = {json.dumps(HOLE_R)} as const;
+
+/** 每节两端板的沿臂位置（站局部 ax，[近端, 远端]）——肌腱 v3 真实走线的腱孔所在 */
+export const PLATES: ReadonlyArray<readonly [number, number]> = {json.dumps(plates)} as const;
 
 /** mesh.bin 分组布局：c0..c6 = 站元胞局部系（刚性）；j0..j5 = 节间 TPU 连接件
  *  （站 g 局部系，blend = [b0,b1] 裸露带，双骨蒙皮 g↔g+1）；mnt = 基座挂站 0。 */

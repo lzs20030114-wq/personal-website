@@ -26,8 +26,16 @@ export interface Linkage3Def {
   bars: { a: number; b: number; rest?: number; stiffness?: number }[];
   /** 缆线（穿环滑索，v6 触手真机制）：对整条路径 Σ|pᵢ₊₁−pᵢ| 的标量约束。
    *  中间节点 = 无摩擦导孔，张力自动分配；oneSided 缺省 true——只拉不推，
-   *  路径短于 rest（松弛）时零作用力。rest 缺省 = 初始路径总长。 */
-  cables?: { nodes: number[]; rest?: number; stiffness?: number; oneSided?: boolean }[];
+   *  路径短于 rest（松弛）时零作用力。rest 缺省 = 初始路径总长。
+   *  maxStep = 单遍投影修正量上限 mm（≈ 驱动器力矩上限：目标不可达（饱和）
+   *  时张力有界，不会把刚性结构挤变形；缺省不设限）。 */
+  cables?: {
+    nodes: number[];
+    rest?: number;
+    stiffness?: number;
+    oneSided?: boolean;
+    maxStep?: number;
+  }[];
 }
 
 export interface Cable3 {
@@ -35,6 +43,7 @@ export interface Cable3 {
   rest: number;
   stiffness: number;
   oneSided: boolean;
+  maxStep: number;
 }
 
 export interface Dynamics3Config {
@@ -86,6 +95,7 @@ export class LinkageSolver3D {
         rest: c.rest ?? L,
         stiffness: c.stiffness ?? 1,
         oneSided: c.oneSided ?? true,
+        maxStep: c.maxStep ?? Infinity,
       };
     });
     this.dyn = opts?.dynamics;
@@ -222,8 +232,9 @@ export class LinkageSolver3D {
       gx[i] -= dx; gy[i] -= dy; gz[i] -= dz;
       gx[i + 1] += dx; gy[i + 1] += dy; gz[i + 1] += dz;
     }
-    const C = L - c.rest;
-    if (c.oneSided && C <= 0) return; // 松弛：绳不推
+    const C0 = L - c.rest;
+    if (c.oneSided && C0 <= 0) return; // 松弛：绳不推
+    const C = Math.max(-c.maxStep, Math.min(c.maxStep, C0)); // 张力有界（驱动器力矩上限）
     let denom = 0;
     for (let i = 0; i < n; i++) {
       if (this.ns[c.nodes[i]].fixed) continue;
