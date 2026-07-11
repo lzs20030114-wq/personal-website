@@ -136,33 +136,67 @@ export function bakeIndexed(verts: Float32Array, idx: Uint16Array | Uint32Array)
   return out;
 }
 
-/** 蒙皮版烘焙：同 bakeIndexed，另按顶点沿臂坐标 ax 附加骨 B 权重
- *  （w = smoothstep(b0, b1, ax)：插接段 0/1，裸露带平滑过渡）。步长 7 float。 */
+type Pt = readonly [number, number, number];
+
+/** 蒙皮版烘焙：附加骨 B 权重 w = smoothstep(b0, b1, ax)——插接段恒 0/1，
+ *  裸露带平滑过渡。**关键：先沿臂向细分**——源网格侧壁常是通长大面（中间无
+ *  顶点），GPU 三角形内部只线性插值，不细分则连接件渲染成直弦、弯角全挤到
+ *  与盒的接口处（用户实测否决）。切到 1/8 带宽后弯曲落在裸露段网格上；
+ *  smoothstep 带两端导数为零 → 接口切线连续无折角。步长 7 float。 */
 export function bakeSkinned(
   verts: Float32Array,
   idx: Uint16Array | Uint32Array,
   b0: number,
   b1: number,
 ): Float32Array {
-  const nTri = idx.length / 3;
-  const out = new Float32Array(nTri * 3 * 7);
   const span = b1 - b0 || 1;
+  const maxAx = span / 8;
+  // 细分：ax 跨度超限且与裸露带相交的边取中点对分（带外 w 恒定 = 刚性，直的没错）
+  const done: Pt[][] = [];
+  const stack: Pt[][] = [];
+  for (let t = 0; t < idx.length / 3; t++) {
+    const tri: Pt[] = [];
+    for (let v = 0; v < 3; v++) {
+      const i = idx[t * 3 + v] * 3;
+      tri.push([verts[i], verts[i + 1], verts[i + 2]]);
+    }
+    stack.push(tri);
+  }
+  while (stack.length) {
+    const t = stack.pop() as Pt[];
+    let e = -1;
+    let best = maxAx;
+    for (let i = 0; i < 3; i++) {
+      const p = t[i];
+      const q = t[(i + 1) % 3];
+      const lo = Math.min(p[0], q[0]);
+      const hi = Math.max(p[0], q[0]);
+      if (hi - lo > best && hi > b0 && lo < b1) {
+        best = hi - lo;
+        e = i;
+      }
+    }
+    if (e < 0) {
+      done.push(t);
+      continue;
+    }
+    const p = t[e];
+    const q = t[(e + 1) % 3];
+    const r = t[(e + 2) % 3];
+    const m: Pt = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2];
+    stack.push([p, m, r], [m, q, r]);
+  }
+  const out = new Float32Array(done.length * 3 * 7);
   let k = 0;
-  for (let t = 0; t < nTri; t++) {
-    const i0 = idx[t * 3] * 3;
-    const i1 = idx[t * 3 + 1] * 3;
-    const i2 = idx[t * 3 + 2] * 3;
-    const ax = verts[i0], ay = verts[i0 + 1], az = verts[i0 + 2];
-    const bx = verts[i1], by = verts[i1 + 1], bz = verts[i1 + 2];
-    const cx = verts[i2], cy = verts[i2 + 1], cz = verts[i2 + 2];
-    const ux = bx - ax, uy = by - ay, uz = bz - az;
-    const vx = cx - ax, vy = cy - ay, vz = cz - az;
+  for (const [a, b, c] of done) {
+    const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
+    const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
     let nx = uy * vz - uz * vy;
     let ny = uz * vx - ux * vz;
     let nz = ux * vy - uy * vx;
     const nl = Math.hypot(nx, ny, nz) || 1;
     nx /= nl; ny /= nl; nz /= nl;
-    for (const [px, py, pz] of [[ax, ay, az], [bx, by, bz], [cx, cy, cz]] as const) {
+    for (const [px, py, pz] of [a, b, c]) {
       const s = Math.min(1, Math.max(0, (px - b0) / span));
       out[k++] = px; out[k++] = py; out[k++] = pz;
       out[k++] = nx; out[k++] = ny; out[k++] = nz;

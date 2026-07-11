@@ -116,37 +116,40 @@ describe('projectScene', () => {
 });
 
 describe('bakeSkinned（TPU 连接件双骨蒙皮烘焙）', () => {
-  it('插接段权重钉死 0/1（榫卯随盒刚动），裸露带中点 0.5，法向单位', () => {
-    // 一个三角：顶点沿臂 ax = 0（骨 A 插接段）/ 10（裸露带中点）/ 20（骨 B 插接段）
-    const verts = new Float32Array([0, 0, 0, 10, 3, 0, 20, 0, 4]);
-    const idx = new Uint16Array([0, 1, 2]);
-    const out = bakeSkinned(verts, idx, 5, 15);
-    expect(out.length).toBe(3 * 7);
-    expect(out[6]).toBe(0); // ax=0 < b0 → 全随骨 A
-    expect(out[13]).toBeCloseTo(0.5, 12); // 裸露带中点：smoothstep(0.5)
-    expect(out[20]).toBe(1); // ax=20 > b1 → 全随骨 B
+  const smooth = (ax: number, b0: number, b1: number): number => {
+    const s = Math.min(1, Math.max(0, (ax - b0) / (b1 - b0)));
+    return s * s * (3 - 2 * s);
+  };
+
+  it('插接段三角原样通过（w 恒 0 = 随盒刚动），法向单位', () => {
+    const verts = new Float32Array([0, 0, 0, 2, 3, 0, 4, 0, 4]); // 全在 b0=5 之前
+    const out = bakeSkinned(verts, new Uint16Array([0, 1, 2]), 5, 15);
+    expect(out.length).toBe(3 * 7); // 不细分
     for (const o of [0, 7, 14]) {
+      expect(out[o + 6]).toBe(0);
       expect(Math.hypot(out[o + 3], out[o + 4], out[o + 5])).toBeCloseTo(1, 6);
-      expect([out[o], out[o + 1], out[o + 2]]).toEqual([
-        verts[(o / 7) * 3], verts[(o / 7) * 3 + 1], verts[(o / 7) * 3 + 2],
-      ]);
     }
   });
 
-  it('权重沿 ax 单调且平滑（无台阶跳变）', () => {
-    const n = 21;
-    const verts = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) verts[i * 3] = i; // ax = 0..20
-    const idx = new Uint16Array((n - 2) * 3);
-    for (let t = 0; t + 2 < n; t++) idx.set([t, t + 1, t + 2], t * 3);
+  it('跨裸露带的通长大面被沿臂细分（GPU 三角内线性插值——不细分弯不出弧），' +
+     '每顶点 w = smoothstep(自身 ax)', () => {
+    // 源网格故意只有两端顶点（模拟通长侧壁）：ax = 0 与 20，带 [5,15]
+    const verts = new Float32Array([0, 0, 0, 20, 0, 0, 20, 5, 0, 0, 5, 0]);
+    const idx = new Uint16Array([0, 1, 2, 0, 2, 3]);
     const out = bakeSkinned(verts, idx, 5, 15);
-    // 每个三角第一顶点的 w 序列应单调不减，相邻差 < 0.2（平滑）
-    let prev = -1;
-    for (let t = 0; t + 2 < n; t++) {
-      const w = out[t * 21 + 6];
-      expect(w).toBeGreaterThanOrEqual(prev);
-      if (prev >= 0) expect(w - prev).toBeLessThan(0.2);
-      prev = w;
+    const nTri = out.length / 21;
+    expect(nTri).toBeGreaterThan(8); // 细分发生
+    for (let t = 0; t < nTri; t++) {
+      let lo = Infinity;
+      let hi = -Infinity;
+      for (let v = 0; v < 3; v++) {
+        const o = t * 21 + v * 7;
+        lo = Math.min(lo, out[o]);
+        hi = Math.max(hi, out[o]);
+        expect(out[o + 6]).toBeCloseTo(smooth(out[o], 5, 15), 12); // w 严格随顶点 ax
+      }
+      // 带内边 ax 跨度 ≤ 1/8 带宽（弯曲有网格可落）
+      if (hi > 5 && lo < 15) expect(hi - lo).toBeLessThanOrEqual(10 / 8 + 1e-9);
     }
   });
 });
