@@ -190,7 +190,6 @@ for o in M.Objects:
 # 缆线进入本体的过孔。缆线固定端 = 基座舵机锚（三件，方位恰 = 腱孔族）。
 # 根部 TPU 轴（跨界细轴）单独成组 jr 蒙皮。
 mnt = Acc()
-jr = Acc()
 root_disc_ax = None
 disc_x0 = None
 disc_hole_r = None
@@ -225,17 +224,16 @@ for o in M.Objects:
                 if sel.sum() >= 8:
                     radii.append(float(rr[sel].mean()))
             disc_hole_r = round(float(np.mean(radii)), 2) if radii else None
-            cells[0].add(local_np(verts, SX[0]), tris, vmin[0], vmax[0])
+            # 盘 = 基座侧固定件（用户七轮定版：只有盘 + 基座不动，
+            # 节 0 以盘心为枢轴蜷曲）
+            mnt.add(local_np(verts, SX[0]), tris, vmin[0], vmax[0])
             continue
         if -8.0 <= pcx <= 1.0 and (vmax[0] - vmin[0]) < 8.0 and 8.0 < math.hypot(pcy2, pcz2) < 18.0:
             az = math.degrees(math.atan2(pcz2, pcy2)) % 360
             servos_raw.append((az, [round(pcy2, 2), round(pcx - SX[0], 2), round(pcz2, 2)]))
             mnt.add(local_np(verts, SX[0]), tris, vmin[0], vmax[0])
             continue
-        if vmin[0] < BOUNDS[0] - 1.5 and vmax[0] > BOUNDS[0] + 0.5 and rr.max() < 5.0:
-            jr.add(local_np(verts, SX[0]), tris, vmin[0], vmax[0])
-        else:
-            mnt.add(local_np(verts, SX[0]), tris, vmin[0], vmax[0])
+        mnt.add(local_np(verts, SX[0]), tris, vmin[0], vmax[0])
 servos = []
 for az_t in (90.0, 210.0, 330.0):
     best = min(servos_raw, key=lambda t: min(abs(t[0] - az_t), 360 - abs(t[0] - az_t)))
@@ -263,12 +261,7 @@ for g, acc in enumerate(joints):
     print(f'缝 {g} 连接件 {acc.n} 顶点 {len(v)} 三角 {len(t)} '
           f'x[{acc.x0:.1f},{acc.x1:.1f}] 裸露带 x[{b0m:.1f},{b1m:.1f}] blend {blend}')
 
-# 根轴蒙皮带：舵机端面（≈ x −1，出基座块处开始柔）→ 导线盘近端面（插接处）
-if jr.n:
-    jr_blend = [round(-1.0 - SX[0], 2), round((disc_x0 if disc_x0 is not None else cells[0].x0) - SX[0], 2)]
-    v, t = jr.packed()
-    groups.append(('jr', v, t, jr_blend))
-    print(f'根轴 零件 {jr.n} 顶点 {len(v)} 三角 {len(t)} x[{jr.x0:.1f},{jr.x1:.1f}] blend {jr_blend}')
+# 根轴并入基座：轴尖（x≤26.2）没入固定盘（19.6–26.6）内，无可见弯曲段
 v, t = mnt.packed()
 groups.append(('mnt', v, t, None))
 print(f'基座 零件 {mnt.n} 顶点 {len(v)} 三角 {len(t)}')
