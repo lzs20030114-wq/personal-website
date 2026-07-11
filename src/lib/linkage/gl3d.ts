@@ -42,18 +42,21 @@ void main() {
   gl_FragColor = vec4(mix(uDark, uLite, 0.12 + 0.88 * vLam), 1.0);
 }`;
 
-// TPU 连接件双骨蒙皮（榫卯插接修正，2026-07-11）：顶点在骨 A（站 g）局部系，
-// 骨 B（站 g+1）局部 = A 局部 − (uDy,0,0)（静息各站同向，只差沿臂间距）。
-// w=0/1 = 插接段随盒刚动（榫卯不分离），中段平滑过渡 = 裸露 TPU 吸收弯曲。
+// TPU 连接件双骨蒙皮（榫卯插接修正，2026-07-11；v7.2 换螺旋插值）：
+// 顶点在骨 A（站 g）局部系，骨 B 局部 = A 局部 − (dy,0,0)。相对运动在 CPU 分解
+// 为螺旋（轴 k̂ 过点 c、转角 θ、沿轴平移 pitch——jointScrew），顶点按 w 比例
+// 刚性旋转/平移：每个截面整体转动、不缩水，w 沿臂线性 → 等曲率圆弧 =
+// 恒弯矩梁的真实形状。v7.1 的位置线性混合出来是弦 + 中部软折（用户否决）。
 const SKIN_VS = `
 attribute vec3 aPos;
 attribute vec3 aNrm;
 attribute float aW;
 uniform mat3 uRA;
 uniform vec3 uTA;
-uniform mat3 uRB;
-uniform vec3 uTB;
-uniform float uDy;
+uniform vec3 uAxis;
+uniform vec3 uCen;
+uniform float uTheta;
+uniform float uPitch;
 uniform mat3 uView;
 uniform vec3 uPivot;
 uniform vec2 uHalf;
@@ -62,11 +65,16 @@ uniform float uDepthK;
 varying float vLam;
 uniform vec3 uLight;
 void main() {
-  vec3 pb = vec3(aPos.x - uDy, aPos.y, aPos.z);
-  vec3 world = mix(uRA * aPos + uTA, uRB * pb + uTB, aW);
+  float ang = uTheta * aW;
+  float c = cos(ang);
+  float s = sin(ang);
+  vec3 d = aPos - uCen;
+  vec3 p = uCen + d * c + cross(uAxis, d) * s + uAxis * (dot(uAxis, d) * (1.0 - c) + uPitch * aW);
+  vec3 world = uRA * p + uTA;
   vec3 q = uView * (world - uPivot);
   gl_Position = vec4(q.x * uScale / uHalf.x, -q.y * uScale / uHalf.y, -q.z * uDepthK, 1.0);
-  vec3 nv = uView * mix(uRA * aNrm, uRB * aNrm, aW);
+  vec3 n = aNrm * c + cross(uAxis, aNrm) * s + uAxis * (dot(uAxis, aNrm) * (1.0 - c));
+  vec3 nv = uView * (uRA * n);
   vLam = abs(dot(normalize(nv), uLight));
 }`;
 
@@ -138,11 +146,68 @@ export function bakeIndexed(verts: Float32Array, idx: Uint16Array | Uint32Array)
 
 type Pt = readonly [number, number, number];
 
-/** 蒙皮版烘焙：附加骨 B 权重 w = smoothstep(b0, b1, ax)——插接段恒 0/1，
- *  裸露带平滑过渡。**关键：先沿臂向细分**——源网格侧壁常是通长大面（中间无
- *  顶点），GPU 三角形内部只线性插值，不细分则连接件渲染成直弦、弯角全挤到
- *  与盒的接口处（用户实测否决）。切到 1/8 带宽后弯曲落在裸露段网格上；
- *  smoothstep 带两端导数为零 → 接口切线连续无折角。步长 7 float。 */
+/** 骨 A→骨 B 相对运动的螺旋分解（A 局部系）。世界映射约定：
+ *  骨 A：world = RA·p + oA；骨 B：world = RB·(p − dy·x̂) + oB（p 为 A 局部静息坐标）。
+ *  返回螺旋：绕过点 c 的单位轴 k̂ 转 θ，再沿 k̂ 平移 pitch——w 比例应用即
+ *  截面刚性插值（等曲率弧）。θ≈0 退化为纯平移（axis = 平移方向）。 */
+export interface ScrewParams {
+  axis: Pt;
+  cen: Pt;
+  theta: number;
+  pitch: number;
+}
+
+export function jointScrew(frA: CellFrame, frB: CellFrame, dy: number): ScrewParams {
+  // RM = RAᵀ·RB（列 = A 基底下的 B 基向量）
+  const uu = frA.ux * frB.ux + frA.uy * frB.uy + frA.uz * frB.uz;
+  const ue = frA.ux * frB.ex + frA.uy * frB.ey + frA.uz * frB.ez;
+  const uf = frA.ux * frB.fx + frA.uy * frB.fy + frA.uz * frB.fz;
+  const eu = frA.ex * frB.ux + frA.ey * frB.uy + frA.ez * frB.uz;
+  const ee = frA.ex * frB.ex + frA.ey * frB.ey + frA.ez * frB.ez;
+  const ef = frA.ex * frB.fx + frA.ey * frB.fy + frA.ez * frB.fz;
+  const fu = frA.fx * frB.ux + frA.fy * frB.uy + frA.fz * frB.uz;
+  const fe = frA.fx * frB.ex + frA.fy * frB.ey + frA.fz * frB.ez;
+  const ff = frA.fx * frB.fx + frA.fy * frB.fy + frA.fz * frB.fz;
+  // tN = RAᵀ·(oB − oA) − RM·(dy,0,0)
+  const vx = frB.o.x - frA.o.x;
+  const vy = frB.o.y - frA.o.y;
+  const vz = frB.o.z - frA.o.z;
+  const tx = frA.ux * vx + frA.uy * vy + frA.uz * vz - dy * uu;
+  const ty = frA.ex * vx + frA.ey * vy + frA.ez * vz - dy * eu;
+  const tz = frA.fx * vx + frA.fy * vy + frA.fz * vz - dy * fu;
+  // 轴角：raw = 2 sinθ · k̂
+  const rx = fe - ef;
+  const ry = uf - fu;
+  const rz = eu - ue;
+  const rl = Math.hypot(rx, ry, rz);
+  const theta = Math.atan2(rl / 2, (uu + ee + ff - 1) / 2);
+  if (rl < 1e-9 || theta < 1e-6) {
+    // 纯平移（静息/未弯）：螺旋退化——轴取平移方向，θ=0
+    const tl = Math.hypot(tx, ty, tz);
+    const axis: Pt = tl > 1e-12 ? [tx / tl, ty / tl, tz / tl] : [1, 0, 0];
+    return { axis, cen: [0, 0, 0], theta: 0, pitch: tl };
+  }
+  const kx = rx / rl, ky = ry / rl, kz = rz / rl;
+  const pitch = tx * kx + ty * ky + tz * kz; // 沿轴平移（扭转分量）
+  const px = tx - pitch * kx, py = ty - pitch * ky, pz = tz - pitch * kz; // t⊥
+  // (I − RM)·c = t⊥，取 c⊥k̂：c = ½(t⊥ + cot(θ/2)·k̂×t⊥)
+  const cot = Math.cos(theta / 2) / Math.sin(theta / 2);
+  const xx = ky * pz - kz * py;
+  const xy = kz * px - kx * pz;
+  const xz = kx * py - ky * px;
+  return {
+    axis: [kx, ky, kz],
+    cen: [(px + cot * xx) / 2, (py + cot * xy) / 2, (pz + cot * xz) / 2],
+    theta,
+    pitch,
+  };
+}
+
+/** 蒙皮版烘焙：附加骨 B 权重 w——插接段恒 0/1，裸露带**线性** ramp（配合
+ *  螺旋插值 = 等曲率圆弧，恒弯矩梁的真实形状；v7.1 smoothstep 曲率集中在
+ *  中部读作软折，废除）。**关键：先沿臂向细分**——源网格侧壁常是通长大面
+ *  （中间无顶点），GPU 三角形内部只线性插值，不细分则连接件渲染成直弦、
+ *  弯角全挤到与盒的接口处（用户实测否决）。切到 1/8 带宽。步长 7 float。 */
 export function bakeSkinned(
   verts: Float32Array,
   idx: Uint16Array | Uint32Array,
@@ -197,10 +262,9 @@ export function bakeSkinned(
     const nl = Math.hypot(nx, ny, nz) || 1;
     nx /= nl; ny /= nl; nz /= nl;
     for (const [px, py, pz] of [a, b, c]) {
-      const s = Math.min(1, Math.max(0, (px - b0) / span));
       out[k++] = px; out[k++] = py; out[k++] = pz;
       out[k++] = nx; out[k++] = ny; out[k++] = nz;
-      out[k++] = s * s * (3 - 2 * s);
+      out[k++] = Math.min(1, Math.max(0, (px - b0) / span));
     }
   }
   return out;
@@ -296,7 +360,8 @@ export class FlatRenderer {
   }
 
   /** TPU 连接件：双骨蒙皮绘制（frA = 站 g 刚架，frB = 站 g+1 刚架，
-   *  dy = 静息站间距——骨 B 局部坐标 = 骨 A 局部 − (dy,0,0)）。 */
+   *  dy = 静息站间距——骨 B 局部坐标 = 骨 A 局部 − (dy,0,0)）。
+   *  相对运动 CPU 螺旋分解（jointScrew），顶点着色器按 w 比例刚性应用。 */
   drawSkinned(id: string, frA: CellFrame, frB: CellFrame, dy: number): void {
     const gl = this.gl;
     const m = this.skins.get(id);
@@ -308,13 +373,11 @@ export class FlatRenderer {
       frA.fx, frA.fy, frA.fz,
     ]);
     gl.uniform3f(gl.getUniformLocation(this.skinProg, 'uTA'), frA.o.x, frA.o.y, frA.o.z);
-    gl.uniformMatrix3fv(gl.getUniformLocation(this.skinProg, 'uRB'), false, [
-      frB.ux, frB.uy, frB.uz,
-      frB.ex, frB.ey, frB.ez,
-      frB.fx, frB.fy, frB.fz,
-    ]);
-    gl.uniform3f(gl.getUniformLocation(this.skinProg, 'uTB'), frB.o.x, frB.o.y, frB.o.z);
-    gl.uniform1f(gl.getUniformLocation(this.skinProg, 'uDy'), dy);
+    const s = jointScrew(frA, frB, dy);
+    gl.uniform3f(gl.getUniformLocation(this.skinProg, 'uAxis'), s.axis[0], s.axis[1], s.axis[2]);
+    gl.uniform3f(gl.getUniformLocation(this.skinProg, 'uCen'), s.cen[0], s.cen[1], s.cen[2]);
+    gl.uniform1f(gl.getUniformLocation(this.skinProg, 'uTheta'), s.theta);
+    gl.uniform1f(gl.getUniformLocation(this.skinProg, 'uPitch'), s.pitch);
     gl.bindBuffer(gl.ARRAY_BUFFER, m.buf);
     const aPos = gl.getAttribLocation(this.skinProg, 'aPos');
     const aNrm = gl.getAttribLocation(this.skinProg, 'aNrm');
