@@ -44,10 +44,11 @@ const cam = new OrbitCamera({
 });
 
 const renderer = new FlatRenderer(canvas);
-// 节间 TPU 连接件（j 组）：与方盒榫卯插接、双骨蒙皮（用户纠偏 2026-07-11）
+// TPU 连接件（j 组）：与方盒榫卯插接、双骨蒙皮（用户纠偏 2026-07-11）。
+// jr = 根部轴（基座固定刚架 ↔ 节 0，gap = −1）——节 0 活化后根轴同样要蒙皮
 const joints = MESH_GROUPS.filter((g) => g.blend).map((g) => ({
   name: g.name,
-  gap: Number(g.name.slice(1)),
+  gap: g.name === 'jr' ? -1 : Number(g.name.slice(1)),
 }));
 // 完整渲染网格（10.7 万三角）从二进制资产异步载入——「直接导入模型」（用户拍板）
 fetch(meshUrl)
@@ -130,10 +131,15 @@ function render(): void {
   // 体：7 胞（活动）+ 基座（常量静息刚架，锚定不动）
   for (let ci = 0; ci <= N; ci++) renderer.drawMesh(`c${ci}`, cellFrame(ci));
   renderer.drawMesh('mnt', MNT_FRAME);
-  // 节间 TPU 连接件：双骨蒙皮（插接段随盒刚动，裸露段吸收弯曲）
+  // TPU 连接件：双骨蒙皮（插接段随盒刚动，裸露段吸收弯曲）；
+  // 根轴 jr：基座固定刚架 ↔ 节 0（静息同原点，dy = 0）
   for (const j of joints) {
-    const dy = STATIONS[j.gap + 1][1] - STATIONS[j.gap][1];
-    renderer.drawSkinned(j.name, cellFrame(j.gap), cellFrame(j.gap + 1), dy);
+    if (j.gap < 0) {
+      renderer.drawSkinned(j.name, MNT_FRAME, cellFrame(0), 0);
+    } else {
+      const dy = STATIONS[j.gap + 1][1] - STATIONS[j.gap][1];
+      renderer.drawSkinned(j.name, cellFrame(j.gap), cellFrame(j.gap + 1), dy);
+    }
   }
   // 参考环（站 0 平面）
   const R = RADII[0] + 14;

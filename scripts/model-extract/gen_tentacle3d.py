@@ -204,8 +204,11 @@ for g, acc in enumerate(joints):
     print(f'缝 {g} 连接件 {acc.n} 顶点 {len(v)} 三角 {len(t)} '
           f'x[{acc.x0:.1f},{acc.x1:.1f}] 裸露带 x[{b0m:.1f},{b1m:.1f}] blend {blend}')
 
-# 基座：干净文件全量（x<25 一侧），仅剔除 x<-300 的遗留块
+# 基座：干净文件全量（x<25 一侧），仅剔除 x<-300 的遗留块。
+# 根部 TPU 轴（跨基座↔节 0 界面的细轴）单独成组 jr——节 0 是活动关节，
+# 轴须在基座（固定）与节 0 刚架间蒙皮，否则弯曲时从插槽拔出（用户实测「碎了」）
 mnt = Acc()
+jr = Acc()
 root_disc_ax = None  # 导线盘（基座侧固定导缆件，用户蓝圈 2026-07-11）沿臂位置
 for o in M.Objects:
     try:
@@ -225,12 +228,20 @@ for o in M.Objects:
         pcx = (vmin[0] + vmax[0]) / 2
         pcy2 = (vmin[1] + vmax[1]) / 2 - AXIS_Y
         pcz2 = (vmin[2] + vmax[2]) / 2 - AXIS_Z
-        if 15.0 < pcx < 30.0 and math.hypot(pcy2, pcz2) < 4.0:
-            rr = np.hypot(verts[:, 1] - AXIS_Y, verts[:, 2] - AXIS_Z)
-            if 17.0 < rr.max() < 23.0:
-                root_disc_ax = round(pcx - SX[0], 2)
-        mnt.add(local_np(verts, SX[0]), tris, verts[:, 0].min(), verts[:, 0].max())
+        rr = np.hypot(verts[:, 1] - AXIS_Y, verts[:, 2] - AXIS_Z)
+        if 15.0 < pcx < 30.0 and math.hypot(pcy2, pcz2) < 4.0 and 17.0 < rr.max() < 23.0:
+            root_disc_ax = round(pcx - SX[0], 2)
+        if vmin[0] < BOUNDS[0] - 1.5 and vmax[0] > BOUNDS[0] + 0.5 and rr.max() < 5.0:
+            jr.add(local_np(verts, SX[0]), tris, vmin[0], vmax[0])
+        else:
+            mnt.add(local_np(verts, SX[0]), tris, vmin[0], vmax[0])
 print('导线盘沿臂位置（站0局部）', root_disc_ax)
+# 根轴蒙皮带：舵机端面（≈ x −1，出基座块处开始柔）→ 节 0 近端面（插接处）
+if jr.n:
+    jr_blend = [round(-1.0 - SX[0], 2), round(cells[0].x0 - SX[0], 2)]
+    v, t = jr.packed()
+    groups.append(('jr', v, t, jr_blend))
+    print(f'根轴 零件 {jr.n} 顶点 {len(v)} 三角 {len(t)} x[{jr.x0:.1f},{jr.x1:.1f}] blend {jr_blend}')
 v, t = mnt.packed()
 groups.append(('mnt', v, t, None))
 print(f'基座 零件 {mnt.n} 顶点 {len(v)} 三角 {len(t)}')
