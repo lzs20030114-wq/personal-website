@@ -1,6 +1,6 @@
-import type { Dynamics3Config, Linkage3Def } from './solver3d';
+import type { Dynamics3Config, Linkage3Def, Vec3 } from './solver3d';
 import { LinkageSolver3D } from './solver3d';
-import { CHAINS, PLATES, STATIONS } from './tentacle3d-shape';
+import { BALLS, CHAINS, PLATES, STATIONS } from './tentacle3d-shape';
 
 /**
  * 立体肌腱触手 v5——干净版真实结构（用户提供 11.3dm，2026-07-10）。
@@ -64,14 +64,26 @@ export interface Tendon3Index {
   rest0: number;
 }
 
-/** 肌腱的**视觉**路径（真实穿心走线：近端板孔 → 节心 → 远端板孔 → 跨缝）。
- *  约束路径只走端板孔（见 makeTentacle3Model 注释），渲染按此画 V 形。 */
-export function tendonVisual3(k: number): number[] {
-  const path: number[] = [];
+/** 肌腱的**视觉**路径（真实走线：近端板孔 → **绕过中央球体背面** → 远端板孔
+ *  → 跨缝，用户剖面图修订 2026-07-11——不是到几何中心折返，是越过轴线贴球体
+ *  远侧表面包绕）。绕点 = 站心沿本腱方位反向推 球半径+缆余隙，由活体节点
+ *  实时计算（随节刚体运动）。约束路径仍只走端板孔（绕点刚挂本节 → 对刚体
+ *  净扳矩为零，力学等价——见 makeTentacle3Model 注释）。 */
+export function tendonVisual3(solver: LinkageSolver3D, k: number): Vec3[] {
+  const pts: Vec3[] = [];
   for (let i = 0; i < N_NODES; i++) {
-    path.push(PLATE3(k, i, 0), SPINE3(i), PLATE3(k, i, 1));
+    const s = solver.nodes[SPINE3(i)];
+    const g = solver.nodes[GUIDE3(k, i)];
+    const dx = g.x - s.x;
+    const dy = g.y - s.y;
+    const dz = g.z - s.z;
+    const L = Math.hypot(dx, dy, dz) || 1;
+    const r = BALLS[i] + 1; // 球面 + 缆余隙
+    pts.push(solver.nodes[PLATE3(k, i, 0)]);
+    pts.push({ x: s.x - (dx / L) * r, y: s.y - (dy / L) * r, z: s.z - (dz / L) * r });
+    pts.push(solver.nodes[PLATE3(k, i, 1)]);
   }
-  return path;
+  return pts;
 }
 
 export interface Tentacle3Model {

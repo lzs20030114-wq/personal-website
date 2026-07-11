@@ -123,13 +123,16 @@ class Acc:
         self.n = 0
         self.x0 = 1e9
         self.x1 = -1e9
-    def add(self, verts_local, tris, xmin, xmax):
+        self.ball_r = 0.0   # 轴上零件（中央球体导件）的最大径向半径
+    def add(self, verts_local, tris, xmin, xmax, on_axis_r=None):
         self.v.append(verts_local)
         self.t.append(tris + self.off)
         self.off += len(verts_local)
         self.n += 1
         self.x0 = min(self.x0, xmin)
         self.x1 = max(self.x1, xmax)
+        if on_axis_r is not None:
+            self.ball_r = max(self.ball_r, on_axis_r)
     def packed(self):
         if not self.v:
             return np.zeros((0, 3)), np.zeros((0, 3), dtype=np.int64)
@@ -164,7 +167,15 @@ for o in M.Objects:
         else:
             pcx = (vmin[0] + vmax[0]) / 2
             i = max(0, min(len(SX) - 1, int(np.searchsorted(BOUNDS, pcx, side='right')) - 1))
-            cells[i].add(local_np(verts, SX[i]), tris, vmin[0], vmax[0])
+            # 中央球体导件（肌腱绕行其背面）：质心贴轴 + x 中心贴站心
+            # （排除同样贴轴对称、但位于节两端的端板与轴销）
+            pcy2 = (vmin[1] + vmax[1]) / 2 - AXIS_Y
+            pcz2 = (vmin[2] + vmax[2]) / 2 - AXIS_Z
+            on_axis_r = None
+            if math.hypot(pcy2, pcz2) < 4.0 and abs(pcx - SX[i]) < 8.0:
+                rr = np.hypot(verts[:, 1] - AXIS_Y, verts[:, 2] - AXIS_Z)
+                on_axis_r = float(rr.max())
+            cells[i].add(local_np(verts, SX[i]), tris, vmin[0], vmax[0], on_axis_r)
 
 groups = []
 for i, acc in enumerate(cells):
@@ -232,8 +243,14 @@ print(f'mesh.bin {len(blob)} 字节，总三角 {total_t}')
 
 stations = [sim(x, AXIS_Y, AXIS_Z, SX[0]) for x in SX]
 # 端板沿臂位置（站局部 ax）：肌腱 v3 真实走线用——腱孔在两端板上，
-# 缆线节内穿几何中心、节间贴端板孔跨缝（用户剖面图 2026-07-11）
+# 缆线节内绕过中央球体背面、节间贴端板孔跨缝（用户剖面图 2026-07-11）
 plates = [[round(acc.x0 - SX[i], 2), round(acc.x1 - SX[i], 2)] for i, acc in enumerate(cells)]
+balls = [round(acc.ball_r, 2) for acc in cells]
+# 梢节短、球体未建成曲面（检出 0）→ 按锥度几何外推
+for i in range(len(balls)):
+    if balls[i] <= 0 and i >= 2:
+        balls[i] = round(balls[i - 1] * balls[i - 1] / balls[i - 2], 2)
+print('中央球体半径', balls)
 chains = []
 for az in AZ:
     a = math.radians(az)
@@ -255,6 +272,9 @@ export const RADII: ReadonlyArray<number> = {json.dumps(HOLE_R)} as const;
 
 /** 每节两端板的沿臂位置（站局部 ax，[近端, 远端]）——肌腱 v3 真实走线的腱孔所在 */
 export const PLATES: ReadonlyArray<readonly [number, number]> = {json.dumps(plates)} as const;
+
+/** 每节中央球体导件的径向半径（轴上零件实测顶点最大径）——肌腱绕行其背面 */
+export const BALLS: ReadonlyArray<number> = {json.dumps(balls)} as const;
 
 /** mesh.bin 分组布局：c0..c6 = 站元胞局部系（刚性）；j0..j5 = 节间 TPU 连接件
  *  （站 g 局部系，blend = [b0,b1] 裸露带，双骨蒙皮 g↔g+1）；mnt = 基座挂站 0。 */

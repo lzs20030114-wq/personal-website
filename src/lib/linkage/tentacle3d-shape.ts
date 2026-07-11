@@ -14,6 +14,9 @@ export const RADII: ReadonlyArray<number> = [10.3, 9.3, 8.3, 7.3, 6.5, 5.7, 4.9]
 /** 每节两端板的沿臂位置（站局部 ax，[近端, 远端]）——肌腱 v3 真实走线的腱孔所在 */
 export const PLATES: ReadonlyArray<readonly [number, number]> = [[-22.3, 27.3], [-25.07, 25.05], [-22.97, 22.99], [-21.07, 21.04], [-19.25, 19.32], [-17.66, 17.65], [-13.65, 13.7]] as const;
 
+/** 每节中央球体导件的径向半径（轴上零件实测顶点最大径）——肌腱绕行其背面 */
+export const BALLS: ReadonlyArray<number> = [12.18, 10.9, 9.72, 8.63, 7.62, 6.69, 5.87] as const;
+
 /** mesh.bin 分组布局：c0..c6 = 站元胞局部系（刚性）；j0..j5 = 节间 TPU 连接件
  *  （站 g 局部系，blend = [b0,b1] 裸露带，双骨蒙皮 g↔g+1）；mnt = 基座挂站 0。 */
 export interface MeshGroup {
