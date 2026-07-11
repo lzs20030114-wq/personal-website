@@ -184,32 +184,17 @@ for o in M.Objects:
                                   [round(pcy2, 2), round(pcx - SX[0], 2), round(pcz2, 2)]))
             cells[i].add(local_np(verts, SX[i]), tris, vmin[0], vmax[0], on_axis_r)
 
-groups = []
-for i, acc in enumerate(cells):
-    v, t = acc.packed()
-    groups.append((f'c{i}', v, t, None))
-    print(f'站 {i} 零件 {acc.n} 顶点 {len(v)} 三角 {len(t)} x[{acc.x0:.1f},{acc.x1:.1f}]')
-for g, acc in enumerate(joints):
-    v, t = acc.packed()
-    if acc.n == 0:
-        print(f'缝 {g} 无连接件零件——跳过（检查 MARGIN/模型）')
-        continue
-    # 蒙皮混合带 = 两侧方盒端面之间的裸露段（真机坐标 → 站 g 局部 ax）
-    b0m, b1m = cells[g].x1, cells[g + 1].x0
-    if b1m - b0m < 2.0:  # 端面几乎贴合：兜底给 ±3mm 混合带
-        mid = (b0m + b1m) / 2
-        b0m, b1m = mid - 3.0, mid + 3.0
-    blend = [round(b0m - SX[g], 2), round(b1m - SX[g], 2)]
-    groups.append((f'j{g}', v, t, blend))
-    print(f'缝 {g} 连接件 {acc.n} 顶点 {len(v)} 三角 {len(t)} '
-          f'x[{acc.x0:.1f},{acc.x1:.1f}] 裸露带 x[{b0m:.1f},{b1m:.1f}] blend {blend}')
-
-# 基座：干净文件全量（x<25 一侧），仅剔除 x<-300 的遗留块。
-# 根部 TPU 轴（跨基座↔节 0 界面的细轴）单独成组 jr——节 0 是活动关节，
-# 轴须在基座（固定）与节 0 刚架间蒙皮，否则弯曲时从插槽拔出（用户实测「碎了」）
+# —— 基座收集（先于组装配——导线盘要并入节 0）。
+# 导线盘 = **节 0 的近端板**（节 0 杆件插在盘上；用户实测「碎了」根因：盘被
+# 错钉在基座静止渲染）——归 c0 随节 0 刚动；其三个腱孔（网格顶点环实测）=
+# 缆线进入本体的过孔。缆线固定端 = 基座舵机锚（三件，方位恰 = 腱孔族）。
+# 根部 TPU 轴（跨界细轴）单独成组 jr 蒙皮。
 mnt = Acc()
 jr = Acc()
-root_disc_ax = None  # 导线盘（基座侧固定导缆件，用户蓝圈 2026-07-11）沿臂位置
+root_disc_ax = None
+disc_x0 = None
+disc_hole_r = None
+servos_raw = []
 for o in M.Objects:
     try:
         bb = o.Geometry.GetBoundingBox()
@@ -231,14 +216,56 @@ for o in M.Objects:
         rr = np.hypot(verts[:, 1] - AXIS_Y, verts[:, 2] - AXIS_Z)
         if 15.0 < pcx < 30.0 and math.hypot(pcy2, pcz2) < 4.0 and 17.0 < rr.max() < 23.0:
             root_disc_ax = round(pcx - SX[0], 2)
+            disc_x0 = float(vmin[0])
+            azs = np.degrees(np.arctan2(verts[:, 2] - AXIS_Z, verts[:, 1] - AXIS_Y)) % 360
+            radii = []
+            for target in (90.0, 210.0, 330.0):
+                d = np.minimum(np.abs(azs - target), 360 - np.abs(azs - target))
+                sel = (d < 30) & (rr > 6) & (rr < 17)
+                if sel.sum() >= 8:
+                    radii.append(float(rr[sel].mean()))
+            disc_hole_r = round(float(np.mean(radii)), 2) if radii else None
+            cells[0].add(local_np(verts, SX[0]), tris, vmin[0], vmax[0])
+            continue
+        if -8.0 <= pcx <= 1.0 and (vmax[0] - vmin[0]) < 8.0 and 8.0 < math.hypot(pcy2, pcz2) < 18.0:
+            az = math.degrees(math.atan2(pcz2, pcy2)) % 360
+            servos_raw.append((az, [round(pcy2, 2), round(pcx - SX[0], 2), round(pcz2, 2)]))
+            mnt.add(local_np(verts, SX[0]), tris, vmin[0], vmax[0])
+            continue
         if vmin[0] < BOUNDS[0] - 1.5 and vmax[0] > BOUNDS[0] + 0.5 and rr.max() < 5.0:
             jr.add(local_np(verts, SX[0]), tris, vmin[0], vmax[0])
         else:
             mnt.add(local_np(verts, SX[0]), tris, vmin[0], vmax[0])
-print('导线盘沿臂位置（站0局部）', root_disc_ax)
-# 根轴蒙皮带：舵机端面（≈ x −1，出基座块处开始柔）→ 节 0 近端面（插接处）
+servos = []
+for az_t in (90.0, 210.0, 330.0):
+    best = min(servos_raw, key=lambda t: min(abs(t[0] - az_t), 360 - abs(t[0] - az_t)))
+    servos.append(best[1])
+print('导线盘（节0近端板）沿臂', root_disc_ax, '腱孔半径', disc_hole_r)
+print('舵机锚（腱序）', servos)
+
+groups = []
+for i, acc in enumerate(cells):
+    v, t = acc.packed()
+    groups.append((f'c{i}', v, t, None))
+    print(f'站 {i} 零件 {acc.n} 顶点 {len(v)} 三角 {len(t)} x[{acc.x0:.1f},{acc.x1:.1f}]')
+for g, acc in enumerate(joints):
+    v, t = acc.packed()
+    if acc.n == 0:
+        print(f'缝 {g} 无连接件零件——跳过（检查 MARGIN/模型）')
+        continue
+    # 蒙皮混合带 = 两侧方盒端面之间的裸露段（真机坐标 → 站 g 局部 ax）
+    b0m, b1m = cells[g].x1, cells[g + 1].x0
+    if b1m - b0m < 2.0:  # 端面几乎贴合：兜底给 ±3mm 混合带
+        mid = (b0m + b1m) / 2
+        b0m, b1m = mid - 3.0, mid + 3.0
+    blend = [round(b0m - SX[g], 2), round(b1m - SX[g], 2)]
+    groups.append((f'j{g}', v, t, blend))
+    print(f'缝 {g} 连接件 {acc.n} 顶点 {len(v)} 三角 {len(t)} '
+          f'x[{acc.x0:.1f},{acc.x1:.1f}] 裸露带 x[{b0m:.1f},{b1m:.1f}] blend {blend}')
+
+# 根轴蒙皮带：舵机端面（≈ x −1，出基座块处开始柔）→ 导线盘近端面（插接处）
 if jr.n:
-    jr_blend = [round(-1.0 - SX[0], 2), round(cells[0].x0 - SX[0], 2)]
+    jr_blend = [round(-1.0 - SX[0], 2), round((disc_x0 if disc_x0 is not None else cells[0].x0) - SX[0], 2)]
     v, t = jr.packed()
     groups.append(('jr', v, t, jr_blend))
     print(f'根轴 零件 {jr.n} 顶点 {len(v)} 三角 {len(t)} x[{jr.x0:.1f},{jr.x1:.1f}] blend {jr_blend}')
@@ -316,9 +343,15 @@ export const BALLS: ReadonlyArray<number> = {json.dumps(balls)} as const;
 /** 梢节绑线柱质心（sim 坐标，腱序 0/1/2 = 方位 90°/210°/330°）——肌腱终点锚 */
 export const TIES: ReadonlyArray<readonly [number, number, number]> = {json.dumps(ties)} as const;
 
-/** 基座导线盘沿臂位置（站 0 局部 ax）——基座侧固定导缆件，缆线由此进入本体；
- *  真正的不动锚在基座总成（用户纠偏 2026-07-11：根部第 0 节是活动关节） */
+/** 导线盘沿臂位置（站 0 局部 ax）。盘 = **节 0 的近端板**（随节 0 刚动，
+ *  节 0 杆件插在盘上）；缆线穿其三个腱孔进入本体（用户纠偏 2026-07-11） */
 export const ROOT_DISC_AX = {json.dumps(root_disc_ax)};
+
+/** 导线盘腱孔孔心半径（网格顶点环实测，三孔均值；方位 = 腱孔族） */
+export const DISC_HOLE_R = {json.dumps(disc_hole_r)};
+
+/** 基座舵机锚质心（sim 坐标，腱序）——缆线的固定端/抽线点（真正的不动锚） */
+export const SERVOS: ReadonlyArray<readonly [number, number, number]> = {json.dumps(servos)} as const;
 
 /** mesh.bin 分组布局：c0..c6 = 站元胞局部系（刚性）；j0..j5 = 节间 TPU 连接件
  *  （站 g 局部系，blend = [b0,b1] 裸露带，双骨蒙皮 g↔g+1）；mnt = 基座挂站 0。 */

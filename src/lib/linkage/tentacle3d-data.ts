@@ -1,6 +1,6 @@
 import type { Dynamics3Config, Linkage3Def, Vec3 } from './solver3d';
 import { LinkageSolver3D } from './solver3d';
-import { BALLS, CHAINS, PLATES, ROOT_DISC_AX, STATIONS, TIES } from './tentacle3d-shape';
+import { BALLS, CHAINS, DISC_HOLE_R, PLATES, ROOT_DISC_AX, SERVOS, STATIONS, TIES } from './tentacle3d-shape';
 
 /**
  * 立体肌腱触手 v5——干净版真实结构（用户提供 11.3dm，2026-07-10）。
@@ -131,14 +131,22 @@ export function makeTentacle3Model(): Tentacle3Model {
       nodes.push({ x, y, z });
     }
   }
-  // 端板腱孔（肌腱 v3）：导盘孔半径 + 方位再转 60°（腱孔族），平移到两端板
+  // 端板腱孔（肌腱 v3）：导盘孔半径 + 方位再转 60°（腱孔族），平移到两端板。
+  // 节 0 近端孔 = **导线盘实测腱孔**（盘 = 节 0 近端板，孔心 r=DISC_HOLE_R
+  // @ 盘中面——用户纠偏 2026-07-11「肌腱穿蓝圈部件的三个洞」）
   for (let k = 0; k < N_TENDONS; k++) {
     for (let i = 0; i < N_NODES; i++) {
       const [sx, sy, sz] = STATIONS[i];
       const [hx, , hz] = CHAINS[k][i];
       const [rx, rz] = ROT60(hx - sx, hz - sz);
+      const rl = Math.hypot(rx, rz) || 1;
       for (const end of [0, 1] as const) {
-        nodes.push({ x: sx + rx, y: sy + PLATES[i][end], z: sz + rz });
+        if (i === 0 && end === 0) {
+          const rd = (DISC_HOLE_R ?? 13.14) / rl;
+          nodes.push({ x: sx + rx * rd, y: sy + (ROOT_DISC_AX ?? -23.79), z: sz + rz * rd });
+        } else {
+          nodes.push({ x: sx + rx, y: sy + PLATES[i][end], z: sz + rz });
+        }
       }
     }
   }
@@ -147,15 +155,13 @@ export function makeTentacle3Model(): Tentacle3Model {
     const [x, y, z] = TIES[k];
     nodes.push({ x, y, z });
   }
-  // 基座固定节点（唯一锚）：导线盘中心 + 三腱孔（方位 = 腱孔族，半径同站 0 孔
-  // ——舵机锚→盘孔→节 0 板孔的静息直线过盘面处 r≈10.4，与站 0 孔径一致）
-  const discY = STATIONS[0][1] + (ROOT_DISC_AX ?? -23.79);
-  nodes.push({ x: STATIONS[0][0], y: discY, z: STATIONS[0][2], fixed: true });
+  // 基座固定节点（唯一锚 = 红圈基座总成）：舵机锚面轴心 + 三舵机锚实测质心
+  // （缆线固定端/抽线点——盘是节 0 的活动件，锚必须在盘之后的基座里）
+  const rootY = (SERVOS[0][1] + SERVOS[1][1] + SERVOS[2][1]) / 3;
+  nodes.push({ x: STATIONS[0][0], y: rootY, z: STATIONS[0][2], fixed: true });
   for (let k = 0; k < N_TENDONS; k++) {
-    const [sx, , sz] = STATIONS[0];
-    const [hx, , hz] = CHAINS[k][0];
-    const [rx, rz] = ROT60(hx - sx, hz - sz);
-    nodes.push({ x: sx + rx, y: discY, z: sz + rz, fixed: true });
+    const [x, y, z] = SERVOS[k];
+    nodes.push({ x, y, z, fixed: true });
   }
 
   // 杆 rest 一律缺省 = 真实初始距离

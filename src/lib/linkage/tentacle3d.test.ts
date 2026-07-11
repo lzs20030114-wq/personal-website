@@ -9,7 +9,7 @@ import {
   createTentacle3,
   tendonVisual3,
 } from './tentacle3d-data';
-import { BALLS, TIES } from './tentacle3d-shape';
+import { BALLS, DISC_HOLE_R, ROOT_DISC_AX, SERVOS, TIES } from './tentacle3d-shape';
 
 // 立体求解器 spec v0.1 / 3D-M1 验收。容差 px，阈值来自实测探针（probe3d，2026-07-10）。
 
@@ -177,9 +177,14 @@ describe('立体肌腱触手', () => {
       const pts = tendonVisual3(s, k);
       expect(pts.length).toBe(1 + 6 * 3 + 2); // 盘孔入口 + 节 0..5 三点 + 梢节 [板孔, 绑柱]
       const [dx, dz] = TENDON_DIRS[k];
-      // 入口 = 基座导线盘腱孔（固定锚侧，在本腱方位、盘面沿臂位置）
-      expect(pts[0].y).toBeCloseTo(-23.79, 1);
-      expect(pts[0].x * dx + pts[0].z * dz).toBeGreaterThan(0);
+      // 固定端 = 基座舵机锚实测质心（真正的不动锚）
+      expect(pts[0].x).toBeCloseTo(SERVOS[k][0], 6);
+      expect(pts[0].y).toBeCloseTo(SERVOS[k][1], 6);
+      expect(pts[0].z).toBeCloseTo(SERVOS[k][2], 6);
+      // 第二点 = 导线盘实测腱孔（节 0 近端板，「穿过蓝圈部件的三个洞」）
+      expect(pts[1].y).toBeCloseTo(ROOT_DISC_AX, 1);
+      expect(Math.hypot(pts[1].x, pts[1].z)).toBeCloseTo(DISC_HOLE_R, 1);
+      expect(pts[1].x * dx + pts[1].z * dz).toBeGreaterThan(0);
       for (let i = 0; i < 6; i++) {
         const w = pts[1 + i * 3 + 1]; // 每节中点 = 绕点
         const sp = s.nodes[SPINE3(i)];
