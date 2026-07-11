@@ -60,6 +60,21 @@ describe('OrbitCamera', () => {
     c.pointerUp(1);
   });
 
+  it('右键平移：屏幕坐标平移、姿态不动；视角归位清零', () => {
+    const c = cam0();
+    c.pointerDown(1, 100, 100, true); // pan = true
+    c.pointerMove(1, 130, 80);
+    c.pointerUp(1);
+    const p = c.project({ x: 0, y: 0, z: 0 });
+    expect(p.x).toBeCloseTo(30, 12);
+    expect(p.y).toBeCloseTo(-20, 12);
+    expect(c.pan).toEqual({ x: 30, y: -20 });
+    expect(c.project({ x: 0, y: 0, z: 1 }).depth).toBeCloseTo(1, 12); // 姿态未变
+    c.reset();
+    expect(c.pan).toEqual({ x: 0, y: 0 });
+    expect(c.project({ x: 0, y: 0, z: 0 }).x).toBeCloseTo(0, 12);
+  });
+
   it('双指捏合 = 缩放（比值驱动，有上限）；wheel 同样钳位', () => {
     const c = cam0();
     c.pointerDown(1, 0, 0);

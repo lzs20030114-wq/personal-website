@@ -183,9 +183,10 @@ homeBtn.addEventListener('click', () => {
 
 viewHomeBtn.addEventListener('click', () => cam.reset());
 
-// —— 视角接线：事件 → 相机（逻辑全在 OrbitCamera，可测）
+// —— 视角接线：事件 → 相机（逻辑全在 OrbitCamera，可测）；右键 = 平移
+canvas.addEventListener('contextmenu', (ev) => ev.preventDefault());
 canvas.addEventListener('pointerdown', (ev) => {
-  cam.pointerDown(ev.pointerId, ev.clientX, ev.clientY);
+  cam.pointerDown(ev.pointerId, ev.clientX, ev.clientY, ev.button === 2);
   try {
     canvas.setPointerCapture(ev.pointerId);
   } catch {

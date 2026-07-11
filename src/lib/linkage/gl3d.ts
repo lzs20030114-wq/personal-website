@@ -23,12 +23,13 @@ uniform vec3 uPivot;
 uniform vec2 uHalf;
 uniform float uScale;
 uniform float uDepthK;
+uniform vec2 uPan;
 varying float vLam;
 uniform vec3 uLight;
 void main() {
   vec3 world = uModelR * aPos + uModelT;
   vec3 q = uView * (world - uPivot);
-  gl_Position = vec4(q.x * uScale / uHalf.x, -q.y * uScale / uHalf.y, -q.z * uDepthK, 1.0);
+  gl_Position = vec4((q.x * uScale + uPan.x) / uHalf.x, -(q.y * uScale + uPan.y) / uHalf.y, -q.z * uDepthK, 1.0);
   vec3 nv = uView * (uModelR * aNrm);
   vLam = abs(dot(normalize(nv), uLight));
 }`;
@@ -62,6 +63,7 @@ uniform vec3 uPivot;
 uniform vec2 uHalf;
 uniform float uScale;
 uniform float uDepthK;
+uniform vec2 uPan;
 varying float vLam;
 uniform vec3 uLight;
 void main() {
@@ -72,7 +74,7 @@ void main() {
   vec3 p = uCen + d * c + cross(uAxis, d) * s + uAxis * (dot(uAxis, d) * (1.0 - c) + uPitch * aW);
   vec3 world = uRA * p + uTA;
   vec3 q = uView * (world - uPivot);
-  gl_Position = vec4(q.x * uScale / uHalf.x, -q.y * uScale / uHalf.y, -q.z * uDepthK, 1.0);
+  gl_Position = vec4((q.x * uScale + uPan.x) / uHalf.x, -(q.y * uScale + uPan.y) / uHalf.y, -q.z * uDepthK, 1.0);
   vec3 n = aNrm * c + cross(uAxis, aNrm) * s + uAxis * (dot(uAxis, aNrm) * (1.0 - c));
   vec3 nv = uView * (uRA * n);
   vLam = abs(dot(normalize(nv), uLight));
@@ -86,9 +88,10 @@ uniform vec2 uHalf;
 uniform float uScale;
 uniform float uDepthK;
 uniform float uDepthBias;
+uniform vec2 uPan;
 void main() {
   vec3 q = uView * (aPos - uPivot);
-  gl_Position = vec4(q.x * uScale / uHalf.x, -q.y * uScale / uHalf.y, -q.z * uDepthK - uDepthBias, 1.0);
+  gl_Position = vec4((q.x * uScale + uPan.x) / uHalf.x, -(q.y * uScale + uPan.y) / uHalf.y, -q.z * uDepthK - uDepthBias, 1.0);
 }`;
 
 const LINE_FS = `
@@ -328,6 +331,7 @@ export class FlatRenderer {
       gl.uniform2f(gl.getUniformLocation(prog, 'uHalf'), this.halfW, this.halfH);
       gl.uniform1f(gl.getUniformLocation(prog, 'uScale'), cam.viewScale);
       gl.uniform1f(gl.getUniformLocation(prog, 'uDepthK'), this.depthK);
+      gl.uniform2f(gl.getUniformLocation(prog, 'uPan'), cam.pan.x, cam.pan.y);
     }
     for (const prog of [this.meshProg, this.skinProg]) {
       gl.useProgram(prog);

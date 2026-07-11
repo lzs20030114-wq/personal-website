@@ -74,8 +74,10 @@ export class OrbitCamera {
   private m: Mat3;
   private readonly m0: Mat3;
   private _zoom = 1;
-  /** 活跃指针（≤2 有意义：1 = 旋转，2 = 捏合） */
-  private readonly pointers = new Map<number, { x: number; y: number }>();
+  private _panX = 0;
+  private _panY = 0;
+  /** 活跃指针（≤2 有意义：1 = 旋转或平移，2 = 捏合） */
+  private readonly pointers = new Map<number, { x: number; y: number; pan: boolean }>();
   private userTookOver = false;
   private pinch0 = 1;
   private zoom0 = 1;
@@ -116,6 +118,11 @@ export class OrbitCamera {
     return this.o.scale * this._zoom;
   }
 
+  /** 屏幕平移偏移（逻辑 px，右键拖拽累积）。渲染层加到投影坐标上。 */
+  get pan(): { x: number; y: number } {
+    return { x: this._panX, y: this._panY };
+  }
+
   /** 正交投影：世界 → 屏幕 + 视深。 */
   project(p: Vec3): Projected {
     const x = p.x - this.o.pivot.x;
@@ -124,8 +131,8 @@ export class OrbitCamera {
     const m = this.m;
     const s = this.o.scale * this._zoom;
     return {
-      x: this.o.cx + (m[0] * x + m[1] * y + m[2] * z) * s,
-      y: this.o.cy + (m[3] * x + m[4] * y + m[5] * z) * s,
+      x: this.o.cx + this._panX + (m[0] * x + m[1] * y + m[2] * z) * s,
+      y: this.o.cy + this._panY + (m[3] * x + m[4] * y + m[5] * z) * s,
       depth: m[6] * x + m[7] * y + m[8] * z,
     };
   }
@@ -136,8 +143,9 @@ export class OrbitCamera {
     if (dyPx) this.m = mul(rotX(-dyPx * this.o.pitchPerPx), this.m);
   }
 
-  pointerDown(id: number, x: number, y: number): void {
-    this.pointers.set(id, { x, y });
+  /** pan = true（右键拖拽）：该指针平移视角而非旋转。 */
+  pointerDown(id: number, x: number, y: number, pan = false): void {
+    this.pointers.set(id, { x, y, pan });
     this.userTookOver = true;
     if (this.pointers.size === 2) {
       this.pinch0 = this.pinchDist() || 1;
@@ -148,7 +156,14 @@ export class OrbitCamera {
   pointerMove(id: number, x: number, y: number): void {
     const p = this.pointers.get(id);
     if (!p) return;
-    if (this.pointers.size === 1) this.rotate(x - p.x, y - p.y);
+    if (this.pointers.size === 1) {
+      if (p.pan) {
+        this._panX += x - p.x;
+        this._panY += y - p.y;
+      } else {
+        this.rotate(x - p.x, y - p.y);
+      }
+    }
     p.x = x;
     p.y = y;
     if (this.pointers.size === 2) {
@@ -173,10 +188,12 @@ export class OrbitCamera {
     }
   }
 
-  /** 视角归位（不恢复自转——主权已交出就不抢回）。 */
+  /** 视角归位（含平移清零；不恢复自转——主权已交出就不抢回）。 */
   reset(): void {
     this.m = this.m0;
     this._zoom = 1;
+    this._panX = 0;
+    this._panY = 0;
   }
 
   private pinchDist(): number {
