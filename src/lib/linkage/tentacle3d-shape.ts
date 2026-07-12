@@ -1,6 +1,7 @@
 // 由 scripts/model-extract/gen_tentacle3d.py 生成——不要手改。
 // 数据源：模型求解器参考/11.3dm（干净版触手本体，用户提供 2026-07-10）。
-// 结构：基座舵机总成（全量）+ 7 方盒椎节 + 节间 TPU 盘轴联接（j 组）+ 梢端盖。
+// 结构：基座舵机总成（固定）+ 根部 TPU 长连接件（jr）+ 7 方盒椎节 +
+// 节间 TPU 盘轴联接（j0..j5）+ 梢端盖。
 // 网格：嵌入渲染网格全量导入（106633 三角，0.05mm 焊接）——WebGL 直接吃。
 // v4：连接件与方盒榫卯插接（刚盒 + TPU 软连接件）——j 组做双骨蒙皮，
 // blend = 裸露带（站 g 局部 ax），插接段随盒刚动。载荷在 tentacle3d-mesh.bin。
@@ -31,8 +32,8 @@ export const DISC_HOLE_R = 13.14;
 /** 基座舵机锚质心（sim 坐标，腱序）——缆线的固定端/抽线点（真正的不动锚） */
 export const SERVOS: ReadonlyArray<readonly [number, number, number]> = [[-0.01, -49.9, 13.86], [-12.04, -49.9, -6.92], [11.84, -49.61, -6.81]] as const;
 
-/** mesh.bin 分组布局：c0..c6 = 站元胞局部系（刚性）；j0..j5 = 节间 TPU 连接件
- *  （站 g 局部系，blend = [b0,b1] 裸露带，双骨蒙皮 g↔g+1）；mnt = 基座挂站 0。 */
+/** mesh.bin 分组布局：c0..c6 = 站元胞局部系（刚性）；jr/j0..j5 = 根部/节间
+ *  TPU 连接件（blend = [b0,b1] 裸露带，双骨蒙皮）；mnt = 固定基座。 */
 export interface MeshGroup {
   name: string;
   verts: number;
@@ -43,4 +44,4 @@ export interface MeshGroup {
   blend?: readonly [number, number];
 }
 
-export const MESH_GROUPS: ReadonlyArray<MeshGroup> = [{"name": "c0", "verts": 8648, "tris": 16065, "vOff": 0, "iOff": 103776, "idx32": false}, {"name": "c1", "verts": 8680, "tris": 15887, "vOff": 200168, "iOff": 304328, "idx32": false}, {"name": "c2", "verts": 8746, "tris": 15782, "vOff": 399652, "iOff": 504604, "idx32": false}, {"name": "c3", "verts": 8531, "tris": 15284, "vOff": 599296, "iOff": 701668, "idx32": false}, {"name": "c4", "verts": 8729, "tris": 15090, "vOff": 793372, "iOff": 898120, "idx32": false}, {"name": "c5", "verts": 9686, "tris": 14915, "vOff": 988660, "iOff": 1104892, "idx32": false}, {"name": "c6", "verts": 4257, "tris": 8088, "vOff": 1194384, "iOff": 1245468, "idx32": false}, {"name": "j0", "verts": 192, "tris": 376, "vOff": 1293996, "iOff": 1296300, "idx32": false, "blend": [27.3, 47.13]}, {"name": "j1", "verts": 192, "tris": 376, "vOff": 1298556, "iOff": 1300860, "idx32": false, "blend": [25.05, 43.93]}, {"name": "j2", "verts": 192, "tris": 376, "vOff": 1303116, "iOff": 1305420, "idx32": false, "blend": [22.99, 40.83]}, {"name": "j3", "verts": 194, "tris": 384, "vOff": 1307676, "iOff": 1310004, "idx32": false, "blend": [21.04, 37.75]}, {"name": "j4", "verts": 192, "tris": 376, "vOff": 1312308, "iOff": 1314612, "idx32": false, "blend": [19.32, 34.84]}, {"name": "j5", "verts": 192, "tris": 376, "vOff": 1316868, "iOff": 1319172, "idx32": false, "blend": [17.65, 33.65]}, {"name": "mnt", "verts": 7755, "tris": 3258, "vOff": 1321428, "iOff": 1414488, "idx32": false}] as const;
+export const MESH_GROUPS: ReadonlyArray<MeshGroup> = [{"name": "c0", "verts": 8648, "tris": 16065, "vOff": 0, "iOff": 103776, "idx32": false}, {"name": "c1", "verts": 8680, "tris": 15887, "vOff": 200168, "iOff": 304328, "idx32": false}, {"name": "c2", "verts": 8746, "tris": 15782, "vOff": 399652, "iOff": 504604, "idx32": false}, {"name": "c3", "verts": 8531, "tris": 15284, "vOff": 599296, "iOff": 701668, "idx32": false}, {"name": "c4", "verts": 8729, "tris": 15090, "vOff": 793372, "iOff": 898120, "idx32": false}, {"name": "c5", "verts": 9686, "tris": 14915, "vOff": 988660, "iOff": 1104892, "idx32": false}, {"name": "c6", "verts": 4257, "tris": 8088, "vOff": 1194384, "iOff": 1245468, "idx32": false}, {"name": "j0", "verts": 192, "tris": 376, "vOff": 1293996, "iOff": 1296300, "idx32": false, "blend": [27.3, 47.13]}, {"name": "j1", "verts": 192, "tris": 376, "vOff": 1298556, "iOff": 1300860, "idx32": false, "blend": [25.05, 43.93]}, {"name": "j2", "verts": 192, "tris": 376, "vOff": 1303116, "iOff": 1305420, "idx32": false, "blend": [22.99, 40.83]}, {"name": "j3", "verts": 194, "tris": 384, "vOff": 1307676, "iOff": 1310004, "idx32": false, "blend": [21.04, 37.75]}, {"name": "j4", "verts": 192, "tris": 376, "vOff": 1312308, "iOff": 1314612, "idx32": false, "blend": [19.32, 34.84]}, {"name": "j5", "verts": 192, "tris": 376, "vOff": 1316868, "iOff": 1319172, "idx32": false, "blend": [17.65, 33.65]}, {"name": "jr", "verts": 192, "tris": 378, "vOff": 1321428, "iOff": 1323732, "idx32": false, "blend": [-49.8, -27.31]}, {"name": "mnt", "verts": 7563, "tris": 2880, "vOff": 1326000, "iOff": 1416756, "idx32": false}] as const;

@@ -34,14 +34,8 @@ export const TENTACLE3D = {
    *  −154），刚性斜杆 = 真机盘轴联接抗扭刚度的等效；实测不吃弯曲力
    *  （c=1 沿向 53→176）、横漂 −154→−43 */
   fasciaK: 1.0,
-  /** 根部联接（节 0 ↔ 固定盘）**全软**——用户九轮定版：节 0 没有支点，
-   *  不是绕盘旋转，而是像其他节一样经弹性 TPU 联接既摆动又平移
-   *  （空间坐标变化）。rootK = 联接弹性（轴向/剪切），rootBend = 弯曲
-   *  记忆斜拉，rootFascia = 抗扭。任何根部刚性距离约束都会造出支点/
-   *  锁死坐标（五~八轮病根），禁止。 */
-  rootK: 0.5,
-  rootBend: 0.7,
-  rootFascia: 1.0,
+  /** 根部不另设关节参数：蓝圈基座固定截面 → 节 0 使用与后续节间相同的
+   *  中心杆 / 对称锥 / fascia 拓扑；柔性来自连接件跨缝变形，而非节 0 内部锚点。 */
   /** 重力取消（用户拍板：被驱动机构非悬垂物）；动量+阻尼保留 */
   dynamics: { gravity: { x: 0, y: 0, z: 0 }, damping: 0.992 } satisfies Dynamics3Config,
   sweeps: 36,
@@ -57,14 +51,10 @@ export const PLATE3 = (k: number, i: number, end: 0 | 1): number =>
   N_NODES * (1 + N_TENDONS) + (k * N_NODES + i) * 2 + end;
 /** 梢节绑线柱（腱 k 的缆线终点锚，用户圈定 2026-07-11——肌腱不穿梢节中间） */
 export const TIE3 = (k: number): number => N_NODES * (1 + N_TENDONS) + N_TENDONS * N_NODES * 2 + k;
-/** 基座侧固定节点（用户十轮定版：固定的只有**细轴/毂 + 基座本体**；
- *  带腱孔的三角板是节 0 的一体件、随动）：ROOTC3 = 轴毂端（弹性联接锚，
- *  节 0 经全软 TPU 联接挂于此——无支点，既摆动又平移）；SERVO3(k) =
- *  基座舵机锚（缆线固定端/抽线点 + 根抗扭/弯曲记忆锚）；ROOTB3 = 舵机面
- *  轴心（备用）。盘腱孔不再是固定节点——它们是 P(k,0,0)（随板动）。 */
-export const ROOTC3 = (): number => TIE3(0) + N_TENDONS;
-export const SERVO3 = (k: number): number => ROOTC3() + 1 + k;
-export const ROOTB3 = (): number => ROOTC3() + 1 + N_TENDONS;
+/** 蓝圈基座上的固定连接截面。SERVO3(k) 同时是三条缆线的固定抽线点和
+ *  截面的三个周向约束点；ROOTB3 是该截面轴心。红圈节 0 内部没有固定点。 */
+export const SERVO3 = (k: number): number => TIE3(0) + N_TENDONS + k;
+export const ROOTB3 = (): number => TIE3(0) + 2 * N_TENDONS;
 export const TIP3 = TENTACLE3D.segments;
 
 /** 腱孔方位 = 导盘孔位方位 + 60°（用户纠偏 2026-07-11：肌腱穿的是端板上
@@ -167,10 +157,8 @@ export function makeTentacle3Model(): Tentacle3Model {
     const [x, y, z] = TIES[k];
     nodes.push({ x, y, z });
   }
-  // 基座固定节点（只有细轴/毂 + 基座本体不动——用户十轮定版）：
-  // 轴毂端（弹性联接锚）、舵机锚（缆线固定端）、舵机面轴心
-  const discY = STATIONS[0][1] + (ROOT_DISC_AX ?? -23.79);
-  nodes.push({ x: STATIONS[0][0], y: discY, z: STATIONS[0][2], fixed: true });
+  // 蓝圈基座固定截面：三个周向点（兼作缆线固定抽线点）+ 截面轴心。
+  // 红圈节 0 内部不放任何 fixed 节点。
   for (let k = 0; k < N_TENDONS; k++) {
     const [x, y, z] = SERVOS[k];
     nodes.push({ x, y, z, fixed: true });
@@ -228,22 +216,18 @@ export function makeTentacle3Model(): Tentacle3Model {
     bars.push({ a: t, b: SPINE3(segments - 1) });
     for (let j = 0; j < N_TENDONS; j++) bars.push({ a: t, b: GUIDE3(j, segments) });
   }
-  // 根部联接 = **全软弹性 TPU 轴**（用户九轮定版：节 0 无支点、非绕盘
-  // 旋转——像其他节一样既摆动又平移，空间坐标自由变化）。轴向/剪切弹性
-  // = 盘心↔节 0 各点软杆（rootK）；弯曲记忆 = 盘腱孔→脊柱 1 斜拉
-  // （rootBend，离轴一阶敏感）；抗扭 = 盘腱孔 fascia（rootFascia）。
-  // **禁止任何根部刚性（stiffness 1）距离约束**——那会造出支点或
-  // 把节 0 坐标锁死（五~八轮病根）。
-  const { rootK, rootBend, rootFascia } = TENTACLE3D;
-  bars.push({ a: ROOTC3(), b: SPINE3(0), stiffness: rootK });
+  // 根部长连接件：把蓝圈基座截面当作“虚拟前一节”，完整复用普通节间拓扑。
+  // 中心杆只保持连接长度；固定截面的三个周向点与节 0 构成前后对称锥，
+  // fascia 双手性交叉负责抗扭。弯曲发生在两截面之间，不再围绕红圈内一点。
+  bars.push({ a: ROOTB3(), b: SPINE3(0) });
   for (let k = 0; k < N_TENDONS; k++) {
-    bars.push({ a: ROOTC3(), b: GUIDE3(k, 0), stiffness: rootK });
-    bars.push({ a: SERVO3(k), b: GUIDE3((k + 1) % N_TENDONS, 0), stiffness: rootFascia });
-    bars.push({ a: SERVO3(k), b: GUIDE3((k + 2) % N_TENDONS, 0), stiffness: rootFascia });
+    bars.push({ a: SERVO3(k), b: SPINE3(0) });
+    bars.push({ a: GUIDE3(k, 0), b: ROOTB3() });
+    bars.push({ a: SERVO3(k), b: GUIDE3((k + 1) % N_TENDONS, 0), stiffness: fasciaK });
+    bars.push({ a: SERVO3(k), b: GUIDE3((k + 2) % N_TENDONS, 0), stiffness: fasciaK });
   }
-  for (let k = 0; k < N_TENDONS; k++) {
-    bars.push({ a: SERVO3(k), b: SPINE3(1), stiffness: rootBend });
-  }
+  // 与普通背骨 i↔i+2 同义：虚拟基座站（−1）跨过节 0 连到节 1。
+  bars.push({ a: ROOTB3(), b: SPINE3(1), stiffness: bendRoot });
   // 肌腱 = 穿环滑缆（v3 真实走线）：锚在梢节远端板孔、节间贴端板孔跨缝。
   // **约束路径只走端板孔**：节内穿心 V 腿两端同挂一节（长度恒定），对刚体节
   // 的净扳矩为零（内部走线不改变外部合力）——力学上与真实 V 走线严格等价；
