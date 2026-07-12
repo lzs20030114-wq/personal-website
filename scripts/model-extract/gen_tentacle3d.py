@@ -192,6 +192,7 @@ for o in M.Objects:
 mnt = Acc()
 root_disc_ax = None
 disc_x0 = None
+disc_x1 = None
 disc_hole_r = None
 servos_raw = []
 for o in M.Objects:
@@ -216,6 +217,7 @@ for o in M.Objects:
         if 15.0 < pcx < 30.0 and math.hypot(pcy2, pcz2) < 4.0 and 17.0 < rr.max() < 23.0:
             root_disc_ax = round(pcx - SX[0], 2)
             disc_x0 = float(vmin[0])
+            disc_x1 = float(vmax[0])
             azs = np.degrees(np.arctan2(verts[:, 2] - AXIS_Z, verts[:, 1] - AXIS_Y)) % 360
             radii = []
             for target in (90.0, 210.0, 330.0):
@@ -244,8 +246,12 @@ print('舵机锚（腱序）', servos)
 groups = []
 for i, acc in enumerate(cells):
     v, t = acc.packed()
-    groups.append((f'c{i}', v, t, None))
-    print(f'站 {i} 零件 {acc.n} 顶点 {len(v)} 三角 {len(t)} x[{acc.x0:.1f},{acc.x1:.1f}]')
+    # 节 0 带根界面蒙皮带：杆根段（插在固定盘槽内）随盘不动、沿杆渐变到
+    # 刚体——否则节 0 绕盘心蜷曲时杆件从盘槽拔出（用户实测「又碎了」，
+    # 与节间连接件同病同药）。带 = 盘远端面 → 杆身（球体导件之前）
+    blend0 = [round((disc_x1 or 26.6) - SX[0], 2), -8.0] if i == 0 else None
+    groups.append((f'c{i}', v, t, blend0))
+    print(f'站 {i} 零件 {acc.n} 顶点 {len(v)} 三角 {len(t)} x[{acc.x0:.1f},{acc.x1:.1f}]' + (f' 根蒙皮带 {blend0}' if blend0 else ''))
 for g, acc in enumerate(joints):
     v, t = acc.packed()
     if acc.n == 0:

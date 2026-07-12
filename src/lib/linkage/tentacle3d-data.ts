@@ -37,7 +37,7 @@ export const TENTACLE3D = {
   /** 根关节（盘心球铰）弯曲记忆 / 抗扭斜杆刚度——独立于节间参数：
    *  一侧固定的根 fascia 对弯曲是一阶阻力（节间是共享平分姿态的高阶），
    *  同刚度会锁死；记忆杆太软则根成唯一软肋、整臂刚棍倾倒（实测）。 */
-  rootBend: 0.4,
+  rootBend: 0.7,
   rootFascia: 1.0,
   /** 重力取消（用户拍板：被驱动机构非悬垂物）；动量+阻尼保留 */
   dynamics: { gravity: { x: 0, y: 0, z: 0 }, damping: 0.992 } satisfies Dynamics3Config,
