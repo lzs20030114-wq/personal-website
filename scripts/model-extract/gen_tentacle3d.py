@@ -226,9 +226,9 @@ for o in M.Objects:
                 if sel.sum() >= 8:
                     radii.append(float(rr[sel].mean()))
             disc_hole_r = round(float(np.mean(radii)), 2) if radii else None
-            # 盘 = 基座侧固定件（用户七轮定版：只有盘 + 基座不动，
-            # 节 0 以盘心为枢轴蜷曲）
-            mnt.add(local_np(verts, SX[0]), tris, vmin[0], vmax[0])
+            # 三角腱孔板 = **节 0 的一体件**（用户十轮定版：红圈三角板随
+            # 节 0 运动；固定的只有细轴/毂（蓝圈）+ 基座本体）→ 归 c0
+            cells[0].add(local_np(verts, SX[0]), tris, vmin[0], vmax[0])
             continue
         if -8.0 <= pcx <= 1.0 and (vmax[0] - vmin[0]) < 8.0 and 8.0 < math.hypot(pcy2, pcz2) < 18.0:
             az = math.degrees(math.atan2(pcz2, pcy2)) % 360
