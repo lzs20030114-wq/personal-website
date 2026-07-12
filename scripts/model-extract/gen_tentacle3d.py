@@ -277,14 +277,19 @@ for g, acc in enumerate(joints):
     print(f'缝 {g} 连接件 {acc.n} 顶点 {len(v)} 三角 {len(t)} '
           f'x[{acc.x0:.1f},{acc.x1:.1f}] 裸露带 x[{b0m:.1f},{b1m:.1f}] blend {blend}')
 
-# 根部长条的蒙皮带 = 蓝圈固定截面（舵机锚平均轴位）→ 节 0 刚体近端面。
-# 两端插接区保持刚性，中间像 j0..j5 一样做螺旋插值连续弯曲。
+# 根部长条的 A 骨原点 = 蓝圈固定截面（舵机锚平均轴位），B 骨原点 = 节 0
+# 站心；与 j0..j5 一样使用真实两端截面 + 真实节距。旧版仍把 jr 顶点存在
+# 节 0 局部系、渲染时 dy=0，端点虽能数学对齐，中段螺旋却绕了错误的共同原点，
+# 视觉上会读作蓝件与绿色节 0 分离。两端插接区保持刚性，中间连续弯曲。
 v, t = root_joint.packed()
 if root_joint.n == 0:
     raise RuntimeError('未识别到根部长条连接件 jr——检查根部零件阈值')
 base_face = SX[0] + float(np.mean([s[1] for s in servos]))
 cell0_face = cells[0].x0
-root_blend = [round(base_face - SX[0], 2), round(cell0_face - SX[0], 2)]
+# root_joint 此时仍在站 0 局部系；平移到蓝端 A 骨局部系。
+root_ax0 = base_face - SX[0]
+v[:, 0] -= root_ax0
+root_blend = [0.0, round(cell0_face - base_face, 2)]
 groups.append(('jr', v, t, root_blend))
 print(f'根部连接件 {root_joint.n} 顶点 {len(v)} 三角 {len(t)} '
       f'x[{root_joint.x0:.1f},{root_joint.x1:.1f}] 裸露带 x[{base_face:.1f},{cell0_face:.1f}] '

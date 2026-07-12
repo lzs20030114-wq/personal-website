@@ -123,7 +123,9 @@ describe('立体肌腱触手', () => {
     }
 
     const rootJoint = MESH_GROUPS.find((g) => g.name === 'jr');
-    expect(rootJoint?.blend).toEqual([-49.8, -27.31]);
+    // jr 与普通 j 组一样存于 A 骨局部系：蓝端面 = 0，绿色节 0 外表面开始
+    // 全权重锁死。其后仍有 6.63mm 网格插入绿色件内部（26.22−19.59）。
+    expect(rootJoint?.blend).toEqual([0, 22.49]);
     expect(rootJoint?.tris).toBeGreaterThan(0);
   });
 
