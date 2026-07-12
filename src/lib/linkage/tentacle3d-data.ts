@@ -34,9 +34,12 @@ export const TENTACLE3D = {
    *  −154），刚性斜杆 = 真机盘轴联接抗扭刚度的等效；实测不吃弯曲力
    *  （c=1 沿向 53→176）、横漂 −154→−43 */
   fasciaK: 1.0,
-  /** 根关节（盘心球铰）弯曲记忆 / 抗扭斜杆刚度——独立于节间参数：
-   *  一侧固定的根 fascia 对弯曲是一阶阻力（节间是共享平分姿态的高阶），
-   *  同刚度会锁死；记忆杆太软则根成唯一软肋、整臂刚棍倾倒（实测）。 */
+  /** 根部联接（节 0 ↔ 固定盘）**全软**——用户九轮定版：节 0 没有支点，
+   *  不是绕盘旋转，而是像其他节一样经弹性 TPU 联接既摆动又平移
+   *  （空间坐标变化）。rootK = 联接弹性（轴向/剪切），rootBend = 弯曲
+   *  记忆斜拉，rootFascia = 抗扭。任何根部刚性距离约束都会造出支点/
+   *  锁死坐标（五~八轮病根），禁止。 */
+  rootK: 0.5,
   rootBend: 0.7,
   rootFascia: 1.0,
   /** 重力取消（用户拍板：被驱动机构非悬垂物）；动量+阻尼保留 */
@@ -54,10 +57,10 @@ export const PLATE3 = (k: number, i: number, end: 0 | 1): number =>
   N_NODES * (1 + N_TENDONS) + (k * N_NODES + i) * 2 + end;
 /** 梢节绑线柱（腱 k 的缆线终点锚，用户圈定 2026-07-11——肌腱不穿梢节中间） */
 export const TIE3 = (k: number): number => N_NODES * (1 + N_TENDONS) + N_TENDONS * N_NODES * 2 + k;
-/** 基座侧固定节点（用户七轮定版：只有导线盘 + 基座不动，节 0 以**盘心为
- *  枢轴**蜷曲）：ROOTC3 = 盘心（球铰枢轴）；ROOTG3(k) = 盘腱孔（缆线过孔 +
- *  根部抗扭 fascia 锚）；SERVO3(k) = 基座舵机锚（缆线固定端/抽线点）；
- *  ROOTB3 = 舵机面轴心（根弯曲记忆锚） */
+/** 基座侧固定节点（只有导线盘 + 基座不动；节 0 经**全软弹性联接**挂在
+ *  盘上——无支点，既摆动又平移）：ROOTC3 = 盘心（弹性联接锚）；
+ *  ROOTG3(k) = 盘腱孔（缆线过孔 + 抗扭/弯曲记忆锚）；SERVO3(k) = 基座
+ *  舵机锚（缆线固定端/抽线点）；ROOTB3 = 舵机面轴心（备用锚） */
 export const ROOTC3 = (): number => TIE3(0) + N_TENDONS;
 export const ROOTG3 = (k: number): number => ROOTC3() + 1 + k;
 export const SERVO3 = (k: number): number => ROOTC3() + 1 + N_TENDONS + k;
@@ -157,8 +160,8 @@ export function makeTentacle3Model(): Tentacle3Model {
     const [x, y, z] = TIES[k];
     nodes.push({ x, y, z });
   }
-  // 基座固定节点（只有盘 + 基座不动——用户七轮定版）：
-  // 盘心（球铰枢轴）、盘腱孔（缆线过孔）、舵机锚（缆线固定端）、舵机面轴心
+  // 基座固定节点（只有盘 + 基座不动）：
+  // 盘心（弹性联接锚）、盘腱孔（缆线过孔）、舵机锚（缆线固定端）、舵机面轴心
   const discY = STATIONS[0][1] + (ROOT_DISC_AX ?? -23.79);
   nodes.push({ x: STATIONS[0][0], y: discY, z: STATIONS[0][2], fixed: true });
   for (let k = 0; k < N_TENDONS; k++) {
@@ -226,20 +229,19 @@ export function makeTentacle3Model(): Tentacle3Model {
     bars.push({ a: t, b: SPINE3(segments - 1) });
     for (let j = 0; j < N_TENDONS; j++) bars.push({ a: t, b: GUIDE3(j, segments) });
   }
-  // 根部关节 = **以盘心为枢轴的球铰**（用户七轮定版「旋转焦点在盘不在
-  // 节 0 中心」）：节 0 各点只对盘心 ROOTC3 保持距离 → 整节绕盘心刚体
-  // 旋转；弯曲记忆 = 舵机面轴心软杆（bendRoot）；抗扭 = 盘腱孔 fascia。
-  // 注意**不可**把节 0 拴到盘心以外的固定点（如盘腱孔）——那会把节 0
-  // 中心钉死在原位，旋转焦点退回节 0 中心（五、六轮的病根）。
-  const { rootBend, rootFascia } = TENTACLE3D;
-  bars.push({ a: ROOTC3(), b: SPINE3(0) });
+  // 根部联接 = **全软弹性 TPU 轴**（用户九轮定版：节 0 无支点、非绕盘
+  // 旋转——像其他节一样既摆动又平移，空间坐标自由变化）。轴向/剪切弹性
+  // = 盘心↔节 0 各点软杆（rootK）；弯曲记忆 = 盘腱孔→脊柱 1 斜拉
+  // （rootBend，离轴一阶敏感）；抗扭 = 盘腱孔 fascia（rootFascia）。
+  // **禁止任何根部刚性（stiffness 1）距离约束**——那会造出支点或
+  // 把节 0 坐标锁死（五~八轮病根）。
+  const { rootK, rootBend, rootFascia } = TENTACLE3D;
+  bars.push({ a: ROOTC3(), b: SPINE3(0), stiffness: rootK });
   for (let k = 0; k < N_TENDONS; k++) {
-    bars.push({ a: ROOTC3(), b: GUIDE3(k, 0) });
+    bars.push({ a: ROOTC3(), b: GUIDE3(k, 0), stiffness: rootK });
     bars.push({ a: ROOTG3(k), b: GUIDE3((k + 1) % N_TENDONS, 0), stiffness: rootFascia });
     bars.push({ a: ROOTG3(k), b: GUIDE3((k + 2) % N_TENDONS, 0), stiffness: rootFascia });
   }
-  // 根弯曲记忆：盘腱孔（离轴固定点）→ 脊柱 1 斜拉——对根摆动一阶敏感
-  // （轴上点对轴上点跨枢轴在静息一阶失明、大角度法向反转 → 拦不住翻转，废）
   for (let k = 0; k < N_TENDONS; k++) {
     bars.push({ a: ROOTG3(k), b: SPINE3(1), stiffness: rootBend });
   }
