@@ -6,7 +6,7 @@ import {
   createTentacle3,
   tendonVisual3,
 } from '../lib/linkage/tentacle3d-data';
-import { CHAINS, MESH_GROUPS, RADII, STATIONS } from '../lib/linkage/tentacle3d-shape';
+import { CHAINS, MESH_GROUPS, STATIONS } from '../lib/linkage/tentacle3d-shape';
 import { OrbitCamera } from '../lib/linkage/camera3d';
 import { FlatRenderer, bakeIndexed, bakeSkinned, type CellFrame } from '../lib/linkage/gl3d';
 import meshUrl from './assets/tentacle3d-mesh.bin?url';
@@ -65,14 +65,13 @@ fetch(meshUrl)
     }
   });
 
-// 线色（纸墨系）：脊柱 / 三腱 / 参考环
+// 线色（纸墨系）：脊柱 / 三腱
 const SPINE_C: [number, number, number] = [0.54, 0.54, 0.51];
 const TENDON_C: [number, number, number][] = [
   [0.14, 0.34, 0.65],
   [0.69, 0.41, 0.18],
   [0.29, 0.48, 0.32],
 ];
-const RING_C: [number, number, number] = [0.75, 0.75, 0.7];
 
 function cellFrame(i: number): CellFrame {
   const nodes = sim.solver.nodes;
@@ -142,18 +141,9 @@ function render(): void {
       renderer.drawSkinned(j.name, cellFrame(j.gap), cellFrame(j.gap + 1), dy);
     }
   }
-  // 参考环（站 0 平面）
-  const R = RADII[0] + 14;
-  const ring: { a: { x: number; y: number; z: number }; b: { x: number; y: number; z: number } }[] = [];
-  for (let a = 0; a < 24; a++) {
-    const t0 = (a * Math.PI) / 12;
-    const t1 = ((a + 1) * Math.PI) / 12;
-    ring.push({
-      a: { x: R * Math.cos(t0), y: 0, z: R * Math.sin(t0) },
-      b: { x: R * Math.cos(t1), y: 0, z: R * Math.sin(t1) },
-    });
-  }
-  renderer.drawLines(ring, RING_C, 0);
+  // （参考环已废除，2026-07-11 用户三轮纠偏定案：固定画在节 0 中心的环
+  // 被读作「旋转中心固定锚」和「碎裂环件」——它不是结构件，纯 UI 污染。
+  // 旋转视觉锚由基座本体承担。）
   // 脊柱与肌腱（参与深度测试——穿过零件的段被正确遮挡）
   const spineSegs = [];
   for (let i = 0; i < N; i++) spineSegs.push({ a: nodes[SPINE3(i)], b: nodes[SPINE3(i + 1)] });
