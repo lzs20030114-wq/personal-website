@@ -1,5 +1,6 @@
 import {
   GUIDE3,
+  ROOTB3,
   SPINE3,
   TENTACLE3D,
   applyContraction3,
@@ -45,8 +46,8 @@ const cam = new OrbitCamera({
 
 const renderer = new FlatRenderer(canvas);
 // TPU 连接件（j 组）：与方盒榫卯插接、双骨蒙皮（用户纠偏 2026-07-11）。
-// 注意：**刚性节不做蒙皮**（v7.4 曾给节 0 挂根蒙皮带被用户否决——刚性
-// 材质不能弯；节 0 是纯刚体绕盘旋转，根界面开合是真实铰链行为）
+// 注意：刚性节不做蒙皮；根部长条 jr 与 j0..j5 一样，只有两端之间的 TPU
+// 裸露段弯曲，红圈节 0 本身仍作为刚体整体参与运动。
 const joints = MESH_GROUPS.filter((g) => g.blend).map((g) => ({
   name: g.name,
   gap: g.name === 'jr' ? -1 : Number(g.name.slice(1)),
@@ -125,6 +126,18 @@ const MNT_FRAME: CellFrame = (() => {
   };
 })();
 
+// 根部长条的 A 骨必须位于蓝圈真实固定截面，而不是与绿色节 0 共用原点。
+// jr 网格也由提取器存成此截面的局部坐标；dy 使用两截面的真实静息节距。
+const ROOT_FRAME: CellFrame = {
+  ...MNT_FRAME,
+  o: {
+    x: sim.solver.nodes[ROOTB3()].x,
+    y: sim.solver.nodes[ROOTB3()].y,
+    z: sim.solver.nodes[ROOTB3()].z,
+  },
+};
+const ROOT_DY = STATIONS[0][1] - ROOT_FRAME.o.y;
+
 function render(): void {
   const nodes = sim.solver.nodes;
   renderer.beginFrame(cam);
@@ -132,10 +145,10 @@ function render(): void {
   for (let ci = 0; ci <= N; ci++) renderer.drawMesh(`c${ci}`, cellFrame(ci));
   renderer.drawMesh('mnt', MNT_FRAME);
   // TPU 连接件：双骨蒙皮（插接段随盒刚动，裸露段吸收弯曲）；
-  // 根轴 jr：基座固定刚架 ↔ 节 0（静息同原点，dy = 0）
+  // 根部长条 jr：蓝圈基座固定刚架 ↔ 红圈节 0（静息同原点，dy = 0）
   for (const j of joints) {
     if (j.gap < 0) {
-      renderer.drawSkinned(j.name, MNT_FRAME, cellFrame(0), 0);
+      renderer.drawSkinned(j.name, ROOT_FRAME, cellFrame(0), ROOT_DY);
     } else {
       const dy = STATIONS[j.gap + 1][1] - STATIONS[j.gap][1];
       renderer.drawSkinned(j.name, cellFrame(j.gap), cellFrame(j.gap + 1), dy);

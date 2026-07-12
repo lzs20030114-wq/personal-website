@@ -3,7 +3,8 @@
 产物：
 - src/lib/linkage/tentacle3d-shape.ts   站位/孔链/半径 + 网格分组元数据（含 blend）
 - src/demo/assets/tentacle3d-mesh.bin   逐组索引网格（Float32 顶点 + Uint16/32 索引）
-结构：7 方盒椎节（x 46.9→404.7）+ 节间 TPU 盘轴联接（j0..j5）+ 基座舵机总成。
+结构：7 方盒椎节（x 46.9→404.7）+ 根部/节间 TPU 盘轴联接（jr/j0..j5）+
+基座舵机总成。
 v4（用户纠偏 2026-07-11）：连接件与两侧方盒是**榫卯插接**——刚性方盒 + TPU 软
 连接件，弯曲全部发生在连接件裸露段，插接不分离。故跨越节间边界的零件按**零件级
 x 范围**判定为连接件、单独成组（j 组），blend = 两侧方盒端面之间的裸露带；渲染层
@@ -188,8 +189,10 @@ for o in M.Objects:
 # 导线盘 = **节 0 的近端板**（节 0 杆件插在盘上；用户实测「碎了」根因：盘被
 # 错钉在基座静止渲染）——归 c0 随节 0 刚动；其三个腱孔（网格顶点环实测）=
 # 缆线进入本体的过孔。缆线固定端 = 基座舵机锚（三件，方位恰 = 腱孔族）。
-# 根部 TPU 轴（跨界细轴）单独成组 jr 蒙皮。
+# 根部长条连接件与后续节间连接件同材质、同弯曲方式，单独成组 jr 蒙皮；
+# 它的近端插入蓝圈基座，远端插入节 0，绝不能并入固定 mnt。
 mnt = Acc()
+root_joint = Acc()
 root_disc_ax = None
 disc_x0 = None
 disc_x1 = None
@@ -214,6 +217,11 @@ for o in M.Objects:
         pcy2 = (vmin[1] + vmax[1]) / 2 - AXIS_Y
         pcz2 = (vmin[2] + vmax[2]) / 2 - AXIS_Z
         rr = np.hypot(verts[:, 1] - AXIS_Y, verts[:, 2] - AXIS_Z)
+        # 根部长条：跨过蓝圈基座端面（x≈−3）并插入节 0 近端板（x≈19.6）。
+        # 旧版把它整件并入 mnt，导致视觉上永远笔直固定。
+        if vmin[0] < 0.0 and vmax[0] > 18.0 and math.hypot(pcy2, pcz2) < 3.0 and rr.max() < 7.0:
+            root_joint.add(local_np(verts, SX[0]), tris, vmin[0], vmax[0])
+            continue
         if 15.0 < pcx < 30.0 and math.hypot(pcy2, pcz2) < 4.0 and 17.0 < rr.max() < 23.0:
             root_disc_ax = round(pcx - SX[0], 2)
             disc_x0 = float(vmin[0])
@@ -228,6 +236,10 @@ for o in M.Objects:
             disc_hole_r = round(float(np.mean(radii)), 2) if radii else None
             # 三角腱孔板 = **节 0 的一体件**（用户十轮定版：红圈三角板随
             # 节 0 运动；固定的只有细轴/毂（蓝圈）+ 基座本体）→ 归 c0
+            cells[0].add(local_np(verts, SX[0]), tris, vmin[0], vmax[0])
+            continue
+        # 位于三角板内部的轴端/套筒属于节 0 的刚性插接端，随红圈整体运动。
+        if 15.0 < pcx < 30.0 and math.hypot(pcy2, pcz2) < 4.0 and rr.max() < 8.0:
             cells[0].add(local_np(verts, SX[0]), tris, vmin[0], vmax[0])
             continue
         if -8.0 <= pcx <= 1.0 and (vmax[0] - vmin[0]) < 8.0 and 8.0 < math.hypot(pcy2, pcz2) < 18.0:
@@ -265,7 +277,24 @@ for g, acc in enumerate(joints):
     print(f'缝 {g} 连接件 {acc.n} 顶点 {len(v)} 三角 {len(t)} '
           f'x[{acc.x0:.1f},{acc.x1:.1f}] 裸露带 x[{b0m:.1f},{b1m:.1f}] blend {blend}')
 
-# 根轴并入基座：轴尖（x≤26.2）没入固定盘（19.6–26.6）内，无可见弯曲段
+# 根部长条的 A 骨原点 = 蓝圈固定截面（舵机锚平均轴位），B 骨原点 = 节 0
+# 站心；与 j0..j5 一样使用真实两端截面 + 真实节距。旧版仍把 jr 顶点存在
+# 节 0 局部系、渲染时 dy=0，端点虽能数学对齐，中段螺旋却绕了错误的共同原点，
+# 视觉上会读作蓝件与绿色节 0 分离。两端插接区保持刚性，中间连续弯曲。
+v, t = root_joint.packed()
+if root_joint.n == 0:
+    raise RuntimeError('未识别到根部长条连接件 jr——检查根部零件阈值')
+base_face = SX[0] + float(np.mean([s[1] for s in servos]))
+cell0_face = cells[0].x0
+# root_joint 此时仍在站 0 局部系；平移到蓝端 A 骨局部系。
+root_ax0 = base_face - SX[0]
+v[:, 0] -= root_ax0
+root_blend = [0.0, round(cell0_face - base_face, 2)]
+groups.append(('jr', v, t, root_blend))
+print(f'根部连接件 {root_joint.n} 顶点 {len(v)} 三角 {len(t)} '
+      f'x[{root_joint.x0:.1f},{root_joint.x1:.1f}] 裸露带 x[{base_face:.1f},{cell0_face:.1f}] '
+      f'blend {root_blend}')
+
 v, t = mnt.packed()
 groups.append(('mnt', v, t, None))
 print(f'基座 零件 {mnt.n} 顶点 {len(v)} 三角 {len(t)}')
@@ -319,7 +348,8 @@ for az in AZ:
 
 ts = f"""// 由 scripts/model-extract/gen_tentacle3d.py 生成——不要手改。
 // 数据源：模型求解器参考/11.3dm（干净版触手本体，用户提供 2026-07-10）。
-// 结构：基座舵机总成（全量）+ 7 方盒椎节 + 节间 TPU 盘轴联接（j 组）+ 梢端盖。
+// 结构：基座舵机总成（固定）+ 根部 TPU 长连接件（jr）+ 7 方盒椎节 +
+// 节间 TPU 盘轴联接（j0..j5）+ 梢端盖。
 // 网格：嵌入渲染网格全量导入（{total_t} 三角，0.05mm 焊接）——WebGL 直接吃。
 // v4：连接件与方盒榫卯插接（刚盒 + TPU 软连接件）——j 组做双骨蒙皮，
 // blend = 裸露带（站 g 局部 ax），插接段随盒刚动。载荷在 tentacle3d-mesh.bin。
@@ -350,8 +380,8 @@ export const DISC_HOLE_R = {json.dumps(disc_hole_r)};
 /** 基座舵机锚质心（sim 坐标，腱序）——缆线的固定端/抽线点（真正的不动锚） */
 export const SERVOS: ReadonlyArray<readonly [number, number, number]> = {json.dumps(servos)} as const;
 
-/** mesh.bin 分组布局：c0..c6 = 站元胞局部系（刚性）；j0..j5 = 节间 TPU 连接件
- *  （站 g 局部系，blend = [b0,b1] 裸露带，双骨蒙皮 g↔g+1）；mnt = 基座挂站 0。 */
+/** mesh.bin 分组布局：c0..c6 = 站元胞局部系（刚性）；jr/j0..j5 = 根部/节间
+ *  TPU 连接件（blend = [b0,b1] 裸露带，双骨蒙皮）；mnt = 固定基座。 */
 export interface MeshGroup {{
   name: string;
   verts: number;
@@ -364,5 +394,5 @@ export interface MeshGroup {{
 
 export const MESH_GROUPS: ReadonlyArray<MeshGroup> = {json.dumps(meta)} as const;
 """
-open('src/lib/linkage/tentacle3d-shape.ts', 'w').write(ts)
+open('src/lib/linkage/tentacle3d-shape.ts', 'w', encoding='utf-8', newline='\n').write(ts)
 print('生成 tentacle3d-shape.ts', len(ts), '字节')

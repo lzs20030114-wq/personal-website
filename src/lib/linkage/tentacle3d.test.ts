@@ -4,12 +4,17 @@ import {
   TENDON_DIRS,
   TENTACLE3D,
   TIP3,
+  GUIDE3,
+  PLATE3,
+  ROOTB3,
+  SERVO3,
   SPINE3,
   applyContraction3,
   createTentacle3,
+  makeTentacle3Model,
   tendonVisual3,
 } from './tentacle3d-data';
-import { BALLS, DISC_HOLE_R, ROOT_DISC_AX, SERVOS, TIES } from './tentacle3d-shape';
+import { BALLS, DISC_HOLE_R, MESH_GROUPS, ROOT_DISC_AX, SERVOS, TIES } from './tentacle3d-shape';
 
 // 立体求解器 spec v0.1 / 3D-M1 验收。容差 px，阈值来自实测探针（probe3d，2026-07-10）。
 
@@ -94,6 +99,36 @@ describe('solver3d 内核', () => {
 });
 
 describe('立体肌腱触手', () => {
+  it('根部边界在蓝圈基座截面；红圈节 0 无内部锚点，连接拓扑与普通节间同构', () => {
+    const { def } = makeTentacle3Model();
+    const fixed = def.nodes.flatMap((n, i) => (n.fixed ? [i] : []));
+    expect(fixed.sort((a, b) => a - b)).toEqual(
+      [SERVO3(0), SERVO3(1), SERVO3(2), ROOTB3()].sort((a, b) => a - b),
+    );
+    expect(def.nodes[SPINE3(0)].fixed).not.toBe(true);
+    for (let k = 0; k < 3; k++) {
+      expect(def.nodes[GUIDE3(k, 0)].fixed).not.toBe(true);
+      expect(def.nodes[PLATE3(k, 0, 0)].fixed).not.toBe(true);
+      expect(def.nodes[PLATE3(k, 0, 1)].fixed).not.toBe(true);
+    }
+
+    const hasBar = (a: number, b: number): boolean =>
+      def.bars.some((bar) => (bar.a === a && bar.b === b) || (bar.a === b && bar.b === a));
+    expect(hasBar(ROOTB3(), SPINE3(0))).toBe(true);
+    for (let k = 0; k < 3; k++) {
+      expect(hasBar(SERVO3(k), SPINE3(0))).toBe(true);
+      expect(hasBar(ROOTB3(), GUIDE3(k, 0))).toBe(true);
+      expect(hasBar(SERVO3(k), GUIDE3((k + 1) % 3, 0))).toBe(true);
+      expect(hasBar(SERVO3(k), GUIDE3((k + 2) % 3, 0))).toBe(true);
+    }
+
+    const rootJoint = MESH_GROUPS.find((g) => g.name === 'jr');
+    // jr 与普通 j 组一样存于 A 骨局部系：蓝端面 = 0，绿色节 0 外表面开始
+    // 全权重锁死。其后仍有 6.63mm 网格插入绿色件内部（26.22−19.59）。
+    expect(rootJoint?.blend).toEqual([0, 22.49]);
+    expect(rootJoint?.tris).toBeGreaterThan(0);
+  });
+
   it('静息 = 真机静息几何：全约束天然满足（err 0.000），原地不动', () => {
     const { solver: s } = createTentacle3();
     settle(s, 120);
@@ -142,6 +177,15 @@ describe('立体肌腱触手', () => {
       fold.push((Math.acos(Math.max(-1, Math.min(1, dd))) * 180) / Math.PI);
     }
     const total = fold.reduce((a, b) => a + b, 0);
+    const root = s.nodes[SPINE3(0)];
+    const base = s.nodes[ROOTB3()];
+    const rootLink = dir(base, root);
+    const rootDot =
+      (rootLink[0] * segs[1][0] + rootLink[1] * segs[1][1] + rootLink[2] * segs[1][2]) /
+      (Math.hypot(...rootLink) * Math.hypot(...segs[1]));
+    const rootFlex = (Math.acos(Math.max(-1, Math.min(1, rootDot))) * 180) / Math.PI;
+    expect(Math.hypot(root.x, root.z)).toBeGreaterThan(0.5); // 红圈节中心参与侧移，不是内部定点
+    expect(rootFlex).toBeGreaterThan(5); // 蓝圈→红圈长连接件承担相对弯曲
     expect(total).toBeGreaterThan(70); // 深卷成立（根活化后实测 ≈75–90°）
     expect(total).toBeLessThan(160);
     expect(fold[fold.length - 1]).toBeGreaterThan(fold[1]); // 曲率向软梢集中
