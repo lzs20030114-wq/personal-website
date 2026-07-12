@@ -45,11 +45,11 @@ const cam = new OrbitCamera({
 
 const renderer = new FlatRenderer(canvas);
 // TPU 连接件（j 组）：与方盒榫卯插接、双骨蒙皮（用户纠偏 2026-07-11）。
-// c0 = 节 0 根界面蒙皮（基座固定刚架 ↔ 节 0 刚架，gap = −1）：杆根段留在
-// 固定盘槽内、沿杆渐变到刚体——节 0 绕盘心蜷曲时不从盘槽拔出
+// 注意：**刚性节不做蒙皮**（v7.4 曾给节 0 挂根蒙皮带被用户否决——刚性
+// 材质不能弯；节 0 是纯刚体绕盘旋转，根界面开合是真实铰链行为）
 const joints = MESH_GROUPS.filter((g) => g.blend).map((g) => ({
   name: g.name,
-  gap: g.name === 'jr' || g.name === 'c0' ? -1 : Number(g.name.slice(1)),
+  gap: g.name === 'jr' ? -1 : Number(g.name.slice(1)),
 }));
 // 完整渲染网格（10.7 万三角）从二进制资产异步载入——「直接导入模型」（用户拍板）
 fetch(meshUrl)

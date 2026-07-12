@@ -246,12 +246,10 @@ print('舵机锚（腱序）', servos)
 groups = []
 for i, acc in enumerate(cells):
     v, t = acc.packed()
-    # 节 0 带根界面蒙皮带：杆根段（插在固定盘槽内）随盘不动、沿杆渐变到
-    # 刚体——否则节 0 绕盘心蜷曲时杆件从盘槽拔出（用户实测「又碎了」，
-    # 与节间连接件同病同药）。带 = 盘远端面 → 杆身（球体导件之前）
-    blend0 = [round((disc_x1 or 26.6) - SX[0], 2), -8.0] if i == 0 else None
-    groups.append((f'c{i}', v, t, blend0))
-    print(f'站 {i} 零件 {acc.n} 顶点 {len(v)} 三角 {len(t)} x[{acc.x0:.1f},{acc.x1:.1f}]' + (f' 根蒙皮带 {blend0}' if blend0 else ''))
+    # 节 0 同样是**纯刚体**（用户否决根蒙皮：刚性材质不能弯——它作为
+    # 刚体整体绕盘旋转，柔性只在关节本身，界面开合是真实铰链行为）
+    groups.append((f'c{i}', v, t, None))
+    print(f'站 {i} 零件 {acc.n} 顶点 {len(v)} 三角 {len(t)} x[{acc.x0:.1f},{acc.x1:.1f}]')
 for g, acc in enumerate(joints):
     v, t = acc.packed()
     if acc.n == 0:
