@@ -76,9 +76,11 @@ const TENDON_C: [number, number, number][] = [
 
 function cellFrame(i: number): CellFrame {
   const nodes = sim.solver.nodes;
-  const si = Math.max(0, i); // i = −1 表示基座（挂站 0 刚架）
+  const si = Math.max(0, i);
   const o = nodes[SPINE3(si)];
-  const nA = nodes[SPINE3(Math.max(0, si - 1))];
+  // 节 0 与中间节完全同构：姿态取“前一站→后一站”的中央切线。
+  // 前一站是蓝点 ROOTB3，不再把节 0 自己重复当作前站（旧版原地自转根因）。
+  const nA = si === 0 ? nodes[ROOTB3()] : nodes[SPINE3(si - 1)];
   const nB = nodes[SPINE3(Math.min(N, si + 1))];
   let ux = nB.x - nA.x;
   let uy = nB.y - nA.y;

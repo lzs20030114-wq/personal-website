@@ -7,6 +7,7 @@ import {
   GUIDE3,
   PLATE3,
   ROOTB3,
+  ROOTG3,
   SERVO3,
   SPINE3,
   applyContraction3,
@@ -103,7 +104,9 @@ describe('立体肌腱触手', () => {
     const { def } = makeTentacle3Model();
     const fixed = def.nodes.flatMap((n, i) => (n.fixed ? [i] : []));
     expect(fixed.sort((a, b) => a - b)).toEqual(
-      [SERVO3(0), SERVO3(1), SERVO3(2), ROOTB3()].sort((a, b) => a - b),
+      [ROOTG3(0), ROOTG3(1), ROOTG3(2), SERVO3(0), SERVO3(1), SERVO3(2), ROOTB3()].sort(
+        (a, b) => a - b,
+      ),
     );
     expect(def.nodes[SPINE3(0)].fixed).not.toBe(true);
     for (let k = 0; k < 3; k++) {
@@ -116,10 +119,14 @@ describe('立体肌腱触手', () => {
       def.bars.some((bar) => (bar.a === a && bar.b === b) || (bar.a === b && bar.b === a));
     expect(hasBar(ROOTB3(), SPINE3(0))).toBe(true);
     for (let k = 0; k < 3; k++) {
-      expect(hasBar(SERVO3(k), SPINE3(0))).toBe(true);
+      expect(hasBar(ROOTG3(k), SPINE3(0))).toBe(true);
       expect(hasBar(ROOTB3(), GUIDE3(k, 0))).toBe(true);
-      expect(hasBar(SERVO3(k), GUIDE3((k + 1) % 3, 0))).toBe(true);
-      expect(hasBar(SERVO3(k), GUIDE3((k + 2) % 3, 0))).toBe(true);
+      expect(hasBar(ROOTG3(k), GUIDE3((k + 1) % 3, 0))).toBe(true);
+      expect(hasBar(ROOTG3(k), GUIDE3((k + 2) % 3, 0))).toBe(true);
+      expect(hasBar(ROOTB3(), PLATE3(k, 0, 0))).toBe(true);
+      expect(hasBar(ROOTB3(), PLATE3(k, 0, 1))).toBe(true);
+      // 舵机点只允许出现在 cables 路径，绝不再作为第 0 节结构锚。
+      expect(def.bars.some((bar) => bar.a === SERVO3(k) || bar.b === SERVO3(k))).toBe(false);
     }
 
     const rootJoint = MESH_GROUPS.find((g) => g.name === 'jr');
@@ -184,8 +191,9 @@ describe('立体肌腱触手', () => {
       (rootLink[0] * segs[1][0] + rootLink[1] * segs[1][1] + rootLink[2] * segs[1][2]) /
       (Math.hypot(...rootLink) * Math.hypot(...segs[1]));
     const rootFlex = (Math.acos(Math.max(-1, Math.min(1, rootDot))) * 180) / Math.PI;
-    expect(Math.hypot(root.x, root.z)).toBeGreaterThan(0.5); // 红圈节中心参与侧移，不是内部定点
-    expect(rootFlex).toBeGreaterThan(5); // 蓝圈→红圈长连接件承担相对弯曲
+    expect(Math.hypot(root.x, root.z)).toBeGreaterThan(5); // 红点实测侧移 ≈7.9mm，不再近似定点
+    expect(rootFlex).toBeGreaterThan(8); // 蓝点→第 0 节实测折角 ≈14.9°
+    expect(Math.abs(rootFlex - fold[1])).toBeLessThan(8); // 与后续关节同一连续角度序列
     expect(total).toBeGreaterThan(70); // 深卷成立（根活化后实测 ≈75–90°）
     expect(total).toBeLessThan(160);
     expect(fold[fold.length - 1]).toBeGreaterThan(fold[1]); // 曲率向软梢集中

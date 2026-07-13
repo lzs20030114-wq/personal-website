@@ -51,10 +51,11 @@ export const PLATE3 = (k: number, i: number, end: 0 | 1): number =>
   N_NODES * (1 + N_TENDONS) + (k * N_NODES + i) * 2 + end;
 /** 梢节绑线柱（腱 k 的缆线终点锚，用户圈定 2026-07-11——肌腱不穿梢节中间） */
 export const TIE3 = (k: number): number => N_NODES * (1 + N_TENDONS) + N_TENDONS * N_NODES * 2 + k;
-/** 蓝圈基座上的固定连接截面。SERVO3(k) 同时是三条缆线的固定抽线点和
- *  截面的三个周向约束点；ROOTB3 是该截面轴心。红圈节 0 内部没有固定点。 */
-export const SERVO3 = (k: number): number => TIE3(0) + N_TENDONS + k;
-export const ROOTB3 = (): number => TIE3(0) + 2 * N_TENDONS;
+/** 蓝圈基座上的固定虚拟前一节：ROOTG3 = 与各活动节同方位的三枚结构导点，
+ *  ROOTB3 = 截面轴心。SERVO3 只承担肌腱固定/抽线，不再兼任结构锚。 */
+export const ROOTG3 = (k: number): number => TIE3(0) + N_TENDONS + k;
+export const SERVO3 = (k: number): number => TIE3(0) + 2 * N_TENDONS + k;
+export const ROOTB3 = (): number => TIE3(0) + 3 * N_TENDONS;
 export const TIP3 = TENTACLE3D.segments;
 
 /** 腱孔方位 = 导盘孔位方位 + 60°（用户纠偏 2026-07-11：肌腱穿的是端板上
@@ -157,13 +158,18 @@ export function makeTentacle3Model(): Tentacle3Model {
     const [x, y, z] = TIES[k];
     nodes.push({ x, y, z });
   }
-  // 蓝圈基座固定截面：三个周向点（兼作缆线固定抽线点）+ 截面轴心。
-  // 红圈节 0 内部不放任何 fixed 节点。
+  // 蓝圈基座固定截面 = 虚拟前一节：结构导点使用和 GUIDE3 相同的
+  // 30°/150°/270° 方位。舵机点是另一族 90°/210°/330°，只拉肌腱，
+  // 不能再拿来约束节 0（旧版错开 60°，制造了根部原地扭转）。
+  const rootY = (SERVOS[0][1] + SERVOS[1][1] + SERVOS[2][1]) / 3;
+  for (let k = 0; k < N_TENDONS; k++) {
+    const [x, , z] = CHAINS[k][0];
+    nodes.push({ x, y: rootY, z, fixed: true });
+  }
   for (let k = 0; k < N_TENDONS; k++) {
     const [x, y, z] = SERVOS[k];
     nodes.push({ x, y, z, fixed: true });
   }
-  const rootY = (SERVOS[0][1] + SERVOS[1][1] + SERVOS[2][1]) / 3;
   nodes.push({ x: STATIONS[0][0], y: rootY, z: STATIONS[0][2], fixed: true });
 
   // 杆 rest 一律缺省 = 真实初始距离
@@ -216,15 +222,17 @@ export function makeTentacle3Model(): Tentacle3Model {
     bars.push({ a: t, b: SPINE3(segments - 1) });
     for (let j = 0; j < N_TENDONS; j++) bars.push({ a: t, b: GUIDE3(j, segments) });
   }
-  // 根部长连接件：把蓝圈基座截面当作“虚拟前一节”，完整复用普通节间拓扑。
-  // 中心杆只保持连接长度；固定截面的三个周向点与节 0 构成前后对称锥，
-  // fascia 双手性交叉负责抗扭。弯曲发生在两截面之间，不再围绕红圈内一点。
+  // 根部长连接件：蓝圈固定截面是虚拟站 −1，严格复用普通站 −1↔0 拓扑。
+  // 舵机锚不出现在 bars 中；红圈节 0 的中心、导点、端板全部是活动节点。
   bars.push({ a: ROOTB3(), b: SPINE3(0) });
   for (let k = 0; k < N_TENDONS; k++) {
-    bars.push({ a: SERVO3(k), b: SPINE3(0) });
+    bars.push({ a: ROOTG3(k), b: SPINE3(0) });
     bars.push({ a: GUIDE3(k, 0), b: ROOTB3() });
-    bars.push({ a: SERVO3(k), b: GUIDE3((k + 1) % N_TENDONS, 0), stiffness: fasciaK });
-    bars.push({ a: SERVO3(k), b: GUIDE3((k + 2) % N_TENDONS, 0), stiffness: fasciaK });
+    bars.push({ a: ROOTG3(k), b: GUIDE3((k + 1) % N_TENDONS, 0), stiffness: fasciaK });
+    bars.push({ a: ROOTG3(k), b: GUIDE3((k + 2) % N_TENDONS, 0), stiffness: fasciaK });
+    // 中间节的每个端板孔都连前后两站；i=0 的“前站”就是 ROOTB3。
+    bars.push({ a: PLATE3(k, 0, 0), b: ROOTB3() });
+    bars.push({ a: PLATE3(k, 0, 1), b: ROOTB3() });
   }
   // 与普通背骨 i↔i+2 同义：虚拟基座站（−1）跨过节 0 连到节 1。
   bars.push({ a: ROOTB3(), b: SPINE3(1), stiffness: bendRoot });
