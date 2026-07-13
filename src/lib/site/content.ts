@@ -1,29 +1,34 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import matter from 'gray-matter';
+import { cache } from 'react';
 import { z } from 'zod';
 
 // SITE_SPEC §5 —— 内容池 schema，构建期 fail-fast。
+const CreditSchema = z.object({ name: z.string(), role: z.string() }).strict();
+const VideoSchema = z
+  .object({ src: z.string().min(1), duration: z.number().positive() })
+  .strict();
 const WorkEntrySchema = z.object({
   title: z.string(),
   slug: z.string(),
   date: z.string().regex(/^\d{4}-\d{2}$/), // 只到月（SITE_SPEC §4：archive 无 last-updated）
   selected: z.boolean(),
-  order: z.number().optional(),
+  order: z.number().int().positive().optional(),
   summary: z.string().max(160),
   cover: z.string().optional(),
   role: z.array(z.string()).min(1), // 跨校硬要求（ADMISSIONS_RESEARCH §三.1），必填
-  credits: z.array(z.object({ name: z.string(), role: z.string() })).optional(),
+  credits: z.array(CreditSchema).optional(),
   tools: z.array(z.string()).optional(),
-  video: z.object({ src: z.string(), duration: z.number() }).optional(),
+  video: VideoSchema.optional(),
   status: z.enum(['draft', 'published']),
-});
+}).strict();
 
 export type WorkEntry = z.infer<typeof WorkEntrySchema> & { body: string };
 
 const WORK_DIR = path.join(process.cwd(), 'content', 'work');
 
-export function getAllWork(): WorkEntry[] {
+const loadAllWork = cache((): WorkEntry[] => {
   const dirs = fs
     .readdirSync(WORK_DIR, { withFileTypes: true })
     .filter((d) => d.isDirectory());
@@ -46,7 +51,20 @@ export function getAllWork(): WorkEntry[] {
   if (selected.length !== 4) {
     throw new Error(`selected: true 的条目必须恰为 4 个（当前 ${selected.length}）——见 SITE_SPEC §5`);
   }
+  const seenOrders = new Map<number, string>();
+  for (const entry of entries) {
+    if (entry.order === undefined) continue;
+    const prior = seenOrders.get(entry.order);
+    if (prior) {
+      throw new Error(`order: ${entry.order} 同时被 ${prior} 与 ${entry.slug} 使用`);
+    }
+    seenOrders.set(entry.order, entry.slug);
+  }
   return entries.sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+});
+
+export function getAllWork(): WorkEntry[] {
+  return loadAllWork();
 }
 
 export function getSelectedWork(): WorkEntry[] {
@@ -59,4 +77,8 @@ export function getArchiveWork(): WorkEntry[] {
 
 export function getWorkBySlug(slug: string): WorkEntry | undefined {
   return getAllWork().find((e) => e.slug === slug);
+}
+
+export function getPublishedWorkBySlug(slug: string): WorkEntry | undefined {
+  return getAllWork().find((e) => e.slug === slug && e.status === 'published');
 }

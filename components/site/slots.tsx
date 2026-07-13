@@ -101,21 +101,25 @@ export function InteractiveSlot({
   caption,
   status = 'M3 后挂入',
   size,
+  children,
 }: {
   id: string;
   caption: string;
   status?: SlotStatus;
   size?: SlotSize;
+  children?: ReactNode;
 }) {
   return (
     <figure className={`my-8${sizeClass(size)}`}>
       <div
-        className="figframe flex items-center justify-center border-dashed"
-        style={{ aspectRatio: '700/520', borderStyle: 'dashed' }}
+        className={`figframe ${children ? '' : 'flex items-center justify-center border-dashed'}`}
+        style={{ aspectRatio: '700/520', borderStyle: children ? undefined : 'dashed' }}
       >
-        <span className="mono text-xs" style={{ color: 'var(--trace-blue)' }}>
-          {id} · interactive
-        </span>
+        {children ?? (
+          <span className="mono text-xs" style={{ color: 'var(--trace-blue)' }}>
+            {id} · interactive
+          </span>
+        )}
       </div>
       <figcaption className="mono mt-2 flex items-baseline gap-2 text-xs">
         <span>{id}</span>

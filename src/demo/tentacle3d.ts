@@ -44,7 +44,14 @@ const cam = new OrbitCamera({
   autoYaw: reducedMotion ? 0 : 0.15,
 });
 
-const renderer = new FlatRenderer(canvas);
+let renderError: string | null = null;
+let renderer: FlatRenderer | null = null;
+try {
+  renderer = new FlatRenderer(canvas);
+} catch (error) {
+  renderError = error instanceof Error ? error.message : 'WebGL 初始化失败';
+  canvas.setAttribute('aria-label', `3D preview unavailable: ${renderError}`);
+}
 // TPU 连接件（j 组）：与方盒榫卯插接、双骨蒙皮（用户纠偏 2026-07-11）。
 // 注意：刚性节不做蒙皮；根部长条 jr 与 j0..j5 一样，只有两端之间的 TPU
 // 裸露段弯曲，红圈节 0 本身仍作为刚体整体参与运动。
@@ -53,17 +60,34 @@ const joints = MESH_GROUPS.filter((g) => g.blend).map((g) => ({
   gap: g.name === 'jr' ? -1 : Number(g.name.slice(1)),
 }));
 // 完整渲染网格（10.7 万三角）从二进制资产异步载入——「直接导入模型」（用户拍板）
-fetch(meshUrl)
-  .then((r) => r.arrayBuffer())
+const activeRenderer = renderer;
+if (activeRenderer) fetch(meshUrl)
+  .then((r) => {
+    if (!r.ok) throw new Error(`3D mesh 请求失败（HTTP ${r.status}）`);
+    return r.arrayBuffer();
+  })
   .then((buf) => {
+    const requiredBytes = Math.max(
+      ...MESH_GROUPS.flatMap((g) => [
+        g.vOff + g.verts * 3 * Float32Array.BYTES_PER_ELEMENT,
+        g.iOff + g.tris * 3 * (g.idx32 ? Uint32Array.BYTES_PER_ELEMENT : Uint16Array.BYTES_PER_ELEMENT),
+      ]),
+    );
+    if (buf.byteLength < requiredBytes) {
+      throw new Error(`3D mesh 数据不完整（${buf.byteLength}/${requiredBytes} bytes）`);
+    }
     for (const g of MESH_GROUPS) {
       const verts = new Float32Array(buf, g.vOff, g.verts * 3);
       const idx = g.idx32
         ? new Uint32Array(buf, g.iOff, g.tris * 3)
         : new Uint16Array(buf, g.iOff, g.tris * 3);
-      if (g.blend) renderer.addSkinnedMesh(g.name, bakeSkinned(verts, idx, g.blend[0], g.blend[1]));
-      else renderer.addMesh(g.name, bakeIndexed(verts, idx));
+      if (g.blend) activeRenderer.addSkinnedMesh(g.name, bakeSkinned(verts, idx, g.blend[0], g.blend[1]));
+      else activeRenderer.addMesh(g.name, bakeIndexed(verts, idx));
     }
+  })
+  .catch((error: unknown) => {
+    renderError = error instanceof Error ? error.message : '3D mesh 载入失败';
+    canvas.setAttribute('aria-label', `3D preview incomplete: ${renderError}`);
   });
 
 // 线色（纸墨系）：脊柱 / 三腱
@@ -141,6 +165,10 @@ const ROOT_FRAME: CellFrame = {
 const ROOT_DY = STATIONS[0][1] - ROOT_FRAME.o.y;
 
 function render(): void {
+  if (!renderer) {
+    hudEl.textContent = `3D preview unavailable · ${renderError ?? 'WebGL 不可用'}`;
+    return;
+  }
   const nodes = sim.solver.nodes;
   renderer.beginFrame(cam);
   // 体：7 胞（活动）+ 基座（常量静息刚架，锚定不动）
@@ -171,7 +199,9 @@ function render(): void {
     renderer.drawLines(segs, TENDON_C[k]);
   }
   const c = sliders.map((s) => `${s.value}%`).join(' / ');
-  hudEl.textContent = `T1/T2/T3 ${c}   err ${sim.solver.maxError().toFixed(2)} px   ×${cam.zoom.toFixed(2)}`;
+  hudEl.textContent = renderError
+    ? `3D preview incomplete · ${renderError}`
+    : `T1/T2/T3 ${c}   err ${sim.solver.maxError().toFixed(2)} px   ×${cam.zoom.toFixed(2)}`;
 }
 
 // —— 肌肉：临界阻尼缓动 ×3 + 联动组
@@ -240,6 +270,10 @@ canvas.addEventListener(
 // —— rAF 主循环（物理 dt clamp 在 solver3d.step 内部）
 let last = performance.now();
 function frameLoop(now: number): void {
+  if (!renderer) {
+    render();
+    return;
+  }
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
   cam.tick(dt);

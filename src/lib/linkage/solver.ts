@@ -1,4 +1,5 @@
 import type { Bar, DynamicsConfig, LinkageDef, NodeState, Point } from './types';
+import { consumeFixedSteps } from './fixed-step';
 
 export interface IterationSnapshot {
   positions: Point[];
@@ -46,6 +47,8 @@ export class LinkageSolver {
   /** Verlet 上一子步位置（仅动力学开启时存在）。 */
   private readonly prevX: number[] = [];
   private readonly prevY: number[] = [];
+  /** 固定步余时：跨渲染帧保留，避免 90/144Hz 下物理时钟变快或变慢。 */
+  private timeRemainder = 0;
 
   constructor(def: LinkageDef, opts?: { dynamics?: DynamicsConfig }) {
     this.ns = def.nodes.map((n) => ({ x: n.x, y: n.y, fixed: n.fixed ?? false }));
@@ -95,9 +98,13 @@ export class LinkageSolver {
       return;
     }
     if (dt <= 0) return;
+    const clock = consumeFixedSteps(this.timeRemainder, dt, SUBSTEP, MAX_SUBSTEPS);
+    this.timeRemainder = clock.remainder;
+    if (clock.steps === 0) return;
     const { gravity, damping } = this.dyn;
-    const n = Math.max(1, Math.min(MAX_SUBSTEPS, Math.round(dt / SUBSTEP)));
-    for (let s = 0; s < n; s++) {
+    // MAX_DRAG_REACH 是渲染帧预算：一帧只钳一次，不能在每个物理子步重新向前滚动。
+    this.clampDragTarget();
+    for (let s = 0; s < clock.steps; s++) {
       for (let i = 0; i < this.ns.length; i++) {
         const node = this.ns[i];
         if (node.fixed) {
@@ -112,7 +119,7 @@ export class LinkageSolver {
         node.x += vx + gravity.x * SUBSTEP * SUBSTEP;
         node.y += vy + gravity.y * SUBSTEP * SUBSTEP;
       }
-      this.iterate(sweeps);
+      for (let i = 0; i < sweeps; i++) this.sweepOnce();
     }
   }
 

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { LinkageFigure } from '../components/linkage/LinkageFigure';
 import { getSelectedWork } from '../src/lib/site/content';
 
 /**
@@ -17,14 +18,9 @@ export default function Home() {
           </p>
         </div>
         <figure>
-          {/* FIG.01：连杆签名件，M3 后由 LinkageFigure 挂入（SITE_SPEC §7）。题栏含入口——hero 是门。 */}
-          <div
-            className="figframe flex items-center justify-center"
-            style={{ aspectRatio: '700/520' }}
-          >
-            <span className="mono text-xs" style={{ color: 'var(--trace-blue)' }}>
-              FIG. 01 · interactive linkage · M3 后挂入
-            </span>
+          {/* FIG.01：签名件是通往 case study 的门，不承担目录角色。 */}
+          <div className="figframe" style={{ aspectRatio: '700/520' }}>
+            <LinkageFigure />
           </div>
           <figcaption
             className="mono mt-2 flex items-baseline justify-between text-xs"

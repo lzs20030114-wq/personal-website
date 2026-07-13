@@ -3,6 +3,8 @@
 // 2D 内核是封盘资产，本文件与其完全平行、互不引用数据类型。
 // 零依赖：不得引用 React / DOM / window。
 
+import { consumeFixedSteps } from './fixed-step';
+
 export interface Vec3 {
   x: number;
   y: number;
@@ -68,6 +70,8 @@ export class LinkageSolver3D {
   private readonly prevX: number[] = [];
   private readonly prevY: number[] = [];
   private readonly prevZ: number[] = [];
+  /** 固定步余时：跨渲染帧保留，避免高刷新率改变动力学速度。 */
+  private timeRemainder = 0;
 
   constructor(def: Linkage3Def, opts?: { dynamics?: Dynamics3Config }) {
     this.ns = def.nodes.map((n) => ({ x: n.x, y: n.y, z: n.z, fixed: n.fixed ?? false }));
@@ -185,10 +189,10 @@ export class LinkageSolver3D {
       return;
     }
     if (dt <= 0) return;
-    const clamped = Math.min(dt, DT_MAX);
     const { gravity, damping } = this.dyn;
-    const n = Math.max(1, Math.min(MAX_SUBSTEPS, Math.round(clamped / SUBSTEP)));
-    for (let s = 0; s < n; s++) {
+    const clock = consumeFixedSteps(this.timeRemainder, Math.min(dt, DT_MAX), SUBSTEP, MAX_SUBSTEPS);
+    this.timeRemainder = clock.remainder;
+    for (let s = 0; s < clock.steps; s++) {
       for (let i = 0; i < this.ns.length; i++) {
         const node = this.ns[i];
         if (node.fixed) {

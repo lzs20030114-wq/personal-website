@@ -1,0 +1,3 @@
+# 可复现的模型提取环境：使用 CPython 3.13（rhino3dm 8.17.0 提供对应 wheel）。
+rhino3dm==8.17.0
+numpy==2.5.1

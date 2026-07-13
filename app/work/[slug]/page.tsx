@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { MDXRemote } from 'next-mdx-remote/rsc';
-import { getAllWork, getWorkBySlug } from '../../../src/lib/site/content';
+import { getAllWork, getPublishedWorkBySlug } from '../../../src/lib/site/content';
 import {
   ConceptCard,
   ConceptGrid,
@@ -11,6 +11,7 @@ import {
   VideoSlot,
 } from '../../../components/site/slots';
 import { DisclosureSlot, MetaRail } from '../../../components/site/RoleBlock';
+import { LinkageFigure } from '../../../components/linkage/LinkageFigure';
 
 export function generateStaticParams() {
   return getAllWork()
@@ -18,10 +19,14 @@ export function generateStaticParams() {
     .map((w) => ({ slug: w.slug }));
 }
 
+/** 作品路由只允许构建期列出的 published slug；draft/未知 slug 不做按需渲染。 */
+export const dynamicParams = false;
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const entry = getWorkBySlug(slug);
-  return { title: entry?.title ?? 'Work', description: entry?.summary };
+  const entry = getPublishedWorkBySlug(slug);
+  if (!entry) notFound();
+  return { title: entry.title, description: entry.summary };
 }
 
 const mdxComponents = {
@@ -32,13 +37,14 @@ const mdxComponents = {
   ProcessAside,
   ConceptCard,
   ConceptGrid,
+  LinkageFigure,
 };
 
 /** case study 三区（版式 v2）：左粘性元数据栏 + 正文列（66ch flush-left）+ 边缘列。 */
 export default async function WorkPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const entry = getWorkBySlug(slug);
-  if (!entry || entry.status !== 'published') notFound();
+  const entry = getPublishedWorkBySlug(slug);
+  if (!entry) notFound();
 
   return (
     <div className="sheet">

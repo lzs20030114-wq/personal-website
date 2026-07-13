@@ -97,6 +97,16 @@ describe('solver3d 内核', () => {
     expect(s.nodes[0].y - y0).toBeLessThan(7);
     expect(finite(s)).toBe(true);
   });
+
+  it.each([30, 60, 90, 120, 144])('%iHz：固定步累计器让 1 秒自由落体等时', (fps) => {
+    const s = new LinkageSolver3D(
+      { nodes: [{ x: 0, y: 0, z: 0 }], bars: [] },
+      { dynamics: { gravity: { x: 0, y: 100, z: 0 }, damping: 1 } },
+    );
+    for (let f = 0; f < fps; f++) s.step(1 / fps, 1);
+    expect(s.nodes[0].y).toBeGreaterThan(49);
+    expect(s.nodes[0].y).toBeLessThan(52);
+  });
 });
 
 describe('立体肌腱触手', () => {

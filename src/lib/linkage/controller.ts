@@ -78,12 +78,17 @@ export class LinkageController {
   private omegaEst = 0;
   /** release 模式的当前角速度。 */
   private omegaRel = 0;
+  /** reduced-motion 下动力学初始冻结；用户直接交互后才允许时间推进。 */
+  private dynamicMotionActive: boolean;
 
   constructor(
     private readonly solver: LinkageSolver,
     opts: ControllerOpts,
   ) {
     this.driver = opts.driver ?? null;
+    if (solver.dynamic && this.driver) {
+      throw new Error('LinkageController 暂不支持 dynamics 与 driver 同时启用');
+    }
     this.hitRadius = opts.hitRadius ?? 24;
     this.dtMax = opts.dtMax ?? 0.05;
     this.dragSweeps = opts.dragSweeps ?? 36;
@@ -95,6 +100,7 @@ export class LinkageController {
     this.relSnapEps = opts.release?.snapEps ?? 0.05;
     this._theta = opts.theta0 ?? -Math.PI / 3;
     this._mode = this.driver && !this.reducedMotion ? 'spin' : 'idle';
+    this.dynamicMotionActive = !this.reducedMotion;
   }
 
   get mode(): Mode {
@@ -110,6 +116,11 @@ export class LinkageController {
     if (this._mode === 'spin' && this.driver) return this.driver.omega;
     if (this._mode === 'release') return this.omegaRel;
     return 0;
+  }
+
+  /** 滑块等非指针 UI 调用：reduced-motion 下只在用户主动操作后启动动力学。 */
+  activateDynamics(): void {
+    if (this.solver.dynamic) this.dynamicMotionActive = true;
   }
 
   /** 仅在 driver 存在的模式路径中调用。 */
@@ -137,6 +148,7 @@ export class LinkageController {
     this.activePointer = pointerId;
     this.solver.beginDrag(best);
     this.solver.dragTo(x, y);
+    this.activateDynamics();
     this._mode = 'drag';
     this.omegaEst = 0;
     if (this.driver) this._theta = this.crankAngle(); // 拖拽中 θ 跟踪当前姿态，供角速度估计差分
@@ -177,6 +189,7 @@ export class LinkageController {
   frame(dt: number): void {
     const clamped = Math.min(dt, this.dtMax);
     if (this.solver.dynamic) {
+      if (!this.dynamicMotionActive) return;
       // 动力学机构（SPEC §3.6）：时间总在流逝——idle 的链条也在摆。
       // drag 的软目标注入发生在 step 内部的 iterate 里，路径不分叉。
       this.solver.step(clamped, this._mode === 'drag' ? this.dragSweeps : this.spinSweeps);

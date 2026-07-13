@@ -83,6 +83,7 @@ function render(): void {
 
 // —— 收缩控制（GH contraction 滑块的对应物）
 function applySliders(): void {
+  controller.activateDynamics();
   applyContraction(solver, left, Number(sliderL.value) / 100);
   applyContraction(solver, right, Number(sliderR.value) / 100);
 }

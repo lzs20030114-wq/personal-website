@@ -48,7 +48,7 @@
 - **Session 2 / M1 完成**：`src/lib/linkage/`（solver / presets / trace）+ 单测全绿 + typecheck 干净 + vanilla 验收页（`npm run dev`，脚手架落地后改名 `npm run demo`——见 SITE_SPEC §2）。实测数字与两处 spec 修订均已回填 LINKAGE_SPEC（数值一律以彼为准，此处不复制）。
 - **Session 3（M2）关闭**：交互状态机抽为纯类 `LinkageController`（零 DOM、驱动参数化，vanilla 页与 React 封装共用）+ 23 项测试全绿 + 浏览器验证（含 mobile 视口缩放拖拽）。**真机触屏手测通过（2026-07-07，用户在 Vercel 部署页实测：拖拽/双指/切后台/暴力甩均无异常）**。已部署：GitHub `personal-website`（私有）→ Vercel 自动部署，push 即上线。
 - **M3+M4 关闭（2026-07-10，用户真机手感拍板通过）**：release 阻尼（继承甩动末速、指数松弛接回，默认参数即定版，τ=0 = 论点实验硬切开关）+ 耦合曲线实时描绘 + 工程标注/题栏 + 架构注记入档。36 项测试绿。**四杆连杆按 SPEC §8.1 全里程碑完成，正式封盘：只修 bug、不加功能、不主动提议打磨。**
-- **网站 S1+S3 完成（2026-07-08）**：Next.js 16 脚手架落地（`npm run dev`=站点 :3000，`npm run demo`=连杆台架 :5173）。内容池（zod 校验、selected 恒 4 机器强制）+ 四路由 + 占位插槽系统（FigSlot/VideoSlot/InteractiveSlot/IntentNote/ProcessAside/概念卡）+ 轮回机器八段骨架页（结构=案例页骨架，论证=总框架，素材全为带状态插槽，正文全为意图占位——**不代写正文**）。构建/typecheck/23 测试全绿。vercel.json 声明 nextjs 框架，push 即部署。余项：S2（连杆 M3 后挂 FIG.01/FIG.12）、S4（OG/check-links）。
+- **网站 S1+S2+S3 完成（2026-07-13）**：Next.js 16 脚手架、内容池、四路由、占位插槽系统与轮回机器八段骨架页就位；正式 React `LinkageFigure` 复用 solver/controller，已挂主页 FIG.01 与案例页 FIG.12，含 SSR 首帧、IntersectionObserver 停启和 reduced-motion。正文仍全为作者意图占位，模型不代写。余项：S4（OG/check-links）。
 - **拱环求解器实例完成（2026-07-10）**：真机 S4 环（角化剪式拱 + 曲柄滑块）从 `模型求解器参考/求解器结构演示.3dm` 提取为求解器实例——**内核零修改**（导轨=超长杆近似、扁板加支撑节点防镜像隧穿），复用 controller，台架 `/arch.html`（`npm run demo`），`arch.test.ts` 7 项 + 全套 30 项绿。决策与实测见 轮回机器_拱环求解器.md。触手模拟明确不做（软体，范围外）。
 - **网站 review 完成（2026-07-10）**：四路外部调研（获奖站/开源架构/动效/叙事）验证现有方向，无需推翻。产出 SITE_REVIEW_2026-07.md：§二 代码发现、§九 弱模型工单（11 条，随时可派）。三项拍板已通过并入 SITE_SPEC 修订（§1 hover/active 最小集放宽、§4 about colophon 席位、§8 字体换自托管 Source Serif 4）。
 - **台架静态上线（2026-07-10）**：`build`=`vite build && next build`（SITE_SPEC §2 修订），台架双页随 Vercel 部署上线——线上 `/demo/`=四杆、`/demo/arch.html`=拱环（产物落 `public/demo/`，.gitignore，构建时生成）。本地 `npm run demo` 行为不变。用户拍板推 master 上生产。
@@ -66,7 +66,7 @@
 - 三层，上层只调下层公开 API：`solver.ts`（纯数学，零依赖）→ `controller.ts`（交互状态机，零 DOM）→ 台架页 `src/demo/*.ts`（DOM 接线与 SVG 渲染）/ 未来 React 封装（SITE_SPEC S2）。
 - 加新机构 = 新数据实例 + 台架页，**不改内核**（拱环先例：`arch-data.ts` + `arch.ts` + `arch.html`）。
 - 手感参数全部集中在 `ControllerOpts`（driver / release / sweeps / hitRadius），渲染层不藏参数；数值以 LINKAGE_SPEC 为准。
-- **3D 线同构（2026-07-10 复用化拍板）**：`solver3d`（3D 内核）→ `camera3d` OrbitCamera + `scene3d` projectScene + `motion` CriticallyDamped（公共装备，零 DOM 有测试）→ 台架页。加新 3D 机构 = 新数据实例 + 台架页，**不改装备**。详见 轮回机器_立体求解器spec.md §1.5。
+- **3D 线同构（2026-07-10 复用化拍板）**：`solver3d`（3D 内核）→ `camera3d` OrbitCamera + `motion` CriticallyDamped（零 DOM 公共装备）+ `gl3d` FlatRenderer（唯一浏览器渲染边界）→ 台架页。旧 `scene3d` 画家算法路线已退役删除。加新 3D 机构 = 新数据实例 + 台架页，**不改装备**。详见 轮回机器_立体求解器spec.md §1.5。
 
 ## 可用工具
 

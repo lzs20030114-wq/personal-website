@@ -66,6 +66,39 @@ describe('内核：B 级软约束 + C 级门控 Verlet（回归与单元）', ()
     expect(prevY).toBeLessThan(55.5);
   });
 
+  it.each([30, 60, 90, 120, 144])('%iHz：固定步累计器让 1 秒自由落体等时', (fps) => {
+    const s = new LinkageSolver(
+      { nodes: [{ x: 0, y: 0 }], bars: [] },
+      { dynamics: { gravity: { x: 0, y: 100 }, damping: 1 } },
+    );
+    for (let f = 0; f < fps; f++) s.step(1 / fps, 1);
+    expect(s.nodes[0].y).toBeGreaterThan(49);
+    expect(s.nodes[0].y).toBeLessThan(52);
+  });
+
+  it('reduced-motion：动力学初始冻结，用户激活后才推进', () => {
+    const s = new LinkageSolver(
+      { nodes: [{ x: 0, y: 0 }], bars: [] },
+      { dynamics: { gravity: { x: 0, y: 100 }, damping: 1 } },
+    );
+    const ctl = new LinkageController(s, { reducedMotion: true });
+    ctl.frame(H);
+    expect(s.nodes[0].y).toBe(0);
+    ctl.activateDynamics();
+    ctl.frame(H);
+    expect(s.nodes[0].y).toBeGreaterThan(0);
+  });
+
+  it('dynamics + driver 的未支持组合在构造期明确失败', () => {
+    const s = new LinkageSolver(
+      { nodes: [{ x: 0, y: 0 }], bars: [] },
+      { dynamics: { gravity: { x: 0, y: 0 }, damping: 1 } },
+    );
+    expect(
+      () => new LinkageController(s, { driver: { anchor: 0, tip: 0, radius: 1, omega: 1 } }),
+    ).toThrow(/dynamics.*driver/);
+  });
+
   it('setRest：运行时改原长，投影向新 rest 收敛（收缩驱动的内核依据）', () => {
     const s = new LinkageSolver({
       nodes: [

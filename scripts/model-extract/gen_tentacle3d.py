@@ -11,7 +11,9 @@ x 范围**判定为连接件、单独成组（j 组），blend = 两侧方盒端
 对 j 组做双骨蒙皮（插接段权重恒 0/1 = 随盒刚动，裸露段平滑过渡）。
 v3 的按质心整箱分桶会把连接件塞进单侧盒里，弯曲时从对侧插槽拔出（用户否决）。
 坐标：站局部系 [沿臂 ax, 腱1 方向 u, 副法向 w]；单位 mm。
-用法：python3 scripts/model-extract/gen_tentacle3d.py
+环境：CPython 3.13 + scripts/model-extract/requirements.txt（版本锁定，避免重生成漂移）
+用法：python3 -m pip install -r scripts/model-extract/requirements.txt
+      python3 scripts/model-extract/gen_tentacle3d.py
 """
 import rhino3dm as r
 import json, math
