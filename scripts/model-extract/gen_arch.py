@@ -1,59 +1,59 @@
 # -*- coding: utf-8 -*-
-"""ring_S4_shell.json -> src/lib/linkage/arch-data.ts
-坐标变换：x_px = 350 + S*x_mm ; y_px = 430 - S*y_mm（SVG y 向下）。
-驱动链：轮心(0,0)->pin(0,12) 曲柄；pin->apex(joint12) 中央杆。
+"""ring_S4.json -> src/lib/linkage/arch-data.ts
+坐标变换：x_px = 350 + 1.9*x_mm ; y_px = 430 - 1.9*y_mm（SVG y 向下）。
+驱动链：轮心(0,0)->pin(0,28.0965) 曲柄；pin->apex(joint6) 中央杆。
 导轨/脚槽 = 超长杆到远锚点（半径 1e6 px 的圆局部近似直线，偏差 <0.01px）。
 
-脚部边界以最初的「伸缩外壳1.3dm」S4 截面为准：四个脚点都参与水平滑动；
-每侧轨道从完全展开时的外脚位置向中心延伸。原模型截面中心 x=158.745mm，
-外脚 x=76.022/241.467mm，轨道内端距中心 12mm；杆系、驱动和轨道全部取自
-同一个原始 S4 截面，不再混用「求解器结构演示.3dm」的展开态。
+脚部边界以最初的「伸缩外壳1.3dm」为准：外侧两脚是地面固定铰，内侧两脚在
+各 38mm 的水平槽内向心滑动。「求解器结构演示.3dm」驱动层的 -170.48…+170.48mm
+是整段地线，不是两条脚槽的端点。
 """
 import json, math, io, sys
 from pathlib import Path
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-S, CX, GY = 3.643287, 350.0, 430.0   # 原始 S4 外脚映射到既有 700px 画幅
+S, CX, GY = 1.9, 350.0, 430.0        # scale, center-x, ground-y (px)
 GUIDE = 1_000_000.0                   # 导轨模拟半径
-APEX_J = 12
-FEET_J = [18, 20, 1, 3]              # 左外、左内、右外、右内；四点都滑动
-SOURCE_SLOT_INNER_OFFSET_MM = 12.0
-PIN_MM = (0.0, 12.0)                  # 伸缩外壳1.3dm S4 驱动层实测
-R_MM = 12.0                           # 轮半径 = |pin - center|
+APEX_J = 6
+FIXED_FEET_J = [16, 19]               # 最初设计：外侧地面固定铰
+SLIDER_FEET_J = [18, 21]              # 最初设计：内侧两脚向心滑动
+FEET_J = [16, 18, 19, 21]
+SLOT_LENGTH_MM = 38.0                 # 伸缩外壳1.3dm 原始左/右槽长
+PIN_MM = (0.0, 28.0965)               # 曲柄销（驱动层实测）
+R_MM = 28.0965                        # 轮半径 = |pin - center|
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
-d = json.load(open(HERE / "ring_S4_shell.json", encoding="utf-8"))
+d = json.load(open(HERE / "ring_S4.json", encoding="utf-8"))
 joints = d["joints"]                  # 23 个 (x_mm, y_mm)
 
 def px(p):
     return (round(CX + S * p[0], 4), round(GY - S * p[1], 4))
 
 nodes = [{"x": x, "y": y} for (x, y) in (px(j) for j in joints)]
+for f in FIXED_FEET_J:
+    nodes[f]["fixed"] = True
 
 PIN = len(nodes)                      # 23
 nodes.append({"x": px(PIN_MM)[0], "y": px(PIN_MM)[1]})
 CENTER = len(nodes)                   # 24
 nodes.append({"x": CX, "y": GY, "fixed": True})
 
-# 远锚点：apex 水平向 +x 远方；四个滑脚都用竖直向 +y 的远锚点
+# 远锚点：apex 水平向 +x 远方；仅内侧滑脚用竖直向 +y 的远锚点
 apex_px = px(joints[APEX_J])
 APEX_ANCHOR = len(nodes)              # 25
 nodes.append({"x": round(CX + GUIDE, 4), "y": apex_px[1], "fixed": True})
 FOOT_ANCHORS = []
-for f in FEET_J:
+for f in SLIDER_FEET_J:
     fp = px(joints[f])
     FOOT_ANCHORS.append(len(nodes))
     nodes.append({"x": fp[0], "y": round(GY + GUIDE, 4), "fixed": True})
 
-# 每侧共用一条向心轨道。外端取完全展开时的外脚；内端按原始 S4 截面比例映射。
-left_outer_x = px(joints[18])[0]
-right_outer_x = px(joints[1])[0]
-slot_inner_offset_px = round(SOURCE_SLOT_INNER_OFFSET_MM * S, 4)
-SLOT_RANGES = [
-    [left_outer_x, round(CX - slot_inner_offset_px, 4)],
-    [round(CX + slot_inner_offset_px, 4), right_outer_x],
-]
+slot_px = round(SLOT_LENGTH_MM * S, 4)
+SLOT_RANGES = []
+for f in SLIDER_FEET_J:
+    x = px(joints[f])[0]
+    SLOT_RANGES.append([x, round(x + slot_px, 4)] if x < CX else [round(x - slot_px, 4), x])
 
 def dist(i, j):
     a, b = nodes[i], nodes[j]
@@ -111,7 +111,7 @@ for js in tris:
 add_bar(CENTER, PIN, "crank")
 add_bar(PIN, APEX_J, "rod")
 add_bar(APEX_J, APEX_ANCHOR, "guide")
-for f, fa in zip(FEET_J, FOOT_ANCHORS):
+for f, fa in zip(SLIDER_FEET_J, FOOT_ANCHORS):
     add_bar(f, fa, "guide")
 
 # 三角朝向符号（初始解支不变量）
@@ -134,14 +134,14 @@ def fmt_bar(b):
 
 ts = io.StringIO()
 ts.write(
-"""// arch-data.ts —— 轮回机器伏丘壳体 S4 环运动学骨架，机器生成。
-// 来源：模型求解器参考/伸缩外壳1.3dm 的原始 S4 截面（objects 97..148，2026-07-16 复核，
-// 生成脚本 scripts/model-extract/gen_arch.py）。坐标 = viewBox px：x = 350 + 3.643287·x_mm，y = 430 − 3.643287·y_mm。
-// 结构：14 块角化三角板（刚性三角 = 3 杆）+ 23 销关节 + 曲柄(R*=12mm)→中央杆→拱顶，
-// 四个脚点都参与水平滑动；每侧共用一条从完全展开外脚位向中心延伸的轨道。顶部竖直导轨 + 两条脚轨
+"""// arch-data.ts —— 轮回机器伏丘壳体 S4 环（M3 × 1.000）运动学骨架，机器生成。
+// 来源：模型求解器参考/求解器结构演示.3dm 图层「摊开骨架::S4_M3x1.000」（2026-07-10 提取，
+// 生成脚本 scripts/model-extract/gen_arch.py）。坐标 = viewBox px：x = 350 + 1.9·x_mm，y = 430 − 1.9·y_mm。
+// 结构：14 块角化三角板（刚性三角 = 3 杆）+ 23 销关节 + 曲柄(R*=28.1mm)→中央杆(≈L*)→拱顶，
+// 外侧两脚是地面固定铰；内侧两脚在各 38mm 的向心水平槽内滑动。顶部竖直导轨 + 两脚水平槽
 // 用「超长杆到远锚点」模拟（半径 1e6px 的圆弧局部逼近直线，
 // 行程内偏差 < 0.01px——Watt 直线机构同理；求解器内核零修改，范围锁死内）。
-// 四脚位置、轨道和驱动链全部取自同一 S4 截面，不再混用「求解器结构演示.3dm」的展开态。
+// 脚部边界取自「伸缩外壳1.3dm」；驱动层 ±170.48mm 整段地线不再误作脚槽。
 // 手改无效——改 scripts/model-extract/gen_arch.py 重新生成（依赖 pip: rhino3dm；流程见该目录脚本头注）。
 
 import type { LinkageDef } from './types';
@@ -151,10 +151,9 @@ ts.write(f"export const ARCH_PIN = {PIN};\n")
 ts.write(f"export const ARCH_CENTER = {CENTER};\n")
 ts.write(f"export const ARCH_APEX = {APEX_J};\n")
 ts.write(f"export const ARCH_FEET = {FEET_J} as const;\n")
-ts.write(f"export const ARCH_SLIDER_FEET = {FEET_J} as const;\n")
+ts.write(f"export const ARCH_FIXED_FEET = {FIXED_FEET_J} as const;\n")
+ts.write(f"export const ARCH_SLIDER_FEET = {SLIDER_FEET_J} as const;\n")
 ts.write(f"export const ARCH_SLOT_RANGES: ReadonlyArray<readonly [number, number]> = {json.dumps(SLOT_RANGES)};\n")
-ts.write(f"export const ARCH_SCALE = {S};\n")
-ts.write(f"export const ARCH_GROUND_Y = {GY};\n")
 ts.write(f"export const ARCH_CRANK_RADIUS = {round(dist(CENTER, PIN), 4)};\n")
 ts.write(f"export const GUIDE_REST = {GUIDE};\n")
 ts.write(f"/** 支撑节点（渲染跳过；每板一个，K4 加固，见头注）。 */\n")

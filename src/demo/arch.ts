@@ -4,6 +4,7 @@ import {
   ARCH_CRANK_RADIUS,
   ARCH_DRAG_SWEEPS,
   ARCH_DRIVER,
+  ARCH_FIXED_FEET,
   ARCH_PIN,
   ARCH_SLIDER_FEET,
   ARCH_SLOT_RANGES,
@@ -15,7 +16,7 @@ import {
 } from '../lib/linkage/arch';
 import { LinkageController } from '../lib/linkage/controller';
 
-// 轮回机器伏丘壳体 S4 环台架（真机机构的求解器实例，几何提取自最初的 伸缩外壳1.3dm）。
+// 轮回机器伏丘壳体 S4 环台架（真机机构的求解器实例，几何提取自 求解器结构演示.3dm）。
 // 与 main.ts（四杆台架）同构：状态机/交互规则全在 LinkageController，本文件只做
 // DOM 接线与渲染。渲染只画物理件（板面/驱动链/关节）；导轨模拟长杆与支撑节点不画。
 
@@ -32,7 +33,7 @@ const controller = new LinkageController(solver, {
   dragSweeps: ARCH_DRAG_SWEEPS,
 });
 
-/** 可抓手柄：拱顶（呼吸）、四个水平滑脚、曲柄销（手动盘轮）。
+/** 可抓手柄：拱顶（呼吸）、内侧两滑脚、曲柄销（手动盘轮）。外侧两脚是地面固定铰；
  * 中段销不设手柄——
  * 扁板对法向按压敏感（arch-data 头注），把拖拽入口留在机构自由度的方向上。 */
 const HANDLES = new Set<number>([ARCH_APEX, ...ARCH_SLIDER_FEET, ARCH_PIN]);
@@ -57,7 +58,7 @@ rail.setAttribute('x2', String(c.x));
 rail.setAttribute('y2', '316');
 const slotL = el('line', 'slot');
 const slotR = el('line', 'slot');
-// 伸缩外壳1.3dm 的 S4 边界：每侧轨道从完全展开外脚位向中心延伸。
+// 伸缩外壳1.3dm 原始边界：内侧滑脚从全开位向心走 38mm。
 slotL.setAttribute('x1', String(ARCH_SLOT_RANGES[0][0]));
 slotL.setAttribute('y1', '430');
 slotL.setAttribute('x2', String(ARCH_SLOT_RANGES[0][1]));
@@ -80,6 +81,11 @@ const centerDot = el('circle', 'joint-fixed');
 centerDot.setAttribute('r', '6');
 centerDot.setAttribute('cx', String(c.x));
 centerDot.setAttribute('cy', String(c.y));
+const fixedFootDots = ARCH_FIXED_FEET.map(() => {
+  const d = el('circle', 'joint-fixed');
+  d.setAttribute('r', '6');
+  return d;
+});
 const handleEls = [...HANDLES].map((i) => {
   const h = el('circle', 'joint-handle');
   h.setAttribute('r', '7');
@@ -111,13 +117,18 @@ function render(): void {
     pinDots[i].setAttribute('cx', String(solver.nodes[i].x));
     pinDots[i].setAttribute('cy', String(solver.nodes[i].y));
   }
+  fixedFootDots.forEach((d, i) => {
+    const n = solver.nodes[ARCH_FIXED_FEET[i]];
+    d.setAttribute('cx', String(n.x));
+    d.setAttribute('cy', String(n.y));
+  });
   handleEls.forEach((h) => {
     const n = solver.nodes[Number(h.dataset.node)];
     h.setAttribute('cx', String(n.x));
     h.setAttribute('cy', String(n.y));
   });
   const phi = ((Math.atan2(pin.y - c.y, pin.x - c.x) * 180) / Math.PI + 450) % 360;
-  hud.textContent = `FIG. 12   S4 ring   φ = ${phi.toFixed(1)}°   apex = ${apexHeightMM(solver).toFixed(1)} mm   maxError = ${solver.maxError().toFixed(2)} px   [${controller.mode}]`;
+  hud.textContent = `FIG. 12   S4 ring (M3×1.000)   φ = ${phi.toFixed(1)}°   apex = ${apexHeightMM(solver).toFixed(1)} mm   maxError = ${solver.maxError().toFixed(2)} px   [${controller.mode}]`;
 }
 
 // —— 指针接线（SPEC §4.3）：CTM 逆变换 + 手柄过滤
