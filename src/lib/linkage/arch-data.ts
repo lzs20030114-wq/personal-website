@@ -2,8 +2,10 @@
 // 来源：模型求解器参考/求解器结构演示.3dm 图层「摊开骨架::S4_M3x1.000」（2026-07-10 提取，
 // 生成脚本 scripts/model-extract/gen_arch.py）。坐标 = viewBox px：x = 350 + 1.9·x_mm，y = 430 − 1.9·y_mm。
 // 结构：14 块角化三角板（刚性三角 = 3 杆）+ 23 销关节 + 曲柄(R*=28.1mm)→中央杆(≈L*)→拱顶，
-// 顶部竖直导轨 + 四脚水平槽用「超长杆到远锚点」模拟（半径 1e6px 的圆弧局部逼近直线，
+// 外侧两脚是地面固定铰；内侧两脚在各 38mm 的向心水平槽内滑动。顶部竖直导轨 + 两脚水平槽
+// 用「超长杆到远锚点」模拟（半径 1e6px 的圆弧局部逼近直线，
 // 行程内偏差 < 0.01px——Watt 直线机构同理；求解器内核零修改，范围锁死内）。
+// 脚部边界取自「伸缩外壳1.3dm」；驱动层 ±170.48mm 整段地线不再误作脚槽。
 // 手改无效——改 scripts/model-extract/gen_arch.py 重新生成（依赖 pip: rhino3dm；流程见该目录脚本头注）。
 
 import type { LinkageDef } from './types';
@@ -12,10 +14,13 @@ export const ARCH_PIN = 23;
 export const ARCH_CENTER = 24;
 export const ARCH_APEX = 6;
 export const ARCH_FEET = [16, 18, 19, 21] as const;
+export const ARCH_FIXED_FEET = [16, 19] as const;
+export const ARCH_SLIDER_FEET = [18, 21] as const;
+export const ARCH_SLOT_RANGES: ReadonlyArray<readonly [number, number]> = [[68.99, 141.19], [558.81, 631.01]];
 export const ARCH_CRANK_RADIUS = 53.3834;
 export const GUIDE_REST = 1000000.0;
 /** 支撑节点（渲染跳过；每板一个，K4 加固，见头注）。 */
-export const ARCH_BRACES: ReadonlyArray<number> = [30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43];
+export const ARCH_BRACES: ReadonlyArray<number> = [28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41];
 
 /** 14 块角化三角板的关节索引（渲染板面 + 解支符号用）。 */
 export const ARCH_TRIS: ReadonlyArray<readonly [number, number, number]> = [[0, 1, 2], [3, 4, 5], [6, 7, 3], [8, 9, 10], [11, 4, 1], [12, 10, 13], [14, 5, 2], [15, 13, 7], [16, 17, 12], [18, 9, 17], [19, 20, 0], [21, 14, 20], [6, 11, 22], [15, 22, 8]];
@@ -41,19 +46,17 @@ export const ARCH_DEF: LinkageDef = {
   { x: 179.3382, y: 244.1401 },
   { x: 611.4685, y: 320.3358 },
   { x: 234.9968, y: 223.7683 },
-  { x: 48.6182, y: 430.0 },
+  { x: 48.6182, y: 430.0, fixed: true },
   { x: 58.8041, y: 371.6111 },
   { x: 68.99, y: 430.0 },
-  { x: 651.3818, y: 430.0 },
+  { x: 651.3818, y: 430.0, fixed: true },
   { x: 641.1959, y: 371.6111 },
   { x: 631.01, y: 430.0 },
   { x: 290.7295, y: 203.596 },
   { x: 350.0, y: 376.6166 },
   { x: 350.0, y: 430.0, fixed: true },
   { x: 1000350.0, y: 203.4896, fixed: true },
-  { x: 48.6182, y: 1000430.0, fixed: true },
   { x: 68.99, y: 1000430.0, fixed: true },
-  { x: 651.3818, y: 1000430.0, fixed: true },
   { x: 631.01, y: 1000430.0, fixed: true },
   { x: 523.8424, y: 317.7733 },
   { x: 437.4436, y: 271.7015 },
@@ -113,54 +116,52 @@ export const ARCH_DEF: LinkageDef = {
   { a: 15, b: 22, rest: 59.271 }, // tri
   { a: 22, b: 8, rest: 116.7404 }, // tri
   { a: 8, b: 15, rest: 59.2699 }, // tri
-  { a: 30, b: 0, rest: 73.7018 }, // brace
-  { a: 30, b: 1, rest: 73.7019 }, // brace
-  { a: 30, b: 2, rest: 55.2925 }, // brace
-  { a: 31, b: 5, rest: 73.7027 }, // brace
-  { a: 31, b: 3, rest: 73.7027 }, // brace
-  { a: 31, b: 4, rest: 55.2913 }, // brace
-  { a: 32, b: 7, rest: 73.7026 }, // brace
-  { a: 32, b: 3, rest: 73.7026 }, // brace
-  { a: 32, b: 6, rest: 55.2916 }, // brace
-  { a: 33, b: 8, rest: 73.7019 }, // brace
-  { a: 33, b: 9, rest: 73.7019 }, // brace
-  { a: 33, b: 10, rest: 55.2926 }, // brace
-  { a: 34, b: 1, rest: 73.7024 }, // brace
-  { a: 34, b: 11, rest: 73.7024 }, // brace
-  { a: 34, b: 4, rest: 55.2915 }, // brace
-  { a: 35, b: 13, rest: 73.7019 }, // brace
-  { a: 35, b: 12, rest: 73.7018 }, // brace
-  { a: 35, b: 10, rest: 55.2925 }, // brace
-  { a: 36, b: 14, rest: 73.7019 }, // brace
-  { a: 36, b: 5, rest: 73.7019 }, // brace
-  { a: 36, b: 2, rest: 55.2926 }, // brace
-  { a: 37, b: 13, rest: 73.7024 }, // brace
-  { a: 37, b: 7, rest: 73.7024 }, // brace
-  { a: 37, b: 15, rest: 55.2915 }, // brace
-  { a: 38, b: 12, rest: 71.6032 }, // brace
-  { a: 38, b: 16, rest: 71.6032 }, // brace
-  { a: 38, b: 17, rest: 65.2717 }, // brace
-  { a: 39, b: 18, rest: 71.6033 }, // brace
-  { a: 39, b: 9, rest: 71.6033 }, // brace
-  { a: 39, b: 17, rest: 65.2712 }, // brace
-  { a: 40, b: 0, rest: 71.6032 }, // brace
-  { a: 40, b: 19, rest: 71.6032 }, // brace
-  { a: 40, b: 20, rest: 65.2717 }, // brace
-  { a: 41, b: 21, rest: 71.6033 }, // brace
-  { a: 41, b: 14, rest: 71.6033 }, // brace
-  { a: 41, b: 20, rest: 65.2712 }, // brace
-  { a: 42, b: 11, rest: 73.7026 }, // brace
-  { a: 42, b: 22, rest: 73.7026 }, // brace
-  { a: 42, b: 6, rest: 55.2916 }, // brace
-  { a: 43, b: 22, rest: 73.7027 }, // brace
-  { a: 43, b: 8, rest: 73.7027 }, // brace
-  { a: 43, b: 15, rest: 55.2913 }, // brace
+  { a: 28, b: 0, rest: 73.7018 }, // brace
+  { a: 28, b: 1, rest: 73.7019 }, // brace
+  { a: 28, b: 2, rest: 55.2925 }, // brace
+  { a: 29, b: 5, rest: 73.7027 }, // brace
+  { a: 29, b: 3, rest: 73.7027 }, // brace
+  { a: 29, b: 4, rest: 55.2913 }, // brace
+  { a: 30, b: 7, rest: 73.7026 }, // brace
+  { a: 30, b: 3, rest: 73.7026 }, // brace
+  { a: 30, b: 6, rest: 55.2916 }, // brace
+  { a: 31, b: 8, rest: 73.7019 }, // brace
+  { a: 31, b: 9, rest: 73.7019 }, // brace
+  { a: 31, b: 10, rest: 55.2926 }, // brace
+  { a: 32, b: 1, rest: 73.7024 }, // brace
+  { a: 32, b: 11, rest: 73.7024 }, // brace
+  { a: 32, b: 4, rest: 55.2915 }, // brace
+  { a: 33, b: 13, rest: 73.7019 }, // brace
+  { a: 33, b: 12, rest: 73.7018 }, // brace
+  { a: 33, b: 10, rest: 55.2925 }, // brace
+  { a: 34, b: 14, rest: 73.7019 }, // brace
+  { a: 34, b: 5, rest: 73.7019 }, // brace
+  { a: 34, b: 2, rest: 55.2926 }, // brace
+  { a: 35, b: 13, rest: 73.7024 }, // brace
+  { a: 35, b: 7, rest: 73.7024 }, // brace
+  { a: 35, b: 15, rest: 55.2915 }, // brace
+  { a: 36, b: 12, rest: 71.6032 }, // brace
+  { a: 36, b: 16, rest: 71.6032 }, // brace
+  { a: 36, b: 17, rest: 65.2717 }, // brace
+  { a: 37, b: 18, rest: 71.6033 }, // brace
+  { a: 37, b: 9, rest: 71.6033 }, // brace
+  { a: 37, b: 17, rest: 65.2712 }, // brace
+  { a: 38, b: 0, rest: 71.6032 }, // brace
+  { a: 38, b: 19, rest: 71.6032 }, // brace
+  { a: 38, b: 20, rest: 65.2717 }, // brace
+  { a: 39, b: 21, rest: 71.6033 }, // brace
+  { a: 39, b: 14, rest: 71.6033 }, // brace
+  { a: 39, b: 20, rest: 65.2712 }, // brace
+  { a: 40, b: 11, rest: 73.7026 }, // brace
+  { a: 40, b: 22, rest: 73.7026 }, // brace
+  { a: 40, b: 6, rest: 55.2916 }, // brace
+  { a: 41, b: 22, rest: 73.7027 }, // brace
+  { a: 41, b: 8, rest: 73.7027 }, // brace
+  { a: 41, b: 15, rest: 55.2913 }, // brace
   { a: 24, b: 23, rest: 53.3834 }, // crank
   { a: 23, b: 6, rest: 173.127 }, // rod
   { a: 6, b: 25, rest: 1000000.0 }, // guide
-  { a: 16, b: 26, rest: 1000000.0 }, // guide
-  { a: 18, b: 27, rest: 1000000.0 }, // guide
-  { a: 19, b: 28, rest: 1000000.0 }, // guide
-  { a: 21, b: 29, rest: 1000000.0 }, // guide
+  { a: 18, b: 26, rest: 1000000.0 }, // guide
+  { a: 21, b: 27, rest: 1000000.0 }, // guide
  ],
 };

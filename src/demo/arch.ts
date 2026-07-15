@@ -4,8 +4,10 @@ import {
   ARCH_CRANK_RADIUS,
   ARCH_DRAG_SWEEPS,
   ARCH_DRIVER,
-  ARCH_FEET,
+  ARCH_FIXED_FEET,
   ARCH_PIN,
+  ARCH_SLIDER_FEET,
+  ARCH_SLOT_RANGES,
   ARCH_SPIN_SWEEPS,
   ARCH_THETA0,
   ARCH_TRIS,
@@ -31,9 +33,10 @@ const controller = new LinkageController(solver, {
   dragSweeps: ARCH_DRAG_SWEEPS,
 });
 
-/** 可抓手柄：拱顶（呼吸）、四脚（滑槽）、曲柄销（手动盘轮）。中段销不设手柄——
+/** 可抓手柄：拱顶（呼吸）、内侧两滑脚、曲柄销（手动盘轮）。外侧两脚是地面固定铰；
+ * 中段销不设手柄——
  * 扁板对法向按压敏感（arch-data 头注），把拖拽入口留在机构自由度的方向上。 */
-const HANDLES = new Set<number>([ARCH_APEX, ...ARCH_FEET, ARCH_PIN]);
+const HANDLES = new Set<number>([ARCH_APEX, ...ARCH_SLIDER_FEET, ARCH_PIN]);
 
 function el<K extends keyof SVGElementTagNameMap>(tag: K, cls: string): SVGElementTagNameMap[K] {
   const e = document.createElementNS(SVG_NS, tag);
@@ -55,14 +58,14 @@ rail.setAttribute('x2', String(c.x));
 rail.setAttribute('y2', '316');
 const slotL = el('line', 'slot');
 const slotR = el('line', 'slot');
-// 槽长 = 3dm 驱动层地线全跨（±170.48mm → ±323.9px）
-slotL.setAttribute('x1', '26');
+// 伸缩外壳1.3dm 原始边界：内侧滑脚从全开位向心走 38mm。
+slotL.setAttribute('x1', String(ARCH_SLOT_RANGES[0][0]));
 slotL.setAttribute('y1', '430');
-slotL.setAttribute('x2', '96');
+slotL.setAttribute('x2', String(ARCH_SLOT_RANGES[0][1]));
 slotL.setAttribute('y2', '430');
-slotR.setAttribute('x1', '604');
+slotR.setAttribute('x1', String(ARCH_SLOT_RANGES[1][0]));
 slotR.setAttribute('y1', '430');
-slotR.setAttribute('x2', '674');
+slotR.setAttribute('x2', String(ARCH_SLOT_RANGES[1][1]));
 slotR.setAttribute('y2', '430');
 
 // —— 动态元素：板面多边形、驱动链两杆、关节
@@ -78,6 +81,11 @@ const centerDot = el('circle', 'joint-fixed');
 centerDot.setAttribute('r', '6');
 centerDot.setAttribute('cx', String(c.x));
 centerDot.setAttribute('cy', String(c.y));
+const fixedFootDots = ARCH_FIXED_FEET.map(() => {
+  const d = el('circle', 'joint-fixed');
+  d.setAttribute('r', '6');
+  return d;
+});
 const handleEls = [...HANDLES].map((i) => {
   const h = el('circle', 'joint-handle');
   h.setAttribute('r', '7');
@@ -109,6 +117,11 @@ function render(): void {
     pinDots[i].setAttribute('cx', String(solver.nodes[i].x));
     pinDots[i].setAttribute('cy', String(solver.nodes[i].y));
   }
+  fixedFootDots.forEach((d, i) => {
+    const n = solver.nodes[ARCH_FIXED_FEET[i]];
+    d.setAttribute('cx', String(n.x));
+    d.setAttribute('cy', String(n.y));
+  });
   handleEls.forEach((h) => {
     const n = solver.nodes[Number(h.dataset.node)];
     h.setAttribute('cx', String(n.x));

@@ -15,7 +15,10 @@ export {
   ARCH_CENTER,
   ARCH_CRANK_RADIUS,
   ARCH_FEET,
+  ARCH_FIXED_FEET,
   ARCH_PIN,
+  ARCH_SLIDER_FEET,
+  ARCH_SLOT_RANGES,
   ARCH_TRIS,
 } from './arch-data';
 
@@ -26,7 +29,7 @@ export {
  * 只是 LinkageDef 换成从 求解器结构演示.3dm 提取的真机几何：
  *   14 块角化三角板（刚性三角 = 3 杆，同「耦合三角板」原理）
  *   + 曲柄滑块驱动链（轮心锚点 → 曲柄销 → 中央杆 → 拱顶）
- *   + 竖直导轨 / 四脚水平槽（超长杆近似直线，见 arch-data.ts 头注）。
+ *   + 竖直导轨 / 外侧两固定脚 / 内侧两向心滑槽（见 arch-data.ts 头注）。
  * 盘点原理对照：F=1（导轨消掉裸拱的侧摆自由度）；曲柄销过轮顶/轮底 = 伸展/折叠死点，
  * 对应求解器的雅可比降秩区（SPEC §3.4「变软」，文档化不特判）——真机拿它当自锁限位。
  */
@@ -50,12 +53,11 @@ export const ARCH_DRIVER = {
 
 /**
  * 剪式链比四杆环长（约 9 级传播直径），GS 每遍只把约束信息推进一格（SPEC §3.2），
- * 同等刚性感需要更高的遍数预算。实测回填（2026-07-10，arch.test/debug）：
- * 48 遍 @ 720 步/圈瞬态峰值 2.08px、96 遍 1.99px——峰值受死点慢模态支配而非预算，
- * 加遍数不值；48/64 已让全程视觉刚性（<2.1px @ 700px 画幅）。
- * 成本量级：91 杆 × 64 遍 × 60fps ≈ 35 万投影/秒，无压力（SPEC §3.5 同款估算）。
+ * 同等刚性感需要更高的遍数预算。2026-07-16 脚部边界按原始设计修正后，
+ * 64 遍在精确折叠死点的峰值为 5.31px；增到 96 遍仍为 5.31px——这是雅可比降秩的
+ * 慢模态，不是遍数不足。成本量级：89 杆 × 64 遍 × 60fps ≈ 34 万投影/秒。
  */
-export const ARCH_SPIN_SWEEPS = 48;
+export const ARCH_SPIN_SWEEPS = 64;
 export const ARCH_DRAG_SWEEPS = 64;
 
 function cross(ux: number, uy: number, vx: number, vy: number): number {
