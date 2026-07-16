@@ -55,18 +55,16 @@ rail.setAttribute('x2', String(c.x));
 rail.setAttribute('y2', '316');
 const slotL = el('line', 'slot');
 const slotR = el('line', 'slot');
-// 槽线 = 四脚实际行程的对称包络（2026-07-16 实测，运行时节奏 60fps × ω=0.8 spin：
-// 首圈瞬态左 [15.3,69.0]/右 [631.0,685.3]，第 2 圈起稳态轨道左 [20.3,35.7]/右 [666.8,682.5]，
-// 残差 0.08px）。图纸姿态内脚 x=68.99/631.01 恰在槽内端。注意：拖拽可把脚推出槽线——
-// 模型无止程（不等式）约束，spec §1.2 范围外；槽线只对齐自转行为。
-slotL.setAttribute('x1', '14');
+// 槽线 = 各侧两脚实际到过的 x 范围（运行时累计包络，用户拍板 2026-07-16）。
+// 四脚沿地线的停靠点随帧率/运动历史漂移（软自由度；槽端止程是不等式约束，
+// spec §1.2 范围外），静态槽线换台设备必然对不上——所以逐帧按实测范围画。
 slotL.setAttribute('y1', '430');
-slotL.setAttribute('x2', '69');
 slotL.setAttribute('y2', '430');
-slotR.setAttribute('x1', '631');
 slotR.setAttribute('y1', '430');
-slotR.setAttribute('x2', '686');
 slotR.setAttribute('y2', '430');
+const leftFeet = ARCH_FEET.filter((f) => solver.nodes[f].x < 350);
+const rightFeet = ARCH_FEET.filter((f) => solver.nodes[f].x >= 350);
+const slotRange = { lMin: Infinity, lMax: -Infinity, rMin: Infinity, rMax: -Infinity };
 
 // —— 动态元素：板面多边形、驱动链两杆、关节
 const plateEls = ARCH_TRIS.map(() => el('polygon', 'plate'));
@@ -92,6 +90,18 @@ hud.setAttribute('x', '16');
 hud.setAttribute('y', '504');
 
 function render(): void {
+  for (const f of leftFeet) {
+    slotRange.lMin = Math.min(slotRange.lMin, solver.nodes[f].x);
+    slotRange.lMax = Math.max(slotRange.lMax, solver.nodes[f].x);
+  }
+  for (const f of rightFeet) {
+    slotRange.rMin = Math.min(slotRange.rMin, solver.nodes[f].x);
+    slotRange.rMax = Math.max(slotRange.rMax, solver.nodes[f].x);
+  }
+  slotL.setAttribute('x1', String(slotRange.lMin));
+  slotL.setAttribute('x2', String(slotRange.lMax));
+  slotR.setAttribute('x1', String(slotRange.rMin));
+  slotR.setAttribute('x2', String(slotRange.rMax));
   ARCH_TRIS.forEach((t, i) => {
     plateEls[i].setAttribute(
       'points',
