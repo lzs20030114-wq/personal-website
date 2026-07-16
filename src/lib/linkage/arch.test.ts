@@ -5,10 +5,7 @@ import {
   ARCH_CRANK_RADIUS,
   ARCH_DRAG_SWEEPS,
   ARCH_FEET,
-  ARCH_FIXED_FEET,
   ARCH_PIN,
-  ARCH_SLIDER_FEET,
-  ARCH_SLOT_RANGES,
   ARCH_SPIN_SWEEPS,
   ARCH_THETA0,
   archTriSigns,
@@ -58,67 +55,33 @@ describe('拱环装配（图纸姿态）', () => {
 });
 
 describe('整周呼吸（曲柄 360°，144 步 warm start）', () => {
-  it('原始脚部边界：外脚固定，内脚离开全开死点后向心滑动', () => {
-    const s = createArch();
-    const fixedX = ARCH_FIXED_FEET.map((f) => s.nodes[f].x);
-    const sliderX = ARCH_SLIDER_FEET.map((f) => s.nodes[f].x);
-
-    for (const f of ARCH_FIXED_FEET) expect(s.nodes[f].fixed).toBe(true);
-    for (const f of ARCH_SLIDER_FEET) expect(s.nodes[f].fixed).toBe(false);
-
-    // 图纸初始姿态 = 全开；内侧滑脚此时位于 38mm 槽的外端。
-    for (let k = 1; k <= 18; k++) {
-      spinStep(s, ARCH_THETA0 + (k * Math.PI) / 180, ARCH_SPIN_SWEEPS);
-    }
-
-    expect(s.nodes[ARCH_FIXED_FEET[0]].x).toBeCloseTo(fixedX[0], 8);
-    expect(s.nodes[ARCH_FIXED_FEET[1]].x).toBeCloseTo(fixedX[1], 8);
-    expect(s.nodes[ARCH_SLIDER_FEET[0]].x).toBeGreaterThan(sliderX[0] + 0.5);
-    expect(s.nodes[ARCH_SLIDER_FEET[1]].x).toBeLessThan(sliderX[1] - 0.5);
-  });
-
-  it('残差有界、无 NaN、板解支恒定、滑脚不越槽、行程 = 2R', () => {
+  it('残差有界、无 NaN、板解支恒定、导轨全程贴合、行程 = 2R', () => {
     const s = createArch();
     let apexMin = Infinity;
     let apexMax = -Infinity;
-    let peakError = 0;
-    const fixedXY = ARCH_FIXED_FEET.map((f) => ({ x: s.nodes[f].x, y: s.nodes[f].y }));
-    const sliderMin = ARCH_SLIDER_FEET.map(() => Infinity);
-    const sliderMax = ARCH_SLIDER_FEET.map(() => -Infinity);
     for (let k = 0; k <= 144; k++) {
       const theta = ARCH_THETA0 + (k * 2 * Math.PI) / 144;
       spinStep(s, theta, ARCH_SPIN_SWEEPS);
       for (const n of s.nodes) {
         expect(Number.isFinite(n.x) && Number.isFinite(n.y)).toBe(true);
       }
-      // 修正脚部边界后，折叠死点的雅可比慢模态峰值实测 5.31px；
-      // 64→96 遍不再降低，故保留 64 遍并用 5.5px 锁定已知死点峰值。
-      peakError = Math.max(peakError, s.maxError());
+      // 瞬态残差上界：实测峰值 3.59px，出现在折叠死点附近（雅可比降秩、GS 收敛率
+      // 下降——SPEC §3.4「变软」；本工况 2.5°/步是运行时步距的 ~5 倍，属苛刻测试；
+      // 运行时步距（720 步/圈）实测峰值 2.08px）。遍数加倍只降 ~4%（48→96 遍：
+      // 2.08→1.99px）——慢模态非预算问题，不追。
+      expect(s.maxError()).toBeLessThan(4);
       expect(archTriSigns(s)).toEqual([...ARCH_TRI_SIGNS]);
       expect(Math.abs(s.nodes[ARCH_APEX].x - 350)).toBeLessThan(0.1);
-      for (const f of ARCH_SLIDER_FEET) {
+      for (const f of ARCH_FEET) {
         expect(Math.abs(s.nodes[f].y - 430)).toBeLessThan(0.1);
       }
-      ARCH_FIXED_FEET.forEach((f, i) => {
-        expect(s.nodes[f].x).toBe(fixedXY[i].x);
-        expect(s.nodes[f].y).toBe(fixedXY[i].y);
-      });
-      ARCH_SLIDER_FEET.forEach((f, i) => {
-        sliderMin[i] = Math.min(sliderMin[i], s.nodes[f].x);
-        sliderMax[i] = Math.max(sliderMax[i], s.nodes[f].x);
-      });
       apexMin = Math.min(apexMin, s.nodes[ARCH_APEX].y);
       apexMax = Math.max(apexMax, s.nodes[ARCH_APEX].y);
     }
     // 滑块行程 = 2R（曲柄滑块运动学；图纸位 203.49 = 全开，+2R = 折叠位）。
     // 容差放宽到死点瞬态量级。
-    expect(peakError).toBeLessThan(5.5);
     expect(Math.abs(apexMin - 203.49)).toBeLessThan(2);
     expect(Math.abs(apexMax - apexMin - 2 * ARCH_CRANK_RADIUS)).toBeLessThan(3);
-    ARCH_SLOT_RANGES.forEach(([min, max], i) => {
-      expect(sliderMin[i]).toBeGreaterThanOrEqual(min - 0.2);
-      expect(sliderMax[i]).toBeLessThanOrEqual(max + 0.2);
-    });
     // 呼吸幅度换算回真机口径：行程 ≈ 2 × R* = 56.2mm
     expect(apexHeightMM(s)).toBeGreaterThan(0);
   });
