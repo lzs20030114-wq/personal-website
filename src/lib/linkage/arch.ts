@@ -94,3 +94,52 @@ export function createArch(): LinkageSolver {
 export function apexHeightMM(s: LinkageSolver): number {
   return (430 - s.nodes[ARCH_APEX].y) / 1.9;
 }
+
+/**
+ * 脚槽两端止程（2026-07-16 止程模拟实验 → 2026-07-17 转正入台架，用户拍板）。
+ *
+ * 真机脚（销）在有限长水平直槽内开合（盘点 §6.1「脚在水平直槽内开合」）。超长杆
+ * 只近似了槽的「直线」，丢了槽的「端点」——少了它，四脚存在零刚度自由滑移模态
+ * （曲柄只锁拱顶高度），帧时序不同的设备几秒内漂进不同构型（实测：两脚并拢 +
+ * 整环压扁，残差仍 ≈0——是合法解不是算错，形态由设备帧历史决定）。
+ * 止程是不等式约束，SPEC §1.2 范围外，按 2026-07-16 事故定案落在内核之外，
+ * 由台架与投影交错调用。
+ *
+ * 槽端数值 = 本模型自己的运动学行程（外端 = 全开位 = 图纸装配位；内端 = 理想
+ * 准静态整圈实测极值：1440 步 × 96 遍交错钳制，峰值残差 0.381px，左右镜像对称
+ * 到 0.01px）。真机槽长/内端止程按实测标定（07-16 定案），标定后替换此表即可。
+ */
+export const ARCH_FOOT_SLOTS: ReadonlyArray<{ node: number; lo: number; hi: number }> = [
+  { node: 16, lo: 48.6182, hi: 145.42 },
+  { node: 18, lo: 68.99, hi: 246.61 },
+  { node: 19, lo: 554.58, hi: 651.3818 },
+  { node: 21, lo: 453.39, hi: 631.01 },
+];
+
+/** 与投影交错调用：越出槽端的脚钳回端点（两端均止）。 */
+export function clampFootStops(s: LinkageSolver): void {
+  for (const { node, lo, hi } of ARCH_FOOT_SLOTS) {
+    const n = s.nodes[node];
+    if (n.x < lo) s.setNode(node, lo, n.y);
+    else if (n.x > hi) s.setNode(node, hi, n.y);
+  }
+}
+
+/**
+ * 台架每个仿真子步后的止程松弛：钳制与投影交错（8×6 遍），把钳制引入的
+ * 残差摊回全环再收口。实测（3 圈自旋）：峰值残差 60fps 1.04px / 120fps 0.48px。
+ */
+export function archStopPass(s: LinkageSolver): void {
+  for (let k = 0; k < 8; k++) {
+    clampFootStops(s);
+    s.iterate(6);
+  }
+  clampFootStops(s);
+}
+
+/**
+ * 固定仿真步长（秒）。自旋轨迹的分岔源是「每帧 Δθ = ω·dt 随设备帧率变化」——
+ * 台架用累加器按 ARCH_STEP_DT 定步推进（渲染帧率只影响采样，不影响轨迹），
+ * 任何设备走同一条逐步相同的轨迹，配合槽端止程实现跨设备形态一致。
+ */
+export const ARCH_STEP_DT = 1 / 120;

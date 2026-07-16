@@ -4,15 +4,19 @@ import {
   ARCH_CENTER,
   ARCH_CRANK_RADIUS,
   ARCH_DRAG_SWEEPS,
+  ARCH_DRIVER,
   ARCH_FEET,
+  ARCH_FOOT_SLOTS,
   ARCH_PIN,
   ARCH_SPIN_SWEEPS,
+  ARCH_STEP_DT,
   ARCH_THETA0,
+  archStopPass,
   archTriSigns,
   apexHeightMM,
   createArch,
 } from './arch';
-import { ARCH_TRI_SIGNS } from './arch-data';
+import { ARCH_DEF, ARCH_TRI_SIGNS } from './arch-data';
 
 /** 曲柄位置驱动一步（controller.frame 的 spin 路径，SPEC §4.2）。 */
 function spinStep(s: ReturnType<typeof createArch>, theta: number, sweeps: number): void {
@@ -95,6 +99,78 @@ describe('整周呼吸（曲柄 360°，144 步 warm start）', () => {
       return s.nodes.map((n) => [n.x, n.y]);
     };
     expect(run()).toEqual(run());
+  });
+});
+
+describe('脚槽止程（ARCH_FOOT_SLOTS + archStopPass + 定步积分，2026-07-17 转正）', () => {
+  it('槽表几何：外端 = 图纸全开位、lo<hi、左右镜像对称', () => {
+    for (const { node, lo, hi } of ARCH_FOOT_SLOTS) {
+      expect(lo).toBeLessThan(hi);
+      const x0 = ARCH_DEF.nodes[node].x;
+      // 全开位 = 槽外端（左侧外端是 lo，右侧是 hi）
+      expect(Math.abs(x0 - (x0 < 350 ? lo : hi))).toBeLessThan(1e-6);
+    }
+    const byNode = new Map(ARCH_FOOT_SLOTS.map((s) => [s.node, s]));
+    for (const [a, b] of [
+      [16, 19],
+      [18, 21],
+    ] as const) {
+      const sa = byNode.get(a)!;
+      const sb = byNode.get(b)!;
+      expect(Math.abs(sa.lo + sb.hi - 700)).toBeLessThan(0.02);
+      expect(Math.abs(sa.hi + sb.lo - 700)).toBeLessThan(0.02);
+    }
+  });
+
+  it('定步自旋 3 圈：脚恒在槽内、无并拢塌缩、残差有界、板解支恒定', () => {
+    // 回归 2026-07-17 跨设备事故：无止程时四脚零刚度滑移模态在首圈内并拢
+    // （gap 20.4→0、整环压扁、残差仍 ≈0——合法解不是算错，形态随设备帧历史分岔）。
+    const s = createArch();
+    const steps = Math.round(((2 * Math.PI) / ARCH_DRIVER.omega / ARCH_STEP_DT) * 3);
+    let peakErr = 0;
+    let minGap = Infinity;
+    for (let k = 1; k <= steps; k++) {
+      spinStep(s, ARCH_THETA0 + k * ARCH_DRIVER.omega * ARCH_STEP_DT, ARCH_SPIN_SWEEPS);
+      archStopPass(s);
+      peakErr = Math.max(peakErr, s.maxError());
+      minGap = Math.min(
+        minGap,
+        Math.hypot(s.nodes[16].x - s.nodes[18].x, s.nodes[16].y - s.nodes[18].y),
+      );
+      if (k % 24 === 0) {
+        for (const { node, lo, hi } of ARCH_FOOT_SLOTS) {
+          expect(s.nodes[node].x).toBeGreaterThanOrEqual(lo - 1e-9);
+          expect(s.nodes[node].x).toBeLessThanOrEqual(hi + 1e-9);
+        }
+      }
+    }
+    // 实测（120fps 定步 + 8×6 交错钳制）峰值 ≈0.5px；上界留死点瞬态余量
+    expect(peakErr).toBeLessThan(1.5);
+    // 名义脚距 20.37px（同侧两脚欧氏距），并拢塌缩时 → 0
+    expect(minGap).toBeGreaterThan(15);
+    expect(archTriSigns(s)).toEqual([...ARCH_TRI_SIGNS]);
+  });
+
+  it('定步积分：渲染帧率（累加器切分方式）不影响轨迹——逐位相同', () => {
+    // 分岔源是「每帧 Δθ = ω·dt 随设备帧率变化」；定步后设备帧率只决定
+    // 一次 rAF 里跑几个子步，子步序列本身与设备无关。
+    const run = (batch: (k: number) => number) => {
+      const s = createArch();
+      let done = 0;
+      const total = 360;
+      while (done < total) {
+        const n = Math.min(batch(done), total - done);
+        for (let i = 0; i < n; i++) {
+          done++;
+          spinStep(s, ARCH_THETA0 + done * ARCH_DRIVER.omega * ARCH_STEP_DT, ARCH_SPIN_SWEEPS);
+          archStopPass(s);
+        }
+      }
+      return s.nodes.map((n) => [n.x, n.y]);
+    };
+    const perFrame60 = run(() => 2); // 60Hz 渲染：每帧 2 子步
+    const jittery = run((k) => 1 + (k % 3)); // 抖动设备：1–3 子步不等
+    expect(perFrame60).toEqual(jittery);
   });
 });
 

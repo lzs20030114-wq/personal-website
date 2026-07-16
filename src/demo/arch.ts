@@ -5,11 +5,14 @@ import {
   ARCH_DRAG_SWEEPS,
   ARCH_DRIVER,
   ARCH_FEET,
+  ARCH_FOOT_SLOTS,
   ARCH_PIN,
   ARCH_SPIN_SWEEPS,
+  ARCH_STEP_DT,
   ARCH_THETA0,
   ARCH_TRIS,
   apexHeightMM,
+  archStopPass,
   createArch,
 } from '../lib/linkage/arch';
 import { LinkageController } from '../lib/linkage/controller';
@@ -53,47 +56,15 @@ rail.setAttribute('x1', String(c.x));
 rail.setAttribute('y1', '196');
 rail.setAttribute('x2', String(c.x));
 rail.setAttribute('y2', '316');
-const slotL = el('line', 'slot');
-const slotR = el('line', 'slot');
-// 槽线 = 各侧两脚实际到过的 x 范围（运行时累计包络，用户拍板 2026-07-16）。
-// 四脚沿地线的停靠点随帧率/运动历史漂移（软自由度；槽端止程是不等式约束，
-// spec §1.2 范围外），静态槽线换台设备必然对不上——所以逐帧按实测范围画。
-slotL.setAttribute('y1', '430');
-slotL.setAttribute('y2', '430');
-slotR.setAttribute('y1', '430');
-slotR.setAttribute('y2', '430');
-const leftFeet = ARCH_FEET.filter((f) => solver.nodes[f].x < 350);
-const rightFeet = ARCH_FEET.filter((f) => solver.nodes[f].x >= 350);
-const slotRange = { lMin: Infinity, lMax: -Infinity, rMin: Infinity, rMax: -Infinity };
-
-// 预盘一圈做包络种子（用户拍板 2026-07-16）：独立实例按 60fps 节奏静默盘一整圈，
-// 页面一进来槽线就是完整一段；本机实际路径若超出种子，运行时累计仍会扩展
-// （槽线恒 ⊇ 实际活动范围）。一次性 ~471 步 × 64 遍，数十毫秒量级。
-{
-  const pre = createArch();
-  const a0 = pre.nodes[ARCH_CENTER];
-  const dt = 1 / 60;
-  const steps = Math.round((2 * Math.PI) / ARCH_DRIVER.omega / dt);
-  let th = ARCH_THETA0;
-  for (let k = 0; k < steps; k++) {
-    th += ARCH_DRIVER.omega * dt;
-    pre.setFixed(ARCH_PIN, true);
-    pre.setNode(
-      ARCH_PIN,
-      a0.x + ARCH_CRANK_RADIUS * Math.cos(th),
-      a0.y + ARCH_CRANK_RADIUS * Math.sin(th),
-    );
-    pre.iterate(ARCH_SPIN_SWEEPS);
-    pre.setFixed(ARCH_PIN, false);
-    for (const f of leftFeet) {
-      slotRange.lMin = Math.min(slotRange.lMin, pre.nodes[f].x);
-      slotRange.lMax = Math.max(slotRange.lMax, pre.nodes[f].x);
-    }
-    for (const f of rightFeet) {
-      slotRange.rMin = Math.min(slotRange.rMin, pre.nodes[f].x);
-      slotRange.rMax = Math.max(slotRange.rMax, pre.nodes[f].x);
-    }
-  }
+// 槽线 = 设计活动范围（ARCH_FOOT_SLOTS，每脚一条静态段）。止程转正（2026-07-17
+// 用户拍板）后槽端是确定量，静态绘制即真值——取代 2026-07-16 的运行时包络方案
+// （彼时前提「停靠点随帧历史漂移」已被止程 + 定步积分消除）。
+for (const { lo, hi } of ARCH_FOOT_SLOTS) {
+  const line = el('line', 'slot');
+  line.setAttribute('x1', String(lo));
+  line.setAttribute('y1', '430');
+  line.setAttribute('x2', String(hi));
+  line.setAttribute('y2', '430');
 }
 
 // —— 动态元素：板面多边形、驱动链两杆、关节
@@ -120,18 +91,6 @@ hud.setAttribute('x', '16');
 hud.setAttribute('y', '504');
 
 function render(): void {
-  for (const f of leftFeet) {
-    slotRange.lMin = Math.min(slotRange.lMin, solver.nodes[f].x);
-    slotRange.lMax = Math.max(slotRange.lMax, solver.nodes[f].x);
-  }
-  for (const f of rightFeet) {
-    slotRange.rMin = Math.min(slotRange.rMin, solver.nodes[f].x);
-    slotRange.rMax = Math.max(slotRange.rMax, solver.nodes[f].x);
-  }
-  slotL.setAttribute('x1', String(slotRange.lMin));
-  slotL.setAttribute('x2', String(slotRange.lMax));
-  slotR.setAttribute('x1', String(slotRange.rMin));
-  slotR.setAttribute('x2', String(slotRange.rMax));
   ARCH_TRIS.forEach((t, i) => {
     plateEls[i].setAttribute(
       'points',
@@ -203,12 +162,19 @@ svg.addEventListener('pointermove', (ev) => {
 svg.addEventListener('pointerup', (ev) => controller.pointerUp(ev.pointerId));
 svg.addEventListener('pointercancel', (ev) => controller.pointerUp(ev.pointerId));
 
-// —— rAF 主循环（dt clamp 在 controller.frame 内部）
+// —— rAF 主循环：定步积分（累加器按 ARCH_STEP_DT 推进仿真，渲染帧率只影响采样）。
+// 自旋轨迹的分岔源是「每帧 Δθ 随设备帧率变化」——定步后任何设备走同一条轨迹；
+// 每个子步后跑 archStopPass（槽端止程与投影交错），形态跨设备一致。
 let last = performance.now();
+let acc = 0;
 function frameLoop(now: number): void {
-  const dt = (now - last) / 1000;
+  acc = Math.min(acc + (now - last) / 1000, 0.25); // 长卡顿丢时间，不追帧
   last = now;
-  controller.frame(dt);
+  while (acc >= ARCH_STEP_DT) {
+    controller.frame(ARCH_STEP_DT);
+    archStopPass(solver);
+    acc -= ARCH_STEP_DT;
+  }
   render();
   requestAnimationFrame(frameLoop);
 }
