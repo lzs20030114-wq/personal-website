@@ -17,6 +17,7 @@ export default defineConfig(({ command }) => ({
         arch: resolve(import.meta.dirname, "arch.html"),
         tentacle: resolve(import.meta.dirname, "tentacle.html"),
         tentacle3d: resolve(import.meta.dirname, "tentacle3d.html"),
+        shell3d: resolve(import.meta.dirname, "shell3d.html"),
       },
     },
   },

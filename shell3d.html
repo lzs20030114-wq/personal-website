@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Shell 3D — 轮回机器 伏丘五环立体台架</title>
+    <style>
+      body {
+        margin: 0;
+        background: #fafaf7;
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+      }
+      canvas {
+        width: min(92vw, 720px);
+        aspect-ratio: 700 / 520;
+        touch-action: none;
+        cursor: grab;
+      }
+      #hud {
+        position: fixed;
+        left: 16px;
+        bottom: 84px;
+        font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        color: #8a8a82;
+      }
+      nav {
+        position: fixed;
+        top: 10px;
+        left: 14px;
+        font: 12px ui-monospace, Menlo, Consolas, monospace;
+      }
+      nav a {
+        color: #2456a6;
+        margin-right: 12px;
+      }
+      #hint {
+        position: fixed;
+        top: 10px;
+        right: 14px;
+        font: 12px ui-monospace, Menlo, Consolas, monospace;
+        color: #8a8a82;
+      }
+      #controls {
+        position: fixed;
+        bottom: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        color: #1f1f1d;
+        background: #fafaf7;
+        padding: 8px 12px;
+        border: 1px solid #d9d9d1;
+      }
+      #controls label {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      #controls input[type='range'] {
+        width: 160px;
+        accent-color: #2456a6;
+      }
+      #controls button {
+        font: inherit;
+        color: #2456a6;
+        background: none;
+        border: 1px solid #d9d9d1;
+        padding: 2px 10px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <a href="./index.html">← 四杆台架</a><a href="./arch.html">拱环·平面</a
+      ><a href="./tentacle3d.html">触手·立体</a>
+    </nav>
+    <div id="hint">拖拽旋转 · 右键平移 · 滚轮/双指缩放</div>
+    <canvas id="fig" width="1400" height="1040"></canvas>
+    <div id="hud"></div>
+    <div id="controls">
+      <label><input id="spin" type="checkbox" checked /> 呼吸</label>
+      <label>φ <input id="phase" type="range" min="0" max="360" step="0.1" value="0" /></label>
+      <button id="view-home">视角归位</button>
+    </div>
+    <script type="module" src="/src/demo/shell3d.ts"></script>
+  </body>
+</html>
