@@ -21,9 +21,10 @@ describe('五环装配（图纸姿态）', () => {
     }
   });
 
-  it('站位与 roll 对表（85mm 等距、盘点 §7 roll——2026-07-17 用户拍板）', () => {
+  it('站位与姿态对表（85mm 等距、无 roll 全竖直——2026-07-17 用户两轮拍板）', () => {
     expect(SHELL_RINGS.map((d) => d.station)).toEqual([-170, -85, 0, 85, 170]);
-    expect(SHELL_RINGS.map((d) => d.rollDeg)).toEqual([-14, -6, 2, 9, 15]);
+    // 用户纠偏：「根本没有 roll，都在同一平面上」——盘点 §7 roll 列非装配侧倾
+    expect(SHELL_RINGS.map((d) => d.rollDeg)).toEqual([0, 0, 0, 0, 0]);
   });
 
   it('每环四脚共地线（|y| < 0.05mm）、左右镜像、槽端外端 = 全开位', () => {
@@ -45,12 +46,16 @@ describe('五环装配（图纸姿态）', () => {
     }
   });
 
-  it('roll 是环面内旋转：环平面 x = station 不变，apex 横向斜漂', () => {
+  it('位姿嵌入：局部 (x,y) → 世界 (station, x, y)——竖直站立、四脚共地 z=0', () => {
     for (const d of SHELL_RINGS) {
       const apex = d.def.nodes[d.apex];
       const p = ringPoint(d, apex.x, apex.y);
       expect(p.x).toBe(d.station);
-      if (d.rollDeg !== 0) expect(Math.abs(p.y)).toBeGreaterThan(1);
+      expect(Math.abs(p.y - apex.x)).toBeLessThan(1e-9);
+      expect(Math.abs(p.z - apex.y)).toBeLessThan(1e-9);
+      for (const f of d.feet) {
+        expect(Math.abs(ringPoint(d, d.def.nodes[f].x, d.def.nodes[f].y).z)).toBeLessThan(0.05);
+      }
     }
   });
 });

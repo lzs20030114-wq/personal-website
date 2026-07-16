@@ -29,7 +29,7 @@ export const SHELL_RINGS: ReadonlyArray<ShellRingData> = [
   {
     name: 'S1_M3x1.057',
     station: -170.0,
-    rollDeg: -14.0,
+    rollDeg: 0.0,
     pin: 23,
     center: 24,
     apex: 3,
@@ -183,7 +183,7 @@ export const SHELL_RINGS: ReadonlyArray<ShellRingData> = [
   {
     name: 'S2_M1x1.184',
     station: -85.0,
-    rollDeg: -6.0,
+    rollDeg: 0.0,
     pin: 23,
     center: 24,
     apex: 5,
@@ -337,7 +337,7 @@ export const SHELL_RINGS: ReadonlyArray<ShellRingData> = [
   {
     name: 'S3_M5x1.584',
     station: 0.0,
-    rollDeg: 2.0,
+    rollDeg: 0.0,
     pin: 17,
     center: 18,
     apex: 9,
@@ -457,7 +457,7 @@ export const SHELL_RINGS: ReadonlyArray<ShellRingData> = [
   {
     name: 'S4_M3x1.000',
     station: 85.0,
-    rollDeg: 9.0,
+    rollDeg: 0.0,
     pin: 23,
     center: 24,
     apex: 6,
@@ -611,7 +611,7 @@ export const SHELL_RINGS: ReadonlyArray<ShellRingData> = [
   {
     name: 'S5_M3x0.870',
     station: 170.0,
-    rollDeg: 15.0,
+    rollDeg: 0.0,
     pin: 23,
     center: 24,
     apex: 3,
