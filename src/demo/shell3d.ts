@@ -28,16 +28,19 @@ if (reducedMotion) spinBox.checked = false;
 const rings = createShell();
 
 // —— 相机：枢轴取壳体中腰；初始 3/4 机位，Z 上
+// 初始机位 = 平视正视图（用户拍板 2026-07-17「开始的视角要平」）：
+// 俯仰 π/2 把 Z 立成屏幕上方、视线水平，yaw 0 = 体轴横向排开的侧立面（丘轮廓）。
+// 空闲自转关闭——开场即定格，动视角全靠拖拽；「视角归位」回到此机位。
 const cam = new OrbitCamera({
   cx: 350,
   cy: 280,
   pivot: { x: 0, y: 0, z: 85 },
   scale: 1.35,
-  pitch0: Math.PI / 2 - 0.28,
-  yaw0: 0.55,
+  pitch0: Math.PI / 2,
+  yaw0: 0,
   zoomMin: 0.5,
   zoomMax: 3,
-  autoYaw: reducedMotion ? 0 : 0.12,
+  autoYaw: 0,
 });
 
 const renderer = new FlatRenderer(canvas);
