@@ -66,6 +66,36 @@ const leftFeet = ARCH_FEET.filter((f) => solver.nodes[f].x < 350);
 const rightFeet = ARCH_FEET.filter((f) => solver.nodes[f].x >= 350);
 const slotRange = { lMin: Infinity, lMax: -Infinity, rMin: Infinity, rMax: -Infinity };
 
+// 预盘一圈做包络种子（用户拍板 2026-07-16）：独立实例按 60fps 节奏静默盘一整圈，
+// 页面一进来槽线就是完整一段；本机实际路径若超出种子，运行时累计仍会扩展
+// （槽线恒 ⊇ 实际活动范围）。一次性 ~471 步 × 64 遍，数十毫秒量级。
+{
+  const pre = createArch();
+  const a0 = pre.nodes[ARCH_CENTER];
+  const dt = 1 / 60;
+  const steps = Math.round((2 * Math.PI) / ARCH_DRIVER.omega / dt);
+  let th = ARCH_THETA0;
+  for (let k = 0; k < steps; k++) {
+    th += ARCH_DRIVER.omega * dt;
+    pre.setFixed(ARCH_PIN, true);
+    pre.setNode(
+      ARCH_PIN,
+      a0.x + ARCH_CRANK_RADIUS * Math.cos(th),
+      a0.y + ARCH_CRANK_RADIUS * Math.sin(th),
+    );
+    pre.iterate(ARCH_SPIN_SWEEPS);
+    pre.setFixed(ARCH_PIN, false);
+    for (const f of leftFeet) {
+      slotRange.lMin = Math.min(slotRange.lMin, pre.nodes[f].x);
+      slotRange.lMax = Math.max(slotRange.lMax, pre.nodes[f].x);
+    }
+    for (const f of rightFeet) {
+      slotRange.rMin = Math.min(slotRange.rMin, pre.nodes[f].x);
+      slotRange.rMax = Math.max(slotRange.rMax, pre.nodes[f].x);
+    }
+  }
+}
+
 // —— 动态元素：板面多边形、驱动链两杆、关节
 const plateEls = ARCH_TRIS.map(() => el('polygon', 'plate'));
 const crankEl = el('line', 'bar');
