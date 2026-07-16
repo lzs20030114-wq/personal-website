@@ -55,14 +55,17 @@ rail.setAttribute('x2', String(c.x));
 rail.setAttribute('y2', '316');
 const slotL = el('line', 'slot');
 const slotR = el('line', 'slot');
-// 槽长 = 3dm 驱动层地线全跨（±170.48mm → ±323.9px）
-slotL.setAttribute('x1', '26');
+// 槽线 = 四脚实际行程的对称包络（2026-07-16 实测，运行时节奏 60fps × ω=0.8 spin：
+// 首圈瞬态左 [15.3,69.0]/右 [631.0,685.3]，第 2 圈起稳态轨道左 [20.3,35.7]/右 [666.8,682.5]，
+// 残差 0.08px）。图纸姿态内脚 x=68.99/631.01 恰在槽内端。注意：拖拽可把脚推出槽线——
+// 模型无止程（不等式）约束，spec §1.2 范围外；槽线只对齐自转行为。
+slotL.setAttribute('x1', '14');
 slotL.setAttribute('y1', '430');
-slotL.setAttribute('x2', '96');
+slotL.setAttribute('x2', '69');
 slotL.setAttribute('y2', '430');
-slotR.setAttribute('x1', '604');
+slotR.setAttribute('x1', '631');
 slotR.setAttribute('y1', '430');
-slotR.setAttribute('x2', '674');
+slotR.setAttribute('x2', '686');
 slotR.setAttribute('y2', '430');
 
 // —— 动态元素：板面多边形、驱动链两杆、关节
