@@ -87,24 +87,41 @@ export function ringStopPass(s: LinkageSolver, slots: ReadonlyArray<FootSlot>): 
 }
 
 /**
- * 实测该环的槽端（确定性程序，任何设备同结果）。外端 = 全开位（图纸装配位，
- * 左脚 lo / 右脚 hi）。内端 = 曲柄**细步半圈**（全开 → 折叠死点，0.5°/步，
- * 外止程逐遍交错）扫掠的四脚最内到达位。步距是关键：S1 实测 0.5°/步全程
- * 健康收拢（残差 ≤0.5mm、双向一致），1.5°/步会在全开死点出口被踢进压平
- * 分支（apex 降、脚外挤），量出零长槽、运行时硬顶 6.7mm。
- * 校验：扫到折叠端 apex 必须到达 apex₀ − 2R*，否则抛错拒绝上台。
+ * 实测该环的槽端（确定性程序，任何设备同结果）：曲柄**细步半圈**（全开 →
+ * 折叠死点，0.5°/步）扫掠 + 外止程逐遍交错，槽端 = 每脚实际往返包络
+ * （外端 = 最外到达位，内端 = 最内到达位）。外止程余量**逐环自动标定**：
+ * 从 0 起阶梯试 [0,2,4,8]mm，第一个扫掠健康（峰值残差 < 1.2mm 且 apex 到达
+ * 折叠端 apex₀ − 2R*）的余量胜出；全阶梯不健康则抛错拒绝上台。
+ *
+ * 三个来之不易的教训（都以「一动就塌」现形，2026-07-17）：
+ * ① 步距决定分支——S1 在 1.5°/步会于全开死点出口被踢进压平分支，
+ *   0.5°/步全程健康（残差 ≤0.5mm、双向一致）。
+ * ② 外止程钉死图纸位会堵死 S3——其折叠路径在全开附近需先向外冒 ~2mm
+ *   再收拢（用户观察「开局对、随即坍缩」破的案；内向行程 15.6→34.3mm、
+ *   残差 1.58→0.77 对比）。
+ * ③ 外止程一律放宽又会放跑 S5——宽松 8mm 让它漂进压平分支（运行时 3.7mm）。
+ *   松紧是环的个性，只能按健康度逐环标定。
  */
-function measureSlots(d: ShellRingData): FootSlot[] {
+const MARGIN_LADDER = [0, 2, 4, 8];
+const SWEEP_ERR_LIMIT = 1.2;
+
+function sweepEnvelope(
+  d: ShellRingData,
+  margin: number,
+): { slots: FootSlot[]; peakErr: number; folded: boolean } {
   const s = makeSolver(d);
   const c = s.nodes[d.center];
   const clampOuter = () => {
     for (const f of d.feet) {
       const x0 = d.def.nodes[f].x;
+      const lim = x0 < 0 ? x0 - margin : x0 + margin;
       const n = s.nodes[f];
-      if (x0 < 0 ? n.x < x0 : n.x > x0) s.setNode(f, x0, n.y);
+      if (x0 < 0 ? n.x < lim : n.x > lim) s.setNode(f, lim, n.y);
     }
   };
-  const innerReach = new Map<number, number>(d.feet.map((f) => [f, d.def.nodes[f].x]));
+  const lo = new Map<number, number>(d.feet.map((f) => [f, d.def.nodes[f].x]));
+  const hi = new Map<number, number>(d.feet.map((f) => [f, d.def.nodes[f].x]));
+  let peakErr = 0;
   for (let k = 1; k <= 360; k++) {
     const th = SHELL_THETA0 + (k * Math.PI) / 360;
     s.setFixed(d.pin, true);
@@ -114,22 +131,27 @@ function measureSlots(d: ShellRingData): FootSlot[] {
       clampOuter();
     }
     s.setFixed(d.pin, false);
+    peakErr = Math.max(peakErr, s.maxError());
     for (const f of d.feet) {
       const x = s.nodes[f].x;
-      const cur = innerReach.get(f) as number;
-      // 最内到达位：左脚取最大 x，右脚取最小 x
-      if (d.def.nodes[f].x < 0 ? x > cur : x < cur) innerReach.set(f, x);
+      if (x < (lo.get(f) as number)) lo.set(f, x);
+      if (x > (hi.get(f) as number)) hi.set(f, x);
     }
   }
   const apexTarget = d.def.nodes[d.apex].y - 2 * d.crankR + 1;
-  if (s.nodes[d.apex].y > apexTarget) {
-    throw new Error(`${d.name} 槽端实测未到折叠端（apex 未达 apex₀−2R*）——检查提取数据`);
+  return {
+    slots: d.feet.map((f) => ({ node: f, lo: lo.get(f) as number, hi: hi.get(f) as number })),
+    peakErr,
+    folded: s.nodes[d.apex].y <= apexTarget,
+  };
+}
+
+function measureSlots(d: ShellRingData): FootSlot[] {
+  for (const margin of MARGIN_LADDER) {
+    const r = sweepEnvelope(d, margin);
+    if (r.folded && r.peakErr < SWEEP_ERR_LIMIT) return r.slots;
   }
-  return d.feet.map((f) => {
-    const x0 = d.def.nodes[f].x;
-    const xin = innerReach.get(f) as number;
-    return x0 < 0 ? { node: f, lo: x0, hi: xin } : { node: f, lo: xin, hi: x0 };
-  });
+  throw new Error(`${d.name} 槽端标定失败：余量阶梯 ${MARGIN_LADDER} 内无健康折叠——检查提取数据`);
 }
 
 const slotCache = new Map<string, FootSlot[]>();

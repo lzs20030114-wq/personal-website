@@ -27,7 +27,7 @@ describe('五环装配（图纸姿态）', () => {
     expect(SHELL_RINGS.map((d) => d.rollDeg)).toEqual([0, 0, 0, 0, 0]);
   });
 
-  it('每环四脚共地线（|y| < 0.05mm）、左右镜像、槽端外端 = 全开位', () => {
+  it('每环四脚共地线（|y| < 0.05mm）、左右镜像、槽外端 = 全开位 + 逐环标定余量', () => {
     const rings = createShell();
     for (const r of rings) {
       const d = r.data;
@@ -40,8 +40,11 @@ describe('五环装配（图纸姿态）', () => {
       expect(Math.abs(d.def.nodes[d.feet[1]].x + d.def.nodes[d.feet[2]].x)).toBeLessThan(0.01);
       for (const s of r.slots) {
         expect(s.lo).toBeLessThan(s.hi);
+        // 外端 = 全开位向外 0–8mm（余量阶梯逐环标定；实测 S3=2、其余=0）
         const x0 = d.def.nodes[s.node].x;
-        expect(Math.abs(x0 - (x0 < 0 ? s.lo : s.hi))).toBeLessThan(1e-6);
+        const slack = x0 < 0 ? x0 - s.lo : s.hi - x0;
+        expect(slack).toBeGreaterThanOrEqual(-1e-9);
+        expect(slack).toBeLessThanOrEqual(8);
       }
     }
   });
@@ -61,7 +64,7 @@ describe('五环装配（图纸姿态）', () => {
 });
 
 describe('同相呼吸（定步 + 槽端止程，S4 定案同款）', () => {
-  it('整圈：残差有界、四脚恒在槽内、同侧脚距不塌（S3 豁免）', () => {
+  it('整圈：残差有界、四脚恒在槽内、同侧脚距不塌', () => {
     const rings = createShell();
     const steps = Math.round((2 * Math.PI) / SHELL_OMEGA / SHELL_STEP_DT);
     const dTheta = SHELL_OMEGA * SHELL_STEP_DT;
@@ -74,9 +77,6 @@ describe('同相呼吸（定步 + 槽端止程，S4 定案同款）', () => {
       for (const r of rings) stepRing(r, dTheta);
       peakErr = Math.max(peakErr, shellMaxError(rings));
       rings.forEach((r, i) => {
-        // S3（M5 变体）折叠是「卷起」不是「收脚」：同侧两脚在折叠中天然并拢
-        //（实测三种步密度残差全程 0.00）——脚距检查对它不适用。
-        if (r.data.name.startsWith('S3')) return;
         const g = Math.hypot(
           r.solver.nodes[r.data.feet[0]].x - r.solver.nodes[r.data.feet[1]].x,
           r.solver.nodes[r.data.feet[0]].y - r.solver.nodes[r.data.feet[1]].y,
@@ -92,10 +92,10 @@ describe('同相呼吸（定步 + 槽端止程，S4 定案同款）', () => {
         }
       }
     }
-    // mm 口径实测（1/120 定步）：S1 0.34 / S2 0.42 / S3 1.12（慢模态瞬态）/
-    // S4 0.30 / S5 0.24——上界 1.5 留余量
-    expect(peakErr).toBeLessThan(1.5);
-    // 并拢塌缩（自由模态病）时同侧脚距 → 0；健康折叠中四常规环脚距只会张开
+    // mm 口径实测（1/120 定步 + 逐环余量标定）：S1 0.34 / S2 0.42 / S3 0.40 /
+    // S4 0.30 / S5 0.24——上界 1.0 留死点瞬态余量
+    expect(peakErr).toBeLessThan(1);
+    // 并拢塌缩（自由模态病）时同侧脚距 → 0；健康折叠中脚距只会张开（实测比恒 1.00）
     expect(minGapRatio).toBeGreaterThan(0.6);
   });
 
