@@ -188,6 +188,13 @@ export class OrbitCamera {
     }
   }
 
+  /** 外部设定姿态矩阵（固定视角预设/切换动画用，2026-07-17 五环台架拍板新增）。
+   *  视为用户接管：空闲自转不再抢回。 */
+  setOrientation(m: readonly number[]): void {
+    this.m = [...m] as Mat3;
+    this.userTookOver = true;
+  }
+
   /** 视角归位（含平移清零；不恢复自转——主权已交出就不抢回）。 */
   reset(): void {
     this.m = this.m0;

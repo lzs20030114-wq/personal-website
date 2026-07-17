@@ -111,6 +111,111 @@ function drivelineSegs(): { a: Vec3; b: Vec3 }[] {
   return segs;
 }
 
+// —— 固定视角预设（用户拍板 2026-07-17：CAD 式方位切换，按钮组在控制条第二排）。
+// 基准：正视 = rotX(π/2)（屏 x=体轴X、上=Z、深=Y）；其余 = 正视右乘绕世界竖轴
+// Rz（转台语义）；顶视 = 单位阵；轴测 = 开场机位。切换用四元数球面插值 0.35s
+//（smoothstep 缓动，reduced-motion 直切），拖拽随时打断。
+type M3 = number[];
+const mul3 = (a: M3, b: M3): M3 => {
+  const r = new Array(9) as M3;
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      r[i * 3 + j] = a[i * 3] * b[j] + a[i * 3 + 1] * b[3 + j] + a[i * 3 + 2] * b[6 + j];
+    }
+  }
+  return r;
+};
+const rotX3 = (t: number): M3 => {
+  const c = Math.cos(t);
+  const s = Math.sin(t);
+  return [1, 0, 0, 0, c, -s, 0, s, c];
+};
+const rotY3 = (t: number): M3 => {
+  const c = Math.cos(t);
+  const s = Math.sin(t);
+  return [c, 0, s, 0, 1, 0, -s, 0, c];
+};
+const rotZ3 = (t: number): M3 => {
+  const c = Math.cos(t);
+  const s = Math.sin(t);
+  return [c, -s, 0, s, c, 0, 0, 0, 1];
+};
+const VIEW_FRONT = rotX3(Math.PI / 2);
+const PRESET_VIEWS: Record<string, M3> = {
+  axon: mul3(rotZ3(-1.053336), mul3(rotX3(0.735843), rotY3(0.867459))),
+  front: VIEW_FRONT,
+  back: mul3(VIEW_FRONT, rotZ3(Math.PI)),
+  left: mul3(VIEW_FRONT, rotZ3(-Math.PI / 2)),
+  right: mul3(VIEW_FRONT, rotZ3(Math.PI / 2)),
+  top: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+};
+
+type Quat = [number, number, number, number]; // w,x,y,z
+function m2q(m: readonly number[]): Quat {
+  const tr = m[0] + m[4] + m[8];
+  if (tr > 0) {
+    const s = Math.sqrt(tr + 1) * 2;
+    return [s / 4, (m[7] - m[5]) / s, (m[2] - m[6]) / s, (m[3] - m[1]) / s];
+  }
+  if (m[0] > m[4] && m[0] > m[8]) {
+    const s = Math.sqrt(1 + m[0] - m[4] - m[8]) * 2;
+    return [(m[7] - m[5]) / s, s / 4, (m[1] + m[3]) / s, (m[2] + m[6]) / s];
+  }
+  if (m[4] > m[8]) {
+    const s = Math.sqrt(1 + m[4] - m[0] - m[8]) * 2;
+    return [(m[2] - m[6]) / s, (m[1] + m[3]) / s, s / 4, (m[5] + m[7]) / s];
+  }
+  const s = Math.sqrt(1 + m[8] - m[0] - m[4]) * 2;
+  return [(m[3] - m[1]) / s, (m[2] + m[6]) / s, (m[5] + m[7]) / s, s / 4];
+}
+function q2m(q: Quat): M3 {
+  const [w, x, y, z] = q;
+  return [
+    1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y),
+    2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x),
+    2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y),
+  ];
+}
+function slerpQ(a: Quat, b: Quat, t: number): Quat {
+  let dot = a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
+  let bb = b;
+  if (dot < 0) {
+    bb = [-b[0], -b[1], -b[2], -b[3]];
+    dot = -dot;
+  }
+  let w0: number;
+  let w1: number;
+  if (dot > 0.9995) {
+    w0 = 1 - t;
+    w1 = t;
+  } else {
+    const th = Math.acos(Math.min(1, dot));
+    const s = Math.sin(th);
+    w0 = Math.sin((1 - t) * th) / s;
+    w1 = Math.sin(t * th) / s;
+  }
+  const q: Quat = [
+    w0 * a[0] + w1 * bb[0],
+    w0 * a[1] + w1 * bb[1],
+    w0 * a[2] + w1 * bb[2],
+    w0 * a[3] + w1 * bb[3],
+  ];
+  const n = Math.hypot(...q) || 1;
+  return [q[0] / n, q[1] / n, q[2] / n, q[3] / n];
+}
+
+let viewAnim: { q0: Quat; q1: Quat; t: number } | null = null;
+function viewTo(name: string): void {
+  const target = PRESET_VIEWS[name];
+  if (!target) return;
+  if (reducedMotion) {
+    viewAnim = null;
+    cam.setOrientation(target);
+    return;
+  }
+  viewAnim = { q0: m2q(cam.matrix), q1: m2q(target), t: 0 };
+}
+
 // —— 定步仿真：spin = 匀速呼吸；滑块 = 限速追踪目标相位。五环共用同一 θ（同相拍板）。
 let theta = SHELL_THETA0;
 let targetTheta = theta;
@@ -162,11 +267,18 @@ phaseSlider.addEventListener('input', () => {
   spinBox.checked = false;
   targetTheta = SHELL_THETA0 + (Number(phaseSlider.value) * Math.PI) / 180;
 });
-viewHome.addEventListener('click', () => cam.reset());
+viewHome.addEventListener('click', () => {
+  viewAnim = null;
+  cam.reset();
+});
+document.querySelectorAll<HTMLButtonElement>('#views button').forEach((btn) => {
+  btn.addEventListener('click', () => viewTo(btn.dataset.view as string));
+});
 
 // —— 视角接线（tentacle3d 同款）：拖拽旋转、右键平移、滚轮/双指缩放
 canvas.addEventListener('contextmenu', (ev) => ev.preventDefault());
 canvas.addEventListener('pointerdown', (ev) => {
+  viewAnim = null; // 拖拽打断视角切换动画
   canvas.setPointerCapture(ev.pointerId);
   cam.pointerDown(ev.pointerId, ev.clientX, ev.clientY, ev.button === 2);
 });
@@ -193,6 +305,13 @@ function frameLoop(now: number): void {
     substep();
     acc -= SHELL_STEP_DT;
   }
+  if (viewAnim) {
+    viewAnim.t += dtReal / 0.35;
+    const t = Math.min(1, viewAnim.t);
+    const e = t * t * (3 - 2 * t);
+    cam.setOrientation(q2m(slerpQ(viewAnim.q0, viewAnim.q1, e)));
+    if (t >= 1) viewAnim = null;
+  }
   cam.tick(dtReal);
   render();
   requestAnimationFrame(frameLoop);
@@ -201,5 +320,12 @@ render();
 requestAnimationFrame(frameLoop);
 
 if (import.meta.env.DEV) {
-  (window as unknown as Record<string, unknown>).__shell = { rings, cam, get theta() { return theta; } };
+  (window as unknown as Record<string, unknown>).__shell = {
+    rings,
+    cam,
+    presets: PRESET_VIEWS,
+    viewTo,
+    get viewAnim() { return viewAnim; },
+    get theta() { return theta; },
+  };
 }
