@@ -284,6 +284,7 @@ export class FlatRenderer {
   private readonly halfW: number;
   private readonly halfH: number;
   private readonly depthK: number;
+  private cam: OrbitCamera | null = null;
 
   /** logicalW/H = 视口逻辑单位（对齐旧 viewBox 700×520）；depthRange = 世界深度半径 */
   constructor(canvas: HTMLCanvasElement, logicalW = 700, logicalH = 520, depthRange = 900) {
@@ -320,6 +321,7 @@ export class FlatRenderer {
   }
 
   beginFrame(cam: OrbitCamera): void {
+    this.cam = cam;
     const gl = this.gl;
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -393,6 +395,44 @@ export class FlatRenderer {
     gl.vertexAttribPointer(aNrm, 3, gl.FLOAT, false, 28, 12);
     gl.vertexAttribPointer(aW, 1, gl.FLOAT, false, 28, 24);
     gl.drawArrays(gl.TRIANGLES, 0, m.n);
+  }
+
+  /** 世界坐标圆点集（关节销等）：屏幕朝向公告牌圆盘、平色（线条程序 +
+   *  TRIANGLES 扇），半径为世界单位、参与深度遮挡。2026-07-17 五环线框渲染
+   *  拍板新增（板件改三角线条 + 关节圆点，网格着色路径画点会发浅灰）。 */
+  drawDots(pts: ReadonlyArray<Vec3>, radius: number, color: [number, number, number], bias = 0.006): void {
+    if (!pts.length || !this.cam) return;
+    const m = this.cam.matrix;
+    // 相机矩阵列 = 屏幕轴的世界方向（M 行主序，view = M·p → 列 i = M^T·e_i）
+    const ax = { x: m[0], y: m[3], z: m[6] };
+    const ay = { x: m[1], y: m[4], z: m[7] };
+    const SEG = 10;
+    const arr = new Float32Array(pts.length * SEG * 9);
+    let k = 0;
+    for (const p of pts) {
+      for (let i = 0; i < SEG; i++) {
+        const a0 = (i * 2 * Math.PI) / SEG;
+        const a1 = ((i + 1) * 2 * Math.PI) / SEG;
+        arr[k++] = p.x; arr[k++] = p.y; arr[k++] = p.z;
+        for (const a of [a0, a1]) {
+          const c = Math.cos(a) * radius;
+          const s = Math.sin(a) * radius;
+          arr[k++] = p.x + ax.x * c + ay.x * s;
+          arr[k++] = p.y + ax.y * c + ay.y * s;
+          arr[k++] = p.z + ax.z * c + ay.z * s;
+        }
+      }
+    }
+    const gl = this.gl;
+    gl.useProgram(this.lineProg);
+    gl.uniform3f(gl.getUniformLocation(this.lineProg, 'uColor'), color[0], color[1], color[2]);
+    gl.uniform1f(gl.getUniformLocation(this.lineProg, 'uDepthBias'), bias);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.lineBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, arr, gl.DYNAMIC_DRAW);
+    const aPos = gl.getAttribLocation(this.lineProg, 'aPos');
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 12, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, pts.length * SEG * 3);
   }
 
   /** 世界坐标线段集（深度测试参与遮挡；bias 防与体面 z-fighting）。 */

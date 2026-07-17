@@ -1,5 +1,5 @@
 import { OrbitCamera } from '../lib/linkage/camera3d';
-import { FlatRenderer, bakeIndexed, type CellFrame } from '../lib/linkage/gl3d';
+import { FlatRenderer } from '../lib/linkage/gl3d';
 import type { Vec3 } from '../lib/linkage/solver3d';
 import {
   SHELL_OMEGA,
@@ -9,7 +9,6 @@ import {
   ringPoint,
   shellMaxError,
   stepRing,
-  type ShellRing,
 } from '../lib/linkage/shell3d';
 
 // 轮回机器伏丘壳体 五环立体台架（2026-07-17 用户立项：85mm 等距 / 同相呼吸 /
@@ -48,65 +47,38 @@ const cam = new OrbitCamera({
 
 const renderer = new FlatRenderer(canvas);
 
-// —— 板件棱柱烘焙（每板一次）：局部系 = 装配姿态下 (û=AB, ê=⊥, f=环法向)。
-// 剪式交叉板同面叠置会 z-fighting——按板朝向符号错层 ±2.5mm（真机双层板语义）。
-const PLATE_T = 3;
-const LAYER_OFF = 2.5;
-const PRISM_IDX = new Uint16Array([
-  0, 1, 2, 3, 5, 4,
-  0, 1, 4, 0, 4, 3,
-  1, 2, 5, 1, 5, 4,
-  2, 0, 3, 2, 3, 5,
-]);
+// —— 板件 = 三角形线条 + 关节 = 圆形点（用户拍板 2026-07-17，对齐 2D 台架纸墨风）。
+// 关节销 = 生成器里 0..pin-1 的原始销关节（支撑节点/远锚点不画，同 2D 台架约定）。
+const JOINT_R = 2.4;
+const HUB_R = 4;
 
-interface PlateRef {
-  id: string;
-  a: number;
-  b: number;
+function plateSegs(): { a: Vec3; b: Vec3 }[] {
+  const segs: { a: Vec3; b: Vec3 }[] = [];
+  for (const r of rings) {
+    const d = r.data;
+    for (const [ja, jb, jc] of d.tris) {
+      const a = r.solver.nodes[ja];
+      const b = r.solver.nodes[jb];
+      const c = r.solver.nodes[jc];
+      const aw = ringPoint(d, a.x, a.y);
+      const bw = ringPoint(d, b.x, b.y);
+      const cw = ringPoint(d, c.x, c.y);
+      segs.push({ a: aw, b: bw }, { a: bw, b: cw }, { a: cw, b: aw });
+    }
+  }
+  return segs;
 }
-const plates: PlateRef[][] = rings.map((r, ri) => {
-  const d = r.data;
-  return d.tris.map((js, ti) => {
-    const [ja, jb, jc] = js;
-    const A = d.def.nodes[ja];
-    const B = d.def.nodes[jb];
-    const C = d.def.nodes[jc];
-    const ux = B.x - A.x;
-    const uy = B.y - A.y;
-    const len = Math.hypot(ux, uy);
-    const u = { x: ux / len, y: uy / len };
-    const e = { x: -u.y, y: u.x };
-    const c2 = {
-      x: (C.x - A.x) * u.x + (C.y - A.y) * u.y,
-      y: (C.x - A.x) * e.x + (C.y - A.y) * e.y,
-    };
-    const off = d.signs[ti] * LAYER_OFF;
-    const z0 = off - PLATE_T / 2;
-    const z1 = off + PLATE_T / 2;
-    const verts = new Float32Array([
-      0, 0, z1, len, 0, z1, c2.x, c2.y, z1,
-      0, 0, z0, len, 0, z0, c2.x, c2.y, z0,
-    ]);
-    const id = `p${ri}-${ti}`;
-    renderer.addMesh(id, bakeIndexed(verts, PRISM_IDX));
-    return { id, a: ja, b: jb };
-  });
-});
 
-/** 板刚架：o = A 世界位，û = AB 方向，f = 环法向（体轴 X̂，roll 不变量），ê = f×û。 */
-function plateFrame(r: ShellRing, p: PlateRef): CellFrame {
-  const d = r.data;
-  const A = r.solver.nodes[p.a];
-  const B = r.solver.nodes[p.b];
-  const aw = ringPoint(d, A.x, A.y);
-  const bw = ringPoint(d, B.x, B.y);
-  const dx = bw.y - aw.y;
-  const dz = bw.z - aw.z;
-  const l = Math.hypot(dx, dz) || 1;
-  const uy = dx / l;
-  const uz = dz / l;
-  // û=(0,uy,uz)，f=(1,0,0)，ê=f×û=(0,−uz,uy)
-  return { o: aw, ux: 0, uy, uz, ex: 0, ey: -uz, ez: uy, fx: 1, fy: 0, fz: 0 };
+function jointDots(): Vec3[] {
+  const pts: Vec3[] = [];
+  for (const r of rings) {
+    const d = r.data;
+    for (let j = 0; j <= d.pin; j++) {
+      const n = r.solver.nodes[j];
+      pts.push(ringPoint(d, n.x, n.y));
+    }
+  }
+  return pts;
 }
 
 // —— 静态装饰线（每帧重发但内容不变的部分预先算好）：轮圈、脚槽
@@ -169,11 +141,15 @@ function phiDeg(): number {
 
 function render(): void {
   renderer.beginFrame(cam);
-  rings.forEach((r, ri) => {
-    for (const p of plates[ri]) renderer.drawMesh(p.id, plateFrame(r, p));
-  });
+  renderer.drawLines(plateSegs(), [0.12, 0.12, 0.11]);
   renderer.drawLines(drivelineSegs(), [0.12, 0.12, 0.11]);
   renderer.drawLines(decorSegs, [0.8, 0.8, 0.76], 0.002);
+  renderer.drawDots(jointDots(), JOINT_R, [0.12, 0.12, 0.11]);
+  renderer.drawDots(
+    rings.map((r) => ringPoint(r.data, 0, 0)),
+    HUB_R,
+    [0.12, 0.12, 0.11],
+  );
   const apexS2 = rings[1].solver.nodes[rings[1].data.apex].y;
   hud.textContent =
     `FIG. 13   S1–S5 shell (85mm pitch, in-phase)   φ = ${phiDeg().toFixed(1)}°` +
