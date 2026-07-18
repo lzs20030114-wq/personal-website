@@ -1,11 +1,12 @@
 import { OrbitCamera } from '../lib/linkage/camera3d';
-import { FlatRenderer } from '../lib/linkage/gl3d';
+import { FlatRenderer, bakeIndexed } from '../lib/linkage/gl3d';
 import type { Vec3 } from '../lib/linkage/solver3d';
 import {
   SHELL_OMEGA,
   SHELL_STEP_DT,
   SHELL_THETA0,
   createShell,
+  ringOuterProfile,
   ringPoint,
   shellMaxError,
   stepRing,
@@ -19,6 +20,7 @@ const canvas = document.getElementById('fig') as HTMLCanvasElement;
 const hud = document.getElementById('hud') as HTMLDivElement;
 const spinBox = document.getElementById('spin') as HTMLInputElement;
 const phaseSlider = document.getElementById('phase') as HTMLInputElement;
+const skinBox = document.getElementById('skin') as HTMLInputElement;
 const viewHome = document.getElementById('view-home') as HTMLButtonElement;
 
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -79,6 +81,66 @@ function jointDots(): Vec3[] {
     }
   }
   return pts;
+}
+
+// —— 蒙皮（用户拍板 2026-07-17，可开关）：织物跨接相邻环（盘点 §6.1），锚固在
+// 各环外侧支点（ringOuterProfile 装配位选定、此后固定跟销），随环呼吸。
+// 每帧：两侧锚点折线等弧长重采样到同参数 → 直纹三角带 → 动态平面着色网格。
+const SKIN_SAMPLES = 25;
+const profiles = rings.map((r) => ringOuterProfile(r.data));
+
+function profileWorld(ri: number): Vec3[] {
+  const r = rings[ri];
+  return profiles[ri].map((j) => {
+    const n = r.solver.nodes[j];
+    return ringPoint(r.data, n.x, n.y);
+  });
+}
+
+function resample(pts: Vec3[], n: number): Vec3[] {
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) {
+    cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y, pts[i].z - pts[i - 1].z));
+  }
+  const total = cum[cum.length - 1] || 1;
+  const out: Vec3[] = [];
+  let seg = 0;
+  for (let k = 0; k < n; k++) {
+    const t = (k / (n - 1)) * total;
+    while (seg < pts.length - 2 && cum[seg + 1] < t) seg++;
+    const span = cum[seg + 1] - cum[seg] || 1;
+    const u = Math.min(1, Math.max(0, (t - cum[seg]) / span));
+    out.push({
+      x: pts[seg].x + (pts[seg + 1].x - pts[seg].x) * u,
+      y: pts[seg].y + (pts[seg + 1].y - pts[seg].y) * u,
+      z: pts[seg].z + (pts[seg + 1].z - pts[seg].z) * u,
+    });
+  }
+  return out;
+}
+
+const SKIN_IDX = (() => {
+  const idx: number[] = [];
+  for (let k = 0; k < SKIN_SAMPLES - 1; k++) {
+    const a = k;
+    const b = SKIN_SAMPLES + k;
+    idx.push(a, b, a + 1, b, b + 1, a + 1);
+  }
+  return new Uint16Array(idx);
+})();
+
+function skinMesh(ri: number): Float32Array {
+  const A = resample(profileWorld(ri), SKIN_SAMPLES);
+  const B = resample(profileWorld(ri + 1), SKIN_SAMPLES);
+  const verts = new Float32Array(SKIN_SAMPLES * 2 * 3);
+  let k = 0;
+  for (const p of A) {
+    verts[k++] = p.x; verts[k++] = p.y; verts[k++] = p.z;
+  }
+  for (const p of B) {
+    verts[k++] = p.x; verts[k++] = p.y; verts[k++] = p.z;
+  }
+  return bakeIndexed(verts, SKIN_IDX);
 }
 
 // —— 静态装饰线（每帧重发但内容不变的部分预先算好）：轮圈、脚槽
@@ -246,6 +308,9 @@ function phiDeg(): number {
 
 function render(): void {
   renderer.beginFrame(cam);
+  if (skinBox.checked) {
+    for (let ri = 0; ri < rings.length - 1; ri++) renderer.drawDynamicMesh(skinMesh(ri));
+  }
   renderer.drawLines(plateSegs(), [0.12, 0.12, 0.11]);
   renderer.drawLines(drivelineSegs(), [0.12, 0.12, 0.11]);
   renderer.drawLines(decorSegs, [0.8, 0.8, 0.76], 0.002);

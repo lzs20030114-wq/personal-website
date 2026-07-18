@@ -5,6 +5,7 @@ import {
   SHELL_STEP_DT,
   SHELL_THETA0,
   createShell,
+  ringOuterProfile,
   ringPoint,
   shellMaxError,
   stepRing,
@@ -58,6 +59,22 @@ describe('五环装配（图纸姿态）', () => {
       expect(Math.abs(p.z - apex.y)).toBeLessThan(1e-9);
       for (const f of d.feet) {
         expect(Math.abs(ringPoint(d, d.def.nodes[f].x, d.def.nodes[f].y).z)).toBeLessThan(0.05);
+      }
+    }
+  });
+});
+
+describe('蒙皮锚点（外侧支点序列）', () => {
+  it('每环：左外脚起、右外脚止、含拱顶、极角单调递减、≥10 销', () => {
+    for (const d of SHELL_RINGS) {
+      const prof = ringOuterProfile(d);
+      expect(prof.length).toBeGreaterThanOrEqual(10);
+      expect(prof[0]).toBe(d.feet[0]);
+      expect(prof[prof.length - 1]).toBe(d.feet[3]);
+      expect(prof).toContain(d.apex);
+      const ang = (i: number) => Math.atan2(Math.max(d.def.nodes[i].y, 0), d.def.nodes[i].x);
+      for (let k = 1; k < prof.length; k++) {
+        expect(ang(prof[k])).toBeLessThan(ang(prof[k - 1]));
       }
     }
   });

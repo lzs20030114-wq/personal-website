@@ -287,6 +287,7 @@ export class FlatRenderer {
   private readonly meshes = new Map<string, { buf: WebGLBuffer; n: number }>();
   private readonly skins = new Map<string, { buf: WebGLBuffer; n: number }>();
   private readonly lineBuf: WebGLBuffer;
+  private readonly dynMeshBuf: WebGLBuffer;
   private readonly halfW: number;
   private readonly halfH: number;
   private readonly depthK: number;
@@ -302,6 +303,7 @@ export class FlatRenderer {
     this.skinProg = link(gl, SKIN_VS, MESH_FS);
     this.lineProg = link(gl, LINE_VS, LINE_FS);
     this.lineBuf = gl.createBuffer() as WebGLBuffer;
+    this.dynMeshBuf = gl.createBuffer() as WebGLBuffer;
     this.halfW = logicalW / 2;
     this.halfH = logicalH / 2;
     this.depthK = 1 / depthRange;
@@ -316,6 +318,25 @@ export class FlatRenderer {
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
     this.meshes.set(id, { buf, n: data.length / 6 });
+  }
+
+  /** 动态平面着色网格（世界坐标、恒等模型系；bakeIndexed 产物逐帧上传）。
+   *  蒙皮等每帧变形的几何用——2026-07-17 五环台架拍板新增。 */
+  drawDynamicMesh(data: Float32Array): void {
+    if (!data.length) return;
+    const gl = this.gl;
+    gl.useProgram(this.meshProg);
+    gl.uniformMatrix3fv(gl.getUniformLocation(this.meshProg, 'uModelR'), false, [1, 0, 0, 0, 1, 0, 0, 0, 1]);
+    gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uModelT'), 0, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.dynMeshBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
+    const aPos = gl.getAttribLocation(this.meshProg, 'aPos');
+    const aNrm = gl.getAttribLocation(this.meshProg, 'aNrm');
+    gl.enableVertexAttribArray(aPos);
+    gl.enableVertexAttribArray(aNrm);
+    gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 24, 0);
+    gl.vertexAttribPointer(aNrm, 3, gl.FLOAT, false, 24, 12);
+    gl.drawArrays(gl.TRIANGLES, 0, data.length / 6);
   }
 
   /** 蒙皮网格（bakeSkinned 产物，步长 7 float） */

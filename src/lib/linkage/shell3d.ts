@@ -193,3 +193,21 @@ export function ringPoint(d: ShellRingData, x: number, y: number): Vec3 {
 export function shellMaxError(rings: ReadonlyArray<ShellRing>): number {
   return Math.max(...rings.map((r) => r.solver.maxError()));
 }
+
+/**
+ * 环的外侧支点序列（蒙皮锚固点，盘点 §6.1「锚固在每环外侧支点的固定件上」）：
+ * 按装配位极角扫描（绕轮心，左外脚 π → 右外脚 0），每个角窗（±0.15 rad）只留
+ * 半径最大的销——外弧销胜出，内弧/交叉销被滤除。脚的 y 钳到 ≥0 再取角
+ * （±0 号位差会把外脚甩到 −π/−0 打乱次序）。锚点选在装配位、此后固定跟销——
+ * 蒙皮物理上缝死在这些件上，不随姿态换锚。
+ */
+export function ringOuterProfile(d: ShellRingData): number[] {
+  const ang = (i: number) => Math.atan2(Math.max(d.def.nodes[i].y, 0), d.def.nodes[i].x);
+  const rad = (i: number) => Math.hypot(d.def.nodes[i].x, d.def.nodes[i].y);
+  const ids = [...Array(d.pin).keys()];
+  const DW = 0.15;
+  const keep = ids.filter(
+    (i) => !ids.some((j) => j !== i && Math.abs(ang(j) - ang(i)) < DW && rad(j) > rad(i)),
+  );
+  return keep.sort((a, b) => ang(b) - ang(a));
+}
