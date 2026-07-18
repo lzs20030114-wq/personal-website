@@ -403,9 +403,10 @@ export class FlatRenderer {
   drawDots(pts: ReadonlyArray<Vec3>, radius: number, color: [number, number, number], bias = 0.006): void {
     if (!pts.length || !this.cam) return;
     const m = this.cam.matrix;
-    // 相机矩阵列 = 屏幕轴的世界方向（M 行主序，view = M·p → 列 i = M^T·e_i）
-    const ax = { x: m[0], y: m[3], z: m[6] };
-    const ay = { x: m[1], y: m[4], z: m[7] };
+    // 屏幕轴的世界方向 = M 的**行**（view = M·p，正交阵 M⁻¹ = Mᵀ，Mᵀe_i = 行 i）。
+    // 曾错取列：正视图因对称恰好不露馅，任意视角下圆点变侧棱（用户发现纠正）。
+    const ax = { x: m[0], y: m[1], z: m[2] };
+    const ay = { x: m[3], y: m[4], z: m[5] };
     const SEG = 10;
     const arr = new Float32Array(pts.length * SEG * 9);
     let k = 0;
