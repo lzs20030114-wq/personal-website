@@ -271,6 +271,9 @@ viewHome.addEventListener('click', () => {
   viewAnim = null;
   cam.reset();
 });
+// 透视开关：视距 700mm（模型半径 ~350 → 视场约 40°，温和的建筑透视感）
+const perspBox = document.getElementById('persp') as HTMLInputElement;
+perspBox.addEventListener('change', () => renderer.setPerspective(perspBox.checked ? 700 : 0));
 document.querySelectorAll<HTMLButtonElement>('#views button').forEach((btn) => {
   btn.addEventListener('click', () => viewTo(btn.dataset.view as string));
 });
@@ -323,6 +326,8 @@ if (import.meta.env.DEV) {
   (window as unknown as Record<string, unknown>).__shell = {
     rings,
     cam,
+    renderer,
+    render,
     presets: PRESET_VIEWS,
     viewTo,
     get viewAnim() { return viewAnim; },

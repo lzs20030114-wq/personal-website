@@ -23,13 +23,15 @@ uniform vec3 uPivot;
 uniform vec2 uHalf;
 uniform float uScale;
 uniform float uDepthK;
+uniform float uPerspD;
 uniform vec2 uPan;
 varying float vLam;
 uniform vec3 uLight;
 void main() {
   vec3 world = uModelR * aPos + uModelT;
   vec3 q = uView * (world - uPivot);
-  gl_Position = vec4((q.x * uScale + uPan.x) / uHalf.x, -(q.y * uScale + uPan.y) / uHalf.y, -q.z * uDepthK, 1.0);
+  float w = uPerspD > 0.0 ? 1.0 - q.z / uPerspD : 1.0;
+  gl_Position = vec4((q.x * uScale + uPan.x * w) / uHalf.x, -(q.y * uScale + uPan.y * w) / uHalf.y, -q.z * uDepthK * w, w);
   vec3 nv = uView * (uModelR * aNrm);
   vLam = abs(dot(normalize(nv), uLight));
 }`;
@@ -63,6 +65,7 @@ uniform vec3 uPivot;
 uniform vec2 uHalf;
 uniform float uScale;
 uniform float uDepthK;
+uniform float uPerspD;
 uniform vec2 uPan;
 varying float vLam;
 uniform vec3 uLight;
@@ -74,7 +77,8 @@ void main() {
   vec3 p = uCen + d * c + cross(uAxis, d) * s + uAxis * (dot(uAxis, d) * (1.0 - c) + uPitch * aW);
   vec3 world = uRA * p + uTA;
   vec3 q = uView * (world - uPivot);
-  gl_Position = vec4((q.x * uScale + uPan.x) / uHalf.x, -(q.y * uScale + uPan.y) / uHalf.y, -q.z * uDepthK, 1.0);
+  float w = uPerspD > 0.0 ? 1.0 - q.z / uPerspD : 1.0;
+  gl_Position = vec4((q.x * uScale + uPan.x * w) / uHalf.x, -(q.y * uScale + uPan.y * w) / uHalf.y, -q.z * uDepthK * w, w);
   vec3 n = aNrm * c + cross(uAxis, aNrm) * s + uAxis * (dot(uAxis, aNrm) * (1.0 - c));
   vec3 nv = uView * (uRA * n);
   vLam = abs(dot(normalize(nv), uLight));
@@ -87,11 +91,13 @@ uniform vec3 uPivot;
 uniform vec2 uHalf;
 uniform float uScale;
 uniform float uDepthK;
+uniform float uPerspD;
 uniform float uDepthBias;
 uniform vec2 uPan;
 void main() {
   vec3 q = uView * (aPos - uPivot);
-  gl_Position = vec4((q.x * uScale + uPan.x) / uHalf.x, -(q.y * uScale + uPan.y) / uHalf.y, -q.z * uDepthK - uDepthBias, 1.0);
+  float w = uPerspD > 0.0 ? 1.0 - q.z / uPerspD : 1.0;
+  gl_Position = vec4((q.x * uScale + uPan.x * w) / uHalf.x, -(q.y * uScale + uPan.y * w) / uHalf.y, (-q.z * uDepthK - uDepthBias) * w, w);
 }`;
 
 const LINE_FS = `
@@ -285,6 +291,7 @@ export class FlatRenderer {
   private readonly halfH: number;
   private readonly depthK: number;
   private cam: OrbitCamera | null = null;
+  private perspD = 0;
 
   /** logicalW/H = 视口逻辑单位（对齐旧 viewBox 700×520）；depthRange = 世界深度半径 */
   constructor(canvas: HTMLCanvasElement, logicalW = 700, logicalH = 520, depthRange = 900) {
@@ -320,6 +327,12 @@ export class FlatRenderer {
     this.skins.set(id, { buf, n: data.length / 7 });
   }
 
+  /** 透视投影：d = 相机到枢轴的视距（世界单位，0 = 正交，默认）。
+   *  2026-07-17 五环台架拍板新增；透视强度 ∝ 模型尺度/d。 */
+  setPerspective(d: number): void {
+    this.perspD = d;
+  }
+
   beginFrame(cam: OrbitCamera): void {
     this.cam = cam;
     const gl = this.gl;
@@ -333,6 +346,7 @@ export class FlatRenderer {
       gl.uniform2f(gl.getUniformLocation(prog, 'uHalf'), this.halfW, this.halfH);
       gl.uniform1f(gl.getUniformLocation(prog, 'uScale'), cam.viewScale);
       gl.uniform1f(gl.getUniformLocation(prog, 'uDepthK'), this.depthK);
+      gl.uniform1f(gl.getUniformLocation(prog, 'uPerspD'), this.perspD);
       gl.uniform2f(gl.getUniformLocation(prog, 'uPan'), cam.pan.x, cam.pan.y);
     }
     for (const prog of [this.meshProg, this.skinProg]) {
