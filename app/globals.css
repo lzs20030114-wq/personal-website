@@ -1,39 +1,95 @@
 @import 'tailwindcss';
 
-/* SITE_SPEC §8 —— 视觉 token（毛坯锁定，语言不变、数值可微调） */
+/* SITE_SPEC §8 —— 视觉 token
+   Modernist 试点（2026-07-20 用户拍板，主页先行）：数值切到 claude.ai/design
+   「Modernist」设计系统（mono 红 #ec3013 / 全站 Archivo / radius 0 / 强分隔线 /
+   照片黑白）。token 名沿用旧语言（--trace-blue 现挂红 accent），试点通过后
+   随 SITE_SPEC 修订统一改名；未通过则整体回退本次 commit。 */
 :root {
-  --paper: #fafaf7;
-  --ink: #1f1f1d;
-  --graphite: #8a8a82;
-  --trace-blue: #2456a6;
-  --hairline: #d9d9d1;
+  --paper: #f3f2f2;
+  --surface: #eae9e9;
+  --ink: #201e1d;
+  /* 次级文字：70% 墨（≈5.8:1）——Modernist 自带的 55% 在小字号不够对比度 */
+  --graphite: color-mix(in srgb, #201e1d 70%, transparent);
+  --trace-blue: #ec3013; /* accent 基准档：图形描线、主要动作 */
+  --accent-600: #dd2b0f; /* hover 深一档 */
+  --accent-700: #ae1800; /* 小字号 accent 文本用深档（≥4.5:1） */
+  --hairline: color-mix(in srgb, #201e1d 40%, transparent); /* 行级 1px 分隔线 */
 }
 
 body {
   background: var(--paper);
   color: var(--ink);
-  font-family: 'Iowan Old Style', Palatino, 'Palatino Linotype', 'Songti SC', serif;
-  font-size: 17px;
-  line-height: 1.6;
+  font-family: 'Archivo Variable', Archivo, system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
 }
 
+/* Modernist：标题与正文同族，重量与紧排做层级 */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+}
+
+/* 图内工程读数保留等宽（仪表数据是图的自有语言，不属页面 UI） */
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-/* 图框：发丝线边 + 点阵网格衬底（只用于 figure，不铺全页） */
-.figframe {
-  border: 1px solid var(--hairline);
-  background-image: radial-gradient(var(--hairline) 1px, transparent 1px);
-  background-size: 16px 16px;
+/* 题栏/栏头小字：Archivo 600 大写疏排（Modernist kicker/表头语法） */
+.kicker {
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-feature-settings: 'tnum' 1;
 }
 
+/* 图框：平面色面，无边线无装饰（Modernist：nothing floats, nothing is decorated） */
+.figframe {
+  background: var(--surface);
+}
+
+/* 分隔线两档：段级 2px 强线 / 行级 1px */
+.rule2-t {
+  border-top: 2px solid var(--hairline);
+}
+.rule2-b {
+  border-bottom: 2px solid var(--hairline);
+}
 .hairline-t {
   border-top: 1px solid var(--hairline);
+}
+.hairline-b {
+  border-bottom: 1px solid var(--hairline);
 }
 
 a {
   color: inherit;
+}
+/* 导航链接与行链接的主题化 hover（SITE_SPEC §1 放宽后的最小集内） */
+.nav-link:hover {
+  color: var(--trace-blue);
+}
+.row-hover:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--trace-blue);
+  outline-offset: 2px;
+}
+::selection {
+  background: color-mix(in srgb, var(--trace-blue) 30%, transparent);
+}
+
+/* 照片一律黑白（试点拍板：先严格执行，看效果再定例外条款） */
+.grayscale-img {
+  filter: grayscale(1) contrast(1.08);
 }
 
 /* 正文中栏（窄页面用：archive/about） */
