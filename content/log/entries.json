@@ -1,0 +1,59 @@
+[
+  {
+    "date": "2026-07-17",
+    "lead": "Five-ring choreography v0.2→v0.3.",
+    "body": "S1–S5 family extracted; stop margins calibrated per ring ([0, 2, 4, 8] mm ladder); whole-family peaks 0.24–0.42 mm.",
+    "tags": [
+      { "label": "Lab", "variant": "outline" },
+      { "label": "Shell", "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-07-17",
+    "lead": "Arch stops promoted to the model.",
+    "body": "Two devices diverged on the same URL — a legal sliding mode, not a bug. Dual-end slot clamping + fixed-step integration; 168 tests green.",
+    "tags": [
+      { "label": "Lab", "variant": "outline" },
+      { "label": "Arch", "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-07-13",
+    "lead": "Site S1–S3.",
+    "body": "Next.js scaffold, content pool with build-time validation, four routes; LinkageFigure live on the homepage with SSR first frame.",
+    "tags": [{ "label": "Site", "variant": "neutral" }]
+  },
+  {
+    "date": "2026-07-10",
+    "lead": "3D solver M1+M2.",
+    "body": "Independent 3D kernel; three-tendon 120° tentacle; orbit camera. First version vetoed on feel — fascia anti-twist bracing brought lateral drift 38.5→1.2 px.",
+    "tags": [
+      { "label": "Lab", "variant": "outline" },
+      { "label": "3D", "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-07-10",
+    "lead": "Arch ring solver instance.",
+    "body": "The physical S4 ring (angulated scissor arch + crank-slider) as a solver preset — kernel untouched, 7 new tests.",
+    "tags": [{ "label": "Lab", "variant": "outline" }]
+  },
+  {
+    "date": "2026-07-10",
+    "lead": "Four-bar closed at M4.",
+    "body": "Release damping, live coupler tracing, engineering captions; 36 tests. Sealed: bugfixes only from here.",
+    "tags": [{ "label": "Lab", "variant": "outline" }]
+  },
+  {
+    "date": "2026-07-08",
+    "lead": "Layout research.",
+    "body": "Line-length law, Tufte margin notes, Swiss grid — desktop-first case-study grid decided.",
+    "tags": [{ "label": "Site", "variant": "neutral" }]
+  },
+  {
+    "date": "2026-07-07",
+    "lead": "LINKAGE_SPEC v1.1.",
+    "body": "Math derivations, API, tolerances, milestones — the single source of truth for the solver line.",
+    "tags": [{ "label": "Docs", "variant": "neutral" }]
+  }
+]

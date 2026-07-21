@@ -51,9 +51,19 @@
 body {
   background: var(--paper);
   color: var(--ink);
-  font-family: 'Iowan Old Style', Palatino, 'Palatino Linotype', 'Songti SC', serif;
-  font-size: 17px;
-  line-height: 1.6;
+  /* MAPPING §2：全站 Archivo（自托管 @fontsource-variable/archivo，import 在 layout.tsx）；
+     CJK 回退 PingFang / YaHei（站内少量中文占位记号）。 */
+  font-family: 'Archivo Variable', Archivo, system-ui, -apple-system, 'Segoe UI',
+    'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+/* 标题同族 Archivo 800，大写字距收紧（MAPPING §2）；逐元素仍可覆写字号。 */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1.12;
 }
 
 .mono {
@@ -140,6 +150,15 @@ a:hover {
   background: var(--g200);
 }
 
+/* 焦点环：MAPPING §1 —— 2px accent，不留浏览器默认蓝圈 */
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* 正文中栏（窄页面用：archive/about） */
 .prose-col {
   max-width: 68ch;
@@ -160,16 +179,18 @@ a:hover {
   }
 }
 
-/* case study 三区之外层：左粘性元数据栏 + 内容区 */
+/* case study 三区之外层（Case-Modernist 稿）：左 300px 粘性元数据栏 + 内容区 */
 .case-layout {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
-  column-gap: 56px;
+  grid-template-columns: 300px minmax(0, 1fr);
+  align-items: start;
 }
 .case-rail {
   position: sticky;
-  top: 32px;
+  top: 24px;
   align-self: start;
+  padding: 32px 40px 32px 0;
+  border-right: 2px solid var(--ink);
 }
 @media (max-width: 1023px) {
   .case-layout {
@@ -177,7 +198,9 @@ a:hover {
   }
   .case-rail {
     position: static;
-    margin-bottom: 2.5rem;
+    padding: 32px 0;
+    border-right: 0;
+    margin-bottom: 8px;
   }
 }
 
@@ -202,4 +225,236 @@ a:hover {
   .flow {
     display: block;
   }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Modernist 组件类（design-ref/modernist-styles.css → 绿×紫 token 翻译，MAPPING §1）
+   红色 hex 与 Google Fonts @import 一律不带进本站；分隔线=墨色 2px 实线、零圆角、flush-left。
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* 内容画布：设计稿 max-width 1320 / padding 48（nav 满宽同缩进，主内容居中封顶） */
+.shell {
+  max-width: 1320px;
+  margin-inline: auto;
+  padding-inline: 48px;
+}
+@media (max-width: 640px) {
+  .shell {
+    padding-inline: 20px;
+  }
+}
+
+/* — 导航 — */
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 14px 48px;
+  border-bottom: 2px solid var(--ink);
+}
+.nav-brand {
+  font-weight: 800;
+  font-size: 18px;
+  margin-right: auto;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  color: inherit;
+}
+.nav a {
+  color: inherit;
+  text-decoration: none;
+  font-size: 14px;
+}
+.nav a:hover,
+.nav a[aria-current='page'] {
+  color: var(--accent);
+}
+@media (max-width: 640px) {
+  .nav {
+    padding-inline: 20px;
+    gap: 16px;
+  }
+}
+
+/* — 页脚（MAPPING §1：整版铺底 G900 深林，文字 G100/G200） — */
+.site-footer {
+  background: var(--g900);
+  color: var(--g100);
+}
+.site-footer .footer-email {
+  font-size: 28px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+}
+.site-footer .footer-note {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--g200);
+}
+
+/* — 按钮（MAPPING §1：primary = G600 填充 hover G700 active G800；secondary = 墨描边）
+     flush-left：宽按钮文字左对齐（design-system never centered） — */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1.2;
+  color: var(--ink);
+  background: transparent;
+  border: 2px solid transparent;
+  padding: 12px 16px;
+  border-radius: 0;
+}
+.btn-primary {
+  background: var(--g600);
+  color: var(--paper);
+  border-color: var(--g600);
+}
+.btn-secondary {
+  border-color: var(--ink);
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn {
+    transition: background 160ms ease, border-color 160ms ease;
+  }
+  .btn-primary:hover {
+    background: var(--g700);
+    border-color: var(--g700);
+  }
+  .btn-secondary:hover {
+    background: var(--n200);
+  }
+}
+.btn-primary:active {
+  background: var(--g800);
+  border-color: var(--g800);
+}
+.btn-secondary:active {
+  background: var(--n300);
+}
+
+/* — 标签（MAPPING §1：outline = accent 边框+文字；neutral = N200 底 / N800 文字） — */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  padding: 3px 10px;
+  border-radius: 0;
+  white-space: nowrap;
+}
+.tag-outline {
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+.tag-neutral {
+  background: var(--n200);
+  color: var(--n800);
+}
+
+/* — 卡片（surface 底，零圆角；kicker = accent） — */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 0;
+  background: var(--surface);
+  text-decoration: none;
+  color: inherit;
+}
+.card-kicker {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.card-title {
+  font-weight: 800;
+  font-size: 17px;
+  line-height: 1.2;
+}
+.card-body {
+  margin: 0;
+  font-size: 13px;
+  color: var(--n700);
+  flex: 1;
+}
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--n600);
+}
+@media (hover: hover) and (pointer: fine) {
+  a.card {
+    transition: background 160ms ease;
+  }
+  a.card:hover {
+    background: var(--n200);
+  }
+  a.card:hover .card-title {
+    color: var(--accent);
+  }
+}
+
+/* — 斜纹占位图框（MAPPING §6：2px 墨边 + 45° 斜纹衬底，取代点阵 .figframe） — */
+.hatch {
+  border: 2px solid var(--ink);
+  background: repeating-linear-gradient(
+    45deg,
+    transparent 0 14px,
+    color-mix(in srgb, var(--ink) 4%, transparent) 14px 15px
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* — 虚线文字占位框（Placeholder，MAPPING §5.2：保持占位形态） — */
+.placeholder-note {
+  border: 2px dashed var(--n400);
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--n700);
+}
+
+/* — Selected work 索引行 hover（SITE_SPEC §1 克制条款：hover 反馈，门控） — */
+@media (hover: hover) and (pointer: fine) {
+  .work-row {
+    transition: background 160ms ease;
+  }
+  .work-row:hover {
+    background: var(--surface);
+  }
+}
+
+/* — case study 正文：编号 section（CSS counter 自动 01–06），只换模板不改 MDX — */
+.case-body {
+  counter-reset: section;
+}
+.case-body h2 {
+  counter-increment: section;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  margin: 56px 0 16px;
+  padding-top: 16px;
+  border-top: 2px solid var(--ink);
+}
+.case-body h2::before {
+  content: counter(section, decimal-leading-zero) '\00a0\00a0';
+  color: var(--accent);
 }

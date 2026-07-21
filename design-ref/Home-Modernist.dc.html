@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/modernist-e1e24b48-ed03-408f-9a6f-de59c5fec0ba/styles.css">
+<style>html,body{margin:0;background:#f3f2f2}a{color:var(--color-text)}a:hover{color:var(--color-accent)}</style>
+</helmet>
+<div style="min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+  <nav class="nav" style="border-bottom:2px solid var(--color-divider);padding-left:48px;padding-right:48px">
+    <span class="nav-brand" style="font-weight:800;text-transform:uppercase;letter-spacing:0.02em">[Name]</span>
+    <a href="#" aria-current="page">Work</a>
+    <a href="#">Lab</a>
+    <a href="#">Log</a>
+    <a href="#">About</a>
+  </nav>
+  <main style="max-width:1320px;margin:0 auto;padding:0 48px">
+    <section style="padding:72px 0 48px;border-bottom:2px solid var(--color-divider)">
+      <p style="margin:0 0 20px;font-size:13px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--color-neutral-600)">Portfolio — Application 2026</p>
+      <h1 style="font-size:88px;font-weight:800;line-height:0.98;letter-spacing:-0.02em;margin:0;text-transform:uppercase;max-width:14ch">Structures that move, machines that live.</h1>
+    </section>
+    <section style="display:grid;grid-template-columns:1.5fr 1fr;border-bottom:2px solid var(--color-divider)">
+      <figure style="margin:0;padding:32px 48px 32px 0;border-right:2px solid var(--color-divider)">
+        <x-import component-from-global-scope="linkage-fig" from="./linkage-fig.js" variant="modernist" spin="{{ spinStr }}" hint-size="100%,480px"></x-import>
+        <figcaption style="margin-top:12px;font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">Fig. 01 — structural study for Reincarnation Machine · drag any joint</figcaption>
+      </figure>
+      <div style="padding:32px 0 32px 48px;display:flex;flex-direction:column;gap:24px">
+        <p style="font-size:19px;line-height:1.5;margin:0;max-width:36ch">Mechanism design, custom physics solvers, and human–robot interaction research. Four projects, built and measured.</p>
+        <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start">
+          <a class="btn btn-primary" href="#work" style="text-decoration:none;min-width:320px">Reincarnation Machine — case study</a>
+          <a class="btn btn-secondary" href="#lab" style="text-decoration:none;min-width:320px">Browse the lab</a>
+        </div>
+        <div style="margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:2px solid var(--color-divider)">
+          <div style="padding:16px 16px 0 0;border-right:2px solid var(--color-divider)">
+            <div style="font-size:34px;font-weight:800">04</div>
+            <div style="font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--color-neutral-600)">Projects</div>
+          </div>
+          <div style="padding:16px 0 0 16px">
+            <div style="font-size:34px;font-weight:800">168</div>
+            <div style="font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--color-neutral-600)">Tests green</div>
+          </div>
+          <div style="padding:16px 16px 0 0;border-right:2px solid var(--color-divider);border-top:2px solid var(--color-divider);margin-top:16px">
+            <div style="font-size:34px;font-weight:800">02</div>
+            <div style="font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--color-neutral-600)">Solver kernels</div>
+          </div>
+          <div style="padding:16px 0 0 16px;border-top:2px solid var(--color-divider);margin-top:16px">
+            <div style="font-size:34px;font-weight:800">05</div>
+            <div style="font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--color-neutral-600)">Live demos</div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="work" style="padding:56px 0 0">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:24px">
+        <h2 style="margin:0;font-size:15px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase">Selected work</h2>
+        <span style="font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">4 entries</span>
+      </div>
+      <div style="display:grid;grid-template-columns:88px 360px 1fr 96px;align-items:baseline;gap:24px;padding:22px 0;border-top:2px solid var(--color-divider);cursor:pointer" style-hover="background:var(--color-surface)">
+        <span style="font-size:26px;font-weight:800;color:var(--color-accent)">01</span>
+        <span style="font-size:26px;font-weight:800;text-transform:uppercase;letter-spacing:-0.01em">Reincarnation Machine</span>
+        <span style="font-size:14px;color:var(--color-neutral-700)">A desktop machine that lives, ages, dies, and is reborn with a new personality — while your touch secretly hastens its death.</span>
+        <span style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-align:right;color:var(--color-neutral-600)">2026-07</span>
+      </div>
+      <div style="display:grid;grid-template-columns:88px 360px 1fr 96px;align-items:baseline;gap:24px;padding:22px 0;border-top:2px solid var(--color-divider)">
+        <span style="font-size:26px;font-weight:800;color:var(--color-neutral-400)">02</span>
+        <span style="font-size:26px;font-weight:800;text-transform:uppercase;color:var(--color-neutral-500)">Project II</span>
+        <span style="font-size:14px;color:var(--color-neutral-500)">Case study in preparation.</span>
+        <span style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-align:right;color:var(--color-neutral-500)">TBD</span>
+      </div>
+      <div style="display:grid;grid-template-columns:88px 360px 1fr 96px;align-items:baseline;gap:24px;padding:22px 0;border-top:2px solid var(--color-divider)">
+        <span style="font-size:26px;font-weight:800;color:var(--color-neutral-400)">03</span>
+        <span style="font-size:26px;font-weight:800;text-transform:uppercase;color:var(--color-neutral-500)">Project III</span>
+        <span style="font-size:14px;color:var(--color-neutral-500)">Case study in preparation.</span>
+        <span style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-align:right;color:var(--color-neutral-500)">TBD</span>
+      </div>
+      <div style="display:grid;grid-template-columns:88px 360px 1fr 96px;align-items:baseline;gap:24px;padding:22px 0;border-top:2px solid var(--color-divider);border-bottom:2px solid var(--color-divider)">
+        <span style="font-size:26px;font-weight:800;color:var(--color-neutral-400)">04</span>
+        <span style="font-size:26px;font-weight:800;text-transform:uppercase;color:var(--color-neutral-500)">Project IV</span>
+        <span style="font-size:14px;color:var(--color-neutral-500)">Case study in preparation.</span>
+        <span style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-align:right;color:var(--color-neutral-500)">TBD</span>
+      </div>
+    </section>
+    <section id="lab" style="padding:56px 0 0">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:24px">
+        <h2 style="margin:0;font-size:15px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase">The lab</h2>
+        <span style="font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">Solver testbenches · live</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:var(--color-divider);border:2px solid var(--color-divider)">
+        <div class="card" style="gap:8px">
+          <div class="card-kicker">Lab.01</div>
+          <div class="card-title" style="font-weight:800">Four-bar linkage</div>
+          <p class="card-body">2D PBD solver testbench — the kernel behind Fig. 01.</p>
+          <div class="card-meta">36 tests · SVG</div>
+        </div>
+        <div class="card" style="gap:8px">
+          <div class="card-kicker">Lab.02</div>
+          <div class="card-title" style="font-weight:800">Arch ring solver</div>
+          <p class="card-body">Angulated scissor arch + crank-slider, from the physical S4 ring.</p>
+          <div class="card-meta">Kernel untouched · SVG</div>
+        </div>
+        <div class="card" style="gap:8px">
+          <div class="card-kicker">Lab.03</div>
+          <div class="card-title" style="font-weight:800">Tendon tentacle</div>
+          <p class="card-body">16 vertebrae, three tendons at 120° — full 3D kernel.</p>
+          <div class="card-meta">Orbit camera · WebGL</div>
+        </div>
+        <div class="card" style="gap:8px">
+          <div class="card-kicker">Lab.04</div>
+          <div class="card-title" style="font-weight:800">Five-ring shell</div>
+          <p class="card-body">S1–S5 ring family choreography — a breathing body.</p>
+          <div class="card-meta">Calibrated stops · WebGL</div>
+        </div>
+      </div>
+    </section>
+    <sc-if value="{{ showLog }}" hint-placeholder-val="{{ true }}">
+      <section style="padding:56px 0 64px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:24px">
+          <h2 style="margin:0;font-size:15px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase">Work log</h2>
+          <a href="#" style="font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;text-decoration:none;color:var(--color-accent)">All entries →</a>
+        </div>
+        <div style="display:grid;grid-template-columns:120px 1fr;gap:16px;padding:18px 0;border-top:2px solid var(--color-divider)">
+          <span style="font-size:13px;font-weight:800">2026-07-17</span>
+          <span style="font-size:14px;color:var(--color-neutral-700)">Five-ring choreography v0.3 — stop-margin calibration per ring; whole family peaks under 0.42&nbsp;mm.</span>
+        </div>
+        <div style="display:grid;grid-template-columns:120px 1fr;gap:16px;padding:18px 0;border-top:2px solid var(--color-divider)">
+          <span style="font-size:13px;font-weight:800">2026-07-13</span>
+          <span style="font-size:14px;color:var(--color-neutral-700)">Site scaffold S1–S3 — content pool, four routes, LinkageFigure live on the homepage.</span>
+        </div>
+        <div style="display:grid;grid-template-columns:120px 1fr;gap:16px;padding:18px 0;border-top:2px solid var(--color-divider);border-bottom:2px solid var(--color-divider)">
+          <span style="font-size:13px;font-weight:800">2026-07-10</span>
+          <span style="font-size:14px;color:var(--color-neutral-700)">Arch solver instance — real S4 ring as a solver preset, kernel untouched, 7 new tests green.</span>
+        </div>
+      </section>
+    </sc-if>
+  </main>
+  <footer style="background:var(--color-accent);color:var(--color-bg)">
+    <div style="max-width:1320px;margin:0 auto;padding:40px 48px;display:flex;justify-content:space-between;align-items:baseline">
+      <span style="font-size:28px;font-weight:800;text-transform:uppercase;letter-spacing:-0.01em">[email placeholder]</span>
+      <span style="font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase">GitHub · no password · plain URLs</span>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;spin&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Hero figure&quot;},&quot;showLog&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Sections&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return { showLog: this.props.showLog ?? true, spinStr: String(this.props.spin ?? false) };
+  }
+}
+</script>
+</body>
+</html>
