@@ -1,12 +1,51 @@
 @import 'tailwindcss';
 
-/* SITE_SPEC §8 —— 视觉 token（毛坯锁定，语言不变、数值可微调） */
+/* SITE_SPEC §8 —— 视觉 token
+   配色 = 绿×紫 Proposal 02 · After Monet（claude.ai/design「个人网站UI设计规划」Palette-绿紫.dc.html）
+   三条色阶共用同一条 OKLCH 感知明度曲线，同级同重量可互换；色相随明度漂移（绿 120→196，紫 300→277，灰 118→215）。
+   面积纪律：纸 58 / 墨 30 / 绿 8 / 紫 3 / 粉 1；紫一页至多一处，莲粉全站一两处。 */
 :root {
-  --paper: #fafaf7;
-  --ink: #1f1f1d;
-  --graphite: #8a8a82;
-  --trace-blue: #2456a6;
-  --hairline: #d9d9d1;
+  /* 绿 Green · 莲叶 */
+  --g100: oklch(0.95 0.032 120);
+  --g200: oklch(0.9 0.058 124);
+  --g300: oklch(0.83 0.082 132);
+  --g400: oklch(0.71 0.098 145);
+  --g500: oklch(0.58 0.105 158);
+  --g600: oklch(0.5 0.098 168);
+  --g700: oklch(0.42 0.088 178);
+  --g800: oklch(0.33 0.068 188);
+  --g900: oklch(0.25 0.048 196);
+  /* 紫 Violet · 水面 */
+  --p100: oklch(0.95 0.025 300);
+  --p200: oklch(0.9 0.05 297);
+  --p300: oklch(0.83 0.075 294);
+  --p400: oklch(0.71 0.095 291);
+  --p500: oklch(0.58 0.105 288);
+  --p600: oklch(0.5 0.1 285);
+  --p700: oklch(0.42 0.09 282);
+  --p800: oklch(0.33 0.07 280);
+  --p900: oklch(0.25 0.05 277);
+  /* 灰 Neutral · 池雾 */
+  --n100: oklch(0.955 0.009 118);
+  --n200: oklch(0.91 0.008 125);
+  --n300: oklch(0.84 0.01 135);
+  --n400: oklch(0.72 0.012 150);
+  --n500: oklch(0.59 0.014 165);
+  --n600: oklch(0.51 0.014 180);
+  --n700: oklch(0.43 0.013 192);
+  --n800: oklch(0.33 0.011 204);
+  --n900: oklch(0.25 0.009 215);
+
+  /* 角色（token 语言不变；数值实测对比度见行内注） */
+  --paper: oklch(0.965 0.01 115); /* 画布暖乳白 ≈ #F3F4ED */
+  --surface: var(--n100);
+  --ink: oklch(0.235 0.025 215); /* 对纸 15.0:1 */
+  --graphite: var(--n600); /* 注释/图注，对纸 5.2:1 ≥4.5 达标 */
+  --hairline: var(--n300);
+  --accent: var(--g700); /* 浅底彩色文字一律 700 级，对纸 7.2:1 */
+  --accent-2: var(--p700); /* 次强调，稀用，对纸 7.9:1 */
+  --rose: oklch(0.72 0.12 356); /* 莲粉高光，全站一两处 */
+  --trace-blue: var(--accent); /* 兼容别名：机构描线随主强调色，组件零改动 */
 }
 
 body {
@@ -32,8 +71,73 @@ body {
   border-top: 1px solid var(--hairline);
 }
 
+/* 图片调色 · 双色印刷法（Palette-绿紫 §图片调色）
+   黑白基准 = 列表缩略图与次要图的默认档；duotone 包一层即归入体系：
+   暗部 → 900 级（lighten 叠色）、亮部 → 100 级（darken 叠色）。
+   -g 绿调 = 首页主图/案例头图默认；-p 紫调只配合紫色海报区块；-gp 绿影紫光 = 全站一两张的招牌图。 */
+.tone-bw {
+  filter: grayscale(1) contrast(1.06);
+}
+.duotone-g,
+.duotone-p,
+.duotone-gp {
+  position: relative;
+  isolation: isolate;
+}
+.duotone-g > *,
+.duotone-p > *,
+.duotone-gp > * {
+  filter: grayscale(1) contrast(1.06);
+}
+.duotone-g::before,
+.duotone-g::after,
+.duotone-p::before,
+.duotone-p::after,
+.duotone-gp::before,
+.duotone-gp::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.duotone-g::before,
+.duotone-p::before,
+.duotone-gp::before {
+  mix-blend-mode: lighten;
+}
+.duotone-g::after,
+.duotone-p::after,
+.duotone-gp::after {
+  mix-blend-mode: darken;
+}
+.duotone-g::before {
+  background: var(--g900);
+}
+.duotone-g::after {
+  background: var(--g100);
+}
+.duotone-p::before {
+  background: var(--p900);
+}
+.duotone-p::after {
+  background: var(--p100);
+}
+.duotone-gp::before {
+  background: var(--g900);
+}
+.duotone-gp::after {
+  background: var(--p200);
+}
+
 a {
   color: inherit;
+}
+a:hover {
+  color: var(--accent);
+}
+
+::selection {
+  background: var(--g200);
 }
 
 /* 正文中栏（窄页面用：archive/about） */
