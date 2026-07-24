@@ -75,3 +75,4 @@
 - **Stage 默认位（用户拍板 2026-07-24：先空着）**：落地时按稿内 [待定] 占位实现——保持空展示位，不放 LinkageFigure、不自行填充任何内容；后续放什么由用户另行拍板。
 - **落地约束**：wheel 接管仅桌面生效；`prefers-reduced-motion` 与 <1024px 回落常规文档流（稿内已实现，移植时保持）；动效 token（--dur-micro 180ms / --dur-struct 520ms / --ease-site）进 globals.css；Tweaks 布尔开关（pagingFeel/hoverPeek/entrance/staggerFx/stageFx/cursorReadout/railFlip/spin）落地为组件 props 或构建期常量。
 - **克制条款（用户拍板 2026-07-24：冻结不回填）**：SITE_SPEC §1 原文**保持不动、不做修订**；主页按本稿执行，主页与该条款的差异以本节为准（视为主页专属例外，其余页面仍守原条款）。统计数字 168 已过时（同 §4，落地用当前实测数）。占位文案照搬纪律同 §5 条 2。
+- **落地记录（2026-07-24）**：`app/page.tsx`（服务端取内容池）+ `components/site/HomeScreens.tsx`（全部交互，引擎常量原样）；SiteNav/SiteFooter 移入 `app/(site)/layout.tsx` 路由组（/work /archive /about 不变，主页无顶部导航、页脚在 S2 幕内）；`/#lab` 深链在引擎态直落 S2；卡片/舞台数据自内容池（title/date/status），Role/Tools/thesis 文案照稿硬编；统计条 = vitest 实测 103（2026-07-24）。

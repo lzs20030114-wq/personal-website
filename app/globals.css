@@ -458,3 +458,119 @@ a:hover {
   content: counter(section, decimal-leading-zero) '\00a0\00a0';
   color: var(--accent);
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   主页 Home-Screens（design-ref/Home-Screens.dc.html → MAPPING §6）
+   动效 token 全站唯一来源；分页引擎常量在 HomeScreens.tsx（手感标定项，不进 CSS）。
+   ════════════════════════════════════════════════════════════════════════ */
+:root {
+  --dur-micro: 180ms;
+  --dur-struct: 520ms;
+  --ease-site: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* S0 枢纽幕布局：<1024 单列、卡片单列、舞台隐藏（引擎同时停用，见组件 applyMode） */
+.hub-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 52px;
+}
+.hub-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 6px;
+}
+.hub-stage {
+  display: flex;
+}
+@media (max-width: 1023px) {
+  .hub-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .hub-cards {
+    grid-template-columns: 1fr;
+  }
+  .hub-stage {
+    display: none;
+  }
+}
+
+/* 项目卡（按钮手感：hover 浮起 + 按压 0.97，SITE_SPEC §1 已批准的最小集） */
+.hub-card {
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  padding: 14px 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--paper);
+}
+@media (hover: hover) and (pointer: fine) {
+  .hub-card {
+    transition: background var(--dur-micro) var(--ease-site),
+      transform var(--dur-micro) var(--ease-site),
+      border-color var(--dur-micro) var(--ease-site);
+  }
+  .hub-card:hover {
+    background: var(--surface);
+    transform: translateY(-2px);
+  }
+}
+.hub-card:active {
+  transform: scale(0.97);
+}
+
+/* 舞台题栏"00 · Stage"解除驻留小签 */
+.figchip {
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper);
+  color: inherit;
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) {
+  .figchip {
+    transition: background var(--dur-micro) var(--ease-site);
+  }
+  .figchip:hover {
+    background: var(--surface);
+  }
+}
+
+/* 右缘 rail 跳幕按钮 */
+.rail-btn {
+  font: inherit;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 2px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+/* S2 幕内页脚 email 大字（hover = P300，设计稿 style-hover 照搬） */
+.hub-footer-email {
+  color: var(--g100);
+  text-decoration: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .hub-footer-email {
+    transition: color var(--dur-micro) var(--ease-site);
+  }
+  .hub-footer-email:hover {
+    color: var(--p300);
+  }
+}

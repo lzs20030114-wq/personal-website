@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { MDXRemote } from 'next-mdx-remote/rsc';
-import { getAllWork, getPublishedWorkBySlug } from '../../../src/lib/site/content';
+import { getAllWork, getPublishedWorkBySlug } from '../../../../src/lib/site/content';
 import {
   ConceptCard,
   ConceptGrid,
@@ -9,9 +9,9 @@ import {
   InteractiveSlot,
   ProcessAside,
   VideoSlot,
-} from '../../../components/site/slots';
-import { DisclosureSlot, MetaRail } from '../../../components/site/RoleBlock';
-import { LinkageFigure } from '../../../components/linkage/LinkageFigure';
+} from '../../../../components/site/slots';
+import { DisclosureSlot, MetaRail } from '../../../../components/site/RoleBlock';
+import { LinkageFigure } from '../../../../components/linkage/LinkageFigure';
 
 export function generateStaticParams() {
   return getAllWork()

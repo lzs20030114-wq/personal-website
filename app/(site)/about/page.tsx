@@ -1,4 +1,4 @@
-import { DisclosureSlot } from '../../components/site/RoleBlock';
+import { DisclosureSlot } from '../../../components/site/RoleBlock';
 
 export const metadata = { title: 'About' };
 

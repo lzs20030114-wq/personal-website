@@ -1,4 +1,4 @@
-import { getLogEntries } from '../../src/lib/site/log';
+import { getLogEntries } from '../../../src/lib/site/log';
 
 export const metadata = { title: 'Work log' };
 
