@@ -14,11 +14,11 @@ import { useRouter } from 'next/navigation';
  */
 
 // Tweaks 开关（设计稿 props → 构建期常量，MAPPING §6）
+// staggerFx（翻幕到位后的幕内 stagger+边框闪）已删——用户真机否决 2026-07-24，转场另行安排。
 const FX = {
   pagingFeel: true,
   hoverPeek: true,
   entrance: true,
-  staggerFx: true,
   stageFx: true,
   cursorReadout: true,
   railFlip: true,
@@ -143,14 +143,6 @@ const SECTION_BASE: CSSProperties = {
   flexDirection: 'column',
   position: 'relative',
 };
-const FLASH: CSSProperties = {
-  position: 'absolute',
-  inset: 10,
-  border: '1px solid var(--accent)',
-  opacity: 0,
-  pointerEvents: 'none',
-};
-
 function StagePlaceholderPanel({ work, index }: { work: HomeWork; index: number }) {
   // 四项目舞台版式完全同等（红线）；正文位一律 [待作者供稿] 占位，不代写。
   const supplied = index === 0;
@@ -222,7 +214,6 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const fxEntrance = FX.entrance && !reduced;
-    const fxStagger = FX.staggerFx && !reduced;
     const fxStage = FX.stageFx && !reduced;
     const fxCursor = FX.cursorReadout && !reduced && window.matchMedia('(hover: hover)').matches;
     const fxRail = FX.railFlip && !reduced;
@@ -243,7 +234,6 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
     if (!vp || !track || !s2el || !railEl || !pFig || !chip || !lbl || !cardsBox || !aboutLink) return;
     if (secs.some((s) => !s)) return;
     const sections = secs as HTMLElement[];
-    const flashes = sections.map((s) => s.querySelector<HTMLElement>('[data-flash]'));
     const railItems = Array.from(railEl.querySelectorAll<HTMLElement>('[data-rail]'));
     const panels = [pFig, ...works.map((_, i) => $(`wp${i + 1}`))].filter(Boolean) as HTMLElement[];
     const cards = works.map((_, i) => $(`c${i + 1}`)).filter(Boolean) as HTMLElement[];
@@ -283,22 +273,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
             );
         }
       });
-    const enter = (i: number) => {
-      if (!fxStagger) return;
-      flashes[i]?.animate([{ opacity: 0 }, { opacity: 1 }, { opacity: 0 }], {
-        duration: MICRO,
-        easing: 'linear',
-      });
-      sections[i].querySelectorAll<HTMLElement>('[data-row]').forEach((row, k) =>
-        row.animate(
-          [
-            { opacity: 0, transform: 'translateY(12px)', clipPath: 'inset(0 0 100% 0)' },
-            { opacity: 1, transform: 'translateY(0)', clipPath: 'inset(0 0 -10% 0)' },
-          ],
-          { duration: STRUCT, delay: k * STAG, easing: EASE, fill: 'backwards' },
-        ),
-      );
-    };
+    // 翻幕到位后不再有幕内 stagger/闪帧（用户真机否决 2026-07-24）——入场编排仅 S0 首载一次。
 
     // ---------- 分页引擎（物理原样移植） ----------
     let acc = 0;
@@ -307,7 +282,6 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
     let needRearm = false;
     let lastInputT = 0;
     let pauseTimer: ReturnType<typeof setTimeout> | undefined;
-    let enterTimer: ReturnType<typeof setTimeout> | undefined;
     const easeOut = (x: number) => 1 - Math.pow(1 - x, 3);
     const applyOffset = () => {
       const sign = Math.sign(acc) || 1;
@@ -344,8 +318,6 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
       setTrack(-Math.min(n, 1) * H(), PUSH_MS);
       setS2(n === 2 ? 0 : W(), PUSH_MS);
       setRail(n);
-      clearTimeout(enterTimer);
-      enterTimer = setTimeout(() => enter(n), PUSH_MS);
     };
     const goScreen = (n: number) => {
       if (performance.now() < lockUntil) return;
@@ -694,7 +666,6 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
       offs.forEach((f) => f());
       if (craf) cancelAnimationFrame(craf);
       clearTimeout(pauseTimer);
-      clearTimeout(enterTimer);
       clearTimeout(hoverT);
       clearTimeout(swapT);
       clearTimeout(returnT);
@@ -1021,9 +992,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                   ))}
                 </div>
               </div>
-            </div>
-            <div data-flash style={FLASH} />
-          </section>
+            </div>          </section>
 
           {/* ——— S1 About 幕 ——— */}
           <section
@@ -1128,9 +1097,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                   </figcaption>
                 </figure>
               </div>
-            </div>
-            <div data-flash style={FLASH} />
-          </section>
+            </div>          </section>
 
           {/* ——— S2 Lab + Log + 页脚幕 ——— */}
           <section
@@ -1249,9 +1216,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                   GitHub · no password · plain URLs
                 </span>
               </div>
-            </footer>
-            <div data-flash style={FLASH} />
-          </section>
+            </footer>          </section>
         </div>
       </main>
     </div>
