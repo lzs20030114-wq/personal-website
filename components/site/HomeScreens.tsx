@@ -1,24 +1,27 @@
 'use client';
 
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 /**
- * 主页整屏分幕（design-ref/Home-Screens.dc.html 落地，MAPPING §6）。
- * 三幕：S0 枢纽（卡片组 + 预览舞台）/ S1 About / S2 Lab+Log+页脚。
+ * 主页整屏分幕（design-ref/Home-Screens.dc.html 落地，MAPPING §6；2026-07-26 迭代稿同步）。
+ * 三幕：S0 枢纽（卡片组 + 预览舞台）/ S1 About（深色渐变幕）/ S2 Lab+Log+页脚。
  * 分页引擎 = 接管 wheel/touch 的阻力翻页；引擎与光标层仅桌面 + 非 reduced-motion 生效，
  * 其余回落常规文档流（幕 minHeight 100svh，原生滚动）。
  * Stage 默认位 = 空占位（用户拍板 2026-07-24：先空着，不自行填充）。
+ * 页面转场 goPT = 迭代稿「媒体块生长 + 遮罩淡入」的 SPA 适配（router.push + body 挂载 + 定时淡出）。
  */
 
 // Tweaks 开关（设计稿 props → 构建期常量，MAPPING §6）
-// staggerFx（翻幕到位后的幕内 stagger+边框闪）已删——用户真机否决 2026-07-24，转场另行安排。
+// staggerFx = 翻幕到位后的幕内 stagger + 扫光：迭代稿已把边框闪改为斜向扫光并保留编排，
+// 但 2026-07-24 用户真机拍板「翻幕后静置」仍然有效——代码按新稿移植、默认关；启用只翻此常量。
 const FX = {
   pagingFeel: true,
   hoverPeek: true,
   entrance: true,
+  staggerFx: false,
   stageFx: true,
   cursorReadout: true,
   railFlip: true,
@@ -43,6 +46,20 @@ const MICRO = 180;
 const STRUCT = 520;
 const STAG = 50;
 
+// 迭代稿深色渐变段（稿内字面值，非 token；PT_BG 与 S1 幕底同款）
+const PT_BG =
+  'linear-gradient(160deg,oklch(0.27 0.052 200) 0%,oklch(0.24 0.048 232) 55%,oklch(0.26 0.052 282) 100%)';
+const FOOT_GRAD =
+  'linear-gradient(104deg,oklch(0.3 0.062 196) 0%,oklch(0.26 0.058 232) 55%,oklch(0.28 0.062 285) 100%)';
+// S0/S2 网格衬底（72px 制图网格）
+const GRID_BG =
+  'repeating-linear-gradient(to right,oklch(0.235 0.025 215 / 0.07) 0 1px,transparent 1px 72px),repeating-linear-gradient(to bottom,oklch(0.235 0.025 215 / 0.07) 0 1px,transparent 1px 72px),var(--paper)';
+// S1 深色幕上的正文色与发丝线（稿内字面值）
+const S1_BODY = 'oklch(0.84 0.045 160)';
+const HAIR_LIGHT = '1px solid oklch(0.95 0.032 120 / 0.25)';
+// 卡片顶部色刻度（稿内节奏：绿 / 灰 / 灰 / 紫）
+const TICKS = ['var(--g500)', 'var(--n300)', 'var(--n300)', 'var(--p300)'];
+
 export interface HomeWork {
   title: string;
   slug: string;
@@ -50,7 +67,8 @@ export interface HomeWork {
   published: boolean;
 }
 
-// Lab 四卡（文案照搬 Home-Screens 稿；链接 = MAPPING §3 /demo 台架）
+// Lab 四卡（文案照搬 Home-Screens 稿；链接 = MAPPING §3 /demo 台架；
+// bar/hover = 迭代稿按内核家族双色编码：SVG=绿、WebGL=紫）
 const LABS = [
   {
     kicker: 'Lab.01',
@@ -58,6 +76,9 @@ const LABS = [
     body: '2D PBD testbench — the kernel behind Fig. 01.',
     meta: '36 tests · SVG',
     href: '/demo/',
+    bar: 'var(--g500)',
+    hover: 'var(--g100)',
+    kickerColor: 'var(--accent)',
   },
   {
     kicker: 'Lab.02',
@@ -65,6 +86,9 @@ const LABS = [
     body: 'Angulated scissor arch + crank-slider, from the S4 ring.',
     meta: 'Kernel untouched · SVG',
     href: '/demo/arch.html',
+    bar: 'var(--g700)',
+    hover: 'var(--g100)',
+    kickerColor: 'var(--accent)',
   },
   {
     kicker: 'Lab.03',
@@ -72,6 +96,9 @@ const LABS = [
     body: '16 vertebrae, three tendons at 120° — full 3D kernel.',
     meta: 'Orbit camera · WebGL',
     href: '/demo/tentacle3d.html',
+    bar: 'var(--p500)',
+    hover: 'var(--p100)',
+    kickerColor: 'var(--accent-2)',
   },
   {
     kicker: 'Lab.04',
@@ -79,6 +106,9 @@ const LABS = [
     body: 'S1–S5 ring family choreography — a breathing body.',
     meta: 'Calibrated stops · WebGL',
     href: '/demo/shell3d.html',
+    bar: 'var(--p700)',
+    hover: 'var(--p100)',
+    kickerColor: 'var(--accent-2)',
   },
 ];
 
@@ -98,12 +128,13 @@ const LOG_PREVIEW = [
   },
 ];
 
-// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-07-24 vitest 实测 103）
+// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-07-24 vitest 实测 103；
+// 迭代稿配色：Tests=绿 700、Kernels=紫 700、Demos=绿 600）
 const STATS = [
-  { n: '04', label: 'Projects', accent: false },
-  { n: '103', label: 'Tests green', accent: true },
-  { n: '02', label: 'Solver kernels', accent: false },
-  { n: '05', label: 'Live demos', accent: false },
+  { n: '04', label: 'Projects', color: 'var(--ink)' },
+  { n: '103', label: 'Tests green', color: 'var(--accent)' },
+  { n: '02', label: 'Solver kernels', color: 'var(--accent-2)' },
+  { n: '05', label: 'Live demos', color: 'var(--g600)' },
 ];
 
 const UPPER_11: CSSProperties = {
@@ -123,6 +154,9 @@ const LINK_11: CSSProperties = {
 };
 const SCREEN_H2: CSSProperties = {
   margin: 0,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 9,
   fontSize: 14,
   fontWeight: 800,
   letterSpacing: '0.14em',
@@ -135,6 +169,14 @@ const CELL_LABEL: CSSProperties = {
   textTransform: 'uppercase',
   marginBottom: 4,
 };
+// 小标签（迭代稿：tag 盒退役，改纯文字小签）
+const MINI_TAG: CSSProperties = {
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: '0.1em',
+  textTransform: 'uppercase',
+  color: 'var(--n500)',
+};
 const SECTION_BASE: CSSProperties = {
   minHeight: '100svh',
   background: 'var(--paper)',
@@ -143,6 +185,57 @@ const SECTION_BASE: CSSProperties = {
   flexDirection: 'column',
   position: 'relative',
 };
+// 翻幕扫光层（迭代稿新形态；仅 staggerFx 开启时被 enter() 点亮）
+const FLASH_STYLE: CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  opacity: 0,
+  pointerEvents: 'none',
+  background:
+    'linear-gradient(100deg,transparent 16%,oklch(0.71 0.098 145 / 0.5) 46%,oklch(0.71 0.095 291 / 0.4) 62%,transparent 86%)',
+};
+
+/** 点阵叠加层（透明度/遮罩/点色逐处不同，稿内字面值） */
+function Dots({ mask, opacity, color }: { mask: string; opacity: number; color?: string }) {
+  return (
+    <div
+      className="om-dots"
+      style={{
+        opacity,
+        WebkitMaskImage: mask,
+        maskImage: mask,
+        ...(color ? { backgroundImage: `radial-gradient(${color} 1px, transparent 1.2px)` } : {}),
+      }}
+    />
+  );
+}
+
+/** 颗粒叠加层 */
+function Grain({ opacity, blend = 'overlay' }: { opacity: number; blend?: CSSProperties['mixBlendMode'] }) {
+  return <div className="om-grain" style={{ opacity, mixBlendMode: blend }} />;
+}
+
+/** 舞台媒体块（深色渐变 + 点阵 + 颗粒；data-ptm = goPT 转场克隆源） */
+function StageMedia({
+  maskDeg,
+  grain,
+  children,
+  style,
+}: {
+  maskDeg: number;
+  grain: number;
+  children: ReactNode;
+  style?: CSSProperties;
+}) {
+  return (
+    <div data-ptm className="om-media" style={style}>
+      <Dots mask={`linear-gradient(${maskDeg}deg,#000 0%,transparent 55%)`} opacity={0.3} />
+      <Grain opacity={grain} />
+      {children}
+    </div>
+  );
+}
+
 function StagePlaceholderPanel({ work, index }: { work: HomeWork; index: number }) {
   // 四项目舞台版式完全同等（红线）；正文位一律 [待作者供稿] 占位，不代写。
   const supplied = index === 0;
@@ -150,7 +243,7 @@ function StagePlaceholderPanel({ work, index }: { work: HomeWork; index: number 
     <>
       <div
         style={{
-          border: '2px dashed var(--n400)',
+          border: '1px dashed oklch(0.58 0.105 158 / 0.5)',
           padding: '9px 13px',
           fontSize: 12,
           color: 'var(--n700)',
@@ -161,11 +254,32 @@ function StagePlaceholderPanel({ work, index }: { work: HomeWork; index: number 
         </span>{' '}
         {supplied ? 'thesis 一句话 — 这台机器为何值得被哀悼。' : 'thesis 一句话。'}
       </div>
-      <div className="hatch" style={{ flex: 1, minHeight: 0 }}>
-        <span style={UPPER_11}>[待作者供稿] 主图 · duotone green</span>
-      </div>
-      <div className="grid grid-cols-2" style={{ borderTop: '2px solid var(--ink)' }}>
-        <div style={{ padding: '9px 13px 0 0', borderRight: '2px solid var(--ink)' }}>
+      <StageMedia
+        maskDeg={150}
+        grain={0.14}
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <span
+          style={{
+            position: 'relative',
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            color: 'var(--g200)',
+          }}
+        >
+          [待作者供稿] 主图 · duotone
+        </span>
+      </StageMedia>
+      <div className="grid grid-cols-2" style={{ borderTop: 'var(--hair)' }}>
+        <div style={{ padding: '9px 13px 0 0', borderRight: 'var(--hair)' }}>
           <div style={{ ...CELL_LABEL, marginBottom: 3 }}>Role</div>
           <div style={{ fontSize: 12, lineHeight: 1.45, color: 'var(--n700)' }}>
             {supplied ? 'Concept · mechanism · electronics · HRI study' : '[待作者供稿]'}
@@ -179,19 +293,29 @@ function StagePlaceholderPanel({ work, index }: { work: HomeWork; index: number 
         </div>
       </div>
       {work.published ? (
-        <Link
-          className="btn btn-primary"
+        <a
+          data-pt
           href={`/work/${work.slug}`}
-          style={{ alignSelf: 'flex-start' }}
+          style={{
+            alignSelf: 'flex-start',
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            textDecoration: 'none',
+            color: 'var(--accent)',
+            borderBottom: '1px solid var(--g500)',
+            paddingBottom: 2,
+          }}
         >
-          Open case study
-        </Link>
+          Open case study →
+        </a>
       ) : (
         <div className="flex items-baseline" style={{ gap: 14 }}>
-          <span className="tag tag-neutral">In preparation</span>
-          <Link href="/archive" style={LINK_11}>
+          <span style={MINI_TAG}>In preparation</span>
+          <a data-pt href="/archive" style={LINK_11}>
             Work log →
-          </Link>
+          </a>
         </div>
       )}
     </>
@@ -214,6 +338,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const fxEntrance = FX.entrance && !reduced;
+    const fxStagger = FX.staggerFx && !reduced;
     const fxStage = FX.stageFx && !reduced;
     const fxCursor = FX.cursorReadout && !reduced && window.matchMedia('(hover: hover)').matches;
     const fxRail = FX.railFlip && !reduced;
@@ -225,6 +350,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
     const track = $('track');
     const s2el = $('s2');
     const railEl = $('rail');
+    const prog = $('prog');
     const pFig = $('pFig');
     const chip = $('figChip');
     const lbl = $('stageLbl');
@@ -234,6 +360,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
     if (!vp || !track || !s2el || !railEl || !pFig || !chip || !lbl || !cardsBox || !aboutLink) return;
     if (secs.some((s) => !s)) return;
     const sections = secs as HTMLElement[];
+    const flashes = sections.map((s) => s.querySelector<HTMLElement>('[data-flash]'));
     const railItems = Array.from(railEl.querySelectorAll<HTMLElement>('[data-rail]'));
     const panels = [pFig, ...works.map((_, i) => $(`wp${i + 1}`))].filter(Boolean) as HTMLElement[];
     const cards = works.map((_, i) => $(`c${i + 1}`)).filter(Boolean) as HTMLElement[];
@@ -260,7 +387,10 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
       railItems.forEach((it, i) => {
         const bar = it.querySelector<HTMLElement>('[data-rbar]');
         const num = it.querySelector<HTMLElement>('[data-rnum]');
-        if (bar) bar.style.background = i === n ? 'var(--ink)' : 'transparent';
+        if (bar) {
+          bar.style.background = i === n ? 'var(--g500)' : 'var(--n300)';
+          bar.style.width = i === n ? '22px' : '14px';
+        }
         if (num) {
           num.style.color = i === n ? 'var(--accent)' : 'var(--n500)';
           if (i === n && fxRail)
@@ -272,8 +402,130 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
               { duration: MICRO, easing: EASE },
             );
         }
+        if (prog && i === n) prog.style.transform = `scaleX(${(n + 1) / (N + 1)})`;
       });
-    // 翻幕到位后不再有幕内 stagger/闪帧（用户真机否决 2026-07-24）——入场编排仅 S0 首载一次。
+    // 翻幕编排（迭代稿：斜向扫光 + 幕内 stagger）——staggerFx 默认关（07-24 真机拍板），enter 即空转。
+    const enter = (i: number) => {
+      if (!fxStagger) return;
+      flashes[i]?.animate(
+        [
+          { opacity: 0, transform: 'translateX(-16%)' },
+          { opacity: 1, transform: 'translateX(0)', offset: 0.45 },
+          { opacity: 0, transform: 'translateX(16%)' },
+        ],
+        { duration: 460, easing: EASE },
+      );
+      sections[i].querySelectorAll<HTMLElement>('[data-row]').forEach((row, k) =>
+        row.animate(
+          [
+            { opacity: 0, transform: 'translateY(12px)', clipPath: 'inset(0 0 100% 0)' },
+            { opacity: 1, transform: 'translateY(0)', clipPath: 'inset(0 0 -10% 0)' },
+          ],
+          { duration: STRUCT, delay: k * STAG, easing: EASE, fill: 'backwards' },
+        ),
+      );
+    };
+
+    // ---------- 页面转场 goPT（迭代稿 MPA 版的 SPA 适配） ----------
+    // 稿内：veil 淡入 + 视口缩放模糊 + 媒体块克隆生长 → location.href；目标页以 sessionStorage
+    // 交接 om-veil 开场淡出。SPA 下文档不重载：节点挂 body（组件卸载后仍在），router.push 完成
+    // 客户端渲染后定时淡出移除；四个目标路由挂载时预取，push 即时。
+    let ptBusy = false;
+    const goPT = (href: string, fromEl: HTMLElement | null) => {
+      if (ptBusy) return;
+      if (reduced) {
+        router.push(href);
+        return;
+      }
+      ptBusy = true;
+      const finish = () => {
+        router.push(href);
+        setTimeout(() => {
+          document.querySelectorAll<HTMLElement>('[data-pt-tmp]').forEach((el) => {
+            const from = el.hasAttribute('data-pt-veil') ? 0.92 : 1;
+            el.animate([{ opacity: from }, { opacity: 0 }], {
+              duration: STRUCT,
+              easing: EASE,
+              fill: 'forwards',
+            }).onfinish = () => el.remove();
+          });
+        }, 220);
+      };
+      const veil = document.createElement('div');
+      veil.setAttribute('data-pt-tmp', '1');
+      veil.setAttribute('data-pt-veil', '1');
+      veil.style.cssText = `position:fixed;inset:0;z-index:199;pointer-events:none;opacity:0;background:${PT_BG}`;
+      document.body.appendChild(veil);
+      veil.animate([{ opacity: 0 }, { opacity: 0.92 }], {
+        duration: STRUCT,
+        easing: EASE,
+        fill: 'forwards',
+      });
+      vp.style.willChange = 'transform,filter';
+      vp.animate(
+        [
+          { transform: 'scale(1)', filter: 'blur(0px)' },
+          { transform: 'scale(1.04)', filter: 'blur(8px)' },
+        ],
+        { duration: PUSH_MS, easing: EASE, fill: 'forwards' },
+      );
+      if (!fromEl) {
+        setTimeout(finish, 540);
+        return;
+      }
+      const r = fromEl.getBoundingClientRect();
+      if (r.width < 10 || r.height < 10) {
+        setTimeout(finish, 540);
+        return;
+      }
+      const wrap = document.createElement('div');
+      wrap.setAttribute('data-pt-tmp', '1');
+      wrap.style.cssText = `position:fixed;top:${r.top}px;left:${r.left}px;width:${r.width}px;height:${r.height}px;z-index:200;pointer-events:none;overflow:hidden;transform-origin:50% 50%;will-change:transform`;
+      const clone = fromEl.cloneNode(true) as HTMLElement;
+      clone.style.position = 'absolute';
+      clone.style.inset = '0';
+      clone.style.width = '100%';
+      clone.style.height = '100%';
+      clone.style.margin = '0';
+      clone.style.flex = 'none';
+      clone.style.minHeight = '0';
+      wrap.appendChild(clone);
+      document.body.appendChild(wrap);
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const s = Math.max(vw / Math.max(r.width, 1), vh / Math.max(r.height, 1)) * 1.02;
+      const tx = vw / 2 - (r.left + r.width / 2);
+      const ty = vh / 2 - (r.top + r.height / 2);
+      wrap.animate(
+        [
+          { transform: 'translate(0px,0px) scale(1)' },
+          { transform: `translate(${tx}px,${ty}px) scale(${s})` },
+        ],
+        { duration: PUSH_MS, easing: EASE, fill: 'forwards' },
+      ).onfinish = () => setTimeout(finish, 50);
+    };
+    // 舞台内页链接（data-pt）：所在面板的媒体块作克隆源；无面板则链接自身生长（稿内行为）
+    const ptLinks = Array.from(root.querySelectorAll<HTMLElement>('a[data-pt]'));
+    ptLinks.forEach((a) =>
+      on(a, 'click', (e) => {
+        e.preventDefault();
+        const href = a.getAttribute('href');
+        if (!href) return;
+        const panel = a.closest<HTMLElement>('[id^="wp"]');
+        goPT(href, panel ? panel.querySelector<HTMLElement>('[data-ptm]') : a);
+      }),
+    );
+    // goPT 目标路由预取（卡片 + data-pt 链接）
+    const ptTargets = new Set<string>();
+    cards.forEach((c) => {
+      const h = c.getAttribute('data-href');
+      if (h) ptTargets.add(h);
+    });
+    ptLinks.forEach((a) => {
+      const h = a.getAttribute('href');
+      if (h) ptTargets.add(h);
+    });
+    ptTargets.forEach((h) => router.prefetch(h));
 
     // ---------- 分页引擎（物理原样移植） ----------
     let acc = 0;
@@ -318,6 +570,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
       setTrack(-Math.min(n, 1) * H(), PUSH_MS);
       setS2(n === 2 ? 0 : W(), PUSH_MS);
       setRail(n);
+      setTimeout(() => enter(n), PUSH_MS);
     };
     const goScreen = (n: number) => {
       if (performance.now() < lockUntil) return;
@@ -444,6 +697,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
     });
 
     // ---------- 舞台三态：偷看 / 回归 / 驻留 ----------
+    // 迭代稿：点击卡片改走 goPT 转场跳页（驻留仅剩 hoverPeek=false 手感分支，chip 解除保留）。
     let showing = 0;
     let pinned = 0;
     let hoverT: ReturnType<typeof setTimeout> | undefined;
@@ -457,9 +711,13 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
       cards.forEach((c, i) => {
         const num = c.querySelector<HTMLElement>('[data-cnum]');
         const active = pinned === i + 1 || showing === i + 1;
-        if (num) num.style.color = active ? 'var(--accent)' : 'var(--n500)';
-        c.style.background = pinned === i + 1 ? 'var(--surface)' : 'var(--paper)';
-        c.style.borderColor = pinned === i + 1 ? 'var(--accent)' : 'var(--ink)';
+        if (num)
+          num.style.color = active
+            ? 'var(--g800)'
+            : works[i]?.published
+              ? 'var(--g600)'
+              : 'var(--n400)';
+        c.style.background = pinned === i + 1 ? 'var(--g100)' : 'transparent';
       });
     const showStage = (n: number, slow?: boolean) => {
       if (n === showing) return;
@@ -510,19 +768,10 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
       });
       on(c, 'mouseleave', () => clearTimeout(hoverT));
       on(c, 'click', () => {
-        if (small) {
-          const href = c.getAttribute('data-href');
-          if (href) router.push(href);
-          return;
-        }
-        if (pinned === n) {
-          pinned = 0;
-          showStage(0, true);
-        } else {
-          pinned = n;
-          showStage(n);
-        }
-        setCards();
+        const href = c.getAttribute('data-href');
+        if (!href) return;
+        const media = small ? null : (panels[n]?.querySelector<HTMLElement>('[data-ptm]') ?? c);
+        goPT(href, media);
       });
     });
     on(cardsBox, 'mouseleave', () => {
@@ -626,6 +875,9 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
         s2el.style.top = '100svh';
         s2el.style.left = '0';
         s2el.style.right = '0';
+        // 稿内隐性层叠 bug 的落地修正：track 的 willChange 建层叠上下文后，S1 内容层 z1
+        // 会盖穿横向推入的 s2（transform 上下文 z auto）——引擎态显式抬 s2。
+        s2el.style.zIndex = '2';
         s2el.style.transition = 'none';
         s2el.style.transform = cur === 2 ? 'translate3d(0,0,0)' : `translate3d(${W()}px,0,0)`;
       } else {
@@ -633,6 +885,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
         s2el.style.top = '';
         s2el.style.left = '';
         s2el.style.right = '';
+        s2el.style.zIndex = '';
         s2el.style.transition = 'none';
         s2el.style.transform = '';
       }
@@ -642,6 +895,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
         sec.style.overflow = engine ? 'hidden' : 'visible';
       });
       railEl.style.display = engine ? 'flex' : 'none';
+      if (prog) prog.style.display = engine ? 'block' : 'none';
       acc = 0;
     };
     applyMode();
@@ -689,10 +943,29 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
           fontWeight: 700,
           letterSpacing: '0.12em',
           textTransform: 'uppercase',
-          background: 'var(--ink)',
+          background: 'var(--accent)',
           color: 'var(--paper)',
           whiteSpace: 'nowrap',
           transition: 'opacity var(--dur-micro) var(--ease-site)',
+        }}
+      />
+
+      {/* 顶缘进度条（迭代稿新增；仅引擎态显示，applyMode 控制） */}
+      <div
+        id="prog"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 3,
+          zIndex: 96,
+          pointerEvents: 'none',
+          transformOrigin: '0 50%',
+          transform: 'scaleX(0.334)',
+          background: 'var(--g500)',
+          transition: 'transform var(--dur-struct) var(--ease-site)',
+          display: 'none',
         }}
       />
 
@@ -716,9 +989,10 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
               data-rbar
               style={{
                 display: 'inline-block',
-                width: 14,
+                width: i === 0 ? 22 : 14,
                 height: 2,
-                background: i === 0 ? 'var(--ink)' : 'transparent',
+                background: i === 0 ? 'var(--g500)' : 'var(--n300)',
+                transition: 'width var(--dur-micro) var(--ease-site)',
               }}
             />
             <span
@@ -741,7 +1015,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
       <main id="vp" style={{ position: 'relative' }}>
         <div id="track" style={{ willChange: 'transform' }}>
           {/* ——— S0 枢纽幕 ——— */}
-          <section id="s0" style={SECTION_BASE}>
+          <section id="s0" style={{ ...SECTION_BASE, background: GRID_BG }}>
             <div
               className="hub-grid"
               style={{
@@ -772,7 +1046,26 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                     <span style={{ color: 'var(--ink)', fontWeight: 800 }}>[Name]</span> — Portfolio
                     2026
                   </span>
-                  <span style={{ color: 'var(--accent)' }}>The solver runs live</span>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      color: 'var(--accent)',
+                    }}
+                  >
+                    <span
+                      data-pulse
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: 999,
+                        background: 'var(--g500)',
+                        animation: 'pulse 1.6s ease-in-out infinite',
+                      }}
+                    />
+                    The solver runs live
+                  </span>
                 </p>
                 <h1
                   data-row
@@ -788,6 +1081,18 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                 >
                   Structures that move, <span style={{ color: 'var(--accent)' }}>machines that live.</span>
                 </h1>
+                <svg data-row width={230} height={8} style={{ display: 'block', overflow: 'visible' }}>
+                  <line
+                    data-dash
+                    x1={0}
+                    y1={4}
+                    x2={230}
+                    y2={4}
+                    strokeWidth={1.5}
+                    strokeDasharray="8 6"
+                    style={{ stroke: 'var(--g500)', animation: 'dashmove 2.6s linear infinite' }}
+                  />
+                </svg>
                 <p data-row style={{ fontSize: 14, lineHeight: 1.5, margin: 0, maxWidth: '44ch' }}>
                   Mechanism design, custom physics solvers, and human–robot interaction research.
                   Four projects, built and measured.
@@ -803,13 +1108,25 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                       data-cursor={`View ${String(i + 1).padStart(2, '0')} →`}
                       data-href={w.published ? `/work/${w.slug}` : '/archive'}
                     >
+                      <span
+                        data-tick
+                        style={{
+                          position: 'absolute',
+                          top: -2,
+                          left: 0,
+                          width: 26,
+                          height: 3,
+                          background: TICKS[i] ?? 'var(--n300)',
+                          pointerEvents: 'none',
+                        }}
+                      />
                       <span className="flex items-baseline justify-between" style={{ gap: 10 }}>
                         <span
                           data-cnum
                           style={{
-                            fontSize: 24,
+                            fontSize: 26,
                             fontWeight: 800,
-                            color: 'var(--n500)',
+                            color: w.published ? 'var(--g600)' : 'var(--n400)',
                             transition: 'color var(--dur-micro) var(--ease-site)',
                           }}
                         >
@@ -818,10 +1135,11 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                         <span
                           style={{
                             fontSize: 9,
-                            fontWeight: 600,
+                            fontWeight: w.published ? 700 : 600,
                             letterSpacing: '0.1em',
                             textTransform: 'uppercase',
-                            color: w.published ? 'var(--accent)' : 'var(--n600)',
+                            whiteSpace: 'nowrap',
+                            color: w.published ? 'var(--accent)' : 'var(--n500)',
                           }}
                         >
                           {w.published ? 'live' : 'in prep'}
@@ -859,7 +1177,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                   className="flex flex-wrap"
                   style={{
                     marginTop: 'auto',
-                    borderTop: '2px solid var(--ink)',
+                    borderTop: 'var(--hair)',
                     paddingTop: 10,
                     gap: 24,
                     fontSize: 11,
@@ -871,10 +1189,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                 >
                   {STATS.map((s) => (
                     <span key={s.label}>
-                      <b style={{ color: s.accent ? 'var(--accent)' : 'var(--ink)', fontWeight: 800 }}>
-                        {s.n}
-                      </b>{' '}
-                      {s.label}
+                      <b style={{ color: s.color, fontWeight: 800 }}>{s.n}</b> {s.label}
                     </span>
                   ))}
                 </div>
@@ -885,11 +1200,22 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                 id="wstage"
                 data-row
                 className="hub-stage"
-                style={{ border: '1px solid var(--n400)', minHeight: 0, flexDirection: 'column' }}
+                style={{
+                  minHeight: 0,
+                  flexDirection: 'column',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
               >
                 <div
-                  className="flex items-center justify-between"
-                  style={{ gap: 16, padding: '10px 16px', borderBottom: '1px solid var(--n400)' }}
+                  className="flex items-baseline justify-between"
+                  style={{
+                    position: 'relative',
+                    zIndex: 1,
+                    gap: 16,
+                    padding: '0 0 8px',
+                    borderBottom: 'var(--hair)',
+                  }}
                 >
                   <span
                     id="stageLbl"
@@ -898,6 +1224,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                       fontWeight: 800,
                       letterSpacing: '0.12em',
                       textTransform: 'uppercase',
+                      color: 'var(--accent)',
                     }}
                   >
                     Stage — 默认展示位
@@ -906,14 +1233,14 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                     00 · Stage
                   </button>
                 </div>
-                <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+                <div style={{ position: 'relative', zIndex: 1, flex: 1, minHeight: 0 }}>
                   <div
                     id="pFig"
                     data-cursor="Stage — 待定"
                     style={{
                       position: 'absolute',
                       inset: 0,
-                      padding: 20,
+                      padding: '14px 0 2px',
                       boxSizing: 'border-box',
                       display: 'flex',
                       flexDirection: 'column',
@@ -931,32 +1258,39 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                           pointerEvents: 'none',
                         }}
                       />
-                      <div
-                        className="flex flex-col items-center justify-center text-center"
+                      <StageMedia
+                        maskDeg={155}
+                        grain={0.13}
                         style={{
                           flex: 1,
-                          border: '2px dashed var(--n400)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                           gap: 10,
+                          textAlign: 'center',
                           padding: 24,
                           boxSizing: 'border-box',
                         }}
                       >
                         <span
                           style={{
+                            position: 'relative',
                             fontSize: 13,
                             fontWeight: 800,
                             letterSpacing: '0.12em',
                             textTransform: 'uppercase',
-                            color: 'var(--accent)',
+                            color: 'var(--g200)',
                           }}
                         >
                           [待定] 默认展示位
                         </span>
                         <span
                           style={{
+                            position: 'relative',
                             fontSize: 12,
                             lineHeight: 1.6,
-                            color: 'var(--n600)',
+                            color: 'var(--g400)',
                             maxWidth: '32ch',
                           }}
                         >
@@ -964,11 +1298,11 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                           <br />
                           悬停左侧卡片即可预览各项目。
                         </span>
-                      </div>
+                      </StageMedia>
                     </div>
                     <div className="flex items-baseline justify-between" style={{ gap: 16 }}>
                       <span style={UPPER_11}>Stage 00 · placeholder</span>
-                      <span className="tag tag-outline">tbd</span>
+                      <span style={MINI_TAG}>tbd</span>
                     </div>
                   </div>
                   {works.map((w, i) => (
@@ -978,7 +1312,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                       style={{
                         position: 'absolute',
                         inset: 0,
-                        padding: 20,
+                        padding: '14px 0 2px',
                         boxSizing: 'border-box',
                         display: 'flex',
                         flexDirection: 'column',
@@ -992,17 +1326,21 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                   ))}
                 </div>
               </div>
-            </div>          </section>
+            </div>
+            <Grain opacity={0.055} blend="multiply" />
+            <div data-flash style={FLASH_STYLE} />
+          </section>
 
-          {/* ——— S1 About 幕 ——— */}
-          <section
-            id="s1"
-            style={{ ...SECTION_BASE, borderTop: '2px solid var(--ink)' }}
-          >
+          {/* ——— S1 About 幕（迭代稿：深色渐变底 + 点阵/颗粒叠加） ——— */}
+          <section id="s1" style={{ ...SECTION_BASE, background: PT_BG }}>
             <span id="about-preview" />
+            <Dots mask="linear-gradient(115deg,#000 0%,transparent 45%)" opacity={0.2} />
+            <Grain opacity={0.12} />
             <div
               className="flex flex-col"
               style={{
+                position: 'relative',
+                zIndex: 1,
                 flex: 1,
                 minHeight: 0,
                 maxWidth: 1400,
@@ -1014,10 +1352,18 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
               }}
             >
               <div data-row className="flex items-baseline justify-between" style={{ minHeight: 24 }}>
-                <h2 style={SCREEN_H2}>
-                  <span style={{ color: 'var(--accent)' }}>S1</span> · About
+                <h2 style={{ ...SCREEN_H2, color: 'var(--g100)' }}>
+                  <span style={{ color: 'var(--g400)' }}>S1</span> About
                 </h2>
-                <Link href="/about" style={LINK_11}>
+                <Link
+                  href="/about"
+                  style={{
+                    ...LINK_11,
+                    color: 'var(--g400)',
+                    borderBottom: '1px solid oklch(0.71 0.098 145 / 0.5)',
+                    paddingBottom: 2,
+                  }}
+                >
                   Full about →
                 </Link>
               </div>
@@ -1031,58 +1377,104 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                   margin: 0,
                   textTransform: 'uppercase',
                   maxWidth: '20ch',
+                  color: 'var(--g100)',
                 }}
               >
-                Builder first, researcher by method.
+                Builder first, <span style={{ color: 'var(--g400)' }}>researcher by method.</span>
               </h2>
+              <svg data-row width={230} height={8} style={{ display: 'block', overflow: 'visible' }}>
+                <line
+                  data-dash
+                  x1={0}
+                  y1={4}
+                  x2={230}
+                  y2={4}
+                  strokeWidth={1.5}
+                  strokeDasharray="8 6"
+                  style={{ stroke: 'var(--g400)', animation: 'dashmove 2.6s linear infinite' }}
+                />
+              </svg>
               <div
                 data-row
                 className="grid items-stretch gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]"
                 style={{ flex: 1, minHeight: 0 }}
               >
                 <div className="flex flex-col" style={{ gap: 16 }}>
-                  <div className="placeholder-note" style={{ padding: '12px 16px', maxWidth: '60ch' }}>
-                    <span style={{ fontWeight: 800, color: 'var(--accent)' }}>[待作者供稿]</span> 摘要 —
+                  <div
+                    style={{
+                      border: '1px dashed oklch(0.71 0.098 145 / 0.45)',
+                      padding: '12px 16px',
+                      fontSize: 13,
+                      color: S1_BODY,
+                      maxWidth: '60ch',
+                    }}
+                  >
+                    <span style={{ fontWeight: 800, color: 'var(--g400)' }}>[待作者供稿]</span> 摘要 —
                     两三句：背景、方向、申请目标。
                   </div>
-                  <div className="grid grid-cols-2" style={{ borderTop: '2px solid var(--ink)' }}>
-                    <div style={{ padding: '12px 16px 0 0', borderRight: '2px solid var(--ink)' }}>
-                      <div style={CELL_LABEL}>Contact</div>
-                      <div style={{ fontSize: 13, lineHeight: 1.55, color: 'var(--n700)' }}>
+                  <div className="grid grid-cols-2" style={{ borderTop: HAIR_LIGHT }}>
+                    <div style={{ padding: '12px 16px 0 0', borderRight: HAIR_LIGHT }}>
+                      <div style={{ ...CELL_LABEL, color: 'var(--g100)' }}>Contact</div>
+                      <div style={{ fontSize: 13, lineHeight: 1.55, color: S1_BODY }}>
                         [email placeholder]
                         <br />
                         GitHub · plain URLs · no password
                       </div>
                     </div>
                     <div style={{ padding: '12px 0 0 16px' }}>
-                      <div style={CELL_LABEL}>Currently</div>
-                      <div style={{ fontSize: 13, lineHeight: 1.55, color: 'var(--n700)' }}>
+                      <div style={{ ...CELL_LABEL, color: 'var(--g100)' }}>Currently</div>
+                      <div style={{ fontSize: 13, lineHeight: 1.55, color: S1_BODY }}>
                         <span style={{ color: 'var(--rose)' }}>●</span> [待作者供稿] 状态一行
                       </div>
                     </div>
                   </div>
                   <div
                     className="grid grid-cols-2"
-                    style={{ marginTop: 'auto', borderTop: '2px solid var(--ink)' }}
+                    style={{ marginTop: 'auto', borderTop: HAIR_LIGHT }}
                   >
-                    <div style={{ padding: '12px 16px 0 0', borderRight: '2px solid var(--ink)' }}>
-                      <div style={CELL_LABEL}>Role</div>
-                      <div style={{ fontSize: 13, lineHeight: 1.55, color: 'var(--n700)' }}>
+                    <div style={{ padding: '12px 16px 0 0', borderRight: HAIR_LIGHT }}>
+                      <div style={{ ...CELL_LABEL, color: 'var(--g100)' }}>Role</div>
+                      <div style={{ fontSize: 13, lineHeight: 1.55, color: S1_BODY }}>
                         Concept &amp; research design · mechanism &amp; fabrication · electronics &amp;
                         behavior · HRI study
                       </div>
                     </div>
                     <div style={{ padding: '12px 0 0 16px' }}>
-                      <div style={CELL_LABEL}>Tools</div>
-                      <div style={{ fontSize: 13, lineHeight: 1.55, color: 'var(--n700)' }}>
+                      <div style={{ ...CELL_LABEL, color: 'var(--g100)' }}>Tools</div>
+                      <div style={{ fontSize: 13, lineHeight: 1.55, color: S1_BODY }}>
                         Rhino / Grasshopper · SLS / FDM / resin · ESP32 · ELAN · TypeScript solvers
                       </div>
                     </div>
                   </div>
                 </div>
                 <figure className="flex min-h-0 flex-col" style={{ margin: 0, gap: 8 }}>
-                  <div className="hatch" style={{ flex: 1, minHeight: 200 }}>
-                    <span style={UPPER_11}>[待作者供稿] 人像 — duotone green</span>
+                  <div
+                    style={{
+                      position: 'relative',
+                      flex: 1,
+                      minHeight: 200,
+                      isolation: 'isolate',
+                      background: 'var(--g200)',
+                    }}
+                  >
+                    <Dots
+                      mask="linear-gradient(150deg,#000 0%,transparent 60%)"
+                      opacity={0.5}
+                      color="var(--g500)"
+                    />
+                    <div
+                      className="flex items-center justify-center"
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        padding: 24,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <span style={{ ...UPPER_11, color: 'var(--g700)' }}>
+                        [待作者供稿] 人像 — duotone green
+                      </span>
+                    </div>
                   </div>
                   <figcaption
                     style={{
@@ -1090,20 +1482,20 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                       fontWeight: 600,
                       letterSpacing: '0.08em',
                       textTransform: 'uppercase',
-                      color: 'var(--n600)',
+                      color: 'var(--g400)',
                     }}
                   >
                     Portrait · duotone green
                   </figcaption>
                 </figure>
               </div>
-            </div>          </section>
+            </div>
+            <Grain opacity={0.055} blend="multiply" />
+            <div data-flash style={FLASH_STYLE} />
+          </section>
 
           {/* ——— S2 Lab + Log + 页脚幕 ——— */}
-          <section
-            id="s2"
-            style={{ ...SECTION_BASE, borderTop: '2px solid var(--ink)' }}
-          >
+          <section id="s2" style={{ ...SECTION_BASE, background: GRID_BG, borderTop: 'var(--hair)' }}>
             <span id="lab" />
             <div
               className="flex flex-col"
@@ -1120,18 +1512,38 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
             >
               <div data-row className="flex items-baseline justify-between" style={{ minHeight: 24 }}>
                 <h2 style={SCREEN_H2}>
-                  <span style={{ color: 'var(--accent)' }}>S2</span> · The lab
+                  <span style={{ color: 'var(--accent-2)' }}>S2</span> The lab
                 </h2>
-                <span style={UPPER_11}>Solver testbenches · all live</span>
+                <span className="flex items-center" style={{ ...UPPER_11, gap: 14 }}>
+                  <span className="flex items-center" style={{ gap: 6 }}>
+                    <span style={{ width: 9, height: 9, background: 'var(--g500)' }} />
+                    SVG
+                  </span>
+                  <span className="flex items-center" style={{ gap: 6 }}>
+                    <span style={{ width: 9, height: 9, background: 'var(--p500)' }} />
+                    WebGL
+                  </span>
+                  <span>All live</span>
+                </span>
               </div>
               <div
                 data-row
                 className="grid grid-cols-2 lg:grid-cols-4"
-                style={{ gap: 2, background: 'var(--ink)', border: '2px solid var(--ink)' }}
+                style={{ gap: 1, background: 'oklch(0.235 0.025 215 / 0.22)' }}
               >
                 {LABS.map((lab) => (
-                  <a key={lab.kicker} href={lab.href} className="card" style={{ gap: 6 }}>
-                    <div className="card-kicker">{lab.kicker}</div>
+                  <a
+                    key={lab.kicker}
+                    href={lab.href}
+                    className="card lab-card"
+                    style={{ '--lab-bar': lab.bar, '--lab-hover': lab.hover } as CSSProperties}
+                  >
+                    <div
+                      className="card-kicker"
+                      style={{ alignSelf: 'flex-start', color: lab.kickerColor }}
+                    >
+                      {lab.kicker}
+                    </div>
                     <div className="card-title">{lab.title}</div>
                     <p className="card-body">{lab.body}</p>
                     <div className="card-meta">{lab.meta}</div>
@@ -1144,25 +1556,22 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                 style={{ marginTop: 6 }}
               >
                 <h2 style={SCREEN_H2}>Work log</h2>
-                <Link href="/archive" style={LINK_11}>
+                <a data-pt href="/archive" style={LINK_11}>
                   All entries →
-                </Link>
+                </a>
               </div>
               <div data-row style={{ flex: 1, minHeight: 0 }}>
                 {LOG_PREVIEW.map((e, i) => (
                   <div
                     key={e.date}
-                    className="grid grid-cols-[110px_1fr]"
-                    style={{
-                      gap: 14,
-                      padding: '11px 0',
-                      borderTop: '2px solid var(--ink)',
-                      ...(i === LOG_PREVIEW.length - 1
-                        ? { borderBottom: '2px solid var(--ink)' }
-                        : {}),
-                    }}
+                    className="log-row"
+                    style={
+                      i === LOG_PREVIEW.length - 1 ? { borderBottom: 'var(--hair)' } : undefined
+                    }
                   >
-                    <span style={{ fontSize: 12, fontWeight: 800 }}>{e.date}</span>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)' }}>
+                      {e.date}
+                    </span>
                     <span style={{ fontSize: 13, color: 'var(--n700)' }}>{e.text}</span>
                   </div>
                 ))}
@@ -1177,16 +1586,27 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                   }}
                 >
                   Colophon —{' '}
-                  <span style={{ borderBottom: '2px dashed var(--n400)' }}>
+                  <span style={{ borderBottom: '1px dashed var(--n400)' }}>
                     [待作者供稿] 一句：这个站本身如何被构建
                   </span>
                 </p>
               </div>
             </div>
-            <footer style={{ background: 'var(--g900)', color: 'var(--g100)' }}>
+            <footer
+              style={{
+                position: 'relative',
+                overflow: 'hidden',
+                background: FOOT_GRAD,
+                color: 'var(--g100)',
+              }}
+            >
+              <Dots mask="linear-gradient(92deg,#000 0%,transparent 55%)" opacity={0.26} />
+              <Grain opacity={0.1} />
               <div
                 className="flex items-baseline justify-between"
                 style={{
+                  position: 'relative',
+                  zIndex: 1,
                   maxWidth: 1400,
                   margin: '0 auto',
                   padding: '24px 64px 24px 48px',
@@ -1216,7 +1636,10 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                   GitHub · no password · plain URLs
                 </span>
               </div>
-            </footer>          </section>
+            </footer>
+            <Grain opacity={0.055} blend="multiply" />
+            <div data-flash style={FLASH_STYLE} />
+          </section>
         </div>
       </main>
     </div>

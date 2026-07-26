@@ -148,6 +148,7 @@ a:hover {
 
 ::selection {
   background: var(--g200);
+  color: var(--ink);
 }
 
 /* 焦点环：MAPPING §1 —— 2px accent，不留浏览器默认蓝圈 */
@@ -467,6 +468,58 @@ a:hover {
   --dur-micro: 180ms;
   --dur-struct: 520ms;
   --ease-site: cubic-bezier(0.2, 0.7, 0.2, 1);
+  /* 2026-07-26 迭代稿：发丝线 + 颗粒纹理（om 视觉语言，MAPPING §6） */
+  --hair: 1px solid oklch(0.235 0.025 215 / 0.22);
+  --grain: url(data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%27160%27%20height=%27160%27%3E%3Cfilter%20id=%27g%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%270.9%27%20numOctaves=%274%27%20stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect%20width=%27160%27%20height=%27160%27%20filter=%27url%28%23g%29%27/%3E%3C/svg%3E);
+}
+
+/* 迭代稿装饰动画（脉冲圆点 / 虚线行进）；reduced-motion 一律停 */
+@keyframes dashmove {
+  to {
+    stroke-dashoffset: -56px;
+  }
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-dash],
+  [data-pulse] {
+    animation: none;
+  }
+}
+
+/* 纹理叠加层（点阵 / 颗粒）：透明度与遮罩逐处内联（各区数值不同） */
+.om-dots {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(var(--g400) 1px, transparent 1.2px);
+  background-size: 6px 6px;
+}
+.om-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: var(--grain);
+  background-size: 170px 170px;
+}
+/* 舞台媒体块：深色渐变底（转场 goPT 的克隆源，data-ptm） */
+.om-media {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    150deg,
+    oklch(0.3 0.062 196) 0%,
+    oklch(0.26 0.058 232) 55%,
+    oklch(0.28 0.062 285) 100%
+  );
 }
 
 /* S0 枢纽幕布局：<1024 单列、卡片单列、舞台隐藏（引擎同时停用，见组件 applyMode） */
@@ -496,55 +549,87 @@ a:hover {
   }
 }
 
-/* 项目卡（按钮手感：hover 浮起 + 按压 0.97，SITE_SPEC §1 已批准的最小集） */
+/* 项目卡（2026-07-26 迭代稿：边框盒改发丝线列表项，hover 只变色；浮起/按压已随稿删除） */
 .hub-card {
   font: inherit;
   text-align: left;
   color: inherit;
-  border: 2px solid var(--ink);
+  position: relative;
+  border: 0;
+  border-top: var(--hair);
   border-radius: 0;
-  padding: 14px 16px;
+  padding: 12px 2px 2px 0;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  background: var(--paper);
+  background: transparent;
 }
 @media (hover: hover) and (pointer: fine) {
   .hub-card {
-    transition: background var(--dur-micro) var(--ease-site),
-      transform var(--dur-micro) var(--ease-site),
-      border-color var(--dur-micro) var(--ease-site);
+    transition: color var(--dur-micro) var(--ease-site),
+      background var(--dur-micro) var(--ease-site);
   }
   .hub-card:hover {
-    background: var(--surface);
-    transform: translateY(-2px);
+    color: var(--accent);
   }
 }
-.hub-card:active {
-  transform: scale(0.97);
-}
 
-/* 舞台题栏"00 · Stage"解除驻留小签 */
+/* 舞台题栏"00 · Stage"解除驻留小签（迭代稿：描边盒改下划线小链） */
 .figchip {
   font: inherit;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  padding: 3px 8px;
-  border: 2px solid var(--ink);
+  padding: 0 0 2px;
+  border: 0;
+  border-bottom: 1px solid var(--g500);
   border-radius: 0;
-  background: var(--paper);
-  color: inherit;
+  background: transparent;
+  color: var(--accent);
   cursor: pointer;
 }
 @media (hover: hover) and (pointer: fine) {
   .figchip {
-    transition: background var(--dur-micro) var(--ease-site);
+    transition: color var(--dur-micro) var(--ease-site);
   }
   .figchip:hover {
-    background: var(--surface);
+    color: var(--accent-2);
+  }
+}
+
+/* S2 Lab 四卡（迭代稿：paper 底 + 3px 色顶边按内核家族双色编码，hover 同族 100 级底） */
+.lab-card {
+  background: var(--paper);
+  border-top: 3px solid var(--lab-bar);
+}
+@media (hover: hover) and (pointer: fine) {
+  a.lab-card {
+    transition: background var(--dur-micro) var(--ease-site);
+  }
+  a.lab-card:hover {
+    background: var(--lab-hover);
+  }
+  a.lab-card:hover .card-title {
+    color: inherit;
+  }
+}
+
+/* S2 Work log 行（迭代稿：发丝线 + hover 淡绿底） */
+.log-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 14px;
+  padding: 11px 0;
+  border-top: var(--hair);
+}
+@media (hover: hover) and (pointer: fine) {
+  .log-row {
+    transition: background var(--dur-micro) var(--ease-site);
+  }
+  .log-row:hover {
+    background: var(--g100);
   }
 }
 
