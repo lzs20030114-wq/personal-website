@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+<!-- 2026-07-26 迭代稿：由 Claude Design standalone 导出反重构（DS 资源引用/内链 href/image-slot from 还原、__standalone 标记移除）；非逐字副本。 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="./support.js"></script>
@@ -13,104 +14,116 @@
 <style>
 html,body{margin:0;background:oklch(0.965 0.010 115)}
 a{color:oklch(0.235 0.025 215)}a:hover{color:oklch(0.42 0.088 178)}
-::selection{background:oklch(0.90 0.058 124)}
+::selection{background:oklch(0.90 0.058 124);color:oklch(0.235 0.025 215)}
+@keyframes sheen{0%{transform:translateX(-6%)}100%{transform:translateX(6%)}}
+@keyframes dashmove{to{stroke-dashoffset:-56px}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+@media (prefers-reduced-motion:reduce){[data-sheen],[data-dash],[data-pulse]{animation:none}}
 </style>
+<script>try{if(sessionStorage.getItem('om-pt')==='1'&&!document.getElementById('om-veil')){var v=document.createElement('div');v.id='om-veil';v.setAttribute('data-pt-tmp','1');v.style.cssText='position:fixed;inset:0;z-index:200;pointer-events:none;background:linear-gradient(160deg,oklch(0.27 0.052 200) 0%,oklch(0.24 0.048 232) 55%,oklch(0.26 0.052 282) 100%)';document.documentElement.appendChild(v);}}catch(e){}</script>
 </helmet>
-<div style="background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);--dur-micro:180ms;--dur-struct:520ms;--ease-site:cubic-bezier(0.2,0.7,0.2,1);--color-bg:oklch(0.965 0.010 115);--color-surface:oklch(0.955 0.009 118);--color-text:oklch(0.235 0.025 215);--color-divider:oklch(0.235 0.025 215);--color-accent:oklch(0.58 0.105 158);--color-accent-100:oklch(0.95 0.032 120);--color-accent-200:oklch(0.90 0.058 124);--color-accent-300:oklch(0.83 0.082 132);--color-accent-400:oklch(0.71 0.098 145);--color-accent-500:oklch(0.58 0.105 158);--color-accent-600:oklch(0.50 0.098 168);--color-accent-700:oklch(0.42 0.088 178);--color-accent-800:oklch(0.33 0.068 188);--color-accent-900:oklch(0.25 0.048 196);--color-accent-2:oklch(0.58 0.105 288);--color-accent-2-300:oklch(0.83 0.075 294);--color-accent-2-700:oklch(0.42 0.09 282);--color-neutral-300:oklch(0.84 0.010 135);--color-neutral-400:oklch(0.72 0.012 150);--color-neutral-500:oklch(0.59 0.014 165);--color-neutral-600:oklch(0.51 0.014 180);--color-neutral-700:oklch(0.43 0.013 192)">
-  <div id="cursorTag" style="position:fixed;top:0;left:0;z-index:95;pointer-events:none;opacity:0;padding:5px 10px;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;background:var(--color-text);color:var(--color-bg);white-space:nowrap;transition:opacity var(--dur-micro) var(--ease-site)">Fig.01</div>
+<div style="background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);--dur-micro:180ms;--dur-struct:520ms;--ease-site:cubic-bezier(0.2,0.7,0.2,1);--color-bg:oklch(0.965 0.010 115);--color-surface:oklch(0.955 0.009 118);--color-text:oklch(0.235 0.025 215);--color-divider:oklch(0.235 0.025 215);--color-accent:oklch(0.58 0.105 158);--color-accent-100:oklch(0.95 0.032 120);--color-accent-200:oklch(0.90 0.058 124);--color-accent-300:oklch(0.83 0.082 132);--color-accent-400:oklch(0.71 0.098 145);--color-accent-500:oklch(0.58 0.105 158);--color-accent-600:oklch(0.50 0.098 168);--color-accent-700:oklch(0.42 0.088 178);--color-accent-800:oklch(0.33 0.068 188);--color-accent-900:oklch(0.25 0.048 196);--color-accent-2:oklch(0.58 0.105 288);--color-accent-2-300:oklch(0.83 0.075 294);--color-accent-2-700:oklch(0.42 0.09 282);--color-neutral-300:oklch(0.84 0.010 135);--color-neutral-400:oklch(0.72 0.012 150);--color-neutral-500:oklch(0.59 0.014 165);--color-neutral-600:oklch(0.51 0.014 180);--color-neutral-700:oklch(0.43 0.013 192);--color-accent-2-100:oklch(0.95 0.025 300);--color-accent-2-200:oklch(0.90 0.05 297);--color-accent-2-500:oklch(0.58 0.105 288);--color-accent-2-900:oklch(0.25 0.05 277);--color-rose:oklch(0.72 0.12 356);--hair:1px solid oklch(0.235 0.025 215 / 0.22);--grain:url(data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%27160%27%20height=%27160%27%3E%3Cfilter%20id=%27g%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%270.9%27%20numOctaves=%274%27%20stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect%20width=%27160%27%20height=%27160%27%20filter=%27url%28%23g%29%27/%3E%3C/svg%3E)">
+  <div id="cursorTag" style="position:fixed;top:0;left:0;z-index:95;pointer-events:none;opacity:0;padding:5px 10px;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;background:oklch(0.42 0.088 178);color:oklch(0.965 0.010 115);white-space:nowrap;transition:opacity var(--dur-micro) var(--ease-site)">Fig.01</div>
+
+  <div id="prog" style="position:fixed;top:0;left:0;right:0;height:3px;z-index:96;pointer-events:none;transform-origin:0 50%;transform:scaleX(0.334);background:oklch(0.58 0.105 158);transition:transform var(--dur-struct) var(--ease-site)"></div>
 
   <div id="rail" style="position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:90;display:flex;flex-direction:column;gap:10px">
     <div data-rail="0" data-cursor="Go S0 →" role="button" tabindex="0" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 2px" style-focus="outline:2px solid var(--color-accent);outline-offset:2px">
-      <span data-rbar style="display:inline-block;width:14px;height:2px;background:var(--color-divider)"></span>
-      <span data-rnum style="display:inline-block;font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--color-accent-700)">00</span>
+      <span data-rbar="" style="display:inline-block;width:22px;height:2px;background:oklch(0.58 0.105 158);transition:width var(--dur-micro) var(--ease-site)"></span>
+      <span data-rnum="" style="display:inline-block;font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--color-accent-700)">00</span>
     </div>
     <div data-rail="1" data-cursor="Go S1 →" role="button" tabindex="0" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 2px" style-focus="outline:2px solid var(--color-accent);outline-offset:2px">
-      <span data-rbar style="display:inline-block;width:14px;height:2px;background:transparent"></span>
-      <span data-rnum style="display:inline-block;font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--color-neutral-500)">01</span>
+      <span data-rbar="" style="display:inline-block;width:14px;height:2px;background:var(--color-neutral-300);transition:width var(--dur-micro) var(--ease-site)"></span>
+      <span data-rnum="" style="display:inline-block;font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--color-neutral-500)">01</span>
     </div>
     <div data-rail="2" data-cursor="Go S2 →" role="button" tabindex="0" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 2px" style-focus="outline:2px solid var(--color-accent);outline-offset:2px">
-      <span data-rbar style="display:inline-block;width:14px;height:2px;background:transparent"></span>
-      <span data-rnum style="display:inline-block;font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--color-neutral-500)">02</span>
+      <span data-rbar="" style="display:inline-block;width:14px;height:2px;background:var(--color-neutral-300);transition:width var(--dur-micro) var(--ease-site)"></span>
+      <span data-rnum="" style="display:inline-block;font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--color-neutral-500)">02</span>
     </div>
   </div>
 
   <div id="vp" style="height:100svh;overflow:hidden;position:relative">
     <div id="track" style="will-change:transform">
 
-      <section id="s0" data-screen-label="S0 Hub" style="height:100svh;overflow:hidden;background:var(--color-bg);box-sizing:border-box;display:flex;flex-direction:column;position:relative">
+      <section id="s0" data-screen-label="S0 Hub" style="height:100svh;overflow:hidden;background:repeating-linear-gradient(to right,oklch(0.235 0.025 215 / 0.07) 0 1px,transparent 1px 72px),repeating-linear-gradient(to bottom,oklch(0.235 0.025 215 / 0.07) 0 1px,transparent 1px 72px),var(--color-bg);box-sizing:border-box;display:flex;flex-direction:column;position:relative">
         <div id="s0grid" style="flex:1;min-height:0;max-width:1400px;width:100%;margin:0 auto;padding:28px 64px 32px 48px;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,0.95fr) minmax(0,1.05fr);gap:52px">
           <div style="display:flex;flex-direction:column;gap:16px;min-height:0">
-            <p data-row style="margin:0;display:flex;justify-content:space-between;gap:16px;font-size:12px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--color-neutral-600)"><span><span style="color:var(--color-text);font-weight:800">[Name]</span> — Portfolio 2026</span><span style="color:var(--color-accent-700)">The solver runs live</span></p>
-            <h1 data-row style="font-size:clamp(34px,3.4vw,52px);font-weight:800;line-height:0.98;letter-spacing:-0.02em;margin:0;text-transform:uppercase;max-width:16ch">Structures that move, <span style="color:var(--color-accent-700)">machines that live.</span></h1>
-            <p data-row style="font-size:14px;line-height:1.5;margin:0;max-width:44ch">Mechanism design, custom physics solvers, and human–robot interaction research. Four projects, built and measured.</p>
+            <p data-row="" style="margin:0;display:flex;justify-content:space-between;gap:16px;font-size:12px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--color-neutral-600)"><span><span style="color:var(--color-text);font-weight:800">[Name]</span> — Portfolio 2026</span><span style="display:inline-flex;align-items:center;gap:6px;color:var(--color-accent-700)"><span data-pulse="" style="width:6px;height:6px;border-radius:999px;background:oklch(0.58 0.105 158);animation:pulse 1.6s ease-in-out infinite"></span>The solver runs live</span></p>
+            <h1 data-row="" style="font-size:clamp(34px,3.4vw,52px);font-weight:800;line-height:0.98;letter-spacing:-0.02em;margin:0;text-transform:uppercase;max-width:16ch">Structures that move, <span style="color:var(--color-accent-700)">machines that live.</span></h1>
+            <svg data-row="" width="230" height="8" style="display:block;overflow:visible"><line data-dash="" x1="0" y1="4" x2="230" y2="4" stroke="oklch(0.58 0.105 158)" stroke-width="1.5" stroke-dasharray="8 6" style="animation:dashmove 2.6s linear infinite"></line></svg>
+            <p data-row="" style="font-size:14px;line-height:1.5;margin:0;max-width:44ch">Mechanism design, custom physics solvers, and human–robot interaction research. Four projects, built and measured.</p>
             <div id="cards" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px">
-              <div id="c1" data-card="1" data-cursor="View 01 →" role="button" tabindex="0" style="border:2px solid var(--color-divider);padding:14px 16px;cursor:pointer;display:flex;flex-direction:column;gap:6px;background:var(--color-bg);transition:background var(--dur-micro) var(--ease-site), transform var(--dur-micro) var(--ease-site)" style-hover="background:var(--color-surface);transform:translateY(-2px)" style-active="transform:scale(0.97)" style-focus="outline:2px solid var(--color-accent);outline-offset:2px">
+              <div id="c1" data-card="1" data-cursor="View 01 →" role="button" tabindex="0" style="position:relative;border-top:var(--hair);padding:12px 2px 2px 0;cursor:pointer;display:flex;flex-direction:column;gap:6px;background:transparent;transition:color var(--dur-micro) var(--ease-site), background var(--dur-micro) var(--ease-site)" style-hover="color:var(--color-accent-700)" style-focus="outline:2px solid var(--color-accent);outline-offset:2px">
                 <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
-                  <span data-cnum style="font-size:24px;font-weight:800;color:var(--color-neutral-500);transition:color var(--dur-micro) var(--ease-site)">01</span>
-                  <span style="font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-accent-700)">live</span>
+                  <span data-tick="" style="position:absolute;top:-2px;left:0;width:26px;height:3px;background:oklch(0.58 0.105 158);pointer-events:none"></span><span data-cnum="" style="font-size:26px;font-weight:800;color:var(--color-accent-600);transition:color var(--dur-micro) var(--ease-site)">01</span>
+                  <span style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;color:var(--color-accent-700)">live</span>
                 </div>
                 <span style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.03em;line-height:1.25">Reincarnation Machine</span>
                 <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:var(--color-neutral-600)">2026-07</span>
               </div>
-              <div id="c2" data-card="2" data-cursor="View 02 →" role="button" tabindex="0" style="border:2px solid var(--color-divider);padding:14px 16px;cursor:pointer;display:flex;flex-direction:column;gap:6px;background:var(--color-bg);transition:background var(--dur-micro) var(--ease-site), transform var(--dur-micro) var(--ease-site)" style-hover="background:var(--color-surface);transform:translateY(-2px)" style-active="transform:scale(0.97)" style-focus="outline:2px solid var(--color-accent);outline-offset:2px">
+              <div id="c2" data-card="2" data-cursor="View 02 →" role="button" tabindex="0" style="position:relative;border-top:var(--hair);padding:12px 2px 2px 0;cursor:pointer;display:flex;flex-direction:column;gap:6px;background:transparent;transition:color var(--dur-micro) var(--ease-site), background var(--dur-micro) var(--ease-site)" style-hover="color:var(--color-accent-700)" style-focus="outline:2px solid var(--color-accent);outline-offset:2px">
                 <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
-                  <span data-cnum style="font-size:24px;font-weight:800;color:var(--color-neutral-500);transition:color var(--dur-micro) var(--ease-site)">02</span>
-                  <span style="font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">in prep</span>
+                  <span data-tick="" style="position:absolute;top:-2px;left:0;width:26px;height:3px;background:oklch(0.84 0.010 135);pointer-events:none"></span><span data-cnum="" style="font-size:26px;font-weight:800;color:var(--color-neutral-400);transition:color var(--dur-micro) var(--ease-site)">02</span>
+                  <span style="font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500);white-space:nowrap">in prep</span>
                 </div>
                 <span style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.03em;line-height:1.25">Project II</span>
                 <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:var(--color-neutral-600)">TBD</span>
               </div>
-              <div id="c3" data-card="3" data-cursor="View 03 →" role="button" tabindex="0" style="border:2px solid var(--color-divider);padding:14px 16px;cursor:pointer;display:flex;flex-direction:column;gap:6px;background:var(--color-bg);transition:background var(--dur-micro) var(--ease-site), transform var(--dur-micro) var(--ease-site)" style-hover="background:var(--color-surface);transform:translateY(-2px)" style-active="transform:scale(0.97)" style-focus="outline:2px solid var(--color-accent);outline-offset:2px">
+              <div id="c3" data-card="3" data-cursor="View 03 →" role="button" tabindex="0" style="position:relative;border-top:var(--hair);padding:12px 2px 2px 0;cursor:pointer;display:flex;flex-direction:column;gap:6px;background:transparent;transition:color var(--dur-micro) var(--ease-site), background var(--dur-micro) var(--ease-site)" style-hover="color:var(--color-accent-700)" style-focus="outline:2px solid var(--color-accent);outline-offset:2px">
                 <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
-                  <span data-cnum style="font-size:24px;font-weight:800;color:var(--color-neutral-500);transition:color var(--dur-micro) var(--ease-site)">03</span>
-                  <span style="font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">in prep</span>
+                  <span data-tick="" style="position:absolute;top:-2px;left:0;width:26px;height:3px;background:oklch(0.84 0.010 135);pointer-events:none"></span><span data-cnum="" style="font-size:26px;font-weight:800;color:var(--color-neutral-400);transition:color var(--dur-micro) var(--ease-site)">03</span>
+                  <span style="font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500);white-space:nowrap">in prep</span>
                 </div>
                 <span style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.03em;line-height:1.25">Project III</span>
                 <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:var(--color-neutral-600)">TBD</span>
               </div>
-              <div id="c4" data-card="4" data-cursor="View 04 →" role="button" tabindex="0" style="border:2px solid var(--color-divider);padding:14px 16px;cursor:pointer;display:flex;flex-direction:column;gap:6px;background:var(--color-bg);transition:background var(--dur-micro) var(--ease-site), transform var(--dur-micro) var(--ease-site)" style-hover="background:var(--color-surface);transform:translateY(-2px)" style-active="transform:scale(0.97)" style-focus="outline:2px solid var(--color-accent);outline-offset:2px">
+              <div id="c4" data-card="4" data-cursor="View 04 →" role="button" tabindex="0" style="position:relative;border-top:var(--hair);padding:12px 2px 2px 0;cursor:pointer;display:flex;flex-direction:column;gap:6px;background:transparent;transition:color var(--dur-micro) var(--ease-site), background var(--dur-micro) var(--ease-site)" style-hover="color:var(--color-accent-700)" style-focus="outline:2px solid var(--color-accent);outline-offset:2px">
                 <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
-                  <span data-cnum style="font-size:24px;font-weight:800;color:var(--color-neutral-500);transition:color var(--dur-micro) var(--ease-site)">04</span>
-                  <span style="font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">in prep</span>
+                  <span data-tick="" style="position:absolute;top:-2px;left:0;width:26px;height:3px;background:oklch(0.83 0.075 294);pointer-events:none"></span><span data-cnum="" style="font-size:26px;font-weight:800;color:var(--color-neutral-400);transition:color var(--dur-micro) var(--ease-site)">04</span>
+                  <span style="font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500);white-space:nowrap">in prep</span>
                 </div>
                 <span style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.03em;line-height:1.25">Project IV</span>
                 <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:var(--color-neutral-600)">TBD</span>
               </div>
             </div>
-            <a data-row href="#" id="aboutLink" data-cursor="Go S1 →" style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;text-decoration:none;color:var(--color-accent-700)">About + contact ↓</a>
-            <div data-row style="margin-top:auto;border-top:2px solid var(--color-divider);padding-top:10px;display:flex;gap:24px;flex-wrap:wrap;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">
+            <a data-row="" href="#" id="aboutLink" data-cursor="Go S1 →" style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;text-decoration:none;color:var(--color-accent-700)">About + contact ↓</a>
+            <div data-row="" style="margin-top:auto;border-top:var(--hair);padding-top:10px;display:flex;gap:24px;flex-wrap:wrap;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">
               <span><b style="color:var(--color-text);font-weight:800">04</b> Projects</span>
               <span><b style="color:var(--color-accent-700);font-weight:800">168</b> Tests green</span>
-              <span><b style="color:var(--color-text);font-weight:800">02</b> Solver kernels</span>
-              <span><b style="color:var(--color-text);font-weight:800">05</b> Live demos</span>
+              <span><b style="color:var(--color-accent-2-700);font-weight:800">02</b> Solver kernels</span>
+              <span><b style="color:var(--color-accent-600);font-weight:800">05</b> Live demos</span>
             </div>
           </div>
-          <div id="wstage" data-row style="border:1px solid var(--color-neutral-400);min-height:0;display:flex;flex-direction:column">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--color-neutral-400)">
-              <span id="stageLbl" style="font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase">Stage — 默认展示位</span>
-              <span id="figChip" role="button" tabindex="0" style="visibility:hidden;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:3px 8px;border:2px solid var(--color-divider);cursor:pointer;transition:background var(--dur-micro) var(--ease-site)" style-hover="background:var(--color-surface)" style-focus="outline:2px solid var(--color-accent);outline-offset:2px">00 · Stage</span>
+          <div id="wstage" data-row="" style="min-height:0;display:flex;flex-direction:column;position:relative;overflow:hidden">
+            <div style="position:relative;z-index:1;display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:0 0 8px;border-bottom:var(--hair)">
+              <span id="stageLbl" style="font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:var(--color-accent-700)">Stage — 默认展示位</span>
+              <span id="figChip" role="button" tabindex="0" style="visibility:hidden;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-accent-700);border-bottom:1px solid var(--color-accent-500);padding-bottom:2px;cursor:pointer;transition:color var(--dur-micro) var(--ease-site)" style-hover="color:var(--color-accent-2-700)" style-focus="outline:2px solid var(--color-accent);outline-offset:2px">00 · Stage</span>
             </div>
-            <div style="position:relative;flex:1;min-height:0">
-              <div id="pFig" data-cursor="Stage — 待定" style="position:absolute;inset:0;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px">
+            <div style="position:relative;z-index:1;flex:1;min-height:0">
+              <div id="pFig" data-cursor="Stage — 待定" style="position:absolute;inset:0;padding:14px 0 2px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px">
                 <div style="position:relative;flex:1;min-height:0;display:flex">
                   <div id="figFrame" style="position:absolute;inset:-10px;border:1px solid var(--color-accent);opacity:0;pointer-events:none"></div>
-                  <div style="flex:1;border:2px dashed var(--color-neutral-400);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px;box-sizing:border-box">
-                    <span style="font-size:13px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:var(--color-accent-700)">[待定] 默认展示位</span>
-                    <span style="font-size:12px;line-height:1.6;color:var(--color-neutral-600);max-width:32ch">后续放置：动态图形 / 精选画面。<br>悬停左侧卡片即可预览各项目。</span>
+                  <div data-ptm="" style="flex:1;position:relative;overflow:hidden;background:linear-gradient(150deg,oklch(0.30 0.062 196) 0%,oklch(0.26 0.058 232) 55%,oklch(0.28 0.062 285) 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px;box-sizing:border-box">
+                    <div style="position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(oklch(0.71 0.098 145) 1px,transparent 1.2px);background-size:6px 6px;opacity:0.3;-webkit-mask-image:linear-gradient(155deg,#000 0%,transparent 55%);mask-image:linear-gradient(155deg,#000 0%,transparent 55%)"></div>
+                    <div style="position:absolute;inset:0;pointer-events:none;background-image:var(--grain);background-size:170px 170px;opacity:0.13;mix-blend-mode:overlay"></div>
+                    <span style="position:relative;font-size:13px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:oklch(0.90 0.058 124)">[待定] 默认展示位</span>
+                    <span style="position:relative;font-size:12px;line-height:1.6;color:oklch(0.71 0.098 145);max-width:32ch">后续放置：动态图形 / 精选画面。<br>悬停左侧卡片即可预览各项目。</span>
                   </div>
                 </div>
                 <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px">
                   <span style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">Stage 00 · placeholder</span>
-                  <span class="tag tag-outline">tbd</span>
+                  <span style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">tbd</span>
                 </div>
               </div>
-              <div id="wp1" style="position:absolute;inset:0;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;visibility:hidden;opacity:0">
-                <div style="border:2px dashed var(--color-neutral-400);padding:9px 13px;font-size:12px;color:var(--color-neutral-700)"><span style="font-weight:800;color:var(--color-accent-700)">[作者供稿]</span> thesis 一句话 — 这台机器为何值得被哀悼。</div>
-                <div style="flex:1;min-height:0;border:2px solid var(--color-divider);background:repeating-linear-gradient(45deg,transparent 0 14px,color-mix(in srgb, var(--color-text) 4%, transparent) 14px 15px);display:flex;align-items:center;justify-content:center">
-                  <span style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">[待作者供稿] 主图 · duotone green</span>
+              <div id="wp1" style="position:absolute;inset:0;padding:14px 0 2px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;visibility:hidden;opacity:0">
+                <div style="border:1px dashed oklch(0.58 0.105 158 / 0.5);padding:9px 13px;font-size:12px;color:var(--color-neutral-700)"><span style="font-weight:800;color:var(--color-accent-700)">[作者供稿]</span> thesis 一句话 — 这台机器为何值得被哀悼。</div>
+                <div data-ptm="" style="flex:1;min-height:0;background:linear-gradient(150deg,oklch(0.30 0.062 196) 0%,oklch(0.26 0.058 232) 55%,oklch(0.28 0.062 285) 100%);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">
+                  <div style="position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(oklch(0.71 0.098 145) 1px,transparent 1.2px);background-size:6px 6px;opacity:0.3;-webkit-mask-image:linear-gradient(150deg,#000 0%,transparent 55%);mask-image:linear-gradient(150deg,#000 0%,transparent 55%)"></div>
+                  <div style="position:absolute;inset:0;pointer-events:none;background-image:var(--grain);background-size:170px 170px;opacity:0.14;mix-blend-mode:overlay"></div>
+                  <span style="position:relative;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.90 0.058 124)">[待作者供稿] 主图 · duotone</span>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:2px solid var(--color-divider)">
-                  <div style="padding:9px 13px 0 0;border-right:2px solid var(--color-divider)">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:var(--hair)">
+                  <div style="padding:9px 13px 0 0;border-right:var(--hair)">
                     <div style="font-size:10px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:3px">Role</div>
                     <div style="font-size:12px;line-height:1.45;color:var(--color-neutral-700)">Concept · mechanism · electronics · HRI study</div>
                   </div>
@@ -119,15 +132,17 @@ a{color:oklch(0.235 0.025 215)}a:hover{color:oklch(0.42 0.088 178)}
                     <div style="font-size:12px;line-height:1.45;color:var(--color-neutral-700)">Rhino / GH · SLS / FDM · ESP32 · ELAN</div>
                   </div>
                 </div>
-                <a class="btn btn-primary" href="Case-Modernist.dc.html" style="text-decoration:none;align-self:flex-start">Open case study</a>
+                <a href="Case-Modernist.dc.html" style="align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;color:var(--color-accent-700);border-bottom:1px solid var(--color-accent-500);padding-bottom:2px">Open case study →</a>
               </div>
-              <div id="wp2" style="position:absolute;inset:0;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;visibility:hidden;opacity:0">
-                <div style="border:2px dashed var(--color-neutral-400);padding:9px 13px;font-size:12px;color:var(--color-neutral-700)"><span style="font-weight:800;color:var(--color-accent-700)">[待作者供稿]</span> thesis 一句话。</div>
-                <div style="flex:1;min-height:0;border:2px solid var(--color-divider);background:repeating-linear-gradient(45deg,transparent 0 14px,color-mix(in srgb, var(--color-text) 4%, transparent) 14px 15px);display:flex;align-items:center;justify-content:center">
-                  <span style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">[待作者供稿] 主图 · duotone green</span>
+              <div id="wp2" style="position:absolute;inset:0;padding:14px 0 2px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;visibility:hidden;opacity:0">
+                <div style="border:1px dashed oklch(0.58 0.105 158 / 0.5);padding:9px 13px;font-size:12px;color:var(--color-neutral-700)"><span style="font-weight:800;color:var(--color-accent-700)">[待作者供稿]</span> thesis 一句话。</div>
+                <div data-ptm="" style="flex:1;min-height:0;background:linear-gradient(150deg,oklch(0.30 0.062 196) 0%,oklch(0.26 0.058 232) 55%,oklch(0.28 0.062 285) 100%);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">
+                  <div style="position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(oklch(0.71 0.098 145) 1px,transparent 1.2px);background-size:6px 6px;opacity:0.3;-webkit-mask-image:linear-gradient(150deg,#000 0%,transparent 55%);mask-image:linear-gradient(150deg,#000 0%,transparent 55%)"></div>
+                  <div style="position:absolute;inset:0;pointer-events:none;background-image:var(--grain);background-size:170px 170px;opacity:0.14;mix-blend-mode:overlay"></div>
+                  <span style="position:relative;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.90 0.058 124)">[待作者供稿] 主图 · duotone</span>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:2px solid var(--color-divider)">
-                  <div style="padding:9px 13px 0 0;border-right:2px solid var(--color-divider)">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:var(--hair)">
+                  <div style="padding:9px 13px 0 0;border-right:var(--hair)">
                     <div style="font-size:10px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:3px">Role</div>
                     <div style="font-size:12px;line-height:1.45;color:var(--color-neutral-700)">[待作者供稿]</div>
                   </div>
@@ -137,17 +152,19 @@ a{color:oklch(0.235 0.025 215)}a:hover{color:oklch(0.42 0.088 178)}
                   </div>
                 </div>
                 <div style="display:flex;gap:14px;align-items:baseline">
-                  <span class="tag tag-neutral">In preparation</span>
+                  <span style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">In preparation</span>
                   <a href="Log-Modernist.dc.html" style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;text-decoration:none;color:var(--color-accent-700)">Work log →</a>
                 </div>
               </div>
-              <div id="wp3" style="position:absolute;inset:0;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;visibility:hidden;opacity:0">
-                <div style="border:2px dashed var(--color-neutral-400);padding:9px 13px;font-size:12px;color:var(--color-neutral-700)"><span style="font-weight:800;color:var(--color-accent-700)">[待作者供稿]</span> thesis 一句话。</div>
-                <div style="flex:1;min-height:0;border:2px solid var(--color-divider);background:repeating-linear-gradient(45deg,transparent 0 14px,color-mix(in srgb, var(--color-text) 4%, transparent) 14px 15px);display:flex;align-items:center;justify-content:center">
-                  <span style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">[待作者供稿] 主图 · duotone green</span>
+              <div id="wp3" style="position:absolute;inset:0;padding:14px 0 2px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;visibility:hidden;opacity:0">
+                <div style="border:1px dashed oklch(0.58 0.105 158 / 0.5);padding:9px 13px;font-size:12px;color:var(--color-neutral-700)"><span style="font-weight:800;color:var(--color-accent-700)">[待作者供稿]</span> thesis 一句话。</div>
+                <div data-ptm="" style="flex:1;min-height:0;background:linear-gradient(150deg,oklch(0.30 0.062 196) 0%,oklch(0.26 0.058 232) 55%,oklch(0.28 0.062 285) 100%);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">
+                  <div style="position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(oklch(0.71 0.098 145) 1px,transparent 1.2px);background-size:6px 6px;opacity:0.3;-webkit-mask-image:linear-gradient(150deg,#000 0%,transparent 55%);mask-image:linear-gradient(150deg,#000 0%,transparent 55%)"></div>
+                  <div style="position:absolute;inset:0;pointer-events:none;background-image:var(--grain);background-size:170px 170px;opacity:0.14;mix-blend-mode:overlay"></div>
+                  <span style="position:relative;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.90 0.058 124)">[待作者供稿] 主图 · duotone</span>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:2px solid var(--color-divider)">
-                  <div style="padding:9px 13px 0 0;border-right:2px solid var(--color-divider)">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:var(--hair)">
+                  <div style="padding:9px 13px 0 0;border-right:var(--hair)">
                     <div style="font-size:10px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:3px">Role</div>
                     <div style="font-size:12px;line-height:1.45;color:var(--color-neutral-700)">[待作者供稿]</div>
                   </div>
@@ -157,17 +174,19 @@ a{color:oklch(0.235 0.025 215)}a:hover{color:oklch(0.42 0.088 178)}
                   </div>
                 </div>
                 <div style="display:flex;gap:14px;align-items:baseline">
-                  <span class="tag tag-neutral">In preparation</span>
+                  <span style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">In preparation</span>
                   <a href="Log-Modernist.dc.html" style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;text-decoration:none;color:var(--color-accent-700)">Work log →</a>
                 </div>
               </div>
-              <div id="wp4" style="position:absolute;inset:0;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;visibility:hidden;opacity:0">
-                <div style="border:2px dashed var(--color-neutral-400);padding:9px 13px;font-size:12px;color:var(--color-neutral-700)"><span style="font-weight:800;color:var(--color-accent-700)">[待作者供稿]</span> thesis 一句话。</div>
-                <div style="flex:1;min-height:0;border:2px solid var(--color-divider);background:repeating-linear-gradient(45deg,transparent 0 14px,color-mix(in srgb, var(--color-text) 4%, transparent) 14px 15px);display:flex;align-items:center;justify-content:center">
-                  <span style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">[待作者供稿] 主图 · duotone green</span>
+              <div id="wp4" style="position:absolute;inset:0;padding:14px 0 2px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;visibility:hidden;opacity:0">
+                <div style="border:1px dashed oklch(0.58 0.105 158 / 0.5);padding:9px 13px;font-size:12px;color:var(--color-neutral-700)"><span style="font-weight:800;color:var(--color-accent-700)">[待作者供稿]</span> thesis 一句话。</div>
+                <div data-ptm="" style="flex:1;min-height:0;background:linear-gradient(150deg,oklch(0.30 0.062 196) 0%,oklch(0.26 0.058 232) 55%,oklch(0.28 0.062 285) 100%);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">
+                  <div style="position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(oklch(0.71 0.098 145) 1px,transparent 1.2px);background-size:6px 6px;opacity:0.3;-webkit-mask-image:linear-gradient(150deg,#000 0%,transparent 55%);mask-image:linear-gradient(150deg,#000 0%,transparent 55%)"></div>
+                  <div style="position:absolute;inset:0;pointer-events:none;background-image:var(--grain);background-size:170px 170px;opacity:0.14;mix-blend-mode:overlay"></div>
+                  <span style="position:relative;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.90 0.058 124)">[待作者供稿] 主图 · duotone</span>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:2px solid var(--color-divider)">
-                  <div style="padding:9px 13px 0 0;border-right:2px solid var(--color-divider)">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:var(--hair)">
+                  <div style="padding:9px 13px 0 0;border-right:var(--hair)">
                     <div style="font-size:10px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:3px">Role</div>
                     <div style="font-size:12px;line-height:1.45;color:var(--color-neutral-700)">[待作者供稿]</div>
                   </div>
@@ -177,121 +196,130 @@ a{color:oklch(0.235 0.025 215)}a:hover{color:oklch(0.42 0.088 178)}
                   </div>
                 </div>
                 <div style="display:flex;gap:14px;align-items:baseline">
-                  <span class="tag tag-neutral">In preparation</span>
+                  <span style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">In preparation</span>
                   <a href="Log-Modernist.dc.html" style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;text-decoration:none;color:var(--color-accent-700)">Work log →</a>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        <div style="position:absolute;inset:10px;border:1px solid var(--color-accent);opacity:0;pointer-events:none" data-flash></div>
+        <div data-tex="" style="position:absolute;inset:0;pointer-events:none;background-image:var(--grain);background-size:170px 170px;opacity:0.055;mix-blend-mode:multiply"></div>
+        <div style="position:absolute;inset:0;opacity:0;pointer-events:none;background:linear-gradient(100deg,transparent 16%,oklch(0.71 0.098 145 / 0.5) 46%,oklch(0.71 0.095 291 / 0.4) 62%,transparent 86%)" data-flash=""></div>
       </section>
 
-      <section id="s1" data-screen-label="S1 About" style="height:100svh;overflow:hidden;background:var(--color-bg);box-sizing:border-box;border-top:2px solid var(--color-divider);display:flex;flex-direction:column;position:relative">
-        <div style="flex:1;min-height:0;max-width:1400px;width:100%;margin:0 auto;padding:24px 64px 32px 48px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
-          <div data-row style="display:flex;justify-content:space-between;align-items:baseline;min-height:24px">
-            <h2 style="margin:0;font-size:14px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase"><span style="color:var(--color-accent-700)">S1</span> · About</h2>
-            <a href="#" style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;text-decoration:none;color:var(--color-accent-700)">Full about →</a>
+      <section id="s1" data-screen-label="S1 About" style="height:100svh;overflow:hidden;background:linear-gradient(160deg,oklch(0.27 0.052 200) 0%,oklch(0.24 0.048 232) 55%,oklch(0.26 0.052 282) 100%);box-sizing:border-box;display:flex;flex-direction:column;position:relative">
+        <div style="position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(oklch(0.71 0.098 145) 1px,transparent 1.2px);background-size:6px 6px;opacity:0.2;-webkit-mask-image:linear-gradient(115deg,#000 0%,transparent 45%);mask-image:linear-gradient(115deg,#000 0%,transparent 45%)"></div>
+        <div style="position:absolute;inset:0;pointer-events:none;background-image:var(--grain);background-size:170px 170px;opacity:0.12;mix-blend-mode:overlay"></div>
+        <div style="position:relative;z-index:1;flex:1;min-height:0;max-width:1400px;width:100%;margin:0 auto;padding:24px 64px 32px 48px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
+          <div data-row="" style="display:flex;justify-content:space-between;align-items:baseline;min-height:24px">
+            <h2 style="margin:0;display:flex;align-items:center;gap:9px;font-size:14px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:oklch(0.95 0.032 120)"><span style="color:oklch(0.71 0.098 145)">S1</span> About</h2>
+            <a href="#" style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;text-decoration:none;color:oklch(0.71 0.098 145);border-bottom:1px solid oklch(0.71 0.098 145 / 0.5);padding-bottom:2px">Full about →</a>
           </div>
-          <h2 data-row style="font-size:clamp(34px,3.6vw,54px);font-weight:800;line-height:0.98;letter-spacing:-0.02em;margin:0;text-transform:uppercase;max-width:20ch">Builder first, researcher by method.</h2>
-          <div data-row style="flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);gap:40px;align-items:stretch">
+          <h2 data-row="" style="font-size:clamp(34px,3.6vw,54px);font-weight:800;line-height:0.98;letter-spacing:-0.02em;margin:0;text-transform:uppercase;max-width:20ch;color:oklch(0.95 0.032 120)">Builder first, <span style="color:oklch(0.71 0.098 145)">researcher by method.</span></h2>
+          <svg data-row="" width="230" height="8" style="display:block;overflow:visible"><line data-dash="" x1="0" y1="4" x2="230" y2="4" stroke="oklch(0.71 0.098 145)" stroke-width="1.5" stroke-dasharray="8 6" style="animation:dashmove 2.6s linear infinite"></line></svg>
+          <div data-row="" style="flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);gap:40px;align-items:stretch">
             <div style="display:flex;flex-direction:column;gap:16px">
-              <div style="border:2px dashed var(--color-neutral-400);padding:12px 16px;font-size:13px;color:var(--color-neutral-700);max-width:60ch"><span style="font-weight:800;color:var(--color-accent-700)">[待作者供稿]</span> 摘要 — 两三句：背景、方向、申请目标。</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:2px solid var(--color-divider)">
-                <div style="padding:12px 16px 0 0;border-right:2px solid var(--color-divider)">
-                  <div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:4px">Contact</div>
-                  <div style="font-size:13px;line-height:1.55;color:var(--color-neutral-700)">[email placeholder]<br>GitHub · plain URLs · no password</div>
+              <div style="border:1px dashed oklch(0.71 0.098 145 / 0.45);padding:12px 16px;font-size:13px;color:oklch(0.84 0.045 160);max-width:60ch"><span style="font-weight:800;color:oklch(0.71 0.098 145)">[待作者供稿]</span> 摘要 — 两三句：背景、方向、申请目标。</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid oklch(0.95 0.032 120 / 0.25)">
+                <div style="padding:12px 16px 0 0;border-right:1px solid oklch(0.95 0.032 120 / 0.25)">
+                  <div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:4px;color:oklch(0.95 0.032 120)">Contact</div>
+                  <div style="font-size:13px;line-height:1.55;color:oklch(0.84 0.045 160)">[email placeholder]<br>GitHub · plain URLs · no password</div>
                 </div>
                 <div style="padding:12px 0 0 16px">
-                  <div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:4px">Currently</div>
-                  <div style="font-size:13px;line-height:1.55;color:var(--color-neutral-700)"><span style="color:oklch(0.72 0.12 356)">●</span> [待作者供稿] 状态一行</div>
+                  <div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:4px;color:oklch(0.95 0.032 120)">Currently</div>
+                  <div style="font-size:13px;line-height:1.55;color:oklch(0.84 0.045 160)"><span style="color:oklch(0.72 0.12 356)">●</span> [待作者供稿] 状态一行</div>
                 </div>
               </div>
-              <div style="margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:2px solid var(--color-divider)">
-                <div style="padding:12px 16px 0 0;border-right:2px solid var(--color-divider)">
-                  <div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:4px">Role</div>
-                  <div style="font-size:13px;line-height:1.55;color:var(--color-neutral-700)">Concept &amp; research design · mechanism &amp; fabrication · electronics &amp; behavior · HRI study</div>
+              <div style="margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid oklch(0.95 0.032 120 / 0.25)">
+                <div style="padding:12px 16px 0 0;border-right:1px solid oklch(0.95 0.032 120 / 0.25)">
+                  <div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:4px;color:oklch(0.95 0.032 120)">Role</div>
+                  <div style="font-size:13px;line-height:1.55;color:oklch(0.84 0.045 160)">Concept &amp; research design · mechanism &amp; fabrication · electronics &amp; behavior · HRI study</div>
                 </div>
                 <div style="padding:12px 0 0 16px">
-                  <div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:4px">Tools</div>
-                  <div style="font-size:13px;line-height:1.55;color:var(--color-neutral-700)">Rhino / Grasshopper · SLS / FDM / resin · ESP32 · ELAN · TypeScript solvers</div>
+                  <div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:4px;color:oklch(0.95 0.032 120)">Tools</div>
+                  <div style="font-size:13px;line-height:1.55;color:oklch(0.84 0.045 160)">Rhino / Grasshopper · SLS / FDM / resin · ESP32 · ELAN · TypeScript solvers</div>
                 </div>
               </div>
             </div>
             <figure style="margin:0;min-height:0;display:flex;flex-direction:column;gap:8px">
-              <div style="position:relative;flex:1;min-height:200px;isolation:isolate;border:2px solid var(--color-divider)">
+              <div style="position:relative;flex:1;min-height:200px;isolation:isolate;background:oklch(0.90 0.058 124)">
+                <div style="position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(oklch(0.58 0.105 158) 1px,transparent 1.2px);background-size:6px 6px;opacity:0.5;-webkit-mask-image:linear-gradient(150deg,#000 0%,transparent 60%);mask-image:linear-gradient(150deg,#000 0%,transparent 60%)"></div>
                 <div style="position:absolute;inset:0;filter:grayscale(1) contrast(1.06)">
                   <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="screens-portrait" shape="rect" placeholder="[待作者供稿] 人像 — 拖入自动转绿调" hint-size="100%,100%"></x-import>
                 </div>
                 <div style="position:absolute;inset:0;pointer-events:none;background:oklch(0.25 0.048 196);mix-blend-mode:lighten"></div>
                 <div style="position:absolute;inset:0;pointer-events:none;background:oklch(0.95 0.032 120);mix-blend-mode:darken"></div>
               </div>
-              <figcaption style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Portrait · duotone green</figcaption>
+              <figcaption style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:oklch(0.71 0.098 145)">Portrait · duotone green</figcaption>
             </figure>
           </div>
         </div>
-        <div style="position:absolute;inset:10px;border:1px solid var(--color-accent);opacity:0;pointer-events:none" data-flash></div>
+        <div data-tex="" style="position:absolute;inset:0;pointer-events:none;background-image:var(--grain);background-size:170px 170px;opacity:0.055;mix-blend-mode:multiply"></div>
+        <div style="position:absolute;inset:0;opacity:0;pointer-events:none;background:linear-gradient(100deg,transparent 16%,oklch(0.71 0.098 145 / 0.5) 46%,oklch(0.71 0.095 291 / 0.4) 62%,transparent 86%)" data-flash=""></div>
       </section>
 
-      <section id="s2" data-screen-label="S2 Lab + Log" style="height:100svh;overflow:hidden;background:var(--color-bg);box-sizing:border-box;border-top:2px solid var(--color-divider);display:flex;flex-direction:column;position:relative">
+      <section id="s2" data-screen-label="S2 Lab + Log" style="height:100svh;overflow:hidden;background:repeating-linear-gradient(to right,oklch(0.235 0.025 215 / 0.07) 0 1px,transparent 1px 72px),repeating-linear-gradient(to bottom,oklch(0.235 0.025 215 / 0.07) 0 1px,transparent 1px 72px),var(--color-bg);box-sizing:border-box;border-top:var(--hair);display:flex;flex-direction:column;position:relative">
         <div style="flex:1;min-height:0;max-width:1400px;width:100%;margin:0 auto;padding:24px 64px 0 48px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px">
-          <div data-row style="display:flex;justify-content:space-between;align-items:baseline;min-height:24px">
-            <h2 style="margin:0;font-size:14px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase"><span style="color:var(--color-accent-700)">S2</span> · The lab</h2>
-            <span style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">Solver testbenches · all live</span>
+          <div data-row="" style="display:flex;justify-content:space-between;align-items:baseline;min-height:24px">
+            <h2 style="margin:0;display:flex;align-items:center;gap:9px;font-size:14px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase"><span style="color:oklch(0.42 0.09 282)">S2</span> The lab</h2>
+            <span style="display:flex;align-items:center;gap:14px;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)"><span style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;background:var(--color-accent-500)"></span>SVG</span><span style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;background:var(--color-accent-2-500)"></span>WebGL</span><span>All live</span></span>
           </div>
-          <div data-row style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:var(--color-divider);border:2px solid var(--color-divider)">
-            <div class="card" style="gap:6px;cursor:pointer" style-hover="background:var(--color-accent-100)">
-              <div class="card-kicker" style="color:var(--color-accent-700)">Lab.01</div>
+          <div data-row="" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:oklch(0.235 0.025 215 / 0.22)">
+            <div class="card" style="gap:8px;cursor:pointer;background:var(--color-bg);border-top:3px solid oklch(0.58 0.105 158);transition:background var(--dur-micro) var(--ease-site)" style-hover="background:oklch(0.95 0.032 120)">
+              <div class="card-kicker" style="align-self:flex-start;color:oklch(0.42 0.088 178)">Lab.01</div>
               <div class="card-title" style="font-weight:800">Four-bar linkage</div>
               <p class="card-body">2D PBD testbench — the kernel behind Fig. 01.</p>
               <div class="card-meta">36 tests · SVG</div>
             </div>
-            <div class="card" style="gap:6px;cursor:pointer" style-hover="background:var(--color-accent-100)">
-              <div class="card-kicker" style="color:var(--color-accent-700)">Lab.02</div>
+            <div class="card" style="gap:8px;cursor:pointer;background:var(--color-bg);border-top:3px solid oklch(0.42 0.088 178);transition:background var(--dur-micro) var(--ease-site)" style-hover="background:oklch(0.95 0.032 120)">
+              <div class="card-kicker" style="align-self:flex-start;color:oklch(0.42 0.088 178)">Lab.02</div>
               <div class="card-title" style="font-weight:800">Arch ring solver</div>
               <p class="card-body">Angulated scissor arch + crank-slider, from the S4 ring.</p>
               <div class="card-meta">Kernel untouched · SVG</div>
             </div>
-            <div class="card" style="gap:6px;cursor:pointer" style-hover="background:var(--color-accent-100)">
-              <div class="card-kicker" style="color:var(--color-accent-700)">Lab.03</div>
+            <div class="card" style="gap:8px;cursor:pointer;background:var(--color-bg);border-top:3px solid oklch(0.58 0.105 288);transition:background var(--dur-micro) var(--ease-site)" style-hover="background:oklch(0.95 0.025 300)">
+              <div class="card-kicker" style="align-self:flex-start;color:oklch(0.42 0.09 282)">Lab.03</div>
               <div class="card-title" style="font-weight:800">Tendon tentacle</div>
               <p class="card-body">16 vertebrae, three tendons at 120° — full 3D kernel.</p>
               <div class="card-meta">Orbit camera · WebGL</div>
             </div>
-            <div class="card" style="gap:6px;cursor:pointer" style-hover="background:var(--color-accent-100)">
-              <div class="card-kicker" style="color:var(--color-accent-700)">Lab.04</div>
+            <div class="card" style="gap:8px;cursor:pointer;background:var(--color-bg);border-top:3px solid oklch(0.42 0.09 282);transition:background var(--dur-micro) var(--ease-site)" style-hover="background:oklch(0.95 0.025 300)">
+              <div class="card-kicker" style="align-self:flex-start;color:oklch(0.42 0.09 282)">Lab.04</div>
               <div class="card-title" style="font-weight:800">Five-ring shell</div>
               <p class="card-body">S1–S5 ring family choreography — a breathing body.</p>
               <div class="card-meta">Calibrated stops · WebGL</div>
             </div>
           </div>
-          <div data-row style="display:flex;justify-content:space-between;align-items:baseline;margin-top:6px">
+          <div data-row="" style="display:flex;justify-content:space-between;align-items:baseline;margin-top:6px">
             <h2 style="margin:0;font-size:14px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase">Work log</h2>
             <a href="Log-Modernist.dc.html" style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;text-decoration:none;color:var(--color-accent-700)">All entries →</a>
           </div>
-          <div data-row style="flex:1;min-height:0">
-            <div style="display:grid;grid-template-columns:110px 1fr;gap:14px;padding:11px 0;border-top:2px solid var(--color-divider)">
-              <span style="font-size:12px;font-weight:800">2026-07-17</span>
+          <div data-row="" style="flex:1;min-height:0">
+            <div style="display:grid;grid-template-columns:110px 1fr;gap:14px;padding:11px 0;border-top:var(--hair);transition:background var(--dur-micro) var(--ease-site)" style-hover="background:oklch(0.95 0.032 120)">
+              <span style="font-size:12px;font-weight:800;color:var(--color-accent-700)">2026-07-17</span>
               <span style="font-size:13px;color:var(--color-neutral-700)">Five-ring choreography v0.3 — stop-margin calibration per ring; whole family peaks under 0.42&nbsp;mm.</span>
             </div>
-            <div style="display:grid;grid-template-columns:110px 1fr;gap:14px;padding:11px 0;border-top:2px solid var(--color-divider)">
-              <span style="font-size:12px;font-weight:800">2026-07-13</span>
+            <div style="display:grid;grid-template-columns:110px 1fr;gap:14px;padding:11px 0;border-top:var(--hair);transition:background var(--dur-micro) var(--ease-site)" style-hover="background:oklch(0.95 0.032 120)">
+              <span style="font-size:12px;font-weight:800;color:var(--color-accent-700)">2026-07-13</span>
               <span style="font-size:13px;color:var(--color-neutral-700)">Site scaffold S1–S3 — content pool, four routes, LinkageFigure live on the homepage.</span>
             </div>
-            <div style="display:grid;grid-template-columns:110px 1fr;gap:14px;padding:11px 0;border-top:2px solid var(--color-divider);border-bottom:2px solid var(--color-divider)">
-              <span style="font-size:12px;font-weight:800">2026-07-10</span>
+            <div style="display:grid;grid-template-columns:110px 1fr;gap:14px;padding:11px 0;border-top:var(--hair);border-bottom:var(--hair);transition:background var(--dur-micro) var(--ease-site)" style-hover="background:oklch(0.95 0.032 120)">
+              <span style="font-size:12px;font-weight:800;color:var(--color-accent-700)">2026-07-10</span>
               <span style="font-size:13px;color:var(--color-neutral-700)">Arch solver instance — real S4 ring as a solver preset, kernel untouched, 7 new tests green.</span>
             </div>
-            <p style="margin:8px 0 0;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">Colophon — <span style="border-bottom:2px dashed var(--color-neutral-400)">[待作者供稿] 一句：这个站本身如何被构建</span></p>
+            <p style="margin:8px 0 0;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">Colophon — <span style="border-bottom:1px dashed var(--color-neutral-400)">[待作者供稿] 一句：这个站本身如何被构建</span></p>
           </div>
         </div>
-        <footer style="background:var(--color-accent-900);color:oklch(0.95 0.032 120)">
-          <div style="max-width:1400px;margin:0 auto;padding:24px 64px 24px 48px;display:flex;justify-content:space-between;align-items:baseline;gap:32px">
+        <footer style="position:relative;overflow:hidden;background:linear-gradient(104deg,oklch(0.30 0.062 196) 0%,oklch(0.26 0.058 232) 55%,oklch(0.28 0.062 285) 100%);color:oklch(0.95 0.032 120)">
+          <div style="position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(oklch(0.71 0.098 145) 1px,transparent 1.2px);background-size:6px 6px;opacity:0.26;-webkit-mask-image:linear-gradient(92deg,#000 0%,transparent 55%);mask-image:linear-gradient(92deg,#000 0%,transparent 55%)"></div>
+          <div style="position:absolute;inset:0;pointer-events:none;background-image:var(--grain);background-size:170px 170px;opacity:0.1;mix-blend-mode:overlay"></div>
+          <div style="position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:24px 64px 24px 48px;display:flex;justify-content:space-between;align-items:baseline;gap:32px">
             <a href="#" style="font-size:clamp(22px,2.2vw,32px);font-weight:800;text-transform:uppercase;letter-spacing:-0.01em;color:oklch(0.95 0.032 120);text-decoration:none" style-hover="color:oklch(0.83 0.075 294)">[email placeholder]</a>
             <span style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.71 0.098 145)">GitHub · no password · plain URLs</span>
           </div>
         </footer>
-        <div style="position:absolute;inset:10px;border:1px solid var(--color-accent);opacity:0;pointer-events:none" data-flash></div>
+        <div data-tex="" style="position:absolute;inset:0;pointer-events:none;background-image:var(--grain);background-size:170px 170px;opacity:0.055;mix-blend-mode:multiply"></div>
+        <div style="position:absolute;inset:0;opacity:0;pointer-events:none;background:linear-gradient(100deg,transparent 16%,oklch(0.71 0.098 145 / 0.5) 46%,oklch(0.71 0.095 291 / 0.4) 62%,transparent 86%)" data-flash=""></div>
       </section>
     </div>
   </div>
@@ -318,6 +346,8 @@ class Component extends DCLogic {
     const MAX_PEEK = 0.10;
     const TOUCH_COMMIT = 0.18;
     const RETURN_DELAY = 300; // 离开卡片组后舞台回归 FIG.01 的延时
+    const CARD_IDLE = 'transparent';
+    const CARD_PIN = 'oklch(0.95 0.032 120)';
     // ----------------------------------
     const fxEntrance = (P.entrance ?? true) && !reduced;
     const fxStagger = (P.staggerFx ?? true) && !reduced;
@@ -326,11 +356,71 @@ class Component extends DCLogic {
     const fxRail = (P.railFlip ?? true) && !reduced;
     const hoverPeek = P.hoverPeek ?? true;
     const wantPaging = (P.pagingFeel ?? true) && !reduced;
+    // ---------- page transition: plane grows from media block, next page blurs in ----------
+    const PT_BG = 'linear-gradient(160deg,oklch(0.27 0.052 200) 0%,oklch(0.24 0.048 232) 55%,oklch(0.26 0.052 282) 100%)';
+    const GRAIN = 'url(data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%27160%27%20height=%27160%27%3E%3Cfilter%20id=%27g%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%270.9%27%20numOctaves=%274%27%20stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect%20width=%27160%27%20height=%27160%27%20filter=%27url%28%23g%29%27/%3E%3C/svg%3E)';
+    let ptBusy = false;
+    const goPT = (href, fromEl) => {
+      if (window.__standalone) return;
+      if (ptBusy) return;
+      if (reduced) { location.href = href; return; }
+      ptBusy = true;
+      try { sessionStorage.setItem('om-pt', '1'); const b0 = fromEl ? (getComputedStyle(fromEl).backgroundImage || '') : ''; sessionStorage.setItem('om-pt-bg', (b0.indexOf('gradient') > -1 || b0.indexOf('url(') > -1) ? b0 : ''); } catch (err) {}
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const rootEl = vp.parentElement;
+      const veil = document.createElement('div');
+      veil.setAttribute('data-pt-tmp', '1');
+      veil.style.cssText = 'position:fixed;inset:0;z-index:199;pointer-events:none;opacity:0;background:' + PT_BG;
+      rootEl.appendChild(veil);
+      veil.animate([{ opacity: 0 }, { opacity: 0.92 }], { duration: 520, easing: EASE, fill: 'forwards' });
+      vp.style.willChange = 'transform,filter';
+      vp.animate([{ transform: 'scale(1)', filter: 'blur(0px)' }, { transform: 'scale(1.04)', filter: 'blur(8px)' }], { duration: 620, easing: EASE, fill: 'forwards' });
+      if (!fromEl) { setTimeout(() => { location.href = href; }, 540); return; }
+      const r = fromEl.getBoundingClientRect();
+      if (r.width < 10 || r.height < 10) { setTimeout(() => { location.href = href; }, 540); return; }
+      const wrap = document.createElement('div');
+      wrap.setAttribute('data-pt-tmp', '1');
+      wrap.style.cssText = 'position:fixed;top:' + r.top + 'px;left:' + r.left + 'px;width:' + r.width + 'px;height:' + r.height + 'px;z-index:200;pointer-events:none;overflow:hidden;transform-origin:50% 50%;will-change:transform';
+      const clone = fromEl.cloneNode(true);
+      clone.style.position = 'absolute'; clone.style.inset = '0'; clone.style.width = '100%'; clone.style.height = '100%'; clone.style.margin = '0'; clone.style.flex = 'none'; clone.style.minHeight = '0';
+      wrap.appendChild(clone);
+      rootEl.appendChild(wrap);
+      const s = Math.max(vw / Math.max(r.width, 1), vh / Math.max(r.height, 1)) * 1.02;
+      const tx = vw / 2 - (r.left + r.width / 2), ty = vh / 2 - (r.top + r.height / 2);
+      wrap.animate([
+        { transform: 'translate(0px,0px) scale(1)' },
+        { transform: 'translate(' + tx + 'px,' + ty + 'px) scale(' + s + ')' }
+      ], { duration: 620, easing: EASE, fill: 'forwards' }).onfinish = () => { setTimeout(() => { location.href = href; }, 50); };
+    };
+    this.goPT = goPT;
+    on(window, 'pageshow', ev => {
+      if (!ev.persisted) return;
+      ptBusy = false;
+      vp.getAnimations().forEach(a2 => a2.cancel());
+      vp.style.willChange = '';
+      document.querySelectorAll('[data-pt-tmp]').forEach(el => el.remove());
+    });
+    try { if (sessionStorage.getItem('om-pt') === '1') sessionStorage.removeItem('om-pt'); } catch (err) {}
+    const hvs = [].slice.call(document.querySelectorAll('[id="om-veil"]'));
+    const hv = hvs.shift() || null;
+    hvs.forEach(v0 => v0.remove());
+    setTimeout(() => { [].slice.call(document.querySelectorAll('[id="om-veil"]')).forEach(v0 => v0.remove()); }, 1600);
+    if (hv) {
+      if (reduced) hv.remove();
+      else hv.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 520, easing: EASE, fill: 'forwards' }).onfinish = () => hv.remove();
+    }
+    document.querySelectorAll('a[href="Case-Modernist.dc.html"], a[href="Log-Modernist.dc.html"]').forEach(a2 => {
+      on(a2, 'click', e => {
+        e.preventDefault();
+        const panel = a2.closest('[id^="wp"]');
+        goPT(a2.getAttribute('href'), panel ? panel.querySelector('[data-ptm]') : a2);
+      });
+    });
     const N = 2;
     const vp = $('vp'), track = $('track');
     const secs = ['s0', 's1', 's2'].map($);
     const flashes = secs.map(s => s.querySelector('[data-flash]'));
-    const railEl = $('rail');
+    const railEl = $('rail'), prog = $('prog');
     const railItems = Array.from(railEl.querySelectorAll('[data-rail]'));
     let engine = false, cur = 0, small = false;
     const H = () => vp.clientHeight;
@@ -346,14 +436,21 @@ class Component extends DCLogic {
       s2el.style.transform = 'translate3d(' + x + 'px,0,0)';
     };
     const setRail = n => railItems.forEach((it, i) => {
-      it.querySelector('[data-rbar]').style.background = i === n ? 'var(--color-divider)' : 'transparent';
+      const bar = it.querySelector('[data-rbar]');
+      bar.style.background = i === n ? 'oklch(0.58 0.105 158)' : 'var(--color-neutral-300)';
+      bar.style.width = i === n ? '22px' : '14px';
       const num = it.querySelector('[data-rnum]');
       num.style.color = i === n ? 'var(--color-accent-700)' : 'var(--color-neutral-500)';
+      if (prog && i === n) prog.style.transform = 'scaleX(' + ((n + 1) / (N + 1)) + ')';
       if (i === n && fxRail) num.animate([{ transform: 'translateY(60%)', opacity: 0 }, { transform: 'translateY(0)', opacity: 1 }], { duration: MICRO, easing: EASE });
     });
     const enter = i => {
       if (!fxStagger) return;
-      flashes[i].animate([{ opacity: 0 }, { opacity: 1 }, { opacity: 0 }], { duration: MICRO, easing: 'linear' });
+      flashes[i].animate([
+        { opacity: 0, transform: 'translateX(-16%)' },
+        { opacity: 1, transform: 'translateX(0)', offset: 0.45 },
+        { opacity: 0, transform: 'translateX(16%)' }
+      ], { duration: 460, easing: EASE });
       secs[i].querySelectorAll('[data-row]').forEach((row, k) => row.animate([
         { opacity: 0, transform: 'translateY(12px)', clipPath: 'inset(0 0 100% 0)' },
         { opacity: 1, transform: 'translateY(0)', clipPath: 'inset(0 0 -10% 0)' }
@@ -465,9 +562,8 @@ class Component extends DCLogic {
     const setCards = () => cards.forEach((c, i) => {
       const num = c.querySelector('[data-cnum]');
       const active = pinned === i + 1 || showing === i + 1;
-      num.style.color = active ? 'var(--color-accent-700)' : 'var(--color-neutral-500)';
-      c.style.background = pinned === i + 1 ? 'var(--color-surface)' : 'var(--color-bg)';
-      c.style.borderColor = pinned === i + 1 ? 'var(--color-accent-700)' : 'var(--color-divider)';
+      num.style.color = active ? 'var(--color-accent-800)' : (i === 0 ? 'var(--color-accent-600)' : 'var(--color-neutral-400)');
+      c.style.background = pinned === i + 1 ? CARD_PIN : CARD_IDLE;
     });
     const showStage = (n, slow) => {
       if (n === showing) return;
@@ -498,10 +594,9 @@ class Component extends DCLogic {
       });
       on(c, 'mouseleave', () => clearTimeout(hoverT));
       on(c, 'click', () => {
-        if (small) { location.href = n === 1 ? 'Case-Modernist.dc.html' : 'Log-Modernist.dc.html'; return; }
-        if (pinned === n) { pinned = 0; showStage(0, true); }
-        else { pinned = n; showStage(n); }
-        setCards();
+        const href = n === 1 ? 'Case-Modernist.dc.html' : 'Log-Modernist.dc.html';
+        const media = panels[n].querySelector('[data-ptm]');
+        goPT(href, small ? null : (media || c));
       });
       on(c, 'keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); c.click(); } });
     });
@@ -579,6 +674,7 @@ class Component extends DCLogic {
       wstage.style.minHeight = engine || small ? '' : '64vh';
       $('cards').style.gridTemplateColumns = small ? '1fr' : '1fr 1fr';
       railEl.style.display = engine ? 'flex' : 'none';
+      prog.style.display = engine ? 'block' : 'none';
       acc = 0;
     };
     applyMode();
