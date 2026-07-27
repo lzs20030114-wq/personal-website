@@ -969,3 +969,19 @@ a:hover {
     background: oklch(0.95 0.032 120 / 0.1);
   }
 }
+
+/* Stage 轮播图注：随片切换的入场（key 变化即重播；reduced-motion 停） */
+@keyframes stage-cap-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.stage-cap {
+  animation: stage-cap-in var(--dur-struct) var(--ease-site);
+}
+@media (prefers-reduced-motion: reduce) {
+  .stage-cap {
+    animation: none;
+  }
+}

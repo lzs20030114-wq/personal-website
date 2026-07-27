@@ -148,7 +148,7 @@
 
 ### 7.6 Stage 轮播 + 项目 01 临时主图（2026-07-27，用户拍板）
 
-- **Stage 待机 = 四台 Lab 台架顺序轮播**（`components/lab/StageRotator.tsx`）：四杆 → 拱环 → 触手 → 五环，每台停留 `DWELL_MS` 9s，交叉淡入 520ms（= --dur-struct），图注随片切换、带可点选的进度指示点。三条工程约束：
+- **Stage 待机 = 四台 Lab 台架顺序轮播**（`components/lab/StageRotator.tsx`）：四杆 → 拱环 → 触手 → 五环，每台停留 `DWELL_MS` **4s**（用户拍板：9s 太长），交叉淡入 520ms（= --dur-struct），图注随片切换、带可点选的进度指示点。三条工程约束：
   1. **懒挂载**——首屏只建四杆，轮到才建、建后常驻（3D 重建要重传 GPU 缓冲、触手还要重取 1.4MB 网格）；
   2. **非当前片停跑**——`useBenchLoop` 新增 `enabled` 门控。IntersectionObserver 只看几何、看不见 visibility/opacity，不显式关会让后台台架空烧 CPU/WebGL；
   3. **交互即暂停**——台架上 pointerdown/wheel 即停轮播（正拖着被切走最恼人），静置 `RESUME_MS` 15s 恢复；点指示点亦暂停。
