@@ -30,7 +30,7 @@ import { useBenchLoop } from './useBenchLoop';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const HANDLES = [ARCH_APEX, ...ARCH_FEET, ARCH_PIN];
 
-export function ArchBench({ grid = true }: { grid?: boolean }) {
+export function ArchBench({ grid = true, active = true }: { grid?: boolean; active?: boolean }) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const stateRef = useRef<{ ctl: LinkageController; step: (dt: number) => void } | null>(null);
   const [hud, setHud] = useState({ phi: 0, apex: 0, err: 0, mode: 'idle' });
@@ -140,7 +140,7 @@ export function ArchBench({ grid = true }: { grid?: boolean }) {
     };
   }, [grid]);
 
-  useBenchLoop(svgRef, (dt) => stateRef.current?.step(dt), [grid]);
+  useBenchLoop(svgRef, (dt) => stateRef.current?.step(dt), [grid], active);
 
   const toVB = (ev: React.PointerEvent<SVGSVGElement>): Point | null => {
     const m = svgRef.current?.getScreenCTM();

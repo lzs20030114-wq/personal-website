@@ -34,7 +34,16 @@ const TENDON_C: [number, number, number][] = [
 const PAIRS: ([number, number] | null)[] = [null, [0, 1], [1, 2], [0, 2]];
 const LINK_LABELS = ['none', '1+2', '2+3', '1+3'];
 
-export function TentacleBench({ spin = true }: { spin?: boolean }) {
+export function TentacleBench({
+  spin = true,
+  active = true,
+  controls = true,
+}: {
+  spin?: boolean;
+  active?: boolean;
+  /** false = 纯展示（主页舞台用）：不出控制条 */
+  controls?: boolean;
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const apiRef = useRef<{
     step: (dt: number) => void;
@@ -283,7 +292,7 @@ export function TentacleBench({ spin = true }: { spin?: boolean }) {
     };
   }, [spin]);
 
-  useBenchLoop(canvasRef, (dt) => apiRef.current?.step(dt), [spin]);
+  useBenchLoop(canvasRef, (dt) => apiRef.current?.step(dt), [spin], active);
 
   return (
     <div>
@@ -306,52 +315,55 @@ export function TentacleBench({ spin = true }: { spin?: boolean }) {
         </div>
         <div className="lab-hud bl">拖拽 = 轨道相机 · 右键平移 · 滚轮缩放</div>
       </div>
+      {controls ? (
       <div className="lab-ctl">
-        {[0, 1, 2].map((k) => (
-          <label key={k}>
-            T{k + 1}
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={Math.round(tendons[k] * 100)}
-              onChange={(e) => apiRef.current?.setTarget(k, Number(e.target.value) / 100)}
-            />
-          </label>
-        ))}
-        <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          联动
-          {LINK_LABELS.map((lbl, i) => (
-            <button
-              key={lbl}
-              type="button"
-              className="lab-btn"
-              style={i === link ? { borderColor: 'var(--g400)', color: 'var(--g400)' } : undefined}
-              onClick={() => {
-                setLink(i);
-                linkRef.current = i;
-                const pair = PAIRS[i];
-                if (pair) apiRef.current?.setTarget(pair[0], tendons[pair[0]]);
-              }}
-            >
-              {lbl}
-            </button>
+          {[0, 1, 2].map((k) => (
+            <label key={k}>
+              T{k + 1}
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round(tendons[k] * 100)}
+                onChange={(e) => apiRef.current?.setTarget(k, Number(e.target.value) / 100)}
+              />
+            </label>
           ))}
-        </span>
-        <button
-          type="button"
-          className="lab-btn"
-          onClick={() => [0, 1, 2].forEach((k) => apiRef.current?.setTarget(k, 0))}
-        >
-          放松
-        </button>
-        <button type="button" className="lab-btn" onClick={() => apiRef.current?.home()}>
-          归位
-        </button>
-        <button type="button" className="lab-btn" onClick={() => apiRef.current?.viewHome()}>
-          视角归位
-        </button>
-      </div>
+          <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            联动
+            {LINK_LABELS.map((lbl, i) => (
+              <button
+                key={lbl}
+                type="button"
+                className="lab-btn"
+                style={i === link ? { borderColor: 'var(--g400)', color: 'var(--g400)' } : undefined}
+                onClick={() => {
+                  setLink(i);
+                  linkRef.current = i;
+                  const pair = PAIRS[i];
+                  if (pair) apiRef.current?.setTarget(pair[0], tendons[pair[0]]);
+                }}
+              >
+                {lbl}
+              </button>
+            ))}
+          </span>
+          <button
+            type="button"
+            className="lab-btn"
+            onClick={() => [0, 1, 2].forEach((k) => apiRef.current?.setTarget(k, 0))}
+          >
+            放松
+          </button>
+          <button type="button" className="lab-btn" onClick={() => apiRef.current?.home()}>
+            归位
+          </button>
+          <button type="button" className="lab-btn" onClick={() => apiRef.current?.viewHome()}>
+            视角归位
+          </button>
+        </div>
+  
+      ) : null}
     </div>
   );
 }

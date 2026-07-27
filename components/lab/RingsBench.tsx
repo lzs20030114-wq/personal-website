@@ -30,7 +30,16 @@ const CHASE_OMEGA = 2.5;
 
 const wrapAngle = (a: number): number => ((a + Math.PI) % (2 * Math.PI)) - Math.PI;
 
-export function RingsBench({ spin = true }: { spin?: boolean }) {
+export function RingsBench({
+  spin = true,
+  active = true,
+  controls = true,
+}: {
+  spin?: boolean;
+  active?: boolean;
+  /** false = 纯展示（主页舞台/项目预览用）：不出控制条，避免浅底上白字看不清 */
+  controls?: boolean;
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const apiRef = useRef<{
     step: (dt: number) => void;
@@ -224,7 +233,7 @@ export function RingsBench({ spin = true }: { spin?: boolean }) {
     };
   }, [spin]);
 
-  useBenchLoop(canvasRef, (dt) => apiRef.current?.step(dt), [spin]);
+  useBenchLoop(canvasRef, (dt) => apiRef.current?.step(dt), [spin], active);
 
   return (
     <div>
@@ -245,38 +254,41 @@ export function RingsBench({ spin = true }: { spin?: boolean }) {
         </div>
         <div className="lab-hud bl">拖拽 = 轨道相机 · 右键平移 · 滚轮缩放</div>
       </div>
+      {controls ? (
       <div className="lab-ctl">
-        <label>
-          <input
-            type="checkbox"
-            checked={breathe}
-            onChange={(e) => {
-              setBreathe(e.target.checked);
-              apiRef.current?.setBreathe(e.target.checked);
-            }}
-          />
-          呼吸
-        </label>
-        <label>
-          相位
-          <input
-            type="range"
-            min={0}
-            max={360}
-            step={0.1}
-            value={phase}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setBreathe(false);
-              setPhase(v);
-              apiRef.current?.setPhase(v);
-            }}
-          />
-        </label>
-        <button type="button" className="lab-btn" onClick={() => apiRef.current?.viewHome()}>
-          视角归位
-        </button>
-      </div>
+          <label>
+            <input
+              type="checkbox"
+              checked={breathe}
+              onChange={(e) => {
+                setBreathe(e.target.checked);
+                apiRef.current?.setBreathe(e.target.checked);
+              }}
+            />
+            呼吸
+          </label>
+          <label>
+            相位
+            <input
+              type="range"
+              min={0}
+              max={360}
+              step={0.1}
+              value={phase}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setBreathe(false);
+                setPhase(v);
+                apiRef.current?.setPhase(v);
+              }}
+            />
+          </label>
+          <button type="button" className="lab-btn" onClick={() => apiRef.current?.viewHome()}>
+            视角归位
+          </button>
+        </div>
+  
+      ) : null}
     </div>
   );
 }

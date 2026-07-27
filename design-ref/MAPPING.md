@@ -145,3 +145,14 @@
 - `RingsBench` 未搬织物蒙皮与视角预设按钮（`/demo/shell3d.html` 仍有），站内取结构主体。
 - 稿内 Lab 页自带 nav/footer 为设计稿自描；站内走既有 `(site)` 布局与 rule-link 页脚。
 - 台架 canvas 背景缓冲沿用台架的 1400×1040（2× 逻辑 700×520）——漏设会导致 3D 画面偏小偏移（实测踩过）。
+
+### 7.6 Stage 轮播 + 项目 01 临时主图（2026-07-27，用户拍板）
+
+- **Stage 待机 = 四台 Lab 台架顺序轮播**（`components/lab/StageRotator.tsx`）：四杆 → 拱环 → 触手 → 五环，每台停留 `DWELL_MS` 9s，交叉淡入 520ms（= --dur-struct），图注随片切换、带可点选的进度指示点。三条工程约束：
+  1. **懒挂载**——首屏只建四杆，轮到才建、建后常驻（3D 重建要重传 GPU 缓冲、触手还要重取 1.4MB 网格）；
+  2. **非当前片停跑**——`useBenchLoop` 新增 `enabled` 门控。IntersectionObserver 只看几何、看不见 visibility/opacity，不显式关会让后台台架空烧 CPU/WebGL；
+  3. **交互即暂停**——台架上 pointerdown/wheel 即停轮播（正拖着被切走最恼人），静置 `RESUME_MS` 15s 恢复；点指示点亦暂停。
+  reduced-motion：不轮播，定格第一台。
+- **项目 01 预览主图 = Lab.04 五环台架**（临时）：`StagePlaceholderPanel` 在 index 0 用 `<RingsBench>` 顶替 `StageMedia` 占位块，`active` 由新增的 `panel` state 门控（只在该预览显示时跑）。**作者主图供稿后换回 StageMedia**。
+- **`controls` 开关**：3D 台架新增 `controls`（默认 true）。主页语境（轮播 / 项目预览）传 `false`——控制条是为深色 /lab 页配色的，浅底主页上白字不可读，且"展示图"不该带仪表控件；真控件在 /lab。
+- 两处的活台架都挂 `data-ptm`，仍是 goPT 转场克隆源（canvas 克隆无像素，转场表现为同族深色块生长——可接受）。

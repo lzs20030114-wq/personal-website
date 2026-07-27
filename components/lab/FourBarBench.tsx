@@ -15,7 +15,7 @@ import { useBenchLoop } from './useBenchLoop';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const LABELS = ['A', 'B', 'C', 'D', 'P'] as const;
 
-export function FourBarBench({ grid = true, spin = true }: { grid?: boolean; spin?: boolean }) {
+export function FourBarBench({ grid = true, spin = true, active = true }: { grid?: boolean; spin?: boolean; active?: boolean }) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const stateRef = useRef<{
     solver: ReturnType<typeof createCrankRocker>;
@@ -138,7 +138,7 @@ export function FourBarBench({ grid = true, spin = true }: { grid?: boolean; spi
     };
   }, [grid, spin]);
 
-  useBenchLoop(svgRef, (dt) => stateRef.current?.step(dt), [grid, spin]);
+  useBenchLoop(svgRef, (dt) => stateRef.current?.step(dt), [grid, spin], active);
 
   const toVB = (ev: React.PointerEvent<SVGSVGElement>): Point | null => {
     const m = svgRef.current?.getScreenCTM();

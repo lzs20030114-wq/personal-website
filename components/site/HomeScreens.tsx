@@ -1,17 +1,18 @@
 'use client';
 
 import type { CSSProperties, ReactNode } from 'react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FourBarBench } from '../lab/FourBarBench';
+import { StageRotator } from '../lab/StageRotator';
+import { RingsBench } from '../lab/RingsBench';
 
 /**
  * 主页整屏分幕（design-ref/Home-Screens.dc.html 落地，MAPPING §6；2026-07-26 迭代稿同步）。
  * 三幕：S0 枢纽（卡片组 + 预览舞台）/ S1 About（深色渐变幕）/ S2 Lab+Log+页脚。
  * 分页引擎 = 接管 wheel/touch 的阻力翻页；引擎与光标层仅桌面 + 非 reduced-motion 生效，
  * 其余回落常规文档流（幕 minHeight 100svh，原生滚动）。
- * Stage 默认位 = 活的四杆台架 FourBarBench（用户 2026-07-27 拍板放入；此前为空占位）。
+ * Stage 待机位 = 四台 Lab 台架顺序轮播 StageRotator（用户 2026-07-27 拍板；此前空占位→单台四杆）。
  * 页面转场 goPT = 迭代稿「媒体块生长 + 遮罩淡入」的 SPA 适配（router.push + body 挂载 + 定时淡出）。
  */
 
@@ -237,8 +238,16 @@ function StageMedia({
   );
 }
 
-function StagePlaceholderPanel({ work, index }: { work: HomeWork; index: number }) {
-  // 四项目舞台版式完全同等（红线）；正文位一律 [待作者供稿] 占位，不代写。
+function StagePlaceholderPanel({
+  work,
+  index,
+  active = false,
+}: {
+  work: HomeWork;
+  index: number;
+  active?: boolean;
+}) {
+  // 四项目版式完全同等（红线）；正文位一律 [待作者供稿] 占位，不代写。
   const supplied = index === 0;
   return (
     <>
@@ -255,30 +264,47 @@ function StagePlaceholderPanel({ work, index }: { work: HomeWork; index: number 
         </span>{' '}
         {supplied ? 'thesis 一句话 — 这台机器为何值得被哀悼。' : 'thesis 一句话。'}
       </div>
-      <StageMedia
-        maskDeg={150}
-        grain={0.14}
-        style={{
-          flex: 1,
-          minHeight: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <span
+      {supplied ? (
+        // 项目 01 临时主图 = Lab.04 五环台架（用户拍板 2026-07-27：主图待拍摄前先用活件顶上）；
+        // data-ptm 让它同时是 goPT 转场的克隆源。作者供图后换回 StageMedia。
+        <div
+          data-ptm
           style={{
-            position: 'relative',
-            fontSize: 11,
-            fontWeight: 600,
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-            color: 'var(--g200)',
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            alignItems: 'center',
+            overflow: 'hidden',
           }}
         >
-          [待作者供稿] 主图 · duotone
-        </span>
-      </StageMedia>
+          <RingsBench active={active} controls={false} />
+        </div>
+      ) : (
+        <StageMedia
+          maskDeg={150}
+          grain={0.14}
+          style={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <span
+            style={{
+              position: 'relative',
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--g200)',
+            }}
+          >
+            [待作者供稿] 主图 · duotone
+          </span>
+        </StageMedia>
+      )}
       <div className="grid grid-cols-2" style={{ borderTop: 'var(--hair)' }}>
         <div style={{ padding: '9px 13px 0 0', borderRight: 'var(--hair)' }}>
           <div style={{ ...CELL_LABEL, marginBottom: 3 }}>Role</div>
@@ -325,6 +351,8 @@ function StagePlaceholderPanel({ work, index }: { work: HomeWork; index: number 
 
 export function HomeScreens({ works }: { works: HomeWork[] }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  // 当前舞台面板（0 = 待机轮播，1..4 = 项目预览）——用于给面板内的活台架做 active 门控
+  const [panel, setPanel] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -366,7 +394,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
     const panels = [pFig, ...works.map((_, i) => $(`wp${i + 1}`))].filter(Boolean) as HTMLElement[];
     const cards = works.map((_, i) => $(`c${i + 1}`)).filter(Boolean) as HTMLElement[];
     const lblTxt = [
-      'Stage — Fig. 01 四杆',
+      'Stage — Lab 台架轮播',
       ...works.map((w, i) => `Preview — ${String(i + 1).padStart(2, '0')} ${w.title}`),
     ];
 
@@ -738,6 +766,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
       const old = panels[showing];
       const next = panels[n];
       showing = n;
+      setPanel(n);
       lbl.textContent = lblTxt[n];
       chip.style.visibility = n === 0 ? 'hidden' : 'visible';
       setCards();
@@ -1241,7 +1270,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                       color: 'var(--accent)',
                     }}
                   >
-                    Stage — Fig. 01 四杆
+                    Stage — Lab 台架轮播
                   </span>
                   <button id="figChip" type="button" className="figchip" style={{ visibility: 'hidden' }}>
                     00 · Stage
@@ -1250,7 +1279,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                 <div style={{ position: 'relative', zIndex: 1, flex: 1, minHeight: 0 }}>
                   <div
                     id="pFig"
-                    data-cursor="Fig.01 · live — drag any joint"
+                    data-cursor="Lab 台架 · live — 可拖动"
                     style={{
                       position: 'absolute',
                       inset: 0,
@@ -1261,38 +1290,19 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                       gap: 10,
                     }}
                   >
-                    <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex' }}>
-                      <div
-                        id="figFrame"
-                        style={{
-                          position: 'absolute',
-                          inset: -10,
-                          border: '1px solid var(--accent)',
-                          opacity: 0,
-                          pointerEvents: 'none',
-                        }}
-                      />
-                      {/* Stage 默认位 = 活的四杆台架（签名件，用户 2026-07-27 拍板放入）；
-                          data-ptm 让它同时是 goPT 转场的克隆源 */}
-                      <div
-                        data-ptm
-                        style={{
-                          flex: 1,
-                          minHeight: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          overflow: 'hidden',
-                        }}
-                      >
-                        <FourBarBench />
-                      </div>
-                    </div>
-                    <div className="flex items-baseline justify-between" style={{ gap: 16 }}>
-                      <span style={UPPER_11}>Fig. 01 · four-bar · live</span>
-                      <Link href="/lab#lab01" className="rule-link" data-pt style={{ fontSize: 10 }}>
-                        Open the lab →
-                      </Link>
-                    </div>
+                    <div
+                      id="figFrame"
+                      style={{
+                        position: 'absolute',
+                        inset: 4,
+                        border: '1px solid var(--accent)',
+                        opacity: 0,
+                        pointerEvents: 'none',
+                      }}
+                    />
+                    {/* Stage 待机 = 四台 Lab 台架顺序轮播（用户拍板 2026-07-27；
+                        此前为单台四杆，再之前为空占位）。图注与 data-ptm 都在组件内。 */}
+                    <StageRotator />
                   </div>
                   {works.map((w, i) => (
                     <div
@@ -1310,7 +1320,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                         opacity: 0,
                       }}
                     >
-                      <StagePlaceholderPanel work={w} index={i} />
+                      <StagePlaceholderPanel work={w} index={i} active={panel === i + 1} />
                     </div>
                   ))}
                 </div>
