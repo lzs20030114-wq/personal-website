@@ -36,9 +36,9 @@ const COMMIT_DIST = 360;
 const FLICK_V = 140;
 const COMMIT_P = 0.5;
 const PUSH_MS = 620;
-// 直飞转场（/work/*）跳页前的遮罩时长：只够盖住换页那一帧，预览块这期间原地不动。
-// 调大 = 换页更稳、但飞之前多停一下；调小 = 更利落、但可能露出主页硬切成深色案例页那一帧。
-const PRE_MS = 190;
+// 直飞转场（/work/*）跳页前：底板从预览块的框展开到铺满视口的时长，铺满即 push。
+// 调大 = 展开看得更清楚、但飞之前等更久；调小 = 更利落、但展开会显得赶。
+const EXPAND_MS = 380;
 const LOCK_TAIL = 160;
 const SILENCE = 200;
 const PAUSE_SNAP = 120;
@@ -492,18 +492,39 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
           });
         }, 700);
       };
+      // 源块矩形先量：直飞时底板要从它的框展开，遮罩的起始形状依赖它
+      const r0 = fromEl ? fromEl.getBoundingClientRect() : null;
+      const usable = !!r0 && r0.width >= 10 && r0.height >= 10;
       const veil = document.createElement('div');
       veil.setAttribute('data-pt-tmp', '1');
       veil.setAttribute('data-pt-veil', '1');
-      veil.style.cssText = `position:fixed;inset:0;z-index:199;pointer-events:none;opacity:0;background:${PT_BG}`;
+      veil.style.cssText = `position:fixed;inset:0;z-index:199;pointer-events:none;opacity:0;background:${
+        bg && bg !== 'none' ? bg : PT_BG
+      }`;
       document.body.appendChild(veil);
-      // 直飞时遮罩要在 PRE_MS 内**压到全不透明**：它此刻的活儿是盖住换页那一帧，
-      // 半透明等于没盖。生长那条路仍是稿内的 0.92 / STRUCT。
-      veil.animate([{ opacity: 0 }, { opacity: direct ? 1 : 0.92 }], {
-        duration: direct ? PRE_MS : STRUCT,
-        easing: EASE,
-        fill: 'forwards',
-      });
+      if (direct && usable && r0) {
+        // 背景从预览块展开（用户拍板 2026-07-27：「现在是直接一下闪过来的，不太自然」）。
+        // 换页那一帧必须被盖住，但**怎么盖**是有讲究的：整块淡入 = 平白多出一层东西；
+        // 改成底板从预览块的框沿四边铺开，读起来是这块预览自己的底板长成了新页面的背景。
+        // 用 clip-path 而非 scale：缩放会把渐变一起拉伸变形，clip 只是把同一块底板露出来。
+        const from = `inset(${r0.top}px ${window.innerWidth - r0.right}px ${
+          window.innerHeight - r0.bottom
+        }px ${r0.left}px)`;
+        veil.style.opacity = '1';
+        veil.style.clipPath = from;
+        veil.animate([{ clipPath: from }, { clipPath: 'inset(0px 0px 0px 0px)' }], {
+          duration: EXPAND_MS,
+          easing: EASE,
+          fill: 'forwards',
+        });
+      } else {
+        // 生长那条路仍是稿内的 0.92 / STRUCT 淡入；直飞但量不到源块时退回全屏淡入
+        veil.animate([{ opacity: 0 }, { opacity: direct ? 1 : 0.92 }], {
+          duration: direct ? EXPAND_MS : STRUCT,
+          easing: EASE,
+          fill: 'forwards',
+        });
+      }
       vp.style.willChange = 'transform,filter';
       vp.animate(
         direct
@@ -515,17 +536,13 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
               { transform: 'scale(1)', filter: 'blur(0px)' },
               { transform: 'scale(1.04)', filter: 'blur(8px)' },
             ],
-        { duration: direct ? PRE_MS : PUSH_MS, easing: EASE, fill: 'forwards' },
+        { duration: direct ? EXPAND_MS : PUSH_MS, easing: EASE, fill: 'forwards' },
       );
-      if (!fromEl) {
-        setTimeout(finish, direct ? PRE_MS : 540);
+      if (!fromEl || !usable || !r0) {
+        setTimeout(finish, direct ? EXPAND_MS : 540);
         return;
       }
-      const r = fromEl.getBoundingClientRect();
-      if (r.width < 10 || r.height < 10) {
-        setTimeout(finish, direct ? PRE_MS : 540);
-        return;
-      }
+      const r = r0;
       const wrap = document.createElement('div');
       wrap.setAttribute('data-pt-tmp', '1');
       // data-pt-morph + 版式盒尺寸：目标页 PageEnter 接手这个克隆，把它从当前的满屏帧
@@ -568,10 +585,10 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
       if (direct) {
         // 直飞（用户拍板 2026-07-27：「不要中间放大一下再缩小过去」）：这里**不动**克隆，
         // 让它钉在原位，等目标页量到 hero 落点后一次飞过去（PageEnter 第 ① 条路）。
-        // 只等 PRE_MS 让遮罩压住底下的主页——立刻 push 的话，遮罩才两成透明度，
-        // 浅底主页会当场硬切成深色案例页，那一下比放大还扎眼。
+        // 等底板铺满（EXPAND_MS）再 push——铺满前换页会从没盖住的边角漏出浅底主页
+        // 硬切成深色案例页那一帧，那一下比放大还扎眼。预览块这期间原地不动。
         wrap.setAttribute('data-pt-direct', '1');
-        setTimeout(finish, PRE_MS);
+        setTimeout(finish, EXPAND_MS);
         return;
       }
 
