@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { LogEntry, LogLang } from '../../src/lib/site/log';
 
 /**
@@ -63,10 +63,30 @@ function groupByMonth(entries: LogEntry[]): Group[] {
   return groups;
 }
 
+const STORE_KEY = 'log-lang';
+
 export function LogList({ entries }: { entries: LogEntry[] }) {
+  // SSR 首帧恒为 EN（静态预渲染，服务端读不到偏好）；挂载后再按上次选择切。
   const [lang, setLang] = useState<LogLang>('en');
   const groups = useMemo(() => groupByMonth(entries), [entries]);
   const copy = COPY[lang];
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(STORE_KEY) === 'zh') setLang('zh');
+    } catch {
+      /* 隐私模式下 localStorage 抛异常——记不住语言不该让整页挂掉 */
+    }
+  }, []);
+
+  function pick(next: LogLang) {
+    setLang(next);
+    try {
+      localStorage.setItem(STORE_KEY, next);
+    } catch {
+      /* 同上 */
+    }
+  }
 
   return (
     <>
@@ -104,7 +124,7 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
               type="button"
               className="lang-switch__opt"
               aria-pressed={lang === 'en'}
-              onClick={() => setLang('en')}
+              onClick={() => pick('en')}
             >
               EN
             </button>
@@ -112,7 +132,7 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
               type="button"
               className="lang-switch__opt"
               aria-pressed={lang === 'zh'}
-              onClick={() => setLang('zh')}
+              onClick={() => pick('zh')}
             >
               中文
             </button>
@@ -130,8 +150,8 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
                   <span className="log-entry__date">{e.date.slice(5)}</span>
                   <span className="log-entry__tags">
                     {e.tags.map((t) => (
-                      <span key={t.label} className={`tag tag-${t.variant}`}>
-                        {t.label}
+                      <span key={t.label.en} className={`tag tag-${t.variant}`}>
+                        {t.label[lang]}
                       </span>
                     ))}
                   </span>

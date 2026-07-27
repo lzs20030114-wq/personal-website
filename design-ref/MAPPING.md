@@ -49,7 +49,7 @@
 ## 4. 数据来源
 
 - 主页 2×2 统计格：04 Projects / **176** Tests green（用当前实测数，设计稿 168 已过时）/ 02 Solver kernels / 05 Live demos。硬编码即可（发版时人工更新）。
-- Work log 条目：设计稿 8 条为定稿文案，若现有 archive 内容池为空/占位则以设计稿 8 条建档（沿用现有内容池机制建，不许绕过 zod 校验管线；机制若不适配纯 log 条目可扩 schema）。
+- Work log 条目：设计稿 8 条为定稿文案，若现有 archive 内容池为空/占位则以设计稿 8 条建档（沿用现有内容池机制建，不许绕过 zod 校验管线；机制若不适配纯 log 条目可扩 schema）。**2026-07-27 起以 §8 为准**（并入项目 1 日志、全字段双语、主页预览改接池）。
 - Case 页：**保持 frontmatter/内容池驱动**（role/date/tools/figures/video/AI 披露插槽机制不动），只换渲染模板；设计稿的 My role 四行、Tools 串、六个编号 section（01 Research question / 02 Concepts 四卡 / 03 Form / 04 Structure / 05 Behavior / 06 Research）+ V.60 视频席位 + AI disclosure 席位为目标结构。设计稿虚线 Placeholder 框原样保留（那就是占位标记的视觉形态）。
 
 ## 5. 纪律（红线）
@@ -183,3 +183,34 @@
 2. **尺寸塌缩**——`.lab-wrap` / `.lab-fig` 在 flex 容器里作为 flex item 收缩成内容宽，内部 `width:100%` 失去参照 → SVG 退回固有宽（约 300px 小图）。修：两者都补 `width: 100%`（对 /lab 的网格单元无影响）。
 
 教训同 §7.7：**照搬稿内 CSS 时要连"稿内隐含的上下文假设"一起搬**——稿只跑在深色页、只用网格布局，这两条假设在主页都不成立。
+
+---
+
+## 8. Work log 双语化 + 版式重排（2026-07-27，用户拍板）
+
+项目 1「轮回机器」的工作日志（2026.03–07，19 条）并入 log 内容池后，日志从「站建设流水」变成「项目主线记录」，随之三处修订——**§4「数据来源」中 Work log 一条以本节为准**：
+
+### 8.1 数据形状：条目全字段双语
+
+- `lead` / `body` / `tags[].label` 均改为 `{ en, zh }`，zod 两语言都 `min(1)`——**缺一种构建期直接 fail**（半翻译的条目切到中文会留英文孤岛，形状校验本身挡不住，故落在 schema 上）。
+- 标签词汇表（en/zh）：Machine 机器 · Lab 实验室 · Site 网站 · Docs 文档 · Record 记录 · Shell 壳体 · Arch 拱环 · 3D 立体 · Concept 概念 · Study 实验设计 · Mechanical 机械 · Simulation 仿真 · Electronics 电子 · Sourcing 采购 · Strategy 战略。`Machine`（outline）= 项目桶，与既有 `Lab` 平级；每条上限 1 outline + 1 neutral（多了会把 /archive 的 tag 列撑宽）。
+- 双语来源存档 = 轮回机器_工作日志原稿.md（未删减）；站上条目是其**结论式压缩**，不是逐句翻译——原稿留数值细节，站上留「学到什么」。
+- 守门测试 `src/lib/site/log.test.ts`：排序、同日 tie 稳定性、双语补全、标签译名一致性（zod 挡不住这四类）。
+
+### 8.2 语言切换（Log 页专属）
+
+- `/archive` 标头右侧 EN / 中文 滑块（`.lang-switch`），切换范围 = 条目 + 标签 + 标题 + 副标 + 页脚说明；**全站不做 i18n 路由**，其余页面恒英文。
+- SSR 首帧恒 EN（页面是静态预渲染，服务端读不到偏好）；挂载后从 `localStorage['log-lang']` 恢复，选择即写回。隐私模式下 localStorage 抛异常已吞掉——记不住语言不该让整页挂掉。
+- 中文标题走系统 CJK 回退字体（自托管的 Source Serif 4 无中文字面）。**已知偏离**，要统一质感需另外自托管中文字体，本轮不做。
+
+### 8.3 版式：条目拆行（用户「不要全堆在一起」）
+
+设计稿的单行条目（日期 / lead+正文同段 / tag 组）在 27 条、含长正文时糊成一片，改为：
+
+- 左栏 150px：日期（20px/800）+ 标签竖排；右栏：**引句独占一行**（16px/650），正文另起（英 66ch / 中 40em 限宽，中文行距 1.85、字距 +0.01em——同号字下中文比拉丁更密）。
+- 按月分组，月首一条「月份标签 + 占满余量的发丝线」（`.log-month`）。
+- <768px 回落单栏，日期与标签同行。
+
+### 8.4 主页 Log 预览改接内容池
+
+`LOG_PREVIEW` 硬编码（稿内三条字面）删除 → `app/page.tsx` 从池里取最新三条英文面传 `HomeScreens` 的 `logs` prop，与 /archive 同源。池里条目长短不一，预览行 `-webkit-line-clamp: 2` 钳两行——S2 幕高度固定，长条目会把页脚顶出去。

@@ -10,8 +10,8 @@
       "zh": "手算比实际乐观约 4.5 倍。加背肋与前唇后承载力接近三倍；面外最差跨位仍待收尾。"
     },
     "tags": [
-      { "label": "Machine", "variant": "outline" },
-      { "label": "Simulation", "variant": "neutral" }
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
     ]
   },
   {
@@ -25,8 +25,8 @@
       "zh": "S1–S5 全族提取；止程余量逐环阶梯标定（[0, 2, 4, 8] mm）；全族峰值残差 0.24–0.42 mm。"
     },
     "tags": [
-      { "label": "Lab", "variant": "outline" },
-      { "label": "Shell", "variant": "neutral" }
+      { "label": { "en": "Lab", "zh": "实验室" }, "variant": "outline" },
+      { "label": { "en": "Shell", "zh": "壳体" }, "variant": "neutral" }
     ]
   },
   {
@@ -40,8 +40,8 @@
       "zh": "同一 URL 两台设备形态分岔——是合法的滑移模态，不是算错。双向槽端钳制 + 定步积分；168 项测试绿。"
     },
     "tags": [
-      { "label": "Lab", "variant": "outline" },
-      { "label": "Arch", "variant": "neutral" }
+      { "label": { "en": "Lab", "zh": "实验室" }, "variant": "outline" },
+      { "label": { "en": "Arch", "zh": "拱环" }, "variant": "neutral" }
     ]
   },
   {
@@ -54,7 +54,7 @@
       "en": "Next.js scaffold, content pool with build-time validation, four routes; LinkageFigure live on the homepage with SSR first frame.",
       "zh": "Next.js 脚手架、带构建期校验的内容池、四条路由；LinkageFigure 上主页，含 SSR 首帧。"
     },
-    "tags": [{ "label": "Site", "variant": "neutral" }]
+    "tags": [{ "label": { "en": "Site", "zh": "网站" }, "variant": "neutral" }]
   },
   {
     "date": "2026-07-10",
@@ -67,8 +67,8 @@
       "zh": "独立 3D 内核；三肌腱 120° 触手；轨道相机。首版手感被否——fascia 抗扭斜杆把横向漂移压到 38.5→1.2 px。"
     },
     "tags": [
-      { "label": "Lab", "variant": "outline" },
-      { "label": "3D", "variant": "neutral" }
+      { "label": { "en": "Lab", "zh": "实验室" }, "variant": "outline" },
+      { "label": { "en": "3D", "zh": "立体" }, "variant": "neutral" }
     ]
   },
   {
@@ -81,7 +81,7 @@
       "en": "The physical S4 ring (angulated scissor arch + crank-slider) as a solver preset — kernel untouched, 7 new tests.",
       "zh": "真机 S4 环（角化剪式拱 + 曲柄滑块）作为求解器实例——内核零修改，新增 7 项测试。"
     },
-    "tags": [{ "label": "Lab", "variant": "outline" }]
+    "tags": [{ "label": { "en": "Lab", "zh": "实验室" }, "variant": "outline" }]
   },
   {
     "date": "2026-07-10",
@@ -93,7 +93,7 @@
       "en": "Release damping, live coupler tracing, engineering captions; 36 tests. Sealed: bugfixes only from here.",
       "zh": "release 阻尼、耦合曲线实时描绘、工程标注；36 项测试。封盘后只修 bug。"
     },
-    "tags": [{ "label": "Lab", "variant": "outline" }]
+    "tags": [{ "label": { "en": "Lab", "zh": "实验室" }, "variant": "outline" }]
   },
   {
     "date": "2026-07-10",
@@ -106,8 +106,8 @@
       "zh": "五环共轴：步进电机 + 3:1 皮带 + 6mm D 轴。扭矩由重力与摩擦决定，不是惯性。"
     },
     "tags": [
-      { "label": "Machine", "variant": "outline" },
-      { "label": "Mechanical", "variant": "neutral" }
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
     ]
   },
   {
@@ -121,8 +121,8 @@
       "zh": "含条件项总计约 ¥300；已有库存明确排除，避免重复采购。"
     },
     "tags": [
-      { "label": "Machine", "variant": "outline" },
-      { "label": "Sourcing", "variant": "neutral" }
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Sourcing", "zh": "采购" }, "variant": "neutral" }
     ]
   },
   {
@@ -135,7 +135,7 @@
       "en": "Line-length law, Tufte margin notes, Swiss grid — desktop-first case-study grid decided.",
       "zh": "行长定律、Tufte 边注、瑞士网格——案例页确定桌面优先网格。"
     },
-    "tags": [{ "label": "Site", "variant": "neutral" }]
+    "tags": [{ "label": { "en": "Site", "zh": "网站" }, "variant": "neutral" }]
   },
   {
     "date": "2026-07-07",
@@ -147,7 +147,7 @@
       "en": "Math derivations, API, tolerances, milestones — the single source of truth for the solver line.",
       "zh": "数学推导、API、容差、里程碑——求解器线的唯一权威来源。"
     },
-    "tags": [{ "label": "Docs", "variant": "neutral" }]
+    "tags": [{ "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }]
   },
   {
     "date": "2026-07-07",
@@ -160,8 +160,8 @@
       "zh": "算不过来的那项生理对比直接砍掉，不做勉强；量表裁剪到匹配小样本。感知范围冻结在六个输入通道。"
     },
     "tags": [
-      { "label": "Machine", "variant": "outline" },
-      { "label": "Study", "variant": "neutral" }
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Study", "zh": "实验设计" }, "variant": "neutral" }
     ]
   },
   {
@@ -175,8 +175,8 @@
       "zh": "两盏柔光箱 + 纸质无缝背景。拍静物时，光的质量远比亮度重要。"
     },
     "tags": [
-      { "label": "Machine", "variant": "outline" },
-      { "label": "Docs", "variant": "neutral" }
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Record", "zh": "记录" }, "variant": "neutral" }
     ]
   },
   {
@@ -190,8 +190,8 @@
       "zh": "舵盘花键沿用原厂而非自造；打印孔位放大以迁就实际收缩；一个电极只给一个读数——要分位置就得加通道。"
     },
     "tags": [
-      { "label": "Machine", "variant": "outline" },
-      { "label": "Electronics", "variant": "neutral" }
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Electronics", "zh": "电子" }, "variant": "neutral" }
     ]
   },
   {
@@ -205,8 +205,8 @@
       "zh": "自由度分析表明单杆锁不住拱，加顶点导轨才行。环几何据此冻结，各环行程增益 3–26%。"
     },
     "tags": [
-      { "label": "Machine", "variant": "outline" },
-      { "label": "Simulation", "variant": "neutral" }
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
     ]
   },
   {
@@ -220,8 +220,8 @@
       "zh": "方法（生理传感、验证量表、行为编码）是与「机器人之死」类美学作品的分界线。行为引擎最弱，也最有杠杆。"
     },
     "tags": [
-      { "label": "Machine", "variant": "outline" },
-      { "label": "Strategy", "variant": "neutral" }
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Strategy", "zh": "战略" }, "variant": "neutral" }
     ]
   },
   {
@@ -235,8 +235,8 @@
       "zh": "三台 NEMA17 配 TMC2209——更便宜的驱动器电流不够，没有折中余地。"
     },
     "tags": [
-      { "label": "Machine", "variant": "outline" },
-      { "label": "Sourcing", "variant": "neutral" }
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Sourcing", "zh": "采购" }, "variant": "neutral" }
     ]
   },
   {
@@ -250,8 +250,8 @@
       "zh": "0.4mm 卡死一个关节，换来一条规则：烧结件要的余量比图纸直觉更大，而轴向夹紧比孔紧更致命。"
     },
     "tags": [
-      { "label": "Machine", "variant": "outline" },
-      { "label": "Mechanical", "variant": "neutral" }
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
     ]
   },
   {
@@ -265,8 +265,8 @@
       "zh": "塞打螺丝一件两用——既是轴颈又定间隙，直接消掉一条公差链，而不是去管理它。"
     },
     "tags": [
-      { "label": "Machine", "variant": "outline" },
-      { "label": "Mechanical", "variant": "neutral" }
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
     ]
   },
   {
@@ -280,8 +280,8 @@
       "zh": "一条表达性主臂 + 两条反射性触须，胜过三条都不强的臂。同时澄清：这不是仿生——机器就该看起来像机器，行为才是自变量。"
     },
     "tags": [
-      { "label": "Machine", "variant": "outline" },
-      { "label": "Concept", "variant": "neutral" }
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
     ]
   },
   {
@@ -295,8 +295,8 @@
       "zh": "哑铃销侧滑装入、键槽垂直于拉力方向——手指能拆开维修，而不是被压配死死封住。"
     },
     "tags": [
-      { "label": "Machine", "variant": "outline" },
-      { "label": "Mechanical", "variant": "neutral" }
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
     ]
   },
   {
@@ -310,8 +310,8 @@
       "zh": "五个候选比下来，角化剪式胜出只因一点：它是唯一能一路参数化到仿真的方案。"
     },
     "tags": [
-      { "label": "Machine", "variant": "outline" },
-      { "label": "Mechanical", "variant": "neutral" }
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
     ]
   },
   {
@@ -325,8 +325,8 @@
       "zh": "四段渐变指节 + 三根肌腱。让关节先后闭合的摩擦不是要消除的缺陷——它读起来正是生命感。"
     },
     "tags": [
-      { "label": "Machine", "variant": "outline" },
-      { "label": "Simulation", "variant": "neutral" }
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
     ]
   },
   {
@@ -340,8 +340,8 @@
       "zh": "把一套完整的 Kangaroo 定义逐个电池拆开读懂。之后所有机构研究都站在这上面。"
     },
     "tags": [
-      { "label": "Machine", "variant": "outline" },
-      { "label": "Simulation", "variant": "neutral" }
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
     ]
   },
   {
@@ -355,8 +355,8 @@
       "zh": "四大结构组件与功能优先级；单场约 37 分钟、四个加速生命周期。测量工具在动手造之前就选定，不是事后补。"
     },
     "tags": [
-      { "label": "Machine", "variant": "outline" },
-      { "label": "Study", "variant": "neutral" }
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Study", "zh": "实验设计" }, "variant": "neutral" }
     ]
   },
   {
@@ -370,8 +370,8 @@
       "zh": "人在什么条件下对非生命体产生依恋，失去时又如何表现。早期「最大化悲伤」的偏移已纠正——死亡是工具，不是目的。"
     },
     "tags": [
-      { "label": "Machine", "variant": "outline" },
-      { "label": "Concept", "variant": "neutral" }
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
     ]
   },
   {
@@ -385,8 +385,8 @@
       "zh": "看着人们哀悼一次模型更新带走的 AI 伴侣，产出三个候选概念。留下来的是这一个。"
     },
     "tags": [
-      { "label": "Machine", "variant": "outline" },
-      { "label": "Concept", "variant": "neutral" }
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
     ]
   }
 ]

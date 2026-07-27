@@ -8,13 +8,6 @@ import { z } from 'zod';
  * 纯 log 条目形状与 WorkEntry 不同，故扩独立 schema（不绕过校验管线）。
  * 数据 = content/log/entries.json，条目文案照搬 Log-Modernist 设计稿。
  */
-const LogTagSchema = z
-  .object({
-    label: z.string().min(1),
-    variant: z.enum(['outline', 'neutral']),
-  })
-  .strict();
-
 /** 双语文本：两种语言都必填——缺一种就等于切换后半页空白，构建期即报错。 */
 const BilingualSchema = z
   .object({
@@ -23,12 +16,19 @@ const BilingualSchema = z
   })
   .strict();
 
+const LogTagSchema = z
+  .object({
+    label: BilingualSchema, // 标签同样双语——切中文后不留英文孤岛
+    variant: z.enum(['outline', 'neutral']),
+  })
+  .strict();
+
 const LogEntrySchema = z
   .object({
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // Log 页显示 MM-DD，首页预览用整日期
     lead: BilingualSchema, // 加粗引句
     body: BilingualSchema, // 引句之后的正文
-    tags: z.array(LogTagSchema), // label 不翻译：标签是分类词汇表，中英同形
+    tags: z.array(LogTagSchema),
   })
   .strict();
 
