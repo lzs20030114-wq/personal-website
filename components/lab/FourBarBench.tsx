@@ -15,7 +15,7 @@ import { useBenchLoop } from './useBenchLoop';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const LABELS = ['A', 'B', 'C', 'D', 'P'] as const;
 
-export function FourBarBench({ grid = true, spin = true, active = true }: { grid?: boolean; spin?: boolean; active?: boolean }) {
+export function FourBarBench({ grid = true, spin = true, active = true, onLight = false }: { grid?: boolean; spin?: boolean; active?: boolean; onLight?: boolean }) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const stateRef = useRef<{
     solver: ReturnType<typeof createCrankRocker>;
@@ -148,7 +148,7 @@ export function FourBarBench({ grid = true, spin = true, active = true }: { grid
   };
 
   return (
-    <div className="lab-wrap">
+    <div className={`lab-wrap${onLight ? ' on-light' : ''}`}>
       <div className="lab-fig">
       <svg
         ref={svgRef}

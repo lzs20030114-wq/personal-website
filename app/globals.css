@@ -791,9 +791,33 @@ a:hover {
 .lab-wrap {
   position: relative;
   color: var(--ink);
+  /* flex 容器里作为 flex item 会收缩成内容宽，内部 width:100% 便失去参照（实测缩成小图） */
+  width: 100%;
+}
+/* 台架是深色仪表：放在浅色页（主页舞台/项目预览）时必须自带深底与深色 token，
+   否则 HUD 与 SVG class 会解析成浅底配色、整台"裸奔"在纸面上（2026-07-27 实测回归）。
+   /lab 是深色页，由页面底色供给，不加此修饰符。 */
+.lab-wrap.on-light {
+  --paper: oklch(0.22 0.042 235);
+  --surface: oklch(0.95 0.032 120 / 0.05);
+  --ink: oklch(0.95 0.032 120);
+  --accent: oklch(0.71 0.098 145);
+  --accent-2: oklch(0.83 0.075 294);
+  --n300: oklch(0.45 0.03 190);
+  --n400: oklch(0.58 0.04 175);
+  --n500: oklch(0.66 0.045 170);
+  --n600: oklch(0.72 0.05 165);
+  --n700: oklch(0.82 0.045 160);
+  color: var(--ink);
+}
+.lab-wrap.on-light .lab-fig {
+  background: oklch(0.22 0.042 235);
+  border: 1px solid oklch(0.95 0.032 120 / 0.25);
 }
 .lab-fig {
   position: relative;
+  /* flex 容器里不加会收缩成内容宽（svg width:100% 无参照 → 退回固有宽，实测缩成小图） */
+  width: 100%;
 }
 .lab-fig svg,
 .lab-fig canvas {

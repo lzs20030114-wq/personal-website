@@ -40,11 +40,14 @@ export function TentacleBench({
   spin = true,
   active = true,
   controls = true,
+  onLight = false,
 }: {
   spin?: boolean;
   active?: boolean;
   /** false = 纯展示（主页舞台用）：不出控制条 */
   controls?: boolean;
+  /** true = 置于浅色页（主页舞台）：自带深底与深色 token */
+  onLight?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const apiRef = useRef<{
@@ -297,7 +300,7 @@ export function TentacleBench({
   useBenchLoop(canvasRef, (dt) => apiRef.current?.step(dt), [spin], active);
 
   return (
-    <div className="lab-wrap">
+    <div className={`lab-wrap${onLight ? ' on-light' : ''}`}>
       <div className="lab-fig">
         <canvas ref={canvasRef} width={1400} height={1040} aria-label="立体触手台架；拖拽旋转视角、滑块收缩肌腱" />
         <div className="lab-hud tl">

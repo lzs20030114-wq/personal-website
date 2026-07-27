@@ -277,7 +277,7 @@ function StagePlaceholderPanel({
             overflow: 'hidden',
           }}
         >
-          <RingsBench active={active} controls={false} />
+          <RingsBench active={active} controls={false} onLight />
         </div>
       ) : (
         <StageMedia

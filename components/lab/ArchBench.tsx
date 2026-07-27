@@ -30,7 +30,7 @@ import { useBenchLoop } from './useBenchLoop';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const HANDLES = [ARCH_APEX, ...ARCH_FEET, ARCH_PIN];
 
-export function ArchBench({ grid = true, active = true }: { grid?: boolean; active?: boolean }) {
+export function ArchBench({ grid = true, active = true, onLight = false }: { grid?: boolean; active?: boolean; onLight?: boolean }) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const stateRef = useRef<{ ctl: LinkageController; step: (dt: number) => void } | null>(null);
   const [hud, setHud] = useState({ phi: 0, apex: 0, err: 0, mode: 'idle' });
@@ -150,7 +150,7 @@ export function ArchBench({ grid = true, active = true }: { grid?: boolean; acti
   };
 
   return (
-    <div className="lab-wrap">
+    <div className={`lab-wrap${onLight ? ' on-light' : ''}`}>
       <div className="lab-fig">
       <svg
         ref={svgRef}

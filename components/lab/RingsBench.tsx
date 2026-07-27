@@ -181,11 +181,14 @@ export function RingsBench({
   spin = true,
   active = true,
   controls = true,
+  onLight = false,
 }: {
   spin?: boolean;
   active?: boolean;
   /** false = 纯展示（主页舞台/项目预览用）：不出控制条 */
   controls?: boolean;
+  /** true = 置于浅色页（主页舞台）：自带深底与深色 token */
+  onLight?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const apiRef = useRef<{
@@ -431,7 +434,7 @@ export function RingsBench({
   }, []);
 
   return (
-    <div className="lab-wrap">
+    <div className={`lab-wrap${onLight ? ' on-light' : ''}`}>
       <div className="lab-fig">
         <canvas
           ref={canvasRef}
