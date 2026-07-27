@@ -36,6 +36,9 @@ const COMMIT_DIST = 360;
 const FLICK_V = 140;
 const COMMIT_P = 0.5;
 const PUSH_MS = 620;
+// 直飞转场（/work/*）跳页前的遮罩时长：只够盖住换页那一帧，预览块这期间原地不动。
+// 调大 = 换页更稳、但飞之前多停一下；调小 = 更利落、但可能露出主页硬切成深色案例页那一帧。
+const PRE_MS = 190;
 const LOCK_TAIL = 160;
 const SILENCE = 200;
 const PAUSE_SNAP = 120;
@@ -463,6 +466,9 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
       // 深色目标（case/archive）交接给目标页 PageEnter 播放揭开进入段；
       // 写一次性标记 + 媒体块底色，供着陆平面同族续接。
       const isDark = /^\/(work\/|archive)/.test(href);
+      // 直飞 = 目标页有 hero 落点（只有 case 页有）：预览块钉在原位跳页，落地后一次飞到主图位。
+      // 其余路由没地方可落，仍走稿内的「生长铺满」。
+      const direct = /^\/work\//.test(href);
       const bg = fromEl ? getComputedStyle(fromEl).backgroundImage : '';
       const finish = () => {
         try {
@@ -491,26 +497,33 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
       veil.setAttribute('data-pt-veil', '1');
       veil.style.cssText = `position:fixed;inset:0;z-index:199;pointer-events:none;opacity:0;background:${PT_BG}`;
       document.body.appendChild(veil);
-      veil.animate([{ opacity: 0 }, { opacity: 0.92 }], {
-        duration: STRUCT,
+      // 直飞时遮罩要在 PRE_MS 内**压到全不透明**：它此刻的活儿是盖住换页那一帧，
+      // 半透明等于没盖。生长那条路仍是稿内的 0.92 / STRUCT。
+      veil.animate([{ opacity: 0 }, { opacity: direct ? 1 : 0.92 }], {
+        duration: direct ? PRE_MS : STRUCT,
         easing: EASE,
         fill: 'forwards',
       });
       vp.style.willChange = 'transform,filter';
       vp.animate(
-        [
-          { transform: 'scale(1)', filter: 'blur(0px)' },
-          { transform: 'scale(1.04)', filter: 'blur(8px)' },
-        ],
-        { duration: PUSH_MS, easing: EASE, fill: 'forwards' },
+        direct
+          ? [
+              { transform: 'scale(1)', filter: 'blur(0px)' },
+              { transform: 'scale(1.015)', filter: 'blur(4px)' },
+            ]
+          : [
+              { transform: 'scale(1)', filter: 'blur(0px)' },
+              { transform: 'scale(1.04)', filter: 'blur(8px)' },
+            ],
+        { duration: direct ? PRE_MS : PUSH_MS, easing: EASE, fill: 'forwards' },
       );
       if (!fromEl) {
-        setTimeout(finish, 540);
+        setTimeout(finish, direct ? PRE_MS : 540);
         return;
       }
       const r = fromEl.getBoundingClientRect();
       if (r.width < 10 || r.height < 10) {
-        setTimeout(finish, 540);
+        setTimeout(finish, direct ? PRE_MS : 540);
         return;
       }
       const wrap = document.createElement('div');
@@ -551,6 +564,18 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
       });
       wrap.appendChild(clone);
       document.body.appendChild(wrap);
+
+      if (direct) {
+        // 直飞（用户拍板 2026-07-27：「不要中间放大一下再缩小过去」）：这里**不动**克隆，
+        // 让它钉在原位，等目标页量到 hero 落点后一次飞过去（PageEnter 第 ① 条路）。
+        // 只等 PRE_MS 让遮罩压住底下的主页——立刻 push 的话，遮罩才两成透明度，
+        // 浅底主页会当场硬切成深色案例页，那一下比放大还扎眼。
+        wrap.setAttribute('data-pt-direct', '1');
+        setTimeout(finish, PRE_MS);
+        return;
+      }
+
+      // 无落点的路由（/archive /lab）：仍是稿内的「媒体块生长铺满」再交接
       const cover = coverRect(r, window.innerWidth, window.innerHeight);
       wrap.animate(
         [{ transform: 'translate(0px,0px) scale(1)' }, { transform: flipCss(flipTransform(r, cover)) }],

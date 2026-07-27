@@ -4,14 +4,16 @@ import { useEffect } from 'react';
 import { coverRect, flipCss, flipTransform, type Rect } from '../../src/lib/site/flip';
 
 /**
- * 页面转场进入段（MAPPING §6.1 / §9）。主页 goPT 把预览块放大到铺满视口 → router.push →
- * 本层接力，把那一帧**缩放位移落到本页的 hero 主图位**。
+ * 页面转场进入段（MAPPING §6.1 / §9）。主页 goPT 把预览块交接过来 → router.push →
+ * 本层接力，把它**变位缩放到本页的 hero 主图位**。
  *
  * 落地段有两条路：
  * ① **变位缩放（有 hero 落点，/work/[slug]）**——出场克隆（body 上、跨路由存活的 [data-pt-morph]）
  *    与本页 hero 同时沿同一条几何路径飞向 hero 的版式位（几何见 src/lib/site/flip.ts），
  *    途中交叉淡出：静止的克隆快照退，活的 hero 进。看上去就是主页那张预览图自己落到了主图位。
- *    起点取克隆此刻的视觉框（而不是重新按视口算）——这样第一段的末帧就是第二段的首帧，接缝为零。
+ *    起点**一律取克隆此刻的视觉框**，所以 goPT 那边是把它钉在卡片原位（直飞，用户拍板
+ *    2026-07-27「不要中间放大一下再缩小过去」）还是先放大铺满，本层不必知道——
+ *    上一段的末帧永远就是这一段的首帧，接缝为零。
  * ② **着陆平面（无 hero 落点，/archive 等）**——旧行为原样保留：不透明平面盖场、内容 blur 揭入、
  *    平面 clip 收回后移除。
  *
@@ -20,10 +22,12 @@ import { coverRect, flipCss, flipTransform, type Rect } from '../../src/lib/site
  * - 任何情况超时强制收尾（hero 内联样式一并复原）；组件卸载也强制 finish。
  * 转场标记 = sessionStorage('om-pt') 存 Date.now()，读后即删；超 3s 视为过期忽略。
  */
-const MORPH_MS = 760; // 第二段：满屏帧 → hero 位
+const MORPH_MS = 660; // 飞行：起点帧 → hero 位（直飞路程比原来的满屏帧短，760 → 660）
 const CROSSFADE = 0.55; // 克隆淡出到此进度已经交给活件（越小越早交，越大越粘）
 const REVEAL_MS = 560; // 周边内容揭入
 const REVEAL_DELAY = 140;
+const VEIL_OUT = 420; // 直飞时盖住换页的遮罩淡出（生长路上它被克隆盖着，淡不淡无所谓）
+const VEIL_DELAY = 60;
 
 const rectOf = (el: Element): Rect => {
   const r = el.getBoundingClientRect();
@@ -79,9 +83,17 @@ export function PageEnter() {
         ? rectOf(morph)
         : coverRect(heroRect, window.innerWidth, window.innerHeight);
 
-      // 平面残留（goPT 的 0.92 遮罩）此刻被满屏的克隆/hero 盖着，直接撤掉不会露馅
-      document.querySelectorAll('[data-pt-tmp]').forEach((el) => {
-        if (el !== morph) el.remove();
+      // 遮罩残留的处置分两种：生长那条路它被满屏的克隆盖着，撤不撤都一样；直飞那条路
+      // 它正**全不透明地盖着整页**，得淡出把案例页交出来。同时要压到 hero 之下——
+      // 遮罩夹在 hero 与克隆之间的话，活件被蒙一层灰、克隆在其上不受影响，
+      // 交叉淡出就成了「亮的淡成暗的」。
+      document.querySelectorAll<HTMLElement>('[data-pt-tmp]').forEach((el) => {
+        if (el === morph) return;
+        el.style.zIndex = '100';
+        el.animate(
+          [{ opacity: getComputedStyle(el).opacity }, { opacity: 0 }],
+          { duration: VEIL_OUT, delay: VEIL_DELAY, easing: EASE, fill: 'forwards' },
+        ).onfinish = () => el.remove();
       });
 
       // hero：从满屏帧缩回自己的版式位。z-index 只为压住 nav / 正文（都不带 z-index），
