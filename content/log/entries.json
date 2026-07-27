@@ -1,5 +1,14 @@
 [
   {
+    "date": "2026-07-18",
+    "lead": "Rail structure FEA.",
+    "body": "Hexahedral FEA in scikit-fem showed the hand calculations were ~4.5× optimistic; a back rib plus front lip cut ledge deflection 1.55→0.34 mm and raised ultimate load 19→54 N.",
+    "tags": [
+      { "label": "Machine", "variant": "outline" },
+      { "label": "Simulation", "variant": "neutral" }
+    ]
+  },
+  {
     "date": "2026-07-17",
     "lead": "Five-ring choreography v0.2→v0.3.",
     "body": "S1–S5 family extracted; stop margins calibrated per ring ([0, 2, 4, 8] mm ladder); whole-family peaks 0.24–0.42 mm.",
@@ -45,6 +54,24 @@
     "tags": [{ "label": "Lab", "variant": "outline" }]
   },
   {
+    "date": "2026-07-10",
+    "lead": "Main shaft drive finalized.",
+    "body": "All five rings on one shaft: NEMA17 + TMC2209 through a 3:1 GT2 belt, and the shaft dropped 8→6 mm with filleted D-bore hubs. Peak design torque 0.3–0.5 N·m, gravity and friction dominant.",
+    "tags": [
+      { "label": "Machine", "variant": "outline" },
+      { "label": "Mechanical", "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-07-09",
+    "lead": "Procurement list consolidated.",
+    "body": "~¥216 of essentials plus condition-triggered items, ~¥300 with the conditionals. Existing kit stock explicitly excluded to avoid duplicate buys.",
+    "tags": [
+      { "label": "Machine", "variant": "outline" },
+      { "label": "Sourcing", "variant": "neutral" }
+    ]
+  },
+  {
     "date": "2026-07-08",
     "lead": "Layout research.",
     "body": "Line-length law, Tufte margin notes, Swiss grid — desktop-first case-study grid decided.",
@@ -55,5 +82,149 @@
     "lead": "LINKAGE_SPEC v1.1.",
     "body": "Math derivations, API, tolerances, milestones — the single source of truth for the solver line.",
     "tags": [{ "label": "Docs", "variant": "neutral" }]
+  },
+  {
+    "date": "2026-07-07",
+    "lead": "Study design repaired, sensing frozen.",
+    "body": "Death timing bounded to a ±30 s window with an honest debrief; the arithmetically infeasible HRV contrast dropped in favor of event-locked SCR. Six input channels, a nine-class event vocabulary and the grasp state machine frozen.",
+    "tags": [
+      { "label": "Machine", "variant": "outline" },
+      { "label": "Study", "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-07-05",
+    "lead": "Home photo studio.",
+    "body": "Two softbox kits and a sheet of white cardstock bent into an infinity curve. On a tripod brightness is a free variable; white-on-white parts stay legible only under low rear rim light.",
+    "tags": [
+      { "label": "Machine", "variant": "outline" },
+      { "label": "Docs", "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-06-21",
+    "lead": "Servo horns, fasteners, capacitive touch.",
+    "body": "The SG90 21T spline kept as the interface with M2 screws for custom linkages; FDM holes print 0.1–0.3 mm undersize, so model oversized. MPR121: one conductor is one measurement, so left/right discrimination costs two channels per feeler.",
+    "tags": [
+      { "label": "Machine", "variant": "outline" },
+      { "label": "Electronics", "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-06-15",
+    "lead": "Fuqiu central-rod drive.",
+    "body": "Null-space analysis: the bare arch has M0 = 2, so one rod under-constrains it — an apex vertical guide is what buys F = 1. Per-ring parameters optimized for 3–26% range gains; ring geometry, congruence classes and foot slots frozen.",
+    "tags": [
+      { "label": "Machine", "variant": "outline" },
+      { "label": "Simulation", "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-06-12",
+    "lead": "Strategic assessment.",
+    "body": "HRI methodology — physiological sensing, validated scales, behavioral coding — is what separates this from aesthetic “robot death” work, and the behavior engine is the highest-leverage gap. Paper target: an HRI/CHI Late-Breaking Work.",
+    "tags": [
+      { "label": "Machine", "variant": "outline" },
+      { "label": "Strategy", "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-06-08",
+    "lead": "NEMA17 drive chain sourced.",
+    "body": "Three 0.51 N·m steppers on TMC2209s (A4988/DRV8825 lack the current headroom), GT2 aluminum pulleys with custom D-bore, 12 V 5 A supply.",
+    "tags": [
+      { "label": "Machine", "variant": "outline" },
+      { "label": "Sourcing", "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-06-04",
+    "lead": "Clearance rules for printed moving parts.",
+    "body": "A print-in-place joint seized at 0.4 mm — SLS needs 0.5–0.6 mm for sintered skin and trapped powder. Switched to a metal axle in a printed sleeve (0.2–0.4 mm); axial clamping turned out to be the more fatal failure mode.",
+    "tags": [
+      { "label": "Machine", "variant": "outline" },
+      { "label": "Mechanical", "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-06-03",
+    "lead": "Pivot joint selection.",
+    "body": "The ⌀10×4 mm disc scissor joint built around a shoulder screw — the smooth shoulder is journal and gap-setter at once, anchored in the bottom disc by a heat-set brass insert.",
+    "tags": [
+      { "label": "Machine", "variant": "outline" },
+      { "label": "Mechanical", "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-06-01",
+    "lead": "Appendage system simplified.",
+    "body": "Three fully actuated tentacles became one tendon-driven arm plus two compliant feelers — one expressive limb, two reflexive ones. Clarified in the same pass: this is not biomimicry, the mechanical look is deliberate so that behavior stays the independent variable.",
+    "tags": [
+      { "label": "Machine", "variant": "outline" },
+      { "label": "Concept", "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-05-08",
+    "lead": "Finger joints and tendons finalized.",
+    "body": "Dumbbell slide-in pins (⌀3×15 mm) with the keyway perpendicular to tendon pull — no press-fit stress, fully disassemblable. Tendons: 0.4–0.5 mm braided PE in 1.0–1.2 mm channels, knotted into anchor cavities.",
+    "tags": [
+      { "label": "Machine", "variant": "outline" },
+      { "label": "Mechanical", "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-04-27",
+    "lead": "Deployable structure survey.",
+    "body": "Five directions weighed — variable-length scissors, angulated units, You–Pellegrino bars, Bennett rings, phased kinetic walls. Angulated scissors won on parametric and simulation compatibility.",
+    "tags": [
+      { "label": "Machine", "variant": "outline" },
+      { "label": "Mechanical", "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-04-26",
+    "lead": "Underactuated finger simulation running.",
+    "body": "Rigid bodies, two-point hinges and multi-segment spring tendons in Kangaroo2; strength hierarchy fixed at anchor 10000 > body 1000 > collide 100 > spring 1–3. Four tapered segments and three tendons — and the friction-driven sequential propagation reads as lifelike rather than as a defect.",
+    "tags": [
+      { "label": "Machine", "variant": "outline" },
+      { "label": "Simulation", "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-04-04",
+    "lead": "Grasshopper + Kangaroo2 groundwork.",
+    "body": "A full physics definition parsed component by component — spring, anchor, grab, bouncy solver — and the constraint-and-solver logic internalized. Everything downstream leans on this.",
+    "tags": [
+      { "label": "Machine", "variant": "outline" },
+      { "label": "Simulation", "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-04-03",
+    "lead": "Physical form framework and study protocol v1.",
+    "body": "Four components — bell jar, appendages, eye stalk, base — plus a 13-item function hierarchy and two interaction channels. Protocol: 5–8 participants, 4 accelerated life cycles, ~37-minute sessions, IDAQ / IRI / ECR-S / Godspeed and physiological signals.",
+    "tags": [
+      { "label": "Machine", "variant": "outline" },
+      { "label": "Study", "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-03-20",
+    "lead": "Research question locked.",
+    "body": "Under what conditions do people form pet-like attachment to a non-living thing, and how does it surface at loss. An early drift toward maximizing grief was corrected — death and rebirth are the instrument, not the goal.",
+    "tags": [
+      { "label": "Machine", "variant": "outline" },
+      { "label": "Concept", "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-03-07",
+    "lead": "Project kickoff.",
+    "body": "Three concepts drafted out of the “cyber soul-calling” wave that followed the GPT-4o update — Reincarnation Machine, Presence, Unconscious Nudge. The first one stuck.",
+    "tags": [
+      { "label": "Machine", "variant": "outline" },
+      { "label": "Concept", "variant": "neutral" }
+    ]
   }
 ]
