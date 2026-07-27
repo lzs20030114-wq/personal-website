@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { StageRotator } from '../lab/StageRotator';
 import { RingsBench } from '../lab/RingsBench';
+import { snapshotCanvas } from '../lab/snapshot';
+import { coverRect, flipCss, flipTransform } from '../../src/lib/site/flip';
 
 /**
  * 主页整屏分幕（design-ref/Home-Screens.dc.html 落地，MAPPING §6；2026-07-26 迭代稿同步）。
@@ -34,6 +36,9 @@ const COMMIT_DIST = 360;
 const FLICK_V = 140;
 const COMMIT_P = 0.5;
 const PUSH_MS = 620;
+// 直飞转场（/work/*）跳页前的遮罩时长：只够盖住换页那一帧，预览块这期间原地不动。
+// 调大 = 换页更稳、但飞之前多停一下；调小 = 更利落、但可能露出主页硬切成深色案例页那一帧。
+const PRE_MS = 190;
 const LOCK_TAIL = 160;
 const SILENCE = 200;
 const PAUSE_SNAP = 120;
@@ -121,11 +126,11 @@ export interface HomeLog {
   text: string;
 }
 
-// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-07-27 vitest 实测 124；
+// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-07-27 vitest 实测 133；
 // 迭代稿配色：Tests=绿 700、Kernels=紫 700、Demos=绿 600）
 const STATS = [
   { n: '04', label: 'Projects', color: 'var(--ink)' },
-  { n: '124', label: 'Tests green', color: 'var(--accent)' },
+  { n: '133', label: 'Tests green', color: 'var(--accent)' },
   { n: '02', label: 'Solver kernels', color: 'var(--accent-2)' },
   { n: '05', label: 'Live demos', color: 'var(--g600)' },
 ];
@@ -461,6 +466,9 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
       // 深色目标（case/archive）交接给目标页 PageEnter 播放揭开进入段；
       // 写一次性标记 + 媒体块底色，供着陆平面同族续接。
       const isDark = /^\/(work\/|archive)/.test(href);
+      // 直飞 = 目标页有 hero 落点（只有 case 页有）：预览块钉在原位跳页，落地后一次飞到主图位。
+      // 其余路由没地方可落，仍走稿内的「生长铺满」。
+      const direct = /^\/work\//.test(href);
       const bg = fromEl ? getComputedStyle(fromEl).backgroundImage : '';
       const finish = () => {
         try {
@@ -489,30 +497,47 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
       veil.setAttribute('data-pt-veil', '1');
       veil.style.cssText = `position:fixed;inset:0;z-index:199;pointer-events:none;opacity:0;background:${PT_BG}`;
       document.body.appendChild(veil);
-      veil.animate([{ opacity: 0 }, { opacity: 0.92 }], {
-        duration: STRUCT,
+      // 直飞时遮罩要在 PRE_MS 内**压到全不透明**：它此刻的活儿是盖住换页那一帧，
+      // 半透明等于没盖。生长那条路仍是稿内的 0.92 / STRUCT。
+      veil.animate([{ opacity: 0 }, { opacity: direct ? 1 : 0.92 }], {
+        duration: direct ? PRE_MS : STRUCT,
         easing: EASE,
         fill: 'forwards',
       });
       vp.style.willChange = 'transform,filter';
       vp.animate(
-        [
-          { transform: 'scale(1)', filter: 'blur(0px)' },
-          { transform: 'scale(1.04)', filter: 'blur(8px)' },
-        ],
-        { duration: PUSH_MS, easing: EASE, fill: 'forwards' },
+        direct
+          ? [
+              { transform: 'scale(1)', filter: 'blur(0px)' },
+              { transform: 'scale(1.015)', filter: 'blur(4px)' },
+            ]
+          : [
+              { transform: 'scale(1)', filter: 'blur(0px)' },
+              { transform: 'scale(1.04)', filter: 'blur(8px)' },
+            ],
+        { duration: direct ? PRE_MS : PUSH_MS, easing: EASE, fill: 'forwards' },
       );
       if (!fromEl) {
-        setTimeout(finish, 540);
+        setTimeout(finish, direct ? PRE_MS : 540);
         return;
       }
       const r = fromEl.getBoundingClientRect();
       if (r.width < 10 || r.height < 10) {
-        setTimeout(finish, 540);
+        setTimeout(finish, direct ? PRE_MS : 540);
         return;
       }
       const wrap = document.createElement('div');
       wrap.setAttribute('data-pt-tmp', '1');
+      // data-pt-morph + 版式盒尺寸：目标页 PageEnter 接手这个克隆，把它从当前的满屏帧
+      // 继续送到 hero 主图位（第二段）。盒尺寸得留着——克隆此刻带着 transform，
+      // getBoundingClientRect 量到的是变换后的框，算不回原盒。
+      wrap.setAttribute('data-pt-morph', '1');
+      wrap.dataset.ptRect = JSON.stringify({
+        left: r.left,
+        top: r.top,
+        width: r.width,
+        height: r.height,
+      });
       wrap.style.cssText = `position:fixed;top:${r.top}px;left:${r.left}px;width:${r.width}px;height:${r.height}px;z-index:200;pointer-events:none;overflow:hidden;transform-origin:50% 50%;will-change:transform`;
       const clone = fromEl.cloneNode(true) as HTMLElement;
       clone.style.position = 'absolute';
@@ -522,18 +547,38 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
       clone.style.margin = '0';
       clone.style.flex = 'none';
       clone.style.minHeight = '0';
+      // canvas 的像素不随 cloneNode 复制（克隆是空画布）——3D 台架当预览时，点下去
+      // 机构会凭空消失。改挂快照位图，静止但画面连得上（snapshot.ts）。
+      const srcCanvas = fromEl.querySelectorAll('canvas');
+      const dstCanvas = clone.querySelectorAll('canvas');
+      srcCanvas.forEach((src, i) => {
+        const dst = dstCanvas[i];
+        const url = snapshotCanvas(src);
+        if (!dst || !url) return;
+        const box = src.getBoundingClientRect();
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = '';
+        img.style.cssText = `display:block;width:100%;aspect-ratio:${Math.max(box.width, 1)}/${Math.max(box.height, 1)}`;
+        dst.replaceWith(img);
+      });
       wrap.appendChild(clone);
       document.body.appendChild(wrap);
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      const s = Math.max(vw / Math.max(r.width, 1), vh / Math.max(r.height, 1)) * 1.02;
-      const tx = vw / 2 - (r.left + r.width / 2);
-      const ty = vh / 2 - (r.top + r.height / 2);
+
+      if (direct) {
+        // 直飞（用户拍板 2026-07-27：「不要中间放大一下再缩小过去」）：这里**不动**克隆，
+        // 让它钉在原位，等目标页量到 hero 落点后一次飞过去（PageEnter 第 ① 条路）。
+        // 只等 PRE_MS 让遮罩压住底下的主页——立刻 push 的话，遮罩才两成透明度，
+        // 浅底主页会当场硬切成深色案例页，那一下比放大还扎眼。
+        wrap.setAttribute('data-pt-direct', '1');
+        setTimeout(finish, PRE_MS);
+        return;
+      }
+
+      // 无落点的路由（/archive /lab）：仍是稿内的「媒体块生长铺满」再交接
+      const cover = coverRect(r, window.innerWidth, window.innerHeight);
       wrap.animate(
-        [
-          { transform: 'translate(0px,0px) scale(1)' },
-          { transform: `translate(${tx}px,${ty}px) scale(${s})` },
-        ],
+        [{ transform: 'translate(0px,0px) scale(1)' }, { transform: flipCss(flipTransform(r, cover)) }],
         { duration: PUSH_MS, easing: EASE, fill: 'forwards' },
       ).onfinish = () => setTimeout(finish, 50);
     };

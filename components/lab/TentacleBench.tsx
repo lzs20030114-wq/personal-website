@@ -14,6 +14,7 @@ import { CHAINS, MESH_GROUPS, STATIONS } from '../../src/lib/linkage/tentacle3d-
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import { FlatRenderer, bakeIndexed, bakeSkinned, type CellFrame } from '../../src/lib/linkage/gl3d';
 import { CriticallyDamped } from '../../src/lib/linkage/motion';
+import { setSnapshot } from './snapshot';
 import { useBenchLoop } from './useBenchLoop';
 
 /**
@@ -284,10 +285,17 @@ export function TentacleBench({
     canvas.addEventListener('pointercancel', onUp);
     canvas.addEventListener('wheel', onWheel, { passive: false });
 
+    // 转场克隆用的画面快照（同 RingsBench，见 snapshot.ts）
+    setSnapshot(canvas, () => {
+      render();
+      return canvas.toDataURL('image/png');
+    });
+
     render();
     return () => {
       disposed = true;
       apiRef.current = null;
+      setSnapshot(canvas, null);
       canvas.removeEventListener('contextmenu', onCtx);
       canvas.removeEventListener('pointerdown', onDown);
       canvas.removeEventListener('pointermove', onMove);

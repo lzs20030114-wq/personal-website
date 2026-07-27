@@ -12,6 +12,7 @@ import {
 } from '../../../../components/site/slots';
 import { DisclosureSlot, MetaRail } from '../../../../components/site/RoleBlock';
 import { LinkageFigure } from '../../../../components/linkage/LinkageFigure';
+import { RingsBench } from '../../../../components/lab/RingsBench';
 import { PageEnter } from '../../../../components/site/PageEnter';
 
 export function generateStaticParams() {
@@ -57,6 +58,8 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
   if (!entry) notFound();
 
   const caseNo = String(entry.order ?? 1).padStart(2, '0');
+  // 主图暂用活台架顶替的项目（与主页预览位同一件；作者供图后删掉这一行即回占位块）
+  const liveHero = slug === 'reincarnation-machine';
 
   return (
     <>
@@ -102,29 +105,51 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
 
         <div className="min-w-0 lg:pl-14" style={{ paddingTop: 32 }}>
           {/* hero 着陆媒体块（转场落点 data-pt-target；占位待拍摄，MAPPING §5.2 不代写） */}
-          <figure className="case-hero" data-pt-target style={{ margin: '0 0 40px' }}>
-            <div
-              className="om-dots"
-              style={{
-                opacity: 0.3,
-                WebkitMaskImage: 'linear-gradient(150deg,#000 0%,transparent 55%)',
-                maskImage: 'linear-gradient(150deg,#000 0%,transparent 55%)',
-              }}
-            />
-            <div className="om-grain" style={{ opacity: 0.14, mixBlendMode: 'overlay' }} />
-            <figcaption
-              style={{
-                position: 'relative',
-                fontSize: 11,
-                fontWeight: 600,
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                color: 'var(--n700)',
-              }}
-            >
-              Fig. 01 — [待拍摄] machine hero · studio white sweep
-            </figcaption>
-          </figure>
+          {liveHero ? (
+            // 项目 01 临时主图 = Lab.04 五环活件（用户拍板 2026-07-27：与主页预览位同一件，
+            // 转场从卡片预览一路缩放落到这里）。作者供图后删掉本分支即回占位。
+            <figure style={{ margin: '0 0 40px' }}>
+              <div className="case-hero case-hero--live" data-pt-target>
+                <RingsBench controls={false} />
+              </div>
+              <figcaption
+                style={{
+                  marginTop: 10,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: 'var(--n700)',
+                }}
+              >
+                Fig. 01 — [临时顶替] Lab.04 five-ring shell · live · machine hero 待拍摄
+              </figcaption>
+            </figure>
+          ) : (
+            <figure className="case-hero" data-pt-target style={{ margin: '0 0 40px' }}>
+              <div
+                className="om-dots"
+                style={{
+                  opacity: 0.3,
+                  WebkitMaskImage: 'linear-gradient(150deg,#000 0%,transparent 55%)',
+                  maskImage: 'linear-gradient(150deg,#000 0%,transparent 55%)',
+                }}
+              />
+              <div className="om-grain" style={{ opacity: 0.14, mixBlendMode: 'overlay' }} />
+              <figcaption
+                style={{
+                  position: 'relative',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: 'var(--n700)',
+                }}
+              >
+                Fig. 01 — [待拍摄] machine hero · studio white sweep
+              </figcaption>
+            </figure>
+          )}
 
           {/* 编号 section 01–06：CSS counter 作用于 .case-body h2（只换模板，MDX 不动） */}
           <div className="case-body">
