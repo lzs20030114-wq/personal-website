@@ -79,6 +79,17 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
     }
   }, []);
 
+  // 展开的条目 id 集合；默认全收起——27 条一屏扫得完，要细节再点开。
+  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
+
+  function toggle(id: string) {
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  }
+
   function pick(next: LogLang) {
     setLang(next);
     try {
@@ -144,26 +155,59 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
         {groups.map((g) => (
           <div key={g.key}>
             <h2 className="log-month">{monthLabel(g.key, lang)}</h2>
-            {g.entries.map((e, i) => (
-              <article key={`${e.date}-${i}`} className="log-entry">
-                <div className="log-entry__meta">
-                  <span className="log-entry__date">{e.date.slice(5)}</span>
-                  <span className="log-entry__tags">
-                    {e.tags.map((t) => (
-                      <span key={t.label.en} className={`tag tag-${t.variant}`}>
-                        {t.label[lang]}
+            {g.entries.map((e, i) => {
+              const id = `${e.date}-${i}`;
+              const isOpen = open.has(id);
+              return (
+                <article key={id} className="log-entry" data-open={isOpen}>
+                  <div className="log-entry__meta">
+                    <span className="log-entry__date">{e.date.slice(5)}</span>
+                    <span className="log-entry__tags">
+                      {e.tags.map((t) => (
+                        <span key={t.label.en} className={`tag tag-${t.variant}`}>
+                          {t.label[lang]}
+                        </span>
+                      ))}
+                    </span>
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      className="log-entry__toggle"
+                      aria-expanded={isOpen}
+                      aria-controls={`log-panel-${id}`}
+                      onClick={() => toggle(id)}
+                    >
+                      <span className="log-entry__lead">{e.lead[lang]}</span>
+                      <span className="log-entry__chev" aria-hidden>
+                        <svg viewBox="0 0 16 16" width="14" height="14">
+                          <path
+                            d="M3 6l5 5 5-5"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                          />
+                        </svg>
                       </span>
-                    ))}
-                  </span>
-                </div>
-                <div>
-                  <p className="log-entry__lead">{e.lead[lang]}</p>
-                  <p className="log-entry__body" data-lang={lang}>
-                    {e.body[lang]}
-                  </p>
-                </div>
-              </article>
-            ))}
+                    </button>
+                    {/* 详情面板：收起时用 grid 0fr 压扁（内容留在 DOM 里，可被搜索引擎读到）。
+                        图 / 表格将来加在正文之后——内容池加可选 blocks 字段，在此按序渲染。 */}
+                    <div
+                      id={`log-panel-${id}`}
+                      className="log-entry__panel"
+                      data-open={isOpen}
+                      role="region"
+                    >
+                      <div className="log-entry__panelInner">
+                        <p className="log-entry__body" data-lang={lang}>
+                          {e.body[lang]}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         ))}
         <p style={{ margin: '40px 0 64px', fontSize: 13, color: 'var(--n600)' }}>{copy.foot}</p>

@@ -715,7 +715,7 @@ a:hover {
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
-  padding: 20px 0;
+  padding: 16px 0;
   border-top: var(--hair);
 }
 .log-entry:first-of-type {
@@ -739,6 +739,22 @@ a:hover {
   flex-wrap: wrap;
   gap: 6px;
 }
+/* 概括行 = 按钮：整行可点，右端箭头指示开合 */
+.log-entry__toggle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  max-width: 70ch;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
 .log-entry__lead {
   margin: 0;
   font-size: 16px;
@@ -746,12 +762,56 @@ a:hover {
   line-height: 1.45;
   color: var(--ink);
 }
+.log-entry__chev {
+  flex: none;
+  margin-top: 3px;
+  color: var(--n500);
+  line-height: 0;
+}
+.log-entry[data-open='true'] .log-entry__chev {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+@media (hover: hover) and (pointer: fine) {
+  .log-entry__chev {
+    transition:
+      transform var(--dur-micro) var(--ease-site),
+      color var(--dur-micro) var(--ease-site);
+  }
+  .log-entry__toggle:hover .log-entry__lead {
+    color: var(--accent);
+  }
+  .log-entry__toggle:hover .log-entry__chev {
+    color: var(--accent);
+  }
+}
+
+/* 详情面板：0fr→1fr 撑开（内容始终留在 DOM 里，不做条件渲染） */
+.log-entry__panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  overflow: hidden;
+  transition: grid-template-rows 240ms var(--ease-site); /* 段落展开，比 micro 慢一档 */
+}
+.log-entry__panel[data-open='true'] {
+  grid-template-rows: 1fr;
+}
+.log-entry__panelInner {
+  min-height: 0;
+}
 .log-entry__body {
-  margin: 7px 0 0;
+  margin: 0;
+  padding: 10px 0 2px;
   max-width: 66ch;
   font-size: 14.5px;
   line-height: 1.7;
   color: var(--n700);
+}
+@media (prefers-reduced-motion: reduce) {
+  .log-entry__panel,
+  .log-entry__chev {
+    transition: none;
+  }
 }
 /* 中文正文行距放宽一档、字距微开——同号字下中文比拉丁字更密 */
 .log-entry__body[data-lang='zh'] {
@@ -763,7 +823,7 @@ a:hover {
   .log-entry {
     grid-template-columns: 150px 1fr;
     gap: 36px;
-    padding: 26px 0;
+    padding: 20px 0;
   }
   .log-entry__meta {
     flex-direction: column;
