@@ -75,6 +75,21 @@
     ]
   },
   {
+    "date": "2026-07-14",
+    "lead": {
+      "en": "Wrote the v2 interview guide — 33 questions, 60 minutes — for a PE faculty member who competed as a national-games swimmer.",
+      "zh": "为体育部一位教师（前全国比赛游泳运动员）写出 v2 完整访谈提纲：33 题，60 分钟。"
+    },
+    "body": {
+      "en": "Methodology came first — The Mom Test, Portigal's Interviewing Users, and the critical incident technique (asking about specific remembered incidents instead of general opinions) — alongside published qualitative studies of athlete sleep. Then came a review of my own earlier draft and a teammate's parallel one, which shared the same flaws: leading questions, product language appearing too early, too many questions. The v2 design: the opening gives only a neutral project introduction, with product information held back to the final section; question 1 acts as a gate, routing to a coach line or a retrospective line depending on whether the interviewee currently trains a team; compound questions are split into a short main question with follow-up probes in parentheses, so the interviewer can expand on whatever the interviewee engages with; and the two design concepts (low-intrusion intervention, tiered data sharing) get a five-step evaluation protocol. The governing principle throughout is to ask about specific past behaviour, never about opinions or future intentions. A fifth question was added afterwards, on how adolescent athletes' sleep needs and their training-to-rest ratio should adjust through growth.",
+      "zh": "先查方法论——《The Mom Test》、Portigal 的《洞察用户》，以及关键事件技术（请受访者回忆具体发生过的事件，而不是发表泛泛看法）——同时读了已发表的运动员睡眠质性研究。然后评审自己的旧稿和队友的平行稿，两稿的毛病相同：诱导性提问、产品语言出现得太早、题量过大。v2 的关键设计：开场只做中性的项目介绍，产品信息压到最后一节；第 1 题设分流闸，按对方当前是否带队走教练线或回溯线；复合问题拆成一句短主问加括号里的追问，让访谈员按对方接哪句话灵活展开；两个设计概念（低介入干预、分级数据共享）各配一套五步评估流程。贯穿全稿的原则：问具体的过去行为，不问观点和未来打算。之后补写了第五题，问青少年运动员发育期的睡眠需求，以及训练与休息的配比该怎么动态调整。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
+      { "label": { "en": "Interviews", "zh": "访谈" }, "variant": "neutral" }
+    ]
+  },
+  {
     "date": "2026-07-13",
     "lead": {
       "en": "Put up the site frame and got the linkage running on the homepage.",
@@ -243,6 +258,21 @@
     ]
   },
   {
+    "date": "2026-07-07",
+    "lead": {
+      "en": "Replaced a persona that did not hold up, dissolved solo-living youth as a standalone population, and produced five persona cards plus a screener question set.",
+      "zh": "换掉一个不成立的骑手画像，解散独居青年这个独立人群，产出五张画像卡和一套筛选题组。"
+    },
+    "body": {
+      "en": "The delivery-rider persona was rejected by the team, and rightly: riders can choose their own hours, so they do not belong at the \"schedule disrupted by work\" end of the spectrum. Reasoning through alternatives landed on platform freight truck drivers — once a shipment is accepted the task is locked, loan payments make rest feel unaffordable, city traffic restrictions dictate the driving windows, and waiting on standby permits only shallow sleep. Solo-living youth had a deeper problem: living alone generates no sleep needs of its own, it only amplifies needs generated elsewhere. So the population was dismantled and its content redistributed into three host populations (deliberate bedtime delay to high-pressure office workers, schedule drift to irregular sleepers, loneliness-driven trouble falling asleep to those with disorder tendencies), with living alone kept as a cross-cutting variable in a section of its own. On the visual side, five JPG persona cards were produced, each a five-panel storyboard across the stages of a night plus a radar chart of RU-SATED damage (the six dimensions of sleep health), labelled as encoded judgment rather than measurement. The screener runs about 18 items and identifies every defined population through combinations of variables, not by asking respondents to pick a label for themselves.",
+      "zh": "外卖骑手这个画像被组里否掉，也确实该否：骑手可以自选工时，不符合光谱上「作息被工作打乱」那一端。推理过几个替代方案后换成平台货运卡车司机——接单之后任务就锁死，贷款压力让人不敢休息，城市限行决定了能开车的时段，待命状态只能浅睡。独居青年的问题更根本：独居本身不直接产生睡眠需求，它只放大别处产生的需求。于是拆掉这个人群，内容分流进三个宿主人群（主动熬夜→高压白领，作息漂移→不规律作息，孤独导致入睡困难→睡眠障碍倾向），另立一节把「独居」作为横切变量处理。可视化产出五张 JPG 画像卡，每张是一夜各阶段的五格分镜，加一张 RU-SATED（睡眠健康六维度）受损雷达图，并标注为判断编码、不是实测数据。筛选问卷约 18 题，靠变量组合而不是让受访者自选身份来识别全部已定义人群。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
+      { "label": { "en": "Personas", "zh": "画像" }, "variant": "neutral" }
+    ]
+  },
+  {
     "date": "2026-07-06",
     "lead": {
       "en": "Anchored the simulation on one small avoidance decision, and planned the first three versions of the code.",
@@ -270,6 +300,21 @@
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
       { "label": { "en": "Record", "zh": "记录" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-06-30",
+    "lead": {
+      "en": "Finished evidence audits and persona manuscripts for two groups — shift workers and solo-living young adults — and threw out two inherited persona conventions along the way.",
+      "zh": "完成倒班人群与独居青年两组的证据审计和画像手稿，期间推翻了两个一直沿用的画像范式。"
+    },
+    "body": {
+      "en": "A deep evidence audit came first: Chinese primary sources prioritised, company self-reported data labelled as such and downgraded, extrapolated conclusions flagged explicitly; writing began only once the evidence held. Two conventions did not survive contact with the material. Named-individual persona cards (\"Lin Mei, 29, ER nurse in Guangzhou\") read as stereotyped and awkward, so they were replaced with type-level profiles — what this kind of person is typically like. And the reference template's 2×2 positioning matrix would not fit occupationally defined groups, which cannot be spread along two continuous axes, so it became a single-axis spectrum instead: predictable to unpredictable schedule for shift workers, deliberate bedtime delay to involuntary insomnia for solo-living youth. Each manuscript holds a positioning paragraph, the spectrum, four cross-type need clusters mapped to RU-SATED (a six-dimension sleep-health framework: regularity, satisfaction, alertness, timing, efficiency, duration), two type profiles, and an evidence list at the end. One rule set here has held since: coin no new vocabulary, use only terms already in the project or the source literature.",
+      "zh": "先做深度证据审计——中文一手来源优先，企业自报数据单独标注并降级使用，外推得出的结论显式标记——确认证据够用才动笔。写作中有两个沿用的范式没能扛住材料。一是具名个体式画像卡（「林梅，29 岁，广州急诊护士」这一类），读起来刻板别扭，改成类型级描写，也就是「这类人通常是什么样」。二是参考模板的 2×2 定位矩阵：由职业定义的人群套不进两个连续轴，于是换成单轴光谱（倒班组：作息可预测 ↔ 不可预测；独居组：主动熬夜 ↔ 被动失眠）。两份手稿各含定位段、光谱、四组跨类型需求（对应 RU-SATED，即睡眠健康的六个维度：规律性、满意度、清醒度、时机、效率、时长）、两个类型画像和文末证据清单。此时定下一条一直沿用至今的规则：不造新词，只用项目和文献里已有的词汇。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
+      { "label": { "en": "Personas", "zh": "画像" }, "variant": "neutral" }
     ]
   },
   {
@@ -348,6 +393,21 @@
     ]
   },
   {
+    "date": "2026-06-15",
+    "lead": {
+      "en": "Wrote a survey design specification for the whole team, and revised a teammate's draft of the functional-needs section.",
+      "zh": "给全组写了一份问卷设计规范，并修订队友起草的功能需求一节。"
+    },
+    "body": {
+      "en": "The specification has ten hard rules grounded in academic survey standards (Pew Research, Krosnick and Presser), covering things like labelling every point of a rating scale in words, restricting which question types may be used, mapping each item to the analysis it serves, and running a pretest before the survey goes out. The revision was surgical rather than a rewrite: five matrix questions got their scale labels completed, a copy-pasted introduction carrying the wrong text was fixed, two truncated passages were restored, a duplicated pillow-interaction question was removed, and a household-composition screening question was added — my own first draft of that question missed the roommate, shared-flat and dormitory category, which was then patched in.",
+      "zh": "规范含十条硬规则，依据是学界的问卷标准（Pew Research、Krosnick 与 Presser 等），覆盖量表每一档都要有文字标注、限制可用题型、每道题都要对应到某项分析、发放前必须预测试等。修订走的是外科手术路线而不是重构：五个矩阵题补全量表标注，改掉一处复制粘贴带错的引导语，补全两处截断文本，删去重复出现的枕头交互题，新增一道家庭构成筛选题——这道题我自己第一稿漏了室友／合租／宿舍这一类，随后补上。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
+      { "label": { "en": "Survey", "zh": "问卷" }, "variant": "neutral" }
+    ]
+  },
+  {
     "date": "2026-06-12",
     "lead": {
       "en": "Took stock of where the project stands and pointed it at a paper.",
@@ -360,6 +420,21 @@
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
       { "label": { "en": "Strategy", "zh": "战略" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-06-12",
+    "lead": {
+      "en": "After the three-author chapter was merged, repaired broken cross-references and an inconsistent classification axis, and drew an evolution diagram for my own section.",
+      "zh": "三人合写的第三章合并之后，修掉跨节引用断裂和分类口径不一，并给自己那一节配了演化关系图。"
+    },
+    "body": {
+      "en": "My section cited an eleven-category population list from an earlier section that no longer existed after that section was restructured; tracing the broken link surfaced five orphaned population entries whose source had vanished, and they were cleaned out. The axis dividing the four evolution types was unified as whether mainstream discourse already recognises the group — and the long-argued question of where solo-living young adults belong was settled by that axis: they go into the surfacing type. The closing summary was finalised as four judgments: demand growth concentrates where demographic shifts intersect; sleep is increasingly embedded in relationships and caregiving rather than being a solo behaviour; some groups are turning sleep from a problem to fix into a resource to manage; and a set of long-overlooked groups is coming into view. The diagram was drawn as an SVG wireframe that encodes each evolution type in the line itself — thickening for amplification, an elbow bend for redirection, dashed turning solid for surfacing — and took two rounds of geometry fixes to stop lines running through circles and labels. The same day I read the full merged report and flagged leftover merge damage in other chapters: misaligned citation numbers, duplicate headings.",
+      "zh": "我那一节原本引用前面某节的「11 类人群清单」，但那一节改版后清单已经不存在了；顺着这条断线清理出五个来源失效的人群条目。四类演化的划分轴统一为「这个群体是否已被主流讨论充分认识」——独居青年归哪一类争了好几轮，最后按这条轴定为需求显现型。本节总结定稿为四条判断：需求增长集中在人口结构变化的交叉处；睡眠日益嵌入关系与照护情境，而不再是单人行为；部分人群把睡眠从待修复的问题变成主动管理的资源；一批长期被忽视的人群正在显形。演化图用 SVG 线框画，把演化方式编码进线条形态本身——加粗表示放大、折弯表示转向、虚线转实线表示显现——几何碰撞（线穿过圆圈和标签）修了两轮。同一天通读了全组合并稿，给其他章节标出合并遗留的问题：引文编号错位、标题重复。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
+      { "label": { "en": "Writing", "zh": "写作" }, "variant": "neutral" }
     ]
   },
   {
@@ -393,6 +468,21 @@
     ]
   },
   {
+    "date": "2026-06-05",
+    "lead": {
+      "en": "Drafted the report section on future sleep populations in full over five days, built on a \"full inventory, then four kinds of evolution\" frame.",
+      "zh": "用五天写完报告里「未来典型睡眠人群假设」一节的完整初稿，框架是「基础人群全集 → 四类演化」。"
+    },
+    "body": {
+      "en": "The section closes out its chapter: it takes the populations catalogued in the two preceding sections and sorts them by how they will change by 2030 — needs amplified, needs redirected, needs surfacing into view, or needs staying stable. Several things were cut for failing the evidence bar. A perimenopause statistic went out entirely because it could not be verified at the primary source; the group at risk of sleep apnea moved from \"amplified\" back to \"stable\" for lack of evidence that it is growing structurally; and the phrase \"nearly 150 million empty-nest elderly\" was qualified so that readers cannot conflate it with the far smaller 7.72 million living alone at advanced age. Final delivery was a Word and PDF manuscript with 19 individually verified references in ACM format, and the first version's colourful rounded-box figures were replaced with black-and-white academic line drawings.",
+      "zh": "这一节是第三章的收口：把前两节盘点过的现有人群，按到 2030 年的演化方式分成四类——需求被放大、需求转向、需求显现、需求稳定。写作中砍掉了几处站不住的内容：一个围绝经期数据因为无法在一手来源核实，整条删除；呼吸暂停风险人群缺乏结构性放大的证据，从放大型挪回稳定型；「近 1.5 亿空巢老人」补写了限定，与数量小得多的「772 万高龄独居」明确区分，防止读者混读。最终交付 Word 与 PDF 两版，含 19 条逐一核实的 ACM 格式参考文献；第一版彩色圆角框插图换成了黑白线稿的学术风格。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
+      { "label": { "en": "Writing", "zh": "写作" }, "variant": "neutral" }
+    ]
+  },
+  {
     "date": "2026-06-04",
     "lead": {
       "en": "A printed joint seized up, so I worked out how much clearance moving parts really need.",
@@ -405,6 +495,21 @@
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
       { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-06-04",
+    "lead": {
+      "en": "Developed a quick interview-exercise bed concept into a system where a person's comfort settings travel with them, and produced a Chinese presentation board.",
+      "zh": "把访谈练习里的智能床概念深化成「舒适度数据跟着人走」的系统方案，并做出中文展板。"
+    },
+    "body": {
+      "en": "The starting point was an adaptive bed for the problem Chinese speakers call renchuang — sleeping badly in any unfamiliar bed — reading pulse, temperature and pressure to adjust its shape and warmth automatically. The developed version goes further: a personal comfort profile is configured once and stored, and any connected device, not only a bed, adapts to it automatically, the way an Apple ID carries your settings onto a new phone. The value is portability across spaces rather than the bed itself. The board copy was rewritten in the dense, objective register of a design brief, replacing earlier drafts that leaned lyrical and slogan-like.",
+      "zh": "起点是一张解决「认床」问题的自适应床：读脉搏、体温、压力信号，自动调整形态和温度。深化之后的框架更进一步——个人舒适度配置预先存好，任何接入的设备（不限于床）都能自动适配，就像 Apple ID 把设置同步到一台新手机上。价值在于跨空间的可携带性，而不在床本身。展板文案按「设计概述」那种客观密实的文体重写，替换掉前几稿偏抒情的口号式写法。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
     ]
   },
   {
@@ -450,6 +555,36 @@
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
       { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-05-26",
+    "lead": {
+      "en": "Built an evidence base of roughly 40 sources into a 14-page lab-meeting deck, with every key citation checked by hand.",
+      "zh": "把约 40 条文献攒成证据库，做成 14 页组会汇报，关键引文逐条核对。"
+    },
+    "body": {
+      "en": "The evidence covers five dimensions: how beds get used for things other than sleeping, sleep pain points in China compared with elsewhere, purchase decision factors, emotional needs, and smart-home acceptance and privacy. Checking the citations by hand caught one wrong author affiliation and led to two weak references from non-core journals being cut. For population segmentation I dropped the matrix diagram in favour of a plain two-column evidence-to-population table (nine candidate groups, four of them highlighted), plus a page on age-specific sleep traits across three adult life phases (19–33 / 34–53 / 54+). A mid-course self-check found the deck only about two thirds done — missing the segmentation, the translation from pain points to needs, and users' own words — so those were added before it was finalised.",
+      "zh": "证据覆盖五个维度：床在睡觉之外的多场景使用、中外睡眠痛点对比、购买决策因素、情感需求，以及智能家居的接受度与隐私顾虑。逐条核对引文时改正了一处作者单位错误，也据此删掉两条非核心期刊的弱引用。人群分层放弃了矩阵图，改成「证据 → 人群」两栏表（九个候选人群，其中四个重点标出），另加一页按 19–33 / 34–53 / 54 岁以上三个人生阶段划分的年龄睡眠特征。中途自查发现这一版只做到六七成——缺人群细分、缺从痛点到需求的转译、缺用户原话——补齐之后才定稿。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
+      { "label": { "en": "Research", "zh": "调研" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-05-19",
+    "lead": {
+      "en": "Finished the first round of research and competitive analysis for the smart bed project, landing on four market gaps as design entry points.",
+      "zh": "完成智能床项目首轮资料检索与竞品分析，定下四个市场空白作为设计切入点。"
+    },
+    "body": {
+      "en": "The project is a 2030 sleep-foresight study run jointly by Tsinghua University's Future Lab and DeRucci, a Chinese premium mattress brand. I mapped four tiers of competitors — Eight Sleep (temperature control), Sleep Number and Bryte (pneumatic adjustment), DeRucci's own T11+ all-in-one, and budget ecosystem products from Xiaomi and Huawei — and found that the industry shares one failure: over-intervention, with users complaining that the bed moves on its own after they fall asleep and wakes them up. Four gaps followed from that: restrained intelligence, meaning a system that knows when not to act; a form that reads as furniture rather than as an appliance; designing for the relationship between the two people in the bed instead of for a single optimised sleeper; and treating sleep as a ritual rather than a problem to be fixed. Deliverables were an annotated reading guide, an 18-page competitive analysis deck, and a feature comparison chart.",
+      "zh": "项目是清华大学未来实验室与慕思合作的 2030 智慧睡眠前瞻研究。梳理了四档竞品——Eight Sleep（控温）、Sleep Number 与 Bryte（气动调节）、慕思自家的 T11+ 一体机、小米华为生态里的低价产品——发现行业有一个共同问题：过度干预，用户抱怨床在人睡着之后自行移动，把人吵醒。据此提出四个空白：克制的智能，也就是知道什么时候不介入；形态上是家具感而不是家电感；把床上两个人的关系而不是被优化的单个睡眠者作为设计对象；把睡眠当作仪式，而不是一个待修复的问题。产出一份文献导读、一套 18 页竞品分析和一张竞品功能对照图。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
+      { "label": { "en": "Research", "zh": "调研" }, "variant": "neutral" }
     ]
   },
   {

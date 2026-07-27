@@ -62,6 +62,17 @@ describe('log 内容池', () => {
     }
   });
 
+  it('没有重复条目（同日 + 同一句 lead）', () => {
+    // 池现在由三份日志原稿汇入，同一条被两次并入是最可能的合并事故——
+    // zod 与上面的排序测试都看不出来（重复条目形状完全合法、日期也对）。
+    const seen = new Set<string>();
+    for (const e of getLogEntries()) {
+      const key = `${e.date}｜${e.lead.en.trim().toLowerCase()}`;
+      expect(seen.has(key), `${e.date} 有重复条目`).toBe(false);
+      seen.add(key);
+    }
+  });
+
   it('同一英文标签只对应一个中文译名', () => {
     const dict = new Map<string, string>();
     for (const e of getLogEntries()) {
