@@ -101,3 +101,47 @@
 - **返回转场**：设计稿 goBack（case→home 平面淡入返回）本次**未做**——返回走普通 SPA 切换。可作后续。
 - **about 未动**：设计稿这次未给 /about 独立深色稿（主页 S1 About 幕的深色语言可作后续套用依据）；/about 现仍浅色 Modernist。**三内页现状：case/log 深色、about 浅色**——是否统一深色待用户拍板。
 - 纪律守恒：case 仍 frontmatter/内容池 + MDXRemote 驱动，只换渲染模板与配色；四路由不动；LinkageFigure 内部零改；正文/图占位不代写。
+
+---
+
+## 7. Lab-Modernist：站内求解器台架（2026-07-27）
+
+设计源 = `Lab-Modernist.dc.html`（DesignSync 云端授权失效，本目录 `Lab-Modernist.extracted.html` = 从用户上传 standalone 解包的文档；`lab-solvers.reference.js` = 稿内四台台架的暗色实现，**仅作视觉参照存档，不参与构建**）。
+
+### 7.1 关键判定：稿里没有「内核改进」
+
+稿内 `lab-kernel.js` 头注自述：*"faithful JS port of …/src/lib/linkage/* (master @ 2026-07-27) … Kernel semantics must NOT be changed here"* —— 它是**我们自己 TS 内核的 1:1 JS 移植**，不是新算法。`lab-solvers.js` 同样自述是 `src/demo/{main,arch,tentacle3d,shell3d}.ts` 的移植 + 暗色 HUD。
+
+因此本次落地的"改进"= **表现层**：暗色 HUD 语言、可嵌入组件化、带规格表的 Lab 页。**内核一行未改**（封盘纪律不受影响），也**没有**把那份 JS 移植引入仓库（会造成内核双份、必然漂移）。
+
+### 7.2 实现路径
+
+站内新建 React 台架组件 `components/lab/*`，**直接 import 我们的 TS 内核**（`src/lib/linkage/*`），渲染画法逐段照搬对应 `src/demo/*.ts`：
+
+| 组件 | 对应台架 | 内核/装备 |
+|---|---|---|
+| `FourBarBench` | `src/demo/main.ts` | solver / controller / trace |
+| `ArchBench` | `src/demo/arch.ts` | arch 实例 + 定步 + `archStopPass` |
+| `TentacleBench` | `src/demo/tentacle3d.ts` | solver3d + gl3d + camera3d + **真实扫描网格** |
+| `RingsBench` | `src/demo/shell3d.ts` | shell3d 五环 + gl3d + camera3d |
+
+- `src/demo/*` 台架文件**零改动**（用户真机验过手感的东西不动，规避回归风险）；`npm run demo` 与线上 `/demo/*` 行为不变。
+- 暗色皮肤在 `app/globals.css`（`.lab-fig` 系列，沿用台架同名 class：`.bar/.plate/.trace/.joint-*/.slot/.ground/.grid-dot`）。
+- 公共 rAF 循环 `useBenchLoop`：IntersectionObserver 停启 + 页面隐藏暂停 + 单帧 dt 封顶 50ms。
+
+### 7.3 ★ 3D 用真实形态（用户拍板 2026-07-27）
+
+稿内 `lab-solvers.js` 自述：*"The scanned 106k-tri mesh (.bin) is not importable, so Lab.03 renders the vertebrae as procedural boxes"* —— 设计工具导不进网格才退化成程序化方盒。**本站不接受该退化**：`TentacleBench` 载入真实扫描网格（`src/demo/assets/tentacle3d-mesh.bin`，10.7 万三角），由 `scripts/copy-assets.mjs` 在 `predev`/`prebuild` 复制到 `public/mesh/`（gitignore，构建期生成），组件 fetch `/mesh/tentacle3d-mesh.bin`。gl3d/camera3d 装备零改（架构纪律：加新机构 = 新实例 + 台架，不改装备）。
+
+### 7.4 路由与入口变更
+
+- 新增 `/lab`（深色，与 case/log 同语言）：四台台架 + 规格表，文案照搬稿内。
+- 主页 S2 的 Lab 四卡链接 `/demo/*.html` → **`/lab#lab01..04`**（站内台架取代裸台架页作为公开入口；`/demo/*` 保留为开发台架）。
+- SiteNav：Lab 指向 `/lab`；`/lab` 并入深色 nav 判定。
+- **Stage 默认位 = 活的四杆台架**（用户 2026-07-27 拍板放入，此前为空占位）——签名件定位（CLAUDE.md：连杆 = 主页封面）；同时挂 `data-ptm` 作 goPT 转场克隆源，题栏加 "Open the lab →"。
+
+### 7.5 未搬运 / 已知偏离
+
+- `RingsBench` 未搬织物蒙皮与视角预设按钮（`/demo/shell3d.html` 仍有），站内取结构主体。
+- 稿内 Lab 页自带 nav/footer 为设计稿自描；站内走既有 `(site)` 布局与 rule-link 页脚。
+- 台架 canvas 背景缓冲沿用台架的 1400×1040（2× 逻辑 700×520）——漏设会导致 3D 画面偏小偏移（实测踩过）。

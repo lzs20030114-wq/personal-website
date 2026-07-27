@@ -9,7 +9,9 @@
     "build": "npm run test && vite build && next build",
     "start": "next start",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "predev": "node scripts/copy-assets.mjs",
+    "prebuild": "node scripts/copy-assets.mjs"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.2",

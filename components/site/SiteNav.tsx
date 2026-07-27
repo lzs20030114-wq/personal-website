@@ -15,7 +15,8 @@ export function SiteNav() {
   const onAbout = pathname.startsWith('/about');
   const current = (active: boolean) => (active ? { 'aria-current': 'page' as const } : {});
   // 深色内页（case / log）用深色 nav 变体（MAPPING §6.1：透明底 + 浅绿文字 + 发丝线）
-  const dark = pathname.startsWith('/work') || pathname.startsWith('/archive');
+  const dark =
+    pathname.startsWith('/work') || pathname.startsWith('/archive') || pathname.startsWith('/lab');
 
   return (
     <nav className={dark ? 'nav nav-dark' : 'nav'}>
@@ -26,7 +27,9 @@ export function SiteNav() {
       <Link href="/#work" {...current(onHome)}>
         Work
       </Link>
-      <Link href="/#lab">Lab</Link>
+      <Link href="/lab" {...current(pathname.startsWith('/lab'))}>
+        Lab
+      </Link>
       <Link href="/archive" {...current(onLog)}>
         Log
       </Link>

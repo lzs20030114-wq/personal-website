@@ -781,3 +781,191 @@ a:hover {
     animation: none;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   站内求解器台架（Lab-Modernist 稿 → MAPPING §6.3）
+   组件在 components/lab/*，渲染逻辑复用 src/demo 的画法、内核 = src/lib/linkage（封盘）。
+   本节只管暗色皮肤：台架 SVG 用 class 上色（与 src/demo 台架同名类，值改暗底）。
+   ════════════════════════════════════════════════════════════════════════ */
+.lab-fig {
+  position: relative;
+  overflow: hidden;
+  background: oklch(0.22 0.042 235);
+  border: var(--plane-hair);
+  /* 宽度优先、高度封顶：容器被 flex 拉高时不按 aspect 反算出超宽盒（会横向裁切） */
+  width: 100%;
+  max-height: 100%;
+}
+/* SVG 用 viewBox 等比内嵌（容器被拉伸时留白居中，不裁切）；canvas 按容器铺满 */
+.lab-fig svg,
+.lab-fig canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+.lab-fig svg:active,
+.lab-fig canvas:active {
+  cursor: grabbing;
+}
+/* 点阵衬底（与台架同款 28px 节距，暗底压低） */
+.lab-fig .grid-dot {
+  fill: oklch(0.95 0.032 120 / 0.16);
+}
+/* 杆件 / 板面 / 关节：暗底反相——墨线改浅绿白，强调件用绿 */
+.lab-fig .bar {
+  stroke: oklch(0.9 0.03 130);
+  stroke-width: 3;
+  stroke-linecap: square;
+}
+.lab-fig .plate {
+  fill: color-mix(in srgb, var(--g400) 10%, transparent);
+  stroke: oklch(0.95 0.032 120 / 0.32);
+  stroke-width: 1.2;
+}
+.lab-fig .trace {
+  fill: none;
+  stroke: var(--g400);
+  stroke-width: 2;
+  opacity: 0.95;
+}
+.lab-fig .frame-line {
+  stroke: oklch(0.95 0.032 120 / 0.3);
+  stroke-width: 1.4;
+  stroke-dasharray: 10 4 2 4;
+}
+.lab-fig .decor {
+  fill: none;
+  stroke: oklch(0.95 0.032 120 / 0.25);
+  stroke-width: 1;
+  stroke-dasharray: 4 5;
+}
+.lab-fig .slot {
+  stroke: oklch(0.95 0.032 120 / 0.4);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.lab-fig .ground {
+  fill: none;
+  stroke: oklch(0.95 0.032 120 / 0.55);
+  stroke-width: 1.2;
+}
+.lab-fig .joint-pin,
+.lab-fig .joint-fixed {
+  fill: oklch(0.9 0.03 130);
+}
+.lab-fig .joint-free,
+.lab-fig .joint-handle {
+  fill: oklch(0.22 0.042 235);
+  stroke: oklch(0.9 0.03 130);
+  stroke-width: 2.2;
+}
+.lab-fig .joint-tip {
+  fill: var(--g400);
+  stroke: oklch(0.22 0.042 235);
+  stroke-width: 2.2;
+}
+.lab-fig .label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  fill: oklch(0.95 0.032 120 / 0.7);
+}
+.lab-fig .dim {
+  font-size: 9.5px;
+  font-weight: 600;
+  fill: oklch(0.95 0.032 120 / 0.42);
+  font-variant-numeric: tabular-nums;
+}
+.lab-fig .hud {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  fill: oklch(0.95 0.032 120 / 0.55);
+}
+
+/* HUD 角标（DOM 覆盖层，非 SVG）：左上题名 / 右下读数 / 左下提示 */
+.lab-hud {
+  position: absolute;
+  pointer-events: none;
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: oklch(0.95 0.032 120 / 0.72);
+}
+.lab-hud.tl {
+  top: 12px;
+  left: 14px;
+}
+.lab-hud.br {
+  right: 14px;
+  bottom: 12px;
+  text-align: right;
+}
+.lab-hud.bl {
+  left: 14px;
+  bottom: 12px;
+  color: oklch(0.95 0.032 120 / 0.42);
+}
+.lab-hud .k {
+  color: var(--g400);
+  font-weight: 800;
+}
+.lab-hud .num {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: oklch(0.95 0.032 120 / 0.9);
+  font-variant-numeric: tabular-nums;
+}
+.lab-hud .sub {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  color: oklch(0.95 0.032 120 / 0.45);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 台架控制条（滑块/按钮，暗底） */
+.lab-ctl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: oklch(0.95 0.032 120 / 0.6);
+}
+.lab-ctl label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lab-ctl input[type='range'] {
+  width: 108px;
+  accent-color: oklch(0.71 0.098 145);
+}
+.lab-btn {
+  font: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 4px 10px;
+  border: 1px solid oklch(0.95 0.032 120 / 0.28);
+  border-radius: 0;
+  background: transparent;
+  color: oklch(0.95 0.032 120 / 0.8);
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) {
+  .lab-btn {
+    transition: background var(--dur-micro) var(--ease-site);
+  }
+  .lab-btn:hover {
+    background: oklch(0.95 0.032 120 / 0.1);
+  }
+}

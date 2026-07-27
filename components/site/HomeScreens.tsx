@@ -4,13 +4,14 @@ import type { CSSProperties, ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { FourBarBench } from '../lab/FourBarBench';
 
 /**
  * 主页整屏分幕（design-ref/Home-Screens.dc.html 落地，MAPPING §6；2026-07-26 迭代稿同步）。
  * 三幕：S0 枢纽（卡片组 + 预览舞台）/ S1 About（深色渐变幕）/ S2 Lab+Log+页脚。
  * 分页引擎 = 接管 wheel/touch 的阻力翻页；引擎与光标层仅桌面 + 非 reduced-motion 生效，
  * 其余回落常规文档流（幕 minHeight 100svh，原生滚动）。
- * Stage 默认位 = 空占位（用户拍板 2026-07-24：先空着，不自行填充）。
+ * Stage 默认位 = 活的四杆台架 FourBarBench（用户 2026-07-27 拍板放入；此前为空占位）。
  * 页面转场 goPT = 迭代稿「媒体块生长 + 遮罩淡入」的 SPA 适配（router.push + body 挂载 + 定时淡出）。
  */
 
@@ -67,7 +68,7 @@ export interface HomeWork {
   published: boolean;
 }
 
-// Lab 四卡（文案照搬 Home-Screens 稿；链接 = MAPPING §3 /demo 台架；
+// Lab 四卡（文案照搬 Home-Screens 稿；链接改指站内 /lab 台架页，MAPPING §6.3；
 // bar/hover = 迭代稿按内核家族双色编码：SVG=绿、WebGL=紫）
 const LABS = [
   {
@@ -75,7 +76,7 @@ const LABS = [
     title: 'Four-bar linkage',
     body: '2D PBD testbench — the kernel behind Fig. 01.',
     meta: '36 tests · SVG',
-    href: '/demo/',
+    href: '/lab#lab01',
     bar: 'var(--g500)',
     hover: 'var(--g100)',
     kickerColor: 'var(--accent)',
@@ -85,7 +86,7 @@ const LABS = [
     title: 'Arch ring solver',
     body: 'Angulated scissor arch + crank-slider, from the S4 ring.',
     meta: 'Kernel untouched · SVG',
-    href: '/demo/arch.html',
+    href: '/lab#lab02',
     bar: 'var(--g700)',
     hover: 'var(--g100)',
     kickerColor: 'var(--accent)',
@@ -95,7 +96,7 @@ const LABS = [
     title: 'Tendon tentacle',
     body: '16 vertebrae, three tendons at 120° — full 3D kernel.',
     meta: 'Orbit camera · WebGL',
-    href: '/demo/tentacle3d.html',
+    href: '/lab#lab03',
     bar: 'var(--p500)',
     hover: 'var(--p100)',
     kickerColor: 'var(--accent-2)',
@@ -105,7 +106,7 @@ const LABS = [
     title: 'Five-ring shell',
     body: 'S1–S5 ring family choreography — a breathing body.',
     meta: 'Calibrated stops · WebGL',
-    href: '/demo/shell3d.html',
+    href: '/lab#lab04',
     bar: 'var(--p700)',
     hover: 'var(--p100)',
     kickerColor: 'var(--accent-2)',
@@ -365,7 +366,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
     const panels = [pFig, ...works.map((_, i) => $(`wp${i + 1}`))].filter(Boolean) as HTMLElement[];
     const cards = works.map((_, i) => $(`c${i + 1}`)).filter(Boolean) as HTMLElement[];
     const lblTxt = [
-      'Stage — 默认展示位',
+      'Stage — Fig. 01 四杆',
       ...works.map((w, i) => `Preview — ${String(i + 1).padStart(2, '0')} ${w.title}`),
     ];
 
@@ -1240,7 +1241,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                       color: 'var(--accent)',
                     }}
                   >
-                    Stage — 默认展示位
+                    Stage — Fig. 01 四杆
                   </span>
                   <button id="figChip" type="button" className="figchip" style={{ visibility: 'hidden' }}>
                     00 · Stage
@@ -1249,7 +1250,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                 <div style={{ position: 'relative', zIndex: 1, flex: 1, minHeight: 0 }}>
                   <div
                     id="pFig"
-                    data-cursor="Stage — 待定"
+                    data-cursor="Fig.01 · live — drag any joint"
                     style={{
                       position: 'absolute',
                       inset: 0,
@@ -1271,51 +1272,26 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                           pointerEvents: 'none',
                         }}
                       />
-                      <StageMedia
-                        maskDeg={155}
-                        grain={0.13}
+                      {/* Stage 默认位 = 活的四杆台架（签名件，用户 2026-07-27 拍板放入）；
+                          data-ptm 让它同时是 goPT 转场的克隆源 */}
+                      <div
+                        data-ptm
                         style={{
                           flex: 1,
+                          minHeight: 0,
                           display: 'flex',
-                          flexDirection: 'column',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 10,
-                          textAlign: 'center',
-                          padding: 24,
-                          boxSizing: 'border-box',
+                          overflow: 'hidden',
                         }}
                       >
-                        <span
-                          style={{
-                            position: 'relative',
-                            fontSize: 13,
-                            fontWeight: 800,
-                            letterSpacing: '0.12em',
-                            textTransform: 'uppercase',
-                            color: 'var(--g200)',
-                          }}
-                        >
-                          [待定] 默认展示位
-                        </span>
-                        <span
-                          style={{
-                            position: 'relative',
-                            fontSize: 12,
-                            lineHeight: 1.6,
-                            color: 'var(--g400)',
-                            maxWidth: '32ch',
-                          }}
-                        >
-                          后续放置：动态图形 / 精选画面。
-                          <br />
-                          悬停左侧卡片即可预览各项目。
-                        </span>
-                      </StageMedia>
+                        <FourBarBench />
+                      </div>
                     </div>
                     <div className="flex items-baseline justify-between" style={{ gap: 16 }}>
-                      <span style={UPPER_11}>Stage 00 · placeholder</span>
-                      <span style={MINI_TAG}>tbd</span>
+                      <span style={UPPER_11}>Fig. 01 · four-bar · live</span>
+                      <Link href="/lab#lab01" className="rule-link" data-pt style={{ fontSize: 10 }}>
+                        Open the lab →
+                      </Link>
                     </div>
                   </div>
                   {works.map((w, i) => (

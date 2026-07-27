@@ -10,3 +10,6 @@ next-env.d.ts
 
 # Vite 台架构建产物（build 时生成，随部署上线，不进 git）
 public/demo/
+
+# 站内台架组件用的资源副本（prebuild/predev 生成，不进 git）
+public/mesh/
