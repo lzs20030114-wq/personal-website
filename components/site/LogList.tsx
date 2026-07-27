@@ -6,13 +6,13 @@ import type { LogEntry, LogLang } from '../../src/lib/site/log';
 import {
   aspectFacets,
   aspectOf,
-  bucketOf,
   buildHeatmap,
   heatLevel,
   monthFacets,
   monthLabel,
   monthOf,
   projectFacets,
+  projectOf,
   type Facet,
 } from '../../src/lib/site/log-facets';
 
@@ -193,7 +193,7 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
 
   const match = useCallback(
     (e: LogEntry, p: string | null, a: string | null, m: string | null) =>
-      (p === null || bucketOf(e) === p) &&
+      (p === null || projectOf(e) === p) &&
       (a === null || aspectOf(e) === a) &&
       (m === null || monthOf(e) === m),
     [],

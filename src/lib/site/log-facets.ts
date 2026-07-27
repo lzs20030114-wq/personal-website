@@ -14,9 +14,57 @@ export type Facet = { key: string; label: Bilingual; count: number; short?: Bili
 export const OTHER_ASPECT = '~other';
 const OTHER_LABEL: Bilingual = { en: 'Other', zh: '其他' };
 
-/** 项目（一级）= outline 标签，MAPPING §8.1 既定约定；每条恰好一个（守门测试保证）。 */
+/** 条目的 outline 标签（主题词，如 Machine / Lab）；每条恰好一个（守门测试保证）。 */
 export function bucketOf(entry: LogEntry): string | null {
   return entry.tags.find((t) => t.variant === 'outline')?.label.en ?? null;
+}
+
+/**
+ * 项目分组（一级筛选的显示单位）——用户拍板 2026-07-27：一级要按**具体项目**选
+ * （「项目 1 / 项目 2 / other works 这样分别展示」），不是按 outline 标签的字面。
+ *
+ * 标签是主题词，项目是读者认的东西，两者不是一回事：连杆求解器台架（`Lab`）按
+ * CLAUDE.md「定位与边界」属于项目一「轮回机器」的结构实现部分，不是独立项目，
+ * 因此与 `Machine` 归同一组。项目名与 /work 各页的编号一致（Project I / II）。
+ *
+ * 顺序固定，按作品集编号排、不按条数——项目的先后是作者定的，不该随条数抖动。
+ * 新增 outline 标签时必须在这里登记，否则该条会从所有一级视图里消失（守门测试挡住）。
+ */
+export type ProjectGroup = { key: string; label: Bilingual; buckets: readonly string[] };
+export const PROJECT_GROUPS: readonly ProjectGroup[] = [
+  {
+    key: 'project-i',
+    label: { en: 'Project I · Reincarnation Machine', zh: '项目一 · 轮回机器' },
+    buckets: ['Machine', 'Lab'],
+  },
+  {
+    key: 'project-ii',
+    // 项目二尚未定名，这里给的是描述而非标题（作者定名后连同 /work 页一并改）。
+    label: { en: 'Project II · Spatial Simulation', zh: '项目二 · 空间仿真' },
+    buckets: ['Space'],
+  },
+  {
+    key: 'other-work',
+    // 智能床按作者拍板暂列 other work，不计为主项目。
+    label: { en: 'Other work · Smart Bed', zh: '其他工作 · 智能床' },
+    buckets: ['Sleep'],
+  },
+  {
+    key: 'this-site',
+    // 建站流水：不是作品集项目，但也不该塞进 other work 与研究项目混读。
+    label: { en: 'This site', zh: '本站' },
+    buckets: ['Site'],
+  },
+];
+
+const PROJECT_OF_BUCKET = new Map<string, string>(
+  PROJECT_GROUPS.flatMap((g) => g.buckets.map((b) => [b, g.key] as [string, string])),
+);
+
+/** 项目（一级）= outline 标签经 PROJECT_GROUPS 归组后的项目 key。 */
+export function projectOf(entry: LogEntry): string | null {
+  const bucket = bucketOf(entry);
+  return bucket === null ? null : (PROJECT_OF_BUCKET.get(bucket) ?? null);
 }
 
 /** 方面（二级）= neutral 标签；没有就归 Other。 */
@@ -84,9 +132,18 @@ function byCountThenKey(a: Facet, b: Facet): number {
   return b.count - a.count || (a.key < b.key ? -1 : 1);
 }
 
+/** 项目级选项：顺序取自 PROJECT_GROUPS（固定），只保留池里真有条目的组。 */
 export function projectFacets(entries: LogEntry[]): Facet[] {
-  const tag = (e: LogEntry) => e.tags.find((t) => t.variant === 'outline')!.label;
-  return tally(entries, bucketOf, (e) => tag(e)).sort(byCountThenKey);
+  const counts = new Map<string, number>();
+  for (const e of entries) {
+    const key = projectOf(e);
+    if (key !== null) counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return PROJECT_GROUPS.filter((g) => counts.has(g.key)).map((g) => ({
+    key: g.key,
+    label: g.label,
+    count: counts.get(g.key)!,
+  }));
 }
 
 /** 方面：同样条数优先，但 Other 恒在最后（它不是一个主题，是「没打主题标签」）。 */

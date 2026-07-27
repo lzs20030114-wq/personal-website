@@ -10,7 +10,9 @@ import {
   monthChip,
   monthLabel,
   OTHER_ASPECT,
+  PROJECT_GROUPS,
   projectFacets,
+  projectOf,
 } from './log-facets';
 
 /**
@@ -22,15 +24,29 @@ import {
 const ENTRIES = getLogEntries();
 
 describe('三级筛选', () => {
-  it('项目：覆盖全池、条数守恒、条数多的在前', () => {
+  it('项目：覆盖全池、条数守恒、顺序恒为 PROJECT_GROUPS 的登记顺序', () => {
     const facets = projectFacets(ENTRIES);
-    expect(facets.length).toBeGreaterThan(1); // 只剩一个桶就没有筛选的意义
+    expect(facets.length).toBeGreaterThan(1); // 只剩一个项目就没有筛选的意义
     expect(facets.reduce((n, f) => n + f.count, 0)).toBe(ENTRIES.length);
     for (const f of facets) {
-      expect(ENTRIES.filter((e) => bucketOf(e) === f.key).length, `项目 ${f.key}`).toBe(f.count);
+      expect(ENTRIES.filter((e) => projectOf(e) === f.key).length, `项目 ${f.key}`).toBe(f.count);
     }
-    const order = facets.map((f) => [f.count, f.key] as const);
-    expect(order).toEqual([...order].sort((a, b) => b[0] - a[0] || (a[1] < b[1] ? -1 : 1)));
+    // 项目的先后是作者定的（作品集编号），不随条数抖动
+    const registered = PROJECT_GROUPS.map((g) => g.key).filter((k) =>
+      facets.some((f) => f.key === k),
+    );
+    expect(facets.map((f) => f.key)).toEqual(registered);
+  });
+
+  it('每个 outline 标签都登记在某个项目组里，且不重复登记', () => {
+    // 没登记的标签会让那批条目从所有一级视图里消失，只在总览态出现——
+    // 页面上看不出漏在哪，只能在这里挡。
+    const buckets = new Set(ENTRIES.map((e) => bucketOf(e)!));
+    for (const b of buckets) {
+      const owners = PROJECT_GROUPS.filter((g) => g.buckets.includes(b));
+      expect(owners.length, `标签 ${b} 必须恰好归属一个项目组`).toBe(1);
+    }
+    for (const e of ENTRIES) expect(projectOf(e), `${e.date} 无项目归属`).not.toBeNull();
   });
 
   it('方面：覆盖全池（没打主题标签的条目落 Other，不掉出下钻路径）', () => {
@@ -53,7 +69,7 @@ describe('三级筛选', () => {
 
   it('三级交叉筛选：任意组合的结果都是全池的子集，且计数自洽', () => {
     for (const p of projectFacets(ENTRIES)) {
-      const inProject = ENTRIES.filter((e) => bucketOf(e) === p.key);
+      const inProject = ENTRIES.filter((e) => projectOf(e) === p.key);
       // 项目内的方面/月份计数之和 = 该项目的条数（下钻不丢条目）
       expect(aspectFacets(inProject).reduce((n, f) => n + f.count, 0)).toBe(p.count);
       expect(monthFacets(inProject).reduce((n, f) => n + f.count, 0)).toBe(p.count);

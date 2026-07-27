@@ -816,6 +816,9 @@ a:hover {
   border: 0;
   border-bottom: 2px solid transparent;
   cursor: pointer;
+  /* 项目名带副名后标签变长（「Project I · Reincarnation Machine」），
+     整项换行才对——从中间断开会读成两个筛选项。 */
+  white-space: nowrap;
 }
 .log-filter__opt[aria-pressed='true'] {
   color: var(--accent);
