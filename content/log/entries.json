@@ -2,12 +2,12 @@
   {
     "date": "2026-07-18",
     "lead": {
-      "en": "Rail structure verified by FEA.",
-      "zh": "导轨结构 FEA 验证。"
+      "en": "Ran a finite-element check on the rail and found the hand math was wrong.",
+      "zh": "用有限元把导轨算了一遍，发现手算靠不住。"
     },
     "body": {
-      "en": "Hand calculations ran about 4.5× optimistic. A back rib and a front lip nearly tripled the load capacity; one out-of-plane span still needs closing out.",
-      "zh": "手算比实际乐观约 4.5 倍。加背肋与前唇后承载力接近三倍；面外最差跨位仍待收尾。"
+      "en": "The five rings' feet all slide along one rail, which I had sized with textbook beam formulas. A finite-element check — meshing the part and solving it cell by cell — showed the real deflection was about 4.5× worse: the original front ledge bent 1.55 mm under 20 N, close to failing. Adding an 8×3 mm rib on the back and a 4×2.5 mm lip on the front brought that down to 0.34 mm and raised the load it can carry from 19 N to 54 N.",
+      "zh": "五个环的脚都在同一条导轨上滑动，我原本用材料力学的公式估强度。改用有限元（把零件切成网格逐格算受力）复核后发现，实际挠度是手算的约 4.5 倍——原来的前檐条在 20N 下就弯 1.55mm，接近失效。在背面加一道 8×3mm 加强肋、前缘加一道 4×2.5mm 唇边后，同样受力只弯 0.34mm，能承受的载荷从 19N 提到 54N。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -17,12 +17,12 @@
   {
     "date": "2026-07-17",
     "lead": {
-      "en": "Five-ring choreography v0.2→v0.3.",
-      "zh": "五环编排 v0.2→v0.3。"
+      "en": "Brought all five shell rings into the web simulation, and fixed one that kept collapsing.",
+      "zh": "把外壳的五个环全部搬进网页模拟，并修好了其中一个会坍塌的环。"
     },
     "body": {
-      "en": "S1–S5 family extracted; stop margins calibrated per ring ([0, 2, 4, 8] mm ladder); whole-family peaks 0.24–0.42 mm.",
-      "zh": "S1–S5 全族提取；止程余量逐环阶梯标定（[0, 2, 4, 8] mm）；全族峰值残差 0.24–0.42 mm。"
+      "en": "The page had only one ring before this. All five were extracted from the CAD model, spaced 85 mm apart in 3D, and made to open and close together. The third one caved in a few seconds after starting — not a drawing error: I had pinned how far its feet may slide to exactly the drawing position, which blocked the ~2 mm outward move it has to make before it can fold inward. Tuning that allowance ring by ring got all five holding their shape to within 0.4 mm.",
+      "zh": "在这之前网页上只有一个环。这次把五个环全部从图纸里提取出来，在三维中按 85mm 间距排好，让它们一起开合。第三个环开局正常、几秒后就瘪掉——不是图纸错了：我把它脚能滑动的范围卡死在图纸位置，而它必须先向外张开约 2mm 才能收拢，这条路被堵住了。给每个环单独试出合适的余量后，五个环的形状误差都在 0.4mm 以内。"
     },
     "tags": [
       { "label": { "en": "Lab", "zh": "实验室" }, "variant": "outline" },
@@ -32,12 +32,12 @@
   {
     "date": "2026-07-17",
     "lead": {
-      "en": "Arch stops promoted to the model.",
-      "zh": "拱环止程转正。"
+      "en": "The same page behaved differently on two computers — the model was missing its end stops.",
+      "zh": "同一个网页在两台电脑上跑出不同形状，查出来是模型少了限位。"
     },
     "body": {
-      "en": "Two devices diverged on the same URL — a legal sliding mode, not a bug. Dual-end slot clamping + fixed-step integration; 168 tests green.",
-      "zh": "同一 URL 两台设备形态分岔——是合法的滑移模态，不是算错。双向槽端钳制 + 定步积分；168 项测试绿。"
+      "en": "Opened on two machines, the arch flattened itself within seconds on one of them. It was not a computation error: the crank only fixes the height of the apex, so the four feet are free to slide in their rails and the flattened shape is a legal answer too. Adding stops at both ends of every foot slot, and stepping the simulation at a fixed rate instead of following the monitor's refresh rate, made the motion identical on any device.",
+      "zh": "同一个页面在两台设备上打开，其中一台几秒后就把拱压扁了。这不是算错：曲柄只锁住拱顶的高度，四只脚在各自的滑槽里可以自由移动，压扁也是一个合法的解。给每只脚的滑槽两端都补上限位，并把模拟改成按固定时间步长推进（不再跟着显示器刷新率走），任何设备上的动作就一致了。"
     },
     "tags": [
       { "label": { "en": "Lab", "zh": "实验室" }, "variant": "outline" },
@@ -47,24 +47,24 @@
   {
     "date": "2026-07-13",
     "lead": {
-      "en": "Site S1–S3.",
-      "zh": "网站 S1–S3。"
+      "en": "Put up the site frame and got the linkage running on the homepage.",
+      "zh": "搭起网站框架，把连杆放上主页。"
     },
     "body": {
-      "en": "Next.js scaffold, content pool with build-time validation, four routes; LinkageFigure live on the homepage with SSR first frame.",
-      "zh": "Next.js 脚手架、带构建期校验的内容池、四条路由；LinkageFigure 上主页，含 SSR 首帧。"
+      "en": "Built with Next.js: four pages — home, work, lab, log — with all text and images read from a single content folder that fails the build if anything is malformed. The four-bar linkage at the top of the homepage is the actual solver running live, not a video or a GIF.",
+      "zh": "用 Next.js 建站，四个页面：首页、作品、实验室、日志。所有文字和图片都从同一个内容目录读取，格式不对构建时直接报错。主页顶上那个四杆连杆是求解器在实时运行，不是视频也不是动图。"
     },
     "tags": [{ "label": { "en": "Site", "zh": "网站" }, "variant": "neutral" }]
   },
   {
     "date": "2026-07-10",
     "lead": {
-      "en": "3D solver M1+M2.",
-      "zh": "立体求解器 M1+M2。"
+      "en": "Wrote a 3D solver and built a tentacle driven by three tendons.",
+      "zh": "写了一套三维求解器，做出三根肌腱驱动的触手。"
     },
     "body": {
-      "en": "Independent 3D kernel; three-tendon 120° tentacle; orbit camera. First version vetoed on feel — fascia anti-twist bracing brought lateral drift 38.5→1.2 px.",
-      "zh": "独立 3D 内核；三肌腱 120° 触手；轨道相机。首版手感被否——fascia 抗扭斜杆把横向漂移压到 38.5→1.2 px。"
+      "en": "The existing 2D solver was left untouched and a separate 3D one written beside it: 16 vertebrae with three tendons spaced 120° apart, so pulling one bends the tentacle toward it. Dragging the mouse orbits the camera rather than moving the model. The first version twisted into a spiral and juddered as it contracted, so I added symmetric diagonal braces between segments — the job real fascia does — which cut sideways drift from 38.5 px to 1.2 px and kept the bend in a single plane.",
+      "zh": "原来的二维求解器一行没动，另写了一套三维的：16 节椎骨，三根肌腱按 120° 分布，拉哪根就往哪边弯。鼠标拖动转的是相机，不是模型本身。第一版一收缩就拧成螺旋、还发抖，于是在每节之间加了左右对称的斜拉杆——相当于人身上筋膜的作用——横向漂移从 38.5 像素降到 1.2 像素，弯曲这才老实待在一个平面里。"
     },
     "tags": [
       { "label": { "en": "Lab", "zh": "实验室" }, "variant": "outline" },
@@ -74,36 +74,36 @@
   {
     "date": "2026-07-10",
     "lead": {
-      "en": "Arch ring solver instance.",
-      "zh": "拱环求解器实例。"
+      "en": "Turned one ring of the real machine into a model you can drag on the page.",
+      "zh": "把真机上的一个环做成网页上能拖动的模型。"
     },
     "body": {
-      "en": "The physical S4 ring (angulated scissor arch + crank-slider) as a solver preset — kernel untouched, 7 new tests.",
-      "zh": "真机 S4 环（角化剪式拱 + 曲柄滑块）作为求解器实例——内核零修改，新增 7 项测试。"
+      "en": "It is the shell's fourth ring: an arch built from scissor linkages, pushed by a crank at the base. The solver itself was not modified — the ring is just its bar lengths and joint connections written out as data and fed in. That was the point of the exercise: the solver is not hard-wired to one example.",
+      "zh": "用的是外壳的第四个环：剪刀式连杆围成的拱，底下一个曲柄推着它开合。求解器本身没有改动，这个环只是把杆长和铰接关系写成一组数据喂进去。这正是要验证的事：求解器不是只能跑一个写死的例子。"
     },
     "tags": [{ "label": { "en": "Lab", "zh": "实验室" }, "variant": "outline" }]
   },
   {
     "date": "2026-07-10",
     "lead": {
-      "en": "Four-bar closed at M4.",
-      "zh": "四杆连杆 M4 封盘。"
+      "en": "Finished the homepage linkage — bug fixes only from here on.",
+      "zh": "主页那个连杆做完了，之后只修 bug，不再加功能。"
     },
     "body": {
-      "en": "Release damping, live coupler tracing, engineering captions; 36 tests. Sealed: bugfixes only from here.",
-      "zh": "release 阻尼、耦合曲线实时描绘、工程标注；36 项测试。封盘后只修 bug。"
+      "en": "Two last pieces went in. When you let go, the bars carry the speed you flung them with and ease to a stop instead of freezing on the spot; and the curve traced by the moving joint is drawn as it happens. With dimension labels and a caption added, 36 tests pass.",
+      "zh": "最后补了两件：松手之后杆件会带着你甩出去的速度继续走、再慢慢停下，而不是啪一下定住；以及连杆上那个动点扫过的曲线会实时画出来。加上尺寸标注和图注，36 项测试通过。"
     },
     "tags": [{ "label": { "en": "Lab", "zh": "实验室" }, "variant": "outline" }]
   },
   {
     "date": "2026-07-10",
     "lead": {
-      "en": "Main shaft drive finalized.",
-      "zh": "主轴驱动定案。"
+      "en": "Settled the drive that turns all five rings from one shaft.",
+      "zh": "定下五个环共用一根主轴的传动方案。"
     },
     "body": {
-      "en": "All five rings now turn on one shaft — stepper, 3:1 belt, 6 mm D-shaft. Gravity and friction set the torque, not inertia.",
-      "zh": "五环共轴：步进电机 + 3:1 皮带 + 6mm D 轴。扭矩由重力与摩擦决定，不是惯性。"
+      "en": "A NEMA17 stepper on a TMC2209 driver, geared down 3:1 through a GT2 belt (20-tooth pulley on the motor, 60-tooth on the shaft, 2GT-280 closed loop, 99.2 mm between centres). The shaft went from 8 mm round to a 6 mm D-shaft — a flat ground on one side so pulleys cannot slip — with the hub bores redrawn to match, delivered as a dimensioned drawing plus a profile that imports straight into the CAD file. The motor bracket has slotted holes so either gear ratio can be fitted. Peak design torque is 0.3–0.5 N·m, nearly all of it spent on gravity and friction rather than acceleration.",
+      "zh": "一台 NEMA17 步进电机配 TMC2209 驱动，经 GT2 同步带 3:1 减速（电机端 20 齿、轴端 60 齿，2GT-280 闭口带，中心距 99.2mm）。主轴从 8mm 圆轴改成 6mm 的 D 形轴——侧面磨一个平面，皮带轮就不会打滑——轮毂孔同步改成对应的 D 形，出了标注图和能直接导进模型的轮廓文件。电机座开腰形槽，两种减速比都装得上。设计峰值扭矩 0.3–0.5N·m，几乎全花在克服重力和摩擦上，而不是加速。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -113,12 +113,12 @@
   {
     "date": "2026-07-09",
     "lead": {
-      "en": "Procurement list closed.",
-      "zh": "采购清单定稿。"
+      "en": "Put together the full parts list for the machine.",
+      "zh": "汇总了整机的采购清单。"
     },
     "body": {
-      "en": "About ¥300 all in, with existing kit stock excluded so nothing gets bought twice.",
-      "zh": "含条件项总计约 ¥300；已有库存明确排除，避免重复采购。"
+      "en": "About ¥216 of things I definitely need: an ESP32, buck converters, a small amplifier and speaker, addressable LED rings, SG90 servos, lever microswitches, springs, conductive copper tape, silicone wire, connectors. A few items wait on decisions still open — a fourth stepper, a USB camera, a level shifter, a laser distance sensor — which would bring it to roughly ¥300. Everything already sitting in the Elegoo kit was struck off first.",
+      "zh": "确定要买的约 ¥216：ESP32、降压模块、小功放和喇叭、可编程灯环、SG90 舵机、微动开关、弹簧、导电铜箔、硅胶线、接插件。另有几项要等决定再说——第四台步进电机、USB 相机、电平转换、激光测距——都算上大约 ¥300。手上 Elegoo 套件里已有的先全部划掉了。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -128,36 +128,36 @@
   {
     "date": "2026-07-08",
     "lead": {
-      "en": "Layout research.",
-      "zh": "版式研究。"
+      "en": "Read up on layout and settled the grid for the case-study pages.",
+      "zh": "查了版式资料，定下案例页的网格。"
     },
     "body": {
-      "en": "Line-length law, Tufte margin notes, Swiss grid — desktop-first case-study grid decided.",
-      "zh": "行长定律、Tufte 边注、瑞士网格——案例页确定桌面优先网格。"
+      "en": "Line length (how many characters per line still reads comfortably), Tufte's way of putting notes in the margin, and the Swiss grid. The decision: lay the pages out for a wide desktop screen first and fall back to a single column on phones.",
+      "zh": "看了行长（一行多少字还读得舒服）、Tufte 把注释放在页边的做法，以及瑞士网格。结论是：先按桌面宽屏排版，手机上退成单栏。"
     },
     "tags": [{ "label": { "en": "Site", "zh": "网站" }, "variant": "neutral" }]
   },
   {
     "date": "2026-07-07",
     "lead": {
-      "en": "LINKAGE_SPEC v1.1.",
-      "zh": "LINKAGE_SPEC v1.1。"
+      "en": "Wrote the spec for the linkage solver.",
+      "zh": "写了连杆求解器的技术规格文档。"
     },
     "body": {
-      "en": "Math derivations, API, tolerances, milestones — the single source of truth for the solver line.",
-      "zh": "数学推导、API、容差、里程碑——求解器线的唯一权威来源。"
+      "en": "The maths, the interface other code calls, how much numerical error counts as acceptable, and what each stage has to deliver — all in one document that the code answers to. Where the two disagree, the code changes, not the document.",
+      "zh": "数学推导、别的代码调用它的接口、多大的数值误差算可接受、每个阶段要交付什么——全部写进一份文档，代码以它为准。两者打架时改代码，不改文档。"
     },
     "tags": [{ "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }]
   },
   {
     "date": "2026-07-07",
     "lead": {
-      "en": "Study design repaired, sensing frozen.",
-      "zh": "实验设计修复，感知系统冻结。"
+      "en": "Reviewed the whole study protocol, cut what the numbers could not support, and froze the sensor list.",
+      "zh": "通篇审了一遍实验方案，砍掉算不出结果的部分，并定死传感器清单。"
     },
     "body": {
-      "en": "The physiological contrast that did not survive the arithmetic was cut rather than fudged, and the measurement battery trimmed to fit a small sample. Sensing scope frozen at six channels.",
-      "zh": "算不过来的那项生理对比直接砍掉，不做勉强；量表裁剪到匹配小样本。感知范围冻结在六个输入通道。"
+      "en": "The machine's death now falls inside a ±30-second window, and participants are told so honestly afterwards. A planned before/after comparison of heart-rate variability was dropped outright — with 5–8 participants it can never reach significance — leaving skin conductance, measured around specific events, as the main physiological signal. Participants may speak naturally; those stretches get flagged as artefacts and a short interview afterwards asks what they remembered feeling. Sensing is fixed at six inputs: touch on the feelers, touch on the shell, ultrasonic distance, tilt and motion, sound, and an internal clock. Still open: ethics filing, privacy compliance, Chinese-language versions of the scales, and a second person to code the behavior independently.",
+      "zh": "机器的死亡时间现在限定在一个 ±30 秒的窗口内，事后如实告诉被试。原计划比较死亡前后的心率变异性，直接删掉——5–8 人的样本量根本达不到显著性——改用围绕具体事件测量的皮肤电作为主要生理信号。被试可以自然说话，这些片段标记为伪影，另加一段事后访谈问他们当时记得什么感受。传感部分定死为六路输入：触须上的触摸、外壳上的触摸、超声测距、倾斜与运动、声音、内部时钟。仍未解决：伦理申报、隐私合规、量表的中文版，以及找第二个人独立做行为编码。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -167,12 +167,12 @@
   {
     "date": "2026-07-05",
     "lead": {
-      "en": "Home photo studio built.",
-      "zh": "摄影棚搭建。"
+      "en": "Set up a small photo studio at home for shooting parts.",
+      "zh": "在家搭了个拍零件的小影棚。"
     },
     "body": {
-      "en": "Two softboxes and a paper infinity curve. For static parts, the quality of the light matters far more than the quantity of it.",
-      "zh": "两盏柔光箱 + 纸质无缝背景。拍静物时，光的质量远比亮度重要。"
+      "en": "Two octagonal softboxes on stands, and a full sheet of white card bent into a seamless curve so there is no visible corner behind the subject. Two things I learned: a part that does not move can be shot with a long exposure, so the lights do not need to be bright; and a white part on a white background needs a rim light from behind and to one side, or its outline dissolves into the backdrop.",
+      "zh": "两盏八角柔光箱加灯架，一张整开白卡纸弯成弧形，主体身后看不到接缝。学到两件事：零件不会动，就可以用长曝光，灯根本不必亮；白色零件放在白底上，得靠侧后方的逆光勾出边缘，否则轮廓会糊进背景里。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -182,12 +182,12 @@
   {
     "date": "2026-06-21",
     "lead": {
-      "en": "Servo, fastener and touch standards settled.",
-      "zh": "舵机 / 紧固件 / 触摸三线定标准。"
+      "en": "Settled three small things at once: the servo interface, screw sizes, and how touch electrodes are wired.",
+      "zh": "一次定了三件小事：舵机接口、螺丝规格、触摸电极怎么走线。"
     },
     "body": {
-      "en": "Reuse the stock servo spline instead of reinventing it; oversize printed holes to meet reality; and accept that one electrode returns one number — position costs channels.",
-      "zh": "舵盘花键沿用原厂而非自造；打印孔位放大以迁就实际收缩；一个电极只给一个读数——要分位置就得加通道。"
+      "en": "Servos: keep the plastic horn that comes in the box as the splined interface and bolt my own linkages onto it with M2 screws, rather than trying to print the 21-tooth spline myself. Fasteners: M2.8 does not exist as a standard size (M2.5 and M3 do), and printed holes come out 0.1–0.3 mm smaller than drawn, so they get modelled oversize. Touch sensing: one conductor gives one reading, so telling left from right needs two separate electrodes; the wire leading to an electrode is itself part of the sensing surface, so all solder joints sit inside the rigid body and bare wire acts as the electrode along the flexible sections.",
+      "zh": "舵机：盒子里自带的塑料舵盘留着当花键接口，自己的连杆用 M2 螺丝拧上去，不去自己造那个 21 齿花键。紧固件：M2.8 这个规格根本不存在（标准是 M2.5 和 M3），打印出来的孔比图纸小 0.1–0.3mm，建模时要预先放大。触摸感应：一根导体只给一个读数，想分辨左右就必须做两路独立电极；通向电极的导线本身也是感应面，所以焊点全部收进硬壳内部，柔性段直接拿裸线当电极。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -197,12 +197,12 @@
   {
     "date": "2026-06-15",
     "lead": {
-      "en": "Fuqiu central-rod drive.",
-      "zh": "伏丘中心杆驱动定案。"
+      "en": "Changed the shell's drive from two side rods to one central rod, and re-optimized all five rings.",
+      "zh": "外壳的驱动从两侧双杆改成中间一根杆，并重算了五个环的尺寸。"
     },
     "body": {
-      "en": "Mobility analysis showed one rod cannot pin the arch down; an apex guide can. Ring geometry frozen on that basis, with 3–26% more travel per ring.",
-      "zh": "自由度分析表明单杆锁不住拱，加顶点导轨才行。环几何据此冻结，各环行程增益 3–26%。"
+      "en": "A degrees-of-freedom check showed that pushing with a single central rod still leaves the arch free to sway sideways — two ways to move, so the shape at any given moment is not unique. A vertical guide at the apex takes the sway away and pins the motion down to one. The check also exposed a bug in the code that locates the apex: it picked the highest point, which on one of the rings is an off-centre shoulder, so it now picks the point closest to the centreline instead. After re-optimizing, each ring travels 3–26% further between open and closed, and the ring geometry is now frozen.",
+      "zh": "算自由度时发现：只靠中间一根杆推，拱还能左右摇摆——有两种运动方式，所以某一时刻的形状并不唯一。在顶点加一条垂直导轨把摇摆去掉，运动才唯一确定。这一算也暴露出找顶点的代码有 bug：它取的是最高点，而其中一个环最高的地方是偏在一侧的肩部，改成取最靠近中轴的那个点。重新优化后，每个环从全开到收拢的行程增加了 3–26%，环的几何就此冻结。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -212,12 +212,12 @@
   {
     "date": "2026-06-12",
     "lead": {
-      "en": "Strategy reset around method.",
-      "zh": "战略重定在方法上。"
+      "en": "Took stock of where the project stands and pointed it at a paper.",
+      "zh": "评估了项目现状，把方向定在写一篇论文上。"
     },
     "body": {
-      "en": "Method — sensing, validated scales, coded behavior — is what separates this from aesthetic “robot death” work. The behavior engine is both the weakest link and the biggest lever.",
-      "zh": "方法（生理传感、验证量表、行为编码）是与「机器人之死」类美学作品的分界线。行为引擎最弱，也最有杠杆。"
+      "en": "Art pieces about robots dying already exist; what makes this one hold up is the method behind it — physiological sensing, psychological scales that others have already validated, and behavior coded from video by a fixed scheme. The least developed part is the behavior engine, the logic deciding how the machine moves and reacts, which is also the part with the most to gain. Target: a 4–6 page short paper at HRI or CHI; having it in submission or as a preprint is enough for applications. Ethics approval has to start now, since it gates everything with participants in it.",
+      "zh": "关于机器人之死的艺术作品已经有不少，这个项目能站住，靠的是背后的方法：生理传感、别人已经验证过的心理量表、以及按固定方案从录像里编码行为。目前最欠开发的是行为引擎——决定机器怎么动、怎么反应的那套逻辑——它也是提升空间最大的部分。目标定为 HRI 或 CHI 的 4–6 页短文，处于投稿中或挂出预印本就够申请用。伦理审批必须立刻启动，因为凡是有真人参与的环节都卡在它前面。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -227,12 +227,12 @@
   {
     "date": "2026-06-08",
     "lead": {
-      "en": "Stepper drive chain sourced.",
-      "zh": "步进驱动链采购。"
+      "en": "Locked the drive parts for the three stepper motors.",
+      "zh": "定下三台步进电机的驱动方案。"
     },
     "body": {
-      "en": "Three NEMA17s on TMC2209 drivers — the cheaper drivers simply lack the current headroom, so there was no trade to make.",
-      "zh": "三台 NEMA17 配 TMC2209——更便宜的驱动器电流不够，没有折中余地。"
+      "en": "NEMA17 motors (0.51 N·m, 1.7 A) running on TMC2209 drivers — three plus one spare — because the two common cheap drivers cannot supply that much current. Along with them: GT2 aluminium pulleys with a custom D-shaped bore, one 100 µF capacitor per driver, and a 12 V 5 A supply. One habit adopted here: check what is already in the Elegoo kit before ordering anything.",
+      "zh": "电机是 NEMA17（0.51N·m、1.7A），驱动器用 TMC2209，三片加一片备用——常见的两款便宜驱动器供不上这么大电流。配套：GT2 铝同步轮（D 形孔定制）、每片驱动器一颗 100µF 电容、12V 5A 电源。这次立了条规矩：下单前先翻一遍手上 Elegoo 套件的库存。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -242,12 +242,12 @@
   {
     "date": "2026-06-04",
     "lead": {
-      "en": "Clearance rules for printed moving parts.",
-      "zh": "打印活动件间隙规则。"
+      "en": "A printed joint seized up, so I worked out how much clearance moving parts really need.",
+      "zh": "打印出来的关节卡死，借此摸清了活动件该留多少间隙。"
     },
     "body": {
-      "en": "A joint seized at 0.4 mm and taught the rule: sintered parts need more room than the drawing suggests, and axial clamping kills a joint faster than a tight bore.",
-      "zh": "0.4mm 卡死一个关节，换来一条规则：烧结件要的余量比图纸直觉更大，而轴向夹紧比孔紧更致命。"
+      "en": "The joint had been printed already assembled with 0.4 mm of clearance and would not turn: parts made by sintering powder come out with a rough skin and trap loose powder in the gap, so they need 0.5–0.6 mm at minimum. Switching to a metal axle inside a printed sleeve dropped the requirement to 0.2–0.4 mm, since metal against plastic needs far less room. The more useful lesson: being squeezed along the axis jams a joint faster than a hole that is slightly too tight, so the rotating hub is made 0.2–0.5 mm shorter than the screw it turns on. Where a bit of friction is actually wanted, wave washers do it better than flat ones.",
+      "zh": "那个关节是连着打印出来的、留了 0.4mm 间隙，结果转不动：粉末烧结成型的零件表面有一层粗糙的皮，缝里还困着没清干净的粉，至少要留 0.5–0.6mm。改成金属轴配打印套筒之后，需求降到 0.2–0.4mm——金属对塑料需要的余量小得多。更有用的一条教训是：轴向被夹住比孔略紧更容易卡死，所以转动件的轮毂要做得比它转的那颗螺丝短 0.2–0.5mm。确实需要一点阻尼手感的地方，波形垫圈比平垫好用。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -257,12 +257,12 @@
   {
     "date": "2026-06-03",
     "lead": {
-      "en": "Pivot joint selection.",
-      "zh": "转动关节选型。"
+      "en": "Chose the pivot hardware for the scissor joints.",
+      "zh": "定了剪刀式连杆转轴用什么零件。"
     },
     "body": {
-      "en": "A shoulder screw does two jobs at once — journal and gap-setter — which removes a tolerance stack instead of managing it.",
-      "zh": "塞打螺丝一件两用——既是轴颈又定间隙，直接消掉一条公差链，而不是去管理它。"
+      "en": "The joint is a ⌀10×4 mm disc turning on a shoulder screw — a screw with a ⌀4 smooth section before the M3 thread starts. That smooth section does two jobs at once: it is the surface the disc turns on, and its length sets the gap between the two plates. It anchors into the bottom disc with a brass insert melted into the plastic, or a hex nut trapped in a pocket.",
+      "zh": "关节是 ⌀10×4mm 的圆盘，转在塞打螺丝上——这种螺丝在 M3 螺纹之前有一段 ⌀4 的光杆。这段光杆一件干两件事：既是圆盘转动的轴面，它的长度又决定了两片之间的间隙。底盘那头用热熔进塑料的铜螺母，或者埋一颗六角螺母固定。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -272,12 +272,12 @@
   {
     "date": "2026-06-01",
     "lead": {
-      "en": "Appendages cut from three to one plus two.",
-      "zh": "触手从三条改为一主两须。"
+      "en": "Cut the three tentacles down to one grasping arm plus two soft feelers.",
+      "zh": "三条触手改成一条能抓的主臂加两条软触须。"
     },
     "body": {
-      "en": "One expressive arm and two reflexive feelers beat three weak arms. Restated in the same pass: this is not biomimicry — the machine should look like a machine, so that behavior stays the variable.",
-      "zh": "一条表达性主臂 + 两条反射性触须，胜过三条都不强的臂。同时澄清：这不是仿生——机器就该看起来像机器，行为才是自变量。"
+      "en": "Making all three fully motorised would have left each of them weak, so they were given different jobs instead: one tendon-driven arm that expresses and wraps, and two flexible feelers that sense and whip about on their own (a fibreglass or nitinol core inside silicone tube, one micro servo at the base — the springing back comes from the material itself, not from a motor). The same session settled a point of principle: this is not biomimicry. The object should look like a machine, and only the way it moves should read as living, so that behavior stays the one thing being tested. Touch is two capacitive channels per feeler, enough to tell which side was touched.",
+      "zh": "三条都做成全电机驱动的话，每条都会很弱，于是改成分工：一条肌腱驱动的主臂负责表达和缠绕，两条柔性触须负责感知和自己甩动（玻纤或镍钛芯外套硅胶管，根部一个微型舵机——回弹来自材料本身，不是电机）。同一轮还澄清了一条原则：这个项目不是仿生。外形就该看起来是机器，只有它的运动方式像活的，这样「行为」才是唯一被检验的变量。触摸感应做成每根触须两路电容通道，够分辨碰的是哪一侧。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -287,12 +287,12 @@
   {
     "date": "2026-05-08",
     "lead": {
-      "en": "Finger joints and tendons finalized.",
-      "zh": "手指连接件与肌腱定案。"
+      "en": "Chose the pins and tendons for the finger.",
+      "zh": "定下手指的销钉和肌腱用什么。"
     },
     "body": {
-      "en": "Slide-in pins keyed across the pull direction, so the hand comes apart for repair instead of being sealed shut by press fits.",
-      "zh": "哑铃销侧滑装入、键槽垂直于拉力方向——手指能拆开维修，而不是被压配死死封住。"
+      "en": "The pins are dumbbell-shaped and slide in from the side (⌀3×15 mm, waisted to 2.4–2.5 mm in the middle), with the slot they sit in turned perpendicular to the direction the tendon pulls — so nothing has to be pressed in and nothing can be pulled out, and the finger can be taken apart and repaired. The tendons are 0.4–0.5 mm braided fishing line rated 30–40 lb, running through 1.0–1.2 mm channels inside the printed segments and knotted into small cavities at the ends. The gaps between segments are graduated along the finger rather than kept equal.",
+      "zh": "销钉做成哑铃形、从侧面滑进去（⌀3×15mm，中段收细到 2.4–2.5mm），装它的槽口方向与肌腱拉力垂直——所以既不用压配，也不会被拉脱，手指随时能拆开维修。肌腱用 0.4–0.5mm 的编织鱼线（30–40 磅），穿过打印件内部 1.0–1.2mm 的通道，末端打结卡进预留的小腔里。指节之间的间隙沿手指做渐变分布，不是等距。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -302,12 +302,12 @@
   {
     "date": "2026-04-27",
     "lead": {
-      "en": "Deployable structure survey.",
-      "zh": "可变形结构方向调研。"
+      "en": "Compared five ways of building a structure that opens and closes, and picked one.",
+      "zh": "比较了五种能张开收拢的结构，选定其中一种。"
     },
     "body": {
-      "en": "Five candidates compared; angulated scissors won for one reason — it is the only one that stays parametric all the way into simulation.",
-      "zh": "五个候选比下来，角化剪式胜出只因一点：它是唯一能一路参数化到仿真的方案。"
+      "en": "The candidates were: scissor linkages whose bars change length, angulated scissor units (the mechanism inside a Hoberman sphere — the bars are bent at an angle, which makes the whole ring grow and shrink outward), You–Pellegrino folding bars, Bennett spatial linkage rings, and walls of panels driven in phased groups. Angulated scissors won on a practical ground: it is the only one that stays parametric all the way from Grasshopper modelling into physics simulation, so changing a dimension does not mean rebuilding everything.",
+      "zh": "候选有五种：杆长可变的剪式连杆、角化剪式单元（Hoberman 球里的那套机构——杆是带折角的，使整个环能沿半径胀缩）、You–Pellegrino 折叠杆、Bennett 空间连杆环、以及分组按相位驱动的板墙。选角化剪式的理由很实际：只有它能一路参数化——从 Grasshopper 建模直接进物理模拟，改一个尺寸不必推倒重来。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -317,12 +317,12 @@
   {
     "date": "2026-04-26",
     "lead": {
-      "en": "Underactuated finger simulation running.",
-      "zh": "欠驱动手指刚体模拟跑通。"
+      "en": "Got the underactuated finger simulation working — one tendon, several joints.",
+      "zh": "跑通了欠驱动手指的模拟——一根肌腱带动多个关节。"
     },
     "body": {
-      "en": "Four tapered segments, three tendons. The friction that makes the joints close one after another is not a defect to design out — it is what reads as alive.",
-      "zh": "四段渐变指节 + 三根肌腱。让关节先后闭合的摩擦不是要消除的缺陷——它读起来正是生命感。"
+      "en": "The Jansen leg simulation was finished first, on my own. For the finger: each segment is a rigid body, hinges are defined by two points the two bodies share, and the tendons are chains of springs routed through guide points; the wrap test passes. The constraint strengths were fixed in a hierarchy — anchors 10000, rigid bodies 1000, collisions 100, springs 1–3 — because they only behave once the orders of magnitude are clearly separated. Best configuration: four segments tapering 25/20/15/10 mm with three tendons. Friction makes the joints close one after another rather than all at once, and that lag should not be designed away — it is exactly what makes the motion read as alive.",
+      "zh": "先自己独立做完了 Jansen 腿。手指这边：每一节做成刚体，铰链用两个刚体共有的两个点来定义，肌腱是穿过导向点的一串弹簧，缠绕测试通过。约束强度定了个层级——锚点 10000、刚体 1000、碰撞 100、弹簧 1–3——数量级明显拉开它们才各司其职。最优方案是四节渐变指节（25/20/15/10mm）配三根肌腱。摩擦让关节一节接一节地依次合拢、而不是同时闭合，这个延迟不该被消掉——它恰恰是运动看起来像活的原因。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -332,12 +332,12 @@
   {
     "date": "2026-04-04",
     "lead": {
-      "en": "Physics simulation groundwork.",
-      "zh": "物理模拟入门。"
+      "en": "Started learning physics simulation in Grasshopper.",
+      "zh": "开始学 Grasshopper 里的物理模拟。"
     },
     "body": {
-      "en": "A full Kangaroo definition taken apart component by component. Every mechanism study after this one stands on it.",
-      "zh": "把一套完整的 Kangaroo 定义逐个电池拆开读懂。之后所有机构研究都站在这上面。"
+      "en": "Took an existing Kangaroo definition apart piece by piece — springs, anchors, the tool that lets you drag things while it runs, the solver — got the dragging working, and understood how constraints and solver actually fit together. Everything mechanical I simulated afterwards is built on this.",
+      "zh": "把一套现成的 Kangaroo 定义逐个组件拆开看懂——弹簧、锚点、运行中拖拽的工具、求解器——把拖拽调通，弄明白约束和求解器到底怎么配合。后面所有机构模拟都建立在这上面。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -347,12 +347,12 @@
   {
     "date": "2026-04-03",
     "lead": {
-      "en": "Form framework and first study protocol.",
-      "zh": "物理形态框架 + 实验方案初版。"
+      "en": "Fixed the machine's four parts and wrote the first version of the study.",
+      "zh": "定下机器的四个部件，并写出第一版实验方案。"
     },
     "body": {
-      "en": "Four structural components and a ranked function list; sessions of roughly 37 minutes across four accelerated life cycles. The measures were chosen before the build, not after it.",
-      "zh": "四大结构组件与功能优先级；单场约 37 分钟、四个加速生命周期。测量工具在动手造之前就选定，不是事后补。"
+      "en": "Structurally it is four things: a bell-jar body, appendages, an eye stalk, and a base — with the functions ranked into 13 priorities and interaction split into living-alongside and direct-contact modes. The bell jar has to open outward in every direction at once, so push rods, a camera-style iris, and shape-memory alloy were all surveyed; Kresling origami was ruled out because it extends lengthwise rather than outward. The study, first draft: 5–8 participants, four accelerated life cycles each, sessions of about 37 minutes, using four established questionnaires alongside physiological signals, with behavior coded from video on an existing framework and predictions written out in advance for three kinds of participant.",
+      "zh": "结构上是四件东西：钟罩主体、触手、眼柄、基座——功能排成 13 项优先级，交互分成共居和直接接触两种模式。钟罩要能同时向四周张开，所以调研了推杆、相机光圈式虹膜、形状记忆合金三条路；Kresling 折纸被排除，因为它是纵向伸长而不是向外扩张。实验方案初稿：5–8 名被试，每人经历四个加速的生命周期，单场约 37 分钟，用四份成熟问卷配合生理信号，行为按现成框架从录像里编码，并事先为三类典型被试写好预测。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -362,12 +362,12 @@
   {
     "date": "2026-03-20",
     "lead": {
-      "en": "Research question locked.",
-      "zh": "研究问题定型。"
+      "en": "Locked down the research question.",
+      "zh": "把研究问题定下来。"
     },
     "body": {
-      "en": "When does a person attach to a non-living thing, and what surfaces at loss. An early drift toward maximizing grief was corrected — death is the instrument, not the point.",
-      "zh": "人在什么条件下对非生命体产生依恋，失去时又如何表现。早期「最大化悲伤」的偏移已纠正——死亡是工具，不是目的。"
+      "en": "The question: under what conditions does a person come to feel about a non-living object the way they feel about a pet, and how does that show when they lose it. An early drift toward \"how do we make people sadder\" was corrected — death and rebirth are instruments for studying attachment, not the point of the piece. Several mechanics were settled: a new personality overwrites the old one instead of accumulating on top of it; the ending is a loss of control rather than a clean goodbye; the timing of death is unpredictable but preceded by visible signs of aging; and one rule the participant is never told — the more they interact with it, the sooner it dies.",
+      "zh": "问题是：人在什么条件下会对一个非生命的东西产生像对宠物那样的感情，失去它时又会如何表现。早期一度跑偏成「怎么让人更难过」，已经纠正——死亡和轮回是研究依恋的手段，不是作品的目的。定下几条机制：新人格覆写旧的，而不是叠加在上面；结局是失控，不是好好告别；死亡时间不可预测，但事先会有明显的衰老征兆；还有一条不告诉被试的规则——他们越是和它互动，它死得越快。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -377,12 +377,12 @@
   {
     "date": "2026-03-07",
     "lead": {
-      "en": "Project kickoff.",
-      "zh": "项目起点。"
+      "en": "Started the project with three directions on the table.",
+      "zh": "项目立项，一次提了三个方向。"
     },
     "body": {
-      "en": "Three concepts came out of watching people mourn an AI companion that a model update had taken away. This is the one that stuck.",
-      "zh": "看着人们哀悼一次模型更新带走的 AI 伴侣，产出三个候选概念。留下来的是这一个。"
+      "en": "The starting point was watching people on the Chinese internet grieve after the GPT-4o update, mourning AI companions that had been changed out from under them. Three candidates came out of it: the Reincarnation Machine (attachment and a shared history), Presence (a device for remote company while working alone), and Unconscious Nudge (furniture that adjusts your state without you noticing). A template for pitching each one was set at the same time — narrative, system logic, physical expression. The Reincarnation Machine starts here.",
+      "zh": "起点是 GPT-4o 更新之后，中文互联网上很多人在哀悼被改掉的 AI 伴侣。由此提了三个候选方向：轮回机器（情感依恋与共同经历）、在场（一个人做事时远程陪伴的装置）、无意识助推（会在你察觉不到的情况下调节你状态的家具）。同时定下讲每个方案的模板：叙事、系统逻辑、物理表达。轮回机器就是从这里开始的。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },

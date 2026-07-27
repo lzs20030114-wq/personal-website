@@ -14,9 +14,10 @@ export default function Home() {
     date: w.date,
     published: w.status === 'published',
   }));
-  // S2 幕的 Log 预览 = 池里最新三条（英文面）——不再硬编码，与 /archive 同源
+  // S2 幕的 Log 预览 = 池里最新三条（英文面）——不再硬编码，与 /archive 同源。
+  // 只取 lead：改写成说明性文案后每条 lead 已是完整一句「做了什么」，正文太长塞不进预览行。
   const logs = getLogEntries()
     .slice(0, 3)
-    .map((e) => ({ date: e.date, text: `${e.lead.en} ${e.body.en}` }));
+    .map((e) => ({ date: e.date, text: e.lead.en }));
   return <HomeScreens works={works} logs={logs} />;
 }
