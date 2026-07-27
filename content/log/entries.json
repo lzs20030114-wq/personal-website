@@ -1,5 +1,20 @@
 [
   {
+    "date": "2026-07-24",
+    "lead": {
+      "en": "A fifth direction — spaces shared with animals — and a plan for how the 3D work and the simulation connect.",
+      "zh": "第五个方向成形——人与动物共享的空间——并定下三维与仿真怎么对接。"
+    },
+    "body": {
+      "en": "Two things. The direction: shared human-and-pet space, with a stance of its own — the room reads what both species actually do and redistributes volume accordingly, rather than staging a zero-sum fight over territory; the tone aimed for is renewal, not elegy. And the technical setup, shaped like a dumbbell: 3D at both ends, used only for the hero images and held to a hard four-week rendering budget so it cannot eat the engine and the writing; a NumPy computation layer in the middle working on a flat grid, or a stack of them if height turns out to matter; and the two ends joined by nothing more exotic than image files going in and spreadsheet or JSON files coming out. Toolchain fixed: Python with NumPy and Matplotlib for the engine, a notebook environment to work in, ffmpeg to turn frames into video, and a browser library for the interactive demo. (Several sessions in this stretch could not be retrieved; this entry is reconstructed from the project's own notes, and its date is approximate.)",
+      "zh": "两件事。方向上：人宠共享空间成形，并确立了自己的立场——房间读取两个物种各自真实的行为痕迹，据此重新分配体量，而不是安排一场零和的地盘争夺；想要的基调是新生，不是挽歌。技术上：定下「哑铃」结构——两头是三维，只用来出几张主图，并卡死四周的渲染预算，免得它吃掉引擎和文书的时间；中间是 NumPy 的计算层，跑在一张平面网格上，如果高度确实重要就叠成几层；两头之间的连接不用任何花哨手段，进去是图片文件，出来是表格或 JSON。工具链定死：引擎用 Python 加 NumPy 和 Matplotlib，工作环境用笔记本式的交互界面，视频用 ffmpeg 把帧合成，网页 demo 用浏览器端的绘图库。（这一时段有几次会话记录读不回来，本条依据项目自己的记忆文件整理，日期为近似值。）"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ]
+  },
+  {
     "date": "2026-07-18",
     "lead": {
       "en": "Ran a finite-element check on the rail and found the hand math was wrong.",
@@ -45,6 +60,21 @@
     ]
   },
   {
+    "date": "2026-07-17",
+    "lead": {
+      "en": "Set up the files that carry project memory into the coding tool — and rewrote them after the first version had rules but no content.",
+      "zh": "搭好把项目记忆带进编程工具的那套文件——首版只有规矩没有内容，推倒重写。"
+    },
+    "body": {
+      "en": "Three files at the project root: one holding the working rules and constraints, one the background, one the full substantive record. The first attempt was correctly called out as rules without substance — it told an assistant how to behave but not what the project actually knows. So the record file was rebuilt from the whole conversation history: the vision, the three mechanisms, the five utility drafts, the eleven-direction audit table, the clock classification of about thirty-five spaces, the restroom's four surgeries, the empirical sources with their numbers, the v0/v1/v2 code roadmap, and the ten rules. The open decisions were written in as the explicit place to continue from — whether any of the five cut directions may be revived, which clock scheme to adopt, cutting six candidates down to three, and finally converging on one.",
+      "zh": "项目根目录下三份文件：一份放工作规则与约束，一份放背景总览，一份放完整的实质工作记录。首版被指出得没错——只有规矩没有内容，它告诉助手该怎么做事，却没告诉它这个项目到底知道些什么。于是回溯全部历史会话，把记录那份重建：愿景、三大机制、五种欲望的效用草案、11 个方向的审计表、约 35 个空间的时钟分类、公厕的四刀手术、带数字的实证校准来源、v0/v1/v2 的代码路线图，以及十条规则。所有待决事项作为明确的续接点写了进去——被砍的五个方向有没有复活权、采用哪套时钟方案、六选三、以及最终收敛到单一场景。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
     "date": "2026-07-13",
     "lead": {
       "en": "Put up the site frame and got the linkage running on the homepage.",
@@ -55,6 +85,36 @@
       "zh": "用 Next.js 建站，四个页面：首页、作品、实验室、日志。所有文字和图片都从同一个内容目录读取，格式不对构建时直接报错。主页顶上那个四杆连杆是求解器在实时运行，不是视频也不是动图。"
     },
     "tags": [{ "label": { "en": "Site", "zh": "网站" }, "variant": "neutral" }]
+  },
+  {
+    "date": "2026-07-13",
+    "lead": {
+      "en": "Compressed everything so far into one handoff document, with ten rules written out of my own repeated mistakes.",
+      "zh": "把目前的全部积累压成一份交接文档，并写下十条源自自己反复犯错的规矩。"
+    },
+    "body": {
+      "en": "One Chinese document that any new assistant — or I, three months from now — can pick up cold: the vision, the three mechanisms (cascades that come from inside, the two clocks, the lag effect), draft utility functions for the five desires, the verb library, the results of the eleven-direction audit, the rebuilt restroom, and every decision still open. Ten collaboration rules were codified at the end, each traceable to a mistake already made: don't default to the shared-flat living room, don't let the building solve things by subtraction, don't reason by headcount, don't treat collapse as the conclusion, and the candidate list may shrink but never grow.",
+      "zh": "压成一份中文文档，任何新助手——或者三个月后的我自己——冷启动就能接着干：核心愿景、三大机制（级联从内部产生、两个时钟、滞后效应）、五种欲望的效用函数草案、动词库、11 个方向的审计结果、重建后的公厕方案，以及所有还没拍板的事。文末固化了十条协作规则，每一条都对应一个已经犯过的错：不要一想就回到合租客厅、不要让建筑用减法解决问题、不要按人头数推理、不要把塌缩当成结论，以及候选池只减不增。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Record", "zh": "记录" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-07-12",
+    "lead": {
+      "en": "Added the dimension the audit was missing — how fast the building acts — and rebuilt a rejected idea into a real contender.",
+      "zh": "补上审计表漏掉的一维——建筑响应的快慢——并把一个被否掉的方案重建成正经候选。"
+    },
+    "body": {
+      "en": "The audit table had no column for time. The source material splits cleanly into two clocks: a fast one measured in minutes — how bodies arrange themselves once they are in a room — and a slow one measured in days or weeks — whether you decide to show up at all. The engine design that follows is nested: the building holds three roles running at three rhythms, one that holds the line weekly, one that mediates daily, one that reacts by the minute. About thirty-five spaces were classified this way, which reshuffled the shortlist — a dormitory floor is the only candidate with both clocks natively, and it happens to be downstairs where I can observe it; a pickup basketball court runs on a cyclic clock, which is different maths; a waiting room has only the fast clock, with the room's own memory as the only thing carried from one session to the next. The reading also produced hard numbers to calibrate against, including a classic corridor-versus-suite dormitory study and a large randomised work-from-home experiment. The public restroom idea first got an honest no — it is a negative-feedback system, the kind that settles down instead of running away. It then came back after four changes: different fuel (dirt spreading, and a secret clean bathroom ruined by becoming known — both genuinely self-reinforcing), a bigger scale (the building's whole restroom network, which restores the slow clock), a wider verb set (partitions that breathe, glass that changes opacity, a secret bathroom that migrates once it is famous), and a presentation rule (never show fixtures — only building-scale flows and each room's reputation). Rebuilt, it is the only natural home for one of the five desires. The dormitory is still the safer main scenario.",
+      "zh": "审计表上一直缺一列：建筑自己的时间尺度。理论材料很干净地裂成两个时钟——快时钟以分钟计，是人进了房间之后身体怎么摆位；慢时钟以天或周计，是你到底还去不去。由此得出的引擎设计是嵌套的：建筑有三种角色按三种节律运行，一种按周守成、一种按天调停、一种按分钟催化。用这套标准给约 35 个空间做了分类，候选排名随之重排——宿舍楼层是唯一天生同时有两个时钟的场景，而且就在楼下，我随时能去看；野球场是循环时钟的机器，那是另一套数学；候诊室只有快时钟，房间自己的记忆是唯一能跨场次留下来的东西。文献检索还带回了可用于校准的实测数字，包括一项经典的走廊式 vs 套间式宿舍研究，和一项大规模的居家办公随机对照实验。公厕这个方向先得到了一个诚实的否定——它是负反馈系统，这类系统会自己稳下来，不会失控放大。随后经过四刀手术又活了过来：换燃料（脏污的扩散，以及一间干净的秘密厕所因为出名而被毁——这两件都是真正的正反馈）、放大尺度（整栋楼的厕所网络，慢时钟因此回来了）、扩展动词（隔板会呼吸、玻璃改变透明度、秘密厕所一旦出名就迁移）、以及重写呈现方式（不拍洁具，只呈现楼层级的人流和每间厕所的名声变化）。重建之后，它是五种欲望里某一种唯一的自然栖所。常设投票不变：宿舍仍是更稳的主场景。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
   },
   {
     "date": "2026-07-10",
@@ -126,6 +186,21 @@
     ]
   },
   {
+    "date": "2026-07-09",
+    "lead": {
+      "en": "Audited every candidate scenario against seven tests, and corrected the vision — collapse is the villain, not the subject.",
+      "zh": "用七项指标把所有候选场景审了一遍，并纠正了愿景——塌缩是反派，不是主题。"
+    },
+    "body": {
+      "en": "The heaviest session so far, in two halves. On method: the Japanese street-observation traditions and the environment-behaviour literature (Whyte, Gehl, Hall, Goffman) were distilled into a set of observation rule cards and a seven-indicator filter for scenarios. The seventh became a hard requirement — the cascade has to be endogenous: an outside shock may light the fuse, but the amplification must travel from person to person, which in fieldwork reduces to one question you can actually ask someone: are you avoiding this place because it doesn't work, or because nobody else goes? On direction: collapse had quietly become the thesis, and it was demoted back to antagonist. What the project is about is bold, mobile, even fantastical spatial possibility — real people, dreaming space. So the building's verbs expanded beyond subtraction (cancel, close, partition) to merging, migrating, luring, splitting, dissolving, and five spatial desires were introduced, each of which will need a utility function the code can compute. Eleven candidate directions were generated and adversarially audited: six survived, five were cut for having no co-present bodies sensing one another, and virtual spaces were excluded outright. Two of my own recurring errors were named so they stop repeating: defaulting back to the shared-flat living room, and reasoning by headcount instead of by what the space wants.",
+      "zh": "至今最重的一轮，分两半。方法上：把日本的路上观察传统和环境行为学文献（Whyte、Gehl、Hall、Goffman）提炼成一套观察规则卡，以及一张七指标的场景筛选表。第七项被立为硬约束——级联必须是内生的：外部冲击可以点火，但非线性放大必须靠人传人，落到田野里就是一个真能开口问的问题：你不来这儿，是因为它不好用，还是因为没人来？方向上：塌缩不知不觉变成了主题，这次把它降回反派的位置。项目要讲的是大胆、可动、甚至带幻想性的空间可能性——真实的人，梦境的空间。于是建筑的动词从减法（取消、关闭、隔断）扩展到合并、迁徙、引诱、分裂、溶解，并引入五种空间欲望，每一种都需要一个代码算得出来的效用函数。生成 11 个候选方向并做了对抗式自审：6 个存活，5 个被砍（都缺少「身体共处一室、彼此能感觉到对方」这个前提），游戏服务器一类的虚拟空间直接排除。还点名了自己反复犯的两个错误，防止再犯：一想场景就默认回到合租客厅；以及按人头数推理，而不是按空间想要什么推理。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Study", "zh": "实验设计" }, "variant": "neutral" }
+    ]
+  },
+  {
     "date": "2026-07-08",
     "lead": {
       "en": "Read up on layout and settled the grid for the case-study pages.",
@@ -165,6 +240,21 @@
     ]
   },
   {
+    "date": "2026-07-06",
+    "lead": {
+      "en": "Anchored the simulation on one small avoidance decision, and planned the first three versions of the code.",
+      "zh": "把仿真锚定在一个很小的回避决定上，并排出代码前三版的路线。"
+    },
+    "body": {
+      "en": "The reframe: the project does not have to choose between a big social issue and a small everyday friction — its own logic requires the small thing as input, with the big pattern coming out the other end as a result rather than as an assumption. A three-sentence test now filters every candidate scenario: what is the individual rule, what collective pattern does it produce, and why does nobody want that outcome. The first concrete case: the common room of a shared flat, where people withdraw, occupancy collapses, and the landlord eventually converts it into another bedroom — a landlord reacting to what tenants actually do is already a spatial agent operating in the real world. The code path in three stages: v0, about forty lines of Python where five agents leave when the room feels too crowded, run for a hundred steps to watch occupancy collapse; v1, add the building's response, so low use triggers the floor area being reallocated; v2, sweep the parameters to demonstrate hysteresis — a lag effect where restoring the original conditions does not bring the room back to life. That lag is the payoff the whole simulation exists to show. (The shared-flat case was later demoted to one candidate among several.)",
+      "zh": "一次关键重构：项目不必在宏大的社会议题和琐碎的日常摩擦之间二选一——它自身的逻辑要求把那件小事当输入，宏观模式是从另一头跑出来的结果，而不是预设。从此每个候选场景都要过三句话的筛选：个体的规则是什么、汇聚出什么集体模式、为什么没人想要这个结果。第一个具体场景：合租房的公共客厅——人陆续退出，使用率塌缩，房东最终把它改成又一间卧室；房东按租客的实际行为作反应，本身就是现实中运行着的一个「空间智能体」。代码路线分三段：v0，约四十行 Python，五个智能体在觉得太挤时离开，跑一百步看使用率塌下去；v1，加入建筑的响应，使用率低就触发面积重新分配；v2，扫参数演示滞后效应——把条件调回原样，房间也活不回来。这个滞后就是整个仿真存在的意义所在。（合租场景后来降级为若干候选之一，不再是定案。）"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
     "date": "2026-07-05",
     "lead": {
       "en": "Set up a small photo studio at home for shooting parts.",
@@ -177,6 +267,21 @@
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
       { "label": { "en": "Record", "zh": "记录" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-06-22",
+    "lead": {
+      "en": "The theme stopped feeling like mine, so the project restarts from a problem I have actually stood in.",
+      "zh": "这个主题不再像是我自己的，于是决定从我真正待过的空间里重新出发。"
+    },
+    "body": {
+      "en": "My advisor suggested simplifying the whole thing into a single problem→solution line. A bigger doubt surfaced at the same time: 'social withdrawal in East Asia' felt like a stock topic I had picked up rather than something I own. Separating the two halves helps — the packaging really is at risk of cliché, but the mechanism underneath (a building reconfiguring itself from social signals, sitting in the cybernetic lineage) is still not being done by anyone. The root cause is how it was built: from theory downward, instead of growing upward out of a problem. The decision: start again from one concrete situation in a space I have actually been in. The tension between the advisor's clean problem→solution shape and a project that is speculative by nature is left on record, unresolved.",
+      "zh": "导师建议把整个项目简化成「发现问题—设计解决」的单线结构。同时冒出一个更根本的疑虑：「东亚社会退缩」这个主题像是从外面捡来的现成题目，不像是我自己的。把两件事分开看会清楚些——包装确实有俗套的风险，但底下的机制（建筑根据人与人之间的社交信号重构自己，接在控制论建筑这条谱系上）仍然没人在做。病根在于它是怎么建起来的：从理论往下推，而不是从一个问题往上长。决定：从我真正待过的某个具体空间、某个具体情境重新开始。导师那套干净的问题—解决结构，和一个天然带思辨性的项目之间的张力，先记录在案，暂不解决。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Strategy", "zh": "战略" }, "variant": "neutral" }
     ]
   },
   {
@@ -195,6 +300,21 @@
     ]
   },
   {
+    "date": "2026-06-20",
+    "lead": {
+      "en": "Wrote the whole project up in one document, and turned its traits into criteria for picking schools.",
+      "zh": "把整个项目写成一份文档，并把它的特征翻译成选校的判断标准。"
+    },
+    "body": {
+      "en": "Eight sections under the working title Cells of Withdrawal, closing with a list of what a graduate programme would have to offer for this project to fit into it — agent-based modelling, urban computing, and enough tolerance for speculative work. One risk written down plainly instead of buried: the concept is complete, but none of the implementation — the rule engine, the video, the web simulation — has started, and that lands directly on the application timeline.",
+      "zh": "以暂定名《孤室 / Cells of Withdrawal》整理成八节的参考文档，最后一节把项目特征翻译成挑研究生项目的标准——有没有基于智能体的建模、有没有城市计算、对思辨性作品的容忍度够不够。有一条风险写在明处而不是藏起来：概念已经完备，但实现部分（规则引擎、视频、网页仿真）一个都没开始，这直接压在申请时间线上。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Record", "zh": "记录" }, "variant": "neutral" }
+    ]
+  },
+  {
     "date": "2026-06-15",
     "lead": {
       "en": "Changed the shell's drive from two side rods to one central rod, and re-optimized all five rings.",
@@ -207,6 +327,21 @@
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
       { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-06-15",
+    "lead": {
+      "en": "Found the social mechanism the project is actually about: everyone's reasonable decision to withdraw adds up to a situation nobody wanted.",
+      "zh": "找到了项目真正要讲的社会机制：每个人合理的退出决定，累加成没人想要的局面。"
+    },
+    "body": {
+      "en": "Three rounds of reading, with one correction along the way — the earlier rounds kept folding the sociology back into architecture talk, so it was redone with the social science in front. Four models line up into a single skeleton: Schelling's segregation model, where mild individual preferences end in total separation; Granovetter's threshold cascades, where each person needs a different number of others to have gone first; Kuran's preference falsification, where people hide what they actually want so everyone misreads the room; and the low-fertility trap. Numbers to anchor it: marriage registrations in China falling from about 13 million a year to 6.1 million, a fertility rate near 1.0. The closing claim: a system that faithfully grants everyone's wish to withdraw ends up welding each person into their own isolated cell. The deliverables were fixed in the same pass — image boards, a video that speeds the tipping point up enough to be seen, and a web simulation so a reviewer can trigger the counterintuitive result themselves instead of taking my word for it. No physical installation.",
+      "zh": "三轮深度检索，中途纠正过一次——前面几轮总是把社会学的发现折回建筑的话术里，于是推倒重来，让社会学和心理学站在前面。四个模型拼成一副骨架：Schelling 隔离模型（每个人只有轻微的偏好，最后却完全分开住）、Granovetter 阈值级联（每个人需要看到多少人先动了才肯跟上，这个数各不相同）、Kuran 偏好伪装（人隐藏自己真实的想法，于是所有人都误判了气氛）、以及低生育率陷阱。用来锚定的数字：中国结婚登记从每年约 1300 万降到 610 万，总和生育率接近 1.0。收束成一句话：一个忠实满足每个人退出愿望的系统，最后会把每个人焊进自己的隔间。交付形态也在这一轮定死——图版、一段把临界翻转加速到看得见的视频，以及一个网页仿真，让评审自己动手触发那个反直觉的结果，而不是听我说。不做实体装置。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
     ]
   },
   {
@@ -240,6 +375,21 @@
     ]
   },
   {
+    "date": "2026-06-07",
+    "lead": {
+      "en": "Started the second project and fixed its architecture: two layers of agents, the people and the building itself.",
+      "zh": "第二个项目立项，定下它的架构：两层智能体，一层是人，一层是建筑本身。"
+    },
+    "body": {
+      "en": "The starting point was Sou Fujimoto's Final Wooden House and the idea of affordance — that a form suggests what you might do with it instead of dictating it. Four commitments were fixed: the space adapts to the people rather than the other way round; it keeps changing over time; the scale is several people inside a building, not hand gestures; and the whole thing is a software simulation whose rules are written by hand and readable by a person — no sensors, no camera vision, no hardware. That gives the architecture: agents on two layers, people deciding their own social behaviour, and building parts (walls, rooms, openings) sensing those people and responding. Two rounds of reading mapped where this sits — cybernetic architecture of the 1960s and 70s (Pask, Cedric Price's Fun Palace and Generator, Negroponte's SEEK), Archigram, and the computational ancestors it borrows from (Schelling's segregation model, Boids, Space Syntax) — plus current work on robotic walls. The gap is real: nobody in recent years drives a building's reconfiguration from the social signals passing between people, and the closest precedent is a decade old. The honest verdict at the end: the project had a skeleton but no heart — no question sharp enough to produce a surprising answer.",
+      "zh": "起点是藤本壮介的 Final Wooden House 和「可供性」这个概念——形态是在提示你可以怎么用它，而不是规定你怎么用。定下四条底线：空间去适应人，而不是反过来；系统随时间持续变化；尺度是一栋建筑里的若干人，不做手势识别；整个作品是纯软件仿真，规则手写、人能读懂——不用传感器、不用图像识别、不做硬件。由此得出架构：两层智能体，人这一层自主决定社交行为，建筑构件（墙、房间、开口）这一层感知这些人并作出反应。两轮文献检索理清了它的位置——六七十年代的控制论建筑（Pask、Cedric Price 的 Fun Palace 与 Generator、Negroponte 的 SEEK）、Archigram，以及它借用的计算方法前身（Schelling 隔离模型、Boids、空间句法），再加上当下的机器人墙体研究。空缺是真的：近几年没有人用人与人之间的社交信号去驱动建筑重构，最接近的先例已是十年前。当轮的诚实结论：项目有骨架、没有心脏——还缺一个足够锐利、能给出反直觉答案的问题。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ]
+  },
+  {
     "date": "2026-06-04",
     "lead": {
       "en": "A printed joint seized up, so I worked out how much clearance moving parts really need.",
@@ -267,6 +417,21 @@
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
       { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-06-03",
+    "lead": {
+      "en": "Decided where machine learning is allowed in this project, and where it is not.",
+      "zh": "裁定机器学习在这个项目里能用在哪、不能用在哪。"
+    },
+    "body": {
+      "en": "Reinforcement learning — training an agent by rewarding outcomes instead of telling it what to do — is a legitimate later upgrade for the people layer, replacing the crude 'take the best option nearby' rule those agents use now. It must never replace the hand-written rules on the building side: those rules are what a reviewer reads directly, and they are the argument. The first working version involves no learning at all — plain Python, a grid, and loops. The tool order was set: Python and NumPy first, then the plotting and data libraries, and only reach for reinforcement learning once the rule-based engine runs and the simple agents visibly look too stupid. The principle underneath: a method has to be pulled in by the problem, never grafted on because it looks good on an application.",
+      "zh": "强化学习——不直接告诉智能体该做什么，而是用结果奖励去训练它——可以留作人这一层的后期升级，替换掉它们现在用的「就近挑最好的」这条粗规则。但它永远不替换建筑那一侧的手写规则：那些规则是评审直接阅读的东西，它们本身就是论证。第一个能跑的版本完全不涉及学习——纯 Python、一张网格、几个循环。工具顺序定了下来：先 Python 和 NumPy，再是画图与数据处理的库，等规则引擎跑起来、简单智能体显得明显笨了，才轮到强化学习。背后的原则：方法要由问题拉出来，不能因为写在申请材料里好看就硬加。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Strategy", "zh": "战略" }, "variant": "neutral" }
     ]
   },
   {

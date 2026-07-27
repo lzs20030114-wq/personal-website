@@ -50,6 +50,17 @@ describe('log 内容池', () => {
     }
   });
 
+  it('每条至多 1 个 outline（项目桶）+ 1 个 neutral（主题）', () => {
+    // MAPPING §8.1 的标签预算：outline = 项目桶（Machine / Space / Lab），一条只能属于一个项目；
+    // 超预算会把 /archive 左栏的标签列撑宽（版式按 150px 定的）。
+    for (const e of getLogEntries()) {
+      const outline = e.tags.filter((t) => t.variant === 'outline');
+      const neutral = e.tags.filter((t) => t.variant === 'neutral');
+      expect(outline.length, `${e.date} outline 标签超预算`).toBeLessThanOrEqual(1);
+      expect(neutral.length, `${e.date} neutral 标签超预算`).toBeLessThanOrEqual(1);
+    }
+  });
+
   it('同一英文标签只对应一个中文译名', () => {
     const dict = new Map<string, string>();
     for (const e of getLogEntries()) {

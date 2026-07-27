@@ -79,7 +79,7 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
     }
   }, []);
 
-  // 展开的条目 id 集合；默认全收起——27 条一屏扫得完，要细节再点开。
+  // 展开的条目 id 集合；默认全收起——收起态一屏扫得完，要细节再点开。
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
 
   function toggle(id: string) {

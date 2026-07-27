@@ -6,7 +6,8 @@ import { z } from 'zod';
 /**
  * Work log 内容池（MAPPING §4）——沿用现有池的 zod 构建期 fail-fast 纪律；
  * 纯 log 条目形状与 WorkEntry 不同，故扩独立 schema（不绕过校验管线）。
- * 数据 = content/log/entries.json，条目文案照搬 Log-Modernist 设计稿。
+ * 数据 = content/log/entries.json：站建设条目源自 Log-Modernist 设计稿，
+ * 项目主线条目源自各项目日志原稿（轮回机器_/项目二_工作日志原稿.md）的结论式压缩。
  */
 /** 双语文本：两种语言都必填——缺一种就等于切换后半页空白，构建期即报错。 */
 const BilingualSchema = z
