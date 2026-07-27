@@ -1,5 +1,6 @@
 import { HomeScreens } from '../components/site/HomeScreens';
 import { getSelectedWork } from '../src/lib/site/content';
+import { getLogEntries } from '../src/lib/site/log';
 
 /**
  * 主页 = Home-Screens 整屏分幕（design-ref/Home-Screens.dc.html，MAPPING §6）。
@@ -13,5 +14,9 @@ export default function Home() {
     date: w.date,
     published: w.status === 'published',
   }));
-  return <HomeScreens works={works} />;
+  // S2 幕的 Log 预览 = 池里最新三条（英文面）——不再硬编码，与 /archive 同源
+  const logs = getLogEntries()
+    .slice(0, 3)
+    .map((e) => ({ date: e.date, text: `${e.lead.en} ${e.body.en}` }));
+  return <HomeScreens works={works} logs={logs} />;
 }

@@ -633,6 +633,145 @@ a:hover {
   }
 }
 
+/* ── Work log 页（/archive）：中英切换滑块 + 分组条目行（2026-07-27 版式修订） ──
+   目标是「不要堆在一起」：引句独占一行，正文另起并限宽；日期与标签退到左栏。 */
+.lang-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  padding: 3px;
+  border: var(--hair);
+  border-radius: 999px;
+  background: var(--n200);
+}
+.lang-switch__thumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  border-radius: 999px;
+  background: var(--accent);
+}
+.lang-switch__thumb[data-at='zh'] {
+  transform: translateX(100%);
+}
+.lang-switch__opt {
+  position: relative;
+  z-index: 1;
+  flex: 1 0 auto;
+  min-width: 54px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+  color: var(--n600);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.lang-switch__opt[aria-pressed='true'] {
+  color: var(--paper);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lang-switch__thumb {
+    transition: transform var(--dur-micro) var(--ease-site);
+  }
+  .lang-switch__opt {
+    transition: color var(--dur-micro) var(--ease-site);
+  }
+  .lang-switch__opt:hover[aria-pressed='false'] {
+    color: var(--ink);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lang-switch__thumb {
+    transition: none;
+  }
+}
+
+/* 月份分隔：小标签 + 占满余量的发丝线 */
+.log-month {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0;
+  padding: 44px 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--n600);
+}
+.log-month::after {
+  content: '';
+  flex: 1;
+  border-top: var(--hair);
+}
+
+.log-entry {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  padding: 20px 0;
+  border-top: var(--hair);
+}
+.log-entry:first-of-type {
+  border-top: 0;
+}
+.log-entry__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.log-entry__date {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.log-entry__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.log-entry__lead {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.45;
+  color: var(--ink);
+}
+.log-entry__body {
+  margin: 7px 0 0;
+  max-width: 66ch;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--n700);
+}
+/* 中文正文行距放宽一档、字距微开——同号字下中文比拉丁字更密 */
+.log-entry__body[data-lang='zh'] {
+  max-width: 40em;
+  line-height: 1.85;
+  letter-spacing: 0.01em;
+}
+@media (min-width: 768px) {
+  .log-entry {
+    grid-template-columns: 150px 1fr;
+    gap: 36px;
+    padding: 26px 0;
+  }
+  .log-entry__meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
+
 /* 右缘 rail 跳幕按钮 */
 .rail-btn {
   font: inherit;

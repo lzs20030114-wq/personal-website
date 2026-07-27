@@ -15,15 +15,25 @@ const LogTagSchema = z
   })
   .strict();
 
-const LogEntrySchema = z
+/** 双语文本：两种语言都必填——缺一种就等于切换后半页空白，构建期即报错。 */
+const BilingualSchema = z
   .object({
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // Log 页显示 MM-DD，首页预览用整日期
-    lead: z.string().min(1), // 加粗引句
-    body: z.string().min(1), // 引句之后的正文
-    tags: z.array(LogTagSchema),
+    en: z.string().min(1),
+    zh: z.string().min(1),
   })
   .strict();
 
+const LogEntrySchema = z
+  .object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // Log 页显示 MM-DD，首页预览用整日期
+    lead: BilingualSchema, // 加粗引句
+    body: BilingualSchema, // 引句之后的正文
+    tags: z.array(LogTagSchema), // label 不翻译：标签是分类词汇表，中英同形
+  })
+  .strict();
+
+/** Log 页语言切换的两个取值；也是 LogEntry.lead/body 的键。 */
+export type LogLang = 'en' | 'zh';
 export type LogTag = z.infer<typeof LogTagSchema>;
 export type LogEntry = z.infer<typeof LogEntrySchema>;
 

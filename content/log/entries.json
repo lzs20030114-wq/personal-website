@@ -1,8 +1,14 @@
 [
   {
     "date": "2026-07-18",
-    "lead": "Rail structure FEA.",
-    "body": "Hexahedral FEA in scikit-fem showed the hand calculations were ~4.5× optimistic; a back rib plus front lip cut ledge deflection 1.55→0.34 mm and raised ultimate load 19→54 N.",
+    "lead": {
+      "en": "Rail structure verified by FEA.",
+      "zh": "导轨结构 FEA 验证。"
+    },
+    "body": {
+      "en": "Hand calculations ran about 4.5× optimistic. A back rib and a front lip nearly tripled the load capacity; one out-of-plane span still needs closing out.",
+      "zh": "手算比实际乐观约 4.5 倍。加背肋与前唇后承载力接近三倍；面外最差跨位仍待收尾。"
+    },
     "tags": [
       { "label": "Machine", "variant": "outline" },
       { "label": "Simulation", "variant": "neutral" }
@@ -10,8 +16,14 @@
   },
   {
     "date": "2026-07-17",
-    "lead": "Five-ring choreography v0.2→v0.3.",
-    "body": "S1–S5 family extracted; stop margins calibrated per ring ([0, 2, 4, 8] mm ladder); whole-family peaks 0.24–0.42 mm.",
+    "lead": {
+      "en": "Five-ring choreography v0.2→v0.3.",
+      "zh": "五环编排 v0.2→v0.3。"
+    },
+    "body": {
+      "en": "S1–S5 family extracted; stop margins calibrated per ring ([0, 2, 4, 8] mm ladder); whole-family peaks 0.24–0.42 mm.",
+      "zh": "S1–S5 全族提取；止程余量逐环阶梯标定（[0, 2, 4, 8] mm）；全族峰值残差 0.24–0.42 mm。"
+    },
     "tags": [
       { "label": "Lab", "variant": "outline" },
       { "label": "Shell", "variant": "neutral" }
@@ -19,8 +31,14 @@
   },
   {
     "date": "2026-07-17",
-    "lead": "Arch stops promoted to the model.",
-    "body": "Two devices diverged on the same URL — a legal sliding mode, not a bug. Dual-end slot clamping + fixed-step integration; 168 tests green.",
+    "lead": {
+      "en": "Arch stops promoted to the model.",
+      "zh": "拱环止程转正。"
+    },
+    "body": {
+      "en": "Two devices diverged on the same URL — a legal sliding mode, not a bug. Dual-end slot clamping + fixed-step integration; 168 tests green.",
+      "zh": "同一 URL 两台设备形态分岔——是合法的滑移模态，不是算错。双向槽端钳制 + 定步积分；168 项测试绿。"
+    },
     "tags": [
       { "label": "Lab", "variant": "outline" },
       { "label": "Arch", "variant": "neutral" }
@@ -28,14 +46,26 @@
   },
   {
     "date": "2026-07-13",
-    "lead": "Site S1–S3.",
-    "body": "Next.js scaffold, content pool with build-time validation, four routes; LinkageFigure live on the homepage with SSR first frame.",
+    "lead": {
+      "en": "Site S1–S3.",
+      "zh": "网站 S1–S3。"
+    },
+    "body": {
+      "en": "Next.js scaffold, content pool with build-time validation, four routes; LinkageFigure live on the homepage with SSR first frame.",
+      "zh": "Next.js 脚手架、带构建期校验的内容池、四条路由；LinkageFigure 上主页，含 SSR 首帧。"
+    },
     "tags": [{ "label": "Site", "variant": "neutral" }]
   },
   {
     "date": "2026-07-10",
-    "lead": "3D solver M1+M2.",
-    "body": "Independent 3D kernel; three-tendon 120° tentacle; orbit camera. First version vetoed on feel — fascia anti-twist bracing brought lateral drift 38.5→1.2 px.",
+    "lead": {
+      "en": "3D solver M1+M2.",
+      "zh": "立体求解器 M1+M2。"
+    },
+    "body": {
+      "en": "Independent 3D kernel; three-tendon 120° tentacle; orbit camera. First version vetoed on feel — fascia anti-twist bracing brought lateral drift 38.5→1.2 px.",
+      "zh": "独立 3D 内核；三肌腱 120° 触手；轨道相机。首版手感被否——fascia 抗扭斜杆把横向漂移压到 38.5→1.2 px。"
+    },
     "tags": [
       { "label": "Lab", "variant": "outline" },
       { "label": "3D", "variant": "neutral" }
@@ -43,20 +73,38 @@
   },
   {
     "date": "2026-07-10",
-    "lead": "Arch ring solver instance.",
-    "body": "The physical S4 ring (angulated scissor arch + crank-slider) as a solver preset — kernel untouched, 7 new tests.",
+    "lead": {
+      "en": "Arch ring solver instance.",
+      "zh": "拱环求解器实例。"
+    },
+    "body": {
+      "en": "The physical S4 ring (angulated scissor arch + crank-slider) as a solver preset — kernel untouched, 7 new tests.",
+      "zh": "真机 S4 环（角化剪式拱 + 曲柄滑块）作为求解器实例——内核零修改，新增 7 项测试。"
+    },
     "tags": [{ "label": "Lab", "variant": "outline" }]
   },
   {
     "date": "2026-07-10",
-    "lead": "Four-bar closed at M4.",
-    "body": "Release damping, live coupler tracing, engineering captions; 36 tests. Sealed: bugfixes only from here.",
+    "lead": {
+      "en": "Four-bar closed at M4.",
+      "zh": "四杆连杆 M4 封盘。"
+    },
+    "body": {
+      "en": "Release damping, live coupler tracing, engineering captions; 36 tests. Sealed: bugfixes only from here.",
+      "zh": "release 阻尼、耦合曲线实时描绘、工程标注；36 项测试。封盘后只修 bug。"
+    },
     "tags": [{ "label": "Lab", "variant": "outline" }]
   },
   {
     "date": "2026-07-10",
-    "lead": "Main shaft drive finalized.",
-    "body": "All five rings on one shaft: NEMA17 + TMC2209 through a 3:1 GT2 belt, and the shaft dropped 8→6 mm with filleted D-bore hubs. Peak design torque 0.3–0.5 N·m, gravity and friction dominant.",
+    "lead": {
+      "en": "Main shaft drive finalized.",
+      "zh": "主轴驱动定案。"
+    },
+    "body": {
+      "en": "All five rings now turn on one shaft — stepper, 3:1 belt, 6 mm D-shaft. Gravity and friction set the torque, not inertia.",
+      "zh": "五环共轴：步进电机 + 3:1 皮带 + 6mm D 轴。扭矩由重力与摩擦决定，不是惯性。"
+    },
     "tags": [
       { "label": "Machine", "variant": "outline" },
       { "label": "Mechanical", "variant": "neutral" }
@@ -64,8 +112,14 @@
   },
   {
     "date": "2026-07-09",
-    "lead": "Procurement list consolidated.",
-    "body": "~¥216 of essentials plus condition-triggered items, ~¥300 with the conditionals. Existing kit stock explicitly excluded to avoid duplicate buys.",
+    "lead": {
+      "en": "Procurement list closed.",
+      "zh": "采购清单定稿。"
+    },
+    "body": {
+      "en": "About ¥300 all in, with existing kit stock excluded so nothing gets bought twice.",
+      "zh": "含条件项总计约 ¥300；已有库存明确排除，避免重复采购。"
+    },
     "tags": [
       { "label": "Machine", "variant": "outline" },
       { "label": "Sourcing", "variant": "neutral" }
@@ -73,20 +127,38 @@
   },
   {
     "date": "2026-07-08",
-    "lead": "Layout research.",
-    "body": "Line-length law, Tufte margin notes, Swiss grid — desktop-first case-study grid decided.",
+    "lead": {
+      "en": "Layout research.",
+      "zh": "版式研究。"
+    },
+    "body": {
+      "en": "Line-length law, Tufte margin notes, Swiss grid — desktop-first case-study grid decided.",
+      "zh": "行长定律、Tufte 边注、瑞士网格——案例页确定桌面优先网格。"
+    },
     "tags": [{ "label": "Site", "variant": "neutral" }]
   },
   {
     "date": "2026-07-07",
-    "lead": "LINKAGE_SPEC v1.1.",
-    "body": "Math derivations, API, tolerances, milestones — the single source of truth for the solver line.",
+    "lead": {
+      "en": "LINKAGE_SPEC v1.1.",
+      "zh": "LINKAGE_SPEC v1.1。"
+    },
+    "body": {
+      "en": "Math derivations, API, tolerances, milestones — the single source of truth for the solver line.",
+      "zh": "数学推导、API、容差、里程碑——求解器线的唯一权威来源。"
+    },
     "tags": [{ "label": "Docs", "variant": "neutral" }]
   },
   {
     "date": "2026-07-07",
-    "lead": "Study design repaired, sensing frozen.",
-    "body": "Death timing bounded to a ±30 s window with an honest debrief; the arithmetically infeasible HRV contrast dropped in favor of event-locked SCR. Six input channels, a nine-class event vocabulary and the grasp state machine frozen.",
+    "lead": {
+      "en": "Study design repaired, sensing frozen.",
+      "zh": "实验设计修复，感知系统冻结。"
+    },
+    "body": {
+      "en": "The physiological contrast that did not survive the arithmetic was cut rather than fudged, and the measurement battery trimmed to fit a small sample. Sensing scope frozen at six channels.",
+      "zh": "算不过来的那项生理对比直接砍掉，不做勉强；量表裁剪到匹配小样本。感知范围冻结在六个输入通道。"
+    },
     "tags": [
       { "label": "Machine", "variant": "outline" },
       { "label": "Study", "variant": "neutral" }
@@ -94,8 +166,14 @@
   },
   {
     "date": "2026-07-05",
-    "lead": "Home photo studio.",
-    "body": "Two softbox kits and a sheet of white cardstock bent into an infinity curve. On a tripod brightness is a free variable; white-on-white parts stay legible only under low rear rim light.",
+    "lead": {
+      "en": "Home photo studio built.",
+      "zh": "摄影棚搭建。"
+    },
+    "body": {
+      "en": "Two softboxes and a paper infinity curve. For static parts, the quality of the light matters far more than the quantity of it.",
+      "zh": "两盏柔光箱 + 纸质无缝背景。拍静物时，光的质量远比亮度重要。"
+    },
     "tags": [
       { "label": "Machine", "variant": "outline" },
       { "label": "Docs", "variant": "neutral" }
@@ -103,8 +181,14 @@
   },
   {
     "date": "2026-06-21",
-    "lead": "Servo horns, fasteners, capacitive touch.",
-    "body": "The SG90 21T spline kept as the interface with M2 screws for custom linkages; FDM holes print 0.1–0.3 mm undersize, so model oversized. MPR121: one conductor is one measurement, so left/right discrimination costs two channels per feeler.",
+    "lead": {
+      "en": "Servo, fastener and touch standards settled.",
+      "zh": "舵机 / 紧固件 / 触摸三线定标准。"
+    },
+    "body": {
+      "en": "Reuse the stock servo spline instead of reinventing it; oversize printed holes to meet reality; and accept that one electrode returns one number — position costs channels.",
+      "zh": "舵盘花键沿用原厂而非自造；打印孔位放大以迁就实际收缩；一个电极只给一个读数——要分位置就得加通道。"
+    },
     "tags": [
       { "label": "Machine", "variant": "outline" },
       { "label": "Electronics", "variant": "neutral" }
@@ -112,8 +196,14 @@
   },
   {
     "date": "2026-06-15",
-    "lead": "Fuqiu central-rod drive.",
-    "body": "Null-space analysis: the bare arch has M0 = 2, so one rod under-constrains it — an apex vertical guide is what buys F = 1. Per-ring parameters optimized for 3–26% range gains; ring geometry, congruence classes and foot slots frozen.",
+    "lead": {
+      "en": "Fuqiu central-rod drive.",
+      "zh": "伏丘中心杆驱动定案。"
+    },
+    "body": {
+      "en": "Mobility analysis showed one rod cannot pin the arch down; an apex guide can. Ring geometry frozen on that basis, with 3–26% more travel per ring.",
+      "zh": "自由度分析表明单杆锁不住拱，加顶点导轨才行。环几何据此冻结，各环行程增益 3–26%。"
+    },
     "tags": [
       { "label": "Machine", "variant": "outline" },
       { "label": "Simulation", "variant": "neutral" }
@@ -121,8 +211,14 @@
   },
   {
     "date": "2026-06-12",
-    "lead": "Strategic assessment.",
-    "body": "HRI methodology — physiological sensing, validated scales, behavioral coding — is what separates this from aesthetic “robot death” work, and the behavior engine is the highest-leverage gap. Paper target: an HRI/CHI Late-Breaking Work.",
+    "lead": {
+      "en": "Strategy reset around method.",
+      "zh": "战略重定在方法上。"
+    },
+    "body": {
+      "en": "Method — sensing, validated scales, coded behavior — is what separates this from aesthetic “robot death” work. The behavior engine is both the weakest link and the biggest lever.",
+      "zh": "方法（生理传感、验证量表、行为编码）是与「机器人之死」类美学作品的分界线。行为引擎最弱，也最有杠杆。"
+    },
     "tags": [
       { "label": "Machine", "variant": "outline" },
       { "label": "Strategy", "variant": "neutral" }
@@ -130,8 +226,14 @@
   },
   {
     "date": "2026-06-08",
-    "lead": "NEMA17 drive chain sourced.",
-    "body": "Three 0.51 N·m steppers on TMC2209s (A4988/DRV8825 lack the current headroom), GT2 aluminum pulleys with custom D-bore, 12 V 5 A supply.",
+    "lead": {
+      "en": "Stepper drive chain sourced.",
+      "zh": "步进驱动链采购。"
+    },
+    "body": {
+      "en": "Three NEMA17s on TMC2209 drivers — the cheaper drivers simply lack the current headroom, so there was no trade to make.",
+      "zh": "三台 NEMA17 配 TMC2209——更便宜的驱动器电流不够，没有折中余地。"
+    },
     "tags": [
       { "label": "Machine", "variant": "outline" },
       { "label": "Sourcing", "variant": "neutral" }
@@ -139,8 +241,14 @@
   },
   {
     "date": "2026-06-04",
-    "lead": "Clearance rules for printed moving parts.",
-    "body": "A print-in-place joint seized at 0.4 mm — SLS needs 0.5–0.6 mm for sintered skin and trapped powder. Switched to a metal axle in a printed sleeve (0.2–0.4 mm); axial clamping turned out to be the more fatal failure mode.",
+    "lead": {
+      "en": "Clearance rules for printed moving parts.",
+      "zh": "打印活动件间隙规则。"
+    },
+    "body": {
+      "en": "A joint seized at 0.4 mm and taught the rule: sintered parts need more room than the drawing suggests, and axial clamping kills a joint faster than a tight bore.",
+      "zh": "0.4mm 卡死一个关节，换来一条规则：烧结件要的余量比图纸直觉更大，而轴向夹紧比孔紧更致命。"
+    },
     "tags": [
       { "label": "Machine", "variant": "outline" },
       { "label": "Mechanical", "variant": "neutral" }
@@ -148,8 +256,14 @@
   },
   {
     "date": "2026-06-03",
-    "lead": "Pivot joint selection.",
-    "body": "The ⌀10×4 mm disc scissor joint built around a shoulder screw — the smooth shoulder is journal and gap-setter at once, anchored in the bottom disc by a heat-set brass insert.",
+    "lead": {
+      "en": "Pivot joint selection.",
+      "zh": "转动关节选型。"
+    },
+    "body": {
+      "en": "A shoulder screw does two jobs at once — journal and gap-setter — which removes a tolerance stack instead of managing it.",
+      "zh": "塞打螺丝一件两用——既是轴颈又定间隙，直接消掉一条公差链，而不是去管理它。"
+    },
     "tags": [
       { "label": "Machine", "variant": "outline" },
       { "label": "Mechanical", "variant": "neutral" }
@@ -157,8 +271,14 @@
   },
   {
     "date": "2026-06-01",
-    "lead": "Appendage system simplified.",
-    "body": "Three fully actuated tentacles became one tendon-driven arm plus two compliant feelers — one expressive limb, two reflexive ones. Clarified in the same pass: this is not biomimicry, the mechanical look is deliberate so that behavior stays the independent variable.",
+    "lead": {
+      "en": "Appendages cut from three to one plus two.",
+      "zh": "触手从三条改为一主两须。"
+    },
+    "body": {
+      "en": "One expressive arm and two reflexive feelers beat three weak arms. Restated in the same pass: this is not biomimicry — the machine should look like a machine, so that behavior stays the variable.",
+      "zh": "一条表达性主臂 + 两条反射性触须，胜过三条都不强的臂。同时澄清：这不是仿生——机器就该看起来像机器，行为才是自变量。"
+    },
     "tags": [
       { "label": "Machine", "variant": "outline" },
       { "label": "Concept", "variant": "neutral" }
@@ -166,8 +286,14 @@
   },
   {
     "date": "2026-05-08",
-    "lead": "Finger joints and tendons finalized.",
-    "body": "Dumbbell slide-in pins (⌀3×15 mm) with the keyway perpendicular to tendon pull — no press-fit stress, fully disassemblable. Tendons: 0.4–0.5 mm braided PE in 1.0–1.2 mm channels, knotted into anchor cavities.",
+    "lead": {
+      "en": "Finger joints and tendons finalized.",
+      "zh": "手指连接件与肌腱定案。"
+    },
+    "body": {
+      "en": "Slide-in pins keyed across the pull direction, so the hand comes apart for repair instead of being sealed shut by press fits.",
+      "zh": "哑铃销侧滑装入、键槽垂直于拉力方向——手指能拆开维修，而不是被压配死死封住。"
+    },
     "tags": [
       { "label": "Machine", "variant": "outline" },
       { "label": "Mechanical", "variant": "neutral" }
@@ -175,8 +301,14 @@
   },
   {
     "date": "2026-04-27",
-    "lead": "Deployable structure survey.",
-    "body": "Five directions weighed — variable-length scissors, angulated units, You–Pellegrino bars, Bennett rings, phased kinetic walls. Angulated scissors won on parametric and simulation compatibility.",
+    "lead": {
+      "en": "Deployable structure survey.",
+      "zh": "可变形结构方向调研。"
+    },
+    "body": {
+      "en": "Five candidates compared; angulated scissors won for one reason — it is the only one that stays parametric all the way into simulation.",
+      "zh": "五个候选比下来，角化剪式胜出只因一点：它是唯一能一路参数化到仿真的方案。"
+    },
     "tags": [
       { "label": "Machine", "variant": "outline" },
       { "label": "Mechanical", "variant": "neutral" }
@@ -184,8 +316,14 @@
   },
   {
     "date": "2026-04-26",
-    "lead": "Underactuated finger simulation running.",
-    "body": "Rigid bodies, two-point hinges and multi-segment spring tendons in Kangaroo2; strength hierarchy fixed at anchor 10000 > body 1000 > collide 100 > spring 1–3. Four tapered segments and three tendons — and the friction-driven sequential propagation reads as lifelike rather than as a defect.",
+    "lead": {
+      "en": "Underactuated finger simulation running.",
+      "zh": "欠驱动手指刚体模拟跑通。"
+    },
+    "body": {
+      "en": "Four tapered segments, three tendons. The friction that makes the joints close one after another is not a defect to design out — it is what reads as alive.",
+      "zh": "四段渐变指节 + 三根肌腱。让关节先后闭合的摩擦不是要消除的缺陷——它读起来正是生命感。"
+    },
     "tags": [
       { "label": "Machine", "variant": "outline" },
       { "label": "Simulation", "variant": "neutral" }
@@ -193,8 +331,14 @@
   },
   {
     "date": "2026-04-04",
-    "lead": "Grasshopper + Kangaroo2 groundwork.",
-    "body": "A full physics definition parsed component by component — spring, anchor, grab, bouncy solver — and the constraint-and-solver logic internalized. Everything downstream leans on this.",
+    "lead": {
+      "en": "Physics simulation groundwork.",
+      "zh": "物理模拟入门。"
+    },
+    "body": {
+      "en": "A full Kangaroo definition taken apart component by component. Every mechanism study after this one stands on it.",
+      "zh": "把一套完整的 Kangaroo 定义逐个电池拆开读懂。之后所有机构研究都站在这上面。"
+    },
     "tags": [
       { "label": "Machine", "variant": "outline" },
       { "label": "Simulation", "variant": "neutral" }
@@ -202,8 +346,14 @@
   },
   {
     "date": "2026-04-03",
-    "lead": "Physical form framework and study protocol v1.",
-    "body": "Four components — bell jar, appendages, eye stalk, base — plus a 13-item function hierarchy and two interaction channels. Protocol: 5–8 participants, 4 accelerated life cycles, ~37-minute sessions, IDAQ / IRI / ECR-S / Godspeed and physiological signals.",
+    "lead": {
+      "en": "Form framework and first study protocol.",
+      "zh": "物理形态框架 + 实验方案初版。"
+    },
+    "body": {
+      "en": "Four structural components and a ranked function list; sessions of roughly 37 minutes across four accelerated life cycles. The measures were chosen before the build, not after it.",
+      "zh": "四大结构组件与功能优先级；单场约 37 分钟、四个加速生命周期。测量工具在动手造之前就选定，不是事后补。"
+    },
     "tags": [
       { "label": "Machine", "variant": "outline" },
       { "label": "Study", "variant": "neutral" }
@@ -211,8 +361,14 @@
   },
   {
     "date": "2026-03-20",
-    "lead": "Research question locked.",
-    "body": "Under what conditions do people form pet-like attachment to a non-living thing, and how does it surface at loss. An early drift toward maximizing grief was corrected — death and rebirth are the instrument, not the goal.",
+    "lead": {
+      "en": "Research question locked.",
+      "zh": "研究问题定型。"
+    },
+    "body": {
+      "en": "When does a person attach to a non-living thing, and what surfaces at loss. An early drift toward maximizing grief was corrected — death is the instrument, not the point.",
+      "zh": "人在什么条件下对非生命体产生依恋，失去时又如何表现。早期「最大化悲伤」的偏移已纠正——死亡是工具，不是目的。"
+    },
     "tags": [
       { "label": "Machine", "variant": "outline" },
       { "label": "Concept", "variant": "neutral" }
@@ -220,8 +376,14 @@
   },
   {
     "date": "2026-03-07",
-    "lead": "Project kickoff.",
-    "body": "Three concepts drafted out of the “cyber soul-calling” wave that followed the GPT-4o update — Reincarnation Machine, Presence, Unconscious Nudge. The first one stuck.",
+    "lead": {
+      "en": "Project kickoff.",
+      "zh": "项目起点。"
+    },
+    "body": {
+      "en": "Three concepts came out of watching people mourn an AI companion that a model update had taken away. This is the one that stuck.",
+      "zh": "看着人们哀悼一次模型更新带走的 AI 伴侣，产出三个候选概念。留下来的是这一个。"
+    },
     "tags": [
       { "label": "Machine", "variant": "outline" },
       { "label": "Concept", "variant": "neutral" }

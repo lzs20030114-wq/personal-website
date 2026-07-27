@@ -114,21 +114,12 @@ const LABS = [
   },
 ];
 
-// Work log 预览三条（Home 稿字面，MAPPING §5.2）
-const LOG_PREVIEW = [
-  {
-    date: '2026-07-17',
-    text: 'Five-ring choreography v0.3 — stop-margin calibration per ring; whole family peaks under 0.42 mm.',
-  },
-  {
-    date: '2026-07-13',
-    text: 'Site scaffold S1–S3 — content pool, four routes, LinkageFigure live on the homepage.',
-  },
-  {
-    date: '2026-07-10',
-    text: 'Arch solver instance — real S4 ring as a solver preset, kernel untouched, 7 new tests green.',
-  },
-];
+// Work log 预览三条：2026-07-27 起改接内容池最新三条（此前为 Home 稿硬编码字面，
+// 会与 /archive 脱节）。主页恒为英文——中英切换是 Log 页专属（MAPPING §5.2 修订）。
+export interface HomeLog {
+  date: string;
+  text: string;
+}
 
 // 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-07-24 vitest 实测 103；
 // 迭代稿配色：Tests=绿 700、Kernels=紫 700、Demos=绿 600）
@@ -349,7 +340,7 @@ function StagePlaceholderPanel({
   );
 }
 
-export function HomeScreens({ works }: { works: HomeWork[] }) {
+export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[] }) {
   const rootRef = useRef<HTMLDivElement>(null);
   // 当前舞台面板（0 = 待机轮播，1..4 = 项目预览）——用于给面板内的活台架做 active 门控
   const [panel, setPanel] = useState(0);
@@ -1560,18 +1551,28 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
                 </a>
               </div>
               <div data-row style={{ flex: 1, minHeight: 0 }}>
-                {LOG_PREVIEW.map((e, i) => (
+                {logs.map((e, i) => (
                   <div
-                    key={e.date}
+                    key={`${e.date}-${i}`}
                     className="log-row"
-                    style={
-                      i === LOG_PREVIEW.length - 1 ? { borderBottom: 'var(--hair)' } : undefined
-                    }
+                    style={i === logs.length - 1 ? { borderBottom: 'var(--hair)' } : undefined}
                   >
                     <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)' }}>
                       {e.date}
                     </span>
-                    <span style={{ fontSize: 13, color: 'var(--n700)' }}>{e.text}</span>
+                    {/* 池里条目长短不一，钳到两行——S2 幕高度固定，不能让预览把页脚顶出去 */}
+                    <span
+                      style={{
+                        fontSize: 13,
+                        color: 'var(--n700)',
+                        display: '-webkit-box',
+                        WebkitBoxOrient: 'vertical',
+                        WebkitLineClamp: 2,
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {e.text}
+                    </span>
                   </div>
                 ))}
                 <p
