@@ -32,7 +32,9 @@ const TENDON_C: [number, number, number][] = [
   [0.72, 0.74, 0.7],
 ];
 const PAIRS: ([number, number] | null)[] = [null, [0, 1], [1, 2], [0, 2]];
-const LINK_LABELS = ['none', '1+2', '2+3', '1+3'];
+const LINK_LABELS = ['无', '1+2', '2+3', '1+3'];
+// 滑块拇指色 = 该腱线色（稿内：绿 / 中性 / 紫）
+const TENDON_UI = ['var(--accent)', 'color-mix(in srgb, var(--ink) 80%, transparent)', 'var(--accent-2)'];
 
 export function TentacleBench({
   spin = true,
@@ -295,74 +297,75 @@ export function TentacleBench({
   useBenchLoop(canvasRef, (dt) => apiRef.current?.step(dt), [spin], active);
 
   return (
-    <div>
-      <div className="lab-fig" style={{ aspectRatio: '700/520' }}>
+    <div className="lab-wrap">
+      <div className="lab-fig">
         <canvas ref={canvasRef} width={1400} height={1040} aria-label="立体触手台架；拖拽旋转视角、滑块收缩肌腱" />
         <div className="lab-hud tl">
-          <div className="k">Lab.03</div>
-          <div>Tendon tentacle · 3D</div>
-          <div className="sub">真实扫描网格 · 7 椎节 · WebGL z-buffer</div>
+          <div style={{ color: 'var(--accent-2)' }}>Lab.03</div>
+          <div>立体肌腱触手</div>
+          <div className="dim">7 方盒椎节 · 3 腱 @120° · 真实扫描网格 10.7 万三角</div>
         </div>
         <div className="lab-hud br">
-          <div className="num">
-            T {tendons.map((v) => `${Math.round(v * 100)}`).join('/')}
-          </div>
-          <div className="sub">
-            {hud.note
-              ? hud.note
-              : `err ${hud.err.toFixed(2)} px · ×${hud.zoom.toFixed(2)}`}
+          <div className="num">T {tendons.map((v) => Math.round(v * 100)).join(' / ')} %</div>
+          <div className="dim">
+            {hud.note ? hud.note : `err ${hud.err.toFixed(2)} px · ×${hud.zoom.toFixed(2)}`}
           </div>
         </div>
-        <div className="lab-hud bl">拖拽 = 轨道相机 · 右键平移 · 滚轮缩放</div>
+        <div className="lab-hud bl dim">拖拽旋转 · 右键平移 · 滚轮缩放</div>
       </div>
       {controls ? (
-      <div className="lab-ctl">
-          {[0, 1, 2].map((k) => (
-            <label key={k}>
-              T{k + 1}
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={Math.round(tendons[k] * 100)}
-                onChange={(e) => apiRef.current?.setTarget(k, Number(e.target.value) / 100)}
-              />
-            </label>
-          ))}
-          <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            联动
-            {LINK_LABELS.map((lbl, i) => (
-              <button
-                key={lbl}
-                type="button"
-                className="lab-btn"
-                style={i === link ? { borderColor: 'var(--g400)', color: 'var(--g400)' } : undefined}
-                onClick={() => {
-                  setLink(i);
-                  linkRef.current = i;
-                  const pair = PAIRS[i];
-                  if (pair) apiRef.current?.setTarget(pair[0], tendons[pair[0]]);
-                }}
-              >
-                {lbl}
-              </button>
+        <div className="lab-ctl">
+          <div className="grp">
+            <span className="k">肌腱</span>
+            {[0, 1, 2].map((k) => (
+              <label key={k}>
+                {k + 1}
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={Math.round(tendons[k] * 100)}
+                  style={{ accentColor: TENDON_UI[k] }}
+                  onChange={(e) => apiRef.current?.setTarget(k, Number(e.target.value) / 100)}
+                />
+              </label>
             ))}
-          </span>
-          <button
-            type="button"
-            className="lab-btn"
-            onClick={() => [0, 1, 2].forEach((k) => apiRef.current?.setTarget(k, 0))}
-          >
-            放松
-          </button>
-          <button type="button" className="lab-btn" onClick={() => apiRef.current?.home()}>
-            归位
-          </button>
-          <button type="button" className="lab-btn" onClick={() => apiRef.current?.viewHome()}>
-            视角归位
-          </button>
+          </div>
+          <div className="grp">
+            <span className="k">联动</span>
+            <span className="seg">
+              {LINK_LABELS.map((lbl, i) => (
+                <button
+                  key={lbl}
+                  type="button"
+                  className={i === link ? 'active' : undefined}
+                  onClick={() => {
+                    setLink(i);
+                    linkRef.current = i;
+                    const pair = PAIRS[i];
+                    if (pair) apiRef.current?.setTarget(pair[0], tendons[pair[0]]);
+                  }}
+                >
+                  {lbl}
+                </button>
+              ))}
+            </span>
+          </div>
+          <div className="grp">
+            <button
+              type="button"
+              onClick={() => [0, 1, 2].forEach((k) => apiRef.current?.setTarget(k, 0))}
+            >
+              放松
+            </button>
+            <button type="button" onClick={() => apiRef.current?.home()}>
+              归位
+            </button>
+            <button type="button" onClick={() => apiRef.current?.viewHome()}>
+              视角归位
+            </button>
+          </div>
         </div>
-  
       ) : null}
     </div>
   );

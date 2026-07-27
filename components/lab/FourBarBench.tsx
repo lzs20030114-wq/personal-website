@@ -148,7 +148,8 @@ export function FourBarBench({ grid = true, spin = true, active = true }: { grid
   };
 
   return (
-    <div className="lab-fig" style={{ aspectRatio: '700/520' }}>
+    <div className="lab-wrap">
+      <div className="lab-fig">
       <svg
         ref={svgRef}
         viewBox="0 0 700 520"
@@ -172,17 +173,18 @@ export function FourBarBench({ grid = true, spin = true, active = true }: { grid
         onPointerCancel={(ev) => stateRef.current?.ctl.pointerUp(ev.pointerId)}
       />
       <div className="lab-hud tl">
-        <div className="k">Lab.01 / Fig. 01</div>
-        <div>Grashof crank-rocker</div>
-        <div className="sub">2D PBD · Gauss–Seidel · L 66·178·127</div>
+        <div style={{ color: 'var(--accent)' }}>Lab.01 / Fig. 01</div>
+        <div>Grashof 曲柄摇杆</div>
+        <div className="dim">2D PBD · Gauss–Seidel · L 66·178·127 · 板 132·100</div>
       </div>
       <div className="lab-hud br">
         <div className="num">θ {hud.theta.toFixed(1)}°</div>
-        <div className="sub">
+        <div className="dim">
           ω {hud.omega.toFixed(2)} · err {hud.err.toFixed(3)} · {hud.mode}
         </div>
       </div>
-      <div className="lab-hud bl">拖任意自由节点 · 松手继承角速度</div>
+      <div className="lab-hud bl dim">拖任意自由节点 · 松手继承角速度</div>
+      </div>
     </div>
   );
 }

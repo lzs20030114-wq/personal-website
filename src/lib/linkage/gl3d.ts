@@ -321,11 +321,20 @@ export class FlatRenderer {
   }
 
   /** 动态平面着色网格（世界坐标、恒等模型系；bakeIndexed 产物逐帧上传）。
-   *  蒙皮等每帧变形的几何用——2026-07-17 五环台架拍板新增。 */
-  drawDynamicMesh(data: Float32Array): void {
+   *  蒙皮等每帧变形的几何用——2026-07-17 五环台架拍板新增。
+   *  dark/lite 可选：本次绘制覆盖明暗端色，画完即还原为 beginFrame 的默认
+   *  （2026-07-27 加：暗底台架要「烟灰织物」压暗蒙皮，好让彩色线稿透出来；
+   *   加法式扩展，不传即旧行为，现有调用点零影响）。 */
+  drawDynamicMesh(
+    data: Float32Array,
+    dark?: [number, number, number],
+    lite?: [number, number, number],
+  ): void {
     if (!data.length) return;
     const gl = this.gl;
     gl.useProgram(this.meshProg);
+    if (dark) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uDark'), dark[0], dark[1], dark[2]);
+    if (lite) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uLite'), lite[0], lite[1], lite[2]);
     gl.uniformMatrix3fv(gl.getUniformLocation(this.meshProg, 'uModelR'), false, [1, 0, 0, 0, 1, 0, 0, 0, 1]);
     gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uModelT'), 0, 0, 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.dynMeshBuf);
@@ -337,6 +346,9 @@ export class FlatRenderer {
     gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 24, 0);
     gl.vertexAttribPointer(aNrm, 3, gl.FLOAT, false, 24, 12);
     gl.drawArrays(gl.TRIANGLES, 0, data.length / 6);
+    // 还原默认明暗端色，后续 drawMesh/drawSkinned 不受影响
+    if (dark) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uDark'), 0.29, 0.29, 0.27);
+    if (lite) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uLite'), 0.95, 0.95, 0.92);
   }
 
   /** 蒙皮网格（bakeSkinned 产物，步长 7 float） */

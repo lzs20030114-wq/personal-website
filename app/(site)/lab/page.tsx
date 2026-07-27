@@ -9,65 +9,118 @@ import { RingsBench } from '../../../components/lab/RingsBench';
 export const metadata = { title: 'The lab' };
 
 /**
- * The lab（Lab-Modernist 稿 → MAPPING §6.3）：四台真求解器台架，深色语言与 case/log 一致。
+ * The lab（Lab-Modernist 稿 → MAPPING §7）：四台真求解器台架，深色语言与 case/log 一致。
+ * ★ 版式逐项对稿：300px 定宽左栏 + 44px 间距；规格表竖排行（92px 标签列 + 发丝线分隔）；
+ *   图框 3px 彩色顶线（2D 绿 / 3D 紫）+ 极淡填充；标题 72px；页脚两链。
  * 每台跑的是站内 TS 内核（src/lib/linkage，封盘零改），不是视频、不是二次实现。
- * 规格表文案照搬设计稿。
  */
-const SPEC_LABEL: CSSProperties = {
-  fontSize: 10,
-  fontWeight: 800,
+const KICKER: CSSProperties = {
+  margin: 0,
+  fontSize: 13,
+  fontWeight: 600,
   letterSpacing: '0.14em',
   textTransform: 'uppercase',
   color: 'var(--n600)',
 };
-const SPEC_VALUE: CSSProperties = { fontSize: 13, lineHeight: 1.5, color: 'var(--n700)' };
+const LEGEND: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 14,
+  fontSize: 11,
+  fontWeight: 600,
+  letterSpacing: '0.1em',
+  textTransform: 'uppercase',
+  color: 'var(--n600)',
+};
+const SPEC_KEY: CSSProperties = {
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: '0.1em',
+  textTransform: 'uppercase',
+  color: 'var(--n500)',
+  paddingTop: 2,
+};
+const HAIR_14 = '1px solid color-mix(in srgb, var(--ink) 14%, transparent)';
 
 function Bench({
   no,
   title,
   lede,
   specs,
+  accent,
   children,
 }: {
   no: string;
   title: string;
   lede: string;
   specs: [string, string][];
+  /** 图框顶线：2D 内核绿 / 3D 内核紫（稿内编码） */
+  accent: string;
   children: ReactNode;
 }) {
   return (
     <section
       id={`lab${no}`}
-      style={{ padding: '48px 0', borderTop: 'var(--hair)', scrollMarginTop: 24 }}
+      className="lab-section"
+      style={{ padding: '44px 0 52px', borderBottom: 'var(--hair)', scrollMarginTop: 16 }}
     >
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-        <div className="flex flex-col" style={{ gap: 14 }}>
-          <p style={{ ...SPEC_LABEL, color: 'var(--accent)', margin: 0 }}>Lab.{no}</p>
-          <h2
-            style={{
-              margin: 0,
-              fontSize: 'clamp(26px, 2.6vw, 38px)',
-              fontWeight: 800,
-              lineHeight: 1.02,
-              letterSpacing: '-0.02em',
-              textTransform: 'uppercase',
-            }}
-          >
-            {title}
-          </h2>
-          <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: 'var(--n700)', maxWidth: '46ch' }}>
-            {lede}
-          </p>
-          <dl className="grid grid-cols-2" style={{ gap: '14px 20px', margin: '6px 0 0' }}>
-            {specs.map(([k, v]) => (
-              <div key={k} style={{ borderTop: 'var(--hair)', paddingTop: 8 }}>
-                <dt style={SPEC_LABEL}>{k}</dt>
-                <dd style={{ ...SPEC_VALUE, margin: 0 }}>{v}</dd>
-              </div>
-            ))}
-          </dl>
+      <div className="flex flex-col" style={{ gap: 14 }}>
+        <p
+          style={{
+            margin: 0,
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: 'var(--accent)',
+          }}
+        >
+          Lab.{no}
+        </p>
+        <h2
+          style={{
+            margin: 0,
+            fontSize: 26,
+            fontWeight: 800,
+            lineHeight: 1.05,
+            letterSpacing: '-0.01em',
+            textTransform: 'uppercase',
+          }}
+        >
+          {title}
+        </h2>
+        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: 'var(--n700)', maxWidth: '30ch' }}>
+          {lede}
+        </p>
+        <div style={{ marginTop: 10 }}>
+          {specs.map(([k, v], i) => (
+            <div
+              key={k}
+              className="grid"
+              style={{
+                gridTemplateColumns: '92px 1fr',
+                gap: 12,
+                padding: '8px 0',
+                borderTop: HAIR_14,
+                ...(i === specs.length - 1 ? { borderBottom: HAIR_14 } : {}),
+                fontSize: 12,
+              }}
+            >
+              <span style={SPEC_KEY}>{k}</span>
+              <span>{v}</span>
+            </div>
+          ))}
         </div>
-        <div className="min-w-0">{children}</div>
+      </div>
+      <div
+        style={{
+          position: 'relative',
+          border: 'var(--hair)',
+          borderTop: `3px solid ${accent}`,
+          background: 'color-mix(in srgb, var(--ink) 4.5%, transparent)',
+        }}
+      >
+        {children}
       </div>
     </section>
   );
@@ -79,12 +132,10 @@ export default function LabPage() {
       <div className="ground-plane" aria-hidden />
       <PageEnter />
       <div className="shell pg-dark" data-pt-content>
-        <header style={{ padding: '64px 0 32px' }}>
-          <div className="flex flex-wrap items-baseline justify-between" style={{ gap: 16 }}>
-            <p style={{ ...SPEC_LABEL, margin: 0 }}>
-              S2 — The lab · four live instruments
-            </p>
-            <span className="flex items-center" style={{ ...SPEC_LABEL, gap: 14 }}>
+        <header style={{ padding: '64px 0 40px', borderBottom: 'var(--hair)' }}>
+          <div className="flex items-baseline justify-between" style={{ gap: 32 }}>
+            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · four live instruments</p>
+            <span style={LEGEND}>
               <span className="flex items-center" style={{ gap: 6 }}>
                 <span style={{ width: 9, height: 9, background: 'var(--accent)' }} />
                 2D kernel
@@ -98,11 +149,11 @@ export default function LabPage() {
           </div>
           <h1
             style={{
-              fontSize: 'clamp(40px, 7vw, 78px)',
+              fontSize: 'clamp(44px, 7vw, 72px)',
               fontWeight: 800,
-              lineHeight: 0.96,
+              lineHeight: 0.98,
               letterSpacing: '-0.02em',
-              margin: '18px 0 0',
+              margin: 0,
               textTransform: 'uppercase',
             }}
           >
@@ -121,7 +172,7 @@ export default function LabPage() {
             />
             <line x1="0" y1="10" x2="150" y2="10" stroke="var(--accent-2)" strokeWidth="1.5" />
           </svg>
-          <p style={{ fontSize: 15, lineHeight: 1.6, margin: '20px 0 0', maxWidth: '62ch', color: 'var(--n700)' }}>
+          <p style={{ fontSize: 19, lineHeight: 1.5, margin: '24px 0 0', maxWidth: '56ch' }}>
             Every figure below runs the real solver — the same kernel that drives the hardware. Drag
             them; nothing here is a video. Same kernel, same tests, same stops as the hardware
             benches.
@@ -132,6 +183,7 @@ export default function LabPage() {
           no="01"
           title="Four-bar linkage"
           lede="The 2D testbench behind Fig. 01 — position-based dynamics with a Gauss–Seidel pass, driven from the crank."
+          accent="var(--accent)"
           specs={[
             ['Kernel', '2D PBD · Gauss–Seidel'],
             ['Tests', '36 green'],
@@ -146,6 +198,7 @@ export default function LabPage() {
           no="02"
           title="Arch ring solver"
           lede="The physical S4 ring — angulated plates on a crank-slider, run as a preset of the untouched 2D kernel."
+          accent="var(--accent)"
           specs={[
             ['Kernel', 'Same 2D core — untouched'],
             ['Instance', 'S4 M3×1.000 · 14 plates'],
@@ -160,6 +213,7 @@ export default function LabPage() {
           no="03"
           title="Tendon tentacle"
           lede="Seven box vertebrae on three tendons at 120° — the independent 3D kernel, rendered from the real scanned mesh."
+          accent="var(--accent-2)"
           specs={[
             ['Kernel', 'LinkageSolver3D · symmetric GS'],
             ['Mesh', '107k tri · real scan'],
@@ -174,11 +228,12 @@ export default function LabPage() {
           no="04"
           title="Five-ring shell"
           lede="Five ring instances breathing in phase — 85 mm pitch, foot slots auto-calibrated per ring."
+          accent="var(--accent-2)"
           specs={[
             ['Family', 'S1–S5 · ladder 0 / 2 / 4 / 8'],
             ['Choreo', 'In-phase · ω 0.8 · step 1/120 s'],
             ['Peaks', '0.24–0.42 mm'],
-            ['Drive', 'Breathe toggle · phase slider'],
+            ['Drive', 'Breathe · phase · skin · views'],
           ]}
         >
           <RingsBench />
@@ -186,14 +241,33 @@ export default function LabPage() {
 
         <footer
           className="flex flex-wrap items-baseline justify-between"
-          style={{ gap: 16, padding: '32px 0 72px', borderTop: 'var(--hair)' }}
+          style={{ gap: 32, padding: '26px 0 72px' }}
         >
-          <span style={SPEC_LABEL}>04 instruments · one kernel · all live</span>
-          <span className="flex" style={{ gap: 18 }}>
-            <Link href="/work/reincarnation-machine" className="rule-link">
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--n500)',
+            }}
+          >
+            04 instruments · one kernel · all live
+          </span>
+          <span
+            className="flex"
+            style={{
+              gap: 24,
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}
+          >
+            <Link href="/work/reincarnation-machine" style={{ textDecoration: 'none', color: 'var(--g300)' }}>
               Work →
             </Link>
-            <Link href="/archive" className="rule-link">
+            <Link href="/archive" style={{ textDecoration: 'none', color: 'var(--g300)' }}>
               Log →
             </Link>
           </span>

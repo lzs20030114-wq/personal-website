@@ -150,7 +150,8 @@ export function ArchBench({ grid = true, active = true }: { grid?: boolean; acti
   };
 
   return (
-    <div className="lab-fig" style={{ aspectRatio: '700/520' }}>
+    <div className="lab-wrap">
+      <div className="lab-fig">
       <svg
         ref={svgRef}
         viewBox="0 0 700 520"
@@ -174,17 +175,18 @@ export function ArchBench({ grid = true, active = true }: { grid?: boolean; acti
         onPointerCancel={(ev) => stateRef.current?.ctl.pointerUp(ev.pointerId)}
       />
       <div className="lab-hud tl">
-        <div className="k">Lab.02 / Fig. 12</div>
-        <div>S4 ring · M3×1.000</div>
-        <div className="sub">同一 2D 内核 · 14 板 · 槽端止程 · 定步 1/120</div>
+        <div style={{ color: 'var(--accent)' }}>Lab.02 / Fig. 12</div>
+        <div>S4 环 · M3×1.000</div>
+        <div className="dim">同一 2D 内核 · 14 板 · 槽端止程 · 定步 1/120</div>
       </div>
       <div className="lab-hud br">
         <div className="num">φ {hud.phi.toFixed(1)}°</div>
-        <div className="sub">
+        <div className="dim">
           apex {hud.apex.toFixed(1)} mm · err {hud.err.toFixed(2)} · {hud.mode}
         </div>
       </div>
-      <div className="lab-hud bl">拖拱顶 / 四脚 / 曲柄销</div>
+      <div className="lab-hud bl dim">拖拱顶 · 四脚 · 曲柄销</div>
+      </div>
     </div>
   );
 }
