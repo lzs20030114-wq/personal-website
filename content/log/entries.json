@@ -84,7 +84,7 @@
       "en": "Built with Next.js: four pages — home, work, lab, log — with all text and images read from a single content folder that fails the build if anything is malformed. The four-bar linkage at the top of the homepage is the actual solver running live, not a video or a GIF.",
       "zh": "用 Next.js 建站，四个页面：首页、作品、实验室、日志。所有文字和图片都从同一个内容目录读取，格式不对构建时直接报错。主页顶上那个四杆连杆是求解器在实时运行，不是视频也不是动图。"
     },
-    "tags": [{ "label": { "en": "Site", "zh": "网站" }, "variant": "neutral" }]
+    "tags": [{ "label": { "en": "Site", "zh": "网站" }, "variant": "outline" }]
   },
   {
     "date": "2026-07-13",
@@ -210,7 +210,7 @@
       "en": "Line length (how many characters per line still reads comfortably), Tufte's way of putting notes in the margin, and the Swiss grid. The decision: lay the pages out for a wide desktop screen first and fall back to a single column on phones.",
       "zh": "看了行长（一行多少字还读得舒服）、Tufte 把注释放在页边的做法，以及瑞士网格。结论是：先按桌面宽屏排版，手机上退成单栏。"
     },
-    "tags": [{ "label": { "en": "Site", "zh": "网站" }, "variant": "neutral" }]
+    "tags": [{ "label": { "en": "Site", "zh": "网站" }, "variant": "outline" }]
   },
   {
     "date": "2026-07-07",
@@ -222,7 +222,10 @@
       "en": "The maths, the interface other code calls, how much numerical error counts as acceptable, and what each stage has to deliver — all in one document that the code answers to. Where the two disagree, the code changes, not the document.",
       "zh": "数学推导、别的代码调用它的接口、多大的数值误差算可接受、每个阶段要交付什么——全部写进一份文档，代码以它为准。两者打架时改代码，不改文档。"
     },
-    "tags": [{ "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }]
+    "tags": [
+      { "label": { "en": "Lab", "zh": "实验室" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
   },
   {
     "date": "2026-07-07",

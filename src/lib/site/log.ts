@@ -53,3 +53,28 @@ const loadLog = cache((): LogEntry[] => {
 export function getLogEntries(): LogEntry[] {
   return loadLog();
 }
+
+/**
+ * 项目筛选桶（用户拍板 2026-07-27）。多项目共池后，读者要能只看某一个项目。
+ * 不新开字段——沿用 MAPPING §8.1 既定约定：**outline 标签就是项目桶**
+ * （Machine 机器 / Space 空间 / Lab 实验室 / Site 网站），每条恰好一个（守门测试保证）。
+ */
+export type LogBucket = { key: string; label: { en: string; zh: string }; count: number };
+
+/** 条目所属项目桶的 key = outline 标签的英文名。客户端同款判定见 LogList（那边不能 import 本模块）。 */
+export function logBucketKey(entry: LogEntry): string | null {
+  return entry.tags.find((t) => t.variant === 'outline')?.label.en ?? null;
+}
+
+/** 池内出现过的项目桶，条数多的在前（同数按 key 字典序——SSR 与客户端必须排出同一顺序）。 */
+export function getLogBuckets(): LogBucket[] {
+  const byKey = new Map<string, LogBucket>();
+  for (const e of getLogEntries()) {
+    const tag = e.tags.find((t) => t.variant === 'outline');
+    if (!tag) continue;
+    const seen = byKey.get(tag.label.en);
+    if (seen) seen.count += 1;
+    else byKey.set(tag.label.en, { key: tag.label.en, label: tag.label, count: 1 });
+  }
+  return [...byKey.values()].sort((a, b) => b.count - a.count || (a.key < b.key ? -1 : 1));
+}

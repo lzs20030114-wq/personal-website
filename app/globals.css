@@ -692,6 +692,77 @@ a:hover {
   }
 }
 
+/* 项目筛选条：全部 + 每个项目桶。选中 = accent 文字 + 底边实线，
+   与条目左栏的 tag-outline 同色系——点的是哪个项目，一眼对得上。 */
+.log-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 20px;
+  padding: 18px 0 0;
+}
+.log-filter__opt {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--n600);
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+.log-filter__opt[aria-pressed='true'] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.log-filter__n {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--n500);
+}
+.log-filter__opt[aria-pressed='true'] .log-filter__n {
+  color: var(--accent);
+}
+/* 读数：占位常驻（总览态文本为空），切筛选时按钮行不跳动 */
+.log-filter__count {
+  margin-left: auto;
+  min-height: 1em;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--n500);
+}
+/* 中文不做大写变形（CJK 无大小写，uppercase 只白白扰动字宽计算） */
+[lang='zh-Hans'] .log-filter__opt,
+[lang='zh-Hans'] .log-filter__count {
+  text-transform: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .log-filter__opt {
+    transition:
+      color var(--dur-micro) var(--ease-site),
+      border-color var(--dur-micro) var(--ease-site);
+  }
+  .log-filter__opt:hover[aria-pressed='false'] {
+    color: var(--ink);
+    border-bottom-color: var(--n400);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .log-filter__opt {
+    transition: none;
+  }
+}
+
 /* 月份分隔：小标签 + 占满余量的发丝线 */
 .log-month {
   display: flex;
