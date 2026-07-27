@@ -14,9 +14,11 @@ export function SiteNav() {
   const onLog = pathname.startsWith('/archive');
   const onAbout = pathname.startsWith('/about');
   const current = (active: boolean) => (active ? { 'aria-current': 'page' as const } : {});
+  // 深色内页（case / log）用深色 nav 变体（MAPPING §6.1：透明底 + 浅绿文字 + 发丝线）
+  const dark = pathname.startsWith('/work') || pathname.startsWith('/archive');
 
   return (
-    <nav className="nav">
+    <nav className={dark ? 'nav nav-dark' : 'nav'}>
       {/* brand 文案维持占位（MAPPING §3：作者定名前 [NAME·占位]） */}
       <Link href="/" className="nav-brand">
         [NAME·占位]

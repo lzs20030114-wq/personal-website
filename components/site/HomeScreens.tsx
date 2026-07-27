@@ -438,8 +438,21 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
         return;
       }
       ptBusy = true;
+      // 深色目标（case/archive）交接给目标页 PageEnter 播放揭开进入段；
+      // 写一次性标记 + 媒体块底色，供着陆平面同族续接。
+      const isDark = /^\/(work\/|archive)/.test(href);
+      const bg = fromEl ? getComputedStyle(fromEl).backgroundImage : '';
       const finish = () => {
+        try {
+          if (isDark) {
+            sessionStorage.setItem('om-pt', String(Date.now()));
+            sessionStorage.setItem('om-pt-bg', bg && bg !== 'none' ? bg : PT_BG);
+          }
+        } catch {
+          /* sessionStorage 不可用：目标页无揭开，goPT 兜底淡出仍生效 */
+        }
         router.push(href);
+        // 兜底淡出（PageEnter 接管时会先清掉这些残留；延迟给足接管窗口，防双层闪）
         setTimeout(() => {
           document.querySelectorAll<HTMLElement>('[data-pt-tmp]').forEach((el) => {
             const from = el.hasAttribute('data-pt-veil') ? 0.92 : 1;
@@ -449,7 +462,7 @@ export function HomeScreens({ works }: { works: HomeWork[] }) {
               fill: 'forwards',
             }).onfinish = () => el.remove();
           });
-        }, 220);
+        }, 700);
       };
       const veil = document.createElement('div');
       veil.setAttribute('data-pt-tmp', '1');

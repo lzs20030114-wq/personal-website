@@ -88,3 +88,16 @@
 - **翻幕编排**：迭代稿把边框闪重设计为**斜向扫光**并保留 stagger——已按稿移植，但 2026-07-24 拍板「翻幕后静置」维持有效，`FX.staggerFx` 常量默认关；用户要启用新扫光只翻此常量（HomeScreens.tsx）。
 - **人像位**：稿内 image-slot + duotone 机件；本站以 g200 底 + 点阵占位块落地（主页无图片机制），作者供图后按 §1 duotone-g 接入。
 - 统计条仍用当前实测数（§4 纪律）；Stage 默认位仍空占位（07-24 拍板不变）；引擎手感常量数值原样。
+
+### 6.2 case / log 深色化 + 转场进入段落地（2026-07-27）
+
+迭代稿 standalone 内含三页——除 pgHome 外还有 **pgCase / pgLog 深色改版**与转场进入段（caseInit/logInit 的 clip 揭开）。§6.1 只落地了主页；本次补齐 case（`/work/[slug]`）与 log（`/archive`）的深色版并接通转场。源出处：从用户上传 standalone 解包的 pgCase/pgLog（DesignSync 授权在云端失效，无 .dc.html 源，实现依据已在代码中固化）。
+
+- **深色 token 策略**：不逐字复制静态 pgCase，改在 `.pg-dark` 容器内**重定义语义 token**（`--paper`→深蓝 `oklch(0.25 0.05 225)`、`--ink`→浅绿白、`--accent`→深底亮绿 `oklch(0.71 0.098 145)`、`--accent-2`→亮紫、`--hair`/`--hairline`→浅绿 25%、`--n300..800` 深底中性）——现有组件类（`.case-body` / `.tag` / `.card` / MetaRail / slots）零改动自动深色。全站唯一深色 scope，其余页面不受影响。
+- **深底铺满**：`.ground-plane`（fixed inset:0 z-index:-1，深渐变 + 颗粒）盖住 body 浅纸底，滚动不露边。
+- **深色 nav 变体**：SiteNav 在 `/work` / `/archive` 路由加 `.nav-dark`（透明底 + 浅绿文字 + 发丝线 + hover 亮绿），沿用 usePathname 判定。footer（g900）在深底上更深，自洽。
+- **case hero 着陆块**：case 内容列首插 `.case-hero`（3:2 深绿渐变媒体块 + 点阵/颗粒，Fig.01 占位「待拍摄」不代写）——既是版式 hero，也是转场落点（`data-pt-target`）。
+- **转场进入段 `PageEnter`（新 client 组件）**：补齐 goPT 只有的出发段。主页 goPT push 前对深色目标（`/work/` `/archive`）写一次性 `sessionStorage('om-pt'=Date.now(), 'om-pt-bg'=媒体块底色)`；目标页 `PageEnter` 挂载读标记 → 造不透明着陆平面（`.pt-veil`，续接同族底色）盖场 → 清 goPT 残留 → 内容（`data-pt-content`）blur 揭入 → 平面 `clipPath` 从满屏收回到 hero 后移除。**强兜底（跨路由动画唯一硬风险 = 遮罩残留白屏）**：无标记/reduced-motion 立即清残留不揭开、标记超 3s 过期忽略、2s 超时强制移除、组件卸载即清。goPT 兜底淡出延迟 220→700ms 给 PageEnter 接管窗口。真浏览器 CDP 实测：生长→push→揭开→残留归零（tmp:0，不白屏）；直接访问无残留；reduced-motion 直跳。
+- **返回转场**：设计稿 goBack（case→home 平面淡入返回）本次**未做**——返回走普通 SPA 切换。可作后续。
+- **about 未动**：设计稿这次未给 /about 独立深色稿（主页 S1 About 幕的深色语言可作后续套用依据）；/about 现仍浅色 Modernist。**三内页现状：case/log 深色、about 浅色**——是否统一深色待用户拍板。
+- 纪律守恒：case 仍 frontmatter/内容池 + MDXRemote 驱动，只换渲染模板与配色；四路由不动；LinkageFigure 内部零改；正文/图占位不代写。

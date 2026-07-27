@@ -12,6 +12,7 @@ import {
 } from '../../../../components/site/slots';
 import { DisclosureSlot, MetaRail } from '../../../../components/site/RoleBlock';
 import { LinkageFigure } from '../../../../components/linkage/LinkageFigure';
+import { PageEnter } from '../../../../components/site/PageEnter';
 
 export function generateStaticParams() {
   return getAllWork()
@@ -58,8 +59,12 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
   const caseNo = String(entry.order ?? 1).padStart(2, '0');
 
   return (
-    <div className="shell">
-      <header style={{ padding: '64px 0 40px', borderBottom: '2px solid var(--ink)' }}>
+    <>
+      {/* 深色底铺满视口 + 转场进入段（MAPPING §6.1） */}
+      <div className="ground-plane" aria-hidden />
+      <PageEnter />
+      <div className="shell pg-dark" data-pt-content>
+      <header style={{ padding: '64px 0 40px', borderBottom: 'var(--hair)' }}>
         <p
           style={{
             margin: '0 0 16px',
@@ -91,11 +96,36 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
       </header>
 
       <div className="case-layout">
-        <aside className="case-rail">
+        <aside className="case-rail" style={{ borderRightColor: 'var(--hairline)' }}>
           <MetaRail entry={entry} />
         </aside>
 
         <div className="min-w-0 lg:pl-14" style={{ paddingTop: 32 }}>
+          {/* hero 着陆媒体块（转场落点 data-pt-target；占位待拍摄，MAPPING §5.2 不代写） */}
+          <figure className="case-hero" data-pt-target style={{ margin: '0 0 40px' }}>
+            <div
+              className="om-dots"
+              style={{
+                opacity: 0.3,
+                WebkitMaskImage: 'linear-gradient(150deg,#000 0%,transparent 55%)',
+                maskImage: 'linear-gradient(150deg,#000 0%,transparent 55%)',
+              }}
+            />
+            <div className="om-grain" style={{ opacity: 0.14, mixBlendMode: 'overlay' }} />
+            <figcaption
+              style={{
+                position: 'relative',
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: 'var(--n700)',
+              }}
+            >
+              Fig. 01 — [待拍摄] machine hero · studio white sweep
+            </figcaption>
+          </figure>
+
           {/* 编号 section 01–06：CSS counter 作用于 .case-body h2（只换模板，MDX 不动） */}
           <div className="case-body">
             <MDXRemote source={entry.body} components={mdxComponents} />
@@ -113,6 +143,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
           <DisclosureSlot />
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

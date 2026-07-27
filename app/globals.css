@@ -659,3 +659,125 @@ a:hover {
     color: var(--p300);
   }
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   深色内页（case / log）——迭代稿 pgCase/pgLog 的深色语言（MAPPING §6.1）
+   策略：.pg-dark 容器内重定义语义 token，现有组件类（.case-body/.tag/.card/.nav）自动深色。
+   token 值取自设计稿 caseRoot；深底彩字用亮一档的绿/紫（对深底 ≥AA）。
+   ════════════════════════════════════════════════════════════════════════ */
+.pg-dark {
+  --paper: oklch(0.25 0.05 225); /* 深蓝底 */
+  --surface: oklch(0.95 0.032 120 / 0.05);
+  --ink: oklch(0.95 0.032 120); /* 浅绿白：正文/分隔线 */
+  --graphite: oklch(0.72 0.05 165);
+  --hairline: oklch(0.95 0.032 120 / 0.25);
+  --hair: 1px solid oklch(0.95 0.032 120 / 0.25);
+  --accent: oklch(0.71 0.098 145); /* 深底亮绿 */
+  --accent-2: oklch(0.83 0.075 294); /* 深底亮紫 */
+  --n300: oklch(0.45 0.03 190);
+  --n400: oklch(0.58 0.04 175);
+  --n500: oklch(0.66 0.045 170);
+  --n600: oklch(0.72 0.05 165);
+  --n700: oklch(0.82 0.045 160);
+  --n800: oklch(0.9 0.04 155);
+  --n200: oklch(0.95 0.032 120 / 0.08);
+  color: var(--ink);
+  position: relative;
+  z-index: 0;
+}
+/* 深底铺满视口（盖住 body 的浅纸底；转场着陆背景） */
+.ground-plane {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    160deg,
+    oklch(0.27 0.052 200) 0%,
+    oklch(0.24 0.048 232) 55%,
+    oklch(0.26 0.052 282) 100%
+  );
+}
+.ground-plane::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--grain);
+  background-size: 170px 170px;
+  opacity: 0.1;
+  mix-blend-mode: overlay;
+}
+/* 深色页 case-body 编号 section：2px 墨线改发丝线（贴设计稿），底色透明 */
+.pg-dark .case-body h2 {
+  border-top: var(--hair);
+}
+/* 深色页 hero 着陆媒体块（转场落点，data-ptm 克隆源同族渐变） */
+.case-hero {
+  aspect-ratio: 3 / 2;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    150deg,
+    oklch(0.3 0.062 196) 0%,
+    oklch(0.26 0.058 232) 55%,
+    oklch(0.28 0.062 285) 100%
+  );
+}
+
+/* 深色 nav 变体（SiteNav 在深色路由加 .nav-dark；透明底 + 浅绿文字 + 发丝线） */
+.nav-dark {
+  background: transparent;
+  color: oklch(0.95 0.032 120);
+  border-bottom-color: oklch(0.95 0.032 120 / 0.25);
+}
+.nav-dark .nav-brand,
+.nav-dark a {
+  color: oklch(0.95 0.032 120);
+}
+.nav-dark a:hover,
+.nav-dark a[aria-current='page'] {
+  color: oklch(0.71 0.098 145);
+}
+
+/* ── 页面转场进入段（PageEnter）：着陆平面从满屏 clip 收回到 hero 位置揭开 ──
+   goPT（主页）媒体块生长满屏 → router.push → 本层接力：不透明平面盖场、
+   内容 blur 揭入、平面 clip 到 hero 后移除。强兜底：任何情况超时必清（防白屏）。 */
+.pt-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+  background: linear-gradient(
+    160deg,
+    oklch(0.27 0.052 200) 0%,
+    oklch(0.24 0.048 232) 55%,
+    oklch(0.26 0.052 282) 100%
+  );
+}
+.pt-veil::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(oklch(0.71 0.098 145) 1px, transparent 1.2px);
+  background-size: 6px 6px;
+  opacity: 0.26;
+  -webkit-mask-image: linear-gradient(150deg, #000 0%, transparent 55%);
+  mask-image: linear-gradient(150deg, #000 0%, transparent 55%);
+}
+@keyframes pt-reveal {
+  to {
+    filter: blur(0);
+    transform: scale(1);
+  }
+}
+.pt-enter {
+  animation: pt-reveal var(--dur-struct) var(--ease-site) 80ms backwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pt-enter {
+    animation: none;
+  }
+}
