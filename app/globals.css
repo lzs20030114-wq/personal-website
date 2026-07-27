@@ -741,6 +741,36 @@ a:hover {
   gap: 0 18px;
   min-width: 0;
 }
+/* 滚轴行（月份）：「全部」留在轨道外恒可见，月份挤在轨道里横向滚。
+   月份这一级随时间无限增长——平铺换行迟早把筛选带撑成一堵墙。 */
+.log-facet__opts[data-scroll='true'] {
+  flex-wrap: nowrap;
+}
+.log-facet__track {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: 0 18px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain; /* 滚到头不要接着把整页往回带 */
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: var(--n400) transparent;
+}
+.log-facet__track > * {
+  flex: none;
+  scroll-snap-align: start;
+}
+.log-facet__track::-webkit-scrollbar {
+  height: 4px;
+}
+.log-facet__track::-webkit-scrollbar-thumb {
+  background: var(--n400);
+  border-radius: 2px;
+}
+.log-facet__track::-webkit-scrollbar-track {
+  background: transparent;
+}
 .log-band__readout {
   display: flex;
   align-items: baseline;

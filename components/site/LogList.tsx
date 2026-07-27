@@ -95,7 +95,11 @@ function groupByMonth(rows: Row[]): Group[] {
 
 const STORE_KEY = 'log-lang';
 
-/** 一行筛选：左侧级别名 + 「全部」+ 各选项（点已选中的 = 取消回该级全部）。 */
+/**
+ * 一行筛选：左侧级别名 + 「全部」+ 各选项（点已选中的 = 取消回该级全部）。
+ * `scroll` = 选项装进横向滚轴（月份专用：这一级会随时间无限增长，
+ * 平铺换行迟早把整个筛选带撑成一堵墙；「全部」留在轨道外，永远够得着）。
+ */
 function FacetRow({
   level,
   facets,
@@ -104,6 +108,7 @@ function FacetRow({
   allLabel,
   allCount,
   lang,
+  scroll = false,
 }: {
   level: string;
   facets: Facet[];
@@ -112,11 +117,43 @@ function FacetRow({
   allLabel: string;
   allCount: number;
   lang: LogLang;
+  scroll?: boolean;
 }) {
+  const track = useRef<HTMLDivElement>(null);
+
+  // 选中项滚进视野（热力图跳转会替你改月份，选中的那格可能在轨道外）。
+  // 手动改 scrollLeft，不用 scrollIntoView——后者会连带把整页竖着滚一下。
+  // 位置用 getBoundingClientRect 相减，不用 offsetLeft：offsetLeft 是相对
+  // 最近的定位祖先算的，轨道自己没定位时会量到外层容器上去。
+  useEffect(() => {
+    const el = track.current;
+    if (!el || value === null) return;
+    const chip = el.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (!chip) return;
+    const box = el.getBoundingClientRect();
+    const at = chip.getBoundingClientRect();
+    el.scrollLeft += at.left - box.left - (box.width - at.width) / 2;
+  }, [value]);
+
+  const opts = facets.map((f) => (
+    <button
+      key={f.key}
+      type="button"
+      className="log-filter__opt"
+      aria-pressed={value === f.key}
+      // 该项在当前上层筛选下为空：留在原位但不可点，免得整行随下钻跳来跳去
+      disabled={f.count === 0 && value !== f.key}
+      onClick={() => onPick(value === f.key ? null : f.key)}
+    >
+      {(scroll ? (f.short ?? f.label) : f.label)[lang]}
+      <span className="log-filter__n">{f.count}</span>
+    </button>
+  ));
+
   return (
     <div className="log-facet" role="group" aria-label={level}>
       <span className="log-facet__level">{level}</span>
-      <div className="log-facet__opts">
+      <div className="log-facet__opts" data-scroll={scroll}>
         <button
           type="button"
           className="log-filter__opt"
@@ -126,20 +163,13 @@ function FacetRow({
           {allLabel}
           <span className="log-filter__n">{allCount}</span>
         </button>
-        {facets.map((f) => (
-          <button
-            key={f.key}
-            type="button"
-            className="log-filter__opt"
-            aria-pressed={value === f.key}
-            // 该项在当前上层筛选下为空：留在原位但不可点，免得整行随下钻跳来跳去
-            disabled={f.count === 0 && value !== f.key}
-            onClick={() => onPick(value === f.key ? null : f.key)}
-          >
-            {f.label[lang]}
-            <span className="log-filter__n">{f.count}</span>
-          </button>
-        ))}
+        {scroll ? (
+          <div className="log-facet__track" ref={track} tabIndex={-1}>
+            {opts}
+          </div>
+        ) : (
+          opts
+        )}
       </div>
     </div>
   );
@@ -339,6 +369,7 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
             allLabel={copy.all}
             allCount={facets.counts.m}
             lang={lang}
+            scroll
           />
           {/* 读数：筛完只剩几条时说明「不是漏了，是筛掉了」；总览态留空占位不出字。 */}
           <div className="log-band__readout">

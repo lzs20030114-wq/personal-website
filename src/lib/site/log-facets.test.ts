@@ -7,6 +7,7 @@ import {
   buildHeatmap,
   heatLevel,
   monthFacets,
+  monthChip,
   monthLabel,
   OTHER_ASPECT,
   projectFacets,
@@ -65,6 +66,20 @@ describe('三级筛选', () => {
     for (const f of monthFacets(ENTRIES)) {
       expect(f.label.en.length).toBeGreaterThan(0);
       expect(f.label.zh.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('月份滚轴用的紧凑写法：每项都有，且比全称短（轨道里越短看见越多）', () => {
+    expect(monthChip('2026-07')).toEqual({ en: 'Jul 2026', zh: '2026.07' });
+    expect(monthChip('2025-12')).toEqual({ en: 'Dec 2025', zh: '2025.12' });
+    for (const f of monthFacets(ENTRIES)) {
+      expect(f.short, `${f.key} 缺紧凑写法`).toBeDefined();
+      expect(f.short!.en.length).toBeLessThanOrEqual(f.label.en.length);
+      expect(f.short!.zh.length).toBeLessThanOrEqual(f.label.zh.length);
+    }
+    // 只有月份用滚轴，另外两级不该带 short（带了说明谁被顺手改了形状）
+    for (const f of [...projectFacets(ENTRIES), ...aspectFacets(ENTRIES)]) {
+      expect(f.short).toBeUndefined();
     }
   });
 });

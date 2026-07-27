@@ -4,8 +4,11 @@
 import type { LogEntry } from './log';
 
 export type Bilingual = { en: string; zh: string };
-/** 一个筛选项：key = 判定用的稳定标识，label = 显示名，count = 该项下的条数。 */
-export type Facet = { key: string; label: Bilingual; count: number };
+/**
+ * 一个筛选项：key = 判定用的稳定标识，label = 显示名，count = 该项下的条数。
+ * short = 紧凑写法，只有月份用（月份是唯一会无限增长的一级，放在滚轴里，越短越多看见几个）。
+ */
+export type Facet = { key: string; label: Bilingual; count: number; short?: Bilingual };
 
 /** 没有 neutral 标签的条目落这个方面——保证「各方面之和 = 总览」，不让条目掉出下钻路径。 */
 export const OTHER_ASPECT = '~other';
@@ -54,6 +57,12 @@ function shortMonthLabel(key: string): Bilingual {
   return { en: MONTHS_EN[month - 1].slice(0, 3), zh: `${month} 月` };
 }
 
+/** 月份的紧凑写法，给筛选滚轴用（'Jul 2026' / '2026.07'）。 */
+export function monthChip(key: string): Bilingual {
+  const [year, month] = key.split('-');
+  return { en: `${MONTHS_EN[Number(month) - 1].slice(0, 3)} ${year}`, zh: `${year}.${month}` };
+}
+
 function tally(
   entries: LogEntry[],
   keyOf: (e: LogEntry) => string | null,
@@ -95,9 +104,9 @@ export function aspectFacets(entries: LogEntry[]): Facet[] {
 
 /** 月份：按时间倒序，与条目列表同序（最新在前）。 */
 export function monthFacets(entries: LogEntry[]): Facet[] {
-  return tally(entries, monthOf, (_e, key) => monthLabel(key)).sort((a, b) =>
-    a.key < b.key ? 1 : -1,
-  );
+  return tally(entries, monthOf, (_e, key) => monthLabel(key))
+    .map((f) => ({ ...f, short: monthChip(f.key) }))
+    .sort((a, b) => (a.key < b.key ? 1 : -1));
 }
 
 /* ── 热力图（GitHub 式：列 = 周，行 = 周日→周六） ─────────────────────────── */
