@@ -14,6 +14,7 @@ import {
   shellMaxError,
   stepRing,
 } from '../../src/lib/linkage/shell3d';
+import { setSnapshot } from './snapshot';
 import { useBenchLoop } from './useBenchLoop';
 
 /**
@@ -414,9 +415,16 @@ export function RingsBench({
     canvas.addEventListener('pointercancel', onUp);
     canvas.addEventListener('wheel', onWheel, { passive: false });
 
+    // 转场克隆用的画面快照：重绘一帧后立刻读回（同任务内绘制缓冲仍在，见 snapshot.ts）
+    setSnapshot(canvas, () => {
+      render();
+      return canvas.toDataURL('image/png');
+    });
+
     render();
     return () => {
       apiRef.current = null;
+      setSnapshot(canvas, null);
       canvas.removeEventListener('contextmenu', onCtx);
       canvas.removeEventListener('pointerdown', onDown);
       canvas.removeEventListener('pointermove', onMove);

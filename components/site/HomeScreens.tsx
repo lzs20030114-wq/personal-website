@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { StageRotator } from '../lab/StageRotator';
 import { RingsBench } from '../lab/RingsBench';
+import { snapshotCanvas } from '../lab/snapshot';
+import { coverRect, flipCss, flipTransform } from '../../src/lib/site/flip';
 
 /**
  * 主页整屏分幕（design-ref/Home-Screens.dc.html 落地，MAPPING §6；2026-07-26 迭代稿同步）。
@@ -121,11 +123,11 @@ export interface HomeLog {
   text: string;
 }
 
-// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-07-27 vitest 实测 122；
+// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-07-27 vitest 实测 131；
 // 迭代稿配色：Tests=绿 700、Kernels=紫 700、Demos=绿 600）
 const STATS = [
   { n: '04', label: 'Projects', color: 'var(--ink)' },
-  { n: '122', label: 'Tests green', color: 'var(--accent)' },
+  { n: '131', label: 'Tests green', color: 'var(--accent)' },
   { n: '02', label: 'Solver kernels', color: 'var(--accent-2)' },
   { n: '05', label: 'Live demos', color: 'var(--g600)' },
 ];
@@ -513,6 +515,16 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
       }
       const wrap = document.createElement('div');
       wrap.setAttribute('data-pt-tmp', '1');
+      // data-pt-morph + 版式盒尺寸：目标页 PageEnter 接手这个克隆，把它从当前的满屏帧
+      // 继续送到 hero 主图位（第二段）。盒尺寸得留着——克隆此刻带着 transform，
+      // getBoundingClientRect 量到的是变换后的框，算不回原盒。
+      wrap.setAttribute('data-pt-morph', '1');
+      wrap.dataset.ptRect = JSON.stringify({
+        left: r.left,
+        top: r.top,
+        width: r.width,
+        height: r.height,
+      });
       wrap.style.cssText = `position:fixed;top:${r.top}px;left:${r.left}px;width:${r.width}px;height:${r.height}px;z-index:200;pointer-events:none;overflow:hidden;transform-origin:50% 50%;will-change:transform`;
       const clone = fromEl.cloneNode(true) as HTMLElement;
       clone.style.position = 'absolute';
@@ -522,18 +534,26 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
       clone.style.margin = '0';
       clone.style.flex = 'none';
       clone.style.minHeight = '0';
+      // canvas 的像素不随 cloneNode 复制（克隆是空画布）——3D 台架当预览时，点下去
+      // 机构会凭空消失。改挂快照位图，静止但画面连得上（snapshot.ts）。
+      const srcCanvas = fromEl.querySelectorAll('canvas');
+      const dstCanvas = clone.querySelectorAll('canvas');
+      srcCanvas.forEach((src, i) => {
+        const dst = dstCanvas[i];
+        const url = snapshotCanvas(src);
+        if (!dst || !url) return;
+        const box = src.getBoundingClientRect();
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = '';
+        img.style.cssText = `display:block;width:100%;aspect-ratio:${Math.max(box.width, 1)}/${Math.max(box.height, 1)}`;
+        dst.replaceWith(img);
+      });
       wrap.appendChild(clone);
       document.body.appendChild(wrap);
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      const s = Math.max(vw / Math.max(r.width, 1), vh / Math.max(r.height, 1)) * 1.02;
-      const tx = vw / 2 - (r.left + r.width / 2);
-      const ty = vh / 2 - (r.top + r.height / 2);
+      const cover = coverRect(r, window.innerWidth, window.innerHeight);
       wrap.animate(
-        [
-          { transform: 'translate(0px,0px) scale(1)' },
-          { transform: `translate(${tx}px,${ty}px) scale(${s})` },
-        ],
+        [{ transform: 'translate(0px,0px) scale(1)' }, { transform: flipCss(flipTransform(r, cover)) }],
         { duration: PUSH_MS, easing: EASE, fill: 'forwards' },
       ).onfinish = () => setTimeout(finish, 50);
     };

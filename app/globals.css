@@ -1200,6 +1200,14 @@ button.log-heat__cell {
   );
 }
 
+/* 主图位放活台架时（项目 01 临时用 Lab.04 五环）：高度交给台架自身比例，
+   固定的 3/2 会把画布上下裁掉、连带切掉 HUD 角标。渐变底保留——它与主页预览块
+   （.om-media）同款，转场落地时两边底色对得上。 */
+.case-hero--live {
+  aspect-ratio: auto;
+  display: block;
+}
+
 /* 深色 nav 变体（SiteNav 在深色路由加 .nav-dark；透明底 + 浅绿文字 + 发丝线） */
 .nav-dark {
   background: transparent;

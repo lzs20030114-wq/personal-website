@@ -1,17 +1,35 @@
 'use client';
 
 import { useEffect } from 'react';
+import { coverRect, flipCss, flipTransform, type Rect } from '../../src/lib/site/flip';
 
 /**
- * 页面转场进入段（MAPPING §6.1）。主页 goPT 媒体块生长满屏 → router.push 后本层接力：
- * 挂一层不透明着陆平面（盖住 goPT 残留与新页面首帧）→ 内容 blur 揭入 →
- * 平面 clipPath 从满屏收回到 hero（data-pt-target）位置后移除。
+ * 页面转场进入段（MAPPING §6.1 / §9）。主页 goPT 把预览块放大到铺满视口 → router.push →
+ * 本层接力，把那一帧**缩放位移落到本页的 hero 主图位**。
+ *
+ * 落地段有两条路：
+ * ① **变位缩放（有 hero 落点，/work/[slug]）**——出场克隆（body 上、跨路由存活的 [data-pt-morph]）
+ *    与本页 hero 同时沿同一条几何路径飞向 hero 的版式位（几何见 src/lib/site/flip.ts），
+ *    途中交叉淡出：静止的克隆快照退，活的 hero 进。看上去就是主页那张预览图自己落到了主图位。
+ *    起点取克隆此刻的视觉框（而不是重新按视口算）——这样第一段的末帧就是第二段的首帧，接缝为零。
+ * ② **着陆平面（无 hero 落点，/archive 等）**——旧行为原样保留：不透明平面盖场、内容 blur 揭入、
+ *    平面 clip 收回后移除。
  *
  * 强兜底（防白屏，这是跨路由动画唯一的硬风险）：
- * - 无转场标记（直接访问/普通导航）→ 立即清除 goPT 残留，不揭开；
- * - 任何情况 2s 超时强制移除平面；组件卸载也强制 finish。
+ * - 无转场标记（直接访问/普通导航）→ 立即清除 goPT 残留，什么都不播；
+ * - 任何情况超时强制收尾（hero 内联样式一并复原）；组件卸载也强制 finish。
  * 转场标记 = sessionStorage('om-pt') 存 Date.now()，读后即删；超 3s 视为过期忽略。
  */
+const MORPH_MS = 760; // 第二段：满屏帧 → hero 位
+const CROSSFADE = 0.55; // 克隆淡出到此进度已经交给活件（越小越早交，越大越粘）
+const REVEAL_MS = 560; // 周边内容揭入
+const REVEAL_DELAY = 140;
+
+const rectOf = (el: Element): Rect => {
+  const r = el.getBoundingClientRect();
+  return { left: r.left, top: r.top, width: r.width, height: r.height };
+};
+
 export function PageEnter() {
   useEffect(() => {
     const EASE = 'cubic-bezier(0.2,0.7,0.2,1)';
@@ -37,27 +55,105 @@ export function PageEnter() {
       return;
     }
 
-    // 着陆平面：先盖住一切（含 goPT 残留与新页面首帧），再清残留（此刻被盖，无感）。
+    let done = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const cleanups: Array<() => void> = [];
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      cleanups.forEach((fn) => fn());
+      clearTmp();
+      document.querySelectorAll('[data-pt-morph]').forEach((el) => el.remove());
+    };
+
+    const hero = document.querySelector<HTMLElement>('[data-pt-target]');
+    const content = document.querySelector<HTMLElement>('[data-pt-content]');
+    const heroRect = hero ? rectOf(hero) : null;
+
+    // ── ① 变位缩放：克隆与 hero 一起飞到 hero 版式位 ─────────────────────────────
+    if (hero && heroRect && heroRect.width > 10 && heroRect.height > 10) {
+      const morph = document.querySelector<HTMLElement>('[data-pt-morph]');
+      // 起点 = 克隆此刻的视觉框（第一段的末帧）；没有克隆（兜底路径）就自己按视口算一帧
+      const start = morph
+        ? rectOf(morph)
+        : coverRect(heroRect, window.innerWidth, window.innerHeight);
+
+      // 平面残留（goPT 的 0.92 遮罩）此刻被满屏的克隆/hero 盖着，直接撤掉不会露馅
+      document.querySelectorAll('[data-pt-tmp]').forEach((el) => {
+        if (el !== morph) el.remove();
+      });
+
+      // hero：从满屏帧缩回自己的版式位。z-index 只为压住 nav / 正文（都不带 z-index），
+      // 克隆在 body 上 z=200，仍在 hero 之上——交叉淡出要的就是这个顺序。
+      const prev = hero.getAttribute('style') ?? '';
+      hero.style.position = 'relative';
+      hero.style.zIndex = '150';
+      hero.style.transformOrigin = '50% 50%';
+      hero.style.willChange = 'transform';
+      cleanups.push(() => {
+        if (prev) hero.setAttribute('style', prev);
+        else hero.removeAttribute('style');
+      });
+      const heroAnim = hero.animate(
+        [{ transform: flipCss(flipTransform(heroRect, start)) }, { transform: 'none' }],
+        { duration: MORPH_MS, easing: EASE },
+      );
+      // 收尾必须连动画一起收：只复原内联样式而放任动画跑完，hero 会在失去 z-index 之后
+      // 继续放大着压在正文底下（慢机器上硬兜底先到，实测可见）。
+      cleanups.push(() => heroAnim.cancel());
+      // 没有克隆（兜底路径）时由 hero 自己收尾——否则收尾只能等硬兜底超时
+      if (!document.querySelector('[data-pt-morph]')) heroAnim.onfinish = finish;
+
+      if (morph) {
+        // 克隆带着 transform，量不回版式盒——goPT 把原盒写在 dataset 里
+        let base: Rect | null = null;
+        try {
+          base = JSON.parse(morph.dataset.ptRect ?? 'null') as Rect | null;
+        } catch {
+          base = null;
+        }
+        // 摘掉 data-pt-tmp：主页那边 push 后 700ms 的兜底淡出只认这个属性，别让它抢走
+        morph.removeAttribute('data-pt-tmp');
+        const from = getComputedStyle(morph).transform;
+        const to = base ? flipCss(flipTransform(base, heroRect)) : from;
+        morph.animate(
+          [
+            { transform: from, opacity: 1, offset: 0 },
+            { opacity: 0, offset: CROSSFADE },
+            { transform: to, opacity: 0, offset: 1 },
+          ],
+          { duration: MORPH_MS, easing: EASE, fill: 'forwards' },
+        ).onfinish = finish;
+      }
+
+      // 周边内容（不含 hero 的那些块）揭入；hero 所在块不碰——给它加 filter 会另起层叠上下文，
+      // 把 hero 压回 nav 之下。
+      Array.from(content?.children ?? []).forEach((kid) => {
+        if (kid.contains(hero)) return;
+        (kid as HTMLElement).animate(
+          [
+            { opacity: 0, filter: 'blur(10px)' },
+            { opacity: 1, filter: 'blur(0px)' },
+          ],
+          { duration: REVEAL_MS, delay: REVEAL_DELAY, easing: EASE, fill: 'backwards' },
+        );
+      });
+
+      timer = setTimeout(finish, MORPH_MS + 900); // 硬兜底
+      return finish;
+    }
+
+    // ── ② 着陆平面（无 hero 落点）：旧行为原样 ─────────────────────────────────
     const veil = document.createElement('div');
     veil.className = 'pt-veil';
     veil.setAttribute('data-pt-tmp', '1');
     if (bg) veil.style.background = bg;
     document.body.appendChild(veil);
-    document.querySelectorAll('[data-pt-tmp]').forEach((el) => {
+    document.querySelectorAll('[data-pt-tmp], [data-pt-morph]').forEach((el) => {
       if (el !== veil) el.remove();
     });
 
-    let done = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      veil.remove();
-    };
-
-    // 内容 blur 揭入（data-pt-content）
-    const content = document.querySelector<HTMLElement>('[data-pt-content]');
     content?.animate(
       [
         { filter: 'blur(14px)', transform: 'scale(1.03)' },
@@ -66,30 +162,12 @@ export function PageEnter() {
       { duration: 700, delay: 80, easing: EASE, fill: 'backwards' },
     );
 
-    // settle：平面从满屏 clip 收回到 hero 位置；无 hero 则直接淡出
-    const settle = () => {
-      const hero = document.querySelector<HTMLElement>('[data-pt-target]');
-      const r = hero?.getBoundingClientRect();
-      if (!r || r.width < 10 || r.height < 10) {
-        veil.animate([{ opacity: 1 }, { opacity: 0 }], {
-          duration: 520,
-          easing: EASE,
-          fill: 'forwards',
-        }).onfinish = finish;
-        return;
-      }
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      const clip = `inset(${Math.max(r.top, 0)}px ${Math.max(vw - r.right, 0)}px ${Math.max(
-        vh - r.bottom,
-        0,
-      )}px ${Math.max(r.left, 0)}px)`;
-      veil.animate(
-        [{ clipPath: 'inset(0px 0px 0px 0px)' }, { clipPath: clip }],
-        { duration: 680, delay: 120, easing: EASE, fill: 'forwards' },
-      ).onfinish = finish;
-    };
-    requestAnimationFrame(() => requestAnimationFrame(settle));
+    veil.animate([{ opacity: 1 }, { opacity: 0 }], {
+      duration: 520,
+      delay: 120,
+      easing: EASE,
+      fill: 'forwards',
+    }).onfinish = finish;
 
     timer = setTimeout(finish, 2000); // 硬兜底：无论如何 2s 必清
     return finish; // 卸载即清
