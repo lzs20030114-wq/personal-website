@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { getLogBuckets, getLogEntries, logBucketKey } from './log';
+import { getLogEntries } from './log';
 
 /**
  * Work log 内容池的守门测试。zod 已在构建期挡住形状错误，这里守的是
@@ -60,22 +60,6 @@ describe('log 内容池', () => {
       expect(outline.length, `${e.date} 必须恰好一个项目桶（outline）`).toBe(1);
       expect(neutral.length, `${e.date} neutral 标签超预算`).toBeLessThanOrEqual(1);
     }
-  });
-
-  it('项目桶：覆盖全池、条数守恒、顺序确定', () => {
-    const entries = getLogEntries();
-    const buckets = getLogBuckets();
-    expect(buckets.length).toBeGreaterThan(1); // 只剩一个桶就没有筛选的意义
-    // 各筛选视图之和 = 总览：没有条目掉在筛选之外
-    expect(buckets.reduce((n, b) => n + b.count, 0)).toBe(entries.length);
-    for (const b of buckets) {
-      const actual = entries.filter((e) => logBucketKey(e) === b.key);
-      expect(actual.length, `桶 ${b.key} 计数不符`).toBe(b.count);
-    }
-    // 条数多的在前，同数按 key 字典序——SSR 首帧与客户端必须排出同一个顺序
-    const order = buckets.map((b) => [b.count, b.key] as const);
-    const sorted = [...order].sort((a, b) => b[0] - a[0] || (a[1] < b[1] ? -1 : 1));
-    expect(order).toEqual(sorted);
   });
 
   it('同一英文标签只对应一个中文译名', () => {

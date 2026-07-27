@@ -692,15 +692,85 @@ a:hover {
   }
 }
 
-/* 项目筛选条：全部 + 每个项目桶。选中 = accent 文字 + 底边实线，
-   与条目左栏的 tag-outline 同色系——点的是哪个项目，一眼对得上。 */
-.log-filter {
+/* 筛选带：左 = 三级下钻（项目 → 方面 → 月份），右 = 日历热力图。
+   <1100px 热力图落到筛选下面（网格塌成单列）。 */
+.log-band {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 24px 40px;
+  padding: 18px 0 22px;
+  border-bottom: var(--hair);
+}
+@media (max-width: 1099px) {
+  .log-band {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.log-band__filters {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+/* 一行 = 一级：左侧固定宽的级别名 + 右侧选项（选项自己会换行，级别名不参与） */
+.log-facet {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 12px;
+}
+@media (max-width: 640px) {
+  .log-facet {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}
+.log-facet__level {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--n500);
+  padding-top: 8px;
+}
+.log-facet__opts {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 20px;
-  padding: 18px 0 0;
+  gap: 0 18px;
+  min-width: 0;
 }
+.log-band__readout {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  min-height: 1.4em;
+  margin-top: 6px;
+  padding-left: 88px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--n500);
+}
+@media (max-width: 640px) {
+  .log-band__readout {
+    padding-left: 0;
+  }
+}
+.log-band__clear {
+  font: inherit;
+  padding: 0;
+  color: var(--accent);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  cursor: pointer;
+}
+
+/* 筛选项：选中 = accent 文字 + 底边实线，与条目左栏的 tag-outline 同色系——
+   点的是哪个项目/方面，一眼对得上。 */
 .log-filter__opt {
   display: inline-flex;
   align-items: baseline;
@@ -731,19 +801,17 @@ a:hover {
 .log-filter__opt[aria-pressed='true'] .log-filter__n {
   color: var(--accent);
 }
-/* 读数：占位常驻（总览态文本为空），切筛选时按钮行不跳动 */
-.log-filter__count {
-  margin-left: auto;
-  min-height: 1em;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--n500);
+/* 当前上层筛选下为空的项：留在原位但点不动（免得整行随下钻跳来跳去） */
+.log-filter__opt:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 /* 中文不做大写变形（CJK 无大小写，uppercase 只白白扰动字宽计算） */
 [lang='zh-Hans'] .log-filter__opt,
-[lang='zh-Hans'] .log-filter__count {
+[lang='zh-Hans'] .log-facet__level,
+[lang='zh-Hans'] .log-band__readout,
+[lang='zh-Hans'] .log-heat__title,
+[lang='zh-Hans'] .log-heat__legend {
   text-transform: none;
 }
 @media (hover: hover) and (pointer: fine) {
@@ -760,6 +828,111 @@ a:hover {
 @media (prefers-reduced-motion: reduce) {
   .log-filter__opt {
     transition: none;
+  }
+}
+
+/* 日历热力图：列 = 周，行 = 周日→周六（GitHub 式）。有条目的格子才是按钮，
+   空日与范围外的补位格不进 tab 序——键盘不该在一片空网格里穿行。 */
+.log-heat {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  --heat-cell: 11px;
+  --heat-gap: 3px;
+}
+.log-heat__title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--n500);
+}
+/* 窄屏横向滚动：格子宁可滑出去，也不缩到点不中 */
+.log-heat__scroll {
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.log-heat__months,
+.log-heat__grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--heat-cell);
+  gap: var(--heat-gap);
+  width: max-content;
+}
+.log-heat__months {
+  margin-bottom: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--n500);
+  white-space: nowrap;
+}
+.log-heat__week {
+  display: grid;
+  grid-template-rows: repeat(7, var(--heat-cell));
+  gap: var(--heat-gap);
+}
+.log-heat__cell {
+  width: var(--heat-cell);
+  height: var(--heat-cell);
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+button.log-heat__cell {
+  cursor: pointer;
+}
+.log-heat__cell[data-level='void'] {
+  background: transparent;
+}
+.log-heat__cell[data-level='1'] {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.log-heat__cell[data-level='2'] {
+  background: color-mix(in srgb, var(--accent) 52%, transparent);
+}
+.log-heat__cell[data-level='3'] {
+  background: color-mix(in srgb, var(--accent) 76%, transparent);
+}
+.log-heat__cell[data-level='4'] {
+  background: var(--accent);
+}
+/* 月份筛选生效时，其余月份的格子退到背景——热力图与月份那一级是同一个控件 */
+.log-heat__cell[data-dim='true'] {
+  opacity: 0.28;
+}
+.log-heat__legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--n500);
+}
+@media (hover: hover) and (pointer: fine) {
+  button.log-heat__cell {
+    transition: outline-color var(--dur-micro) var(--ease-site);
+    outline: 1px solid transparent;
+    outline-offset: 1px;
+  }
+  button.log-heat__cell:hover {
+    outline-color: var(--ink);
+  }
+}
+/* 跳转落点：闪一下告诉你「就是这条」（reduced-motion 下不动画，靠底色停留） */
+.log-entry[data-flash='true'] {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .log-entry {
+    transition: background 480ms var(--ease-site);
   }
 }
 

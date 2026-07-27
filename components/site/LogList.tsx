@@ -1,8 +1,20 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 // 只取类型：本模块是 'use client'，而 src/lib/site/log 会 import node:fs（服务端读内容池）。
-import type { LogBucket, LogEntry, LogLang } from '../../src/lib/site/log';
+import type { LogEntry, LogLang } from '../../src/lib/site/log';
+import {
+  aspectFacets,
+  aspectOf,
+  bucketOf,
+  buildHeatmap,
+  heatLevel,
+  monthFacets,
+  monthLabel,
+  monthOf,
+  projectFacets,
+  type Facet,
+} from '../../src/lib/site/log-facets';
 
 /**
  * Work log 列表 + 中英切换（用户拍板 2026-07-27）。
@@ -12,8 +24,9 @@ import type { LogBucket, LogEntry, LogLang } from '../../src/lib/site/log';
  * 版式（同日拍板「不要全堆在一起」）：左栏 日期 + 标签，右栏 引句独占一行、正文另起，
  * 正文限宽 66ch；按月分组，月首插一条带标签的发丝线。
  *
- * 项目筛选（用户拍板 2026-07-27）：标头下一行筛选条，默认「全部」= 总览，
- * 点某个项目只看该项目。桶 = outline 标签（MAPPING §8.1），不新开字段。
+ * 三级筛选 + 热力图（用户拍板 2026-07-27）：项目 → 方面 → 月份三行下钻，
+ * 右侧 GitHub 式日历热力图，点某天跳到那天的条目。三级都从内容池现算
+ * （src/lib/site/log-facets，纯函数），不新开字段、不加路由。
  */
 
 type Copy = {
@@ -22,8 +35,14 @@ type Copy = {
   foot: string;
   switchLabel: string;
   filterLabel: string;
+  levels: { project: string; aspect: string; month: string };
   all: string;
   showing: (shown: number, total: number) => string;
+  clear: string;
+  heat: string;
+  heatLess: string;
+  heatMore: string;
+  day: (date: string, n: number) => string;
 };
 
 const COPY: Record<LogLang, Copy> = {
@@ -32,51 +51,41 @@ const COPY: Record<LogLang, Copy> = {
     kicker: 'Continuous record · newest first',
     foot: 'The log grows over time. Entries link into case studies and lab benches as they land.',
     switchLabel: 'Language',
-    filterLabel: 'Filter by project',
+    filterLabel: 'Filter entries',
+    levels: { project: 'Project', aspect: 'Aspect', month: 'Month' },
     all: 'All',
     showing: (shown, total) => `Showing ${shown} of ${total} entries`,
+    clear: 'Clear',
+    heat: 'Activity',
+    heatLess: 'Less',
+    heatMore: 'More',
+    day: (date, n) => `${date} — ${n} ${n === 1 ? 'entry' : 'entries'}`,
   },
   zh: {
     title: '工作日志',
     kicker: '持续记录 · 最新在前',
     foot: '日志持续增补。条目落地后会链入对应的案例页与实验台架。',
     switchLabel: '语言',
-    filterLabel: '按项目筛选',
+    filterLabel: '筛选条目',
+    levels: { project: '项目', aspect: '方面', month: '时间' },
     all: '全部',
     showing: (shown, total) => `显示 ${total} 条中的 ${shown} 条`,
+    clear: '清除',
+    heat: '活跃度',
+    heatLess: '少',
+    heatMore: '多',
+    day: (date, n) => `${date} — ${n} 条`,
   },
 };
 
-const MONTHS_EN = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-];
-
-/** '2026-07' → 'July 2026' / '2026 年 7 月'（不用 Intl：SSR 与客户端 locale 必须一致）。 */
-function monthLabel(key: string, lang: LogLang): string {
-  const [year, month] = key.split('-');
-  const i = Number(month) - 1;
-  return lang === 'zh' ? `${year} 年 ${Number(month)} 月` : `${MONTHS_EN[i]} ${year}`;
-}
-
 /** 条目 + 全池内稳定 id：id 必须与筛选无关，否则筛完之后展开态会串到别的条目上。 */
-type Row = { entry: LogEntry; id: string; bucket: string | null };
+type Row = { entry: LogEntry; id: string };
 type Group = { key: string; rows: Row[] };
 
 function groupByMonth(rows: Row[]): Group[] {
   const groups: Group[] = [];
   for (const r of rows) {
-    const key = r.entry.date.slice(0, 7);
+    const key = monthOf(r.entry);
     const last = groups[groups.length - 1];
     if (last && last.key === key) last.rows.push(r);
     else groups.push({ key, rows: [r] });
@@ -86,27 +95,114 @@ function groupByMonth(rows: Row[]): Group[] {
 
 const STORE_KEY = 'log-lang';
 
-export function LogList({ entries, buckets }: { entries: LogEntry[]; buckets: LogBucket[] }) {
+/** 一行筛选：左侧级别名 + 「全部」+ 各选项（点已选中的 = 取消回该级全部）。 */
+function FacetRow({
+  level,
+  facets,
+  value,
+  onPick,
+  allLabel,
+  allCount,
+  lang,
+}: {
+  level: string;
+  facets: Facet[];
+  value: string | null;
+  onPick: (next: string | null) => void;
+  allLabel: string;
+  allCount: number;
+  lang: LogLang;
+}) {
+  return (
+    <div className="log-facet" role="group" aria-label={level}>
+      <span className="log-facet__level">{level}</span>
+      <div className="log-facet__opts">
+        <button
+          type="button"
+          className="log-filter__opt"
+          aria-pressed={value === null}
+          onClick={() => onPick(null)}
+        >
+          {allLabel}
+          <span className="log-filter__n">{allCount}</span>
+        </button>
+        {facets.map((f) => (
+          <button
+            key={f.key}
+            type="button"
+            className="log-filter__opt"
+            aria-pressed={value === f.key}
+            // 该项在当前上层筛选下为空：留在原位但不可点，免得整行随下钻跳来跳去
+            disabled={f.count === 0 && value !== f.key}
+            onClick={() => onPick(value === f.key ? null : f.key)}
+          >
+            {f.label[lang]}
+            <span className="log-filter__n">{f.count}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function LogList({ entries }: { entries: LogEntry[] }) {
   // SSR 首帧恒为 EN（静态预渲染，服务端读不到偏好）；挂载后再按上次选择切。
   const [lang, setLang] = useState<LogLang>('en');
-  // 项目筛选：null = 总览看全部。不记 localStorage——刷新即回总览，免得下次进来
-  // 只看到一个项目还以为条目丢了（语言不同，那是长期偏好）。
-  const [bucket, setBucket] = useState<string | null>(null);
+  // 三级筛选，null = 该级不限。都不记 localStorage——刷新即回总览，免得下次进来
+  // 只看到一小撮条目还以为丢了（语言不同，那是长期偏好）。
+  const [project, setProject] = useState<string | null>(null);
+  const [aspect, setAspect] = useState<string | null>(null);
+  const [month, setMonth] = useState<string | null>(null);
+  const copy = COPY[lang];
+
   const rows = useMemo<Row[]>(
-    () =>
-      entries.map((entry, i) => ({
-        entry,
-        id: `${entry.date}-${i}`, // 下标取自全池，与筛选结果无关
-        bucket: entry.tags.find((t) => t.variant === 'outline')?.label.en ?? null,
-      })),
+    // 下标取自全池，与筛选结果无关
+    () => entries.map((entry, i) => ({ entry, id: `${entry.date}-${i}` })),
     [entries],
   );
+
+  const match = useCallback(
+    (e: LogEntry, p: string | null, a: string | null, m: string | null) =>
+      (p === null || bucketOf(e) === p) &&
+      (a === null || aspectOf(e) === a) &&
+      (m === null || monthOf(e) === m),
+    [],
+  );
+
   const shown = useMemo(
-    () => (bucket === null ? rows : rows.filter((r) => r.bucket === bucket)),
-    [rows, bucket],
+    () => rows.filter((r) => match(r.entry, project, aspect, month)),
+    [rows, match, project, aspect, month],
   );
   const groups = useMemo(() => groupByMonth(shown), [shown]);
-  const copy = COPY[lang];
+
+  // 每级的选项按「另外两级已选」现算（faceted search 惯例）：数字就是点下去会剩几条。
+  const facets = useMemo(() => {
+    const forLevel = (skip: 'p' | 'a' | 'm') =>
+      entries.filter((e) =>
+        match(e, skip === 'p' ? null : project, skip === 'a' ? null : aspect, skip === 'm' ? null : month),
+      );
+    const p = forLevel('p');
+    const a = forLevel('a');
+    const m = forLevel('m');
+    // 全集决定「有哪些项」（选项不随下钻消失，只是计数归零变灰），当前子集决定计数
+    const merge = (all: Facet[], sub: Facet[]) => {
+      const counts = new Map(sub.map((f) => [f.key, f.count]));
+      return all.map((f) => ({ ...f, count: counts.get(f.key) ?? 0 }));
+    };
+    return {
+      projects: merge(projectFacets(entries), projectFacets(p)),
+      aspects: merge(aspectFacets(entries), aspectFacets(a)),
+      months: merge(monthFacets(entries), monthFacets(m)),
+      counts: { p: p.length, a: a.length, m: m.length },
+    };
+  }, [entries, match, project, aspect, month]);
+
+  // 热力图按「项目 + 方面」算（月份那一维正是热力图自己在表达，不该再拿它裁自己）；
+  // 值域恒为全池，筛选只改格子深浅——网格不缩，右侧版面不跳。
+  const heat = useMemo(
+    () => buildHeatmap(entries.filter((e) => match(e, project, aspect, null)), entries),
+    [entries, match, project, aspect],
+  );
 
   useEffect(() => {
     try {
@@ -136,6 +232,31 @@ export function LogList({ entries, buckets }: { entries: LogEntry[]; buckets: Lo
       /* 同上 */
     }
   }
+
+  /* 热力图跳转：点某天 → 滚到那天的第一条并闪一下。
+     热力图本身已按项目+方面筛过，所以唯一可能挡住目标的是月份那一级——
+     把月份切到目标所在月即可，不粗暴清空用户的其余选择。 */
+  const [flash, setFlash] = useState<string | null>(null);
+  const listRef = useRef<HTMLElement>(null);
+
+  function jumpTo(date: string) {
+    if (month !== null && month !== date.slice(0, 7)) setMonth(date.slice(0, 7));
+    setFlash(date);
+  }
+
+  useEffect(() => {
+    if (flash === null) return;
+    const el = listRef.current?.querySelector(`[data-date="${flash}"]`);
+    if (el) {
+      const reduce =
+        typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      el.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' });
+    }
+    const t = setTimeout(() => setFlash(null), 1600);
+    return () => clearTimeout(t);
+  }, [flash]);
+
+  const filtered = project !== null || aspect !== null || month !== null;
 
   return (
     <>
@@ -189,48 +310,122 @@ export function LogList({ entries, buckets }: { entries: LogEntry[]; buckets: Lo
         </div>
       </header>
 
-      {/* 项目筛选条：全部 + 每个项目桶（桶名与条目左栏的 outline 标签同名同色，点谁看谁）。 */}
-      <div
-        className="log-filter"
-        role="group"
-        aria-label={copy.filterLabel}
-        lang={lang === 'zh' ? 'zh-Hans' : 'en'}
-      >
-        <button
-          type="button"
-          className="log-filter__opt"
-          aria-pressed={bucket === null}
-          onClick={() => setBucket(null)}
-        >
-          {copy.all}
-          <span className="log-filter__n">{entries.length}</span>
-        </button>
-        {buckets.map((b) => (
-          <button
-            key={b.key}
-            type="button"
-            className="log-filter__opt"
-            aria-pressed={bucket === b.key}
-            onClick={() => setBucket((prev) => (prev === b.key ? null : b.key))}
-          >
-            {b.label[lang]}
-            <span className="log-filter__n">{b.count}</span>
-          </button>
-        ))}
-        {/* 读数：筛完只剩几条时说明「不是漏了，是筛掉了」；总览态留空占位不出字。 */}
-        <span className="log-filter__count" aria-live="polite">
-          {bucket === null ? '' : copy.showing(shown.length, entries.length)}
-        </span>
+      {/* 筛选带：左三行下钻（项目 → 方面 → 月份），右热力图。<1100px 热力图落到下面。 */}
+      <div className="log-band" lang={lang === 'zh' ? 'zh-Hans' : 'en'}>
+        <div className="log-band__filters" role="group" aria-label={copy.filterLabel}>
+          <FacetRow
+            level={copy.levels.project}
+            facets={facets.projects}
+            value={project}
+            onPick={setProject}
+            allLabel={copy.all}
+            allCount={facets.counts.p}
+            lang={lang}
+          />
+          <FacetRow
+            level={copy.levels.aspect}
+            facets={facets.aspects}
+            value={aspect}
+            onPick={setAspect}
+            allLabel={copy.all}
+            allCount={facets.counts.a}
+            lang={lang}
+          />
+          <FacetRow
+            level={copy.levels.month}
+            facets={facets.months}
+            value={month}
+            onPick={setMonth}
+            allLabel={copy.all}
+            allCount={facets.counts.m}
+            lang={lang}
+          />
+          {/* 读数：筛完只剩几条时说明「不是漏了，是筛掉了」；总览态留空占位不出字。 */}
+          <div className="log-band__readout">
+            <span aria-live="polite">
+              {filtered ? copy.showing(shown.length, entries.length) : ''}
+            </span>
+            {filtered && (
+              <button
+                type="button"
+                className="log-band__clear"
+                onClick={() => {
+                  setProject(null);
+                  setAspect(null);
+                  setMonth(null);
+                }}
+              >
+                {copy.clear}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 日历热力图（列 = 周，行 = 周日→周六）。值域 = 首条到末条，不铺满一年。 */}
+        <figure className="log-heat">
+          <figcaption className="log-heat__title">{copy.heat}</figcaption>
+          <div className="log-heat__scroll">
+            <div className="log-heat__months" aria-hidden>
+              {heat.months.map((m) => (
+                <span key={m.index} style={{ gridColumn: m.index + 1 }}>
+                  {m.label[lang]}
+                </span>
+              ))}
+            </div>
+            <div className="log-heat__grid">
+              {heat.weeks.map((week, wi) => (
+                <div className="log-heat__week" key={wi}>
+                  {week.map((day, di) =>
+                    day === null ? (
+                      <span key={di} className="log-heat__cell" data-level="void" aria-hidden />
+                    ) : day.count === 0 ? (
+                      <span
+                        key={di}
+                        className="log-heat__cell"
+                        data-level={0}
+                        title={copy.day(day.date, 0)}
+                      />
+                    ) : (
+                      <button
+                        key={di}
+                        type="button"
+                        className="log-heat__cell"
+                        data-level={heatLevel(day.count, heat.max)}
+                        data-dim={month !== null && month !== day.date.slice(0, 7)}
+                        title={copy.day(day.date, day.count)}
+                        aria-label={copy.day(day.date, day.count)}
+                        onClick={() => jumpTo(day.date)}
+                      />
+                    ),
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="log-heat__legend" aria-hidden>
+            <span>{copy.heatLess}</span>
+            {[0, 1, 2, 3, 4].map((l) => (
+              <span key={l} className="log-heat__cell" data-level={l} />
+            ))}
+            <span>{copy.heatMore}</span>
+          </div>
+        </figure>
       </div>
 
-      <section lang={lang === 'zh' ? 'zh-Hans' : 'en'}>
+      <section lang={lang === 'zh' ? 'zh-Hans' : 'en'} ref={listRef}>
         {groups.map((g) => (
           <div key={g.key}>
-            <h2 className="log-month">{monthLabel(g.key, lang)}</h2>
+            <h2 className="log-month">{monthLabel(g.key)[lang]}</h2>
             {g.rows.map(({ entry: e, id }) => {
               const isOpen = open.has(id);
               return (
-                <article key={id} className="log-entry" data-open={isOpen}>
+                <article
+                  key={id}
+                  className="log-entry"
+                  data-open={isOpen}
+                  data-date={e.date}
+                  data-flash={flash === e.date}
+                >
                   <div className="log-entry__meta">
                     <span className="log-entry__date">{e.date.slice(5)}</span>
                     <span className="log-entry__tags">
