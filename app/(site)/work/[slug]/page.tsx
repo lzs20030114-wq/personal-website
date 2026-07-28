@@ -72,34 +72,13 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
       <PageEnter />
       <BackTransition />
       <div className="shell pg-dark" data-pt-content>
-      <header style={{ padding: '64px 0 40px', borderBottom: 'var(--hair)' }}>
-        <p
-          style={{
-            margin: '0 0 16px',
-            fontSize: 13,
-            fontWeight: 600,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--n600)',
-          }}
-        >
-          Case study {caseNo} / 04
-        </p>
-        <h1
-          style={{
-            fontSize: 'clamp(36px, 6vw, 72px)',
-            fontWeight: 800,
-            lineHeight: 0.98,
-            letterSpacing: '-0.02em',
-            margin: 0,
-            textTransform: 'uppercase',
-            maxWidth: '16ch',
-          }}
-        >
-          {entry.title}
-        </h1>
+      {/* 版式度量全部走 .case-* 类（globals.css）——首屏要按视口高度压一档，
+          内联样式没法被媒体查询接管 */}
+      <header className="case-head">
+        <p className="case-kicker">Case study {caseNo} / 04</p>
+        <h1 className="case-title">{entry.title}</h1>
         {/* 标题下的双线尺（稿）：上一条绿虚线行进（reduced-motion 停），下一条紫实线 150px */}
-        <svg width="230" height="12" style={{ display: 'block', margin: '16px 0 0', overflow: 'visible' }} aria-hidden>
+        <svg className="case-rule" width="230" height="12" aria-hidden>
           <line
             data-dash
             x1="0"
@@ -113,9 +92,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
           />
           <line x1="0" y1="10" x2="150" y2="10" stroke="var(--accent-2)" strokeWidth="1.5" />
         </svg>
-        <p style={{ fontSize: 19, lineHeight: 1.5, margin: '24px 0 0', maxWidth: '56ch' }}>
-          {cleanSummary(entry.summary)}
-        </p>
+        <p className="case-lede">{cleanSummary(entry.summary)}</p>
       </header>
 
       <div className="case-layout">
@@ -123,11 +100,11 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
           <MetaRail entry={entry} />
         </aside>
 
-        <div className="min-w-0 lg:pl-14" style={{ paddingTop: 32 }}>
+        <div className="case-content min-w-0 lg:pl-14">
           {/* Fig.01 主图（稿：渐变媒体块 + 点阵 + 颗粒 + 框内标签，图注在框外）。
               这一件就是稿里的 Fig.01——MDX 里那条同名 FigSlot 已删，避免主图出现两次。
-              同时是转场落点（data-pt-target）。 */}
-          <figure style={{ margin: '0 0 40px' }}>
+              同时是转场落点（data-pt-target）。首屏完整性由 .case-hero 的高度预算保证。 */}
+          <figure className="case-hero-fig">
             {liveHero ? (
               // 项目 01 临时主图 = Lab.04 五环活件（用户拍板 2026-07-27：与主页预览位同一件，
               // 转场从卡片预览一路缩放落到这里）。作者供图后删掉本分支即回占位。

@@ -1301,6 +1301,86 @@ button.log-heat__cell {
 .pg-dark .card-body {
   color: color-mix(in srgb, var(--ink) 80%, transparent);
 }
+/* ── case study 首屏（标题区 + 主图）版式度量 ───────────────────────────────
+   稿的定值在下面这组类里；**首屏完整性**（用户 2026-07-28 拍板：进来第一眼要看到
+   完整的主图，不许被视口下沿切掉）靠两件事保证：
+   ① 视口不够高时标题区整体压一档（下面的 max-height 媒体查询）；
+   ② 主图高度锁进「视口 − 主图上沿 − 图注 − 底部留白」的预算 --case-hero-budget，
+      **按比例缩不裁切**（.case-hero 是 3/2，给 max-width；活台架的高度由自身
+      700/520 的 aspect 决定，只能也给 max-width——给 max-height 会被 overflow 裁掉）。
+   预算值 = 实测的上沿 + 图注行 + 留白，两档各一份，改版式度量时要一起改。 */
+.case-head {
+  padding: 64px 0 40px;
+  border-bottom: var(--hair);
+}
+.case-kicker {
+  margin: 0 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--n600);
+}
+.case-title {
+  font-size: clamp(36px, 6vw, 72px);
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+  margin: 0;
+  text-transform: uppercase;
+  max-width: 16ch;
+}
+.case-rule {
+  display: block;
+  margin: 16px 0 0;
+  overflow: visible;
+}
+.case-lede {
+  font-size: 19px;
+  line-height: 1.5;
+  margin: 24px 0 0;
+  max-width: 56ch;
+}
+.case-content {
+  padding-top: 32px;
+}
+.case-hero-fig {
+  margin: 0 0 40px;
+}
+/* 高视口（≥961px）：稿的定值原样，主图也够放 */
+.case-layout {
+  --case-hero-budget: 523px;
+}
+@media (max-height: 960px) and (min-width: 1024px) {
+  .case-head {
+    padding: 36px 0 24px;
+  }
+  .case-title {
+    font-size: clamp(34px, 4.4vw, 54px);
+  }
+  .case-rule {
+    margin-top: 12px;
+  }
+  .case-lede {
+    font-size: 17px;
+    margin-top: 18px;
+  }
+  .case-content {
+    padding-top: 20px;
+  }
+  .case-layout {
+    --case-hero-budget: 412px;
+  }
+}
+@media (min-width: 1024px) {
+  .case-hero {
+    max-width: calc((100svh - var(--case-hero-budget)) * 3 / 2);
+  }
+  .case-hero--live {
+    max-width: calc((100svh - var(--case-hero-budget)) * 700 / 520);
+  }
+}
+
 /* 深色页 hero 着陆媒体块（转场落点，data-ptm 克隆源同族渐变） */
 .case-hero {
   aspect-ratio: 3 / 2;
