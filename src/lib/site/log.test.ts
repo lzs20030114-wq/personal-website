@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { getLogEntries } from './log';
+import { checkLogEntries } from './log-guards';
+import { serializeEntries } from './log-schema';
 
 /**
  * Work log 内容池的守门测试。zod 已在构建期挡住形状错误，这里守的是
@@ -71,6 +73,22 @@ describe('log 内容池', () => {
       expect(seen.has(key), `${e.date} 有重复条目`).toBe(false);
       seen.add(key);
     }
+  });
+
+  it('文件内容 = serializeEntries 的输出（逐字）', () => {
+    // /studio 发布时用 serializeEntries 落盘。两者一致，才能保证「发布一条 = diff 一条」，
+    // 而不是每次发布都把 47 条重排一遍（JSON.stringify(x, null, 2) 就会这样）。
+    const onDisk = fs.readFileSync(
+      path.join(process.cwd(), 'content', 'log', 'entries.json'),
+      'utf8',
+    );
+    expect(serializeEntries(getLogEntries())).toBe(onDisk);
+  });
+
+  it('通过 /studio 发布前那一套守门规则（同一份代码，见 ./log-guards）', () => {
+    // 这条是「网页上写日志不会把线上构建搞挂」的另一半保证：
+    // 编辑器发布前跑 checkLogEntries，构建期这里也跑同一份——两边不许有偏差。
+    expect(checkLogEntries(getLogEntries())).toEqual([]);
   });
 
   it('同一英文标签只对应一个中文译名', () => {
