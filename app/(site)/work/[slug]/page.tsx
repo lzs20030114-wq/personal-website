@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react';
 import { notFound } from 'next/navigation';
 import { MDXRemote } from 'next-mdx-remote/rsc';
 import remarkGfm from 'remark-gfm';
@@ -12,10 +13,12 @@ import {
   InteractiveSlot,
   ProcessAside,
   VideoSlot,
+  type SlotLang,
 } from '../../../../components/site/slots';
+import { CaseLangRoot, CaseLangSwitch, Pick } from '../../../../components/site/CaseLang';
 import { DisclosureSlot, MetaRail } from '../../../../components/site/RoleBlock';
 import { LinkageFigure } from '../../../../components/linkage/LinkageFigure';
-import { RingsBench } from '../../../../components/lab/RingsBench';
+import { CaseHeroLive } from '../../../../components/site/CaseHeroLive';
 import { PageEnter } from '../../../../components/site/PageEnter';
 import { BackTransition } from '../../../../components/site/BackTransition';
 
@@ -40,17 +43,45 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return { title: entry.title, description: cleanSummary(entry.summary) };
 }
 
-const mdxComponents = {
-  FigSlot,
+/**
+ * MDX 组件表按语言绑定：图注的状态签、Process 标签、概念卡题都要跟着切。
+ * 语言在服务端就定死在组件表里（两棵树各渲一次），插槽因此仍是服务端组件——
+ * 不为了拿一个 lang 把整个插槽体系推成 client。
+ */
+const mdxComponents = (lang: SlotLang) => ({
+  FigSlot: (p: ComponentProps<typeof FigSlot>) => <FigSlot {...p} lang={lang} />,
   FigPair,
-  VideoSlot,
-  InteractiveSlot,
+  VideoSlot: (p: ComponentProps<typeof VideoSlot>) => <VideoSlot {...p} lang={lang} />,
+  InteractiveSlot: (p: ComponentProps<typeof InteractiveSlot>) => (
+    <InteractiveSlot {...p} lang={lang} />
+  ),
   IntentNote,
-  ProcessAside,
-  ConceptCard,
+  ProcessAside: (p: ComponentProps<typeof ProcessAside>) => <ProcessAside {...p} lang={lang} />,
+  ConceptCard: (p: ComponentProps<typeof ConceptCard>) => <ConceptCard {...p} lang={lang} />,
   ConceptGrid,
   LinkageFigure,
-};
+});
+
+const mdxOptions = { mdxOptions: { remarkPlugins: [remarkGfm] } };
+
+/** 页面框架字（正文之外的固定词）；正文两侧各自成文，不在这里。 */
+const COPY = {
+  en: {
+    kicker: (n: string) => `Case study ${n} / 04`,
+    video:
+      'One full life cycle — birth, interaction, ageing, stop, blank — eight minutes compressed to ninety seconds',
+    heroLabel: 'machine hero photo · studio white sweep · B/W',
+    heroDesc: 'The machine, full view',
+    heroLive: '[stand-in] Lab.04 five-ring shell · live',
+  },
+  zh: {
+    kicker: (n: string) => `案例 ${n} / 04`,
+    video: '一个完整生命周期：诞生、互动、衰老、停止、空白——约 8 分钟压缩到 90 秒',
+    heroLabel: '整机主照 · 影棚白弧扫 · 黑白',
+    heroDesc: '整机全貌',
+    heroLive: '[顶替] Lab.04 五环活件',
+  },
+} as const;
 
 /**
  * case study（Case-Modernist 稿）：全宽 header（kicker + 72px 标题 + summary）→
@@ -72,12 +103,20 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
       <div className="ground-plane" aria-hidden />
       <PageEnter />
       <BackTransition />
-      <div className="shell pg-dark" data-pt-content>
+      <CaseLangRoot className="shell pg-dark" data-pt-content>
       {/* 版式度量全部走 .case-* 类（globals.css）——首屏要按视口高度压一档，
           内联样式没法被媒体查询接管 */}
       <header className="case-head">
-        <p className="case-kicker">Case study {caseNo} / 04</p>
-        <h1 className="case-title">{entry.title}</h1>
+        <div className="case-head__top">
+          <p className="case-kicker">
+            <Pick en={COPY.en.kicker(caseNo)} zh={COPY.zh.kicker(caseNo)} />
+          </p>
+          {/* 中英滑块（用户拍板 2026-07-28）：与 log 页同一套皮肤、同一个偏好键 */}
+          <CaseLangSwitch />
+        </div>
+        <h1 className="case-title">
+          <Pick en={entry.title} zh={entry.zh?.title ?? entry.title} />
+        </h1>
         {/* 标题下的双线尺（稿）：上一条绿虚线行进（reduced-motion 停），下一条紫实线 150px */}
         <svg className="case-rule" width="230" height="12" aria-hidden>
           <line
@@ -93,12 +132,17 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
           />
           <line x1="0" y1="10" x2="150" y2="10" stroke="var(--accent-2)" strokeWidth="1.5" />
         </svg>
-        <p className="case-lede">{cleanSummary(entry.summary)}</p>
+        <p className="case-lede">
+          <Pick
+            en={cleanSummary(entry.summary)}
+            zh={cleanSummary(entry.zh?.summary ?? entry.summary)}
+          />
+        </p>
       </header>
 
       <div className="case-layout">
         <aside className="case-rail">
-          <MetaRail entry={entry} />
+          <Pick en={<MetaRail entry={entry} lang="en" />} zh={<MetaRail entry={entry} lang="zh" />} />
         </aside>
 
         <div className="case-content min-w-0 lg:pl-14">
@@ -113,7 +157,9 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
               // 转场落点也随之下移到画面盒（ptTarget），否则落点框着控制条那一列，
               // 主页飞过来的画面快照会被拉宽、交接那帧一跳。
               <div className="case-hero case-hero--live">
-                <RingsBench sideControls ptTarget lang="en" />
+                {/* HUD 语言跟页面走——主图只能有一份（两份 = 两个 WebGL 上下文），
+                    所以它不进 Pick，改由一层客户端壳读语言上下文。 */}
+                <CaseHeroLive />
               </div>
             ) : (
               <div className="case-hero" data-pt-target>
@@ -138,44 +184,83 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
                     padding: '0 16px',
                   }}
                 >
-                  machine hero photo · studio white sweep · B/W
+                  <Pick en={COPY.en.heroLabel} zh={COPY.zh.heroLabel} />
                 </span>
               </div>
             )}
-            <FigCaption
-              id="Fig. 01"
-              desc={
-                // 状态小签本身已经写着「待拍摄」，说明文字里不再重复一遍
-                liveHero ? '[stand-in] Lab.04 five-ring shell · live' : 'The machine, full view'
+            {/* 状态小签本身已经写着「待拍摄」，说明文字里不再重复一遍 */}
+            <Pick
+              en={
+                <FigCaption
+                  id="Fig. 01"
+                  desc={liveHero ? COPY.en.heroLive : COPY.en.heroDesc}
+                  status="待拍摄"
+                  lang="en"
+                />
               }
-              status="待拍摄"
+              zh={
+                <FigCaption
+                  id="图 01"
+                  desc={liveHero ? COPY.zh.heroLive : COPY.zh.heroDesc}
+                  status="待拍摄"
+                  lang="zh"
+                />
+              }
             />
           </figure>
 
-          {/* 编号 section 01–06：CSS counter 作用于 .case-body h2（只换模板，MDX 不动） */}
+          {/* 编号 section（CSS counter 作用于 .case-body h2）——中英各一棵树，
+              两棵都随 RSC 载荷发下来，只有当前语言那棵挂载。
+              remark-gfm：正文里的规格表/人格参数表是 GFM 管道表，非 GFM 会原样吐出竖线。 */}
           <div className="case-body">
-            {/* remark-gfm：正文里的规格表/人格参数表是 GFM 管道表，非 GFM 会原样吐出竖线 */}
-            <MDXRemote
-              source={entry.body}
-              components={mdxComponents}
-              options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
+            <Pick
+              en={
+                <MDXRemote
+                  source={entry.body}
+                  components={mdxComponents('en')}
+                  options={mdxOptions}
+                />
+              }
+              zh={
+                <MDXRemote
+                  source={entry.bodyZh ?? entry.body}
+                  components={mdxComponents('zh')}
+                  options={mdxOptions}
+                />
+              }
             />
           </div>
 
           {/* 视频席位（frontmatter 提供 src 前为斜纹占位框，不自动播放）；稿 margin:64px 0 0 */}
-          <VideoSlot
-            id="V.60"
-            caption="One full life cycle — birth, interaction, ageing, stop, blank — eight minutes compressed to ninety seconds"
-            status={entry.video ? '可现产' : '待拍摄'}
-            src={entry.video?.src}
-            size="wide"
-            style={{ margin: '64px 0 0' }}
+          <Pick
+            en={
+              <VideoSlot
+                id="V.60"
+                caption={COPY.en.video}
+                status={entry.video ? '可现产' : '待拍摄'}
+                src={entry.video?.src}
+                size="wide"
+                style={{ margin: '64px 0 0' }}
+                lang="en"
+              />
+            }
+            zh={
+              <VideoSlot
+                id="V.60"
+                caption={COPY.zh.video}
+                status={entry.video ? '可现产' : '待拍摄'}
+                src={entry.video?.src}
+                size="wide"
+                style={{ margin: '64px 0 0' }}
+                lang="zh"
+              />
+            }
           />
 
-          <DisclosureSlot />
+          <Pick en={<DisclosureSlot lang="en" />} zh={<DisclosureSlot lang="zh" />} />
         </div>
       </div>
-      </div>
+      </CaseLangRoot>
     </>
   );
 }

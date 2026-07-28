@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 // 只取类型：本模块是 'use client'，而 src/lib/site/log 会 import node:fs（服务端读内容池）。
 import type { LogEntry, LogLang } from '../../src/lib/site/log';
+import { readStoredLang, storeLang } from '../../src/lib/site/lang';
 import {
   aspectFacets,
   aspectOf,
@@ -93,7 +94,8 @@ function groupByMonth(rows: Row[]): Group[] {
   return groups;
 }
 
-const STORE_KEY = 'log-lang';
+/* 语言偏好与案例页共用一个键（src/lib/site/lang.ts）——对读者来说「我要看中文」
+   是一个偏好而不是两个：在这里切了中文，点进案例页不该又变回英文。 */
 
 /**
  * 一行筛选：左侧级别名 + 「全部」+ 各选项（点已选中的 = 取消回该级全部）。
@@ -235,11 +237,8 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
   );
 
   useEffect(() => {
-    try {
-      if (localStorage.getItem(STORE_KEY) === 'zh') setLang('zh');
-    } catch {
-      /* 隐私模式下 localStorage 抛异常——记不住语言不该让整页挂掉 */
-    }
+    const stored = readStoredLang();
+    if (stored) setLang(stored);
   }, []);
 
   // 展开的条目 id 集合；默认全收起——收起态一屏扫得完，要细节再点开。
@@ -256,11 +255,7 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
 
   function pick(next: LogLang) {
     setLang(next);
-    try {
-      localStorage.setItem(STORE_KEY, next);
-    } catch {
-      /* 同上 */
-    }
+    storeLang(next);
   }
 
   /* 热力图跳转：点某天 → 滚到那天的第一条并闪一下。

@@ -81,6 +81,8 @@
 
 - **项目 01 正文入池（2026-07-28，用户供稿「你可以往网站里面填了」）**：用户交来 `reincarnation_machine_site_content.md`（17 节，中英各自独立成文），案例页正文占位**首次被真文字顶掉**——`content/work/reincarnation-machine/index.mdx` 里的 `IntentNote` 全撤，八段叙事弧结构与图插槽编号一律不动。取英文侧（SITE_SPEC §1 英文优先、v1 无 i18n），中文只留在概念卡双写与图框标签。新增两段编号 section（07 Where it stands / 08 Specifications）承接供稿 §13/§14/§16。**这是转录不是代写**，SITE_SPEC「模型不代写」条款未破。三件配套：① 稿从没给过正文排印（`Case-Screens` 正文位全是虚线框），按站内版式语言补 `.case-body` 段落/列表/子标题/表格/code 排印——文本列仍 62ch 而表可越出，层级只用字号字重发丝线不加颜色；② 四张 GFM 管道表要 `remark-gfm`（`MDXRemote` 挂 `mdxOptions`）；③ **隐蔽机制不发布**——原 summary 的「your touch secretly hastens its death」正是供稿 §10 明令预实验前不得上网的剧透（被试搜到即毁设计），已换成供稿给的模糊表述，实验后再补全。坑：Tailwind preflight 清了 `list-style`，正文列表要显式写回。133 测试绿（无新增）、双构建过、CDP 全页实测无 pageerror。映射=MAPPING §10。
 
+- **案例页中英切换（2026-07-28，用户拍板「和 log 页面同样的中英文切换滑块，以后每个项目的详情页也都这样」）**：设计稿里没有这件东西（Case-Screens 是纯英文页），属站方增补——滑块皮肤、SSR 首帧恒 EN、不新开路由全部照 log 页那套，**全站仍然不做 i18n**。内容模型 = 两个文件：`index.mdx`（英文正文 + frontmatter）、`index.zh.mdx`（中文正文、无 frontmatter），元数据单一来源是 frontmatter 新增的 `zh` 块；**published 条目缺中文两件套即构建期 fail**（draft 不卡，项目 II–IV 不受影响）。**不整页渲两遍藏一半**——主图那台五环活件只能有一份（两份 = 两个 WebGL 上下文），故切换点打散成若干 `<Pick en zh>`，主图留在 Pick 外由薄客户端壳读语言上下文传 prop（CDP 实测切换后 canvas 恒为 1）。插槽仍是服务端组件，语言靠**按语言绑定 MDX 组件表**注入（状态签英文字面取自稿：ready / to shoot / tbd / after study）。中文侧排印只关掉大写与拉丁字距、抬 CJK 行距，度量与层级一律不动。语言偏好全站一个键 `site-lang`（log 页与案例页共用，旧键 `log-lang` 弃用）。新增守门测试 `content.test.ts` 5 项——双语正文最可能的事故是**两侧漂移**（一边加图另一边没加），故卡「两侧插槽编号与顺序完全一致」。统计条 133→**138**，双构建过，CDP 实测切换/刷新记忆/跨页互通全绿、无 pageerror。映射=MAPPING §11。
+
 ## 部署纪律（2026-07-10 事故入档）
 
 - **Vercel Hobby 限额：100 次部署/天**——2026-07-10 因高频迭代烧穿（工作分支预览 + master 生产双倍计数），表现为「webhook 静默失灵、无任何新部署」，重连 Git 无效。

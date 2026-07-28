@@ -601,6 +601,49 @@ a:hover {
   max-width: none;
 }
 
+/* — 标题行：kicker 与中英滑块同一行（滑块靠右，基线对齐） — */
+.case-head__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.case-head__top .case-kicker {
+  margin-bottom: 0;
+}
+.case-head__top + .case-title {
+  margin-top: 16px;
+}
+
+/* — 中文侧排印修正（MAPPING §11）——
+   全大写与 0.14em 字距是给拉丁字母的；套到汉字上会变成一行散开的方块，
+   且 CJK 行距要比拉丁高一档才不挤。只调这几件，度量与层级一律不动。 */
+[data-lang='zh'] .case-title {
+  text-transform: none;
+  letter-spacing: 0.01em;
+}
+[data-lang='zh'] .case-body h2,
+[data-lang='zh'] .case-body h3,
+[data-lang='zh'] .case-body th {
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+[data-lang='zh'] .case-body p,
+[data-lang='zh'] .case-body li {
+  line-height: 1.8;
+}
+[data-lang='zh'] .case-body td {
+  line-height: 1.6;
+}
+/* 图注/元数据栏标签：中文不做大写，字距收回 */
+[data-lang='zh'] .fig-cap,
+[data-lang='zh'] .fig-cap__status,
+[data-lang='zh'] .case-kicker {
+  text-transform: none;
+  letter-spacing: 0.06em;
+}
+
 /* ════════════════════════════════════════════════════════════════════════════
    主页 Home-Screens（design-ref/Home-Screens.dc.html → MAPPING §6）
    动效 token 全站唯一来源；分页引擎常量在 HomeScreens.tsx（手感标定项，不进 CSS）。
