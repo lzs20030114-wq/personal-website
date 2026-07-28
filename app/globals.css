@@ -690,10 +690,13 @@ a:hover {
   }
 }
 
-/* 项目卡（2026-07-26 迭代稿：边框盒改发丝线列表项，hover 只变色；浮起/按压已随稿删除） */
+/* 项目卡（2026-07-26 迭代稿：边框盒改发丝线列表项，hover 只变色；浮起/按压已随稿删除）
+   2026-07-28：由 <button> 改为 <a>（卡片是导航，见组件注释）——补 text-decoration，
+   其余声明本就是元素无关的，视觉逐像素不变。 */
 .hub-card {
   font: inherit;
   text-align: left;
+  text-decoration: none;
   color: inherit;
   position: relative;
   border: 0;
