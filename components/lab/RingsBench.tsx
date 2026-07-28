@@ -178,6 +178,44 @@ function resample(pts: Vec3[], n: number): Vec3[] {
   return out;
 }
 
+/**
+ * 界面词表（用户拍板 2026-07-28：案例页主图的控制条要英文）。
+ * `/lab` 仍按稿走中文（§7.7 对稿结论：题名/控件用中文），案例页主图传 lang="en"——
+ * 那一页从标题到 role/tools 全英文，控件夹一列中文会读成两种语言的拼贴。
+ */
+const COPY = {
+  zh: {
+    display: '显示',
+    breathe: '呼吸',
+    persp: '透视',
+    skin: '蒙皮',
+    phase: '相位',
+    view: '视角',
+    reset: '归位',
+    views: { axon: '轴测', front: '正', left: '左', right: '右', top: '顶' },
+    title: 'S1–S5 伏丘壳体',
+    sub: '85 mm 等距 · 同相呼吸 · 槽端逐环标定 [0/2/4/8]',
+    hint: '拖拽旋转 · 右键平移 · 滚轮缩放',
+    drive: { spin: '自转', slider: '滑杆' },
+    aria: '五环立体编排台架；拖拽旋转，呼吸/相位驱动',
+  },
+  en: {
+    display: 'Display',
+    breathe: 'Breathe',
+    persp: 'Perspective',
+    skin: 'Skin',
+    phase: 'Phase',
+    view: 'View',
+    reset: 'Reset',
+    views: { axon: 'Axon', front: 'Front', left: 'Left', right: 'Right', top: 'Top' },
+    title: 'S1–S5 shell family',
+    sub: '85 mm pitch · in-phase breathing · slot ladder [0/2/4/8]',
+    hint: 'Drag to orbit · right-drag to pan · scroll to zoom',
+    drive: { spin: 'spin', slider: 'slider' },
+    aria: 'Five-ring shell bench; drag to orbit, breathing/phase driven',
+  },
+} as const;
+
 export function RingsBench({
   spin = true,
   active = true,
@@ -185,6 +223,7 @@ export function RingsBench({
   onLight = false,
   sideControls = false,
   ptTarget = false,
+  lang = 'zh',
 }: {
   spin?: boolean;
   active?: boolean;
@@ -204,6 +243,8 @@ export function RingsBench({
    * 会被拉到整件宽度、交接那一帧明显一跳。落点必须只框画面本身。
    */
   ptTarget?: boolean;
+  /** 界面语言：'zh' = 稿的中文（/lab）；'en' = 英文（案例页主图，用户拍板 2026-07-28） */
+  lang?: 'zh' | 'en';
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const apiRef = useRef<{
@@ -455,6 +496,8 @@ export function RingsBench({
     apiRef.current?.viewTo(k);
   }, []);
 
+  const L = COPY[lang];
+
   return (
     <div
       className={`lab-wrap${onLight ? ' on-light' : ''}${
@@ -466,26 +509,27 @@ export function RingsBench({
           ref={canvasRef}
           width={1400}
           height={1040}
-          aria-label="五环立体编排台架；拖拽旋转，呼吸/相位驱动"
+          aria-label={L.aria}
         />
         <div className="lab-hud tl">
           <div style={{ color: 'var(--p300)' }}>Lab.04 / Fig. 13</div>
-          <div>S1–S5 伏丘壳体</div>
-          <div className="dim">85 mm 等距 · 同相呼吸 · 槽端逐环标定 [0/2/4/8]</div>
+          <div>{L.title}</div>
+          <div className="dim">{L.sub}</div>
         </div>
         <div className="lab-hud br">
           <div className="num">φ {phase.toFixed(1)}°</div>
           <div className="dim">
             {hud.note
               ? hud.note
-              : `apex(S2) ${hud.apex.toFixed(1)} mm · err ${hud.err.toFixed(2)} · ${breathe ? 'spin' : 'slider'}`}
+              : `apex(S2) ${hud.apex.toFixed(1)} mm · err ${hud.err.toFixed(2)} · ${breathe ? L.drive.spin : L.drive.slider}`}
           </div>
         </div>
-        <div className="lab-hud bl dim">拖拽旋转 · 右键平移 · 滚轮缩放</div>
+        {sideControls && controls ? null : <div className="lab-hud bl dim">{L.hint}</div>}
       </div>
       {controls ? (
         <div className="lab-ctl">
           <div className="grp">
+            {sideControls ? <span className="k">{L.display}</span> : null}
             <label>
               <input
                 type="checkbox"
@@ -495,7 +539,7 @@ export function RingsBench({
                   apiRef.current?.setBreathe(e.target.checked);
                 }}
               />
-              呼吸
+              {L.breathe}
             </label>
             <label>
               <input
@@ -506,7 +550,7 @@ export function RingsBench({
                   apiRef.current?.setPersp(e.target.checked);
                 }}
               />
-              透视
+              {L.persp}
             </label>
             <label>
               <input
@@ -517,11 +561,14 @@ export function RingsBench({
                   apiRef.current?.setSkin(e.target.checked);
                 }}
               />
-              蒙皮
+              {L.skin}
             </label>
           </div>
           <div className="grp">
-            <span className="k">相位</span>
+            <span className="k">
+              {L.phase}
+              {sideControls ? <b className="v">{phase.toFixed(1)}°</b> : null}
+            </span>
             <input
               type="range"
               min={0}
@@ -539,7 +586,7 @@ export function RingsBench({
             />
           </div>
           <div className="grp">
-            <span className="k">视角</span>
+            <span className="k">{L.view}</span>
             <span className="seg">
               {VIEWS.map((v) => (
                 <button
@@ -548,14 +595,22 @@ export function RingsBench({
                   className={v.key === view ? 'active' : undefined}
                   onClick={() => goView(v.key)}
                 >
-                  {v.label}
+                  {L.views[v.key]}
                 </button>
               ))}
+              {sideControls ? (
+                <button type="button" className="alt" onClick={() => apiRef.current?.viewHome()}>
+                  {L.reset}
+                </button>
+              ) : null}
             </span>
-            <button type="button" onClick={() => apiRef.current?.viewHome()}>
-              归位
-            </button>
+            {sideControls ? null : (
+              <button type="button" onClick={() => apiRef.current?.viewHome()}>
+                {L.reset}
+              </button>
+            )}
           </div>
+          {sideControls ? <p className="lab-ctl__hint">{L.hint}</p> : null}
         </div>
       ) : null}
     </div>

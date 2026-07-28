@@ -1384,6 +1384,23 @@ button.log-heat__cell {
   /* 活台架：预算约束的是**画面**，右侧控制条另算一列（不占高度，只占宽） */
   .case-hero--live {
     max-width: calc((100svh - var(--case-hero-budget)) * 700 / 520 + var(--lab-ctl-w));
+    /* 硬闸：控制列内容若比画面还高（矮屏实测会），flex 行会被它撑高、首屏又被顶破。
+       封住整件高度，多出来的由控制列自己滚（.lab-ctl 的 overflow-y）。 */
+    max-height: calc(100svh - var(--case-hero-budget));
+  }
+  /* 矮屏先省掉操作提示那两行——比让控制列出滚动条体面 */
+  @media (max-height: 830px) {
+    .lab-ctl__hint {
+      display: none;
+    }
+    .lab-wrap--side .lab-ctl {
+      padding: 12px 12px 13px;
+    }
+    .lab-wrap--side .lab-ctl .grp {
+      gap: 7px;
+      padding-top: 11px;
+      margin-top: 11px;
+    }
   }
 }
 
@@ -1627,6 +1644,9 @@ button.log-heat__cell {
 .lab-wrap--side {
   display: flex;
   align-items: stretch;
+  /* 整件收进一个发丝线框里读成一台仪器；没有框时它是浮在页面底色上的一块，
+     画面与控制列之间只剩一条竖线，看着像掉了半边 */
+  border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
 }
 .lab-wrap--side .lab-fig {
   flex: 1 1 auto;
@@ -1643,6 +1663,8 @@ button.log-heat__cell {
   padding: 14px 14px 16px;
   border-top: none;
   border-left: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
+  /* 兜底：整件高度被封死时（.case-hero--live 的 max-height），多出来的控件在这一列里滚 */
+  overflow-y: auto;
 }
 .lab-wrap--side .lab-ctl .grp {
   flex-direction: column;
@@ -1659,13 +1681,53 @@ button.log-heat__cell {
   margin-top: 0;
   border-top: none;
 }
-.lab-wrap--side .lab-ctl .seg {
-  flex-wrap: wrap;
+/* 组名（DISPLAY / PHASE / VIEW）独占一行，右端可挂读数（相位角） */
+.lab-wrap--side .lab-ctl .k {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  width: 100%;
+  gap: 8px;
+  opacity: 1;
+  color: color-mix(in srgb, var(--ink) 45%, transparent);
 }
-/* 换行后的分段按钮：右边框会缺一条，补回来（横排时靠 last-child 补） */
+.lab-wrap--side .lab-ctl .k .v {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.lab-wrap--side .lab-ctl input[type='range'] {
+  width: 100%;
+}
+/* 视角：5 个预设 + 归位 = 2×3 按钮网格（分段控件横排才成立；竖排里挤成两行会留豁口） */
+.lab-wrap--side .lab-ctl .seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  width: 100%;
+}
 .lab-wrap--side .lab-ctl .seg button {
   border-right-width: 1px;
-  margin-right: -1px;
+  padding: 5px 4px;
+  text-align: center;
+}
+/* 归位不是第六个视角：留描边、不参与选中态填色 */
+.lab-wrap--side .lab-ctl .seg button.alt {
+  color: color-mix(in srgb, var(--ink) 62%, transparent);
+  border-color: color-mix(in srgb, var(--ink) 22%, transparent);
+}
+/* 操作提示沉到列底（画面里那条同文小字在侧栏模式下已关掉，不重复） */
+.lab-ctl__hint {
+  margin: 18px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  width: 100%;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.6;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink) 40%, transparent);
 }
 .lab-ctl .grp:first-child {
   border-left: none;

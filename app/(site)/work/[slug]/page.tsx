@@ -112,7 +112,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
               // 转场落点也随之下移到画面盒（ptTarget），否则落点框着控制条那一列，
               // 主页飞过来的画面快照会被拉宽、交接那帧一跳。
               <div className="case-hero case-hero--live">
-                <RingsBench sideControls ptTarget />
+                <RingsBench sideControls ptTarget lang="en" />
               </div>
             ) : (
               <div className="case-hero" data-pt-target>
@@ -144,9 +144,8 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
             <FigCaption
               id="Fig. 01"
               desc={
-                liveHero
-                  ? '[临时顶替] Lab.04 five-ring shell · machine hero 待拍摄'
-                  : 'The machine, full view'
+                // 状态小签本身已经写着「待拍摄」，说明文字里不再重复一遍
+                liveHero ? '[stand-in] Lab.04 five-ring shell · live' : 'The machine, full view'
               }
               status="待拍摄"
             />
