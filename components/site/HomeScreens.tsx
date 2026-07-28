@@ -441,6 +441,21 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
         if (engine && i !== n) sec.setAttribute('inert', '');
         else sec.removeAttribute('inert');
       });
+    /**
+     * 不变量兜底：引擎态下 #vp 完全由 transform 驱动，**任何真实滚动都是异常**，
+     * 归零即可——没有哪个合法状态需要 #vp 自己滚。
+     *
+     * 为什么 inert 之后还要这一层：inert 挡住的是「焦点进入非当前幕」这条路，但翻幕途中
+     * 目标幕已经 live、transform 却还在移动，以及横向停放的幕会给容器留出滚动溢出区，
+     * 这些窗口仍能让浏览器为「让焦点可见」滚一下容器。实测到过 scrollLeft=949 的偶发，
+     * 按相位复现失败——说明触发路径比单一窗口更刁钻。与其继续猜触发条件，不如守住
+     * 不变量本身：这样无论哪条路径把它顶歪，下一帧都自己回正。
+     */
+    on(vp, 'scroll', () => {
+      if (!engine) return;
+      if (vp.scrollTop !== 0) vp.scrollTop = 0;
+      if (vp.scrollLeft !== 0) vp.scrollLeft = 0;
+    });
     // 翻幕编排（迭代稿：斜向扫光 + 幕内 stagger）——staggerFx 默认关（07-24 真机拍板），enter 即空转。
     const enter = (i: number) => {
       if (!fxStagger) return;
@@ -1027,6 +1042,11 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
       railEl.style.display = engine ? 'flex' : 'none';
       if (prog) prog.style.display = engine ? 'block' : 'none';
       setInert(cur);
+      // 模式切换时先归零：文档流态下积累的滚动不该带进引擎态
+      if (engine) {
+        vp.scrollTop = 0;
+        vp.scrollLeft = 0;
+      }
       acc = 0;
     };
     applyMode();
