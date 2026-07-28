@@ -3,7 +3,13 @@ import type { Metadata } from 'next';
 import '@fontsource-variable/archivo';
 import './globals.css';
 
+/**
+ * 生产域名 zishuoli.org（apex 为主，www 在 Vercel 侧 301 到它）。
+ * metadataBase 必须钉死字面量：不设的话 Next 会回落到 VERCEL_URL，
+ * OG 图与 canonical 会指向那个 *.vercel.app 预览域名。
+ */
 export const metadata: Metadata = {
+  metadataBase: new URL('https://zishuoli.org'),
   title: { default: 'Portfolio', template: '%s — Portfolio' },
   description: 'Selected work.',
 };
