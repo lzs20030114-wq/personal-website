@@ -15,6 +15,7 @@ import {
   projectOf,
   type Facet,
 } from '../../src/lib/site/log-facets';
+import { LogBody } from './LogBody';
 
 /**
  * Work log 列表 + 中英切换（用户拍板 2026-07-27）。
@@ -488,7 +489,7 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
                       </span>
                     </button>
                     {/* 详情面板：收起时用 grid 0fr 压扁（内容留在 DOM 里，可被搜索引擎读到）。
-                        图 / 表格将来加在正文之后——内容池加可选 blocks 字段，在此按序渲染。 */}
+                        正文（受限 Markdown）+ 图 / 表块都由 LogBody 渲染——与 /studio 预览同一段代码。 */}
                     <div
                       id={`log-panel-${id}`}
                       className="log-entry__panel"
@@ -496,9 +497,7 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
                       role="region"
                     >
                       <div className="log-entry__panelInner">
-                        <p className="log-entry__body" data-lang={lang}>
-                          {e.body[lang]}
-                        </p>
+                        <LogBody body={e.body[lang]} blocks={e.blocks} lang={lang} />
                       </div>
                     </div>
                   </div>

@@ -1132,6 +1132,115 @@ button.log-heat__cell {
   line-height: 1.85;
   letter-spacing: 0.01em;
 }
+
+/* ── 正文内的受限 Markdown（src/lib/site/md.ts）与图 / 表块 ─────────────────
+   2026-07-28：正文从单个 <p> 变成块序列（小标题 / 列表 / 代码块 / 图 / 表）。
+   段落用 pre-line 保留作者敲的换行——写日志的人按回车就是想换行，不是想要一个新段落。 */
+.log-entry__body > * {
+  margin: 0 0 0.9em;
+}
+.log-entry__body > *:last-child {
+  margin-bottom: 0;
+}
+.log-entry__body p {
+  white-space: pre-line;
+}
+.log-entry__body h3,
+.log-entry__body h4 {
+  margin: 1.4em 0 0.5em;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--n800);
+}
+.log-entry__body h4 {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  color: var(--n700);
+}
+.log-entry__body ul,
+.log-entry__body ol {
+  padding-left: 1.4em;
+}
+/* Tailwind preflight 把列表标记清掉了——正文里的列表要看得出是列表 */
+.log-entry__body ul {
+  list-style: disc;
+}
+.log-entry__body ol {
+  list-style: decimal;
+}
+.log-entry__body li {
+  margin: 0 0 0.35em;
+}
+.log-entry__body ul li::marker {
+  color: var(--accent);
+}
+.log-entry__body code {
+  padding: 1px 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+  background: var(--n200);
+  border-radius: 3px;
+}
+.log-entry__body pre {
+  padding: 12px 14px;
+  overflow-x: auto;
+  font-size: 12.5px;
+  line-height: 1.55;
+  border: var(--hair);
+  border-left: 2px solid var(--accent);
+  background: var(--surface);
+}
+.log-entry__body pre code {
+  padding: 0;
+  background: none;
+}
+/* 图：满栏宽（正文限宽 66ch，图不受限——图小了看不出东西），图注退一档 */
+.log-fig,
+.log-table {
+  margin: 1.2em 0;
+}
+.log-fig img {
+  display: block;
+  /* width 取图自身尺寸（属性里写着），只封顶不放大：小图（示意截图）保持原大，
+     大图缩到栏宽。统一 width:100% 会把 240px 的小图拉成一整栏的糊图。 */
+  max-width: 100%;
+  height: auto;
+  border: var(--hair);
+}
+.log-fig figcaption,
+.log-table figcaption {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--n600);
+}
+/* 表：窄屏自己横向滚，不把整页撑宽 */
+.log-table__scroll {
+  overflow-x: auto;
+}
+.log-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.log-table th,
+.log-table td {
+  padding: 7px 12px 7px 0;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: var(--hair);
+}
+.log-table th {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--n600);
+  white-space: nowrap;
+}
 @media (min-width: 768px) {
   .log-entry {
     grid-template-columns: 150px 1fr;

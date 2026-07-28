@@ -131,3 +131,56 @@ const WorkEntry = z.object({
 ## 11. 明确不做（v1）
 
 CMS、评论、站内搜索、i18n、暗色模式、RSS、动效库、第三方 analytics（Vercel 内置足够）、newsletter。发现自己在装其中任何一个时，停手。
+
+**2026-07-28 修订（用户拍板）**：「不做 CMS」这一条对 work log 开一个**有边界的例外**——见 §12。边界是：不引第三方 CMS / 后台框架 / 数据库 / 图床，站内多写一个受密码保护的路由，写的还是 `content/log/entries.json` 这同一个内容池文件，构建期 zod 校验一行不动。其余内容（四个 case study 的 MDX、about）仍然只手工改。
+
+## 12. Work log 编辑后台 `/studio`（2026-07-28，用户拍板）
+
+需求原话：「加一个可以让我自己上传的页面，就像编写博客、传图片、传表格一样把内容传上去……同时也支持已经交上去的工作日志可以被我修改」。
+
+**存储 = 仓库本身**（用户在三个选项里选的）：编辑器用 GitHub API 打一个 commit（`content/log/entries.json` + 新图片 `public/log/*`）→ Vercel 自动部署 → 约 1–2 分钟后 `/archive` 上线。内容池仍是唯一来源、每次修改都有 git 历史可回滚、不新增任何服务。代价写明：**不即时**，且一次发布 = 一次 Vercel 部署（Hobby 100 次/天，见 CLAUDE.md 部署纪律）——所以编辑器是「改多条 → 一次发布 = 一个 commit」，不是逐条保存。
+
+没配 `STUDIO_GITHUB_TOKEN` 时自动退化成**本地文件模式**：直接写本地文件，之后作者自己 commit。本地 `npm run dev` 写日志不必配任何东西。
+
+### 12.1 环境变量（在 Vercel 项目 Environment Variables 里配）
+
+| 变量 | 必需 | 作用 |
+|---|---|---|
+| `STUDIO_PASSWORD` | 是 | 进 `/studio` 的密码。**随机 24 位以上**——serverless 没有持久的失败次数计数器，短密码会被穷举。没配则页面只显示配置说明，编辑器不渲染。 |
+| `STUDIO_GITHUB_TOKEN` | 生产必需 | fine-grained PAT，只给本仓库 `Contents: Read and write`。发布时用它打 commit。 |
+| `STUDIO_BRANCH` | 否（默认 `master`） | 发布目标分支 = 生产分支。 |
+| `STUDIO_REPO` | 否 | 默认取 Vercel 注入的 `VERCEL_GIT_REPO_OWNER/SLUG`。 |
+| `STUDIO_SECRET` | 否 | 会话 cookie 的 HMAC 密钥；不配则从密码派生（**改密码即登出所有会话**）。 |
+
+### 12.2 门禁（`src/lib/studio/auth.ts`）
+
+密码 + HMAC 签名的 httpOnly cookie（30 天）。cookie 里只有一个到期时间戳 + 签名，没有秘密可泄；签名覆盖到期时间，改时间即失效。诚实的局限：**会话不可撤销**（无服务端 session 表，要一次性踢掉所有会话就改 `STUDIO_SECRET` 或密码）、**无持久暴力破解计数**（密码错时慢 400ms，仅此而已）。页面 `noindex` + `app/robots.ts` 屏蔽 `/studio` 与 `/api/`——但那是「别收录」，不是访问控制。
+
+### 12.3 「不可能因为在网页上写日志而把线上构建搞挂」
+
+这是整个设计的核心约束：发布提交的是构建输入，构建失败 = 站点停在旧版直到人来修。做法是**校验只有一份代码，三处跑**：
+
+- `src/lib/site/log-schema.ts` —— zod 形状（从 `log.ts` 拆出来，不碰 fs，客户端可 import）。
+- `src/lib/site/log-guards.ts` —— zod 挡不住但会让站点变坏的规则：恰好一个项目标签、项目标签必须登记在 `PROJECT_GROUPS`（否则条目从所有筛选视图消失）、同一英文标签只能有一个中文译名、同日同引句去重、真实存在的日期、表格行列数一致。
+- 跑它的三处：① 编辑器里实时跑（有问题「发布」按钮就是禁用的，并列出人话报错）；② 发布接口在服务端再跑一遍（不信客户端）；③ `log.test.ts` 构建期跑同一份。
+
+另外两道：图片引用必须真的存在（新上传的或仓库里已有的，**已有名单由服务端自己去看**，不听客户端）；发布前比对 `entries.json` 的 blob sha，被别处改过就拒绝并要求刷新（两个标签页各改一半不会互相覆盖）。
+
+### 12.4 内容能力：正文受限 Markdown + 图 / 表块
+
+- **受限 Markdown**（`src/lib/site/md.ts`，自己写的小解析器，零新依赖）：`### 小标题`、`- 列表`、`1. 编号`、``` 代码块、行内 `**加粗**` / `` `代码` `` / `[文字](链接)`。输出**数据**而非 HTML 字符串，渲染用 React 元素拼——没有 `dangerouslySetInnerHTML`，也就没有从编辑器注入脚本的路径。不安全链接（`javascript:`、协议相对 URL）降级成原文。段落内换行原样保留（`white-space: pre-line`）。**池内既有 47 条正文一个记号都没有，解析后逐字不变**（守门测试对着真数据比过）。
+- **图片块**：`blocks: [{ kind: 'image', src: '/log/…', alt, caption?, width, height }]`。src 只允许 `/log/` 下的文件（挡外链热链与注入 URL）；alt 必填；width/height 必填（展开面板时不顶下面的正文）。浏览器端先缩到长边 1600px 再转 WebP 才上传（手机直出 4MB 原图会永久留在 git 历史里），单张压缩后上限 900KB、单次发布图片总量 3MB。
+- **表格块**：`{ kind: 'table', caption?, head, rows }`。单元格是双语对象**或一个字符串**——字符串 = 两种语言相同，给数字 / 单位 / 零件代号用（逼作者把 `0.34 mm` 抄两遍只会制造抄错的机会）。散文性单元格仍双语。
+- 双语仍是**中英并排必填**（用户在三个选项里选的）：编辑器两栏永排在眼前，缺一侧发布不了。
+
+### 12.5 落盘格式：一次发布 = 一条 diff
+
+`serializeEntries`（log-schema.ts）不是 `JSON.stringify(x, null, 2)`——后者会把 `{ "label": …, "variant": … }` 这种短对象拆成五行，一次发布产生几百行无意义 diff。规则是「`tags` / `head` / `rows` 的每一项短就并一行，散文字段逐字段换行」，**与手写时期的 entries.json 逐字一致**（`log.test.ts` 里对着真文件比过；实测发布一条新日志 = 36 行纯新增）。
+
+### 12.6 验证（2026-07-28）
+
+175 测试绿（+42：md 10 / auth 6 / publish 15 / repo 6 / 落盘格式与守门各 1 等）。GitHub 提交那条路对着打桩的 fetch 钉了请求序列与载荷（blob → tree → commit → 移动引用、`base_tree` 接原树、`parents` 挂当前 HEAD、引用不 force）、并发拒绝时一个写请求都不发、401 给的是能照着修的中文报错。真浏览器 12 步（本地文件模式）：登录 / 密码错 / 改既有条目 / 新建带图带表 / 预览 / 发布 / `/archive` 展开且图真的加载出来（`naturalWidth>0`）且中英切换正确 / 三级筛选 / robots / 匿名调发布接口 401 / 删除后回到 47 条——全过、无 pageerror。**未在生产验证的一件事**：真 GitHub token 下的实际 commit（本地没有 token），首次线上发布请留意 commit 是否出现在目标分支。
+
+### 12.7 界面（`app/studio/` + `components/studio/`）
+
+顶栏（条数 / 发布目标 / 有无未发布改动 / 发布 / 退出）+ 左清单（搜索、新建、每条显示日期 · 引句 · 标签 · 块数）+ 右表单（日期、项目下拉、方面下拉或自定义、引句双栏、正文双栏、图表块编辑器）+ **预览**。预览用的是站上那个 `LogBody` 组件本身——预览与线上必须是同一段代码画的。项目 / 方面用下拉而不是自由输入，正是为了让守门规则天然被满足（词汇表 = `src/lib/studio/vocab.ts` 从池里现算）。草稿存 localStorage（图片放不下时退回只存文字并明说）。**无设计稿来源**：这是工具界面，视觉借站点的发丝线语言，度量按「能长时间打字」定，不进 design-ref/MAPPING。

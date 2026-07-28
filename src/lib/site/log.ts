@@ -1,53 +1,41 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { cache } from 'react';
-import { z } from 'zod';
+import { LogEntriesSchema, sortEntries, type LogEntry } from './log-schema';
 
 /**
- * Work log 内容池（MAPPING §4）——沿用现有池的 zod 构建期 fail-fast 纪律；
- * 纯 log 条目形状与 WorkEntry 不同，故扩独立 schema（不绕过校验管线）。
+ * Work log 内容池（MAPPING §4）——沿用现有池的 zod 构建期 fail-fast 纪律。
  * 数据 = content/log/entries.json：站建设条目源自 Log-Modernist 设计稿，
- * 项目主线条目源自各项目日志原稿（轮回机器_/项目二_工作日志原稿.md）的结论式压缩。
+ * 项目主线条目源自各项目日志原稿（轮回机器_/项目二_/智能床_工作日志原稿.md）的结论式压缩，
+ * 2026-07-28 起也可由 /studio 编辑器直接提交（形状仍走同一套 schema + 守门规则）。
+ *
+ * 形状定义已拆到 ./log-schema（不碰 fs，客户端与 Studio 共用）；
+ * 本模块只负责「读文件 + 校验 + 排序」。
  */
-/** 双语文本：两种语言都必填——缺一种就等于切换后半页空白，构建期即报错。 */
-const BilingualSchema = z
-  .object({
-    en: z.string().min(1),
-    zh: z.string().min(1),
-  })
-  .strict();
 
-const LogTagSchema = z
-  .object({
-    label: BilingualSchema, // 标签同样双语——切中文后不留英文孤岛
-    variant: z.enum(['outline', 'neutral']),
-  })
-  .strict();
+/** 类型仍从这里再导出：站内多处 `import type { LogEntry } from '.../log'`，不必跟着改。 */
+export type {
+  Bilingual,
+  LogBlock,
+  LogCell,
+  LogEntry,
+  LogImageBlock,
+  LogLang,
+  LogTableBlock,
+  LogTag,
+} from './log-schema';
 
-const LogEntrySchema = z
-  .object({
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // Log 页显示 MM-DD，首页预览用整日期
-    lead: BilingualSchema, // 加粗引句
-    body: BilingualSchema, // 引句之后的正文
-    tags: z.array(LogTagSchema),
-  })
-  .strict();
-
-/** Log 页语言切换的两个取值；也是 LogEntry.lead/body 的键。 */
-export type LogLang = 'en' | 'zh';
-export type LogTag = z.infer<typeof LogTagSchema>;
-export type LogEntry = z.infer<typeof LogEntrySchema>;
-
+export const LOG_FILE_REL = 'content/log/entries.json';
 const LOG_FILE = path.join(process.cwd(), 'content', 'log', 'entries.json');
 
 const loadLog = cache((): LogEntry[] => {
   const raw = fs.readFileSync(LOG_FILE, 'utf8');
-  const parsed = z.array(LogEntrySchema).safeParse(JSON.parse(raw));
+  const parsed = LogEntriesSchema.safeParse(JSON.parse(raw));
   if (!parsed.success) {
     throw new Error(`content/log/entries.json 校验失败：${parsed.error.message}`);
   }
   // 最新在前（Log 稿 "newest first"）；同日 ties 保持 JSON 内顺序（Array.sort 稳定）。
-  return [...parsed.data].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  return sortEntries(parsed.data);
 });
 
 export function getLogEntries(): LogEntry[] {
