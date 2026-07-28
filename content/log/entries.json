@@ -1325,6 +1325,234 @@
             }
           ]
         ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "Two more events added to the vocabulary in the same session.",
+          "zh": "同一次会话里给事件词表增补的两条。"
+        },
+        "head": [
+          { "en": "Event", "zh": "新事件" },
+          { "en": "Trigger", "zh": "判定" },
+          { "en": "Who uses it", "zh": "消费方" }
+        ],
+        "rows": [
+          [
+            "ARM_TOUCH",
+            {
+              "en": "capacitance on the arm electrode crosses the threshold",
+              "zh": "臂电极的电容变化超过阈值"
+            },
+            {
+              "en": "social response, log, and the counterpart in the video analysis of a poke on the arm",
+              "zh": "社交响应、日志，以及录像编码里「戳臂」那一条的镜像"
+            }
+          ],
+          [
+            "RESISTANCE",
+            {
+              "en": "the microswitch on the tensioning idler trips",
+              "zh": "张紧惰轮上的微动开关被触发"
+            },
+            {
+              "en": "stop pulling in line — yield or change strategy — and the log",
+              "zh": "停止收线——让步或换策略——以及日志"
+            }
+          ]
+        ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "What the sensing side needed that was already on the desk: nothing in this table had to be bought.",
+          "zh": "传感这一侧已经在手上的件——这张表里的东西一件都不用买。"
+        },
+        "head": [
+          { "en": "Item", "zh": "件" },
+          { "en": "Where it came from", "zh": "来源" },
+          { "en": "Job", "zh": "职能" }
+        ],
+        "rows": [
+          [
+            {
+              "en": "Capacitive touch chip",
+              "zh": "电容触摸芯片"
+            },
+            {
+              "en": "already bought",
+              "zh": "已购"
+            },
+            {
+              "en": "every capacitive touch surface: feelers, shell, arm",
+              "zh": "触须、壳体、臂上的全部电容触摸"
+            }
+          ],
+          [
+            {
+              "en": "Ultrasonic rangefinder",
+              "zh": "超声测距"
+            },
+            {
+              "en": "starter kit",
+              "zh": "现有套件"
+            },
+            {
+              "en": "presence and distance (the echo pin divided down to 3.3 V with resistors from the kit)",
+              "zh": "在场与距离（回波脚用套件里的电阻分压到 3.3 V）"
+            }
+          ],
+          [
+            {
+              "en": "Accelerometer",
+              "zh": "加速度计"
+            },
+            {
+              "en": "starter kit",
+              "zh": "现有套件"
+            },
+            {
+              "en": "vibration — being knocked, being pushed",
+              "zh": "震动——被敲、被推"
+            }
+          ],
+          [
+            {
+              "en": "Sound sensor",
+              "zh": "声音传感器"
+            },
+            {
+              "en": "starter kit",
+              "zh": "现有套件"
+            },
+            {
+              "en": "clap transients, and a shared marker for syncing recordings",
+              "zh": "拍手的瞬态，同时用作录像对齐的同步锚点"
+            }
+          ],
+          [
+            {
+              "en": "SG90 servos",
+              "zh": "SG90 舵机"
+            },
+            {
+              "en": "existing stock",
+              "zh": "现有库存"
+            },
+            {
+              "en": "count whether four are on hand: two feelers, one eye stalk, one spare",
+              "zh": "盘点是否够 4 只：触须 2、眼柄 1、备用 1"
+            }
+          ]
+        ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "Superseded — the sensing-side shopping list from this session, folded two days later into one consolidated parts list. The rule for picking the microswitch still holds: its operating force has to be clearly lower than the spring preload, or the switch gives way before the spring does and the threshold means nothing.",
+          "zh": "已被取代——这次会话开出的传感侧采购单，两天后并进了统一的整机清单。选微动开关的那条标准仍然有效：触发力必须明显小于弹簧预紧力，否则开关比弹簧先让步，阈值就废了。"
+        },
+        "head": [
+          { "en": "Item", "zh": "件" },
+          { "en": "Spec", "zh": "规格" },
+          { "en": "Qty", "zh": "数量" },
+          { "en": "Approx.", "zh": "约价" },
+          { "en": "What for", "zh": "用途" }
+        ],
+        "rows": [
+          [
+            {
+              "en": "Lever microswitch",
+              "zh": "杠杆微动开关"
+            },
+            {
+              "en": "long lever, low operating force",
+              "zh": "长杠杆式，触发力要小"
+            },
+            "3",
+            "¥6",
+            {
+              "en": "one on each tendon's tensioning idler, to sense resistance",
+              "zh": "每根肌腱的张紧惰轮各一只，用来测阻力"
+            }
+          ],
+          [
+            {
+              "en": "Tension springs",
+              "zh": "小拉簧"
+            },
+            {
+              "en": "assorted sizes",
+              "zh": "多规格"
+            },
+            {
+              "en": "1 set",
+              "zh": "1 套"
+            },
+            "¥10",
+            {
+              "en": "idler preload — constant tension, creep compensation and the switch threshold in one part",
+              "zh": "惰轮预紧——恒张力、蠕变补偿、开关阈值三件事由一个件承担"
+            }
+          ],
+          [
+            {
+              "en": "Copper foil tape",
+              "zh": "铜箔导电胶带"
+            },
+            {
+              "en": "10 mm wide or more, conductive adhesive",
+              "zh": "≥10 mm 宽，导电背胶"
+            },
+            {
+              "en": "1 roll",
+              "zh": "1 卷"
+            },
+            "¥10",
+            {
+              "en": "the two shell half-ring electrodes and the arm electrode",
+              "zh": "壳体左右两个半环电极，加臂电极"
+            }
+          ],
+          [
+            {
+              "en": "Silicone hook-up wire",
+              "zh": "硅胶软线"
+            },
+            {
+              "en": "30 AWG, assorted colours",
+              "zh": "30 AWG 多色"
+            },
+            {
+              "en": "1 set",
+              "zh": "1 套"
+            },
+            "¥15",
+            {
+              "en": "wiring to the electrodes, with a service loop at each joint so it does not break",
+              "zh": "电极走线，过关节处留伸缩环防断"
+            }
+          ],
+          [
+            {
+              "en": "Motor damping pads",
+              "zh": "电机减振垫"
+            },
+            {
+              "en": "silicone or foam",
+              "zh": "硅胶或泡棉"
+            },
+            {
+              "en": "1 set",
+              "zh": "1 套"
+            },
+            "¥5",
+            {
+              "en": "lower the vibration floor so knock detection keeps its signal-to-noise",
+              "zh": "压低震动地板，保住敲击检测的信噪比"
+            }
+          ]
+        ]
       }
     ]
   },
@@ -1451,23 +1679,24 @@
       {
         "kind": "table",
         "caption": {
-          "en": "The breathing shell is five differently sized expanding arches (S1–S5) set along the body axis, each a scaled variant of the same linkage. s_top and s_bot are the half-span of the two driving feet fully open and fully closed; R is the crank pin radius and L the rod length. Millimetres. (The source table also carries a tilt column; it is left out here because what it measures is still unsettled.)",
-          "zh": "呼吸外壳由五个大小不同的可展开拱（S1–S5）沿身体轴线排成一道丘，每个都是同一种连杆原型的缩放变体。s_top / s_bot 是张到最开与收到最紧时两只驱动脚的半跨距，R 是驱动轮上销子的半径，L 是连杆长度。单位毫米。（原表另有一列侧倾角，此处略去——它到底量的是什么尚未定论。）"
+          "en": "The breathing shell is five differently sized expanding arches (S1–S5) set along the body axis, each a scaled variant of the same linkage. s_top and s_bot are the half-span of the two driving feet fully open and fully closed; R is the crank pin radius and L the rod length. Millimetres. The tilt column is carried over from the source but is not settled: later work on the five rings found they stand vertical with all feet on one plane, so whatever this angle describes, it is not an assembly tilt. Evolution: S2 was M2 × 1.017 and was swapped to gain height; S5 was × 0.743 and was scaled up.",
+          "zh": "呼吸外壳由五个大小不同的可展开拱（S1–S5）沿身体轴线排成一道丘，每个都是同一种连杆原型的缩放变体。s_top / s_bot 是张到最开与收到最紧时两只驱动脚的半跨距，R 是驱动轮上销子的半径，L 是连杆长度。单位毫米。侧倾角一列照抄原表，但**尚未定论**：后来做五环时发现它们是竖直站立、四脚共地的，所以这个角无论描述的是什么，都不是装配侧倾。演化记录：S2 原为 M2 × 1.017，为抬高换掉；S5 原为 × 0.743，后放大。"
         },
         "head": [
           { "en": "Ring", "zh": "环" },
           { "en": "Source (variant × scale)", "zh": "来源（变体 × 缩放）" },
+          { "en": "Tilt (unsettled)", "zh": "侧倾角（未定论）" },
           "s_top",
           "s_bot",
           "R",
           "L"
         ],
         "rows": [
-          ["S1", "M3 × 1.057", "157.1", "73.6", "41.75", "115.35"],
-          ["S2", "M1 × 1.184", "161.6", "59.6", "51.00", "110.60"],
-          ["S3", "M5 × 1.584", "147.6", "57.9", "44.86", "102.77"],
-          ["S4", "M3 × 1.000", "147.9", "69.4", "39.25", "108.65"],
-          ["S5", "M3 × 0.870", "127.5", "61.0", "33.25", "94.25"]
+          ["S1", "M3 × 1.057", "−14°", "157.1", "73.6", "41.75", "115.35"],
+          ["S2", "M1 × 1.184", "−6°", "161.6", "59.6", "51.00", "110.60"],
+          ["S3", "M5 × 1.584", "+2°", "147.6", "57.9", "44.86", "102.77"],
+          ["S4", "M3 × 1.000", "+9°", "147.9", "69.4", "39.25", "108.65"],
+          ["S5", "M3 × 0.870", "+15°", "127.5", "61.0", "33.25", "94.25"]
         ]
       },
       {
@@ -1501,20 +1730,66 @@
       {
         "kind": "table",
         "caption": {
-          "en": "The drive parameters after the switch, optimised in the last round. At full contraction the central channel is only 10–12 mm wide, so the rod and its guide together have to stay within 10 mm of the axis or they hit the inner joints. Millimetres.",
-          "zh": "改用中央单杆之后最后一轮优化定下的驱动参数。最大收缩时中央通道净空只有 10–12 毫米，中央杆加竖导轨合计必须收在轴线 ±10 毫米内，否则撞上内侧节点。单位毫米。"
+          "en": "The drive parameters after the switch, optimised in the last round. At full contraction the central channel is only 10–12 mm wide, so the rod and its guide together have to stay within 10 mm of the axis or they hit the inner joints. Millimetres. The third column is labelled only \"ratio\" in the source, with no definition — it is not rod length over pin radius — so it is reproduced here unverified. This round changed only the wheel, the rod and the vertical guide: ring geometry, the eleven link types, the fully open shape and the foot slot lengths were all left alone.",
+          "zh": "改用中央单杆之后最后一轮优化定下的驱动参数。最大收缩时中央通道净空只有 10–12 毫米，中央杆加竖导轨合计必须收在轴线 ±10 毫米内，否则撞上内侧节点。单位毫米。第三列在原文里只写作「ratio」，没有给定义——它不等于杆长除以销半径——照录于此，**未经确认**。这一轮只动了轮、连杆与竖导轨：环几何、十一个连杆类、全开形状、脚槽长度全部未变。"
         },
         "head": [
           { "en": "Ring", "zh": "环" },
           { "en": "Pin radius R", "zh": "销半径 R" },
-          { "en": "Rod length L", "zh": "杆长 L" }
+          { "en": "Rod length L", "zh": "杆长 L" },
+          { "en": "ratio (undefined)", "zh": "ratio（定义不明）" }
         ],
         "rows": [
-          ["S1", "30", "97"],
-          ["S2", "49", "174"],
-          ["S3", "35", "124"],
-          ["S4", "28", "92"],
-          ["S5", "24", "80"]
+          ["S1", "30", "97", "2.73"],
+          ["S2", "49", "174", "2.85"],
+          ["S3", "35", "124", "3.30"],
+          ["S4", "28", "92", "2.71"],
+          ["S5", "24", "80", "2.66"]
+        ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "Unresolved — two sets of numbers for the same five rings, one from an overview table and one from the handoff document. They almost certainly measure different points: the height of the centre node against the height of the apex, and the driving half-span against the actual outer half-width. Before any overall dimension of the machine goes into writing, one convention has to be measured in the CAD file and fixed. Millimetres.",
+          "zh": "尚未解决——同样五个环的两套数值，一套来自总览表，一套来自交接文档。两者大概率量的不是同一个点：中心节点高与拱顶高，驱动半跨距与实际外廓半宽。往日志或网站里写整机尺寸之前，要先在三维文件里量一次、把口径定死。单位毫米。"
+        },
+        "head": [
+          { "en": "Ring", "zh": "环" },
+          { "en": "Peak height (overview)", "zh": "总览表 峰高" },
+          { "en": "Half-width (overview)", "zh": "总览表 半宽" },
+          { "en": "Height / width", "zh": "高宽比" },
+          { "en": "Peak height, open (handoff)", "zh": "交接表 全开峰高" },
+          { "en": "Half-width, open (handoff)", "zh": "交接表 全开半宽" }
+        ],
+        "rows": [
+          ["S1", "111", "142", "0.391", "~126", "~157"],
+          ["S2", "179", "152", "0.588", "~221", "~162"],
+          ["S3", "135", "148", "0.458", "~157", "~148"],
+          ["S4", "105", "134", "0.391", "~119", "~148"],
+          ["S5", "78", "100", "0.391", "~104", "~138"]
+        ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "Superseded — the version between the first attempt and the current numbers. It got the tracked node right for the first time, but had not yet been through the feedback loop: lowering the closed end makes the wheel envelope grow, which pushes the bottom line back up again. Kept for traceability. Millimetres.",
+          "zh": "已被取代——介于第一次计算与现行版之间的一版。它第一次把跟踪的节点选对了，但还没做那轮反馈迭代：把收缩端降低会让轮的包络变大，底线又被抬回去。保留只为追溯。单位毫米。"
+        },
+        "head": [
+          { "en": "Ring", "zh": "环" },
+          { "en": "Centre node (closed → open)", "zh": "中心节点（收 → 展）" },
+          { "en": "Pin radius R", "zh": "销半径 R" },
+          { "en": "Rod length L", "zh": "杆长 L" },
+          { "en": "Stroke 2R", "zh": "行程 2R" },
+          { "en": "Wheel ⌀", "zh": "轮 ⌀" },
+          { "en": "Slot half-length ≥", "zh": "槽半长 ≥" }
+        ],
+        "rows": [
+          ["S1", "77.6 → 126.3", "24.3", "102.0", "48.7", "48.7", "157"],
+          ["S2", "126.6 → 221.2", "47.3", "173.9", "94.6", "94.6", "162"],
+          ["S3", "98.3 → 157.3", "29.5", "127.8", "59.0", "59.0", "148"],
+          ["S4", "73.3 → 119.2", "23.0", "96.2", "45.9", "45.9", "148"],
+          ["S5", "64.2 → 103.3", "19.6", "83.7", "39.1", "39.1", "128"]
         ]
       },
       {
@@ -2341,6 +2616,494 @@
               "en": "signs of physiological fatigue: reactivity down, baseline still high",
               "zh": "生理疲劳的迹象：反应性降低，基线仍高"
             }
+          ]
+        ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "Overturned in part — the early ordering of the four personalities. It disagrees with the parameter table above about what C and D are: life 4 is called intimate here, while the parameter table has D as the erratic one and C as the curious one. The parameter table is the later document, so the last two rows need rewriting. The note attached to this table also said the order would be counterbalanced across participants; that was dropped on 7 July — the order is now the same for everyone and the confounding is stated openly instead.",
+          "zh": "部分被推翻——四轮人格顺序的早期版本。它和上面的参数表对不上：这里第 4 轮叫「亲密」，而参数表里 D 是不稳定型、C 才是好奇型。参数表是更晚的文档，所以最后两行需要重写。原表附注还写着人格顺序要在被试之间做平衡，这条已于 7 月 7 日取消——现在所有人顺序相同，混淆改为明示。"
+        },
+        "head": [
+          { "en": "Round", "zh": "轮次" },
+          { "en": "Personality", "zh": "人格代号" },
+          { "en": "Movement", "zh": "运动特征" },
+          { "en": "Response", "zh": "响应模式" },
+          { "en": "Sound", "zh": "声音特征" }
+        ],
+        "rows": [
+          [
+            "1",
+            {
+              "en": "A · energetic",
+              "zh": "A · 活力"
+            },
+            {
+              "en": "fast, bouncing",
+              "zh": "快节奏、跳跃式"
+            },
+            {
+              "en": "immediate, eager",
+              "zh": "即时响应、热情"
+            },
+            {
+              "en": "high pitched, bright",
+              "zh": "高频、明快"
+            }
+          ],
+          [
+            "2",
+            {
+              "en": "B · calm",
+              "zh": "B · 沉静"
+            },
+            {
+              "en": "slow, smooth",
+              "zh": "缓慢、流畅"
+            },
+            {
+              "en": "delayed, deliberate",
+              "zh": "延迟响应、深思"
+            },
+            {
+              "en": "low pitched, warm",
+              "zh": "低频、温暖"
+            }
+          ],
+          [
+            "3",
+            {
+              "en": "C · curious",
+              "zh": "C · 好奇"
+            },
+            {
+              "en": "irregular, exploratory",
+              "zh": "不规则、探索式"
+            },
+            {
+              "en": "reacts strongly to anything new",
+              "zh": "对新刺激反应强烈"
+            },
+            {
+              "en": "mid pitched, varied",
+              "zh": "中频、变化多"
+            }
+          ],
+          [
+            "4",
+            {
+              "en": "D · intimate — conflicts with the parameter table",
+              "zh": "D · 亲密——与参数表冲突"
+            },
+            {
+              "en": "moves in close to the user",
+              "zh": "贴近用户的运动"
+            },
+            {
+              "en": "extremely sensitive to touch",
+              "zh": "对触摸极度敏感"
+            },
+            {
+              "en": "soft, almost whispering",
+              "zh": "柔和、近乎私语"
+            }
+          ]
+        ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "Needs checking — the quick assessments given in the silence after each death. The measurement battery was cut substantially in the review of 7 July, so this is the April state, not necessarily the current protocol.",
+          "zh": "待核对——每次死亡后的空白期里要填的快速评估。测量组在 7 月 7 日的复审里被大幅裁剪过，所以这是四月的状态，不一定是现行协议。"
+        },
+        "head": [
+          { "en": "Instrument", "zh": "量表" },
+          { "en": "What it measures", "zh": "测量内容" },
+          { "en": "When", "zh": "施测时点" }
+        ],
+        "rows": [
+          [
+            {
+              "en": "Self-assessment manikin (SAM)",
+              "zh": "自评人形量表（SAM）"
+            },
+            {
+              "en": "pleasantness, arousal, sense of control",
+              "zh": "愉悦度 / 唤醒度 / 控制感"
+            },
+            {
+              "en": "in the silence after each life",
+              "zh": "每轮空白期"
+            }
+          ],
+          [
+            {
+              "en": "Subjective units of distress (SUDS)",
+              "zh": "主观困扰单位（SUDS）"
+            },
+            {
+              "en": "distress on a 0–100 scale",
+              "zh": "0–100 的困扰程度"
+            },
+            {
+              "en": "in the silence after each life",
+              "zh": "每轮空白期"
+            }
+          ],
+          [
+            {
+              "en": "Godspeed animacy subscale",
+              "zh": "Godspeed 活性子量表"
+            },
+            {
+              "en": "perceived aliveness (dead–alive and similar pairs)",
+              "zh": "感知到的活性（死—活等词对）"
+            },
+            {
+              "en": "after lives 2 and 4",
+              "zh": "第 2、4 轮之后"
+            }
+          ],
+          [
+            {
+              "en": "Single-item attachment rating",
+              "zh": "单题依附感评分"
+            },
+            {
+              "en": "\"how attached do you feel to this device?\", 0–10",
+              "zh": "「你对这个装置感到多大程度的依恋？」0–10"
+            },
+            {
+              "en": "in the silence after each life",
+              "zh": "每轮空白期"
+            }
+          ]
+        ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "Needs checking — the battery given at the very end of the session; same caveat as the table above.",
+          "zh": "待核对——整场结束后的后测量表组；与上一张表同样的保留意见。"
+        },
+        "head": [{ "en": "Instrument", "zh": "量表" }, { "en": "What it measures", "zh": "测量内容" }],
+        "rows": [
+          [
+            {
+              "en": "Godspeed, full version (anthropomorphism, animacy, likeability)",
+              "zh": "Godspeed 完整版（拟人化 + 活性 + 好感）"
+            },
+            {
+              "en": "final perception of the device",
+              "zh": "对装置的最终感知"
+            }
+          ],
+          [
+            {
+              "en": "Mind perception scale (Gray et al., 2007): agency and experience",
+              "zh": "心智感知量表（Gray 等 2007）：能动性 + 体验性"
+            },
+            {
+              "en": "how much mind is attributed to it",
+              "zh": "对它的心智归因有多少"
+            }
+          ],
+          [
+            {
+              "en": "Heerink social presence scale, 4 items",
+              "zh": "Heerink 社会存在感量表（4 题）"
+            },
+            {
+              "en": "the sense of another presence in the room",
+              "zh": "房间里「还有一个存在」的感觉"
+            }
+          ],
+          [
+            {
+              "en": "Purpose-built loss scale, adapted from Banks 2024 and a pet-loss scale",
+              "zh": "自编丧失感量表（改编自 Banks 2024 与宠物丧失量表）"
+            },
+            {
+              "en": "the experience of losing it",
+              "zh": "失去它的体验"
+            }
+          ],
+          [
+            {
+              "en": "PANAS, after the session",
+              "zh": "PANAS 后测"
+            },
+            {
+              "en": "change in mood",
+              "zh": "情绪的变化"
+            }
+          ]
+        ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "Overturned in part — the original physiological plan. The three heart-rate-variability rows were dropped on 7 July: with 5 to 8 participants, a before-and-after-death contrast can never reach significance, so spending the equipment and the session time on it made no sense. Event-locked skin conductance is now the single primary physiological measure; the dropped rows are kept here so the decision can be traced.",
+          "zh": "部分被推翻——最初的生理测量方案。其中三行心率变异性已于 7 月 7 日删掉：5 到 8 人的样本，死亡前后的对比在算术上根本不可能显著，为它耗设备和场次时间不划算。现行方案只以事件锁定的皮肤电反应为主要生理指标；被删的三行留在这里，是为了让这个决定可追溯。"
+        },
+        "head": [
+          { "en": "Measure", "zh": "指标" },
+          { "en": "What exactly", "zh": "具体测量" },
+          { "en": "Sampling", "zh": "采样率" },
+          { "en": "Analysis", "zh": "分析方法" },
+          { "en": "Window", "zh": "时间窗口" }
+        ],
+        "rows": [
+          [
+            {
+              "en": "Heart-rate variability, RMSSD — dropped",
+              "zh": "心率变异性 RMSSD——已删"
+            },
+            {
+              "en": "root mean square of successive differences between beats",
+              "zh": "逐拍间期连续差值的均方根"
+            },
+            {
+              "en": "ECG at 1000 Hz",
+              "zh": "心电 1000 Hz"
+            },
+            {
+              "en": "Kubios HRV, 2-minute epochs",
+              "zh": "Kubios HRV，2 分钟窗"
+            },
+            {
+              "en": "2 min before death against 2 min after",
+              "zh": "死亡前 2 分钟对死亡后 2 分钟"
+            }
+          ],
+          [
+            {
+              "en": "Heart-rate variability, SDNN — dropped",
+              "zh": "心率变异性 SDNN——已删"
+            },
+            {
+              "en": "standard deviation of the beat intervals",
+              "zh": "心搏间期的标准差"
+            },
+            {
+              "en": "as above",
+              "zh": "同上"
+            },
+            {
+              "en": "as above",
+              "zh": "同上"
+            },
+            {
+              "en": "the whole of each life, 5 min",
+              "zh": "每轮交互全程，5 分钟"
+            }
+          ],
+          [
+            {
+              "en": "Heart-rate variability, high-frequency power — dropped",
+              "zh": "心率变异性 高频功率——已删"
+            },
+            {
+              "en": "power in the 0.15–0.40 Hz band",
+              "zh": "0.15–0.40 Hz 频段的功率"
+            },
+            {
+              "en": "as above",
+              "zh": "同上"
+            },
+            {
+              "en": "frequency analysis",
+              "zh": "频域分析"
+            },
+            {
+              "en": "needs a window of 2 min or more",
+              "zh": "需要 2 分钟以上的窗口"
+            }
+          ],
+          [
+            {
+              "en": "Skin-conductance response amplitude — primary measure",
+              "zh": "皮肤电反应幅度——主指标"
+            },
+            {
+              "en": "event-related change in skin conductance",
+              "zh": "与事件关联的皮肤电导变化"
+            },
+            {
+              "en": "4 Hz or higher",
+              "zh": "4 Hz 以上"
+            },
+            {
+              "en": "Ledalab CDA decomposition",
+              "zh": "Ledalab CDA 分解"
+            },
+            {
+              "en": "1–5 s after the death",
+              "zh": "死亡事件后 1–5 秒"
+            }
+          ],
+          [
+            {
+              "en": "Mean skin-conductance level",
+              "zh": "平均皮肤电水平"
+            },
+            {
+              "en": "the slow, tonic level",
+              "zh": "缓慢变化的紧张性水平"
+            },
+            {
+              "en": "as above",
+              "zh": "同上"
+            },
+            {
+              "en": "cvxEDA baseline correction",
+              "zh": "cvxEDA 基线校正"
+            },
+            {
+              "en": "the whole of each life",
+              "zh": "每轮交互全程"
+            }
+          ],
+          [
+            {
+              "en": "Response frequency",
+              "zh": "反应频率"
+            },
+            {
+              "en": "number of responses not tied to any event",
+              "zh": "与任何事件都无关的反应次数"
+            },
+            {
+              "en": "as above",
+              "zh": "同上"
+            },
+            {
+              "en": "threshold of 0.01 µS",
+              "zh": "阈值 0.01 µS"
+            },
+            {
+              "en": "the whole of each life",
+              "zh": "每轮交互全程"
+            }
+          ],
+          [
+            {
+              "en": "Heart rate",
+              "zh": "心率"
+            },
+            {
+              "en": "beats per minute",
+              "zh": "每分钟心跳次数"
+            },
+            {
+              "en": "pulse or ECG",
+              "zh": "脉搏或心电"
+            },
+            {
+              "en": "computed directly",
+              "zh": "直接计算"
+            },
+            {
+              "en": "monitored throughout",
+              "zh": "全程持续监测"
+            }
+          ]
+        ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "Incomplete — the distance layer of the video coding scheme. Only four codes survive in the source, which breaks off mid-list; nothing has been invented to fill the gap.",
+          "zh": "残缺——录像编码的距离层。原文在这里被截断，只捞回四条；缺口没有补造。"
+        },
+        "head": [{ "en": "Code", "zh": "编码" }, { "en": "Definition", "zh": "定义" }],
+        "rows": [
+          [
+            "D-approach",
+            {
+              "en": "body or head moves at least 5 cm towards the device",
+              "zh": "身体或头部向装置移近 ≥5 cm"
+            }
+          ],
+          [
+            "D-retreat",
+            {
+              "en": "body or head moves at least 5 cm away from it",
+              "zh": "身体或头部远离装置 ≥5 cm"
+            }
+          ],
+          ["D-lean-in", { "en": "upper body leans in towards the device", "zh": "上半身前倾朝向装置" }],
+          [
+            "D-lean-back",
+            {
+              "en": "upper body leans back (the source breaks off here)",
+              "zh": "上半身后仰（原文在此截断）"
+            }
+          ],
+          [
+            "…",
+            {
+              "en": "missing — to be recovered from the original notes",
+              "zh": "缺失——待从原始记录里补回"
+            }
+          ]
+        ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "Incomplete — the analysis refers to an eight-class coding framework, but only two classes survive in the source. The convention that goes with it: one code every 5 seconds, two coders working independently, target agreement of 0.70. The second coder is still not arranged — one of the gaps flagged in the 7 July review.",
+          "zh": "残缺——数据分析里反复引用的八类编码框架，原文只捞回两类。配套约定：每 5 秒一个编码窗口，两名编码者独立编码，一致性目标 0.70。第二编码员至今没有落实，是 7 月 7 日复审标出的缺口之一。"
+        },
+        "head": [
+          { "en": "Code", "zh": "编码" },
+          { "en": "Name", "zh": "名称" },
+          { "en": "Definition", "zh": "定义" },
+          { "en": "Example", "zh": "示例" }
+        ],
+        "rows": [
+          [
+            "CONT",
+            {
+              "en": "continuity judgment",
+              "zh": "连续性判断"
+            },
+            {
+              "en": "anything said about whether it is the same being across lives",
+              "zh": "关于「跨轮次是不是同一个」的任何表达"
+            },
+            {
+              "en": "\"is this the same one?\", \"welcome back\"",
+              "zh": "「是同一个吗？」「欢迎回来」"
+            }
+          ],
+          [
+            "CARE",
+            {
+              "en": "caring behaviour",
+              "zh": "照顾行为"
+            },
+            {
+              "en": "protective or nurturing action",
+              "zh": "保护性或照料性的动作"
+            },
+            {
+              "en": "shielding the device, moving it so that it is \"comfortable\"",
+              "zh": "遮挡装置、挪动位置让它「舒服」"
+            }
+          ],
+          [
+            {
+              "en": "The other six classes",
+              "zh": "其余六类"
+            },
+            {
+              "en": "missing — to be recovered from the original notes",
+              "zh": "缺失——待从原始记录里补回"
+            },
+            "—",
+            "—"
           ]
         ]
       }
