@@ -1351,6 +1351,11 @@ button.log-heat__cell {
 .case-layout {
   --case-hero-budget: 523px;
 }
+/* 侧栏控制条的列宽——.lab-wrap--side 与 .case-hero--live 的宽度预算共用一个数，
+   定在 :root 上：.case-hero--live 是 .lab-wrap 的**父**，从子元素继承不到。 */
+:root {
+  --lab-ctl-w: 188px;
+}
 @media (max-height: 960px) and (min-width: 1024px) {
   .case-head {
     padding: 36px 0 24px;
@@ -1376,8 +1381,9 @@ button.log-heat__cell {
   .case-hero {
     max-width: calc((100svh - var(--case-hero-budget)) * 3 / 2);
   }
+  /* 活台架：预算约束的是**画面**，右侧控制条另算一列（不占高度，只占宽） */
   .case-hero--live {
-    max-width: calc((100svh - var(--case-hero-budget)) * 700 / 520);
+    max-width: calc((100svh - var(--case-hero-budget)) * 700 / 520 + var(--lab-ctl-w));
   }
 }
 
@@ -1613,6 +1619,53 @@ button.log-heat__cell {
   align-items: center;
   padding: 0 16px;
   border-left: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+}
+
+/* ── 控制条竖排在画面右侧（.lab-wrap--side，案例页主图用；用户拍板 2026-07-28）──
+   横排控制条挂在画面下面会把整件变高，而案例页主图高度是首屏预算里的硬约束；
+   竖排到右侧则**只变宽不变高**。组间分隔线相应从竖线转横线。 */
+.lab-wrap--side {
+  display: flex;
+  align-items: stretch;
+}
+.lab-wrap--side .lab-fig {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.lab-wrap--side .lab-ctl {
+  flex: 0 0 var(--lab-ctl-w);
+  width: var(--lab-ctl-w);
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  justify-content: flex-start;
+  row-gap: 0;
+  padding: 14px 14px 16px;
+  border-top: none;
+  border-left: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
+}
+.lab-wrap--side .lab-ctl .grp {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  width: 100%;
+  padding: 13px 0 0;
+  margin-top: 13px;
+  border-left: none;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+}
+.lab-wrap--side .lab-ctl .grp:first-child {
+  padding-top: 0;
+  margin-top: 0;
+  border-top: none;
+}
+.lab-wrap--side .lab-ctl .seg {
+  flex-wrap: wrap;
+}
+/* 换行后的分段按钮：右边框会缺一条，补回来（横排时靠 last-child 补） */
+.lab-wrap--side .lab-ctl .seg button {
+  border-right-width: 1px;
+  margin-right: -1px;
 }
 .lab-ctl .grp:first-child {
   border-left: none;

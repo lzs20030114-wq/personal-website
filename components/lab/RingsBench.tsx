@@ -183,6 +183,8 @@ export function RingsBench({
   active = true,
   controls = true,
   onLight = false,
+  sideControls = false,
+  ptTarget = false,
 }: {
   spin?: boolean;
   active?: boolean;
@@ -190,6 +192,18 @@ export function RingsBench({
   controls?: boolean;
   /** true = 置于浅色页（主页舞台）：自带深底与深色 token */
   onLight?: boolean;
+  /**
+   * true = 控制条竖排在画面**右侧**（案例页主图用，用户拍板 2026-07-28）。
+   * 控制条在下面会把整件变高，而案例页主图的高度是首屏预算里的硬约束——
+   * 放右边则只变宽不变高。/lab 页不用（那里没有首屏约束，横排读着更顺）。
+   */
+  sideControls?: boolean;
+  /**
+   * true = 把转场落点 data-pt-target 打在**画面盒**（.lab-fig）而不是外层。
+   * 侧栏控制条会把外层撑宽近 200px，落点若还框着外层，主页飞过来的那张画面快照
+   * 会被拉到整件宽度、交接那一帧明显一跳。落点必须只框画面本身。
+   */
+  ptTarget?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const apiRef = useRef<{
@@ -442,8 +456,12 @@ export function RingsBench({
   }, []);
 
   return (
-    <div className={`lab-wrap${onLight ? ' on-light' : ''}`}>
-      <div className="lab-fig">
+    <div
+      className={`lab-wrap${onLight ? ' on-light' : ''}${
+        sideControls && controls ? ' lab-wrap--side' : ''
+      }`}
+    >
+      <div className="lab-fig" {...(ptTarget ? { 'data-pt-target': '' } : {})}>
         <canvas
           ref={canvasRef}
           width={1400}
@@ -510,7 +528,8 @@ export function RingsBench({
               max={360}
               step={0.5}
               value={phase}
-              style={{ width: 132 }}
+              // 侧栏里滑杆占满一列（横排时是稿里的定值 132）
+              style={sideControls ? { width: '100%' } : { width: 132 }}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 setBreathe(false);

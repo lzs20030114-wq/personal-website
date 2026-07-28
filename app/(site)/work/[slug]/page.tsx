@@ -108,8 +108,11 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
             {liveHero ? (
               // 项目 01 临时主图 = Lab.04 五环活件（用户拍板 2026-07-27：与主页预览位同一件，
               // 转场从卡片预览一路缩放落到这里）。作者供图后删掉本分支即回占位。
-              <div className="case-hero case-hero--live" data-pt-target>
-                <RingsBench controls={false} />
+              // 控制条竖排在右侧（用户拍板 2026-07-28）：横排会把主图变高、撞首屏预算。
+              // 转场落点也随之下移到画面盒（ptTarget），否则落点框着控制条那一列，
+              // 主页飞过来的画面快照会被拉宽、交接那帧一跳。
+              <div className="case-hero case-hero--live">
+                <RingsBench sideControls ptTarget />
               </div>
             ) : (
               <div className="case-hero" data-pt-target>
