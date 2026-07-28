@@ -429,6 +429,18 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
         }
         if (prog && i === n) prog.style.transform = `scaleX(${(n + 1) / (N + 1)})`;
       });
+    /**
+     * 引擎态把非当前幕整体摘出可交互树。屏幕外的链接若还能 Tab 进去，浏览器为了让
+     * 焦点可见会去滚 #vp——而这个位移 transform 引擎既不知道也还原不了：实测停在 S0
+     * 连按 Tab，第 14 次 scrollTop 就被顶到 484，第 20 次 scrollLeft 到 1440，纵横都歪，
+     * 除了刷新没有任何交互能救回来。文档流态（<1024 / reduced-motion）不加，那时三幕
+     * 本来就该全部可达。
+     */
+    const setInert = (n: number) =>
+      sections.forEach((sec, i) => {
+        if (engine && i !== n) sec.setAttribute('inert', '');
+        else sec.removeAttribute('inert');
+      });
     // 翻幕编排（迭代稿：斜向扫光 + 幕内 stagger）——staggerFx 默认关（07-24 真机拍板），enter 即空转。
     const enter = (i: number) => {
       if (!fxStagger) return;
@@ -456,6 +468,22 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
     // 交接 om-veil 开场淡出。SPA 下文档不重载：节点挂 body（组件卸载后仍在），router.push 完成
     // 客户端渲染后定时淡出移除；四个目标路由挂载时预取，push 即时。
     let ptBusy = false;
+    /**
+     * 带修饰键 / 非左键的点击是「在别处打开」，不是「在本页跳转」——转场必须让路，
+     * 交回浏览器原生行为，否则 ⌘/Ctrl-click 开新标签会被吃成当场跳走。
+     * 卡片与舞台链接共用（BackTransition 里是同一套判据）。
+     */
+    const modifiedClick = (e: Event): boolean => {
+      const me = e as MouseEvent;
+      return (
+        me.defaultPrevented ||
+        me.button !== 0 ||
+        me.metaKey ||
+        me.ctrlKey ||
+        me.shiftKey ||
+        me.altKey
+      );
+    };
     const goPT = (href: string, fromEl: HTMLElement | null) => {
       if (ptBusy) return;
       if (reduced) {
@@ -603,20 +631,7 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
     const ptLinks = Array.from(root.querySelectorAll<HTMLElement>('a[data-pt]'));
     ptLinks.forEach((a) =>
       on(a, 'click', (e) => {
-        // 带修饰键的点击是「在别处打开」，不是「在本页跳转」——转场必须让路，
-        // 否则 ⌘/Ctrl-click 开新标签会被吃成当场跳走（评审习惯并排开好几页看）。
-        // 守卫与 BackTransition 同款，两处保持一致。
-        const me = e as MouseEvent;
-        if (
-          me.defaultPrevented ||
-          me.button !== 0 ||
-          me.metaKey ||
-          me.ctrlKey ||
-          me.shiftKey ||
-          me.altKey
-        ) {
-          return;
-        }
+        if (modifiedClick(e)) return;
         e.preventDefault();
         const href = a.getAttribute('href');
         if (!href) return;
@@ -679,6 +694,7 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
       setTrack(-Math.min(n, 1) * H(), PUSH_MS);
       setS2(n === 2 ? 0 : W(), PUSH_MS);
       setRail(n);
+      setInert(n);
       setTimeout(() => enter(n), PUSH_MS);
     };
     const goScreen = (n: number) => {
@@ -877,7 +893,11 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
         }, 80);
       });
       on(c, 'mouseleave', () => clearTimeout(hoverT));
-      on(c, 'click', () => {
+      // 卡片现在是真链接（<a href>），转场只是接管默认行为：修饰键点击交回浏览器，
+      // 普通左键才走 goPT。href 与 data-href 同值——前者给浏览器/爬虫，后者给引擎读。
+      on(c, 'click', (e) => {
+        if (modifiedClick(e)) return;
+        e.preventDefault();
         const href = c.getAttribute('data-href');
         if (!href) return;
         const media = small ? null : (panels[n]?.querySelector<HTMLElement>('[data-ptm]') ?? c);
@@ -1006,6 +1026,7 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
       });
       railEl.style.display = engine ? 'flex' : 'none';
       if (prog) prog.style.display = engine ? 'block' : 'none';
+      setInert(cur);
       acc = 0;
     };
     applyMode();
@@ -1024,6 +1045,7 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
       setTrack(-H(), 0);
       setS2(0, 0);
       setRail(2);
+      setInert(2);
     }
 
     return () => {
@@ -1213,13 +1235,17 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
                 </p>
                 <div id="cards" className="hub-cards">
                   {works.map((w, i) => (
-                    <button
+                    // 卡片是导航，就得是链接：此前是 <button> + JS 跳转，于是整页只有
+                    // 舞台面板里那一条 href 指向案例页，而舞台在 <1024 是 display:none。
+                    // 结果卡片对爬虫、对「复制链接地址」、对新标签页、对禁用 JS 全都不存在。
+                    // 转场不受影响——引擎照旧读 data-href，只是改成接管默认行为（见 goPT 接线）。
+                    <a
                       key={w.slug}
-                      type="button"
                       id={`c${i + 1}`}
                       className="hub-card"
                       data-card={i + 1}
                       data-cursor={`View ${String(i + 1).padStart(2, '0')} →`}
+                      href={w.published ? `/work/${w.slug}` : '/archive'}
                       data-href={w.published ? `/work/${w.slug}` : '/archive'}
                     >
                       <span
@@ -1280,7 +1306,7 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
                       >
                         {w.published ? w.date : 'TBD'}
                       </span>
-                    </button>
+                    </a>
                   ))}
                 </div>
                 <a data-row id="aboutLink" href="#about-preview" data-cursor="Go S1 →" style={LINK_11}>
