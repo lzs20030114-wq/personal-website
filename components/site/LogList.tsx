@@ -267,17 +267,20 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
   /* 热力图跳转：点某天 → 滚到那天的第一条并闪一下。
      热力图本身已按项目+方面筛过，所以唯一可能挡住目标的是月份那一级——
      把月份切到目标所在月即可，不粗暴清空用户的其余选择。 */
-  const [flash, setFlash] = useState<string | null>(null);
+  /* 带序号：只存日期的话，连点同一格第二次 setState 值没变 → 不重渲染 → 下面的
+     effect 不重跑 → 既不滚也不闪（要等 1.6s 归零后才又能点）。同一格点两下是很自然的
+     动作，所以每次跳转自增一个序号，保证状态必变。 */
+  const [flash, setFlash] = useState<{ date: string; seq: number } | null>(null);
   const listRef = useRef<HTMLElement>(null);
 
   function jumpTo(date: string) {
     if (month !== null && month !== date.slice(0, 7)) setMonth(date.slice(0, 7));
-    setFlash(date);
+    setFlash((prev) => ({ date, seq: (prev?.seq ?? 0) + 1 }));
   }
 
   useEffect(() => {
     if (flash === null) return;
-    const el = listRef.current?.querySelector(`[data-date="${flash}"]`);
+    const el = listRef.current?.querySelector(`[data-date="${flash.date}"]`);
     if (el) {
       const reduce =
         typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -456,7 +459,7 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
                   className="log-entry"
                   data-open={isOpen}
                   data-date={e.date}
-                  data-flash={flash === e.date}
+                  data-flash={flash?.date === e.date}
                 >
                   <div className="log-entry__meta">
                     <span className="log-entry__date">{e.date.slice(5)}</span>
