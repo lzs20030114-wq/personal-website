@@ -489,6 +489,137 @@
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
       { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "table",
+        "caption": {
+          "en": "The worst-loaded ring, before and after adding a rib on the back and a lip on the front edge. The lateral hot spot is not at mid-span but at the square corner where the slot ends; rounding that corner to R1.8 should bring it down to about 13 MPa.",
+          "zh": "受力最不利的那个环，加强前后的对比：背面一道 8×3 毫米加强肋，前缘一道 4×2.5 毫米下翻边。侧向的应力热点不在跨中，而在槽外端那个方角——把方角改成 R1.8 的圆角，预计能降到 13 MPa 量级。"
+        },
+        "head": [
+          { "en": "Measure (worst case)", "zh": "指标（最不利工况）" },
+          { "en": "Before", "zh": "加强前" },
+          { "en": "After the rib and lip", "zh": "加背肋与前缘翻边后" }
+        ],
+        "rows": [
+          [
+            {
+              "en": "Vertical 20 N · peak stress",
+              "zh": "垂直 20 N · 最大应力"
+            },
+            {
+              "en": "47.5 MPa (over the limit)",
+              "zh": "47.5 MPa（超限）"
+            },
+            "16.5 MPa"
+          ],
+          [
+            {
+              "en": "Vertical 20 N · deflection",
+              "zh": "垂直 20 N · 挠度"
+            },
+            {
+              "en": "1.55 mm (enough to jam the slider)",
+              "zh": "1.55 mm（足以卡死滑块）"
+            },
+            "0.34 mm"
+          ],
+          [
+            {
+              "en": "Vertical load at failure",
+              "zh": "垂直极限载荷"
+            },
+            {
+              "en": "about 19 N",
+              "zh": "约 19 N"
+            },
+            {
+              "en": "about 54 N",
+              "zh": "约 54 N"
+            }
+          ],
+          [
+            {
+              "en": "Lateral 10 N · front edge opening",
+              "zh": "侧向 10 N · 前缘张开"
+            },
+            "0.74 mm",
+            "0.61 mm"
+          ],
+          [
+            {
+              "en": "Lateral stress hot spot (square corner at the outer end of the slot)",
+              "zh": "侧向应力热点（槽外端的方角）"
+            },
+            "21.6 MPa",
+            {
+              "en": "21.6 MPa — unchanged",
+              "zh": "21.6 MPa——没有改善"
+            }
+          ]
+        ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "The redesigned rail, checked the same way: T-shaped web plates, posts, a continuous rib along the back and vertical guide strips. It takes the pressing direction easily; the direction perpendicular to the plate still needs a front lip.",
+          "zh": "重设计后的分体式导轨用同样的方法复核：T 形腹板 + 立柱 + 连续背肋 + 垂直导条。按压方向很轻松，垂直于板面的方向还差一道前唇收尾。"
+        },
+        "head": [{ "en": "Item", "zh": "项" }, { "en": "Result", "zh": "结果" }],
+        "rows": [
+          [
+            {
+              "en": "In-plane (the pressing direction) load at failure",
+              "zh": "面内（按压方向）极限承载"
+            },
+            {
+              "en": "about 222 N — ample",
+              "zh": "约 222 N——充裕"
+            }
+          ],
+          [
+            {
+              "en": "Out-of-plane, worst free span, at 10 N",
+              "zh": "面外最差自由跨位，10 N"
+            },
+            {
+              "en": "deflects 1.32 mm — needs a front lip",
+              "zh": "挠 1.32 mm——需要加前唇"
+            }
+          ],
+          [
+            {
+              "en": "Slot width",
+              "zh": "槽宽"
+            },
+            {
+              "en": "3.40 → 3.60 mm (a printed slot comes out around 3.3, leaving 0.3 clearance on a 3.0 mm shoulder)",
+              "zh": "3.40 → 3.60 mm（打印出来实得约 3.3，对 ⌀3.0 的光筒留 0.3 间隙）"
+            }
+          ],
+          [
+            {
+              "en": "Slider",
+              "zh": "滑块"
+            },
+            {
+              "en": "the smooth barrel of an M2 lock nut — cylindrical contact, not thread",
+              "zh": "M2 锁紧螺母的光筒——圆柱面接触，不是螺纹"
+            }
+          ],
+          [
+            {
+              "en": "Washer",
+              "zh": "垫片"
+            },
+            {
+              "en": "nylon flat washer, 3.2 × 7 × 0.5 mm, keeping the barrel-against-barrel preload",
+              "zh": "尼龙平垫 3.2 × 7 × 0.5 mm，沿用筒对筒的预紧逻辑"
+            }
+          ]
+        ]
+      }
     ]
   },
   {
@@ -660,6 +791,261 @@
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
       { "label": { "en": "Sourcing", "zh": "采购" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "table",
+        "caption": {
+          "en": "The consolidated must-buy list, cross-checked against the starter kit already on the desk so nothing is bought twice. About ¥216 in total.",
+          "zh": "合并主单与传感追加后的最终版，已逐项对照过手上已有的套件库存，重复的都剔掉了。合计约 ¥216。"
+        },
+        "head": [
+          { "en": "Item", "zh": "件" },
+          { "en": "Spec", "zh": "规格" },
+          { "en": "Qty", "zh": "数量" },
+          { "en": "Approx.", "zh": "约价" }
+        ],
+        "rows": [
+          [
+            {
+              "en": "ESP32 board",
+              "zh": "ESP32 开发板"
+            },
+            {
+              "en": "WROOM-32, 38 pin (check the USB connector type on arrival)",
+              "zh": "WROOM-32 38 pin（收货看清 USB 口型再配线）"
+            },
+            "2",
+            "¥60"
+          ],
+          [
+            {
+              "en": "Step-down module",
+              "zh": "降压模块"
+            },
+            {
+              "en": "XL4015, 12 V → 5 V, 5 A",
+              "zh": "XL4015，12V→5V 5A"
+            },
+            "1",
+            "¥8"
+          ],
+          [
+            {
+              "en": "Amplifier and speaker",
+              "zh": "功放与喇叭"
+            },
+            {
+              "en": "PAM8403 with a 4 Ω 3 W, ⌀28–40 mm driver",
+              "zh": "PAM8403 配 4Ω 3W、⌀28–40 mm 喇叭"
+            },
+            {
+              "en": "1 each",
+              "zh": "各 1"
+            },
+            "¥10"
+          ],
+          [
+            {
+              "en": "Light",
+              "zh": "灯"
+            },
+            {
+              "en": "WS2812B, 12-LED ring",
+              "zh": "WS2812B 12 灯环"
+            },
+            "1",
+            "¥15"
+          ],
+          [
+            {
+              "en": "SG90 servo",
+              "zh": "SG90 舵机"
+            },
+            {
+              "en": "same batch as the existing ones — count stock first, top up to 4",
+              "zh": "与现有同批规格——先盘点，补至 4 只"
+            },
+            {
+              "en": "the shortfall",
+              "zh": "补差"
+            },
+            {
+              "en": "¥8 each",
+              "zh": "¥8/只"
+            }
+          ],
+          [
+            {
+              "en": "Lever microswitch",
+              "zh": "杠杆微动开关"
+            },
+            {
+              "en": "long lever; pick the lowest operating force on the shelf",
+              "zh": "长杠杆式；触发力选货架上最小的一档"
+            },
+            "3",
+            "¥6"
+          ],
+          [
+            {
+              "en": "Tension springs",
+              "zh": "小拉簧"
+            },
+            {
+              "en": "assorted sizes",
+              "zh": "多规格"
+            },
+            {
+              "en": "1 set",
+              "zh": "1 套"
+            },
+            "¥10"
+          ],
+          [
+            {
+              "en": "Copper foil tape",
+              "zh": "铜箔导电胶带"
+            },
+            {
+              "en": "10 mm wide or more, conductive adhesive",
+              "zh": "≥10 mm 宽，导电背胶"
+            },
+            {
+              "en": "1 roll",
+              "zh": "1 卷"
+            },
+            "¥10"
+          ],
+          [
+            {
+              "en": "Silicone hook-up wire",
+              "zh": "硅胶软线"
+            },
+            {
+              "en": "30 AWG, assorted colours",
+              "zh": "30 AWG 多色"
+            },
+            {
+              "en": "1 set",
+              "zh": "1 套"
+            },
+            "¥15"
+          ],
+          [
+            {
+              "en": "XH2.54 connectors",
+              "zh": "XH2.54 端子"
+            },
+            {
+              "en": "pre-crimped 2, 3 and 4 pin sets",
+              "zh": "2/3/4P 带线成品套装"
+            },
+            {
+              "en": "1 set",
+              "zh": "1 套"
+            },
+            "¥20"
+          ],
+          [
+            {
+              "en": "Electrolytic capacitors",
+              "zh": "电解电容"
+            },
+            {
+              "en": "470–1000 µF, 16 V",
+              "zh": "470–1000 µF，16 V"
+            },
+            "4",
+            "¥5"
+          ],
+          [
+            {
+              "en": "Heat-shrink tubing",
+              "zh": "热缩管"
+            },
+            {
+              "en": "assorted set",
+              "zh": "套装"
+            },
+            "1",
+            "¥8"
+          ],
+          [
+            {
+              "en": "Motor damping pads",
+              "zh": "电机减振垫"
+            },
+            {
+              "en": "silicone or foam",
+              "zh": "硅胶或泡棉"
+            },
+            {
+              "en": "1 set",
+              "zh": "1 套"
+            },
+            "¥5"
+          ]
+        ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "Held back until a specific condition makes them necessary — about ¥300 for everything if all four are eventually bought.",
+          "zh": "先不下单，等触发条件到了再买——四项全买上限约 ¥300。"
+        },
+        "head": [
+          { "en": "Item", "zh": "件" },
+          { "en": "Approx.", "zh": "约价" },
+          { "en": "Buy it only if", "zh": "触发条件" }
+        ],
+        "rows": [
+          [
+            {
+              "en": "A fourth stepper motor, same model (plus a matching pulley and belt, ¥10)",
+              "zh": "第四台步进电机，同型号（另配同规格带轮与皮带 ¥10）"
+            },
+            "¥35",
+            {
+              "en": "the tendons end up on three independent shafts",
+              "zh": "肌腱最终裁决为三根独立轴"
+            }
+          ],
+          [
+            {
+              "en": "USB camera, 1080p",
+              "zh": "USB 摄像头 1080p"
+            },
+            "¥60",
+            {
+              "en": "needed for the face angle in the study; any time before September",
+              "zh": "实验的脸部机位要用，9 月前到位即可"
+            }
+          ],
+          [
+            {
+              "en": "Level shifter",
+              "zh": "电平转换芯片"
+            },
+            "¥3",
+            {
+              "en": "the LED ring flickers when driven at 3.3 V",
+              "zh": "灯环在 3.3 V 数据下出现闪烁"
+            }
+          ],
+          [
+            {
+              "en": "Laser rangefinder",
+              "zh": "激光测距模块"
+            },
+            "¥12",
+            {
+              "en": "the ultrasonic sensor reads unstably once it is inside the shell",
+              "zh": "超声测距装进壳体后读数不稳"
+            }
+          ]
+        ]
+      }
     ]
   },
   {
@@ -717,6 +1103,229 @@
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
       { "label": { "en": "Study", "zh": "实验设计" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "table",
+        "caption": {
+          "en": "Six inputs doing one job: turning continuous physical signals into a short list of discrete events. The behaviour engine and the study log read the same stream, so the record the device keeps of itself is usable as behavioural data.",
+          "zh": "六路输入只做一件事：把连续的物理信号变成一份离散的事件词表。行为引擎和实验日志读的是同一条事件流——装置自己产生的记录，直接就是可用的客观行为数据。"
+        },
+        "head": [
+          { "en": "Channel", "zh": "通道" },
+          { "en": "Hardware", "zh": "硬件" },
+          { "en": "What it reads", "zh": "读出什么" }
+        ],
+        "rows": [
+          [
+            {
+              "en": "Feeler touch",
+              "zh": "触须触摸"
+            },
+            {
+              "en": "capacitive touch chip, one channel per side of each feeler",
+              "zh": "电容触摸芯片，每根触须左右各一通道"
+            },
+            {
+              "en": "which side was touched, how hard, how long",
+              "zh": "碰的是哪一侧、多重、多久"
+            }
+          ],
+          [
+            {
+              "en": "Shell stroking",
+              "zh": "外壳抚摸"
+            },
+            {
+              "en": "copper-foil electrodes, one half-ring on each side",
+              "zh": "铜箔电极，左右各半环"
+            },
+            {
+              "en": "stroking, resting a hand, gripping",
+              "zh": "抚摸、长按、抓握"
+            }
+          ],
+          [
+            {
+              "en": "Presence and distance",
+              "zh": "在场与距离"
+            },
+            {
+              "en": "ultrasonic rangefinder",
+              "zh": "超声测距"
+            },
+            {
+              "en": "whether anyone is there, and how close",
+              "zh": "人在不在，有多近"
+            }
+          ],
+          [
+            {
+              "en": "Knocks and vibration",
+              "zh": "震动与敲击"
+            },
+            {
+              "en": "accelerometer, vibration envelope only, no orientation",
+              "zh": "加速度计，只取震动包络，不做姿态"
+            },
+            {
+              "en": "being knocked, being pushed",
+              "zh": "被敲、被推"
+            }
+          ],
+          [
+            {
+              "en": "Sound",
+              "zh": "声音"
+            },
+            {
+              "en": "sound sensor",
+              "zh": "声音传感器"
+            },
+            {
+              "en": "claps and speech, which pull its attention",
+              "zh": "拍手与说话——会把它的注意力引走"
+            }
+          ],
+          [
+            {
+              "en": "Time",
+              "zh": "时间"
+            },
+            {
+              "en": "internal clock",
+              "zh": "内部时钟"
+            },
+            {
+              "en": "the ageing curve, gaps between interactions, when the next life begins",
+              "zh": "衰老曲线、互动间隔、下一世什么时候开始"
+            }
+          ]
+        ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "How the arm knows what it has wrapped around, using two signals it already has and no new sensors. The capacitive electrode responds to skin but not to a wooden pen — that limitation is exactly what makes it a person/object classifier here.",
+          "zh": "触手缠上去之后，怎么知道缠住的是人、是东西，还是缠了个空——不加任何新传感器，两个已有信号的组合就够。电容电极只对人敏感、对木头笔杆没反应，这个「缺陷」在这里正好当人／物分类器用。"
+        },
+        "head": [
+          { "en": "Tension switch", "zh": "张力开关" },
+          { "en": "Arm electrode", "zh": "臂电极" },
+          { "en": "Verdict", "zh": "判定" },
+          { "en": "Response", "zh": "响应" }
+        ],
+        "rows": [
+          [
+            "✓",
+            "✓",
+            {
+              "en": "wrapped around a person (a finger)",
+              "zh": "缠住了人（手指）"
+            },
+            {
+              "en": "social hold: very light, can be pulled free at any moment",
+              "zh": "社交握持模式：极轻，随时可以拔出来"
+            }
+          ],
+          [
+            "✓",
+            "✗",
+            {
+              "en": "wrapped around an object",
+              "zh": "缠住了物"
+            },
+            {
+              "en": "keep holding",
+              "zh": "保持握住"
+            }
+          ],
+          [
+            {
+              "en": "✗ (ran to the limit)",
+              "zh": "✗（走到限位）"
+            },
+            "✗",
+            {
+              "en": "closed on nothing",
+              "zh": "抓空"
+            },
+            {
+              "en": "release, then search or show confusion",
+              "zh": "松开，然后搜寻或表达困惑"
+            }
+          ]
+        ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "The wrap itself needs no feedback — the mechanism has fewer motors than joints, so it closes around whatever shape it meets. Sensing only answers three questions: when to start, when to stop, and what was caught.",
+          "zh": "缠绕这个动作本身不需要反馈来执行——机构的电机数少于关节数，会自己顺着形状包裹。传感只回答三件事：什么时候开始、什么时候停、抓到的是什么。"
+        },
+        "head": [
+          { "en": "Event", "zh": "事件" },
+          { "en": "Trigger", "zh": "判定" },
+          { "en": "Who uses it", "zh": "消费方" }
+        ],
+        "rows": [
+          [
+            "GRASP_START",
+            {
+              "en": "started by the engine, or entered from a touch on the arm",
+              "zh": "引擎发起，或由臂上的触摸转入"
+            },
+            {
+              "en": "log, mode switching",
+              "zh": "日志、模式切换"
+            }
+          ],
+          [
+            "GRASP_HOLD_OBJECT / GRASP_HOLD_HUMAN",
+            {
+              "en": "the first two rows of the truth table above",
+              "zh": "上面真值表的前两行"
+            },
+            {
+              "en": "state layer, log",
+              "zh": "状态层、日志"
+            }
+          ],
+          [
+            "GRASP_EMPTY",
+            {
+              "en": "runs to the limit with no resistance",
+              "zh": "走到限位仍然没有阻力"
+            },
+            {
+              "en": "searching behaviour, log",
+              "zh": "搜寻表达、日志"
+            }
+          ],
+          [
+            "GRASP_LOST",
+            {
+              "en": "tension or contact disappears mid-hold",
+              "zh": "保持中张力或接触突然消失"
+            },
+            {
+              "en": "the reaction — chase or give up, depending on personality — and the log",
+              "zh": "反应——追还是放弃，取决于人格——以及日志"
+            }
+          ],
+          [
+            "RELEASE_DONE",
+            {
+              "en": "line paid back out to zero",
+              "zh": "放线回零"
+            },
+            {
+              "en": "log",
+              "zh": "日志"
+            }
+          ]
+        ]
+      }
     ]
   },
   {
@@ -837,6 +1446,97 @@
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
       { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "table",
+        "caption": {
+          "en": "The breathing shell is five differently sized expanding arches (S1–S5) set along the body axis, each a scaled variant of the same linkage. s_top and s_bot are the half-span of the two driving feet fully open and fully closed; R is the crank pin radius and L the rod length. Millimetres. (The source table also carries a tilt column; it is left out here because what it measures is still unsettled.)",
+          "zh": "呼吸外壳由五个大小不同的可展开拱（S1–S5）沿身体轴线排成一道丘，每个都是同一种连杆原型的缩放变体。s_top / s_bot 是张到最开与收到最紧时两只驱动脚的半跨距，R 是驱动轮上销子的半径，L 是连杆长度。单位毫米。（原表另有一列侧倾角，此处略去——它到底量的是什么尚未定论。）"
+        },
+        "head": [
+          { "en": "Ring", "zh": "环" },
+          { "en": "Source (variant × scale)", "zh": "来源（变体 × 缩放）" },
+          "s_top",
+          "s_bot",
+          "R",
+          "L"
+        ],
+        "rows": [
+          ["S1", "M3 × 1.057", "157.1", "73.6", "41.75", "115.35"],
+          ["S2", "M1 × 1.184", "161.6", "59.6", "51.00", "110.60"],
+          ["S3", "M5 × 1.584", "147.6", "57.9", "44.86", "102.77"],
+          ["S4", "M3 × 1.000", "147.9", "69.4", "39.25", "108.65"],
+          ["S5", "M3 × 0.870", "127.5", "61.0", "33.25", "94.25"]
+        ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "All five arches are built from isosceles V-shaped links. Sorted by shape there are exactly eleven types, reused inside a ring by rotating and mirroring, never shared between rings — the arm lengths differ. Arm length plus included angle fully define a piece. Millimetres.",
+          "zh": "五个拱全部由等腰 V 形连杆件搭成。按形状归类只有十一种，每种在环内靠旋转和镜像复用，没有一种能跨环共用——五个环的臂长各不相同。臂长加夹角两个数就能定死一个件。单位毫米。"
+        },
+        "head": [
+          { "en": "Block", "zh": "块 #" },
+          { "en": "Ring", "zh": "环" },
+          { "en": "Arm", "zh": "臂长" },
+          { "en": "Chord", "zh": "弦长" },
+          { "en": "Angle", "zh": "夹角" },
+          { "en": "Qty", "zh": "数量" }
+        ],
+        "rows": [
+          ["1", "S3", "49.4", "95.5", "150°", "4"],
+          ["2", "S3", "49.4", "92.9", "140°", "6"],
+          ["3", "S2", "43.8", "86.2", "160°", "8"],
+          ["4", "S2", "43.8", "84.5", "150°", "4"],
+          ["5", "S2", "43.8", "82.3", "140°", "2"],
+          ["6", "S1", "33.0", "65.0", "160°", "10"],
+          ["7", "S1", "33.0", "62.0", "140°", "4"],
+          ["8", "S4", "31.2", "61.4", "160°", "10"],
+          ["9", "S4", "31.2", "58.6", "140°", "4"],
+          ["10", "S5", "27.1", "53.5", "160°", "10"],
+          ["11", "S5", "27.1", "51.0", "140°", "4"]
+        ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "The drive parameters after the switch, optimised in the last round. At full contraction the central channel is only 10–12 mm wide, so the rod and its guide together have to stay within 10 mm of the axis or they hit the inner joints. Millimetres.",
+          "zh": "改用中央单杆之后最后一轮优化定下的驱动参数。最大收缩时中央通道净空只有 10–12 毫米，中央杆加竖导轨合计必须收在轴线 ±10 毫米内，否则撞上内侧节点。单位毫米。"
+        },
+        "head": [
+          { "en": "Ring", "zh": "环" },
+          { "en": "Pin radius R", "zh": "销半径 R" },
+          { "en": "Rod length L", "zh": "杆长 L" }
+        ],
+        "rows": [
+          ["S1", "30", "97"],
+          ["S2", "49", "174"],
+          ["S3", "35", "124"],
+          ["S4", "28", "92"],
+          ["S5", "24", "80"]
+        ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "The first attempt at the same numbers, kept because it was wrong: it tracked the highest point of the arch instead of the node on the axis, which made every pin radius too small and every rod too long. Caught and redone in the same session.",
+          "zh": "同一组数的第一次计算，留着是因为它算错了：跟踪的是拱的最高点而不是轴上那个中心节点，于是销半径整体偏小、杆长偏长。当场自己发现并推翻重算。"
+        },
+        "head": [
+          { "en": "Ring", "zh": "环" },
+          { "en": "Peak height (closed → open)", "zh": "峰高（收 → 展）" },
+          { "en": "Pin radius R", "zh": "销半径 R" },
+          { "en": "Rod length L", "zh": "杆长 L" }
+        ],
+        "rows": [
+          ["S1", "100 → 126", "13.0", "113.0"],
+          ["S2", "152 → 221", "34.6", "186.5"],
+          ["S3", "124 → 157", "16.5", "140.5"],
+          ["S4", "94 → 119", "12.4", "106.5"],
+          ["S5", "83 → 104", "10.7", "93.5"]
+        ]
+      }
     ]
   },
   {
@@ -1122,6 +1822,528 @@
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
       { "label": { "en": "Study", "zh": "实验设计" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "table",
+        "caption": {
+          "en": "Each life's personality is twelve numbers, not a description: same behaviour code, different numbers, different creature.",
+          "zh": "每一世的「性格」不是写出来的描述，而是十二个可调数值——同一套行为代码，换一组数就换一个人格。"
+        },
+        "head": [
+          { "en": "Parameter", "zh": "参数" },
+          { "en": "A · Energetic", "zh": "A 活力型" },
+          { "en": "B · Calm", "zh": "B 沉静型" },
+          { "en": "C · Curious", "zh": "C 好奇型" },
+          { "en": "D · Erratic", "zh": "D 不稳定型" }
+        ],
+        "rows": [
+          [
+            {
+              "en": "Breathing cycle",
+              "zh": "呼吸周期"
+            },
+            {
+              "en": "2 s",
+              "zh": "2 秒"
+            },
+            {
+              "en": "6 s",
+              "zh": "6 秒"
+            },
+            {
+              "en": "4 s",
+              "zh": "4 秒"
+            },
+            {
+              "en": "2–8 s, random",
+              "zh": "2–8 秒随机"
+            }
+          ],
+          [
+            {
+              "en": "Breathing amplitude",
+              "zh": "呼吸幅度"
+            },
+            "80%",
+            "30%",
+            "50%",
+            {
+              "en": "20–90%, random",
+              "zh": "20–90% 随机"
+            }
+          ],
+          [
+            {
+              "en": "Movement speed",
+              "zh": "运动速度"
+            },
+            "3 cm/s",
+            "0.5 cm/s",
+            "1.5 cm/s",
+            {
+              "en": "0.5–4 cm/s, random",
+              "zh": "0.5–4 cm/s 随机"
+            }
+          ],
+          [
+            {
+              "en": "Response delay",
+              "zh": "响应延迟"
+            },
+            {
+              "en": "0.2 s",
+              "zh": "0.2 秒"
+            },
+            {
+              "en": "2 s",
+              "zh": "2 秒"
+            },
+            {
+              "en": "0.5 s",
+              "zh": "0.5 秒"
+            },
+            {
+              "en": "0.3–3 s, random",
+              "zh": "0.3–3 秒随机"
+            }
+          ],
+          [
+            {
+              "en": "Response strength (amplitude increment)",
+              "zh": "响应强度（幅度增量）"
+            },
+            "+40%",
+            "+10%",
+            "+25%",
+            {
+              "en": "±10–50%, random",
+              "zh": "±10–50% 随机"
+            }
+          ],
+          [
+            {
+              "en": "Interval between spontaneous movements",
+              "zh": "自发运动间隔"
+            },
+            {
+              "en": "3–5 s",
+              "zh": "3–5 秒"
+            },
+            {
+              "en": "15–25 s",
+              "zh": "15–25 秒"
+            },
+            {
+              "en": "8–12 s (5–8 s when a person is present)",
+              "zh": "8–12 秒（人在时 5–8 秒）"
+            },
+            {
+              "en": "2–30 s, random",
+              "zh": "2–30 秒随机"
+            }
+          ],
+          [
+            {
+              "en": "Sound base frequency",
+              "zh": "声音基频"
+            },
+            "800–1200 Hz",
+            "200–400 Hz",
+            "400–800 Hz",
+            {
+              "en": "200–1200 Hz, random",
+              "zh": "200–1200 Hz 随机"
+            }
+          ],
+          [
+            {
+              "en": "Sound duty cycle",
+              "zh": "声音占空比"
+            },
+            {
+              "en": "70% on",
+              "zh": "70% 响"
+            },
+            {
+              "en": "20% on",
+              "zh": "20% 响"
+            },
+            {
+              "en": "50% on",
+              "zh": "50% 响"
+            },
+            {
+              "en": "10–80% on, random",
+              "zh": "10–80% 响，随机"
+            }
+          ],
+          [
+            {
+              "en": "Interval between changes of facing",
+              "zh": "朝向变化间隔"
+            },
+            {
+              "en": "5–8 s",
+              "zh": "5–8 秒"
+            },
+            {
+              "en": "30–45 s",
+              "zh": "30–45 秒"
+            },
+            {
+              "en": "10–15 s",
+              "zh": "10–15 秒"
+            },
+            {
+              "en": "3–40 s, random",
+              "zh": "3–40 秒随机"
+            }
+          ],
+          [
+            {
+              "en": "Probability of facing the person",
+              "zh": "朝向偏向人的概率"
+            },
+            "40%",
+            "20%",
+            "80%",
+            {
+              "en": "50%, but the direction is unstable",
+              "zh": "50%，但方向不稳定"
+            }
+          ],
+          [
+            {
+              "en": "Startle threshold (0–1)",
+              "zh": "惊吓触发阈值（0–1）"
+            },
+            "0.8",
+            "0.2",
+            "0.5",
+            {
+              "en": "0.2–0.9, random",
+              "zh": "0.2–0.9 随机"
+            }
+          ],
+          [
+            {
+              "en": "How it dies",
+              "zh": "死亡方式"
+            },
+            {
+              "en": "winds down as energy runs out, 90 s",
+              "zh": "精力耗尽渐停，90 秒"
+            },
+            {
+              "en": "goes quiet and slowly stops, 120 s",
+              "zh": "安静慢慢停下，120 秒"
+            },
+            {
+              "en": "turns to face the user, then slowly stops, 90 s",
+              "zh": "最后朝向用户缓慢停止，90 秒"
+            },
+            {
+              "en": "three or four spasms, then stops abruptly, 60 s",
+              "zh": "3–4 次抽搐后骤停，60 秒"
+            }
+          ]
+        ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "With each death as time zero, the skin-conductance trace is read in five windows. This defines the primary physiological measure.",
+          "zh": "以每次死亡为零点，皮肤电信号切成五段来读——这张表定义了现行的主要生理指标。"
+        },
+        "head": [
+          { "en": "Window", "zh": "窗口" },
+          { "en": "Time range", "zh": "时间范围" },
+          { "en": "What is measured", "zh": "测量指标" },
+          { "en": "Why", "zh": "理论依据" }
+        ],
+        "rows": [
+          [
+            {
+              "en": "Baseline",
+              "zh": "基线"
+            },
+            {
+              "en": "−10 s to −5 s",
+              "zh": "事件前 −10 秒至 −5 秒"
+            },
+            {
+              "en": "mean skin conductance level",
+              "zh": "平均皮肤电水平"
+            },
+            {
+              "en": "reference for normalisation",
+              "zh": "标准化参照"
+            }
+          ],
+          [
+            {
+              "en": "Anticipatory",
+              "zh": "预期性反应"
+            },
+            {
+              "en": "−3 s to 0 s",
+              "zh": "事件前 −3 秒至 0 秒"
+            },
+            {
+              "en": "mean phasic drive",
+              "zh": "平均相位驱动值"
+            },
+            {
+              "en": "anticipatory responses are measurable about 1.25 s before the event",
+              "zh": "预期性反应在事件前约 1.25 秒即可测到"
+            }
+          ],
+          [
+            {
+              "en": "Immediate",
+              "zh": "即时反应"
+            },
+            {
+              "en": "1–4 s after",
+              "zh": "事件后 1–4 秒"
+            },
+            {
+              "en": "peak response amplitude, number of responses",
+              "zh": "反应峰值幅度、反应次数"
+            },
+            {
+              "en": "response latency is typically 1–5 s",
+              "zh": "反应潜伏期通常为 1–5 秒"
+            }
+          ],
+          [
+            {
+              "en": "Delayed",
+              "zh": "延迟反应"
+            },
+            {
+              "en": "4–8 s after",
+              "zh": "事件后 4–8 秒"
+            },
+            {
+              "en": "summed response amplitude",
+              "zh": "反应幅度总和"
+            },
+            {
+              "en": "second-pass emotional processing",
+              "zh": "二次情绪加工"
+            }
+          ],
+          [
+            {
+              "en": "Recovery",
+              "zh": "恢复期"
+            },
+            {
+              "en": "8–20 s after",
+              "zh": "事件后 8–20 秒"
+            },
+            {
+              "en": "rate of return to baseline",
+              "zh": "回到基线的速率"
+            },
+            {
+              "en": "an index of emotion regulation",
+              "zh": "情绪调节能力的指标"
+            }
+          ]
+        ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "The touch-coding scheme for the video analysis; each instance also logs when it starts and ends, which body part, which part of the device, and how hard.",
+          "zh": "录像逐帧编码用的触碰动作分类；每次触碰另记起止时间、身体部位、装置部位与力度。"
+        },
+        "head": [
+          { "en": "Code", "zh": "编码" },
+          { "en": "Definition", "zh": "定义" },
+          { "en": "Example", "zh": "示例" }
+        ],
+        "rows": [
+          [
+            "T-stroke",
+            {
+              "en": "continuous sliding contact, 2 s or longer",
+              "zh": "连续滑动触碰，≥2 秒"
+            },
+            {
+              "en": "stroking the surface of the shell",
+              "zh": "抚摸壳体表面"
+            }
+          ],
+          [
+            "T-pat",
+            {
+              "en": "brief light tap, under 1 s",
+              "zh": "短促轻拍，<1 秒"
+            },
+            {
+              "en": "patting the top of the device",
+              "zh": "轻拍装置顶部"
+            }
+          ],
+          [
+            "T-poke",
+            {
+              "en": "single-finger touch or poke",
+              "zh": "单指点触 / 戳"
+            },
+            {
+              "en": "a tentative touch on a feeler",
+              "zh": "探试性触碰触须"
+            }
+          ],
+          [
+            "T-hold",
+            {
+              "en": "sustained hold or enclosure",
+              "zh": "持续握持 / 包裹"
+            },
+            {
+              "en": "both hands around the device",
+              "zh": "双手环绕装置"
+            }
+          ],
+          [
+            "T-cradle",
+            {
+              "en": "lifting or cupping",
+              "zh": "托举 / 捧起"
+            },
+            {
+              "en": "holding the device in cupped hands",
+              "zh": "将装置捧在手心"
+            }
+          ],
+          [
+            "T-push",
+            {
+              "en": "pushing or moving it away",
+              "zh": "推动 / 移开"
+            },
+            {
+              "en": "pushing the device away from oneself",
+              "zh": "将装置推离自己"
+            }
+          ],
+          [
+            "T-restrain",
+            {
+              "en": "preventing the device from moving",
+              "zh": "阻止装置运动"
+            },
+            {
+              "en": "holding down a device that is trying to move",
+              "zh": "按住试图移动的装置"
+            }
+          ],
+          [
+            "T-post-mortem",
+            {
+              "en": "touch after death",
+              "zh": "死亡后触碰"
+            },
+            {
+              "en": "touching the device once it has stopped",
+              "zh": "装置停止后触碰"
+            }
+          ]
+        ]
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "Predictions written down before any data was collected, so that the results can contradict them — a mismatch is itself a finding.",
+          "zh": "在收数据之前先写下的预测：四次死亡各自会看到什么。写下来是为了事后能被数据打脸——预测和结果不符本身就是发现。"
+        },
+        "head": [
+          { "en": "Cycle", "zh": "周期" },
+          { "en": "Behaviour", "zh": "行为预测" },
+          { "en": "What they will report", "zh": "主观报告预测" },
+          { "en": "Physiology", "zh": "生理预测" }
+        ],
+        "rows": [
+          [
+            {
+              "en": "Life 1 and death 1",
+              "zh": "生命 1 + 死亡 1"
+            },
+            {
+              "en": "intimacy forms fast — frequent stroking, an early name — and the death draws strong holding and speech",
+              "zh": "亲密行为迅速建立——频繁抚摸、很早就给它取名——死亡时出现强烈的握持与言语表达"
+            },
+            {
+              "en": "reported mood drops sharply, distress around 70–80 out of 100, strong separation anxiety",
+              "zh": "自评情绪急剧下降，困扰程度 70–80（满分 100），强烈的分离焦虑"
+            },
+            {
+              "en": "the largest skin-conductance response of the study; heart rate clearly up",
+              "zh": "全程最大的一次皮电反应，心率明显升高"
+            }
+          ],
+          [
+            {
+              "en": "Life 2 and death 2",
+              "zh": "生命 2 + 死亡 2"
+            },
+            {
+              "en": "anticipatory anxiety: signs appear in the second half of life 2 — more touching, more approaching — a holding-on pattern",
+              "zh": "预期性焦虑：生命 2 的后半段就出现迹象——触碰变多、趋近变多——形成「抓紧」的模式"
+            },
+            {
+              "en": "distress possibly higher than at death 1, anticipated grief stacked on actual grief",
+              "zh": "困扰程度可能高于死亡 1，预期的悲伤叠加实际的悲伤"
+            },
+            {
+              "en": "sensitisation rather than habituation: responses grow, baseline arousal stays elevated",
+              "zh": "敏感化而非习惯化：反应不降反升，基线唤醒全程偏高"
+            }
+          ],
+          [
+            {
+              "en": "Life 3 and death 3",
+              "zh": "生命 3 + 死亡 3"
+            },
+            {
+              "en": "deepest attachment, alongside self-protective behaviour — wanting to approach while expecting the loss",
+              "zh": "最深的依附，同时出现自我保护行为——想靠近又预期失去的矛盾"
+            },
+            {
+              "en": "distress 65–80, possible overflow into tears, loss entangled with memories of losing a pet",
+              "zh": "困扰程度 65–80，可能情感溢出（眼泪），丧失感与失去宠物的经验交织"
+            },
+            {
+              "en": "sustained high arousal, with self-report and physiology in close agreement",
+              "zh": "持续的高唤醒，主观报告与生理信号高度一致"
+            }
+          ],
+          [
+            {
+              "en": "Life 4 and death 4",
+              "zh": "生命 4 + 死亡 4"
+            },
+            {
+              "en": "two possible paths: emotional fatigue and withdrawal, with touching dropping off, or continued investment that turns ritualised",
+              "zh": "两条可能的路径：情感疲劳导致撤退、触碰频率骤降；或继续高投入但行为变得仪式化"
+            },
+            {
+              "en": "distress 55–75 — slight habituation but still high — and a turn towards making sense of it",
+              "zh": "困扰程度 55–75——轻微习惯化但仍然高——并转向意义建构"
+            },
+            {
+              "en": "signs of physiological fatigue: reactivity down, baseline still high",
+              "zh": "生理疲劳的迹象：反应性降低，基线仍高"
+            }
+          ]
+        ]
+      }
     ]
   },
   {
@@ -1137,6 +2359,149 @@
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
       { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "table",
+        "caption": {
+          "en": "Three candidate directions compared on one five-layer model of perceived aliveness. Accelerated Life was the one taken forward.",
+          "zh": "早期三个候选方向放在同一套「什么让人觉得它是活的」的五层框架上比较，看各自把重量压在哪一层——最后选了加速生命。"
+        },
+        "head": [
+          { "en": "Layer", "zh": "层" },
+          { "en": "A · Long cohabitation", "zh": "方向 A · 长期共处" },
+          { "en": "B · Accelerated life", "zh": "方向 B · 加速生命" },
+          { "en": "C · Two-body relationship", "zh": "方向 C · 双体关系" }
+        ],
+        "rows": [
+          [
+            {
+              "en": "1 · Self-directed motion",
+              "zh": "一 · 自主运动"
+            },
+            {
+              "en": "understated, kept in the background",
+              "zh": "低调、背景化"
+            },
+            {
+              "en": "active, conspicuous",
+              "zh": "活跃、明显"
+            },
+            {
+              "en": "two channels: single-body motion plus synchrony between the two",
+              "zh": "双通道：单体运动 + 双体同步"
+            }
+          ],
+          [
+            {
+              "en": "2 · Non-deterministic response",
+              "zh": "二 · 非确定性响应"
+            },
+            {
+              "en": "moderately unpredictable",
+              "zh": "中等非确定性"
+            },
+            {
+              "en": "Core layer. Highly unpredictable, fast feedback",
+              "zh": "核心层。高非确定性、快反馈"
+            },
+            {
+              "en": "splits into responses to the user and responses to each other",
+              "zh": "分裂为对用户和对彼此两种响应"
+            }
+          ],
+          [
+            {
+              "en": "3 · Internal state",
+              "zh": "三 · 内部状态"
+            },
+            {
+              "en": "slow drift, measured in days",
+              "zh": "缓慢漂移，以天为单位"
+            },
+            {
+              "en": "Core layer. Fast fluctuation, differences between generations exaggerated",
+              "zh": "核心层。快速波动，跨世代差异夸张"
+            },
+            {
+              "en": "coupled: one unit's state affects the other",
+              "zh": "双体耦合：一台的状态影响另一台"
+            }
+          ],
+          [
+            {
+              "en": "4 · Relationship building",
+              "zh": "四 · 关系塑造"
+            },
+            {
+              "en": "Core layer. Builds slowly over weeks",
+              "zh": "核心层。数周缓慢建立"
+            },
+            {
+              "en": "essentially absent",
+              "zh": "基本不存在"
+            },
+            {
+              "en": "Core layer. The two units adapting to each other is visible to the user",
+              "zh": "核心层。双体互相适应的过程对用户可见"
+            }
+          ],
+          [
+            {
+              "en": "5 · Initiative",
+              "zh": "五 · 主动性"
+            },
+            {
+              "en": "triggered infrequently",
+              "zh": "低频触发"
+            },
+            {
+              "en": "weakened or removed",
+              "zh": "弱化或去除"
+            },
+            {
+              "en": "Core moment. How the survivor behaves after the other one dies",
+              "zh": "核心时刻。一台死后另一台的行为变化"
+            }
+          ],
+          [
+            {
+              "en": "What death tests",
+              "zh": "死亡验证的是"
+            },
+            {
+              "en": "whether layer 4 took hold",
+              "zh": "第四层是否生效"
+            },
+            {
+              "en": "whether layers 2 and 3 can trigger attribution in a very short time",
+              "zh": "第二三层能否在极短时间内触发归因"
+            },
+            {
+              "en": "whether the user attributed life to the pair's relationship",
+              "zh": "用户是否对双体关系产生了拟生命归因"
+            }
+          ],
+          [
+            {
+              "en": "What reincarnation reveals",
+              "zh": "轮回揭示的是"
+            },
+            {
+              "en": "whether attachment anchors to the personality or to the shared history",
+              "zh": "情感锚定在人格还是共享历史"
+            },
+            {
+              "en": "whether repeated exposure shifts the standard for attribution",
+              "zh": "重复暴露是否改变归因标准"
+            },
+            {
+              "en": "whether rebuilding a relationship is perceived differently",
+              "zh": "新关系的重建是否被不同地感知"
+            }
+          ]
+        ]
+      }
     ]
   },
   {
