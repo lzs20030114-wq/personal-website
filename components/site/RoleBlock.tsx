@@ -53,7 +53,7 @@ export function DisclosureSlot() {
   return (
     <section
       style={{
-        borderTop: '2px solid var(--ink)',
+        borderTop: 'var(--hair)',
         marginTop: 64,
         padding: '16px 0 64px',
         fontSize: 13,

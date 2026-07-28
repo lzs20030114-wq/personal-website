@@ -9,19 +9,36 @@ import type { CSSProperties, ReactNode } from 'react';
 
 export type SlotStatus = '可现产' | '待集成' | '待拍摄' | '研究期后' | '待定' | 'M3 后挂入';
 
-/** 状态标：设计稿 tag 视觉形态——「可现产/ready/live」用 outline，其余用 neutral。 */
-function StatusTag({ status }: { status: SlotStatus }) {
+/**
+ * 状态小签：稿里是纯文字（11px/700/0.1em 大写），不是 .tag 盒——迭代稿把 tag 盒退役
+ * （MAPPING §6.1）。「可现产」= 稿的 ready/live，走 accent；其余走 n500。
+ */
+function StatusSign({ status }: { status: SlotStatus }) {
   const ready = status === '可现产';
-  return <span className={`tag ${ready ? 'tag-outline' : 'tag-neutral'}`}>{status}</span>;
+  return (
+    <span className={`fig-cap__status${ready ? ' fig-cap__status--ready' : ''}`}>{status}</span>
+  );
 }
 
-const CAP_ROW: CSSProperties = {
-  marginTop: 10,
-  fontSize: 12,
-  fontWeight: 600,
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase',
-};
+/** 图注行（稿）：Fig. NN + 说明 + 状态小签，baseline 对齐、gap 12。 */
+export function FigCaption({
+  id,
+  desc,
+  status,
+}: {
+  id: string;
+  desc?: string;
+  status: SlotStatus;
+}) {
+  return (
+    <figcaption className="fig-cap">
+      <span>{id}</span>
+      {desc && <span className="fig-cap__desc">{desc}</span>}
+      <StatusSign status={status} />
+    </figcaption>
+  );
+}
+
 const FRAME_LABEL: CSSProperties = {
   fontSize: 12,
   fontWeight: 600,
@@ -37,16 +54,22 @@ export type SlotSize = 'inline' | 'wide';
 
 const sizeClass = (size?: SlotSize) => (size === 'wide' ? ' fig-wide' : '');
 
-/** 图插槽：斜纹图框（内含图说明）+ 题栏（编号 + 状态标）。ratio 如 "700/520"。 */
+/**
+ * 图插槽：斜纹图框（框内 = 要产出什么素材）+ 图注行（编号 + 说明 + 状态）。ratio 如 "700/520"。
+ * 稿里框内标签与图注说明是两串不同的字（前者说"要拍什么"，后者说"这张图是什么"），
+ * 故 desc 单独给——稿有 desc 的图照搬其原文，稿没给的（Fig.05/06/13）留空。
+ */
 export function FigSlot({
   id,
   caption,
+  desc,
   status,
   ratio = '16/9',
   size,
 }: {
   id: string;
   caption: string;
+  desc?: string;
   status: SlotStatus;
   ratio?: string;
   size?: SlotSize;
@@ -56,11 +79,29 @@ export function FigSlot({
       <div className="hatch" style={{ aspectRatio: ratio }}>
         <span style={FRAME_LABEL}>{caption}</span>
       </div>
-      <figcaption className="flex items-baseline gap-3" style={CAP_ROW}>
-        <span>{id}</span>
-        <StatusTag status={status} />
-      </figcaption>
+      <FigCaption id={id} desc={desc} status={status} />
     </figure>
+  );
+}
+
+/**
+ * 双图并置（稿 §04 里 Fig.05 / Fig.06 那一对）：grid 1fr 1fr · gap 24 · max-width 62ch，
+ * 各自 4/3。两张互为佐证的小图并排读，比顺次铺两张全宽图省一屏。
+ */
+export function FigPair({ children }: { children: ReactNode }) {
+  return (
+    <div
+      className="fig-pair"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: 24,
+        marginTop: 24,
+        maxWidth: '62ch',
+      }}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -71,15 +112,17 @@ export function VideoSlot({
   status,
   src,
   size,
+  style,
 }: {
   id: string;
   caption: string;
   status: SlotStatus;
   src?: string;
   size?: SlotSize;
+  style?: CSSProperties;
 }) {
   return (
-    <figure className={`my-8${sizeClass(size)}`}>
+    <figure className={`my-8${sizeClass(size)}`} style={style}>
       {src ? (
         <video controls preload="metadata" className="w-full" src={src} />
       ) : (
@@ -87,16 +130,12 @@ export function VideoSlot({
           <span style={FRAME_LABEL}>{id} · video</span>
         </div>
       )}
-      <figcaption className="flex items-baseline gap-3" style={CAP_ROW}>
-        <span>{id}</span>
-        <span style={{ color: 'var(--n600)' }}>{caption}</span>
-        <StatusTag status={status} />
-      </figcaption>
+      <FigCaption id={id} desc={caption} status={status} />
     </figure>
   );
 }
 
-/** 交互件插槽（连杆 live）：有 children → 2px 墨边 + 纸底裱框；无 → 斜纹占位。SITE_SPEC §6 双轨。 */
+/** 交互件插槽（连杆 live）：有 children → 裱框（深色页里仍是浅纸底，稿）；无 → 斜纹占位。 */
 export function InteractiveSlot({
   id,
   caption,
@@ -113,17 +152,13 @@ export function InteractiveSlot({
   return (
     <figure className={`my-8${sizeClass(size)}`}>
       {children ? (
-        <div style={{ border: '2px solid var(--ink)', background: 'var(--paper)' }}>{children}</div>
+        <div className="fig-live">{children}</div>
       ) : (
         <div className="hatch" style={{ aspectRatio: '700/520' }}>
           <span style={FRAME_LABEL}>{id} · interactive</span>
         </div>
       )}
-      <figcaption className="flex items-baseline gap-3" style={CAP_ROW}>
-        <span>{id}</span>
-        <span style={{ color: 'var(--n600)' }}>{caption}</span>
-        <StatusTag status={status} />
-      </figcaption>
+      <FigCaption id={id} desc={caption} status={status} />
     </figure>
   );
 }
@@ -142,7 +177,7 @@ export function ProcessAside({ children }: { children: ReactNode }) {
   return (
     <aside
       style={{
-        borderLeft: '4px solid var(--accent)',
+        borderLeft: '3px solid var(--accent)',
         paddingLeft: 16,
         marginTop: 24,
         maxWidth: '62ch',
@@ -172,21 +207,14 @@ export function ConceptCard({ zh, en, note }: { zh: string; en?: string; note?: 
   const fallback = note ?? '占位 · 卡片正文待作者撰写';
   const body = en ? `${zh} — ${fallback}` : fallback;
   return (
-    <div className="card" style={{ gap: 6 }}>
+    <div className="card">
       <div className="card-title">{title}</div>
       <p className="card-body">{body}</p>
     </div>
   );
 }
 
-/** 概念四卡网格：2px 墨色分隔（design 稿 gap:2px + ink 底）。 */
+/** 概念四卡网格：稿是 gap 1px + 发丝线底、无外框（分隔线由卡片间的 1px 缝隙露出）。 */
 export function ConceptGrid({ children }: { children: ReactNode }) {
-  return (
-    <div
-      className="my-8 grid grid-cols-1 sm:grid-cols-2"
-      style={{ gap: 2, background: 'var(--ink)', border: '2px solid var(--ink)' }}
-    >
-      {children}
-    </div>
-  );
+  return <div className="concept-grid my-8">{children}</div>;
 }

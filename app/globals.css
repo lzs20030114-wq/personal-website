@@ -249,8 +249,9 @@ a:hover {
 .nav {
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 14px 48px;
+  /* 设计系统 .nav：padding space-3/space-4、gap space-4（稿实测 12px 48px / gap 16） */
+  gap: 16px;
+  padding: 12px 48px;
   border-bottom: 2px solid var(--ink);
 }
 .nav-brand {
@@ -409,6 +410,41 @@ a:hover {
   }
 }
 
+/* — 图注行（Case 稿）：Fig. NN + 说明（n600）+ 状态小签 —
+   状态是纯文字小签，不是 .tag 盒（迭代稿把 tag 盒退役，MAPPING §6.1）。 */
+.fig-cap {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  /* 编号本身是 55% 墨（设计系统 figcaption 基色，稿沿用），说明与状态再各自压一档 */
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+.fig-cap__desc {
+  color: var(--n600);
+}
+.fig-cap__status {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--n500);
+}
+.fig-cap__status--ready {
+  color: var(--accent);
+}
+
+/* — 活件裱框（Fig.12 连杆）：深色页里这一框仍是浅纸底（稿 oklch(0.955 0.009 118)），
+     2D 连杆的浅底配色不动（LINKAGE_SPEC 封盘），所以框自己供纸面。 — */
+.fig-live {
+  border: 2px solid var(--ink);
+  background: var(--paper);
+}
+
 /* — 斜纹占位图框（MAPPING §6：2px 墨边 + 45° 斜纹衬底，取代点阵 .figframe） — */
 .hatch {
   border: 2px solid var(--ink);
@@ -450,7 +486,7 @@ a:hover {
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  line-height: 1.2;
+  line-height: 1.12;
   margin: 56px 0 16px;
   padding-top: 16px;
   border-top: 2px solid var(--ink);
@@ -1174,6 +1210,17 @@ button.log-heat__cell {
     oklch(0.26 0.052 282) 100%
   );
 }
+/* 稿 #groundPlane 是三层：渐变 + 点阵（115° 遮罩淡出）+ 颗粒。点阵此前漏搬。 */
+.ground-plane::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(oklch(0.71 0.098 145) 1px, transparent 1.2px);
+  background-size: 6px 6px;
+  opacity: 0.14;
+  -webkit-mask-image: linear-gradient(115deg, #000 0%, transparent 40%);
+  mask-image: linear-gradient(115deg, #000 0%, transparent 40%);
+}
 .ground-plane::after {
   content: '';
   position: absolute;
@@ -1183,9 +1230,76 @@ button.log-heat__cell {
   opacity: 0.1;
   mix-blend-mode: overlay;
 }
-/* 深色页 case-body 编号 section：2px 墨线改发丝线（贴设计稿），底色透明 */
+/* 深色页链接与选区（稿 head style：a=accent 绿、hover=紫；选区深青底浅绿字） */
+.pg-dark a {
+  color: var(--accent);
+}
+.pg-dark a:hover {
+  color: var(--accent-2);
+}
+.pg-dark ::selection {
+  background: oklch(0.42 0.088 178);
+  color: oklch(0.95 0.032 120);
+}
+
+/* 深色页 case-body 编号 section：2px 墨线改发丝线 + 左上 26×3 色刻度（稿 h2 内的绝对定位 span） */
 .pg-dark .case-body h2 {
   border-top: var(--hair);
+  position: relative;
+}
+.pg-dark .case-body h2::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 0;
+  width: 26px;
+  height: 3px;
+  background: var(--accent);
+}
+/* 稿里 01 段整段 max-width:62ch —— 它的分隔线因此比 02–06 短一截，是有意的层级信号；
+   与主图的间距也比段间大一档（稿 section margin-top 64 vs 56）。 */
+.case-body h2:first-of-type {
+  max-width: 62ch;
+  margin-top: 64px;
+}
+
+/* 深色页发丝线化：元数据栏竖线 / 斜纹图框边 / 活件裱框，一律 1px 发丝线（稿 var(--hair)） */
+.pg-dark .case-rail {
+  border-right: var(--hair);
+}
+.pg-dark .hatch {
+  border: var(--hair);
+}
+.pg-dark .fig-live {
+  border: var(--hair);
+  background: oklch(0.955 0.009 118);
+}
+/* 深色页虚线占位框：稿是 1px 绿虚线（45% 透明），不是浅色页的 2px 中性虚线 */
+.pg-dark .placeholder-note {
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+}
+/* 概念四卡：稿 gap 1px + 发丝线底（无外框），卡内边距走设计系统的 12px */
+.concept-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1px;
+  background: var(--hairline);
+}
+@media (min-width: 640px) {
+  .concept-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.concept-grid .card {
+  padding: 12px;
+  gap: 6px;
+}
+/* 并置双图：稿里这一对 figure 自身 margin:0（外层 .fig-pair 已给 24px 上边距） */
+.fig-pair > figure {
+  margin: 0;
+}
+.pg-dark .card-body {
+  color: color-mix(in srgb, var(--ink) 80%, transparent);
 }
 /* 深色页 hero 着陆媒体块（转场落点，data-ptm 克隆源同族渐变） */
 .case-hero {
@@ -1215,7 +1329,8 @@ button.log-heat__cell {
 .nav-dark {
   background: transparent;
   color: oklch(0.95 0.032 120);
-  border-bottom-color: oklch(0.95 0.032 120 / 0.25);
+  /* 稿：深色页 nav 下缘是 1px 发丝线，不是浅色页那条 2px 墨线 */
+  border-bottom: 1px solid oklch(0.95 0.032 120 / 0.25);
 }
 .nav-dark .nav-brand,
 .nav-dark a {
@@ -1224,6 +1339,47 @@ button.log-heat__cell {
 .nav-dark a:hover,
 .nav-dark a[aria-current='page'] {
   color: oklch(0.71 0.098 145);
+}
+
+/* 深色页页脚（稿 footer）：104° 渐变 + 点阵（92° 遮罩）+ 颗粒；不是 G900 平铺色块。
+   浅色页（/about）仍走 .site-footer 原样。 */
+.site-footer--deep {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    104deg,
+    oklch(0.3 0.062 196) 0%,
+    oklch(0.26 0.058 232) 55%,
+    oklch(0.28 0.062 285) 100%
+  );
+  color: oklch(0.95 0.032 120);
+}
+.site-footer--deep::before,
+.site-footer--deep::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.site-footer--deep::before {
+  background-image: radial-gradient(oklch(0.71 0.098 145) 1px, transparent 1.2px);
+  background-size: 6px 6px;
+  opacity: 0.26;
+  -webkit-mask-image: linear-gradient(92deg, #000 0%, transparent 55%);
+  mask-image: linear-gradient(92deg, #000 0%, transparent 55%);
+}
+.site-footer--deep::after {
+  background-image: var(--grain);
+  background-size: 170px 170px;
+  opacity: 0.1;
+  mix-blend-mode: overlay;
+}
+.site-footer--deep > * {
+  position: relative;
+  z-index: 1;
+}
+.site-footer--deep .footer-note {
+  color: oklch(0.95 0.032 120);
 }
 
 /* ── 页面转场进入段（PageEnter）：着陆平面从满屏 clip 收回到 hero 位置揭开 ──

@@ -98,9 +98,39 @@
 - **深色 nav 变体**：SiteNav 在 `/work` / `/archive` 路由加 `.nav-dark`（透明底 + 浅绿文字 + 发丝线 + hover 亮绿），沿用 usePathname 判定。footer（g900）在深底上更深，自洽。
 - **case hero 着陆块**：case 内容列首插 `.case-hero`（3:2 深绿渐变媒体块 + 点阵/颗粒，Fig.01 占位「待拍摄」不代写）——既是版式 hero，也是转场落点（`data-pt-target`）。
 - **转场进入段 `PageEnter`（新 client 组件）**：补齐 goPT 只有的出发段。主页 goPT push 前对深色目标（`/work/` `/archive`）写一次性 `sessionStorage('om-pt'=Date.now(), 'om-pt-bg'=媒体块底色)`；目标页 `PageEnter` 挂载读标记 → 造不透明着陆平面（`.pt-veil`，续接同族底色）盖场 → 清 goPT 残留 → 内容（`data-pt-content`）blur 揭入 → 平面 `clipPath` 从满屏收回到 hero 后移除。**强兜底（跨路由动画唯一硬风险 = 遮罩残留白屏）**：无标记/reduced-motion 立即清残留不揭开、标记超 3s 过期忽略、2s 超时强制移除、组件卸载即清。goPT 兜底淡出延迟 220→700ms 给 PageEnter 接管窗口。真浏览器 CDP 实测：生长→push→揭开→残留归零（tmp:0，不白屏）；直接访问无残留；reduced-motion 直跳。
-- **返回转场**：设计稿 goBack（case→home 平面淡入返回）本次**未做**——返回走普通 SPA 切换。可作后续。
+- **返回转场**：设计稿 goBack（case→home 平面淡入返回）本次**未做**——返回走普通 SPA 切换。可作后续。**已于 §6.3 补上。**
 - **about 未动**：设计稿这次未给 /about 独立深色稿（主页 S1 About 幕的深色语言可作后续套用依据）；/about 现仍浅色 Modernist。**三内页现状：case/log 深色、about 浅色**——是否统一深色待用户拍板。
 - 纪律守恒：case 仍 frontmatter/内容池 + MDXRemote 驱动，只换渲染模板与配色；四路由不动；LinkageFigure 内部零改；正文/图占位不代写。
+
+### 6.3 案例页对稿返工（2026-07-28，用户指出「没完全对齐参考」）
+
+**失误与真因**：§6.2 说「不逐字复制静态 pgCase，改在 `.pg-dark` 里重定义语义 token」——这是**只搬配色不搬构件**，与 §7.7 那次「剥掉 style 读稿」是同一类偷工。深色稿当时确实见过（站上 `.pg-dark` 的 token 与稿内 `#caseRoot` 逐值相同），但**没有存档**，于是稿里的构件全丢了、也无从复查。本轮用户重传，存档为 `design-ref/Case-Screens.dc.html`（**深色案例页稿 = 设计项目里 `Case-Modernist.dc.html` 的迭代版**，旧的浅色副本保留作对照）。**教训与 §7.7 并列：稿要存档，token 相同不等于对过稿。**
+
+**逐项对稿结果**（以稿内代码为准，实测计算值已与稿比对）：
+
+| 位置 | 稿 | 返工前 |
+|---|---|---|
+| Fig.01 主图 | 一件（内容列首 hero，图注在盒外） | **出现两次**——模板 hero + MDX 里同名 FigSlot |
+| 图注行 | `Fig. NN` (55% 墨) + 说明 (n600) + 状态**纯文字**小签 11px/700 | 缺说明；状态还是 `.tag` 盒；字号 11px/0.1em（应 12px/0.08em） |
+| 编号 h2 | 左上 **26×3 accent 色刻度**；行高 1.12；01 段整段 62ch（线短一截）、上距 64 | 无色刻度；行高 1.2；全段等宽、上距一律 56 |
+| 占位框 | 1px **绿虚线**（accent 45%） | 2px 中性虚线 |
+| 概念四卡 | gap **1px** + 发丝线底、**无外框**、卡内边距 12 | gap 2px + 满不透明墨底 + 2px 外框、内边距 16 |
+| 斜纹图框 / 元数据竖线 / 披露分隔线 | 一律 1px 发丝线 | 2px 墨线 |
+| Fig.05 / 06 | **并置一行**（1fr 1fr · gap 24 · 62ch · 各 4/3） | 顺次两张全宽图 |
+| Fig.12 连杆裱框 | 深色页里仍是**浅纸底** `oklch(0.955 0.009 118)` | `var(--paper)` → 在 `.pg-dark` 里解析成深底 |
+| ground plane | 渐变 + **点阵（115° 遮罩）** + 颗粒 | 少了点阵层 |
+| 页脚 | 104° 渐变 + 点阵（92° 遮罩）+ 颗粒 | G900 平铺色块 |
+| nav | padding 12/48 · gap 16 · 下缘 1px 发丝线 | padding 14/48 · gap 24 · 2px |
+| 标题下 | 绿虚线（行进）+ 紫实线**双线尺** | 无 |
+| summary | 正文墨色 | 被调到 n700 变灰 |
+
+**落地方式**：新增 `.fig-cap*`（图注行）/`.fig-live`（活件裱框）/`.concept-grid` 三组类 + `.pg-dark` 下的发丝线化覆盖；`FigSlot` 加 `desc`（稿里"框内标签"与"图注说明"本就是两串字）、状态由 `StatusTag` 改 `StatusSign`；新增 `FigPair`。MDX 只动三处：删掉重复的 FIG.01、05/06 包进 FigPair、按稿补 desc。**四路由不动、内容池机制不动、LinkageFigure 内部零改。**
+
+**两处有意保留的偏离**：① 项目 01 主图仍是 Lab.04 五环活件（§9.1 用户拍板，稿里是待拍摄占位块）；② 大标题用 `clamp()` 而非稿的定值 72px（§5 条 4 响应式硬要求）。
+
+**返回转场 goBack 补上**（`components/site/BackTransition.tsx`）：点 brand / Work → 内容 blur(10px)+scale(0.985)、深色平面 480ms 淡入盖满 → 换页 → 平面淡出。**SPA 适配两条**：稿靠换文档 + `om-pt` 交接给主页 `<head>` 脚本揭开，本站平面不随文档销毁，**由本组件自己淡出移除**，因此**不写 `om-pt`**（写了会让下一次进深色页的 `PageEnter` 误判成"刚从主页转场过来"）；卸载时**不撤销**收尾定时器——push 之后组件即卸载，撤了平面就永远留在屏上（平面另带 `pointer-events:none` + `data-pt-tmp` + 自身兜底移除三重保险）。**必须挂捕获阶段**：`next/link` 自带点击处理，冒泡阶段再 `preventDefault` 已经晚了（实测跳转照常发生、转场根本没播）。reduced-motion 直接走普通导航。
+
+**连带影响（非案例页）**：`.nav` 的 padding/gap 改为设计系统值——全站导航同步；`.site-footer--deep` 只加在深色路由（`/work` `/archive` `/lab`），`/about` 仍是 G900 铺底。CDP 实测四路由无 pageerror、返回转场残留归零（含 reduced-motion 分支）。
 
 ---
 
