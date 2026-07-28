@@ -496,6 +496,111 @@ a:hover {
   color: var(--accent);
 }
 
+/* — case study 正文排印（作者供稿落地，2026-07-28）——
+   稿（Case-Screens）里正文位全是虚线占位框，没有给排印，故按站内版式语言补：
+   度量沿用 LAYOUT_NOTES 的 62ch 文本列（图与表可越出），层级只靠字号/字重/发丝线，
+   不新增颜色（面积纪律：正文一律墨色，强调走字重不走色）。 */
+.case-body p,
+.case-body ul,
+.case-body ol {
+  max-width: 62ch;
+  font-size: 15px;
+  line-height: 1.62;
+  margin: 0 0 16px;
+}
+/* 首段（编号 01 之前的引子）比正文大一档——它是主图与第一节之间的过门 */
+.case-body > p:first-of-type {
+  font-size: 17px;
+  line-height: 1.55;
+  margin-top: 24px;
+}
+/* Tailwind preflight 把 list-style 清零了——正文列表要显式要回记号 */
+.case-body ul {
+  list-style: disc;
+  padding-left: 20px;
+}
+.case-body ol {
+  list-style: decimal;
+  padding-left: 22px;
+}
+.case-body li {
+  margin: 0 0 8px;
+}
+.case-body li::marker {
+  color: var(--accent);
+}
+.case-body strong {
+  font-weight: 800;
+}
+/* 子标题（h3）：不进 section 计数，靠字号 + 一道短刻度与编号大标题拉开层级 */
+.case-body h3 {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin: 36px 0 12px;
+  padding-left: 14px;
+  position: relative;
+}
+.case-body h3::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.42em;
+  width: 8px;
+  height: 2px;
+  background: var(--accent);
+}
+/* 状态串（`Study in progress · …`）：等宽 + 发丝线框，读作机器写的字段不是正文 */
+.case-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  border: var(--hair);
+  padding: 3px 8px;
+}
+/* 数据表：工程图纸式——表头小号大写、格线只留横向发丝线、数字列等宽对齐。
+   窄视口下表自身横向滚动（display:block），不撑破内容列。 */
+.case-body table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin: 0 0 24px;
+  font-variant-numeric: tabular-nums;
+}
+.case-body th,
+.case-body td {
+  text-align: left;
+  vertical-align: top;
+  padding: 8px 20px 8px 0;
+  border-bottom: var(--hair);
+}
+.case-body th {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--n600);
+  border-bottom: 1px solid currentColor;
+}
+.case-body td {
+  font-size: 13px;
+  line-height: 1.45;
+}
+.case-body tbody td:first-child {
+  font-weight: 600;
+  white-space: nowrap;
+}
+/* 过程侧栏里的段落沿用侧栏字号，不吃正文的 15px */
+.case-body aside p {
+  font-size: inherit;
+  line-height: 1.55;
+  margin: 0;
+  max-width: none;
+}
+
 /* ════════════════════════════════════════════════════════════════════════════
    主页 Home-Screens（design-ref/Home-Screens.dc.html → MAPPING §6）
    动效 token 全站唯一来源；分页引擎常量在 HomeScreens.tsx（手感标定项，不进 CSS）。

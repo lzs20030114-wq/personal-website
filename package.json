@@ -31,6 +31,7 @@
     "next-mdx-remote": "^6.0.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "remark-gfm": "^4.0.1",
     "zod": "^4.4.3"
   },
   "//overrides": "next 16.2.12 自身的公告已清，剩下两条是它锁着的旧传递依赖（postcss 8.4.31 / sharp 0.34.5），上游没放新版就只能这样顶上去。注意 npm audit fix --force 的建议是把 next 降到 9.3.3——倒退七个大版本、站直接报废，永远不要执行它。sharp 只被 next/image 用到，本站零处使用。",

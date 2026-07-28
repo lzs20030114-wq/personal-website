@@ -377,3 +377,33 @@
 ### 9.4 手感常量与实测
 
 `EXPAND_MS` 380（底板展开，直飞专用）/ `MORPH_MS` 660（飞行；直飞路程短，760 → 660）/ `CROSSFADE` 0.55 / `REVEAL_MS` 560 + 140ms 延迟 / `VEIL_OUT` 420。生长那条路的 `PUSH_MS` 620 不动——**待用户真机拍板**。真浏览器（CDP，1440×900）实测五条路径：转场落位后残留归零、hero 内联样式复原、无 pageerror；直接访问 / reduced-motion / `/archive`（无落点走老路）/ 回退后二次转场 / 窄视口无克隆兜底，全部干净。统计条 122 → **131**（新增 flip 9 项）。
+
+---
+
+## 10. 项目 01 正文落地：作者供稿入池（2026-07-28）
+
+来源 = 用户提供的 `reincarnation_machine_site_content.md`（中英各自独立成文，非互译）。站点英文优先、v1 不做 i18n（SITE_SPEC §1），故案例页正文取**英文侧**，中文侧仅用于概念卡的双写与图框标签。**这是转录不是代写**——`content/work/reincarnation-machine/index.mdx` 里原先的 `IntentNote` 占位全部由供稿正文顶掉，结构（八段叙事弧）与图插槽编号一律不动。
+
+### 10.1 稿里没有的东西：正文排印
+
+`Case-Screens.dc.html` 的正文位**全是虚线占位框**——稿从未给过段落、列表、表格的排印。占位换成真文字后必须补，补法按站内版式语言（不是新起一套）：
+
+- 文本列仍是 62ch（`LAYOUT_NOTES`），**图与表允许越出**——人格参数表 5 列、传感表 3 列，压进 62ch 会挤成面条。
+- 层级只用字号/字重/发丝线，**不新增颜色**：正文一律墨色，强调走 `<strong>` 800 而不是彩字（面积纪律：绿 8 / 紫 3）。
+- `h3` 不进 section 计数（计数只属于 `h2` 的 01–08），靠左侧 8×2px 绿刻度与编号大标题拉开层级。
+- 表格 = 工程图纸式：表头 11px 大写、格线只留横向发丝线、`tabular-nums`；`display:block; width:max-content; overflow-x:auto`，窄视口下表自身横滚而不撑破内容列。
+- **Tailwind preflight 把 `list-style` 清零**——正文列表要显式写回 `disc`/`decimal`，否则只剩缩进没有记号（首版即此错，CDP 截图才看出来）。
+- 状态串（`Study in progress · Pilot autumn 2026 · n=5–8`）走 `code`：等宽 + 发丝线框，读作机器写的字段而不是正文句子。
+
+### 10.2 GFM 表格
+
+供稿里四张表是 GFM 管道表，`next-mdx-remote` 默认不带 GFM（原样吐竖线）。加 `remark-gfm` 并在 `/work/[slug]` 的 `MDXRemote` 上挂 `mdxOptions.remarkPlugins`。这是 remark 插件不是内容框架，不违反 SITE_SPEC §2「不引入 CMS / contentlayer 类重依赖」。
+
+### 10.3 隐蔽机制：按供稿要求不发布
+
+供稿 §10 末尾写明：装置「互动加速死亡」的具体机理**在预实验结束前不得上网**（被试搜到即毁设计）。原 frontmatter 的 summary（`while your touch secretly hastens its death`）正是这句剧透，且它同时喂主页预览、案例页 lede 与 OG description。已按供稿给的模糊表述换掉：summary 改用供稿 §1 的一句话，概念卡 Hidden complicity 改 "a concealed coupling between interaction and lifespan, disclosed to participants in debriefing"。**实验做完再补全**。
+
+### 10.4 顺带落地
+
+- 主页项目 01 预览位的 thesis 行由「虚线占位框 + `[作者供稿]` 标记」改为**正文**（撤虚线框），文字接内容池 `summary`（新增 `HomeWork.summary`，单一来源）。Role/Tools 两格仍是压缩串，但补上供稿硬要求的 **Solo** signal。未供稿的项目 II–IV 原样保留 `[待作者供稿]` 占位。
+- `V.60` 视频席位图注换成供稿 §15 资产 2 的原文；`FIG.04 / 11 / 13` 的 `desc` 换成供稿 §15 对应图注。图框标签（中文）不动。
