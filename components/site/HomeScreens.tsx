@@ -603,6 +603,20 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
     const ptLinks = Array.from(root.querySelectorAll<HTMLElement>('a[data-pt]'));
     ptLinks.forEach((a) =>
       on(a, 'click', (e) => {
+        // 带修饰键的点击是「在别处打开」，不是「在本页跳转」——转场必须让路，
+        // 否则 ⌘/Ctrl-click 开新标签会被吃成当场跳走（评审习惯并排开好几页看）。
+        // 守卫与 BackTransition 同款，两处保持一致。
+        const me = e as MouseEvent;
+        if (
+          me.defaultPrevented ||
+          me.button !== 0 ||
+          me.metaKey ||
+          me.ctrlKey ||
+          me.shiftKey ||
+          me.altKey
+        ) {
+          return;
+        }
         e.preventDefault();
         const href = a.getAttribute('href');
         if (!href) return;
@@ -1112,6 +1126,10 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
         <div id="track" style={{ willChange: 'transform' }}>
           {/* ——— S0 枢纽幕 ——— */}
           <section id="s0" style={{ ...SECTION_BASE, background: GRID_BG }}>
+            {/* SiteNav 的 Work 指向 /#work（MAPPING §3），此前全站没有这个锚点，
+                自内页点 Work 只是落到页顶、看着像没反应。与 s1 的 #about-preview、
+                s2 的 #lab 同一形态：零高度 span，不参与版式。 */}
+            <span id="work" />
             <div
               className="hub-grid"
               style={{
