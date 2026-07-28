@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { MDXRemote } from 'next-mdx-remote/rsc';
+import remarkGfm from 'remark-gfm';
 import { getAllWork, getPublishedWorkBySlug } from '../../../../src/lib/site/content';
 import {
   ConceptCard,
@@ -153,13 +154,18 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
 
           {/* 编号 section 01–06：CSS counter 作用于 .case-body h2（只换模板，MDX 不动） */}
           <div className="case-body">
-            <MDXRemote source={entry.body} components={mdxComponents} />
+            {/* remark-gfm：正文里的规格表/人格参数表是 GFM 管道表，非 GFM 会原样吐出竖线 */}
+            <MDXRemote
+              source={entry.body}
+              components={mdxComponents}
+              options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
+            />
           </div>
 
           {/* 视频席位（frontmatter 提供 src 前为斜纹占位框，不自动播放）；稿 margin:64px 0 0 */}
           <VideoSlot
             id="V.60"
-            caption="Full cycle: birth → aging → death → rebirth"
+            caption="One full life cycle — birth, interaction, ageing, stop, blank — eight minutes compressed to ninety seconds"
             status={entry.video ? '可现产' : '待拍摄'}
             src={entry.video?.src}
             size="wide"

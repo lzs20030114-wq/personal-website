@@ -79,6 +79,8 @@
 
 - **案例页对稿返工（2026-07-28，用户指出「没完全对齐参考」）**：07-27 的 case 深色化只搬了配色（`.pg-dark` 重定义 token），**稿里的构件全丢**——与 Lab 那次「剥掉 style 读稿」同一类偷工，且深色稿当时**没存档**、无从复查。用户重传后存 `design-ref/Case-Screens.dc.html`，逐项对齐：主图去重（此前 hero 与 MDX 里同名 FigSlot 各画一次）、图注行补说明 + 状态改纯文字小签、编号 h2 补 26×3 色刻度、占位框改绿虚线、概念四卡改 1px 发丝缝无外框、图框/竖线/分隔线一律发丝线、Fig.05/06 并置、Fig.12 连杆裱框回浅纸底、ground plane 补点阵层、页脚换渐变+点阵、nav 度量归位、标题下补双线尺、summary 回正色。另补上稿里一直没做的**返回转场 goBack**（点 brand/Work 平面淡入换页；SPA 适配与三重防残留见 MAPPING §6.3）。四路由不动、内容池机制不动、连杆内部零改；133 测试绿、双构建过、四路由 CDP 无 pageerror。**教训入档：稿要存档；token 对得上不等于对过稿。**
 
+- **项目 01 正文入池（2026-07-28，用户供稿「你可以往网站里面填了」）**：用户交来 `reincarnation_machine_site_content.md`（17 节，中英各自独立成文），案例页正文占位**首次被真文字顶掉**——`content/work/reincarnation-machine/index.mdx` 里的 `IntentNote` 全撤，八段叙事弧结构与图插槽编号一律不动。取英文侧（SITE_SPEC §1 英文优先、v1 无 i18n），中文只留在概念卡双写与图框标签。新增两段编号 section（07 Where it stands / 08 Specifications）承接供稿 §13/§14/§16。**这是转录不是代写**，SITE_SPEC「模型不代写」条款未破。三件配套：① 稿从没给过正文排印（`Case-Screens` 正文位全是虚线框），按站内版式语言补 `.case-body` 段落/列表/子标题/表格/code 排印——文本列仍 62ch 而表可越出，层级只用字号字重发丝线不加颜色；② 四张 GFM 管道表要 `remark-gfm`（`MDXRemote` 挂 `mdxOptions`）；③ **隐蔽机制不发布**——原 summary 的「your touch secretly hastens its death」正是供稿 §10 明令预实验前不得上网的剧透（被试搜到即毁设计），已换成供稿给的模糊表述，实验后再补全。坑：Tailwind preflight 清了 `list-style`，正文列表要显式写回。133 测试绿（无新增）、双构建过、CDP 全页实测无 pageerror。映射=MAPPING §10。
+
 ## 部署纪律（2026-07-10 事故入档）
 
 - **Vercel Hobby 限额：100 次部署/天**——2026-07-10 因高频迭代烧穿（工作分支预览 + master 生产双倍计数），表现为「webhook 静默失灵、无任何新部署」，重连 Git 无效。

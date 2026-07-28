@@ -72,6 +72,8 @@ export interface HomeWork {
   slug: string;
   date: string;
   published: boolean;
+  /** 内容池 summary（= 案例页 lede 同一句），供稿后顶掉预览位的 thesis 占位 */
+  summary: string;
 }
 
 // Lab 四卡（文案照搬 Home-Screens 稿；链接改指站内 /lab 台架页，MAPPING §6.3；
@@ -243,23 +245,28 @@ function StagePlaceholderPanel({
   index: number;
   active?: boolean;
 }) {
-  // 四项目版式完全同等（红线）；正文位一律 [待作者供稿] 占位，不代写。
+  // 四项目版式完全同等（红线）；未供稿的项目正文位仍是 [待作者供稿] 占位，不代写。
   const supplied = index === 0;
   return (
     <>
-      <div
-        style={{
-          border: '1px dashed oklch(0.58 0.105 158 / 0.5)',
-          padding: '9px 13px',
-          fontSize: 12,
-          color: 'var(--n700)',
-        }}
-      >
-        <span style={{ fontWeight: 800, color: 'var(--accent)' }}>
-          {supplied ? '[作者供稿]' : '[待作者供稿]'}
-        </span>{' '}
-        {supplied ? 'thesis 一句话 — 这台机器为何值得被哀悼。' : 'thesis 一句话。'}
-      </div>
+      {supplied ? (
+        // 供稿后 thesis 位是正文不是占位：撤掉虚线框，走正常字号（内容池 summary 唯一来源）
+        <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: 'var(--n800)' }}>
+          {work.summary}
+        </p>
+      ) : (
+        <div
+          style={{
+            border: '1px dashed oklch(0.58 0.105 158 / 0.5)',
+            padding: '9px 13px',
+            fontSize: 12,
+            color: 'var(--n700)',
+          }}
+        >
+          <span style={{ fontWeight: 800, color: 'var(--accent)' }}>[待作者供稿]</span> thesis
+          一句话。
+        </div>
+      )}
       {supplied ? (
         // 项目 01 临时主图 = Lab.04 五环台架（用户拍板 2026-07-27：主图待拍摄前先用活件顶上）；
         // data-ptm 让它同时是 goPT 转场的克隆源。作者供图后换回 StageMedia。
@@ -305,13 +312,13 @@ function StagePlaceholderPanel({
         <div style={{ padding: '9px 13px 0 0', borderRight: 'var(--hair)' }}>
           <div style={{ ...CELL_LABEL, marginBottom: 3 }}>Role</div>
           <div style={{ fontSize: 12, lineHeight: 1.45, color: 'var(--n700)' }}>
-            {supplied ? 'Concept · mechanism · electronics · HRI study' : '[待作者供稿]'}
+            {supplied ? 'Solo — concept · mechanism · electronics · HRI study' : '[待作者供稿]'}
           </div>
         </div>
         <div style={{ padding: '9px 0 0 13px' }}>
           <div style={{ ...CELL_LABEL, marginBottom: 3 }}>Tools</div>
           <div style={{ fontSize: 12, lineHeight: 1.45, color: 'var(--n700)' }}>
-            {supplied ? 'Rhino / GH · SLS / FDM · ESP32 · ELAN' : '[待作者供稿]'}
+            {supplied ? 'Rhino / GH · scikit-fem · FDM / SLS · ESP32 · ELAN' : '[待作者供稿]'}
           </div>
         </div>
       </div>

@@ -1,57 +1,110 @@
-﻿---
+---
 title: Reincarnation Machine
 slug: reincarnation-machine
 date: 2026-07
 selected: true
 order: 1
-summary: 'A desktop machine that lives, ages, dies, and is reborn with a new personality — while your touch secretly hastens its death. [summary 草案，须作者改写]'
+summary: 'A desk-sized machine that dies. It is born, grows, ages, stops, and wakes up with a new personality — same body, no memory of you.'
 role:
   - Concept & research design
   - Mechanism design & fabrication
-  - Electronics & behavior system
+  - Electronics & firmware
   - HRI study design
+  - Solo — no team, no studio
 tools:
-  - Rhino / Grasshopper
-  - SLS / FDM / resin printing
+  - Rhino / Grasshopper / Kangaroo2
+  - scikit-fem (FEA)
+  - FDM / SLS printing
   - ESP32
   - ELAN
 status: published
 ---
 
 {/* 结构 = 轮回机器_案例页骨架.md 八段叙事弧；论证 = 展示逻辑总框架 P1–P4。
-    全部正文为占位（IntentNote），素材为插槽（FigSlot 等）——作者填充时结构不动。 */}
+    正文取自作者供稿 reincarnation_machine_site_content.md（2026-07-28）英文侧，
+    素材仍为插槽（FigSlot 等）。⚠ 隐蔽机制（互动加速死亡）在预实验结束前不得写出具体机理，
+    页面只保留供稿 §10 给的模糊表述——见该文件 §10 末尾的发布前警告。 */}
 
 {/* FIG.01 主图不在此处：稿里它是内容列首的 hero（渐变媒体块 + 图注），由页面模板渲染，
     同时充当转场落点。此处再放一次会让主图出现两遍。 */}
 
-<IntentNote>段 1 · Hook：读者带走"这台明显是机器的东西会死——而抚摸它的人在暗中加速它的死亡"（总主张入口）。</IntentNote>
+After the GPT-4o update, Chinese social media filled up with something close to séances — long posts mourning a model version. The surprising part was not that people grieved. It was that **they all knew it was a model.** They understood perfectly well what was on the other side, and still lost something specific.
 
-## Research Question
+Structurally this is the same as losing a cat. A cat's temperament arrives with it; the body is in principle replaceable; that particular animal is not.
 
-<IntentNote>段 2：读者带走"这是一项可测量的 HRI 研究——人对非生命体产生哀悼反应的条件是什么"。</IntentNote>
+I wanted to pull this out of the screen and make it a physical process you can put your hands on. Same mechanism, except now the loss happens on your desk, at a speed you can watch. The hypothesis that follows: if attachment doesn't depend on whether the other party is "real," then it depends on accumulated shared history — and that is a claim you can actually test.
+
+## Research question
+
+Under what conditions do people treat an obviously mechanical object as alive — and feel a real loss when it stops?
+
+The question splits in two. **What actually triggers the attachment**: a shared history built up over time, or simply the fact that the thing moves on its own? And **how does that attachment show itself at the moment of loss**?
+
+Death and rebirth are not the subject here. They are the instrument. To measure loss you need a device that can produce it, repeatedly, on demand.
 
 ## Concepts
 
-<IntentNote>段 3（P1 概念原创）：四张概念卡 + 一句与既有"机器死亡"作品的差异；哲学框架收脚注，不堆术语。</IntentNote>
-
 <ConceptGrid>
-  <ConceptCard zh="同体异魂" en="Same body, different souls" />
-  <ConceptCard zh="隐蔽共谋" en="Hidden complicity" />
-  <ConceptCard zh="死亡即安静" en="Death as quiet" />
-  <ConceptCard zh="共情来自行为" en="Empathy from behavior, not form" />
+  <ConceptCard
+    zh="同体异魂"
+    en="Same body, different souls"
+    note="The shell is constant across every life; personality is the only thing that changes. It is the inverse of the usual thought experiment, which moves one mind into a new body."
+  />
+  <ConceptCard
+    zh="隐蔽共谋"
+    en="Hidden complicity"
+    note="A concealed coupling between interaction and lifespan, disclosed to participants in debriefing."
+  />
+  <ConceptCard
+    zh="死亡即安静"
+    en="Death as quiet"
+    note="No spectacle. It simply runs down and stops — harder to watch than a performance, and the reason the drop reads as a death rather than as a fault."
+  />
+  <ConceptCard
+    zh="共情来自行为"
+    en="Empathy from behavior, not form"
+    note="No face, no animal to recognise. If it looked like a pet the empathy would be bought by the shape, and behaviour would stop being the only variable."
+  />
 </ConceptGrid>
+
+### Where it sits
+
+The established fact is that people form real attachments to machines and grieve when they "die." That isn't what I'm trying to prove. It's where I start.
+
+- **Heider & Simmel (1944)** — self-moving geometric shapes are enough to trigger attributions of life. The direct basis for layer one.
+- **Kate Darling's Pleo studies** — an hour of interaction is enough that people refuse to "hurt" a toy robot. The threshold is very low.
+- **AIBO funerals in Japan** — the strongest real-world validation: people hold actual funerals for a discontinued robot dog.
+- **Tamagotchi** — death and reset, on a screen, with no body.
+- **_Can't Help Myself_ (Sun Yuan & Peng Yu, 2016)** — machine death as spectacle, but with no personality and no rebirth.
+- **Ian Cheng's _BOB_** — a personality that evolves, but on a screen, and it does not die.
+
+**The empty cell**: physical embodiment, personality, emotional bond, death, and cyclical rebirth in one mechanism. I could not find a precedent. The specific contribution is **same body, different soul** — the inverse of the usual thought experiment, which moves one mind into a new body.
+
+Philosophically it sits between Parfit's psychological continuity (identity comes in degrees rather than being all-or-nothing) and the Buddhist reading of no-self and rebirth — Parfit himself noted his view resembles the Buddhist account of the self.
 
 ## Form
 
-<IntentNote>段 4：读者带走"不对称是器官分工，不是残缺；运动的注意焦点让它读作'在做一件事'"。</IntentNote>
+A tabletop object roughly 33 × 34 × 22 cm when fully expanded, dropping to about 15.5 cm tall as it contracts. It is fixed to the desk and cannot move around — everything it expresses, it expresses in place, through breathing, posture and where it points.
+
+It has no face and imitates no known animal. That is deliberate. If it looked like a pet, the empathy would be bought by the shape, and behaviour would stop being the only variable. **It should look like a machine and feel like it is alive.**
+
+- **The breathing shell.** Five expanding rings arranged along the body into a low ridge, opening and closing together. This is the primary carrier of aliveness — rate, depth and regularity of breathing hold most of the information about personality and about ageing.
+- **One tendon-driven arm.** A segmented finger pulled by braided line; it carries response strength and voluntary reaching.
+- **Two compliant feelers.** A springy core inside a silicone sleeve, one micro servo at the base each. Their whip and rebound come from the material, not from code. They double as touch electrodes.
+- **An eye stalk.** Pure orientation. An organ of expression, not a sensor.
+- **The base.** Motors, controller and power live here, keeping the mass at the bottom.
+
+Inside: a dual-core ESP32 — one core driving motor pulses, one running the behaviour engine. Six sensing inputs, six expressive outputs.
 
 <FigSlot id="FIG.02" caption="形态三视 + 体轴脊线（roll −14°→+15°）" desc="Form study" status="待定" ratio="3/1" size="wide" />
 
-<ProcessAside>占位 · 过程侧栏：造型代号"伏丘"的推导（作者填）。</ProcessAside>
+<ProcessAside>
+**One wire, three jobs.** The springy core inside each feeler — superelastic nitinol, or fibreglass rod on a budget — is doing three jobs at once: it is the **skeleton** setting bending stiffness and rebound, the **posture coupling** a single base servo grips to aim it, and a **capacitive touch electrode**, so one wire makes the entire length of the feeler touch-sensitive. No extra sensor, no wiring run through a thin flexing part. The best complexity cut in the project. One expensive trap: buy **superelastic** nitinol, which springs at room temperature — not **shape-memory** wire, which only contracts when heated. They look identical.
+</ProcessAside>
 
 ## Structure
 
-<IntentNote>段 5（P4 工艺证据段，不承载生命感论点）：读者带走"五根异形 Hoberman 角化拱肋 + 蒙皮 = 一个会呼吸的身体；F=1 是被约束设计出来的"。机构管节拍，代码管生命——本段不得出现"机构让它显得活"。</IntentNote>
+The breathing shell is five irregular angulated Hoberman arches, 82.5 mm apart, each expanding 2.66 to 3.30×, all driven from one NEMA17 through a 3:1 GT2 reduction. Across all five rings the triangular parts fall into eleven congruence classes, reused within each ring — that number is what makes modelling and printing the whole shell feasible for one person.
 
 <FigSlot id="FIG.03" caption="五环参数族线稿（S1–S5，R*/L*/膨胀比）" desc="S1–S5, R*/L*/expansion ratio" status="可现产" ratio="16/7" size="wide" />
 
@@ -61,24 +114,188 @@ status: published
   <FigSlot id="FIG.06" caption="自由度论证：裸拱 M=2 → 中央杆+导轨 → F=1" status="可现产" ratio="4/3" />
 </FigPair>
 
-<FigSlot id="FIG.04" caption="呼吸序列：全开 → 收缩" status="待集成" ratio="16/6" size="wide" />
+### The hand math was wrong
+
+**Problem.** Each ring of the breathing shell opens and closes on four feet sliding in rail slots. The load-bearing front ledge of that rail is thin. I ran the standard beam formulas by hand and it looked fine.
+
+**Evidence.** I didn't trust it, so I meshed the part into hexahedral elements and solved it cell by cell with scikit-fem. Real deflection came out about **4.5× worse** than the hand calculation: 1.55 mm under a 20 N load, close to the stress limit. The hand math was optimistic because it assumes the load reaches a support; in the real part the back strip has no support directly under the load point.
+
+**Decision.** Two pieces of reinforcement — an 8 × 3 mm rib on the back, a 4 × 2.5 mm lip on the front.
+
+**Result.** Deflection **1.55 → 0.34 mm**; ultimate capacity **19 N → 54 N**, at almost no weight cost.
+
+**Lesson.** Don't trust hand calculations on thin-walled printed structures. Ribs and lips buy an order of magnitude of stiffness for almost no material.
+
+### Two side rods became one central rod
+
+**Problem.** Each ring was originally pushed by two rods coming in from the sides. They fan outward and eat base width — the one dimension the silhouette can least afford to spend.
+
+**Evidence.** I wanted a single rod on the centreline, but first had to prove the thing wouldn't collapse. A null-space analysis of the constraint matrix showed the bare arch has **two degrees of freedom**: breathing, plus lateral sway. One rod only removes one of them; the remaining sway lets the whole ring fall sideways.
+
+**Decision.** Central rod plus a vertical guide rail at the apex. The rail kills the sway, the system returns to a single degree of freedom, and the motion becomes determinate.
+
+**Result.** Base width recovered. It also flushed out a bug: the code located the apex by taking the highest point, but the fifth ring flattens at high expansion ratios and its highest point migrates out to the shoulder — the wrong node entirely. Switching to "the node nearest the centreline" gave all five rings a consistent reference. Re-running the fixed-point optimisation afterwards gained 3–26% of travel per ring.
 
 <InteractiveSlot id="FIG.12" caption="The PBD solver built to design these mechanisms — drag any joint" status="可现产" size="wide">
   <LinkageFigure />
 </InteractiveSlot>
 
-<ProcessAside>占位 · 过程侧栏：失败的打印就位铰链 / SLS 间隙经验 / 驱动方案迭代（作者填，评审明文要看）。</ProcessAside>
+<FigSlot id="FIG.04" caption="呼吸序列：全开 → 收缩" desc="Rate, depth and regularity carry most of what you can know about this life" status="待集成" ratio="16/6" size="wide" />
+
+### Built solo
+
+No team, no workshop, no industrial processes. Every part came off one 3D printer, plus tools and standard hardware a single person can buy — M2 and M3 screws, GT2 belt, Chicago screws.
+
+This constraint isn't romanticism, it's a design input. It eliminated whole categories of solution up front: the sea-anemone sculpture driven by 120 industrial linear actuators, injection-moulded silicone skins, anything needing a lathe or a five-axis machine. What survives has to be assemblable, tunable and repairable by one person at a desk.
+
+- One reinforcement plate is 402 mm long, past the diagonal of a standard FDM bed (about 256 mm). Either a large-format printer or an outsourced SLS part.
+- FDM holes print 0.1–0.3 mm undersize. To get a real 4.0 mm hole you model 4.1–4.15 mm. Print a test block once, calibrate, and reuse the number forever.
+- FDM cannot produce sharp internal corners, so hex pockets need dogbone relief.
+
+<ProcessAside>
+**Why printed joints seize.** SLS nylon joints printed with 0.4 mm clearance came out dead — they would not turn at all. SLS parts carry a sintered skin and trap powder in narrow gaps, so 0.4 mm isn't enough; and the usual killer isn't radial clearance but **axial** — if the rotating hub is longer than the screw barrel it clamps itself solid the moment you tighten it. The fix was a metal axle (the unthreaded shoulder of a Chicago screw) running in a printed sleeve: metal on plastic needs only 0.2–0.4 mm radial clearance, and the hub must be 0.2–0.5 mm **shorter** than the barrel. Where friction damping is wanted, use wave washers rather than flat ones. Joint feel became a choice rather than a redesign.
+</ProcessAside>
 
 ## Behavior
 
-<IntentNote>段 6（P2 论点主场，全页高潮）：读者带走"生命感是行为演出来的——同一硬件，人格参数与行为杠杆决定它像不像活物"；互锁点在此显式一次：外形跨轮回恒定是常量，人格是唯一变量——概念即实验设计。</IntentNote>
+The hardware is identical in every life. What changes between one life and the next is a table of numbers — which is what makes the concept and the experiment the same object: form is the constant, personality is the only variable.
+
+### One life
+
+One full life is compressed into roughly eight minutes. A session runs four of them.
+
+| Stage | Length | What happens |
+|---|---|---|
+| Birth | 1 min | Ramps up from complete stillness; within the first 30 seconds you should be able to tell who this one is |
+| Growth / interaction | 4 min | Free interaction. It responds to touch — and sometimes declines to |
+| Ageing | 1.5 min | Breathing shallows, latency stretches, motion turns irregular |
+| Death | — | Goes quiet and stops |
+| Blank | 45 s | Dark and silent. The shell is still there and it is empty |
+
+Then a new life wakes up: different colour, different rhythm, a completely different answer to the same touch. Everything you learned about getting along with the last one is void.
+
+**Death is deliberately undramatic.** Simply running down is harder to watch than a performance — Tan et al. found that switching a robot off produces more personal distress than watching it act out emotion.
+
+<FigSlot id="FIG.11" caption="生命周期状态图（诞生 → 成长 → 衰老 → 死亡 → 轮回）" desc="Personality is twelve numbers, re-rolled at each rebirth — ageing is every parameter drifting at once" status="可现产" />
+
+### Five layers of aliveness
+
+1. **Self-motion — "it moves by itself."** It moves whether or not you touch it. Heider and Simmel showed in 1944 that geometric shapes moving on their own are enough to trigger attributions of life. No human-like features required.
+2. **Non-deterministic response — "it's answering me."** Touch produces a response, but not the same one every time. Unpredictability blocks the button-and-reaction model and pushes people toward mental explanations instead.
+3. **Internal state — "it has moods."** The same touch gets different answers at different moments, so people start explaining behaviour with feelings. By this layer the anthropomorphising has already happened. This is where each life's personality lives.
+4. **Relationship — "it knows me."** Over time it answers your habitual way of touching it more smoothly. The change has to be subtle enough to read as familiarity rather than as an adaptive algorithm. Reincarnation resets this layer to zero.
+5. **Initiative — "it needs me."** When you're away for a while, its behaviour shifts in a way that points at you. Too obvious and it fails; the right intensity is one you notice by accident and then narrate to yourself.
+
+**Death lands because all five layers go to zero at once.** Not one channel disappearing — the whole stack, together. That drop is the event.
+
+### Four personalities
+
+Personality here is not a set of adjectives. It is twelve numbers you can compile.
+
+| Parameter | A Vital | B Withdrawn | C Affectionate | D Unstable |
+|---|---|---|---|---|
+| Breath period | 2 s | 6 s | 4 s | random 2–8 s |
+| Breath depth | 80% | 30% | 50% | random 20–90% |
+| Motion speed | fast | slow | medium-fast | swings |
+| Response latency | very short | long | short | inconsistent |
+| Response strength | large | small | medium-large | inconsistent |
+| Idle motion rate | high | low | medium, rises when you're there | random |
+| Sound pitch | bright, high | warm, low | mid, variable | unsteady |
+| Sound rhythm | dense, continuous | sparse, broken | rhythmic with variation | no pattern |
+| Reorientation rate | high | low | medium | random |
+| Orientation bias | looks everywhere | away from you | strongly toward you | toward, then away |
+| Startle threshold | high, hard to spook | low, flinches at a touch | medium | inconsistent |
+| How it dies | winds down, movements shrinking | quietly slows to a stop | turns toward you, then stops | rhythm falls apart, then fades |
+
+The order is fixed A → B → C → D and counterbalanced across participants. The sequence is designed: A sets the baseline and the expectation, B breaks it and creates contrast, C builds the deepest bond — making the third death the candidate emotional peak — and D uses unpredictability to test what coping strategy people have built after three rounds.
+
+### How it senses you
+
+Six input channels, all doing one job: turning continuous physical signals into a **discrete event vocabulary**. The behaviour engine and the experiment log read the same event stream — which means the device's own record is directly usable as objective behavioural data in the paper.
+
+| Channel | Hardware | What it reads |
+|---|---|---|
+| Feeler touch | MPR121 capacitive, one channel per side per feeler | which side, how hard, how long |
+| Shell stroking | copper-tape electrodes, left and right half-rings | stroke / hold / grab |
+| Presence and distance | ultrasonic rangefinder | are you there, how close |
+| Knocks and vibration | accelerometer, vibration envelope only, no attitude | being tapped, being pushed |
+| Sound | sound sensor | claps and speech → shift of attention |
+| Time | internal clock | ageing curve, interaction gaps, cycle scheduling |
+
+Nine event classes, plus a grasp state machine: holding a human / holding an object / closed on nothing / lost grip.
+
+**Four self-interference problems had to be designed out** — all of them the kind that works on the bench and fails inside the enclosure: motor electrical noise reaching the accelerometer, speaker vibration feeding back into the microphone, ultrasonic readings collapsing when a hand rests on the shell, and the capacitive baseline tracker swallowing a long press as environmental drift (anything held over ten seconds gets falsely released).
 
 <FigSlot id="FIG.10" caption="系统逻辑：传感 → 事件词表 → 人格参数 → 行为杠杆 → 执行器" desc="System logic" status="可现产" ratio="16/8" size="wide" />
-<FigSlot id="FIG.11" caption="生命周期状态图（交互加速死亡标注）" status="可现产" />
 
 ## Research
 
-<IntentNote>段 7（P3 方法学差异）：读者带走"SCR 事件锁定 + 验证量表 + 行为编码——方法学把它与美学奇观区分开"。发现 = 待回填席位，不预支结论。</IntentNote>
+This section is what separates the project from "robot death" as an art gesture. The difference isn't the object. It's what I intend to measure with it, and how.
 
-<FigSlot id="FIG.13" caption="研究方法：事件锁定 SCR 示意" status="研究期后" />
+**Protocol.** 5–8 participants, one session of roughly 37 minutes, four accelerated life cycles.
+
+**Measures**
+
+- **Primary physiological measure**: event-locked skin conductance response. Each death is timestamped as an event marker and the response around it is what gets analysed. The device sends its own markers over WiFi straight into the recording software, so nothing depends on manual alignment.
+- **Self-report**: IDAQ (anthropomorphism tendency), IRI (empathy), ECR-S (attachment style), Godspeed (perception of the device); after each death, VAS ratings of aliveness, attachment and sadness, plus SAM for valence and arousal.
+- **Behavioural coding**: full video, coded in ELAN against a defined vocabulary.
+- **Device-side log**: the event stream above doubles as an objective record of interaction.
+
+**What got cut** — more revealing than what stayed
+
+- A heart-rate-variability comparison across death events. **Dropped.** HRV needs a time window far longer than a death lasts, and with 5–8 participants it can never reach significance. Event-locked SCR stays as the single primary physiological measure.
+- The two-device version, where a pair of machines form a relationship and the survivor degrades after the other dies. **Dropped** to future work. It doesn't fit in the time.
+- The measurement battery was cut hard to match the real sample size. Every extra scale reduces what eight people can actually say.
+
+**Known problems, being handled**
+
+- **Legibility of death is the single point of failure.** If participants read the death as a malfunction, every grief measure goes to zero. Personality D originally died by twitching and then stopping — which is exactly what a broken machine looks like, and would actively invite the wrong attribution. Changed to a rhythm that falls apart and fades. **A 2–3 person pilot is a hard gate**, and its first job is to confirm that death reads as death.
+- **Demand characteristics.** I am both the author and the experimenter, so participants will perform the reaction they think I want. Countermeasures: neutral recruitment wording, participants from unrelated departments, screening out anyone who has seen the project, and a scripted opening read verbatim.
+- **Solo coding has no reliability.** One person coding every video means no inter-rater agreement to report. A second coder blind-codes 20–25% of the material and Cohen's κ gets reported.
+- **Jurisdiction.** The data protection plan was initially written entirely to GDPR, but the applicable law here is China's PIPL, under which physiological data is sensitive personal information requiring separate consent. Scales must use published validated Chinese versions rather than my own translations.
+
+`Study in progress · Pilot autumn 2026 · n=5–8`
+
+<FigSlot id="FIG.13" caption="研究方法：事件锁定 SCR 示意" desc="Four life cycles, about 37 minutes; event-locked skin conductance is the primary physiological measure" status="研究期后" />
 <FigSlot id="FIG.14" caption="关键时刻抓帧（用户与机器）" status="研究期后" ratio="3/2" />
+
+## Where it stands
+
+- **Mechanism design** — done. Ring geometry, five-ring parameters, the 11 triangle congruence classes, and the drive train (NEMA17 + TMC2209 + GT2 at 3:1) are all frozen.
+- **Structural verification** — done. The rail system passed FEA; the reinforcement scheme is settled.
+- **Parts** — printed. Hardware purchased.
+- **Sensing** — frozen: six inputs, nine event classes, grasp state machine, four self-interference countermeasures.
+- **Behaviour engine** — **the one remaining gap.** The three-layer architecture is decided — reflex layer (touch to withdrawal in under 100 ms, wired on-board); state layer (a point drifting across a valence–arousal plane, with personality as a parameter map and ageing expressed as rising irregularity, falling amplitude and stretching latency); motion synthesis layer (base rhythm plus noise jitter, easing curves, and crossfades on interruption) — but it isn't written yet.
+- **Study execution** — ethics route, physiological equipment and second coder still to be secured.
+
+**Fallback**: if the engine isn't convincing by the pilot, switch to Wizard-of-Oz — the experimenter triggers behaviour from behind the scenes, disclosed honestly in the paper. This is standard and accepted practice in HRI, and writing it into the risk plan means the behaviour engine stops being a single point of failure.
+
+### Reflection
+
+The project started out trying to maximise sadness. That was the wrong target — death and rebirth are instruments, not the subject. Correcting it gave every subsequent design decision something to be judged against.
+
+The mechanical side doesn't need any more cleverness. What it needs is for the contradictions in the study design to be cleared one by one before data collection starts.
+
+With more resources I'd build the two-device version, where the relationship between two machines is visible to the user and the survivor degrades after the other one dies. That's where the genuinely new question is.
+
+## Specifications
+
+| Spec | Value |
+|---|---|
+| Envelope, fully expanded | 330 × 343 × 220 mm |
+| Contracted | 330 × 271 × 155 mm |
+| Breathing rings | 5 irregular angulated Hoberman arches, 82.5 mm apart |
+| Ring expansion ratio | 2.66 – 3.30 × (per ring) |
+| Triangle parts | 11 congruence classes, reused within each ring |
+| Main drive | NEMA17 (0.51 N·m) + TMC2209, GT2 belt 3:1 (20T / 60T) |
+| Main shaft | ⌀6 mm D-shaft, 5.5 mm across flats |
+| Peak design torque | 0.3 – 0.5 N·m (gravity and friction dominant; inertia negligible) |
+| Finger | 4 tapered phalanges, 25 / 20 / 15 / 10 mm |
+| Tendon | 0.4–0.5 mm braided PE (30–40 lb), 1.0–1.2 mm channels in PLA |
+| Feelers | 70–100 mm, superelastic nitinol or fibreglass core + silicone / TPU sleeve |
+| Controller | ESP32 WROOM-32, dual core |
+| Sensing | MPR121 capacitive touch · MPU6050 · ultrasonic rangefinder · sound sensor |
+| Expression | breath · arm · feelers · eye stalk · WS2812B · PAM8403 + speaker |
+| Power | 12 V 5 A, XL4015 buck to the 5 V rail |
+| Fabrication | FDM (primary) + SLS nylon (moving parts), M2 / M3 hardware |
+| Material budget | about ¥300, excluding stock on hand |
