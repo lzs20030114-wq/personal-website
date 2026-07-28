@@ -1,9 +1,9 @@
 // 纯派生逻辑：不碰 fs、不碰 DOM，服务端与客户端组件都能 import。
 // （内容池 src/lib/site/log.ts 会 import node:fs，'use client' 组件不能碰它——
 //  多层筛选的桶/方面/月份三级都要在客户端现算，所以派生逻辑下沉到这里。）
-import type { LogEntry } from './log';
+import type { Bilingual, LogEntry } from './log-schema';
 
-export type Bilingual = { en: string; zh: string };
+export type { Bilingual };
 /**
  * 一个筛选项：key = 判定用的稳定标识，label = 显示名，count = 该项下的条数。
  * short = 紧凑写法，只有月份用（月份是唯一会无限增长的一级，放在滚轴里，越短越多看见几个）。

@@ -1,0 +1,494 @@
+/**
+ * Studio 的样式：工具界面，不是作品集页面。
+ * 借站点的发丝线 / 单色语言，但度量按「长时间打字」来定（字号不小于 14px、点击目标够大、
+ * 两栏并排能同时看到中英）。预览区例外——那里用的是站上真正的 .pg-dark + .log-* 规则。
+ */
+
+.studio {
+  --s-bg: oklch(0.21 0.02 220);
+  --s-panel: oklch(0.25 0.022 220);
+  --s-line: oklch(0.95 0.03 120 / 0.16);
+  --s-ink: oklch(0.94 0.02 140);
+  --s-dim: oklch(0.72 0.03 165);
+  --s-accent: oklch(0.75 0.12 145);
+  --s-danger: oklch(0.7 0.15 25);
+  min-height: 100vh;
+  background: var(--s-bg);
+  color: var(--s-ink);
+  font-family: var(--font-sans, 'Archivo Variable', system-ui, sans-serif);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── 登录 / 提示 ─────────────────────────────────────────────────────── */
+.studio-login {
+  display: grid;
+  gap: 10px;
+  max-width: 340px;
+  margin: 14vh auto;
+  padding: 28px;
+  border: 1px solid var(--s-line);
+  background: var(--s-panel);
+}
+.studio-login h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.studio-login__hint {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--s-dim);
+}
+.studio-login__error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--s-danger);
+}
+.studio-notice {
+  max-width: 700px;
+  margin: 10vh auto;
+  padding: 28px;
+  border: 1px solid var(--s-line);
+  background: var(--s-panel);
+}
+.studio-notice h1 {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+.studio-notice li {
+  margin: 6px 0;
+}
+.studio-notice ul {
+  padding-left: 1.3em;
+}
+.studio-notice pre {
+  padding: 12px;
+  overflow-x: auto;
+  font-size: 12px;
+  border: 1px solid var(--s-line);
+}
+.studio code {
+  padding: 1px 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.92em;
+  background: oklch(0.95 0.03 120 / 0.08);
+  border-radius: 3px;
+}
+
+/* ── 表单控件（统一深色，浏览器默认在深底上会白得刺眼） ───────────────── */
+.studio input,
+.studio textarea,
+.studio select,
+.studio button {
+  font: inherit;
+  color: inherit;
+}
+.studio input[type='text'],
+.studio input[type='password'],
+.studio input[type='search'],
+.studio input[type='date'],
+.studio textarea,
+.studio select {
+  width: 100%;
+  padding: 7px 9px;
+  color: var(--s-ink);
+  background: oklch(0.18 0.018 220);
+  border: 1px solid var(--s-line);
+  border-radius: 2px;
+}
+.studio textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+.studio input:focus-visible,
+.studio textarea:focus-visible,
+.studio select:focus-visible,
+.studio button:focus-visible {
+  outline: 2px solid var(--s-accent);
+  outline-offset: 1px;
+}
+.studio-mini,
+.studio-publish,
+.studio-login button {
+  padding: 6px 12px;
+  color: var(--s-ink);
+  background: transparent;
+  border: 1px solid var(--s-line);
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 13px;
+  text-decoration: none;
+}
+.studio-mini:hover:not(:disabled),
+.studio-login button:hover:not(:disabled) {
+  border-color: var(--s-accent);
+  color: var(--s-accent);
+}
+.studio-mini[aria-pressed='true'] {
+  border-color: var(--s-accent);
+  color: var(--s-accent);
+}
+.studio-mini:disabled,
+.studio-publish:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.studio-mini--danger:hover:not(:disabled) {
+  border-color: var(--s-danger);
+  color: var(--s-danger);
+}
+.studio-publish {
+  padding: 7px 18px;
+  font-weight: 700;
+  color: oklch(0.18 0.02 220);
+  background: var(--s-accent);
+  border-color: var(--s-accent);
+}
+.studio-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.studio-row--wrap {
+  gap: 16px;
+}
+
+/* ── 顶栏 / 横幅 ─────────────────────────────────────────────────────── */
+.studio-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--s-panel);
+  border-bottom: 1px solid var(--s-line);
+}
+.studio-bar__left {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: baseline;
+}
+.studio-bar__meta {
+  font-size: 12px;
+  color: var(--s-dim);
+}
+.studio-bar__state {
+  font-size: 12px;
+  color: var(--s-dim);
+}
+.studio-bar__state[data-dirty='true'] {
+  color: var(--s-accent);
+}
+.studio-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  font-size: 13px;
+  background: oklch(0.28 0.03 200);
+  border-bottom: 1px solid var(--s-line);
+}
+.studio-banner--warn {
+  background: oklch(0.3 0.05 60);
+}
+.studio-banner[data-ok='false'] {
+  background: oklch(0.3 0.06 25);
+}
+.studio-errors {
+  margin: 6px 0 0;
+  padding-left: 1.2em;
+}
+.studio-error {
+  margin: 8px 0 0;
+  color: var(--s-danger);
+  font-size: 13px;
+}
+
+/* ── 两栏：清单 | 表单 ───────────────────────────────────────────────── */
+.studio-main {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .studio-main {
+    grid-template-columns: 300px 1fr;
+  }
+  .studio-list {
+    position: sticky;
+    top: 57px;
+    max-height: calc(100vh - 57px);
+    overflow-y: auto;
+    border-right: 1px solid var(--s-line);
+  }
+}
+.studio-list__head button {
+  white-space: nowrap;
+}
+.studio-list__head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid var(--s-line);
+}
+.studio-list ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.studio-list__item {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--s-line);
+  cursor: pointer;
+}
+.studio-list__item:hover {
+  background: oklch(0.95 0.03 120 / 0.05);
+}
+.studio-list__item[aria-current='true'] {
+  background: oklch(0.95 0.03 120 / 0.09);
+  box-shadow: inset 2px 0 0 var(--s-accent);
+}
+.studio-list__date {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--s-dim);
+  font-variant-numeric: tabular-nums;
+}
+.studio-list__lead {
+  font-size: 13px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.studio-list__tags {
+  font-size: 11px;
+  color: var(--s-dim);
+}
+
+.studio-pane {
+  padding: 20px;
+  min-width: 0;
+}
+.studio-form {
+  display: grid;
+  gap: 18px;
+  max-width: 1100px;
+}
+.studio-form__foot {
+  padding-top: 8px;
+  border-top: 1px solid var(--s-line);
+}
+.studio-empty {
+  font-size: 13px;
+  color: var(--s-dim);
+}
+.studio-empty--pane {
+  max-width: 46ch;
+  padding: 40px 0;
+}
+
+/* ── 字段 ─────────────────────────────────────────────────────────────── */
+.studio-field {
+  display: grid;
+  gap: 6px;
+}
+.studio-field--inline {
+  gap: 4px;
+  min-width: 150px;
+}
+.studio-field__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: baseline;
+}
+.studio-field__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--s-dim);
+}
+.studio-field__hint {
+  font-size: 11.5px;
+  color: var(--s-dim);
+}
+.studio-field__pair {
+  display: grid;
+  gap: 10px;
+}
+@media (min-width: 760px) {
+  .studio-field__pair {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.studio-field__slot {
+  display: grid;
+  gap: 3px;
+}
+.studio-field__lang {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--s-dim);
+}
+/* 中英有一侧空着：整栏描一道，一眼看得见（发布也会被拦，但那太晚了） */
+.studio-field[data-missing='true'] .studio-field__pair {
+  box-shadow: -6px 0 0 -3px var(--s-danger);
+}
+.studio-optional {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+
+/* ── 块（图 / 表） ───────────────────────────────────────────────────── */
+.studio-blocks {
+  display: grid;
+  gap: 12px;
+  padding-top: 6px;
+  border-top: 1px solid var(--s-line);
+}
+.studio-blocks__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+.studio-blocks h3,
+.studio-preview h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--s-dim);
+}
+.studio-block {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--s-line);
+  background: var(--s-panel);
+}
+.studio-block__bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+.studio-block__kind {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--s-dim);
+}
+.studio-image {
+  display: grid;
+  gap: 12px;
+}
+.studio-image__preview {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+.studio-image__preview img {
+  max-width: min(100%, 420px);
+  height: auto;
+  border: 1px solid var(--s-line);
+}
+.studio-image__meta {
+  font-size: 11px;
+  color: var(--s-dim);
+  font-variant-numeric: tabular-nums;
+}
+.studio-table {
+  display: grid;
+  gap: 10px;
+}
+.studio-table__grid {
+  display: grid;
+  gap: 6px;
+  overflow-x: auto;
+}
+.studio-table__row {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(120px, 1fr)) auto;
+  gap: 6px;
+  align-items: start;
+}
+.studio-table__row--head .studio-cell input {
+  font-weight: 700;
+}
+.studio-table__col {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.studio-table__rowdel {
+  align-self: start;
+}
+/* 删列 / 删行 是低频破坏性操作：缩到最小、靠右，不要在网格里抢视觉 */
+.studio-table__col .studio-mini--danger {
+  justify-self: end;
+  padding: 1px 6px;
+  font-size: 10px;
+}
+.studio-cell {
+  display: grid;
+  gap: 3px;
+  position: relative;
+}
+.studio-cell__mode {
+  padding: 1px 5px;
+  font-size: 10px;
+  color: var(--s-dim);
+  background: transparent;
+  border: 1px solid var(--s-line);
+  border-radius: 2px;
+  cursor: pointer;
+  justify-self: start;
+}
+.studio-cell__mode:hover {
+  color: var(--s-accent);
+  border-color: var(--s-accent);
+}
+
+/* ── 预览：站上那套规则（.pg-dark + .log-*）在这里原样生效 ───────────── */
+.studio-preview {
+  border: 1px solid var(--s-line);
+}
+.studio-preview__bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--s-line);
+}
+.studio-preview__body {
+  padding: 16px;
+}
+.studio-preview__body .log-entry__lead {
+  margin: 8px 0 0;
+}
