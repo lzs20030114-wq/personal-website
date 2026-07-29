@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CellFrame } from './gl3d';
-import { armDir, armFrame, armPoint, armPolyline } from './machine-arm';
+import { ARM_IDLE, armDir, armFrame, armPoint, armPolyline, idleContraction } from './machine-arm';
 import { ARM_PLACEMENT } from './machine-shape';
 import { STATIONS, TIES } from './tentacle3d-shape';
 
@@ -136,5 +136,99 @@ describe('落位参数的出处', () => {
       return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
     });
     d.forEach((v, i) => expect(v).toBeCloseTo(d0[i], 9));
+  });
+});
+
+describe('待机摆动（三腱交替轻收）', () => {
+  const T = [...Array(400).keys()].map((i) => i * 0.19);
+
+  it('收缩率恒在 [base, base+span] 内——肌腱只能拉不能推', () => {
+    for (const t of T) {
+      for (let k = 0; k < 3; k++) {
+        const c = idleContraction(t, k);
+        expect(c).toBeGreaterThanOrEqual(ARM_IDLE.base);
+        expect(c).toBeLessThanOrEqual(ARM_IDLE.base + ARM_IDLE.span + 1e-12);
+      }
+    }
+  });
+
+  it('峰值必须越过松弛门槛（≥0.30），否则待机摆动对触手完全无效', () => {
+    // 实测：单腱 c=0.22 的梢端侧移是 0.0mm——0.28 以下拉的全是空行程。
+    // 首版峰值 0.22 就栽在这里，看着「设了参数」其实什么也没发生。
+    expect(ARM_IDLE.base + ARM_IDLE.span).toBeGreaterThanOrEqual(0.3);
+  });
+
+  it('任意时刻至少一根停在基线（三个 120° 余弦恒和为零，不可能同时为正）', () => {
+    for (const t of T) {
+      const atBase = [0, 1, 2].filter((k) => idleContraction(t, k) === ARM_IDLE.base).length;
+      expect(atBase).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it('三根互为 120° 相位——各自的峰值时刻按 1/3 周期错开', () => {
+    const period = (2 * Math.PI) / ARM_IDLE.sway;
+    const peak = (k: number): number => {
+      let best = 0;
+      let bestV = -1;
+      for (let i = 0; i < 4000; i++) {
+        const t = (i / 4000) * period;
+        // 只看方向项，避开基线与慢速舒卷调制对峰值时刻的微扰
+        const v = Math.cos(ARM_IDLE.sway * t - (2 * Math.PI * k) / 3);
+        if (v > bestV) {
+          bestV = v;
+          best = t;
+        }
+      }
+      return best;
+    };
+    const gap = ((peak(1) - peak(0) + period) % period) / period;
+    expect(gap).toBeCloseTo(1 / 3, 2);
+  });
+
+  it('合成弯向在转圈：三腱按 120° 方位加权求和，方位角单调推进且幅值不塌', () => {
+    // 腱 k 的方位（截面内）= 120°·k；合成向量 = Σ c_k · (cos φ_k, sin φ_k)
+    // 基线三向恒和为零，对合成向量无贡献——弯向完全由差动给，这正是分成
+    // base + span 两项的意义。
+    const vec = (t: number): [number, number] => {
+      let x = 0;
+      let y = 0;
+      for (let k = 0; k < 3; k++) {
+        const c = idleContraction(t, k);
+        const phi = (2 * Math.PI * k) / 3;
+        x += c * Math.cos(phi);
+        y += c * Math.sin(phi);
+      }
+      return [x, y];
+    };
+    const period = (2 * Math.PI) / ARM_IDLE.sway;
+    let prev = Math.atan2(...(vec(0).reverse() as [number, number]));
+    let turned = 0;
+    let minMag = Infinity;
+    for (let i = 1; i <= 720; i++) {
+      const t = (i / 720) * period;
+      const [x, y] = vec(t);
+      minMag = Math.min(minMag, Math.hypot(x, y));
+      const a = Math.atan2(y, x);
+      let d = a - prev;
+      if (d > Math.PI) d -= 2 * Math.PI;
+      if (d < -Math.PI) d += 2 * Math.PI;
+      turned += d;
+      prev = a;
+    }
+    // 一个 sway 周期正好转一整圈
+    expect(Math.abs(turned)).toBeCloseTo(2 * Math.PI, 1);
+    // 幅值不塌到零（否则回转到某些方位时臂会「泄气」）
+    expect(minMag).toBeGreaterThan(0.4 * ARM_IDLE.span);
+  });
+
+  it('幅度克制：峰值收缩低于 J 形卷曲（0.5）——要的是有生气，不是表演卷曲', () => {
+    for (const t of T) {
+      for (let k = 0; k < 3; k++) expect(idleContraction(t, k)).toBeLessThan(0.5);
+    }
+  });
+
+  it('两个周期不可约：长时间不重复（sway 与 curl 之比非简单整数比）', () => {
+    const ratio = ARM_IDLE.sway / ARM_IDLE.curl;
+    for (const q of [1, 1.5, 2, 2.5, 3]) expect(Math.abs(ratio - q)).toBeGreaterThan(0.1);
   });
 });

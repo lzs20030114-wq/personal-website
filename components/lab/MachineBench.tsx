@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import { FlatRenderer, bakeIndexed, bakeRuledPoints, bakeSkinned, type CellFrame } from '../../src/lib/linkage/gl3d';
 import { CriticallyDamped } from '../../src/lib/linkage/motion';
-import { armFrame, armPolyline } from '../../src/lib/linkage/machine-arm';
+import { armFrame, armPolyline, idleContraction } from '../../src/lib/linkage/machine-arm';
 import {
   MESH_GROUPS as ARM_MESH_GROUPS,
   STATIONS as ARM_STATIONS,
@@ -246,7 +246,7 @@ const COPY = {
     partNames: { rings: '环身', drive: '传动', frame: '机架', tentacle: '触手' },
     arm: '肌腱',
     armAria: ['肌腱 1 收缩', '肌腱 2 收缩', '肌腱 3 收缩'],
-    armHome: '松开',
+    armHome: '交还待机',
     ring: '单环',
     ringAll: '全部',
     view: '视角',
@@ -272,7 +272,7 @@ const COPY = {
     partNames: { rings: 'Rings', drive: 'Drive', frame: 'Frame', tentacle: 'Arms' },
     arm: 'Tendons',
     armAria: ['Tendon 1 contraction', 'Tendon 2 contraction', 'Tendon 3 contraction'],
-    armHome: 'Release',
+    armHome: 'Idle',
     ring: 'Ring',
     ringAll: 'All',
     view: 'View',
@@ -367,6 +367,11 @@ export function MachineBench({
     // 肌腱限速：与 Lab.03 同参（临界阻尼 5）——真机肌肉不会瞬间到位
     const muscles = [0, 1, 2].map(() => new CriticallyDamped(5));
     let armReady = false;
+    // 待机摆动：运转中且用户没碰过肌腱滑块时，三腱按 120° 相位轮流轻收
+    // （用户 2026-07-29：「不要让它直挺挺的伸着」）。一碰滑块就交出控制权，
+    // 「松开」再交还回来。
+    let armManual = false;
+    let armClock = 0;
     const armJoints = ARM_MESH_GROUPS.filter((g) => g.blend).map((g) => ({
       name: g.name,
       gap: g.name === 'jr' ? -1 : Number(g.name.slice(1)),
@@ -631,6 +636,19 @@ export function MachineBench({
         acc -= SHELL_STEP_DT;
       }
       // 大触手：与整机同帧推进（自己的 3D 内核，与五环解算互不相干）
+      if (running && !armManual) {
+        armClock += dt;
+        const next: [number, number, number] = [0, 0, 0];
+        for (let k = 0; k < 3; k++) {
+          const c = idleContraction(armClock, k);
+          muscles[k].target = c;
+          next[k] = c;
+        }
+        // 滑块跟着走（看得出此刻是谁在拉）；按整数百分比比较，避免逐帧空转重渲染
+        setTendons((prev) =>
+          prev.every((v, k) => Math.round(v * 100) === Math.round(next[k] * 100)) ? prev : next,
+        );
+      }
       muscles.forEach((m, k) => {
         if (m.update(dt)) applyContraction3(arm.solver, arm.tendons[k], m.value);
       });
@@ -677,9 +695,12 @@ export function MachineBench({
         if (!running) render();
       },
       setTendon: (k, v) => {
+        armManual = true; // 用户接管：待机摆动让位
         muscles[k].target = v;
       },
       armHome: () => {
+        armManual = false; // 交还给待机摆动
+        armClock = 0;
         arm = createTentacle3();
         muscles.forEach((m) => m.jumpTo(0));
       },
@@ -860,7 +881,9 @@ export function MachineBench({
           </div>
           {/* 大触手三肌腱 —— 与 Lab.03 同一条触手、同一套解算，只是摆到了机器上。
               滑块 = 各腱收缩率；限速用临界阻尼（真机肌肉不会瞬间到位）。
-              触手关掉时这一组也没意义，但留着不禁用——再打开就还在原姿态。 */}
+              待机时（运转中且没碰滑块）三腱按 120° 相位轮流轻收，合成一个缓慢
+              回转的弯向 + 更慢的整体舒卷——不让它直挺挺伸着（用户 2026-07-29）。
+              一碰滑块就交出控制权，「交还待机」把它交回去。 */}
           <div className="grp">
             <span className="k">{L.arm}</span>
             {[0, 1, 2].map((k) => (
