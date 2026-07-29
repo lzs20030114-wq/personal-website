@@ -41,6 +41,7 @@ import {
   visibleGroups,
 } from '../../src/lib/linkage/machine';
 import { SHELL_STEP_DT, ringOuterProfile, ringPoint } from '../../src/lib/linkage/shell3d';
+import { stashBench, takeBench } from './handoff';
 import { setSnapshot } from './snapshot';
 import { useBenchLoop } from './useBenchLoop';
 
@@ -125,6 +126,26 @@ const ARM_SHADE = { dark: [0.1, 0.11, 0.11], lite: [0.52, 0.54, 0.5] } as const;
 
 const CHASE_OMEGA = 2.5;
 const VIEW_ANIM_S = 0.35;
+
+/**
+ * 跨路由交接的状态包（handoff.ts）。存的是**机构此刻的位形**，不是组件实例——
+ * 五环各自的节点坐标 + 曲柄角，触手的节点坐标 + 三腱收缩率 + 待机时钟。
+ * 位形直接摆上去，比「设个 θ 让它自己解过去」可靠：同一个 θ 有不止一个合法解
+ * （07-17 S3 坍缩就是这么来的），重解未必回到原来那支。
+ */
+interface MachineHandoff {
+  theta: number;
+  ringTheta: number[];
+  ringPts: Float32Array[];
+  armPts: Float32Array;
+  armClock: number;
+  armManual: boolean;
+  tendons: [number, number, number];
+  running: boolean;
+  dir: 1 | -1;
+  omega: number;
+}
+const HANDOFF_KEY = 'machine';
 
 type M3 = number[];
 type Quat = [number, number, number, number];
@@ -340,6 +361,10 @@ export function MachineBench({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // 交接状态**必须在这里取**，不能等下面用到时再取：createMachine() 里有五环的
+    // 脚槽止程标定（每环扫 360 步 × 四档余量），开发模式下要跑好几秒。等它跑完再取，
+    // 保质期早过了——第一版就是这么写的，实测取到时 age 已经 7.1s。
+    const handed = takeBench<MachineHandoff>(HANDOFF_KEY);
     const machine = createMachine();
 
     // 开场机位：朝向与 Lab.04 同（两台并读时视角一致），但**框的是整台机器**。
@@ -581,6 +606,91 @@ export function MachineBench({
         );
       });
     };
+    // ── 跨路由状态交接（handoff.ts 头注有由来）──────────────────────────────────
+    // 主页预览位与案例页主图位是同一台台架，换页时前者卸载后者新挂。不交接的话
+    // 新实例从 θ₀ 起步、触手笔直、待机摆动重新缓入 6.5s——转场接得再准，落地也是「倒带」。
+    const capture = (): MachineHandoff => {
+      const armN = arm.solver.nodes;
+      const armPts = new Float32Array(armN.length * 3);
+      for (let i = 0; i < armN.length; i++) {
+        armPts[i * 3] = armN[i].x;
+        armPts[i * 3 + 1] = armN[i].y;
+        armPts[i * 3 + 2] = armN[i].z;
+      }
+      return {
+        theta: machine.theta,
+        ringTheta: machine.rings.map((r) => r.theta),
+        ringPts: machine.rings.map((r) => {
+          const n = r.solver.nodes;
+          const a = new Float32Array(n.length * 2);
+          for (let i = 0; i < n.length; i++) {
+            a[i * 2] = n[i].x;
+            a[i * 2 + 1] = n[i].y;
+          }
+          return a;
+        }),
+        armPts,
+        armClock,
+        armManual,
+        tendons: [muscles[0].value, muscles[1].value, muscles[2].value],
+        running,
+        dir,
+        omega: omegaNow,
+      };
+    };
+
+    const restore = (s: MachineHandoff): boolean => {
+      // 形状不符（改了图纸 / 换了触手）一律整份作废：宁可从头开始，也不要摆出个残缺位形
+      if (
+        s.ringPts.length !== machine.rings.length ||
+        machine.rings.some((r, ri) => s.ringPts[ri].length !== r.solver.nodes.length * 2) ||
+        s.armPts.length !== arm.solver.nodes.length * 3
+      ) {
+        return false;
+      }
+      // 五环是拟静力学（只有 iterate，没有 Verlet 历史），位形直接摆上即可，
+      // 且**必须**直接摆——只设 θ 让它自己从 θ₀ 的位形跳过去，会撞上 07-17 那个
+      // 折叠分支问题（同一个 θ 有不止一个合法解）。
+      machine.theta = s.theta;
+      machine.rings.forEach((r, ri) => {
+        r.theta = s.ringTheta[ri];
+        const a = s.ringPts[ri];
+        for (let i = 0; i < r.solver.nodes.length; i++) r.solver.setNode(i, a[i * 2], a[i * 2 + 1]);
+      });
+
+      // 触手是动力学件：先把肌腱原长恢复到当时的收缩率，再摆位形。
+      for (let k = 0; k < 3; k++) {
+        muscles[k].jumpTo(s.tendons[k]);
+        applyContraction3(arm.solver, arm.tendons[k], s.tendons[k]);
+      }
+      const putArm = (): void => {
+        for (let i = 0; i < arm.solver.nodes.length; i++) {
+          arm.solver.setNode(i, s.armPts[i * 3], s.armPts[i * 3 + 1], s.armPts[i * 3 + 2]);
+        }
+      };
+      // **两次 setNode 夹一个空步**：`setNode` 只改位置，不动 Verlet 的上一步位置 px。
+      // 只摆位置的话，第一个子步会算出 v =（目标位 − 笔直位）× damping 的巨大速度，
+      // 把臂甩飞（damping 0.992，甩出去要很久才停）。而 px 是在每个子步**开头**从 x
+      // 拷过来的，所以「摆好 → 走恰好一个子步 → 再摆一遍」之后 px 与 x 都停在目标位，
+      // 速度干净为零。dt 取 1/120 = 恰好一个子步（fixed-step 的浮点护栏保证不多不少）。
+      putArm();
+      arm.solver.step(1 / 120, TENTACLE3D.sweeps);
+      putArm();
+
+      armClock = s.armClock;
+      armManual = s.armManual;
+      running = s.running;
+      dir = s.dir;
+      omegaNow = s.omega;
+      setRun(s.running);
+      setOmega(s.omega);
+      setTendons([s.tendons[0], s.tendons[1], s.tendons[2]]);
+      setPhase(Number(phaseDeg(machine.theta).toFixed(1)));
+      return true;
+    };
+
+    if (handed) restore(handed);
+
     let targetTheta = machine.theta;
     let viewAnim: { q0: Quat; q1: Quat; t: number } | null = null;
     // φ 读数 = 相对伸展位的行程角，恒 0–180（与盘点 §6 同口径：0 伸展 / 180 折叠）。
@@ -734,9 +844,13 @@ export function MachineBench({
     // 鼠标停在这台上也能正常滚页（/lab 五台台架叠起来时这点很实在）。
     // 与 Lab.01–04 的差异是有意的，不是漏了：那几台仍可拖拽。
 
-    // 转场克隆用的画面快照（canvas 的像素不随 cloneNode 复制，见 snapshot.ts）
+    // 转场克隆用的画面快照（canvas 的像素不随 cloneNode 复制，见 snapshot.ts）。
+    // **状态交接也在这里留**——它跑在点击那一刻，与快照像素是同一个瞬间；
+    // 若改在卸载时留，中间还隔着底板铺开的 380ms，落地的活件会比飞过来的快照
+    // 超前那么一截，交叉淡出就成了「跳一下」。这里留，则第一帧与快照严丝合缝。
     setSnapshot(canvas, () => {
       render();
+      stashBench(HANDOFF_KEY, capture());
       return canvas.toDataURL('image/png');
     });
 
@@ -786,7 +900,7 @@ export function MachineBench({
         <div className="lab-ctl">
           {/* 驱动 —— 运转 / 转速 / 透视。转速滑块是这台专有的：
               转速本就是待拍板的手感常量，与其我替你定一个数，不如给你滑块自己找。 */}
-          <div className="grp">
+          <div className="grp grp--half">
             <label>
               <input
                 type="checkbox"
@@ -810,7 +924,7 @@ export function MachineBench({
               {L.persp}
             </label>
           </div>
-          <div className="grp">
+          <div className="grp grp--half">
             <span className="k">
               {L.speed}
               {sideControls ? <b className="v">{omega.toFixed(2)}</b> : null}
@@ -830,7 +944,7 @@ export function MachineBench({
               }}
             />
           </div>
-          <div className="grp">
+          <div className="grp grp--half">
             <span className="k">
               {L.phase}
               {sideControls ? <b className="v">{phase.toFixed(1)}°</b> : null}
@@ -850,29 +964,10 @@ export function MachineBench({
               }}
             />
           </div>
-          {/* 部件显隐 —— 整机独有：这台是一堆零件的装配，「看哪些」本身就是操作。
-              关掉机架能看清传动链怎么走，关掉环身能单看一轴五曲柄。 */}
-          <div className="grp">
-            <span className="k">{L.parts}</span>
-            {PARTS.map((p) => (
-              <label key={p}>
-                <input
-                  type="checkbox"
-                  checked={show[p]}
-                  onChange={(e) => {
-                    const next = { ...show, [p]: e.target.checked };
-                    setShow(next);
-                    apiRef.current?.setShow(next);
-                  }}
-                />
-                {L.partNames[p]}
-              </label>
-            ))}
-          </div>
-          {/* 蒙皮遮罩 —— 与 Lab.04 同一套直纹带，但默认更透（0.22）：
-              这台的看点是里面的传动链，盖太实就白做了。滑到 1 = 实体壳。
+          {/* 蒙皮遮罩 —— 与 Lab.04 同一套直纹带，默认 0.67（用户 2026-07-29 拍板）：
+              这台同时是项目 01 主图，主图先要读出形态。滑到 0 = 看穿到传动链，滑到 1 = 实体壳。
               环身关掉时蒙皮一并不画（皮附在环上，环没了皮也就无所附） */}
-          <div className="grp">
+          <div className="grp grp--half">
             <span className="k">
               {L.skin}
               {sideControls ? <b className="v">{Math.round(skin * 100)}%</b> : null}
@@ -892,12 +987,31 @@ export function MachineBench({
               }}
             />
           </div>
+          {/* 部件显隐 —— 整机独有：这台是一堆零件的装配，「看哪些」本身就是操作。
+              关掉机架能看清传动链怎么走，关掉环身能单看一轴五曲柄。 */}
+          <div className="grp grp--parts">
+            <span className="k">{L.parts}</span>
+            {PARTS.map((p) => (
+              <label key={p}>
+                <input
+                  type="checkbox"
+                  checked={show[p]}
+                  onChange={(e) => {
+                    const next = { ...show, [p]: e.target.checked };
+                    setShow(next);
+                    apiRef.current?.setShow(next);
+                  }}
+                />
+                {L.partNames[p]}
+              </label>
+            ))}
+          </div>
           {/* 大触手三肌腱 —— 与 Lab.03 同一条触手、同一套解算，只是摆到了机器上。
               滑块 = 各腱收缩率；限速用临界阻尼（真机肌肉不会瞬间到位）。
               待机时（运转中且没碰滑块）三腱按 120° 相位轮流轻收，合成一个缓慢
               回转的弯向 + 更慢的整体舒卷——不让它直挺挺伸着（用户 2026-07-29）。
               一碰滑块就交出控制权，「交还待机」把它交回去。 */}
-          <div className="grp">
+          <div className="grp grp--tendons">
             <span className="k">{L.arm}</span>
             {[0, 1, 2].map((k) => (
               <input
@@ -931,7 +1045,7 @@ export function MachineBench({
           </div>
           {/* 单环隔离 —— 五个环同相但行程各异，单独看一个才比得出半径差。
               只筛环件：机架/轴/触手仍按各自开关，否则「只看 S3」会连驱动它的轴一起切掉。 */}
-          <div className="grp">
+          <div className="grp grp--seg">
             <span className="k">{L.ring}</span>
             <span className="seg">
               {RING_KEYS.map((k) => (
@@ -949,7 +1063,7 @@ export function MachineBench({
               ))}
             </span>
           </div>
-          <div className="grp">
+          <div className="grp grp--seg">
             <span className="k">{L.view}</span>
             <span className="seg">
               {VIEWS.map((v) => (

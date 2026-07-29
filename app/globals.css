@@ -1879,7 +1879,7 @@ button.log-heat__cell {
 /* 侧栏控制条的列宽——.lab-wrap--side 与 .case-hero--live 的宽度预算共用一个数，
    定在 :root 上：.case-hero--live 是 .lab-wrap 的**父**，从子元素继承不到。 */
 :root {
-  --lab-ctl-w: 188px;
+  --lab-ctl-w: 272px;
 }
 @media (max-height: 960px) and (min-width: 1024px) {
   .case-head {
@@ -1945,7 +1945,7 @@ button.log-heat__cell {
   );
 }
 
-/* 主图位放活台架时（项目 01 临时用 Lab.04 五环）：高度交给台架自身比例，
+/* 主图位放活台架时（项目 01 临时用 Lab.05 整机）：高度交给台架自身比例，
    固定的 3/2 会把画布上下裁掉、连带切掉 HUD 角标。渐变底保留——它与主页预览块
    （.om-media）同款，转场落地时两边底色对得上。 */
 .case-hero--live {
@@ -2177,34 +2177,92 @@ button.log-heat__cell {
   flex: 1 1 auto;
   min-width: 0;
 }
+/* 两列网格（用户 2026-07-29：「详情页的操作面板被截断了，不行，重新排版」）。
+   Lab.05 有八组控件，竖排一列量到 939px，而案例页主图的高度被首屏预算封在 ~480px，
+   多出来的只能靠 overflow 滚——等于看不见。改两列 + 逐组压扁后约 430px，装得下。
+   列宽随之 188 → 272px。这一档是量出来的折中：案例页正文列把整件宽度封在 868px，
+   控制列每宽 1px 画面就窄 1px（hero 的 max-width 算式里两者相加），320px 时画面掉到
+   546、272px 时 594（原 640）。再窄则三格一行的分段按钮开始挤字。 */
 .lab-wrap--side .lab-ctl {
   flex: 0 0 var(--lab-ctl-w);
   width: var(--lab-ctl-w);
-  flex-direction: column;
-  flex-wrap: nowrap;
-  align-items: flex-start;
-  justify-content: flex-start;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: space-between;
+  column-gap: 14px;
   row-gap: 0;
-  padding: 14px 14px 16px;
+  padding: 12px 13px 13px;
   border-top: none;
   border-left: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
-  /* 兜底：整件高度被封死时（.case-hero--live 的 max-height），多出来的控件在这一列里滚 */
+  /* 兜底：万一某个视口下仍装不下（矮屏 + 更多控件），多出来的在这一列里滚 */
   overflow-y: auto;
 }
 .lab-wrap--side .lab-ctl .grp {
   flex-direction: column;
   align-items: flex-start;
-  gap: 9px;
+  gap: 8px;
   width: 100%;
-  padding: 13px 0 0;
-  margin-top: 13px;
+  padding: 9px 0 0;
+  margin-top: 9px;
   border-left: none;
   border-top: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
 }
-.lab-wrap--side .lab-ctl .grp:first-child {
+/* 两列网格 + **行距按可用高度自动分配**（用户 2026-07-29：「面板被截断了，重新排版」）。
+   这一列的高度不是常数：它等于 min(画面按比例的高, 100svh − 首屏预算)，实测
+   1366×768 只有 356px、1440×1000 有 449px。所以「排得下」不能按一个视口调——
+   八组控件竖排一列量到 939px，两列 + 组内横铺后约 350px，最矮的视口也装得下；
+   高视口多出来的空间交给 align-content: space-between 摊到行距里，不留一块空白在底下。
+   前四组（驱动 / 转速 / 相位 / 蒙皮）各占半格，后四组通栏——因为它们组内要横铺
+   （部件四个复选框、三腱三根滑杆、单环六个按钮、视角五个按钮），半格挤不开。
+   DOM 顺序也据此调过（蒙皮提到相位之后），让四个半格连成两行。 */
+.lab-wrap--side .lab-ctl .grp {
+  grid-column: 1 / -1;
+}
+.lab-wrap--side .lab-ctl .grp--half {
+  grid-column: auto;
+}
+.lab-wrap--side .lab-ctl .grp:first-child,
+.lab-wrap--side .lab-ctl .grp--half:nth-child(2) {
   padding-top: 0;
   margin-top: 0;
   border-top: none;
+}
+/* 组内横铺：竖着排一项一行太占高，通栏之后横向的空间本来就是有的。
+   通栏这几组的**组名也收到行首**（不再独占一行）——三个标签行就是 54px，
+   正是最矮视口差的那一截。 */
+.lab-wrap--side .lab-ctl .grp--parts {
+  display: grid;
+  grid-template-columns: auto repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  align-items: center;
+}
+/* 四格一行时每格只剩 ~48px：方框 11 + 间隙 5 + 词，字得压一档才排得开 */
+.lab-wrap--side .lab-ctl .grp--parts label {
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  gap: 5px;
+}
+.lab-wrap--side .lab-ctl .grp--seg {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+/* 行首组名：不再撑满整行（那是 .k 的通用行为，为了把读数顶到右端） */
+.lab-wrap--side .lab-ctl .grp--parts > .k,
+.lab-wrap--side .lab-ctl .grp--seg > .k {
+  display: block;
+  width: auto;
+}
+/* 三腱：标题独占一行，三根滑杆并排，「交还待机」跟在末尾 */
+.lab-wrap--side .lab-ctl .grp--tendons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 7px;
+  align-items: center;
+}
+.lab-wrap--side .lab-ctl .grp--tendons .k {
+  grid-column: 1 / -1;
 }
 /* 组名（DISPLAY / PHASE / VIEW）独占一行，右端可挂读数（相位角） */
 .lab-wrap--side .lab-ctl .k {
@@ -2225,24 +2283,36 @@ button.log-heat__cell {
   width: 100%;
 }
 /* 视角：5 个预设 + 归位 = 2×3 按钮网格（分段控件横排才成立；竖排里挤成两行会留豁口） */
+/* 分段按钮通栏一行排完（单环 6 个、视角 5 个）——原来竖排一列时要 3 行 */
 .lab-wrap--side .lab-ctl .seg {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5px;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 4px;
   width: 100%;
 }
 .lab-wrap--side .lab-ctl .seg button {
   border-right-width: 1px;
-  padding: 5px 4px;
+  padding: 5px 0;
   text-align: center;
+  /* 三格一行后每格只剩 ~35px：英文视角名（FRONT / RIGHT / AXON）按原字号加字距会顶出格。
+     压一档字号、收紧字距——这里的字本来就只是按钮标签，不承担版式层级。 */
+  font-size: 9px;
+  letter-spacing: 0.02em;
 }
 /* 归位不是第六个视角：留描边、不参与选中态填色 */
 .lab-wrap--side .lab-ctl .seg button.alt {
   color: color-mix(in srgb, var(--ink) 62%, transparent);
   border-color: color-mix(in srgb, var(--ink) 22%, transparent);
 }
-/* 操作提示沉到列底（画面里那条同文小字在侧栏模式下已关掉，不重复） */
+/* 侧栏模式不出操作提示：控件已全摆在眼前，这行字只占高（约 45px），
+   而这一列的高度被案例页首屏预算封死，省下来的正好是它超出去的那点。 */
+.lab-wrap--side .lab-ctl__hint {
+  display: none;
+}
 .lab-ctl__hint {
+  grid-column: 1 / -1;
   margin: 18px 0 0;
   padding-top: 12px;
   border-top: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
@@ -2345,6 +2415,9 @@ button.log-heat__cell {
   -webkit-appearance: none;
   width: 11px;
   height: 11px;
+  /* 绝不参与 flex 压缩：格子窄时字撑不动，压的就是这个方框——挤成一条竖线，
+     四个「部件」复选框全变成 | 号（对稿返工后实测到的） */
+  flex: none;
   border: 1px solid color-mix(in srgb, var(--ink) 45%, transparent);
   border-radius: 0;
   background: transparent;
