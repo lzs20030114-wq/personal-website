@@ -250,15 +250,14 @@ const COPY = {
     ring: '单环',
     ringAll: '全部',
     view: '视角',
-    reset: '归位',
     views: { axon: '轴测', front: '正', left: '左', right: '右', top: '顶' },
     title: '整机传动',
     sub: '一轴五曲柄 · 同相 · 180° 往复张合',
-    hint: '拖拽旋转 · 右键平移 · 滚轮缩放',
+    hint: '视角由下方按钮切换',
     drive: { spin: '自转', slider: '滑杆' },
     // 方向指示用盘点 §6 的既有口径：φ=0 伸展死点 / φ=180 折叠死点
     going: { fold: '折叠 ↓', open: '伸展 ↑' },
-    aria: '轮回机器整机台架；拖拽旋转，曲柄角驱动',
+    aria: '轮回机器整机台架；曲柄角与肌腱驱动，视角按钮切换',
     loading: '载入实体…',
   },
   en: {
@@ -277,14 +276,13 @@ const COPY = {
     ring: 'Ring',
     ringAll: 'All',
     view: 'View',
-    reset: 'Reset',
     views: { axon: 'Axon', front: 'Front', left: 'Left', right: 'Right', top: 'Top' },
     title: 'Full transmission',
     sub: 'One shaft, five cranks · in phase · 180° reciprocating',
-    hint: 'Drag to orbit · right-drag to pan · scroll to zoom',
+    hint: 'View set by the buttons below',
     drive: { spin: 'spin', slider: 'slider' },
     going: { fold: 'folding ↓', open: 'extending ↑' },
-    aria: 'Reincarnation machine full-assembly bench; drag to orbit, crank-angle driven',
+    aria: 'Reincarnation machine full-assembly bench; crank and tendon driven, view set by buttons',
     loading: 'loading solids…',
   },
 } as const;
@@ -319,7 +317,6 @@ export function MachineBench({
     setTendon: (k: number, v: number) => void;
     armHome: () => void;
     viewTo: (k: ViewKey) => void;
-    viewHome: () => void;
   } | null>(null);
   const [run, setRun] = useState(spin);
   const [persp, setPersp] = useState(false);
@@ -357,6 +354,7 @@ export function MachineBench({
       roll0: -1.053336,
       pitch0: 0.735843,
       yaw0: 0.867459,
+      // 缩放上下限留着但用不上——没有滚轮接线，zoom 恒为 1（视角只由按钮切换）
       zoomMin: 0.3,
       zoomMax: 3,
       autoYaw: 0,
@@ -695,34 +693,12 @@ export function MachineBench({
         }
         viewAnim = { q0: m2q(cam.matrix), q1: m2q(target), t: 0 };
       },
-      viewHome: () => {
-        viewAnim = null;
-        cam.reset();
-      },
     };
 
-    const onCtx = (ev: Event): void => ev.preventDefault();
-    const onDown = (ev: PointerEvent): void => {
-      viewAnim = null;
-      cam.pointerDown(ev.pointerId, ev.clientX, ev.clientY, ev.button === 2);
-      try {
-        canvas.setPointerCapture(ev.pointerId);
-      } catch {
-        /* 合成事件无活跃 pointerId */
-      }
-    };
-    const onMove = (ev: PointerEvent): void => cam.pointerMove(ev.pointerId, ev.clientX, ev.clientY);
-    const onUp = (ev: PointerEvent): void => cam.pointerUp(ev.pointerId);
-    const onWheel = (ev: WheelEvent): void => {
-      ev.preventDefault();
-      cam.wheel(ev.deltaY);
-    };
-    canvas.addEventListener('contextmenu', onCtx);
-    canvas.addEventListener('pointerdown', onDown);
-    canvas.addEventListener('pointermove', onMove);
-    canvas.addEventListener('pointerup', onUp);
-    canvas.addEventListener('pointercancel', onUp);
-    canvas.addEventListener('wheel', onWheel, { passive: false });
+    // 机位**只由下面的固定视角按钮控制**（用户拍板 2026-07-29：取消拖拽视角移动）。
+    // 故这里不挂任何指针/滚轮监听——连带的好处是滚轮不再被画布吞掉，
+    // 鼠标停在这台上也能正常滚页（/lab 五台台架叠起来时这点很实在）。
+    // 与 Lab.01–04 的差异是有意的，不是漏了：那几台仍可拖拽。
 
     // 转场克隆用的画面快照（canvas 的像素不随 cloneNode 复制，见 snapshot.ts）
     setSnapshot(canvas, () => {
@@ -735,12 +711,6 @@ export function MachineBench({
       disposed = true;
       apiRef.current = null;
       setSnapshot(canvas, null);
-      canvas.removeEventListener('contextmenu', onCtx);
-      canvas.removeEventListener('pointerdown', onDown);
-      canvas.removeEventListener('pointermove', onMove);
-      canvas.removeEventListener('pointerup', onUp);
-      canvas.removeEventListener('pointercancel', onUp);
-      canvas.removeEventListener('wheel', onWheel);
     };
   }, [spin]);
 
@@ -956,17 +926,7 @@ export function MachineBench({
                   {L.views[v.key]}
                 </button>
               ))}
-              {sideControls ? (
-                <button type="button" className="alt" onClick={() => apiRef.current?.viewHome()}>
-                  {L.reset}
-                </button>
-              ) : null}
             </span>
-            {sideControls ? null : (
-              <button type="button" onClick={() => apiRef.current?.viewHome()}>
-                {L.reset}
-              </button>
-            )}
           </div>
           {sideControls ? <p className="lab-ctl__hint">{L.hint}</p> : null}
         </div>
