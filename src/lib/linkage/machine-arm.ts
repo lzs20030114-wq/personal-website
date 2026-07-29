@@ -81,7 +81,33 @@ export const ARM_IDLE = {
   curl: 0.23,
   /** 舒卷下限：差动幅度在 [floor, 1] × span 之间起伏（越低，卷与舒的对比越大） */
   floor: 0.45,
+  /**
+   * 差动的起步缓入时长（秒）。用户 2026-07-29：「第一下的收缩有点猛」。
+   *
+   * **缓入只加在差动上，不加在基线上**——这是关键，首版加在整体上没解决问题：
+   * 松弛门槛（≈0.28）以下臂完全不动，若整体从 0 缓入，前几秒是纯粹的空等，
+   * 等驱动腱越过门槛时缓入已走了大半，于是一越过就直奔大变形，照样是「一下子」。
+   * 基线本身几乎不产生弯曲（三腱共缩 0.34 实测侧移仅 3.2mm，臂长 357/358mm，
+   * 不压屈），所以它可以早早给足；把弯曲量从零拉起来的是差动，缓的就该是它。
+   */
+  easeIn: 5,
+  /** 基线自身的缓入（秒）：只为避开 t=0 的阶跃，短即可 */
+  easeBase: 1.5,
 } as const;
+
+const smoothstep = (x: number): number => {
+  const u = Math.min(1, Math.max(0, x));
+  return u * u * (3 - 2 * u);
+};
+
+/** 基线缓入系数 ∈ [0,1] */
+export function idleBaseEase(t: number): number {
+  return smoothstep(t / ARM_IDLE.easeBase);
+}
+/** 差动缓入系数 ∈ [0,1]，从基线就位后才开始 */
+export function idleEase(t: number): number {
+  return smoothstep((t - ARM_IDLE.easeBase) / ARM_IDLE.easeIn);
+}
 
 /**
  * 待机时第 k 根肌腱在时刻 t（秒）的目标收缩率 ∈ [base, base + span]。
@@ -89,6 +115,7 @@ export const ARM_IDLE = {
  * 实测效果（跑完整波形、量梢端相对基座的侧向偏移）：**43–150mm**，臂长 358mm 的
  * 12%–42%——始终带弧、从不回到笔直，卷与舒之间有三倍多的落差。
  * 幅度是用户 2026-07-29 第二轮上调的（首版峰值 0.42 → 侧移 18–78mm，「不明显」）。
+ * 开场另有缓入（见常量注释）：基线 1.5s 到位，差动再用 easeIn 秒从零拉起。
  *
  * 残差说明：收缩越大残差越大，且**是稳态量不是收敛滞后**——把波形放慢 2.6 倍
  * （15s→39s 一圈）残差纹丝不动（6.44→6.63mm）。这是该肌腱模型的固有量。
@@ -99,7 +126,7 @@ export const ARM_IDLE = {
  */
 export function idleContraction(t: number, k: number): number {
   const dir = Math.cos(ARM_IDLE.sway * t - (2 * Math.PI * k) / 3);
-  if (dir <= 0) return ARM_IDLE.base;
   const curl = ARM_IDLE.floor + (1 - ARM_IDLE.floor) * (0.5 + 0.5 * Math.sin(ARM_IDLE.curl * t));
-  return ARM_IDLE.base + ARM_IDLE.span * curl * dir;
+  const diff = dir > 0 ? ARM_IDLE.span * curl * dir * idleEase(t) : 0;
+  return ARM_IDLE.base * idleBaseEase(t) + diff;
 }

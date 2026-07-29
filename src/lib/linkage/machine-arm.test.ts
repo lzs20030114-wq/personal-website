@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { CellFrame } from './gl3d';
-import { ARM_IDLE, armDir, armFrame, armPoint, armPolyline, idleContraction } from './machine-arm';
+import {
+  ARM_IDLE,
+  armDir,
+  armFrame,
+  armPoint,
+  armPolyline,
+  idleBaseEase,
+  idleContraction,
+  idleEase,
+} from './machine-arm';
 import { ARM_PLACEMENT } from './machine-shape';
 import { STATIONS, TIES } from './tentacle3d-shape';
 
@@ -140,7 +149,8 @@ describe('落位参数的出处', () => {
 });
 
 describe('待机摆动（三腱交替轻收）', () => {
-  const T = [...Array(400).keys()].map((i) => i * 0.19);
+  // 稳态取样：跳过开场缓入窗口（基线 easeBase + 差动 easeIn）
+  const T = [...Array(400).keys()].map((i) => ARM_IDLE.easeBase + ARM_IDLE.easeIn + i * 0.19);
 
   it('收缩率恒在 [base, base+span] 内——肌腱只能拉不能推', () => {
     for (const t of T) {
@@ -163,6 +173,42 @@ describe('待机摆动（三腱交替轻收）', () => {
       const atBase = [0, 1, 2].filter((k) => idleContraction(t, k) === ARM_IDLE.base).length;
       expect(atBase).toBeGreaterThanOrEqual(1);
     }
+  });
+
+  it('开场缓入分两段：基线先就位，差动才从零拉起', () => {
+    // 用户「第一下的收缩有点猛」。缓入**只能加在差动上**——
+    // 首版加在整体上没用：松弛门槛以下臂完全不动，整体从 0 缓入等于前几秒空等，
+    // 等驱动腱越过门槛时缓入已走了大半，一越过照样是「一下子」。
+    expect(idleBaseEase(0)).toBe(0);
+    expect(idleBaseEase(ARM_IDLE.easeBase)).toBe(1);
+    // 差动在基线就位之前恒为零
+    expect(idleEase(0)).toBe(0);
+    expect(idleEase(ARM_IDLE.easeBase)).toBe(0);
+    expect(idleEase(ARM_IDLE.easeBase + ARM_IDLE.easeIn)).toBe(1);
+    // 两者都单调不减、两端斜率为零（起步不猛、结束不折角）
+    for (const f of [idleBaseEase, idleEase]) {
+      let prev = -1;
+      const span = ARM_IDLE.easeBase + ARM_IDLE.easeIn;
+      for (let i = 0; i <= 300; i++) {
+        const v = f((i / 300) * span * 1.2);
+        expect(v).toBeGreaterThanOrEqual(prev - 1e-12);
+        prev = v;
+      }
+      const d = (t: number): number => (f(t + 1e-4) - f(t - 1e-4)) / 2e-4;
+      expect(Math.abs(d(1e-3))).toBeLessThan(0.05);
+      expect(Math.abs(d(span - 1e-3))).toBeLessThan(0.05);
+    }
+    // 开场第一秒内所有腱都还在松弛门槛以下——真正意义上的「先不动」
+    for (let k = 0; k < 3; k++) expect(idleContraction(0.8, k)).toBeLessThan(0.28);
+  });
+
+  it('基线只吃松弛、不产生弯曲——所以它可以早早给足，不必陪着缓入', () => {
+    // 实测：三腱共缩 0.34（= base）末态侧移仅 3.2mm，臂长 357/358mm，不压屈。
+    // 弯曲量全由差动给，故 base 不参与 easeIn 是有依据的，不是图省事。
+    const t = ARM_IDLE.easeBase + 0.01; // 基线刚满、差动刚起
+    const cs = [0, 1, 2].map((k) => idleContraction(t, k));
+    for (const c of cs) expect(c).toBeCloseTo(ARM_IDLE.base, 2);
+    expect(Math.max(...cs) - Math.min(...cs)).toBeLessThan(0.01);
   });
 
   it('三根互为 120° 相位——各自的峰值时刻按 1/3 周期错开', () => {
@@ -201,11 +247,12 @@ describe('待机摆动（三腱交替轻收）', () => {
       return [x, y];
     };
     const period = (2 * Math.PI) / ARM_IDLE.sway;
-    let prev = Math.atan2(...(vec(0).reverse() as [number, number]));
+    const t0 = ARM_IDLE.easeBase + ARM_IDLE.easeIn; // 同样跳过缓入窗口
+    let prev = Math.atan2(...(vec(t0).reverse() as [number, number]));
     let turned = 0;
     let minMag = Infinity;
     for (let i = 1; i <= 720; i++) {
-      const t = (i / 720) * period;
+      const t = t0 + (i / 720) * period;
       const [x, y] = vec(t);
       minMag = Math.min(minMag, Math.hypot(x, y));
       const a = Math.atan2(y, x);
@@ -218,9 +265,11 @@ describe('待机摆动（三腱交替轻收）', () => {
     // 一个 sway 周期正好转一整圈
     expect(Math.abs(turned)).toBeCloseTo(2 * Math.PI, 1);
     // 幅值不塌到零（否则回转到某些方位时臂会「泄气」）。
-    // 存在两重固有起伏：① 三个截零余弦的合成本身有 2:1 的六角纹波；
-    // ② 慢速舒卷把幅度再压到 floor 倍。故下界按 span 的 0.3 取，不贴着实测值写。
-    expect(minMag).toBeGreaterThan(0.3 * ARM_IDLE.span);
+    // 下界是**推得出来的**，不用拍：合成向量有两重固有起伏——
+    // ① 三个截零余弦相加，方位落在两腱之间时幅值降到峰值的 0.5（六角纹波）；
+    // ② 慢速舒卷再把幅度压到 floor 倍。
+    // 故理论下界 = 0.5 × floor × span，留一点余量。
+    expect(minMag).toBeGreaterThan(0.4 * ARM_IDLE.floor * ARM_IDLE.span);
   });
 
   it('峰值仍低于满拉：待机是舒卷，不是把臂拧成弹簧', () => {
