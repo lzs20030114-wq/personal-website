@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
-import { FlatRenderer, bakeIndexed } from '../../src/lib/linkage/gl3d';
+import { FlatRenderer, bakeIndexed, bakeRuledPoints } from '../../src/lib/linkage/gl3d';
+import { bandTriIndex, bandVerts, bandsFarToNear, resample } from '../../src/lib/linkage/skin';
+import type { Vec3 } from '../../src/lib/linkage/solver3d';
 import {
   MACHINE_GROUPS,
   MACHINE_MESH_URL,
@@ -22,7 +24,7 @@ import {
   thetaAtStroke,
   visibleGroups,
 } from '../../src/lib/linkage/machine';
-import { SHELL_STEP_DT } from '../../src/lib/linkage/shell3d';
+import { SHELL_STEP_DT, ringOuterProfile, ringPoint } from '../../src/lib/linkage/shell3d';
 import { setSnapshot } from './snapshot';
 import { useBenchLoop } from './useBenchLoop';
 
@@ -70,6 +72,25 @@ const shade = (c: [number, number, number]): { dark: [number, number, number]; l
 const FRAME_SHADE = { dark: [0.1, 0.11, 0.12], lite: [0.5, 0.53, 0.56] } as const;
 /** 触手：静件且不参与运动，再压一档，避免抢主体 */
 const TENT_SHADE = { dark: [0.09, 0.09, 0.1], lite: [0.38, 0.38, 0.42] } as const;
+
+// 蒙皮：与 Lab.04 同参（RingsBench 头注有完整由来）。整机上默认更透一点——
+// 这台的看点是里面的传动链，蒙皮盖太实就白做了。
+const SKIN_SAMPLES = 41;
+const SKIN_U = 58;
+const SKIN_V = 11;
+const SKIN_DOT_R = 1.75;
+const SKIN_DEFAULT = 0.22;
+const SKIN_OPAQUE_AT = 0.985;
+const dotAlpha = (a: number): number => Math.min(0.72, a * 1.8);
+const SKIN_IDX = bandTriIndex(SKIN_SAMPLES);
+/** 带 ri 的遮罩面明暗端色：取两环色中值压暗（同 Lab.04 的 bandShade） */
+const bandShade = (ri: number): { dark: [number, number, number]; lite: [number, number, number] } => {
+  const m = COLS[ri].map((c, k) => (c + COLS[ri + 1][k]) / 2) as [number, number, number];
+  return {
+    dark: [m[0] * 0.13, m[1] * 0.13, m[2] * 0.13],
+    lite: [m[0] * 0.62, m[1] * 0.62, m[2] * 0.62],
+  };
+};
 
 const CHASE_OMEGA = 2.5;
 const VIEW_ANIM_S = 0.35;
@@ -191,6 +212,8 @@ const COPY = {
     speedAria: '转速（非真机节律，减速比无出处）',
     phase: '相位',
     parts: '部件',
+    skin: '蒙皮',
+    skinAria: '蒙皮遮罩透明度：0 全透明，1 不透明',
     partNames: { rings: '环身', drive: '传动', frame: '机架', tentacle: '触手' },
     ring: '单环',
     ringAll: '全部',
@@ -213,6 +236,8 @@ const COPY = {
     speedAria: 'Speed (not the hardware cadence — gear ratio unknown)',
     phase: 'Phase',
     parts: 'Parts',
+    skin: 'Skin',
+    skinAria: 'Skin opacity: 0 clear, 1 solid',
     partNames: { rings: 'Rings', drive: 'Drive', frame: 'Frame', tentacle: 'Arms' },
     ring: 'Ring',
     ringAll: 'All',
@@ -253,6 +278,7 @@ export function MachineBench({
     setRun: (on: boolean) => void;
     setOmega: (w: number) => void;
     setPersp: (on: boolean) => void;
+    setSkin: (a: number) => void;
     setShow: (s: Record<MachinePartKind, boolean>) => void;
     setIsolate: (ri: number | null) => void;
     viewTo: (k: ViewKey) => void;
@@ -260,6 +286,7 @@ export function MachineBench({
   } | null>(null);
   const [run, setRun] = useState(spin);
   const [persp, setPersp] = useState(false);
+  const [skin, setSkin] = useState(SKIN_DEFAULT);
   const [omega, setOmega] = useState(MACHINE_OMEGA);
   const [view, setView] = useState<ViewKey>('axon');
   const [phase, setPhase] = useState(0);
@@ -356,6 +383,43 @@ export function MachineBench({
       tentacle: true,
     };
     let isolateNow: number | null = null;
+    let skinA = SKIN_DEFAULT;
+
+    // 蒙皮：相邻环外侧支点之间的直纹带（锚点在装配位选定后固定跟销，同 Lab.04）
+    const profiles = machine.rings.map((r) => ringOuterProfile(r.data));
+    const profileWorld = (ri: number): Vec3[] =>
+      profiles[ri].map((j) => {
+        const n = machine.rings[ri].solver.nodes[j];
+        return ringPoint(machine.rings[ri].data, n.x, n.y);
+      });
+    const skinMesh = (ri: number): Float32Array =>
+      bakeIndexed(
+        bandVerts(
+          resample(profileWorld(ri), SKIN_SAMPLES),
+          resample(profileWorld(ri + 1), SKIN_SAMPLES),
+        ),
+        SKIN_IDX,
+      );
+    const skinPoints = (ri: number): Float32Array =>
+      bakeRuledPoints(
+        resample(profileWorld(ri), SKIN_U),
+        resample(profileWorld(ri + 1), SKIN_U),
+        SKIN_V,
+      );
+    /** 带序从远到近（半透明面之间没有 z 排序）。深度取两环轮心中点。 */
+    const bandOrder = (): number[] => {
+      const mtx = cam.matrix;
+      const pv = cam.pivotPoint;
+      return bandsFarToNear(machine.rings.length - 1, (ri) => {
+        const a = ringPoint(machine.rings[ri].data, 0, 0);
+        const b = ringPoint(machine.rings[ri + 1].data, 0, 0);
+        return (
+          mtx[6] * ((a.x + b.x) / 2 - pv.x) +
+          mtx[7] * ((a.y + b.y) / 2 - pv.y) +
+          mtx[8] * ((a.z + b.z) / 2 - pv.z)
+        );
+      });
+    };
     let targetTheta = machine.theta;
     let viewAnim: { q0: Quat; q1: Quat; t: number } | null = null;
     // φ 读数 = 相对伸展位的行程角，恒 0–180（与盘点 §6 同口径：0 伸展 / 180 折叠）。
@@ -383,9 +447,27 @@ export function MachineBench({
       if (!ready) return;
       // 全实体、全部写深度——遮挡交给 z-buffer（这台没有半透明层，
       // 故不需要 Lab.04 那套「从远到近自己排序」）
+      // 不透明档：遮罩面走实体路径——先画、写深度，遮挡由 z-buffer 精确给出
+      const skinOn = showNow.rings && skinA > 0.005;
+      if (skinOn && skinA >= SKIN_OPAQUE_AT) {
+        for (const ri of bandOrder()) {
+          const bs = bandShade(ri);
+          R.drawDynamicMesh(skinMesh(ri), bs.dark, bs.lite);
+        }
+      }
       for (const g of visibleGroups(showNow, isolateNow)) {
         const s = groupShade(g.name);
         R.drawMesh(g.name, machineFrame(g, machine), s.dark, s.lite);
+      }
+      // 半透明层最后画：与已成像的实体混合，且**深度只测不写**；
+      // 带之间没有 z 排序，只能靠从远到近的下单顺序（Lab.04 07-29 定案）。
+      if (skinOn && skinA < SKIN_OPAQUE_AT) {
+        const da = dotAlpha(skinA);
+        for (const ri of bandOrder()) {
+          const bs = bandShade(ri);
+          R.drawDynamicMesh(skinMesh(ri), bs.dark, bs.lite, skinA);
+          R.drawPointCloud(skinPoints(ri), COLS[ri], COLS[ri + 1], SKIN_DOT_R, da);
+        }
       }
     };
 
@@ -439,6 +521,10 @@ export function MachineBench({
       },
       setIsolate: (ri) => {
         isolateNow = ri;
+        if (!running) render();
+      },
+      setSkin: (a) => {
+        skinA = a;
         if (!running) render();
       },
       setPersp: (on) => R.setPerspective(on ? 900 : 0),
@@ -620,6 +706,29 @@ export function MachineBench({
                 {L.partNames[p]}
               </label>
             ))}
+          </div>
+          {/* 蒙皮遮罩 —— 与 Lab.04 同一套直纹带，但默认更透（0.22）：
+              这台的看点是里面的传动链，盖太实就白做了。滑到 1 = 实体壳。
+              环身关掉时蒙皮一并不画（皮附在环上，环没了皮也就无所附） */}
+          <div className="grp">
+            <span className="k">
+              {L.skin}
+              {sideControls ? <b className="v">{Math.round(skin * 100)}%</b> : null}
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={skin}
+              aria-label={L.skinAria}
+              style={sideControls ? { width: '100%' } : { width: 96 }}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setSkin(v);
+                apiRef.current?.setSkin(v);
+              }}
+            />
           </div>
           {/* 单环隔离 —— 五个环同相但行程各异，单独看一个才比得出半径差。
               只筛环件：机架/轴/触手仍按各自开关，否则「只看 S3」会连驱动它的轴一起切掉。 */}
