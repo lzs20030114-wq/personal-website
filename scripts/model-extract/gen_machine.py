@@ -314,7 +314,10 @@ def main():
         claimed = {}
 
         def ring_local(v):
-            return np.c_[v[:, 0] - X0, v[:, 2] - Z0, v[:, 1] - plane]
+            # w = −(y_asm − 环面)：站位轴与图纸 y **反向**（S1 y=−1112.4 → 站位 −170，
+            # S5 y=−1452.4 → +170）。取正号会把整机沿体轴镜像——板的两层左右对调，
+            # 且映射行列式变 −1，烘出来的面法向朝里，打光一并出错。
+            return np.c_[v[:, 0] - X0, v[:, 2] - Z0, -(v[:, 1] - plane)]
 
         # --- 角化件
         cand = []
@@ -407,10 +410,39 @@ def main():
 
     # ---- 静件：图纸世界系 → 台架世界系（x = station + w, y = u, z = v）
     def to_world(v):
+        # 与 ring_local 同一个约定：站位轴反向（见那里的注释）
         u = v[:, 0] - X0
         vv = v[:, 2] - Z0
-        w = v[:, 1] - PLANE0  # 相对 S1 环面
-        return np.c_[STATION[0] + w, u, vv]
+        return np.c_[STATION[0] - (v[:, 1] - PLANE0), u, vv]
+
+    # 体轴方向自检：五副滑轨架各服务一个环，映射后的 x 应逐一落在五个站位上。
+    # 首版 w 取了正号（整机沿体轴镜像），M1 的回算闸门查的是环局部往返、抓不到它；
+    # 这一关专抓世界系映射的方向错。
+    rail_x = []
+    for o in by_layer.get("滑轨架", []):
+        g = o.Geometry
+        if g is None:
+            continue
+        bb = g.GetBoundingBox()
+        cy = (bb.Min.Y + bb.Max.Y) / 2
+        if cy > -1000:
+            continue
+        rail_x.append(STATION[0] - (cy - PLANE0))
+    rail_x.sort()
+    if len(rail_x) == len(STATION):
+        # 滑轨架是 22.6 厚的板、贴在环面旁边，故整体有个**一致的**偏置（约半个板厚）。
+        # 要查的是「去掉这个共同偏置之后还剩多少」——剩得多才说明方向或次序错了。
+        off = [a - b for a, b in zip(rail_x, STATION)]
+        bias = sum(off) / len(off)
+        resid = max(abs(o - bias) for o in off)
+        print(
+            f"  体轴自检：滑轨架落位 {[round(v, 1) for v in rail_x]} vs 站位 {STATION}"
+            f"  共同偏置 {bias:+.1f}mm（板厚偏置，正常）· 去偏残差 {resid:.2f}mm"
+        )
+        if resid > 1.0:
+            sys.exit(f"体轴方向或次序错：去偏残差 {resid:.1f}mm——检查 w 的符号")
+    else:
+        report.append(f"!! 滑轨架 {len(rail_x)} 副，与五环对不上")
 
     static_parts = []
     for lay in STATIC_LAYERS:
