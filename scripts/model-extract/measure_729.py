@@ -114,6 +114,9 @@ def measure_ring(byl, ring):
     )
 
     ground = sorted(round(p.X, 4) for p in pins if abs(p.Y) < 1e-6)
+    # 拱顶 = **中线上**最高的销（驱动接的就是它）。注意与「全环最高销」不是一回事：
+    # S5 的最高销在 x = −27.135 处（103.855），比中线拱顶（103.282）还高。
+    center_pins = [p.Y for p in pins if abs(p.X) < 0.35 and p.Y > 1]
     return {
         "layer": ring,
         "base": ring.split("_")[1].split("x")[0],
@@ -128,6 +131,7 @@ def measure_ring(byl, ring):
         "rail_lo": None if rail_lo is None else round(rail_lo, 4),
         "rail_hi": None if rail_hi is None else round(rail_hi, 4),
         "apex_y": round(max(p.Y for p in pins), 4),
+        "apex_center_y": round(max(center_pins), 4) if center_pins else None,
         "half_span_x": round(max(abs(p.X) for p in pins), 4),
         "ground_x": ground,
         "assembly_plane_y": round(asm_pins[0].Y, 4) if asm_pins else None,
@@ -196,7 +200,7 @@ def main():
     print(f"UNITS: {m.Settings.ModelUnitSystem}")
     print("=" * 104)
     print(
-        "环   基型 比例   曲柄r    连杆l   导轨[下,上]           行程    拱顶y    半跨x   销 三角  装配面y"
+        "环   基型 比例   曲柄r    连杆l   导轨[下,上]           行程   中线拱顶  最高销   半跨x   销 三角  装配面y"
     )
     for d in rings:
         lo = "   —   " if d["rail_lo"] is None else f"{d['rail_lo']:7.3f}"
@@ -204,7 +208,7 @@ def main():
         print(
             f"{d['layer'][:2]}  {d['base']:<3}{d['scale']:6.3f} {d['crank_r']:7.3f} {d['rod_len']:8.3f}"
             f"  [{lo},{d['rail_hi']:8.3f}] {span}"
-            f" {d['apex_y']:8.3f} {d['half_span_x']:8.3f} {d['pins']:4d} {d['triangles']:4d}"
+            f" {d['apex_center_y']:8.3f} {d['apex_y']:8.3f} {d['half_span_x']:8.3f} {d['pins']:4d} {d['triangles']:4d}"
             f" {d['assembly_plane_y']:10.3f}"
         )
 

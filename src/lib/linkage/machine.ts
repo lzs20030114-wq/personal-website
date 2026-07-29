@@ -1,0 +1,169 @@
+import type { CellFrame } from './gl3d';
+import { MACHINE_DRIVE, MACHINE_GROUPS, type MachineGroup } from './machine-shape';
+import { SHELL_THETA0, createShell, stepRing, type ShellRing } from './shell3d';
+
+export { MACHINE_GROUPS, MACHINE_MESH_URL, MACHINE_TRIS, MACHINE_DRIVE } from './machine-shape';
+
+/**
+ * 轮回机器整机（Lab.05）——真机装配的求解器实例。spec = 轮回机器_整机spec.md。
+ *
+ * 架构：**不新建运动学**。五环的销坐标与 shell3d-data 逐位相同（新旧图纸比对
+ * 全部差值 ≤0.001mm，是生成时的四舍五入位数差），故环的解算、脚槽止程标定、
+ * 定步积分一律复用 shell3d，本模块只做两件事：
+ *   ① 把「一台电机 → 中间轴 → 五曲柄（同相、半径各异）」表达成五环同 dθ 推进；
+ *   ② 给每组实体网格算出当前刚性位姿（CellFrame），供 gl3d 直接绘制。
+ *
+ * 传动链不进求解器（spec §3.2）：曲柄销与拱顶都已由环的解算定死，连杆只是
+ * 把这两点连起来的可见形体，再拿它当约束是重复建模。杆长只作校验读数。
+ *
+ * 世界系同 shell3d：x = 体轴（站位），y = 环局部 u，z = 环局部 v（向上）。
+ * 零件的出平面位置 w 加在 x 上——真机的板有厚度、分两层错开，这个偏移必须留着，
+ * 否则同环的两层板会重叠打架。
+ */
+
+/** 图纸姿态曲柄角（上死点 = 全开），与 shell3d 同。 */
+export const MACHINE_THETA0 = SHELL_THETA0;
+
+export interface Machine {
+  rings: ShellRing[];
+  /** 中间轴转角（五环同相，故整机只有这一个自由度）。 */
+  theta: number;
+}
+
+export function createMachine(): Machine {
+  const rings = createShell();
+  for (const r of rings) {
+    // 本模块的位姿计算假定环面竖直、无 roll（CLAUDE.md v0.2 定案）。
+    // 若哪天 roll 复活，frame 的列向量要一起改——这里先炸掉而不是画歪。
+    if (r.data.rollDeg !== 0) {
+      throw new Error(`${r.data.name} rollDeg=${r.data.rollDeg}——整机位姿未支持 roll`);
+    }
+  }
+  if (rings.length !== MACHINE_DRIVE.length) {
+    throw new Error(`环数 ${rings.length} 与形体表 ${MACHINE_DRIVE.length} 不符`);
+  }
+  return { rings, theta: MACHINE_THETA0 };
+}
+
+/** 推进一个定步：一根轴带动五个曲柄 ⇒ 五环同 dθ。 */
+export function stepMachine(m: Machine, dTheta: number): void {
+  m.theta += dTheta;
+  for (const r of m.rings) stepRing(r, dTheta);
+}
+
+/** 全机最大约束残差（HUD 读数）。 */
+export function machineMaxError(m: Machine): number {
+  return Math.max(...m.rings.map((r) => r.solver.maxError()));
+}
+
+/**
+ * 连杆长度校验：曲柄销 ↔ 拱顶的实时距离应恒等于图纸姿态的静息长。
+ * 环是刚性链，这个值理应不动；它一旦漂，说明解算跑偏了——比看残差更直观。
+ */
+export function rodLengthDrift(m: Machine): number {
+  let worst = 0;
+  for (const r of m.rings) {
+    const d = r.data;
+    const p = r.solver.nodes[d.pin];
+    const a = r.solver.nodes[d.apex];
+    const rest = d.def.nodes[d.apex].y - d.def.nodes[d.pin].y;
+    worst = Math.max(worst, Math.abs(Math.hypot(a.x - p.x, a.y - p.y) - rest));
+  }
+  return worst;
+}
+
+// ------------------------------------------------------------------ 位姿
+
+/**
+ * 组名 → 当前刚性位姿。命名规则见 machine-shape.ts 头注：
+ *   p{ri}_{tri}  板：由该板三销中的前两枚定标架
+ *   x{ri}_{node} 配件：跟销平移，不转
+ *   w{ri}        单杆轮：绕轮心转 θ−θ₀
+ *   r{ri}        驱动杆：曲柄销 → 拱顶 定标架
+ *   其他          静件：已烘到世界系，恒等
+ *
+ * CellFrame 的三列 = 局部基向量的像（gl3d 按列主序上传）：
+ * world = [û ê f̂]·local + o。
+ */
+export function machineFrame(g: MachineGroup, m: Machine): CellFrame {
+  const kind = g.name[0];
+  if (kind !== 'p' && kind !== 'x' && kind !== 'w' && kind !== 'r') return IDENTITY;
+
+  const ri = Number(g.name[1]);
+  const ring = m.rings[ri];
+  if (!ring) return IDENTITY;
+  const st = ring.data.station;
+  const s = ring.solver;
+
+  if (kind === 'w') {
+    // 单杆轮：绕轮心（环局部原点）转 θ−θ₀
+    const dth = m.theta - MACHINE_THETA0;
+    const c = Math.cos(dth);
+    const sn = Math.sin(dth);
+    // 局部 (u, v, w) → 世界 (st + w, u·c − v·s, u·s + v·c)
+    return {
+      o: { x: st, y: 0, z: 0 },
+      ux: 0, uy: c, uz: sn,
+      ex: 0, ey: -sn, ez: c,
+      fx: 1, fy: 0, fz: 0,
+    };
+  }
+
+  if (kind === 'x') {
+    const j = Number(g.name.split('_')[1]);
+    const n = s.nodes[j];
+    // 局部 (du, dv, w) → 世界 (st + w, n.x + du, n.y + dv)
+    return {
+      o: { x: st, y: n.x, z: n.y },
+      ux: 0, uy: 1, uz: 0,
+      ex: 0, ey: 0, ez: 1,
+      fx: 1, fy: 0, fz: 0,
+    };
+  }
+
+  // p / r：两点定平面标架（与 gen_machine.py 的 frame_local 逆运算一致）
+  let ia: number;
+  let ib: number;
+  if (kind === 'p') {
+    const k = Number(g.name.split('_')[1]);
+    const tri = ring.data.tris[k];
+    ia = tri[0];
+    ib = tri[1];
+  } else {
+    ia = ring.data.pin;
+    ib = ring.data.apex;
+  }
+  const A = s.nodes[ia];
+  const B = s.nodes[ib];
+  let dx = B.x - A.x;
+  let dy = B.y - A.y;
+  const L = Math.hypot(dx, dy) || 1;
+  dx /= L;
+  dy /= L;
+  // ex = 单位(B−A)，ey = ex 逆时针 90°
+  // 局部 (a, b, w) → 世界 (st + w, A.x + a·ex.u + b·ey.u, A.y + a·ex.v + b·ey.v)
+  return {
+    o: { x: st, y: A.x, z: A.y },
+    ux: 0, uy: dx, uz: dy,
+    ex: 0, ey: -dy, ez: dx,
+    fx: 1, fy: 0, fz: 0,
+  };
+}
+
+const IDENTITY: CellFrame = {
+  o: { x: 0, y: 0, z: 0 },
+  ux: 1, uy: 0, uz: 0,
+  ex: 0, ey: 1, ez: 0,
+  fx: 0, fy: 0, fz: 1,
+};
+
+/** 全部组的当前位姿（渲染层逐组 drawMesh 用）。 */
+export function machineFrames(m: Machine): Array<{ name: string; frame: CellFrame }> {
+  return MACHINE_GROUPS.map((g) => ({ name: g.name, frame: machineFrame(g, m) }));
+}
+
+/** 某环拱顶的当前高度（环局部 v）——行程断言与 HUD 用。 */
+export function apexHeight(m: Machine, ri: number): number {
+  const r = m.rings[ri];
+  return r.solver.nodes[r.data.apex].y;
+}

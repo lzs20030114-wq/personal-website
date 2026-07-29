@@ -313,6 +313,7 @@
    "rail_lo": 67.2144,
    "rail_hi": 126.978,
    "apex_y": 126.2939,
+   "apex_center_y": 126.2939,
    "half_span_x": 167.6206,
    "ground_x": [
     -167.6206,
@@ -632,6 +633,7 @@
    "rail_lo": null,
    "rail_hi": 222.4401,
    "apex_y": 221.228,
+   "apex_center_y": 221.228,
    "half_span_x": 172.6182,
    "ground_x": [
     -172.6182,
@@ -870,6 +872,7 @@
    "rail_lo": 89.4623,
    "rail_hi": 158.9278,
    "apex_y": 157.2748,
+   "apex_center_y": 157.2748,
    "half_span_x": 161.915,
    "ground_x": [
     -161.915,
@@ -1189,6 +1192,7 @@
    "rail_lo": 63.8815,
    "rail_hi": 120.0746,
    "apex_y": 119.2161,
+   "apex_center_y": 119.2161,
    "half_span_x": 158.6225,
    "ground_x": [
     -158.6225,
@@ -1508,6 +1512,7 @@
    "rail_lo": 56.1668,
    "rail_hi": 104.5225,
    "apex_y": 103.8545,
+   "apex_center_y": 103.2815,
    "half_span_x": 138.0523,
    "ground_x": [
     -138.0523,
