@@ -36,13 +36,16 @@ void main() {
   vLam = abs(dot(normalize(nv), uLight));
 }`;
 
+// uAlpha 默认 1.0（beginFrame 每帧置回），故实体绘制路径与加它之前逐像素相同；
+// 只有显式传 alpha 的半透明绘制才会用到（2026-07-29 五环遮罩滑块新增）。
 const MESH_FS = `
 precision mediump float;
 varying float vLam;
 uniform vec3 uDark;
 uniform vec3 uLite;
+uniform float uAlpha;
 void main() {
-  gl_FragColor = vec4(mix(uDark, uLite, 0.12 + 0.88 * vLam), 1.0);
+  gl_FragColor = vec4(mix(uDark, uLite, 0.12 + 0.88 * vLam), uAlpha);
 }`;
 
 // TPU 连接件双骨蒙皮（榫卯插接修正，2026-07-11；v7.2 换螺旋插值）：
@@ -419,15 +422,28 @@ export class FlatRenderer {
    *  蒙皮等每帧变形的几何用——2026-07-17 五环台架拍板新增。
    *  dark/lite 可选：本次绘制覆盖明暗端色，画完即还原为 beginFrame 的默认
    *  （2026-07-27 加：暗底台架要「烟灰织物」压暗蒙皮，好让彩色线稿透出来；
-   *   加法式扩展，不传即旧行为，现有调用点零影响）。 */
+   *   加法式扩展，不传即旧行为，现有调用点零影响）。
+   *
+   *  alpha 可选（2026-07-29 遮罩滑块加）：< 1 时走半透明路径——开混合、
+   *  **深度只测不写**，故不遮挡其后要画的东西，但仍被先画的实体正确挡住。
+   *  代价：半透明面之间无 z 排序，调用点须**自己按视深从远到近**下单。
+   *  不传 = 实体路径（写深度、不混合），与加它之前逐像素相同。 */
   drawDynamicMesh(
     data: Float32Array,
     dark?: [number, number, number],
     lite?: [number, number, number],
+    alpha?: number,
   ): void {
     if (!data.length) return;
     const gl = this.gl;
     gl.useProgram(this.meshProg);
+    const blended = alpha !== undefined && alpha < 1;
+    if (blended) {
+      gl.uniform1f(gl.getUniformLocation(this.meshProg, 'uAlpha'), alpha);
+      gl.enable(gl.BLEND);
+      gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      gl.depthMask(false);
+    }
     if (dark) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uDark'), dark[0], dark[1], dark[2]);
     if (lite) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uLite'), lite[0], lite[1], lite[2]);
     gl.uniformMatrix3fv(gl.getUniformLocation(this.meshProg, 'uModelR'), false, [1, 0, 0, 0, 1, 0, 0, 0, 1]);
@@ -441,9 +457,14 @@ export class FlatRenderer {
     gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 24, 0);
     gl.vertexAttribPointer(aNrm, 3, gl.FLOAT, false, 24, 12);
     gl.drawArrays(gl.TRIANGLES, 0, data.length / 6);
-    // 还原默认明暗端色，后续 drawMesh/drawSkinned 不受影响
+    // 还原默认明暗端色与状态，后续 drawMesh/drawSkinned 不受影响
     if (dark) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uDark'), 0.29, 0.29, 0.27);
     if (lite) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uLite'), 0.95, 0.95, 0.92);
+    if (blended) {
+      gl.uniform1f(gl.getUniformLocation(this.meshProg, 'uAlpha'), 1);
+      gl.depthMask(true);
+      gl.disable(gl.BLEND);
+    }
   }
 
   /**
@@ -533,6 +554,7 @@ export class FlatRenderer {
       gl.useProgram(prog);
       gl.uniform3f(gl.getUniformLocation(prog, 'uDark'), 0.29, 0.29, 0.27);
       gl.uniform3f(gl.getUniformLocation(prog, 'uLite'), 0.95, 0.95, 0.92);
+      gl.uniform1f(gl.getUniformLocation(prog, 'uAlpha'), 1);
     }
   }
 
