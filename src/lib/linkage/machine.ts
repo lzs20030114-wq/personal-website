@@ -35,8 +35,18 @@ export const MACHINE_THETA0 = SHELL_THETA0;
  * 曲柄匀速反转时输出速度本来就是从 0 平滑折回的，**不需要额外缓动**。
  */
 export const MACHINE_SWEEP = Math.PI;
-export const MACHINE_THETA_MIN = MACHINE_THETA0;
-export const MACHINE_THETA_MAX = MACHINE_THETA0 + MACHINE_SWEEP;
+
+/**
+ * 摆向：从伸展位（θ₀，曲柄销正上方）起，销朝**哪一侧**扫过这 180°。
+ * −1 = 经 +u 一侧（用户 2026-07-29「转反了，应该是另一侧」；首版取 +1，摆错了边）。
+ *
+ * 两个摆向的拱顶轨迹**完全相同**（关于死点对称），差别只在曲柄与连杆从哪边走。
+ * 所以这是纯外观量——改它不动运动学，也不影响任何行程结论。
+ */
+export const MACHINE_DIR: 1 | -1 = -1;
+
+export const MACHINE_THETA_MIN = Math.min(MACHINE_THETA0, MACHINE_THETA0 + MACHINE_DIR * MACHINE_SWEEP);
+export const MACHINE_THETA_MAX = Math.max(MACHINE_THETA0, MACHINE_THETA0 + MACHINE_DIR * MACHINE_SWEEP);
 
 /**
  * 默认角速度 rad/s。半程 π 用时 = π/ω ≈ 3.9s，一次完整张合（开→合→开）≈ 7.9s，
@@ -75,12 +85,23 @@ export function reciprocate(
   return { theta: clampTheta(t), dir: d };
 }
 
-/** 行程参数 u ∈ [0,1]：0 = 全开（图纸姿态），1 = 全折叠。 */
+/**
+ * 行程参数 u ∈ [0,1]：**0 = 伸展（全开，图纸姿态）、1 = 折叠**。
+ * 与盘点 §6「φ=0°/180° 为伸展 / 折叠死点」同口径——φ = u × 180°。
+ */
 export function strokeOf(theta: number): number {
-  return (clampTheta(theta) - MACHINE_THETA_MIN) / MACHINE_SWEEP;
+  return Math.abs(clampTheta(theta) - MACHINE_THETA0) / MACHINE_SWEEP;
 }
 export function thetaAtStroke(u: number): number {
-  return MACHINE_THETA_MIN + Math.min(1, Math.max(0, u)) * MACHINE_SWEEP;
+  return MACHINE_THETA0 + MACHINE_DIR * Math.min(1, Math.max(0, u)) * MACHINE_SWEEP;
+}
+/** φ 读数（度，0–180）：伸展位为 0。 */
+export function phaseDeg(theta: number): number {
+  return strokeOf(theta) * 180;
+}
+/** 正在往哪儿去：true = 正在折叠（u 增大），false = 正在伸展。 */
+export function isFolding(dir: 1 | -1): boolean {
+  return dir === MACHINE_DIR;
 }
 
 export interface Machine {

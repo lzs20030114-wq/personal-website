@@ -6,17 +6,20 @@ import { FlatRenderer, bakeIndexed } from '../../src/lib/linkage/gl3d';
 import {
   MACHINE_GROUPS,
   MACHINE_MESH_URL,
+  MACHINE_DIR,
   MACHINE_OMEGA,
   MACHINE_SWEEP,
-  MACHINE_THETA0,
   type MachinePartKind,
   apexHeight,
   clampTheta,
   createMachine,
+  isFolding,
   machineFrame,
   machineMaxError,
+  phaseDeg,
   runMachine,
   stepMachine,
+  thetaAtStroke,
   visibleGroups,
 } from '../../src/lib/linkage/machine';
 import { SHELL_STEP_DT } from '../../src/lib/linkage/shell3d';
@@ -198,6 +201,8 @@ const COPY = {
     sub: '一轴五曲柄 · 同相 · 180° 往复张合',
     hint: '拖拽旋转 · 右键平移 · 滚轮缩放',
     drive: { spin: '自转', slider: '滑杆' },
+    // 方向指示用盘点 §6 的既有口径：φ=0 伸展死点 / φ=180 折叠死点
+    going: { fold: '折叠 ↓', open: '伸展 ↑' },
     aria: '轮回机器整机台架；拖拽旋转，曲柄角驱动',
     loading: '载入实体…',
   },
@@ -218,6 +223,7 @@ const COPY = {
     sub: 'One shaft, five cranks · in phase · 180° reciprocating',
     hint: 'Drag to orbit · right-drag to pan · scroll to zoom',
     drive: { spin: 'spin', slider: 'slider' },
+    going: { fold: 'folding ↓', open: 'extending ↑' },
     aria: 'Reincarnation machine full-assembly bench; drag to orbit, crank-angle driven',
     loading: 'loading solids…',
   },
@@ -264,7 +270,7 @@ export function MachineBench({
     tentacle: true,
   });
   const [isolate, setIsolate] = useState<number | null>(null);
-  const [hud, setHud] = useState({ err: 0, apex: 0, ring: 2, note: '' });
+  const [hud, setHud] = useState({ err: 0, apex: 0, ring: 2, folding: true, note: '' });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -341,7 +347,7 @@ export function MachineBench({
       });
 
     let running = spin && !reduced;
-    let dir: 1 | -1 = 1;
+    let dir: 1 | -1 = MACHINE_DIR;
     let omegaNow = MACHINE_OMEGA;
     let showNow: Record<MachinePartKind, boolean> = {
       rings: true,
@@ -352,8 +358,9 @@ export function MachineBench({
     let isolateNow: number | null = null;
     let targetTheta = machine.theta;
     let viewAnim: { q0: Quat; q1: Quat; t: number } | null = null;
-    // φ 读数 = 相对全开位的转角，0–180（中间轴只在这个范围内往复）
-    const phiDeg = (): number => ((machine.theta - MACHINE_THETA0) * 180) / Math.PI;
+    // φ 读数 = 相对伸展位的行程角，恒 0–180（与盘点 §6 同口径：0 伸展 / 180 折叠）。
+    // 用 phaseDeg 而不是 (θ−θ₀)：摆向为负时那个差值是负的，读数会变成 −0…−180。
+    const phiDeg = (): number => phaseDeg(machine.theta);
 
     const substep = (): void => {
       if (running) {
@@ -401,7 +408,15 @@ export function MachineBench({
       // 读数跟着「单环」走：隔离哪一环就报哪一环的拱顶，全部时报中间那环（S3）
       const ri = isolateNow ?? 2;
       setHud((h) =>
-        h.note ? h : { err: machineMaxError(machine), apex: apexHeight(machine, ri), ring: ri, note: '' },
+        h.note
+          ? h
+          : {
+              err: machineMaxError(machine),
+              apex: apexHeight(machine, ri),
+              ring: ri,
+              folding: isFolding(dir),
+              note: '',
+            },
       );
       if (running) setPhase(Number(phiDeg().toFixed(1)));
     };
@@ -410,7 +425,7 @@ export function MachineBench({
       step,
       setPhase: (deg) => {
         running = false;
-        targetTheta = MACHINE_THETA0 + (deg * Math.PI) / 180;
+        targetTheta = thetaAtStroke(deg / PHASE_MAX);
       },
       setRun: (on) => {
         running = on;
@@ -513,7 +528,7 @@ export function MachineBench({
             {hud.note
               ? hud.note
               : `apex(S${hud.ring + 1}) ${hud.apex.toFixed(1)} mm · err ${hud.err.toFixed(2)} · ${
-                  run ? L.drive.spin : L.drive.slider
+                  run ? (hud.folding ? L.going.fold : L.going.open) : L.drive.slider
                 }`}
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MACHINE_DRIVE, MACHINE_GROUPS, MACHINE_TRIS } from './machine-shape';
 import {
+  MACHINE_DIR,
   MACHINE_OMEGA,
   MACHINE_SWEEP,
   MACHINE_THETA0,
@@ -9,11 +10,13 @@ import {
   apexHeight,
   clampTheta,
   createMachine,
+  isFolding,
   machineFrame,
   machineFrames,
   machineMaxError,
   groupRing,
   partKind,
+  phaseDeg,
   reciprocate,
   rodLengthDrift,
   runMachine,
@@ -27,6 +30,8 @@ import { SHELL_RINGS, SHELL_STEP_DT } from './shell3d';
 // 单位 = mm（环局部）。世界系 x = 站位 + 出平面 w，y = u，z = v。
 
 const STEP = (Math.PI * 2) / 720; // 0.5°/步——与 shell3d 标定扫掠同量级
+/** 沿设计摆向的一步（MACHINE_DIR = 摆向，用户 2026-07-29 指定经另一侧） */
+const DSTEP = MACHINE_DIR * STEP;
 
 describe('整机装配（图纸姿态）', () => {
   it('五环就位、无 roll、θ₀ = 上死点', () => {
@@ -84,14 +89,14 @@ describe('传动链（一根轴 → 五个曲柄）', () => {
     const lo = MACHINE_DRIVE.map((_, i) => apexHeight(m, i));
     const hi = [...lo];
     for (let k = 0; k < 360; k++) {
-      stepMachine(m, STEP);
+      stepMachine(m, DSTEP);
       MACHINE_DRIVE.forEach((_, i) => {
         const y = apexHeight(m, i);
         if (y < lo[i]) lo[i] = y;
         if (y > hi[i]) hi[i] = y;
       });
     }
-    expect(m.theta).toBeCloseTo(MACHINE_THETA_MAX, 9);
+    expect(strokeOf(m.theta)).toBeCloseTo(1, 6); // 走满半程 = 折叠位
     MACHINE_DRIVE.forEach((d, i) => {
       expect(hi[i] - lo[i]).toBeCloseTo(2 * d.crankR, 1);
       expect(hi[i]).toBeCloseTo(d.apex0, 1);
@@ -102,7 +107,7 @@ describe('传动链（一根轴 → 五个曲柄）', () => {
     const m = createMachine();
     let worstDrift = 0;
     let worstErr = 0;
-    let dir: 1 | -1 = 1;
+    let dir: 1 | -1 = MACHINE_DIR;
     // 开 → 合 → 开，含两次端点折返
     for (let k = 0; k < 740; k++) {
       dir = runMachine(m, dir, STEP);
@@ -115,8 +120,8 @@ describe('传动链（一根轴 → 五个曲柄）', () => {
 
   it('五环同相：任意时刻 θ 只有一个，各环由自身半径决定行程', () => {
     const m = createMachine();
-    for (let k = 0; k < 90; k++) stepMachine(m, STEP);
-    expect(m.theta).toBeCloseTo(MACHINE_THETA0 + 90 * STEP, 12);
+    for (let k = 0; k < 90; k++) stepMachine(m, DSTEP);
+    expect(m.theta).toBeCloseTo(MACHINE_THETA0 + 90 * DSTEP, 12);
     // 半径大的环下沉多——同一 θ 下降幅之比 ≈ 半径之比
     const drop = MACHINE_DRIVE.map((d, i) => d.apex0 - apexHeight(m, i));
     const ratio = drop.map((v, i) => v / MACHINE_DRIVE[i].crankR);
@@ -127,7 +132,7 @@ describe('传动链（一根轴 → 五个曲柄）', () => {
 describe('位姿（网格绑定）', () => {
   it('板标架：局部原点落在该板首销上，且标架正交单位', () => {
     const m = createMachine();
-    for (let k = 0; k < 37; k++) stepMachine(m, STEP);
+    for (let k = 0; k < 37; k++) stepMachine(m, DSTEP);
     for (const g of MACHINE_GROUPS.filter((x) => x.name[0] === 'p')) {
       const ri = Number(g.name[1]);
       const tri = m.rings[ri].data.tris[Number(g.name.split('_')[1])];
@@ -153,7 +158,7 @@ describe('位姿（网格绑定）', () => {
 
   it('板标架第一列 = 首销指向次销的单位向量（世界 y-z 面内）', () => {
     const m = createMachine();
-    for (let k = 0; k < 200; k++) stepMachine(m, STEP);
+    for (let k = 0; k < 200; k++) stepMachine(m, DSTEP);
     const g = MACHINE_GROUPS.find((x) => x.name.startsWith('p3_')) as (typeof MACHINE_GROUPS)[number];
     const ri = Number(g.name[1]);
     const tri = m.rings[ri].data.tris[Number(g.name.split('_')[1])];
@@ -168,7 +173,7 @@ describe('位姿（网格绑定）', () => {
 
   it('配件只平移不转（标架恒等，原点跟销）', () => {
     const m = createMachine();
-    for (let k = 0; k < 55; k++) stepMachine(m, STEP);
+    for (let k = 0; k < 55; k++) stepMachine(m, DSTEP);
     const aux = MACHINE_GROUPS.filter((g) => g.name[0] === 'x');
     expect(aux.length).toBeGreaterThan(0);
     for (const g of aux) {
@@ -184,8 +189,8 @@ describe('位姿（网格绑定）', () => {
 
   it('单杆轮绕轮心转 θ−θ₀（原点恒在站位上，与环无关）', () => {
     const m = createMachine();
-    const dth = 137 * STEP;
-    for (let k = 0; k < 137; k++) stepMachine(m, STEP);
+    const dth = 137 * DSTEP;
+    for (let k = 0; k < 137; k++) stepMachine(m, DSTEP);
     for (const g of MACHINE_GROUPS.filter((x) => x.name[0] === 'w')) {
       const ri = Number(g.name[1]);
       const f = machineFrame(g, m);
@@ -200,7 +205,7 @@ describe('位姿（网格绑定）', () => {
     const before = machineFrames(m).filter((f) => !'pxwr'.includes(f.name[0]));
     // shaft 与 frame 分开成组：控制面板的「传动」开关要能连中间轴一起切
     expect(before.map((f) => f.name).sort()).toEqual(['frame', 'shaft', 'tentacle']);
-    for (let k = 0; k < 40; k++) stepMachine(m, STEP);
+    for (let k = 0; k < 40; k++) stepMachine(m, DSTEP);
     for (const { frame } of machineFrames(m).filter((f) => !'pxwr'.includes(f.name[0]))) {
       expect(frame.o).toEqual({ x: 0, y: 0, z: 0 });
       expect([frame.ux, frame.ey, frame.fz]).toEqual([1, 1, 1]);
@@ -214,21 +219,18 @@ describe('位姿（网格绑定）', () => {
 });
 
 describe('180° 往复（中间轴不整周转，用户 2026-07-29 指出）', () => {
-  it('区间两端 = 曲柄滑块上下死点：θ₀ 全开、θ₀+π 全折叠', () => {
+  it('区间跨度恰 180°，一端是伸展死点（θ₀）另一端是折叠死点', () => {
     expect(MACHINE_SWEEP).toBeCloseTo(Math.PI, 12);
-    expect(MACHINE_THETA_MIN).toBe(MACHINE_THETA0);
-    expect(MACHINE_THETA_MAX).toBeCloseTo(MACHINE_THETA0 + Math.PI, 12);
-    const m = createMachine();
-    const open = MACHINE_DRIVE.map((_, i) => apexHeight(m, i));
-    for (let k = 0; k < 360; k++) stepMachine(m, STEP);
-    MACHINE_DRIVE.forEach((d, i) => {
-      // 全折叠位 = 全开位 − 2R
-      expect(apexHeight(m, i)).toBeCloseTo(open[i] - 2 * d.crankR, 1);
-    });
+    expect(MACHINE_THETA_MAX - MACHINE_THETA_MIN).toBeCloseTo(Math.PI, 12);
+    // θ₀（伸展位）必是区间的某一端，不在中间
+    const atEnd =
+      Math.abs(MACHINE_THETA0 - MACHINE_THETA_MIN) < 1e-12 ||
+      Math.abs(MACHINE_THETA0 - MACHINE_THETA_MAX) < 1e-12;
+    expect(atEnd).toBe(true);
   });
 
   it('撞到端点折返而不是钳住不动', () => {
-    // 从上端往外走一步 → 方向翻转、角度折回区间内
+    // 从区间上端往外走一步 → 方向翻转、角度折回区间内
     const a = reciprocate(MACHINE_THETA_MAX - 0.01, 1, 0.03);
     expect(a.dir).toBe(-1);
     expect(a.theta).toBeLessThan(MACHINE_THETA_MAX);
@@ -237,22 +239,23 @@ describe('180° 往复（中间轴不整周转，用户 2026-07-29 指出）', (
     const b = reciprocate(MACHINE_THETA_MIN + 0.01, -1, 0.03);
     expect(b.dir).toBe(1);
     expect(b.theta).toBeCloseTo(MACHINE_THETA_MIN + 0.02, 9);
-    // 区间内不改方向
-    const c = reciprocate(MACHINE_THETA0 + 1, 1, 0.05);
+    // 区间内不改方向（取区间中点，与摆向无关）
+    const mid = (MACHINE_THETA_MIN + MACHINE_THETA_MAX) / 2;
+    const c = reciprocate(mid, 1, 0.05);
     expect(c.dir).toBe(1);
-    expect(c.theta).toBeCloseTo(MACHINE_THETA0 + 1.05, 9);
+    expect(c.theta).toBeCloseTo(mid + 0.05, 9);
   });
 
   it('θ 永不越界，且往复一整轮后回到起点附近', () => {
     const m = createMachine();
-    let dir: 1 | -1 = 1;
+    let dir: 1 | -1 = MACHINE_DIR;
     const steps = Math.round((2 * MACHINE_SWEEP) / STEP);
     for (let k = 0; k < steps; k++) {
       dir = runMachine(m, dir, STEP);
       expect(m.theta).toBeGreaterThanOrEqual(MACHINE_THETA_MIN - 1e-9);
       expect(m.theta).toBeLessThanOrEqual(MACHINE_THETA_MAX + 1e-9);
     }
-    expect(m.theta).toBeCloseTo(MACHINE_THETA_MIN, 6);
+    expect(strokeOf(m.theta)).toBeCloseTo(0, 5); // 回到伸展位
     // 不断言此刻的方向符号：恰好落在端点时是否触发反射取决于末位误差，
     // 两个取值都合法，断它等于在测浮点噪声。要紧的是**不卡死**——
     // 再走几步必须重新离开端点。
@@ -261,18 +264,40 @@ describe('180° 往复（中间轴不整周转，用户 2026-07-29 指出）', (
     expect(Math.abs(m.theta - before)).toBeGreaterThan(10 * STEP);
   });
 
-  it('行程参数 u：0 = 全开、1 = 全折叠，与 θ 一一对应', () => {
-    expect(strokeOf(MACHINE_THETA_MIN)).toBeCloseTo(0, 12);
-    expect(strokeOf(MACHINE_THETA_MAX)).toBeCloseTo(1, 12);
-    expect(thetaAtStroke(0)).toBe(MACHINE_THETA_MIN);
-    expect(thetaAtStroke(1)).toBeCloseTo(MACHINE_THETA_MAX, 12);
+  it('行程参数 u：0 = 伸展、1 = 折叠，与 θ 一一对应（与摆向无关）', () => {
+    // 断言按**语义**写，不按 MIN/MAX 写——那两个边界谁是伸展端取决于摆向，
+    // 拿它们当基准的话，翻一次摆向测试就得跟着翻一次（首版即此错）。
+    expect(strokeOf(MACHINE_THETA0)).toBeCloseTo(0, 12);
+    expect(thetaAtStroke(0)).toBe(MACHINE_THETA0);
+    expect(strokeOf(thetaAtStroke(1))).toBeCloseTo(1, 12);
+    expect(phaseDeg(MACHINE_THETA0)).toBeCloseTo(0, 12);
+    expect(phaseDeg(thetaAtStroke(1))).toBeCloseTo(180, 12);
     for (const u of [0, 0.25, 0.5, 0.75, 1]) {
       expect(strokeOf(thetaAtStroke(u))).toBeCloseTo(u, 12);
     }
+    // 折叠端就是区间里离 θ₀ 远的那一头
+    const folded = thetaAtStroke(1);
+    expect(Math.min(folded, MACHINE_THETA0)).toBeCloseTo(MACHINE_THETA_MIN, 12);
+    expect(Math.max(folded, MACHINE_THETA0)).toBeCloseTo(MACHINE_THETA_MAX, 12);
     // 越界一律钳住（滑杆不会送进区间外的值，但接口不该被越界值带飞）
-    expect(strokeOf(MACHINE_THETA_MAX + 5)).toBe(1);
-    expect(strokeOf(MACHINE_THETA_MIN - 5)).toBe(0);
+    expect(strokeOf(MACHINE_THETA_MAX + 5)).toBeLessThanOrEqual(1);
+    expect(strokeOf(MACHINE_THETA_MIN - 5)).toBeLessThanOrEqual(1);
     expect(clampTheta(MACHINE_THETA_MAX + 5)).toBe(MACHINE_THETA_MAX);
+    expect(clampTheta(MACHINE_THETA_MIN - 5)).toBe(MACHINE_THETA_MIN);
+  });
+
+  it('摆向：从伸展位起经用户指定的一侧（MACHINE_DIR），且折叠端 = 拱顶降 2R', () => {
+    expect(Math.abs(MACHINE_DIR)).toBe(1);
+    // 沿设计摆向走满半程即折叠位
+    const m = createMachine();
+    const open = MACHINE_DRIVE.map((_, i) => apexHeight(m, i));
+    for (let k = 0; k < 360; k++) stepMachine(m, DSTEP);
+    MACHINE_DRIVE.forEach((d, i) => {
+      expect(apexHeight(m, i)).toBeCloseTo(open[i] - 2 * d.crankR, 1);
+    });
+    // 方向语义：沿摆向走 = 正在折叠
+    expect(isFolding(MACHINE_DIR)).toBe(true);
+    expect(isFolding(MACHINE_DIR === 1 ? -1 : 1)).toBe(false);
   });
 
   it('默认转速给出接近呼吸的节律（半程 3–5 秒）', () => {
