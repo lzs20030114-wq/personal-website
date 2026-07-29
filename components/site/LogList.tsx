@@ -13,9 +13,11 @@ import {
   monthLabel,
   monthOf,
   projectFacets,
+  projectGroupOf,
   projectOf,
   type Facet,
 } from '../../src/lib/site/log-facets';
+import { blockCounts, countsLabel } from '../../src/lib/site/log-blocks';
 import { LogBody } from './LogBody';
 
 /**
@@ -175,6 +177,46 @@ function FacetRow({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * 条目行右端的附件角标（2026-07-29）：这条挂了几张图、几张表，收起态就看得见。
+ * 数字与展开后右栏列出来的是同一份计数（src/lib/site/log-blocks）。
+ * 整块是条目按钮的一部分——点它 = 展开这条，不另做一个交互对象。
+ */
+function Marks({ blocks, lang }: { blocks?: LogEntry['blocks']; lang: LogLang }) {
+  const counts = blockCounts(blocks);
+  if (counts.total === 0) return null;
+  const label = countsLabel(counts)[lang];
+  return (
+    <span className="log-marks" role="img" aria-label={label} title={label}>
+      {counts.images > 0 && (
+        <span className="log-mark">
+          <svg viewBox="0 0 16 12" width="16" height="12" aria-hidden focusable="false">
+            <rect x="0.5" y="0.5" width="15" height="11" fill="none" stroke="currentColor" />
+            <path d="M0.5 9L5 5l3.5 3L11 6l4.5 4" fill="none" stroke="currentColor" />
+            <circle cx="11" cy="3.4" r="1.3" fill="currentColor" />
+          </svg>
+          {counts.images}
+        </span>
+      )}
+      {counts.tables > 0 && (
+        <span className="log-mark">
+          <svg viewBox="0 0 16 12" width="16" height="12" aria-hidden focusable="false">
+            <rect x="0.5" y="0.5" width="15" height="11" fill="none" stroke="currentColor" />
+            <path
+              d="M0.5 4h15M0.5 8h15M5.5 0.5v11M10.5 0.5v11"
+              fill="none"
+              stroke="currentColor"
+              strokeOpacity="0.6"
+            />
+            <rect x="0.5" y="0.5" width="15" height="3.5" fill="currentColor" fillOpacity="0.2" />
+          </svg>
+          {counts.tables}
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -448,6 +490,7 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
             <h2 className="log-month">{monthLabel(g.key)[lang]}</h2>
             {g.rows.map(({ entry: e, id }) => {
               const isOpen = open.has(id);
+              const group = projectGroupOf(e);
               return (
                 <article
                   key={id}
@@ -457,6 +500,21 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
                   data-flash={flash?.date === e.date}
                 >
                   <div className="log-entry__meta">
+                    {/* 项目标记（用户拍板 2026-07-29「每一条都要标注属于哪个项目」）：
+                        标签说的是「哪一类工作」（Machine / Lab…），项目说的是「哪个项目」，
+                        两者不同名（log-facets §PROJECT_GROUPS）——所以项目要自己写出来。
+                        点它 = 只看这个项目，与上面筛选条的一级是同一个状态。 */}
+                    {group && (
+                      <button
+                        type="button"
+                        className="log-entry__project"
+                        aria-pressed={project === group.key}
+                        title={group.label[lang]}
+                        onClick={() => setProject(project === group.key ? null : group.key)}
+                      >
+                        {group.short[lang]}
+                      </button>
+                    )}
                     <span className="log-entry__date">{e.date.slice(5)}</span>
                     <span className="log-entry__tags">
                       {e.tags.map((t) => (
@@ -466,7 +524,7 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
                       ))}
                     </span>
                   </div>
-                  <div>
+                  <div className="log-entry__main">
                     <button
                       type="button"
                       className="log-entry__toggle"
@@ -475,6 +533,7 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
                       onClick={() => toggle(id)}
                     >
                       <span className="log-entry__lead">{e.lead[lang]}</span>
+                      <Marks blocks={e.blocks} lang={lang} />
                       <span className="log-entry__chev" aria-hidden>
                         <svg viewBox="0 0 16 16" width="14" height="14">
                           <path

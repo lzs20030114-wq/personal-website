@@ -12,6 +12,7 @@ import {
   OTHER_ASPECT,
   PROJECT_GROUPS,
   projectFacets,
+  projectGroupOf,
   projectOf,
 } from './log-facets';
 
@@ -47,6 +48,20 @@ describe('三级筛选', () => {
       expect(owners.length, `标签 ${b} 必须恰好归属一个项目组`).toBe(1);
     }
     for (const e of ENTRIES) expect(projectOf(e), `${e.date} 无项目归属`).not.toBeNull();
+  });
+
+  it('每条条目都能标出所属项目（左栏标记用 short，中英都得有）', () => {
+    // 2026-07-29：条目左栏要标「属于哪个项目」。缺 short 的项目组会让那批条目
+    // 只剩日期和标签，页面上看不出漏的是哪一组。
+    for (const g of PROJECT_GROUPS) {
+      expect(g.short.en.length, `${g.key} 缺英文短名`).toBeGreaterThan(0);
+      expect(g.short.zh.length, `${g.key} 缺中文短名`).toBeGreaterThan(0);
+    }
+    for (const e of ENTRIES) {
+      const g = projectGroupOf(e);
+      expect(g, `${e.date} 取不到项目组`).not.toBeNull();
+      expect(g!.key).toBe(projectOf(e));
+    }
   });
 
   it('方面：覆盖全池（没打主题标签的条目落 Other，不掉出下钻路径）', () => {

@@ -1203,14 +1203,55 @@ button.log-heat__cell {
   flex-wrap: wrap;
   gap: 6px;
 }
-/* 概括行 = 按钮：整行可点，右端箭头指示开合 */
+/* 项目标记：左栏第一行。刻意不做成 .tag 盒——盒子已经被「标签」占着，
+   项目是另一个维度（哪个项目 vs 哪一类工作），用紫色短刻度 + 微型大写区分。 */
+.log-entry__project {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--n600);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.log-entry__project::before {
+  content: '';
+  flex: none;
+  width: 14px;
+  height: 3px;
+  background: var(--accent-2);
+}
+.log-entry__project[aria-pressed='true'] {
+  color: var(--accent-2);
+}
+@media (hover: hover) and (pointer: fine) {
+  .log-entry__project {
+    transition: color var(--dur-micro) var(--ease-site);
+  }
+  .log-entry__project:hover {
+    color: var(--accent-2);
+  }
+}
+/* 中文项目名不该被拉成大写 / 加拉丁字距 */
+[lang='zh-Hans'] .log-entry__project {
+  text-transform: none;
+  letter-spacing: 0.06em;
+  font-size: 11px;
+}
+/* 概括行 = 按钮：整行可点。引句限宽 70ch（行长），附件角标与箭头贴右缘——
+   右缘那一列就是「这条的图表在哪」：收起态是角标，展开后正下方就是右栏（.log-rail）。 */
 .log-entry__toggle {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
   gap: 20px;
   width: 100%;
-  max-width: 70ch;
   padding: 0;
   font: inherit;
   color: inherit;
@@ -1220,17 +1261,56 @@ button.log-heat__cell {
   cursor: pointer;
 }
 .log-entry__lead {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 70ch;
   margin: 0;
   font-size: 16px;
   font-weight: 650;
   line-height: 1.45;
   color: var(--ink);
 }
+/* 附件角标：图标 + 张数（图与表各一枚） */
+.log-marks {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  padding-top: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+  color: var(--n500);
+}
+.log-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 1;
+}
+.log-entry[data-open='true'] .log-marks {
+  color: var(--accent);
+}
+@media (hover: hover) and (pointer: fine) {
+  .log-marks {
+    transition: color var(--dur-micro) var(--ease-site);
+  }
+  .log-entry__toggle:hover .log-marks {
+    color: var(--accent);
+  }
+}
 .log-entry__chev {
   flex: none;
   margin-top: 3px;
   color: var(--n500);
   line-height: 0;
+}
+/* 没有附件的条目：箭头自己贴右缘（有附件时右推的活由 .log-marks 干，
+   两个 margin-left:auto 会把剩余空间对半分，角标就飘到行中间去了） */
+.log-entry__lead + .log-entry__chev {
+  margin-left: auto;
 }
 .log-entry[data-open='true'] .log-entry__chev {
   transform: rotate(180deg);
@@ -1391,6 +1471,191 @@ button.log-heat__cell {
   text-transform: uppercase;
   color: var(--n600);
   white-space: nowrap;
+}
+
+/* ── 展开后的正文 = 左正文 + 右图表栏（2026-07-29，MAPPING §8.13）────────────
+   分栏用 container query 而不是 @media：同一个 LogBody 也长在 /studio 的窄预览面板里，
+   那里视口很宽但可用宽度很窄——按视口判断会把 300px 的右栏硬塞进 400px 的预览。 */
+.log-doc {
+  container-type: inline-size;
+}
+.log-doc__split {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+@container (min-width: 760px) {
+  .log-doc__split {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 40px;
+  }
+  .log-doc__split > .log-entry__body {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .log-rail {
+    flex: none;
+    width: 300px;
+    /* 贴右缘：与收起态的附件角标同一列，展开前后视线不用重新找 */
+    margin-left: auto;
+  }
+}
+.log-rail {
+  padding-top: 10px;
+}
+.log-rail__title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 2px;
+  padding-bottom: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--n500);
+}
+[lang='zh-Hans'] .log-rail__title {
+  letter-spacing: 0.06em;
+  font-size: 11px;
+}
+.log-rail__n {
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.log-rail__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* 一张卡 = 一张图 / 一张表的入口：编号 + 规格 + 说明（说明两行封顶，卡片高度才可预期）。
+   卡片本身是收着的——点开才在下面展开那一张。 */
+.log-card {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 3px 12px;
+  width: 100%;
+  padding: 10px 8px 10px 0;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-top: var(--hair);
+  cursor: pointer;
+}
+.log-rail__list > li:first-child .log-card {
+  border-top: 0;
+}
+.log-card__mark {
+  grid-row: span 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  color: var(--n500);
+  line-height: 0;
+}
+.log-card__mark img {
+  width: 30px;
+  height: 24px;
+  object-fit: cover;
+  border: var(--hair);
+}
+.log-card__label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--n700);
+  font-variant-numeric: tabular-nums;
+}
+.log-card__meta {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--n500);
+}
+.log-card__cap {
+  grid-column: 2;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--n600);
+}
+.log-card[aria-expanded='true'] {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.log-card[aria-expanded='true'] .log-card__label,
+.log-card[aria-expanded='true'] .log-card__mark {
+  color: var(--accent);
+}
+@media (hover: hover) and (pointer: fine) {
+  .log-card {
+    transition: background var(--dur-micro) var(--ease-site);
+  }
+  .log-card:hover {
+    background: var(--n200);
+  }
+  .log-card:hover .log-card__label {
+    color: var(--accent);
+  }
+}
+/* 展开的那一张：占满整幅宽度（表要宽度才读得动），顶上一条标题栏说明是哪一张 */
+.log-view[data-open='true'] {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: var(--hair);
+}
+.log-view__bar {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.log-view__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.log-view__meta {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--n500);
+}
+.log-view__close {
+  margin-left: auto;
+  padding: 0;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--n600);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  cursor: pointer;
+}
+[lang='zh-Hans'] .log-view__close,
+[lang='zh-Hans'] .log-view__label {
+  text-transform: none;
+  letter-spacing: 0.06em;
+}
+.log-view .log-fig,
+.log-view .log-table {
+  margin: 10px 0 0;
 }
 @media (min-width: 768px) {
   .log-entry {
