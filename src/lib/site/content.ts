@@ -113,3 +113,21 @@ export function getWorkBySlug(slug: string): WorkEntry | undefined {
 export function getPublishedWorkBySlug(slug: string): WorkEntry | undefined {
   return getAllWork().find((e) => e.slug === slug && e.status === 'published');
 }
+
+/**
+ * 有自己路由的作品 = published ∪ 四个主项目（selected）。
+ *
+ * 用户拍板 2026-07-29：主页四张卡片各进各的详情页。此前只有 01 是 published，
+ * 另外三张一律指 /archive——四个项目在 IA 上地位同等（CLAUDE.md 定位与边界），
+ * 导航上却三个没有地址、点下去还落到同一页。未发稿的三个改渲「筹备中」页
+ * （components/site/WorkInPreparation），正文仍由作者来写。
+ *
+ * 边界没放开：非 selected 的 draft（将来的次要作品）照旧不出路由。
+ */
+export function getRoutableWork(): WorkEntry[] {
+  return getAllWork().filter((e) => e.status === 'published' || e.selected);
+}
+
+export function getRoutableWorkBySlug(slug: string): WorkEntry | undefined {
+  return getRoutableWork().find((e) => e.slug === slug);
+}

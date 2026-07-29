@@ -128,11 +128,11 @@ export interface HomeLog {
   text: string;
 }
 
-// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-07-29 vitest 实测 191；
+// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-07-29 vitest 实测 193；
 // 迭代稿配色：Tests=绿 700、Kernels=紫 700、Demos=绿 600）
 const STATS = [
   { n: '04', label: 'Projects', color: 'var(--ink)' },
-  { n: '191', label: 'Tests green', color: 'var(--accent)' },
+  { n: '193', label: 'Tests green', color: 'var(--accent)' },
   { n: '02', label: 'Solver kernels', color: 'var(--accent-2)' },
   { n: '05', label: 'Live demos', color: 'var(--g600)' },
 ];
@@ -322,6 +322,8 @@ function StagePlaceholderPanel({
           </div>
         </div>
       </div>
+      {/* 四个项目一律进各自的 /work/[slug]（用户拍板 2026-07-29）——未发稿的那三个
+          落到「筹备中」页，不再统一甩去 /archive。状态签仍保留，别让人以为点进去有正文。 */}
       {work.published ? (
         <a
           data-pt
@@ -343,8 +345,8 @@ function StagePlaceholderPanel({
       ) : (
         <div className="flex items-baseline" style={{ gap: 14 }}>
           <span style={MINI_TAG}>In preparation</span>
-          <a data-pt href="/archive" style={LINK_11}>
-            Work log →
+          <a data-pt href={`/work/${work.slug}`} style={LINK_11}>
+            Project page →
           </a>
         </div>
       )}
@@ -1272,8 +1274,10 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
                       className="hub-card"
                       data-card={i + 1}
                       data-cursor={`View ${String(i + 1).padStart(2, '0')} →`}
-                      href={w.published ? `/work/${w.slug}` : '/archive'}
-                      data-href={w.published ? `/work/${w.slug}` : '/archive'}
+                      // 四张卡各进各的详情页（用户拍板 2026-07-29）：未发稿的三个落
+                      // 「筹备中」页，不再全指 /archive——四项目地位同等，导航上也得同等。
+                      href={`/work/${w.slug}`}
+                      data-href={`/work/${w.slug}`}
                     >
                       <span
                         data-tick
