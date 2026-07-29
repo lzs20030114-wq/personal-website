@@ -7,8 +7,11 @@ import {
   machineFrame,
   machineFrames,
   machineMaxError,
+  groupRing,
+  partKind,
   rodLengthDrift,
   stepMachine,
+  visibleGroups,
 } from './machine';
 import { SHELL_RINGS, SHELL_STEP_DT } from './shell3d';
 
@@ -178,10 +181,11 @@ describe('位姿（网格绑定）', () => {
     }
   });
 
-  it('静件恒等不动（机架、触手）', () => {
+  it('静件恒等不动（机架、中间轴、触手）', () => {
     const m = createMachine();
     const before = machineFrames(m).filter((f) => !'pxwr'.includes(f.name[0]));
-    expect(before.map((f) => f.name).sort()).toEqual(['frame', 'tentacle']);
+    // shaft 与 frame 分开成组：控制面板的「传动」开关要能连中间轴一起切
+    expect(before.map((f) => f.name).sort()).toEqual(['frame', 'shaft', 'tentacle']);
     for (let k = 0; k < 40; k++) stepMachine(m, STEP);
     for (const { frame } of machineFrames(m).filter((f) => !'pxwr'.includes(f.name[0]))) {
       expect(frame.o).toEqual({ x: 0, y: 0, z: 0 });
@@ -192,6 +196,71 @@ describe('位姿（网格绑定）', () => {
   it('每组都拿得到位姿，数量与形体表一致', () => {
     const m = createMachine();
     expect(machineFrames(m)).toHaveLength(MACHINE_GROUPS.length);
+  });
+});
+
+describe('部件分类（控制面板用）', () => {
+  it('四档各自认领，且不重不漏——每组恰好归一档', () => {
+    const seen = new Map<string, number>();
+    for (const g of MACHINE_GROUPS) {
+      const k = partKind(g.name);
+      expect(['rings', 'drive', 'frame', 'tentacle']).toContain(k);
+      seen.set(k, (seen.get(k) ?? 0) + 1);
+    }
+    expect([...seen.values()].reduce((a, b) => a + b, 0)).toBe(MACHINE_GROUPS.length);
+    // 环身 = 66 板 + 3 配件；传动 = 5 轮 + 5 杆 + 中间轴
+    expect(seen.get('rings')).toBe(69);
+    expect(seen.get('drive')).toBe(11);
+    expect(seen.get('frame')).toBe(1);
+    expect(seen.get('tentacle')).toBe(1);
+  });
+
+  it('中间轴归「传动」而不是「机架」（否则传动开关切不动它）', () => {
+    expect(MACHINE_GROUPS.some((g) => g.name === 'shaft')).toBe(true);
+    expect(partKind('shaft')).toBe('drive');
+    expect(partKind('frame')).toBe('frame');
+  });
+
+  it('环归属：动件报 0..4，静件报 null', () => {
+    expect(groupRing('p3_7')).toBe(3);
+    expect(groupRing('x0_13')).toBe(0);
+    expect(groupRing('w4')).toBe(4);
+    expect(groupRing('r2')).toBe(2);
+    expect(groupRing('frame')).toBeNull();
+    expect(groupRing('shaft')).toBeNull();
+    expect(groupRing('tentacle')).toBeNull();
+    for (const g of MACHINE_GROUPS) {
+      const ri = groupRing(g.name);
+      if (ri !== null) expect(ri).toBeLessThan(5);
+    }
+  });
+
+  it('全开时即全部组；关掉一档就少掉那一档的全部', () => {
+    const all = { rings: true, drive: true, frame: true, tentacle: true } as const;
+    expect(visibleGroups(all, null)).toHaveLength(MACHINE_GROUPS.length);
+    const noTent = visibleGroups({ ...all, tentacle: false }, null);
+    expect(noTent.some((g) => g.name === 'tentacle')).toBe(false);
+    expect(noTent).toHaveLength(MACHINE_GROUPS.length - 1);
+    expect(visibleGroups({ rings: false, drive: false, frame: false, tentacle: false }, null)).toHaveLength(0);
+  });
+
+  it('单环隔离只筛环件，机架/轴/触手不跟着消失', () => {
+    const all = { rings: true, drive: true, frame: true, tentacle: true } as const;
+    const only2 = visibleGroups(all, 2);
+    for (const g of only2) {
+      const ri = groupRing(g.name);
+      if (ri !== null) expect(ri).toBe(2);
+    }
+    // 静件仍在（否则「只看 S3」会连驱动它的轴一起切掉）
+    expect(only2.some((g) => g.name === 'frame')).toBe(true);
+    expect(only2.some((g) => g.name === 'shaft')).toBe(true);
+    expect(only2.some((g) => g.name === 'tentacle')).toBe(true);
+    // 五环各自隔离之和 = 全部环件
+    const perRing = [0, 1, 2, 3, 4].reduce(
+      (n, i) => n + visibleGroups({ ...all, drive: false, frame: false, tentacle: false }, i).length,
+      0,
+    );
+    expect(perRing).toBe(visibleGroups({ ...all, drive: false, frame: false, tentacle: false }, null).length);
   });
 });
 

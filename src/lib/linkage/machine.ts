@@ -167,3 +167,50 @@ export function apexHeight(m: Machine, ri: number): number {
   const r = m.rings[ri];
   return r.solver.nodes[r.data.apex].y;
 }
+
+// -------------------------------------------------------------- 部件分类
+
+/**
+ * 台架控制面板的部件分档。整机是一堆零件的装配，「看哪些」本身就是一种操作——
+ * 这是 Lab.05 独有的需求（单机构台架没有这个问题），故分类逻辑落在这里、可单测，
+ * 组件只管接线。
+ *
+ * - rings    环身：角化板 + 脚/拱顶配件
+ * - drive    传动：中间轴与电机 + 五个单杆轮 + 五根驱动杆
+ * - frame    机架：滑轨架 + 底盘
+ * - tentacle 触手：三条（静态形体，不参与运动）
+ */
+export type MachinePartKind = 'rings' | 'drive' | 'frame' | 'tentacle';
+
+export function partKind(name: string): MachinePartKind {
+  const k = name[0];
+  if (k === 'p' || k === 'x') return 'rings';
+  if (k === 'w' || k === 'r') return 'drive';
+  if (name === 'shaft') return 'drive';
+  if (name === 'tentacle') return 'tentacle';
+  return 'frame';
+}
+
+/** 组属于哪个环（0..4）；静件返回 null。 */
+export function groupRing(name: string): number | null {
+  if (!'pxwr'.includes(name[0])) return null;
+  const ri = Number(name[1]);
+  return Number.isInteger(ri) && ri >= 0 && ri < 5 ? ri : null;
+}
+
+/**
+ * 当前该画哪些组：部件开关 + 单环隔离的交集。
+ * 隔离只作用于带环归属的组——机架/轴/触手是否可见由各自开关决定，
+ * 不跟着某个环一起消失（否则「只看 S3」会连轴一起切掉，读不出它被谁驱动）。
+ */
+export function visibleGroups(
+  show: Readonly<Record<MachinePartKind, boolean>>,
+  isolate: number | null,
+): typeof MACHINE_GROUPS {
+  return MACHINE_GROUPS.filter((g) => {
+    if (!show[partKind(g.name)]) return false;
+    const ri = groupRing(g.name);
+    if (isolate === null || ri === null) return true;
+    return ri === isolate;
+  });
+}

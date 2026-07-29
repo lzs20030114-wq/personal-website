@@ -7,10 +7,13 @@ import {
   MACHINE_GROUPS,
   MACHINE_MESH_URL,
   MACHINE_THETA0,
+  type MachinePartKind,
+  apexHeight,
   createMachine,
   machineFrame,
   machineMaxError,
   stepMachine,
+  visibleGroups,
 } from '../../src/lib/linkage/machine';
 import { SHELL_OMEGA, SHELL_STEP_DT } from '../../src/lib/linkage/shell3d';
 import { setSnapshot } from './snapshot';
@@ -163,11 +166,26 @@ function groupShade(name: string): { dark: [number, number, number]; lite: [numb
   return { dark: [...FRAME_SHADE.dark], lite: [...FRAME_SHADE.lite] };
 }
 
+/** 转速滑块范围（rad/s）。默认沿用 shell3d 的 0.8——**不是真机节律**，
+ *  减速比图上没标（spec §7 第一条局限）。给滑块正是为了让用户自己找手感值。 */
+const OMEGA_MIN = 0.1;
+const OMEGA_MAX = 2.4;
+
+const PARTS: ReadonlyArray<MachinePartKind> = ['rings', 'drive', 'frame', 'tentacle'];
+/** 环选择器：null = 全部 */
+const RING_KEYS = [null, 0, 1, 2, 3, 4] as const;
+
 const COPY = {
   zh: {
     run: '运转',
     persp: '透视',
+    speed: '转速',
+    speedAria: '转速（非真机节律，减速比无出处）',
     phase: '相位',
+    parts: '部件',
+    partNames: { rings: '环身', drive: '传动', frame: '机架', tentacle: '触手' },
+    ring: '单环',
+    ringAll: '全部',
     view: '视角',
     reset: '归位',
     views: { axon: '轴测', front: '正', left: '左', right: '右', top: '顶' },
@@ -181,7 +199,13 @@ const COPY = {
   en: {
     run: 'Run',
     persp: 'Perspective',
+    speed: 'Speed',
+    speedAria: 'Speed (not the hardware cadence — gear ratio unknown)',
     phase: 'Phase',
+    parts: 'Parts',
+    partNames: { rings: 'Rings', drive: 'Drive', frame: 'Frame', tentacle: 'Arms' },
+    ring: 'Ring',
+    ringAll: 'All',
     view: 'View',
     reset: 'Reset',
     views: { axon: 'Axon', front: 'Front', left: 'Left', right: 'Right', top: 'Top' },
@@ -216,15 +240,26 @@ export function MachineBench({
     step: (dt: number) => void;
     setPhase: (deg: number) => void;
     setRun: (on: boolean) => void;
+    setOmega: (w: number) => void;
     setPersp: (on: boolean) => void;
+    setShow: (s: Record<MachinePartKind, boolean>) => void;
+    setIsolate: (ri: number | null) => void;
     viewTo: (k: ViewKey) => void;
     viewHome: () => void;
   } | null>(null);
   const [run, setRun] = useState(spin);
   const [persp, setPersp] = useState(false);
+  const [omega, setOmega] = useState(SHELL_OMEGA);
   const [view, setView] = useState<ViewKey>('axon');
   const [phase, setPhase] = useState(0);
-  const [hud, setHud] = useState({ err: 0, note: '' });
+  const [show, setShow] = useState<Record<MachinePartKind, boolean>>({
+    rings: true,
+    drive: true,
+    frame: true,
+    tentacle: true,
+  });
+  const [isolate, setIsolate] = useState<number | null>(null);
+  const [hud, setHud] = useState({ err: 0, apex: 0, ring: 2, note: '' });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -301,6 +336,14 @@ export function MachineBench({
       });
 
     let running = spin && !reduced;
+    let omegaNow = SHELL_OMEGA;
+    let showNow: Record<MachinePartKind, boolean> = {
+      rings: true,
+      drive: true,
+      frame: true,
+      tentacle: true,
+    };
+    let isolateNow: number | null = null;
     let targetTheta = machine.theta;
     let viewAnim: { q0: Quat; q1: Quat; t: number } | null = null;
     const phiDeg = (): number =>
@@ -309,7 +352,7 @@ export function MachineBench({
     const substep = (): void => {
       let dTheta: number;
       if (running) {
-        dTheta = SHELL_OMEGA * SHELL_STEP_DT;
+        dTheta = omegaNow * SHELL_STEP_DT;
         targetTheta = machine.theta + dTheta;
       } else {
         const diff = wrapAngle(targetTheta - machine.theta);
@@ -325,7 +368,7 @@ export function MachineBench({
       if (!ready) return;
       // 全实体、全部写深度——遮挡交给 z-buffer（这台没有半透明层，
       // 故不需要 Lab.04 那套「从远到近自己排序」）
-      for (const g of MACHINE_GROUPS) {
+      for (const g of visibleGroups(showNow, isolateNow)) {
         const s = groupShade(g.name);
         R.drawMesh(g.name, machineFrame(g, machine), s.dark, s.lite);
       }
@@ -347,7 +390,11 @@ export function MachineBench({
         acc -= SHELL_STEP_DT;
       }
       render();
-      setHud((h) => (h.note ? h : { err: machineMaxError(machine), note: '' }));
+      // 读数跟着「单环」走：隔离哪一环就报哪一环的拱顶，全部时报中间那环（S3）
+      const ri = isolateNow ?? 2;
+      setHud((h) =>
+        h.note ? h : { err: machineMaxError(machine), apex: apexHeight(machine, ri), ring: ri, note: '' },
+      );
       if (running) setPhase(Number(phiDeg().toFixed(1)));
     };
 
@@ -359,6 +406,17 @@ export function MachineBench({
       },
       setRun: (on) => {
         running = on;
+      },
+      setOmega: (w) => {
+        omegaNow = w;
+      },
+      setShow: (s) => {
+        showNow = s;
+        if (!running) render();
+      },
+      setIsolate: (ri) => {
+        isolateNow = ri;
+        if (!running) render();
       },
       setPersp: (on) => R.setPerspective(on ? 900 : 0),
       viewTo: (k) => {
@@ -444,13 +502,19 @@ export function MachineBench({
         <div className="lab-hud br">
           <div className="num">φ {phase.toFixed(1)}°</div>
           <div className="dim">
-            {hud.note ? hud.note : `err ${hud.err.toFixed(2)} · ${run ? L.drive.spin : L.drive.slider}`}
+            {hud.note
+              ? hud.note
+              : `apex(S${hud.ring + 1}) ${hud.apex.toFixed(1)} mm · err ${hud.err.toFixed(2)} · ${
+                  run ? L.drive.spin : L.drive.slider
+                }`}
           </div>
         </div>
         {sideControls && controls ? null : <div className="lab-hud bl dim">{L.hint}</div>}
       </div>
       {controls ? (
         <div className="lab-ctl">
+          {/* 驱动 —— 运转 / 转速 / 透视。转速滑块是这台专有的：
+              转速本就是待拍板的手感常量，与其我替你定一个数，不如给你滑块自己找。 */}
           <div className="grp">
             <label>
               <input
@@ -477,6 +541,26 @@ export function MachineBench({
           </div>
           <div className="grp">
             <span className="k">
+              {L.speed}
+              {sideControls ? <b className="v">{omega.toFixed(2)}</b> : null}
+            </span>
+            <input
+              type="range"
+              min={OMEGA_MIN}
+              max={OMEGA_MAX}
+              step={0.05}
+              value={omega}
+              aria-label={L.speedAria}
+              style={sideControls ? { width: '100%' } : { width: 84 }}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setOmega(v);
+                apiRef.current?.setOmega(v);
+              }}
+            />
+          </div>
+          <div className="grp">
+            <span className="k">
               {L.phase}
               {sideControls ? <b className="v">{phase.toFixed(1)}°</b> : null}
             </span>
@@ -494,6 +578,45 @@ export function MachineBench({
                 apiRef.current?.setPhase(v);
               }}
             />
+          </div>
+          {/* 部件显隐 —— 整机独有：这台是一堆零件的装配，「看哪些」本身就是操作。
+              关掉机架能看清传动链怎么走，关掉环身能单看一轴五曲柄。 */}
+          <div className="grp">
+            <span className="k">{L.parts}</span>
+            {PARTS.map((p) => (
+              <label key={p}>
+                <input
+                  type="checkbox"
+                  checked={show[p]}
+                  onChange={(e) => {
+                    const next = { ...show, [p]: e.target.checked };
+                    setShow(next);
+                    apiRef.current?.setShow(next);
+                  }}
+                />
+                {L.partNames[p]}
+              </label>
+            ))}
+          </div>
+          {/* 单环隔离 —— 五个环同相但行程各异，单独看一个才比得出半径差。
+              只筛环件：机架/轴/触手仍按各自开关，否则「只看 S3」会连驱动它的轴一起切掉。 */}
+          <div className="grp">
+            <span className="k">{L.ring}</span>
+            <span className="seg">
+              {RING_KEYS.map((k) => (
+                <button
+                  key={k === null ? 'all' : k}
+                  type="button"
+                  className={k === isolate ? 'active' : undefined}
+                  onClick={() => {
+                    setIsolate(k);
+                    apiRef.current?.setIsolate(k);
+                  }}
+                >
+                  {k === null ? L.ringAll : `S${k + 1}`}
+                </button>
+              ))}
+            </span>
           </div>
           <div className="grp">
             <span className="k">{L.view}</span>

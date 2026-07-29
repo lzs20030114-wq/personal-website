@@ -56,7 +56,12 @@ HULL_TOL = 0.6
 # 一律全分辨率，不降。
 TENTACLE_WELD = 1.5
 
-STATIC_LAYERS = ["滑轨架", "骨架", "中间轴", "中间轴驱动"]
+# 静件分两组，不合并：台架的「传动」开关要能连中间轴与电机一起切掉，
+# 合成一组的话轴会跟着机架走，开关就名不副实了。
+STATIC_GROUPS = [
+    ("frame", ["滑轨架", "骨架"]),
+    ("shaft", ["中间轴", "中间轴驱动"]),
+]
 BLOCK_LAYERS = ["大触手", "小触手"]
 
 
@@ -444,21 +449,25 @@ def main():
     else:
         report.append(f"!! 滑轨架 {len(rail_x)} 副，与五环对不上")
 
-    static_parts = []
-    for lay in STATIC_LAYERS:
-        for o in by_layer.get(lay, []):
-            g = o.Geometry
-            if g is None or g.ObjectType not in (r3d.ObjectType.Brep, r3d.ObjectType.Extrusion):
-                continue
-            bb = g.GetBoundingBox()
-            if (bb.Min.X + bb.Max.X) / 2 > -1000:
-                continue
-            mesh = raw_mesh(g)
-            if mesh is not None:
-                static_parts.append((to_world(mesh[0]), mesh[1]))
-    st = merge(static_parts)
-    if st is not None:
-        groups.append(("frame", st[0], st[1], None))
+    for gname, layers in STATIC_GROUPS:
+        static_parts = []
+        for lay in layers:
+            for o in by_layer.get(lay, []):
+                g = o.Geometry
+                if g is None or g.ObjectType not in (r3d.ObjectType.Brep, r3d.ObjectType.Extrusion):
+                    continue
+                bb = g.GetBoundingBox()
+                if (bb.Min.X + bb.Max.X) / 2 > -1000:
+                    continue
+                mesh = raw_mesh(g)
+                if mesh is not None:
+                    static_parts.append((to_world(mesh[0]), mesh[1]))
+        st = merge(static_parts)
+        if st is None:
+            report.append(f"!! 静件组 {gname} 空（图层 {layers}）")
+            continue
+        print(f"  静件 {gname}: {len(st[1]):,} 三角（图层 {'/'.join(layers)}）")
+        groups.append((gname, st[0], st[1], None))
 
     tent_parts = []
     for lay in BLOCK_LAYERS:
