@@ -274,7 +274,9 @@ export function partKind(name: string): MachinePartKind {
   if (k === 'p' || k === 'x') return 'rings';
   if (k === 'w' || k === 'r') return 'drive';
   if (name === 'shaft') return 'drive';
-  if (name === 'tentacle') return 'tentacle';
+  // armsmall = 两条小触手（静态摆件）。大触手不在这张表里——它是 Lab.03 那条
+  // 三肌腱触手，由 tentacle3d 实时驱动、单独绘制，同样受「触手」开关管。
+  if (name === 'armsmall') return 'tentacle';
   return 'frame';
 }
 

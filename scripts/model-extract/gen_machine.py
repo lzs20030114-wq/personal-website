@@ -62,7 +62,12 @@ STATIC_GROUPS = [
     ("frame", ["滑轨架", "骨架"]),
     ("shaft", ["中间轴", "中间轴驱动"]),
 ]
-BLOCK_LAYERS = ["大触手", "小触手"]
+# 大触手**不再烘成静件**：它就是 Lab.03 那条三肌腱触手（椎节间距逐位吻合），
+# 改由 tentacle3d 的解算实时驱动（spec §3.4）。这里只测它的放置参数。
+# 小触手仍是静件（另一种零件，27 件，无机构数据）。
+BLOCK_LAYERS = ["小触手"]
+ARM_LAYER = "大触手"
+SHAPE_TS = ROOT / "src/lib/linkage/tentacle3d-shape.ts"
 
 
 # ---------------------------------------------------------------- shell3d-data
@@ -284,6 +289,103 @@ def frame_world(loc, A, B):
     return np.c_[uv, loc[:, 2]]
 
 
+# ------------------------------------------------------------------- 大触手
+
+def parse_shape_arr(name):
+    """从 tentacle3d-shape.ts 取一个数组常量（机器生成、格式固定）。"""
+    src = SHAPE_TS.read_text(encoding="utf-8")
+    mm = re.search(rf"export const {name}[^=]*= (\[.*?\]) as const;", src, re.S)
+    if not mm:
+        raise RuntimeError(f"tentacle3d-shape.ts 里找不到 {name}")
+    return json.loads(mm.group(1))
+
+
+def measure_arm(model, by_layer):
+    """大触手在装配位的放置参数 + 滚转自检。
+
+    实测结论（2026-07-29）：臂轴沿 +y；截面坐标系与装配系**不差旋转**（滚转 ≈ 0）。
+    故 sim → 装配 是纯平移，再叠上整机的世界映射 ⇒ 总体 = 绕世界 z 轴 90° + 平移。
+
+    滚转只能靠**离轴地标**定住——用梢端三根绑线柱的方位与 TIES 比对。
+    椎节质心全部落在轴线上，定不出绕轴姿态，光看它们会漏掉滚转错误。
+    """
+    ties = parse_shape_arr("TIES")
+    tie_ax = sum(t[1] for t in ties) / len(ties)
+
+    acc = []
+    for o in by_layer.get(ARM_LAYER, []):
+        g = o.Geometry
+        if g is None or g.ObjectType != r3d.ObjectType.InstanceReference:
+            continue
+        expand_instance(model, g, acc)
+    if not acc:
+        sys.exit("装配位没找到大触手图块")
+
+    parts = [(v.mean(axis=0), v, t) for v, t in acc]
+    V = np.vstack([p[1] for p in parts])
+    _u, _s, vt = np.linalg.svd(V - V.mean(axis=0), full_matrices=False)
+    axis = vt[0] / np.linalg.norm(vt[0])
+    if abs(abs(axis[1]) - 1) > 1e-3:
+        sys.exit(f"大触手主轴不沿 y（实测 {np.round(axis, 4)}）——放置假设不成立")
+
+    parts.sort(key=lambda r: r[0][1])
+    clusters = [[parts[0]]]
+    for r in parts[1:]:
+        if r[0][1] - clusters[-1][-1][0][1] > 12:
+            clusters.append([r])
+        else:
+            clusters[-1].append(r)
+    verts = [c for c in clusters if len(c) >= 17]
+    if len(verts) < 5:
+        sys.exit(f"大触手椎节簇只认出 {len(verts)} 个——分簇阈值或模型变了")
+    cen = np.array([np.vstack([x[1] for x in c]).mean(axis=0) for c in verts])
+    ax_x = float(cen[:, 0].mean())
+    ax_z = float(cen[:, 2].mean())
+    spread = float(max(cen[:, 0].std(), cen[:, 2].std()))
+    if spread > 0.5:
+        sys.exit(f"椎节质心不共线（散布 {spread:.2f}mm）——轴线拟合不可信")
+
+    # ① 先用六个椎节质心把 ax 原点拟合出来——**这一步与滚转无关**，
+    #    质心全在轴线上，只定得住沿臂位置。
+    stations = parse_shape_arr("STATIONS")
+    if len(stations) < len(cen):
+        sys.exit(f"STATIONS 只有 {len(stations)} 站，少于实测椎节 {len(cen)}")
+    offs = [cen[i][1] - stations[i][1] for i in range(len(cen))]
+    y0 = sum(offs) / len(offs)
+    scatter = max(abs(o - y0) for o in offs)
+    if scatter > 1.0:
+        sys.exit(f"椎节沿臂位置与 STATIONS 对不上（残差 {scatter:.2f}mm）——不是同一条触手")
+
+    # ② 再按 ax = TIES 的沿臂位置去**定位**该取哪一组绑线柱。
+    #    梢端有两组半径≈6 的三件（实测彼此差约 60°），按「最靠梢端」取会选错那组
+    #    （首版即此错，滚转算出 61°）。用沿臂位置选，不用「最靠梢端」选。
+    want_y = y0 + tie_ax
+    cand = []
+    for c, _v, _t in parts:
+        rr = math.hypot(c[0] - ax_x, c[2] - ax_z)
+        if 4.5 < rr < 8.5 and abs(c[1] - want_y) < 6.0:
+            cand.append((c, rr, math.degrees(math.atan2(c[2] - ax_z, c[0] - ax_x))))
+    if len(cand) < 3:
+        sys.exit(f"ax≈{tie_ax:.1f} 处的绑线柱只找到 {len(cand)} 根——定不住滚转")
+    cand.sort(key=lambda p: abs(p[0][1] - want_y))
+    posts = cand[:3]
+    print(
+        f"  绑线柱取 ax≈{tie_ax:.1f}（y≈{want_y:.2f}）处三根，实测 y="
+        f"{[round(p[0][1], 2) for p in posts]}"
+    )
+
+    tie_az = sorted(math.degrees(math.atan2(t[2], t[0])) % 360 for t in ties)
+    post_az = sorted(p[2] % 360 for p in posts)
+    roll = max(abs(((a - b + 180) % 360) - 180) for a, b in zip(post_az, tie_az))
+    print(
+        f"  大触手：轴线 x={ax_x:.3f} z={ax_z:.3f}（椎节 {len(verts)} 簇，散布 {spread:.3f}mm）"
+        f" · ax0 在 y={y0:.3f} · 滚转残差 {roll:.2f}°"
+    )
+    if roll > 6.0:
+        sys.exit(f"大触手滚转 {roll:.1f}° ≠ 0——放置需要绕臂轴旋转，当前实现未支持")
+    return {"axis_x": ax_x, "axis_z": ax_z, "ax0_y": y0, "roll_deg": round(roll, 3)}
+
+
 # --------------------------------------------------------------------- main
 
 def main():
@@ -479,6 +581,8 @@ def main():
             expand_instance(model, g, acc)
             for v, t in acc:
                 tent_parts.append((to_world(v), t))
+    arm = measure_arm(model, by_layer)
+
     tt = merge(tent_parts)
     if tt is not None:
         raw_t = len(tt[1])
@@ -487,8 +591,8 @@ def main():
         WELD = TENTACLE_WELD
         tt = weld(tt[0], tt[1])
         WELD = keep
-        print(f"  触手降面 {raw_t:,} → {len(tt[1]):,} 三角（静态摆件，{TENTACLE_WELD}mm 顶点聚类）")
-        groups.append(("tentacle", tt[0], tt[1], None))
+        print(f"  小触手降面 {raw_t:,} → {len(tt[1]):,} 三角（静态摆件，{TENTACLE_WELD}mm 顶点聚类）")
+        groups.append(("armsmall", tt[0], tt[1], None))
 
     # ---- M1 验收闸门：按运行时的重建方式回算，比对图纸姿态原位
     # 这一关专抓标架约定写反（ey 取反 = 零件镜像，运行时才发现就晚了）。
@@ -569,6 +673,14 @@ def main():
             }
         )
 
+    arm_origin = [
+        round(STATION[0] - (arm["ax0_y"] - PLANE0), 4),
+        round(arm["axis_x"] - X0, 4),
+        round(arm["axis_z"] - Z0, 4),
+    ]
+    arm_json = json.dumps({"origin": arm_origin, "rollDeg": arm["roll_deg"]}, ensure_ascii=False)
+    print(f"  大触手世界落位 origin={arm_origin}")
+
     ts = io.StringIO()
     ts.write(
         f"""// machine-shape.ts —— 轮回机器整机（Lab.05）形体分组与绑定表，机器生成。
@@ -602,6 +714,19 @@ export interface MachineDrive {{
   /** 图纸姿态（θ₀ = 上死点 = 全开）的拱顶高度；行程下端 = apex0 − 2·crankR。 */
   apex0: number;
 }}
+
+/**
+ * 大触手（= Lab.03 那条三肌腱触手，椎节间距逐位吻合）在整机世界系里的落位。
+ * sim 坐标系：y = 沿臂，(x, z) = 截面。实测滚转 ≈ 0（梢端三绑线柱方位与 TIES
+ * 逐一对上），故 sim → 世界 是**绕世界 z 轴 90° + 平移**，无绕臂轴旋转：
+ *   world = ( ARM_ORIGIN.x − sy , ARM_ORIGIN.y + sx , ARM_ORIGIN.z + sz )
+ * 方向向量同理去掉平移。滚转残差见 ARM_ROLL_DEG（生成期 >6° 直接拒绝出表）。
+ */
+export interface ArmPlacement {{
+  origin: readonly [number, number, number];
+  rollDeg: number;
+}}
+export const ARM_PLACEMENT: ArmPlacement = {arm_json};
 
 export const MACHINE_MESH_URL = '/mesh/machine-mesh.bin';
 export const MACHINE_TRIS = {total_t};

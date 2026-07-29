@@ -204,7 +204,7 @@ describe('位姿（网格绑定）', () => {
     const m = createMachine();
     const before = machineFrames(m).filter((f) => !'pxwr'.includes(f.name[0]));
     // shaft 与 frame 分开成组：控制面板的「传动」开关要能连中间轴一起切
-    expect(before.map((f) => f.name).sort()).toEqual(['frame', 'shaft', 'tentacle']);
+    expect(before.map((f) => f.name).sort()).toEqual(['armsmall', 'frame', 'shaft']);
     for (let k = 0; k < 40; k++) stepMachine(m, DSTEP);
     for (const { frame } of machineFrames(m).filter((f) => !'pxwr'.includes(f.name[0]))) {
       expect(frame.o).toEqual({ x: 0, y: 0, z: 0 });
@@ -320,6 +320,7 @@ describe('部件分类（控制面板用）', () => {
     expect(seen.get('rings')).toBe(69);
     expect(seen.get('drive')).toBe(11);
     expect(seen.get('frame')).toBe(1);
+    // 只有小触手在表里；大触手是活件，不烘进 machine-mesh.bin
     expect(seen.get('tentacle')).toBe(1);
   });
 
@@ -327,6 +328,13 @@ describe('部件分类（控制面板用）', () => {
     expect(MACHINE_GROUPS.some((g) => g.name === 'shaft')).toBe(true);
     expect(partKind('shaft')).toBe('drive');
     expect(partKind('frame')).toBe('frame');
+  });
+
+  it('大触手不在形体表里——它是活件，由 tentacle3d 实时驱动', () => {
+    expect(MACHINE_GROUPS.some((g) => g.name === 'tentacle')).toBe(false);
+    // 小触手仍是静件，归「触手」档（与大触手同一个开关）
+    expect(MACHINE_GROUPS.some((g) => g.name === 'armsmall')).toBe(true);
+    expect(partKind('armsmall')).toBe('tentacle');
   });
 
   it('环归属：动件报 0..4，静件报 null', () => {
@@ -347,7 +355,7 @@ describe('部件分类（控制面板用）', () => {
     const all = { rings: true, drive: true, frame: true, tentacle: true } as const;
     expect(visibleGroups(all, null)).toHaveLength(MACHINE_GROUPS.length);
     const noTent = visibleGroups({ ...all, tentacle: false }, null);
-    expect(noTent.some((g) => g.name === 'tentacle')).toBe(false);
+    expect(noTent.some((g) => g.name === 'armsmall')).toBe(false);
     expect(noTent).toHaveLength(MACHINE_GROUPS.length - 1);
     expect(visibleGroups({ rings: false, drive: false, frame: false, tentacle: false }, null)).toHaveLength(0);
   });
@@ -362,7 +370,7 @@ describe('部件分类（控制面板用）', () => {
     // 静件仍在（否则「只看 S3」会连驱动它的轴一起切掉）
     expect(only2.some((g) => g.name === 'frame')).toBe(true);
     expect(only2.some((g) => g.name === 'shaft')).toBe(true);
-    expect(only2.some((g) => g.name === 'tentacle')).toBe(true);
+    expect(only2.some((g) => g.name === 'armsmall')).toBe(true);
     // 五环各自隔离之和 = 全部环件
     const perRing = [0, 1, 2, 3, 4].reduce(
       (n, i) => n + visibleGroups({ ...all, drive: false, frame: false, tentacle: false }, i).length,

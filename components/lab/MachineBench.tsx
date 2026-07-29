@@ -2,7 +2,23 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
-import { FlatRenderer, bakeIndexed, bakeRuledPoints } from '../../src/lib/linkage/gl3d';
+import { FlatRenderer, bakeIndexed, bakeRuledPoints, bakeSkinned, type CellFrame } from '../../src/lib/linkage/gl3d';
+import { CriticallyDamped } from '../../src/lib/linkage/motion';
+import { armFrame, armPolyline } from '../../src/lib/linkage/machine-arm';
+import {
+  MESH_GROUPS as ARM_MESH_GROUPS,
+  STATIONS as ARM_STATIONS,
+  CHAINS as ARM_CHAINS,
+} from '../../src/lib/linkage/tentacle3d-shape';
+import {
+  GUIDE3,
+  ROOTB3,
+  SPINE3,
+  TENTACLE3D,
+  applyContraction3,
+  createTentacle3,
+  tendonVisual3,
+} from '../../src/lib/linkage/tentacle3d-data';
 import { bandTriIndex, bandVerts, bandsFarToNear, resample } from '../../src/lib/linkage/skin';
 import type { Vec3 } from '../../src/lib/linkage/solver3d';
 import {
@@ -35,15 +51,18 @@ import { useBenchLoop } from './useBenchLoop';
  * 这里看**整台机器怎么被一台电机驱动**——一根中间轴带五个不同半径的曲柄（同相），
  * 五根不同长度的连杆推五个环的拱顶，全机只有一个自由度。
  *
- * 形体是真机实体（729新参考.3dm 装配位逐面取网格，11.4 万三角）：66 块角化板各自绑
- * 自己的三角、3 件配件跟销、5 个单杆轮随 θ 转、5 根驱动杆由两点定位姿；机架与三条
- * 触手烘死为静件。分组与绑定见 machine-shape.ts，位姿计算在 machine.ts（可单测，
- * 与渲染无关）。
+ * 形体是真机实体（729新参考.3dm 装配位逐面取网格）：66 块角化板各自绑自己的三角、
+ * 3 件配件跟销、5 个单杆轮随 θ 转、5 根驱动杆由两点定位姿；机架与两条小触手烘死为
+ * 静件。分组与绑定见 machine-shape.ts，位姿计算在 machine.ts（可单测，与渲染无关）。
+ *
+ * **大触手是活件**：查明它就是 Lab.03 那条三肌腱触手（椎节沿臂位置与 STATIONS 逐位
+ * 吻合），故整套复用 tentacle3d 的解算与网格，本台架只把它摆到机器上
+ * （machine-arm 的刚体变换，落位参数由 gen_machine.py 实测生成）。
  *
  * 运动学一行没新写——五环销坐标与 shell3d-data 逐位相同，直接复用其解算与止程标定。
  *
- * 规格表须写明的三条局限（spec §7）：转速非真机节律（减速比无出处）、触手是静态
- * 形体不参与运动、脚槽止程是仿真标定值非真机实测。
+ * 规格表须写明的三条局限（spec §7）：转速非真机节律（减速比无出处）、两条小触手是
+ * 静态形体不参与运动、脚槽止程是仿真标定值非真机实测。
  */
 
 const VIEWS = [
@@ -91,6 +110,16 @@ const bandShade = (ri: number): { dark: [number, number, number]; lite: [number,
     lite: [m[0] * 0.62, m[1] * 0.62, m[2] * 0.62],
   };
 };
+
+/** 大触手网格：与 Lab.03 同一份载荷（同一条触手，浏览器会命中缓存） */
+const ARM_MESH_URL = '/mesh/tentacle3d-mesh.bin';
+/** 三腱线色：与 Lab.03 同族（绿 / 紫 / 中灰） */
+const TENDON_C: [number, number, number][] = [
+  [0.62, 0.82, 0.58],
+  [0.76, 0.7, 0.92],
+  [0.72, 0.74, 0.7],
+];
+const ARM_SHADE = { dark: [0.1, 0.11, 0.11], lite: [0.52, 0.54, 0.5] } as const;
 
 const CHASE_OMEGA = 2.5;
 const VIEW_ANIM_S = 0.35;
@@ -215,6 +244,9 @@ const COPY = {
     skin: '蒙皮',
     skinAria: '蒙皮遮罩透明度：0 全透明，1 不透明',
     partNames: { rings: '环身', drive: '传动', frame: '机架', tentacle: '触手' },
+    arm: '肌腱',
+    armAria: ['肌腱 1 收缩', '肌腱 2 收缩', '肌腱 3 收缩'],
+    armHome: '松开',
     ring: '单环',
     ringAll: '全部',
     view: '视角',
@@ -239,6 +271,9 @@ const COPY = {
     skin: 'Skin',
     skinAria: 'Skin opacity: 0 clear, 1 solid',
     partNames: { rings: 'Rings', drive: 'Drive', frame: 'Frame', tentacle: 'Arms' },
+    arm: 'Tendons',
+    armAria: ['Tendon 1 contraction', 'Tendon 2 contraction', 'Tendon 3 contraction'],
+    armHome: 'Release',
     ring: 'Ring',
     ringAll: 'All',
     view: 'View',
@@ -281,6 +316,8 @@ export function MachineBench({
     setSkin: (a: number) => void;
     setShow: (s: Record<MachinePartKind, boolean>) => void;
     setIsolate: (ri: number | null) => void;
+    setTendon: (k: number, v: number) => void;
+    armHome: () => void;
     viewTo: (k: ViewKey) => void;
     viewHome: () => void;
   } | null>(null);
@@ -297,6 +334,7 @@ export function MachineBench({
     tentacle: true,
   });
   const [isolate, setIsolate] = useState<number | null>(null);
+  const [tendons, setTendons] = useState<[number, number, number]>([0, 0, 0]);
   const [hud, setHud] = useState({ err: 0, apex: 0, ring: 2, folding: true, note: '' });
 
   useEffect(() => {
@@ -323,6 +361,18 @@ export function MachineBench({
       zoomMax: 3,
       autoYaw: 0,
     });
+
+    // 大触手：**就是 Lab.03 那条**（椎节沿臂位置与 STATIONS 逐位吻合，生成期已闸门）。
+    // 运动学整套复用 tentacle3d，本台架只把它摆到机器上（machine-arm 的刚体变换）。
+    const N_ARM = TENTACLE3D.segments;
+    let arm = createTentacle3();
+    // 肌腱限速：与 Lab.03 同参（临界阻尼 5）——真机肌肉不会瞬间到位
+    const muscles = [0, 1, 2].map(() => new CriticallyDamped(5));
+    let armReady = false;
+    const armJoints = ARM_MESH_GROUPS.filter((g) => g.blend).map((g) => ({
+      name: g.name,
+      gap: g.name === 'jr' ? -1 : Number(g.name.slice(1)),
+    }));
 
     let renderer: FlatRenderer | null = null;
     try {
@@ -373,6 +423,30 @@ export function MachineBench({
         canvas.setAttribute('aria-label', `3D preview incomplete: ${msg}`);
       });
 
+    fetch(ARM_MESH_URL)
+      .then((res) => {
+        if (!res.ok) throw new Error(`arm mesh 请求失败（HTTP ${res.status}）`);
+        return res.arrayBuffer();
+      })
+      .then((buf) => {
+        if (disposed) return;
+        for (const g of ARM_MESH_GROUPS) {
+          const verts = new Float32Array(buf, g.vOff, g.verts * 3);
+          const idx = g.idx32
+            ? new Uint32Array(buf, g.iOff, g.tris * 3)
+            : new Uint16Array(buf, g.iOff, g.tris * 3);
+          // 组名加 a_ 前缀：整机组名里已经有 c/j/m 开头的可能，别撞车
+          if (g.blend) R.addSkinnedMesh(`a_${g.name}`, bakeSkinned(verts, idx, g.blend[0], g.blend[1]));
+          else R.addMesh(`a_${g.name}`, bakeIndexed(verts, idx));
+        }
+        armReady = true;
+      })
+      .catch((error: unknown) => {
+        if (disposed) return;
+        const msg = error instanceof Error ? error.message : 'arm mesh 载入失败';
+        setHud((h) => (h.note ? h : { ...h, note: msg }));
+      });
+
     let running = spin && !reduced;
     let dir: 1 | -1 = MACHINE_DIR;
     let omegaNow = MACHINE_OMEGA;
@@ -406,6 +480,77 @@ export function MachineBench({
         resample(profileWorld(ri + 1), SKIN_U),
         SKIN_V,
       );
+    // 站元胞刚架：与 Lab.03 同一公式（前站→后站中央切线 + 导向点正交化）。
+    // 算完在 sim 系，交给 armFrame 一次性搬到整机世界。
+    const armCell = (i: number): CellFrame => {
+      const nodes = arm.solver.nodes;
+      const si = Math.max(0, i);
+      const o = nodes[SPINE3(si)];
+      const nA = si === 0 ? nodes[ROOTB3()] : nodes[SPINE3(si - 1)];
+      const nB = nodes[SPINE3(Math.min(N_ARM, si + 1))];
+      let ux = nB.x - nA.x;
+      let uy = nB.y - nA.y;
+      let uz = nB.z - nA.z;
+      const ul = Math.hypot(ux, uy, uz) || 1;
+      ux /= ul; uy /= ul; uz /= ul;
+      const g = nodes[GUIDE3(0, si)];
+      let ex = g.x - o.x;
+      let ey = g.y - o.y;
+      let ez = g.z - o.z;
+      const dt = ex * ux + ey * uy + ez * uz;
+      ex -= dt * ux; ey -= dt * uy; ez -= dt * uz;
+      const el = Math.hypot(ex, ey, ez) || 1;
+      ex /= el; ey /= el; ez /= el;
+      return armFrame({
+        o, ux, uy, uz, ex, ey, ez,
+        fx: ey * uz - ez * uy,
+        fy: ez * ux - ex * uz,
+        fz: ex * uy - ey * ux,
+      });
+    };
+    /** 基座 = 不动锚（静息刚架，不随节 0 摆动），同 Lab.03 */
+    const ARM_MNT: CellFrame = (() => {
+      const g = ARM_CHAINS[0][0];
+      const o = ARM_STATIONS[0];
+      let ex = g[0] - o[0];
+      let ez = g[2] - o[2];
+      const el = Math.hypot(ex, ez) || 1;
+      ex /= el; ez /= el;
+      return armFrame({
+        o: { x: o[0], y: o[1], z: o[2] },
+        ux: 0, uy: 1, uz: 0,
+        ex, ey: 0, ez,
+        fx: -ez, fy: 0, fz: ex,
+      });
+    })();
+    const armRootDy = ARM_STATIONS[0][1] - arm.solver.nodes[ROOTB3()].y;
+    const armRootFrame = (): CellFrame => {
+      const b = arm.solver.nodes[ROOTB3()];
+      return { ...ARM_MNT, o: armFrame({ ...ARM_MNT, o: b }).o };
+    };
+
+    const drawArm = (): void => {
+      if (!armReady) return;
+      for (let ci = 0; ci <= N_ARM; ci++) {
+        R.drawMesh(`a_c${ci}`, armCell(ci), [...ARM_SHADE.dark], [...ARM_SHADE.lite]);
+      }
+      R.drawMesh('a_mnt', ARM_MNT, [...ARM_SHADE.dark], [...ARM_SHADE.lite]);
+      for (const j of armJoints) {
+        if (j.gap < 0) R.drawSkinned(`a_${j.name}`, armRootFrame(), armCell(0), armRootDy);
+        else {
+          const dy = ARM_STATIONS[j.gap + 1][1] - ARM_STATIONS[j.gap][1];
+          R.drawSkinned(`a_${j.name}`, armCell(j.gap), armCell(j.gap + 1), dy);
+        }
+      }
+      // 三根肌腱走线——不画的话「牵拉」看不见是谁在拉
+      for (let k = 0; k < 3; k++) {
+        const pts = armPolyline(tendonVisual3(arm.solver, k));
+        const segs = [];
+        for (let i = 1; i < pts.length; i++) segs.push({ a: pts[i - 1], b: pts[i] });
+        R.drawLines(segs, TENDON_C[k], 0.004);
+      }
+    };
+
     /** 带序从远到近（半透明面之间没有 z 排序）。深度取两环轮心中点。 */
     const bandOrder = (): number[] => {
       const mtx = cam.matrix;
@@ -459,6 +604,7 @@ export function MachineBench({
         const s = groupShade(g.name);
         R.drawMesh(g.name, machineFrame(g, machine), s.dark, s.lite);
       }
+      if (showNow.tentacle) drawArm();
       // 半透明层最后画：与已成像的实体混合，且**深度只测不写**；
       // 带之间没有 z 排序，只能靠从远到近的下单顺序（Lab.04 07-29 定案）。
       if (skinOn && skinA < SKIN_OPAQUE_AT) {
@@ -486,6 +632,11 @@ export function MachineBench({
         substep();
         acc -= SHELL_STEP_DT;
       }
+      // 大触手：与整机同帧推进（自己的 3D 内核，与五环解算互不相干）
+      muscles.forEach((m, k) => {
+        if (m.update(dt)) applyContraction3(arm.solver, arm.tendons[k], m.value);
+      });
+      arm.solver.step(dt, TENTACLE3D.sweeps);
       render();
       // 读数跟着「单环」走：隔离哪一环就报哪一环的拱顶，全部时报中间那环（S3）
       const ri = isolateNow ?? 2;
@@ -526,6 +677,13 @@ export function MachineBench({
       setSkin: (a) => {
         skinA = a;
         if (!running) render();
+      },
+      setTendon: (k, v) => {
+        muscles[k].target = v;
+      },
+      armHome: () => {
+        arm = createTentacle3();
+        muscles.forEach((m) => m.jumpTo(0));
       },
       setPersp: (on) => R.setPerspective(on ? 900 : 0),
       viewTo: (k) => {
@@ -729,6 +887,41 @@ export function MachineBench({
                 apiRef.current?.setSkin(v);
               }}
             />
+          </div>
+          {/* 大触手三肌腱 —— 与 Lab.03 同一条触手、同一套解算，只是摆到了机器上。
+              滑块 = 各腱收缩率；限速用临界阻尼（真机肌肉不会瞬间到位）。
+              触手关掉时这一组也没意义，但留着不禁用——再打开就还在原姿态。 */}
+          <div className="grp">
+            <span className="k">{L.arm}</span>
+            {[0, 1, 2].map((k) => (
+              <input
+                key={k}
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round(tendons[k] * 100)}
+                aria-label={L.armAria[k]}
+                style={{ width: sideControls ? '100%' : 62 }}
+                onChange={(e) => {
+                  const v = Number(e.target.value) / 100;
+                  setTendons((t) => {
+                    const n = [...t] as [number, number, number];
+                    n[k] = v;
+                    return n;
+                  });
+                  apiRef.current?.setTendon(k, v);
+                }}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                setTendons([0, 0, 0]);
+                apiRef.current?.armHome();
+              }}
+            >
+              {L.armHome}
+            </button>
           </div>
           {/* 单环隔离 —— 五个环同相但行程各异，单独看一个才比得出半径差。
               只筛环件：机架/轴/触手仍按各自开关，否则「只看 S3」会连驱动它的轴一起切掉。 */}

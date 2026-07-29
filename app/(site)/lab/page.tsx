@@ -243,13 +243,14 @@ export default function LabPage() {
         <Bench
           no="05"
           title="Full assembly"
-          lede="The whole machine on one motor — one shaft swings 180° back and forth, five cranks of different radii open and close the rings, and every plate carries its real solid."
+          lede="The whole machine on one motor — one shaft swings 180° back and forth, five cranks of different radii open and close the rings, and the big arm curls on its three tendons."
           accent="var(--accent-2)"
           specs={[
-            ['Bodies', '114k tri · real solids'],
+            ['Bodies', 'Real solids · adjustable skin'],
             ['Drive', 'One shaft · five cranks · in phase'],
             ['Stroke', '180° reciprocating · apex ≡ 2R'],
-            ['Caveats', 'Speed not to scale · tentacles static'],
+            ['Arm', 'Three tendons · same solver as Lab.03'],
+            ['Caveats', 'Speed not to scale · small arms static'],
           ]}
         >
           <MachineBench />
