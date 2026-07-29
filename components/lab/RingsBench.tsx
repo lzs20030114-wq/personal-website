@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
-import { FlatRenderer, bakeIndexed } from '../../src/lib/linkage/gl3d';
+import { FlatRenderer, bakeRuledPoints } from '../../src/lib/linkage/gl3d';
 import type { Vec3 } from '../../src/lib/linkage/solver3d';
 import {
   SHELL_OMEGA,
@@ -22,11 +22,21 @@ import { useBenchLoop } from './useBenchLoop';
  * 几何/装备与 src/demo/shell3d.ts 同源：五个 2D 环实例定步推进（同相呼吸，1/120 定步——
  * 跨设备一致）+ 刚体位姿嵌入 3D + 织物蒙皮（相邻环外侧支点等弧长重采样成直纹带）+
  * 视角预设四元数 slerp。
- * 视觉按稿：族系配色 S1 绿 → S3 中性 → S5 紫（线色承载环身份）、烟灰蒙皮压暗让线稿透出、
+ * 视觉按稿：族系配色 S1 绿 → S3 中性 → S5 紫（线色承载环身份）、
  * 关节点径随环递增、销点绿、轮毂点取环色。
- * 装备零改（gl3d 只加了 drawDynamicMesh 的可选明暗端色，加法式扩展、不传即旧行为）。
+ *
+ * 蒙皮 2026-07-29 改**半透明点阵**（用户拍板：实心织物「死灰一片」）：同一张直纹带
+ * 不再铺三角面，改成格心点云——点色沿带宽从 A 环色渐变到 B 环色（族系配色因此
+ * 铺满整个身体、不再只在线上），点径世界单位、逐点明暗、深度只测不写。
+ * 故绘制序反了过来：线稿先画，点阵后画（半透明要压在已成像的线上做混合）。
+ * 装备为加法式扩展（drawPointCloud + bakeRuledPoints 新增，既有绘制路径零改）。
  */
-const SKIN_SAMPLES = 25;
+// 点阵网格：沿环外廓 SKIN_U 列 × 跨带 SKIN_V 行（四条带共 ~3.4k 点/帧）
+const SKIN_U = 58;
+const SKIN_V = 11;
+// 点径（世界 mm，随缩放同步变大 ⇒ 密度观感恒定）与不透明度上限
+const SKIN_DOT_R = 1.75;
+const SKIN_ALPHA = 0.62;
 const HUB_R = 4;
 const CHASE_OMEGA = 2.5;
 const VIEW_ANIM_S = 0.35;
@@ -40,9 +50,6 @@ const COLS: [number, number, number][] = [
 ];
 const C_DIM: [number, number, number] = [0.44, 0.47, 0.5];
 const C_GRN: [number, number, number] = [0.62, 0.82, 0.58];
-// 烟灰织物：压暗蒙皮，彩色线稿才透得出来（稿内字面值）
-const SKIN_DARK: [number, number, number] = [0.08, 0.1, 0.13];
-const SKIN_LITE: [number, number, number] = [0.52, 0.56, 0.6];
 
 const VIEWS = [
   { key: 'axon', label: '轴测' },
@@ -141,16 +148,6 @@ function slerpQ(a: Quat, b: Quat, t: number): Quat {
 }
 
 const wrapAngle = (a: number): number => ((a + Math.PI) % (2 * Math.PI)) - Math.PI;
-
-const SKIN_IDX = (() => {
-  const idx: number[] = [];
-  for (let k = 0; k < SKIN_SAMPLES - 1; k++) {
-    const a = k;
-    const b = SKIN_SAMPLES + k;
-    idx.push(a, b, a + 1, b, b + 1, a + 1);
-  }
-  return new Uint16Array(idx);
-})();
 
 /** 折线按弧长等距重采样到 n 点（照搬 src/demo/shell3d.ts） */
 function resample(pts: Vec3[], n: number): Vec3[] {
@@ -320,23 +317,12 @@ export function RingsBench({
         const n = rings[ri].solver.nodes[j];
         return ringPoint(rings[ri].data, n.x, n.y);
       });
-    const skinMesh = (ri: number): Float32Array => {
-      const A = resample(profileWorld(ri), SKIN_SAMPLES);
-      const B = resample(profileWorld(ri + 1), SKIN_SAMPLES);
-      const verts = new Float32Array(SKIN_SAMPLES * 2 * 3);
-      let k = 0;
-      for (const p of A) {
-        verts[k++] = p.x;
-        verts[k++] = p.y;
-        verts[k++] = p.z;
-      }
-      for (const p of B) {
-        verts[k++] = p.x;
-        verts[k++] = p.y;
-        verts[k++] = p.z;
-      }
-      return bakeIndexed(verts, SKIN_IDX);
-    };
+    const skinPoints = (ri: number): Float32Array =>
+      bakeRuledPoints(
+        resample(profileWorld(ri), SKIN_U),
+        resample(profileWorld(ri + 1), SKIN_U),
+        SKIN_V,
+      );
 
     let theta = SHELL_THETA0;
     let targetTheta = theta;
@@ -362,12 +348,6 @@ export function RingsBench({
 
     const render = (): void => {
       R.beginFrame(cam);
-      // 烟灰织物先画（压暗），彩色线稿画其上
-      if (skinOn) {
-        for (let ri = 0; ri < rings.length - 1; ri++) {
-          R.drawDynamicMesh(skinMesh(ri), SKIN_DARK, SKIN_LITE);
-        }
-      }
       R.drawLines(decorSegs, C_DIM, 0.002);
       rings.forEach((r, ri) => {
         const d = r.data;
@@ -396,6 +376,12 @@ export function RingsBench({
         R.drawDots([ringPoint(d, pin.x, pin.y)], 3.4, C_GRN, 0.007);
         R.drawDots([ringPoint(d, 0, 0)], HUB_R, col, 0.007);
       });
+      // 点阵最后画：半透明要与已成像的线稿混合，且不写深度（自身不互遮）
+      if (skinOn) {
+        for (let ri = 0; ri < rings.length - 1; ri++) {
+          R.drawPointCloud(skinPoints(ri), COLS[ri], COLS[ri + 1], SKIN_DOT_R, SKIN_ALPHA);
+        }
+      }
     };
 
     let acc = 0;

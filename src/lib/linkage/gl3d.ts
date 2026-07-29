@@ -84,6 +84,50 @@ void main() {
   vLam = abs(dot(normalize(nv), uLight));
 }`;
 
+// 半透明点阵（2026-07-29 新增）：把整片实体蒙皮换成一层点云薄纱——
+// 点径 = 世界单位（随缩放变大，密度观感恒定），逐点 |n·L| 明暗 + 两端色 ramp，
+// 圆形由 gl_PointCoord 裁出并羽化边缘。深度**只测不写**：点之间互不遮挡、
+// 线稿透得过来，同时仍被前方实体正确挡住。
+const POINT_VS = `
+attribute vec3 aPos;
+attribute vec3 aNrm;
+attribute float aT;
+uniform mat3 uView;
+uniform vec3 uPivot;
+uniform vec2 uHalf;
+uniform float uScale;
+uniform float uDepthK;
+uniform float uPerspD;
+uniform vec2 uPan;
+uniform vec3 uLight;
+uniform vec3 uColA;
+uniform vec3 uColB;
+uniform float uSize;
+uniform float uPxScale;
+uniform float uAlpha;
+varying vec4 vCol;
+void main() {
+  vec3 q = uView * (aPos - uPivot);
+  float w = uPerspD > 0.0 ? 1.0 - q.z / uPerspD : 1.0;
+  gl_Position = vec4((q.x * uScale + uPan.x * w) / uHalf.x, -(q.y * uScale + uPan.y * w) / uHalf.y, -q.z * uDepthK * w, w);
+  // gl_PointSize 是帧缓冲像素、不参与透视除法，故此处自行除 w
+  gl_PointSize = clamp(uSize * uScale * uPxScale / w, 1.0, 14.0);
+  // 形体主要交给**不透明度**、颜色只轻微压暗：暗底上再乘明暗会把背光的点压成
+  // 灰渣（实测一片灰蒙蒙），族系色须保住
+  float lam = abs(dot(normalize(uView * aNrm), uLight));
+  vCol = vec4(mix(uColA, uColB, aT) * (0.74 + 0.26 * lam), uAlpha * (0.3 + 0.7 * lam));
+}`;
+
+const POINT_FS = `
+precision mediump float;
+varying vec4 vCol;
+void main() {
+  vec2 d = gl_PointCoord - vec2(0.5);
+  float r2 = dot(d, d);
+  if (r2 > 0.25) discard;
+  gl_FragColor = vec4(vCol.rgb, vCol.a * smoothstep(0.25, 0.08, r2));
+}`;
+
 const LINE_VS = `
 attribute vec3 aPos;
 uniform mat3 uView;
@@ -148,6 +192,53 @@ export function bakeIndexed(verts: Float32Array, idx: Uint16Array | Uint32Array)
     for (const [px, py, pz] of [[ax, ay, az], [bx, by, bz], [cx, cy, cz]] as const) {
       out[k++] = px; out[k++] = py; out[k++] = pz;
       out[k++] = nx; out[k++] = ny; out[k++] = nz;
+    }
+  }
+  return out;
+}
+
+/**
+ * 两条等长折线之间的直纹带 → 点阵顶点流（步长 7 float：pos / 法向 / 横向参数 t）。
+ * 纯几何、无 GL 调用，可单测。
+ *
+ * 取**格心** v=(j+0.5)/nv 而非等分端点：v=0/1 正落在两侧折线上，相邻两带会在
+ * 共用的那条线上叠出双倍密度，且与线稿重影。t 同时用作 drawPointCloud 的两端色
+ * 插值参数——一条带从 A 环色渐变到 B 环色。
+ * 法向取直纹面偏导叉积（∂/∂u 中心差分，∂/∂v = B−A），退化处（两点重合）留零向量。
+ */
+export function bakeRuledPoints(a: ReadonlyArray<Vec3>, b: ReadonlyArray<Vec3>, nv: number): Float32Array {
+  const nu = Math.min(a.length, b.length);
+  if (nu < 2 || nv < 1) return new Float32Array(0);
+  const out = new Float32Array(nu * nv * 7);
+  let k = 0;
+  for (let i = 0; i < nu; i++) {
+    const i0 = Math.max(0, i - 1);
+    const i1 = Math.min(nu - 1, i + 1);
+    for (let j = 0; j < nv; j++) {
+      const v = (j + 0.5) / nv;
+      const px = a[i].x + (b[i].x - a[i].x) * v;
+      const py = a[i].y + (b[i].y - a[i].y) * v;
+      const pz = a[i].z + (b[i].z - a[i].z) * v;
+      // ∂/∂u（中心差分，同一 v 上的相邻两列）
+      const ux = a[i1].x + (b[i1].x - a[i1].x) * v - (a[i0].x + (b[i0].x - a[i0].x) * v);
+      const uy = a[i1].y + (b[i1].y - a[i1].y) * v - (a[i0].y + (b[i0].y - a[i0].y) * v);
+      const uz = a[i1].z + (b[i1].z - a[i1].z) * v - (a[i0].z + (b[i0].z - a[i0].z) * v);
+      // ∂/∂v（直纹方向，与 v 无关）
+      const wx = b[i].x - a[i].x;
+      const wy = b[i].y - a[i].y;
+      const wz = b[i].z - a[i].z;
+      let nx = uy * wz - uz * wy;
+      let ny = uz * wx - ux * wz;
+      let nz = ux * wy - uy * wx;
+      const nl = Math.hypot(nx, ny, nz);
+      if (nl > 1e-9) {
+        nx /= nl; ny /= nl; nz /= nl;
+      } else {
+        nx = 0; ny = 0; nz = 0;
+      }
+      out[k++] = px; out[k++] = py; out[k++] = pz;
+      out[k++] = nx; out[k++] = ny; out[k++] = nz;
+      out[k++] = v;
     }
   }
   return out;
@@ -284,10 +375,12 @@ export class FlatRenderer {
   private readonly meshProg: WebGLProgram;
   private readonly skinProg: WebGLProgram;
   private readonly lineProg: WebGLProgram;
+  private readonly pointProg: WebGLProgram;
   private readonly meshes = new Map<string, { buf: WebGLBuffer; n: number }>();
   private readonly skins = new Map<string, { buf: WebGLBuffer; n: number }>();
   private readonly lineBuf: WebGLBuffer;
   private readonly dynMeshBuf: WebGLBuffer;
+  private readonly pointBuf: WebGLBuffer;
   private readonly halfW: number;
   private readonly halfH: number;
   private readonly depthK: number;
@@ -302,8 +395,10 @@ export class FlatRenderer {
     this.meshProg = link(gl, MESH_VS, MESH_FS);
     this.skinProg = link(gl, SKIN_VS, MESH_FS);
     this.lineProg = link(gl, LINE_VS, LINE_FS);
+    this.pointProg = link(gl, POINT_VS, POINT_FS);
     this.lineBuf = gl.createBuffer() as WebGLBuffer;
     this.dynMeshBuf = gl.createBuffer() as WebGLBuffer;
+    this.pointBuf = gl.createBuffer() as WebGLBuffer;
     this.halfW = logicalW / 2;
     this.halfH = logicalH / 2;
     this.depthK = 1 / depthRange;
@@ -351,6 +446,54 @@ export class FlatRenderer {
     if (lite) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uLite'), 0.95, 0.95, 0.92);
   }
 
+  /**
+   * 半透明点阵（bakeRuledPoints 产物，步长 7 float；世界坐标、逐帧上传）。
+   * colA/colB = 横向参数 t 的两端色；size = 点径（**世界单位**，故缩放时密度观感不变）；
+   * alpha = 正对光时的不透明度上限。
+   *
+   * 深度**测试开、写入关**：点云内部不自遮挡（避免绘制序决定谁盖谁的闪烁），
+   * 但仍被先画的实体/线条正确挡住 ⇒ 调用点应在实体与线稿**之后**画点阵。
+   * 混合用 blendFuncSeparate：canvas 是 premultipliedAlpha 的透明底，
+   * alpha 通道必须走 (ONE, 1−SRC_ALPHA) 才不会把底色叠花。
+   * 状态用完即还原（BLEND 关、depthMask 开），后续绘制零影响。
+   */
+  drawPointCloud(
+    data: Float32Array,
+    colA: [number, number, number],
+    colB: [number, number, number],
+    size: number,
+    alpha: number,
+  ): void {
+    if (!data.length) return;
+    const gl = this.gl;
+    const P = this.pointProg;
+    gl.useProgram(P);
+    gl.uniform3f(gl.getUniformLocation(P, 'uColA'), colA[0], colA[1], colA[2]);
+    gl.uniform3f(gl.getUniformLocation(P, 'uColB'), colB[0], colB[1], colB[2]);
+    gl.uniform1f(gl.getUniformLocation(P, 'uSize'), size);
+    gl.uniform1f(gl.getUniformLocation(P, 'uAlpha'), alpha);
+    // 逻辑单位 → 帧缓冲像素（canvas 背板通常是逻辑视口的整数倍）
+    gl.uniform1f(gl.getUniformLocation(P, 'uPxScale'), gl.drawingBufferWidth / (this.halfW * 2));
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.pointBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
+    const aPos = gl.getAttribLocation(P, 'aPos');
+    const aNrm = gl.getAttribLocation(P, 'aNrm');
+    const aT = gl.getAttribLocation(P, 'aT');
+    gl.enableVertexAttribArray(aPos);
+    gl.enableVertexAttribArray(aNrm);
+    gl.enableVertexAttribArray(aT);
+    gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 28, 0);
+    gl.vertexAttribPointer(aNrm, 3, gl.FLOAT, false, 28, 12);
+    gl.vertexAttribPointer(aT, 1, gl.FLOAT, false, 28, 24);
+    gl.enable(gl.BLEND);
+    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthMask(false);
+    gl.drawArrays(gl.POINTS, 0, data.length / 7);
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
+    gl.disableVertexAttribArray(aT);
+  }
+
   /** 蒙皮网格（bakeSkinned 产物，步长 7 float） */
   addSkinnedMesh(id: string, data: Float32Array): void {
     const gl = this.gl;
@@ -371,7 +514,7 @@ export class FlatRenderer {
     const gl = this.gl;
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    for (const prog of [this.meshProg, this.skinProg, this.lineProg]) {
+    for (const prog of [this.meshProg, this.skinProg, this.lineProg, this.pointProg]) {
       gl.useProgram(prog);
       gl.uniformMatrix3fv(gl.getUniformLocation(prog, 'uView'), false, transpose3(cam.matrix));
       const pv = cam.pivotPoint;
@@ -382,9 +525,12 @@ export class FlatRenderer {
       gl.uniform1f(gl.getUniformLocation(prog, 'uPerspD'), this.perspD);
       gl.uniform2f(gl.getUniformLocation(prog, 'uPan'), cam.pan.x, cam.pan.y);
     }
-    for (const prog of [this.meshProg, this.skinProg]) {
+    for (const prog of [this.meshProg, this.skinProg, this.pointProg]) {
       gl.useProgram(prog);
       gl.uniform3f(gl.getUniformLocation(prog, 'uLight'), -0.42, -0.52, 0.74);
+    }
+    for (const prog of [this.meshProg, this.skinProg]) {
+      gl.useProgram(prog);
       gl.uniform3f(gl.getUniformLocation(prog, 'uDark'), 0.29, 0.29, 0.27);
       gl.uniform3f(gl.getUniformLocation(prog, 'uLite'), 0.95, 0.95, 0.92);
     }
