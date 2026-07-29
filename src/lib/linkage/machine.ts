@@ -24,6 +24,65 @@ export { MACHINE_GROUPS, MACHINE_MESH_URL, MACHINE_TRIS, MACHINE_DRIVE } from '.
 /** 图纸姿态曲柄角（上死点 = 全开），与 shell3d 同。 */
 export const MACHINE_THETA0 = SHELL_THETA0;
 
+/**
+ * **中间轴不整周转，只在 180° 内往复**（用户 2026-07-29 指出：真机驱动如此）。
+ * 于是机器做的是张合，不是循环转动——θ 在 [θ₀, θ₀+π] 之间来回扫。
+ *
+ * 两端恰好是曲柄滑块的两个死点：θ₀ = 上死点 = 全开（图纸姿态），
+ * θ₀+π = 下死点 = 全折叠。所以 180° 正好走完整个行程 2R，一步不多一步不少。
+ *
+ * 这也解释了为什么端点换向不会看着一顿：死点处 d(拱顶)/dθ = 0，
+ * 曲柄匀速反转时输出速度本来就是从 0 平滑折回的，**不需要额外缓动**。
+ */
+export const MACHINE_SWEEP = Math.PI;
+export const MACHINE_THETA_MIN = MACHINE_THETA0;
+export const MACHINE_THETA_MAX = MACHINE_THETA0 + MACHINE_SWEEP;
+
+/**
+ * 默认角速度 rad/s。半程 π 用时 = π/ω ≈ 3.9s，一次完整张合（开→合→开）≈ 7.9s，
+ * 与人的呼吸节律同量级——THESIS_NOTES 的「生命感」要的就是这个，不是机械循环感。
+ * 与 shell3d 的 SHELL_OMEGA 取同值，两台并读时节奏一致。
+ * **非真机节律**：减速比图上未标，这是展示取值（spec §7 第一条局限）。
+ */
+export const MACHINE_OMEGA = 0.8;
+
+/** θ 钳进往复区间。 */
+export function clampTheta(theta: number): number {
+  return Math.min(MACHINE_THETA_MAX, Math.max(MACHINE_THETA_MIN, theta));
+}
+
+/**
+ * 往复推进一步：走到端点就折返。纯函数、可单测。
+ * 反射而非钳制——钳制会让机器停在端点直到方向被人改，反射才是「来回转」。
+ */
+export function reciprocate(
+  theta: number,
+  dir: 1 | -1,
+  step: number,
+): { theta: number; dir: 1 | -1 } {
+  let t = theta + dir * step;
+  let d = dir;
+  // 步长大于半程时要连续反射几次才落回区间（定步下不会发生，留作护栏）
+  for (let guard = 0; guard < 8; guard++) {
+    if (t > MACHINE_THETA_MAX) {
+      t = 2 * MACHINE_THETA_MAX - t;
+      d = -1;
+    } else if (t < MACHINE_THETA_MIN) {
+      t = 2 * MACHINE_THETA_MIN - t;
+      d = 1;
+    } else break;
+  }
+  return { theta: clampTheta(t), dir: d };
+}
+
+/** 行程参数 u ∈ [0,1]：0 = 全开（图纸姿态），1 = 全折叠。 */
+export function strokeOf(theta: number): number {
+  return (clampTheta(theta) - MACHINE_THETA_MIN) / MACHINE_SWEEP;
+}
+export function thetaAtStroke(u: number): number {
+  return MACHINE_THETA_MIN + Math.min(1, Math.max(0, u)) * MACHINE_SWEEP;
+}
+
 export interface Machine {
   rings: ShellRing[];
   /** 中间轴转角（五环同相，故整机只有这一个自由度）。 */
@@ -49,6 +108,13 @@ export function createMachine(): Machine {
 export function stepMachine(m: Machine, dTheta: number): void {
   m.theta += dTheta;
   for (const r of m.rings) stepRing(r, dTheta);
+}
+
+/** 往复驱动一步：按当前方向走，撞到 180° 的任一端就折返。 */
+export function runMachine(m: Machine, dir: 1 | -1, step: number): 1 | -1 {
+  const next = reciprocate(m.theta, dir, step);
+  stepMachine(m, next.theta - m.theta);
+  return next.dir;
 }
 
 /** 全机最大约束残差（HUD 读数）。 */

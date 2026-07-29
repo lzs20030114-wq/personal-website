@@ -6,16 +6,20 @@ import { FlatRenderer, bakeIndexed } from '../../src/lib/linkage/gl3d';
 import {
   MACHINE_GROUPS,
   MACHINE_MESH_URL,
+  MACHINE_OMEGA,
+  MACHINE_SWEEP,
   MACHINE_THETA0,
   type MachinePartKind,
   apexHeight,
+  clampTheta,
   createMachine,
   machineFrame,
   machineMaxError,
+  runMachine,
   stepMachine,
   visibleGroups,
 } from '../../src/lib/linkage/machine';
-import { SHELL_OMEGA, SHELL_STEP_DT } from '../../src/lib/linkage/shell3d';
+import { SHELL_STEP_DT } from '../../src/lib/linkage/shell3d';
 import { setSnapshot } from './snapshot';
 import { useBenchLoop } from './useBenchLoop';
 
@@ -154,8 +158,6 @@ function slerpQ(a: Quat, b: Quat, t: number): Quat {
   return [q[0] / n, q[1] / n, q[2] / n, q[3] / n];
 }
 
-const wrapAngle = (a: number): number => ((a + Math.PI) % (2 * Math.PI)) - Math.PI;
-
 /** 组名 → 明暗端色（环件取族系色，静件取中性） */
 function groupShade(name: string): { dark: [number, number, number]; lite: [number, number, number] } {
   if ('pxwr'.includes(name[0])) {
@@ -170,6 +172,9 @@ function groupShade(name: string): { dark: [number, number, number]; lite: [numb
  *  减速比图上没标（spec §7 第一条局限）。给滑块正是为了让用户自己找手感值。 */
 const OMEGA_MIN = 0.1;
 const OMEGA_MAX = 2.4;
+
+/** 相位滑块上限 = 往复行程 180°（不是 360——中间轴不整周转） */
+const PHASE_MAX = Math.round((MACHINE_SWEEP * 180) / Math.PI);
 
 const PARTS: ReadonlyArray<MachinePartKind> = ['rings', 'drive', 'frame', 'tentacle'];
 /** 环选择器：null = 全部 */
@@ -190,7 +195,7 @@ const COPY = {
     reset: '归位',
     views: { axon: '轴测', front: '正', left: '左', right: '右', top: '顶' },
     title: '整机传动',
-    sub: '一轴五曲柄 · 同相 · 单自由度',
+    sub: '一轴五曲柄 · 同相 · 180° 往复张合',
     hint: '拖拽旋转 · 右键平移 · 滚轮缩放',
     drive: { spin: '自转', slider: '滑杆' },
     aria: '轮回机器整机台架；拖拽旋转，曲柄角驱动',
@@ -210,7 +215,7 @@ const COPY = {
     reset: 'Reset',
     views: { axon: 'Axon', front: 'Front', left: 'Left', right: 'Right', top: 'Top' },
     title: 'Full transmission',
-    sub: 'One shaft, five cranks · in phase · single DOF',
+    sub: 'One shaft, five cranks · in phase · 180° reciprocating',
     hint: 'Drag to orbit · right-drag to pan · scroll to zoom',
     drive: { spin: 'spin', slider: 'slider' },
     aria: 'Reincarnation machine full-assembly bench; drag to orbit, crank-angle driven',
@@ -249,7 +254,7 @@ export function MachineBench({
   } | null>(null);
   const [run, setRun] = useState(spin);
   const [persp, setPersp] = useState(false);
-  const [omega, setOmega] = useState(SHELL_OMEGA);
+  const [omega, setOmega] = useState(MACHINE_OMEGA);
   const [view, setView] = useState<ViewKey>('axon');
   const [phase, setPhase] = useState(0);
   const [show, setShow] = useState<Record<MachinePartKind, boolean>>({
@@ -336,7 +341,8 @@ export function MachineBench({
       });
 
     let running = spin && !reduced;
-    let omegaNow = SHELL_OMEGA;
+    let dir: 1 | -1 = 1;
+    let omegaNow = MACHINE_OMEGA;
     let showNow: Record<MachinePartKind, boolean> = {
       rings: true,
       drive: true,
@@ -346,20 +352,22 @@ export function MachineBench({
     let isolateNow: number | null = null;
     let targetTheta = machine.theta;
     let viewAnim: { q0: Quat; q1: Quat; t: number } | null = null;
-    const phiDeg = (): number =>
-      (((machine.theta - MACHINE_THETA0) * 180) / Math.PI + 360000) % 360;
+    // φ 读数 = 相对全开位的转角，0–180（中间轴只在这个范围内往复）
+    const phiDeg = (): number => ((machine.theta - MACHINE_THETA0) * 180) / Math.PI;
 
     const substep = (): void => {
-      let dTheta: number;
       if (running) {
-        dTheta = omegaNow * SHELL_STEP_DT;
-        targetTheta = machine.theta + dTheta;
-      } else {
-        const diff = wrapAngle(targetTheta - machine.theta);
-        const max = CHASE_OMEGA * SHELL_STEP_DT;
-        dTheta = Math.max(-max, Math.min(max, diff));
-        if (dTheta === 0) return;
+        // 往复：撞到 180° 的任一端就折返。端点是曲柄滑块的死点，
+        // 输出速度本来就归零，故匀速反转看着不会一顿。
+        dir = runMachine(machine, dir, omegaNow * SHELL_STEP_DT);
+        targetTheta = machine.theta;
+        return;
       }
+      // 滑杆态：追目标角。区间不绕圈，故直接取差值、不做 wrap
+      const diff = clampTheta(targetTheta) - machine.theta;
+      const max = CHASE_OMEGA * SHELL_STEP_DT;
+      const dTheta = Math.max(-max, Math.min(max, diff));
+      if (dTheta === 0) return;
       stepMachine(machine, dTheta);
     };
 
@@ -567,7 +575,7 @@ export function MachineBench({
             <input
               type="range"
               min={0}
-              max={360}
+              max={PHASE_MAX}
               step={0.5}
               value={phase}
               style={sideControls ? { width: '100%' } : { width: 132 }}
