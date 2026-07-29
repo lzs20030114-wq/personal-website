@@ -7,7 +7,10 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const jobs = [['src/demo/assets/tentacle3d-mesh.bin', 'public/mesh/tentacle3d-mesh.bin']];
+const jobs = [
+  ['src/demo/assets/tentacle3d-mesh.bin', 'public/mesh/tentacle3d-mesh.bin'],
+  ['src/demo/assets/machine-mesh.bin', 'public/mesh/machine-mesh.bin'],
+];
 
 for (const [from, to] of jobs) {
   const src = join(root, from);
