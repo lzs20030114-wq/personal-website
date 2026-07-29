@@ -92,13 +92,15 @@ const FRAME_SHADE = { dark: [0.1, 0.11, 0.12], lite: [0.5, 0.53, 0.56] } as cons
 /** 触手：静件且不参与运动，再压一档，避免抢主体 */
 const TENT_SHADE = { dark: [0.09, 0.09, 0.1], lite: [0.38, 0.38, 0.42] } as const;
 
-// 蒙皮：与 Lab.04 同参（RingsBench 头注有完整由来）。整机上默认更透一点——
-// 这台的看点是里面的传动链，蒙皮盖太实就白做了。
+// 蒙皮：与 Lab.04 同参（RingsBench 头注有完整由来）。默认不透明度 0.67 是
+// 用户 2026-07-29 拍板的值（初版 0.22 求「看清里面的传动链」，用户要「调高一点」）——
+// 这台同时是项目 01 的主图，主图要先读出**这是一台什么形态的机器**，
+// 传动链交给控制面板的蒙皮滑块（拉到 0 即可看穿）。
 const SKIN_SAMPLES = 41;
 const SKIN_U = 58;
 const SKIN_V = 11;
 const SKIN_DOT_R = 1.75;
-const SKIN_DEFAULT = 0.22;
+const SKIN_DEFAULT = 0.67;
 const SKIN_OPAQUE_AT = 0.985;
 const dotAlpha = (a: number): number => Math.min(0.72, a * 1.8);
 const SKIN_IDX = bandTriIndex(SKIN_SAMPLES);
@@ -345,12 +347,23 @@ export function MachineBench({
     // 挂在底盘下方（图纸原位，非错位）。只框环身的话，触手会在画幅边缘露出一截，
     // 读成碎片；既然这台的题目是「还原真实形态」，就该把它整个收进来。
     // 代价是环身只占画幅约四成——枢轴向机器本体偏了一些作折中。
-    // 三个数都是手感常量，待用户真机拍板（spec M4）。
+    //
+    // pivot/scale 由**实测运动包络**定（用户 2026-07-29「往左上挪一点，确保任何时候
+    // 都全部在画内」）：待机摆动会把触手梢甩出一大片，静止一帧量出来的框根本不够用，
+    // 故先缩到不裁的比例、按 60s（覆盖摆动 15s 与舒卷 27s 两个周期）每 2s 采一帧取并集，
+    // 再解出「让包络居中」的枢轴。旧值实测下缘只剩 6px、上缘空着 144px——整体偏下。
+    // 现值：左右各 ~117px、上下各 ~73px 余量（画布 878×652 CSS px）。
+    //
+    // 两个坑：① **cx/cy 在 WebGL 台架上是死参数**——gl3d 只读 matrix/pivot/viewScale/pan，
+    // 屏幕中心恒取画布中心（camera3d.project 那条 SVG 老路才用 cx/cy）。要挪画面就动
+    // pivot（或 pan），改 cx/cy 毫无效果。② 量之前先把 .lab-hud 藏掉——φ / apex 读数
+    // 逐帧变，会被当成「形体」算进包络（右下角因此恒被吃满）。
+    // 两个数仍是手感常量，待用户真机拍板（spec M4）。
     const cam = new OrbitCamera({
       cx: 350,
-      cy: 280,
-      pivot: { x: -150, y: 0, z: 40 },
-      scale: 0.78,
+      cy: 260,
+      pivot: { x: -158.02, y: 39.22, z: -24.37 },
+      scale: 0.75,
       roll0: -1.053336,
       pitch0: 0.735843,
       yaw0: 0.867459,

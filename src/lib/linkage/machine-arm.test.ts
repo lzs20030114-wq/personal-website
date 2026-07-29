@@ -9,6 +9,7 @@ import {
   idleBaseEase,
   idleContraction,
   idleEase,
+  idleSwayAngle,
 } from './machine-arm';
 import { ARM_PLACEMENT } from './machine-shape';
 import { STATIONS, TIES } from './tentacle3d-shape';
@@ -211,15 +212,41 @@ describe('待机摆动（三腱交替轻收）', () => {
     expect(Math.max(...cs) - Math.min(...cs)).toBeLessThan(0.01);
   });
 
+  it('回转速率与幅度同步缓入：开场几乎不转，「第一下」是干净的往上抬', () => {
+    // 腱 0 把臂梢推向世界 +Z（实测单位向量 (0.23,0.09,0.97)）。
+    // 若回转按 sway·t 直接走，缓入那 5 秒里会转满 120°，主导权交到推向左下的腱 1
+    // ——用户「现在是往左下移动」正是这么来的。
+    expect(idleSwayAngle(0)).toBe(0);
+    expect(idleSwayAngle(ARM_IDLE.easeBase)).toBe(0);
+    // 幅度刚变得可见的那几秒，方向仍基本停在腱 0（<15°）
+    expect(idleSwayAngle(3)).toBeLessThan(Math.PI / 12);
+    // 缓入结束时也才转了半个窗口的量，远不到交棒给腱 1 的 120°
+    const atEnd = idleSwayAngle(ARM_IDLE.easeBase + ARM_IDLE.easeIn);
+    expect(atEnd).toBeLessThan((2 * Math.PI) / 3);
+    // 稳态回到匀速：周期不变，只相当于固定相移
+    const dt = 1;
+    const t0 = ARM_IDLE.easeBase + ARM_IDLE.easeIn + 5;
+    expect(idleSwayAngle(t0 + dt) - idleSwayAngle(t0)).toBeCloseTo(ARM_IDLE.sway * dt, 9);
+    // 单调不减（不能倒着转）
+    let prev = -1;
+    for (let i = 0; i <= 400; i++) {
+      const v = idleSwayAngle((i / 400) * 30);
+      expect(v).toBeGreaterThanOrEqual(prev - 1e-12);
+      prev = v;
+    }
+  });
+
   it('三根互为 120° 相位——各自的峰值时刻按 1/3 周期错开', () => {
     const period = (2 * Math.PI) / ARM_IDLE.sway;
+    const tSteady = ARM_IDLE.easeBase + ARM_IDLE.easeIn; // 稳态段起点
     const peak = (k: number): number => {
       let best = 0;
       let bestV = -1;
       for (let i = 0; i < 4000; i++) {
         const t = (i / 4000) * period;
-        // 只看方向项，避开基线与慢速舒卷调制对峰值时刻的微扰
-        const v = Math.cos(ARM_IDLE.sway * t - (2 * Math.PI * k) / 3);
+        // 只看方向项，避开基线与慢速舒卷调制对峰值时刻的微扰。
+        // 用 idleSwayAngle 而非 sway·t——缓入期两者不同（见上一条测试）
+        const v = Math.cos(idleSwayAngle(tSteady + t) - (2 * Math.PI * k) / 3);
         if (v > bestV) {
           bestV = v;
           best = t;

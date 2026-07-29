@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { StageRotator } from '../lab/StageRotator';
-import { RingsBench } from '../lab/RingsBench';
+import { MachineBench } from '../lab/MachineBench';
 import { snapshotCanvas } from '../lab/snapshot';
 import { coverRect, flipCss, flipTransform } from '../../src/lib/site/flip';
 
@@ -139,11 +139,11 @@ export interface HomeLog {
   text: string;
 }
 
-// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-07-29 vitest 实测 248；
+// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-07-29 vitest 实测 249；
 // 迭代稿配色：Tests=绿 700、Kernels=紫 700、Demos=绿 600）
 const STATS = [
   { n: '04', label: 'Projects', color: 'var(--ink)' },
-  { n: '248', label: 'Tests green', color: 'var(--accent)' },
+  { n: '249', label: 'Tests green', color: 'var(--accent)' },
   { n: '02', label: 'Solver kernels', color: 'var(--accent-2)' },
   { n: '05', label: 'Live demos', color: 'var(--g600)' },
 ];
@@ -279,7 +279,8 @@ function StagePlaceholderPanel({
         </div>
       )}
       {supplied ? (
-        // 项目 01 临时主图 = Lab.04 五环台架（用户拍板 2026-07-27：主图待拍摄前先用活件顶上）；
+        // 项目 01 临时主图 = Lab.05 整机台架（用户拍板 2026-07-27 先用活件顶上，
+        // 07-29 从 Lab.04 五环换成整机——与案例页主图同一件，见 CaseHeroLive）；
         // data-ptm 让它同时是 goPT 转场的克隆源。作者供图后换回 StageMedia。
         <div
           data-ptm
@@ -291,7 +292,7 @@ function StagePlaceholderPanel({
             overflow: 'hidden',
           }}
         >
-          <RingsBench active={active} controls={false} onLight />
+          <MachineBench active={active} controls={false} onLight />
         </div>
       ) : (
         <StageMedia

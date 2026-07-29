@@ -110,6 +110,29 @@ export function idleEase(t: number): number {
 }
 
 /**
+ * 弯向的回转角。**回转速率与幅度同步缓入**——用 idleEase 的积分做时钟，
+ * 而不是直接拿 t 乘 sway。
+ *
+ * 为什么必须这样（用户 2026-07-29：「第一下活动往上移动…现在是往左下」）：
+ * 腱 0 的收缩把臂梢推向世界 **+Z（正上）**，腱 1 推向左下，腱 2 推向右下（实测单位向量
+ * 分别是 (0.23,0.09,0.97) / (0.23,−0.85,−0.48) / (0.22,0.81,−0.54)）。
+ * 波形从腱 0 起本来是对的，但缓入那 5 秒里回转会走满 0.42×5 = 2.1 rad = **120°**,
+ * 恰好把主导权交给腱 1——等幅度终于起来，方向已经变成左下了。
+ * 让回转跟着幅度一起从零加速，头几秒方向几乎不动，于是「第一下」是干净的往上抬。
+ *
+ * 稳态下 τ(t) = t − easeBase − easeIn/2，即只相当于一个固定相移，周期不变。
+ */
+export function idleSwayAngle(t: number): number {
+  const a = ARM_IDLE.easeBase;
+  const L = ARM_IDLE.easeIn;
+  if (t <= a) return 0;
+  if (t >= a + L) return ARM_IDLE.sway * (t - a - L / 2);
+  // ∫₀ᵘ smoothstep = u³ − u⁴/2（u = 归一化进度），乘回 L 得已积累的「有效时间」
+  const u = (t - a) / L;
+  return ARM_IDLE.sway * L * (u * u * u - (u * u * u * u) / 2);
+}
+
+/**
  * 待机时第 k 根肌腱在时刻 t（秒）的目标收缩率 ∈ [base, base + span]。
  *
  * 实测效果（跑完整波形、量梢端相对基座的侧向偏移）：**43–150mm**，臂长 358mm 的
@@ -125,7 +148,7 @@ export function idleEase(t: number): number {
  * 全是手感常量，待用户真机拍板。
  */
 export function idleContraction(t: number, k: number): number {
-  const dir = Math.cos(ARM_IDLE.sway * t - (2 * Math.PI * k) / 3);
+  const dir = Math.cos(idleSwayAngle(t) - (2 * Math.PI * k) / 3);
   const curl = ARM_IDLE.floor + (1 - ARM_IDLE.floor) * (0.5 + 0.5 * Math.sin(ARM_IDLE.curl * t));
   const diff = dir > 0 ? ARM_IDLE.span * curl * dir * idleEase(t) : 0;
   return ARM_IDLE.base * idleBaseEase(t) + diff;
