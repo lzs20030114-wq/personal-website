@@ -24,7 +24,9 @@ from collections import defaultdict
 
 _ap = argparse.ArgumentParser()
 _ap.add_argument("path", nargs="?", default="../../模型求解器参考/729新参考.3dm")
-PATH = _ap.parse_args().path
+_ap.add_argument("--json", default=None, help="把出图用的结果数据写成 JSON")
+_args = _ap.parse_args()
+PATH = _args.path
 
 # ---------------- 材料假设（结论对材料不敏感，报告里给敏感性） ----------------
 E_PLA = 2300.0        # MPa，短期弹性模量（FDM PLA 实测常见 2.0–2.6 GPa）
@@ -498,7 +500,8 @@ def run_case(design, side_loads, overh, E, scale=1.0, name="", support="corner")
     smax = defaultdict(float)
     for tag, s in stresses:
         smax[tag] = max(smax[tag], s)
-    return dict(dz_max=abs(dz_ext), station_dz=st_dz, ddz_adj=ddz, smax=dict(smax))
+    return dict(dz_max=abs(dz_ext), station_dz=st_dz, ddz_adj=ddz, smax=dict(smax),
+                profile=sorted((float(y), float(v)) for y, v in dz.items()))
 
 # 现状设计（实测截面）
 c = chordL
@@ -596,4 +599,46 @@ for name, spec in CANDS:
           f"{s1:7.2f}{s2:7.2f}{SIGMA_Y/s2:9.1f}")
 
 print("\n（C1 = 展示支承长期；C2 = 单侧搬运×2 动载；SF = 许用/峰值。差沉 = 相邻站位挠度差，")
-print("  轴系同轴度预算取 0.05 mm —— D 孔配隙 0.15 mm 的 1/3。）")
+print("  对中预算 ≈ 0.56 mm —— 配隙 0.15 × 站距 85 / 孔长 22.55，超过即开始别轴。）")
+
+
+# ---------------- 5. 出图数据（--json） ----------------
+if _args.json:
+    import json as _json
+    viz = {"station_y": [float(y) for y in STATION_Y],
+           "rung_y": [float(y) for y in rung_ys],
+           "truss": {"y0": float(y0g), "y1": float(y1g), "len": float(truss_len)},
+           "budget_mm": 0.56,
+           "d0_profiles": {}, "cands": [], "racking": {"braced": float(dy_b), "unbraced": float(dy_nb)}}
+    for sup in ("corner", "mid", "rungs"):
+        best = None
+        for side in ("L", "R"):
+            r = run_case(D0, station_load[side], overhang[side], E_LONG, 1.0, support=sup)
+            if best is None or r["dz_max"] > best[1]["dz_max"]:
+                best = (side, r)
+        side, r = best
+        viz["d0_profiles"][sup] = {"profile": r["profile"], "dz_max": r["dz_max"],
+                                   "ddz": r["ddz_adj"], "side": side}
+    for name, spec in CANDS:
+        if spec is None:
+            D = D0; mass = vol_truss * RHO_PRINT
+        else:
+            w, t, rw, rt, bw, bt, br = spec
+            cAx, cIv, cIl, ccv, ccl = rect_chord(w, t)
+            D = (cAx, cIv, cIl, ccv, ccl, rw, rt, bw or 1.0, bt or 1.0, br)
+            mass = truss_mass(w, t, rw, rt, bw, bt, br)
+        row = {"name": name, "mass": float(mass), "ddz": {}, "dzmax": {}}
+        for sup in ("corner", "mid", "rungs"):
+            worst = None
+            for side in ("L", "R"):
+                r1 = run_case(D, station_load[side], overhang[side], E_LONG, 1.0, support=sup)
+                if worst is None or r1["dz_max"] > worst["dz_max"]:
+                    worst = r1
+            row["ddz"][sup] = float(worst["ddz_adj"]); row["dzmax"][sup] = float(worst["dz_max"])
+        r2 = run_case(D, all_load, all_over, E_PLA, 2.0)
+        row["c2_sigma"] = float(max(r2["smax"].values()))
+        row["c2_sf_yield"] = float(SIGMA_Y / max(r2["smax"].values()))
+        viz["cands"].append(row)
+    with open(_args.json, "w", encoding="utf-8") as f:
+        _json.dump(viz, f, ensure_ascii=False, indent=1)
+    print(f"\n→ 出图数据已写 {_args.json}")
