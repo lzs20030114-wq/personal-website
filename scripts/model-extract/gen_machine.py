@@ -64,7 +64,8 @@ STATIC_GROUPS = [
 ]
 # 大触手**不再烘成静件**：它就是 Lab.03 那条三肌腱触手（椎节间距逐位吻合），
 # 改由 tentacle3d 的解算实时驱动（spec §3.4）。这里只测它的放置参数。
-# 小触手仍是静件（另一种零件，27 件，无机构数据）。
+# 小触手 2026-07-30 起也不再烘死：用户给出机构说明（底座固定 + 舵机驱动大节绕
+# 圆形轴心甩动 + 软性中间件连被动小块），按关节拆四组提取（见 smallarm_articulate）。
 BLOCK_LAYERS = ["小触手"]
 ARM_LAYER = "大触手"
 SHAPE_TS = ROOT / "src/lib/linkage/tentacle3d-shape.ts"
@@ -287,6 +288,188 @@ def frame_world(loc, A, B):
     ex, ey = frame_axes(A, B)
     uv = np.array(A, dtype=float) + loc[:, [0]] * ex + loc[:, [1]] * ey
     return np.c_[uv, loc[:, 2]]
+
+
+# ------------------------------------------------------------------- 小触手
+
+def smallarm_articulate(model, by_layer):
+    """小触手关节化提取（用户 2026-07-30 给出机构说明后由静件转正）。
+
+    机构（用户原话的翻译）：底座固定在机架上；**大的一节由 SG90 舵机驱动，绕后端
+    圆形轴心甩动**；一根细软杆（软性结构）连到下面的小块；小块无驱动，靠软杆
+    传力 + 重力 + 惯性跟着甩——受迫大摆 + 柔性连接的被动小摆。
+
+    分组（块局部坐标，按 z 中心分档；两实例共用同一块定义，网格只烘一份）：
+      sa_mount  底座托架 + SG90（静件，跟实例位姿）
+      sa_seg1   轴心圆盘 + 悬臂 + 大叉形件 + 上关节块（绕轴心转 θ）
+      sa_soft   细软杆（双骨蒙皮，blend = 两关节块之间的裸露带）
+      sa_seg2   下关节块 + 小叉形件（被动刚体，位姿由 2D 链解出）
+
+    烘焙局部系（与运行时 machine-smallarm.ts 的标架约定必须一致——闸门在下面）：
+      v_l = ( −(z−zJ), y, x−xJ )，J = 本组锚点（seg1 取轴心、soft 取上关节、
+      seg2 取下关节、mount 也取轴心）。即局部 x̂ = 块内**向下**（悬垂方向），
+      ŷ = 块 y，ẑ = 块 x——右手系，行列式 +1。
+      为什么向下当 x̂：gl3d 的 bakeSkinned 按顶点 **x** 坐标算混合权重，
+      软杆的弯曲方向必须躺在烘焙 x 轴上。
+
+    返回 (groups, placements, shape, gate_residual)。
+    """
+    import numpy as _np
+
+    # 找两实例（图纸世界系变换）与块定义
+    refs = []
+    for o in by_layer.get("小触手", []):
+        g = o.Geometry
+        if g is not None and g.ObjectType == r3d.ObjectType.InstanceReference:
+            refs.append(g)
+    if len(refs) != 2:
+        sys.exit(f"小触手实例数 {len(refs)} ≠ 2——图纸变了，先核对再出表")
+    idef = model.InstanceDefinitions.FindId(refs[0].ParentIdefId)
+    if any(model.InstanceDefinitions.FindId(r.ParentIdefId).Id != idef.Id for r in refs):
+        sys.exit("两条小触手引用了不同的块定义——提取假设失效")
+
+    # 块局部逐件网格：直接成员逐件取，SG90 子块展开进 mount
+    mount_parts, chain_parts = [], []
+    for oid in idef.GetObjectIds():
+        ob = model.Objects.FindId(oid)
+        if ob is None or ob.Geometry is None:
+            continue
+        g = ob.Geometry
+        if g.ObjectType == r3d.ObjectType.InstanceReference:
+            acc = []
+            expand_instance(model, g, acc)  # 停在块局部系（无实例变换）
+            mount_parts += acc
+            continue
+        if g.ObjectType not in (r3d.ObjectType.Brep, r3d.ObjectType.Extrusion):
+            continue
+        m = raw_mesh(g)
+        if m is None:
+            continue
+        bb_lo, bb_hi = m[0].min(0), m[0].max(0)
+        size = bb_hi - bb_lo
+        if size[0] > 50:  # 底座托架（84×44×50，唯一 x 跨度过 50 的件）
+            mount_parts.append(m)
+        else:
+            chain_parts.append((m, bb_lo, bb_hi))
+
+    # 轴心：薄圆盘（x 向 ≤3、y/z 跨度相等且 ≥30）
+    discs = [
+        (m, lo, hi) for m, lo, hi in chain_parts
+        if hi[0] - lo[0] <= 3 and hi[1] - lo[1] >= 30 and abs((hi[1] - lo[1]) - (hi[2] - lo[2])) < 1
+    ]
+    if len(discs) != 1:
+        sys.exit(f"轴心圆盘匹配到 {len(discs)} 件（应为 1）——识别规则需更新")
+    dl, dh = discs[0][1], discs[0][2]
+    pivot = _np.array([(dl[0] + dh[0]) / 2, (dl[1] + dh[1]) / 2, (dl[2] + dh[2]) / 2])
+
+    # 两个关节块（8×8×7.5）：上 = 软杆顶端所在（属 seg1），下 = 小块顶端（属 seg2）
+    knuckles = [
+        (m, lo, hi) for m, lo, hi in chain_parts
+        if abs((hi[0] - lo[0]) - 8) < 1 and abs((hi[1] - lo[1]) - 8) < 1 and abs((hi[2] - lo[2]) - 7.5) < 1
+    ]
+    if len(knuckles) != 2:
+        sys.exit(f"关节块匹配到 {len(knuckles)} 件（应为 2）——识别规则需更新")
+    knuckles.sort(key=lambda k: -(k[1][2] + k[2][2]))  # z 高的在前
+    (ka_m, ka_lo, ka_hi), (kb_m, kb_lo, kb_hi) = knuckles
+    jA = _np.array([(ka_lo[0] + ka_hi[0]) / 2, 0.0, (ka_lo[2] + ka_hi[2]) / 2])
+    jB = _np.array([(kb_lo[0] + kb_hi[0]) / 2, 0.0, (kb_lo[2] + kb_hi[2]) / 2])
+
+    # 分档：z 中心 > −95 → seg1；> −110 → soft；其余 seg2。
+    # 阈值取关节块与软杆的实测间隙中点，块定义固定、不会漂。
+    seg1_parts, soft_parts, seg2_parts = [], [], []
+    zc_a, zc_b = jA[2], jB[2]
+    t_hi = (zc_a + (zc_a + zc_b) / 2) / 2  # ≈ −95
+    t_lo = (zc_b + (zc_a + zc_b) / 2) / 2  # ≈ −106.4
+    for m, lo, hi in chain_parts:
+        zc = (lo[2] + hi[2]) / 2
+        if zc > t_hi:
+            seg1_parts.append(m)
+        elif zc > t_lo:
+            soft_parts.append(m)
+        else:
+            seg2_parts.append(m)
+    if len(soft_parts) != 1:
+        sys.exit(f"软杆匹配到 {len(soft_parts)} 件（应为 1）——分档阈值需核对")
+
+    # 软杆蒙皮混合带：上关节块下端面 → 下关节块上端面（局部 x_l = −(z−zA)）
+    b0 = round(float(zc_a - ka_lo[2]), 2)   # −(ka_lo.z − zc_a)
+    b1 = round(float(zc_a - kb_hi[2]), 2)
+    tip_z = min(float(lo[2]) for _, lo, _hi in
+                [(m, m[0].min(0), m[0].max(0)) for m in seg2_parts])
+
+    def bake(parts, J):
+        mm = merge(parts)
+        v, t = mm
+        v_l = _np.c_[-(v[:, 2] - J[2]), v[:, 1] - J[1], v[:, 0] - J[0]]
+        return v_l, t
+
+    groups = [
+        ("sa_mount", *bake(mount_parts, pivot), None),
+        ("sa_seg1", *bake(seg1_parts, pivot), None),
+        ("sa_soft", *bake(soft_parts, jA), ("blend", [b0, b1])),
+        ("sa_seg2", *bake(seg2_parts, jB), None),
+    ]
+
+    # 实例位姿 → 机器世界。图纸→世界线性部 L(dx,dy,dz) = (−dy, dx, dz)（to_world 同式）。
+    def Lmap(d):
+        return _np.array([-d[1], d[0], d[2]])
+
+    def w_point(p_draw):
+        return _np.array([
+            STATION[0] - (p_draw[1] - PLANE0),
+            p_draw[0] - X0,
+            p_draw[2] - Z0,
+        ])
+
+    placements = []
+    for g in refs:
+        M = xf_mat(g.Xform)
+        R, t = M[:3, :3], M[:3, 3]
+        p_draw = R @ pivot + t
+        axis = Lmap(R @ _np.array([1.0, 0, 0]))     # 块 x̂ = 摆轴
+        hdir = Lmap(R @ _np.array([0, 1.0, 0]))     # 块 ŷ = 摆平面内水平向
+        up = Lmap(R @ _np.array([0, 0, 1.0]))
+        if abs(up[2] - 1) > 1e-6:
+            sys.exit("小触手实例块 ẑ 未指向世界竖直——摆平面假设失效")
+        det = float(_np.linalg.det(_np.c_[axis, hdir, up]))
+        if abs(det - 1) > 1e-6:
+            sys.exit(f"小触手位姿行列式 {det:.4f} ≠ +1——出现镜像")
+        placements.append({
+            "o": [round(float(x), 4) for x in w_point(p_draw)],
+            "axis": [round(float(x), 4) for x in axis],
+            "h": [round(float(x), 4) for x in hdir],
+        })
+
+    shape = {
+        "L1": round(float(pivot[2] - jA[2]), 3),
+        "LS": round(float(jA[2] - jB[2]), 3),
+        "L2": round(float(jB[2] - tip_z), 3),
+        "blend": [b0, b1],
+    }
+
+    # ---- 零位复原闸门：烘焙局部 → 绑定标架 → 世界，须与「原始件直接变换到世界」逐位一致。
+    # 抓的是标架约定写反（局部轴排错 / 摆轴取错）——这类错运行时不报错，只画歪。
+    worst = 0.0
+    for g in refs:
+        M = xf_mat(g.Xform)
+        R, t = M[:3, :3], M[:3, 3]
+        for name, v_l, _t, _x in groups:
+            J = {"sa_mount": pivot, "sa_seg1": pivot, "sa_soft": jA, "sa_seg2": jB}[name]
+            # 局部→块：v_b = (z_l + Jx, y_l + Jy, −x_l + Jz)
+            v_b = _np.c_[v_l[:, 2] + J[0], v_l[:, 1] + J[1], -v_l[:, 0] + J[2]]
+            direct = (R @ v_b.T).T + t
+            direct_w = _np.c_[
+                STATION[0] - (direct[:, 1] - PLANE0), direct[:, 0] - X0, direct[:, 2] - Z0
+            ]
+            # 绑定标架重建：u = 世界 −ẑ（零位悬垂）、e = axis×u、f = u×e，o = 轴心/关节世界点
+            axis = Lmap(R @ _np.array([1.0, 0, 0]))
+            u = _np.array([0.0, 0, -1])
+            e = _np.cross(axis, u)
+            f = _np.cross(u, e)
+            o_w = w_point(R @ J + t)
+            rebuilt = o_w + v_l[:, [0]] * u + v_l[:, [1]] * e + v_l[:, [2]] * f
+            worst = max(worst, float(_np.abs(rebuilt - direct_w).max()))
+    return groups, placements, shape, worst
 
 
 # ------------------------------------------------------------------- 大触手
@@ -583,16 +766,13 @@ def main():
                 tent_parts.append((to_world(v), t))
     arm = measure_arm(model, by_layer)
 
-    tt = merge(tent_parts)
-    if tt is not None:
-        raw_t = len(tt[1])
-        global WELD
-        keep = WELD
-        WELD = TENTACLE_WELD
-        tt = weld(tt[0], tt[1])
-        WELD = keep
-        print(f"  小触手降面 {raw_t:,} → {len(tt[1]):,} 三角（静态摆件，{TENTACLE_WELD}mm 顶点聚类）")
-        groups.append(("armsmall", tt[0], tt[1], None))
+    del tent_parts  # 静件路线已退役：小触手改关节化（见 smallarm_articulate）
+    sa_groups, sa_places, sa_shape, sa_gate = smallarm_articulate(model, by_layer)
+    print(f"  小触手关节化：{' · '.join(f'{n} {len(t):,}三角' for n, _v, t, _x in sa_groups)}")
+    print(f"  小触手零位复原最大偏差 {sa_gate:.2e} mm")
+    if sa_gate > 1e-3:
+        sys.exit(f"小触手零位复原超差 {sa_gate:.4f}mm——标架约定有误，不出 TS")
+    groups += sa_groups
 
     # ---- M1 验收闸门：按运行时的重建方式回算，比对图纸姿态原位
     # 这一关专抓标架约定写反（ey 取反 = 零件镜像，运行时才发现就晚了）。
@@ -639,16 +819,17 @@ def main():
         blob += idx.tobytes()
         while len(blob) % 4:
             blob += b"\0"
-        meta.append(
-            {
-                "name": name,
-                "verts": int(len(v)),
-                "tris": int(len(t)),
-                "vOff": v_off,
-                "iOff": i_off,
-                "idx32": bool(idx32),
-            }
-        )
+        entry = {
+            "name": name,
+            "verts": int(len(v)),
+            "tris": int(len(t)),
+            "vOff": v_off,
+            "iOff": i_off,
+            "idx32": bool(idx32),
+        }
+        if isinstance(extra, tuple) and extra and extra[0] == "blend":
+            entry["blend"] = extra[1]
+        meta.append(entry)
     OUT_BIN.parent.mkdir(parents=True, exist_ok=True)
     OUT_BIN.write_bytes(blob)
 
@@ -679,6 +860,9 @@ def main():
         round(arm["axis_z"] - Z0, 4),
     ]
     arm_json = json.dumps({"origin": arm_origin, "rollDeg": arm["roll_deg"]}, ensure_ascii=False)
+    sa_places_json = json.dumps(sa_places, ensure_ascii=False)
+    sa_shape_json = json.dumps(sa_shape, ensure_ascii=False)
+    print(f"  小触手位姿 {sa_places} 链 {sa_shape}")
     print(f"  大触手世界落位 origin={arm_origin}")
 
     ts = io.StringIO()
@@ -705,6 +889,8 @@ export interface MachineGroup {{
   vOff: number;
   iOff: number;
   idx32: boolean;
+  /** 仅 sa_soft：双骨蒙皮混合带 [b0, b1]（组局部 x，= 沿链向下的距离） */
+  blend?: readonly [number, number];
 }}
 
 export interface MachineDrive {{
@@ -727,6 +913,20 @@ export interface ArmPlacement {{
   rollDeg: number;
 }}
 export const ARM_PLACEMENT: ArmPlacement = {arm_json};
+
+/**
+ * 小触手（两条，机身两侧镜像）在整机世界系的位姿与链几何——机构由用户 2026-07-30
+ * 说明：底座固定、SG90 驱动大节绕圆形轴心甩动、软性中间件连被动小块。
+ * o = 轴心世界点；axis = 摆轴（单位向量）；h = 摆平面内的水平方向（θ>0 摆向 +h）。
+ * 2D 链在 (h, 世界 z) 平面内解算，L1/LS/L2 = 轴心→上关节 / 软杆 / 下关节→梢端 mm。
+ */
+export interface SmallArmPlacement {{
+  o: readonly [number, number, number];
+  axis: readonly [number, number, number];
+  h: readonly [number, number, number];
+}}
+export const SMALLARM_PLACEMENTS: ReadonlyArray<SmallArmPlacement> = {sa_places_json};
+export const SMALLARM_SHAPE = {sa_shape_json} as const;
 
 export const MACHINE_MESH_URL = '/mesh/machine-mesh.bin';
 export const MACHINE_TRIS = {total_t};

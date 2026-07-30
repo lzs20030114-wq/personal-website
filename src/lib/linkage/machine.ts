@@ -274,10 +274,20 @@ export function partKind(name: string): MachinePartKind {
   if (k === 'p' || k === 'x') return 'rings';
   if (k === 'w' || k === 'r') return 'drive';
   if (name === 'shaft') return 'drive';
-  // armsmall = 两条小触手（静态摆件）。大触手不在这张表里——它是 Lab.03 那条
-  // 三肌腱触手，由 tentacle3d 实时驱动、单独绘制，同样受「触手」开关管。
-  if (name === 'armsmall') return 'tentacle';
+  // sa_* = 两条小触手（2026-07-30 由静件转正为关节化活件，见 machine-smallarm.ts）。
+  // 大触手不在这张表里——它是 Lab.03 那条三肌腱触手，由 tentacle3d 实时驱动、
+  // 单独绘制；两类触手同受「触手」开关管。
+  if (isSmallArmGroup(name)) return 'tentacle';
   return 'frame';
+}
+
+/**
+ * 小触手组（sa_mount / sa_seg1 / sa_soft / sa_seg2）。它们在 MACHINE_GROUPS 里
+ * （载荷与其他组同一个 bin），但**不走 machineFrame 的静姿路径**——位姿由
+ * machine-smallarm 的 2D 链逐帧解出，台架另行绘制，故 visibleGroups 恒排除。
+ */
+export function isSmallArmGroup(name: string): boolean {
+  return name.startsWith('sa_');
 }
 
 /** 组属于哪个环（0..4）；静件返回 null。 */
@@ -297,6 +307,7 @@ export function visibleGroups(
   isolate: number | null,
 ): typeof MACHINE_GROUPS {
   return MACHINE_GROUPS.filter((g) => {
+    if (isSmallArmGroup(g.name)) return false;
     if (!show[partKind(g.name)]) return false;
     const ri = groupRing(g.name);
     if (isolate === null || ri === null) return true;

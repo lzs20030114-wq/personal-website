@@ -41,6 +41,16 @@ import {
   visibleGroups,
 } from '../../src/lib/linkage/machine';
 import { SHELL_STEP_DT, ringOuterProfile, ringPoint } from '../../src/lib/linkage/shell3d';
+import {
+  SMALLARM,
+  SMALLARM_IDLE,
+  createSmallArm,
+  driveSmallArm,
+  idleSwing,
+  smallArmPose,
+  stepSmallArm,
+} from '../../src/lib/linkage/machine-smallarm';
+import { SMALLARM_PLACEMENTS } from '../../src/lib/linkage/machine-shape';
 import { stashBench, takeBench } from './handoff';
 import { setSnapshot } from './snapshot';
 import { useBenchLoop } from './useBenchLoop';
@@ -53,8 +63,12 @@ import { useBenchLoop } from './useBenchLoop';
  * 五根不同长度的连杆推五个环的拱顶，全机只有一个自由度。
  *
  * 形体是真机实体（729新参考.3dm 装配位逐面取网格）：66 块角化板各自绑自己的三角、
- * 3 件配件跟销、5 个单杆轮随 θ 转、5 根驱动杆由两点定位姿；机架与两条小触手烘死为
- * 静件。分组与绑定见 machine-shape.ts，位姿计算在 machine.ts（可单测，与渲染无关）。
+ * 3 件配件跟销、5 个单杆轮随 θ 转、5 根驱动杆由两点定位姿；机架烘死为静件。
+ * 分组与绑定见 machine-shape.ts，位姿计算在 machine.ts（可单测，与渲染无关）。
+ *
+ * **小触手也是活件**（2026-07-30 用户给出机构说明后由静件转正）：底座固定、
+ * SG90 驱动大节绕圆形轴心甩动、软性中间件连被动小块——受迫大摆 + 柔性被动小摆，
+ * 2D 内核解算（machine-smallarm.ts），软杆用双骨蒙皮渲染。
  *
  * **大触手是活件**：查明它就是 Lab.03 那条三肌腱触手（椎节沿臂位置与 STATIONS 逐位
  * 吻合），故整套复用 tentacle3d 的解算与网格，本台架只把它摆到机器上
@@ -62,8 +76,8 @@ import { useBenchLoop } from './useBenchLoop';
  *
  * 运动学一行没新写——五环销坐标与 shell3d-data 逐位相同，直接复用其解算与止程标定。
  *
- * 规格表须写明的三条局限（spec §7）：转速非真机节律（减速比无出处）、两条小触手是
- * 静态形体不参与运动、脚槽止程是仿真标定值非真机实测。
+ * 规格表须写明的局限（spec §7）：转速非真机节律（减速比无出处）、小触手波形是
+ * 展示编排非真机节律、脚槽止程是仿真标定值非真机实测。
  */
 
 const VIEWS = [
@@ -144,6 +158,10 @@ interface MachineHandoff {
   running: boolean;
   dir: 1 | -1;
   omega: number;
+  /** 小触手：每条的 2D 节点位形 + 驱动角 + 共用时钟（2026-07-30 活化后加入） */
+  saPts: Float32Array[];
+  saTheta: number[];
+  saClock: number;
 }
 const HANDOFF_KEY = 'machine';
 
@@ -268,6 +286,11 @@ const COPY = {
     skinAria: '蒙皮遮罩透明度：0 全透明，1 不透明',
     partNames: { rings: '环身', drive: '传动', frame: '机架', tentacle: '触手' },
     arm: '肌腱',
+    sarm: '小触手',
+    sarmAmp: '摆幅',
+    sarmFreq: '频率',
+    sarmAmpAria: '小触手摆幅（度）',
+    sarmFreqAria: '小触手摆动频率（Hz）',
     armAria: ['肌腱 1 收缩', '肌腱 2 收缩', '肌腱 3 收缩'],
     armHome: '交还待机',
     ring: '单环',
@@ -294,6 +317,11 @@ const COPY = {
     skinAria: 'Skin opacity: 0 clear, 1 solid',
     partNames: { rings: 'Rings', drive: 'Drive', frame: 'Frame', tentacle: 'Arms' },
     arm: 'Tendons',
+    sarm: 'Small arms',
+    sarmAmp: 'swing',
+    sarmFreq: 'rate',
+    sarmAmpAria: 'Small-arm swing amplitude (degrees)',
+    sarmFreqAria: 'Small-arm swing frequency (Hz)',
     armAria: ['Tendon 1 contraction', 'Tendon 2 contraction', 'Tendon 3 contraction'],
     armHome: 'Idle',
     ring: 'Ring',
@@ -339,6 +367,7 @@ export function MachineBench({
     setIsolate: (ri: number | null) => void;
     setTendon: (k: number, v: number) => void;
     armHome: () => void;
+    setSaSwing: (ampDeg: number, freqHz: number) => void;
     viewTo: (k: ViewKey) => void;
   } | null>(null);
   const [run, setRun] = useState(spin);
@@ -355,6 +384,8 @@ export function MachineBench({
   });
   const [isolate, setIsolate] = useState<number | null>(null);
   const [tendons, setTendons] = useState<[number, number, number]>([0, 0, 0]);
+  const [saAmp, setSaAmp] = useState(Math.round((SMALLARM_IDLE.amp * 180) / Math.PI));
+  const [saFreq, setSaFreq] = useState<number>(SMALLARM_IDLE.freq);
   const [hud, setHud] = useState({ err: 0, apex: 0, ring: 2, folding: true, note: '' });
 
   useEffect(() => {
@@ -410,6 +441,11 @@ export function MachineBench({
     // 「松开」再交还回来。
     let armManual = false;
     let armClock = 0;
+    // 小触手（两条，镜像）：舵机波形驱动大节，其余靠物理跟随。幅/频可被 /lab 滑块覆盖
+    const smallArms = SMALLARM_PLACEMENTS.map(() => createSmallArm());
+    let saClock = 0;
+    let saAmpNow: number = SMALLARM_IDLE.amp;
+    let saFreqNow: number = SMALLARM_IDLE.freq;
     const armJoints = ARM_MESH_GROUPS.filter((g) => g.blend).map((g) => ({
       name: g.name,
       gap: g.name === 'jr' ? -1 : Number(g.name.slice(1)),
@@ -452,7 +488,9 @@ export function MachineBench({
           const idx = g.idx32
             ? new Uint32Array(buf, g.iOff, g.tris * 3)
             : new Uint16Array(buf, g.iOff, g.tris * 3);
-          R.addMesh(g.name, bakeIndexed(verts, idx));
+          // 带 blend 的组（sa_soft 软杆）= 双骨蒙皮：跟着两端关节标架弯
+          if (g.blend) R.addSkinnedMesh(g.name, bakeSkinned(verts, idx, g.blend[0], g.blend[1]));
+          else R.addMesh(g.name, bakeIndexed(verts, idx));
         }
         ready = true;
         setHud((h) => ({ ...h, note: '' }));
@@ -592,6 +630,18 @@ export function MachineBench({
       }
     };
 
+    // 小触手：mount 静件随位姿、大节/小块刚体、软杆双骨蒙皮（与大触手同一渲染语言）
+    const drawSmallArms = (): void => {
+      if (!ready) return; // 网格与整机同一个 bin，ready 一起到
+      for (let pi = 0; pi < smallArms.length; pi++) {
+        const pose = smallArmPose(smallArms[pi], pi);
+        R.drawMesh('sa_mount', pose.mount, [...FRAME_SHADE.dark], [...FRAME_SHADE.lite]);
+        R.drawMesh('sa_seg1', pose.seg1, [...ARM_SHADE.dark], [...ARM_SHADE.lite]);
+        R.drawSkinned('sa_soft', pose.soft[0], pose.soft[1], pose.soft[2]);
+        R.drawMesh('sa_seg2', pose.seg2, [...ARM_SHADE.dark], [...ARM_SHADE.lite]);
+      }
+    };
+
     /** 带序从远到近（半透明面之间没有 z 排序）。深度取两环轮心中点。 */
     const bandOrder = (): number[] => {
       const mtx = cam.matrix;
@@ -617,8 +667,20 @@ export function MachineBench({
         armPts[i * 3 + 1] = armN[i].y;
         armPts[i * 3 + 2] = armN[i].z;
       }
+      const saPts = smallArms.map((sa) => {
+        const n = sa.solver.nodes;
+        const a = new Float32Array(n.length * 2);
+        for (let i = 0; i < n.length; i++) {
+          a[i * 2] = n[i].x;
+          a[i * 2 + 1] = n[i].y;
+        }
+        return a;
+      });
       return {
         theta: machine.theta,
+        saPts,
+        saTheta: smallArms.map((sa) => sa.theta),
+        saClock,
         ringTheta: machine.rings.map((r) => r.theta),
         ringPts: machine.rings.map((r) => {
           const n = r.solver.nodes;
@@ -644,7 +706,9 @@ export function MachineBench({
       if (
         s.ringPts.length !== machine.rings.length ||
         machine.rings.some((r, ri) => s.ringPts[ri].length !== r.solver.nodes.length * 2) ||
-        s.armPts.length !== arm.solver.nodes.length * 3
+        s.armPts.length !== arm.solver.nodes.length * 3 ||
+        s.saPts.length !== smallArms.length ||
+        smallArms.some((sa, k) => s.saPts[k].length !== sa.solver.nodes.length * 2)
       ) {
         return false;
       }
@@ -676,6 +740,19 @@ export function MachineBench({
       putArm();
       arm.solver.step(1 / 120, TENTACLE3D.sweeps);
       putArm();
+
+      // 小触手同法（2D 动力学件）：两次摆位夹一个空步，把 Verlet 的 px 一起钉住
+      smallArms.forEach((sa, k) => {
+        sa.theta = s.saTheta[k];
+        const putSa = (): void => {
+          const a = s.saPts[k];
+          for (let i = 0; i < sa.solver.nodes.length; i++) sa.solver.setNode(i, a[i * 2], a[i * 2 + 1]);
+        };
+        putSa();
+        sa.solver.step(1 / 120, SMALLARM.sweeps);
+        putSa();
+      });
+      saClock = s.saClock;
 
       armClock = s.armClock;
       armManual = s.armManual;
@@ -730,7 +807,10 @@ export function MachineBench({
         const s = groupShade(g.name);
         R.drawMesh(g.name, machineFrame(g, machine), s.dark, s.lite);
       }
-      if (showNow.tentacle) drawArm();
+      if (showNow.tentacle) {
+        drawArm();
+        drawSmallArms();
+      }
       // 半透明层最后画：与已成像的实体混合，且**深度只测不写**；
       // 带之间没有 z 排序，只能靠从远到近的下单顺序（Lab.04 07-29 定案）。
       if (skinOn && skinA < SKIN_OPAQUE_AT) {
@@ -776,6 +856,12 @@ export function MachineBench({
         if (m.update(dt)) applyContraction3(arm.solver, arm.tendons[k], m.value);
       });
       arm.solver.step(dt, TENTACLE3D.sweeps);
+      // 小触手：运转中按波形甩，停下时保持最后角度（物理继续松弛到静止）
+      if (running) saClock += dt;
+      smallArms.forEach((sa, k) => {
+        if (running) driveSmallArm(sa, idleSwing(saClock, k, saAmpNow, saFreqNow));
+        stepSmallArm(sa, dt);
+      });
       render();
       // 读数跟着「单环」走：隔离哪一环就报哪一环的拱顶，全部时报中间那环（S3）
       const ri = isolateNow ?? 2;
@@ -826,6 +912,10 @@ export function MachineBench({
         armClock = 0;
         arm = createTentacle3();
         muscles.forEach((m) => m.jumpTo(0));
+      },
+      setSaSwing: (ampDeg, freqHz) => {
+        saAmpNow = (ampDeg * Math.PI) / 180;
+        saFreqNow = freqHz;
       },
       setPersp: (on) => R.setPerspective(on ? 900 : 0),
       viewTo: (k) => {
@@ -1043,6 +1133,45 @@ export function MachineBench({
               {L.armHome}
             </button>
           </div>
+          {/* 小触手 —— 摆幅/频率（用户 2026-07-30 机构说明后活化；波形是展示编排，
+              幅频是待拍板的手感常量，给滑块自己找）。**只在横排面板出**：
+              案例页侧栏的高度预算在 §13.2 已经顶满，加一组就会重新被裁；
+              案例页语境用默认值即可，要调去 /lab（同一台仪器）。 */}
+          {sideControls ? null : (
+            <div className="grp">
+              <span className="k">{L.sarm}</span>
+              <span className="k">{L.sarmAmp}</span>
+              <input
+                type="range"
+                min={0}
+                max={60}
+                step={1}
+                value={saAmp}
+                aria-label={L.sarmAmpAria}
+                style={{ width: 84 }}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setSaAmp(v);
+                  apiRef.current?.setSaSwing(v, saFreq);
+                }}
+              />
+              <span className="k">{L.sarmFreq}</span>
+              <input
+                type="range"
+                min={0.1}
+                max={1}
+                step={0.05}
+                value={saFreq}
+                aria-label={L.sarmFreqAria}
+                style={{ width: 84 }}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setSaFreq(v);
+                  apiRef.current?.setSaSwing(saAmp, v);
+                }}
+              />
+            </div>
+          )}
           {/* 单环隔离 —— 五个环同相但行程各异，单独看一个才比得出半径差。
               只筛环件：机架/轴/触手仍按各自开关，否则「只看 S3」会连驱动它的轴一起切掉。 */}
           <div className="grp grp--seg">

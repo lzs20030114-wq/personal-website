@@ -24,6 +24,7 @@ import {
   strokeOf,
   thetaAtStroke,
   visibleGroups,
+  isSmallArmGroup,
 } from './machine';
 import { SHELL_RINGS, SHELL_STEP_DT } from './shell3d';
 
@@ -202,11 +203,16 @@ describe('位姿（网格绑定）', () => {
 
   it('静件恒等不动（机架、中间轴、触手）', () => {
     const m = createMachine();
-    const before = machineFrames(m).filter((f) => !'pxwr'.includes(f.name[0]));
+    // sa_* 不在此列：小触手 2026-07-30 起是活件，位姿由 machine-smallarm 逐帧解
+    const before = machineFrames(m).filter(
+      (f) => !'pxwr'.includes(f.name[0]) && !isSmallArmGroup(f.name),
+    );
     // shaft 与 frame 分开成组：控制面板的「传动」开关要能连中间轴一起切
-    expect(before.map((f) => f.name).sort()).toEqual(['armsmall', 'frame', 'shaft']);
+    expect(before.map((f) => f.name).sort()).toEqual(['frame', 'shaft']);
     for (let k = 0; k < 40; k++) stepMachine(m, DSTEP);
-    for (const { frame } of machineFrames(m).filter((f) => !'pxwr'.includes(f.name[0]))) {
+    for (const { frame } of machineFrames(m).filter(
+      (f) => !'pxwr'.includes(f.name[0]) && !isSmallArmGroup(f.name),
+    )) {
       expect(frame.o).toEqual({ x: 0, y: 0, z: 0 });
       expect([frame.ux, frame.ey, frame.fz]).toEqual([1, 1, 1]);
     }
@@ -320,8 +326,8 @@ describe('部件分类（控制面板用）', () => {
     expect(seen.get('rings')).toBe(69);
     expect(seen.get('drive')).toBe(11);
     expect(seen.get('frame')).toBe(1);
-    // 只有小触手在表里；大触手是活件，不烘进 machine-mesh.bin
-    expect(seen.get('tentacle')).toBe(1);
+    // 小触手 = 四个关节化组；大触手是活件，不烘进 machine-mesh.bin
+    expect(seen.get('tentacle')).toBe(4);
   });
 
   it('中间轴归「传动」而不是「机架」（否则传动开关切不动它）', () => {
@@ -332,9 +338,15 @@ describe('部件分类（控制面板用）', () => {
 
   it('大触手不在形体表里——它是活件，由 tentacle3d 实时驱动', () => {
     expect(MACHINE_GROUPS.some((g) => g.name === 'tentacle')).toBe(false);
-    // 小触手仍是静件，归「触手」档（与大触手同一个开关）
-    expect(MACHINE_GROUPS.some((g) => g.name === 'armsmall')).toBe(true);
-    expect(partKind('armsmall')).toBe('tentacle');
+    // 小触手 2026-07-30 起也是活件：四组网格在表里（同一个 bin），但位姿另解
+    for (const n of ['sa_mount', 'sa_seg1', 'sa_soft', 'sa_seg2']) {
+      expect(MACHINE_GROUPS.some((g) => g.name === n)).toBe(true);
+      expect(partKind(n)).toBe('tentacle');
+      expect(isSmallArmGroup(n)).toBe(true);
+    }
+    // 软杆带蒙皮混合带，其余三组不带
+    expect(MACHINE_GROUPS.find((g) => g.name === 'sa_soft')?.blend).toHaveLength(2);
+    expect(MACHINE_GROUPS.find((g) => g.name === 'sa_seg1')?.blend).toBeUndefined();
   });
 
   it('环归属：动件报 0..4，静件报 null', () => {
@@ -353,10 +365,13 @@ describe('部件分类（控制面板用）', () => {
 
   it('全开时即全部组；关掉一档就少掉那一档的全部', () => {
     const all = { rings: true, drive: true, frame: true, tentacle: true } as const;
-    expect(visibleGroups(all, null)).toHaveLength(MACHINE_GROUPS.length);
+    // sa_* 恒不在静姿清单里（位姿由 machine-smallarm 另解、台架另画）
+    expect(visibleGroups(all, null)).toHaveLength(MACHINE_GROUPS.length - 4);
     const noTent = visibleGroups({ ...all, tentacle: false }, null);
-    expect(noTent.some((g) => g.name === 'armsmall')).toBe(false);
-    expect(noTent).toHaveLength(MACHINE_GROUPS.length - 1);
+    expect(noTent.some((g) => isSmallArmGroup(g.name))).toBe(false);
+    // 触手档在 MACHINE_GROUPS 里只有 sa_*，且它们本就不走静姿路径，
+    // 故关不关触手对这张清单没有额外影响
+    expect(noTent).toHaveLength(MACHINE_GROUPS.length - 4);
     expect(visibleGroups({ rings: false, drive: false, frame: false, tentacle: false }, null)).toHaveLength(0);
   });
 
@@ -370,7 +385,7 @@ describe('部件分类（控制面板用）', () => {
     // 静件仍在（否则「只看 S3」会连驱动它的轴一起切掉）
     expect(only2.some((g) => g.name === 'frame')).toBe(true);
     expect(only2.some((g) => g.name === 'shaft')).toBe(true);
-    expect(only2.some((g) => g.name === 'armsmall')).toBe(true);
+    expect(only2.some((g) => g.name === 'shaft')).toBe(true);
     // 五环各自隔离之和 = 全部环件
     const perRing = [0, 1, 2, 3, 4].reduce(
       (n, i) => n + visibleGroups({ ...all, drive: false, frame: false, tentacle: false }, i).length,
