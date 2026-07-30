@@ -49,8 +49,8 @@ export const SMALLARM = {
 
 /** 待机甩动波形（手感常量，待拍板）。幅度/频率可被台架滑块覆盖。 */
 export const SMALLARM_IDLE = {
-  /** 摆幅 rad（±34°；SG90 行程 ±90°，取其中段） */
-  amp: 0.6,
+  /** 摆幅 rad（±18°；首版 0.6≈34° 用户 2026-07-30「甩小一点」调至此） */
+  amp: 0.32,
   /** 频率 Hz（链的自然频率 ≈1.5Hz，取其下——要看到甩尾滞后不是共振） */
   freq: 0.5,
   /** 起步缓入（秒）：避免 t=0 从垂位直接进入满幅正弦的「一下子」 */
@@ -61,6 +61,38 @@ export const SMALLARM_IDLE = {
    */
   phase: [0, 0],
 } as const;
+
+/**
+ * 受惊反应（用户 2026-07-30：「鼠标点击它，它会给一个比较大的反应，比如甩开我」）。
+ * 点击命中后叠加在待机波形上的一段**衰减震荡**：dir·amp·e^(−t/decay)·sin(2πf·t)——
+ * t=0 时值为零、斜率朝 dir（甩开方向），即第一下就是猛地甩离点击那一侧；
+ * 频率取在链自然频率（≈1.5Hz）附近，被动小块会被甩出明显的鞭梢；
+ * 随后指数衰减、自然回到待机的小幅摆。全是手感常量，待真机拍板。
+ */
+export const SMALLARM_STARTLE = {
+  /** 峰值幅度 rad（首峰 ≈ amp·e^(−1/(4f·decay)) ≈ 0.94 rad ≈ 54°，远大于待机 18°） */
+  amp: 1.15,
+  /** 震荡频率 Hz */
+  freq: 1.4,
+  /** 衰减时间常数（秒） */
+  decay: 0.9,
+  /** 波形寿命（秒）：此后贡献 <4% 峰值，掐掉（也让暂停态的驱动覆盖能结束） */
+  duration: 3.5,
+  /** 合成驱动角上限 rad（≈75°——SG90 行程内，也别把臂甩进底盘） */
+  max: (75 * Math.PI) / 180,
+} as const;
+
+/** 受惊贡献：t = 距点击的秒数，dir = 甩开方向（±1）。界外恒 0。 */
+export function startleSwing(t: number, dir: 1 | -1): number {
+  if (!(t >= 0) || t >= SMALLARM_STARTLE.duration) return 0;
+  const { amp, freq, decay } = SMALLARM_STARTLE;
+  return dir * amp * Math.exp(-t / decay) * Math.sin(2 * Math.PI * freq * t);
+}
+
+/** 合成驱动角钳制（待机 + 受惊 可能短暂越界） */
+export function clampSwing(theta: number): number {
+  return Math.max(-SMALLARM_STARTLE.max, Math.min(SMALLARM_STARTLE.max, theta));
+}
 
 export interface SmallArm {
   solver: LinkageSolver;
@@ -172,6 +204,20 @@ export function saFrame(
     ex: e.x, ey: e.y, ez: e.z,
     fx: f.x, fy: f.y, fz: f.z,
   };
+}
+
+/**
+ * 链的世界折线（台架点击命中检测用）：轴心 → A → 软杆内点 → B → 梢端。
+ * 只有骨架线，命中半径由调用方给（屏幕像素域）。
+ */
+export function saChainWorld(sa: SmallArm, pi: number): Vec3[] {
+  const p = SMALLARM_PLACEMENTS[pi];
+  const pts: Vec3[] = [saPoint(p, 0, 0)];
+  for (let i = SA_A; i <= SA_T; i++) {
+    const n = sa.solver.nodes[i];
+    pts.push(saPoint(p, n.x, n.y));
+  }
+  return pts;
 }
 
 export interface SmallArmPose {

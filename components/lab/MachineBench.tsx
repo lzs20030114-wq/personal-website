@@ -44,10 +44,14 @@ import { SHELL_STEP_DT, ringOuterProfile, ringPoint } from '../../src/lib/linkag
 import {
   SMALLARM,
   SMALLARM_IDLE,
+  SMALLARM_STARTLE,
+  clampSwing,
   createSmallArm,
   driveSmallArm,
   idleSwing,
+  saChainWorld,
   smallArmPose,
+  startleSwing,
   stepSmallArm,
 } from '../../src/lib/linkage/machine-smallarm';
 import { SMALLARM_PLACEMENTS } from '../../src/lib/linkage/machine-shape';
@@ -299,7 +303,7 @@ const COPY = {
     views: { axon: '轴测', front: '正', left: '左', right: '右', top: '顶' },
     title: '整机传动',
     sub: '一轴五曲柄 · 同相 · 180° 往复张合',
-    hint: '视角由下方按钮切换',
+    hint: '视角由下方按钮切换 · 点一下小触手试试',
     drive: { spin: '自转', slider: '滑杆' },
     // 方向指示用盘点 §6 的既有口径：φ=0 伸展死点 / φ=180 折叠死点
     going: { fold: '折叠 ↓', open: '伸展 ↑' },
@@ -330,7 +334,7 @@ const COPY = {
     views: { axon: 'Axon', front: 'Front', left: 'Left', right: 'Right', top: 'Top' },
     title: 'Full transmission',
     sub: 'One shaft, five cranks · in phase · 180° reciprocating',
-    hint: 'View set by the buttons below',
+    hint: 'View set by the buttons below · try clicking a small arm',
     drive: { spin: 'spin', slider: 'slider' },
     going: { fold: 'folding ↓', open: 'extending ↑' },
     aria: 'Reincarnation machine full-assembly bench; crank and tendon driven, view set by buttons',
@@ -443,6 +447,10 @@ export function MachineBench({
     let armClock = 0;
     // 小触手（两条，镜像）：舵机波形驱动大节，其余靠物理跟随。幅/频可被 /lab 滑块覆盖
     const smallArms = SMALLARM_PLACEMENTS.map(() => createSmallArm());
+    // 受惊状态（点击触发）：t = 距点击秒数（Infinity = 无），dir = 甩开方向
+    const saStartle = SMALLARM_PLACEMENTS.map(() => ({ t: Infinity, dir: 1 as 1 | -1 }));
+    // 每条的待机基角（暂停时驱动覆盖要有个基准，不能凭空归零）
+    const saBase = SMALLARM_PLACEMENTS.map(() => 0);
     let saClock = 0;
     let saAmpNow: number = SMALLARM_IDLE.amp;
     let saFreqNow: number = SMALLARM_IDLE.freq;
@@ -537,6 +545,7 @@ export function MachineBench({
     };
     let isolateNow: number | null = null;
     let skinA = SKIN_DEFAULT;
+    let perspNow = false;
 
     // 蒙皮：相邻环外侧支点之间的直纹带（锚点在装配位选定后固定跟销，同 Lab.04）
     const profiles = machine.rings.map((r) => ringOuterProfile(r.data));
@@ -744,6 +753,7 @@ export function MachineBench({
       // 小触手同法（2D 动力学件）：两次摆位夹一个空步，把 Verlet 的 px 一起钉住
       smallArms.forEach((sa, k) => {
         sa.theta = s.saTheta[k];
+        saBase[k] = s.saTheta[k];
         const putSa = (): void => {
           const a = s.saPts[k];
           for (let i = 0; i < sa.solver.nodes.length; i++) sa.solver.setNode(i, a[i * 2], a[i * 2 + 1]);
@@ -856,10 +866,21 @@ export function MachineBench({
         if (m.update(dt)) applyContraction3(arm.solver, arm.tendons[k], m.value);
       });
       arm.solver.step(dt, TENTACLE3D.sweeps);
-      // 小触手：运转中按波形甩，停下时保持最后角度（物理继续松弛到静止）
+      // 小触手：运转中按波形甩，停下时保持最后角度（物理继续松弛到静止）。
+      // 受惊（点击）叠加在待机之上，且**暂停时也生效**——戳它就该有反应，
+      // 波形过了寿命就停止覆盖，暂停态回到「保持不动」。
       if (running) saClock += dt;
       smallArms.forEach((sa, k) => {
-        if (running) driveSmallArm(sa, idleSwing(saClock, k, saAmpNow, saFreqNow));
+        if (running) saBase[k] = idleSwing(saClock, k, saAmpNow, saFreqNow);
+        const st = saStartle[k];
+        if (Number.isFinite(st.t)) {
+          st.t += dt;
+          if (st.t >= SMALLARM_STARTLE.duration) st.t = Infinity;
+        }
+        const startled = Number.isFinite(st.t);
+        if (running || startled) {
+          driveSmallArm(sa, clampSwing(saBase[k] + (startled ? startleSwing(st.t, st.dir) : 0)));
+        }
         stepSmallArm(sa, dt);
       });
       render();
@@ -917,7 +938,10 @@ export function MachineBench({
         saAmpNow = (ampDeg * Math.PI) / 180;
         saFreqNow = freqHz;
       },
-      setPersp: (on) => R.setPerspective(on ? 900 : 0),
+      setPersp: (on) => {
+        perspNow = on;
+        R.setPerspective(on ? 900 : 0);
+      },
       viewTo: (k) => {
         const target = PRESET_VIEWS[k];
         if (reduced) {
@@ -930,9 +954,89 @@ export function MachineBench({
     };
 
     // 机位**只由下面的固定视角按钮控制**（用户拍板 2026-07-29：取消拖拽视角移动）。
-    // 故这里不挂任何指针/滚轮监听——连带的好处是滚轮不再被画布吞掉，
-    // 鼠标停在这台上也能正常滚页（/lab 五台台架叠起来时这点很实在）。
+    // 不挂旋转/平移/滚轮监听——滚轮不被画布吞掉，鼠标停在这台上能正常滚页。
     // 与 Lab.01–04 的差异是有意的，不是漏了：那几台仍可拖拽。
+    //
+    // 例外（用户 2026-07-30：「鼠标点击它，它会给一个比较大的反应，比如甩开我」）：
+    // 挂一个 **pointerdown 命中小触手 → 受惊甩开**，外加 pointermove 换光标做提示。
+    // 这两个监听都不动相机、不 preventDefault，滚页不受影响。
+
+    // 世界点 → 画布 CSS 像素（照抄 gl3d 顶点着色器的投影式：视变换 → 透视 w →
+    // 逻辑 700×520 → CSS）。**cx/cy 不参与**——WebGL 屏幕中心恒为画布中心（§12.3 的坑）。
+    const cssPoint = (w: Vec3): { x: number; y: number } => {
+      const m = cam.matrix;
+      const pv = cam.pivotPoint;
+      const dx = w.x - pv.x;
+      const dy = w.y - pv.y;
+      const dz = w.z - pv.z;
+      const qx = m[0] * dx + m[1] * dy + m[2] * dz;
+      const qy = m[3] * dx + m[4] * dy + m[5] * dz;
+      const qz = m[6] * dx + m[7] * dy + m[8] * dz;
+      const pw = perspNow ? 1 - qz / 900 : 1;
+      const xl = (qx * cam.viewScale) / pw + cam.pan.x;
+      const yl = (qy * cam.viewScale) / pw + cam.pan.y;
+      const r = canvas.getBoundingClientRect();
+      return { x: r.width / 2 + xl * (r.width / 700), y: r.height / 2 + yl * (r.height / 520) };
+    };
+
+    /** 点到线段距离（CSS px 域） */
+    const segDist = (
+      p: { x: number; y: number },
+      a: { x: number; y: number },
+      b: { x: number; y: number },
+    ): number => {
+      const vx = b.x - a.x;
+      const vy = b.y - a.y;
+      const L2 = vx * vx + vy * vy || 1;
+      const u = Math.max(0, Math.min(1, ((p.x - a.x) * vx + (p.y - a.y) * vy) / L2));
+      return Math.hypot(p.x - (a.x + u * vx), p.y - (a.y + u * vy));
+    };
+
+    /** 命中哪条小触手（阈值 CSS px）；没中返回 null */
+    const hitSmallArm = (px: number, py: number, radius: number): number | null => {
+      if (!showNow.tentacle) return null;
+      let best = radius;
+      let hit: number | null = null;
+      for (let k = 0; k < smallArms.length; k++) {
+        const pts = saChainWorld(smallArms[k], k).map(cssPoint);
+        for (let i = 1; i < pts.length; i++) {
+          const d = segDist({ x: px, y: py }, pts[i - 1], pts[i]);
+          if (d < best) {
+            best = d;
+            hit = k;
+          }
+        }
+      }
+      return hit;
+    };
+
+    const onPointerDown = (e: PointerEvent): void => {
+      if (e.button !== 0) return;
+      const r = canvas.getBoundingClientRect();
+      const px = e.clientX - r.left;
+      const py = e.clientY - r.top;
+      const k = hitSmallArm(px, py, 30);
+      if (k === null) return;
+      // 甩开方向 = 点击落在摆平面哪一侧的**反面**。侧别在屏幕上量：
+      // 把世界 h 轴投到屏幕，取点击相对轴心的水平分量的符号。
+      // 视线恰好沿 h 轴时投影退化（分量 ≈0）——退到「远离当前倾角」兜底。
+      const p = SMALLARM_PLACEMENTS[k];
+      const o = cssPoint({ x: p.o[0], y: p.o[1], z: p.o[2] });
+      const hTip = cssPoint({ x: p.o[0] + p.h[0] * 10, y: p.o[1] + p.h[1] * 10, z: p.o[2] + p.h[2] * 10 });
+      const hs = { x: hTip.x - o.x, y: hTip.y - o.y };
+      const hLen = Math.hypot(hs.x, hs.y);
+      const side = hLen > 1 ? Math.sign(((px - o.x) * hs.x + (py - o.y) * hs.y) / hLen) : 0;
+      const st = saStartle[k];
+      st.dir = (side !== 0 ? -side : -Math.sign(smallArms[k].theta) || -1) as 1 | -1;
+      st.t = 0;
+    };
+    const onPointerMove = (e: PointerEvent): void => {
+      const r = canvas.getBoundingClientRect();
+      canvas.style.cursor =
+        hitSmallArm(e.clientX - r.left, e.clientY - r.top, 30) !== null ? 'pointer' : '';
+    };
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointermove', onPointerMove);
 
     // 转场克隆用的画面快照（canvas 的像素不随 cloneNode 复制，见 snapshot.ts）。
     // **状态交接也在这里留**——它跑在点击那一刻，与快照像素是同一个瞬间；
@@ -948,6 +1052,9 @@ export function MachineBench({
     return () => {
       disposed = true;
       apiRef.current = null;
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('pointermove', onPointerMove);
+      canvas.style.cursor = '';
       setSnapshot(canvas, null);
     };
   }, [spin]);

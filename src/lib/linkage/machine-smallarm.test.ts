@@ -13,6 +13,12 @@ import {
   smallArmPose,
   stepSmallArm,
 } from './machine-smallarm';
+import {
+  SMALLARM_STARTLE,
+  clampSwing,
+  saChainWorld,
+  startleSwing,
+} from './machine-smallarm';
 import { SMALLARM_PLACEMENTS, SMALLARM_SHAPE } from './machine-shape';
 
 /**
@@ -106,6 +112,61 @@ describe('小触手：物理', () => {
       ...[...Array(200)].map((_, i) => Math.abs(idleSwing(10 + i / 20, 0))),
     );
     expect(late).toBeGreaterThan(SMALLARM_IDLE.amp * 0.95);
+  });
+});
+
+describe('小触手：受惊反应（点击甩开）', () => {
+  it('t=0 值为零、第一下朝甩开方向（不是先缩回来再甩）', () => {
+    expect(startleSwing(0, 1)).toBe(0);
+    expect(startleSwing(0.08, 1)).toBeGreaterThan(0);
+    expect(startleSwing(0.08, -1)).toBeLessThan(0);
+  });
+
+  it('首峰远大于待机摆幅（这是「比较大的反应」的定义）', () => {
+    const peak = Math.max(...[...Array(200)].map((_, i) => startleSwing(i / 100, 1)));
+    expect(peak).toBeGreaterThan(SMALLARM_IDLE.amp * 2);
+  });
+
+  it('会衰减、会结束：寿命末尾贡献可忽略，界外恒 0', () => {
+    const tail = Math.abs(startleSwing(SMALLARM_STARTLE.duration - 0.01, 1));
+    expect(tail).toBeLessThan(SMALLARM_STARTLE.amp * 0.05);
+    expect(startleSwing(SMALLARM_STARTLE.duration, 1)).toBe(0);
+    expect(startleSwing(-0.1, 1)).toBe(0);
+    expect(startleSwing(Number.NaN, 1)).toBe(0);
+  });
+
+  it('合成角钳制在 ±max（待机 + 受惊叠加可能短暂越界）', () => {
+    expect(clampSwing(2)).toBeCloseTo(SMALLARM_STARTLE.max, 9);
+    expect(clampSwing(-2)).toBeCloseTo(-SMALLARM_STARTLE.max, 9);
+    expect(clampSwing(0.3)).toBeCloseTo(0.3, 9);
+  });
+
+  it('受惊驱动下小块被甩出明显位移，且波形结束后能回到垂悬附近', () => {
+    const sa = createSmallArm();
+    driveSmallArm(sa, 0);
+    settle(sa, 3);
+    let maxDev = 0;
+    for (let i = 0; i < 10 * 120; i++) {
+      const t = i / 120;
+      driveSmallArm(sa, clampSwing(startleSwing(t, 1)));
+      stepSmallArm(sa, 1 / 120);
+      maxDev = Math.max(maxDev, Math.abs(sa.solver.nodes[SA_T].x));
+    }
+    expect(maxDev).toBeGreaterThan(60);
+    // 10s 后（波形寿命 3.5s + 阻尼余摆）回到竖直附近
+    expect(Math.abs(sa.solver.nodes[SA_T].x)).toBeLessThan(6);
+  });
+
+  it('链世界折线：节点数 = 轴心 + 5 链点，两实例各在自己一侧', () => {
+    const sa = createSmallArm();
+    const a = saChainWorld(sa, 0);
+    const b = saChainWorld(sa, 1);
+    expect(a).toHaveLength(6);
+    expect(Math.sign(a[0].y)).toBe(-1);
+    expect(Math.sign(b[0].y)).toBe(1);
+    // 悬垂位梢端在轴心正下方
+    expect(a[5].z).toBeLessThan(a[0].z);
+    expect(Math.abs(a[5].x - a[0].x)).toBeLessThan(1);
   });
 });
 
