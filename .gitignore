@@ -13,3 +13,4 @@ public/demo/
 
 # 站内台架组件用的资源副本（prebuild/predev 生成，不进 git）
 public/mesh/
+scripts/model-extract/.venv/
