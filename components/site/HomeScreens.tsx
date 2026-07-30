@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { StageRotator } from '../lab/StageRotator';
-import { RingsBench } from '../lab/RingsBench';
+import { MachineBench } from '../lab/MachineBench';
 import { snapshotCanvas } from '../lab/snapshot';
 import { coverRect, flipCss, flipTransform } from '../../src/lib/site/flip';
 
@@ -76,7 +76,8 @@ export interface HomeWork {
   summary: string;
 }
 
-// Lab 四卡（文案照搬 Home-Screens 稿；链接改指站内 /lab 台架页，MAPPING §6.3；
+// Lab 五卡（文案照搬 Home-Screens 稿；链接改指站内 /lab 台架页，MAPPING §6.3；
+// 2026-07-29 加 Lab.05，网格随之 4 列→5 列（用户：卡片后续再优化，先把新的加进来）；
 // bar/hover = 迭代稿按内核家族双色编码：SVG=绿、WebGL=紫）
 const LABS = [
   {
@@ -119,6 +120,16 @@ const LABS = [
     hover: 'var(--p100)',
     kickerColor: 'var(--accent-2)',
   },
+  {
+    kicker: 'Lab.05',
+    title: 'Full assembly',
+    body: 'One shaft opens and closes five rings; the arm curls on three tendons.',
+    meta: 'Real solids · WebGL',
+    href: '/lab#lab05',
+    bar: 'var(--p700)',
+    hover: 'var(--p100)',
+    kickerColor: 'var(--accent-2)',
+  },
 ];
 
 // Work log 预览三条：2026-07-27 起改接内容池最新三条（此前为 Home 稿硬编码字面，
@@ -128,11 +139,11 @@ export interface HomeLog {
   text: string;
 }
 
-// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-07-29 vitest 实测 193；
+// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-07-30 vitest 实测 275；
 // 迭代稿配色：Tests=绿 700、Kernels=紫 700、Demos=绿 600）
 const STATS = [
   { n: '04', label: 'Projects', color: 'var(--ink)' },
-  { n: '193', label: 'Tests green', color: 'var(--accent)' },
+  { n: '275', label: 'Tests green', color: 'var(--accent)' },
   { n: '02', label: 'Solver kernels', color: 'var(--accent-2)' },
   { n: '05', label: 'Live demos', color: 'var(--g600)' },
 ];
@@ -268,7 +279,8 @@ function StagePlaceholderPanel({
         </div>
       )}
       {supplied ? (
-        // 项目 01 临时主图 = Lab.04 五环台架（用户拍板 2026-07-27：主图待拍摄前先用活件顶上）；
+        // 项目 01 临时主图 = Lab.05 整机台架（用户拍板 2026-07-27 先用活件顶上，
+        // 07-29 从 Lab.04 五环换成整机——与案例页主图同一件，见 CaseHeroLive）；
         // data-ptm 让它同时是 goPT 转场的克隆源。作者供图后换回 StageMedia。
         <div
           data-ptm
@@ -280,7 +292,7 @@ function StagePlaceholderPanel({
             overflow: 'hidden',
           }}
         >
-          <RingsBench active={active} controls={false} onLight />
+          <MachineBench active={active} controls={false} onLight />
         </div>
       ) : (
         <StageMedia
@@ -1655,7 +1667,7 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
               </div>
               <div
                 data-row
-                className="grid grid-cols-2 lg:grid-cols-4"
+                className="grid grid-cols-2 lg:grid-cols-5"
                 style={{ gap: 1, background: 'oklch(0.235 0.025 215 / 0.22)' }}
               >
                 {LABS.map((lab) => (

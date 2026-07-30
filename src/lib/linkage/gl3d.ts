@@ -558,11 +558,17 @@ export class FlatRenderer {
     }
   }
 
-  drawMesh(id: string, fr: CellFrame): void {
+  /** 静态缓冲的刚体网格。
+   *  dark/lite 可选（2026-07-29 整机台架加）：本次绘制覆盖明暗端色，画完即还原为
+   *  beginFrame 的默认——整机的五环要各自带族系色，而零件是静态缓冲、不能像
+   *  drawDynamicMesh 那样逐帧重传顶点。加法式扩展，不传即旧行为，现有调用点零影响。 */
+  drawMesh(id: string, fr: CellFrame, dark?: [number, number, number], lite?: [number, number, number]): void {
     const gl = this.gl;
     const m = this.meshes.get(id);
     if (!m) return;
     gl.useProgram(this.meshProg);
+    if (dark) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uDark'), dark[0], dark[1], dark[2]);
+    if (lite) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uLite'), lite[0], lite[1], lite[2]);
     // 列 = (û, ê1, ê2)：world = R·local + o（uniformMatrix3fv 按列主序）
     gl.uniformMatrix3fv(gl.getUniformLocation(this.meshProg, 'uModelR'), false, [
       fr.ux, fr.uy, fr.uz,
@@ -578,6 +584,8 @@ export class FlatRenderer {
     gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 24, 0);
     gl.vertexAttribPointer(aNrm, 3, gl.FLOAT, false, 24, 12);
     gl.drawArrays(gl.TRIANGLES, 0, m.n);
+    if (dark) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uDark'), 0.29, 0.29, 0.27);
+    if (lite) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uLite'), 0.95, 0.95, 0.92);
   }
 
   /** TPU 连接件：双骨蒙皮绘制（frA = 站 g 刚架，frB = 站 g+1 刚架，

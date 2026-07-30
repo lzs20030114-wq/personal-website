@@ -82,14 +82,14 @@ const COPY = {
       'One full life cycle — birth, interaction, ageing, stop, blank — eight minutes compressed to ninety seconds',
     heroLabel: 'machine hero photo · studio white sweep · B/W',
     heroDesc: 'The machine, full view',
-    heroLive: '[stand-in] Lab.04 five-ring shell · live',
+    heroLive: '[stand-in] Lab.05 full assembly · live',
   },
   zh: {
     kicker: (n: string) => `案例 ${n} / 04`,
     video: '一个完整生命周期：诞生、互动、衰老、停止、空白——约 8 分钟压缩到 90 秒',
     heroLabel: '整机主照 · 影棚白弧扫 · 黑白',
     heroDesc: '整机全貌',
-    heroLive: '[顶替] Lab.04 五环活件',
+    heroLive: '[顶替] Lab.05 整机活件',
   },
 } as const;
 
@@ -163,7 +163,8 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
               同时是转场落点（data-pt-target）。首屏完整性由 .case-hero 的高度预算保证。 */}
           <figure className="case-hero-fig">
             {liveHero ? (
-              // 项目 01 临时主图 = Lab.04 五环活件（用户拍板 2026-07-27：与主页预览位同一件，
+              // 项目 01 临时主图 = Lab.05 整机活件（用户拍板 2026-07-27 先用活件顶上、07-29 从
+              // Lab.04 五环换成整机；与主页预览位同一件，
               // 转场从卡片预览一路缩放落到这里）。作者供图后删掉本分支即回占位。
               // 控制条竖排在右侧（用户拍板 2026-07-28）：横排会把主图变高、撞首屏预算。
               // 转场落点也随之下移到画面盒（ptTarget），否则落点框着控制条那一列，

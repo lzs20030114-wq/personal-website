@@ -5,11 +5,12 @@ import { FourBarBench } from '../../../components/lab/FourBarBench';
 import { ArchBench } from '../../../components/lab/ArchBench';
 import { TentacleBench } from '../../../components/lab/TentacleBench';
 import { RingsBench } from '../../../components/lab/RingsBench';
+import { MachineBench } from '../../../components/lab/MachineBench';
 
 export const metadata = { title: 'The lab' };
 
 /**
- * The lab（Lab-Modernist 稿 → MAPPING §7）：四台真求解器台架，深色语言与 case/log 一致。
+ * The lab（Lab-Modernist 稿 → MAPPING §7）：五台真求解器台架，深色语言与 case/log 一致。
  * ★ 版式逐项对稿：300px 定宽左栏 + 44px 间距；规格表竖排行（92px 标签列 + 发丝线分隔）；
  *   图框 3px 彩色顶线（2D 绿 / 3D 紫）+ 极淡填充；标题 72px；页脚两链。
  * 每台跑的是站内 TS 内核（src/lib/linkage，封盘零改），不是视频、不是二次实现。
@@ -134,7 +135,7 @@ export default function LabPage() {
       <div className="shell pg-dark" data-pt-content>
         <header style={{ padding: '64px 0 40px', borderBottom: 'var(--hair)' }}>
           <div className="flex items-baseline justify-between" style={{ gap: 32 }}>
-            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · four live instruments</p>
+            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · five live instruments</p>
             <span style={LEGEND}>
               <span className="flex items-center" style={{ gap: 6 }}>
                 <span style={{ width: 9, height: 9, background: 'var(--accent)' }} />
@@ -239,6 +240,22 @@ export default function LabPage() {
           <RingsBench />
         </Bench>
 
+        <Bench
+          no="05"
+          title="Full assembly"
+          lede="The whole machine on one motor — one shaft swings 180° back and forth, five cranks of different radii open and close the rings, and the big arm curls on its three tendons."
+          accent="var(--accent-2)"
+          specs={[
+            ['Bodies', 'Real solids · adjustable skin'],
+            ['Drive', 'One shaft · five cranks · in phase'],
+            ['Stroke', '180° reciprocating · apex ≡ 2R'],
+            ['Arm', 'Three tendons · same solver as Lab.03'],
+            ['Caveats', 'Speed not to scale · small arms static'],
+          ]}
+        >
+          <MachineBench />
+        </Bench>
+
         <footer
           className="flex flex-wrap items-baseline justify-between"
           style={{ gap: 32, padding: '26px 0 72px' }}
@@ -252,7 +269,7 @@ export default function LabPage() {
               color: 'var(--n500)',
             }}
           >
-            04 instruments · one kernel · all live
+            05 instruments · one kernel · all live
           </span>
           <span
             className="flex"
