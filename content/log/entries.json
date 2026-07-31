@@ -1,5 +1,64 @@
 [
   {
+    "date": "2026-07-31",
+    "lead": {
+      "en": "Ran a finite-element check on the chassis frames: over-built for strength, and the display stand matters far more than the thickness.",
+      "zh": "给底盘那两副方形桁架做了有限元计算：强度余量确实过大，而真正决定能减多薄的是展台怎么托。"
+    },
+    "body": {
+      "en": "It started as a gut call — the square base frames looked too heavy, stealing attention from the breathing shell above — so I weighed the machine part by part (about 1.5 kg rests on the frames) and checked the two 362×100 mm printed trusses with a beam-element finite element model, treating every strut as a small bending beam. Strength turned out to be a non-issue: display loads use about 5% of what the material can take, a worst case of double the machine’s full weight carried on one truss still leaves a safety factor of 8, and the X-braces contribute under 0.5% of the stiffness — pure decoration. The real limit is alignment: the drive shaft threads through five bores, and neighbouring frames may only settle about 0.56 mm relative to each other before the shaft binds — a budget decided by the display stand, not the frame. Supported only at its four corners the current truss slowly sags 4.8 mm, nearly six times over budget; on two full-length rails it sags 0.02 mm, a 200× difference — so fix the stand first, and the struts can safely drop to 40% of their material (104 g to 44 g per piece). One near-miss along the way: the first mass audit counted the large tentacle five times too heavy — nested parts in the model carry inverted faces that double-count volume — which would have built the conclusion on the wrong weight. The frame has now been redrawn to the slimmer spec, with the cross-braces gone and the members thinned.",
+      "zh": "起因是肉眼觉得下部方形框架过于厚重、抢了上方呼吸壳体的风头，于是把整机重量逐件核算（压在框架上的约 1.5 公斤），再用梁单元有限元——把每根杆当作会弯曲的梁逐段求解——复核这两副 362×100 毫米的打印桁架。强度完全不是问题：展示状态只用到材料承载力的 5%，整机全重翻倍压在单副桁架上安全系数仍有 8，交叉斜撑对刚度的贡献不到 0.5%，属于纯装饰。真正的约束是对中：驱动轴要依次穿过五个轴孔，相邻框架之间的错位超过约 0.56 毫米轴就会卡死——而这个量由展台托法决定，不由框架厚度决定。现状桁架只托四角时会慢慢下垂 4.8 毫米、超限近六倍，改成两条通长托条只剩 0.02 毫米，相差 200 倍——所以先定托法，杆件才能放心减到原用料的四成（单件 104 克到 44 克）。中途有个差点翻车的坑：第一版重量核算把大触手算重了五倍——模型嵌套件里有朝向相反的面，体积被重复计入——差点让整份结论建立在错误的重量上。框架已按这套结论改瘦了一版：去掉交叉斜撑、构件减细。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "image",
+        "src": "/log/2026-07-31-chassis-truss-measured.webp",
+        "alt": {
+          "en": "Measured thickness map of one ladder truss: two 16 mm chords with thin rungs and X-braces between them",
+          "zh": "单件梯形桁架的实测厚度分布：两根 16 毫米弦杆，中间是薄横撑与交叉斜撑"
+        },
+        "caption": {
+          "en": "What the frame actually is: two thick rails do the work; the lattice between them is only 4 mm thin.",
+          "zh": "框架的真实构成：受力的是两根粗弦杆，中间的格构只有 4 毫米厚。"
+        },
+        "width": 1195,
+        "height": 690
+      },
+      {
+        "kind": "image",
+        "src": "/log/2026-07-31-chassis-support-modes.webp",
+        "alt": {
+          "en": "Deflection curves and per-station misalignment of the same truss under three ways of supporting it",
+          "zh": "同一副桁架在三种展台托法下的挠度曲线与相邻站位错位对比"
+        },
+        "caption": {
+          "en": "Same truss, three stands: corners-only sags 4.8 mm, full-length rails 0.02 mm — the stand decides.",
+          "zh": "同一副桁架换三种托法：只托四角垂 4.8 毫米，通长托条只剩 0.02 毫米——托法说了算。"
+        },
+        "width": 1600,
+        "height": 620
+      },
+      {
+        "kind": "image",
+        "src": "/log/2026-07-31-chassis-slimming-options.webp",
+        "alt": {
+          "en": "Slimming options compared against the 0.56 mm alignment budget, with mass and carry safety factors",
+          "zh": "候选减薄方案对照 0.56 毫米对中预算的比较，附质量与搬运安全系数"
+        },
+        "caption": {
+          "en": "With full-length rails even the thinnest option (44 g, −58%) uses less than half the budget.",
+          "zh": "有通长托条时，最瘦的方案（44 克、减重 58%）也只用掉预算的一半不到。"
+        },
+        "width": 1600,
+        "height": 620
+      }
+    ]
+  },
+  {
     "date": "2026-07-29",
     "lead": {
       "en": "Added kittens as a separate agent type, which broke a rule I had already written for adult cats.",
