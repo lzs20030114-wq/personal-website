@@ -58,10 +58,15 @@ TENTACLE_WELD = 1.5
 
 # 静件分两组，不合并：台架的「传动」开关要能连中间轴与电机一起切掉，
 # 合成一组的话轴会跟着机架走，开关就名不副实了。
-STATIC_GROUPS = [
-    ("frame", ["滑轨架", "骨架"]),
-    ("shaft", ["中间轴", "中间轴驱动"]),
-]
+#
+# 2026-07-31 起静件与触手摆位改取 底架改进.3dm（用户按底盘桁架 FEA 结论改模：
+# 旧 8 件桁架+副框 → 2 整板 + 2 夹件；滑轨架五副换新版；电机箱移位 30.5mm；
+# 触手摆位微调）。环身板/单杆轮/驱动杆仍取 729新参考.3dm——逐件配对比对证实未变。
+# 新文件图层纪律缺失（整机堆在 默认值 层）且装配簇整体平移了 (Δx,Δy)≈(−749.7,+434.4)，
+# 故**不能按图层取件**：平移量由五个曲柄圆中心解出（五环互证，散布 >0.01mm 拒收），
+# 件按尺寸签名分类且数量强校验（对不上就退出，图纸再改过要先重新核对）。
+NEW_SRC = ROOT / "模型求解器参考/底架改进.3dm"
+STATIC_GROUPS = ["frame", "shaft"]  # frame = 底盘 5 件 + 滑轨架 5 副；shaft = 轴 + 联轴 + 电机
 # 大触手**不再烘成静件**：它就是 Lab.03 那条三肌腱触手（椎节间距逐位吻合），
 # 改由 tentacle3d 的解算实时驱动（spec §3.4）。这里只测它的放置参数。
 # 小触手 2026-07-30 起也不再烘死：用户给出机构说明（底座固定 + 舵机驱动大节绕
@@ -292,8 +297,11 @@ def frame_world(loc, A, B):
 
 # ------------------------------------------------------------------- 小触手
 
-def smallarm_articulate(model, by_layer):
+def smallarm_articulate(model, by_layer, shift=None):
     """小触手关节化提取（用户 2026-07-30 给出机构说明后由静件转正）。
+
+    shift：源文件装配簇相对 729新参考 的整体平移（底架改进源用）。块局部几何
+    不动（块定义本来就是局部系），只把实例变换的平移分量搬回旧图纸坐标。
 
     机构（用户原话的翻译）：底座固定在机架上；**大的一节由 SG90 舵机驱动，绕后端
     圆形轴心甩动**；一根细软杆（软性结构）连到下面的小块；小块无驱动，靠软杆
@@ -421,10 +429,11 @@ def smallarm_articulate(model, by_layer):
             p_draw[2] - Z0,
         ])
 
+    SH = _np.zeros(3) if shift is None else _np.asarray(shift)
     placements = []
     for g in refs:
         M = xf_mat(g.Xform)
-        R, t = M[:3, :3], M[:3, 3]
+        R, t = M[:3, :3], M[:3, 3] + SH
         p_draw = R @ pivot + t
         axis = Lmap(R @ _np.array([1.0, 0, 0]))     # 块 x̂ = 摆轴
         hdir = Lmap(R @ _np.array([0, 1.0, 0]))     # 块 ŷ = 摆平面内水平向
@@ -452,7 +461,7 @@ def smallarm_articulate(model, by_layer):
     worst = 0.0
     for g in refs:
         M = xf_mat(g.Xform)
-        R, t = M[:3, :3], M[:3, 3]
+        R, t = M[:3, :3], M[:3, 3] + SH
         for name, v_l, _t, _x in groups:
             J = {"sa_mount": pivot, "sa_seg1": pivot, "sa_soft": jA, "sa_seg2": jB}[name]
             # 局部→块：v_b = (z_l + Jx, y_l + Jy, −x_l + Jz)
@@ -483,8 +492,11 @@ def parse_shape_arr(name):
     return json.loads(mm.group(1))
 
 
-def measure_arm(model, by_layer):
+def measure_arm(model, by_layer, shift=None):
     """大触手在装配位的放置参数 + 滚转自检。
+
+    shift：源文件装配簇相对 729新参考 的整体平移（底架改进源用）——展开后
+    先把顶点搬回旧图纸坐标，量出的落位才与 X0/PLANE0/Z0 同一坐标系。
 
     实测结论（2026-07-29）：臂轴沿 +y；截面坐标系与装配系**不差旋转**（滚转 ≈ 0）。
     故 sim → 装配 是纯平移，再叠上整机的世界映射 ⇒ 总体 = 绕世界 z 轴 90° + 平移。
@@ -503,6 +515,8 @@ def measure_arm(model, by_layer):
         expand_instance(model, g, acc)
     if not acc:
         sys.exit("装配位没找到大触手图块")
+    if shift is not None:
+        acc = [(v + shift, t) for v, t in acc]
 
     parts = [(v.mean(axis=0), v, t) for v, t in acc]
     V = np.vstack([p[1] for p in parts])
@@ -569,6 +583,100 @@ def measure_arm(model, by_layer):
     return {"axis_x": ax_x, "axis_z": ax_z, "ax0_y": y0, "roll_deg": round(roll, 3)}
 
 
+# ------------------------------------------------------------- 底架改进源
+
+def load_chassis_update(shell):
+    """读 底架改进.3dm：解整体平移量 + 按尺寸签名分类装配簇件。
+
+    平移量：新文件每个环面仍画着曲柄圆（摊开骨架::Sx::驱动 的闭合曲线），
+    圆心在旧文件里的位置是已知定案 (X0, PLANE0−85i, Z0)——五环各解一次 Δ，
+    互相印证（散布 >0.01mm 或半径对不上 crankR 都直接拒收）。
+
+    分类（旧文件的图层名在新文件里没了，整机堆在 默认值）：
+      shaft    y 跨 >300 且 x 跨 <20（370 长 D 轴）
+      rails    z 跨 >100（滑轨架五副立板）
+      motor    x 跨 85–100 且 y/z 跨 55–70（电机箱）
+      coupling 三向都 <25（联轴小件）
+      chassis  其余实体（2 整板 + 2 夹件 + S1 散横撑）
+      大触手   实例引用中 y 跨 >400；小触手 = 其余实例引用
+    每类数量强校验；分类完的件在 main 里统一 +Δ 回旧图纸坐标，后续管线零改。
+    """
+    model = r3d.File3dm.Read(str(NEW_SRC))
+    if model is None:
+        sys.exit(f"READ FAILED: {NEW_SRC}")
+    layer = {l.Index: (l.FullPath if hasattr(l, "FullPath") else l.Name) for l in model.Layers}
+    byl = defaultdict(list)
+    for o in model.Objects:
+        byl[layer.get(o.Attributes.LayerIndex, "?")].append(o)
+
+    deltas = []
+    for i, rname in enumerate(RING_NAMES):
+        want_r = shell[rname]["crankR"]
+        hit = None
+        for o in byl.get(f"摊开骨架::{rname}::驱动", []):
+            g = o.Geometry
+            if g is None or g.ObjectType != r3d.ObjectType.Curve or not g.IsClosed:
+                continue
+            bb = g.GetBoundingBox()
+            r = (bb.Max.X - bb.Min.X) / 2
+            if abs(r - want_r) > 0.05:
+                continue
+            hit = np.array([
+                (bb.Min.X + bb.Max.X) / 2,
+                (bb.Min.Y + bb.Max.Y) / 2,
+                (bb.Min.Z + bb.Max.Z) / 2,
+            ])
+        if hit is None:
+            sys.exit(f"底架改进：{rname} 找不到半径 {want_r} 的曲柄圆——定不出平移量")
+        old_c = np.array([X0, PLANE0 - PITCH * i, Z0])
+        deltas.append(old_c - hit)
+    D = np.mean(deltas, axis=0)
+    spread = float(np.max(np.abs(np.array(deltas) - D)))
+    print(f"  底架改进：平移量 Δ=({D[0]:.3f}, {D[1]:.3f}, {D[2]:.3f})  五环散布 {spread:.4f}mm")
+    if spread > 0.01:
+        sys.exit(f"底架改进：五环解出的平移量不一致（散布 {spread:.3f}mm）——文件不是纯平移")
+
+    x0n, plane0n = X0 - D[0], PLANE0 - D[1]
+    cls = {"shaft": [], "rails": [], "motor": [], "coupling": [], "chassis": [], "arm": [], "small": []}
+    for objs in byl.values():
+        for o in objs:
+            g = o.Geometry
+            if g is None:
+                continue
+            bb = g.GetBoundingBox()
+            cx, cy = (bb.Min.X + bb.Max.X) / 2, (bb.Min.Y + bb.Max.Y) / 2
+            if abs(cx - x0n) > 400 or not (plane0n - 4 * PITCH - 300 < cy < plane0n + 300):
+                continue
+            dx, dy, dz = bb.Max.X - bb.Min.X, bb.Max.Y - bb.Min.Y, bb.Max.Z - bb.Min.Z
+            if g.ObjectType == r3d.ObjectType.InstanceReference:
+                cls["arm" if dy > 400 else "small"].append(o)
+            elif g.ObjectType in (r3d.ObjectType.Brep, r3d.ObjectType.Extrusion):
+                if dy > 300 and dx < 20:
+                    cls["shaft"].append(o)
+                elif dz > 100:
+                    cls["rails"].append(o)
+                elif 85 < dx < 100 and 55 < dy < 70 and 55 < dz < 70:
+                    cls["motor"].append(o)
+                elif max(dx, dy, dz) < 25:
+                    cls["coupling"].append(o)
+                else:
+                    cls["chassis"].append(o)
+    want = {"shaft": 1, "rails": 5, "motor": 1, "coupling": 1, "chassis": 5, "arm": 1, "small": 2}
+    got = {k: len(v) for k, v in cls.items()}
+    if got != want:
+        sys.exit(f"底架改进：装配簇分类数量对不上 {got}（应为 {want}）——图纸变了，先核对再出表")
+    print(f"  底架改进：分类 {got} ✓")
+    return {
+        "model": model,
+        "delta": D,
+        "frame": cls["chassis"] + cls["rails"],
+        "shaft": cls["shaft"] + cls["coupling"] + cls["motor"],
+        "rails": cls["rails"],
+        "arm": cls["arm"],
+        "small": cls["small"],
+    }
+
+
 # --------------------------------------------------------------------- main
 
 def main():
@@ -582,6 +690,9 @@ def main():
     by_layer = defaultdict(list)
     for o in model.Objects:
         by_layer[layer.get(o.Attributes.LayerIndex, "?")].append(o)
+
+    upd = load_chassis_update(shell)
+    D = upd["delta"]
 
     groups = []  # (name, verts, tris, meta)
     report = []
@@ -709,14 +820,9 @@ def main():
     # 首版 w 取了正号（整机沿体轴镜像），M1 的回算闸门查的是环局部往返、抓不到它；
     # 这一关专抓世界系映射的方向错。
     rail_x = []
-    for o in by_layer.get("滑轨架", []):
-        g = o.Geometry
-        if g is None:
-            continue
-        bb = g.GetBoundingBox()
-        cy = (bb.Min.Y + bb.Max.Y) / 2
-        if cy > -1000:
-            continue
+    for o in upd["rails"]:
+        bb = o.Geometry.GetBoundingBox()
+        cy = (bb.Min.Y + bb.Max.Y) / 2 + D[1]  # 新文件坐标 +Δ 回旧图纸系
         rail_x.append(STATION[0] - (cy - PLANE0))
     rail_x.sort()
     if len(rail_x) == len(STATION):
@@ -734,40 +840,24 @@ def main():
     else:
         report.append(f"!! 滑轨架 {len(rail_x)} 副，与五环对不上")
 
-    for gname, layers in STATIC_GROUPS:
+    for gname in STATIC_GROUPS:
         static_parts = []
-        for lay in layers:
-            for o in by_layer.get(lay, []):
-                g = o.Geometry
-                if g is None or g.ObjectType not in (r3d.ObjectType.Brep, r3d.ObjectType.Extrusion):
-                    continue
-                bb = g.GetBoundingBox()
-                if (bb.Min.X + bb.Max.X) / 2 > -1000:
-                    continue
-                mesh = raw_mesh(g)
-                if mesh is not None:
-                    static_parts.append((to_world(mesh[0]), mesh[1]))
+        for o in upd[gname]:
+            mesh = raw_mesh(o.Geometry)
+            if mesh is not None:
+                static_parts.append((to_world(mesh[0] + D), mesh[1]))
         st = merge(static_parts)
         if st is None:
-            report.append(f"!! 静件组 {gname} 空（图层 {layers}）")
+            report.append(f"!! 静件组 {gname} 空（底架改进源）")
             continue
-        print(f"  静件 {gname}: {len(st[1]):,} 三角（图层 {'/'.join(layers)}）")
+        print(f"  静件 {gname}: {len(st[1]):,} 三角（源：底架改进.3dm）")
         groups.append((gname, st[0], st[1], None))
 
-    tent_parts = []
-    for lay in BLOCK_LAYERS:
-        for o in by_layer.get(lay, []):
-            g = o.Geometry
-            if g is None or g.ObjectType != r3d.ObjectType.InstanceReference:
-                continue
-            acc = []
-            expand_instance(model, g, acc)
-            for v, t in acc:
-                tent_parts.append((to_world(v), t))
-    arm = measure_arm(model, by_layer)
+    arm = measure_arm(upd["model"], {ARM_LAYER: upd["arm"]}, shift=D)
 
-    del tent_parts  # 静件路线已退役：小触手改关节化（见 smallarm_articulate）
-    sa_groups, sa_places, sa_shape, sa_gate = smallarm_articulate(model, by_layer)
+    sa_groups, sa_places, sa_shape, sa_gate = smallarm_articulate(
+        upd["model"], {"小触手": upd["small"]}, shift=D
+    )
     print(f"  小触手关节化：{' · '.join(f'{n} {len(t):,}三角' for n, _v, t, _x in sa_groups)}")
     print(f"  小触手零位复原最大偏差 {sa_gate:.2e} mm")
     if sa_gate > 1e-3:
@@ -868,8 +958,9 @@ def main():
     ts = io.StringIO()
     ts.write(
         f"""// machine-shape.ts —— 轮回机器整机（Lab.05）形体分组与绑定表，机器生成。
-// 来源：模型求解器参考/729新参考.3dm 装配位（2026-07-29 提取，生成脚本
-// scripts/model-extract/gen_machine.py——手改无效，改脚本重生成）。
+// 来源：模型求解器参考/729新参考.3dm（环身/单杆轮/驱动杆，2026-07-29 提取）
+//     + 模型求解器参考/底架改进.3dm（底盘/滑轨架/轴系/触手摆位，2026-07-31 换源），
+// 生成脚本 scripts/model-extract/gen_machine.py——手改无效，改脚本重生成。
 // spec = 轮回机器_整机spec.md；测绘 = 轮回机器_整机测绘.md。
 //
 // 运动学不在这里：五环销坐标与 shell3d-data.ts 逐位相同，Lab.05 复用 shell3d 解算。
