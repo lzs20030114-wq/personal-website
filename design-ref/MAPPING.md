@@ -599,3 +599,33 @@ Lab.05 有八组控件，§ 侧栏那套竖排一列量到 **939px**，而案例
 2. **复选框要 `flex: none`。** 四格一行时每格只剩 ~48px，字撑不动，压的就是那个 11px 方框——四个部件复选框全挤成 `|` 号。
 
 实测（CDP，六档视口 × 中英两侧）：1366×768 / 1280×800 / 1440×1000 / 1680×912 / 1920×1080 / 2560×1300 全部无裁切、无内滚、主图仍在首屏。`/lab` 的横排控制条一行未改（改的全在 `.lab-wrap--side` 作用域内）。
+
+---
+
+## 14. 四个项目各进各的详情页（2026-07-29，用户拍板「主页进 1234 项目只有 1 进了自己的详情页，234 也都进一个各自的详情页」）
+
+此前只有项目 01 是 `published`，主页四张卡片里另外三张的 `href` 一律写死 `/archive`——点 02/03/04 全落到同一个工作日志页。IA 红线是「四项目结构地位同等」（CLAUDE.md 定位与边界），导航上却三个连地址都没有，这是实现漏了一口，不是设计选择。
+
+### 14.1 路由名单：published ∪ selected
+
+`src/lib/site/content.ts` 新增 `getRoutableWork()` / `getRoutableWorkBySlug()`＝published ∪ 四个主项目（selected）。`generateStaticParams` 与页面查询都改读它，`dynamicParams = false` 不变——**边界没放开**：非 selected 的 draft（将来的次要作品）照旧不出路由。
+
+### 14.2 未发稿的三个渲「筹备中」页
+
+`components/site/WorkInPreparation.tsx`（服务端组件），走 `/work/[slug]` 同一条路由：`entry.status !== 'published'` 就返回它。版式**全部复用 `.case-*` 类**（同一套 head / 双线尺 / 左栏 / hero 框 / `.case-body`），发稿时换的是内容不是模板。
+
+页面里**没有任何项目正文**——正文是作者的活（SITE_SPEC「模型不代写」），这里只有站方框架字：它是什么状态、发稿后会长成什么样、现在能去哪看到相关记录。中英切换、`PageEnter`/`BackTransition`、深色 `.pg-dark` 与 case 页一致；`entry.zh` 缺失时中文标题按序号兜底（项目二 / 三 / 四）。
+
+左栏两格：`Status = In preparation / 筹备中`（`.tag-outline`），以及**该项目在 log 池里的条数**——`projectOf(entry) === slug` 现算，项目组 key 与 work slug 同名的才数得出来（现为 `project-ii`，实测 18 条 since 2026-06）；没有记录的（03/04）这一格与正文里那句都自动换成「暂时没有可读的」。
+
+### 14.3 主页两处 href
+
+卡片（`hub-card`）与舞台面板的链接一律改成 `/work/${slug}`；面板上的 `In preparation` 状态签保留，链接文案由 `Work log →` 改 `Project page →`——别让人以为点进去有正文。转场不受影响：筹备页的 hero 框带 `data-pt-target`，主页卡片飞过来照样落在它上面（CDP 实测 03 卡片点击落位、残留归零、返回转场正常）。
+
+### 14.4 元数据
+
+筹备中的页面 `description` 不用 frontmatter 里的「待盘点」占位字，改固定英文一句，并加 `robots: { index: false }`——空页不该进索引。
+
+### 14.5 守门测试
+
+`content.test.ts` 新增 2 项：四个主项目每个都在路由名单里（否则主页卡片指向 404，卡片 href 与 `generateStaticParams` 读的是同一份名单）／非主项目的 draft 不出路由。本条与 §12/§13（Lab.05 系列）并行开发，合并 master 后统计条以 vitest 实测为准 → **275**。

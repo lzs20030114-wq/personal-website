@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react';
 import { notFound } from 'next/navigation';
 import { MDXRemote } from 'next-mdx-remote/rsc';
 import remarkGfm from 'remark-gfm';
-import { getAllWork, getPublishedWorkBySlug } from '../../../../src/lib/site/content';
+import { getRoutableWork, getRoutableWorkBySlug } from '../../../../src/lib/site/content';
 import {
   ConceptCard,
   ConceptGrid,
@@ -21,14 +21,16 @@ import { LinkageFigure } from '../../../../components/linkage/LinkageFigure';
 import { CaseHeroLive } from '../../../../components/site/CaseHeroLive';
 import { PageEnter } from '../../../../components/site/PageEnter';
 import { BackTransition } from '../../../../components/site/BackTransition';
+import { WorkInPreparation } from '../../../../components/site/WorkInPreparation';
 
 export function generateStaticParams() {
-  return getAllWork()
-    .filter((w) => w.status === 'published')
-    .map((w) => ({ slug: w.slug }));
+  return getRoutableWork().map((w) => ({ slug: w.slug }));
 }
 
-/** 作品路由只允许构建期列出的 published slug；draft/未知 slug 不做按需渲染。 */
+/**
+ * 作品路由只允许构建期列出的 slug（published + 四个主项目）；其余 draft/未知 slug
+ * 不做按需渲染。四个主项目里未发稿的三个渲「筹备中」页（用户拍板 2026-07-29）。
+ */
 export const dynamicParams = false;
 
 /** 去掉作者自留的方括号备注（如 "[summary 草案…]"），仅用于展示。 */
@@ -38,8 +40,16 @@ function cleanSummary(s: string): string {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const entry = getPublishedWorkBySlug(slug);
+  const entry = getRoutableWorkBySlug(slug);
   if (!entry) notFound();
+  // 筹备中的页面没有正文，summary 还是「待盘点」占位——别把占位字当描述发出去，也别让它进索引
+  if (entry.status !== 'published') {
+    return {
+      title: entry.title,
+      description: 'In preparation — the case study for this project has not been published yet.',
+      robots: { index: false, follow: true },
+    };
+  }
   return { title: entry.title, description: cleanSummary(entry.summary) };
 }
 
@@ -90,8 +100,10 @@ const COPY = {
  */
 export default async function WorkPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const entry = getPublishedWorkBySlug(slug);
+  const entry = getRoutableWorkBySlug(slug);
   if (!entry) notFound();
+  // 四个主项目里还没发稿的：同一条路由、同一套版式，正文位换成「筹备中」框架字（不代写）
+  if (entry.status !== 'published') return <WorkInPreparation entry={entry} />;
 
   const caseNo = String(entry.order ?? 1).padStart(2, '0');
   // 主图暂用活台架顶替的项目（与主页预览位同一件；作者供图后删掉这一行即回占位块）
