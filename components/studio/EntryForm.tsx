@@ -17,7 +17,9 @@ import { BiField } from './fields';
  * 预览用的是站上那个 LogBody 组件本身——预览与线上必须是同一段代码画的。
  */
 
-const MD_HINT = '支持：### 小标题 · - 列表 · 1. 编号 · **加粗** · `代码` · [文字](链接) · ``` 代码块';
+const MD_HINT =
+  '纪律：分条写（- 列表），每条简短说明改了哪、用了什么方法——成段散文过不了发布检查。' +
+  '另支持：### 小标题 · 1. 编号 · **加粗** · `代码` · [文字](链接) · ``` 代码块';
 
 function tagsWith(outline: LogTag | null, neutral: LogTag | null): LogTag[] {
   // 顺序固定 outline → neutral：与池内既有条目一致，避免整文件 diff 抖动
@@ -129,6 +131,7 @@ export function EntryForm({
         label="引句（收起时显示的一句概括）"
         value={entry.lead}
         rows={2}
+        hint="一句话写明改进了什么、或在哪方面做了什么工作——它要单独成立（收起态与主页预览只显示这句）"
         onChange={(lead) => onChange({ ...entry, lead })}
       />
       <BiField

@@ -1,5 +1,6 @@
 import type { LogEntry } from './log-schema';
 import { PROJECT_GROUPS } from './log-facets';
+import { parseMarkdown } from './md';
 
 /**
  * 内容池的守门规则——**zod 挡不住、但会让站点变坏的那些事**。
@@ -64,6 +65,17 @@ export function checkLogEntries(entries: LogEntry[]): GuardIssue[] {
     const key = `${e.date}｜${e.lead.en.trim().toLowerCase()}`;
     if (seenEntry.has(key)) at('与另一条同日同引句（重复条目）');
     seenEntry.add(key);
+
+    // 写作纪律（2026-07-31 用户拍板，见 工作日志写作纪律.md）：正文分条写，不堆成段。
+    // 小标题与代码块仍允许（07-28 拍板的能力不收回），挡的只是成段散文。
+    for (const [lang, text] of [['英文', e.body.en], ['中文', e.body.zh]] as const) {
+      const blocks = parseMarkdown(text);
+      if (blocks.some((b) => b.t === 'p')) {
+        at(`${lang}正文有成段散文——按写作纪律要分条（- 列表），每条简短说明改了哪、用了什么方法`);
+      } else if (!blocks.some((b) => b.t === 'list')) {
+        at(`${lang}正文没有分条列表——正文主体要用「- 」列表写`);
+      }
+    }
 
     // 表格：每行列数必须与表头一致，否则渲染出来是错位的网格。
     (e.blocks ?? []).forEach((b, bi) => {

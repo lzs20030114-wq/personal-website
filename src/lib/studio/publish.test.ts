@@ -13,7 +13,8 @@ function entry(over: Partial<LogEntry> = {}): LogEntry {
   return {
     date: '2026-07-28',
     lead: { en: 'A lead.', zh: '一句概括。' },
-    body: { en: 'Body.', zh: '正文。' },
+    // 正文按写作纪律（2026-07-31）分条——成段散文会被 checkLogEntries 拦下
+    body: { en: '- Body.', zh: '- 正文。' },
     tags: [{ label: { en: 'Machine', zh: '机器' }, variant: 'outline' }],
     ...over,
   };

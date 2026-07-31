@@ -6,8 +6,8 @@
       "zh": "给底盘那两副方形桁架做了有限元计算：强度余量确实过大，而真正决定能减多薄的是展台怎么托。"
     },
     "body": {
-      "en": "It started as a gut call — the square base frames looked too heavy, stealing attention from the breathing shell above — so I weighed the machine part by part (about 1.5 kg rests on the frames) and checked the two 362×100 mm printed trusses with a beam-element finite element model, treating every strut as a small bending beam. Strength turned out to be a non-issue: display loads use about 5% of what the material can take, a worst case of double the machine’s full weight carried on one truss still leaves a safety factor of 8, and the X-braces contribute under 0.5% of the stiffness — pure decoration. The real limit is alignment: the drive shaft threads through five bores, and neighbouring frames may only settle about 0.56 mm relative to each other before the shaft binds — a budget decided by the display stand, not the frame. Supported only at its four corners the current truss slowly sags 4.8 mm, nearly six times over budget; on two full-length rails it sags 0.02 mm, a 200× difference — so fix the stand first, and the struts can safely drop to 40% of their material (104 g to 44 g per piece). One near-miss along the way: the first mass audit counted the large tentacle five times too heavy — nested parts in the model carry inverted faces that double-count volume — which would have built the conclusion on the wrong weight. The frame has now been redrawn to the slimmer spec, with the cross-braces gone and the members thinned.",
-      "zh": "起因是肉眼觉得下部方形框架过于厚重、抢了上方呼吸壳体的风头，于是把整机重量逐件核算（压在框架上的约 1.5 公斤），再用梁单元有限元——把每根杆当作会弯曲的梁逐段求解——复核这两副 362×100 毫米的打印桁架。强度完全不是问题：展示状态只用到材料承载力的 5%，整机全重翻倍压在单副桁架上安全系数仍有 8，交叉斜撑对刚度的贡献不到 0.5%，属于纯装饰。真正的约束是对中：驱动轴要依次穿过五个轴孔，相邻框架之间的错位超过约 0.56 毫米轴就会卡死——而这个量由展台托法决定，不由框架厚度决定。现状桁架只托四角时会慢慢下垂 4.8 毫米、超限近六倍，改成两条通长托条只剩 0.02 毫米，相差 200 倍——所以先定托法，杆件才能放心减到原用料的四成（单件 104 克到 44 克）。中途有个差点翻车的坑：第一版重量核算把大触手算重了五倍——模型嵌套件里有朝向相反的面，体积被重复计入——差点让整份结论建立在错误的重量上。框架已按这套结论改瘦了一版：去掉交叉斜撑、构件减细。"
+      "en": "- Checked the two 362×100 mm chassis trusses with a beam-element finite-element model, after weighing the machine part by part (about 1.5 kg rests on them) — prompted by a gut feeling that the frames looked too heavy.\n- Strength is over-built: display loads use about 5% of what the material can take, the worst carrying case still leaves a safety factor of 8, and the X-braces add under 0.5% of the stiffness — pure decoration.\n- The real limit is shaft alignment: neighbouring frames may only shift about 0.56 mm before the drive shaft binds, and that is decided by the display stand — corners-only support sags 4.8 mm, two full-length rails only 0.02 mm, a 200× difference.\n- Wrong turn: the first mass audit counted the large tentacle five times too heavy (nested parts carry inverted faces that double-count volume); caught and corrected.\n- Outcome: fix the stand first, then the struts can drop to 40% of their material (104 g → 44 g per piece); the frame has been redrawn to the slimmer spec.",
+      "zh": "- 用梁单元有限元复核底盘两副 362×100 毫米桁架，动手前先逐件核算整机重量（压在框架上的约 1.5 公斤）——起因是肉眼觉得框架过厚。\n- 强度确认过剩：展示工况只用到材料承载力的 5%，最恶劣的搬运工况安全系数仍有 8，交叉斜撑对刚度贡献不到 0.5%、纯装饰。\n- 真正的限制是驱动轴对中：相邻框架错位超过约 0.56 毫米轴就卡死，而这个量由展台托法决定——只托四角垂 4.8 毫米，两条通长托条只剩 0.02 毫米，差 200 倍。\n- 弯路：首版重量核算把大触手算重了五倍（模型嵌套件里有反向面，体积被重复计入），当场纠正。\n- 结论落地：先做通长托条，杆件即可减到原用料四成（单件 104 克 → 44 克）；框架已按此改瘦一版。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -65,8 +65,8 @@
       "zh": "把幼猫单独建成一类智能体，结果推翻了一条已经写好的成猫规则。"
     },
     "body": {
-      "en": "Every cat measurement I had collected came from adults — the café study followed 27 neutered cats, the distance experiment used cats aged 15 to 24 months. A cat café usually has kittens in it too, and they are not small adults: they sleep 16 to 22 hours a day, but while awake they are roughly 1.5 to 1.8 times as active as a grown cat. Social play appears at about 4 weeks, peaks between 9 and 14 weeks, then falls away as play with objects takes over around 18 weeks. The rule that broke was the one saying a cat climbs to a high shelf when the room gets crowded: a kitten under 12 weeks can only manage about 0.6 to 0.9 m, so when a crowd arrives the adults go up and the kittens have nowhere to go. That is not something I designed — it falls out of what a kitten's legs can do — and it means one crowd surge pushes the two age groups to opposite parts of the room.",
-      "zh": "此前收集的猫的数据全部来自成猫——猫咖那项研究跟的是 27 只绝育成猫，距离实验用的是 15 到 24 月龄的猫。而猫咖里通常也有幼猫，幼猫不是缩小版的成猫：它们每天睡 16 到 22 小时，但清醒时的活动量约为成猫的 1.5 到 1.8 倍。社会性游戏约 4 周出现，9 到 14 周达到高峰，之后随物体游戏在 18 周左右接手而回落。被推翻的是那条「人多时猫会上高处」的规则：12 周以下的幼猫只能上到约 0.6 到 0.9 米，所以客流一涌进来，成猫往上走，幼猫无处可去。这不是我设计出来的，是幼猫的运动能力决定的——同一次客流高峰会把两个年龄段的猫推向房间里完全不同的位置。"
+      "en": "- Added kittens as their own agent type: all the cat data collected so far came from adults, and a cat café usually has kittens too.\n- Method: gave kittens their own parameters from developmental literature — 16–22 hours of sleep a day, 1.5–1.8× an adult's activity while awake, social play peaking at 9–14 weeks.\n- The rule that broke: \"a cat climbs high when the room gets crowded\" — a kitten under 12 weeks only manages about 0.6–0.9 m, so when a crowd arrives the adults go up and the kittens have nowhere to go.\n- Result: one crowd surge pushes the two age groups to opposite parts of the room — not designed, it falls out of what a kitten's legs can do.",
+      "zh": "- 把幼猫单独建成一类智能体：此前收集的数据全部来自成猫，而猫咖里通常有幼猫。\n- 方法：按发育文献给幼猫单独配参数——每天睡 16–22 小时、清醒时活动量是成猫的 1.5–1.8 倍、社会性游戏 9–14 周达峰。\n- 被推翻的规则：「人多时猫上高处」——12 周以下的幼猫只能上到约 0.6–0.9 米，客流一来，成猫往上走、幼猫无处可去。\n- 结果：同一次客流高峰会把两个年龄段的猫推向房间的不同位置——这不是设计出来的，是幼猫的运动能力决定的。"
     },
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
@@ -166,8 +166,8 @@
       "zh": "验证了「品种决定猫狗个体差异」这个假设，然后把它否掉了。"
     },
     "body": {
-      "en": "Each animal in the simulation needs a few attributes so that the same rule produces different behaviour in different individuals. My starting guess was breed for cats and body size for dogs. A 2022 genomics study covering 18,385 dogs settled the dog half: breed accounts for only about 9% of the variation between individual dogs, and almost none of it in the traits that matter here, like fear of strangers. Body size does predict spatial behaviour — shorter dogs show more generalised aggression, taller ones are more sociable and playful — so size replaces breed outright. For cats, breed effects are real but land mostly on how active the animal is, not on how close it will let a person come; what predicts that is temperament and how much the cat was handled between roughly 2 and 7 weeks old. So the two species end up with different attribute sets rather than one shared template.",
-      "zh": "模拟里每只动物需要带几个属性，好让同一条规则在不同个体身上跑出不同结果。我一开始的猜测是猫看品种、狗看体型。2022 年一项覆盖 18,385 只狗的基因组研究把狗这一半的问题解决了：品种只能解释个体间约 9% 的行为差异，而且在这个项目真正关心的性状上（比如怕不怕陌生人）几乎解释不了。体型倒是确实能预测空间行为——矮的狗攻击性更泛化，高的狗更亲和、更爱玩——所以直接用体型取代品种。猫这边品种效应是存在的，但主要落在活动量上，而不是落在「愿意让人靠多近」上；后者由性格，以及大约 2 到 7 周龄期间被人抚摸的程度决定。于是两个物种最后拿到的是两套不同的属性，而不是一套通用模板。"
+      "en": "- What was tested: my starting guess for per-animal attributes was breed for cats, body size for dogs.\n- Dogs: a 2022 genomics study of 18,385 dogs shows breed explains only about 9% of behavioural variation between individuals, and almost none in traits like fear of strangers; body size does predict spatial behaviour, so it replaces breed outright.\n- Cats: breed effects land mostly on activity level; how close a cat lets a person come is set by temperament and how much it was handled at 2–7 weeks old.\n- Result: each species gets its own attribute set; breed only biases the setup draw and is not carried at run time.",
+      "zh": "- 验证对象：给每只动物挑属性时，最初的猜测是「猫看品种、狗看体型」。\n- 狗：2022 年一项覆盖 18,385 只狗的基因组研究显示，品种只解释约 9% 的个体行为差异，在「怕不怕陌生人」这类关键性状上几乎无解释力；体型倒确实能预测空间行为，于是直接取代品种。\n- 猫：品种效应主要落在活动量上；「愿意让人靠多近」由性格和 2–7 周龄被抚摸的程度决定。\n- 结果：两个物种各用一套属性；品种只在初始化时影响抽样，运行时不携带。"
     },
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
@@ -223,8 +223,8 @@
       "zh": "把「人能靠一只猫多近它才走开」这个数值翻遍了文献，确认没有人测过。"
     },
     "body": {
-      "en": "The measurement exists for wild animals and is called flight initiation distance — you walk at an animal at a steady pace and record the distance at which it leaves. For domestic cats it does not exist: in that whole research tradition the cat appears only as the thing disturbing the birds, never as the animal being measured. The closest usable data is a 1988 experiment where 19 cats each met unfamiliar people in a room, with the person sitting and reading rather than approaching. It logs distance in four bands instead of metres. So the rule gets written as a probability spread over those bands rather than as a single trigger distance, and it goes into the document marked as inferred, not measured. Writing an invented number here would have been the easiest thing to do and the worst.",
-      "zh": "这个量在野生动物研究里有，叫惊飞距离——以匀速走向动物，记录它起身离开时的距离。家猫身上没有这个数：在整个惊飞距离的研究传统里，猫只作为惊扰鸟类的一方出现，从来不是被测量的对象。最接近可用的是 1988 年的一项实验，19 只猫各自在房间里与陌生人相遇，人是坐着看书而不是主动靠近。它记录的不是米数，而是四个距离档。所以这条规则最终写成落在那几个档位上的概率分布，而不是一个单一的触发距离，并在文档里标注为推断而非实测。在这里编一个数字是最省事的做法，也是最糟的做法。"
+      "en": "- The number sought: flight initiation distance from wildlife research — walk at an animal at a steady pace and record when it leaves. For domestic cats nobody has measured it; in that literature the cat only ever appears as the thing disturbing the birds.\n- Closest usable data: a 1988 experiment where 19 cats met unfamiliar people in a room, the person sitting and reading rather than approaching; distance logged in four bands, not metres.\n- Handling: the rule is written as a probability spread over those bands instead of an invented trigger distance, and marked in the document as inferred, not measured.",
+      "zh": "- 要找的量：野生动物研究里的「惊飞距离」——匀速走向动物、记录它起身离开时的距离。家猫身上没人测过：在那个研究传统里，猫只作为惊扰鸟的一方出现。\n- 最接近的可用数据：1988 年的实验，19 只猫在房间里与陌生人相遇，人坐着看书、不主动靠近；距离只记四个档，不记米数。\n- 处理：规则写成落在这几个档位上的概率分布，而不是编一个触发距离，并在文档里标注「推断、非实测」。"
     },
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
@@ -271,8 +271,8 @@
       "zh": "重写了人类智能体——此前把人写成了只会对拥挤做反应的粒子。"
     },
     "body": {
-      "en": "I had given people and animals the same structure: two thresholds, one where it starts feeling crowded and one where it leaves. That works for animals and is wrong for people, because the same 60 cm means something different depending on who is standing there — an intrusion from a stranger, ordinary closeness from a friend. Survey data across 42 countries gives three usable defaults. People also actively approach rather than only retreat, and they cluster: a group in conversation occupies a circle, not a point, and others walk around it instead of through it. Density did not disappear, it just stopped being the main variable — it now only sets walking speed.",
-      "zh": "此前我给人和动物用了同一套结构：两个阈值，一个是开始觉得挤，一个是转身离开。这套对动物成立，对人不成立——同样是 60 厘米，站在那儿的是谁决定了它意味着什么：陌生人是侵犯，朋友是寻常的靠近。一项覆盖 42 国的调查给出三个可用的默认值。而且人不只是退避，也会主动靠近并成簇：一群人交谈时占据的是一个圈而不是一个点，别人绕着走而不是穿过去。密度并没有被删掉，只是不再是主变量——它现在只用来决定步速。"
+      "en": "- The problem: people and animals shared one structure (two crowding thresholds), which is wrong for people — the same 60 cm is an intrusion from a stranger and ordinary closeness from a friend.\n- The fix: distance now depends on relationship, using three defaults from a 42-country survey (stranger 1.35 m / acquaintance 0.92 m / close 0.32 m).\n- Two human behaviours added: people actively approach, and they cluster — a group in conversation occupies a circle that others walk around, not through.\n- Density stayed, but demoted: it now only sets walking speed.",
+      "zh": "- 问题：人和动物用了同一套结构（两个拥挤阈值），对人不成立——同样是 60 厘米，陌生人是侵犯、朋友是寻常靠近。\n- 改法：距离改由关系决定，取 42 国调查的三个默认值（陌生人 1.35 米／熟人 0.92 米／亲近 0.32 米）。\n- 补上人特有的两种行为：会主动靠近，也会成簇——交谈的一群人占一个圈，别人绕行、不穿行。\n- 密度没删，但降级：只用来定步速。"
     },
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
@@ -339,8 +339,8 @@
       "zh": "把占用空间的代价拆成两种——起因是我写出了一个只有人需要付代价的版本。"
     },
     "body": {
-      "en": "In the first draft, once a patch of floor had been reshaped to cat proportions, a person entering it paid a penalty. That is one-directional and wrong: people can also push a space back into being theirs. The fix was to separate two things I had been conflating — what it costs to get somewhere, and what it costs to stay there. The asymmetry that comes out is not a thumb on the scale for either species: cats can enter everywhere a person can and more, but stay reluctantly; people are limited in where they fit, but once inside they hold the ground. Reclaiming space, in the end, is not humans forcing their way in — it is people repeatedly showing up nearby until the space reads their traces and reshapes itself back.",
-      "zh": "第一稿里，一块地面一旦被改造成猫的尺度，人再进去就要付出代价。这是单向的，也是错的：人同样有能力把空间重新变回自己的。修法是把此前混在一起的两件事分开——走到那里要付什么，和留在那里要付什么。由此产生的不对称并不偏袒任何一方：猫能去人能去的所有地方，还能去更多，但不愿久留；人受体量限制，可一旦进入就能稳定占据。所谓夺回空间，最终不是人硬闯，而是人反复出现在附近，直到空间读到这些痕迹、把形式改回去。"
+      "en": "- The trigger: in the first draft, once floor had been reshaped to cat scale only humans paid to enter — one-directional, and wrong: people can push a space back into being theirs.\n- The fix: separate two things that had been conflated — the cost of getting somewhere (set by body size against the shape of the space, fixed) and the cost of staying (set by who else is present, recalculated every tick).\n- The resulting asymmetry favours neither species: cats can go everywhere but stay reluctantly; people are limited in where they fit but hold the ground once inside.\n- Reclaiming space now has a mechanism: not forcing a way in, but showing up nearby repeatedly until the space reads the traces and reshapes itself back.",
+      "zh": "- 起因：第一稿里地面一旦被改成猫的尺度，只有人进去要付代价——单向，也不对：人同样能把空间变回自己的。\n- 改法：把混在一起的两件事拆开——「走到那里」的代价由身体尺度对空间形式决定、不随时刻变化；「留在那里」的代价由此刻在场者决定、每一拍重算。\n- 拆出来的不对称不偏袒任何一方：猫哪都能去但不愿久留；人受体量限制，但一旦进入就占得住。\n- 「夺回空间」由此有了机制：不是人硬闯，而是人反复出现在附近，空间读到痕迹后把形式改回去。"
     },
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
@@ -426,8 +426,8 @@
       "zh": "把模拟砍成单一的分钟级时钟，代价是丢掉了整条跨日的故事线。"
     },
     "body": {
-      "en": "The design had two clocks: one running at the speed of bodies moving around a room, one running at the speed of people deciding whether to come back tomorrow. The slow clock was where the most interesting result lived — attendance collapsing because nobody else shows up, and then not recovering even after the original conditions return. Dropping it was deliberate: the subject is what happens between bodies in a room over minutes, and forcing a week-scale mechanism on top of that was making the rule book carry two sets of literature for one story. What survives as tension is smaller but internal to the timescale: people leaving the area rather than leaving for good, and the fact that the space always reshapes itself a step behind the bodies it is reading.",
-      "zh": "原来的设计有两个时钟：一个按身体在房间里移动的速度走，一个按人决定明天还来不来的速度走。慢钟里藏着最有意思的结果——出勤因为「别人都不来」而崩塌，而且即使原来的条件恢复也回不去。砍掉它是有意为之：这个项目的对象是一个房间里、以分钟计的身体之间发生的事，硬在上面架一层周尺度的机制，等于让规则书为同一个故事背两套文献。留下的张力更小，但内生于这个时间尺度：人是走开而不是从此不来；空间读取痕迹并改造自己，永远慢身体一步。"
+      "en": "- What was cut: the design had two clocks — minutes (how bodies move in a room) and days/weeks (whether people come back tomorrow); the slow one was removed entirely.\n- The cost, stated plainly: the slow clock held the most interesting result — attendance collapsing because nobody else shows up, and not recovering when conditions return.\n- Why cut anyway: the subject is what happens in one room over minutes; forcing a week-scale mechanism on top made the rule book carry two bodies of literature for one story.\n- The tension that remains is internal to the timescale: people walk away rather than leave for good, and the space always reshapes itself one step behind the bodies.",
+      "zh": "- 砍了什么：原设计有两个时钟——分钟级（身体在房间里怎么动）和天／周级（人明天还来不来）；慢钟整个删掉。\n- 代价说在明处：慢钟里有最有意思的结果——出勤因「别人都不来」而崩塌、条件恢复也回不去。\n- 还是砍的理由：项目对象就是一个房间里以分钟计的事，硬架一层周尺度机制，等于让规则书为一个故事背两套文献。\n- 留下的张力内生于这个尺度：人是走开、不是从此不来；空间的改造永远慢身体一步。"
     },
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
@@ -491,12 +491,12 @@
   {
     "date": "2026-07-24",
     "lead": {
-      "en": "A fifth direction — spaces shared with animals — and a plan for how the 3D work and the simulation connect.",
-      "zh": "第五个方向成形——人与动物共享的空间——并定下三维与仿真怎么对接。"
+      "en": "Settled the fifth direction — space shared between people and pets — and fixed how the 3D work connects to the simulation.",
+      "zh": "定下第五个方向——人宠共享空间——并定好三维与仿真怎么对接。"
     },
     "body": {
-      "en": "Two things. The direction: shared human-and-pet space, with a stance of its own — the room reads what both species actually do and redistributes volume accordingly, rather than staging a zero-sum fight over territory; the tone aimed for is renewal, not elegy. And the technical setup, shaped like a dumbbell: 3D at both ends, used only for the hero images and held to a hard four-week rendering budget so it cannot eat the engine and the writing; a NumPy computation layer in the middle working on a flat grid, or a stack of them if height turns out to matter; and the two ends joined by nothing more exotic than image files going in and spreadsheet or JSON files coming out. Toolchain fixed: Python with NumPy and Matplotlib for the engine, a notebook environment to work in, ffmpeg to turn frames into video, and a browser library for the interactive demo. (Several sessions in this stretch could not be retrieved; this entry is reconstructed from the project's own notes, and its date is approximate.)",
-      "zh": "两件事。方向上：人宠共享空间成形，并确立了自己的立场——房间读取两个物种各自真实的行为痕迹，据此重新分配体量，而不是安排一场零和的地盘争夺；想要的基调是新生，不是挽歌。技术上：定下「哑铃」结构——两头是三维，只用来出几张主图，并卡死四周的渲染预算，免得它吃掉引擎和文书的时间；中间是 NumPy 的计算层，跑在一张平面网格上，如果高度确实重要就叠成几层；两头之间的连接不用任何花哨手段，进去是图片文件，出来是表格或 JSON。工具链定死：引擎用 Python 加 NumPy 和 Matplotlib，工作环境用笔记本式的交互界面，视频用 ffmpeg 把帧合成，网页 demo 用浏览器端的绘图库。（这一时段有几次会话记录读不回来，本条依据项目自己的记忆文件整理，日期为近似值。）"
+      "en": "- The stance: the room reads what both species actually do and redistributes volume accordingly — not a zero-sum territory fight; the tone aimed for is renewal, not elegy.\n- The technical shape is a dumbbell: 3D at both ends (hero images only, on a hard four-week rendering budget), a NumPy computation layer in the middle on a flat grid, stacked only if height turns out to matter.\n- The two ends connect through nothing exotic: image files in, spreadsheet or JSON files out.\n- Toolchain fixed: Python with NumPy and Matplotlib for the engine, Jupyter to work in, ffmpeg for video, a browser plotting library for the interactive demo.\n- (Several sessions from this stretch could not be retrieved; the entry is reconstructed from the project's notes and its date is approximate.)",
+      "zh": "- 方向的立场：房间读取人和宠物各自真实的行为痕迹、据此重新分配体量，不做零和的地盘争夺；基调是新生，不是挽歌。\n- 技术结构像哑铃：两头是三维（只出主图，渲染预算卡死四周），中间是 NumPy 计算层，跑平面网格，高度确实重要再叠层。\n- 两头的连接不用花哨手段：进去是图片文件，出来是表格或 JSON。\n- 工具链定死：引擎用 Python + NumPy + Matplotlib，工作环境用 Jupyter，视频用 ffmpeg 合成，网页 demo 用浏览器端绘图库。\n- （这一时段有几次会话记录读不回来，本条按项目记忆文件整理，日期为近似值。）"
     },
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
@@ -510,8 +510,8 @@
       "zh": "搭好工作环境，跑通了三十行的模拟——这三十行已经是整个引擎的缩微版。"
     },
     "body": {
-      "en": "First NetLogo, only to watch two of its built-in models run: one where agents relocate based on their neighbours, one where ants lay and follow evaporating trails. Then Anaconda and Jupyter, where the actual engine will be written — the trap there is a Windows install path containing non-English characters, so it went to a plain English folder. The first real script puts five dots on a grid; each dot walks one step per tick and adds to a trace value on the square it lands on; all traces decay slightly every tick; a square whose trace passes a threshold turns solid and can no longer be entered. Three snapshots at tick 0, 250 and 500 show black, then spreading trails, then bright blocks the dots have to walk around. That last part is the whole point: the space changed because of where bodies went, and then the bodies had to move differently because the space had changed. Everything after this is the same loop with better rules.",
-      "zh": "先装 NetLogo，只为看它自带的两个模型跑起来：一个是智能体根据邻居决定是否搬家，一个是蚂蚁留下会挥发的信息素并沿着走。然后装 Anaconda 和 Jupyter，引擎将来就写在这里——这一步的坑是 Windows 的安装路径不能带中文，所以装进了纯英文目录。第一个真正的脚本在网格上放五个点；每个点每拍走一步，并在落到的格子上加一份痕迹；所有痕迹每拍轻微衰减；某格痕迹超过阈值就固化，从此不可进入。第 0、250、500 拍的三张快照依次是：全黑，蔓延的痕迹，以及点必须绕开的亮块。最后这一步是全部意义所在：空间因为身体去过哪里而改变，身体又因为空间改变了而不得不换一种走法。之后所有的工作，都是同一个循环换上更好的规则。"
+      "en": "- Environment: NetLogo first, just to watch two built-in models run (agents relocating by neighbours, ants following evaporating trails), then Anaconda and Jupyter for the real engine; the one trap was a Windows install path with non-English characters.\n- The thirty lines: five dots on a 20×20 grid, each walking one step per tick and adding a trace where it lands; traces decay 2% per tick; a square past the threshold turns solid and cannot be entered again.\n- Three snapshots over 500 ticks: black, then spreading trails, then bright blocks the dots must walk around.\n- The point: the space changed because of where bodies went, and the bodies then had to move differently — everything after this is the same loop with better rules.",
+      "zh": "- 装环境：先用 NetLogo 看两个自带模型跑起来（按邻居决定搬家、蚂蚁沿会挥发的信息素走），再装 Anaconda + Jupyter 写自己的引擎；唯一的坑是 Windows 安装路径不能带中文。\n- 三十行的规则：20×20 网格上五个点，每拍走一步、在落点加一份痕迹；痕迹每拍衰减 2%；超过阈值的格子固化、从此不可进入。\n- 跑 500 拍的三张快照：全黑 → 蔓延的痕迹 → 点必须绕开的亮块。\n- 意义所在：空间因身体去过哪里而改变，身体又因空间改变而换走法——之后的全部工作都是这个循环换上更好的规则。"
     },
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
@@ -542,8 +542,8 @@
       "zh": "用有限元把导轨算了一遍，发现手算靠不住。"
     },
     "body": {
-      "en": "The five rings' feet all slide along one rail, which I had sized with textbook beam formulas. A finite-element check — meshing the part and solving it cell by cell — showed the real deflection was about 4.5× worse: the original front ledge bent 1.55 mm under 20 N, close to failing. Adding an 8×3 mm rib on the back and a 4×2.5 mm lip on the front brought that down to 0.34 mm and raised the load it can carry from 19 N to 54 N.",
-      "zh": "五个环的脚都在同一条导轨上滑动，我原本用材料力学的公式估强度。改用有限元（把零件切成网格逐格算受力）复核后发现，实际挠度是手算的约 4.5 倍——原来的前檐条在 20N 下就弯 1.55mm，接近失效。在背面加一道 8×3mm 加强肋、前缘加一道 4×2.5mm 唇边后，同样受力只弯 0.34mm，能承受的载荷从 19N 提到 54N。"
+      "en": "- Checked the rail that all five rings' feet slide on with a finite-element model — meshing the part and solving it cell by cell — instead of the textbook beam formulas I had sized it with.\n- The finding: the front ledge bends 1.55 mm under 20 N, about 4.5× worse than the hand math said — close to failing.\n- The fix: an 8×3 mm rib on the back plus a 4×2.5 mm lip on the front edge; deflection drops to 0.34 mm, and the load it can carry rises from 19 N to 54 N.",
+      "zh": "- 用有限元（把零件切成网格逐格算受力）复核五个环共用的那条导轨，替掉原来的材料力学手算。\n- 发现：前檐条在 20N 下弯 1.55mm，是手算的约 4.5 倍，接近失效。\n- 修法：背面加一道 8×3mm 加强肋、前缘加一道 4×2.5mm 唇边——挠度降到 0.34mm，承载从 19N 提到 54N。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -688,8 +688,8 @@
       "zh": "把外壳的五个环全部搬进网页模拟，并修好了其中一个会坍塌的环。"
     },
     "body": {
-      "en": "The page had only one ring before this. All five were extracted from the CAD model, spaced 85 mm apart in 3D, and made to open and close together. The third one caved in a few seconds after starting — not a drawing error: I had pinned how far its feet may slide to exactly the drawing position, which blocked the ~2 mm outward move it has to make before it can fold inward. Tuning that allowance ring by ring got all five holding their shape to within 0.4 mm.",
-      "zh": "在这之前网页上只有一个环。这次把五个环全部从图纸里提取出来，在三维中按 85mm 间距排好，让它们一起开合。第三个环开局正常、几秒后就瘪掉——不是图纸错了：我把它脚能滑动的范围卡死在图纸位置，而它必须先向外张开约 2mm 才能收拢，这条路被堵住了。给每个环单独试出合适的余量后，五个环的形状误差都在 0.4mm 以内。"
+      "en": "- What was done: the page had one ring; all five were extracted from the CAD model, spaced 85 mm apart in 3D and made to open and close together.\n- The failure: the third ring started fine and caved in seconds later — not a drawing error: I had pinned its feet to exactly the drawing position, blocking the ~2 mm outward move it must make before it can fold inward.\n- The fix: tune the sliding allowance ring by ring rather than loosening all of them — loosened everywhere, another ring escapes into a flattened shape.\n- Result: all five hold their shape to within 0.4 mm and move as one.",
+      "zh": "- 做了什么：网页上原本只有一个环；这次从图纸提取全部五个，三维中按 85mm 间距排好、一起开合。\n- 事故：第三个环开局正常、几秒后瘪掉——不是图纸错，是我把它脚的滑动范围钉死在图纸位置，堵死了「先向外张约 2mm 再收拢」的必经之路。\n- 修法：脚的滑动余量逐环单独试出合适值，不一律放宽——全放宽会让另一个环滑进压扁的形态。\n- 结果：五个环的形状误差都在 0.4mm 以内，动作一致。"
     },
     "tags": [
       { "label": { "en": "Lab", "zh": "实验室" }, "variant": "outline" },
@@ -703,8 +703,8 @@
       "zh": "同一个网页在两台电脑上跑出不同形状，查出来是模型少了限位。"
     },
     "body": {
-      "en": "Opened on two machines, the arch flattened itself within seconds on one of them. It was not a computation error: the crank only fixes the height of the apex, so the four feet are free to slide in their rails and the flattened shape is a legal answer too. Adding stops at both ends of every foot slot, and stepping the simulation at a fixed rate instead of following the monitor's refresh rate, made the motion identical on any device.",
-      "zh": "同一个页面在两台设备上打开，其中一台几秒后就把拱压扁了。这不是算错：曲柄只锁住拱顶的高度，四只脚在各自的滑槽里可以自由移动，压扁也是一个合法的解。给每只脚的滑槽两端都补上限位，并把模拟改成按固定时间步长推进（不再跟着显示器刷新率走），任何设备上的动作就一致了。"
+      "en": "- The symptom: the same page opened on two machines; on one of them the arch flattened itself within seconds.\n- Diagnosis: not a computation error — the crank only fixes the apex height, the four feet slide freely in their rails, and the flattened shape is a legal answer too; the model was missing its end stops.\n- The fix: stops at both ends of every foot slot, plus stepping the simulation at a fixed rate instead of following the monitor's refresh rate.\n- Result: identical motion on any device.",
+      "zh": "- 现象：同一个页面在两台电脑上打开，其中一台几秒内把拱压扁。\n- 诊断：不是算错——曲柄只锁拱顶高度，四只脚在滑槽里自由移动，压扁也是一个合法解；模型缺的是限位。\n- 修法：每只脚的滑槽两端补上限位，模拟改为按固定时间步长推进、不再跟显示器刷新率走。\n- 结果：任何设备上的动作一致。"
     },
     "tags": [
       { "label": { "en": "Lab", "zh": "实验室" }, "variant": "outline" },
@@ -718,8 +718,8 @@
       "zh": "搭好把项目记忆带进编程工具的那套文件——首版只有规矩没有内容，推倒重写。"
     },
     "body": {
-      "en": "Three files at the project root: one holding the working rules and constraints, one the background, one the full substantive record. The first attempt was correctly called out as rules without substance — it told an assistant how to behave but not what the project actually knows. So the record file was rebuilt from the whole conversation history: the vision, the three mechanisms, the five utility drafts, the eleven-direction audit table, the clock classification of about thirty-five spaces, the restroom's four surgeries, the empirical sources with their numbers, the v0/v1/v2 code roadmap, and the ten rules. The open decisions were written in as the explicit place to continue from — whether any of the five cut directions may be revived, which clock scheme to adopt, cutting six candidates down to three, and finally converging on one.",
-      "zh": "项目根目录下三份文件：一份放工作规则与约束，一份放背景总览，一份放完整的实质工作记录。首版被指出得没错——只有规矩没有内容，它告诉助手该怎么做事，却没告诉它这个项目到底知道些什么。于是回溯全部历史会话，把记录那份重建：愿景、三大机制、五种欲望的效用草案、11 个方向的审计表、约 35 个空间的时钟分类、公厕的四刀手术、带数字的实证校准来源、v0/v1/v2 的代码路线图，以及十条规则。所有待决事项作为明确的续接点写了进去——被砍的五个方向有没有复活权、采用哪套时钟方案、六选三、以及最终收敛到单一场景。"
+      "en": "- The structure: three files at the project root — working rules and constraints, background, and the full substantive record.\n- Wrong turn: the first version had rules but no content — it told an assistant how to behave, not what the project knows; called out, torn down, rewritten.\n- The rewrite: went back through the whole conversation history and moved the vision, the mechanisms, the audit table, the space classification, the calibration numbers, the code roadmap and the ten rules into the record file.\n- Continuation points written in explicitly: the open decisions (revival rights for cut directions, the clock scheme, six down to three, final convergence) as a list.",
+      "zh": "- 结构：项目根目录三份文件——工作规则与约束、背景总览、完整的实质工作记录。\n- 弯路：首版只有规矩没有内容——告诉助手该怎么做事，却没告诉它这个项目知道什么；被指出后推倒重写。\n- 重写方法：回溯全部历史会话，把愿景、机制、审计表、空间分类、实证数字、代码路线图、十条规则搬进记录文件。\n- 续接点显式写入：待决事项（被砍方向有无复活权、时钟方案、六选三、最终收敛）列成清单。"
     },
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
@@ -733,8 +733,8 @@
       "zh": "为体育部一位教师（前全国比赛游泳运动员）写出 v2 完整访谈提纲：33 题，60 分钟。"
     },
     "body": {
-      "en": "Methodology came first — The Mom Test, Portigal's Interviewing Users, and the critical incident technique (asking about specific remembered incidents instead of general opinions) — alongside published qualitative studies of athlete sleep. Then came a review of my own earlier draft and a teammate's parallel one, which shared the same flaws: leading questions, product language appearing too early, too many questions. The v2 design: the opening gives only a neutral project introduction, with product information held back to the final section; question 1 acts as a gate, routing to a coach line or a retrospective line depending on whether the interviewee currently trains a team; compound questions are split into a short main question with follow-up probes in parentheses, so the interviewer can expand on whatever the interviewee engages with; and the two design concepts (low-intrusion intervention, tiered data sharing) get a five-step evaluation protocol. The governing principle throughout is to ask about specific past behaviour, never about opinions or future intentions. A fifth question was added afterwards, on how adolescent athletes' sleep needs and their training-to-rest ratio should adjust through growth.",
-      "zh": "先查方法论——《The Mom Test》、Portigal 的《洞察用户》，以及关键事件技术（请受访者回忆具体发生过的事件，而不是发表泛泛看法）——同时读了已发表的运动员睡眠质性研究。然后评审自己的旧稿和队友的平行稿，两稿的毛病相同：诱导性提问、产品语言出现得太早、题量过大。v2 的关键设计：开场只做中性的项目介绍，产品信息压到最后一节；第 1 题设分流闸，按对方当前是否带队走教练线或回溯线；复合问题拆成一句短主问加括号里的追问，让访谈员按对方接哪句话灵活展开；两个设计概念（低介入干预、分级数据共享）各配一套五步评估流程。贯穿全稿的原则：问具体的过去行为，不问观点和未来打算。之后补写了第五题，问青少年运动员发育期的睡眠需求，以及训练与休息的配比该怎么动态调整。"
+      "en": "- Method first: The Mom Test, Portigal's Interviewing Users, the critical incident technique (asking about specific remembered events, not general opinions), plus published qualitative studies of athlete sleep.\n- Review of earlier drafts: mine and a teammate's shared the same flaws — leading questions, product language appearing too early, too many questions.\n- The v2 design: a neutral opening with product information held to the end; question 1 routes to a coach line or a retrospective line by whether they currently train a team; compound questions split into a short main question plus probes in parentheses; each of the two design concepts gets a five-step evaluation protocol.\n- Governing principle: ask about specific past behaviour, never opinions or future intentions; a fifth question added afterwards on adolescent athletes' sleep needs through growth.",
+      "zh": "- 方法先行：《The Mom Test》、Portigal《洞察用户》、关键事件技术（请对方回忆具体发生过的事，不问泛泛看法），加上已发表的运动员睡眠质性研究。\n- 评审旧稿：自己的稿和队友的平行稿毛病相同——诱导性提问、产品语言出现太早、题量过大。\n- v2 的关键设计：开场只做中性介绍、产品信息压到最后；第 1 题按「当前是否带队」分流教练线或回溯线；复合题拆成短主问＋括号里的追问；两个设计概念各配一套五步评估流程。\n- 贯穿原则：只问具体的过去行为，不问观点和未来打算；事后补写第五题（发育期的睡眠需求与训练休息配比）。"
     },
     "tags": [
       { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
@@ -748,8 +748,8 @@
       "zh": "搭起网站框架，把连杆放上主页。"
     },
     "body": {
-      "en": "Built with Next.js: four pages — home, work, lab, log — with all text and images read from a single content folder that fails the build if anything is malformed. The four-bar linkage at the top of the homepage is the actual solver running live, not a video or a GIF.",
-      "zh": "用 Next.js 建站，四个页面：首页、作品、实验室、日志。所有文字和图片都从同一个内容目录读取，格式不对构建时直接报错。主页顶上那个四杆连杆是求解器在实时运行，不是视频也不是动图。"
+      "en": "- Built with Next.js: four pages — home, work, lab, log.\n- All text and images come from a single content folder that fails the build if anything is malformed.\n- The four-bar linkage at the top of the homepage is the solver running live, not a video or a GIF.",
+      "zh": "- 用 Next.js 建站，四个页面：首页、作品、实验室、日志。\n- 所有文字和图片从同一个内容目录读取，格式不对构建时直接报错。\n- 主页顶上的四杆连杆是求解器实时运行，不是视频也不是动图。"
     },
     "tags": [{ "label": { "en": "Site", "zh": "网站" }, "variant": "outline" }]
   },
@@ -760,8 +760,8 @@
       "zh": "把目前的全部积累压成一份交接文档，并写下十条源自自己反复犯错的规矩。"
     },
     "body": {
-      "en": "One Chinese document that any new assistant — or I, three months from now — can pick up cold: the vision, the three mechanisms (cascades that come from inside, the two clocks, the lag effect), draft utility functions for the five desires, the verb library, the results of the eleven-direction audit, the rebuilt restroom, and every decision still open. Ten collaboration rules were codified at the end, each traceable to a mistake already made: don't default to the shared-flat living room, don't let the building solve things by subtraction, don't reason by headcount, don't treat collapse as the conclusion, and the candidate list may shrink but never grow.",
-      "zh": "压成一份中文文档，任何新助手——或者三个月后的我自己——冷启动就能接着干：核心愿景、三大机制（级联从内部产生、两个时钟、滞后效应）、五种欲望的效用函数草案、动词库、11 个方向的审计结果、重建后的公厕方案，以及所有还没拍板的事。文末固化了十条协作规则，每一条都对应一个已经犯过的错：不要一想就回到合租客厅、不要让建筑用减法解决问题、不要按人头数推理、不要把塌缩当成结论，以及候选池只减不增。"
+      "en": "- The deliverable: one Chinese document that a new assistant — or me in three months — can pick up cold.\n- Contents: the vision, the three mechanisms (endogenous cascades, the two clocks, the lag effect), draft utility functions for the five desires, the verb library, the eleven-direction audit results, the rebuilt restroom, and every open decision.\n- Ten collaboration rules at the end, each traceable to a mistake already made: don't default to the shared-flat living room, don't let the building solve by subtraction, don't reason by headcount, don't treat collapse as the conclusion, and the candidate list may shrink but never grow.",
+      "zh": "- 交付形态：一份中文文档，新助手——或三个月后的我自己——冷启动就能接手。\n- 内容：核心愿景、三大机制（内生级联、两个时钟、滞后效应）、五种欲望的效用函数草案、动词库、11 方向审计结果、重建后的公厕方案、所有待决事项。\n- 文末十条协作规则，每条对应一个已经犯过的错：不默认回合租客厅、不让建筑用减法解决问题、不按人头数推理、不把塌缩当结论、候选池只减不增。"
     },
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
@@ -775,8 +775,8 @@
       "zh": "补上审计表漏掉的一维——建筑响应的快慢——并把一个被否掉的方案重建成正经候选。"
     },
     "body": {
-      "en": "The audit table had no column for time. The source material splits cleanly into two clocks: a fast one measured in minutes — how bodies arrange themselves once they are in a room — and a slow one measured in days or weeks — whether you decide to show up at all. The engine design that follows is nested: the building holds three roles running at three rhythms, one that holds the line weekly, one that mediates daily, one that reacts by the minute. About thirty-five spaces were classified this way, which reshuffled the shortlist — a dormitory floor is the only candidate with both clocks natively, and it happens to be downstairs where I can observe it; a pickup basketball court runs on a cyclic clock, which is different maths; a waiting room has only the fast clock, with the room's own memory as the only thing carried from one session to the next. The reading also produced hard numbers to calibrate against, including a classic corridor-versus-suite dormitory study and a large randomised work-from-home experiment. The public restroom idea first got an honest no — it is a negative-feedback system, the kind that settles down instead of running away. It then came back after four changes: different fuel (dirt spreading, and a secret clean bathroom ruined by becoming known — both genuinely self-reinforcing), a bigger scale (the building's whole restroom network, which restores the slow clock), a wider verb set (partitions that breathe, glass that changes opacity, a secret bathroom that migrates once it is famous), and a presentation rule (never show fixtures — only building-scale flows and each room's reputation). Rebuilt, it is the only natural home for one of the five desires. The dormitory is still the safer main scenario.",
-      "zh": "审计表上一直缺一列：建筑自己的时间尺度。理论材料很干净地裂成两个时钟——快时钟以分钟计，是人进了房间之后身体怎么摆位；慢时钟以天或周计，是你到底还去不去。由此得出的引擎设计是嵌套的：建筑有三种角色按三种节律运行，一种按周守成、一种按天调停、一种按分钟催化。用这套标准给约 35 个空间做了分类，候选排名随之重排——宿舍楼层是唯一天生同时有两个时钟的场景，而且就在楼下，我随时能去看；野球场是循环时钟的机器，那是另一套数学；候诊室只有快时钟，房间自己的记忆是唯一能跨场次留下来的东西。文献检索还带回了可用于校准的实测数字，包括一项经典的走廊式 vs 套间式宿舍研究，和一项大规模的居家办公随机对照实验。公厕这个方向先得到了一个诚实的否定——它是负反馈系统，这类系统会自己稳下来，不会失控放大。随后经过四刀手术又活了过来：换燃料（脏污的扩散，以及一间干净的秘密厕所因为出名而被毁——这两件都是真正的正反馈）、放大尺度（整栋楼的厕所网络，慢时钟因此回来了）、扩展动词（隔板会呼吸、玻璃改变透明度、秘密厕所一旦出名就迁移）、以及重写呈现方式（不拍洁具，只呈现楼层级的人流和每间厕所的名声变化）。重建之后，它是五种欲望里某一种唯一的自然栖所。常设投票不变：宿舍仍是更稳的主场景。"
+      "en": "- The missing dimension: the audit table had no column for the building's own timescale. The literature splits into two clocks — fast in minutes (how bodies arrange themselves in a room), slow in days or weeks (whether you keep showing up at all).\n- The engine nests accordingly: the building holds three roles at three rhythms — holding the line weekly, mediating daily, reacting by the minute.\n- About thirty-five spaces classified this way, reshuffling the shortlist: a dormitory floor is the only candidate with both clocks natively (and it is downstairs, observable any time); a pickup court runs on a cyclic clock — different maths; a waiting room has the fast clock only. The reading also brought back hard calibration numbers (a corridor-versus-suite dormitory study, a large randomised work-from-home experiment).\n- The restroom idea first got an honest no (a negative-feedback system that settles down instead of running away), then came back after four changes: different fuel (dirt spreading; a secret clean bathroom ruined by fame — both genuinely self-reinforcing), building scale (the whole restroom network, restoring the slow clock), a wider verb set (breathing partitions, glass changing opacity, a secret bathroom that migrates), and a presentation rule (no fixtures — only flows and reputations).\n- The standing vote holds: the dormitory is still the safer main scenario.",
+      "zh": "- 补上的一维：审计表一直缺「建筑自己的时间尺度」。理论材料裂成两个时钟——快钟以分钟计（进了房间身体怎么摆位），慢钟以天／周计（到底还去不去）。\n- 引擎随之嵌套：建筑三种角色按三种节律运行——按周守成、按天调停、按分钟催化。\n- 用这套标准分类约 35 个空间，候选排名重排：宿舍楼层是唯一天生双时钟的场景（而且就在楼下、随时能观察）；野球场是循环时钟、另一套数学；候诊室只有快钟。检索还带回可校准的实测数字（走廊式 vs 套间式宿舍研究、大规模居家办公随机对照实验）。\n- 公厕方向先被诚实否掉（负反馈系统，自己会稳下来），经四刀手术复活：换燃料（脏污扩散、一间干净的秘密厕所因出名被毁——都是真正的正反馈）、放大到整栋楼的厕所网络（慢钟回来了）、扩展动词（隔板呼吸、玻璃变透明度、秘密厕所出名即迁移）、重写呈现（不拍洁具，只看楼层人流与每间的名声）。\n- 常设投票不变：宿舍仍是更稳的主场景。"
     },
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
@@ -790,8 +790,8 @@
       "zh": "写了一套三维求解器，做出三根肌腱驱动的触手。"
     },
     "body": {
-      "en": "The existing 2D solver was left untouched and a separate 3D one written beside it: 16 vertebrae with three tendons spaced 120° apart, so pulling one bends the tentacle toward it. Dragging the mouse orbits the camera rather than moving the model. The first version twisted into a spiral and juddered as it contracted, so I added symmetric diagonal braces between segments — the job real fascia does — which cut sideways drift from 38.5 px to 1.2 px and kept the bend in a single plane.",
-      "zh": "原来的二维求解器一行没动，另写了一套三维的：16 节椎骨，三根肌腱按 120° 分布，拉哪根就往哪边弯。鼠标拖动转的是相机，不是模型本身。第一版一收缩就拧成螺旋、还发抖，于是在每节之间加了左右对称的斜拉杆——相当于人身上筋膜的作用——横向漂移从 38.5 像素降到 1.2 像素，弯曲这才老实待在一个平面里。"
+      "en": "- The 2D solver was left untouched; a separate 3D one was written beside it.\n- The build: 16 vertebrae with three tendons spaced 120° apart — pull one and the tentacle bends toward it; dragging the mouse orbits the camera, not the model.\n- Wrong turn: the first version twisted into a spiral and juddered as it contracted. Fix: symmetric diagonal braces between segments (the job real fascia does), cutting sideways drift from 38.5 px to 1.2 px and keeping the bend in one plane.",
+      "zh": "- 二维求解器一行没动，旁边另写一套三维内核。\n- 结构：16 节椎骨，三根肌腱按 120° 分布，拉哪根就往哪边弯；鼠标拖动转的是相机，不是模型。\n- 弯路：第一版一收缩就拧成螺旋、还发抖。修法：每节之间加左右对称的斜拉杆（相当于筋膜的作用），横向漂移从 38.5 像素降到 1.2 像素，弯曲回到一个平面内。"
     },
     "tags": [
       { "label": { "en": "Lab", "zh": "实验室" }, "variant": "outline" },
@@ -805,8 +805,8 @@
       "zh": "把真机上的一个环做成网页上能拖动的模型。"
     },
     "body": {
-      "en": "It is the shell's fourth ring: an arch built from scissor linkages, pushed by a crank at the base. The solver itself was not modified — the ring is just its bar lengths and joint connections written out as data and fed in. That was the point of the exercise: the solver is not hard-wired to one example.",
-      "zh": "用的是外壳的第四个环：剪刀式连杆围成的拱，底下一个曲柄推着它开合。求解器本身没有改动，这个环只是把杆长和铰接关系写成一组数据喂进去。这正是要验证的事：求解器不是只能跑一个写死的例子。"
+      "en": "- The subject: the shell's fourth ring — an arch of scissor linkages, opened and closed by a crank at the base.\n- Method: zero changes to the solver; the ring is just bar lengths and joint connections written out as data and fed in.\n- Which was the point: the solver is not hard-wired to one example.",
+      "zh": "- 对象：外壳的第四个环——剪刀式连杆围成的拱，底部一个曲柄推着开合。\n- 方法：求解器零修改，环只是把杆长和铰接关系写成一组数据喂进去。\n- 要验证的正是这件事：求解器不是只能跑一个写死的例子。"
     },
     "tags": [{ "label": { "en": "Lab", "zh": "实验室" }, "variant": "outline" }]
   },
@@ -817,8 +817,8 @@
       "zh": "主页那个连杆做完了，之后只修 bug，不再加功能。"
     },
     "body": {
-      "en": "Two last pieces went in. When you let go, the bars carry the speed you flung them with and ease to a stop instead of freezing on the spot; and the curve traced by the moving joint is drawn as it happens. With dimension labels and a caption added, 36 tests pass.",
-      "zh": "最后补了两件：松手之后杆件会带着你甩出去的速度继续走、再慢慢停下，而不是啪一下定住；以及连杆上那个动点扫过的曲线会实时画出来。加上尺寸标注和图注，36 项测试通过。"
+      "en": "- Release feel: letting go now carries the speed you flung the bars with and eases to a stop, instead of freezing on the spot.\n- Curve tracing: the path swept by the moving joint is drawn as it happens.\n- With dimension labels and a caption added, the piece is closed — bug fixes only from here on.",
+      "zh": "- 补松手手感：松开后杆件带着甩出去的速度继续走、慢慢停下，不再啪一下定住。\n- 补曲线描绘：连杆上动点扫过的曲线实时画出。\n- 加上尺寸标注和图注后收尾——此后只修 bug，不加功能。"
     },
     "tags": [{ "label": { "en": "Lab", "zh": "实验室" }, "variant": "outline" }]
   },
@@ -829,8 +829,8 @@
       "zh": "定下五个环共用一根主轴的传动方案。"
     },
     "body": {
-      "en": "A NEMA17 stepper on a TMC2209 driver, geared down 3:1 through a GT2 belt (20-tooth pulley on the motor, 60-tooth on the shaft, 2GT-280 closed loop, 99.2 mm between centres). The shaft went from 8 mm round to a 6 mm D-shaft — a flat ground on one side so pulleys cannot slip — with the hub bores redrawn to match, delivered as a dimensioned drawing plus a profile that imports straight into the CAD file. The motor bracket has slotted holes so either gear ratio can be fitted. Peak design torque is 0.3–0.5 N·m, nearly all of it spent on gravity and friction rather than acceleration.",
-      "zh": "一台 NEMA17 步进电机配 TMC2209 驱动，经 GT2 同步带 3:1 减速（电机端 20 齿、轴端 60 齿，2GT-280 闭口带，中心距 99.2mm）。主轴从 8mm 圆轴改成 6mm 的 D 形轴——侧面磨一个平面，皮带轮就不会打滑——轮毂孔同步改成对应的 D 形，出了标注图和能直接导进模型的轮廓文件。电机座开腰形槽，两种减速比都装得上。设计峰值扭矩 0.3–0.5N·m，几乎全花在克服重力和摩擦上，而不是加速。"
+      "en": "- Motor and reduction: a NEMA17 stepper on a TMC2209 driver, geared down 3:1 through a GT2 belt (20-tooth pulley on the motor, 60-tooth on the shaft).\n- The shaft: 8 mm round changed to a 6 mm D-shaft — a flat ground on one side so pulleys cannot slip; hub bores redrawn to match, delivered as a dimensioned drawing plus a profile that imports straight into the CAD file.\n- Compatibility: slotted holes in the motor bracket, so either gear ratio fits.\n- Torque budget: 0.3–0.5 N·m peak, nearly all of it spent on gravity and friction rather than acceleration.",
+      "zh": "- 电机与减速：NEMA17 步进电机配 TMC2209 驱动，GT2 同步带 3:1 减速（电机端 20 齿、轴端 60 齿）。\n- 主轴：8mm 圆轴改 6mm D 形轴——侧面磨一个平面，皮带轮就不会打滑；轮毂孔同步改 D 形，出了标注图和能直接导进模型的轮廓文件。\n- 兼容性：电机座开腰形槽，两种减速比都装得上。\n- 扭矩预算：峰值 0.3–0.5N·m，几乎全花在克服重力和摩擦上，不在加速。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -844,8 +844,8 @@
       "zh": "汇总了整机的采购清单。"
     },
     "body": {
-      "en": "About ¥216 of things I definitely need: an ESP32, buck converters, a small amplifier and speaker, addressable LED rings, SG90 servos, lever microswitches, springs, conductive copper tape, silicone wire, connectors. A few items wait on decisions still open — a fourth stepper, a USB camera, a level shifter, a laser distance sensor — which would bring it to roughly ¥300. Everything already sitting in the Elegoo kit was struck off first.",
-      "zh": "确定要买的约 ¥216：ESP32、降压模块、小功放和喇叭、可编程灯环、SG90 舵机、微动开关、弹簧、导电铜箔、硅胶线、接插件。另有几项要等决定再说——第四台步进电机、USB 相机、电平转换、激光测距——都算上大约 ¥300。手上 Elegoo 套件里已有的先全部划掉了。"
+      "en": "- About ¥216 of definite buys: an ESP32, buck converters, a small amplifier and speaker, LED rings, SG90 servos, microswitches, springs, conductive copper tape, silicone wire, connectors.\n- A few items held pending decisions — a fourth stepper, a USB camera, a level shifter, a laser rangefinder — roughly ¥300 with everything.\n- Method: inventory the Elegoo kit first and strike off everything already on hand, so nothing is bought twice.",
+      "zh": "- 确定要买的约 ¥216：ESP32、降压模块、小功放和喇叭、灯环、SG90 舵机、微动开关、弹簧、导电铜箔、硅胶线、接插件。\n- 几项挂起等决定：第四台步进电机、USB 相机、电平转换、激光测距——全买约 ¥300。\n- 方法：先盘点手上的 Elegoo 套件，已有的全部划掉，不重复买。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -1114,8 +1114,8 @@
       "zh": "用七项指标把所有候选场景审了一遍，并纠正了愿景——塌缩是反派，不是主题。"
     },
     "body": {
-      "en": "The heaviest session so far, in two halves. On method: the Japanese street-observation traditions and the environment-behaviour literature (Whyte, Gehl, Hall, Goffman) were distilled into a set of observation rule cards and a seven-indicator filter for scenarios. The seventh became a hard requirement — the cascade has to be endogenous: an outside shock may light the fuse, but the amplification must travel from person to person, which in fieldwork reduces to one question you can actually ask someone: are you avoiding this place because it doesn't work, or because nobody else goes? On direction: collapse had quietly become the thesis, and it was demoted back to antagonist. What the project is about is bold, mobile, even fantastical spatial possibility — real people, dreaming space. So the building's verbs expanded beyond subtraction (cancel, close, partition) to merging, migrating, luring, splitting, dissolving, and five spatial desires were introduced, each of which will need a utility function the code can compute. Eleven candidate directions were generated and adversarially audited: six survived, five were cut for having no co-present bodies sensing one another, and virtual spaces were excluded outright. Two of my own recurring errors were named so they stop repeating: defaulting back to the shared-flat living room, and reasoning by headcount instead of by what the space wants.",
-      "zh": "至今最重的一轮，分两半。方法上：把日本的路上观察传统和环境行为学文献（Whyte、Gehl、Hall、Goffman）提炼成一套观察规则卡，以及一张七指标的场景筛选表。第七项被立为硬约束——级联必须是内生的：外部冲击可以点火，但非线性放大必须靠人传人，落到田野里就是一个真能开口问的问题：你不来这儿，是因为它不好用，还是因为没人来？方向上：塌缩不知不觉变成了主题，这次把它降回反派的位置。项目要讲的是大胆、可动、甚至带幻想性的空间可能性——真实的人，梦境的空间。于是建筑的动词从减法（取消、关闭、隔断）扩展到合并、迁徙、引诱、分裂、溶解，并引入五种空间欲望，每一种都需要一个代码算得出来的效用函数。生成 11 个候选方向并做了对抗式自审：6 个存活，5 个被砍（都缺少「身体共处一室、彼此能感觉到对方」这个前提），游戏服务器一类的虚拟空间直接排除。还点名了自己反复犯的两个错误，防止再犯：一想场景就默认回到合租客厅；以及按人头数推理，而不是按空间想要什么推理。"
+      "en": "- Method: the Japanese street-observation traditions and the environment-behaviour literature (Whyte, Gehl, Hall, Goffman) distilled into observation rule cards plus a seven-indicator filter for scenarios.\n- The seventh is a hard requirement — the cascade must be endogenous: an outside shock may light the fuse, but the amplification must travel person to person; in fieldwork that is one askable question: \"are you avoiding this place because it doesn't work, or because nobody else goes?\"\n- Course correction: collapse had quietly become the thesis and was demoted back to antagonist — the project is about bold, mobile, even fantastical spatial possibility. The building's verbs grew beyond subtraction to merging, migrating, luring, splitting, dissolving, with five spatial desires introduced (each needing a computable utility function).\n- Audit outcome: eleven candidate directions adversarially reviewed — six survived, five cut (all lacking co-present bodies sensing one another), virtual spaces excluded outright.\n- Two of my own recurring errors named so they stop repeating: defaulting to the shared-flat living room, and reasoning by headcount instead of by what the space wants.",
+      "zh": "- 方法侧：把日本的路上观察传统和环境行为学文献（Whyte、Gehl、Hall、Goffman）提炼成观察规则卡＋七指标筛选表。\n- 第七项立为硬约束——级联必须内生：外部冲击可以点火，放大必须人传人；落到田野就是一句问得出口的话：「你不来，是因为它不好用，还是因为没人来？」\n- 方向纠偏：塌缩不知不觉成了主题，这次降回反派——项目讲的是大胆、可动、带幻想性的空间可能。建筑动词从减法扩展到合并、迁徙、引诱、分裂、溶解，并引入五种空间欲望（每种都要有代码算得出的效用函数）。\n- 审计结果：11 个候选方向对抗式自审，6 个存活、5 个被砍（都缺「身体共处、彼此可感」这个前提），虚拟空间直接排除。\n- 点名自己反复犯的两个错防再犯：一想场景就回合租客厅；按人头数推理，而不是按空间想要什么。"
     },
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
@@ -1129,8 +1129,8 @@
       "zh": "查了版式资料，定下案例页的网格。"
     },
     "body": {
-      "en": "Line length (how many characters per line still reads comfortably), Tufte's way of putting notes in the margin, and the Swiss grid. The decision: lay the pages out for a wide desktop screen first and fall back to a single column on phones.",
-      "zh": "看了行长（一行多少字还读得舒服）、Tufte 把注释放在页边的做法，以及瑞士网格。结论是：先按桌面宽屏排版，手机上退成单栏。"
+      "en": "- Read three things: line length (how many characters per line still reads comfortably), Tufte's margin notes, the Swiss grid.\n- The decision: lay out for a wide desktop screen first, fall back to a single column on phones.",
+      "zh": "- 看了三样：行长（一行多少字还读得舒服）、Tufte 把注释放页边的做法、瑞士网格。\n- 决定：先按桌面宽屏排版，手机上退成单栏。"
     },
     "tags": [{ "label": { "en": "Site", "zh": "网站" }, "variant": "outline" }]
   },
@@ -1141,8 +1141,8 @@
       "zh": "写了连杆求解器的技术规格文档。"
     },
     "body": {
-      "en": "The maths, the interface other code calls, how much numerical error counts as acceptable, and what each stage has to deliver — all in one document that the code answers to. Where the two disagree, the code changes, not the document.",
-      "zh": "数学推导、别的代码调用它的接口、多大的数值误差算可接受、每个阶段要交付什么——全部写进一份文档，代码以它为准。两者打架时改代码，不改文档。"
+      "en": "- Contents: the maths, the interface other code calls, how much numerical error counts as acceptable, and what each stage has to deliver — all in one document.\n- The rule: the code answers to the document; where the two disagree, the code changes, not the document.",
+      "zh": "- 内容：数学推导、别的代码调用它的接口、多大的数值误差算可接受、每个阶段要交付什么——全在一份文档里。\n- 规矩：代码以文档为准，两者打架时改代码，不改文档。"
     },
     "tags": [
       { "label": { "en": "Lab", "zh": "实验室" }, "variant": "outline" },
@@ -1156,8 +1156,8 @@
       "zh": "通篇审了一遍实验方案，砍掉算不出结果的部分，并定死传感器清单。"
     },
     "body": {
-      "en": "The machine's death now falls inside a ±30-second window, and participants are told so honestly afterwards. A planned before/after comparison of heart-rate variability was dropped outright — with 5–8 participants it can never reach significance — leaving skin conductance, measured around specific events, as the main physiological signal. Participants may speak naturally; those stretches get flagged as artefacts and a short interview afterwards asks what they remembered feeling. Sensing is fixed at six inputs: touch on the feelers, touch on the shell, ultrasonic distance, tilt and motion, sound, and an internal clock. Still open: ethics filing, privacy compliance, Chinese-language versions of the scales, and a second person to code the behavior independently.",
-      "zh": "机器的死亡时间现在限定在一个 ±30 秒的窗口内，事后如实告诉被试。原计划比较死亡前后的心率变异性，直接删掉——5–8 人的样本量根本达不到显著性——改用围绕具体事件测量的皮肤电作为主要生理信号。被试可以自然说话，这些片段标记为伪影，另加一段事后访谈问他们当时记得什么感受。传感部分定死为六路输入：触须上的触摸、外壳上的触摸、超声测距、倾斜与运动、声音、内部时钟。仍未解决：伦理申报、隐私合规、量表的中文版，以及找第二个人独立做行为编码。"
+      "en": "- The machine's death now falls inside a ±30-second window, told to participants honestly afterwards.\n- Cut what the numbers cannot support: the heart-rate-variability before/after comparison went entirely — 5–8 participants can never reach significance; skin conductance measured around specific events is now the main physiological signal.\n- Speech is allowed: those stretches get flagged as artefacts, with a short interview afterwards about what they remember feeling.\n- Sensing frozen at six inputs: feeler touch, shell touch, ultrasonic distance, tilt and motion, sound, and an internal clock.\n- Still open: ethics filing, privacy compliance, Chinese versions of the scales, a second independent behaviour coder.",
+      "zh": "- 死亡时点收进一个 ±30 秒的窗口，事后如实告诉被试。\n- 砍掉算不出结果的：死亡前后的心率变异性对比直接删——5–8 人的样本永远达不到显著；主生理信号改为围绕具体事件测量的皮肤电。\n- 说话不禁止：自然说话的片段标为伪影，另加事后访谈问当时记得的感受。\n- 传感定死六路输入：触须触摸、外壳触摸、超声测距、倾斜与运动、声音、内部时钟。\n- 仍未解决：伦理申报、隐私合规、量表中文版、第二位独立行为编码员。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -1622,8 +1622,8 @@
       "zh": "换掉一个不成立的骑手画像，解散独居青年这个独立人群，产出五张画像卡和一套筛选题组。"
     },
     "body": {
-      "en": "The delivery-rider persona was rejected by the team, and rightly: riders can choose their own hours, so they do not belong at the \"schedule disrupted by work\" end of the spectrum. Reasoning through alternatives landed on platform freight truck drivers — once a shipment is accepted the task is locked, loan payments make rest feel unaffordable, city traffic restrictions dictate the driving windows, and waiting on standby permits only shallow sleep. Solo-living youth had a deeper problem: living alone generates no sleep needs of its own, it only amplifies needs generated elsewhere. So the population was dismantled and its content redistributed into three host populations (deliberate bedtime delay to high-pressure office workers, schedule drift to irregular sleepers, loneliness-driven trouble falling asleep to those with disorder tendencies), with living alone kept as a cross-cutting variable in a section of its own. On the visual side, five JPG persona cards were produced, each a five-panel storyboard across the stages of a night plus a radar chart of RU-SATED damage (the six dimensions of sleep health), labelled as encoded judgment rather than measurement. The screener runs about 18 items and identifies every defined population through combinations of variables, not by asking respondents to pick a label for themselves.",
-      "zh": "外卖骑手这个画像被组里否掉，也确实该否：骑手可以自选工时，不符合光谱上「作息被工作打乱」那一端。推理过几个替代方案后换成平台货运卡车司机——接单之后任务就锁死，贷款压力让人不敢休息，城市限行决定了能开车的时段，待命状态只能浅睡。独居青年的问题更根本：独居本身不直接产生睡眠需求，它只放大别处产生的需求。于是拆掉这个人群，内容分流进三个宿主人群（主动熬夜→高压白领，作息漂移→不规律作息，孤独导致入睡困难→睡眠障碍倾向），另立一节把「独居」作为横切变量处理。可视化产出五张 JPG 画像卡，每张是一夜各阶段的五格分镜，加一张 RU-SATED（睡眠健康六维度）受损雷达图，并标注为判断编码、不是实测数据。筛选问卷约 18 题，靠变量组合而不是让受访者自选身份来识别全部已定义人群。"
+      "en": "- The swap: the delivery-rider persona was rejected by the team, rightly — riders choose their own hours, so they don't fit the \"schedule disrupted by work\" end of the spectrum. Replaced with platform freight truck drivers: task locked once a shipment is accepted, loan payments making rest feel unaffordable, traffic restrictions dictating the windows, standby permitting only shallow sleep.\n- The dissolution: living alone generates no sleep needs of its own — it only amplifies needs from elsewhere. The population was dismantled into three host populations, with \"living alone\" kept as a cross-cutting variable in its own section.\n- Visuals: five persona cards, each a five-panel storyboard across a night plus a radar chart of RU-SATED damage (the six dimensions of sleep health), labelled as encoded judgment rather than measurement.\n- The screener: about 18 items, identifying every population through combinations of variables rather than asking respondents to pick a label for themselves.",
+      "zh": "- 换画像：外卖骑手被组里否掉，也该否——骑手可自选工时，不符合「作息被工作打乱」那一端。换成平台货运卡车司机：接单即锁死、贷款压力不敢休息、城市限行决定时段、待命只能浅睡。\n- 拆人群：独居本身不产生睡眠需求，只放大别处的需求——解散独居青年，内容分流进三个宿主人群，「独居」另立一节作横切变量。\n- 可视化：五张画像卡，各为一夜分阶段的五格分镜＋一张 RU-SATED（睡眠健康六维度）受损雷达图，标注为判断编码、不是实测。\n- 筛选问卷约 18 题：靠变量组合识别人群，不让受访者自选身份。"
     },
     "tags": [
       { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
@@ -1637,8 +1637,8 @@
       "zh": "把仿真锚定在一个很小的回避决定上，并排出代码前三版的路线。"
     },
     "body": {
-      "en": "The reframe: the project does not have to choose between a big social issue and a small everyday friction — its own logic requires the small thing as input, with the big pattern coming out the other end as a result rather than as an assumption. A three-sentence test now filters every candidate scenario: what is the individual rule, what collective pattern does it produce, and why does nobody want that outcome. The first concrete case: the common room of a shared flat, where people withdraw, occupancy collapses, and the landlord eventually converts it into another bedroom — a landlord reacting to what tenants actually do is already a spatial agent operating in the real world. The code path in three stages: v0, about forty lines of Python where five agents leave when the room feels too crowded, run for a hundred steps to watch occupancy collapse; v1, add the building's response, so low use triggers the floor area being reallocated; v2, sweep the parameters to demonstrate hysteresis — a lag effect where restoring the original conditions does not bring the room back to life. That lag is the payoff the whole simulation exists to show. (The shared-flat case was later demoted to one candidate among several.)",
-      "zh": "一次关键重构：项目不必在宏大的社会议题和琐碎的日常摩擦之间二选一——它自身的逻辑要求把那件小事当输入，宏观模式是从另一头跑出来的结果，而不是预设。从此每个候选场景都要过三句话的筛选：个体的规则是什么、汇聚出什么集体模式、为什么没人想要这个结果。第一个具体场景：合租房的公共客厅——人陆续退出，使用率塌缩，房东最终把它改成又一间卧室；房东按租客的实际行为作反应，本身就是现实中运行着的一个「空间智能体」。代码路线分三段：v0，约四十行 Python，五个智能体在觉得太挤时离开，跑一百步看使用率塌下去；v1，加入建筑的响应，使用率低就触发面积重新分配；v2，扫参数演示滞后效应——把条件调回原样，房间也活不回来。这个滞后就是整个仿真存在的意义所在。（合租场景后来降级为若干候选之一，不再是定案。）"
+      "en": "- The reframe: no need to choose between a big social issue and a small everyday friction — the small thing is the input, and the big pattern comes out the other end as a result, not an assumption.\n- The filter: every candidate scenario answers three sentences — what is the individual rule, what collective pattern does it produce, and why does nobody want that outcome.\n- First concrete case: the shared-flat common room — people withdraw, occupancy collapses, the landlord converts it into a bedroom; a landlord reacting to what tenants actually do is already a spatial agent in the real world. (Later demoted to one candidate among several.)\n- Code path: v0, about forty lines of Python watching occupancy collapse; v1, add the building's response (low use triggers reallocating floor area); v2, sweep parameters to show hysteresis — restoring the original conditions does not bring the room back, which is the payoff the whole simulation exists to show.",
+      "zh": "- 重构：不必在宏大议题和日常小摩擦之间二选一——小事当输入，宏观模式是从另一头跑出来的结果，不是预设。\n- 筛选器：每个候选场景过三句话——个体规则是什么、汇成什么集体模式、为什么没人想要这个结果。\n- 第一个具体场景：合租客厅——人退出、使用率塌缩、房东改成又一间卧室；房东按租客实际行为反应，本身就是现实中运行着的空间智能体。（此场景后来降级为候选之一。）\n- 代码路线：v0 约四十行 Python 看使用率塌缩；v1 加建筑响应（使用率低触发面积重分配）；v2 扫参数演示滞后——条件调回原样房间也活不回来，这正是整个仿真存在的意义。"
     },
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
@@ -1652,8 +1652,8 @@
       "zh": "在家搭了个拍零件的小影棚。"
     },
     "body": {
-      "en": "Two octagonal softboxes on stands, and a full sheet of white card bent into a seamless curve so there is no visible corner behind the subject. Two things I learned: a part that does not move can be shot with a long exposure, so the lights do not need to be bright; and a white part on a white background needs a rim light from behind and to one side, or its outline dissolves into the backdrop.",
-      "zh": "两盏八角柔光箱加灯架，一张整开白卡纸弯成弧形，主体身后看不到接缝。学到两件事：零件不会动，就可以用长曝光，灯根本不必亮；白色零件放在白底上，得靠侧后方的逆光勾出边缘，否则轮廓会糊进背景里。"
+      "en": "- The setup: two octagonal softboxes on stands, and a full sheet of white card bent into a seamless curve so there is no visible corner behind the subject.\n- Lesson one: a part that does not move can be shot with a long exposure, so the lights need not be bright.\n- Lesson two: a white part on a white background needs a rim light from behind and to one side, or its outline dissolves into the backdrop.",
+      "zh": "- 器材：两盏八角柔光箱加灯架，一张整开白卡纸弯成弧形，主体身后看不到接缝。\n- 学到一：零件不会动，就可以长曝光，灯根本不必亮。\n- 学到二：白零件放白底上，得靠侧后方的逆光勾边，否则轮廓糊进背景。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -1667,8 +1667,8 @@
       "zh": "完成倒班人群与独居青年两组的证据审计和画像手稿，期间推翻了两个一直沿用的画像范式。"
     },
     "body": {
-      "en": "A deep evidence audit came first: Chinese primary sources prioritised, company self-reported data labelled as such and downgraded, extrapolated conclusions flagged explicitly; writing began only once the evidence held. Two conventions did not survive contact with the material. Named-individual persona cards (\"Lin Mei, 29, ER nurse in Guangzhou\") read as stereotyped and awkward, so they were replaced with type-level profiles — what this kind of person is typically like. And the reference template's 2×2 positioning matrix would not fit occupationally defined groups, which cannot be spread along two continuous axes, so it became a single-axis spectrum instead: predictable to unpredictable schedule for shift workers, deliberate bedtime delay to involuntary insomnia for solo-living youth. Each manuscript holds a positioning paragraph, the spectrum, four cross-type need clusters mapped to RU-SATED (a six-dimension sleep-health framework: regularity, satisfaction, alertness, timing, efficiency, duration), two type profiles, and an evidence list at the end. One rule set here has held since: coin no new vocabulary, use only terms already in the project or the source literature.",
-      "zh": "先做深度证据审计——中文一手来源优先，企业自报数据单独标注并降级使用，外推得出的结论显式标记——确认证据够用才动笔。写作中有两个沿用的范式没能扛住材料。一是具名个体式画像卡（「林梅，29 岁，广州急诊护士」这一类），读起来刻板别扭，改成类型级描写，也就是「这类人通常是什么样」。二是参考模板的 2×2 定位矩阵：由职业定义的人群套不进两个连续轴，于是换成单轴光谱（倒班组：作息可预测 ↔ 不可预测；独居组：主动熬夜 ↔ 被动失眠）。两份手稿各含定位段、光谱、四组跨类型需求（对应 RU-SATED，即睡眠健康的六个维度：规律性、满意度、清醒度、时机、效率、时长）、两个类型画像和文末证据清单。此时定下一条一直沿用至今的规则：不造新词，只用项目和文献里已有的词汇。"
+      "en": "- Evidence before writing: Chinese primary sources first, company self-reported data labelled and downgraded, extrapolated conclusions flagged explicitly.\n- Convention overturned, one: named-individual persona cards (\"Lin Mei, 29, ER nurse\") read as stereotyped — replaced with type-level profiles, what this kind of person is typically like.\n- Convention overturned, two: the template's 2×2 positioning matrix cannot hold occupationally defined groups — replaced with a single-axis spectrum (shift workers: predictable ↔ unpredictable schedule; solo-living youth: deliberate delay ↔ involuntary insomnia).\n- Each manuscript: a positioning paragraph, the spectrum, four need clusters mapped to RU-SATED (the six dimensions of sleep health: regularity, satisfaction, alertness, timing, efficiency, duration), two type profiles, an evidence list.\n- A rule set here has held since: coin no new vocabulary — only terms already in the project or the literature.",
+      "zh": "- 先审证据再动笔：中文一手来源优先，企业自报数据单独标注并降级，外推结论显式标记。\n- 推翻范式一：具名个体画像卡（「林梅，29 岁，急诊护士」式）读来刻板，改为类型级描写——这类人通常什么样。\n- 推翻范式二：模板的 2×2 定位矩阵装不下按职业定义的人群，改单轴光谱（倒班：作息可预测↔不可预测；独居：主动熬夜↔被动失眠）。\n- 手稿构成：定位段、光谱、对应 RU-SATED（睡眠健康六维度：规律、满意、清醒、时机、效率、时长）的四组需求、两个类型画像、文末证据清单。\n- 立下沿用至今的规则：不造新词，只用项目和文献里已有的词。"
     },
     "tags": [
       { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
@@ -1678,12 +1678,12 @@
   {
     "date": "2026-06-22",
     "lead": {
-      "en": "The theme stopped feeling like mine, so the project restarts from a problem I have actually stood in.",
-      "zh": "这个主题不再像是我自己的，于是决定从我真正待过的空间里重新出发。"
+      "en": "Restarted the project from a space I have actually lived in, after the theme stopped feeling like mine.",
+      "zh": "决定让项目从我真正待过的空间重新出发——原来的主题已经不像我自己的了。"
     },
     "body": {
-      "en": "My advisor suggested simplifying the whole thing into a single problem→solution line. A bigger doubt surfaced at the same time: 'social withdrawal in East Asia' felt like a stock topic I had picked up rather than something I own. Separating the two halves helps — the packaging really is at risk of cliché, but the mechanism underneath (a building reconfiguring itself from social signals, sitting in the cybernetic lineage) is still not being done by anyone. The root cause is how it was built: from theory downward, instead of growing upward out of a problem. The decision: start again from one concrete situation in a space I have actually been in. The tension between the advisor's clean problem→solution shape and a project that is speculative by nature is left on record, unresolved.",
-      "zh": "导师建议把整个项目简化成「发现问题—设计解决」的单线结构。同时冒出一个更根本的疑虑：「东亚社会退缩」这个主题像是从外面捡来的现成题目，不像是我自己的。把两件事分开看会清楚些——包装确实有俗套的风险，但底下的机制（建筑根据人与人之间的社交信号重构自己，接在控制论建筑这条谱系上）仍然没人在做。病根在于它是怎么建起来的：从理论往下推，而不是从一个问题往上长。决定：从我真正待过的某个具体空间、某个具体情境重新开始。导师那套干净的问题—解决结构，和一个天然带思辨性的项目之间的张力，先记录在案，暂不解决。"
+      "en": "- The trigger: my advisor suggested simplifying to a single problem→solution line; at the same time a deeper doubt surfaced — \"social withdrawal in East Asia\" felt like a stock topic picked up, not owned.\n- Separating the two: the packaging genuinely risks cliché, but the mechanism underneath (a building reconfiguring itself from social signals, in the cybernetic lineage) is still not being done by anyone.\n- The root cause: the project was built from theory downward instead of growing upward out of a problem.\n- The decision: start again from one concrete situation in a space I have actually been in; the tension between the advisor's clean shape and a naturally speculative project stays on record, unresolved.",
+      "zh": "- 起因：导师建议简化成「发现问题—设计解决」的单线结构；同时自己冒出更根本的疑虑——「东亚社会退缩」像从外面捡来的现成题目。\n- 拆开看：包装确有俗套风险，但底下的机制（建筑根据社交信号重构自己，接控制论建筑谱系）仍然没人在做。\n- 病根：项目是从理论往下推建起来的，不是从一个问题往上长的。\n- 决定：从真正待过的具体空间、具体情境重新开始；导师的单线结构与项目天然的思辨性之间的张力，记录在案、暂不解决。"
     },
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
@@ -1697,8 +1697,8 @@
       "zh": "一次定了三件小事：舵机接口、螺丝规格、触摸电极怎么走线。"
     },
     "body": {
-      "en": "Servos: keep the plastic horn that comes in the box as the splined interface and bolt my own linkages onto it with M2 screws, rather than trying to print the 21-tooth spline myself. Fasteners: M2.8 does not exist as a standard size (M2.5 and M3 do), and printed holes come out 0.1–0.3 mm smaller than drawn, so they get modelled oversize. Touch sensing: one conductor gives one reading, so telling left from right needs two separate electrodes; the wire leading to an electrode is itself part of the sensing surface, so all solder joints sit inside the rigid body and bare wire acts as the electrode along the flexible sections.",
-      "zh": "舵机：盒子里自带的塑料舵盘留着当花键接口，自己的连杆用 M2 螺丝拧上去，不去自己造那个 21 齿花键。紧固件：M2.8 这个规格根本不存在（标准是 M2.5 和 M3），打印出来的孔比图纸小 0.1–0.3mm，建模时要预先放大。触摸感应：一根导体只给一个读数，想分辨左右就必须做两路独立电极；通向电极的导线本身也是感应面，所以焊点全部收进硬壳内部，柔性段直接拿裸线当电极。"
+      "en": "- Servos: keep the stock plastic horn as the splined interface and bolt my own linkages on with M2 screws — no printing the 21-tooth spline myself.\n- Fasteners: M2.8 does not exist as a standard size (M2.5 and M3 do); printed holes come out 0.1–0.3 mm under drawn size, so they get modelled oversize.\n- Touch electrodes: one conductor gives one reading, so telling left from right needs two separate electrodes; the lead wire is itself part of the sensing surface — solder joints go inside the rigid body, bare wire acts as the electrode along the flexible sections.",
+      "zh": "- 舵机：保留原装塑料舵盘当花键接口，自己的连杆用 M2 螺丝拧上去——不去自己打印那个 21 齿花键。\n- 紧固件：M2.8 这个规格不存在（标准是 M2.5 和 M3）；打印孔比图纸小 0.1–0.3mm，建模时预先放大。\n- 触摸电极：一根导体只给一个读数，分左右要两路独立电极；导线本身也是感应面——焊点全收进硬壳内部，柔性段直接拿裸线当电极。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -1712,8 +1712,8 @@
       "zh": "把整个项目写成一份文档，并把它的特征翻译成选校的判断标准。"
     },
     "body": {
-      "en": "Eight sections under the working title Cells of Withdrawal, closing with a list of what a graduate programme would have to offer for this project to fit into it — agent-based modelling, urban computing, and enough tolerance for speculative work. One risk written down plainly instead of buried: the concept is complete, but none of the implementation — the rule engine, the video, the web simulation — has started, and that lands directly on the application timeline.",
-      "zh": "以暂定名《孤室 / Cells of Withdrawal》整理成八节的参考文档，最后一节把项目特征翻译成挑研究生项目的标准——有没有基于智能体的建模、有没有城市计算、对思辨性作品的容忍度够不够。有一条风险写在明处而不是藏起来：概念已经完备，但实现部分（规则引擎、视频、网页仿真）一个都没开始，这直接压在申请时间线上。"
+      "en": "- Eight sections under the working title Cells of Withdrawal.\n- The closing section translates the project's traits into school-picking criteria: agent-based modelling, urban computing, enough tolerance for speculative work.\n- One risk stated plainly instead of buried: the concept is complete, but none of the implementation — rule engine, video, web simulation — has started, and that lands directly on the application timeline.",
+      "zh": "- 以暂定名《孤室 / Cells of Withdrawal》整理成八节文档。\n- 末节把项目特征翻译成选校标准：有没有基于智能体的建模、有没有城市计算、对思辨性作品的容忍度够不够。\n- 一条风险写在明处而不是藏起来：概念已完备，但规则引擎、视频、网页仿真一个都没开工，直接压在申请时间线上。"
     },
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
@@ -1727,8 +1727,8 @@
       "zh": "外壳的驱动从两侧双杆改成中间一根杆，并重算了五个环的尺寸。"
     },
     "body": {
-      "en": "A degrees-of-freedom check showed that pushing with a single central rod still leaves the arch free to sway sideways — two ways to move, so the shape at any given moment is not unique. A vertical guide at the apex takes the sway away and pins the motion down to one. The check also exposed a bug in the code that locates the apex: it picked the highest point, which on one of the rings is an off-centre shoulder, so it now picks the point closest to the centreline instead. After re-optimizing, each ring travels 3–26% further between open and closed, and the ring geometry is now frozen.",
-      "zh": "算自由度时发现：只靠中间一根杆推，拱还能左右摇摆——有两种运动方式，所以某一时刻的形状并不唯一。在顶点加一条垂直导轨把摇摆去掉，运动才唯一确定。这一算也暴露出找顶点的代码有 bug：它取的是最高点，而其中一个环最高的地方是偏在一侧的肩部，改成取最靠近中轴的那个点。重新优化后，每个环从全开到收拢的行程增加了 3–26%，环的几何就此冻结。"
+      "en": "- The trigger: a degrees-of-freedom check showed a single central rod still lets the arch sway sideways — two ways to move, so the shape at any moment is not unique.\n- The fix: a vertical guide at the apex removes the sway and pins the motion down to one.\n- A bug found on the way: the apex-finding code picked the highest point, which on one ring is an off-centre shoulder — changed to pick the point nearest the centreline.\n- Result: after re-optimising, each ring travels 3–26% further between open and closed; ring geometry is now frozen.",
+      "zh": "- 起因：算自由度发现只靠中间一根杆推，拱还能左右摇摆——有两种运动方式，某一时刻的形状并不唯一。\n- 修法：顶点加一条垂直导轨，把摇摆去掉、运动唯一确定。\n- 顺带修出一个 bug：找顶点的代码取「最高点」，而有个环最高处是偏在一侧的肩部——改成取最靠近中轴的点。\n- 结果：重新优化后各环开合行程增加 3–26%；环的几何就此冻结。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -1880,8 +1880,8 @@
       "zh": "找到了项目真正要讲的社会机制：每个人合理的退出决定，累加成没人想要的局面。"
     },
     "body": {
-      "en": "Three rounds of reading, with one correction along the way — the earlier rounds kept folding the sociology back into architecture talk, so it was redone with the social science in front. Four models line up into a single skeleton: Schelling's segregation model, where mild individual preferences end in total separation; Granovetter's threshold cascades, where each person needs a different number of others to have gone first; Kuran's preference falsification, where people hide what they actually want so everyone misreads the room; and the low-fertility trap. Numbers to anchor it: marriage registrations in China falling from about 13 million a year to 6.1 million, a fertility rate near 1.0. The closing claim: a system that faithfully grants everyone's wish to withdraw ends up welding each person into their own isolated cell. The deliverables were fixed in the same pass — image boards, a video that speeds the tipping point up enough to be seen, and a web simulation so a reviewer can trigger the counterintuitive result themselves instead of taking my word for it. No physical installation.",
-      "zh": "三轮深度检索，中途纠正过一次——前面几轮总是把社会学的发现折回建筑的话术里，于是推倒重来，让社会学和心理学站在前面。四个模型拼成一副骨架：Schelling 隔离模型（每个人只有轻微的偏好，最后却完全分开住）、Granovetter 阈值级联（每个人需要看到多少人先动了才肯跟上，这个数各不相同）、Kuran 偏好伪装（人隐藏自己真实的想法，于是所有人都误判了气氛）、以及低生育率陷阱。用来锚定的数字：中国结婚登记从每年约 1300 万降到 610 万，总和生育率接近 1.0。收束成一句话：一个忠实满足每个人退出愿望的系统，最后会把每个人焊进自己的隔间。交付形态也在这一轮定死——图版、一段把临界翻转加速到看得见的视频，以及一个网页仿真，让评审自己动手触发那个反直觉的结果，而不是听我说。不做实体装置。"
+      "en": "- Three rounds of reading, one correction along the way: earlier rounds kept folding the sociology back into architecture talk — redone with the social science in front.\n- Four models line up into one skeleton: Schelling's segregation (mild preferences ending in total separation), Granovetter's threshold cascades (each person needs a different number of first movers), Kuran's preference falsification (everyone misreads the room), and the low-fertility trap.\n- Anchoring numbers: marriage registrations in China falling from about 13 million a year to 6.1 million; fertility near 1.0.\n- The closing claim: a system that faithfully grants everyone's wish to withdraw ends up welding each person into their own cell.\n- Deliverables fixed in the same pass: image boards, a video that speeds the tipping point up enough to be seen, and a web simulation where a reviewer triggers the counterintuitive result themselves; no physical installation.",
+      "zh": "- 三轮深度检索，中途纠偏一次：前几轮总把社会学的发现折回建筑话术，推倒重来、让社会科学站在前面。\n- 四个模型拼成骨架：Schelling 隔离（轻微偏好最后完全分开住）、Granovetter 阈值级联（每人需要看到不同数量的先行者）、Kuran 偏好伪装（人人误判气氛）、低生育率陷阱。\n- 锚定数字：中国结婚登记从每年约 1300 万降到 610 万，总和生育率接近 1.0。\n- 一句话收束：一个忠实满足每个人退出愿望的系统，最后把每个人焊进自己的隔间。\n- 交付同轮定死：图版、把临界翻转加速到看得见的视频、评审能亲手触发反直觉结果的网页仿真；不做实体装置。"
     },
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
@@ -1895,8 +1895,8 @@
       "zh": "给全组写了一份问卷设计规范，并修订队友起草的功能需求一节。"
     },
     "body": {
-      "en": "The specification has ten hard rules grounded in academic survey standards (Pew Research, Krosnick and Presser), covering things like labelling every point of a rating scale in words, restricting which question types may be used, mapping each item to the analysis it serves, and running a pretest before the survey goes out. The revision was surgical rather than a rewrite: five matrix questions got their scale labels completed, a copy-pasted introduction carrying the wrong text was fixed, two truncated passages were restored, a duplicated pillow-interaction question was removed, and a household-composition screening question was added — my own first draft of that question missed the roommate, shared-flat and dormitory category, which was then patched in.",
-      "zh": "规范含十条硬规则，依据是学界的问卷标准（Pew Research、Krosnick 与 Presser 等），覆盖量表每一档都要有文字标注、限制可用题型、每道题都要对应到某项分析、发放前必须预测试等。修订走的是外科手术路线而不是重构：五个矩阵题补全量表标注，改掉一处复制粘贴带错的引导语，补全两处截断文本，删去重复出现的枕头交互题，新增一道家庭构成筛选题——这道题我自己第一稿漏了室友／合租／宿舍这一类，随后补上。"
+      "en": "- The specification: ten hard rules grounded in academic survey standards (Pew Research, Krosnick and Presser) — label every scale point in words, restrict question types, map each item to an analysis, pretest before release.\n- The revision was surgical, not a rewrite: five matrix questions got complete scale labels, a copy-pasted introduction carrying the wrong text was fixed, two truncated passages restored, a duplicated pillow-interaction question removed.\n- One question added — household composition; my own first draft of it missed the roommate/shared-flat/dormitory category, patched in after.",
+      "zh": "- 规范：十条硬规则，依据学界问卷标准（Pew Research、Krosnick 与 Presser）——量表每档都要文字标注、限制可用题型、每题对应一项分析、发放前必须预测试。\n- 修订走外科手术路线而不是重构：五个矩阵题补全量表标注、改掉复制粘贴带错的引导语、补全两处截断文本、删去重复的枕头交互题。\n- 新增一道家庭构成筛选题——这道题我自己第一稿漏了室友／合租／宿舍这一类，随后补上。"
     },
     "tags": [
       { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
@@ -1910,8 +1910,8 @@
       "zh": "评估了项目现状，把方向定在写一篇论文上。"
     },
     "body": {
-      "en": "Art pieces about robots dying already exist; what makes this one hold up is the method behind it — physiological sensing, psychological scales that others have already validated, and behavior coded from video by a fixed scheme. The least developed part is the behavior engine, the logic deciding how the machine moves and reacts, which is also the part with the most to gain. Target: a 4–6 page short paper at HRI or CHI; having it in submission or as a preprint is enough for applications. Ethics approval has to start now, since it gates everything with participants in it.",
-      "zh": "关于机器人之死的艺术作品已经有不少，这个项目能站住，靠的是背后的方法：生理传感、别人已经验证过的心理量表、以及按固定方案从录像里编码行为。目前最欠开发的是行为引擎——决定机器怎么动、怎么反应的那套逻辑——它也是提升空间最大的部分。目标定为 HRI 或 CHI 的 4–6 页短文，处于投稿中或挂出预印本就够申请用。伦理审批必须立刻启动，因为凡是有真人参与的环节都卡在它前面。"
+      "en": "- The judgment: art about robots dying already exists; this one holds up on method — physiological sensing, validated psychological scales, behaviour coded from video by a fixed scheme.\n- The least developed and highest-return part is the behaviour engine — the logic deciding how the machine moves and reacts.\n- Target: a 4–6 page short paper at HRI or CHI; in submission or as a preprint is enough for applications.\n- Ethics approval starts now — everything with participants in it is gated on it.",
+      "zh": "- 判断：机器人之死的艺术作品已有不少；这个项目站得住靠方法——生理传感、经过验证的心理量表、按固定方案从录像编码行为。\n- 最欠开发、也最值得投入的是行为引擎——决定机器怎么动、怎么反应的那套逻辑。\n- 目标：HRI 或 CHI 的 4–6 页短文；处于投稿中或挂出预印本就够申请用。\n- 伦理审批立刻启动——凡有真人参与的环节全卡在它前面。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -1925,8 +1925,8 @@
       "zh": "三人合写的第三章合并之后，修掉跨节引用断裂和分类口径不一，并给自己那一节配了演化关系图。"
     },
     "body": {
-      "en": "My section cited an eleven-category population list from an earlier section that no longer existed after that section was restructured; tracing the broken link surfaced five orphaned population entries whose source had vanished, and they were cleaned out. The axis dividing the four evolution types was unified as whether mainstream discourse already recognises the group — and the long-argued question of where solo-living young adults belong was settled by that axis: they go into the surfacing type. The closing summary was finalised as four judgments: demand growth concentrates where demographic shifts intersect; sleep is increasingly embedded in relationships and caregiving rather than being a solo behaviour; some groups are turning sleep from a problem to fix into a resource to manage; and a set of long-overlooked groups is coming into view. The diagram was drawn as an SVG wireframe that encodes each evolution type in the line itself — thickening for amplification, an elbow bend for redirection, dashed turning solid for surfacing — and took two rounds of geometry fixes to stop lines running through circles and labels. The same day I read the full merged report and flagged leftover merge damage in other chapters: misaligned citation numbers, duplicate headings.",
-      "zh": "我那一节原本引用前面某节的「11 类人群清单」，但那一节改版后清单已经不存在了；顺着这条断线清理出五个来源失效的人群条目。四类演化的划分轴统一为「这个群体是否已被主流讨论充分认识」——独居青年归哪一类争了好几轮，最后按这条轴定为需求显现型。本节总结定稿为四条判断：需求增长集中在人口结构变化的交叉处；睡眠日益嵌入关系与照护情境，而不再是单人行为；部分人群把睡眠从待修复的问题变成主动管理的资源；一批长期被忽视的人群正在显形。演化图用 SVG 线框画，把演化方式编码进线条形态本身——加粗表示放大、折弯表示转向、虚线转实线表示显现——几何碰撞（线穿过圆圈和标签）修了两轮。同一天通读了全组合并稿，给其他章节标出合并遗留的问题：引文编号错位、标题重复。"
+      "en": "- Broken links repaired: my section cited an eleven-category population list that no longer existed after an earlier section was restructured; tracing it surfaced five orphaned population entries, cleaned out.\n- One axis unified: the four evolution types now divide by whether mainstream discourse already recognises the group; the long-argued solo-living youth land in the surfacing type by that axis.\n- The summary finalised as four judgments: demand grows where demographic shifts intersect; sleep is increasingly embedded in relationships and care; some groups are turning sleep from a problem into a managed resource; long-overlooked groups are coming into view.\n- The diagram: an SVG wireframe that encodes each evolution type in the line itself — thickening for amplification, an elbow for redirection, dashed-to-solid for surfacing; two rounds of geometry fixes to stop lines crossing circles and labels.\n- Same day, read the full merged report and flagged leftover merge damage in other chapters: misaligned citation numbers, duplicate headings.",
+      "zh": "- 修断链：我那节引用的「11 类人群清单」在前文改版后已不存在；顺着断线清理出五个来源失效的人群条目。\n- 统一口径：四类演化的划分轴定为「群体是否已被主流讨论充分认识」；争了几轮的独居青年按这条轴归入需求显现型。\n- 总结定稿四条判断：需求增长集中在人口结构变化交叉处；睡眠日益嵌入关系与照护；有人群把睡眠从待修复问题变成主动管理的资源；一批被忽视的人群正在显形。\n- 演化图：SVG 线框，把演化方式编码进线条本身——加粗＝放大、折弯＝转向、虚转实＝显现；线穿过圆圈和标签的几何碰撞修了两轮。\n- 同日通读全组合并稿，给其他章节标出合并遗留问题：引文编号错位、标题重复。"
     },
     "tags": [
       { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
@@ -1940,8 +1940,8 @@
       "zh": "定下三台步进电机的驱动方案。"
     },
     "body": {
-      "en": "NEMA17 motors (0.51 N·m, 1.7 A) running on TMC2209 drivers — three plus one spare — because the two common cheap drivers cannot supply that much current. Along with them: GT2 aluminium pulleys with a custom D-shaped bore, one 100 µF capacitor per driver, and a 12 V 5 A supply. One habit adopted here: check what is already in the Elegoo kit before ordering anything.",
-      "zh": "电机是 NEMA17（0.51N·m、1.7A），驱动器用 TMC2209，三片加一片备用——常见的两款便宜驱动器供不上这么大电流。配套：GT2 铝同步轮（D 形孔定制）、每片驱动器一颗 100µF 电容、12V 5A 电源。这次立了条规矩：下单前先翻一遍手上 Elegoo 套件的库存。"
+      "en": "- Selection: NEMA17 motors (0.51 N·m, 1.7 A) on TMC2209 drivers, three plus a spare — the two common cheap drivers cannot supply that much current.\n- Alongside: GT2 aluminium pulleys with a custom D-bore, one 100 µF capacitor per driver, a 12 V 5 A supply.\n- A habit adopted here: check what is already in the Elegoo kit before ordering anything.",
+      "zh": "- 选型：NEMA17 电机（0.51N·m、1.7A）配 TMC2209 驱动器，三片加一片备用——常见的两款便宜驱动器供不上这么大电流。\n- 配套：GT2 铝同步轮（D 形孔定制）、每片驱动器一颗 100µF 电容、12V 5A 电源。\n- 这次立的规矩：下单前先翻一遍手上 Elegoo 套件的库存。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -1955,8 +1955,8 @@
       "zh": "第二个项目立项，定下它的架构：两层智能体，一层是人，一层是建筑本身。"
     },
     "body": {
-      "en": "The starting point was Sou Fujimoto's Final Wooden House and the idea of affordance — that a form suggests what you might do with it instead of dictating it. Four commitments were fixed: the space adapts to the people rather than the other way round; it keeps changing over time; the scale is several people inside a building, not hand gestures; and the whole thing is a software simulation whose rules are written by hand and readable by a person — no sensors, no camera vision, no hardware. That gives the architecture: agents on two layers, people deciding their own social behaviour, and building parts (walls, rooms, openings) sensing those people and responding. Two rounds of reading mapped where this sits — cybernetic architecture of the 1960s and 70s (Pask, Cedric Price's Fun Palace and Generator, Negroponte's SEEK), Archigram, and the computational ancestors it borrows from (Schelling's segregation model, Boids, Space Syntax) — plus current work on robotic walls. The gap is real: nobody in recent years drives a building's reconfiguration from the social signals passing between people, and the closest precedent is a decade old. The honest verdict at the end: the project had a skeleton but no heart — no question sharp enough to produce a surprising answer.",
-      "zh": "起点是藤本壮介的 Final Wooden House 和「可供性」这个概念——形态是在提示你可以怎么用它，而不是规定你怎么用。定下四条底线：空间去适应人，而不是反过来；系统随时间持续变化；尺度是一栋建筑里的若干人，不做手势识别；整个作品是纯软件仿真，规则手写、人能读懂——不用传感器、不用图像识别、不做硬件。由此得出架构：两层智能体，人这一层自主决定社交行为，建筑构件（墙、房间、开口）这一层感知这些人并作出反应。两轮文献检索理清了它的位置——六七十年代的控制论建筑（Pask、Cedric Price 的 Fun Palace 与 Generator、Negroponte 的 SEEK）、Archigram，以及它借用的计算方法前身（Schelling 隔离模型、Boids、空间句法），再加上当下的机器人墙体研究。空缺是真的：近几年没有人用人与人之间的社交信号去驱动建筑重构，最接近的先例已是十年前。当轮的诚实结论：项目有骨架、没有心脏——还缺一个足够锐利、能给出反直觉答案的问题。"
+      "en": "- The starting point: Sou Fujimoto's Final Wooden House and affordance — a form suggesting what you might do with it rather than dictating it.\n- Four commitments: the space adapts to the people, not the reverse; it keeps changing over time; the scale is several people inside a building; pure software simulation with hand-written, readable rules — no sensors, no hardware.\n- The architecture follows: two layers of agents — people deciding their own social behaviour, and building parts (walls, rooms, openings) sensing them and responding.\n- Positioning from two rounds of reading: cybernetic architecture of the 60s–70s (Pask, Cedric Price, Negroponte's SEEK), Archigram, the computational ancestors (Schelling, Boids, Space Syntax), plus current robotic-wall work. The gap is real — nobody recently drives a building's reconfiguration from social signals between people; the closest precedent is a decade old.\n- The honest verdict of the round: a skeleton without a heart — still missing a question sharp enough to produce a surprising answer.",
+      "zh": "- 起点：藤本壮介的 Final Wooden House 与「可供性」——形态提示你可以怎么用它，而不是规定你怎么用。\n- 四条底线：空间去适应人，而不是反过来；系统随时间持续变化；尺度是一栋建筑里的若干人；纯软件仿真、规则手写可读——不用传感器、不做硬件。\n- 架构随之而来：两层智能体——人这一层自主决定社交行为，建筑构件（墙、房间、开口）感知这些人并响应。\n- 两轮检索定位：六七十年代控制论建筑（Pask、Cedric Price、Negroponte 的 SEEK）、Archigram、计算方法前身（Schelling、Boids、空间句法），加上当下的机器人墙体研究。空缺是真的——近年没人用人与人之间的社交信号驱动建筑重构，最近的先例已是十年前。\n- 当轮的诚实结论：有骨架、没心脏——还缺一个足够锐利、能给出反直觉答案的问题。"
     },
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
@@ -1970,8 +1970,8 @@
       "zh": "用五天写完报告里「未来典型睡眠人群假设」一节的完整初稿，框架是「基础人群全集 → 四类演化」。"
     },
     "body": {
-      "en": "The section closes out its chapter: it takes the populations catalogued in the two preceding sections and sorts them by how they will change by 2030 — needs amplified, needs redirected, needs surfacing into view, or needs staying stable. Several things were cut for failing the evidence bar. A perimenopause statistic went out entirely because it could not be verified at the primary source; the group at risk of sleep apnea moved from \"amplified\" back to \"stable\" for lack of evidence that it is growing structurally; and the phrase \"nearly 150 million empty-nest elderly\" was qualified so that readers cannot conflate it with the far smaller 7.72 million living alone at advanced age. Final delivery was a Word and PDF manuscript with 19 individually verified references in ACM format, and the first version's colourful rounded-box figures were replaced with black-and-white academic line drawings.",
-      "zh": "这一节是第三章的收口：把前两节盘点过的现有人群，按到 2030 年的演化方式分成四类——需求被放大、需求转向、需求显现、需求稳定。写作中砍掉了几处站不住的内容：一个围绝经期数据因为无法在一手来源核实，整条删除；呼吸暂停风险人群缺乏结构性放大的证据，从放大型挪回稳定型；「近 1.5 亿空巢老人」补写了限定，与数量小得多的「772 万高龄独居」明确区分，防止读者混读。最终交付 Word 与 PDF 两版，含 19 条逐一核实的 ACM 格式参考文献；第一版彩色圆角框插图换成了黑白线稿的学术风格。"
+      "en": "- The section closes its chapter: populations from the two preceding sections sorted by how they evolve to 2030 — needs amplified, redirected, surfacing, or stable.\n- Cut what failed the evidence bar: a perimenopause statistic unverifiable at the primary source, deleted entirely; the sleep-apnea risk group moved back to \"stable\" for lack of structural growth evidence; \"nearly 150 million empty-nest elderly\" qualified so it cannot be conflated with the far smaller 7.72 million living alone at advanced age.\n- Delivered: Word and PDF manuscripts with 19 individually verified ACM-format references; the first version's colourful rounded-box figures replaced with black-and-white academic line drawings.",
+      "zh": "- 这一节是第三章的收口：把前两节盘点的人群按到 2030 年的演化分四类——需求被放大、转向、显现、稳定。\n- 砍掉站不住的：一个围绝经期数据无法在一手来源核实、整条删除；呼吸暂停风险人群缺结构性放大的证据、挪回稳定型；「近 1.5 亿空巢老人」补写限定，与数量小得多的「772 万高龄独居」明确区分。\n- 交付：Word 与 PDF 两版，含 19 条逐一核实的 ACM 格式参考文献；第一版彩色圆角框插图换成黑白线稿。"
     },
     "tags": [
       { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
@@ -1985,8 +1985,8 @@
       "zh": "打印出来的关节卡死，借此摸清了活动件该留多少间隙。"
     },
     "body": {
-      "en": "The joint had been printed already assembled with 0.4 mm of clearance and would not turn: parts made by sintering powder come out with a rough skin and trap loose powder in the gap, so they need 0.5–0.6 mm at minimum. Switching to a metal axle inside a printed sleeve dropped the requirement to 0.2–0.4 mm, since metal against plastic needs far less room. The more useful lesson: being squeezed along the axis jams a joint faster than a hole that is slightly too tight, so the rotating hub is made 0.2–0.5 mm shorter than the screw it turns on. Where a bit of friction is actually wanted, wave washers do it better than flat ones.",
-      "zh": "那个关节是连着打印出来的、留了 0.4mm 间隙，结果转不动：粉末烧结成型的零件表面有一层粗糙的皮，缝里还困着没清干净的粉，至少要留 0.5–0.6mm。改成金属轴配打印套筒之后，需求降到 0.2–0.4mm——金属对塑料需要的余量小得多。更有用的一条教训是：轴向被夹住比孔略紧更容易卡死，所以转动件的轮毂要做得比它转的那颗螺丝短 0.2–0.5mm。确实需要一点阻尼手感的地方，波形垫圈比平垫好用。"
+      "en": "- The failure: a joint printed pre-assembled with 0.4 mm of clearance would not turn — powder-sintered parts come out with a rough skin and trap loose powder in the gap; 0.5–0.6 mm is the minimum.\n- The change: a metal axle inside a printed sleeve drops the need to 0.2–0.4 mm — metal against plastic needs far less room.\n- The more useful lesson: being squeezed along the axis jams a joint faster than a slightly tight bore, so a rotating hub is made 0.2–0.5 mm shorter than the screw it turns on.\n- Where a bit of friction is actually wanted, wave washers do it better than flat ones.",
+      "zh": "- 事故：连着打印出来的关节留了 0.4mm 间隙，转不动——粉末烧结件表面有层粗糙的皮、缝里还困着粉，至少要 0.5–0.6mm。\n- 改法：金属轴配打印套筒，需求降到 0.2–0.4mm——金属对塑料的余量小得多。\n- 更有用的教训：轴向被夹比孔略紧更容易卡死，转动件的轮毂要比它转的螺丝短 0.2–0.5mm。\n- 确实要一点阻尼手感的地方，波形垫圈比平垫好用。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -2000,8 +2000,8 @@
       "zh": "把访谈练习里的智能床概念深化成「舒适度数据跟着人走」的系统方案，并做出中文展板。"
     },
     "body": {
-      "en": "The starting point was an adaptive bed for the problem Chinese speakers call renchuang — sleeping badly in any unfamiliar bed — reading pulse, temperature and pressure to adjust its shape and warmth automatically. The developed version goes further: a personal comfort profile is configured once and stored, and any connected device, not only a bed, adapts to it automatically, the way an Apple ID carries your settings onto a new phone. The value is portability across spaces rather than the bed itself. The board copy was rewritten in the dense, objective register of a design brief, replacing earlier drafts that leaned lyrical and slogan-like.",
-      "zh": "起点是一张解决「认床」问题的自适应床：读脉搏、体温、压力信号，自动调整形态和温度。深化之后的框架更进一步——个人舒适度配置预先存好，任何接入的设备（不限于床）都能自动适配，就像 Apple ID 把设置同步到一台新手机上。价值在于跨空间的可携带性，而不在床本身。展板文案按「设计概述」那种客观密实的文体重写，替换掉前几稿偏抒情的口号式写法。"
+      "en": "- The starting point: an adaptive bed for renchuang — sleeping badly in any unfamiliar bed — reading pulse, temperature and pressure to adjust its shape and warmth automatically.\n- The development: a personal comfort profile configured once and stored, with any connected device — not only a bed — adapting automatically, the way an Apple ID carries settings onto a new phone; the value is portability across spaces, not the bed itself.\n- The board copy was rewritten in the dense, objective register of a design brief, replacing earlier drafts that leaned lyrical and slogan-like.",
+      "zh": "- 起点：解决「认床」的自适应床——读脉搏、体温、压力信号，自动调整形态和温度。\n- 深化：个人舒适度配置预先存好，任何接入设备（不限于床）自动适配——像 Apple ID 把设置同步到新手机；价值在跨空间的可携带性，不在床本身。\n- 展板文案按设计概述的客观密实文体重写，替掉此前偏抒情的口号式稿。"
     },
     "tags": [
       { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
@@ -2015,8 +2015,8 @@
       "zh": "定了剪刀式连杆转轴用什么零件。"
     },
     "body": {
-      "en": "The joint is a ⌀10×4 mm disc turning on a shoulder screw — a screw with a ⌀4 smooth section before the M3 thread starts. That smooth section does two jobs at once: it is the surface the disc turns on, and its length sets the gap between the two plates. It anchors into the bottom disc with a brass insert melted into the plastic, or a hex nut trapped in a pocket.",
-      "zh": "关节是 ⌀10×4mm 的圆盘，转在塞打螺丝上——这种螺丝在 M3 螺纹之前有一段 ⌀4 的光杆。这段光杆一件干两件事：既是圆盘转动的轴面，它的长度又决定了两片之间的间隙。底盘那头用热熔进塑料的铜螺母，或者埋一颗六角螺母固定。"
+      "en": "- The choice: a ⌀10×4 mm disc turning on a shoulder screw — a screw with a ⌀4 smooth section before the M3 thread starts.\n- One part, two jobs: the smooth section is the surface the disc turns on, and its length sets the gap between the two plates.\n- Anchoring: a brass insert melted into the bottom disc, or a hex nut trapped in a pocket.",
+      "zh": "- 选定：⌀10×4mm 圆盘转在塞打螺丝上——这种螺丝在 M3 螺纹之前有一段 ⌀4 的光杆。\n- 一件两用：光杆既是圆盘转动的轴面，长度又定死两片之间的间隙。\n- 固定：底盘用热熔进塑料的铜螺母，或口袋里埋一颗六角螺母。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -2030,8 +2030,8 @@
       "zh": "裁定机器学习在这个项目里能用在哪、不能用在哪。"
     },
     "body": {
-      "en": "Reinforcement learning — training an agent by rewarding outcomes instead of telling it what to do — is a legitimate later upgrade for the people layer, replacing the crude 'take the best option nearby' rule those agents use now. It must never replace the hand-written rules on the building side: those rules are what a reviewer reads directly, and they are the argument. The first working version involves no learning at all — plain Python, a grid, and loops. The tool order was set: Python and NumPy first, then the plotting and data libraries, and only reach for reinforcement learning once the rule-based engine runs and the simple agents visibly look too stupid. The principle underneath: a method has to be pulled in by the problem, never grafted on because it looks good on an application.",
-      "zh": "强化学习——不直接告诉智能体该做什么，而是用结果奖励去训练它——可以留作人这一层的后期升级，替换掉它们现在用的「就近挑最好的」这条粗规则。但它永远不替换建筑那一侧的手写规则：那些规则是评审直接阅读的东西，它们本身就是论证。第一个能跑的版本完全不涉及学习——纯 Python、一张网格、几个循环。工具顺序定了下来：先 Python 和 NumPy，再是画图与数据处理的库，等规则引擎跑起来、简单智能体显得明显笨了，才轮到强化学习。背后的原则：方法要由问题拉出来，不能因为写在申请材料里好看就硬加。"
+      "en": "- The ruling: reinforcement learning (training by rewarding outcomes instead of giving instructions) may later upgrade the people layer, replacing the crude \"take the best option nearby\" rule.\n- The red line: it never replaces the hand-written rules on the building side — those rules are what a reviewer reads directly; they are the argument.\n- The order: the first working version involves no learning at all — plain Python, a grid, loops; reinforcement learning only once the rule engine runs and the simple agents visibly look too stupid.\n- The principle underneath: a method has to be pulled in by the problem, never grafted on because it looks good on an application.",
+      "zh": "- 裁定：强化学习（不下指令、用结果奖励去训练）可留作人这一层的后期升级，替换「就近挑最好」的粗规则。\n- 红线：永不替换建筑侧的手写规则——那些规则是评审直接阅读的东西，它们本身就是论证。\n- 顺序：第一个能跑的版本完全不涉及学习——纯 Python、一张网格、几个循环；等规则引擎跑起来、简单智能体显得明显笨了，才轮到强化学习。\n- 背后的原则：方法要由问题拉出来，不能因为写在申请里好看就硬加。"
     },
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
@@ -2045,8 +2045,8 @@
       "zh": "三条触手改成一条能抓的主臂加两条软触须。"
     },
     "body": {
-      "en": "Making all three fully motorised would have left each of them weak, so they were given different jobs instead: one tendon-driven arm that expresses and wraps, and two flexible feelers that sense and whip about on their own (a fibreglass or nitinol core inside silicone tube, one micro servo at the base — the springing back comes from the material itself, not from a motor). The same session settled a point of principle: this is not biomimicry. The object should look like a machine, and only the way it moves should read as living, so that behavior stays the one thing being tested. Touch is two capacitive channels per feeler, enough to tell which side was touched.",
-      "zh": "三条都做成全电机驱动的话，每条都会很弱，于是改成分工：一条肌腱驱动的主臂负责表达和缠绕，两条柔性触须负责感知和自己甩动（玻纤或镍钛芯外套硅胶管，根部一个微型舵机——回弹来自材料本身，不是电机）。同一轮还澄清了一条原则：这个项目不是仿生。外形就该看起来是机器，只有它的运动方式像活的，这样「行为」才是唯一被检验的变量。触摸感应做成每根触须两路电容通道，够分辨碰的是哪一侧。"
+      "en": "- The change: three fully motorised tentacles would each be weak, so they got different jobs — one tendon-driven arm that expresses and wraps, two flexible feelers that sense and whip about on their own.\n- The feelers: a fibreglass or nitinol core inside silicone tube, one micro servo at the base — the springing back comes from the material itself, not from a motor.\n- A principle settled the same session: this is not biomimicry — the object should look like a machine, with only the way it moves reading as alive, so behaviour stays the one thing being tested.\n- Touch: two capacitive channels per feeler, enough to tell which side was touched.",
+      "zh": "- 改法：三条都做成全电机驱动，每条都会很弱——改成分工：一条肌腱驱动的主臂负责表达和缠绕，两条柔性触须负责感知和自己甩动。\n- 触须做法：玻纤或镍钛芯外套硅胶管，根部一个微型舵机——回弹来自材料本身，不是电机。\n- 同轮澄清一条原则：不是仿生——外形就该看起来是机器，只有运动方式像活的，这样「行为」才是唯一被检验的变量。\n- 触摸：每根触须两路电容通道，够分辨碰的是哪一侧。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -2060,8 +2060,8 @@
       "zh": "把约 40 条文献攒成证据库，做成 14 页组会汇报，关键引文逐条核对。"
     },
     "body": {
-      "en": "The evidence covers five dimensions: how beds get used for things other than sleeping, sleep pain points in China compared with elsewhere, purchase decision factors, emotional needs, and smart-home acceptance and privacy. Checking the citations by hand caught one wrong author affiliation and led to two weak references from non-core journals being cut. For population segmentation I dropped the matrix diagram in favour of a plain two-column evidence-to-population table (nine candidate groups, four of them highlighted), plus a page on age-specific sleep traits across three adult life phases (19–33 / 34–53 / 54+). A mid-course self-check found the deck only about two thirds done — missing the segmentation, the translation from pain points to needs, and users' own words — so those were added before it was finalised.",
-      "zh": "证据覆盖五个维度：床在睡觉之外的多场景使用、中外睡眠痛点对比、购买决策因素、情感需求，以及智能家居的接受度与隐私顾虑。逐条核对引文时改正了一处作者单位错误，也据此删掉两条非核心期刊的弱引用。人群分层放弃了矩阵图，改成「证据 → 人群」两栏表（九个候选人群，其中四个重点标出），另加一页按 19–33 / 34–53 / 54 岁以上三个人生阶段划分的年龄睡眠特征。中途自查发现这一版只做到六七成——缺人群细分、缺从痛点到需求的转译、缺用户原话——补齐之后才定稿。"
+      "en": "- Five dimensions of evidence: non-sleep uses of the bed, Chinese versus global pain points, purchase decision factors, emotional needs, smart-home acceptance and privacy.\n- Citations checked by hand: one wrong author affiliation corrected, two weak references from non-core journals cut.\n- Segmentation dropped the matrix diagram for a plain evidence-to-population table (nine candidate groups, four highlighted), plus a page of age-specific sleep traits across three adult phases (19–33 / 34–53 / 54+).\n- A mid-course self-check found the deck only two-thirds done — missing the segmentation, the pain-point-to-needs translation, and users' own words — finalised only after those were added.",
+      "zh": "- 证据覆盖五个维度：床在睡觉之外的用途、中外睡眠痛点对比、购买决策因素、情感需求、智能家居接受度与隐私。\n- 逐条核对引文：改正一处作者单位错误，删掉两条非核心期刊的弱引用。\n- 人群分层放弃矩阵图，改「证据 → 人群」两栏表（九个候选、四个重点标出），另加一页三个人生阶段（19–33 / 34–53 / 54 岁以上）的年龄睡眠特征。\n- 中途自查发现只做到六七成——缺人群细分、缺痛点到需求的转译、缺用户原话——补齐之后才定稿。"
     },
     "tags": [
       { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
@@ -2075,8 +2075,8 @@
       "zh": "完成智能床项目首轮资料检索与竞品分析，定下四个市场空白作为设计切入点。"
     },
     "body": {
-      "en": "The project is a 2030 sleep-foresight study run jointly by Tsinghua University's Future Lab and DeRucci, a Chinese premium mattress brand. I mapped four tiers of competitors — Eight Sleep (temperature control), Sleep Number and Bryte (pneumatic adjustment), DeRucci's own T11+ all-in-one, and budget ecosystem products from Xiaomi and Huawei — and found that the industry shares one failure: over-intervention, with users complaining that the bed moves on its own after they fall asleep and wakes them up. Four gaps followed from that: restrained intelligence, meaning a system that knows when not to act; a form that reads as furniture rather than as an appliance; designing for the relationship between the two people in the bed instead of for a single optimised sleeper; and treating sleep as a ritual rather than a problem to be fixed. Deliverables were an annotated reading guide, an 18-page competitive analysis deck, and a feature comparison chart.",
-      "zh": "项目是清华大学未来实验室与慕思合作的 2030 智慧睡眠前瞻研究。梳理了四档竞品——Eight Sleep（控温）、Sleep Number 与 Bryte（气动调节）、慕思自家的 T11+ 一体机、小米华为生态里的低价产品——发现行业有一个共同问题：过度干预，用户抱怨床在人睡着之后自行移动，把人吵醒。据此提出四个空白：克制的智能，也就是知道什么时候不介入；形态上是家具感而不是家电感；把床上两个人的关系而不是被优化的单个睡眠者作为设计对象；把睡眠当作仪式，而不是一个待修复的问题。产出一份文献导读、一套 18 页竞品分析和一张竞品功能对照图。"
+      "en": "- The project: a 2030 sleep-foresight study run jointly by Tsinghua University's Future Lab and DeRucci, a Chinese premium mattress brand.\n- Four competitor tiers mapped: Eight Sleep (temperature control), Sleep Number and Bryte (pneumatic adjustment), DeRucci's own T11+ all-in-one, budget ecosystem products from Xiaomi and Huawei.\n- The industry's shared failure: over-intervention — users complain the bed moves on its own after they fall asleep and wakes them up.\n- Four gaps follow: restrained intelligence (a system that knows when not to act), a form that reads as furniture rather than appliance, designing for the relationship between the two people in the bed, and treating sleep as a ritual rather than a problem to fix.\n- Delivered: an annotated reading guide, an 18-page competitive analysis deck, a feature comparison chart.",
+      "zh": "- 项目背景：清华大学未来实验室与慕思（国内高端床垫品牌）合作的 2030 智慧睡眠前瞻研究。\n- 竞品梳理四档：Eight Sleep（控温）、Sleep Number 与 Bryte（气动调节）、慕思自家 T11+ 一体机、小米华为生态低价品。\n- 行业共同病：过度干预——用户抱怨床在人睡着之后自行移动，把人吵醒。\n- 据此定四个空白：克制的智能（知道什么时候不介入）、家具感而非家电感、以床上两个人的关系为设计对象、把睡眠当仪式而不是待修复的问题。\n- 产出：一份文献导读、18 页竞品分析、一张功能对照图。"
     },
     "tags": [
       { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
@@ -2090,8 +2090,8 @@
       "zh": "定下手指的销钉和肌腱用什么。"
     },
     "body": {
-      "en": "The pins are dumbbell-shaped and slide in from the side (⌀3×15 mm, waisted to 2.4–2.5 mm in the middle), with the slot they sit in turned perpendicular to the direction the tendon pulls — so nothing has to be pressed in and nothing can be pulled out, and the finger can be taken apart and repaired. The tendons are 0.4–0.5 mm braided fishing line rated 30–40 lb, running through 1.0–1.2 mm channels inside the printed segments and knotted into small cavities at the ends. The gaps between segments are graduated along the finger rather than kept equal.",
-      "zh": "销钉做成哑铃形、从侧面滑进去（⌀3×15mm，中段收细到 2.4–2.5mm），装它的槽口方向与肌腱拉力垂直——所以既不用压配，也不会被拉脱，手指随时能拆开维修。肌腱用 0.4–0.5mm 的编织鱼线（30–40 磅），穿过打印件内部 1.0–1.2mm 的通道，末端打结卡进预留的小腔里。指节之间的间隙沿手指做渐变分布，不是等距。"
+      "en": "- The pins: dumbbell-shaped, slid in from the side (⌀3×15 mm, waisted to 2.4–2.5 mm), their slot turned perpendicular to the tendon's pull — no press fit, cannot be pulled out, and the finger comes apart for repair.\n- The tendons: 0.4–0.5 mm braided fishing line rated 30–40 lb, running through 1.0–1.2 mm channels inside the printed segments, knotted into small cavities at the ends.\n- The gaps between segments are graduated along the finger rather than kept equal.",
+      "zh": "- 销钉：哑铃形、从侧面滑进去（⌀3×15mm，中段收细到 2.4–2.5mm），槽口方向与肌腱拉力垂直——不用压配、拉不脱，手指随时能拆开维修。\n- 肌腱：0.4–0.5mm 编织鱼线（30–40 磅），穿过打印件内部 1.0–1.2mm 的通道，末端打结卡进预留的小腔。\n- 指节之间的间隙沿手指做渐变分布，不是等距。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -2105,8 +2105,8 @@
       "zh": "比较了五种能张开收拢的结构，选定其中一种。"
     },
     "body": {
-      "en": "The candidates were: scissor linkages whose bars change length, angulated scissor units (the mechanism inside a Hoberman sphere — the bars are bent at an angle, which makes the whole ring grow and shrink outward), You–Pellegrino folding bars, Bennett spatial linkage rings, and walls of panels driven in phased groups. Angulated scissors won on a practical ground: it is the only one that stays parametric all the way from Grasshopper modelling into physics simulation, so changing a dimension does not mean rebuilding everything.",
-      "zh": "候选有五种：杆长可变的剪式连杆、角化剪式单元（Hoberman 球里的那套机构——杆是带折角的，使整个环能沿半径胀缩）、You–Pellegrino 折叠杆、Bennett 空间连杆环、以及分组按相位驱动的板墙。选角化剪式的理由很实际：只有它能一路参数化——从 Grasshopper 建模直接进物理模拟，改一个尺寸不必推倒重来。"
+      "en": "- Five candidates: scissor linkages with length-changing bars, angulated scissor units (the Hoberman-sphere mechanism — bent bars that let the whole ring grow and shrink radially), You–Pellegrino folding bars, Bennett spatial linkage rings, and walls of panels driven in phased groups.\n- Angulated scissors won on a practical ground: it is the only one that stays parametric all the way from Grasshopper modelling into physics simulation — change a dimension without rebuilding everything.",
+      "zh": "- 候选五种：杆长可变的剪式连杆、角化剪式单元（Hoberman 球里那套机构——带折角的杆让整个环沿半径胀缩）、You–Pellegrino 折叠杆、Bennett 空间连杆环、分组按相位驱动的板墙。\n- 选角化剪式，理由很实际：只有它能从 Grasshopper 建模到物理模拟全程参数化——改一个尺寸不必推倒重来。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -2120,8 +2120,8 @@
       "zh": "跑通了欠驱动手指的模拟——一根肌腱带动多个关节。"
     },
     "body": {
-      "en": "The Jansen leg simulation was finished first, on my own. For the finger: each segment is a rigid body, hinges are defined by two points the two bodies share, and the tendons are chains of springs routed through guide points; the wrap test passes. The constraint strengths were fixed in a hierarchy — anchors 10000, rigid bodies 1000, collisions 100, springs 1–3 — because they only behave once the orders of magnitude are clearly separated. Best configuration: four segments tapering 25/20/15/10 mm with three tendons. Friction makes the joints close one after another rather than all at once, and that lag should not be designed away — it is exactly what makes the motion read as alive.",
-      "zh": "先自己独立做完了 Jansen 腿。手指这边：每一节做成刚体，铰链用两个刚体共有的两个点来定义，肌腱是穿过导向点的一串弹簧，缠绕测试通过。约束强度定了个层级——锚点 10000、刚体 1000、碰撞 100、弹簧 1–3——数量级明显拉开它们才各司其职。最优方案是四节渐变指节（25/20/15/10mm）配三根肌腱。摩擦让关节一节接一节地依次合拢、而不是同时闭合，这个延迟不该被消掉——它恰恰是运动看起来像活的原因。"
+      "en": "- The Jansen walking-linkage leg was finished first, independently.\n- The finger: each segment a rigid body, hinges defined by two points the bodies share, tendons as chains of springs routed through guide points; the wrap test passes.\n- The key tuning: constraint strengths separated by orders of magnitude — anchors 10000, rigid bodies 1000, collisions 100, springs 1–3 — they only behave once clearly apart.\n- Best configuration: four tapering segments (25/20/15/10 mm) with three tendons.\n- A finding kept: friction closes the joints one after another rather than all at once, and that lag should not be designed away — it is what makes the motion read as alive.",
+      "zh": "- 先自己独立做完了 Jansen 仿生步行连杆腿。\n- 手指做法：每节一个刚体，铰链由两个刚体共有的两点定义，肌腱是穿过导向点的一串弹簧；缠绕测试通过。\n- 关键调参：约束强度按数量级拉开——锚点 10000、刚体 1000、碰撞 100、弹簧 1–3，拉不开就互相打架。\n- 最优配置：四节渐变指节（25/20/15/10mm）配三根肌腱。\n- 一条留下的发现：摩擦让关节一节接一节地合拢而不是同时闭合，这个延迟不该消掉——它正是运动像活的原因。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -2135,8 +2135,8 @@
       "zh": "开始学 Grasshopper 里的物理模拟。"
     },
     "body": {
-      "en": "Took an existing Kangaroo definition apart piece by piece — springs, anchors, the tool that lets you drag things while it runs, the solver — got the dragging working, and understood how constraints and solver actually fit together. Everything mechanical I simulated afterwards is built on this.",
-      "zh": "把一套现成的 Kangaroo 定义逐个组件拆开看懂——弹簧、锚点、运行中拖拽的工具、求解器——把拖拽调通，弄明白约束和求解器到底怎么配合。后面所有机构模拟都建立在这上面。"
+      "en": "- Took an existing Kangaroo definition (the physics engine inside Grasshopper) apart piece by piece: springs, anchors, the drag-while-running tool, the solver.\n- Got the dragging working and understood how constraints and solver actually fit together.\n- Everything mechanical simulated afterwards is built on this.",
+      "zh": "- 把一套现成的 Kangaroo（Grasshopper 里的物理求解插件）定义逐组件拆开看懂：弹簧、锚点、运行中拖拽的工具、求解器。\n- 把拖拽调通，弄明白约束和求解器到底怎么配合。\n- 后面所有的机构模拟都建立在这上面。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -2150,8 +2150,8 @@
       "zh": "定下机器的四个部件，并写出第一版实验方案。"
     },
     "body": {
-      "en": "Structurally it is four things: a bell-jar body, appendages, an eye stalk, and a base — with the functions ranked into 13 priorities and interaction split into living-alongside and direct-contact modes. The bell jar has to open outward in every direction at once, so push rods, a camera-style iris, and shape-memory alloy were all surveyed; Kresling origami was ruled out because it extends lengthwise rather than outward. The study, first draft: 5–8 participants, four accelerated life cycles each, sessions of about 37 minutes, using four established questionnaires alongside physiological signals, with behavior coded from video on an existing framework and predictions written out in advance for three kinds of participant.",
-      "zh": "结构上是四件东西：钟罩主体、触手、眼柄、基座——功能排成 13 项优先级，交互分成共居和直接接触两种模式。钟罩要能同时向四周张开，所以调研了推杆、相机光圈式虹膜、形状记忆合金三条路；Kresling 折纸被排除，因为它是纵向伸长而不是向外扩张。实验方案初稿：5–8 名被试，每人经历四个加速的生命周期，单场约 37 分钟，用四份成熟问卷配合生理信号，行为按现成框架从录像里编码，并事先为三类典型被试写好预测。"
+      "en": "- The structure fixed as four parts: a bell-jar body, appendages, an eye stalk, a base; functions ranked into 13 priorities, interaction split into living-alongside and direct-contact modes.\n- The bell jar must open outward in every direction at once: push rods, a camera-style iris and shape-memory alloy were surveyed; Kresling origami ruled out — it extends lengthwise rather than outward.\n- The study, first draft: 5–8 participants, four accelerated life cycles each, sessions of about 37 minutes; four established questionnaires alongside physiological signals, behaviour coded from video on an existing framework, predictions written in advance for three kinds of participant.",
+      "zh": "- 结构定为四件：钟罩主体、触手、眼柄、基座；功能排成 13 项优先级，交互分共居和直接接触两种模式。\n- 钟罩要能同时向四周张开：调研了推杆、相机光圈式虹膜、形状记忆合金三条路；Kresling 折纸排除——它是纵向伸长，不向外扩。\n- 实验方案初稿：5–8 名被试，每人经历四个加速的生命周期，单场约 37 分钟；四份成熟问卷配合生理信号，行为按现成框架从录像编码，并事先为三类典型被试写好预测。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -3175,8 +3175,8 @@
       "zh": "把研究问题定下来。"
     },
     "body": {
-      "en": "The question: under what conditions does a person come to feel about a non-living object the way they feel about a pet, and how does that show when they lose it. An early drift toward \"how do we make people sadder\" was corrected — death and rebirth are instruments for studying attachment, not the point of the piece. Several mechanics were settled: a new personality overwrites the old one instead of accumulating on top of it; the ending is a loss of control rather than a clean goodbye; the timing of death is unpredictable but preceded by visible signs of aging; and one rule the participant is never told — the more they interact with it, the sooner it dies.",
-      "zh": "问题是：人在什么条件下会对一个非生命的东西产生像对宠物那样的感情，失去它时又会如何表现。早期一度跑偏成「怎么让人更难过」，已经纠正——死亡和轮回是研究依恋的手段，不是作品的目的。定下几条机制：新人格覆写旧的，而不是叠加在上面；结局是失控，不是好好告别；死亡时间不可预测，但事先会有明显的衰老征兆；还有一条不告诉被试的规则——他们越是和它互动，它死得越快。"
+      "en": "- The question: under what conditions does a person come to feel about a non-living object the way they feel about a pet, and how does that show when they lose it.\n- One correction: an early drift toward \"how do we make people sadder\" — death and rebirth are instruments for studying attachment, not the point of the piece.\n- Mechanics settled: a new personality overwrites the old instead of accumulating; the ending is a loss of control, not a clean goodbye; the timing of death is unpredictable but preceded by visible signs of aging.\n- One rule the participant is never told: the more they interact with it, the sooner it dies.",
+      "zh": "- 问题定为：人在什么条件下会对一个非生命的东西产生像对宠物那样的感情，失去它时又会如何表现。\n- 纠偏一次：早期一度跑偏成「怎么让人更难过」——死亡和轮回是研究依恋的手段，不是作品的目的。\n- 定下机制：新人格覆写旧的、不叠加；结局是失控、不是好好告别；死亡时间不可预测，但事先有明显的衰老征兆。\n- 一条不告诉被试的规则：越是和它互动，它死得越快。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -3333,8 +3333,8 @@
       "zh": "项目立项，一次提了三个方向。"
     },
     "body": {
-      "en": "The starting point was watching people on the Chinese internet grieve after the GPT-4o update, mourning AI companions that had been changed out from under them. Three candidates came out of it: the Reincarnation Machine (attachment and a shared history), Presence (a device for remote company while working alone), and Unconscious Nudge (furniture that adjusts your state without you noticing). A template for pitching each one was set at the same time — narrative, system logic, physical expression. The Reincarnation Machine starts here.",
-      "zh": "起点是 GPT-4o 更新之后，中文互联网上很多人在哀悼被改掉的 AI 伴侣。由此提了三个候选方向：轮回机器（情感依恋与共同经历）、在场（一个人做事时远程陪伴的装置）、无意识助推（会在你察觉不到的情况下调节你状态的家具）。同时定下讲每个方案的模板：叙事、系统逻辑、物理表达。轮回机器就是从这里开始的。"
+      "en": "- The starting point: after the GPT-4o update, watching people on the Chinese internet mourn AI companions that had been changed out from under them.\n- Three candidates proposed: the Reincarnation Machine (attachment and shared history), Presence (a device for remote company while working alone), and Unconscious Nudge (furniture that adjusts your state without you noticing).\n- A pitch template fixed at the same time: narrative, system logic, physical expression. The Reincarnation Machine starts here.",
+      "zh": "- 起点：GPT-4o 更新之后，中文互联网上很多人在哀悼被改掉的 AI 伴侣。\n- 提出三个候选方向：轮回机器（情感依恋与共同经历）、在场（一个人做事时远程陪伴的装置）、无意识助推（在你察觉不到时调节你状态的家具）。\n- 同时定下讲方案的模板：叙事、系统逻辑、物理表达。轮回机器就是从这里开始的。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },

@@ -9,13 +9,22 @@ describe('受限 Markdown', () => {
     ]);
   });
 
-  it('池内既有条目解析后与原文逐字相同（这次改动不许动到老条目的呈现）', () => {
-    // 老条目正文里一个 Markdown 记号都没有——所以「一个段落、一段纯文本」是必须的结果。
+  it('池内条目正文全部分条（写作纪律 2026-07-31：分条列表，不堆成段）', () => {
+    // 旧版本此处断言「正文是无记号的纯段落」——那是 07-28 引入解析器时的兼容性快照。
+    // 2026-07-31 全池按新纪律重写成分条列表后，守的东西反过来：不许再出现成段散文。
+    // 同一条规则也在 log-guards 里（studio 发布前与构建期同一份），这里从解析层再卡一道。
     for (const e of getLogEntries()) {
       for (const text of [e.body.en, e.body.zh]) {
         const blocks = parseMarkdown(text);
-        expect(blocks.length, `${e.date} 被解析成了 ${blocks.length} 块`).toBe(1);
-        expect(blocks[0]).toEqual({ t: 'p', spans: [{ t: 'text', v: text }] });
+        expect(blocks.length, `${e.date} 正文为空`).toBeGreaterThan(0);
+        expect(
+          blocks.some((b) => b.t === 'p'),
+          `${e.date} 正文有成段散文`,
+        ).toBe(false);
+        expect(
+          blocks.some((b) => b.t === 'list'),
+          `${e.date} 正文没有分条列表`,
+        ).toBe(true);
       }
     }
   });
