@@ -322,8 +322,9 @@ describe('部件分类（控制面板用）', () => {
       seen.set(k, (seen.get(k) ?? 0) + 1);
     }
     expect([...seen.values()].reduce((a, b) => a + b, 0)).toBe(MACHINE_GROUPS.length);
-    // 环身 = 66 板 + 3 配件；传动 = 5 轮 + 5 杆 + 中间轴
-    expect(seen.get('rings')).toBe(69);
+    // 环身 = 66 板 + 2 配件（S1 两件脚配件；815 换源删掉了 729 时期的 S3 拱顶配件）；
+    // 传动 = 5 轮 + 5 杆 + 中间轴
+    expect(seen.get('rings')).toBe(68);
     expect(seen.get('drive')).toBe(11);
     expect(seen.get('frame')).toBe(1);
     // 小触手 = 四个关节化组；大触手是活件，不烘进 machine-mesh.bin

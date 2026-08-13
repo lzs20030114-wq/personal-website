@@ -88,8 +88,11 @@ describe('小触手：物理', () => {
         desync = Math.max(desync, Math.abs(angSeg2 - sa.theta));
       }
     }
-    // 摆幅传到了梢端（不是只有大节在动）
-    expect(maxX - minX).toBeGreaterThan(40);
+    // 摆幅传到了梢端（不是只有大节在动）——门槛按链总长取比例，不写死绝对值：
+    // 815 换源把大节 L1 从 62.3 缩到 48.7mm，梢端扫幅随几何等比例缩，
+    // 绝对门槛会在每次改模后误报。0.3 × 总长 ≈ 待机摆幅的下限留有余量。
+    const reach = SMALLARM.L1 + SMALLARM.LS + SMALLARM.L2;
+    expect(maxX - minX).toBeGreaterThan(0.3 * reach);
     // 小块与驱动角之间存在明显相位/角度差（刚性链才会恒等于驱动角）
     expect(desync).toBeGreaterThan(0.1);
   });
