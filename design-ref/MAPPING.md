@@ -639,3 +639,32 @@ Lab.05 有八组控件，§ 侧栏那套竖排一列量到 **939px**，而案例
 ### 14.5 守门测试
 
 `content.test.ts` 新增 2 项：四个主项目每个都在路由名单里（否则主页卡片指向 404，卡片 href 与 `generateStaticParams` 读的是同一份名单）／非主项目的 draft 不出路由。本条与 §12/§13（Lab.05 系列）并行开发，合并 master 后统计条以 vitest 实测为准 → **275**。
+---
+
+## 15. 项目 02 正文落地：作者供稿入池（2026-08-14）
+
+来源 = 用户提供的 `project_02_academic.md`（学术体，中英各节并排、各自成文）。**这是转录不是代写**——`content/work/project-ii/` 补齐 `index.mdx`（英文正文 + frontmatter `zh` 块）与 `index.zh.mdx`（中文正文），status 转 `published`，原 `IntentNote` 占位撤掉；项目 II 从「筹备中」页（§14.2）转正为完整案例页，筹备页自动只剩 03/04。
+
+### 15.1 标题处置：项目仍未定名
+
+供稿眉注明写「待定：主标题」——题名行「多物种共处空间中行为模式差异驱动的空间重构 / Spatial reconfiguration driven by behavioral divergence in multi-species shared space」是描述性副题，不是定名。处置：h1 沿用 **Project II / 项目二**，题名行作 frontmatter `summary`（= 案例页 lede，也顶掉主页 Stage 的 thesis 占位）；定名后标题连同 slug 一并改（CLAUDE.md 既定约定）。
+
+### 15.2 结构映射
+
+- 摘要按项目 01 版式作**开篇散文**，不占编号 section（供稿眉注「版式对齐项目一」）。
+- 编号 section 10 个（研究背景与问题 → 参考文献），两侧 h2 数目一致（守门卡）。英文侧标题照项目 01 用 sentence case。
+- 供稿的「项目信息」表是双语同格（`类型 / Type`），案例页按语言各渲一棵树，拆成**每侧各一张单语表**；角色/工具/时间同时进 frontmatter（左栏 MetaRail 吃这份），`date: 2026-06` 取供稿 Timeline 起点，「进行中」在表里。
+- **供稿无图——两侧零插槽**，插槽守门恒等式平凡成立。图插槽待作者供图后再加（加时两侧同步）。
+- MDX 陷阱排查过：正文多处 `z*` 不会被 markdown 配对成斜体（`*` 后跟标点/空格、非 left-flanking），CDP 实测 HTML 无 `<em>` 误伤。
+
+### 15.3 连带修正：框架字不再是项目 01 专属
+
+发布第二个项目暴露了三处「只有一个 published 条目」时代的硬编码：
+
+1. **案例页 hero/V.60 题注**（`app/(site)/work/[slug]/page.tsx`）：原 `COPY` 里 V.60 写死项目 01 的「生命周期」题注、hero 占位写死「整机主照」——项目 2 页会串台。改 `SLOT_COPY` 按 slug 取 + `SLOT_COPY_FALLBACK` 中性兜底（将来新发布的项目在补条目前不再借别的项目的题注）；`heroLive` 只有主图被活台架顶替的项目才有。项目 2 的 V.60 题注 = 「仿真演示视频——居家人猫场景」（取自供稿产出行），hero 占位 = 「主图 · 待供图」。
+2. **主页 Stage 面板**（`HomeScreens.tsx`）：`supplied = index === 0` 拆成两件事——thesis/Role/Tools 是否有真内容改由 `STAGE_CELLS`（按 slug 的紧凑串，格宽有限、frontmatter 原文太长，照项目 01 先例手工压缩）判断；预览主图的活台架仍只有项目 01（`liveMedia = index === 0`），项目 2 主图位保持「待作者供稿」占位。
+3. **统计条** 275 → **279**：`content.test.ts` 按 published 条目参数化（每条 4 项守门），项目 2 发布自动带进 4 项——不是新增测试文件。
+
+### 15.4 实测
+
+typecheck + 279 测试绿 + `vite build && next build` 过（`/work/project-ii` 进 SSG 名单）；CDP（生产构建）：EN/中文各 10 个编号 section、语言切换 + 刷新记忆正常、中文侧项目信息表 8 格可见、项目 2 页 0 canvas（无活台架）、主页 Stage 出项目 2 summary 与 Role/Tools 真内容、无 pageerror（唯一 console 404 是站上本就没有的 favicon.ico，既有情况）。

@@ -1,13 +1,133 @@
 ---
 title: 'Project II'
 slug: project-ii
-date: 2026-07
+date: 2026-06
 selected: true
 order: 2
-summary: '待盘点 — placeholder for the second main project.'
+summary: 'Spatial reconfiguration driven by behavioral divergence in multi-species shared space'
 role:
-  - 待盘点
-status: draft
+  - Concept
+  - System design
+  - Behavioral algorithms
+  - Implementation
+tools:
+  - Python / NumPy
+  - Matplotlib
+  - Blender / Grasshopper
+  - p5.js / three.js
+  - ffmpeg
+# 中文侧元数据（案例页有中英切换，published 条目必填）；中文正文见同目录 index.zh.mdx
+zh:
+  title: 项目二
+  summary: 多物种共处空间中行为模式差异驱动的空间重构
+  role:
+    - 概念
+    - 系统设计
+    - 行为算法
+    - 实现
+  tools:
+    - Python / NumPy
+    - Matplotlib
+    - Blender / Grasshopper
+    - p5.js / three.js
+    - ffmpeg
+status: published
 ---
 
-<IntentNote>占位：第二个主项目，盘点后替换。</IntentNote>
+{/* 正文取自作者供稿 project_02_academic.md（2026-08-14）英文侧——转录不代写。
+    项目尚未定名（供稿眉注「待定：主标题」）：标题暂用 Project II，
+    供稿的题名行作 summary/lede；定名后连 slug 一并改（CLAUDE.md）。
+    供稿无图——图插槽待作者供图后再加（加时两侧同步，content.test.ts 卡编号一致）。
+    摘要按项目 01 版式作开篇散文，不占编号 section。 */}
+
+Species sharing a single space differ systematically in movement dimensionality, body scale, and distance thresholds. Prevailing design practice resolves these differences through functional zoning, keeping the activity ranges of each species separate; this strategy avoids inter-species encounter and decouples spatial form from behavioral difference. This project proposes and tests the opposite hypothesis: if spatial components can read the behavioral divergence among co-present parties and reconfigure their own form accordingly, that divergence can be converted from a constraint to be resolved into a generative condition for form. The method is multi-agent simulation. Candidate scenarios are classified into three types of human–animal relationship, one of which — a human and a cat in a domestic setting — is developed into the simulation. Behavioral rules are drawn from empirical studies in animal behavior and environment–behavior research; spatial response is carried by a suspended net structure.
+
+## Background and research question
+
+Cross-species interior design carries a default solution: vertical stratification. Human furniture occupies the lower volume while cat-climbing elements ascend the walls, each species holding a non-overlapping band of height. The strategy is sound as engineering, but its cost is the elimination of bodily encounter between species — stratification reduces cohabitation to juxtaposition.
+
+The research question of this project is whether space can participate in cohabitation as a responding party rather than as a container. Specifically, if the units composing a space can sense the behavioral information left by co-present parties and actively change form, can inter-species behavioral divergence be continuously translated into change of spatial form.
+
+## Design position
+
+This project frames cross-species space not through scale competition (which body takes priority in occupying volume) but through volume redistribution: spatial volume is to be reallocated according to the free behavior of all parties, and the design objective is the transformation of spatial form rather than the adjudication of dominance between species.
+
+Under this framing, space carries no arbitration function. Spatial units do not judge the proper allocation of volume; they read the behavioral traces left by bodies — dwell hotspots, high-frequency paths, avoided regions — and shift volume toward the forms those traces indicate. The computational correlate is stigmergy, in which individuals coordinate indirectly through information deposited in the environment rather than through direct negotiation. The established correlate in the built environment is the desire path, where paving ultimately ratifies the shortcut worn in by users.
+
+## Scenario classification and selection
+
+Candidate scenarios were classified into three types, each corresponding to one human–animal relationship; together they form a gradient of co-presence intensity.
+
+**Domestic setting (human–cat): cohabitation.** Both parties remain in one room for extended periods; direct co-presence duration is the highest of the three types. Body scales differ markedly, yet the two share the same furniture and the same ceiling.
+
+**Pet square (human–dog): mediation.** The dog functions in this scenario not as the counterpart of the relationship but as a trigger for human-to-human contact. Civil inattention, Goffman's term for the default norm under which strangers withhold engagement, is legitimately suspended in a dog's presence; Whyte termed the linking of two strangers through an external object triangulation. What the space must chiefly handle in this scenario is the human relationship the animal switches on.
+
+**Urban residual space (human–wild animal): avoidance.** Both parties actively avoid co-presence; interaction occurs only at the level of traces (feeding points, corridors, rooftops, ruins). The animal's range expands as human space contracts, and conversely.
+
+The simulation takes the first type. The selection follows from a timescale constraint: the engine models bodily dynamics only within periods of simultaneous presence (see Method), so co-presence duration directly determines how much can be simulated. The first type has the highest such duration; the third has almost none; in the second, the core interaction runs between humans, with the animal serving only a trigger function, so modeling it would displace cross-species interaction as the object of study.
+
+Within the first type, the cat was selected over other companion animals on three grounds: the cat's three-dimensional mobility brings verticality into the scope of behavioral modeling; the human–cat size differential provides legible scale contrast; and the human–cat relationship contains no third-party mediation, so the objects of interaction are the two species themselves.
+
+All three types appear on the project boards; the simulation covers the first only.
+
+## Method
+
+The simulation adopts a dual-layer multi-agent architecture. The **behavioral layer** consists of two classes of body agents, human and cat, whose rules are drawn entirely from empirical research: interpersonal distance rules from Hall's proxemic measurements, stranger-interaction norms from Goffman's observational work, quantified dwelling behavior from the public-space studies of Whyte and Gehl, and feline space use and human–cat interaction rules from the animal-behavior literature (see Behavioral clauses). The **spatial layer** consists of ceiling-suspended components whose rules are authored within this project and which are licensed to perform morphological operations unavailable to real structures: merging, migrating, luring, splitting, dissolving. The two layers are held to deliberately asymmetric standards — the behavioral layer is empirically constrained while the spatial layer admits speculation — and this asymmetry constitutes the project's methodological boundary: speculation is confined to a single layer and anchored by the empirical one.
+
+The simulation operates at the scale of minutes, and its modeled variables are restricted to bodily dynamics: position, orientation, dwell duration, gaze direction, and movement path. Attendance decisions on the scale of days or weeks (whether to be present; long-term changes in willingness to stay) are excluded from the model.
+
+Decision-making in the spatial layer is utility-driven: each component computes a utility function over observable state — a quantified assessment of how desirable the current situation is to that component — and different components hold different utility dispositions. The utility of some components rises as the two bodies approach each other; that of others rises as neglected regions come into use. Under a single situation, component objectives may be mutually exclusive.
+
+Component input is not instantaneous body position but the accumulation and decay of behavioral traces. Traces deepen with use and fade with disuse, and constitute the sole information channel between the spatial and behavioral layers. From this follows the phenomenon of central interest to the project — hysteresis: a component that has changed form in response to traces does not revert upon the bodies' departure, because traces decay more slowly than bodies exit; even if the behavioral layer returns to its original configuration, spatial form does not return to its initial state.
+
+## Formal definition of interaction events
+
+All interaction outcomes are classified into four formally defined event types, which serve as reward terms in the engine and as evaluation metrics:
+
+- **Co-gazing**: both parties oriented toward the same visual target, height differential permitted;
+- **Co-warmth**: one party enters and remains within the other's 0.5–1.5m comfort band, without physical contact;
+- **Co-touch**: physical contact occurs; the escalated state of co-warmth;
+- **Crossing**: one party's movement path passes through the other's body domain.
+
+A **null event** is additionally defined: a signal sent and unanswered. Null events are not treated as invalid data but as the trigger condition for spatial-layer intervention — where the behavioral layer's invitation fails is precisely where the spatial layer's luring operation applies.
+
+## Behavioral clauses and the interaction matrix
+
+Behavioral-layer rules are organized as numbered clauses: C1–C8 for the cat, H3–H4 for the human, each corresponding to an empirical finding. The cat's high-perch avoidance rule (C3) derives from Hirsch et al. (2025), a behavioral observation of 27 domestic cats in a Swedish cat café, which found that during high-visitor periods cats significantly preferred elevated shelving and concealment.
+
+The clauses yield the two axes of the interaction matrix. The cat axis takes three states, following the branching logic internal to the adult-cat clauses: a stranger state (governed by C1/C6, with a latency period before first approach), a familiar state (C2), and a high-perch avoidance state (C3, triggered when local human density exceeds a threshold). The human axis takes three behaviors: passing (the speed and density rules of H3/H4), focused dwelling (the attention state defined in C4), and active invitation (C5, the slow-blink or dual-modal visual-vocal signal). C8 remains outside the matrix as a global modulator, sorting individuals into avoidant and proactive types and adjusting transition probabilities and temporal parameters across all cells.
+
+The crossed axes produce nine cells, each holding one trigger rule and one dominant event. Three cells illustrate the matrix's explanatory reach. Familiar × passing: a familiar person's path enters within 0.5m of the cat, the cat holds position, and a crossing completes; paired with stranger × passing — identical geometry, opposite outcome — it provides the minimal evidential unit for the claim that relationship state alters spatial right-of-way. High-perch avoidance × passing: the cat occupies height, the person passes below, and interaction reduces to co-gazing across a height differential; this cell translates directly into a structural requirement, since a perch fixed above 2m prevents escalation, and the net's capacity to lower a perch into the overlap band (0.4–1.2m, the interval where the two species' body heights coincide) is the exit this cell requires.
+
+Only one of the nine cells contains a genuine inter-clause conflict: high-perch avoidance × active invitation, where the approach pull of C5 and the avoidance push of C3 act simultaneously and the source clauses provide no rule of combination. This project defines the outcome of that cell as an equilibrium height z* on the vertical axis rather than a binary result, on the grounds of Miller's (1944) approach-avoidance gradient model — the avoidance gradient runs steeper than the approach gradient, and the conflicted subject halts at their intersection — and the escape-economics framework of Ydenberg and Dill (1986). C8 typing adjusts gradient steepness without altering the existence of the equilibrium solution. The z* coordinate at which a cat repeatedly hovers simultaneously constitutes spatial-layer input: lowering a perch to z* is the point of application of the luring operation. The rule of combination for this cell is authored within this project and constitutes the original portion of the behavioral algorithm layer.
+
+## The spatial body
+
+The interaction medium is the ceiling. The structural scheme is a passive net–winch system: a net suspended beneath a ceiling-mounted winch array, one winch per attachment point, with the combination of cable lengths ℓᵢ determining net morphology. Four canonical morphologies are established: a uniform length field produces a flat canopy; center elongation produces a hanging pocket; edge elongation produces a tunnel arched at mid-span; ring elongation produces a half-enclosing wrap. All four morphologies fall within the 0.4–1.2m overlap band.
+
+The net is a passive component containing no actuated members; its morphology is fully determined by the cable-length field, and its kinematics are therefore fully solvable — given a length vector, the net form can be computed. Four criteria governed the selection of the structural scheme: cellular modularity, fully solvable kinematics, support by a mathematical model or design tool, and publication as research methodology rather than as artwork. Candidates evaluated and excluded include pneumatic truss systems (rigid-member geometry inconsistent with draped textile morphology) and telescoping column systems (floor-mounted, in conflict with the ceiling-as-medium premise).
+
+The structural principle is cited; the research contribution of this project lies in the behavioral algorithm layer, that is, the rule system that drives the structure.
+
+## Technical implementation
+
+The core engine is a rule-based system in Python and NumPy; all rules are hand-written, human-readable clauses, with no dependence on sensors, computer vision, or hardware. Net morphology is computed with a mass–spring model, mathematically grounded in the force density method (Schek, 1974) and dynamic relaxation from the form-finding literature. Space is represented as a 2.5D layered grid in one-to-one correspondence with structural cells. Visualization rests on Matplotlib as the base layer; three-dimensional rendering is attached at both ends of the computational pipeline via Blender or Grasshopper (image input, CSV/JSON output), with intermediate stages remaining numerical. The web demonstration uses p5.js or three.js; video is exported through ffmpeg.
+
+## Project info
+
+| | |
+|---|---|
+| Type | Independent research · computational design |
+| Role | Concept, system design, behavioral algorithms, implementation |
+| Timeline | 2026.06 — ongoing |
+| Deliverables | Simulation engine, boards covering all three scenario types, video, web demonstration |
+
+## References
+
+- Goffman, E. (1963). *Behavior in Public Places*. Free Press.
+- Hall, E. T. (1966). *The Hidden Dimension*. Doubleday.
+- Hirsch, E. N., Navarro Rivero, B., & Andersson, M. (2025). Cats in a cat café: Individual cat behavior and interactions with humans. *Animals*, 15(22), 3233.
+- Miller, N. E. (1944). Experimental studies of conflict. In *Personality and the Behavior Disorders*. Ronald Press.
+- Schek, H.-J. (1974). The force density method for form finding and computation of general networks. *Computer Methods in Applied Mechanics and Engineering*, 3(1), 115–134.
+- Whyte, W. H. (1980). *The Social Life of Small Urban Spaces*. Conservation Foundation.
+- Ydenberg, R. C., & Dill, L. M. (1986). The economics of fleeing from predators. *Advances in the Study of Behavior*, 16, 229–249.

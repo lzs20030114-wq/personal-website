@@ -139,11 +139,11 @@ export interface HomeLog {
   text: string;
 }
 
-// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-07-30 vitest 实测 275；
+// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-08-14 vitest 实测 279；
 // 迭代稿配色：Tests=绿 700、Kernels=紫 700、Demos=绿 600）
 const STATS = [
   { n: '04', label: 'Projects', color: 'var(--ink)' },
-  { n: '275', label: 'Tests green', color: 'var(--accent)' },
+  { n: '279', label: 'Tests green', color: 'var(--accent)' },
   { n: '02', label: 'Solver kernels', color: 'var(--accent-2)' },
   { n: '05', label: 'Live demos', color: 'var(--g600)' },
 ];
@@ -247,6 +247,22 @@ function StageMedia({
   );
 }
 
+/**
+ * 舞台面板 Role/Tools 格的紧凑串（格宽有限，frontmatter 原文太长，按供稿手工压缩）。
+ * 有条目 = 该项目已供稿：thesis 位显示内容池 summary。此前用 index===0 判断，
+ * 项目 02 供稿（2026-08-14）后不再只有项目 01。
+ */
+const STAGE_CELLS: Record<string, { role: string; tools: string }> = {
+  'reincarnation-machine': {
+    role: 'Solo — concept · mechanism · electronics · HRI study',
+    tools: 'Rhino / GH · scikit-fem · FDM / SLS · ESP32 · ELAN',
+  },
+  'project-ii': {
+    role: 'Concept · system design · behavioral algorithms · implementation',
+    tools: 'Python / NumPy · Matplotlib · Blender / GH · p5.js / three.js',
+  },
+};
+
 function StagePlaceholderPanel({
   work,
   index,
@@ -257,7 +273,10 @@ function StagePlaceholderPanel({
   active?: boolean;
 }) {
   // 四项目版式完全同等（红线）；未供稿的项目正文位仍是 [待作者供稿] 占位，不代写。
-  const supplied = index === 0;
+  const cells = STAGE_CELLS[work.slug];
+  const supplied = Boolean(cells);
+  // 预览主图的活台架仍只有项目 01（Lab.05 顶替；项目 02 未供图，主图位保持占位）
+  const liveMedia = index === 0;
   return (
     <>
       {supplied ? (
@@ -278,7 +297,7 @@ function StagePlaceholderPanel({
           一句话。
         </div>
       )}
-      {supplied ? (
+      {liveMedia ? (
         // 项目 01 临时主图 = Lab.05 整机台架（用户拍板 2026-07-27 先用活件顶上，
         // 07-29 从 Lab.04 五环换成整机——与案例页主图同一件，见 CaseHeroLive）；
         // data-ptm 让它同时是 goPT 转场的克隆源。作者供图后换回 StageMedia。
@@ -324,13 +343,13 @@ function StagePlaceholderPanel({
         <div style={{ padding: '9px 13px 0 0', borderRight: 'var(--hair)' }}>
           <div style={{ ...CELL_LABEL, marginBottom: 3 }}>Role</div>
           <div style={{ fontSize: 12, lineHeight: 1.45, color: 'var(--n700)' }}>
-            {supplied ? 'Solo — concept · mechanism · electronics · HRI study' : '[待作者供稿]'}
+            {cells ? cells.role : '[待作者供稿]'}
           </div>
         </div>
         <div style={{ padding: '9px 0 0 13px' }}>
           <div style={{ ...CELL_LABEL, marginBottom: 3 }}>Tools</div>
           <div style={{ fontSize: 12, lineHeight: 1.45, color: 'var(--n700)' }}>
-            {supplied ? 'Rhino / GH · scikit-fem · FDM / SLS · ESP32 · ELAN' : '[待作者供稿]'}
+            {cells ? cells.tools : '[待作者供稿]'}
           </div>
         </div>
       </div>

@@ -76,22 +76,50 @@ const mdxOptions = { mdxOptions: { remarkPlugins: [remarkGfm] } };
 
 /** 页面框架字（正文之外的固定词）；正文两侧各自成文，不在这里。 */
 const COPY = {
-  en: {
-    kicker: (n: string) => `Case study ${n} / 04`,
-    video:
-      'One full life cycle — birth, interaction, ageing, stop, blank — eight minutes compressed to ninety seconds',
-    heroLabel: 'machine hero photo · studio white sweep · B/W',
-    heroDesc: 'The machine, full view',
-    heroLive: '[stand-in] Lab.05 full assembly · live',
-  },
-  zh: {
-    kicker: (n: string) => `案例 ${n} / 04`,
-    video: '一个完整生命周期：诞生、互动、衰老、停止、空白——约 8 分钟压缩到 90 秒',
-    heroLabel: '整机主照 · 影棚白弧扫 · 黑白',
-    heroDesc: '整机全貌',
-    heroLive: '[顶替] Lab.05 整机活件',
-  },
+  en: { kicker: (n: string) => `Case study ${n} / 04` },
+  zh: { kicker: (n: string) => `案例 ${n} / 04` },
 } as const;
+
+/**
+ * hero / V.60 席位的题注是项目相关的框架字，按 slug 取——此前硬编码成项目 01 专属
+ * （V.60 写着「生命周期」），项目 02 发布（2026-08-14）后会串台。
+ * heroLive 只有主图被活台架顶替的项目才有。
+ */
+type SlotCopy = { video: string; heroLabel: string; heroDesc: string; heroLive?: string };
+const SLOT_COPY: Record<string, { en: SlotCopy; zh: SlotCopy }> = {
+  'reincarnation-machine': {
+    en: {
+      video:
+        'One full life cycle — birth, interaction, ageing, stop, blank — eight minutes compressed to ninety seconds',
+      heroLabel: 'machine hero photo · studio white sweep · B/W',
+      heroDesc: 'The machine, full view',
+      heroLive: '[stand-in] Lab.05 full assembly · live',
+    },
+    zh: {
+      video: '一个完整生命周期：诞生、互动、衰老、停止、空白——约 8 分钟压缩到 90 秒',
+      heroLabel: '整机主照 · 影棚白弧扫 · 黑白',
+      heroDesc: '整机全貌',
+      heroLive: '[顶替] Lab.05 整机活件',
+    },
+  },
+  'project-ii': {
+    en: {
+      video: 'Simulation video — the domestic human–cat scenario',
+      heroLabel: 'hero image · to be supplied',
+      heroDesc: 'Hero image',
+    },
+    zh: {
+      video: '仿真演示视频——居家人猫场景',
+      heroLabel: '主图 · 待供图',
+      heroDesc: '主图',
+    },
+  },
+};
+/** 将来新发布的项目在补进 SLOT_COPY 前先落到中性兜底，不再借别的项目的题注。 */
+const SLOT_COPY_FALLBACK: { en: SlotCopy; zh: SlotCopy } = {
+  en: { video: 'Project video — to be supplied', heroLabel: 'hero image · to be supplied', heroDesc: 'Hero image' },
+  zh: { video: '项目视频——待供', heroLabel: '主图 · 待供图', heroDesc: '主图' },
+};
 
 /**
  * case study（Case-Modernist 稿）：全宽 header（kicker + 72px 标题 + summary）→
@@ -108,6 +136,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
   const caseNo = String(entry.order ?? 1).padStart(2, '0');
   // 主图暂用活台架顶替的项目（与主页预览位同一件；作者供图后删掉这一行即回占位块）
   const liveHero = slug === 'reincarnation-machine';
+  const sc = SLOT_COPY[slug] ?? SLOT_COPY_FALLBACK;
 
   return (
     <>
@@ -197,7 +226,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
                     padding: '0 16px',
                   }}
                 >
-                  <Pick en={COPY.en.heroLabel} zh={COPY.zh.heroLabel} />
+                  <Pick en={sc.en.heroLabel} zh={sc.zh.heroLabel} />
                 </span>
               </div>
             )}
@@ -206,7 +235,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
               en={
                 <FigCaption
                   id="Fig. 01"
-                  desc={liveHero ? COPY.en.heroLive : COPY.en.heroDesc}
+                  desc={(liveHero && sc.en.heroLive) || sc.en.heroDesc}
                   status="待拍摄"
                   lang="en"
                 />
@@ -214,7 +243,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
               zh={
                 <FigCaption
                   id="图 01"
-                  desc={liveHero ? COPY.zh.heroLive : COPY.zh.heroDesc}
+                  desc={(liveHero && sc.zh.heroLive) || sc.zh.heroDesc}
                   status="待拍摄"
                   lang="zh"
                 />
@@ -249,7 +278,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
             en={
               <VideoSlot
                 id="V.60"
-                caption={COPY.en.video}
+                caption={sc.en.video}
                 status={entry.video ? '可现产' : '待拍摄'}
                 src={entry.video?.src}
                 size="wide"
@@ -260,7 +289,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
             zh={
               <VideoSlot
                 id="V.60"
-                caption={COPY.zh.video}
+                caption={sc.zh.video}
                 status={entry.video ? '可现产' : '待拍摄'}
                 src={entry.video?.src}
                 size="wide"
