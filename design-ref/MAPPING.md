@@ -668,3 +668,36 @@ Lab.05 有八组控件，§ 侧栏那套竖排一列量到 **939px**，而案例
 ### 15.4 实测
 
 typecheck + 279 测试绿 + `vite build && next build` 过（`/work/project-ii` 进 SSG 名单）；CDP（生产构建）：EN/中文各 10 个编号 section、语言切换 + 刷新记忆正常、中文侧项目信息表 8 格可见、项目 2 页 0 canvas（无活台架）、主页 Stage 出项目 2 summary 与 Role/Tools 真内容、无 pageerror（唯一 console 404 是站上本就没有的 favicon.ico，既有情况）。
+---
+
+## 16. Lab.06 · 项目二皮肤单元台架 + /lab 按项目分组（2026-08-18）
+
+来源不是设计稿——是用户交接的**研究代码**：`项目二参考/HANDOFF_claude_code.md`（结构系统定义、键谱语法、冻结决定、协作规则）+ `skin_sim_v7_final.py`（唯一最终引擎）。用户一句话立项：「这个是我项目二的第一个lab」。工程细节与对照数字 = 项目二_皮肤单元lab.md；这里只记站上呈现与决定。
+
+### 16.1 内核：站上第三个（src/lib/space/）
+
+- v7 的 **1:1 移植**，不做内核改进（物理阶段已在 Python 侧收口）。批量跑分改步进式 `advance()` 供台架逐帧驱动，其余逐字。
+- 守门 = 与 Python 参考逐位对照（`skin-ref.json`，dump 脚本物理逐字复刻）：四单元全程位置偏差 ≈5e-10（= 基准舍入量级）、锁定键序列精确匹配。23 项测试。
+- 与 `src/lib/linkage` 平行、互不引用；连杆内核（封盘）零改。
+
+### 16.2 台架呈现（components/lab/SkinBench.tsx）
+
+- 四键谱并排一幅 SVG，照 v7 目录图（窗口、条纹、残影两帧、render_smooth 只用于绘图）；暗色适配走 token，**键线保留原稿 BOND 橙**（证据色，不并入绿/紫内核编码）。
+- 定步推进：RATE=110 步/s、每帧封顶 3 步——慢设备放慢不漂移（同 Lab.02/04 纪律）。跑完静置 3.2s 自动重播（每次重播 = 全新收缩，键锁定不可逆）。
+- 无拖拽（v7 无交互输入，不代设计）；reduced-motion 不自动播。控制条：运转 / 键线 / 重播 / 速度（播放倍率非物理量）。
+
+### 16.3 /lab 按项目分组
+
+- 新增 `ProjectRule` 分组头：Project I（Lab.01–05，两个连杆内核）/ Project II（Lab.06）——log 页先例（§8.10）：多项目共用一条主线，编号照页序连续（不另起 P2·01，锚点 #lab06 不与既有冲突）。
+- 项目二措辞与 log 页 `PROJECT_GROUPS` 同源（「Spatial simulation」，描述非标题，定名后一并改）。
+- 页头 five→six live instruments；页脚 05→06 instruments · 03 kernels；开头段改为按项目说明内核来历（原「Drag them」一句对 Lab.05/06 已不成立，顺带改准确）。
+
+### 16.4 主页连带
+
+- S2 Lab 卡第六张（Lab.06 · Contractile skin，SVG 家族绿顶边），网格 `lg:grid-cols-5`→`6`——顺带结清 §7.6 之后「小屏两列 5 张有一张单行」的待优化项（6 张两列正好铺满）。
+- 统计条：Tests 279→**302**（vitest 实测）、Solver kernels 02→**03**、Live demos 05→**06**。
+- Stage 轮播、项目卡、转场、log 全部不动。
+
+### 16.5 实测
+
+typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建）：/lab 六台并存 + 分组头呈现、Lab.06 step/r 推进、键锁定后键线出现、键线开关立即生效、重播归零、主页六卡 + 统计条正确、/archive /work/* /about 回归无 pageerror（唯一 404 仍是 favicon.ico，既有情况）。headless 软件渲染帧率极低导致推进慢是既档案化的环境现象（§13 同款），真机 60fps 下 RATE 成立。

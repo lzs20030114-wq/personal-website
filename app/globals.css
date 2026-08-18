@@ -2504,6 +2504,40 @@ button.log-heat__cell {
   font-variant-numeric: tabular-nums;
 }
 
+/* Lab.06 · 项目二皮肤单元（skin_sim_v7_final 目录图的暗色适配）：
+   条纹双色 = 原稿 GREEN/PALE；键线 = 原稿 BOND 橙的提亮版——证据色（滞回图同源），
+   有意不并入站内绿/紫内核编码：它标的是「锁定键」，不是内核家族。 */
+.lab-fig .skin-a {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3.4;
+  stroke-linecap: butt;
+}
+.lab-fig .skin-b {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 36%, transparent);
+  stroke-width: 3.4;
+  stroke-linecap: butt;
+}
+.lab-fig .skin-bond {
+  stroke: #e06a3e;
+  stroke-width: 1.3;
+  opacity: 0.9;
+}
+.lab-fig .skin-core {
+  stroke: color-mix(in srgb, var(--ink) 46%, transparent);
+  stroke-width: 2.2;
+}
+.lab-fig .skin-ceil {
+  stroke: color-mix(in srgb, var(--ink) 62%, transparent);
+  stroke-width: 3;
+}
+.lab-fig .skin-ghost {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 18%, transparent);
+  stroke-width: 1;
+}
+
 /* Stage 轮播图注：随片切换的入场（key 变化即重播；reduced-motion 停） */
 @keyframes stage-cap-in {
   from {

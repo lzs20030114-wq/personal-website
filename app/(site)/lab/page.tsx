@@ -6,14 +6,17 @@ import { ArchBench } from '../../../components/lab/ArchBench';
 import { TentacleBench } from '../../../components/lab/TentacleBench';
 import { RingsBench } from '../../../components/lab/RingsBench';
 import { MachineBench } from '../../../components/lab/MachineBench';
+import { SkinBench } from '../../../components/lab/SkinBench';
 
 export const metadata = { title: 'The lab' };
 
 /**
- * The lab（Lab-Modernist 稿 → MAPPING §7）：五台真求解器台架，深色语言与 case/log 一致。
+ * The lab（Lab-Modernist 稿 → MAPPING §7）：六台真求解器台架，深色语言与 case/log 一致。
  * ★ 版式逐项对稿：300px 定宽左栏 + 44px 间距；规格表竖排行（92px 标签列 + 发丝线分隔）；
  *   图框 3px 彩色顶线（2D 绿 / 3D 紫）+ 极淡填充；标题 72px；页脚两链。
- * 每台跑的是站内 TS 内核（src/lib/linkage，封盘零改），不是视频、不是二次实现。
+ * 每台跑的是站内 TS 内核，不是视频、不是二次实现：Lab.01–05 = src/lib/linkage（封盘零改，
+ * 项目一），Lab.06 = src/lib/space（项目二皮肤单元引擎，Python 研究代码的 1:1 移植）。
+ * 2026-08-18 起页面按项目分组（MAPPING §16）——log 页先例：多项目共用一条主线。
  */
 const KICKER: CSSProperties = {
   margin: 0,
@@ -42,6 +45,39 @@ const SPEC_KEY: CSSProperties = {
   paddingTop: 2,
 };
 const HAIR_14 = '1px solid color-mix(in srgb, var(--ink) 14%, transparent)';
+
+/** 项目分组头：台架从此按项目归组（Lab.01–05 = 项目一，Lab.06 = 项目二） */
+function ProjectRule({ label, sub }: { label: string; sub: string }) {
+  return (
+    <div
+      className="flex flex-wrap items-baseline justify-between"
+      style={{ gap: 24, padding: '44px 0 0' }}
+    >
+      <p
+        style={{
+          margin: 0,
+          fontSize: 13,
+          fontWeight: 800,
+          letterSpacing: '0.16em',
+          textTransform: 'uppercase',
+        }}
+      >
+        {label}
+      </p>
+      <span
+        style={{
+          fontSize: 11,
+          fontWeight: 600,
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          color: 'var(--n500)',
+        }}
+      >
+        {sub}
+      </span>
+    </div>
+  );
+}
 
 function Bench({
   no,
@@ -135,7 +171,7 @@ export default function LabPage() {
       <div className="shell pg-dark" data-pt-content>
         <header style={{ padding: '64px 0 40px', borderBottom: 'var(--hair)' }}>
           <div className="flex items-baseline justify-between" style={{ gap: 32 }}>
-            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · five live instruments</p>
+            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · six live instruments</p>
             <span style={LEGEND}>
               <span className="flex items-center" style={{ gap: 6 }}>
                 <span style={{ width: 9, height: 9, background: 'var(--accent)' }} />
@@ -174,11 +210,16 @@ export default function LabPage() {
             <line x1="0" y1="10" x2="150" y2="10" stroke="var(--accent-2)" strokeWidth="1.5" />
           </svg>
           <p style={{ fontSize: 19, lineHeight: 1.5, margin: '24px 0 0', maxWidth: '56ch' }}>
-            Every figure below runs the real solver — the same kernel that drives the hardware. Drag
-            them; nothing here is a video. Same kernel, same tests, same stops as the hardware
-            benches.
+            Every figure below runs a real solver — nothing here is a video. Project I&apos;s
+            benches run the same kernels, tests and stops as the hardware; Project II&apos;s bench
+            runs its structure engine, ported line-for-line from the research code.
           </p>
         </header>
+
+        <ProjectRule
+          label="Project I — Reincarnation machine"
+          sub="Lab.01–05 · two linkage kernels"
+        />
 
         <Bench
           no="01"
@@ -256,6 +297,28 @@ export default function LabPage() {
           <MachineBench />
         </Bench>
 
+        {/* 项目二尚未定名：与 log 页 PROJECT_GROUPS 同一措辞（描述而非标题），定名后一并改 */}
+        <ProjectRule
+          label="Project II — Spatial simulation"
+          sub="Lab.06 · skin-unit engine"
+        />
+
+        <Bench
+          no="06"
+          title="Contractile skin units"
+          lede="Project II's structure system — a ceiling-hung strip contracts, surplus fabric gathers, and a pre-embedded bond map decides what it becomes: pocket, bulb, ledge or stairs."
+          accent="var(--accent)"
+          specs={[
+            ['Kernel', 'Position-based · Verlet + projection'],
+            ['Port', '1:1 from research code · parity ≤ 1e-9'],
+            ['Bonds', 'Zipper lock · permanent — hysteresis'],
+            ['Drive', 'One contraction ℓ · four bond maps'],
+            ['Render', 'SVG · smoothing is draw-only'],
+          ]}
+        >
+          <SkinBench />
+        </Bench>
+
         <footer
           className="flex flex-wrap items-baseline justify-between"
           style={{ gap: 32, padding: '26px 0 72px' }}
@@ -269,7 +332,7 @@ export default function LabPage() {
               color: 'var(--n500)',
             }}
           >
-            05 instruments · one kernel · all live
+            06 instruments · 03 kernels · all live
           </span>
           <span
             className="flex"
