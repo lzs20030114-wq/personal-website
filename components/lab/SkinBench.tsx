@@ -2,13 +2,23 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { SKIN_UNITS } from '../../src/lib/space/skin-data';
-import { SKIN, createSkinUnit, renderSmooth, type SkinUnit } from '../../src/lib/space/skin-unit';
+import {
+  SKIN,
+  SKIN_ROOT_FIX,
+  createSkinUnit,
+  renderSmooth,
+  type SkinUnit,
+} from '../../src/lib/space/skin-unit';
 import { useBenchLoop } from './useBenchLoop';
 
 /**
  * Lab.06 · 项目二第一台：收缩张紧外皮单元（skin_sim_v7_final.py 的目录图，活体版）。
  * 内核 = src/lib/space/skin-unit（v7 的 1:1 移植，物理已在 Python 侧收口）；
  * 本文件只做 DOM 接线与暗色渲染——四个键谱并排，同一收缩协议同时推进。
+ *
+ * 台架跑的是 v7 + 站方根部修正（SKIN_ROOT_FIX：芯不可穿透 + 根部缓冲料硬贴轴——
+ * 用户 2026-08-18 看真机拍板「没被键拉起的地方贴着最开始的轴」，对照手绘定案；
+ * 默认关，Python 对照守门跑的仍是 v7 逐字路径）。
  *
  * 推进是定步的：协议以 step 为时钟（r、外压衰减、拉链纪律解除全按 step 索引），
  * 按 RATE steps/s 折算真实时间、每帧封顶 MAX_STEPS_PER_FRAME——慢设备上表现为
@@ -107,7 +117,7 @@ export function SkinBench({
     const units: UnitView[] = SKIN_UNITS.map((def, u) => {
       const x0 = M + u * (UNIT_W + GAP);
       const g = el('g');
-      const sim = createSkinUnit(def.spec);
+      const sim = createSkinUnit(def.spec, SKIN_ROOT_FIX);
       const sx = (wx: number): number => x0 + (wx - WX0) * S;
       const sy = (wy: number): number => 8 + (WY1 - wy) * S;
       // 天花线（皮从这里垂下）
@@ -170,7 +180,7 @@ export function SkinBench({
     let holdT = 0;
     const replay = (): void => {
       units.forEach((v, u) => {
-        v.sim = createSkinUnit(SKIN_UNITS[u].spec);
+        v.sim = createSkinUnit(SKIN_UNITS[u].spec, SKIN_ROOT_FIX);
         v.ghostDone = GHOST_STEPS.map(() => false);
         v.ghostEls.forEach((e) => e.setAttribute('d', ''));
       });

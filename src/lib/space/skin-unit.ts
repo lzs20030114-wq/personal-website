@@ -52,6 +52,26 @@ export interface SkinBuild {
   panels: SkinPanel[];
 }
 
+/**
+ * 站方可选修正（用户 2026-08-18 看真机拍板「根部不想被提拉起来，没被键拉起的地方
+ * 贴着最开始的轴」）。两项都默认关——默认路径 = v7 逐字，Python 对照不受影响：
+ * - coreWall：芯不可穿透（x ≥ 0 的单侧墙，只作用于自由节点）。v7 是纯 2D 剖面、
+ *   没建这条显然的物理事实，富余材料会从轴左侧穿出去鼓包——红圈事故的主因。
+ * - rootHug：键谱围合区之外的自由节点（根部缓冲料）向芯贴靠的弱吸附，
+ *   把根部富余压成贴轴的褶而不是离轴的弓。
+ */
+export interface SkinUnitOpts {
+  coreWall?: boolean;
+  rootHug?: number; // 每迭代向 x=0 靠拢的比例（0=关；1=硬贴轴）
+}
+
+/**
+ * 站上台架用的定案参数（对照手绘 P2 逐档实验：0.08 太弱——拉伸约束每迭代 55 次
+ * 会把缓冲拽回斜线；0.3 仍剩小漏斗；1.0 = 硬贴轴，形态直接从轴上长出）。
+ * 四单元锁定数在此参数下与 v7 逐一相同（2/9/11/11），拉链不受影响。
+ */
+export const SKIN_ROOT_FIX: Required<SkinUnitOpts> = { coreWall: true, rootHug: 1.0 };
+
 export function buildUnit(spec: SkinSpec): SkinBuild {
   const glued: number[] = [];
   const chains: SkinBond[][] = [];
@@ -114,9 +134,15 @@ export class SkinUnit {
   private lockedSet = new Set<number>();
   /** 每条链已锁定键的链内下标（升序 = 跨度降序），锁定时增量维护——热循环里不做 filter 分配 */
   private chainLocked: number[][];
+  private coreWall: boolean;
+  private rootHug: number;
+  /** 键谱围合区之外的自由节点（根部缓冲料）——rootHug 的作用对象，静态可知 */
+  readonly rootFree: number[] = [];
 
-  constructor(spec: SkinSpec) {
+  constructor(spec: SkinSpec, opts: SkinUnitOpts = {}) {
     this.spec = spec;
+    this.coreWall = opts.coreWall ?? false;
+    this.rootHug = opts.rootHug ?? 0;
     const { n, glued, chains, panels } = buildUnit(spec);
     this.n = n;
     this.glued = glued;
@@ -132,6 +158,18 @@ export class SkinUnit {
     this.freeMask = new Uint8Array(n).fill(1);
     for (const g of glued) this.freeMask[g] = 0;
     this.chainLocked = chains.map(() => []);
+    // 根部缓冲料 = 自由节点里不落在任何键谱围合区（链的最外键跨）内的那些
+    const inSpan = new Uint8Array(n);
+    for (const ch of chains) {
+      let lo = n;
+      let hi = 0;
+      for (const [i, j] of ch) {
+        lo = Math.min(lo, i);
+        hi = Math.max(hi, j);
+      }
+      for (let i = lo; i <= hi; i++) inSpan[i] = 1;
+    }
+    for (let i = 0; i < n; i++) if (this.freeMask[i] && !inSpan[i]) this.rootFree.push(i);
 
     this.coreLen = coreY(spec, SKIN.R0, this.ys);
     this.py.set(this.ys);
@@ -333,13 +371,24 @@ export class SkinUnit {
         }
       }
       this.pinGlued();
+      // ---- 站方可选修正（默认关，见 SkinUnitOpts）----
+      if (this.rootHug > 0) {
+        const k = this.rootHug;
+        for (let t = 0; t < this.rootFree.length; t++) {
+          const i = this.rootFree[t];
+          px[i] -= k * px[i]; // 根部缓冲料向芯贴靠（只动 x，不碰围合区）
+        }
+      }
+      if (this.coreWall) {
+        for (let i = 0; i < n; i++) if (this.freeMask[i] && px[i] < 0) px[i] = 0; // 皮不得穿芯
+      }
     }
     this.step = step + 1;
   }
 }
 
-export function createSkinUnit(spec: SkinSpec): SkinUnit {
-  return new SkinUnit(spec);
+export function createSkinUnit(spec: SkinSpec, opts?: SkinUnitOpts): SkinUnit {
+  return new SkinUnit(spec, opts);
 }
 
 /**

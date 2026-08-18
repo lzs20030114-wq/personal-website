@@ -312,6 +312,7 @@ export default function LabPage() {
             ['Kernel', 'Position-based · Verlet + projection'],
             ['Port', '1:1 from research code · parity ≤ 1e-9'],
             ['Bonds', 'Zipper lock · permanent — hysteresis'],
+            ['Roots', 'Hug the shaft · solid-core wall (author rev.)'],
             ['Drive', 'One contraction ℓ · four bond maps'],
             ['Render', 'SVG · smoothing is draw-only'],
           ]}

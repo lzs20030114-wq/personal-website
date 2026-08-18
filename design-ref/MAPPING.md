@@ -701,3 +701,7 @@ typecheck + 279 测试绿 + `vite build && next build` 过（`/work/project-ii` 
 ### 16.5 实测
 
 typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建）：/lab 六台并存 + 分组头呈现、Lab.06 step/r 推进、键锁定后键线出现、键线开关立即生效、重播归零、主页六卡 + 统计条正确、/archive /work/* /about 回归无 pageerror（唯一 404 仍是 favicon.ico，既有情况）。headless 软件渲染帧率极低导致推进慢是既档案化的环境现象（§13 同款），真机 60fps 下 RATE 成立。
+
+### 16.6 根部贴轴修正（2026-08-18 同日，用户看真机拍板）
+
+用户红圈：四单元根部被形态拖成离轴斜漏斗，配手绘「没被键拉起的地方贴着最开始的轴」。不是移植 bug（v7 本身即此几何），是设计层修订。落地为引擎可选项 `SkinUnitOpts`（`coreWall` 芯不可穿透 + `rootHug` 根部缓冲料贴轴），**默认关 = v7 逐字，Python 对照守门不受影响**；台架用定案 `SKIN_ROOT_FIX`（rootHug=1.0 硬贴轴——0.08/0.3 都会被每迭代 55 次的拉伸约束拽回斜线，实验记录在 项目二_皮肤单元lab.md §5）。四单元锁定数/集合与 v7 逐一相同，拉链不受影响。规格表加 Roots 行；统计条 302→**304**。

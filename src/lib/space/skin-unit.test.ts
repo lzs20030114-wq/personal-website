@@ -2,7 +2,14 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { SKIN_REF_NAMES, SKIN_UNITS } from './skin-data';
-import { SKIN, coreY, createSkinUnit, renderSmooth, type SkinUnit } from './skin-unit';
+import {
+  SKIN,
+  SKIN_ROOT_FIX,
+  coreY,
+  createSkinUnit,
+  renderSmooth,
+  type SkinUnit,
+} from './skin-unit';
 
 /**
  * 守门：TS 引擎 = skin_sim_v7_final.py 的 1:1 移植。
@@ -158,6 +165,35 @@ describe('skin unit 引擎公共行为', () => {
     expect(s.x[3]).toBeCloseTo((0 + 3 + 0) / 3, 12);
     // 物理数据不做美化：输入数组原样
     expect(px[3]).toBe(3);
+  });
+
+  it('站方根部修正（SKIN_ROOT_FIX，台架实际跑的路径）：贴轴、不穿芯、键照锁', () => {
+    // 用户 2026-08-18 拍板「没被键拉起的地方贴着最开始的轴」。跑到 step 1000
+    // （四单元的键在 step≤900 全部锁完，见参考检查点）即可断言全部性质。
+    for (const def of SKIN_UNITS) {
+      const R = ref.units[SKIN_REF_NAMES[def.key]];
+      const sim = createSkinUnit(def.spec, SKIN_ROOT_FIX);
+      for (let s = 0; s < 1000; s++) sim.advance();
+      // 键照锁：数量与集合都与 v7 一致（拉链不受修正影响；顺序可容差——几何变了）
+      expect(sim.locked.length, def.key).toBe(R.lockedSeq.length);
+      const key = (b: readonly number[]): string => `${b[0]}-${b[1]}`;
+      expect(new Set(sim.locked.map(key)), def.key).toEqual(new Set(R.lockedSeq.map(key)));
+      // 芯墙：全程投影后任何节点不越到轴左侧
+      for (let i = 0; i < sim.n; i++) expect(sim.px[i], `${def.key} node ${i}`).toBeGreaterThanOrEqual(0);
+      // 硬贴轴：根部缓冲料（键谱围合区之外的自由节点）迭代收尾时 x 恰为 0
+      expect(sim.rootFree.length, def.key).toBeGreaterThan(0);
+      for (const i of sim.rootFree) expect(sim.px[i], `${def.key} root ${i}`).toBe(0);
+    }
+  });
+
+  it('SKIN_ROOT_FIX 是可选项：默认构造不带修正（v7 逐字路径，对照测试跑的就是它）', () => {
+    // 参考数据里 v7 全程会轻微越轴（实测 minX≈-0.005…-0.012）；默认路径若被
+    // 修正污染，这里与上方的逐位对照会先后变红。
+    const sim = createSkinUnit(SKIN_UNITS[3].spec);
+    for (let s = 0; s < 3; s++) sim.advance();
+    let minX = Infinity;
+    for (let i = 0; i < sim.n; i++) minX = Math.min(minX, sim.px[i]);
+    expect(minX).toBeLessThan(0); // v7 在 step 2 就有节点越到轴左（参考实测）
   });
 
   it('四形态终点确实互异（键谱是设计对象：同协议不同键位图 → 不同形态）', () => {
