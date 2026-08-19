@@ -38,7 +38,10 @@ const UNIT_H = (WY1 - WY0) * S; // 362
 const GAP = 8;
 const M = 10;
 const VB_W = M * 2 + UNIT_W * 4 + GAP * 3; // 764
-const VB_H = 8 + UNIT_H + 30; // 400
+// 底部留出两层：题名行（strips 下方）+ HUD 带（bl/br 角标叠在图框最底；br 两行
+// 读数按站宽折算约占 35 个 viewBox 单位）——2026-08-19 实测题名与 HUD 读数叠字，
+// 画布加高、题名抬离 HUD 带（58 仍与 br 的 R 读数擦边，78 干净）
+const VB_H = 8 + UNIT_H + 78; // 448
 
 interface UnitView {
   sim: SkinUnit;
@@ -142,7 +145,7 @@ export function SkinBench({
       // 题名（中 · 英，照 v7 目录）
       const label = el('text', 'label', g);
       label.textContent = `${def.zh} · ${def.en}`;
-      attrs(label, { x: x0 + UNIT_W / 2, y: VB_H - 10, 'text-anchor': 'middle' });
+      attrs(label, { x: x0 + UNIT_W / 2, y: VB_H - 52, 'text-anchor': 'middle' });
       const [smoothW, smoothP] = def.smooth ?? [3, 1];
       return {
         sim,
