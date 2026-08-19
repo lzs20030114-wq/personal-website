@@ -7,15 +7,17 @@ import { TentacleBench } from '../../../components/lab/TentacleBench';
 import { RingsBench } from '../../../components/lab/RingsBench';
 import { MachineBench } from '../../../components/lab/MachineBench';
 import { SkinBench } from '../../../components/lab/SkinBench';
+import { SkinSolidBench } from '../../../components/lab/SkinSolidBench';
 
 export const metadata = { title: 'The lab' };
 
 /**
- * The lab（Lab-Modernist 稿 → MAPPING §7）：六台真求解器台架，深色语言与 case/log 一致。
+ * The lab（Lab-Modernist 稿 → MAPPING §7）：七台真求解器台架，深色语言与 case/log 一致。
  * ★ 版式逐项对稿：300px 定宽左栏 + 44px 间距；规格表竖排行（92px 标签列 + 发丝线分隔）；
  *   图框 3px 彩色顶线（2D 绿 / 3D 紫）+ 极淡填充；标题 72px；页脚两链。
  * 每台跑的是站内 TS 内核，不是视频、不是二次实现：Lab.01–05 = src/lib/linkage（封盘零改，
- * 项目一），Lab.06 = src/lib/space（项目二皮肤单元引擎，Python 研究代码的 1:1 移植）。
+ * 项目一），Lab.06–07 = src/lib/space（项目二皮肤单元引擎，Python 研究代码的 1:1 移植；
+ * 07 是同一引擎的立体带呈现，几何烘焙 skin-solid + 复用 gl3d/camera3d 装备）。
  * 2026-08-18 起页面按项目分组（MAPPING §16）——log 页先例：多项目共用一条主线。
  */
 const KICKER: CSSProperties = {
@@ -171,7 +173,7 @@ export default function LabPage() {
       <div className="shell pg-dark" data-pt-content>
         <header style={{ padding: '64px 0 40px', borderBottom: 'var(--hair)' }}>
           <div className="flex items-baseline justify-between" style={{ gap: 32 }}>
-            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · six live instruments</p>
+            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · seven live instruments</p>
             <span style={LEGEND}>
               <span className="flex items-center" style={{ gap: 6 }}>
                 <span style={{ width: 9, height: 9, background: 'var(--accent)' }} />
@@ -300,7 +302,7 @@ export default function LabPage() {
         {/* 项目二尚未定名：与 log 页 PROJECT_GROUPS 同一措辞（描述而非标题），定名后一并改 */}
         <ProjectRule
           label="Project II — Spatial simulation"
-          sub="Lab.06 · skin-unit engine"
+          sub="Lab.06–07 · skin-unit engine"
         />
 
         <Bench
@@ -320,6 +322,22 @@ export default function LabPage() {
           <SkinBench />
         </Bench>
 
+        <Bench
+          no="07"
+          title="Skin units, solid"
+          lede="The same four bond maps, extruded into fabric bands with real thickness — the section cut shows the skin as material, and the whole catalog turns in space."
+          accent="var(--accent-2)"
+          specs={[
+            ['Kernel', 'Same 2D engine as Lab.06 · one protocol'],
+            ['Solid', 'Extruded band · fabric thickness 5'],
+            ['Camera', 'Orbit + presets — shared 3D rig'],
+            ['Bonds', 'Zipper rungs on both section cuts'],
+            ['Render', 'WebGL z-buffer · bake per frame'],
+          ]}
+        >
+          <SkinSolidBench />
+        </Bench>
+
         <footer
           className="flex flex-wrap items-baseline justify-between"
           style={{ gap: 32, padding: '26px 0 72px' }}
@@ -333,7 +351,7 @@ export default function LabPage() {
               color: 'var(--n500)',
             }}
           >
-            06 instruments · 03 kernels · all live
+            07 instruments · 03 kernels · all live
           </span>
           <span
             className="flex"
