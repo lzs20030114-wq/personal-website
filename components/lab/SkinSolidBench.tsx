@@ -6,7 +6,14 @@ import { FlatRenderer, bakeIndexed } from '../../src/lib/linkage/gl3d';
 import type { Vec3 } from '../../src/lib/linkage/solver3d';
 import { SKIN_UNITS, skinSiteOpts } from '../../src/lib/space/skin-data';
 import { SOLID, boxVerts, buildSolidTopology, fillSolidVerts } from '../../src/lib/space/skin-solid';
-import { SKIN, createSkinUnit, renderSmooth, type SkinUnit } from '../../src/lib/space/skin-unit';
+import {
+  SKIN,
+  createSkinUnit,
+  renderSmooth,
+  type SkinSpec,
+  type SkinUnit,
+  type SkinUnitOpts,
+} from '../../src/lib/space/skin-unit';
 import { useBenchLoop } from './useBenchLoop';
 
 /**
@@ -147,14 +154,57 @@ interface SolidUnit {
   verts: Float32Array;
 }
 
+/** 场景单元（units prop 用）：spec + 引擎选项 + 绘图平滑 */
+export interface SolidUnitDef {
+  spec: SkinSpec;
+  opts: SkinUnitOpts;
+  smooth: readonly [number, number];
+}
+
+interface SolidHud {
+  kicker: string;
+  title: string;
+  sub: string;
+  hint: string;
+  aria: string;
+}
+
+const DEFAULT_HUD: SolidHud = {
+  kicker: 'Lab.07 / Project II',
+  title: '皮肤单元 · 立体带',
+  sub: `剖面挤出 · 织物厚度 ${SOLID.THICK}px · 同一收缩协议`,
+  hint: '拖拽旋转 · 右键平移 · 滚轮缩放',
+  aria: '皮肤单元立体带：四个键谱的剖面挤出成有厚度的织物带，可拖拽旋转',
+};
+
 export function SkinSolidBench({
   active = true,
   onLight = false,
   controls = true,
+  units,
+  gapX = UNIT_GAP_X,
+  depth = SOLID.DEPTH,
+  pivot = PIVOT,
+  camScale = CAM_SCALE,
+  ceiling = 'per-unit',
+  rate = RATE,
+  hud: hudCopy = DEFAULT_HUD,
 }: {
   active?: boolean;
   onLight?: boolean;
   controls?: boolean;
+  /** 场景单元（默认 = Lab.06 那四台 × skinSiteOpts）；Lab.08 阵列传自己的序列 */
+  units?: readonly SolidUnitDef[];
+  gapX?: number;
+  /** 带深（「单元很窄」= 传小值） */
+  depth?: number;
+  pivot?: { x: number; y: number; z: number };
+  camScale?: number;
+  /** 天花：per-unit = 每单元一条板（Lab.07）；span = 一整条通长板（密排阵列用——
+   *  per-unit 板在小间距下会大面积共面重叠 → z-fight） */
+  ceiling?: 'per-unit' | 'span';
+  rate?: number;
+  hud?: SolidHud;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const apiRef = useRef<{
@@ -192,8 +242,8 @@ export function SkinSolidBench({
     const cam = new OrbitCamera({
       cx: 350,
       cy: 260,
-      pivot: PIVOT,
-      scale: CAM_SCALE,
+      pivot,
+      scale: camScale,
       pitch0: AXON_PITCH,
       yaw0: AXON_YAW,
       zoomMin: 0.5,
@@ -213,12 +263,14 @@ export function SkinSolidBench({
     }
     const R = renderer;
 
-    const units: SolidUnit[] = SKIN_UNITS.map((def, u) => {
-      const sim = createSkinUnit(def.spec, skinSiteOpts(def));
-      const [smoothW, smoothP] = def.smooth ?? [3, 1];
+    const defs: readonly SolidUnitDef[] =
+      units ?? SKIN_UNITS.map((d) => ({ spec: d.spec, opts: skinSiteOpts(d), smooth: d.smooth ?? [3, 1] }));
+    const scene: SolidUnit[] = defs.map((def, u) => {
+      const sim = createSkinUnit(def.spec, def.opts);
+      const [smoothW, smoothP] = def.smooth;
       return {
         sim,
-        offX: u * UNIT_GAP_X,
+        offX: u * gapX,
         smoothW,
         smoothP,
         emaX: null,
@@ -228,10 +280,18 @@ export function SkinSolidBench({
       };
     });
 
-    // 天花板条（静件，随构造一次烘焙上传）
-    for (const v of units) {
-      const ceil = boxVerts(v.offX + 30, -3, 0, 88, 3, SOLID.DEPTH / 2 + 16);
-      R.addMesh(`ceil${v.offX}`, bakeIndexed(ceil.verts, ceil.idx));
+    // 天花板条（静件，随构造一次烘焙上传）。span = 一整条通长板——
+    // 密排阵列下 per-unit 板会大面积共面重叠（z-fight）
+    if (ceiling === 'span') {
+      const x0 = -45;
+      const x1 = scene[scene.length - 1].offX + 75;
+      const ceil = boxVerts((x0 + x1) / 2, -3, 0, (x1 - x0) / 2, 3, depth / 2 + 16);
+      R.addMesh('ceil-span', bakeIndexed(ceil.verts, ceil.idx));
+    } else {
+      for (const v of scene) {
+        const ceil = boxVerts(v.offX + 30, -3, 0, 88, 3, depth / 2 + 16);
+        R.addMesh(`ceil${v.offX}`, bakeIndexed(ceil.verts, ceil.idx));
+      }
     }
     const IDENT = {
       ux: 1, uy: 0, uz: 0,
@@ -244,23 +304,24 @@ export function SkinSolidBench({
 
     const render = (): void => {
       R.beginFrame(cam);
-      for (const v of units) {
+      if (ceiling === 'span') R.drawMesh('ceil-span', IDENT, RAIL_DARK, RAIL_LITE);
+      for (const v of scene) {
         const { sim } = v;
         if (!v.emaX || !v.emaY) {
           v.emaX = Float64Array.from(sim.px);
           v.emaY = Float64Array.from(sim.py);
         }
         const p = renderSmooth(v.emaX, v.emaY, v.smoothW, v.smoothP);
-        fillSolidVerts(p.x, p.y, sim.n, v.offX, SOLID.DEPTH, SOLID.THICK, SOLID.SCALE, v.verts);
+        fillSolidVerts(p.x, p.y, sim.n, v.offX, depth, SOLID.THICK, SOLID.SCALE, v.verts);
         R.drawDynamicMesh(bakeIndexed(v.verts, v.topo.idxA), DARK_A, LITE_A);
         R.drawDynamicMesh(bakeIndexed(v.verts, v.topo.idxB), DARK_B, LITE_B);
         // 芯轨（长度随收缩变，逐帧小盒）
         const railLen = sim.coreLen * SOLID.SCALE;
-        const rail = boxVerts(v.offX - 3.4, railLen / 2, 0, 2.4, railLen / 2, 6);
+        const rail = boxVerts(v.offX - 3.4, railLen / 2, 0, 2.4, railLen / 2, Math.min(6, depth / 4));
         R.drawDynamicMesh(bakeIndexed(rail.verts, rail.idx), RAIL_DARK, RAIL_LITE);
-        R.drawMesh(`ceil${v.offX}`, IDENT, RAIL_DARK, RAIL_LITE);
+        if (ceiling !== 'span') R.drawMesh(`ceil${v.offX}`, IDENT, RAIL_DARK, RAIL_LITE);
         if (bondsRef.current && sim.locked.length) {
-          const hz = SOLID.DEPTH / 2;
+          const hz = depth / 2;
           const segs: { a: Vec3; b: Vec3 }[] = [];
           for (const [i, j] of sim.locked) {
             for (const z of [hz, -hz]) {
@@ -279,8 +340,8 @@ export function SkinSolidBench({
     let holdT = 0;
     let lastHud = '';
     const replay = (): void => {
-      units.forEach((v, u) => {
-        v.sim = createSkinUnit(SKIN_UNITS[u].spec, skinSiteOpts(SKIN_UNITS[u]));
+      scene.forEach((v, u) => {
+        v.sim = createSkinUnit(defs[u].spec, defs[u].opts);
         v.emaX = null;
         v.emaY = null;
       });
@@ -297,10 +358,10 @@ export function SkinSolidBench({
       } else {
         cam.tick(dt);
       }
-      const lead = units[0].sim;
+      const lead = scene[0].sim;
       let n = 0;
       if (runningRef.current && !lead.done) {
-        acc += dt * RATE * speedRef.current;
+        acc += dt * rate * speedRef.current;
         n = Math.floor(acc);
         if (n > MAX_STEPS_PER_FRAME) {
           n = MAX_STEPS_PER_FRAME;
@@ -308,7 +369,7 @@ export function SkinSolidBench({
         } else {
           acc -= n;
         }
-        for (let k = 0; k < n; k++) for (const v of units) v.sim.advance();
+        for (let k = 0; k < n; k++) for (const v of scene) v.sim.advance();
       } else if (runningRef.current && lead.done) {
         holdT += dt;
         if (holdT >= REPLAY_HOLD_S) replay();
@@ -316,7 +377,7 @@ export function SkinSolidBench({
       // 帧间 EMA（Lab.06 同款纪律：物理不动，只平滑画面时间轴）
       if (n > 0) {
         const a = 1 - Math.pow(0.45, n / 20);
-        for (const v of units) {
+        for (const v of scene) {
           if (!v.emaX || !v.emaY) continue;
           for (let i = 0; i < v.sim.n; i++) {
             v.emaX[i] += a * (v.sim.px[i] - v.emaX[i]);
@@ -325,12 +386,12 @@ export function SkinSolidBench({
         }
       }
       render();
-      const locked = units.reduce((s, v) => s + v.sim.locked.length, 0);
+      const locked = scene.reduce((s, v) => s + v.sim.locked.length, 0);
       const phase = lead.done ? '锁定 · 即将重播' : lead.step < 900 ? '收缩中' : '张紧 · 排泡';
       const key = `${lead.step}|${locked}|${phase}`;
       if (key !== lastHud) {
         lastHud = key;
-        setHud((h) => ({ ...h, r: units[units.length - 1].sim.r, step: lead.step, locked, phase }));
+        setHud((h) => ({ ...h, r: scene[scene.length - 1].sim.r, step: lead.step, locked, phase }));
       }
     };
 
@@ -407,12 +468,12 @@ export function SkinSolidBench({
           ref={canvasRef}
           width={1400}
           height={1040}
-          aria-label="皮肤单元立体带：四个键谱的剖面挤出成有厚度的织物带，可拖拽旋转"
+          aria-label={hudCopy.aria}
         />
         <div className="lab-hud tl">
-          <div style={{ color: 'var(--accent-2)' }}>Lab.07 / Project II</div>
-          <div>皮肤单元 · 立体带</div>
-          <div className="dim">剖面挤出 · 织物厚度 {SOLID.THICK}px · 同一收缩协议</div>
+          <div style={{ color: 'var(--accent-2)' }}>{hudCopy.kicker}</div>
+          <div>{hudCopy.title}</div>
+          <div className="dim">{hudCopy.sub}</div>
         </div>
         <div className="lab-hud br">
           <div className="num">r {hud.r.toFixed(2)}</div>
@@ -421,7 +482,7 @@ export function SkinSolidBench({
           </div>
         </div>
         <div className="lab-hud bl dim">
-          {hud.note || '拖拽旋转 · 右键平移 · 滚轮缩放'}
+          {hud.note || hudCopy.hint}
         </div>
       </div>
       {controls ? (

@@ -8,6 +8,7 @@ import { RingsBench } from '../../../components/lab/RingsBench';
 import { MachineBench } from '../../../components/lab/MachineBench';
 import { SkinBench } from '../../../components/lab/SkinBench';
 import { SkinSolidBench } from '../../../components/lab/SkinSolidBench';
+import { SkinArrayBench } from '../../../components/lab/SkinArrayBench';
 
 export const metadata = { title: 'The lab' };
 
@@ -173,7 +174,7 @@ export default function LabPage() {
       <div className="shell pg-dark" data-pt-content>
         <header style={{ padding: '64px 0 40px', borderBottom: 'var(--hair)' }}>
           <div className="flex items-baseline justify-between" style={{ gap: 32 }}>
-            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · seven live instruments</p>
+            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · eight live instruments</p>
             <span style={LEGEND}>
               <span className="flex items-center" style={{ gap: 6 }}>
                 <span style={{ width: 9, height: 9, background: 'var(--accent)' }} />
@@ -302,7 +303,7 @@ export default function LabPage() {
         {/* 项目二尚未定名：与 log 页 PROJECT_GROUPS 同一措辞（描述而非标题），定名后一并改 */}
         <ProjectRule
           label="Project II — Spatial simulation"
-          sub="Lab.06–07 · skin-unit engine"
+          sub="Lab.06–08 · skin-unit engine"
         />
 
         <Bench
@@ -338,6 +339,22 @@ export default function LabPage() {
           <SkinSolidBench />
         </Bench>
 
+        <Bench
+          no="08"
+          title="Gradient array"
+          lede="Twelve narrow bands in a row — bulb flange on the left, stepped box on the right, ten real units in between. Each bond map shifts a little; the transition grows out of the physics."
+          accent="var(--accent-2)"
+          specs={[
+            ['Array', '12 bands · bond length 0.10 → 0.32'],
+            ['Units', 'Every band runs the real engine'],
+            ['Endpoints', 'Lab.06 unit 2 → unit 4, verbatim'],
+            ['Rungs', '9 → 10 · one discrete step at mid'],
+            ['Render', 'Shared solid bench · WebGL'],
+          ]}
+        >
+          <SkinArrayBench />
+        </Bench>
+
         <footer
           className="flex flex-wrap items-baseline justify-between"
           style={{ gap: 32, padding: '26px 0 72px' }}
@@ -351,7 +368,7 @@ export default function LabPage() {
               color: 'var(--n500)',
             }}
           >
-            07 instruments · 03 kernels · all live
+            08 instruments · 03 kernels · all live
           </span>
           <span
             className="flex"

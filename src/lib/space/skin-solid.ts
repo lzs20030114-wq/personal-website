@@ -70,9 +70,9 @@ export function fillSolidVerts(
   py: ArrayLike<number>,
   n: number,
   offX: number,
-  depth = SOLID.DEPTH,
-  thick = SOLID.THICK,
-  scale = SOLID.SCALE,
+  depth: number = SOLID.DEPTH,
+  thick: number = SOLID.THICK,
+  scale: number = SOLID.SCALE,
   out?: Float32Array,
 ): Float32Array {
   const verts = out && out.length === 4 * n * 3 ? out : new Float32Array(4 * n * 3);

@@ -5,7 +5,7 @@
  */
 import { SKIN_ROOT_FIX, type SkinBond, type SkinSpec, type SkinUnitOpts } from './skin-unit';
 
-function fan(center: number, kFrom: number, kTo: number, kStep: number, rb: number): SkinBond[] {
+export function fan(center: number, kFrom: number, kTo: number, kStep: number, rb: number): SkinBond[] {
   const out: SkinBond[] = [];
   for (let k = kFrom; k < kTo; k += kStep) out.push([center - k, center + k, rb]);
   return out;
