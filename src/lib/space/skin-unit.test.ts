@@ -203,6 +203,20 @@ describe('skin unit 引擎公共行为', () => {
     // 顶/底面斜率（内角 vs 外角的 y 差）
     expect(Math.abs(sim.py[pa] - sim.py[outer[0]]) * 100).toBeLessThan(1.5);
     expect(Math.abs(sim.py[pb] - sim.py[outer[1]]) * 100).toBeLessThan(1.5);
+    // 顶/底面平直（用户 2026-08-19 拍板「不够平直」→ 压平后 y 波动 ≤2.5px；
+    // 此前 ±2.3px 的键间起伏当织物质感保留过一轮，被否）
+    for (const [a, b] of [
+      [outer[0], pa],
+      [pb, outer[1]],
+    ]) {
+      let mn = Infinity;
+      let mx = -Infinity;
+      for (let i = a; i <= b; i++) {
+        mn = Math.min(mn, sim.py[i]);
+        mx = Math.max(mx, sim.py[i]);
+      }
+      expect((mx - mn) * 100, `face ${a}-${b}`).toBeLessThan(2.5);
+    }
     // 梯挡键长全等（矩形的高）
     for (const [i, j, rb] of sim.locked) {
       const d = Math.hypot(sim.px[j] - sim.px[i], sim.py[j] - sim.py[i]);

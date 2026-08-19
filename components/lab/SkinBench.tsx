@@ -51,6 +51,9 @@ interface UnitView {
   /** 渲染平滑参数（per-unit，见 SkinUnitDef.smooth）——绘图专用，物理数据不动 */
   smoothW: number;
   smoothP: number;
+  /** 帧间指数平滑的画面位置（v7 GIF 同款纪律；null = 尚未初始化/刚重播） */
+  emaX: Float64Array | null;
+  emaY: Float64Array | null;
 }
 
 export function SkinBench({
@@ -151,15 +154,30 @@ export function SkinBench({
         x0,
         smoothW,
         smoothP,
+        emaX: null,
+        emaY: null,
       };
     });
 
-    const drawUnit = (v: UnitView): void => {
+    const drawUnit = (v: UnitView, nSteps = 0): void => {
       const { sim, x0 } = v;
       const sx = (wx: number): number => x0 + (wx - WX0) * S;
       const sy = (wy: number): number => 8 + (WY1 - wy) * S;
       attrs(v.coreEl, { x1: sx(0), y1: sy(0), x2: sx(0), y2: sy(-sim.coreLen) });
-      const p = renderSmooth(sim.px, sim.py, v.smoothW, v.smoothP); // 渲染平滑只用于绘图，物理数据不做美化
+      // 帧间指数平滑（v7 GIF 同款纪律，物理不动只平滑画面时间轴——成形期约束互相
+      // 拉扯，逐步位移实测最高 7px，直接画会抖）：GIF 是每 20 步一帧、旧帧保留
+      // 0.45，按本帧实际推进的步数折算等效系数，快慢设备观感一致。
+      if (!v.emaX || !v.emaY) {
+        v.emaX = Float64Array.from(sim.px);
+        v.emaY = Float64Array.from(sim.py);
+      } else if (nSteps > 0) {
+        const a = 1 - Math.pow(0.45, nSteps / 20);
+        for (let i = 0; i < sim.n; i++) {
+          v.emaX[i] += a * (sim.px[i] - v.emaX[i]);
+          v.emaY[i] += a * (sim.py[i] - v.emaY[i]);
+        }
+      }
+      const p = renderSmooth(v.emaX, v.emaY, v.smoothW, v.smoothP); // 渲染平滑只用于绘图，物理数据不做美化
       for (let s0 = 0, k = 0; s0 < sim.n - 1; s0 += SKIN.STRIPE, k++) {
         const s1 = Math.min(s0 + SKIN.STRIPE, sim.n - 1);
         let pts = '';
@@ -193,10 +211,12 @@ export function SkinBench({
         v.sim = createSkinUnit(SKIN_UNITS[u].spec, skinSiteOpts(SKIN_UNITS[u]));
         v.ghostDone = GHOST_STEPS.map(() => false);
         v.ghostEls.forEach((e) => e.setAttribute('d', ''));
+        v.emaX = null; // 帧间平滑重新起步（全新收缩，不许拖上一轮的画面尾巴）
+        v.emaY = null;
       });
       acc = 0;
       holdT = 0;
-      units.forEach(drawUnit);
+      units.forEach((v) => drawUnit(v));
     };
 
     let lastHud = '';
@@ -212,7 +232,7 @@ export function SkinBench({
           acc -= n;
         }
         for (let k = 0; k < n; k++) for (const v of units) v.sim.advance();
-        if (n > 0) units.forEach(drawUnit);
+        if (n > 0) units.forEach((v) => drawUnit(v, n));
       } else if (runningRef.current && lead.done) {
         holdT += dt;
         if (holdT >= REPLAY_HOLD_S) replay();
@@ -228,8 +248,8 @@ export function SkinBench({
       }
     };
 
-    units.forEach(drawUnit);
-    stateRef.current = { step, replay, redraw: () => units.forEach(drawUnit) };
+    units.forEach((v) => drawUnit(v));
+    stateRef.current = { step, replay, redraw: () => units.forEach((v) => drawUnit(v)) };
     return () => {
       stateRef.current = null;
     };

@@ -259,6 +259,28 @@ export class SkinUnit {
     }
   }
 
+  /** 把 a..b 的内部节点向 a→b 连线投影（垂足，0.5 混合）——只压横向偏差 */
+  private flattenToLine(a: number, b: number): void {
+    if (b < a) {
+      const t = a;
+      a = b;
+      b = t;
+    }
+    const { px, py } = this;
+    const ax = px[a];
+    const ay = py[a];
+    const ux = px[b] - ax;
+    const uy = py[b] - ay;
+    const L2 = Math.max(ux * ux + uy * uy, 1e-12);
+    for (let i = a + 1; i < b; i++) {
+      const t = ((px[i] - ax) * ux + (py[i] - ay) * uy) / L2;
+      const fx = ax + t * ux;
+      const fy = ay + t * uy;
+      px[i] += 0.5 * (fx - px[i]);
+      py[i] += 0.5 * (fy - py[i]);
+    }
+  }
+
   /** 锁定键入链内清单，保持链内下标升序（late 期可乱序锁定，需插入而非追加） */
   private addChainLock(c: number, idx: number): void {
     const arr = this.chainLocked[c];
@@ -423,6 +445,14 @@ export class SkinUnit {
             py[i] += cf * dy;
             px[j] -= cf * dx;
             py[j] -= cf * dy;
+          }
+          // 顶/底面压平：端角键锁定后（面才成立），把面内节点向「嘴角→端角连线」
+          // 投影——只压横向偏差（垂足），沿线分布仍归拉伸/直化管。键间富余的
+          // ±2.3px 起伏此前当织物质感保留，用户 2026-08-19 拍板「不够平直」，压掉。
+          const tip = ch[ch.length - 1];
+          if (lockedSet.has(tip[0] * 1024 + tip[1])) {
+            this.flattenToLine(ch[0][0], tip[0]);
+            this.flattenToLine(tip[1], ch[0][1]);
           }
         }
         // 端面拉直：找平每迭代把两个端角拽向顶/底面，把角旁的段抻长（实测 2.64px
