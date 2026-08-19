@@ -77,8 +77,13 @@ export interface SkinUnitOpts {
    * ② 底面找平——v7 只找平上层台面（猫站的面），底面只直化不找平（波动 6.5px）；
    * ③ 端角键距迭代末重申——找平/直化会把最外与最内键对压短（24→22.1px），
    *    端面弦 < 弧 ⇒ 必然外鼓 4px；末位重申让端面弦=弧 → 拉直。
+   *
+   * 强度（2026-08-19 Lab.08 过渡系列新增，用户「转变不平滑」返工）：
+   * true = 1.0（既有行为逐位不变），数字 ∈ (0,1) = 各项整形按比例減力——
+   * 硬投影变 blend、找平/重申系数乘强度。过渡中段用弱强度让「方」渐入，
+   * 而不是最后一格二值切换。
    */
-  boxSquare?: boolean;
+  boxSquare?: boolean | number;
 }
 
 /**
@@ -153,7 +158,8 @@ export class SkinUnit {
   private coreWall: boolean;
   private rootHug: number;
   private r1: number;
-  private boxSquare: boolean;
+  /** 方箱整形强度：0 = 关，(0,1) = 渐入（Lab.08 过渡中段），1 = 全量（阶梯方箱） */
+  private boxSquare: number;
   /** 根部缓冲料的连续段（boxSquare 用：段内节点在两端锚点之间均匀排布） */
   private rootRuns: [number, number][] = [];
   /** 键谱围合区之外的自由节点（根部缓冲料）——rootHug 的作用对象，静态可知 */
@@ -164,7 +170,8 @@ export class SkinUnit {
     this.coreWall = opts.coreWall ?? false;
     this.rootHug = opts.rootHug ?? 0;
     this.r1 = opts.r1 ?? SKIN.R1;
-    this.boxSquare = opts.boxSquare ?? false;
+    this.boxSquare =
+      opts.boxSquare === true ? 1 : typeof opts.boxSquare === 'number' ? opts.boxSquare : 0;
     const { n, glued, chains, panels } = buildUnit(spec);
     this.n = n;
     this.glued = glued;
@@ -430,14 +437,20 @@ export class SkinUnit {
       }
       this.pinGlued();
       // ---- 站方可选修正（默认关，见 SkinUnitOpts）----
-      if (this.boxSquare) {
+      if (this.boxSquare > 0) {
+        const sq = this.boxSquare; // 强度：<1 时各项整形按比例减力（Lab.08 过渡渐入）
         for (let c = 0; c < chains.length; c++) {
           const ch = chains[c];
           const lbi = this.chainLocked[c];
           // 嘴角贴轴：最外键对（链首）x=0——箱体内面就是轴。从 step 0 就锚，
           // 拉链照走（两角同在轴上时键距 = |Δy|，收缩推进自然入锁定窗口）
-          px[ch[0][0]] = 0;
-          px[ch[0][1]] = 0;
+          if (sq >= 1) {
+            px[ch[0][0]] = 0;
+            px[ch[0][1]] = 0;
+          } else {
+            px[ch[0][0]] *= 1 - sq;
+            px[ch[0][1]] *= 1 - sq;
+          }
           if (lbi.length >= 3) {
             // 底面找平：v7 只找平上层台面（lb 全跨的 i 侧），底面（j 侧）对称补上
             const a = ch[lbi[lbi.length - 1]][1];
@@ -445,7 +458,7 @@ export class SkinUnit {
             let mean = 0;
             for (let i = a; i <= b; i++) mean += py[i];
             mean /= b - a + 1;
-            for (let i = a; i <= b; i++) py[i] += 0.25 * (mean - py[i]);
+            for (let i = a; i <= b; i++) py[i] += 0.25 * sq * (mean - py[i]);
           }
           // 端角键距迭代末重申：找平/直化会把最外与最内键对压短（弦 < 弧 ⇒ 端面鼓）
           for (const t of [lbi[0], lbi[lbi.length - 1]]) {
@@ -456,7 +469,7 @@ export class SkinUnit {
             const dx = px[j] - px[i];
             const dy = py[j] - py[i];
             const rr = Math.max(Math.sqrt(dx * dx + dy * dy), 1e-9);
-            const cf = (0.5 * (rr - bd[2])) / rr;
+            const cf = (0.5 * sq * (rr - bd[2])) / rr;
             px[i] += cf * dx;
             py[i] += cf * dy;
             px[j] -= cf * dx;
@@ -467,25 +480,42 @@ export class SkinUnit {
           // ±2.3px 起伏此前当织物质感保留，用户 2026-08-19 拍板「不够平直」，压掉。
           const tip = ch[ch.length - 1];
           if (lockedSet.has(tip[0] * 1024 + tip[1])) {
-            this.flattenToLine(ch[0][0], tip[0]);
-            this.flattenToLine(tip[1], ch[0][1]);
+            this.flattenToLine(ch[0][0], tip[0], sq);
+            this.flattenToLine(tip[1], ch[0][1], sq);
           }
         }
         // 端面拉直：找平每迭代把两个端角拽向顶/底面，把角旁的段抻长（实测 2.64px
         // = 超伸 32%）→ 面弧 > 弦 ⇒ 必然外鼓 4px，段长重申的力道追不上。改为决定性
         // 投影——最内键锁定后（弦 = 键长已建立），面内节点直接向「两角连线等分点」
         // 靠拢：这是 v7 面板注释「端面弧长=键长 -> 必然拉直」的逻辑终点。
+        // 前提是弦≈弧（rb≈端面弧长）：rb 明显小于弧长时硬压 = 把富余材料逐迭代
+        // 挤出端面，形态直接崩（Lab.08 线稿系列 candC，Δ11.45）。故按几何判据
+        // 启用——面弦（锁定后 = rb）达到面弧的 93% 才投影（压缩 <7% 可被段长
+        // 吸收），且按 sq 混入；渐入档更圆的鼻端交给 rb 增长本身（弓高随弦弧比
+        // 连续收缩），投影只做收尾。
         for (let p = 0; p < panels.length; p++) {
           const a = panels[p][0];
           const b = panels[p][1];
           if (!lockedSet.has(a * 1024 + b)) continue;
+          const chord = Math.sqrt((px[b] - px[a]) ** 2 + (py[b] - py[a]) ** 2);
+          // 弦弧比 0.85→1.00 平滑渐入（smoothstep），再乘 sq：投影强度随几何
+          // 一致性连续爬坡，不在任何一级上二值启用
+          const ratio = chord / ((b - a) * SKIN.SEG);
+          const w = Math.min(1, Math.max(0, (ratio - 0.85) / 0.15));
+          const eff = sq >= 1 ? 1 : sq * w * w * (3 - 2 * w);
+          if (eff <= 0) continue;
           const m = b - a;
           for (let t = 1; t < m; t++) {
             // 硬投影（同 flattenToLine 的理由）：端面每帧收尾都严格是直线
             const tx = px[a] + ((px[b] - px[a]) * t) / m;
             const ty = py[a] + ((py[b] - py[a]) * t) / m;
-            px[a + t] = tx;
-            py[a + t] = ty;
+            if (eff >= 1) {
+              px[a + t] = tx;
+              py[a + t] = ty;
+            } else {
+              px[a + t] += eff * (tx - px[a + t]);
+              py[a + t] += eff * (ty - py[a + t]);
+            }
           }
         }
         // 根部缓冲料排整齐：在两端锚点（贴合端 ↔ 嘴角）之间均匀排布（硬投影）。
@@ -498,8 +528,15 @@ export class SkinUnit {
           const m = hi - lo;
           for (let i = a; i <= b; i++) {
             const t = (i - lo) / m;
-            px[i] = px[lo] + t * (px[hi] - px[lo]);
-            py[i] = py[lo] + t * (py[hi] - py[lo]);
+            const tx = px[lo] + t * (px[hi] - px[lo]);
+            const ty = py[lo] + t * (py[hi] - py[lo]);
+            if (sq >= 1) {
+              px[i] = tx;
+              py[i] = ty;
+            } else {
+              px[i] += sq * (tx - px[i]);
+              py[i] += sq * (ty - py[i]);
+            }
           }
         }
       }
