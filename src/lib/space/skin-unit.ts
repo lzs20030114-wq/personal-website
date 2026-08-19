@@ -154,6 +154,8 @@ export class SkinUnit {
   private rootHug: number;
   private r1: number;
   private boxSquare: boolean;
+  /** 根部缓冲料的连续段（boxSquare 用：段内节点在两端锚点之间均匀排布） */
+  private rootRuns: [number, number][] = [];
   /** 键谱围合区之外的自由节点（根部缓冲料）——rootHug 的作用对象，静态可知 */
   readonly rootFree: number[] = [];
 
@@ -190,6 +192,15 @@ export class SkinUnit {
       for (let i = lo; i <= hi; i++) inSpan[i] = 1;
     }
     for (let i = 0; i < n; i++) if (this.freeMask[i] && !inSpan[i]) this.rootFree.push(i);
+    for (let k = 0; k < this.rootFree.length; k++) {
+      const a = this.rootFree[k];
+      let b = a;
+      while (k + 1 < this.rootFree.length && this.rootFree[k + 1] === b + 1) {
+        b++;
+        k++;
+      }
+      if (a > 0 && b < n - 1) this.rootRuns.push([a, b]);
+    }
 
     this.coreLen = coreY(spec, SKIN.R0, this.ys);
     this.py.set(this.ys);
@@ -475,6 +486,20 @@ export class SkinUnit {
             const ty = py[a] + ((py[b] - py[a]) * t) / m;
             px[a + t] = tx;
             py[a + t] = ty;
+          }
+        }
+        // 根部缓冲料排整齐：在两端锚点（贴合端 ↔ 嘴角）之间均匀排布（硬投影）。
+        // 缓冲弧长超出可用轴距（阶梯下缓冲 14px 只有 4px 可用），硬贴轴后自由褶皱
+        // 会在嘴角背后拱成上下折返的疙瘩（实测 node 110 反而比嘴角高 5.8px），
+        // 平滑再把它带出来 = 用户圈的「左侧收紧」；均匀排布 = 手绘 P2 的直线入角。
+        for (const [a, b] of this.rootRuns) {
+          const lo = a - 1;
+          const hi = b + 1;
+          const m = hi - lo;
+          for (let i = a; i <= b; i++) {
+            const t = (i - lo) / m;
+            px[i] = px[lo] + t * (px[hi] - px[lo]);
+            py[i] = py[lo] + t * (py[hi] - py[lo]);
           }
         }
       }

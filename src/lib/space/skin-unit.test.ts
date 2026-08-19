@@ -222,6 +222,22 @@ describe('skin unit 引擎公共行为', () => {
       const d = Math.hypot(sim.px[j] - sim.px[i], sim.py[j] - sim.py[i]);
       expect(Math.abs(d - rb) * 100, `bond ${i}-${j}`).toBeLessThan(0.5);
     }
+    // 根部缓冲沿轴均匀排布（用户「左侧不要收紧，做到 P2 那样」）：贴轴 + 等距 +
+    // 单调——富余褶皱不许在嘴角背后拱成折返疙瘩
+    for (let k = 0; k < sim.rootFree.length; ) {
+      const a = sim.rootFree[k];
+      let b = a;
+      while (k + 1 < sim.rootFree.length && sim.rootFree[k + 1] === b + 1) {
+        b++;
+        k++;
+      }
+      k++;
+      const step = (sim.py[b + 1] - sim.py[a - 1]) / (b + 1 - (a - 1));
+      for (let i = a; i <= b; i++) {
+        expect(sim.px[i], `root ${i}`).toBe(0);
+        expect(sim.py[i], `root ${i}`).toBeCloseTo(sim.py[a - 1] + step * (i - (a - 1)), 9);
+      }
+    }
   });
 
   it('SKIN_ROOT_FIX 是可选项：默认构造不带修正（v7 逐字路径，对照测试跑的就是它）', () => {
