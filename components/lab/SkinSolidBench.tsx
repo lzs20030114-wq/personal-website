@@ -146,6 +146,8 @@ function slerpQ(a: Quat, b: Quat, t: number): Quat {
 interface SolidUnit {
   sim: SkinUnit;
   offX: number;
+  offZ: number;
+  ceilKey: string;
   smoothW: number;
   smoothP: number;
   emaX: Float64Array | null;
@@ -159,6 +161,22 @@ export interface SolidUnitDef {
   spec: SkinSpec;
   opts: SkinUnitOpts;
   smooth: readonly [number, number];
+}
+
+/**
+ * 排布（layouts prop 用）：单元沿 X 分列（gapX）或沿 Z 密排并拢（gapZ）+
+ * 该排布下的机位。传 ≥2 个即出「排列」切换；**切换只改渲染偏移与机位，
+ * 不重建引擎**（收缩进行到哪就在哪继续——并拢/分列看的是同一次收缩）。
+ * 只支持 ceiling='span'（per-unit 天花板条按挂载时 offX 烘死，不随排布走）。
+ */
+export interface SolidLayout {
+  key: string;
+  label: string;
+  gapX: number;
+  /** 沿深度的单元间距（并拢用；建议略大于 depth，贴平会让相邻剖口共面 z-fight） */
+  gapZ: number;
+  pivot: { x: number; y: number; z: number };
+  camScale: number;
 }
 
 interface SolidHud {
@@ -189,6 +207,7 @@ export function SkinSolidBench({
   ceiling = 'per-unit',
   rate = RATE,
   hud: hudCopy = DEFAULT_HUD,
+  layouts,
 }: {
   active?: boolean;
   onLight?: boolean;
@@ -205,6 +224,8 @@ export function SkinSolidBench({
   ceiling?: 'per-unit' | 'span';
   rate?: number;
   hud?: SolidHud;
+  /** 多排布（≥2 出「排列」切换，首项为默认）；省略 = 单排布（gapX/pivot/camScale） */
+  layouts?: readonly SolidLayout[];
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const apiRef = useRef<{
@@ -213,6 +234,7 @@ export function SkinSolidBench({
     setPersp: (on: boolean) => void;
     viewTo: (k: ViewKey) => void;
     viewHome: () => void;
+    setLayout: (li: number) => void;
   } | null>(null);
   const runningRef = useRef(true);
   const speedRef = useRef(1);
@@ -222,6 +244,7 @@ export function SkinSolidBench({
   const [persp, setPersp] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [view, setView] = useState<ViewKey>('axon');
+  const [layout, setLayout] = useState(0);
   const [hud, setHud] = useState<{ r: number; step: number; locked: number; phase: string; note: string }>({
     r: SKIN.R0,
     step: 0,
@@ -239,11 +262,18 @@ export function SkinSolidBench({
       setRunning(false);
     }
 
+    // 单排布 = 一条「默认排布」——多排布与否走同一条路径
+    const layoutList: readonly SolidLayout[] =
+      layouts && layouts.length
+        ? layouts
+        : [{ key: 'default', label: '', gapX, gapZ: 0, pivot, camScale }];
+    let layoutIdx = 0;
+
     const cam = new OrbitCamera({
       cx: 350,
       cy: 260,
-      pivot,
-      scale: camScale,
+      pivot: layoutList[0].pivot,
+      scale: layoutList[0].camScale,
       pitch0: AXON_PITCH,
       yaw0: AXON_YAW,
       zoomMin: 0.5,
@@ -270,7 +300,10 @@ export function SkinSolidBench({
       const [smoothW, smoothP] = def.smooth;
       return {
         sim,
-        offX: u * gapX,
+        // Z 取 ((n−1)/2 − u)：单元 0 在 +Z（轴测机位的近端）——分列的「左」= 并拢的「近」
+        offX: u * layoutList[0].gapX,
+        offZ: ((defs.length - 1) / 2 - u) * layoutList[0].gapZ,
+        ceilKey: `ceil-u${u}`,
         smoothW,
         smoothP,
         emaX: null,
@@ -280,17 +313,32 @@ export function SkinSolidBench({
       };
     });
 
+    /** 排布只改渲染偏移与机位——引擎不重建，收缩接着跑 */
+    const applyLayout = (li: number): void => {
+      layoutIdx = li;
+      const L = layoutList[li];
+      scene.forEach((v, u) => {
+        v.offX = u * L.gapX;
+        v.offZ = ((scene.length - 1) / 2 - u) * L.gapZ;
+      });
+      cam.retarget(L.pivot, L.camScale);
+    };
+
     // 天花板条（静件，随构造一次烘焙上传）。span = 一整条通长板——
-    // 密排阵列下 per-unit 板会大面积共面重叠（z-fight）
+    // 密排阵列下 per-unit 板会大面积共面重叠（z-fight）；每排布各烘一条
+    // （X/Z 范围随排布变），绘制时取当前排布那条
     if (ceiling === 'span') {
-      const x0 = -45;
-      const x1 = scene[scene.length - 1].offX + 75;
-      const ceil = boxVerts((x0 + x1) / 2, -3, 0, (x1 - x0) / 2, 3, depth / 2 + 16);
-      R.addMesh('ceil-span', bakeIndexed(ceil.verts, ceil.idx));
+      layoutList.forEach((L, li) => {
+        const n = scene.length;
+        const x1 = (n - 1) * L.gapX + 75;
+        const zHalf = ((n - 1) * L.gapZ) / 2 + depth / 2 + 16;
+        const ceil = boxVerts((-45 + x1) / 2, -3, 0, (x1 + 45) / 2, 3, zHalf);
+        R.addMesh(`ceil-span-${li}`, bakeIndexed(ceil.verts, ceil.idx));
+      });
     } else {
       for (const v of scene) {
         const ceil = boxVerts(v.offX + 30, -3, 0, 88, 3, depth / 2 + 16);
-        R.addMesh(`ceil${v.offX}`, bakeIndexed(ceil.verts, ceil.idx));
+        R.addMesh(v.ceilKey, bakeIndexed(ceil.verts, ceil.idx));
       }
     }
     const IDENT = {
@@ -304,7 +352,7 @@ export function SkinSolidBench({
 
     const render = (): void => {
       R.beginFrame(cam);
-      if (ceiling === 'span') R.drawMesh('ceil-span', IDENT, RAIL_DARK, RAIL_LITE);
+      if (ceiling === 'span') R.drawMesh(`ceil-span-${layoutIdx}`, IDENT, RAIL_DARK, RAIL_LITE);
       for (const v of scene) {
         const { sim } = v;
         if (!v.emaX || !v.emaY) {
@@ -312,19 +360,19 @@ export function SkinSolidBench({
           v.emaY = Float64Array.from(sim.py);
         }
         const p = renderSmooth(v.emaX, v.emaY, v.smoothW, v.smoothP);
-        fillSolidVerts(p.x, p.y, sim.n, v.offX, depth, SOLID.THICK, SOLID.SCALE, v.verts);
+        fillSolidVerts(p.x, p.y, sim.n, v.offX, depth, SOLID.THICK, SOLID.SCALE, v.verts, v.offZ);
         R.drawDynamicMesh(bakeIndexed(v.verts, v.topo.idxA), DARK_A, LITE_A);
         R.drawDynamicMesh(bakeIndexed(v.verts, v.topo.idxB), DARK_B, LITE_B);
         // 芯轨（长度随收缩变，逐帧小盒）
         const railLen = sim.coreLen * SOLID.SCALE;
-        const rail = boxVerts(v.offX - 3.4, railLen / 2, 0, 2.4, railLen / 2, Math.min(6, depth / 4));
+        const rail = boxVerts(v.offX - 3.4, railLen / 2, v.offZ, 2.4, railLen / 2, Math.min(6, depth / 4));
         R.drawDynamicMesh(bakeIndexed(rail.verts, rail.idx), RAIL_DARK, RAIL_LITE);
-        if (ceiling !== 'span') R.drawMesh(`ceil${v.offX}`, IDENT, RAIL_DARK, RAIL_LITE);
+        if (ceiling !== 'span') R.drawMesh(v.ceilKey, IDENT, RAIL_DARK, RAIL_LITE);
         if (bondsRef.current && sim.locked.length) {
           const hz = depth / 2;
           const segs: { a: Vec3; b: Vec3 }[] = [];
           for (const [i, j] of sim.locked) {
-            for (const z of [hz, -hz]) {
+            for (const z of [v.offZ + hz, v.offZ - hz]) {
               segs.push({
                 a: { x: v.offX + p.x[i] * SOLID.SCALE, y: -p.y[i] * SOLID.SCALE, z },
                 b: { x: v.offX + p.x[j] * SOLID.SCALE, y: -p.y[j] * SOLID.SCALE, z },
@@ -417,6 +465,10 @@ export function SkinSolidBench({
         cam.reset();
         render();
       },
+      setLayout: (li) => {
+        applyLayout(li);
+        render();
+      },
     };
 
     const onCtx = (ev: Event): void => ev.preventDefault();
@@ -459,6 +511,11 @@ export function SkinSolidBench({
   const goView = useCallback((k: ViewKey) => {
     setView(k);
     apiRef.current?.viewTo(k);
+  }, []);
+
+  const goLayout = useCallback((li: number) => {
+    setLayout(li);
+    apiRef.current?.setLayout(li);
   }, []);
 
   return (
@@ -548,6 +605,23 @@ export function SkinSolidBench({
               }}
             />
           </div>
+          {layouts && layouts.length > 1 ? (
+            <div className="grp">
+              <span className="k">排列</span>
+              <span className="seg">
+                {layouts.map((L, li) => (
+                  <button
+                    key={L.key}
+                    type="button"
+                    className={li === layout ? 'active' : undefined}
+                    onClick={() => goLayout(li)}
+                  >
+                    {L.label}
+                  </button>
+                ))}
+              </span>
+            </div>
+          ) : null}
           <div className="grp">
             <span className="k">视角</span>
             <span className="seg">

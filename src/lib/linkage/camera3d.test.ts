@@ -89,6 +89,22 @@ describe('OrbitCamera', () => {
     expect(w.zoom).toBe(0.5); // 下限
   });
 
+  it('retarget 换枢轴/基础缩放：姿态、zoom、pan 全不动（Lab.08 排列切换机位连续）', () => {
+    const c = cam0({ scale: 2 });
+    c.pointerDown(1, 100, 100, true); // 先积累一段 pan
+    c.pointerMove(1, 130, 80);
+    c.pointerUp(1);
+    c.retarget({ x: 10, y: 0, z: 0 }, 0.5);
+    expect(c.pivotPoint).toEqual({ x: 10, y: 0, z: 0 });
+    expect(c.viewScale).toBe(0.5); // zoom 仍 1，基础缩放已换
+    expect(c.pan).toEqual({ x: 30, y: -20 }); // pan 保留（reset 才清）
+    const p = c.project({ x: 10, y: 0, z: 0 }); // 新枢轴投到屏幕中心 + pan
+    expect(p.x).toBeCloseTo(30, 12);
+    expect(p.y).toBeCloseTo(-20, 12);
+    c.retarget({ x: 0, y: 0, z: 0 }); // 省略 scale = 只换枢轴
+    expect(c.viewScale).toBe(0.5);
+  });
+
   it('空闲自转：用户首次接管后永久停止；reset 复位姿态不复活自转', () => {
     const c = cam0({ autoYaw: 1 });
     c.tick(0.5);

@@ -342,13 +342,13 @@ export default function LabPage() {
         <Bench
           no="08"
           title="Gradient array"
-          lede="Twelve narrow bands in a row — bulb flange on the left, stepped box on the right, ten real units in between. Each bond map shifts a little; the transition grows out of the physics."
+          lede="Twelve narrow bands packed into one continuous body — bulb flange at the near end, stepped box at the far end, ten real units in between. Each bond map shifts a little; the transition grows out of the physics. Split them apart to read band by band."
           accent="var(--accent-2)"
           specs={[
             ['Array', '12 bands · bond length 0.10 → 0.32'],
             ['Units', 'Every band runs the real engine'],
             ['Endpoints', 'Lab.06 unit 2 → unit 4, verbatim'],
-            ['Rungs', '9 → 10 · one discrete step at mid'],
+            ['Layouts', 'Packed body ↔ spread row · same run'],
             ['Render', 'Shared solid bench · WebGL'],
           ]}
         >

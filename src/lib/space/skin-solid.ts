@@ -63,7 +63,9 @@ export function buildSolidTopology(n: number, stripe: number): SolidTopology {
  * 逐帧填顶点：输入 2D 剖面（已做绘图平滑/帧间平滑的 x=离轴、y=沿轴向下为负），
  * 输出 xyz 平铺数组（长度 4n×3，布局 = 外前/外后/内前/内后）。
  * 世界系：X = offX + x·scale（离轴向右）、Y = −y·scale（0 在天花、向下增大，
- * 与屏幕 y 同向）、Z = ±depth/2（挤出）。法向取剖面折线的 2D 垂线（中央差分）。
+ * 与屏幕 y 同向）、Z = offZ ± depth/2（挤出；offZ = 沿深度的整体错位，
+ * 2026-08-19 并拢排列新增，尾参默认 0 ⇒ 既有按位调用零改）。
+ * 法向取剖面折线的 2D 垂线（中央差分）。
  */
 export function fillSolidVerts(
   px: ArrayLike<number>,
@@ -74,9 +76,11 @@ export function fillSolidVerts(
   thick: number = SOLID.THICK,
   scale: number = SOLID.SCALE,
   out?: Float32Array,
+  offZ: number = 0,
 ): Float32Array {
   const verts = out && out.length === 4 * n * 3 ? out : new Float32Array(4 * n * 3);
-  const hz = depth / 2;
+  const hzF = offZ + depth / 2;
+  const hzB = offZ - depth / 2;
   const ht = thick / 2;
   for (let i = 0; i < n; i++) {
     const i0 = Math.max(0, i - 1);
@@ -107,19 +111,19 @@ export function fillSolidVerts(
     let k = i * 3;
     verts[k] = ox;
     verts[k + 1] = oy;
-    verts[k + 2] = hz;
+    verts[k + 2] = hzF;
     k = (n + i) * 3;
     verts[k] = ox;
     verts[k + 1] = oy;
-    verts[k + 2] = -hz;
+    verts[k + 2] = hzB;
     k = (2 * n + i) * 3;
     verts[k] = ix;
     verts[k + 1] = iy;
-    verts[k + 2] = hz;
+    verts[k + 2] = hzF;
     k = (3 * n + i) * 3;
     verts[k] = ix;
     verts[k + 1] = iy;
-    verts[k + 2] = -hz;
+    verts[k + 2] = hzB;
   }
   return verts;
 }

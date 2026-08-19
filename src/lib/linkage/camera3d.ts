@@ -203,6 +203,13 @@ export class OrbitCamera {
     this._panY = 0;
   }
 
+  /** 换枢轴/基础缩放（2026-08-19 Lab.08 排列切换新增，加法式：不动姿态矩阵、
+   *  zoom、pan——同一台架在两种排布间切换时机位语义连续，不像 reset 那样归零）。 */
+  retarget(pivot: Vec3, scale?: number): void {
+    this.o.pivot = pivot;
+    if (scale !== undefined) this.o.scale = scale;
+  }
+
   private pinchDist(): number {
     const [a, b] = [...this.pointers.values()];
     return Math.hypot(a.x - b.x, a.y - b.y);
