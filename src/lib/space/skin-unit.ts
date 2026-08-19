@@ -259,8 +259,13 @@ export class SkinUnit {
     }
   }
 
-  /** 把 a..b 的内部节点向 a→b 连线投影（垂足，0.5 混合）——只压横向偏差 */
-  private flattenToLine(a: number, b: number): void {
+  /**
+   * 把 a..b 的内部节点向 a→b 连线投影（垂足）——只压横向偏差。
+   * blend=1 是硬投影：迭代末面节点直接落在连线上。0.5 试过不够——键间材料把面
+   * 中段顶出 ~2px，而嘴角被键距钉在 rb，面比嘴宽 ⇒ 靠嘴几节被拽成向内的斜坡
+   *（用户 2026-08-19：「根部有一段错误的收紧」）；硬投影让面与嘴严格同高。
+   */
+  private flattenToLine(a: number, b: number, blend = 1.0): void {
     if (b < a) {
       const t = a;
       a = b;
@@ -276,8 +281,8 @@ export class SkinUnit {
       const t = ((px[i] - ax) * ux + (py[i] - ay) * uy) / L2;
       const fx = ax + t * ux;
       const fy = ay + t * uy;
-      px[i] += 0.5 * (fx - px[i]);
-      py[i] += 0.5 * (fy - py[i]);
+      px[i] += blend * (fx - px[i]);
+      py[i] += blend * (fy - py[i]);
     }
   }
 
@@ -465,10 +470,11 @@ export class SkinUnit {
           if (!lockedSet.has(a * 1024 + b)) continue;
           const m = b - a;
           for (let t = 1; t < m; t++) {
+            // 硬投影（同 flattenToLine 的理由）：端面每帧收尾都严格是直线
             const tx = px[a] + ((px[b] - px[a]) * t) / m;
             const ty = py[a] + ((py[b] - py[a]) * t) / m;
-            px[a + t] += 0.5 * (tx - px[a + t]);
-            py[a + t] += 0.5 * (ty - py[a + t]);
+            px[a + t] = tx;
+            py[a + t] = ty;
           }
         }
       }

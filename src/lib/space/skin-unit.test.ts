@@ -199,7 +199,7 @@ describe('skin unit 引擎公共行为', () => {
       xMin = Math.min(xMin, sim.px[i]);
       xMax = Math.max(xMax, sim.px[i]);
     }
-    expect((xMax - xMin) * 100).toBeLessThan(2); // px（世界 ×100）
+    expect((xMax - xMin) * 100).toBeLessThan(0.5); // px（世界 ×100）；硬投影后实测 0.0
     // 顶/底面斜率（内角 vs 外角的 y 差）
     expect(Math.abs(sim.py[pa] - sim.py[outer[0]]) * 100).toBeLessThan(1.5);
     expect(Math.abs(sim.py[pb] - sim.py[outer[1]]) * 100).toBeLessThan(1.5);
@@ -215,7 +215,7 @@ describe('skin unit 引擎公共行为', () => {
         mn = Math.min(mn, sim.py[i]);
         mx = Math.max(mx, sim.py[i]);
       }
-      expect((mx - mn) * 100, `face ${a}-${b}`).toBeLessThan(2.5);
+      expect((mx - mn) * 100, `face ${a}-${b}`).toBeLessThan(0.5); // 硬投影后实测 0.0
     }
     // 梯挡键长全等（矩形的高）
     for (const [i, j, rb] of sim.locked) {
