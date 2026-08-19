@@ -2512,12 +2512,15 @@ button.log-heat__cell {
   stroke: var(--accent);
   stroke-width: 3.4;
   stroke-linecap: butt;
+  /* miter 会把微皱的折点放大成毛刺（锯齿感的一半来自这里），圆角连接压平 */
+  stroke-linejoin: round;
 }
 .lab-fig .skin-b {
   fill: none;
   stroke: color-mix(in srgb, var(--ink) 36%, transparent);
   stroke-width: 3.4;
   stroke-linecap: butt;
+  stroke-linejoin: round;
 }
 .lab-fig .skin-bond {
   stroke: #e06a3e;

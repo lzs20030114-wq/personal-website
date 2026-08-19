@@ -1,15 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { SKIN_REF_NAMES, SKIN_UNITS } from './skin-data';
-import {
-  SKIN,
-  SKIN_ROOT_FIX,
-  coreY,
-  createSkinUnit,
-  renderSmooth,
-  type SkinUnit,
-} from './skin-unit';
+import { SKIN_REF_NAMES, SKIN_UNITS, skinSiteOpts } from './skin-data';
+import { SKIN, coreY, createSkinUnit, renderSmooth, type SkinUnit } from './skin-unit';
 
 /**
  * 守门：TS 引擎 = skin_sim_v7_final.py 的 1:1 移植。
@@ -167,17 +160,19 @@ describe('skin unit 引擎公共行为', () => {
     expect(px[3]).toBe(3);
   });
 
-  it('站方根部修正（SKIN_ROOT_FIX，台架实际跑的路径）：贴轴、不穿芯、键照锁', () => {
-    // 用户 2026-08-18 拍板「没被键拉起的地方贴着最开始的轴」。跑到 step 1000
-    // （四单元的键在 step≤900 全部锁完，见参考检查点）即可断言全部性质。
+  it('站方修正（skinSiteOpts，台架实际跑的路径）：贴轴、不穿芯、键照锁、r1 到位', () => {
+    // 用户 2026-08-18 两轮拍板：根部贴轴（芯墙+硬贴轴）+ 袋收缩终点 r1=0.66。
+    // 跑到 step 1000（四单元的键在 step≤900 全部锁完、r 也已到终点）即可断言全部性质。
     for (const def of SKIN_UNITS) {
       const R = ref.units[SKIN_REF_NAMES[def.key]];
-      const sim = createSkinUnit(def.spec, SKIN_ROOT_FIX);
+      const sim = createSkinUnit(def.spec, skinSiteOpts(def));
       for (let s = 0; s < 1000; s++) sim.advance();
       // 键照锁：数量与集合都与 v7 一致（拉链不受修正影响；顺序可容差——几何变了）
       expect(sim.locked.length, def.key).toBe(R.lockedSeq.length);
       const key = (b: readonly number[]): string => `${b[0]}-${b[1]}`;
       expect(new Set(sim.locked.map(key)), def.key).toEqual(new Set(R.lockedSeq.map(key)));
+      // 每单元一个收缩自由度 ℓ：r 落在该单元自己的终点（袋 0.66，其余全深 R1）
+      expect(sim.r, def.key).toBeCloseTo(def.r1 ?? SKIN.R1, 12);
       // 芯墙：全程投影后任何节点不越到轴左侧
       for (let i = 0; i < sim.n; i++) expect(sim.px[i], `${def.key} node ${i}`).toBeGreaterThanOrEqual(0);
       // 硬贴轴：根部缓冲料（键谱围合区之外的自由节点）迭代收尾时 x 恰为 0

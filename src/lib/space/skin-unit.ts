@@ -63,6 +63,13 @@ export interface SkinBuild {
 export interface SkinUnitOpts {
   coreWall?: boolean;
   rootHug?: number; // 每迭代向 x=0 靠拢的比例（0=关；1=硬贴轴）
+  /**
+   * 该单元的收缩终点 r₁（默认 SKIN.R1=0.30）。结构系统本就是「每单元一个收缩
+   * 自由度 ℓ」（交接件），目录图为了对比才共用一个终点；用户 2026-08-18 拍板
+   * 袋收缩浅一点最好看（终态 = 原协议 step≈400 的圆鼓形，不再压到下垂）。
+   * 时间表不变（step 900 走完），只改深度——四单元仍同步呼吸。
+   */
+  r1?: number;
 }
 
 /**
@@ -70,7 +77,7 @@ export interface SkinUnitOpts {
  * 会把缓冲拽回斜线；0.3 仍剩小漏斗；1.0 = 硬贴轴，形态直接从轴上长出）。
  * 四单元锁定数在此参数下与 v7 逐一相同（2/9/11/11），拉链不受影响。
  */
-export const SKIN_ROOT_FIX: Required<SkinUnitOpts> = { coreWall: true, rootHug: 1.0 };
+export const SKIN_ROOT_FIX: SkinUnitOpts = { coreWall: true, rootHug: 1.0 };
 
 export function buildUnit(spec: SkinSpec): SkinBuild {
   const glued: number[] = [];
@@ -136,6 +143,7 @@ export class SkinUnit {
   private chainLocked: number[][];
   private coreWall: boolean;
   private rootHug: number;
+  private r1: number;
   /** 键谱围合区之外的自由节点（根部缓冲料）——rootHug 的作用对象，静态可知 */
   readonly rootFree: number[] = [];
 
@@ -143,6 +151,7 @@ export class SkinUnit {
     this.spec = spec;
     this.coreWall = opts.coreWall ?? false;
     this.rootHug = opts.rootHug ?? 0;
+    this.r1 = opts.r1 ?? SKIN.R1;
     const { n, glued, chains, panels } = buildUnit(spec);
     this.n = n;
     this.glued = glued;
@@ -262,7 +271,7 @@ export class SkinUnit {
     const { px, py, ppx, ppy, ys, n, chains, panels, locked, lockedSet } = this;
     const step = this.step;
 
-    const r = SKIN.R0 + (SKIN.R1 - SKIN.R0) * Math.min(step / 900, 1.0);
+    const r = SKIN.R0 + (this.r1 - SKIN.R0) * Math.min(step / 900, 1.0);
     this.r = r;
     this.coreLen = coreY(this.spec, r, ys);
 
