@@ -76,7 +76,9 @@ const PRESET_VIEWS: Record<ViewKey, M3> = {
   axon: mul3(rotX3(AXON_PITCH), rotY3(AXON_YAW)),
   front: rotZ3(0),
   side: rotY3(-Math.PI / 2 + 0.12),
-  top: mul3(rotX3(-Math.PI / 2 + 0.1), rotY3(0)),
+  // 顶视是高角度斜俯视，不是纯俯视——单元吊在天花下，垂直往下看只剩天花板条
+  // （首版即此错，CDP 截图整幅灰板）
+  top: mul3(rotX3(-Math.PI / 2 + 0.52), rotY3(-0.35)),
 };
 
 // 四元数 slerp（RingsBench 同款：矩阵直插会走非刚体路径）
