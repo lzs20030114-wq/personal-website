@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { SKIN_REF_NAMES, SKIN_UNITS, skinSiteOpts } from './skin-data';
+import { SKIN_REF_NAMES, SKIN_UNITS, SKIN_V7_SPECS, skinSiteOpts } from './skin-data';
 import { SKIN, coreY, createSkinUnit, renderSmooth, type SkinUnit } from './skin-unit';
 
 /**
@@ -48,7 +48,8 @@ const runs = new Map<string, RunResult>();
 beforeAll(() => {
   for (const def of SKIN_UNITS) {
     const R = ref.units[SKIN_REF_NAMES[def.key]];
-    const sim = createSkinUnit(def.spec);
+    // 对照永远跑 v7 原键谱（阶梯挑台的展示键谱已按用户拍板改比例，基准不动）
+    const sim = createSkinUnit(SKIN_V7_SPECS[def.key]);
     const cpDiffs: RunResult['cpDiffs'] = [];
     const lockSteps: number[] = [];
     let ci = 0;
@@ -161,16 +162,16 @@ describe('skin unit 引擎公共行为', () => {
   });
 
   it('站方修正（skinSiteOpts，台架实际跑的路径）：贴轴、不穿芯、键照锁、r1 到位', () => {
-    // 用户 2026-08-18 两轮拍板：根部贴轴（芯墙+硬贴轴）+ 袋收缩终点 r1=0.66。
-    // 跑到 step 1000（四单元的键在 step≤900 全部锁完、r 也已到终点）即可断言全部性质。
+    // 用户 2026-08-18/19 数轮拍板：根部贴轴（芯墙+硬贴轴）+ 袋收缩终点 r1=0.66 +
+    // 阶梯方箱整形与近方比例。跑到 step 1000（键全部锁完、r 已到终点）断言全部性质。
     for (const def of SKIN_UNITS) {
-      const R = ref.units[SKIN_REF_NAMES[def.key]];
       const sim = createSkinUnit(def.spec, skinSiteOpts(def));
       for (let s = 0; s < 1000; s++) sim.advance();
-      // 键照锁：数量与集合都与 v7 一致（拉链不受修正影响；顺序可容差——几何变了）
-      expect(sim.locked.length, def.key).toBe(R.lockedSeq.length);
+      // 键照锁：键谱全员锁定（对自己的键位图数，不对 v7 基准——阶梯键谱已改比例）
+      const allBonds = sim.chains.flat();
       const key = (b: readonly number[]): string => `${b[0]}-${b[1]}`;
-      expect(new Set(sim.locked.map(key)), def.key).toEqual(new Set(R.lockedSeq.map(key)));
+      expect(sim.locked.length, def.key).toBe(allBonds.length);
+      expect(new Set(sim.locked.map(key)), def.key).toEqual(new Set(allBonds.map(key)));
       // 每单元一个收缩自由度 ℓ：r 落在该单元自己的终点（袋 0.66，其余全深 R1）
       expect(sim.r, def.key).toBeCloseTo(def.r1 ?? SKIN.R1, 12);
       // 芯墙：全程投影后任何节点不越到轴左侧
@@ -178,6 +179,34 @@ describe('skin unit 引擎公共行为', () => {
       // 硬贴轴：根部缓冲料（键谱围合区之外的自由节点）迭代收尾时 x 恰为 0
       expect(sim.rootFree.length, def.key).toBeGreaterThan(0);
       for (const i of sim.rootFree) expect(sim.px[i], `${def.key} root ${i}`).toBe(0);
+    }
+  });
+
+  it('方箱整形（boxSquare，阶梯挑台）：贴轴方正、端面平直、面无斜率、键长全等', () => {
+    // 用户 2026-08-19 拍板「最终的形态应该是一个方形」。三个「不方」来源的守门：
+    // 浮轴（嘴角 x=0）/ 端面鼓弧（x 波动 <2px）/ 顶底面倾斜（斜率 <1.5px）。
+    const def = SKIN_UNITS.find((d) => d.key === 'stepped')!;
+    expect(def.boxSquare).toBe(true);
+    const sim = createSkinUnit(def.spec, skinSiteOpts(def));
+    for (let s = 0; s < SKIN.STEPS; s++) sim.advance();
+    const outer = sim.chains[0][0]; // 最外键对 = 嘴角
+    expect(sim.px[outer[0]]).toBe(0);
+    expect(sim.px[outer[1]]).toBe(0);
+    const [pa, pb] = sim.panels[0]; // 端面
+    let xMin = Infinity;
+    let xMax = -Infinity;
+    for (let i = pa; i <= pb; i++) {
+      xMin = Math.min(xMin, sim.px[i]);
+      xMax = Math.max(xMax, sim.px[i]);
+    }
+    expect((xMax - xMin) * 100).toBeLessThan(2); // px（世界 ×100）
+    // 顶/底面斜率（内角 vs 外角的 y 差）
+    expect(Math.abs(sim.py[pa] - sim.py[outer[0]]) * 100).toBeLessThan(1.5);
+    expect(Math.abs(sim.py[pb] - sim.py[outer[1]]) * 100).toBeLessThan(1.5);
+    // 梯挡键长全等（矩形的高）
+    for (const [i, j, rb] of sim.locked) {
+      const d = Math.hypot(sim.px[j] - sim.px[i], sim.py[j] - sim.py[i]);
+      expect(Math.abs(d - rb) * 100, `bond ${i}-${j}`).toBeLessThan(0.5);
     }
   });
 

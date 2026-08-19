@@ -70,6 +70,15 @@ export interface SkinUnitOpts {
    * 时间表不变（step 900 走完），只改深度——四单元仍同步呼吸。
    */
   r1?: number;
+  /**
+   * 方箱整形（阶梯挑台用，用户 2026-08-19 拍板「最终的形态应该是一个方形」）。
+   * 全部用 v7 自己的约束词汇，补上它没做的三件（实测即「不方」的三个来源）：
+   * ① 嘴角贴轴——最外键对 x=0（箱体内面就是轴，手绘即此；此前浮在轴外 8px）；
+   * ② 底面找平——v7 只找平上层台面（猫站的面），底面只直化不找平（波动 6.5px）；
+   * ③ 端角键距迭代末重申——找平/直化会把最外与最内键对压短（24→22.1px），
+   *    端面弦 < 弧 ⇒ 必然外鼓 4px；末位重申让端面弦=弧 → 拉直。
+   */
+  boxSquare?: boolean;
 }
 
 /**
@@ -144,6 +153,7 @@ export class SkinUnit {
   private coreWall: boolean;
   private rootHug: number;
   private r1: number;
+  private boxSquare: boolean;
   /** 键谱围合区之外的自由节点（根部缓冲料）——rootHug 的作用对象，静态可知 */
   readonly rootFree: number[] = [];
 
@@ -152,6 +162,7 @@ export class SkinUnit {
     this.coreWall = opts.coreWall ?? false;
     this.rootHug = opts.rootHug ?? 0;
     this.r1 = opts.r1 ?? SKIN.R1;
+    this.boxSquare = opts.boxSquare ?? false;
     const { n, glued, chains, panels } = buildUnit(spec);
     this.n = n;
     this.glued = glued;
@@ -381,6 +392,56 @@ export class SkinUnit {
       }
       this.pinGlued();
       // ---- 站方可选修正（默认关，见 SkinUnitOpts）----
+      if (this.boxSquare) {
+        for (let c = 0; c < chains.length; c++) {
+          const ch = chains[c];
+          const lbi = this.chainLocked[c];
+          // 嘴角贴轴：最外键对（链首）x=0——箱体内面就是轴。从 step 0 就锚，
+          // 拉链照走（两角同在轴上时键距 = |Δy|，收缩推进自然入锁定窗口）
+          px[ch[0][0]] = 0;
+          px[ch[0][1]] = 0;
+          if (lbi.length >= 3) {
+            // 底面找平：v7 只找平上层台面（lb 全跨的 i 侧），底面（j 侧）对称补上
+            const a = ch[lbi[lbi.length - 1]][1];
+            const b = ch[lbi[0]][1];
+            let mean = 0;
+            for (let i = a; i <= b; i++) mean += py[i];
+            mean /= b - a + 1;
+            for (let i = a; i <= b; i++) py[i] += 0.25 * (mean - py[i]);
+          }
+          // 端角键距迭代末重申：找平/直化会把最外与最内键对压短（弦 < 弧 ⇒ 端面鼓）
+          for (const t of [lbi[0], lbi[lbi.length - 1]]) {
+            if (t === undefined) continue;
+            const bd = ch[t];
+            const i = bd[0];
+            const j = bd[1];
+            const dx = px[j] - px[i];
+            const dy = py[j] - py[i];
+            const rr = Math.max(Math.sqrt(dx * dx + dy * dy), 1e-9);
+            const cf = (0.5 * (rr - bd[2])) / rr;
+            px[i] += cf * dx;
+            py[i] += cf * dy;
+            px[j] -= cf * dx;
+            py[j] -= cf * dy;
+          }
+        }
+        // 端面拉直：找平每迭代把两个端角拽向顶/底面，把角旁的段抻长（实测 2.64px
+        // = 超伸 32%）→ 面弧 > 弦 ⇒ 必然外鼓 4px，段长重申的力道追不上。改为决定性
+        // 投影——最内键锁定后（弦 = 键长已建立），面内节点直接向「两角连线等分点」
+        // 靠拢：这是 v7 面板注释「端面弧长=键长 -> 必然拉直」的逻辑终点。
+        for (let p = 0; p < panels.length; p++) {
+          const a = panels[p][0];
+          const b = panels[p][1];
+          if (!lockedSet.has(a * 1024 + b)) continue;
+          const m = b - a;
+          for (let t = 1; t < m; t++) {
+            const tx = px[a] + ((px[b] - px[a]) * t) / m;
+            const ty = py[a] + ((py[b] - py[a]) * t) / m;
+            px[a + t] += 0.5 * (tx - px[a + t]);
+            py[a + t] += 0.5 * (ty - py[a + t]);
+          }
+        }
+      }
       if (this.rootHug > 0) {
         const k = this.rootHug;
         for (let t = 0; t < this.rootFree.length; t++) {
