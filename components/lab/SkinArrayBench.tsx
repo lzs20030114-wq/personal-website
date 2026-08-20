@@ -17,20 +17,18 @@ import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
  * - **分列** = 沿 X 排开（间距 80），逐条读键谱差异。
  * 切换只改渲染偏移与机位，引擎不重建——两种排列看的是同一次收缩。
  *
- * 并拢的切片陈列（用户 2026-08-20 追加「居中对齐 + 每一个宽度 0.6 倍」）：
- * 带深 26 → 15.6（间距 27.5 不动 ⇒ 片间留缝、读作 12 片），center 逐帧把每片
- * 折叠体的中线对齐到全员均值（纯渲染纵移，形态与物理不动），frame:false 收掉
- * 天花板条与芯轨——居中后带子各自纵移，板/轨对不上挂点；分列仍是原样吊挂读法。
+ * 切片陈列（用户 2026-08-20 两轮拍板「居中对齐 + 每一个宽度 0.6 倍」「间距也收
+ * 0.6 倍」「保证上端对齐，改形状在线上的位置来居中」）：带深 26 → 15.6、间距
+ * 27.5 → 16.5（各 0.6×，片间留 0.9 缝防剖口共面 z-fight）；**居中是物理对位不是
+ * 渲染偏移**——12 条 lead 统一为对位常数（skin-array ARRAY_LEAD），顶端全部
+ * 贴天花、折叠体中线自然对齐，天花板条与芯轨照常显示。
  */
 const ARRAY_UNITS: readonly SolidUnitDef[] = buildTransitionArray().map(
   ({ spec, opts, smooth }) => ({ spec, opts, smooth }),
 );
 
 const ARRAY_LAYOUTS = [
-  {
-    key: 'merged', label: '并拢', gapX: 0, gapZ: 27.5,
-    pivot: { x: 45, y: 160, z: 0 }, camScale: 1.1, center: true, frame: false,
-  },
+  { key: 'merged', label: '并拢', gapX: 0, gapZ: 16.5, pivot: { x: 45, y: 160, z: 0 }, camScale: 1.1 },
   { key: 'spread', label: '分列', gapX: 80, gapZ: 0, pivot: { x: 468, y: 168, z: 0 }, camScale: 0.6 },
 ] as const;
 

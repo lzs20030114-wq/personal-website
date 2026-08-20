@@ -62,10 +62,12 @@ export function buildSolidTopology(n: number, stripe: number): SolidTopology {
 /**
  * 逐帧填顶点：输入 2D 剖面（已做绘图平滑/帧间平滑的 x=离轴、y=沿轴向下为负），
  * 输出 xyz 平铺数组（长度 4n×3，布局 = 外前/外后/内前/内后）。
- * 世界系：X = offX + x·scale（离轴向右）、Y = offY − y·scale（0 在天花、向下增大，
- * 与屏幕 y 同向）、Z = offZ ± depth/2（挤出）。offZ/offY = 沿深度/纵向的整体
- * 错位（2026-08-19 并拢排列 / 2026-08-20 居中对齐新增，尾参默认 0 ⇒ 既有按位
- * 调用零改）。法向取剖面折线的 2D 垂线（中央差分）。
+ * 世界系：X = offX + x·scale（离轴向右）、Y = −y·scale（0 在天花、向下增大，
+ * 与屏幕 y 同向）、Z = offZ ± depth/2（挤出；offZ = 沿深度的整体错位，
+ * 2026-08-19 并拢排列新增，尾参默认 0 ⇒ 既有按位调用零改）。
+ * 法向取剖面折线的 2D 垂线（中央差分）。
+ * 注：曾短暂有过 offY 尾参（渲染纵移居中），2026-08-20 用户否决该对位方案后
+ * 撤除——对位在键谱层做（skin-array「lead = 对位常数」），几何烘焙不再需要纵移。
  */
 export function fillSolidVerts(
   px: ArrayLike<number>,
@@ -77,7 +79,6 @@ export function fillSolidVerts(
   scale: number = SOLID.SCALE,
   out?: Float32Array,
   offZ: number = 0,
-  offY: number = 0,
 ): Float32Array {
   const verts = out && out.length === 4 * n * 3 ? out : new Float32Array(4 * n * 3);
   const hzF = offZ + depth / 2;
@@ -98,7 +99,7 @@ export function fillSolidVerts(
     }
     // 剖面法向（世界系，Y 已翻转 ⇒ 用 (ny=-tx? ) —— 先算世界系切线再转 90°）
     const wx = offX + (px[i] as number) * scale;
-    const wy = offY - (py[i] as number) * scale;
+    const wy = -(py[i] as number) * scale;
     const wtx = tx * scale;
     const wty = -ty * scale;
     const wl = Math.sqrt(wtx * wtx + wty * wty) || 1;

@@ -61,19 +61,18 @@ describe('skin-solid 立体化烘焙', () => {
     expect(again).toBe(v);
   });
 
-  it('offZ/offY 错位（并拢排列 / 居中对齐用）：z 平移 offZ、y 平移 offY、X 逐位不变；' +
-     '默认 0 = 旧行为', () => {
+  it('offZ 深度错位（并拢排列用）：全部 z 平移 offZ、XY 逐位不变；默认 0 = 旧行为', () => {
     const n = 8;
     const px = new Float64Array(n);
     const py = new Float64Array(n);
     for (let i = 0; i < n; i++) py[i] = -i * SKIN.SEG;
     const base = fillSolidVerts(px, py, n, 50);
     const off = fillSolidVerts(
-      px, py, n, 50, SOLID.DEPTH, SOLID.THICK, SOLID.SCALE, undefined, -27.5, 12.5,
+      px, py, n, 50, SOLID.DEPTH, SOLID.THICK, SOLID.SCALE, undefined, -27.5,
     );
     for (let i = 0; i < 4 * n; i++) {
       expect(off[i * 3]).toBe(base[i * 3]);
-      expect(off[i * 3 + 1]).toBeCloseTo(base[i * 3 + 1] + 12.5, 9);
+      expect(off[i * 3 + 1]).toBe(base[i * 3 + 1]);
       expect(off[i * 3 + 2]).toBeCloseTo(base[i * 3 + 2] - 27.5, 9);
     }
   });

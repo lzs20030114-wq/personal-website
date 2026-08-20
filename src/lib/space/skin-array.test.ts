@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTransitionArray } from './skin-array';
+import { ARRAY_LEAD, buildTransitionArray } from './skin-array';
 import { SKIN_UNITS, skinSiteOpts } from './skin-data';
 import { createSkinUnit } from './skin-unit';
 
@@ -15,14 +15,20 @@ describe('skin-array 阵列过渡', () => {
   const sqOf = (u: (typeof arr)[number]): number =>
     typeof u.opts.boxSquare === 'number' ? u.opts.boxSquare : u.opts.boxSquare === true ? 1 : 0;
 
-  it('12 条带，t 单调 0→1，端点 = 站上原谱（对象同一 + 选项深等）', () => {
+  it('12 条带，t 单调 0→1，端点键谱段 = 站上原谱（对象同一）· lead = 对位常数', () => {
     expect(arr.length).toBe(12);
     for (let i = 1; i < arr.length; i++) expect(arr[i].t).toBeGreaterThan(arr[i - 1].t);
     const bulb = SKIN_UNITS.find((d) => d.key === 'bulb')!;
     const stepped = SKIN_UNITS.find((d) => d.key === 'stepped')!;
-    expect(arr[0].spec).toBe(bulb.spec);
+    // 形态 = 键谱段 + 尾段，逐字原谱（对象同一）；lead 是形状在带上的位置，
+    // 按用户 2026-08-20 指令统一为对位常数（居中对齐的机制），不属形态
+    expect(arr[0].spec[1]).toBe(bulb.spec[1]);
+    expect(arr[0].spec[2]).toBe(bulb.spec[2]);
+    expect(arr[0].spec[0]).toEqual(['g', ARRAY_LEAD]);
     expect(arr[0].opts).toEqual(skinSiteOpts(bulb));
-    expect(arr[11].spec).toBe(stepped.spec);
+    expect(arr[11].spec[1]).toBe(stepped.spec[1]);
+    expect(arr[11].spec[2]).toBe(stepped.spec[2]);
+    expect(arr[11].spec[0]).toEqual(['g', ARRAY_LEAD]);
     expect(arr[11].opts).toEqual(skinSiteOpts(stepped));
     expect(arr[11].opts.boxSquare).toBe(true);
   });
@@ -62,10 +68,9 @@ describe('skin-array 阵列过渡', () => {
   });
 
   it('方化渐入纪律：sq 单调不减、步长 ≤0.15、中间级 <1（禁止回到二值切换）；' +
-     'panel 半跨单调不减至 ±8；lead 单调不增', () => {
+     'panel 半跨单调不减至 ±8；lead 恒为对位常数', () => {
     let prevSq = 0;
     let prevPw = 0;
-    let prevLead = Infinity;
     for (let i = 0; i < arr.length; i++) {
       const u = arr[i];
       const sq = sqOf(u);
@@ -78,21 +83,32 @@ describe('skin-array 阵列过渡', () => {
       const pw = panel ? (panel[1] - panel[0]) / 2 : 0;
       expect(pw, `panel 半跨 i=${i}`).toBeGreaterThanOrEqual(prevPw);
       prevPw = pw;
-      const lead = u.spec[0][1];
-      expect(lead, `lead i=${i}`).toBeLessThanOrEqual(prevLead);
-      prevLead = lead;
+      expect(u.spec[0][1], `lead i=${i}`).toBe(ARRAY_LEAD);
     }
     expect(sqOf(arr[11])).toBe(1); // 端点全量
     expect(prevPw).toBe(8); // 末端 panel = 最内键跨（端面投影的启用前提）
   });
 
-  it('中间级物理冒烟（i=3/6/9 跑到 step 1000）：键谱全员锁定、贴轴不穿芯', () => {
-    for (const i of [3, 6, 9]) {
-      const u = arr[i];
+  it('全员物理冒烟 + 居中对齐（12 台跑到 step 1200）：键谱全锁、贴轴不穿芯、' +
+     '顶端钉在天花、折叠中线散布 ≤2px（lead 对位常数的效果——用户 2026-08-20' +
+     '「保证上端对齐，改形状在线上的位置来居中」；改任何形状后散布超差 = 需重标 ARRAY_LEAD）', { timeout: 40000 }, () => {
+    const centers: number[] = [];
+    for (const u of arr) {
       const sim = createSkinUnit(u.spec, u.opts);
-      for (let s = 0; s < 1000; s++) sim.advance();
-      expect(sim.locked.length, `i=${i}`).toBe(sim.chains.flat().length);
+      for (let s = 0; s < 1200; s++) sim.advance();
+      expect(sim.locked.length).toBe(sim.chains.flat().length);
+      expect(Math.abs(sim.py[0])).toBe(0); // 顶端贴天花（钉轴给的是 −0，宽容符号）
       for (let k = 0; k < sim.n; k++) expect(sim.px[k]).toBeGreaterThanOrEqual(0);
+      const glued = new Set(sim.glued);
+      let lo = Infinity;
+      let hi = -Infinity;
+      for (let k = 0; k < sim.n; k++) {
+        if (glued.has(k)) continue;
+        if (sim.py[k] < lo) lo = sim.py[k];
+        if (sim.py[k] > hi) hi = sim.py[k];
+      }
+      centers.push((-(lo + hi) / 2) * 100);
     }
+    expect(Math.max(...centers) - Math.min(...centers)).toBeLessThanOrEqual(2);
   });
 });
