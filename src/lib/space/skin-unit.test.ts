@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { SKIN_REF_NAMES, SKIN_UNITS, SKIN_V7_SPECS, skinSiteOpts } from './skin-data';
-import { SKIN, coreY, createSkinUnit, renderSmooth, type SkinUnit } from './skin-unit';
+import { SKIN_REF_NAMES, SKIN_UNITS, SKIN_V7_SPECS, fan, skinSiteOpts } from './skin-data';
+import { SKIN, SKIN_ROOT_FIX, coreY, createSkinUnit, renderSmooth, type SkinUnit } from './skin-unit';
 
 /**
  * 守门：TS 引擎 = skin_sim_v7_final.py 的 1:1 移植。
@@ -262,5 +262,78 @@ describe('skin unit 引擎公共行为', () => {
       return `${maxX.toFixed(2)}/${minY.toFixed(2)}`;
     });
     expect(new Set(spans).size).toBe(SKIN_UNITS.length);
+  });
+
+  it('boxSquare 强度真实分级（Lab.08 过渡的机理）：sq 0 → 0.5 → 1 垂度单调收平、' +
+     '键照锁；true 与 1 等价', () => {
+    // 固定键谱（Lab.08 中后段量级），只变强度——分级若失效（任何 sq>0 都收敛成
+    // 全量方箱），过渡会退回二值切换，正是用户否决的首版毛病。
+    const spec: Parameters<typeof createSkinUnit>[0] = [
+      ['g', 53],
+      ['f', 65, fan(32, 8, 27, 2, 0.27), [[24, 40]]],
+      ['g', 50],
+    ];
+    const droopOf = (sq: number | true | undefined): { droop: number; locked: number } => {
+      const opts = { ...SKIN_ROOT_FIX, ...(sq !== undefined ? { boxSquare: sq } : {}) };
+      const sim = createSkinUnit(spec, opts);
+      for (let s = 0; s < SKIN.STEPS; s++) sim.advance();
+      const ch = sim.chains[0];
+      let minY = Infinity;
+      for (let i = ch[0][0]; i <= ch[0][1]; i++) minY = Math.min(minY, sim.py[i]);
+      return { droop: sim.py[ch[0][1]] - minY, locked: sim.locked.length };
+    };
+    const s0 = droopOf(undefined);
+    const s5 = droopOf(0.5);
+    const s1 = droopOf(1);
+    const sT = droopOf(true);
+    expect(s0.locked).toBe(10);
+    expect(s5.locked).toBe(10);
+    expect(s1.locked).toBe(10);
+    expect(s5.droop).toBeLessThan(s0.droop * 0.6); // 半强度显著收平……
+    expect(s5.droop).toBeGreaterThan(s1.droop); // ……但还没到全量（分级真实）
+    expect(sT.droop).toBe(s1.droop); // true ≡ 1
+  });
+
+  it('端面投影的几何门（candC 崩法回归）：rb 远小于端面弧长时渐入档不硬压——' +
+     '形态有界、键照锁、端面保留鼓弧', () => {
+    // 弦弧比 0.22/0.32 ≈ 0.69 << 0.85：投影必须不参与，否则每迭代把富余材料
+    // 挤出端面，线稿实验实测形态直接崩（相邻距离 11+）。键谱 = Lab.08 定版系列
+    // 6 号单元（真实走这条路径的单元，锁定完备性已由阵列物理冒烟另行守住）。
+    const spec: Parameters<typeof createSkinUnit>[0] = [
+      ['g', 53],
+      ['f', 64, fan(32, 8, 27, 2, 0.22), [[24, 40]]],
+      ['g', 50],
+    ];
+    const run = (opts: Parameters<typeof createSkinUnit>[1]): SkinUnit => {
+      const sim = createSkinUnit(spec, opts);
+      for (let s = 0; s < SKIN.STEPS; s++) sim.advance();
+      return sim;
+    };
+    const base = run({ ...SKIN_ROOT_FIX }); // 无 box 基线
+    const sim = run({ ...SKIN_ROOT_FIX, boxSquare: 0.4 });
+    expect(sim.locked.length).toBe(10);
+    // 与基线对照：门关闭时只剩温和的贴轴/压肩，量级必须与基线同款
+    // （candC 崩法 = 材料被逐迭代挤出端面，范围会偏离基线一个量级）
+    const extent = (s: SkinUnit): [number, number] => {
+      let mx = -Infinity;
+      let mnY = Infinity;
+      for (let i = 0; i < s.n; i++) {
+        mx = Math.max(mx, s.px[i]);
+        mnY = Math.min(mnY, s.py[i]);
+      }
+      return [mx, mnY];
+    };
+    const [bx, by] = extent(base);
+    const [sx, sy] = extent(sim);
+    expect(Math.abs(sx - bx)).toBeLessThan(0.05);
+    expect(Math.abs(sy - by)).toBeLessThan(0.05);
+    // 端面（最内键 24..40，链内下标 +lead）应仍外鼓：没被硬拉成直线
+    let fMin = Infinity;
+    let fMax = -Infinity;
+    for (let i = 53 + 24; i <= 53 + 40; i++) {
+      fMin = Math.min(fMin, sim.px[i]);
+      fMax = Math.max(fMax, sim.px[i]);
+    }
+    expect(fMax - fMin).toBeGreaterThan(0.02); // 鼓弧仍在（≥2px 站上尺度）
   });
 });
