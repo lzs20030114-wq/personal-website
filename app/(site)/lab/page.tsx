@@ -342,7 +342,7 @@ export default function LabPage() {
         <Bench
           no="08"
           title="Gradient array"
-          lede="Twelve narrow bands packed into one continuous body — bulb flange at the near end, stepped box at the far end, ten real units in between. Each bond map shifts a little; the transition grows out of the physics. Split them apart to read band by band."
+          lede="Twelve narrow slices on one axis, center-aligned — bulb flange at the near end, stepped box at the far end, ten real units in between. Each bond map shifts a little; the transition grows out of the physics. Split them apart to read band by band."
           accent="var(--accent-2)"
           specs={[
             ['Array', '12 bands · bond length 0.10 → 0.32'],

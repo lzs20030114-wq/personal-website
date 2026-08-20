@@ -13,17 +13,24 @@ import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
  * RATE 降到 80：十二台同时推进，成形期单帧物理量是 Lab.07 的三倍。
  *
  * 两种排列（用户 2026-08-19 追加「把他们并一起看效果」）：
- * - **并拢**（默认）= 12 条带沿深度密排（间距 27.5 略大于带深 26——贴平会让相邻
- *   剖口共面 z-fight），共用一条轴线，读作一个剖面渐变的连续体；
+ * - **并拢**（默认）= 12 条带沿深度排成切片序列，共用一条轴线；
  * - **分列** = 沿 X 排开（间距 80），逐条读键谱差异。
  * 切换只改渲染偏移与机位，引擎不重建——两种排列看的是同一次收缩。
+ *
+ * 并拢的切片陈列（用户 2026-08-20 追加「居中对齐 + 每一个宽度 0.6 倍」）：
+ * 带深 26 → 15.6（间距 27.5 不动 ⇒ 片间留缝、读作 12 片），center 逐帧把每片
+ * 折叠体的中线对齐到全员均值（纯渲染纵移，形态与物理不动），frame:false 收掉
+ * 天花板条与芯轨——居中后带子各自纵移，板/轨对不上挂点；分列仍是原样吊挂读法。
  */
 const ARRAY_UNITS: readonly SolidUnitDef[] = buildTransitionArray().map(
   ({ spec, opts, smooth }) => ({ spec, opts, smooth }),
 );
 
 const ARRAY_LAYOUTS = [
-  { key: 'merged', label: '并拢', gapX: 0, gapZ: 27.5, pivot: { x: 45, y: 160, z: 0 }, camScale: 1.1 },
+  {
+    key: 'merged', label: '并拢', gapX: 0, gapZ: 27.5,
+    pivot: { x: 45, y: 160, z: 0 }, camScale: 1.1, center: true, frame: false,
+  },
   { key: 'spread', label: '分列', gapX: 80, gapZ: 0, pivot: { x: 468, y: 168, z: 0 }, camScale: 0.6 },
 ] as const;
 
@@ -42,7 +49,7 @@ export function SkinArrayBench({
       onLight={onLight}
       controls={controls}
       units={ARRAY_UNITS}
-      depth={26}
+      depth={15.6}
       ceiling="span"
       rate={80}
       layouts={ARRAY_LAYOUTS}

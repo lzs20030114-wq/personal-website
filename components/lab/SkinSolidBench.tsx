@@ -147,6 +147,10 @@ interface SolidUnit {
   sim: SkinUnit;
   offX: number;
   offZ: number;
+  /** 居中对齐的渲染纵移（center 排布逐帧算，其余排布恒 0） */
+  offY: number;
+  /** 自由段（非贴合）节点下标——居中对齐量折叠体的范围只看它们 */
+  free: number[];
   ceilKey: string;
   smoothW: number;
   smoothP: number;
@@ -177,6 +181,13 @@ export interface SolidLayout {
   gapZ: number;
   pivot: { x: number; y: number; z: number };
   camScale: number;
+  /** 居中对齐（2026-08-20 用户拍板）：逐单元渲染纵移，把折叠体（自由段）的
+   *  中线对齐到全员均值——纯展示偏移，引擎与形态不动。lead 时间表定的是过渡
+   *  平滑度，不负责对位；端点 lead 又是原谱锁死的，故对位只能在渲染层做 */
+  center?: boolean;
+  /** false = 本排布隐藏天花板条与芯轨（居中后带子各自纵移，板/轨对不上挂点，
+   *  切片陈列读法里它们是噪声）。默认 true */
+  frame?: boolean;
 }
 
 interface SolidHud {
@@ -298,11 +309,16 @@ export function SkinSolidBench({
     const scene: SolidUnit[] = defs.map((def, u) => {
       const sim = createSkinUnit(def.spec, def.opts);
       const [smoothW, smoothP] = def.smooth;
+      const gluedSet = new Set(sim.glued);
+      const free: number[] = [];
+      for (let i = 0; i < sim.n; i++) if (!gluedSet.has(i)) free.push(i);
       return {
         sim,
         // Z 取 ((n−1)/2 − u)：单元 0 在 +Z（轴测机位的近端）——分列的「左」= 并拢的「近」
         offX: u * layoutList[0].gapX,
         offZ: ((defs.length - 1) / 2 - u) * layoutList[0].gapZ,
+        offY: 0,
+        free,
         ceilKey: `ceil-u${u}`,
         smoothW,
         smoothP,
@@ -352,36 +368,69 @@ export function SkinSolidBench({
 
     const render = (): void => {
       R.beginFrame(cam);
-      if (ceiling === 'span') R.drawMesh(`ceil-span-${layoutIdx}`, IDENT, RAIL_DARK, RAIL_LITE);
-      for (const v of scene) {
-        const { sim } = v;
+      const L = layoutList[layoutIdx];
+      const frame = L.frame !== false;
+      if (ceiling === 'span' && frame)
+        R.drawMesh(`ceil-span-${layoutIdx}`, IDENT, RAIL_DARK, RAIL_LITE);
+      // 第一遍：全员平滑剖面（居中对齐要先算齐才有公共中线）
+      const ps = scene.map((v) => {
         if (!v.emaX || !v.emaY) {
-          v.emaX = Float64Array.from(sim.px);
-          v.emaY = Float64Array.from(sim.py);
+          v.emaX = Float64Array.from(v.sim.px);
+          v.emaY = Float64Array.from(v.sim.py);
         }
-        const p = renderSmooth(v.emaX, v.emaY, v.smoothW, v.smoothP);
-        fillSolidVerts(p.x, p.y, sim.n, v.offX, depth, SOLID.THICK, SOLID.SCALE, v.verts, v.offZ);
+        return renderSmooth(v.emaX, v.emaY, v.smoothW, v.smoothP);
+      });
+      // 居中对齐（纯渲染纵移）：各单元折叠体（自由段）中线 → 全员均值。
+      // 输入用的就是要画的平滑剖面 ⇒ 对齐即所见；随收缩整体升降照常发生
+      if (L.center) {
+        const mids = scene.map((v, u) => {
+          let lo = Infinity;
+          let hi = -Infinity;
+          for (const i of v.free) {
+            const y = ps[u].y[i];
+            if (y < lo) lo = y;
+            if (y > hi) hi = y;
+          }
+          return (-(lo + hi) / 2) * SOLID.SCALE;
+        });
+        const mean = mids.reduce((a, b) => a + b, 0) / mids.length;
+        scene.forEach((v, u) => {
+          v.offY = mean - mids[u];
+        });
+      } else {
+        for (const v of scene) v.offY = 0;
+      }
+      scene.forEach((v, u) => {
+        const { sim } = v;
+        const p = ps[u];
+        fillSolidVerts(
+          p.x, p.y, sim.n, v.offX, depth, SOLID.THICK, SOLID.SCALE, v.verts, v.offZ, v.offY,
+        );
         R.drawDynamicMesh(bakeIndexed(v.verts, v.topo.idxA), DARK_A, LITE_A);
         R.drawDynamicMesh(bakeIndexed(v.verts, v.topo.idxB), DARK_B, LITE_B);
-        // 芯轨（长度随收缩变，逐帧小盒）
-        const railLen = sim.coreLen * SOLID.SCALE;
-        const rail = boxVerts(v.offX - 3.4, railLen / 2, v.offZ, 2.4, railLen / 2, Math.min(6, depth / 4));
-        R.drawDynamicMesh(bakeIndexed(rail.verts, rail.idx), RAIL_DARK, RAIL_LITE);
-        if (ceiling !== 'span') R.drawMesh(v.ceilKey, IDENT, RAIL_DARK, RAIL_LITE);
+        if (frame) {
+          // 芯轨（长度随收缩变，逐帧小盒）
+          const railLen = sim.coreLen * SOLID.SCALE;
+          const rail = boxVerts(
+            v.offX - 3.4, railLen / 2 + v.offY, v.offZ, 2.4, railLen / 2, Math.min(6, depth / 4),
+          );
+          R.drawDynamicMesh(bakeIndexed(rail.verts, rail.idx), RAIL_DARK, RAIL_LITE);
+        }
+        if (ceiling !== 'span' && frame) R.drawMesh(v.ceilKey, IDENT, RAIL_DARK, RAIL_LITE);
         if (bondsRef.current && sim.locked.length) {
           const hz = depth / 2;
           const segs: { a: Vec3; b: Vec3 }[] = [];
           for (const [i, j] of sim.locked) {
             for (const z of [v.offZ + hz, v.offZ - hz]) {
               segs.push({
-                a: { x: v.offX + p.x[i] * SOLID.SCALE, y: -p.y[i] * SOLID.SCALE, z },
-                b: { x: v.offX + p.x[j] * SOLID.SCALE, y: -p.y[j] * SOLID.SCALE, z },
+                a: { x: v.offX + p.x[i] * SOLID.SCALE, y: v.offY - p.y[i] * SOLID.SCALE, z },
+                b: { x: v.offX + p.x[j] * SOLID.SCALE, y: v.offY - p.y[j] * SOLID.SCALE, z },
               });
             }
           }
           R.drawLines(segs, C_BOND, 0.004);
         }
-      }
+      });
     };
 
     let acc = 0;
