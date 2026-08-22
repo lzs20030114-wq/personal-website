@@ -522,21 +522,20 @@ export class SkinUnit {
         // 缓冲弧长超出可用轴距（阶梯下缓冲 14px 只有 4px 可用），硬贴轴后自由褶皱
         // 会在嘴角背后拱成上下折返的疙瘩（实测 node 110 反而比嘴角高 5.8px），
         // 平滑再把它带出来 = 用户圈的「左侧收紧」；均匀排布 = 手绘 P2 的直线入角。
+        // **这一遍不随 sq 减力**（2026-08-22）：缓冲排布是**位置**机制不是形态机制
+        // ——它决定折叠体在轴上落在哪儿，不决定折叠体长什么样（缓冲料贴轴、藏在
+        // 竖带背后看不见）。半强度会让上下缓冲拉伸不等，把嘴心从自由段几何中点
+        // 拽偏，且偏量随 sq 非单调（实测 sq=0.85 时 −0.96px、sq=1 时 −0.03px）
+        // ⇒ Lab.08 十二条带的对位出现 1.3px 台阶。实测改硬投影后形态零变化
+        // （终态高度差 ≤0.03px、锁定键集合不变），只有对位改善（全程 1.30→0.91px）。
         for (const [a, b] of this.rootRuns) {
           const lo = a - 1;
           const hi = b + 1;
           const m = hi - lo;
           for (let i = a; i <= b; i++) {
             const t = (i - lo) / m;
-            const tx = px[lo] + t * (px[hi] - px[lo]);
-            const ty = py[lo] + t * (py[hi] - py[lo]);
-            if (sq >= 1) {
-              px[i] = tx;
-              py[i] = ty;
-            } else {
-              px[i] += sq * (tx - px[i]);
-              py[i] += sq * (ty - py[i]);
-            }
+            px[i] = px[lo] + t * (px[hi] - px[lo]);
+            py[i] = py[lo] + t * (py[hi] - py[lo]);
           }
         }
       }

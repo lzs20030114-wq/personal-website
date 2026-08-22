@@ -20,8 +20,8 @@ import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
  * 切片陈列（用户 2026-08-20 两轮拍板「居中对齐 + 每一个宽度 0.6 倍」「间距也收
  * 0.6 倍」「保证上端对齐，改形状在线上的位置来居中」）：带深 26 → 15.6、间距
  * 27.5 → 16.5（各 0.6×，片间留 0.9 缝防剖口共面 z-fight）；**居中是物理对位不是
- * 渲染偏移**——12 条 lead 统一为对位常数（skin-array ARRAY_LEAD），顶端全部
- * 贴天花、折叠体中线自然对齐，天花板条与芯轨照常显示。
+ * 渲染偏移**——12 条带三段等长、扇形一律居中在自由段上（见 skin-array.ts 文件头
+ * 的对位构造），顶端全部贴天花，嘴心（折叠体与竖带的接合处）逐位对齐。
  */
 const ARRAY_UNITS: readonly SolidUnitDef[] = buildTransitionArray().map(
   ({ spec, opts, smooth }) => ({ spec, opts, smooth }),
