@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { ARRAY_LEAD, buildTransitionArray } from './skin-array';
+import { ARRAY_TOTAL, buildTransitionArray } from './skin-array';
 import { SKIN_UNITS, skinSiteOpts } from './skin-data';
-import { createSkinUnit } from './skin-unit';
+import { SKIN, createSkinUnit, renderSmooth } from './skin-unit';
 
 /**
  * 守门：Lab.08 阵列过渡的键谱序列（v2 = 用户 2026-08-20 线稿拍板的定版系列）。
@@ -15,22 +15,20 @@ describe('skin-array 阵列过渡', () => {
   const sqOf = (u: (typeof arr)[number]): number =>
     typeof u.opts.boxSquare === 'number' ? u.opts.boxSquare : u.opts.boxSquare === true ? 1 : 0;
 
-  it('12 条带，t 单调 0→1，端点键谱段 = 站上原谱（对象同一）· lead = 对位常数', () => {
+  it('12 条带，t 单调 0→1，端点键谱段 = 站上原谱（对象同一）· 各带总长一致', () => {
     expect(arr.length).toBe(12);
     for (let i = 1; i < arr.length; i++) expect(arr[i].t).toBeGreaterThan(arr[i - 1].t);
     const bulb = SKIN_UNITS.find((d) => d.key === 'bulb')!;
     const stepped = SKIN_UNITS.find((d) => d.key === 'stepped')!;
-    // 形态 = 键谱段 + 尾段，逐字原谱（对象同一）；lead 是形状在带上的位置，
-    // 按用户 2026-08-20 指令统一为对位常数（居中对齐的机制），不属形态
+    // 形态 = 键谱段，逐字原谱（对象同一）；lead（形状在带上的位置）与尾段长度
+    // 是位置/配平量，按用户 2026-08-20 指令走对位表，不属形态
     expect(arr[0].spec[1]).toBe(bulb.spec[1]);
-    expect(arr[0].spec[2]).toBe(bulb.spec[2]);
-    expect(arr[0].spec[0]).toEqual(['g', ARRAY_LEAD]);
     expect(arr[0].opts).toEqual(skinSiteOpts(bulb));
     expect(arr[11].spec[1]).toBe(stepped.spec[1]);
-    expect(arr[11].spec[2]).toBe(stepped.spec[2]);
-    expect(arr[11].spec[0]).toEqual(['g', ARRAY_LEAD]);
     expect(arr[11].opts).toEqual(skinSiteOpts(stepped));
     expect(arr[11].opts.boxSquare).toBe(true);
+    // 尾段配平：总长恒定 ⇒ 帘子下缘齐（此前差 5 节 = 10px 参差）
+    for (const u of arr) expect(u.spec.reduce((a, x) => a + x[1], 0)).toBe(ARRAY_TOTAL);
   });
 
   it('每级纪律：等长键、缓冲 ≥4 节、rb 严格递增、梯挡数不减', () => {
@@ -68,7 +66,7 @@ describe('skin-array 阵列过渡', () => {
   });
 
   it('方化渐入纪律：sq 单调不减、步长 ≤0.15、中间级 <1（禁止回到二值切换）；' +
-     'panel 半跨单调不减至 ±8；lead 恒为对位常数', () => {
+     'panel 半跨单调不减至 ±8；lead 相邻至多差 1 节（对位表，不是任意跳）', () => {
     let prevSq = 0;
     let prevPw = 0;
     for (let i = 0; i < arr.length; i++) {
@@ -83,29 +81,30 @@ describe('skin-array 阵列过渡', () => {
       const pw = panel ? (panel[1] - panel[0]) / 2 : 0;
       expect(pw, `panel 半跨 i=${i}`).toBeGreaterThanOrEqual(prevPw);
       prevPw = pw;
-      expect(u.spec[0][1], `lead i=${i}`).toBe(ARRAY_LEAD);
+      if (i > 0) expect(Math.abs(u.spec[0][1] - arr[i - 1].spec[0][1]), `lead i=${i}`).toBeLessThanOrEqual(1);
     }
     expect(sqOf(arr[11])).toBe(1); // 端点全量
     expect(prevPw).toBe(8); // 末端 panel = 最内键跨（端面投影的启用前提）
   });
 
-  it('全员物理冒烟 + 居中对齐（12 台跑到 step 1200）：键谱全锁、贴轴不穿芯、' +
-     '顶端钉在天花、折叠中线散布 ≤2px（lead 对位常数的效果——用户 2026-08-20' +
-     '「保证上端对齐，改形状在线上的位置来居中」；改任何形状后散布超差 = 需重标 ARRAY_LEAD）', { timeout: 40000 }, () => {
+  it('全员物理冒烟 + 居中对齐（12 台跑到终态）：键谱全锁、贴轴不穿芯、顶端钉在天花、' +
+     '**凸出体**中线散布 ≤2px（用户 2026-08-20「保证上端对齐，改形状在线上的位置来居中」；' +
+     '判据必须是离轴那团——贴轴的缓冲料藏在竖带里，算进去就对错了东西。' +
+     '改任何形状后散布超差 = 需按 scratch 标定脚本重标 LEAD 表）', { timeout: 60000 }, () => {
     const centers: number[] = [];
     for (const u of arr) {
       const sim = createSkinUnit(u.spec, u.opts);
-      for (let s = 0; s < 1200; s++) sim.advance();
+      for (let s = 0; s < SKIN.STEPS; s++) sim.advance();
       expect(sim.locked.length).toBe(sim.chains.flat().length);
       expect(Math.abs(sim.py[0])).toBe(0); // 顶端贴天花（钉轴给的是 −0，宽容符号）
       for (let k = 0; k < sim.n; k++) expect(sim.px[k]).toBeGreaterThanOrEqual(0);
-      const glued = new Set(sim.glued);
+      const p = renderSmooth(sim.px, sim.py, u.smooth[0], u.smooth[1]);
       let lo = Infinity;
       let hi = -Infinity;
       for (let k = 0; k < sim.n; k++) {
-        if (glued.has(k)) continue;
-        if (sim.py[k] < lo) lo = sim.py[k];
-        if (sim.py[k] > hi) hi = sim.py[k];
+        if (p.x[k] < 0.08) continue; // 离轴 8px 以上才算「看得见的形状」
+        if (p.y[k] < lo) lo = p.y[k];
+        if (p.y[k] > hi) hi = p.y[k];
       }
       centers.push((-(lo + hi) / 2) * 100);
     }
