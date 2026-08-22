@@ -102,22 +102,30 @@ describe('skin-array 阵列过渡', () => {
     expect(prevPw).toBe(8); // 末端 panel = 最内键跨（端面投影的启用前提）
   });
 
-  it('全员物理冒烟 + 嘴心对齐（12 台跑到终态）：键谱全锁、贴轴不穿芯、顶端钉在天花、' +
-     '**嘴心**（折叠体与带子的接合口中心）散布 ≤1.5px。' +
-     '基准取嘴心是用户 2026-08-20 拍板：嘴的开口 = 键长 rb，是理想终态直接定义的量；' +
-     '体心与嘴心相差各形态自身的下垂量 Δ（松散 +1.8px → 方箱 0，全族差 2.8px），' +
-     '**二者不可能同时对齐**。改任何形状后散布超差 = 需按 scripts/skin-array/calibrate.mjs 重标',
+  it('全员物理冒烟 + 嘴心**全程**对齐（12 台同步推进，四个检查点各测一次）：' +
+     '键谱全锁、贴轴不穿芯、顶端钉在天花、嘴心散布 ≤2px。' +
+     '基准取嘴心是用户 2026-08-20 拍板（嘴的开口 = 键长 rb，理想终态直接定义的量；' +
+     '体心与嘴心相差各形态自身的下垂量 Δ，二者不可能同时对齐）。' +
+     '**必须卡全程不能只卡终态**：嘴心随收缩比 r 走一次式（斜率 2f·φ），' +
+     '只对终态标定的话早期会散开——首版即此病，早期 4.78px / 终态 1.01px，' +
+     '而台架大部分时间在收缩过程中。改形状后超差 = 按 scripts/skin-array/calibrate.mjs 重标',
      { timeout: 60000 }, () => {
-    const mouths: number[] = [];
-    for (const u of arr) {
-      const sim = createSkinUnit(u.spec, u.opts);
-      for (let s = 0; s < SKIN.STEPS; s++) sim.advance();
+    const CPS = [150, 450, 750, SKIN.STEPS - 1];
+    const sims = arr.map((u) => createSkinUnit(u.spec, u.opts));
+    const mouth = (sim: (typeof sims)[number]): number => {
+      const [i, j] = sim.chains[0][0]; // 最外键对 = 嘴
+      return (-(sim.py[i] + sim.py[j]) / 2) * 100;
+    };
+    for (let s = 0; s < SKIN.STEPS; s++) {
+      for (const sim of sims) sim.advance();
+      if (!CPS.includes(s)) continue;
+      const ms = sims.map(mouth);
+      expect(Math.max(...ms) - Math.min(...ms), `step ${s}`).toBeLessThanOrEqual(2);
+    }
+    for (const sim of sims) {
       expect(sim.locked.length).toBe(sim.chains.flat().length);
       expect(Math.abs(sim.py[0])).toBe(0); // 顶端贴天花（钉轴给的是 −0，宽容符号）
       for (let k = 0; k < sim.n; k++) expect(sim.px[k]).toBeGreaterThanOrEqual(0);
-      const [i, j] = sim.chains[0][0]; // 最外键对 = 嘴
-      mouths.push((-(sim.py[i] + sim.py[j]) / 2) * 100);
     }
-    expect(Math.max(...mouths) - Math.min(...mouths)).toBeLessThanOrEqual(1.5);
   });
 });
