@@ -66,8 +66,11 @@ export function buildSolidTopology(n: number, stripe: number): SolidTopology {
  * 与屏幕 y 同向）、Z = offZ ± depth/2（挤出；offZ = 沿深度的整体错位，
  * 2026-08-19 并拢排列新增，尾参默认 0 ⇒ 既有按位调用零改）。
  * 法向取剖面折线的 2D 垂线（中央差分）。
- * 注：曾短暂有过 offY 尾参（渲染纵移居中），2026-08-20 用户否决该对位方案后
- * 撤除——对位在键谱层做（skin-array「lead = 对位常数」），几何烘焙不再需要纵移。
+ * offY = 落位纵移（**常量**，2026-08-22 随「收缩注册端反转」重新引入）：注册端
+ * 换到底端后，长度不同的单元各自钉在自己的下缘，靠它把几台的下缘对到同一条线。
+ * 注意与 2026-08-20 被用户否决的那个 offY 区分——那个是**逐帧**的居中纵移，
+ * 会让接天花的顶端跟着错位；这个是每台一个常数、天花板条与芯轨一起跟着移。
+ * 同一根带子上「形状落在哪」仍然在键谱层解决（skin-array 的对位构造），不在这里。
  */
 export function fillSolidVerts(
   px: ArrayLike<number>,
@@ -79,6 +82,7 @@ export function fillSolidVerts(
   scale: number = SOLID.SCALE,
   out?: Float32Array,
   offZ: number = 0,
+  offY: number = 0,
 ): Float32Array {
   const verts = out && out.length === 4 * n * 3 ? out : new Float32Array(4 * n * 3);
   const hzF = offZ + depth / 2;
@@ -99,7 +103,7 @@ export function fillSolidVerts(
     }
     // 剖面法向（世界系，Y 已翻转 ⇒ 用 (ny=-tx? ) —— 先算世界系切线再转 90°）
     const wx = offX + (px[i] as number) * scale;
-    const wy = -(py[i] as number) * scale;
+    const wy = offY - (py[i] as number) * scale;
     const wtx = tx * scale;
     const wty = -ty * scale;
     const wl = Math.sqrt(wtx * wtx + wty * wty) || 1;

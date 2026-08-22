@@ -33,6 +33,9 @@ const REPLAY_HOLD_S = 3.2;
 const VIEW_ANIM_S = 0.35;
 /** 四单元沿 X 排布的间距与画面枢轴（世界单位 = 2D px 尺度） */
 const UNIT_GAP_X = 175;
+// 机位（2026-08-22 注册端反转后**不用改**：装置占位的并集仍是 [0, 初始芯长]——
+// 以前是顶端钉死、下缘往上缩，现在是下缘钉死、顶端往下走，空出来的那块从底部
+// 换到了顶部，取景范围一模一样。按终态去重新居中会把起始态顶出画外，实测即此）
 const PIVOT = { x: 290, y: 168, z: 0 };
 const CAM_SCALE = 0.98;
 // 条纹双色（2D 目录的 GREEN/PALE 立体化）：A=族系绿、B=灰纱
@@ -148,6 +151,8 @@ interface SolidUnit {
   offX: number;
   offZ: number;
   ceilKey: string;
+  /** 落位纵移（常量）：单元长度不同时把各自的下缘对到同一条线 */
+  offY: number;
   smoothW: number;
   smoothP: number;
   emaX: Float64Array | null;
@@ -316,6 +321,7 @@ export function SkinSolidBench({
         offX: u * layoutList[0].gapX,
         offZ: ((defs.length - 1) / 2 - u) * layoutList[0].gapZ,
         ceilKey: `ceil-u${u}`,
+        offY: 0, // 全部建好后统一解（见下方 footAlign）
         smoothW,
         smoothP,
         emaX: null,
@@ -324,6 +330,18 @@ export function SkinSolidBench({
         verts: new Float32Array(4 * sim.n * 3),
       };
     });
+
+    // 下缘对位（用户 2026-08-22「对齐点都在最下面的点」）：注册端换到底端后，
+    // 每台的末节点各自钉在自己的初始位；长度不同的单元（Lab.07 的四台）要把短的
+    // 整体下移，四条下缘才落在同一条线上。纯常量落位，天花板条与芯轨一起跟着移。
+    // Lab.08 的十二条带总长本来就配平相同 ⇒ 全为 0，逐位不变。
+    {
+      const feet = scene.map((v) => v.sim.py[v.sim.n - 1]);
+      const deepest = Math.min(...feet);
+      scene.forEach((v, u) => {
+        v.offY = (feet[u] - deepest) * SOLID.SCALE; // 世界 Y 向下为正 ⇒ 短的加正值下移
+      });
+    }
 
     /** 排布只改渲染偏移与机位——引擎不重建，收缩接着跑 */
     const applyLayout = (li: number): void => {
@@ -365,7 +383,11 @@ export function SkinSolidBench({
 
     const render = (): void => {
       R.beginFrame(cam);
-      if (ceiling === 'span') R.drawMesh(`ceil-span-${layoutIdx}`, IDENT, RAIL_DARK, RAIL_LITE);
+      if (ceiling === 'span') {
+        // 通长板：各带段落结构相同 ⇒ 顶端同步下降，取第一台的即可
+        const yTop = scene[0].offY - scene[0].sim.coreTop * SOLID.SCALE;
+        R.drawMesh(`ceil-span-${layoutIdx}`, { ...IDENT, o: { x: 0, y: yTop, z: 0 } }, RAIL_DARK, RAIL_LITE);
+      }
       for (const v of scene) {
         const { sim } = v;
         if (!v.emaX || !v.emaY) {
@@ -373,22 +395,25 @@ export function SkinSolidBench({
           v.emaY = Float64Array.from(sim.py);
         }
         const p = renderSmooth(v.emaX, v.emaY, v.smoothW, v.smoothP);
-        fillSolidVerts(p.x, p.y, sim.n, v.offX, depth, SOLID.THICK, SOLID.SCALE, v.verts, v.offZ);
+        fillSolidVerts(p.x, p.y, sim.n, v.offX, depth, SOLID.THICK, SOLID.SCALE, v.verts, v.offZ, v.offY);
         R.drawDynamicMesh(bakeIndexed(v.verts, v.topo.idxA), DARK_A, LITE_A);
         R.drawDynamicMesh(bakeIndexed(v.verts, v.topo.idxB), DARK_B, LITE_B);
-        // 芯轨（长度随收缩变，逐帧小盒）
+        // 芯轨（长度随收缩变，逐帧小盒）。注册端在底端 ⇒ 轨的下端钉住、上端随
+        // 收缩下降（yTop 由芯自己给；默认注册端时 coreTop 恒为 0 ⇒ 与旧行为逐位相同）
         const railLen = sim.coreLen * SOLID.SCALE;
-        const rail = boxVerts(v.offX - 3.4, railLen / 2, v.offZ, 2.4, railLen / 2, Math.min(6, depth / 4));
+        const yTop = v.offY - sim.coreTop * SOLID.SCALE;
+        const rail = boxVerts(v.offX - 3.4, yTop + railLen / 2, v.offZ, 2.4, railLen / 2, Math.min(6, depth / 4));
         R.drawDynamicMesh(bakeIndexed(rail.verts, rail.idx), RAIL_DARK, RAIL_LITE);
-        if (ceiling !== 'span') R.drawMesh(v.ceilKey, IDENT, RAIL_DARK, RAIL_LITE);
+        // 天花板条跟着顶端走（静件不重烘，只给平移矩阵）
+        if (ceiling !== 'span') R.drawMesh(v.ceilKey, { ...IDENT, o: { x: 0, y: yTop, z: 0 } }, RAIL_DARK, RAIL_LITE);
         if (bondsRef.current && sim.locked.length) {
           const hz = depth / 2;
           const segs: { a: Vec3; b: Vec3 }[] = [];
           for (const [i, j] of sim.locked) {
             for (const z of [v.offZ + hz, v.offZ - hz]) {
               segs.push({
-                a: { x: v.offX + p.x[i] * SOLID.SCALE, y: -p.y[i] * SOLID.SCALE, z },
-                b: { x: v.offX + p.x[j] * SOLID.SCALE, y: -p.y[j] * SOLID.SCALE, z },
+                a: { x: v.offX + p.x[i] * SOLID.SCALE, y: v.offY - p.y[i] * SOLID.SCALE, z },
+                b: { x: v.offX + p.x[j] * SOLID.SCALE, y: v.offY - p.y[j] * SOLID.SCALE, z },
               });
             }
           }

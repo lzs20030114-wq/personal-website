@@ -84,6 +84,15 @@ export interface SkinUnitOpts {
    * 而不是最后一格二值切换。
    */
   boxSquare?: boolean | number;
+  /**
+   * 收缩的注册端：默认 false = 顶端（v7 原行为——node 0 钉在天花，自由段一变短，
+   * 它下面的材料整体上移，带子的下缘随收缩往上跑）；true = **底端**（用户
+   * 2026-08-22 拍板「把收缩的固定点和方向反转」——最后一个节点钉住不动，
+   * 收缩时上面的材料往下走，带子的顶端随收缩下降）。
+   * 实现 = 每次排芯后给整条芯加一个统一纵向偏移，使末节点恒在初始位置；
+   * 键谱、约束、整形全都不知道这件事（约束是相对量、重力均匀）。
+   */
+  anchorEnd?: boolean;
 }
 
 /**
@@ -157,6 +166,9 @@ export class SkinUnit {
   private chainLocked: number[][];
   private coreWall: boolean;
   private rootHug: number;
+  private anchorEnd: boolean;
+  /** anchorEnd 的锚：末节点在 r=R0 时的 y（此后恒定） */
+  private anchorRef = 0;
   private r1: number;
   /** 方箱整形强度：0 = 关，(0,1) = 渐入（Lab.08 过渡中段），1 = 全量（阶梯方箱） */
   private boxSquare: number;
@@ -169,6 +181,7 @@ export class SkinUnit {
     this.spec = spec;
     this.coreWall = opts.coreWall ?? false;
     this.rootHug = opts.rootHug ?? 0;
+    this.anchorEnd = opts.anchorEnd ?? false;
     this.r1 = opts.r1 ?? SKIN.R1;
     this.boxSquare =
       opts.boxSquare === true ? 1 : typeof opts.boxSquare === 'number' ? opts.boxSquare : 0;
@@ -210,6 +223,7 @@ export class SkinUnit {
     }
 
     this.coreLen = coreY(spec, SKIN.R0, this.ys);
+    this.anchorRef = this.ys[n - 1]; // r=R0 时偏移恒为 0，这里取的就是锚
     this.py.set(this.ys);
     // 自由段初始鼓包：np.sin(π·linspace(0,1,L))（L=1 时 linspace 取 [0]）
     let runStart = -1;
@@ -321,6 +335,11 @@ export class SkinUnit {
     }
   }
 
+  /** 芯的顶端 y（默认注册端 = 顶端时恒为 0；anchorEnd 时随收缩下降）——渲染用 */
+  get coreTop(): number {
+    return this.ys[0];
+  }
+
   /** 推进一个协议步（step 索引即 Python 侧 for step in range(STEPS) 的 step） */
   advance(): void {
     if (this.done) return;
@@ -330,6 +349,12 @@ export class SkinUnit {
     const r = SKIN.R0 + (this.r1 - SKIN.R0) * Math.min(step / 900, 1.0);
     this.r = r;
     this.coreLen = coreY(this.spec, r, ys);
+    if (this.anchorEnd) {
+      // 注册端换到底端：整条芯平移，使末节点恒在锚位（收缩量从「下面往上跑」
+      // 变成「上面往下走」）。相对间距一字未动 ⇒ 键谱与整形逻辑完全无感。
+      const d = this.anchorRef - ys[n - 1];
+      for (let i = 0; i < n; i++) ys[i] += d;
+    }
 
     for (let i = 0; i < n; i++) {
       const vx = (px[i] - ppx[i]) * SKIN.DAMP;

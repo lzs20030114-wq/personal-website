@@ -45,6 +45,10 @@ const VB_H = 8 + UNIT_H + 78; // 448
 
 interface UnitView {
   sim: SkinUnit;
+  /** 天花线（随注册端在底端时的顶端一起下降） */
+  ceilEl: SVGLineElement;
+  /** 落位纵移（常量）：四个单元长度不同，注册端在底端 ⇒ 把它们的下缘对到同一条线 */
+  yOff: number;
   coreEl: SVGLineElement;
   stripeEls: SVGPolylineElement[];
   bondEls: SVGLineElement[];
@@ -123,10 +127,9 @@ export function SkinBench({
       const x0 = M + u * (UNIT_W + GAP);
       const g = el('g');
       const sim = createSkinUnit(def.spec, skinSiteOpts(def));
-      const sx = (wx: number): number => x0 + (wx - WX0) * S;
-      const sy = (wy: number): number => 8 + (WY1 - wy) * S;
-      // 天花线（皮从这里垂下）
-      attrs(el('line', 'skin-ceil', g), { x1: sx(-0.55), y1: sy(0), x2: sx(1.15), y2: sy(0) });
+      // 天花线（皮挂在这里）——收缩注册在底端后它随顶端一起下降（见 skin-data
+      // SKIN_SITE_BASE：末节点钉住不动、材料往下聚拢），故逐帧更新
+      const ceilEl = el('line', 'skin-ceil', g);
       // 残影（收缩中途的两帧历史，目录图同款）——先建空 path，路过快照点时填
       const ghostEls = GHOST_STEPS.map(() => el('path', 'skin-ghost', g));
       // 芯（收缩源，单自由度 ℓ）
@@ -149,6 +152,8 @@ export function SkinBench({
       const [smoothW, smoothP] = def.smooth ?? [3, 1];
       return {
         sim,
+        ceilEl,
+        yOff: 0, // 四台建好后统一解（见下方 footAlign）
         coreEl,
         stripeEls,
         bondEls,
@@ -162,11 +167,27 @@ export function SkinBench({
       };
     });
 
+    // 下缘对位（用户 2026-08-22「对齐点都在最下面的点」）：注册端换到底端后，
+    // 每台的末节点各自钉在自己的初始位，而四个单元总长不同 ⇒ 把短的整体下移，
+    // 四条下缘落在同一条线上。纯常量落位（不随时间变、不进物理），与 Lab.08 那套
+    // 「对位在键谱层做」不冲突——那里管的是同一根带子上形状的位置，这里管的是
+    // 长度本就不同的四台之间的落位。
+    const footAlign = (): void => {
+      const feet = units.map((v) => v.sim.py[v.sim.n - 1]);
+      const deepest = Math.min(...feet);
+      units.forEach((v, u) => {
+        v.yOff = deepest - feet[u];
+      });
+    };
+    footAlign();
+
     const drawUnit = (v: UnitView, nSteps = 0): void => {
       const { sim, x0 } = v;
       const sx = (wx: number): number => x0 + (wx - WX0) * S;
-      const sy = (wy: number): number => 8 + (WY1 - wy) * S;
-      attrs(v.coreEl, { x1: sx(0), y1: sy(0), x2: sx(0), y2: sy(-sim.coreLen) });
+      const sy = (wy: number): number => 8 + (WY1 - wy - v.yOff) * S;
+      const yTop = sim.coreTop; // 注册端在底端 ⇒ 顶端随收缩下降（默认注册端时恒为 0）
+      attrs(v.ceilEl, { x1: sx(-0.55), y1: sy(yTop), x2: sx(1.15), y2: sy(yTop) });
+      attrs(v.coreEl, { x1: sx(0), y1: sy(yTop), x2: sx(0), y2: sy(yTop - sim.coreLen) });
       // 帧间指数平滑（v7 GIF 同款纪律，物理不动只平滑画面时间轴——成形期约束互相
       // 拉扯，逐步位移实测最高 7px，直接画会抖）：GIF 是每 20 步一帧、旧帧保留
       // 0.45，按本帧实际推进的步数折算等效系数，快慢设备观感一致。
@@ -217,6 +238,7 @@ export function SkinBench({
         v.emaX = null; // 帧间平滑重新起步（全新收缩，不许拖上一轮的画面尾巴）
         v.emaY = null;
       });
+      footAlign();
       acc = 0;
       holdT = 0;
       units.forEach((v) => drawUnit(v));

@@ -33,9 +33,17 @@ export interface SkinUnitDef {
   boxSquare?: boolean;
 }
 
-/** 台架实际使用的引擎选项（根部贴轴修正 + 每单元收缩终点/方箱整形）——测试与台架共用同一份 */
+/**
+ * 站上展示的公共引擎选项——四台台架与 Lab.08 阵列共用同一份（留两份必然漂）：
+ * 根部贴轴修正（SKIN_ROOT_FIX）+ **收缩注册在底端**（用户 2026-08-22 拍板
+ * 「把收缩的固定点和方向反转」：末节点钉住不动，材料往下聚拢，顶端随收缩下降）。
+ * 对照基准（Python 逐字复刻）不带这些 ⇒ 移植守门不受影响。
+ */
+export const SKIN_SITE_BASE: SkinUnitOpts = { ...SKIN_ROOT_FIX, anchorEnd: true };
+
+/** 台架实际使用的引擎选项（公共项 + 每单元收缩终点/方箱整形）——测试与台架共用同一份 */
 export function skinSiteOpts(def: SkinUnitDef): SkinUnitOpts {
-  const opts: SkinUnitOpts = { ...SKIN_ROOT_FIX };
+  const opts: SkinUnitOpts = { ...SKIN_SITE_BASE };
   if (def.r1 !== undefined) opts.r1 = def.r1;
   if (def.boxSquare) opts.boxSquare = true;
   return opts;

@@ -56,8 +56,8 @@
  * 只是两张既有键谱之间的形态学串联（演示编排，形态经用户线稿拍板），不是那套
  * 翻译规则；用户交来正式规则后本文件随时按其替换。
  */
-import { SKIN_ROOT_FIX, type SkinSeg, type SkinSpec, type SkinUnitOpts } from './skin-unit';
-import { SKIN_UNITS, fan, skinSiteOpts } from './skin-data';
+import type { SkinSeg, SkinSpec, SkinUnitOpts } from './skin-unit';
+import { SKIN_SITE_BASE, SKIN_UNITS, fan, skinSiteOpts } from './skin-data';
 
 export interface SkinArrayUnit {
   /** 过渡参数 0..1（0 = 蘑菇挑台，1 = 阶梯方箱） */
@@ -137,7 +137,7 @@ export function buildTransitionArray(): SkinArrayUnit[] {
         PW[i] > 0
           ? ['f', FREE, bonds, [[ARRAY_CENTER - PW[i], ARRAY_CENTER + PW[i]]]]
           : ['f', FREE, bonds];
-      opts = { ...SKIN_ROOT_FIX };
+      opts = { ...SKIN_SITE_BASE };
       if (SQ[i] > 0) opts.boxSquare = SQ[i];
       // 绘图平滑：低强度段梯身微皱仍要 [5,2] 盖住；sq≥0.5 后箱体自带压平，回 [3,1]
       smooth = SQ[i] >= 0.5 ? [3, 1] : [5, 2];

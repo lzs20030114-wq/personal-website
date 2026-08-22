@@ -131,6 +131,8 @@ describe('skin-array 阵列过渡', () => {
      { timeout: 60000 }, () => {
     const CPS = [150, 450, 750, SKIN.STEPS - 1];
     const sims = arr.map((u) => createSkinUnit(u.spec, u.opts));
+    // 收缩的注册端 = 底端（用户 2026-08-22 拍板）：末节点从头到尾不动
+    const feet = sims.map((sim) => sim.py[sim.n - 1]);
     const mouth = (sim: (typeof sims)[number]): number => {
       const [i, j] = sim.chains[0][0]; // 最外键对 = 嘴
       return (-(sim.py[i] + sim.py[j]) / 2) * 100;
@@ -143,10 +145,14 @@ describe('skin-array 阵列过渡', () => {
       // 折叠成形前（前两个检查点）构造保证严格恒等；成形后只剩形态自身的不对称
       expect(spread, `step ${s}`).toBeLessThanOrEqual(s <= 450 ? 0.05 : 1.2);
     }
-    for (const sim of sims) {
+    sims.forEach((sim, i) => {
       expect(sim.locked.length).toBe(sim.chains.flat().length);
-      expect(Math.abs(sim.py[0])).toBe(0); // 顶端贴天花（钉轴给的是 −0，宽容符号）
+      // 底端钉住不动（注册端反转后的新不变量），顶端反过来随收缩下降
+      expect(sim.py[sim.n - 1]).toBe(feet[i]);
+      expect(sim.coreTop, `顶端应随收缩下降 i=${i}`).toBeLessThan(-0.1);
       for (let k = 0; k < sim.n; k++) expect(sim.px[k]).toBeGreaterThanOrEqual(0);
-    }
+    });
+    // 12 条带下缘逐条重合（总长配平 + 底端注册 ⇒「对齐点在最下面的点」）
+    expect(Math.max(...feet) - Math.min(...feet)).toBe(0);
   });
 });

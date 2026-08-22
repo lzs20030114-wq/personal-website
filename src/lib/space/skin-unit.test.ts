@@ -240,6 +240,36 @@ describe('skin unit 引擎公共行为', () => {
     }
   });
 
+  it('anchorEnd（收缩注册在底端）= 纯平移：形态逐位不变，只是底端钉住、顶端下降',
+     { timeout: 30000 }, () => {
+    // 用户 2026-08-22「把收缩的固定点和方向反转」。默认路径 = v7 原行为
+    // （顶端钉在天花、下缘随收缩上跑）；anchorEnd 反过来。因为约束全是相对量、
+    // 重力逐节点均匀，两条路径的解只差一个逐帧统一的纵向偏移——这条守门就是
+    // 那句话的硬证据（若哪天引擎引入了与绝对 y 相关的项，这里先红）。
+    const spec = SKIN_UNITS[1].spec;
+    const a = createSkinUnit(spec, { ...SKIN_ROOT_FIX });
+    const b = createSkinUnit(spec, { ...SKIN_ROOT_FIX, anchorEnd: true });
+    const foot0 = b.py[b.n - 1]; // 底端的初始位（锚）
+    for (let s = 0; s < 600; s++) {
+      a.advance();
+      b.advance();
+    }
+    expect(Math.abs(a.py[0])).toBe(0); // 默认：顶端钉在天花（钉轴给的是 −0）
+    expect(b.coreTop).toBeLessThan(-0.1); // 反转：顶端已经降下来
+    expect(b.py[b.n - 1]).toBe(foot0); // 底端一动不动
+    const d = b.py[0] - a.py[0];
+    expect(d).toBeLessThan(0); // 整体下移
+    // 容差 2e-4 世界单位 = 0.02px：两条路径不是逐位相同——每帧被「传送」的是
+    // 哪一段贴合料不一样（默认是下面那段往上跑、反转后是上面那段往下走），
+    // Verlet 的隐式速度会因此有极小差别。四个单元全程实测最大偏差 4.85e-5
+    // （= 0.005px，蘑菇挑台 step 899），远在任何可见量之下；形态实测（终态
+    // 高度 / 凸出宽度 / 锁定键集合）逐位相同。
+    for (let i = 0; i < a.n; i++) {
+      expect(Math.abs(b.px[i] - a.px[i]), `px ${i}`).toBeLessThan(2e-4);
+      expect(Math.abs(b.py[i] - a.py[i] - d), `py ${i}`).toBeLessThan(2e-4);
+    }
+  });
+
   it('SKIN_ROOT_FIX 是可选项：默认构造不带修正（v7 逐字路径，对照测试跑的就是它）', () => {
     // 参考数据里 v7 全程会轻微越轴（实测 minX≈-0.005…-0.012）；默认路径若被
     // 修正污染，这里与上方的逐位对照会先后变红。
