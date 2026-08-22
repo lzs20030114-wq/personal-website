@@ -28,8 +28,11 @@ const ARRAY_UNITS: readonly SolidUnitDef[] = buildTransitionArray().map(
 );
 
 const ARRAY_LAYOUTS = [
-  { key: 'merged', label: '并拢', gapX: 0, gapZ: 16.5, pivot: { x: 45, y: 160, z: 0 }, camScale: 1.1 },
-  { key: 'spread', label: '分列', gapX: 80, gapZ: 0, pivot: { x: 468, y: 168, z: 0 }, camScale: 0.6 },
+  // 并拢默认水平机位：12 片沿深度叠着，俯仰≠0 时远片会纵向偏移（视角错位，
+  // 不是形状没对齐——12 条相同形状在轴测下照样呈阶梯，实验实证）
+  { key: 'merged', label: '并拢', gapX: 0, gapZ: 16.5, pivot: { x: 45, y: 160, z: 0 }, camScale: 1.1, home: 'side' },
+  // 分列沿 X 展开、gapZ=0（无深度展开）⇒ 任何机位都不错位，用轴测看 3D
+  { key: 'spread', label: '分列', gapX: 80, gapZ: 0, pivot: { x: 468, y: 168, z: 0 }, camScale: 0.6, home: 'axon' },
 ] as const;
 
 export function SkinArrayBench({

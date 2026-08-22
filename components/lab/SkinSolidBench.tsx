@@ -177,10 +177,16 @@ export interface SolidLayout {
   gapZ: number;
   pivot: { x: number; y: number; z: number };
   camScale: number;
+  /** 该排布的默认机位（2026-08-20 用户「还是不齐」→ 查明是视角的深度错位）：
+   *  并拢排布把 12 片沿深度叠着，相机只要有俯仰，远片就在屏幕上纵向偏移
+   *  （12 条**完全相同**的形状在轴测机位下照样呈阶梯——实验实证）。
+   *  俯仰角 = 0 的机位（正/侧）深度分量对屏幕 y 的系数恰为 0 ⇒ 一排恒水平。
+   *  省略 = 'axon'（分列排布 gapZ=0、无深度展开，任何机位都不错位） */
+  home?: ViewKey;
 }
 // 对位注记（2026-08-20 二轮纠偏）：曾在这里做过「渲染纵移居中」（center/frame
 // 旗标），被用户否——顶端接天花的部分会跟着错位。对位的正解在键谱层：lead
-// （贴合段节数）就是形状在带上的位置，见 skin-array.ts「lead = 对位常数」。
+// （贴合段节数）就是形状在带上的位置，见 skin-array.ts「lead = 形状在带上的位置」。
 
 interface SolidHud {
   kicker: string;
@@ -246,7 +252,7 @@ export function SkinSolidBench({
   const [bonds, setBonds] = useState(true);
   const [persp, setPersp] = useState(false);
   const [speed, setSpeed] = useState(1);
-  const [view, setView] = useState<ViewKey>('axon');
+  const [view, setView] = useState<ViewKey>(layouts?.[0]?.home ?? 'axon');
   const [layout, setLayout] = useState(0);
   const [hud, setHud] = useState<{ r: number; step: number; locked: number; phase: string; note: string }>({
     r: SKIN.R0,
@@ -355,6 +361,7 @@ export function SkinSolidBench({
     };
 
     let viewAnim: { q0: Quat; q1: Quat; t: number } | null = null;
+    if (layoutList[0].home) cam.setOrientation(PRESET_VIEWS[layoutList[0].home]);
 
     const render = (): void => {
       R.beginFrame(cam);
@@ -473,6 +480,11 @@ export function SkinSolidBench({
       },
       setLayout: (li) => {
         applyLayout(li);
+        const home = layoutList[li].home;
+        if (home) {
+          viewAnim = null;
+          cam.setOrientation(PRESET_VIEWS[home]);
+        }
         render();
       },
     };
@@ -522,7 +534,9 @@ export function SkinSolidBench({
   const goLayout = useCallback((li: number) => {
     setLayout(li);
     apiRef.current?.setLayout(li);
-  }, []);
+    const home = layouts?.[li]?.home;
+    if (home) setView(home);
+  }, [layouts]);
 
   return (
     <div className={`lab-wrap${onLight ? ' on-light' : ''}`}>
