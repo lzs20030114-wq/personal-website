@@ -121,6 +121,55 @@ describe('OrbitCamera', () => {
   });
 });
 
+describe('OrbitCamera · 转盘模式（2026-08-20 用户拍板「模仿 Rhino，怎么拖都是正的」）', () => {
+  it('y 轴世界：任意斜拖序列后世界竖直轴仍投影为屏幕竖直（零侧倾）', () => {
+    const c = cam0({ mode: 'turntable', pitch0: -0.34, yaw0: -0.62 });
+    c.pointerDown(1, 0, 0);
+    for (const [x, y] of [[37, -21], [90, 40], [-55, 66], [140, -80]]) c.pointerMove(1, x, y);
+    c.pointerUp(1);
+    const p = c.project({ x: 0, y: 1, z: 0 });
+    expect(p.x).toBeCloseTo(0, 12); // 水平分量恒 0——歪的状态在参数化里不存在
+    expect(p.y).toBeGreaterThan(0); // 没有翻倒
+  });
+
+  it('俯仰钳位：狂竖拖不过顶、不倒置（trackball 那条守的是「能翻」，此处相反）', () => {
+    const c = cam0({ mode: 'turntable' });
+    c.pointerDown(1, 0, 0);
+    c.pointerMove(1, 0, 10000);
+    c.pointerUp(1);
+    expect(c.project({ x: 0, y: 1, z: 0 }).y).toBeGreaterThanOrEqual(0);
+    c.pointerDown(2, 0, 0);
+    c.pointerMove(2, 0, -20000);
+    c.pointerUp(2);
+    expect(c.project({ x: 0, y: 1, z: 0 }).y).toBeGreaterThanOrEqual(0);
+  });
+
+  it('z 轴世界（图纸系）：五环轴测三元组吸附后严格无侧倾，拖拽后 Z 仍屏幕竖直', () => {
+    const c = cam0({
+      mode: 'turntable', upAxis: 'z',
+      roll0: -1.053336, pitch0: 0.735843, yaw0: 0.867459, // RingsBench 实际机位
+    });
+    expect(c.project({ x: 0, y: 0, z: 1 }).x).toBeCloseTo(0, 12); // 吸附即无侧倾
+    c.pointerDown(1, 0, 0);
+    c.pointerMove(1, 77, 33);
+    c.pointerUp(1);
+    const up = c.project({ x: 0, y: 0, z: 1 });
+    expect(up.x).toBeCloseTo(0, 12);
+    expect(up.y).toBeLessThan(0); // Z 朝上 = 屏幕上方（y 负）
+  });
+
+  it('setOrientation 吸附：带侧倾的姿态被投到最近无侧倾姿态（预设 slerp 过渡路径）', () => {
+    const rolled = cam0({ roll0: 0.3, pitch0: 0.5, yaw0: 0.7 }).matrix; // trackball 原样出带 roll 矩阵
+    const c = cam0({ mode: 'turntable' });
+    c.setOrientation(rolled);
+    expect(c.project({ x: 0, y: 1, z: 0 }).x).toBeCloseTo(0, 12);
+    // 无侧倾输入则落点精确：环绕/俯仰角还原
+    const clean = cam0({ pitch0: 0.5, yaw0: 0.7 }).matrix;
+    c.setOrientation(clean);
+    for (let i = 0; i < 9; i++) expect(c.matrix[i]).toBeCloseTo(clean[i], 12);
+  });
+});
+
 describe('bakeSkinned（TPU 连接件双骨蒙皮烘焙）', () => {
   const lin = (ax: number, b0: number, b1: number): number =>
     Math.min(1, Math.max(0, (ax - b0) / (b1 - b0)));

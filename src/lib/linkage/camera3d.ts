@@ -32,6 +32,17 @@ export interface OrbitCameraOpts {
   pitchPerPx?: number;
   /** wheel 缩放速率（/deltaY px） */
   wheelRate?: number;
+  /** 拖拽模型（2026-08-20 用户拍板「模仿 Rhino 的视角，不管怎么拖动都是正的」）：
+   *  'turntable' = 转盘——姿态只有环绕角 + 俯仰角两个数，**永不产生侧倾**
+   *  （世界竖直轴恒投影为屏幕竖直），横拖 = 绕世界竖直轴环绕、竖拖 = 俯仰
+   *  （±90° 钳位不过顶）；初始三元组与 setOrientation 传入的姿态一律吸附到
+   *  最近的无侧倾姿态（抽取环绕/俯仰、丢弃残余 roll——预设过渡动画照常走）。
+   *  'trackball' = 自由轨迹球（**类级默认**，2026-07-10 拍板的历史行为——
+   *  站上台架逐台显式传 turntable；src/demo 与横躺机位的触手台架零改）。 */
+  mode?: 'trackball' | 'turntable';
+  /** turntable 的世界竖直轴：'y' = 悬挂类世界（皮肤单元：Y 沿屏幕竖直）；
+   *  'z' = 图纸系 Z 朝上（五环/整机）。默认 'y'。 */
+  upAxis?: 'y' | 'z';
 }
 
 export interface Projected {
@@ -68,11 +79,16 @@ const rotZ = (t: number): Mat3 => {
   return [c, -s, 0, s, c, 0, 0, 0, 1];
 };
 
+const PITCH_MAX = Math.PI / 2;
+
 export class OrbitCamera {
   private readonly o: Required<OrbitCameraOpts>;
   /** 姿态矩阵：世界 → 视空间（屏幕 x 右、y 下、z 近） */
   private m: Mat3;
-  private readonly m0: Mat3;
+  private m0: Mat3;
+  /** 转盘姿态（mode='turntable' 时是唯一事实，m 由它重建） */
+  private _yaw = 0;
+  private _pitch = 0;
   private _zoom = 1;
   private _panX = 0;
   private _panY = 0;
@@ -94,10 +110,17 @@ export class OrbitCamera {
       yawPerPx: 0.008,
       pitchPerPx: 0.006,
       wheelRate: 0.0012,
+      mode: 'trackball',
+      upAxis: 'y',
       ...opts,
     };
     this.m0 = mul(rotZ(this.o.roll0), mul(rotX(this.o.pitch0), rotY(this.o.yaw0)));
     this.m = this.m0;
+    if (this.o.mode === 'turntable') {
+      // 初始三元组吸附到无侧倾姿态（历史机位的残余 roll 是数值量级，见台架注记）
+      this.ttAdopt(this.m0);
+      this.m0 = this.m;
+    }
   }
 
   get zoom(): number {
@@ -137,8 +160,41 @@ export class OrbitCamera {
     };
   }
 
-  /** 屏幕轴旋转（trackball 核心）：横 = 绕屏幕竖轴，竖 = 绕屏幕横轴。 */
+  /** 转盘：由 (_yaw, _pitch) 重建姿态矩阵——结构上保证世界竖直轴投到屏幕竖直 */
+  private ttRebuild(): void {
+    this.m =
+      this.o.upAxis === 'z'
+        ? mul(rotX(this._pitch), mul(rotX(Math.PI / 2), rotZ(this._yaw)))
+        : mul(rotX(this._pitch), rotY(this._yaw));
+  }
+
+  /** 转盘：把任意姿态吸附到最近的无侧倾姿态（抽取环绕/俯仰、丢弃残余 roll） */
+  private ttAdopt(m: readonly number[]): void {
+    if (this.o.upAxis === 'z') {
+      // m ≈ rotX(pitch+π/2)·rotZ(yaw)：row2/row3 给出俯仰，row1 给出环绕
+      this._pitch = Math.atan2(-m[5], m[8]) - Math.PI / 2;
+      this._yaw = Math.atan2(-m[1], m[0]);
+    } else {
+      // m ≈ rotX(pitch)·rotY(yaw)
+      this._pitch = Math.asin(Math.max(-1, Math.min(1, m[7])));
+      this._yaw = Math.atan2(-m[6], m[8]);
+    }
+    this._pitch = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, this._pitch));
+    this.ttRebuild();
+  }
+
+  /** 屏幕轴旋转：trackball = 绕屏幕轴自由转；turntable = 横拖环绕竖直轴、
+   *  竖拖俯仰（钳位）——两者在竖直拖拽上公式一致，手感连续。 */
   rotate(dxPx: number, dyPx: number): void {
+    if (this.o.mode === 'turntable') {
+      this._yaw += dxPx * this.o.yawPerPx;
+      this._pitch = Math.max(
+        -PITCH_MAX,
+        Math.min(PITCH_MAX, this._pitch - dyPx * this.o.pitchPerPx),
+      );
+      this.ttRebuild();
+      return;
+    }
     if (dxPx) this.m = mul(rotY(dxPx * this.o.yawPerPx), this.m);
     if (dyPx) this.m = mul(rotX(-dyPx * this.o.pitchPerPx), this.m);
   }
@@ -181,23 +237,38 @@ export class OrbitCamera {
     this._zoom = this.clampZoom(this._zoom * Math.exp(-deltaY * this.o.wheelRate));
   }
 
-  /** 每帧：空闲自转（前乘屏幕竖轴 = 整体横向转动；用户接管后永不再动）。 */
+  /** 每帧：空闲自转（trackball 前乘屏幕竖轴；turntable 推环绕角——同为
+   *  整体横向环视；用户接管后永不再动）。 */
   tick(dt: number): void {
     if (!this.userTookOver && this.pointers.size === 0) {
-      this.m = mul(rotY(this.o.autoYaw * dt), this.m);
+      if (this.o.mode === 'turntable') {
+        this._yaw += this.o.autoYaw * dt;
+        this.ttRebuild();
+      } else {
+        this.m = mul(rotY(this.o.autoYaw * dt), this.m);
+      }
     }
   }
 
   /** 外部设定姿态矩阵（固定视角预设/切换动画用，2026-07-17 五环台架拍板新增）。
-   *  视为用户接管：空闲自转不再抢回。 */
+   *  turntable 下吸附到最近无侧倾姿态（预设本就无侧倾 ⇒ 落点精确；slerp 过渡的
+   *  中间帧被投掉瞬时 roll，过渡全程保持水平）。视为用户接管：空闲自转不再抢回。 */
   setOrientation(m: readonly number[]): void {
-    this.m = [...m] as Mat3;
+    if (this.o.mode === 'turntable') {
+      this.ttAdopt(m);
+    } else {
+      this.m = [...m] as Mat3;
+    }
     this.userTookOver = true;
   }
 
   /** 视角归位（含平移清零；不恢复自转——主权已交出就不抢回）。 */
   reset(): void {
-    this.m = this.m0;
+    if (this.o.mode === 'turntable') {
+      this.ttAdopt(this.m0);
+    } else {
+      this.m = this.m0;
+    }
     this._zoom = 1;
     this._panX = 0;
     this._panY = 0;

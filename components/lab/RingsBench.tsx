@@ -315,6 +315,10 @@ export function RingsBench({
       zoomMin: 0.5,
       zoomMax: 3,
       autoYaw: 0,
+      // 转盘模式（用户 2026-08-20 拍板）：图纸系 Z 朝上。上面的轴测三元组
+      // 本就是无侧倾机位（残余 roll ≈0.0016，数值量级），吸附后观感不变
+      mode: 'turntable',
+      upAxis: 'z',
     });
 
     let renderer: FlatRenderer | null = null;

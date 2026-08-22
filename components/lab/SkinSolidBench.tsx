@@ -282,6 +282,9 @@ export function SkinSolidBench({
       zoomMin: 0.5,
       zoomMax: 3,
       autoYaw: 0,
+      // 转盘模式（用户 2026-08-20 拍板「模仿 Rhino，怎么拖都是正的」）：
+      // 本台世界 Y 沿屏幕竖直 ⇒ upAxis 默认 'y'
+      mode: 'turntable',
     });
 
     let renderer: FlatRenderer | null = null;
