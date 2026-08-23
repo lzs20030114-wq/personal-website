@@ -45,8 +45,6 @@ const VB_H = 8 + UNIT_H + 78; // 448
 
 interface UnitView {
   sim: SkinUnit;
-  /** 天花线（随注册端在底端时的顶端一起下降） */
-  ceilEl: SVGLineElement;
   /** 落位纵移（常量）：四个单元长度不同，注册端在底端 ⇒ 把它们的下缘对到同一条线 */
   yOff: number;
   coreEl: SVGLineElement;
@@ -127,9 +125,15 @@ export function SkinBench({
       const x0 = M + u * (UNIT_W + GAP);
       const g = el('g');
       const sim = createSkinUnit(def.spec, skinSiteOpts(def));
-      // 天花线（皮挂在这里）——收缩注册在底端后它随顶端一起下降（见 skin-data
-      // SKIN_SITE_BASE：末节点钉住不动、材料往下聚拢），故逐帧更新
-      const ceilEl = el('line', 'skin-ceil', g);
+      // 天花线 = 房间的天花板，**固定不动**（用户 2026-08-22 纠偏）。收缩注册在
+      // 底端后带子的顶端会离开它往下沉，那条缝是「往下收」的本来面目，不是错位。
+      // 注意它不吃 v.yOff（落位纵移是单元的事，天花是共用基准）
+      attrs(el('line', 'skin-ceil', g), {
+        x1: x0 + (-0.55 - WX0) * S,
+        y1: 8 + WY1 * S,
+        x2: x0 + (1.15 - WX0) * S,
+        y2: 8 + WY1 * S,
+      });
       // 残影（收缩中途的两帧历史，目录图同款）——先建空 path，路过快照点时填
       const ghostEls = GHOST_STEPS.map(() => el('path', 'skin-ghost', g));
       // 芯（收缩源，单自由度 ℓ）
@@ -152,7 +156,6 @@ export function SkinBench({
       const [smoothW, smoothP] = def.smooth ?? [3, 1];
       return {
         sim,
-        ceilEl,
         yOff: 0, // 四台建好后统一解（见下方 footAlign）
         coreEl,
         stripeEls,
@@ -186,7 +189,6 @@ export function SkinBench({
       const sx = (wx: number): number => x0 + (wx - WX0) * S;
       const sy = (wy: number): number => 8 + (WY1 - wy - v.yOff) * S;
       const yTop = sim.coreTop; // 注册端在底端 ⇒ 顶端随收缩下降（默认注册端时恒为 0）
-      attrs(v.ceilEl, { x1: sx(-0.55), y1: sy(yTop), x2: sx(1.15), y2: sy(yTop) });
       attrs(v.coreEl, { x1: sx(0), y1: sy(yTop), x2: sx(0), y2: sy(yTop - sim.coreLen) });
       // 帧间指数平滑（v7 GIF 同款纪律，物理不动只平滑画面时间轴——成形期约束互相
       // 拉扯，逐步位移实测最高 7px，直接画会抖）：GIF 是每 20 步一帧、旧帧保留

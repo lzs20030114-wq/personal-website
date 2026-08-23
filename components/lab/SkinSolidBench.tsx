@@ -383,11 +383,7 @@ export function SkinSolidBench({
 
     const render = (): void => {
       R.beginFrame(cam);
-      if (ceiling === 'span') {
-        // 通长板：各带段落结构相同 ⇒ 顶端同步下降，取第一台的即可
-        const yTop = scene[0].offY - scene[0].sim.coreTop * SOLID.SCALE;
-        R.drawMesh(`ceil-span-${layoutIdx}`, { ...IDENT, o: { x: 0, y: yTop, z: 0 } }, RAIL_DARK, RAIL_LITE);
-      }
+      if (ceiling === 'span') R.drawMesh(`ceil-span-${layoutIdx}`, IDENT, RAIL_DARK, RAIL_LITE);
       for (const v of scene) {
         const { sim } = v;
         if (!v.emaX || !v.emaY) {
@@ -404,8 +400,9 @@ export function SkinSolidBench({
         const yTop = v.offY - sim.coreTop * SOLID.SCALE;
         const rail = boxVerts(v.offX - 3.4, yTop + railLen / 2, v.offZ, 2.4, railLen / 2, Math.min(6, depth / 4));
         R.drawDynamicMesh(bakeIndexed(rail.verts, rail.idx), RAIL_DARK, RAIL_LITE);
-        // 天花板条跟着顶端走（静件不重烘，只给平移矩阵）
-        if (ceiling !== 'span') R.drawMesh(v.ceilKey, { ...IDENT, o: { x: 0, y: yTop, z: 0 } }, RAIL_DARK, RAIL_LITE);
+        // 天花板条 = 房间的天花板，**固定不动**（用户 2026-08-22 纠偏）：收缩注册在
+        // 底端后带子的顶端离开它往下沉，那条缝就是「往下收」本身
+        if (ceiling !== 'span') R.drawMesh(v.ceilKey, IDENT, RAIL_DARK, RAIL_LITE);
         if (bondsRef.current && sim.locked.length) {
           const hz = depth / 2;
           const segs: { a: Vec3; b: Vec3 }[] = [];
