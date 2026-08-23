@@ -52,6 +52,9 @@
  * 能压的只有富余材料本身——故 FREE 取纪律允许的最小值（见下）。
  * 对比历史：首版标定 4.78px（早期）/ 1.01px（终态），二轮四检查点标定 1.93px。
  *
+ * 这副构造（三段等长 + 扇形正居中 + placeOnBand）被 Lab.09 圆筒原样复用：
+ * 圈上四种键谱要让嘴心落在同一条水平线上，靠的就是它。
+ *
  * 边界申明：交接件明令「行为矩阵 → 键谱的翻译规则由使用者手写」。这里的序列
  * 只是两张既有键谱之间的形态学串联（演示编排，形态经用户线稿拍板），不是那套
  * 翻译规则；用户交来正式规则后本文件随时按其替换。
@@ -82,6 +85,9 @@ const SQ = [0, 0, 0.05, 0.12, 0.20, 0.30, 0.40, 0.51, 0.61, 0.70, 0.85, 1];
 const LEAD = 54;
 const FREE = 61;
 const TAIL = 57;
+/** 三段（贴合 / 自由 / 尾）节数——Lab.09 圆筒复用同一副构造，见 placeOnBand */
+export const ARRAY_LEAD = LEAD;
+export const ARRAY_TAIL = TAIL;
 // FREE 取 61 是**下限**：kMax=26 的那六条带缓冲只剩 4 节，再小就吃穿交接件的
 // 「键谱两端 ≥4 节缓冲」纪律。取下限是有理由的——自由段越长、富余材料越多，
 // 上下缓冲的拉伸越不对称，终态残留越大（实测全程最大散布：f=61 0.73 /
@@ -101,14 +107,17 @@ export const ARRAY_CENTER = (FREE - 1) / 2;
  * 变的只有它在带子上的位置与两端缓冲的长度——按用户 2026-08-20 拍板，
  * 那些是位置量，不属形态。
  */
-function place(seg: SkinSeg): SkinSeg {
+export function placeOnBand(seg: SkinSeg, free: number = FREE, center: number = ARRAY_CENTER): SkinSeg {
   const bonds = seg[2]!;
-  const d = ARRAY_CENTER - (bonds[0][0] + bonds[0][1]) / 2;
+  const d = center - (bonds[0][0] + bonds[0][1]) / 2;
   const moved = bonds.map(([i, j, rb]) => [i + d, j + d, rb] as const);
   return seg.length === 4
-    ? ['f', FREE, moved, seg[3].map(([a, b]) => [a + d, b + d] as const)]
-    : ['f', FREE, moved];
+    ? ['f', free, moved, seg[3].map(([a, b]) => [a + d, b + d] as const)]
+    : ['f', free, moved];
 }
+
+/** 本文件内部用（Lab.08 的十二条带都落在同一副三段构造上） */
+const place = (seg: SkinSeg): SkinSeg => placeOnBand(seg);
 
 /** 左右端点 + 10 级中间单元 = 12 条带（定版表只支持这一个规模） */
 export function buildTransitionArray(): SkinArrayUnit[] {

@@ -9,16 +9,18 @@ import { MachineBench } from '../../../components/lab/MachineBench';
 import { SkinBench } from '../../../components/lab/SkinBench';
 import { SkinSolidBench } from '../../../components/lab/SkinSolidBench';
 import { SkinArrayBench } from '../../../components/lab/SkinArrayBench';
+import { SkinRingBench } from '../../../components/lab/SkinRingBench';
 
 export const metadata = { title: 'The lab' };
 
 /**
- * The lab（Lab-Modernist 稿 → MAPPING §7）：七台真求解器台架，深色语言与 case/log 一致。
+ * The lab（Lab-Modernist 稿 → MAPPING §7）：九台真求解器台架，深色语言与 case/log 一致。
  * ★ 版式逐项对稿：300px 定宽左栏 + 44px 间距；规格表竖排行（92px 标签列 + 发丝线分隔）；
  *   图框 3px 彩色顶线（2D 绿 / 3D 紫）+ 极淡填充；标题 72px；页脚两链。
  * 每台跑的是站内 TS 内核，不是视频、不是二次实现：Lab.01–05 = src/lib/linkage（封盘零改，
  * 项目一），Lab.06–07 = src/lib/space（项目二皮肤单元引擎，Python 研究代码的 1:1 移植；
- * 07 是同一引擎的立体带呈现，几何烘焙 skin-solid + 复用 gl3d/camera3d 装备）。
+ * 07 是同一引擎的立体带呈现，几何烘焙 skin-solid + 复用 gl3d/camera3d 装备；
+ * 08 = 十二条带的键谱渐变阵列；09 = 二十条带围成圆筒、收缩成环形平台）。
  * 2026-08-18 起页面按项目分组（MAPPING §16）——log 页先例：多项目共用一条主线。
  */
 const KICKER: CSSProperties = {
@@ -303,7 +305,7 @@ export default function LabPage() {
         {/* 项目二尚未定名：与 log 页 PROJECT_GROUPS 同一措辞（描述而非标题），定名后一并改 */}
         <ProjectRule
           label="Project II — Spatial simulation"
-          sub="Lab.06–08 · skin-unit engine"
+          sub="Lab.06–09 · skin-unit engine"
         />
 
         <Bench
@@ -355,6 +357,22 @@ export default function LabPage() {
           <SkinArrayBench />
         </Bench>
 
+        <Bench
+          no="09"
+          title="Cylinder of units"
+          lede="Twenty narrow bands stood in a circle: hanging slack they close into a tube, and as they contract each one folds out its own ledge — together, a platform ringing the cylinder. Four bond maps take turns around the ring; the radius is yours to set."
+          accent="var(--accent-2)"
+          specs={[
+            ['Ring', '20 bands · 4 bond maps × 5'],
+            ['Solve', '4 engines, 20 placements — same run'],
+            ['Radius', 'Live slider · gaps widen with it'],
+            ['Ceiling', 'Annular plate · bands hang and sink'],
+            ['Caveat', 'Bands do not touch each other — 2D sections'],
+          ]}
+        >
+          <SkinRingBench />
+        </Bench>
+
         <footer
           className="flex flex-wrap items-baseline justify-between"
           style={{ gap: 32, padding: '26px 0 72px' }}
@@ -368,7 +386,7 @@ export default function LabPage() {
               color: 'var(--n500)',
             }}
           >
-            08 instruments · 03 kernels · all live
+            09 instruments · 03 kernels · all live
           </span>
           <span
             className="flex"

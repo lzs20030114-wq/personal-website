@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { SKIN, createSkinUnit } from './skin-unit';
 import { SKIN_UNITS, skinSiteOpts } from './skin-data';
-import { SOLID, boxVerts, buildSolidTopology, fillSolidVerts } from './skin-solid';
+import {
+  SOLID,
+  boxVerts,
+  buildSolidTopology,
+  fillSolidVerts,
+  placePoint,
+  ringPlateVerts,
+  rotateVertsY,
+} from './skin-solid';
 
 /**
  * 守门：Lab.07 立体化烘焙（纯几何，物理零涉及）。
@@ -90,5 +98,96 @@ describe('skin-solid 立体化烘焙', () => {
     expect(minX).toBe(7);
     expect(maxX).toBe(13);
     for (const i of idx) expect(i).toBeLessThan(8);
+  });
+});
+
+/**
+ * 守门：环列落位（Lab.09 圆筒，2026-08-23）。ring 是加法式尾参——
+ * 第一条卡的就是「不传 = 逐位不变」，Lab.07/08 的直排路径不许被它碰到。
+ */
+describe('skin-solid 环列落位', () => {
+  const straight = (n: number): { px: Float64Array; py: Float64Array } => {
+    const px = new Float64Array(n);
+    const py = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      px[i] = 0.1 + 0.004 * i; // 微微外张，法向不退化
+      py[i] = -i * SKIN.SEG;
+    }
+    return { px, py };
+  };
+
+  it('ring 不传 / 传 null：与加它之前逐位相同（直排路径回归护栏）', () => {
+    const n = 20;
+    const { px, py } = straight(n);
+    const a = fillSolidVerts(px, py, n, 50, SOLID.DEPTH, SOLID.THICK, SOLID.SCALE, undefined, -7, 3);
+    const b = fillSolidVerts(px, py, n, 50, SOLID.DEPTH, SOLID.THICK, SOLID.SCALE, undefined, -7, 3, null);
+    expect(Array.from(b)).toEqual(Array.from(a));
+  });
+
+  it('环上：离筒轴的半径 = 站位半径 + 剖面横坐标（±厚度一半），方位角照给', () => {
+    const n = 16;
+    const depth = 7.8;
+    const thick = 3;
+    const { px, py } = straight(n);
+    const radius = 30;
+    for (const angle of [0, Math.PI / 2, 2.3]) {
+      const v = fillSolidVerts(px, py, n, 0, depth, thick, SOLID.SCALE, undefined, 0, 0, {
+        radius,
+        angle,
+      });
+      const c = Math.cos(angle);
+      const sn = Math.sin(angle);
+      // 投到径向 / 切向两个方向上分解（Float32 顶点 ⇒ 容差取 1e-3）
+      const rad = (k: number): number => v[k * 3] * c + v[k * 3 + 2] * sn;
+      const tan = (k: number): number => -v[k * 3] * sn + v[k * 3 + 2] * c;
+      for (let i = 0; i < n; i++) {
+        const wantRad = radius + px[i] * SOLID.SCALE;
+        // 外/内两条棱环夹着剖面本身，间距恒 = 织物厚度（法向在「径向×竖直」平面里，
+        // 剖面有坡度 ⇒ 只量径向分量会短一截，要量整个平面内的距离），
+        // 中点 = 站位半径 + 剖面横坐标
+        expect(
+          Math.hypot(rad(i) - rad(2 * n + i), v[i * 3 + 1] - v[(2 * n + i) * 3 + 1]),
+        ).toBeCloseTo(thick, 3);
+        expect((rad(i) + rad(2 * n + i)) / 2).toBeCloseTo(wantRad, 3);
+        // 前后棱环分居切向两侧 ⇒ 带的切向宽度恒 = depth
+        expect(tan(i)).toBeCloseTo(depth / 2, 3);
+        expect(tan(n + i)).toBeCloseTo(-depth / 2, 3);
+        // 竖直方向不受环列影响（只差一个法向厚度偏移）
+        expect(Math.abs(v[i * 3 + 1] - -py[i] * SOLID.SCALE)).toBeLessThan(thick);
+      }
+    }
+  });
+
+  it('placePoint / rotateVertsY：绕世界 Y 转，半径与高度不变；null 原样', () => {
+    const p = placePoint(30, 12, 4, { radius: 0, angle: Math.PI / 2 });
+    expect(p.x).toBeCloseTo(-4, 12);
+    expect(p.y).toBe(12);
+    expect(p.z).toBeCloseTo(30, 12);
+    expect(placePoint(30, 12, 4, null)).toEqual({ x: 30, y: 12, z: 4 });
+
+    const box = boxVerts(26, 100, 0, 2.4, 50, 2);
+    const before = Array.from(box.verts);
+    rotateVertsY(box.verts, null);
+    expect(Array.from(box.verts)).toEqual(before);
+    rotateVertsY(box.verts, { radius: 26, angle: 0.7 });
+    for (let i = 0; i < 8; i++) {
+      const r0 = Math.hypot(before[i * 3], before[i * 3 + 2]);
+      const r1 = Math.hypot(box.verts[i * 3], box.verts[i * 3 + 2]);
+      expect(r1).toBeCloseTo(r0, 3);
+      expect(box.verts[i * 3 + 1]).toBe(before[i * 3 + 1]); // 高度不动
+    }
+  });
+
+  it('ringPlateVerts：矩形截面扫一圈——顶点只落在两个半径与两个高度上', () => {
+    const segs = 24;
+    const { verts, idx } = ringPlateVerts(16, 46, -3, 3, segs);
+    expect(verts.length).toBe(segs * 4 * 3);
+    expect(idx.length).toBe(segs * 4 * 6); // 每段四条 quad × 两三角 × 三索引
+    for (const i of idx) expect(i).toBeLessThan(segs * 4);
+    for (let i = 0; i < segs * 4; i++) {
+      const r = Math.hypot(verts[i * 3], verts[i * 3 + 2]);
+      expect(Math.min(Math.abs(r - 16), Math.abs(r - 46))).toBeLessThan(1e-4);
+      expect(Math.min(Math.abs(verts[i * 3 + 1] + 6), Math.abs(verts[i * 3 + 1]))).toBeLessThan(1e-5);
+    }
   });
 });

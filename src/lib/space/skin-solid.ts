@@ -22,6 +22,20 @@ export const SOLID = {
   SCALE: 100,
 } as const;
 
+/**
+ * 环上站位（Lab.09 圆筒，2026-08-23 用户立项「把表皮向外偏移一点然后复制 20 个
+ * 围成一圈」）：剖面从「沿 X 直排」改成「绕世界 Y 轴排一圈」——
+ * 剖面的离轴 x 变成**离筒轴的半径**（radius + x·scale），挤出方向变成**切向**。
+ * 剖面所在平面（径向 × 竖直）不变 ⇒ 织物厚度、法向、拓扑全部照旧，
+ * 只是最后落笔时把 (径向, 切向) 转到世界 XZ。
+ */
+export interface RingPlace {
+  /** 站位半径 = 芯轨所在圆的半径（世界单位；剖面的 x=0 落在这里） */
+  radius: number;
+  /** 绕世界 Y 的方位角（0 = 指向 +X） */
+  angle: number;
+}
+
 export interface SolidTopology {
   /** 条纹 A / B 两组三角索引（共用同一份顶点缓冲） */
   idxA: Uint32Array;
@@ -71,6 +85,8 @@ export function buildSolidTopology(n: number, stripe: number): SolidTopology {
  * 注意与 2026-08-20 被用户否决的那个 offY 区分——那个是**逐帧**的居中纵移，
  * 会让接天花的顶端跟着错位；这个是每台一个常数、天花板条与芯轨一起跟着移。
  * 同一根带子上「形状落在哪」仍然在键谱层解决（skin-array 的对位构造），不在这里。
+ * ring = 环上站位（2026-08-23 Lab.09 圆筒新增，尾参默认 null ⇒ 既有按位调用逐位不变）：
+ * 传了就把 (径向, 切向) 绕世界 Y 转到 XZ，offX/offZ 退化为半径/切向的微调量。
  */
 export function fillSolidVerts(
   px: ArrayLike<number>,
@@ -83,11 +99,22 @@ export function fillSolidVerts(
   out?: Float32Array,
   offZ: number = 0,
   offY: number = 0,
+  ring: RingPlace | null = null,
 ): Float32Array {
   const verts = out && out.length === 4 * n * 3 ? out : new Float32Array(4 * n * 3);
   const hzF = offZ + depth / 2;
   const hzB = offZ - depth / 2;
   const ht = thick / 2;
+  // 环上 = 把 (径向, 切向) 绕世界 Y 转到 XZ；直排 = c/s/r0 取恒等值，
+  // 落笔式子退化成 verts=(径向, y, 切向)，与加 ring 之前逐位相同
+  const c = ring ? Math.cos(ring.angle) : 1;
+  const sn = ring ? Math.sin(ring.angle) : 0;
+  const r0 = ring ? ring.radius : 0;
+  const put = (k: number, rad: number, y: number, tan: number): void => {
+    verts[k] = rad * c - tan * sn;
+    verts[k + 1] = y;
+    verts[k + 2] = rad * sn + tan * c;
+  };
   for (let i = 0; i < n; i++) {
     const i0 = Math.max(0, i - 1);
     const i1 = Math.min(n - 1, i + 1);
@@ -102,7 +129,8 @@ export function fillSolidVerts(
       ty = 1;
     }
     // 剖面法向（世界系，Y 已翻转 ⇒ 用 (ny=-tx? ) —— 先算世界系切线再转 90°）
-    const wx = offX + (px[i] as number) * scale;
+    // wx = 剖面内的横坐标：直排时就是世界 X，环上时是**离筒轴的半径**
+    const wx = r0 + offX + (px[i] as number) * scale;
     const wy = offY - (py[i] as number) * scale;
     const wtx = tx * scale;
     const wty = -ty * scale;
@@ -114,24 +142,86 @@ export function fillSolidVerts(
     const ix = wx - nx * ht;
     const iy = wy - ny * ht;
     // 外前 / 外后 / 内前 / 内后
-    let k = i * 3;
-    verts[k] = ox;
-    verts[k + 1] = oy;
-    verts[k + 2] = hzF;
-    k = (n + i) * 3;
-    verts[k] = ox;
-    verts[k + 1] = oy;
-    verts[k + 2] = hzB;
-    k = (2 * n + i) * 3;
-    verts[k] = ix;
-    verts[k + 1] = iy;
-    verts[k + 2] = hzF;
-    k = (3 * n + i) * 3;
-    verts[k] = ix;
-    verts[k + 1] = iy;
-    verts[k + 2] = hzB;
+    put(i * 3, ox, oy, hzF);
+    put((n + i) * 3, ox, oy, hzB);
+    put((2 * n + i) * 3, ix, iy, hzF);
+    put((3 * n + i) * 3, ix, iy, hzB);
   }
   return verts;
+}
+
+/**
+ * 单点落位（键线端点、芯轨中心用）：与 fillSolidVerts 同一套约定——
+ * radial = 剖面横坐标（环上 = 离筒轴半径）、tangential = 挤出方向、y = 世界 Y。
+ */
+export function placePoint(
+  radial: number,
+  y: number,
+  tangential: number,
+  ring: RingPlace | null = null,
+): { x: number; y: number; z: number } {
+  if (!ring) return { x: radial, y, z: tangential };
+  const c = Math.cos(ring.angle);
+  const s = Math.sin(ring.angle);
+  return { x: radial * c - tangential * s, y, z: radial * s + tangential * c };
+}
+
+/** 把一串 xyz 平铺顶点绕世界 Y 就地旋转（芯轨小盒搬上环用；ring=null 不动） */
+export function rotateVertsY(verts: Float32Array, ring: RingPlace | null): Float32Array {
+  if (!ring) return verts;
+  const c = Math.cos(ring.angle);
+  const s = Math.sin(ring.angle);
+  for (let k = 0; k < verts.length; k += 3) {
+    const x = verts[k];
+    const z = verts[k + 2];
+    verts[k] = x * c - z * s;
+    verts[k + 2] = x * s + z * c;
+  }
+  return verts;
+}
+
+/**
+ * 圆环板（Lab.09 的天花——用户 2026-08-23「天花改成圆环板」）：
+ * 矩形截面绕世界 Y 扫一圈，中心在原点、板面水平。
+ * y = 板中心高度、halfT = 板厚一半、segs = 圆周分段。
+ */
+export function ringPlateVerts(
+  rIn: number,
+  rOut: number,
+  y: number,
+  halfT: number,
+  segs = 64,
+): { verts: Float32Array; idx: Uint32Array } {
+  const verts = new Float32Array(segs * 4 * 3);
+  const idx: number[] = [];
+  for (let s = 0; s < segs; s++) {
+    const a = (s / segs) * Math.PI * 2;
+    const c = Math.cos(a);
+    const sn = Math.sin(a);
+    // 截面四角（径向 × 竖直）：外上、外下、内下、内上
+    const corners: [number, number][] = [
+      [rOut, y - halfT],
+      [rOut, y + halfT],
+      [rIn, y + halfT],
+      [rIn, y - halfT],
+    ];
+    for (let k = 0; k < 4; k++) {
+      const [r, yy] = corners[k];
+      const v = (s * 4 + k) * 3;
+      verts[v] = r * c;
+      verts[v + 1] = yy;
+      verts[v + 2] = r * sn;
+    }
+  }
+  for (let s = 0; s < segs; s++) {
+    const a = s * 4;
+    const b = ((s + 1) % segs) * 4;
+    for (let k = 0; k < 4; k++) {
+      const k2 = (k + 1) % 4;
+      idx.push(a + k, b + k, b + k2, a + k, b + k2, a + k2);
+    }
+  }
+  return { verts, idx: Uint32Array.from(idx) };
 }
 
 /** 简易长方体（芯轨/天花板条用）：中心 c、半尺寸 h → xyz 平铺 36 顶点（12 三角） */
