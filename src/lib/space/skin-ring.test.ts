@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ARRAY_CENTER, ARRAY_FREE, ARRAY_LEAD, ARRAY_TAIL } from './skin-array';
-import { SKIN_UNITS } from './skin-data';
+import { ARRAY_CENTER, ARRAY_FREE, ARRAY_LEAD, ARRAY_TAIL, placeOnBand } from './skin-array';
+import { SKIN_UNITS, skinSiteOpts } from './skin-data';
 import { SOLID } from './skin-solid';
 import {
   RAIL_HALF,
@@ -8,6 +8,8 @@ import {
   RING,
   RING_BAND_NODES,
   RING_DEFAULT_FORM,
+  RING_LEAD,
+  RING_TAIL,
   buildRingOrder,
   buildRingUnits,
   ringAngle,
@@ -73,6 +75,8 @@ describe('skin-ring 圆筒环列', () => {
   });
 
   it('四条带三段等长——嘴心对位构造的前提', () => {
+    // 带总长与 Lab.08 一致（变的只有 lead/tail 的分配 ⇒ 形状在带上的高度）
+    expect(RING_LEAD + RING_TAIL).toBe(ARRAY_LEAD + ARRAY_TAIL);
     expect(RING_BAND_NODES).toBe(ARRAY_LEAD + ARRAY_FREE + ARRAY_TAIL);
     for (const d of DEFS) {
       const total = d.spec.reduce((s, seg) => s + seg[1], 0);
@@ -156,6 +160,39 @@ describe('skin-ring 圆筒环列', () => {
     expect(pocket.mouth - flat.mouth).toBeGreaterThan(15); // 嘴心高约 22px
     expect(pocket.top - flat.top).toBeGreaterThan(30); // 带顶高约 44px
   });
+
+  it('挑台环挪到筒的下段：位置在离底 14–24%，且是纯平移（形态一个数没变）', () => {
+    // 位置：三种同收缩终点的形态都落在下段（袋另有 ℓ，不参与）
+    for (const r of run()) {
+      if (r.key === 'pocket') continue;
+      const frac = r.mouth / r.top;
+      expect(frac, r.key).toBeGreaterThan(0.14);
+      expect(frac, r.key).toBeLessThan(0.24);
+    }
+    // 纯平移：同一张键谱换 lead/tail 分配（总长不变）跑到底，剖面相对嘴心归一后逐点比对。
+    // 这条同时卡住尾段别太短——实测 tail=7 时偏差 0.756，形状会被拽变形。
+    const D = SKIN_UNITS.find((d) => d.key === 'stepped')!;
+    const seg = placeOnBand(D.spec[1]);
+    const shape = (lead: number): [number, number][] => {
+      const tail = RING_LEAD + RING_TAIL - lead;
+      const sim = createSkinUnit([['g', lead], seg, ['g', tail]], skinSiteOpts(D));
+      for (let k = 0; k < SKIN.STEPS; k++) sim.advance();
+      const bonds = (seg as readonly ['f', number, readonly SkinBond[]])[2];
+      let widest = bonds[0];
+      for (const b of bonds) if (b[1] - b[0] > widest[1] - widest[0]) widest = b;
+      const mouth = -(sim.py[lead + widest[0]] + sim.py[lead + widest[1]]) / 2;
+      const out: [number, number][] = [];
+      for (let i = lead; i < lead + ARRAY_FREE; i++)
+        out.push([sim.px[i] * 100, (-sim.py[i] - mouth) * 100]);
+      return out;
+    };
+    const a = shape(ARRAY_LEAD); // Lab.08 那副分配（环在腰上）
+    const b = shape(RING_LEAD); // 现在这副（环在下段）
+    let dev = 0;
+    for (let i = 0; i < a.length; i++)
+      dev = Math.max(dev, Math.hypot(a[i][0] - b[i][0], a[i][1] - b[i][1]));
+    expect(dev).toBeLessThan(0.05);
+  }, 30_000);
 
   it('半径下限卡在「相邻带刚好不互穿」上——芯轨那一圈也不穿', () => {
     expect(ringGap(RING.RADIUS_MIN)).toBeGreaterThan(0);

@@ -27,10 +27,10 @@
  * 边界申明：交接件明令「行为矩阵 → 键谱的翻译规则由使用者手写」。这里的序列
  * 与 Lab.08 一样只是两张既有键谱之间的形态学串联（演示编排），不是那套翻译规则。
  */
-import { ARRAY_CENTER, ARRAY_FREE, ARRAY_LEAD, ARRAY_TAIL, placeOnBand } from './skin-array';
+import { ARRAY_CENTER, ARRAY_FREE, placeOnBand } from './skin-array';
 import { SKIN_SITE_BASE, SKIN_UNITS, fan, skinSiteOpts } from './skin-data';
 import type { SkinSeg, SkinSpec, SkinUnitOpts } from './skin-unit';
-import type { RingUnitDef } from './skin-ring';
+import { RING_LEAD, RING_TAIL, type RingUnitDef } from './skin-ring';
 
 /** 级数（= 回文的一半 + 1；20 位一个来回 ⇒ 11 级） */
 export const GRAD_LEVELS = 11;
@@ -66,7 +66,8 @@ function levelSeg(l: number, pwFrom: number, kJump: number): SkinSeg {
     : ['f', ARRAY_FREE, bonds];
 }
 
-const band = (seg: SkinSeg): SkinSpec => [['g', ARRAY_LEAD], seg, ['g', ARRAY_TAIL]];
+// 三段与整环同形那一编制同一副（lead 96 / tail 15）——切编制时环的高度不该跳
+const band = (seg: SkinSeg): SkinSpec => [['g', RING_LEAD], seg, ['g', RING_TAIL]];
 
 /** 渐变序列：11 级，0 = 蘑菇挑台原谱、10 = 阶梯方箱原谱 */
 export function buildRingGradient(pwFrom: number = PW_FROM, kJump: number = KJUMP): RingUnitDef[] {

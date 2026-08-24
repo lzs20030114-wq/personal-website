@@ -76,6 +76,22 @@ export function ringGap(radius: number, count: number = RING.COUNT, depth: numbe
   return ringPitch(radius, count) - depth;
 }
 
+/**
+ * 折叠体在带子上的位置（用户 2026-08-23 圈图拍板「把这个形状安排到我画的这个位置去」——
+ * 挑台环从腰上挪到筒的下段）。
+ *
+ * `lead` 就是这个旋钮：贴合段每多一节，折叠体沿带子下移 2px（SEG·100，与收缩率无关）。
+ * **lead + tail 保持 111 不变** ⇒ 带子总节数、筒的上下缘、机位全都不动，动的只有环的高度。
+ * 实测（阶梯方箱终态，筒高 256.6px）：lead 54 → 平台在离底 51%；96 → **18%**；
+ * 与 lead 54 的剖面逐点偏差 **0.000**（纯平移，形态一个数没变）。
+ * 上限卡在 tail：tail=7 时实测偏差 0.756 —— 尾段太短撑不住，形状开始变形，故不再往下挪。
+ *
+ * 注意这两个数是 Lab.09 专用，**不是** skin-array 的 ARRAY_LEAD/ARRAY_TAIL——
+ * 那一副是 Lab.08 十二条带的，改它会一并挪走那台的形状。
+ */
+export const RING_LEAD = 96;
+export const RING_TAIL = ARRAY_LEAD + ARRAY_TAIL - RING_LEAD; // = 15，总长与 Lab.08 一致
+
 /** 芯轨中心相对站位圆的内偏（台架画轨用的常量，守门算最小间隙也用它） */
 export const RAIL_INSET = 3.4;
 /** 芯轨半宽（径向）与半厚（切向） */
@@ -99,7 +115,7 @@ export function buildRingUnits(): RingUnitDef[] {
     key: d.key,
     zh: d.zh,
     en: d.en,
-    spec: [['g', ARRAY_LEAD], placeOnBand(d.spec[1]), ['g', ARRAY_TAIL]] as SkinSpec,
+    spec: [['g', RING_LEAD], placeOnBand(d.spec[1]), ['g', RING_TAIL]] as SkinSpec,
     opts: skinSiteOpts(d),
     smooth: d.smooth ?? ([3, 1] as const),
   }));
@@ -119,5 +135,5 @@ export function buildRingOrder(count: number = RING.COUNT): number[] {
  */
 export const RING_DEFAULT_FORM = 3;
 
-/** 单元总节数（四条相同——对位构造的三段等长） */
-export const RING_BAND_NODES = ARRAY_LEAD + ARRAY_FREE + ARRAY_TAIL;
+/** 单元总节数（四条相同——对位构造的三段等长；与 Lab.08 同长，只是 lead/tail 的分配不同） */
+export const RING_BAND_NODES = RING_LEAD + ARRAY_FREE + RING_TAIL;

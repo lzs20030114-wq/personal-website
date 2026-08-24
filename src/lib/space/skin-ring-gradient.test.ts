@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { ARRAY_CENTER, ARRAY_FREE, ARRAY_LEAD } from './skin-array';
+import { ARRAY_CENTER, ARRAY_FREE } from './skin-array';
 import { SKIN_UNITS } from './skin-data';
 import { GRAD_LEVELS, buildGradientOrder, buildRingGradient } from './skin-ring-gradient';
-import { RING } from './skin-ring';
+import { RING, RING_LEAD } from './skin-ring';
 import { SKIN, createSkinUnit, type SkinBond } from './skin-unit';
 
 /**
@@ -29,7 +29,7 @@ function runAll() {
     const s = createSkinUnit(d.spec, d.opts);
     for (let k = 0; k < SKIN.STEPS; k++) s.advance();
     const pts: [number, number][] = [];
-    for (let i = ARRAY_LEAD; i < ARRAY_LEAD + ARRAY_FREE; i++)
+    for (let i = RING_LEAD; i < RING_LEAD + ARRAY_FREE; i++)
       pts.push([s.px[i] * 100, -s.py[i] * 100]);
     // 等弧长重采样，形态之间才可比
     const L = [0];
@@ -53,7 +53,7 @@ function runAll() {
     for (const b of bonds) if (b[1] - b[0] > widest[1] - widest[0]) widest = b;
     const foot = s.py[s.n - 1];
     const mouth =
-      ((s.py[ARRAY_LEAD + widest[0]] + s.py[ARRAY_LEAD + widest[1]]) / 2 - foot) * 100;
+      ((s.py[RING_LEAD + widest[0]] + s.py[RING_LEAD + widest[1]]) / 2 - foot) * 100;
     return { sim: s, samp, mouth };
   });
 }
