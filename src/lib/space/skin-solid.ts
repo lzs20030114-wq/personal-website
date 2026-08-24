@@ -224,6 +224,27 @@ export function ringPlateVerts(
   return { verts, idx: Uint32Array.from(idx) };
 }
 
+/**
+ * 芯轨的竖直跨度。两种读法，按台架给：
+ * - `core`（Lab.06–08）= 轨就是芯本身，长度随收缩变；注册端在底端 ⇒ 下端钉住、
+ *   上端随收缩下降，它与天花之间那条缝就是「往下收」本身（2026-08-22 拍板）。
+ * - `fixed`（Lab.09 环列，用户 2026-08-23「起点始终和天花板在一起、尾端固定在
+ *   现在固定的位置」）= 轨是**房间的立杆**，从天花一直到注册端钉住的那一点，
+ *   长度恒定不随收缩变；收缩时是外皮沿着它往下聚，不是它自己缩。
+ * footY = 末节点的 sim 纵坐标（注册端钉住 ⇒ 常量），ceilY = 天花板的中面高度。
+ */
+export function railSpan(
+  mode: 'core' | 'fixed',
+  sim: { coreTop: number; coreLen: number; footY: number },
+  offY: number,
+  ceilY: number,
+  scale: number = SOLID.SCALE,
+): { top: number; bottom: number } {
+  if (mode === 'fixed') return { top: ceilY, bottom: offY - sim.footY * scale };
+  const top = offY - sim.coreTop * scale;
+  return { top, bottom: top + sim.coreLen * scale };
+}
+
 /** 简易长方体（芯轨/天花板条用）：中心 c、半尺寸 h → xyz 平铺 36 顶点（12 三角） */
 export function boxVerts(
   cx: number,

@@ -11,6 +11,7 @@ import {
   buildSolidTopology,
   fillSolidVerts,
   placePoint,
+  railSpan,
   ringPlateVerts,
   rotateVertsY,
   type RingPlace,
@@ -260,6 +261,7 @@ export function SkinSolidBench({
   radius,
   thick = SOLID.THICK,
   axon,
+  rail = 'core',
   unitsKey,
   extraControls,
 }: {
@@ -291,6 +293,8 @@ export function SkinSolidBench({
   thick?: number;
   /** 轴测机位（省略 = 本文件的默认三元组） */
   axon?: { pitch: number; yaw: number };
+  /** 芯轨的读法（见 skin-solid.railSpan）：core = 跟着芯收缩；fixed = 天花到钉住点的固定立杆 */
+  rail?: 'core' | 'fixed';
   /** units/order 的版本号：变了就整场重建引擎（Lab.09 换形态即此），不重挂 WebGL 上下文 */
   unitsKey?: string;
   /** 台架自己的控件（塞进控制条最前面）——Lab.09 的形态选择 */
@@ -513,14 +517,25 @@ export function SkinSolidBench({
         fillSolidVerts(px, py, sim.n, inst.offX, depth, thick, SOLID.SCALE, inst.verts, inst.offZ, v.offY, rp);
         R.drawDynamicMesh(bakeIndexed(inst.verts, v.topo.idxA), DARK_A, LITE_A);
         R.drawDynamicMesh(bakeIndexed(inst.verts, v.topo.idxB), DARK_B, LITE_B);
-        // 芯轨（长度随收缩变，逐帧小盒）。注册端在底端 ⇒ 轨的下端钉住、上端随
-        // 收缩下降（yTop 由芯自己给；默认注册端时 coreTop 恒为 0 ⇒ 与旧行为逐位相同）
-        const railLen = sim.coreLen * SOLID.SCALE;
-        const yTop = v.offY - sim.coreTop * SOLID.SCALE;
+        // 芯轨（逐帧小盒）。core = 跟着芯收缩（下端钉住、上端随收缩下降）；
+        // fixed = 天花到钉住点的固定立杆，收缩时是外皮沿着它往下聚（见 railSpan）
+        const rs = railSpan(
+          rail,
+          { coreTop: sim.coreTop, coreLen: sim.coreLen, footY: sim.py[sim.n - 1] },
+          v.offY,
+          CEIL_RING.y,
+        );
         const rad0 = (rp ? rp.radius : 0) + inst.offX;
-        const rail = boxVerts(rad0 - 3.4, yTop + railLen / 2, inst.offZ, 2.4, railLen / 2, Math.min(6, depth / 4));
-        rotateVertsY(rail.verts, rp); // 环上：轴对齐盒先按 (径向,切向) 建，再绕 Y 转到位
-        R.drawDynamicMesh(bakeIndexed(rail.verts, rail.idx), RAIL_DARK, RAIL_LITE);
+        const railBox = boxVerts(
+          rad0 - 3.4,
+          (rs.top + rs.bottom) / 2,
+          inst.offZ,
+          2.4,
+          (rs.bottom - rs.top) / 2,
+          Math.min(6, depth / 4),
+        );
+        rotateVertsY(railBox.verts, rp); // 环上：轴对齐盒先按 (径向,切向) 建，再绕 Y 转到位
+        R.drawDynamicMesh(bakeIndexed(railBox.verts, railBox.idx), RAIL_DARK, RAIL_LITE);
         // 天花板条 = 房间的天花板，**固定不动**（用户 2026-08-22 纠偏）：收缩注册在
         // 底端后带子的顶端离开它往下沉，那条缝就是「往下收」本身
         if (ceiling === 'per-unit') R.drawMesh(inst.ceilKey, IDENT, RAIL_DARK, RAIL_LITE);

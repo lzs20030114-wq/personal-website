@@ -7,6 +7,7 @@ import {
   buildSolidTopology,
   fillSolidVerts,
   placePoint,
+  railSpan,
   ringPlateVerts,
   rotateVertsY,
 } from './skin-solid';
@@ -176,6 +177,26 @@ describe('skin-solid 环列落位', () => {
       expect(r1).toBeCloseTo(r0, 3);
       expect(box.verts[i * 3 + 1]).toBe(before[i * 3 + 1]); // 高度不动
     }
+  });
+
+  it('railSpan：core 跟着芯缩、fixed 是天花到钉住点的固定立杆', () => {
+    const offY = 12;
+    const ceilY = -3;
+    const foot = -3.38; // 注册端钉住 ⇒ 收缩期间恒定
+    // core：上端随收缩下降、长度 = 芯长（Lab.06–08 的旧行为，逐位不变）
+    for (const [coreTop, coreLen] of [[0, 3.38], [0.4, 2.6]] as [number, number][]) {
+      const r = railSpan('core', { coreTop, coreLen, footY: foot }, offY, ceilY);
+      expect(r.top).toBeCloseTo(offY - coreTop * SOLID.SCALE, 9);
+      expect(r.bottom - r.top).toBeCloseTo(coreLen * SOLID.SCALE, 9);
+    }
+    // fixed：上端恒在天花、下端恒在钉住点 ⇒ 长度与芯长完全无关
+    const a = railSpan('fixed', { coreTop: 0, coreLen: 3.38, footY: foot }, offY, ceilY);
+    const b = railSpan('fixed', { coreTop: 0.4, coreLen: 2.6, footY: foot }, offY, ceilY);
+    expect(a.top).toBe(ceilY);
+    expect(b.top).toBe(ceilY);
+    expect(a.bottom).toBeCloseTo(offY - foot * SOLID.SCALE, 9);
+    expect(b.bottom).toBeCloseTo(a.bottom, 12);
+    expect(b.bottom - b.top).toBeCloseTo(a.bottom - a.top, 12);
   });
 
   it('ringPlateVerts：矩形截面扫一圈——顶点只落在两个半径与两个高度上', () => {

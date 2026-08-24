@@ -75,6 +75,9 @@ export function SkinRingBench({
       depth={RING.DEPTH}
       thick={RING.THICK}
       ceiling="ring"
+      // 灰立杆是房间的固定结构，不跟着外皮缩（用户 2026-08-23：起点始终和天花板
+      // 在一起、尾端固定在现在固定的位置）——Lab.06–08 仍是「轨即芯」的旧读法
+      rail="fixed"
       pivot={{ x: 0, y: 166, z: 0 }}
       camScale={0.95}
       axon={{ pitch: -0.45, yaw: -0.62 }}
