@@ -165,7 +165,7 @@ const LABS = [
   {
     kicker: 'Lab.09',
     title: 'Cylinder of units',
-    body: 'Twenty bands on one bond map contract into a platform ringing the tube.',
+    body: 'Twenty bands ring a tube and contract into a platform — one form, or a gradient.',
     meta: 'Form + radius · WebGL',
     href: '/lab#lab09',
     bar: 'var(--p700)',
@@ -181,11 +181,11 @@ export interface HomeLog {
   text: string;
 }
 
-// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-08-23 vitest 实测 339；
+// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-08-23 vitest 实测 346；
 // 迭代稿配色：Tests=绿 700、Kernels=紫 700、Demos=绿 600）
 const STATS = [
   { n: '04', label: 'Projects', color: 'var(--ink)' },
-  { n: '339', label: 'Tests green', color: 'var(--accent)' },
+  { n: '346', label: 'Tests green', color: 'var(--accent)' },
   { n: '03', label: 'Solver kernels', color: 'var(--accent-2)' },
   { n: '09', label: 'Live demos', color: 'var(--g600)' },
 ];

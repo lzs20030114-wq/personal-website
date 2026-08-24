@@ -3,12 +3,14 @@
 // 纪律（用户 2026-08-20 立）：先设计只有线的形态系列、确认后再上 3D。
 // 用法： npx vite-node scripts/skin-ring/draft.mjs <out.svg> [模式]
 //   模式 catalog（默认）= 目录四形态并排 + 叠合对照
-//        bulb-ledge / bulb-stepped = 该对端点的环上渐变系列（回文，20 位 = 11 级）
+//        bulb-ledge = 蘑菇↔直挑台的粗排系列（探路用；实测这一对差 1.86px，已否）
+//        ring-gradient = 定版：Lab.09 环上渐变（蘑菇↔方箱，20 位回文 = 11 级）
 import { writeFileSync } from 'node:fs';
 import { createSkinUnit, SKIN } from '../../src/lib/space/skin-unit.ts';
 import { buildRingUnits } from '../../src/lib/space/skin-ring.ts';
 import { ARRAY_CENTER, ARRAY_FREE, ARRAY_LEAD, ARRAY_TAIL } from '../../src/lib/space/skin-array.ts';
-import { SKIN_SITE_BASE, fan } from '../../src/lib/space/skin-data.ts';
+import { SKIN_SITE_BASE } from '../../src/lib/space/skin-data.ts';
+import { buildGradientOrder, buildRingGradient } from '../../src/lib/space/skin-ring-gradient.ts';
 
 const OUT = process.argv[2] ?? 'draft.svg';
 const MODE = process.argv[3] ?? 'catalog';
@@ -95,30 +97,16 @@ function bulbLedgeSeries(levels) {
 }
 
 function seriesFor(mode) {
+  if (mode.startsWith('ring-gradient')) {
+    // ring-gradient 或 ring-gradient:<panel格>:<梯挡格>（比稿用）
+    const [, pw, kj] = mode.split(':');
+    return buildRingGradient(pw ? Number(pw) : undefined, kj ? Number(kj) : undefined).map((d) => ({
+      label: d.zh, spec: d.spec, opts: d.opts, smooth: d.smooth,
+    }));
+  }
   if (mode === 'catalog')
     return DEFS.map((d) => ({ label: `${d.zh} · ${d.en}`, spec: d.spec, opts: d.opts, smooth: d.smooth }));
   if (mode === 'bulb-ledge') return bulbLedgeSeries(11);
-  if (mode === 'bulb-stepped') {
-    // Lab.08 定版序列重采样到 11 级（回文用）
-    const RB = [0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.22, 0.24, 0.26, 0.28, 0.3, 0.32];
-    const PW = [0, 0, 0, 2, 4, 6, 8, 8, 8, 8, 8, 8];
-    const SQ = [0, 0, 0.05, 0.12, 0.2, 0.3, 0.4, 0.51, 0.61, 0.7, 0.85, 1];
-    const out = [];
-    for (let l = 0; l < 11; l++) {
-      const x = (l / 10) * 11; // 12 格重采样到 11 级
-      const i = Math.round(x);
-      let kMax = 24 + 2 * Math.round(l / 10);
-      while (ARRAY_CENTER - kMax < 4) kMax -= 2;
-      const bonds = fan(ARRAY_CENTER, 8, kMax + 1, 2, RB[i]);
-      const seg = PW[i] > 0
-        ? ['f', ARRAY_FREE, bonds, [[ARRAY_CENTER - PW[i], ARRAY_CENTER + PW[i]]]]
-        : ['f', ARRAY_FREE, bonds];
-      const opts = { ...SKIN_SITE_BASE };
-      if (SQ[i] > 0) opts.boxSquare = SQ[i];
-      out.push({ label: `t=${(l / 10).toFixed(2)}`, spec: band(seg), opts, smooth: SQ[i] >= 0.5 ? [3, 1] : [5, 2] });
-    }
-    return out;
-  }
   throw new Error(`未知模式 ${mode}`);
 }
 
@@ -140,6 +128,15 @@ runs.forEach((r, i) => {
 });
 if (gaps.length)
   console.log(`相邻距离 ${Math.min(...gaps).toFixed(2)}–${Math.max(...gaps).toFixed(2)}（最大/最小 ${(Math.max(...gaps) / Math.min(...gaps)).toFixed(1)}×）`);
+if (MODE.startsWith('ring-gradient')) {
+  const order = buildGradientOrder();
+  console.log(`环上 20 位 → 级：${order.join(' ')}`);
+  const seam = order.map((l, i) => {
+    const j = order[(i + 1) % order.length];
+    return Math.abs(l - j) === 1 ? gaps[Math.min(l, j)] : NaN;
+  });
+  console.log(`接缝（19↔0）距离 ${seam[order.length - 1].toFixed(2)}，与其余步同量级 = 闭合成立`);
+}
 
 // ── SVG：并排 + 叠合（按全系列公共包围盒等比铺满，形态之间才可比） ──────────
 const all = runs.flatMap((r) => r.draw);

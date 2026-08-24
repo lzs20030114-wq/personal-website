@@ -311,6 +311,11 @@ export function SkinSolidBench({
   const speedRef = useRef(1);
   const bondsRef = useRef(true);
   const radiusRef = useRef(radius?.def ?? 0);
+  // 推进速率随编制变（渐变要解十一条引擎，得放慢）——主 effect 只建一次，故走 ref
+  const rateRef = useRef(rate);
+  useEffect(() => {
+    rateRef.current = rate;
+  }, [rate]);
   const [radiusV, setRadiusV] = useState(radius?.def ?? 0);
   const [running, setRunning] = useState(true);
   const [bonds, setBonds] = useState(true);
@@ -560,7 +565,7 @@ export function SkinSolidBench({
       const lead = sims[0].sim;
       let n = 0;
       if (runningRef.current && !lead.done) {
-        acc += dt * rate * speedRef.current;
+        acc += dt * rateRef.current * speedRef.current;
         n = Math.floor(acc);
         if (n > MAX_STEPS_PER_FRAME) {
           n = MAX_STEPS_PER_FRAME;
