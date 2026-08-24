@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import { FlatRenderer, bakeIndexed } from '../../src/lib/linkage/gl3d';
 import type { Vec3 } from '../../src/lib/linkage/solver3d';
@@ -260,6 +260,8 @@ export function SkinSolidBench({
   radius,
   thick = SOLID.THICK,
   axon,
+  unitsKey,
+  extraControls,
 }: {
   active?: boolean;
   onLight?: boolean;
@@ -289,6 +291,10 @@ export function SkinSolidBench({
   thick?: number;
   /** 轴测机位（省略 = 本文件的默认三元组） */
   axon?: { pitch: number; yaw: number };
+  /** units/order 的版本号：变了就整场重建引擎（Lab.09 换形态即此），不重挂 WebGL 上下文 */
+  unitsKey?: string;
+  /** 台架自己的控件（塞进控制条最前面）——Lab.09 的形态选择 */
+  extraControls?: ReactNode;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const apiRef = useRef<{
@@ -296,6 +302,7 @@ export function SkinSolidBench({
     replay: () => void;
     setPersp: (on: boolean) => void;
     setRadius: (r: number) => void;
+    setUnits: (u: readonly SolidUnitDef[], o?: readonly number[]) => void;
     viewTo: (k: ViewKey) => void;
     viewHome: () => void;
     setLayout: (li: number) => void;
@@ -365,11 +372,13 @@ export function SkinSolidBench({
     }
     const R = renderer;
 
-    const defs: readonly SolidUnitDef[] =
+    let defs: readonly SolidUnitDef[] =
       units ?? SKIN_UNITS.map((d) => ({ spec: d.spec, opts: skinSiteOpts(d), smooth: d.smooth ?? [3, 1] }));
     /** 摆放编制：省略 = 一条引擎一处实例（Lab.07/08 的行为） */
-    const plan: readonly number[] = order ?? defs.map((_, u) => u);
-    const sims: SolidSim[] = defs.map((def) => {
+    let plan: readonly number[] = order ?? defs.map((_, u) => u);
+    let sims: SolidSim[] = [];
+    let insts: SolidInst[] = [];
+    const makeSims = (): SolidSim[] => defs.map((def) => {
       const sim = createSkinUnit(def.spec, def.opts);
       const [smoothW, smoothP] = def.smooth;
       return {
@@ -384,7 +393,7 @@ export function SkinSolidBench({
         sy: null,
       };
     });
-    const insts: SolidInst[] = plan.map((simIdx, u) => ({
+    const makeInsts = (): SolidInst[] => plan.map((simIdx, u) => ({
       simIdx,
       // 环列的站位全在方位角里，行间距对它没有意义（首版忘了清零，175 的排距
       // 被当成半径加了上去，二十条带被甩到半径 3355 处 —— 一眼可见的事故）
@@ -403,13 +412,20 @@ export function SkinSolidBench({
     // 每台的末节点各自钉在自己的初始位；长度不同的单元（Lab.07 的四台）要把短的
     // 整体下移，四条下缘才落在同一条线上。纯常量落位，天花板条与芯轨一起跟着移。
     // Lab.08 的十二条带总长本来就配平相同 ⇒ 全为 0，逐位不变。
-    {
+    const footAlign = (): void => {
       const feet = sims.map((v) => v.sim.py[v.sim.n - 1]);
       const deepest = Math.min(...feet);
       sims.forEach((v, u) => {
         v.offY = (feet[u] - deepest) * SOLID.SCALE; // 世界 Y 向下为正 ⇒ 短的加正值下移
       });
-    }
+    };
+    /** 建/重建整场（换键谱走这条，不重挂 WebGL 上下文） */
+    const seed = (): void => {
+      sims = makeSims();
+      insts = makeInsts();
+      footAlign();
+    };
+    seed();
 
     /** 排布只改渲染偏移与机位——引擎不重建，收缩接着跑 */
     const applyLayout = (li: number): void => {
@@ -433,12 +449,14 @@ export function SkinSolidBench({
         const ceil = boxVerts((-45 + x1) / 2, -3, 0, (x1 + 45) / 2, 3, zHalf);
         R.addMesh(`ceil-span-${li}`, bakeIndexed(ceil.verts, ceil.idx));
       });
-    } else if (ceiling === 'per-unit') {
+    }
+    const bakePerUnitCeil = (): void => {
       for (const v of insts) {
         const ceil = boxVerts(v.offX + 30, -3, 0, 88, 3, depth / 2 + 16);
         R.addMesh(v.ceilKey, bakeIndexed(ceil.verts, ceil.idx));
       }
-    }
+    };
+    if (ceiling === 'per-unit') bakePerUnitCeil();
     // 环列天花是圆环板：半径可现场调 ⇒ 不能烘死，按半径缓存重烘（一次 72×4 顶点）
     let ceilRingR = Number.NaN;
     let ceilRingData: Float32Array | null = null;
@@ -588,6 +606,19 @@ export function SkinSolidBench({
         radiusRef.current = rad;
         render();
       },
+      // 换键谱 = 整场重建引擎（Lab.09 换形态）。不重挂组件：重挂会丢一个 WebGL
+      // 上下文再要一个，一页九台的场合是实打实的风险
+      setUnits: (nextUnits, nextOrder) => {
+        defs = nextUnits;
+        plan = nextOrder ?? nextUnits.map((_, u) => u);
+        seed();
+        if (ceiling === 'per-unit') bakePerUnitCeil();
+        applyLayout(layoutIdx);
+        acc = 0;
+        holdT = 0;
+        lastHud = '';
+        render();
+      },
       viewTo: (k) => {
         const target = presets[k];
         if (reduced) {
@@ -649,6 +680,17 @@ export function SkinSolidBench({
     };
   }, []);
 
+  // units/order 换了就重建整场（首次由主 effect 建，这里跳过）
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (!seededRef.current) {
+      seededRef.current = true;
+      return;
+    }
+    if (units) apiRef.current?.setUnits(units, order);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unitsKey]);
+
   useBenchLoop(canvasRef, (dt) => apiRef.current?.step(dt), [], active);
 
   const goView = useCallback((k: ViewKey) => {
@@ -689,6 +731,7 @@ export function SkinSolidBench({
       </div>
       {controls ? (
         <div className="lab-ctl">
+          {extraControls}
           <div className="grp">
             <label>
               <input

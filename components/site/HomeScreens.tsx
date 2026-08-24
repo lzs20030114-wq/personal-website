@@ -165,8 +165,8 @@ const LABS = [
   {
     kicker: 'Lab.09',
     title: 'Cylinder of units',
-    body: 'Twenty bands in a circle contract into a platform ringing the tube.',
-    meta: 'Radius slider · WebGL',
+    body: 'Twenty bands on one bond map contract into a platform ringing the tube.',
+    meta: 'Form + radius · WebGL',
     href: '/lab#lab09',
     bar: 'var(--p700)',
     hover: 'var(--p100)',

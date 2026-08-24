@@ -7,6 +7,7 @@ import {
   RAIL_INSET,
   RING,
   RING_BAND_NODES,
+  RING_DEFAULT_FORM,
   buildRingOrder,
   buildRingUnits,
   ringAngle,
@@ -17,8 +18,9 @@ import { SKIN, createSkinUnit, type SkinBond } from './skin-unit';
 
 /**
  * 守门：Lab.09 圆筒环列的编制（键谱层 + 环上几何）。物理零涉及——
- * 引擎与 Lab.06 逐字同一份，这里卡的是「四条带能不能围成一个读得出来的筒」：
- * 编制、三段等长、形态未被搬动、平台齐平、半径下限不互穿。
+ * 引擎与 Lab.06 逐字同一份，这里卡的是「一种键谱围成的筒读不读得出来」：
+ * 一圈同一种（用户 2026-08-23 纠偏，混着摆的首版被否）、四种可互换而不跳台阶、
+ * 形态未被搬动、半径下限不互穿。
  */
 
 const DEFS = buildRingUnits();
@@ -57,14 +59,14 @@ function runAll() {
 const run = (): ReturnType<typeof runAll> => (RUN ??= runAll());
 
 describe('skin-ring 圆筒环列', () => {
-  it('编制：20 位、四种键谱各 5 份、循环排开', () => {
+  it('编制：一圈 20 位全指同一条引擎（用户拍板：一个环只用一种形状）', () => {
     const order = buildRingOrder();
     expect(order.length).toBe(RING.COUNT);
+    expect(new Set(order).size).toBe(1); // 混四种的首版被否：平台不连续
+    expect(order.every((v) => v === 0)).toBe(true);
+    // 四种键谱仍全部备着，是「选哪一种」的选项
     expect(DEFS.length).toBe(4);
-    for (let k = 0; k < 4; k++) expect(order.filter((v) => v === k).length).toBe(RING.COUNT / 4);
-    // 循环而不是分区：相邻两位必是不同键谱
-    for (let i = 0; i < order.length; i++)
-      expect(order[i]).not.toBe(order[(i + 1) % order.length]);
+    expect(DEFS[RING_DEFAULT_FORM].key).toBe('stepped'); // 默认方箱：顶面找平过
     // 方位角均分整圈
     expect(ringAngle(0)).toBe(0);
     expect(ringAngle(RING.COUNT)).toBeCloseTo(Math.PI * 2, 12);
@@ -132,7 +134,7 @@ describe('skin-ring 圆筒环列', () => {
     }
   });
 
-  it('平台是平的：收缩终点相同的三条带，嘴心相对下缘齐平（实测散布 0.08px）', () => {
+  it('四种形态可互换：同一收缩终点的三种，嘴心与筒高逐位齐平（实测散布 0.08px）', () => {
     const m = run()
       .filter((r) => r.key !== 'pocket')
       .map((r) => r.mouth);
@@ -145,7 +147,7 @@ describe('skin-ring 圆筒环列', () => {
     expect(Math.max(...t) - Math.min(...t)).toBeLessThan(0.01);
   });
 
-  it('袋按自己的 ℓ 收：终点更浅 ⇒ 高出另外三条（系统语义，不是没对齐）', () => {
+  it('换成袋那一环整体更高更浅：它的 ℓ 是另一个（系统语义，不是没对齐）', () => {
     const rows = run();
     const pocket = rows.find((r) => r.key === 'pocket')!;
     const flat = rows.find((r) => r.key === 'stepped')!;
