@@ -76,7 +76,7 @@ export interface HomeWork {
   summary: string;
 }
 
-// Lab 九卡（文案照搬 Home-Screens 稿；链接改指站内 /lab 台架页，MAPPING §6.3；
+// Lab 十卡（文案照搬 Home-Screens 稿；链接改指站内 /lab 台架页，MAPPING §6.3；
 // 2026-07-29 加 Lab.05，网格随之 4 列→5 列（用户：卡片后续再优化，先把新的加进来）；
 // 2026-08-18 加 Lab.06（项目二第一台，皮肤单元引擎），网格 5 列→6 列——顺带结清
 // 「小屏两列时 5 张有一张单行」的待优化项（6 张两列正好铺满）；
@@ -172,6 +172,16 @@ const LABS = [
     hover: 'var(--p100)',
     kickerColor: 'var(--accent-2)',
   },
+  {
+    kicker: 'Lab.10',
+    title: 'Four by four',
+    body: 'Sixteen units on a grid — the pitch is measured off their peak swell.',
+    meta: '16 live units · WebGL',
+    href: '/lab#lab10',
+    bar: 'var(--p700)',
+    hover: 'var(--p100)',
+    kickerColor: 'var(--accent-2)',
+  },
 ];
 
 // Work log 预览三条：2026-07-27 起改接内容池最新三条（此前为 Home 稿硬编码字面，
@@ -181,13 +191,13 @@ export interface HomeLog {
   text: string;
 }
 
-// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-08-23 vitest 实测 348；
+// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-08-23 vitest 实测 353；
 // 迭代稿配色：Tests=绿 700、Kernels=紫 700、Demos=绿 600）
 const STATS = [
   { n: '04', label: 'Projects', color: 'var(--ink)' },
-  { n: '348', label: 'Tests green', color: 'var(--accent)' },
+  { n: '353', label: 'Tests green', color: 'var(--accent)' },
   { n: '03', label: 'Solver kernels', color: 'var(--accent-2)' },
-  { n: '09', label: 'Live demos', color: 'var(--g600)' },
+  { n: '10', label: 'Live demos', color: 'var(--g600)' },
 ];
 
 const UPPER_11: CSSProperties = {
@@ -1728,7 +1738,7 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
               </div>
               <div
                 data-row
-                className="grid grid-cols-2 lg:grid-cols-9"
+                className="grid grid-cols-2 lg:grid-cols-10"
                 style={{ gap: 1, background: 'oklch(0.235 0.025 215 / 0.22)' }}
               >
                 {LABS.map((lab) => (

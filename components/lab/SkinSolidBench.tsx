@@ -249,6 +249,7 @@ export function SkinSolidBench({
   controls = true,
   units,
   gapX = UNIT_GAP_X,
+  gapZ = 0,
   depth = SOLID.DEPTH,
   pivot = PIVOT,
   camScale = CAM_SCALE,
@@ -258,6 +259,7 @@ export function SkinSolidBench({
   layouts,
   order,
   ring = false,
+  grid,
   radius,
   thick = SOLID.THICK,
   axon,
@@ -271,14 +273,18 @@ export function SkinSolidBench({
   /** 场景单元（默认 = Lab.06 那四台 × skinSiteOpts）；Lab.08 阵列传自己的序列 */
   units?: readonly SolidUnitDef[];
   gapX?: number;
+  /** 沿深度的间距（网格排布的行距；单排布时默认 0 = 一列，行为与加它之前相同） */
+  gapZ?: number;
   /** 带深（「单元很窄」= 传小值） */
   depth?: number;
   pivot?: { x: number; y: number; z: number };
   camScale?: number;
   /** 天花：per-unit = 每单元一条板（Lab.07）；span = 一整条通长板（密排阵列用——
    *  per-unit 板在小间距下会大面积共面重叠 → z-fight）；
-   *  ring = 圆环板（Lab.09 环列，用户 2026-08-23 拍板；随半径滑块重烘） */
-  ceiling?: 'per-unit' | 'span' | 'ring';
+   *  ring = 圆环板（Lab.09 环列，用户 2026-08-23 拍板；随半径滑块重烘）；
+   *  beams = 每列一根梁（Lab.10 网格）——整块板会把顶视全挡住，而顶视正是读间距的角度，
+   *  梁之间恰好露出膨胀体（梁的宽度只罩住芯轨那一档） */
+  ceiling?: 'per-unit' | 'span' | 'ring' | 'beams';
   rate?: number;
   hud?: SolidHud;
   /** 多排布（≥2 出「排列」切换，首项为默认）；省略 = 单排布（gapX/pivot/camScale） */
@@ -287,6 +293,8 @@ export function SkinSolidBench({
   order?: readonly number[];
   /** 环列（Lab.09 圆筒）：实例绕世界 Y 排一圈而不是排一列，半径由 radius 给 */
   ring?: boolean;
+  /** 网格排布（Lab.10 4×4 阵列）：给列数，实例按 (列, 行) 铺开而不是排一列；与 ring 互斥 */
+  grid?: number;
   /** 半径滑块（只在 ring 下有意义）——用户 2026-08-23 拍板「半径做滑块现场调」 */
   radius?: { min: number; max: number; def: number };
   /** 织物厚度（窄带上 5 太厚，会读成方棍） */
@@ -351,7 +359,7 @@ export function SkinSolidBench({
     const layoutList: readonly SolidLayout[] =
       layouts && layouts.length
         ? layouts
-        : [{ key: 'default', label: '', gapX, gapZ: 0, pivot, camScale }];
+        : [{ key: 'default', label: '', gapX, gapZ, pivot, camScale }];
     let layoutIdx = 0;
 
     const cam = new OrbitCamera({
@@ -381,6 +389,24 @@ export function SkinSolidBench({
     }
     const R = renderer;
 
+    /**
+     * 一份实例在某个排布下的站位。三种：
+     * 环列（全在方位角里，行列偏移必须清零）/ 网格（Lab.10：列走 X、行走 Z，行居中）/
+     * 一列（Lab.07/08 的原路径）。
+     */
+    const placeAt = (u: number, L: SolidLayout, n: number): { offX: number; offZ: number } => {
+      if (ring) return { offX: 0, offZ: 0 };
+      if (grid) {
+        const rows = Math.ceil(n / grid);
+        return {
+          offX: (u % grid) * L.gapX,
+          offZ: (Math.floor(u / grid) - (rows - 1) / 2) * L.gapZ,
+        };
+      }
+      // Z 取 ((n−1)/2 − u)：单元 0 在 +Z（轴测机位的近端）——分列的「左」= 并拢的「近」
+      return { offX: u * L.gapX, offZ: ((n - 1) / 2 - u) * L.gapZ };
+    };
+
     let defs: readonly SolidUnitDef[] =
       units ?? SKIN_UNITS.map((d) => ({ spec: d.spec, opts: skinSiteOpts(d), smooth: d.smooth ?? [3, 1] }));
     /** 摆放编制：省略 = 一条引擎一处实例（Lab.07/08 的行为） */
@@ -404,11 +430,7 @@ export function SkinSolidBench({
     });
     const makeInsts = (): SolidInst[] => plan.map((simIdx, u) => ({
       simIdx,
-      // 环列的站位全在方位角里，行间距对它没有意义（首版忘了清零，175 的排距
-      // 被当成半径加了上去，二十条带被甩到半径 3355 处 —— 一眼可见的事故）
-      // Z 取 ((n−1)/2 − u)：单元 0 在 +Z（轴测机位的近端）——分列的「左」= 并拢的「近」
-      offX: ring ? 0 : u * layoutList[0].gapX,
-      offZ: ring ? 0 : ((plan.length - 1) / 2 - u) * layoutList[0].gapZ,
+      ...placeAt(u, layoutList[0], plan.length),
       angle: (u / plan.length) * Math.PI * 2,
       ceilKey: `ceil-u${u}`,
       verts: new Float32Array(4 * sims[simIdx].sim.n * 3),
@@ -441,8 +463,9 @@ export function SkinSolidBench({
       layoutIdx = li;
       const L = layoutList[li];
       insts.forEach((v, u) => {
-        v.offX = ring ? 0 : u * L.gapX;
-        v.offZ = ring ? 0 : ((insts.length - 1) / 2 - u) * L.gapZ;
+        const q = placeAt(u, L, insts.length);
+        v.offX = q.offX;
+        v.offZ = q.offZ;
       });
       cam.retarget(L.pivot, L.camScale);
     };
@@ -450,22 +473,39 @@ export function SkinSolidBench({
     // 天花板条（静件，随构造一次烘焙上传）。span = 一整条通长板——
     // 密排阵列下 per-unit 板会大面积共面重叠（z-fight）；每排布各烘一条
     // （X/Z 范围随排布变），绘制时取当前排布那条
-    if (ceiling === 'span') {
+    const beamCount = ceiling === 'beams' ? (grid ?? 1) : 0;
+    /** 天花（静件）：三种非环列的读法各烘一次；环列的圆环板随半径动态重烘 */
+    const bakeCeil = (): void => {
+      if (ceiling === 'per-unit') {
+        for (const v of insts) {
+          const ceil = boxVerts(v.offX + 30, -3, 0, 88, 3, depth / 2 + 16);
+          R.addMesh(v.ceilKey, bakeIndexed(ceil.verts, ceil.idx));
+        }
+        return;
+      }
+      if (ceiling !== 'span' && ceiling !== 'beams') return;
+      // 按该排布下**实例的实际站位**算包围盒——一列时与旧算式逐位相同
+      // （min offX=0 / max=(n−1)gapX、offZ 对称），网格排布也照样罩得住
       layoutList.forEach((L, li) => {
         const n = insts.length;
-        const x1 = (n - 1) * L.gapX + 75;
-        const zHalf = ((n - 1) * L.gapZ) / 2 + depth / 2 + 16;
-        const ceil = boxVerts((-45 + x1) / 2, -3, 0, (x1 + 45) / 2, 3, zHalf);
-        R.addMesh(`ceil-span-${li}`, bakeIndexed(ceil.verts, ceil.idx));
+        const qs = Array.from({ length: n }, (_, u) => placeAt(u, L, n));
+        const z0 = Math.min(...qs.map((q) => q.offZ)) - depth / 2 - 16;
+        const z1 = Math.max(...qs.map((q) => q.offZ)) + depth / 2 + 16;
+        if (ceiling === 'span') {
+          const x0 = Math.min(...qs.map((q) => q.offX)) - 45;
+          const x1 = Math.max(...qs.map((q) => q.offX)) + 75;
+          const ceil = boxVerts((x0 + x1) / 2, -3, (z0 + z1) / 2, (x1 - x0) / 2, 3, (z1 - z0) / 2);
+          R.addMesh(`ceil-span-${li}`, bakeIndexed(ceil.verts, ceil.idx));
+          return;
+        }
+        for (let c = 0; c < beamCount; c++) {
+          // 梁只罩住芯轨那一档（半宽 13），膨胀体在梁之间露出来
+          const beam = boxVerts(c * L.gapX - 3.4, -3, (z0 + z1) / 2, 13, 3, (z1 - z0) / 2);
+          R.addMesh(`ceil-beam-${li}-${c}`, bakeIndexed(beam.verts, beam.idx));
+        }
       });
-    }
-    const bakePerUnitCeil = (): void => {
-      for (const v of insts) {
-        const ceil = boxVerts(v.offX + 30, -3, 0, 88, 3, depth / 2 + 16);
-        R.addMesh(v.ceilKey, bakeIndexed(ceil.verts, ceil.idx));
-      }
     };
-    if (ceiling === 'per-unit') bakePerUnitCeil();
+    bakeCeil();
     // 环列天花是圆环板：半径可现场调 ⇒ 不能烘死，按半径缓存重烘（一次 72×4 顶点）
     let ceilRingR = Number.NaN;
     let ceilRingData: Float32Array | null = null;
@@ -498,6 +538,9 @@ export function SkinSolidBench({
       R.beginFrame(cam);
       if (ceiling === 'span') R.drawMesh(`ceil-span-${layoutIdx}`, IDENT, RAIL_DARK, RAIL_LITE);
       else if (ceiling === 'ring') R.drawDynamicMesh(ceilRing(), RAIL_DARK, RAIL_LITE);
+      else if (ceiling === 'beams')
+        for (let c = 0; c < beamCount; c++)
+          R.drawMesh(`ceil-beam-${layoutIdx}-${c}`, IDENT, RAIL_DARK, RAIL_LITE);
       // 绘图平滑按引擎算一次，它的全部实例共用（圆筒 4 条引擎摆 20 处）
       for (const s of sims) {
         if (!s.emaX || !s.emaY) {
@@ -632,7 +675,7 @@ export function SkinSolidBench({
         defs = nextUnits;
         plan = nextOrder ?? nextUnits.map((_, u) => u);
         seed();
-        if (ceiling === 'per-unit') bakePerUnitCeil();
+        bakeCeil();
         applyLayout(layoutIdx);
         acc = 0;
         holdT = 0;
