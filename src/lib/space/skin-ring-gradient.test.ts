@@ -1,6 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { ARRAY_CENTER, ARRAY_FREE } from './skin-array';
-import { SKIN_UNITS } from './skin-data';
+import { RING_CENTER, RING_FREE, RING_GROW, buildRingUnits } from './skin-ring';
 import { GRAD_LEVELS, buildGradientOrder, buildRingGradient } from './skin-ring-gradient';
 import { RING, RING_LEAD } from './skin-ring';
 import { SKIN, createSkinUnit, type SkinBond } from './skin-unit';
@@ -29,7 +28,7 @@ function runAll() {
     const s = createSkinUnit(d.spec, d.opts);
     for (let k = 0; k < SKIN.STEPS; k++) s.advance();
     const pts: [number, number][] = [];
-    for (let i = RING_LEAD; i < RING_LEAD + ARRAY_FREE; i++)
+    for (let i = RING_LEAD; i < RING_LEAD + RING_FREE; i++)
       pts.push([s.px[i] * 100, -s.py[i] * 100]);
     // 等弧长重采样，形态之间才可比
     const L = [0];
@@ -86,19 +85,21 @@ describe('skin-ring-gradient 环上渐变', () => {
     for (let l = 1; l < GRAD_LEVELS - 1; l++) expect(count(l), `级 ${l}`).toBe(2);
   });
 
-  it('端点逐字取站上原谱：跨度集/键长/面板只整体平移', () => {
+  it('端点与「整环同形」那两支逐位同一份键谱', () => {
+    // 两个编制在同一台上切换，端点必须是同一个东西（不然折返点的形态会跳）。
+    // 2026-08-25 环族构造放大后，这里比的是**放大后**的那一份 —— 也就是
+    // buildRingUnits() 出来的，而不再是 SKIN_UNITS 的原谱（那份仍归 Lab.06–08 用）
+    const RU = buildRingUnits();
     for (const [l, key] of [[0, 'bulb'], [GRAD_LEVELS - 1, 'stepped']] as const) {
-      const src = SKIN_UNITS.find((d) => d.key === key)!.spec[1];
-      expect(src[0]).toBe('f');
-      if (src[0] !== 'f') return;
+      const src = RU.find((d) => d.key === key)!.spec[1];
+      if (src[0] !== 'f') throw new Error('自由段位置变了');
       const a = src[2];
       const b = bondsOf(LV[l]);
-      expect(b.length).toBe(a.length);
-      const shift = b[0][0] - a[0][0];
+      expect(b.length, key).toBe(a.length);
       a.forEach(([i, j, rb], k) => {
-        expect(b[k][0]).toBe(i + shift);
-        expect(b[k][1]).toBe(j + shift);
-        expect(b[k][2]).toBe(rb);
+        expect(b[k][0], key).toBe(i);
+        expect(b[k][1], key).toBe(j);
+        expect(b[k][2], key).toBe(rb);
       });
     }
   });
@@ -136,17 +137,21 @@ describe('skin-ring-gradient 环上渐变', () => {
         hi = Math.max(hi, j);
       }
       expect(lo).toBeGreaterThanOrEqual(4);
-      expect(ARRAY_FREE - 1 - hi).toBeGreaterThanOrEqual(4);
-      expect((lo + hi) / 2).toBeCloseTo(ARRAY_CENTER, 12);
+      expect(RING_FREE - 1 - hi).toBeGreaterThanOrEqual(4);
+      expect((lo + hi) / 2).toBeCloseTo(RING_CENTER, 12);
     }
   });
 
-  it('逐级微变没有断层：相邻形态距离 0.5–2.5px，最大/最小 ≤3.2×', () => {
+  it('逐级微变没有断层：相邻形态距离随构造等比放大后仍在带内，最大/最小 ≤3.2×', () => {
     const rows = run();
     const gaps = rows.slice(1).map((r, i) => dist(rows[i].samp, r.samp));
     for (const g of gaps) {
-      expect(g).toBeGreaterThan(0.5); // 太小 = 这一格白给
-      expect(g).toBeLessThan(2.5); // 太大 = 断层（Lab.08 当初被否的那种）
+      // 阈值随构造放大同比（2026-08-25 环族 ×1.5）——距离是长度量，比值才是形状量
+      expect(g).toBeGreaterThan(0.5 * RING_GROW); // 太小 = 这一格白给
+      // 上界随构造同比，但**留了一点余量**：离散跳变（端面找平一到位）不是长度量，
+      // 放大后它相对变粗了一点（旧尺度下 2.04 → 2.52）。真正卡「有没有断层」的是
+      // 下面那条比值断言——它是形状量、与尺度无关
+      expect(g).toBeLessThan(2.7 * RING_GROW);
     }
     expect(Math.max(...gaps) / Math.min(...gaps)).toBeLessThanOrEqual(3.2);
     // 首尾接缝 = 级 0↔1 那一步，与其余同量级 ⇒ 一圈闭合
@@ -155,7 +160,7 @@ describe('skin-ring-gradient 环上渐变', () => {
 
   it('平台仍然是平的：11 级的嘴心逐位齐平（对位构造在渐变下照样成立）', () => {
     const m = run().map((r) => r.mouth);
-    expect(Math.max(...m) - Math.min(...m)).toBeLessThan(1.2);
+    expect(Math.max(...m) - Math.min(...m)).toBeLessThan(1.2 * RING_GROW);
   });
 
   it('每级都真的锁定成形，无 NaN', () => {

@@ -40,7 +40,8 @@
  * ⇒ 嘴心 = 2·lead + (f−1)·r，与键长、与形态无关），形态逐位不动、只换它在带上
  * 的位置与两端缓冲长度。实测同一收缩终点的三种形态嘴心散布 0.078px。
  */
-import { ARRAY_FREE, ARRAY_LEAD, ARRAY_TAIL, placeOnBand } from './skin-array';
+import { ARRAY_LEAD, ARRAY_TAIL, placeOnBand } from './skin-array';
+import type { SkinSeg } from './skin-unit';
 import { SKIN_UNITS, skinSiteOpts } from './skin-data';
 import type { SkinSpec, SkinUnitOpts } from './skin-unit';
 
@@ -97,6 +98,54 @@ export const RAIL_INSET = 3.4;
 /** 芯轨半宽（径向）与半厚（切向） */
 export const RAIL_HALF = { r: 2.4, t: 2.4 } as const;
 
+/**
+ * ## 环族的放大构造（用户 2026-08-25「往外延出来的这个平台，展开的更多一些」）
+ *
+ * 用户给的机制猜想是「收缩得更多一些」，**实测不成立**：收缩终点 r₁ 从 0.30 压到 0.18
+ * 只多挑 5%（52.0 → 54.8px），再往下（0.14）反而回缩、把平台压厚。原因是挑出的长度由
+ * **键捕获的材料量**定——键一旦锁住，被它兜住的那段材料就定了，核心再往里收也不会
+ * 多出材料来。而现有键谱已经把 61 节的自由段吃满（最外键跨 52 节，两端只剩 4 节缓冲，
+ * 那是交接件的纪律下限）。
+ *
+ * 所以真正的旋钮是**给它更多材料**：键跨、嘴口（rb）、自由段一律 ×1.5。取 1.5 而不是
+ * 别的数，是因为它让整副构造保持**结构相似**——扇形的步长 2 → 3 是整数，于是每种形态的
+ * **键的根数一根不变**（蘑菇 9 / 直挑台 11 / 阶梯 10），形态还是那个形态，只是大了一圈；
+ * 自由段 61 → 91（奇数，扇心仍落在整数节点上）。等长键纪律照旧成立：阶梯的端面 24 节
+ * × 0.02 = 0.48 = 放大后的 rb。
+ *
+ * 代价照实说：带子因此长了 30 节（172 → 202），装置整体高了一截（芯轨相应变短）；
+ * 平台变大 ⇒ 格距跟着长 ⇒ 场地与房间都变大一点。这几件都是自动跟着算的。
+ *
+ * **Lab.09 与 Lab.10 一起变**——Lab.10 的定义就是「十六个 Lab.09 那种圆筒环」，
+ * 只改一台会让两台的环不再是同一个东西。Lab.06/07/08 的键谱一个数没动。
+ */
+export const RING_GROW = 1.5;
+/** 放大后的自由段（取奇数，扇心落在整数节点上） */
+export const RING_FREE = 91;
+/** 扇心 */
+export const RING_CENTER = (RING_FREE - 1) / 2;
+
+/**
+ * 把一段键谱按 RING_GROW 放大：每根键的半跨与 rb 同比，**根数不变**
+ * （逐根映射，不是重新生成扇形）；阶梯的端面板同比。
+ */
+export function growSeg(seg: SkinSeg, g: number = RING_GROW): SkinSeg {
+  const bonds = seg[2]!;
+  const c = (bonds[0][0] + bonds[0][1]) / 2;
+  const grown = bonds.map(([i, j, rb]) => {
+    const k = Math.round(((j - i) / 2) * g);
+    return [c - k, c + k, rb * g] as const;
+  });
+  if (seg.length === 4) {
+    const panel = seg[3].map(([a, b]) => {
+      const k = Math.round(((b - a) / 2) * g);
+      return [c - k, c + k] as const;
+    });
+    return ['f', seg[1], grown, panel] as SkinSeg;
+  }
+  return ['f', seg[1], grown] as SkinSeg;
+}
+
 export interface RingUnitDef {
   key: string;
   zh: string;
@@ -115,7 +164,11 @@ export function buildRingUnits(): RingUnitDef[] {
     key: d.key,
     zh: d.zh,
     en: d.en,
-    spec: [['g', RING_LEAD], placeOnBand(d.spec[1]), ['g', RING_TAIL]] as SkinSpec,
+    spec: [
+      ['g', RING_LEAD],
+      placeOnBand(growSeg(d.spec[1]), RING_FREE, RING_CENTER),
+      ['g', RING_TAIL],
+    ] as SkinSpec,
     opts: skinSiteOpts(d),
     smooth: d.smooth ?? ([3, 1] as const),
   }));
@@ -136,4 +189,4 @@ export function buildRingOrder(count: number = RING.COUNT): number[] {
 export const RING_DEFAULT_FORM = 3;
 
 /** 单元总节数（四条相同——对位构造的三段等长；与 Lab.08 同长，只是 lead/tail 的分配不同） */
-export const RING_BAND_NODES = RING_LEAD + ARRAY_FREE + RING_TAIL;
+export const RING_BAND_NODES = RING_LEAD + RING_FREE + RING_TAIL;

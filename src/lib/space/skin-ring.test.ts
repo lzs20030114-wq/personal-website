@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ARRAY_CENTER, ARRAY_FREE, ARRAY_LEAD, ARRAY_TAIL, placeOnBand } from './skin-array';
+import { ARRAY_LEAD, ARRAY_TAIL, placeOnBand } from './skin-array';
 import { SKIN_UNITS, skinSiteOpts } from './skin-data';
 import { SOLID } from './skin-solid';
 import {
@@ -7,10 +7,14 @@ import {
   RAIL_INSET,
   RING,
   RING_BAND_NODES,
+  RING_CENTER,
   RING_DEFAULT_FORM,
+  RING_FREE,
+  RING_GROW,
   RING_LEAD,
   RING_TAIL,
   buildRingOrder,
+  growSeg,
   buildRingUnits,
   ringAngle,
   ringGap,
@@ -75,38 +79,47 @@ describe('skin-ring 圆筒环列', () => {
   });
 
   it('四条带三段等长——嘴心对位构造的前提', () => {
-    // 带总长与 Lab.08 一致（变的只有 lead/tail 的分配 ⇒ 形状在带上的高度）
+    // 两端缓冲的分配与 Lab.08 一致（RING_LEAD/TAIL 只挪形状在带上的高度）；
+    // 自由段是环族专属的放大值（2026-08-25「平台展开更多一些」）
     expect(RING_LEAD + RING_TAIL).toBe(ARRAY_LEAD + ARRAY_TAIL);
-    expect(RING_BAND_NODES).toBe(ARRAY_LEAD + ARRAY_FREE + ARRAY_TAIL);
+    expect(RING_BAND_NODES).toBe(RING_LEAD + RING_FREE + RING_TAIL);
+    expect(RING_CENTER).toBe((RING_FREE - 1) / 2); // 扇心落在整数节点上
     for (const d of DEFS) {
       const total = d.spec.reduce((s, seg) => s + seg[1], 0);
       expect(total).toBe(RING_BAND_NODES);
       expect(d.spec.map((seg) => seg[0])).toEqual(['g', 'f', 'g']);
-      expect(d.spec[1][1]).toBe(ARRAY_FREE);
+      expect(d.spec[1][1]).toBe(RING_FREE); // 四条同一副构造 ⇒ 对位构造成立
     }
   });
 
-  it('形态未被搬动：只是整体平移——跨度集/键长/面板跨度逐位不动', () => {
+  it('形态没被改写：整副构造按 RING_GROW 等比放大，键的根数一根不变', () => {
+    // 用户 2026-08-25「平台展开更多一些」：挑出长度由**材料量**定（收缩量实测无效），
+    // 故环族用一副放大 1.5× 的构造。放大必须是**结构相似**——根数、相对比例、
+    // 等长键纪律都不许变，否则就不是「同一个形态大了一圈」而是换了个形态。
     DEFS.forEach((d, i) => {
       const src = SKIN_UNITS[i].spec[1];
       const dst = d.spec[1];
-      expect(src[0]).toBe('f');
-      expect(dst[0]).toBe('f');
-      if (src[0] !== 'f' || dst[0] !== 'f') return;
+      if (src[0] !== 'f' || dst[0] !== 'f') throw new Error('自由段位置变了');
       const a = src[2];
       const b = dst[2];
-      expect(b.length).toBe(a.length);
-      const shift = b[0][0] - a[0][0];
-      a.forEach(([i0, j0, rb], k) => {
-        expect(b[k][0]).toBe(i0 + shift); // 同一个平移量
-        expect(b[k][1]).toBe(j0 + shift);
-        expect(b[k][2]).toBe(rb); // 键长逐位不动
-        expect(b[k][1] - b[k][0]).toBe(j0 - i0); // 跨度逐位不动
+      expect(b.length, d.key).toBe(a.length); // 根数一根不变
+      b.forEach(([i1, j1], k) => {
+        // 每根键的半跨等比（整数取整），且全部同心
+        expect((j1 - i1) / 2, d.key).toBe(Math.round(((a[k][1] - a[k][0]) / 2) * RING_GROW));
+        expect((i1 + j1) / 2, d.key).toBeCloseTo(RING_CENTER, 12); // 扇形正居中
+        expect(b[k][2], d.key).toBeCloseTo(a[k][2] * RING_GROW, 12); // 嘴口同比
       });
       const pa = src.length === 4 ? src[3] : undefined;
       const pb = dst.length === 4 ? dst[3] : undefined;
       expect(!!pb).toBe(!!pa);
-      if (pa && pb) pa.forEach(([x, y], k) => expect(pb[k]).toEqual([x + shift, y + shift]));
+      if (pa && pb) {
+        pa.forEach(([x, y], k) => {
+          const span = pb[k][1] - pb[k][0];
+          expect(span).toBe(2 * Math.round(((y - x) / 2) * RING_GROW));
+          // 等长键纪律：端面弧长 = 键长（阶梯方箱的「方」就是靠这个）
+          expect(b[0][2]).toBeCloseTo(span * 0.02, 9);
+        });
+      }
     });
   });
 
@@ -120,13 +133,13 @@ describe('skin-ring 圆筒环列', () => {
         hi = Math.max(hi, j);
       }
       expect(lo).toBeGreaterThanOrEqual(4);
-      expect(ARRAY_FREE - 1 - hi).toBeGreaterThanOrEqual(4);
+      expect(RING_FREE - 1 - hi).toBeGreaterThanOrEqual(4);
       // 正居中 ⇒ 上下缓冲等长 ⇒ 嘴心与键长无关（skin-array 文件头的构造）
-      expect((lo + hi) / 2).toBeCloseTo(ARRAY_CENTER, 12);
+      expect((lo + hi) / 2).toBeCloseTo(RING_CENTER, 12);
     }
   });
 
-  it('真跑：四条带各自锁定成形、皮不穿芯、终态无 NaN', () => {
+  it('真跑：四条带各自锁定成形、皮不穿芯、终态无 NaN', { timeout: 60_000 }, () => {
     for (const r of run()) {
       expect(r.sim.locked.length, r.key).toBeGreaterThan(0);
       expect(r.outX, r.key).toBeGreaterThan(20); // 确实挑出来了
@@ -172,7 +185,7 @@ describe('skin-ring 圆筒环列', () => {
     // 纯平移：同一张键谱换 lead/tail 分配（总长不变）跑到底，剖面相对嘴心归一后逐点比对。
     // 这条同时卡住尾段别太短——实测 tail=7 时偏差 0.756，形状会被拽变形。
     const D = SKIN_UNITS.find((d) => d.key === 'stepped')!;
-    const seg = placeOnBand(D.spec[1]);
+    const seg = placeOnBand(growSeg(D.spec[1]), RING_FREE, RING_CENTER);
     const shape = (lead: number): [number, number][] => {
       const tail = RING_LEAD + RING_TAIL - lead;
       const sim = createSkinUnit([['g', lead], seg, ['g', tail]], skinSiteOpts(D));
@@ -182,7 +195,7 @@ describe('skin-ring 圆筒环列', () => {
       for (const b of bonds) if (b[1] - b[0] > widest[1] - widest[0]) widest = b;
       const mouth = -(sim.py[lead + widest[0]] + sim.py[lead + widest[1]]) / 2;
       const out: [number, number][] = [];
-      for (let i = lead; i < lead + ARRAY_FREE; i++)
+      for (let i = lead; i < lead + RING_FREE; i++)
         out.push([sim.px[i] * 100, (-sim.py[i] - mouth) * 100]);
       return out;
     };

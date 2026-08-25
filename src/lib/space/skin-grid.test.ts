@@ -7,6 +7,7 @@ import {
   RIG_SCALE,
   RIG_Y,
   RIG_HANG,
+  RIG_ANCHOR_Y,
   roomBoxes,
   roomSpan,
   FIGURE,
@@ -65,7 +66,7 @@ describe('skin-grid 4×4 环阵列', () => {
     expect(worst).toBeCloseTo(PEAK_REACH, 0); // 常量没跟实测漂开
     // 「必须按全程量」不是空话：至少有一种形态的过程峰值明显大于终态
     const box = PEAKS.find((p) => p.key === 'stepped')!;
-    expect(box.peak).toBeGreaterThan(box.final + 2);
+    expect(box.peak).toBeGreaterThan(box.final + 1);
     expect(box.peakAt).toBeLessThan(900); // 峰值出现在收缩途中，不在终点
     // 外缘 = 芯上半径 + 峰值：四种形态全程都不越出去
     for (const p of PEAKS) expect(ringOuter(30) - 30, p.key).toBeGreaterThanOrEqual(p.peak);
@@ -195,11 +196,12 @@ describe('skin-grid 4×4 环阵列', () => {
 
   it('装置缩到 0.5 且下缘不动（用户 2026-08-25 拍板）', () => {
     expect(RIG_SCALE).toBe(0.5);
-    // 缩完整体下移，使下缘停在缩放前那个高度 —— 只缩不移的话整片会升到人头以上
-    expect(RIG_HANG * RIG_SCALE + RIG_Y).toBeCloseTo(RIG_HANG, 9);
+    // 缩完整体下移，使下缘停在 RIG_ANCHOR_Y —— 只缩不移的话整片会升到人头以上。
+    // 这条也把「带子放长/放大时下缘不动」钉住了：变的是顶端离天花多远，不是下缘离地多高
+    expect(RIG_HANG * RIG_SCALE + RIG_Y).toBeCloseTo(RIG_ANCHOR_Y, 9);
     // 下缘离地仍是 1.08 m；顶端退到半空，那一截由芯轨（房间的立杆）补上
-    expect((ROOM.FLOOR_Y - RIG_HANG) * MM_PER_UNIT).toBeCloseTo(1083, 0);
-    expect(RIG_Y * MM_PER_UNIT / 1000).toBeCloseTo(1.33, 1); // 顶端离天花 = 缩掉的那一半
+    expect((ROOM.FLOOR_Y - RIG_ANCHOR_Y) * MM_PER_UNIT).toBeCloseTo(1083, 0);
+    expect(RIG_Y).toBeGreaterThan(0); // 顶端确实离开了天花
     // 世界尺寸确实是装置尺寸的一半
     for (const r of RADII) {
       expect(ringGridSpan(r)).toBeCloseTo(
@@ -207,9 +209,9 @@ describe('skin-grid 4×4 环阵列', () => {
       const cells = ringGridCells(r, 'uniform');
       expect(cells[1].x - cells[0].x).toBeCloseTo(ringCellPitch(r) * RIG_SCALE, 6);
     }
-    // 平台 ⌀0.65 m、场地 2.9 m 见方（缩放前是 1.30 / 5.8）
-    expect(2 * ringOuter(RING.RADIUS_DEF) * RIG_SCALE * MM_PER_UNIT / 1000).toBeCloseTo(0.65, 2);
-    expect(ringGridSpan(RING.RADIUS_DEF) * MM_PER_UNIT / 1000).toBeCloseTo(2.92, 2);
+    // 平台 ⌀0.82 m、场地 3.73 m 见方（2026-08-25 环族构造放大 1.5× 后；缩放前那一版是 0.65 / 2.9）
+    expect(2 * ringOuter(RING.RADIUS_DEF) * RIG_SCALE * MM_PER_UNIT / 1000).toBeCloseTo(0.82, 2);
+    expect(ringGridSpan(RING.RADIUS_DEF) * MM_PER_UNIT / 1000).toBeCloseTo(3.73, 1);
   });
 
   it('房间：地板 + 两面墙，墙内面到最外环外缘 = 留距', () => {

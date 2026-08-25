@@ -27,10 +27,18 @@
  * 边界申明：交接件明令「行为矩阵 → 键谱的翻译规则由使用者手写」。这里的序列
  * 与 Lab.08 一样只是两张既有键谱之间的形态学串联（演示编排），不是那套翻译规则。
  */
-import { ARRAY_CENTER, ARRAY_FREE, placeOnBand } from './skin-array';
+import { placeOnBand } from './skin-array';
 import { SKIN_SITE_BASE, SKIN_UNITS, fan, skinSiteOpts } from './skin-data';
 import type { SkinSeg, SkinSpec, SkinUnitOpts } from './skin-unit';
-import { RING_LEAD, RING_TAIL, type RingUnitDef } from './skin-ring';
+import {
+  RING_CENTER,
+  RING_FREE,
+  RING_GROW,
+  RING_LEAD,
+  RING_TAIL,
+  growSeg,
+  type RingUnitDef,
+} from './skin-ring';
 
 /** 级数（= 回文的一半 + 1；20 位一个来回 ⇒ 11 级） */
 export const GRAD_LEVELS = 11;
@@ -50,20 +58,33 @@ export const GRAD_LEVELS = 11;
  * ② panel@3 那版第 3 级有一颗键始终没锁上（9→8），环上会有两条带比邻居少一根梯挡。
  * 代价是 panel 到位那一格 2.04（Lab.08 定版最大 1.76）——它是硬跳变，压不掉：
  * 半跨渐入实测更差（2.21），把梯挡跳变挪开也只把它从 2.04 变成 2.07。
+ *
+ * **2026-08-25 环族构造放大 1.5× 后重扫梯挡那一格**：放大不是严格的相似变换
+ * （重力、PRESS、键刚度这些量没有跟着缩放），等距性因此变差——原来的 6+6 比值从
+ * 2.9 涨到 3.75。**用户钉死的 panel@6 不动**（它是按「一圈里蘑菇占几条」定的，
+ * 与等距无关），只重扫梯挡那一格：3–7 一律 4.0 上下，8 是 3.5，**9 是 2.57**
+ * ——比放大前还好。故 KJUMP 6 → 9；RB / SQ / PW_FROM 一个数没动。
  */
 const RB = [0.1, 0.122, 0.144, 0.166, 0.188, 0.21, 0.232, 0.254, 0.276, 0.298, 0.32];
 const SQ = [0, 0, 0.06, 0.14, 0.24, 0.34, 0.45, 0.56, 0.68, 0.83, 1];
 export const PW_FROM = 6; // 这一格起端面找平给全跨 ±8（之前一律不给）
-export const KJUMP = 6; // 这一格起梯挡 24→26
+export const KJUMP = 9; // 这一格起梯挡多一根（放大后重扫，见下）
 
-/** 一级的键谱（端点两格由 buildRingGradient 换成站上原谱） */
+/**
+ * 一级的键谱（端点两格由 buildRingGradient 换成站上原谱）。
+ * 2026-08-25 环族构造放大 1.5× 后，这里的三个长度量（扇形起止、步长、rb、端面板）
+ * 一律同比——**键的根数不变**（步长 2 → 3 是整数，故 9 / 10 根照旧），
+ * 时间表（RB / SQ / PW_FROM / KJUMP）是级号不是长度，原样不动。
+ */
+const G = RING_GROW;
 function levelSeg(l: number, pwFrom: number, kJump: number): SkinSeg {
-  let kMax = l >= kJump ? 26 : 24;
-  while (ARRAY_CENTER - kMax < 4) kMax -= 2; // 键谱两端 ≥4 节缓冲（交接件纪律）
-  const bonds = fan(ARRAY_CENTER, 8, kMax + 1, 2, RB[l]);
+  let kMax = Math.round((l >= kJump ? 26 : 24) * G);
+  while (RING_CENTER - kMax < 4) kMax -= 3; // 键谱两端 ≥4 节缓冲（交接件纪律）
+  const bonds = fan(RING_CENTER, Math.round(8 * G), kMax + 1, 3, RB[l] * G);
+  const pw = Math.round(8 * G);
   return l >= pwFrom
-    ? ['f', ARRAY_FREE, bonds, [[ARRAY_CENTER - 8, ARRAY_CENTER + 8]]]
-    : ['f', ARRAY_FREE, bonds];
+    ? ['f', RING_FREE, bonds, [[RING_CENTER - pw, RING_CENTER + pw]]]
+    : ['f', RING_FREE, bonds];
 }
 
 // 三段与整环同形那一编制同一副（lead 96 / tail 15）——切编制时环的高度不该跳
@@ -81,7 +102,7 @@ export function buildRingGradient(pwFrom: number = PW_FROM, kJump: number = KJUM
         key: `g${l}`,
         zh: d.zh,
         en: d.en,
-        spec: band(placeOnBand(d.spec[1])),
+        spec: band(placeOnBand(growSeg(d.spec[1]), RING_FREE, RING_CENTER)),
         opts: skinSiteOpts(d),
         smooth: l === 0 ? (A.smooth ?? [3, 1]) : [3, 1],
       });

@@ -35,10 +35,10 @@ import { figureVerts, type FigureSpec } from './figure';
 import { boxVerts } from './skin-solid';
 import { RING, ringGap } from './skin-ring';
 
-/** 全程最大膨胀（四种形态取最大：直挑台实测 52.02，向上取到 0.1 ⇒ 这个常量是**上界**）。
+/** 全程最大膨胀（四种形态取最大：直挑台实测 73.87，向上取到 0.1 ⇒ 这个常量是**上界**）。
  *  必须按**全程**量而不是终态——阶梯方箱在 step 519 鼓到 43.5，终态反而收回 40.6；
  *  只看终态会把格距定小 3px，收缩过程中就撞上了。 */
-export const PEAK_REACH = 52.1;
+export const PEAK_REACH = 73.9;
 
 /** 环间缝 / 环内平台外缘带间缝 的比值（手感常量，待真机拍板；> 1 是硬约束） */
 export const RING_GAP_RATIO = 1.5;
@@ -65,10 +65,16 @@ export const RING_GRID_COUNT = RING_GRID.COLS * RING_GRID.ROWS;
  * 引擎、键谱、对位构造、止程全都不知道有这回事，故与 Lab.06–09 仍是同一份东西。
  */
 export const RIG_SCALE = 0.5;
-/** 装置在自身坐标系里的竖向占高（收缩全程包络；= 缩放前的吊长） */
-export const RIG_HANG = 336;
-/** 缩放后的整体下移量：使下缘仍停在缩放前那个高度 */
-export const RIG_Y = RIG_HANG * (1 - RIG_SCALE);
+/** 装置在自身坐标系里的竖向占高（收缩全程包络实测；2026-08-25 环族构造放大后 336 → 393） */
+export const RIG_HANG = 393;
+/**
+ * 下缘在世界里的高度——**这个数是定下来的，不随构造变**：离地 137 单位 = 1.08 m，
+ * 平台正好在人的胸口。带子放长/放大时，变的是顶端离天花多远（芯轨相应变短），
+ * 不是下缘离地多高。
+ */
+export const RIG_ANCHOR_Y = 336;
+/** 缩放后的整体下移量：使下缘停在 RIG_ANCHOR_Y */
+export const RIG_Y = RIG_ANCHOR_Y - RIG_SCALE * RIG_HANG;
 
 /** 环的外缘半径（芯上半径 + 全程最大膨胀） */
 export function ringOuter(radius: number): number {
@@ -136,7 +142,9 @@ export const RING_GRID_AXON = { pitch: -0.45, yaw: -0.62 } as const;
  *
  * 站上吊件总长是 336 世界单位（`RING_GRID_Y.hi` 的旧值，收缩全程的包络）⇒
  *
- * - **房高 = 336 / 0.71 ≈ 473 单位**（地面 y = 473，天花仍是 y = 0）
+ * - **房高 = 336 / 0.71 ≈ 473 单位**（地面 y = 473，天花仍是 y = 0）。
+ *   注：336 是当时的吊件总长；2026-08-25 环族构造放大后带子长到 393，**房间不再重推**
+ *   ——房高是已经定下来的东西，带子变长只是顶端离天花近了一点。
  * - **人 = 0.455 × 473 ≈ 215 单位**；取 1.70 m 的成年人 ⇒ **1 单位 ≈ 7.9 mm**
  * - 吊件下缘离地 = 473 − 336 = **137 单位 ≈ 1.08 m**（草图 0.27 房高，实得 0.29，对得上）
  *
