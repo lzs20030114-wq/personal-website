@@ -135,5 +135,63 @@ export function buildRingOrder(count: number = RING.COUNT): number[] {
  */
 export const RING_DEFAULT_FORM = 3;
 
+/**
+ * 回文编制：一圈 count 位、levels 级，位置 i 与 count−i 同级（差一级的邻居首尾相接）。
+ * 一圈是周期的，所以「转过去再转回来」是闭合的唯一自然形式——渐变与起伏共用这一个。
+ * offset = 整体绕轴转几位（纯外观量：把折返点从正前正后转开，免得被自己挡住）。
+ */
+export function palindromeOrder(count: number, levels: number, offset = 0): number[] {
+  const half = levels - 1;
+  return Array.from({ length: count }, (_, i) => {
+    const t = (((i + offset) % count) / count) * 2;
+    const l = Math.round(t * half);
+    return l <= half ? l : 2 * half - l;
+  });
+}
+
+/**
+ * 一圈起伏（用户 2026-08-23：「一圈的形状 从低到高再到低一圈下来」）——
+ * **同一种键谱，每个位置一个不同的 lead**。lead 就是形状在带上的高度（2px/节），
+ * 所以这不是新形态，是把已经验过的那个旋钮沿圆周排成一条波。
+ *
+ * 实测（lead 20–96 全程）：剖面逐点偏差 0.000–0.026、筒高恒 256.6、锁定键数不变
+ * ⇒ 一圈里高度在变、形状一个数没变。低点取 RING_LEAD（= 用户圈图定的那个位置），
+ * 从那里升上去再回来。用余弦而不是三角波：三角波在最高最低处有折角，
+ * 余弦两端平缓、接缝处斜率连续，一圈读下来是一条起伏而不是两段斜坡。
+ */
+export const RING_WAVE = {
+  LEVELS: 11,
+  /** 波谷的 lead（越大越低）= 用户拍板的那个位置 */
+  LOW: RING_LEAD,
+  /** 波峰的 lead（越小越高）。18% → 71% 的筒高，扫掉大半根筒 */
+  HIGH: 28,
+  /** 相位：把波谷/波峰从正前正后转开，默认轴测机位下才看得见起伏 */
+  PHASE: 5,
+} as const;
+
+/** 各级的 lead（0 = 最低，LEVELS−1 = 最高） */
+export function waveLeads(): number[] {
+  const { LEVELS, LOW, HIGH } = RING_WAVE;
+  return Array.from({ length: LEVELS }, (_, l) =>
+    Math.round(LOW - (LOW - HIGH) * ((1 - Math.cos((Math.PI * l) / (LEVELS - 1))) / 2)),
+  );
+}
+
+/** 起伏编制的 11 级：同一张键谱搬到不同的 lead 上（lead + tail 恒定 ⇒ 筒的上下缘不动） */
+export function buildWaveUnits(def: RingUnitDef): RingUnitDef[] {
+  const sum = RING_LEAD + RING_TAIL;
+  const free = def.spec[1];
+  return waveLeads().map((lead, l) => ({
+    ...def,
+    key: `${def.key}-w${l}`,
+    spec: [['g', lead], free, ['g', sum - lead]] as SkinSpec,
+  }));
+}
+
+/** 起伏编制的 20 位（回文 + 相位） */
+export function buildWaveOrder(count: number = RING.COUNT): number[] {
+  return palindromeOrder(count, RING_WAVE.LEVELS, RING_WAVE.PHASE);
+}
+
 /** 单元总节数（四条相同——对位构造的三段等长；与 Lab.08 同长，只是 lead/tail 的分配不同） */
 export const RING_BAND_NODES = RING_LEAD + ARRAY_FREE + RING_TAIL;

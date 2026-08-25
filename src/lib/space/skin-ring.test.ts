@@ -10,6 +10,11 @@ import {
   RING_DEFAULT_FORM,
   RING_LEAD,
   RING_TAIL,
+  RING_WAVE,
+  buildWaveOrder,
+  buildWaveUnits,
+  palindromeOrder,
+  waveLeads,
   buildRingOrder,
   buildRingUnits,
   ringAngle,
@@ -26,6 +31,7 @@ import { SKIN, createSkinUnit, type SkinBond } from './skin-unit';
  */
 
 const DEFS = buildRingUnits();
+const FORMS_STEPPED = (): (typeof DEFS)[number] => DEFS.find((d) => d.key === 'stepped')!;
 
 /** 跑完一轮收缩（四条带，约 2s）——多个用例共用，别重复跑 */
 let RUN: ReturnType<typeof runAll> | null = null;
@@ -192,6 +198,71 @@ describe('skin-ring 圆筒环列', () => {
     for (let i = 0; i < a.length; i++)
       dev = Math.max(dev, Math.hypot(a[i][0] - b[i][0], a[i][1] - b[i][1]));
     expect(dev).toBeLessThan(0.05);
+  }, 30_000);
+
+  it('一圈起伏：11 级 lead 从低单调升到高，余弦两端平缓（不是三角波的折角）', () => {
+    const leads = waveLeads();
+    expect(leads.length).toBe(RING_WAVE.LEVELS);
+    expect(leads[0]).toBe(RING_WAVE.LOW);
+    expect(leads[leads.length - 1]).toBe(RING_WAVE.HIGH);
+    // lead 越小越高 ⇒ 单调递减
+    for (let l = 1; l < leads.length; l++) expect(leads[l], `级 ${l}`).toBeLessThan(leads[l - 1]);
+    // 余弦：两端的步子明显小于中段（三角波会处处相等）
+    const d = leads.slice(1).map((v, i) => leads[i] - v);
+    expect(Math.min(d[0], d[d.length - 1])).toBeLessThan(Math.max(...d) / 2);
+  });
+
+  it('一圈起伏的编制闭合：20 位回文，含首尾在内每对邻居恰好差一级', () => {
+    const order = buildWaveOrder();
+    expect(order.length).toBe(RING.COUNT);
+    for (let i = 0; i < order.length; i++) {
+      const j = (i + 1) % order.length;
+      expect(Math.abs(order[i] - order[j]), `位置 ${i}↔${j}`).toBe(1);
+    }
+    expect(order.filter((v) => v === 0).length).toBe(1);
+    expect(order.filter((v) => v === RING_WAVE.LEVELS - 1).length).toBe(1);
+    // 通用回文编制（渐变也用它）：级数任意都闭合
+    for (const lv of [4, 7, 11]) {
+      const o = palindromeOrder(2 * (lv - 1), lv, 0);
+      for (let i = 0; i < o.length; i++)
+        expect(Math.abs(o[i] - o[(i + 1) % o.length])).toBe(1);
+    }
+  });
+
+  it('起伏只改高度不改形状：最低级与最高级的剖面逐点相同，筒的上下缘不动', () => {
+    const base = FORMS_STEPPED();
+    const lv = buildWaveUnits(base);
+    const shape = (d: (typeof lv)[number]) => {
+      const sim = createSkinUnit(d.spec, d.opts);
+      for (let k = 0; k < SKIN.STEPS; k++) sim.advance();
+      const lead = (d.spec[0] as readonly [string, number])[1];
+      const bonds = (d.spec[1] as readonly ['f', number, readonly SkinBond[]])[2];
+      let w = bonds[0];
+      for (const b of bonds) if (b[1] - b[0] > w[1] - w[0]) w = b;
+      const mouth = -(sim.py[lead + w[0]] + sim.py[lead + w[1]]) / 2;
+      const prof: [number, number][] = [];
+      for (let i = lead; i < lead + ARRAY_FREE; i++)
+        prof.push([sim.px[i] * 100, (-sim.py[i] - mouth) * 100]);
+      return {
+        prof,
+        mouthPx: mouth * 100,
+        top: -sim.py[0] * 100,
+        foot: -sim.py[sim.n - 1] * 100,
+        locked: sim.locked.length,
+      };
+    };
+    const lo = shape(lv[0]);
+    const hi = shape(lv[lv.length - 1]);
+    let dev = 0;
+    for (let i = 0; i < lo.prof.length; i++)
+      dev = Math.max(dev, Math.hypot(lo.prof[i][0] - hi.prof[i][0], lo.prof[i][1] - hi.prof[i][1]));
+    expect(dev).toBeLessThan(0.05); // 形状一个数没变
+    expect(hi.locked).toBe(lo.locked);
+    // 高度差 = lead 差 × 2px/节
+    expect(lo.mouthPx - hi.mouthPx).toBeCloseTo((RING_WAVE.LOW - RING_WAVE.HIGH) * 2, 1);
+    // 筒的上下缘不动（lead + tail 恒定）
+    expect(hi.top).toBeCloseTo(lo.top, 6);
+    expect(hi.foot).toBeCloseTo(lo.foot, 6);
   }, 30_000);
 
   it('半径下限卡在「相邻带刚好不互穿」上——芯轨那一圈也不穿', () => {

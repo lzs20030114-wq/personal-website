@@ -361,14 +361,14 @@ export default function LabPage() {
         <Bench
           no="09"
           title="Cylinder of units"
-          lede="Twenty narrow bands stood in a circle: hanging slack they close into a tube, and as they contract each one folds out its ledge — together, a platform ringing the cylinder. Run the ring on one bond map, or let the map drift bulb → box → bulb once around; set the radius yourself."
+          lede="Twenty narrow bands stood in a circle: hanging slack they close into a tube, and as they contract each one folds out its ledge — together, a platform ringing the cylinder. By default the ledge climbs and falls once around, a stair wrapped on the tube; or hold it level on one form, or let the form drift bulb → box → bulb. Set the radius yourself."
           accent="var(--accent-2)"
           specs={[
-            ['Ring', '20 bands · one form, or 11-step drift'],
+            ['Ring', '20 bands · level, undulating, or drifting'],
+            ['Height', 'Same form, one lead per station — 18% ↔ 71%'],
             ['Solve', '1 or 11 engines, 20 placements — same run'],
             ['Closure', 'Palindrome — the seam is one step wide'],
             ['Radius', 'Live slider · gaps widen with it'],
-            ['Ceiling', 'Annular plate · bands hang and sink'],
             ['Caveat', 'Bands do not touch each other — 2D sections'],
           ]}
         >

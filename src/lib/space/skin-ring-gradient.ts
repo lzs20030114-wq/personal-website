@@ -30,7 +30,7 @@
 import { ARRAY_CENTER, ARRAY_FREE, placeOnBand } from './skin-array';
 import { SKIN_SITE_BASE, SKIN_UNITS, fan, skinSiteOpts } from './skin-data';
 import type { SkinSeg, SkinSpec, SkinUnitOpts } from './skin-unit';
-import { RING_LEAD, RING_TAIL, type RingUnitDef } from './skin-ring';
+import { RING_LEAD, RING_TAIL, palindromeOrder, type RingUnitDef } from './skin-ring';
 
 /** 级数（= 回文的一半 + 1；20 位一个来回 ⇒ 11 级） */
 export const GRAD_LEVELS = 11;
@@ -114,10 +114,5 @@ export function buildRingGradient(pwFrom: number = PW_FROM, kJump: number = KJUM
 export const GRAD_PHASE = 5;
 
 export function buildGradientOrder(count = 20, offset: number = GRAD_PHASE): number[] {
-  const half = GRAD_LEVELS - 1; // 10
-  return Array.from({ length: count }, (_, i) => {
-    const t = (((i + offset) % count) / count) * 2; // 0..2
-    const l = Math.round(t * half);
-    return l <= half ? l : 2 * half - l;
-  });
+  return palindromeOrder(count, GRAD_LEVELS, offset);
 }
