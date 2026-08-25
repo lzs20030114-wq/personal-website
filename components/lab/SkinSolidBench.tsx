@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
-import { FlatRenderer, bakeIndexed } from '../../src/lib/linkage/gl3d';
+import { FlatRenderer, bakeIndexed, type MeshPlace } from '../../src/lib/linkage/gl3d';
 import type { Vec3 } from '../../src/lib/linkage/solver3d';
 import { SKIN_UNITS, skinSiteOpts } from '../../src/lib/space/skin-data';
 import {
@@ -97,7 +97,7 @@ const VIEWS = [
   { key: 'side', label: '侧' },
   { key: 'top', label: '顶' },
 ] as const;
-type ViewKey = (typeof VIEWS)[number]['key'];
+export type ViewKey = (typeof VIEWS)[number]['key'];
 /** 本台世界系：X 右、Y 向下（与屏幕同向）、Z 出屏 ⇒ 正视 = 恒等 */
 const AXON_PITCH = -0.34;
 const AXON_YAW = -0.62;
@@ -191,8 +191,21 @@ interface SolidInst {
   offZ: number;
   /** 环列的方位角（ring 关时不用） */
   angle: number;
+  /** 环阵列：这条带属于哪一份环编制（ringPlans 下标）；非阵列恒 0 */
+  plan: number;
   ceilKey: string;
   verts: Float32Array;
+}
+
+/**
+ * 环阵列的一格（Lab.10）：站位 + 用哪一份环编制。
+ * 阵列下**几何只烘一份**——同一条引擎、同一半径，320 处的差别全在 (方位角, 平移) 里，
+ * 故顶点上传一次、逐处只换模型变换各画一遍（gl3d 的 MeshPlace）。
+ */
+export interface SolidCell {
+  x: number;
+  z: number;
+  plan: number;
 }
 
 /** 场景单元（units prop 用）：spec + 引擎选项 + 绘图平滑 */
@@ -259,7 +272,9 @@ export function SkinSolidBench({
   layouts,
   order,
   ring = false,
-  grid,
+  cells,
+  ringPlans,
+  camScaleFor,
   radius,
   thick = SOLID.THICK,
   axon,
@@ -281,10 +296,8 @@ export function SkinSolidBench({
   camScale?: number;
   /** 天花：per-unit = 每单元一条板（Lab.07）；span = 一整条通长板（密排阵列用——
    *  per-unit 板在小间距下会大面积共面重叠 → z-fight）；
-   *  ring = 圆环板（Lab.09 环列，用户 2026-08-23 拍板；随半径滑块重烘）；
-   *  beams = 每列一根梁（Lab.10 网格）——整块板会把顶视全挡住，而顶视正是读间距的角度，
-   *  梁之间恰好露出膨胀体（梁的宽度只罩住芯轨那一档） */
-  ceiling?: 'per-unit' | 'span' | 'ring' | 'beams';
+   *  ring = 圆环板（Lab.09 环列 / Lab.10 环阵列——阵列下每格一块，随半径滑块重烘） */
+  ceiling?: 'per-unit' | 'span' | 'ring';
   rate?: number;
   hud?: SolidHud;
   /** 多排布（≥2 出「排列」切换，首项为默认）；省略 = 单排布（gapX/pivot/camScale） */
@@ -293,8 +306,20 @@ export function SkinSolidBench({
   order?: readonly number[];
   /** 环列（Lab.09 圆筒）：实例绕世界 Y 排一圈而不是排一列，半径由 radius 给 */
   ring?: boolean;
-  /** 网格排布（Lab.10 4×4 阵列）：给列数，实例按 (列, 行) 铺开而不是排一列；与 ring 互斥 */
-  grid?: number;
+  /**
+   * 环阵列（Lab.10）：把整个环复制到若干格站位上。给的是**半径的函数**——
+   * 格距由环的外缘定，而外缘随半径滑块动（用户 2026-08-25 拍板「格距跟着滑块走」）。
+   * 省略 = 单个环（Lab.09），绘制路径逐位不变。
+   */
+  cells?: (radius: number) => readonly SolidCell[];
+  /** 环阵列的编制表：每份是「环上第 i 条带用哪一条引擎」；省略 = 只有一份（= order） */
+  ringPlans?: readonly (readonly number[])[];
+  /**
+   * 取景：给半径与当前视角算 camScale。两件事都要它——阵列随半径变大时相机得跟着退，
+   * 而**四个视角所需的取景差得很远**（轴测被宽度卡、顶视被整片地面的高度卡）。
+   * 省略 = camScale 不随半径与视角动（Lab.07–09 的行为）。
+   */
+  camScaleFor?: (radius: number, view: ViewKey) => number;
   /** 半径滑块（只在 ring 下有意义）——用户 2026-08-23 拍板「半径做滑块现场调」 */
   radius?: { min: number; max: number; def: number };
   /** 织物厚度（窄带上 5 太厚，会读成方棍） */
@@ -314,7 +339,11 @@ export function SkinSolidBench({
     replay: () => void;
     setPersp: (on: boolean) => void;
     setRadius: (r: number) => void;
-    setUnits: (u: readonly SolidUnitDef[], o?: readonly number[]) => void;
+    setUnits: (
+      u: readonly SolidUnitDef[],
+      o?: readonly number[],
+      plans?: readonly (readonly number[])[],
+    ) => void;
     viewTo: (k: ViewKey) => void;
     viewHome: () => void;
     setLayout: (li: number) => void;
@@ -323,6 +352,14 @@ export function SkinSolidBench({
   const speedRef = useRef(1);
   const bondsRef = useRef(true);
   const radiusRef = useRef(radius?.def ?? 0);
+  // 主 effect 是 []-deps ⇒ 直接闭包会永远拿挂载那一刻的函数 prop。换编制时 cells 会变
+  // （每格用哪一份编制随之变），拿旧的会让除第一份以外的编制一格都摆不出去。
+  const cellsRef = useRef(cells);
+  const camScaleRef = useRef(camScaleFor);
+  useEffect(() => {
+    cellsRef.current = cells;
+    camScaleRef.current = camScaleFor;
+  });
   // 推进速率随编制变（渐变要解十一条引擎，得放慢）——主 effect 只建一次，故走 ref
   const rateRef = useRef(rate);
   useEffect(() => {
@@ -362,11 +399,18 @@ export function SkinSolidBench({
         : [{ key: 'default', label: '', gapX, gapZ, pivot, camScale }];
     let layoutIdx = 0;
 
+    /** 当前视角（逐视角取景要用；预设切换与归位都要同步它） */
+    let viewKey: ViewKey = layoutList[0].home ?? 'axon';
+    const scaleOf = (k: ViewKey = viewKey): number => {
+      const f = camScaleRef.current;
+      return f ? f(radiusRef.current, k) : layoutList[layoutIdx].camScale;
+    };
+
     const cam = new OrbitCamera({
       cx: 350,
       cy: 260,
       pivot: layoutList[0].pivot,
-      scale: layoutList[0].camScale,
+      scale: camScaleFor ? camScaleFor(radiusRef.current, viewKey) : layoutList[0].camScale, // 挂载帧：ref 尚未同步，用 prop
       pitch0: axonPitch,
       yaw0: axonYaw,
       zoomMin: 0.5,
@@ -390,19 +434,11 @@ export function SkinSolidBench({
     const R = renderer;
 
     /**
-     * 一份实例在某个排布下的站位。三种：
-     * 环列（全在方位角里，行列偏移必须清零）/ 网格（Lab.10：列走 X、行走 Z，行居中）/
-     * 一列（Lab.07/08 的原路径）。
+     * 一份实例在某个排布下的站位。两种：环列（全在方位角里，行列偏移必须清零；
+     * 环阵列的格子偏移走 cells，不进这里）/ 一列（Lab.07/08 的原路径）。
      */
     const placeAt = (u: number, L: SolidLayout, n: number): { offX: number; offZ: number } => {
       if (ring) return { offX: 0, offZ: 0 };
-      if (grid) {
-        const rows = Math.ceil(n / grid);
-        return {
-          offX: (u % grid) * L.gapX,
-          offZ: (Math.floor(u / grid) - (rows - 1) / 2) * L.gapZ,
-        };
-      }
       // Z 取 ((n−1)/2 − u)：单元 0 在 +Z（轴测机位的近端）——分列的「左」= 并拢的「近」
       return { offX: u * L.gapX, offZ: ((n - 1) / 2 - u) * L.gapZ };
     };
@@ -411,6 +447,8 @@ export function SkinSolidBench({
       units ?? SKIN_UNITS.map((d) => ({ spec: d.spec, opts: skinSiteOpts(d), smooth: d.smooth ?? [3, 1] }));
     /** 摆放编制：省略 = 一条引擎一处实例（Lab.07/08 的行为） */
     let plan: readonly number[] = order ?? defs.map((_, u) => u);
+    /** 环阵列的编制表（每份 = 一整个环的带→引擎映射）；非阵列只有一份 */
+    let planList: readonly (readonly number[])[] = ringPlans ?? [plan];
     let sims: SolidSim[] = [];
     let insts: SolidInst[] = [];
     const makeSims = (): SolidSim[] => defs.map((def) => {
@@ -428,16 +466,60 @@ export function SkinSolidBench({
         sy: null,
       };
     });
-    const makeInsts = (): SolidInst[] => plan.map((simIdx, u) => ({
-      simIdx,
-      ...placeAt(u, layoutList[0], plan.length),
-      angle: (u / plan.length) * Math.PI * 2,
-      ceilKey: `ceil-u${u}`,
-      verts: new Float32Array(4 * sims[simIdx].sim.n * 3),
-    }));
-    /** 环上站位（ring 关时恒 null ⇒ fillSolidVerts 走与加它之前逐位相同的直排路径） */
+    const makeInsts = (): SolidInst[] => {
+      // 环阵列（Lab.10）：实例 = 每份环编制 × 环上每条带；格子偏移不进实例，
+      // 由 placesOf 现算成摆放表——同一条带在十六格里是同一份顶点
+      if (cells) {
+        const out: SolidInst[] = [];
+        planList.forEach((bandPlan, v) => {
+          bandPlan.forEach((simIdx, u) => {
+            out.push({
+              simIdx,
+              offX: 0,
+              offZ: 0,
+              angle: (u / bandPlan.length) * Math.PI * 2,
+              plan: v,
+              ceilKey: `ceil-p${v}-u${u}`,
+              verts: new Float32Array(4 * sims[simIdx].sim.n * 3),
+            });
+          });
+        });
+        return out;
+      }
+      return plan.map((simIdx, u) => ({
+        simIdx,
+        ...placeAt(u, layoutList[0], plan.length),
+        angle: (u / plan.length) * Math.PI * 2,
+        plan: 0,
+        ceilKey: `ceil-u${u}`,
+        verts: new Float32Array(4 * sims[simIdx].sim.n * 3),
+      }));
+    };
+    /** 环上站位（ring 关时恒 null ⇒ fillSolidVerts 走与加它之前逐位相同的直排路径）。
+     *  **环阵列下恒 null**：那条路径把方位角烘进顶点，而阵列要的是「同一份顶点摆多处」，
+     *  转到 GPU 的 uModelR 上去（Lab.09 单环仍走 CPU 那条，逐位不回归） */
     const placeOf = (inst: SolidInst): RingPlace | null =>
-      ring ? { radius: radiusRef.current, angle: inst.angle } : null;
+      ring && !cells ? { radius: radiusRef.current, angle: inst.angle } : null;
+
+    // 环阵列的格子表（随半径滑块重算：格距 = 2·外缘 + 缝，见 skin-grid）
+    let cellList: readonly SolidCell[] = cells ? cellsRef.current!(radiusRef.current) : [];
+    /** 某份编制的全部摆放（方位角 + 格子平移）；非阵列 = undefined ⇒ 走原来的单处绘制 */
+    const placesOf = (inst: SolidInst): readonly MeshPlace[] | undefined => {
+      if (!cells) return undefined;
+      const out: MeshPlace[] = [];
+      for (const c of cellList)
+        if (c.plan === inst.plan) out.push({ yaw: inst.angle, x: c.x, y: 0, z: c.z });
+      return out;
+    };
+    /** 天花圆环板的摆放：每格一块，与编制无关 */
+    const cellPlaces = (): readonly MeshPlace[] | undefined =>
+      cells ? cellList.map((c) => ({ yaw: 0, x: c.x, y: 0, z: c.z })) : undefined;
+    /** 半径变了：格距跟着走（用户 2026-08-25 拍板），相机也得跟着退 */
+    const reflow = (): void => {
+      if (!cells) return;
+      cellList = cellsRef.current!(radiusRef.current);
+      if (camScaleRef.current) cam.retarget(layoutList[layoutIdx].pivot, scaleOf());
+    };
 
     // 下缘对位（用户 2026-08-22「对齐点都在最下面的点」）：注册端换到底端后，
     // 每台的末节点各自钉在自己的初始位；长度不同的单元（Lab.07 的四台）要把短的
@@ -467,13 +549,12 @@ export function SkinSolidBench({
         v.offX = q.offX;
         v.offZ = q.offZ;
       });
-      cam.retarget(L.pivot, L.camScale);
+      cam.retarget(L.pivot, camScaleRef.current ? scaleOf() : L.camScale);
     };
 
     // 天花板条（静件，随构造一次烘焙上传）。span = 一整条通长板——
     // 密排阵列下 per-unit 板会大面积共面重叠（z-fight）；每排布各烘一条
     // （X/Z 范围随排布变），绘制时取当前排布那条
-    const beamCount = ceiling === 'beams' ? (grid ?? 1) : 0;
     /** 天花（静件）：三种非环列的读法各烘一次；环列的圆环板随半径动态重烘 */
     const bakeCeil = (): void => {
       if (ceiling === 'per-unit') {
@@ -483,7 +564,7 @@ export function SkinSolidBench({
         }
         return;
       }
-      if (ceiling !== 'span' && ceiling !== 'beams') return;
+      if (ceiling !== 'span') return;
       // 按该排布下**实例的实际站位**算包围盒——一列时与旧算式逐位相同
       // （min offX=0 / max=(n−1)gapX、offZ 对称），网格排布也照样罩得住
       layoutList.forEach((L, li) => {
@@ -491,18 +572,10 @@ export function SkinSolidBench({
         const qs = Array.from({ length: n }, (_, u) => placeAt(u, L, n));
         const z0 = Math.min(...qs.map((q) => q.offZ)) - depth / 2 - 16;
         const z1 = Math.max(...qs.map((q) => q.offZ)) + depth / 2 + 16;
-        if (ceiling === 'span') {
-          const x0 = Math.min(...qs.map((q) => q.offX)) - 45;
-          const x1 = Math.max(...qs.map((q) => q.offX)) + 75;
-          const ceil = boxVerts((x0 + x1) / 2, -3, (z0 + z1) / 2, (x1 - x0) / 2, 3, (z1 - z0) / 2);
-          R.addMesh(`ceil-span-${li}`, bakeIndexed(ceil.verts, ceil.idx));
-          return;
-        }
-        for (let c = 0; c < beamCount; c++) {
-          // 梁只罩住芯轨那一档（半宽 13），膨胀体在梁之间露出来
-          const beam = boxVerts(c * L.gapX - 3.4, -3, (z0 + z1) / 2, 13, 3, (z1 - z0) / 2);
-          R.addMesh(`ceil-beam-${li}-${c}`, bakeIndexed(beam.verts, beam.idx));
-        }
+        const x0 = Math.min(...qs.map((q) => q.offX)) - 45;
+        const x1 = Math.max(...qs.map((q) => q.offX)) + 75;
+        const ceil = boxVerts((x0 + x1) / 2, -3, (z0 + z1) / 2, (x1 - x0) / 2, 3, (z1 - z0) / 2);
+        R.addMesh(`ceil-span-${li}`, bakeIndexed(ceil.verts, ceil.idx));
       });
     };
     bakeCeil();
@@ -531,16 +604,15 @@ export function SkinSolidBench({
       o: { x: 0, y: 0, z: 0 },
     };
 
-    let viewAnim: { q0: Quat; q1: Quat; t: number } | null = null;
+    let viewAnim: { q0: Quat; q1: Quat; t: number; from: ViewKey; to: ViewKey } | null = null;
     if (layoutList[0].home) cam.setOrientation(presets[layoutList[0].home]);
 
     const render = (): void => {
       R.beginFrame(cam);
       if (ceiling === 'span') R.drawMesh(`ceil-span-${layoutIdx}`, IDENT, RAIL_DARK, RAIL_LITE);
-      else if (ceiling === 'ring') R.drawDynamicMesh(ceilRing(), RAIL_DARK, RAIL_LITE);
-      else if (ceiling === 'beams')
-        for (let c = 0; c < beamCount; c++)
-          R.drawMesh(`ceil-beam-${layoutIdx}-${c}`, IDENT, RAIL_DARK, RAIL_LITE);
+      // 环列 = 一块圆环板；环阵列 = 同一块板摆到每一格（板与编制无关）
+      else if (ceiling === 'ring')
+        R.drawDynamicMesh(ceilRing(), RAIL_DARK, RAIL_LITE, undefined, cellPlaces());
       // 绘图平滑按引擎算一次，它的全部实例共用（圆筒 4 条引擎摆 20 处）
       for (const s of sims) {
         if (!s.emaX || !s.emaY) {
@@ -557,9 +629,13 @@ export function SkinSolidBench({
         const px = v.sx as Float64Array;
         const py = v.sy as Float64Array;
         const rp = placeOf(inst);
-        fillSolidVerts(px, py, sim.n, inst.offX, depth, thick, SOLID.SCALE, inst.verts, inst.offZ, v.offY, rp);
-        R.drawDynamicMesh(bakeIndexed(inst.verts, v.topo.idxA), DARK_A, LITE_A);
-        R.drawDynamicMesh(bakeIndexed(inst.verts, v.topo.idxB), DARK_B, LITE_B);
+        // 环阵列：本地系里把带子摆在半径处（方位角与格子平移交给 GPU 的模型变换）；
+        // 单环与直排仍是老式子——rp 非空时半径已在 rp 里，offX 恒 0
+        const localX = cells ? radiusRef.current : inst.offX;
+        const places = placesOf(inst);
+        fillSolidVerts(px, py, sim.n, localX, depth, thick, SOLID.SCALE, inst.verts, inst.offZ, v.offY, rp);
+        R.drawDynamicMesh(bakeIndexed(inst.verts, v.topo.idxA), DARK_A, LITE_A, undefined, places);
+        R.drawDynamicMesh(bakeIndexed(inst.verts, v.topo.idxB), DARK_B, LITE_B, undefined, places);
         // 芯轨（逐帧小盒）。core = 跟着芯收缩（下端钉住、上端随收缩下降）；
         // fixed = 天花到钉住点的固定立杆，收缩时是外皮沿着它往下聚（见 railSpan）
         const rs = railSpan(
@@ -568,7 +644,7 @@ export function SkinSolidBench({
           v.offY,
           CEIL_RING.y,
         );
-        const rad0 = (rp ? rp.radius : 0) + inst.offX;
+        const rad0 = (rp ? rp.radius : 0) + localX;
         const railBox = boxVerts(
           rad0 - 3.4,
           (rs.top + rs.bottom) / 2,
@@ -578,7 +654,7 @@ export function SkinSolidBench({
           Math.min(6, depth / 4),
         );
         rotateVertsY(railBox.verts, rp); // 环上：轴对齐盒先按 (径向,切向) 建，再绕 Y 转到位
-        R.drawDynamicMesh(bakeIndexed(railBox.verts, railBox.idx), RAIL_DARK, RAIL_LITE);
+        R.drawDynamicMesh(bakeIndexed(railBox.verts, railBox.idx), RAIL_DARK, RAIL_LITE, undefined, places);
         // 天花板条 = 房间的天花板，**固定不动**（用户 2026-08-22 纠偏）：收缩注册在
         // 底端后带子的顶端离开它往下沉，那条缝就是「往下收」本身
         if (ceiling === 'per-unit') R.drawMesh(inst.ceilKey, IDENT, RAIL_DARK, RAIL_LITE);
@@ -593,7 +669,7 @@ export function SkinSolidBench({
               });
             }
           }
-          R.drawLines(segs, C_BOND, 0.004);
+          R.drawLines(segs, C_BOND, 0.004, places);
         }
       }
     };
@@ -616,6 +692,14 @@ export function SkinSolidBench({
         viewAnim.t = Math.min(1, viewAnim.t + dt / VIEW_ANIM_S);
         const e = viewAnim.t < 0.5 ? 2 * viewAnim.t ** 2 : 1 - (-2 * viewAnim.t + 2) ** 2 / 2;
         cam.setOrientation(q2m(slerpQ(viewAnim.q0, viewAnim.q1, e)));
+        // 取景与姿态一起走：逐视角取景下两档 scale 差得多，硬切会「先跳一下再转」。
+        // 两端**逐帧现算**——过渡途中拉半径滑块时，算死的值会把新取景覆盖回去
+        // （慢设备上过渡要跑几秒，这个窗口很容易撞上）
+        if (camScaleRef.current && viewAnim.from !== viewAnim.to) {
+          const s0 = scaleOf(viewAnim.from);
+          const s1 = scaleOf(viewAnim.to);
+          cam.retarget(layoutList[layoutIdx].pivot, s0 + (s1 - s0) * e);
+        }
         if (viewAnim.t >= 1) viewAnim = null;
       } else {
         cam.tick(dt);
@@ -648,8 +732,14 @@ export function SkinSolidBench({
         }
       }
       render();
-      // 报的是**场上**的锁定键数（实例数 × 各自引擎），不是引擎数
-      const locked = insts.reduce((acc, i) => acc + sims[i.simIdx].sim.locked.length, 0);
+      // 报的是**场上**的锁定键数（实例数 × 各自引擎），不是引擎数；
+      // 环阵列下一条带摆在若干格里，每一份都要数进去
+      const planCells = (pi: number): number =>
+        cells ? cellList.reduce((a, c) => a + (c.plan === pi ? 1 : 0), 0) : 1;
+      const locked = insts.reduce(
+        (acc, i) => acc + sims[i.simIdx].sim.locked.length * planCells(i.plan),
+        0,
+      );
       const phase = lead.done ? '锁定 · 即将重播' : lead.step < 900 ? '收缩中' : '张紧 · 排泡';
       const key = `${lead.step}|${locked}|${phase}`;
       if (key !== lastHud) {
@@ -667,14 +757,17 @@ export function SkinSolidBench({
       setPersp: (on) => R.setPerspective(on ? 900 : 0),
       setRadius: (rad) => {
         radiusRef.current = rad;
+        reflow(); // 阵列：格距 = 2·外缘 + 缝，随半径重算；相机跟着退
         render();
       },
       // 换键谱 = 整场重建引擎（Lab.09 换形态）。不重挂组件：重挂会丢一个 WebGL
       // 上下文再要一个，一页九台的场合是实打实的风险
-      setUnits: (nextUnits, nextOrder) => {
+      setUnits: (nextUnits, nextOrder, nextPlans) => {
         defs = nextUnits;
         plan = nextOrder ?? nextUnits.map((_, u) => u);
+        planList = nextPlans ?? [plan];
         seed();
+        reflow();
         bakeCeil();
         applyLayout(layoutIdx);
         acc = 0;
@@ -684,22 +777,29 @@ export function SkinSolidBench({
       },
       viewTo: (k) => {
         const target = presets[k];
+        const from = viewKey;
+        viewKey = k;
         if (reduced) {
           viewAnim = null;
           cam.setOrientation(target);
+          if (camScaleRef.current) cam.retarget(layoutList[layoutIdx].pivot, scaleOf());
           render();
           return;
         }
-        viewAnim = { q0: m2q(cam.matrix), q1: m2q(target), t: 0 };
+        viewAnim = { q0: m2q(cam.matrix), q1: m2q(target), t: 0, from, to: k };
       },
       viewHome: () => {
         viewAnim = null;
         cam.reset();
+        // reset 回的是挂载时的姿态（= 轴测）与那档 scale；半径与视角都可能变过，得再对一次
+        viewKey = layoutList[layoutIdx].home ?? 'axon';
+        if (camScaleRef.current) cam.retarget(layoutList[layoutIdx].pivot, scaleOf());
         render();
       },
       setLayout: (li) => {
-        applyLayout(li);
         const home = layoutList[li].home;
+        if (home) viewKey = home;
+        applyLayout(li);
         if (home) {
           viewAnim = null;
           cam.setOrientation(presets[home]);
@@ -750,7 +850,7 @@ export function SkinSolidBench({
       seededRef.current = true;
       return;
     }
-    if (units) apiRef.current?.setUnits(units, order);
+    if (units) apiRef.current?.setUnits(units, order, ringPlans);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unitsKey]);
 

@@ -1,29 +1,36 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { GRID, buildGridOrder, buildGridUnits } from '../../src/lib/space/skin-grid';
+import { RING, buildRingUnits } from '../../src/lib/space/skin-ring';
+import {
+  RING_GRID,
+  RING_GRID_AXON,
+  RING_GRID_DEFAULT_FORM,
+  ringGridCamScale,
+  ringGridCells,
+  ringGridPlans,
+  type RingGridMode,
+} from '../../src/lib/space/skin-grid';
 import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
 
 /**
- * Lab.10 · 4×4 阵列（用户 2026-08-23 立项：「一个 4×4 的阵列，间距就是每个膨胀到
- * 最大的时候有一点点空隙就行」）。
+ * Lab.10 · 4×4 环阵列。
  *
- * 前面几台把单元排成一列（Lab.08）或一圈（Lab.09），这台把十六个单元铺进房间的
- * 平面网格。**间距是量出来的**：全程最大膨胀 52.0px + 芯轨外伸 5.8 + 留缝 6 = 64；
- * 带深取 58 让深度方向的缝也是 6（推导见 src/lib/space/skin-grid.ts）。
+ * 用户 2026-08-25 纠偏：「我指的阵列是 4×4 的，每一个单元都是那个环形的，
+ * 而不是 4×4 个小单元。」——首版（十六个单条带铺成平面网格）已作废，这里是
+ * **十六个 Lab.09 那种圆筒环**站成一片场地：每格一个环，收缩后各自扣出一圈环形平台。
  *
- * 两种编制：**整片同形**（默认，十六格同一种键谱 ⇒ 解一条引擎画十六份）/
- * **每行一种**（行 0–3 = 袋 / 蘑菇挑台 / 直挑台 / 阶梯挑台，四条引擎，
- * 把目录当成一片场地来读）。
+ * 同轮拍板：格距跟着半径滑块走 · 每个环各自独立（不挤成一片）· 编制两档。
+ * 间距与视野的推导全在 src/lib/space/skin-grid.ts，这里只接线。
  *
- * 芯轨用固定立杆（rail="fixed"）：上端埋进天花、下端在钉住点——与 Lab.09 同一读法。
- * 天花用**每列一根梁**而不是整块板：整块板会把顶视全挡住，而顶视正是读间距的角度；
- * 梁只罩住芯轨那一档，膨胀体在梁之间露出来（单元本来也就是这么吊的）。
+ * 环本身一个数没改——`buildRingUnits()` 与 Lab.09 同一份（RING_LEAD 96 的三段构造、
+ * 20 条带、带深 7.8、厚度 3）。变的只有「这个环被复制到哪些站位」。
+ *
+ * 机位：枢轴与 Lab.09 同（阵列以原点居中 ⇒ 枢轴不随半径动），camScale 由
+ * ringGridCamScale 随半径算——半径拉大时整片阵列一起变大，相机得跟着退。
  */
-const FORMS = buildGridUnits();
-const UNIFORM_ORDER = buildGridOrder('uniform');
-const PER_ROW_ORDER = buildGridOrder('perRow');
-const PER_ROW_UNITS: readonly SolidUnitDef[] = FORMS.map(({ spec, opts, smooth }) => ({
+const FORMS = buildRingUnits();
+const FORM_UNITS: readonly SolidUnitDef[] = FORMS.map(({ spec, opts, smooth }) => ({
   spec,
   opts,
   smooth,
@@ -33,9 +40,6 @@ const PLANS = [
   { key: 'uniform', label: '整片同形' },
   { key: 'perRow', label: '每行一种' },
 ] as const;
-type PlanKey = (typeof PLANS)[number]['key'];
-/** 默认形态 = 蘑菇挑台：它正好在最大膨胀那一档，「刚好不挤上」的间距才读得出来 */
-const DEFAULT_FORM = 1;
 
 export function SkinGridBench({
   active = true,
@@ -46,33 +50,39 @@ export function SkinGridBench({
   onLight?: boolean;
   controls?: boolean;
 }) {
-  const [plan, setPlan] = useState<PlanKey>('uniform');
-  const [form, setForm] = useState(DEFAULT_FORM);
+  const [mode, setMode] = useState<RingGridMode>('uniform');
+  const [form, setForm] = useState(RING_GRID_DEFAULT_FORM);
+  const perRow = mode === 'perRow';
   const def = FORMS[form];
-  const perRow = plan === 'perRow';
-  const uniformUnits = useMemo<readonly SolidUnitDef[]>(
-    () => [{ spec: def.spec, opts: def.opts, smooth: def.smooth }],
-    [def],
+
+  // 整片同形只把选中的那一种传进去 ⇒ 全场一条引擎；每行一种传四条
+  const units = useMemo<readonly SolidUnitDef[]>(
+    () => (perRow ? FORM_UNITS : [{ spec: def.spec, opts: def.opts, smooth: def.smooth }]),
+    [perRow, def],
   );
+  const plans = useMemo(() => ringGridPlans(mode), [mode]);
+  const cells = useMemo(() => (r: number) => ringGridCells(r, mode), [mode]);
 
   return (
     <SkinSolidBench
       active={active}
       onLight={onLight}
       controls={controls}
-      units={perRow ? PER_ROW_UNITS : uniformUnits}
-      order={perRow ? PER_ROW_ORDER : UNIFORM_ORDER}
+      units={units}
+      ringPlans={plans}
       unitsKey={perRow ? 'perRow' : `uniform:${def.key}`}
-      grid={GRID.COLS}
-      gapX={GRID.PITCH}
-      gapZ={GRID.PITCH}
-      depth={GRID.DEPTH}
-      thick={GRID.THICK}
-      ceiling="beams"
+      ring
+      cells={cells}
+      camScaleFor={ringGridCamScale}
+      radius={{ min: RING.RADIUS_MIN, max: RING.RADIUS_MAX, def: RING.RADIUS_DEF }}
+      depth={RING.DEPTH}
+      thick={RING.THICK}
+      ceiling="ring"
       rail="fixed"
-      pivot={{ x: 119, y: 169, z: 0 }}
-      camScale={0.88}
-      axon={{ pitch: -0.45, yaw: -0.62 }}
+      rate={perRow ? 80 : 110}
+      pivot={{ x: 0, y: 166, z: 0 }}
+      camScale={ringGridCamScale(RING.RADIUS_DEF, 'axon')}
+      axon={RING_GRID_AXON}
       extraControls={
         <>
           <div className="grp">
@@ -82,8 +92,8 @@ export function SkinGridBench({
                 <button
                   key={p.key}
                   type="button"
-                  className={p.key === plan ? 'active' : undefined}
-                  onClick={() => setPlan(p.key)}
+                  className={p.key === mode ? 'active' : undefined}
+                  onClick={() => setMode(p.key)}
                 >
                   {p.label}
                 </button>
@@ -111,12 +121,12 @@ export function SkinGridBench({
       }
       hud={{
         kicker: 'Lab.10 / Project II',
-        title: '4×4 阵列 · 一片单元',
+        title: '4×4 环阵列 · 一片场地',
         sub: perRow
-          ? `${GRID.COLS}×${GRID.ROWS} · 每行一种键谱 · 间距 ${GRID.PITCH}（膨胀峰值 + 一点点缝）`
-          : `${GRID.COLS}×${GRID.ROWS} · 同一键谱：${def.zh} · 间距 ${GRID.PITCH}（膨胀峰值 + 一点点缝）`,
-        hint: '编制 / 形态可切 · 顶视看排布 · 拖拽旋转',
-        aria: '4×4 阵列：十六个收缩张紧外皮单元铺成平面网格，间距按膨胀峰值加一点点空隙定；可切整片同形或每行一种形态，可拖拽旋转',
+          ? `${RING_GRID.COLS}×${RING_GRID.ROWS} 个环 · 每行一种键谱 · 各 ${RING.COUNT} 条带`
+          : `${RING_GRID.COLS}×${RING_GRID.ROWS} 个环 · 同一键谱：${def.zh} · 各 ${RING.COUNT} 条带`,
+        hint: '编制 / 形态可切 · 半径滑块连格距一起变 · 顶视看排布 · 拖拽旋转',
+        aria: '4×4 环阵列：十六个收缩张紧外皮圆筒环铺成平面网格，每个环收缩后扣出一圈环形平台；格距随半径滑块算，可切整片同形或每行一种形态，可拖拽旋转',
       }}
     />
   );

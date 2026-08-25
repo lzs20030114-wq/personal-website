@@ -13,6 +13,30 @@ export interface CellFrame {
   fx: number; fy: number; fz: number;
 }
 
+/**
+ * 同一份顶点的一处摆放：先绕世界 Y 转 yaw，再平移到 (x, y, z)。
+ * yaw 的取向与 skin-solid 的 RingPlace.angle 一致（x' = x·cos − z·sin）。
+ *
+ * 2026-08-25（Lab.10 环阵列）加：十六个环 × 每环二十条带 = 320 处摆放，但**几何只有
+ * 一份**——同一条引擎、同一半径，差别全在 (yaw, 平移) 里。逐处各传一遍顶点的话
+ * 每帧要上传 320 份；改成上传一次、逐处只换 uModelR/uModelT 各画一遍，上传量降回
+ * 单条带。加法式扩展：不传 places 即恒等单处，与加它之前逐位相同。
+ */
+export interface MeshPlace {
+  yaw: number;
+  x: number;
+  y: number;
+  z: number;
+}
+
+/** 绕世界 Y 的 yaw → WebGL 列主序 3×3（与 placePoint 同取向） */
+function yawColMajor(yaw: number): number[] {
+  const c = Math.cos(yaw);
+  const sn = Math.sin(yaw);
+  return [c, 0, sn, 0, 1, 0, -sn, 0, c];
+}
+const IDENT3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+
 const MESH_VS = `
 attribute vec3 aPos;
 attribute vec3 aNrm;
@@ -133,6 +157,8 @@ void main() {
 
 const LINE_VS = `
 attribute vec3 aPos;
+uniform mat3 uModelR;
+uniform vec3 uModelT;
 uniform mat3 uView;
 uniform vec3 uPivot;
 uniform vec2 uHalf;
@@ -142,7 +168,7 @@ uniform float uPerspD;
 uniform float uDepthBias;
 uniform vec2 uPan;
 void main() {
-  vec3 q = uView * (aPos - uPivot);
+  vec3 q = uView * (uModelR * aPos + uModelT - uPivot);
   float w = uPerspD > 0.0 ? 1.0 - q.z / uPerspD : 1.0;
   gl_Position = vec4((q.x * uScale + uPan.x * w) / uHalf.x, -(q.y * uScale + uPan.y * w) / uHalf.y, (-q.z * uDepthK - uDepthBias) * w, w);
 }`;
@@ -433,6 +459,7 @@ export class FlatRenderer {
     dark?: [number, number, number],
     lite?: [number, number, number],
     alpha?: number,
+    places?: readonly MeshPlace[],
   ): void {
     if (!data.length) return;
     const gl = this.gl;
@@ -446,8 +473,10 @@ export class FlatRenderer {
     }
     if (dark) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uDark'), dark[0], dark[1], dark[2]);
     if (lite) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uLite'), lite[0], lite[1], lite[2]);
-    gl.uniformMatrix3fv(gl.getUniformLocation(this.meshProg, 'uModelR'), false, [1, 0, 0, 0, 1, 0, 0, 0, 1]);
-    gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uModelT'), 0, 0, 0);
+    const uR = gl.getUniformLocation(this.meshProg, 'uModelR');
+    const uT = gl.getUniformLocation(this.meshProg, 'uModelT');
+    gl.uniformMatrix3fv(uR, false, IDENT3);
+    gl.uniform3f(uT, 0, 0, 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.dynMeshBuf);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
     const aPos = gl.getAttribLocation(this.meshProg, 'aPos');
@@ -456,7 +485,19 @@ export class FlatRenderer {
     gl.enableVertexAttribArray(aNrm);
     gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 24, 0);
     gl.vertexAttribPointer(aNrm, 3, gl.FLOAT, false, 24, 12);
-    gl.drawArrays(gl.TRIANGLES, 0, data.length / 6);
+    const nv = data.length / 6;
+    // 顶点已上传：多处摆放只换两个 uniform 各画一遍（不传 places = 原来那一次恒等绘制）
+    if (places && places.length) {
+      for (const q of places) {
+        gl.uniformMatrix3fv(uR, false, yawColMajor(q.yaw));
+        gl.uniform3f(uT, q.x, q.y, q.z);
+        gl.drawArrays(gl.TRIANGLES, 0, nv);
+      }
+      gl.uniformMatrix3fv(uR, false, IDENT3);
+      gl.uniform3f(uT, 0, 0, 0);
+    } else {
+      gl.drawArrays(gl.TRIANGLES, 0, nv);
+    }
     // 还原默认明暗端色与状态，后续 drawMesh/drawSkinned 不受影响
     if (dark) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uDark'), 0.29, 0.29, 0.27);
     if (lite) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uLite'), 0.95, 0.95, 0.92);
@@ -659,8 +700,15 @@ export class FlatRenderer {
     gl.drawArrays(gl.TRIANGLES, 0, pts.length * SEG * 3);
   }
 
-  /** 世界坐标线段集（深度测试参与遮挡；bias 防与体面 z-fighting）。 */
-  drawLines(segs: ReadonlyArray<{ a: Vec3; b: Vec3 }>, color: [number, number, number], bias = 0.004): void {
+  /** 世界坐标线段集（深度测试参与遮挡；bias 防与体面 z-fighting）。
+   *  places 可选（2026-08-25 环阵列加，与 drawDynamicMesh 同义）：线段按局部系给一份，
+   *  逐处换模型变换各画一遍；不传 = 恒等单处，与加它之前逐位相同。 */
+  drawLines(
+    segs: ReadonlyArray<{ a: Vec3; b: Vec3 }>,
+    color: [number, number, number],
+    bias = 0.004,
+    places?: readonly MeshPlace[],
+  ): void {
     if (!segs.length) return;
     const gl = this.gl;
     const arr = new Float32Array(segs.length * 6);
@@ -672,12 +720,26 @@ export class FlatRenderer {
     gl.useProgram(this.lineProg);
     gl.uniform3f(gl.getUniformLocation(this.lineProg, 'uColor'), color[0], color[1], color[2]);
     gl.uniform1f(gl.getUniformLocation(this.lineProg, 'uDepthBias'), bias);
+    const uR = gl.getUniformLocation(this.lineProg, 'uModelR');
+    const uT = gl.getUniformLocation(this.lineProg, 'uModelT');
+    gl.uniformMatrix3fv(uR, false, IDENT3);
+    gl.uniform3f(uT, 0, 0, 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.lineBuf);
     gl.bufferData(gl.ARRAY_BUFFER, arr, gl.DYNAMIC_DRAW);
     const aPos = gl.getAttribLocation(this.lineProg, 'aPos');
     gl.enableVertexAttribArray(aPos);
     gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 12, 0);
-    gl.drawArrays(gl.LINES, 0, segs.length * 2);
+    if (places && places.length) {
+      for (const q of places) {
+        gl.uniformMatrix3fv(uR, false, yawColMajor(q.yaw));
+        gl.uniform3f(uT, q.x, q.y, q.z);
+        gl.drawArrays(gl.LINES, 0, segs.length * 2);
+      }
+      gl.uniformMatrix3fv(uR, false, IDENT3);
+      gl.uniform3f(uT, 0, 0, 0);
+    } else {
+      gl.drawArrays(gl.LINES, 0, segs.length * 2);
+    }
   }
 }
 
