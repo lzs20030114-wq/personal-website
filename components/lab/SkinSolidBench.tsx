@@ -5,9 +5,11 @@ import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import { FlatRenderer, bakeIndexed, type MeshPlace } from '../../src/lib/linkage/gl3d';
 import type { Vec3 } from '../../src/lib/linkage/solver3d';
 import { SKIN_UNITS, skinSiteOpts } from '../../src/lib/space/skin-data';
+import { bandsFarToNear } from '../../src/lib/linkage/skin';
 import {
   SOLID,
   boxVerts,
+  membranePanel,
   buildSolidTopology,
   fillSolidVerts,
   placePoint,
@@ -65,6 +67,10 @@ const CEIL_RING = { inner: 12, outer: 11, y: -3, halfT: 3, segs: 72 } as const;
 const RAIL_DARK: [number, number, number] = [0.08, 0.09, 0.1];
 const RAIL_LITE: [number, number, number] = [0.4, 0.43, 0.46];
 const C_BOND: [number, number, number] = [0.88, 0.42, 0.24];
+// 环间织物膜（用户 2026-08-25「加一个半透明蒙皮」）：比带子本身淡、偏纱灰，
+// 让它读作「带与带之间的那块布」而不是又一层结构
+const MEM_DARK: [number, number, number] = [0.1, 0.16, 0.14];
+const MEM_LITE: [number, number, number] = [0.5, 0.68, 0.58];
 // 布景（Lab.10 房间 + 比例小人，2026-08-25）：房间压得比芯轨还暗——它是背景不是展品；
 // 小人略亮且偏暖，在灰调的房间里一眼认得出是人
 const ROOM_DARK: [number, number, number] = [0.05, 0.06, 0.065];
@@ -281,6 +287,7 @@ export function SkinSolidBench({
   cells,
   ringPlans,
   rig,
+  skin,
   scene,
   camScaleFor,
   radius,
@@ -331,6 +338,12 @@ export function SkinSolidBench({
    */
   rig?: { scale: number; y: number };
   /**
+   * 环间织物膜（「半透明蒙皮」）：给了就出一条 0–1 滑块，并在实体之后画一层跨在
+   * 相邻两条带之间的直纹带，把圆周上那些缝糊上（几何见 skin-solid.membranePanel）。
+   * 省略 = 不画（Lab.07/08 逐位不变）。
+   */
+  skin?: { def: number };
+  /**
    * 布景（Lab.10 的房间 + 人体比例参考）：给半径返回一组静件三角网格。
    * 随半径重建（格距变了房间也得变），台架按半径缓存、不逐帧重算。
    * 省略 = 不画布景（Lab.07–09 的绘制路径逐位不变）。
@@ -361,6 +374,7 @@ export function SkinSolidBench({
     replay: () => void;
     setPersp: (on: boolean) => void;
     setRadius: (r: number) => void;
+    setSkin: (v: number) => void;
     setUnits: (
       u: readonly SolidUnitDef[],
       o?: readonly number[],
@@ -390,6 +404,8 @@ export function SkinSolidBench({
     rateRef.current = rate;
   }, [rate]);
   const [radiusV, setRadiusV] = useState(radius?.def ?? 0);
+  const [skinV, setSkinV] = useState(skin?.def ?? 0);
+  const skinRef = useRef(skin?.def ?? 0);
   const [running, setRunning] = useState(true);
   const [bonds, setBonds] = useState(true);
   const [persp, setPersp] = useState(false);
@@ -734,6 +750,71 @@ export function SkinSolidBench({
           R.drawLines(segs, C_BOND, 0.004, places);
         }
       }
+
+      // ── 环间织物膜（半透明蒙皮）────────────────────────────────────────────
+      // 三条硬约束照 Lab.04 定案：深度只测不写 ⇒ 必须**实体全画完之后**才画，
+      // 且半透明面之间没有 z 排序 ⇒ 调用点自己按视深从远到近下单
+      if (skin && ring && skinRef.current > 0.004) {
+        const alpha = skinRef.current;
+        const rad = radiusRef.current;
+        const cells: readonly SolidCell[] = cellList.length ? cellList : [{ x: 0, z: 0, plan: 0 }];
+        const M = cam.matrix; // 行主序：第 3 行点乘世界向量 = 视深（大 = 近）
+        const viewZ = (x: number, z: number): number => M[6] * x + M[8] * z;
+        planList.forEach((_, v) => {
+          const ring0 = insts.filter((i) => i.plan === v);
+          const cnt = ring0.length;
+          if (cnt < 2) return;
+          const cs = cells.filter((c) => c.plan === v);
+          if (!cs.length) return;
+          const dTheta = (2 * Math.PI) / cnt;
+          const seat = (u: number, c: SolidCell): MeshPlace => ({
+            yaw: ring0[u].angle,
+            x: c.x,
+            y: rigY,
+            z: c.z,
+            s: rigS,
+          });
+          // 一圈同谱时二十块板逐位相同 ⇒ 只烘一份，二十个方位角全走摆放表
+          const same = ring0.every((i) => i.simIdx === ring0[0].simIdx);
+          const panelOf = (u: number): Float32Array => {
+            const A = sims[ring0[u].simIdx];
+            const B = sims[ring0[(u + 1) % cnt].simIdx];
+            const g = membranePanel(
+              { px: A.sx as Float64Array, py: A.sy as Float64Array, offY: A.offY },
+              { px: B.sx as Float64Array, py: B.sy as Float64Array, offY: B.offY },
+              A.sim.n,
+              rad,
+              depth,
+              SOLID.SCALE,
+              dTheta,
+            );
+            return bakeIndexed(g.verts, g.idx);
+          };
+          if (same) {
+            // (方位角 × 格子) 全部按视深排一遍，再一次画完
+            const seats: MeshPlace[] = [];
+            for (let u = 0; u < cnt; u++) for (const c of cs) seats.push(seat(u, c));
+            seats.sort(
+              (a, b) =>
+                viewZ(Math.cos(a.yaw) * rad * rigS + a.x, Math.sin(a.yaw) * rad * rigS + a.z) -
+                viewZ(Math.cos(b.yaw) * rad * rigS + b.x, Math.sin(b.yaw) * rad * rigS + b.z),
+            );
+            R.drawDynamicMesh(panelOf(0), MEM_DARK, MEM_LITE, alpha, seats);
+          } else {
+            // 渐变编制：每对邻居形状不同，只能逐块烘；按板自身的视深从远到近
+            for (const u of bandsFarToNear(cnt, (i) =>
+              viewZ(Math.cos(ring0[i].angle) * rad * rigS, Math.sin(ring0[i].angle) * rad * rigS),
+            ))
+              R.drawDynamicMesh(
+                panelOf(u),
+                MEM_DARK,
+                MEM_LITE,
+                alpha,
+                cs.map((c) => seat(u, c)),
+              );
+          }
+        });
+      }
     };
 
     let acc = 0;
@@ -817,6 +898,10 @@ export function SkinSolidBench({
         render();
       },
       setPersp: (on) => R.setPerspective(on ? 900 : 0),
+      setSkin: (v) => {
+        skinRef.current = v;
+        render();
+      },
       setRadius: (rad) => {
         radiusRef.current = rad;
         reflow(); // 阵列：格距 = 2·外缘 + 缝，随半径重算；相机跟着退
@@ -1018,6 +1103,28 @@ export function SkinSolidBench({
               }}
             />
           </div>
+          {skin ? (
+            <div className="grp">
+              <span className="k">蒙皮</span>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={skinV}
+                aria-label="环间织物膜的不透明度（0 = 只剩带子，1 = 封闭的筒）"
+                style={{ width: 96 }}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setSkinV(v);
+                  apiRef.current?.setSkin(v);
+                }}
+              />
+              <b style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>
+                {Math.round(skinV * 100)}
+              </b>
+            </div>
+          ) : null}
           {radius ? (
             <div className="grp">
               <span className="k">半径</span>

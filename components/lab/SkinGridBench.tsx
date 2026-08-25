@@ -87,6 +87,7 @@ export function SkinGridBench({
       radius={{ min: RING.RADIUS_MIN, max: RING.RADIUS_MAX, def: RING.RADIUS_DEF }}
       depth={RING.DEPTH}
       thick={RING.THICK}
+      skin={{ def: 0.35 }}
       ceiling="ring"
       rail="fixed"
       rate={perRow ? 80 : 110}

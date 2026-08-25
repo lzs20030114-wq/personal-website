@@ -388,6 +388,7 @@ export default function LabPage() {
             ['Pitch', '2 × (radius + peak swell 101.1) + gap · tracks the slider'],
             ['Gap', '1.5 × the gap inside a ring — rings stay separate'],
             ['Plans', 'One form ↔ one form per row'],
+            ['Skin', 'A membrane bridges the gaps between bands · 0–1'],
           ]}
         >
           <SkinGridBench />

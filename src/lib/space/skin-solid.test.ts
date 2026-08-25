@@ -6,6 +6,7 @@ import {
   boxVerts,
   buildSolidTopology,
   fillSolidVerts,
+  membranePanel,
   placePoint,
   railSpan,
   ringPlateVerts,
@@ -210,5 +211,56 @@ describe('skin-solid 环列落位', () => {
       expect(Math.min(Math.abs(r - 16), Math.abs(r - 46))).toBeLessThan(1e-4);
       expect(Math.min(Math.abs(verts[i * 3 + 1] + 6), Math.abs(verts[i * 3 + 1]))).toBeLessThan(1e-5);
     }
+  });
+});
+
+describe('membranePanel 环间织物膜', () => {
+  const n = 24;
+  const prof = (dx: number) => {
+    const px = new Float64Array(n);
+    const py = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      px[i] = 0.1 + dx + 0.2 * Math.sin((i / (n - 1)) * Math.PI);
+      py[i] = -i * 0.02;
+    }
+    return { px, py, offY: 0 };
+  };
+  const R = 30;
+  const D = 7.8;
+  const S = 100;
+  const dT = (2 * Math.PI) / 20;
+
+  it('是一张直纹带：顶点 2n、三角 (n−1)×2', () => {
+    const g = membranePanel(prof(0), prof(0), n, R, D, S, dT);
+    expect(g.verts.length).toBe(2 * n * 3); // xyz 平铺：A 侧 n 点 + B 侧 n 点
+    expect(g.idx.length).toBe((n - 1) * 6);
+    for (const i of g.idx) expect(i).toBeLessThan(2 * n);
+  });
+
+  it('两条边正好搭在缝的两侧：A = 本条带的后剖口，B = 下一条带的前剖口', () => {
+    const g = membranePanel(prof(0), prof(0), n, R, D, S, dT);
+    const at = (k: number) => ({ x: g.verts[k * 3], y: g.verts[k * 3 + 1], z: g.verts[k * 3 + 2] });
+    for (let i = 0; i < n; i++) {
+      const a = at(i);
+      const b = at(n + i);
+      // A 边在方位角 0 上，切向 −depth/2
+      expect(a.z).toBeCloseTo(-D / 2, 5); // Float32 精度
+      // 两边离筒轴的距离相同（同一条剖面）⇒ 膜不歪
+      expect(Math.hypot(b.x, b.z)).toBeCloseTo(Math.hypot(a.x, a.z), 4);
+      // B 边转过一个角节距 ⇒ 两边的方位角差正好是那个角
+      const angA = Math.atan2(a.z, a.x);
+      const angB = Math.atan2(b.z, b.x);
+      expect(angB - angA).toBeGreaterThan(0);
+      expect(angB - angA).toBeLessThan(dT + 0.2); // 切向偏移让它略小于角节距
+      expect(a.y).toBeCloseTo(b.y, 5);
+    }
+  });
+
+  it('两侧剖面不同也能搭（一圈渐变编制）', () => {
+    const g = membranePanel(prof(0), prof(0.15), n, R, D, S, dT);
+    const at = (k: number) => ({ x: g.verts[k * 3], z: g.verts[k * 3 + 2] });
+    // B 边整体更靠外（它那条带鼓得更远）
+    for (let i = 1; i < n - 1; i++)
+      expect(Math.hypot(at(n + i).x, at(n + i).z)).toBeGreaterThan(Math.hypot(at(i).x, at(i).z));
   });
 });
