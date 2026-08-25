@@ -378,14 +378,14 @@ export default function LabPage() {
         <Bench
           no="10"
           title="Four by four"
-          lede="Sixteen of those cylinders hung in a room — 320 bands, one solved section. A 1.70 m figure stands on the floor beside them, and that figure is what sets the scale: everything else on this page had none until now. How far a ledge reaches is set by how much material its bonds capture, not by how hard the unit contracts — so this family runs a bond map scaled 1.5× against the catalogue's. Each ring keeps its own clearance, and pulling the radius breathes the whole field."
+          lede="Sixteen of those cylinders hung in a room — 320 bands, one solved section. A 1.70 m figure stands on the floor beside them, and that figure is what sets the scale: everything else on this page had none until now. How far a ledge reaches is set by how much material its outermost bond captures — not by how hard the unit contracts. So this family folds more of the same strip: 202 nodes as before, but the fan spans 2.1× the catalogue's, and the slack hugging the mast is what pays for it. Each ring keeps its own clearance, and pulling the radius breathes the whole field."
           accent="var(--accent-2)"
           specs={[
             ['Field', '4 × 4 rings · 20 bands each · 320 placements'],
             ['Solved', 'One section — the field is that section, placed'],
-            ['Scale', 'Figure 1.70 m ⇒ room 3.74 m · ring 0.82 m across'],
+            ['Scale', 'Figure 1.70 m ⇒ room 3.74 m · ring 1.04 m across'],
             ['Rig', 'Half size, hung lower — underside stays at 1.08 m'],
-            ['Pitch', '2 × (radius + peak swell 73.9) + gap · tracks the slider'],
+            ['Pitch', '2 × (radius + peak swell 101.1) + gap · tracks the slider'],
             ['Gap', '1.5 × the gap inside a ring — rings stay separate'],
             ['Plans', 'One form ↔ one form per row'],
           ]}

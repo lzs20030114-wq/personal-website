@@ -67,8 +67,20 @@ export const GRAD_LEVELS = 11;
  */
 const RB = [0.1, 0.122, 0.144, 0.166, 0.188, 0.21, 0.232, 0.254, 0.276, 0.298, 0.32];
 const SQ = [0, 0, 0.06, 0.14, 0.24, 0.34, 0.45, 0.56, 0.68, 0.83, 1];
-export const PW_FROM = 6; // 这一格起端面找平给全跨 ±8（之前一律不给）
-export const KJUMP = 9; // 这一格起梯挡多一根（放大后重扫，见下）
+/**
+ * 端面找平的半跨，逐级渐入（单位 = 放大后的节数；端点那一档 17 = round(8 × RING_GROW)）。
+ *
+ * **这一条推翻了 Lab.08 时期的「半跨是假杠杆」**——那个结论是在 ±8 的尺度上得到的：
+ * 不到全跨，端面投影根本不参与，所以只能做成一格硬跳变。2026-08-25 折叠加深后
+ * （panel 全跨 ±17）重测，它变成了**连续**杠杆：±0 挑 97 · ±6 挑 95 · ±9 挑 93 ·
+ * ±11 挑 92 · ±13 挑 90 · ±15 挑 88 · ±17 挑 84。于是硬跳变换成渐入，
+ * 原来那一格 12.3 的断层就没有了。
+ *
+ * 只有 ±17 会掉一根键（9→8），故满跨只留给端点那一级。把 PW[9] 也提到 17 试过：
+ * 那一级的挑出会从 86 塌到 72（±17 正是掉键的阈值），比不提还差 —— 故末级前保持 16。
+ */
+export const PW = [0, 0, 3, 6, 8, 10, 12, 13, 15, 16, 17];
+export const KJUMP = 8; // 这一格起梯挡多一根（每次改构造都要重扫，见下）
 
 /**
  * 一级的键谱（端点两格由 buildRingGradient 换成站上原谱）。
@@ -77,12 +89,14 @@ export const KJUMP = 9; // 这一格起梯挡多一根（放大后重扫，见�
  * 时间表（RB / SQ / PW_FROM / KJUMP）是级号不是长度，原样不动。
  */
 const G = RING_GROW;
-function levelSeg(l: number, pwFrom: number, kJump: number): SkinSeg {
+/** 扇形步长随构造同比（整数 ⇒ 键的根数一根不变，形态不变、只是折得更深） */
+const STEP = Math.round(2 * G);
+function levelSeg(l: number, kJump: number, pw0: readonly number[]): SkinSeg {
   let kMax = Math.round((l >= kJump ? 26 : 24) * G);
-  while (RING_CENTER - kMax < 4) kMax -= 3; // 键谱两端 ≥4 节缓冲（交接件纪律）
-  const bonds = fan(RING_CENTER, Math.round(8 * G), kMax + 1, 3, RB[l] * G);
-  const pw = Math.round(8 * G);
-  return l >= pwFrom
+  while (RING_CENTER - kMax < 4) kMax -= STEP; // 键谱两端 ≥4 节缓冲（交接件纪律）
+  const bonds = fan(RING_CENTER, Math.round(8 * G), kMax + 1, STEP, RB[l] * G);
+  const pw = pw0[l];
+  return pw > 0
     ? ['f', RING_FREE, bonds, [[RING_CENTER - pw, RING_CENTER + pw]]]
     : ['f', RING_FREE, bonds];
 }
@@ -91,7 +105,10 @@ function levelSeg(l: number, pwFrom: number, kJump: number): SkinSeg {
 const band = (seg: SkinSeg): SkinSpec => [['g', RING_LEAD], seg, ['g', RING_TAIL]];
 
 /** 渐变序列：11 级，0 = 蘑菇挑台原谱、10 = 阶梯方箱原谱 */
-export function buildRingGradient(pwFrom: number = PW_FROM, kJump: number = KJUMP): RingUnitDef[] {
+export function buildRingGradient(
+  kJump: number = KJUMP,
+  pw0: readonly number[] = PW,
+): RingUnitDef[] {
   const A = SKIN_UNITS.find((d) => d.key === 'bulb')!;
   const B = SKIN_UNITS.find((d) => d.key === 'stepped')!;
   const out: RingUnitDef[] = [];
@@ -114,7 +131,7 @@ export function buildRingGradient(pwFrom: number = PW_FROM, kJump: number = KJUM
       key: `g${l}`,
       zh: `渐变 ${l}/${GRAD_LEVELS - 1}`,
       en: `blend ${l}/${GRAD_LEVELS - 1}`,
-      spec: band(levelSeg(l, pwFrom, kJump)),
+      spec: band(levelSeg(l, kJump, pw0)),
       opts,
       // 低强度段梯身微皱要 [5,2] 盖住；sq≥0.5 后箱体自带压平，回 [3,1]
       smooth: SQ[l] >= 0.5 ? [3, 1] : [5, 2],

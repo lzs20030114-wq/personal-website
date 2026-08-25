@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ARRAY_LEAD, ARRAY_TAIL, placeOnBand } from './skin-array';
+import { ARRAY_LEAD, placeOnBand } from './skin-array';
 import { SKIN_UNITS, skinSiteOpts } from './skin-data';
 import { SOLID } from './skin-solid';
 import {
@@ -79,10 +79,12 @@ describe('skin-ring 圆筒环列', () => {
   });
 
   it('四条带三段等长——嘴心对位构造的前提', () => {
-    // 两端缓冲的分配与 Lab.08 一致（RING_LEAD/TAIL 只挪形状在带上的高度）；
-    // 自由段是环族专属的放大值（2026-08-25「平台展开更多一些」）
-    expect(RING_LEAD + RING_TAIL).toBe(ARRAY_LEAD + ARRAY_TAIL);
-    expect(RING_BAND_NODES).toBe(RING_LEAD + RING_FREE + RING_TAIL);
+    // **带子总长钉死**（用户 2026-08-25「不是要增长带子，就这个长度，增加折叠程度」）：
+    // 要折得更深只能把贴合段匀给自由段，三段之和恒等于总长
+    expect(RING_BAND_NODES).toBe(202);
+    expect(RING_LEAD + RING_FREE + RING_TAIL).toBe(RING_BAND_NODES);
+    expect(RING_LEAD).toBeGreaterThan(20); // 贴合段别让光
+    expect(RING_TAIL).toBeGreaterThanOrEqual(11); // 尾段太短形状会被拽变形（tail=7 实测偏差 0.756）
     expect(RING_CENTER).toBe((RING_FREE - 1) / 2); // 扇心落在整数节点上
     for (const d of DEFS) {
       const total = d.spec.reduce((s, seg) => s + seg[1], 0);
@@ -107,7 +109,8 @@ describe('skin-ring 圆筒环列', () => {
         // 每根键的半跨等比（整数取整），且全部同心
         expect((j1 - i1) / 2, d.key).toBe(Math.round(((a[k][1] - a[k][0]) / 2) * RING_GROW));
         expect((i1 + j1) / 2, d.key).toBeCloseTo(RING_CENTER, 12); // 扇形正居中
-        expect(b[k][2], d.key).toBeCloseTo(a[k][2] * RING_GROW, 12); // 嘴口同比
+        // 嘴口同比；阶梯方箱例外——它的 rb 由端面板反算（等长键纪律，见 growSeg）
+        if (src.length !== 4) expect(b[k][2], d.key).toBeCloseTo(a[k][2] * RING_GROW, 12);
       });
       const pa = src.length === 4 ? src[3] : undefined;
       const pb = dst.length === 4 ? dst[3] : undefined;
@@ -178,9 +181,11 @@ describe('skin-ring 圆筒环列', () => {
     // 位置：三种同收缩终点的形态都落在下段（袋另有 ℓ，不参与）
     for (const r of run()) {
       if (r.key === 'pocket') continue;
+      // 折叠体在筒的下段。2026-08-25 折叠加深后这个比例上移了一点——折叠体自己变大，
+      // 嘴心跟着抬高，但**下缘离钉住点几乎没动**（+33~+50px / 筒高 221px）
       const frac = r.mouth / r.top;
       expect(frac, r.key).toBeGreaterThan(0.14);
-      expect(frac, r.key).toBeLessThan(0.24);
+      expect(frac, r.key).toBeLessThan(0.35);
     }
     // 纯平移：同一张键谱换 lead/tail 分配（总长不变）跑到底，剖面相对嘴心归一后逐点比对。
     // 这条同时卡住尾段别太短——实测 tail=7 时偏差 0.756，形状会被拽变形。

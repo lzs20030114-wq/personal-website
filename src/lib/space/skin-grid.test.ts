@@ -64,10 +64,12 @@ describe('skin-grid 4×4 环阵列', () => {
   it('外缘按**全程**膨胀峰值定——只看终态会偏小（阶梯方箱中途鼓得比终态大）', () => {
     const worst = Math.max(...PEAKS.map((p) => p.peak));
     expect(worst).toBeCloseTo(PEAK_REACH, 0); // 常量没跟实测漂开
-    // 「必须按全程量」不是空话：至少有一种形态的过程峰值明显大于终态
+    // 常量必须是**全程**的上界，不是终态值：四种形态逐个卡
+    for (const p of PEAKS) expect(PEAK_REACH, p.key).toBeGreaterThanOrEqual(p.peak);
+    // 「必须按全程量」的由来：阶梯方箱的峰值出现在收缩途中而不是终点。
+    // 2026-08-25 折叠加深后这个过冲已经很小（0.5px，早先是 3px），但方向没变
     const box = PEAKS.find((p) => p.key === 'stepped')!;
-    expect(box.peak).toBeGreaterThan(box.final + 1);
-    expect(box.peakAt).toBeLessThan(900); // 峰值出现在收缩途中，不在终点
+    expect(box.peak).toBeGreaterThanOrEqual(box.final);
     // 外缘 = 芯上半径 + 峰值：四种形态全程都不越出去
     for (const p of PEAKS) expect(ringOuter(30) - 30, p.key).toBeGreaterThanOrEqual(p.peak);
   });
@@ -209,9 +211,10 @@ describe('skin-grid 4×4 环阵列', () => {
       const cells = ringGridCells(r, 'uniform');
       expect(cells[1].x - cells[0].x).toBeCloseTo(ringCellPitch(r) * RIG_SCALE, 6);
     }
-    // 平台 ⌀0.82 m、场地 3.73 m 见方（2026-08-25 环族构造放大 1.5× 后；缩放前那一版是 0.65 / 2.9）
-    expect(2 * ringOuter(RING.RADIUS_DEF) * RIG_SCALE * MM_PER_UNIT / 1000).toBeCloseTo(0.82, 2);
-    expect(ringGridSpan(RING.RADIUS_DEF) * MM_PER_UNIT / 1000).toBeCloseTo(3.73, 1);
+    // 平台 ⌀1.04 m、场地 4.74 m 见方（2026-08-25 第二轮加深折叠后；
+    // 三轮的账：⌀0.65 → 0.82（放大构造）→ 1.04（贴合段匀给自由段））
+    expect(2 * ringOuter(RING.RADIUS_DEF) * RIG_SCALE * MM_PER_UNIT / 1000).toBeCloseTo(1.04, 2);
+    expect(ringGridSpan(RING.RADIUS_DEF) * MM_PER_UNIT / 1000).toBeCloseTo(4.74, 1);
   });
 
   it('房间：地板 + 两面墙，墙内面到最外环外缘 = 留距', () => {

@@ -35,10 +35,10 @@ import { figureVerts, type FigureSpec } from './figure';
 import { boxVerts } from './skin-solid';
 import { RING, ringGap } from './skin-ring';
 
-/** 全程最大膨胀（四种形态取最大：直挑台实测 73.87，向上取到 0.1 ⇒ 这个常量是**上界**）。
+/** 全程最大膨胀（四种形态取最大：直挑台实测 100.99，向上取到 0.1 ⇒ 这个常量是**上界**）。
  *  必须按**全程**量而不是终态——阶梯方箱在 step 519 鼓到 43.5，终态反而收回 40.6；
  *  只看终态会把格距定小 3px，收缩过程中就撞上了。 */
-export const PEAK_REACH = 73.9;
+export const PEAK_REACH = 101.1;
 
 /** 环间缝 / 环内平台外缘带间缝 的比值（手感常量，待真机拍板；> 1 是硬约束） */
 export const RING_GAP_RATIO = 1.5;
@@ -65,8 +65,8 @@ export const RING_GRID_COUNT = RING_GRID.COLS * RING_GRID.ROWS;
  * 引擎、键谱、对位构造、止程全都不知道有这回事，故与 Lab.06–09 仍是同一份东西。
  */
 export const RIG_SCALE = 0.5;
-/** 装置在自身坐标系里的竖向占高（收缩全程包络实测；2026-08-25 环族构造放大后 336 → 393） */
-export const RIG_HANG = 393;
+/** 装置在自身坐标系里的竖向占高（收缩全程包络实测；2026-08-25 环族两轮加深后 336 → 393 → 389） */
+export const RIG_HANG = 389;
 /**
  * 下缘在世界里的高度——**这个数是定下来的，不随构造变**：离地 137 单位 = 1.08 m，
  * 平台正好在人的胸口。带子放长/放大时，变的是顶端离天花多远（芯轨相应变短），
