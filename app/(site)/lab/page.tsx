@@ -21,7 +21,7 @@ export const metadata = { title: 'The lab' };
  * 每台跑的是站内 TS 内核，不是视频、不是二次实现：Lab.01–05 = src/lib/linkage（封盘零改，
  * 项目一），Lab.06–07 = src/lib/space（项目二皮肤单元引擎，Python 研究代码的 1:1 移植；
  * 07 是同一引擎的立体带呈现，几何烘焙 skin-solid + 复用 gl3d/camera3d 装备；
- * 08 = 十二条带的键谱渐变阵列；09 = 二十条同谱窄带围成圆筒、收缩成环形平台；10 = 十六个单元铺成 4×4 平面网格）。
+ * 08 = 十二条带的键谱渐变阵列；09 = 二十条同谱窄带围成圆筒、收缩成环形平台；10 = 十六个那样的圆筒环吊在一间房里铺成 4×4 网格，地上站着人作比例）。
  * 2026-08-18 起页面按项目分组（MAPPING §16）——log 页先例：多项目共用一条主线。
  */
 const KICKER: CSSProperties = {
@@ -378,14 +378,17 @@ export default function LabPage() {
         <Bench
           no="10"
           title="Four by four"
-          lede="Sixteen units on a floor grid. The spacing is not a taste call — it is measured: the widest each unit ever swells during its run, plus the rail it hangs on, plus a little clearance. Run the field on one bond map, or give each row its own."
+          lede="Sixteen of those cylinders hung in a room — 320 bands, one solved section. A 1.70 m figure stands on the floor beside them, and that figure is what sets the scale: everything else on this page had none until now. How far a ledge reaches is set by how much material its outermost bond captures — not by how hard the unit contracts. So this family folds more of the same strip: 202 nodes as before, but the fan spans 2.1× the catalogue's, and the slack hugging the mast is what pays for it. Each ring keeps its own clearance, and pulling the radius breathes the whole field."
           accent="var(--accent-2)"
           specs={[
-            ['Field', '4 × 4 · 16 units on one protocol'],
-            ['Pitch', '64 = peak swell 52 + rail 5.8 + gap 6'],
-            ['Measured', 'Peak is mid-run, not at the end'],
+            ['Field', '4 × 4 rings · 20 bands each · 320 placements'],
+            ['Solved', 'One section — the field is that section, placed'],
+            ['Scale', 'Figure 1.70 m ⇒ room 3.74 m · ring 1.04 m across'],
+            ['Rig', 'Half size, hung lower — underside stays at 1.08 m'],
+            ['Pitch', '2 × (radius + peak swell 101.1) + gap · tracks the slider'],
+            ['Gap', '1.5 × the gap inside a ring — rings stay separate'],
             ['Plans', 'One form ↔ one form per row'],
-            ['Rails', 'Fixed masts — ceiling to anchor'],
+            ['Skin', 'A membrane bridges the gaps between bands · 0–1'],
           ]}
         >
           <SkinGridBench />

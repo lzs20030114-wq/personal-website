@@ -40,7 +40,8 @@
  * ⇒ 嘴心 = 2·lead + (f−1)·r，与键长、与形态无关），形态逐位不动、只换它在带上
  * 的位置与两端缓冲长度。实测同一收缩终点的三种形态嘴心散布 0.078px。
  */
-import { ARRAY_FREE, ARRAY_LEAD, ARRAY_TAIL, placeOnBand } from './skin-array';
+import { placeOnBand } from './skin-array';
+import type { SkinSeg } from './skin-unit';
 import { SKIN_UNITS, skinSiteOpts } from './skin-data';
 import type { SkinSpec, SkinUnitOpts } from './skin-unit';
 
@@ -76,26 +77,94 @@ export function ringGap(radius: number, count: number = RING.COUNT, depth: numbe
   return ringPitch(radius, count) - depth;
 }
 
-/**
- * 折叠体在带子上的位置（用户 2026-08-23 圈图拍板「把这个形状安排到我画的这个位置去」——
- * 挑台环从腰上挪到筒的下段）。
- *
- * `lead` 就是这个旋钮：贴合段每多一节，折叠体沿带子下移 2px（SEG·100，与收缩率无关）。
- * **lead + tail 保持 111 不变** ⇒ 带子总节数、筒的上下缘、机位全都不动，动的只有环的高度。
- * 实测（阶梯方箱终态，筒高 256.6px）：lead 54 → 平台在离底 51%；96 → **18%**；
- * 与 lead 54 的剖面逐点偏差 **0.000**（纯平移，形态一个数没变）。
- * 上限卡在 tail：tail=7 时实测偏差 0.756 —— 尾段太短撑不住，形状开始变形，故不再往下挪。
- *
- * 注意这两个数是 Lab.09 专用，**不是** skin-array 的 ARRAY_LEAD/ARRAY_TAIL——
- * 那一副是 Lab.08 十二条带的，改它会一并挪走那台的形状。
- */
-export const RING_LEAD = 96;
-export const RING_TAIL = ARRAY_LEAD + ARRAY_TAIL - RING_LEAD; // = 15，总长与 Lab.08 一致
-
 /** 芯轨中心相对站位圆的内偏（台架画轨用的常量，守门算最小间隙也用它） */
 export const RAIL_INSET = 3.4;
 /** 芯轨半宽（径向）与半厚（切向） */
 export const RAIL_HALF = { r: 2.4, t: 2.4 } as const;
+
+/**
+ * ## 环族的放大构造（用户 2026-08-25「往外延出来的这个平台，展开的更多一些」）
+ *
+ * 用户给的机制猜想是「收缩得更多一些」，**实测不成立**：收缩终点 r₁ 从 0.30 压到 0.18
+ * 只多挑 5%（52.0 → 54.8px），再往下（0.14）反而回缩、把平台压厚。原因是挑出的长度由
+ * **键捕获的材料量**定——键一旦锁住，被它兜住的那段材料就定了，核心再往里收也不会
+ * 多出材料来。而现有键谱已经把 61 节的自由段吃满（最外键跨 52 节，两端只剩 4 节缓冲，
+ * 那是交接件的纪律下限）。
+ *
+ * 所以真正的旋钮是**让最外那根键吃掉更多自由段**。实测关系干脆得出乎意料：
+ * **挑出 ≈ 最外键的半跨 × 2px**（k=36 → 72px，实测 73.9）——挑出就是那根键兜住的
+ * 材料对折以后的长度，内圈的键只负责把中间的材料排成梯身。
+ *
+ * 第一轮（2026-08-25）用的是「键跨 / 嘴口 / 自由段一律 ×1.5」并把带子接长 30 节；
+ * **第二轮用户明确「不是要增长带子，就这个长度，增加折叠程度」**，于是改成：
+ * 总长钉死 202 节，把**贴合段匀给自由段**（lead 96 → 58、free 91 → 129），
+ * 放大倍数随之 1.5 → 2.1。折叠体吃掉的带子比例变大 —— 那正是「折叠得更多」。
+ *
+ * 取 2.1 是因为它保**结构相似**：扇形步长 2 → 4（= round(2×2.1)）是整数，于是每种
+ * 形态的**键的根数一根不变**（蘑菇 9 / 直挑台 11 / 阶梯 10 / 袋 2），还是那个形态、
+ * 只是折得更深；自由段取奇数 129，扇心仍落在整数节点上。等长键纪律照旧成立。
+ *
+ * 两条实测的死路记在这里，省得再试：
+ * - **收缩终点 r₁ 不是杠杆**：0.30 压到 0.18 只多挑 5%，0.14 以下反而回缩。
+ * - **嘴口 rb 也不是**：×0.7/×0.5/×0.3 逐档量下来挑出不升反降，还开始掉键。
+ *
+ * 代价：装置竖向占高与带子总长都不动，但平台变大 ⇒ 格距跟着长 ⇒ 场地与房间变大。
+ *
+ * **Lab.09 与 Lab.10 一起变**——Lab.10 的定义就是「十六个 Lab.09 那种圆筒环」，
+ * 只改一台会让两台的环不再是同一个东西。Lab.06/07/08 的键谱一个数没动。
+ */
+export const RING_GROW = 2.1;
+/**
+ * **带子总长钉死**（用户 2026-08-25 第二轮：「不是要增长带子，就这个长度，增加折叠程度」）。
+ * 202 = 上一轮放大后的节数；此后再想挑得更远，只能把**贴合段匀给自由段**，
+ * 而不是把带子接长。
+ */
+export const RING_BAND_NODES = 202;
+/** 尾段（钉住端那一截）——纪律下限附近，不再往下压 */
+export const RING_TAIL = 15;
+/** 自由段：折叠体吃掉的那一段（取奇数，扇心落在整数节点上） */
+export const RING_FREE = 129;
+/**
+ * 贴合段 = 总长减掉另外两段 —— **总长恒定就是靠这一行**。
+ *
+ * 它同时还是「折叠体在带子上多高」的旋钮（用户 2026-08-23 圈图拍板「把这个形状安排到
+ * 我画的这个位置去」，挑台环从腰上挪到筒的下段）：贴合段每多一节，折叠体沿带子下移
+ * 2px。第二轮把它从 96 让到 58 去喂自由段，折叠体因此上移了一点——但**实测折叠体
+ * 下缘离钉住点只从 +32px 变到 +35px**（折叠体自己变大了，两头几乎抵消），
+ * 平台高度肉眼看不出变化。
+ *
+ * 注意这几个数是环族专用，**不是** skin-array 的 ARRAY_LEAD/ARRAY_TAIL——
+ * 那一副是 Lab.08 十二条带的，改它会一并挪走那台的形状。
+ */
+export const RING_LEAD = RING_BAND_NODES - RING_FREE - RING_TAIL;
+/** 扇心 */
+export const RING_CENTER = (RING_FREE - 1) / 2;
+
+/**
+ * 把一段键谱按 RING_GROW 放大：每根键的半跨与 rb 同比，**根数不变**
+ * （逐根映射，不是重新生成扇形）；阶梯的端面板同比。
+ */
+export function growSeg(seg: SkinSeg, g: number = RING_GROW): SkinSeg {
+  const bonds = seg[2]!;
+  const c = (bonds[0][0] + bonds[0][1]) / 2;
+  const grown = bonds.map(([i, j, rb]) => {
+    const k = Math.round(((j - i) / 2) * g);
+    return [c - k, c + k, rb * g] as const;
+  });
+  if (seg.length === 4) {
+    const panel = seg[3].map(([a, b]) => {
+      const k = Math.round(((b - a) / 2) * g);
+      return [c - k, c + k] as const;
+    });
+    // 等长键纪律：键长 = 端面弧长 = 端面板跨度 × SEG。放大后两边各自取整会差一点点
+    // （0.672 vs 0.68），故 rb **从取整后的端面板反算**，让纪律精确成立——
+    // 阶梯挑台的「方」就是靠这条，差 0.008 也别放过
+    const span = panel[0][1] - panel[0][0];
+    const rb = span * 0.02;
+    return ['f', seg[1], grown.map(([i, j]) => [i, j, rb] as const), panel] as SkinSeg;
+  }
+  return ['f', seg[1], grown] as SkinSeg;
+}
 
 export interface RingUnitDef {
   key: string;
@@ -115,7 +184,11 @@ export function buildRingUnits(): RingUnitDef[] {
     key: d.key,
     zh: d.zh,
     en: d.en,
-    spec: [['g', RING_LEAD], placeOnBand(d.spec[1]), ['g', RING_TAIL]] as SkinSpec,
+    spec: [
+      ['g', RING_LEAD],
+      placeOnBand(growSeg(d.spec[1]), RING_FREE, RING_CENTER),
+      ['g', RING_TAIL],
+    ] as SkinSpec,
     opts: skinSiteOpts(d),
     smooth: d.smooth ?? ([3, 1] as const),
   }));
@@ -154,17 +227,19 @@ export function palindromeOrder(count: number, levels: number, offset = 0): numb
  * **同一种键谱，每个位置一个不同的 lead**。lead 就是形状在带上的高度（2px/节），
  * 所以这不是新形态，是把已经验过的那个旋钮沿圆周排成一条波。
  *
- * 实测（lead 20–96 全程）：剖面逐点偏差 0.000–0.026、筒高恒 256.6、锁定键数不变
- * ⇒ 一圈里高度在变、形状一个数没变。低点取 RING_LEAD（= 用户圈图定的那个位置），
- * 从那里升上去再回来。用余弦而不是三角波：三角波在最高最低处有折角，
- * 余弦两端平缓、接缝处斜率连续，一圈读下来是一条起伏而不是两段斜坡。
+ * 实测（放大后的环族几何上重标，lead 12–58 全程）：剖面逐点偏差 ≤0.008、
+ * 筒高恒 221.4、锁定键数不变 ⇒ 一圈里高度在变、形状一个数没变。
+ * 再往上（lead ≤ 6）贴合段撑不住，折叠体被拽变形（偏差跳到 17），故波峰留余量。
+ * 低点取 RING_LEAD（= 环族当前那个位置），从那里升上去再回来。用余弦而不是三角波：
+ * 三角波在最高最低处有折角，余弦两端平缓、接缝处斜率连续，一圈读下来是一条起伏
+ * 而不是两段斜坡。
  */
 export const RING_WAVE = {
   LEVELS: 11,
-  /** 波谷的 lead（越大越低）= 用户拍板的那个位置 */
+  /** 波谷的 lead（越大越低）= 环族当前的落位 */
   LOW: RING_LEAD,
-  /** 波峰的 lead（越小越高）。18% → 71% 的筒高，扫掉大半根筒 */
-  HIGH: 28,
+  /** 波峰的 lead（越小越高）。30% → 71% 的筒高；12 是形状还没被拽变形的下限，留 2 节余量 */
+  HIGH: 14,
   /** 相位：把波谷/波峰从正前正后转开，默认轴测机位下才看得见起伏 */
   PHASE: 5,
 } as const;
@@ -193,5 +268,3 @@ export function buildWaveOrder(count: number = RING.COUNT): number[] {
   return palindromeOrder(count, RING_WAVE.LEVELS, RING_WAVE.PHASE);
 }
 
-/** 单元总节数（四条相同——对位构造的三段等长；与 Lab.08 同长，只是 lead/tail 的分配不同） */
-export const RING_BAND_NODES = RING_LEAD + ARRAY_FREE + RING_TAIL;

@@ -13,6 +13,9 @@
  */
 
 /** 立体化常量（展示几何，不是物理量；物理仍全在 skin-unit） */
+import { bandTriIndex, bandVerts } from '../linkage/skin';
+import type { Vec3 } from '../linkage/solver3d';
+
 export const SOLID = {
   /** 带深（挤出方向 z 的总宽，世界单位 = 2D 的 px 尺度） */
   DEPTH: 80,
@@ -273,4 +276,42 @@ export function boxVerts(
     1, 5, 7, 1, 7, 3, // z+
   ]);
   return { verts: v, idx };
+}
+
+
+/**
+ * 环上相邻两条带之间的**织物膜**（用户 2026-08-25「给这些结构都加一个半透明蒙皮」）。
+ *
+ * 带子本身就是布，缺的是**带与带之间**那块——环上二十条窄带绕轴一圈，圆周比带宽长，
+ * 于是天生留缝（R=30 时芯上 1.6px、平台外缘 41px，一圈六成是空的）。这块膜把缝填上，
+ * 筒就读作一个封闭的体、平台读作一整圈台面，而不是一把梳子。
+ *
+ * 几何 = 一张**直纹带**：A 边取本条带的后剖口（切向 −depth/2）、B 边取下一条带的
+ * 前剖口（+depth/2，绕世界 Y 转过一个角节距）——正好糊住那道缝、不与带子自己重叠。
+ * 面片索引复用 linkage/skin 的 bandTriIndex（Lab.04 五环那套织物蒙皮同一份）。
+ *
+ * 板子烘在**方位角 0** 处：一圈二十处的差别只是 yaw，交给 gl3d 的 MeshPlace，
+ * 故每帧只上传一份。半透明的三条硬约束照 Lab.04 定案（深度只测不写 / 实体先画 /
+ * 调用点自己按视深从远到近下单）。
+ */
+export function membranePanel(
+  a: { px: Float64Array; py: Float64Array; offY: number },
+  b: { px: Float64Array; py: Float64Array; offY: number },
+  n: number,
+  radius: number,
+  depth: number,
+  scale: number,
+  dTheta: number,
+): { verts: Float32Array; idx: Uint16Array } {
+  const c = Math.cos(dTheta);
+  const sn = Math.sin(dTheta);
+  const A: Vec3[] = [];
+  const B: Vec3[] = [];
+  for (let i = 0; i < n; i++) {
+    A.push({ x: radius + a.px[i] * scale, y: a.offY - a.py[i] * scale, z: -depth / 2 });
+    const r = radius + b.px[i] * scale;
+    const t = depth / 2;
+    B.push({ x: r * c - t * sn, y: b.offY - b.py[i] * scale, z: r * sn + t * c });
+  }
+  return { verts: bandVerts(A, B), idx: bandTriIndex(n) };
 }
