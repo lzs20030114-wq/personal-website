@@ -3,6 +3,13 @@ import {
   PEAK_REACH,
   RING_GRID_VIEW_K,
   ringGridViewFit,
+  ringGridScene,
+  roomBoxes,
+  roomSpan,
+  FIGURE,
+  MM_PER_UNIT,
+  ROOM,
+  figureSpot,
   RING_GAP_RATIO,
   RING_GRID,
   RING_GRID_COUNT,
@@ -15,6 +22,7 @@ import {
   ringGridSpan,
   ringOuter,
 } from './skin-grid';
+import { figureBox } from './figure';
 import { RING, buildRingUnits, ringGap } from './skin-ring';
 import { SKIN, createSkinUnit } from './skin-unit';
 
@@ -79,8 +87,8 @@ describe('skin-grid 4×4 环阵列', () => {
       expect(pitches[i], `R=${RADII[i]}`).toBeGreaterThan(pitches[i - 1]); // 半径大 → 格距大
       expect(scales[i], `R=${RADII[i]}`).toBeLessThan(scales[i - 1]); // 阵列变大 → 相机退
     }
-    // 取景恒按整片占宽算 ⇒ 屏上占比不随半径漂
-    const onScreen = RADII.map((r) => ringGridSpan(r) * ringGridCamScale(r));
+    // 取景恒按**房间**内净尺寸算（2026-08-25 布景落地后）⇒ 屏上占比不随半径漂
+    const onScreen = RADII.map((r) => roomSpan(r) * ringGridCamScale(r));
     for (const v of onScreen) expect(v).toBeCloseTo(onScreen[0], 6);
   });
 
@@ -149,6 +157,75 @@ describe('skin-grid 4×4 环阵列', () => {
       expect(inRow.length).toBe(RING_GRID.COLS);
       for (const c of inRow) expect(c.z).toBeCloseTo(byRow[row * RING_GRID.COLS].z, 9);
     }
+  });
+
+  it('布景的尺度自洽：草图那三条比例 ⇒ 房高 / 人 / 离地', () => {
+    // 全站此前无尺度；这三条是由用户手绘草图的比例反推出来的，改一条别的要跟着改
+    expect(MM_PER_UNIT * FIGURE.HEIGHT).toBeCloseTo(1700, 6); // 人 = 1.70 m
+    const hang = 336; // 吊件总长（收缩全程包络）——房高就是按它 / 0.71 定的
+    expect(ROOM.FLOOR_Y / hang).toBeCloseTo(1 / 0.71, 1);
+    expect(FIGURE.HEIGHT / ROOM.FLOOR_Y).toBeCloseTo(0.455, 1);
+    expect(ROOM.FLOOR_Y - hang).toBe(137); // 吊件下缘离地 ≈ 1.08 m
+    // 取景包围盒的下界就是地板底面：地板落在画外的话「站在地上」就读不出来
+    expect(ROOM.FLOOR_Y + ROOM.FLOOR_T).toBeGreaterThanOrEqual(ROOM.FLOOR_Y);
+  });
+
+  it('位置关系：人站在地上、在房间内、且不与任何一个环相撞', () => {
+    for (const r of RADII) {
+      const spec = figureSpot(r);
+      const b = figureBox(spec);
+      expect(b.y1, `R=${r} 脚没落地`).toBeCloseTo(ROOM.FLOOR_Y, 6);
+      expect(b.y0, `R=${r} 顶到天花`).toBeGreaterThan(0);
+      // 在房间内（墙内面 = ±roomSpan/2）
+      const wall = roomSpan(r) / 2;
+      for (const v of [b.x0, b.x1, b.z0, b.z1]) expect(Math.abs(v), `R=${r} 出墙`).toBeLessThan(wall);
+      // 与十六个环的水平净距 > 0。这条是硬的不是构图偏好：人的头顶（y≈258）比带子的
+      // 下缘（y=336）还高，平面上一旦与环重叠，头就插进平台里了
+      const reach = Math.max(b.x1 - b.x0, b.z1 - b.z0) / 2;
+      expect(b.y0, `R=${r} 头顶反而低于带子下缘了，这条约束的前提变了`).toBeLessThan(336);
+      for (const c of ringGridCells(r, 'uniform')) {
+        const d = Math.hypot(spec.x - c.x, spec.z - c.z);
+        expect(d - ringOuter(r) - reach, `R=${r} 与环相撞`).toBeGreaterThan(0);
+      }
+      // 正视图里人落在最外一列之外（草图画的就是这个位置关系）
+      expect(spec.x, `R=${r} 人没在阵列外侧`).toBeGreaterThan(ringGridSpan(r) / 2);
+    }
+  });
+
+  it('房间：地板 + 两面墙，墙内面到最外环外缘 = 留距', () => {
+    for (const r of [RING.RADIUS_DEF, RING.RADIUS_MAX]) {
+      expect(roomSpan(r) - ringGridSpan(r)).toBeCloseTo(2 * ROOM.MARGIN, 6);
+      const boxes = roomBoxes(r);
+      expect(boxes.length).toBe(3);
+      const [floor, wx, wz] = boxes;
+      // 地板铺满房间、顶面就是地面高度
+      expect(floor.cy - floor.hy).toBeCloseTo(ROOM.FLOOR_Y, 6);
+      expect(floor.hx * 2).toBeGreaterThanOrEqual(roomSpan(r));
+      // 两面墙在 −X / −Z（相机在 +X/+Z 上方 ⇒ 远端，露内表面、不挡装置）
+      expect(wx.cx).toBeLessThan(0);
+      expect(wz.cz).toBeLessThan(0);
+      // 墙顶收在天花平面 y=0：那条顶边就是草图里的天花线
+      for (const w of [wx, wz]) expect(w.cy - w.hy).toBeCloseTo(0, 6);
+      for (const w of [wx, wz]) expect(w.cy + w.hy).toBeCloseTo(ROOM.FLOOR_Y, 6);
+      // **不做天花板面**：做了会横在相机与装置之间，整幅盖死
+      expect(boxes.some((b) => b.cy + b.hy <= 0 && b.hx > 50)).toBe(false);
+    }
+  });
+
+  it('布景件：房间三件 + 人一件，随半径重建', () => {
+    const a = ringGridScene(RING.RADIUS_DEF);
+    expect(a.length).toBe(4);
+    expect(a.filter((m) => m.kind === 'room').length).toBe(3);
+    expect(a.filter((m) => m.kind === 'figure').length).toBe(1);
+    for (const m of a) {
+      expect(m.verts.length % 3).toBe(0);
+      expect(m.idx.length % 3).toBe(0);
+      for (const i of m.idx) expect(i).toBeLessThan(m.verts.length / 3);
+    }
+    // 半径变了房间跟着变（格距变了墙不动的话阵列会撞穿墙）
+    const wide = roomBoxes(RING.RADIUS_MAX)[1];
+    const near = roomBoxes(RING.RADIUS_DEF)[1];
+    expect(Math.abs(wide.cx)).toBeGreaterThan(Math.abs(near.cx));
   });
 
   it('环本身与 Lab.09 逐字同源——阵列只是把它复制到十六处', () => {

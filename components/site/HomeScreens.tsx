@@ -175,7 +175,7 @@ const LABS = [
   {
     kicker: 'Lab.10',
     title: 'Four by four',
-    body: 'Sixteen of those cylinders on a floor grid — 320 bands, one solved section.',
+    body: 'Sixteen of those cylinders hung in a room, with a 1.70 m figure for scale.',
     meta: '16 live rings · WebGL',
     href: '/lab#lab10',
     bar: 'var(--p700)',
@@ -191,11 +191,11 @@ export interface HomeLog {
   text: string;
 }
 
-// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-08-25 vitest 实测 355；
+// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-08-25 vitest 实测 363；
 // 迭代稿配色：Tests=绿 700、Kernels=紫 700、Demos=绿 600）
 const STATS = [
   { n: '04', label: 'Projects', color: 'var(--ink)' },
-  { n: '355', label: 'Tests green', color: 'var(--accent)' },
+  { n: '363', label: 'Tests green', color: 'var(--accent)' },
   { n: '03', label: 'Solver kernels', color: 'var(--accent-2)' },
   { n: '10', label: 'Live demos', color: 'var(--g600)' },
 ];

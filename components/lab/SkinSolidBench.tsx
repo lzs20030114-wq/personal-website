@@ -65,6 +65,12 @@ const CEIL_RING = { inner: 12, outer: 11, y: -3, halfT: 3, segs: 72 } as const;
 const RAIL_DARK: [number, number, number] = [0.08, 0.09, 0.1];
 const RAIL_LITE: [number, number, number] = [0.4, 0.43, 0.46];
 const C_BOND: [number, number, number] = [0.88, 0.42, 0.24];
+// 布景（Lab.10 房间 + 比例小人，2026-08-25）：房间压得比芯轨还暗——它是背景不是展品；
+// 小人略亮且偏暖，在灰调的房间里一眼认得出是人
+const ROOM_DARK: [number, number, number] = [0.05, 0.06, 0.065];
+const ROOM_LITE: [number, number, number] = [0.24, 0.27, 0.29];
+const FIG_DARK: [number, number, number] = [0.12, 0.115, 0.105];
+const FIG_LITE: [number, number, number] = [0.62, 0.6, 0.56];
 
 type M3 = number[];
 type Quat = [number, number, number, number];
@@ -274,6 +280,7 @@ export function SkinSolidBench({
   ring = false,
   cells,
   ringPlans,
+  scene,
   camScaleFor,
   radius,
   thick = SOLID.THICK,
@@ -314,6 +321,12 @@ export function SkinSolidBench({
   cells?: (radius: number) => readonly SolidCell[];
   /** 环阵列的编制表：每份是「环上第 i 条带用哪一条引擎」；省略 = 只有一份（= order） */
   ringPlans?: readonly (readonly number[])[];
+  /**
+   * 布景（Lab.10 的房间 + 人体比例参考）：给半径返回一组静件三角网格。
+   * 随半径重建（格距变了房间也得变），台架按半径缓存、不逐帧重算。
+   * 省略 = 不画布景（Lab.07–09 的绘制路径逐位不变）。
+   */
+  scene?: (radius: number) => readonly { verts: Float32Array; idx: Uint32Array; kind: 'room' | 'figure' }[];
   /**
    * 取景：给半径与当前视角算 camScale。两件事都要它——阵列随半径变大时相机得跟着退，
    * 而**四个视角所需的取景差得很远**（轴测被宽度卡、顶视被整片地面的高度卡）。
@@ -356,9 +369,11 @@ export function SkinSolidBench({
   // （每格用哪一份编制随之变），拿旧的会让除第一份以外的编制一格都摆不出去。
   const cellsRef = useRef(cells);
   const camScaleRef = useRef(camScaleFor);
+  const sceneRef = useRef(scene);
   useEffect(() => {
     cellsRef.current = cells;
     camScaleRef.current = camScaleFor;
+    sceneRef.current = scene;
   });
   // 推进速率随编制变（渐变要解十一条引擎，得放慢）——主 effect 只建一次，故走 ref
   const rateRef = useRef(rate);
@@ -514,8 +529,22 @@ export function SkinSolidBench({
     /** 天花圆环板的摆放：每格一块，与编制无关 */
     const cellPlaces = (): readonly MeshPlace[] | undefined =>
       cells ? cellList.map((c) => ({ yaw: 0, x: c.x, y: 0, z: c.z })) : undefined;
+    /** 布景（房间 + 比例小人）：静件，按半径缓存重烘 */
+    let setR = Number.NaN;
+    let setMeshes: { data: Float32Array; kind: 'room' | 'figure' }[] = [];
+    const bakeScene = (): void => {
+      const f = sceneRef.current;
+      if (!f) return;
+      setMeshes = f(radiusRef.current).map((m) => ({
+        data: bakeIndexed(m.verts, m.idx),
+        kind: m.kind,
+      }));
+      setR = radiusRef.current;
+    };
+
     /** 半径变了：格距跟着走（用户 2026-08-25 拍板），相机也得跟着退 */
     const reflow = (): void => {
+      if (sceneRef.current && setR !== radiusRef.current) bakeScene();
       if (!cells) return;
       cellList = cellsRef.current!(radiusRef.current);
       if (camScaleRef.current) cam.retarget(layoutList[layoutIdx].pivot, scaleOf());
@@ -580,6 +609,7 @@ export function SkinSolidBench({
     };
     bakeCeil();
     // 环列天花是圆环板：半径可现场调 ⇒ 不能烘死，按半径缓存重烘（一次 72×4 顶点）
+    bakeScene();
     let ceilRingR = Number.NaN;
     let ceilRingData: Float32Array | null = null;
     const ceilRing = (): Float32Array => {
@@ -609,6 +639,13 @@ export function SkinSolidBench({
 
     const render = (): void => {
       R.beginFrame(cam);
+      // 布景先画：不透明、写深度，装置的遮挡关系交给 z-buffer
+      for (const m of setMeshes)
+        R.drawDynamicMesh(
+          m.data,
+          m.kind === 'figure' ? FIG_DARK : ROOM_DARK,
+          m.kind === 'figure' ? FIG_LITE : ROOM_LITE,
+        );
       if (ceiling === 'span') R.drawMesh(`ceil-span-${layoutIdx}`, IDENT, RAIL_DARK, RAIL_LITE);
       // 环列 = 一块圆环板；环阵列 = 同一块板摆到每一格（板与编制无关）
       else if (ceiling === 'ring')

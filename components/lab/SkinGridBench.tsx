@@ -3,12 +3,17 @@
 import { useMemo, useState } from 'react';
 import { RING, buildRingUnits } from '../../src/lib/space/skin-ring';
 import {
+  FIGURE,
+  MM_PER_UNIT,
   RING_GRID,
   RING_GRID_AXON,
   RING_GRID_DEFAULT_FORM,
+  RING_GRID_PIVOT_Y,
+  ROOM,
   ringGridCamScale,
   ringGridCells,
   ringGridPlans,
+  ringGridScene,
   type RingGridMode,
 } from '../../src/lib/space/skin-grid';
 import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
@@ -73,6 +78,7 @@ export function SkinGridBench({
       unitsKey={perRow ? 'perRow' : `uniform:${def.key}`}
       ring
       cells={cells}
+      scene={ringGridScene}
       camScaleFor={ringGridCamScale}
       radius={{ min: RING.RADIUS_MIN, max: RING.RADIUS_MAX, def: RING.RADIUS_DEF }}
       depth={RING.DEPTH}
@@ -80,7 +86,7 @@ export function SkinGridBench({
       ceiling="ring"
       rail="fixed"
       rate={perRow ? 80 : 110}
-      pivot={{ x: 0, y: 166, z: 0 }}
+      pivot={{ x: 0, y: RING_GRID_PIVOT_Y, z: 0 }}
       camScale={ringGridCamScale(RING.RADIUS_DEF, 'axon')}
       axon={RING_GRID_AXON}
       extraControls={
@@ -123,10 +129,10 @@ export function SkinGridBench({
         kicker: 'Lab.10 / Project II',
         title: '4×4 环阵列 · 一片场地',
         sub: perRow
-          ? `${RING_GRID.COLS}×${RING_GRID.ROWS} 个环 · 每行一种键谱 · 各 ${RING.COUNT} 条带`
-          : `${RING_GRID.COLS}×${RING_GRID.ROWS} 个环 · 同一键谱：${def.zh} · 各 ${RING.COUNT} 条带`,
-        hint: '编制 / 形态可切 · 半径滑块连格距一起变 · 顶视看排布 · 拖拽旋转',
-        aria: '4×4 环阵列：十六个收缩张紧外皮圆筒环铺成平面网格，每个环收缩后扣出一圈环形平台；格距随半径滑块算，可切整片同形或每行一种形态，可拖拽旋转',
+          ? `${RING_GRID.COLS}×${RING_GRID.ROWS} 个环 · 每行一种键谱 · 房高 ${((ROOM.FLOOR_Y * MM_PER_UNIT) / 1000).toFixed(2)} m`
+          : `${RING_GRID.COLS}×${RING_GRID.ROWS} 个环 · 同一键谱：${def.zh} · 房高 ${((ROOM.FLOOR_Y * MM_PER_UNIT) / 1000).toFixed(2)} m`,
+        hint: `编制 / 形态可切 · 半径滑块连格距一起变 · 顶视看排布 · 拖拽旋转 · 人 ${(FIGURE.MM / 1000).toFixed(2)} m 作比例`,
+        aria: '4×4 环阵列：十六个收缩张紧外皮圆筒环吊在一间房里铺成平面网格，每个环收缩后扣出一圈环形平台；地上站着一个 1.7 米高的人作比例参考；格距随半径滑块算，可切整片同形或每行一种形态，可拖拽旋转',
       }}
     />
   );
