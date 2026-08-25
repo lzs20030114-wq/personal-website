@@ -383,7 +383,8 @@ export default function LabPage() {
           specs={[
             ['Field', '4 × 4 rings · 20 bands each · 320 placements'],
             ['Solved', 'One section — the field is that section, placed'],
-            ['Scale', 'Figure 1.70 m ⇒ room 3.74 m · ring 1.30 m across'],
+            ['Scale', 'Figure 1.70 m ⇒ room 3.74 m · ring 0.65 m across'],
+            ['Rig', 'Half size, hung lower — underside stays at 1.08 m'],
             ['Pitch', '2 × (radius + peak swell 52.1) + gap · tracks the slider'],
             ['Gap', '1.5 × the gap inside a ring — rings stay separate'],
             ['Plans', 'One form ↔ one form per row'],

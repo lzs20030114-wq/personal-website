@@ -51,6 +51,25 @@ export const RING_GRID = {
 /** 格数 */
 export const RING_GRID_COUNT = RING_GRID.COLS * RING_GRID.ROWS;
 
+/**
+ * ## 装置整体缩放（用户 2026-08-25 拍板「整体缩小至 0.5」，并选定「挂得更低」）
+ *
+ * 环、格距、吊长、织物厚度——**装置的一切**按 0.5 缩；房间与人不缩。于是环形平台从
+ * ⌀1.30 m 变 ⌀0.65 m、场地 5.8 → 2.9 m 见方、吊长 2.65 → 1.33 m。
+ *
+ * 只缩不移的话下缘会从离地 1.08 m 升到 2.41 m（整片高过人头，读成吊顶而不是平台），
+ * 故缩完把装置整体下移 `RIG_Y`，**让下缘停在原来那个高度**——用户选的就是这一支。
+ * 空出来的那段由芯轨补上：立杆仍然从天花一直落到钉住点，装置挂在它的下半截。
+ *
+ * 实现上这是个**摆放期的均匀缩放**（gl3d 的 MeshPlace.s），不是把几何重算一遍——
+ * 引擎、键谱、对位构造、止程全都不知道有这回事，故与 Lab.06–09 仍是同一份东西。
+ */
+export const RIG_SCALE = 0.5;
+/** 装置在自身坐标系里的竖向占高（收缩全程包络；= 缩放前的吊长） */
+export const RIG_HANG = 336;
+/** 缩放后的整体下移量：使下缘仍停在缩放前那个高度 */
+export const RIG_Y = RIG_HANG * (1 - RIG_SCALE);
+
 /** 环的外缘半径（芯上半径 + 全程最大膨胀） */
 export function ringOuter(radius: number): number {
   return radius + PEAK_REACH;
@@ -66,44 +85,40 @@ export function ringCellPitch(radius: number): number {
   return 2 * ringOuter(radius) + ringCellGap(radius);
 }
 
-/** 整片阵列在一个方向上的占宽（含两端环的外缘） */
+/**
+ * 整片阵列在一个方向上的占宽（含两端环的外缘）——**世界单位**。
+ * `ringOuter`/`ringCellPitch`/`ringCellGap` 说的是装置自身坐标系里的尺寸（缩放前），
+ * 从这里开始乘上 RIG_SCALE 进世界；房间与人本来就在世界里，不乘。
+ */
 export function ringGridSpan(radius: number, cols: number = RING_GRID.COLS): number {
-  return (cols - 1) * ringCellPitch(radius) + 2 * ringOuter(radius);
+  return ((cols - 1) * ringCellPitch(radius) + 2 * ringOuter(radius)) * RIG_SCALE;
 }
 
 /**
- * 视野：camScale = K / span——半径拉大时整片阵列一起变大，相机得跟着退，
- * 否则 R=90 时四角的环出画。
+ * 视野：`camScale = ringGridViewFit(半径, 视角) × 余量`。
  *
- * **K 是逐视角的**，不是一个数管四个：一个环的时候四个预设差不多大，铺成 4×4
- * 之后差得很远。轴测下画面被**宽度**卡住，顶视下被**高度**卡住——而顶视看的正是
- * 738×738 的整片地面，投到 520 高的画框里，所需 scale 只有轴测的 0.77 倍。
- * 用一个数管四个的话：按轴测定则顶视裁掉两行（首版即此，CDP 截图实测），
- * 按顶视定则轴测两侧空出 150px。
+ * **逐视角、逐半径现算**，不是一个常数管四个视角——一个环的时候四个预设差不多大，
+ * 铺成 4×4 之后差得很远：轴测下画面被**宽度**卡住，顶视下被**整片地面的高度**卡住，
+ * 顶视所需的 scale 只有轴测的七成多。一个数管四个的话不是裁掉两行（首版即此，
+ * CDP 截图实测），就是两侧空出一大片。
  *
- * 每档 K = 该视角在滑块全量程内允许的最小 (scale × span)，再留 6% 余量。
- * 允许值由包络解析算出（阵列 bbox = ±span/2 见方 × 世界 y ∈ [−6, 336]，
- * 视口半宽高 350×260），四档实测：
- *   轴测 482 · 正 700 · 侧 629 · 顶 379（顶视随半径 379→409，取下限）。
- * 2026-08-25 布景落地后重标：包围盒从「阵列 + 带子高度」换成「房间内净尺寸 + 房高」，
- * 四档随之下调（轴测 468→453、顶 361→356）。
+ * 早先用过一张按半径下限标定的 K 表（K = scale × span）。2026-08-25 装置缩到 0.5 后
+ * 那张表失效了：房间的占宽减半而房高不变 ⇒ 房间的长宽比随半径变，允许值在量程内
+ * 摆动 23%，取下限就会在大半径处白留四分之一的画框。改成**直接用包络解析式**，
+ * 每个半径每个视角都贴着各自的极限留同一份余量，K 表随之退役。
  */
-export const RING_GRID_VIEW_K = {
-  axon: 453,
-  front: 658,
-  side: 591,
-  top: 356,
-} as const;
+export const RING_GRID_FIT = 0.94;
 
-export type RingGridView = keyof typeof RING_GRID_VIEW_K;
+export type RingGridView = 'axon' | 'front' | 'side' | 'top';
 
 export function ringGridCamScale(
   radius: number,
   view: string = 'axon',
   cols: number = RING_GRID.COLS,
 ): number {
-  const k = RING_GRID_VIEW_K[view as RingGridView] ?? RING_GRID_VIEW_K.axon;
-  return k / roomSpan(radius, cols);
+  const v: RingGridView =
+    view === 'front' || view === 'side' || view === 'top' ? view : 'axon';
+  return ringGridViewFit(radius, v, cols) * RING_GRID_FIT;
 }
 
 /** 本台的轴测机位（台架从这里取，故取景推导与实际机位同源、不会各说各话） */
@@ -184,12 +199,12 @@ export function roomBoxes(radius: number, cols: number = RING_GRID.COLS): RoomBo
  * y ≈ 258，而带子的下缘在 y = 336（更低），所以**平面上一旦与环重叠，头就会插进平台里**。
  * 站进环阵内部的十字过道也不行：会被四个环围住、读不出比例，手臂离平台外缘只剩十几公分。
  *
- * 取对角外扩 24 单位（≈ 19 cm）：全量程下与最近那个环的净距 28–86 单位，且
+ * 取对角外扩 40 单位（≈ 32 cm）：全量程下与最近那个环的净距 28–86 单位，且
  * **正视图里人正好落在最外一列的右边**——草图画的就是这张图的这个位置关系。
  * 朝向 +Z（面朝敞开的那一侧），正视看是正面、轴测看是四分之三侧面。
  */
 export function figureSpot(radius: number, cols: number = RING_GRID.COLS): FigureSpec {
-  const corner = ringGridSpan(radius, cols) / 2 + 24;
+  const corner = ringGridSpan(radius, cols) / 2 + 40;
   return { x: corner, z: corner, footY: ROOM.FLOOR_Y, height: FIGURE.HEIGHT, yaw: 0 };
 }
 
@@ -239,7 +254,7 @@ export function ringGridViewMatrix(view: RingGridView): number[] {
 /**
  * 某视角下**不裁边**所允许的最大 camScale：把阵列的包围盒（±span/2 见方 ×
  * RING_GRID_Y）投到该视角，取宽高两个约束里紧的那个。
- * RING_GRID_VIEW_K 就是按它标定的——守门卡「实际取景 ≤ 允许值」。
+ * `ringGridCamScale` 就是它乘上一份固定余量——守门卡「实际取景 ≤ 允许值、且余量恒定」。
  */
 export function ringGridViewFit(
   radius: number,
@@ -275,7 +290,7 @@ export function ringGridCells(
   cols: number = RING_GRID.COLS,
   rows: number = RING_GRID.ROWS,
 ): RingGridCell[] {
-  const pitch = ringCellPitch(radius);
+  const pitch = ringCellPitch(radius) * RIG_SCALE; // 世界格距
   const cells: RingGridCell[] = [];
   for (let r = 0; r < rows; r++)
     for (let c = 0; c < cols; c++)

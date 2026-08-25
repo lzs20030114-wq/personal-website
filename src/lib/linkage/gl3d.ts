@@ -27,13 +27,15 @@ export interface MeshPlace {
   x: number;
   y: number;
   z: number;
+  /** 均匀缩放（默认 1）。法向在着色器里 normalize，故均匀缩放不影响明暗。 */
+  s?: number;
 }
 
-/** 绕世界 Y 的 yaw → WebGL 列主序 3×3（与 placePoint 同取向） */
-function yawColMajor(yaw: number): number[] {
-  const c = Math.cos(yaw);
-  const sn = Math.sin(yaw);
-  return [c, 0, sn, 0, 1, 0, -sn, 0, c];
+/** 绕世界 Y 的 yaw + 均匀缩放 → WebGL 列主序 3×3（与 placePoint 同取向） */
+function yawColMajor(yaw: number, s = 1): number[] {
+  const c = Math.cos(yaw) * s;
+  const sn = Math.sin(yaw) * s;
+  return [c, 0, sn, 0, s, 0, -sn, 0, c];
 }
 const IDENT3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
@@ -489,7 +491,7 @@ export class FlatRenderer {
     // 顶点已上传：多处摆放只换两个 uniform 各画一遍（不传 places = 原来那一次恒等绘制）
     if (places && places.length) {
       for (const q of places) {
-        gl.uniformMatrix3fv(uR, false, yawColMajor(q.yaw));
+        gl.uniformMatrix3fv(uR, false, yawColMajor(q.yaw, q.s));
         gl.uniform3f(uT, q.x, q.y, q.z);
         gl.drawArrays(gl.TRIANGLES, 0, nv);
       }
@@ -731,7 +733,7 @@ export class FlatRenderer {
     gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 12, 0);
     if (places && places.length) {
       for (const q of places) {
-        gl.uniformMatrix3fv(uR, false, yawColMajor(q.yaw));
+        gl.uniformMatrix3fv(uR, false, yawColMajor(q.yaw, q.s));
         gl.uniform3f(uT, q.x, q.y, q.z);
         gl.drawArrays(gl.LINES, 0, segs.length * 2);
       }

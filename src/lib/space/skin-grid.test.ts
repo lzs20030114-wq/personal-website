@@ -1,9 +1,12 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   PEAK_REACH,
-  RING_GRID_VIEW_K,
+  RING_GRID_FIT,
   ringGridViewFit,
   ringGridScene,
+  RIG_SCALE,
+  RIG_Y,
+  RIG_HANG,
   roomBoxes,
   roomSpan,
   FIGURE,
@@ -87,27 +90,25 @@ describe('skin-grid 4×4 环阵列', () => {
       expect(pitches[i], `R=${RADII[i]}`).toBeGreaterThan(pitches[i - 1]); // 半径大 → 格距大
       expect(scales[i], `R=${RADII[i]}`).toBeLessThan(scales[i - 1]); // 阵列变大 → 相机退
     }
-    // 取景恒按**房间**内净尺寸算（2026-08-25 布景落地后）⇒ 屏上占比不随半径漂
-    const onScreen = RADII.map((r) => roomSpan(r) * ringGridCamScale(r));
-    for (const v of onScreen) expect(v).toBeCloseTo(onScreen[0], 6);
+    // 装置缩到 0.5 后房间的长宽比随半径变（占宽减半、房高不变）⇒「屏上占比恒定」
+    // 这条不再成立，取而代之的是上一条「每档余量恒定」。这里只卡取景确实随半径动。
+    expect(ringGridCamScale(RING.RADIUS_MAX)).toBeLessThan(ringGridCamScale(RING.RADIUS_MIN));
   });
 
-  it('取景：四个视角各自算，全量程都不裁边（顶视最苛刻）', () => {
-    const views = Object.keys(RING_GRID_VIEW_K) as (keyof typeof RING_GRID_VIEW_K)[];
+  it('取景：四个视角逐半径各自算，全量程都不裁边、余量恒定', () => {
+    const views = ['axon', 'front', 'side', 'top'] as const;
     for (const r of RADII)
       for (const v of views) {
         const used = ringGridCamScale(r, v);
         const fit = ringGridViewFit(r, v);
         expect(used, `${v} R=${r} 裁边`).toBeLessThanOrEqual(fit);
-        // 也不能白留：余量控制在 15% 以内，否则画框里全是空地
-        expect(used / fit, `${v} R=${r} 太空`).toBeGreaterThan(0.85);
+        // 每档都贴着自己的极限留同一份余量：既不裁边，也不白留一大片空地
+        expect(used / fit, `${v} R=${r} 余量漂了`).toBeCloseTo(RING_GRID_FIT, 9);
       }
-    // 顶视看的是整片地面（span 见方投进 520 高的画框），是四档里最苛刻的那个；
-    // 一个数管四个的话不是裁掉两行就是两侧空出一大片（首版即此）
-    for (const r of RADII) {
-      expect(ringGridViewFit(r, 'top')).toBeLessThan(ringGridViewFit(r, 'axon'));
-      expect(RING_GRID_VIEW_K.top).toBeLessThan(RING_GRID_VIEW_K.axon);
-    }
+    expect(RING_GRID_FIT).toBeGreaterThan(0.85);
+    expect(RING_GRID_FIT).toBeLessThan(1);
+    // 顶视看的是整片地面（span 见方投进 520 高的画框），是四档里最苛刻的那个
+    for (const r of RADII) expect(ringGridViewFit(r, 'top')).toBeLessThan(ringGridViewFit(r, 'axon'));
     // 未知视角退回轴测，不炸
     expect(ringGridCamScale(RING.RADIUS_DEF, 'nope')).toBe(ringGridCamScale(RING.RADIUS_DEF, 'axon'));
   });
@@ -117,7 +118,7 @@ describe('skin-grid 4×4 环阵列', () => {
       const cells = ringGridCells(r, 'uniform');
       expect(cells.length).toBe(RING_GRID_COUNT);
       expect(RING_GRID_COUNT).toBe(RING_GRID.COLS * RING_GRID.ROWS);
-      const pitch = ringCellPitch(r);
+      const pitch = ringCellPitch(r) * RIG_SCALE; // cells 是世界单位，ringCellPitch 是装置单位
       // 居中：两个方向的重心都在原点（枢轴才不用随半径动）
       expect(cells.reduce((a, c) => a + c.x, 0) / cells.length).toBeCloseTo(0, 9);
       expect(cells.reduce((a, c) => a + c.z, 0) / cells.length).toBeCloseTo(0, 9);
@@ -133,7 +134,7 @@ describe('skin-grid 4×4 环阵列', () => {
         expect(cells[row * RING_GRID.COLS].z - cells[(row - 1) * RING_GRID.COLS].z).toBeCloseTo(pitch, 6);
       // 占宽 = 首末格中心距 + 两端各半个环
       const xs = cells.map((c) => c.x);
-      expect(Math.max(...xs) - Math.min(...xs) + 2 * ringOuter(r)).toBeCloseTo(ringGridSpan(r), 6);
+      expect(Math.max(...xs) - Math.min(...xs) + 2 * ringOuter(r) * RIG_SCALE).toBeCloseTo(ringGridSpan(r), 6);
     }
   });
 
@@ -185,11 +186,30 @@ describe('skin-grid 4×4 环阵列', () => {
       expect(b.y0, `R=${r} 头顶反而低于带子下缘了，这条约束的前提变了`).toBeLessThan(336);
       for (const c of ringGridCells(r, 'uniform')) {
         const d = Math.hypot(spec.x - c.x, spec.z - c.z);
-        expect(d - ringOuter(r) - reach, `R=${r} 与环相撞`).toBeGreaterThan(0);
+        expect(d - ringOuter(r) * RIG_SCALE - reach, `R=${r} 与环相撞`).toBeGreaterThan(0);
       }
       // 正视图里人落在最外一列之外（草图画的就是这个位置关系）
       expect(spec.x, `R=${r} 人没在阵列外侧`).toBeGreaterThan(ringGridSpan(r) / 2);
     }
+  });
+
+  it('装置缩到 0.5 且下缘不动（用户 2026-08-25 拍板）', () => {
+    expect(RIG_SCALE).toBe(0.5);
+    // 缩完整体下移，使下缘停在缩放前那个高度 —— 只缩不移的话整片会升到人头以上
+    expect(RIG_HANG * RIG_SCALE + RIG_Y).toBeCloseTo(RIG_HANG, 9);
+    // 下缘离地仍是 1.08 m；顶端退到半空，那一截由芯轨（房间的立杆）补上
+    expect((ROOM.FLOOR_Y - RIG_HANG) * MM_PER_UNIT).toBeCloseTo(1083, 0);
+    expect(RIG_Y * MM_PER_UNIT / 1000).toBeCloseTo(1.33, 1); // 顶端离天花 = 缩掉的那一半
+    // 世界尺寸确实是装置尺寸的一半
+    for (const r of RADII) {
+      expect(ringGridSpan(r)).toBeCloseTo(
+        ((RING_GRID.COLS - 1) * ringCellPitch(r) + 2 * ringOuter(r)) * RIG_SCALE, 6);
+      const cells = ringGridCells(r, 'uniform');
+      expect(cells[1].x - cells[0].x).toBeCloseTo(ringCellPitch(r) * RIG_SCALE, 6);
+    }
+    // 平台 ⌀0.65 m、场地 2.9 m 见方（缩放前是 1.30 / 5.8）
+    expect(2 * ringOuter(RING.RADIUS_DEF) * RIG_SCALE * MM_PER_UNIT / 1000).toBeCloseTo(0.65, 2);
+    expect(ringGridSpan(RING.RADIUS_DEF) * MM_PER_UNIT / 1000).toBeCloseTo(2.92, 2);
   });
 
   it('房间：地板 + 两面墙，墙内面到最外环外缘 = 留距', () => {

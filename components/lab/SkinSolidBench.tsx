@@ -280,6 +280,7 @@ export function SkinSolidBench({
   ring = false,
   cells,
   ringPlans,
+  rig,
   scene,
   camScaleFor,
   radius,
@@ -321,6 +322,14 @@ export function SkinSolidBench({
   cells?: (radius: number) => readonly SolidCell[];
   /** 环阵列的编制表：每份是「环上第 i 条带用哪一条引擎」；省略 = 只有一份（= order） */
   ringPlans?: readonly (readonly number[])[];
+  /**
+   * 装置整体缩放（Lab.10：用户 2026-08-25「整体缩小至 0.5」）。
+   * `scale` = 摆放期的均匀缩放（几何一个数不重算，只是摆的时候缩）；
+   * `y` = 缩完的整体下移量，用来把装置的下缘留在原来那个高度。
+   * 省略 = 1 / 0（Lab.07–09 逐位不变）。**芯轨不吃这个缩放的竖向部分**——它是房间的
+   * 立杆，上端恒在天花，装置挂在它的下半截。
+   */
+  rig?: { scale: number; y: number };
   /**
    * 布景（Lab.10 的房间 + 人体比例参考）：给半径返回一组静件三角网格。
    * 随半径重建（格距变了房间也得变），台架按半径缓存、不逐帧重算。
@@ -518,8 +527,18 @@ export function SkinSolidBench({
 
     // 环阵列的格子表（随半径滑块重算：格距 = 2·外缘 + 缝，见 skin-grid）
     let cellList: readonly SolidCell[] = cells ? cellsRef.current!(radiusRef.current) : [];
-    /** 某份编制的全部摆放（方位角 + 格子平移）；非阵列 = undefined ⇒ 走原来的单处绘制 */
+    const rigS = rig?.scale ?? 1;
+    const rigY = rig?.y ?? 0;
+    /** 某份编制的全部摆放（方位角 + 缩放 + 格子平移）；非阵列 = undefined ⇒ 原来的单处绘制 */
     const placesOf = (inst: SolidInst): readonly MeshPlace[] | undefined => {
+      if (!cells) return undefined;
+      const out: MeshPlace[] = [];
+      for (const c of cellList)
+        if (c.plan === inst.plan) out.push({ yaw: inst.angle, x: c.x, y: rigY, z: c.z, s: rigS });
+      return out;
+    };
+    /** 同一批站位，但**不缩放**（芯轨那种已经按世界尺寸建好的件用） */
+    const placesWorldOf = (inst: SolidInst): readonly MeshPlace[] | undefined => {
       if (!cells) return undefined;
       const out: MeshPlace[] = [];
       for (const c of cellList)
@@ -616,8 +635,8 @@ export function SkinSolidBench({
       const rad = radiusRef.current;
       if (!ceilRingData || ceilRingR !== rad) {
         const pl = ringPlateVerts(
-          Math.max(2, rad - CEIL_RING.inner),
-          rad + CEIL_RING.outer,
+          Math.max(2, (rad - CEIL_RING.inner) * rigS),
+          (rad + CEIL_RING.outer) * rigS,
           CEIL_RING.y,
           CEIL_RING.halfT,
           CEIL_RING.segs,
@@ -670,6 +689,7 @@ export function SkinSolidBench({
         // 单环与直排仍是老式子——rp 非空时半径已在 rp 里，offX 恒 0
         const localX = cells ? radiusRef.current : inst.offX;
         const places = placesOf(inst);
+        const placesW = placesWorldOf(inst);
         fillSolidVerts(px, py, sim.n, localX, depth, thick, SOLID.SCALE, inst.verts, inst.offZ, v.offY, rp);
         R.drawDynamicMesh(bakeIndexed(inst.verts, v.topo.idxA), DARK_A, LITE_A, undefined, places);
         R.drawDynamicMesh(bakeIndexed(inst.verts, v.topo.idxB), DARK_B, LITE_B, undefined, places);
@@ -682,16 +702,21 @@ export function SkinSolidBench({
           CEIL_RING.y,
         );
         const rad0 = (rp ? rp.radius : 0) + localX;
+        // 芯轨按**世界尺寸**直接建（截面随装置缩，竖向不缩）：装置缩小后立杆仍从天花
+        // 落到钉住点，装置挂在它的下半截 —— 空出来的那段就是「挂得更低」本身。
+        // rig 缺省时 (scale 1, y 0) 这两行退化成原式子，Lab.07–09 逐位不变
+        const railTop = rail === 'fixed' ? rs.top : rs.top * rigS + rigY;
+        const railBot = rs.bottom * rigS + rigY;
         const railBox = boxVerts(
-          rad0 - 3.4,
-          (rs.top + rs.bottom) / 2,
-          inst.offZ,
-          2.4,
-          (rs.bottom - rs.top) / 2,
-          Math.min(6, depth / 4),
+          (rad0 - 3.4) * rigS,
+          (railTop + railBot) / 2,
+          inst.offZ * rigS,
+          2.4 * rigS,
+          (railBot - railTop) / 2,
+          Math.min(6, depth / 4) * rigS,
         );
         rotateVertsY(railBox.verts, rp); // 环上：轴对齐盒先按 (径向,切向) 建，再绕 Y 转到位
-        R.drawDynamicMesh(bakeIndexed(railBox.verts, railBox.idx), RAIL_DARK, RAIL_LITE, undefined, places);
+        R.drawDynamicMesh(bakeIndexed(railBox.verts, railBox.idx), RAIL_DARK, RAIL_LITE, undefined, placesW);
         // 天花板条 = 房间的天花板，**固定不动**（用户 2026-08-22 纠偏）：收缩注册在
         // 底端后带子的顶端离开它往下沉，那条缝就是「往下收」本身
         if (ceiling === 'per-unit') R.drawMesh(inst.ceilKey, IDENT, RAIL_DARK, RAIL_LITE);
