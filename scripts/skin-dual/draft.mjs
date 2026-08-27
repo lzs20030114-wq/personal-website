@@ -4,6 +4,7 @@
 // 用法： npx vite-node scripts/skin-dual/draft.mjs <out.svg> [模式]
 //   模式 pairs（默认）= 单结构参照 + 同形双结构三种 + 混合一种
 //        gap = 选定形态的中间贴合段间距系列（结构不变，只变两结构的间距）
+//        transition = 过渡组：单阶梯方箱 → 双阶梯方箱（12 级，顶端锚定生长）
 import { writeFileSync } from 'node:fs';
 import { createSkinUnit, SKIN } from '../../src/lib/space/skin-unit.ts';
 import {
@@ -14,6 +15,7 @@ import {
   DUAL_TAIL,
   buildDualBand,
   buildDualControl,
+  buildDualTransition,
 } from '../../src/lib/space/skin-dual.ts';
 
 const OUT = process.argv[2] ?? 'dual-draft.svg';
@@ -66,14 +68,69 @@ function seriesFor(mode) {
       ...buildDualBand('stepped', 'stepped', { mid }),
       zh: `双阶梯方箱 · mid=${mid}`,
     }));
+  if (mode === 'transition') return buildDualTransition();
   throw new Error(`未知模式 ${mode}`);
 }
+
+// 等弧长重采样 + 相邻形态距离（Lab.08/ring 的平滑判据，量整条带）
+const RS = 220;
+const resample = (pts) => {
+  const L = [0];
+  for (let i = 1; i < pts.length; i++)
+    L.push(L[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const total = L[L.length - 1];
+  const out = [];
+  let j = 0;
+  for (let m = 0; m < RS; m++) {
+    const s = (m / (RS - 1)) * total;
+    while (j < L.length - 2 && L[j + 1] < s) j++;
+    const f = (s - L[j]) / Math.max(1e-9, L[j + 1] - L[j]);
+    out.push([pts[j][0] + f * (pts[j + 1][0] - pts[j][0]), pts[j][1] + f * (pts[j + 1][1] - pts[j][1])]);
+  }
+  return out;
+};
+const dist = (A, B) => {
+  let s = 0;
+  for (let i = 0; i < RS; i++) s += Math.hypot(A[i][0] - B[i][0], A[i][1] - B[i][1]);
+  return s / RS;
+};
+
+/**
+ * 剪影：沿带高逐格取最大离轴 x（= 眼睛看到的轮廓）。过渡组必须用它评平滑——
+ * 等弧长重采样把贴轴压紧的隐藏松弛也计权（约半数采样点落在看不见的褶皱里），
+ * 松弛的轴向重排会冲高 Δ 而画面几乎没变。
+ */
+const SIL_DY = 2;
+const silhouette = (pts) => {
+  let y0 = 1e9;
+  let y1 = -1e9;
+  for (const [, y] of pts) {
+    y0 = Math.min(y0, y);
+    y1 = Math.max(y1, y);
+  }
+  const n = Math.ceil((y1 - y0) / SIL_DY) + 1;
+  const sil = new Float64Array(n);
+  for (const [x, y] of pts) {
+    const b = Math.round((y - y0) / SIL_DY);
+    if (x > sil[b]) sil[b] = x;
+  }
+  return { y0, sil };
+};
+const silDist = (A, B) => {
+  const n = Math.max(A.sil.length, B.sil.length);
+  let s = 0;
+  for (let i = 0; i < n; i++) s += Math.abs((A.sil[i] ?? 0) - (B.sil[i] ?? 0));
+  return s / n;
+};
 
 const series = seriesFor(MODE);
 const runs = series.map((u) => {
   const sim = runToEnd(u.spec, u.opts);
-  return { ...u, sim, draw: smooth(bandProfile(sim), u.smooth[0], u.smooth[1]) };
+  const raw = bandProfile(sim);
+  return { ...u, sim, samp: resample(raw), sil: silhouette(raw), draw: smooth(raw, u.smooth[0], u.smooth[1]) };
 });
+const gaps = runs.slice(1).map((r, i) => dist(runs[i].samp, r.samp));
+const silGaps = runs.slice(1).map((r, i) => silDist(runs[i].sil, r.sil));
 
 console.log(`模式 ${MODE} · ${runs.length} 条带（lead ${DUAL_LEAD} / free ${DUAL_FREE} / mid ${DUAL_MID} / tail ${DUAL_TAIL}）`);
 for (const r of runs) {
@@ -84,10 +141,16 @@ for (const r of runs) {
   });
   let out = 0;
   for (let k = 0; k < r.sim.n; k++) out = Math.max(out, r.sim.px[k] * 100);
+  const i = runs.indexOf(r);
   console.log(
-    `  ${r.zh.padEnd(18)} 节点 ${String(r.sim.n).padStart(3)}  离轴 ${out.toFixed(1).padStart(5)}px  锁定(链) ${perChain.join(' · ') || '—'}  总锁定 ${r.sim.locked.length}`,
+    `  ${r.zh.padEnd(18)} 节点 ${String(r.sim.n).padStart(3)}  离轴 ${out.toFixed(1).padStart(5)}px  锁定(链) ${perChain.join(' · ') || '—'}  总锁定 ${String(r.sim.locked.length).padStart(2)}` +
+      (i ? `  ← 剪影Δ ${silGaps[i - 1].toFixed(2)}（弧长Δ ${gaps[i - 1].toFixed(2)}）` : ''),
   );
 }
+if (silGaps.length > 1)
+  console.log(
+    `相邻剪影距离 ${Math.min(...silGaps).toFixed(2)}–${Math.max(...silGaps).toFixed(2)}（弧长口径 ${Math.min(...gaps).toFixed(2)}–${Math.max(...gaps).toFixed(2)}）`,
+  );
 
 // 解耦实测：双结构带 vs 拿掉另一个结构的对照带，逐节点最大偏差（px）
 if (MODE === 'pairs') {
