@@ -10,6 +10,7 @@ import {
   DUAL_FREE,
   DUAL_LEAD,
   DUAL_MID,
+  DUAL_MID_OPTIONS,
   DUAL_TAIL,
   buildDualBand,
   buildDualControl,
@@ -61,7 +62,7 @@ function seriesFor(mode) {
     ];
   }
   if (mode === 'gap')
-    return [16, 24, 40].map((mid) => ({
+    return DUAL_MID_OPTIONS.map((mid) => ({
       ...buildDualBand('stepped', 'stepped', { mid }),
       zh: `双阶梯方箱 · mid=${mid}`,
     }));

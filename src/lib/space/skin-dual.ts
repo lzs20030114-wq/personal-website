@@ -11,12 +11,17 @@
  *   [贴合 lead | 自由 f₁(键谱A) | 贴合 mid | 自由 f₂(键谱B) | 贴合 tail]
  * ——不是交接件暂缓的 tunnel 形态（那个要「皮-芯键新键型」，这里没有任何新键型）。
  *
- * ## 解耦的构造前提
+ * ## 解耦的构造前提（两个下限，实测钉准）
  *
- * 中间贴合段每迭代两次钉回芯上，两个结构之间只隔着被钉死的材料；全局约束里
- * 跨距最大的是 16（span-16 抗弯），故 **mid ≥ 16** 时没有任何一条约束同时抓住
- * 两个自由段的节点——两个结构静力学解耦，各自的锁定键集合与「把另一个结构的
- * 键谱拿掉」的对照带逐位相同（守门 skin-dual.test.ts 卡的就是这句话）。
+ * 中间贴合段每迭代两次钉回芯上，两个结构之间只隔着被钉死的材料。
+ * - **mid ≥ 16（合法下限）**：全局约束里跨距最大的是 16（span-16 抗弯），
+ *   不短于它就没有任何一条约束同时抓住两个自由段的节点。锁定键集合与单结构
+ *   逐位相同；但一个迭代**内**的瞬时位移仍会经贴合段传导（钉回发生在迭代末），
+ *   实测形态偏差 mid=16 时 0.40px（折叠体）/ 0.86px（贴轴缓冲）——肉眼不可见。
+ * - **mid ≥ 29（逐位解耦）**：一个迭代内扰动经贴合段的最大传导距离 =
+ *   16（span-16 的读窗）+ 13（前序 stretch/bend4/bend8 的累计写入 1+4+8）= 29 节；
+ *   贴合段不短于它时「把另一个结构拿掉」的对照带与双结构带**逐位相同**
+ *   （实测 mid=28 偏差 7e-2px、mid=29 起精确 0.000——守门卡的就是这一位）。
  *
  * ## 单收缩自由度
  *
@@ -33,12 +38,17 @@ import { SKIN, type SkinSeg, type SkinSpec, type SkinUnitOpts } from './skin-uni
 export const DUAL_FREE = 61;
 /** 扇形对位中心（正居中 ⇒ 上下缓冲等长，对位构造的 φ=1/2 对每个结构各自成立） */
 export const DUAL_CENTER = (DUAL_FREE - 1) / 2;
-/** 默认三段贴合：顶 / 中 / 尾。mid 的下限 16 是解耦前提（见文件头），不是手感量 */
+/** 默认三段贴合：顶 / 中 / 尾。mid 默认取合法下限 16 = 线稿里最贴草图的紧凑间距 */
 export const DUAL_LEAD = 24;
-export const DUAL_MID = 24;
+export const DUAL_MID = 16;
 export const DUAL_TAIL = 24;
-/** 解耦前提：全局约束最大跨距 = 16（advance 里的 span-16 抗弯） */
+/** 合法下限：全局约束最大跨距 = 16（advance 里的 span-16 抗弯），无一条约束跨两段 */
 export const DUAL_MID_MIN = 16;
+/** 逐位解耦下限：迭代内扰动最大传导 16 + (1+4+8) = 29 节（推导见文件头，实测钉准） */
+export const DUAL_MID_EXACT = 29;
+/** 台架的间距三档（mid 是待拍板的手感量——照转速滑块的先例做成控件，不替用户定死）：
+ *  紧凑 16 = 草图 · 29 = 逐位解耦下限 · 48 = 拉开读 */
+export const DUAL_MID_OPTIONS = [DUAL_MID_MIN, DUAL_MID_EXACT, 48] as const;
 
 export interface DualDims {
   lead?: number;
@@ -100,6 +110,20 @@ export function buildDualBand(keyA: string, keyB: string = keyA, dims?: DualDims
     opts: skinSiteOpts(A),
     smooth: [Math.max(sa[0], sb[0]), Math.max(sa[1], sb[1])] as const,
   };
+}
+
+/**
+ * Lab.11 台架的五条带：四种同形对（目录序，草图右侧那种）+ 一条混排
+ * （蘑菇＋直挑台——两条拉链各自独立的直接演示）。五条各自独立引擎。
+ */
+export function buildDualDisplay(dims?: DualDims): DualBandDef[] {
+  return [
+    buildDualBand('pocket', 'pocket', dims),
+    buildDualBand('bulb', 'bulb', dims),
+    buildDualBand('ledge', 'ledge', dims),
+    buildDualBand('stepped', 'stepped', dims),
+    buildDualBand('bulb', 'ledge', dims),
+  ];
 }
 
 /**
