@@ -10,9 +10,8 @@ import {
   buildDualBand,
   buildDualControl,
   buildDualDisplay,
-  buildDualTransition,
 } from './skin-dual';
-import { SKIN, createSkinUnit, type SkinBond, type SkinSeg, type SkinUnit } from './skin-unit';
+import { SKIN, createSkinUnit, type SkinBond, type SkinSeg } from './skin-unit';
 
 /**
  * 守门：双结构带（用户 2026-08-26 草图立项「条可以出现两个结构的」）。
@@ -188,94 +187,5 @@ describe('skin-dual 双结构带', () => {
         expect(Math.abs(dual.px[i])).toBeLessThan(1e-12);
     },
     RUN_TIMEOUT,
-  );
-});
-
-describe('skin-dual 过渡组（单方箱 → 双方箱）', () => {
-  const T = buildDualTransition();
-
-  it('构造：12 级、端点逐字、A 全程同一对象、顶端锚定、等长键', () => {
-    expect(T.length).toBe(12);
-    expect((T[0].spec[3] as SkinSeg)[2]).toEqual([]); // L0 = 真单结构（B 段无键）
-    expect(T[T.length - 1].spec[3]).toEqual(buildDualBand('stepped').spec[3]); // 末级 = 双方箱正谱
-    for (let i = 2; i < T.length; i++) expect(T[i].spec[1]).toBe(T[1].spec[1]); // A 引用同一
-    expect(T[0].spec[1]).toEqual(T[1].spec[1]);
-    // 五段布局全级恒定（收缩轨迹逐位同步的前提）
-    const layout = T[0].spec.map((s) => [s[0], s[1]]);
-    for (const d of T) expect(d.spec.map((s) => [s[0], s[1]])).toEqual(layout);
-    // 顶端锚定 + 等长键 + 生长时间表
-    const spans: number[] = [];
-    let prevCount = 0;
-    for (const d of T.slice(1)) {
-      const bonds = (d.spec[3] as SkinSeg)[2] as readonly SkinBond[];
-      expect(Math.min(...bonds.map((b) => b[0]))).toBe(4); // 最外键上角恒在节点 4
-      for (const b of bonds) expect(b[2]).toBe(bonds[0][2]); // 等长键
-      expect(bonds.length).toBeGreaterThanOrEqual(prevCount);
-      prevCount = bonds.length;
-      spans.push(Math.max(...bonds.map((b) => (b[1] - b[0]) / 2)));
-    }
-    expect(spans).toEqual([8, 10, 12, 14, 16, 18, 20, 22, 24, 25, 26]);
-  });
-
-  it(
-    '物理：逐级锁定齐全、B 挑出单调爬升、嘴逐级小步下落、剪影相邻距离有界',
-    () => {
-      const segB0 = DUAL_LEAD + DUAL_FREE + DUAL_MID;
-      const sims: SkinUnit[] = T.map((d) => {
-        const s = createSkinUnit(d.spec, d.opts);
-        for (let k = 0; k < SKIN.STEPS; k++) s.advance();
-        return s;
-      });
-      // 剪影：沿带高逐格取最大离轴 x（评平滑必须用它——等弧长口径会把贴轴压紧的
-      // 隐藏松弛的轴向重排计成大 Δ，而画面几乎没变；见 draft.mjs 同名实现）
-      const DY = 2;
-      const silhouette = (s: SkinUnit): Float64Array => {
-        let y0 = Infinity;
-        let y1 = -Infinity;
-        for (let i = 0; i < s.n; i++) {
-          const y = -s.py[i] * 100;
-          y0 = Math.min(y0, y);
-          y1 = Math.max(y1, y);
-        }
-        const sil = new Float64Array(Math.ceil((y1 - y0) / DY) + 1);
-        for (let i = 0; i < s.n; i++) {
-          const b = Math.round((-s.py[i] * 100 - y0) / DY);
-          const x = s.px[i] * 100;
-          if (x > sil[b]) sil[b] = x;
-        }
-        return sil;
-      };
-      let prevOut = 0;
-      let prevMouth: number | null = null;
-      let prevSil: Float64Array | null = null;
-      sims.forEach((s, li) => {
-        // 锁定齐全（每级全部键都要锁上，B 的链一根不欠）
-        let total = 0;
-        for (const ch of s.chains) total += ch.length;
-        expect(s.locked.length).toBe(total);
-        // B 挑出单调爬升（结构的出生是材料捕获的连续爬升，不许回缩）
-        let out = 0;
-        for (let i = segB0; i < segB0 + DUAL_FREE; i++) out = Math.max(out, s.px[i] * 100);
-        expect(out).toBeGreaterThanOrEqual(prevOut - 0.3);
-        prevOut = out;
-        // 嘴逐级小步移动（首版事故 = 欠定翻跳，单步 60px 量级；现全程 ≤13px/级）
-        if (li >= 1) {
-          const [a] = s.chains[1][0];
-          const mouthY = -s.py[a] * 100;
-          if (prevMouth !== null) expect(Math.abs(mouthY - prevMouth)).toBeLessThanOrEqual(13);
-          prevMouth = mouthY;
-        }
-        // 剪影相邻距离 ≤4.5px（实测 0.05–3.76；断层判据）
-        const sil = silhouette(s);
-        if (prevSil) {
-          const n = Math.max(sil.length, prevSil.length);
-          let d = 0;
-          for (let i = 0; i < n; i++) d += Math.abs((sil[i] ?? 0) - (prevSil[i] ?? 0));
-          expect(d / n).toBeLessThanOrEqual(4.5);
-        }
-        prevSil = sil;
-      });
-    },
-    240_000,
   );
 });

@@ -4,7 +4,6 @@
 // 用法： npx vite-node scripts/skin-dual/draft.mjs <out.svg> [模式]
 //   模式 pairs（默认）= 单结构参照 + 同形双结构三种 + 混合一种
 //        gap = 选定形态的中间贴合段间距系列（结构不变，只变两结构的间距）
-//        transition = 过渡组：单阶梯方箱 → 双阶梯方箱（12 级，顶端锚定生长）
 import { writeFileSync } from 'node:fs';
 import { createSkinUnit, SKIN } from '../../src/lib/space/skin-unit.ts';
 import {
@@ -15,7 +14,6 @@ import {
   DUAL_TAIL,
   buildDualBand,
   buildDualControl,
-  buildDualTransition,
 } from '../../src/lib/space/skin-dual.ts';
 
 const OUT = process.argv[2] ?? 'dual-draft.svg';
@@ -68,7 +66,6 @@ function seriesFor(mode) {
       ...buildDualBand('stepped', 'stepped', { mid }),
       zh: `双阶梯方箱 · mid=${mid}`,
     }));
-  if (mode === 'transition') return buildDualTransition();
   throw new Error(`未知模式 ${mode}`);
 }
 
