@@ -7,14 +7,15 @@
 // 中间级读作「鞍」，不是窄槽）；终态 = 两台 + 宽缝 G1，总高 = 2·LOBE + G1。
 // 圆角 = 密采样折线 + 滑动平均（草图质感），触轴后钳制 x ≥ 0。
 //
-// 用法：npx vite-node scripts/skin-dual/line-draft.mjs <out.svg> [终态缝宽=28]
+// v3（用户「上下两个台更薄一些」）：每台高 32 → 22（默认），副行改台高三档。
+// 用法：npx vite-node scripts/skin-dual/line-draft.mjs <out.svg> [终态缝宽=28] [台高=22]
 import { writeFileSync } from 'node:fs';
 
 const OUT = process.argv[2] ?? 'line-draft.svg';
 const G1 = Number(process.argv[3] ?? 28); // 终态缝宽（两台之间）
 
 const D = 40; // 台深
-const LOBE = 32; // 每台高（= 目录方箱嘴高）
+const LOBE = Number(process.argv[4] ?? 22); // 每台高（用户「更薄一些」：32 → 22）
 const TAIL = 46; // 上下轴线延伸
 const LEVELS = 10;
 
@@ -23,10 +24,10 @@ const wOf = (t, g1 = G1) => g1 * Math.pow(t, 0.7);
 const dvOf = (t) => D * Math.pow(t, 1.2);
 
 /** 尖角轮廓（x = 离轴，y = 向下；从上轴线到下轴线） */
-function sharpProfile(t, g1 = G1) {
+function sharpProfile(t, g1 = G1, lobe = LOBE) {
   const w = wOf(t, g1);
   const dv = dvOf(t);
-  const H = 2 * LOBE + w;
+  const H = 2 * lobe + w;
   const yc = H / 2;
   const pts = [
     [0, -TAIL],
@@ -88,9 +89,9 @@ const PAD = 34;
 const HMAX = 2 * LOBE + G1 + 2 * TAIL;
 const OY = PAD + 26 + TAIL * SC;
 const W = PAD * 2 + LEVELS * CW;
-const ALT_G = [20, 28, 36];
+const ALT_L = [18, 22, 26]; // 台高三档（缝恒 G1）
 const OY2 = OY + (2 * LOBE + G1 + TAIL) * SC + 76 + TAIL * SC;
-const HGT = OY2 + (2 * LOBE + 36 + TAIL) * SC + 40;
+const HGT = OY2 + (2 * 26 + G1 + TAIL) * SC + 40;
 const path = (pts, ox, oy) =>
   pts.map(([x, y], i) => `${i ? 'L' : 'M'}${(ox + x * SC).toFixed(2)},${(oy + y * SC).toFixed(2)}`).join('');
 let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${Math.ceil(HGT)}" viewBox="0 0 ${W} ${Math.ceil(HGT)}" font-family="ui-sans-serif,system-ui,sans-serif">
@@ -101,15 +102,15 @@ shapes.forEach((pts, i) => {
   svg += `<text x="${ox - 20}" y="${PAD + 10}" font-size="12" font-weight="600" fill="#3a3a38">${i === 0 ? '单箱' : i === LEVELS - 1 ? '双台' : `${i}/9`}</text>`;
   svg += `<path d="${path(pts, ox, OY)}" fill="none" stroke="#1c3a2c" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
 });
-svg += `<text x="${PAD}" y="${OY2 - TAIL * SC - 24}" font-size="13" font-weight="700" fill="#1b1b1a">终态缝宽三档（各画 5/9 级与终态）—— 供拍板</text>`;
-ALT_G.forEach((g, i) => {
+svg += `<text x="${PAD}" y="${OY2 - TAIL * SC - 24}" font-size="13" font-weight="700" fill="#1b1b1a">台高三档（缝恒 ${G1}，各画 5/9 级与终态）—— 供拍板</text>`;
+ALT_L.forEach((lb, i) => {
   [5 / 9, 1].forEach((t, j) => {
     const ox = PAD + (i * 2 + j) * CW + 30;
-    const pts = smooth(densify(sharpProfile(t, g)));
-    svg += `<text x="${ox - 20}" y="${OY2 - TAIL * SC - 4}" font-size="12" font-weight="600" fill="#3a3a38">缝 ${g} · ${t === 1 ? '终态' : '5/9'}</text>`;
+    const pts = smooth(densify(sharpProfile(t, G1, lb)));
+    svg += `<text x="${ox - 20}" y="${OY2 - TAIL * SC - 4}" font-size="12" font-weight="600" fill="#3a3a38">台高 ${lb} · ${t === 1 ? '终态' : '5/9'}</text>`;
     svg += `<path d="${path(pts, ox, OY2)}" fill="none" stroke="#1c3a2c" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
   });
 });
 svg += '</svg>';
 writeFileSync(OUT, svg);
-console.log(`→ ${OUT} · ${LEVELS} 级 · 每台 ${LOBE} · 终态缝 ${G1}（副行 ${ALT_G.join('/')}）`);
+console.log(`→ ${OUT} · ${LEVELS} 级 · 每台 ${LOBE} · 终态缝 ${G1}（副行台高 ${ALT_L.join('/')}）`);
