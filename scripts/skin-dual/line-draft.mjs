@@ -1,31 +1,39 @@
 // 纯几何线稿：捏分过渡的目标形态系列（用户 2026-08-27：「先只做这两条线之间
 // 过渡形态组，先把线是什么形态确认下来」）——不跑引擎，只画线。
-// 形态确认后再定实现路径（三箱 / 皮-芯键 / 其它）。
 //
-// 参数化：外包络恒定（高 H、深 D 的圆角矩形），面中央挖一个圆角凹谷，
-// 谷深 dv 逐级 0 → D（触轴 = 分成两瓣）；谷口宽 W 恒定。
-// 圆角 = 密采样折线 + 滑动平均（草图质感），谷底触轴后钳制 x ≥ 0。
+// v2（用户当轮纠偏「谷口应该更宽——本质是上下两个台，而不是一个大台中间挖个坑」）：
+// 参数化改成**两台分离**：单箱 = 两个 LOBE 高的台合在一起（总高 2·LOBE），
+// 过渡 = 两台逐级拉开，缝宽 w(t) 领先于缝深 dv(t)（开口先张、膜后退——
+// 中间级读作「鞍」，不是窄槽）；终态 = 两台 + 宽缝 G1，总高 = 2·LOBE + G1。
+// 圆角 = 密采样折线 + 滑动平均（草图质感），触轴后钳制 x ≥ 0。
 //
-// 用法：npx vite-node scripts/skin-dual/line-draft.mjs <out.svg> [谷口宽=12]
+// 用法：npx vite-node scripts/skin-dual/line-draft.mjs <out.svg> [终态缝宽=28]
 import { writeFileSync } from 'node:fs';
 
 const OUT = process.argv[2] ?? 'line-draft.svg';
-const WV = Number(process.argv[3] ?? 12); // 谷口宽
+const G1 = Number(process.argv[3] ?? 28); // 终态缝宽（两台之间）
 
-const D = 40; // 深
-const H = 74; // 总高（= 两瓣 + 谷口，终态每瓣 (74−12)/2 = 31）
+const D = 40; // 台深
+const LOBE = 32; // 每台高（= 目录方箱嘴高）
 const TAIL = 46; // 上下轴线延伸
 const LEVELS = 10;
 
+// 缝宽领先、缝深随后：w 张得快（t^0.7）、膜退得稳（t^1.2）
+const wOf = (t, g1 = G1) => g1 * Math.pow(t, 0.7);
+const dvOf = (t) => D * Math.pow(t, 1.2);
+
 /** 尖角轮廓（x = 离轴，y = 向下；从上轴线到下轴线） */
-function sharpProfile(dv, w) {
+function sharpProfile(t, g1 = G1) {
+  const w = wOf(t, g1);
+  const dv = dvOf(t);
+  const H = 2 * LOBE + w;
   const yc = H / 2;
   const pts = [
     [0, -TAIL],
     [0, 0],
     [D, 0],
   ];
-  if (dv > 0.5) {
+  if (w > 0.5) {
     pts.push([D, yc - w / 2]);
     pts.push([D - dv, yc - w / 2]);
     pts.push([D - dv, yc + w / 2]);
@@ -51,7 +59,7 @@ function densify(pts) {
   return out;
 }
 
-/** 滑动平均圆角（窗口 ~9px），端点原样 */
+/** 滑动平均圆角（窗口 ~9px） */
 function smooth(pts, w = 4, passes = 2) {
   let cur = pts;
   for (let p = 0; p < passes; p++)
@@ -67,38 +75,41 @@ function smooth(pts, w = 4, passes = 2) {
       }
       return [sx / n, sy / n];
     });
-  return cur.map(([x, y]) => [Math.max(0, x), y]); // 谷底触轴后不越过轴
+  return cur.map(([x, y]) => [Math.max(0, x), y]);
 }
 
 const levels = Array.from({ length: LEVELS }, (_, i) => i / (LEVELS - 1));
-const shapes = levels.map((t) => smooth(densify(sharpProfile(D * t, WV))));
+const shapes = levels.map((t) => smooth(densify(sharpProfile(t))));
 
-// ── SVG：主行 = 10 级系列；副行 = t=0.5 的谷口宽三档（供拍板） ─────────────
+// ── SVG：主行 = 10 级；副行 = 终态缝宽三档（各画中间级 + 终态，供拍板） ────
 const CW = 150;
-const SC = 2.2;
+const SC = 2.0;
 const PAD = 34;
+const HMAX = 2 * LOBE + G1 + 2 * TAIL;
 const OY = PAD + 26 + TAIL * SC;
 const W = PAD * 2 + LEVELS * CW;
-const ALT_W = [8, 12, 18];
-const OY2 = OY + (H + TAIL) * SC + 70 + TAIL * SC;
-const HGT = OY2 + (H + TAIL) * SC + 40;
+const ALT_G = [20, 28, 36];
+const OY2 = OY + (2 * LOBE + G1 + TAIL) * SC + 76 + TAIL * SC;
+const HGT = OY2 + (2 * LOBE + 36 + TAIL) * SC + 40;
 const path = (pts, ox, oy) =>
   pts.map(([x, y], i) => `${i ? 'L' : 'M'}${(ox + x * SC).toFixed(2)},${(oy + y * SC).toFixed(2)}`).join('');
-let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${HGT}" viewBox="0 0 ${W} ${HGT}" font-family="ui-sans-serif,system-ui,sans-serif">
-<rect width="${W}" height="${HGT}" fill="#f6f4ef"/>
-<text x="${PAD}" y="${PAD - 10}" font-size="15" font-weight="700" fill="#1b1b1a">线稿 · 捏分过渡 · 纯几何目标形态（谷口宽 ${WV}）</text>`;
+let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${Math.ceil(HGT)}" viewBox="0 0 ${W} ${Math.ceil(HGT)}" font-family="ui-sans-serif,system-ui,sans-serif">
+<rect width="${W}" height="${Math.ceil(HGT)}" fill="#f6f4ef"/>
+<text x="${PAD}" y="${PAD - 10}" font-size="15" font-weight="700" fill="#1b1b1a">线稿 · 两台分离过渡 · 纯几何目标形态（每台高 ${LOBE} · 终态缝 ${G1}）</text>`;
 shapes.forEach((pts, i) => {
   const ox = PAD + i * CW + 30;
-  svg += `<text x="${ox - 20}" y="${PAD + 10}" font-size="12" font-weight="600" fill="#3a3a38">${i === 0 ? '单箱' : i === LEVELS - 1 ? '双箱' : `${i}/9`}</text>`;
+  svg += `<text x="${ox - 20}" y="${PAD + 10}" font-size="12" font-weight="600" fill="#3a3a38">${i === 0 ? '单箱' : i === LEVELS - 1 ? '双台' : `${i}/9`}</text>`;
   svg += `<path d="${path(pts, ox, OY)}" fill="none" stroke="#1c3a2c" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
 });
-svg += `<text x="${PAD}" y="${OY2 - TAIL * SC - 24}" font-size="13" font-weight="700" fill="#1b1b1a">中间级（5/9）的谷口宽三档 —— 供拍板</text>`;
-ALT_W.forEach((w, i) => {
-  const ox = PAD + i * CW + 30;
-  const pts = smooth(densify(sharpProfile(D * (5 / 9), w)));
-  svg += `<text x="${ox - 20}" y="${OY2 - TAIL * SC - 4}" font-size="12" font-weight="600" fill="#3a3a38">谷口 ${w}</text>`;
-  svg += `<path d="${path(pts, ox, OY2)}" fill="none" stroke="#1c3a2c" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
+svg += `<text x="${PAD}" y="${OY2 - TAIL * SC - 24}" font-size="13" font-weight="700" fill="#1b1b1a">终态缝宽三档（各画 5/9 级与终态）—— 供拍板</text>`;
+ALT_G.forEach((g, i) => {
+  [5 / 9, 1].forEach((t, j) => {
+    const ox = PAD + (i * 2 + j) * CW + 30;
+    const pts = smooth(densify(sharpProfile(t, g)));
+    svg += `<text x="${ox - 20}" y="${OY2 - TAIL * SC - 4}" font-size="12" font-weight="600" fill="#3a3a38">缝 ${g} · ${t === 1 ? '终态' : '5/9'}</text>`;
+    svg += `<path d="${path(pts, ox, OY2)}" fill="none" stroke="#1c3a2c" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
+  });
 });
 svg += '</svg>';
 writeFileSync(OUT, svg);
-console.log(`→ ${OUT} · ${LEVELS} 级 · 谷深 0→${D} · 谷口 ${WV}（副行 ${ALT_W.join('/')}）`);
+console.log(`→ ${OUT} · ${LEVELS} 级 · 每台 ${LOBE} · 终态缝 ${G1}（副行 ${ALT_G.join('/')}）`);
