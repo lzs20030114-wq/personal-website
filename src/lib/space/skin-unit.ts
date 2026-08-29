@@ -99,6 +99,14 @@ export interface SkinUnitOpts {
    */
   sqChains?: readonly number[];
   /**
+   * 只做找平的链（2026-08-29 刻缝方箱缝链用）：boxSquare 五件套里
+   * 只取「底面找平 + 端角键距重申」两件——补 v7「只找平上层」的老不对称
+   * （缝链 i 侧有核心台面找平、j 侧下缝壁没有，实测锯齿全长在下壁），
+   * 而不带嘴角贴轴 / flattenToLine（那两件对缝链是破坏性的）。
+   * 仅在 boxSquare 开启时生效；省略 = 无此类链（既有行为逐位不变）。
+   */
+  levelChains?: readonly number[];
+  /**
    * **皮-芯键（tunnel 机制）**——交接件「暂缓项」，用户 2026-08-27 明确解禁。
    * `[节点下标, 半径]`：该皮节点**不得越出**这个离轴距离（引擎单位，×100 = px）。
    *
@@ -212,6 +220,8 @@ export class SkinUnit {
   private coreTether: readonly (readonly [number, number])[] | null;
   /** boxSquare 的作用链（null = 全部链，既有行为） */
   private sqChains: readonly number[] | null;
+  /** 只做找平（底面找平 + 端角重申）的链；null = 无（既有行为） */
+  private levelChains: readonly number[] | null;
   private anchorEnd: boolean;
   /** anchorEnd 的锚：末节点在 r=R0 时的 y（此后恒定） */
   private anchorRef = 0;
@@ -229,6 +239,7 @@ export class SkinUnit {
     this.rootHug = opts.rootHug ?? 0;
     this.coreTether = opts.coreTether && opts.coreTether.length ? opts.coreTether : null;
     this.sqChains = opts.sqChains ?? null;
+    this.levelChains = opts.levelChains ?? null;
     this.anchorEnd = opts.anchorEnd ?? false;
     this.r1 = opts.r1 ?? SKIN.R1;
     this.boxSquare =
@@ -513,17 +524,21 @@ export class SkinUnit {
       if (this.boxSquare > 0) {
         const sq = this.boxSquare; // 强度：<1 时各项整形按比例减力（Lab.08 过渡渐入）
         for (let c = 0; c < chains.length; c++) {
-          if (this.sqChains && !this.sqChains.includes(c)) continue; // 只整形指定链
+          const full = !this.sqChains || this.sqChains.includes(c); // 全套整形
+          const lvlOnly = !full && !!this.levelChains && this.levelChains.includes(c); // 只找平
+          if (!full && !lvlOnly) continue;
           const ch = chains[c];
           const lbi = this.chainLocked[c];
           // 嘴角贴轴：最外键对（链首）x=0——箱体内面就是轴。从 step 0 就锚，
           // 拉链照走（两角同在轴上时键距 = |Δy|，收缩推进自然入锁定窗口）
-          if (sq >= 1) {
-            px[ch[0][0]] = 0;
-            px[ch[0][1]] = 0;
-          } else {
-            px[ch[0][0]] *= 1 - sq;
-            px[ch[0][1]] *= 1 - sq;
+          if (full) {
+            if (sq >= 1) {
+              px[ch[0][0]] = 0;
+              px[ch[0][1]] = 0;
+            } else {
+              px[ch[0][0]] *= 1 - sq;
+              px[ch[0][1]] *= 1 - sq;
+            }
           }
           if (lbi.length >= 3) {
             // 底面找平：v7 只找平上层台面（lb 全跨的 i 侧），底面（j 侧）对称补上
@@ -552,10 +567,12 @@ export class SkinUnit {
           // 顶/底面压平：端角键锁定后（面才成立），把面内节点向「嘴角→端角连线」
           // 投影——只压横向偏差（垂足），沿线分布仍归拉伸/直化管。键间富余的
           // ±2.3px 起伏此前当织物质感保留，用户 2026-08-19 拍板「不够平直」，压掉。
-          const tip = ch[ch.length - 1];
-          if (lockedSet.has(tip[0] * 1024 + tip[1])) {
-            this.flattenToLine(ch[0][0], tip[0], sq);
-            this.flattenToLine(tip[1], ch[0][1], sq);
+          if (full) {
+            const tip = ch[ch.length - 1];
+            if (lockedSet.has(tip[0] * 1024 + tip[1])) {
+              this.flattenToLine(ch[0][0], tip[0], sq);
+              this.flattenToLine(tip[1], ch[0][1], sq);
+            }
           }
         }
         // 端面拉直：找平每迭代把两个端角拽向顶/底面，把角旁的段抻长（实测 2.64px

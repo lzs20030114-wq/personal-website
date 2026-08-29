@@ -263,6 +263,19 @@ describe('coreTether 皮-芯键（tunnel 机制，用户 2026-08-27 解禁）', 
   );
 
   it(
+    'levelChains：不与 sqChains 配合时惰性——全部链已吃全套整形，默认路径零影响',
+    () => {
+      const base = run(opts);
+      const s = run({ ...opts, levelChains: [0] });
+      let dev = 0;
+      for (let i = 0; i < base.n; i++)
+        dev = Math.max(dev, Math.abs(base.px[i] - s.px[i]), Math.abs(base.py[i] - s.py[i]));
+      expect(dev).toBe(0);
+    },
+    240_000,
+  );
+
+  it(
     '单侧限位：被限的节点不越出给定半径，且它是限位（不是钉死）——其余材料仍自由',
     () => {
       const base = run(opts);
