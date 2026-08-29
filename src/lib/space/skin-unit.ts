@@ -85,6 +85,27 @@ export interface SkinUnitOpts {
    */
   boxSquare?: boolean | number;
   /**
+   * **皮-芯键（tunnel 机制）**——交接件「暂缓项」，用户 2026-08-27 明确解禁。
+   * `[节点下标, 半径]`：该皮节点**不得越出**这个离轴距离（引擎单位，×100 = px）。
+   *
+   * **单侧**（限位，不是钉死）——与 `coreWall`（皮不得内穿 x≥0）正好是一对镜像。
+   * 双向硬钉试过并否决：钉住的点确实到位、点与点之间的材料却绞成死结
+   *（实测中段自交成环；数字全对而图全错——这是本项目第三次「量对了、形错了」）。
+   * 单侧限位下材料是被 PRESS 自己压上去的、且可沿限位滑动，形状仍由物理找平衡。
+   * 默认 undefined = 不启用 ⇒ 默认路径逐字不变、
+   * Python 对照守门不受影响（与 coreWall / rootHug / anchorEnd / boxSquare 同款先例）。
+   *
+   * 为什么非它不可（2026-08-27 两轮实测的结论）：引擎里**没有任何朝轴的体制**——
+   * 键只锁距离、不定侧；PRESS 恒向外；富余材料往哪折由拉链的形成序决定，
+   * 而形成序里没有一步是朝轴的。所以「悬空的再入特征」（裂口尖停在半深处、
+   * 不切到轴）做不出来：贴合锚键能把尖拉住却拉不出体制（箱体随即散开）。
+   * 这条键就是唯一缺的那件——给材料一个「离轴多远」的直接约束。
+   *
+   * 用法纪律：**只钉必须钉的那几个点**（比如裂口尖），其余交给键谱与物理；
+   * 拿它逐点描形 = 把形状写死，不是让形状从键谱长出来。
+   */
+  coreTether?: readonly (readonly [number, number])[];
+  /**
    * 收缩的注册端：默认 false = 顶端（v7 原行为——node 0 钉在天花，自由段一变短，
    * 它下面的材料整体上移，带子的下缘随收缩往上跑）；true = **底端**（用户
    * 2026-08-22 拍板「把收缩的固定点和方向反转」——最后一个节点钉住不动，
@@ -166,6 +187,8 @@ export class SkinUnit {
   private chainLocked: number[][];
   private coreWall: boolean;
   private rootHug: number;
+  /** 皮-芯键（见 SkinUnitOpts.coreTether）；null = 未启用，默认路径零影响 */
+  private coreTether: readonly (readonly [number, number])[] | null;
   private anchorEnd: boolean;
   /** anchorEnd 的锚：末节点在 r=R0 时的 y（此后恒定） */
   private anchorRef = 0;
@@ -181,6 +204,7 @@ export class SkinUnit {
     this.spec = spec;
     this.coreWall = opts.coreWall ?? false;
     this.rootHug = opts.rootHug ?? 0;
+    this.coreTether = opts.coreTether && opts.coreTether.length ? opts.coreTether : null;
     this.anchorEnd = opts.anchorEnd ?? false;
     this.r1 = opts.r1 ?? SKIN.R1;
     this.boxSquare =
@@ -573,6 +597,14 @@ export class SkinUnit {
       }
       if (this.coreWall) {
         for (let i = 0; i < n; i++) if (this.freeMask[i] && px[i] < 0) px[i] = 0; // 皮不得穿芯
+      }
+      if (this.coreTether) {
+        // 皮-芯键：单侧径向限位，放在迭代最后 ⇒ 它是这一迭代的最后一句话
+        // （拉伸/抗弯/整形都在它之前跑过；下一迭代它们再据此重新分配材料）
+        for (let t = 0; t < this.coreTether.length; t++) {
+          const tie = this.coreTether[t];
+          if (px[tie[0]] > tie[1]) px[tie[0]] = tie[1];
+        }
       }
     }
     this.step = step + 1;

@@ -189,3 +189,54 @@ describe('skin-dual 双结构带', () => {
     RUN_TIMEOUT,
   );
 });
+
+describe('coreTether 皮-芯键（tunnel 机制，用户 2026-08-27 解禁）', () => {
+  const spec = [
+    ['g', 24],
+    ['f', 61, [[8, 52, 0.32]], [[22, 38]]],
+    ['g', 24],
+  ] as unknown as Parameters<typeof createSkinUnit>[0];
+  const opts = { coreWall: true, rootHug: 1, anchorEnd: true, boxSquare: true } as const;
+  const run = (o: Parameters<typeof createSkinUnit>[1]) => {
+    const s = createSkinUnit(spec, o);
+    for (let k = 0; k < SKIN.STEPS; k++) s.advance();
+    return s;
+  };
+
+  it(
+    '默认不启用：给 undefined / 空表与不传逐位相同（Python 对照路径零影响）',
+    () => {
+      const base = run(opts);
+      for (const variant of [{ ...opts, coreTether: undefined }, { ...opts, coreTether: [] }]) {
+        const s = run(variant);
+        let dev = 0;
+        for (let i = 0; i < base.n; i++)
+          dev = Math.max(dev, Math.abs(base.px[i] - s.px[i]), Math.abs(base.py[i] - s.py[i]));
+        expect(dev).toBe(0);
+      }
+    },
+    120_000,
+  );
+
+  it(
+    '单侧限位：被限的节点不越出给定半径，且它是限位（不是钉死）——其余材料仍自由',
+    () => {
+      const base = run(opts);
+      let peak = 0;
+      let peakAt = 0;
+      for (let i = 24; i < 24 + 61; i++)
+        if (base.px[i] > peak) {
+          peak = base.px[i];
+          peakAt = i;
+        }
+      const cap = peak * 0.6;
+      const s = run({ ...opts, coreTether: [[peakAt, cap]] });
+      expect(s.px[peakAt]).toBeLessThanOrEqual(cap + 1e-12); // 不得越出
+      // 单侧：限位之外的材料没有被一并钉住（仍有比 cap 更远的节点）
+      let far = 0;
+      for (let i = 24; i < 24 + 61; i++) far = Math.max(far, s.px[i]);
+      expect(far).toBeGreaterThan(cap);
+    },
+    120_000,
+  );
+});
