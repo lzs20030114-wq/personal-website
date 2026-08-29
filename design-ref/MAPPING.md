@@ -740,3 +740,12 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
 - 机位按全程运动包络离线定（`scripts/skin-dual/envelope.mjs`）：pivot (315, 190) / camScale 0.88，三档里最长的 mid=48 带全程画内、四边余量 ≥53px。
 - 挂点：/lab 第十一台（Project II 组头 Lab.06–11、页脚 11 instruments、标头 eleven live instruments——顺带修掉陈旧的「eight」）；主页 S2 第十一卡（网格 `lg:grid-cols-10`→`grid-cols-11`）；统计条 Tests 370→377、Demos 10→11。
 - CDP 生产实测（软件 GL：`--use-angle=swiftshader --enable-unsafe-swiftshader`，无此二参 WebGL 建不出、台架早退 step 恒 0）：/lab 11 段 8 canvas、Lab.11 推进、间距切 48 就地重建、主页 Lab.11 卡与 377 就位，两页均无 pageerror。
+
+## 18. Lab.12 · 捏分过渡（2026-08-29，用户「把这次的一组工作做完然后推上去合并」）
+
+- **无设计稿可对**——机构研究件（草图立项），呈现语言全部沿用 Lab.07/08：SkinSolidBench 薄封装（`components/lab/SkinSplitBench.tsx`）、深色 HUD、发丝线规格表、3px 紫顶线（3D/WebGL 家族）。
+- 十条带 = 捏分过渡的十级（单箱 → 两台），构造与逐级旋钮 = `src/lib/space/skin-split.ts`，守门 `skin-split.test.ts` 9 项。与 Lab.08 阵列过渡的分工：那台串联两张既有目录键谱，这台每级是单独设计的谱（用户否决生成器路线）。
+- 排布：沿 X 排开 gapX 80（照 Lab.08 十二条带的口径——结构只 ~44px 深，密排才读得出逐级挪动）、通长天花 `ceiling='span'`、**芯轨取 `rail='fixed'`**（各级自由段长度不同 ⇒ 顶端下沉幅度不同；固定立杆让它读作「布沿杆往下聚」而不是「带子脱开天花」，Lab.09/10 先例）。
+- 机位按**实测像素包围盒**定（headless CDP 截图 → Node 侧解 PNG 找内容框；量之前先把 `.lab-hud` 藏掉，否则逐帧变的读数会被当成形体——旧坑）：pivot (382, 280) / camScale 0.60，四边余量 153/163/50/52，全程无裁切。两轮定的：先在小 scale 上量出未裁的世界尺寸（935×915），再解出「装得下且居中」的一组值。
+- 挂点：/lab 第十二台（Project II 组头 Lab.06–12、页脚 12 instruments、标头 twelve live instruments）；主页 S2 第十二卡（网格 `grid-cols-11`→`grid-cols-12`）；统计条 Tests 379→391、Demos 11→12。
+- CDP 生产实测（软件 GL）：/lab 七段逐台有 canvas 且推进（Lab.06–12）、Lab.12 三视角、主页十二卡与统计条、案例页 1 canvas，全程无 pageerror、无 console error。

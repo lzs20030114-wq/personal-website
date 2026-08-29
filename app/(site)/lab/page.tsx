@@ -12,18 +12,20 @@ import { SkinArrayBench } from '../../../components/lab/SkinArrayBench';
 import { SkinRingBench } from '../../../components/lab/SkinRingBench';
 import { SkinGridBench } from '../../../components/lab/SkinGridBench';
 import { SkinDualBench } from '../../../components/lab/SkinDualBench';
+import { SkinSplitBench } from '../../../components/lab/SkinSplitBench';
 
 export const metadata = { title: 'The lab' };
 
 /**
- * The lab（Lab-Modernist 稿 → MAPPING §7）：十一台真求解器台架，深色语言与 case/log 一致。
+ * The lab（Lab-Modernist 稿 → MAPPING §7）：十二台真求解器台架，深色语言与 case/log 一致。
  * ★ 版式逐项对稿：300px 定宽左栏 + 44px 间距；规格表竖排行（92px 标签列 + 发丝线分隔）；
  *   图框 3px 彩色顶线（2D 绿 / 3D 紫）+ 极淡填充；标题 72px；页脚两链。
  * 每台跑的是站内 TS 内核，不是视频、不是二次实现：Lab.01–05 = src/lib/linkage（封盘零改，
  * 项目一），Lab.06–07 = src/lib/space（项目二皮肤单元引擎，Python 研究代码的 1:1 移植；
  * 07 是同一引擎的立体带呈现，几何烘焙 skin-solid + 复用 gl3d/camera3d 装备；
  * 08 = 十二条带的键谱渐变阵列；09 = 二十条同谱窄带围成圆筒、收缩成环形平台；10 = 十六个那样的圆筒环吊在一间房里铺成 4×4 网格，地上站着人作比例；
- * 11 = 双结构带——五段谱一条带折出上下两个结构，两条拉链各自独立）。
+ * 11 = 双结构带——五段谱一条带折出上下两个结构，两条拉链各自独立；
+ * 12 = 捏分过渡——十级从单箱裂成两台，每级一份单独设计的谱）。
  * 2026-08-18 起页面按项目分组（MAPPING §16）——log 页先例：多项目共用一条主线。
  */
 const KICKER: CSSProperties = {
@@ -179,7 +181,7 @@ export default function LabPage() {
       <div className="shell pg-dark" data-pt-content>
         <header style={{ padding: '64px 0 40px', borderBottom: 'var(--hair)' }}>
           <div className="flex items-baseline justify-between" style={{ gap: 32 }}>
-            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · eleven live instruments</p>
+            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · twelve live instruments</p>
             <span style={LEGEND}>
               <span className="flex items-center" style={{ gap: 6 }}>
                 <span style={{ width: 9, height: 9, background: 'var(--accent)' }} />
@@ -308,7 +310,7 @@ export default function LabPage() {
         {/* 项目二尚未定名：与 log 页 PROJECT_GROUPS 同一措辞（描述而非标题），定名后一并改 */}
         <ProjectRule
           label="Project II — Spatial simulation"
-          sub="Lab.06–11 · skin-unit engine"
+          sub="Lab.06–12 · skin-unit engine"
         />
 
         <Bench
@@ -413,6 +415,24 @@ export default function LabPage() {
           <SkinDualBench />
         </Bench>
 
+        <Bench
+          no="12"
+          title="Pinched apart"
+          lede="Ten bands, each its own bond map, walking a single box until it is two platforms. The seam is cut, not carved: an outer ladder folds the box while a second zipper inside it — plus one bond per face corner, which is what makes the faces stand upright — holds the crack open, and a one-sided tether to the mast keeps its floor from sinking past the target. Every level was designed on its own and measured against the drawn target by silhouette; the numbers agreed three times while the shape was wrong, so only the picture counts."
+          accent="var(--accent-2)"
+          specs={[
+            ['Series', '10 levels · one box ⇒ two platforms'],
+            ['Target', 'Platform 12 px · depth 40 · final seam 28'],
+            ['Design', 'Per level — no single parameter sweeps it'],
+            ['Chains', 'Outer ladder + seam zipper + two face-corner bonds'],
+            ['Tether', 'Skin-to-mast, one-sided — a ceiling, not a pin'],
+            ['Fit', 'Silhouette Δ 0.3–5.5 px · neighbours within 1.4×'],
+            ['Align', 'Tail and buffers fixed ⇒ the floor line holds'],
+          ]}
+        >
+          <SkinSplitBench />
+        </Bench>
+
         <footer
           className="flex flex-wrap items-baseline justify-between"
           style={{ gap: 32, padding: '26px 0 72px' }}
@@ -426,7 +446,7 @@ export default function LabPage() {
               color: 'var(--n500)',
             }}
           >
-            11 instruments · 03 kernels · all live
+            12 instruments · 03 kernels · all live
           </span>
           <span
             className="flex"

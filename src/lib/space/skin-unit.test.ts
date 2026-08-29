@@ -322,7 +322,10 @@ describe('skin unit 引擎公共行为', () => {
     expect(s5.droop).toBeLessThan(s0.droop * 0.6); // 半强度显著收平……
     expect(s5.droop).toBeGreaterThan(s1.droop); // ……但还没到全量（分级真实）
     expect(sT.droop).toBe(s1.droop); // true ≡ 1
-  });
+    // 四条 168 节的带各跑满 1500 步 ≈ 5.8s，正卡在 vitest 5s 默认预算上：
+    // 套件并行负载一高就超时（2026-08-29 加进第十二台后实测）。给显式预算，
+    // 与本仓库其它引擎用例同款做法——它不是慢，是预算给小了。
+  }, 60_000);
 
   it('端面投影的几何门（candC 崩法回归）：rb 远小于端面弧长时渐入档不硬压——' +
      '形态有界、键照锁、端面保留鼓弧', () => {
