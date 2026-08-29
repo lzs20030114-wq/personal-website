@@ -20,7 +20,15 @@ export type SkinPanel = readonly [number, number]; // (a, b)：区段强制直�
 export type SkinSeg =
   | readonly ['g', number] // 贴合段：钉在芯上
   | readonly ['f', number, readonly SkinBond[]] // 自由段：富余材料 + 键谱
-  | readonly ['f', number, readonly SkinBond[], readonly SkinPanel[]];
+  | readonly ['f', number, readonly SkinBond[], readonly SkinPanel[]]
+  /**
+   * 第 5 元素 = **附加链**（2026-08-29 捏分过渡需要，加法式）：同一段材料上的
+   * 第二组（或更多）独立拉链。v7 的「一段一链」是移植格式的产物，不是物理决定
+   * ——链机制本身按链循环，天然支持多链；此前双结构带的两条链就是靠两个段。
+   * 刻缝方箱的缝键必须与外箱梯分链：混在一条链里，台面找平（advance 内
+   * i 侧全跨 y 均值，核心 v7 行为）会把面和缝一起压毁。省略 = 旧行为逐位不变。
+   */
+  | readonly ['f', number, readonly SkinBond[], readonly SkinPanel[], readonly (readonly SkinBond[])[]];
 export type SkinSpec = readonly SkinSeg[];
 
 /** 全部物理常量，逐字取自 v7（不是手感参数，不许调——协议本体） */
@@ -85,6 +93,12 @@ export interface SkinUnitOpts {
    */
   boxSquare?: boolean | number;
   /**
+   * boxSquare 的作用链（链下标，按 buildUnit 的链序）。省略 = 全部链（既有行为）。
+   * 刻缝方箱（2026-08-29）需要它：缝链的最外键是缝角、在面上不在轴上，
+   * 嘴角贴轴会把缝角硬拉回轴——方箱整形只该作用于外箱梯那条链。
+   */
+  sqChains?: readonly number[];
+  /**
    * **皮-芯键（tunnel 机制）**——交接件「暂缓项」，用户 2026-08-27 明确解禁。
    * `[节点下标, 半径]`：该皮节点**不得越出**这个离轴距离（引擎单位，×100 = px）。
    *
@@ -137,7 +151,14 @@ export function buildUnit(spec: SkinSpec): SkinBuild {
         zone.sort((t1, t2) => t2[1] - t2[0] - (t1[1] - t1[0])); // 拉链: 跨度大(近主干)在前（稳定排序）
         chains.push(zone);
       }
-      if (s.length === 4) for (const [a, b] of s[3]) panels.push([idx + a, idx + b]);
+      if (s.length === 4 || s.length === 5) for (const [a, b] of s[3]) panels.push([idx + a, idx + b]);
+      if (s.length === 5)
+        for (const extra of s[4]) {
+          if (!extra.length) continue;
+          const zone: SkinBond[] = extra.map(([a, b, rb]) => [idx + a, idx + b, rb]);
+          zone.sort((t1, t2) => t2[1] - t2[0] - (t1[1] - t1[0]));
+          chains.push(zone); // 附加链排在本段主链之后（链序 = 声明序）
+        }
     }
     idx += s[1];
   }
@@ -189,6 +210,8 @@ export class SkinUnit {
   private rootHug: number;
   /** 皮-芯键（见 SkinUnitOpts.coreTether）；null = 未启用，默认路径零影响 */
   private coreTether: readonly (readonly [number, number])[] | null;
+  /** boxSquare 的作用链（null = 全部链，既有行为） */
+  private sqChains: readonly number[] | null;
   private anchorEnd: boolean;
   /** anchorEnd 的锚：末节点在 r=R0 时的 y（此后恒定） */
   private anchorRef = 0;
@@ -205,6 +228,7 @@ export class SkinUnit {
     this.coreWall = opts.coreWall ?? false;
     this.rootHug = opts.rootHug ?? 0;
     this.coreTether = opts.coreTether && opts.coreTether.length ? opts.coreTether : null;
+    this.sqChains = opts.sqChains ?? null;
     this.anchorEnd = opts.anchorEnd ?? false;
     this.r1 = opts.r1 ?? SKIN.R1;
     this.boxSquare =
@@ -489,6 +513,7 @@ export class SkinUnit {
       if (this.boxSquare > 0) {
         const sq = this.boxSquare; // 强度：<1 时各项整形按比例减力（Lab.08 过渡渐入）
         for (let c = 0; c < chains.length; c++) {
+          if (this.sqChains && !this.sqChains.includes(c)) continue; // 只整形指定链
           const ch = chains[c];
           const lbi = this.chainLocked[c];
           // 嘴角贴轴：最外键对（链首）x=0——箱体内面就是轴。从 step 0 就锚，

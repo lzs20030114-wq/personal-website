@@ -11,7 +11,7 @@ import {
   buildDualControl,
   buildDualDisplay,
 } from './skin-dual';
-import { SKIN, createSkinUnit, type SkinBond, type SkinSeg } from './skin-unit';
+import { SKIN, buildUnit, createSkinUnit, type SkinBond, type SkinSeg, type SkinSpec } from './skin-unit';
 
 /**
  * 守门：双结构带（用户 2026-08-26 草图立项「条可以出现两个结构的」）。
@@ -216,6 +216,50 @@ describe('coreTether 皮-芯键（tunnel 机制，用户 2026-08-27 解禁）', 
       }
     },
     120_000,
+  );
+
+  it('附加链（谱第 5 元素，2026-08-29 捏分过渡需要）：各成独立链、各自跨度降序；空表与省略同义', () => {
+    const bonds: SkinBond[] = [[4, 40, 0.24]];
+    const extra: SkinBond[] = [[16, 28, 0.12], [12, 32, 0.16]];
+    const spec5: SkinSpec = [
+      ['g', 8],
+      ['f', 45, bonds, [[18, 26]], [extra]],
+      ['g', 8],
+    ];
+    const b5 = buildUnit(spec5);
+    expect(b5.chains.length).toBe(2); // 主链 + 附加链，不并链
+    expect(b5.chains[0]).toEqual([[12, 48, 0.24]]);
+    expect(b5.chains[1]).toEqual([
+      [20, 40, 0.16], // 附加链内部同样跨度降序 = 拉链序
+      [24, 36, 0.12],
+    ]);
+    expect(b5.panels).toEqual([[26, 34]]);
+    // 空附加链表 = 与四元素谱完全同构（默认路径零影响的结构面）
+    const spec4: SkinSpec = [
+      ['g', 8],
+      ['f', 45, bonds, [[18, 26]]],
+      ['g', 8],
+    ];
+    const bEmpty = buildUnit([['g', 8], ['f', 45, bonds, [[18, 26]], []], ['g', 8]]);
+    expect(bEmpty).toEqual(buildUnit(spec4));
+  });
+
+  it(
+    'sqChains：省略 = 全部链吃 boxSquare（既有行为）；指定后未列入的链不吃嘴角贴轴',
+    () => {
+      // 单链单元上 sqChains:[0] 与省略必须逐位相同（作用域=全集时是同一码路）
+      const base = run(opts);
+      const scoped = run({ ...opts, sqChains: [0] });
+      let dev = 0;
+      for (let i = 0; i < base.n; i++)
+        dev = Math.max(dev, Math.abs(base.px[i] - scoped.px[i]), Math.abs(base.py[i] - scoped.py[i]));
+      expect(dev).toBe(0);
+      // 排除链 0 后嘴角不再被钉在轴上（贴轴是 boxSquare 独有的硬钉）
+      const excluded = run({ ...opts, sqChains: [] });
+      const mouth = excluded.chains[0][0];
+      expect(Math.abs(excluded.px[mouth[0]]) + Math.abs(excluded.px[mouth[1]])).toBeGreaterThan(1e-6);
+    },
+    240_000,
   );
 
   it(
