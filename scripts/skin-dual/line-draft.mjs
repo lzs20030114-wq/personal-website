@@ -5,8 +5,10 @@
 // 参数化改成**两台分离**：单箱 = 两个 LOBE 高的台合在一起，过渡 = 两台逐级拉开，
 // 终态 = 两台 + 宽缝 G1（总高 2·LOBE + G1 —— 台的尺寸全程不变，是「长开」不是切开）。
 // v3（用户「上下两个台更薄一些」）：每台高 32 → 22。
-// v4（用户「上下再薄一点，然后做好过渡」）：
-//   ① 每台高 22 → 16（副行台高三档 12/16/20）；
+// v4（用户「上下再薄一点，然后做好过渡」）：每台高 22 → 16；
+// **v5 定版（用户 2026-08-27 拍板「台高 12 做吧」）**：每台高 12、终态缝 28、10 级。
+//   比选副行撤掉——这张就是目标线形本身，后续引擎实现照它对。
+//   ① 台高 12（定值）；
 //   ② **缝做成有锥度的裂口**：嘴宽 wm、尖宽 wt = wm·τ(t)，τ 从 0.4 爬到 1
 //      ——早期是窄楔（材料刚被拉开），末期是平行缝（两台完全分离）；
 //   ③ **节奏改按视觉差量等分**（弧长重参数化，不再手调幂函数）：
@@ -14,12 +16,12 @@
 //      故可在形状空间里量相邻距离。做法 = 密采样 t、累积相邻剪影距离、按等距取级。
 //      早期那几级（缝还没张开、肉眼几乎没差）会被自动跳过，步长比 ~1.0。
 //
-// 用法：npx vite-node scripts/skin-dual/line-draft.mjs <out.svg> [终态缝宽=28] [台高=16]
+// 用法：npx vite-node scripts/skin-dual/line-draft.mjs <out.svg> [终态缝宽=28] [台高=12]
 import { writeFileSync } from 'node:fs';
 
 const OUT = process.argv[2] ?? 'line-draft.svg';
 const G1 = Number(process.argv[3] ?? 28); // 终态缝宽（两台之间）
-const LOBE = Number(process.argv[4] ?? 16); // 每台高（用户两轮「更薄」：32 → 22 → 16）
+const LOBE = Number(process.argv[4] ?? 12); // 每台高（**定版**：用户三轮「更薄」32 → 22 → 16 → 12）
 
 const D = 40; // 台深
 const TAIL = 46; // 上下轴线延伸
@@ -175,35 +177,24 @@ console.log(
     `（比值 ${(Math.max(...steps) / Math.min(...steps)).toFixed(2)}×）`,
 );
 
-// ── SVG：主行 = 等距 10 级（缝心对齐）；副行 = 台高三档 ─────────────────────
-const CW = 150;
-const SC = 2.2;
-const PAD = 34;
-const HALF = (2 * 20 + G1) / 2 + TAIL; // 按最厚一档留版面
-const OY = PAD + 30 + HALF * SC;
+// ── SVG：等距 10 级，缝心对齐 ────────────────────────────────────────────
+const CW = 168;
+const SC = 2.9;
+const PAD = 36;
+const HALF = (2 * LOBE + G1) / 2 + TAIL;
+const OY = PAD + 34 + HALF * SC;
 const W = PAD * 2 + LEVELS * CW;
-const ALT_L = [12, 16, 20];
-const OY2 = OY + HALF * SC + 76 + HALF * SC;
-const HGT = Math.ceil(OY2 + HALF * SC + 34);
+const HGT = Math.ceil(OY + HALF * SC + 34);
 const path = (pts, ox, oy) =>
   pts.map(([x, y], i) => `${i ? 'L' : 'M'}${(ox + x * SC).toFixed(2)},${(oy + y * SC).toFixed(2)}`).join('');
 let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${HGT}" viewBox="0 0 ${W} ${HGT}" font-family="ui-sans-serif,system-ui,sans-serif">
 <rect width="${W}" height="${HGT}" fill="#f6f4ef"/>
-<text x="${PAD}" y="${PAD - 10}" font-size="15" font-weight="700" fill="#1b1b1a">线稿 · 两台分离过渡 · 纯几何目标形态（每台高 ${LOBE} · 终态缝 ${G1} · 视觉等距 ${LEVELS} 级）</text>`;
+<text x="${PAD}" y="${PAD - 12}" font-size="16" font-weight="700" fill="#1b1b1a">目标线形 · 定版 · 两台分离过渡（每台高 ${LOBE} · 台深 ${D} · 终态缝 ${G1} · 视觉等距 ${LEVELS} 级）</text>`;
 shapes.forEach((pts, i) => {
   const ox = PAD + i * CW + 30;
   svg += `<text x="${ox - 20}" y="${PAD + 12}" font-size="12" font-weight="600" fill="#3a3a38">${i === 0 ? '单箱' : i === LEVELS - 1 ? '双台' : `${i}/${LEVELS - 1}`}</text>`;
   svg += `<path d="${path(pts, ox, OY)}" fill="none" stroke="#1c3a2c" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
 });
-svg += `<text x="${PAD}" y="${OY2 - HALF * SC - 22}" font-size="13" font-weight="700" fill="#1b1b1a">台高三档（缝恒 ${G1}，各画中段与终态）—— 供拍板</text>`;
-ALT_L.forEach((lb, i) => {
-  const ts = evenLevels(LEVELS, G1, lb);
-  [ts[4], 1].forEach((t, j) => {
-    const ox = PAD + (i * 2 + j) * CW + 30;
-    svg += `<text x="${ox - 20}" y="${OY2 - HALF * SC - 2}" font-size="12" font-weight="600" fill="#3a3a38">台高 ${lb} · ${j ? '终态' : '中段'}</text>`;
-    svg += `<path d="${path(shapeAt(t, G1, lb), ox, OY2)}" fill="none" stroke="#1c3a2c" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
-  });
-});
 svg += '</svg>';
 writeFileSync(OUT, svg);
-console.log(`→ ${OUT} · 每台 ${LOBE} · 终态缝 ${G1}（副行台高 ${ALT_L.join('/')}）`);
+console.log(`→ ${OUT} · 定版：每台高 ${LOBE} · 台深 ${D} · 终态缝 ${G1} · ${LEVELS} 级`);
