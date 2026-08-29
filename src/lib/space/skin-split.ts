@@ -70,6 +70,14 @@ export const splitTipRatio = (t: number): number => 0.4 + 0.6 * t;
 
 /** 对位构造：尾段与缓冲全员同值（缝心齐平的全部条件），配平放顶端贴合段 */
 export const SPLIT_TAIL = 69;
+/**
+ * 带总长（节）。全员同值——**这是并拢排布下十片对齐的前提**：台架按末节点
+ * 对位（footAlign），而末节点的初始位置由总长定；总长不等则十片的落位散开
+ * （2026-08-29 试过「按终态芯长配平顶端」让顶端在终态齐平，实测反而把台架的
+ * 落位打散到 68px——终态芯长齐了，初始芯长就不齐了，而对位是按初始位置做的）。
+ * 代价：各级自由段长短不同 ⇒ 终态芯长差 70px，带子顶端读成一道缓坡（下缘齐、
+ * 结构齐，只有顶端不齐）——那是「收得多的带子短」的老实结果，留着。
+ */
 export const SPLIT_TOTAL = 200;
 /** 键谱两端缓冲（交接件纪律下限 4——取下限：富余材料越少形态越稳） */
 export const SPLIT_BUF = 4;
@@ -89,6 +97,8 @@ export interface SplitTune {
   ramp?: boolean;
   /** 缝链是否吃「底面找平 + 端角重申」（深缝级用，压下缝壁锯齿） */
   lvl?: boolean;
+  /** 收缩时间曲线指数（省略 = 按 LOCK_U 对齐算）——扫描工具用，站上走定案表 */
+  warp?: number;
 }
 
 /**
@@ -96,18 +106,50 @@ export interface SplitTune {
  * 浅缝级斜坡 + 稀键，深缝级斜坡 + 壁键——同一架构在不同缝深区间最优配方不同，
  * 这正是逐级独立设计要解决的事。
  */
-const TUNE: readonly (SplitTune | null)[] = [
+export const SPLIT_TUNE: readonly (SplitTune | null)[] = [
   null, // L0 单箱（另一支构造）
   { ramp: true, wallStep: 0, boxD: 36 }, // Δ0.48
   { ramp: true, wallStep: 0, boxD: 36 }, // Δ0.88
   { ramp: true, wallStep: 0, boxD: 36, wallN: 5 }, // Δ0.88
-  { ramp: true, wallStep: 2, boxD: 36, wallN: 8, a: 2 }, // Δ1.29
-  { ramp: true, wallStep: 0, boxD: 36, a: 2, wallN: 11 }, // Δ2.93
+  { ramp: true, wallStep: 2, boxD: 36, wallN: 6, a: 3 }, // Δ1.92（缝料按下方「不打结」重挑）
+  { ramp: true, wallStep: 0, boxD: 36, a: 3, wallN: 9 }, // Δ3.26（同上）
   { ramp: true, wallStep: 2, boxD: 36, a: 3, wallN: 12 }, // Δ3.25
   { ramp: true, wallStep: 2, boxD: 36, a: 4, wallN: 14 }, // Δ4.77
   { ramp: true, wallStep: 2, boxD: 32, wallN: 15, lvl: true }, // Δ5.54
   { ramp: true, wallStep: 2, boxD: 36, wallN: 18, lvl: true }, // Δ4.38（缝裂到轴 = 两台分离）
 ];
+
+/**
+ * **全程连续的关键：成形时刻对齐**（用户 2026-08-29 看图纠偏「要确保它们收缩的
+ * 过程里也是平滑的过渡连续形状」）。
+ *
+ * 每级的拉链是「一瞬间全锁」，而这一瞬发生在各自不同的 r 上——键长 rb 与跨度 f
+ * 的比值定的，十级实测落在 u = 0.633…0.806（u = min(step/900,1)，见下表）。
+ * 十条带同推时，画面上总有一段已成形、一段还是直带子，那道边界扫过整排
+ * ＝ 断层（实测 step 400 相邻Δ 最大 12.9px、比值 9.4×，而终态只有 1.4×）。
+ *
+ * 修法不是改形态，是改**路上的快慢**：引擎的 `warp` 指数只改 r(step) 的形状、
+ * 不动两端（u=0 → R0、u=1 → r1），故收缩终点与协议长度都不变。逐级取
+ *   warp_i = ln(自然全锁 u_i) / ln(对齐点 u*)
+ * 即把各自那一瞬搬到同一个 u 上：早锁的放慢、晚锁的加快。
+ *
+ * 代价与验收：这是**路径**改动，而拉链锁定不可逆（滞回）——换条路走到同一个 r
+ * 未必得到同一个锁定集合，故终态必须重验（守门卡逐级剪影Δ 与全锁）。
+ */
+const LOCK_U: readonly number[] = [0.634, 0.659, 0.636, 0.636, 0.646, 0.663, 0.709, 0.738, 0.733, 0.807];
+/**
+ * 对齐点（逐级）。**warp 不影响终态形**——十级剪影Δ 在 u* = 0.68…0.88 全程逐位
+ * 不变（实测），它只改路上的快慢。于是它是一个**免费的过程质量旋钮**，这里就
+ * 拿它解第二个问题：成形期的自交。
+ *
+ * 松料在拉链闭合前被 PRESS 顶出去、能不能绕回来打成环，是个**分岔**——同一级
+ * 换个对齐点，结的个数在 0 与 6 之间跳（矩阵见 项目二_皮肤单元lab.md §15.10）。
+ * 故逐级扫过 u* ∈ [0.70, 0.845]，各取「零自交且完成步离大伙最近」的那个：
+ * 基准 0.71，只有 L7 要挪到 0.72。十级完成步落在 628–649（差 21 步 ≈ 0.26s），
+ * 排上任何时刻都是同一阶段 ⇒ 全程读作连续渐变。
+ */
+const SYNC_U: readonly number[] = [0.71, 0.71, 0.71, 0.71, 0.71, 0.71, 0.71, 0.72, 0.71, 0.71];
+export const splitWarp = (i: number): number => Math.log(LOCK_U[i]) / Math.log(SYNC_U[i]);
 
 export interface SkinSplitLevel {
   /** 级序 0..9 */
@@ -134,9 +176,12 @@ export interface SkinSplitLevel {
 /** 站方公共选项 + 本族专属（缝链的作用域拆分） */
 const SPLIT_BASE: SkinUnitOpts = { ...SKIN_ROOT_FIX, anchorEnd: true, boxSquare: true };
 
-/** 自由段外裹上对位构造：顶端配平 + 固定尾段（三段之和恒 SPLIT_TOTAL） */
+/** 自由段外裹上对位构造：顶端配平（终态芯长恒定）+ 固定尾段 */
+export function splitLead(free: number): number {
+  return SPLIT_TOTAL - SPLIT_TAIL - free;
+}
 function band(free: number): { lead: number; wrap: (seg: SkinSpec[number]) => SkinSpec } {
-  const lead = SPLIT_TOTAL - SPLIT_TAIL - free;
+  const lead = splitLead(free);
   if (lead < SPLIT_BUF) throw new Error(`自由段 ${free} 节放不下（顶端配平 ${lead} < ${SPLIT_BUF}）`);
   return { lead, wrap: (seg) => [['g', lead], seg, ['g', SPLIT_TAIL]] };
 }
@@ -158,7 +203,7 @@ function levelSingle(boxD = 36): SkinSplitLevel {
     i: 0,
     t: SPLIT_T[0],
     spec: wrap(seg),
-    opts: { ...SPLIT_BASE },
+    opts: { ...SPLIT_BASE, warp: splitWarp(0) },
     smooth: [3, 1],
     lead,
     free,
@@ -219,6 +264,7 @@ function levelNotched(i: number, tune: SplitTune): SkinSplitLevel {
     free,
     opts: {
       ...SPLIT_BASE,
+      warp: tune.warp ?? splitWarp(i), // 成形时刻对齐（见 LOCK_U 上方的推导）
       sqChains: [0], // 方箱整形只作用于外箱梯
       ...(tune.lvl ? { levelChains: [1] } : {}), // 缝链只吃找平 + 端角重申
       coreTether: tether,
@@ -232,7 +278,7 @@ function levelNotched(i: number, tune: SplitTune): SkinSplitLevel {
 /** 单级（sweep 工具用：可临时覆盖旋钮） */
 export function buildSplitLevel(i: number, tune?: SplitTune): SkinSplitLevel {
   if (i === 0 && !tune) return levelSingle();
-  return levelNotched(i, tune ?? TUNE[i] ?? {});
+  return levelNotched(i, tune ?? SPLIT_TUNE[i] ?? {});
 }
 
 /** 定案十级（左 = 单箱，右 = 两台） */

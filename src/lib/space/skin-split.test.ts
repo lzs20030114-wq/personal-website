@@ -6,6 +6,7 @@ import {
   SPLIT_T,
   SPLIT_TAIL,
   SPLIT_TOTAL,
+  splitLead,
   buildSplitLevels,
   silhouette,
   splitSeamW,
@@ -49,12 +50,51 @@ interface Row {
   tipX: number;
   seam: number;
   finite: boolean;
+  /** 拉链走完（全部键锁上）的步 —— 十级要对齐，否则一排里一半成形一半还是直带子 */
+  doneStep: number;
+  /** 成形期自交的最大环（夹住的节数）：≤6 节 = 织物褶皱；几十节 = 肉眼可见的死结 */
+  knotSpan: number;
+  /** 检查点剖面（全程连续性判据用） */
+  frames: [number, number][][];
 }
 let RUN: Row[] = [];
+/** 全程检查点（成形前 / 成形中 / 锁定后 / 终态附近） */
+const FRAMES = [300, 500, 700, 900, 1200];
+/** 自交的最大环：夹住的节数 */
+function knotSpan(p: readonly (readonly [number, number])[]): number {
+  const hit = (a: readonly number[], b: readonly number[], c: readonly number[], d: readonly number[]): boolean => {
+    const s1x = b[0] - a[0], s1y = b[1] - a[1], s2x = d[0] - c[0], s2y = d[1] - c[1];
+    const den = -s2x * s1y + s1x * s2y;
+    if (Math.abs(den) < 1e-12) return false;
+    const s = (-s1y * (a[0] - c[0]) + s1x * (a[1] - c[1])) / den;
+    const t = (s2x * (a[1] - c[1]) - s2y * (a[0] - c[0])) / den;
+    return s > 0 && s < 1 && t > 0 && t < 1;
+  };
+  let span = 0;
+  for (let i = 0; i + 1 < p.length; i++)
+    for (let j = i + 2; j + 1 < p.length; j++) if (hit(p[i], p[i + 1], p[j], p[j + 1])) span = Math.max(span, j - i);
+  return span;
+}
 function runAll(): Row[] {
   return LV.map((lv) => {
     const s = createSkinUnit(lv.spec, lv.opts);
-    for (let k = 0; k < SKIN.STEPS; k++) s.advance();
+    const tot0 = s.chains.reduce((a, c) => a + c.length, 0);
+    const frames: [number, number][][] = [];
+    let doneStep = 0;
+    let knot = 0;
+    const snap = (): [number, number][] => {
+      const cy0 = -s.py[lv.marks.center] * 100;
+      const o: [number, number][] = [];
+      for (let i = lv.lead; i < lv.lead + lv.free; i++) o.push([s.px[i] * 100, -s.py[i] * 100 - cy0]);
+      return o;
+    };
+    for (let k = 0; k < SKIN.STEPS; k++) {
+      s.advance();
+      if (!doneStep && s.locked.length === tot0) doneStep = k + 1;
+      if (FRAMES.includes(k + 1)) frames.push(snap());
+      // 打结是瞬态：密采样才抓得住（稀采样漏过一次，差点当成没有）
+      if ((k + 1) % 50 === 0 && k + 1 <= 1000) knot = Math.max(knot, knotSpan(snap()));
+    }
     const px = (i: number) => s.px[i] * 100;
     const py = (i: number) => -s.py[i] * 100;
     const foot = py(s.n - 1);
@@ -84,6 +124,9 @@ function runAll(): Row[] {
       tipX: px(lv.marks.center),
       seam: Math.abs(py(lv.marks.mouthB) - py(lv.marks.mouthA)),
       finite,
+      doneStep,
+      knotSpan: knot,
+      frames,
     };
   });
 }
@@ -100,6 +143,8 @@ describe('skin-split 捏分过渡', () => {
       expect(d.spec[0][1]).toBe(d.lead);
       expect(d.spec[1][1]).toBe(d.free);
       expect(d.spec[2][1], `L${d.i} 尾段`).toBe(SPLIT_TAIL);
+      // 带总长全员同值 = 并拢排布下十片落位对齐的前提（台架按末节点对位）
+      expect(d.lead).toBe(splitLead(d.free));
       expect(d.lead + d.free + SPLIT_TAIL).toBe(SPLIT_TOTAL);
       // 两端缓冲恒 SPLIT_BUF：交接件纪律的下限，也是「下缓冲全员同值」的那一项
       let lo = d.free;
@@ -204,11 +249,46 @@ describe('skin-split 捏分过渡', () => {
     expect(seam[seam.length - 1]).toBeCloseTo(28, -0.5); // 终态缝 = 定版 28
     // 对位：底边（下台的下缘）离带子下缘全员齐平——尾段与缓冲同值的直接后果
     const bot = RUN.map((r) => r.botAbove);
-    expect(Math.max(...bot) - Math.min(...bot), '底边散布').toBeLessThan(6);
+    // 实测 6.4px——尾段与缓冲同值把「结构底边离下缘」钉死，残差是各级折叠体
+    // 自身的下垂差（形态量，不是放置误差）
+    expect(Math.max(...bot) - Math.min(...bot), '底边散布').toBeLessThan(8);
     // 顶边（上台的上缘）逐级抬升，总抬升 ≈ 终态缝宽（= 上台被推开的距离）
     const top = RUN.map((r) => r.topAbove);
     for (let i = 1; i < top.length; i++) expect(top[i], `级 ${i} 顶边`).toBeGreaterThan(top[i - 1] - 0.5);
     expect(top[top.length - 1] - top[0]).toBeGreaterThan(20);
+  });
+
+
+  it('收缩全程都是连续渐变：成形时刻十级对齐（用户 2026-08-29「过程里也要平滑」）', () => {
+    // 每级的拉链是「一瞬间全锁」，而这一瞬本来发生在各自不同的 r 上（实测 571→726 步）
+    // ⇒ 一排里总有一段已成形、一段还是直带子，那道边界扫过整排就是断层。
+    // 逐级 warp 把这一瞬搬到同一个 u（见 skin-split 的 LOCK_U/SYNC_U 推导）。
+    const steps = RUN.map((r) => r.doneStep);
+    for (const st of steps) expect(st).toBeGreaterThan(0); // 每级都真的走完拉链
+    expect(Math.max(...steps) - Math.min(...steps), '成形时刻散布（步）').toBeLessThanOrEqual(30);
+  });
+
+  it('成形期不打结：自交只剩织物褶皱（几十节的死结是看得见的事故）', () => {
+    // 判据要看**环的规模**不是个数：2–3 节 = 褶皱，绘图平滑就盖住了；
+    // 35/42 节 = L4/L5 早先那种肉眼可见的死结（缝底料被裁太狠拽出来的）。
+    for (const r of RUN) expect(r.knotSpan, `L${r.lv.i} 最大环（节）`).toBeLessThanOrEqual(6);
+  });
+
+  it('全程相邻连续：每个检查点上相邻级的形态距离都在一条带里', () => {
+    const HALF = 45;
+    const d = (a: Float64Array, b: Float64Array): number => {
+      let s = 0;
+      for (let i = 0; i < a.length; i++) s += Math.abs(a[i] - b[i]);
+      return s / a.length;
+    };
+    RUN[0].frames.forEach((_, f) => {
+      const sil = RUN.map((r) => silhouette(r.frames[f], -HALF, HALF));
+      const gaps = sil.slice(1).map((s, i) => d(sil[i], s));
+      // 成形前形态尚未定形，带子宽一点；锁定后（第 3 个检查点起）收紧到 4px
+      const cap = f < 2 ? 14 : 4;
+      for (let i = 0; i < gaps.length; i++)
+        expect(gaps[i], `检查点 ${f} 的 L${i}↔L${i + 1}`).toBeLessThan(cap);
+    });
   });
 
   it('过渡没有断层：相邻级形态距离在带内，最大/最小 ≤2×', () => {

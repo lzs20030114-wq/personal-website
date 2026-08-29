@@ -427,6 +427,7 @@ export default function LabPage() {
             ['Chains', 'Outer ladder + seam zipper + two face-corner bonds'],
             ['Tether', 'Skin-to-mast, one-sided — a ceiling, not a pin'],
             ['Fit', 'Silhouette Δ 0.3–5.5 px · neighbours within 1.4×'],
+            ['Timing', 'Per-level warp — all ten set within 30 steps'],
             ['Align', 'Tail and buffers fixed ⇒ the floor line holds'],
           ]}
         >

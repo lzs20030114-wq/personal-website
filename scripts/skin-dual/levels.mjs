@@ -25,9 +25,11 @@ import {
 } from '../../src/lib/space/skin-split.ts';
 
 const OUT = process.argv[2] ?? 'levels.svg';
-const ONLY = process.argv[3] !== undefined ? Number(process.argv[3]) : null;
+const ONLY = process.argv[3] ? Number(process.argv[3]) : null; // 空串 = 全部（检查点模式用）
 const SNAP = process.argv[4] === 'snap';
 const SWEEP = process.argv[4] === 'sweep';
+// 检查点模式：十级在某一步的横排（全程连续性靠它看，终态图看不出过程）
+const AT = process.argv[4] && /^\d+$/.test(process.argv[4]) ? Number(process.argv[4]) : null;
 
 const SNAP_AT = [250, 450, 600, 750, 900, 1500];
 const runToEnd = (lv, snaps = null) => {
@@ -105,7 +107,12 @@ if (SWEEP && ONLY !== null && ONLY >= 1) {
 
 const levels = ONLY !== null ? [buildSplitLevel(ONLY)] : buildSplitLevels();
 const snapBag = SNAP ? [] : null;
-const runs = levels.map((lv) => measure(lv, runToEnd(lv, snapBag)));
+const runs = levels.map((lv) => {
+  if (AT === null) return measure(lv, runToEnd(lv, snapBag));
+  const s = createSkinUnit(lv.spec, lv.opts);
+  for (let k = 0; k < AT; k++) s.advance();
+  return measure(lv, s);
+});
 for (const r of runs) console.log(line(r));
 if (runs.length > 1) {
   const ds = runs.map((r) => r.silD);
@@ -144,7 +151,7 @@ const path = (pts, ox, oy) =>
   pts.map(([x, y], i) => `${i ? 'L' : 'M'}${(ox + x * SC).toFixed(2)},${(oy + y * SC).toFixed(2)}`).join('');
 let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${HGT}" viewBox="0 0 ${W} ${HGT}" font-family="ui-sans-serif,system-ui,sans-serif">
 <rect width="${W}" height="${HGT}" fill="#f6f4ef"/>
-<text x="${PAD}" y="${PAD - 12}" font-size="16" font-weight="700" fill="#1b1b1a">捏分过渡 · 真引擎终态（实线）叠目标线（虚线）· 每台高 ${SPLIT_LOBE} · 台深 ${SPLIT_DEPTH}</text>`;
+<text x="${PAD}" y="${PAD - 12}" font-size="16" font-weight="700" fill="#1b1b1a">捏分过渡 · 真引擎终态（实线）叠目标线（虚线）· ${AT === null ? "终态" : "step " + AT} · 每台高 ${SPLIT_LOBE} · 台深 ${SPLIT_DEPTH}</text>`;
 runs.forEach((r, i) => {
   const ox = PAD + i * CW + 24;
   svg += `<text x="${ox - 16}" y="${PAD + 12}" font-size="12" font-weight="600" fill="#3a3a38">L${r.lv.i} · t=${r.lv.t.toFixed(2)}</text>`;

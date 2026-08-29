@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { SPLIT_LOBE, SPLIT_SEAM, buildSplitLevels } from '../../src/lib/space/skin-split';
-import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
+import { SkinSolidBench, type SolidLayout, type SolidUnitDef } from './SkinSolidBench';
 
 /**
  * Lab.12 · 捏分过渡（用户 2026-08-27 草图立项、2026-08-29 逐级定案）：
@@ -19,6 +19,19 @@ import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
  * 台架整台复用 SkinSolidBench，与 Lab.07–08 同一种立体呈现。
  */
 const RATE = 80; // 十条 200 节的带同推——成形期单帧物理量大，照 Lab.08 十二条带降速
+/** 切片带深（Lab.08 并拢同款 0.6×）：并拢时片间留缝、剖面渐变连成一条连续体 */
+const DEPTH = 15.6;
+
+/**
+ * 两种排布（用户 2026-08-29 看图指定「把它们平着排成一列」= Lab.08 的并拢）：
+ * - **并拢**（默认）：十片沿深度密排成一条连续体，从侧面读剖面的渐变；
+ * - 分列：拉开成一排，逐级单看。
+ * 切排布只改渲染偏移与机位、**不重建引擎**（同一次收缩的两种看法）。
+ */
+const PLANS: readonly SolidLayout[] = [
+  { key: 'merged', label: '并拢', gapX: 0, gapZ: 16.5, pivot: { x: 45, y: 360, z: 0 }, camScale: 0.62, home: 'side' },
+  { key: 'spread', label: '分列', gapX: 80, gapZ: 0, pivot: { x: 382, y: 280, z: 0 }, camScale: 0.6, home: 'axon' },
+];
 
 export function SkinSplitBench({
   active = true,
@@ -41,18 +54,15 @@ export function SkinSplitBench({
       controls={controls}
       units={units}
       rate={RATE}
-      // 间距按 Lab.08 十二条带的口径：结构本身只 ~44px 深，密排才读得出逐级挪动；
-      // 机位随之（十条带的行宽 720 世界单位 vs Lab.08 的 880）
-      gapX={80}
+      depth={DEPTH}
+      layouts={PLANS}
       ceiling="span"
       rail="fixed"
-      pivot={{ x: 382, y: 280, z: 0 }}
-      camScale={0.60}
       hud={{
         kicker: 'Lab.12 / Project II',
         title: '捏分过渡 · 单箱裂成两台',
         sub: `10 级 · 每台高 ${SPLIT_LOBE}px · 终态缝 ${SPLIT_SEAM}px · 逐级独立设计的键谱`,
-        hint: '左 = 单箱，右 = 两台 · 缝逐级豁开 · 拖拽旋转',
+        hint: '左 = 单箱，右 = 两台 · 缝逐级豁开 · 并拢/分列可切 · 拖拽旋转',
         aria: '捏分过渡：十条织物带从单个方箱逐级过渡到分开的两个平台，面上的缝一级比一级张得更开、最后裂到芯上；每一级是单独设计的键谱，可拖拽旋转',
       }}
     />

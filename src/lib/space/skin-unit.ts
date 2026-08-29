@@ -79,6 +79,21 @@ export interface SkinUnitOpts {
    */
   r1?: number;
   /**
+   * 收缩时间曲线的指数（默认 1 = 线性，与 v7 逐字；>1 前慢后快，<1 前快后慢）。
+   * `r = R0 + (r1−R0)·u^warp`，u = min(step/900, 1) —— 两端不动（u=0 → R0、
+   * u=1 → r1），**只改路上的快慢**，故收缩终点与协议长度都不变。
+   *
+   * 为什么需要它（2026-08-29 Lab.12 捏分过渡）：每个单元的拉链是「一瞬间全锁」，
+   * 而这一瞬发生在各自不同的 r 上（键长 rb 与跨度 f 的比值定的，实测十级
+   * 571→726 步）。一排单元同推时，画面上总有一段已成形、一段还是直带子，
+   * 那道边界扫过整排 = 用户看到的断层。逐级给 warp 把这一瞬对齐到同一个 u，
+   * 排上任何时刻都是同一阶段的十个形态 ⇒ 全程读作连续渐变。
+   *
+   * 注意这是**路径**改动：拉链锁定不可逆（滞回），换条路径到达同一个 r 未必
+   * 得到同一个锁定集合——用了它就要重新验终态（Lab.12 守门即卡这条）。
+   */
+  warp?: number;
+  /**
    * 方箱整形（阶梯挑台用，用户 2026-08-19 拍板「最终的形态应该是一个方形」）。
    * 全部用 v7 自己的约束词汇，补上它没做的三件（实测即「不方」的三个来源）：
    * ① 嘴角贴轴——最外键对 x=0（箱体内面就是轴，手绘即此；此前浮在轴外 8px）；
@@ -226,6 +241,8 @@ export class SkinUnit {
   /** anchorEnd 的锚：末节点在 r=R0 时的 y（此后恒定） */
   private anchorRef = 0;
   private r1: number;
+  /** 收缩时间曲线指数（1 = 线性，默认路径逐位不变） */
+  private warp: number;
   /** 方箱整形强度：0 = 关，(0,1) = 渐入（Lab.08 过渡中段），1 = 全量（阶梯方箱） */
   private boxSquare: number;
   /** 根部缓冲料的连续段（boxSquare 用：段内节点在两端锚点之间均匀排布） */
@@ -242,6 +259,7 @@ export class SkinUnit {
     this.levelChains = opts.levelChains ?? null;
     this.anchorEnd = opts.anchorEnd ?? false;
     this.r1 = opts.r1 ?? SKIN.R1;
+    this.warp = opts.warp ?? 1;
     this.boxSquare =
       opts.boxSquare === true ? 1 : typeof opts.boxSquare === 'number' ? opts.boxSquare : 0;
     const { n, glued, chains, panels } = buildUnit(spec);
@@ -405,7 +423,9 @@ export class SkinUnit {
     const { px, py, ppx, ppy, ys, n, chains, panels, locked, lockedSet } = this;
     const step = this.step;
 
-    const r = SKIN.R0 + (this.r1 - SKIN.R0) * Math.min(step / 900, 1.0);
+    const u = Math.min(step / 900, 1.0);
+    // warp = 1 时不走 pow：默认路径逐位不变（Python 对照守门的前提）
+    const r = SKIN.R0 + (this.r1 - SKIN.R0) * (this.warp === 1 ? u : Math.pow(u, this.warp));
     this.r = r;
     this.coreLen = coreY(this.spec, r, ys);
     if (this.anchorEnd) {
