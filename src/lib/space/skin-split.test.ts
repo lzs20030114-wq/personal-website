@@ -58,6 +58,8 @@ interface Row {
   knotSpan: number;
   /** 检查点剖面（全程连续性判据用） */
   frames: [number, number][][];
+  /** 逐检查点：缝心离带子下缘的高度（px）——居中对齐的全程判据 */
+  centerAbove: number[];
 }
 let RUN: Row[] = [];
 /** 全程检查点（成形前 / 成形中 / 锁定后 / 终态附近） */
@@ -82,6 +84,7 @@ function runAll(): Row[] {
     const s = createSkinUnit(lv.spec, lv.opts);
     const tot0 = s.chains.reduce((a, c) => a + c.length, 0);
     const frames: [number, number][][] = [];
+    const centerAbove: number[] = [];
     let doneStep = 0;
     let knot = 0;
     const snap = (): [number, number][] => {
@@ -93,7 +96,10 @@ function runAll(): Row[] {
     for (let k = 0; k < SKIN.STEPS; k++) {
       s.advance();
       if (!doneStep && s.locked.length === tot0) doneStep = k + 1;
-      if (FRAMES.includes(k + 1)) frames.push(snap());
+      if (FRAMES.includes(k + 1)) {
+        frames.push(snap());
+        centerAbove.push((s.py[lv.marks.center] - s.py[s.n - 1]) * 100);
+      }
       // 打结是瞬态：密采样才抓得住（稀采样漏过一次，差点当成没有）
       if ((k + 1) % 50 === 0 && k + 1 <= 1000) knot = Math.max(knot, knotSpan(snap()));
     }
@@ -129,6 +135,7 @@ function runAll(): Row[] {
       doneStep,
       knotSpan: knot,
       frames,
+      centerAbove,
     };
   });
 }
@@ -138,21 +145,27 @@ describe('skin-split 捏分过渡', () => {
     RUN = runAll();
   }, 120_000);
 
-  it('对位构造：三段之和恒定、尾段与缓冲全员同值（底边齐平的全部条件）', () => {
+  it('对位构造 v4：七段谱、半垫对称配平（缝心全程逐级恒等的构造保证）', () => {
     expect(LV.length).toBe(SPLIT_T.length);
     for (const d of LV) {
-      // 五段谱：[杆帽贴合 | 配平垫 | 隔离贴合 | 结构自由段 | 尾段]
-      expect(d.spec.map((s) => s[0])).toEqual(['g', 'f', 'g', 'f', 'g']);
+      // 七段谱：[杆帽 | 半垫 | 隔离 | 结构 | 隔离 | 半垫 | 尾段]——配平垫劈成
+      // 相等两半放结构两侧 ⇒ 缝心 = 两贴合锚中点 = 138 + 114r px，与级别无关
+      expect(d.spec.map((s) => s[0])).toEqual(['g', 'f', 'g', 'f', 'g', 'f', 'g']);
       expect(d.spec[0][1]).toBe(SPLIT_LEAD_A);
-      expect(d.spec[2][1], `L${d.i} 隔离贴合`).toBe(SPLIT_LEAD_B);
+      expect(d.spec[2][1], `L${d.i} 上隔离`).toBe(SPLIT_LEAD_B);
+      expect(d.spec[4][1], `L${d.i} 下隔离`).toBe(SPLIT_LEAD_B);
       expect(SPLIT_LEAD_B, '隔离下限 = 全局约束最大跨距').toBeGreaterThanOrEqual(16);
-      expect(d.spec[4][1], `L${d.i} 尾段`).toBe(SPLIT_TAIL);
-      // 「任何时刻整片齐平」的充要条件：贴合总量与自由材料总量都全员同值
-      // ⇒ 芯长(r) = 贴合·2 + 自由·2r 在每个 r 上逐级相等
-      expect(d.spec[1][1] + d.free, `L${d.i} 自由总量`).toBe(SPLIT_FREE_TOTAL);
-      expect(SPLIT_LEAD_A + d.spec[1][1] + SPLIT_LEAD_B + d.free + SPLIT_TAIL).toBe(SPLIT_TOTAL);
+      expect(d.spec[6][1], `L${d.i} 尾段`).toBe(SPLIT_TAIL);
+      // 两半垫精确相等（free 恒奇 ⇒ 107−free 恒偶，零取整误差）
+      expect(d.spec[1][1], `L${d.i} 半垫`).toBe(d.spec[5][1]);
+      // 带缘齐平的充要条件照旧：贴合总量与自由总量都全员同值
+      expect(d.spec[1][1] + d.spec[5][1] + d.free, `L${d.i} 自由总量`).toBe(SPLIT_FREE_TOTAL);
+      expect(
+        SPLIT_LEAD_A + d.spec[1][1] + SPLIT_LEAD_B + d.free + SPLIT_LEAD_B + d.spec[5][1] + SPLIT_TAIL,
+      ).toBe(SPLIT_TOTAL);
       // 配平垫无键（纯富余材料，rootHug+均匀排布收拾在杆上）
       expect((d.spec[1] as readonly ['f', number, readonly SkinBond[]])[2].length).toBe(0);
+      expect((d.spec[5] as readonly ['f', number, readonly SkinBond[]])[2].length).toBe(0);
       // 结构自由段两端缓冲恒 SPLIT_BUF（逐级定案的动力学环境，一字不动）
       let lo = d.free;
       let hi = 0;
@@ -250,20 +263,26 @@ describe('skin-split 捏分过渡', () => {
     });
   });
 
-  it('读得出是「两台逐级拉开」：缝宽单调张开，底边全程齐平、顶边随缝抬升', () => {
+  it('读得出是「两台对称拉开」：缝宽单调张开，缝心全程居中（v4 居中对齐）', () => {
     // 缝宽（两缝角间距）单调增——L0 无缝，从 L1 起算
     const seam = RUN.slice(1).map((r) => r.seam);
     for (let i = 1; i < seam.length; i++) expect(seam[i], `级 ${i + 1} 缝宽`).toBeGreaterThan(seam[i - 1]);
     expect(seam[seam.length - 1]).toBeCloseTo(28, -0.5); // 终态缝 = 定版 28
-    // 对位：底边（下台的下缘）离带子下缘全员齐平——尾段与缓冲同值的直接后果
-    const bot = RUN.map((r) => r.botAbove);
-    // 实测 6.4px——尾段与缓冲同值把「结构底边离下缘」钉死，残差是各级折叠体
-    // 自身的下垂差（形态量，不是放置误差）
-    expect(Math.max(...bot) - Math.min(...bot), '底边散布').toBeLessThan(8);
-    // 顶边（上台的上缘）逐级抬升，总抬升 ≈ 终态缝宽（= 上台被推开的距离）
+    // **居中对齐是全程量**（§15.11 教训）：缝心离下缘在每个检查点上跨级散布
+    // 有界。构造保证 = 缝心恒在两贴合锚中点（138+114r）；残差是折叠体在自身
+    // 松弛区间里的重力落位差（形态量），实测早期 1.7 / 成形波峰 5.5 / 终态 3.3px
+    // ——对比 v3 底边齐平口径下缝心系统性差 ~14px（= 缝宽/2）。
+    RUN[0].centerAbove.forEach((_, f) => {
+      const cs = RUN.map((r) => r.centerAbove[f]);
+      expect(Math.max(...cs) - Math.min(...cs), `检查点 ${f} 缝心散布`).toBeLessThan(6.5);
+    });
+    // 对称张开：顶边逐级抬升、底边逐级下降（两台被对称推开，各 ~缝/2）
     const top = RUN.map((r) => r.topAbove);
-    for (let i = 1; i < top.length; i++) expect(top[i], `级 ${i} 顶边`).toBeGreaterThan(top[i - 1] - 0.5);
-    expect(top[top.length - 1] - top[0]).toBeGreaterThan(20);
+    const bot = RUN.map((r) => r.botAbove);
+    for (let i = 1; i < top.length; i++) expect(top[i], `级 ${i} 顶边`).toBeGreaterThan(top[i - 1] - 1.2);
+    for (let i = 1; i < bot.length; i++) expect(bot[i], `级 ${i} 底边`).toBeLessThan(bot[i - 1] + 1.2);
+    expect(top[top.length - 1] - top[0]).toBeGreaterThan(10);
+    expect(bot[0] - bot[bot.length - 1]).toBeGreaterThan(10);
   });
 
 
