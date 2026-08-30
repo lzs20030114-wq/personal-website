@@ -135,7 +135,7 @@ export const SPLIT_TUNE: readonly (SplitTune | null)[] = [
   { ramp: true, wallStep: 0, boxD: 36 }, // Δ0.88
   { ramp: true, wallStep: 0, boxD: 36, wallN: 5 }, // Δ0.88
   { ramp: true, wallStep: 2, boxD: 36, wallN: 6, a: 3 }, // Δ1.92（缝料按下方「不打结」重挑）
-  { ramp: true, wallStep: 0, boxD: 36, a: 3, wallN: 9 }, // Δ3.26（同上）
+  { ramp: true, wallStep: 2, boxD: 36, a: 3, wallN: 10 }, // Δ2.00（2026-08-30 B 定稿补壁键：旧配方 wallStep0 是十级唯一「缝深无壁键」的级，缝壁成形期自由晃、中段歪斜，折痕 v1 也是被它拖塌；壁键 + 排整齐后终态反而更贴目标线）
   { ramp: true, wallStep: 2, boxD: 36, a: 3, wallN: 12 }, // Δ3.25
   { ramp: true, wallStep: 2, boxD: 36, a: 4, wallN: 14 }, // Δ4.77
   { ramp: true, wallStep: 2, boxD: 32, wallN: 15, lvl: true }, // Δ5.54
@@ -171,6 +171,29 @@ export const SPLIT_TUNE: readonly (SplitTune | null)[] = [
  * 最短、成形前后都是定形态），中间形态的设计立为独立工作。审视四条与全程
  * 逐帧证据见 项目二_皮肤单元lab.md §15.12；lockGap / stepClamp 保留在引擎
  * （默认关、逐位不变），此处不再使用。
+ *
+ * ## 成形过程设计定稿（B 路线 v3，2026-08-30 用户逐轮看线稿拍板后接入）
+ *
+ * 上一节的教训落成正事：把「成形到一半长什么样」当设计对象，先线稿后上站。
+ * 合格基准（动手前写死）：**全程任何一帧单独截下来都像一个有意的形态**——
+ * 无卷钩、无锯齿褶皱、无翻折；成形段每帧都是「更深一挡的箱」。四件套：
+ *
+ * 1. **外箱拉链反向**（zipUp:[0]，SPLIT_BASE）：v7 拉链从最大跨放行、而最外键
+ *    最晚够得着 ⇒ 全链等它、一到全放（啪的根源）；反向后哪挡材料够了哪挡锁，
+ *    箱体从面鼻逐挡向外长出（锁定摊在 ~240–690 步的连续生长）。
+ * 2. **吸引近程门**（attNear 1.5 只圈外箱链，SPLIT_BASE）：远程吸引把等待材料
+ *    拧成卷钩，收窄后等待材料是干净的斜坡直线。近程门对缝链无效（浅缝出生
+ *    即在锁定窗口内）——缝区另有 3/4 两件。
+ * 3. **缝区折痕待命**（coreTetherRel 同侧规则）+ 4. **缝壁排整齐**（alignRuns）
+ *    ——依赖缝区节点下标，构造在 levelNotched 里，注释见彼处。
+ * 另有一处逐级配方修正：L5 补壁键（SPLIT_TUNE[5] 注释）。
+ *
+ * 十级验收（括号内为 08-29 定案旧值）：剪影Δ 0.29–3.72（0.29–5.54——全面更贴
+ * 目标线，L9 4.38→1.42：旧偏差大半是壁纹，而目标线的缝壁本来就是直的）；
+ * 密采样瞬态自交环全部 0（≤5）；全程任意时刻相邻级最大距离 5.4（同步全锁
+ * 13.6 / 被否的拉链波 15.1）；锁定数不变、末锁 561–685 全在纪律解除（950）前、
+ * 终态相邻比值 1.80×。滞回披露：换了折叠路径，终态不再与 08-29 定案逐位相同
+ * （Δ 反而全面更小），守门按 v3 重钉。细节 = 项目二_皮肤单元lab.md §15.13。
  */
 
 export interface SkinSplitLevel {
@@ -195,8 +218,25 @@ export interface SkinSplitLevel {
   };
 }
 
-/** 站方公共选项 + 本族专属（缝链的作用域拆分） */
-const SPLIT_BASE: SkinUnitOpts = { ...SKIN_ROOT_FIX, anchorEnd: true, boxSquare: true };
+/**
+ * 站方公共选项 + 本族专属（缝链的作用域拆分 + **成形过程设计**，
+ * 2026-08-30 用户拍板 B 路线后逐轮线稿定的四件套之一二——另两件（折痕、
+ * 缝壁排整齐）依赖缝区节点下标，在 levelNotched 里逐级构造）：
+ * - `zipUp:[0]` 外箱拉链反向：从最小跨（面侧）放行，哪挡材料够了哪挡锁
+ *   ⇒ 箱体从面鼻逐挡向外长出（实测锁定摊在 ~560–690 步），不再是
+ *   「等最外键入窗、一瞬全放」的啪；
+ * - `attNear:1.5`（只圈外箱链）吸引近程门：远程吸引会把等待中的富余材料
+ *   拧成卷钩（鼓包想收成环），收窄到 1.5×键长后等待材料是干净的斜坡。
+ * 缝链/面角键保持 v7 原时序（缝链预锁是 §15.8 的既有机理，不碰）。
+ */
+const SPLIT_BASE: SkinUnitOpts = {
+  ...SKIN_ROOT_FIX,
+  anchorEnd: true,
+  boxSquare: true,
+  zipUp: [0],
+  attNear: 1.5,
+  attNearChains: [0],
+};
 
 /** 结构自由段外裹上对位构造：杆帽贴合 + 配平垫 + 隔离贴合 + 结构 + 尾段 */
 function wrap(seg: SkinSpec[number] & readonly ['f', number, ...unknown[]]): { spec: SkinSpec; base: number } {
@@ -272,6 +312,24 @@ function levelNotched(i: number, tune: SplitTune): SkinSplitLevel {
       const r = rTip + ((k - a) * (SPLIT_DEPTH / 100 - rTip)) / wallN;
       tether.push([c0 + k, r], [c0 - k, r]);
     }
+  // 成形过程设计其余两件（B 定稿 v3，2026-08-30）：
+  // ① 缝区折痕待命（coreTetherRel **同侧规则**）：缝壁不得越过同侧缝角所在
+  //    的面、缝心贴双角——等待期缝料压平读作面上一道折痕，箱面越过 rTip 后
+  //    缝才从零逐步裂开（先见折痕、后见裂开，中间态始终是家族成员）。
+  //    跨侧耦合版（每个节点贴双角）会把 L5 拖塌（Δ3.29→16.5），弃。
+  // ② 缝壁排整齐（alignRuns 缝角↔缝底角）：锯齿 = 键与键之间的富余材料鼓成
+  //    的小包串（用户「干净的方案不应该出现锯齿」），均匀排布直接抹平——
+  //    终态反而全面更贴目标线（缝壁本来就该是直的），瞬态自交环密采归零。
+  const crease: (readonly [number, number, number])[] = [];
+  for (let i = c0 - m + 1; i < c0 + m; i++) {
+    if (i < c0) crease.push([i, c0 - m, 0]);
+    else if (i > c0) crease.push([i, c0 + m, 0]);
+    else crease.push([i, c0 - m, 0], [i, c0 + m, 0]);
+  }
+  const walls: (readonly [number, number])[] = [
+    [c0 - m, c0 - a],
+    [c0 + a, c0 + m],
+  ];
 
   return {
     i,
@@ -285,6 +343,8 @@ function levelNotched(i: number, tune: SplitTune): SkinSplitLevel {
       sqChains: [0], // 方箱整形只作用于外箱梯
       ...(tune.lvl ? { levelChains: [1] } : {}), // 缝链只吃找平 + 端角重申
       coreTether: tether,
+      coreTetherRel: crease,
+      alignRuns: walls,
     },
     // 缝只有几 px 宽，[3,1] 的窗口会把它抹平——绘图平滑不许说谎（§16.3）
     smooth: [2, 1],

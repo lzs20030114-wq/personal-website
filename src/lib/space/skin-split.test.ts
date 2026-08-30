@@ -238,9 +238,10 @@ describe('skin-split 捏分过渡', () => {
   });
 
   it('形对得上目标线：逐级剪影Δ 在阈值内（唯一有效的形状分数）', () => {
-    // 阈值 = 定案实测（0.33 / 0.48 / 0.88 / 0.88 / 1.29 / 2.93 / 3.25 / 4.77 / 5.54 / 4.38）
-    // 各留 ~1px 余量。深缝级偏大是引擎本性（±2px 织物波纹 + 嘴角圆化），不是缺陷。
-    const CAP = [1.4, 1.5, 1.9, 1.9, 2.3, 4.0, 4.3, 5.8, 6.6, 5.4];
+    // 阈值 = B v3 定稿实测（0.29 / 0.46 / 0.98 / 0.87 / 1.56 / 2.00 / 2.87 / 3.42 /
+    // 3.72 / 1.42），各留 ~1px 余量。缝壁排整齐后全面比 08-29 定案更贴目标线
+    // （旧 0.29–5.54，深缝级偏大的主因就是壁纹——目标线的缝壁本来是直的）。
+    const CAP = [1.3, 1.5, 2.0, 1.9, 2.6, 3.0, 3.9, 4.4, 4.7, 2.4];
     RUN.forEach((r) => {
       expect(r.silD, `L${r.lv.i} 剪影Δ`).toBeLessThan(CAP[r.lv.i]);
       // 裂口尖落在目标退距上（这一族的主特征）——实测七级精确命中，
@@ -266,13 +267,12 @@ describe('skin-split 捏分过渡', () => {
   });
 
 
-  it('成形 = 从左到右的有序级联，且芯长全程逐级相等（顶端齐平的构造保证）', () => {
-    // 自然时序（不 warp——warp 会让十级各走各的 r(t)，芯长中途就不齐，顶端出
-    // ~37px 的瞬态阶梯；取舍实测见 skin-split 的成形时序注释）。卡两件事：
-    // ① 级联有序：L9（裂到轴，最难折）最后完成，窗口有界——动作是一道传播的
-    //    裂开，不是乱序乱响；② r 全员同步 + 三段构造全员同值 ⇒ 芯长处处相等
-    //    （构造性质，第一条守门已卡三段；这里再卡因果链的另一端：完成步都在
-    //    同一协议段内，且每级都真的走完）。
+  it('成形收尾有序，且芯长全程逐级相等（顶端齐平的构造保证）', () => {
+    // B v3 逐挡生长（zipUp）下各级从 ~240 步起持续长箱，这里卡的是**收尾**：
+    // ① L9（裂到轴，最难折）最后合拢、窗口有界、近乎单调——整排是一次
+    //    连贯的动作，不是乱序乱响；② r 全员同步 + 三段构造全员同值 ⇒ 芯长
+    //    处处相等（构造性质，第一条守门已卡三段；这里卡因果链的另一端：
+    //    完成步都在同一协议段内，且每级都真的走完）。
     const steps = RUN.map((r) => r.doneStep);
     for (const st of steps) expect(st).toBeGreaterThan(0); // 每级都真的走完拉链
     expect(Math.max(...steps), '最晚完成').toBe(steps[9]); // 裂到轴的 L9 收尾
@@ -282,10 +282,38 @@ describe('skin-split 捏分过渡', () => {
       expect(steps[i], `L${i - 1}→L${i} 级联序`).toBeGreaterThan(steps[i - 1] - 40);
   });
 
+  it('成形过程设计（B v3）：四件套配置齐全且同侧/区段正确', () => {
+    for (const d of LV) {
+      // 逐挡长出 + 近程门（全员，含 L0 单箱）
+      expect(d.opts.zipUp, `L${d.i} zipUp`).toEqual([0]);
+      expect(d.opts.attNear, `L${d.i} attNear`).toBe(1.5);
+      expect(d.opts.attNearChains, `L${d.i} attNearChains`).toEqual([0]);
+      if (d.i === 0) {
+        expect(d.opts.coreTetherRel).toBeUndefined();
+        expect(d.opts.alignRuns).toBeUndefined();
+        continue;
+      }
+      // 折痕**同侧规则**：缝壁贴同侧缝角、缝心贴双角（跨侧耦合会把 L5 拖塌）
+      const c = d.marks.center;
+      for (const [i, ref, off] of d.opts.coreTetherRel ?? []) {
+        expect(off, `L${d.i} 折痕偏移`).toBe(0);
+        if (i < c) expect(ref, `L${d.i} 节点 ${i} 折痕参考`).toBe(d.marks.mouthA);
+        else if (i > c) expect(ref).toBe(d.marks.mouthB);
+        else expect([d.marks.mouthA, d.marks.mouthB]).toContain(ref);
+      }
+      // 缝壁排整齐：两条 run 的外锚 = 缝角、内锚对称于缝心（锯齿的治法）
+      const runs = d.opts.alignRuns ?? [];
+      expect(runs.length, `L${d.i} alignRuns`).toBe(2);
+      expect(runs[0][0]).toBe(d.marks.mouthA);
+      expect(runs[1][1]).toBe(d.marks.mouthB);
+      expect(runs[0][1] - c, `L${d.i} 缝底角对称`).toBe(-(runs[1][0] - c));
+    }
+  });
+
   it('成形期不打结：自交只剩织物褶皱（几十节的死结是看得见的事故）', () => {
-    // 判据要看**环的规模**不是个数：2–3 节 = 褶皱，绘图平滑就盖住了；
-    // 35/42 节 = L4/L5 早先那种肉眼可见的死结（缝底料被裁太狠拽出来的）。
-    for (const r of RUN) expect(r.knotSpan, `L${r.lv.i} 最大环（节）`).toBeLessThanOrEqual(6);
+    // 判据要看**环的规模**不是个数：35/42 节 = L4/L5 早先那种肉眼可见的死结。
+    // B v3（缝壁排整齐）后密采样全程为 0——褶皱环也随锯齿一起消失，收紧到 2。
+    for (const r of RUN) expect(r.knotSpan, `L${r.lv.i} 最大环（节）`).toBeLessThanOrEqual(2);
   });
 
   it('全程相邻连续：每个检查点上相邻级的形态距离都在一条带里', () => {
@@ -298,9 +326,9 @@ describe('skin-split 捏分过渡', () => {
     RUN[0].frames.forEach((_, f) => {
       const sil = RUN.map((r) => silhouette(r.frames[f], -HALF, HALF));
       const gaps = sil.slice(1).map((s, i) => d(sil[i], s));
-      // 成形前形态尚未定形，带子宽一点；级联收尾后（第 3 个检查点起）收紧。
-      // step 700 上 L8↔L9 实测 3.97（L9 还差 26 步收尾）——上限留一点余量
-      const cap = f < 2 ? 14 : 4.5;
+      // B v3 逐挡生长下整排全程都比旧动态连贯（实测各检查点最大 5.40 / 4.54 /
+      // 3.55 / 4.11 / 4.11，旧同步全锁的峰值是 13.6）——上限各留一点余量
+      const cap = f < 2 ? 7 : 5.2;
       for (let i = 0; i < gaps.length; i++)
         expect(gaps[i], `检查点 ${f} 的 L${i}↔L${i + 1}`).toBeLessThan(cap);
     });
