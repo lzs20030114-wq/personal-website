@@ -5,11 +5,15 @@
 //   模式 catalog（默认）= 目录四形态并排 + 叠合对照
 //        bulb-ledge = 蘑菇↔直挑台的粗排系列（探路用；实测这一对差 1.86px，已否）
 //        ring-gradient = 定版：Lab.09 环上渐变（蘑菇↔方箱，20 位回文 = 11 级）
+//        ring-square = 方形环线稿：三档挑出把俯视外轮廓凑成正方形（角带 = 现行方箱原谱）
 import { writeFileSync } from 'node:fs';
 import { createSkinUnit, SKIN } from '../../src/lib/space/skin-unit.ts';
-import { buildRingUnits } from '../../src/lib/space/skin-ring.ts';
-import { ARRAY_CENTER, ARRAY_FREE, ARRAY_LEAD, ARRAY_TAIL } from '../../src/lib/space/skin-array.ts';
-import { SKIN_SITE_BASE } from '../../src/lib/space/skin-data.ts';
+import {
+  RING, RING_BAND_NODES, RING_CENTER, RING_GROW, RING_LEAD,
+  buildRingUnits, growSeg,
+} from '../../src/lib/space/skin-ring.ts';
+import { ARRAY_CENTER, ARRAY_FREE, ARRAY_LEAD, ARRAY_TAIL, placeOnBand } from '../../src/lib/space/skin-array.ts';
+import { SKIN_SITE_BASE, SKIN_UNITS, skinSiteOpts } from '../../src/lib/space/skin-data.ts';
 import { buildGradientOrder, buildRingGradient } from '../../src/lib/space/skin-ring-gradient.ts';
 
 const OUT = process.argv[2] ?? 'draft.svg';
@@ -108,6 +112,254 @@ function seriesFor(mode) {
     return DEFS.map((d) => ({ label: `${d.zh} · ${d.en}`, spec: d.spec, opts: d.opts, smooth: d.smooth }));
   if (mode === 'bulb-ledge') return bulbLedgeSeries(11);
   throw new Error(`未知模式 ${mode}`);
+}
+
+// ── ring-square：方形环线稿（用户 2026-08-30「先用最简单的 Lab.09 的最初形态来做」）──
+//
+// 筒芯保持圆的，靠每条带挑出多远把**俯视外轮廓**凑到一个正方形上。
+// 相位转半格（9°）让 4 条带正好落在 4 个角上 ⇒ 20 个平台外缘点全部落在方形边上；
+// 环间膜俯视是弦线、同一条边上两点之间的弦就是边本身 ⇒ 终态外轮廓精确是方形。
+// 20 位 ÷ D4 对称 = 只有 3 档挑出（面 8 条 / 边 8 条 / 角 4 条），解 3 条摆 20 处。
+//
+// 级族 = 等比缩放（growSeg 的 g 分档，形态同一张方箱谱、键根数不变）。
+// 方形只能「往里做」：角档 = 现行方箱原谱（g = RING_GROW，即 Lab.09 整环同形那条），
+// 其余两档往小缩——反过来把面档钉在现行大小去把角做大，挑出要 116px+，
+// 202 节的带子装不下（总长钉死是 2026-08-25 的拍板）。
+// 半径也钉死在默认值：挑出目标是「方形极径 − 站位半径」的绝对量，R 一变三档全要重标。
+if (MODE === 'ring-square') {
+  ringSquare();
+  process.exit(0);
+}
+
+function ringSquare() {
+  const P = 30; // 画布边距（别用全局 PAD——它声明在本函数被调用之后，TDZ）
+  const stepped = SKIN_UNITS.find((d) => d.key === 'stepped');
+  const R = RING.RADIUS_DEF;
+  const N = RING.COUNT;
+  const PHASE = Math.PI / N; // 半格 = 9°：角带落在 45°/135°/225°/315°
+  const BUF = 4; // 键谱两端缓冲的纪律下限
+  const ISO = 16; // 垫与结构之间的隔离贴合（Lab.12 配平垫先例：约束最大跨距，结构动力学不受垫扰）
+  const TAIL2 = 15; // 尾段照环族惯例
+
+  // 贴身自由段：该 g 下 2(kMax+BUF)+1 的最小奇数长度（扇心居整数节点、缓冲压到纪律下限）
+  const tautFs = (grown) => {
+    let kMax = 0;
+    for (const [i, j] of grown[2]) kMax = Math.max(kMax, Math.round((j - i) / 2));
+    return 2 * (kMax + BUF) + 1;
+  };
+  const F_TOT = tautFs(growSeg(stepped.spec[1], RING_GROW)); // 角档贴身长 = 配平基准（奇数）
+  const LEAD2 = RING_BAND_NODES - 2 * ISO - F_TOT - TAIL2;
+
+  // 一档 = 同一张方箱谱缩到 g，放进 **配平垫七段谱**（Lab.12 v4 先例）：
+  //   [贴合 | 垫 p | 隔离 16 | 结构 fs | 隔离 16 | 垫 p | 尾]，垫+结构 = F_TOT 恒定。
+  // 两条弯路都实测过，记在这里：
+  // - 三档共用 f=129：面档多出 ~40px 缓冲料，折叠体在松弛区间里被压沉，
+  //   嘴心比角档低 61.7px（对位构造「嘴心与键长无关」的隐含前提是缓冲基本吃满跨度）；
+  // - 贴身自由段 + lead 配平：常数项补得掉、**斜率补不掉**——coreY 里自由段按 SEG·r
+  //   收缩而贴合段不收，fs 不同 ⇒ 嘴心随 r 的斜率不同，全程散布 14.6px（这正是
+  //   skin-array 坚持「全员同 f」的原因）。
+  // 配平垫把两头都钉死：嘴心高（离下缘）= SEG·(iso+tail) + SEG·r·(p+(fs+1)/2)，
+  // 垫+结构恒定 ⇒ 常数项与斜率都与档位无关——对齐是构造给的，在每一个 r 上成立。
+  // 垫是无键自由段（rootHug 把它贴在轴上，读作竖带的一部分）；fs 与 F_TOT 都取奇数
+  // ⇒ 垫恒为偶数，上下各半精确整数。leadComp = 整数位残差补偿（纯平移），备而少用。
+  const levelFor = (g, leadComp = 0) => {
+    const grown = growSeg(stepped.spec[1], g);
+    const fs = tautFs(grown);
+    const c = (fs - 1) / 2;
+    const seg = placeOnBand(grown, fs, c);
+    const p = (F_TOT - fs) / 2;
+    const lead = LEAD2 + leadComp;
+    const tail = TAIL2 - leadComp;
+    const spec =
+      p > 0
+        ? [['g', lead], ['f', p, []], ['g', ISO], seg, ['g', ISO], ['f', p, []], ['g', tail]]
+        : [['g', lead + ISO], seg, ['g', ISO + tail]];
+    const off = lead + p + ISO; // 结构段起点（剖面与嘴的绝对下标从这里偏）
+    return { g, seg, fs, c, p, lead, tail, off, spec };
+  };
+
+  // 全程检查点（§8.8 教训：动画件的对齐要按整个时间轴验，不能只验终态）
+  const CHK_R = [0.87, 0.66, 0.44];
+  const chkSteps = CHK_R.map((r) => Math.round((900 * (SKIN.R0 - r)) / (SKIN.R0 - SKIN.R1)));
+  const cache = new Map();
+  const runLevel = (lv) => {
+    const sig = JSON.stringify(lv.spec);
+    if (cache.has(sig)) return cache.get(sig);
+    const sim = createSkinUnit(lv.spec, skinSiteOpts(stepped));
+    const bonds = lv.seg[2];
+    let w = bonds[0];
+    for (const b of bonds) if (b[1] - b[0] > w[1] - w[0]) w = b;
+    const mi = lv.off + w[0];
+    const mj = lv.off + w[1];
+    const mouthAt = () => -((sim.py[mi] + sim.py[mj]) / 2) * 100;
+    const chk = [];
+    for (let k = 0; k < SKIN.STEPS; k++) {
+      sim.advance();
+      if (chkSteps.includes(k)) chk.push(mouthAt());
+    }
+    let out = 0;
+    for (let k = 0; k < sim.n; k++) out = Math.max(out, sim.px[k] * 100);
+    const raw = [];
+    for (let i = lv.off; i < lv.off + lv.fs; i++) raw.push([sim.px[i] * 100, -sim.py[i] * 100]);
+    const res = {
+      ...lv, sig, out, raw,
+      locked: sim.locked.length,
+      mouthY: mouthAt(),
+      chk,
+      mouthPx: bonds[0][2] * 100,
+    };
+    cache.set(sig, res);
+    return res;
+  };
+
+  // 角档 = 现行方箱形态（g = RING_GROW，谱逐位同 Lab.09 整环同形那张；lead/tail 是
+  // 位置量不属形态）；方形大小由它反推（sq(θ) = 方形边界的极径）
+  const corner = runLevel(levelFor(RING_GROW));
+  const a = (R + corner.out) / Math.SQRT2;
+  const sq = (th) => a / Math.max(Math.abs(Math.cos(th)), Math.abs(Math.sin(th)));
+  const T = { mid: sq((Math.PI * 27) / 180) - R, face: sq((Math.PI * 9) / 180) - R };
+
+  // 标定：g 扫 1.05–1.80（谱经取整会重复，按签名去重），掉键的档直接不要
+  const sweep = [];
+  const seen = new Set();
+  for (let gi = 105; gi <= 180; gi += 1) {
+    const r = runLevel(levelFor(gi / 100));
+    if (!seen.has(r.sig)) {
+      seen.add(r.sig);
+      sweep.push(r);
+    }
+  }
+  const pick = (target) => {
+    let best = null;
+    for (const r of sweep) {
+      if (r.locked !== corner.locked) continue;
+      if (!best || Math.abs(r.out - target) < Math.abs(best.out - target)) best = r;
+    }
+    return best;
+  };
+
+  // lead 整数位补偿：以角档为基准，把该档全程（三检查点 + 终态）的嘴心平均偏移
+  // 用 lead 收掉（1 节 = 2px；lead/tail 对调、总长不变 = 纯平移）
+  const allY = (r) => [...r.chk, r.mouthY];
+  const compensate = (r0) => {
+    const ref = allY(corner);
+    const d = allY(r0).reduce((s, y, i) => s + (y - ref[i]), 0) / (CHK_R.length + 1);
+    const comp = -Math.round(d / 2);
+    return comp === 0 ? r0 : runLevel(levelFor(r0.g, comp));
+  };
+  const face = compensate(pick(T.face));
+  const mid = compensate(pick(T.mid));
+  const LV = [
+    { name: '面', r: face, target: T.face, count: 8 },
+    { name: '边', r: mid, target: T.mid, count: 8 },
+    { name: '角', r: corner, target: corner.out, count: 4 },
+  ];
+
+  console.log(`ring-square · 方形环三档标定（R=${R} 钉死 · 相位 +9° · 角带 = 现行方箱形态 g=${RING_GROW}）`);
+  console.log(`  方形半边长 a = ${a.toFixed(1)}px（边长 ${(2 * a).toFixed(1)}px，外接现行环的外缘）`);
+  for (const l of LV)
+    console.log(
+      `  ${l.name}档 ×${l.count}  g=${l.r.g.toFixed(2)}  谱 [${l.r.lead}|垫${l.r.p}|${ISO}|结构${l.r.fs}|${ISO}|垫${l.r.p}|${l.r.tail}]  挑出 目标 ${l.target.toFixed(1)} / 实测 ${l.r.out.toFixed(1)}` +
+        `（偏差 ${(l.r.out - l.target >= 0 ? '+' : '')}${(l.r.out - l.target).toFixed(1)}）  锁定键 ${l.r.locked}  嘴 ${l.r.mouthPx.toFixed(0)}px`,
+    );
+  for (const l of LV) {
+    if (l.r.tail < 11) console.log(`  ⚠ ${l.name}档 tail=${l.r.tail} < 11（尾段太短会拽变形）`);
+    if (l.r.lead < 20) console.log(`  ⚠ ${l.name}档 lead=${l.r.lead} < 20（贴合段别让光）`);
+  }
+  const spreadAt = (i) => {
+    const ys = LV.map((l) => allY(l.r)[i]);
+    return Math.max(...ys) - Math.min(...ys);
+  };
+  const spreads = [...CHK_R, SKIN.R1].map((_, i) => spreadAt(i));
+  console.log(
+    `  三档嘴心散布（全程 r≈${[...CHK_R, SKIN.R1].join('/')}）：${spreads.map((s) => s.toFixed(1)).join(' / ')}px`,
+  );
+  console.log(`  扫掠 g→挑出（! = 掉键，不取）：${sweep.map((r) => `${r.g.toFixed(2)}→${r.out.toFixed(0)}${r.locked !== corner.locked ? '!' : ''}`).join('  ')}`);
+
+  // 20 位：档位、外缘点、对目标方形的偏差
+  const pts = Array.from({ length: N }, (_, i) => {
+    const th = PHASE + (i / N) * Math.PI * 2;
+    const t = sq(th) - R;
+    let lvl = 0;
+    for (let l = 1; l < LV.length; l++) if (Math.abs(LV[l].target - t) < Math.abs(LV[lvl].target - t)) lvl = l;
+    const rr = R + LV[lvl].r.out;
+    return { th, lvl, x: Math.cos(th) * rr, y: Math.sin(th) * rr, dev: rr - sq(th) };
+  });
+  const maxDev = Math.max(...pts.map((p) => Math.abs(p.dev)));
+  console.log(`  20 个外缘点对目标方形的最大偏差 ${maxDev.toFixed(1)}px`);
+
+  // ── SVG：上 = 俯视轮廓，下 = 三档剖面并排 + 叠合 ─────────────────────────
+  const HUE = [150, 215, 285]; // 面→角：绿 → 蓝 → 紫
+  const col = (l) => `hsl(${HUE[l]} 42% 38%)`;
+  const PV = 560; // 俯视画布边长
+  const SC2 = (PV - 70) / (2 * (a + 12));
+  const cx = P + 60 + PV / 2;
+  const cy = P + 52 + PV / 2;
+  const X = (x) => (cx + x * SC2).toFixed(1);
+  const Y = (y) => (cy + y * SC2).toFixed(1);
+
+  const draws = LV.map((l) => smooth(l.r.raw, 3, 1));
+  const allp = draws.flat();
+  const b2 = allp.reduce(
+    (acc, [x, y]) => ({ x0: Math.min(acc.x0, x), x1: Math.max(acc.x1, x), y0: Math.min(acc.y0, y), y1: Math.max(acc.y1, y) }),
+    { x0: 1e9, x1: -1e9, y0: 1e9, y1: -1e9 },
+  );
+  const SC3 = Math.min(150 / Math.max(1, b2.x1 - b2.x0), 220 / Math.max(1, b2.y1 - b2.y0));
+  const oyP = P + 52 + PV + 64;
+  const drawH = (b2.y1 - b2.y0) * SC3;
+  const lbY = oyP + drawH + 30; // 标签贴着剖面放（画布高度按内容收，不留死空间）
+  // 公共 y 基准（对齐验证图的硬要求——逐帧按 yMin 归零会把要验的东西归掉）
+  const prof = (ptsIn, ox) =>
+    ptsIn.map(([x, y], i) => `${i ? 'L' : 'M'}${(ox + x * SC3).toFixed(2)},${(oyP + (y - b2.y0) * SC3).toFixed(2)}`).join('');
+
+  const W2 = Math.max(P * 2 + PV + 120, P * 2 + 4 * 230);
+  const H2 = Math.ceil(lbY + 14 + 30);
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${W2}" height="${H2}" viewBox="0 0 ${W2} ${H2}" font-family="ui-sans-serif,system-ui,sans-serif">
+<rect width="${W2}" height="${H2}" fill="#f6f4ef"/>
+<text x="${P}" y="${P}" font-size="15" font-weight="700" fill="#1b1b1a">线稿 · ring-square · 方形环（Lab.09 方箱 · 等比缩放三档 · 真引擎终态）</text>
+<text x="${P}" y="${P + 20}" font-size="11.5" fill="#3a3a38">R=${R} 钉死 · 相位 +9°（角上有带）· 边长 ${(2 * a).toFixed(0)}px · 外缘点最大偏差 ${maxDev.toFixed(1)}px · 嘴心散布全程 ${Math.max(...spreads).toFixed(1)}px</text>
+<text x="${P}" y="${P + 40}" font-size="12" font-weight="700" fill="#1b1b1a">俯视：橙虚线 = 目标方形 · 紫虚线 = 环间膜的弦线 · 灰实圆 = 筒芯（不变）· 灰点圆 = 现行圆环外缘（对照）</text>`;
+
+  // 目标方形 + 芯圆 + 现行圆环外缘（对照：从这个圆变成那个方）
+  s += `<rect x="${X(-a)}" y="${Y(-a)}" width="${(2 * a * SC2).toFixed(1)}" height="${(2 * a * SC2).toFixed(1)}" fill="none" stroke="#a05a2c" stroke-width="1.6" stroke-dasharray="7 5"/>`;
+  s += `<circle cx="${cx}" cy="${cy}" r="${(R * SC2).toFixed(1)}" fill="none" stroke="#8f8a7d" stroke-width="1.2"/>`;
+  s += `<circle cx="${cx}" cy="${cy}" r="${((R + corner.out) * SC2).toFixed(1)}" fill="none" stroke="#8f8a7d" stroke-width="1" stroke-dasharray="2 4"/>`;
+  // 膜弦线（外缘点连成的 20 边形——同边的弦落在方形边上）
+  s += `<polygon points="${pts.map((p) => `${X(p.x)},${Y(p.y)}`).join(' ')}" fill="none" stroke="#5a4a8a" stroke-width="1.1" stroke-dasharray="3 3"/>`;
+  // 二十条带（径向条：从芯到各自的挑出）
+  for (const p of pts) {
+    const c = Math.cos(p.th);
+    const sn = Math.sin(p.th);
+    const w = RING.DEPTH / 2;
+    const E = R + LV[p.lvl].r.out;
+    const q = (u, v) => `${X(u * c - v * sn)},${Y(u * sn + v * c)}`;
+    s += `<polygon points="${q(R, -w)} ${q(E, -w)} ${q(E, w)} ${q(R, w)}" fill="hsl(${HUE[p.lvl]} 40% 42% / 0.5)" stroke="${col(p.lvl)}" stroke-width="1"/>`;
+  }
+  // 图例
+  LV.forEach((l, i) => {
+    const ly = P + 76 + i * 20;
+    s += `<rect x="${P}" y="${ly - 10}" width="12" height="12" fill="hsl(${HUE[i]} 40% 42% / 0.5)" stroke="${col(i)}"/>`;
+    s += `<text x="${P + 18}" y="${ly}" font-size="11" fill="#3a3a38">${l.name} ×${l.count} · g ${l.r.g.toFixed(2)} · 挑出 ${l.r.out.toFixed(1)}</text>`;
+  });
+
+  // 三档剖面并排 + 叠合（公共 y 基准：上下缘与嘴心的相对关系直接可读）
+  s += `<text x="${P}" y="${oyP - 34}" font-size="12" font-weight="700" fill="#1b1b1a">三档侧面剖面（自由段终态 · 公共 y 基准同比例）——厚度跟着 g 走：角厚面薄，这是等比族的代价</text>`;
+  LV.forEach((l, i) => {
+    const ox = P + i * 230 + 40;
+    s += `<line x1="${ox}" y1="${oyP - 8}" x2="${ox}" y2="${oyP + (b2.y1 - b2.y0) * SC3 + 8}" stroke="#cdc7b9" stroke-width="1" stroke-dasharray="4 4"/>`;
+    s += `<path d="${prof(draws[i], ox)}" fill="none" stroke="${col(i)}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>`;
+    s += `<text x="${ox - 26}" y="${lbY}" font-size="11" font-weight="700" fill="#3a3a38">${l.name}档 g=${l.r.g.toFixed(2)} · 结构 ${l.r.fs} + 垫 ${2 * l.r.p}（配平）</text>`;
+    s += `<text x="${ox - 26}" y="${lbY + 14}" font-size="10.5" fill="#3a3a38">挑出 ${l.r.out.toFixed(1)}（目标 ${l.target.toFixed(1)}）· 键 ${l.r.locked} · 嘴 ${l.r.mouthPx.toFixed(0)}px</text>`;
+  });
+  const ox4 = P + 3 * 230 + 40;
+  s += `<line x1="${ox4}" y1="${oyP - 8}" x2="${ox4}" y2="${oyP + (b2.y1 - b2.y0) * SC3 + 8}" stroke="#cdc7b9" stroke-width="1" stroke-dasharray="4 4"/>`;
+  LV.forEach((_, i) => {
+    s += `<path d="${prof(draws[i], ox4)}" fill="none" stroke="${col(i)}" stroke-width="1.3" opacity="0.9" stroke-linejoin="round"/>`;
+  });
+  s += `<text x="${ox4 - 26}" y="${lbY}" font-size="11" font-weight="700" fill="#3a3a38">叠合 · 嘴心散布全程 ${Math.max(...spreads).toFixed(1)}px</text>`;
+  s += '</svg>';
+  writeFileSync(OUT, s);
+  console.log(`→ ${OUT}`);
 }
 
 const series = seriesFor(MODE);
