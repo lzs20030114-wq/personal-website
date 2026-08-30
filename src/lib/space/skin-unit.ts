@@ -193,6 +193,16 @@ export interface SkinUnitOpts {
    */
   zipUp?: readonly number[];
   /**
+   * **显式均匀排布**（B 实验旋钮）：`[锚a, 锚b]` 区段的内部节点每迭代被硬投影
+   * 到两锚点连线上等距排布——与根部缓冲料的 rootRuns 治法**同一份机制**，
+   * 只是作用区段由调用方点名（rootRuns 是 boxSquare 自动圈出的缓冲段）。
+   * 动机（用户 2026-08-30「干净的方案不应该出现锯齿」）：锯齿 = 键与键之间的
+   * 富余材料鼓成的小包串（等待期是折叠纹、成形后是缝壁波纹）；两锚点之间
+   * 均匀排布直接抹平——排布是**位置**机制不是形态机制（rootRuns 注释的老
+   * 结论），锚点仍由键/限位管。默认 undefined = 关，逐位不变。
+   */
+  alignRuns?: readonly (readonly [number, number])[];
+  /**
    * **相对单侧限位**（B 实验旋钮）：`[节点, 参考节点, 偏移]`——每迭代末，
    * 节点的 x 不得超过 参考节点 x + 偏移（世界单位）。与 coreTether（绝对限位）
    * 是同一族约束，区别是上限跟着参考节点走。
@@ -314,6 +324,7 @@ export class SkinUnit {
   private attNearChains: readonly number[] | null;
   private zipUp: readonly number[] | null;
   private coreTetherRel: readonly (readonly [number, number, number])[] | null;
+  private alignRuns: readonly (readonly [number, number])[] | null;
   /** 每步位移上限（0 = 关） */
   private stepClamp: number;
   private r1: number;
@@ -340,6 +351,7 @@ export class SkinUnit {
     this.attNearChains = opts.attNearChains ?? null;
     this.zipUp = opts.zipUp && opts.zipUp.length ? opts.zipUp : null;
     this.coreTetherRel = opts.coreTetherRel && opts.coreTetherRel.length ? opts.coreTetherRel : null;
+    this.alignRuns = opts.alignRuns && opts.alignRuns.length ? opts.alignRuns : null;
     this.stepClamp = opts.stepClamp ?? 0;
     this.r1 = opts.r1 ?? SKIN.R1;
     this.warp = opts.warp ?? 1;
@@ -742,6 +754,20 @@ export class SkinUnit {
             const t = (i - lo) / m;
             px[i] = px[lo] + t * (px[hi] - px[lo]);
             py[i] = py[lo] + t * (py[hi] - py[lo]);
+          }
+        }
+      }
+      if (this.alignRuns) {
+        // 显式均匀排布（见 SkinUnitOpts.alignRuns）：与 rootRuns 同一治法，
+        // 作用于调用方点名的区段（内部节点排在两端锚点的连线上）
+        for (let t = 0; t < this.alignRuns.length; t++) {
+          const lo = this.alignRuns[t][0];
+          const hi = this.alignRuns[t][1];
+          const m = hi - lo;
+          for (let i = lo + 1; i < hi; i++) {
+            const f = (i - lo) / m;
+            px[i] = px[lo] + f * (px[hi] - px[lo]);
+            py[i] = py[lo] + f * (py[hi] - py[lo]);
           }
         }
       }
