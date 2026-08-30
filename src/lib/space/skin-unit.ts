@@ -175,6 +175,24 @@ export interface SkinUnitOpts {
    */
   lockGapChains?: readonly number[];
   /**
+   * **吸引近程门**（B 实验旋钮，2026-08-30 中间形态设计）：把吸引护栏的作用
+   * 范围从 D_ACT（1.2 = 120px，远程）收窄到 rb × attNear——键距超出键长的
+   * attNear 倍时不吸引，材料靠收缩自己走近。默认 0 = 关（v7 逐字）。
+   * 动机：远程吸引把「等待中的富余材料」拧成卷钩（鼓包想收成环），是等待态
+   * 难看的直接来源；配 attNearChains 圈定作用链（缝链的预锁依赖远程吸引，
+   * 不能碰——lockGapChains 同款先例）。路径改动，用了重验终态。
+   */
+  attNear?: number;
+  /** 吸引近程门的作用链（省略 = 全部链） */
+  attNearChains?: readonly number[];
+  /**
+   * **拉链反向**（B 实验旋钮）：列出的链从**最小跨**开始放行（v7 = 跨度大在前）。
+   * 动机：正规拉链等最外键入窗后一瞬全放（§15.12 的啪）；反向后最内键早早
+   * 可锁，箱体从面侧逐挡向外长出，富余材料一到就被折进去、不在等待态里
+   * 堆成团。锁定集合与键谱不变，变的只有放行顺序。路径改动，用了重验终态。
+   */
+  zipUp?: readonly number[];
+  /**
    * **每步位移上限**（世界单位；×100 = px。默认 undefined = 关，逐位不变）。
    * 机制无关的限速总闸：每个协议步结束时，自由节点相对步首位置的位移超限
    * 即按比例缩回；突变变成有界速度的滑行，约束在随后的步里以限速继续收敛。
@@ -281,6 +299,10 @@ export class SkinUnit {
   private lockGap: number;
   private lockGapChains: readonly number[] | null;
   private chainLastLock: number[];
+  /** 吸引近程门（0 = 关）及作用链；拉链反向链（null = 无） */
+  private attNear: number;
+  private attNearChains: readonly number[] | null;
+  private zipUp: readonly number[] | null;
   /** 每步位移上限（0 = 关） */
   private stepClamp: number;
   private r1: number;
@@ -303,6 +325,9 @@ export class SkinUnit {
     this.anchorEnd = opts.anchorEnd ?? false;
     this.lockGap = opts.lockGap ?? 0;
     this.lockGapChains = opts.lockGapChains ?? null;
+    this.attNear = opts.attNear ?? 0;
+    this.attNearChains = opts.attNearChains ?? null;
+    this.zipUp = opts.zipUp && opts.zipUp.length ? opts.zipUp : null;
     this.stepClamp = opts.stepClamp ?? 0;
     this.r1 = opts.r1 ?? SKIN.R1;
     this.warp = opts.warp ?? 1;
@@ -563,9 +588,13 @@ export class SkinUnit {
         const ch = chains[c];
         const paced =
           this.lockGap > 0 && (!this.lockGapChains || this.lockGapChains.includes(c));
+        const up = this.zipUp !== null && this.zipUp.includes(c); // 反向：最小跨先放行
+        const near =
+          this.attNear > 0 && (!this.attNearChains || this.attNearChains.includes(c));
         let firstUnlocked = true;
-        for (let t = 0; t < ch.length; t++) {
+        for (let tt = 0; tt < ch.length; tt++) {
           // 吸引全员, 锁定按拉链
+          const t = up ? ch.length - 1 - tt : tt;
           const bond = ch[t];
           const i = bond[0];
           const j = bond[1];
@@ -583,7 +612,7 @@ export class SkinUnit {
             lockedSet.add(i * 1024 + j);
             this.addChainLock(c, t);
             this.chainLastLock[c] = step;
-          } else if (rb < rr && rr < SKIN.D_ACT) {
+          } else if (rb < rr && rr < SKIN.D_ACT && (!near || rr < rb * this.attNear)) {
             // 吸引护栏：键距小于键长不再收紧（否则封死端面）
             px[i] += SKIN.K_ATT * dx;
             py[i] += SKIN.K_ATT * dy;
