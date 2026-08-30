@@ -148,8 +148,8 @@ function seriesFor(mode) {
 // 模式保留作证据与复查工具。
 // ring-square-h（用户 2026-08-30 拍板 A）：**高度一圈恒定、只有深度在变**。
 // 是 x 族（用户方案）的可行版本——x 族横向那半成立、竖向失败，根因是箱高钉在 68px
-// 时浅档的自由段放不下（详见 ring-square-x 注释）。把恒定值降到面档反推的上限内
-// （默认 48 = 等比族边档的嘴高），每一档就都能用「贴身自由段 + 配平垫」的干净构造。
+// 时浅档的自由段放不下（详见 ring-square-x 注释）。把恒定值降到**带子装得下**的范围
+// （默认 36，上限见下），每一档就都能用「贴身自由段 + 配平垫」的干净构造。
 //
 // 参数化（全部是已验证过的零件，无新机制）：
 // - 箱高 H 恒定 ⇒ 嘴键 rb = H/100 全员相同；端面板半跨 = H/4 节（等长键纪律精确：
@@ -161,10 +161,16 @@ function seriesFor(mode) {
 // - 缓冲 b 由折叠余量 E = 4b − (轴向间隙) ≥ E_MIN 定（余量太小缓冲被拉直、箱子变形；
 //   太大就是 x 族那种堆料乱滑）。这条规则在角档实扫验证。
 //
-// **定案（2026-08-30 实测，H=48）**：角 k50 / 边 k38 / 面 k33，一律 10 挡、嘴 48px。
-// 挑出 79.8 / 56.5 / 47.8（外缘点对目标方形 ≤0.8px），**箱高实测三档全是 48.0px、
-// 顶面水平度 ≤0.2px**（一圈恒定且是平的 = 这族的卖点），平台面终态散布 1.4px。
-// 方形边长 155.3px 与等比族的 156.2 差 0.9px ⇒ Lab.10 的格距/场地/房间照旧不用改。
+// **定案（2026-08-30 实测，H=36）**：角 k52 / 边 k39 / 面 k35，一律 10 挡、嘴 36px。
+// 挑出 89.2 / 63.7 / 56.0（外缘点对目标方形 ≤0.9px），箱高实测三档全是 **36.0px**、
+// 顶面水平度 ≤0.1px，**平台面终态散布 0.0px、全程最差 1.6px**，且三档 lead 相同
+// ⇒ 补偿一节都没用上，对齐是构造直接给的。方形边长 169px（等比族 156）。
+//
+// **H 的上限由带子总长定（202 节，2026-08-25 用户拍板钉死）**：
+// 浅档要「箱子住得下自由段」⇒ 它的 k 要够大 ⇒ 方形要够大 ⇒ 角档 F_TOT 要够长。
+// 逐档算下来 H=36 需 127 节、H=38 需 135 节（= lead 只剩 20 的硬上限）、
+// H=40 需 141 节（超）。故 **H ≈ 38 是极限，取 36 留余量**。要更高的箱只能放开
+// 「带子总长 202」那条拍板。
 //
 // 三条实测教训（都踩过，别再走）：
 // ① **深度不服材料账**：4k = 2D + H 推出的 D = 2k − H/2 高估，实测 D ≈ 1.78k
@@ -190,13 +196,25 @@ function seriesFor(mode) {
 //    常数项/斜率项）的前提正是同一时刻同一 r，用了反而全盘失配。三档末锁步
 //    501/603/652 不同是事实，但不能靠 warp 抹平。
 //
-// **残留**：两个整数旋钮只消得掉常数项与 r 的线性项，剩下的非线性残差（浅档折叠体
-// 在收缩末段多下垂，实测 8.6px）是形态量。拟合权重偏向收缩后段 ⇒ 终态 1.4px、
-// 中段一瞬 6.2px；等权则全程摊平在 4.2px。取前者：终态是台架上停留最久、也是
-// 「一圈平台」真正被读出来的状态。
+// ⑦ **「箱子住得下自由段」这条约束必须写成代码，不能只写在注释里**（用户
+//    2026-08-30 看叠合图指出「绿色底部这个形状咋反了」的病根）。面档 fs=75 时
+//    自由段在收缩终点的轴向跨度只有 44.4px，而箱高 48px ⇒ 间隙为 −3.6px：
+//    箱子比它住的那一段还高，嘴的上节点被顶到段端、下节点只能伸到段外，
+//    **下侧缓冲被拉直外翻**，上侧却松弛折叠 —— 上下不对称，底部嘴角就反向弯了。
+//    这与 x 族失败是同一条约束，当时只在注释里推导（「H ≲ 50」）没落地成守门。
+//    现在 gapOf ≥ G_MIN 进了 bForK 与 healthy 两处。
+// ⑧ **对齐不需要旋钮，对称垫本身就精确满足**：上垫 + (fs−1)/2 = (F_TOT−1)/2 恒定
+//    ⇒ 常数项与斜率项本来就三档相同。此前之所以要补偿，是因为箱子被挤（间隙不足）
+//    产生的物理偏移；而补偿用的 padShift 会让结构两侧材料不对称、把形也弄不对称
+//    （同一张图上用户还指出「有点小偏移」——两件事同一个根源）。间隙修好后
+//    实测三档 lead 相同、平台面散布 0.0px。padShift 已撤（参数保留备查，恒传 0）。
+//
+// **一条方法教训**：这一族连翻三次车（端面投影没触发 / 间隙为负 / 为指标加旋钮
+// 毁了形），三次都是「读数全绿、图不对」。§16.3 说的「人肉看图前先看分数」要补一句：
+// **分数只能否决，不能通过**——通过必须看图，且要看上下对称性这类分数没度量的性质。
 if (MODE === 'ring-square' || MODE === 'ring-square-x' || MODE.startsWith('ring-square-h')) {
   const fam = MODE === 'ring-square-x' ? 'x' : MODE.startsWith('ring-square-h') ? 'h' : 'iso';
-  ringSquare(fam, Number(MODE.split(':')[1]) || 48);
+  ringSquare(fam, Number(MODE.split(':')[1]) || 36);
   process.exit(0);
 }
 
@@ -311,12 +329,27 @@ function ringSquare(FAMILY, H_H) {
    */
   const D_PER_K = 1.78;
   const kForDepth = (D) => Math.max(KMIN + KSTEP, Math.round(D / D_PER_K));
+  /**
+   * 自由段在收缩终点的**轴向跨度**（px）。箱子就住在这一段里。
+   */
+  const spanOf = (kMax, b) => 2 * R1 * (2 * (kMax + b) + 1 - 1);
+  /** 轴向间隙：自由段跨度减掉箱高。**必须为正**——负的就是「箱子比它住的那段还高」 */
+  const gapOf = (kMax, b) => spanOf(kMax, b) - H_H;
   /** 折叠余量：缓冲材料 4b 减掉它要跨的轴向间隙（>0 = 折着，<0 = 被拉直 ⇒ 箱子变形） */
-  const slackOf = (kMax, b) => 4 * b - (2 * R1 * (2 * kMax + 2 * b) - H_H);
-  const E_MIN = 12; // 折叠余量下限（px）——角档实扫验过这条规则
+  const slackOf = (kMax, b) => 4 * b - gapOf(kMax, b);
+  /**
+   * 缓冲 b 要同时满足两条（**两条都得写成代码，不能只写在注释里**——用户
+   * 2026-08-30 看图指出的「绿色底部形状反了」就是漏掉第一条：面档 fs=75 ⇒
+   * 自由段轴向跨度只有 44.4px，而箱高 48px，箱子比它住的那一段还高，被硬挤进去，
+   * 底部嘴角外翻。这正是 x 族失败的同一条约束，当时只推导没落地）：
+   * ① 间隙 gap ≥ G_MIN：自由段放得下箱子，还留一点过渡；
+   * ② 余量 slack ≥ E_MIN：缓冲折得起来、不被拉直。
+   */
+  const G_MIN = 6;
+  const E_MIN = 12;
   const bForK = (kMax) => {
     let b = 4; // 交接件纪律：键谱两端 ≥4 节缓冲
-    while (slackOf(kMax, b) < E_MIN) b++;
+    while (gapOf(kMax, b) < G_MIN || slackOf(kMax, b) < E_MIN) b++;
     return b;
   };
   // **缓冲要按余量恒定给，不能全员同值**（2026-08-30 实测，两条都跑过）：
@@ -440,7 +473,8 @@ function ringSquare(FAMILY, H_H) {
           r.keys === BASE_KS.length && // 梯挡数一圈相同（§13 的既有品味）
           Math.abs(r.boxH - H_H) <= 4 && // 箱高实测对得上 —— 键全锁不等于形没塌
           r.topFlat <= 6 &&
-          r.botFlat <= 6 // 顶/底面得是平的 —— 这条才抓得住「跑型」
+          r.botFlat <= 6 && // 顶/底面得是平的 —— 这条才抓得住「跑型」
+          gapOf(r.kMax, r.b) >= G_MIN // 箱子住得下自己那段自由段
         : r.locked === r.keys;
   const closest = (pool, target) => {
     let best = null;
@@ -470,36 +504,42 @@ function ringSquare(FAMILY, H_H) {
   // iso/x：角档 = 现行方箱形态（谱逐位同 Lab.09 整环同形那张；lead/tail 是位置量不属形态）。
   // h：角档保持**现行这个深度**（80.5px，上一版线稿已按它出过图）⇒ 方形边长、Lab.10
   //    的格距、房间尺寸一律不动，这一族改的只有箱高（68 → H_H）。
-  const CORNER_D = 80.5;
+  const CORNER_D = 80.5; // iso/x 族的角档深度（h 族改为自动取最大，见下）
   let corner;
   if (FAMILY === 'h') {
-    const k0 = kForDepth(CORNER_D);
-    // phase 1：b 规则实扫——余量太小则缓冲被拉直、箱子变形；这条规则要拿实测验，不是推的
+    // 角档 = **带子装得下的最大深度**，不再钉在 iso 族那个 80.5。
+    // 理由是这一族的瓶颈在最浅那档：方形越大 ⇒ 面档的 k 越大 ⇒ 它的自由段越长 ⇒
+    // 越装得下那个恒定的箱高。把角档做小反而是在为难面档。
+    // 上限来自带子总长：F_TOT = 2(k+b)+1 ≤ 202 − 2·ISO − TAIL2 − 20（lead 留 20）。
+    const FS_MAX = RING_BAND_NODES - 2 * ISO - TAIL2 - 20;
+    let k0 = 0;
+    for (let k = 70; k >= 20; k--) {
+      const b = bForK(k);
+      if (2 * (k + b) + 1 <= FS_MAX) {
+        k0 = k;
+        break;
+      }
+    }
+    // phase 1：b 规则实扫——余量太小缓冲被拉直、间隙太小箱子住不下；两条都要实测验
     const bScan = [];
-    for (let b = 4; b <= 14; b += 2) bScan.push(runLevel(levelForH(k0, b)));
+    for (let b = 4; b <= 16; b += 3) bScan.push(runLevel(levelForH(k0, b)));
     console.log(
-      `  [phase1] 角档缓冲 b 实扫（kMax=${k0}，箱高目标 ${H_H}）：` +
+      `  [phase1] 角档 kMax=${k0}（带长上限）· 箱高目标 ${H_H} · 缓冲实扫：` +
         bScan
           .map(
             (r) =>
-              `b${r.b}(余量${r.slack.toFixed(0)})→深${r.out.toFixed(1)}/高${r.boxH.toFixed(1)}/键${r.locked}of${r.keys}`,
+              `b${r.b}(间隙${gapOf(r.kMax, r.b).toFixed(0)}/余量${r.slack.toFixed(0)})→深${r.out.toFixed(1)}/高${r.boxH.toFixed(1)}/平${r.topFlat.toFixed(1)}`,
           )
           .join('  '),
     );
-    // phase 2：kMax 搜到目标深度（b 由余量规则给），角档定案 ⇒ 配平基准 F_TOT
-    searchK(CORNER_D);
-    corner = closest(sweep, CORNER_D);
-    const rows = (pool) =>
-      pool
-        .map(
-          (r) =>
-            `k${r.kMax}:深${r.out.toFixed(0)}/高${r.boxH.toFixed(0)}/平${r.topFlat.toFixed(0)},${r.botFlat.toFixed(0)}/键${r.locked}of${r.keys}${healthy(r) ? '' : '✗'}`,
-        )
-        .join('  ');
-    if (!corner) {
-      console.log('  [角档候选] ' + rows(sweep));
-      throw new Error('角档没有健康候选——看上一行逐档读数：深/高/平(顶,底)/键');
+    corner = runLevel(levelForH(k0, bForK(k0)));
+    if (!healthy(corner)) {
+      console.log(
+        `  [角档] k${corner.kMax}/b${corner.b}：深${corner.out.toFixed(1)}/高${corner.boxH.toFixed(1)}/平${corner.topFlat.toFixed(1)},${corner.botFlat.toFixed(1)}/键${corner.locked}of${corner.keys}/间隙${gapOf(corner.kMax, corner.b).toFixed(1)}`,
+      );
+      corner = null;
     }
+    if (!corner) throw new Error('角档不健康——看上一行读数：深/高/平(顶,底)/键/间隙');
     F_TOT_H = corner.fs;
     corner = runLevel(levelForH(corner.kMax, B_FIX_ENV || bForK(corner.kMax))); // 带上配平垫重跑（角档 p=0，值应逐位不变）
   } else {
@@ -535,12 +575,15 @@ function ringSquare(FAMILY, H_H) {
       if (comp === 0) return r0;
       return runLevel(FAMILY === 'x' ? levelForX(r0.cut, r0.pw, comp) : levelFor(r0.g, comp));
     }
-    // h 族：两个旋钮各管一项——把残差 d(r) 拟合成 A + B·r，
-    // 用 lead 消 A（Δ常数 = −2·节）、用垫的上下分配消 B（Δ斜率 = +2·节）。
-    // 取整后残差还在就再来一轮（旋钮量子 2px / 2r px，两轮足够收敛）。
+    // h 族：**只用 lead 这一个旋钮**。
+    // 垫的上下分配（padShift）试过并撤销：对称垫时
+    //   上垫 + (fs−1)/2 = (F_TOT−1)/2 恒定 ⇒ 常数项与斜率项**本来就精确相同**，
+    // 对齐是构造给的、不需要那个旋钮；而挪动它会让结构两侧的缓冲材料不对称，
+    // 箱子上下就不对称了（用户 2026-08-30 看图指出面档底部嘴角走向反了）。
+    // 保留 levelForH 的参数备查，这里恒传 0。
     let cur = r0;
     let lead = 0;
-    let pad = 0;
+    const pad = 0;
     for (let iter = 0; iter < 2; iter++) {
       const dev = allY(cur).map((y, i) => y - ref[i]);
       // 加权最小二乘拟合 dev ≈ A + B·r。两个旋钮只消得掉常数项与 r 的线性项，
@@ -562,12 +605,10 @@ function ringSquare(FAMILY, H_H) {
       const A = md - B * mr;
       // Δ = 2·dLead − 2r·dPad 要抵消 dev = A + B·r
       const dLead = Math.round(-A / 2);
-      const dPad = Math.round(B / 2);
-      if (dLead === 0 && dPad === 0) break;
-      const next = levelForH(r0.kMax, r0.b, lead + dLead, pad + dPad);
+      if (dLead === 0) break;
+      const next = levelForH(r0.kMax, r0.b, lead + dLead, pad);
       if (next.bad) break;
       lead += dLead;
-      pad += dPad;
       cur = runLevel(next);
     }
     return cur;
@@ -615,7 +656,8 @@ function ringSquare(FAMILY, H_H) {
   for (const l of LV)
     console.log(
       `    ${l.name}档 嘴心 ${allY(l.r).map((y) => y.toFixed(1)).join(' / ')}` +
-        `  顶面 ${l.r.topY.toFixed(1)}（水平度 ${l.r.topFlat.toFixed(1)} / 底 ${l.r.botFlat.toFixed(1)}）  末锁 step ${l.r.lockEnd}` +
+        `  顶面 ${l.r.topY.toFixed(1)}（水平度 ${l.r.topFlat.toFixed(1)} / 底 ${l.r.botFlat.toFixed(1)}）` +
+        `  间隙 ${gapOf(l.r.kMax, l.r.b).toFixed(1)} / 余量 ${l.r.slack.toFixed(1)}  末锁 ${l.r.lockEnd}` +
         (l.r.padShift ? `（垫偏移 ${l.r.padShift}）` : ''),
     );
   const tops = LV.map((l) => l.r.topY);
