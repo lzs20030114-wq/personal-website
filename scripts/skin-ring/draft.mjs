@@ -6,6 +6,8 @@
 //        bulb-ledge = 蘑菇↔直挑台的粗排系列（探路用；实测这一对差 1.86px，已否）
 //        ring-gradient = 定版：Lab.09 环上渐变（蘑菇↔方箱，20 位回文 = 11 级）
 //        ring-square = 方形环线稿：三档挑出把俯视外轮廓凑成正方形（角带 = 现行方箱原谱）
+//        ring-square-x = 方形环 · 横向压缩族（用户方案）：只压挑出、高度不变——
+//                        rb/端面板一律不动，从外侧剪梯挡（粗调）+ 端面板宽（细调）
 import { writeFileSync } from 'node:fs';
 import { createSkinUnit, SKIN } from '../../src/lib/space/skin-unit.ts';
 import {
@@ -126,12 +128,30 @@ function seriesFor(mode) {
 // 其余两档往小缩——反过来把面档钉在现行大小去把角做大，挑出要 116px+，
 // 202 节的带子装不下（总长钉死是 2026-08-25 的拍板）。
 // 半径也钉死在默认值：挑出目标是「方形极径 − 站位半径」的绝对量，R 一变三档全要重标。
-if (MODE === 'ring-square') {
-  ringSquare();
+// ring-square-x（用户 2026-08-30 方案）：**只有向外扩展的横向维度被压缩，高度不变**，
+// 每条带的压缩比例由「放进方形里具体压缩了多少」反推。机制上 = 剪梯族：
+// 同一张方箱谱，rb（=箱高）与端面板一律不动，从外侧剪梯挡——挑出就是最外键兜住的
+// 材料对折的长度（§14.5.3 实测关系），剪掉外圈键 = 只减折叠深度、不动端面高度。
+// 粗调 = 剪几根（一根 ≈ 8px），细调 = 端面板半跨（渐变实测它在 2.1 尺度是连续杠杆）。
+//
+// **实测结论（2026-08-30，横向成立、竖向失败，弯路入档）**：
+// - 横向那半成立：三档挑出贴住目标（外缘偏差 1.1px）、嘴 68px 三档恒定、键各自全锁；
+// - 竖向失败：嘴心全程散布 22–61px，剖面图上箱子在跨度里各滑一头（边档沉到下半、
+//   面档浮到上半且破形）。机理是一条结构性的账——箱高 68px 的竖向跨度由**锁定的
+//   嘴键**撑着（零材料），于是自由段节点数被迫 ≥ ~115 才放得下这个跨度；节点就是
+//   材料，角档的键兜走 220px 刚好吃满，面档的键只兜 136px，多出 ~90px 富余料挤在
+//   ~3px 的松弛区间里打褶，而引擎的硬机制清单（§16）里**没有任何钉竖向位置的机制**
+//   ——箱子连同褶一起乱滑。等比族没这个病：形一缩嘴也缩，自由段能贴身。
+// - 端面板收窄（±13）还会破「面板端点恰好是锁定键」的触发条件，端面鼓圆角。
+// 结论：高度钉在现行 68px 的横向压缩做不干净；「高度一圈恒定」要可行得把恒定值
+// 降到面档反推的上限（H ≲ 1.2·kMax_face + ~10 ≈ 50px），那样每档都能贴身+配平垫。
+// 模式保留作证据与复查工具。
+if (MODE === 'ring-square' || MODE === 'ring-square-x') {
+  ringSquare(MODE === 'ring-square-x' ? 'x' : 'iso');
   process.exit(0);
 }
 
-function ringSquare() {
+function ringSquare(FAMILY) {
   const P = 30; // 画布边距（别用全局 PAD——它声明在本函数被调用之后，TDZ）
   const stepped = SKIN_UNITS.find((d) => d.key === 'stepped');
   const R = RING.RADIUS_DEF;
@@ -178,6 +198,28 @@ function ringSquare() {
     return { g, seg, fs, c, p, lead, tail, off, spec };
   };
 
+  // 横向压缩族（用户方案）的一档：现行方箱谱**剪掉外侧 cut 根梯挡**，rb（=箱高）、
+  // 内圈键位、fs 全员不动 ⇒ 高度与箱厚一圈恒定；pw = 端面板半跨（±17 = 原谱全跨，
+  // 收窄是细调挑出的旋钮——渐变实测它在 2.1 尺度是连续杠杆；代价是端面硬投影的
+  // 触发条件「面板端点恰好是锁定键」不再严格成立，端面质量看剖面图验收）。
+  // M 恒定 + 全员同一副 [g|f|g] ⇒ 嘴心与档位无关，不需要配平垫。
+  const PW_FULL = Math.round(8 * RING_GROW);
+  const levelForX = (cut, pw, leadComp = 0) => {
+    const fs = F_TOT;
+    const c = (fs - 1) / 2;
+    const placed = placeOnBand(growSeg(stepped.spec[1], RING_GROW), fs, c);
+    const bonds = placed[2].slice(0, placed[2].length - cut); // 谱内升序，剪尾 = 剪最外
+    const kMax = Math.round((bonds[bonds.length - 1][1] - bonds[bonds.length - 1][0]) / 2);
+    const seg = ['f', fs, bonds, [[c - pw, c + pw]]];
+    const lead = LEAD2 + leadComp;
+    const tail = TAIL2 - leadComp;
+    return {
+      g: RING_GROW, cut, pw, kMax, keys: bonds.length, seg, fs, c, p: 0, lead, tail,
+      off: lead + ISO,
+      spec: [['g', lead + ISO], seg, ['g', ISO + tail]],
+    };
+  };
+
   // 全程检查点（§8.8 教训：动画件的对齐要按整个时间轴验，不能只验终态）
   const CHK_R = [0.87, 0.66, 0.44];
   const chkSteps = CHK_R.map((r) => Math.round((900 * (SKIN.R0 - r)) / (SKIN.R0 - SKIN.R1)));
@@ -214,7 +256,7 @@ function ringSquare() {
 
   // 角档 = 现行方箱形态（g = RING_GROW，谱逐位同 Lab.09 整环同形那张；lead/tail 是
   // 位置量不属形态）；方形大小由它反推（sq(θ) = 方形边界的极径）
-  const corner = runLevel(levelFor(RING_GROW));
+  const corner = runLevel(FAMILY === 'x' ? levelForX(0, PW_FULL) : levelFor(RING_GROW));
   const a = (R + corner.out) / Math.SQRT2;
   const sq = (th) => a / Math.max(Math.abs(Math.cos(th)), Math.abs(Math.sin(th)));
   const T = { mid: sq((Math.PI * 27) / 180) - R, face: sq((Math.PI * 9) / 180) - R };
@@ -222,18 +264,28 @@ function ringSquare() {
   // 标定：g 扫 1.05–1.80（谱经取整会重复，按签名去重），掉键的档直接不要
   const sweep = [];
   const seen = new Set();
-  for (let gi = 105; gi <= 180; gi += 1) {
-    const r = runLevel(levelFor(gi / 100));
+  const trySweep = (lv) => {
+    const r = runLevel(lv);
     if (!seen.has(r.sig)) {
       seen.add(r.sig);
       sweep.push(r);
     }
+  };
+  if (FAMILY === 'x') {
+    for (let cut = 0; cut <= 6; cut++) for (const pw of [PW_FULL, 15, 13]) trySweep(levelForX(cut, pw));
+  } else {
+    for (let gi = 105; gi <= 180; gi += 1) trySweep(levelFor(gi / 100));
   }
+  // 掉键的档直接不要：等比族键数恒 = 角档；剪梯族每档键数 = 自己谱里的根数（剪是有意的）
+  const healthy = (r) => (FAMILY === 'x' ? r.locked === r.keys : r.locked === corner.locked);
   const pick = (target) => {
     let best = null;
     for (const r of sweep) {
-      if (r.locked !== corner.locked) continue;
-      if (!best || Math.abs(r.out - target) < Math.abs(best.out - target)) best = r;
+      if (!healthy(r)) continue;
+      const err = Math.abs(r.out - target);
+      if (!best || err < Math.abs(best.out - target) - 1e-9) best = r;
+      // 同误差取端面板更接近全跨的（少动原谱器件）
+      else if (best && Math.abs(err - Math.abs(best.out - target)) < 1e-9 && (r.pw ?? 0) > (best.pw ?? 0)) best = r;
     }
     return best;
   };
@@ -244,8 +296,10 @@ function ringSquare() {
   const compensate = (r0) => {
     const ref = allY(corner);
     const d = allY(r0).reduce((s, y, i) => s + (y - ref[i]), 0) / (CHK_R.length + 1);
-    const comp = -Math.round(d / 2);
-    return comp === 0 ? r0 : runLevel(levelFor(r0.g, comp));
+    // 补偿夹在尾段纪律内（tail ≥ 11——首跑 x 族时 +7 的补偿把尾段挤到 8）
+    const comp = Math.min(-Math.round(d / 2), TAIL2 - 11);
+    if (comp === 0) return r0;
+    return runLevel(FAMILY === 'x' ? levelForX(r0.cut, r0.pw, comp) : levelFor(r0.g, comp));
   };
   const face = compensate(pick(T.face));
   const mid = compensate(pick(T.mid));
@@ -255,11 +309,17 @@ function ringSquare() {
     { name: '角', r: corner, target: corner.out, count: 4 },
   ];
 
-  console.log(`ring-square · 方形环三档标定（R=${R} 钉死 · 相位 +9° · 角带 = 现行方箱形态 g=${RING_GROW}）`);
+  const famName = FAMILY === 'x' ? '横向压缩族（剪梯挡，高度不变）' : '等比缩放族';
+  const desc = (r) => (FAMILY === 'x' ? `剪${r.cut}根(kMax ${r.kMax})·板±${r.pw}` : `g=${r.g.toFixed(2)}`);
+  const specStr = (r) =>
+    r.p > 0
+      ? `[${r.lead}|垫${r.p}|${ISO}|结构${r.fs}|${ISO}|垫${r.p}|${r.tail}]`
+      : `[${r.lead + ISO}|结构${r.fs}|${ISO + r.tail}]`;
+  console.log(`ring-square(${FAMILY}) · ${famName} 三档标定（R=${R} 钉死 · 相位 +9° · 角带 = 现行方箱形态）`);
   console.log(`  方形半边长 a = ${a.toFixed(1)}px（边长 ${(2 * a).toFixed(1)}px，外接现行环的外缘）`);
   for (const l of LV)
     console.log(
-      `  ${l.name}档 ×${l.count}  g=${l.r.g.toFixed(2)}  谱 [${l.r.lead}|垫${l.r.p}|${ISO}|结构${l.r.fs}|${ISO}|垫${l.r.p}|${l.r.tail}]  挑出 目标 ${l.target.toFixed(1)} / 实测 ${l.r.out.toFixed(1)}` +
+      `  ${l.name}档 ×${l.count}  ${desc(l.r)}  谱 ${specStr(l.r)}  挑出 目标 ${l.target.toFixed(1)} / 实测 ${l.r.out.toFixed(1)}` +
         `（偏差 ${(l.r.out - l.target >= 0 ? '+' : '')}${(l.r.out - l.target).toFixed(1)}）  锁定键 ${l.r.locked}  嘴 ${l.r.mouthPx.toFixed(0)}px`,
     );
   for (const l of LV) {
@@ -274,7 +334,9 @@ function ringSquare() {
   console.log(
     `  三档嘴心散布（全程 r≈${[...CHK_R, SKIN.R1].join('/')}）：${spreads.map((s) => s.toFixed(1)).join(' / ')}px`,
   );
-  console.log(`  扫掠 g→挑出（! = 掉键，不取）：${sweep.map((r) => `${r.g.toFixed(2)}→${r.out.toFixed(0)}${r.locked !== corner.locked ? '!' : ''}`).join('  ')}`);
+  console.log(
+    `  扫掠 →挑出（! = 掉键，不取）：${sweep.map((r) => `${FAMILY === 'x' ? `剪${r.cut}/±${r.pw}` : r.g.toFixed(2)}→${r.out.toFixed(0)}${healthy(r) ? '' : '!'}`).join('  ')}`,
+  );
 
   // 20 位：档位、外缘点、对目标方形的偏差
   const pts = Array.from({ length: N }, (_, i) => {
@@ -316,7 +378,7 @@ function ringSquare() {
   const H2 = Math.ceil(lbY + 14 + 30);
   let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${W2}" height="${H2}" viewBox="0 0 ${W2} ${H2}" font-family="ui-sans-serif,system-ui,sans-serif">
 <rect width="${W2}" height="${H2}" fill="#f6f4ef"/>
-<text x="${P}" y="${P}" font-size="15" font-weight="700" fill="#1b1b1a">线稿 · ring-square · 方形环（Lab.09 方箱 · 等比缩放三档 · 真引擎终态）</text>
+<text x="${P}" y="${P}" font-size="15" font-weight="700" fill="#1b1b1a">线稿 · ring-square${FAMILY === 'x' ? '-x' : ''} · 方形环（Lab.09 方箱 · ${famName} · 真引擎终态）</text>
 <text x="${P}" y="${P + 20}" font-size="11.5" fill="#3a3a38">R=${R} 钉死 · 相位 +9°（角上有带）· 边长 ${(2 * a).toFixed(0)}px · 外缘点最大偏差 ${maxDev.toFixed(1)}px · 嘴心散布全程 ${Math.max(...spreads).toFixed(1)}px</text>
 <text x="${P}" y="${P + 40}" font-size="12" font-weight="700" fill="#1b1b1a">俯视：橙虚线 = 目标方形 · 紫虚线 = 环间膜的弦线 · 灰实圆 = 筒芯（不变）· 灰点圆 = 现行圆环外缘（对照）</text>`;
 
@@ -339,16 +401,20 @@ function ringSquare() {
   LV.forEach((l, i) => {
     const ly = P + 76 + i * 20;
     s += `<rect x="${P}" y="${ly - 10}" width="12" height="12" fill="hsl(${HUE[i]} 40% 42% / 0.5)" stroke="${col(i)}"/>`;
-    s += `<text x="${P + 18}" y="${ly}" font-size="11" fill="#3a3a38">${l.name} ×${l.count} · g ${l.r.g.toFixed(2)} · 挑出 ${l.r.out.toFixed(1)}</text>`;
+    s += `<text x="${P + 18}" y="${ly}" font-size="11" fill="#3a3a38">${l.name} ×${l.count} · ${desc(l.r)} · 挑出 ${l.r.out.toFixed(1)}</text>`;
   });
 
   // 三档剖面并排 + 叠合（公共 y 基准：上下缘与嘴心的相对关系直接可读）
-  s += `<text x="${P}" y="${oyP - 34}" font-size="12" font-weight="700" fill="#1b1b1a">三档侧面剖面（自由段终态 · 公共 y 基准同比例）——厚度跟着 g 走：角厚面薄，这是等比族的代价</text>`;
+  s += `<text x="${P}" y="${oyP - 34}" font-size="12" font-weight="700" fill="#1b1b1a">${
+    FAMILY === 'x'
+      ? '三档侧面剖面（自由段终态 · 公共 y 基准同比例）——高度/箱厚一圈恒定，只有深度在变：这是这族的卖点'
+      : '三档侧面剖面（自由段终态 · 公共 y 基准同比例）——厚度跟着 g 走：角厚面薄，这是等比族的代价'
+  }</text>`;
   LV.forEach((l, i) => {
     const ox = P + i * 230 + 40;
     s += `<line x1="${ox}" y1="${oyP - 8}" x2="${ox}" y2="${oyP + (b2.y1 - b2.y0) * SC3 + 8}" stroke="#cdc7b9" stroke-width="1" stroke-dasharray="4 4"/>`;
     s += `<path d="${prof(draws[i], ox)}" fill="none" stroke="${col(i)}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>`;
-    s += `<text x="${ox - 26}" y="${lbY}" font-size="11" font-weight="700" fill="#3a3a38">${l.name}档 g=${l.r.g.toFixed(2)} · 结构 ${l.r.fs} + 垫 ${2 * l.r.p}（配平）</text>`;
+    s += `<text x="${ox - 26}" y="${lbY}" font-size="11" font-weight="700" fill="#3a3a38">${l.name}档 ${desc(l.r)}${l.r.p > 0 ? ` · 垫 ${2 * l.r.p}（配平）` : ''}</text>`;
     s += `<text x="${ox - 26}" y="${lbY + 14}" font-size="10.5" fill="#3a3a38">挑出 ${l.r.out.toFixed(1)}（目标 ${l.target.toFixed(1)}）· 键 ${l.r.locked} · 嘴 ${l.r.mouthPx.toFixed(0)}px</text>`;
   });
   const ox4 = P + 3 * 230 + 40;
