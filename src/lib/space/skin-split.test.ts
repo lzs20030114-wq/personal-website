@@ -1,7 +1,9 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   SPLIT_BUF,
+  SPLIT_CLAMP,
   SPLIT_DEPTH,
+  SPLIT_GAP,
   SPLIT_LOBE,
   SPLIT_T,
   SPLIT_TAIL,
@@ -56,6 +58,10 @@ interface Row {
   doneStep: number;
   /** 成形期自交的最大环（夹住的节数）：≤6 节 = 织物褶皱；几十节 = 肉眼可见的死结 */
   knotSpan: number;
+  /** 外箱链各挡锁定的步号（成形顺滑守门：节拍真的把「同一步全锁」摊开了） */
+  boxLockSteps: number[];
+  /** 结构段每步最大位移的全程峰值（px；掐掉开局落位瞬态） */
+  peakMove: number;
   /** 检查点剖面（全程连续性判据用） */
   frames: [number, number][][];
 }
@@ -84,6 +90,13 @@ function runAll(): Row[] {
     const frames: [number, number][][] = [];
     let doneStep = 0;
     let knot = 0;
+    // 外箱键按跨度甄别：箱扇最小跨 = 缝嘴跨 + 2·FACE_N（L0 无缝，全部键都是箱键）
+    const boxMin = lv.i === 0 ? 0 : lv.marks.mouthB - lv.marks.mouthA + 12;
+    const boxLockSteps: number[] = [];
+    let prevLocked = 0;
+    let peakMove = 0;
+    const px0 = new Float64Array(s.n);
+    const py0 = new Float64Array(s.n);
     const snap = (): [number, number][] => {
       const cy0 = -s.py[lv.marks.center] * 100;
       const o: [number, number][] = [];
@@ -91,7 +104,18 @@ function runAll(): Row[] {
       return o;
     };
     for (let k = 0; k < SKIN.STEPS; k++) {
+      px0.set(s.px);
+      py0.set(s.py);
       s.advance();
+      if (k >= 30) {
+        for (let i = lv.lead; i < lv.lead + lv.free; i++) {
+          const d = Math.hypot(s.px[i] - px0[i], s.py[i] - py0[i]) * 100;
+          if (d > peakMove) peakMove = d;
+        }
+      }
+      for (let b = prevLocked; b < s.locked.length; b++)
+        if (s.locked[b][1] - s.locked[b][0] >= boxMin) boxLockSteps.push(k + 1);
+      prevLocked = s.locked.length;
       if (!doneStep && s.locked.length === tot0) doneStep = k + 1;
       if (FRAMES.includes(k + 1)) frames.push(snap());
       // 打结是瞬态：密采样才抓得住（稀采样漏过一次，差点当成没有）
@@ -128,6 +152,8 @@ function runAll(): Row[] {
       finite,
       doneStep,
       knotSpan: knot,
+      boxLockSteps,
+      peakMove,
       frames,
     };
   });
@@ -282,6 +308,22 @@ describe('skin-split 捏分过渡', () => {
       expect(steps[i], `L${i - 1}→L${i} 级联序`).toBeGreaterThan(steps[i - 1] - 40);
   });
 
+  it('成形顺滑（2026-08-30 返工）：外箱拉链逐挡推进 + 每步位移有界', () => {
+    // 病根 = 外箱十颗键同一步全锁（吸引护栏早备好全链、闸一开 55 迭代放行 55 颗），
+    // 全部整形机制以锁定为开关 ⇒ 成形压缩在 4 步里、峰值 34.5px/步 = 基线 114 倍。
+    // 修法 = 节拍（lockGap 只圈外箱链——缝链预锁不能碰，L8 实测绞死）+ 限速
+    // （stepClamp 兜屈曲翻越与单键顿挫；裸用会让缝料输掉与箱体合拢的竞速，必须
+    // 在节拍把合拢摊开之后才安全）。终态 Δ/锁定集合逐位复原（上面几条守门即证）。
+    for (const r of RUN) {
+      const bs = r.boxLockSteps;
+      expect(bs.length, `L${r.lv.i} 外箱键数`).toBeGreaterThanOrEqual(9);
+      for (let i = 1; i < bs.length; i++)
+        expect(bs[i] - bs[i - 1], `L${r.lv.i} 外箱第 ${i} 挡间隔`).toBeGreaterThanOrEqual(SPLIT_GAP);
+      expect(bs[bs.length - 1], `L${r.lv.i} 末挡`).toBeLessThan(950); // 拉链在纪律解除前走完
+      expect(r.peakMove, `L${r.lv.i} 过程峰值 px/步`).toBeLessThanOrEqual(SPLIT_CLAMP * 100 + 1e-6);
+    }
+  });
+
   it('成形期不打结：自交只剩织物褶皱（几十节的死结是看得见的事故）', () => {
     // 判据要看**环的规模**不是个数：2–3 节 = 褶皱，绘图平滑就盖住了；
     // 35/42 节 = L4/L5 早先那种肉眼可见的死结（缝底料被裁太狠拽出来的）。
@@ -298,9 +340,11 @@ describe('skin-split 捏分过渡', () => {
     RUN[0].frames.forEach((_, f) => {
       const sil = RUN.map((r) => silhouette(r.frames[f], -HALF, HALF));
       const gaps = sil.slice(1).map((s, i) => d(sil[i], s));
-      // 成形前形态尚未定形，带子宽一点；级联收尾后（第 3 个检查点起）收紧。
-      // step 700 上 L8↔L9 实测 3.97（L9 还差 26 步收尾）——上限留一点余量
-      const cap = f < 2 ? 14 : 4.5;
+      // 节拍化拉链（SPLIT_GAP）下，成形是一道跨 ~590–940 步的传播波：波峰期
+      // （检查点 700）相邻级差 = 拉链相位差 + 各自形态目标差，实测最大 15.1
+      // ——与旧「同步全锁」动态的全程峰值 13.6 同量级，不是断层；波过后
+      // （900）收到 5.3，终态（1200）3.2。上限按各段实测留一点余量。
+      const cap = f < 3 ? 17 : f === 3 ? 6.5 : 4.5;
       for (let i = 0; i < gaps.length; i++)
         expect(gaps[i], `检查点 ${f} 的 L${i}↔L${i + 1}`).toBeLessThan(cap);
     });

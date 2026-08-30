@@ -151,6 +151,44 @@ export interface SkinUnitOpts {
    * 键谱、约束、整形全都不知道这件事（约束是相对量、重力均匀）。
    */
   anchorEnd?: boolean;
+  /**
+   * **锁定节拍**：同一条链两次锁定之间的最小协议步距（默认 0 = v7 原行为，
+   * 逐位不变）。2026-08-30 过程顺滑返工（用户「还是不够顺滑：抽一个单独做
+   * 它的变化过程」）在 L5 上量出的病根：吸引护栏早把全链键距备到 rb 附近，
+   * 拉链只等最外键入窗——闸一开，**十颗键在同一步全锁**（55 迭代/步，每迭代
+   * 放行一颗），而全部整形机制（垂直化/直化/找平/硬投影）都以锁定为开关，
+   * 于是整个成形压缩在 4 步（0.05s）里：帧上是坯团一步变方箱的「啪」。
+   *
+   * 节拍不改锁定集合、不改拉链顺序（firstUnlocked 闸原样），只把「同一步
+   * 全放行」摊开成逐挡推进——折叠成了真正的拉拉链，从嘴到底一挡一挡合上。
+   * late 期（step>950，纪律解除排气泡）不受节拍限制，收尾行为不变。
+   * 注意这与 warp 一样是**路径**改动：锁定时刻变了，须重验终态（剪影Δ）。
+   *
+   * 适用边界（L8/L9 实测）：节拍不加作用域时会碰到缝链——而深缝级靠缝链在
+   * step 250 前预锁成刚性手风琴（§15.8 机理），延迟它会绞出大环（L8 实测
+   * Δ5.54→20.6、49 节死结）。故配 lockGapChains 圈定作用链。
+   */
+  lockGap?: number;
+  /**
+   * 锁定节拍的作用链（链下标，按 buildUnit 链序；省略 = 全部链）。
+   * 捏分族用 [0]：只给外箱梯上节拍，缝链/面角键保持 v7 原时序。
+   */
+  lockGapChains?: readonly number[];
+  /**
+   * **每步位移上限**（世界单位；×100 = px。默认 undefined = 关，逐位不变）。
+   * 2026-08-30 过程顺滑返工的主修法：成形期的猛动来自三种「开关式」机制——
+   * 拉链同步全锁（34px/步）、无锁定的屈曲翻越（23px/步）、锁定触发的硬投影
+   * （找平/flattenToLine，单键 30px/步）——逐一软化每种开关既繁琐又各有暗坑
+   * （节拍碰坏缝链预锁即一例）。限速是机制无关的总闸：每个协议步结束时，
+   * 自由节点相对步首位置的位移超限即按比例缩回。任何机制引起的突变都变成
+   * 有界速度的滑行，约束在随后的步里以限速继续收敛，**平衡态（终态）不变**。
+   *
+   * 先例 = Lab.05 触手的肌肉限速渐变（1.2/s，2026-07-10 用户实测拍板）。
+   * 与 DAMP 的区别：DAMP 衰减历史速度，限的是振荡；这里限单步位移，限的是
+   * 突变。贴合段（钉死）不受限。这也是**路径**改动：锁定时刻可能小幅后移，
+   * 用了就要重验终态（剪影Δ / 锁定集合）。
+   */
+  stepClamp?: number;
 }
 
 /**
@@ -240,6 +278,12 @@ export class SkinUnit {
   private anchorEnd: boolean;
   /** anchorEnd 的锚：末节点在 r=R0 时的 y（此后恒定） */
   private anchorRef = 0;
+  /** 锁定节拍（0 = 关）、其作用链（null = 全部）与每条链最近一次锁定的步号 */
+  private lockGap: number;
+  private lockGapChains: readonly number[] | null;
+  private chainLastLock: number[];
+  /** 每步位移上限（0 = 关） */
+  private stepClamp: number;
   private r1: number;
   /** 收缩时间曲线指数（1 = 线性，默认路径逐位不变） */
   private warp: number;
@@ -258,6 +302,9 @@ export class SkinUnit {
     this.sqChains = opts.sqChains ?? null;
     this.levelChains = opts.levelChains ?? null;
     this.anchorEnd = opts.anchorEnd ?? false;
+    this.lockGap = opts.lockGap ?? 0;
+    this.lockGapChains = opts.lockGapChains ?? null;
+    this.stepClamp = opts.stepClamp ?? 0;
     this.r1 = opts.r1 ?? SKIN.R1;
     this.warp = opts.warp ?? 1;
     this.boxSquare =
@@ -277,6 +324,7 @@ export class SkinUnit {
     this.freeMask = new Uint8Array(n).fill(1);
     for (const g of glued) this.freeMask[g] = 0;
     this.chainLocked = chains.map(() => []);
+    this.chainLastLock = chains.map(() => -Infinity);
     // 根部缓冲料 = 自由节点里不落在任何键谱围合区（链的最外键跨）内的那些
     const inSpan = new Uint8Array(n);
     for (const ch of chains) {
@@ -514,6 +562,8 @@ export class SkinUnit {
 
       for (let c = 0; c < chains.length; c++) {
         const ch = chains[c];
+        const paced =
+          this.lockGap > 0 && (!this.lockGapChains || this.lockGapChains.includes(c));
         let firstUnlocked = true;
         for (let t = 0; t < ch.length; t++) {
           // 吸引全员, 锁定按拉链
@@ -525,10 +575,15 @@ export class SkinUnit {
           const dx = px[j] - px[i];
           const dy = py[j] - py[i];
           const rr = Math.sqrt(dx * dx + dy * dy);
-          if ((firstUnlocked || late) && rr < rb + SKIN.D_LOCK) {
+          if (
+            (firstUnlocked || late) &&
+            rr < rb + SKIN.D_LOCK &&
+            (late || !paced || step - this.chainLastLock[c] >= this.lockGap)
+          ) {
             locked.push([i, j, rb]);
             lockedSet.add(i * 1024 + j);
             this.addChainLock(c, t);
+            this.chainLastLock[c] = step;
           } else if (rb < rr && rr < SKIN.D_ACT) {
             // 吸引护栏：键距小于键长不再收紧（否则封死端面）
             px[i] += SKIN.K_ATT * dx;
@@ -666,6 +721,22 @@ export class SkinUnit {
         for (let t = 0; t < this.coreTether.length; t++) {
           const tie = this.coreTether[t];
           if (px[tie[0]] > tie[1]) px[tie[0]] = tie[1];
+        }
+      }
+    }
+    if (this.stepClamp > 0) {
+      // 限速：步末对照步首（ppx/ppy 在积分段留的快照），超限按比例缩回。
+      // 只动自由节点；被缩回的位移下一步由约束继续以限速收敛。
+      const lim = this.stepClamp;
+      for (let i = 0; i < n; i++) {
+        if (!this.freeMask[i]) continue;
+        const dx = px[i] - ppx[i];
+        const dy = py[i] - ppy[i];
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d > lim) {
+          const f = lim / d;
+          px[i] = ppx[i] + dx * f;
+          py[i] = ppy[i] + dy * f;
         }
       }
     }

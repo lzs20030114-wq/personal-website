@@ -106,6 +106,11 @@ if (SWEEP && ONLY !== null && ONLY >= 1) {
 }
 
 const levels = ONLY !== null ? [buildSplitLevel(ONLY)] : buildSplitLevels();
+// 过程顺滑实验用：CLAMP（px）/GAP（步）注入站方选项，不动定案表
+for (const lv of levels) {
+  if (process.env.CLAMP) lv.opts = { ...lv.opts, stepClamp: Number(process.env.CLAMP) / 100 };
+  if (process.env.GAP) lv.opts = { ...lv.opts, lockGap: Number(process.env.GAP) };
+}
 const snapBag = SNAP ? [] : null;
 const runs = levels.map((lv) => {
   if (AT === null) return measure(lv, runToEnd(lv, snapBag));
