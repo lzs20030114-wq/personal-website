@@ -6,7 +6,9 @@ import {
   SPLIT_T,
   SPLIT_TAIL,
   SPLIT_TOTAL,
-  splitLead,
+  SPLIT_FREE_TOTAL,
+  SPLIT_LEAD_A,
+  SPLIT_LEAD_B,
   buildSplitLevels,
   silhouette,
   splitSeamW,
@@ -29,7 +31,7 @@ import { SKIN, createSkinUnit, type SkinBond, type SkinPanel } from './skin-unit
 const LV = buildSplitLevels();
 
 const segOf = (d: (typeof LV)[number]) =>
-  d.spec[1] as readonly ['f', number, readonly SkinBond[], readonly SkinPanel[], readonly (readonly SkinBond[])[]];
+  d.spec[3] as readonly ['f', number, readonly SkinBond[], readonly SkinPanel[], readonly (readonly SkinBond[])[]];
 const bondsOf = (d: (typeof LV)[number]): readonly SkinBond[] => segOf(d)[2];
 const panelsOf = (d: (typeof LV)[number]): readonly SkinPanel[] => segOf(d)[3] ?? [];
 const extraOf = (d: (typeof LV)[number]): readonly (readonly SkinBond[])[] => segOf(d)[4] ?? [];
@@ -139,14 +141,19 @@ describe('skin-split 捏分过渡', () => {
   it('对位构造：三段之和恒定、尾段与缓冲全员同值（底边齐平的全部条件）', () => {
     expect(LV.length).toBe(SPLIT_T.length);
     for (const d of LV) {
-      expect(d.spec.map((s) => s[0])).toEqual(['g', 'f', 'g']);
-      expect(d.spec[0][1]).toBe(d.lead);
-      expect(d.spec[1][1]).toBe(d.free);
-      expect(d.spec[2][1], `L${d.i} 尾段`).toBe(SPLIT_TAIL);
-      // 带总长全员同值 = 并拢排布下十片落位对齐的前提（台架按末节点对位）
-      expect(d.lead).toBe(splitLead(d.free));
-      expect(d.lead + d.free + SPLIT_TAIL).toBe(SPLIT_TOTAL);
-      // 两端缓冲恒 SPLIT_BUF：交接件纪律的下限，也是「下缓冲全员同值」的那一项
+      // 五段谱：[杆帽贴合 | 配平垫 | 隔离贴合 | 结构自由段 | 尾段]
+      expect(d.spec.map((s) => s[0])).toEqual(['g', 'f', 'g', 'f', 'g']);
+      expect(d.spec[0][1]).toBe(SPLIT_LEAD_A);
+      expect(d.spec[2][1], `L${d.i} 隔离贴合`).toBe(SPLIT_LEAD_B);
+      expect(SPLIT_LEAD_B, '隔离下限 = 全局约束最大跨距').toBeGreaterThanOrEqual(16);
+      expect(d.spec[4][1], `L${d.i} 尾段`).toBe(SPLIT_TAIL);
+      // 「任何时刻整片齐平」的充要条件：贴合总量与自由材料总量都全员同值
+      // ⇒ 芯长(r) = 贴合·2 + 自由·2r 在每个 r 上逐级相等
+      expect(d.spec[1][1] + d.free, `L${d.i} 自由总量`).toBe(SPLIT_FREE_TOTAL);
+      expect(SPLIT_LEAD_A + d.spec[1][1] + SPLIT_LEAD_B + d.free + SPLIT_TAIL).toBe(SPLIT_TOTAL);
+      // 配平垫无键（纯富余材料，rootHug+均匀排布收拾在杆上）
+      expect((d.spec[1] as readonly ['f', number, readonly SkinBond[]])[2].length).toBe(0);
+      // 结构自由段两端缓冲恒 SPLIT_BUF（逐级定案的动力学环境，一字不动）
       let lo = d.free;
       let hi = 0;
       for (const [i, j] of allBonds(d)) {
@@ -155,7 +162,7 @@ describe('skin-split 捏分过渡', () => {
       }
       expect(lo, `L${d.i} 上缓冲`).toBe(SPLIT_BUF);
       expect(d.free - 1 - hi, `L${d.i} 下缓冲`).toBe(SPLIT_BUF);
-      // 结构居中在自由段上（缝心 = 正中）
+      // 结构居中在自己的自由段上
       expect(d.marks.center - d.lead).toBe((d.free - 1) / 2);
     }
   });
@@ -259,13 +266,20 @@ describe('skin-split 捏分过渡', () => {
   });
 
 
-  it('收缩全程都是连续渐变：成形时刻十级对齐（用户 2026-08-29「过程里也要平滑」）', () => {
-    // 每级的拉链是「一瞬间全锁」，而这一瞬本来发生在各自不同的 r 上（实测 571→726 步）
-    // ⇒ 一排里总有一段已成形、一段还是直带子，那道边界扫过整排就是断层。
-    // 逐级 warp 把这一瞬搬到同一个 u（见 skin-split 的 LOCK_U/SYNC_U 推导）。
+  it('成形 = 从左到右的有序级联，且芯长全程逐级相等（顶端齐平的构造保证）', () => {
+    // 自然时序（不 warp——warp 会让十级各走各的 r(t)，芯长中途就不齐，顶端出
+    // ~37px 的瞬态阶梯；取舍实测见 skin-split 的成形时序注释）。卡两件事：
+    // ① 级联有序：L9（裂到轴，最难折）最后完成，窗口有界——动作是一道传播的
+    //    裂开，不是乱序乱响；② r 全员同步 + 三段构造全员同值 ⇒ 芯长处处相等
+    //    （构造性质，第一条守门已卡三段；这里再卡因果链的另一端：完成步都在
+    //    同一协议段内，且每级都真的走完）。
     const steps = RUN.map((r) => r.doneStep);
     for (const st of steps) expect(st).toBeGreaterThan(0); // 每级都真的走完拉链
-    expect(Math.max(...steps) - Math.min(...steps), '成形时刻散布（步）').toBeLessThanOrEqual(30);
+    expect(Math.max(...steps), '最晚完成').toBe(steps[9]); // 裂到轴的 L9 收尾
+    expect(Math.max(...steps) - Math.min(...steps), '级联窗口（步）').toBeLessThanOrEqual(170);
+    // 近乎单调：允许小逆序（自然时刻 L1/L2、L7/L8 各差 ~20 步），大逆序 = 乱响
+    for (let i = 1; i < steps.length; i++)
+      expect(steps[i], `L${i - 1}→L${i} 级联序`).toBeGreaterThan(steps[i - 1] - 40);
   });
 
   it('成形期不打结：自交只剩织物褶皱（几十节的死结是看得见的事故）', () => {
@@ -284,8 +298,9 @@ describe('skin-split 捏分过渡', () => {
     RUN[0].frames.forEach((_, f) => {
       const sil = RUN.map((r) => silhouette(r.frames[f], -HALF, HALF));
       const gaps = sil.slice(1).map((s, i) => d(sil[i], s));
-      // 成形前形态尚未定形，带子宽一点；锁定后（第 3 个检查点起）收紧到 4px
-      const cap = f < 2 ? 14 : 4;
+      // 成形前形态尚未定形，带子宽一点；级联收尾后（第 3 个检查点起）收紧。
+      // step 700 上 L8↔L9 实测 3.97（L9 还差 26 步收尾）——上限留一点余量
+      const cap = f < 2 ? 14 : 4.5;
       for (let i = 0; i < gaps.length; i++)
         expect(gaps[i], `检查点 ${f} 的 L${i}↔L${i + 1}`).toBeLessThan(cap);
     });
