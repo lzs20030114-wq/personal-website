@@ -212,6 +212,16 @@ const LABS = [
     hover: 'var(--p100)',
     kickerColor: 'var(--accent-2)',
   },
+  {
+    kicker: 'Lab.14',
+    title: 'A square ring',
+    body: 'The mast stays round; how far each band reaches makes the plan a square.',
+    meta: 'Three depths · WebGL',
+    href: '/lab#lab14',
+    bar: 'var(--p700)',
+    hover: 'var(--p100)',
+    kickerColor: 'var(--accent-2)',
+  },
 ];
 
 // Work log 预览三条：2026-07-27 起改接内容池最新三条（此前为 Home 稿硬编码字面，
@@ -221,13 +231,13 @@ export interface HomeLog {
   text: string;
 }
 
-// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-08-30 vitest 实测 400；
+// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-08-30 vitest 实测 412；
 // 迭代稿配色：Tests=绿 700、Kernels=紫 700、Demos=绿 600）
 const STATS = [
   { n: '04', label: 'Projects', color: 'var(--ink)' },
-  { n: '400', label: 'Tests green', color: 'var(--accent)' },
+  { n: '412', label: 'Tests green', color: 'var(--accent)' },
   { n: '03', label: 'Solver kernels', color: 'var(--accent-2)' },
-  { n: '13', label: 'Live demos', color: 'var(--g600)' },
+  { n: '14', label: 'Live demos', color: 'var(--g600)' },
 ];
 
 const UPPER_11: CSSProperties = {
@@ -1768,7 +1778,7 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
               </div>
               <div
                 data-row
-                className="grid grid-cols-2 lg:grid-cols-13"
+                className="grid grid-cols-2 lg:grid-cols-14"
                 style={{ gap: 1, background: 'oklch(0.235 0.025 215 / 0.22)' }}
               >
                 {LABS.map((lab) => (

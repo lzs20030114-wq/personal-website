@@ -14,6 +14,7 @@ import { SkinGridBench } from '../../../components/lab/SkinGridBench';
 import { SkinDualBench } from '../../../components/lab/SkinDualBench';
 import { SkinSplitBench } from '../../../components/lab/SkinSplitBench';
 import { SkinSplitRingBench } from '../../../components/lab/SkinSplitRingBench';
+import { SquareRingBench } from '../../../components/lab/SquareRingBench';
 
 export const metadata = { title: 'The lab' };
 
@@ -182,7 +183,7 @@ export default function LabPage() {
       <div className="shell pg-dark" data-pt-content>
         <header style={{ padding: '64px 0 40px', borderBottom: 'var(--hair)' }}>
           <div className="flex items-baseline justify-between" style={{ gap: 32 }}>
-            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · thirteen live instruments</p>
+            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · fourteen live instruments</p>
             <span style={LEGEND}>
               <span className="flex items-center" style={{ gap: 6 }}>
                 <span style={{ width: 9, height: 9, background: 'var(--accent)' }} />
@@ -452,6 +453,25 @@ export default function LabPage() {
           <SkinSplitRingBench />
         </Bench>
 
+        <Bench
+          no="14"
+          title="A square ring"
+          lede="The mast stays round; the plan does not. Each of the twenty bands reaches out a different distance — four at the corners, eight along the edges, eight on the faces — so the rim lands on a square, and since the membrane between neighbours is a ruled panel, the chord it draws is the edge itself. Only the reach changes: the box is the same height the whole way round, its ladder the same ten rungs, squeezed closer as the shelf gets shallower. Two conditions decide whether that works, and both were learnt the hard way: the end panel must end on a locked rung or the end face bows out, and the box has to fit inside the free run it lives in — when it does not, the lower buffer is pulled straight and the mouth curls the wrong way."
+          accent="var(--accent-2)"
+          specs={[
+            ['Ring', '20 bands · three depths — 8 face · 8 edge · 4 corner'],
+            ['Plan', 'Square, side 169 px · rim within 0.9 px of it'],
+            ['Reach', '56 / 64 / 89 px — the only thing that varies'],
+            ['Box', 'Height 36 px everywhere · faces flat within 0.1 px'],
+            ['Ladder', '10 rungs on every band, pitched closer when shallow'],
+            ['Flat', 'Platform spread 0.0 px — the padding makes it, not a fit'],
+            ['Radius', 'Fixed: the depths are calibrated against it'],
+            ['Ceiling', 'Ring plate · fixed masts, skin gathers down them'],
+          ]}
+        >
+          <SquareRingBench />
+        </Bench>
+
         <footer
           className="flex flex-wrap items-baseline justify-between"
           style={{ gap: 32, padding: '26px 0 72px' }}
@@ -465,7 +485,7 @@ export default function LabPage() {
               color: 'var(--n500)',
             }}
           >
-            13 instruments · 03 kernels · all live
+            14 instruments · 03 kernels · all live
           </span>
           <span
             className="flex"

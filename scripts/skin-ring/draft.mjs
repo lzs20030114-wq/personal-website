@@ -16,6 +16,7 @@ import {
 } from '../../src/lib/space/skin-ring.ts';
 import { ARRAY_CENTER, ARRAY_FREE, ARRAY_LEAD, ARRAY_TAIL, placeOnBand } from '../../src/lib/space/skin-array.ts';
 import { SKIN_SITE_BASE, SKIN_UNITS, skinSiteOpts } from '../../src/lib/space/skin-data.ts';
+import { SQUARE, SQUARE_TIERS, squareBuffer, squareFree, squareSpec } from '../../src/lib/space/skin-square.ts';
 import { buildGradientOrder, buildRingGradient } from '../../src/lib/space/skin-ring-gradient.ts';
 
 const OUT = process.argv[2] ?? 'draft.svg';
@@ -368,7 +369,24 @@ function ringSquare(FAMILY, H_H) {
    * 符号踩过一次：先按「下垫管斜率、lead 反向」写，补偿把面档从 6.7 推到 13.9px。
    * 一个补常数、一个补斜率，正好解掉「早期对上了终态又跑偏」那类残差。
    */
+  // 定案那一档（H = 站上的 SQUARE.H）**直接用站上模块造谱**——线稿与站上共用一份
+  // 实现，谁改了都不会漂；探索别的 H 时才走下面这套脚本自己的参数化。
+  const useModule = H_H === SQUARE.H;
   const levelForH = (kMax, b, leadComp = 0, padShift = 0) => {
+    if (useModule && leadComp === 0 && padShift === 0 && F_TOT_H) {
+      const fs = squareFree(kMax, b);
+      const p = (F_TOT_H - fs) / 2;
+      const lead = RING_BAND_NODES - 2 * ISO - F_TOT_H - TAIL2;
+      const spec = squareSpec(kMax, F_TOT_H);
+      const seg = spec[p > 0 ? 3 : 1];
+      return {
+        g: 0, kMax, b, keys: seg[2].length, slack: slackOf(kMax, b),
+        seg, fs, c: (fs - 1) / 2, p, pHi: p, pLo: p, padShift: 0, lead, tail: TAIL2,
+        bad: p < 0 || lead < 20,
+        off: lead + p + ISO,
+        spec,
+      };
+    }
     const fs = 2 * (kMax + b) + 1;
     const c = (fs - 1) / 2;
     const bonds = ladderKs(kMax).map((k) => [c - k, c + k, H_H / 100]);

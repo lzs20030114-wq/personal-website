@@ -284,6 +284,7 @@ export function SkinSolidBench({
   layouts,
   order,
   ring = false,
+  angleOffset = 0,
   cells,
   ringPlans,
   rig,
@@ -319,6 +320,11 @@ export function SkinSolidBench({
   layouts?: readonly SolidLayout[];
   /** 摆放编制：每项是 units 的下标（同一条引擎可摆多处）。省略 = 一条一处 */
   order?: readonly number[];
+  /**
+   * 环列的相位偏移（弧度，默认 0 = 位置 0 指向 +X）。Lab.14 方形环用半格
+   * （π/COUNT）把四条带转到四个角上——不转的话没有带落在 45°，方形的角就是空的。
+   */
+  angleOffset?: number;
   /** 环列（Lab.09 圆筒）：实例绕世界 Y 排一圈而不是排一列，半径由 radius 给 */
   ring?: boolean;
   /**
@@ -517,7 +523,7 @@ export function SkinSolidBench({
               simIdx,
               offX: 0,
               offZ: 0,
-              angle: (u / bandPlan.length) * Math.PI * 2,
+              angle: angleOffset + (u / bandPlan.length) * Math.PI * 2,
               plan: v,
               ceilKey: `ceil-p${v}-u${u}`,
               verts: new Float32Array(4 * sims[simIdx].sim.n * 3),
@@ -529,7 +535,7 @@ export function SkinSolidBench({
       return plan.map((simIdx, u) => ({
         simIdx,
         ...placeAt(u, layoutList[0], plan.length),
-        angle: (u / plan.length) * Math.PI * 2,
+        angle: angleOffset + (u / plan.length) * Math.PI * 2,
         plan: 0,
         ceilKey: `ceil-u${u}`,
         verts: new Float32Array(4 * sims[simIdx].sim.n * 3),
@@ -1125,7 +1131,7 @@ export function SkinSolidBench({
               </b>
             </div>
           ) : null}
-          {radius ? (
+          {radius && radius.max > radius.min ? (
             <div className="grp">
               <span className="k">半径</span>
               <input

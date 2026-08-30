@@ -764,3 +764,16 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
 - 两处偏离 Lab.09：蒙皮默认 0.15（那台要糊成闭合的筒，这台要读出沿圆周的过渡）、机位按实测重取 pivot(0,184)/camScale 1.06。
 - 挂点：/lab 第十三台、主页第十三卡（`grid-cols-12`→`grid-cols-13`）、页脚与 S2 标头 13 instruments、统计条 Tests 397→400 · Demos 12→13。
 - CDP 生产实测：/lab 十三台并存、Lab.13 四视角（轴测/正/侧/顶）、半径滑块、canvas 1、无 pageerror。
+
+## 20. Lab.14 · 方形环（2026-08-30，用户「靠外延的长度来做形状」+「可以 做吧 新开一个 lab」）
+
+设计稿里没有这台（Lab-Modernist 稿只到四台），版式语言仍是 `.lab-*` 那套，零新样式。
+
+- 台架 `components/lab/SquareRingBench.tsx` = `SkinSolidBench` 薄壳（同 Lab.09/13 的做法），
+  键谱与几何全在 `src/lib/space/skin-square.ts`，线稿脚本与站上共用同一份实现。
+- `SkinSolidBench` 本轮只加了 **`angleOffset`**（环列相位偏移，默认 0 ⇒ Lab.07–10 逐位
+  不变）；半径滑块改为「量程为零就不渲染」——方形的三档深度是按站位半径标定的绝对量。
+- 默认机位取顶视预设（这一族的卖点是俯视为方；轴测的俯仰压缩会把方形读成菱形）。
+- 站点接线：/lab 第十四台（`#lab14`）· 主页 S2 第十四张 Lab 卡（`lg:grid-cols-13` →
+  `-14`）· /lab 标头与页脚 thirteen/13 → fourteen/14 · 统计条 Tests 400→412 · Demos 13→14。
+- 案例页、连杆、四路由一律未动。
