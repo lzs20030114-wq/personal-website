@@ -28,9 +28,13 @@ const DEPTH = 15.6;
  * - 分列：拉开成一排，逐级单看。
  * 切排布只改渲染偏移与机位、**不重建引擎**（同一次收缩的两种看法）。
  */
+// 机位在 2026-08-30 重定：此前的 pivot/camScale 是按**被放大 1.5 倍的带子**
+// 框的（renderSmooth 偶数窗口 bug，见 skin-unit 该函数注释）——那时带子垂到
+// 芯轨下缘之外，画面被撑满；修好后装置回到真尺寸（天花→钉住点 387 世界单位），
+// 取景空出四成，故按真实包围盒重取。
 const PLANS: readonly SolidLayout[] = [
-  { key: 'merged', label: '并拢', gapX: 0, gapZ: 16.5, pivot: { x: 45, y: 360, z: 0 }, camScale: 0.62, home: 'side' },
-  { key: 'spread', label: '分列', gapX: 80, gapZ: 0, pivot: { x: 382, y: 280, z: 0 }, camScale: 0.6, home: 'axon' },
+  { key: 'merged', label: '并拢', gapX: 0, gapZ: 16.5, pivot: { x: 45, y: 200, z: 0 }, camScale: 1.0, home: 'side' },
+  { key: 'spread', label: '分列', gapX: 80, gapZ: 0, pivot: { x: 400, y: 205, z: 0 }, camScale: 0.76, home: 'axon' },
 ];
 
 export function SkinSplitBench({

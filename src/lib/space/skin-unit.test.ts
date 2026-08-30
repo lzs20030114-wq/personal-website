@@ -369,4 +369,25 @@ describe('skin unit 引擎公共行为', () => {
     }
     expect(fMax - fMin).toBeGreaterThan(0.02); // 鼓弧仍在（≥2px 站上尺度）
   });
+
+  it('renderSmooth 不改变尺度：常量场与线性场逐位复原（偶数窗口曾放大 1.5×）', () => {
+    // 2026-08-30：窗口是 half=w>>1 的对称窗（2·half+1 个样本），此前除以 w
+    // ⇒ 偶数 w 整幅放大 (w+1)/w。Lab.12 九个刻缝级用的正是 [2,1]，被放大
+    // 1.5 倍画出来，同台 L0（[3,1]）却是真尺寸——用户一眼看出「没同步」。
+    for (const w of [1, 2, 3, 4, 5]) {
+      const n = 40;
+      const cx = new Float64Array(n).fill(2.5);
+      const cy = new Float64Array(n).fill(-1.25);
+      const c = renderSmooth(cx, cy, w, 2);
+      for (let i = 0; i < n; i++) {
+        expect(c.x[i], `w=${w} 常量场 x`).toBeCloseTo(2.5, 12);
+        expect(c.y[i], `w=${w} 常量场 y`).toBeCloseTo(-1.25, 12);
+      }
+      // 线性场：端点被 edge 补边影响，中段应逐位复原（平滑不搬家、不缩放）
+      const rx = Float64Array.from({ length: n }, (_, i) => i * 0.02);
+      const ry = new Float64Array(n);
+      const r = renderSmooth(rx, ry, w, 1);
+      for (let i = w; i < n - w; i++) expect(r.x[i], `w=${w} 线性场`).toBeCloseTo(i * 0.02, 12);
+    }
+  });
 });

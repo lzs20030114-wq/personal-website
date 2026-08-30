@@ -301,6 +301,15 @@ describe('skin-split 捏分过渡', () => {
       expect(steps[i], `L${i - 1}→L${i} 级联序`).toBeGreaterThan(steps[i - 1] - 40);
   });
 
+  it('绘图平滑：十级同窗口且为奇数（偶数窗口会被 renderSmooth 放大 (w+1)/w）', () => {
+    // 2026-08-30 用户「最左边的没同步」= L0([3,1]) 真尺寸 vs 其余([2,1]) 放大
+    // 1.5 倍。引擎侧已修归一化；这里卡住「一台之内窗口一致、且不用偶数窗」。
+    for (const d of LV) {
+      expect(d.smooth, `L${d.i} 平滑窗口`).toEqual(LV[0].smooth);
+      expect(d.smooth[0] % 2, `L${d.i} 窗口须为奇数`).toBe(1);
+    }
+  });
+
   it('成形过程设计（B v3）：四件套配置齐全且同侧/区段正确', () => {
     for (const d of LV) {
       // 逐挡长出 + 近程门（全员，含 L0 单箱）

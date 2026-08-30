@@ -825,6 +825,13 @@ export function createSkinUnit(spec: SkinSpec, opts?: SkinUnitOpts): SkinUnit {
 /**
  * 渲染用平滑（v7 render_smooth 的移植）：沿链移动平均（edge 补边），只用于绘图，
  * 不改物理数据。返回新数组。
+ *
+ * **归一化按实际采样数**（2026-08-30 修）：窗口是 `half = w>>1` 的对称窗，
+ * 一共采 `2·half+1` 个样本。此前除以 w——奇数 w 恰好相等（逐位不变），
+ * **偶数 w 则多采一个样本却少除一份 ⇒ 整幅放大 (w+1)/w**。Lab.12 的九个
+ * 刻缝级是全站唯一用偶数窗口的（[2,1]），被放大 1.5 倍画了出来，而同台的
+ * L0（[3,1]）是真尺寸——用户一眼看出「最左边的没同步」，实测比值 1.49。
+ * 平滑是绘图的事，绝不该改变尺度（§16.3「绘图平滑不许说谎」的字面含义）。
  */
 export function renderSmooth(
   px: Float64Array,
@@ -836,6 +843,7 @@ export function renderSmooth(
   let qx = Float64Array.from(px);
   let qy = Float64Array.from(py);
   const half = w >> 1;
+  const taps = 2 * half + 1; // 实际采样数——除以 w 会在偶数窗口上放大 (w+1)/w
   for (let p = 0; p < passes; p++) {
     const ox = new Float64Array(n);
     const oy = new Float64Array(n);
@@ -847,8 +855,8 @@ export function renderSmooth(
         sx += qx[j];
         sy += qy[j];
       }
-      ox[i] = sx / w;
-      oy[i] = sy / w;
+      ox[i] = sx / taps;
+      oy[i] = sy / taps;
     }
     qx = ox;
     qy = oy;
