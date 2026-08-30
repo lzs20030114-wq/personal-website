@@ -193,6 +193,16 @@ export interface SkinUnitOpts {
    */
   zipUp?: readonly number[];
   /**
+   * **相对单侧限位**（B 实验旋钮）：`[节点, 参考节点, 偏移]`——每迭代末，
+   * 节点的 x 不得超过 参考节点 x + 偏移（世界单位）。与 coreTether（绝对限位）
+   * 是同一族约束，区别是上限跟着参考节点走。
+   * 动机：缝区材料按终态缝深配料，成形前无处安放、以疙瘩形式骑在斜坡上
+   * （中间形态难看的直接来源）；以缝角为参考把缝区压在面板之内，等待期读作
+   * 面上一道「折痕」，箱面越过缝底限位后缝才从零逐步裂开——先见折痕、
+   * 后见裂开，中间态始终是家族成员。默认 undefined = 关，逐位不变。
+   */
+  coreTetherRel?: readonly (readonly [number, number, number])[];
+  /**
    * **每步位移上限**（世界单位；×100 = px。默认 undefined = 关，逐位不变）。
    * 机制无关的限速总闸：每个协议步结束时，自由节点相对步首位置的位移超限
    * 即按比例缩回；突变变成有界速度的滑行，约束在随后的步里以限速继续收敛。
@@ -299,10 +309,11 @@ export class SkinUnit {
   private lockGap: number;
   private lockGapChains: readonly number[] | null;
   private chainLastLock: number[];
-  /** 吸引近程门（0 = 关）及作用链；拉链反向链（null = 无） */
+  /** 吸引近程门（0 = 关）及作用链；拉链反向链；相对单侧限位（均 null = 无） */
   private attNear: number;
   private attNearChains: readonly number[] | null;
   private zipUp: readonly number[] | null;
+  private coreTetherRel: readonly (readonly [number, number, number])[] | null;
   /** 每步位移上限（0 = 关） */
   private stepClamp: number;
   private r1: number;
@@ -328,6 +339,7 @@ export class SkinUnit {
     this.attNear = opts.attNear ?? 0;
     this.attNearChains = opts.attNearChains ?? null;
     this.zipUp = opts.zipUp && opts.zipUp.length ? opts.zipUp : null;
+    this.coreTetherRel = opts.coreTetherRel && opts.coreTetherRel.length ? opts.coreTetherRel : null;
     this.stepClamp = opts.stepClamp ?? 0;
     this.r1 = opts.r1 ?? SKIN.R1;
     this.warp = opts.warp ?? 1;
@@ -749,6 +761,14 @@ export class SkinUnit {
         for (let t = 0; t < this.coreTether.length; t++) {
           const tie = this.coreTether[t];
           if (px[tie[0]] > tie[1]) px[tie[0]] = tie[1];
+        }
+      }
+      if (this.coreTetherRel) {
+        // 相对单侧限位：上限 = 参考节点 x + 偏移（见 SkinUnitOpts.coreTetherRel）
+        for (let t = 0; t < this.coreTetherRel.length; t++) {
+          const tie = this.coreTetherRel[t];
+          const cap = px[tie[1]] + tie[2];
+          if (px[tie[0]] > cap) px[tie[0]] = cap;
         }
       }
     }
