@@ -13,6 +13,7 @@ import { SkinRingBench } from '../../../components/lab/SkinRingBench';
 import { SkinGridBench } from '../../../components/lab/SkinGridBench';
 import { SkinDualBench } from '../../../components/lab/SkinDualBench';
 import { SkinSplitBench } from '../../../components/lab/SkinSplitBench';
+import { SkinSplitRingBench } from '../../../components/lab/SkinSplitRingBench';
 
 export const metadata = { title: 'The lab' };
 
@@ -181,7 +182,7 @@ export default function LabPage() {
       <div className="shell pg-dark" data-pt-content>
         <header style={{ padding: '64px 0 40px', borderBottom: 'var(--hair)' }}>
           <div className="flex items-baseline justify-between" style={{ gap: 32 }}>
-            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · twelve live instruments</p>
+            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · thirteen live instruments</p>
             <span style={LEGEND}>
               <span className="flex items-center" style={{ gap: 6 }}>
                 <span style={{ width: 9, height: 9, background: 'var(--accent)' }} />
@@ -434,6 +435,23 @@ export default function LabPage() {
           <SkinSplitBench />
         </Bench>
 
+        <Bench
+          no="13"
+          title="The seam, around"
+          lede="The pinched series bent into a ring: twenty narrow bands around one mast, walking one box into two platforms and back again over a single turn. Each level is placed twice — mirrored — so the sequence closes on itself, and because the seam centre sits at the same height on every level the platform reads as one band that opens and shuts, not as twenty different shelves."
+          accent="var(--accent-2)"
+          specs={[
+            ['Ring', '20 bands · 10 levels mirrored ⇒ one round trip'],
+            ['Order', 'Exact mirror — no rounding, each level twice'],
+            ['Forms', 'Lab.12 verbatim — no ring-scale, index-bound mechanisms'],
+            ['Flat', 'Seam centre 138 + 114·r px — level-independent'],
+            ['Radius', 'Live slider · bands never self-intersect in range'],
+            ['Ceiling', 'Ring plate · fixed masts, skin gathers down them'],
+          ]}
+        >
+          <SkinSplitRingBench />
+        </Bench>
+
         <footer
           className="flex flex-wrap items-baseline justify-between"
           style={{ gap: 32, padding: '26px 0 72px' }}
@@ -447,7 +465,7 @@ export default function LabPage() {
               color: 'var(--n500)',
             }}
           >
-            12 instruments · 03 kernels · all live
+            13 instruments · 03 kernels · all live
           </span>
           <span
             className="flex"
