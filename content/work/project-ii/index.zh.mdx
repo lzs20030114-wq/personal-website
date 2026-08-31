@@ -72,6 +72,10 @@
 
 结构原理为引用成果；本项目的研究贡献位于行为算法层，即驱动该结构的规则系统。
 
+<InteractiveSlot id="FIG.02" caption="一个收缩自由度长出四种形态——网面背后的结构引擎，实时运行" status="可现产" size="wide">
+  <SkinSolidFigure />
+</InteractiveSlot>
+
 ## 技术实现
 
 核心引擎为基于 Python 与 NumPy 的规则系统，全部规则为人工撰写的可读条文，不依赖传感器、计算机视觉或硬件。网面形态计算采用质点—弹簧模型，数学基础为找形领域的力密度法（Schek, 1974）与动力松弛法。空间表示为 2.5D 分层网格，与结构单元一一对应。可视化以 Matplotlib 为基础层；三维呈现由 Blender 或 Grasshopper 接入计算流程两端（图像输入、CSV/JSON 输出），中间环节保持数值表示。网页演示采用 p5.js 或 three.js；视频经 ffmpeg 导出。

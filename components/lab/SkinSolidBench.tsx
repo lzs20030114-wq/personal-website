@@ -285,6 +285,7 @@ export function SkinSolidBench({
   order,
   ring = false,
   angleOffset = 0,
+  ptTarget = false,
   cells,
   ringPlans,
   rig,
@@ -325,6 +326,11 @@ export function SkinSolidBench({
    * （π/COUNT）把四条带转到四个角上——不转的话没有带落在 45°，方形的角就是空的。
    */
   angleOffset?: number;
+  /**
+   * 案例页主图位用：给画面盒挂 `data-pt-target`，主页卡片飞过来的转场落在这里
+   * （MachineBench 同款）。默认 false ⇒ /lab 上的台架逐位不变。
+   */
+  ptTarget?: boolean;
   /** 环列（Lab.09 圆筒）：实例绕世界 Y 排一圈而不是排一列，半径由 radius 给 */
   ring?: boolean;
   /**
@@ -1027,7 +1033,7 @@ export function SkinSolidBench({
 
   return (
     <div className={`lab-wrap${onLight ? ' on-light' : ''}`}>
-      <div className="lab-fig">
+      <div className="lab-fig" {...(ptTarget ? { 'data-pt-target': '' } : {})}>
         <canvas
           ref={canvasRef}
           width={1400}

@@ -109,6 +109,10 @@ The net is a passive component containing no actuated members; its morphology is
 
 The structural principle is cited; the research contribution of this project lies in the behavioral algorithm layer, that is, the rule system that drives the structure.
 
+<InteractiveSlot id="FIG.02" caption="Four morphologies from one contraction degree of freedom — the structural engine behind the net, running live" status="可现产" size="wide">
+  <SkinSolidFigure />
+</InteractiveSlot>
+
 ## Technical implementation
 
 The core engine is a rule-based system in Python and NumPy; all rules are hand-written, human-readable clauses, with no dependence on sensors, computer vision, or hardware. Net morphology is computed with a mass–spring model, mathematically grounded in the force density method (Schek, 1974) and dynamic relaxation from the form-finding literature. Space is represented as a 2.5D layered grid in one-to-one correspondence with structural cells. Visualization rests on Matplotlib as the base layer; three-dimensional rendering is attached at both ends of the computational pipeline via Blender or Grasshopper (image input, CSV/JSON output), with intermediate stages remaining numerical. The web demonstration uses p5.js or three.js; video is exported through ffmpeg.

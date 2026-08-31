@@ -19,6 +19,8 @@ import { CaseLangRoot, CaseLangSwitch, Pick } from '../../../../components/site/
 import { DisclosureSlot, MetaRail } from '../../../../components/site/RoleBlock';
 import { LinkageFigure } from '../../../../components/linkage/LinkageFigure';
 import { CaseHeroLive } from '../../../../components/site/CaseHeroLive';
+import { CaseHeroSpace } from '../../../../components/site/CaseHeroSpace';
+import { SkinSolidBench } from '../../../../components/lab/SkinSolidBench';
 import { PageEnter } from '../../../../components/site/PageEnter';
 import { BackTransition } from '../../../../components/site/BackTransition';
 import { WorkInPreparation } from '../../../../components/site/WorkInPreparation';
@@ -70,6 +72,36 @@ const mdxComponents = (lang: SlotLang) => ({
   ConceptCard: (p: ComponentProps<typeof ConceptCard>) => <ConceptCard {...p} lang={lang} />,
   ConceptGrid,
   LinkageFigure,
+  // 项目 II 正文里的活件：四种形态的立体带（Lab.07）。正文「空间本体」那节说的
+  // 「缆长场决定网面形态、四种典型形态」，在引擎里就是每单元一个收缩自由度 ℓ；
+  // 控制条收掉（正文里的图不该带一排按钮），要调去 /lab。
+  SkinSolidFigure: () => (
+    <SkinSolidBench
+      controls={false}
+      // 正文里的活件框是浅纸底（稿：Fig.12 连杆那一件同款），不传的话 HUD 是给深底
+      // 配的浅字，在这里几乎看不见
+      onLight
+      hud={
+        lang === 'en'
+          ? {
+              kicker: 'Lab.07 / Project II',
+              title: 'Four morphologies, one protocol',
+              sub: 'Four bands · fabric 5 px · the same contraction run',
+              hint: 'Each band locks its own bond map — see /lab to drive it',
+              aria:
+                'Four fabric bands contracting under one protocol; each bond map locks the surplus into a different morphology: pocket, bulb flange, straight ledge, stepped box.',
+            }
+          : {
+              kicker: 'Lab.07 / Project II',
+              title: '四种形态 · 同一收缩协议',
+              sub: '四条带 · 织物厚度 5px · 同一次收缩',
+              hint: '每条带按自己的键谱扣合——要动手调去 /lab',
+              aria:
+                '四条织物带在同一收缩协议下运行，各自的键谱把富余材料扣成不同形态：袋、蘑菇挑台、直挑台、阶梯方箱。',
+            }
+      }
+    />
+  ),
 });
 
 const mdxOptions = { mdxOptions: { remarkPlugins: [remarkGfm] } };
@@ -107,11 +139,13 @@ const SLOT_COPY: Record<string, { en: SlotCopy; zh: SlotCopy }> = {
       video: 'Simulation video — the domestic human–cat scenario',
       heroLabel: 'hero image · to be supplied',
       heroDesc: 'Hero image',
+      heroLive: '[stand-in] Lab.10 sixteen-ring floor · live',
     },
     zh: {
       video: '仿真演示视频——居家人猫场景',
       heroLabel: '主图 · 待供图',
       heroDesc: '主图',
+      heroLive: '[顶替] Lab.10 十六环场地活件',
     },
   },
 };
@@ -134,8 +168,10 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
   if (entry.status !== 'published') return <WorkInPreparation entry={entry} />;
 
   const caseNo = String(entry.order ?? 1).padStart(2, '0');
-  // 主图暂用活台架顶替的项目（与主页预览位同一件；作者供图后删掉这一行即回占位块）
-  const liveHero = slug === 'reincarnation-machine';
+  // 主图暂用活台架顶替的项目（作者供图后删掉对应的一支即回占位块）：
+  // 项目 01 = Lab.05 整机（与主页预览位同一件）· 项目 II = Lab.10 4×4 环阵列
+  // （九台里只有它带真实尺度——房、人、十六片吊在天花下的平台）
+  const liveHero = slug === 'reincarnation-machine' || slug === 'project-ii';
   const sc = SLOT_COPY[slug] ?? SLOT_COPY_FALLBACK;
 
   return (
@@ -201,7 +237,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
               <div className="case-hero case-hero--live">
                 {/* HUD 语言跟页面走——主图只能有一份（两份 = 两个 WebGL 上下文），
                     所以它不进 Pick，改由一层客户端壳读语言上下文。 */}
-                <CaseHeroLive />
+                {slug === 'project-ii' ? <CaseHeroSpace /> : <CaseHeroLive />}
               </div>
             ) : (
               <div className="case-hero" data-pt-target>

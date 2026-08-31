@@ -53,10 +53,16 @@ export function SkinGridBench({
   active = true,
   onLight = false,
   controls = true,
+  ptTarget = false,
+  lang = 'zh',
 }: {
   active?: boolean;
   onLight?: boolean;
   controls?: boolean;
+  /** 案例页主图位：转场落点 */
+  ptTarget?: boolean;
+  /** HUD 语言——案例页有中英切换，主图只能有一份，故由外层壳读语言再传进来 */
+  lang?: 'zh' | 'en';
 }) {
   const [mode, setMode] = useState<RingGridMode>('uniform');
   const [form, setForm] = useState(RING_GRID_DEFAULT_FORM);
@@ -130,13 +136,26 @@ export function SkinGridBench({
           </div>
         </>
       }
-      hud={{
-        kicker: 'Lab.10 / Project II',
-        title: '4×4 环阵列 · 一片场地',
-        sub: `${RING_GRID.COLS}×${RING_GRID.ROWS} 个环 · ${perRow ? '每行一种键谱' : `同一键谱：${def.zh}`} · 平台 ⌀${((2 * ringOuter(RING.RADIUS_DEF) * RIG_SCALE * MM_PER_UNIT) / 1000).toFixed(2)} m · 房高 ${((ROOM.FLOOR_Y * MM_PER_UNIT) / 1000).toFixed(2)} m`,
-        hint: `编制 / 形态可切 · 半径滑块连格距一起变 · 顶视看排布 · 拖拽旋转 · 人 ${(FIGURE.MM / 1000).toFixed(2)} m 作比例`,
-        aria: '4×4 环阵列：十六个收缩张紧外皮圆筒环吊在一间房里铺成平面网格，每个环收缩后扣出一圈环形平台；地上站着一个 1.7 米高的人作比例参考；格距随半径滑块算，可切整片同形或每行一种形态，可拖拽旋转',
-      }}
+      ptTarget={ptTarget}
+      hud={
+        lang === 'en'
+          ? {
+              kicker: 'Lab.10 / Project II',
+              title: 'Sixteen rings, one floor',
+              sub: `${RING_GRID.COLS}×${RING_GRID.ROWS} rings · ${perRow ? 'one bond map per row' : `one bond map: ${def.en}`} · platform ⌀${((2 * ringOuter(RING.RADIUS_DEF) * RIG_SCALE * MM_PER_UNIT) / 1000).toFixed(2)} m · room ${((ROOM.FLOOR_Y * MM_PER_UNIT) / 1000).toFixed(2)} m high`,
+              hint: `Plan / form switchable · radius drives the pitch · top view reads the grid · drag to orbit · figure ${(FIGURE.MM / 1000).toFixed(2)} m for scale`,
+              aria:
+                'Sixteen contracting-skin cylinder rings hung in a room on a square grid; each contracts into a ring platform. A 1.7 m figure stands on the floor for scale. Pitch follows the radius slider; the plan can be switched and the view orbited.',
+            }
+          : {
+              kicker: 'Lab.10 / Project II',
+              title: '4×4 环阵列 · 一片场地',
+              sub: `${RING_GRID.COLS}×${RING_GRID.ROWS} 个环 · ${perRow ? '每行一种键谱' : `同一键谱：${def.zh}`} · 平台 ⌀${((2 * ringOuter(RING.RADIUS_DEF) * RIG_SCALE * MM_PER_UNIT) / 1000).toFixed(2)} m · 房高 ${((ROOM.FLOOR_Y * MM_PER_UNIT) / 1000).toFixed(2)} m`,
+              hint: `编制 / 形态可切 · 半径滑块连格距一起变 · 顶视看排布 · 拖拽旋转 · 人 ${(FIGURE.MM / 1000).toFixed(2)} m 作比例`,
+              aria:
+                '4×4 环阵列：十六个收缩张紧外皮圆筒环吊在一间房里铺成平面网格，每个环收缩后扣出一圈环形平台；地上站着一个 1.7 米高的人作比例参考；格距随半径滑块算，可切整片同形或每行一种形态，可拖拽旋转',
+            }
+      }
     />
   );
 }

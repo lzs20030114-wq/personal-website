@@ -785,3 +785,29 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
   峰值口径下边对边比角对角更紧）。`SkinSolidBench` 的 `cells`/`ringPlans` 改走 ref
   （主 effect []-deps 会把 undefined 闭包住，阵列摆不出去）；`reflow` 切回单环时清空格子。
   Lab.10 逐位无影响。统计条 417→420。
+
+## 21. 项目 II 案例页接活件（2026-08-30，用户拍板「先把已有的接进案例页」）
+
+项目 II 的正文 2026-08-14 入池后一直是**零插槽、零图**（供稿无图），而 /lab 上有九台
+属于它的台架。这一轮把台架接进案例页，机制全部走项目 01 那条已验证的路。
+
+- **主图 = Lab.10（4×4 环阵列）活件**。九台里只有它带真实尺度——3.74m 的房、地上
+  1.7m 的人、十六片吊在天花下的平台；项目二讲的是空间，主图先答「这是个什么尺度的
+  装置」。壳 = `components/site/CaseHeroSpace.tsx`（与项目 01 的 `CaseHeroLive` 同款：
+  单独一层客户端壳只为把页面的中英切换传给 HUD——主图**只能有一份**，进 `<Pick>`
+  就成了两个 WebGL 上下文）。控制条收掉（`controls={false}`）：案例页主图高度被首屏
+  预算封在 356–449px，项目 01 那轮为此把控制条竖排到侧栏，这台的控件更多，直接收掉
+  更干净——要调编制/形态/半径去 /lab。
+- **正文 FIG.02 = Lab.07（四形态立体带）活件**，插在「空间本体」那节之后：正文说的
+  「缆长场决定网面形态、四种典型形态」，在引擎里就是每单元一个收缩自由度 ℓ。
+  中英两侧同位置插同一个 id（`content.test.ts` 卡「两侧插槽编号与顺序完全一致」）。
+- **正文里的活件必须传 `onLight`**：`.pg-dark .fig-live` 是**浅纸底**（稿的裱框做法），
+  而台架是深色仪表——不传的话 HUD 与 SVG class 会解析成浅底配色、整台裸奔在纸面上
+  （globals.css 那条注释记的 2026-07-27 回归，这次差点重演）。主图位不用传：
+  `.case-hero` 本来就是深底。
+- 接线：`SkinSolidBench` 加 `ptTarget`（默认 false ⇒ Lab.07–14 逐位不变）；`SkinGridBench`
+  加 `ptTarget`/`lang`（HUD 双语）；`page.tsx` 的 `liveHero` 从写死项目 01 改为按 slug 选
+  组件；`SLOT_COPY['project-ii']` 补 `heroLive` 两语（video/heroLabel 是入池时按正文写的，
+  原样保留）。
+- CDP 生产实测：canvas 恒 **2**（主图 + FIG.02），中英切换后仍 2（没被 Pick 渲两份）、
+  转场落点 1、无 pageerror。420 测试绿（content.test 按 published 条目参数化，无新增）。
