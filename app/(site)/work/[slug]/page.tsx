@@ -21,6 +21,9 @@ import { LinkageFigure } from '../../../../components/linkage/LinkageFigure';
 import { CaseHeroLive } from '../../../../components/site/CaseHeroLive';
 import { CaseHeroSpace } from '../../../../components/site/CaseHeroSpace';
 import { SkinSolidBench } from '../../../../components/lab/SkinSolidBench';
+import { SkinBench } from '../../../../components/lab/SkinBench';
+import { SkinArrayBench } from '../../../../components/lab/SkinArrayBench';
+import { SquareRingBench } from '../../../../components/lab/SquareRingBench';
 import { PageEnter } from '../../../../components/site/PageEnter';
 import { BackTransition } from '../../../../components/site/BackTransition';
 import { WorkInPreparation } from '../../../../components/site/WorkInPreparation';
@@ -102,6 +105,19 @@ const mdxComponents = (lang: SlotLang) => ({
       }
     />
   ),
+  // 「方法」那节讲的滞回（痕迹衰减比身体离场慢 ⇒ 形态不回退），在引擎里就是
+  // **键锁定不可逆**：同一收缩协议下四张键谱各自扣出一种形态，松开也不还原。
+  // Lab.06 是 2D 剖面、画的是 SVG，正文里最轻的一件。
+  SkinUnitFigure: () => <SkinBench controls={false} onLight lang={lang} />,
+  // 「行为条款与交互矩阵」那节要的是**形态的连续词汇**：十二条带的键谱逐级微变，
+  // 从一种形态走到另一种。注意这是两张既有键谱的形态学串联（演示编排）——
+  // 行为矩阵 → 键谱的翻译规则由作者手写，模型不代拟，图注也不许说成是它。
+  // 开场取**分列**而不是 /lab 的并拢：并拢的默认机位是侧视，十二条带叠在深度上、
+  // 前一条挡住后面的，读者又没有控制条可切——正文里必须一眼看见那条渐变。
+  SkinArrayFigure: () => <SkinArrayBench controls={false} onLight lang={lang} layout={1} />,
+  // 「技术实现」那节说的单元化 + 运动学可解：二十条同谱的带绕轴一圈，
+  // 只解一条摆二十处，每条带挑出多远就决定了俯视的轮廓。
+  SquareRingFigure: () => <SquareRingBench controls={false} onLight lang={lang} />,
 });
 
 const mdxOptions = { mdxOptions: { remarkPlugins: [remarkGfm] } };

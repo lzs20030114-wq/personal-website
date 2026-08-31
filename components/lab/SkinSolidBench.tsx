@@ -282,6 +282,7 @@ export function SkinSolidBench({
   rate = RATE,
   hud: hudCopy = DEFAULT_HUD,
   layouts,
+  layout0 = 0,
   order,
   ring = false,
   angleOffset = 0,
@@ -319,6 +320,11 @@ export function SkinSolidBench({
   hud?: SolidHud;
   /** 多排布（≥2 出「排列」切换，首项为默认）；省略 = 单排布（gapX/pivot/camScale） */
   layouts?: readonly SolidLayout[];
+  /**
+   * 开场停在第几个排布（默认 0 = 首项）。给正文里那种**没有控制条**的场合用：
+   * 读者动不了按钮，开场停在哪一个就是他能看到的全部。
+   */
+  layout0?: number;
   /** 摆放编制：每项是 units 的下标（同一条引擎可摆多处）。省略 = 一条一处 */
   order?: readonly number[];
   /**
@@ -425,7 +431,7 @@ export function SkinSolidBench({
   const [persp, setPersp] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [view, setView] = useState<ViewKey>(layouts?.[0]?.home ?? 'axon');
-  const [layout, setLayout] = useState(0);
+  const [layout, setLayout] = useState(layout0);
   const [hud, setHud] = useState<{ r: number; step: number; locked: number; phase: string; note: string }>({
     r: SKIN.R0,
     step: 0,
@@ -451,10 +457,10 @@ export function SkinSolidBench({
       layouts && layouts.length
         ? layouts
         : [{ key: 'default', label: '', gapX, gapZ, pivot, camScale }];
-    let layoutIdx = 0;
+    let layoutIdx = Math.min(Math.max(layout0, 0), layoutList.length - 1);
 
     /** 当前视角（逐视角取景要用；预设切换与归位都要同步它） */
-    let viewKey: ViewKey = layoutList[0].home ?? 'axon';
+    let viewKey: ViewKey = layoutList[layoutIdx].home ?? 'axon';
     const scaleOf = (k: ViewKey = viewKey): number => {
       const f = camScaleRef.current;
       return f ? f(radiusRef.current, k) : layoutList[layoutIdx].camScale;
@@ -463,8 +469,8 @@ export function SkinSolidBench({
     const cam = new OrbitCamera({
       cx: 350,
       cy: 260,
-      pivot: layoutList[0].pivot,
-      scale: camScaleFor ? camScaleFor(radiusRef.current, viewKey) : layoutList[0].camScale, // 挂载帧：ref 尚未同步，用 prop
+      pivot: layoutList[layoutIdx].pivot,
+      scale: camScaleFor ? camScaleFor(radiusRef.current, viewKey) : layoutList[layoutIdx].camScale, // 挂载帧：ref 尚未同步，用 prop
       pitch0: axonPitch,
       yaw0: axonYaw,
       zoomMin: 0.5,
@@ -544,7 +550,8 @@ export function SkinSolidBench({
       }
       return plan.map((simIdx, u) => ({
         simIdx,
-        ...placeAt(u, layoutList[0], plan.length),
+        // 开场排布不一定是首项（layout0；正文里那种没有控制条的场合要直接停在想看的那个）
+        ...placeAt(u, layoutList[layoutIdx], plan.length),
         angle: angleOffset + (u / plan.length) * Math.PI * 2,
         plan: 0,
         ceilKey: `ceil-u${u}`,
@@ -686,7 +693,8 @@ export function SkinSolidBench({
     };
 
     let viewAnim: { q0: Quat; q1: Quat; t: number; from: ViewKey; to: ViewKey } | null = null;
-    if (layoutList[0].home) cam.setOrientation(presets[layoutList[0].home]);
+    const home0 = layoutList[layoutIdx].home;
+    if (home0) cam.setOrientation(presets[home0]);
 
     const render = (): void => {
       R.beginFrame(cam);

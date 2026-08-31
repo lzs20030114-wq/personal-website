@@ -35,14 +35,40 @@ const ARRAY_LAYOUTS = [
   { key: 'spread', label: '分列', gapX: 80, gapZ: 0, pivot: { x: 468, y: 168, z: 0 }, camScale: 0.6, home: 'axon' },
 ] as const;
 
+/** HUD 双语：/lab 说中文（默认），案例页正文里的活件跟着页面的中英切换走 */
+const HUD = {
+  zh: {
+    kicker: 'Lab.08 / Project II',
+    title: '阵列过渡 · 蘑菇挑台 → 阶梯方箱',
+    sub: '12 条窄带 · 键长 0.10→0.32 逐级微变 · 同一收缩协议',
+    hint: (ctl: boolean) =>
+      `近端 = 蘑菇挑台 · 远端 = 阶梯方箱${ctl ? ' · 并拢/分列可切' : ''} · 拖拽旋转`,
+    aria: '阵列过渡：十二条窄织物带沿深度并拢成一个连续体，键谱逐级微变，从蘑菇挑台渐变为阶梯方箱，可切换为分列排布',
+  },
+  en: {
+    kicker: 'Lab.08 / Project II',
+    title: 'A graded array — bulb flange to stepped box',
+    sub: 'Twelve narrow bands · bond length 0.10→0.32 in even steps · one protocol',
+    hint: (ctl: boolean) =>
+      `A bulb flange at one end, a stepped box at the other — every band a real solve, not an interpolation${ctl ? ' · packed or spread' : ''}`,
+    aria:
+      'Twelve narrow fabric bands packed edge to edge into one continuous body; the bond map changes by a small step from band to band, so the form grades from a bulb flange to a stepped box.',
+  },
+} as const;
+
 export function SkinArrayBench({
   active = true,
   onLight = false,
   controls = true,
+  lang = 'zh',
+  layout = 0,
 }: {
   active?: boolean;
   onLight?: boolean;
   controls?: boolean;
+  lang?: 'en' | 'zh';
+  /** 开场停在第几种排列（0 并拢 / 1 分列）。正文里没有控制条，故那边取分列 */
+  layout?: number;
 }) {
   return (
     <SkinSolidBench
@@ -54,13 +80,8 @@ export function SkinArrayBench({
       ceiling="span"
       rate={80}
       layouts={ARRAY_LAYOUTS}
-      hud={{
-        kicker: 'Lab.08 / Project II',
-        title: '阵列过渡 · 蘑菇挑台 → 阶梯方箱',
-        sub: '12 条窄带 · 键长 0.10→0.32 逐级微变 · 同一收缩协议',
-        hint: '近端 = 蘑菇挑台 · 远端 = 阶梯方箱 · 并拢/分列可切 · 拖拽旋转',
-        aria: '阵列过渡：十二条窄织物带沿深度并拢成一个连续体，键谱逐级微变，从蘑菇挑台渐变为阶梯方箱，可切换为分列排布',
-      }}
+      layout0={layout}
+      hud={{ ...HUD[lang], hint: HUD[lang].hint(controls) }}
     />
   );
 }

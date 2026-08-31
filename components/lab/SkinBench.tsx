@@ -61,15 +61,42 @@ interface UnitView {
   emaY: Float64Array | null;
 }
 
+/**
+ * HUD 双语：/lab 说中文（默认），案例页正文里的活件跟着页面的中英切换走。
+ * 只有读数文案两份，几何/物理/控件一律共用。
+ */
+const COPY = {
+  zh: {
+    aria: '收缩张紧外皮单元：四个键谱在同一收缩协议下分别成形为袋、蘑菇挑台、直挑台、阶梯挑台',
+    title: '收缩张紧外皮单元',
+    sub: '软皮 · 键生成刚度 · 四键谱同一收缩协议',
+    foot: '芯收缩 → 皮富余 → 键扣合 · 键锁定永久（滞回）',
+    bonds: (n: number) => `键 ${n}`,
+    phase: { run: '收缩中', tension: '张紧 · 排泡', done: '锁定 · 即将重播' },
+  },
+  en: {
+    aria:
+      'A contracting tensioned skin unit: four bond maps run the same contraction protocol and settle into a pocket, a bulb flange, a straight ledge and a stepped box.',
+    title: 'Contracting tensioned skin',
+    sub: 'Soft skin · stiffness made by bonds · four maps, one protocol',
+    foot: 'Core contracts → skin goes slack → bonds catch · a locked bond never releases (hysteresis)',
+    bonds: (n: number) => `${n} locked`,
+    phase: { run: 'contracting', tension: 'tensioning', done: 'locked · replaying' },
+  },
+} as const;
+
 export function SkinBench({
   active = true,
   onLight = false,
   controls = true,
+  lang = 'zh',
 }: {
   active?: boolean;
   onLight?: boolean;
   controls?: boolean;
+  lang?: 'en' | 'zh';
 }) {
+  const t = COPY[lang];
   const svgRef = useRef<SVGSVGElement | null>(null);
   const stateRef = useRef<{
     step: (dt: number) => void;
@@ -82,11 +109,11 @@ export function SkinBench({
   const [running, setRunning] = useState(true);
   const [speed, setSpeed] = useState(1);
   const [bonds, setBonds] = useState(true);
-  const [hud, setHud] = useState<{ r: number; step: number; locked: number; phase: string }>({
+  const [hud, setHud] = useState<{ r: number; step: number; locked: number; phase: 'run' | 'tension' | 'done' }>({
     r: SKIN.R0,
     step: 0,
     locked: 0,
-    phase: '收缩中',
+    phase: 'run',
   });
 
   useEffect(() => {
@@ -265,7 +292,7 @@ export function SkinBench({
         if (holdT >= REPLAY_HOLD_S) replay();
       }
       const locked = units.reduce((s, v) => s + v.sim.locked.length, 0);
-      const phase = lead.done ? '锁定 · 即将重播' : lead.step < 900 ? '收缩中' : '张紧 · 排泡';
+      const phase: 'run' | 'tension' | 'done' = lead.done ? 'done' : lead.step < 900 ? 'run' : 'tension';
       const key = `${lead.step}|${locked}|${phase}`;
       if (key !== lastHud) {
         lastHud = key;
@@ -291,21 +318,21 @@ export function SkinBench({
           ref={svgRef}
           viewBox={`0 0 ${VB_W} ${VB_H}`}
           role="img"
-          aria-label="收缩张紧外皮单元：四个键谱在同一收缩协议下分别成形为袋、蘑菇挑台、直挑台、阶梯挑台"
+          aria-label={t.aria}
           style={{ cursor: 'default', touchAction: 'auto' }}
         />
         <div className="lab-hud tl">
           <div style={{ color: 'var(--accent)' }}>Lab.06 / Project II</div>
-          <div>收缩张紧外皮单元</div>
-          <div className="dim">软皮 · 键生成刚度 · 四键谱同一收缩协议</div>
+          <div>{t.title}</div>
+          <div className="dim">{t.sub}</div>
         </div>
         <div className="lab-hud br">
           <div className="num">r {hud.r.toFixed(2)}</div>
           <div className="dim">
-            step {hud.step}/{SKIN.STEPS} · 键 {hud.locked} · {hud.phase}
+            step {hud.step}/{SKIN.STEPS} · {t.bonds(hud.locked)} · {t.phase[hud.phase]}
           </div>
         </div>
-        <div className="lab-hud bl dim">芯收缩 → 皮富余 → 键扣合 · 键锁定永久（滞回）</div>
+        <div className="lab-hud bl dim">{t.foot}</div>
       </div>
       {controls ? (
         <div className="lab-ctl">

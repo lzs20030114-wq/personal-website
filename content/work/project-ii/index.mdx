@@ -80,6 +80,10 @@ Decision-making in the spatial layer is utility-driven: each component computes 
 
 Component input is not instantaneous body position but the accumulation and decay of behavioral traces. Traces deepen with use and fade with disuse, and constitute the sole information channel between the spatial and behavioral layers. From this follows the phenomenon of central interest to the project — hysteresis: a component that has changed form in response to traces does not revert upon the bodies' departure, because traces decay more slowly than bodies exit; even if the behavioral layer returns to its original configuration, spatial form does not return to its initial state.
 
+<InteractiveSlot id="FIG.02" caption="Hysteresis, in the structural engine: four bond maps under one contraction protocol — a bond that has caught never releases, so the form does not come back" status="可现产" size="wide">
+  <SkinUnitFigure />
+</InteractiveSlot>
+
 ## Formal definition of interaction events
 
 All interaction outcomes are classified into four formally defined event types, which serve as reward terms in the engine and as evaluation metrics:
@@ -101,6 +105,10 @@ The crossed axes produce nine cells, each holding one trigger rule and one domin
 
 Only one of the nine cells contains a genuine inter-clause conflict: high-perch avoidance × active invitation, where the approach pull of C5 and the avoidance push of C3 act simultaneously and the source clauses provide no rule of combination. This project defines the outcome of that cell as an equilibrium height z* on the vertical axis rather than a binary result, on the grounds of Miller's (1944) approach-avoidance gradient model — the avoidance gradient runs steeper than the approach gradient, and the conflicted subject halts at their intersection — and the escape-economics framework of Ydenberg and Dill (1986). C8 typing adjusts gradient steepness without altering the existence of the equilibrium solution. The z* coordinate at which a cat repeatedly hovers simultaneously constitutes spatial-layer input: lowering a perch to z* is the point of application of the luring operation. The rule of combination for this cell is authored within this project and constitutes the original portion of the behavioral algorithm layer.
 
+<InteractiveSlot id="FIG.03" caption="The vocabulary the matrix has to be written into: twelve bands whose bond maps change by one small step each, grading from one morphology to another — every band a real solve, not an interpolation between two pictures" status="可现产" size="wide">
+  <SkinArrayFigure />
+</InteractiveSlot>
+
 ## The spatial body
 
 The interaction medium is the ceiling. The structural scheme is a passive net–winch system: a net suspended beneath a ceiling-mounted winch array, one winch per attachment point, with the combination of cable lengths ℓᵢ determining net morphology. Four canonical morphologies are established: a uniform length field produces a flat canopy; center elongation produces a hanging pocket; edge elongation produces a tunnel arched at mid-span; ring elongation produces a half-enclosing wrap. All four morphologies fall within the 0.4–1.2m overlap band.
@@ -109,13 +117,17 @@ The net is a passive component containing no actuated members; its morphology is
 
 The structural principle is cited; the research contribution of this project lies in the behavioral algorithm layer, that is, the rule system that drives the structure.
 
-<InteractiveSlot id="FIG.02" caption="Four morphologies from one contraction degree of freedom — the structural engine behind the net, running live" status="可现产" size="wide">
+<InteractiveSlot id="FIG.04" caption="Four morphologies from one contraction degree of freedom — the structural engine behind the net, running live" status="可现产" size="wide">
   <SkinSolidFigure />
 </InteractiveSlot>
 
 ## Technical implementation
 
 The core engine is a rule-based system in Python and NumPy; all rules are hand-written, human-readable clauses, with no dependence on sensors, computer vision, or hardware. Net morphology is computed with a mass–spring model, mathematically grounded in the force density method (Schek, 1974) and dynamic relaxation from the form-finding literature. Space is represented as a 2.5D layered grid in one-to-one correspondence with structural cells. Visualization rests on Matplotlib as the base layer; three-dimensional rendering is attached at both ends of the computational pipeline via Blender or Grasshopper (image input, CSV/JSON output), with intermediate stages remaining numerical. The web demonstration uses p5.js or three.js; video is exported through ffmpeg.
+
+<InteractiveSlot id="FIG.05" caption="Cellular and solvable: twenty identical bands stood in a ring, one solve placed twenty times — how far each one reaches is what decides the plan seen from above" status="可现产" size="wide">
+  <SquareRingFigure />
+</InteractiveSlot>
 
 ## Project info
 

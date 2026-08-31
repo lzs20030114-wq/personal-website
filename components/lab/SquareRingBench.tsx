@@ -96,15 +96,53 @@ const cellsOf = () => CELLS;
 const SINGLE_SCALE = 0.95;
 const GRID_SCALE = (SINGLE_SCALE * (2 * squareCornerRadius())) / squareGridSpan();
 
+/** HUD 双语：/lab 说中文（默认），案例页正文里的活件跟着页面的中英切换走 */
+const HUD = {
+  zh: {
+    title: '方形环 · 靠挑出的长度做形状',
+    circle: (d: number) => `圆 ⌀${d}px`,
+    square: (side: number) => `方 · 边长 ${side}px`,
+    round: (n: string, d: number) => `圆角方 n=${n} · 角点 ⌀${d}px`,
+    grid: (c: number, r: number, pitch: string, outline: string, wave: boolean) =>
+      `${c}×${r} 片平台 · 格距 ${pitch}px（边对边最紧）· ${outline}${wave ? ' · 一圈起伏' : ''}`,
+    wave: (n: number, swing: number, levels: number, outline: string) =>
+      `${n} 条窄带 · 三档深度不变 · 高度沿圆周起伏 ${swing}px · ${levels} 级 · ${outline}`,
+    flat: (n: number, reach: string, h: number, outline: string) =>
+      `${n} 条窄带 · 三档深度 ${reach}px · 箱高恒定 ${h}px · ${outline}`,
+    hint: (tiers: string, rungs: number, wave: boolean) =>
+      `${tiers} · 每条带 ${rungs} 挡 · ${wave ? '俯视看轮廓 · 侧看起伏' : '顶视看轮廓'} · 拖拽旋转`,
+    aria: '方形环：二十条窄织物带围成一圈，每条带按自己在方形里的位置挑出不同长度，收缩后二十个挑台连成一圈俯视为正方形的平台；箱高一圈恒定，可拖拽旋转',
+  },
+  en: {
+    title: 'A square ring — the plan is made of reach',
+    circle: (d: number) => `a circle, ⌀${d} px`,
+    square: (side: number) => `a square, side ${side} px`,
+    round: (n: string, d: number) => `a rounded square, n=${n} · corners ⌀${d} px`,
+    grid: (c: number, r: number, pitch: string, outline: string, wave: boolean) =>
+      `${c}×${r} platforms · pitch ${pitch} px, set edge to edge · ${outline}${wave ? ' · undulating' : ''}`,
+    wave: (n: number, swing: number, levels: number, outline: string) =>
+      `${n} narrow bands · depths unchanged · height swings ${swing} px once around · ${levels} levels · ${outline}`,
+    flat: (n: number, reach: string, h: number, outline: string) =>
+      `${n} narrow bands · three depths ${reach} px · box ${h} px high everywhere · ${outline}`,
+    hint: (tiers: string, rungs: number, wave: boolean) =>
+      `${tiers} · ${rungs} rungs on every band · ${wave ? 'plan from above, swing from the side' : 'read the plan from above'} · drag to orbit`,
+    aria:
+      'Twenty narrow fabric bands stand in a ring; each reaches out a different distance according to where it sits in the plan, so once contracted the twenty shelves join into one platform that reads as a square from above. The box is the same height the whole way round.',
+  },
+} as const;
+
 export function SquareRingBench({
   active = true,
   onLight = false,
   controls = true,
+  lang = 'zh',
 }: {
   active?: boolean;
   onLight?: boolean;
   controls?: boolean;
+  lang?: 'en' | 'zh';
 }) {
+  const T = HUD[lang];
   const side = useMemo(() => Math.round(2 * squareHalfSide()), []);
   const [plan, setPlan] = useState<PlanKey>('flat');
   const [layout, setLayout] = useState<LayoutKey>('single');
@@ -116,10 +154,10 @@ export function SquareRingBench({
   /** 这一档的轮廓怎么念（圆 / 圆角方 / 方） */
   const outline =
     shape === 0
-      ? `圆 ⌀${Math.round(2 * (SQUARE.RADIUS + m.reach[0]))}px`
+      ? T.circle(Math.round(2 * (SQUARE.RADIUS + m.reach[0])))
       : shape === SQUARE_MORPH.STEPS - 1
-        ? `方 · 边长 ${side}px`
-        : `圆角方 n=${m.n.toFixed(1)} · 角点 ⌀${Math.round(2 * (SQUARE.RADIUS + m.reach[2]))}px`;
+        ? T.square(side)
+        : T.round(m.n.toFixed(1), Math.round(2 * (SQUARE.RADIUS + m.reach[2])));
   return (
     <SkinSolidBench
       active={active}
@@ -208,15 +246,18 @@ export function SquareRingBench({
       }
       hud={{
         kicker: 'Lab.14 / Project II',
-        title: '方形环 · 靠挑出的长度做形状',
+        title: T.title,
         sub: grid
-          ? `${SQUARE_GRID.COLS}×${SQUARE_GRID.ROWS} 片平台 · 格距 ${squareCellPitch().toFixed(0)}px（边对边最紧）· ${outline}${wave ? ' · 一圈起伏' : ''}`
+          ? T.grid(SQUARE_GRID.COLS, SQUARE_GRID.ROWS, squareCellPitch().toFixed(0), outline, wave)
           : wave
-            ? `${SQUARE.COUNT} 条窄带 · 三档深度不变 · 高度沿圆周起伏 ${(SQUARE_WAVE.LOW - SQUARE_WAVE.HIGH) * 2}px · ${SQUARE_WAVE.LEVELS} 级 · ${outline}`
-            : `${SQUARE.COUNT} 条窄带 · 三档深度 ${m.reach.map((r) => r.toFixed(0)).join(' / ')}px · 箱高恒定 ${SQUARE.H}px · ${outline}`,
-        hint: `${SQUARE_TIERS.map((t, i) => `${t.name}${t.count}·k${m.tiers[i].k}`).join(' · ')} · 每条带 ${SQUARE_RUNGS} 挡 · ${wave ? '俯视看轮廓 · 侧看起伏' : '顶视看轮廓'} · 拖拽旋转`,
-        aria:
-          '方形环：二十条窄织物带围成一圈，每条带按自己在方形里的位置挑出不同长度，收缩后二十个挑台连成一圈俯视为正方形的平台；箱高一圈恒定，可拖拽旋转',
+            ? T.wave(SQUARE.COUNT, (SQUARE_WAVE.LOW - SQUARE_WAVE.HIGH) * 2, SQUARE_WAVE.LEVELS, outline)
+            : T.flat(SQUARE.COUNT, m.reach.map((r) => r.toFixed(0)).join(' / '), SQUARE.H, outline),
+        hint: T.hint(
+          SQUARE_TIERS.map((t, i) => `${lang === 'zh' ? t.name : t.en} ${t.count}·k${m.tiers[i].k}`).join(' · '),
+          SQUARE_RUNGS,
+          wave,
+        ),
+        aria: T.aria,
       }}
     />
   );
