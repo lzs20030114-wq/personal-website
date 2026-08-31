@@ -23,6 +23,14 @@ import {
   squareLead,
   squareWaveLeads,
   squareWaveLevel,
+  SQUARE_GRID,
+  SQUARE_PEAK,
+  squareCellGap,
+  squareCellPitch,
+  squareCornerRadius,
+  squareGridCells,
+  squareGridSpan,
+  squareTightRadius,
 } from './skin-square';
 import { RING_BAND_NODES } from './skin-ring';
 import { SKIN, createSkinUnit, type SkinBond, type SkinSpec } from './skin-unit';
@@ -305,5 +313,49 @@ describe('方形环 · 一圈起伏（第二种编制）', () => {
     // 筒的上下缘不动
     expect(A.top).toBeCloseTo(B.top, 6);
     expect(A.foot).toBeCloseTo(B.foot, 6);
+  });
+});
+
+describe('方形环 · 4×4 阵列（第二组控件「排布」）', () => {
+  it('峰值是全程量、且比终态大——格距按它定，不能按终态', () => {
+    for (let i = 0; i < SQUARE_PEAK.length; i++) {
+      expect(SQUARE_PEAK[i], SQUARE_TIERS[i].name).toBeGreaterThan(SQUARE_REACH[i]);
+      expect(SQUARE_PEAK[i] - SQUARE_REACH[i]).toBeLessThan(5); // 鼓出的量级（1.5–2.5px）
+    }
+    // 面档在过程中鼓得比角档多 —— 这正是「边对边比角对角更紧」的原因
+    expect(SQUARE_PEAK[0] - SQUARE_REACH[0]).toBeGreaterThan(SQUARE_PEAK[2] - SQUARE_REACH[2]);
+  });
+
+  it('格距按边对边定：它比对角约束更紧（同相位最省地方）', () => {
+    const pitch = squareCellPitch();
+    const edge = 2 * squareTightRadius(); // 边对边：两个方形的面档点相接
+    const diag = (2 * squareCornerRadius()) / Math.SQRT2; // 对角相邻：pitch·√2 ≥ 2·角点半径
+    expect(edge).toBeGreaterThan(diag); // 边对边更紧 —— 结论反了会把格距定小
+    expect(pitch).toBeGreaterThan(edge); // 留了缝
+    expect(squareCellGap()).toBeGreaterThan(10);
+    // 角点半径不要多乘 √2（角档的带子本来就指向 45°，外缘点就是方形的角）
+    expect(squareCornerRadius()).toBeCloseTo(SQUARE.RADIUS + SQUARE_PEAK[2], 9);
+  });
+
+  it('十六格居中、间距均匀，且任意两格的方形都不相碰', () => {
+    const cells = squareGridCells();
+    expect(cells.length).toBe(SQUARE_GRID.COLS * SQUARE_GRID.ROWS);
+    // 居中：坐标和为零
+    expect(cells.reduce((s, c) => s + c.x, 0)).toBeCloseTo(0, 9);
+    expect(cells.reduce((s, c) => s + c.z, 0)).toBeCloseTo(0, 9);
+    // 不相碰：任意两格中心距 ≥ 两个方形在该方向上的占用之和
+    const a = squareCornerRadius() / Math.SQRT2; // 峰值半边长
+    for (let i = 0; i < cells.length; i++)
+      for (let j = i + 1; j < cells.length; j++) {
+        const dx = Math.abs(cells[i].x - cells[j].x);
+        const dz = Math.abs(cells[i].z - cells[j].z);
+        // 两个同相位的正方形不相交 ⇔ 沿某一轴分离
+        expect(Math.max(dx, dz), `格 ${i}/${j}`).toBeGreaterThan(2 * a);
+      }
+    // 占宽 = 格距 × (列数−1) + 两端角点
+    expect(squareGridSpan()).toBeCloseTo(
+      (SQUARE_GRID.COLS - 1) * squareCellPitch() + 2 * squareCornerRadius(),
+      9,
+    );
   });
 });

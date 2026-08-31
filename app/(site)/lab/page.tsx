@@ -461,6 +461,7 @@ export default function LabPage() {
           specs={[
             ['Ring', '20 bands · three depths — 8 face · 8 edge · 4 corner'],
             ['Plans', 'Flat, or undulating — height waves once around'],
+            ['Layout', 'One ring, or sixteen — pitch set edge-to-edge'],
             ['Plan', 'Square, side 169 px · rim within 0.9 px of it'],
             ['Reach', '56 / 64 / 89 px — the only thing that varies'],
             ['Box', 'Height 36 px everywhere · faces flat within 0.1 px'],

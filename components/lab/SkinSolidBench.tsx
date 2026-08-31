@@ -397,10 +397,12 @@ export function SkinSolidBench({
   // 主 effect 是 []-deps ⇒ 直接闭包会永远拿挂载那一刻的函数 prop。换编制时 cells 会变
   // （每格用哪一份编制随之变），拿旧的会让除第一份以外的编制一格都摆不出去。
   const cellsRef = useRef(cells);
+  const ringPlansRef = useRef(ringPlans);
   const camScaleRef = useRef(camScaleFor);
   const sceneRef = useRef(scene);
   useEffect(() => {
     cellsRef.current = cells;
+    ringPlansRef.current = ringPlans;
     camScaleRef.current = camScaleFor;
     sceneRef.current = scene;
   });
@@ -494,7 +496,9 @@ export function SkinSolidBench({
     /** 摆放编制：省略 = 一条引擎一处实例（Lab.07/08 的行为） */
     let plan: readonly number[] = order ?? defs.map((_, u) => u);
     /** 环阵列的编制表（每份 = 一整个环的带→引擎映射）；非阵列只有一份 */
-    let planList: readonly (readonly number[])[] = ringPlans ?? [plan];
+    /** 当前是不是阵列（cells 从 undefined 变成函数 ⇒ 判断必须每次读 ref，不能闭包 prop） */
+    const hasCells = (): boolean => !!cellsRef.current;
+    let planList: readonly (readonly number[])[] = ringPlansRef.current ?? [plan];
     let sims: SolidSim[] = [];
     let insts: SolidInst[] = [];
     const makeSims = (): SolidSim[] => defs.map((def) => {
@@ -515,7 +519,7 @@ export function SkinSolidBench({
     const makeInsts = (): SolidInst[] => {
       // 环阵列（Lab.10）：实例 = 每份环编制 × 环上每条带；格子偏移不进实例，
       // 由 placesOf 现算成摆放表——同一条带在十六格里是同一份顶点
-      if (cells) {
+      if (hasCells()) {
         const out: SolidInst[] = [];
         planList.forEach((bandPlan, v) => {
           bandPlan.forEach((simIdx, u) => {
@@ -545,15 +549,15 @@ export function SkinSolidBench({
      *  **环阵列下恒 null**：那条路径把方位角烘进顶点，而阵列要的是「同一份顶点摆多处」，
      *  转到 GPU 的 uModelR 上去（Lab.09 单环仍走 CPU 那条，逐位不回归） */
     const placeOf = (inst: SolidInst): RingPlace | null =>
-      ring && !cells ? { radius: radiusRef.current, angle: inst.angle } : null;
+      ring && !hasCells() ? { radius: radiusRef.current, angle: inst.angle } : null;
 
     // 环阵列的格子表（随半径滑块重算：格距 = 2·外缘 + 缝，见 skin-grid）
-    let cellList: readonly SolidCell[] = cells ? cellsRef.current!(radiusRef.current) : [];
+    let cellList: readonly SolidCell[] = hasCells() ? cellsRef.current!(radiusRef.current) : [];
     const rigS = rig?.scale ?? 1;
     const rigY = rig?.y ?? 0;
     /** 某份编制的全部摆放（方位角 + 缩放 + 格子平移）；非阵列 = undefined ⇒ 原来的单处绘制 */
     const placesOf = (inst: SolidInst): readonly MeshPlace[] | undefined => {
-      if (!cells) return undefined;
+      if (!hasCells()) return undefined;
       const out: MeshPlace[] = [];
       for (const c of cellList)
         if (c.plan === inst.plan) out.push({ yaw: inst.angle, x: c.x, y: rigY, z: c.z, s: rigS });
@@ -561,7 +565,7 @@ export function SkinSolidBench({
     };
     /** 同一批站位，但**不缩放**（芯轨那种已经按世界尺寸建好的件用） */
     const placesWorldOf = (inst: SolidInst): readonly MeshPlace[] | undefined => {
-      if (!cells) return undefined;
+      if (!hasCells()) return undefined;
       const out: MeshPlace[] = [];
       for (const c of cellList)
         if (c.plan === inst.plan) out.push({ yaw: inst.angle, x: c.x, y: 0, z: c.z });
@@ -569,7 +573,7 @@ export function SkinSolidBench({
     };
     /** 天花圆环板的摆放：每格一块，与编制无关 */
     const cellPlaces = (): readonly MeshPlace[] | undefined =>
-      cells ? cellList.map((c) => ({ yaw: 0, x: c.x, y: 0, z: c.z })) : undefined;
+      hasCells() ? cellList.map((c) => ({ yaw: 0, x: c.x, y: 0, z: c.z })) : undefined;
     /** 布景（房间 + 比例小人）：静件，按半径缓存重烘 */
     let setR = Number.NaN;
     let setMeshes: { data: Float32Array; kind: 'room' | 'figure' }[] = [];
@@ -586,8 +590,8 @@ export function SkinSolidBench({
     /** 半径变了：格距跟着走（用户 2026-08-25 拍板），相机也得跟着退 */
     const reflow = (): void => {
       if (sceneRef.current && setR !== radiusRef.current) bakeScene();
-      if (!cells) return;
-      cellList = cellsRef.current!(radiusRef.current);
+      // 阵列 ⇄ 单环也走这里：切回单环要把格子**清空**（留着旧的会让膜按十六格去画）
+      cellList = hasCells() ? cellsRef.current!(radiusRef.current) : [];
       if (camScaleRef.current) cam.retarget(layoutList[layoutIdx].pivot, scaleOf());
     };
 
@@ -709,7 +713,7 @@ export function SkinSolidBench({
         const rp = placeOf(inst);
         // 环阵列：本地系里把带子摆在半径处（方位角与格子平移交给 GPU 的模型变换）；
         // 单环与直排仍是老式子——rp 非空时半径已在 rp 里，offX 恒 0
-        const localX = cells ? radiusRef.current : inst.offX;
+        const localX = hasCells() ? radiusRef.current : inst.offX;
         const places = placesOf(inst);
         const placesW = placesWorldOf(inst);
         fillSolidVerts(px, py, sim.n, localX, depth, thick, SOLID.SCALE, inst.verts, inst.offZ, v.offY, rp);
@@ -884,7 +888,7 @@ export function SkinSolidBench({
       // 报的是**场上**的锁定键数（实例数 × 各自引擎），不是引擎数；
       // 环阵列下一条带摆在若干格里，每一份都要数进去
       const planCells = (pi: number): number =>
-        cells ? cellList.reduce((a, c) => a + (c.plan === pi ? 1 : 0), 0) : 1;
+        hasCells() ? cellList.reduce((a, c) => a + (c.plan === pi ? 1 : 0), 0) : 1;
       const locked = insts.reduce(
         (acc, i) => acc + sims[i.simIdx].sim.locked.length * planCells(i.plan),
         0,

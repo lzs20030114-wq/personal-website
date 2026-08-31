@@ -780,3 +780,8 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
 - **第二种编制「一圈起伏」（同日追加）**：台架加「编制」两档控件（整环平 / 一圈起伏），
   起伏档解十一条引擎故 RATE 110→80；HUD 副标题与提示按档切换。规格表加两行
   （Plans / Wave），主页卡片文案补 “flat or undulating”，统计条 412→417。
+
+- **第二组控件「排布」（同日追加）**：Lab.14 加单环 / 4×4 两档（格距 207px，方形自己算——
+  峰值口径下边对边比角对角更紧）。`SkinSolidBench` 的 `cells`/`ringPlans` 改走 ref
+  （主 effect []-deps 会把 undefined 闭包住，阵列摆不出去）；`reflow` 切回单环时清空格子。
+  Lab.10 逐位无影响。统计条 417→420。

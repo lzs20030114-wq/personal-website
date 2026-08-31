@@ -339,3 +339,71 @@ export function buildSquareWave(): { units: RingUnitDef[]; order: number[] } {
   });
   return { units, order };
 }
+
+/**
+ * ## 4×4 阵列（第二组控件「排布」，2026-08-30）
+ *
+ * 与 Lab.10 的圆环阵列是同一件事，但**格距的账不一样**——圆环的外缘处处等距，
+ * 方形环没有：
+ * - 终态下边对边与角对角**恰好一样紧**（都是 2a）；
+ * - 但**过程中面档鼓得比角档多**（实测峰值 面 +2.5 / 边 +2.3 / 角 +1.5），
+ *   于是峰值口径下**边对边更紧**（177 vs 角对角 170.7）——格距按它定。
+ * 所以这里不能套 skin-grid 的 `ringOuter(radius) = radius + PEAK_REACH`（那是圆的）。
+ *
+ * 缝照 Lab.10 的规则给（环间缝 = 1.5 × 环内平台外缘的带间缝），但取**最紧处**
+ * ——面档那个方位，不是角档：一圈里最容易挤上的是面对面。
+ *
+ * **相位一律相同**：试过隔格转 45° 让角对着邻格的边，实测最近距离反而从 168.6
+ * 变成 203.5（a + a√2）——正方形阵列里同相位最省地方。
+ */
+/** 三档全程峰值挑出（px，真引擎实测；终态是 56.0 / 63.7 / 89.2） */
+export const SQUARE_PEAK: readonly number[] = [58.5, 66.0, 90.7];
+
+/** 峰值口径下的最紧外缘半径 = 面档那个方位（决定边对边） */
+export function squareTightRadius(): number {
+  return SQUARE.RADIUS + SQUARE_PEAK[0];
+}
+
+/** 环间净缝：照 Lab.10 的比值规则，取最紧处的带间缝 */
+export function squareCellGap(): number {
+  const rho = squareTightRadius();
+  return 1.5 * ((2 * Math.PI * rho) / SQUARE.COUNT - SQUARE.DEPTH);
+}
+
+/** 格距 = 边对边（2 × 最紧外缘）+ 缝 */
+export function squareCellPitch(): number {
+  return 2 * squareTightRadius() + squareCellGap();
+}
+
+export const SQUARE_GRID = { COLS: 4, ROWS: 4 } as const;
+
+/**
+ * 峰值口径下的角点半径。**角档的带子本来就指向 45°，它的外缘点就是方形的角**
+ * ——不要再乘 √2（那是「半边长 → 角点」的换算，这里不适用；初版就这么错过一次，
+ * 把对角约束算成 241.4、结论也跟着反了）。
+ */
+export function squareCornerRadius(): number {
+  return SQUARE.RADIUS + SQUARE_PEAK[SQUARE_PEAK.length - 1];
+}
+
+/**
+ * 整片阵列在一个方向上的占宽（含两端环的角点——包围盒由角点定，不是边）。
+ * 顺带记下两条约束的比较：边对边要 pitch ≥ 2×88.5 = 177，对角相邻要
+ * pitch·√2 ≥ 2×120.7 ⇒ pitch ≥ 170.7 —— **边对边更紧**，格距按它定。
+ */
+export function squareGridSpan(cols: number = SQUARE_GRID.COLS): number {
+  return (cols - 1) * squareCellPitch() + 2 * squareCornerRadius();
+}
+
+/** 十六个格子的站位（阵列以原点居中） */
+export function squareGridCells(
+  cols: number = SQUARE_GRID.COLS,
+  rows: number = SQUARE_GRID.ROWS,
+): { x: number; z: number; plan: number }[] {
+  const pitch = squareCellPitch();
+  const out: { x: number; z: number; plan: number }[] = [];
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++)
+      out.push({ x: (c - (cols - 1) / 2) * pitch, z: (r - (rows - 1) / 2) * pitch, plan: 0 });
+  return out;
+}
