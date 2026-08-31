@@ -488,21 +488,60 @@ describe('方形环 · 圆↔方五档', () => {
   });
 });
 
-describe('方形环 · 真跑（圆档与中间档的新深度）', () => {
-  it('表里没跑过的那两个 kMax 也成形：键全锁、挑出对表、箱高仍是 36', { timeout: 120_000 }, () => {
-    const opts = UNITS[0].opts;
-    const ks = [squareMorphTiers(0)[2].k, squareMorphTiers(2)[2].k]; // 圆档 34 / 中间档 43
-    const rows = runAll(ks.map((k) => ({ key: `k${k}`, spec: squareSpec(k, F_TOT), opts })));
-    rows.forEach((r, i) => {
+describe('方形环 · 真跑（五档用到的全部深度）', () => {
+  /** 方档三条之外，圆↔方还用到的 kMax（34 / 37 / 43 / 47）——一条都不能漏跑 */
+  const EXTRA = [
+    ...new Set(
+      Array.from({ length: SQUARE_MORPH.STEPS }, (_, s) => squareMorphTiers(s).map((t) => t.k))
+        .flat()
+        .filter((k) => !SQUARE_TIERS.some((t) => t.k === k)),
+    ),
+  ].sort((a, b) => a - b);
+  let EXTRA_RUN: ReturnType<typeof runAll> | null = null;
+  const extra = () =>
+    (EXTRA_RUN ??= runAll(EXTRA.map((k) => ({ key: `k${k}`, spec: squareSpec(k, F_TOT), opts: UNITS[0].opts }))));
+
+  it('每个新深度都成形：键全锁、挑出对表、箱高仍是 36、面是平的', { timeout: 120_000 }, () => {
+    expect(EXTRA.length).toBeGreaterThan(0);
+    extra().forEach((r, i) => {
       expect(r.locked, r.key).toBe(r.keys);
       expect(r.keys).toBe(SQUARE_RUNGS);
-      expect(Math.abs(r.out - squareReachOf(ks[i])), `${r.key} 挑出 ${r.out.toFixed(1)}`).toBeLessThan(2);
+      expect(Math.abs(r.out - squareReachOf(EXTRA[i])), `${r.key} 挑出 ${r.out.toFixed(1)}`).toBeLessThan(2);
       expect(Math.abs(r.boxH - SQUARE.H), `${r.key} 箱高 ${r.boxH.toFixed(1)}`).toBeLessThan(1.5);
       expect(r.topFlat, `${r.key} 顶面水平度`).toBeLessThan(1.5);
       expect(r.botFlat, `${r.key} 底面水平度`).toBeLessThan(1.5);
     });
-    // 与方档三条一起看：平台高度与 kMax 无关（切轮廓档不跳）
-    const tops = [...rows, ...run()].map((r) => r.topY);
-    expect(Math.max(...tops) - Math.min(...tops), '五档共用构造下的平台面散布').toBeLessThan(1.5);
+  });
+
+  it('切轮廓档不跳高度——**按整个时间轴验**，不是只验终态（§8.8 的教训）', { timeout: 120_000 }, () => {
+    const rows = [...extra(), ...run()];
+    for (let i = 0; i < rows[0].mouth.length; i++) {
+      const ys = rows.map((r) => r.mouth[i]);
+      expect(
+        Math.max(...ys) - Math.min(...ys),
+        `检查点 ${i}：${rows.map((r) => `${r.key} ${r.mouth[i].toFixed(1)}`).join(' / ')}`,
+      ).toBeLessThan(2.5);
+    }
+    const tops = rows.map((r) => r.topY);
+    expect(Math.max(...tops) - Math.min(...tops), '终态平台面散布').toBeLessThan(1.5);
+  });
+});
+
+describe('方形环 · 起伏 × 轮廓', () => {
+  it('去重键取 (深度, 位置)：圆档不白跑两条一样的引擎，另四档逐位不变', () => {
+    for (let s = 0; s < SQUARE_MORPH.STEPS; s++) {
+      const w = buildSquareWave(squareMorphTiers(s));
+      const sigs = new Set(w.units.map((u) => JSON.stringify(u.spec)));
+      expect(sigs.size, `档${s} 有重复引擎`).toBe(w.units.length);
+      expect(w.order.length).toBe(SQUARE.COUNT);
+      for (const i of w.order) expect(i).toBeLessThan(w.units.length);
+    }
+    // 圆档三档同深度 ⇒ 波峰波谷各两级 lead 取整相同，合并掉两条
+    expect(buildSquareWave(squareMorphTiers(0)).units.length).toBeLessThan(SQUARE_WAVE.LEVELS);
+    // 方档 = 默认，逐位不变
+    const a = buildSquareWave(squareMorphTiers(SQUARE_MORPH.STEPS - 1));
+    const b = buildSquareWave();
+    expect(a.order).toEqual(b.order);
+    expect(a.units.map((u) => u.spec)).toEqual(b.units.map((u) => u.spec));
   });
 });

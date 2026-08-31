@@ -380,7 +380,11 @@ export function buildSquareWave(
   const order = Array.from({ length: SQUARE.COUNT }, (_, i) => {
     const t = tiers[i];
     const l = squareWaveLevel(i);
-    const key = `${t}:${l}`;
+    // 去重键取**真正决定引擎的那两个量**（深度 + 位置），不是 (档号, 级号)：
+    // 圆那一档三档 kMax 相同，而余弦波的波峰波谷各有两级取整后 lead 相同
+    // ⇒ 按档号去重会留下两条一模一样的引擎白跑（实测圆档 11 → 9）。
+    // 另外四档 (k, lead) 与 (档号, 级号) 一一对应，故单元表逐位不变。
+    const key = `${depths[t].k}:${leads[l]}`;
     let idx = seen.get(key);
     if (idx === undefined) {
       idx = units.length;
