@@ -18,6 +18,11 @@ import {
   squareRadiusAt,
   squareRimPoints,
   squareSlack,
+  SQUARE_WAVE,
+  buildSquareWave,
+  squareLead,
+  squareWaveLeads,
+  squareWaveLevel,
 } from './skin-square';
 import { RING_BAND_NODES } from './skin-ring';
 import { SKIN, createSkinUnit, type SkinBond, type SkinSpec } from './skin-unit';
@@ -226,5 +231,79 @@ describe('方形环 · 真跑（三档终态）', () => {
       const ys = rows.map((r) => r.mouth[i]);
       expect(Math.max(...ys) - Math.min(...ys), `检查点 ${i}`).toBeLessThan(2.5);
     }
+  });
+});
+
+describe('方形环 · 一圈起伏（第二种编制）', () => {
+  const WAVE = buildSquareWave();
+
+  it('起伏只动 lead：档位分布与平档逐位相同（方形不受影响）', () => {
+    const flat = buildSquareOrder();
+    for (let i = 0; i < SQUARE.COUNT; i++) {
+      const u = WAVE.units[WAVE.order[i]];
+      // 引擎的 key 里带着档名 ⇒ 每位的深度档必须与平档那份一致
+      expect(u.key.startsWith(`sq-${SQUARE_TIERS[flat[i]].en}-`), `位置 ${i}`).toBe(true);
+    }
+  });
+
+  it('波的对称轴落在角位 ⇒ 组合数减半（11 条引擎，不是 19 条）', () => {
+    expect(WAVE.units.length).toBeLessThanOrEqual(SQUARE_WAVE.LEVELS);
+    // 相位对齐的硬证据：位置 2±d 同级（角位是轴）
+    for (let d = 1; d <= 5; d++)
+      expect(squareWaveLevel((2 + d) % SQUARE.COUNT)).toBe(squareWaveLevel((2 - d + SQUARE.COUNT) % SQUARE.COUNT));
+  });
+
+  it('幅度与两端都在实测安全区内（lead 6…32 剖面偏差 0.000px）', () => {
+    const leads = squareWaveLeads();
+    expect(leads.length).toBe(SQUARE_WAVE.LEVELS);
+    expect(Math.max(...leads)).toBe(SQUARE_WAVE.LOW);
+    expect(Math.min(...leads)).toBe(SQUARE_WAVE.HIGH);
+    for (const l of leads) {
+      expect(l).toBeGreaterThanOrEqual(SQUARE.LEAD_MIN);
+      expect(RING_BAND_NODES - 2 * SQUARE.ISO - F_TOT - l).toBeGreaterThanOrEqual(SQUARE.TAIL_MIN);
+    }
+    // 余弦：单调升到波峰再单调降回（不是三角波的折角，也不能有抖动）
+    const half = (SQUARE_WAVE.LEVELS - 1) / 2;
+    for (let i = 1; i < leads.length; i++) expect(leads[i]).toBeLessThanOrEqual(leads[i - 1]);
+    expect(half).toBeGreaterThan(0);
+    // 中心 = 平档那个 lead ⇒ 切编制时平台的平均高度不跳
+    expect((SQUARE_WAVE.LOW + SQUARE_WAVE.HIGH) / 2).toBe(squareLead());
+  });
+
+  it('筒的上下缘不动：每一级 lead + tail 恒定（带子总长钉死）', () => {
+    for (const u of WAVE.units) {
+      const p = parts(u.spec);
+      expect(p.total).toBe(RING_BAND_NODES);
+      expect(2 * p.padHi + p.fs).toBe(F_TOT); // 自由总量恒定 ⇒ 芯长逐点相同
+    }
+  });
+
+  it('真跑：同一档的最低级与最高级，形状逐点相同、只是整体平移', { timeout: 120_000 }, () => {
+    // 取角档（最紧的一档）的两端级
+    const leads = squareWaveLeads();
+    const lo = WAVE.units.find((u) => u.key === `sq-corner-w0`)!;
+    const hi = WAVE.units.find((u) => u.key === `sq-corner-w${SQUARE_WAVE.LEVELS - 1}`)!;
+    const shape = (u: (typeof WAVE.units)[number]) => {
+      const P = parts(u.spec);
+      const sim = createSkinUnit(u.spec, u.opts);
+      for (let k = 0; k < SKIN.STEPS; k++) sim.advance();
+      let w = P.bonds[0];
+      for (const b of P.bonds) if (b[1] - b[0] > w[1] - w[0]) w = b;
+      const my = -(sim.py[P.off + w[0]] + sim.py[P.off + w[1]]) / 2;
+      const prof: [number, number][] = [];
+      for (let i = P.off; i < P.off + P.fs; i++) prof.push([sim.px[i] * 100, (-sim.py[i] - my) * 100]);
+      return { prof, mouth: my * 100, top: -sim.py[0] * 100, foot: -sim.py[sim.n - 1] * 100 };
+    };
+    const A = shape(lo);
+    const B = shape(hi);
+    let dev = 0;
+    for (let i = 0; i < A.prof.length; i++)
+      dev = Math.max(dev, Math.hypot(A.prof[i][0] - B.prof[i][0], A.prof[i][1] - B.prof[i][1]));
+    expect(dev).toBeLessThan(0.05); // 形状一个数没变
+    // 高度差 = lead 差 × 2px/节
+    expect(A.mouth - B.mouth).toBeCloseTo((leads[0] - leads[leads.length - 1]) * 2, 1);
+    // 筒的上下缘不动
+    expect(A.top).toBeCloseTo(B.top, 6);
+    expect(A.foot).toBeCloseTo(B.foot, 6);
   });
 });

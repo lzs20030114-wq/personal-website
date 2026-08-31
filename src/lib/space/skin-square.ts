@@ -75,10 +75,16 @@ export const SQUARE = {
   THICK: RING.THICK,
   /** 垫与结构之间的隔离贴合（= 约束最大跨距 ⇒ 结构的动力学不受垫扰） */
   ISO: 16,
-  /** 尾段（钉住端那一截） */
+  /** 尾段（钉住端那一截；平档用这个值，起伏档按 lead 配平） */
   TAIL: 15,
-  /** 贴合段的下限（别让光） */
-  LEAD_MIN: 20,
+  /** 尾段下限：实测 lead 32 / tail 5 仍逐位不变，留一点余量 */
+  TAIL_MIN: 5,
+  /**
+   * 贴合段的下限。**8 是实测的，不是拍的**：角档 lead 6…32 全区间剖面偏差 0.000px
+   * （挑出/箱高/水平度/键数逐位不变）——垫与结构之间的 ISO 隔离贴合把结构的动力学
+   * 与两端分配隔开了。初版按 Lab.09 的经验拍了 20，把起伏幅度低估了三倍（见 SQUARE_WAVE）。
+   */
+  LEAD_MIN: 8,
   /** 键谱两端缓冲的纪律下限（交接件） */
   BUF_MIN: 4,
   /** 轴向间隙下限：箱子住得下自由段，还留一点过渡（坑②） */
@@ -154,27 +160,35 @@ export const SQUARE_TIERS: readonly SquareTier[] = [
 /** 三档实测挑出（px，真引擎终态；守门按它卡，改构造必须同步重标） */
 export const SQUARE_REACH: readonly number[] = [56.0, 63.7, 89.2];
 
-/** 一档的谱：配平垫七段（垫对称——坑③） */
-export function squareSpec(kMax: number, fTotal: number = squareFreeTotal()): SkinSpec {
+/** 平档的贴合段（三档全员同值 ⇒ 对齐的常数项相同） */
+export function squareLead(fTotal: number = squareFreeTotal()): number {
+  return RING_BAND_NODES - 2 * SQUARE.ISO - fTotal - SQUARE.TAIL;
+}
+
+/**
+ * 一档的谱：配平垫七段（垫对称——坑③）。
+ * `lead` 省略 = 平档那个值（三档相同）；起伏编制按位置传不同的 lead——
+ * 那是形状**在带子上的位置**（2px/节，纯平移），实测 lead 6…32 剖面偏差 0.000px、
+ * 挑出/箱高/水平度/键数逐位不变，靠的是垫与结构之间那两段 ISO 隔离贴合。
+ */
+export function squareSpec(
+  kMax: number,
+  fTotal: number = squareFreeTotal(),
+  leadAt: number = squareLead(fTotal),
+): SkinSpec {
   const b = squareBuffer(kMax);
   const fs = squareFree(kMax, b);
   const c = (fs - 1) / 2;
   const bonds: SkinBond[] = squareLadder(kMax).map((k) => [c - k, c + k, SQUARE.H / 100]);
   const seg: SkinSeg = ['f', fs, bonds, [[c - SQUARE_PW, c + SQUARE_PW]]];
   const p = (fTotal - fs) / 2;
-  const lead = RING_BAND_NODES - 2 * SQUARE.ISO - fTotal - SQUARE.TAIL;
-  if (p < 0 || lead < SQUARE.LEAD_MIN) throw new Error(`方形环档位越界：k=${kMax} 垫=${p} lead=${lead}`);
+  const lead = leadAt;
+  const tail = RING_BAND_NODES - 2 * SQUARE.ISO - fTotal - lead;
+  if (p < 0 || lead < SQUARE.LEAD_MIN || tail < SQUARE.TAIL_MIN)
+    throw new Error(`方形环档位越界：k=${kMax} 垫=${p} lead=${lead} tail=${tail}`);
   return p > 0
-    ? [
-        ['g', lead],
-        ['f', p, []],
-        ['g', SQUARE.ISO],
-        seg,
-        ['g', SQUARE.ISO],
-        ['f', p, []],
-        ['g', SQUARE.TAIL],
-      ]
-    : [['g', lead + SQUARE.ISO], seg, ['g', SQUARE.ISO + SQUARE.TAIL]];
+    ? [['g', lead], ['f', p, []], ['g', SQUARE.ISO], seg, ['g', SQUARE.ISO], ['f', p, []], ['g', tail]]
+    : [['g', lead + SQUARE.ISO], seg, ['g', SQUARE.ISO + tail]];
 }
 
 /** 三档的引擎定义（同一张方箱的整形选项，只换键谱） */
@@ -239,4 +253,89 @@ export function squareRimPoints(
     const rr = SQUARE.RADIUS + reach[t];
     return { x: Math.cos(th) * rr, z: Math.sin(th) * rr, dev: rr - squareRadiusAt(th, a) };
   });
+}
+
+/**
+ * ## 一圈起伏（第二种编制，2026-08-30）
+ *
+ * 与 Lab.09 的起伏同一个旋钮：**同一张键谱、每个位置一个不同的 lead**
+ * ——lead 是形状在带子上的位置（2px/节），所以这不是新形态，是把已经验过的
+ * 那个旋钮沿圆周排成一条波。方形那一半完全不受影响：挑出由 kMax 定，与 lead 正交。
+ *
+ * 幅度：实测角档 lead 6…32 全区间剖面偏差 **0.000px**（挑出 89.2 / 箱高 36.0 /
+ * 顶底面水平度 0.1 / 键 10 逐位不变，嘴心精确按 2px/节平移）。取对称安全区
+ * [12, 32]（中心 22 = 平档那个位置）⇒ 幅度 **40px ≈ 1.1 倍箱高**，与 Lab.09 的
+ * 1.29 同量级。这一族比 Lab.09 宽松，是因为垫与结构之间那两段 ISO 隔离贴合把
+ * 结构的动力学与两端的分配隔开了——Lab.09 的 `tail ≥ 11` 是在没有这层隔离的
+ * 构造上测的，**跨族搬那个下限会把幅度低估三倍**（本轮实测纠正）。
+ *
+ * 用余弦不用三角波（三角波在最高最低处有折角），20 位回文 ⇒ 11 级。
+ * 相位转四分之一圈：不转的话波峰波谷落在正前正后，默认机位下看不出起伏。
+ *
+ * **注意平台面不再齐平**——那正是这一档要的效果；平档那条「平台面散布 0.0px」
+ * 的守门在起伏档下不适用，改卡「形状逐位不变、只有高度在变」。
+ */
+export const SQUARE_WAVE = {
+  LEVELS: 11,
+  /** 波谷（lead 大 = 折叠体沿带下移 = 低） */
+  LOW: 32,
+  /** 波峰（lead 小 = 高）。两端都在实测安全区内且留了余量（实测边界 6 / 32） */
+  HIGH: 12,
+  /**
+   * 相位：**让波的对称轴落在角位上**（位置 2 与 12）。
+   * 这不是外观微调，是省一半引擎：深度档关于角位镜像（t(2+d) = t(2−d)），
+   * 若波的轴不与它重合，(档, 级) 组合几乎不重复 —— 实测 PHASE=5 要解 19 条带，
+   * 对齐后只要 11 条（与 Lab.09 渐变同量级）。视觉上仍是「一圈从最低升到最高
+   * 再回来」，只是波谷波峰恰好落在一对对角上。
+   */
+  PHASE: 18,
+} as const;
+
+/** 各级的 lead（0 = 最低，LEVELS−1 = 最高） */
+export function squareWaveLeads(): number[] {
+  const { LEVELS, LOW, HIGH } = SQUARE_WAVE;
+  return Array.from({ length: LEVELS }, (_, l) =>
+    Math.round(LOW - (LOW - HIGH) * ((1 - Math.cos((Math.PI * l) / (LEVELS - 1))) / 2)),
+  );
+}
+
+/** 位置 i 的起伏级（20 位回文 + 相位） */
+export function squareWaveLevel(i: number, count: number = SQUARE.COUNT): number {
+  const half = SQUARE_WAVE.LEVELS - 1;
+  const t = (((i + SQUARE_WAVE.PHASE) % count) / count) * 2;
+  const l = Math.round(t * half);
+  return l <= half ? l : 2 * half - l;
+}
+
+/**
+ * 起伏编制：每个位置是 (深度档, 起伏级) 的组合。两者都由位置定，且都关于同一条
+ * 轴镜像 ⇒ 组合数远少于 20（实测见守门）。相同组合共用同一条引擎。
+ */
+export function buildSquareWave(): { units: RingUnitDef[]; order: number[] } {
+  const fTotal = squareFreeTotal();
+  const leads = squareWaveLeads();
+  const tiers = buildSquareOrder();
+  const opts: SkinUnitOpts = skinSiteOpts(STEPPED);
+  const seen = new Map<string, number>();
+  const units: RingUnitDef[] = [];
+  const order = Array.from({ length: SQUARE.COUNT }, (_, i) => {
+    const t = tiers[i];
+    const l = squareWaveLevel(i);
+    const key = `${t}:${l}`;
+    let idx = seen.get(key);
+    if (idx === undefined) {
+      idx = units.length;
+      seen.set(key, idx);
+      units.push({
+        key: `sq-${SQUARE_TIERS[t].en}-w${l}`,
+        zh: `${SQUARE_TIERS[t].name}档 ${l}/${SQUARE_WAVE.LEVELS - 1}`,
+        en: `${SQUARE_TIERS[t].en} ${l}`,
+        spec: squareSpec(SQUARE_TIERS[t].k, fTotal, leads[l]),
+        opts,
+        smooth: [3, 1] as const,
+      });
+    }
+    return idx;
+  });
+  return { units, order };
 }

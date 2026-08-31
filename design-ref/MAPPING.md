@@ -777,3 +777,6 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
 - 站点接线：/lab 第十四台（`#lab14`）· 主页 S2 第十四张 Lab 卡（`lg:grid-cols-13` →
   `-14`）· /lab 标头与页脚 thirteen/13 → fourteen/14 · 统计条 Tests 400→412 · Demos 13→14。
 - 案例页、连杆、四路由一律未动。
+- **第二种编制「一圈起伏」（同日追加）**：台架加「编制」两档控件（整环平 / 一圈起伏），
+  起伏档解十一条引擎故 RATE 110→80；HUD 副标题与提示按档切换。规格表加两行
+  （Plans / Wave），主页卡片文案补 “flat or undulating”，统计条 412→417。

@@ -1,14 +1,16 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   SQUARE,
   SQUARE_PHASE,
   SQUARE_REACH,
   SQUARE_RUNGS,
   SQUARE_TIERS,
+  SQUARE_WAVE,
   buildSquareOrder,
   buildSquareUnits,
+  buildSquareWave,
   squareHalfSide,
 } from '../../src/lib/space/skin-square';
 import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
@@ -30,12 +32,21 @@ import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
  *   R 一变方形就不成立，得整套重标。
  * - **顶视是主视角**：方形要俯视才读得出来，故默认机位就是顶视。
  */
-const UNITS: readonly SolidUnitDef[] = buildSquareUnits().map(({ spec, opts, smooth }) => ({
-  spec,
-  opts,
-  smooth,
-}));
-const ORDER = buildSquareOrder();
+const strip = (d: { spec: SolidUnitDef['spec']; opts: SolidUnitDef['opts']; smooth: SolidUnitDef['smooth'] }): SolidUnitDef => ({
+  spec: d.spec,
+  opts: d.opts,
+  smooth: d.smooth,
+});
+const FLAT_UNITS: readonly SolidUnitDef[] = buildSquareUnits().map(strip);
+const FLAT_ORDER = buildSquareOrder();
+const WAVE = buildSquareWave();
+const WAVE_UNITS: readonly SolidUnitDef[] = WAVE.units.map(strip);
+
+const PLANS = [
+  { key: 'flat', label: '整环平' },
+  { key: 'wave', label: '一圈起伏' },
+] as const;
+type PlanKey = (typeof PLANS)[number]['key'];
 
 export function SquareRingBench({
   active = true,
@@ -47,15 +58,18 @@ export function SquareRingBench({
   controls?: boolean;
 }) {
   const side = useMemo(() => Math.round(2 * squareHalfSide()), []);
+  const [plan, setPlan] = useState<PlanKey>('flat');
+  const wave = plan === 'wave';
   return (
     <SkinSolidBench
       active={active}
       onLight={onLight}
       controls={controls}
-      units={UNITS}
-      order={ORDER}
-      unitsKey="square"
-      rate={110}
+      units={wave ? WAVE_UNITS : FLAT_UNITS}
+      order={wave ? WAVE.order : FLAT_ORDER}
+      unitsKey={plan}
+      // 起伏要解十一条引擎（平档只有三条）⇒ 推进速率随之降，同 Lab.08/09 渐变的做法
+      rate={wave ? 80 : 110}
       ring
       angleOffset={SQUARE_PHASE}
       // 量程为零 = 滑块不出（方形是按这个半径标定的）
@@ -71,11 +85,30 @@ export function SquareRingBench({
         { key: 'square', label: '', gapX: 0, gapZ: 0, pivot: { x: 0, y: 166, z: 0 }, camScale: 0.95, home: 'top' },
       ]}
       axon={{ pitch: -0.45, yaw: -0.62 }}
+      extraControls={
+        <div className="grp">
+          <span className="k">编制</span>
+          <span className="seg">
+            {PLANS.map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                className={p.key === plan ? 'active' : undefined}
+                onClick={() => setPlan(p.key)}
+              >
+                {p.label}
+              </button>
+            ))}
+          </span>
+        </div>
+      }
       hud={{
         kicker: 'Lab.14 / Project II',
         title: '方形环 · 靠挑出的长度做形状',
-        sub: `${SQUARE.COUNT} 条窄带 · 三档深度 ${SQUARE_REACH.map((r) => r.toFixed(0)).join(' / ')}px · 箱高恒定 ${SQUARE.H}px · 边长 ${side}px`,
-        hint: `${SQUARE_TIERS.map((t) => `${t.name}${t.count}`).join(' · ')} · 每条带 ${SQUARE_RUNGS} 挡 · 顶视看方 · 拖拽旋转`,
+        sub: wave
+          ? `${SQUARE.COUNT} 条窄带 · 三档深度不变 · 高度沿圆周起伏 ${(SQUARE_WAVE.LOW - SQUARE_WAVE.HIGH) * 2}px · ${SQUARE_WAVE.LEVELS} 级`
+          : `${SQUARE.COUNT} 条窄带 · 三档深度 ${SQUARE_REACH.map((r) => r.toFixed(0)).join(' / ')}px · 箱高恒定 ${SQUARE.H}px · 边长 ${side}px`,
+        hint: `${SQUARE_TIERS.map((t) => `${t.name}${t.count}`).join(' · ')} · 每条带 ${SQUARE_RUNGS} 挡 · ${wave ? '俯视仍是方的 · 侧看起伏' : '顶视看方'} · 拖拽旋转`,
         aria:
           '方形环：二十条窄织物带围成一圈，每条带按自己在方形里的位置挑出不同长度，收缩后二十个挑台连成一圈俯视为正方形的平台；箱高一圈恒定，可拖拽旋转',
       }}

@@ -215,7 +215,7 @@ const LABS = [
   {
     kicker: 'Lab.14',
     title: 'A square ring',
-    body: 'The mast stays round; how far each band reaches makes the plan a square.',
+    body: 'The mast stays round; how far each band reaches makes the plan a square — flat or undulating.',
     meta: 'Three depths · WebGL',
     href: '/lab#lab14',
     bar: 'var(--p700)',
@@ -231,11 +231,11 @@ export interface HomeLog {
   text: string;
 }
 
-// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-08-30 vitest 实测 412；
+// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-08-30 vitest 实测 417；
 // 迭代稿配色：Tests=绿 700、Kernels=紫 700、Demos=绿 600）
 const STATS = [
   { n: '04', label: 'Projects', color: 'var(--ink)' },
-  { n: '412', label: 'Tests green', color: 'var(--accent)' },
+  { n: '417', label: 'Tests green', color: 'var(--accent)' },
   { n: '03', label: 'Solver kernels', color: 'var(--accent-2)' },
   { n: '14', label: 'Live demos', color: 'var(--g600)' },
 ];
