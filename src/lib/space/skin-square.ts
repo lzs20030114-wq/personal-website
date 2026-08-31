@@ -147,6 +147,58 @@ export interface SquareTier {
 }
 
 /**
+ * ## 深度表：最外梯挡半跨 kMax → 挑出（px）
+ *
+ * 真引擎实测（scratchpad 扫掠，共用配平基准 F_TOT / lead ⇒ 与站上逐位同构），
+ * 两列分别是**终态**（平台伸到哪）与**全程峰值**（阵列格距按它定，见 §阵列）。
+ *
+ * - **下界 k=28 是实测的**：H 恒 36 ⇒ 自由段轴向跨度要够住得下箱子（gap ≥ G_MIN）
+ *   ⇒ k 越小缓冲 b 被顶得越高（k30 时 b=5，k20 时 b=15），多出来的松料把嘴心
+ *   拽偏 30px、顶底面水平度从 0.13 掉到 0.9。k28 起嘴心才稳定。
+ * - **上界 k=52 是带长定的**：贴身自由段 2(k+b)+1 要装得进 F_TOT=133。
+ * - **嘴心全表散布 0.26px** —— 这正是「换 kMax 不改平台高度」的硬证据，
+ *   也是圆↔方能做成一组档位、切档时平台不跳的前提。
+ */
+export const SQUARE_DEPTH = {
+  /** 表的首个 kMax */
+  KLO: 28,
+  /** 终态挑出（px），下标 = kMax − KLO */
+  REACH: [
+    44.2, 45.5, 46.8, 48.4, 50.5, 52.5, 54.1, 56.0, 57.8, 59.9, 61.6, 63.7, 65.5,
+    68.0, 70.2, 71.9, 74.1, 75.8, 77.9, 79.6, 81.4, 83.5, 85.3, 87.3, 89.2,
+  ],
+  /** 全程峰值挑出（px，成形期鼓出的那一下） */
+  PEAK: [
+    45.5, 47.4, 49.4, 51.1, 52.6, 54.3, 56.7, 58.5, 60.3, 62.3, 64.0, 66.0, 67.9,
+    70.0, 72.0, 73.7, 75.7, 77.6, 79.5, 81.5, 83.1, 85.0, 87.1, 89.1, 90.7,
+  ],
+} as const;
+
+/** 表内最大 kMax */
+export const SQUARE_KHI = SQUARE_DEPTH.KLO + SQUARE_DEPTH.REACH.length - 1;
+
+function depthAt(col: readonly number[], k: number): number {
+  const i = k - SQUARE_DEPTH.KLO;
+  if (i < 0 || i >= col.length) throw new Error(`方形环深度表越界：k=${k}（表 ${SQUARE_DEPTH.KLO}–${SQUARE_KHI}）`);
+  return col[i];
+}
+/** 该 kMax 的终态挑出 */
+export function squareReachOf(k: number): number {
+  return depthAt(SQUARE_DEPTH.REACH, k);
+}
+/** 该 kMax 的全程峰值挑出 */
+export function squarePeakOf(k: number): number {
+  return depthAt(SQUARE_DEPTH.PEAK, k);
+}
+/** 反查：挑出最接近目标的那个 kMax（并列时取小的 ⇒ 端点复现档案值） */
+export function squareDepthK(want: number): number {
+  let best: number = SQUARE_DEPTH.KLO;
+  for (let k = SQUARE_DEPTH.KLO + 1; k <= SQUARE_KHI; k++)
+    if (Math.abs(squareReachOf(k) - want) < Math.abs(squareReachOf(best) - want)) best = k;
+  return best;
+}
+
+/**
  * 三档（标定自 scripts/skin-ring/draft.mjs 的 ring-square-h 扫掠，真引擎实测）：
  * 角档取带长允许的最大 kMax，方形由它定；边/面两档按方形几何反推目标深度后搜出。
  * 实测挑出 89.2 / 63.7 / 56.0，外缘点对目标方形 ≤0.9px。
@@ -157,8 +209,8 @@ export const SQUARE_TIERS: readonly SquareTier[] = [
   { name: '角', en: 'corner', k: 52, count: 4 },
 ];
 
-/** 三档实测挑出（px，真引擎终态；守门按它卡，改构造必须同步重标） */
-export const SQUARE_REACH: readonly number[] = [56.0, 63.7, 89.2];
+/** 三档实测挑出（px，真引擎终态）——**查深度表**，不再另抄一份数 */
+export const SQUARE_REACH: readonly number[] = SQUARE_TIERS.map((t) => squareReachOf(t.k));
 
 /** 平档的贴合段（三档全员同值 ⇒ 对齐的常数项相同） */
 export function squareLead(fTotal: number = squareFreeTotal()): number {
@@ -192,10 +244,10 @@ export function squareSpec(
 }
 
 /** 三档的引擎定义（同一张方箱的整形选项，只换键谱） */
-export function buildSquareUnits(): RingUnitDef[] {
+export function buildSquareUnits(tiers: readonly SquareTier[] = SQUARE_TIERS): RingUnitDef[] {
   const fTotal = squareFreeTotal();
   const opts: SkinUnitOpts = skinSiteOpts(STEPPED);
-  return SQUARE_TIERS.map((t) => ({
+  return tiers.map((t) => ({
     key: `sq-${t.en}`,
     zh: `${t.name}档`,
     en: t.en,
@@ -227,18 +279,23 @@ export function squareHalfSide(reach: readonly number[] = SQUARE_REACH): number 
 }
 
 /**
- * 二十位编制：每位按自己的方位角，在三档里取目标深度最接近的那一档。
- * 正方形的对称性保证结果恰好是 面 8 / 边 8 / 角 4。
+ * 第 i 位属于哪一档——**按方位角到最近坐标轴的角距现算**，不看深度。
+ * 正方形（以及任何一条 D4 对称的轮廓线）都只有三类方位：把角折进 [0°,45°]，
+ * 二十位给出 9° / 27° / 45°（= 面 8 / 边 8 / 角 4）。
+ *
+ * 早先这里是「在三档挑出里取最接近的那个」——对方形等价，但**圆那一档三档挑出
+ * 相同、最接近是并列的**，圆↔方那组档位就靠不住了。守门里仍留着旧那套几何反查
+ * 作为对照（两者对方形必须逐位一致）。
  */
+export function squareClassOf(i: number, count: number = SQUARE.COUNT): number {
+  const step = (Math.PI * 2) / count;
+  const q = ((squareAngle(i, count) % (Math.PI / 2)) + Math.PI / 2) % (Math.PI / 2);
+  return Math.round(Math.min(q, Math.PI / 2 - q) / step - 0.5);
+}
+
+/** 二十位编制：每位一个档号（面 0 / 边 1 / 角 2） */
 export function buildSquareOrder(count: number = SQUARE.COUNT): number[] {
-  const a = squareHalfSide();
-  return Array.from({ length: count }, (_, i) => {
-    const want = squareRadiusAt(squareAngle(i, count), a) - SQUARE.RADIUS;
-    let best = 0;
-    for (let t = 1; t < SQUARE_REACH.length; t++)
-      if (Math.abs(SQUARE_REACH[t] - want) < Math.abs(SQUARE_REACH[best] - want)) best = t;
-    return best;
-  });
+  return Array.from({ length: count }, (_, i) => squareClassOf(i, count));
 }
 
 /** 二十个平台外缘点（俯视，世界 XZ）——守门用它卡「落在方形边上」 */
@@ -311,7 +368,9 @@ export function squareWaveLevel(i: number, count: number = SQUARE.COUNT): number
  * 起伏编制：每个位置是 (深度档, 起伏级) 的组合。两者都由位置定，且都关于同一条
  * 轴镜像 ⇒ 组合数远少于 20（实测见守门）。相同组合共用同一条引擎。
  */
-export function buildSquareWave(): { units: RingUnitDef[]; order: number[] } {
+export function buildSquareWave(
+  depths: readonly SquareTier[] = SQUARE_TIERS,
+): { units: RingUnitDef[]; order: number[] } {
   const fTotal = squareFreeTotal();
   const leads = squareWaveLeads();
   const tiers = buildSquareOrder();
@@ -327,10 +386,10 @@ export function buildSquareWave(): { units: RingUnitDef[]; order: number[] } {
       idx = units.length;
       seen.set(key, idx);
       units.push({
-        key: `sq-${SQUARE_TIERS[t].en}-w${l}`,
-        zh: `${SQUARE_TIERS[t].name}档 ${l}/${SQUARE_WAVE.LEVELS - 1}`,
-        en: `${SQUARE_TIERS[t].en} ${l}`,
-        spec: squareSpec(SQUARE_TIERS[t].k, fTotal, leads[l]),
+        key: `sq-${depths[t].en}-w${l}`,
+        zh: `${depths[t].name}档 ${l}/${SQUARE_WAVE.LEVELS - 1}`,
+        en: `${depths[t].en} ${l}`,
+        spec: squareSpec(depths[t].k, fTotal, leads[l]),
         opts,
         smooth: [3, 1] as const,
       });
@@ -356,8 +415,8 @@ export function buildSquareWave(): { units: RingUnitDef[]; order: number[] } {
  * **相位一律相同**：试过隔格转 45° 让角对着邻格的边，实测最近距离反而从 168.6
  * 变成 203.5（a + a√2）——正方形阵列里同相位最省地方。
  */
-/** 三档全程峰值挑出（px，真引擎实测；终态是 56.0 / 63.7 / 89.2） */
-export const SQUARE_PEAK: readonly number[] = [58.5, 66.0, 90.7];
+/** 三档全程峰值挑出（px，真引擎实测；终态是 56.0 / 63.7 / 89.2）——同样查表 */
+export const SQUARE_PEAK: readonly number[] = SQUARE_TIERS.map((t) => squarePeakOf(t.k));
 
 /** 峰值口径下的最紧外缘半径 = 面档那个方位（决定边对边） */
 export function squareTightRadius(): number {
@@ -406,4 +465,119 @@ export function squareGridCells(
     for (let c = 0; c < cols; c++)
       out.push({ x: (c - (cols - 1) / 2) * pitch, z: (r - (rows - 1) / 2) * pitch, plan: 0 });
   return out;
+}
+
+/**
+ * ## 圆 ↔ 方（第三组控件「轮廓」，2026-08-31）
+ *
+ * 同一族的第三个旋钮，仍然只动**每条带挑出多远**——用户立项时那句「靠外延的
+ * 长度来做形状」的直接推论：把目标轮廓从正方形换成**超椭圆** |x|ⁿ+|z|ⁿ = aⁿ，
+ * n=2 是圆、n→∞ 是方，中间是圆角方。键谱、箱高、梯挡根数、对位构造一个数不动。
+ *
+ * ### 固定的是内切圆，不是外接圆
+ *
+ * 半边长 a（= 方形那档的内切圆半径 84.3）全程不变 ⇒ **面档几乎不动**
+ * （挑出 54.1 → 56.0），**角往外长**（54.1 → 89.2）。读起来就是「一个圆的四个角
+ * 被推出去变成方」，而不是整个平台忽大忽小。另两种取法（固定外接圆 / 固定面积）
+ * 都会让圆比方明显大一圈或小一圈，形状之外还多出一个尺寸变化，反而读不清。
+ *
+ * ### 五档怎么取的
+ *
+ * 按**角点半径线性**推进（不是按 n 线性——n 的尾巴很长，等分 n 会让后两档几乎
+ * 看不出差别）：R_corner(u) = a·(1 + u·(√2−1))，而超椭圆的角点半径恰好是
+ * a·2^(1/2 − 1/n) ⇒ 反解 n(u) = 1 / (1/2 − log₂(1 + u(√2−1)))。
+ * 实测得到的角档 kMax 是 **34 / 39 / 43 / 47 / 52**（Δ 5·4·4·5），逐级几乎等距。
+ *
+ * ### 切档时平台不跳
+ *
+ * 五档共用同一个配平基准 F_TOT ⇒ lead 恒定 ⇒ 嘴心与 kMax 无关（深度表实测
+ * 全表散布 0.26px）。这是圆↔方能做成一组档位的前提：切档只换轮廓，不换高度。
+ *
+ * ### 端点复现
+ *
+ * 末档（n=∞）反查出来的三档 kMax 必须逐位等于 SQUARE_TIERS（35/39/52）——
+ * 那是用户逐轮看图拍板过的方形，守门直接卡这条（Lab.08 端点同一断言的先例）。
+ */
+export const SQUARE_MORPH = {
+  /** 档数（含两端） */
+  STEPS: 5,
+  /** 控件标签：两端点名，中间只给序号（它们是过渡不是形态） */
+  LABELS: ['圆', '1', '2', '3', '方'] as const,
+  /** 默认停在方形档（= 这台立项时的那个形状） */
+  DEF: 4,
+} as const;
+
+/** 第 step 档的超椭圆指数（末档 = Infinity，即正方形） */
+export function squareMorphExp(step: number, steps: number = SQUARE_MORPH.STEPS): number {
+  const u = step / (steps - 1);
+  if (u >= 1) return Infinity;
+  return 1 / (0.5 - Math.log2(1 + u * (Math.SQRT2 - 1)));
+}
+
+/** 第 step 档的轮廓在方位角 θ 处的极径（半边长 a 固定） */
+export function squareMorphRadiusAt(
+  theta: number,
+  step: number,
+  a: number = squareHalfSide(),
+  steps: number = SQUARE_MORPH.STEPS,
+): number {
+  const n = squareMorphExp(step, steps);
+  if (!Number.isFinite(n)) return squareRadiusAt(theta, a);
+  const c = Math.abs(Math.cos(theta));
+  const t = Math.abs(Math.sin(theta));
+  return a / Math.pow(Math.pow(c, n) + Math.pow(t, n), 1 / n);
+}
+
+/** 第 step 档的三档深度（档名沿用面/边/角——它们是方位类，不随轮廓变） */
+export function squareMorphTiers(
+  step: number,
+  count: number = SQUARE.COUNT,
+  steps: number = SQUARE_MORPH.STEPS,
+): SquareTier[] {
+  const a = squareHalfSide();
+  const order = buildSquareOrder(count);
+  return SQUARE_TIERS.map((t, c) => {
+    const i = order.indexOf(c);
+    const want = squareMorphRadiusAt(squareAngle(i, count), step, a, steps) - SQUARE.RADIUS;
+    return { name: t.name, en: t.en, k: squareDepthK(want), count: order.filter((q) => q === c).length };
+  });
+}
+
+/** 第 step 档的三档挑出（查表） */
+export function squareMorphReach(step: number, count: number = SQUARE.COUNT): number[] {
+  return squareMorphTiers(step, count).map((t) => squareReachOf(t.k));
+}
+
+/**
+ * 第 step 档的二十个平台外缘点（俯视，世界 XZ）+ 对目标轮廓线的偏差。
+ * 守门用它卡「外缘点落在轮廓线上」——偏差 = 深度表离散化的量化误差（≤1px）。
+ */
+export function squareMorphRim(
+  step: number,
+  count: number = SQUARE.COUNT,
+): { x: number; z: number; dev: number }[] {
+  const a = squareHalfSide();
+  const reach = squareMorphReach(step, count);
+  return buildSquareOrder(count).map((t, i) => {
+    const th = squareAngle(i, count);
+    const rr = SQUARE.RADIUS + reach[t];
+    return { x: Math.cos(th) * rr, z: Math.sin(th) * rr, dev: rr - squareMorphRadiusAt(th, step, a) };
+  });
+}
+
+/**
+ * 阵列格距对所有轮廓档都够用吗？——**格距不随轮廓档变**（站位是场地的属性，
+ * 切轮廓时格子不该重排），故这里给出每档在格子方向（±X / ±Z）上的最大外伸，
+ * 守门卡它不超过方档那个最紧值。方档最紧的是面档（88.5 × cos9° = 87.4），
+ * 圆档处处 86.7、角档虽远但指着 45° ⇒ 都比它松。
+ */
+export function squareMorphExtent(step: number, count: number = SQUARE.COUNT): number {
+  const tiers = squareMorphTiers(step, count);
+  const order = buildSquareOrder(count);
+  let m = 0;
+  for (let i = 0; i < count; i++) {
+    const rho = SQUARE.RADIUS + squarePeakOf(tiers[order[i]].k);
+    m = Math.max(m, Math.abs(Math.cos(squareAngle(i, count))) * rho);
+  }
+  return m;
 }

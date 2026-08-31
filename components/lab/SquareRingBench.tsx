@@ -3,8 +3,8 @@
 import { useMemo, useState } from 'react';
 import {
   SQUARE,
+  SQUARE_MORPH,
   SQUARE_PHASE,
-  SQUARE_REACH,
   SQUARE_RUNGS,
   SQUARE_TIERS,
   SQUARE_GRID,
@@ -17,6 +17,10 @@ import {
   squareGridCells,
   squareGridSpan,
   squareHalfSide,
+  squareMorphExp,
+  squareMorphReach,
+  squareMorphTiers,
+  type SquareTier,
 } from '../../src/lib/space/skin-square';
 import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
 
@@ -42,10 +46,36 @@ const strip = (d: { spec: SolidUnitDef['spec']; opts: SolidUnitDef['opts']; smoo
   opts: d.opts,
   smooth: d.smooth,
 });
-const FLAT_UNITS: readonly SolidUnitDef[] = buildSquareUnits().map(strip);
 const FLAT_ORDER = buildSquareOrder();
-const WAVE = buildSquareWave();
-const WAVE_UNITS: readonly SolidUnitDef[] = WAVE.units.map(strip);
+
+/**
+ * 五个轮廓档各自的引擎（圆那一档三个方位类的深度相同 ⇒ 只解一条，order 重映射）。
+ * 全是键谱数据，不跑仿真，模块加载期算完即可。
+ */
+const flatOf = (tiers: readonly SquareTier[]) => {
+  const uniq: SquareTier[] = [];
+  const idx = tiers.map((t) => {
+    let i = uniq.findIndex((q) => q.k === t.k);
+    if (i < 0) {
+      i = uniq.length;
+      uniq.push(t);
+    }
+    return i;
+  });
+  return { units: buildSquareUnits(uniq).map(strip), order: FLAT_ORDER.map((c) => idx[c]) };
+};
+
+const MORPH = Array.from({ length: SQUARE_MORPH.STEPS }, (_, s) => {
+  const tiers = squareMorphTiers(s);
+  const wave = buildSquareWave(tiers);
+  return {
+    tiers,
+    reach: squareMorphReach(s),
+    n: squareMorphExp(s),
+    flat: flatOf(tiers),
+    wave: { units: wave.units.map(strip), order: wave.order },
+  };
+});
 
 const PLANS = [
   { key: 'flat', label: '整环平' },
@@ -78,17 +108,26 @@ export function SquareRingBench({
   const side = useMemo(() => Math.round(2 * squareHalfSide()), []);
   const [plan, setPlan] = useState<PlanKey>('flat');
   const [layout, setLayout] = useState<LayoutKey>('single');
+  const [shape, setShape] = useState<number>(SQUARE_MORPH.DEF);
   const wave = plan === 'wave';
   const grid = layout === 'grid';
-  const order = wave ? WAVE.order : FLAT_ORDER;
+  const m = MORPH[shape];
+  const order = wave ? m.wave.order : m.flat.order;
+  /** 这一档的轮廓怎么念（圆 / 圆角方 / 方） */
+  const outline =
+    shape === 0
+      ? `圆 ⌀${Math.round(2 * (SQUARE.RADIUS + m.reach[0]))}px`
+      : shape === SQUARE_MORPH.STEPS - 1
+        ? `方 · 边长 ${side}px`
+        : `圆角方 n=${m.n.toFixed(1)} · 角点 ⌀${Math.round(2 * (SQUARE.RADIUS + m.reach[2]))}px`;
   return (
     <SkinSolidBench
       active={active}
       onLight={onLight}
       controls={controls}
-      units={wave ? WAVE_UNITS : FLAT_UNITS}
+      units={wave ? m.wave.units : m.flat.units}
       order={order}
-      unitsKey={`${plan}:${layout}`}
+      unitsKey={`${plan}:${layout}:${shape}`}
       // 起伏要解十一条引擎（平档只有三条）⇒ 推进速率随之降，同 Lab.08/09 渐变的做法。
       // **阵列不加负担**：十六格是同一份顶点摆十六处（gl3d 的摆放表），物理仍是那几条带
       rate={wave ? 80 : 110}
@@ -120,6 +159,21 @@ export function SquareRingBench({
       axon={{ pitch: -0.45, yaw: -0.62 }}
       extraControls={
         <>
+          <div className="grp">
+            <span className="k">轮廓</span>
+            <span className="seg">
+              {SQUARE_MORPH.LABELS.map((lb, i) => (
+                <button
+                  key={lb}
+                  type="button"
+                  className={i === shape ? 'active' : undefined}
+                  onClick={() => setShape(i)}
+                >
+                  {lb}
+                </button>
+              ))}
+            </span>
+          </div>
           <div className="grp">
             <span className="k">编制</span>
             <span className="seg">
@@ -156,11 +210,11 @@ export function SquareRingBench({
         kicker: 'Lab.14 / Project II',
         title: '方形环 · 靠挑出的长度做形状',
         sub: grid
-          ? `${SQUARE_GRID.COLS}×${SQUARE_GRID.ROWS} 片方形平台 · 格距 ${squareCellPitch().toFixed(0)}px（边对边最紧）· ${wave ? '一圈起伏' : `边长 ${side}px`}`
+          ? `${SQUARE_GRID.COLS}×${SQUARE_GRID.ROWS} 片平台 · 格距 ${squareCellPitch().toFixed(0)}px（边对边最紧）· ${outline}${wave ? ' · 一圈起伏' : ''}`
           : wave
-            ? `${SQUARE.COUNT} 条窄带 · 三档深度不变 · 高度沿圆周起伏 ${(SQUARE_WAVE.LOW - SQUARE_WAVE.HIGH) * 2}px · ${SQUARE_WAVE.LEVELS} 级`
-            : `${SQUARE.COUNT} 条窄带 · 三档深度 ${SQUARE_REACH.map((r) => r.toFixed(0)).join(' / ')}px · 箱高恒定 ${SQUARE.H}px · 边长 ${side}px`,
-        hint: `${SQUARE_TIERS.map((t) => `${t.name}${t.count}`).join(' · ')} · 每条带 ${SQUARE_RUNGS} 挡 · ${wave ? '俯视仍是方的 · 侧看起伏' : '顶视看方'} · 拖拽旋转`,
+            ? `${SQUARE.COUNT} 条窄带 · 三档深度不变 · 高度沿圆周起伏 ${(SQUARE_WAVE.LOW - SQUARE_WAVE.HIGH) * 2}px · ${SQUARE_WAVE.LEVELS} 级 · ${outline}`
+            : `${SQUARE.COUNT} 条窄带 · 三档深度 ${m.reach.map((r) => r.toFixed(0)).join(' / ')}px · 箱高恒定 ${SQUARE.H}px · ${outline}`,
+        hint: `${SQUARE_TIERS.map((t, i) => `${t.name}${t.count}·k${m.tiers[i].k}`).join(' · ')} · 每条带 ${SQUARE_RUNGS} 挡 · ${wave ? '俯视看轮廓 · 侧看起伏' : '顶视看轮廓'} · 拖拽旋转`,
         aria:
           '方形环：二十条窄织物带围成一圈，每条带按自己在方形里的位置挑出不同长度，收缩后二十个挑台连成一圈俯视为正方形的平台；箱高一圈恒定，可拖拽旋转',
       }}

@@ -8,6 +8,8 @@
 //        ring-square = 方形环线稿：三档挑出把俯视外轮廓凑成正方形（角带 = 现行方箱原谱）
 //        ring-square-x = 方形环 · 横向压缩族（用户方案）：只压挑出、高度不变——
 //                        rb/端面板一律不动，从外侧剪梯挡（粗调）+ 端面板宽（细调）
+//        ring-morph = 圆↔方五档线稿：俯视轮廓（目标超椭圆 + 二十个外缘点 + 弦）
+//                     + 各档真引擎终态剖面叠合（整套查站上模块，不另写一份）
 import { writeFileSync } from 'node:fs';
 import { createSkinUnit, SKIN } from '../../src/lib/space/skin-unit.ts';
 import {
@@ -16,7 +18,11 @@ import {
 } from '../../src/lib/space/skin-ring.ts';
 import { ARRAY_CENTER, ARRAY_FREE, ARRAY_LEAD, ARRAY_TAIL, placeOnBand } from '../../src/lib/space/skin-array.ts';
 import { SKIN_SITE_BASE, SKIN_UNITS, skinSiteOpts } from '../../src/lib/space/skin-data.ts';
-import { SQUARE, SQUARE_TIERS, squareBuffer, squareFree, squareSpec } from '../../src/lib/space/skin-square.ts';
+import {
+  SQUARE, SQUARE_MORPH, SQUARE_TIERS, buildSquareOrder, squareAngle, squareBuffer, squareFree,
+  squareHalfSide, squareMorphExp, squareMorphRadiusAt, squareMorphReach, squareMorphRim,
+  squareMorphTiers, squareSpec,
+} from '../../src/lib/space/skin-square.ts';
 import { buildGradientOrder, buildRingGradient } from '../../src/lib/space/skin-ring-gradient.ts';
 
 const OUT = process.argv[2] ?? 'draft.svg';
@@ -213,6 +219,120 @@ function seriesFor(mode) {
 // **一条方法教训**：这一族连翻三次车（端面投影没触发 / 间隙为负 / 为指标加旋钮
 // 毁了形），三次都是「读数全绿、图不对」。§16.3 说的「人肉看图前先看分数」要补一句：
 // **分数只能否决，不能通过**——通过必须看图，且要看上下对称性这类分数没度量的性质。
+// ── ring-morph：圆↔方五档（2026-08-31）。轮廓从方形的**内切圆**长到方形，
+// 半边长 a 全程不变 ⇒ 面档几乎不动、角往外长。几何与档位一律查 skin-square.ts
+// （线稿与站上共用一份实现——§17 纪律），这里只负责画。
+if (MODE === 'ring-morph') {
+  ringMorph();
+  process.exit(0);
+}
+
+function ringMorph() {
+  const P = 30;
+  const N = SQUARE.COUNT;
+  const R = SQUARE.RADIUS;
+  const a = squareHalfSide();
+  const opts = skinSiteOpts(SKIN_UNITS.find((d) => d.key === 'stepped'));
+  const order = buildSquareOrder();
+  const STEPS = SQUARE_MORPH.STEPS;
+
+  // 每档：三条真引擎终态剖面（只跑不同的 kMax，最多 3 条/档，重复的复用）
+  const cache = new Map();
+  const sectionOf = (k) => {
+    if (!cache.has(k)) {
+      const sim = runToEnd(squareSpec(k), opts);
+      const pts = [];
+      for (let i = 0; i < sim.n; i++) pts.push([sim.px[i] * 100, -sim.py[i] * 100]);
+      cache.set(k, pts);
+    }
+    return cache.get(k);
+  };
+
+  const steps = Array.from({ length: STEPS }, (_, s) => {
+    const tiers = squareMorphTiers(s);
+    const reach = squareMorphReach(s);
+    const rim = squareMorphRim(s);
+    return { s, tiers, reach, rim, n: squareMorphExp(s), sections: tiers.map((t) => sectionOf(t.k)) };
+  });
+
+  console.log(`ring-morph · 圆↔方 ${STEPS} 档（半边长 a=${a.toFixed(1)}px 钉死 = 方形的内切圆；站位半径 R=${R}）`);
+  for (const st of steps) {
+    const dev = Math.max(...st.rim.map((q) => Math.abs(q.dev)));
+    console.log(
+      `  ${SQUARE_MORPH.LABELS[st.s]}  n=${Number.isFinite(st.n) ? st.n.toFixed(2).padStart(5) : '    ∞'}` +
+        `  k=[${st.tiers.map((t) => t.k).join(', ')}]  挑出=[${st.reach.map((r) => r.toFixed(1)).join(', ')}]` +
+        `  外缘点对轮廓线偏差 ≤${dev.toFixed(2)}px  角点 ${(R + st.reach[2]).toFixed(1)}px`,
+    );
+  }
+  const kc = steps.map((st) => st.tiers[2].k);
+  console.log(`  角档 kMax 逐级 ${kc.join(' → ')}（Δ ${kc.slice(1).map((k, i) => k - kc[i]).join(' · ')}）`);
+  console.log(`  末档 = 档案三档 ${JSON.stringify(steps[STEPS - 1].tiers.map((t) => t.k))} vs ${JSON.stringify(SQUARE_TIERS.map((t) => t.k))}`);
+
+  // ── 出图：上排 = 五档俯视轮廓；下排 = 各档三条剖面叠合
+  const CW = 250, CH = 250, GAP = 18, SC = 0.86;
+  const SEC_H = 230;
+  const W = P * 2 + STEPS * CW + (STEPS - 1) * GAP;
+  const H = P + 34 + CH + 26 + SEC_H + P;
+  const COL = ['#2f7d4f', '#b8791f', '#7a4fc0'];
+  const out = [];
+  out.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="ui-sans-serif,system-ui,sans-serif">`);
+  out.push(`<rect width="${W}" height="${H}" fill="#faf9f6"/>`);
+  out.push(`<text x="${P}" y="${P}" font-size="15" font-weight="700" fill="#1b1b1a">线稿 · ring-morph · 圆 ↔ 方五档（俯视轮廓 / 真引擎终态剖面）</text>`);
+  out.push(`<text x="${P}" y="${P + 17}" font-size="10.5" fill="#6b6b66">半边长 a=${a.toFixed(1)}px 全程不变（方形的内切圆）· 箱高恒 ${SQUARE.H}px · 每条带 10 挡 · 面 8 / 边 8 / 角 4 · 灰 = 目标超椭圆，实线 = 二十个外缘点连成的弦</text>`);
+
+  for (const st of steps) {
+    const ox = P + st.s * (CW + GAP), oy = P + 34;
+    const cx = ox + CW / 2, cy = oy + CH / 2 + 8;
+    const px = (x) => cx + x * SC, py = (z) => cy + z * SC;
+    out.push(`<rect x="${ox}" y="${oy}" width="${CW}" height="${CH}" fill="#fff" stroke="#e3e1da"/>`);
+    out.push(`<text x="${ox + 8}" y="${oy + 15}" font-size="11.5" font-weight="700" fill="#1b1b1a">${SQUARE_MORPH.LABELS[st.s]}${Number.isFinite(st.n) ? ` · n=${st.n.toFixed(2)}` : ' · n→∞'}</text>`);
+    // 目标轮廓线
+    const curve = [];
+    for (let d = 0; d <= 360; d++) {
+      const th = (d * Math.PI) / 180;
+      const r = squareMorphRadiusAt(th, st.s, a);
+      curve.push(`${px(Math.cos(th) * r).toFixed(1)},${py(Math.sin(th) * r).toFixed(1)}`);
+    }
+    out.push(`<polyline points="${curve.join(' ')}" fill="none" stroke="#c9c6bd" stroke-width="1.2"/>`);
+    // 芯（站位圆）
+    out.push(`<circle cx="${px(0)}" cy="${py(0)}" r="${(R * SC).toFixed(1)}" fill="none" stroke="#dcd9d0" stroke-width="1" stroke-dasharray="3 3"/>`);
+    // 二十条带 + 外缘点 + 弦
+    const rim = st.rim;
+    out.push(`<polygon points="${rim.map((q) => `${px(q.x).toFixed(1)},${py(q.z).toFixed(1)}`).join(' ')}" fill="none" stroke="#1b1b1a" stroke-width="1.4"/>`);
+    for (let i = 0; i < N; i++) {
+      const th = squareAngle(i);
+      out.push(`<line x1="${px(Math.cos(th) * R).toFixed(1)}" y1="${py(Math.sin(th) * R).toFixed(1)}" x2="${px(rim[i].x).toFixed(1)}" y2="${py(rim[i].z).toFixed(1)}" stroke="${COL[order[i]]}" stroke-width="1.6" opacity="0.85"/>`);
+      out.push(`<circle cx="${px(rim[i].x).toFixed(1)}" cy="${py(rim[i].z).toFixed(1)}" r="2" fill="${COL[order[i]]}"/>`);
+    }
+    out.push(`<text x="${ox + CW / 2}" y="${oy + CH - 8}" font-size="10" text-anchor="middle" fill="#6b6b66">k ${st.tiers.map((t) => t.k).join(' / ')} · 挑出 ${st.reach.map((r) => r.toFixed(0)).join(' / ')} · 偏差 ≤${Math.max(...rim.map((q) => Math.abs(q.dev))).toFixed(2)}px</text>`);
+  }
+
+  // 下排：剖面叠合（同一档三条按颜色，越深越长）
+  const sy = P + 34 + CH + 26;
+  // 只框折叠体那一段（离轴 >2px）——整条带绝大部分是贴轴的竖料，框进来箱子就成了一条缝
+  let ymin = 1e9, ymax = -1e9, xmax = 0;
+  for (const st of steps) for (const sec of st.sections) for (const [x, y] of sec) {
+    if (x <= 2) continue;
+    ymin = Math.min(ymin, y); ymax = Math.max(ymax, y); xmax = Math.max(xmax, x);
+  }
+  ymin -= 6; ymax += 6;
+  const ssc = Math.min((CW - 34) / (xmax + 10), (SEC_H - 44) / (ymax - ymin));
+  for (const st of steps) {
+    const ox = P + st.s * (CW + GAP);
+    out.push(`<rect x="${ox}" y="${sy}" width="${CW}" height="${SEC_H}" fill="#fff" stroke="#e3e1da"/>`);
+    out.push(`<text x="${ox + 8}" y="${sy + 15}" font-size="10.5" fill="#6b6b66">终态剖面 · 只框折叠体（面 / 边 / 角）· 箱高恒 ${SQUARE.H}px</text>`);
+    const bx = ox + 16, by = sy + 26;
+    out.push(`<line x1="${bx}" y1="${by}" x2="${bx}" y2="${by + (ymax - ymin) * ssc}" stroke="#dcd9d0" stroke-width="1" stroke-dasharray="3 3"/>`);
+    st.sections.forEach((sec, t) => {
+      const pts = sec.map(([x, y]) => `${(bx + x * ssc).toFixed(1)},${(by + (y - ymin) * ssc).toFixed(1)}`).join(' ');
+      out.push(`<polyline points="${pts}" fill="none" stroke="${COL[t]}" stroke-width="1.2" opacity="0.9"/>`);
+    });
+  }
+  out.push('</svg>');
+  writeFileSync(OUT, out.join('\n'));
+  console.log(`→ ${OUT}`);
+}
+
 if (MODE === 'ring-square' || MODE === 'ring-square-x' || MODE.startsWith('ring-square-h')) {
   const fam = MODE === 'ring-square-x' ? 'x' : MODE.startsWith('ring-square-h') ? 'h' : 'iso';
   ringSquare(fam, Number(MODE.split(':')[1]) || 36);

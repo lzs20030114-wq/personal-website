@@ -31,6 +31,19 @@ import {
   squareGridCells,
   squareGridSpan,
   squareTightRadius,
+  SQUARE_DEPTH,
+  SQUARE_KHI,
+  SQUARE_MORPH,
+  squareClassOf,
+  squareDepthK,
+  squareMorphExp,
+  squareMorphExtent,
+  squareMorphReach,
+  squareMorphRim,
+  squareMorphTiers,
+  squarePeakOf,
+  squareReachOf,
+  squareSpec,
 } from './skin-square';
 import { RING_BAND_NODES } from './skin-ring';
 import { SKIN, createSkinUnit, type SkinBond, type SkinSpec } from './skin-unit';
@@ -64,8 +77,8 @@ let RUN: ReturnType<typeof runAll> | null = null;
 const CHK_R = [0.87, 0.66, 0.44];
 const CHK_STEPS = CHK_R.map((r) => Math.round((900 * (SKIN.R0 - r)) / (SKIN.R0 - SKIN.R1)));
 
-function runAll() {
-  return UNITS.map((d) => {
+function runAll(units: readonly { key: string; spec: SkinSpec; opts: Parameters<typeof createSkinUnit>[1] }[] = UNITS) {
+  return units.map((d) => {
     const P = parts(d.spec);
     const sim = createSkinUnit(d.spec, d.opts);
     let widest = P.bonds[0];
@@ -357,5 +370,139 @@ describe('方形环 · 4×4 阵列（第二组控件「排布」）', () => {
       (SQUARE_GRID.COLS - 1) * squareCellPitch() + 2 * squareCornerRadius(),
       9,
     );
+  });
+});
+
+/**
+ * 圆 ↔ 方（第三组控件「轮廓」，2026-08-31）。这一档的新东西只有两件：
+ * 一张 kMax→挑出 的实测深度表，和一条把目标轮廓从内切圆推到方形的超椭圆。
+ * 键谱构造、对位构造、整形选项一个数没动，故这里卡的是**表与轮廓**本身，
+ * 外加两条端点性质：末档必须逐位复现用户拍板过的那个方形，圆档三档必须相同。
+ */
+describe('方形环 · 深度表', () => {
+  it('两列等长、单调递增，且峰值恒在终态之外', () => {
+    expect(SQUARE_DEPTH.PEAK.length).toBe(SQUARE_DEPTH.REACH.length);
+    expect(SQUARE_KHI).toBe(SQUARE_DEPTH.KLO + SQUARE_DEPTH.REACH.length - 1);
+    for (let k = SQUARE_DEPTH.KLO + 1; k <= SQUARE_KHI; k++) {
+      expect(squareReachOf(k), `k${k} 挑出`).toBeGreaterThan(squareReachOf(k - 1));
+      expect(squarePeakOf(k), `k${k} 峰值`).toBeGreaterThan(squarePeakOf(k - 1));
+    }
+    for (let k = SQUARE_DEPTH.KLO; k <= SQUARE_KHI; k++) {
+      expect(squarePeakOf(k), `k${k}`).toBeGreaterThan(squareReachOf(k));
+      expect(squarePeakOf(k) - squareReachOf(k)).toBeLessThan(5); // 鼓出的量级
+    }
+    expect(() => squareReachOf(SQUARE_DEPTH.KLO - 1)).toThrow();
+    expect(() => squareReachOf(SQUARE_KHI + 1)).toThrow();
+  });
+
+  it('档案三档 = 查表（数只有一份，改构造必须重标同一张表）', () => {
+    expect(SQUARE_REACH).toEqual(SQUARE_TIERS.map((t) => squareReachOf(t.k)));
+    expect(SQUARE_PEAK).toEqual(SQUARE_TIERS.map((t) => squarePeakOf(t.k)));
+    expect([...SQUARE_REACH]).toEqual([56.0, 63.7, 89.2]); // 用户看图拍板过的那三档
+    expect([...SQUARE_PEAK]).toEqual([58.5, 66.0, 90.7]);
+  });
+
+  it('表的上界由带长定：再深一档的贴身自由段就装不进配平基准了', () => {
+    expect(squareFree(SQUARE_KHI)).toBeLessThanOrEqual(F_TOT);
+    expect(squareFree(SQUARE_KHI + 1)).toBeGreaterThan(F_TOT);
+    expect(() => squareSpec(SQUARE_KHI + 1)).toThrow();
+  });
+
+  it('反查取最近，并列时取小的（末档才复现得了档案值）', () => {
+    for (let k = SQUARE_DEPTH.KLO; k <= SQUARE_KHI; k++) expect(squareDepthK(squareReachOf(k))).toBe(k);
+    expect(squareDepthK(-999)).toBe(SQUARE_DEPTH.KLO);
+    expect(squareDepthK(999)).toBe(SQUARE_KHI);
+  });
+});
+
+describe('方形环 · 圆↔方五档', () => {
+  it('位次改按方位类现算，与旧的几何反查对方形逐位一致', () => {
+    const a = squareHalfSide();
+    const old = Array.from({ length: SQUARE.COUNT }, (_, i) => {
+      const want = squareRadiusAt(squareAngle(i), a) - SQUARE.RADIUS;
+      let best = 0;
+      for (let t = 1; t < SQUARE_REACH.length; t++)
+        if (Math.abs(SQUARE_REACH[t] - want) < Math.abs(SQUARE_REACH[best] - want)) best = t;
+      return best;
+    });
+    expect(buildSquareOrder()).toEqual(old);
+    expect(Array.from({ length: SQUARE.COUNT }, (_, i) => squareClassOf(i))).toEqual(old);
+  });
+
+  it('端点：末档 = 用户拍板的那个方形，圆档三档相同（内切圆）', () => {
+    const last = squareMorphTiers(SQUARE_MORPH.STEPS - 1);
+    expect(last.map((t) => t.k)).toEqual(SQUARE_TIERS.map((t) => t.k));
+    expect(last.map((t) => t.count)).toEqual(SQUARE_TIERS.map((t) => t.count));
+    expect(squareMorphExp(SQUARE_MORPH.STEPS - 1)).toBe(Infinity);
+
+    const first = squareMorphTiers(0);
+    expect(squareMorphExp(0)).toBeCloseTo(2, 9); // n=2 = 圆
+    expect(new Set(first.map((t) => t.k)).size).toBe(1);
+    // 圆的半径 ≈ 方形的内切圆（半边长），差的是深度表的量化误差
+    expect(SQUARE.RADIUS + squareMorphReach(0)[0]).toBeCloseTo(squareHalfSide(), 0);
+  });
+
+  it('逐级只往外长：角档单调递增且步子匀，面档几乎不动', () => {
+    const ks = Array.from({ length: SQUARE_MORPH.STEPS }, (_, s) => squareMorphTiers(s).map((t) => t.k));
+    for (let s = 1; s < ks.length; s++)
+      for (let c = 0; c < 3; c++) expect(ks[s][c], `档${s} ${SQUARE_TIERS[c].name}`).toBeGreaterThanOrEqual(ks[s - 1][c]);
+    const corner = ks.map((k) => k[2]);
+    for (let s = 1; s < corner.length; s++) expect(corner[s]).toBeGreaterThan(corner[s - 1]);
+    const d = corner.slice(1).map((k, i) => k - corner[i]);
+    expect(Math.max(...d) - Math.min(...d), `角档步子 ${d.join('/')}`).toBeLessThanOrEqual(2);
+    // 面档从头到尾只差一格 —— 固定的是内切圆，动的是角
+    expect(ks[ks.length - 1][0] - ks[0][0]).toBeLessThanOrEqual(1);
+  });
+
+  it('每档外缘点都落在自己的轮廓线上（偏差 = 深度表的量化误差）', () => {
+    for (let s = 0; s < SQUARE_MORPH.STEPS; s++) {
+      const rim = squareMorphRim(s);
+      expect(rim.length).toBe(SQUARE.COUNT);
+      for (const q of rim) expect(Math.abs(q.dev), `档${s}`).toBeLessThan(1);
+      // 四个角位仍在 45° 上（相位半格是这一族的前提，换档不能动它）
+      for (const i of [2, 7, 12, 17]) {
+        const th = squareAngle(i);
+        expect(Math.abs(Math.abs(Math.cos(th)) - Math.abs(Math.sin(th)))).toBeLessThan(1e-9);
+      }
+    }
+  });
+
+  it('切档不改平台高度：五档共用同一个配平基准 ⇒ lead 恒定', () => {
+    const leads = new Set<number>();
+    for (let s = 0; s < SQUARE_MORPH.STEPS; s++)
+      for (const t of squareMorphTiers(s)) {
+        const P = parts(squareSpec(t.k, F_TOT));
+        leads.add(P.lead);
+        expect(P.padHi, `档${s} k${t.k} 垫上下对称`).toBe(P.padLo);
+        expect(2 * P.padHi + P.fs, `档${s} k${t.k} 垫+结构`).toBe(F_TOT);
+        expect(P.total).toBe(RING_BAND_NODES);
+      }
+    expect(leads.size, `lead 出现了 ${[...leads].join('/')}`).toBe(1);
+  });
+
+  it('阵列格距不随轮廓变也够用：每档在格子方向上的外伸都不超过方档', () => {
+    for (let s = 0; s < SQUARE_MORPH.STEPS; s++)
+      expect(squareMorphExtent(s), `档${s} 外伸`).toBeLessThanOrEqual(squareTightRadius());
+    // 方档那个最紧值本身就是格距的依据
+    expect(squareCellPitch()).toBeGreaterThan(2 * squareMorphExtent(SQUARE_MORPH.STEPS - 1));
+  });
+});
+
+describe('方形环 · 真跑（圆档与中间档的新深度）', () => {
+  it('表里没跑过的那两个 kMax 也成形：键全锁、挑出对表、箱高仍是 36', { timeout: 120_000 }, () => {
+    const opts = UNITS[0].opts;
+    const ks = [squareMorphTiers(0)[2].k, squareMorphTiers(2)[2].k]; // 圆档 34 / 中间档 43
+    const rows = runAll(ks.map((k) => ({ key: `k${k}`, spec: squareSpec(k, F_TOT), opts })));
+    rows.forEach((r, i) => {
+      expect(r.locked, r.key).toBe(r.keys);
+      expect(r.keys).toBe(SQUARE_RUNGS);
+      expect(Math.abs(r.out - squareReachOf(ks[i])), `${r.key} 挑出 ${r.out.toFixed(1)}`).toBeLessThan(2);
+      expect(Math.abs(r.boxH - SQUARE.H), `${r.key} 箱高 ${r.boxH.toFixed(1)}`).toBeLessThan(1.5);
+      expect(r.topFlat, `${r.key} 顶面水平度`).toBeLessThan(1.5);
+      expect(r.botFlat, `${r.key} 底面水平度`).toBeLessThan(1.5);
+    });
+    // 与方档三条一起看：平台高度与 kMax 无关（切轮廓档不跳）
+    const tops = [...rows, ...run()].map((r) => r.topY);
+    expect(Math.max(...tops) - Math.min(...tops), '五档共用构造下的平台面散布').toBeLessThan(1.5);
   });
 });
