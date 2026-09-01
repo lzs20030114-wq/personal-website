@@ -167,6 +167,10 @@ function Bench({
           border: 'var(--hair)',
           borderTop: `3px solid ${accent}`,
           background: 'color-mix(in srgb, var(--ink) 4.5%, transparent)',
+          // 框贴着台架自己的高度，**不跟着 grid 拉满行高**：左栏（正文 + 规格表）比它长时
+          // 拉伸出来的是一个空框，框线一路画到底下什么也没有（Lab.14 实测空了 614px）。
+          // 单列（窄屏）下 grid 只有一列，这条不起作用。
+          alignSelf: 'start',
         }}
       >
         {children}
@@ -456,14 +460,13 @@ export default function LabPage() {
         <Bench
           no="14"
           title="A square ring"
-          lede="The mast stays round; the plan does not. Each of the twenty bands reaches out a different distance — four at the corners, eight along the edges, eight on the faces — so the rim lands on a square, and since the membrane between neighbours is a ruled panel, the chord it draws is the edge itself. Only the reach changes: the box is the same height the whole way round, its ladder the same ten rungs, squeezed closer as the shelf gets shallower. Two conditions decide whether that works, and both were learnt the hard way: the end panel must end on a locked rung or the end face bows out, and the box has to fit inside the free run it lives in — when it does not, the lower buffer is pulled straight and the mouth curls the wrong way. The plan is a dial, not a fixed shape: hold the inscribed circle and push only the corners out, and the same twenty bands walk from a circle to the square in five steps — every one of them a depth read off one measured table, so the platform never changes height as you go."
+          lede="The mast stays round; the plan does not. Each of the twenty bands reaches out a different distance — four at the corners, eight along the edges, eight on the faces — so the rim lands on a square, and since the membrane between neighbours is a ruled panel, the chord it draws is the edge itself. Only the reach changes: the box is the same height the whole way round, its ladder the same ten rungs, squeezed closer as the shelf gets shallower. Two conditions decide whether that works, and both were learnt the hard way: the end panel must end on a locked rung or the end face bows out, and the box has to fit inside the free run it lives in — when it does not, the lower buffer is pulled straight and the mouth curls the wrong way. The plan is a dial, not a fixed shape: hold the inscribed circle, push only the corners out, and the same twenty bands walk from circle to square in five steps."
           accent="var(--accent-2)"
           specs={[
             ['Ring', '20 bands · three depths — 8 face · 8 edge · 4 corner'],
             ['Plans', 'Flat, or undulating — height waves once around'],
             ['Layout', 'One ring, or sixteen — pitch set edge-to-edge'],
-            ['Plan', 'Circle to square in five: |x|ⁿ+|z|ⁿ = aⁿ, n = 2 … ∞'],
-            ['Square', 'Side 169 px · rim within 0.9 px of the target curve'],
+            ['Plan', 'Circle to square in five (|x|ⁿ+|z|ⁿ = aⁿ) · square side 169 px, rim within 0.9 px'],
             ['Reach', '54 / 54 / 54 round · 56 / 64 / 89 square'],
             ['Box', 'Height 36 px everywhere · faces flat within 0.1 px'],
             ['Ladder', '10 rungs on every band, pitched closer when shallow'],
