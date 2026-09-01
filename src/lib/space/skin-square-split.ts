@@ -17,8 +17,9 @@
  *    用 Lab.14 守门自己的口径实测：三档箱高全 36.00（散布 0.00）、顶底面水平度
  *    0.07–0.28（守门线 <1.5，平档自己 0.13–0.15）。
  * ② **预算不是 107**：那是 Lab.12 自己的分配（lead 8 / tail 53 / 200 节带）；方形环在
- *    202 节带上本来就有 **133**（lead 22 / tail 15）。用环族自己这份分配，带子一节不用
- *    加长，且与平档同一份配平基准 ⇒ 平台高度一致（六条一起缝心散布 2.31px）。
+ *    202 节带上本来就有 **133**（lead 22 / tail 15），带子一节不用加长。
+ *    （2026-09-01 第二轮把缝加深后，这一编制改用自己那份分配 F_TOT 149 / lead 8 /
+ *      tail 13 —— 仍是同一条 202 节的带子，只是重新分配；见 `SQSPLIT.F_TOT`。）
  *
  * ## 材料账：为什么必须是 4 重，且缝只能在面档最深
  *
@@ -51,7 +52,7 @@ import { SKIN_ROOT_FIX, type SkinBond, type SkinPanel, type SkinSeg, type SkinSp
 import { skinSiteOpts, SKIN_UNITS } from './skin-data';
 import {
   SQUARE, SQUARE_RUNGS, buildSquareOrder, squareAngle, squareBuffer,
-  squareFree, squareFreeTotal, squareLead, squarePw, squareSpec, squareWrap,
+  squareFree, squarePw, squareSpec, squareWrap,
 } from './skin-square';
 import type { RingUnitDef } from './skin-ring';
 
@@ -59,26 +60,55 @@ const STEPPED = SKIN_UNITS.find((d) => d.key === 'stepped')!;
 
 export const SQSPLIT = {
   /**
-   * **箱高**（2026-09-01 用户「整体厚一些…大概收缩到最多的时候也要有这么厚」，
-   * 截图上红线量下来 ≈69）。平档是 36，这一档单独用 68 = **1.9×**。
+   * **箱高** = 两片台（各 22）+ 缝（32）。这一档单独用 76，平档是 36。
    *
-   * 为什么不是「等比放大」：一条带的布料钉死 202 节，而形的周长跟着放大倍数长，
-   * **等比 g=1.05 就爆预算**（结构自由段 141 > 133）。而**只长高几乎不花钱**——
-   * 箱高在材料账两边同时出现（箱高涨 ⇒ 自由段留给缓冲的间隙变小 ⇒ 所需缓冲变少），
-   * 正好抵消：`M ≤ (1.4F + H − 1.4 − e)/4` 与 `M = 挑出/2 + 缝深/2 + H/4` 的 H 项同斜率。
-   * 上限由打结定：H=68 干净（结 3）、72 起箱高失准且打结（实测 71.4 / 结 33）。
+   * 来历分两步。① 2026-09-01「整体厚一些…大概收缩到最多的时候也要有这么厚」（截图红线
+   * ≈69）⇒ 36 → 68。**不是等比放大**：一条带的布料钉死 202 节而形的周长跟着放大倍数长，
+   * 等比 g=1.05 就爆预算（结构自由段 141 > 133）；而**只长高几乎不花钱**——箱高在材料账
+   * 两边同时出现（箱高涨 ⇒ 自由段留给缓冲的间隙变小 ⇒ 所需缓冲变少），正好抵消：
+   * `M ≤ (1.4F + H − 1.4 − e)/4` 与 `M = 挑出/2 + 缝深/2 + H/4` 的 H 项同斜率。
+   * ② 同日「维持上下两个平台高度不变，中间的空间再加高 1 倍」⇒ 台高钉死 22×2、缝 24 → 32。
    *
-   * **代价：三档深度必须在新箱高上重标**——长高会把布料从深度挪到高度
-   * （角档在旧 k=46 上从 77.9 掉到 58.2）。重标后方形 153px ≈ 原来的 152。
+   * **加一倍（缝 48 / 箱高 92）做不到**。三道账夹着这个数，H 每涨一档就要多付一样东西：
+   *  · 布料：自由段在收缩终点的轴向跨度只有 `0.6·(F−1)`，箱子要住得进去（间隙 ≥ G_MIN）
+   *    ⇒ `H ≤ 0.6·(F_TOT−1) − 6`。F=133（平档那份）给 73.2、F=149 给 82.8、F=157（榨干）
+   *    给 87.6；92 要 164 节自由段，而 202 节的带子最多给 157（lead 8 / tail 5）。
+   *  · **缓冲富余上限**（`SQUARE.E_MAX`，这一轮才发现）：箱越高，浅档要的缓冲越多，
+   *    富余一过 31 折叠体就沿轴浮起来 —— 剖面/箱高/水平度/锁定数全绿而**平台不平了**
+   *    （H=82 实测三档缝心 101/134/134，散布 33px）。压住富余就得让最外梯挡更深
+   *    ⇒ **角档的挑出有下限**（H68 ≥78.9 · H72 ≥82.7 · H76 ≥88.6 · H80 ≥92.6）⇒ 方形被顶大。
+   *  · 而**面档（满裂那一档）的挑出有上限**：满裂时 M ≈ 挑出 + H/4，而 M ≤ F/2 − BUF_MIN
+   *    ⇒ `挑出 ≤ F/2 − 4 − H/4`。箱越高这条越紧、角档那条越松 —— 两条对着走，
+   *    代进方形的角/面比（`挑出角 = √2·cos9°·(挑出面 + R) − R`）就解出 H 的上限；
+   *    它随 F 走：**F=149 ⇒ H ≤ 73.5 · F=157 ⇒ H ≤ 77.1**。再加上「H 必须是 4 的倍数」
+   *    （端面板半跨 = H/4 节，等长键纪律要它是整数）⇒ F=149 只能到 72、F=157 能到 **76**。
+   *    实测印证：F=149/H=76 时面档最深只到 50.5（⇒ 边长 ≤159）而角档最浅 88.6（⇒ ≥168），
+   *    两个区间没有交集，最好的组合外缘偏差也有 2.62px。
+   * ⇒ 取 **F=157 / H=76 / 缝 32（1.33×）**。代价写在 `F_TOT` 那条：这一编制的平台比平档
+   *    低 12.8px。换来的不只是缝：外缘偏差 1.31 → 0.86、全程对位散布 14.9 → 3.3
+   *    （原来那条已知瑕疵基本消掉）、方形 153 → 167 ≈ 平档的 169。
    */
-  H: 68,
+  H: 76,
   /**
-   * 终态缝宽（2026-09-01 随箱高重标：两片台各 22 高、缝 24，与原来 12/12/12 的
-   * 三等分读法一致）。**打结的坏点是孤立的**：H=68 时缝 19/20/21/24/25/27/28/29
-   * 都干净，只有 23 打结（环 36）——而 23 恰好是从 36:12 严格等比来的那个数，
-   * 故取 24。缝宽不影响材料账（台高与缝在 M 里合成 H/4），是纯审美旋钮。
+   * 终态缝宽。`lobe = (H − w)/2` ⇒ 两片台各 22（与 68/24 那一版逐位相同——用户要的
+   * 「维持上下两个平台高度不变」就是这个），缝 24 → 32。缝宽本身不进材料账
+   * （台高与缝在 M 里合成 H/4），真正的天花板是上面那三条。
    */
-  W_END: 24,
+  W_END: 32,
+  /**
+   * **这一编制自己的带子分配**（平档是 F_TOT 133 / lead 22 / tail 15）。
+   * 缝要更深就得让自由段更长，而 202 节的带子只能重新分：`lead + 16 + F + 16 + tail = 202`。
+   * 取 **F=157 / lead=8（贴合段下限）/ tail=5（尾段下限）** —— 把带子榨到底。
+   *
+   * **代价（如实带着）**：缝心离下缘 = `2(tail+ISO) + r(F−1)`，终态 r=0.3 ⇒
+   * 平档 101.6 / 本档 **88.8**，这一编制的平台整体低 **12.8px**（带子全长约 340px 的 4%）。
+   * 切编制时会看到平台落得低一点——两种编制本来就是各跑各的（换编制走 setUnits 重建、
+   * 从头收缩），不会在动画中途跳。**编制内部的对位仍然是构造精确给的**（三档共用这一份）。
+   * 保住对齐的那一档（F=149 / tail=13 / 平台差 0.8px）只能到 H=72、缝 28，
+   * 而且外缘偏差要放到 2.6px —— 少 4px 的缝、方形还更歪，不值。
+   */
+  F_TOT: 157,
+  LEAD: 8,
   /** 边档的形态位置（拍板 0.5：缝开到一半、切进 44%，Δ 最干净）。
    *  可用区间不宽：0.35 箱高失准到 40.4、0.65 形崩到 Δ16.7。 */
   EDGE_T: 0.5,
@@ -107,16 +137,21 @@ export const sqSplitLobe = (t: number, wEnd: number = SQSPLIT.W_END): number => 
 export function sqSplitBuffer(M: number): number {
   for (let b = SQUARE.BUF_MIN; b < 60; b++) {
     const span = 1.2 * (M + b);
-    if (span - SQSPLIT.H >= SQUARE.G_MIN && 4 * b - (span - SQSPLIT.H) >= SQUARE.E_MIN) return b;
+    const slack = 4 * b - (span - SQSPLIT.H);
+    if (span - SQSPLIT.H < SQUARE.G_MIN || slack < SQUARE.E_MIN) continue;
+    // 富余上限（SQUARE.E_MAX）：超了折叠体会沿轴浮起来，一圈的平台就不平了
+    if (slack > SQUARE.E_MAX)
+      throw new Error(`捏分档缓冲富余 ${slack.toFixed(1)} 超上限 ${SQUARE.E_MAX}（M=${M}）：折叠体会沿轴浮起来`);
+    return b;
   }
   throw new Error(`捏分档缓冲解不出来：M=${M}`);
 }
 
 /** 材料账天花板：结构半跨 M 的上限（解析；slack ≥ e 与 free ≤ F 联立消去 BUF） */
-export const sqSplitMCap = (fTotal: number = squareFreeTotal(), e: number = SQUARE.E_MIN): number =>
+export const sqSplitMCap = (fTotal: number = SQSPLIT.F_TOT, e: number = SQUARE.E_MIN): number =>
   (1.4 * fTotal + SQSPLIT.H - 1.4 - e) / 4;
 /** 满裂平台的设计深度上限（解析）——H 在两边抵消 ⇒ **与箱高无关**（长高不能换来更深） */
-export const sqSplitDCap = (fTotal: number = squareFreeTotal(), e: number = SQUARE.E_MIN): number =>
+export const sqSplitDCap = (fTotal: number = SQSPLIT.F_TOT, e: number = SQUARE.E_MIN): number =>
   sqSplitMCap(fTotal, e) - SQSPLIT.H / 4;
 
 /** 梯挡：10 根，最内钉在端面板端点 f（端面硬投影的触发条件，§17.3 坑①），最外 = M */
@@ -154,36 +189,46 @@ export interface SqSplitTier {
 /**
  * ## 定案三档（真引擎标定，**冻结成表**——不是活扫掠）
  *
- * 半边长 a = (面档实测挑出 + 站位半径)·cos9° = 76.2 ⇒ **边长 152px**（现行平档 169，
- * 小 10%；用户 2026-09-01 拍板收）。面档的 boxD 取材料账允许的最深（42 起构造期拒绝）。
+ * 标定法：三档各扫一遍 (boxD × tether 深) / k，只留**干净候选**——键全锁 · 打结 ≤6 ·
+ * 顶底面水平度 <1.5 · 箱高准 · 面档缝真裂到轴 · **剪影Δ <6** · **缝角不鼓出端面** ·
+ * **缓冲富余不超 E_MAX**；再在候选集上按三条一起选：外缘偏差（方形准不准）·
+ * 剪影Δ（形对不对）· **全程对位散布**（一圈平不平）。半边长 a 也进优化。
  *
  * 实测（Lab.14 守门口径）：
- *   角 k46  挑出 77.9  箱高 36.00  顶/底平 0.13  锁 10/10  结 0  Δ 0.19
- *   边 t.5  挑出 55.6  箱高 36.00  顶/底平 0.07  锁 19/19  结 0  Δ 1.98
- *   面 t1   挑出 47.1  箱高 36.00  顶/底平 0.28  锁 24/24  结 2  Δ 3.35
- * 外缘点对方形偏差 ≤0.2px；全程峰值挑出 = 终态（无鼓胀）⇒ 阵列格距与取景不用重排。
+ *   角 k60  挑出 88.59（偏 +0.23） 箱高 76.00  顶/底平 0.13  锁 10/10  结 0  Δ 0.09
+ *   边 t.5  挑出 64.80（偏 +0.86） 箱高 76.00  顶/底平 0.15  锁 20/20  结 0  Δ 1.95
+ *   面 t1   挑出 54.50（偏 −0.24） 箱高 76.00  顶/底平 0.05  锁 26/26  结 0  Δ 0.69
+ * 边长 **167px**（加深缝前 153；平档 169）· 外缘偏差 **≤0.86px**（加深前 1.31）·
+ * 三档剪影Δ 全面更好（3.35/1.98/0.19 → 0.69/1.95/0.09）· **全程对位散布 14.9 → 3.3px**
+ * （原来那条已知瑕疵基本消掉）· 全程峰值挑出 = 终态（无鼓胀）⇒ 阵列格距与取景不用重排。
+ *
+ * **判据这一轮补了三条**（加深之前只卡锁定/打结/水平度）：
+ *  · **剪影Δ** —— §16.3 早写着「验收只认剪影Δ」，是探索工具漏了它；
+ *  · **缝角不许鼓出端面** —— 否则「挑出」量到的是缝角而不是台面外缘，方形就建在
+ *    错的特征上（第一版把端面竖直度从 0.24 弄到 4.08）；
+ *  · **缓冲富余上限** —— 见 `SQUARE.E_MAX`。
+ * **对位也是这一轮才进选优的**（此前只按外缘偏差挑）。
  */
 export const SQSPLIT_TIERS: readonly SqSplitTier[] = [
   // D 是 tether 的绝对深度锚（斜坡上限按它给），与 boxD 是**两个独立的量**：等长键箱
   // 终态比设计值鼓一截，故两者都要标定，不能拿目标值当设计值（2026-09-01 搬运时踩过）。
-  { name: '面', en: 'face', count: 8, t: 1, D: 45.7, boxD: 40 },
-  // 边档的 D 取 64（比它自己的目标挑出 56 高一截）：tether 斜坡放宽后这一档的**落位**
-  // 明显更准——D58 时缝心比面/角高 8.7px，D64 只高 3.3px，外缘偏差还从 1.3 降到 0.4。
-  // （原先只按外缘偏差挑配置，挑到了落位最偏的那个；对位也要进选优。）
-  { name: '边', en: 'edge', count: 8, t: SQSPLIT.EDGE_T, D: 64, boxD: 52 },
-  { name: '角', en: 'corner', count: 4, t: 0, k: 53 },
+  // 自洽标定的目标取**面角 x**（台面外缘）而不是 max 挑出——后者在缝角鼓出时会被污染，
+  // D 越设越大、缝角越鼓，是个正反馈。
+  { name: '面', en: 'face', count: 8, t: 1, D: 53.7, boxD: 48 },
+  { name: '边', en: 'edge', count: 8, t: SQSPLIT.EDGE_T, D: 64.8, boxD: 60 },
+  { name: '角', en: 'corner', count: 4, t: 0, k: 60 },
 ];
 
 /** 三档实测终态挑出（px）——守门逐位核对 */
-export const SQSPLIT_REACH: readonly number[] = [46.4, 56.5, 78.9];
+export const SQSPLIT_REACH: readonly number[] = [54.5, 64.8, 88.6];
 
 /**
- * 目标方形的半边长。**不是从面档反推的**——变厚后三档的深度旋钮变粗（角档 k 一格
- * 就是 2–3px、边档 boxD 一格 1.2px），按面档定 a 会让另两档差到 3px。改为把 a 也放进
- * 优化：在可达集合上扫 a、取三档最大外缘偏差最小的那个（1.31px）。
- * 实测边长 **153px**，与变厚前的 152 基本一致。
+ * 目标方形的半边长。**不是从面档反推的**——三档的深度旋钮很粗（角档 k 一格就是 2–3px、
+ * 边档 boxD 一格 1.2px），按面档定 a 会让另两档差到 3px；它和三档配置一起进优化。
+ * 边长 **167px**（加深缝前 153，平档 169）——加深缝把它顶大了，见 `SQSPLIT.H` 里那三条账。
+ * 取 83.7 而不是偏差最小的 84.0：那个的边长 168.0 只比平档的 168.6 小 0.6px，留一点余量。
  */
-export const SQSPLIT_HALF_SIDE = 76.7;
+export const SQSPLIT_HALF_SIDE = 83.7;
 
 /** 目标方形的半边长 */
 export function sqSplitHalfSide(): number {
@@ -198,17 +243,17 @@ export function sqSplitBuild(tier: SqSplitTier, wEnd: number = SQSPLIT.W_END): {
   free: number;
   marks: { center: number; mouthA: number; mouthB: number; faceA: number; faceB: number; outA: number; outB: number };
 } {
-  const fTotal = squareFreeTotal();
+  const fTotal = SQSPLIT.F_TOT;
   if (tier.t <= 0) {
     // 角档 = 平档原谱（只是浅一档）——构造完全复用 squareSpec，不另写一份
     const k = tier.k!;
     const b = squareBuffer(k, SQSPLIT.H);
     const free = squareFree(k, b);
-    const base = squareLead(fTotal) + (fTotal - free) / 2 + SQUARE.ISO;
+    const base = SQSPLIT.LEAD + (fTotal - free) / 2 + SQUARE.ISO;
     const c = base + (free - 1) / 2;
     const pw = squarePw(SQSPLIT.H);
     return {
-      spec: squareSpec(k, fTotal, squareLead(fTotal), SQSPLIT.H),
+      spec: squareSpec(k, fTotal, SQSPLIT.LEAD, SQSPLIT.H),
       opts: { ...skinSiteOpts(STEPPED), ...FORM },
       lead: base,
       free,
@@ -242,7 +287,7 @@ export function sqSplitBuild(tier: SqSplitTier, wEnd: number = SQSPLIT.W_END): {
   const panels: SkinPanel[] = [[c - f, c - m], [c + m, c + f], [c - a, c + a]];
   const bonds: SkinBond[] = sqSplitLadder(f, M).map((k) => [c - k, c + k, SQSPLIT.H / 100]);
   const seg: SkinSeg = ['f', free, bonds, panels, [crack, faceUp, faceDn]];
-  const { spec, base } = squareWrap(seg, fTotal, squareLead(fTotal), `${tier.name}档 t=${tier.t}`);
+  const { spec, base } = squareWrap(seg, fTotal, SQSPLIT.LEAD, `${tier.name}档 t=${tier.t}`);
 
   const c0 = base + c;
   const rTip = (D - dv) / 100;

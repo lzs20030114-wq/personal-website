@@ -13,7 +13,8 @@ import {
   sqSplitRim,
 } from './skin-square-split';
 import {
-  SQUARE, SQUARE_RUNGS, SQUARE_PEAK, squareAngle, squareFreeTotal, squareLead, squarePw,
+  SQUARE, SQUARE_RUNGS, SQUARE_PEAK, SQUARE_REACH, SQUARE_DEPTH, SQUARE_KHI,
+  squareAngle, squareBuffer, squareFreeTotal, squarePw,
 } from './skin-square';
 import { RING_BAND_NODES } from './skin-ring';
 import { SKIN, createSkinUnit, type SkinBond } from './skin-unit';
@@ -27,8 +28,12 @@ import { SKIN, createSkinUnit, type SkinBond } from './skin-unit';
  * 外加一条如实记录的**已知瑕疵**：成形中段的全程对位散布（见文件末）。
  */
 
-const F_TOT = squareFreeTotal();
-const LEAD = squareLead(F_TOT);
+// **这一编制自己的分配**（平档是 133 / lead 22 / tail 15）——加深缝需要更长的自由段
+const F_TOT = SQSPLIT.F_TOT;
+const LEAD = SQSPLIT.LEAD;
+const TAIL = RING_BAND_NODES - 2 * SQUARE.ISO - F_TOT - LEAD;
+/** 缝心离带子下缘（构造式）：2(尾+ISO) + r·(F−1)，与档位无关 */
+const mouthY = (f: number, tail: number, r = 0.3): number => 2 * (tail + SQUARE.ISO) + r * (f - 1);
 const BUILDS = SQSPLIT_TIERS.map((t) => sqSplitBuild(t));
 
 interface Row {
@@ -43,6 +48,8 @@ interface Row {
   knot: number;
   /** 缝区最小 x（0 = 裂到轴） */
   seamMinX: number;
+  /** 缝角鼓出端面多少（>0 = 缝角比台面外缘还靠外 ⇒ 「挑出」量的是缝角，方形就建错了特征） */
+  vert: number;
   /** 两片台之间的净空（沿挑出方向的最小值） */
   gap: number;
   /** 缝心离带子下缘，逐检查点 */
@@ -121,9 +128,12 @@ function runAll(): Row[] {
       }
     let keys = 0;
     for (const ch of sim.chains) keys += ch.length;
+    const vert = tier.t > 0
+      ? Math.max(px(b.marks.mouthA) - px(b.marks.faceA), px(b.marks.mouthB) - px(b.marks.faceB))
+      : 0;
     return {
       key: tier.en, reach, boxH: mean(bot) - mean(top), topFlat: rng(top), botFlat: rng(bot),
-      topMean: mean(top), locked: sim.locked.length, keys, knot, seamMinX, gap, align, peak,
+      topMean: mean(top), locked: sim.locked.length, keys, knot, seamMinX, gap, align, peak, vert,
     };
   });
 }
@@ -152,7 +162,7 @@ describe('方形环 · 捏分编制（构造）', () => {
       if (order[i] === 2) expect(Math.abs(Math.cos(squareAngle(i))) - Math.abs(Math.sin(squareAngle(i)))).toBeCloseTo(0, 9);
   });
 
-  it('七段谱与平档同一份配平基准 ⇒ 平台高度一致（对位是构造给的）', () => {
+  it('七段谱：三档共用自己那份配平基准，平台高度仍与平档对得上', () => {
     for (const b of BUILDS) {
       expect(b.spec.reduce((s, q) => s + q[1], 0)).toBe(RING_BAND_NODES);
       expect(b.free % 2).toBe(1); // 自由段恒奇 ⇒ 垫劈两半是精确整数
@@ -165,6 +175,27 @@ describe('方形环 · 捏分编制（构造）', () => {
     }
     // 全员同 lead（对位构造的常数项）
     expect(new Set(BUILDS.map((b) => b.lead - (F_TOT - b.free) / 2)).size).toBe(1);
+    // 这一编制用的是自己那份分配（缝要更深 ⇒ 自由段要更长），带子已经榨到底
+    expect(TAIL).toBe(SQUARE.TAIL_MIN);
+    expect(LEAD).toBe(SQUARE.LEAD_MIN);
+    // **如实钉住那条代价**：平台比平档低 12.8px（缝心离下缘 = 2(尾+ISO) + r(F−1)）。
+    // 这是拿「平台与平档齐平」换来的缝深（见 SQSPLIT.F_TOT）——别悄悄变大，也别以为它是 0。
+    const drop = mouthY(squareFreeTotal(), SQUARE.TAIL) - mouthY(F_TOT, TAIL);
+    expect(drop, '平台比平档低多少').toBeGreaterThan(12);
+    expect(drop, '平台比平档低多少').toBeLessThan(14);
+  });
+
+  it('缓冲富余上限：箱高与方形大小的联系（超了折叠体会沿轴浮起来）', () => {
+    // 三档都在上限之内
+    for (const [i, b] of BUILDS.entries()) {
+      const slack = 4 * ((b.free - 1) / 2 - (b.marks.outB - b.marks.center)) - (0.6 * (b.free - 1) - SQSPLIT.H);
+      expect(slack, `${SQSPLIT_TIERS[i].en} 缓冲富余`).toBeLessThanOrEqual(SQUARE.E_MAX);
+      expect(slack, `${SQSPLIT_TIERS[i].en} 缓冲富余`).toBeGreaterThanOrEqual(SQUARE.E_MIN);
+    }
+    // 把方形压小一档（角档 k 59 而不是 60）就越界 ⇒ 构造期拒绝，而不是悄悄浮起来
+    expect(() => squareBuffer(SQSPLIT_TIERS[2].k! - 1, SQSPLIT.H)).toThrow();
+    // 平档全表不受这条新纪律影响（实测最大富余 22.0）
+    for (let k = SQUARE_DEPTH.KLO; k <= SQUARE_KHI; k++) expect(() => squareBuffer(k)).not.toThrow();
   });
 
   it('梯挡：外箱链恒 10 根、等长键、最内钉在端面板端点（端面硬投影的触发条件）', () => {
@@ -214,11 +245,12 @@ describe('方形环 · 捏分编制（构造）', () => {
   it('材料账：面档用满预算，天花板与箱高无关', () => {
     // 满裂的设计深度上限与 H 无关（H 在两边抵消）——换个箱高上限不动
     expect(sqSplitDCap()).toBeCloseTo(sqSplitMCap() - SQSPLIT.H / 4, 9);
-    expect(sqSplitDCap()).toBeGreaterThan(40);
-    expect(sqSplitDCap()).toBeLessThan(46);
-    // 面档（满裂那一档）恰好用满 F_TOT ⇒ 再深一格构造期就该拒绝
-    expect(BUILDS[0].free).toBe(F_TOT);
-    expect(() => sqSplitBuild({ ...SQSPLIT_TIERS[0], boxD: 42 })).toThrow();
+    expect(sqSplitDCap()).toBeGreaterThan(48);
+    expect(sqSplitDCap()).toBeLessThan(55);
+    // 面档（最吃材料的那一档）已经贴着预算 ⇒ 再深一格构造期就该拒绝
+    expect(BUILDS[0].free).toBeLessThanOrEqual(F_TOT);
+    expect(F_TOT - BUILDS[0].free).toBeLessThan(6);
+    expect(() => sqSplitBuild({ ...SQSPLIT_TIERS[0], boxD: SQSPLIT_TIERS[0].boxD! + 2 })).toThrow();
   });
 
   it('梯挡表：根数恒定、单调、首尾正确', () => {
@@ -231,9 +263,12 @@ describe('方形环 · 捏分编制（构造）', () => {
 
   it('外缘点落在方形边上（方形是靠挑出做出来的）', () => {
     const side = 2 * sqSplitHalfSide();
-    expect(side).toBeGreaterThan(150);
-    expect(side).toBeLessThan(156);
-    // 变厚后深度旋钮变粗（角档 k 一格 2–3px），外缘偏差从 0.21 放到 1.3——a 已进优化
+    expect(side).toBeGreaterThan(164);
+    expect(side).toBeLessThan(170);
+    // **仍要小于平档的方形**（阵列格距与取景按平档定，见下方那条守门）：
+    // 平档的半边长由它的角档定（角在 45°，极径 = a√2）
+    expect(side, '捏分方形不许超过平档的').toBeLessThan(2 * (SQUARE.RADIUS + SQUARE_REACH[2]) / Math.SQRT2);
+    // 深度旋钮很粗（角档 k 一格 2–3px），外缘偏差 ≤1.31——a 与三档配置一起进的优化
     for (const p of sqSplitRim()) expect(Math.abs(p.dev)).toBeLessThan(1.5);
   });
 });
@@ -244,6 +279,9 @@ describe('方形环 · 捏分编制（真跑）', () => {
       expect(r.locked, r.key).toBe(r.keys);
       expect(Math.abs(r.reach - SQSPLIT_REACH[i]), `${r.key} 挑出 ${r.reach.toFixed(1)}`).toBeLessThan(0.5);
       expect(r.knot, `${r.key} 打结`).toBeLessThanOrEqual(6);
+      // 缝角不许鼓出端面：鼓了的话「挑出」量到的是缝角而不是台面外缘，方形就建在错的
+      // 特征上（2026-09-01 加深缝第一版实测 4.08px，而定案三档 ≤0.2）
+      expect(r.vert, `${r.key} 缝角鼓出端面`).toBeLessThan(1.5);
     }
   });
 
@@ -257,7 +295,7 @@ describe('方形环 · 捏分编制（真跑）', () => {
     const hs = run().map((r) => r.boxH);
     expect(Math.max(...hs) - Math.min(...hs), '箱高散布').toBeLessThan(0.5);
     const tops = run().map((r) => r.topMean);
-    // 变厚后落位残差按比例长（2.0px / 68 高 = 2.9%，比变厚前的 1.31/36 = 3.6% 还小些）
+    // 落位残差按比例长（1.9px / 76 高 = 2.5%，比最早那版的 1.31/36 = 3.6% 还小些）
     expect(Math.max(...tops) - Math.min(...tops), '顶面位置散布').toBeLessThan(2.5);
   });
 
@@ -276,15 +314,13 @@ describe('方形环 · 捏分编制（真跑）', () => {
     expect(pk, '捏分档全程峰值挑出').toBeLessThan(SQUARE.RADIUS + SQUARE_PEAK[SQUARE_PEAK.length - 1]);
   });
 
-  it('【已知瑕疵】全程对位：终态过、成形中段不过——按实测钉住，不许再变差', { timeout: 180_000 }, () => {
+  it('全程对位：一圈平不平 —— 加深缝那轮把它从 14.9 收到 6.0', { timeout: 180_000 }, () => {
     const rows = run();
     const spread = CK.map((_, i) => Math.max(...rows.map((r) => r.align[i])) - Math.min(...rows.map((r) => r.align[i])));
-    // 终态那一格是过族守门线（2.5）的
+    // 终态那一格（族守门线 2.5，这一编制仍略宽）
     expect(spread[CK.length - 1], '终态').toBeLessThan(4);
-    // 成形中段面档滞后，峰值 ~14.9px = 族守门线的 6 倍。**这是这一编制上站时带着的
-    // 已知瑕疵**（属成形过程那一轮的活，§16.4）。这里不放宽族的线，而是把实测值钉住：
-    // 谁把它改差了，这条会红。
-    expect(Math.max(...spread), '全程峰值散布').toBeLessThan(16);
-    expect(Math.max(...spread), '全程峰值散布（钉住，别悄悄变差）').toBeGreaterThan(10);
+    // 成形中段仍是最差的一格（6.0px）。它**不再是当初那条已知瑕疵**——加深缝那轮把对位
+    // 放进了标定的目标函数（此前只按外缘偏差 + Δ 挑），峰值从 14.9 降到 6.0。
+    expect(Math.max(...spread), '全程峰值散布').toBeLessThan(8);
   });
 });

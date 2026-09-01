@@ -91,6 +91,20 @@ export const SQUARE = {
   G_MIN: 6,
   /** 折叠余量下限：缓冲折得起来、不被拉直 */
   E_MIN: 12,
+  /**
+   * 折叠余量**上限**（2026-09-01 加深缝那轮实测发现，此前这一族只有下限）。
+   * 缓冲里的富余布料太多时，折叠体会**沿轴整体浮起来**、下方那截布料被拉成直线：
+   * 剖面、箱高、水平度、锁定数**全都照样合格**，只有「缝心离下缘」跳三十来 px
+   * ——一圈里各档浮的量不同，平台就不平了。
+   * 实测阈值很干脆（缓冲 b≤9 干净 / b=10 就浮，三个箱高上各测一次）：
+   *   H68 k52 富余 33.6 浮 · k53 29.6 干净；H72 k55 34 浮 · k56 30 干净；
+   *   H76 k59 33.2 浮 · k60 29.2 干净；H80 k62 33.6 浮 · k63 29.6 干净。
+   * 取 31 落在两侧之间。平档全表最大富余 22.0（k28），不受影响。
+   *
+   * **它是「箱高 ↔ 方形大小」的真正联系**：箱越高，浅档要的缓冲越多，
+   * 于是最外那根梯挡必须更深才压得住富余 ⇒ 方形被顶大。
+   */
+  E_MAX: 31,
 } as const;
 
 /** 梯挡根数 = 现行方箱键位图的根数（10）——一圈恒定 */
@@ -117,10 +131,12 @@ export function squareGap(kMax: number, b: number, h: number = SQUARE.H): number
 export function squareSlack(kMax: number, b: number, h: number = SQUARE.H): number {
   return 4 * b - squareGap(kMax, b, h);
 }
-/** 缓冲 b：同时满足「住得下」与「折得起来」的最小值 */
+/** 缓冲 b：同时满足「住得下」与「折得起来」的最小值；富余超上限即拒绝（见 E_MAX） */
 export function squareBuffer(kMax: number, h: number = SQUARE.H): number {
   let b = SQUARE.BUF_MIN;
   while (squareGap(kMax, b, h) < SQUARE.G_MIN || squareSlack(kMax, b, h) < SQUARE.E_MIN) b++;
+  if (squareSlack(kMax, b, h) > SQUARE.E_MAX)
+    throw new Error(`缓冲富余 ${squareSlack(kMax, b, h).toFixed(1)} 超上限 ${SQUARE.E_MAX}（k=${kMax} 箱高=${h}）：折叠体会沿轴浮起来`);
   return b;
 }
 

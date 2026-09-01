@@ -6,7 +6,17 @@ import { build, buildSolid, run } from './split-thick.mjs';
 const OUT = process.argv[2] ?? 'thick.svg';
 const R = 30, TH = (n) => (Math.PI / 20) * n;
 const T10 = [0, 0.108, 0.254, 0.397, 0.523, 0.638, 0.741, 0.834, 0.92, 1];
-const ok = (m) => m.locked === m.tot && m.knot <= 6 && m.topFlat < 1.5 && m.botFlat < 1.5;
+// 验收判据（与 split-thick.mjs 的 ok/okm 同一套）：**剪影Δ 与端面竖直度也在里面**
+// ——2026-09-01 用户从这张线稿里一眼看出一个「形状崩坏」的形，而当时这里只卡
+// 锁定/打结/水平度，坏的那档照样被画了出来、看着像个提案。
+const why = (m) => {
+  if (m.locked !== m.tot) return `键没锁全 ${m.locked}/${m.tot}`;
+  if (m.knot > 6) return `打结 ${m.knot} 节`;
+  if (m.topFlat >= 1.5 || m.botFlat >= 1.5) return `面不平 ${Math.max(m.topFlat, m.botFlat).toFixed(1)}`;
+  if (m.silD >= 6) return `剪影Δ ${m.silD.toFixed(1)}`;
+  if (m.vert > 1.5) return `缝角鼓出端面 ${m.vert.toFixed(1)}`;
+  return '';
+};
 const prof = (b, s) => b.profile;
 
 /** 拿一档的终态剖面（以箱中心为 y 原点） */
@@ -26,16 +36,19 @@ const rows = PLANS.map((P) => ({
   ...P,
   runs: P.tiers.map(([nm, k, D, t]) => {
     const b = t === 0 ? buildSolid(P.H, k) : build(P.H, P.W, D, k, t);
-    if (b.over || b.odd !== undefined) return { nm, bad: b.over ? `装不下(${b.over})` : '垫非偶' };
-    const m = run(b);
-    return { nm, b, m };
+    if (b.over || b.odd !== undefined || b.floats)
+      return { nm, bad: b.over ? `装不下(${b.over})` : b.floats ? `缓冲富余超上限(b=${b.floats})：折叠体会浮起来` : '垫非偶' };
+    // 单箱档没有目标深度：先跑一遍拿实测挑出，再以「那个深度的矩形」当目标线量 Δ
+    const m0 = run(b, { t, D: D ?? 0, wEnd: P.W, H: P.H });
+    const m = D === null ? run(b, { t, D: m0.reach, wEnd: P.W, H: P.H }) : m0;
+    return { nm, b, m, why: why(m) };
   }),
 }));
 
 for (const r of rows) {
   console.log(`── ${r.label}（箱高 ${r.H} · 缝 ${r.W} · 边长 ${r.side}）`);
   for (const q of r.runs)
-    console.log(q.bad ? `   ${q.nm}: ${q.bad}` : `   ${q.nm}: 挑出 ${q.m.reach.toFixed(1)} 箱高 ${q.m.boxH.toFixed(2)} 顶平 ${q.m.topFlat.toFixed(2)} 锁 ${q.m.locked}/${q.m.tot} 结 ${q.m.knot} 缝底x ${q.m.seamMin.toFixed(1)}${ok(q.m) ? '' : ' ×'}`);
+    console.log(q.bad ? `   ${q.nm}: ${q.bad}` : `   ${q.nm}: 挑出 ${q.m.reach.toFixed(1)} 箱高 ${q.m.boxH.toFixed(2)} 顶平 ${q.m.topFlat.toFixed(2)} 锁 ${q.m.locked}/${q.m.tot} 结 ${q.m.knot} Δ ${q.m.silD.toFixed(2)} 端面 ${q.m.vert.toFixed(2)} 缝底x ${q.m.seamMin.toFixed(1)}${q.why ? ' ✗ ' + q.why : ''}`);
 }
 
 // ── SVG ──
@@ -68,12 +81,14 @@ for (const r of rows) {
   let x0 = 70;
   for (let i = 0; i < r.runs.length; i++) {
     const q = r.runs[i];
-    if (q.bad) { txt(x0, CY, q.bad, 11, '#c33'); x0 += 150; continue; }
+    if (q.bad) { txt(x0, CY, q.bad, 11, '#c33'); x0 += 190; continue; }
     line(x0, CY - 62, x0, CY + 62, '#999', 1);
     line(x0 - 6, CY, x0 + q.m.reach * SC + 14, CY, '#ddd', 0.8, '3 3');
-    poly(smooth(q.m.profile).map(([x, y]) => [x0 + x * SC, CY + y * SC]), COL[i % 3], 1.6);
-    txt(x0, CY + 78, q.nm, 12, '#222', true);
+    // 没过验收的档**画成红色虚线并写明理由**，不许它混在提案里当正常形看
+    poly(smooth(q.m.profile).map(([x, y]) => [x0 + x * SC, CY + y * SC]), q.why ? '#c33' : COL[i % 3], 1.6);
+    txt(x0, CY + 78, q.nm, 12, q.why ? '#c33' : '#222', true);
     txt(x0, CY + 92, `挑出 ${q.m.reach.toFixed(1)} · 高 ${q.m.boxH.toFixed(1)}`, 10.5, '#666');
+    if (q.why) txt(x0, CY + 106, `✗ ${q.why}`, 10.5, '#c33');
     x0 += Math.max(q.m.reach * SC, 60) + 74;
   }
   // 桅杆半径参考
@@ -94,7 +109,7 @@ Y += 12;
     line(24, CY + (r.H / 2) * SC, 24 + 20 * SLOT + 16, CY + (r.H / 2) * SC, '#bbb', 1);
     for (let i = 0; i < 20; i++) {
       const q = r.runs[ORDER[i]];
-      if (!q || q.bad) continue;
+      if (!q || q.bad || q.why) continue;
       const x0 = 34 + i * SLOT;
       poly(smooth(q.m.profile).map(([x, y]) => [x0 + x * SC, CY + y * SC]), COL[ORDER[i]], 1.2);
       if (ORDER[i] === 2) txt(x0, CY - (r.H / 2) * SC - 6, '▲', 9, '#3f6d3f');

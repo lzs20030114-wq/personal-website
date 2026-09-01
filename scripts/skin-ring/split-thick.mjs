@@ -13,20 +13,41 @@
 import { createSkinUnit, SKIN, SKIN_ROOT_FIX } from '../../src/lib/space/skin-unit.ts';
 import { SQUARE, SQUARE_RUNGS, squareFreeTotal, squareLead } from '../../src/lib/space/skin-square.ts';
 import { RING_BAND_NODES } from '../../src/lib/space/skin-ring.ts';
+import { silhouette } from '../../src/lib/space/skin-split.ts';
 
 const F_TOT = squareFreeTotal(), LEAD = squareLead(F_TOT);
+// 分配（自由段总量 / 贴合段）——默认 = 平档那份；ALLOC 模式扫「把带子重新分配能换到多深的缝」
+const A_F = Number(process.env.FTOT ?? F_TOT), A_LEAD = Number(process.env.LEAD ?? (A_F === F_TOT ? LEAD : SQUARE.LEAD_MIN));
+const SQUARE_EDGE_T = Number(process.env.ET ?? 0.5);
+/** 缝角鼓出端面的上限（px）。1.5 与这一族其它「形对不对」的线同级；
+ *  历史上用户拍板过的那版实测 0.56，故不能定在 0.5。 */
+const VERT_MAX = Number(process.env.VERT ?? 1.5);
 const seamW = (t, w) => w * Math.pow(t, 0.7);
 const sink = (t, D) => D * Math.pow(t, 1.2);
 const tip = (t) => 0.4 + 0.6 * t;
 
+/**
+ * 目标线（与 split-draft.mjs 的 `targetAt` 同一条，只是把箱高也参数化）：
+ * 外顶面 → 端面 → 缝（嘴宽 w、尖宽 wt、退到 D−dv） → 外底面。
+ */
+function targetAt(t, D, wEnd, H) {
+  const w = seamW(t, wEnd), dv = sink(t, D), wt = w * tip(t), y0 = -H / 2;
+  const p = [[0, y0], [D, y0]];
+  if (w > 0.5) p.push([D, -w / 2], [D - dv, -wt / 2], [D - dv, wt / 2], [D, w / 2]);
+  p.push([D, -y0], [0, -y0]);
+  return p;
+}
+
 /** 参数化：箱高 H、缝宽 wEnd、目标深度 D、箱设计深度 boxD、形态 t */
-function build(H, wEnd, D, boxD, t) {
+function build(H, wEnd, D, boxD, t, F_TOT = A_F, LEAD = A_LEAD) {
   const w = seamW(t, wEnd), dv = sink(t, D), wt = w * tip(t);
   const lobe = (H - w) / 2, faceN = Math.round(lobe / 2);
   const a = Math.max(1, Math.round(wt / 4)), wallN = Math.max(1, Math.round(dv / 2));
   const m = a + wallN, f = m + faceN, M = f + boxD / 2;
   let buf = SQUARE.BUF_MIN;
   for (; buf < 60; buf++) { const sp = 1.2 * (M + buf); if (sp - H >= SQUARE.G_MIN && 4 * buf - (sp - H) >= SQUARE.E_MIN) break; }
+  // 富余上限（SQUARE.E_MAX）：超了折叠体会沿轴浮起来 —— 读数全绿而平台不平
+  if (4 * buf - (1.2 * (M + buf) - H) > SQUARE.E_MAX) return { floats: buf };
   const free = 2 * (M + buf) + 1;
   if (free > F_TOT) return { over: free };
   const c = buf + M, wv = (w + wt) / 2;
@@ -51,11 +72,15 @@ function build(H, wEnd, D, boxD, t) {
     opts: { ...SKIN_ROOT_FIX, anchorEnd: true, boxSquare: true, zipUp: [0], attNear: 2.5, attNearChains: [0], sqChains: [0], coreTether: tether, coreTetherRel: crease, alignRuns: [[c0 - m, c0 - a], [c0 + a, c0 + m]] },
   };
 }
-function run(b) {
+const CK = [400, 550, 650, 750, 1000, 1500];
+function run(b, tgt) {
   const s = createSkinUnit(b.spec, b.opts);
   let knot = 0;
+  const align = [];
   for (let k = 0; k < SKIN.STEPS; k++) {
     s.advance();
+    // 缝心离带子下缘（对位）——**必须逐检查点记全程**，只看终态会挑到中段最偏的那个配置
+    if (CK.includes(k + 1)) align.push((s.py[b.marks.center] - s.py[s.n - 1]) * 100);
     if (k % 25 === 0) {
       const p = []; for (let i = b.lead; i < b.lead + b.free; i++) p.push([s.px[i], s.py[i]]);
       let sp = 0;
@@ -75,18 +100,35 @@ function run(b) {
   const mean = (v) => v.reduce((a, c) => a + c, 0) / v.length, rng = (v) => Math.max(...v) - Math.min(...v);
   const top = win(b.marks.outA, b.marks.faceA), bot = win(b.marks.faceB, b.marks.outB);
   let seamMin = Infinity; for (let i = b.marks.mouthA; i <= b.marks.mouthB; i++) seamMin = Math.min(seamMin, px(i));
+  // **缝角不许鼓出端面**：正值 = 缝角比面角还靠外，此时「挑出」量到的是缝角而不是台面外缘
+  // ——方形就建在了错的特征上（2026-09-01 加深缝那轮撞到，端面竖直度从 0.24 掉到 4.08）。
+  const faceX = (px(b.marks.faceA) + px(b.marks.faceB)) / 2;
+  const vert = b.marks.mouthA === b.marks.mouthB ? 0
+    : Math.max(px(b.marks.mouthA) - px(b.marks.faceA), px(b.marks.mouthB) - px(b.marks.faceB));
   let tot = 0; for (const ch of s.chains) tot += ch.length;
   const cy = (mean(top) + mean(bot)) / 2;
   const profile = [];
   for (let i = b.lead; i < b.lead + b.free; i++) profile.push([px(i), py(i) - cy]);
-  return { reach, boxH: mean(bot) - mean(top), topFlat: rng(top), botFlat: rng(bot), locked: s.locked.length, tot, knot, seamMin, profile };
+  // **剪影Δ 是唯一的形态判据**（§16.3）：锁定/打结/水平度全绿而形是楔形的情况真出现过
+  // ——1 重编制那版就是这么混过验收的（用户 2026-09-01 从线稿里一眼看出「形状崩坏」）。
+  let silD = NaN;
+  if (tgt) {
+    const half = tgt.H / 2 + 4;
+    const A = silhouette(profile, -half, half);
+    const B = silhouette(targetAt(tgt.t, tgt.D, tgt.wEnd, tgt.H), -half, half);
+    let sum = 0;
+    for (let i = 0; i < A.length; i++) sum += Math.abs(A[i] - B[i]);
+    silD = sum / A.length;
+  }
+  return { reach, boxH: mean(bot) - mean(top), topFlat: rng(top), botFlat: rng(bot), locked: s.locked.length, tot, knot, seamMin, silD, align, vert, faceX, profile };
 }
 
 /** 角档（实心箱）在任意箱高下的谱——平档 squareSpec 把 SQUARE.H 写死了，这里参数化 */
-function buildSolid(H, k) {
+function buildSolid(H, k, F_TOT = A_F, LEAD = A_LEAD) {
   const PW = Math.round(H / 4);
   let buf = SQUARE.BUF_MIN;
   for (; buf < 60; buf++) { const sp = 1.2 * (k + buf); if (sp - H >= SQUARE.G_MIN && 4 * buf - (sp - H) >= SQUARE.E_MIN) break; }
+  if (4 * buf - (1.2 * (k + buf) - H) > SQUARE.E_MAX) return { floats: buf };
   const free = 2 * (k + buf) + 1;
   if (free > F_TOT) return { over: free };
   const c = (free - 1) / 2;
@@ -127,7 +169,9 @@ if (process.env.MIRROR) {
   for (let o = 0; o < 20; o++) { const mx = Math.max(...order.flatMap((c, i) => (c === 2 ? [mir((i + o) % 20)] : []))); if (mx < bestMax) { bestMax = mx; bestOff = o; } }
   const combos = [...new Set(order.map((c, i) => `${c}:${mir((i + bestOff) % 20)}`))].map((k) => k.split(':').map(Number));
   console.log(`H=${H} 缝=${W}：1 重镜像 相位 ${bestOff} ⇒ 角位最高到 L${bestMax}；${combos.length} 条引擎`);
-  const okm = (m) => m.locked === m.tot && m.knot <= 6 && m.topFlat < 1.5 && m.botFlat < 1.5;
+  // 判据里**必须有剪影Δ**：只看锁定/打结/水平度会放过楔形（2026-09-01 用户从线稿里
+  // 一眼看出「形状崩坏」的那一版就是这么过的验收）。6.0 = 定案三档最差那档 3.35 的两倍。
+  const okm = (m) => m.locked === m.tot && m.knot <= 6 && m.topFlat < 1.5 && m.botFlat < 1.5 && m.silD < 6 && m.vert <= VERT_MAX;
   const feasible = (a, verbose) => {
     const rs = [a / Math.cos(TH(1)) - R, a / Math.cos(TH(3)) - R, a / Math.cos(TH(5)) - R];
     const rows = [];
@@ -136,20 +180,20 @@ if (process.env.MIRROR) {
       if (want <= 8) return null;
       if (l === 0) { // 单箱：扫 k
         let best = null;
-        for (let k = Math.round(H / 4) + 9; k <= 62; k++) { const b = buildSolid(H, k); if (b.over || b.odd !== undefined) continue; const m = run(b); if (!okm(m)) continue; if (!best || Math.abs(m.reach - want) < Math.abs(best.m.reach - want)) best = { m }; }
+        for (let k = Math.round(H / 4) + 9; k <= 62; k++) { const b = buildSolid(H, k); if (b.over || b.odd !== undefined || b.floats) continue; const m = run(b, { t: 0, D: want, wEnd: W, H }); if (!okm(m)) continue; if (!best || Math.abs(m.reach - want) < Math.abs(best.m.reach - want)) best = { m }; }
         if (!best || Math.abs(best.m.reach - want) > 2.5) { if (verbose) console.log(`   ${['面','边','角'][c]}L${l} 目标 ${want.toFixed(1)}: ${best ? '差 ' + (best.m.reach - want).toFixed(1) : '无干净候选'} ×`); return null; }
         rows.push([c, l, want, best.m]); continue;
       }
       let best = null;
       for (const dOff of [0, 3, 6]) for (let boxD = Math.max(6, Math.round((want - 20) / 2) * 2); boxD <= want + 12; boxD += 2) {
-        const b = build(H, W, want + dOff, boxD, T10[l]); if (b.over || b.odd !== undefined) continue;
-        const m = run(b); if (!okm(m)) continue;
+        const b = build(H, W, want + dOff, boxD, T10[l]); if (b.over || b.odd !== undefined || b.floats) continue;
+        const m = run(b, { t: T10[l], D: want + dOff, wEnd: W, H }); if (!okm(m)) continue;
         if (!best || Math.abs(m.reach - want) < Math.abs(best.m.reach - want)) best = { boxD, m };
       }
       if (!best || Math.abs(best.m.reach - want) > 2.5) { if (verbose) console.log(`   ${['面','边','角'][c]}L${l} 目标 ${want.toFixed(1)}: ${best ? '差 ' + (best.m.reach - want).toFixed(1) : '无干净候选'} ×`); return null; }
       rows.push([c, l, want, best.m]);
     }
-    if (verbose) for (const [c, l, want, m] of rows) console.log(`   ${['面','边','角'][c]}L${l}: 目标 ${want.toFixed(1)} 挑出 ${m.reach.toFixed(1)}（差 ${(m.reach - want).toFixed(1)}） 箱高 ${m.boxH.toFixed(2)} 顶平 ${m.topFlat.toFixed(2)} 结 ${m.knot} 缝底x ${m.seamMin.toFixed(1)}`);
+    if (verbose) for (const [c, l, want, m] of rows) console.log(`   ${['面','边','角'][c]}L${l}: 目标 ${want.toFixed(1)} 挑出 ${m.reach.toFixed(1)}（差 ${(m.reach - want).toFixed(1)}） 箱高 ${m.boxH.toFixed(2)} 顶平 ${m.topFlat.toFixed(2)} 结 ${m.knot} Δ ${m.silD.toFixed(2)} 缝底x ${m.seamMin.toFixed(1)}`);
     return rows;
   };
   if (process.env.AT) { console.log(`\n逐组合诊断 @ 半边长 ${process.env.AT}（边长 ${(2 * Number(process.env.AT)).toFixed(0)}）：`); feasible(Number(process.env.AT), true); process.exit(0); }
@@ -171,10 +215,10 @@ if (process.env.CAL2) {
   let face = null;
   for (let boxD = 34; boxD <= 46; boxD += 2) {
     let D = boxD + 7, b = build(H, W, D, boxD, 1);
-    if (b.over || b.odd !== undefined) { console.log(` 面 boxD${boxD}: ${b.over ? '自由段 ' + b.over + ' ×' : '垫非偶'}`); continue; }
+    if (b.over || b.odd !== undefined || b.floats) { console.log(` 面 boxD${boxD}: ${b.over ? '自由段 ' + b.over + ' ×' : '垫非偶'}`); continue; }
     let m = run(b);
     const D2 = Math.round(m.reach * 10) / 10, b2 = build(H, W, D2, boxD, 1); // 第二遍自洽
-    if (!b2.over && b2.odd === undefined) { const m2 = run(b2); if (ok(m2)) { b = b2; m = m2; D = D2; } }
+    if (!b2.over && b2.odd === undefined && !b2.floats) { const m2 = run(b2); if (ok(m2)) { b = b2; m = m2; D = D2; } }
     console.log(` 面 boxD${boxD} D${D.toFixed(1)}: 挑出 ${m.reach.toFixed(1).padStart(5)} 箱高 ${m.boxH.toFixed(2)} 顶平 ${m.topFlat.toFixed(2)} 自由段 ${String(b.free).padStart(3)} 锁 ${m.locked}/${m.tot} 结 ${String(m.knot).padStart(2)} 缝底x ${m.seamMin.toFixed(2)}${ok(m) ? '' : '  ×'}`);
     if (ok(m) && m.seamMin < 0.5 && (!face || m.reach > face.m.reach)) face = { boxD, D, b, m };
   }
@@ -186,7 +230,7 @@ if (process.env.CAL2) {
   let edge = null;
   for (const dOff of [0, 3, 6]) for (let boxD = 44; boxD <= 60; boxD += 2) {
     const D = tEdge + dOff, b = build(H, W, D, boxD, 0.5);
-    if (b.over || b.odd !== undefined) continue;
+    if (b.over || b.odd !== undefined || b.floats) continue;
     const m = run(b);
     if (!ok(m)) continue;
     if (!edge || Math.abs(m.reach - tEdge) < Math.abs(edge.m.reach - tEdge)) edge = { boxD, D, b, m };
@@ -196,7 +240,7 @@ if (process.env.CAL2) {
   let corner = null;
   for (let k = 44; k <= 60; k += 1) {
     const b = buildSolid(H, k);
-    if (b.over || b.odd !== undefined) continue;
+    if (b.over || b.odd !== undefined || b.floats) continue;
     const m = run(b);
     if (!ok(m)) continue;
     if (!corner || Math.abs(m.reach - tCorner) < Math.abs(corner.m.reach - tCorner)) corner = { k, b, m };
@@ -217,7 +261,7 @@ if (process.env.CAL) {
   console.log(' 缝  台高×2  自由段 缓冲   挑出   箱高   顶平  锁定    结');
   for (let w = 18; w <= 30; w += 1) {
     const b = build(H, w, 46.8, 40, 1);
-    if (b.over || b.odd !== undefined) { console.log(` ${String(w).padStart(2)}  ${b.over ? '自由段 ' + b.over + ' ×' : '垫非偶'}`); continue; }
+    if (b.over || b.odd !== undefined || b.floats) { console.log(` ${String(w).padStart(2)}  ${b.over ? '自由段 ' + b.over + ' ×' : '垫非偶'}`); continue; }
     const m = run(b);
     console.log(` ${String(w).padStart(2)}  ${((H - w) / 2).toFixed(1).padStart(5)}   ${String(b.free).padStart(5)}  ${String(b.buf).padStart(3)}  ${m.reach.toFixed(1).padStart(6)}  ${m.boxH.toFixed(2).padStart(6)}  ${m.topFlat.toFixed(2)}  ${(m.locked + '/' + m.tot).padStart(7)}  ${String(m.knot).padStart(2)}`);
   }
@@ -225,14 +269,14 @@ if (process.env.CAL) {
   console.log(`\n══ H=${H} 缝=${W}：边档深度扫描（目标挑出 55.5）══`);
   for (let boxD = 46; boxD <= 62; boxD += 2) {
     const b = build(H, W, 55.5, boxD, 0.5);
-    if (b.over || b.odd !== undefined) { console.log(` boxD${boxD}: ${b.over ? '自由段 ' + b.over + ' ×' : '垫非偶'}`); continue; }
+    if (b.over || b.odd !== undefined || b.floats) { console.log(` boxD${boxD}: ${b.over ? '自由段 ' + b.over + ' ×' : '垫非偶'}`); continue; }
     const m = run(b);
     console.log(` boxD${String(boxD).padStart(2)}: 自由段 ${String(b.free).padStart(3)} 挑出 ${m.reach.toFixed(1).padStart(5)}（差 ${(m.reach - 55.5).toFixed(1).padStart(5)}） 箱高 ${m.boxH.toFixed(2)} 顶平 ${m.topFlat.toFixed(2)} 锁 ${m.locked}/${m.tot} 结 ${String(m.knot).padStart(2)} 缝底x ${m.seamMin.toFixed(1)}`);
   }
   console.log(`\n══ H=${H}：角档深度扫描（目标挑出 77.7）══`);
   for (let k = 48; k <= 62; k += 2) {
     const b = buildSolid(H, k);
-    if (b.over || b.odd !== undefined) { console.log(` k${k}: ${b.over ? '自由段 ' + b.over + ' ×' : '垫非偶'}`); continue; }
+    if (b.over || b.odd !== undefined || b.floats) { console.log(` k${k}: ${b.over ? '自由段 ' + b.over + ' ×' : '垫非偶'}`); continue; }
     const m = run(b);
     console.log(` k${String(k).padStart(2)}: 自由段 ${String(b.free).padStart(3)} 挑出 ${m.reach.toFixed(1).padStart(5)}（差 ${(m.reach - 77.7).toFixed(1).padStart(5)}） 箱高 ${m.boxH.toFixed(2)} 顶平 ${m.topFlat.toFixed(2)} 锁 ${m.locked}/${m.tot} 结 ${String(m.knot).padStart(2)}`);
   }
@@ -276,3 +320,91 @@ if (process.env.FINE) {
 }
 
 export { build, buildSolid, run, F_TOT };
+
+if (process.env.ALLOC) {
+  // 「缝再加高」那轮：把带子重新分配（FTOT/LEAD）能把缝做到多深。
+  // 两片台高度钉死 22 ⇒ 缝 w = H − 44。面档（满裂 t=1）是最吃材料的一档，天花板由它定。
+  const tail = RING_BAND_NODES - 2 * SQUARE.ISO - A_F - A_LEAD;
+  const mouthY = 2 * (tail + SQUARE.ISO) + SKIN.R1 * 2 * (A_F - 1) / 2;
+  console.log(`分配 F_TOT=${A_F} lead=${A_LEAD} tail=${tail} · 平台高度基准 ${mouthY.toFixed(1)}px（平档 101.6）`);
+  console.log(`箱高上限（自由段跨度 − G_MIN）= ${(0.6 * (A_F - 1) - SQUARE.G_MIN).toFixed(1)}`);
+  console.log('  H   缝   boxD    挑出   箱高   顶平  底平   锁    结   缝底x');
+  for (const H of (process.env.HS ?? '68,72,74,76,78,80,82').split(',').map(Number)) {
+    const W = H - 44;
+    let best = null;
+    for (let boxD = 60; boxD >= 20; boxD -= 2) {
+      let D = boxD + 6;
+      for (let pass = 0; pass < 3; pass++) {
+        const b = build(H, W, D, boxD, 1);
+        if (b.over || b.odd || b.floats) { D = -1; break; }
+        const r = run(b);
+        D = r.reach;
+        if (pass === 2) best = { boxD, D, r };
+      }
+      if (best) break;
+    }
+    if (!best) { console.log(`${String(H).padStart(3)}  ${String(W).padStart(3)}   —— 装不下`); continue; }
+    const { boxD, D, r } = best;
+    console.log(`${String(H).padStart(3)}  ${String(W).padStart(3)}  ${String(boxD).padStart(4)}  ${r.reach.toFixed(1).padStart(6)}  ${r.boxH.toFixed(2).padStart(6)}  ${r.topFlat.toFixed(2).padStart(5)} ${r.botFlat.toFixed(2).padStart(5)}  ${String(r.locked).padStart(2)}/${r.tot}  ${String(r.knot).padStart(3)}  ${r.seamMin.toFixed(2).padStart(5)}   D=${D.toFixed(1)}`);
+  }
+}
+
+if (process.env.JOINT) {
+  // 联合标定：先枚举三档各自的**干净候选集**（连同实测挑出），再把半边长 a 也放进优化
+  // ——在可达集合上扫 a，取三档最大外缘偏差最小的那个（§17.9 变厚那轮定的做法）。
+  const H = Number(process.env.H ?? 82), W = Number(process.env.W ?? (H - 44));
+  const R = SQUARE.RADIUS, TH = (n) => (Math.PI / SQUARE.COUNT) * n;
+  // 判据含**剪影Δ**（§16.3：只认剪影Δ）——锁定/打结/水平度全绿而形是楔形的情况真出现过
+  const ok = (m) => m.locked === m.tot && m.knot <= 6 && m.topFlat < 1.5 && m.botFlat < 1.5 && Math.abs(m.boxH - H) < 0.5 && m.silD < 6 && m.vert <= VERT_MAX;
+  console.log(`══ 联合标定 H=${H} 缝=${W}（两片台各 ${((H - W) / 2).toFixed(1)}）· 分配 F_TOT=${A_F} lead=${A_LEAD} ══`);
+  const cand = [[], [], []];
+  const BD0 = Number(process.env.BD0 ?? 28), BD1 = Number(process.env.BD1 ?? 70);
+  for (let boxD = BD0; boxD <= BD1; boxD += 2) {
+    for (const dOff of [0, 2, 4, 6, 8]) {
+      for (const [ti, t] of [[0, 1], [1, SQUARE_EDGE_T]]) {
+        let D = boxD + 6 + dOff, b = build(H, W, D, boxD, t);
+        if (b.over || b.odd !== undefined || b.floats) continue;
+        let m = run(b, { t, D, wEnd: W, H });
+        // 自洽目标取**面角 x**（台面外缘）而不是 max 挑出：后者在缝角鼓出时会被污染，
+        // D 越设越大、缝角越鼓 —— 正反馈（2026-09-01 端面竖直度掉到 4.08 的根因）
+        const D2 = Math.round((m.faceX + dOff) * 10) / 10, b2 = build(H, W, D2, boxD, t);
+        if (!b2.over && b2.odd === undefined && !b2.floats) { const m2 = run(b2, { t, D: D2, wEnd: W, H }); if (ok(m2)) { m = m2; D = D2; } }
+        if (!ok(m)) continue;
+        if (ti === 0 && m.seamMin > 0.5) continue; // 面档必须真裂到轴
+        cand[ti].push({ boxD, D, reach: m.reach, m });
+      }
+    }
+  }
+  for (let k = Number(process.env.K0 ?? 40); k <= Number(process.env.K1 ?? 72); k++) {
+    const b = buildSolid(H, k);
+    if (b.over || b.odd !== undefined || b.floats) continue;
+    const m = run(b, { t: 0, D: k * 2 * SKIN.R1 * 1.0, wEnd: W, H });
+    // 单箱的目标线取「实测挑出的矩形」——这一档没有缝，Δ 只用来挡跑型
+    const m2 = run(b, { t: 0, D: m.reach, wEnd: W, H });
+    if (ok(m2)) cand[2].push({ k, reach: m2.reach, m: m2 });
+  }
+  const names = ['面', '边', '角'], cosT = [Math.cos(TH(1)), Math.cos(TH(3)), Math.cos(TH(5))];
+  // 候选集要跑十分钟，落盘给 `pick.mjs` 反复换目标函数用（不再重跑引擎）
+  if (process.env.DUMP)
+    (await import('node:fs')).writeFileSync(process.env.DUMP, JSON.stringify(cand.map((cs) => cs.map(({ boxD, D, k, reach, m }) =>
+      ({ boxD, D, k, reach, boxH: m.boxH, topFlat: m.topFlat, botFlat: m.botFlat, knot: m.knot, seamMin: m.seamMin, silD: m.silD, align: m.align, vert: m.vert })))));
+  for (let i = 0; i < 3; i++)
+    console.log(`${names[i]}档干净候选 ${cand[i].length} 个 · 挑出 ${cand[i].length ? Math.min(...cand[i].map((c) => c.reach)).toFixed(1) + '–' + Math.max(...cand[i].map((c) => c.reach)).toFixed(1) : '——'}`);
+  if (cand.some((c) => !c.length)) process.exit(1);
+  let best = null;
+  for (let a = 60; a <= 100; a += 0.1) {
+    const pick = cosT.map((cs, i) => {
+      const want = a / cs - R;
+      return cand[i].reduce((p, c) => (Math.abs(c.reach - want) < Math.abs(p.reach - want) ? c : p));
+    });
+    const dev = pick.map((p, i) => p.reach - (a / cosT[i] - R));
+    const mx = Math.max(...dev.map(Math.abs));
+    if (!best || mx < best.mx) best = { a, pick, dev, mx };
+  }
+  const { a, pick, dev, mx } = best;
+  console.log(`\n⇒ 半边长 ${a.toFixed(1)} · **边长 ${(2 * a).toFixed(0)}px** · 最大外缘偏差 ${mx.toFixed(2)}px`);
+  for (let i = 0; i < 3; i++) {
+    const p = pick[i], m = p.m;
+    console.log(` ${names[i]} ${p.k !== undefined ? 'k' + p.k : 'boxD' + p.boxD + '/D' + p.D.toFixed(1)}: 挑出 ${m.reach.toFixed(1)}（偏 ${dev[i].toFixed(2)}） 箱高 ${m.boxH.toFixed(2)} 顶平 ${m.topFlat.toFixed(2)} 底平 ${m.botFlat.toFixed(2)} 锁 ${m.locked}/${m.tot} 结 ${m.knot} Δ ${m.silD.toFixed(2)} 端面 ${m.vert.toFixed(2)} 缝底x ${m.seamMin.toFixed(2)}`);
+  }
+}

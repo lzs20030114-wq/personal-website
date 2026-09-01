@@ -55,8 +55,12 @@ const MODE = process.argv[3] ?? 'draft';
 const STEPPED = SKIN_UNITS.find((d) => d.key === 'stepped');
 
 // ── 恒高捏分族（原型；拍板后并入 src/lib/space/，与站上共用一份）──────────────
+// **注意：这里这套探索常量是最早那一轮（箱高 36 / 缝 12 / 与平档同一份分配）的**。
+// 站上定案后来两轮加厚已经走了另一套（箱高 76 / 缝 32 / F_TOT 157），以
+// `skin-square-split.ts` 为准 —— 本文件的**定案路径委托给它**（sqSplitBuild），
+// 只有下面这些**探索**用的量还留在原来的尺度上。加厚那轮的参数化工具是 split-thick.mjs。
 const H = SQUARE.H; // 箱高一圈恒定 = 方形族的定义
-const F_TOT = squareFreeTotal(); // 133 —— 与平档同一份分配 ⇒ 平台高度逐位相同
+const F_TOT = squareFreeTotal(); // 133 —— 最早那一轮与平档同一份分配
 const LEAD = squareLead();
 const R1 = SKIN.R1;
 
