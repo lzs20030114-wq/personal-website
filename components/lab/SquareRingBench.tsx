@@ -23,6 +23,7 @@ import {
   type SquareTier,
 } from '../../src/lib/space/skin-square';
 import {
+  SQSPLIT,
   buildSquareSplitOrder,
   buildSquareSplitUnits,
   sqSplitHalfSide,
@@ -287,7 +288,7 @@ export function SquareRingBench({
         kicker: 'Lab.14 / Project II',
         title: T.title,
         sub: split
-          ? T.split(SQUARE.COUNT, SQUARE.H, SPLIT.side)
+          ? T.split(SQUARE.COUNT, SQSPLIT.H, SPLIT.side)
           : grid
             ? T.grid(SQUARE_GRID.COLS, SQUARE_GRID.ROWS, squareCellPitch().toFixed(0), outline, wave)
             : wave

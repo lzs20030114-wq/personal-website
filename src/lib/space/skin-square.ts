@@ -98,30 +98,36 @@ export const SQUARE_RUNGS = (STEPPED.spec[1] as readonly ['f', number, readonly 
 
 /** 端面板半跨 = 最内那根梯挡（等长键纪律 + 端面硬投影的触发条件，坑①） */
 export const SQUARE_PW = Math.round(SQUARE.H / 4);
+/** 同上，但按给定箱高算——捏分编制用比平档高的箱（默认 = 平档，逐位不变） */
+export const squarePw = (h: number = SQUARE.H): number => Math.round(h / 4);
 
 /** 自由段 fs 节在收缩终点的轴向跨度（px） */
 export function squareSpan(kMax: number, b: number): number {
   return 2 * SKIN.R1 * (2 * (kMax + b) + 1 - 1);
 }
-/** 轴向间隙 = 自由段跨度 − 箱高。**必须为正**（坑②） */
-export function squareGap(kMax: number, b: number): number {
-  return squareSpan(kMax, b) - SQUARE.H;
+/**
+ * 轴向间隙 = 自由段跨度 − 箱高。**必须为正**（坑②）。
+ * `h` 省略 = 平档箱高；捏分编制用更高的箱（2026-09-01 用户「整体厚一些」），
+ * 传入它自己那个高度 ⇒ 平档路径逐位不变。
+ */
+export function squareGap(kMax: number, b: number, h: number = SQUARE.H): number {
+  return squareSpan(kMax, b) - h;
 }
 /** 折叠余量 = 缓冲材料 4b − 它要跨的轴向间隙（>0 = 折着，<0 = 被拉直） */
-export function squareSlack(kMax: number, b: number): number {
-  return 4 * b - squareGap(kMax, b);
+export function squareSlack(kMax: number, b: number, h: number = SQUARE.H): number {
+  return 4 * b - squareGap(kMax, b, h);
 }
 /** 缓冲 b：同时满足「住得下」与「折得起来」的最小值 */
-export function squareBuffer(kMax: number): number {
+export function squareBuffer(kMax: number, h: number = SQUARE.H): number {
   let b = SQUARE.BUF_MIN;
-  while (squareGap(kMax, b) < SQUARE.G_MIN || squareSlack(kMax, b) < SQUARE.E_MIN) b++;
+  while (squareGap(kMax, b, h) < SQUARE.G_MIN || squareSlack(kMax, b, h) < SQUARE.E_MIN) b++;
   return b;
 }
 
 /** 该档的梯挡半跨表：最内钉死在端面板端点、最外 = kMax，其余均分（根数恒定） */
-export function squareLadder(kMax: number): number[] {
+export function squareLadder(kMax: number, pw: number = SQUARE_PW): number[] {
   const ks = Array.from({ length: SQUARE_RUNGS }, (_, i) =>
-    Math.round(SQUARE_PW + ((kMax - SQUARE_PW) * i) / (SQUARE_RUNGS - 1)),
+    Math.round(pw + ((kMax - pw) * i) / (SQUARE_RUNGS - 1)),
   );
   return [...new Set(ks)];
 }
@@ -227,12 +233,14 @@ export function squareSpec(
   kMax: number,
   fTotal: number = squareFreeTotal(),
   leadAt: number = squareLead(fTotal),
+  h: number = SQUARE.H,
 ): SkinSpec {
-  const b = squareBuffer(kMax);
+  const b = squareBuffer(kMax, h);
   const fs = squareFree(kMax, b);
   const c = (fs - 1) / 2;
-  const bonds: SkinBond[] = squareLadder(kMax).map((k) => [c - k, c + k, SQUARE.H / 100]);
-  const seg: SkinSeg = ['f', fs, bonds, [[c - SQUARE_PW, c + SQUARE_PW]]];
+  const pw = squarePw(h);
+  const bonds: SkinBond[] = squareLadder(kMax, pw).map((k) => [c - k, c + k, h / 100]);
+  const seg: SkinSeg = ['f', fs, bonds, [[c - pw, c + pw]]];
   return squareWrap(seg, fTotal, leadAt, `k=${kMax}`).spec;
 }
 

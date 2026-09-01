@@ -50,17 +50,35 @@
 import { SKIN_ROOT_FIX, type SkinBond, type SkinPanel, type SkinSeg, type SkinSpec, type SkinUnitOpts } from './skin-unit';
 import { skinSiteOpts, SKIN_UNITS } from './skin-data';
 import {
-  SQUARE, SQUARE_PW, SQUARE_RUNGS, buildSquareOrder, squareAngle, squareBuffer,
-  squareDepthK, squareFree, squareFreeTotal, squareLead, squareSpec, squareWrap,
+  SQUARE, SQUARE_RUNGS, buildSquareOrder, squareAngle, squareBuffer,
+  squareFree, squareFreeTotal, squareLead, squarePw, squareSpec, squareWrap,
 } from './skin-square';
 import type { RingUnitDef } from './skin-ring';
 
 const STEPPED = SKIN_UNITS.find((d) => d.key === 'stepped')!;
 
 export const SQSPLIT = {
-  /** 终态缝宽（用户 2026-09-01 拍板 12：两片 12 高的台夹一道 12 的缝）。
-   *  与材料账无关、纯审美——实测 8/12/16/20 都跑得干净（挑出 47.0–47.2 逐档同）。 */
-  W_END: 12,
+  /**
+   * **箱高**（2026-09-01 用户「整体厚一些…大概收缩到最多的时候也要有这么厚」，
+   * 截图上红线量下来 ≈69）。平档是 36，这一档单独用 68 = **1.9×**。
+   *
+   * 为什么不是「等比放大」：一条带的布料钉死 202 节，而形的周长跟着放大倍数长，
+   * **等比 g=1.05 就爆预算**（结构自由段 141 > 133）。而**只长高几乎不花钱**——
+   * 箱高在材料账两边同时出现（箱高涨 ⇒ 自由段留给缓冲的间隙变小 ⇒ 所需缓冲变少），
+   * 正好抵消：`M ≤ (1.4F + H − 1.4 − e)/4` 与 `M = 挑出/2 + 缝深/2 + H/4` 的 H 项同斜率。
+   * 上限由打结定：H=68 干净（结 3）、72 起箱高失准且打结（实测 71.4 / 结 33）。
+   *
+   * **代价：三档深度必须在新箱高上重标**——长高会把布料从深度挪到高度
+   * （角档在旧 k=46 上从 77.9 掉到 58.2）。重标后方形 153px ≈ 原来的 152。
+   */
+  H: 68,
+  /**
+   * 终态缝宽（2026-09-01 随箱高重标：两片台各 22 高、缝 24，与原来 12/12/12 的
+   * 三等分读法一致）。**打结的坏点是孤立的**：H=68 时缝 19/20/21/24/25/27/28/29
+   * 都干净，只有 23 打结（环 36）——而 23 恰好是从 36:12 严格等比来的那个数，
+   * 故取 24。缝宽不影响材料账（台高与缝在 M 里合成 H/4），是纯审美旋钮。
+   */
+  W_END: 24,
   /** 边档的形态位置（拍板 0.5：缝开到一半、切进 44%，Δ 最干净）。
    *  可用区间不宽：0.35 箱高失准到 40.4、0.65 形崩到 Δ16.7。 */
   EDGE_T: 0.5,
@@ -78,7 +96,7 @@ export const sqSplitSeamW = (t: number, wEnd: number = SQSPLIT.W_END): number =>
 export const sqSplitSink = (t: number, D: number): number => D * Math.pow(t, 1.2);
 export const sqSplitTip = (t: number): number => 0.4 + 0.6 * t;
 /** 缝宽换台高 ⇒ 2·台高 + 缝 = H 恒定 */
-export const sqSplitLobe = (t: number, wEnd: number = SQSPLIT.W_END): number => (SQUARE.H - sqSplitSeamW(t, wEnd)) / 2;
+export const sqSplitLobe = (t: number, wEnd: number = SQSPLIT.W_END): number => (SQSPLIT.H - sqSplitSeamW(t, wEnd)) / 2;
 
 /**
  * 缓冲：折得起来（余量 ≥ E_MIN）且住得下（间隙 ≥ G_MIN）。
@@ -89,17 +107,17 @@ export const sqSplitLobe = (t: number, wEnd: number = SQSPLIT.W_END): number => 
 export function sqSplitBuffer(M: number): number {
   for (let b = SQUARE.BUF_MIN; b < 60; b++) {
     const span = 1.2 * (M + b);
-    if (span - SQUARE.H >= SQUARE.G_MIN && 4 * b - (span - SQUARE.H) >= SQUARE.E_MIN) return b;
+    if (span - SQSPLIT.H >= SQUARE.G_MIN && 4 * b - (span - SQSPLIT.H) >= SQUARE.E_MIN) return b;
   }
   throw new Error(`捏分档缓冲解不出来：M=${M}`);
 }
 
 /** 材料账天花板：结构半跨 M 的上限（解析；slack ≥ e 与 free ≤ F 联立消去 BUF） */
 export const sqSplitMCap = (fTotal: number = squareFreeTotal(), e: number = SQUARE.E_MIN): number =>
-  (1.4 * fTotal + SQUARE.H - 1.4 - e) / 4;
-/** 满裂平台的设计深度上限（解析）——H 在两边抵消 ⇒ 与箱高无关 */
+  (1.4 * fTotal + SQSPLIT.H - 1.4 - e) / 4;
+/** 满裂平台的设计深度上限（解析）——H 在两边抵消 ⇒ **与箱高无关**（长高不能换来更深） */
 export const sqSplitDCap = (fTotal: number = squareFreeTotal(), e: number = SQUARE.E_MIN): number =>
-  sqSplitMCap(fTotal, e) - SQUARE.H / 4;
+  sqSplitMCap(fTotal, e) - SQSPLIT.H / 4;
 
 /** 梯挡：10 根，最内钉在端面板端点 f（端面硬投影的触发条件，§17.3 坑①），最外 = M */
 export function sqSplitLadder(f: number, M: number): number[] {
@@ -125,8 +143,8 @@ export interface SqSplitTier {
   count: number;
   /** 形态位置（0 = 单箱，1 = 满裂） */
   t: number;
-  /** 几何目标挑出（px）——tether 的绝对深度锚与目标线用 */
-  D: number;
+  /** tether 的绝对深度锚（px；斜坡上限按它给）。单箱那一档没有缝、不需要它 */
+  D?: number;
   /** 箱设计深度（px；等长键箱终态比它鼓出约 +4，故要标定、不能直接拿目标值当设计值） */
   boxD?: number;
   /** 单箱那一档：直接走平档原谱的 kMax */
@@ -146,20 +164,30 @@ export interface SqSplitTier {
  * 外缘点对方形偏差 ≤0.2px；全程峰值挑出 = 终态（无鼓胀）⇒ 阵列格距与取景不用重排。
  */
 export const SQSPLIT_TIERS: readonly SqSplitTier[] = [
-  // D 是 tether 的绝对深度锚（斜坡上限按它给），**取标定第二遍自洽后的值**：
-  // 第一遍用 boxD+鼓出量 46 跑出挑出 46.8，回代 46.8 再跑得 47.1 —— 差的 1.7% 全在
-  // 斜坡上限上。填第一遍的 46 会少 0.3px（搬运时踩过一次，实测抓出来的）。
-  { name: '面', en: 'face', count: 8, t: 1, D: 46.8, boxD: 40 },
-  { name: '边', en: 'edge', count: 8, t: SQSPLIT.EDGE_T, D: 55.5, boxD: 46 },
-  { name: '角', en: 'corner', count: 4, t: 0, D: 77.7, k: 46 },
+  // D 是 tether 的绝对深度锚（斜坡上限按它给），与 boxD 是**两个独立的量**：等长键箱
+  // 终态比设计值鼓一截，故两者都要标定，不能拿目标值当设计值（2026-09-01 搬运时踩过）。
+  { name: '面', en: 'face', count: 8, t: 1, D: 45.7, boxD: 40 },
+  // 边档的 D 取 64（比它自己的目标挑出 56 高一截）：tether 斜坡放宽后这一档的**落位**
+  // 明显更准——D58 时缝心比面/角高 8.7px，D64 只高 3.3px，外缘偏差还从 1.3 降到 0.4。
+  // （原先只按外缘偏差挑配置，挑到了落位最偏的那个；对位也要进选优。）
+  { name: '边', en: 'edge', count: 8, t: SQSPLIT.EDGE_T, D: 64, boxD: 52 },
+  { name: '角', en: 'corner', count: 4, t: 0, k: 53 },
 ];
 
 /** 三档实测终态挑出（px）——守门逐位核对 */
-export const SQSPLIT_REACH: readonly number[] = [47.1, 55.6, 77.9];
+export const SQSPLIT_REACH: readonly number[] = [46.4, 56.5, 78.9];
 
-/** 目标方形的半边长（由面档实测挑出反推） */
-export function sqSplitHalfSide(reach: readonly number[] = SQSPLIT_REACH): number {
-  return (reach[0] + SQUARE.RADIUS) * Math.cos(Math.PI / SQUARE.COUNT);
+/**
+ * 目标方形的半边长。**不是从面档反推的**——变厚后三档的深度旋钮变粗（角档 k 一格
+ * 就是 2–3px、边档 boxD 一格 1.2px），按面档定 a 会让另两档差到 3px。改为把 a 也放进
+ * 优化：在可达集合上扫 a、取三档最大外缘偏差最小的那个（1.31px）。
+ * 实测边长 **153px**，与变厚前的 152 基本一致。
+ */
+export const SQSPLIT_HALF_SIDE = 76.7;
+
+/** 目标方形的半边长 */
+export function sqSplitHalfSide(): number {
+  return SQSPLIT_HALF_SIDE;
 }
 
 /** 一档的谱 + 选项 + 关键节点下标 */
@@ -173,27 +201,29 @@ export function sqSplitBuild(tier: SqSplitTier, wEnd: number = SQSPLIT.W_END): {
   const fTotal = squareFreeTotal();
   if (tier.t <= 0) {
     // 角档 = 平档原谱（只是浅一档）——构造完全复用 squareSpec，不另写一份
-    const k = tier.k ?? squareDepthK(tier.D);
-    const b = squareBuffer(k);
+    const k = tier.k!;
+    const b = squareBuffer(k, SQSPLIT.H);
     const free = squareFree(k, b);
     const base = squareLead(fTotal) + (fTotal - free) / 2 + SQUARE.ISO;
     const c = base + (free - 1) / 2;
+    const pw = squarePw(SQSPLIT.H);
     return {
-      spec: squareSpec(k),
+      spec: squareSpec(k, fTotal, squareLead(fTotal), SQSPLIT.H),
       opts: { ...skinSiteOpts(STEPPED), ...FORM },
       lead: base,
       free,
-      marks: { center: c, mouthA: c, mouthB: c, faceA: c - SQUARE_PW, faceB: c + SQUARE_PW, outA: c - k, outB: c + k },
+      marks: { center: c, mouthA: c, mouthB: c, faceA: c - pw, faceB: c + pw, outA: c - k, outB: c + k },
     };
   }
   const w = sqSplitSeamW(tier.t, wEnd);
-  const dv = sqSplitSink(tier.t, tier.D);
+  const D = tier.D!;
+  const dv = sqSplitSink(tier.t, D);
   const wt = w * sqSplitTip(tier.t);
-  const lobe = (SQUARE.H - w) / 2;
+  const lobe = (SQSPLIT.H - w) / 2;
   const faceN = Math.round(lobe / 2);
   const a = Math.max(1, Math.round(wt / 4));
   const wallN = Math.max(1, Math.round(dv / 2));
-  const boxD = tier.boxD ?? Math.round(tier.D / 2) * 2;
+  const boxD = tier.boxD ?? Math.round(D / 2) * 2;
   const m = a + wallN; // 缝角
   const f = m + faceN; // 面角
   const M = f + boxD / 2; // 轴嘴
@@ -210,16 +240,16 @@ export function sqSplitBuild(tier: SqSplitTier, wEnd: number = SQSPLIT.W_END): {
   const faceUp: SkinBond[] = [[c - f, c - m, lobe / 100]];
   const faceDn: SkinBond[] = [[c + m, c + f, lobe / 100]];
   const panels: SkinPanel[] = [[c - f, c - m], [c + m, c + f], [c - a, c + a]];
-  const bonds: SkinBond[] = sqSplitLadder(f, M).map((k) => [c - k, c + k, SQUARE.H / 100]);
+  const bonds: SkinBond[] = sqSplitLadder(f, M).map((k) => [c - k, c + k, SQSPLIT.H / 100]);
   const seg: SkinSeg = ['f', free, bonds, panels, [crack, faceUp, faceDn]];
   const { spec, base } = squareWrap(seg, fTotal, squareLead(fTotal), `${tier.name}档 t=${tier.t}`);
 
   const c0 = base + c;
-  const rTip = (tier.D - dv) / 100;
+  const rTip = (D - dv) / 100;
   const tether: [number, number][] = [];
   for (let k = -a; k <= a; k++) tether.push([c0 + k, rTip]);
   for (let k = a + 1; k <= m; k++) {
-    const r = rTip + ((k - a) * (tier.D / 100 - rTip)) / wallN;
+    const r = rTip + ((k - a) * (D / 100 - rTip)) / wallN;
     tether.push([c0 + k, r], [c0 - k, r]);
   }
   // 缝区折痕待命（同侧规则：缝壁贴同侧缝角、缝心贴双角。跨侧耦合会把形拖塌）
@@ -275,7 +305,7 @@ export function sqSplitRim(
   reach: readonly number[] = SQSPLIT_REACH,
   count: number = SQUARE.COUNT,
 ): { x: number; z: number; dev: number }[] {
-  const a = sqSplitHalfSide(reach);
+  const a = sqSplitHalfSide();
   return buildSquareSplitOrder(count).map((t, i) => {
     const th = squareAngle(i, count);
     const rr = SQUARE.RADIUS + reach[t];
