@@ -47,6 +47,7 @@ import {
   squareFreeTotal, squareLead, squareSpec, squareDepthK, squareReachOf, SQUARE_TIERS,
 } from '../../src/lib/space/skin-square.ts';
 import { skinSiteOpts, SKIN_UNITS } from '../../src/lib/space/skin-data.ts';
+import { SQSPLIT, SQSPLIT_TIERS, sqSplitBuild } from '../../src/lib/space/skin-square-split.ts';
 import { RING_BAND_NODES } from '../../src/lib/space/skin-ring.ts';
 
 const OUT = process.argv[2] ?? 'split-square.svg';
@@ -61,6 +62,7 @@ const R1 = SKIN.R1;
 
 /** 形态时间表：缝宽（张得快）· 缝深（退得稳）· 缝尖宽/缝嘴宽 —— 沿用捏分族原式 */
 const seamW = (t, wEnd) => wEnd * Math.pow(t, 0.7);
+const sqSplitSeamWLocal = (t, wEnd) => (t <= 0 ? 0 : seamW(t, wEnd));
 const seamSink = (t, D) => D * Math.pow(t, 1.2);
 const tipRatio = (t) => 0.4 + 0.6 * t;
 
@@ -106,6 +108,15 @@ const ladder = (f, M) => [
  */
 function build(D, t, opt = {}) {
   const wEnd = opt.wEnd ?? 12;
+  // **定案路径委托给站上模块**（§17 纪律：线稿与站上共用一份实现——留两份必然漂，
+  // 本轮搬运时就漂过一次：tether 的 D 填成标定第一遍的 46 而非自洽后的 46.8，少 0.3px）。
+  // 下面那份本地构造只服务**探索用的旋钮**（varH 走出路 C 的对照、lvl / attNear /
+  // wallStep / 缓冲覆写 / formLikeSplit），那些不进 src/。
+  const EXPLORE = ['varH', 'lvl', 'attNear', 'wallStep', 'buf', 'e', 'g', 'formLikeSplit'];
+  if (!EXPLORE.some((k) => opt[k] !== undefined)) {
+    const b = sqSplitBuild({ name: '·', en: 'x', count: 0, t, D, boxD: opt.boxD, k: opt.k }, wEnd);
+    return { t, D, boxD: opt.boxD ?? null, k: opt.k ?? null, wEnd, ...b, M: null, buf: null, seam: sqSplitSeamWLocal(t, wEnd), lobe: (H - sqSplitSeamWLocal(t, wEnd)) / 2, dv: seamSink(t, D), hBox: H };
+  }
   if (t <= 0) {
     // 角档 = 方形族原谱（只是浅一档）——构造完全复用，不另写一份
     const k = opt.k ?? squareDepthK(D);

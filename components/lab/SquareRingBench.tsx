@@ -22,6 +22,11 @@ import {
   squareMorphTiers,
   type SquareTier,
 } from '../../src/lib/space/skin-square';
+import {
+  buildSquareSplitOrder,
+  buildSquareSplitUnits,
+  sqSplitHalfSide,
+} from '../../src/lib/space/skin-square-split';
 import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
 
 /**
@@ -77,9 +82,21 @@ const MORPH = Array.from({ length: SQUARE_MORPH.STEPS }, (_, s) => {
   };
 });
 
+/**
+ * 捏分编制（用户 2026-09-01 拍板：收方形小一圈 · 缝 12 · 边档 t=0.5 · 角档实心箱）。
+ * 一圈四个来回：… 边 面 面 边 │ 角 │ …，而俯视轮廓仍是方的（边长 152px）。
+ * 谱与几何全在 skin-square-split.ts（线稿脚本与站上共用一份）；这里只取数据。
+ */
+const SPLIT = {
+  units: buildSquareSplitUnits().map(strip),
+  order: buildSquareSplitOrder(),
+  side: Math.round(2 * sqSplitHalfSide()),
+};
+
 const PLANS = [
   { key: 'flat', label: '整环平' },
   { key: 'wave', label: '一圈起伏' },
+  { key: 'split', label: '捏分' },
 ] as const;
 type PlanKey = (typeof PLANS)[number]['key'];
 
@@ -109,6 +126,10 @@ const HUD = {
       `${n} 条窄带 · 三档深度不变 · 高度沿圆周起伏 ${swing}px · ${levels} 级 · ${outline}`,
     flat: (n: number, reach: string, h: number, outline: string) =>
       `${n} 条窄带 · 三档深度 ${reach}px · 箱高恒定 ${h}px · ${outline}`,
+    split: (n: number, h: number, side: number) =>
+      `${n} 条窄带 · 一圈四个来回：单箱 → 开缝 → 裂成两台 → 合拢 · 箱高仍恒定 ${h}px · 方 · 边长 ${side}px`,
+    splitHint: (rungs: number) =>
+      `面 8 裂开 · 边 8 开一半 · 角 4 实心箱 · 每条带 ${rungs} 挡 · 轴测看裂开 · 顶视看方形 · 拖拽旋转`,
     hint: (tiers: string, rungs: number, wave: boolean) =>
       `${tiers} · 每条带 ${rungs} 挡 · ${wave ? '俯视看轮廓 · 侧看起伏' : '顶视看轮廓'} · 拖拽旋转`,
     aria: '方形环：二十条窄织物带围成一圈，每条带按自己在方形里的位置挑出不同长度，收缩后二十个挑台连成一圈俯视为正方形的平台；箱高一圈恒定，可拖拽旋转',
@@ -124,6 +145,10 @@ const HUD = {
       `${n} narrow bands · depths unchanged · height swings ${swing} px once around · ${levels} levels · ${outline}`,
     flat: (n: number, reach: string, h: number, outline: string) =>
       `${n} narrow bands · three depths ${reach} px · box ${h} px high everywhere · ${outline}`,
+    split: (n: number, h: number, side: number) =>
+      `${n} narrow bands · four round trips: one box, a notch, two shelves, closed again · still ${h} px high everywhere · a square, side ${side} px`,
+    splitHint: (rungs: number) =>
+      `8 split · 8 half-open · 4 solid at the corners · ${rungs} rungs on every band · the split reads from the side, the plan from above · drag to orbit`,
     hint: (tiers: string, rungs: number, wave: boolean) =>
       `${tiers} · ${rungs} rungs on every band · ${wave ? 'plan from above, swing from the side' : 'read the plan from above'} · drag to orbit`,
     aria:
@@ -148,9 +173,10 @@ export function SquareRingBench({
   const [layout, setLayout] = useState<LayoutKey>('single');
   const [shape, setShape] = useState<number>(SQUARE_MORPH.DEF);
   const wave = plan === 'wave';
+  const split = plan === 'split';
   const grid = layout === 'grid';
   const m = MORPH[shape];
-  const order = wave ? m.wave.order : m.flat.order;
+  const order = split ? SPLIT.order : wave ? m.wave.order : m.flat.order;
   /** 这一档的轮廓怎么念（圆 / 圆角方 / 方） */
   const outline =
     shape === 0
@@ -163,9 +189,19 @@ export function SquareRingBench({
       active={active}
       onLight={onLight}
       controls={controls}
-      units={wave ? m.wave.units : m.flat.units}
+      units={split ? SPLIT.units : wave ? m.wave.units : m.flat.units}
       order={order}
-      unitsKey={`${plan}:${layout}:${shape}`}
+      unitsKey={`${plan}:${layout}:${split ? 'sq' : shape}`}
+      // 捏分是**竖向**特征（两片台夹一道缝），顶视投影里根本不出现 ⇒ 换编制时换机位。
+      // 走 view prop 而不是 layouts[].home：home 在主 effect（[]-deps）挂载时读取，
+      // 换编制不会重取（§14.4 记过的闭包坑）
+      view={split ? 'axon' : 'top'}
+      // 膜：整环平要它把二十条糊成闭合的筒（0.35）；捏分要看见那道缝，故调低到 0.15
+      // （Lab.13 捏分环同款理由与同款数）。**顶视的方形在捏分档读不出来**——环间膜按
+      // 节点下标配对，而捏分档共享的那个下标是「缝底」（x=0）、平档那里是「箱尖」，
+      // 于是角带的尖被连到邻带的缝底、膜整片往里凹成花瓣。调不透明度救不回来（实测），
+      // 要改膜的配对规则（skin-solid 的几何），是单独一轮的活。故这一档看点在轴测/侧视。
+      skinValue={split ? 0.15 : 0.35}
       // 起伏要解十一条引擎（平档只有三条）⇒ 推进速率随之降，同 Lab.08/09 渐变的做法。
       // **阵列不加负担**：十六格是同一份顶点摆十六处（gl3d 的摆放表），物理仍是那几条带
       rate={wave ? 80 : 110}
@@ -204,7 +240,10 @@ export function SquareRingBench({
                 <button
                   key={lb}
                   type="button"
-                  className={i === shape ? 'active' : undefined}
+                  className={!split && i === shape ? 'active' : undefined}
+                  // 捏分下变灰：「缝只能在面档最深、角档为零」是**方形专有**的材料账推论，
+                  // 而圆那一档三个方位类挑出相同、没有几何依据（Lab.09 渐变同款做法）
+                  disabled={split}
                   onClick={() => setShape(i)}
                 >
                   {lb}
@@ -247,16 +286,20 @@ export function SquareRingBench({
       hud={{
         kicker: 'Lab.14 / Project II',
         title: T.title,
-        sub: grid
-          ? T.grid(SQUARE_GRID.COLS, SQUARE_GRID.ROWS, squareCellPitch().toFixed(0), outline, wave)
-          : wave
-            ? T.wave(SQUARE.COUNT, (SQUARE_WAVE.LOW - SQUARE_WAVE.HIGH) * 2, SQUARE_WAVE.LEVELS, outline)
-            : T.flat(SQUARE.COUNT, m.reach.map((r) => r.toFixed(0)).join(' / '), SQUARE.H, outline),
-        hint: T.hint(
-          SQUARE_TIERS.map((t, i) => `${lang === 'zh' ? t.name : t.en} ${t.count}·k${m.tiers[i].k}`).join(' · '),
-          SQUARE_RUNGS,
-          wave,
-        ),
+        sub: split
+          ? T.split(SQUARE.COUNT, SQUARE.H, SPLIT.side)
+          : grid
+            ? T.grid(SQUARE_GRID.COLS, SQUARE_GRID.ROWS, squareCellPitch().toFixed(0), outline, wave)
+            : wave
+              ? T.wave(SQUARE.COUNT, (SQUARE_WAVE.LOW - SQUARE_WAVE.HIGH) * 2, SQUARE_WAVE.LEVELS, outline)
+              : T.flat(SQUARE.COUNT, m.reach.map((r) => r.toFixed(0)).join(' / '), SQUARE.H, outline),
+        hint: split
+          ? T.splitHint(SQUARE_RUNGS)
+          : T.hint(
+              SQUARE_TIERS.map((t, i) => `${lang === 'zh' ? t.name : t.en} ${t.count}·k${m.tiers[i].k}`).join(' · '),
+              SQUARE_RUNGS,
+              wave,
+            ),
         aria: T.aria,
       }}
     />

@@ -28,7 +28,8 @@ export const metadata = { title: 'The lab' };
  * 07 是同一引擎的立体带呈现，几何烘焙 skin-solid + 复用 gl3d/camera3d 装备；
  * 08 = 十二条带的键谱渐变阵列；09 = 二十条同谱窄带围成圆筒、收缩成环形平台；10 = 十六个那样的圆筒环吊在一间房里铺成 4×4 网格，地上站着人作比例；
  * 11 = 双结构带——五段谱一条带折出上下两个结构，两条拉链各自独立；
- * 12 = 捏分过渡——十级从单箱裂成两台，每级一份单独设计的谱）。
+ * 12 = 捏分过渡——十级从单箱裂成两台，每级一份单独设计的谱；
+ * 14 第三种编制「捏分」= 把那个来回搬上方形环：一圈四个来回，而俯视轮廓仍是方的）。
  * 2026-08-18 起页面按项目分组（MAPPING §16）——log 页先例：多项目共用一条主线。
  */
 const KICKER: CSSProperties = {
@@ -468,7 +469,7 @@ export default function LabPage() {
           accent="var(--accent-2)"
           specs={[
             ['Ring', '20 bands · three depths — 8 face · 8 edge · 4 corner'],
-            ['Plans', 'Flat, or undulating — height waves once around'],
+            ['Plans', 'Flat, undulating — or pinched, where the box splits into two shelves'],
             ['Layout', 'One ring, or sixteen — pitch set edge-to-edge'],
             ['Plan', 'Circle to square in five (|x|ⁿ+|z|ⁿ = aⁿ) · square side 169 px, rim within 0.9 px'],
             ['Reach', '54 / 54 / 54 round · 56 / 64 / 89 square'],
@@ -476,6 +477,9 @@ export default function LabPage() {
             ['Ladder', '10 rungs on every band, pitched closer when shallow'],
             ['Flat', 'Platform spread 0.0 px — the padding makes it, not a fit'],
             ['Wave', '40 px swing · shape unchanged, only where it sits'],
+            ['Pinch', 'Four round trips: one box → a notch → two shelves → closed again'],
+            ['Pinched box', 'Still 36 px high · square side 152 px · seam cuts to the mast'],
+            ['Why four', 'Reach and seam draw on the same fabric — only the shallow face can split'],
             ['Radius', 'Fixed: the depths are calibrated against it'],
             ['Ceiling', 'Ring plate · fixed masts, skin gathers down them'],
           ]}

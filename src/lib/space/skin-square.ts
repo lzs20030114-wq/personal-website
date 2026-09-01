@@ -233,14 +233,34 @@ export function squareSpec(
   const c = (fs - 1) / 2;
   const bonds: SkinBond[] = squareLadder(kMax).map((k) => [c - k, c + k, SQUARE.H / 100]);
   const seg: SkinSeg = ['f', fs, bonds, [[c - SQUARE_PW, c + SQUARE_PW]]];
+  return squareWrap(seg, fTotal, leadAt, `k=${kMax}`).spec;
+}
+
+/**
+ * 七段谱包装（对位构造 v4 的配平垫）——**平档与捏分档共用这一份**。
+ * `[贴合 lead | 垫 p | 隔离 ISO | 结构 | 隔离 ISO | 垫 p | 尾 tail]`，垫对称（坑③），
+ * 垫 + 结构 = fTotal 恒定 ⇒ 嘴心 = 2(lead+ISO) + 2r·(fTotal−1)/2 与档位无关。
+ * 返回 `base` = 结构段的绝对起点（读数窗口与 marks 用，别从垫上量）。
+ */
+export function squareWrap(
+  seg: SkinSeg,
+  fTotal: number = squareFreeTotal(),
+  leadAt: number = squareLead(fTotal),
+  who = '',
+): { spec: SkinSpec; base: number } {
+  const fs = seg[1];
   const p = (fTotal - fs) / 2;
   const lead = leadAt;
   const tail = RING_BAND_NODES - 2 * SQUARE.ISO - fTotal - lead;
   if (p < 0 || lead < SQUARE.LEAD_MIN || tail < SQUARE.TAIL_MIN)
-    throw new Error(`方形环档位越界：k=${kMax} 垫=${p} lead=${lead} tail=${tail}`);
+    throw new Error(`方形环档位越界：${who} 垫=${p} lead=${lead} tail=${tail}`);
+  if (p % 1 !== 0) throw new Error(`配平垫 ${p} 非整数（自由段应为奇数）：${who}`);
   return p > 0
-    ? [['g', lead], ['f', p, []], ['g', SQUARE.ISO], seg, ['g', SQUARE.ISO], ['f', p, []], ['g', tail]]
-    : [['g', lead + SQUARE.ISO], seg, ['g', SQUARE.ISO + tail]];
+    ? {
+        spec: [['g', lead], ['f', p, []], ['g', SQUARE.ISO], seg, ['g', SQUARE.ISO], ['f', p, []], ['g', tail]],
+        base: lead + p + SQUARE.ISO,
+      }
+    : { spec: [['g', lead + SQUARE.ISO], seg, ['g', SQUARE.ISO + tail]], base: lead + SQUARE.ISO };
 }
 
 /** 三档的引擎定义（同一张方箱的整形选项，只换键谱） */

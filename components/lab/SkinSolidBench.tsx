@@ -298,6 +298,8 @@ export function SkinSolidBench({
   axon,
   rail = 'core',
   unitsKey,
+  view: viewProp,
+  skinValue,
   extraControls,
 }: {
   active?: boolean;
@@ -383,6 +385,20 @@ export function SkinSolidBench({
   rail?: 'core' | 'fixed';
   /** units/order 的版本号：变了就整场重建引擎（Lab.09 换形态即此），不重挂 WebGL 上下文 */
   unitsKey?: string;
+  /**
+   * 外部指定膜的不透明度（默认 undefined ⇒ 不干预，Lab.07–14 逐位不变）。
+   * 与 `skin.def` 的区别：那个只在挂载时读一次，这个随 prop 变化生效——同一台上
+   * 不同编制对膜的需求可能相反（整环平要膜糊成闭合的筒；捏分要看见那道缝）。
+   */
+  skinValue?: number;
+  /**
+   * 外部指定机位（默认 undefined ⇒ 不干预，Lab.07–14 逐位不变）。
+   * 值一变就切过去，与用户点视角按钮不冲突（只在 prop 变化时生效）。
+   * 动机：同一台上不同编制的看点可能在不同方向——Lab.14 的方形要俯视才读得出，
+   * 而它的捏分编制是**竖向**特征（两片台夹一道缝），俯视投影里根本不出现。
+   * `home` 是排布级属性、在主 effect（[]-deps）挂载时读取，换编制不会重取（§14.4 的坑）。
+   */
+  view?: ViewKey;
   /** 台架自己的控件（塞进控制条最前面）——Lab.09 的形态选择 */
   extraControls?: ReactNode;
 }) {
@@ -1031,6 +1047,23 @@ export function SkinSolidBench({
     setView(k);
     apiRef.current?.viewTo(k);
   }, []);
+
+  // 外部指定膜：只在 prop 变化时应用（挂载那次由 skin.def 负责）
+  const skinPropRef = useRef(skinValue);
+  useEffect(() => {
+    if (skinValue === undefined || skinValue === skinPropRef.current) return;
+    skinPropRef.current = skinValue;
+    setSkinV(skinValue);
+    apiRef.current?.setSkin(skinValue);
+  }, [skinValue]);
+
+  // 外部指定机位：只在 prop 变化时切（挂载那次由 layouts[].home 负责，不重复切）
+  const viewPropRef = useRef(viewProp);
+  useEffect(() => {
+    if (!viewProp || viewProp === viewPropRef.current) return;
+    viewPropRef.current = viewProp;
+    goView(viewProp);
+  }, [viewProp, goView]);
 
   const goLayout = useCallback((li: number) => {
     setLayout(li);
