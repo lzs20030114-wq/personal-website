@@ -851,3 +851,24 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
 - CDP 生产实测：五台活件、canvas 恒 4（Lab.06 是 SVG）；清掉 `site-lang` 后默认 EN，
   切中文后五台 HUD 与六条图注全翻、canvas 仍 4（没被 Pick 渲两份）；/lab 十四台并存
   且 Lab.08 默认仍是并拢+侧；无 pageerror。433 测试绿（无新增）。
+
+
+## 23. /lab 两栏对齐：台架框不拉伸 + 左栏框内滚（2026-08-31 / 09-01）
+
+`.lab-section` 是两列 grid，行高由更长的那一栏定。两条都是用户看真机指出来的：
+
+- **台架框不再被拉满行高**（`alignSelf: start`）。左栏比台架长时，`stretch` 会把那个
+  带边框的盒子拉成一个空框，框线一路画到底下什么也没有——Lab.14 实测空了 614px，
+  Lab.10 / 12 各 132 / 110px。
+- **左栏改成框内滚**（`.lab-copy` / `.lab-copy__inner`）。内容用 `position:absolute;
+  inset:0` 抽出文档流 ⇒ **行高只由台架那栏定**，左栏再长也不撑高这一行；两栏因此
+  永远等高、底边齐平。窄屏（<1024px）单列下整段规则不生效——那时左右变成上下两块，
+  限高滚动只会更难读（实测 900px 下 `position:static / overflow:visible`）。
+- **「下面还有」的提示不能只靠滚动条**：macOS 与 headless Chromium 都是 overlay 滚动条，
+  静置时根本不画（本轮截图实测看不见），读者会以为规格表只有两行。渐隐又必须条件化——
+  内容没超出时挂一层渐隐会把规格表末行的发丝线糊掉，而纯 CSS 做不到这个条件
+  （sticky 在内容短时照样贴底，`animation-timeline: scroll()` 兼容性还不稳）。
+  故加最小客户端组件 `components/lab/LabCopyScroll.tsx`：只在还能往下滚时给
+  `.lab-copy` 挂 `data-more`，滚到底自动摘掉；样式仍全在 globals.css
+  （`.lab-copy[data-more]::after` 底缘渐隐 38px，右让 14px 不压滚动条）。
+  实测挂在 lab10 / lab12 / lab14 三台，Lab.14 滚到底后自动摘掉，900px 单列 0 台。

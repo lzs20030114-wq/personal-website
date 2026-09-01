@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
+import { LabCopyScroll } from '../../../components/lab/LabCopyScroll';
 import { PageEnter } from '../../../components/site/PageEnter';
 import { FourBarBench } from '../../../components/lab/FourBarBench';
 import { ArchBench } from '../../../components/lab/ArchBench';
@@ -113,7 +114,8 @@ function Bench({
       className="lab-section"
       style={{ padding: '44px 0 52px', borderBottom: 'var(--hair)', scrollMarginTop: 16 }}
     >
-      <div className="flex flex-col" style={{ gap: 14 }}>
+      <div className="lab-copy">
+        <div className="lab-copy__inner flex flex-col" style={{ gap: 14 }}>
         <p
           style={{
             margin: 0,
@@ -160,6 +162,7 @@ function Bench({
             </div>
           ))}
         </div>
+        </div>
       </div>
       <div
         style={{
@@ -184,6 +187,7 @@ export default function LabPage() {
     <>
       <div className="ground-plane" aria-hidden />
       <PageEnter />
+      <LabCopyScroll />
       <div className="shell pg-dark" data-pt-content>
         <header style={{ padding: '64px 0 40px', borderBottom: 'var(--hair)' }}>
           <div className="flex items-baseline justify-between" style={{ gap: 32 }}>

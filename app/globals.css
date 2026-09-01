@@ -2569,3 +2569,48 @@ button.log-heat__cell {
     gap: 24px;
   }
 }
+/* — /lab 左栏（正文 + 规格表）在框内滚（用户 2026-09-01 拍板）。
+     内容用绝对定位抽出文档流 ⇒ **行高只由台架那栏定**，左栏再长也不撑高这一行；
+     台架框自己是 align-self:start（2026-08-31 那条：否则它会被拉成一个空框）。
+     窄屏单列下整段规则不生效——那时左右变成上下两块，限高滚动只会更难读。 — */
+@media (min-width: 1024px) {
+  .lab-copy {
+    position: relative;
+    min-height: 0;
+  }
+  .lab-copy__inner {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    /* 滚动条是这里**唯一**的「下面还有」提示（内容不超出时它自己不出现，
+       正好条件化），所以不能压到看不见：轨道一条淡线 + 明确的滑块。
+       留 14px 免得字贴着条，末行也不贴底。 */
+    padding-right: 14px;
+    padding-bottom: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--ink) 42%, transparent)
+      color-mix(in srgb, var(--ink) 10%, transparent);
+  }
+  .lab-copy__inner::-webkit-scrollbar {
+    width: 8px;
+  }
+  .lab-copy__inner::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--ink) 42%, transparent);
+  }
+  .lab-copy__inner::-webkit-scrollbar-track {
+    background: color-mix(in srgb, var(--ink) 10%, transparent);
+  }
+  /* 「下面还有」：底缘渐隐。data-more 由 LabCopyScroll 挂——只在还能往下滚时有，
+     滚到底自动摘掉（内容不超出的台架从头到尾不挂，规格表末行的发丝线不会被糊掉）。
+     右边让出 14px 给滚动条，渐隐不压在条上。 */
+  .lab-copy[data-more]::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 14px;
+    bottom: 0;
+    height: 38px;
+    background: linear-gradient(to bottom, transparent, var(--paper));
+    pointer-events: none;
+  }
+}
