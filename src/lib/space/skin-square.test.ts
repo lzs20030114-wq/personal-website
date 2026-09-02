@@ -45,7 +45,6 @@ import {
   squareReachOf,
   squareSpec,
 } from './skin-square';
-import { RING_BAND_NODES } from './skin-ring';
 import { SKIN, createSkinUnit, type SkinBond, type SkinSpec } from './skin-unit';
 
 /**
@@ -129,10 +128,10 @@ describe('方形环 · 构造（Lab.14）', () => {
     expect(SQUARE_REACH.length).toBe(SQUARE_TIERS.length);
   });
 
-  it('带子总长钉死 202，三档 lead 相同且不让光，垫上下对称', () => {
+  it('带子总长钉死（这一族自己的 SQUARE.BAND），三档 lead 相同且不让光，垫上下对称', () => {
     const P = UNITS.map((u) => parts(u.spec));
     for (const p of P) {
-      expect(p.total).toBe(RING_BAND_NODES);
+      expect(p.total).toBe(SQUARE.BAND);
       expect(p.lead).toBe(P[0].lead); // lead 全员同 ⇒ 嘴心的常数项相同
       expect(p.lead).toBeGreaterThanOrEqual(SQUARE.LEAD_MIN);
       // 垫对称：不对称会把结构两侧的材料弄不平衡，形跟着不对称（坑③）
@@ -274,14 +273,14 @@ describe('方形环 · 一圈起伏（第二种编制）', () => {
       expect(squareWaveLevel((2 + d) % SQUARE.COUNT)).toBe(squareWaveLevel((2 - d + SQUARE.COUNT) % SQUARE.COUNT));
   });
 
-  it('幅度与两端都在实测安全区内（lead 6…32 剖面偏差 0.000px）', () => {
+  it('幅度与两端都在实测安全区内（形状逐点相同由下一条守门核对）', () => {
     const leads = squareWaveLeads();
     expect(leads.length).toBe(SQUARE_WAVE.LEVELS);
     expect(Math.max(...leads)).toBe(SQUARE_WAVE.LOW);
     expect(Math.min(...leads)).toBe(SQUARE_WAVE.HIGH);
     for (const l of leads) {
       expect(l).toBeGreaterThanOrEqual(SQUARE.LEAD_MIN);
-      expect(RING_BAND_NODES - 2 * SQUARE.ISO - F_TOT - l).toBeGreaterThanOrEqual(SQUARE.TAIL_MIN);
+      expect(SQUARE.BAND - 2 * SQUARE.ISO - F_TOT - l).toBeGreaterThanOrEqual(SQUARE.TAIL_MIN);
     }
     // 余弦：单调升到波峰再单调降回（不是三角波的折角，也不能有抖动）
     const half = (SQUARE_WAVE.LEVELS - 1) / 2;
@@ -294,7 +293,7 @@ describe('方形环 · 一圈起伏（第二种编制）', () => {
   it('筒的上下缘不动：每一级 lead + tail 恒定（带子总长钉死）', () => {
     for (const u of WAVE.units) {
       const p = parts(u.spec);
-      expect(p.total).toBe(RING_BAND_NODES);
+      expect(p.total).toBe(SQUARE.BAND);
       expect(2 * p.padHi + p.fs).toBe(F_TOT); // 自由总量恒定 ⇒ 芯长逐点相同
     }
   });
@@ -475,7 +474,7 @@ describe('方形环 · 圆↔方五档', () => {
         leads.add(P.lead);
         expect(P.padHi, `档${s} k${t.k} 垫上下对称`).toBe(P.padLo);
         expect(2 * P.padHi + P.fs, `档${s} k${t.k} 垫+结构`).toBe(F_TOT);
-        expect(P.total).toBe(RING_BAND_NODES);
+        expect(P.total).toBe(SQUARE.BAND);
       }
     expect(leads.size, `lead 出现了 ${[...leads].join('/')}`).toBe(1);
   });

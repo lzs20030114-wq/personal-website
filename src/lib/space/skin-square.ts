@@ -58,7 +58,7 @@
  */
 import { SKIN, type SkinBond, type SkinSeg, type SkinSpec, type SkinUnitOpts } from './skin-unit';
 import { SKIN_UNITS, skinSiteOpts } from './skin-data';
-import { RING, RING_BAND_NODES } from './skin-ring';
+import { RING } from './skin-ring';
 import type { RingUnitDef } from './skin-ring';
 
 const STEPPED = SKIN_UNITS.find((d) => d.key === 'stepped')!;
@@ -75,6 +75,23 @@ export const SQUARE = {
   THICK: RING.THICK,
   /** 垫与结构之间的隔离贴合（= 约束最大跨距 ⇒ 结构的动力学不受垫扰） */
   ISO: 16,
+  /**
+   * **这一族自己的带子总长**（环族那个 `RING_BAND_NODES` 是 202，Lab.09/10/13 仍用它）。
+   *
+   * 2026-09-02 用户「缝加不了一倍是为什么？带子不够长了吗 那就加长带子呗」——
+   * 是。加深缝的三道账里有两道随带长走（自由段要装得下更高的箱 · 满裂档的挑出上限
+   * `≤ F/2 − BUF_MIN − H/4`），只有 E_MAX 那道不随。实测每多要 4px 的缝，
+   * 带子要长约 11–12 节：缝 32 要 202 · 36 要 216 · **48（= 原来 24 的两倍）要 250**。
+   * 取 250 ⇒ 捏分编制能做到缝 48，且平台高度回到与平档只差 1.6px（不用再牺牲 tail）。
+   *
+   * **只改这一族**（Lab.14 的三种编制共用它）：Lab.09/10/13 仍是 202——Lab.10 的
+   * 房间与人的比例是从吊件总长推出来的（§14.5），跟着改要重新推整套场景尺寸，
+   * 不在这次的范围里。代价是 Lab.14 的筒比 Lab.09/13 高 24%，机位各自重取。
+   *
+   * 各编制的**形状在带子上的高度不变**：那由 `TAIL` 与 F_TOT 定（`2(尾+ISO) + r(F−1)`），
+   * 与总长无关；加长的部分全部进 `lead`（平档 22 → 70），即筒的上半截是更长的素管。
+   */
+  BAND: 250,
   /** 尾段（钉住端那一截；平档用这个值，起伏档按 lead 配平） */
   TAIL: 15,
   /** 尾段下限：实测 lead 32 / tail 5 仍逐位不变，留一点余量 */
@@ -236,7 +253,7 @@ export const SQUARE_REACH: readonly number[] = SQUARE_TIERS.map((t) => squareRea
 
 /** 平档的贴合段（三档全员同值 ⇒ 对齐的常数项相同） */
 export function squareLead(fTotal: number = squareFreeTotal()): number {
-  return RING_BAND_NODES - 2 * SQUARE.ISO - fTotal - SQUARE.TAIL;
+  return SQUARE.BAND - 2 * SQUARE.ISO - fTotal - SQUARE.TAIL;
 }
 
 /**
@@ -275,7 +292,7 @@ export function squareWrap(
   const fs = seg[1];
   const p = (fTotal - fs) / 2;
   const lead = leadAt;
-  const tail = RING_BAND_NODES - 2 * SQUARE.ISO - fTotal - lead;
+  const tail = SQUARE.BAND - 2 * SQUARE.ISO - fTotal - lead;
   if (p < 0 || lead < SQUARE.LEAD_MIN || tail < SQUARE.TAIL_MIN)
     throw new Error(`方形环档位越界：${who} 垫=${p} lead=${lead} tail=${tail}`);
   if (p % 1 !== 0) throw new Error(`配平垫 ${p} 非整数（自由段应为奇数）：${who}`);
@@ -378,10 +395,16 @@ export function squareRimPoints(
  */
 export const SQUARE_WAVE = {
   LEVELS: 11,
-  /** 波谷（lead 大 = 折叠体沿带下移 = 低） */
-  LOW: 32,
-  /** 波峰（lead 小 = 高）。两端都在实测安全区内且留了余量（实测边界 6 / 32） */
-  HIGH: 12,
+  /**
+   * 波谷（lead 大 = 折叠体沿带下移 = 低）。
+   * **2026-09-02 随带长 202 → 250 整体上移 48**（幅度 40px 与两端间距一字未改，
+   * 中心仍等于平档的 lead ⇒ 切编制时平台的平均高度不跳）。安全区那条实测结论
+   * （lead 6…32 剖面偏差 0.000px）靠的是垫与结构之间的 ISO 隔离，与 lead 的绝对值
+   * 无关；新区间 60…80 由守门「形状逐点相同、只是整体平移」逐级核对。
+   */
+  LOW: 80,
+  /** 波峰（lead 小 = 高） */
+  HIGH: 60,
   /**
    * 相位：**让波的对称轴落在角位上**（位置 2 与 12）。
    * 这不是外观微调，是省一半引擎：深度档关于角位镜像（t(2+d) = t(2−d)），

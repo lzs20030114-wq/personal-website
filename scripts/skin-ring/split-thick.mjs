@@ -9,6 +9,12 @@
 //   TIERS=1         三档在候选箱高上的实测
 //   CAL2=1 H=68 W=24  完整重标（面档天花板定方形 → 反推边/角）
 //   MIRROR=1 H=68 W=24 [AT=58]  1 重编制（一圈一个来回）的天花板 / 逐组合诊断
+//   ALLOC=1 [FTOT= LEAD= BAND=] HS=…  换带子分配 / 加长带子能把缝做到多深
+//   JOINT=1 H=92 [BAND= FTOT= LEAD=]  联合标定：三档候选集 + 半边长 a 一起优化
+//
+// **两段式标定（2026-09-02 加，别退回一段式）**：扫掠为了跑得动，自交检测是**每 25 步**
+// 采一次；而守门是每 10 步。死结是瞬态，稀采样会整段漏掉——评分最高那组曾「打结 0」而
+// 守门当场报 52 节。故 JOINT 出候选后**按分数排队、逐组用守门那个密度复核**，取第一组干净的。
 
 import { createSkinUnit, SKIN, SKIN_ROOT_FIX } from '../../src/lib/space/skin-unit.ts';
 import { SQUARE, SQUARE_RUNGS, squareFreeTotal, squareLead } from '../../src/lib/space/skin-square.ts';
@@ -18,6 +24,8 @@ import { silhouette } from '../../src/lib/space/skin-split.ts';
 const F_TOT = squareFreeTotal(), LEAD = squareLead(F_TOT);
 // 分配（自由段总量 / 贴合段）——默认 = 平档那份；ALLOC 模式扫「把带子重新分配能换到多深的缝」
 const A_F = Number(process.env.FTOT ?? F_TOT), A_LEAD = Number(process.env.LEAD ?? (A_F === F_TOT ? LEAD : SQUARE.LEAD_MIN));
+// 带子总长：默认 = 环族那个钉死的 202；BAND=… 用来探「加长带子能换到多深的缝」
+const A_BAND = Number(process.env.BAND ?? RING_BAND_NODES);
 const SQUARE_EDGE_T = Number(process.env.ET ?? 0.5);
 /** 缝角鼓出端面的上限（px）。1.5 与这一族其它「形对不对」的线同级；
  *  历史上用户拍板过的那版实测 0.56，故不能定在 0.5。 */
@@ -38,6 +46,16 @@ function targetAt(t, D, wEnd, H) {
   return p;
 }
 
+/** 两段是否相交（自交检测用） */
+function seg2Hit(a, b, c, d) {
+  const s1x = b[0] - a[0], s1y = b[1] - a[1], s2x = d[0] - c[0], s2y = d[1] - c[1];
+  const den = -s2x * s1y + s1x * s2y;
+  if (Math.abs(den) < 1e-12) return false;
+  const q = (-s1y * (a[0] - c[0]) + s1x * (a[1] - c[1])) / den;
+  const r = (s2x * (a[1] - c[1]) - s2y * (a[0] - c[0])) / den;
+  return q > 0 && q < 1 && r > 0 && r < 1;
+}
+
 /** 参数化：箱高 H、缝宽 wEnd、目标深度 D、箱设计深度 boxD、形态 t */
 function build(H, wEnd, D, boxD, t, F_TOT = A_F, LEAD = A_LEAD) {
   const w = seamW(t, wEnd), dv = sink(t, D), wt = w * tip(t);
@@ -56,7 +74,7 @@ function build(H, wEnd, D, boxD, t, F_TOT = A_F, LEAD = A_LEAD) {
   crack.push([c - a, c + a, wt / 100]);
   const bonds = [...new Set(Array.from({ length: SQUARE_RUNGS }, (_, i) => Math.round(f + ((M - f) * i) / (SQUARE_RUNGS - 1))))].map((k) => [c - k, c + k, H / 100]);
   const seg = ['f', free, bonds, [[c - f, c - m], [c + m, c + f], [c - a, c + a]], [crack, [[c - f, c - m, lobe / 100]], [[c + m, c + f, lobe / 100]]]];
-  const pad = F_TOT - free, half = pad / 2, tail = RING_BAND_NODES - 2 * SQUARE.ISO - F_TOT - LEAD;
+  const pad = F_TOT - free, half = pad / 2, tail = A_BAND - 2 * SQUARE.ISO - F_TOT - LEAD;
   if (pad % 2) return { odd: pad };
   const spec = half > 0
     ? [['g', LEAD], ['f', half, []], ['g', SQUARE.ISO], seg, ['g', SQUARE.ISO], ['f', half, []], ['g', tail]]
@@ -84,13 +102,8 @@ function run(b, tgt) {
     if (k % 25 === 0) {
       const p = []; for (let i = b.lead; i < b.lead + b.free; i++) p.push([s.px[i], s.py[i]]);
       let sp = 0;
-      for (let i = 0; i + 1 < p.length; i++) for (let j = i + 2; j + 1 < p.length; j++) {
-        const A = p[i], B = p[i + 1], C = p[j], D2 = p[j + 1];
-        const s1x = B[0] - A[0], s1y = B[1] - A[1], s2x = D2[0] - C[0], s2y = D2[1] - C[1];
-        const den = -s2x * s1y + s1x * s2y; if (Math.abs(den) < 1e-12) continue;
-        const q = (-s1y * (A[0] - C[0]) + s1x * (A[1] - C[1])) / den, r = (s2x * (A[1] - C[1]) - s2y * (A[0] - C[0])) / den;
-        if (q > 0 && q < 1 && r > 0 && r < 1) sp = Math.max(sp, j - i);
-      }
+      for (let i = 0; i + 1 < p.length; i++) for (let j = i + 2; j + 1 < p.length; j++)
+        if (j - i > sp && seg2Hit(p[i], p[i + 1], p[j], p[j + 1])) sp = j - i;
       knot = Math.max(knot, sp);
     }
   }
@@ -134,7 +147,7 @@ function buildSolid(H, k, F_TOT = A_F, LEAD = A_LEAD) {
   const c = (free - 1) / 2;
   const ks = [...new Set(Array.from({ length: SQUARE_RUNGS }, (_, i) => Math.round(PW + ((k - PW) * i) / (SQUARE_RUNGS - 1))))];
   const seg = ['f', free, ks.map((q) => [c - q, c + q, H / 100]), [[c - PW, c + PW]]];
-  const pad = F_TOT - free, half = pad / 2, tail = RING_BAND_NODES - 2 * SQUARE.ISO - F_TOT - LEAD;
+  const pad = F_TOT - free, half = pad / 2, tail = A_BAND - 2 * SQUARE.ISO - F_TOT - LEAD;
   if (pad % 2) return { odd: pad };
   const spec = half > 0
     ? [['g', LEAD], ['f', half, []], ['g', SQUARE.ISO], seg, ['g', SQUARE.ISO], ['f', half, []], ['g', tail]]
@@ -324,7 +337,7 @@ export { build, buildSolid, run, F_TOT };
 if (process.env.ALLOC) {
   // 「缝再加高」那轮：把带子重新分配（FTOT/LEAD）能把缝做到多深。
   // 两片台高度钉死 22 ⇒ 缝 w = H − 44。面档（满裂 t=1）是最吃材料的一档，天花板由它定。
-  const tail = RING_BAND_NODES - 2 * SQUARE.ISO - A_F - A_LEAD;
+  const tail = A_BAND - 2 * SQUARE.ISO - A_F - A_LEAD;
   const mouthY = 2 * (tail + SQUARE.ISO) + SKIN.R1 * 2 * (A_F - 1) / 2;
   console.log(`分配 F_TOT=${A_F} lead=${A_LEAD} tail=${tail} · 平台高度基准 ${mouthY.toFixed(1)}px（平档 101.6）`);
   console.log(`箱高上限（自由段跨度 − G_MIN）= ${(0.6 * (A_F - 1) - SQUARE.G_MIN).toFixed(1)}`);
@@ -391,18 +404,51 @@ if (process.env.JOINT) {
   for (let i = 0; i < 3; i++)
     console.log(`${names[i]}档干净候选 ${cand[i].length} 个 · 挑出 ${cand[i].length ? Math.min(...cand[i].map((c) => c.reach)).toFixed(1) + '–' + Math.max(...cand[i].map((c) => c.reach)).toFixed(1) : '——'}`);
   if (cand.some((c) => !c.length)) process.exit(1);
-  let best = null;
-  for (let a = 60; a <= 100; a += 0.1) {
-    const pick = cosT.map((cs, i) => {
-      const want = a / cs - R;
-      return cand[i].reduce((p, c) => (Math.abs(c.reach - want) < Math.abs(p.reach - want) ? c : p));
-    });
-    const dev = pick.map((p, i) => p.reach - (a / cosT[i] - R));
-    const mx = Math.max(...dev.map(Math.abs));
-    if (!best || mx < best.mx) best = { a, pick, dev, mx };
+  // 第一段：在可达集合上扫 a，外缘偏差 · 剪影Δ · 全程对位一起进目标函数
+  const spAll = (rows) => Math.max(...rows[0].align.map((_, i) => { const v = rows.map((x) => x.align[i]); return Math.max(...v) - Math.min(...v); }));
+  const spEnd = (rows) => { const v = rows.map((x) => x.align[x.align.length - 1]); return Math.max(...v) - Math.min(...v); };
+  const ranked = [];
+  for (let a = 60; a <= 110; a += 0.1) {
+    const near = cosT.map((cs, i) => { const want = a / cs - R; return cand[i].filter((c) => Math.abs(c.reach - want) <= 1.5); });
+    if (near.some((n) => !n.length)) continue;
+    for (const x of near[0]) for (const y of near[1]) for (const z of near[2]) {
+      const pick = [x, y, z];
+      const dev = pick.map((p, i) => p.reach - (a / cosT[i] - R));
+      const mx = Math.max(...dev.map(Math.abs));
+      const sil = Math.max(...pick.map((p) => p.silD));
+      ranked.push({ a, pick, dev, mx, score: 2 * mx + spEnd(pick) + 0.3 * spAll(pick) + sil });
+    }
   }
+  if (!ranked.length) { console.log('三档的可达区间没有交集'); process.exit(1); }
+  // **第二段：按分数排队，逐组用守门那个采样密度复核打结**（见文件头「两段式标定」）
+  const dense = new Map();
+  const knotDense = (ti, cd) => {
+    const key = `${ti}:${cd.k ?? cd.boxD + '/' + cd.D}`;
+    if (dense.has(key)) return dense.get(key);
+    const b = ti === 2 ? buildSolid(H, cd.k) : build(H, W, cd.D, cd.boxD, ti === 0 ? 1 : SQUARE_EDGE_T);
+    const sim = createSkinUnit(b.spec, b.opts);
+    let kn = 0;
+    for (let q = 0; q < SKIN.STEPS; q++) {
+      sim.advance();
+      if (q % 10) continue;
+      const p2 = []; for (let i = b.lead; i < b.lead + b.free; i++) p2.push([sim.px[i], sim.py[i]]);
+      for (let i = 0; i + 1 < p2.length; i++) for (let j = i + 2; j + 1 < p2.length; j++)
+        if (j - i > kn && seg2Hit(p2[i], p2[i + 1], p2[j], p2[j + 1])) kn = j - i;
+    }
+    dense.set(key, kn);
+    return kn;
+  };
+  ranked.sort((p, q) => p.score - q.score);
+  let best = null, tried = 0;
+  for (const r of ranked) {
+    const ks = r.pick.map((c, i) => knotDense(i, c));
+    tried++;
+    if (Math.max(...ks) <= 6) { best = { ...r, ks, tried }; break; }
+    if (tried <= 6) console.log(`  跳过 a=${r.a.toFixed(1)} 密采样打结 ${ks.join('/')}`);
+  }
+  if (!best) { console.log('候选集里没有密采样也干净的组合'); process.exit(1); }
   const { a, pick, dev, mx } = best;
-  console.log(`\n⇒ 半边长 ${a.toFixed(1)} · **边长 ${(2 * a).toFixed(0)}px** · 最大外缘偏差 ${mx.toFixed(2)}px`);
+  console.log(`\n⇒ 半边长 ${a.toFixed(1)} · **边长 ${(2 * a).toFixed(0)}px** · 最大外缘偏差 ${mx.toFixed(2)}px · 密采样打结 ${best.ks.join('/')}（试了 ${best.tried} 组）`);
   for (let i = 0; i < 3; i++) {
     const p = pick[i], m = p.m;
     console.log(` ${names[i]} ${p.k !== undefined ? 'k' + p.k : 'boxD' + p.boxD + '/D' + p.D.toFixed(1)}: 挑出 ${m.reach.toFixed(1)}（偏 ${dev[i].toFixed(2)}） 箱高 ${m.boxH.toFixed(2)} 顶平 ${m.topFlat.toFixed(2)} 底平 ${m.botFlat.toFixed(2)} 锁 ${m.locked}/${m.tot} 结 ${m.knot} Δ ${m.silD.toFixed(2)} 端面 ${m.vert.toFixed(2)} 缝底x ${m.seamMin.toFixed(2)}`);

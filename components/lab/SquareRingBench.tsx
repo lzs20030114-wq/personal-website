@@ -15,7 +15,6 @@ import {
   squareCellPitch,
   squareCornerRadius,
   squareGridCells,
-  squareGridSpan,
   squareHalfSide,
   squareMorphExp,
   squareMorphReach,
@@ -24,6 +23,7 @@ import {
 } from '../../src/lib/space/skin-square';
 import {
   SQSPLIT,
+  SQSPLIT_REACH,
   buildSquareSplitOrder,
   buildSquareSplitUnits,
   sqSplitHalfSide,
@@ -84,10 +84,12 @@ const MORPH = Array.from({ length: SQUARE_MORPH.STEPS }, (_, s) => {
 });
 
 /**
- * 捏分编制（用户 2026-09-01 拍板：边档 t=0.5 · 角档实心箱；同日两轮加厚——先「整体厚一些」
- * 36→68，再「维持上下两个平台高度不变、中间的空间加高」⇒ 台高 22×2 + 缝 32、箱高 76）。
- * 一圈四个来回：… 边 面 面 边 │ 角 │ …，而俯视轮廓仍是方的（边长随之被顶到 167px，
- * 仍在平档 169 之内——为什么会被顶大见 skin-square.ts 的 `SQUARE.E_MAX`）。
+ * 捏分编制（用户 2026-09-01 拍板：边档 t=0.5 · 角档实心箱；随后三轮加厚——「整体厚一些」
+ * 36→68 · 「维持上下两个平台高度不变、中间的空间加高」⇒ 台高 22×2 + 缝 32 · 2026-09-02
+ * 「那就加长带子呗」⇒ 带子 202 → 250 节，**缝 24 → 48 正好两倍**、箱高 92）。
+ * 一圈四个来回：… 边 面 面 边 │ 角 │ …，而俯视轮廓仍是方的（边长随之被顶到 197px，
+ * 比平档的 169 大一圈——缝越深方形越大，机理见 skin-square.ts 的 `SQUARE.E_MAX`；
+ * 阵列格距按平档定，捏分在里面仍留 10px 边对边、16px 对角净空）。
  * 谱与几何全在 skin-square-split.ts（线稿脚本与站上共用一份）；这里只取数据。
  */
 const SPLIT = {
@@ -111,10 +113,26 @@ type LayoutKey = (typeof LAYOUTS)[number]['key'];
 
 /** 阵列的格子（不随半径变——方形按固定半径标定，故这个函数忽略入参） */
 const CELLS = squareGridCells();
+/** 装置竖向中点（带子 202 → 250 后重取，2026-09-02） */
+const PIVOT_Y = 205;
 const cellsOf = () => CELLS;
-/** 单环时框角点直径，阵列时框整片占宽 ⇒ 取景按两者之比缩 */
-const SINGLE_SCALE = 0.95;
-const GRID_SCALE = (SINGLE_SCALE * (2 * squareCornerRadius())) / squareGridSpan();
+/**
+ * 取景。**按编制分**——捏分的环比平档大（缝越深方形越大，见 skin-square-split 的 SQSPLIT.H）：
+ * 平档角点半径 120.7 / 捏分 138.1，同一个 scale 会把捏分裁掉一圈。
+ * 单环框角点直径、阵列框整片占宽，两档按各自的横向尺寸等比缩。
+ * `SINGLE_SCALE` 是平档单环那一档：带子 202 → 250 后筒高了 24%，故从 0.95 按 202/250 缩到
+ * **0.77**（= 装置在画面里占的地方与加长之前一样，不是重新构图）。`PIVOT_Y` 同理 166 → 205。
+ */
+const SINGLE_SCALE = 0.77;
+const CORNER_FLAT = squareCornerRadius();
+const CORNER_SPLIT = SQUARE.RADIUS + Math.max(...SQSPLIT_REACH);
+const spanWith = (corner: number): number =>
+  (SQUARE_GRID.COLS - 1) * squareCellPitch() + 2 * corner;
+const camScaleOf = (split: boolean, grid: boolean): number => {
+  const corner = split ? CORNER_SPLIT : CORNER_FLAT;
+  const base = (SINGLE_SCALE * CORNER_FLAT) / corner;
+  return grid ? (base * (2 * corner)) / spanWith(corner) : base;
+};
 
 /** HUD 双语：/lab 说中文（默认），案例页正文里的活件跟着页面的中英切换走 */
 const HUD = {
@@ -227,12 +245,12 @@ export function SquareRingBench({
           label: '',
           gapX: 0,
           gapZ: 0,
-          pivot: { x: 0, y: 166, z: 0 },
-          camScale: grid ? GRID_SCALE : SINGLE_SCALE,
+          pivot: { x: 0, y: PIVOT_Y, z: 0 },
+          camScale: camScaleOf(split, grid),
           home: 'top',
         },
       ]}
-      camScaleFor={() => (grid ? GRID_SCALE : SINGLE_SCALE)}
+      camScaleFor={() => camScaleOf(split, grid)}
       axon={{ pitch: -0.45, yaw: -0.62 }}
       extraControls={
         <>

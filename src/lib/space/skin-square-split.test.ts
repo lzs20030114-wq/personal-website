@@ -13,10 +13,9 @@ import {
   sqSplitRim,
 } from './skin-square-split';
 import {
-  SQUARE, SQUARE_RUNGS, SQUARE_PEAK, SQUARE_REACH, SQUARE_DEPTH, SQUARE_KHI,
-  squareAngle, squareBuffer, squareFreeTotal, squarePw,
+  SQUARE, SQUARE_RUNGS, SQUARE_PEAK, SQUARE_DEPTH, SQUARE_KHI,
+  squareAngle, squareBuffer, squareCellPitch, squareFreeTotal, squarePw,
 } from './skin-square';
-import { RING_BAND_NODES } from './skin-ring';
 import { SKIN, createSkinUnit, type SkinBond } from './skin-unit';
 
 /**
@@ -31,7 +30,7 @@ import { SKIN, createSkinUnit, type SkinBond } from './skin-unit';
 // **这一编制自己的分配**（平档是 133 / lead 22 / tail 15）——加深缝需要更长的自由段
 const F_TOT = SQSPLIT.F_TOT;
 const LEAD = SQSPLIT.LEAD;
-const TAIL = RING_BAND_NODES - 2 * SQUARE.ISO - F_TOT - LEAD;
+const TAIL = SQUARE.BAND - 2 * SQUARE.ISO - F_TOT - LEAD;
 /** 缝心离带子下缘（构造式）：2(尾+ISO) + r·(F−1)，与档位无关 */
 const mouthY = (f: number, tail: number, r = 0.3): number => 2 * (tail + SQUARE.ISO) + r * (f - 1);
 const BUILDS = SQSPLIT_TIERS.map((t) => sqSplitBuild(t));
@@ -164,7 +163,7 @@ describe('方形环 · 捏分编制（构造）', () => {
 
   it('七段谱：三档共用自己那份配平基准，平台高度仍与平档对得上', () => {
     for (const b of BUILDS) {
-      expect(b.spec.reduce((s, q) => s + q[1], 0)).toBe(RING_BAND_NODES);
+      expect(b.spec.reduce((s, q) => s + q[1], 0)).toBe(SQUARE.BAND);
       expect(b.free % 2).toBe(1); // 自由段恒奇 ⇒ 垫劈两半是精确整数
       const pad = F_TOT - b.free;
       expect(pad % 2).toBe(0);
@@ -178,11 +177,10 @@ describe('方形环 · 捏分编制（构造）', () => {
     // 这一编制用的是自己那份分配（缝要更深 ⇒ 自由段要更长），带子已经榨到底
     expect(TAIL).toBe(SQUARE.TAIL_MIN);
     expect(LEAD).toBe(SQUARE.LEAD_MIN);
-    // **如实钉住那条代价**：平台比平档低 12.8px（缝心离下缘 = 2(尾+ISO) + r(F−1)）。
-    // 这是拿「平台与平档齐平」换来的缝深（见 SQSPLIT.F_TOT）——别悄悄变大，也别以为它是 0。
+    // 平台高度仍与平档对得上（缝心离下缘 = 2(尾+ISO) + r(F−1)）：带子加长后 F 变大、
+    // r 那一项自己把 tail 榨到下限的亏空补了回来，只差 1.6px。
     const drop = mouthY(squareFreeTotal(), SQUARE.TAIL) - mouthY(F_TOT, TAIL);
-    expect(drop, '平台比平档低多少').toBeGreaterThan(12);
-    expect(drop, '平台比平档低多少').toBeLessThan(14);
+    expect(Math.abs(drop), '与平档的平台高度差').toBeLessThan(2.5);
   });
 
   it('缓冲富余上限：箱高与方形大小的联系（超了折叠体会沿轴浮起来）', () => {
@@ -192,8 +190,12 @@ describe('方形环 · 捏分编制（构造）', () => {
       expect(slack, `${SQSPLIT_TIERS[i].en} 缓冲富余`).toBeLessThanOrEqual(SQUARE.E_MAX);
       expect(slack, `${SQSPLIT_TIERS[i].en} 缓冲富余`).toBeGreaterThanOrEqual(SQUARE.E_MIN);
     }
-    // 把方形压小一档（角档 k 59 而不是 60）就越界 ⇒ 构造期拒绝，而不是悄悄浮起来
-    expect(() => squareBuffer(SQSPLIT_TIERS[2].k! - 1, SQSPLIT.H)).toThrow();
+    // 角档的挑出下限就是这条纪律给的：缓冲要 ≤9 节 ⇒ 最外梯挡至少这么深，
+    // 再浅一格构造期就拒绝（而不是悄悄浮起来）。**这才是「箱高顶大方形」的那一步。**
+    const kFloor = Math.ceil((SQSPLIT.H + SQUARE.G_MIN) / 1.2) - 9;
+    expect(() => squareBuffer(kFloor - 1, SQSPLIT.H)).toThrow();
+    expect(() => squareBuffer(kFloor, SQSPLIT.H)).not.toThrow();
+    expect(SQSPLIT_TIERS[2].k!, '角档不许浅于这条下限').toBeGreaterThanOrEqual(kFloor);
     // 平档全表不受这条新纪律影响（实测最大富余 22.0）
     for (let k = SQUARE_DEPTH.KLO; k <= SQUARE_KHI; k++) expect(() => squareBuffer(k)).not.toThrow();
   });
@@ -245,12 +247,16 @@ describe('方形环 · 捏分编制（构造）', () => {
   it('材料账：面档用满预算，天花板与箱高无关', () => {
     // 满裂的设计深度上限与 H 无关（H 在两边抵消）——换个箱高上限不动
     expect(sqSplitDCap()).toBeCloseTo(sqSplitMCap() - SQSPLIT.H / 4, 9);
-    expect(sqSplitDCap()).toBeGreaterThan(48);
-    expect(sqSplitDCap()).toBeLessThan(55);
-    // 面档（最吃材料的那一档）已经贴着预算 ⇒ 再深一格构造期就该拒绝
+    expect(sqSplitDCap()).toBeGreaterThan(64);
+    expect(sqSplitDCap()).toBeLessThan(72);
+    // 面档（最吃材料的那一档）贴着预算：再深几格构造期就该拒绝，而不是悄悄超出
     expect(BUILDS[0].free).toBeLessThanOrEqual(F_TOT);
     expect(F_TOT - BUILDS[0].free).toBeLessThan(6);
-    expect(() => sqSplitBuild({ ...SQSPLIT_TIERS[0], boxD: SQSPLIT_TIERS[0].boxD! + 2 })).toThrow();
+    let over = Infinity;
+    for (let d = 2; d <= 16; d += 2) {
+      try { sqSplitBuild({ ...SQSPLIT_TIERS[0], boxD: SQSPLIT_TIERS[0].boxD! + d }); } catch { over = d; break; }
+    }
+    expect(over, '面档还能再深几格').toBeLessThanOrEqual(8);
   });
 
   it('梯挡表：根数恒定、单调、首尾正确', () => {
@@ -263,11 +269,15 @@ describe('方形环 · 捏分编制（构造）', () => {
 
   it('外缘点落在方形边上（方形是靠挑出做出来的）', () => {
     const side = 2 * sqSplitHalfSide();
-    expect(side).toBeGreaterThan(164);
-    expect(side).toBeLessThan(170);
-    // **仍要小于平档的方形**（阵列格距与取景按平档定，见下方那条守门）：
-    // 平档的半边长由它的角档定（角在 45°，极径 = a√2）
-    expect(side, '捏分方形不许超过平档的').toBeLessThan(2 * (SQUARE.RADIUS + SQUARE_REACH[2]) / Math.SQRT2);
+    expect(side).toBeGreaterThan(192);
+    expect(side).toBeLessThan(198);
+    // 捏分的方形比平档大（缝越深方形越大，见 SQSPLIT.H）——**格距按平档定，所以真正
+    // 要卡的是十六个环在 4×4 里不许相碰**，两条方位都要留净空：
+    const pitch = squareCellPitch();
+    const tight = SQUARE.RADIUS + SQSPLIT_REACH[0]; // 面档方位（边对边最紧）
+    const corner = SQUARE.RADIUS + SQSPLIT_REACH[2]; // 角点（对角相邻）
+    expect(pitch - 2 * tight, '边对边净空').toBeGreaterThan(6);
+    expect(pitch * Math.SQRT2 - 2 * corner, '对角净空').toBeGreaterThan(6);
     // 深度旋钮很粗（角档 k 一格 2–3px），外缘偏差 ≤1.31——a 与三档配置一起进的优化
     for (const p of sqSplitRim()) expect(Math.abs(p.dev)).toBeLessThan(1.5);
   });
@@ -314,13 +324,17 @@ describe('方形环 · 捏分编制（真跑）', () => {
     expect(pk, '捏分档全程峰值挑出').toBeLessThan(SQUARE.RADIUS + SQUARE_PEAK[SQUARE_PEAK.length - 1]);
   });
 
-  it('全程对位：一圈平不平 —— 加深缝那轮把它从 14.9 收到 6.0', { timeout: 180_000 }, () => {
+  it('【已知瑕疵】全程对位：终态是平的，成形中段那一秒不是——按实测钉住', { timeout: 180_000 }, () => {
     const rows = run();
     const spread = CK.map((_, i) => Math.max(...rows.map((r) => r.align[i])) - Math.min(...rows.map((r) => r.align[i])));
-    // 终态那一格（族守门线 2.5，这一编制仍略宽）
+    // 终态与 step 750 起都在族守门线附近
     expect(spread[CK.length - 1], '终态').toBeLessThan(4);
-    // 成形中段仍是最差的一格（6.0px）。它**不再是当初那条已知瑕疵**——加深缝那轮把对位
-    // 放进了标定的目标函数（此前只按外缘偏差 + Δ 挑），峰值从 14.9 降到 6.0。
-    expect(Math.max(...spread), '全程峰值散布').toBeLessThan(8);
+    expect(spread[3], 'step 750').toBeLessThan(4);
+    expect(spread[4], 'step 1000').toBeLessThan(3);
+    // 成形中段（step 550）角档先落位、面档还在裂开，散布 ~20px。缝 48 这版**压不动**
+    // （全候选集里最小 17.4——箱子高一倍、要聚拢的材料多一倍，快慢差就大一倍）。
+    // 守门不放宽族的线，按实测钉住：谁把它改差了这条会红。
+    expect(Math.max(...spread), '全程峰值散布').toBeLessThan(30);
+    expect(Math.max(...spread), '全程峰值散布（钉住，别悄悄变差）').toBeGreaterThan(24);
   });
 });
