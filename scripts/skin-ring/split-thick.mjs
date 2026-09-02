@@ -91,7 +91,12 @@ function build(H, wEnd, D, boxD, t, F_TOT = A_F, LEAD = A_LEAD) {
   };
 }
 const CK = [400, 550, 650, 750, 1000, 1500];
-function run(b, tgt) {
+/**
+ * `knotEvery`：自交检测的采样步距。默认 25 是旧扫掠为跑得动的稀采样；**守门是每 10 步**，
+ * 死结是瞬态、稀采样会整段漏掉（2026-09-02 一天坑了两次）。LOOP 模式直接按 10 采——
+ * 密采样并进候选池，而不是事后复核。
+ */
+function run(b, tgt, knotEvery = 25) {
   const s = createSkinUnit(b.spec, b.opts);
   let knot = 0;
   const align = [];
@@ -99,7 +104,7 @@ function run(b, tgt) {
     s.advance();
     // 缝心离带子下缘（对位）——**必须逐检查点记全程**，只看终态会挑到中段最偏的那个配置
     if (CK.includes(k + 1)) align.push((s.py[b.marks.center] - s.py[s.n - 1]) * 100);
-    if (k % 25 === 0) {
+    if (k % knotEvery === 0) {
       const p = []; for (let i = b.lead; i < b.lead + b.free; i++) p.push([s.px[i], s.py[i]]);
       let sp = 0;
       for (let i = 0; i + 1 < p.length; i++) for (let j = i + 2; j + 1 < p.length; j++)
@@ -215,6 +220,76 @@ if (process.env.MIRROR) {
   if (!okA) { console.log('1 重在 边长 80 以上都装不下'); process.exit(0); }
   console.log(`\n⇒ 1 重天花板：半边长 ${okA} · **边长 ${(2 * okA).toFixed(0)}px**（4 重在同高度是 150）`);
   feasible(okA, true);
+  process.exit(0);
+}
+
+if (process.env.LOOP) {
+  // **一次循环 · 面极排法的候选池**（2026-09-02，用户拍板「一次循环优先，厚度让路」）。
+  // 「一条边上是双平台，绕到对面变成整块」⇒ 镜像轴穿过两条对边的中点，二十位折成十对
+  // [面 边 角 边 面 面 边 角 边 面]，每对一个级。面类要在**同一个挑出**上既做出整块（L0）
+  // 又做出满裂（L9）：L0 的 E_MAX 下限与 L9 的材料上限一起夹出面类的窗口，角/边由方形
+  // 的 1/cos 比值反推。这里**不定时间表**，只按 方位类 × 级别 扫各自的干净候选（挑出落在
+  // 半边长区间 [A0, A1] 反推的窗口里），落盘给挑选阶段换时间表反复用；
+  // **打结每 10 步采（守门口径）直接进候选池**，不再事后复核。
+  //   LOOP=1 H=44 BAND=305 FTOT=259 LEAD=8 CLS=F [LV=0,4,5,9] [A0=79 A1=84] [DOFF=0,2,4,6] DUMP=out.json
+  const H = Number(process.env.H ?? 44), W = Number(process.env.W ?? Math.round(H / 3));
+  const A0 = Number(process.env.A0 ?? 79), A1 = Number(process.env.A1 ?? 84);
+  const CLS = (process.env.CLS ?? 'F,E,C').split(',');
+  const LV = (process.env.LV ?? '0,1,2,3,4,5,6,7,8,9').split(',').map(Number);
+  const DOFF = (process.env.DOFF ?? '0,2,4,6').split(',').map(Number);
+  const T10 = [0, 0.108, 0.254, 0.397, 0.523, 0.638, 0.741, 0.834, 0.92, 1];
+  const R = SQUARE.RADIUS, TH = (n) => (Math.PI / SQUARE.COUNT) * n;
+  const COS = { F: Math.cos(TH(1)), E: Math.cos(TH(3)), C: Math.cos(TH(5)) };
+  const ok = (m) => m.locked === m.tot && m.knot <= 6 && m.topFlat < 1.5 && m.botFlat < 1.5 && Math.abs(m.boxH - H) < 0.5 && m.silD < 6 && m.vert <= VERT_MAX;
+  const keep = (m) => ({ boxH: m.boxH, topFlat: m.topFlat, botFlat: m.botFlat, knot: m.knot, seamMin: m.seamMin, silD: m.silD, align: m.align, vert: m.vert, faceX: m.faceX, locked: m.locked, tot: m.tot });
+  // 实心箱的剪影Δ：目标线取「实测挑出的矩形」，从返回的剖面直接算，不用再跑第二遍
+  const silRect = (m) => {
+    const half = H / 2 + 4, A = silhouette(m.profile, -half, half), B = silhouette(targetAt(0, m.reach, W, H), -half, half);
+    let sum = 0; for (let i = 0; i < A.length; i++) sum += Math.abs(A[i] - B[i]);
+    return sum / A.length;
+  };
+  const out = [], t0 = Date.now();
+  let runs = 0;
+  console.log(`══ 一次循环候选池 H=${H} 缝=${W} · 带 ${A_BAND} F_TOT=${A_F} lead=${A_LEAD} tail=${A_BAND - 2 * SQUARE.ISO - A_F - A_LEAD} · 半边长 ${A0}–${A1} ══`);
+  for (const c of CLS) {
+    const lo = A0 / COS[c] - R - 2, hi = A1 / COS[c] - R + 2;
+    console.log(`${c}：挑出窗口 ${lo.toFixed(1)}–${hi.toFixed(1)}`);
+    for (const l of LV) {
+      const t = T10[l];
+      const rows = [];
+      if (t === 0) {
+        // 实心箱：扫 k（平档深度表 挑出 ≈ 44.2 + 1.875·(k−28)，窗口两侧各放 3 格）
+        const k0 = Math.floor((lo - 44.2) / 1.875 + 28) - 3, k1 = Math.ceil((hi - 44.2) / 1.875 + 28) + 3;
+        for (let k = Math.max(12, k0); k <= k1; k++) {
+          const b = buildSolid(H, k);
+          if (b.over || b.odd !== undefined || b.floats) continue;
+          const m = run(b, { t: 0, D: k * 2 * SKIN.R1, wEnd: W, H }, 10); runs++;
+          m.silD = silRect(m);
+          if (!ok(m) || m.reach < lo || m.reach > hi) continue;
+          rows.push({ c, l, t, k, reach: m.reach, free: b.free, buf: b.buf, ...keep(m) });
+        }
+      } else {
+        const bd0 = Math.floor((lo - 10) / 2) * 2, bd1 = Math.ceil((hi - 2) / 2) * 2;
+        for (let boxD = Math.max(6, bd0); boxD <= bd1; boxD += 2) for (const dOff of DOFF) {
+          let D = boxD + 6 + dOff, b = build(H, W, D, boxD, t);
+          if (b.over || b.odd !== undefined || b.floats) continue;
+          let m = run(b, { t, D, wEnd: W, H }, 10); runs++;
+          // 自洽第二遍：目标取**面角 x**（§17.10 的教训：取 max 挑出会被鼓出的缝角污染成正反馈）
+          const D2 = Math.round((m.faceX + dOff) * 10) / 10, b2 = build(H, W, D2, boxD, t);
+          if (!b2.over && b2.odd === undefined && !b2.floats) { const m2 = run(b2, { t, D: D2, wEnd: W, H }, 10); runs++; if (ok(m2)) { m = m2; D = D2; b = b2; } }
+          if (!ok(m)) continue;
+          if (l === 9 && m.seamMin > 0.5) continue; // 满裂必须真裂到轴
+          if (m.reach < lo || m.reach > hi) continue;
+          rows.push({ c, l, t, boxD, D, dOff, reach: m.reach, free: b.free, buf: b.buf, ...keep(m) });
+        }
+      }
+      out.push(...rows);
+      const rs = rows.map((r) => r.reach);
+      console.log(`  L${l} t=${t}: 干净候选 ${rows.length} 个${rows.length ? ` · 挑出 ${Math.min(...rs).toFixed(1)}–${Math.max(...rs).toFixed(1)}` : ''}  （${runs} 跑 / ${((Date.now() - t0) / 60000).toFixed(1)} min）`);
+    }
+  }
+  if (process.env.DUMP) (await import('node:fs')).writeFileSync(process.env.DUMP, JSON.stringify(out));
+  console.log(`共 ${out.length} 个干净候选，${runs} 跑，${((Date.now() - t0) / 60000).toFixed(1)} min`);
   process.exit(0);
 }
 

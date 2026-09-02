@@ -29,7 +29,7 @@ export const metadata = { title: 'The lab' };
  * 08 = 十二条带的键谱渐变阵列；09 = 二十条同谱窄带围成圆筒、收缩成环形平台；10 = 十六个那样的圆筒环吊在一间房里铺成 4×4 网格，地上站着人作比例；
  * 11 = 双结构带——五段谱一条带折出上下两个结构，两条拉链各自独立；
  * 12 = 捏分过渡——十级从单箱裂成两台，每级一份单独设计的谱；
- * 14 第三种编制「捏分」= 把那个来回搬上方形环：一圈四个来回，而俯视轮廓仍是方的）。
+ * 14 第三种编制「捏分」= 把那个来回搬上方形环：一圈一个来回（一条边双平台、对边整块），而俯视轮廓仍是方的）。
  * 2026-08-18 起页面按项目分组（MAPPING §16）——log 页先例：多项目共用一条主线。
  */
 const KICKER: CSSProperties = {
@@ -477,13 +477,13 @@ export default function LabPage() {
             ['Ladder', '10 rungs on every band, pitched closer when shallow'],
             ['Flat', 'Platform spread 0.0 px — the padding makes it, not a fit'],
             ['Wave', '40 px swing · shape unchanged, only where it sits'],
-            ['Pinch', 'Four round trips: one box → a notch → two shelves → closed again'],
-            ['Thickness', 'Height is nearly free in the fabric account; scaling the whole form is not'],
-            ['Pinched box', '92 px high — two 22 px shelves with a 48 px gap · seam cuts to the mast'],
-            ['Longer band', 'Twice the gap needed a longer band: 202 → 250 nodes, this family only'],
-            ['Deeper gap', 'A taller box needs more slack, and slack has a ceiling — so the square grows: side 197 px'],
-            ['Its cost', 'Mid-forming the corner settles first — the ring is level at rest, not for that one second'],
-            ['Why four', 'Reach and seam draw on the same fabric — only the shallow face can split'],
+            ['Pinch', 'One round trip: two shelves on one side, one box on the opposite side, ten steps between'],
+            ['Pinched box', '44 px high — two 14.5 px shelves with a 15 px gap · the split side cuts to the mast'],
+            ['Why one loop costs', 'A face must hold both the box and the split at one reach — the box sets a floor, the split a ceiling; they only meet near 44 px'],
+            ['Longer band', 'The corner next to the split needs the fabric account of a 305-node band, this family only'],
+            ['Ten engines', 'Face L9·5·4·0 · edge L8·5·3·1 · corner L6·1 — each class at its own reach; L2 forms on no band, L7–8 on no corner'],
+            ['Square', 'Side 166 px (flat plan 169), rim within 1.0 px'],
+            ['Its cost', 'The platform sits 20 px higher than the flat plan, and ten engines settle 4.5 px apart at rest'],
             ['Radius', 'Fixed: the depths are calibrated against it'],
             ['Ceiling', 'Ring plate · fixed masts, skin gathers down them'],
           ]}
