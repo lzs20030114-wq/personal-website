@@ -4,9 +4,13 @@ import {
   CLUSTER_LEAD,
   CLUSTER_PLANS,
   CLUSTER_RELATIONS,
+  CLUSTER_TIMINGS,
   LEVEL_RANGE_PX,
   OVERLAP_CLEAR,
+  STAGGER_STEPS,
   UNIT_FORMS,
+  clusterBridges,
+  clusterBuild,
   clusterCamScale,
   clusterCells,
   clusterFieldSpan,
@@ -21,11 +25,20 @@ import {
   clusterPositions,
   clusterScene,
   clusterUnits,
+  clusterWaves,
   overlapFeasible,
   overlapMargin,
 } from './unit-cluster';
 import { RING, RING_LEAD, RING_TAIL, buildRingUnits } from './skin-ring';
-import { MM_PER_UNIT, RIG_SCALE, ROOM, figureSpotBySpan, ringCellPitch, viewFitBySpan } from './skin-grid';
+import {
+  MM_PER_UNIT,
+  RIG_SCALE,
+  ROOM,
+  figureSpotBySpan,
+  ringCellPitch,
+  ringGridScene,
+  viewFitBySpan,
+} from './skin-grid';
 import { SKIN, createSkinUnit } from './skin-unit';
 import { SOLID } from './skin-solid';
 
@@ -139,7 +152,7 @@ describe('unit-cluster 单元关系', () => {
     expect(CLUSTER_PLANS.map((p) => p.n)).toEqual([2, 3, 4, 9]);
   });
 
-  it('高度级：齐平全 0；错层一对 2 / 三角 3 / 方阵 4 / 九宫 3（角 0 边 1 心 2）；交叠是棋盘，相邻永不同级', () => {
+  it('高度级：齐平全 0；错层一对 2 / 三角 3 / 方阵对角 2 / 九宫 3（角 0 边 1 心 2）；交叠是棋盘，相邻永不同级', () => {
     for (const plan of PLANS) {
       expect(clusterLevels(plan, 'apart').every((l) => l === 0)).toBe(true);
       expect(clusterLevels(plan, 'touch').every((l) => l === 0)).toBe(true);
@@ -147,7 +160,9 @@ describe('unit-cluster 单元关系', () => {
     }
     expect(clusterLevelCount('pair', 'touchStep')).toBe(2);
     expect(clusterLevelCount('triad', 'touchStep')).toBe(3);
-    expect(clusterLevelCount('quad', 'touchStep')).toBe(4);
+    // 方阵：四级顺着绕（每级 0.11 m）在真机读不出「级」，用户 2026-09-03 拍板改对角两级（0.35 m）
+    expect(clusterLevels('quad', 'touchStep')).toEqual([0, 1, 0, 1]);
+    expect(clusterLevelCount('quad', 'touchStep')).toBe(2);
     expect(clusterLevels('nine', 'touchStep')).toEqual([0, 1, 0, 1, 2, 1, 0, 1, 0]);
     for (const plan of PLANS) {
       const pos = clusterPositions(plan);
@@ -290,5 +305,69 @@ describe('unit-cluster 单元关系', () => {
     const m3 = clusterMetrics('quad', 'apart', 3, R);
     expect(m3.stepM).toBe(0);
     expect(m3.overlapM).toBeLessThan(0); // 分离：留着空地
+  });
+
+  it('时序：同步 = 几级解几条、延迟全 0；错相 = 每格一条、按波序晚 150 步一波起步、九宫按对角线扫', () => {
+    expect(CLUSTER_TIMINGS.map((t) => t.key)).toEqual(['sync', 'stagger']);
+    expect(STAGGER_STEPS).toBe(150);
+    expect(clusterWaves('pair')).toEqual([0, 1]);
+    expect(clusterWaves('triad')).toEqual([0, 1, 2]);
+    expect(clusterWaves('quad')).toEqual([0, 1, 2, 3]);
+    expect(clusterWaves('nine')).toEqual([0, 1, 2, 1, 2, 3, 2, 3, 4]); // 行 + 列：一道波从一个角推到对角
+    const form = FORMS[CLUSTER_DEFAULT_FORM];
+    for (const plan of PLANS)
+      for (const rel of RELS) {
+        const n = CLUSTER_PLANS.find((p) => p.key === plan)!.n;
+        const lv = clusterLevels(plan, rel);
+        const leads = clusterLeads(clusterLevelCount(plan, rel));
+        const sync = clusterBuild(plan, rel, 'sync', form);
+        expect(sync.units.length).toBe(clusterLevelCount(plan, rel));
+        expect(sync.units.every((u) => u.delay === 0)).toBe(true);
+        expect(sync.cellPlan).toEqual(lv);
+        expect(sync.plans.length).toBe(sync.units.length);
+        const st = clusterBuild(plan, rel, 'stagger', form);
+        expect(st.units.length).toBe(n);
+        expect(st.plans.length).toBe(n);
+        expect(st.cellPlan).toEqual(lv.map((_, i) => i));
+        st.units.forEach((u, i) => {
+          expect(u.delay).toBe(clusterWaves(plan)[i] * STAGGER_STEPS);
+          expect(u.spec[0][1]).toBe(leads[lv[i]]); // 各带自己那一级的 lead
+          expect(u.spec[1]).toBe(form.spec[1]); // 形态同一个自由段对象
+          expect(st.plans[i].every((e) => e === i)).toBe(true);
+        });
+        // 站位表的 plan 跟着时序走
+        expect(clusterCells(plan, rel, CLUSTER_DEFAULT_FORM, R, 'stagger').map((c) => c.plan)).toEqual(
+          lv.map((_, i) => i),
+        );
+        expect(clusterCells(plan, rel, CLUSTER_DEFAULT_FORM, R).map((c) => c.plan)).toEqual(lv);
+      }
+  });
+
+  it('连接：只在相切·齐平下，相邻（归一距 1）的每一对之间搭一块网', () => {
+    expect(clusterBridges('pair', 'touch').length).toBe(1);
+    expect(clusterBridges('triad', 'touch').length).toBe(3);
+    expect(clusterBridges('quad', 'touch').length).toBe(4);
+    expect(clusterBridges('nine', 'touch').length).toBe(12);
+    for (const plan of PLANS) {
+      for (const rel of ['apart', 'apartStep', 'touchStep', 'overlap'] as const)
+        expect(clusterBridges(plan, rel)).toEqual([]);
+      const pos = clusterPositions(plan);
+      for (const [i, j] of clusterBridges(plan, 'touch'))
+        expect(Math.hypot(pos[i].x - pos[j].x, pos[i].z - pos[j].z)).toBeCloseTo(1, 9);
+    }
+  });
+
+  it('房间固定用 Lab.12 那一间：同半径下地板与两面墙逐位相同，簇再小房间不缩', () => {
+    for (const r of [RING.RADIUS_MIN, R, RING.RADIUS_MAX]) {
+      const ref = ringGridScene(r);
+      for (const plan of PLANS)
+        for (const rel of RELS) {
+          const sc = clusterScene(plan, rel, CLUSTER_DEFAULT_FORM, r);
+          for (let k = 0; k < 3; k++) {
+            expect(sc[k].kind).toBe('room');
+            expect(Array.from(sc[k].verts)).toEqual(Array.from(ref[k].verts));
+          }
+        }
+    }
   });
 });

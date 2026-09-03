@@ -59,6 +59,65 @@
     ]
   },
   {
+    "date": "2026-09-03",
+    "lead": {
+      "en": "Landed the five decisions on the unit-relations bench, adding staggered contraction and a fabric web across touching seams.",
+      "zh": "把单元关系台架按五条拍板改到位，其中新加了错相收缩与相切处的织物网两项。"
+    },
+    "body": {
+      "en": "- The bench now opens on a pair interleaved at two heights: its subject is relations, so the first thing seen should be one the 4×4 field cannot show. The two-by-two's stepped mode went from four levels spiralling round to two on the diagonal — 0.11 m per level does not read as a step on a real screen, 0.35 m plainly does.\n- The room is now the same room as the 4×4 field, whatever the cluster size. Before, the room scaled with the cluster's footprint, so switching clusters moved the walls and made it look as if the units had changed size; now the background stays put and only the camera moves in.\n- Staggered timing: each unit starts one wave after the last (150 steps a wave), so the contraction travels through the cluster; the three-by-three goes diagonally in five waves. This is a clock added on the bench — each unit begins stepping when its turn comes — with no change to the engine. The cost is one solver per unit in this mode, nine for the three-by-three.\n- Connection: where two level platforms touch, a fabric web grows either side of the contact point and fills the wedge-shaped gap (a top layer, a bottom layer and an end panel, 16 cm wide), so the two platforms read as one surface. It is not there all the time: it only appears once the two rims are within 14 px of each other, because before that it would be a sheet floating between two masts.\n- Left as they were: the interleaving clearances and the conservative gate. Not done yet: a ramp where stepped platforms touch, mixed forms in one cluster, and a different radius per unit.",
+      "zh": "- 默认开场改成一对交叠错层：这台的题目是「关系」，第一眼就该看到一个 4×4 场地里没有的关系。方阵的错层从四级顺着绕改成对角两级：每级 0.11 米在真机上读不出「级」，0.35 米一眼就是两层。\n- 房间固定用 4×4 那一间：此前房间随几个单元的占地缩放，切换编制时墙跟着动，容易误以为单元变了大小；现在背景不动，只有相机按簇推进。\n- 错相：每个单元比前一波晚 150 步起步，收缩像一道波在簇里传过去，九宫按对角线分五波。做法是给台架加一个全场时钟，各单元到点才开始推进，引擎本身没改；代价是错相下每个单元要单独解一条，九宫九条。\n- 连接：相切且同高的两圈平台之间，切点两侧长出一块织物网把楔形缝糊上（顶面一层、底面一层、外端一块封板，网宽 16 厘米），两圈平台读成一片。网不是一直在：两圈外缘差不到 14 像素才搭，否则收缩前它会是一张横在两根立杆之间的悬空布。\n- 没动的：交叠的净距与保守判据。还没做的：错层相切处的落差斜坡、一簇里混几种形态、每个单元不同半径。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "image",
+        "src": "/log/2026-09-03-unit-cluster-pair-interleaved.webp",
+        "alt": {
+          "en": "Two ring platforms interleaved at two heights in the room, one sliding under the other, with the 1.70 m figure beside them",
+          "zh": "房间里两圈平台交叠错层，一圈从另一圈底下穿过，旁边站着 1.7 米的人"
+        },
+        "caption": {
+          "en": "The new opening state: a pair interleaved, 0.35 m apart in height, platforms overlapping by 0.30 m.",
+          "zh": "新的开场：一对交叠，高差 0.35 米，平台盖过去 0.30 米。"
+        },
+        "width": 1317,
+        "height": 978
+      },
+      {
+        "kind": "image",
+        "src": "/log/2026-09-03-unit-cluster-nine-staggered.webp",
+        "alt": {
+          "en": "Nine units mid-contraction with the near corner already formed into platforms and the far corner still straight bands",
+          "zh": "九个单元收缩到一半：近角已经扣出平台，远角还是直带"
+        },
+        "caption": {
+          "en": "Staggered timing on the three-by-three: the wave has reached the middle; the far corner has not started.",
+          "zh": "九宫错相：波推到中间那一列，远角还没起步。"
+        },
+        "width": 1317,
+        "height": 978
+      },
+      {
+        "kind": "image",
+        "src": "/log/2026-09-03-unit-cluster-touch-web.webp",
+        "alt": {
+          "en": "Top view, zoomed in: two touching ring platforms whose outlines merge at the contact point through a small fabric web",
+          "zh": "顶视放大：两圈相切的平台在切点处由一小块织物网接成一片"
+        },
+        "caption": {
+          "en": "The seam webbed: from above the two discs read as one figure-eight surface.",
+          "zh": "缝糊上以后：从上面看两个圆盘连成一个 8 字形的面。"
+        },
+        "width": 1317,
+        "height": 978
+      }
+    ]
+  },
+  {
     "date": "2026-07-31",
     "lead": {
       "en": "Ran a finite-element check on the chassis frames: over-built for strength, and the display stand matters far more than the thickness.",

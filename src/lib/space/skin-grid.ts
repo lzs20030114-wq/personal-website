@@ -360,9 +360,12 @@ export function ringGridScene(radius: number, cols: number = RING_GRID.COLS): Sc
   return sceneBySpan(ringGridSpan(radius, cols));
 }
 
-/** 同一套布景，按装置占宽给（房间 = 占宽 + 两侧留距，人站近侧角外）；`ringGridScene` 委托到这里 */
-export function sceneBySpan(fieldSpan: number): SceneMesh[] {
-  const out: SceneMesh[] = roomBoxesBySpan(fieldSpan + 2 * ROOM.MARGIN).map((b) => {
+/**
+ * 同一套布景，按装置占宽给（房间 = 占宽 + 两侧留距，人站近侧角外）；`ringGridScene` 委托到这里。
+ * `roomInner` 可另给（Lab.13 用 Lab.12 那间固定的房，装置再小房间不缩）；省略 = 随占宽。
+ */
+export function sceneBySpan(fieldSpan: number, roomInner: number = fieldSpan + 2 * ROOM.MARGIN): SceneMesh[] {
+  const out: SceneMesh[] = roomBoxesBySpan(roomInner).map((b) => {
     const g = boxVerts(b.cx, b.cy, b.cz, b.hx, b.hy, b.hz);
     return { verts: g.verts, idx: g.idx, kind: 'room' as const };
   });

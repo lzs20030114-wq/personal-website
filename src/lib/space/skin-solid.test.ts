@@ -11,6 +11,7 @@ import {
   railSpan,
   ringPlateVerts,
   rotateVertsY,
+  bridgeWeb,
 } from './skin-solid';
 
 /**
@@ -264,3 +265,50 @@ describe('membranePanel 环间织物膜', () => {
       expect(Math.hypot(at(n + i).x, at(n + i).z)).toBeGreaterThan(Math.hypot(at(i).x, at(i).z));
   });
 });
+
+describe('bridgeWeb 单元之间的织物网（Lab.13 连接）', () => {
+  const rim = (x: number, z: number, rho = 60, yTop = 300, yBot = 334) => ({ x, z, rho, yTop, yBot });
+
+  it('两圈相切：切点处零宽、外缘弦宽 = width、顶底两层加外端封板，点数与三角数对得上', () => {
+    const S = 8;
+    const W = 20;
+    const g = bridgeWeb(rim(0, 0), rim(120, 0), W, 7, S);
+    expect(g).not.toBeNull();
+    const { verts, idx } = g!;
+    expect(verts.length).toBe(2 * (S + 1) * 4 * 3);
+    expect(idx.length).toBe(2 * (S * 12 + 6));
+    // k=0：A 顶与 B 顶重合（切点）
+    expect(Math.hypot(verts[0] - verts[3], verts[2] - verts[5])).toBeLessThan(1e-9);
+    // k=S：A 顶到 B 顶的弦 = width（2ρ(1−cosΦ) = W 的定义）
+    const kS = S * 4 * 3;
+    expect(Math.hypot(verts[kS] - verts[kS + 3], verts[kS + 2] - verts[kS + 5])).toBeCloseTo(W, 6);
+    // y 只有顶与底两个值
+    const ys = new Set<number>();
+    for (let k = 1; k < verts.length; k += 3) ys.add(verts[k]);
+    expect([...ys].sort()).toEqual([300, 334]);
+    // 每个索引都在范围内
+    for (const i of idx) expect(i).toBeLessThan(verts.length / 3);
+  });
+
+  it('还没挨上（外缘差 > 门槛）不搭；差一点点搭且切点处的格就是那道缝；盖过去（交叠）也不搭', () => {
+    expect(bridgeWeb(rim(0, 0), rim(140, 0), 20, 7)).toBeNull(); // 缝 20 > 7
+    const g = bridgeWeb(rim(0, 0), rim(125, 0), 20, 7)!;
+    expect(g).not.toBeNull();
+    expect(Math.hypot(g.verts[0] - g.verts[3], g.verts[2] - g.verts[5])).toBeCloseTo(5, 6);
+    expect(bridgeWeb(rim(0, 0), rim(100, 0), 20, 7)).toBeNull(); // 盖过去 20，不是缝
+    expect(bridgeWeb(rim(0, 0), rim(0, 0), 20, 7)).toBeNull(); // 同一处
+  });
+
+  it('方向无关：两圈沿任意方向相切，网关于连心线中垂面对称', () => {
+    const th = 0.7;
+    const g = bridgeWeb(rim(0, 0), rim(120 * Math.cos(th), 120 * Math.sin(th)), 20, 7, 4)!;
+    const mid = { x: 60 * Math.cos(th), z: 60 * Math.sin(th) };
+    for (let k = 0; k <= 4; k++) {
+      const a = k * 12;
+      const dA = Math.hypot(g.verts[a] - mid.x, g.verts[a + 2] - mid.z);
+      const dB = Math.hypot(g.verts[a + 3] - mid.x, g.verts[a + 5] - mid.z);
+      expect(dA).toBeCloseTo(dB, 3); // 顶点是 Float32，只比到 1e-3
+    }
+  });
+});
+

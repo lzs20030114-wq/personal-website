@@ -522,7 +522,7 @@ export default function LabPage() {
         <Bench
           no="13"
           title="Between units"
-          lede="Call one of those cylinders a unit — twenty bands round a mast that contract into a ring platform. This bench asks what a few of them can be to each other. Two, three, four or nine hang in the same room; the relations are measured, not styled: apart (Lab.12's clearance), touching (platform edge to platform edge), stepped (the same shape carried higher on its band — up to 0.35 m), or interleaved, where a lower platform slides under a higher one and stops short of its neighbour's mast. Interleaving has a physical gate: the step must clear the folded body at its fattest moment, so some form–cluster pairs grey out rather than collide."
+          lede="Call one of those cylinders a unit — twenty bands round a mast that contract into a ring platform. This bench asks what a few of them can be to each other. Two, three, four or nine hang in Lab.12's room; the relations are measured, not styled: apart (Lab.12's clearance), touching (platform edge to platform edge, with a fabric web growing across each seam once the rims meet), stepped (the same shape carried higher on its band — up to 0.35 m), or interleaved, where a lower platform slides under a higher one and stops short of its neighbour's mast. Interleaving has a physical gate: the step must clear the folded body at its fattest moment, so some form–cluster pairs grey out rather than collide. Timing is a second axis: all at once, or wave by wave across the cluster."
           accent="var(--accent-2)"
           specs={[
             ['Unit', 'One Lab.10 ring — 20 bands · 202 nodes · same bond maps'],
@@ -531,8 +531,10 @@ export default function LabPage() {
             ['Spacing', 'Derived per relation from peak reach — never a styled number'],
             ['Height', 'lead knob, 14–58 nodes ⇒ up to 0.35 m; shape unchanged'],
             ['Interleave', 'Step ≥ body swell + 6 px · greyed out where it fails'],
-            ['Switching', 'Relation re-places without re-solving; form or level count re-solves'],
-            ['Scale', 'Same room and 1.70 m figure as Lab.12'],
+            ['Timing', 'Together, or one wave every 150 steps — one solver per unit'],
+            ['Seams', 'Touching, level: a 16 cm fabric web bridges each seam'],
+            ['Switching', 'Relation re-places without re-solving; form, timing or level count re-solves'],
+            ['Scale', 'Lab.12\'s room and 1.70 m figure, whatever the cluster size'],
           ]}
         >
           <SkinClusterBench />

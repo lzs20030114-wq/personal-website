@@ -315,3 +315,71 @@ export function membranePanel(
   }
   return { verts: bandVerts(A, B), idx: bandTriIndex(n) };
 }
+
+// ── 跨单元的织物网（Lab.13 连接，用户 2026-09-03 拍板「再做连接」）────────────────────────
+
+/** 一圈平台在此刻的外缘：圆心（世界 x/z）、外缘半径、顶面与底面高度（世界 y，向下为正） */
+export interface BridgeRim {
+  x: number;
+  z: number;
+  rho: number;
+  yTop: number;
+  yBot: number;
+}
+
+/**
+ * 两圈相切的平台之间那道缝，用一块织物网糊上。
+ *
+ * 两个圆在切点两侧张开一对楔形缝。网 = 沿切点两侧各取 `samples` 个方位角 φ，A 圈外缘上
+ * θ+φ 处的点与 B 圈外缘上 θ+π−φ 处的点（关于两圆心连线的中垂面互为镜像）拉成一格：
+ * 顶面一层（把两圈的走面连成一片）、底面一层、外端一块竖直封板（φ 最大处两点之间）。
+ * φ 取到「网的外缘弦宽 = width」为止：2ρ(1−cos Φ) = width ⇒ 再往外缝已经宽过一条带深的
+ * 几倍，糊上就是一大片平板而不是圆角。
+ *
+ * **不是随时都在**：收缩前两圈外缘还隔着老远，那时的网会是一张横在两根立杆之间的悬空布
+ * ——只在两圈外缘差 ≤ gapMax 时才搭（最后那十几像素挑出到位的过程里长出来），
+ * 之后一直在。gap 为负（交叠）也不搭：交叠不是缝。
+ *
+ * 单位随调用方（这里全部是世界单位）。返回 null = 这一刻不搭。
+ */
+export function bridgeWeb(
+  a: BridgeRim,
+  b: BridgeRim,
+  width: number,
+  gapMax: number,
+  samples = 8,
+): { verts: Float32Array; idx: Uint16Array } | null {
+  const dx = b.x - a.x;
+  const dz = b.z - a.z;
+  const d = Math.hypot(dx, dz);
+  const gap = d - a.rho - b.rho;
+  if (d < 1e-9 || gap > gapMax || gap < -gapMax) return null;
+  const th = Math.atan2(dz, dx);
+  const rho = Math.min(a.rho, b.rho);
+  const phiMax = Math.acos(Math.max(-1, Math.min(1, 1 - width / (2 * rho))));
+  const verts: number[] = [];
+  const idx: number[] = [];
+  for (const side of [1, -1]) {
+    const base = verts.length / 3;
+    for (let k = 0; k <= samples; k++) {
+      const phi = (side * k * phiMax) / samples;
+      const ax = a.x + a.rho * Math.cos(th + phi);
+      const az = a.z + a.rho * Math.sin(th + phi);
+      const bx = b.x + b.rho * Math.cos(th + Math.PI - phi);
+      const bz = b.z + b.rho * Math.sin(th + Math.PI - phi);
+      // 每个 k 四个点：A 顶 · B 顶 · A 底 · B 底
+      verts.push(ax, a.yTop, az, bx, b.yTop, bz, ax, a.yBot, az, bx, b.yBot, bz);
+    }
+    const v = (k: number, w: number): number => base + k * 4 + w;
+    for (let k = 0; k < samples; k++) {
+      // 顶面一格
+      idx.push(v(k, 0), v(k, 1), v(k + 1, 1), v(k, 0), v(k + 1, 1), v(k + 1, 0));
+      // 底面一格
+      idx.push(v(k, 2), v(k + 1, 3), v(k, 3), v(k, 2), v(k + 1, 2), v(k + 1, 3));
+    }
+    // 外端封板
+    idx.push(v(samples, 0), v(samples, 1), v(samples, 3), v(samples, 0), v(samples, 3), v(samples, 2));
+  }
+  return { verts: Float32Array.from(verts), idx: Uint16Array.from(idx) };
+}
+

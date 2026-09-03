@@ -9,6 +9,7 @@ import { bandsFarToNear } from '../../src/lib/linkage/skin';
 import {
   SOLID,
   boxVerts,
+  bridgeWeb,
   membranePanel,
   buildSolidTopology,
   fillSolidVerts,
@@ -70,6 +71,9 @@ const C_BOND: [number, number, number] = [0.88, 0.42, 0.24];
 // 环间织物膜（用户 2026-08-25「加一个半透明蒙皮」）：比带子本身淡、偏纱灰，
 // 让它读作「带与带之间的那块布」而不是又一层结构
 const MEM_DARK: [number, number, number] = [0.1, 0.16, 0.14];
+// 单元之间的织物网（Lab.13 连接）：外缘弦宽 / 起网门槛，2D px（× rig 缩放进世界）——值同 unit-cluster.BRIDGE
+const BRIDGE_W = 40;
+const BRIDGE_GAP = 14;
 const MEM_LITE: [number, number, number] = [0.5, 0.68, 0.58];
 // 布景（Lab.10 房间 + 比例小人，2026-08-25）：房间压得比芯轨还暗——它是背景不是展品；
 // 小人略亮且偏暖，在灰调的房间里一眼认得出是人
@@ -194,6 +198,8 @@ interface SolidSim {
   /** 本帧平滑后的剖面（render 内填，实例共用，不逐实例重算） */
   sx: Float64Array | null;
   sy: Float64Array | null;
+  /** 起步延迟（协议步）：Lab.13 错相；0 = 与全场同一时钟（既有台架） */
+  delay: number;
 }
 
 /** 场上的一份摆放（引擎下标 + 站位） */
@@ -225,6 +231,12 @@ export interface SolidUnitDef {
   spec: SkinSpec;
   opts: SkinUnitOpts;
   smooth: readonly [number, number];
+  /**
+   * 起步延迟（协议步，默认 0 ⇒ 逐位不变）。Lab.13 错相：每个单元晚几波起步，收缩像一道波
+   * 在簇里传过去。这是台架层的事——引擎从 step 0 起照常推进，只是晚一点开始推；
+   * 全场「跑完」按最后一条算，重播一起归零。
+   */
+  delay?: number;
 }
 
 /**
@@ -303,6 +315,7 @@ export function SkinSolidBench({
   pivotY,
   pivotFor,
   cellsKey,
+  bridges,
   extraControls,
 }: {
   active?: boolean;
@@ -423,6 +436,12 @@ export function SkinSolidBench({
    * 引擎要变（形态 / 级数）走 `unitsKey`，那条会重建；两把钥匙同时变时先重建再重摆，无害。
    */
   cellsKey?: string;
+  /**
+   * 要糊缝的格子对（Lab.13 连接，默认 undefined ⇒ 不画）：两圈相切的平台之间长一块织物网
+   * （skin-solid.bridgeWeb），随蒙皮滑块走同一个透明度；两圈外缘差 ≤ 起网门槛时才搭。
+   * 每帧从两格各自的引擎现读外缘半径与顶底高度，几何按世界坐标直接烘（每对不同，不走摆放表）。
+   */
+  bridges?: readonly (readonly [number, number])[];
   /** 台架自己的控件（塞进控制条第一层）——Lab.09 的形态选择 */
   extraControls?: ReactNode;
 }) {
@@ -459,6 +478,7 @@ export function SkinSolidBench({
   // 立杆读法也走 ref：序列台两种编制读法不同（渐变 = 轨即芯，08-22 拍板留的旧读法；
   // 捏分 = 固定立杆），换编制要能切；帧循环每帧现读，不传即挂载值 ⇒ 既有台架逐位不变
   const railRef = useRef(rail);
+  const bridgesRef = useRef(bridges);
   useEffect(() => {
     cellsRef.current = cells;
     ringPlansRef.current = ringPlans;
@@ -466,6 +486,7 @@ export function SkinSolidBench({
     pivotForRef.current = pivotFor;
     railRef.current = rail;
     sceneRef.current = scene;
+    bridgesRef.current = bridges;
   });
   // 推进速率随编制变（渐变要解十一条引擎，得放慢）——主 effect 只建一次，故走 ref
   const rateRef = useRef(rate);
@@ -587,6 +608,7 @@ export function SkinSolidBench({
         offY: 0, // 全部建好后统一解（见下方 footAlign）
         sx: null,
         sy: null,
+        delay: def.delay ?? 0,
       };
     });
     const makeInsts = (): SolidInst[] => {
@@ -900,11 +922,56 @@ export function SkinSolidBench({
           }
         });
       }
+
+      // ── 单元之间的织物网（Lab.13 连接）：相切的两圈平台之间那道缝 ─────────────────
+      // 也是半透明面 ⇒ 在实体与环内膜之后画，按每对的中点视深从远到近
+      const pairs = bridgesRef.current;
+      if (skin && hasCells() && pairs && pairs.length && skinRef.current > 0.004 && cellList.length) {
+        const alpha = skinRef.current;
+        const rad = radiusRef.current;
+        const M = cam.matrix;
+        const viewZ = (x: number, z: number): number => M[6] * x + M[8] * z;
+        /** 某格此刻的外缘：外缘半径 = 站位半径 + 最大挑出；顶/底 = 离轴 ≥ 85% 最大挑出那些节点的 y 范围 */
+        const rimOf = (c: SolidCell) => {
+          const inst = insts.find((t) => t.plan === c.plan);
+          if (!inst) return null;
+          const v = sims[inst.simIdx];
+          if (!v.sx || !v.sy) return null;
+          let mx = 0;
+          for (let i = 0; i < v.sim.n; i++) mx = Math.max(mx, v.sx[i]);
+          if (mx * SOLID.SCALE < 8) return null; // 还没挑出来，没有「外缘」可言
+          let yTop = Infinity;
+          let yBot = -Infinity;
+          for (let i = 0; i < v.sim.n; i++) {
+            if (v.sx[i] < 0.85 * mx) continue;
+            const y = rigY + rigS * (v.offY - v.sy[i] * SOLID.SCALE);
+            yTop = Math.min(yTop, y);
+            yBot = Math.max(yBot, y);
+          }
+          return { x: c.x, z: c.z, rho: rigS * (rad + mx * SOLID.SCALE), yTop, yBot };
+        };
+        const webs: { z: number; data: Float32Array }[] = [];
+        for (const [i, j] of pairs) {
+          const a = cellList[i];
+          const b = cellList[j];
+          if (!a || !b) continue;
+          const ra = rimOf(a);
+          const rb = rimOf(b);
+          if (!ra || !rb) continue;
+          const g = bridgeWeb(ra, rb, BRIDGE_W * rigS, BRIDGE_GAP * rigS);
+          if (!g) continue;
+          webs.push({ z: viewZ((a.x + b.x) / 2, (a.z + b.z) / 2), data: bakeIndexed(g.verts, g.idx) });
+        }
+        webs.sort((p, q) => p.z - q.z);
+        for (const w of webs) R.drawDynamicMesh(w.data, MEM_DARK, MEM_LITE, alpha);
+      }
     };
 
     let acc = 0;
     let holdT = 0;
     let lastHud = '';
+    /** 全场时钟（协议步，含起步延迟前的等待）；错相下引擎按各自的 delay 晚几步再推 */
+    let tick = 0;
     const replay = (): void => {
       sims.forEach((v, u) => {
         v.sim = createSkinUnit(defs[u].spec, defs[u].opts);
@@ -913,6 +980,7 @@ export function SkinSolidBench({
       });
       acc = 0;
       holdT = 0;
+      tick = 0;
     };
 
     const step = (dt: number): void => {
@@ -933,8 +1001,10 @@ export function SkinSolidBench({
         cam.tick(dt);
       }
       const lead = sims[0].sim;
+      // 「跑完」按全场最后一条算：错相下最晚起步的那条还没到头，别人不许先重播
+      const allDone = sims.every((v) => v.sim.done);
       let n = 0;
-      if (runningRef.current && !lead.done) {
+      if (runningRef.current && !allDone) {
         acc += dt * rateRef.current * speedRef.current;
         n = Math.floor(acc);
         if (n > MAX_STEPS_PER_FRAME) {
@@ -943,8 +1013,11 @@ export function SkinSolidBench({
         } else {
           acc -= n;
         }
-        for (let k = 0; k < n; k++) for (const v of sims) v.sim.advance();
-      } else if (runningRef.current && lead.done) {
+        for (let k = 0; k < n; k++) {
+          tick++;
+          for (const v of sims) if (tick > v.delay) v.sim.advance();
+        }
+      } else if (runningRef.current && allDone) {
         holdT += dt;
         if (holdT >= REPLAY_HOLD_S) replay();
       }
@@ -968,7 +1041,7 @@ export function SkinSolidBench({
         (acc, i) => acc + sims[i.simIdx].sim.locked.length * planCells(i.plan),
         0,
       );
-      const phase = lead.done ? '锁定 · 即将重播' : lead.step < 900 ? '收缩中' : '张紧 · 排泡';
+      const phase = allDone ? '锁定 · 即将重播' : lead.step < 900 ? '收缩中' : '张紧 · 排泡';
       const key = `${lead.step}|${locked}|${phase}`;
       if (key !== lastHud) {
         lastHud = key;
@@ -1010,6 +1083,7 @@ export function SkinSolidBench({
         applyLayout(layoutIdx);
         acc = 0;
         holdT = 0;
+        tick = 0;
         lastHud = '';
         render();
       },

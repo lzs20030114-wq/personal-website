@@ -47,6 +47,7 @@ import {
   RING_GRID_FIT,
   ROOM,
   ringCellPitch,
+  roomSpan,
   sceneBySpan,
   viewFitBySpan,
   type RingGridView,
@@ -160,8 +161,9 @@ export function clusterPositions(plan: ClusterPlanKey): readonly { x: number; z:
 /**
  * 每个站位的高度级（0 = 最低）。
  * - 齐平：全 0；
- * - 错层：一对两级 / 三角三级 / 方阵四级顺着绕 / 九宫按离中心的圈数（角 0 · 边 1 · 心 2）
- *   ——中心最高，读成一座台地；
+ * - 错层：一对两级 / 三角三级 / **方阵对角两级** / 九宫按离中心的圈数（角 0 · 边 1 · 心 2）
+ *   ——中心最高，读成一座台地。方阵原是四级顺着绕（每级 0.11 m），用户 2026-09-03 拍板改两级：
+ *   0.11 m 的高差在真机上读不出「级」，而 0.35 m 一眼就是两层；
  * - 交叠（parity）：两级棋盘——任何一对相邻的单元都在不同高度，同高的只在对角 / 隔一格。
  *   三角不是二分图（三个两两相邻），只能三级，每级之间的高差随之只剩一半。
  */
@@ -171,6 +173,7 @@ export function clusterLevels(plan: ClusterPlanKey, relation: ClusterRelationKey
   if (mode === 'flat') return new Array<number>(n).fill(0);
   if (mode === 'stepped') {
     if (plan === 'nine') return [0, 1, 0, 1, 2, 1, 0, 1, 0];
+    if (plan === 'quad') return [0, 1, 0, 1];
     return Array.from({ length: n }, (_, i) => i);
   }
   // parity
@@ -235,6 +238,106 @@ export function clusterUnits(
 export function clusterPlans(levels: number, count: number = RING.COUNT): number[][] {
   return Array.from({ length: levels }, (_, l) => new Array<number>(count).fill(l));
 }
+
+// ── 时序：同步 / 错相（用户 2026-09-03 拍板「先做错相」）────────────────────────────
+
+/**
+ * 同步 = 全场一个时钟（此前唯一的行为）；错相 = 每个单元一个起步延迟，收缩像一道波
+ * 在簇里传过去。延迟是台架层的加法式扩展（SolidUnitDef.delay），引擎一行不动。
+ * 错相下**每个单元一条引擎**（同一条引擎摆多处的单元不可能各有各的相位）：
+ * 一对 2 · 三角 3 · 方阵 4 · 九宫 9 条，仍在 Lab.10 渐变（11 条）的量级之内。
+ */
+export const CLUSTER_TIMINGS = [
+  { key: 'sync', label: '同步', zh: '同步', en: 'together' },
+  { key: 'stagger', label: '错相', zh: '错相', en: 'staggered' },
+] as const;
+export type ClusterTimingKey = (typeof CLUSTER_TIMINGS)[number]['key'];
+
+/** 相邻两波之间的起步间隔（协议步）：收缩全程 900 步的六分之一，一波看得出先后、又不至于前一波已经定形 */
+export const STAGGER_STEPS = 150;
+
+/**
+ * 每个站位属于第几波（0 = 最先起步）：一对 / 三角 / 方阵按站位顺序绕一圈，
+ * 九宫按对角线扫过整片（行 + 列，五波）——一道波从一个角推到对角。
+ */
+export function clusterWaves(plan: ClusterPlanKey): number[] {
+  if (plan === 'nine') return clusterPositions(plan).map((q) => q.x + 1 + (q.z + 1));
+  return clusterPositions(plan).map((_, i) => i);
+}
+
+export interface ClusterUnit extends RingUnitDef {
+  /** 起步延迟（协议步）；同步一律 0 */
+  delay: number;
+}
+export interface ClusterBuild {
+  units: ClusterUnit[];
+  /** 环编制表：第 v 份 = 二十条带全指第 v 条引擎 */
+  plans: number[][];
+  /** 每个站位用第几份编制 */
+  cellPlan: number[];
+}
+
+/** 每个站位用第几份编制：同步 = 它的高度级；错相 = 它自己（一格一条引擎） */
+export function clusterCellPlan(
+  plan: ClusterPlanKey,
+  relation: ClusterRelationKey,
+  timing: ClusterTimingKey = 'sync',
+): number[] {
+  const lv = clusterLevels(plan, relation);
+  return timing === 'stagger' ? lv.map((_, i) => i) : lv;
+}
+
+/**
+ * 解什么、摆到哪：同步下几级高度就解几条（一对错层与方阵交叠都是两级 ⇒ 同一组引擎）；
+ * 错相下每格一条，各带自己的 lead 与起步延迟。
+ */
+export function clusterBuild(
+  plan: ClusterPlanKey,
+  relation: ClusterRelationKey,
+  timing: ClusterTimingKey,
+  form: RingUnitDef,
+): ClusterBuild {
+  const lv = clusterLevels(plan, relation);
+  if (timing !== 'stagger') {
+    const units = clusterUnits(plan, relation, form).map((u) => ({ ...u, delay: 0 }));
+    return { units, plans: clusterPlans(units.length), cellPlan: lv };
+  }
+  const leads = clusterLeads(clusterLevelCount(plan, relation));
+  const waves = clusterWaves(plan);
+  const sum = RING_LEAD + RING_TAIL;
+  const free = form.spec[1];
+  const units: ClusterUnit[] = lv.map((l, i) => ({
+    ...form,
+    key: `${form.key}-u${i}`,
+    spec: [['g', leads[l]], free, ['g', sum - leads[l]]] as SkinSpec,
+    delay: waves[i] * STAGGER_STEPS,
+  }));
+  return { units, plans: clusterPlans(units.length), cellPlan: lv.map((_, i) => i) };
+}
+
+// ── 连接：相切·齐平下两圈平台之间的缝（用户 2026-09-03 拍板「再做连接」）──────────────
+
+/**
+ * 要糊缝的单元对：**只在相切·齐平下**——两圈平台边贴边、同一高度，相邻（归一距 1）的每一对
+ * 之间长一块织物网（几何见 skin-solid.bridgeWeb）。错层的相切不糊：那道缝是两级之间的落差，
+ * 糊上就是一道斜坡，不是这一轮要的东西；分离与交叠本来就没有「缝」可糊。
+ */
+export function clusterBridges(
+  plan: ClusterPlanKey,
+  relation: ClusterRelationKey,
+): (readonly [number, number])[] {
+  const rel = clusterRelation(relation);
+  if (rel.spacing !== 'touch' || rel.levels !== 'flat') return [];
+  const pos = clusterPositions(plan);
+  const out: (readonly [number, number])[] = [];
+  for (let i = 0; i < pos.length; i++)
+    for (let j = i + 1; j < pos.length; j++)
+      if (Math.abs(Math.hypot(pos[i].x - pos[j].x, pos[i].z - pos[j].z) - 1) < 1e-9) out.push([i, j]);
+  return out;
+}
+
+/** 织物网的两个手感常量（2D px）：外缘弦宽（网伸到缝多宽为止）· 起网门槛（两圈平台外缘差多远就开始搭） */
+export const BRIDGE = { WIDTH: 40, GAP_MAX: 14 } as const;
 
 // ── 间距：由关系推出来 ───────────────────────────────────────────────────────────
 
@@ -302,16 +405,17 @@ export interface ClusterCell {
   plan: number;
 }
 
-/** 站位（世界单位；簇心在原点）+ 每格用哪一级 */
+/** 站位（世界单位；簇心在原点）+ 每格用哪一份编制（同步 = 高度级；错相 = 自己） */
 export function clusterCells(
   plan: ClusterPlanKey,
   relation: ClusterRelationKey,
   formIdx: number,
   radius: number,
+  timing: ClusterTimingKey = 'sync',
 ): ClusterCell[] {
   const p = clusterPitch(plan, relation, formIdx, radius) * RIG_SCALE;
-  const lv = clusterLevels(plan, relation);
-  return clusterPositions(plan).map((q, i) => ({ x: q.x * p, z: q.z * p, plan: lv[i] }));
+  const cp = clusterCellPlan(plan, relation, timing);
+  return clusterPositions(plan).map((q, i) => ({ x: q.x * p, z: q.z * p, plan: cp[i] }));
 }
 
 /** 装置占宽（世界单位，见方取大边）：最远站位 + 平台外缘 */
@@ -327,17 +431,25 @@ export function clusterFieldSpan(
   return (2 * far * p + 2 * (radius + UNIT_FORMS[formIdx].peakReach)) * RIG_SCALE;
 }
 
-/** 布景（房间 + 比例小人）：与 Lab.12 同一套，只是占宽由关系给 */
+/**
+ * 布景：**房间固定用 Lab.12 那一间**（同半径下同一间房，用户 2026-09-03 拍板——这台研究的是
+ * 单元之间的关系，房间是背景，背景不该跟着主体呼吸；首版房间随簇的占宽变，切编制时墙跟着缩放，
+ * 会让人误以为单元也变了大小）。小人仍站在簇的近侧角外，与 Lab.12 同一条站位规则。
+ */
 export function clusterScene(
   plan: ClusterPlanKey,
   relation: ClusterRelationKey,
   formIdx: number,
   radius: number,
 ): SceneMesh[] {
-  return sceneBySpan(clusterFieldSpan(plan, relation, formIdx, radius));
+  return sceneBySpan(clusterFieldSpan(plan, relation, formIdx, radius), roomSpan(radius));
 }
 
-/** 取景：与 Lab.12 同一份包围盒解析式（框的是房间），逐视角逐半径现算 */
+/**
+ * 取景：与 Lab.12 同一份包围盒解析式，逐视角逐半径现算。框的是**簇 + 一圈留距**而不是整间房
+ * ——房间固定后一对单元在 Lab.12 的取景里只剩画面中央一小团，故相机按簇推进、墙允许出画
+ * （「一对时环变小的问题靠默认机位稍近一点补」）。
+ */
 export function clusterCamScale(
   plan: ClusterPlanKey,
   relation: ClusterRelationKey,

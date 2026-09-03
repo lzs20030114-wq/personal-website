@@ -1053,3 +1053,11 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
 - **线稿**：`scripts/unit-cluster/atlas.mjs`（unit / dims / matrix 三张 SVG，headless Chromium 转 PNG 已发用户）。
 - 案例页零改（项目 II 主图仍是 Lab.12）。
 
+### 26.1 同日第二轮：拍板落地 + 错相 + 连接（用户「按你的想法做吧」）
+
+- **台架**：`SkinClusterBench` 默认 一对 · 交叠·错层；控制条第一层加「时序」（同步／错相）；HUD 副题带错相与糊缝口径。
+- **SkinSolidBench 两处加法式**：`SolidUnitDef.delay`（步进循环加全场时钟 `tick`，引擎按各自延迟晚起步；`allDone` 才重播）· prop `bridges`（相切格子对之间的织物网，实体与环内膜之后画，按对中点视深排序）。默认值下 Lab.07–12 逐位不变。
+- **模块**：`unit-cluster.ts` 加 `CLUSTER_TIMINGS / STAGGER_STEPS / clusterWaves / clusterBuild / clusterCellPlan / clusterBridges / BRIDGE`，方阵错层 `[0,1,0,1]`，`clusterScene` 传 `roomSpan(radius)`；`skin-grid.sceneBySpan` 加可选 `roomInner`；`skin-solid.bridgeWeb`（+3 项守门）。
+- **差分守门**：Lab.13 轴 [关系, 时序] ⇒ 160，冻结清单 126 → 206 行。
+- **`/lab` 规格表** +2 行（Timing / Seams），lede 改口径；主页卡 meta 加「2 timings」；统计条 Tests 467。
+

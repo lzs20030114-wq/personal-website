@@ -16,7 +16,7 @@
 import { SKIN_UNITS } from './skin-data';
 import { DUAL_MID_OPTIONS } from './skin-dual';
 import { SQUARE_GRID, SQUARE_MORPH } from './skin-square';
-import { CLUSTER_PLANS, CLUSTER_RELATIONS } from './unit-cluster';
+import { CLUSTER_PLANS, CLUSTER_RELATIONS, CLUSTER_TIMINGS } from './unit-cluster';
 
 export interface VariantOption {
   key: string;
@@ -89,10 +89,12 @@ export const GRID_PLANS = [
 ] as const;
 export type GridPlanKey = (typeof GRID_PLANS)[number]['key'];
 
-/** Lab.13 单元关系（2026-09-03 立项）：编制 = 几个单元怎么摆（2 / 3 / 4 / 9），关系五档为正交轴 */
+/** Lab.13 单元关系（2026-09-03 立项）：编制 = 几个单元怎么摆（2 / 3 / 4 / 9），关系五档与时序两档为正交轴 */
 export const CLUSTER_PLAN_OPTIONS = CLUSTER_PLANS.map((p) => ({ key: p.key, label: p.label }));
 export const CLUSTER_RELATION_OPTIONS = CLUSTER_RELATIONS.map((r) => ({ key: r.key, label: r.label }));
+export const CLUSTER_TIMING_OPTIONS = CLUSTER_TIMINGS.map((t) => ({ key: t.key, label: t.label }));
 const CLUSTER_RELATION_AXIS: VariantAxis = { axis: '关系', options: CLUSTER_RELATION_OPTIONS };
+const CLUSTER_TIMING_AXIS: VariantAxis = { axis: '时序', options: CLUSTER_TIMING_OPTIONS };
 
 /** 目录四形态（袋 / 蘑菇挑台 / 直挑台 / 阶梯挑台方箱）——环族与场地的「形态」子选项 */
 const FORM_OPTIONS: readonly VariantOption[] = SKIN_UNITS.map((d) => ({ key: d.key, label: d.zh }));
@@ -155,7 +157,7 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     // 交叠 × 三角 × {袋, 方箱} 与 交叠 × {一对, 方阵, 九宫} × 袋 在物理上装不下（unit-cluster.overlapFeasible），
     // 按钮变灰留位——档位仍在清单里，是「有这一档但这一档不成立」，不是丢了
     plans: CLUSTER_PLAN_OPTIONS.map((p) => ({ ...p, sub: FORM_SUB })),
-    axes: [CLUSTER_RELATION_AXIS],
+    axes: [CLUSTER_RELATION_AXIS, CLUSTER_TIMING_AXIS],
   },
 ];
 
