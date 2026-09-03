@@ -187,7 +187,15 @@ export interface RoomBox {
  * 读起来是一间被剖开的房间——与草图那张剖面图是同一种画法。
  */
 export function roomBoxes(radius: number, cols: number = RING_GRID.COLS): RoomBox[] {
-  const half = roomSpan(radius, cols) / 2;
+  return roomBoxesBySpan(roomSpan(radius, cols));
+}
+
+/**
+ * 同一间房，按**内净尺寸**给（2026-09-03 单元关系 Lab.13 复用：那台的占宽由几个单元的
+ * 关系定，不是行列数 × 格距）。`roomBoxes` 委托到这里 ⇒ Lab.12 逐位不变。
+ */
+export function roomBoxesBySpan(span: number): RoomBox[] {
+  const half = span / 2;
   const wallH = ROOM.FLOOR_Y / 2;
   const t = ROOM.WALL_T / 2;
   return [
@@ -212,7 +220,12 @@ export function roomBoxes(radius: number, cols: number = RING_GRID.COLS): RoomBo
  * 朝向 +Z（面朝敞开的那一侧），正视看是正面、轴测看是四分之三侧面。
  */
 export function figureSpot(radius: number, cols: number = RING_GRID.COLS): FigureSpec {
-  const corner = ringGridSpan(radius, cols) / 2 + 40;
+  return figureSpotBySpan(ringGridSpan(radius, cols));
+}
+
+/** 同一条站位规则，按装置占宽（世界单位，不含房间留距）给；`figureSpot` 委托到这里 */
+export function figureSpotBySpan(fieldSpan: number): FigureSpec {
+  const corner = fieldSpan / 2 + 40;
   return { x: corner, z: corner, footY: ROOM.FLOOR_Y, height: FIGURE.HEIGHT, yaw: 0 };
 }
 
@@ -269,8 +282,13 @@ export function ringGridViewFit(
   view: RingGridView,
   cols: number = RING_GRID.COLS,
 ): number {
+  return viewFitBySpan(roomSpan(radius, cols), view); // 取景要框的是**房间**，不只是阵列
+}
+
+/** 同一套包围盒解析式，按房间内净尺寸给；`ringGridViewFit` 委托到这里 */
+export function viewFitBySpan(span: number, view: RingGridView): number {
   const M = ringGridViewMatrix(view);
-  const h = roomSpan(radius, cols) / 2; // 取景要框的是**房间**，不只是阵列
+  const h = span / 2;
   const hy = (RING_GRID_Y.hi - RING_GRID_Y.lo) / 2;
   const dy = (RING_GRID_Y.hi + RING_GRID_Y.lo) / 2 - RING_GRID_PIVOT_Y; // 盒心相对枢轴
   const ex = Math.abs(M[0]) * h + Math.abs(M[1]) * hy + Math.abs(M[2]) * h;
@@ -339,11 +357,16 @@ export interface SceneMesh {
  * 全是静件，台架按半径缓存，不逐帧重算。
  */
 export function ringGridScene(radius: number, cols: number = RING_GRID.COLS): SceneMesh[] {
-  const out: SceneMesh[] = roomBoxes(radius, cols).map((b) => {
+  return sceneBySpan(ringGridSpan(radius, cols));
+}
+
+/** 同一套布景，按装置占宽给（房间 = 占宽 + 两侧留距，人站近侧角外）；`ringGridScene` 委托到这里 */
+export function sceneBySpan(fieldSpan: number): SceneMesh[] {
+  const out: SceneMesh[] = roomBoxesBySpan(fieldSpan + 2 * ROOM.MARGIN).map((b) => {
     const g = boxVerts(b.cx, b.cy, b.cz, b.hx, b.hy, b.hz);
     return { verts: g.verts, idx: g.idx, kind: 'room' as const };
   });
-  const f = figureVerts(figureSpot(radius, cols));
+  const f = figureVerts(figureSpotBySpan(fieldSpan));
   out.push({ verts: f.verts, idx: f.idx, kind: 'figure' });
   return out;
 }

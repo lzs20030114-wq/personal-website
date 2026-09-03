@@ -302,6 +302,7 @@ export function SkinSolidBench({
   skinValue,
   pivotY,
   pivotFor,
+  cellsKey,
   extraControls,
 }: {
   active?: boolean;
@@ -415,6 +416,13 @@ export function SkinSolidBench({
    * 走 ref 每次现读；换编制时 setUnits → applyLayout 会用它重定枢轴。`pivotY` 给了仍覆盖 y。
    */
   pivotFor?: (layoutKey: string) => { x: number; y: number; z: number };
+  /**
+   * 站位表的版本号（默认 undefined ⇒ 不干预，Lab.07–12 逐位不变）。变了就**只重摆不重解**：
+   * 重读 `cells`、重烘布景、相机重取景，引擎接着跑。给 Lab.13 单元关系用——同一次收缩，
+   * 分离 / 相切 / 交叠三种看法之间切换不该把收缩倒回去（Lab.08 换排布的先例）。
+   * 引擎要变（形态 / 级数）走 `unitsKey`，那条会重建；两把钥匙同时变时先重建再重摆，无害。
+   */
+  cellsKey?: string;
   /** 台架自己的控件（塞进控制条第一层）——Lab.09 的形态选择 */
   extraControls?: ReactNode;
 }) {
@@ -424,6 +432,7 @@ export function SkinSolidBench({
     replay: () => void;
     setPersp: (on: boolean) => void;
     setRadius: (r: number) => void;
+    reflowCells: () => void;
     setSkin: (v: number) => void;
     setUnits: (
       u: readonly SolidUnitDef[],
@@ -983,6 +992,12 @@ export function SkinSolidBench({
         reflow(); // 阵列：格距 = 2·外缘 + 缝，随半径重算；相机跟着退
         render();
       },
+      // 站位表换了（Lab.13 换关系）：布景按站位算，缓存键只有半径 ⇒ 先作废再重摆
+      reflowCells: () => {
+        setR = Number.NaN;
+        reflow();
+        render();
+      },
       // 换键谱 = 整场重建引擎（Lab.09 换形态）。不重挂组件：重挂会丢一个 WebGL
       // 上下文再要一个，一页九台的场合是实打实的风险
       setUnits: (nextUnits, nextOrder, nextPlans) => {
@@ -1080,6 +1095,14 @@ export function SkinSolidBench({
     if (units) apiRef.current?.setUnits(units, order, ringPlans);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unitsKey]);
+
+  // 站位表换了就只重摆（首次由主 effect 摆，这里跳过）
+  const cellsKeyRef = useRef(cellsKey);
+  useEffect(() => {
+    if (cellsKey === undefined || cellsKey === cellsKeyRef.current) return;
+    cellsKeyRef.current = cellsKey;
+    apiRef.current?.reflowCells();
+  }, [cellsKey]);
 
   useBenchLoop(canvasRef, (dt) => apiRef.current?.step(dt), [], active);
 

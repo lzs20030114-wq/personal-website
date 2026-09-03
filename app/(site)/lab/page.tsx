@@ -14,15 +14,16 @@ import { SkinSeriesBench } from '../../../components/lab/SkinSeriesBench';
 import { SkinGridBench } from '../../../components/lab/SkinGridBench';
 import { SkinDualBench } from '../../../components/lab/SkinDualBench';
 import { SquareRingBench } from '../../../components/lab/SquareRingBench';
+import { SkinClusterBench } from '../../../components/lab/SkinClusterBench';
 
 export const metadata = { title: 'The lab' };
 
 /**
- * The lab（Lab-Modernist 稿 → MAPPING §7）：十二台真求解器台架，深色语言与 case/log 一致。
+ * The lab（Lab-Modernist 稿 → MAPPING §7）：十三台真求解器台架，深色语言与 case/log 一致。
  * ★ 版式逐项对稿：300px 定宽左栏 + 44px 间距；规格表竖排行（92px 标签列 + 发丝线分隔）；
  *   图框 3px 彩色顶线（2D 绿 / 3D 紫）+ 极淡填充；标题 72px；页脚两链。
  * 每台跑的是站内 TS 内核，不是视频、不是二次实现：Lab.01–05 = src/lib/linkage（封盘零改，
- * 项目一），Lab.06–12 = src/lib/space（项目二皮肤单元引擎，Python 研究代码的 1:1 移植）。
+ * 项目一），Lab.06–13 = src/lib/space（项目二皮肤单元引擎，Python 研究代码的 1:1 移植）。
  *
  * 项目二七台按**尺度**收成四段（2026-09-03 用户拍板「七台四段」——此前九台按立项时间排，
  * 读者看完 4×4 的房间又跳回单条带）：一条带 → 一排 → 一圈 → 一间房；段内按形态族
@@ -31,6 +32,8 @@ export const metadata = { title: 'The lab' };
  * 捏分十级｜10 圆筒环 = 原 09 三编制 + 原 13 捏分环 · 11 方形环（原 14）｜12 环阵列场地（原 10）。
  * 46 种离散差分一档不少，冻在 src/lib/space/lab-variants.test.ts；折进编制按钮的差分用
  * `/lab#labNN-<plan>` 直达（如 #lab10-split）。编号按新页序连续；文档里的旧号见 CLAUDE.md 对照表。
+ * 2026-09-03 加第五段 Ⅴ Between units（Lab.13 单元关系）：尺度主轴到「一间房」封顶，Ⅴ 开的是第二条轴
+ * ——几个单元**之间**能是什么关系（距离 / 高度 / 形态），编号顺延不重排。
  * 2026-08-18 起页面按项目分组（MAPPING §16）——log 页先例：多项目共用一条主线。
  */
 const KICKER: CSSProperties = {
@@ -231,7 +234,7 @@ export default function LabPage() {
       <div className="shell pg-dark" data-pt-content>
         <header style={{ padding: '64px 0 40px', borderBottom: 'var(--hair)' }}>
           <div className="flex items-baseline justify-between" style={{ gap: 32 }}>
-            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · fourteen live instruments</p>
+            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · fifteen live instruments</p>
             <span style={LEGEND}>
               <span className="flex items-center" style={{ gap: 6 }}>
                 <span style={{ width: 9, height: 9, background: 'var(--accent)' }} />
@@ -514,6 +517,27 @@ export default function LabPage() {
           <SkinGridBench />
         </Bench>
 
+        <ScaleRule n="Ⅴ" label="Between units" sub="Lab.13 · what two, three, four, nine units can be to each other" />
+
+        <Bench
+          no="13"
+          title="Between units"
+          lede="Call one of those cylinders a unit — twenty bands round a mast that contract into a ring platform. This bench asks what a few of them can be to each other. Two, three, four or nine hang in the same room; the relations are measured, not styled: apart (Lab.12's clearance), touching (platform edge to platform edge), stepped (the same shape carried higher on its band — up to 0.35 m), or interleaved, where a lower platform slides under a higher one and stops short of its neighbour's mast. Interleaving has a physical gate: the step must clear the folded body at its fattest moment, so some form–cluster pairs grey out rather than collide."
+          accent="var(--accent-2)"
+          specs={[
+            ['Unit', 'One Lab.10 ring — 20 bands · 202 nodes · same bond maps'],
+            ['Clusters', 'Pair · triad · two-by-two · three-by-three'],
+            ['Relations', 'Apart · touching · apart stepped · touching stepped · interleaved'],
+            ['Spacing', 'Derived per relation from peak reach — never a styled number'],
+            ['Height', 'lead knob, 14–58 nodes ⇒ up to 0.35 m; shape unchanged'],
+            ['Interleave', 'Step ≥ body swell + 6 px · greyed out where it fails'],
+            ['Switching', 'Relation re-places without re-solving; form or level count re-solves'],
+            ['Scale', 'Same room and 1.70 m figure as Lab.12'],
+          ]}
+        >
+          <SkinClusterBench />
+        </Bench>
+
         <footer
           className="flex flex-wrap items-baseline justify-between"
           style={{ gap: 32, padding: '26px 0 72px' }}
@@ -527,7 +551,7 @@ export default function LabPage() {
               color: 'var(--n500)',
             }}
           >
-            14 instruments · 03 kernels · all live
+            15 instruments · 03 kernels · all live
           </span>
           <span
             className="flex"

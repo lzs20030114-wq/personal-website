@@ -16,6 +16,7 @@
 import { SKIN_UNITS } from './skin-data';
 import { DUAL_MID_OPTIONS } from './skin-dual';
 import { SQUARE_GRID, SQUARE_MORPH } from './skin-square';
+import { CLUSTER_PLANS, CLUSTER_RELATIONS } from './unit-cluster';
 
 export interface VariantOption {
   key: string;
@@ -88,6 +89,11 @@ export const GRID_PLANS = [
 ] as const;
 export type GridPlanKey = (typeof GRID_PLANS)[number]['key'];
 
+/** Lab.13 单元关系（2026-09-03 立项）：编制 = 几个单元怎么摆（2 / 3 / 4 / 9），关系五档为正交轴 */
+export const CLUSTER_PLAN_OPTIONS = CLUSTER_PLANS.map((p) => ({ key: p.key, label: p.label }));
+export const CLUSTER_RELATION_OPTIONS = CLUSTER_RELATIONS.map((r) => ({ key: r.key, label: r.label }));
+const CLUSTER_RELATION_AXIS: VariantAxis = { axis: '关系', options: CLUSTER_RELATION_OPTIONS };
+
 /** 目录四形态（袋 / 蘑菇挑台 / 直挑台 / 阶梯挑台方箱）——环族与场地的「形态」子选项 */
 const FORM_OPTIONS: readonly VariantOption[] = SKIN_UNITS.map((d) => ({ key: d.key, label: d.zh }));
 const FORM_SUB: VariantSub = { axis: '形态', options: FORM_OPTIONS };
@@ -102,7 +108,7 @@ const DUAL_GAP_AXIS: VariantAxis = {
   options: DUAL_MID_OPTIONS.map((m) => ({ key: String(m), label: String(m) })),
 };
 
-/** 七台四段（页序）：Ⅰ 单元 06–08 · Ⅱ 序列 09 · Ⅲ 环 10–11 · Ⅳ 场 12 */
+/** 八台五段（页序）：Ⅰ 单元 06–08 · Ⅱ 序列 09 · Ⅲ 环 10–11 · Ⅳ 场 12 · Ⅴ 单元之间 13 */
 export const LAB_VARIANTS: readonly BenchVariants[] = [
   { no: '06', key: 'unit', zh: '二维皮肤单元', en: 'Contractile skin units', plans: [], axes: [] },
   { no: '07', key: 'solid', zh: '立体带', en: 'Skin units, solid', plans: [], axes: [] },
@@ -140,6 +146,16 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     en: 'Four by four',
     plans: GRID_PLANS.map((p) => (p.key === 'uniform' ? { ...p, sub: FORM_SUB } : { ...p })),
     axes: [],
+  },
+  {
+    no: '13',
+    key: 'cluster',
+    zh: '单元关系',
+    en: 'Between units',
+    // 交叠 × 三角 × {袋, 方箱} 与 交叠 × {一对, 方阵, 九宫} × 袋 在物理上装不下（unit-cluster.overlapFeasible），
+    // 按钮变灰留位——档位仍在清单里，是「有这一档但这一档不成立」，不是丢了
+    plans: CLUSTER_PLAN_OPTIONS.map((p) => ({ ...p, sub: FORM_SUB })),
+    axes: [CLUSTER_RELATION_AXIS],
   },
 ];
 

@@ -1041,3 +1041,15 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
 - **案例页**：FIG.03 由 `SkinArrayBench layout={1}` 改 `SkinSeriesBench plan="gradient" layout={1}`（开场逐位相同）；heroLive 题注 Lab.10 → Lab.12。
 - **已知代价**：折进编制按钮的两套内容（原 12 捏分、原 13 捏分环）不再有自己的主页卡片与 lede，靠合并台的 lede／规格表与 hash 直达承接。
 
+## 26. Lab.13 单元关系：第五段 Ⅴ Between units（2026-09-03，用户立项「几个单元之间可形成的关系」）
+
+机理、可行性审计与账在 项目二_单元关系lab.md，这里只记落点与影响面。**稿里没有这件东西**（Lab-Modernist 稿只有一列台架），属站方增补，版式语言全部复用稿内既有构件与 §25 的段头。
+
+- **`/lab` 页**：Ⅳ A room 之后加 `ScaleRule` Ⅴ Between units（Lab.13）+ `Bench no="13"`（lede / 规格表八行）；页首 kicker 「fourteen → fifteen live instruments」、页脚 14 → 15 instruments。编号顺延不重排（§25 刚定的 06–12 不动）。
+- **台架**：新 `components/lab/SkinClusterBench.tsx`（编制 一对／三角／方阵／九宫 × 关系五档 × 形态四种；交叠装不下的组合按钮变灰留位）。`SkinSolidBench` 加法式 prop `cellsKey`（默认 undefined ⇒ Lab.07–12 逐位不变）+ api `reflowCells`。
+- **模块**：`src/lib/space/unit-cluster.ts` + 守门 9 项；`skin-grid.ts` 抽出四个 BySpan 函数（原函数委托，Lab.12 守门原样通过）。
+- **差分守门**：`lab-variants.ts` 加 no 13（plans 4 × sub 形态 4 × axis 关系 5 = 80），冻结清单 46 → 126 行；`/lab#lab13-<plan>` 直达。
+- **主页**：LABS 卡 12 → 13（Between units），`lg:grid-cols-12 → 13`，统计条 Demos 13、Tests 461。
+- **线稿**：`scripts/unit-cluster/atlas.mjs`（unit / dims / matrix 三张 SVG，headless Chromium 转 PNG 已发用户）。
+- 案例页零改（项目 II 主图仍是 Lab.12）。
+

@@ -58,23 +58,104 @@ const FROZEN = [
   '12:uniform.ledge',
   '12:uniform.stepped',
   '12:perRow',
+  // Ⅴ 单元之间（Lab.13 单元关系 ⇒ 编制 4 × 形态 4 × 关系 5）
+  '13:pair.pocket:apart',
+  '13:pair.pocket:touch',
+  '13:pair.pocket:apartStep',
+  '13:pair.pocket:touchStep',
+  '13:pair.pocket:overlap',
+  '13:pair.bulb:apart',
+  '13:pair.bulb:touch',
+  '13:pair.bulb:apartStep',
+  '13:pair.bulb:touchStep',
+  '13:pair.bulb:overlap',
+  '13:pair.ledge:apart',
+  '13:pair.ledge:touch',
+  '13:pair.ledge:apartStep',
+  '13:pair.ledge:touchStep',
+  '13:pair.ledge:overlap',
+  '13:pair.stepped:apart',
+  '13:pair.stepped:touch',
+  '13:pair.stepped:apartStep',
+  '13:pair.stepped:touchStep',
+  '13:pair.stepped:overlap',
+  '13:triad.pocket:apart',
+  '13:triad.pocket:touch',
+  '13:triad.pocket:apartStep',
+  '13:triad.pocket:touchStep',
+  '13:triad.pocket:overlap',
+  '13:triad.bulb:apart',
+  '13:triad.bulb:touch',
+  '13:triad.bulb:apartStep',
+  '13:triad.bulb:touchStep',
+  '13:triad.bulb:overlap',
+  '13:triad.ledge:apart',
+  '13:triad.ledge:touch',
+  '13:triad.ledge:apartStep',
+  '13:triad.ledge:touchStep',
+  '13:triad.ledge:overlap',
+  '13:triad.stepped:apart',
+  '13:triad.stepped:touch',
+  '13:triad.stepped:apartStep',
+  '13:triad.stepped:touchStep',
+  '13:triad.stepped:overlap',
+  '13:quad.pocket:apart',
+  '13:quad.pocket:touch',
+  '13:quad.pocket:apartStep',
+  '13:quad.pocket:touchStep',
+  '13:quad.pocket:overlap',
+  '13:quad.bulb:apart',
+  '13:quad.bulb:touch',
+  '13:quad.bulb:apartStep',
+  '13:quad.bulb:touchStep',
+  '13:quad.bulb:overlap',
+  '13:quad.ledge:apart',
+  '13:quad.ledge:touch',
+  '13:quad.ledge:apartStep',
+  '13:quad.ledge:touchStep',
+  '13:quad.ledge:overlap',
+  '13:quad.stepped:apart',
+  '13:quad.stepped:touch',
+  '13:quad.stepped:apartStep',
+  '13:quad.stepped:touchStep',
+  '13:quad.stepped:overlap',
+  '13:nine.pocket:apart',
+  '13:nine.pocket:touch',
+  '13:nine.pocket:apartStep',
+  '13:nine.pocket:touchStep',
+  '13:nine.pocket:overlap',
+  '13:nine.bulb:apart',
+  '13:nine.bulb:touch',
+  '13:nine.bulb:apartStep',
+  '13:nine.bulb:touchStep',
+  '13:nine.bulb:overlap',
+  '13:nine.ledge:apart',
+  '13:nine.ledge:touch',
+  '13:nine.ledge:apartStep',
+  '13:nine.ledge:touchStep',
+  '13:nine.ledge:overlap',
+  '13:nine.stepped:apart',
+  '13:nine.stepped:touch',
+  '13:nine.stepped:apartStep',
+  '13:nine.stepped:touchStep',
+  '13:nine.stepped:overlap',
 ];
 
 describe('lab-variants · 项目二台架差分清单', () => {
-  it('七台四段：编号 06–12 连续、不重复', () => {
-    expect(LAB_VARIANTS.map((b) => b.no)).toEqual(['06', '07', '08', '09', '10', '11', '12']);
+  it('八台五段：编号 06–13 连续、不重复', () => {
+    expect(LAB_VARIANTS.map((b) => b.no)).toEqual(['06', '07', '08', '09', '10', '11', '12', '13']);
     expect(new Set(LAB_VARIANTS.map((b) => b.key)).size).toBe(LAB_VARIANTS.length);
   });
 
-  it('46 种离散组合逐条与冻结清单相同（少一档即红）', () => {
+  it('126 种离散组合逐条与冻结清单相同（少一档即红）', () => {
     const combos = allCombos();
-    expect(combos.length).toBe(46);
+    expect(combos.length).toBe(126);
     expect(combos).toEqual(FROZEN);
   });
 
-  it('每台组合数 = 收纳前各台组合之和（1 + 1 + 3 + (2+2) + (9+1) + 22 + 5）', () => {
+  it('每台组合数 = 收纳前各台组合之和（1 + 1 + 3 + (2+2) + (9+1) + 22 + 5）+ Lab.13 的 80', () => {
     const per = Object.fromEntries(LAB_VARIANTS.map((b) => [b.no, benchCombos(b).length]));
-    expect(per).toEqual({ '06': 1, '07': 1, '08': 3, '09': 4, '10': 10, '11': 22, '12': 5 });
+    expect(per).toEqual({ '06': 1, '07': 1, '08': 3, '09': 4, '10': 10, '11': 22, '12': 5, '13': 80 });
   });
 
   it('组合 id 唯一（同名档不会在清单里被折叠掉）', () => {
