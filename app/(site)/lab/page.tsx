@@ -481,9 +481,9 @@ export default function LabPage() {
             ['Shelves', '16 px thick, fixed — the gap opens from 0 to 100 px, so the height grows from 32 to 132 px around the ring'],
             ['Why the height varies', 'A solid box must be deeper than it is tall (the buffer rule); a 132 px box would need a 358 px square — so the slab side stays 32 px'],
             ['Forming', 'Tall boxes fold their top face into the seam while forming — the faces are kept straight (a placement rule), and the fold never appears'],
-            ['Ten engines', 'Face L9·6·5·0 · edge L9·7·4·1 · corner L8·3 — each class at its own reach; L2 forms on no band'],
-            ['Square', 'Side 232 px (flat plan 169), rim within 0.9 px · own band of 419 nodes, own grid pitch'],
-            ['Level', 'The lower shelf stays level (asymmetric padding); the upper one lifts with the gap'],
+            ['Ten engines', 'One per pair of bands, ten steps of gap from 100 px to 0 — the height drops 11 px a pair, evenly, all the way round'],
+            ['Square', 'Side 223 px (flat plan 169), rim within 0.9 px · own band of 338 nodes, own grid pitch'],
+            ['Level', 'The seam centre stays level (symmetric padding); the two shelves part evenly above and below it'],
             ['Radius', 'Fixed: the depths are calibrated against it'],
             ['Ceiling', 'Ring plate · fixed masts, skin gathers down them'],
           ]}

@@ -90,7 +90,7 @@ const MORPH = Array.from({ length: SQUARE_MORPH.STEPS }, (_, s) => {
  * 捏分编制——**一次循环 · 变高**（用户 2026-09-02 两轮拍板：「一次循环优先」→「拉高，上下两个板
  * 之间有充足的空间」，选了变高：台高钉死 16、缝张到 100，整块那边是 32 高的薄块，上板沿一圈
  * 从贴着下板升到缝顶）。一次循环要面类在同一个挑出上既做出整块又做出满裂；恒高读法下缝 100
- * 的实心箱要挑出 ≥151、边长 358，故走变高。俯视轮廓仍按方形标定，但比平档大一圈（边长 ≈235），
+ * 的实心箱要挑出 ≥151、边长 358，故走变高。俯视轮廓仍按方形标定，但比平档大一圈（边长 223），
  * 4×4 用自己的格距；带子也是自己的一份（`SQSPLIT_BAND`），换编制时枢轴跟着走（`pivotY`）。
  * 谱、编制与几何全在 skin-square-split.ts（线稿脚本与站上共用一份）；这里只取数据。
  */
@@ -132,8 +132,8 @@ const PIVOT_Y_SPLIT = Math.round((PIVOT_Y * SQSPLIT_BAND) / SQUARE.BAND);
 const cellsOf = () => CELLS;
 const splitCellsOf = () => SPLIT.cells;
 /**
- * 取景。**按编制分**——捏分的环比平档大一圈（边长 232 vs 169：变高读法下面类挑出 ≈88）、
- * 带子也更长（406 vs 305），同一个 scale 会把它裁掉一圈。
+ * 取景。**按编制分**——捏分的环比平档大一圈（边长 223 vs 169：变高读法下面类挑出 ≈83）、
+ * 带子也更长（338 vs 305），同一个 scale 会把它裁掉一圈。
  * 单环框角点直径、阵列框整片占宽，两档按各自的横向尺寸等比缩，单环再按带长缩一次。
  * `SINGLE_SCALE` 是平档单环那一档：带子 202 → 250 → 305 后筒高了 51%，故从 0.95 按
  * 202/305 缩到 **0.63**（= 装置在画面里占的地方与加长之前一样，不是重新构图）。
@@ -168,7 +168,7 @@ const HUD = {
     split: (n: number, lobe: number, gap: number, side: number) =>
       `${n} 条窄带 · 一圈一个来回：一条边上是两片台、隔 ${gap}px → 绕到对边合成一块 · 台高钉死 ${lobe}px · 方 · 边长 ${side}px`,
     splitHint: (rungs: number, engines: number) =>
-      `下板齐平、上板沿一圈升起 · ${engines} 条引擎摆二十处 · 每条带 ${rungs} 挡 · 侧看两台分开 · 顶视看方形 · 拖拽旋转`,
+      `缝心一圈恒定、两台各升降一半 · ${engines} 条引擎摆二十处 · 每条带 ${rungs} 挡 · 侧看两台分开 · 顶视看方形 · 拖拽旋转`,
     hint: (tiers: string, rungs: number, wave: boolean) =>
       `${tiers} · 每条带 ${rungs} 挡 · ${wave ? '俯视看轮廓 · 侧看起伏' : '顶视看轮廓'} · 拖拽旋转`,
     aria: '方形环：二十条窄织物带围成一圈，每条带按自己在方形里的位置挑出不同长度，收缩后二十个挑台连成一圈俯视为正方形的平台；箱高一圈恒定，可拖拽旋转',
@@ -187,7 +187,7 @@ const HUD = {
     split: (n: number, lobe: number, gap: number, side: number) =>
       `${n} narrow bands · one round trip: two shelves ${gap} px apart on one side, one slab on the opposite side · shelves ${lobe} px thick everywhere · a square, side ${side} px`,
     splitHint: (rungs: number, engines: number) =>
-      `the lower shelf stays level, the upper one lifts around the ring · ${engines} engines placed twenty times · ${rungs} rungs on every band · the split reads from the side, the plan from above · drag to orbit`,
+      `the seam centre stays level, the two shelves part evenly · ${engines} engines placed twenty times · ${rungs} rungs on every band · the split reads from the side, the plan from above · drag to orbit`,
     hint: (tiers: string, rungs: number, wave: boolean) =>
       `${tiers} · ${rungs} rungs on every band · ${wave ? 'plan from above, swing from the side' : 'read the plan from above'} · drag to orbit`,
     aria:

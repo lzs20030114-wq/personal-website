@@ -12,7 +12,7 @@ import { createSkinUnit, SKIN } from '../../src/lib/space/skin-unit.ts';
 import { silhouette } from '../../src/lib/space/skin-split.ts';
 import { SQUARE } from '../../src/lib/space/skin-square.ts';
 import {
-  SQSPLIT, SQSPLIT_BAND, SQSPLIT_T, SQSPLIT_TIERS, SQSPLIT_REACH, SQSPLIT_SCHEDULE,
+  SQSPLIT, SQSPLIT_BAND, SQSPLIT_PAIR_T, SQSPLIT_TIERS, SQSPLIT_REACH,
   buildSquareSplitOrder, sqSplitBuild, sqSplitHalfSide, sqSplitPairOf, sqSplitRim, sqSplitTarget,
 } from '../../src/lib/space/skin-square-split.ts';
 
@@ -77,7 +77,7 @@ const order = buildSquareSplitOrder();
 const M = SQSPLIT_TIERS.map((t) => measure(t));
 for (const [i, t] of SQSPLIT_TIERS.entries()) {
   const m = M[i];
-  console.log(`${t.en.padEnd(10)} L${t.level} t=${t.t}  挑出 ${m.reach.toFixed(1)}（表 ${SQSPLIT_REACH[i]}） 总高 ${m.boxH.toFixed(2)}/${m.H.toFixed(1)} 锁 ${m.locked}/${m.tot} 结 ${m.knot} Δ ${m.silD.toFixed(2)} 缝底 ${m.seamMin.toFixed(1)} 下板底 ${m.floorY.toFixed(1)} 缝心 ${m.mouthY.toFixed(1)}${m.fails.length ? '  × ' + m.fails.join(' · ') : ''}`);
+  console.log(`${t.en.padEnd(10)} t=${t.t.toFixed(3)}  挑出 ${m.reach.toFixed(1)}（表 ${SQSPLIT_REACH[i]}） 总高 ${m.boxH.toFixed(2)}/${m.H.toFixed(1)} 锁 ${m.locked}/${m.tot} 结 ${m.knot} Δ ${m.silD.toFixed(2)} 缝底 ${m.seamMin.toFixed(1)} 下板底 ${m.floorY.toFixed(1)} 缝心 ${m.mouthY.toFixed(1)}${m.fails.length ? '  × ' + m.fails.join(' · ') : ''}`);
 }
 
 // ── SVG ─────────────────────────────────────────────────────────────────────
@@ -89,8 +89,8 @@ const svg = [];
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 svg.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${cellH + 90 + PLAN + 40}" font-family="ui-monospace, Menlo, monospace" font-size="10">`);
 svg.push(`<rect width="100%" height="100%" fill="#fbfaf7"/>`);
-svg.push(`<text x="20" y="22" font-size="14" font-weight="600">方形环 · 捏分 · 一次循环 · 变高（面极）：台高 ${SQSPLIT.LOBE} · 缝张到 ${SQSPLIT.W_END} · 带 ${SQSPLIT_BAND} · 边长 ${(2 * sqSplitHalfSide()).toFixed(0)}px · ${SQSPLIT_TIERS.length} 条引擎</text>`);
-svg.push(`<text x="20" y="38">从双平台那条边的中点顺时针数二十位：位置 · 方位类 · 级 t · 挑出。每条剖面 x = 挑出方向、y 以带子下缘为 0（同一基线 ⇒ 缝心/平台高度可直接比）。红 = 没过守门判据。</text>`);
+svg.push(`<text x="20" y="22" font-size="14" font-weight="600">方形环 · 捏分 · 一次循环 · 变高 · 居中（面极）：台高 ${SQSPLIT.LOBE} · 缝张到 ${SQSPLIT.W_END} · 带 ${SQSPLIT_BAND} · 边长 ${(2 * sqSplitHalfSide()).toFixed(0)}px · ${SQSPLIT_TIERS.length} 条引擎</text>`);
+svg.push(`<text x="20" y="38">从双平台那条边的中点顺时针数二十位：位置 · 方位类 · 对号 · t · 挑出。每条剖面 x = 挑出方向、y 以带子下缘为 0（同一基线 ⇒ 缝心/上下板高度可直接比）。红 = 没过守门判据。</text>`);
 // 从极点起绕一圈：找到 j=0 的第一个位置
 const start = order.findIndex((_, i) => sqSplitPairOf(i) === 0);
 for (let q = 0; q < 20; q++) {
@@ -103,8 +103,8 @@ for (let q = 0; q < 20; q++) {
   svg.push(`<line x1="${x0}" y1="${y0 - 260 * S}" x2="${x0}" y2="${y0}" stroke="#bbb" stroke-dasharray="2 3"/>`);
   const pts = m.profile.map(([x, y]) => `${(x0 + x * S).toFixed(1)},${(y0 - y * S).toFixed(1)}`).join(' ');
   svg.push(`<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.4" stroke-linejoin="round"/>`);
-  svg.push(`<text x="${x0}" y="${y0 + 14}" fill="${col}">${i} · ${cls[t.cls]} · L${t.level}</text>`);
-  svg.push(`<text x="${x0}" y="${y0 + 26}" fill="${col}">t ${t.t} · 挑出 ${m.reach.toFixed(1)}</text>`);
+  svg.push(`<text x="${x0}" y="${y0 + 14}" fill="${col}">${i} · ${cls[t.cls]} · j${t.pair}</text>`);
+  svg.push(`<text x="${x0}" y="${y0 + 26}" fill="${col}">t ${t.t.toFixed(2)} · 高 ${m.boxH.toFixed(0)} · 挑出 ${m.reach.toFixed(1)}</text>`);
   if (bad) svg.push(`<text x="${x0}" y="${y0 + 38}" fill="${col}">× ${esc(m.fails.join(' '))}</text>`);
 }
 // 俯视：外缘点 vs 目标方形
@@ -116,17 +116,17 @@ for (const [i, p] of rim.entries()) {
   const ti = order[i], t = SQSPLIT_TIERS[ti];
   const col = ['#2d6a4f', '#3a5a9c', '#7b3fa0'][t.cls];
   svg.push(`<circle cx="${(cx + p.x * PS).toFixed(1)}" cy="${(cy + p.z * PS).toFixed(1)}" r="3" fill="${col}"/>`);
-  svg.push(`<text x="${(cx + p.x * PS * 1.12).toFixed(1)}" y="${(cy + p.z * PS * 1.12 + 3).toFixed(1)}" fill="${col}" text-anchor="middle">${i}·L${t.level}</text>`);
+  svg.push(`<text x="${(cx + p.x * PS * 1.12).toFixed(1)}" y="${(cy + p.z * PS * 1.12 + 3).toFixed(1)}" fill="${col}" text-anchor="middle">${i}·j${t.pair}</text>`);
 }
 const devs = rim.map((p) => Math.abs(p.dev));
 svg.push(`<text x="${cx + a * PS + 30}" y="${cy - a * PS + 10}">俯视：二十个外缘点 vs 目标方形（虚线）· 最大偏差 ${Math.max(...devs).toFixed(2)}px · 半边长 ${a.toFixed(1)}</text>`);
-svg.push(`<text x="${cx + a * PS + 30}" y="${cy - a * PS + 26}">十对位置的级（从双平台边到整块边）：${SQSPLIT_SCHEDULE.join(' ')}  · t = ${SQSPLIT_SCHEDULE.map((l) => SQSPLIT_T[l]).join(' ')}</text>`);
-const my = M.map((m) => m.floorY);
-svg.push(`<text x="${cx + a * PS + 30}" y="${cy - a * PS + 42}">终态下板底面离下缘：${Math.min(...my).toFixed(1)}–${Math.max(...my).toFixed(1)}px（散布 ${(Math.max(...my) - Math.min(...my)).toFixed(2)}）· 总高 ${Math.min(...M.map((m) => m.boxH)).toFixed(1)}–${Math.max(...M.map((m) => m.boxH)).toFixed(1)}</text>`);
+svg.push(`<text x="${cx + a * PS + 30}" y="${cy - a * PS + 26}">十对位置的 t（从双平台边到整块边，总高等步）：${SQSPLIT_PAIR_T.map((t) => t.toFixed(2)).join(' ')}</text>`);
+const my = M.map((m) => m.mouthY);
+svg.push(`<text x="${cx + a * PS + 30}" y="${cy - a * PS + 42}">终态缝心离下缘：${Math.min(...my).toFixed(1)}–${Math.max(...my).toFixed(1)}px（散布 ${(Math.max(...my) - Math.min(...my)).toFixed(2)}，居中对位）· 总高 ${Math.min(...M.map((m) => m.boxH)).toFixed(1)}–${Math.max(...M.map((m) => m.boxH)).toFixed(1)}</text>`);
 let yy = cy - a * PS + 62;
 for (const [i, t] of SQSPLIT_TIERS.entries()) {
   const m = M[i];
-  svg.push(`<text x="${cx + a * PS + 30}" y="${yy}" fill="${m.fails.length ? '#c0392b' : '#333'}">${cls[t.cls]} L${t.level} t=${t.t} ${t.k !== undefined ? 'k' + t.k : 'boxD' + t.boxD + '/D' + t.D}：挑出 ${m.reach.toFixed(1)} 总高 ${m.boxH.toFixed(1)} 锁 ${m.locked}/${m.tot} 结 ${m.knot} Δ ${m.silD.toFixed(2)} 缝底 ${m.seamMin.toFixed(1)} 下板底 ${m.floorY.toFixed(1)}${m.fails.length ? ' × ' + esc(m.fails.join(' · ')) : ''}</text>`);
+  svg.push(`<text x="${cx + a * PS + 30}" y="${yy}" fill="${m.fails.length ? '#c0392b' : '#333'}">${cls[t.cls]} j${t.pair} t=${t.t.toFixed(3)} ${t.k !== undefined ? 'k' + t.k : 'boxD' + t.boxD + '/D' + t.D}：挑出 ${m.reach.toFixed(1)} 总高 ${m.boxH.toFixed(1)} 锁 ${m.locked}/${m.tot} 结 ${m.knot} Δ ${m.silD.toFixed(2)} 缝底 ${m.seamMin.toFixed(1)} 下板底 ${m.floorY.toFixed(1)}${m.fails.length ? ' × ' + esc(m.fails.join(' · ')) : ''}</text>`);
   yy += 14;
 }
 svg.push('</svg>');

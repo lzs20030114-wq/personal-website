@@ -245,7 +245,9 @@ if (process.env.LOOP) {
   // **变高读法**（2026-09-02 用户拍板「台高钉死、缝张开」）：VARH=台高 ⇒ 每级 H(t) = 2·台高 + w(t)，
   // 整块那一级 H = 2·台高。不设即恒高（H 对全级相同）。
   const VARH = process.env.VARH ? Number(process.env.VARH) : 0;
-  const T10 = [0, 0.108, 0.254, 0.397, 0.523, 0.638, 0.741, 0.834, 0.92, 1];
+  // TS=… 自定义形态位置表（LV 仍是它的下标）。2026-09-02 第三轮：十对位置各自一个 t，
+  // 按总高等步（w 线性）取 t_j = ((9−j)/9)^(1/0.7)，不再用捏分族那张十级表
+  const T10 = process.env.TS ? process.env.TS.split(',').map(Number) : [0, 0.108, 0.254, 0.397, 0.523, 0.638, 0.741, 0.834, 0.92, 1];
   const R = SQUARE.RADIUS, TH = (n) => (Math.PI / SQUARE.COUNT) * n;
   const COS = { F: Math.cos(TH(1)), E: Math.cos(TH(3)), C: Math.cos(TH(5)) };
   const ok = (m) => m.locked === m.tot && m.knot <= 6 && m.topFlat < 1.5 && m.botFlat < 1.5 && Math.abs(m.boxH - H) < 0.5 && m.silD < 6 && m.vert <= VERT_MAX;
