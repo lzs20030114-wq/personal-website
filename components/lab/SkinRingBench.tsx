@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { RING_PLANS, type RingPlanKey } from '../../src/lib/space/lab-variants';
 import {
   RING,
   RING_DEFAULT_FORM,
@@ -11,14 +12,22 @@ import {
   buildWaveUnits,
 } from '../../src/lib/space/skin-ring';
 import { GRAD_LEVELS, buildGradientOrder, buildRingGradient } from '../../src/lib/space/skin-ring-gradient';
+import { SPLIT_LOBE, SPLIT_SEAM } from '../../src/lib/space/skin-split';
+import {
+  SPLIT_RING_COUNT,
+  buildSplitRingOrder,
+  buildSplitRingUnits,
+} from '../../src/lib/space/skin-split-ring';
+import { planFromHash } from './planHash';
 import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
 
 /**
- * Lab.09 · 圆筒环列（用户 2026-08-23 立项：「把每一个单元再收窄 0.5 倍，
+ * Lab.10 · 圆筒环（原 Lab.09，2026-08-23 用户立项：「把每一个单元再收窄 0.5 倍，
  * 然后把表皮向外偏移一点然后复制 20 个围成一圈，形成一个圆筒，
  * 这个圆筒收缩就可以形成一个环形平台」）。
  *
- * 三种编制，控制条上切：
+ * 四种编制，控制条第一层上切（2026-09-03 收纳：原 Lab.13 捏分环并入为第四种——
+ * 两台参数几乎同一份：同半径量程、圆环板天花、固定立杆、同带深与厚度、同轴测机位）：
  * - **一圈起伏**（默认，用户 2026-08-23「一圈的形状 从低到高再到低一圈下来」）=
  *   同一种键谱、每个位置一个不同的 lead（形状在带上的高度，2px/节）⇒ 环沿圆周升上去
  *   再回来，读成一段绕筒的螺旋台阶。形状一个数没变（实测偏差 0.000–0.026），
@@ -27,9 +36,19 @@ import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
  *   连续的环形平台」）。只解一条引擎、摆二十处。
  * - **一圈渐变** = 蘑菇挑台 → 阶梯方箱 → 蘑菇挑台，一个来回在一圈里走完
  *   （线稿对照后定的端点与级数）。20 位回文 ⇒ 11 级键谱；见 skin-ring-gradient.ts。
+ * - **捏分** = 原 Lab.13（用户 2026-08-30「做那种环形的，20 个从形态 1 到 2 再到 1」）：
+ *   Lab.12 的十级捏分搬上环，沿圆周单箱 → 两台 → 单箱。零新机制，编制是 20 位镜像
+ *   （skin-split-ring.ts：10 级配 20 位有精确解，不必走按 11 级设计的 palindromeOrder）。
+ *   一圈里读得出「过渡」全靠对位构造 v4（缝心 = 138 + 114r，与级别无关）。
  *
  * 台架整台复用 SkinSolidBench（引擎与摆放分开 + 环列 + 圆环板天花 + 半径滑块 +
- * 换键谱就地重建），零第二份实现。渐变要解十一条引擎，推进速率随之降到 80（同 Lab.08）。
+ * 换键谱就地重建），零第二份实现。多引擎的编制（渐变 11 条、起伏 11 条、捏分 10 条）
+ * 推进速率降到 80。
+ *
+ * 捏分与另三档的三处差别全走 SkinSolidBench 既有的响应式钩子（Lab.14 先例）：
+ * 蒙皮默认 0.35 → 0.15（一圈同形时膜把二十条糊成闭合的筒是目的；捏分的看点是沿圆周
+ * 的过渡，膜太厚会把二十条各自的形糊掉）· 枢轴 y 166 → 184 与取景 0.95 → 1.06
+ * （捏分族的台深 40 比环族小一半多，照搬环族取景只填到七成、且整体偏低 40px）。
  *
  * 机位：轴测俯角比另外两台大（−0.45），一圈才读得出是圈；顶视是这台的主视角。
  */
@@ -41,14 +60,22 @@ const GRAD_UNITS: readonly SolidUnitDef[] = buildRingGradient().map(({ spec, opt
   opts,
   smooth,
 }));
-
-const PLANS = [
-  { key: 'wave', label: '一圈起伏' },
-  { key: 'single', label: '整环同形' },
-  { key: 'gradient', label: '一圈渐变' },
-] as const;
 const WAVE_ORDER = buildWaveOrder();
-type PlanKey = (typeof PLANS)[number]['key'];
+let splitCache: { units: readonly SolidUnitDef[]; order: readonly number[] } | null = null;
+const splitRing = () =>
+  (splitCache ??= (() => {
+    const levels = buildSplitRingUnits();
+    return {
+      units: levels.map(({ spec, opts, smooth }) => ({ spec, opts, smooth })),
+      order: buildSplitRingOrder(levels.length),
+    };
+  })());
+
+/** 取景（编制级）：捏分那组是 2026-08-30 实测重取的 */
+const PIVOT_Y = 166;
+const PIVOT_Y_SPLIT = 184;
+const CAM_SCALE = 0.95;
+const CAM_SCALE_SPLIT = 1.06;
 
 export function SkinRingBench({
   active = true,
@@ -59,11 +86,22 @@ export function SkinRingBench({
   onLight?: boolean;
   controls?: boolean;
 }) {
-  const [plan, setPlan] = useState<PlanKey>('wave');
+  const [plan, setPlan] = useState<RingPlanKey>('wave');
   const [form, setForm] = useState(RING_DEFAULT_FORM);
+  // `/lab#lab10-split` 直达捏分（合并进来的编制没有自己的卡片与锚点，这是它的 URL 入口）
+  useEffect(() => {
+    const k = planFromHash(
+      '10',
+      RING_PLANS.map((p) => p.key),
+    );
+    if (k) setPlan(k);
+  }, []);
   const def = FORMS[form];
   const grad = plan === 'gradient';
   const wave = plan === 'wave';
+  const split = plan === 'split';
+  /** 形态按钮只在同形／起伏下有意义；渐变与捏分由各自的级表决定，留位变灰不隐藏 */
+  const formLocked = grad || split;
   const singleUnits = useMemo<readonly SolidUnitDef[]>(
     () => [{ spec: def.spec, opts: def.opts, smooth: def.smooth }],
     [def],
@@ -73,34 +111,39 @@ export function SkinRingBench({
     () => buildWaveUnits(def).map(({ spec, opts, smooth }) => ({ spec, opts, smooth })),
     [def],
   );
+  const units = split ? splitRing().units : grad ? GRAD_UNITS : wave ? waveUnits : singleUnits;
+  const order = split ? splitRing().order : grad ? GRAD_ORDER : wave ? WAVE_ORDER : RING_ORDER;
 
   return (
     <SkinSolidBench
       active={active}
       onLight={onLight}
       controls={controls}
-      units={grad ? GRAD_UNITS : wave ? waveUnits : singleUnits}
-      order={grad ? GRAD_ORDER : wave ? WAVE_ORDER : RING_ORDER}
-      unitsKey={grad ? 'gradient' : `${plan}:${def.key}`}
-      rate={grad || wave ? 80 : 110}
+      units={units}
+      order={order}
+      unitsKey={split ? 'split' : grad ? 'gradient' : `${plan}:${def.key}`}
+      rate={plan === 'single' ? 110 : 80}
       ring
       radius={{ min: RING.RADIUS_MIN, max: RING.RADIUS_MAX, def: RING.RADIUS_DEF }}
       depth={RING.DEPTH}
       thick={RING.THICK}
       skin={{ def: 0.35 }}
+      skinValue={split ? 0.15 : 0.35}
+      pivotY={split ? PIVOT_Y_SPLIT : PIVOT_Y}
+      camScaleFor={() => (split ? CAM_SCALE_SPLIT : CAM_SCALE)}
       ceiling="ring"
       // 灰立杆是房间的固定结构，不跟着外皮缩（用户 2026-08-23：起点始终和天花板
       // 在一起、尾端固定在现在固定的位置）——Lab.06–08 仍是「轨即芯」的旧读法
       rail="fixed"
-      pivot={{ x: 0, y: 166, z: 0 }}
-      camScale={0.95}
+      pivot={{ x: 0, y: PIVOT_Y, z: 0 }}
+      camScale={CAM_SCALE}
       axon={{ pitch: -0.45, yaw: -0.62 }}
       extraControls={
         <>
           <div className="grp">
             <span className="k">编制</span>
             <span className="seg">
-              {PLANS.map((p) => (
+              {RING_PLANS.map((p) => (
                 <button
                   key={p.key}
                   type="button"
@@ -112,16 +155,22 @@ export function SkinRingBench({
               ))}
             </span>
           </div>
-          <div className="grp" style={grad ? { opacity: 0.35 } : undefined}>
+          <div className="grp" style={formLocked ? { opacity: 0.35 } : undefined}>
             <span className="k">形态</span>
             <span className="seg">
               {FORMS.map((f, i) => (
                 <button
                   key={f.key}
                   type="button"
-                  className={!grad && i === form ? 'active' : undefined}
-                  disabled={grad}
-                  title={grad ? '渐变编制下由 11 级键谱决定' : `${f.zh} · ${f.en}`}
+                  className={!formLocked && i === form ? 'active' : undefined}
+                  disabled={formLocked}
+                  title={
+                    grad
+                      ? '渐变编制下由 11 级键谱决定'
+                      : split
+                        ? '捏分编制下由 10 级键谱决定'
+                        : `${f.zh} · ${f.en}`
+                  }
                   onClick={() => setForm(i)}
                 >
                   {f.zh}
@@ -132,15 +181,19 @@ export function SkinRingBench({
         </>
       }
       hud={{
-        kicker: 'Lab.09 / Project II',
-        title: '圆筒环列 · 收缩成环形平台',
-        sub: grad
-          ? `${RING.COUNT} 条窄带 · 蘑菇挑台 → 阶梯方箱 → 蘑菇挑台 · ${GRAD_LEVELS} 级键谱`
-          : wave
-            ? `${RING.COUNT} 条窄带 · ${def.zh} · 高度沿圆周起伏 · ${RING_WAVE.LEVELS} 级`
-            : `${RING.COUNT} 条窄带 · 同一键谱：${def.zh} · 同一收缩协议`,
-        hint: '编制 / 形态 / 半径可调 · 顶视看环 · 拖拽旋转',
-        aria: '圆筒环列：二十条窄织物带围成一圈，收缩后各自扣出挑台、连成绕筒一圈的环形平台；可切整环同形或一圈渐变，形态与半径可调，可拖拽旋转',
+        kicker: 'Lab.10 / Project II',
+        title: split ? '圆筒环 · 捏分 · 一圈里裂开再合上' : '圆筒环 · 收缩成环形平台',
+        sub: split
+          ? `${SPLIT_RING_COUNT} 条窄带 · 单箱 → 两台 → 单箱 · 10 级键谱镜像成一圈`
+          : grad
+            ? `${RING.COUNT} 条窄带 · 蘑菇挑台 → 阶梯方箱 → 蘑菇挑台 · ${GRAD_LEVELS} 级键谱`
+            : wave
+              ? `${RING.COUNT} 条窄带 · ${def.zh} · 高度沿圆周起伏 · ${RING_WAVE.LEVELS} 级`
+              : `${RING.COUNT} 条窄带 · 同一键谱：${def.zh} · 同一收缩协议`,
+        hint: split
+          ? `每台高 ${SPLIT_LOBE}px · 终态缝 ${SPLIT_SEAM}px · 编制 / 半径可调 · 顶视看环 · 拖拽旋转`
+          : '编制 / 形态 / 半径可调 · 顶视看环 · 拖拽旋转',
+        aria: '圆筒环：二十条窄织物带围成一圈，收缩后各自扣出挑台、连成绕筒一圈的环形平台；可切一圈起伏、整环同形、一圈渐变或捏分，形态与半径可调，可拖拽旋转',
       }}
     />
   );

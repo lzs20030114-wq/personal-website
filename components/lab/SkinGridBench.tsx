@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { GRID_PLANS } from '../../src/lib/space/lab-variants';
 import { RING, buildRingUnits } from '../../src/lib/space/skin-ring';
 import {
   FIGURE,
@@ -22,7 +23,7 @@ import {
 import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
 
 /**
- * Lab.10 · 4×4 环阵列。
+ * Lab.12 · 4×4 环阵列（原 Lab.10，2026-09-03 收纳后编号 12：Ⅳ 场 · 一间房）。
  *
  * 用户 2026-08-25 纠偏：「我指的阵列是 4×4 的，每一个单元都是那个环形的，
  * 而不是 4×4 个小单元。」——首版（十六个单条带铺成平面网格）已作废，这里是
@@ -44,10 +45,8 @@ const FORM_UNITS: readonly SolidUnitDef[] = FORMS.map(({ spec, opts, smooth }) =
   smooth,
 }));
 
-const PLANS = [
-  { key: 'uniform', label: '整片同形' },
-  { key: 'perRow', label: '每行一种' },
-] as const;
+/** 编制表取自差分清单（lab-variants.ts，2026-09-03 收纳：守门冻结全部档位） */
+const PLANS = GRID_PLANS;
 
 export function SkinGridBench({
   active = true,
@@ -89,7 +88,8 @@ export function SkinGridBench({
       cells={cells}
       rig={{ scale: RIG_SCALE, y: RIG_Y }}
       scene={ringGridScene}
-      camScaleFor={ringGridCamScale}
+      // 只转前两参：camScaleFor 的第三参是排布键（2026-09-03 加），而 ringGridCamScale 的第三参是列数
+      camScaleFor={(r, v) => ringGridCamScale(r, v)}
       radius={{ min: RING.RADIUS_MIN, max: RING.RADIUS_MAX, def: RING.RADIUS_DEF }}
       depth={RING.DEPTH}
       thick={RING.THICK}
@@ -140,7 +140,7 @@ export function SkinGridBench({
       hud={
         lang === 'en'
           ? {
-              kicker: 'Lab.10 / Project II',
+              kicker: 'Lab.12 / Project II',
               title: 'Sixteen rings, one floor',
               sub: `${RING_GRID.COLS}×${RING_GRID.ROWS} rings · ${perRow ? 'one bond map per row' : `one bond map: ${def.en}`} · platform ⌀${((2 * ringOuter(RING.RADIUS_DEF) * RIG_SCALE * MM_PER_UNIT) / 1000).toFixed(2)} m · room ${((ROOM.FLOOR_Y * MM_PER_UNIT) / 1000).toFixed(2)} m high`,
               hint: `Plan / form switchable · radius drives the pitch · top view reads the grid · drag to orbit · figure ${(FIGURE.MM / 1000).toFixed(2)} m for scale`,
@@ -148,7 +148,7 @@ export function SkinGridBench({
                 'Sixteen contracting-skin cylinder rings hung in a room on a square grid; each contracts into a ring platform. A 1.7 m figure stands on the floor for scale. Pitch follows the radius slider; the plan can be switched and the view orbited.',
             }
           : {
-              kicker: 'Lab.10 / Project II',
+              kicker: 'Lab.12 / Project II',
               title: '4×4 环阵列 · 一片场地',
               sub: `${RING_GRID.COLS}×${RING_GRID.ROWS} 个环 · ${perRow ? '每行一种键谱' : `同一键谱：${def.zh}`} · 平台 ⌀${((2 * ringOuter(RING.RADIUS_DEF) * RIG_SCALE * MM_PER_UNIT) / 1000).toFixed(2)} m · 房高 ${((ROOM.FLOOR_Y * MM_PER_UNIT) / 1000).toFixed(2)} m`,
               hint: `编制 / 形态可切 · 半径滑块连格距一起变 · 顶视看排布 · 拖拽旋转 · 人 ${(FIGURE.MM / 1000).toFixed(2)} m 作比例`,

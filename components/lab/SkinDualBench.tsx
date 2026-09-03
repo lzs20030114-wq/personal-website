@@ -11,7 +11,8 @@ import {
 import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
 
 /**
- * Lab.11 · 双结构带（用户 2026-08-26 草图立项「条可以出现两个结构的」，
+ * Lab.08 · 双结构带（原 Lab.11，2026-09-03 收纳后编号 08：Ⅰ 单元 · 一条带。
+ * 用户 2026-08-26 草图立项「条可以出现两个结构的」，
  * 线稿拍板后上 3D）。
  *
  * 引擎零新增：五条带全是 Lab.06 那套 2D 剖面引擎（站方修正全套），一条带 =
@@ -79,7 +80,7 @@ export function SkinDualBench({
         </div>
       }
       hud={{
-        kicker: 'Lab.11 / Project II',
+        kicker: 'Lab.08 / Project II',
         title: '双结构带 · 一条带两个结构',
         sub: `5 条带 · 每条两个键谱、两条拉链各自独立 · 同一收缩协议`,
         hint: '四种同形对 + 一条混排 · 间距三档 · 拖拽旋转',

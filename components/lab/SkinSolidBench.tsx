@@ -301,6 +301,7 @@ export function SkinSolidBench({
   view: viewProp,
   skinValue,
   pivotY,
+  pivotFor,
   extraControls,
 }: {
   active?: boolean;
@@ -375,7 +376,7 @@ export function SkinSolidBench({
    * 而**四个视角所需的取景差得很远**（轴测被宽度卡、顶视被整片地面的高度卡）。
    * 省略 = camScale 不随半径与视角动（Lab.07–09 的行为）。
    */
-  camScaleFor?: (radius: number, view: ViewKey) => number;
+  camScaleFor?: (radius: number, view: ViewKey, layoutKey: string) => number;
   /** 半径滑块（只在 ring 下有意义）——用户 2026-08-23 拍板「半径做滑块现场调」 */
   radius?: { min: number; max: number; def: number };
   /** 织物厚度（窄带上 5 太厚，会读成方棍） */
@@ -406,7 +407,15 @@ export function SkinSolidBench({
    * `layouts[].pivot` 在主 effect（[]-deps）挂载时读取，换编制不会重取（§14.4 的坑）。
    */
   pivotY?: number;
-  /** 台架自己的控件（塞进控制条最前面）——Lab.09 的形态选择 */
+  /**
+   * 按排布键给机位枢轴（默认 undefined ⇒ 用排布的 pivot，Lab.07–14 逐位不变）。
+   * 与 `pivotY` 的区别：那个只覆盖 y、与排布无关；这个是整个枢轴、且**按当前排布**取——
+   * 序列台（2026-09-03 合并 Lab.08 渐变 + Lab.12 捏分）两种编制在同一种排布下取景不同
+   * （分列：12 条带 468/0.6 vs 10 条带 400/0.76），而 layouts[].pivot 在挂载时读一次。
+   * 走 ref 每次现读；换编制时 setUnits → applyLayout 会用它重定枢轴。`pivotY` 给了仍覆盖 y。
+   */
+  pivotFor?: (layoutKey: string) => { x: number; y: number; z: number };
+  /** 台架自己的控件（塞进控制条第一层）——Lab.09 的形态选择 */
   extraControls?: ReactNode;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -436,11 +445,17 @@ export function SkinSolidBench({
   const ringPlansRef = useRef(ringPlans);
   const camScaleRef = useRef(camScaleFor);
   const pivotYRef = useRef(pivotY);
+  const pivotForRef = useRef(pivotFor);
   const sceneRef = useRef(scene);
+  // 立杆读法也走 ref：序列台两种编制读法不同（渐变 = 轨即芯，08-22 拍板留的旧读法；
+  // 捏分 = 固定立杆），换编制要能切；帧循环每帧现读，不传即挂载值 ⇒ 既有台架逐位不变
+  const railRef = useRef(rail);
   useEffect(() => {
     cellsRef.current = cells;
     ringPlansRef.current = ringPlans;
     camScaleRef.current = camScaleFor;
+    pivotForRef.current = pivotFor;
+    railRef.current = rail;
     sceneRef.current = scene;
   });
   // 推进速率随编制变（渐变要解十一条引擎，得放慢）——主 effect 只建一次，故走 ref
@@ -491,19 +506,23 @@ export function SkinSolidBench({
      * 平台落得更低，换编制时枢轴要跟着走；layouts 在挂载时读一次、换不了）
      */
     const pivotOf = (): { x: number; y: number; z: number } => {
-      const p = layoutList[layoutIdx].pivot;
+      const L = layoutList[layoutIdx];
+      const g = pivotForRef.current;
+      const p = g ? g(L.key) : L.pivot;
       return pivotYRef.current === undefined ? p : { x: p.x, y: pivotYRef.current, z: p.z };
     };
     const scaleOf = (k: ViewKey = viewKey): number => {
       const f = camScaleRef.current;
-      return f ? f(radiusRef.current, k) : layoutList[layoutIdx].camScale;
+      return f ? f(radiusRef.current, k, layoutList[layoutIdx].key) : layoutList[layoutIdx].camScale;
     };
 
     const cam = new OrbitCamera({
       cx: 350,
       cy: 260,
       pivot: pivotOf(),
-      scale: camScaleFor ? camScaleFor(radiusRef.current, viewKey) : layoutList[layoutIdx].camScale, // 挂载帧：ref 尚未同步，用 prop
+      scale: camScaleFor
+        ? camScaleFor(radiusRef.current, viewKey, layoutList[layoutIdx].key)
+        : layoutList[layoutIdx].camScale, // 挂载帧：ref 尚未同步，用 prop
       pitch0: axonPitch,
       yaw0: axonYaw,
       zoomMin: 0.5,
@@ -669,7 +688,7 @@ export function SkinSolidBench({
         v.offX = q.offX;
         v.offZ = q.offZ;
       });
-      cam.retarget(L.pivot, camScaleRef.current ? scaleOf() : L.camScale);
+      cam.retarget(pivotOf(), camScaleRef.current ? scaleOf() : L.camScale);
     };
 
     // 天花板条（静件，随构造一次烘焙上传）。span = 一整条通长板——
@@ -769,7 +788,7 @@ export function SkinSolidBench({
         // 芯轨（逐帧小盒）。core = 跟着芯收缩（下端钉住、上端随收缩下降）；
         // fixed = 天花到钉住点的固定立杆，收缩时是外皮沿着它往下聚（见 railSpan）
         const rs = railSpan(
-          rail,
+          railRef.current,
           { coreTop: sim.coreTop, coreLen: sim.coreLen, footY: sim.py[sim.n - 1] },
           v.offY,
           CEIL_RING.y,
@@ -778,7 +797,7 @@ export function SkinSolidBench({
         // 芯轨按**世界尺寸**直接建（截面随装置缩，竖向不缩）：装置缩小后立杆仍从天花
         // 落到钉住点，装置挂在它的下半截 —— 空出来的那段就是「挂得更低」本身。
         // rig 缺省时 (scale 1, y 0) 这两行退化成原式子，Lab.07–09 逐位不变
-        const railTop = rail === 'fixed' ? rs.top : rs.top * rigS + rigY;
+        const railTop = railRef.current === 'fixed' ? rs.top : rs.top * rigS + rigY;
         const railBot = rs.bottom * rigS + rigY;
         const railBox = boxVerts(
           (rad0 - 3.4) * rigS,
@@ -1100,6 +1119,155 @@ export function SkinSolidBench({
     if (home) setView(home);
   }, [layouts]);
 
+  // 控制条两层（2026-09-03 用户拍板「lab 控制台也要改」，与项目二台架收纳同轮）：
+  // 第一层「解什么」= 台架专属的编制／形态／轮廓／间距（extraControls）与排列——动了会重建
+  // 引擎或重摆；第二层「怎么看」= 运转／键线／透视／速度／蒙皮／半径／视角——不碰引擎。
+  // 两层各自的顺序全站固定，读者学一次就够。只在第一层有东西时分层，没有的台架（Lab.07
+  // 那种）仍是原来那一行、逐位不变。排列切换本属第一层（它改摆放），故从第二层挪出来。
+  const layoutGroup = layouts && layouts.length > 1 ? (
+      <div className="grp">
+        <span className="k">排列</span>
+        <span className="seg">
+          {layouts.map((L, li) => (
+            <button
+              key={L.key}
+              type="button"
+              className={li === layout ? 'active' : undefined}
+              onClick={() => goLayout(li)}
+            >
+              {L.label}
+            </button>
+          ))}
+        </span>
+      </div>
+    ) : null;
+  const tiered = !!extraControls || !!layoutGroup;
+  const viewGroups = (
+    <>
+      <div className="grp">
+        <label>
+          <input
+            type="checkbox"
+            checked={running}
+            onChange={(e) => {
+              runningRef.current = e.target.checked;
+              setRunning(e.target.checked);
+            }}
+          />
+          运转
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={bonds}
+            onChange={(e) => {
+              bondsRef.current = e.target.checked;
+              setBonds(e.target.checked);
+            }}
+          />
+          键线
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={persp}
+            onChange={(e) => {
+              setPersp(e.target.checked);
+              apiRef.current?.setPersp(e.target.checked);
+            }}
+          />
+          透视
+        </label>
+      </div>
+      <div className="grp">
+        <button type="button" onClick={() => {
+          apiRef.current?.replay();
+          runningRef.current = true;
+          setRunning(true);
+        }}>
+          重播
+        </button>
+      </div>
+      <div className="grp">
+        <span className="k">速度</span>
+        <input
+          type="range"
+          min={0.5}
+          max={2}
+          step={0.05}
+          value={speed}
+          aria-label="播放速度（协议步/秒的倍率，不是物理量）"
+          style={{ width: 96 }}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            speedRef.current = v;
+            setSpeed(v);
+          }}
+        />
+      </div>
+      {skin ? (
+        <div className="grp">
+          <span className="k">蒙皮</span>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={skinV}
+            aria-label="环间织物膜的不透明度（0 = 只剩带子，1 = 封闭的筒）"
+            style={{ width: 96 }}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              setSkinV(v);
+              apiRef.current?.setSkin(v);
+            }}
+          />
+          <b style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>
+            {Math.round(skinV * 100)}
+          </b>
+        </div>
+      ) : null}
+      {radius && radius.max > radius.min ? (
+        <div className="grp">
+          <span className="k">半径</span>
+          <input
+            type="range"
+            min={radius.min}
+            max={radius.max}
+            step={1}
+            value={radiusV}
+            aria-label="圆筒半径（世界单位；越大缝越宽）"
+            style={{ width: 96 }}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              setRadiusV(v);
+              apiRef.current?.setRadius(v);
+            }}
+          />
+          <b style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>{radiusV}</b>
+        </div>
+      ) : null}
+      <div className="grp">
+        <span className="k">视角</span>
+        <span className="seg">
+          {VIEWS.map((v) => (
+            <button
+              key={v.key}
+              type="button"
+              className={v.key === view ? 'active' : undefined}
+              onClick={() => goView(v.key)}
+            >
+              {v.label}
+            </button>
+          ))}
+        </span>
+        <button type="button" onClick={() => apiRef.current?.viewHome()}>
+          归位
+        </button>
+      </div>
+    </>
+  );
+
   return (
     <div className={`lab-wrap${onLight ? ' on-light' : ''}`}>
       <div className="lab-fig" {...(ptTarget ? { 'data-pt-target': '' } : {})}>
@@ -1125,147 +1293,17 @@ export function SkinSolidBench({
         </div>
       </div>
       {controls ? (
-        <div className="lab-ctl">
-          {extraControls}
-          <div className="grp">
-            <label>
-              <input
-                type="checkbox"
-                checked={running}
-                onChange={(e) => {
-                  runningRef.current = e.target.checked;
-                  setRunning(e.target.checked);
-                }}
-              />
-              运转
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={bonds}
-                onChange={(e) => {
-                  bondsRef.current = e.target.checked;
-                  setBonds(e.target.checked);
-                }}
-              />
-              键线
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={persp}
-                onChange={(e) => {
-                  setPersp(e.target.checked);
-                  apiRef.current?.setPersp(e.target.checked);
-                }}
-              />
-              透视
-            </label>
-          </div>
-          <div className="grp">
-            <button type="button" onClick={() => {
-              apiRef.current?.replay();
-              runningRef.current = true;
-              setRunning(true);
-            }}>
-              重播
-            </button>
-          </div>
-          <div className="grp">
-            <span className="k">速度</span>
-            <input
-              type="range"
-              min={0.5}
-              max={2}
-              step={0.05}
-              value={speed}
-              aria-label="播放速度（协议步/秒的倍率，不是物理量）"
-              style={{ width: 96 }}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                speedRef.current = v;
-                setSpeed(v);
-              }}
-            />
-          </div>
-          {skin ? (
-            <div className="grp">
-              <span className="k">蒙皮</span>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={skinV}
-                aria-label="环间织物膜的不透明度（0 = 只剩带子，1 = 封闭的筒）"
-                style={{ width: 96 }}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  setSkinV(v);
-                  apiRef.current?.setSkin(v);
-                }}
-              />
-              <b style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>
-                {Math.round(skinV * 100)}
-              </b>
+        tiered ? (
+          <div className="lab-ctl lab-ctl--tiered">
+            <div className="lab-ctl__row lab-ctl__solve">
+              {extraControls}
+              {layoutGroup}
             </div>
-          ) : null}
-          {radius && radius.max > radius.min ? (
-            <div className="grp">
-              <span className="k">半径</span>
-              <input
-                type="range"
-                min={radius.min}
-                max={radius.max}
-                step={1}
-                value={radiusV}
-                aria-label="圆筒半径（世界单位；越大缝越宽）"
-                style={{ width: 96 }}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  setRadiusV(v);
-                  apiRef.current?.setRadius(v);
-                }}
-              />
-              <b style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>{radiusV}</b>
-            </div>
-          ) : null}
-          {layouts && layouts.length > 1 ? (
-            <div className="grp">
-              <span className="k">排列</span>
-              <span className="seg">
-                {layouts.map((L, li) => (
-                  <button
-                    key={L.key}
-                    type="button"
-                    className={li === layout ? 'active' : undefined}
-                    onClick={() => goLayout(li)}
-                  >
-                    {L.label}
-                  </button>
-                ))}
-              </span>
-            </div>
-          ) : null}
-          <div className="grp">
-            <span className="k">视角</span>
-            <span className="seg">
-              {VIEWS.map((v) => (
-                <button
-                  key={v.key}
-                  type="button"
-                  className={v.key === view ? 'active' : undefined}
-                  onClick={() => goView(v.key)}
-                >
-                  {v.label}
-                </button>
-              ))}
-            </span>
-            <button type="button" onClick={() => apiRef.current?.viewHome()}>
-              归位
-            </button>
+            <div className="lab-ctl__row">{viewGroups}</div>
           </div>
-        </div>
+        ) : (
+          <div className="lab-ctl">{viewGroups}</div>
+        )
       ) : null}
     </div>
   );

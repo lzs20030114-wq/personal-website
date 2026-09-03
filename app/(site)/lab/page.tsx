@@ -9,12 +9,10 @@ import { RingsBench } from '../../../components/lab/RingsBench';
 import { MachineBench } from '../../../components/lab/MachineBench';
 import { SkinBench } from '../../../components/lab/SkinBench';
 import { SkinSolidBench } from '../../../components/lab/SkinSolidBench';
-import { SkinArrayBench } from '../../../components/lab/SkinArrayBench';
 import { SkinRingBench } from '../../../components/lab/SkinRingBench';
+import { SkinSeriesBench } from '../../../components/lab/SkinSeriesBench';
 import { SkinGridBench } from '../../../components/lab/SkinGridBench';
 import { SkinDualBench } from '../../../components/lab/SkinDualBench';
-import { SkinSplitBench } from '../../../components/lab/SkinSplitBench';
-import { SkinSplitRingBench } from '../../../components/lab/SkinSplitRingBench';
 import { SquareRingBench } from '../../../components/lab/SquareRingBench';
 
 export const metadata = { title: 'The lab' };
@@ -24,12 +22,15 @@ export const metadata = { title: 'The lab' };
  * ★ 版式逐项对稿：300px 定宽左栏 + 44px 间距；规格表竖排行（92px 标签列 + 发丝线分隔）；
  *   图框 3px 彩色顶线（2D 绿 / 3D 紫）+ 极淡填充；标题 72px；页脚两链。
  * 每台跑的是站内 TS 内核，不是视频、不是二次实现：Lab.01–05 = src/lib/linkage（封盘零改，
- * 项目一），Lab.06–07 = src/lib/space（项目二皮肤单元引擎，Python 研究代码的 1:1 移植；
- * 07 是同一引擎的立体带呈现，几何烘焙 skin-solid + 复用 gl3d/camera3d 装备；
- * 08 = 十二条带的键谱渐变阵列；09 = 二十条同谱窄带围成圆筒、收缩成环形平台；10 = 十六个那样的圆筒环吊在一间房里铺成 4×4 网格，地上站着人作比例；
- * 11 = 双结构带——五段谱一条带折出上下两个结构，两条拉链各自独立；
- * 12 = 捏分过渡——十级从单箱裂成两台，每级一份单独设计的谱；
- * 14 第三种编制「捏分」= 把那个来回搬上方形环：一圈一个来回（一条边双平台、对边整块），而俯视轮廓仍是方的）。
+ * 项目一），Lab.06–12 = src/lib/space（项目二皮肤单元引擎，Python 研究代码的 1:1 移植）。
+ *
+ * 项目二七台按**尺度**收成四段（2026-09-03 用户拍板「七台四段」——此前九台按立项时间排，
+ * 读者看完 4×4 的房间又跳回单条带）：一条带 → 一排 → 一圈 → 一间房；段内按形态族
+ * （目录四形态 → 双结构 → 捏分 → 方形）。一台 = 一种排布，编制 = 形态族：
+ * 06 二维剖面（SVG）· 07 立体带 · 08 双结构带（原 11）｜09 序列 = 原 08 目录渐变 + 原 12
+ * 捏分十级｜10 圆筒环 = 原 09 三编制 + 原 13 捏分环 · 11 方形环（原 14）｜12 环阵列场地（原 10）。
+ * 46 种离散差分一档不少，冻在 src/lib/space/lab-variants.test.ts；折进编制按钮的差分用
+ * `/lab#labNN-<plan>` 直达（如 #lab10-split）。编号按新页序连续；文档里的旧号见 CLAUDE.md 对照表。
  * 2026-08-18 起页面按项目分组（MAPPING §16）——log 页先例：多项目共用一条主线。
  */
 const KICKER: CSSProperties = {
@@ -60,7 +61,7 @@ const SPEC_KEY: CSSProperties = {
 };
 const HAIR_14 = '1px solid color-mix(in srgb, var(--ink) 14%, transparent)';
 
-/** 项目分组头：台架从此按项目归组（Lab.01–05 = 项目一，Lab.06 = 项目二） */
+/** 项目分组头：台架从此按项目归组（Lab.01–05 = 项目一，Lab.06–12 = 项目二；项目二内再按尺度分四段，见 ScaleRule） */
 function ProjectRule({ label, sub }: { label: string; sub: string }) {
   return (
     <div
@@ -76,6 +77,44 @@ function ProjectRule({ label, sub }: { label: string; sub: string }) {
           textTransform: 'uppercase',
         }}
       >
+        {label}
+      </p>
+      <span
+        style={{
+          fontSize: 11,
+          fontWeight: 600,
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          color: 'var(--n500)',
+        }}
+      >
+        {sub}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * 尺度段头（项目二专用，2026-09-03 收纳）：Ⅰ 一条带 / Ⅱ 一排 / Ⅲ 一圈 / Ⅳ 一间房。
+ * 比 ProjectRule 轻一档（11px、n700），读作项目内的目录而不是又一个项目。
+ */
+function ScaleRule({ n, label, sub }: { n: string; label: string; sub: string }) {
+  return (
+    <div
+      className="flex flex-wrap items-baseline justify-between"
+      style={{ gap: 24, padding: '40px 0 0' }}
+    >
+      <p
+        style={{
+          margin: 0,
+          fontSize: 11,
+          fontWeight: 800,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--n700)',
+        }}
+      >
+        <span style={{ display: 'inline-block', minWidth: 26, color: 'var(--accent-2)' }}>{n}</span>
         {label}
       </p>
       <span
@@ -232,8 +271,9 @@ export default function LabPage() {
           </svg>
           <p style={{ fontSize: 19, lineHeight: 1.5, margin: '24px 0 0', maxWidth: '56ch' }}>
             Every figure below runs a real solver — nothing here is a video. Project I&apos;s
-            benches run the same kernels, tests and stops as the hardware; Project II&apos;s bench
-            runs its structure engine, ported line-for-line from the research code.
+            benches run the same kernels, tests and stops as the hardware; Project II&apos;s
+            benches run its structure engine, ported line-for-line from the research code, at four
+            scales — one band, a row, a ring, a room.
           </p>
         </header>
 
@@ -321,8 +361,10 @@ export default function LabPage() {
         {/* 项目二尚未定名：与 log 页 PROJECT_GROUPS 同一措辞（描述而非标题），定名后一并改 */}
         <ProjectRule
           label="Project II — Spatial simulation"
-          sub="Lab.06–12 · skin-unit engine"
+          sub="Lab.06–12 · skin-unit engine · four scales"
         />
+
+        <ScaleRule n="Ⅰ" label="One band" sub="Lab.06–08 · what a unit is" />
 
         <Bench
           no="06"
@@ -359,58 +401,6 @@ export default function LabPage() {
 
         <Bench
           no="08"
-          title="Gradient array"
-          lede="Twelve narrow slices on one axis, center-aligned — bulb flange at the near end, stepped box at the far end, ten real units in between. Each bond map shifts a little; the transition grows out of the physics. Split them apart to read band by band."
-          accent="var(--accent-2)"
-          specs={[
-            ['Array', '12 bands · bond length 0.10 → 0.32'],
-            ['Units', 'Every band runs the real engine'],
-            ['Endpoints', 'Lab.06 unit 2 → unit 4, verbatim'],
-            ['Layouts', 'Packed body ↔ spread row · same run'],
-            ['Render', 'Shared solid bench · WebGL'],
-          ]}
-        >
-          <SkinArrayBench />
-        </Bench>
-
-        <Bench
-          no="09"
-          title="Cylinder of units"
-          lede="Twenty narrow bands stood in a circle: hanging slack they close into a tube, and as they contract each one folds out its ledge — together, a platform ringing the cylinder. By default the ledge climbs and falls once around, a stair wrapped on the tube; or hold it level on one form, or let the form drift bulb → box → bulb. Set the radius yourself."
-          accent="var(--accent-2)"
-          specs={[
-            ['Ring', '20 bands · level, undulating, or drifting'],
-            ['Height', 'Same form, one lead per station — 18% ↔ 71%'],
-            ['Solve', '1 or 11 engines, 20 placements — same run'],
-            ['Closure', 'Palindrome — the seam is one step wide'],
-            ['Radius', 'Live slider · gaps widen with it'],
-            ['Caveat', 'Bands do not touch each other — 2D sections'],
-          ]}
-        >
-          <SkinRingBench />
-        </Bench>
-
-        <Bench
-          no="10"
-          title="Four by four"
-          lede="Sixteen of those cylinders hung in a room — 320 bands, one solved section. A 1.70 m figure stands on the floor beside them, and that figure is what sets the scale: everything else on this page had none until now. How far a ledge reaches is set by how much material its outermost bond captures — not by how hard the unit contracts. So this family folds more of the same strip: 202 nodes as before, but the fan spans 2.1× the catalogue's, and the slack hugging the mast is what pays for it. Each ring keeps its own clearance, and pulling the radius breathes the whole field."
-          accent="var(--accent-2)"
-          specs={[
-            ['Field', '4 × 4 rings · 20 bands each · 320 placements'],
-            ['Solved', 'One section — the field is that section, placed'],
-            ['Scale', 'Figure 1.70 m ⇒ room 3.74 m · ring 1.04 m across'],
-            ['Rig', 'Half size, hung lower — underside stays at 1.08 m'],
-            ['Pitch', '2 × (radius + peak swell 101.1) + gap · tracks the slider'],
-            ['Gap', '1.5 × the gap inside a ring — rings stay separate'],
-            ['Plans', 'One form ↔ one form per row'],
-            ['Skin', 'A membrane bridges the gaps between bands · 0–1'],
-          ]}
-        >
-          <SkinGridBench />
-        </Bench>
-
-        <Bench
-          no="11"
           title="Two structures, one band"
           lede="One strip, two bond maps — a five-segment spectrum folds an upper and a lower structure out of a single contraction. The glued run between them is pinned to the mast every pass, so the two zippers never feel each other: drop one map and the other folds identically. Four same-form pairs plus one mixed band; set how far apart they sit."
           accent="var(--accent-2)"
@@ -426,44 +416,56 @@ export default function LabPage() {
           <SkinDualBench />
         </Bench>
 
+        <ScaleRule n="Ⅱ" label="A row" sub="Lab.09 · transitions along a line" />
+
         <Bench
-          no="12"
-          title="Pinched apart"
-          lede="Ten bands, each its own bond map, walking a single box until it is two platforms. The seam is cut, not carved: an outer ladder folds the box while a second zipper inside it — plus one bond per face corner, which is what makes the faces stand upright — holds the crack open, and a one-sided tether to the mast keeps its floor from sinking past the target. Every level was designed on its own and measured against the drawn target by silhouette; the numbers agreed three times while the shape was wrong, so only the picture counts."
+          no="09"
+          title="Series"
+          lede="Two transition series on one line, every band a real unit. The graded catalogue walks twelve narrow slices from bulb flange to stepped box — each bond map shifts a little, and the transition grows out of the physics, not out of an interpolation. Pinched apart walks ten bands from a single box until it is two platforms: the seam is cut, not carved — an outer ladder folds the box while a second zipper inside it holds the crack open, and every level was designed on its own and measured against the drawn target by silhouette; the numbers agreed three times while the shape was wrong, so only the picture counts. Pack them into one body to read the section, or spread them to read band by band."
           accent="var(--accent-2)"
           specs={[
-            ['Series', '10 levels · one box ⇒ two platforms'],
-            ['Target', 'Platform 12 px · depth 40 · final seam 28'],
+            ['Plans', 'Graded catalogue (12 bands) · pinched apart (10 levels)'],
+            ['Gradient', 'Bond length 0.10 → 0.32 in even steps · endpoints Lab.06 unit 2 → 4, verbatim'],
+            ['Pinch', 'One box ⇒ two platforms · platform 12 px · depth 40 · final seam 28'],
             ['Design', 'Per level — no single parameter sweeps it'],
             ['Chains', 'Outer ladder + seam zipper + two face-corner bonds'],
             ['Tether', 'Skin-to-mast, one-sided — a ceiling, not a pin'],
-            ['Fit', 'Silhouette Δ 0.3–5.5 px · neighbours within 1.4×'],
-            ['Timing', 'Per-level warp — all ten set within 30 steps'],
-            ['Align', 'Tail and buffers fixed ⇒ the floor line holds'],
+            ['Forming', 'Zipper reversed — the box grows rung by rung from the nose; no warp'],
+            ['Fit', 'Silhouette Δ 0.3–3.7 px · neighbours within 1.8×'],
+            ['Align', 'Symmetric padding ⇒ the seam centre sits at 138 + 114·r px on every level'],
+            ['Mast', 'Gradient: the mast is the core · pinch: fixed mast, skin gathers down it'],
+            ['Layouts', 'Packed body ↔ spread row · same run, both plans'],
+            ['Render', 'Shared solid bench · WebGL'],
           ]}
         >
-          <SkinSplitBench />
+          <SkinSeriesBench />
         </Bench>
 
+        <ScaleRule n="Ⅲ" label="A ring" sub="Lab.10–11 · the row closed into a loop" />
+
         <Bench
-          no="13"
-          title="The seam, around"
-          lede="The pinched series bent into a ring: twenty narrow bands around one mast, walking one box into two platforms and back again over a single turn. Each level is placed twice — mirrored — so the sequence closes on itself, and because the seam centre sits at the same height on every level the platform reads as one band that opens and shuts, not as twenty different shelves."
+          no="10"
+          title="Cylinder of units"
+          lede="Twenty narrow bands stood in a circle: hanging slack they close into a tube, and as they contract each one folds out its ledge — together, a platform ringing the cylinder. Four plans. By default the ledge climbs and falls once around, a stair wrapped on the tube; hold it level on one form; let the form drift bulb → box → bulb; or bend the pinched series into the ring, so the box splits into two platforms and closes again over a single turn — each level placed twice, mirrored, and because the seam centre sits at the same height on every level the platform reads as one band that opens and shuts, not as twenty different shelves. Set the radius yourself."
           accent="var(--accent-2)"
           specs={[
-            ['Ring', '20 bands · 10 levels mirrored ⇒ one round trip'],
-            ['Order', 'Exact mirror — no rounding, each level twice'],
-            ['Forms', 'Lab.12 verbatim — no ring-scale, index-bound mechanisms'],
-            ['Flat', 'Seam centre 138 + 114·r px — level-independent'],
-            ['Radius', 'Live slider · bands never self-intersect in range'],
+            ['Ring', '20 bands · level, undulating, drifting, or pinched'],
+            ['Height', 'Same form, one lead per station — 18% ↔ 71%'],
+            ['Solve', '1 / 11 / 10 engines, 20 placements — same run'],
+            ['Closure', 'Palindrome (11 levels) or exact mirror (10) — the seam is one step wide'],
+            ['Pinch', 'Lab.09 levels verbatim — no ring-scale, index-bound mechanisms'],
+            ['Flat', 'Pinched: seam centre 138 + 114·r px — level-independent'],
+            ['Radius', 'Live slider · gaps widen with it'],
+            ['Skin', 'Membrane 0–1 · 0.35 by default, 0.15 under the pinch'],
             ['Ceiling', 'Ring plate · fixed masts, skin gathers down them'],
+            ['Caveat', 'Bands do not touch each other — 2D sections'],
           ]}
         >
-          <SkinSplitRingBench />
+          <SkinRingBench />
         </Bench>
 
         <Bench
-          no="14"
+          no="11"
           title="A square ring"
           lede="The mast stays round; the plan does not. Each of the twenty bands reaches out a different distance — four at the corners, eight along the edges, eight on the faces — so the rim lands on a square, and since the membrane between neighbours is a ruled panel, the chord it draws is the edge itself. Only the reach changes: the box is the same height the whole way round, its ladder the same ten rungs, squeezed closer as the shelf gets shallower. Two conditions decide whether that works, and both were learnt the hard way: the end panel must end on a locked rung or the end face bows out, and the box has to fit inside the free run it lives in — when it does not, the lower buffer is pulled straight and the mouth curls the wrong way. The plan is a dial, not a fixed shape: hold the inscribed circle, push only the corners out, and the same twenty bands walk from circle to square in five steps."
           accent="var(--accent-2)"
@@ -489,6 +491,27 @@ export default function LabPage() {
           ]}
         >
           <SquareRingBench />
+        </Bench>
+
+        <ScaleRule n="Ⅳ" label="A room" sub="Lab.12 · the field at real scale" />
+
+        <Bench
+          no="12"
+          title="Four by four"
+          lede="Sixteen of the cylinders from Lab.10 hung in a room — 320 bands, one solved section. A 1.70 m figure stands on the floor beside them, and that figure is what sets the scale: everything else on this page had none until now. How far a ledge reaches is set by how much material its outermost bond captures — not by how hard the unit contracts. So this family folds more of the same strip: 202 nodes as before, but the fan spans 2.1× the catalogue's, and the slack hugging the mast is what pays for it. Each ring keeps its own clearance, and pulling the radius breathes the whole field."
+          accent="var(--accent-2)"
+          specs={[
+            ['Field', '4 × 4 rings · 20 bands each · 320 placements'],
+            ['Solved', 'One section — the field is that section, placed'],
+            ['Scale', 'Figure 1.70 m ⇒ room 3.74 m · ring 1.04 m across'],
+            ['Rig', 'Half size, hung lower — underside stays at 1.08 m'],
+            ['Pitch', '2 × (radius + peak swell 101.1) + gap · tracks the slider'],
+            ['Gap', '1.5 × the gap inside a ring — rings stay separate'],
+            ['Plans', 'One form ↔ one form per row'],
+            ['Skin', 'A membrane bridges the gaps between bands · 0–1'],
+          ]}
+        >
+          <SkinGridBench />
         </Bench>
 
         <footer

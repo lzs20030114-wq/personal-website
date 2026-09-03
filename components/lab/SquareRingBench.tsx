@@ -2,6 +2,12 @@
 
 import { useMemo, useState } from 'react';
 import {
+  SQUARE_LAYOUTS,
+  SQUARE_PLANS,
+  type SquareLayoutKey,
+  type SquarePlanKey,
+} from '../../src/lib/space/lab-variants';
+import {
   SQUARE,
   SQUARE_MORPH,
   SQUARE_PHASE,
@@ -110,18 +116,11 @@ const SPLIT = {
   pitch: sqSplitCellPitch(squareCellGap()),
 };
 
-const PLANS = [
-  { key: 'flat', label: '整环平' },
-  { key: 'wave', label: '一圈起伏' },
-  { key: 'split', label: '捏分' },
-] as const;
-type PlanKey = (typeof PLANS)[number]['key'];
-
-const LAYOUTS = [
-  { key: 'single', label: '单环' },
-  { key: 'grid', label: `${SQUARE_GRID.COLS}×${SQUARE_GRID.ROWS}` },
-] as const;
-type LayoutKey = (typeof LAYOUTS)[number]['key'];
+/** 编制／排布表取自差分清单（lab-variants.ts，2026-09-03 收纳：守门冻结全部档位） */
+const PLANS = SQUARE_PLANS;
+type PlanKey = SquarePlanKey;
+const LAYOUTS = SQUARE_LAYOUTS;
+type LayoutKey = SquareLayoutKey;
 
 /** 阵列的格子（不随半径变——方形按固定半径标定，故这个函数忽略入参） */
 const CELLS = squareGridCells();
@@ -326,7 +325,7 @@ export function SquareRingBench({
         </>
       }
       hud={{
-        kicker: 'Lab.14 / Project II',
+        kicker: 'Lab.11 / Project II',
         title: T.title,
         sub: split
           ? T.split(SQUARE.COUNT, SQSPLIT.LOBE, SPLIT.gap, SPLIT.side)

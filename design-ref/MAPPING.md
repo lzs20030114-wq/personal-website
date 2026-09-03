@@ -1028,3 +1028,16 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
 - 台架无新 prop：`pivotY` / 取景按 `SQSPLIT_BAND` 自动跟；HUD 与 `/lab` 规格表两行改口径。
 - 守门仍 15 项、内容重钉（居中：终态缝心散布 <6、全程 <40、每对上下板步长 (0,12)）；统计条不动（448）。
 - 待用户真机拍板：取景（带 338 单环在画面里的占比）、双平台边朝向（POLE=1）、速率 80、膜 0.15。
+
+## 25. 项目二台架收纳：七台四段 + 控制条两层（2026-09-03，用户「按合理的排布顺序和收纳逻辑整理，千万不要丢差分」→ review 后拍板 B′）
+
+收纳逻辑、合并判定与差分账在 项目二_皮肤单元lab.md §18，这里只记落点与影响面。**Lab-Modernist 稿里没有这件东西**（稿只有一列台架），属站方增补，版式语言全部复用稿内既有构件。
+
+- **`/lab` 页**：项目二段落改四段（`ScaleRule` 段头：Ⅰ One band 06–08 / Ⅱ A row 09 / Ⅲ A ring 10–11 / Ⅳ A room 12），比 `ProjectRule` 轻一档（11px、n700、罗马数字取紫）。台架 9 → 7：09 序列（合并原 08 + 12）、10 圆筒环（合并原 09 + 13），lede 与规格表按「覆盖两编制」重写，其余五台文案原样只改编号。页首注释与分组头副标题改口径（此前副标题还写着 Lab.06–12 而台架已到 14，收纳后恰好又是 06–12）。
+- **控制条两层**（`SkinSolidBench` JSX + `globals.css` `.lab-ctl--tiered / .lab-ctl__row / .lab-ctl__solve`）：第一层「解什么」（extraControls + 排列）与第二层「怎么看」之间一条发丝线；只在第一层有控件时分层，Lab.01–07 与 Lab.06 那台 SVG 仍是单行。案例页所有活件 `controls=false`，`.lab-wrap--side`（Lab.05 专属面板）不涉及。
+- **台架组件**：新 `SkinSeriesBench.tsx`（编制 目录渐变／捏分 × 排布 并拢／分列；`rail` 按编制切、`pivotFor`/`camScaleFor` 按编制 × 排布现读；HUD 中英各两份）；`SkinRingBench.tsx` 加第四编制捏分（`skinValue 0.15 / pivotY 184 / camScaleFor 1.06`，Lab.14 那三个钩子的先例）；删 `SkinArrayBench / SkinSplitBench / SkinSplitRingBench`。`SkinGridBench / SquareRingBench / SkinDualBench` 只改 kicker 编号与编制表来源。
+- **差分守门**：`src/lib/space/lab-variants.ts`（编制／排布表的单一来源）+ `lab-variants.test.ts`（46 行冻结清单）；`components/lab/planHash.ts` 让 `/lab#labNN-<plan>` 直达折进按钮的编制并滚到台架。
+- **主页**：`HomeScreens` LABS 卡 14 → 12（序列、圆筒环两张新文案），`lg:grid-cols-14 → 12`，统计条 Demos 12、Tests 452。
+- **案例页**：FIG.03 由 `SkinArrayBench layout={1}` 改 `SkinSeriesBench plan="gradient" layout={1}`（开场逐位相同）；heroLive 题注 Lab.10 → Lab.12。
+- **已知代价**：折进编制按钮的两套内容（原 12 捏分、原 13 捏分环）不再有自己的主页卡片与 lede，靠合并台的 lede／规格表与 hash 直达承接。
+

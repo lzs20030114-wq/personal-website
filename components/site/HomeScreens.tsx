@@ -132,6 +132,8 @@ const LABS = [
     hover: 'var(--p100)',
     kickerColor: 'var(--accent-2)',
   },
+  // 项目二七台四段（2026-09-03 收纳：原 08+12 合成 09 序列、原 09+13 合成 10 圆筒环，
+  // 编号按新页序连续；折进编制按钮的差分用 /lab#labNN-<plan> 直达）
   {
     kicker: 'Lab.06',
     title: 'Contractile skin',
@@ -154,9 +156,9 @@ const LABS = [
   },
   {
     kicker: 'Lab.08',
-    title: 'Gradient array',
-    body: 'Twelve narrow bands morph bulb into box — every band runs the engine.',
-    meta: '12 live units · WebGL',
+    title: 'Two structures, one band',
+    body: 'One strip folds an upper and a lower structure — two zippers, one pull.',
+    meta: '5 dual bands · WebGL',
     href: '/lab#lab08',
     bar: 'var(--p700)',
     hover: 'var(--p100)',
@@ -164,9 +166,9 @@ const LABS = [
   },
   {
     kicker: 'Lab.09',
-    title: 'Cylinder of units',
-    body: 'Twenty bands ring a tube — the ledge rises and falls once around.',
-    meta: 'Form + radius · WebGL',
+    title: 'Series',
+    body: 'A graded catalogue, or a box pinched into two platforms — every band a real unit, packed or spread.',
+    meta: '2 plans · WebGL',
     href: '/lab#lab09',
     bar: 'var(--p700)',
     hover: 'var(--p100)',
@@ -174,9 +176,9 @@ const LABS = [
   },
   {
     kicker: 'Lab.10',
-    title: 'Four by four',
-    body: 'Sixteen of those cylinders hung in a room, with a 1.70 m figure for scale.',
-    meta: '16 live rings · WebGL',
+    title: 'Cylinder of units',
+    body: 'Twenty bands ring a tube — level, undulating, drifting, or pinched apart once around.',
+    meta: '4 plans · radius · WebGL',
     href: '/lab#lab10',
     bar: 'var(--p700)',
     hover: 'var(--p100)',
@@ -184,9 +186,9 @@ const LABS = [
   },
   {
     kicker: 'Lab.11',
-    title: 'Two structures, one band',
-    body: 'One strip folds an upper and a lower structure — two zippers, one pull.',
-    meta: '5 dual bands · WebGL',
+    title: 'A square ring',
+    body: 'The mast stays round; how far each band reaches makes the plan a square — flat, undulating, or pinched.',
+    meta: 'Three depths · WebGL',
     href: '/lab#lab11',
     bar: 'var(--p700)',
     hover: 'var(--p100)',
@@ -194,30 +196,10 @@ const LABS = [
   },
   {
     kicker: 'Lab.12',
-    title: 'Pinched apart',
-    body: 'Ten bands walk one box until it is two platforms — each level designed on its own.',
-    meta: '10 levels · WebGL',
+    title: 'Four by four',
+    body: 'Sixteen of those cylinders hung in a room, with a 1.70 m figure for scale.',
+    meta: '16 live rings · WebGL',
     href: '/lab#lab12',
-    bar: 'var(--p700)',
-    hover: 'var(--p100)',
-    kickerColor: 'var(--accent-2)',
-  },
-  {
-    kicker: 'Lab.13',
-    title: 'The seam, around',
-    body: 'Twenty bands ring a mast — the box splits into two platforms and closes again.',
-    meta: '20 bands · WebGL',
-    href: '/lab#lab13',
-    bar: 'var(--p700)',
-    hover: 'var(--p100)',
-    kickerColor: 'var(--accent-2)',
-  },
-  {
-    kicker: 'Lab.14',
-    title: 'A square ring',
-    body: 'The mast stays round; how far each band reaches makes the plan a square — flat or undulating.',
-    meta: 'Three depths · WebGL',
-    href: '/lab#lab14',
     bar: 'var(--p700)',
     hover: 'var(--p100)',
     kickerColor: 'var(--accent-2)',
@@ -231,13 +213,13 @@ export interface HomeLog {
   text: string;
 }
 
-// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-09-02 vitest 实测 448；
+// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-09-03 vitest 实测 452；
 // 迭代稿配色：Tests=绿 700、Kernels=紫 700、Demos=绿 600）
 const STATS = [
   { n: '04', label: 'Projects', color: 'var(--ink)' },
-  { n: '448', label: 'Tests green', color: 'var(--accent)' },
+  { n: '452', label: 'Tests green', color: 'var(--accent)' },
   { n: '03', label: 'Solver kernels', color: 'var(--accent-2)' },
-  { n: '14', label: 'Live demos', color: 'var(--g600)' },
+  { n: '12', label: 'Live demos', color: 'var(--g600)' },
 ];
 
 const UPPER_11: CSSProperties = {
@@ -1778,7 +1760,7 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
               </div>
               <div
                 data-row
-                className="grid grid-cols-2 lg:grid-cols-14"
+                className="grid grid-cols-2 lg:grid-cols-12"
                 style={{ gap: 1, background: 'oklch(0.235 0.025 215 / 0.22)' }}
               >
                 {LABS.map((lab) => (

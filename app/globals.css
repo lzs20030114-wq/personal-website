@@ -2155,6 +2155,27 @@ button.log-heat__cell {
   text-transform: uppercase;
   color: var(--ink);
 }
+/* 控制条两层（2026-09-03，项目二台架收纳同轮）：第一层「解什么」= 台架专属的编制／形态／
+   轮廓／间距与排列，动了会重建引擎或重摆；第二层「怎么看」= 运转／键线／透视／速度／蒙皮／
+   半径／视角，不碰引擎。两层之间一条发丝线；只有第一层有控件的台架才分层，单行的台架
+   （Lab.01–07、Lab.06 的 SVG）仍是上面那一条，逐位不变。 */
+.lab-ctl--tiered {
+  flex-direction: column;
+  align-items: stretch;
+  row-gap: 0;
+  padding: 0;
+}
+.lab-ctl__row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  row-gap: 9px;
+  padding: 11px 10px 12px;
+}
+.lab-ctl__solve {
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+}
 .lab-ctl .grp {
   display: flex;
   gap: 10px;

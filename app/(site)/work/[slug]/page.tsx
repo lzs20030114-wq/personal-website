@@ -22,7 +22,7 @@ import { CaseHeroLive } from '../../../../components/site/CaseHeroLive';
 import { CaseHeroSpace } from '../../../../components/site/CaseHeroSpace';
 import { SkinSolidBench } from '../../../../components/lab/SkinSolidBench';
 import { SkinBench } from '../../../../components/lab/SkinBench';
-import { SkinArrayBench } from '../../../../components/lab/SkinArrayBench';
+import { SkinSeriesBench } from '../../../../components/lab/SkinSeriesBench';
 import { SquareRingBench } from '../../../../components/lab/SquareRingBench';
 import { PageEnter } from '../../../../components/site/PageEnter';
 import { BackTransition } from '../../../../components/site/BackTransition';
@@ -114,7 +114,11 @@ const mdxComponents = (lang: SlotLang) => ({
   // 行为矩阵 → 键谱的翻译规则由作者手写，模型不代拟，图注也不许说成是它。
   // 开场取**分列**而不是 /lab 的并拢：并拢的默认机位是侧视，十二条带叠在深度上、
   // 前一条挡住后面的，读者又没有控制条可切——正文里必须一眼看见那条渐变。
-  SkinArrayFigure: () => <SkinArrayBench controls={false} onLight lang={lang} layout={1} />,
+  // 2026-09-03 收纳：Lab.08 阵列过渡并入 Lab.09 序列台（编制「目录渐变」），这张图接的还是
+  // 那十二条带——开场编制指到渐变、排布指到分列，与合并前逐位相同。
+  SkinArrayFigure: () => (
+    <SkinSeriesBench controls={false} onLight lang={lang} plan="gradient" layout={1} />
+  ),
   // 「技术实现」那节说的单元化 + 运动学可解：二十条同谱的带绕轴一圈，
   // 只解一条摆二十处，每条带挑出多远就决定了俯视的轮廓。
   SquareRingFigure: () => <SquareRingBench controls={false} onLight lang={lang} />,
@@ -155,13 +159,13 @@ const SLOT_COPY: Record<string, { en: SlotCopy; zh: SlotCopy }> = {
       video: 'Simulation video — the domestic human–cat scenario',
       heroLabel: 'hero image · to be supplied',
       heroDesc: 'Hero image',
-      heroLive: '[stand-in] Lab.10 sixteen-ring floor · live',
+      heroLive: '[stand-in] Lab.12 sixteen-ring floor · live',
     },
     zh: {
       video: '仿真演示视频——居家人猫场景',
       heroLabel: '主图 · 待供图',
       heroDesc: '主图',
-      heroLive: '[顶替] Lab.10 十六环场地活件',
+      heroLive: '[顶替] Lab.12 十六环场地活件',
     },
   },
 };
@@ -185,7 +189,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
 
   const caseNo = String(entry.order ?? 1).padStart(2, '0');
   // 主图暂用活台架顶替的项目（作者供图后删掉对应的一支即回占位块）：
-  // 项目 01 = Lab.05 整机（与主页预览位同一件）· 项目 II = Lab.10 4×4 环阵列
+  // 项目 01 = Lab.05 整机（与主页预览位同一件）· 项目 II = Lab.12 4×4 环阵列（2026-09-03 收纳前编号 10）
   // （九台里只有它带真实尺度——房、人、十六片吊在天花下的平台）
   const liveHero = slug === 'reincarnation-machine' || slug === 'project-ii';
   const sc = SLOT_COPY[slug] ?? SLOT_COPY_FALLBACK;
