@@ -1041,3 +1041,13 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
 - **案例页**：FIG.03 由 `SkinArrayBench layout={1}` 改 `SkinSeriesBench plan="gradient" layout={1}`（开场逐位相同）；heroLive 题注 Lab.10 → Lab.12。
 - **已知代价**：折进编制按钮的两套内容（原 12 捏分、原 13 捏分环）不再有自己的主页卡片与 lede，靠合并台的 lede／规格表与 hash 直达承接。
 
+## 26. 圆筒环捏分对齐方形（2026-09-03，用户「圆形的捏分，中间的空间还没做」）
+
+机理、标定与数字在 项目二_皮肤单元lab.md §19，这里只记落点与影响面。
+
+- **Lab.10 捏分档换构造**：`skin-split-ring.ts` 从「Lab.12 十级直接上环」改为「方形捏分的构造 + 十条面类引擎」（变高 · 缝 100 · 居中等步 · 一圈等挑出 83.2）。编制（镜像 + 相位 5）不变。
+- **台架**：`SkinRingBench` 捏分档单元换源、HUD 口径改、枢轴与取景按带长等比（338/202）；其余三档逐位不变。
+- **页面**：`/lab` Lab.10 lede 与规格表 Pinch/Flat 两行改口径；主页统计条 Tests 457。
+- **守门**：`skin-split-ring.test.ts` 重写 8 项（+5）；线稿脚本 `scripts/skin-ring/ring-split-draft.mjs` 新增。
+- **差分清单不变**（仍是 `10:split` 一档）。
+
