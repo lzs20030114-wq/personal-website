@@ -1,5 +1,64 @@
 [
   {
+    "date": "2026-09-03",
+    "lead": {
+      "en": "Named the ring platform a \"unit\" and opened a new bench to study how two, three, four or nine of them can relate in spacing and height.",
+      "zh": "给环形平台命名为「单元」，开了一台新台架研究二、三、四、九个单元之间的距离与高度关系。"
+    },
+    "body": {
+      "en": "- A \"unit\" is the cylinder from earlier: twenty fabric bands round a mast that each fold out a ledge when they contract, joining into one ring platform. It already has four settled knobs — form, radius, height, skin. A relation between units is those knobs pulled apart from one unit to the next, plus one quantity a single unit never had: distance.\n- Listed every dimension first, then checked each: distance, height and form can be done now; a different radius per unit, or units contracting one after another, need new bench features; a sheet of fabric bridging two platforms needs new geometry; and \"nesting\" — one platform reaching into the next unit's bands — cannot be done, because fabric never collides with fabric in this simulation.\n- Distance is measured, not styled: apart keeps the spacing of the 4×4 field (1.23 m); touching puts two platform edges together (0.89 m); interleaved slides one platform under the other until its rim nearly reaches the neighbour's bands (0.59 m, overlapping by 0.30 m). Interleaving only works when the two units sit at different heights.\n- Height comes from where the shape sits along its band — up to 0.35 m higher, with the shape itself unchanged. A pair gets two levels, a triad three, a two-by-two four levels spiralling round, a three-by-three its highest ring in the middle.\n- Interleaving has a physical gate: the step between levels must clear the folded body at its fattest moment. The box shape swells to 77 px mid-way through forming and only settles back to 68, so the gate uses the peak — the pocket form can never interleave, and the box cannot in a triad; those buttons simply grey out.\n- Switching relation on the bench re-places the units without restarting the contraction. Three line drawings — the unit, the relation dimensions, and two/three/four/nine units against five relations — were drawn before the bench, to decide the next step from.",
+      "zh": "- 「单元」就是此前那种二十条布带围成一圈、收缩后各自扣出挑台、连成一圈平台的圆筒。它已有四个定好的旋钮：形态、半径、高度、蒙皮。几个单元之间的关系，就是把这些旋钮在单元之间拉开差别，再加上一个单元自己没有的量——距离。\n- 先把维度列全再逐个审：距离、高度、形态三维现成能做；每个单元不同半径、先后收缩，要给台架加功能；两圈平台之间连一层布要新几何；「嵌」（一个的平台伸进另一个的布带里）做不了——仿真里布与布之间没有碰撞。\n- 距离是量出来的，不是凭感觉分的：分离沿用 4×4 那台的间距（1.23 米），相切是两圈平台边贴边（0.89 米），交叠是一圈平台从另一圈底下穿过去、外缘顶到邻居的布带为止（0.59 米，盖过去 0.30 米）。交叠只有两个单元不同高时才成立。\n- 高度靠「形状在布带上的位置」这个旋钮，最多抬 0.35 米，形状本身一点不变。一对分两级，三角三级，方阵四级顺着绕一圈，九宫中间最高。\n- 交叠有一道物理门槛：上下两层的高差要装得下折叠体最鼓时的厚度。方箱在成形中途鼓到 77 像素、定形后才收回 68，按最鼓那一刻算——于是袋这种形态在任何组合里都不能交叠，三角里方箱也不行，这些按钮直接变灰。\n- 台架上换关系不会把收缩从头来过，只是把几个单元重新摆一遍。三张线稿（单元定义、关系维度、二三四九乘五种关系）先于台架画出来，用来做下一步决策。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "image",
+        "src": "/log/2026-09-03-unit-cluster-unit.webp",
+        "alt": {
+          "en": "Plan and elevation of one unit: twenty bands round a mast, the real final-state section, a 1.70 m figure for scale, and a table of measured values for the four forms",
+          "zh": "一个单元的平面与立面：二十条布带绕立杆一圈、收缩到底的真实剖面、1.7 米的人作比例，附四种形态的实测量表"
+        },
+        "caption": {
+          "en": "What one unit is: platform 0.89 m across, its surface 1.35 m off the floor, and 0.35 m of height still available.",
+          "zh": "一个单元长什么样：平台外径 0.89 米、平台面离地 1.35 米，高度旋钮还能再抬 0.35 米。"
+        },
+        "width": 1600,
+        "height": 800
+      },
+      {
+        "kind": "image",
+        "src": "/log/2026-09-03-unit-cluster-dimensions.webp",
+        "alt": {
+          "en": "Relation dimensions shown on a pair of units: four states of distance, level or stepped height, same or different form and size, staggered timing, and a bridge between platforms",
+          "zh": "用一对单元示范关系维度：距离的四态、高度的齐平与错层、形态与尺寸的同异、先后收缩、平台之间的连接"
+        },
+        "caption": {
+          "en": "Of six dimensions three are ready, two need bench features, one needs new geometry; the red cell, nesting, cannot be done.",
+          "zh": "六个维度里三个现成、两个要加功能、一个要新几何；红色那格「嵌」做不了。"
+        },
+        "width": 1440,
+        "height": 1250
+      },
+      {
+        "kind": "image",
+        "src": "/log/2026-09-03-unit-cluster-matrix.webp",
+        "alt": {
+          "en": "Plan and front elevation of two, three, four and nine units under each of five relations, colour marking the height level",
+          "zh": "二、三、四、九个单元分别在五种关系下的平面与正立面，颜色区分高度级"
+        },
+        "caption": {
+          "en": "Every spacing and step here is derived; in the triad's interleaved cell the box does not fit, so it is drawn with the straight ledge instead.",
+          "zh": "每格的间距与高差都是算出来的；三角在交叠那一格方箱装不下，改用直挑台画。"
+        },
+        "width": 1415,
+        "height": 1338
+      }
+    ]
+  },
+  {
     "date": "2026-07-31",
     "lead": {
       "en": "Ran a finite-element check on the chassis frames: over-built for strength, and the display stand matters far more than the thickness.",
