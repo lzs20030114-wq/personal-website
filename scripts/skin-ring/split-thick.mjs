@@ -87,7 +87,11 @@ function build(H, wEnd, D, boxD, t, F_TOT = A_F, LEAD = A_LEAD) {
   return {
     spec, free, buf, M, lead: base,
     marks: { center: c0, mouthA: c0 - m, mouthB: c0 + m, faceA: c0 - f, faceB: c0 + f, outA: c0 - M, outB: c0 + M },
-    opts: { ...SKIN_ROOT_FIX, anchorEnd: true, boxSquare: true, zipUp: [0], attNear: 2.5, attNearChains: [0], sqChains: [0], coreTether: tether, coreTetherRel: crease, alignRuns: [[c0 - m, c0 - a], [c0 + a, c0 + m]] },
+    opts: { ...SKIN_ROOT_FIX, anchorEnd: true, boxSquare: true, zipUp: [0], attNear: 2.5, attNearChains: [0], sqChains: [0], coreTether: tether, coreTetherRel: crease,
+      // **顶/底面排整齐**（2026-09-02 变高那轮加，FACEALIGN=1）：箱一高（H>70）成形期顶面那片（轴嘴→面角）
+      // 整片翻进缝区打成几十节的环，终态照样对——是瞬态。排整齐是位置机制（两锚点连线等距排布），
+      // 与缝壁那两段同一治法；实测角 L6 环 91 → 0，锁定不变。
+      alignRuns: process.env.FACEALIGN ? [[c0 - m, c0 - a], [c0 + a, c0 + m], [c0 - M, c0 - f], [c0 + f, c0 + M]] : [[c0 - m, c0 - a], [c0 + a, c0 + m]] },
   };
 }
 const CK = [400, 550, 650, 750, 1000, 1500];
@@ -237,6 +241,10 @@ if (process.env.LOOP) {
   const CLS = (process.env.CLS ?? 'F,E,C').split(',');
   const LV = (process.env.LV ?? '0,1,2,3,4,5,6,7,8,9').split(',').map(Number);
   const DOFF = (process.env.DOFF ?? '0,2,4,6').split(',').map(Number);
+  const BSTEP = Number(process.env.BSTEP ?? 2);
+  // **变高读法**（2026-09-02 用户拍板「台高钉死、缝张开」）：VARH=台高 ⇒ 每级 H(t) = 2·台高 + w(t)，
+  // 整块那一级 H = 2·台高。不设即恒高（H 对全级相同）。
+  const VARH = process.env.VARH ? Number(process.env.VARH) : 0;
   const T10 = [0, 0.108, 0.254, 0.397, 0.523, 0.638, 0.741, 0.834, 0.92, 1];
   const R = SQUARE.RADIUS, TH = (n) => (Math.PI / SQUARE.COUNT) * n;
   const COS = { F: Math.cos(TH(1)), E: Math.cos(TH(3)), C: Math.cos(TH(5)) };
@@ -250,37 +258,40 @@ if (process.env.LOOP) {
   };
   const out = [], t0 = Date.now();
   let runs = 0;
-  console.log(`══ 一次循环候选池 H=${H} 缝=${W} · 带 ${A_BAND} F_TOT=${A_F} lead=${A_LEAD} tail=${A_BAND - 2 * SQUARE.ISO - A_F - A_LEAD} · 半边长 ${A0}–${A1} ══`);
+  console.log(`══ 一次循环候选池 ${VARH ? `变高 台高=${VARH}` : `H=${H}`} 缝=${W} · 带 ${A_BAND} F_TOT=${A_F} lead=${A_LEAD} tail=${A_BAND - 2 * SQUARE.ISO - A_F - A_LEAD} · 半边长 ${A0}–${A1} ══`);
   for (const c of CLS) {
     const lo = A0 / COS[c] - R - 2, hi = A1 / COS[c] - R + 2;
     console.log(`${c}：挑出窗口 ${lo.toFixed(1)}–${hi.toFixed(1)}`);
     for (const l of LV) {
       const t = T10[l];
       const rows = [];
+      const Ht = VARH ? 2 * VARH + seamW(t, W) : H;
+      const okH = (m) => m.locked === m.tot && m.knot <= 6 && m.topFlat < 1.5 && m.botFlat < 1.5 && Math.abs(m.boxH - Ht) < 0.5 && m.silD < 6 && m.vert <= VERT_MAX;
       if (t === 0) {
-        // 实心箱：扫 k（平档深度表 挑出 ≈ 44.2 + 1.875·(k−28)，窗口两侧各放 3 格）
-        const k0 = Math.floor((lo - 44.2) / 1.875 + 28) - 3, k1 = Math.ceil((hi - 44.2) / 1.875 + 28) + 3;
+        // 实心箱：扫 k（平档深度表 挑出 ≈ 44.2 + 1.875·(k−28)，窗口两侧各放 3 格；变高读法下箱矮、挑出 ≈ 2k − H/2 + 5）
+        const k0 = VARH ? Math.floor((lo + Ht / 2 - 5) / 2) - 3 : Math.floor((lo - 44.2) / 1.875 + 28) - 3;
+        const k1 = VARH ? Math.ceil((hi + Ht / 2 - 5) / 2) + 3 : Math.ceil((hi - 44.2) / 1.875 + 28) + 3;
         for (let k = Math.max(12, k0); k <= k1; k++) {
-          const b = buildSolid(H, k);
+          const b = buildSolid(Ht, k);
           if (b.over || b.odd !== undefined || b.floats) continue;
-          const m = run(b, { t: 0, D: k * 2 * SKIN.R1, wEnd: W, H }, 10); runs++;
-          m.silD = silRect(m);
-          if (!ok(m) || m.reach < lo || m.reach > hi) continue;
-          rows.push({ c, l, t, k, reach: m.reach, free: b.free, buf: b.buf, ...keep(m) });
+          const m = run(b, { t: 0, D: k * 2 * SKIN.R1, wEnd: W, H: Ht }, 10); runs++;
+          m.silD = (() => { const half = Ht / 2 + 4, A = silhouette(m.profile, -half, half), B = silhouette(targetAt(0, m.reach, W, Ht), -half, half); let s = 0; for (let i = 0; i < A.length; i++) s += Math.abs(A[i] - B[i]); return s / A.length; })();
+          if (!okH(m) || m.reach < lo || m.reach > hi) continue;
+          rows.push({ c, l, t, k, H: Ht, reach: m.reach, free: b.free, buf: b.buf, ...keep(m) });
         }
       } else {
         const bd0 = Math.floor((lo - 10) / 2) * 2, bd1 = Math.ceil((hi - 2) / 2) * 2;
-        for (let boxD = Math.max(6, bd0); boxD <= bd1; boxD += 2) for (const dOff of DOFF) {
-          let D = boxD + 6 + dOff, b = build(H, W, D, boxD, t);
+        for (let boxD = Math.max(6, bd0); boxD <= bd1; boxD += BSTEP) for (const dOff of DOFF) {
+          let D = boxD + 6 + dOff, b = build(Ht, W, D, boxD, t);
           if (b.over || b.odd !== undefined || b.floats) continue;
-          let m = run(b, { t, D, wEnd: W, H }, 10); runs++;
+          let m = run(b, { t, D, wEnd: W, H: Ht }, 10); runs++;
           // 自洽第二遍：目标取**面角 x**（§17.10 的教训：取 max 挑出会被鼓出的缝角污染成正反馈）
-          const D2 = Math.round((m.faceX + dOff) * 10) / 10, b2 = build(H, W, D2, boxD, t);
-          if (!b2.over && b2.odd === undefined && !b2.floats) { const m2 = run(b2, { t, D: D2, wEnd: W, H }, 10); runs++; if (ok(m2)) { m = m2; D = D2; b = b2; } }
-          if (!ok(m)) continue;
+          const D2 = Math.round((m.faceX + dOff) * 10) / 10, b2 = build(Ht, W, D2, boxD, t);
+          if (!b2.over && b2.odd === undefined && !b2.floats) { const m2 = run(b2, { t, D: D2, wEnd: W, H: Ht }, 10); runs++; if (okH(m2)) { m = m2; D = D2; b = b2; } }
+          if (!okH(m)) continue;
           if (l === 9 && m.seamMin > 0.5) continue; // 满裂必须真裂到轴
           if (m.reach < lo || m.reach > hi) continue;
-          rows.push({ c, l, t, boxD, D, dOff, reach: m.reach, free: b.free, buf: b.buf, ...keep(m) });
+          rows.push({ c, l, t, boxD, D, dOff, H: Ht, reach: m.reach, free: b.free, buf: b.buf, ...keep(m) });
         }
       }
       out.push(...rows);

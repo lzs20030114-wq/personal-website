@@ -300,6 +300,7 @@ export function SkinSolidBench({
   unitsKey,
   view: viewProp,
   skinValue,
+  pivotY,
   extraControls,
 }: {
   active?: boolean;
@@ -399,6 +400,12 @@ export function SkinSolidBench({
    * `home` 是排布级属性、在主 effect（[]-deps）挂载时读取，换编制不会重取（§14.4 的坑）。
    */
   view?: ViewKey;
+  /**
+   * 外部指定机位枢轴的 y（默认 undefined ⇒ 用排布的 pivot，Lab.07–14 逐位不变）。
+   * 动机：Lab.14 的捏分编制用比平档长的带子（平台落得更低），换编制时枢轴要跟着走；
+   * `layouts[].pivot` 在主 effect（[]-deps）挂载时读取，换编制不会重取（§14.4 的坑）。
+   */
+  pivotY?: number;
   /** 台架自己的控件（塞进控制条最前面）——Lab.09 的形态选择 */
   extraControls?: ReactNode;
 }) {
@@ -415,6 +422,7 @@ export function SkinSolidBench({
       plans?: readonly (readonly number[])[],
     ) => void;
     viewTo: (k: ViewKey) => void;
+    repivot: () => void;
     viewHome: () => void;
     setLayout: (li: number) => void;
   } | null>(null);
@@ -427,6 +435,7 @@ export function SkinSolidBench({
   const cellsRef = useRef(cells);
   const ringPlansRef = useRef(ringPlans);
   const camScaleRef = useRef(camScaleFor);
+  const pivotYRef = useRef(pivotY);
   const sceneRef = useRef(scene);
   useEffect(() => {
     cellsRef.current = cells;
@@ -477,6 +486,14 @@ export function SkinSolidBench({
 
     /** 当前视角（逐视角取景要用；预设切换与归位都要同步它） */
     let viewKey: ViewKey = layoutList[layoutIdx].home ?? 'axon';
+    /**
+     * 机位枢轴：排布的 pivot，`pivotY` prop 给了就覆盖 y（Lab.14 捏分编制的带子比平档长、
+     * 平台落得更低，换编制时枢轴要跟着走；layouts 在挂载时读一次、换不了）
+     */
+    const pivotOf = (): { x: number; y: number; z: number } => {
+      const p = layoutList[layoutIdx].pivot;
+      return pivotYRef.current === undefined ? p : { x: p.x, y: pivotYRef.current, z: p.z };
+    };
     const scaleOf = (k: ViewKey = viewKey): number => {
       const f = camScaleRef.current;
       return f ? f(radiusRef.current, k) : layoutList[layoutIdx].camScale;
@@ -485,7 +502,7 @@ export function SkinSolidBench({
     const cam = new OrbitCamera({
       cx: 350,
       cy: 260,
-      pivot: layoutList[layoutIdx].pivot,
+      pivot: pivotOf(),
       scale: camScaleFor ? camScaleFor(radiusRef.current, viewKey) : layoutList[layoutIdx].camScale, // 挂载帧：ref 尚未同步，用 prop
       pitch0: axonPitch,
       yaw0: axonYaw,
@@ -621,7 +638,7 @@ export function SkinSolidBench({
       if (sceneRef.current && setR !== radiusRef.current) bakeScene();
       // 阵列 ⇄ 单环也走这里：切回单环要把格子**清空**（留着旧的会让膜按十六格去画）
       cellList = hasCells() ? cellsRef.current!(radiusRef.current) : [];
-      if (camScaleRef.current) cam.retarget(layoutList[layoutIdx].pivot, scaleOf());
+      if (camScaleRef.current) cam.retarget(pivotOf(), scaleOf());
     };
 
     // 下缘对位（用户 2026-08-22「对齐点都在最下面的点」）：注册端换到底端后，
@@ -881,7 +898,7 @@ export function SkinSolidBench({
         if (camScaleRef.current && viewAnim.from !== viewAnim.to) {
           const s0 = scaleOf(viewAnim.from);
           const s1 = scaleOf(viewAnim.to);
-          cam.retarget(layoutList[layoutIdx].pivot, s0 + (s1 - s0) * e);
+          cam.retarget(pivotOf(), s0 + (s1 - s0) * e);
         }
         if (viewAnim.t >= 1) viewAnim = null;
       } else {
@@ -969,18 +986,22 @@ export function SkinSolidBench({
         if (reduced) {
           viewAnim = null;
           cam.setOrientation(target);
-          if (camScaleRef.current) cam.retarget(layoutList[layoutIdx].pivot, scaleOf());
+          if (camScaleRef.current) cam.retarget(pivotOf(), scaleOf());
           render();
           return;
         }
         viewAnim = { q0: m2q(cam.matrix), q1: m2q(target), t: 0, from, to: k };
+      },
+      repivot: () => {
+        cam.retarget(pivotOf(), camScaleRef.current ? scaleOf() : layoutList[layoutIdx].camScale);
+        render();
       },
       viewHome: () => {
         viewAnim = null;
         cam.reset();
         // reset 回的是挂载时的姿态（= 轴测）与那档 scale；半径与视角都可能变过，得再对一次
         viewKey = layoutList[layoutIdx].home ?? 'axon';
-        if (camScaleRef.current) cam.retarget(layoutList[layoutIdx].pivot, scaleOf());
+        if (camScaleRef.current) cam.retarget(pivotOf(), scaleOf());
         render();
       },
       setLayout: (li) => {
@@ -1056,6 +1077,13 @@ export function SkinSolidBench({
     setSkinV(skinValue);
     apiRef.current?.setSkin(skinValue);
   }, [skinValue]);
+
+  // 外部指定枢轴 y：prop 一变就重取景（挂载那次由排布的 pivot 负责）
+  useEffect(() => {
+    if (pivotYRef.current === pivotY) return;
+    pivotYRef.current = pivotY;
+    apiRef.current?.repivot();
+  }, [pivotY]);
 
   // 外部指定机位：只在 prop 变化时切（挂载那次由 layouts[].home 负责，不重复切）
   const viewPropRef = useRef(viewProp);

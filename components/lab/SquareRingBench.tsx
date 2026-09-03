@@ -23,11 +23,14 @@ import {
 } from '../../src/lib/space/skin-square';
 import {
   SQSPLIT,
+  SQSPLIT_BAND,
   SQSPLIT_REACH,
   buildSquareSplitOrder,
   buildSquareSplitUnits,
+  sqSplitCellPitch,
   sqSplitHalfSide,
 } from '../../src/lib/space/skin-square-split';
+import { squareCellGap } from '../../src/lib/space/skin-square';
 import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
 
 /**
@@ -84,17 +87,27 @@ const MORPH = Array.from({ length: SQUARE_MORPH.STEPS }, (_, s) => {
 });
 
 /**
- * 捏分编制——**一次循环**（用户 2026-09-02 拍板「一次循环优先，厚度让路」：一条边上是
- * 双平台，绕到对边变成整块，一圈一个来回）。此前三轮加厚（36→68→76→92、带子 202→250）
- * 做的是**四次循环**（面 边 角 边 面 一个象限一个来回），那是方形三个方位类天然给的排法；
- * 一次循环要面类在同一个挑出上既做出整块又做出满裂，箱高只配得到 44（缝 15），
- * 带子再加长到 305——这是用户接受的代价。俯视轮廓仍按方形标定。
+ * 捏分编制——**一次循环 · 变高**（用户 2026-09-02 两轮拍板：「一次循环优先」→「拉高，上下两个板
+ * 之间有充足的空间」，选了变高：台高钉死 16、缝张到 100，整块那边是 32 高的薄块，上板沿一圈
+ * 从贴着下板升到缝顶）。一次循环要面类在同一个挑出上既做出整块又做出满裂；恒高读法下缝 100
+ * 的实心箱要挑出 ≥151、边长 358，故走变高。俯视轮廓仍按方形标定，但比平档大一圈（边长 ≈235），
+ * 4×4 用自己的格距；带子也是自己的一份（`SQSPLIT_BAND`），换编制时枢轴跟着走（`pivotY`）。
  * 谱、编制与几何全在 skin-square-split.ts（线稿脚本与站上共用一份）；这里只取数据。
  */
 const SPLIT = {
   units: buildSquareSplitUnits().map(strip),
   order: buildSquareSplitOrder(),
   side: Math.round(2 * sqSplitHalfSide()),
+  gap: SQSPLIT.W_END,
+  cells: (() => {
+    const pitch = sqSplitCellPitch(squareCellGap());
+    const out: { x: number; z: number; plan: number }[] = [];
+    for (let r = 0; r < SQUARE_GRID.ROWS; r++)
+      for (let c = 0; c < SQUARE_GRID.COLS; c++)
+        out.push({ x: (c - (SQUARE_GRID.COLS - 1) / 2) * pitch, z: (r - (SQUARE_GRID.ROWS - 1) / 2) * pitch, plan: 0 });
+    return out;
+  })(),
+  pitch: sqSplitCellPitch(squareCellGap()),
 };
 
 const PLANS = [
@@ -114,11 +127,14 @@ type LayoutKey = (typeof LAYOUTS)[number]['key'];
 const CELLS = squareGridCells();
 /** 装置竖向中点（带子 202 → 250 → 305 两次重取，2026-09-02） */
 const PIVOT_Y = 250;
+/** 捏分编制的枢轴：带子更长（SQSPLIT_BAND），装置整体更高，按带长等比 */
+const PIVOT_Y_SPLIT = Math.round((PIVOT_Y * SQSPLIT_BAND) / SQUARE.BAND);
 const cellsOf = () => CELLS;
+const splitCellsOf = () => SPLIT.cells;
 /**
- * 取景。**按编制分**——两种编制的环大小不同（四次循环那版捏分比平档大一圈；一次循环
- * 那版角档只到 k≈62、比平档小一圈），同一个 scale 不是裁掉一圈就是空一圈。
- * 单环框角点直径、阵列框整片占宽，两档按各自的横向尺寸等比缩。
+ * 取景。**按编制分**——捏分的环比平档大一圈（边长 232 vs 169：变高读法下面类挑出 ≈88）、
+ * 带子也更长（406 vs 305），同一个 scale 会把它裁掉一圈。
+ * 单环框角点直径、阵列框整片占宽，两档按各自的横向尺寸等比缩，单环再按带长缩一次。
  * `SINGLE_SCALE` 是平档单环那一档：带子 202 → 250 → 305 后筒高了 51%，故从 0.95 按
  * 202/305 缩到 **0.63**（= 装置在画面里占的地方与加长之前一样，不是重新构图）。
  * `PIVOT_Y` 同理 166 → 250。
@@ -126,12 +142,14 @@ const cellsOf = () => CELLS;
 const SINGLE_SCALE = 0.63;
 const CORNER_FLAT = squareCornerRadius();
 const CORNER_SPLIT = SQUARE.RADIUS + Math.max(...SQSPLIT_REACH);
-const spanWith = (corner: number): number =>
-  (SQUARE_GRID.COLS - 1) * squareCellPitch() + 2 * corner;
+const spanWith = (corner: number, pitch: number): number =>
+  (SQUARE_GRID.COLS - 1) * pitch + 2 * corner;
 const camScaleOf = (split: boolean, grid: boolean): number => {
   const corner = split ? CORNER_SPLIT : CORNER_FLAT;
+  // 捏分的带子更长 ⇒ 装置更高，单环取景再按带长缩一次（阵列框宽度，不吃这一项）
+  const tall = split ? SQUARE.BAND / SQSPLIT_BAND : 1;
   const base = (SINGLE_SCALE * CORNER_FLAT) / corner;
-  return grid ? (base * (2 * corner)) / spanWith(corner) : base;
+  return grid ? (base * (2 * corner)) / spanWith(corner, split ? SPLIT.pitch : squareCellPitch()) : base * tall;
 };
 
 /** HUD 双语：/lab 说中文（默认），案例页正文里的活件跟着页面的中英切换走 */
@@ -147,10 +165,10 @@ const HUD = {
       `${n} 条窄带 · 三档深度不变 · 高度沿圆周起伏 ${swing}px · ${levels} 级 · ${outline}`,
     flat: (n: number, reach: string, h: number, outline: string) =>
       `${n} 条窄带 · 三档深度 ${reach}px · 箱高恒定 ${h}px · ${outline}`,
-    split: (n: number, h: number, side: number) =>
-      `${n} 条窄带 · 一圈一个来回：一条边上是两片台 → 绕到对边合成一箱 · 箱高仍恒定 ${h}px · 方 · 边长 ${side}px`,
+    split: (n: number, lobe: number, gap: number, side: number) =>
+      `${n} 条窄带 · 一圈一个来回：一条边上是两片台、隔 ${gap}px → 绕到对边合成一块 · 台高钉死 ${lobe}px · 方 · 边长 ${side}px`,
     splitHint: (rungs: number, engines: number) =>
-      `双平台那条边到整块那条边逐位过渡 · ${engines} 条引擎摆二十处 · 每条带 ${rungs} 挡 · 轴测看裂开 · 顶视看方形 · 拖拽旋转`,
+      `下板齐平、上板沿一圈升起 · ${engines} 条引擎摆二十处 · 每条带 ${rungs} 挡 · 侧看两台分开 · 顶视看方形 · 拖拽旋转`,
     hint: (tiers: string, rungs: number, wave: boolean) =>
       `${tiers} · 每条带 ${rungs} 挡 · ${wave ? '俯视看轮廓 · 侧看起伏' : '顶视看轮廓'} · 拖拽旋转`,
     aria: '方形环：二十条窄织物带围成一圈，每条带按自己在方形里的位置挑出不同长度，收缩后二十个挑台连成一圈俯视为正方形的平台；箱高一圈恒定，可拖拽旋转',
@@ -166,10 +184,10 @@ const HUD = {
       `${n} narrow bands · depths unchanged · height swings ${swing} px once around · ${levels} levels · ${outline}`,
     flat: (n: number, reach: string, h: number, outline: string) =>
       `${n} narrow bands · three depths ${reach} px · box ${h} px high everywhere · ${outline}`,
-    split: (n: number, h: number, side: number) =>
-      `${n} narrow bands · one round trip: two shelves on one side, one box on the opposite side · still ${h} px high everywhere · a square, side ${side} px`,
+    split: (n: number, lobe: number, gap: number, side: number) =>
+      `${n} narrow bands · one round trip: two shelves ${gap} px apart on one side, one slab on the opposite side · shelves ${lobe} px thick everywhere · a square, side ${side} px`,
     splitHint: (rungs: number, engines: number) =>
-      `split side to solid side, one step per band · ${engines} engines placed twenty times · ${rungs} rungs on every band · the split reads from the side, the plan from above · drag to orbit`,
+      `the lower shelf stays level, the upper one lifts around the ring · ${engines} engines placed twenty times · ${rungs} rungs on every band · the split reads from the side, the plan from above · drag to orbit`,
     hint: (tiers: string, rungs: number, wave: boolean) =>
       `${tiers} · ${rungs} rungs on every band · ${wave ? 'plan from above, swing from the side' : 'read the plan from above'} · drag to orbit`,
     aria:
@@ -217,6 +235,8 @@ export function SquareRingBench({
       // 走 view prop 而不是 layouts[].home：home 在主 effect（[]-deps）挂载时读取，
       // 换编制不会重取（§14.4 记过的闭包坑）
       view={split ? 'axon' : 'top'}
+      // 捏分的带子比平档长（装置更高、平台落得更低）⇒ 换编制时枢轴跟着走
+      pivotY={split ? PIVOT_Y_SPLIT : PIVOT_Y}
       // 膜：整环平要它把二十条糊成闭合的筒（0.35）；捏分要看见那道缝，故调低到 0.15
       // （Lab.13 捏分环同款理由与同款数）。**顶视的方形在捏分档读不出来**——环间膜按
       // 节点下标配对，而捏分档共享的那个下标是「缝底」（x=0）、平档那里是「箱尖」，
@@ -227,7 +247,7 @@ export function SquareRingBench({
       // 同 Lab.08/09 渐变的做法。
       // **阵列不加负担**：十六格是同一份顶点摆十六处（gl3d 的摆放表），物理仍是那几条带
       rate={wave || split ? 80 : 110}
-      cells={grid ? cellsOf : undefined}
+      cells={grid ? (split ? splitCellsOf : cellsOf) : undefined}
       ringPlans={grid ? [order] : undefined}
       ring
       angleOffset={SQUARE_PHASE}
@@ -309,7 +329,7 @@ export function SquareRingBench({
         kicker: 'Lab.14 / Project II',
         title: T.title,
         sub: split
-          ? T.split(SQUARE.COUNT, SQSPLIT.H, SPLIT.side)
+          ? T.split(SQUARE.COUNT, SQSPLIT.LOBE, SPLIT.gap, SPLIT.side)
           : grid
             ? T.grid(SQUARE_GRID.COLS, SQUARE_GRID.ROWS, squareCellPitch().toFixed(0), outline, wave)
             : wave
