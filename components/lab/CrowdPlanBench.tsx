@@ -15,7 +15,8 @@ import { useBenchLoop } from './useBenchLoop';
  * 画法与 Lab.14 共用 planDraw.ts。
  */
 const TIME_SCALES = [1, 3, 8] as const;
-const TIME_DEF = 3;
+/** 默认 ×1：这台演示的是人怎么在房间里慢慢待着，按真实节奏看（Lab.14 仍 ×3——那台是走一遍看结果） */
+const TIME_DEF = 1;
 const HALF = { min: 10, max: 120 } as const;
 const rateFromHalf = (t: number) => 1 - Math.pow(0.5, 1 / t);
 const halfFromRate = (r: number) => Math.log(0.5) / Math.log(1 - r);
@@ -31,7 +32,7 @@ const COPY = {
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${c.people} 人（走 ${c.walking} · 站 ${c.standing}${c.held ? ` · 拖 ${c.held}` : ''}）· 半成以上 ${half} · 地面最深 ${floor.toFixed(1)} s`,
     foot: (reach: number, thr: number, half: number, reading: string) =>
       `影响半径 ${reach.toFixed(2)} m · 阈值 ${thr.toFixed(0)} s · 半衰期 ${half.toFixed(0)} s · ${reading}读 · 绿盘 = 当前读数（会退）· 紫环 = 成形（不回退）· 点地面放人 · 按住拖`,
-    hint: `点空地放一个人（最多 ${CROWD.MAX_PEOPLE} 个），按住一个人拖着走；「自走」= 演示用的随机漫步（随机目标 + 随机站 ${CROWD.PAUSE.min}–${CROWD.PAUSE.max} s），不是行为规则。几个人的影响圈重叠处每秒记几份——两个人站在一起，脚下的单元早一倍成形。`,
+    hint: `点空地放一个人（最多 ${CROWD.MAX_PEOPLE} 个）；悬停到人身上变抓手，按住就能拖着走，松手站在原地。「自走」= 演示用的慢走：每次只挪 ${CROWD.HOP.min}–${CROWD.HOP.max} m（偶尔远一次），到了站 ${CROWD.PAUSE.min}–${CROWD.PAUSE.max} s，步速 ${CROWD.SPEED_DEF} m/s——不是行为规则。几个人的影响圈重叠处每秒记几份——两个人站在一起，脚下的单元早一倍成形。`,
     grid: '格数',
     reading: '读法',
     reach: '影响半径',
@@ -56,7 +57,7 @@ const COPY = {
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${c.people} people (${c.walking} walking · ${c.standing} standing${c.held ? ` · ${c.held} held` : ''}) · ${half} at half or more · deepest floor trace ${floor.toFixed(1)} s`,
     foot: (reach: number, thr: number, half: number, reading: string) =>
       `reach ${reach.toFixed(2)} m · threshold ${thr.toFixed(0)} s · half-life ${half.toFixed(0)} s · ${reading} · green disc = live reading (recedes) · purple ring = formed (never undone) · click to place · hold to drag`,
-    hint: `Click empty floor to place a person (up to ${CROWD.MAX_PEOPLE}); hold one to drag. “Wander” is a demo device — a random target, then a random ${CROWD.PAUSE.min}–${CROWD.PAUSE.max} s stand — not a behaviour rule. Where reaches overlap the floor counts every person, so two people standing together form the unit underfoot twice as fast.`,
+    hint: `Click empty floor to place a person (up to ${CROWD.MAX_PEOPLE}); hover a person for the grab cursor, hold to drag, release to leave them standing. “Wander” is a demo device — a short hop of ${CROWD.HOP.min}–${CROWD.HOP.max} m (occasionally further), then a ${CROWD.PAUSE.min}–${CROWD.PAUSE.max} s stand, at ${CROWD.SPEED_DEF} m/s — not a behaviour rule. Where reaches overlap the floor counts every person, so two people standing together form the unit underfoot twice as fast.`,
     grid: 'grid',
     reading: 'reading',
     reach: 'reach',
@@ -114,7 +115,8 @@ export function CrowdPlanBench({
   const [reach, setReach] = useState<number>(PLAN.REACH.def);
   const [threshold, setThreshold] = useState<number>(PLAN.THRESHOLD);
   const [halfLife, setHalfLife] = useState<number>(halfFromRate(PLAN.DECAY));
-  const [speed, setSpeed] = useState<number>(PLAN.SPEED.def);
+  const [speed, setSpeed] = useState<number>(CROWD.SPEED_DEF);
+  const [cursor, setCursor] = useState<'crosshair' | 'grab' | 'grabbing'>('crosshair');
   const [hud, setHud] = useState({
     formed: 0,
     half: 0,
@@ -211,6 +213,7 @@ export function CrowdPlanBench({
       heldRef.current = hit.id;
       sim.hold(hit.id, x, y);
       canvas.setPointerCapture(e.pointerId);
+      setCursor('grabbing');
     } else {
       const h = sim.layout.roomM / 2;
       if (Math.abs(x) <= h && Math.abs(y) <= h) sim.add(x, y);
@@ -220,10 +223,15 @@ export function CrowdPlanBench({
   const onPointerMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     const sim = simRef.current;
     const canvas = canvasRef.current;
-    if (!sim || !canvas || heldRef.current === null) return;
+    if (!sim || !canvas) return;
     const { x, y } = canvasToRoom(canvas, e.clientX, e.clientY, sim.layout.roomM);
-    sim.drag(heldRef.current, x, y);
-    if (!runningRef.current) paint();
+    if (heldRef.current !== null) {
+      sim.drag(heldRef.current, x, y);
+      if (!runningRef.current) paint();
+      return;
+    }
+    const next = sim.personAt(x, y) ? 'grab' : 'crosshair';
+    if (next !== cursor) setCursor(next);
   };
   const onPointerUp = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     const sim = simRef.current;
@@ -232,6 +240,7 @@ export function CrowdPlanBench({
     sim.release(heldRef.current);
     heldRef.current = null;
     if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+    setCursor('grab');
     paint();
   };
 
@@ -244,7 +253,7 @@ export function CrowdPlanBench({
           ref={canvasRef}
           role="img"
           aria-label={t.aria}
-          style={{ cursor: 'crosshair', touchAction: 'none', aspectRatio: `${W}/${H}` }}
+          style={{ cursor, touchAction: 'none', aspectRatio: `${W}/${H}` }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}

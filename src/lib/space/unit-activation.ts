@@ -638,6 +638,7 @@ export class PlanSim {
     this.field.clear();
     this.act.reset();
     this.t = 0;
+    this.held = false;
     this.exitedAt = null;
     this.trail.length = 0;
     this.trailAcc = 0;
@@ -672,6 +673,47 @@ export class PlanSim {
     this.decay = v;
   }
 
+  /** 被指针按着（拖）：位置直接给、不经步速；松手站在原地 */
+  held = false;
+
+  /** 按住人：清掉路线，之后每帧 drag 给位置 */
+  hold(x: number, y: number): void {
+    if (!this.walker.present) {
+      this.walker.place(this.layout.doors[0].x, this.layout.doors[0].y);
+      this.exitedAt = null;
+    }
+    this.held = true;
+    this.walker.setRoute([{ x: this.walker.x, y: this.walker.y }]); // 清路线、站住
+    this.drag(x, y);
+  }
+
+  drag(x: number, y: number): void {
+    if (!this.held) return;
+    const h = this.layout.roomM / 2 - PLAN.BODY_R;
+    const nx = Math.max(-h, Math.min(h, x));
+    const ny = Math.max(-h, Math.min(h, y));
+    const dx = nx - this.walker.x;
+    const dy = ny - this.walker.y;
+    const d = Math.hypot(dx, dy);
+    if (d > 1e-6) {
+      this.walker.heading = Math.atan2(dy, dx);
+      this.walker.distance += d;
+    }
+    this.walker.x = nx;
+    this.walker.y = ny;
+    this.trailAcc += d;
+    if (this.trailAcc >= 0.1) {
+      this.trail.push(nx, ny);
+      this.trailAcc = 0;
+    }
+  }
+
+  /** 松手：站在原地（预设的路线已清掉，不会再自己走；要重走点「重播」） */
+  release(): void {
+    this.held = false;
+    this.walker.state = 'idle';
+  }
+
   /** 自由模式：点地面 */
   pointerTarget(x: number, y: number): void {
     const h = this.layout.roomM / 2;
@@ -700,7 +742,9 @@ export class PlanSim {
       const sdt = Math.min(MAX_SUB_DT, left);
       left -= sdt;
       const wasPresent = this.walker.present;
-      const moved = this.walker.step(sdt);
+      let moved = 0;
+      if (this.held) this.walker.presentTime += sdt; // 被拖着：不按步速走，位置由 drag 给
+      else moved = this.walker.step(sdt);
       if (this.walker.present) {
         this.field.imprint(this.walker.x, this.walker.y, this.reach, sdt);
         this.trailAcc += moved;

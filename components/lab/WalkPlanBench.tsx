@@ -39,11 +39,11 @@ const COPY = {
     half: (n: number) => `半成以上 ${n}`,
     read: (v: number) => `最高读数 ${v.toFixed(1)} s`,
     floor: (v: number) => `地面最深 ${v.toFixed(1)} s`,
-    state: { outside: '离场', walk: '走', dwell: '站', idle: '站' },
+    state: { outside: '离场', walk: '走', dwell: '站', idle: '站', held: '拖' },
     t: (s: number) => `t ${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`,
     foot: (reach: number, thr: number, half: number, reading: string) =>
       `影响半径 ${reach.toFixed(2)} m · 阈值 ${thr.toFixed(0)} s · 半衰期 ${half.toFixed(0)} s · ${reading}读 · 绿盘 = 当前读数（会退）· 紫环 = 成形进度（不回退）`,
-    hint: '自由模式：点地面，人走过去；停着就是驻留；「离场」从最近的门出去。规则三个数（衰减 2%/s · 阈值 15 s）来自作者 2026-07-20 的原型；影响半径是行为的量，做成旋钮。',
+    hint: '按住那个人可以拖着走，松手就站在原地（预设的路线随之作废，点「重播」重来）。自由模式：点地面，人走过去；停着就是驻留；「离场」从最近的门出去。规则三个数（衰减 2%/s · 阈值 15 s）来自作者 2026-07-20 的原型；影响半径是行为的量，做成旋钮。',
     grid: '格数',
     path: '行为',
     reading: '读法',
@@ -65,11 +65,11 @@ const COPY = {
     half: (n: number) => `${n} at half or more`,
     read: (v: number) => `peak reading ${v.toFixed(1)} s`,
     floor: (v: number) => `deepest floor trace ${v.toFixed(1)} s`,
-    state: { outside: 'left', walk: 'walking', dwell: 'standing', idle: 'standing' },
+    state: { outside: 'left', walk: 'walking', dwell: 'standing', idle: 'standing', held: 'held' },
     t: (s: number) => `t ${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`,
     foot: (reach: number, thr: number, half: number, reading: string) =>
       `reach ${reach.toFixed(2)} m · threshold ${thr.toFixed(0)} s · half-life ${half.toFixed(0)} s · ${reading} · green disc = live reading (recedes) · purple ring = formed (never undone)`,
-    hint: 'Free mode: click the floor and the person walks there; standing still is dwelling; “leave” exits by the nearest door. Decay 2 %/s and threshold 15 s are the author’s 2026-07-20 prototype; reach is a behavioural quantity, so it is a knob.',
+    hint: 'Hold the person to drag them; on release they stand where you left them (the preset route is dropped — “replay” restarts it). Free mode: click the floor and the person walks there; standing still is dwelling; “leave” exits by the nearest door. Decay 2 %/s and threshold 15 s are the author’s 2026-07-20 prototype; reach is a behavioural quantity, so it is a knob.',
     grid: 'grid',
     path: 'behaviour',
     reading: 'reading',
@@ -132,7 +132,8 @@ export function WalkPlanBench({
   const [threshold, setThreshold] = useState<number>(PLAN.THRESHOLD);
   const [halfLife, setHalfLife] = useState<number>(halfFromRate(PLAN.DECAY));
   const [speed, setSpeed] = useState<number>(PLAN.SPEED.def);
-  const [hud, setHud] = useState({ formed: 0, half: 0, max: 0, floor: 0, t: 0, state: 'walk' as 'outside' | 'walk' | 'dwell' | 'idle', total: PLAN.GRID_DEF * PLAN.GRID_DEF });
+  const [hud, setHud] = useState({ formed: 0, half: 0, max: 0, floor: 0, t: 0, state: 'walk' as 'outside' | 'walk' | 'dwell' | 'idle' | 'held', total: PLAN.GRID_DEF * PLAN.GRID_DEF });
+  const [cursor, setCursor] = useState<'default' | 'crosshair' | 'grab' | 'grabbing'>('default');
 
   // `/lab#lab14-<path>` 直达某种行为
   useEffect(() => {
@@ -212,7 +213,8 @@ export function WalkPlanBench({
       const ctx = canvas.getContext('2d');
       if (ctx) drawPlan(ctx, sceneOf(sim, traceRef.current), pal);
       const s = sim.act;
-      const key = `${Math.floor(sim.t)}|${s.formed().length}|${s.countAtLeast(0.5)}|${sim.walker.state}`;
+      const state = sim.held ? 'held' : sim.walker.state;
+      const key = `${Math.floor(sim.t)}|${s.formed().length}|${s.countAtLeast(0.5)}|${state}`;
       if (key !== lastHud.current) {
         lastHud.current = key;
         setHud({
@@ -221,7 +223,7 @@ export function WalkPlanBench({
           max: s.maxInput(),
           floor: sim.field.max(),
           t: sim.t,
-          state: sim.walker.state,
+          state,
           total: sim.layout.units.length,
         });
       }
@@ -230,12 +232,42 @@ export function WalkPlanBench({
     active,
   );
 
+  // 指针：按住人 = 拖（任何模式；用户 2026-09-04「应该有一个用户可以拖动这个人移动的交互」）；
+  // 自由模式下按空地 = 走过去。悬停在人身上光标变抓手，按住变握拳。
+  const hitPerson = (sim: PlanSim, x: number, y: number) =>
+    sim.walker.present && Math.hypot(sim.walker.x - x, sim.walker.y - y) <= PLAN.BODY_R * 1.6;
   const onPointerDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     const sim = simRef.current;
     const canvas = canvasRef.current;
-    if (!sim || !canvas || sim.path !== 'free') return;
+    if (!sim || !canvas) return;
     const { x, y } = canvasToRoom(canvas, e.clientX, e.clientY, sim.layout.roomM);
-    sim.pointerTarget(x, y);
+    if (hitPerson(sim, x, y)) {
+      sim.hold(x, y);
+      canvas.setPointerCapture(e.pointerId);
+      setCursor('grabbing');
+      return;
+    }
+    if (sim.path === 'free') sim.pointerTarget(x, y);
+  };
+  const onPointerMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    const sim = simRef.current;
+    const canvas = canvasRef.current;
+    if (!sim || !canvas) return;
+    const { x, y } = canvasToRoom(canvas, e.clientX, e.clientY, sim.layout.roomM);
+    if (sim.held) {
+      sim.drag(x, y);
+      return;
+    }
+    const next = hitPerson(sim, x, y) ? 'grab' : sim.path === 'free' ? 'crosshair' : 'default';
+    if (next !== cursor) setCursor(next);
+  };
+  const onPointerUp = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    const sim = simRef.current;
+    const canvas = canvasRef.current;
+    if (!sim || !canvas || !sim.held) return;
+    sim.release();
+    if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+    setCursor('grab');
   };
 
   const readingLabel = READINGS.find((r) => r.key === reading)!;
@@ -248,8 +280,11 @@ export function WalkPlanBench({
           ref={canvasRef}
           role="img"
           aria-label={t.aria}
-          style={{ cursor: free ? 'crosshair' : 'default', touchAction: 'auto', aspectRatio: `${W}/${H}` }}
+          style={{ cursor, touchAction: 'none', aspectRatio: `${W}/${H}` }}
           onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
         />
         <div className="lab-hud tl">
           <div style={{ color: 'var(--accent)' }}>Lab.14 / Project II</div>

@@ -30,8 +30,16 @@ import {
 export const CROWD = {
   /** 最多几个人（画面与算力都够；再多读不清谁是谁） */
   MAX_PEOPLE: 8,
-  /** 自走：到点后站多久（s，均匀随机） */
-  PAUSE: { min: 2, max: 30 },
+  /**
+   * 自走的步速（m/s）：室内慢走，不是街上的 1.2——用户看真机「移动得太快太远，不像人缓慢步行、停留」。
+   * Lab.14 的五条预设仍用 PLAN.SPEED.def（那些是「穿行」这类行为，按街上的步速走）。
+   */
+  SPEED_DEF: 0.7,
+  /** 自走：到点后站多久（s）——偏长，站着才是常态；均匀随机 */
+  PAUSE: { min: 8, max: 45 },
+  /** 自走：一次挪多远（m）——大多是 0.5–2 m 的小挪动，偶尔（LONG_HOP_P）走一趟远的 */
+  HOP: { min: 0.5, max: 2.0, long: 3.5 },
+  LONG_HOP_P: 0.2,
   /** 自走：目标点落在场地外扩这么多（m）的方框里——不贴墙、不出门 */
   WANDER_MARGIN: 0.4,
   /** 一开场放几个人、放哪儿（场地坐标按 pitch4 的倍数） */
@@ -107,7 +115,7 @@ export class CrowdSim {
     this.catchment = buildCatchment(this.layout, this.field, opts.reading ?? 'nearest');
     this.decay = opts.decay ?? PLAN.DECAY;
     this.reach = opts.reach ?? PLAN.REACH.def;
-    this.speed = opts.speed ?? PLAN.SPEED.def;
+    this.speed = opts.speed ?? CROWD.SPEED_DEF;
     this.auto = opts.auto ?? true;
     this.rng = makeRng(opts.seed ?? 20260904);
     this.inputsBuf = new Float64Array(this.layout.units.length);
@@ -228,31 +236,44 @@ export class CrowdSim {
     return best;
   }
 
-  /** 自走：没目标就挑一个；到了站一会儿再挑 */
+  /**
+   * 自走：放下先站一会儿，再挑一个**不远的**点走过去，到了又站一会儿。
+   * 首版是随机挑场地里任意一点 + 站 2–30 s，人在房间里窜来窜去；改成小挪动 + 长停留，
+   * 大部分时间是站着的（步速 0.7、挪 1 m 走 1.5 s、站 8–45 s ⇒ 九成时间在站）。
+   * 仍是演示装置：挪多远、站多久都是均匀随机，不是作者的行为规则。
+   */
   private wander(p: Person, dt: number): void {
     const w = p.walker;
     let plan = this.plans.get(p.id);
     if (!plan) {
-      plan = this.pickTarget();
+      // 刚放下 / 刚开自走：先站一会儿（不是一放下就走）
+      plan = { tx: w.x, ty: w.y, pause: this.pausePick() };
       this.plans.set(p.id, plan);
-      w.pushTarget({ x: plan.tx, y: plan.ty });
     }
     if (w.state === 'idle') {
       plan.pause -= dt;
       if (plan.pause <= 0) {
-        const next = this.pickTarget();
+        const next = this.pickTarget(w.x, w.y);
         this.plans.set(p.id, next);
         w.pushTarget({ x: next.tx, y: next.ty });
       }
     }
   }
 
-  private pickTarget(): { tx: number; ty: number; pause: number } {
+  private pausePick(): number {
+    return CROWD.PAUSE.min + this.rng() * (CROWD.PAUSE.max - CROWD.PAUSE.min);
+  }
+
+  /** 从 (x,y) 出发挑下一个点：随机方向、随机短距（偶尔远一次），钳进场地外扩的方框 */
+  private pickTarget(x: number, y: number): { tx: number; ty: number; pause: number } {
     const half = this.layout.fieldM / 2 + CROWD.WANDER_MARGIN;
+    const ang = this.rng() * Math.PI * 2;
+    const far = this.rng() < CROWD.LONG_HOP_P;
+    const hop = far ? CROWD.HOP.max + this.rng() * (CROWD.HOP.long - CROWD.HOP.max) : CROWD.HOP.min + this.rng() * (CROWD.HOP.max - CROWD.HOP.min);
     return {
-      tx: (this.rng() * 2 - 1) * half,
-      ty: (this.rng() * 2 - 1) * half,
-      pause: CROWD.PAUSE.min + this.rng() * (CROWD.PAUSE.max - CROWD.PAUSE.min),
+      tx: Math.max(-half, Math.min(half, x + Math.cos(ang) * hop)),
+      ty: Math.max(-half, Math.min(half, y + Math.sin(ang) * hop)),
+      pause: this.pausePick(),
     };
   }
 

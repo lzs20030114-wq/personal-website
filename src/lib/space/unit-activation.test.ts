@@ -299,6 +299,31 @@ describe('unit-activation · 五种行为在默认规则下的结论（8×8，�
     expect(sim.walker.x).toBeCloseTo(L8.doors[0].x, 9);
   });
 
+  it('拖：按住人拖着走，位置直接跟指针、沿途记痕迹；松手站在原地，预设的路线不再自己走', () => {
+    const sim = new PlanSim({ path: 'through' });
+    for (let k = 0; k < 20; k++) sim.step(0.05); // 走了 1 s
+    sim.hold(sim.walker.x, sim.walker.y);
+    expect(sim.held).toBe(true);
+    for (let k = 0; k <= 40; k++) {
+      sim.drag(-2 + k * 0.1, -1.5);
+      sim.step(0.05);
+    }
+    expect(sim.walker.x).toBeCloseTo(2, 6);
+    expect(sim.walker.y).toBeCloseTo(-1.5, 6);
+    expect(sim.field.data[sim.field.indexOf(0, -1.5)]).toBeGreaterThan(0);
+    sim.release();
+    expect(sim.held).toBe(false);
+    const x = sim.walker.x;
+    for (let k = 0; k < 100; k++) sim.step(0.05);
+    expect(sim.walker.x).toBe(x); // 站着不动，也不会走完穿行那条路出门
+    expect(sim.walker.present).toBe(true);
+    expect(sim.exitedAt).toBeNull();
+    // 重播回到预设
+    sim.reset();
+    expect(sim.held).toBe(false);
+    expect(sim.walker.state).toBe('walk');
+  });
+
   it('同一预设跑两遍逐位相同（无随机）', () => {
     const a = runScenario({ path: 'loop' }, 3);
     const b = runScenario({ path: 'loop' }, 3);

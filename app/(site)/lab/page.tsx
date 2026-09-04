@@ -558,7 +558,7 @@ export default function LabPage() {
             ['Reading', 'By cell (Voronoi = the aisle lines) or footprint only · mean over the cells a unit owns'],
             ['Forming', 'Mean ≥ 15 s ⇒ formed · degree = purple ring growing from mast to rim · never undone'],
             ['Reach', '0.22–1.2 m, default 1.0 m (Hall’s personal distance) · the behavioural knob'],
-            ['Behaviours', 'Passing · diagonal · dwell 20 s · loop ×6 · pacing ×8 · free (click the floor)'],
+            ['Behaviours', 'Passing · diagonal · dwell 20 s · loop ×6 · pacing ×8 · free (click the floor) · hold the person to drag'],
             ['Result', '8×8, reach 1.0: passing forms none · dwell forms a cross of 5 (+4 half) · pacing a corridor · loop a ring'],
             ['Not here', 'Which form a unit takes — the behaviour → form rules are the author’s to write'],
           ]}
@@ -569,11 +569,11 @@ export default function LabPage() {
         <Bench
           no="15"
           title="A few people"
-          lede="Lab.14 replayed one person along a preset path; this bench is live. Click the floor to place people (up to eight), hold one to drag it, or let them wander on their own — a random target, then a random stand of 2–30 s, a demo device rather than a behaviour rule. The floor records presence as they move and the units form in front of you. Where two reaches overlap the floor counts both people, so a pair standing together forms the unit underfoot twice as fast, and a small crowd reshapes more of the room than one person ever could. Same mechanism as Lab.14, same knobs, nothing re-tuned."
+          lede="Lab.14 replayed one person along a preset path; this bench is live. Click the floor to place people (up to eight), hold one to drag it, or let them wander on their own — at an indoor 0.7 m/s, a hop of half a metre to two, then eight to forty-five seconds standing; a demo device rather than a behaviour rule, but paced like people in a room, not like particles. The floor records presence as they move and the units form in front of you. Where two reaches overlap the floor counts both people, so a pair standing together forms the unit underfoot twice as fast, and a small crowd reshapes more of the room than one person ever could. Same mechanism as Lab.14, same knobs, nothing re-tuned."
           accent="var(--accent)"
           specs={[
-            ['People', 'Up to 8 · click empty floor to place · hold to drag · − removes the last'],
-            ['Wander', 'Random target, then 2–30 s standing · seeded, so a run repeats · a demo device, not a rule'],
+            ['People', 'Up to 8 · click empty floor to place · hover for the grab cursor, hold to drag · − removes the last'],
+            ['Wander', 'Indoor pace 0.7 m/s · a hop of 0.5–2 m (now and then 3.5) · then 8–45 s standing · seeded · a demo device, not a rule'],
             ['Mechanism', 'Lab.14’s, untouched: presence-seconds within reach · 2 %/s decay · mean ≥ 15 s forms · never undone'],
             ['Overlap', 'Reaches add: two people on one spot form the unit underfoot in half the time'],
             ['Field', '4×4 / 6×6 / 8×8 on Lab.12’s field · unit scaled with pitch'],

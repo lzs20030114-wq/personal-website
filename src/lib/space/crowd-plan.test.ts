@@ -83,8 +83,8 @@ describe('crowd-plan · 自走', () => {
     };
     const a = run();
     const b = run();
-    expect(a.walked).toBeGreaterThan(200);
-    expect(a.stood).toBeGreaterThan(200);
+    expect(a.walked).toBeGreaterThan(60);
+    expect(a.stood).toBeGreaterThan(a.walked * 3); // 站着才是常态：慢走 + 短距 + 长停
     expect(a.xs).toEqual(b.xs);
     expect(a.total).toBe(b.total);
     const c = new CrowdSim({ seed: 8 });
@@ -92,20 +92,34 @@ describe('crowd-plan · 自走', () => {
     expect(c.people.map((p) => p.walker.x)).not.toEqual(a.xs);
   });
 
-  it('自走目标落在场地外扩 0.4 m 的方框里，站定时长在 2–30 s', () => {
+  it('自走：一次只挪不远（≤ 3.5 m），目标落在场地外扩 0.4 m 的方框里，放下先站一会儿', () => {
     const rng = makeRng(3);
     const vals = Array.from({ length: 1000 }, () => rng());
     expect(Math.min(...vals)).toBeGreaterThanOrEqual(0);
     expect(Math.max(...vals)).toBeLessThan(1);
     const s = new CrowdSim({ seed: 11 });
     const half = s.layout.fieldM / 2 + CROWD.WANDER_MARGIN;
+    // 放下的头几秒都站着（不是一放下就窜）
+    for (let k = 0; k < 40; k++) s.step(0.05);
+    expect(s.people.every((p) => p.walker.state !== 'walk')).toBe(true);
+    // 每一段行走的起终点相距 ≤ 长挪动上限
+    const legStart = new Map<number, [number, number]>();
     for (let k = 0; k < 6000; k++) {
       s.step(0.05);
       for (const p of s.people) {
         expect(Math.abs(p.walker.x)).toBeLessThanOrEqual(half + 1e-6);
         expect(Math.abs(p.walker.y)).toBeLessThanOrEqual(half + 1e-6);
+        if (p.walker.state === 'walk') {
+          if (!legStart.has(p.id)) legStart.set(p.id, [p.walker.x, p.walker.y]);
+        } else if (legStart.has(p.id)) {
+          const [x0, y0] = legStart.get(p.id)!;
+          expect(Math.hypot(p.walker.x - x0, p.walker.y - y0)).toBeLessThanOrEqual(CROWD.HOP.long + 0.1);
+          legStart.delete(p.id);
+        }
       }
     }
+    expect(s.speed).toBe(CROWD.SPEED_DEF);
+    expect(CROWD.SPEED_DEF).toBeLessThan(PLAN.SPEED.def);
   });
 
   it('关自走：人停在原地；开回去：接着走', () => {
@@ -116,7 +130,7 @@ describe('crowd-plan · 自走', () => {
     for (let k = 0; k < 200; k++) s.step(0.05);
     expect(s.people.map((p) => p.walker.x)).toEqual(xs);
     s.setAuto(true);
-    for (let k = 0; k < 600; k++) s.step(0.05);
+    for (let k = 0; k < 2400; k++) s.step(0.05); // 120 s：站最久 45 s，之后一定挪过
     expect(s.people.map((p) => p.walker.x)).not.toEqual(xs);
   });
 });
