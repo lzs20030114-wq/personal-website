@@ -74,8 +74,20 @@ export const PLAN = {
   SPEED: { min: 0.3, max: 1.5, def: 1.2 },
   /** 痕迹每秒衰减比例（原型「每拍衰减 2%」，tick 当 1 s） */
   DECAY: 0.02,
-  /** 成形阈值（秒；原型「超过 15 就固化」） */
+  /** 成形阈值（秒；原型「超过 15 就固化」）——**这是原型值，也是模块默认值**；台架用下面的演示值 */
   THRESHOLD: 15,
+  /**
+   * 台架的演示默认（2026-09-04 用户看真机「作为演示，单元触发得太慢了、没有视觉效果」）：
+   * 阈值 4 s（站五秒左右就下来）· 痕迹半衰期 6 s（人走开十来秒空间就散掉）。
+   * **原型的两个数（15 s / 34 s 半衰期）仍是模块默认**，守门与线稿跑的是原型值；台架的滑块可以拉回去。
+   * 慢的那一档是研究口径（分钟级的痕迹），快的这一档是给人看的口径。
+   */
+  DEMO: { threshold: 4, halfLife: 6 },
+  /**
+   * 机构追读数的速度（程度 / 秒）——绞盘收放需要时间，不是瞬间到位。
+   * 只在「跟随」模式下生效；收得快、放得慢（RISE 1.25 s 满、FALL 2.5 s 空）。
+   */
+  RESPONSE: { rise: 0.8, fall: 0.4 },
   /** 可选的格数（每边）；4 = Lab.12 原样，用来对照 */
   GRIDS: [4, 6, 8] as readonly number[],
   GRID_DEF: 8,
@@ -323,24 +335,50 @@ export function unitInputs(field: TraceField, catchment: Catchment, out?: Float6
 
 // ── 激活：读数 / 阈值，棘轮不回退 ────────────────────────────────────────────
 
+/**
+ * 单元怎么响应读数——两档（2026-09-04 用户「人走了之后这个单元就应该变成不激活的状态」）：
+ *
+ * - `ratchet` **锁定**：程度只升不降。这是项目立论的那个滞回（交接件冻结决定 4：键一旦锁定不解开；
+ *   案例页「方法」节写的「痕迹的衰减慢于身体离场，形态不返回初始状态」）。
+ * - `follow` **跟随**：程度追当前读数，人走了读数退、结构也收回去，追的速度有上限（PLAN.RESPONSE，
+ *   读作绞盘收放需要时间）。**台架默认这一档**：演示上要看见结构跟着人涨落。
+ *
+ * 两档是同一台机器的两种键谱：跟随 = 键不锁死（可解开的吸附），锁定 = 键锁死。谁对是作者的研究问题，
+ * 这里两个都留着，按钮切换。
+ */
+export type ResponseMode = 'follow' | 'ratchet';
+export const RESPONSES = [
+  { key: 'follow', zh: '跟随', en: 'follow' },
+  { key: 'ratchet', zh: '锁定', en: 'lock' },
+] as const satisfies readonly { key: ResponseMode; zh: string; en: string }[];
+
 export class Activation {
   /** 当前读数（秒，随痕迹呼吸） */
   readonly input: Float64Array;
-  /** 激活程度 0–1，只升不降（锁定的键不解开） */
+  /** 激活程度 0–1；锁定档只升不降，跟随档追读数（有速率上限） */
   readonly degree: Float64Array;
   threshold: number;
+  mode: ResponseMode;
 
-  constructor(n: number, threshold: number = PLAN.THRESHOLD) {
+  constructor(n: number, threshold: number = PLAN.THRESHOLD, mode: ResponseMode = 'ratchet') {
     this.input = new Float64Array(n);
     this.degree = new Float64Array(n);
     this.threshold = threshold;
+    this.mode = mode;
   }
 
-  update(inputs: Float64Array): void {
+  /**
+   * 推进 dt 秒（省略 = 不限速，瞬间到位；锁定档的旧路径就是这条 ⇒ 守门与线稿逐位不变）。
+   */
+  update(inputs: Float64Array, dt = Infinity): void {
+    const up = PLAN.RESPONSE.rise * dt;
+    const down = PLAN.RESPONSE.fall * dt;
     for (let u = 0; u < inputs.length; u++) {
       this.input[u] = inputs[u];
-      const a = Math.min(1, inputs[u] / this.threshold);
-      if (a > this.degree[u]) this.degree[u] = a;
+      const target = Math.min(1, inputs[u] / this.threshold);
+      const d = this.degree[u];
+      if (target > d) this.degree[u] = Math.min(target, d + up);
+      else if (this.mode === 'follow') this.degree[u] = Math.max(target, d - down);
     }
   }
 
@@ -595,6 +633,8 @@ export interface PlanSimOpts {
   reading?: Reading;
   threshold?: number;
   decay?: number;
+  /** 单元怎么响应读数：跟随（人走了收回去）/ 锁定（滞回，不回退）。默认锁定 = 原型行为 */
+  mode?: ResponseMode;
   /** 站位半径（Lab.12 的滑块量；这台钉默认） */
   radius?: number;
 }
@@ -624,7 +664,7 @@ export class PlanSim {
     this.layout = planLayout(opts.grid ?? PLAN.GRID_DEF, opts.radius ?? RING.RADIUS_DEF);
     this.field = new TraceField(this.layout.roomM);
     this.walker = new Walker(opts.speed ?? PLAN.SPEED.def);
-    this.act = new Activation(this.layout.units.length, opts.threshold ?? PLAN.THRESHOLD);
+    this.act = new Activation(this.layout.units.length, opts.threshold ?? PLAN.THRESHOLD, opts.mode ?? 'ratchet');
     this.decay = opts.decay ?? PLAN.DECAY;
     this.reach = opts.reach ?? PLAN.REACH.def;
     this.catchment = buildCatchment(this.layout, this.field, opts.reading ?? 'nearest');
@@ -671,6 +711,10 @@ export class PlanSim {
   }
   setDecay(v: number): void {
     this.decay = v;
+  }
+  /** 换响应模式：已经下来的单元留在原处，从这一刻起按新规矩走（跟随档会开始回落） */
+  setMode(m: ResponseMode): void {
+    this.act.mode = m;
   }
 
   /** 被指针按着（拖）：位置直接给、不经步速；松手站在原地 */
@@ -758,7 +802,8 @@ export class PlanSim {
       }
     }
     this.field.decay(dt, this.decay);
-    this.act.update(unitInputs(this.field, this.catchment, this.inputsBuf));
+    // 锁定档传 Infinity = 旧路径逐位不变（守门与线稿的结论钉在那上面）；跟随档才按机构速率限速
+    this.act.update(unitInputs(this.field, this.catchment, this.inputsBuf), this.act.mode === 'follow' ? dt : Infinity);
     this.t += dt;
   }
 

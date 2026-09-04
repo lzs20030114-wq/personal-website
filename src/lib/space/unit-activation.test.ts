@@ -9,6 +9,7 @@ import {
   buildCatchment,
   dwellInput,
   dwellSpot,
+  RESPONSES,
   planLayout,
   runScenario,
   unitInputs,
@@ -159,6 +160,46 @@ describe('unit-activation · 读法', () => {
       }
     expect(dup).toBe(0);
     expect(covered).toBeLessThan(f.cols * f.rows);
+  });
+});
+
+describe('unit-activation · 响应两档', () => {
+  it('两档登记齐全，默认是锁定（= 原型行为）', () => {
+    expect(RESPONSES.map((r) => r.key)).toEqual(['follow', 'ratchet']);
+    expect(new Activation(1).mode).toBe('ratchet');
+    expect(PLAN.DEMO.threshold).toBeLessThan(PLAN.THRESHOLD); // 台架的演示值更快
+    expect(PLAN.RESPONSE.rise).toBeGreaterThan(PLAN.RESPONSE.fall); // 收得快、放得慢
+  });
+
+  it('跟随档：读数退，程度跟着退；退的速度有上限（绞盘收放需要时间）', () => {
+    const a = new Activation(1, 10, 'follow');
+    a.update(Float64Array.from([12]), 5); // 读数超阈值 ⇒ 涨满
+    expect(a.degree[0]).toBe(1);
+    a.update(Float64Array.from([0]), 0.5); // 读数归零，半秒只退 fall×0.5
+    expect(a.degree[0]).toBeCloseTo(1 - PLAN.RESPONSE.fall * 0.5, 9);
+    for (let k = 0; k < 40; k++) a.update(Float64Array.from([0]), 0.1);
+    expect(a.degree[0]).toBe(0); // 几秒后收回去
+    expect(a.formed()).toEqual([]);
+  });
+
+  it('跟随档：涨也有上限——读数一步到满，程度也要花 1/rise 秒才下来', () => {
+    const a = new Activation(1, 10, 'follow');
+    a.update(Float64Array.from([50]), 0.25);
+    expect(a.degree[0]).toBeCloseTo(PLAN.RESPONSE.rise * 0.25, 9);
+    expect(a.degree[0]).toBeLessThan(1);
+  });
+
+  it('跟随档跑一遍：人走了单元收回去，锁定档同一遍留着——这是同一套痕迹的两种读法', () => {
+    const opts = { path: 'dwell' as const, threshold: PLAN.DEMO.threshold, decay: 1 - Math.pow(0.5, 1 / PLAN.DEMO.halfLife) };
+    const follow = runScenario({ ...opts, mode: 'follow' }, 0);
+    expect(follow.act.formed().length).toBeGreaterThan(0); // 人还没走远时下来了一群
+    follow.step(60);
+    expect(follow.act.formed()).toEqual([]); // 走后收回
+    expect(follow.act.countAtLeast(0.05)).toBe(0);
+    const lock = runScenario({ ...opts, mode: 'ratchet' }, 0);
+    const n = lock.act.formed().length;
+    lock.step(60);
+    expect(lock.act.formed().length).toBe(n); // 锁定档留着
   });
 });
 

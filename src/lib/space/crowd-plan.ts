@@ -25,6 +25,7 @@ import {
   type Catchment,
   type PlanLayout,
   type Reading,
+  type ResponseMode,
 } from './unit-activation';
 
 export const CROWD = {
@@ -79,6 +80,8 @@ export interface CrowdSimOpts {
   reach?: number;
   threshold?: number;
   decay?: number;
+  /** 单元怎么响应读数：跟随（人走了收回去）/ 锁定（滞回）。默认锁定 = 原型行为 */
+  mode?: ResponseMode;
   speed?: number;
   radius?: number;
   seed?: number;
@@ -111,7 +114,7 @@ export class CrowdSim {
   constructor(opts: CrowdSimOpts = {}) {
     this.layout = planLayout(opts.grid ?? PLAN.GRID_DEF, opts.radius ?? RING.RADIUS_DEF);
     this.field = new TraceField(this.layout.roomM);
-    this.act = new Activation(this.layout.units.length, opts.threshold ?? PLAN.THRESHOLD);
+    this.act = new Activation(this.layout.units.length, opts.threshold ?? PLAN.THRESHOLD, opts.mode ?? 'ratchet');
     this.catchment = buildCatchment(this.layout, this.field, opts.reading ?? 'nearest');
     this.decay = opts.decay ?? PLAN.DECAY;
     this.reach = opts.reach ?? PLAN.REACH.def;
@@ -213,6 +216,10 @@ export class CrowdSim {
   setDecay(v: number): void {
     this.decay = v;
   }
+  /** 换响应模式：已经下来的单元留在原处，从这一刻起按新规矩走 */
+  setMode(m: ResponseMode): void {
+    this.act.mode = m;
+  }
   setSpeed(v: number): void {
     this.speed = v;
     for (const p of this.people) p.walker.speed = v;
@@ -298,7 +305,7 @@ export class CrowdSim {
       }
     }
     this.field.decay(dt, this.decay);
-    this.act.update(unitInputs(this.field, this.catchment, this.inputsBuf));
+    this.act.update(unitInputs(this.field, this.catchment, this.inputsBuf), this.act.mode === 'follow' ? dt : Infinity);
     this.t += dt;
   }
 

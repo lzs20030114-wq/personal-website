@@ -17,7 +17,7 @@ import { SKIN_UNITS } from './skin-data';
 import { DUAL_MID_OPTIONS } from './skin-dual';
 import { SQUARE_GRID, SQUARE_MORPH } from './skin-square';
 import { CLUSTER_PLANS, CLUSTER_RELATIONS, CLUSTER_TIMINGS } from './unit-cluster';
-import { PATHS, PLAN, READINGS } from './unit-activation';
+import { PATHS, PLAN, READINGS, RESPONSES } from './unit-activation';
 
 export interface VariantOption {
   key: string;
@@ -119,6 +119,8 @@ const WALK_GRID_AXIS: VariantAxis = {
   options: PLAN.GRIDS.map((n) => ({ key: `g${n}`, label: `${n}×${n}` })),
 };
 const WALK_READING_AXIS: VariantAxis = { axis: '读法', options: READINGS.map((r) => ({ key: r.key, label: r.zh })) };
+/** 单元怎么响应读数：跟随（人走了收回去）/ 锁定（滞回）——2026-09-04 用户要的那一档与项目论点那一档 */
+const WALK_RESPONSE_AXIS: VariantAxis = { axis: '响应', options: RESPONSES.map((r) => ({ key: r.key, label: r.zh })) };
 
 /** 十台六段（页序）：Ⅰ 单元 06–08 · Ⅱ 序列 09 · Ⅲ 环 10–11 · Ⅳ 场 12 · Ⅴ 单元之间 13 · Ⅵ 人 14–15 */
 export const LAB_VARIANTS: readonly BenchVariants[] = [
@@ -175,16 +177,16 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     zh: '一个人走过',
     en: 'A person walks through',
     plans: WALK_PATH_OPTIONS,
-    axes: [WALK_GRID_AXIS, WALK_READING_AXIS],
+    axes: [WALK_GRID_AXIS, WALK_READING_AXIS, WALK_RESPONSE_AXIS],
   },
   {
     no: '15',
     key: 'crowd',
     zh: '几个人在场',
     en: 'A few people',
-    // 人数 / 拖 / 自走都是现场操作不是档；离散的只有格数与读法（与 Lab.14 同一副轴）
+    // 人数 / 拖 / 自走都是现场操作不是档；离散的只有格数 / 读法 / 响应（与 Lab.14 同一副轴）
     plans: [],
-    axes: [WALK_GRID_AXIS, WALK_READING_AXIS],
+    axes: [WALK_GRID_AXIS, WALK_READING_AXIS, WALK_RESPONSE_AXIS],
   },
 ];
 

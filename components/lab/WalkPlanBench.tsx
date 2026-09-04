@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { PATHS, PLAN, PlanSim, READINGS, type PathKey, type Reading } from '../../src/lib/space/unit-activation';
+import { PATHS, PLAN, PlanSim, READINGS, RESPONSES, type PathKey, type Reading, type ResponseMode } from '../../src/lib/space/unit-activation';
 import { H, W, canvasToRoom, drawPlan, readPalette, type Palette } from './planDraw';
 import { planFromHash } from './planHash';
 import { useBenchLoop } from './useBenchLoop';
@@ -25,9 +25,8 @@ import { useBenchLoop } from './useBenchLoop';
 const TIME_SCALES = [1, 3, 8] as const;
 const TIME_DEF = 3;
 /** 半衰期滑块（s）与衰减率互换 */
-const HALF = { min: 10, max: 120 } as const;
+const HALF = { min: 3, max: 120 } as const;
 const rateFromHalf = (t: number) => 1 - Math.pow(0.5, 1 / t);
-const halfFromRate = (r: number) => Math.log(0.5) / Math.log(1 - r);
 const MAX_SIM_DT = 0.05 * 8 * 1.01; // 单帧仿真时间封顶（时间倍速 8 × 50ms 帧）
 
 const COPY = {
@@ -41,15 +40,16 @@ const COPY = {
     floor: (v: number) => `地面最深 ${v.toFixed(1)} s`,
     state: { outside: '离场', walk: '走', dwell: '站', idle: '站', held: '拖' },
     t: (s: number) => `t ${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`,
-    foot: (reach: number, thr: number, half: number, reading: string) =>
-      `影响半径 ${reach.toFixed(2)} m · 阈值 ${thr.toFixed(0)} s · 半衰期 ${half.toFixed(0)} s · ${reading}读 · 绿盘 = 当前读数（会退）· 紫环 = 成形进度（不回退）`,
-    hint: '按住那个人可以拖着走，松手就站在原地（预设的路线随之作废，点「重播」重来）。自由模式：点地面，人走过去；停着就是驻留；「离场」从最近的门出去。规则三个数（衰减 2%/s · 阈值 15 s）来自作者 2026-07-20 的原型；影响半径是行为的量，做成旋钮。',
+    foot: (reach: number, thr: number, half: number, reading: string, mode: ResponseMode) =>
+      `影响半径 ${reach.toFixed(2)} m · 阈值 ${thr.toFixed(0)} s · 半衰期 ${half.toFixed(0)} s · ${reading}读 · 绿盘 = 当前读数 · 紫环 = ${mode === 'follow' ? '结构位置（跟着读数涨落，人走了收回去）' : '成形（键锁死，不回退）'}`,
+    hint: '「响应」两档：跟随 = 结构追着读数涨落，人走了收回去（演示默认）；锁定 = 键锁死不回退，那是项目立论的滞回。按住那个人可以拖着走，松手就站在原地（预设的路线随之作废，点「重播」重来）。自由模式：点地面，人走过去；停着就是驻留；「离场」从最近的门出去。规则三个数（衰减 2%/s · 阈值 15 s）来自作者 2026-07-20 的原型；影响半径是行为的量，做成旋钮。',
     grid: '格数',
     path: '行为',
     reading: '读法',
     reach: '影响半径',
     threshold: '阈值',
     half_: '半衰期',
+    response: '响应',
     run: '运转',
     trace: '痕迹',
     replay: '重播',
@@ -67,15 +67,16 @@ const COPY = {
     floor: (v: number) => `deepest floor trace ${v.toFixed(1)} s`,
     state: { outside: 'left', walk: 'walking', dwell: 'standing', idle: 'standing', held: 'held' },
     t: (s: number) => `t ${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`,
-    foot: (reach: number, thr: number, half: number, reading: string) =>
-      `reach ${reach.toFixed(2)} m · threshold ${thr.toFixed(0)} s · half-life ${half.toFixed(0)} s · ${reading} · green disc = live reading (recedes) · purple ring = formed (never undone)`,
-    hint: 'Hold the person to drag them; on release they stand where you left them (the preset route is dropped — “replay” restarts it). Free mode: click the floor and the person walks there; standing still is dwelling; “leave” exits by the nearest door. Decay 2 %/s and threshold 15 s are the author’s 2026-07-20 prototype; reach is a behavioural quantity, so it is a knob.',
+    foot: (reach: number, thr: number, half: number, reading: string, mode: ResponseMode) =>
+      `reach ${reach.toFixed(2)} m · threshold ${thr.toFixed(0)} s · half-life ${half.toFixed(0)} s · ${reading} · green disc = live reading · purple ring = ${mode === 'follow' ? 'where the structure is — it follows the reading and withdraws once they leave' : 'formed; bonds locked, never undone'}`,
+    hint: '“Response” has two settings: follow — the structure tracks the reading and withdraws once people leave (the demo default); lock — bonds stay locked and nothing withdraws, which is the hysteresis the project argues for. Hold the person to drag them; on release they stand where you left them (the preset route is dropped — “replay” restarts it). Free mode: click the floor and the person walks there; standing still is dwelling; “leave” exits by the nearest door. Decay 2 %/s and threshold 15 s are the author’s 2026-07-20 prototype; reach is a behavioural quantity, so it is a knob.',
     grid: 'grid',
     path: 'behaviour',
     reading: 'reading',
     reach: 'reach',
     threshold: 'threshold',
     half_: 'half-life',
+    response: 'response',
     run: 'run',
     trace: 'trace',
     replay: 'replay',
@@ -129,8 +130,9 @@ export function WalkPlanBench({
   const [path, setPath] = useState<PathKey>(DEFAULT_PATH);
   const [reading, setReading] = useState<Reading>('nearest');
   const [reach, setReach] = useState<number>(PLAN.REACH.def);
-  const [threshold, setThreshold] = useState<number>(PLAN.THRESHOLD);
-  const [halfLife, setHalfLife] = useState<number>(halfFromRate(PLAN.DECAY));
+  const [threshold, setThreshold] = useState<number>(PLAN.DEMO.threshold);
+  const [halfLife, setHalfLife] = useState<number>(PLAN.DEMO.halfLife);
+  const [mode, setMode] = useState<ResponseMode>('follow');
   const [speed, setSpeed] = useState<number>(PLAN.SPEED.def);
   const [hud, setHud] = useState({ formed: 0, half: 0, max: 0, floor: 0, t: 0, state: 'walk' as 'outside' | 'walk' | 'dwell' | 'idle' | 'held', total: PLAN.GRID_DEF * PLAN.GRID_DEF });
   const [cursor, setCursor] = useState<'default' | 'crosshair' | 'grab' | 'grabbing'>('default');
@@ -143,7 +145,7 @@ export function WalkPlanBench({
 
   // 建仿真（换格数才重建——单元数变了，痕迹场与读法表要重算；其余旋钮就地改）
   useEffect(() => {
-    const sim = new PlanSim({ grid, path, reading, reach, threshold, decay: rateFromHalf(halfLife), speed });
+    const sim = new PlanSim({ grid, path, reading, reach, threshold, decay: rateFromHalf(halfLife), speed, mode });
     simRef.current = sim;
     if (canvasRef.current && palRef.current) {
       const ctx = canvasRef.current.getContext('2d');
@@ -176,6 +178,9 @@ export function WalkPlanBench({
   useEffect(() => {
     simRef.current?.setSpeed(speed);
   }, [speed]);
+  useEffect(() => {
+    simRef.current?.setMode(mode);
+  }, [mode]);
 
   // 画布 DPR 与配色（挂载一次；配色从容器 CSS 变量取）
   useEffect(() => {
@@ -298,7 +303,7 @@ export function WalkPlanBench({
           </div>
         </div>
         <div className="lab-hud bl dim">
-          {t.foot(reach, threshold, halfLife, lang === 'zh' ? readingLabel.zh : readingLabel.en)}
+          {t.foot(reach, threshold, halfLife, lang === 'zh' ? readingLabel.zh : readingLabel.en, mode)}
         </div>
       </div>
       {controls ? (
@@ -352,6 +357,30 @@ export function WalkPlanBench({
               </span>
             </div>
             <div className="grp">
+              <span className="k">{t.response}</span>
+              <span className="seg">
+                {RESPONSES.map((r) => (
+                  <button
+                    key={r.key}
+                    type="button"
+                    className={r.key === mode ? 'active' : undefined}
+                    title={
+                      r.key === 'follow'
+                        ? lang === 'zh'
+                          ? '结构追着读数涨落，人走了收回去'
+                          : 'the structure tracks the reading and withdraws once people leave'
+                        : lang === 'zh'
+                          ? '键锁死、不回退——项目立论的滞回'
+                          : 'bonds lock and never release — the hysteresis the project argues for'
+                    }
+                    onClick={() => setMode(r.key)}
+                  >
+                    {lang === 'zh' ? r.zh : r.en}
+                  </button>
+                ))}
+              </span>
+            </div>
+            <div className="grp">
               <span className="k">
                 {t.reach} {reach.toFixed(2)} m
               </span>
@@ -372,7 +401,7 @@ export function WalkPlanBench({
               </span>
               <input
                 type="range"
-                min={2}
+                min={1}
                 max={40}
                 step={1}
                 value={threshold}
