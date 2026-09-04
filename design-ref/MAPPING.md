@@ -1083,3 +1083,12 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
 - **线稿**：`scripts/unit-activation/atlas.mjs`（plan / matrix / reach / hysteresis 四张 SVG + 同名 HTML 包裹；headless Chromium 新模式的 window-size 含窗框，直接截 svg 会裁掉底部，故截 HTML 并多给 100px 窗高）。
 - `vercel.json` 加本分支条目；案例页零改（项目 II 主图仍是 Lab.12）。
 
+## 29. Lab.15 几个人在场（2026-09-04 同日，用户「做一个 lab 模拟：人是可动的，也可以放多人，直接演示这些单元的变化」）
+
+- **`/lab` 页**：第六段 `ScaleRule` 改名 Ⅵ People（Lab.14–15），Bench 14 之后加 `Bench no="15"`（lede / 规格表六行，2D 绿顶线）；页首 kicker「sixteen → seventeen live instruments」、页脚 16 → 17 instruments。
+- **台架**：新 `components/lab/CrowdPlanBench.tsx`；画法从 WalkPlanBench 抽成 `components/lab/planDraw.ts`（`drawPlan / frame / readPalette / canvasToRoom`），两台共用，Lab.14 的画面逐位不变。指针：按住人 = 拖（pointer capture，`touchAction: none`），按空地 = 放人。
+- **模块**：`src/lib/space/crowd-plan.ts`（CrowdSim：放人 / 撤人 / 拖 / 自走 / 叠加，带种子随机）+ 守门 10 项。
+- **差分守门**：`lab-variants.ts` 加 no 15（plans 空、轴 格数 × 读法 = 6），冻结清单 242 → 248 行；「九台六段」断言改「十台六段」。
+- **主页**：LABS 卡 14 → 15（A few people），`lg:grid-cols-14 → 15`，统计条 Demos 15、Tests 502。
+- **Work log**：Lab.14 一条入池（58 条），四张线稿 webp 进 `public/log/`（PNG → WebP 走无头 Chromium 的 canvas，本机无 cwebp）。
+

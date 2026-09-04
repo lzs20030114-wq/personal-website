@@ -120,7 +120,7 @@ const WALK_GRID_AXIS: VariantAxis = {
 };
 const WALK_READING_AXIS: VariantAxis = { axis: '读法', options: READINGS.map((r) => ({ key: r.key, label: r.zh })) };
 
-/** 九台六段（页序）：Ⅰ 单元 06–08 · Ⅱ 序列 09 · Ⅲ 环 10–11 · Ⅳ 场 12 · Ⅴ 单元之间 13 · Ⅵ 一个人 14 */
+/** 十台六段（页序）：Ⅰ 单元 06–08 · Ⅱ 序列 09 · Ⅲ 环 10–11 · Ⅳ 场 12 · Ⅴ 单元之间 13 · Ⅵ 人 14–15 */
 export const LAB_VARIANTS: readonly BenchVariants[] = [
   { no: '06', key: 'unit', zh: '二维皮肤单元', en: 'Contractile skin units', plans: [], axes: [] },
   { no: '07', key: 'solid', zh: '立体带', en: 'Skin units, solid', plans: [], axes: [] },
@@ -175,6 +175,15 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     zh: '一个人走过',
     en: 'A person walks through',
     plans: WALK_PATH_OPTIONS,
+    axes: [WALK_GRID_AXIS, WALK_READING_AXIS],
+  },
+  {
+    no: '15',
+    key: 'crowd',
+    zh: '几个人在场',
+    en: 'A few people',
+    // 人数 / 拖 / 自走都是现场操作不是档；离散的只有格数与读法（与 Lab.14 同一副轴）
+    plans: [],
     axes: [WALK_GRID_AXIS, WALK_READING_AXIS],
   },
 ];

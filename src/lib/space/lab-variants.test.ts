@@ -256,23 +256,30 @@ const FROZEN = [
   '14:free:g6:disk',
   '14:free:g8:nearest',
   '14:free:g8:disk',
+  // Lab.15 几个人在场 ⇒ 格数 3 × 读法 2（人数 / 拖 / 自走是现场操作不是档）
+  '15:-:g4:nearest',
+  '15:-:g4:disk',
+  '15:-:g6:nearest',
+  '15:-:g6:disk',
+  '15:-:g8:nearest',
+  '15:-:g8:disk',
 ];
 
 describe('lab-variants · 项目二台架差分清单', () => {
-  it('九台六段：编号 06–14 连续、不重复', () => {
-    expect(LAB_VARIANTS.map((b) => b.no)).toEqual(['06', '07', '08', '09', '10', '11', '12', '13', '14']);
+  it('十台六段：编号 06–15 连续、不重复', () => {
+    expect(LAB_VARIANTS.map((b) => b.no)).toEqual(['06', '07', '08', '09', '10', '11', '12', '13', '14', '15']);
     expect(new Set(LAB_VARIANTS.map((b) => b.key)).size).toBe(LAB_VARIANTS.length);
   });
 
-  it('242 种离散组合逐条与冻结清单相同（少一档即红）', () => {
+  it('248 种离散组合逐条与冻结清单相同（少一档即红）', () => {
     const combos = allCombos();
-    expect(combos.length).toBe(242);
+    expect(combos.length).toBe(248);
     expect(combos).toEqual(FROZEN);
   });
 
-  it('每台组合数 = 收纳前各台组合之和（1 + 1 + 3 + (2+2) + (9+1) + 22 + 5）+ Lab.13 的 160 + Lab.14 的 36', () => {
+  it('每台组合数 = 收纳前各台组合之和（1 + 1 + 3 + (2+2) + (9+1) + 22 + 5）+ Lab.13 的 160 + Lab.14 的 36 + Lab.15 的 6', () => {
     const per = Object.fromEntries(LAB_VARIANTS.map((b) => [b.no, benchCombos(b).length]));
-    expect(per).toEqual({ '06': 1, '07': 1, '08': 3, '09': 4, '10': 10, '11': 22, '12': 5, '13': 160, '14': 36 });
+    expect(per).toEqual({ '06': 1, '07': 1, '08': 3, '09': 4, '10': 10, '11': 22, '12': 5, '13': 160, '14': 36, '15': 6 });
   });
 
   it('组合 id 唯一（同名档不会在清单里被折叠掉）', () => {

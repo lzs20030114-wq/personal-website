@@ -1,15 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import {
-  PATHS,
-  PLAN,
-  PlanSim,
-  READINGS,
-  aisleLines,
-  type PathKey,
-  type Reading,
-} from '../../src/lib/space/unit-activation';
+import { PATHS, PLAN, PlanSim, READINGS, type PathKey, type Reading } from '../../src/lib/space/unit-activation';
+import { H, W, canvasToRoom, drawPlan, readPalette, type Palette } from './planDraw';
 import { planFromHash } from './planHash';
 import { useBenchLoop } from './useBenchLoop';
 
@@ -23,14 +16,11 @@ import { useBenchLoop } from './useBenchLoop';
  * 模型全部在 src/lib/space/unit-activation.ts（线稿脚本与守门共用同一份），这里只做 DOM 接线与画。
  *
  * 画法：一张 2D canvas（逻辑 700×520，与 WebGL 台架同尺；DPR 缩放）——热力场几千格逐帧重画，
- * SVG 逐格改属性不划算；配色从容器的 CSS 变量取（深色 /lab、on-light 修饰符各自解析）。
+ * SVG 逐格改属性不划算；画法与 Lab.15 共用（planDraw.ts），配色从容器的 CSS 变量取。
  * 定步推进：仿真按时间倍速走、行走子步 ≤ 0.05 s（模块内部），慢设备表现为放慢而非轨迹漂移。
  * 预设走完、离场后再看 AFTER_EXIT_S 秒（痕迹在退、成形不退——这一段就是滞回本身）自动重播；
  * 自由模式不自动重播。
  */
-const W = 700;
-const H = 520;
-const PAD_Y = 48;
 /** 时间倍速三档：仿真秒 / 真实秒 */
 const TIME_SCALES = [1, 3, 8] as const;
 const TIME_DEF = 3;
@@ -93,219 +83,19 @@ const COPY = {
   },
 } as const;
 
-interface Palette {
-  ink: string;
-  accent: string;
-  accent2: string;
-  muted: string;
-  paper: string;
-}
-
-function readPalette(el: HTMLElement): Palette {
-  const cs = getComputedStyle(el);
-  const v = (name: string, fallback: string) => cs.getPropertyValue(name).trim() || fallback;
-  return {
-    ink: v('--ink', '#e9efe6'),
-    accent: v('--accent', '#7fbf8f'),
-    accent2: v('--accent-2', '#c9b8ee'),
-    muted: v('--n500', '#8a9a90'),
-    paper: v('--paper', '#1b2a33'),
-  };
-}
-
-/** 房间在画布上的位置与比例：以 (W/2, H/2) 为中心，纵向留 PAD_Y */
-function frame(roomM: number): { sc: number; ox: number; oy: number } {
-  const sc = (H - 2 * PAD_Y) / roomM;
-  return { sc, ox: W / 2, oy: H / 2 };
-}
-
-function draw(ctx: CanvasRenderingContext2D, sim: PlanSim, pal: Palette, showTrace: boolean): void {
-  const L = sim.layout;
-  const { sc, ox, oy } = frame(L.roomM);
-  const X = (x: number) => ox + x * sc;
-  const Y = (y: number) => oy + y * sc;
-  ctx.clearRect(0, 0, W, H);
-
-  // 地板：极淡的墨
-  const h = (L.roomM / 2) * sc;
-  ctx.globalAlpha = 0.045;
-  ctx.fillStyle = pal.ink;
-  ctx.fillRect(ox - h, oy - h, 2 * h, 2 * h);
-  ctx.globalAlpha = 1;
-
-  // 痕迹场：有痕迹的格子按浓度（存在·秒）画绿，阈值处约七成
-  if (showTrace) {
-    const f = sim.field;
-    const cs = f.cell * sc;
-    ctx.fillStyle = pal.accent;
-    for (let idx = 0; idx < f.data.length; idx++) {
-      const v = f.data[idx];
-      if (v <= 1e-3) continue;
-      const [x, y] = f.cellCenter(idx);
-      ctx.globalAlpha = Math.max(0.05, Math.min(0.75, 1 - Math.exp(-v / 12)));
-      ctx.fillRect(X(x) - cs / 2, Y(y) - cs / 2, cs + 0.5, cs + 0.5);
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  // 按格读法的边界（格线）；脚下读法画平台圈本身就是边界
-  if (sim.catchment.reading === 'nearest') {
-    const a = aisleLines(L);
-    const fh = (L.fieldM / 2 + 0.12) * sc;
-    ctx.strokeStyle = pal.ink;
-    ctx.globalAlpha = 0.14;
-    ctx.lineWidth = 0.75;
-    ctx.setLineDash([2, 4]);
-    ctx.beginPath();
-    for (const x of a.x) {
-      ctx.moveTo(X(x), oy - fh);
-      ctx.lineTo(X(x), oy + fh);
-    }
-    for (const y of a.y) {
-      ctx.moveTo(ox - fh, Y(y));
-      ctx.lineTo(ox + fh, Y(y));
-    }
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.globalAlpha = 1;
-  }
-
-  // 墙 + 门（左右墙正中留门）
-  const dw = (PLAN.DOOR_W / 2) * sc;
-  ctx.strokeStyle = pal.ink;
-  ctx.lineWidth = 1.4;
-  ctx.globalAlpha = 0.85;
-  ctx.beginPath();
-  ctx.moveTo(ox - h, oy - h);
-  ctx.lineTo(ox + h, oy - h);
-  ctx.moveTo(ox - h, oy + h);
-  ctx.lineTo(ox + h, oy + h);
-  ctx.moveTo(ox - h, oy - h);
-  ctx.lineTo(ox - h, oy - dw);
-  ctx.moveTo(ox - h, oy + dw);
-  ctx.lineTo(ox - h, oy + h);
-  ctx.moveTo(ox + h, oy - h);
-  ctx.lineTo(ox + h, oy - dw);
-  ctx.moveTo(ox + h, oy + dw);
-  ctx.lineTo(ox + h, oy + h);
-  ctx.stroke();
-  // 门扇
-  ctx.lineWidth = 0.9;
-  ctx.globalAlpha = 0.45;
-  ctx.beginPath();
-  ctx.moveTo(ox - h, oy - dw);
-  ctx.lineTo(ox - h - dw * 0.9, oy - dw * 0.1);
-  ctx.moveTo(ox + h, oy - dw);
-  ctx.lineTo(ox + h + dw * 0.9, oy - dw * 0.1);
-  ctx.stroke();
-  ctx.globalAlpha = 1;
-
-  // 单元：平台外缘（发丝线）· 成形程度（紫圈从芯长出）· 芯
-  const platPx = L.platR * sc;
-  const mastPx = Math.max(1.6, L.mastR * sc);
-  for (const u of L.units) {
-    const cx = X(u.x);
-    const cy = Y(u.y);
-    ctx.strokeStyle = pal.ink;
-    ctx.globalAlpha = 0.22;
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.arc(cx, cy, platPx, 0, Math.PI * 2);
-    ctx.stroke();
-    const d = sim.act.degree[u.i];
-    if (d > 1e-6) {
-      const r = mastPx + d * (platPx - mastPx);
-      ctx.fillStyle = pal.accent2;
-      ctx.globalAlpha = 0.22 + 0.5 * d;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.fill();
-      if (d >= 1 - 1e-9) {
-        ctx.strokeStyle = pal.accent2;
-        ctx.globalAlpha = 0.95;
-        ctx.lineWidth = 1.4;
-        ctx.stroke();
-      }
-    }
-    // 当前读数（呼吸的那个量）：芯外一圈细弧，满圈 = 阈值
-    const frac = Math.min(1, sim.act.input[u.i] / sim.act.threshold);
-    if (frac > 0.02) {
-      ctx.strokeStyle = pal.accent;
-      ctx.globalAlpha = 0.9;
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.arc(cx, cy, mastPx + 2.2, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);
-      ctx.stroke();
-    }
-    ctx.fillStyle = pal.ink;
-    ctx.globalAlpha = 0.9;
-    ctx.beginPath();
-    ctx.arc(cx, cy, mastPx, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  // 走过的路
-  if (sim.trail.length > 2) {
-    ctx.strokeStyle = pal.ink;
-    ctx.globalAlpha = 0.5;
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.moveTo(X(sim.trail[0]), Y(sim.trail[1]));
-    for (let k = 2; k < sim.trail.length; k += 2) ctx.lineTo(X(sim.trail[k]), Y(sim.trail[k + 1]));
-    if (sim.walker.present) ctx.lineTo(X(sim.walker.x), Y(sim.walker.y));
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-  }
-
-  // 人：影响圈（绿虚线）+ 身体 + 朝向
+/** 一个人的场景：人在场才画，走过的路接到人身上 */
+function sceneOf(sim: PlanSim, showTrace: boolean) {
   const w = sim.walker;
-  if (w.present) {
-    const cx = X(w.x);
-    const cy = Y(w.y);
-    ctx.strokeStyle = pal.accent;
-    ctx.globalAlpha = 0.7;
-    ctx.lineWidth = 0.9;
-    ctx.setLineDash([3, 4]);
-    ctx.beginPath();
-    ctx.arc(cx, cy, sim.reach * sc, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    const r = PLAN.BODY_R * sc;
-    ctx.fillStyle = pal.paper;
-    ctx.strokeStyle = pal.ink;
-    ctx.globalAlpha = 1;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + Math.cos(w.heading) * r, cy + Math.sin(w.heading) * r);
-    ctx.stroke();
-  }
-
-  // 比例尺 1 m（房间右上角内侧）
-  const bx1 = ox + h - 0.3 * sc;
-  const bx0 = bx1 - 1 * sc;
-  const by = oy - h + 0.32 * sc;
-  ctx.strokeStyle = pal.muted;
-  ctx.globalAlpha = 0.9;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(bx0, by);
-  ctx.lineTo(bx1, by);
-  ctx.moveTo(bx0, by - 3);
-  ctx.lineTo(bx0, by + 3);
-  ctx.moveTo(bx1, by - 3);
-  ctx.lineTo(bx1, by + 3);
-  ctx.stroke();
-  ctx.fillStyle = pal.muted;
-  ctx.font = '600 9px ui-sans-serif, system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('1 m', (bx0 + bx1) / 2, by - 5);
-  ctx.globalAlpha = 1;
+  return {
+    layout: sim.layout,
+    field: sim.field,
+    catchment: sim.catchment,
+    act: sim.act,
+    people: w.present ? [{ x: w.x, y: w.y, heading: w.heading, reach: sim.reach }] : [],
+    trail: sim.trail,
+    trailEnd: w.present ? { x: w.x, y: w.y } : null,
+    showTrace,
+  };
 }
 
 const PATH_KEYS = PATHS.map((p) => p.key);
@@ -358,7 +148,7 @@ export function WalkPlanBench({
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         const dpr = Math.min(2, window.devicePixelRatio || 1);
         ctx.scale(dpr, dpr);
-        draw(ctx, sim, palRef.current, traceRef.current);
+        drawPlan(ctx, sceneOf(sim, traceRef.current), palRef.current);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -400,7 +190,7 @@ export function WalkPlanBench({
     if (!ctx) return;
     ctx.scale(dpr, dpr);
     palRef.current = readPalette(wrap);
-    if (simRef.current) draw(ctx, simRef.current, palRef.current, traceRef.current);
+    if (simRef.current) drawPlan(ctx, sceneOf(simRef.current, traceRef.current), palRef.current);
   }, []);
 
   const lastHud = useRef('');
@@ -418,7 +208,7 @@ export function WalkPlanBench({
         if (sim.done && sim.path !== 'free') sim.reset();
       }
       const ctx = canvas.getContext('2d');
-      if (ctx) draw(ctx, sim, pal, traceRef.current);
+      if (ctx) drawPlan(ctx, sceneOf(sim, traceRef.current), pal);
       const s = sim.act;
       const key = `${Math.floor(sim.t)}|${s.formed().length}|${s.countAtLeast(0.5)}|${sim.walker.state}`;
       if (key !== lastHud.current) {
@@ -441,11 +231,8 @@ export function WalkPlanBench({
     const sim = simRef.current;
     const canvas = canvasRef.current;
     if (!sim || !canvas || sim.path !== 'free') return;
-    const rect = canvas.getBoundingClientRect();
-    const lx = ((e.clientX - rect.left) / rect.width) * W;
-    const ly = ((e.clientY - rect.top) / rect.height) * H;
-    const { sc, ox, oy } = frame(sim.layout.roomM);
-    sim.pointerTarget((lx - ox) / sc, (ly - oy) / sc);
+    const { x, y } = canvasToRoom(canvas, e.clientX, e.clientY, sim.layout.roomM);
+    sim.pointerTarget(x, y);
   };
 
   const readingLabel = READINGS.find((r) => r.key === reading)!;

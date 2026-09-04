@@ -16,17 +16,18 @@ import { SkinDualBench } from '../../../components/lab/SkinDualBench';
 import { SquareRingBench } from '../../../components/lab/SquareRingBench';
 import { SkinClusterBench } from '../../../components/lab/SkinClusterBench';
 import { WalkPlanBench } from '../../../components/lab/WalkPlanBench';
+import { CrowdPlanBench } from '../../../components/lab/CrowdPlanBench';
 
 export const metadata = { title: 'The lab' };
 
 /**
- * The lab（Lab-Modernist 稿 → MAPPING §7）：十四台真求解器台架，深色语言与 case/log 一致。
+ * The lab（Lab-Modernist 稿 → MAPPING §7）：十五台真求解器台架，深色语言与 case/log 一致。
  * ★ 版式逐项对稿：300px 定宽左栏 + 44px 间距；规格表竖排行（92px 标签列 + 发丝线分隔）；
  *   图框 3px 彩色顶线（2D 绿 / 3D 紫）+ 极淡填充；标题 72px；页脚两链。
  * 每台跑的是站内 TS 内核，不是视频、不是二次实现：Lab.01–05 = src/lib/linkage（封盘零改，
  * 项目一），Lab.06–13 = src/lib/space（项目二皮肤单元引擎，Python 研究代码的 1:1 移植）；
- * Lab.14 = src/lib/space/unit-activation（项目二第一台带行为层的台架：一个人走过，哪一群单元被激活——
- * 平面、2D canvas，规则来自作者 07-20 的原型；2026-09-04 立项，第六段 Ⅵ A person）。
+ * Lab.14–15 = src/lib/space/unit-activation + crowd-plan（项目二带行为层的两台：一个人走过 / 几个人在场——
+ * 平面、2D canvas，规则来自作者 07-20 的原型；2026-09-04 立项，第六段 Ⅵ People）。
  *
  * 项目二七台按**尺度**收成四段（2026-09-03 用户拍板「七台四段」——此前九台按立项时间排，
  * 读者看完 4×4 的房间又跳回单条带）：一条带 → 一排 → 一圈 → 一间房；段内按形态族
@@ -238,7 +239,7 @@ export default function LabPage() {
       <div className="shell pg-dark" data-pt-content>
         <header style={{ padding: '64px 0 40px', borderBottom: 'var(--hair)' }}>
           <div className="flex items-baseline justify-between" style={{ gap: 32 }}>
-            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · sixteen live instruments</p>
+            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · seventeen live instruments</p>
             <span style={LEGEND}>
               <span className="flex items-center" style={{ gap: 6 }}>
                 <span style={{ width: 9, height: 9, background: 'var(--accent)' }} />
@@ -544,7 +545,7 @@ export default function LabPage() {
           <SkinClusterBench />
         </Bench>
 
-        <ScaleRule n="Ⅵ" label="A person" sub="Lab.14 · behaviour reaching the units" />
+        <ScaleRule n="Ⅵ" label="People" sub="Lab.14–15 · behaviour reaching the units" />
 
         <Bench
           no="14"
@@ -565,6 +566,23 @@ export default function LabPage() {
           <WalkPlanBench />
         </Bench>
 
+        <Bench
+          no="15"
+          title="A few people"
+          lede="Lab.14 replayed one person along a preset path; this bench is live. Click the floor to place people (up to eight), hold one to drag it, or let them wander on their own — a random target, then a random stand of 2–30 s, a demo device rather than a behaviour rule. The floor records presence as they move and the units form in front of you. Where two reaches overlap the floor counts both people, so a pair standing together forms the unit underfoot twice as fast, and a small crowd reshapes more of the room than one person ever could. Same mechanism as Lab.14, same knobs, nothing re-tuned."
+          accent="var(--accent)"
+          specs={[
+            ['People', 'Up to 8 · click empty floor to place · hold to drag · − removes the last'],
+            ['Wander', 'Random target, then 2–30 s standing · seeded, so a run repeats · a demo device, not a rule'],
+            ['Mechanism', 'Lab.14’s, untouched: presence-seconds within reach · 2 %/s decay · mean ≥ 15 s forms · never undone'],
+            ['Overlap', 'Reaches add: two people on one spot form the unit underfoot in half the time'],
+            ['Field', '4×4 / 6×6 / 8×8 on Lab.12’s field · unit scaled with pitch'],
+            ['Not here', 'Cats, and any rule for how a real person moves — those are the author’s to write'],
+          ]}
+        >
+          <CrowdPlanBench />
+        </Bench>
+
         <footer
           className="flex flex-wrap items-baseline justify-between"
           style={{ gap: 32, padding: '26px 0 72px' }}
@@ -578,7 +596,7 @@ export default function LabPage() {
               color: 'var(--n500)',
             }}
           >
-            16 instruments · 03 kernels · all live
+            17 instruments · 03 kernels · all live
           </span>
           <span
             className="flex"
