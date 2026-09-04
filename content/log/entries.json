@@ -73,6 +73,65 @@
     ]
   },
   {
+    "date": "2026-09-04",
+    "lead": {
+      "en": "Made the plan bench something you can actually handle: place people, drag them around, watch several at once and see the units form live.",
+      "zh": "把平面台架做成可以现场摆弄的：点一下放个人、按住拖着走、几个人同时在场，单元当场成形。"
+    },
+    "body": {
+      "en": "- The morning's bench replayed one person along a preset route. This one is live: click the floor to place a person (up to eight), hold one to drag them, or let them wander. The rule underneath is unchanged — presence marks the floor, a unit forms when the floor it owns has been marked long enough — so the only new code is 'several people' and 'how a person moves'. Where two reaches overlap the floor counts both, so a pair standing together forms the unit underfoot in half the time, and four or five people reshape a good part of the room.\n- The first wander looked wrong on the machine: they crossed the room at walking-outdoors speed and never stopped. Retuned to how people actually occupy a room — 0.7 m/s, a hop of half a metre to two, then eight to forty-five seconds of standing. It is a demo device, not a claim about behaviour; the behaviour rules are still mine to write.\n- Redrew each unit as two quantities instead of one. A green disc is the live reading and shrinks back as the floor forgets; a purple ring is where the structure actually is. Before this they were one washed-out overlay and I could not see the trace fading at all.\n- Added a switch for what a unit does once the person leaves: follow, where it withdraws, or lock, where it stays. Lock is the hysteresis the project argues for — a trace outlasts the body, form does not return to where it started — but you cannot read a demo in which nothing ever goes back, so the bench defaults to follow and keeps lock one button away.\n- A wrong turn worth keeping: 'form in two seconds, gone six seconds later' could not be done by turning the decay knob down. Decaying by a fixed percentage has no ceiling and no zero — standing pushes the reading up to a steady state of fifty seconds, and after the person leaves it has to fall all that way back before anything moves, which is exactly the 'it stays lit forever' I was trying to fix. Capping the floor at the threshold and fading it away in a straight line separates the two: forming time is the threshold, dispersal time is its own number, and neither drags the other.\n- Still no cat, and the people ignore each other — no avoiding, no clustering. That layer is the author's.",
+      "zh": "- 上午那台是让一个人沿预设路线走一遍。这台是现场的：点地面放一个人（最多八个），按住可以拖着走，也可以让他们自己漫步。底下的规则一个数没改——人在场就在地面留下痕迹，一个单元脚下的地面记满就下来——所以新写的只有「几个人」和「人怎么动」。两个人的影响圈重叠的地方，地面把两份都记上，于是两人站在一起时脚下的单元成形快一倍；四五个人在场就能改掉房间的一大片。\n- 第一版的自走在真机上不像人：横穿整个房间、速度像在户外赶路、从不停下。按人在室内的样子重调——0.7 米每秒，一次只挪半米到两米，然后站八到四十五秒。这是演示装置，不是对行为下的判断；行为规则仍由我自己写。\n- 每个单元改成两个量分开画：绿色圆盘是当前读数，地面淡了它就缩回去；紫色圆环是结构此刻在哪。此前两者叠成一团发灰，衰减根本看不出来。\n- 加了一个开关：人走之后单元怎么办——跟随（收回去）或锁定（留在原处）。锁定是项目立论的那个滞回：痕迹比身体停留得久，形态不回到初始状态；但一个什么都不回退的演示读不出变化，所以台架默认跟随，锁定留在旁边一个按钮上。\n- 值得记下来的弯路：「两秒成形、六秒散掉」不是把衰减调快就能做到的。按固定比例衰减既没有上限也没有零点——人站着时读数一路涨到五十秒的稳态，人走后要先跌回阈值才轮到结构动，那正是我想修掉的「人走了还一直亮着」。改成把地面封顶在阈值、之后按直线退光，两件事才分得开：成形时间就是阈值，散掉时间是另一个数，互不牵扯。\n- 仍然没有猫，几个人之间也互不影响——不避让、不成簇。那一层是作者自己要写的。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "image",
+        "src": "/log/2026-09-04-live-bench-formed.webp",
+        "alt": {
+          "en": "The 8×8 plan with a person standing in the middle of a green patch of floor trace; the unit underfoot and eight around it are drawn with green discs and thick purple rings",
+          "zh": "8×8 的平面，一个人站在一片绿色地面痕迹中央，脚下与周围八个单元画着绿盘和粗紫环"
+        },
+        "caption": {
+          "en": "Two seconds of standing and a group is down — the unit underfoot and its neighbours, about 1.8 m across. Green disc is the live reading, purple ring is where the structure is.",
+          "zh": "站两秒，一群就下来了——脚下那个加周围一圈，直径约 1.8 米。绿盘是当前读数，紫环是结构的位置。"
+        },
+        "width": 1400,
+        "height": 1040
+      },
+      {
+        "kind": "image",
+        "src": "/log/2026-09-04-live-bench-withdrawn.webp",
+        "alt": {
+          "en": "The same plan a few seconds after the person has left by the door: the floor trace is pale and patchy and every purple ring has shrunk back to a small circle around the mast",
+          "zh": "同一个平面，人从门离开几秒之后：地面痕迹变淡变碎，所有紫环都缩回芯边上的小圈"
+        },
+        "caption": {
+          "en": "Follow, a few seconds after they leave: the floor is forgetting and every unit is on its way back up. On lock the same run leaves the group hanging where it formed.",
+          "zh": "跟随档，人走后几秒：地面在忘，单元都在往回收。换成锁定，同一遍走完那一群会留在原处不动。"
+        },
+        "width": 1400,
+        "height": 1040
+      },
+      {
+        "kind": "image",
+        "src": "/log/2026-09-04-live-bench-crowd.webp",
+        "alt": {
+          "en": "Five people standing apart on the 8×8 plan, their dashed reach circles overlapping into one connected green area, with about half the units drawn as green discs inside purple rings",
+          "zh": "五个人分开站在 8×8 的平面上，虚线的影响圈叠成一片连通的绿色区域，约一半的单元画着绿盘与紫环"
+        },
+        "caption": {
+          "en": "Five people placed by hand. Each grows their own group; where they stand close the groups run together and a connected piece of ceiling comes down.",
+          "zh": "手放的五个人。每人长出自己的一群，站得近的地方几群连成一片，天花板上就下来一块连通的结构。"
+        },
+        "width": 1400,
+        "height": 1040
+      }
+    ]
+  },
+  {
     "date": "2026-09-03",
     "lead": {
       "en": "Named the ring platform a \"unit\" and opened a new bench to study how two, three, four or nine of them can relate in spacing and height.",
