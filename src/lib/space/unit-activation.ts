@@ -77,17 +77,20 @@ export const PLAN = {
   /** 成形阈值（秒；原型「超过 15 就固化」）——**这是原型值，也是模块默认值**；台架用下面的演示值 */
   THRESHOLD: 15,
   /**
-   * 台架的演示默认（2026-09-04 用户看真机「作为演示，单元触发得太慢了、没有视觉效果」）：
-   * 阈值 4 s（站五秒左右就下来）· 痕迹半衰期 6 s（人走开十来秒空间就散掉）。
-   * **原型的两个数（15 s / 34 s 半衰期）仍是模块默认**，守门与线稿跑的是原型值；台架的滑块可以拉回去。
-   * 慢的那一档是研究口径（分钟级的痕迹），快的这一档是给人看的口径。
+   * 台架的演示默认（2026-09-04 用户两轮：「作为演示，单元触发得太慢了、没有视觉效果」→「改成 2 秒触发
+   * 6 秒散掉」）：**触发 2 s**（站两秒单元就下来）· **散掉 6 s**（人一走，六秒退光）。
+   *
+   * 这两个数能各管各的，靠的是台架把痕迹改成**封顶 + 线性褪去**：每格最多记满阈值（`TraceField.cap`），
+   * 人不在的格子每秒退 cap/fade（`relax`），人站着的格子当步不退。原型的**指数衰减没有封顶也没有零点**，
+   * 人走后读数要先从稳态跌回阈值、程度才动，长尾拖到几十秒——「6 秒散掉」在那套里做不到。
+   * **原型的三件（阈值 15 s · 每秒 2% · 不封顶）仍是模块默认**，守门与线稿跑的是原型值。
    */
-  DEMO: { threshold: 4, halfLife: 6 },
+  DEMO: { threshold: 2, fade: 6 },
   /**
-   * 机构追读数的速度（程度 / 秒）——绞盘收放需要时间，不是瞬间到位。
-   * 只在「跟随」模式下生效；收得快、放得慢（RISE 1.25 s 满、FALL 2.5 s 空）。
+   * 机构追读数的速度（程度 / 秒）——绞盘收放需要时间，不是瞬间到位。只在「跟随」模式下生效。
+   * 取值让它**不成为瓶颈**：节奏由痕迹的涨落定（触发 2 s / 散掉 6 s），这两个数只负责把每帧的跳变磨平。
    */
-  RESPONSE: { rise: 0.8, fall: 0.4 },
+  RESPONSE: { rise: 1.5, fall: 0.5 },
   /** 可选的格数（每边）；4 = Lab.12 原样，用来对照 */
   GRIDS: [4, 6, 8] as readonly number[],
   GRID_DEF: 8,
@@ -196,15 +199,24 @@ export class TraceField {
   readonly x0: number;
   readonly y0: number;
   readonly data: Float32Array;
+  /**
+   * 每格痕迹的上限（秒）。`Infinity` = 不封顶（原型：站得越久记得越多，读数升到 1/衰减率 的稳态）。
+   * 台架封到阈值：**人一走，读数立刻在阈值以下，程度当即开始退**——不封顶的话要先等长尾跌回阈值。
+   */
+  cap: number;
+  /** 本步被人覆盖过的格子（`relax` 跳过它们：人站着的地方不褪） */
+  private readonly touched: Uint8Array;
   private readonly stampCache = new Map<number, Int32Array>();
 
-  constructor(roomM: number, cell: number = PLAN.CELL) {
+  constructor(roomM: number, cell: number = PLAN.CELL, cap = Infinity) {
     this.cell = cell;
     this.cols = Math.ceil(roomM / cell);
     this.rows = this.cols;
     this.x0 = (-this.cols * cell) / 2;
     this.y0 = (-this.rows * cell) / 2;
     this.data = new Float32Array(this.cols * this.rows);
+    this.touched = new Uint8Array(this.cols * this.rows);
+    this.cap = cap;
   }
 
   /** 格中心（m） */
@@ -250,7 +262,29 @@ export class TraceField {
     for (let k = 0; k < st.length; k += 2) {
       const c = c0 + st[k];
       const rr = r0 + st[k + 1];
-      if (c >= 0 && rr >= 0 && c < this.cols && rr < this.rows) this.data[rr * this.cols + c] += dt;
+      if (c >= 0 && rr >= 0 && c < this.cols && rr < this.rows) {
+        const i = rr * this.cols + c;
+        this.data[i] = Math.min(this.cap, this.data[i] + dt);
+        this.touched[i] = 1;
+      }
+    }
+  }
+
+  /**
+   * 线性褪去（台架用）：没被人覆盖的格子每秒退 `cap / seconds`，`seconds` 秒退光；
+   * **人站着的格子这一步不退**（当步被 imprint 过），所以站着的读数照涨到封顶。
+   * 与 `decay` 的指数衰减是两条路：指数没有零点（长尾），线性有——「六秒散掉」要的就是这个。
+   */
+  relax(dt: number, seconds: number): void {
+    const step = ((Number.isFinite(this.cap) ? this.cap : 1) * dt) / seconds;
+    const d = this.data;
+    for (let i = 0; i < d.length; i++) {
+      if (this.touched[i]) {
+        this.touched[i] = 0;
+        continue;
+      }
+      const v = d[i] - step;
+      d[i] = v > 1e-6 ? v : 0;
     }
   }
 
@@ -278,6 +312,7 @@ export class TraceField {
 
   clear(): void {
     this.data.fill(0);
+    this.touched.fill(0);
   }
 }
 
@@ -633,6 +668,11 @@ export interface PlanSimOpts {
   reading?: Reading;
   threshold?: number;
   decay?: number;
+  /**
+   * 痕迹**线性褪去**的秒数（人不在的地方几秒退光）。给了就用它，痕迹同时封顶到阈值；
+   * 省略 = 原型的指数衰减（`decay`），不封顶。
+   */
+  fade?: number | null;
   /** 单元怎么响应读数：跟随（人走了收回去）/ 锁定（滞回，不回退）。默认锁定 = 原型行为 */
   mode?: ResponseMode;
   /** 站位半径（Lab.12 的滑块量；这台钉默认） */
@@ -649,6 +689,8 @@ export class PlanSim {
   readonly act: Activation;
   catchment: Catchment;
   decay: number;
+  /** 线性褪去秒数；null = 走原型的指数衰减 */
+  fade: number | null;
   reach: number;
   path: PathKey;
   /** 仿真时间（s） */
@@ -662,9 +704,12 @@ export class PlanSim {
 
   constructor(opts: PlanSimOpts = {}) {
     this.layout = planLayout(opts.grid ?? PLAN.GRID_DEF, opts.radius ?? RING.RADIUS_DEF);
-    this.field = new TraceField(this.layout.roomM);
+    const threshold = opts.threshold ?? PLAN.THRESHOLD;
+    this.fade = opts.fade ?? null;
+    // 线性褪去时把每格封顶到阈值：人一走读数就在阈值以下，程度当即开始退
+    this.field = new TraceField(this.layout.roomM, PLAN.CELL, this.fade === null ? Infinity : threshold);
     this.walker = new Walker(opts.speed ?? PLAN.SPEED.def);
-    this.act = new Activation(this.layout.units.length, opts.threshold ?? PLAN.THRESHOLD, opts.mode ?? 'ratchet');
+    this.act = new Activation(this.layout.units.length, threshold, opts.mode ?? 'ratchet');
     this.decay = opts.decay ?? PLAN.DECAY;
     this.reach = opts.reach ?? PLAN.REACH.def;
     this.catchment = buildCatchment(this.layout, this.field, opts.reading ?? 'nearest');
@@ -707,10 +752,16 @@ export class PlanSim {
   }
   setThreshold(v: number): void {
     this.act.threshold = v;
+    if (this.fade !== null) this.field.cap = v; // 封顶跟着阈值走
     this.act.update(unitInputs(this.field, this.catchment, this.inputsBuf));
   }
   setDecay(v: number): void {
     this.decay = v;
+  }
+  /** 换褪去秒数（null = 回到原型的指数衰减，同时取消封顶） */
+  setFade(v: number | null): void {
+    this.fade = v;
+    this.field.cap = v === null ? Infinity : this.act.threshold;
   }
   /** 换响应模式：已经下来的单元留在原处，从这一刻起按新规矩走（跟随档会开始回落） */
   setMode(m: ResponseMode): void {
@@ -801,7 +852,8 @@ export class PlanSim {
         this.exitedAt = this.t + (dt - left);
       }
     }
-    this.field.decay(dt, this.decay);
+    if (this.fade !== null) this.field.relax(dt, this.fade);
+    else this.field.decay(dt, this.decay);
     // 锁定档传 Infinity = 旧路径逐位不变（守门与线稿的结论钉在那上面）；跟随档才按机构速率限速
     this.act.update(unitInputs(this.field, this.catchment, this.inputsBuf), this.act.mode === 'follow' ? dt : Infinity);
     this.t += dt;

@@ -112,7 +112,7 @@ const DUAL_GAP_AXIS: VariantAxis = {
 };
 
 /** Lab.14 一个人走过（2026-09-04 立项）：编制 = 行为（六条路，含自由），格数三档与读法两档为正交轴。
- *  影响半径 / 阈值 / 半衰期 / 步速 / 时间倍速是连续量，不算差分。 */
+ *  影响半径 / 阈值 / 散掉 / 步速 / 时间倍速是连续量，不算差分。 */
 export const WALK_PATH_OPTIONS = PATHS.map((p) => ({ key: p.key, label: p.zh }));
 const WALK_GRID_AXIS: VariantAxis = {
   axis: '格数',

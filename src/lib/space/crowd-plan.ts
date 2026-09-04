@@ -80,6 +80,8 @@ export interface CrowdSimOpts {
   reach?: number;
   threshold?: number;
   decay?: number;
+  /** 痕迹线性褪去的秒数（人不在的地方几秒退光）；省略 = 原型的指数衰减 */
+  fade?: number | null;
   /** 单元怎么响应读数：跟随（人走了收回去）/ 锁定（滞回）。默认锁定 = 原型行为 */
   mode?: ResponseMode;
   speed?: number;
@@ -100,6 +102,8 @@ export class CrowdSim {
   catchment: Catchment;
   people: Person[] = [];
   decay: number;
+  /** 线性褪去秒数；null = 指数衰减 */
+  fade: number | null;
   reach: number;
   speed: number;
   /** 全体是否自走（held 的人不受影响；manual 的人在开自走时转回 auto） */
@@ -113,8 +117,10 @@ export class CrowdSim {
 
   constructor(opts: CrowdSimOpts = {}) {
     this.layout = planLayout(opts.grid ?? PLAN.GRID_DEF, opts.radius ?? RING.RADIUS_DEF);
-    this.field = new TraceField(this.layout.roomM);
-    this.act = new Activation(this.layout.units.length, opts.threshold ?? PLAN.THRESHOLD, opts.mode ?? 'ratchet');
+    const threshold = opts.threshold ?? PLAN.THRESHOLD;
+    this.fade = opts.fade ?? null;
+    this.field = new TraceField(this.layout.roomM, PLAN.CELL, this.fade === null ? Infinity : threshold);
+    this.act = new Activation(this.layout.units.length, threshold, opts.mode ?? 'ratchet');
     this.catchment = buildCatchment(this.layout, this.field, opts.reading ?? 'nearest');
     this.decay = opts.decay ?? PLAN.DECAY;
     this.reach = opts.reach ?? PLAN.REACH.def;
@@ -211,10 +217,16 @@ export class CrowdSim {
   }
   setThreshold(v: number): void {
     this.act.threshold = v;
+    if (this.fade !== null) this.field.cap = v;
     this.act.update(unitInputs(this.field, this.catchment, this.inputsBuf));
   }
   setDecay(v: number): void {
     this.decay = v;
+  }
+  /** 换褪去秒数（null = 回到指数衰减） */
+  setFade(v: number | null): void {
+    this.fade = v;
+    this.field.cap = v === null ? Infinity : this.act.threshold;
   }
   /** 换响应模式：已经下来的单元留在原处，从这一刻起按新规矩走 */
   setMode(m: ResponseMode): void {
@@ -304,7 +316,8 @@ export class CrowdSim {
         if (p.walker.present) this.field.imprint(p.walker.x, p.walker.y, this.reach, sdt);
       }
     }
-    this.field.decay(dt, this.decay);
+    if (this.fade !== null) this.field.relax(dt, this.fade);
+    else this.field.decay(dt, this.decay);
     this.act.update(unitInputs(this.field, this.catchment, this.inputsBuf), this.act.mode === 'follow' ? dt : Infinity);
     this.t += dt;
   }

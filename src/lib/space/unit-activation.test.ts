@@ -121,6 +121,62 @@ describe('unit-activation · 痕迹场（强度语义）', () => {
   });
 });
 
+describe('unit-activation · 封顶 + 线性褪去（台架的演示口径）', () => {
+  it('封顶：站着涨到 cap 就不再涨；人不在的格子每秒退 cap/秒数，到点退光', () => {
+    const f = new TraceField(L8.roomM, PLAN.CELL, 2);
+    for (let k = 0; k < 100; k++) f.imprint(0, 0, 0.6, 0.05); // 站 5 s
+    expect(f.max()).toBeCloseTo(2, 6); // 封在 2，没涨到 5
+    f.relax(0, 6); // 人还在场的那一步：覆盖过的格子不退（这一步只清标记）
+    expect(f.max()).toBeCloseTo(2, 6);
+    // 人走了：6 s 退光，中途线性
+    f.relax(3, 6);
+    expect(f.max()).toBeCloseTo(1, 6);
+    f.relax(3, 6);
+    expect(f.max()).toBe(0);
+  });
+
+  it('人站着的格子当步不退：先 imprint 再 relax，脚下照涨、周围在退', () => {
+    const f = new TraceField(L8.roomM, PLAN.CELL, 2);
+    f.imprint(0, 0, 0.6, 1);
+    f.relax(1, 6);
+    const here = f.data[f.indexOf(0, 0)];
+    expect(here).toBeCloseTo(1, 6); // 覆盖过 ⇒ 不退
+    f.imprint(3, 0, 0.6, 1); // 人挪走了
+    f.relax(1, 6);
+    expect(f.data[f.indexOf(0, 0)]).toBeCloseTo(1 - 2 / 6, 6); // 原地开始退
+    expect(f.data[f.indexOf(3, 0)]).toBeCloseTo(1, 6);
+  });
+
+  it('演示默认：站定 ≈2 s 一群单元下来，人走后 ≈6 s 收光（用户 2026-09-04 拍板的两个数）', () => {
+    const sim = new PlanSim({ path: 'free', threshold: PLAN.DEMO.threshold, fade: PLAN.DEMO.fade, mode: 'follow' });
+    const u = dwellSpot(sim.layout);
+    sim.hold(u.x, u.y); // 把人按在一个单元正下方站着
+    let tOn = 0;
+    for (let k = 0; k < 200; k++) {
+      sim.step(0.05);
+      tOn += 0.05;
+      if (sim.act.degree[u.i] >= 1 - 1e-9) break;
+    }
+    expect(tOn).toBeGreaterThan(1.5);
+    expect(tOn).toBeLessThan(3.5); // 2 s 上下（机构的 rise 上限磨掉一点点）
+    expect(sim.act.formed().length).toBeGreaterThanOrEqual(5); // 一群，不是一个
+    sim.release();
+    sim.leave();
+    for (let k = 0; k < 200; k++) sim.step(0.05); // 人走出门
+    const t0 = sim.t;
+    let tOff = 0;
+    for (let k = 0; k < 600; k++) {
+      sim.step(0.05);
+      if (sim.act.countAtLeast(0.02) === 0) {
+        tOff = sim.t - t0;
+        break;
+      }
+    }
+    expect(tOff).toBeGreaterThan(0);
+    expect(tOff).toBeLessThan(9); // 六秒上下退光（人走出门那一路上还在撒痕迹，故留一点余量）
+  });
+});
+
 describe('unit-activation · 读法', () => {
   it('按格：每格归且只归一个单元；读数是均值——整格都在圈里就读到整份', () => {
     const f = new TraceField(L8.roomM);
@@ -190,16 +246,25 @@ describe('unit-activation · 响应两档', () => {
   });
 
   it('跟随档跑一遍：人走了单元收回去，锁定档同一遍留着——这是同一套痕迹的两种读法', () => {
-    const opts = { path: 'dwell' as const, threshold: PLAN.DEMO.threshold, decay: 1 - Math.pow(0.5, 1 / PLAN.DEMO.halfLife) };
-    const follow = runScenario({ ...opts, mode: 'follow' }, 0);
-    expect(follow.act.formed().length).toBeGreaterThan(0); // 人还没走远时下来了一群
-    follow.step(60);
-    expect(follow.act.formed()).toEqual([]); // 走后收回
-    expect(follow.act.countAtLeast(0.05)).toBe(0);
-    const lock = runScenario({ ...opts, mode: 'ratchet' }, 0);
-    const n = lock.act.formed().length;
-    lock.step(60);
-    expect(lock.act.formed().length).toBe(n); // 锁定档留着
+    const opts = { path: 'dwell' as const, threshold: PLAN.DEMO.threshold, fade: PLAN.DEMO.fade };
+    /** 跑完整条驻留路线，记下过程中的成形峰值与人离场 30 s 后的剩余 */
+    const run = (mode: 'follow' | 'ratchet') => {
+      const sim = new PlanSim({ ...opts, mode });
+      let peak = 0;
+      while (sim.exitedAt === null && sim.t < 200) {
+        sim.step(0.05);
+        peak = Math.max(peak, sim.act.formed().length);
+      }
+      sim.step(30);
+      return { peak, after: sim.act.formed().length, live: sim.act.countAtLeast(0.02) };
+    };
+    const follow = run('follow');
+    expect(follow.peak).toBeGreaterThanOrEqual(5); // 站着时下来一群
+    expect(follow.after).toBe(0); // 人走了收回去
+    expect(follow.live).toBe(0);
+    const lock = run('ratchet');
+    expect(lock.peak).toBeGreaterThanOrEqual(5);
+    expect(lock.after).toBe(lock.peak); // 锁定档留着
   });
 });
 

@@ -550,14 +550,14 @@ export default function LabPage() {
         <Bench
           no="14"
           title="A person walks through"
-          lede="The first bench with a behaviour layer. One person walks through Lab.12’s room — passing, crossing, standing, looping, pacing, or wherever you click — and every second of presence marks the floor within reach. Each unit reads the floor it owns; once that floor has held presence long enough on average, the unit comes down; whether it stays down after they leave is a switch — follow, where it withdraws, or lock, the hysteresis the project argues for. The units are smaller and more numerous than Lab.12’s so that what forms is a group, not a point: at 8×8 a twenty-second stand grows a cross of five, pacing carves a corridor, a loop leaves a ring, passing leaves nothing. Decay 2 %/s and the 15 s threshold are the author’s July prototype; reach is the behavioural knob."
+          lede="The first bench with a behaviour layer. One person walks through Lab.12’s room — passing, crossing, standing, looping, pacing, or wherever you click — and every second of presence marks the floor within reach. Each unit reads the floor it owns; once that floor has held presence long enough on average, the unit comes down; whether it stays down after they leave is a switch — follow, where it withdraws, or lock, the hysteresis the project argues for. The units are smaller and more numerous than Lab.12’s so that what forms is a group, not a point: at 8×8 a twenty-second stand grows a cross of five, pacing carves a corridor, a loop leaves a ring, passing leaves nothing. As a demo it runs fast — two seconds of standing brings a unit down, six seconds after the person leaves it is gone — with the author’s July prototype (2 %/s decay, a 15 s threshold) still one slider away; reach is the behavioural knob."
           accent="var(--accent)"
           specs={[
             ['Field', 'Lab.12’s room and field · 4×4 / 6×6 / 8×8 · unit scaled with pitch (4×4 = Lab.12 verbatim)'],
-            ['Trace', 'Presence-seconds on a 0.1 m floor grid, within reach of the person · decays 2 %/s'],
+            ['Trace', 'Presence-seconds on a 0.1 m floor grid, within reach of the person · on the bench it caps at the threshold and fades away linearly (fade slider); the prototype’s own rule is 2 %/s with no cap and no zero'],
             ['Reading', 'By cell (Voronoi = the aisle lines) or footprint only · mean over the cells a unit owns'],
             ['Forming', 'Mean ≥ the threshold ⇒ down · purple ring grows from mast to rim'],
-            ['Response', 'Follow — the structure tracks the reading and withdraws once people leave (default, 4 s threshold, 6 s half-life) · Lock — bonds stay locked, the hysteresis the project argues for (the prototype’s 15 s and 34 s)'],
+            ['Response', 'Follow — the structure tracks the reading and withdraws once people leave (default; 2 s to form, gone 6 s after they leave) · Lock — bonds stay locked, the hysteresis the project argues for (the prototype: threshold 15 s, decay 2 %/s)'],
             ['Reach', '0.22–1.2 m, default 1.0 m (Hall’s personal distance) · the behavioural knob'],
             ['Behaviours', 'Passing · diagonal · dwell 20 s · loop ×6 · pacing ×8 · free (click the floor) · hold the person to drag'],
             ['Result', 'Under the prototype’s own numbers: passing forms none · a 20 s stand forms a cross of 5 (+4 half) · pacing a corridor · loop a ring'],

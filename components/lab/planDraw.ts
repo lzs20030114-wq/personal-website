@@ -57,6 +57,15 @@ export interface PlanScene {
   showTrace: boolean;
 }
 
+/**
+ * 画痕迹与绿盘用的量程（存在·秒）。痕迹封了顶（台架的「散掉」档 = 线性褪去）就用那个顶——
+ * 读数满 = 绿盘满 = 刚好成形；没封顶（原型的指数衰减）读数会升到阈值之上，量程取 2×阈值，
+ * 否则人一走的头几秒绿盘满着不动、看着像没在退。
+ */
+function traceScale(s: PlanScene): number {
+  return Number.isFinite(s.field.cap) ? s.field.cap : 2 * s.act.threshold;
+}
+
 export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palette): void {
   const L = s.layout;
   const { sc, ox, oy } = frame(L.roomM);
@@ -71,14 +80,13 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
   ctx.fillRect(ox - h, oy - h, 2 * h, 2 * h);
   ctx.globalAlpha = 1;
 
-  // 痕迹场：有痕迹的格子按浓度（存在·秒）画绿——**线性**映射，阈值处 0.55，减半就淡一半
+  // 痕迹场：有痕迹的格子按浓度（存在·秒）画绿——**线性**映射，减半就淡一半
   // （首版用 1−e^(−v/12) 的指数压缩，痕迹减半透明度只从 0.74 掉到 0.49，用户看真机「衰减不明显」）
   if (s.showTrace) {
     const f = s.field;
     const cs = f.cell * sc;
-    // 量程取 2×阈值：站着的读数常在阈值之上（16–20 s），按阈值封顶的话衰减的头几秒画面纹丝不动；
-    // 开方是为了让走过留下的 1–2 s 浅痕迹仍看得见（线性下只有 0.03）
-    const cap = 2 * s.act.threshold;
+    const cap = traceScale(s);
+    // 开方是为了让走过留下的浅痕迹仍看得见（线性下只有 0.03）
     ctx.fillStyle = pal.accent;
     for (let idx = 0; idx < f.data.length; idx++) {
       const v = f.data[idx];
@@ -147,17 +155,18 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
   //   · **成形进度**（只涨不退的棘轮）= 紫环，半径同一尺子；长满 = 平台外缘上一圈粗紫环 + 淡紫底，
   //     读作「这台已经下来了」。绿盘缩回去而紫环留着，就是滞回本身。
   //   · 平台外缘发丝线 = 潜在占位；芯 = 墨点。
-  //   · 绿盘的尺子是 **2×阈值**（不是阈值）：站着的读数常到 16–20 s，按阈值封顶的话人一走开头几秒
-  //     绿盘纹丝不动（读数从 17 掉到 15 之前满盘），用户看真机就是这个观感；按 2×阈值，读数一掉盘就缩。
-  //     读数 = 阈值时绿盘到平台外缘的一半，成形与否由紫环说，不靠绿盘说。
+  //   · 绿盘与痕迹共用一把尺子 `traceScale`：痕迹**封顶**时（台架的「散掉」档）尺子就是那个顶，
+  //     读数满 = 绿盘满 = 单元刚好成形；**不封顶**时（原型的指数衰减）站着的读数会升到阈值以上
+  //     （稳态 16–20 s），按阈值封顶的话人一走开头几秒绿盘纹丝不动，故尺子取 2×阈值，读数一掉盘就缩。
   const platPx = L.platR * sc;
   const mastPx = Math.max(1.6, L.mastR * sc);
   const span = platPx - mastPx;
+  const scale = traceScale(s);
   for (const u of L.units) {
     const cx = X(u.x);
     const cy = Y(u.y);
     const d = s.act.degree[u.i];
-    const frac = Math.min(1, s.act.input[u.i] / (2 * s.act.threshold));
+    const frac = Math.min(1, s.act.input[u.i] / scale);
     // 潜在占位
     ctx.strokeStyle = pal.ink;
     ctx.globalAlpha = 0.2;

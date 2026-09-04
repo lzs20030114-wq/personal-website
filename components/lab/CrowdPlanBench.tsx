@@ -17,8 +17,8 @@ import { useBenchLoop } from './useBenchLoop';
 const TIME_SCALES = [1, 3, 8] as const;
 /** 默认 ×1：这台演示的是人怎么在房间里慢慢待着，按真实节奏看（Lab.14 仍 ×3——那台是走一遍看结果） */
 const TIME_DEF = 1;
-const HALF = { min: 3, max: 120 } as const;
-const rateFromHalf = (t: number) => 1 - Math.pow(0.5, 1 / t);
+/** 「散掉」滑块（s）：人不在的地方几秒把痕迹退光（线性褪去，见 PLAN.DEMO） */
+const FADE = { min: 2, max: 60 } as const;
 const MAX_SIM_DT = 0.05 * 8 * 1.01;
 
 const COPY = {
@@ -29,14 +29,14 @@ const COPY = {
     formed: (n: number, total: number) => `成形 ${n} / ${total}`,
     line: (c: { people: number; walking: number; standing: number; held: number }, half: number, t: number, floor: number) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${c.people} 人（走 ${c.walking} · 站 ${c.standing}${c.held ? ` · 拖 ${c.held}` : ''}）· 半成以上 ${half} · 地面最深 ${floor.toFixed(1)} s`,
-    foot: (reach: number, thr: number, half: number, reading: string, mode: ResponseMode) =>
-      `影响半径 ${reach.toFixed(2)} m · 阈值 ${thr.toFixed(0)} s · 半衰期 ${half.toFixed(0)} s · ${reading}读 · 绿盘 = 当前读数 · 紫环 = ${mode === 'follow' ? '结构位置（人走了收回去）' : '成形（键锁死，不回退）'} · 点地面放人 · 按住拖`,
+    foot: (reach: number, thr: number, fade: number, reading: string, mode: ResponseMode) =>
+      `影响半径 ${reach.toFixed(2)} m · 阈值 ${thr.toFixed(0)} s · 散掉 ${fade.toFixed(0)} s · ${reading}读 · 绿盘 = 当前读数 · 紫环 = ${mode === 'follow' ? '结构位置（人走了收回去）' : '成形（键锁死，不回退）'} · 点地面放人 · 按住拖`,
     hint: `「响应」两档：跟随 = 结构追着读数涨落、人走了收回去（演示默认）；锁定 = 键锁死不回退（项目立论的滞回）。点空地放一个人（最多 ${CROWD.MAX_PEOPLE} 个）；悬停到人身上变抓手，按住就能拖着走，松手站在原地。「自走」= 演示用的慢走：每次只挪 ${CROWD.HOP.min}–${CROWD.HOP.max} m（偶尔远一次），到了站 ${CROWD.PAUSE.min}–${CROWD.PAUSE.max} s，步速 ${CROWD.SPEED_DEF} m/s——不是行为规则。几个人的影响圈重叠处每秒记几份——两个人站在一起，脚下的单元早一倍成形。`,
     grid: '格数',
     reading: '读法',
     reach: '影响半径',
     threshold: '阈值',
-    half_: '半衰期',
+    half_: '散掉',
     response: '响应',
     run: '运转',
     auto: '自走',
@@ -55,14 +55,14 @@ const COPY = {
     formed: (n: number, total: number) => `formed ${n} / ${total}`,
     line: (c: { people: number; walking: number; standing: number; held: number }, half: number, t: number, floor: number) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${c.people} people (${c.walking} walking · ${c.standing} standing${c.held ? ` · ${c.held} held` : ''}) · ${half} at half or more · deepest floor trace ${floor.toFixed(1)} s`,
-    foot: (reach: number, thr: number, half: number, reading: string, mode: ResponseMode) =>
-      `reach ${reach.toFixed(2)} m · threshold ${thr.toFixed(0)} s · half-life ${half.toFixed(0)} s · ${reading} · green disc = live reading · purple ring = ${mode === 'follow' ? 'where the structure is — it withdraws once they leave' : 'formed; bonds locked, never undone'} · click to place · hold to drag`,
+    foot: (reach: number, thr: number, fade: number, reading: string, mode: ResponseMode) =>
+      `reach ${reach.toFixed(2)} m · threshold ${thr.toFixed(0)} s · fade ${fade.toFixed(0)} s · ${reading} · green disc = live reading · purple ring = ${mode === 'follow' ? 'where the structure is — it withdraws once they leave' : 'formed; bonds locked, never undone'} · click to place · hold to drag`,
     hint: `“Response” has two settings: follow — the structure tracks the reading and withdraws once people leave (the demo default); lock — bonds stay locked, the hysteresis the project argues for. Click empty floor to place a person (up to ${CROWD.MAX_PEOPLE}); hover a person for the grab cursor, hold to drag, release to leave them standing. “Wander” is a demo device — a short hop of ${CROWD.HOP.min}–${CROWD.HOP.max} m (occasionally further), then a ${CROWD.PAUSE.min}–${CROWD.PAUSE.max} s stand, at ${CROWD.SPEED_DEF} m/s — not a behaviour rule. Where reaches overlap the floor counts every person, so two people standing together form the unit underfoot twice as fast.`,
     grid: 'grid',
     reading: 'reading',
     reach: 'reach',
     threshold: 'threshold',
-    half_: 'half-life',
+    half_: 'fade',
     response: 'response',
     run: 'run',
     auto: 'wander',
@@ -115,7 +115,7 @@ export function CrowdPlanBench({
   const [reading, setReading] = useState<Reading>('nearest');
   const [reach, setReach] = useState<number>(PLAN.REACH.def);
   const [threshold, setThreshold] = useState<number>(PLAN.DEMO.threshold);
-  const [halfLife, setHalfLife] = useState<number>(PLAN.DEMO.halfLife);
+  const [fade, setFade] = useState<number>(PLAN.DEMO.fade);
   const [mode, setMode] = useState<ResponseMode>('follow');
   const [speed, setSpeed] = useState<number>(CROWD.SPEED_DEF);
   const [cursor, setCursor] = useState<'crosshair' | 'grab' | 'grabbing'>('crosshair');
@@ -139,7 +139,7 @@ export function CrowdPlanBench({
 
   // 建仿真（换格数才重建：单元数变了，痕迹场与读法表要重算；人也重新放）
   useEffect(() => {
-    const sim = new CrowdSim({ grid, reading, reach, threshold, decay: rateFromHalf(halfLife), speed, auto, mode });
+    const sim = new CrowdSim({ grid, reading, reach, threshold, fade, speed, auto, mode });
     simRef.current = sim;
     heldRef.current = null;
     paint();
@@ -155,8 +155,8 @@ export function CrowdPlanBench({
     simRef.current?.setThreshold(threshold);
   }, [threshold]);
   useEffect(() => {
-    simRef.current?.setDecay(rateFromHalf(halfLife));
-  }, [halfLife]);
+    simRef.current?.setFade(fade);
+  }, [fade]);
   useEffect(() => {
     simRef.current?.setSpeed(speed);
   }, [speed]);
@@ -274,7 +274,7 @@ export function CrowdPlanBench({
           <div className="dim">{t.line(hud.counts, hud.half, hud.t, hud.floor)}</div>
         </div>
         <div className="lab-hud bl dim">
-          {t.foot(reach, threshold, halfLife, lang === 'zh' ? readingLabel.zh : readingLabel.en, mode)}
+          {t.foot(reach, threshold, fade, lang === 'zh' ? readingLabel.zh : readingLabel.en, mode)}
         </div>
       </div>
       {controls ? (
@@ -347,9 +347,9 @@ export function CrowdPlanBench({
             </div>
             <div className="grp">
               <span className="k">
-                {t.half_} {halfLife.toFixed(0)} s
+                {t.half_} {fade.toFixed(0)} s
               </span>
-              <input type="range" min={HALF.min} max={HALF.max} step={1} value={halfLife} aria-label={t.half_} style={{ width: 84 }} onChange={(e) => setHalfLife(Number(e.target.value))} />
+              <input type="range" min={FADE.min} max={FADE.max} step={1} value={fade} aria-label={t.half_} style={{ width: 84 }} onChange={(e) => setFade(Number(e.target.value))} />
             </div>
           </div>
           <div className="lab-ctl__row">
