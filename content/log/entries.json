@@ -1,5 +1,78 @@
 [
   {
+    "date": "2026-09-04",
+    "lead": {
+      "en": "Opened the first bench with a behaviour layer: one person walks through the room in plan, and the units whose floor has been occupied long enough form.",
+      "zh": "开了第一台带行为层的台架：一个人在房间平面里走动，看哪一群单元被激活。"
+    },
+    "body": {
+      "en": "- Every bench so far was the space layer alone, its input arranged by hand. This one brings the behaviour layer in: for every second a person is present, each patch of floor within their reach records one second of presence; each unit reads the mean over the floor it owns, forms once that reaches 15 s, and never unforms. The three numbers — 2 % decay per second, a threshold of 15, counting per cell — are the thirty-line prototype from 20 July, given a scale.\n- The units shrink with density: the same 4.74 m field holds 4×4, 6×6 or 8×8, the pitch being field width over unit count. At 8×8 the pitch is 0.60 m and a platform 0.51 m across, a little wider than a person's shoulders; 4×4 is the earlier room to the digit, kept as the control.\n- Findings: a patch of floor stays within reach of a walker for about 1.7 s, so passing or crossing lights nothing. Standing for 20 s at 8×8 grows a cross — the unit underfoot and its four neighbours form, the four diagonals reach half; the same stand at 4×4 lights only the unit underfoot, and no group can be read. Six laps or eight passes along one line never reach the threshold, leaving a half-formed ring or corridor.\n- Reach is a behavioural quantity: 0.22 m (the body alone) cannot even fill the cell underfoot, 0.6 m lights one unit, 1.0 m grows the cross, 1.2 m a 3×3 block. The default is 1.0 m, close to the far phase of Hall's personal distance, and it is a knob rather than a decision made for me.\n- A wrong turn: the first version treated the trace as a conserved quantity — one second shared out among the cells in reach — and summed the readings. The wider the reach, the less each cell received, so 'being near counts' and 'staying long forms' cancelled each other, and the threshold changed with unit size. Recording each patch in full and averaging the reading made the threshold independent of density, and let a group grow together, shallow at the edge and deep in the middle.\n- Limits: one person and no cat; the degree of forming is a continuous ratchet where the real engine locks bond by bond; the plan stops at 'how activated', not which form, and the table from behaviour to form is still mine to write.",
+      "zh": "- 此前的台架全是空间层，输入靠手排。这台把行为层接进来：人在场的每一秒，脚下「影响半径」以内的每块地面各记一秒的存在；每个单元读自己脚下那片地面的平均值，读满 15 秒就成形，成形不回退。三个数——每秒衰减 2%、阈值 15、按格计数——来自 7 月 20 日那个三十行原型，这里只是给了尺度。\n- 单元按密度缩小：同一块 4.74 米见方的场地上摆 4×4、6×6、8×8，格距按场地宽除以格数推。8×8 时格距 0.60 米、平台直径 0.51 米，比一个人的肩宽略宽；4×4 与原来那间房逐位相同，留作对照。\n- 结论：走过一块地面只在影响圈里待约 1.7 秒，穿行与斜穿一个单元都点不亮。站 20 秒在 8×8 上长出一个十字——脚下加四个正邻成形、四个斜邻半成；4×4 上同样的行为只点亮脚下那一个，读不出「群」。绕圈六圈和折返八趟都攒不到阈值，半成的连成一圈或一条走廊。\n- 影响半径是行为的量：0.22 米（只有身体）连脚下那格都填不满，0.6 米只点亮一个，1.0 米长出十字，1.2 米长成 3×3 的块。默认取 1.0 米，接近 Hall 个人距离的远相，做成旋钮，不替自己定死。\n- 弯路：第一版把痕迹做成守恒量（一秒分摊给圈里的格子）、读数取和，结果圈越大每格摊到越少，「靠近就有感」与「站久才成形」互相抵消，阈值还随单元大小变。改成圈里每块地各记满、读数取平均之后，阈值才不随密度变，一群单元才会边浅中深地一起长。\n- 边界：只有一个人，没有猫；成形程度是连续的棘轮，真引擎的锁定是逐键的；平面只到「激活程度」，不选形态，行为到形态的翻译表仍由我手写。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "image",
+        "src": "/log/2026-09-04-walk-plan-densities.webp",
+        "alt": {
+          "en": "Three unit sizes side by side for 4×4, 6×6 and 8×8, a person with a dashed reach circle, and three small room plans showing which units a standing person's reach covers at each density",
+          "zh": "4×4、6×6、8×8 三种单元尺寸并排，一个人带着虚线的影响圈，三张小平面示意每种密度下一个站着的人的影响圈盖住哪些单元"
+        },
+        "caption": {
+          "en": "Three densities on the same field: how small a unit gets, and whose floor a standing person reaches. At 8×8 a platform is 0.51 m across; one person covers three or four.",
+          "zh": "同一块场地三种密度：单元多小、一个人站着时影响圈盖住谁。8×8 的平台直径 0.51 米，一个人站定就压在三四个单元上。"
+        },
+        "width": 1600,
+        "height": 776
+      },
+      {
+        "kind": "image",
+        "src": "/log/2026-09-04-walk-plan-matrix.webp",
+        "alt": {
+          "en": "A five-by-three matrix of room plans: passing, diagonal, dwell, loop and pacing across 4×4, 6×6 and 8×8, with floor traces in green, the walked path as a thin line and formed units as purple discs",
+          "zh": "五行三列的房间平面：穿行、斜穿、驻留、绕圈、折返 × 4×4、6×6、8×8，绿色是地面痕迹，细线是走过的路，紫色圆盘是成形的单元"
+        },
+        "caption": {
+          "en": "Five behaviours by three densities, each run to the moment the person leaves: passing leaves nothing; a 20-second stand grows a cross of five at 8×8 and lights a single unit at 4×4.",
+          "zh": "五种行为 × 三种密度，每格真跑到人离场那一刻：穿行留不下东西，驻留 20 秒在 8×8 长出一个十字，4×4 只点亮一个。"
+        },
+        "width": 1200,
+        "height": 2000
+      },
+      {
+        "kind": "image",
+        "src": "/log/2026-09-04-walk-plan-reach.webp",
+        "alt": {
+          "en": "Dwell, pacing and loop on the 8×8 field at reach 0.22, 0.60, 1.00 and 1.20 m, the formed group growing from nothing to a 3×3 block as reach widens",
+          "zh": "8×8 场地上的驻留、折返、绕圈在影响半径 0.22、0.60、1.00、1.20 米下的结果，成形的一群随半径从零长到 3×3 的块"
+        },
+        "caption": {
+          "en": "Reach is the behavioural knob: with the body alone nothing forms; at 1.0 m a stand grows a cross, at 1.2 m a block. Pacing and looping widen their half-formed corridor and ring the same way.",
+          "zh": "影响半径是行为的量：只有身体时什么都不成形，1.0 米长出十字，1.2 米长成块；折返与绕圈的半成走廊和圈也照样变宽。"
+        },
+        "width": 1200,
+        "height": 1094
+      },
+      {
+        "kind": "image",
+        "src": "/log/2026-09-04-walk-plan-hysteresis.webp",
+        "alt": {
+          "en": "Five moments of one dwell run on the 8×8 field: entering, standing ten seconds, leaving, sixty seconds later and three minutes later; the green trace fades while the purple formed units remain",
+          "zh": "8×8 场地上驻留那一遍的五个时刻：进门、站了十秒、离场、离场后六十秒、离场后三分钟；绿色痕迹逐渐消失，紫色成形的单元留在原处"
+        },
+        "caption": {
+          "en": "After the person leaves, the deepest floor trace fades from 16.9 s to 0.4 s while the five formed units stay put — the hysteresis the project is built on, now visible.",
+          "zh": "人走后地面最深的痕迹从 16.9 秒退到 0.4 秒，成形的五个留在原处——项目立论的那个滞回，第一次看得见。"
+        },
+        "width": 1600,
+        "height": 662
+      }
+    ]
+  },
+  {
     "date": "2026-09-03",
     "lead": {
       "en": "Named the ring platform a \"unit\" and opened a new bench to study how two, three, four or nine of them can relate in spacing and height.",
