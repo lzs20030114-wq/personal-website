@@ -27,10 +27,10 @@ const COPY = {
     title: '几个人在场',
     sub: '平面 · 放人 · 拖 · 自走 → 单元实时成形',
     formed: (n: number, total: number) => `成形 ${n} / ${total}`,
-    line: (c: { people: number; walking: number; standing: number; held: number }, half: number, t: number) =>
-      `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${c.people} 人（走 ${c.walking} · 站 ${c.standing}${c.held ? ` · 拖 ${c.held}` : ''}）· 半成以上 ${half}`,
+    line: (c: { people: number; walking: number; standing: number; held: number }, half: number, t: number, floor: number) =>
+      `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${c.people} 人（走 ${c.walking} · 站 ${c.standing}${c.held ? ` · 拖 ${c.held}` : ''}）· 半成以上 ${half} · 地面最深 ${floor.toFixed(1)} s`,
     foot: (reach: number, thr: number, half: number, reading: string) =>
-      `影响半径 ${reach.toFixed(2)} m · 阈值 ${thr.toFixed(0)} s · 半衰期 ${half.toFixed(0)} s · ${reading}读 · 点地面放人 · 按住拖`,
+      `影响半径 ${reach.toFixed(2)} m · 阈值 ${thr.toFixed(0)} s · 半衰期 ${half.toFixed(0)} s · ${reading}读 · 绿盘 = 当前读数（会退）· 紫环 = 成形（不回退）· 点地面放人 · 按住拖`,
     hint: `点空地放一个人（最多 ${CROWD.MAX_PEOPLE} 个），按住一个人拖着走；「自走」= 演示用的随机漫步（随机目标 + 随机站 ${CROWD.PAUSE.min}–${CROWD.PAUSE.max} s），不是行为规则。几个人的影响圈重叠处每秒记几份——两个人站在一起，脚下的单元早一倍成形。`,
     grid: '格数',
     reading: '读法',
@@ -42,6 +42,7 @@ const COPY = {
     trace: '痕迹',
     add: '+ 人',
     remove: '− 人',
+    clearPeople: '清人',
     clear: '清痕迹',
     speed: '步速',
     time: '时间',
@@ -51,10 +52,10 @@ const COPY = {
     title: 'A few people',
     sub: 'Plan · place · drag · wander → units form live',
     formed: (n: number, total: number) => `formed ${n} / ${total}`,
-    line: (c: { people: number; walking: number; standing: number; held: number }, half: number, t: number) =>
-      `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${c.people} people (${c.walking} walking · ${c.standing} standing${c.held ? ` · ${c.held} held` : ''}) · ${half} at half or more`,
+    line: (c: { people: number; walking: number; standing: number; held: number }, half: number, t: number, floor: number) =>
+      `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${c.people} people (${c.walking} walking · ${c.standing} standing${c.held ? ` · ${c.held} held` : ''}) · ${half} at half or more · deepest floor trace ${floor.toFixed(1)} s`,
     foot: (reach: number, thr: number, half: number, reading: string) =>
-      `reach ${reach.toFixed(2)} m · threshold ${thr.toFixed(0)} s · half-life ${half.toFixed(0)} s · ${reading} · click to place · hold to drag`,
+      `reach ${reach.toFixed(2)} m · threshold ${thr.toFixed(0)} s · half-life ${half.toFixed(0)} s · ${reading} · green disc = live reading (recedes) · purple ring = formed (never undone) · click to place · hold to drag`,
     hint: `Click empty floor to place a person (up to ${CROWD.MAX_PEOPLE}); hold one to drag. “Wander” is a demo device — a random target, then a random ${CROWD.PAUSE.min}–${CROWD.PAUSE.max} s stand — not a behaviour rule. Where reaches overlap the floor counts every person, so two people standing together form the unit underfoot twice as fast.`,
     grid: 'grid',
     reading: 'reading',
@@ -66,6 +67,7 @@ const COPY = {
     trace: 'trace',
     add: '+ person',
     remove: '− person',
+    clearPeople: 'clear people',
     clear: 'clear trace',
     speed: 'pace',
     time: 'time',
@@ -116,6 +118,7 @@ export function CrowdPlanBench({
   const [hud, setHud] = useState({
     formed: 0,
     half: 0,
+    floor: 0,
     t: 0,
     total: PLAN.GRID_DEF * PLAN.GRID_DEF,
     counts: { people: CROWD.OPENING.length, walking: 0, standing: CROWD.OPENING.length, held: 0 },
@@ -190,7 +193,7 @@ export function CrowdPlanBench({
       const key = `${Math.floor(sim.t)}|${formed}|${half}|${counts.people}|${counts.walking}|${counts.held}`;
       if (key !== lastHud.current) {
         lastHud.current = key;
-        setHud({ formed, half, t: sim.t, total: sim.layout.units.length, counts });
+        setHud({ formed, half, floor: sim.field.max(), t: sim.t, total: sim.layout.units.length, counts });
       }
     },
     [],
@@ -254,7 +257,7 @@ export function CrowdPlanBench({
         </div>
         <div className="lab-hud br">
           <div className="num">{t.formed(hud.formed, hud.total)}</div>
-          <div className="dim">{t.line(hud.counts, hud.half, hud.t)}</div>
+          <div className="dim">{t.line(hud.counts, hud.half, hud.t, hud.floor)}</div>
         </div>
         <div className="lab-hud bl dim">
           {t.foot(reach, threshold, halfLife, lang === 'zh' ? readingLabel.zh : readingLabel.en)}
@@ -362,6 +365,16 @@ export function CrowdPlanBench({
                 }}
               >
                 {t.remove}
+              </button>
+              <button
+                type="button"
+                title={lang === 'zh' ? '撤掉全部人，看痕迹怎么退、成形怎么留' : 'remove everyone and watch the trace fade while the formed units stay'}
+                onClick={() => {
+                  simRef.current?.clearPeople();
+                  paint();
+                }}
+              >
+                {t.clearPeople}
               </button>
               <button
                 type="button"

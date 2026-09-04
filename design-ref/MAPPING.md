@@ -1091,4 +1091,5 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
 - **差分守门**：`lab-variants.ts` 加 no 15（plans 空、轴 格数 × 读法 = 6），冻结清单 242 → 248 行；「九台六段」断言改「十台六段」。
 - **主页**：LABS 卡 14 → 15（A few people），`lg:grid-cols-14 → 15`，统计条 Demos 15、Tests 502。
 - **Work log**：Lab.14 一条入池（58 条），四张线稿 webp 进 `public/log/`（PNG → WebP 走无头 Chromium 的 canvas，本机无 cwebp）。
+- **同日返工（用户看真机「衰减不明显、每个单元的状态显示不明显」）**：`planDraw.ts` 单元改两个量分开画——绿盘 = 当前读数（随读数涨缩、会退）· 紫环 = 成形进度（只涨不退，长满加淡紫底）；地面痕迹指数压缩 → √(v/2T)，绿盘尺子取 2×阈值（按阈值封顶时人一走开头几秒满盘不动）；两台 HUD 加「地面最深 x s」；Lab.15 加「清人」。物理与守门零改。
 

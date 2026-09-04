@@ -38,10 +38,11 @@ const COPY = {
     formed: (n: number, total: number) => `成形 ${n} / ${total}`,
     half: (n: number) => `半成以上 ${n}`,
     read: (v: number) => `最高读数 ${v.toFixed(1)} s`,
+    floor: (v: number) => `地面最深 ${v.toFixed(1)} s`,
     state: { outside: '离场', walk: '走', dwell: '站', idle: '站' },
     t: (s: number) => `t ${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`,
     foot: (reach: number, thr: number, half: number, reading: string) =>
-      `影响半径 ${reach.toFixed(2)} m · 阈值 ${thr.toFixed(0)} s · 半衰期 ${half.toFixed(0)} s · ${reading}读 · 绿 = 地面痕迹 · 紫 = 成形程度（不回退）`,
+      `影响半径 ${reach.toFixed(2)} m · 阈值 ${thr.toFixed(0)} s · 半衰期 ${half.toFixed(0)} s · ${reading}读 · 绿盘 = 当前读数（会退）· 紫环 = 成形进度（不回退）`,
     hint: '自由模式：点地面，人走过去；停着就是驻留；「离场」从最近的门出去。规则三个数（衰减 2%/s · 阈值 15 s）来自作者 2026-07-20 的原型；影响半径是行为的量，做成旋钮。',
     grid: '格数',
     path: '行为',
@@ -63,10 +64,11 @@ const COPY = {
     formed: (n: number, total: number) => `formed ${n} / ${total}`,
     half: (n: number) => `${n} at half or more`,
     read: (v: number) => `peak reading ${v.toFixed(1)} s`,
+    floor: (v: number) => `deepest floor trace ${v.toFixed(1)} s`,
     state: { outside: 'left', walk: 'walking', dwell: 'standing', idle: 'standing' },
     t: (s: number) => `t ${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`,
     foot: (reach: number, thr: number, half: number, reading: string) =>
-      `reach ${reach.toFixed(2)} m · threshold ${thr.toFixed(0)} s · half-life ${half.toFixed(0)} s · ${reading} · green = floor trace · purple = formed (never undone)`,
+      `reach ${reach.toFixed(2)} m · threshold ${thr.toFixed(0)} s · half-life ${half.toFixed(0)} s · ${reading} · green disc = live reading (recedes) · purple ring = formed (never undone)`,
     hint: 'Free mode: click the floor and the person walks there; standing still is dwelling; “leave” exits by the nearest door. Decay 2 %/s and threshold 15 s are the author’s 2026-07-20 prototype; reach is a behavioural quantity, so it is a knob.',
     grid: 'grid',
     path: 'behaviour',
@@ -130,7 +132,7 @@ export function WalkPlanBench({
   const [threshold, setThreshold] = useState<number>(PLAN.THRESHOLD);
   const [halfLife, setHalfLife] = useState<number>(halfFromRate(PLAN.DECAY));
   const [speed, setSpeed] = useState<number>(PLAN.SPEED.def);
-  const [hud, setHud] = useState({ formed: 0, half: 0, max: 0, t: 0, state: 'walk' as 'outside' | 'walk' | 'dwell' | 'idle', total: PLAN.GRID_DEF * PLAN.GRID_DEF });
+  const [hud, setHud] = useState({ formed: 0, half: 0, max: 0, floor: 0, t: 0, state: 'walk' as 'outside' | 'walk' | 'dwell' | 'idle', total: PLAN.GRID_DEF * PLAN.GRID_DEF });
 
   // `/lab#lab14-<path>` 直达某种行为
   useEffect(() => {
@@ -217,6 +219,7 @@ export function WalkPlanBench({
           formed: s.formed().length,
           half: s.countAtLeast(0.5),
           max: s.maxInput(),
+          floor: sim.field.max(),
           t: sim.t,
           state: sim.walker.state,
           total: sim.layout.units.length,
@@ -256,7 +259,7 @@ export function WalkPlanBench({
         <div className="lab-hud br">
           <div className="num">{t.formed(hud.formed, hud.total)}</div>
           <div className="dim">
-            {t.t(hud.t)} · {t.half(hud.half)} · {t.read(hud.max)} · {t.state[hud.state]}
+            {t.t(hud.t)} · {t.half(hud.half)} · {t.read(hud.max)} · {t.floor(hud.floor)} · {t.state[hud.state]}
           </div>
         </div>
         <div className="lab-hud bl dim">

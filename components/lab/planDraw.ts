@@ -71,16 +71,20 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
   ctx.fillRect(ox - h, oy - h, 2 * h, 2 * h);
   ctx.globalAlpha = 1;
 
-  // 痕迹场：有痕迹的格子按浓度（存在·秒）画绿，阈值处约七成
+  // 痕迹场：有痕迹的格子按浓度（存在·秒）画绿——**线性**映射，阈值处 0.55，减半就淡一半
+  // （首版用 1−e^(−v/12) 的指数压缩，痕迹减半透明度只从 0.74 掉到 0.49，用户看真机「衰减不明显」）
   if (s.showTrace) {
     const f = s.field;
     const cs = f.cell * sc;
+    // 量程取 2×阈值：站着的读数常在阈值之上（16–20 s），按阈值封顶的话衰减的头几秒画面纹丝不动；
+    // 开方是为了让走过留下的 1–2 s 浅痕迹仍看得见（线性下只有 0.03）
+    const cap = 2 * s.act.threshold;
     ctx.fillStyle = pal.accent;
     for (let idx = 0; idx < f.data.length; idx++) {
       const v = f.data[idx];
       if (v <= 1e-3) continue;
       const [x, y] = f.cellCenter(idx);
-      ctx.globalAlpha = Math.max(0.05, Math.min(0.75, 1 - Math.exp(-v / 12)));
+      ctx.globalAlpha = Math.max(0.04, 0.5 * Math.sqrt(Math.min(1, v / cap)));
       ctx.fillRect(X(x) - cs / 2, Y(y) - cs / 2, cs + 0.5, cs + 0.5);
     }
     ctx.globalAlpha = 1;
@@ -137,42 +141,56 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
   ctx.stroke();
   ctx.globalAlpha = 1;
 
-  // 单元：平台外缘（发丝线）· 成形程度（紫圈从芯长出）· 当前读数（芯外细绿弧）· 芯
+  // 单元：两个量分开画（用户看真机「每个单元的状态显示不明显」——首版把当前读数画成芯外两像素的细弧，
+  // 成形程度画成半透明紫盘压在绿痕迹上，两者糊成一团）：
+  //   · **当前读数**（会退的量）= 实心绿盘，半径从芯长到平台外缘随「读数 / 阈值」涨缩——人走了它就缩回去；
+  //   · **成形进度**（只涨不退的棘轮）= 紫环，半径同一尺子；长满 = 平台外缘上一圈粗紫环 + 淡紫底，
+  //     读作「这台已经下来了」。绿盘缩回去而紫环留着，就是滞回本身。
+  //   · 平台外缘发丝线 = 潜在占位；芯 = 墨点。
+  //   · 绿盘的尺子是 **2×阈值**（不是阈值）：站着的读数常到 16–20 s，按阈值封顶的话人一走开头几秒
+  //     绿盘纹丝不动（读数从 17 掉到 15 之前满盘），用户看真机就是这个观感；按 2×阈值，读数一掉盘就缩。
+  //     读数 = 阈值时绿盘到平台外缘的一半，成形与否由紫环说，不靠绿盘说。
   const platPx = L.platR * sc;
   const mastPx = Math.max(1.6, L.mastR * sc);
+  const span = platPx - mastPx;
   for (const u of L.units) {
     const cx = X(u.x);
     const cy = Y(u.y);
+    const d = s.act.degree[u.i];
+    const frac = Math.min(1, s.act.input[u.i] / (2 * s.act.threshold));
+    // 潜在占位
     ctx.strokeStyle = pal.ink;
-    ctx.globalAlpha = 0.22;
+    ctx.globalAlpha = 0.2;
     ctx.lineWidth = 0.8;
     ctx.beginPath();
     ctx.arc(cx, cy, platPx, 0, Math.PI * 2);
     ctx.stroke();
-    const d = s.act.degree[u.i];
-    if (d > 1e-6) {
-      const r = mastPx + d * (platPx - mastPx);
+    // 已成形：淡紫底
+    if (d >= 1 - 1e-9) {
       ctx.fillStyle = pal.accent2;
-      ctx.globalAlpha = 0.22 + 0.5 * d;
+      ctx.globalAlpha = 0.3;
       ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.arc(cx, cy, platPx, 0, Math.PI * 2);
       ctx.fill();
-      if (d >= 1 - 1e-9) {
-        ctx.strokeStyle = pal.accent2;
-        ctx.globalAlpha = 0.95;
-        ctx.lineWidth = 1.4;
-        ctx.stroke();
-      }
     }
-    const frac = Math.min(1, s.act.input[u.i] / s.act.threshold);
-    if (frac > 0.02) {
-      ctx.strokeStyle = pal.accent;
-      ctx.globalAlpha = 0.9;
-      ctx.lineWidth = 1.2;
+    // 当前读数：实心绿盘
+    if (frac > 0.01) {
+      ctx.fillStyle = pal.accent;
+      ctx.globalAlpha = 0.5;
       ctx.beginPath();
-      ctx.arc(cx, cy, mastPx + 2.2, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);
+      ctx.arc(cx, cy, mastPx + frac * span, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // 成形进度：紫环（不回退）
+    if (d > 1e-6) {
+      ctx.strokeStyle = pal.accent2;
+      ctx.globalAlpha = d >= 1 - 1e-9 ? 1 : 0.85;
+      ctx.lineWidth = d >= 1 - 1e-9 ? 3 : 1.6;
+      ctx.beginPath();
+      ctx.arc(cx, cy, mastPx + d * span, 0, Math.PI * 2);
       ctx.stroke();
     }
+    // 芯
     ctx.fillStyle = pal.ink;
     ctx.globalAlpha = 0.9;
     ctx.beginPath();
