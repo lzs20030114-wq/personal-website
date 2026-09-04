@@ -1061,3 +1061,13 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
 - **差分守门**：Lab.13 轴 [关系, 时序] ⇒ 160，冻结清单 126 → 206 行。
 - **`/lab` 规格表** +2 行（Timing / Seams），lede 改口径；主页卡 meta 加「2 timings」；统计条 Tests 467。
 
+## 27. 圆筒环捏分对齐方形（2026-09-03，用户「圆形的捏分，中间的空间还没做」）
+
+机理、标定与数字在 项目二_皮肤单元lab.md §19，这里只记落点与影响面。
+
+- **Lab.10 捏分档换构造**：`skin-split-ring.ts` 从「Lab.12 十级直接上环」改为「方形捏分的构造 + 十条面类引擎」（变高 · 缝 100 · 居中等步 · 一圈等挑出 83.2）。编制（镜像 + 相位 5）不变。
+- **台架**：`SkinRingBench` 捏分档单元换源、HUD 口径改、枢轴与取景按带长等比（338/202）；其余三档逐位不变。
+- **页面**：`/lab` Lab.10 lede 与规格表 Pinch/Flat 两行改口径；主页统计条 Tests 457。
+- **守门**：`skin-split-ring.test.ts` 重写 8 项（+5）；线稿脚本 `scripts/skin-ring/ring-split-draft.mjs` 新增。
+- **差分清单不变**（仍是 `10:split` 一档）。
+

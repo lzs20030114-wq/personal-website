@@ -449,15 +449,15 @@ export default function LabPage() {
         <Bench
           no="10"
           title="Cylinder of units"
-          lede="Twenty narrow bands stood in a circle: hanging slack they close into a tube, and as they contract each one folds out its ledge — together, a platform ringing the cylinder. Four plans. By default the ledge climbs and falls once around, a stair wrapped on the tube; hold it level on one form; let the form drift bulb → box → bulb; or bend the pinched series into the ring, so the box splits into two platforms and closes again over a single turn — each level placed twice, mirrored, and because the seam centre sits at the same height on every level the platform reads as one band that opens and shuts, not as twenty different shelves. Set the radius yourself."
+          lede="Twenty narrow bands stood in a circle: hanging slack they close into a tube, and as they contract each one folds out its ledge — together, a platform ringing the cylinder. Four plans. By default the ledge climbs and falls once around, a stair wrapped on the tube; hold it level on one form; let the form drift bulb → box → bulb; or pinch it apart — on one side two shelves 100 px apart, on the opposite side one slab, ten steps of gap between, the same construction as the square ring's pinch with every band at one depth so the plan stays a circle. The seam centre stays level all round, so the platform reads as one band that opens and shuts, not as twenty different shelves. Set the radius yourself."
           accent="var(--accent-2)"
           specs={[
             ['Ring', '20 bands · level, undulating, drifting, or pinched'],
             ['Height', 'Same form, one lead per station — 18% ↔ 71%'],
             ['Solve', '1 / 11 / 10 engines, 20 placements — same run'],
             ['Closure', 'Palindrome (11 levels) or exact mirror (10) — the seam is one step wide'],
-            ['Pinch', 'Lab.09 levels verbatim — no ring-scale, index-bound mechanisms'],
-            ['Flat', 'Pinched: seam centre 138 + 114·r px — level-independent'],
+            ['Pinch', 'Shelves 16 px, gap 0 → 100, height in even steps — Lab.11’s construction, one reach (83 px) all round'],
+            ['Flat', 'Pinched: seam centre level all round (symmetric padding) — the shelves part evenly'],
             ['Radius', 'Live slider · gaps widen with it'],
             ['Skin', 'Membrane 0–1 · 0.35 by default, 0.15 under the pinch'],
             ['Ceiling', 'Ring plate · fixed masts, skin gathers down them'],
