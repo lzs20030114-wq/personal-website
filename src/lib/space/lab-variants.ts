@@ -17,6 +17,7 @@ import { SKIN_UNITS } from './skin-data';
 import { DUAL_MID_OPTIONS } from './skin-dual';
 import { SQUARE_GRID, SQUARE_MORPH } from './skin-square';
 import { CLUSTER_PLANS, CLUSTER_RELATIONS, CLUSTER_TIMINGS } from './unit-cluster';
+import { PATHS, PLAN, READINGS } from './unit-activation';
 
 export interface VariantOption {
   key: string;
@@ -110,7 +111,16 @@ const DUAL_GAP_AXIS: VariantAxis = {
   options: DUAL_MID_OPTIONS.map((m) => ({ key: String(m), label: String(m) })),
 };
 
-/** 八台五段（页序）：Ⅰ 单元 06–08 · Ⅱ 序列 09 · Ⅲ 环 10–11 · Ⅳ 场 12 · Ⅴ 单元之间 13 */
+/** Lab.14 一个人走过（2026-09-04 立项）：编制 = 行为（六条路，含自由），格数三档与读法两档为正交轴。
+ *  影响半径 / 阈值 / 半衰期 / 步速 / 时间倍速是连续量，不算差分。 */
+export const WALK_PATH_OPTIONS = PATHS.map((p) => ({ key: p.key, label: p.zh }));
+const WALK_GRID_AXIS: VariantAxis = {
+  axis: '格数',
+  options: PLAN.GRIDS.map((n) => ({ key: `g${n}`, label: `${n}×${n}` })),
+};
+const WALK_READING_AXIS: VariantAxis = { axis: '读法', options: READINGS.map((r) => ({ key: r.key, label: r.zh })) };
+
+/** 九台六段（页序）：Ⅰ 单元 06–08 · Ⅱ 序列 09 · Ⅲ 环 10–11 · Ⅳ 场 12 · Ⅴ 单元之间 13 · Ⅵ 一个人 14 */
 export const LAB_VARIANTS: readonly BenchVariants[] = [
   { no: '06', key: 'unit', zh: '二维皮肤单元', en: 'Contractile skin units', plans: [], axes: [] },
   { no: '07', key: 'solid', zh: '立体带', en: 'Skin units, solid', plans: [], axes: [] },
@@ -158,6 +168,14 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     // 按钮变灰留位——档位仍在清单里，是「有这一档但这一档不成立」，不是丢了
     plans: CLUSTER_PLAN_OPTIONS.map((p) => ({ ...p, sub: FORM_SUB })),
     axes: [CLUSTER_RELATION_AXIS, CLUSTER_TIMING_AXIS],
+  },
+  {
+    no: '14',
+    key: 'walk',
+    zh: '一个人走过',
+    en: 'A person walks through',
+    plans: WALK_PATH_OPTIONS,
+    axes: [WALK_GRID_AXIS, WALK_READING_AXIS],
   },
 ];
 

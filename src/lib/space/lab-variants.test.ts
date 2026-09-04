@@ -219,23 +219,60 @@ const FROZEN = [
   '13:nine.stepped:touchStep:stagger',
   '13:nine.stepped:overlap:sync',
   '13:nine.stepped:overlap:stagger',
+  // Ⅵ 一个人（Lab.14 一个人走过 ⇒ 行为 6 × 格数 3 × 读法 2）
+  '14:through:g4:nearest',
+  '14:through:g4:disk',
+  '14:through:g6:nearest',
+  '14:through:g6:disk',
+  '14:through:g8:nearest',
+  '14:through:g8:disk',
+  '14:diagonal:g4:nearest',
+  '14:diagonal:g4:disk',
+  '14:diagonal:g6:nearest',
+  '14:diagonal:g6:disk',
+  '14:diagonal:g8:nearest',
+  '14:diagonal:g8:disk',
+  '14:dwell:g4:nearest',
+  '14:dwell:g4:disk',
+  '14:dwell:g6:nearest',
+  '14:dwell:g6:disk',
+  '14:dwell:g8:nearest',
+  '14:dwell:g8:disk',
+  '14:loop:g4:nearest',
+  '14:loop:g4:disk',
+  '14:loop:g6:nearest',
+  '14:loop:g6:disk',
+  '14:loop:g8:nearest',
+  '14:loop:g8:disk',
+  '14:pace:g4:nearest',
+  '14:pace:g4:disk',
+  '14:pace:g6:nearest',
+  '14:pace:g6:disk',
+  '14:pace:g8:nearest',
+  '14:pace:g8:disk',
+  '14:free:g4:nearest',
+  '14:free:g4:disk',
+  '14:free:g6:nearest',
+  '14:free:g6:disk',
+  '14:free:g8:nearest',
+  '14:free:g8:disk',
 ];
 
 describe('lab-variants · 项目二台架差分清单', () => {
-  it('八台五段：编号 06–13 连续、不重复', () => {
-    expect(LAB_VARIANTS.map((b) => b.no)).toEqual(['06', '07', '08', '09', '10', '11', '12', '13']);
+  it('九台六段：编号 06–14 连续、不重复', () => {
+    expect(LAB_VARIANTS.map((b) => b.no)).toEqual(['06', '07', '08', '09', '10', '11', '12', '13', '14']);
     expect(new Set(LAB_VARIANTS.map((b) => b.key)).size).toBe(LAB_VARIANTS.length);
   });
 
-  it('206 种离散组合逐条与冻结清单相同（少一档即红）', () => {
+  it('242 种离散组合逐条与冻结清单相同（少一档即红）', () => {
     const combos = allCombos();
-    expect(combos.length).toBe(206);
+    expect(combos.length).toBe(242);
     expect(combos).toEqual(FROZEN);
   });
 
-  it('每台组合数 = 收纳前各台组合之和（1 + 1 + 3 + (2+2) + (9+1) + 22 + 5）+ Lab.13 的 160', () => {
+  it('每台组合数 = 收纳前各台组合之和（1 + 1 + 3 + (2+2) + (9+1) + 22 + 5）+ Lab.13 的 160 + Lab.14 的 36', () => {
     const per = Object.fromEntries(LAB_VARIANTS.map((b) => [b.no, benchCombos(b).length]));
-    expect(per).toEqual({ '06': 1, '07': 1, '08': 3, '09': 4, '10': 10, '11': 22, '12': 5, '13': 160 });
+    expect(per).toEqual({ '06': 1, '07': 1, '08': 3, '09': 4, '10': 10, '11': 22, '12': 5, '13': 160, '14': 36 });
   });
 
   it('组合 id 唯一（同名档不会在清单里被折叠掉）', () => {

@@ -1071,3 +1071,15 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
 - **守门**：`skin-split-ring.test.ts` 重写 8 项（+5）；线稿脚本 `scripts/skin-ring/ring-split-draft.mjs` 新增。
 - **差分清单不变**（仍是 `10:split` 一档）。
 
+## 28. Lab.14 一个人走过：第六段 Ⅵ A person（2026-09-04，用户立项「先做平面，研究一个人在空间中运动时这些单元哪些被激活」+ 纠偏「单元更小、多于 4×4 甚至 8×8、触发一群单元围绕行为形成空间」）
+
+机理、出处与线稿结论在 项目二_激活平面lab.md，这里只记落点与影响面。**稿里没有这件东西**（Lab-Modernist 稿只有一列台架），属站方增补，版式语言全部复用稿内既有构件与 §25 的段头 / 两层控制条。
+
+- **`/lab` 页**：Ⅴ Between units 之后加 `ScaleRule` Ⅵ A person（Lab.14）+ `Bench no="14"`（lede / 规格表八行，顶线取 2D 绿——这台没有 WebGL）；页首 kicker「fifteen → sixteen live instruments」、页脚 15 → 16 instruments。编号顺延不重排。
+- **台架**：新 `components/lab/WalkPlanBench.tsx`——**全站第一台 2D canvas 台架**（此前 2D 一律 SVG、3D 一律 WebGL）：热力场几千格逐帧重画，SVG 逐格改属性不划算；逻辑 700×520 与 WebGL 台架同尺，DPR ≤ 2；配色从容器 CSS 变量读（`--ink / --accent / --accent-2 / --n500 / --paper`），/lab 深色与 `on-light` 修饰符各自解析。控制条两层照 §25：第一层 行为 / 格数 / 读法 / 影响半径 / 阈值 / 半衰期，第二层 运转 / 痕迹 / 重播 / 离场 / 步速 / 时间 ×1·×3·×8；`lab-ctl__hint` 一行说自由模式与规则出处。reduced-motion 不自动播。
+- **模块**：`src/lib/space/unit-activation.ts`（纯模型零 DOM）+ 守门 20 项；尺度全部从 `skin-grid`（`ringCellPitch / ringOuter / ringGridSpan / roomSpan`）换算成米，4×4 与 Lab.12 逐位相同。
+- **差分守门**：`lab-variants.ts` 加 no 14（行为 6 × 格数 3 × 读法 2 = 36），冻结清单 206 → 242 行；「八台五段」两条断言改「九台六段」；`/lab#lab14-<path>` 直达。
+- **主页**：LABS 卡 13 → 14（A person walks through，绿系 = 2D），`lg:grid-cols-13 → 14`，统计条 Demos 14、Tests 492。
+- **线稿**：`scripts/unit-activation/atlas.mjs`（plan / matrix / reach / hysteresis 四张 SVG + 同名 HTML 包裹；headless Chromium 新模式的 window-size 含窗框，直接截 svg 会裁掉底部，故截 HTML 并多给 100px 窗高）。
+- `vercel.json` 加本分支条目；案例页零改（项目 II 主图仍是 Lab.12）。
+

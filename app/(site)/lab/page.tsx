@@ -15,15 +15,18 @@ import { SkinGridBench } from '../../../components/lab/SkinGridBench';
 import { SkinDualBench } from '../../../components/lab/SkinDualBench';
 import { SquareRingBench } from '../../../components/lab/SquareRingBench';
 import { SkinClusterBench } from '../../../components/lab/SkinClusterBench';
+import { WalkPlanBench } from '../../../components/lab/WalkPlanBench';
 
 export const metadata = { title: 'The lab' };
 
 /**
- * The lab（Lab-Modernist 稿 → MAPPING §7）：十三台真求解器台架，深色语言与 case/log 一致。
+ * The lab（Lab-Modernist 稿 → MAPPING §7）：十四台真求解器台架，深色语言与 case/log 一致。
  * ★ 版式逐项对稿：300px 定宽左栏 + 44px 间距；规格表竖排行（92px 标签列 + 发丝线分隔）；
  *   图框 3px 彩色顶线（2D 绿 / 3D 紫）+ 极淡填充；标题 72px；页脚两链。
  * 每台跑的是站内 TS 内核，不是视频、不是二次实现：Lab.01–05 = src/lib/linkage（封盘零改，
- * 项目一），Lab.06–13 = src/lib/space（项目二皮肤单元引擎，Python 研究代码的 1:1 移植）。
+ * 项目一），Lab.06–13 = src/lib/space（项目二皮肤单元引擎，Python 研究代码的 1:1 移植）；
+ * Lab.14 = src/lib/space/unit-activation（项目二第一台带行为层的台架：一个人走过，哪一群单元被激活——
+ * 平面、2D canvas，规则来自作者 07-20 的原型；2026-09-04 立项，第六段 Ⅵ A person）。
  *
  * 项目二七台按**尺度**收成四段（2026-09-03 用户拍板「七台四段」——此前九台按立项时间排，
  * 读者看完 4×4 的房间又跳回单条带）：一条带 → 一排 → 一圈 → 一间房；段内按形态族
@@ -34,6 +37,7 @@ export const metadata = { title: 'The lab' };
  * `/lab#labNN-<plan>` 直达（如 #lab10-split）。编号按新页序连续；文档里的旧号见 CLAUDE.md 对照表。
  * 2026-09-03 加第五段 Ⅴ Between units（Lab.13 单元关系）：尺度主轴到「一间房」封顶，Ⅴ 开的是第二条轴
  * ——几个单元**之间**能是什么关系（距离 / 高度 / 形态），编号顺延不重排。
+ * 2026-09-04 加第六段 Ⅵ A person（Lab.14 一个人走过）：行为层第一次接进来，问的是「人这样走一遍，哪一群单元被激活」。
  * 2026-08-18 起页面按项目分组（MAPPING §16）——log 页先例：多项目共用一条主线。
  */
 const KICKER: CSSProperties = {
@@ -234,7 +238,7 @@ export default function LabPage() {
       <div className="shell pg-dark" data-pt-content>
         <header style={{ padding: '64px 0 40px', borderBottom: 'var(--hair)' }}>
           <div className="flex items-baseline justify-between" style={{ gap: 32 }}>
-            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · fifteen live instruments</p>
+            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · sixteen live instruments</p>
             <span style={LEGEND}>
               <span className="flex items-center" style={{ gap: 6 }}>
                 <span style={{ width: 9, height: 9, background: 'var(--accent)' }} />
@@ -540,6 +544,27 @@ export default function LabPage() {
           <SkinClusterBench />
         </Bench>
 
+        <ScaleRule n="Ⅵ" label="A person" sub="Lab.14 · behaviour reaching the units" />
+
+        <Bench
+          no="14"
+          title="A person walks through"
+          lede="The first bench with a behaviour layer. One person walks through Lab.12’s room — passing, crossing, standing, looping, pacing, or wherever you click — and every second of presence marks the floor within reach. Each unit reads the floor it owns; once that floor has held presence for 15 s on average, the unit forms, and a formed unit never unforms. The units are smaller and more numerous than Lab.12’s so that what forms is a group, not a point: at 8×8 a twenty-second stand grows a cross of five, pacing carves a corridor, a loop leaves a ring, passing leaves nothing. Decay 2 %/s and the 15 s threshold are the author’s July prototype; reach is the behavioural knob."
+          accent="var(--accent)"
+          specs={[
+            ['Field', 'Lab.12’s room and field · 4×4 / 6×6 / 8×8 · unit scaled with pitch (4×4 = Lab.12 verbatim)'],
+            ['Trace', 'Presence-seconds on a 0.1 m floor grid, within reach of the person · decays 2 %/s'],
+            ['Reading', 'By cell (Voronoi = the aisle lines) or footprint only · mean over the cells a unit owns'],
+            ['Forming', 'Mean ≥ 15 s ⇒ formed · degree = purple ring growing from mast to rim · never undone'],
+            ['Reach', '0.22–1.2 m, default 1.0 m (Hall’s personal distance) · the behavioural knob'],
+            ['Behaviours', 'Passing · diagonal · dwell 20 s · loop ×6 · pacing ×8 · free (click the floor)'],
+            ['Result', '8×8, reach 1.0: passing forms none · dwell forms a cross of 5 (+4 half) · pacing a corridor · loop a ring'],
+            ['Not here', 'Which form a unit takes — the behaviour → form rules are the author’s to write'],
+          ]}
+        >
+          <WalkPlanBench />
+        </Bench>
+
         <footer
           className="flex flex-wrap items-baseline justify-between"
           style={{ gap: 32, padding: '26px 0 72px' }}
@@ -553,7 +578,7 @@ export default function LabPage() {
               color: 'var(--n500)',
             }}
           >
-            15 instruments · 03 kernels · all live
+            16 instruments · 03 kernels · all live
           </span>
           <span
             className="flex"
