@@ -51,6 +51,8 @@ export interface PlanPerson {
   keepOut?: number;
   /** 走着且走廊开着：正前方一条 2D 宽的道不落痕迹（画成胶囊缺口） */
   lane?: boolean;
+  /** 视线（弧度）；省略 = 朝向。视野扇形沿它，走廊沿朝向 */
+  gaze?: number;
 }
 
 export interface PlanScene {
@@ -102,8 +104,9 @@ function drawAttention(ctx: CanvasRenderingContext2D, p: PlanPerson, cx: number,
     ctx.globalAlpha = 1;
     return;
   }
-  const a0 = p.heading - fov / 2;
-  const a1 = p.heading + fov / 2;
+  const gaze = p.gaze ?? p.heading;
+  const a0 = gaze - fov / 2;
+  const a1 = gaze + fov / 2;
   const wedge = (c: CanvasRenderingContext2D) => {
     c.beginPath();
     if (full) c.arc(cx, cy, R, 0, Math.PI * 2);
@@ -368,6 +371,13 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.lineTo(cx + Math.cos(p.heading) * r, cy + Math.sin(p.heading) * r);
+    ctx.stroke();
+    // 脸：身体圆周上视线那一侧加粗一段绿弧（站着转头时它离开朝向那条线，扇面跟着它走）
+    const g = p.gaze ?? p.heading;
+    ctx.strokeStyle = pal.accent;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, g - 0.6, g + 0.6);
     ctx.stroke();
   }
 

@@ -62,6 +62,13 @@
  * 三个都开时：站着 ⇒ 前方半圆减去 D 以内 = 一道朝前的弧（影响半径必须 > D 才有东西可招——
  * 4×4 下 D 已超过默认的 1.0 m）；走着 ⇒ 前方两侧各一瓣，正前方留道。
  * 已成形的单元是障碍物，人绕不绕开它是作者行为层的规则，这里的行走不避让（局限，如实带着）。
+ *
+ * ## 视线 ≠ 朝向（2026-09-05 第二轮，用户「站着时头会转，现在扇面钉在最后一步的方向上，站久了那道弧只在一个方向」）
+ *
+ * 朝向 = 身体（`heading`，走的方向；走廊沿它开），视线 = 头（`gaze`；视野扇形沿它转）。走着时视线跟着朝向；
+ * 站着时**转头**（`lookAround`）：每隔 1.5–6 s 挑一个新的看向（身体前方 ±110° 以内——头加眼睛能转到的范围，
+ * 再远身体就得跟着转；三成几率回看正前方），头以 3 rad/s 转过去。带种子的随机数，同种子逐位可复现（守门靠它）。
+ * **这是演示装置不是行为规则**（作者行为层的「视线方向」变量取自实证，这里只给它一个会动的壳）；默认关 ⇒ 视线 = 朝向。
  */
 import { RING } from './skin-ring';
 import { MM_PER_UNIT, RIG_SCALE, RING_GRID, ringCellPitch, ringGridSpan, ringOuter, roomSpan } from './skin-grid';
@@ -138,8 +145,40 @@ export const PLAN = {
    * 「人有朝向、有身体」的台架默认（2026-09-05 用户拍板「按你的做」）：视野 180° · 让位一肘 · 走廊随让位 ·
    * 影响半径 1.5（这一档的含义是看到多远）。模块默认仍是旧口径（全圆、不让位、1.0）。
    */
-  ATTENTION: { fov: Math.PI, clearance: 0.15, lane: true, reach: 1.5 },
+  ATTENTION: { fov: Math.PI, clearance: 0.15, lane: true, reach: 1.5, look: true },
 } as const;
+
+/** 转头（站着时视线到处看）的几个数——演示装置，不是行为规则 */
+export const GAZE = {
+  /** 视线离身体朝向最多多少（弧度）：头 ±70° 加眼睛 ±40°，再远身体就得跟着转 */
+  SPAN: (110 * Math.PI) / 180,
+  /** 头转的速度（rad/s） */
+  TURN: 3.0,
+  /** 看住一个方向多久（s），均匀随机 */
+  HOLD: { min: 1.5, max: 6 },
+  /** 有这么大几率下一眼是回看正前方（±15°） */
+  AHEAD_P: 0.35,
+  AHEAD: (15 * Math.PI) / 180,
+} as const;
+
+/** 把角度折到 (−π, π] */
+export function wrapAngle(a: number): number {
+  a = (a + Math.PI) % (2 * Math.PI);
+  if (a < 0) a += 2 * Math.PI;
+  return a - Math.PI;
+}
+
+/** mulberry32：一个种子一条可复现的序列（与 crowd-plan 同款；放这里是让 Walker 自己能用） */
+export function seededRng(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 /** 让位距离 D（m，芯到人）：平台外缘 + 身体 + 让位——近于这个距离的平台会打到人 */
 export function keepOut(layout: PlanLayout, clearance: number): number {
@@ -318,7 +357,7 @@ export class TraceField {
    *   - 不在前方走廊里（`laneHalfW` > 0 时：前向分量 > 0 且 |侧向| < laneHalfW 的格子不收）
    * 的格子各记 dt 秒。三个都取「不限」时与 `imprint` 逐位相同（直接走那条路）。
    */
-  imprintShaped(x: number, y: number, r: number, dt: number, heading: number, fov: number, holeR: number, laneHalfW: number): void {
+  imprintShaped(x: number, y: number, r: number, dt: number, heading: number, fov: number, holeR: number, laneHalfW: number, gaze: number = heading): void {
     if (fov >= Math.PI * 2 - 1e-9 && holeR <= 0 && laneHalfW <= 0) {
       this.imprint(x, y, r, dt);
       return;
@@ -326,6 +365,9 @@ export class TraceField {
     const c0 = Math.floor((x - this.x0) / this.cell);
     const r0 = Math.floor((y - this.y0) / this.cell);
     const st = this.stamp(r);
+    // 视野扇形沿视线（gaze），走廊沿身体朝向（heading）——两者可以不同（站着转头时）
+    const gx = Math.cos(gaze);
+    const gy = Math.sin(gaze);
     const hx = Math.cos(heading);
     const hy = Math.sin(heading);
     const cosHalf = Math.cos(Math.min(Math.PI, fov / 2));
@@ -338,9 +380,8 @@ export class TraceField {
       const dy = this.y0 + (rr + 0.5) * this.cell - y;
       const d = Math.hypot(dx, dy);
       if (d < holeR) continue;
-      const f = dx * hx + dy * hy;
-      if (d >= own && f < d * cosHalf) continue;
-      if (laneHalfW > 0 && f > 0 && Math.abs(dx * hy - dy * hx) < laneHalfW) continue;
+      if (d >= own && dx * gx + dy * gy < d * cosHalf) continue;
+      if (laneHalfW > 0 && dx * hx + dy * hy > 0 && Math.abs(dx * hy - dy * hx) < laneHalfW) continue;
       const i = rr * this.cols + c;
       this.data[i] = Math.min(this.cap, this.data[i] + dt);
       this.touched[i] = 1;
@@ -574,8 +615,12 @@ export interface Waypoint {
 export class Walker {
   x = 0;
   y = 0;
-  /** 朝向（弧度，房间坐标 x 向右、y 向下） */
+  /** 朝向 = 身体（弧度，房间坐标 x 向右、y 向下）：走的方向；走廊沿它开 */
   heading = 0;
+  /** 视线 = 头：视野扇形沿它转。走着时跟着朝向；站着且 lookAround 开着时到处看 */
+  gaze = 0;
+  /** 站着时转头（演示装置；默认关 ⇒ 视线恒 = 朝向） */
+  lookAround = false;
   speed: number;
   present = false;
   state: WalkerState = 'outside';
@@ -584,9 +629,21 @@ export class Walker {
   presentTime = 0;
   private queue: Waypoint[] = [];
   private dwellLeft = 0;
+  private gazeTarget = 0;
+  private gazeHold = 0;
+  private rng: () => number;
 
-  constructor(speed: number = PLAN.SPEED.def) {
+  constructor(speed: number = PLAN.SPEED.def, seed = 20260905) {
     this.speed = speed;
+    this.rng = seededRng(seed);
+  }
+
+  /** 换种子（重播要逐位复现） */
+  reseed(seed: number): void {
+    this.rng = seededRng(seed);
+    this.gazeHold = 0;
+    this.gaze = this.heading;
+    this.gazeTarget = this.heading;
   }
 
   /** 摆到 (x,y)，在场 */
@@ -597,6 +654,40 @@ export class Walker {
     this.state = 'idle';
     this.queue = [];
     this.dwellLeft = 0;
+    this.gaze = this.heading;
+    this.gazeTarget = this.heading;
+    this.gazeHold = 0;
+  }
+
+  /**
+   * 头往哪看，推进 dt 秒。走着（或转头关着）⇒ 视线以 GAZE.TURN 转回朝向；站着 ⇒ 看住一个方向 1.5–6 s，
+   * 再挑下一个（身体前方 ±SPAN 以内，AHEAD_P 的几率回看正前方），以 GAZE.TURN 转过去。
+   */
+  look(dt: number, walking: boolean): void {
+    if (!this.present) return;
+    if (!this.lookAround) {
+      // 转头关着：视线就是朝向（旧口径，逐位）
+      this.gaze = this.heading;
+      this.gazeTarget = this.heading;
+      this.gazeHold = 0;
+      return;
+    }
+    const maxTurn = GAZE.TURN * dt;
+    if (walking) {
+      this.gazeHold = 0;
+      this.gazeTarget = this.heading;
+    } else {
+      this.gazeHold -= dt;
+      if (this.gazeHold <= 0) {
+        const u = this.rng();
+        const v = this.rng();
+        const off = u < GAZE.AHEAD_P ? (v * 2 - 1) * GAZE.AHEAD : (v * 2 - 1) * GAZE.SPAN;
+        this.gazeTarget = this.heading + off;
+        this.gazeHold = GAZE.HOLD.min + this.rng() * (GAZE.HOLD.max - GAZE.HOLD.min);
+      }
+    }
+    const diff = wrapAngle(this.gazeTarget - this.gaze);
+    this.gaze = wrapAngle(this.gaze + Math.max(-maxTurn, Math.min(maxTurn, diff)));
   }
 
   /** 整条路线（第一个点是起点：直接摆过去） */
@@ -610,6 +701,14 @@ export class Walker {
     this.place(route[0].x, route[0].y);
     this.queue = route.slice(1).map((w) => ({ ...w }));
     this.state = this.queue.length ? 'walk' : 'idle';
+    // 一进门就面朝要走的方向（视线随之），重播才逐位复现——否则第一眼是上一遍离场时的朝向
+    if (this.queue.length) {
+      const dx = this.queue[0].x - this.x;
+      const dy = this.queue[0].y - this.y;
+      if (Math.hypot(dx, dy) > 1e-9) this.heading = Math.atan2(dy, dx);
+    }
+    this.gaze = this.heading;
+    this.gazeTarget = this.heading;
   }
 
   /** 追加一个目标（自由模式：点哪走哪） */
@@ -621,7 +720,7 @@ export class Walker {
     this.state = 'walk';
   }
 
-  /** 走 dt 秒；返回本步走过的路程（m） */
+  /** 走 dt 秒；返回本步走过的路程（m）。站着的话顺带转头（look） */
   step(dt: number): number {
     if (!this.present) return 0;
     this.presentTime += dt;
@@ -631,9 +730,13 @@ export class Walker {
         this.dwellLeft = 0;
         this.state = this.queue.length ? 'walk' : 'idle';
       }
+      this.look(dt, false);
       return 0;
     }
-    if (this.state !== 'walk') return 0;
+    if (this.state !== 'walk') {
+      this.look(dt, false);
+      return 0;
+    }
     let left = this.speed * dt;
     let moved = 0;
     while (left > 0 && this.queue.length) {
@@ -667,6 +770,7 @@ export class Walker {
       }
     }
     this.distance += moved;
+    this.look(dt, moved > 0);
     return moved;
   }
 }
@@ -818,6 +922,10 @@ export interface PlanSimOpts {
   clearance?: number | null;
   /** 走动时前方走廊不落痕迹（半宽 = D）；只在 clearance 开着时有意义。省略 = 关 */
   lane?: boolean;
+  /** 站着时转头（视线 ≠ 朝向，视野扇形跟着视线转）。省略 = 关（视线恒 = 朝向） */
+  look?: boolean;
+  /** 转头用的随机种子（同种子逐位复现） */
+  seed?: number;
 }
 
 /** 行走推进的最大子步（s）：步速 1.5 m/s 时一子步走 7.5 cm < 格边，痕迹才连成一条不断的道 */
@@ -854,6 +962,7 @@ export class PlanSim {
   private readonly inputsBuf: Float64Array;
   private lastX = 0;
   private lastY = 0;
+  private readonly seed: number;
 
   constructor(opts: PlanSimOpts = {}) {
     this.layout = planLayout(opts.grid ?? PLAN.GRID_DEF, opts.radius ?? RING.RADIUS_DEF);
@@ -861,7 +970,9 @@ export class PlanSim {
     this.fade = opts.fade ?? null;
     // 线性褪去时把每格封顶到阈值：人一走读数就在阈值以下，程度当即开始退
     this.field = new TraceField(this.layout.roomM, PLAN.CELL, this.fade === null ? Infinity : threshold);
-    this.walker = new Walker(opts.speed ?? PLAN.SPEED.def);
+    this.seed = opts.seed ?? 20260905;
+    this.walker = new Walker(opts.speed ?? PLAN.SPEED.def, this.seed);
+    this.walker.lookAround = opts.look ?? false;
     this.act = new Activation(this.layout.units.length, threshold, opts.mode ?? 'ratchet');
     this.decay = opts.decay ?? PLAN.DECAY;
     this.reach = opts.reach ?? PLAN.REACH.def;
@@ -886,6 +997,7 @@ export class PlanSim {
     this.trailAcc = 0;
     this.walker.distance = 0;
     this.walker.presentTime = 0;
+    this.walker.reseed(this.seed);
     this.walker.setRoute(pathPreset(this.path).route(this.layout));
     this.trail.push(this.walker.x, this.walker.y);
     this.lastX = this.walker.x;
@@ -936,6 +1048,10 @@ export class PlanSim {
   }
   setLane(on: boolean): void {
     this.lane = on;
+  }
+  /** 站着时转头；关掉视线当即转回朝向 */
+  setLook(on: boolean): void {
+    this.walker.lookAround = on;
   }
 
   /** 让位距离 D（m）；让位关着时 0 */
@@ -1013,14 +1129,17 @@ export class PlanSim {
       left -= sdt;
       const wasPresent = this.walker.present;
       let moved = 0;
-      if (this.held) this.walker.presentTime += sdt; // 被拖着：不按步速走，位置由 drag 给
-      else moved = this.walker.step(sdt);
+      if (this.held) {
+        // 被拖着：不按步速走，位置由 drag 给；头照样转
+        this.walker.presentTime += sdt;
+        this.walker.look(sdt, Math.hypot(this.walker.x - this.lastX, this.walker.y - this.lastY) > 1e-9);
+      } else moved = this.walker.step(sdt);
       if (this.walker.present) {
         // 走着 = 这一子步位置动了（预设按步速走、拖着按指针给，两条路一个判据）
         const moving = Math.hypot(this.walker.x - this.lastX, this.walker.y - this.lastY) > 1e-9;
         this.moving = moving;
         const hole = this.keepOutM;
-        this.field.imprintShaped(this.walker.x, this.walker.y, this.reach, sdt, this.walker.heading, this.fov, hole, this.lane && moving ? hole : 0);
+        this.field.imprintShaped(this.walker.x, this.walker.y, this.reach, sdt, this.walker.heading, this.fov, hole, this.lane && moving ? hole : 0, this.walker.gaze);
         this.trailAcc += moved;
         if (this.trailAcc >= 0.1) {
           this.trail.push(this.walker.x, this.walker.y);

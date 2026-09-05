@@ -216,3 +216,25 @@ describe('crowd-plan · 人有朝向、有身体（同一套选项，默认关�
     expect(sim.act.formed().length).toBeGreaterThan(0);
   });
 });
+
+describe('crowd-plan · 转头', () => {
+  it('两个人站着各转各的头（种子从全场种子抽，不同步）；全场同种子逐位复现', () => {
+    const mk = () => {
+      const sim = new CrowdSim({ grid: 8, opening: false, auto: false, fov: Math.PI, clearance: PLAN.CLEARANCE.def, look: true, seed: 3 });
+      sim.add(-0.6, -0.6);
+      sim.add(1.2, 0.6);
+      const g: number[][] = [[], []];
+      for (let k = 0; k < 400; k++) {
+        sim.step(0.05);
+        g[0].push(sim.people[0].walker.gaze);
+        g[1].push(sim.people[1].walker.gaze);
+      }
+      return g;
+    };
+    const a = mk();
+    const b = mk();
+    expect(a).toEqual(b);
+    expect(a[0]).not.toEqual(a[1]);
+    expect(Math.max(...a[0]) - Math.min(...a[0])).toBeGreaterThan(0.5);
+  });
+});

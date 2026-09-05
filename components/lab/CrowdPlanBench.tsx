@@ -36,13 +36,14 @@ const COPY = {
     foot: (reach: number, thr: number, fade: number, reading: string, mode: ResponseMode, fovDeg: number, D: number | null) =>
       `影响半径 ${reach.toFixed(2)} m · 视野 ${fovDeg.toFixed(0)}° · ${D === null ? '不让位' : `让位 D ${D.toFixed(2)} m`} · 阈值 ${thr.toFixed(0)} s · 散掉 ${fade.toFixed(0)} s · ${reading}读 · 绿盘 = 当前读数 · 紫环 = ${mode === 'follow' ? '结构位置（人走了收回去）' : '成形（键锁死，不回退）'} · 点地面放人 · 按住拖`,
     gated: (n: number) => `闸住 ${n}`,
-    attention: `人有朝向、有身体：痕迹只落在每个人视野扇形里（默认 180°）；让位距离 D = 平台半径 + 身体 + 让位（默认一肘 0.15 m）——D 以内的地面不记，芯在任何一个人 D 以内的单元闸住（莲粉 ×：平台下来会打到人）；走着时正前方一条 2D 宽的道也不记。视野 360°、让位关掉 = 09-04 的旧口径。`,
+    attention: `人有朝向、有身体：痕迹只落在每个人视野扇形里（默认 180°）；让位距离 D = 平台半径 + 身体 + 让位（默认一肘 0.15 m）——D 以内的地面不记，芯在任何一个人 D 以内的单元闸住（莲粉 ×：平台下来会打到人）；走着时正前方一条 2D 宽的道也不记。视线与朝向分开：朝向是身体（走廊沿它开），视线是头（扇面沿它转）——站着时每隔几秒看向别处，走着时看向前方。视野 360°、让位关掉、转头关掉 = 09-04 的旧口径。`,
     hint: `「响应」两档：跟随 = 结构追着读数涨落、人走了收回去（演示默认）；锁定 = 键锁死不回退（项目立论的滞回）。点空地放一个人（最多 ${CROWD.MAX_PEOPLE} 个）；悬停到人身上变抓手，按住就能拖着走，松手站在原地。「自走」= 演示用的慢走：每次只挪 ${CROWD.HOP.min}–${CROWD.HOP.max} m（偶尔远一次），到了站 ${CROWD.PAUSE.min}–${CROWD.PAUSE.max} s，步速 ${CROWD.SPEED_DEF} m/s——不是行为规则。几个人的影响圈重叠处每秒记几份——两个人站在一起，脚下的单元早一倍成形。`,
     grid: '格数',
     reading: '读法',
     reach: '影响半径',
     fov: '视野',
     clearance: '让位',
+    look: '转头',
     threshold: '阈值',
     half_: '散掉',
     response: '响应',
@@ -66,13 +67,14 @@ const COPY = {
     foot: (reach: number, thr: number, fade: number, reading: string, mode: ResponseMode, fovDeg: number, D: number | null) =>
       `reach ${reach.toFixed(2)} m · field of view ${fovDeg.toFixed(0)}° · ${D === null ? 'no clearance' : `clearance D ${D.toFixed(2)} m`} · threshold ${thr.toFixed(0)} s · fade ${fade.toFixed(0)} s · ${reading} · green disc = live reading · purple ring = ${mode === 'follow' ? 'where the structure is — it withdraws once they leave' : 'formed; bonds locked, never undone'} · click to place · hold to drag`,
     gated: (n: number) => `${n} held back`,
-    attention: `People face somewhere and have bodies: each trace lands only inside that person's field of view (180° by default); the clearance distance D = platform radius + body + clearance (an elbow, 0.15 m, by default) — the floor within D records nothing and a unit whose mast is within D of anyone is held back (rose ×: a platform there would hit someone); while walking, a lane 2D wide straight ahead records nothing either. Field of view at 360° with clearance off is the 09-04 reading.`,
+    attention: `People face somewhere and have bodies: each trace lands only inside that person's field of view (180° by default); the clearance distance D = platform radius + body + clearance (an elbow, 0.15 m, by default) — the floor within D records nothing and a unit whose mast is within D of anyone is held back (rose ×: a platform there would hit someone); while walking, a lane 2D wide straight ahead records nothing either. Gaze and facing are separate: facing is the body (the direction walked; the lane follows it), gaze is the head (the wedge follows it) — standing, they glance elsewhere every few seconds within ±110° of the body, so a long stand spreads the arc where they looked; walking, they look ahead. Field of view at 360° with clearance and looking around off is the 09-04 reading.`,
     hint: `“Response” has two settings: follow — the structure tracks the reading and withdraws once people leave (the demo default); lock — bonds stay locked, the hysteresis the project argues for. Click empty floor to place a person (up to ${CROWD.MAX_PEOPLE}); hover a person for the grab cursor, hold to drag, release to leave them standing. “Wander” is a demo device — a short hop of ${CROWD.HOP.min}–${CROWD.HOP.max} m (occasionally further), then a ${CROWD.PAUSE.min}–${CROWD.PAUSE.max} s stand, at ${CROWD.SPEED_DEF} m/s — not a behaviour rule. Where reaches overlap the floor counts every person, so two people standing together form the unit underfoot twice as fast.`,
     grid: 'grid',
     reading: 'reading',
     reach: 'reach',
     fov: 'view',
     clearance: 'clearance',
+    look: 'look around',
     threshold: 'threshold',
     half_: 'fade',
     response: 'response',
@@ -103,6 +105,7 @@ function sceneOf(sim: CrowdSim, showTrace: boolean) {
       fov: sim.fov,
       keepOut: sim.keepOutM,
       lane: sim.lane && p.moving,
+      gaze: p.walker.gaze,
     })),
     showTrace,
     blocked: sim.clearance === null ? null : sim.blocked,
@@ -139,6 +142,7 @@ export function CrowdPlanBench({
   const [fovDeg, setFovDeg] = useState<number>(FOV_DEG.def);
   const [clearOn, setClearOn] = useState(true);
   const [clearance, setClearance] = useState<number>(PLAN.ATTENTION.clearance);
+  const [look, setLook] = useState<boolean>(PLAN.ATTENTION.look);
   const [threshold, setThreshold] = useState<number>(PLAN.DEMO.threshold);
   const [fade, setFade] = useState<number>(PLAN.DEMO.fade);
   const [mode, setMode] = useState<ResponseMode>('follow');
@@ -167,7 +171,7 @@ export function CrowdPlanBench({
 
   // 建仿真（换格数才重建：单元数变了，痕迹场与读法表要重算；人也重新放）
   useEffect(() => {
-    const sim = new CrowdSim({ grid, reading, reach, threshold, fade, speed, auto, mode, fov, clearance: clearanceOpt, lane: clearanceOpt !== null });
+    const sim = new CrowdSim({ grid, reading, reach, threshold, fade, speed, auto, mode, fov, clearance: clearanceOpt, lane: clearanceOpt !== null, look });
     simRef.current = sim;
     heldRef.current = null;
     paint();
@@ -201,6 +205,9 @@ export function CrowdPlanBench({
     simRef.current?.setClearance(clearanceOpt);
     simRef.current?.setLane(clearanceOpt !== null);
   }, [clearanceOpt]);
+  useEffect(() => {
+    simRef.current?.setLook(look);
+  }, [look]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -395,6 +402,15 @@ export function CrowdPlanBench({
                 style={{ width: 84 }}
                 onChange={(e) => setFovDeg(Number(e.target.value))}
               />
+              <label>
+                <input
+                  type="checkbox"
+                  checked={look}
+                  title={lang === 'zh' ? '站着时头会转：视线离开朝向，扇面跟着视线走；走着时看向前方' : 'the head turns while standing: the gaze leaves the facing and the wedge follows it; while walking they look ahead'}
+                  onChange={(e) => setLook(e.target.checked)}
+                />
+                {t.look}
+              </label>
             </div>
             <div className="grp">
               <label>

@@ -1112,3 +1112,9 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
   主画布——直接在主画布上抠会把地板一起抠掉。闸住的单元：平台圈莲粉虚线 + 芯上 ×。
 - **差分清单**不变（滑块与开关不是档）；`/lab#lab14-<path>` 直达照旧。
 - 细节与判断 = 项目二_激活平面lab.md §10。
+
+### 30.1 视线 ≠ 朝向（同日第二轮）
+
+`Walker` 加 `gaze` / `lookAround` / `look(dt, walking)` / `reseed`，`imprintShaped` 尾参 `gaze`；`PlanSimOpts.look` + `seed`、
+`CrowdSimOpts.look`（每人种子从全场 rng 抽）。`PlanPerson.gaze`：扇面沿视线、走廊沿朝向；脸 = 身体圆周视线侧 ±0.6 rad
+加粗绿弧。台架「视野」组加「转头」复选框（默认 `PLAN.ATTENTION.look` = 开）。细节 = 项目二_激活平面lab.md §10.6。

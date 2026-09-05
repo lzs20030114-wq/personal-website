@@ -101,6 +101,8 @@ export interface CrowdSimOpts {
   clearance?: number | null;
   /** 走动时前方走廊不落痕迹 */
   lane?: boolean;
+  /** 站着时转头（视线 ≠ 朝向）。省略 = 关 */
+  look?: boolean;
 }
 
 const MAX_SUB_DT = 0.05;
@@ -124,6 +126,8 @@ export class CrowdSim {
   clearance: number | null;
   /** 走动时前方走廊不落痕迹 */
   lane: boolean;
+  /** 站着时转头 */
+  look: boolean;
   /** 此刻被身体让位闸住的单元（每步现算；clearance 关时全 0） */
   readonly blocked: Uint8Array;
   t = 0;
@@ -147,6 +151,7 @@ export class CrowdSim {
     this.fov = opts.fov ?? Math.PI * 2;
     this.clearance = opts.clearance ?? null;
     this.lane = opts.lane ?? false;
+    this.look = opts.look ?? false;
     this.blocked = new Uint8Array(this.layout.units.length);
     this.rng = makeRng(opts.seed ?? 20260904);
     this.inputsBuf = new Float64Array(this.layout.units.length);
@@ -157,7 +162,9 @@ export class CrowdSim {
   add(x: number, y: number): Person | null {
     if (this.people.length >= CROWD.MAX_PEOPLE) return null;
     const h = this.layout.roomM / 2 - PLAN.BODY_R;
-    const w = new Walker(this.speed);
+    // 每个人自己的转头种子从全场种子里抽（同一全场种子 ⇒ 逐位复现；两个人不同步）
+    const w = new Walker(this.speed, Math.floor(this.rng() * 2 ** 31));
+    w.lookAround = this.look;
     w.place(Math.max(-h, Math.min(h, x)), Math.max(-h, Math.min(h, y)));
     const p: Person = { id: this.nextId++, walker: w, mode: this.auto ? 'auto' : 'manual', lastX: w.x, lastY: w.y, moving: false };
     this.people.push(p);
@@ -254,6 +261,10 @@ export class CrowdSim {
   setLane(on: boolean): void {
     this.lane = on;
   }
+  setLook(on: boolean): void {
+    this.look = on;
+    for (const p of this.people) p.walker.lookAround = on;
+  }
   /** 让位距离 D（m）；让位关着时 0 */
   get keepOutM(): number {
     return this.clearance === null ? 0 : keepOut(this.layout, this.clearance);
@@ -342,9 +353,11 @@ export class CrowdSim {
         if (p.mode === 'auto') this.wander(p, sdt);
         if (p.mode !== 'held') p.walker.step(sdt);
         else {
-          // 被拖着：路程按位置差记
-          p.walker.distance += Math.hypot(p.walker.x - p.lastX, p.walker.y - p.lastY);
+          // 被拖着：路程按位置差记；头照样转
+          const d = Math.hypot(p.walker.x - p.lastX, p.walker.y - p.lastY);
+          p.walker.distance += d;
           p.walker.presentTime += sdt;
+          p.walker.look(sdt, d > 1e-9);
         }
         const moving = Math.hypot(p.walker.x - p.lastX, p.walker.y - p.lastY) > 1e-9;
         p.moving = moving;
@@ -352,7 +365,7 @@ export class CrowdSim {
         p.lastY = p.walker.y;
         if (p.walker.present) {
           const hole = this.keepOutM;
-          this.field.imprintShaped(p.walker.x, p.walker.y, this.reach, sdt, p.walker.heading, this.fov, hole, this.lane && moving ? hole : 0);
+          this.field.imprintShaped(p.walker.x, p.walker.y, this.reach, sdt, p.walker.heading, this.fov, hole, this.lane && moving ? hole : 0, p.walker.gaze);
         }
       }
     }

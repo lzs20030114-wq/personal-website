@@ -10,7 +10,9 @@ import {
   buildCatchment,
   dwellInput,
   dwellSpot,
+  GAZE,
   keepOut,
+  wrapAngle,
   nearestCrossing,
   nearestUnit,
   RESPONSES,
@@ -633,5 +635,89 @@ describe('unit-activation · 人有朝向、有身体（2026-09-05：视野 / �
       expect(aisleLines(L).y.some((y) => Math.abs(y - c.y) < 1e-9)).toBe(true);
       expect(unitsUnderBody(L, c.x, c.y)).toHaveLength(0);
     }
+  });
+});
+
+describe('unit-activation · 视线 ≠ 朝向（2026-09-05 第二轮：站着时转头，默认关）', () => {
+  const opts = { path: 'dwell' as const, grid: 8, fov: Math.PI, clearance: PLAN.CLEARANCE.def, lane: true, reach: 1.6 };
+
+  it('默认关 ⇒ 视线恒 = 朝向，与不带 look 的一遍逐位相同', () => {
+    const a = runScenario(opts, 0);
+    const b = runScenario({ ...opts, look: false }, 0);
+    expect(Array.from(b.act.input)).toEqual(Array.from(a.act.input));
+    const sim = new PlanSim(opts);
+    for (let k = 0; k < 600; k++) {
+      sim.step(0.05);
+      if (sim.walker.present) expect(Math.abs(wrapAngle(sim.walker.gaze - sim.walker.heading))).toBeLessThan(1e-9);
+    }
+  });
+
+  it('开着：走着时看向前方；站着时视线离开朝向、两边都看过、不超过 ±SPAN、转头不超速', () => {
+    const sim = new PlanSim({ ...opts, look: true });
+    let prev = sim.walker.gaze;
+    let minOff = 0;
+    let maxOff = 0;
+    while (sim.walker.state !== 'dwell' && sim.t < 60) {
+      sim.step(0.05);
+      // 走着：视线与朝向之差只会在转弯那一瞬出现，且以 TURN 速率收回
+      expect(Math.abs(wrapAngle(sim.walker.gaze - prev))).toBeLessThanOrEqual(GAZE.TURN * 0.05 + 1e-9);
+      prev = sim.walker.gaze;
+    }
+    for (let k = 0; k < PLAN.DWELL_S / 0.05 - 1; k++) {
+      sim.step(0.05);
+      const off = wrapAngle(sim.walker.gaze - sim.walker.heading);
+      expect(Math.abs(off)).toBeLessThanOrEqual(GAZE.SPAN + 1e-9);
+      expect(Math.abs(wrapAngle(sim.walker.gaze - prev))).toBeLessThanOrEqual(GAZE.TURN * 0.05 + 1e-9);
+      prev = sim.walker.gaze;
+      minOff = Math.min(minOff, off);
+      maxOff = Math.max(maxOff, off);
+    }
+    expect(minOff).toBeLessThan(-0.5);
+    expect(maxOff).toBeGreaterThan(0.5);
+  });
+
+  it('久站的弧散开：转头后痕迹落到了钉死朝向时半圆之外的地面上；同种子逐位复现、换种子不同', () => {
+    const fixed = runScenario(opts, 0);
+    const look = runScenario({ ...opts, look: true }, 0);
+    const c = dwellSpot(L8);
+    // 站着时的身体朝向 = 进门走向（门 → 站点）
+    const h0 = Math.atan2(c.y - 0, c.x - L8.doors[0].x);
+    // 身侧偏后（离朝向 100°–140°、离人 0.7–1.5 m）：钉死朝向那一遍的半圆到 90° 为止，这片地只有走进来时
+    // 留的一两秒；转头那一遍（视线最远偏到 ±110°，扇面边缘到 200°）有站着看过去攒下的好几秒
+    let behindFixed = 0;
+    let behindLook = 0;
+    for (let i = 0; i < fixed.field.data.length; i++) {
+      const [x, y] = fixed.field.cellCenter(i);
+      const fwd = (x - c.x) * Math.cos(h0) + (y - c.y) * Math.sin(h0);
+      const lat = -(x - c.x) * Math.sin(h0) + (y - c.y) * Math.cos(h0);
+      const d = Math.hypot(fwd, lat);
+      const ang = (Math.abs(Math.atan2(lat, fwd)) * 180) / Math.PI;
+      if (d > 0.7 && d < 1.5 && ang > 100 && ang < 140) {
+        if (fixed.field.data[i] > 3) behindFixed++;
+        if (look.field.data[i] > 3) behindLook++;
+      }
+    }
+    expect(behindFixed).toBe(0);
+    expect(behindLook).toBeGreaterThan(20);
+    const again = runScenario({ ...opts, look: true }, 0);
+    expect(Array.from(again.act.input)).toEqual(Array.from(look.act.input));
+    const other = runScenario({ ...opts, look: true, seed: 7 }, 0);
+    expect(Array.from(other.act.input)).not.toEqual(Array.from(look.act.input));
+  });
+
+  it('重播逐位复现：reset 后同一条转头序列', () => {
+    const sim = new PlanSim({ ...opts, look: true });
+    const run = () => {
+      const g: number[] = [];
+      for (let k = 0; k < 800; k++) {
+        sim.step(0.05);
+        g.push(sim.walker.gaze);
+      }
+      return g;
+    };
+    const a = run();
+    sim.reset();
+    const b = run();
+    expect(b).toEqual(a);
   });
 });

@@ -559,7 +559,7 @@ export default function LabPage() {
             ['Forming', 'Mean ≥ the threshold ⇒ down · purple ring grows from mast to rim'],
             ['Response', 'Follow — the structure tracks the reading and withdraws once people leave (default; 2 s to form, gone 6 s after they leave) · Lock — bonds stay locked, the hysteresis the project argues for (the prototype: threshold 15 s, decay 2 %/s)'],
             ['Reach', '0.22–2.0 m, default 1.5 m (how far they look; Hall’s near social distance) · the prototype’s 1.0 m is one slider away'],
-            ['Facing', 'Field of view 60°–360°, default 180° — the trace lands only ahead · facing = the last direction walked'],
+            ['Facing', 'Field of view 60°–360°, default 180° — the trace lands only where they look · body faces the last direction walked; standing, the head turns (a glance every 1.5–6 s within ±110° of the body, a demo device) so a long stand spreads the arc'],
             ['Clearance', 'D = platform radius + body 0.22 + clearance 0.15 m (an elbow) · no trace within D, units whose mast is within D are held back (rose ×) · while walking a lane 2D wide ahead stays clear · off = the 09-04 reading'],
             ['Behaviours', 'Passing · diagonal (aisle-wise steps) · dwell 20 s at an aisle crossing · loop ×6 · pacing ×8 · free (click the floor) · hold the person to drag — every route keeps to the aisles; a unit centre is a mast'],
             ['Result', 'Under the prototype’s own numbers with facing and clearance on: passing forms none · a 20 s stand forms an arc of 3 ahead (+3 half) · pacing lines the corridor without filling it · loop a ring'],
