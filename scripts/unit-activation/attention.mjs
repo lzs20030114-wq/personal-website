@@ -10,7 +10,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  PATHS, PLAN, PlanSim, TraceField, aisleLines, dwellSpot, keepOut, nearestCrossing, planLayout, runScenario, unitsUnderBody,
+  PATHS, PLAN, PlanSim, TraceField, aisleLines, dwellSpot, keepOut, nearestCrossing, nearestUnit, planLayout, runScenario, unitsUnderBody,
 } from '../../src/lib/space/unit-activation.ts';
 
 const OUT = process.argv[2] ?? 'attention-out';
@@ -302,15 +302,15 @@ function dwellAtCrossing(opts, moment = 'standing') {
   const W = 1360;
   const H = 520;
   const out = [];
-  out.push(txt(28, 34, '身体有体积 · 现行驻留点站在单元中心（那里是根杆子）；让位距离 D 随单元大小变，影响半径必须大于 D 才有地面可招', { size: 16, weight: 700 }));
-  out.push(txt(28, 54, '左三格：现行预设的驻留点（灰人）与建议的站位（过道交叉点，黑人），三种密度按真尺。右表：D 与影响半径的关系。', { size: 11, fill: MUTE }));
+  out.push(txt(28, 34, '身体有体积 · 原驻留点站在单元中心（那里是根杆子，09-05 已改走过道）；让位距离 D 随单元大小变，影响半径必须大于 D 才有地面可招', { size: 16, weight: 700 }));
+  out.push(txt(28, 54, '左三格：原预设的驻留点（灰人）与现行站位（过道交叉点，黑人），三种密度按真尺。右表：D 与影响半径的关系。', { size: 11, fill: MUTE }));
   const sc = 110;
   const y = 250;
   PLAN.GRIDS.forEach((n, k) => {
     const L = planLayout(n);
     const ox = 170 + k * 300;
-    const u = dwellSpot(L);
-    const c = nearestCrossing(L, -L.pitch4 / 2, -L.pitch4 / 2);
+    const u = nearestUnit(L, -L.pitch4 / 2, -L.pitch4 / 2); // 09-05 之前的驻留点
+    const c = dwellSpot(L);
     const D = keepOut(L, CLEAR);
     // 视窗以两点中点为中心
     const mx = (u.x + c.x) / 2;
@@ -329,9 +329,9 @@ function dwellAtCrossing(opts, moment = 'standing') {
     }
     // 灰人：现行驻留点
     out.push(circle(oxw + u.x * sc, oyw + u.y * sc, PLAN.BODY_R * sc, { stroke: MUTE, w: 1.2, dash: '3 2' }));
-    out.push(txt(oxw + u.x * sc, oyw + u.y * sc + PLAN.BODY_R * sc + 12, `现行驻留点：单元中心`, { size: 9.5, fill: MUTE, anchor: 'middle' }));
+    out.push(txt(oxw + u.x * sc, oyw + u.y * sc + PLAN.BODY_R * sc + 12, `原驻留点：单元中心`, { size: 9.5, fill: MUTE, anchor: 'middle' }));
     out.push(txt(oxw + u.x * sc, oyw + u.y * sc + PLAN.BODY_R * sc + 24, `（杆子在身体里）`, { size: 9.5, fill: MUTE, anchor: 'middle' }));
-    out.push(txt(oxw + c.x * sc, oyw + c.y * sc - D * sc - 5, `建议：过道交叉点`, { size: 9.5, fill: INK, anchor: 'middle' }));
+    out.push(txt(oxw + c.x * sc, oyw + c.y * sc - D * sc - 5, `现行：过道交叉点`, { size: 9.5, fill: INK, anchor: 'middle' }));
     // 黑人：过道交叉点 + D
     out.push(circle(oxw + c.x * sc, oyw + c.y * sc, D * sc, { stroke: RED, w: 0.8, dash: '2 2' }));
     out.push(circle(oxw + c.x * sc, oyw + c.y * sc, PLAN.BODY_R * sc, { fill: '#fbfbf9', stroke: INK, w: 1.2 }));
@@ -340,7 +340,7 @@ function dwellAtCrossing(opts, moment = 'standing') {
     out.push(rect(ox - half, y - half, 2 * half, 2 * half, { stroke: HAIR, w: 0.8 }));
     out.push(txt(ox, 90, `${n}×${n} · 格距 ${L.pitchM.toFixed(2)} m · 平台 ⌀ ${(2 * L.platR).toFixed(2)}`, { size: 12, weight: 700, anchor: 'middle' }));
     out.push(txt(ox, y + half + 18, `D = ${L.platR.toFixed(2)} + ${PLAN.BODY_R} + ${CLEAR} = ${D.toFixed(2)} m · 站在交叉点时闸住 4 个`, { size: 10.5, anchor: 'middle', fill: RED }));
-    out.push(txt(ox, y + half + 34, `现行驻留点身体里有 ${unitsUnderBody(L, u.x, u.y).length} 根杆子 · 交叉点 ${unitsUnderBody(L, c.x, c.y).length} 根`, { size: 10.5, anchor: 'middle', fill: MUTE }));
+    out.push(txt(ox, y + half + 34, `原驻留点身体里有 ${unitsUnderBody(L, u.x, u.y).length} 根杆子 · 交叉点 ${unitsUnderBody(L, c.x, c.y).length} 根`, { size: 10.5, anchor: 'middle', fill: MUTE }));
   });
   // 右：D vs 影响半径小表
   const tx = 1080;

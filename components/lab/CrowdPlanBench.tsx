@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { CROWD, CrowdSim } from '../../src/lib/space/crowd-plan';
-import { PLAN, READINGS, RESPONSES, type Reading, type ResponseMode } from '../../src/lib/space/unit-activation';
+import { PLAN, READINGS, RESPONSES, keepOut, type Reading, type ResponseMode } from '../../src/lib/space/unit-activation';
 import { H, W, canvasToRoom, drawPlan, readPalette, type Palette } from './planDraw';
 import { useBenchLoop } from './useBenchLoop';
 
@@ -13,6 +13,8 @@ import { useBenchLoop } from './useBenchLoop';
  * 开「自走」让他们自己漫步（随机目标 + 随机站 2–30 s，**演示装置不是行为规则**），地面实时记痕迹、
  * 单元实时长出来。机制一个数不改（unit-activation 同一份），新增的只有多个人与人怎么动（crowd-plan.ts）。
  * 画法与 Lab.14 共用 planDraw.ts。
+ * 人有朝向、有身体（2026-09-05）：视野 / 让位 D / 走廊三件与 Lab.14 同一套选项（unit-activation），闸按每个在场的人
+ * 各算取并集；这里只多两组旋钮与画法。
  */
 const TIME_SCALES = [1, 3, 8] as const;
 /** 默认 ×1：这台演示的是人怎么在房间里慢慢待着，按真实节奏看（Lab.14 仍 ×3——那台是走一遍看结果） */
@@ -20,6 +22,8 @@ const TIME_DEF = 1;
 /** 「散掉」滑块（s）：人不在的地方几秒把痕迹退光（线性褪去，见 PLAN.DEMO） */
 const FADE = { min: 2, max: 60 } as const;
 const MAX_SIM_DT = 0.05 * 8 * 1.01;
+/** 视野滑块（度）：60°–360°，360 = 全圆（旧口径） */
+const FOV_DEG = { min: 60, max: 360, def: Math.round((PLAN.ATTENTION.fov * 180) / Math.PI) } as const;
 
 const COPY = {
   zh: {
@@ -29,12 +33,16 @@ const COPY = {
     formed: (n: number, total: number) => `成形 ${n} / ${total}`,
     line: (c: { people: number; walking: number; standing: number; held: number }, half: number, t: number, floor: number) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${c.people} 人（走 ${c.walking} · 站 ${c.standing}${c.held ? ` · 拖 ${c.held}` : ''}）· 半成以上 ${half} · 地面最深 ${floor.toFixed(1)} s`,
-    foot: (reach: number, thr: number, fade: number, reading: string, mode: ResponseMode) =>
-      `影响半径 ${reach.toFixed(2)} m · 阈值 ${thr.toFixed(0)} s · 散掉 ${fade.toFixed(0)} s · ${reading}读 · 绿盘 = 当前读数 · 紫环 = ${mode === 'follow' ? '结构位置（人走了收回去）' : '成形（键锁死，不回退）'} · 点地面放人 · 按住拖`,
+    foot: (reach: number, thr: number, fade: number, reading: string, mode: ResponseMode, fovDeg: number, D: number | null) =>
+      `影响半径 ${reach.toFixed(2)} m · 视野 ${fovDeg.toFixed(0)}° · ${D === null ? '不让位' : `让位 D ${D.toFixed(2)} m`} · 阈值 ${thr.toFixed(0)} s · 散掉 ${fade.toFixed(0)} s · ${reading}读 · 绿盘 = 当前读数 · 紫环 = ${mode === 'follow' ? '结构位置（人走了收回去）' : '成形（键锁死，不回退）'} · 点地面放人 · 按住拖`,
+    gated: (n: number) => `闸住 ${n}`,
+    attention: `人有朝向、有身体：痕迹只落在每个人视野扇形里（默认 180°）；让位距离 D = 平台半径 + 身体 + 让位（默认一肘 0.15 m）——D 以内的地面不记，芯在任何一个人 D 以内的单元闸住（莲粉 ×：平台下来会打到人）；走着时正前方一条 2D 宽的道也不记。视野 360°、让位关掉 = 09-04 的旧口径。`,
     hint: `「响应」两档：跟随 = 结构追着读数涨落、人走了收回去（演示默认）；锁定 = 键锁死不回退（项目立论的滞回）。点空地放一个人（最多 ${CROWD.MAX_PEOPLE} 个）；悬停到人身上变抓手，按住就能拖着走，松手站在原地。「自走」= 演示用的慢走：每次只挪 ${CROWD.HOP.min}–${CROWD.HOP.max} m（偶尔远一次），到了站 ${CROWD.PAUSE.min}–${CROWD.PAUSE.max} s，步速 ${CROWD.SPEED_DEF} m/s——不是行为规则。几个人的影响圈重叠处每秒记几份——两个人站在一起，脚下的单元早一倍成形。`,
     grid: '格数',
     reading: '读法',
     reach: '影响半径',
+    fov: '视野',
+    clearance: '让位',
     threshold: '阈值',
     half_: '散掉',
     response: '响应',
@@ -55,12 +63,16 @@ const COPY = {
     formed: (n: number, total: number) => `formed ${n} / ${total}`,
     line: (c: { people: number; walking: number; standing: number; held: number }, half: number, t: number, floor: number) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${c.people} people (${c.walking} walking · ${c.standing} standing${c.held ? ` · ${c.held} held` : ''}) · ${half} at half or more · deepest floor trace ${floor.toFixed(1)} s`,
-    foot: (reach: number, thr: number, fade: number, reading: string, mode: ResponseMode) =>
-      `reach ${reach.toFixed(2)} m · threshold ${thr.toFixed(0)} s · fade ${fade.toFixed(0)} s · ${reading} · green disc = live reading · purple ring = ${mode === 'follow' ? 'where the structure is — it withdraws once they leave' : 'formed; bonds locked, never undone'} · click to place · hold to drag`,
+    foot: (reach: number, thr: number, fade: number, reading: string, mode: ResponseMode, fovDeg: number, D: number | null) =>
+      `reach ${reach.toFixed(2)} m · field of view ${fovDeg.toFixed(0)}° · ${D === null ? 'no clearance' : `clearance D ${D.toFixed(2)} m`} · threshold ${thr.toFixed(0)} s · fade ${fade.toFixed(0)} s · ${reading} · green disc = live reading · purple ring = ${mode === 'follow' ? 'where the structure is — it withdraws once they leave' : 'formed; bonds locked, never undone'} · click to place · hold to drag`,
+    gated: (n: number) => `${n} held back`,
+    attention: `People face somewhere and have bodies: each trace lands only inside that person's field of view (180° by default); the clearance distance D = platform radius + body + clearance (an elbow, 0.15 m, by default) — the floor within D records nothing and a unit whose mast is within D of anyone is held back (rose ×: a platform there would hit someone); while walking, a lane 2D wide straight ahead records nothing either. Field of view at 360° with clearance off is the 09-04 reading.`,
     hint: `“Response” has two settings: follow — the structure tracks the reading and withdraws once people leave (the demo default); lock — bonds stay locked, the hysteresis the project argues for. Click empty floor to place a person (up to ${CROWD.MAX_PEOPLE}); hover a person for the grab cursor, hold to drag, release to leave them standing. “Wander” is a demo device — a short hop of ${CROWD.HOP.min}–${CROWD.HOP.max} m (occasionally further), then a ${CROWD.PAUSE.min}–${CROWD.PAUSE.max} s stand, at ${CROWD.SPEED_DEF} m/s — not a behaviour rule. Where reaches overlap the floor counts every person, so two people standing together form the unit underfoot twice as fast.`,
     grid: 'grid',
     reading: 'reading',
     reach: 'reach',
+    fov: 'view',
+    clearance: 'clearance',
     threshold: 'threshold',
     half_: 'fade',
     response: 'response',
@@ -82,8 +94,18 @@ function sceneOf(sim: CrowdSim, showTrace: boolean) {
     field: sim.field,
     catchment: sim.catchment,
     act: sim.act,
-    people: sim.people.map((p) => ({ x: p.walker.x, y: p.walker.y, heading: p.walker.heading, reach: sim.reach, held: p.mode === 'held' })),
+    people: sim.people.map((p) => ({
+      x: p.walker.x,
+      y: p.walker.y,
+      heading: p.walker.heading,
+      reach: sim.reach,
+      held: p.mode === 'held',
+      fov: sim.fov,
+      keepOut: sim.keepOutM,
+      lane: sim.lane && p.moving,
+    })),
     showTrace,
+    blocked: sim.clearance === null ? null : sim.blocked,
   };
 }
 
@@ -113,16 +135,22 @@ export function CrowdPlanBench({
   const [timeScale, setTimeScale] = useState<number>(TIME_DEF);
   const [grid, setGrid] = useState<number>(PLAN.GRID_DEF);
   const [reading, setReading] = useState<Reading>('nearest');
-  const [reach, setReach] = useState<number>(PLAN.REACH.def);
+  const [reach, setReach] = useState<number>(PLAN.ATTENTION.reach);
+  const [fovDeg, setFovDeg] = useState<number>(FOV_DEG.def);
+  const [clearOn, setClearOn] = useState(true);
+  const [clearance, setClearance] = useState<number>(PLAN.ATTENTION.clearance);
   const [threshold, setThreshold] = useState<number>(PLAN.DEMO.threshold);
   const [fade, setFade] = useState<number>(PLAN.DEMO.fade);
   const [mode, setMode] = useState<ResponseMode>('follow');
   const [speed, setSpeed] = useState<number>(CROWD.SPEED_DEF);
   const [cursor, setCursor] = useState<'crosshair' | 'grab' | 'grabbing'>('crosshair');
+  const fov = (fovDeg * Math.PI) / 180;
+  const clearanceOpt = clearOn ? clearance : null;
   const [hud, setHud] = useState({
     formed: 0,
     half: 0,
     floor: 0,
+    gated: 0,
     t: 0,
     total: PLAN.GRID_DEF * PLAN.GRID_DEF,
     counts: { people: CROWD.OPENING.length, walking: 0, standing: CROWD.OPENING.length, held: 0 },
@@ -139,7 +167,7 @@ export function CrowdPlanBench({
 
   // 建仿真（换格数才重建：单元数变了，痕迹场与读法表要重算；人也重新放）
   useEffect(() => {
-    const sim = new CrowdSim({ grid, reading, reach, threshold, fade, speed, auto, mode });
+    const sim = new CrowdSim({ grid, reading, reach, threshold, fade, speed, auto, mode, fov, clearance: clearanceOpt, lane: clearanceOpt !== null });
     simRef.current = sim;
     heldRef.current = null;
     paint();
@@ -166,6 +194,13 @@ export function CrowdPlanBench({
   useEffect(() => {
     simRef.current?.setMode(mode);
   }, [mode]);
+  useEffect(() => {
+    simRef.current?.setFov(fov);
+  }, [fov]);
+  useEffect(() => {
+    simRef.current?.setClearance(clearanceOpt);
+    simRef.current?.setLane(clearanceOpt !== null);
+  }, [clearanceOpt]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -197,10 +232,12 @@ export function CrowdPlanBench({
       const counts = sim.counts();
       const formed = sim.act.formed().length;
       const half = sim.act.countAtLeast(0.5);
-      const key = `${Math.floor(sim.t)}|${formed}|${half}|${counts.people}|${counts.walking}|${counts.held}`;
+      let gated = 0;
+      if (sim.clearance !== null) for (let i = 0; i < sim.blocked.length; i++) gated += sim.blocked[i];
+      const key = `${Math.floor(sim.t)}|${formed}|${half}|${counts.people}|${counts.walking}|${counts.held}|${gated}`;
       if (key !== lastHud.current) {
         lastHud.current = key;
-        setHud({ formed, half, floor: sim.field.max(), t: sim.t, total: sim.layout.units.length, counts });
+        setHud({ formed, half, floor: sim.field.max(), gated, t: sim.t, total: sim.layout.units.length, counts });
       }
     },
     [],
@@ -250,6 +287,7 @@ export function CrowdPlanBench({
   };
 
   const readingLabel = READINGS.find((r) => r.key === reading)!;
+  const D = clearanceOpt === null ? null : keepOut(simRef.current?.layout ?? new CrowdSim({ grid, opening: false }).layout, clearanceOpt);
 
   return (
     <div ref={wrapRef} className={`lab-wrap${onLight ? ' on-light' : ''}`}>
@@ -271,10 +309,13 @@ export function CrowdPlanBench({
         </div>
         <div className="lab-hud br">
           <div className="num">{t.formed(hud.formed, hud.total)}</div>
-          <div className="dim">{t.line(hud.counts, hud.half, hud.t, hud.floor)}</div>
+          <div className="dim">
+            {t.line(hud.counts, hud.half, hud.t, hud.floor)}
+            {clearanceOpt !== null ? ` · ${t.gated(hud.gated)}` : ''}
+          </div>
         </div>
         <div className="lab-hud bl dim">
-          {t.foot(reach, threshold, fade, lang === 'zh' ? readingLabel.zh : readingLabel.en, mode)}
+          {t.foot(reach, threshold, fade, lang === 'zh' ? readingLabel.zh : readingLabel.en, mode, fovDeg, D)}
         </div>
       </div>
       {controls ? (
@@ -337,6 +378,44 @@ export function CrowdPlanBench({
                 aria-label={t.reach}
                 style={{ width: 96 }}
                 onChange={(e) => setReach(Number(e.target.value))}
+              />
+            </div>
+            <div className="grp">
+              <span className="k">
+                {t.fov} {fovDeg.toFixed(0)}°
+              </span>
+              <input
+                type="range"
+                min={FOV_DEG.min}
+                max={FOV_DEG.max}
+                step={10}
+                value={fovDeg}
+                aria-label={t.fov}
+                title={lang === 'zh' ? '痕迹只落在朝向前方这个角度里；360° = 全圆（旧口径）' : 'the trace lands only within this angle ahead; 360° = full circle (the old reading)'}
+                style={{ width: 84 }}
+                onChange={(e) => setFovDeg(Number(e.target.value))}
+              />
+            </div>
+            <div className="grp">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={clearOn}
+                  title={lang === 'zh' ? '平台离身体至少留这么远才许下来；走廊随之开' : 'a platform must keep this far from the body before it may come down; the lane follows'}
+                  onChange={(e) => setClearOn(e.target.checked)}
+                />
+                {t.clearance} {clearance.toFixed(2)} m
+              </label>
+              <input
+                type="range"
+                min={PLAN.CLEARANCE.min}
+                max={PLAN.CLEARANCE.max}
+                step={0.05}
+                value={clearance}
+                disabled={!clearOn}
+                aria-label={t.clearance}
+                style={{ width: 72 }}
+                onChange={(e) => setClearance(Number(e.target.value))}
               />
             </div>
             <div className="grp">
@@ -448,6 +527,7 @@ export function CrowdPlanBench({
                 ))}
               </span>
             </div>
+            <p className="lab-ctl__hint">{t.attention}</p>
             <p className="lab-ctl__hint">{t.hint}</p>
           </div>
         </div>

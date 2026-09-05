@@ -15,6 +15,8 @@ export interface Palette {
   accent2: string;
   muted: string;
   paper: string;
+  /** 警示（闸住的单元 / 让位圈）：全站的莲粉高光 */
+  warn: string;
 }
 
 export function readPalette(el: HTMLElement): Palette {
@@ -26,6 +28,7 @@ export function readPalette(el: HTMLElement): Palette {
     accent2: v('--accent-2', '#c9b8ee'),
     muted: v('--n500', '#8a9a90'),
     paper: v('--paper', '#1b2a33'),
+    warn: v('--rose', '#d98aa0'),
   };
 }
 
@@ -42,6 +45,12 @@ export interface PlanPerson {
   reach: number;
   /** 被指针按着：画粗一圈 */
   held?: boolean;
+  /** 视野全角（弧度）；省略 / ≥ 2π = 全圆 */
+  fov?: number;
+  /** 让位距离 D（m）；省略 / 0 = 不留 */
+  keepOut?: number;
+  /** 走着且走廊开着：正前方一条 2D 宽的道不落痕迹（画成胶囊缺口） */
+  lane?: boolean;
 }
 
 export interface PlanScene {
@@ -55,6 +64,111 @@ export interface PlanScene {
   /** 路的末端接到这个人（省略 = 不接） */
   trailEnd?: { x: number; y: number } | null;
   showTrace: boolean;
+  /** 此刻被身体让位闸住的单元（省略 = 没有） */
+  blocked?: Uint8Array | null;
+}
+
+/** 注意力区域用的离屏画布（缺口要用 destination-out 抠，不能直接在主画布上擦——会把地板一起擦掉） */
+let offscreen: HTMLCanvasElement | null = null;
+function attentionLayer(): CanvasRenderingContext2D | null {
+  if (typeof document === 'undefined') return null;
+  if (!offscreen) {
+    offscreen = document.createElement('canvas');
+    offscreen.width = W;
+    offscreen.height = H;
+  }
+  return offscreen.getContext('2d');
+}
+
+/**
+ * 人的注意力区域：影响半径的扇形（视野）减去让位圈，走着时再减去正前方的走廊——痕迹只落在这块地上。
+ * 画成淡绿面 + 虚线边，随人的朝向转；让位圈是一圈莲粉虚线。全圆、不让位时退化成旧的影响圈虚线。
+ */
+function drawAttention(ctx: CanvasRenderingContext2D, p: PlanPerson, cx: number, cy: number, sc: number, pal: Palette): void {
+  const R = p.reach * sc;
+  const fov = p.fov ?? Math.PI * 2;
+  const full = fov >= Math.PI * 2 - 1e-9;
+  const D = (p.keepOut ?? 0) * sc;
+  const off = attentionLayer();
+  if (full && D <= 0) {
+    ctx.strokeStyle = pal.accent;
+    ctx.globalAlpha = 0.7;
+    ctx.lineWidth = 0.9;
+    ctx.setLineDash([3, 4]);
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+    return;
+  }
+  const a0 = p.heading - fov / 2;
+  const a1 = p.heading + fov / 2;
+  const wedge = (c: CanvasRenderingContext2D) => {
+    c.beginPath();
+    if (full) c.arc(cx, cy, R, 0, Math.PI * 2);
+    else {
+      c.moveTo(cx, cy);
+      c.arc(cx, cy, R, a0, a1);
+      c.closePath();
+    }
+  };
+  if (off) {
+    off.setTransform(1, 0, 0, 1, 0, 0);
+    off.clearRect(0, 0, W, H);
+    off.globalCompositeOperation = 'source-over';
+    off.fillStyle = pal.accent;
+    off.globalAlpha = 0.16;
+    wedge(off);
+    off.fill();
+    off.globalAlpha = 0.7;
+    off.strokeStyle = pal.accent;
+    off.lineWidth = 0.9;
+    off.setLineDash([3, 4]);
+    wedge(off);
+    off.stroke();
+    off.setLineDash([]);
+    // 抠掉让位圈与走廊
+    off.globalCompositeOperation = 'destination-out';
+    off.globalAlpha = 1;
+    if (D > 0) {
+      off.beginPath();
+      off.arc(cx, cy, D, 0, Math.PI * 2);
+      off.fill();
+      if (p.lane) {
+        off.save();
+        off.translate(cx, cy);
+        off.rotate(p.heading);
+        off.fillRect(0, -D, R + 2, 2 * D);
+        off.restore();
+      }
+    }
+    off.globalCompositeOperation = 'source-over';
+    ctx.drawImage(offscreen!, 0, 0, W, H, 0, 0, W, H);
+  }
+  // 让位圈（莲粉虚线）；走着时走廊两条边也画出来
+  if (D > 0) {
+    ctx.strokeStyle = pal.warn;
+    ctx.globalAlpha = 0.8;
+    ctx.lineWidth = 0.9;
+    ctx.setLineDash([2, 3]);
+    ctx.beginPath();
+    ctx.arc(cx, cy, D, 0, Math.PI * 2);
+    ctx.stroke();
+    if (p.lane) {
+      const hx = Math.cos(p.heading);
+      const hy = Math.sin(p.heading);
+      const len = Math.sqrt(Math.max(0, R * R - D * D));
+      ctx.beginPath();
+      ctx.moveTo(cx - hy * D, cy + hx * D);
+      ctx.lineTo(cx - hy * D + hx * len, cy + hx * D + hy * len);
+      ctx.moveTo(cx + hy * D, cy - hx * D);
+      ctx.lineTo(cx + hy * D + hx * len, cy - hx * D + hy * len);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+  }
 }
 
 /**
@@ -167,13 +281,16 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
     const cy = Y(u.y);
     const d = s.act.degree[u.i];
     const frac = Math.min(1, s.act.input[u.i] / scale);
-    // 潜在占位
-    ctx.strokeStyle = pal.ink;
-    ctx.globalAlpha = 0.2;
-    ctx.lineWidth = 0.8;
+    const gated = !!s.blocked && s.blocked[u.i] === 1;
+    // 潜在占位；闸住的（平台下来会打到人）画成莲粉虚线圈
+    ctx.strokeStyle = gated ? pal.warn : pal.ink;
+    ctx.globalAlpha = gated ? 0.85 : 0.2;
+    ctx.lineWidth = gated ? 1 : 0.8;
+    if (gated) ctx.setLineDash([2, 3]);
     ctx.beginPath();
     ctx.arc(cx, cy, platPx, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.setLineDash([]);
     // 已成形：淡紫底
     if (d >= 1 - 1e-9) {
       ctx.fillStyle = pal.accent2;
@@ -205,6 +322,19 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
     ctx.beginPath();
     ctx.arc(cx, cy, mastPx, 0, Math.PI * 2);
     ctx.fill();
+    // 闸住：芯上一个小 ×
+    if (gated) {
+      const k = Math.max(3, mastPx * 1.4);
+      ctx.strokeStyle = pal.warn;
+      ctx.globalAlpha = 0.95;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(cx - k, cy - k);
+      ctx.lineTo(cx + k, cy + k);
+      ctx.moveTo(cx - k, cy + k);
+      ctx.lineTo(cx + k, cy - k);
+      ctx.stroke();
+    }
   }
   ctx.globalAlpha = 1;
 
@@ -221,18 +351,11 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
     ctx.globalAlpha = 1;
   }
 
-  // 人：影响圈（绿虚线）+ 身体 + 朝向；被按着的画粗一圈
+  // 人：注意力区域（视野扇形 − 让位圈 − 走廊；全圆不让位时就是旧的影响圈虚线）+ 身体 + 朝向；被按着的画粗一圈
   for (const p of s.people) {
     const cx = X(p.x);
     const cy = Y(p.y);
-    ctx.strokeStyle = pal.accent;
-    ctx.globalAlpha = 0.7;
-    ctx.lineWidth = 0.9;
-    ctx.setLineDash([3, 4]);
-    ctx.beginPath();
-    ctx.arc(cx, cy, p.reach * sc, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    drawAttention(ctx, p, cx, cy, sc, pal);
     const r = PLAN.BODY_R * sc;
     ctx.fillStyle = pal.paper;
     ctx.strokeStyle = p.held ? pal.accent : pal.ink;

@@ -550,7 +550,7 @@ export default function LabPage() {
         <Bench
           no="14"
           title="A person walks through"
-          lede="The first bench with a behaviour layer. One person walks through Lab.12’s room — passing, crossing, standing, looping, pacing, or wherever you click — and every second of presence marks the floor within reach. Each unit reads the floor it owns; once that floor has held presence long enough on average, the unit comes down; whether it stays down after they leave is a switch — follow, where it withdraws, or lock, the hysteresis the project argues for. The units are smaller and more numerous than Lab.12’s so that what forms is a group, not a point: at 8×8 a twenty-second stand grows a cross of five, pacing carves a corridor, a loop leaves a ring, passing leaves nothing. As a demo it runs fast — two seconds of standing brings a unit down, six seconds after the person leaves it is gone — with the author’s July prototype (2 %/s decay, a 15 s threshold) still one slider away; reach is the behavioural knob."
+          lede="The first bench with a behaviour layer. One person walks through Lab.12’s room — passing, crossing, standing, looping, pacing, or wherever you click — and every second of presence marks the floor within reach. Each unit reads the floor it owns; once that floor has held presence long enough on average, the unit comes down; whether it stays down after they leave is a switch — follow, where it withdraws, or lock, the hysteresis the project argues for. The units are smaller and more numerous than Lab.12’s so that what forms is a group, not a point. The person faces somewhere and has a body: the trace lands only inside a 180° field of view, nothing comes down within a clearance distance of the body (a platform there would hit them — those units are held back, marked with a rose ×), and while walking a lane straight ahead stays clear, so structure grows along the sides of the path and, when they stop, as an arc in front of them. As a demo it runs fast — two seconds of standing brings the arc down, six seconds after the person leaves it is gone — with the author’s July prototype (2 %/s decay, a 15 s threshold) still one slider away; reach, field of view and clearance are the behavioural knobs."
           accent="var(--accent)"
           specs={[
             ['Field', 'Lab.12’s room and field · 4×4 / 6×6 / 8×8 · unit scaled with pitch (4×4 = Lab.12 verbatim)'],
@@ -558,9 +558,11 @@ export default function LabPage() {
             ['Reading', 'By cell (Voronoi = the aisle lines) or footprint only · mean over the cells a unit owns'],
             ['Forming', 'Mean ≥ the threshold ⇒ down · purple ring grows from mast to rim'],
             ['Response', 'Follow — the structure tracks the reading and withdraws once people leave (default; 2 s to form, gone 6 s after they leave) · Lock — bonds stay locked, the hysteresis the project argues for (the prototype: threshold 15 s, decay 2 %/s)'],
-            ['Reach', '0.22–1.2 m, default 1.0 m (Hall’s personal distance) · the behavioural knob'],
-            ['Behaviours', 'Passing · diagonal · dwell 20 s · loop ×6 · pacing ×8 · free (click the floor) · hold the person to drag'],
-            ['Result', 'Under the prototype’s own numbers: passing forms none · a 20 s stand forms a cross of 5 (+4 half) · pacing a corridor · loop a ring'],
+            ['Reach', '0.22–2.0 m, default 1.5 m (how far they look; Hall’s near social distance) · the prototype’s 1.0 m is one slider away'],
+            ['Facing', 'Field of view 60°–360°, default 180° — the trace lands only ahead · facing = the last direction walked'],
+            ['Clearance', 'D = platform radius + body 0.22 + clearance 0.15 m (an elbow) · no trace within D, units whose mast is within D are held back (rose ×) · while walking a lane 2D wide ahead stays clear · off = the 09-04 reading'],
+            ['Behaviours', 'Passing · diagonal (aisle-wise steps) · dwell 20 s at an aisle crossing · loop ×6 · pacing ×8 · free (click the floor) · hold the person to drag — every route keeps to the aisles; a unit centre is a mast'],
+            ['Result', 'Under the prototype’s own numbers with facing and clearance on: passing forms none · a 20 s stand forms an arc of 3 ahead (+3 half) · pacing lines the corridor without filling it · loop a ring'],
             ['Not here', 'Which form a unit takes — the behaviour → form rules are the author’s to write'],
           ]}
         >
@@ -575,7 +577,7 @@ export default function LabPage() {
           specs={[
             ['People', 'Up to 8 · click empty floor to place · hover for the grab cursor, hold to drag · − removes the last'],
             ['Wander', 'Indoor pace 0.7 m/s · a hop of 0.5–2 m (now and then 3.5) · then 8–45 s standing · seeded · a demo device, not a rule'],
-            ['Mechanism', 'Lab.14’s, untouched: presence-seconds within reach · trace decays · mean ≥ threshold brings the unit down'],
+            ['Mechanism', 'Lab.14’s, untouched: presence-seconds within each person’s field of view, outside their clearance · trace decays · mean ≥ threshold brings the unit down · a unit within anyone’s clearance is held back'],
             ['Response', 'Follow (default) — units withdraw when people leave · Lock — they stay, which is the project’s hysteresis'],
             ['Overlap', 'Reaches add: two people on one spot form the unit underfoot in half the time'],
             ['Field', '4×4 / 6×6 / 8×8 on Lab.12’s field · unit scaled with pitch'],

@@ -86,10 +86,11 @@ export const PLAN = {
   CELL: 0.1,
   /** 人的身体半径（m，肩宽约 0.45 m）——画人用；痕迹按 reach 落 */
   BODY_R: 0.22,
-  /** 影响半径（m）：人的存在能被多远的地面感到。下限 = 身体，上限 = Hall 个人距离外沿；
-   *  默认 1.0 ≈ 一臂之遥（Hall 个人距离的远相 0.76–1.2 m）——8×8 下一个人站 20 s 正好长出
-   *  一个十字形的「一群」（中心 + 四邻成形、四角半成，⌀ ≈ 1.8 m）；0.6 只点亮脚下那一个 */
-  REACH: { min: 0.22, max: 1.2, def: 1.0 },
+  /** 影响半径（m）：人的存在能被多远的地面感到。下限 = 身体；上限原是 Hall 个人距离外沿 1.2，
+   *  2026-09-05 放到 2.0（Hall 社交距离近相 1.2–2.1）——让位一开，这个量的含义变成「看到多远」，
+   *  1.0 只剩 D 外一道窄环、什么也招不到。**模块默认仍 1.0**（原型口径，守门与旧线稿钉在它上面）；
+   *  台架用 ATTENTION.reach */
+  REACH: { min: 0.22, max: 2.0, def: 1.0 },
   /** 步速量程与默认（m/s）——1.2 m/s 是作者人类层「密度约 1.2 人/m² 之后开始下降」那条规则的基准步速 */
   SPEED: { min: 0.3, max: 1.5, def: 1.2 },
   /** 痕迹每秒衰减比例（原型「每拍衰减 2%」，tick 当 1 s） */
@@ -133,6 +134,11 @@ export const PLAN = {
    * 让位距离 D = platR + BODY_R + clearance（见 `keepOut`）。
    */
   CLEARANCE: { min: 0, max: 0.4, def: 0.15 },
+  /**
+   * 「人有朝向、有身体」的台架默认（2026-09-05 用户拍板「按你的做」）：视野 180° · 让位一肘 · 走廊随让位 ·
+   * 影响半径 1.5（这一档的含义是看到多远）。模块默认仍是旧口径（全圆、不让位、1.0）。
+   */
+  ATTENTION: { fov: Math.PI, clearance: 0.15, lane: true, reach: 1.5 },
 } as const;
 
 /** 让位距离 D（m，芯到人）：平台外缘 + 身体 + 让位——近于这个距离的平台会打到人 */
@@ -681,9 +687,17 @@ export interface PathPreset {
 
 const pt = (x: number, y: number, extra: Partial<Waypoint> = {}): Waypoint => ({ x, y, ...extra });
 
-/** 驻留点：4×4 时单元 (1,1) 的中心；别的 N 取离它最近的单元中心（站到单元正下方） */
-export function dwellSpot(l: PlanLayout): PlanUnit {
-  return nearestUnit(l, -l.pitch4 / 2, -l.pitch4 / 2);
+/**
+ * 驻留点：离「4×4 时单元 (1,1) 的中心」最近的**过道交叉点**（2026-09-05 用户拍板改走过道——此前站单元中心，
+ * 那里是根杆子：`unitsUnderBody` 体检三种密度都 = 1）。
+ */
+export function dwellSpot(l: PlanLayout): { x: number; y: number } {
+  return nearestCrossing(l, -l.pitch4 / 2, -l.pitch4 / 2);
+}
+
+/** 离 v 最近的一条过道线（沿 x 或 y）——路线预设贴过道走用 */
+function nearestAisle(lines: number[], v: number): number {
+  return lines.reduce((b, c) => (Math.abs(c - v) < Math.abs(b - v) ? c : b));
 }
 
 export const PATHS: readonly PathPreset[] = [
@@ -699,12 +713,25 @@ export const PATHS: readonly PathPreset[] = [
     key: 'diagonal',
     zh: '斜穿',
     en: 'diagonal',
-    zhNote: '从左门斜着横过整片场地到对角，再到右门',
-    enNote: 'left door, diagonally across the whole field, right door',
+    zhNote: '从左门沿过道一步横一步纵地斜穿整片场地到对角，再到右门',
+    enNote: 'left door, then across the whole field corner to corner in aisle-wise steps, right door',
     route: (l) => {
+      // 直线对角必穿杆子（格子的对角线过格心），改成沿过道的阶梯：横一格、纵一格交替
       const c0 = l.units[0];
       const c1 = l.units[l.units.length - 1];
-      return [pt(l.doors[0].x, 0), pt(c0.x, c0.y), pt(c1.x, c1.y), pt(l.doors[1].x, 0, { exit: true })];
+      const a = nearestCrossing(l, c0.x, c0.y);
+      const b = nearestCrossing(l, c1.x, c1.y);
+      const nx = Math.round((b.x - a.x) / l.pitchM);
+      const ny = Math.round((b.y - a.y) / l.pitchM);
+      const out: Waypoint[] = [pt(l.doors[0].x, 0), pt(a.x, a.y)];
+      let x = a.x;
+      let y = a.y;
+      for (let k = 0; k < Math.max(nx, ny); k++) {
+        if (k < nx) out.push(pt((x += l.pitchM), y));
+        if (k < ny) out.push(pt(x, (y += l.pitchM)));
+      }
+      out.push(pt(l.doors[1].x, 0, { exit: true }));
+      return out;
     },
   },
   {
@@ -722,10 +749,11 @@ export const PATHS: readonly PathPreset[] = [
     key: 'loop',
     zh: '绕圈',
     en: 'loop',
-    zhNote: `绕场地中央 ${PLAN.LOOP_LAPS} 圈（边长两个 Lab.12 格距）——反复经过、从不停留`,
-    enNote: `${PLAN.LOOP_LAPS} laps round the centre of the field — passing, never staying`,
+    zhNote: `沿过道绕场地中央 ${PLAN.LOOP_LAPS} 圈（边长约两个 Lab.12 格距）——反复经过、从不停留`,
+    enNote: `${PLAN.LOOP_LAPS} laps round the centre of the field along the aisles — passing, never staying`,
     route: (l) => {
-      const p = l.pitch4;
+      // 边贴最近的一条过道线（原 ±pitch4 在 6×6 下正穿过一排杆子）
+      const p = nearestAisle(aisleLines(l).x.filter((v) => v > 0), l.pitch4);
       const out: Waypoint[] = [pt(l.doors[0].x, 0), pt(-p, 0), pt(-p, -p)];
       for (let k = 0; k < PLAN.LOOP_LAPS; k++) out.push(pt(p, -p), pt(p, p), pt(-p, p), pt(-p, -p));
       out.push(pt(-p, 0), pt(l.doors[1].x, 0, { exit: true }));
@@ -814,6 +842,8 @@ export class PlanSim {
   lane: boolean;
   /** 此刻被身体让位闸住的单元（每步现算；clearance 关时全 0） */
   readonly blocked: Uint8Array;
+  /** 上一子步人有没有动（走廊只在走着时开；画法据此画胶囊） */
+  moving = false;
   /** 仿真时间（s） */
   t = 0;
   /** 人离场那一刻的 t（未离场 = null） */
@@ -860,6 +890,7 @@ export class PlanSim {
     this.trail.push(this.walker.x, this.walker.y);
     this.lastX = this.walker.x;
     this.lastY = this.walker.y;
+    this.moving = false;
     this.blocked.fill(0);
   }
 
@@ -987,6 +1018,7 @@ export class PlanSim {
       if (this.walker.present) {
         // 走着 = 这一子步位置动了（预设按步速走、拖着按指针给，两条路一个判据）
         const moving = Math.hypot(this.walker.x - this.lastX, this.walker.y - this.lastY) > 1e-9;
+        this.moving = moving;
         const hole = this.keepOutM;
         this.field.imprintShaped(this.walker.x, this.walker.y, this.reach, sdt, this.walker.heading, this.fov, hole, this.lane && moving ? hole : 0);
         this.trailAcc += moved;

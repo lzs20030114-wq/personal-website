@@ -11,7 +11,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  PATHS, PLAN, PlanSim, aisleLines, dwellSpot, planLayout, runScenario,
+  PATHS, PLAN, PlanSim, aisleLines, dwellSpot, nearestUnit, planLayout, runScenario,
 } from '../../src/lib/space/unit-activation.ts';
 
 const OUT = process.argv[2] ?? 'activation-out';
@@ -277,7 +277,7 @@ const label = (sim) => {
   out.push(txt(28, 34, '一个人走过 · 驻留那一遍的五个时刻：痕迹在退，成形不退（8×8）', { size: 16, weight: 700 }));
   out.push(txt(28, 54, `走到一处站 ${PLAN.DWELL_S} s 再出门。人走后地面的绿逐渐消失，紫的一群留在原处——这就是滞回（键锁定永久）；行为层与空间层之间唯一的信息通道是痕迹。`, { size: 11, fill: MUTE }));
   const sim = new PlanSim({ path: 'dwell', grid: 8 });
-  const u = dwellSpot(sim.layout);
+  const u = nearestUnit(sim.layout, dwellSpot(sim.layout).x + sim.layout.pitchM / 2, dwellSpot(sim.layout).y + sim.layout.pitchM / 2); // 交叉点右下那台
   moments.forEach(([name, advance], k) => {
     advance(sim);
     const ox = 40 + k * cell + cell / 2 - 15;
@@ -290,7 +290,7 @@ const label = (sim) => {
     out.push(units(sim, ox, oy, sc));
     out.push(person(sim, ox, oy, sc));
     const s = sim.summary();
-    out.push(txt(ox, oy + (ROOM_M / 2) * sc + 16, `脚下单元读数 ${sim.act.input[u.i].toFixed(1)} s · 成形 ${s.formed.length} · 半成以上 ${s.half}`, { size: 10, fill: s.formed.length ? PURPLE : INK, anchor: 'middle' }));
+    out.push(txt(ox, oy + (ROOM_M / 2) * sc + 16, `身旁单元读数 ${sim.act.input[u.i].toFixed(1)} s · 成形 ${s.formed.length} · 半成以上 ${s.half}`, { size: 10, fill: s.formed.length ? PURPLE : INK, anchor: 'middle' }));
     out.push(txt(ox, oy + (ROOM_M / 2) * sc + 30, `地面最深 ${sim.field.max().toFixed(1)} s`, { size: 10, fill: GREEN, anchor: 'middle' }));
   });
   writeFileSync(join(OUT, 'hysteresis.svg'), doc(W, H, out.join('\n')));

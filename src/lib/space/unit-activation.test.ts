@@ -12,6 +12,7 @@ import {
   dwellSpot,
   keepOut,
   nearestCrossing,
+  nearestUnit,
   RESPONSES,
   planLayout,
   runScenario,
@@ -81,10 +82,35 @@ describe('unit-activation · 平面布局', () => {
     expect(a8.y.map((v) => +(v / L8.pitchM).toFixed(9))).toEqual([-3, -2, -1, 0, 1, 2, 3]);
   });
 
-  it('驻留点 = 离 Lab.12 单元 (1,1) 中心最近的单元中心（站到单元正下方）', () => {
-    expect(dwellSpot(L4).i).toBe(idx(L4, 1, 1));
-    const s8 = dwellSpot(L8);
-    expect(Math.hypot(s8.x + L4.pitchM / 2, s8.y + L4.pitchM / 2)).toBeLessThan(L8.pitchM);
+  it('驻留点 = 离 Lab.12 单元 (1,1) 中心最近的过道交叉点（2026-09-05 改走过道：单元中心是根杆子）', () => {
+    for (const L of [L4, planLayout(6), L8]) {
+      const s = dwellSpot(L);
+      expect(aisleLines(L).x.some((x) => Math.abs(x - s.x) < 1e-9)).toBe(true);
+      expect(aisleLines(L).y.some((y) => Math.abs(y - s.y) < 1e-9)).toBe(true);
+      expect(Math.hypot(s.x + L4.pitchM / 2, s.y + L4.pitchM / 2)).toBeLessThan(L.pitchM);
+      expect(unitsUnderBody(L, s.x, s.y)).toHaveLength(0);
+    }
+  });
+
+  it('斜穿与绕圈都贴过道走：路点全在过道线上，任何一步不穿杆子（三种密度）', () => {
+    for (const L of [L4, planLayout(6), L8]) {
+      const a = aisleLines(L);
+      const on = (v: number, lines: number[]) => lines.some((x) => Math.abs(x - v) < 1e-6);
+      for (const key of ['diagonal', 'loop'] as const) {
+        const route = PATHS.find((p) => p.key === key)!.route(L);
+        const inner = route.slice(1, -1); // 两端是门
+        expect(inner.length).toBeGreaterThan(2);
+        for (const w of inner) expect(on(w.x, a.x) || on(w.y, a.y)).toBe(true);
+        // 相邻路点只沿 x 或只沿 y 走（阶梯 / 方框），且在过道线上
+        for (let k = 1; k < inner.length; k++) {
+          const dx = Math.abs(inner[k].x - inner[k - 1].x);
+          const dy = Math.abs(inner[k].y - inner[k - 1].y);
+          expect(dx < 1e-6 || dy < 1e-6).toBe(true);
+          if (dx < 1e-6) expect(on(inner[k].x, a.x)).toBe(true);
+          else expect(on(inner[k].y, a.y)).toBe(true);
+        }
+      }
+    }
   });
 });
 
@@ -153,8 +179,8 @@ describe('unit-activation · 封顶 + 线性褪去（台架的演示口径）', 
 
   it('演示默认：站定 ≈2 s 一群单元下来，人走后 ≈6 s 收光（用户 2026-09-04 拍板的两个数）', () => {
     const sim = new PlanSim({ path: 'free', threshold: PLAN.DEMO.threshold, fade: PLAN.DEMO.fade, mode: 'follow' });
-    const u = dwellSpot(sim.layout);
-    sim.hold(u.x, u.y); // 把人按在一个单元正下方站着
+    const u = nearestUnit(sim.layout, 0, 0);
+    sim.hold(u.x, u.y); // 把人按在一个单元正下方站着（体检用，不走预设）
     let tOn = 0;
     for (let k = 0; k < 200; k++) {
       sim.step(0.05);
@@ -194,7 +220,7 @@ describe('unit-activation · 读法', () => {
         n++;
       }
     expect(n).toBe(f.cols * f.rows);
-    const u = dwellSpot(L8);
+    const u = nearestUnit(L8, -L4.pitchM / 2, -L4.pitchM / 2);
     f.imprint(u.x, u.y, PLAN.REACH.def, 1);
     const s = unitInputs(f, c);
     expect(s[u.i]).toBeCloseTo(1, 6); // 半格对角 0.43 m < 1.0 m ⇒ 整格在圈里
@@ -263,11 +289,11 @@ describe('unit-activation · 响应两档', () => {
       return { peak, after: sim.act.formed().length, live: sim.act.countAtLeast(0.02) };
     };
     const follow = run('follow');
-    expect(follow.peak).toBeGreaterThanOrEqual(5); // 站着时下来一群
+    expect(follow.peak).toBeGreaterThanOrEqual(4); // 站着时下来一群（站在交叉点：围着他的四个）
     expect(follow.after).toBe(0); // 人走了收回去
     expect(follow.live).toBe(0);
     const lock = run('ratchet');
-    expect(lock.peak).toBeGreaterThanOrEqual(5);
+    expect(lock.peak).toBeGreaterThanOrEqual(4);
     expect(lock.after).toBe(lock.peak); // 锁定档留着
   });
 });
@@ -313,34 +339,41 @@ describe('unit-activation · 五种行为在默认规则下的结论（8×8，�
         peak = Math.max(peak, sim.act.maxInput());
       }
       expect(peak).toBeGreaterThan(0.4);
-      // 一块地面在圈里待的时间 ≈ 2×1.0 m ÷ 1.2 m/s ≈ 1.7 s；斜穿在角上转向、走进又走出，那个角约两倍
-      expect(peak).toBeLessThan(2.5);
+      // 一块地面在圈里待的时间 ≈ 2×1.0 m ÷ 1.2 m/s ≈ 1.7 s；斜穿沿过道走阶梯，每个拐角走进又走出，约两倍
+      expect(peak).toBeLessThan(3.5);
       expect(sim.act.formed()).toEqual([]);
       const slow = runScenario({ path, speed: PLAN.SPEED.min }, 0);
-      expect(slow.act.maxInput()).toBeLessThan(PLAN.THRESHOLD / 2);
+      expect(slow.act.maxInput()).toBeLessThan(PLAN.THRESHOLD); // 斜穿的阶梯拐角多，慢走能攒到六成，仍不成形
       expect(slow.act.formed()).toEqual([]);
     }
   });
 
-  it('驻留 20 s：长出一个十字形的「一群」——脚下那个与四个正邻居成形、四个斜邻居半成；离场后痕迹退、成形不退', () => {
+  it('驻留 20 s：站在过道交叉点，围着他的四个单元成形、外圈半成——一群围着人长出来；离场后痕迹退、成形不退', () => {
     const sim = runScenario({ path: 'dwell' }, 0);
-    const u = dwellSpot(L8);
-    const cross = [u.i, idx(L8, u.row - 1, u.col), idx(L8, u.row + 1, u.col), idx(L8, u.row, u.col - 1), idx(L8, u.row, u.col + 1)].sort((a, b) => a - b);
-    expect(sim.act.formed()).toEqual(cross);
-    for (const [dr, dc] of [[1, 1], [-1, -1], [1, -1], [-1, 1]]) {
-      const d = sim.act.degree[idx(L8, u.row + dr, u.col + dc)];
-      expect(d).toBeGreaterThan(0.3);
-      expect(d).toBeLessThan(1);
+    const c = dwellSpot(L8);
+    const ring = L8.units.filter((u) => Math.hypot(u.x - c.x, u.y - c.y) < L8.pitchM).map((u) => u.i).sort((a, b) => a - b);
+    expect(ring).toHaveLength(4);
+    expect(sim.act.formed()).toEqual(ring);
+    const outer = L8.units.filter((u) => {
+      const d = Math.hypot(u.x - c.x, u.y - c.y);
+      return d > L8.pitchM && d < 1.7 * L8.pitchM;
+    });
+    expect(outer).toHaveLength(8);
+    for (const u of outer) {
+      expect(sim.act.degree[u.i]).toBeGreaterThan(0.3);
+      expect(sim.act.degree[u.i]).toBeLessThan(1);
     }
     expect(sim.summary().half).toBeGreaterThanOrEqual(8);
     expect(sim.summary().half).toBeLessThanOrEqual(13);
-    // 中心读数 ≈ 解析式（站 20 s，连续版 16.45）+ 走进走出的一点
-    expect(sim.act.input[u.i]).toBeGreaterThan(dwellInput(PLAN.DWELL_S) * 0.9);
-    expect(sim.act.input[u.i]).toBeLessThan(dwellInput(PLAN.DWELL_S) + 3);
+    // 围着他的单元读数 ≈ 解析式（站 20 s，连续版 16.45）+ 走进走出的一点
+    for (const u of ring) {
+      expect(sim.act.input[u]).toBeGreaterThan(dwellInput(PLAN.DWELL_S) * 0.9);
+      expect(sim.act.input[u]).toBeLessThan(dwellInput(PLAN.DWELL_S) + 3);
+    }
     // 离场再看 60 s：读数掉到阈值以下，程度仍是 1
     sim.step(60);
-    expect(sim.act.input[u.i]).toBeLessThan(PLAN.THRESHOLD / 2);
-    expect(sim.act.formed()).toEqual(cross);
+    for (const u of ring) expect(sim.act.input[u]).toBeLessThan(PLAN.THRESHOLD / 2);
+    expect(sim.act.formed()).toEqual(ring);
   });
 
   it('4×4 读不出「群」：同一个人同一处站同样久，最多只点亮脚下那一个', () => {
@@ -388,9 +421,14 @@ describe('unit-activation · 五种行为在默认规则下的结论（8×8，�
 
   it('阈值是旋钮：压到 0.5 s，斜穿在身后留下一条成形的带子', () => {
     const sim = runScenario({ path: 'diagonal', threshold: 0.5 }, 0);
-    expect(sim.act.formed().length).toBeGreaterThanOrEqual(8);
-    expect(sim.act.formed()).toContain(0);
-    expect(sim.act.formed()).toContain(L8.units.length - 1);
+    const formed = sim.act.formed();
+    expect(formed.length).toBeGreaterThanOrEqual(8);
+    // 带子从起点交叉点旁边一直铺到终点交叉点旁边（阶梯沿过道走，角上那台不一定整格盖到）
+    const route = PATHS.find((p) => p.key === 'diagonal')!.route(L8);
+    const a = route[1];
+    const b = route[route.length - 2];
+    expect(formed.some((i) => Math.hypot(L8.units[i].x - a.x, L8.units[i].y - a.y) < L8.pitchM)).toBe(true);
+    expect(formed.some((i) => Math.hypot(L8.units[i].x - b.x, L8.units[i].y - b.y) < L8.pitchM)).toBe(true);
   });
 
   it('自由模式：点哪走哪，站着就是驻留；离场再点从左门重新进来', () => {
@@ -586,9 +624,9 @@ describe('unit-activation · 人有朝向、有身体（2026-09-05：视野 / �
     expect(Array.from(blockedUnits(L8, [a], null)).filter(Boolean)).toHaveLength(0);
   });
 
-  it('体检：现行驻留点是单元中心——身体里有一根杆子；最近的过道交叉点身体里没有', () => {
+  it('体检：单元中心身体里有一根杆子（09-05 之前的驻留点）；过道交叉点身体里没有', () => {
     for (const L of [L4, planLayout(6), L8]) {
-      const u = dwellSpot(L);
+      const u = nearestUnit(L, -L.pitch4 / 2, -L.pitch4 / 2);
       expect(unitsUnderBody(L, u.x, u.y)).toHaveLength(1);
       const c = nearestCrossing(L, -L.pitch4 / 2, -L.pitch4 / 2);
       expect(aisleLines(L).x.some((x) => Math.abs(x - c.x) < 1e-9)).toBe(true);

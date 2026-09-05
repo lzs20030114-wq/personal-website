@@ -74,6 +74,8 @@ export interface Person {
   /** 拖动时上一帧的位置（算走过的路程用） */
   lastX: number;
   lastY: number;
+  /** 上一子步有没有动（走廊只在走着时开；画法据此画胶囊） */
+  moving: boolean;
 }
 
 export interface CrowdSimOpts {
@@ -157,7 +159,7 @@ export class CrowdSim {
     const h = this.layout.roomM / 2 - PLAN.BODY_R;
     const w = new Walker(this.speed);
     w.place(Math.max(-h, Math.min(h, x)), Math.max(-h, Math.min(h, y)));
-    const p: Person = { id: this.nextId++, walker: w, mode: this.auto ? 'auto' : 'manual', lastX: w.x, lastY: w.y };
+    const p: Person = { id: this.nextId++, walker: w, mode: this.auto ? 'auto' : 'manual', lastX: w.x, lastY: w.y, moving: false };
     this.people.push(p);
     return p;
   }
@@ -345,6 +347,7 @@ export class CrowdSim {
           p.walker.presentTime += sdt;
         }
         const moving = Math.hypot(p.walker.x - p.lastX, p.walker.y - p.lastY) > 1e-9;
+        p.moving = moving;
         p.lastX = p.walker.x;
         p.lastY = p.walker.y;
         if (p.walker.present) {

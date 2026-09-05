@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { PATHS, PLAN, PlanSim, READINGS, RESPONSES, type PathKey, type Reading, type ResponseMode } from '../../src/lib/space/unit-activation';
+import { PATHS, PLAN, PlanSim, READINGS, RESPONSES, keepOut, type PathKey, type Reading, type ResponseMode } from '../../src/lib/space/unit-activation';
 import { H, W, canvasToRoom, drawPlan, readPalette, type Palette } from './planDraw';
 import { planFromHash } from './planHash';
 import { useBenchLoop } from './useBenchLoop';
@@ -20,6 +20,11 @@ import { useBenchLoop } from './useBenchLoop';
  * 定步推进：仿真按时间倍速走、行走子步 ≤ 0.05 s（模块内部），慢设备表现为放慢而非轨迹漂移。
  * 预设走完、离场后再看 AFTER_EXIT_S 秒（痕迹在退、成形不退——这一段就是滞回本身）自动重播；
  * 自由模式不自动重播。
+ *
+ * 人有朝向、有身体（2026-09-05 用户三问后拍板「按你的做」）：视野扇形（默认 180°）· 让位距离 D（平台半径 +
+ * 身体 + 让位一肘；D 以内不落痕迹、芯在 D 以内的单元闸住）· 走廊（走着时正前方一条 2D 宽的道不落痕迹，随让位开）。
+ * 三件全在模型里（unit-activation 的可选项），这里只多两组旋钮与画法：注意力区域随人转、闸住的单元画莲粉 ×。
+ * 影响半径这一档默认 1.5（含义变成「看到多远」）；视野拉到 360°、让位关掉就是 09-04 的旧口径。
  */
 /** 时间倍速三档：仿真秒 / 真实秒 */
 const TIME_SCALES = [1, 3, 8] as const;
@@ -39,13 +44,17 @@ const COPY = {
     floor: (v: number) => `地面最深 ${v.toFixed(1)} s`,
     state: { outside: '离场', walk: '走', dwell: '站', idle: '站', held: '拖' },
     t: (s: number) => `t ${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`,
-    foot: (reach: number, thr: number, fade: number, reading: string, mode: ResponseMode) =>
-      `影响半径 ${reach.toFixed(2)} m · 阈值 ${thr.toFixed(0)} s · 散掉 ${fade.toFixed(0)} s · ${reading}读 · 绿盘 = 当前读数 · 紫环 = ${mode === 'follow' ? '结构位置（跟着读数涨落，人走了收回去）' : '成形（键锁死，不回退）'}`,
+    foot: (reach: number, thr: number, fade: number, reading: string, mode: ResponseMode, fovDeg: number, D: number | null) =>
+      `影响半径 ${reach.toFixed(2)} m · 视野 ${fovDeg.toFixed(0)}° · ${D === null ? '不让位' : `让位 D ${D.toFixed(2)} m`} · 阈值 ${thr.toFixed(0)} s · 散掉 ${fade.toFixed(0)} s · ${reading}读 · 绿盘 = 当前读数 · 紫环 = ${mode === 'follow' ? '结构位置（跟着读数涨落，人走了收回去）' : '成形（键锁死，不回退）'}`,
+    gated: (n: number) => `闸住 ${n}`,
+    attention: `人有朝向、有身体：痕迹只落在视野扇形里（默认 180°，身后的不记）；让位距离 D = 平台半径 + 身体 + 让位（默认一肘 0.15 m）——D 以内的地面不记，芯在 D 以内的单元闸住（莲粉 ×：平台下来会打到人，跟随档退回去、锁定档不升）；走着时正前方一条 2D 宽的道也不记，结构只长在路两侧。视野拉到 360°、让位关掉 = 09-04 的旧口径。`,
     hint: `「响应」两档：跟随 = 结构追着读数涨落，人走了收回去（演示默认）；锁定 = 键锁死不回退，那是项目立论的滞回。按住那个人可以拖着走，松手就站在原地（预设的路线随之作废，点「重播」重来）。自由模式：点地面，人走过去；停着就是驻留；「离场」从最近的门出去。台架跑的是演示值：站 ${PLAN.DEMO.threshold} s 就触发，人走后 ${PLAN.DEMO.fade} s 散光。作者 2026-07-20 原型的三个数（落格 +1 · 每拍衰减 2% · 超过 15 就固化）= 阈值滑块拉到 15，那套要等几十秒才看得出变化。影响半径是行为的量，做成旋钮。`,
     grid: '格数',
     path: '行为',
     reading: '读法',
     reach: '影响半径',
+    fov: '视野',
+    clearance: '让位',
     threshold: '阈值',
     half_: '散掉',
     response: '响应',
@@ -66,13 +75,17 @@ const COPY = {
     floor: (v: number) => `deepest floor trace ${v.toFixed(1)} s`,
     state: { outside: 'left', walk: 'walking', dwell: 'standing', idle: 'standing', held: 'held' },
     t: (s: number) => `t ${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`,
-    foot: (reach: number, thr: number, fade: number, reading: string, mode: ResponseMode) =>
-      `reach ${reach.toFixed(2)} m · threshold ${thr.toFixed(0)} s · fade ${fade.toFixed(0)} s · ${reading} · green disc = live reading · purple ring = ${mode === 'follow' ? 'where the structure is — it follows the reading and withdraws once they leave' : 'formed; bonds locked, never undone'}`,
+    foot: (reach: number, thr: number, fade: number, reading: string, mode: ResponseMode, fovDeg: number, D: number | null) =>
+      `reach ${reach.toFixed(2)} m · field of view ${fovDeg.toFixed(0)}° · ${D === null ? 'no clearance' : `clearance D ${D.toFixed(2)} m`} · threshold ${thr.toFixed(0)} s · fade ${fade.toFixed(0)} s · ${reading} · green disc = live reading · purple ring = ${mode === 'follow' ? 'where the structure is — it follows the reading and withdraws once they leave' : 'formed; bonds locked, never undone'}`,
+    gated: (n: number) => `${n} held back`,
+    attention: `The person faces somewhere and has a body: the trace lands only inside the field of view (180° by default — nothing behind); the clearance distance D = platform radius + body + clearance (an elbow, 0.15 m, by default) — the floor within D records nothing and units whose mast is within D are held back (rose ×: a platform there would hit the person; it withdraws in follow mode, cannot rise in lock mode); while walking, a lane 2D wide straight ahead records nothing either, so structure grows along the sides of the path. Field of view at 360° with clearance off is the 09-04 reading.`,
     hint: `“Response” has two settings: follow — the structure tracks the reading and withdraws once people leave (the demo default); lock — bonds stay locked and nothing withdraws, which is the hysteresis the project argues for. Hold the person to drag them; on release they stand where you left them (the preset route is dropped — “replay” restarts it). Free mode: click the floor and the person walks there; standing still is dwelling; “leave” exits by the nearest door. The bench runs on demo numbers: ${PLAN.DEMO.threshold} s of standing forms a unit, ${PLAN.DEMO.fade} s after they leave it is gone. The author’s 2026-07-20 prototype (+1 on the cell stepped on, 2 % decay a tick, past 15 it solidifies) is the threshold slider at 15 — legible, but tens of seconds to read. Reach is a behavioural quantity, so it is a knob.`,
     grid: 'grid',
     path: 'behaviour',
     reading: 'reading',
     reach: 'reach',
+    fov: 'view',
+    clearance: 'clearance',
     threshold: 'threshold',
     half_: 'fade',
     response: 'response',
@@ -93,15 +106,18 @@ function sceneOf(sim: PlanSim, showTrace: boolean) {
     field: sim.field,
     catchment: sim.catchment,
     act: sim.act,
-    people: w.present ? [{ x: w.x, y: w.y, heading: w.heading, reach: sim.reach }] : [],
+    people: w.present ? [{ x: w.x, y: w.y, heading: w.heading, reach: sim.reach, fov: sim.fov, keepOut: sim.keepOutM, lane: sim.lane && sim.moving }] : [],
     trail: sim.trail,
     trailEnd: w.present ? { x: w.x, y: w.y } : null,
     showTrace,
+    blocked: sim.clearance === null ? null : sim.blocked,
   };
 }
 
 const PATH_KEYS = PATHS.map((p) => p.key);
 const DEFAULT_PATH: PathKey = 'dwell';
+/** 视野滑块（度）：60°–360°，360 = 全圆（旧口径） */
+const FOV_DEG = { min: 60, max: 360, def: Math.round((PLAN.ATTENTION.fov * 180) / Math.PI) } as const;
 
 export function WalkPlanBench({
   active = true,
@@ -128,12 +144,17 @@ export function WalkPlanBench({
   const [grid, setGrid] = useState<number>(PLAN.GRID_DEF);
   const [path, setPath] = useState<PathKey>(DEFAULT_PATH);
   const [reading, setReading] = useState<Reading>('nearest');
-  const [reach, setReach] = useState<number>(PLAN.REACH.def);
+  const [reach, setReach] = useState<number>(PLAN.ATTENTION.reach);
+  const [fovDeg, setFovDeg] = useState<number>(FOV_DEG.def);
+  const [clearOn, setClearOn] = useState(true);
+  const [clearance, setClearance] = useState<number>(PLAN.ATTENTION.clearance);
   const [threshold, setThreshold] = useState<number>(PLAN.DEMO.threshold);
   const [fade, setFade] = useState<number>(PLAN.DEMO.fade);
   const [mode, setMode] = useState<ResponseMode>('follow');
   const [speed, setSpeed] = useState<number>(PLAN.SPEED.def);
-  const [hud, setHud] = useState({ formed: 0, half: 0, max: 0, floor: 0, t: 0, state: 'walk' as 'outside' | 'walk' | 'dwell' | 'idle' | 'held', total: PLAN.GRID_DEF * PLAN.GRID_DEF });
+  const [hud, setHud] = useState({ formed: 0, half: 0, max: 0, floor: 0, t: 0, gated: 0, state: 'walk' as 'outside' | 'walk' | 'dwell' | 'idle' | 'held', total: PLAN.GRID_DEF * PLAN.GRID_DEF });
+  const fov = (fovDeg * Math.PI) / 180;
+  const clearanceOpt = clearOn ? clearance : null;
   const [cursor, setCursor] = useState<'default' | 'crosshair' | 'grab' | 'grabbing'>('default');
 
   // `/lab#lab14-<path>` 直达某种行为
@@ -144,7 +165,8 @@ export function WalkPlanBench({
 
   // 建仿真（换格数才重建——单元数变了，痕迹场与读法表要重算；其余旋钮就地改）
   useEffect(() => {
-    const sim = new PlanSim({ grid, path, reading, reach, threshold, fade, speed, mode });
+    // 走廊随让位一起开（用户拍板 ⑤）
+    const sim = new PlanSim({ grid, path, reading, reach, threshold, fade, speed, mode, fov, clearance: clearanceOpt, lane: clearanceOpt !== null });
     simRef.current = sim;
     if (canvasRef.current && palRef.current) {
       const ctx = canvasRef.current.getContext('2d');
@@ -180,6 +202,13 @@ export function WalkPlanBench({
   useEffect(() => {
     simRef.current?.setMode(mode);
   }, [mode]);
+  useEffect(() => {
+    simRef.current?.setFov(fov);
+  }, [fov]);
+  useEffect(() => {
+    simRef.current?.setClearance(clearanceOpt);
+    simRef.current?.setLane(clearanceOpt !== null);
+  }, [clearanceOpt]);
 
   // 画布 DPR 与配色（挂载一次；配色从容器 CSS 变量取）
   useEffect(() => {
@@ -218,7 +247,9 @@ export function WalkPlanBench({
       if (ctx) drawPlan(ctx, sceneOf(sim, traceRef.current), pal);
       const s = sim.act;
       const state = sim.held ? 'held' : sim.walker.state;
-      const key = `${Math.floor(sim.t)}|${s.formed().length}|${s.countAtLeast(0.5)}|${state}`;
+      let gated = 0;
+      if (sim.clearance !== null) for (let i = 0; i < sim.blocked.length; i++) gated += sim.blocked[i];
+      const key = `${Math.floor(sim.t)}|${s.formed().length}|${s.countAtLeast(0.5)}|${state}|${gated}`;
       if (key !== lastHud.current) {
         lastHud.current = key;
         setHud({
@@ -227,6 +258,7 @@ export function WalkPlanBench({
           max: s.maxInput(),
           floor: sim.field.max(),
           t: sim.t,
+          gated,
           state,
           total: sim.layout.units.length,
         });
@@ -276,6 +308,7 @@ export function WalkPlanBench({
 
   const readingLabel = READINGS.find((r) => r.key === reading)!;
   const free = path === 'free';
+  const D = clearanceOpt === null ? null : keepOut(simRef.current?.layout ?? new PlanSim({ grid }).layout, clearanceOpt);
 
   return (
     <div ref={wrapRef} className={`lab-wrap${onLight ? ' on-light' : ''}`}>
@@ -298,11 +331,12 @@ export function WalkPlanBench({
         <div className="lab-hud br">
           <div className="num">{t.formed(hud.formed, hud.total)}</div>
           <div className="dim">
-            {t.t(hud.t)} · {t.half(hud.half)} · {t.read(hud.max)} · {t.floor(hud.floor)} · {t.state[hud.state]}
+            {t.t(hud.t)} · {t.half(hud.half)} · {t.read(hud.max)} · {t.floor(hud.floor)}
+            {clearanceOpt !== null ? ` · ${t.gated(hud.gated)}` : ''} · {t.state[hud.state]}
           </div>
         </div>
         <div className="lab-hud bl dim">
-          {t.foot(reach, threshold, fade, lang === 'zh' ? readingLabel.zh : readingLabel.en, mode)}
+          {t.foot(reach, threshold, fade, lang === 'zh' ? readingLabel.zh : readingLabel.en, mode, fovDeg, D)}
         </div>
       </div>
       {controls ? (
@@ -392,6 +426,44 @@ export function WalkPlanBench({
                 aria-label={t.reach}
                 style={{ width: 96 }}
                 onChange={(e) => setReach(Number(e.target.value))}
+              />
+            </div>
+            <div className="grp">
+              <span className="k">
+                {t.fov} {fovDeg.toFixed(0)}°
+              </span>
+              <input
+                type="range"
+                min={FOV_DEG.min}
+                max={FOV_DEG.max}
+                step={10}
+                value={fovDeg}
+                aria-label={t.fov}
+                title={lang === 'zh' ? '痕迹只落在朝向前方这个角度里；360° = 全圆（旧口径）' : 'the trace lands only within this angle ahead; 360° = full circle (the old reading)'}
+                style={{ width: 84 }}
+                onChange={(e) => setFovDeg(Number(e.target.value))}
+              />
+            </div>
+            <div className="grp">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={clearOn}
+                  title={lang === 'zh' ? '平台离身体至少留这么远才许下来；走廊随之开' : 'a platform must keep this far from the body before it may come down; the lane follows'}
+                  onChange={(e) => setClearOn(e.target.checked)}
+                />
+                {t.clearance} {clearance.toFixed(2)} m
+              </label>
+              <input
+                type="range"
+                min={PLAN.CLEARANCE.min}
+                max={PLAN.CLEARANCE.max}
+                step={0.05}
+                value={clearance}
+                disabled={!clearOn}
+                aria-label={t.clearance}
+                style={{ width: 72 }}
+                onChange={(e) => setClearance(Number(e.target.value))}
               />
             </div>
             <div className="grp">
@@ -498,6 +570,7 @@ export function WalkPlanBench({
                 ))}
               </span>
             </div>
+            <p className="lab-ctl__hint">{t.attention}</p>
             <p className="lab-ctl__hint">{t.hint}</p>
           </div>
         </div>
