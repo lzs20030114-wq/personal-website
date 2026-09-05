@@ -1,5 +1,106 @@
 [
   {
+    "date": "2026-09-05",
+    "lead": {
+      "en": "Gave the person on the plan bench a facing, a body and a wandering gaze, so structure now forms in front of them, never on top of them.",
+      "zh": "给平面台架上的人加了朝向、身体和会转的视线，结构现在长在人面前、不会长到人头上。"
+    },
+    "body": {
+      "en": "- Three things were wrong with the first version: the person radiated presence in a full circle, so units behind their back came down for no reason; units straight ahead came down too, right in their path; and the body had no size, so the platform directly above them would have hit them on the way down.\n- Field of view: the trace now lands only inside a 180° wedge ahead. On its own this halves what pacing and looping leave behind, because nothing behind the body is recorded any more.\n- Clearance distance D = platform radius + body + an elbow (0.62 m on the 8×8 grid). It does two jobs with one number: a unit whose mast is within D is held back — its platform would strike the person — and the floor within D records nothing. Either alone fails: the hold alone lets the spot where you stood fill in the moment you leave; the blank floor alone still lets a unit that reads mostly outside the circle come down on you.\n- Lane: while walking, a strip 2D wide straight ahead records nothing either, so structure grows along the sides of a route and closes in as an arc only when the person stops.\n- The line drafts showed the old reach of 1.0 m no longer works once clearance is on — only a 0.38 m ring is left outside D, too thin to fill a floor cell. Reach now means how far they look, so its range goes to 2.0 m and the bench defaults to 1.5. They also showed the old dwell preset standing inside a mast; every preset route now keeps to the aisles.\n- Second pass, after seeing it run: the wedge was pinned to the last step's direction, so a long stand grew an arc on one side only. Gaze is now separate from facing — the body keeps its direction and the lane follows it, while the head glances elsewhere every few seconds within ±110°, on a seeded sequence so a replay is identical. The arc spreads to wherever they looked. This is a demo device; the real gaze rule is mine to write.\n- Third pass: inside the wedge only two units were coming down. A unit reads the mean over its whole floor, so only units wholly inside the wedge ever filled; the ones half-covered at its edge never could. A new floor-share knob (half by default) lets a unit come down when half its floor has been looked at long enough — the count in the same scene went from about two to the six whose masts are actually in view.\n- All of it is optional in the model and off by default, so the earlier guards are unchanged bit for bit; 18 guards added. Not done: people still walk straight through platforms that have already formed, and there is still no cat.",
+      "zh": "- 第一版有三处不对：人的存在向四周一圈平均散出去，身后的单元无缘无故也下来；正前方的单元下来了，正好挡在要走的路上；身体没有体积，头顶那台平台下来会打到人。\n- 视野：痕迹只落在朝向前方 180° 的扇形里。单这一条就把折返、绕圈留下的痕迹砍掉一半——身后不再补记。\n- 让位距离 D = 平台半径 + 身体 + 一肘（8×8 下 0.62 m）。一个数管两件事：芯在 D 以内的单元不许下来（它的平台会打到人），D 以内的地面也不落痕迹。只做其一都不成：只有闸，人一走脚下那块立刻长起来、站过的地方永远堵死；只有空地，一个大半地面在圈外的单元照样读满、照样下来打人。\n- 走廊：走动时正前方一条 2D 宽的道也不落痕迹，所以结构沿着路两侧长，人停下来才在面前合成一道弧。\n- 线稿看出两件事：让位一开，原来 1.0 m 的影响半径不够用——D 外只剩 0.38 m 宽的一道窄环，盖不满一格地面；影响半径的含义变成「看到多远」，量程放到 2.0 m，台架默认 1.5。另外原来的驻留预设站在一根杆子里，现在所有预设路线都贴过道走。\n- 第二轮，看真机之后：扇面钉在最后一步的方向上，站久了弧只在一边。视线和朝向分开——身体朝向不变、走廊沿它开，头每隔几秒看向别处（身体前方 ±110° 以内），用带种子的序列，重播逐位一样。弧跟着视线散开到看过的地方。这是演示装置，真正的视线规则由我来写。\n- 第三轮：扇面里只有两个单元下来。单元读的是脚下整片地面的均值，只有整片都在扇面里的才读得满，边上盖住一半的永远到不了。加一个「占比」旋钮（默认一半）：脚下一半的地面被看够了就下来——同一场景里成形数从两个变成六个，正好是芯在视野里的那一圈。\n- 这些在模型里全是可选项、默认关，此前的守门逐位不变；新增守门 18 项。没做的：人仍会径直穿过已经落下的平台；仍然没有猫。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "image",
+        "src": "/log/2026-09-05-attention-shape.webp",
+        "alt": {
+          "en": "Four plan diagrams of the same standing person at true scale: a full green circle of floor trace, a half-circle ahead, the half-circle with a hole around the body and four units marked with a rose ×, and the walking version with a clear lane straight ahead",
+          "zh": "同一个站着的人按真尺画四遍：全圆的绿色地面痕迹、前方半圆、半圆减去身体周围的洞并有四个单元打上莲粉 ×、走动时正前方留出一条道"
+        },
+        "caption": {
+          "en": "Where the trace lands, one mechanism at a time: full circle, field of view, clearance D (units within it held back), walking lane.",
+          "zh": "痕迹落在哪，机制逐项加：全圆、视野、让位 D（圈内单元闸住）、走动走廊。"
+        },
+        "width": 1362,
+        "height": 730
+      },
+      {
+        "kind": "image",
+        "src": "/log/2026-09-05-attention-dwell.webp",
+        "alt": {
+          "en": "A grid of twelve small room plans: rows for reach 1.0, 1.3 and 1.6 m, columns for the four mechanism levels; a purple arc of formed units grows in front of the person from the 1.3 m row on",
+          "zh": "十二张小平面排成表：三行是影响半径 1.0、1.3、1.6 m，四列是四档机制；从 1.3 m 那行起人面前长出一道紫色的弧"
+        },
+        "caption": {
+          "en": "A twenty-second stand under each mechanism and reach. With clearance on, 1.0 m forms nothing; from 1.3 m an arc appears ahead.",
+          "zh": "每档机制、每个影响半径下站 20 秒。让位一开 1.0 m 什么也不成形，1.3 m 起面前出一道弧。"
+        },
+        "width": 1104,
+        "height": 1045
+      },
+      {
+        "kind": "image",
+        "src": "/log/2026-09-05-attention-walk.webp",
+        "alt": {
+          "en": "Twelve room plans for passing, pacing and looping under the four mechanism levels; in the last column the green trace splits into two bands with a clear strip along the walked line",
+          "zh": "穿行、折返、绕圈三种行为在四档机制下的十二张平面；最后一列绿色痕迹分成两条带，走过的线上留着一条空道"
+        },
+        "caption": {
+          "en": "Walking routes: the field of view stops recording behind the body, and the lane keeps the path itself clear.",
+          "zh": "走动的路线：视野让身后不再记，走廊让路本身留空。"
+        },
+        "width": 1104,
+        "height": 1025
+      },
+      {
+        "kind": "image",
+        "src": "/log/2026-09-05-attention-body.webp",
+        "alt": {
+          "en": "Three close-ups at 4×4, 6×6 and 8×8 showing the old dwell spot as a grey circle around a mast and the new spot at an aisle crossing with a rose dashed clearance circle, beside a small table of reach minus D",
+          "zh": "4×4、6×6、8×8 三张放大图：旧驻留点是一个套在杆子上的灰圈，新站位在过道交叉点、带莲粉虚线的让位圈，旁边一张影响半径减 D 的小表"
+        },
+        "caption": {
+          "en": "The body has size: the old preset stood inside a mast; D grows with the unit, so reach must exceed it before anything can form.",
+          "zh": "身体有体积：旧预设站在杆子里；D 随单元变大，影响半径得超过它才有东西可招。"
+        },
+        "width": 1362,
+        "height": 610
+      },
+      {
+        "kind": "image",
+        "src": "/log/2026-09-05-bench-gaze.webp",
+        "alt": {
+          "en": "The dark 8×8 bench: a person stands with a green wedge swung to the lower right of their body line, four units around them marked with a rose ×, purple rings on the units the wedge covers",
+          "zh": "深色的 8×8 台架：人站着，绿色扇面转到了身体朝向线的右下方，身边四个单元打着莲粉 ×，扇面盖住的单元带紫环"
+        },
+        "caption": {
+          "en": "On the bench: the head has turned away from the body line and the wedge has gone with it; the arc moves to where they look.",
+          "zh": "台架上：头已经离开身体那条线，扇面跟着转过去；弧挪到看的方向。"
+        },
+        "width": 878,
+        "height": 652
+      },
+      {
+        "kind": "image",
+        "src": "/log/2026-09-05-bench-fill.webp",
+        "alt": {
+          "en": "The same bench with floor share at 50 %: six units inside the wedge carry full purple rings, the four nearest the body are still marked with a rose ×",
+          "zh": "同一台架、占比 50%：扇面里六个单元带满的紫环，身边四个仍打着莲粉 ×"
+        },
+        "caption": {
+          "en": "Floor share at a half: the whole ring inside the wedge comes down, the four that would hit the person stay up.",
+          "zh": "占比一半：扇面里那一圈全下来，会打到人的四个留在上面。"
+        },
+        "width": 878,
+        "height": 652
+      }
+    ]
+  },
+  {
     "date": "2026-09-04",
     "lead": {
       "en": "Opened the first bench with a behaviour layer: one person walks through the room in plan, and the units whose floor has been occupied long enough form.",
