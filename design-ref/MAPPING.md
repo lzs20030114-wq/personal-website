@@ -1118,3 +1118,8 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
 `Walker` 加 `gaze` / `lookAround` / `look(dt, walking)` / `reseed`，`imprintShaped` 尾参 `gaze`；`PlanSimOpts.look` + `seed`、
 `CrowdSimOpts.look`（每人种子从全场 rng 抽）。`PlanPerson.gaze`：扇面沿视线、走廊沿朝向；脸 = 身体圆周视线侧 ±0.6 rad
 加粗绿弧。台架「视野」组加「转头」复选框（默认 `PLAN.ATTENTION.look` = 开）。细节 = 项目二_激活平面lab.md §10.6。
+
+### 30.2 成形占比（同日第三轮）
+
+`Activation` 第四个构造参数 `fill`（默认 1）+ `PlanSimOpts.fill` / `CrowdSimOpts.fill` + `setFill`；`PLAN.FILL`
+{0.25, 1, def 0.5}。台架第一层「阈值」后加「占比」滑块，HUD 尾行「阈值 2 s × 占比 50%」。细节 = 项目二_激活平面lab.md §10.7。

@@ -146,6 +146,13 @@ export const PLAN = {
    * 影响半径 1.5（这一档的含义是看到多远）。模块默认仍是旧口径（全圆、不让位、1.0）。
    */
   ATTENTION: { fov: Math.PI, clearance: 0.15, lane: true, reach: 1.5, look: true },
+  /**
+   * 成形占比（2026-09-05 用户看真机「触发单元的边界定得有点严格，这一圈里被触发的只有两个」）：
+   * 单元读的是脚下整片地面的均值，演示口径下每格最多记到阈值 ⇒ 只有整片地都在扇面里的单元才读得满，
+   * 扇面边上盖住一半的永远到不了、视线一转更是时盖时不盖。占比 = 脚下有多大比例的地面被看够了就下来：
+   * 程度 = 读数 / (阈值 × 占比)。1.0 = 旧口径（整片都满）；台架默认 0.5（一半）。
+   */
+  FILL: { min: 0.25, max: 1, def: 0.5 },
 } as const;
 
 /** 转头（站着时视线到处看）的几个数——演示装置，不是行为规则 */
@@ -512,12 +519,15 @@ export class Activation {
   readonly degree: Float64Array;
   threshold: number;
   mode: ResponseMode;
+  /** 成形占比：脚下多大比例的地面读满即成形（见 PLAN.FILL）；1 = 整片都满（旧口径） */
+  fill: number;
 
-  constructor(n: number, threshold: number = PLAN.THRESHOLD, mode: ResponseMode = 'ratchet') {
+  constructor(n: number, threshold: number = PLAN.THRESHOLD, mode: ResponseMode = 'ratchet', fill = 1) {
     this.input = new Float64Array(n);
     this.degree = new Float64Array(n);
     this.threshold = threshold;
     this.mode = mode;
+    this.fill = fill;
   }
 
   /**
@@ -529,7 +539,7 @@ export class Activation {
     const down = PLAN.RESPONSE.fall * dt;
     for (let u = 0; u < inputs.length; u++) {
       this.input[u] = inputs[u];
-      const target = blocked && blocked[u] ? 0 : Math.min(1, inputs[u] / this.threshold);
+      const target = blocked && blocked[u] ? 0 : Math.min(1, inputs[u] / (this.threshold * this.fill));
       const d = this.degree[u];
       if (target > d) this.degree[u] = Math.min(target, d + up);
       else if (this.mode === 'follow') this.degree[u] = Math.max(target, d - down);
@@ -926,6 +936,8 @@ export interface PlanSimOpts {
   look?: boolean;
   /** 转头用的随机种子（同种子逐位复现） */
   seed?: number;
+  /** 成形占比（PLAN.FILL）；省略 = 1 = 整片地面都读满才成形（旧口径） */
+  fill?: number;
 }
 
 /** 行走推进的最大子步（s）：步速 1.5 m/s 时一子步走 7.5 cm < 格边，痕迹才连成一条不断的道 */
@@ -973,7 +985,7 @@ export class PlanSim {
     this.seed = opts.seed ?? 20260905;
     this.walker = new Walker(opts.speed ?? PLAN.SPEED.def, this.seed);
     this.walker.lookAround = opts.look ?? false;
-    this.act = new Activation(this.layout.units.length, threshold, opts.mode ?? 'ratchet');
+    this.act = new Activation(this.layout.units.length, threshold, opts.mode ?? 'ratchet', opts.fill ?? 1);
     this.decay = opts.decay ?? PLAN.DECAY;
     this.reach = opts.reach ?? PLAN.REACH.def;
     this.catchment = buildCatchment(this.layout, this.field, opts.reading ?? 'nearest');
@@ -1052,6 +1064,11 @@ export class PlanSim {
   /** 站着时转头；关掉视线当即转回朝向 */
   setLook(on: boolean): void {
     this.walker.lookAround = on;
+  }
+  /** 成形占比（跟随档下当即按新口径重算） */
+  setFill(v: number): void {
+    this.act.fill = v;
+    this.act.update(unitInputs(this.field, this.catchment, this.inputsBuf), this.act.mode === 'follow' ? 0 : Infinity, this.clearance === null ? null : this.blocked);
   }
 
   /** 让位距离 D（m）；让位关着时 0 */

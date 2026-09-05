@@ -44,10 +44,10 @@ const COPY = {
     floor: (v: number) => `地面最深 ${v.toFixed(1)} s`,
     state: { outside: '离场', walk: '走', dwell: '站', idle: '站', held: '拖' },
     t: (s: number) => `t ${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`,
-    foot: (reach: number, thr: number, fade: number, reading: string, mode: ResponseMode, fovDeg: number, D: number | null) =>
-      `影响半径 ${reach.toFixed(2)} m · 视野 ${fovDeg.toFixed(0)}° · ${D === null ? '不让位' : `让位 D ${D.toFixed(2)} m`} · 阈值 ${thr.toFixed(0)} s · 散掉 ${fade.toFixed(0)} s · ${reading}读 · 绿盘 = 当前读数 · 紫环 = ${mode === 'follow' ? '结构位置（跟着读数涨落，人走了收回去）' : '成形（键锁死，不回退）'}`,
+    foot: (reach: number, thr: number, fade: number, reading: string, mode: ResponseMode, fovDeg: number, D: number | null, fill: number) =>
+      `影响半径 ${reach.toFixed(2)} m · 视野 ${fovDeg.toFixed(0)}° · ${D === null ? '不让位' : `让位 D ${D.toFixed(2)} m`} · 阈值 ${thr.toFixed(0)} s × 占比 ${(fill * 100).toFixed(0)}% · 散掉 ${fade.toFixed(0)} s · ${reading}读 · 绿盘 = 当前读数 · 紫环 = ${mode === 'follow' ? '结构位置（跟着读数涨落，人走了收回去）' : '成形（键锁死，不回退）'}`,
     gated: (n: number) => `闸住 ${n}`,
-    attention: `人有朝向、有身体：痕迹只落在视野扇形里（默认 180°，身后的不记）；让位距离 D = 平台半径 + 身体 + 让位（默认一肘 0.15 m）——D 以内的地面不记，芯在 D 以内的单元闸住（莲粉 ×：平台下来会打到人，跟随档退回去、锁定档不升）；走着时正前方一条 2D 宽的道也不记，结构只长在路两侧。视线与朝向分开：朝向是身体（走的方向，走廊沿它开），视线是头（扇面沿它转）——站着时每隔几秒看向别处（身体前方 ±110° 以内），久站的那道弧就跟着视线散开；走着时看向前方。视野拉到 360°、让位关掉、转头关掉 = 09-04 的旧口径。`,
+    attention: `人有朝向、有身体：痕迹只落在视野扇形里（默认 180°，身后的不记）；让位距离 D = 平台半径 + 身体 + 让位（默认一肘 0.15 m）——D 以内的地面不记，芯在 D 以内的单元闸住（莲粉 ×：平台下来会打到人，跟随档退回去、锁定档不升）；走着时正前方一条 2D 宽的道也不记，结构只长在路两侧。视线与朝向分开：朝向是身体（走的方向，走廊沿它开），视线是头（扇面沿它转）——站着时每隔几秒看向别处（身体前方 ±110° 以内），久站的那道弧就跟着视线散开；走着时看向前方。「占比」= 脚下有多大比例的地面被看够了就下来（默认一半）：单元读的是整片地面的均值，100% 时只有整片都在扇面里的才成形，扇面边上盖住一半的永远到不了。视野拉到 360°、让位关掉、转头关掉、占比 100% = 09-04 的旧口径。`,
     hint: `「响应」两档：跟随 = 结构追着读数涨落，人走了收回去（演示默认）；锁定 = 键锁死不回退，那是项目立论的滞回。按住那个人可以拖着走，松手就站在原地（预设的路线随之作废，点「重播」重来）。自由模式：点地面，人走过去；停着就是驻留；「离场」从最近的门出去。台架跑的是演示值：站 ${PLAN.DEMO.threshold} s 就触发，人走后 ${PLAN.DEMO.fade} s 散光。作者 2026-07-20 原型的三个数（落格 +1 · 每拍衰减 2% · 超过 15 就固化）= 阈值滑块拉到 15，那套要等几十秒才看得出变化。影响半径是行为的量，做成旋钮。`,
     grid: '格数',
     path: '行为',
@@ -56,6 +56,7 @@ const COPY = {
     fov: '视野',
     clearance: '让位',
     look: '转头',
+    fill: '占比',
     threshold: '阈值',
     half_: '散掉',
     response: '响应',
@@ -76,10 +77,10 @@ const COPY = {
     floor: (v: number) => `deepest floor trace ${v.toFixed(1)} s`,
     state: { outside: 'left', walk: 'walking', dwell: 'standing', idle: 'standing', held: 'held' },
     t: (s: number) => `t ${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`,
-    foot: (reach: number, thr: number, fade: number, reading: string, mode: ResponseMode, fovDeg: number, D: number | null) =>
-      `reach ${reach.toFixed(2)} m · field of view ${fovDeg.toFixed(0)}° · ${D === null ? 'no clearance' : `clearance D ${D.toFixed(2)} m`} · threshold ${thr.toFixed(0)} s · fade ${fade.toFixed(0)} s · ${reading} · green disc = live reading · purple ring = ${mode === 'follow' ? 'where the structure is — it follows the reading and withdraws once they leave' : 'formed; bonds locked, never undone'}`,
+    foot: (reach: number, thr: number, fade: number, reading: string, mode: ResponseMode, fovDeg: number, D: number | null, fill: number) =>
+      `reach ${reach.toFixed(2)} m · field of view ${fovDeg.toFixed(0)}° · ${D === null ? 'no clearance' : `clearance D ${D.toFixed(2)} m`} · threshold ${thr.toFixed(0)} s × floor share ${(fill * 100).toFixed(0)}% · fade ${fade.toFixed(0)} s · ${reading} · green disc = live reading · purple ring = ${mode === 'follow' ? 'where the structure is — it follows the reading and withdraws once they leave' : 'formed; bonds locked, never undone'}`,
     gated: (n: number) => `${n} held back`,
-    attention: `The person faces somewhere and has a body: the trace lands only inside the field of view (180° by default — nothing behind); the clearance distance D = platform radius + body + clearance (an elbow, 0.15 m, by default) — the floor within D records nothing and units whose mast is within D are held back (rose ×: a platform there would hit the person; it withdraws in follow mode, cannot rise in lock mode); while walking, a lane 2D wide straight ahead records nothing either, so structure grows along the sides of the path. Gaze and facing are separate: facing is the body (the direction walked; the lane follows it), gaze is the head (the wedge follows it) — standing, they glance elsewhere every few seconds within ±110° of the body, so a long stand spreads the arc where they looked; walking, they look ahead. Field of view at 360° with clearance and looking around off is the 09-04 reading.`,
+    attention: `The person faces somewhere and has a body: the trace lands only inside the field of view (180° by default — nothing behind); the clearance distance D = platform radius + body + clearance (an elbow, 0.15 m, by default) — the floor within D records nothing and units whose mast is within D are held back (rose ×: a platform there would hit the person; it withdraws in follow mode, cannot rise in lock mode); while walking, a lane 2D wide straight ahead records nothing either, so structure grows along the sides of the path. Gaze and facing are separate: facing is the body (the direction walked; the lane follows it), gaze is the head (the wedge follows it) — standing, they glance elsewhere every few seconds within ±110° of the body, so a long stand spreads the arc where they looked; walking, they look ahead. “Floor share” is how much of the floor a unit owns must have been looked at long enough before it comes down (half by default): a unit reads the mean over its whole floor, so at 100 % only units entirely inside the wedge ever form and those half-covered at its edge never do. Field of view at 360° with clearance, looking around off and floor share at 100 % is the 09-04 reading.`,
     hint: `“Response” has two settings: follow — the structure tracks the reading and withdraws once people leave (the demo default); lock — bonds stay locked and nothing withdraws, which is the hysteresis the project argues for. Hold the person to drag them; on release they stand where you left them (the preset route is dropped — “replay” restarts it). Free mode: click the floor and the person walks there; standing still is dwelling; “leave” exits by the nearest door. The bench runs on demo numbers: ${PLAN.DEMO.threshold} s of standing forms a unit, ${PLAN.DEMO.fade} s after they leave it is gone. The author’s 2026-07-20 prototype (+1 on the cell stepped on, 2 % decay a tick, past 15 it solidifies) is the threshold slider at 15 — legible, but tens of seconds to read. Reach is a behavioural quantity, so it is a knob.`,
     grid: 'grid',
     path: 'behaviour',
@@ -88,6 +89,7 @@ const COPY = {
     fov: 'view',
     clearance: 'clearance',
     look: 'look around',
+    fill: 'floor share',
     threshold: 'threshold',
     half_: 'fade',
     response: 'response',
@@ -151,6 +153,7 @@ export function WalkPlanBench({
   const [clearOn, setClearOn] = useState(true);
   const [clearance, setClearance] = useState<number>(PLAN.ATTENTION.clearance);
   const [look, setLook] = useState<boolean>(PLAN.ATTENTION.look);
+  const [fill, setFill] = useState<number>(PLAN.FILL.def);
   const [threshold, setThreshold] = useState<number>(PLAN.DEMO.threshold);
   const [fade, setFade] = useState<number>(PLAN.DEMO.fade);
   const [mode, setMode] = useState<ResponseMode>('follow');
@@ -169,7 +172,7 @@ export function WalkPlanBench({
   // 建仿真（换格数才重建——单元数变了，痕迹场与读法表要重算；其余旋钮就地改）
   useEffect(() => {
     // 走廊随让位一起开（用户拍板 ⑤）
-    const sim = new PlanSim({ grid, path, reading, reach, threshold, fade, speed, mode, fov, clearance: clearanceOpt, lane: clearanceOpt !== null, look });
+    const sim = new PlanSim({ grid, path, reading, reach, threshold, fade, speed, mode, fov, clearance: clearanceOpt, lane: clearanceOpt !== null, look, fill });
     simRef.current = sim;
     if (canvasRef.current && palRef.current) {
       const ctx = canvasRef.current.getContext('2d');
@@ -215,6 +218,9 @@ export function WalkPlanBench({
   useEffect(() => {
     simRef.current?.setLook(look);
   }, [look]);
+  useEffect(() => {
+    simRef.current?.setFill(fill);
+  }, [fill]);
 
   // 画布 DPR 与配色（挂载一次；配色从容器 CSS 变量取）
   useEffect(() => {
@@ -342,7 +348,7 @@ export function WalkPlanBench({
           </div>
         </div>
         <div className="lab-hud bl dim">
-          {t.foot(reach, threshold, fade, lang === 'zh' ? readingLabel.zh : readingLabel.en, mode, fovDeg, D)}
+          {t.foot(reach, threshold, fade, lang === 'zh' ? readingLabel.zh : readingLabel.en, mode, fovDeg, D, fill)}
         </div>
       </div>
       {controls ? (
@@ -494,6 +500,22 @@ export function WalkPlanBench({
                 aria-label={t.threshold}
                 style={{ width: 84 }}
                 onChange={(e) => setThreshold(Number(e.target.value))}
+              />
+            </div>
+            <div className="grp">
+              <span className="k">
+                {t.fill} {(fill * 100).toFixed(0)}%
+              </span>
+              <input
+                type="range"
+                min={PLAN.FILL.min}
+                max={PLAN.FILL.max}
+                step={0.05}
+                value={fill}
+                aria-label={t.fill}
+                title={lang === 'zh' ? '脚下有多大比例的地面被看够了就下来；100% = 整片都要（旧口径）' : 'how much of the floor a unit owns must have been looked at long enough before it comes down; 100% = all of it (the old reading)'}
+                style={{ width: 72 }}
+                onChange={(e) => setFill(Number(e.target.value))}
               />
             </div>
             <div className="grp">

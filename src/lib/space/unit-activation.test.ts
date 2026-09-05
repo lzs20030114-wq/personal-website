@@ -721,3 +721,51 @@ describe('unit-activation · 视线 ≠ 朝向（2026-09-05 第二轮：站着�
     expect(b).toEqual(a);
   });
 });
+
+describe('unit-activation · 成形占比（2026-09-05 用户「触发单元的边界定得有点严格，这一圈里只有两个」）', () => {
+  const demo = { path: 'dwell' as const, grid: 8, ...PLAN.ATTENTION, threshold: PLAN.DEMO.threshold, fade: PLAN.DEMO.fade, mode: 'follow' as const };
+  /** 站着转头 20 s 里成形数的平均值 */
+  const avgFormed = (fill: number) => {
+    const sim = new PlanSim({ ...demo, fill });
+    while (sim.walker.state !== 'dwell' && sim.t < 60) sim.step(0.05);
+    let sum = 0;
+    let n = 0;
+    for (let k = 0; k < PLAN.DWELL_S / 0.05; k++) {
+      sim.step(0.05);
+      sum += sim.act.formed().length;
+      n++;
+    }
+    return sum / n;
+  };
+
+  it('默认 1 = 旧口径逐位；程度 = 读数 / (阈值 × 占比)', () => {
+    const a = runScenario({ path: 'dwell', grid: 8 }, 0);
+    const b = runScenario({ path: 'dwell', grid: 8, fill: 1 }, 0);
+    expect(Array.from(b.act.degree)).toEqual(Array.from(a.act.degree));
+    const act = new Activation(2, 10, 'ratchet', 0.5);
+    act.update(Float64Array.from([5, 2.5]));
+    expect(act.degree[0]).toBeCloseTo(1, 12);
+    expect(act.degree[1]).toBeCloseTo(0.5, 12);
+  });
+
+  it('占比一半：脚下一半地面读满就成形——扇面边上盖住一半的单元也下来；演示口径下站着的成形数从 ~2 涨到 ~6', () => {
+    // 一半的格子读满、一半为零 ⇒ 均值 = 阈值/2 ⇒ 占比 0.5 刚好成形、占比 1 只到一半
+    const L = planLayout(8);
+    const f = new TraceField(L.roomM, PLAN.CELL, 2);
+    const c = buildCatchment(L, f, 'nearest');
+    const u = L.units[27];
+    const cells = c.cellsOf[u.i];
+    for (let k = 0; k < Math.floor(cells.length / 2); k++) f.data[cells[k]] = 2; // 恰好一半的格子读满
+    const half = new Activation(L.units.length, 2, 'ratchet', 0.5);
+    const full = new Activation(L.units.length, 2, 'ratchet', 1);
+    half.update(unitInputs(f, c));
+    full.update(unitInputs(f, c));
+    expect(half.degree[u.i]).toBeGreaterThan(0.95);
+    expect(full.degree[u.i]).toBeLessThan(0.55);
+    const strict = avgFormed(1);
+    const loose = avgFormed(PLAN.FILL.def);
+    expect(strict).toBeLessThan(3.5);
+    expect(loose).toBeGreaterThan(5);
+    expect(loose).toBeLessThan(8);
+  });
+});

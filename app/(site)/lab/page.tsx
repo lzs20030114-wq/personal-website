@@ -556,7 +556,7 @@ export default function LabPage() {
             ['Field', 'Lab.12’s room and field · 4×4 / 6×6 / 8×8 · unit scaled with pitch (4×4 = Lab.12 verbatim)'],
             ['Trace', 'Presence-seconds on a 0.1 m floor grid, within reach of the person · on the bench it caps at the threshold and fades away linearly (fade slider); the prototype’s own rule is 2 %/s with no cap and no zero'],
             ['Reading', 'By cell (Voronoi = the aisle lines) or footprint only · mean over the cells a unit owns'],
-            ['Forming', 'Mean ≥ the threshold ⇒ down · purple ring grows from mast to rim'],
+            ['Forming', 'Mean over the floor a unit owns ≥ threshold × floor share ⇒ down (floor share 25–100 %, default half — at 100 % only units wholly inside the wedge ever form) · purple ring grows from mast to rim'],
             ['Response', 'Follow — the structure tracks the reading and withdraws once people leave (default; 2 s to form, gone 6 s after they leave) · Lock — bonds stay locked, the hysteresis the project argues for (the prototype: threshold 15 s, decay 2 %/s)'],
             ['Reach', '0.22–2.0 m, default 1.5 m (how far they look; Hall’s near social distance) · the prototype’s 1.0 m is one slider away'],
             ['Facing', 'Field of view 60°–360°, default 180° — the trace lands only where they look · body faces the last direction walked; standing, the head turns (a glance every 1.5–6 s within ±110° of the body, a demo device) so a long stand spreads the arc'],

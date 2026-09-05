@@ -103,6 +103,8 @@ export interface CrowdSimOpts {
   lane?: boolean;
   /** 站着时转头（视线 ≠ 朝向）。省略 = 关 */
   look?: boolean;
+  /** 成形占比（PLAN.FILL）；省略 = 1（旧口径） */
+  fill?: number;
 }
 
 const MAX_SUB_DT = 0.05;
@@ -142,7 +144,7 @@ export class CrowdSim {
     const threshold = opts.threshold ?? PLAN.THRESHOLD;
     this.fade = opts.fade ?? null;
     this.field = new TraceField(this.layout.roomM, PLAN.CELL, this.fade === null ? Infinity : threshold);
-    this.act = new Activation(this.layout.units.length, threshold, opts.mode ?? 'ratchet');
+    this.act = new Activation(this.layout.units.length, threshold, opts.mode ?? 'ratchet', opts.fill ?? 1);
     this.catchment = buildCatchment(this.layout, this.field, opts.reading ?? 'nearest');
     this.decay = opts.decay ?? PLAN.DECAY;
     this.reach = opts.reach ?? PLAN.REACH.def;
@@ -264,6 +266,10 @@ export class CrowdSim {
   setLook(on: boolean): void {
     this.look = on;
     for (const p of this.people) p.walker.lookAround = on;
+  }
+  setFill(v: number): void {
+    this.act.fill = v;
+    this.act.update(unitInputs(this.field, this.catchment, this.inputsBuf), this.act.mode === 'follow' ? 0 : Infinity, this.clearance === null ? null : this.blocked);
   }
   /** 让位距离 D（m）；让位关着时 0 */
   get keepOutM(): number {
