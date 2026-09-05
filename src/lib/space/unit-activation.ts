@@ -42,6 +42,26 @@
  *              每块地都归且只归一个单元——默认；
  *   - `disk`   脚下：只读平台正下方（半径 = 平台外缘）——平台之间的缝是盲区。
  * 行为矩阵 → 键谱/ℓ 的翻译规则由作者手写（交接件明令），这里止于「激活程度」，不选形态。
+ *
+ * ## 人有朝向、有身体（2026-09-05 用户三问，全部做成可选项，**默认关 = 旧行为逐位不变**）
+ *
+ * 用户：「人是有朝向的……人的视线范围只有约 180°，激发人身后的结构意义也不大」「一味激发眼前的结构
+ * 似乎也会影响行进」「人自身是有体积的……现在会触发一些激发起来会打到人的单元，我们应该留出空间」。
+ * 两个量、三件机制：
+ *   - **视野**（`fov`）：痕迹只落在朝向前方的扇形里（全角 π = 前方半圆）。朝向 = 最近一次走的方向
+ *     （站着时沿用），作者的行为层另有「视线方向」变量，这里先让视线 = 朝向。
+ *   - **让位距离 D**（`clearance`）：平台外缘离身体至少留 `clearance`（默认一肘 0.15 m）⇒
+ *     **D = platR + BODY_R + clearance**（芯到人的距离；8×8 时 0.62 m、4×4 时 1.14 m——单元越大，
+ *     人得离它越远才安全）。同一个 D 用在三处：
+ *       ① **闸**：芯到某个在场的人 < D 的单元不许下来（跟随档退回去、锁定档不升）——平台会打到人；
+ *       ② **洞**：离人 < D 的地面不落痕迹（那片地上方的平台都会打到人，不该由它来招结构）；
+ *       ③ **走廊**（`lane`）：走动时前方 |侧向| < D 的一条道也不落痕迹（与洞连成一个胶囊）——
+ *          人正要走进去的地方不能长东西；站着时走廊收掉，只剩洞。
+ *     单靠①：人一走脚下就长出来（锁定档），站过的地方永远堵死；单靠②：按格读的一片地大半在洞外，
+ *     单元照样读到七八成、平台照样下来打到人。①②一起才是「给身体留出空间」。
+ * 三个都开时：站着 ⇒ 前方半圆减去 D 以内 = 一道朝前的弧（影响半径必须 > D 才有东西可招——
+ * 4×4 下 D 已超过默认的 1.0 m）；走着 ⇒ 前方两侧各一瓣，正前方留道。
+ * 已成形的单元是障碍物，人绕不绕开它是作者行为层的规则，这里的行走不避让（局限，如实带着）。
  */
 import { RING } from './skin-ring';
 import { MM_PER_UNIT, RIG_SCALE, RING_GRID, ringCellPitch, ringGridSpan, ringOuter, roomSpan } from './skin-grid';
@@ -103,7 +123,22 @@ export const PLAN = {
   PACE_TRIPS: 8,
   /** 离场后再看多久痕迹衰减（s，仿真时间）再重播 */
   AFTER_EXIT_S: 30,
+  /**
+   * 视野全角（弧度）。**π = 前方半圆**（用户「视线范围只有约 180°」）；2π = 全圆 = 旧行为。
+   * 模块默认 2π（守门与旧线稿逐位不变），新线稿与台架显式传 π。
+   */
+  FOV: { min: Math.PI / 3, max: Math.PI * 2, def: Math.PI },
+  /**
+   * 让位（m）：平台外缘离身体至少留多少。默认 0.15 ≈ 一肘。模块默认 **null = 关**（旧行为）。
+   * 让位距离 D = platR + BODY_R + clearance（见 `keepOut`）。
+   */
+  CLEARANCE: { min: 0, max: 0.4, def: 0.15 },
 } as const;
+
+/** 让位距离 D（m，芯到人）：平台外缘 + 身体 + 让位——近于这个距离的平台会打到人 */
+export function keepOut(layout: PlanLayout, clearance: number): number {
+  return layout.platR + PLAN.BODY_R + clearance;
+}
 
 // ── 平面布局：Lab.12 那间房与那块场地，N×N 个按比例缩小的单元 ────────────────
 
@@ -271,6 +306,42 @@ export class TraceField {
   }
 
   /**
+   * 带朝向与身体的落痕（2026-09-05）：影响半径 r 以内、且
+   *   - 在朝向 `heading` 前方全角 `fov` 的扇形里（fov ≥ 2π = 不限；人所在的那一格恒收）；
+   *   - 离人 ≥ `holeR`（让位圈，0 = 不留）；
+   *   - 不在前方走廊里（`laneHalfW` > 0 时：前向分量 > 0 且 |侧向| < laneHalfW 的格子不收）
+   * 的格子各记 dt 秒。三个都取「不限」时与 `imprint` 逐位相同（直接走那条路）。
+   */
+  imprintShaped(x: number, y: number, r: number, dt: number, heading: number, fov: number, holeR: number, laneHalfW: number): void {
+    if (fov >= Math.PI * 2 - 1e-9 && holeR <= 0 && laneHalfW <= 0) {
+      this.imprint(x, y, r, dt);
+      return;
+    }
+    const c0 = Math.floor((x - this.x0) / this.cell);
+    const r0 = Math.floor((y - this.y0) / this.cell);
+    const st = this.stamp(r);
+    const hx = Math.cos(heading);
+    const hy = Math.sin(heading);
+    const cosHalf = Math.cos(Math.min(Math.PI, fov / 2));
+    const own = this.cell * 0.5;
+    for (let k = 0; k < st.length; k += 2) {
+      const c = c0 + st[k];
+      const rr = r0 + st[k + 1];
+      if (c < 0 || rr < 0 || c >= this.cols || rr >= this.rows) continue;
+      const dx = this.x0 + (c + 0.5) * this.cell - x;
+      const dy = this.y0 + (rr + 0.5) * this.cell - y;
+      const d = Math.hypot(dx, dy);
+      if (d < holeR) continue;
+      const f = dx * hx + dy * hy;
+      if (d >= own && f < d * cosHalf) continue;
+      if (laneHalfW > 0 && f > 0 && Math.abs(dx * hy - dy * hx) < laneHalfW) continue;
+      const i = rr * this.cols + c;
+      this.data[i] = Math.min(this.cap, this.data[i] + dt);
+      this.touched[i] = 1;
+    }
+  }
+
+  /**
    * 线性褪去（台架用）：没被人覆盖的格子每秒退 `cap / seconds`，`seconds` 秒退光；
    * **人站着的格子这一步不退**（当步被 imprint 过），所以站着的读数照涨到封顶。
    * 与 `decay` 的指数衰减是两条路：指数没有零点（长尾），线性有——「六秒散掉」要的就是这个。
@@ -404,13 +475,14 @@ export class Activation {
 
   /**
    * 推进 dt 秒（省略 = 不限速，瞬间到位；锁定档的旧路径就是这条 ⇒ 守门与线稿逐位不变）。
+   * `blocked[u]` 非零 = 这个单元此刻被身体让位闸住：目标当 0（跟随档按限速退回去、锁定档只是不升）。
    */
-  update(inputs: Float64Array, dt = Infinity): void {
+  update(inputs: Float64Array, dt = Infinity, blocked?: Uint8Array | null): void {
     const up = PLAN.RESPONSE.rise * dt;
     const down = PLAN.RESPONSE.fall * dt;
     for (let u = 0; u < inputs.length; u++) {
       this.input[u] = inputs[u];
-      const target = Math.min(1, inputs[u] / this.threshold);
+      const target = blocked && blocked[u] ? 0 : Math.min(1, inputs[u] / this.threshold);
       const d = this.degree[u];
       if (target > d) this.degree[u] = Math.min(target, d + up);
       else if (this.mode === 'follow') this.degree[u] = Math.max(target, d - down);
@@ -444,6 +516,41 @@ export class Activation {
     this.input.fill(0);
     this.degree.fill(0);
   }
+}
+
+/**
+ * 身体让位闸：芯到某个在场的人 < D（`keepOut`）的单元标 1——它的平台下来会打到人。
+ * clearance 为 null = 全 0（旧行为）。
+ */
+export function blockedUnits(
+  layout: PlanLayout,
+  people: readonly { x: number; y: number; present: boolean }[],
+  clearance: number | null,
+  out?: Uint8Array,
+): Uint8Array {
+  const res = out ?? new Uint8Array(layout.units.length);
+  res.fill(0);
+  if (clearance === null) return res;
+  const lim = keepOut(layout, clearance);
+  for (const p of people) {
+    if (!p.present) continue;
+    for (const u of layout.units) {
+      if (Math.hypot(u.x - p.x, u.y - p.y) < lim) res[u.i] = 1;
+    }
+  }
+  return res;
+}
+
+/** 离 (x,y) 最近的过道交叉点（格线的交点；人能站的地方——单元中心是根杆子） */
+export function nearestCrossing(l: PlanLayout, x: number, y: number): { x: number; y: number } {
+  const a = aisleLines(l);
+  const pick = (v: number, arr: number[]) => arr.reduce((b, c) => (Math.abs(c - v) < Math.abs(b - v) ? c : b));
+  return { x: pick(x, a.x), y: pick(y, a.y) };
+}
+
+/** 哪些单元的芯/平台与身体重叠（人站在杆子里）——布局体检用 */
+export function unitsUnderBody(layout: PlanLayout, x: number, y: number, r: number = PLAN.BODY_R): PlanUnit[] {
+  return layout.units.filter((u) => Math.hypot(u.x - x, u.y - y) < layout.mastR + r);
 }
 
 // ── 人：沿路点走，走到停多久，最后从门出去 ────────────────────────────────────
@@ -677,6 +784,12 @@ export interface PlanSimOpts {
   mode?: ResponseMode;
   /** 站位半径（Lab.12 的滑块量；这台钉默认） */
   radius?: number;
+  /** 视野全角（弧度）；省略 = 2π 全圆（旧行为）。π = 前方半圆 */
+  fov?: number;
+  /** 让位（m，平台外缘离身体至少留多少）：D 以内不落痕迹 + 芯在 D 以内的单元闸住；省略/null = 关（旧行为） */
+  clearance?: number | null;
+  /** 走动时前方走廊不落痕迹（半宽 = D）；只在 clearance 开着时有意义。省略 = 关 */
+  lane?: boolean;
 }
 
 /** 行走推进的最大子步（s）：步速 1.5 m/s 时一子步走 7.5 cm < 格边，痕迹才连成一条不断的道 */
@@ -693,6 +806,14 @@ export class PlanSim {
   fade: number | null;
   reach: number;
   path: PathKey;
+  /** 视野全角（弧度）；2π = 全圆 */
+  fov: number;
+  /** 让位（m）；null = 关 */
+  clearance: number | null;
+  /** 走动时前方走廊不落痕迹 */
+  lane: boolean;
+  /** 此刻被身体让位闸住的单元（每步现算；clearance 关时全 0） */
+  readonly blocked: Uint8Array;
   /** 仿真时间（s） */
   t = 0;
   /** 人离场那一刻的 t（未离场 = null） */
@@ -701,6 +822,8 @@ export class PlanSim {
   readonly trail: number[] = [];
   private trailAcc = 0;
   private readonly inputsBuf: Float64Array;
+  private lastX = 0;
+  private lastY = 0;
 
   constructor(opts: PlanSimOpts = {}) {
     this.layout = planLayout(opts.grid ?? PLAN.GRID_DEF, opts.radius ?? RING.RADIUS_DEF);
@@ -714,6 +837,10 @@ export class PlanSim {
     this.reach = opts.reach ?? PLAN.REACH.def;
     this.catchment = buildCatchment(this.layout, this.field, opts.reading ?? 'nearest');
     this.inputsBuf = new Float64Array(this.layout.units.length);
+    this.blocked = new Uint8Array(this.layout.units.length);
+    this.fov = opts.fov ?? Math.PI * 2;
+    this.clearance = opts.clearance ?? null;
+    this.lane = opts.lane ?? false;
     this.path = opts.path ?? 'dwell';
     this.reset();
   }
@@ -731,6 +858,9 @@ export class PlanSim {
     this.walker.presentTime = 0;
     this.walker.setRoute(pathPreset(this.path).route(this.layout));
     this.trail.push(this.walker.x, this.walker.y);
+    this.lastX = this.walker.x;
+    this.lastY = this.walker.y;
+    this.blocked.fill(0);
   }
 
   setPath(key: PathKey): void {
@@ -766,6 +896,20 @@ export class PlanSim {
   /** 换响应模式：已经下来的单元留在原处，从这一刻起按新规矩走（跟随档会开始回落） */
   setMode(m: ResponseMode): void {
     this.act.mode = m;
+  }
+  setFov(v: number): void {
+    this.fov = v;
+  }
+  setClearance(v: number | null): void {
+    this.clearance = v;
+  }
+  setLane(on: boolean): void {
+    this.lane = on;
+  }
+
+  /** 让位距离 D（m）；让位关着时 0 */
+  get keepOutM(): number {
+    return this.clearance === null ? 0 : keepOut(this.layout, this.clearance);
   }
 
   /** 被指针按着（拖）：位置直接给、不经步速；松手站在原地 */
@@ -841,7 +985,10 @@ export class PlanSim {
       if (this.held) this.walker.presentTime += sdt; // 被拖着：不按步速走，位置由 drag 给
       else moved = this.walker.step(sdt);
       if (this.walker.present) {
-        this.field.imprint(this.walker.x, this.walker.y, this.reach, sdt);
+        // 走着 = 这一子步位置动了（预设按步速走、拖着按指针给，两条路一个判据）
+        const moving = Math.hypot(this.walker.x - this.lastX, this.walker.y - this.lastY) > 1e-9;
+        const hole = this.keepOutM;
+        this.field.imprintShaped(this.walker.x, this.walker.y, this.reach, sdt, this.walker.heading, this.fov, hole, this.lane && moving ? hole : 0);
         this.trailAcc += moved;
         if (this.trailAcc >= 0.1) {
           this.trail.push(this.walker.x, this.walker.y);
@@ -851,11 +998,14 @@ export class PlanSim {
         this.trail.push(this.walker.x, this.walker.y);
         this.exitedAt = this.t + (dt - left);
       }
+      this.lastX = this.walker.x;
+      this.lastY = this.walker.y;
     }
     if (this.fade !== null) this.field.relax(dt, this.fade);
     else this.field.decay(dt, this.decay);
+    blockedUnits(this.layout, [this.walker], this.clearance, this.blocked);
     // 锁定档传 Infinity = 旧路径逐位不变（守门与线稿的结论钉在那上面）；跟随档才按机构速率限速
-    this.act.update(unitInputs(this.field, this.catchment, this.inputsBuf), this.act.mode === 'follow' ? dt : Infinity);
+    this.act.update(unitInputs(this.field, this.catchment, this.inputsBuf), this.act.mode === 'follow' ? dt : Infinity, this.clearance === null ? null : this.blocked);
     this.t += dt;
   }
 

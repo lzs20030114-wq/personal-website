@@ -19,7 +19,9 @@ import {
   PLAN,
   TraceField,
   Walker,
+  blockedUnits,
   buildCatchment,
+  keepOut,
   planLayout,
   unitInputs,
   type Catchment,
@@ -91,6 +93,12 @@ export interface CrowdSimOpts {
   opening?: boolean;
   /** 一开场是否自走（默认开） */
   auto?: boolean;
+  /** 视野全角（弧度）；省略 = 2π 全圆（旧行为） */
+  fov?: number;
+  /** 让位（m）；省略/null = 关（旧行为）。见 unit-activation 头注 */
+  clearance?: number | null;
+  /** 走动时前方走廊不落痕迹 */
+  lane?: boolean;
 }
 
 const MAX_SUB_DT = 0.05;
@@ -108,6 +116,14 @@ export class CrowdSim {
   speed: number;
   /** 全体是否自走（held 的人不受影响；manual 的人在开自走时转回 auto） */
   auto: boolean;
+  /** 视野全角（弧度）；2π = 全圆 */
+  fov: number;
+  /** 让位（m）；null = 关 */
+  clearance: number | null;
+  /** 走动时前方走廊不落痕迹 */
+  lane: boolean;
+  /** 此刻被身体让位闸住的单元（每步现算；clearance 关时全 0） */
+  readonly blocked: Uint8Array;
   t = 0;
   private nextId = 1;
   private readonly rng: () => number;
@@ -126,6 +142,10 @@ export class CrowdSim {
     this.reach = opts.reach ?? PLAN.REACH.def;
     this.speed = opts.speed ?? CROWD.SPEED_DEF;
     this.auto = opts.auto ?? true;
+    this.fov = opts.fov ?? Math.PI * 2;
+    this.clearance = opts.clearance ?? null;
+    this.lane = opts.lane ?? false;
+    this.blocked = new Uint8Array(this.layout.units.length);
     this.rng = makeRng(opts.seed ?? 20260904);
     this.inputsBuf = new Float64Array(this.layout.units.length);
     if (opts.opening ?? true) for (const o of CROWD.OPENING) this.add(o.x * this.layout.pitch4, o.y * this.layout.pitch4);
@@ -223,6 +243,19 @@ export class CrowdSim {
   setDecay(v: number): void {
     this.decay = v;
   }
+  setFov(v: number): void {
+    this.fov = v;
+  }
+  setClearance(v: number | null): void {
+    this.clearance = v;
+  }
+  setLane(on: boolean): void {
+    this.lane = on;
+  }
+  /** 让位距离 D（m）；让位关着时 0 */
+  get keepOutM(): number {
+    return this.clearance === null ? 0 : keepOut(this.layout, this.clearance);
+  }
   /** 换褪去秒数（null = 回到指数衰减） */
   setFade(v: number | null): void {
     this.fade = v;
@@ -311,14 +344,19 @@ export class CrowdSim {
           p.walker.distance += Math.hypot(p.walker.x - p.lastX, p.walker.y - p.lastY);
           p.walker.presentTime += sdt;
         }
+        const moving = Math.hypot(p.walker.x - p.lastX, p.walker.y - p.lastY) > 1e-9;
         p.lastX = p.walker.x;
         p.lastY = p.walker.y;
-        if (p.walker.present) this.field.imprint(p.walker.x, p.walker.y, this.reach, sdt);
+        if (p.walker.present) {
+          const hole = this.keepOutM;
+          this.field.imprintShaped(p.walker.x, p.walker.y, this.reach, sdt, p.walker.heading, this.fov, hole, this.lane && moving ? hole : 0);
+        }
       }
     }
     if (this.fade !== null) this.field.relax(dt, this.fade);
     else this.field.decay(dt, this.decay);
-    this.act.update(unitInputs(this.field, this.catchment, this.inputsBuf), this.act.mode === 'follow' ? dt : Infinity);
+    blockedUnits(this.layout, this.people.map((p) => p.walker), this.clearance, this.blocked);
+    this.act.update(unitInputs(this.field, this.catchment, this.inputsBuf), this.act.mode === 'follow' ? dt : Infinity, this.clearance === null ? null : this.blocked);
     this.t += dt;
   }
 

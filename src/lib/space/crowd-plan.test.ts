@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CROWD, CrowdSim, makeRng } from './crowd-plan';
-import { PLAN, dwellInput, nearestUnit, planLayout } from './unit-activation';
+import { PLAN, dwellInput, keepOut, nearestCrossing, nearestUnit, planLayout } from './unit-activation';
 
 /**
  * Lab.15 几个人在场——守门。机制全部引用 unit-activation（那边守门已卡），这里只卡新增的：
@@ -183,5 +183,36 @@ describe('crowd-plan · 几个人一起改变空间', () => {
     expect(s.act.degree[mid.i]).toBeLessThan(0.35);
     expect(s.counts()).toEqual({ people: 2, walking: 0, standing: 2, held: 0 });
     expect(PLAN.REACH.def).toBeLessThan(1.5 - L.pitchM / 2); // 两圈不相交的前提
+  });
+});
+
+describe('crowd-plan · 人有朝向、有身体（同一套选项，默认关）', () => {
+  it('默认关 ⇒ 与旧路径逐位相同', () => {
+    const a = new CrowdSim({ grid: 8, seed: 7 });
+    const b = new CrowdSim({ grid: 8, seed: 7, fov: Math.PI * 2, clearance: null, lane: false });
+    for (let k = 0; k < 40 / 0.05; k++) {
+      a.step(0.05);
+      b.step(0.05);
+    }
+    expect(Array.from(b.act.degree)).toEqual(Array.from(a.act.degree));
+  });
+
+  it('让位开着：每个在场的人各自闸住芯在 D 以内的单元，两个人隔开 = 4 + 4；被闸的程度恒 0', () => {
+    const sim = new CrowdSim({ grid: 8, opening: false, auto: false, fov: Math.PI, clearance: PLAN.CLEARANCE.def, reach: 1.6 });
+    const L = sim.layout;
+    const c1 = nearestCrossing(L, -L.pitchM, -L.pitchM);
+    const c2 = nearestCrossing(L, 2 * L.pitchM, 2 * L.pitchM);
+    sim.add(c1.x, c1.y);
+    sim.add(c2.x, c2.y);
+    for (let k = 0; k < 20 / 0.05; k++) sim.step(0.05);
+    const gated = Array.from(sim.blocked).map((v, i) => (v ? i : -1)).filter((i) => i >= 0);
+    expect(gated).toHaveLength(8);
+    const D = keepOut(L, PLAN.CLEARANCE.def);
+    for (const u of gated) {
+      const near = Math.min(Math.hypot(L.units[u].x - c1.x, L.units[u].y - c1.y), Math.hypot(L.units[u].x - c2.x, L.units[u].y - c2.y));
+      expect(near).toBeLessThan(D);
+      expect(sim.act.degree[u]).toBe(0);
+    }
+    expect(sim.act.formed().length).toBeGreaterThan(0);
   });
 });

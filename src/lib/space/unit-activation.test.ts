@@ -6,13 +6,17 @@ import {
   PlanSim,
   TraceField,
   aisleLines,
+  blockedUnits,
   buildCatchment,
   dwellInput,
   dwellSpot,
+  keepOut,
+  nearestCrossing,
   RESPONSES,
   planLayout,
   runScenario,
   unitInputs,
+  unitsUnderBody,
   w2m,
 } from './unit-activation';
 import { RING } from './skin-ring';
@@ -435,5 +439,161 @@ describe('unit-activation · 五种行为在默认规则下的结论（8×8，�
     const b = runScenario({ path: 'loop' }, 3);
     expect(Array.from(a.act.input)).toEqual(Array.from(b.act.input));
     expect(a.field.total()).toBe(b.field.total());
+  });
+});
+
+describe('unit-activation · 人有朝向、有身体（2026-09-05：视野 / 让位 D / 走廊，默认全关）', () => {
+  const D8 = keepOut(L8, PLAN.CLEARANCE.def);
+  /** 站到过道交叉点 DWELL_S 秒（不是单元中心——那里是根杆子） */
+  function standAtCrossing(opts: ConstructorParameters<typeof PlanSim>[0], leave = false): PlanSim {
+    const sim = new PlanSim({ path: 'free', grid: 8, ...opts });
+    const c = nearestCrossing(sim.layout, -sim.layout.pitch4 / 2, -sim.layout.pitch4 / 2);
+    sim.walker.setRoute([{ x: sim.layout.doors[0].x, y: 0 }, { x: c.x, y: c.y, dwell: PLAN.DWELL_S }, { x: sim.layout.doors[1].x, y: 0, exit: true }]);
+    if (leave) while (sim.exitedAt === null && sim.t < 200) sim.step(0.05);
+    else {
+      while (sim.walker.state !== 'dwell' && sim.t < 60) sim.step(0.05);
+      for (let k = 0; k < PLAN.DWELL_S / 0.05 - 1; k++) sim.step(0.05);
+    }
+    return sim;
+  }
+
+  it('三个选项默认全关 ⇒ 与旧路径逐位相同（守门与旧线稿的结论不动）', () => {
+    for (const path of ['dwell', 'pace'] as const) {
+      const a = runScenario({ path, grid: 8 }, 0).summary();
+      const b = runScenario({ path, grid: 8, fov: Math.PI * 2, clearance: null, lane: false }, 0).summary();
+      expect(b.degree).toEqual(a.degree);
+      expect(b.input).toEqual(a.input);
+    }
+    const f1 = new TraceField(3);
+    const f2 = new TraceField(3);
+    f1.imprint(0.3, -0.2, 1.0, 0.7);
+    f2.imprintShaped(0.3, -0.2, 1.0, 0.7, 1.1, Math.PI * 2, 0, 0);
+    expect(Array.from(f2.data)).toEqual(Array.from(f1.data));
+  });
+
+  it('让位距离 D = 平台半径 + 身体 + 让位：8×8 ≈ 0.62、4×4 ≈ 0.89——单元越大人得离它越远', () => {
+    expect(D8).toBeCloseTo(L8.platR + PLAN.BODY_R + PLAN.CLEARANCE.def, 12);
+    expect(D8).toBeGreaterThan(0.6);
+    expect(D8).toBeLessThan(0.65);
+    expect(keepOut(L4, PLAN.CLEARANCE.def)).toBeGreaterThan(0.85);
+    expect(keepOut(L4, PLAN.CLEARANCE.def)).toBeGreaterThan(D8);
+  });
+
+  it('视野 180°：痕迹只落在朝向前方的半圆，身后一格不记；记到的格子约为全圆的一半', () => {
+    const full = new TraceField(4);
+    const half = new TraceField(4);
+    full.imprint(0, 0, 1.0, 1);
+    half.imprintShaped(0, 0, 1.0, 1, 0, Math.PI, 0, 0); // 朝 +x
+    const count = (f: TraceField) => Array.from(f.data).filter((v) => v > 0).length;
+    expect(count(half)).toBeGreaterThan(count(full) * 0.47);
+    expect(count(half)).toBeLessThan(count(full) * 0.55);
+    for (let i = 0; i < half.data.length; i++) {
+      const [x] = half.cellCenter(i);
+      if (x < -half.cell) expect(half.data[i]).toBe(0);
+    }
+    // 人所在的那一格恒收
+    expect(half.data[half.indexOf(0, 0)]).toBe(1);
+  });
+
+  it('让位：站着时 D 以内的地面不记（走进来时记过的只退不涨）；芯在 D 以内的四个单元闸住、程度恒 0；人走了闸松开', () => {
+    const sim = new PlanSim({ path: 'free', grid: 8, fov: Math.PI, clearance: PLAN.CLEARANCE.def, reach: 1.6 });
+    const c = nearestCrossing(sim.layout, -sim.layout.pitch4 / 2, -sim.layout.pitch4 / 2);
+    sim.walker.setRoute([{ x: sim.layout.doors[0].x, y: 0 }, { x: c.x, y: c.y, dwell: PLAN.DWELL_S }, { x: sim.layout.doors[1].x, y: 0, exit: true }]);
+    while (sim.walker.state !== 'dwell' && sim.t < 60) sim.step(0.05);
+    const before = Float32Array.from(sim.field.data);
+    const degBefore = Float64Array.from(sim.act.degree);
+    for (let k = 0; k < PLAN.DWELL_S / 0.05 - 1; k++) sim.step(0.05);
+    const w = sim.walker;
+    expect(w.state).toBe('dwell');
+    let inside = 0;
+    for (let i = 0; i < sim.field.data.length; i++) {
+      const [x, y] = sim.field.cellCenter(i);
+      if (Math.hypot(x - w.x, y - w.y) < D8 - sim.field.cell) {
+        expect(sim.field.data[i]).toBeLessThanOrEqual(before[i] + 1e-6); // 站这 20 s 一秒没记
+        inside++;
+      }
+    }
+    expect(inside).toBeGreaterThan(50);
+    const gated = Array.from(sim.blocked).map((v, i) => (v ? i : -1)).filter((i) => i >= 0);
+    expect(gated).toHaveLength(4);
+    for (const u of gated) {
+      expect(Math.hypot(sim.layout.units[u].x - w.x, sim.layout.units[u].y - w.y)).toBeLessThan(D8);
+      // 锁定档：闸只挡涨——走进来那几步前方已升起的一点点（棘轮）留着，站这 20 s 一点不涨
+      expect(sim.act.degree[u]).toBeLessThanOrEqual(degBefore[u] + 1e-9);
+      expect(sim.act.degree[u]).toBeLessThan(0.1);
+    }
+    // 前方长出一道弧：成形的都在朝向前方、都在 D 之外
+    const formed = sim.act.formed();
+    expect(formed.length).toBeGreaterThanOrEqual(3);
+    for (const u of formed) {
+      const dx = sim.layout.units[u].x - w.x;
+      const dy = sim.layout.units[u].y - w.y;
+      expect(dx * Math.cos(w.heading) + dy * Math.sin(w.heading)).toBeGreaterThan(0);
+      expect(Math.hypot(dx, dy)).toBeGreaterThanOrEqual(D8);
+    }
+    const gone = standAtCrossing({ fov: Math.PI, clearance: PLAN.CLEARANCE.def, reach: 1.6 }, true);
+    expect(Array.from(gone.blocked).every((v) => v === 0)).toBe(true);
+  });
+
+  it('让位 + 跟随档：已经下来的平台，人走到它跟前就收回去（闸把目标当 0）', () => {
+    const sim = new PlanSim({ path: 'free', grid: 8, reach: 1.6, fov: Math.PI, clearance: PLAN.CLEARANCE.def, threshold: PLAN.DEMO.threshold, fade: PLAN.DEMO.fade, mode: 'follow' });
+    const L = sim.layout;
+    const c = nearestCrossing(L, 0, 0);
+    sim.walker.place(c.x - 2.0, c.y);
+    sim.walker.heading = 0;
+    for (let k = 0; k < 6 / 0.05; k++) sim.step(0.05);
+    // 正前方 ~1 m 处的单元已经下来了
+    const ahead = L.units.filter((u) => Math.abs(u.y - c.y) < L.pitchM * 0.6 && u.x > c.x - 1.4 && u.x < c.x - 0.6);
+    expect(ahead.length).toBeGreaterThan(0);
+    const u0 = ahead[0].i;
+    expect(sim.act.degree[u0]).toBeGreaterThan(0.9);
+    // 人走到它跟前（芯到人 < D）
+    sim.walker.place(L.units[u0].x - D8 * 0.5, L.units[u0].y);
+    sim.walker.heading = 0;
+    for (let k = 0; k < 3 / 0.05; k++) sim.step(0.05);
+    expect(sim.blocked[u0]).toBe(1);
+    expect(sim.act.degree[u0]).toBe(0);
+  });
+
+  it('走廊：沿中线穿行时正前方 |侧向| < D 的一条道不落痕迹，两侧照记；不开走廊时道上有痕迹', () => {
+    const lane = runScenario({ path: 'through', grid: 8, reach: 1.6, fov: Math.PI, clearance: PLAN.CLEARANCE.def, lane: true }, 0);
+    const noLane = runScenario({ path: 'through', grid: 8, reach: 1.6, fov: Math.PI, clearance: PLAN.CLEARANCE.def, lane: false }, 0);
+    let onLane = 0;
+    let beside = 0;
+    let onLaneNo = 0;
+    for (let i = 0; i < lane.field.data.length; i++) {
+      const [x, y] = lane.field.cellCenter(i);
+      if (Math.abs(x) > lane.layout.fieldM / 2 - 0.3) continue; // 两端门口不算
+      if (Math.abs(y) < D8 - lane.field.cell) {
+        expect(lane.field.data[i]).toBe(0);
+        onLane++;
+        if (noLane.field.data[i] > 0) onLaneNo++;
+      } else if (Math.abs(y) > D8 + 0.1 && Math.abs(y) < 1.2 && lane.field.data[i] > 0) beside++;
+    }
+    expect(onLane).toBeGreaterThan(100);
+    expect(onLaneNo).toBeGreaterThan(onLane * 0.8); // 不开走廊：这条道本来是记的（人过去之后身后补记不到——视野开着——但来路上记到）
+    expect(beside).toBeGreaterThan(100);
+  });
+
+  it('闸是按人算的：几个人各自闸自己 D 以内的单元；不在场的人不算', () => {
+    const c = nearestCrossing(L8, 0, 0);
+    const a = { x: c.x, y: c.y, present: true };
+    const far = { x: c.x + 3 * L8.pitchM, y: c.y, present: true };
+    const gone = { x: c.x + 1.5 * L8.pitchM, y: c.y, present: false };
+    expect(Array.from(blockedUnits(L8, [a], PLAN.CLEARANCE.def)).filter(Boolean)).toHaveLength(4);
+    expect(Array.from(blockedUnits(L8, [a, far], PLAN.CLEARANCE.def)).filter(Boolean)).toHaveLength(8);
+    expect(Array.from(blockedUnits(L8, [a, gone], PLAN.CLEARANCE.def)).filter(Boolean)).toHaveLength(4);
+    expect(Array.from(blockedUnits(L8, [a], null)).filter(Boolean)).toHaveLength(0);
+  });
+
+  it('体检：现行驻留点是单元中心——身体里有一根杆子；最近的过道交叉点身体里没有', () => {
+    for (const L of [L4, planLayout(6), L8]) {
+      const u = dwellSpot(L);
+      expect(unitsUnderBody(L, u.x, u.y)).toHaveLength(1);
+      const c = nearestCrossing(L, -L.pitch4 / 2, -L.pitch4 / 2);
+      expect(aisleLines(L).x.some((x) => Math.abs(x - c.x) < 1e-9)).toBe(true);
+      expect(aisleLines(L).y.some((y) => Math.abs(y - c.y) < 1e-9)).toBe(true);
+      expect(unitsUnderBody(L, c.x, c.y)).toHaveLength(0);
+    }
   });
 });
