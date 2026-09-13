@@ -322,7 +322,7 @@ export function SkinBench({
           style={{ cursor: 'default', touchAction: 'auto' }}
         />
         <div className="lab-hud tl">
-          <div style={{ color: 'var(--accent)' }}>Lab.06 / Project II</div>
+          <div style={{ color: 'var(--accent)' }}>Lab 2-1 / Project II</div>
           <div>{t.title}</div>
           <div className="dim">{t.sub}</div>
         </div>

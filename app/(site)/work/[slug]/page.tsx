@@ -87,7 +87,7 @@ const mdxComponents = (lang: SlotLang) => ({
       hud={
         lang === 'en'
           ? {
-              kicker: 'Lab.07 / Project II',
+              kicker: 'Lab 2-2 / Project II',
               title: 'Four morphologies, one protocol',
               sub: 'Four bands · fabric 5 px · the same contraction run',
               hint: 'Each band locks its own bond map — see /lab to drive it',
@@ -95,7 +95,7 @@ const mdxComponents = (lang: SlotLang) => ({
                 'Four fabric bands contracting under one protocol; each bond map locks the surplus into a different morphology: pocket, bulb flange, straight ledge, stepped box.',
             }
           : {
-              kicker: 'Lab.07 / Project II',
+              kicker: 'Lab 2-2 / Project II',
               title: '四种形态 · 同一收缩协议',
               sub: '四条带 · 织物厚度 5px · 同一次收缩',
               hint: '每条带按自己的键谱扣合——要动手调去 /lab',
@@ -145,13 +145,13 @@ const SLOT_COPY: Record<string, { en: SlotCopy; zh: SlotCopy }> = {
         'One full life cycle — birth, interaction, ageing, stop, blank — eight minutes compressed to ninety seconds',
       heroLabel: 'machine hero photo · studio white sweep · B/W',
       heroDesc: 'The machine, full view',
-      heroLive: '[stand-in] Lab.05 full assembly · live',
+      heroLive: '[stand-in] Lab 1-5 full assembly · live',
     },
     zh: {
       video: '一个完整生命周期：诞生、互动、衰老、停止、空白——约 8 分钟压缩到 90 秒',
       heroLabel: '整机主照 · 影棚白弧扫 · 黑白',
       heroDesc: '整机全貌',
-      heroLive: '[顶替] Lab.05 整机活件',
+      heroLive: '[顶替] Lab 1-5 整机活件',
     },
   },
   'project-ii': {
@@ -159,13 +159,13 @@ const SLOT_COPY: Record<string, { en: SlotCopy; zh: SlotCopy }> = {
       video: 'Simulation video — the domestic human–cat scenario',
       heroLabel: 'hero image · to be supplied',
       heroDesc: 'Hero image',
-      heroLive: '[stand-in] Lab.12 sixteen-ring floor · live',
+      heroLive: '[stand-in] Lab 2-7 sixteen-ring floor · live',
     },
     zh: {
       video: '仿真演示视频——居家人猫场景',
       heroLabel: '主图 · 待供图',
       heroDesc: '主图',
-      heroLive: '[顶替] Lab.12 十六环场地活件',
+      heroLive: '[顶替] Lab 2-7 十六环场地活件',
     },
   },
 };

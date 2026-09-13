@@ -325,7 +325,7 @@ export function SquareRingBench({
         </>
       }
       hud={{
-        kicker: 'Lab.11 / Project II',
+        kicker: 'Lab 2-6 / Project II',
         title: T.title,
         sub: split
           ? T.split(SQUARE.COUNT, SQSPLIT.LOBE, SPLIT.gap, SPLIT.side)

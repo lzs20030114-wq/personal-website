@@ -316,7 +316,7 @@ export function CrowdPlanBench({
           onPointerCancel={onPointerUp}
         />
         <div className="lab-hud tl">
-          <div style={{ color: 'var(--accent)' }}>Lab.15 / Project II</div>
+          <div style={{ color: 'var(--accent)' }}>Lab 2-10 / Project II</div>
           <div>{t.title}</div>
           <div className="dim">{t.sub}</div>
         </div>

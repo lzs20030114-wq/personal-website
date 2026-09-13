@@ -31,10 +31,10 @@ const IN_DELAY = 120; // 入场稍晚起步 → 交叉而不是对撞
 const ENTER_X = '4%'; // 入场起点 / 退场终点的横向位移
 
 const SLIDES = [
-  { key: 'fourbar', caption: 'Fig. 01 · four-bar · live', href: '/lab#lab01' },
-  { key: 'arch', caption: 'Fig. 12 · S4 arch ring · live', href: '/lab#lab02' },
-  { key: 'tentacle', caption: 'Lab.03 · tendon tentacle · live', href: '/lab#lab03' },
-  { key: 'rings', caption: 'Fig. 13 · five-ring shell · live', href: '/lab#lab04' },
+  { key: 'fourbar', caption: 'Fig. 01 · four-bar · live', href: '/lab#lab1-1' },
+  { key: 'arch', caption: 'Fig. 12 · S4 arch ring · live', href: '/lab#lab1-2' },
+  { key: 'tentacle', caption: 'Lab 1-3 · tendon tentacle · live', href: '/lab#lab1-3' },
+  { key: 'rings', caption: 'Fig. 13 · five-ring shell · live', href: '/lab#lab1-4' },
 ] as const;
 
 export function StageRotator() {

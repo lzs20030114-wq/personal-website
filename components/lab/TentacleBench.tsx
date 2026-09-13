@@ -312,7 +312,7 @@ export function TentacleBench({
       <div className="lab-fig">
         <canvas ref={canvasRef} width={1400} height={1040} aria-label="立体触手台架；拖拽旋转视角、滑块收缩肌腱" />
         <div className="lab-hud tl">
-          <div style={{ color: 'var(--accent-2)' }}>Lab.03</div>
+          <div style={{ color: 'var(--accent-2)' }}>Lab 1-3</div>
           <div>立体肌腱触手</div>
           <div className="dim">7 方盒椎节 · 3 腱 @120° · 真实扫描网格 10.7 万三角</div>
         </div>

@@ -80,7 +80,7 @@ export function SkinDualBench({
         </div>
       }
       hud={{
-        kicker: 'Lab.08 / Project II',
+        kicker: 'Lab 2-3 / Project II',
         title: '双结构带 · 一条带两个结构',
         sub: `5 条带 · 每条两个键谱、两条拉链各自独立 · 同一收缩协议`,
         hint: '四种同形对 + 一条混排 · 间距三档 · 拖拽旋转',

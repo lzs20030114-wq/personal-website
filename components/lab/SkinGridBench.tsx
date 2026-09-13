@@ -140,7 +140,7 @@ export function SkinGridBench({
       hud={
         lang === 'en'
           ? {
-              kicker: 'Lab.12 / Project II',
+              kicker: 'Lab 2-7 / Project II',
               title: 'Sixteen rings, one floor',
               sub: `${RING_GRID.COLS}×${RING_GRID.ROWS} rings · ${perRow ? 'one bond map per row' : `one bond map: ${def.en}`} · platform ⌀${((2 * ringOuter(RING.RADIUS_DEF) * RIG_SCALE * MM_PER_UNIT) / 1000).toFixed(2)} m · room ${((ROOM.FLOOR_Y * MM_PER_UNIT) / 1000).toFixed(2)} m high`,
               hint: `Plan / form switchable · radius drives the pitch · top view reads the grid · drag to orbit · figure ${(FIGURE.MM / 1000).toFixed(2)} m for scale`,
@@ -148,7 +148,7 @@ export function SkinGridBench({
                 'Sixteen contracting-skin cylinder rings hung in a room on a square grid; each contracts into a ring platform. A 1.7 m figure stands on the floor for scale. Pitch follows the radius slider; the plan can be switched and the view orbited.',
             }
           : {
-              kicker: 'Lab.12 / Project II',
+              kicker: 'Lab 2-7 / Project II',
               title: '4×4 环阵列 · 一片场地',
               sub: `${RING_GRID.COLS}×${RING_GRID.ROWS} 个环 · ${perRow ? '每行一种键谱' : `同一键谱：${def.zh}`} · 平台 ⌀${((2 * ringOuter(RING.RADIUS_DEF) * RIG_SCALE * MM_PER_UNIT) / 1000).toFixed(2)} m · 房高 ${((ROOM.FLOOR_Y * MM_PER_UNIT) / 1000).toFixed(2)} m`,
               hint: `编制 / 形态可切 · 半径滑块连格距一起变 · 顶视看排布 · 拖拽旋转 · 人 ${(FIGURE.MM / 1000).toFixed(2)} m 作比例`,

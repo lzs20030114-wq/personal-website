@@ -173,7 +173,7 @@ export function FourBarBench({ grid = true, spin = true, active = true, onLight 
         onPointerCancel={(ev) => stateRef.current?.ctl.pointerUp(ev.pointerId)}
       />
       <div className="lab-hud tl">
-        <div style={{ color: 'var(--accent)' }}>Lab.01 / Fig. 01</div>
+        <div style={{ color: 'var(--accent)' }}>Lab 1-1 / Fig. 01</div>
         <div>Grashof 曲柄摇杆</div>
         <div className="dim">2D PBD · Gauss–Seidel · L 66·178·127 · 板 132·100</div>
       </div>

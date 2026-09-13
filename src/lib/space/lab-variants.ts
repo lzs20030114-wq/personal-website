@@ -124,11 +124,11 @@ const WALK_RESPONSE_AXIS: VariantAxis = { axis: '响应', options: RESPONSES.map
 
 /** 十台六段（页序）：Ⅰ 单元 06–08 · Ⅱ 序列 09 · Ⅲ 环 10–11 · Ⅳ 场 12 · Ⅴ 单元之间 13 · Ⅵ 人 14–15 */
 export const LAB_VARIANTS: readonly BenchVariants[] = [
-  { no: '06', key: 'unit', zh: '二维皮肤单元', en: 'Contractile skin units', plans: [], axes: [] },
-  { no: '07', key: 'solid', zh: '立体带', en: 'Skin units, solid', plans: [], axes: [] },
-  { no: '08', key: 'dual', zh: '双结构带', en: 'Two structures, one band', plans: [], axes: [DUAL_GAP_AXIS] },
+  { no: '2-1', key: 'unit', zh: '二维皮肤单元', en: 'Contractile skin units', plans: [], axes: [] },
+  { no: '2-2', key: 'solid', zh: '立体带', en: 'Skin units, solid', plans: [], axes: [] },
+  { no: '2-3', key: 'dual', zh: '双结构带', en: 'Two structures, one band', plans: [], axes: [DUAL_GAP_AXIS] },
   {
-    no: '09',
+    no: '2-4',
     key: 'series',
     zh: '序列',
     en: 'Series',
@@ -136,7 +136,7 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     axes: [{ axis: '排布', options: SERIES_LAYOUTS }],
   },
   {
-    no: '10',
+    no: '2-5',
     key: 'ring',
     zh: '圆筒环',
     en: 'Cylinder of units',
@@ -146,7 +146,7 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     axes: [],
   },
   {
-    no: '11',
+    no: '2-6',
     key: 'square',
     zh: '方形环',
     en: 'A square ring',
@@ -154,7 +154,7 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     axes: [{ axis: '排布', options: SQUARE_LAYOUTS }],
   },
   {
-    no: '12',
+    no: '2-7',
     key: 'grid',
     zh: '环阵列场地',
     en: 'Four by four',
@@ -162,7 +162,7 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     axes: [],
   },
   {
-    no: '13',
+    no: '2-8',
     key: 'cluster',
     zh: '单元关系',
     en: 'Between units',
@@ -172,7 +172,7 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     axes: [CLUSTER_RELATION_AXIS, CLUSTER_TIMING_AXIS],
   },
   {
-    no: '14',
+    no: '2-9',
     key: 'walk',
     zh: '一个人走过',
     en: 'A person walks through',
@@ -180,7 +180,7 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     axes: [WALK_GRID_AXIS, WALK_READING_AXIS, WALK_RESPONSE_AXIS],
   },
   {
-    no: '15',
+    no: '2-10',
     key: 'crowd',
     zh: '几个人在场',
     en: 'A few people',

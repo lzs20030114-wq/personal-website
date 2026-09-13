@@ -273,7 +273,7 @@ interface SolidHud {
 }
 
 const DEFAULT_HUD: SolidHud = {
-  kicker: 'Lab.07 / Project II',
+  kicker: 'Lab 2-2 / Project II',
   title: '皮肤单元 · 立体带',
   sub: `剖面挤出 · 织物厚度 ${SOLID.THICK}px · 同一收缩协议`,
   hint: '拖拽旋转 · 右键平移 · 滚轮缩放',

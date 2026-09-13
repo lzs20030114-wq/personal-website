@@ -579,7 +579,7 @@ export function RingsBench({
           aria-label={L.aria}
         />
         <div className="lab-hud tl">
-          <div style={{ color: 'var(--p300)' }}>Lab.04 / Fig. 13</div>
+          <div style={{ color: 'var(--p300)' }}>Lab 1-4 / Fig. 13</div>
           <div>{L.title}</div>
           <div className="dim">{L.sub}</div>
         </div>

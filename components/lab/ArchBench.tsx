@@ -175,7 +175,7 @@ export function ArchBench({ grid = true, active = true, onLight = false }: { gri
         onPointerCancel={(ev) => stateRef.current?.ctl.pointerUp(ev.pointerId)}
       />
       <div className="lab-hud tl">
-        <div style={{ color: 'var(--accent)' }}>Lab.02 / Fig. 12</div>
+        <div style={{ color: 'var(--accent)' }}>Lab 1-2 / Fig. 12</div>
         <div>S4 环 · M3×1.000</div>
         <div className="dim">同一 2D 内核 · 14 板 · 槽端止程 · 定步 1/120</div>
       </div>

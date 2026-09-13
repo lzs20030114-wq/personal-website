@@ -98,7 +98,7 @@ export function SkinRingBench({
   // `/lab#lab10-split` 直达捏分（合并进来的编制没有自己的卡片与锚点，这是它的 URL 入口）
   useEffect(() => {
     const k = planFromHash(
-      '10',
+      '2-5',
       RING_PLANS.map((p) => p.key),
     );
     if (k) setPlan(k);
@@ -188,7 +188,7 @@ export function SkinRingBench({
         </>
       }
       hud={{
-        kicker: 'Lab.10 / Project II',
+        kicker: 'Lab 2-5 / Project II',
         title: split ? '圆筒环 · 捏分 · 一圈里裂开再合上' : '圆筒环 · 收缩成环形平台',
         sub: split
           ? `${SPLIT_RING_COUNT} 条窄带 · 一圈一个来回：一侧两片台隔 ${SPLIT_RING_W_END}px → 对面合成一块 · 台高钉死 ${SPLIT_RING_LOBE}px · 挑出 ${SPLIT_RING_TARGET}`

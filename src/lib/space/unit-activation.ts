@@ -863,7 +863,7 @@ export const PATHS: readonly PathPreset[] = [
     key: 'loop',
     zh: '绕圈',
     en: 'loop',
-    zhNote: `沿过道绕场地中央 ${PLAN.LOOP_LAPS} 圈（边长约两个 Lab.12 格距）——反复经过、从不停留`,
+    zhNote: `沿过道绕场地中央 ${PLAN.LOOP_LAPS} 圈（边长约两个 Lab 2-7 格距）——反复经过、从不停留`,
     enNote: `${PLAN.LOOP_LAPS} laps round the centre of the field along the aisles — passing, never staying`,
     route: (l) => {
       // 边贴最近的一条过道线（原 ±pitch4 在 6×6 下正穿过一排杆子）

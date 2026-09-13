@@ -1077,7 +1077,7 @@ export function MachineBench({
       <div className="lab-fig" {...(ptTarget ? { 'data-pt-target': '' } : {})}>
         <canvas ref={canvasRef} width={1400} height={1040} aria-label={L.aria} />
         <div className="lab-hud tl">
-          <div style={{ color: 'var(--p300)' }}>Lab.05 / Fig. 14</div>
+          <div style={{ color: 'var(--p300)' }}>Lab 1-5 / Fig. 14</div>
           <div>{L.title}</div>
           <div className="dim">{L.sub}</div>
         </div>

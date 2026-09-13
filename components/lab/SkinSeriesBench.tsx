@@ -73,7 +73,7 @@ const splitUnits = (): readonly SolidUnitDef[] =>
 const HUD = {
   zh: {
     gradient: {
-      kicker: 'Lab.09 / Project II',
+      kicker: 'Lab 2-4 / Project II',
       title: '序列 · 目录渐变 · 蘑菇挑台 → 阶梯方箱',
       sub: '12 条窄带 · 键长 0.10→0.32 逐级微变 · 同一收缩协议',
       hint: (ctl: boolean) =>
@@ -81,7 +81,7 @@ const HUD = {
       aria: '序列·目录渐变：十二条窄织物带沿深度并拢成一个连续体，键谱逐级微变，从蘑菇挑台渐变为阶梯方箱，可切换为分列排布',
     },
     split: {
-      kicker: 'Lab.09 / Project II',
+      kicker: 'Lab 2-4 / Project II',
       title: '序列 · 捏分 · 单箱裂成两台',
       sub: `10 级 · 每台高 ${SPLIT_LOBE}px · 终态缝 ${SPLIT_SEAM}px · 逐级独立设计的键谱`,
       hint: (ctl: boolean) =>
@@ -91,7 +91,7 @@ const HUD = {
   },
   en: {
     gradient: {
-      kicker: 'Lab.09 / Project II',
+      kicker: 'Lab 2-4 / Project II',
       title: 'Series — a graded array, bulb flange to stepped box',
       sub: 'Twelve narrow bands · bond length 0.10→0.32 in even steps · one protocol',
       hint: (ctl: boolean) =>
@@ -100,7 +100,7 @@ const HUD = {
         'Twelve narrow fabric bands packed edge to edge into one continuous body; the bond map changes by a small step from band to band, so the form grades from a bulb flange to a stepped box.',
     },
     split: {
-      kicker: 'Lab.09 / Project II',
+      kicker: 'Lab 2-4 / Project II',
       title: 'Series — pinched apart, one box into two platforms',
       sub: `Ten levels · platform ${SPLIT_LOBE} px · final seam ${SPLIT_SEAM} px · each level its own bond map`,
       hint: (ctl: boolean) =>
@@ -132,7 +132,7 @@ export function SkinSeriesBench({
   // `/lab#lab09-split` 直达捏分（合并进来的编制没有自己的卡片与锚点，这是它的 URL 入口）
   useEffect(() => {
     const k = planFromHash(
-      '09',
+      '2-4',
       SERIES_PLANS.map((p) => p.key),
     );
     if (k) setPlan(k);

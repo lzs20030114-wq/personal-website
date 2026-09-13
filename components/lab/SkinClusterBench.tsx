@@ -76,7 +76,7 @@ export function SkinClusterBench({
   // `/lab#lab13-nine` 直达某个编制
   useEffect(() => {
     const k = planFromHash(
-      '13',
+      '2-8',
       CLUSTER_PLAN_OPTIONS.map((p) => p.key),
     );
     if (k) setPlan(k);
@@ -213,7 +213,7 @@ export function SkinClusterBench({
       hud={
         en
           ? {
-              kicker: 'Lab.13 / Project II',
+              kicker: 'Lab 2-8 / Project II',
               title: 'Between units',
               sub: relLine,
               hint: 'Cluster / relation / timing / form switchable · relation re-places, no re-solve · radius drives the pitch · drag to orbit',
@@ -221,7 +221,7 @@ export function SkinClusterBench({
                 'Between units: two, three, four or nine contracting-skin cylinder rings hung in a room, placed apart, touching, stepped in height, or interleaved at two heights, contracting together or wave by wave; a 1.7 m figure stands on the floor for scale.',
             }
           : {
-              kicker: 'Lab.13 / Project II',
+              kicker: 'Lab 2-8 / Project II',
               title: '单元关系 · 几个单元能是什么关系',
               sub: relLine,
               hint: '编制 / 关系 / 时序 / 形态可切 · 换关系不重解 · 半径连间距一起变 · 拖拽旋转',

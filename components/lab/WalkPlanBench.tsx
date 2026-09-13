@@ -165,7 +165,7 @@ export function WalkPlanBench({
 
   // `/lab#lab14-<path>` 直达某种行为
   useEffect(() => {
-    const k = planFromHash('14', PATH_KEYS);
+    const k = planFromHash('2-9', PATH_KEYS);
     if (k) setPath(k);
   }, []);
 
@@ -336,7 +336,7 @@ export function WalkPlanBench({
           onPointerCancel={onPointerUp}
         />
         <div className="lab-hud tl">
-          <div style={{ color: 'var(--accent)' }}>Lab.14 / Project II</div>
+          <div style={{ color: 'var(--accent)' }}>Lab 2-9 / Project II</div>
           <div>{t.title}</div>
           <div className="dim">{t.sub}</div>
         </div>
@@ -378,7 +378,7 @@ export function WalkPlanBench({
                     key={n}
                     type="button"
                     className={n === grid ? 'active' : undefined}
-                    title={n === 4 ? (lang === 'zh' ? 'Lab.12 原样，对照用' : 'Lab.12 as is, for comparison') : undefined}
+                    title={n === 4 ? (lang === 'zh' ? 'Lab 2-7 原样，对照用' : 'Lab 2-7 as is, for comparison') : undefined}
                     onClick={() => setGrid(n)}
                   >
                     {n}×{n}
