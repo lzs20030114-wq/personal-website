@@ -265,3 +265,42 @@ export function heatLevel(count: number, max: number): 0 | 1 | 2 | 3 | 4 {
   const step = Math.ceil((count / max) * 4);
   return Math.min(4, Math.max(1, step)) as 1 | 2 | 3 | 4;
 }
+
+/* ── 条目锚点 ─────────────────────────────────────────────────────────────
+   案例页正文里的每个设计决策后面带一条「→ 日志 2026-06-15」链到对应条目
+   （2026-09-13 重构指令 §0.5）。这需要一个**跨发布稳定**的地址，而 LogList
+   内部那个展开态 id（`${date}-${i}`，i = 全池下标）不是：池按日期倒序，
+   发一条更新的日志就会把所有旧条目的 i 推后一位，昨天写在案例页里的链接
+   今天指到别的条目上——而且不报错，只是悄悄指错。
+
+   日期本身也不够：41 个日期里有 13 个挂着不止一条（2026-07-10 挂了四条，
+   2026-06-15 那三条分属三个不同项目），只按日期跳会落到当天的第一条。
+
+   所以锚点 = **日期 + 当日序号**（`log-2026-06-15-1`）。序号在**全池**上现算、
+   与筛选无关；sortEntries 是稳定排序且同日保持数组内既有顺序，而同日新增按
+   既定规矩追加在后（CLAUDE.md「同日 tie 一律既有条目在前」），所以已发出去的
+   锚点不会因为以后再发日志而改变。不新开 schema 字段——加字段要同时改 zod、
+   /studio 编辑器、发布接口、落盘格式与 60 条既有条目，而这里只需要一个派生值。 */
+
+/** 条目锚点：`log-<日期>-<当日序号>`，序号从 1 起。 */
+export function entryAnchor(date: string, seq: number): string {
+  return `log-${date}-${seq}`;
+}
+
+/** 给整池按顺序标上锚点（当日序号在全池上现算，与筛选无关）。 */
+export function withAnchors<T extends LogEntry>(entries: T[]): Array<{ entry: T; anchor: string }> {
+  const seen = new Map<string, number>();
+  return entries.map((entry) => {
+    const seq = (seen.get(entry.date) ?? 0) + 1;
+    seen.set(entry.date, seq);
+    return { entry, anchor: entryAnchor(entry.date, seq) };
+  });
+}
+
+/** 解析 `#log-2026-06-15-1`（带不带 `#` 都收）；形状不对返回 null。 */
+export function parseAnchor(hash: string): { date: string; seq: number } | null {
+  const m = /^#?log-(\d{4}-\d{2}-\d{2})-(\d+)$/.exec(hash);
+  if (!m) return null;
+  const seq = Number(m[2]);
+  return seq >= 1 ? { date: m[1], seq } : null;
+}

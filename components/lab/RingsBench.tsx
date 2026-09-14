@@ -579,7 +579,9 @@ export function RingsBench({
           aria-label={L.aria}
         />
         <div className="lab-hud tl">
-          <div style={{ color: 'var(--p300)' }}>Lab 1-4 / Fig. 13</div>
+          {/* 只写台架编号：「Fig. 13」是主页舞台给这台起的图号（StageRotator），不是台架自己的身份；
+              案例页正文嵌这台时，页内图号已是 N01–N20，再印一个 Fig. 13 会读成本页的某张图。 */}
+          <div style={{ color: 'var(--p300)' }}>Lab 1-4</div>
           <div>{L.title}</div>
           <div className="dim">{L.sub}</div>
         </div>

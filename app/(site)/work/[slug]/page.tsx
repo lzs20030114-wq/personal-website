@@ -22,6 +22,9 @@ import { CaseHeroLive } from '../../../../components/site/CaseHeroLive';
 import { CaseHeroSpace } from '../../../../components/site/CaseHeroSpace';
 import { SkinSolidBench } from '../../../../components/lab/SkinSolidBench';
 import { SkinBench } from '../../../../components/lab/SkinBench';
+import { ArchBench } from '../../../../components/lab/ArchBench';
+import { RingsBench } from '../../../../components/lab/RingsBench';
+import { TentacleBench } from '../../../../components/lab/TentacleBench';
 import { SkinSeriesBench } from '../../../../components/lab/SkinSeriesBench';
 import { SquareRingBench } from '../../../../components/lab/SquareRingBench';
 import { PageEnter } from '../../../../components/site/PageEnter';
@@ -70,8 +73,22 @@ const mdxComponents = (lang: SlotLang) => ({
   InteractiveSlot: (p: ComponentProps<typeof InteractiveSlot>) => (
     <InteractiveSlot {...p} lang={lang} />
   ),
-  IntentNote,
+  IntentNote: (p: ComponentProps<typeof IntentNote>) => <IntentNote {...p} lang={lang} />,
   ProcessAside: (p: ComponentProps<typeof ProcessAside>) => <ProcessAside {...p} lang={lang} />,
+  /**
+   * 正文里的链接（2026-09-13）：指回 /archive 某一条日志的引用另给一个类，
+   * 读作旁注不读作正文（.case-cite）。其余链接走 .case-body a 的常规下划线。
+   * 锚点形状 = log-<日期>-<当日序号>，由 log-facets 的 withAnchors 现算——
+   * 不能用 LogList 内部那个带全池下标的 id，那个一发新日志就会指到别的条目上。
+   */
+  a: ({ href, children, ...rest }: ComponentProps<'a'>) => {
+    const cite = typeof href === 'string' && href.startsWith('/archive#log-');
+    return (
+      <a href={href} className={cite ? 'case-cite' : undefined} {...rest}>
+        {children}
+      </a>
+    );
+  },
   ConceptCard: (p: ComponentProps<typeof ConceptCard>) => <ConceptCard {...p} lang={lang} />,
   ConceptGrid,
   LinkageFigure,
@@ -122,6 +139,19 @@ const mdxComponents = (lang: SlotLang) => ({
   // 「技术实现」那节说的单元化 + 运动学可解：二十条同谱的带绕轴一圈，
   // 只解一条摆二十处，每条带挑出多远就决定了俯视的轮廓。
   SquareRingFigure: () => <SquareRingBench controls={false} onLight lang={lang} />,
+
+  /* ── 项目 01 正文里的求解器活件（2026-09-13 重构指令 §5）────────────────────
+     三台都是 7 月曲柄方案的求解器，实物 8 月改了驱动——**不重做台架**，按「当时的
+     产物」嵌入，图注统一带日期与说明。控制条一律收掉（正文里的图不该带一排按钮），
+     要动手去 /lab。
+     整机那台**有意不嵌**（用户拍板 2026-09-13）：本页主图位已经在跑 MachineBench，
+     正文再放一台就是同一台机器两个 WebGL 上下文，而且两者会抢同一个模块级 handoff
+     槽（键名 'machine'，宽限期内两个实例都会去恢复主图的位形）。§6.5 末改为一句话
+     指回页顶主图。 */
+  // ArchBench 不带控制条（它本来就没有控件），故无 controls 可收
+  ArchFigure: () => <ArchBench onLight lang={lang} />,
+  RingsFigure: () => <RingsBench controls={false} onLight lang={lang} />,
+  TentacleFigure: () => <TentacleBench controls={false} onLight lang={lang} />,
 });
 
 const mdxOptions = { mdxOptions: { remarkPlugins: [remarkGfm] } };
@@ -137,7 +167,14 @@ const COPY = {
  * （V.60 写着「生命周期」），项目 02 发布（2026-08-14）后会串台。
  * heroLive 只有主图被活台架顶替的项目才有。
  */
-type SlotCopy = { video: string; heroLabel: string; heroDesc: string; heroLive?: string };
+type SlotCopy = {
+  video: string;
+  heroLabel: string;
+  heroDesc: string;
+  heroLive?: string;
+  /** 主图的图号。默认 Fig. 01 / 图 01；项目 01 的图目录 2026-09-13 改为 N01–N20，故单独给。 */
+  heroId?: string;
+};
 const SLOT_COPY: Record<string, { en: SlotCopy; zh: SlotCopy }> = {
   'reincarnation-machine': {
     en: {
@@ -146,12 +183,14 @@ const SLOT_COPY: Record<string, { en: SlotCopy; zh: SlotCopy }> = {
       heroLabel: 'machine hero photo · studio white sweep · B/W',
       heroDesc: 'The machine, full view',
       heroLive: '[stand-in] Lab 1-5 full assembly · live',
+      heroId: 'N01',
     },
     zh: {
       video: '一个完整生命周期：诞生、互动、衰老、停止、空白——约 8 分钟压缩到 90 秒',
       heroLabel: '整机主照 · 影棚白弧扫 · 黑白',
       heroDesc: '整机全貌',
       heroLive: '[顶替] Lab 1-5 整机活件',
+      heroId: 'N01',
     },
   },
   'project-ii': {
@@ -290,7 +329,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
             <Pick
               en={
                 <FigCaption
-                  id="Fig. 01"
+                  id={sc.en.heroId ?? 'Fig. 01'}
                   desc={(liveHero && sc.en.heroLive) || sc.en.heroDesc}
                   status="待拍摄"
                   lang="en"
@@ -298,7 +337,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
               }
               zh={
                 <FigCaption
-                  id="图 01"
+                  id={sc.zh.heroId ?? '图 01'}
                   desc={(liveHero && sc.zh.heroLive) || sc.zh.heroDesc}
                   status="待拍摄"
                   lang="zh"

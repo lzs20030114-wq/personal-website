@@ -30,7 +30,38 @@ import { useBenchLoop } from './useBenchLoop';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const HANDLES = [ARCH_APEX, ...ARCH_FEET, ARCH_PIN];
 
-export function ArchBench({ grid = true, active = true, onLight = false }: { grid?: boolean; active?: boolean; onLight?: boolean }) {
+/**
+ * HUD 双语（2026-09-13 加，案例页正文要嵌这台）：/lab 说中文（默认），
+ * 案例页里的活件跟着页面的中英切换走。只有读数文案两份，几何/物理一律共用。
+ */
+const COPY = {
+  zh: {
+    aria: 'S4 拱环台架；拖拱顶、四脚或曲柄销驱动',
+    title: 'S4 环 · M3×1.000',
+    sub: '同一 2D 内核 · 14 板 · 槽端止程 · 定步 1/120',
+    foot: '拖拱顶 · 四脚 · 曲柄销',
+  },
+  en: {
+    aria: 'S4 arch-ring bench; drag the apex, a foot, or the crank pin to drive it',
+    title: 'Ring S4 · M3×1.000',
+    sub: 'Same 2D kernel · 14 plates · slot-end stops · fixed step 1/120',
+    foot: 'Drag the apex · the feet · the crank pin',
+  },
+} as const;
+
+export function ArchBench({
+  grid = true,
+  active = true,
+  onLight = false,
+  lang = 'zh',
+}: {
+  grid?: boolean;
+  active?: boolean;
+  onLight?: boolean;
+  /** 界面语言：'zh' = /lab；'en' = 英文案例页正文 */
+  lang?: 'en' | 'zh';
+}) {
+  const t = COPY[lang];
   const svgRef = useRef<SVGSVGElement | null>(null);
   const stateRef = useRef<{ ctl: LinkageController; step: (dt: number) => void } | null>(null);
   const [hud, setHud] = useState({ phi: 0, apex: 0, err: 0, mode: 'idle' });
@@ -156,7 +187,7 @@ export function ArchBench({ grid = true, active = true, onLight = false }: { gri
         ref={svgRef}
         viewBox="0 0 700 520"
         role="img"
-        aria-label="S4 拱环台架；拖拱顶、四脚或曲柄销驱动"
+        aria-label={t.aria}
         onPointerDown={(ev) => {
           const p = toVB(ev);
           if (p && stateRef.current?.ctl.pointerDown(ev.pointerId, p.x, p.y)) {
@@ -175,9 +206,9 @@ export function ArchBench({ grid = true, active = true, onLight = false }: { gri
         onPointerCancel={(ev) => stateRef.current?.ctl.pointerUp(ev.pointerId)}
       />
       <div className="lab-hud tl">
-        <div style={{ color: 'var(--accent)' }}>Lab 1-2 / Fig. 12</div>
-        <div>S4 环 · M3×1.000</div>
-        <div className="dim">同一 2D 内核 · 14 板 · 槽端止程 · 定步 1/120</div>
+        <div style={{ color: 'var(--accent)' }}>Lab 1-2</div>
+        <div>{t.title}</div>
+        <div className="dim">{t.sub}</div>
       </div>
       <div className="lab-hud br">
         <div className="num">φ {hud.phi.toFixed(1)}°</div>
@@ -185,7 +216,7 @@ export function ArchBench({ grid = true, active = true, onLight = false }: { gri
           apex {hud.apex.toFixed(1)} mm · err {hud.err.toFixed(2)} · {hud.mode}
         </div>
       </div>
-      <div className="lab-hud bl dim">拖拱顶 · 四脚 · 曲柄销</div>
+      <div className="lab-hud bl dim">{t.foot}</div>
       </div>
     </div>
   );

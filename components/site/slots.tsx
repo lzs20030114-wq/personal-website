@@ -83,6 +83,8 @@ export function FigSlot({
   status,
   ratio = '16/9',
   size,
+  src,
+  alt,
   lang = 'en',
 }: {
   id: string;
@@ -91,13 +93,28 @@ export function FigSlot({
   status: SlotStatus;
   ratio?: string;
   size?: SlotSize;
+  /**
+   * 素材到位后填：`/log/…` 或 `/work/…` 下的静态图，填了就画真图、不再画斜纹框
+   * （2026-09-13 加——此前插槽只会画占位框，连已经躺在仓库里的图也贴不上去）。
+   */
+  src?: string;
+  /** src 存在时必给：读屏与裂图时唯一的信息来源。 */
+  alt?: string;
   lang?: SlotLang;
 }) {
   return (
     <figure className={`my-8${sizeClass(size)}`}>
-      <div className="hatch" style={{ aspectRatio: ratio }}>
-        <span style={FRAME_LABEL}>{caption}</span>
-      </div>
+      {src ? (
+        // 原生 img，与 /archive 的日志图同一做法：静态图不需要按尺寸重采样服务。
+        // 外框保留 .fig-shot 的发丝线裱框，图自身按 ratio 裁切填满。
+        <div className="fig-shot" style={{ aspectRatio: ratio }}>
+          <img src={src} alt={alt ?? caption} loading="lazy" decoding="async" />
+        </div>
+      ) : (
+        <div className="hatch" style={{ aspectRatio: ratio }}>
+          <span style={FRAME_LABEL}>{caption}</span>
+        </div>
+      )}
       <FigCaption id={id} desc={desc} status={status} lang={lang} />
     </figure>
   );
@@ -187,10 +204,13 @@ export function InteractiveSlot({
 }
 
 /** 意图占位（Placeholder）：虚线框，明确标注非正文——保持占位形态（MAPPING §5.2）。 */
-export function IntentNote({ children }: { children: ReactNode }) {
+export function IntentNote({ children, lang = 'zh' }: { children: ReactNode; lang?: SlotLang }) {
   return (
     <div className="placeholder-note my-6" style={{ maxWidth: '62ch' }}>
-      <span style={{ fontWeight: 800, color: 'var(--accent)' }}>占位 · 正文待作者撰写</span> — {children}
+      <span style={{ fontWeight: 800, color: 'var(--accent)' }}>
+        {lang === 'zh' ? '占位 · 正文待作者撰写' : 'Placeholder · copy to come from the author'}
+      </span>{' '}
+      — {children}
     </div>
   );
 }

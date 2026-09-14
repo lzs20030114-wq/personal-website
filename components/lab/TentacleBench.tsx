@@ -37,16 +37,39 @@ const LINK_LABELS = ['无', '1+2', '2+3', '1+3'];
 // 滑块拇指色 = 该腱线色（稿内：绿 / 中性 / 紫）
 const TENDON_UI = ['var(--accent)', 'color-mix(in srgb, var(--ink) 80%, transparent)', 'var(--accent-2)'];
 
+/**
+ * HUD 双语（2026-09-13 加，案例页正文要嵌这台）：/lab 说中文（默认），
+ * 案例页里的活件跟着页面的中英切换走。控制条只在 /lab 出现（案例页 controls={false}），
+ * 故只有 HUD 读数两份。
+ */
+const COPY = {
+  zh: {
+    aria: '立体触手台架；拖拽旋转视角、滑块收缩肌腱',
+    title: '立体肌腱触手',
+    sub: '7 方盒椎节 · 3 腱 @120° · 真实扫描网格 10.7 万三角',
+    foot: '拖拽旋转 · 右键平移 · 滚轮缩放',
+  },
+  en: {
+    aria: 'Three-tendon tentacle bench; drag to orbit, use the sliders to contract each tendon',
+    title: 'Three-tendon tentacle',
+    sub: '7 box vertebrae · 3 tendons at 120° · scanned mesh, 107k triangles',
+    foot: 'Drag to orbit · right-drag to pan · scroll to zoom',
+  },
+} as const;
+
 export function TentacleBench({
   spin = true,
   active = true,
   controls = true,
   onLight = false,
+  lang = 'zh',
 }: {
   spin?: boolean;
   active?: boolean;
   /** false = 纯展示（主页舞台用）：不出控制条 */
   controls?: boolean;
+  /** 界面语言：'zh' = /lab；'en' = 英文案例页正文 */
+  lang?: 'en' | 'zh';
   /** true = 置于浅色页（主页舞台）：自带深底与深色 token */
   onLight?: boolean;
 }) {
@@ -310,11 +333,11 @@ export function TentacleBench({
   return (
     <div className={`lab-wrap${onLight ? ' on-light' : ''}`}>
       <div className="lab-fig">
-        <canvas ref={canvasRef} width={1400} height={1040} aria-label="立体触手台架；拖拽旋转视角、滑块收缩肌腱" />
+        <canvas ref={canvasRef} width={1400} height={1040} aria-label={COPY[lang].aria} />
         <div className="lab-hud tl">
           <div style={{ color: 'var(--accent-2)' }}>Lab 1-3</div>
-          <div>立体肌腱触手</div>
-          <div className="dim">7 方盒椎节 · 3 腱 @120° · 真实扫描网格 10.7 万三角</div>
+          <div>{COPY[lang].title}</div>
+          <div className="dim">{COPY[lang].sub}</div>
         </div>
         <div className="lab-hud br">
           <div className="num">T {tendons.map((v) => Math.round(v * 100)).join(' / ')} %</div>
@@ -322,7 +345,7 @@ export function TentacleBench({
             {hud.note ? hud.note : `err ${hud.err.toFixed(2)} px · ×${hud.zoom.toFixed(2)}`}
           </div>
         </div>
-        <div className="lab-hud bl dim">拖拽旋转 · 右键平移 · 滚轮缩放</div>
+        <div className="lab-hud bl dim">{COPY[lang].foot}</div>
       </div>
       {controls ? (
         <div className="lab-ctl">

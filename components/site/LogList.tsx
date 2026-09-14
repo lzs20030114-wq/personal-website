@@ -13,8 +13,10 @@ import {
   monthLabel,
   monthOf,
   projectFacets,
+  parseAnchor,
   projectGroupOf,
   projectOf,
+  withAnchors,
   type Facet,
 } from '../../src/lib/site/log-facets';
 import { blockCounts, countsLabel } from '../../src/lib/site/log-blocks';
@@ -83,7 +85,7 @@ const COPY: Record<LogLang, Copy> = {
 };
 
 /** 条目 + 全池内稳定 id：id 必须与筛选无关，否则筛完之后展开态会串到别的条目上。 */
-type Row = { entry: LogEntry; id: string };
+type Row = { entry: LogEntry; id: string; anchor: string };
 type Group = { key: string; rows: Row[] };
 
 function groupByMonth(rows: Row[]): Group[] {
@@ -232,7 +234,15 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
 
   const rows = useMemo<Row[]>(
     // 下标取自全池，与筛选结果无关
-    () => entries.map((entry, i) => ({ entry, id: `${entry.date}-${i}` })),
+    // anchor 与 id 是两件不同的东西：id 只在本次会话里用（展开态、aria），
+    // 可以跟着全池下标走；anchor 要被案例页写进链接里长期有效，所以按
+    // 「日期 + 当日序号」算（log-facets §条目锚点）。
+    () =>
+      withAnchors(entries).map(({ entry, anchor }, i) => ({
+        entry,
+        id: `${entry.date}-${i}`,
+        anchor,
+      })),
     [entries],
   );
 
@@ -307,17 +317,23 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
   /* 带序号：只存日期的话，连点同一格第二次 setState 值没变 → 不重渲染 → 下面的
      effect 不重跑 → 既不滚也不闪（要等 1.6s 归零后才又能点）。同一格点两下是很自然的
      动作，所以每次跳转自增一个序号，保证状态必变。 */
-  const [flash, setFlash] = useState<{ date: string; seq: number } | null>(null);
+  /* anchor = 只闪这一条（从案例页链进来时）；null = 闪一整天（热力图点某一格，
+     那是按天问的，当天每条都是答案）。 */
+  const [flash, setFlash] = useState<{ date: string; seq: number; anchor: string | null } | null>(
+    null,
+  );
   const listRef = useRef<HTMLElement>(null);
 
   function jumpTo(date: string) {
     if (month !== null && month !== date.slice(0, 7)) setMonth(date.slice(0, 7));
-    setFlash((prev) => ({ date, seq: (prev?.seq ?? 0) + 1 }));
+    setFlash((prev) => ({ date, seq: (prev?.seq ?? 0) + 1, anchor: null }));
   }
 
   useEffect(() => {
     if (flash === null) return;
-    const el = listRef.current?.querySelector(`[data-date="${flash.date}"]`);
+    const el = listRef.current?.querySelector(
+      flash.anchor ? `#${CSS.escape(flash.anchor)}` : `[data-date="${flash.date}"]`,
+    );
     if (el) {
       const reduce =
         typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -326,6 +342,39 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
     const t = setTimeout(() => setFlash(null), 1600);
     return () => clearTimeout(t);
   }, [flash]);
+
+  /* 从案例页链进来：`/archive#log-2026-06-15-1`（2026-09-13）。
+     浏览器自己的锚点跳转在这里没用——条目默认收起、而且可能正被筛选挡着，
+     跳过去只会看到一行引句或者什么都没有。所以自己接管：
+     先把筛选清掉（落地那一条必须在场），再展开它，然后滚过去并闪一下。
+     清空而不是只调月份：从站外链进来的读者没有「我刚才筛过」这回事，
+     而热力图那条跳转是页内动作，仍然只动月份一级，两者有意不同。 */
+  const landed = useRef(false);
+  useEffect(() => {
+    function land(initial: boolean) {
+      const target = parseAnchor(window.location.hash);
+      if (!target) return;
+      const row = rows.find(
+        (r) => r.anchor === `log-${target.date}-${target.seq}`,
+      );
+      if (!row) return; // 指向不存在的条目（条目被删 / 手打错）——什么都不做，别乱跳
+      if (initial) landed.current = true;
+      setProject(null);
+      setAspect(null);
+      setMonth(null);
+      setOpen((prev) => (prev.has(row.id) ? prev : new Set(prev).add(row.id)));
+      setFlash((prev) => ({
+        date: row.entry.date,
+        seq: (prev?.seq ?? 0) + 1,
+        anchor: row.anchor,
+      }));
+    }
+    land(true);
+    // 同页内再点一条同站链接只会改 hash、不重新挂载，所以 hashchange 也要接
+    const onHash = () => land(false);
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, [rows]);
 
   const filtered = project !== null || aspect !== null || month !== null;
 
@@ -488,16 +537,17 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
         {groups.map((g) => (
           <div key={g.key}>
             <h2 className="log-month">{monthLabel(g.key)[lang]}</h2>
-            {g.rows.map(({ entry: e, id }) => {
+            {g.rows.map(({ entry: e, id, anchor }) => {
               const isOpen = open.has(id);
               const group = projectGroupOf(e);
               return (
                 <article
                   key={id}
+                  id={anchor}
                   className="log-entry"
                   data-open={isOpen}
                   data-date={e.date}
-                  data-flash={flash?.date === e.date}
+                  data-flash={flash ? (flash.anchor ? flash.anchor === anchor : flash.date === e.date) : false}
                 >
                   <div className="log-entry__meta">
                     {/* 项目标记（用户拍板 2026-07-29「每一条都要标注属于哪个项目」）：

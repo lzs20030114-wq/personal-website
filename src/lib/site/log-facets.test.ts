@@ -9,6 +9,9 @@ import {
   monthFacets,
   monthChip,
   monthLabel,
+  entryAnchor,
+  parseAnchor,
+  withAnchors,
   OTHER_ASPECT,
   PROJECT_GROUPS,
   projectFacets,
@@ -186,5 +189,65 @@ describe('热力图', () => {
     const none = buildHeatmap([], ENTRIES);
     expect(none.weeks.length).toBe(heat.weeks.length);
     expect(none.max).toBe(0);
+  });
+});
+
+/**
+ * 条目锚点的守门（2026-09-13，案例页开始按日期引用日志）。
+ * 守的是「链接悄悄指错」这一类事故——它不报错、页面照常渲染，只是点过去是另一条。
+ */
+describe('条目锚点', () => {
+  const rows = withAnchors(ENTRIES);
+
+  it('每条一个锚点，且全池不重复', () => {
+    const all = rows.map((r) => r.anchor);
+    expect(all).toHaveLength(ENTRIES.length);
+    expect(new Set(all).size).toBe(ENTRIES.length);
+  });
+
+  it('同日多条按当日序号区分（2026-07-10 挂了四条）', () => {
+    const day = rows.filter((r) => r.entry.date === '2026-07-10').map((r) => r.anchor);
+    expect(day).toEqual([
+      'log-2026-07-10-1',
+      'log-2026-07-10-2',
+      'log-2026-07-10-3',
+      'log-2026-07-10-4',
+    ]);
+  });
+
+  /**
+   * 这条是锚点存在的理由：LogList 内部那个展开态 id 用的是全池下标，发一条更新的
+   * 日志就会把旧条目的下标推后一位、已发出去的链接指到别的条目上。锚点必须不受
+   * 「以后又发了几条日志」影响——同日新增按既定规矩追加在后，所以只要序号在全池上
+   * 现算，已有锚点就不动。
+   */
+  it('以后再发日志，已有锚点不变（这正是不用全池下标的原因）', () => {
+    const before = new Map(rows.map((r) => [r.entry, r.anchor]));
+    const grown = withAnchors([
+      { ...ENTRIES[0], date: '2026-12-01' },
+      ...ENTRIES,
+      { ...ENTRIES[0], date: '2026-07-10' }, // 同日追加在后
+    ]);
+    for (const { entry, anchor } of grown) {
+      const was = before.get(entry);
+      if (was) expect(anchor, '既有条目的锚点被推移了').toBe(was);
+    }
+  });
+
+  it('解析：形状不对一律 null，不瞎猜', () => {
+    expect(parseAnchor('#log-2026-06-15-1')).toEqual({ date: '2026-06-15', seq: 1 });
+    expect(parseAnchor('log-2026-06-15-3')).toEqual({ date: '2026-06-15', seq: 3 });
+    expect(parseAnchor('#log-2026-06-15-0')).toBeNull();
+    expect(parseAnchor('#log-2026-06-15')).toBeNull();
+    expect(parseAnchor('#lab1-5')).toBeNull();
+    expect(parseAnchor('')).toBeNull();
+  });
+
+  it('锚点与解析互为逆（往返回到同一条）', () => {
+    for (const { entry, anchor } of rows) {
+      const parsed = parseAnchor('#' + anchor)!;
+      expect(parsed.date).toBe(entry.date);
+      expect(entryAnchor(parsed.date, parsed.seq)).toBe(anchor);
+    }
   });
 });

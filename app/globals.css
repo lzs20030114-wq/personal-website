@@ -532,6 +532,42 @@ a:hover {
 .case-body strong {
   font-weight: 800;
 }
+/* 正文里的链接（2026-09-13 起每个设计决定后面挂一条「→ 日志 YYYY-MM-DD」指回 /archive）：
+   靠下划线不靠颜色——本段排印纪律是正文一律墨色、强调走字重不走色，链接也不例外。 */
+.case-body a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+}
+.case-body a:hover {
+  text-decoration-color: var(--accent);
+}
+/* 图插槽里已经有素材时的裱框（FigSlot 的 src 分支）：与斜纹占位框同一个外形，
+   只是里面换成真图。object-fit: cover 让不同长宽比的素材都能填满给定的 ratio。 */
+.fig-shot {
+  position: relative;
+  overflow: hidden;
+  border: var(--hair);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.fig-shot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* 日志引用：读作旁注不读作正文——小一档、退到 n600，与正文之间留一个空格的呼吸。
+   它是「这个决定哪天做的、在哪儿有记录」，不是句子的一部分。 */
+.case-body .case-cite {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--n600);
+  white-space: nowrap;
+}
+
 /* 子标题（h3）：不进 section 计数，靠字号 + 一道短刻度与编号大标题拉开层级 */
 .case-body h3 {
   font-size: 13px;

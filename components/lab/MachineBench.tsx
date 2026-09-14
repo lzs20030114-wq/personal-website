@@ -1077,7 +1077,9 @@ export function MachineBench({
       <div className="lab-fig" {...(ptTarget ? { 'data-pt-target': '' } : {})}>
         <canvas ref={canvasRef} width={1400} height={1040} aria-label={L.aria} />
         <div className="lab-hud tl">
-          <div style={{ color: 'var(--p300)' }}>Lab 1-5 / Fig. 14</div>
+          {/* 只写台架编号：这台同时是项目 01 案例页的主图，而该页图号 2026-09-13 起是 N01–N20，
+              再印一个 Fig. 14 会被读成本页的某张图（ArchBench / RingsBench 同此处理）。 */}
+          <div style={{ color: 'var(--p300)' }}>Lab 1-5</div>
           <div>{L.title}</div>
           <div className="dim">{L.sub}</div>
         </div>
