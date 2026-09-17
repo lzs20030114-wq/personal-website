@@ -18,6 +18,7 @@ import { SquareRingBench } from '../../../components/lab/SquareRingBench';
 import { SkinClusterBench } from '../../../components/lab/SkinClusterBench';
 import { WalkPlanBench } from '../../../components/lab/WalkPlanBench';
 import { CrowdPlanBench } from '../../../components/lab/CrowdPlanBench';
+import { SkinComboBench } from '../../../components/lab/SkinComboBench';
 
 export const metadata = { title: 'The lab' };
 
@@ -41,6 +42,8 @@ export const metadata = { title: 'The lab' };
  * ——几个单元**之间**能是什么关系（距离 / 高度 / 形态），编号顺延不重排。
  * 2026-09-04 加第六段 Ⅵ A person（Lab.14 一个人走过）：行为层第一次接进来，问的是「人这样走一遍，哪一群单元被激活」。
  * 2026-08-18 起页面按项目分组（MAPPING §16）——log 页先例：多项目共用一条主线。
+ * 2026-09-17 加第七段 Ⅶ Compositions（Lab 2-11 单元组合）：不同形状的单元排成一列合起来读成什么——通道 / 平台 / 密闭，
+ * 形态词汇五个（目录四形态 + 捏分），每个槽位现场可换；编号顺延不重排。
  * 2026-09-13 编号改按项目（用户拍板）：Lab.01–05 → Lab 1-1…1-5，Lab.06–15 → Lab 2-1…2-10；
  * 锚点 `#lab1-1`／`#lab2-5-split`，旧哈希 `#lab10(-split)` 由 LegacyLabHash + planFromHash 照认。
  * 上面各条注释里的两位编号是写下时的号（历史），对照见 CLAUDE.md「Lab 编号对照」。
@@ -244,7 +247,7 @@ export default function LabPage() {
       <div className="shell pg-dark" data-pt-content>
         <header style={{ padding: '64px 0 40px', borderBottom: 'var(--hair)' }}>
           <div className="flex items-baseline justify-between" style={{ gap: 32 }}>
-            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · seventeen live instruments</p>
+            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · eighteen live instruments</p>
             <span style={LEGEND}>
               <span className="flex items-center" style={{ gap: 6 }}>
                 <span style={{ width: 9, height: 9, background: 'var(--accent)' }} />
@@ -374,7 +377,7 @@ export default function LabPage() {
         {/* 项目二尚未定名：与 log 页 PROJECT_GROUPS 同一措辞（描述而非标题），定名后一并改 */}
         <ProjectRule
           label="Project II — Spatial simulation"
-          sub="Lab 2-1 – 2-10 · skin-unit engine"
+          sub="Lab 2-1 – 2-11 · skin-unit engine"
         />
 
         <ScaleRule n="Ⅰ" label="One band" sub="Lab 2-1 – 2-3 · what a unit is" />
@@ -592,6 +595,29 @@ export default function LabPage() {
           <CrowdPlanBench />
         </Bench>
 
+        <ScaleRule n="Ⅶ" label="Compositions" sub="Lab 2-11 · what units of different forms make together" />
+
+        <Bench
+          no="2-11"
+          title="Compositions"
+          lede="Lab 2-8 placed the same unit in several relations; this bench places units of different forms in a row and asks what they make together. The vocabulary has five entries — the four catalogue forms and the split unit from Lab 2-5’s pinch plan, two shelves either side of a 100 px seam on its own longer strip — and three compositions come straight from the author’s sketch: a passage (ledge, ledge, split, ledge — three walkable surfaces in a line, and in the split bay a roof appears overhead while the floor underfoot changes by half a centimetre), a shared platform (ledge and bulb, thin edges meeting with a 2 cm step, webbed into one), and an enclosure (two splits facing, their cavities joining across the seam into a pocket 0.66 m deep and 0.39 m high). Every slot’s form can be swapped live; spacing is measured from peak reach, never styled, and a fabric web grows only across seams of the same family. Heights stay level this round; stepped rows and a walled-off enclosure are the next knobs."
+          accent="var(--accent-2)"
+          specs={[
+            ['Vocabulary', 'Pocket · bulb · ledge · stepped box · split (Lab 2-5 pinch j0, 338 nodes)'],
+            ['Compositions', 'Passage (4 slots) · shared platform (2) · enclosure (2) — sketch defaults, every slot swappable'],
+            ['Surfaces', 'Walkable top: ledge 77 · bulb 82 · box 102 px; split lower shelf 78 — within 3 cm reads as one surface'],
+            ['Roof', 'Split: shelf to shelf 0.39 m headroom · two facing = one cavity 0.66 m deep'],
+            ['Spacing', 'Touching = rim to rim by peak reach, pair by pair · apart adds Lab 2-7’s gap'],
+            ['Seams', 'Fabric web only between units of one family — a ledge-to-split web would be a 0.5 m sail'],
+            ['Solved', 'One solver per form used, placed per slot — a four-slot passage is two solvers'],
+            ['Switching', 'Spacing re-places without re-solving; a form change re-solves'],
+            ['Scale', 'Lab 2-7’s room and 1.70 m figure; the split hangs from a longer strip, so its mast reads taller'],
+            ['Not here', 'Height steps along the row · a seam membrane to close the enclosure on its open sides · how a real person or cat would use it'],
+          ]}
+        >
+          <SkinComboBench />
+        </Bench>
+
         <footer
           className="flex flex-wrap items-baseline justify-between"
           style={{ gap: 32, padding: '26px 0 72px' }}
@@ -605,7 +631,7 @@ export default function LabPage() {
               color: 'var(--n500)',
             }}
           >
-            17 instruments · 03 kernels · all live
+            18 instruments · 03 kernels · all live
           </span>
           <span
             className="flex"

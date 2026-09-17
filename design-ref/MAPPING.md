@@ -1142,3 +1142,12 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
 - **`FigSlot` 能贴真图了**：新增可选 `src` / `alt`（`.fig-shot` 发丝线裱框 + `object-fit: cover`）。此前插槽只会画斜纹占位框，连已经躺在仓库里的图也贴不上去——N14 因此得以用上 `/log/2026-07-31-chassis-support-modes.webp`，**这是案例页上第一张真图**。
 - **实测**：533 测试绿（+5，锚点守门）· typecheck + 双构建过 · CDP 生产实测：两侧各 10 个 h2 / 23 个插槽逐位一致、案例页 canvas 恒 3（中英切换后仍 3）、六个锚点各自落到**正确**那一条（含 06-15 三条按项目区分、07-10 四条按序号区分）、筛选态下落地自动清筛选、坏锚点不炸、案例页点引用真跳到日志并展开、/lab 15 台无回归、主页统计条 533、项目二页不受波及。唯一 404 是 favicon.ico（站上本就没有该文件，与本次无关）。
 - **两处如实带着的偏差**：机构段占正文 31.4%（指令 §0 写 ≤30%，再压会开始掉信息）；N14 那张图是中文标注的分析图，出现在英文页上。
+
+## 32. Lab 2-11 单元组合：第七段 Ⅶ Compositions（2026-09-17，用户草图三张立项「研究不同形状的单元组合来形成不同的效果，比如通道型、共同构造的平台型、密闭空间型」）
+
+- 稿里没有这台（设计稿止于 Lab-Modernist 的表现层），版式全部复用：`Bench` + `ScaleRule`（第七段 Ⅶ Compositions，编号顺延 2-11 不重排）· 台架 = `SkinSolidBench` 薄壳 `SkinComboBench`，走 Lab 2-8 那条阵列路径（cells + ringPlans + rig + scene + bridges + camScaleFor），**SkinSolidBench 零新 prop**。
+- 控制条第一层：编制（通道 / 平台 / 密闭，换编制回到草图默认形态）· 每槽形态五钮（袋 / 蘑菇 / 直台 / 方箱 / 捏分）· 距离（相切 / 分离）；第二层照旧（运转 / 键线 / 透视 / 速度 / 蒙皮 / 半径 / 视角）。每槽形态是现场操作不是档，差分清单只登记编制 × 距离 = 6（290 → 296）。
+- 主页 S2 第 16 卡（`lg:grid-cols-16`）、统计条 Demos 15 → 16、Tests 533 → 548；/lab 标头 seventeen → eighteen、页脚 17 → 18 instruments；ProjectRule sub 2-1 – 2-11。
+- 线稿 `scripts/unit-combo/atlas.mjs` 三张（真引擎终态；SVG → 无头 Chromium 截图要把 window-size 加高 90，新模式含窗框、否则裁底）。几何整套查 `src/lib/space/unit-combo.ts`。
+- 细节与待拍板 = 项目二_单元组合lab.md。
+

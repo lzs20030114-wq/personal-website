@@ -17,6 +17,7 @@ import { SKIN_UNITS } from './skin-data';
 import { DUAL_MID_OPTIONS } from './skin-dual';
 import { SQUARE_GRID, SQUARE_MORPH } from './skin-square';
 import { CLUSTER_PLANS, CLUSTER_RELATIONS, CLUSTER_TIMINGS } from './unit-cluster';
+import { COMBO_PLANS, COMBO_SPACINGS } from './unit-combo';
 import { PATHS, PLAN, READINGS, RESPONSES } from './unit-activation';
 
 export interface VariantOption {
@@ -122,7 +123,13 @@ const WALK_READING_AXIS: VariantAxis = { axis: '读法', options: READINGS.map((
 /** 单元怎么响应读数：跟随（人走了收回去）/ 锁定（滞回）——2026-09-04 用户要的那一档与项目论点那一档 */
 const WALK_RESPONSE_AXIS: VariantAxis = { axis: '响应', options: RESPONSES.map((r) => ({ key: r.key, label: r.zh })) };
 
-/** 十台六段（页序）：Ⅰ 单元 06–08 · Ⅱ 序列 09 · Ⅲ 环 10–11 · Ⅳ 场 12 · Ⅴ 单元之间 13 · Ⅵ 人 14–15 */
+/** Lab 2-11 单元组合（2026-09-17 立项）：编制 = 草图三张（通道 / 平台 / 密闭），距离两档为正交轴。
+ *  每个槽位的形态是现场操作不是档（5^4 种，与 Lab 2-10 的放人同一类）。 */
+export const COMBO_PLAN_OPTIONS = COMBO_PLANS.map((p) => ({ key: p.key, label: p.label }));
+export const COMBO_SPACING_OPTIONS = COMBO_SPACINGS.map((s) => ({ key: s.key, label: s.label }));
+const COMBO_SPACING_AXIS: VariantAxis = { axis: '距离', options: COMBO_SPACING_OPTIONS };
+
+/** 十一台七段（页序）：Ⅰ 单元 06–08 · Ⅱ 序列 09 · Ⅲ 环 10–11 · Ⅳ 场 12 · Ⅴ 单元之间 13 · Ⅵ 人 14–15 · Ⅶ 组合 2-11 */
 export const LAB_VARIANTS: readonly BenchVariants[] = [
   { no: '2-1', key: 'unit', zh: '二维皮肤单元', en: 'Contractile skin units', plans: [], axes: [] },
   { no: '2-2', key: 'solid', zh: '立体带', en: 'Skin units, solid', plans: [], axes: [] },
@@ -187,6 +194,14 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     // 人数 / 拖 / 自走都是现场操作不是档；离散的只有格数 / 读法 / 响应（与 Lab.14 同一副轴）
     plans: [],
     axes: [WALK_GRID_AXIS, WALK_READING_AXIS, WALK_RESPONSE_AXIS],
+  },
+  {
+    no: '2-11',
+    key: 'combo',
+    zh: '单元组合',
+    en: 'Compositions',
+    plans: COMBO_PLAN_OPTIONS,
+    axes: [COMBO_SPACING_AXIS],
   },
 ];
 

@@ -305,23 +305,30 @@ const FROZEN = [
   '2-10:-:g8:nearest:ratchet',
   '2-10:-:g8:disk:follow',
   '2-10:-:g8:disk:ratchet',
+  // Ⅶ 组合（Lab 2-11 ⇒ 编制 3 × 距离 2；每槽形态是现场操作不是档）
+  '2-11:passage:touch',
+  '2-11:passage:apart',
+  '2-11:platform:touch',
+  '2-11:platform:apart',
+  '2-11:enclosure:touch',
+  '2-11:enclosure:apart',
 ];
 
 describe('lab-variants · 项目二台架差分清单', () => {
-  it('十台六段：编号 2-1 – 2-10 连续、不重复', () => {
-    expect(LAB_VARIANTS.map((b) => b.no)).toEqual(['2-1', '2-2', '2-3', '2-4', '2-5', '2-6', '2-7', '2-8', '2-9', '2-10']);
+  it('十一台七段：编号 2-1 – 2-11 连续、不重复', () => {
+    expect(LAB_VARIANTS.map((b) => b.no)).toEqual(['2-1', '2-2', '2-3', '2-4', '2-5', '2-6', '2-7', '2-8', '2-9', '2-10', '2-11']);
     expect(new Set(LAB_VARIANTS.map((b) => b.key)).size).toBe(LAB_VARIANTS.length);
   });
 
-  it('290 种离散组合逐条与冻结清单相同（少一档即红）', () => {
+  it('296 种离散组合逐条与冻结清单相同（少一档即红）', () => {
     const combos = allCombos();
-    expect(combos.length).toBe(290);
+    expect(combos.length).toBe(296);
     expect(combos).toEqual(FROZEN);
   });
 
-  it('每台组合数 = 收纳前各台组合之和（1 + 1 + 3 + (2+2) + (9+1) + 22 + 5）+ Lab 2-8 的 160 + Lab 2-9 的 72 + Lab 2-10 的 12', () => {
+  it('每台组合数 = 收纳前各台组合之和（1 + 1 + 3 + (2+2) + (9+1) + 22 + 5）+ Lab 2-8 的 160 + Lab 2-9 的 72 + Lab 2-10 的 12 + Lab 2-11 的 6', () => {
     const per = Object.fromEntries(LAB_VARIANTS.map((b) => [b.no, benchCombos(b).length]));
-    expect(per).toEqual({ '2-1': 1, '2-2': 1, '2-3': 3, '2-4': 4, '2-5': 10, '2-6': 22, '2-7': 5, '2-8': 160, '2-9': 72, '2-10': 12 });
+    expect(per).toEqual({ '2-1': 1, '2-2': 1, '2-3': 3, '2-4': 4, '2-5': 10, '2-6': 22, '2-7': 5, '2-8': 160, '2-9': 72, '2-10': 12, '2-11': 6 });
   });
 
   it('组合 id 唯一（同名档不会在清单里被折叠掉）', () => {
