@@ -2,6 +2,8 @@ import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { LabCopyScroll } from '../../../components/lab/LabCopyScroll';
 import { LegacyLabHash } from '../../../components/lab/LegacyLabHash';
+import { LabIndex } from '../../../components/lab/LabIndex';
+import { LAB_INDEX, labAccent, labBench } from '../../../src/lib/site/lab-index';
 import { PageEnter } from '../../../components/site/PageEnter';
 import { FourBarBench } from '../../../components/lab/FourBarBench';
 import { ArchBench } from '../../../components/lab/ArchBench';
@@ -44,6 +46,10 @@ export const metadata = { title: 'The lab' };
  * 2026-09-13 编号改按项目（用户拍板）：Lab.01–05 → Lab 1-1…1-5，Lab.06–15 → Lab 2-1…2-10；
  * 锚点 `#lab1-1`／`#lab2-5-split`，旧哈希 `#lab10(-split)` 由 LegacyLabHash + planFromHash 照认。
  * 上面各条注释里的两位编号是写下时的号（历史），对照见 CLAUDE.md「Lab 编号对照」。
+ * 2026-09-17 左栏目录（用户手绘立项）：`.lab-layout` 两列——左 `.lab-rail` 吸顶目录（LabIndex，
+ * 滚动读位 + 滑动标记 + 进度线 + 平滑跳转）、右 `.lab-main` 原有全部内容。台架清单只有一份
+ * = src/lib/site/lab-index.ts：Bench 的题头与顶线色、ProjectRule / ScaleRule 的字都从它取。
+ * 页宽为此放到 1560（`.shell--lab`），否则台架图框要让出目录那一列；<1280 目录回落成页顶芯片带。
  */
 const KICKER: CSSProperties = {
   margin: 0,
@@ -146,20 +152,18 @@ function ScaleRule({ n, label, sub }: { n: string; label: string; sub: string })
 
 function Bench({
   no,
-  title,
   lede,
   specs,
-  accent,
   children,
 }: {
   no: string;
-  title: string;
   lede: string;
   specs: [string, string][];
-  /** 图框顶线：2D 内核绿 / 3D 内核紫（稿内编码） */
-  accent: string;
   children: ReactNode;
 }) {
+  // 题头与图框顶线（2D 绿 / 3D 紫）从目录取：目录是唯一清单，页面不另抄一份（lab-index.test 守门）
+  const { title, kernel } = labBench(no);
+  const accent = labAccent(kernel);
   return (
     <section
       id={`lab${no}`}
@@ -234,6 +238,8 @@ function Bench({
   );
 }
 
+const [P1, P2] = LAB_INDEX;
+
 export default function LabPage() {
   return (
     <>
@@ -241,7 +247,12 @@ export default function LabPage() {
       <PageEnter />
       <LabCopyScroll />
       <LegacyLabHash />
-      <div className="shell pg-dark" data-pt-content>
+      <div className="shell shell--lab pg-dark" data-pt-content>
+        <div className="lab-layout">
+        <aside className="lab-rail">
+          <LabIndex />
+        </aside>
+        <div className="lab-main">
         <header style={{ padding: '64px 0 40px', borderBottom: 'var(--hair)' }}>
           <div className="flex items-baseline justify-between" style={{ gap: 32 }}>
             <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · seventeen live instruments</p>
@@ -290,16 +301,11 @@ export default function LabPage() {
           </p>
         </header>
 
-        <ProjectRule
-          label="Project I — Reincarnation machine"
-          sub="Lab 1-1 – 1-5 · two linkage kernels"
-        />
+        <ProjectRule label={P1.label} sub={P1.sub} />
 
         <Bench
           no="1-1"
-          title="Four-bar linkage"
           lede="The 2D testbench behind Fig. 01 — position-based dynamics with a Gauss–Seidel pass, driven from the crank."
-          accent="var(--accent)"
           specs={[
             ['Kernel', '2D PBD · Gauss–Seidel'],
             ['Tests', '36 green'],
@@ -312,9 +318,7 @@ export default function LabPage() {
 
         <Bench
           no="1-2"
-          title="Arch ring solver"
           lede="The physical S4 ring — angulated plates on a crank-slider, run as a preset of the untouched 2D kernel."
-          accent="var(--accent)"
           specs={[
             ['Kernel', 'Same 2D core — untouched'],
             ['Instance', 'S4 M3×1.000 · 14 plates'],
@@ -327,9 +331,7 @@ export default function LabPage() {
 
         <Bench
           no="1-3"
-          title="Tendon tentacle"
           lede="Seven box vertebrae on three tendons at 120° — the independent 3D kernel, rendered from the real scanned mesh."
-          accent="var(--accent-2)"
           specs={[
             ['Kernel', 'LinkageSolver3D · symmetric GS'],
             ['Mesh', '107k tri · real scan'],
@@ -342,9 +344,7 @@ export default function LabPage() {
 
         <Bench
           no="1-4"
-          title="Five-ring shell"
           lede="Five ring instances breathing in phase — 85 mm pitch, foot slots auto-calibrated per ring."
-          accent="var(--accent-2)"
           specs={[
             ['Family', 'S1–S5 · ladder 0 / 2 / 4 / 8'],
             ['Choreo', 'In-phase · ω 0.8 · step 1/120 s'],
@@ -357,9 +357,7 @@ export default function LabPage() {
 
         <Bench
           no="1-5"
-          title="Full assembly"
           lede="The whole machine on one motor — one shaft swings 180° back and forth, five cranks of different radii open and close the rings, and the big arm curls on its three tendons."
-          accent="var(--accent-2)"
           specs={[
             ['Bodies', 'Real solids · adjustable skin'],
             ['Drive', 'One shaft · five cranks · in phase'],
@@ -372,18 +370,13 @@ export default function LabPage() {
         </Bench>
 
         {/* 项目二尚未定名：与 log 页 PROJECT_GROUPS 同一措辞（描述而非标题），定名后一并改 */}
-        <ProjectRule
-          label="Project II — Spatial simulation"
-          sub="Lab 2-1 – 2-10 · skin-unit engine"
-        />
+        <ProjectRule label={P2.label} sub={P2.sub} />
 
-        <ScaleRule n="Ⅰ" label="One band" sub="Lab 2-1 – 2-3 · what a unit is" />
+        <ScaleRule n={P2.segments[0].n} label={P2.segments[0].label} sub={P2.segments[0].sub} />
 
         <Bench
           no="2-1"
-          title="Contractile skin units"
           lede="Project II's structure system — a ceiling-hung strip contracts, surplus fabric gathers, and a pre-embedded bond map decides what it becomes: pocket, bulb, ledge or stairs."
-          accent="var(--accent)"
           specs={[
             ['Kernel', 'Position-based · Verlet + projection'],
             ['Port', '1:1 from research code · parity ≤ 1e-9'],
@@ -398,9 +391,7 @@ export default function LabPage() {
 
         <Bench
           no="2-2"
-          title="Skin units, solid"
           lede="The same four bond maps, extruded into fabric bands with real thickness — the section cut shows the skin as material, and the whole catalog turns in space."
-          accent="var(--accent-2)"
           specs={[
             ['Kernel', 'Same 2D engine as Lab 2-1 · one protocol'],
             ['Solid', 'Extruded band · fabric thickness 5'],
@@ -414,9 +405,7 @@ export default function LabPage() {
 
         <Bench
           no="2-3"
-          title="Two structures, one band"
           lede="One strip, two bond maps — a five-segment spectrum folds an upper and a lower structure out of a single contraction. The glued run between them is pinned to the mast every pass, so the two zippers never feel each other: drop one map and the other folds identically. Four same-form pairs plus one mixed band; set how far apart they sit."
-          accent="var(--accent-2)"
           specs={[
             ['Band', 'Five segments: glue · free A · glue · free B · glue'],
             ['Engine', 'Same 2D kernel — the spec was always a list'],
@@ -429,13 +418,11 @@ export default function LabPage() {
           <SkinDualBench />
         </Bench>
 
-        <ScaleRule n="Ⅱ" label="A row" sub="Lab 2-4 · transitions along a line" />
+        <ScaleRule n={P2.segments[1].n} label={P2.segments[1].label} sub={P2.segments[1].sub} />
 
         <Bench
           no="2-4"
-          title="Series"
           lede="Two transition series on one line, every band a real unit. The graded catalogue walks twelve narrow slices from bulb flange to stepped box — each bond map shifts a little, and the transition grows out of the physics, not out of an interpolation. Pinched apart walks ten bands from a single box until it is two platforms: the seam is cut, not carved — an outer ladder folds the box while a second zipper inside it holds the crack open, and every level was designed on its own and measured against the drawn target by silhouette; the numbers agreed three times while the shape was wrong, so only the picture counts. Pack them into one body to read the section, or spread them to read band by band."
-          accent="var(--accent-2)"
           specs={[
             ['Plans', 'Graded catalogue (12 bands) · pinched apart (10 levels)'],
             ['Gradient', 'Bond length 0.10 → 0.32 in even steps · endpoints Lab 2-1 unit 2 → 4, verbatim'],
@@ -454,13 +441,11 @@ export default function LabPage() {
           <SkinSeriesBench />
         </Bench>
 
-        <ScaleRule n="Ⅲ" label="A ring" sub="Lab 2-5 – 2-6 · the row closed into a loop" />
+        <ScaleRule n={P2.segments[2].n} label={P2.segments[2].label} sub={P2.segments[2].sub} />
 
         <Bench
           no="2-5"
-          title="Cylinder of units"
           lede="Twenty narrow bands stood in a circle: hanging slack they close into a tube, and as they contract each one folds out its ledge — together, a platform ringing the cylinder. Four plans. By default the ledge climbs and falls once around, a stair wrapped on the tube; hold it level on one form; let the form drift bulb → box → bulb; or pinch it apart — on one side two shelves 100 px apart, on the opposite side one slab, ten steps of gap between, the same construction as the square ring's pinch with every band at one depth so the plan stays a circle. The seam centre stays level all round, so the platform reads as one band that opens and shuts, not as twenty different shelves. Set the radius yourself."
-          accent="var(--accent-2)"
           specs={[
             ['Ring', '20 bands · level, undulating, drifting, or pinched'],
             ['Height', 'Same form, one lead per station — 18% ↔ 71%'],
@@ -479,9 +464,7 @@ export default function LabPage() {
 
         <Bench
           no="2-6"
-          title="A square ring"
           lede="The mast stays round; the plan does not. Each of the twenty bands reaches out a different distance — four at the corners, eight along the edges, eight on the faces — so the rim lands on a square, and since the membrane between neighbours is a ruled panel, the chord it draws is the edge itself. Only the reach changes: the box is the same height the whole way round, its ladder the same ten rungs, squeezed closer as the shelf gets shallower. Two conditions decide whether that works, and both were learnt the hard way: the end panel must end on a locked rung or the end face bows out, and the box has to fit inside the free run it lives in — when it does not, the lower buffer is pulled straight and the mouth curls the wrong way. The plan is a dial, not a fixed shape: hold the inscribed circle, push only the corners out, and the same twenty bands walk from circle to square in five steps."
-          accent="var(--accent-2)"
           specs={[
             ['Ring', '20 bands · three depths — 8 face · 8 edge · 4 corner'],
             ['Plans', 'Flat, undulating — or pinched, where the box splits into two shelves'],
@@ -506,13 +489,11 @@ export default function LabPage() {
           <SquareRingBench />
         </Bench>
 
-        <ScaleRule n="Ⅳ" label="A room" sub="Lab 2-7 · the field at real scale" />
+        <ScaleRule n={P2.segments[3].n} label={P2.segments[3].label} sub={P2.segments[3].sub} />
 
         <Bench
           no="2-7"
-          title="Four by four"
           lede="Sixteen of the cylinders from Lab 2-5 hung in a room — 320 bands, one solved section. A 1.70 m figure stands on the floor beside them, and that figure is what sets the scale: everything else on this page had none until now. How far a ledge reaches is set by how much material its outermost bond captures — not by how hard the unit contracts. So this family folds more of the same strip: 202 nodes as before, but the fan spans 2.1× the catalogue's, and the slack hugging the mast is what pays for it. Each ring keeps its own clearance, and pulling the radius breathes the whole field."
-          accent="var(--accent-2)"
           specs={[
             ['Field', '4 × 4 rings · 20 bands each · 320 placements'],
             ['Solved', 'One section — the field is that section, placed'],
@@ -527,13 +508,11 @@ export default function LabPage() {
           <SkinGridBench />
         </Bench>
 
-        <ScaleRule n="Ⅴ" label="Between units" sub="Lab 2-8 · what two, three, four, nine units can be to each other" />
+        <ScaleRule n={P2.segments[4].n} label={P2.segments[4].label} sub={P2.segments[4].sub} />
 
         <Bench
           no="2-8"
-          title="Between units"
           lede="Call one of those cylinders a unit — twenty bands round a mast that contract into a ring platform. This bench asks what a few of them can be to each other. Two, three, four or nine hang in Lab 2-7's room; the relations are measured, not styled: apart (Lab 2-7's clearance), touching (platform edge to platform edge, with a fabric web growing across each seam once the rims meet), stepped (the same shape carried higher on its band — up to 0.35 m), or interleaved, where a lower platform slides under a higher one and stops short of its neighbour's mast. Interleaving has a physical gate: the step must clear the folded body at its fattest moment, so some form–cluster pairs grey out rather than collide. Timing is a second axis: all at once, or wave by wave across the cluster."
-          accent="var(--accent-2)"
           specs={[
             ['Unit', 'One Lab 2-5 ring — 20 bands · 202 nodes · same bond maps'],
             ['Clusters', 'Pair · triad · two-by-two · three-by-three'],
@@ -550,13 +529,11 @@ export default function LabPage() {
           <SkinClusterBench />
         </Bench>
 
-        <ScaleRule n="Ⅵ" label="People" sub="Lab 2-9 – 2-10 · behaviour reaching the units" />
+        <ScaleRule n={P2.segments[5].n} label={P2.segments[5].label} sub={P2.segments[5].sub} />
 
         <Bench
           no="2-9"
-          title="A person walks through"
           lede="The first bench with a behaviour layer. One person walks through Lab 2-7’s room — passing, crossing, standing, looping, pacing, or wherever you click — and every second of presence marks the floor within reach. Each unit reads the floor it owns; once that floor has held presence long enough on average, the unit comes down; whether it stays down after they leave is a switch — follow, where it withdraws, or lock, the hysteresis the project argues for. The units are smaller and more numerous than Lab 2-7’s so that what forms is a group, not a point. The person faces somewhere and has a body: the trace lands only inside a 180° field of view, nothing comes down within a clearance distance of the body (a platform there would hit them — those units are held back, marked with a rose ×), and while walking a lane straight ahead stays clear, so structure grows along the sides of the path and, when they stop, as an arc in front of them. As a demo it runs fast — two seconds of standing brings the arc down, six seconds after the person leaves it is gone — with the author’s July prototype (2 %/s decay, a 15 s threshold) still one slider away; reach, field of view and clearance are the behavioural knobs."
-          accent="var(--accent)"
           specs={[
             ['Field', 'Lab 2-7’s room and field · 4×4 / 6×6 / 8×8 · unit scaled with pitch (4×4 = Lab 2-7 verbatim)'],
             ['Trace', 'Presence-seconds on a 0.1 m floor grid, within reach of the person · on the bench it caps at the threshold and fades away linearly (fade slider); the prototype’s own rule is 2 %/s with no cap and no zero'],
@@ -576,9 +553,7 @@ export default function LabPage() {
 
         <Bench
           no="2-10"
-          title="A few people"
           lede="Lab 2-9 replayed one person along a preset path; this bench is live. Click the floor to place people (up to eight), hold one to drag it, or let them wander on their own — at an indoor 0.7 m/s, a hop of half a metre to two, then eight to forty-five seconds standing; a demo device rather than a behaviour rule, but paced like people in a room, not like particles. The floor records presence as they move and the units form in front of you. Where two reaches overlap the floor counts both people, so a pair standing together forms the unit underfoot twice as fast, and a small crowd reshapes more of the room than one person ever could. Same mechanism as Lab 2-9, same knobs, nothing re-tuned."
-          accent="var(--accent)"
           specs={[
             ['People', 'Up to 8 · click empty floor to place · hover for the grab cursor, hold to drag · − removes the last'],
             ['Wander', 'Indoor pace 0.7 m/s · a hop of 0.5–2 m (now and then 3.5) · then 8–45 s standing · seeded · a demo device, not a rule'],
@@ -625,6 +600,8 @@ export default function LabPage() {
             </Link>
           </span>
         </footer>
+        </div>
+        </div>
       </div>
     </>
   );

@@ -1142,3 +1142,20 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
 - **`FigSlot` 能贴真图了**：新增可选 `src` / `alt`（`.fig-shot` 发丝线裱框 + `object-fit: cover`）。此前插槽只会画斜纹占位框，连已经躺在仓库里的图也贴不上去——N14 因此得以用上 `/log/2026-07-31-chassis-support-modes.webp`，**这是案例页上第一张真图**。
 - **实测**：533 测试绿（+5，锚点守门）· typecheck + 双构建过 · CDP 生产实测：两侧各 10 个 h2 / 23 个插槽逐位一致、案例页 canvas 恒 3（中英切换后仍 3）、六个锚点各自落到**正确**那一条（含 06-15 三条按项目区分、07-10 四条按序号区分）、筛选态下落地自动清筛选、坏锚点不炸、案例页点引用真跳到日志并展开、/lab 15 台无回归、主页统计条 533、项目二页不受波及。唯一 404 是 favicon.ico（站上本就没有该文件，与本次无关）。
 - **两处如实带着的偏差**：机构段占正文 31.4%（指令 §0 写 ≤30%，再压会开始掉信息）；N14 那张图是中文标注的分析图，出现在英文页上。
+
+## 32. /lab 左栏目录（2026-09-17，用户手绘立项「左边加一列目录，可以直接概览整体，想看什么也可以直接点击跳转」+「审美要高级、要有动效」）
+
+草图：整页两列——左一窄列写着「目录」、右列是台架框，两列之间**两道竖线**。落地：
+
+- **两列骨架**：`.shell--lab`（页宽 1320 → 1560，否则图框要让出目录那一列）> `.lab-layout`（`240px + 48 | 1fr`，1280–1439 收窄为 `200px + 40`）> `.lab-rail`（`align-self: stretch` 撑满整页高度，`padding-top: 64` 与右栏 header 的 kicker 齐平）> `.lab-index`（`position: sticky; top: 24px`，与 `.case-rail` 同一个吸顶位；超高时自身滚动、不画滚动条）+ `.lab-main`（原有全部内容，一字未动）。
+- **数据只有一份** = `src/lib/site/lab-index.ts`（项目 → 段 → 台架，编号/标题/内核）：页面 `Bench` 的题头与图框顶线色、`ProjectRule` / `ScaleRule` 的字全都从它取，目录再从它画 ⇒ 目录与页面不可能各说各话。守门 `lab-index.test.ts`（3 项）另读页面源码，卡「页面里每个 `no=` ↔ 目录逐一对应」——少一台目录就少一行、多一台就出一条跳到空处的链接。
+- **动效四件（`components/lab/LabIndex.tsx` + `.lab-index*`）**：
+  - 滚动读位：视口 30% 高度处一条读线，最后一个顶边越过读线的台架 = 当前台架（sections 很高，读线比 IntersectionObserver 的可见比例稳，两台之间不抖）；rAF 节流一帧一量；`ResizeObserver(body)` 接住 WebGL 画布落定后的高度变化。
+  - 滑动标记：左侧 2px 竖标 `transform + height` 过渡滑到当前项，颜色随内核（2D 绿 / 3D 紫，`--idx-color`）；头部读数 `01 / 15` 与它同色。**不是逐项各自亮灭**——目录像一台仪表在读页面。
+  - 进度线：右缘双线（= 草图那两道竖线）里靠内那条按页面滚动进度从上往下长（`scaleY`，零布局）。
+  - 入场：行按渲染序 stagger 淡入（`--i` 定延时）；`prefers-reduced-motion` 下动画与过渡一律停（CDP 实测 `animationName: none` / `transitionDuration: 0s`）。
+- **点击跳转**：`scrollIntoView({behavior:'smooth'})` + `history.pushState` 写哈希——与既有 `#lab1-1` 锚点同一套，分享地址不变；reduced-motion 或带修饰键的点击交给浏览器原生。旧哈希（`#lab10-split`）冷加载仍由 `LegacyLabHash` / `planFromHash` 认，实测落到 `#lab2-5-split` 且台架顶边 16px。
+- **<1280 回落**：目录收成一条可换行的芯片带放在页顶（段头 / 标记 / 进度线不画，段 `display: contents` 让芯片在项目组里连续流动）。**门槛不是 1024 而是 1280**——台架自己的两栏（300px 左栏 + 图框）在 1024 下再让出一列目录，图框只剩 296px、3D 画布横向溢出 146px（CDP 实测）；芯片带下的版式与加目录前逐位相同。
+- **代价如实带着**：≥1280 图框比原来窄一截（1440 下 712 vs 原 1000、1600 下 832）——目录列是用户画出来要的，图框让位是这件事的固有成本。
+- **坑**：`npx prettier --write` 会把没用 prettier 排过的 `globals.css` / `page.tsx` 整篇重排（仓库没有 prettier 配置），本轮已撤回、diff 只剩实质改动；以后这两份文件不要过 prettier。`pkill -f 'next start'` 会连承载它的 shell 一起杀（命令行里含同样的字），杀服务用 `pgrep -f 'next-serv[e]r'`。
+- **实测**：536 测试绿（+3）· typecheck + 双构建过 · CDP 生产实测（无头 Chromium swiftshader）五档视口 1600 / 1440 / 1280 / 1024 / 900：读位随滚动换台、标记与进度线跟随、点击 2-9 落位 19px 且哈希写入、≥1280 无横向溢出且无标题换行、<1280 芯片带、reduced-motion 全停、canvas 恒 12、零 pageerror（唯一 404 是 favicon.ico）。手感常量（读线 30% / 标记 460ms / stagger 26ms / 目录列 240）待用户真机拍板。
