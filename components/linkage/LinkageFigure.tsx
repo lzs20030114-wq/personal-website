@@ -72,7 +72,8 @@ export function LinkageFigure({ className = '' }: { className?: string }) {
     };
 
     if ('IntersectionObserver' in window) {
-      const observer = new IntersectionObserver(([entry]) => (entry.isIntersecting ? start() : stop()), {
+      // 只修 bug：一次回调可能带多条记录（先出后入），只读第一条会把「出→入」读成「出」而停死；以最后一条为准
+      const observer = new IntersectionObserver((entries) => (entries[entries.length - 1].isIntersecting ? start() : stop()), {
         rootMargin: '100px',
       });
       observer.observe(svg);

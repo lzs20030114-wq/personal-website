@@ -17,7 +17,7 @@ import { SKIN_UNITS } from './skin-data';
 import { DUAL_MID_OPTIONS } from './skin-dual';
 import { SQUARE_GRID, SQUARE_MORPH } from './skin-square';
 import { CLUSTER_PLANS, CLUSTER_RELATIONS, CLUSTER_TIMINGS } from './unit-cluster';
-import { COMBO_PLANS, COMBO_SPACINGS } from './unit-combo';
+import { COMBO_FAMILIES, COMBO_PLANS, COMBO_SPACINGS } from './unit-combo';
 import { PATHS, PLAN, READINGS, RESPONSES } from './unit-activation';
 
 export interface VariantOption {
@@ -123,10 +123,13 @@ const WALK_READING_AXIS: VariantAxis = { axis: '读法', options: READINGS.map((
 /** 单元怎么响应读数：跟随（人走了收回去）/ 锁定（滞回）——2026-09-04 用户要的那一档与项目论点那一档 */
 const WALK_RESPONSE_AXIS: VariantAxis = { axis: '响应', options: RESPONSES.map((r) => ({ key: r.key, label: r.zh })) };
 
-/** Lab 2-11 单元组合（2026-09-17 立项，2026-09-20 用户纠偏为「同一种平台一圈起伏、首尾相接」）：
- *  编制 = 接法（台阶 / 续坡 / 三段坡 / 凹 / 拱），形态四档为子选项，距离两档为正交轴。用户的图形到了按预设追加。 */
+/** Lab 2-11 单元组合（2026-09-17 立项，2026-09-20 用户纠偏为「同一种平台一圈起伏、首尾相接」+ 三张图形）：
+ *  编制 = 图形（① 坡降 / ② 升台 / ③ 合腔 + 五种接法），形态四档为子选项（只管圆环的起伏单元，方环下变灰），
+ *  单元两族（圆环 / 方环）与距离两档为正交轴。 */
 export const COMBO_PLAN_OPTIONS = COMBO_PLANS.map((p) => ({ key: p.key, label: p.label }));
 export const COMBO_SPACING_OPTIONS = COMBO_SPACINGS.map((s) => ({ key: s.key, label: s.label }));
+export const COMBO_FAMILY_OPTIONS = COMBO_FAMILIES.map((f) => ({ key: f.key, label: f.label }));
+const COMBO_FAMILY_AXIS: VariantAxis = { axis: '单元', options: COMBO_FAMILY_OPTIONS };
 const COMBO_SPACING_AXIS: VariantAxis = { axis: '距离', options: COMBO_SPACING_OPTIONS };
 
 /** 十一台七段（页序）：Ⅰ 单元 06–08 · Ⅱ 序列 09 · Ⅲ 环 10–11 · Ⅳ 场 12 · Ⅴ 单元之间 13 · Ⅵ 人 14–15 · Ⅶ 组合 2-11 */
@@ -201,7 +204,7 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     zh: '单元组合',
     en: 'Compositions',
     plans: COMBO_PLAN_OPTIONS.map((p) => ({ ...p, sub: FORM_SUB })),
-    axes: [COMBO_SPACING_AXIS],
+    axes: [COMBO_FAMILY_AXIS, COMBO_SPACING_AXIS],
   },
 ];
 

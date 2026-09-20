@@ -467,6 +467,12 @@ export function SkinSolidBench({
   const speedRef = useRef(1);
   const bondsRef = useRef(true);
   const radiusRef = useRef(radius?.def ?? 0);
+  /** 环列相位偏移走 ref：Lab 2-11 圆环 / 方环两族同一台切换（方环要 9° 半格），setUnits 重建实例时现读；
+   *  不换族的台架值恒定 ⇒ 逐位不变 */
+  const angleOffsetRef = useRef(angleOffset);
+  useEffect(() => {
+    angleOffsetRef.current = angleOffset;
+  }, [angleOffset]);
   // 主 effect 是 []-deps ⇒ 直接闭包会永远拿挂载那一刻的函数 prop。换编制时 cells 会变
   // （每格用哪一份编制随之变），拿旧的会让除第一份以外的编制一格都摆不出去。
   const cellsRef = useRef(cells);
@@ -494,6 +500,15 @@ export function SkinSolidBench({
     rateRef.current = rate;
   }, [rate]);
   const [radiusV, setRadiusV] = useState(radius?.def ?? 0);
+  const radiusDefRef = useRef(radius?.def);
+  useEffect(() => {
+    // 半径量程换了（Lab 2-11 圆环 ⇄ 方环：方环按 30 标定、量程为零）：滑块与实际半径一起复位到新默认值。
+    // 首次挂载不动；量程没变的台架永远走不进来 ⇒ 逐位不变
+    if (radius?.def === undefined || radius.def === radiusDefRef.current) return;
+    radiusDefRef.current = radius.def;
+    setRadiusV(radius.def);
+    apiRef.current?.setRadius(radius.def);
+  }, [radius?.def]);
   const [skinV, setSkinV] = useState(skin?.def ?? 0);
   const skinRef = useRef(skin?.def ?? 0);
   const [running, setRunning] = useState(true);
@@ -622,7 +637,7 @@ export function SkinSolidBench({
               simIdx,
               offX: 0,
               offZ: 0,
-              angle: angleOffset + (u / bandPlan.length) * Math.PI * 2,
+              angle: angleOffsetRef.current + (u / bandPlan.length) * Math.PI * 2,
               plan: v,
               ceilKey: `ceil-p${v}-u${u}`,
               verts: new Float32Array(4 * sims[simIdx].sim.n * 3),
@@ -635,7 +650,7 @@ export function SkinSolidBench({
         simIdx,
         // 开场排布不一定是首项（layout0；正文里那种没有控制条的场合要直接停在想看的那个）
         ...placeAt(u, layoutList[layoutIdx], plan.length),
-        angle: angleOffset + (u / plan.length) * Math.PI * 2,
+        angle: angleOffsetRef.current + (u / plan.length) * Math.PI * 2,
         plan: 0,
         ceilKey: `ceil-u${u}`,
         verts: new Float32Array(4 * sims[simIdx].sim.n * 3),

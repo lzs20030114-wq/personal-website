@@ -600,19 +600,19 @@ export default function LabPage() {
         <Bench
           no="2-11"
           title="Joined platforms"
-          lede="Take one platform form and give it Lab 2-5’s undulation: the ring rises from a trough to a crest and back, 0.35 m in all, the shape itself never changing. Now hang two or three of them edge to edge. Where they touch, each brings whatever height its undulation puts on that side, so the seam can be a step (both crests facing the same way: 35 cm down), level (the first ring uses the lower half of the range, the next the upper half — a ramp that climbs the whole 0.35 m across two units, or in three gentler stages), a hollow (trough meets trough) or an arch (crest meets crest). Every unit has just two knobs — which band its crest sits on, and which slice of the range it uses — and the seam reading falls out of them. The range is the hard budget: 202 nodes of strip give 44 nodes of travel, and a ramp shares it among its units rather than stacking it. The author’s next figures are added as presets in the same two-knob vocabulary."
+          lede="Take one platform and give it Lab 2-5’s undulation: the ring rises from a trough to a crest and back, the shape itself never changing. Hang two or three edge to edge and each brings to the seam whatever height its undulation puts on that side. Three figures from the author’s sketch: a descent — two rings sharing the range so the seam stays level, landing on a flat ring at the bottom; a rise — a split unit’s lower shelf (Lab 2-5’s pinch plan, mouth turned toward the neighbour) meets the trough of a ramp within half a centimetre, and the ramp’s crest meets a flat ring at the top; and an enclosure — two split units mouth to mouth, their cavities joining into one 0.39 m pocket. Five plainer joins stay as presets: step, ramp, ramp in three, hollow, arch. Each undulating unit has two knobs (crest band, height slice), each split unit one (which band its mouth faces), and the seam reading falls out of them. The square family repeats every figure with Lab 2-6’s rings — its undulation spans only 0.16 m, so the square rise keeps an 8 cm step where the ramp leaves the shelf, and the bench says so rather than hiding it."
           accent="var(--accent-2)"
           specs={[
-            ['Unit', 'One Lab 2-5 ring, undulating plan — 20 bands · 202 nodes · same bond map, each band at its own lead'],
-            ['Knobs', 'Crest band (phase, 0–19) · height slice low→high within lead 58–14; the shape only translates'],
-            ['Range', '44 nodes × 2 px = 88 px = 0.35 m per composition — a ramp shares it, a step spends it at the seam'],
-            ['Joins', 'Step (same phase) · ramp (lower half → upper half) · ramp in three · hollow (trough to trough) · arch (crest to crest)'],
-            ['Seam', 'Read on the band facing the neighbour; level within 3 cm · the fabric web spans the seam and slopes if it steps'],
-            ['Spacing', 'Touching = rim to rim by peak reach · apart adds Lab 2-7’s gap'],
-            ['Forms', 'Ledge by default; bulb, stepped box and pocket undulate the same way (the pocket has no walkable top)'],
-            ['Solved', 'One solver per lead used — a step is 11 solvers placed twice, a ramp 21 (the middle lead shared)'],
-            ['Switching', 'Spacing re-places without re-solving; join or form re-solves'],
-            ['Scale', 'Lab 2-7’s room and 1.70 m figure · surface 1.39–1.73 m above the floor'],
+            ['Units', 'Round: Lab 2-5 ring (202 nodes) undulating, or its pinch plan (338) · Square: Lab 2-6 ring (305) undulating, or its one-loop pinch (338)'],
+            ['Knobs', 'Undulating: crest band 0–19 · height slice 0–100 % of the range · Split: mouth band'],
+            ['Range', 'Round lead 58–14 = 0.35 m · Square lead 135–115 = 0.16 m — a ramp shares it, a step spends it at the seam'],
+            ['Figures', '① descent onto a landing · ② rise from a split shelf · ③ two splits enclosing one cavity · + step, ramp, ramp in three, hollow, arch'],
+            ['Seam', 'Read on the band facing the neighbour; level within 3 cm · round ② shelf-to-trough 1.2 px · square ② 8 cm step'],
+            ['Spacing', 'Touching = half-widths by peak reach (split and undulating differ) · apart adds the family’s gap'],
+            ['Solved', 'One solver per lead (and per depth class on the square) · the pinch family solved once however many splits'],
+            ['Switching', 'Spacing re-places without re-solving; figure, family or form re-solves · the square family fixes the radius at 30'],
+            ['Scale', 'Lab 2-7’s room and 1.70 m figure · round surface 1.39–1.73 m, cavity 0.39 m headroom'],
+            ['Not here', 'Interaction between units · figures beyond a single row · what a person or cat would do with them'],
           ]}
         >
           <SkinComboBench />

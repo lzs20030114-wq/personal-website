@@ -44,8 +44,15 @@ export function useBenchLoop(
 
     let io: IntersectionObserver | null = null;
     if ('IntersectionObserver' in window) {
+      // 一次回调可能带**多条**记录（同一目标在两次回调之间先出后入——快速甩滚、视口临时改尺寸），
+      // 只读第一条会把「出→入」读成「出」：loop 停下、再没有人来 start，台架就此冻住
+      // （2026-09-20 Lab 2-11 CDP 复现：records "01" ⇒ STEP 钉死）。以**最后一条**为准
       io = new IntersectionObserver(
-        ([entry]) => (entry.isIntersecting && !document.hidden ? start() : stop()),
+        (entries) => {
+          const entry = entries[entries.length - 1];
+          if (entry.isIntersecting && !document.hidden) start();
+          else stop();
+        },
         { rootMargin: '120px' },
       );
       io.observe(node);

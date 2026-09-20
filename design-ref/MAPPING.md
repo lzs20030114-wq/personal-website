@@ -1143,12 +1143,13 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
 - **实测**：533 测试绿（+5，锚点守门）· typecheck + 双构建过 · CDP 生产实测：两侧各 10 个 h2 / 23 个插槽逐位一致、案例页 canvas 恒 3（中英切换后仍 3）、六个锚点各自落到**正确**那一条（含 06-15 三条按项目区分、07-10 四条按序号区分）、筛选态下落地自动清筛选、坏锚点不炸、案例页点引用真跳到日志并展开、/lab 15 台无回归、主页统计条 533、项目二页不受波及。唯一 404 是 favicon.ico（站上本就没有该文件，与本次无关）。
 - **两处如实带着的偏差**：机构段占正文 31.4%（指令 §0 写 ≤30%，再压会开始掉信息）；N14 那张图是中文标注的分析图，出现在英文页上。
 
-## 32. Lab 2-11 单元组合：第七段 Ⅶ Compositions（2026-09-17 立项 · 2026-09-20 纠偏为「同一种平台一圈起伏、首尾相接接高接低」）
+## 32. Lab 2-11 单元组合：第七段 Ⅶ Compositions（2026-09-17 立项 · 2026-09-20 纠偏为「同一种平台一圈起伏、首尾相接」+ 三张图形 + 方单元版本）
 
-- 首版（目录五形态换槽位）读错，已撤；现行 = 每个单元一个相位 + 一段高度，接法五种预设，用户的图形按预设追加。
+- 首版（目录五形态换槽位）读错，已撤；现行 = 起伏单元（相位 + 高度段）与捏分单元（缝口朝向）两族（圆环 / 方环），八张图形预设。
 - 稿里没有这台，版式全部复用：`Bench` + `ScaleRule`（Ⅶ Compositions，编号顺延 2-11）· 台架 = `SkinSolidBench` 薄壳 `SkinComboBench`，走 Lab 2-8 那条阵列路径（cells + ringPlans + rig + scene + bridges + camScaleFor）。
-- **SkinSolidBench 一处加法式改动**：接缝织物网 `rimOf(c, toward)` 读朝向对方那条带的引擎（一圈同谱时任一条都一样 ⇒ Lab 2-8 逐位不变）。
-- 控制条第一层：接法（台阶 / 续坡 / 三段坡 / 凹 / 拱）· 形态（四）· 距离（相切 / 分离）；第二层照旧。差分清单 = 5 × 4 × 2 = 40（296 → 330）。
-- 主页 S2 第 16 卡（`lg:grid-cols-16`）、统计条 Demos 16 · Tests 550；/lab 标头 eighteen · 页脚 18 instruments；ProjectRule sub 2-1 – 2-11。
-- 线稿 `scripts/unit-combo/wave-draft.mjs`（委托模块画全部预设；SVG → 无头 Chromium 截图要把 window-size 加高 90）。
+- **SkinSolidBench 三处加法式改动**：接缝织物网 `rimOf(c, toward)` 读朝向对方那条带的引擎（一圈同谱时任一条都一样 ⇒ Lab 2-8 逐位不变）· `angleOffset` 走 ref（换族时 setUnits 重建实例现读；值恒定的台架逐位不变）· 半径量程的 `def` 变了就复位滑块与实际半径（首次挂载不动；量程不变的台架永远走不进来）。
+- 控制条第一层：图形（① 坡降 / ② 升台 / ③ 合腔 / 台阶 / 续坡 / 三段坡 / 凹 / 拱）· 单元（圆环 / 方环）· 形态（四，只管圆环的起伏单元，方环或无起伏单元时变灰留位）· 距离（相切 / 分离）；第二层照旧（方环下半径滑块不出——量程为零）。差分清单 = 8 × 4 × 2 × 2 = 128（290 → 418）。
+- 主页 S2 第 16 卡（`lg:grid-cols-16`）、统计条 Demos 16 · Tests 555；/lab 标头 eighteen · 页脚 18 instruments；ProjectRule sub 2-1 – 2-11。
+- **全站台架冻结 bug 一并修**：`components/lab/useBenchLoop.ts` 与 `components/linkage/LinkageFigure.tsx` 的 IntersectionObserver 回调改读最后一条记录（一次回调带「出、入」两条时旧代码只看第一条 ⇒ 停死）。CDP 打桩复现 + 修后同批次记录不再冻结。
+- 线稿 `scripts/unit-combo/wave-draft.mjs`（委托模块画两族全部预设；SVG → 无头 Chromium 截图要把 window-size 加高 90）。
 - 细节与待拍板 = 项目二_单元组合lab.md。

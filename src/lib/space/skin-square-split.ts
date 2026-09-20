@@ -342,25 +342,27 @@ export function sqSplitBuild(tier: SqSplitTier, wEnd: number = SQSPLIT.W_END): {
 }
 
 /** 位置 i 属于哪一对（0 = 双平台那条边上的两条，9 = 整块那条边上的两条） */
-export function sqSplitPairOf(i: number, count: number = SQUARE.COUNT): number {
-  const pole = (SQSPLIT.POLE * Math.PI) / 2;
+export function sqSplitPairOf(i: number, count: number = SQUARE.COUNT, poleIdx: number = SQSPLIT.POLE): number {
+  const pole = (poleIdx * Math.PI) / 2;
   let d = Math.abs(squareAngle(i, count) - pole) % (2 * Math.PI);
   if (d > Math.PI) d = 2 * Math.PI - d;
   return Math.round((d - Math.PI / count) / ((2 * Math.PI) / count));
 }
 
 /** 位置 i 用哪一条引擎（= 它那一对的引擎；方位类由几何核对） */
-export function sqSplitTierAt(i: number, count: number = SQUARE.COUNT): number {
-  const j = sqSplitPairOf(i, count);
+export function sqSplitTierAt(i: number, count: number = SQUARE.COUNT, poleIdx: number = SQSPLIT.POLE): number {
+  const j = sqSplitPairOf(i, count, poleIdx);
   const idx = SQSPLIT_TIERS.findIndex((t) => t.pair === j);
   if (idx < 0 || SQSPLIT_TIERS[idx].cls !== squareClassOf(i, count))
     throw new Error(`捏分一次循环：位置 ${i}（第 ${j} 对）没有登记的引擎或方位类不符`);
   return idx;
 }
 
-/** 二十位编制：位置 → 引擎下标（一圈一个来回，关于极点轴镜像 ⇒ 每条引擎摆两处） */
-export function buildSquareSplitOrder(count: number = SQUARE.COUNT): number[] {
-  return Array.from({ length: count }, (_, i) => sqSplitTierAt(i, count));
+/** 二十位编制：位置 → 引擎下标（一圈一个来回，关于极点轴镜像 ⇒ 每条引擎摆两处）。
+ *  `poleIdx` = 双平台那条边朝向（0 = +X · 1 = +Z · 2 = −X · 3 = −Z），默认 SQSPLIT.POLE ⇒ Lab 2-6 逐位不变；
+ *  Lab 2-11 组合按邻居方向给（2026-09-20 加法式）。 */
+export function buildSquareSplitOrder(count: number = SQUARE.COUNT, poleIdx: number = SQSPLIT.POLE): number[] {
+  return Array.from({ length: count }, (_, i) => sqSplitTierAt(i, count, poleIdx));
 }
 
 /** 引擎定义（解十条摆二十处） */
