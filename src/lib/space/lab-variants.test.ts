@@ -305,13 +305,47 @@ const FROZEN = [
   '2-10:-:g8:nearest:ratchet',
   '2-10:-:g8:disk:follow',
   '2-10:-:g8:disk:ratchet',
-  // Ⅶ 组合（Lab 2-11 ⇒ 编制 3 × 距离 2；每槽形态是现场操作不是档）
-  '2-11:passage:touch',
-  '2-11:passage:apart',
-  '2-11:platform:touch',
-  '2-11:platform:apart',
-  '2-11:enclosure:touch',
-  '2-11:enclosure:apart',
+  // Ⅶ 组合（Lab 2-11 ⇒ 接法 5 × 形态 4 × 距离 2）
+  '2-11:step.pocket:touch',
+  '2-11:step.pocket:apart',
+  '2-11:step.bulb:touch',
+  '2-11:step.bulb:apart',
+  '2-11:step.ledge:touch',
+  '2-11:step.ledge:apart',
+  '2-11:step.stepped:touch',
+  '2-11:step.stepped:apart',
+  '2-11:ramp.pocket:touch',
+  '2-11:ramp.pocket:apart',
+  '2-11:ramp.bulb:touch',
+  '2-11:ramp.bulb:apart',
+  '2-11:ramp.ledge:touch',
+  '2-11:ramp.ledge:apart',
+  '2-11:ramp.stepped:touch',
+  '2-11:ramp.stepped:apart',
+  '2-11:ramp3.pocket:touch',
+  '2-11:ramp3.pocket:apart',
+  '2-11:ramp3.bulb:touch',
+  '2-11:ramp3.bulb:apart',
+  '2-11:ramp3.ledge:touch',
+  '2-11:ramp3.ledge:apart',
+  '2-11:ramp3.stepped:touch',
+  '2-11:ramp3.stepped:apart',
+  '2-11:valley.pocket:touch',
+  '2-11:valley.pocket:apart',
+  '2-11:valley.bulb:touch',
+  '2-11:valley.bulb:apart',
+  '2-11:valley.ledge:touch',
+  '2-11:valley.ledge:apart',
+  '2-11:valley.stepped:touch',
+  '2-11:valley.stepped:apart',
+  '2-11:arch.pocket:touch',
+  '2-11:arch.pocket:apart',
+  '2-11:arch.bulb:touch',
+  '2-11:arch.bulb:apart',
+  '2-11:arch.ledge:touch',
+  '2-11:arch.ledge:apart',
+  '2-11:arch.stepped:touch',
+  '2-11:arch.stepped:apart',
 ];
 
 describe('lab-variants · 项目二台架差分清单', () => {
@@ -320,15 +354,15 @@ describe('lab-variants · 项目二台架差分清单', () => {
     expect(new Set(LAB_VARIANTS.map((b) => b.key)).size).toBe(LAB_VARIANTS.length);
   });
 
-  it('296 种离散组合逐条与冻结清单相同（少一档即红）', () => {
+  it('330 种离散组合逐条与冻结清单相同（少一档即红）', () => {
     const combos = allCombos();
-    expect(combos.length).toBe(296);
+    expect(combos.length).toBe(330);
     expect(combos).toEqual(FROZEN);
   });
 
-  it('每台组合数 = 收纳前各台组合之和（1 + 1 + 3 + (2+2) + (9+1) + 22 + 5）+ Lab 2-8 的 160 + Lab 2-9 的 72 + Lab 2-10 的 12 + Lab 2-11 的 6', () => {
+  it('每台组合数 = 收纳前各台组合之和（1 + 1 + 3 + (2+2) + (9+1) + 22 + 5）+ Lab 2-8 的 160 + Lab 2-9 的 72 + Lab 2-10 的 12 + Lab 2-11 的 40', () => {
     const per = Object.fromEntries(LAB_VARIANTS.map((b) => [b.no, benchCombos(b).length]));
-    expect(per).toEqual({ '2-1': 1, '2-2': 1, '2-3': 3, '2-4': 4, '2-5': 10, '2-6': 22, '2-7': 5, '2-8': 160, '2-9': 72, '2-10': 12, '2-11': 6 });
+    expect(per).toEqual({ '2-1': 1, '2-2': 1, '2-3': 3, '2-4': 4, '2-5': 10, '2-6': 22, '2-7': 5, '2-8': 160, '2-9': 72, '2-10': 12, '2-11': 40 });
   });
 
   it('组合 id 唯一（同名档不会在清单里被折叠掉）', () => {

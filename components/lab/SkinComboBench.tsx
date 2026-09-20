@@ -5,13 +5,12 @@ import { COMBO_PLAN_OPTIONS, COMBO_SPACING_OPTIONS } from '../../src/lib/space/l
 import { RING } from '../../src/lib/space/skin-ring';
 import { RING_GRID_AXON, RING_GRID_PIVOT_Y, RIG_SCALE, RIG_Y } from '../../src/lib/space/skin-grid';
 import {
-  COMBO_FORMS,
-  COMBO_PLANS,
+  COMBO_DEFAULT_FORM,
   comboBridges,
   comboBuild,
   comboCamScale,
   comboCells,
-  comboFormDefs,
+  comboForms,
   comboMetrics,
   comboPlan,
   comboReading,
@@ -23,21 +22,20 @@ import { planFromHash } from './planHash';
 import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
 
 /**
- * Lab 2-11 · 单元组合（用户 2026-09-17 草图立项：「研究不同形状的单元组合来形成不同的效果，
- * 比如通道型、共同构造的平台型、密闭空间型」）。
+ * Lab 2-11 · 单元组合（用户 2026-09-17 草图立项；2026-09-20 纠偏为「同一种平台一圈起伏，几个单元首尾相接、
+ * 接缝处接高接低」，并确认「这个思路是对的」）。
  *
- * Lab 2-8 把同一种单元摆成几种关系；这台把**不同形状**的单元摆在一列，问它们合起来读成什么。
- * 形态词汇五个：目录四形态 + 捏分（Lab 2-5 捏分编制的 j0，自带 338 节的带子）。三种组合按草图给
- * 默认形态（通道 = 直挑台·直挑台·捏分·直挑台 / 平台 = 直挑台·蘑菇 / 密闭 = 捏分·捏分），
- * **每个槽位的形态现场可换**——这台的仪器就是换形状看效果；间距 / 织物网 / 读法全在
- * src/lib/space/unit-combo.ts 推出来（线稿脚本与这里共用一份），这里只接线。
+ * 一个单元 = Lab 2-5 那种圆筒环 + 一圈起伏编制（同一张键谱、每条带一个 lead）。每个单元两个旋钮：
+ * 相位（峰朝哪条带）与高度段（用量程的哪一段）；几个单元相切，接缝处两家各是什么高度就是「接高接低」。
+ * 预设 = 线稿里用户看过的五种接法：台阶（同相）· 续坡（下半段接上半段）· 三段坡 · 凹（谷对谷）· 拱（峰对峰）；
+ * 用户的图形到了按同一套字段追加进 unit-combo.ts 的 COMBO_PLANS。
  *
- * 引擎与摆放分开（Lab 2-9 起的做法）：一种形态只解一条引擎、摆到用它的每个槽位；换形态走
- * `unitsKey` 重建，换距离只重摆（`cellsKey` → reflowCells，同一次收缩两种看法）。
- * 房间固定用 Lab 2-7 那一间（Lab 2-8 的拍板），取景按整列 + 一圈留距推进。
+ * 引擎与摆放分开：用到的每个 lead 一条引擎（续坡两段共用中间那个），每个单元一份编制（二十条带各指自己的 lead）；
+ * 换接法 / 形态走 `unitsKey` 重建，换距离只重摆（`cellsKey`）。接缝织物网从「朝向对方的那条带」的外缘拉过去
+ * （SkinSolidBench 本轮加的读法，同谱环逐位不变），落差大的接缝网就是一道斜坡。
  */
-const FORMS = comboFormDefs();
-const DEFAULT_PLAN: ComboPlanKey = 'passage';
+const FORMS = comboForms();
+const DEFAULT_PLAN: ComboPlanKey = 'ramp';
 const DEFAULT_SPACING: ComboSpacingKey = 'touch';
 
 export function SkinComboBench({
@@ -53,42 +51,33 @@ export function SkinComboBench({
 }) {
   const [plan, setPlan] = useState<ComboPlanKey>(DEFAULT_PLAN);
   const [spacing, setSpacing] = useState<ComboSpacingKey>(DEFAULT_SPACING);
-  const [slots, setSlots] = useState<readonly number[]>(comboPlan(DEFAULT_PLAN).slots);
-  // `/lab#lab2-11-enclosure` 直达某个组合
+  const [form, setForm] = useState(COMBO_DEFAULT_FORM);
+  // `/lab#lab2-11-valley` 直达某种接法
   useEffect(() => {
     const k = planFromHash(
       '2-11',
       COMBO_PLAN_OPTIONS.map((p) => p.key),
     );
-    if (k) {
-      setPlan(k);
-      setSlots(comboPlan(k).slots);
-    }
+    if (k) setPlan(k);
   }, []);
 
-  const choosePlan = (k: ComboPlanKey): void => {
-    setPlan(k);
-    setSlots(comboPlan(k).slots); // 换组合 = 回到草图给的默认形态
-  };
-  const setSlot = (i: number, f: number): void => setSlots((s) => s.map((v, j) => (j === i ? f : v)));
-
-  const build = useMemo(() => comboBuild(slots, FORMS), [slots]);
+  const P = comboPlan(plan);
+  const def = FORMS[form];
+  const build = useMemo(() => comboBuild(P, def), [P, def]);
   const units = useMemo<readonly SolidUnitDef[]>(
     () => build.units.map(({ spec, opts, smooth }) => ({ spec, opts, smooth })),
     [build],
   );
-  const cells = useMemo(() => (r: number) => comboCells(slots, r, spacing), [slots, spacing]);
-  const scene = useMemo(() => (r: number) => comboScene(slots, r, spacing), [slots, spacing]);
-  const bridges = useMemo(() => comboBridges(slots, spacing), [slots, spacing]);
-  const met = comboMetrics(slots, RING.RADIUS_DEF, spacing);
-  const P = comboPlan(plan);
+  const cells = useMemo(() => (r: number) => comboCells(P, form, r, spacing), [P, form, spacing]);
+  const scene = useMemo(() => (r: number) => comboScene(P, form, r, spacing), [P, form, spacing]);
+  const bridges = useMemo(() => comboBridges(P, spacing), [P, spacing]);
+  const met = comboMetrics(P, form, RING.RADIUS_DEF, spacing);
   const en = lang === 'en';
-  const names = slots.map((f) => (en ? COMBO_FORMS[f].en : COMBO_FORMS[f].zh)).join(en ? ' · ' : '·');
   const sp = COMBO_SPACING_OPTIONS.find((s) => s.key === spacing)!;
-  const reading = comboReading(slots, RING.RADIUS_DEF, spacing, lang);
+  const reading = comboReading(P, form, RING.RADIUS_DEF, spacing, lang);
   const relLine = en
-    ? `${P.en}: ${names} · ${spacing === 'touch' ? 'touching' : 'apart'} · ${met.lengthM.toFixed(2)} m end to end${reading ? ` · ${reading}` : ''}`
-    : `${P.zh}：${names} · ${sp.label} · 总长 ${met.lengthM.toFixed(2)} m${reading ? ` · ${reading}` : ''}`;
+    ? `${P.en} · ${P.units.length} units of ${def.en} · ${spacing === 'touch' ? 'touching' : 'apart'} · pitch ${met.pitchM.toFixed(2)} m · ${reading}`
+    : `${P.zh} · ${P.units.length} 个${def.zh} · ${sp.label} · 芯心距 ${met.pitchM.toFixed(2)} m · ${reading}`;
 
   return (
     <SkinSolidBench
@@ -97,62 +86,60 @@ export function SkinComboBench({
       controls={controls}
       units={units}
       ringPlans={build.plans}
-      // 引擎只跟「用到哪几种形态」走：四个直挑台 + 一个捏分 = 两条；换距离不重解
-      unitsKey={build.planForm.map((f) => COMBO_FORMS[f].key).join('+')}
-      // 站位跟槽位与距离走：只重摆（同一次收缩，相切 / 分离两种看法）
-      cellsKey={`${plan}:${slots.join('')}:${spacing}`}
+      // 引擎只跟「形态 + 用到哪些 lead」走：换距离不重解
+      unitsKey={`${def.key}:${build.leads.join(',')}:${build.plans.length}`}
+      // 站位跟接法 / 形态 / 距离走：只重摆（同一次收缩，相切 / 分离两种看法）
+      cellsKey={`${plan}:${def.key}:${spacing}`}
       ring
       cells={cells}
       bridges={bridges}
       rig={{ scale: RIG_SCALE, y: RIG_Y }}
       scene={scene}
-      camScaleFor={(r, v) => comboCamScale(slots, r, spacing, v)}
+      camScaleFor={(r, v) => comboCamScale(P, form, r, spacing, v)}
       radius={{ min: RING.RADIUS_MIN, max: RING.RADIUS_MAX, def: RING.RADIUS_DEF }}
       depth={RING.DEPTH}
       thick={RING.THICK}
-      skin={{ def: 0.25 }}
+      skin={{ def: 0.35 }}
       ceiling="ring"
       rail="fixed"
-      rate={units.length > 1 ? 80 : 110}
+      rate={80}
       pivot={{ x: 0, y: RING_GRID_PIVOT_Y, z: 0 }}
-      camScale={comboCamScale(comboPlan(DEFAULT_PLAN).slots, RING.RADIUS_DEF, DEFAULT_SPACING, 'axon')}
+      camScale={comboCamScale(comboPlan(DEFAULT_PLAN), COMBO_DEFAULT_FORM, RING.RADIUS_DEF, DEFAULT_SPACING, 'axon')}
       axon={RING_GRID_AXON}
       extraControls={
         <>
           <div className="grp">
-            <span className="k">编制</span>
+            <span className="k">接法</span>
             <span className="seg">
               {COMBO_PLAN_OPTIONS.map((p) => (
                 <button
                   key={p.key}
                   type="button"
                   className={p.key === plan ? 'active' : undefined}
-                  title={`${COMBO_PLANS.find((q) => q.key === p.key)!.zh} · ${COMBO_PLANS.find((q) => q.key === p.key)!.en}（回到草图的默认形态）`}
-                  onClick={() => choosePlan(p.key)}
+                  title={`${comboPlan(p.key).zh} · ${comboPlan(p.key).en}`}
+                  onClick={() => setPlan(p.key)}
                 >
                   {p.label}
                 </button>
               ))}
             </span>
           </div>
-          {slots.map((f, i) => (
-            <div className="grp" key={`slot-${i}`}>
-              <span className="k">槽 {i + 1}</span>
-              <span className="seg">
-                {COMBO_FORMS.map((F, j) => (
-                  <button
-                    key={F.key}
-                    type="button"
-                    className={j === f ? 'active' : undefined}
-                    title={`${F.zh} · ${F.en}`}
-                    onClick={() => setSlot(i, j)}
-                  >
-                    {F.short}
-                  </button>
-                ))}
-              </span>
-            </div>
-          ))}
+          <div className="grp">
+            <span className="k">形态</span>
+            <span className="seg">
+              {FORMS.map((f, i) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  className={i === form ? 'active' : undefined}
+                  title={`${f.zh} · ${f.en}`}
+                  onClick={() => setForm(i)}
+                >
+                  {f.zh}
+                </button>
+              ))}
+            </span>
+          </div>
           <div className="grp">
             <span className="k">距离</span>
             <span className="seg">
@@ -175,19 +162,19 @@ export function SkinComboBench({
         en
           ? {
               kicker: 'Lab 2-11 / Project II',
-              title: 'Compositions',
+              title: 'Joined platforms',
               sub: relLine,
-              hint: 'Composition / form per slot / spacing switchable · spacing re-places, no re-solve · radius drives the pitch · drag to orbit',
+              hint: 'Join / form / spacing switchable · spacing re-places, no re-solve · radius drives the pitch · drag to orbit',
               aria:
-                'Compositions: a row of two to four contracting-skin cylinder rings of different forms hung in a room — ledges, bulbs, stepped boxes, pockets and split units — placed edge to edge or apart, reading as a passage, a shared platform or an enclosure; a 1.7 m figure stands on the floor for scale.',
+                'Joined platforms: two or three contracting-skin cylinder rings with undulating platforms hung in a room, placed edge to edge so that the high side of one meets the low or high side of the next — a step, a ramp, a hollow or an arch; a 1.7 m figure stands on the floor for scale.',
             }
           : {
               kicker: 'Lab 2-11 / Project II',
-              title: '单元组合 · 不同形状合起来是什么',
+              title: '单元组合 · 起伏平台首尾相接',
               sub: relLine,
-              hint: '编制 / 每槽形态 / 距离可切 · 换距离不重解 · 半径连间距一起变 · 拖拽旋转',
+              hint: '接法 / 形态 / 距离可切 · 换距离不重解 · 半径连间距一起变 · 拖拽旋转',
               aria:
-                '单元组合：二到四个形态各异的收缩张紧外皮圆筒环排成一列吊在一间房里——直挑台、蘑菇挑台、阶梯方箱、袋与捏分，边贴边或分离摆放，读作通道、共用的平台或密闭的腔；地上站着一个 1.7 米高的人作比例参考；可切编制、每个槽位的形态、距离与半径，可拖拽旋转',
+                '单元组合：两三个带起伏平台的收缩张紧外皮圆筒环吊在一间房里，边贴边摆放，让一个的高处接上下一个的低处或高处——读作台阶、坡、凹处或拱；地上站着一个 1.7 米高的人作比例参考；可切接法、形态、距离与半径，可拖拽旋转',
             }
       }
     />

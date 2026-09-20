@@ -123,8 +123,8 @@ const WALK_READING_AXIS: VariantAxis = { axis: '读法', options: READINGS.map((
 /** 单元怎么响应读数：跟随（人走了收回去）/ 锁定（滞回）——2026-09-04 用户要的那一档与项目论点那一档 */
 const WALK_RESPONSE_AXIS: VariantAxis = { axis: '响应', options: RESPONSES.map((r) => ({ key: r.key, label: r.zh })) };
 
-/** Lab 2-11 单元组合（2026-09-17 立项）：编制 = 草图三张（通道 / 平台 / 密闭），距离两档为正交轴。
- *  每个槽位的形态是现场操作不是档（5^4 种，与 Lab 2-10 的放人同一类）。 */
+/** Lab 2-11 单元组合（2026-09-17 立项，2026-09-20 用户纠偏为「同一种平台一圈起伏、首尾相接」）：
+ *  编制 = 接法（台阶 / 续坡 / 三段坡 / 凹 / 拱），形态四档为子选项，距离两档为正交轴。用户的图形到了按预设追加。 */
 export const COMBO_PLAN_OPTIONS = COMBO_PLANS.map((p) => ({ key: p.key, label: p.label }));
 export const COMBO_SPACING_OPTIONS = COMBO_SPACINGS.map((s) => ({ key: s.key, label: s.label }));
 const COMBO_SPACING_AXIS: VariantAxis = { axis: '距离', options: COMBO_SPACING_OPTIONS };
@@ -200,7 +200,7 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     key: 'combo',
     zh: '单元组合',
     en: 'Compositions',
-    plans: COMBO_PLAN_OPTIONS,
+    plans: COMBO_PLAN_OPTIONS.map((p) => ({ ...p, sub: FORM_SUB })),
     axes: [COMBO_SPACING_AXIS],
   },
 ];

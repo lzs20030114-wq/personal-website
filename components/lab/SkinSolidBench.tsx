@@ -931,9 +931,21 @@ export function SkinSolidBench({
         const rad = radiusRef.current;
         const M = cam.matrix;
         const viewZ = (x: number, z: number): number => M[6] * x + M[8] * z;
-        /** 某格此刻的外缘：外缘半径 = 站位半径 + 最大挑出；顶/底 = 离轴 ≥ 85% 最大挑出那些节点的 y 范围 */
-        const rimOf = (c: SolidCell) => {
-          const inst = insts.find((t) => t.plan === c.plan);
+        /** 某格此刻的外缘：外缘半径 = 站位半径 + 最大挑出；顶/底 = 离轴 ≥ 85% 最大挑出那些节点的 y 范围。
+         *  读**朝向对方的那条带**的引擎（Lab 2-11 起伏环每条带高度不同，接缝在哪条带上网就该跟哪条；
+         *  一圈同谱时任一条都是同一条引擎 ⇒ Lab 2-8 逐位不变） */
+        const rimOf = (c: SolidCell, toward: SolidCell) => {
+          const dir = Math.atan2(toward.z - c.z, toward.x - c.x);
+          let inst: SolidInst | undefined;
+          let best = Infinity;
+          for (const t of insts) {
+            if (t.plan !== c.plan) continue;
+            const d = Math.abs(Math.atan2(Math.sin(t.angle - dir), Math.cos(t.angle - dir)));
+            if (d < best) {
+              best = d;
+              inst = t;
+            }
+          }
           if (!inst) return null;
           const v = sims[inst.simIdx];
           if (!v.sx || !v.sy) return null;
@@ -955,8 +967,8 @@ export function SkinSolidBench({
           const a = cellList[i];
           const b = cellList[j];
           if (!a || !b) continue;
-          const ra = rimOf(a);
-          const rb = rimOf(b);
+          const ra = rimOf(a, b);
+          const rb = rimOf(b, a);
           if (!ra || !rb) continue;
           const g = bridgeWeb(ra, rb, BRIDGE_W * rigS, BRIDGE_GAP * rigS);
           if (!g) continue;
