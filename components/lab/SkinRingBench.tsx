@@ -72,7 +72,7 @@ const splitRing = () =>
   (splitCache ??= (() => {
     const levels = buildSplitRingUnits();
     return {
-      units: levels.map(({ spec, opts, smooth }) => ({ spec, opts, smooth })),
+      units: levels.map(({ spec, opts, smooth, seam }) => ({ spec, opts, smooth, seam })),
       order: buildSplitRingOrder(levels.length),
     };
   })());

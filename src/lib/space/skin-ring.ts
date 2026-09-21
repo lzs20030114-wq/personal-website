@@ -173,6 +173,13 @@ export interface RingUnitDef {
   spec: SkinSpec;
   opts: SkinUnitOpts;
   smooth: readonly [number, number];
+  /**
+   * 缝底节点（绝对下标）。给了 ⇒ 台架**不画**两端跨在它两侧的键（上下两片台之间那把
+   * 外箱梯挡 + 缝链），只画各片台自己内部的键——用户 2026-09-21「取消上下两个平台之间
+   * 跨平台的橙色链接键，只保留各自内部的」。纯表现层：引擎照锁、HUD 键数照记物理数；
+   * 只有开了缝的捏分档才给（整块 t=0 不给，它的梯挡就是这一块的内部键）。
+   */
+  seam?: number;
 }
 
 /**

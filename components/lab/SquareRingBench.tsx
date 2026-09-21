@@ -56,10 +56,11 @@ import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
  *   R 一变方形就不成立，得整套重标。
  * - **顶视是主视角**：方形要俯视才读得出来，故默认机位就是顶视。
  */
-const strip = (d: { spec: SolidUnitDef['spec']; opts: SolidUnitDef['opts']; smooth: SolidUnitDef['smooth'] }): SolidUnitDef => ({
+const strip = (d: { spec: SolidUnitDef['spec']; opts: SolidUnitDef['opts']; smooth: SolidUnitDef['smooth']; seam?: number }): SolidUnitDef => ({
   spec: d.spec,
   opts: d.opts,
   smooth: d.smooth,
+  seam: d.seam,
 });
 const FLAT_ORDER = buildSquareOrder();
 

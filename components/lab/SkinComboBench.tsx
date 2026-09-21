@@ -72,7 +72,7 @@ export function SkinComboBench({
   const rig = comboFamilyRig(fam);
   const build = useMemo(() => comboBuild(P, fam, def, form), [P, fam, def, form]);
   const units = useMemo<readonly SolidUnitDef[]>(
-    () => build.units.map(({ spec, opts, smooth }) => ({ spec, opts, smooth })),
+    () => build.units.map(({ spec, opts, smooth, seam }) => ({ spec, opts, smooth, seam })),
     [build],
   );
   const cells = useMemo(() => (r: number) => comboCells(P, fam, form, r, spacing), [P, fam, form, spacing]);

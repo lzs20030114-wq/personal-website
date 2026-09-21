@@ -200,6 +200,8 @@ interface SolidSim {
   sy: Float64Array | null;
   /** 起步延迟（协议步）：Lab.13 错相；0 = 与全场同一时钟（既有台架） */
   delay: number;
+  /** 缝底节点：跨它的键不画（捏分档）；undefined = 全画 */
+  seam: number | undefined;
 }
 
 /** 场上的一份摆放（引擎下标 + 站位） */
@@ -237,6 +239,12 @@ export interface SolidUnitDef {
    * 全场「跑完」按最后一条算，重播一起归零。
    */
   delay?: number;
+  /**
+   * 缝底节点（绝对下标，捏分档才有）：两端跨在它两侧的键不画（上下两片台之间的外箱梯挡
+   * 与缝链），只画各片台内部的键。纯表现层过滤——引擎照锁、HUD 键数仍是物理数。
+   * 默认 undefined ⇒ 全画（既有台架逐位不变）。
+   */
+  seam?: number;
 }
 
 /**
@@ -624,6 +632,7 @@ export function SkinSolidBench({
         sx: null,
         sy: null,
         delay: def.delay ?? 0,
+        seam: def.seam,
       };
     });
     const makeInsts = (): SolidInst[] => {
@@ -861,7 +870,10 @@ export function SkinSolidBench({
         if (bondsRef.current && sim.locked.length) {
           const hz = depth / 2;
           const segs: { a: Vec3; b: Vec3 }[] = [];
+          const seam = v.seam;
           for (const [i, j] of sim.locked) {
+            // 捏分档：跨缝底的键（上下两片台之间那把梯挡 + 缝链）不画，只留各片台内部的
+            if (seam !== undefined && (i - seam) * (j - seam) < 0) continue;
             for (const t of [inst.offZ + hz, inst.offZ - hz]) {
               segs.push({
                 a: placePoint(rad0 + px[i] * SOLID.SCALE, v.offY - py[i] * SOLID.SCALE, t, rp),

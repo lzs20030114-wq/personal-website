@@ -119,6 +119,7 @@ export function buildSplitRingUnits(tiers: readonly SqSplitTier[] = SPLIT_RING_T
       spec: b.spec,
       opts: b.opts,
       smooth: [3, 1] as const,
+      ...(t.t > 0 ? { seam: b.marks.center } : {}),
     };
   });
 }

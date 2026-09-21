@@ -67,7 +67,13 @@ const GRAD_UNITS: readonly SolidUnitDef[] = buildTransitionArray().map(({ spec, 
 }));
 let splitCache: readonly SolidUnitDef[] | null = null;
 const splitUnits = (): readonly SolidUnitDef[] =>
-  (splitCache ??= buildSplitLevels().map(({ spec, opts, smooth }) => ({ spec, opts, smooth })));
+  (splitCache ??= buildSplitLevels().map(({ spec, opts, smooth, t, marks }) => ({
+    spec,
+    opts,
+    smooth,
+    // 开了缝的级：跨缝底的键不画（同捏分环 / 方形环）；L0 单箱全画
+    ...(t > 0 ? { seam: marks.center } : {}),
+  })));
 
 /** HUD 双语：/lab 说中文（默认），案例页正文里的活件跟着页面的中英切换走 */
 const HUD = {

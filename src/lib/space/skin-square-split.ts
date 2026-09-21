@@ -376,6 +376,7 @@ export function buildSquareSplitUnits(tiers: readonly SqSplitTier[] = SQSPLIT_TI
       spec: b.spec,
       opts: b.opts,
       smooth: [3, 1] as const,
+      ...(t.t > 0 ? { seam: b.marks.center } : {}),
     };
   });
 }
