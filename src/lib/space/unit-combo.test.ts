@@ -323,8 +323,16 @@ describe('解什么、摆到哪', () => {
         cells.forEach((c, i) => expect(c.x).toBeCloseTo(xs[i] * RIG_SCALE, 9));
         expect(cells.map((c) => c.plan)).toEqual([0, 1, 2]);
       }
-    expect(comboBridges(comboPlan('ramp3'), 'touch')).toEqual([[0, 1], [1, 2]]);
-    expect(comboBridges(comboPlan('ramp3'), 'apart')).toEqual([]);
+    expect(comboBridges(comboPlan('ramp3'), 'round', 'touch')).toEqual([{ a: 0, b: 1 }, { a: 1, b: 2 }]);
+    expect(comboBridges(comboPlan('ramp3'), 'round', 'apart')).toEqual([]);
+    // 捏分缝口不当一片台：② 只有下板接坡；③ 上板接上板、下板接下板，腔留空（两族同）
+    for (const fam of ['round', 'square'] as const) {
+      expect(comboBridges(comboPlan('rise'), fam, 'touch')).toEqual([{ a: 0, b: 1, plateA: 'lower' }, { a: 1, b: 2 }]);
+      expect(comboBridges(comboPlan('enclose'), fam, 'touch')).toEqual([
+        { a: 0, b: 1, plateA: 'upper', plateB: 'upper' },
+        { a: 0, b: 1, plateA: 'lower', plateB: 'lower' },
+      ]);
+    }
   });
   it('速率按节点量降：轻的 80、最重的一档不低于 30，且单调', () => {
     expect(comboRate(comboBuild(comboPlan('step'), 'round', FORMS[LEDGE], LEDGE).units)).toBe(80);

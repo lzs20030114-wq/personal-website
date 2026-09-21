@@ -1169,6 +1169,7 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
 - 主页 S2 第 16 卡（`lg:grid-cols-16`）、统计条 Demos 16 · Tests 564（合并 master 的 /lab 目录 +3、缝底守门 +6 后实测）；/lab 标头 eighteen · 页脚 18 instruments；ProjectRule sub 2-1 – 2-11。
 - **全站台架冻结 bug 一并修**：`components/lab/useBenchLoop.ts` 与 `components/linkage/LinkageFigure.tsx` 的 IntersectionObserver 回调改读最后一条记录（一次回调带「出、入」两条时旧代码只看第一条 ⇒ 停死）。CDP 打桩复现 + 修后同批次记录不再冻结。
 - 线稿 `scripts/unit-combo/wave-draft.mjs`（委托模块画两族全部预设；SVG → 无头 Chromium 截图要把 window-size 加高 90）。
+- **接缝织物网按片台搭（2026-09-21 用户看真机「绿色连在外面的……形状错误」）**：捏分缝口那一侧的网不再按整条带最高到最低拉（那会把腔口当一片台）；`comboBridges(plan, fam, spacing)` 出 `ComboBridge{a,b,plateA?,plateB?}`——缝口对起伏只搭下板、缝口对缝口上下各搭各的、腔留空；`SkinSolidBench.bridges` 加对象写法（元组照收，Lab 2-8 逐位不变），`rimOf` 按 `seam` 只读那一侧节点。
 - **捏分跨腔橙键不画（2026-09-21 用户拍板）**：`RingUnitDef.seam` / `SolidUnitDef.seam`（缝底节点，开缝档才有）→ SkinSolidBench 画键线时跳过两端跨缝底的键，只画各片台内部的两根面角键；物理与 HUD 键数不变。Lab 2-4 / 2-5 / 2-6 / 2-11 四处捏分一起变；守门 `skin-seam.test.ts` 6 项。
 - 合并 master（§32 左栏目录）时：`lab-index.ts` 登记第七段 Ⅶ Compositions + Lab 2-11（题头 / 段头 / 项目副题从目录取，`Bench` 不再收 title/accent）；目录守门「页面 no= ↔ 目录」自动带上这台。
 - 细节与待拍板 = 项目二_单元组合lab.md。

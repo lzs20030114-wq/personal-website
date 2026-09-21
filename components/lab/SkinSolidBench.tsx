@@ -248,6 +248,18 @@ export interface SolidUnitDef {
 }
 
 /**
+ * 织物网一条（`bridges` 的对象写法；元组 [a, b] = 两格整条带对整条带）。`plateA`/`plateB` 只对
+ * 带缝底标记（`seam`）的捏分档有意义：外缘只读缝底那一侧的节点——上板 = 缝底之前、下板 = 缝底
+ * 之后——网就只在那片台上起脚，腔口不再被当成一片台面（Lab 2-11 ②③）。没有 seam 的带照整条读。
+ */
+export interface SolidBridge {
+  a: number;
+  b: number;
+  plateA?: 'upper' | 'lower';
+  plateB?: 'upper' | 'lower';
+}
+
+/**
  * 排布（layouts prop 用）：单元沿 X 分列（gapX）或沿 Z 密排并拢（gapZ）+
  * 该排布下的机位。传 ≥2 个即出「排列」切换；**切换只改渲染偏移与机位，
  * 不重建引擎**（收缩进行到哪就在哪继续——并拢/分列看的是同一次收缩）。
@@ -449,7 +461,7 @@ export function SkinSolidBench({
    * （skin-solid.bridgeWeb），随蒙皮滑块走同一个透明度；两圈外缘差 ≤ 起网门槛时才搭。
    * 每帧从两格各自的引擎现读外缘半径与顶底高度，几何按世界坐标直接烘（每对不同，不走摆放表）。
    */
-  bridges?: readonly (readonly [number, number])[];
+  bridges?: readonly (readonly [number, number] | SolidBridge)[];
   /** 台架自己的控件（塞进控制条第一层）——Lab.09 的形态选择 */
   extraControls?: ReactNode;
 }) {
@@ -961,7 +973,7 @@ export function SkinSolidBench({
         /** 某格此刻的外缘：外缘半径 = 站位半径 + 最大挑出；顶/底 = 离轴 ≥ 85% 最大挑出那些节点的 y 范围。
          *  读**朝向对方的那条带**的引擎（Lab 2-11 起伏环每条带高度不同，接缝在哪条带上网就该跟哪条；
          *  一圈同谱时任一条都是同一条引擎 ⇒ Lab 2-8 逐位不变） */
-        const rimOf = (c: SolidCell, toward: SolidCell) => {
+        const rimOf = (c: SolidCell, toward: SolidCell, plate?: 'upper' | 'lower') => {
           const dir = Math.atan2(toward.z - c.z, toward.x - c.x);
           let inst: SolidInst | undefined;
           let best = Infinity;
@@ -976,12 +988,16 @@ export function SkinSolidBench({
           if (!inst) return null;
           const v = sims[inst.simIdx];
           if (!v.sx || !v.sy) return null;
+          // 捏分档按片台读：只看缝底那一侧的节点（上板 = 下标小于缝底、下板 = 大于）
+          const seam = v.seam;
+          const lo = plate && seam !== undefined ? (plate === 'upper' ? 0 : seam + 1) : 0;
+          const hi = plate && seam !== undefined ? (plate === 'upper' ? seam : v.sim.n) : v.sim.n;
           let mx = 0;
-          for (let i = 0; i < v.sim.n; i++) mx = Math.max(mx, v.sx[i]);
+          for (let i = lo; i < hi; i++) mx = Math.max(mx, v.sx[i]);
           if (mx * SOLID.SCALE < 8) return null; // 还没挑出来，没有「外缘」可言
           let yTop = Infinity;
           let yBot = -Infinity;
-          for (let i = 0; i < v.sim.n; i++) {
+          for (let i = lo; i < hi; i++) {
             if (v.sx[i] < 0.85 * mx) continue;
             const y = rigY + rigS * (v.offY - v.sy[i] * SOLID.SCALE);
             yTop = Math.min(yTop, y);
@@ -990,12 +1006,13 @@ export function SkinSolidBench({
           return { x: c.x, z: c.z, rho: rigS * (rad + mx * SOLID.SCALE), yTop, yBot };
         };
         const webs: { z: number; data: Float32Array }[] = [];
-        for (const [i, j] of pairs) {
-          const a = cellList[i];
-          const b = cellList[j];
+        for (const p of pairs) {
+          const br: SolidBridge = 'a' in p ? p : { a: p[0], b: p[1] };
+          const a = cellList[br.a];
+          const b = cellList[br.b];
           if (!a || !b) continue;
-          const ra = rimOf(a, b);
-          const rb = rimOf(b, a);
+          const ra = rimOf(a, b, br.plateA);
+          const rb = rimOf(b, a, br.plateB);
           if (!ra || !rb) continue;
           const g = bridgeWeb(ra, rb, BRIDGE_W * rigS, BRIDGE_GAP * rigS);
           if (!g) continue;

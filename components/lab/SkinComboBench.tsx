@@ -77,7 +77,7 @@ export function SkinComboBench({
   );
   const cells = useMemo(() => (r: number) => comboCells(P, fam, form, r, spacing), [P, fam, form, spacing]);
   const scene = useMemo(() => (r: number) => comboScene(P, fam, form, r, spacing), [P, fam, form, spacing]);
-  const bridges = useMemo(() => comboBridges(P, spacing), [P, spacing]);
+  const bridges = useMemo(() => comboBridges(P, fam, spacing), [P, fam, spacing]);
   const met = comboMetrics(P, fam, form, rig.radius.def, spacing);
   const en = lang === 'en';
   const famDef = COMBO_FAMILIES.find((f) => f.key === fam)!;

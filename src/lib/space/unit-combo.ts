@@ -476,9 +476,37 @@ export function comboCellPlan(plan: ComboPlan, fam: ComboFamilyKey): number[] {
 }
 
 /** 要糊缝的对：相切下的每条接缝（网从接缝那条带的外缘拉过去，落差大就是一道斜坡） */
-export function comboBridges(plan: ComboPlan, spacing: ComboSpacingKey): (readonly [number, number])[] {
+/** 接缝织物网一条：a/b = 相邻两个单元；plateA/plateB = 捏分缝口那一侧只搭哪片台（不给 = 整条带） */
+export interface ComboBridge {
+  a: number;
+  b: number;
+  plateA?: 'upper' | 'lower';
+  plateB?: 'upper' | 'lower';
+}
+
+/**
+ * 相切时每条接缝都糊织物网，但**捏分的缝口不当一片台看**（用户 2026-09-21 看真机：网按整条带的最高点到
+ * 最低点拉，把整个腔口——上板顶到下板底——当成一片台面，③ 里两个腔之间拉成一片透镜、② 里从捏分整高
+ * 扇到薄坡上）。改按片台搭：缝口对起伏 ⇒ 只有**下板**接坡（走面读数就是下板顶，见 comboJoints）；
+ * 缝口对缝口 ⇒ 上板接上板、下板接下板，腔留空；整块那一侧仍按整条带。
+ */
+export function comboBridges(plan: ComboPlan, fam: ComboFamilyKey, spacing: ComboSpacingKey): ComboBridge[] {
   if (spacing !== 'touch') return [];
-  return Array.from({ length: plan.units.length - 1 }, (_, i) => [i, i + 1] as const);
+  const F = FAMILY[fam];
+  const bandA = bandToward(0, F.angleOffset);
+  const bandB = bandToward(Math.PI, F.angleOffset);
+  const out: ComboBridge[] = [];
+  for (let i = 1; i < plan.units.length; i++) {
+    const A = plan.units[i - 1];
+    const B = plan.units[i];
+    const mouthA = A.kind === 'split' && splitPairAt(fam, A, bandA) === 0;
+    const mouthB = B.kind === 'split' && splitPairAt(fam, B, bandB) === 0;
+    if (mouthA && mouthB) out.push({ a: i - 1, b: i, plateA: 'upper', plateB: 'upper' }, { a: i - 1, b: i, plateA: 'lower', plateB: 'lower' });
+    else if (mouthA) out.push({ a: i - 1, b: i, plateA: 'lower' });
+    else if (mouthB) out.push({ a: i - 1, b: i, plateB: 'lower' });
+    else out.push({ a: i - 1, b: i });
+  }
+  return out;
 }
 
 // ── 摆进房间 ──────────────────────────────────────────────────────────────────────
