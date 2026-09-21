@@ -48,6 +48,21 @@ import { useBenchLoop } from './useBenchLoop';
 const RATE = 110; // 协议步/秒（与 Lab.06 同）
 const MAX_STEPS_PER_FRAME = 3;
 const REPLAY_HOLD_S = 3.2;
+/**
+ * 「跳过成形」每帧的推进预算（ms）。**终态只能真跑出来**——引擎是路径依赖的
+ * （键锁定不可逆、Verlet 隐式速度），没有解析解，所以这个开关是快进不是传送：
+ * 按时间预算一帧尽量多推几步，而不是按 rate 节流。预算取 28ms（约两帧）——
+ * 快进期间掉帧无所谓，但不能把主线程整段占死（页面还要响应勾选/滚动）。
+ * 省下多少随编制差很多：轻的（2-1 四形态、2-5 同形环）0.7–3s 到位、省十来秒；
+ * 重的（2-6 捏分、2-11 方环）本来就在 CPU 极限上跑，快进省不下几秒。
+ */
+const SKIP_BUDGET_MS = 28;
+/**
+ * 快进时画面的最小重绘间隔（ms）。实测（/lab 生产构建、软件 GL）：不节流时快进只有
+ * 80 步/s，而同一编制纯物理能跑 3000 步/s——**画一帧比算几十步还贵**，每帧都画
+ * 等于把「跳过」的预算全喂给了渲染。节流到 5 次/秒：进度照样看得见，其余时间全给物理。
+ */
+const SKIP_DRAW_MS = 200;
 const VIEW_ANIM_S = 0.35;
 /** 四单元沿 X 排布的间距与画面枢轴（世界单位 = 2D px 尺度） */
 const UNIT_GAP_X = 175;
@@ -532,6 +547,9 @@ export function SkinSolidBench({
   const [skinV, setSkinV] = useState(skin?.def ?? 0);
   const skinRef = useRef(skin?.def ?? 0);
   const [running, setRunning] = useState(true);
+  // 跳过成形：勾上即冲到终态并停在那儿（不再自动重播——否则每隔 3.2s 又闪回直带子）
+  const [skip, setSkip] = useState(false);
+  const skipRef = useRef(false);
   const [bonds, setBonds] = useState(true);
   const [persp, setPersp] = useState(false);
   const [speed, setSpeed] = useState(1);
@@ -1025,6 +1043,7 @@ export function SkinSolidBench({
 
     let acc = 0;
     let holdT = 0;
+    let lastSkipDraw = 0; // 快进时的重绘节流（见 SKIP_DRAW_MS）
     let lastHud = '';
     /** 全场时钟（协议步，含起步延迟前的等待）；错相下引擎按各自的 delay 晚几步再推 */
     let tick = 0;
@@ -1060,7 +1079,18 @@ export function SkinSolidBench({
       // 「跑完」按全场最后一条算：错相下最晚起步的那条还没到头，别人不许先重播
       const allDone = sims.every((v) => v.sim.done);
       let n = 0;
-      if (runningRef.current && !allDone) {
+      if (skipRef.current && !allDone) {
+        // 跳过成形：按时间预算尽快推到终态。与「运转」无关——勾的就是「我只要结果」，
+        // 停着的台架也该给出结果。定步不变 ⇒ 轨迹与正常播放逐位相同，只是没画中间帧
+        const t0 = performance.now();
+        while (!sims.every((v) => v.sim.done) && performance.now() - t0 < SKIP_BUDGET_MS) {
+          tick++;
+          for (const v of sims) if (tick > v.delay) v.sim.advance();
+          n++;
+        }
+        acc = 0;
+        holdT = 0;
+      } else if (runningRef.current && !allDone) {
         acc += dt * rateRef.current * speedRef.current;
         n = Math.floor(acc);
         if (n > MAX_STEPS_PER_FRAME) {
@@ -1073,13 +1103,15 @@ export function SkinSolidBench({
           tick++;
           for (const v of sims) if (tick > v.delay) v.sim.advance();
         }
-      } else if (runningRef.current && allDone) {
+      } else if (runningRef.current && allDone && !skipRef.current) {
         holdT += dt;
         if (holdT >= REPLAY_HOLD_S) replay();
       }
       // 帧间 EMA（Lab.06 同款纪律：物理不动，只平滑画面时间轴）
       if (n > 0) {
-        const a = 1 - Math.pow(0.45, n / 20);
+        // 快进时平滑直接对齐：帧间 EMA 是给「一帧几步」的展示节奏用的，一帧几百步
+        // 还按系数追会拖出一条追不上的尾巴（画面比物理慢半拍，终态也就歪着）
+        const a = skipRef.current ? 1 : 1 - Math.pow(0.45, n / 20);
         for (const v of sims) {
           if (!v.emaX || !v.emaY) continue;
           for (let i = 0; i < v.sim.n; i++) {
@@ -1088,20 +1120,35 @@ export function SkinSolidBench({
           }
         }
       }
-      render();
-      // 报的是**场上**的锁定键数（实例数 × 各自引擎），不是引擎数；
-      // 环阵列下一条带摆在若干格里，每一份都要数进去
-      const planCells = (pi: number): number =>
-        hasCells() ? cellList.reduce((a, c) => a + (c.plan === pi ? 1 : 0), 0) : 1;
-      const locked = insts.reduce(
-        (acc, i) => acc + sims[i.simIdx].sim.locked.length * planCells(i.plan),
-        0,
-      );
-      const phase = allDone ? '锁定 · 即将重播' : lead.step < 900 ? '收缩中' : '张紧 · 排泡';
-      const key = `${lead.step}|${locked}|${phase}`;
-      if (key !== lastHud) {
-        lastHud = key;
-        setHud((h) => ({ ...h, r: sims[sims.length - 1].sim.r, step: lead.step, locked, phase }));
+      // 快进时按 SKIP_DRAW_MS 节流「画面 + HUD」（终态那一帧与正常播放一律照画）。
+      // HUD 一起节流是有实测依据的：快进时 step 每帧跳几十 ⇒ key 必变 ⇒ 每帧一次
+      // setState + 整台重渲染，那比一帧物理还贵，读数又快得没人看得清
+      const nowMs = performance.now();
+      if (!skipRef.current || allDone || nowMs - lastSkipDraw >= SKIP_DRAW_MS) {
+        render();
+        lastSkipDraw = nowMs;
+        // 报的是**场上**的锁定键数（实例数 × 各自引擎），不是引擎数；
+        // 环阵列下一条带摆在若干格里，每一份都要数进去
+        const planCells = (pi: number): number =>
+          hasCells() ? cellList.reduce((a, c) => a + (c.plan === pi ? 1 : 0), 0) : 1;
+        const locked = insts.reduce(
+          (acc, i) => acc + sims[i.simIdx].sim.locked.length * planCells(i.plan),
+          0,
+        );
+        const phase = allDone
+          ? skipRef.current
+            ? '锁定 · 终态'
+            : '锁定 · 即将重播'
+          : skipRef.current
+            ? '快进中'
+            : lead.step < 900
+              ? '收缩中'
+              : '张紧 · 排泡';
+        const key = `${lead.step}|${locked}|${phase}`;
+        if (key !== lastHud) {
+          lastHud = key;
+          setHud((h) => ({ ...h, r: sims[sims.length - 1].sim.r, step: lead.step, locked, phase }));
+        }
       }
     };
 
@@ -1309,6 +1356,17 @@ export function SkinSolidBench({
           />
           运转
         </label>
+        <label title="勾上直接看收缩完的样子（成形过程只是不画，仍照常算——引擎路径依赖，终态没有解析解）">
+          <input
+            type="checkbox"
+            checked={skip}
+            onChange={(e) => {
+              skipRef.current = e.target.checked;
+              setSkip(e.target.checked);
+            }}
+          />
+          跳过成形
+        </label>
         <label>
           <input
             type="checkbox"
@@ -1337,6 +1395,7 @@ export function SkinSolidBench({
           apiRef.current?.replay();
           runningRef.current = true;
           setRunning(true);
+          // 跳过开着时点重播 = 重新解一遍再冲到终态（不是停在直带子上等）
         }}>
           重播
         </button>
