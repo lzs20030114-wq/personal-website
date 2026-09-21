@@ -1143,13 +1143,31 @@ typecheck + 302 测试绿 + `vite build && next build` 过；CDP（生产构建�
 - **实测**：533 测试绿（+5，锚点守门）· typecheck + 双构建过 · CDP 生产实测：两侧各 10 个 h2 / 23 个插槽逐位一致、案例页 canvas 恒 3（中英切换后仍 3）、六个锚点各自落到**正确**那一条（含 06-15 三条按项目区分、07-10 四条按序号区分）、筛选态下落地自动清筛选、坏锚点不炸、案例页点引用真跳到日志并展开、/lab 15 台无回归、主页统计条 533、项目二页不受波及。唯一 404 是 favicon.ico（站上本就没有该文件，与本次无关）。
 - **两处如实带着的偏差**：机构段占正文 31.4%（指令 §0 写 ≤30%，再压会开始掉信息）；N14 那张图是中文标注的分析图，出现在英文页上。
 
-## 32. Lab 2-11 单元组合：第七段 Ⅶ Compositions（2026-09-17 立项 · 2026-09-20 纠偏为「同一种平台一圈起伏、首尾相接」+ 三张图形 + 方单元版本）
+## 32. /lab 左栏目录（2026-09-17，用户手绘立项「左边加一列目录，可以直接概览整体，想看什么也可以直接点击跳转」+「审美要高级、要有动效」）
+
+草图：整页两列——左一窄列写着「目录」、右列是台架框，两列之间**两道竖线**。落地：
+
+- **两列骨架**：`.shell--lab`（页宽 1320 → 1560，否则图框要让出目录那一列）> `.lab-layout`（`240px + 48 | 1fr`，1280–1439 收窄为 `200px + 40`）> `.lab-rail`（`align-self: stretch` 撑满整页高度，`padding-top: 64` 与右栏 header 的 kicker 齐平）> `.lab-index`（`position: sticky; top: 24px`，与 `.case-rail` 同一个吸顶位；超高时自身滚动、不画滚动条）+ `.lab-main`（原有全部内容，一字未动）。
+- **数据只有一份** = `src/lib/site/lab-index.ts`（项目 → 段 → 台架，编号/标题/内核）：页面 `Bench` 的题头与图框顶线色、`ProjectRule` / `ScaleRule` 的字全都从它取，目录再从它画 ⇒ 目录与页面不可能各说各话。守门 `lab-index.test.ts`（3 项）另读页面源码，卡「页面里每个 `no=` ↔ 目录逐一对应」——少一台目录就少一行、多一台就出一条跳到空处的链接。
+- **动效四件（`components/lab/LabIndex.tsx` + `.lab-index*`）**：
+  - 滚动读位：视口 30% 高度处一条读线，最后一个顶边越过读线的台架 = 当前台架（sections 很高，读线比 IntersectionObserver 的可见比例稳，两台之间不抖）；rAF 节流一帧一量；`ResizeObserver(body)` 接住 WebGL 画布落定后的高度变化。
+  - 滑动标记：左侧 2px 竖标 `transform + height` 过渡滑到当前项，颜色随内核（2D 绿 / 3D 紫，`--idx-color`）；头部读数 `01 / 15` 与它同色。**不是逐项各自亮灭**——目录像一台仪表在读页面。
+  - 进度线：右缘双线（= 草图那两道竖线）里靠内那条按页面滚动进度从上往下长（`scaleY`，零布局）。
+  - 入场：行按渲染序 stagger 淡入（`--i` 定延时）；`prefers-reduced-motion` 下动画与过渡一律停（CDP 实测 `animationName: none` / `transitionDuration: 0s`）。
+- **点击跳转**：`scrollIntoView({behavior:'smooth'})` + `history.pushState` 写哈希——与既有 `#lab1-1` 锚点同一套，分享地址不变；reduced-motion 或带修饰键的点击交给浏览器原生。旧哈希（`#lab10-split`）冷加载仍由 `LegacyLabHash` / `planFromHash` 认，实测落到 `#lab2-5-split` 且台架顶边 16px。
+- **<1280 回落**：目录收成一条可换行的芯片带放在页顶（段头 / 标记 / 进度线不画，段 `display: contents` 让芯片在项目组里连续流动）。**门槛不是 1024 而是 1280**——台架自己的两栏（300px 左栏 + 图框）在 1024 下再让出一列目录，图框只剩 296px、3D 画布横向溢出 146px（CDP 实测）；芯片带下的版式与加目录前逐位相同。
+- **代价如实带着**：≥1280 图框比原来窄一截（1440 下 712 vs 原 1000、1600 下 832）——目录列是用户画出来要的，图框让位是这件事的固有成本。
+- **坑**：`npx prettier --write` 会把没用 prettier 排过的 `globals.css` / `page.tsx` 整篇重排（仓库没有 prettier 配置），本轮已撤回、diff 只剩实质改动；以后这两份文件不要过 prettier。`pkill -f 'next start'` 会连承载它的 shell 一起杀（命令行里含同样的字），杀服务用 `pgrep -f 'next-serv[e]r'`。
+- **实测**：536 测试绿（+3）· typecheck + 双构建过 · CDP 生产实测（无头 Chromium swiftshader）五档视口 1600 / 1440 / 1280 / 1024 / 900：读位随滚动换台、标记与进度线跟随、点击 2-9 落位 19px 且哈希写入、≥1280 无横向溢出且无标题换行、<1280 芯片带、reduced-motion 全停、canvas 恒 12、零 pageerror（唯一 404 是 favicon.ico）。手感常量（读线 30% / 标记 460ms / stagger 26ms / 目录列 240）待用户真机拍板。
+
+## 33. Lab 2-11 单元组合：第七段 Ⅶ Compositions（2026-09-17 立项 · 2026-09-20 纠偏为「同一种平台一圈起伏、首尾相接」+ 三张图形 + 方单元版本）
 
 - 首版（目录五形态换槽位）读错，已撤；现行 = 起伏单元（相位 + 高度段）与捏分单元（缝口朝向）两族（圆环 / 方环），八张图形预设。
 - 稿里没有这台，版式全部复用：`Bench` + `ScaleRule`（Ⅶ Compositions，编号顺延 2-11）· 台架 = `SkinSolidBench` 薄壳 `SkinComboBench`，走 Lab 2-8 那条阵列路径（cells + ringPlans + rig + scene + bridges + camScaleFor）。
 - **SkinSolidBench 三处加法式改动**：接缝织物网 `rimOf(c, toward)` 读朝向对方那条带的引擎（一圈同谱时任一条都一样 ⇒ Lab 2-8 逐位不变）· `angleOffset` 走 ref（换族时 setUnits 重建实例现读；值恒定的台架逐位不变）· 半径量程的 `def` 变了就复位滑块与实际半径（首次挂载不动；量程不变的台架永远走不进来）。
 - 控制条第一层：图形（① 坡降 / ② 升台 / ③ 合腔 / 台阶 / 续坡 / 三段坡 / 凹 / 拱）· 单元（圆环 / 方环）· 形态（四，只管圆环的起伏单元，方环或无起伏单元时变灰留位）· 距离（相切 / 分离）；第二层照旧（方环下半径滑块不出——量程为零）。差分清单 = 8 × 4 × 2 × 2 = 128（290 → 418）。
-- 主页 S2 第 16 卡（`lg:grid-cols-16`）、统计条 Demos 16 · Tests 555；/lab 标头 eighteen · 页脚 18 instruments；ProjectRule sub 2-1 – 2-11。
+- 主页 S2 第 16 卡（`lg:grid-cols-16`）、统计条 Demos 16 · Tests 558（合并 master 的 /lab 目录 +3 后实测）；/lab 标头 eighteen · 页脚 18 instruments；ProjectRule sub 2-1 – 2-11。
 - **全站台架冻结 bug 一并修**：`components/lab/useBenchLoop.ts` 与 `components/linkage/LinkageFigure.tsx` 的 IntersectionObserver 回调改读最后一条记录（一次回调带「出、入」两条时旧代码只看第一条 ⇒ 停死）。CDP 打桩复现 + 修后同批次记录不再冻结。
 - 线稿 `scripts/unit-combo/wave-draft.mjs`（委托模块画两族全部预设；SVG → 无头 Chromium 截图要把 window-size 加高 90）。
+- 合并 master（§32 左栏目录）时：`lab-index.ts` 登记第七段 Ⅶ Compositions + Lab 2-11（题头 / 段头 / 项目副题从目录取，`Bench` 不再收 title/accent）；目录守门「页面 no= ↔ 目录」自动带上这台。
 - 细节与待拍板 = 项目二_单元组合lab.md。

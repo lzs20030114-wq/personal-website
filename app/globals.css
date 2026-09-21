@@ -2671,3 +2671,360 @@ button.log-heat__cell {
     pointer-events: none;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   /lab 左栏目录（2026-09-17，用户手绘立项：左一列目录 · 概览 + 点击跳转 · 要高级要有动效）
+   两列：`.lab-rail`（吸顶目录）+ `.lab-main`（原有全部内容）。页宽放到 1560——不然
+   台架图框要让出目录那一列（1320 下图框会从 ~1050 缩到 ~600）。
+   ════════════════════════════════════════════════════════════════════════ */
+.shell--lab {
+  max-width: 1560px;
+}
+.lab-layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  column-gap: 48px;
+  align-items: start;
+}
+/* 目录列要撑满整页高度，吸顶才有轨道可走：aside stretch、吸顶的是里面的 nav */
+.lab-rail {
+  align-self: stretch;
+  padding-top: 64px; /* 与右栏 header 的 kicker 对齐 */
+}
+.lab-index {
+  --idx-color: var(--accent);
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-height: calc(100vh - 48px);
+  padding-right: 24px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.lab-index::-webkit-scrollbar {
+  display: none;
+}
+/* 右缘双线（草图里就是两道竖线）：外线 = 静态发丝线，内线 = 进度轨 + 随滚动长的彩线 */
+.lab-index__rule {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 6px;
+  border-right: var(--hair);
+  pointer-events: none;
+}
+.lab-index__rule::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+.lab-index__progress {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  background: var(--idx-color);
+  transform-origin: top;
+  transform: scaleY(0);
+  transition:
+    transform 160ms linear,
+    background-color 420ms var(--ease-site);
+}
+.lab-index__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: var(--hair);
+}
+.lab-index__kicker {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--n600);
+}
+.lab-index__count {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+  color: var(--n500);
+}
+.lab-index__count-cur {
+  color: var(--idx-color);
+  transition: color 420ms var(--ease-site);
+}
+.lab-index__count-sep {
+  margin: 0 3px;
+  opacity: 0.6;
+}
+.lab-index__list {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-left: 14px;
+}
+/* 滑动标记：2px 竖标跟着当前项走（transform + height 过渡），颜色随内核 */
+.lab-index__marker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2px;
+  background: var(--idx-color);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--idx-color) 55%, transparent);
+  transition:
+    transform 460ms var(--ease-site),
+    height 460ms var(--ease-site),
+    background-color 420ms var(--ease-site),
+    opacity 300ms;
+  will-change: transform;
+}
+.lab-index__group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lab-index__group + .lab-index__group {
+  margin-top: 6px;
+}
+.lab-index__project {
+  margin: 0 0 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.lab-index__project-sub {
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--n500);
+}
+.lab-index__segment {
+  display: flex;
+  flex-direction: column;
+}
+.lab-index__segment + .lab-index__segment {
+  margin-top: 6px;
+}
+.lab-index__scale {
+  margin: 0 0 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--n600);
+}
+.lab-index__scale-n {
+  display: inline-block;
+  min-width: 18px;
+  color: var(--accent-2);
+}
+.lab-index__item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 6px;
+  align-items: baseline;
+  column-gap: 8px;
+  padding: 5px 0;
+  font-size: 12px;
+  line-height: 1.25;
+  color: var(--n600);
+  text-decoration: none;
+  transition: color 240ms var(--ease-site);
+}
+.pg-dark .lab-index__item {
+  color: var(--n600);
+}
+.lab-index__no {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  color: var(--n500);
+  transition: color 240ms var(--ease-site);
+}
+.lab-index__title {
+  display: inline-block;
+  transition:
+    transform 320ms var(--ease-site),
+    color 240ms var(--ease-site);
+}
+.lab-index__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--dot);
+  opacity: 0.35;
+  align-self: center;
+  transition:
+    opacity 240ms var(--ease-site),
+    transform 320ms var(--ease-site);
+}
+.pg-dark .lab-index__item:hover {
+  color: var(--n800);
+}
+.lab-index__item:hover .lab-index__title {
+  transform: translateX(4px);
+}
+.lab-index__item:hover .lab-index__no {
+  color: var(--dot);
+}
+.lab-index__item:hover .lab-index__dot {
+  opacity: 0.8;
+}
+.pg-dark .lab-index__item[data-on] {
+  color: var(--ink);
+}
+.lab-index__item[data-on] .lab-index__title {
+  font-weight: 700;
+  transform: translateX(4px);
+}
+.lab-index__item[data-on] .lab-index__no {
+  color: var(--dot);
+}
+.lab-index__item[data-on] .lab-index__dot {
+  opacity: 1;
+  transform: scale(1.5);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--dot) 70%, transparent);
+}
+.lab-index__item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.lab-index__foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: var(--hair);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--n500);
+}
+.lab-index__foot-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+/* 入场：各行按序淡入（--i 由组件按渲染序给），reduced-motion 停 */
+@keyframes lab-idx-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+.lab-index__item,
+.lab-index__project,
+.lab-index__scale {
+  animation: lab-idx-in 520ms var(--ease-site) both;
+  animation-delay: calc(120ms + var(--i, 0) * 26ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lab-index__item,
+  .lab-index__project,
+  .lab-index__scale {
+    animation: none;
+  }
+  .lab-index__marker,
+  .lab-index__progress,
+  .lab-index__title,
+  .lab-index__dot {
+    transition: none;
+  }
+  .lab-index__foot-dot {
+    animation: none;
+  }
+}
+/* 1280–1439：目录列收窄到 200，给台架图框多留一点 */
+@media (min-width: 1280px) and (max-width: 1439px) {
+  .lab-layout {
+    grid-template-columns: 200px minmax(0, 1fr);
+    column-gap: 40px;
+  }
+  .lab-index {
+    padding-right: 20px;
+  }
+}
+/* <1280：目录收成一条可换行的芯片带放在页顶，标记 / 进度线 / 段头不画。
+   门槛不是 1024 而是 1280——台架自己的两栏（300px 左栏 + 图框）在 1024 下再让出一列目录，
+   图框只剩 296px、3D 画布横向溢出 146px（CDP 实测）；芯片带下的版式与加目录前逐位相同。 */
+@media (max-width: 1279px) {
+  .shell--lab {
+    max-width: 1320px;
+  }
+  .lab-layout {
+    display: block;
+  }
+  .lab-rail {
+    padding-top: 40px;
+  }
+  .lab-index {
+    position: static;
+    max-height: none;
+    padding-right: 0;
+    overflow: visible;
+    gap: 12px;
+  }
+  .lab-index__rule,
+  .lab-index__marker,
+  .lab-index__foot,
+  .lab-index__project-sub,
+  .lab-index__scale {
+    display: none;
+  }
+  .lab-index__list {
+    padding-left: 0;
+    gap: 10px;
+  }
+  .lab-index__group {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+  }
+  /* 段不再各占一行：芯片在整个项目组里连续流动换行 */
+  .lab-index__segment {
+    display: contents;
+  }
+  .lab-index__project {
+    flex-basis: 100%;
+    margin: 0;
+  }
+  .lab-index__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border: var(--hair);
+    font-size: 11px;
+  }
+  .lab-index__item[data-on] {
+    border-color: var(--dot);
+  }
+  .lab-index__item[data-on] .lab-index__title,
+  .lab-index__item:hover .lab-index__title {
+    transform: none;
+  }
+  .lab-index__dot {
+    display: none;
+  }
+}
