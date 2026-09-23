@@ -61,6 +61,18 @@ export interface SkinBuild {
 }
 
 /**
+ * 可跨线程传递的终态快照。只包含绘制终态与判定 `done` 所需的数据；求解仍完整走
+ * `advance()`，这里不提供绕过物理的第二条路径。
+ */
+export interface SkinTerminalState {
+  px: Float64Array;
+  py: Float64Array;
+  locked: [number, number, number][];
+  step: number;
+  r: number;
+}
+
+/**
  * 站方可选修正（用户 2026-08-18 看真机拍板「根部不想被提拉起来，没被键拉起的地方
  * 贴着最开始的轴」）。两项都默认关——默认路径 = v7 逐字，Python 对照不受影响：
  * - coreWall：芯不可穿透（x ≥ 0 的单侧墙，只作用于自由节点）。v7 是纯 2D 剖面、
@@ -511,6 +523,46 @@ export class SkinUnit {
   /** 芯的顶端 y（默认注册端 = 顶端时恒为 0；anchorEnd 时随收缩下降）——渲染用 */
   get coreTop(): number {
     return this.ys[0];
+  }
+
+  /** 导出已求得的终态，供 Lab 的后台求解线程缓存。 */
+  terminalState(): SkinTerminalState {
+    if (!this.done) throw new Error('SkinUnit terminalState requires a completed solve');
+    return {
+      px: Float64Array.from(this.px),
+      py: Float64Array.from(this.py),
+      locked: this.locked.map(([i, j, rb]) => [i, j, rb]),
+      step: this.step,
+      r: this.r,
+    };
+  }
+
+  /**
+   * 把后台线程算出的终态装回同一规格的实例。位置、芯长与键集合逐项恢复；历史速度
+   * 清零，因为终态不会再推进，取消「跳过」后也会先按既有重播逻辑新建实例。
+   */
+  applyTerminalState(state: SkinTerminalState): void {
+    if (state.px.length !== this.n || state.py.length !== this.n)
+      throw new Error(`SkinUnit terminal state length mismatch: ${state.px.length}/${state.py.length} != ${this.n}`);
+    this.px.set(state.px);
+    this.py.set(state.py);
+    this.ppx.set(state.px);
+    this.ppy.set(state.py);
+    this.locked = state.locked.map(([i, j, rb]) => [i, j, rb]);
+    this.lockedSet = new Set(this.locked.map(([i, j]) => i * 1024 + j));
+    this.chainLocked = this.chains.map((chain) => {
+      const out: number[] = [];
+      for (let t = 0; t < chain.length; t++)
+        if (this.lockedSet.has(chain[t][0] * 1024 + chain[t][1])) out.push(t);
+      return out;
+    });
+    this.step = state.step;
+    this.r = state.r;
+    this.coreLen = coreY(this.spec, state.r, this.ys);
+    if (this.anchorEnd) {
+      const d = this.anchorRef - this.ys[this.n - 1];
+      for (let i = 0; i < this.n; i++) this.ys[i] += d;
+    }
   }
 
   /** 推进一个协议步（step 索引即 Python 侧 for step in range(STEPS) 的 step） */

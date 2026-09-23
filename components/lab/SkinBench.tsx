@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { SKIN_UNITS, skinSiteOpts } from '../../src/lib/space/skin-data';
 import { SKIN, createSkinUnit, renderSmooth, type SkinUnit } from '../../src/lib/space/skin-unit';
 import { useBenchLoop } from './useBenchLoop';
+import { requestSkinTerminal } from './skinTerminal';
 
 /**
  * Lab.06 · 项目二第一台：收缩张紧外皮单元（skin_sim_v7_final.py 的目录图，活体版）。
@@ -26,10 +27,8 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const RATE = 110; // 协议步/秒（收缩段 900 步 ≈ 8.2s）——展示节奏，不是物理量
 const MAX_STEPS_PER_FRAME = 3;
 const REPLAY_HOLD_S = 3.2; // 终态静置再重播
-/** 「跳过成形」每帧推进预算（ms）——快进不是传送：引擎路径依赖，终态只能真跑出来。见 SkinSolidBench 同名常量 */
-const SKIP_BUDGET_MS = 28;
-/** 快进时画面的最小重绘间隔（ms）——画一帧比算几十步还贵，见 SkinSolidBench 同名常量 */
-const SKIP_DRAW_MS = 200;
+/** Worker 不可用时的兜底预算；不画中间态，只在算完后提交一帧终态。 */
+const SKIP_FALLBACK_BUDGET_MS = 4;
 const GHOST_STEPS = [500, 1000]; // 目录图的两帧残影（len//3、2len//3 的 step 等价）
 // 每单元的世界窗口与比例（照 v7 目录图 xlim/ylim）
 const S = 100;
@@ -76,7 +75,7 @@ const COPY = {
     sub: '软皮 · 键生成刚度 · 四键谱同一收缩协议',
     foot: '芯收缩 → 皮富余 → 键扣合 · 键锁定永久（滞回）',
     bonds: (n: number) => `键 ${n}`,
-    phase: { run: '收缩中', tension: '张紧 · 排泡', done: '锁定 · 即将重播', skip: '快进中', held: '锁定 · 终态' },
+    phase: { run: '收缩中', tension: '张紧 · 排泡', done: '锁定 · 即将重播', skip: '终态计算中', held: '锁定 · 终态' },
   },
   en: {
     aria:
@@ -85,7 +84,7 @@ const COPY = {
     sub: 'Soft skin · stiffness made by bonds · four maps, one protocol',
     foot: 'Core contracts → skin goes slack → bonds catch · a locked bond never releases (hysteresis)',
     bonds: (n: number) => `${n} locked`,
-    phase: { run: 'contracting', tension: 'tensioning', done: 'locked · replaying', skip: 'fast-forwarding', held: 'locked' },
+    phase: { run: 'contracting', tension: 'tensioning', done: 'locked · replaying', skip: 'solving final state', held: 'locked' },
   },
 } as const;
 
@@ -266,7 +265,9 @@ export function SkinBench({
 
     let acc = 0;
     let holdT = 0;
-    let lastSkipDraw = 0; // 快进时的重绘节流（见 SKIP_DRAW_MS）
+    let terminalPending = false;
+    let terminalFallback = false;
+    let terminalToken = 0;
     const replay = (): void => {
       units.forEach((v, u) => {
         v.sim = createSkinUnit(SKIN_UNITS[u].spec, skinSiteOpts(SKIN_UNITS[u]));
@@ -282,28 +283,58 @@ export function SkinBench({
     };
 
     let lastHud = '';
+    const terminalInputs = SKIN_UNITS.map((def) => ({ spec: def.spec, opts: skinSiteOpts(def) }));
+    const commitTerminal = (states: Awaited<ReturnType<typeof requestSkinTerminal>>['states']): void => {
+      units.forEach((v, u) => {
+        v.sim.applyTerminalState(states[u]);
+        // 终态只提交一帧；清掉旧 EMA，避免画面继续从勾选前的位置追过去
+        v.emaX = null;
+        v.emaY = null;
+      });
+      acc = 0;
+      holdT = 0;
+      units.forEach((v) => drawUnit(v));
+      const locked = units.reduce((sum, v) => sum + v.sim.locked.length, 0);
+      lastHud = `${SKIN.STEPS}|${locked}|held`;
+      setHud({
+        r: units[units.length - 1].sim.r,
+        step: SKIN.STEPS,
+        locked,
+        phase: 'held',
+      });
+    };
+    const requestTerminal = (): void => {
+      if (terminalPending || terminalFallback) return;
+      terminalPending = true;
+      const token = ++terminalToken;
+      setHud((current) => ({ ...current, phase: 'skip' }));
+      requestSkinTerminal(terminalInputs).then(
+        ({ states }) => {
+          terminalPending = false;
+          if (token !== terminalToken || !skipRef.current) return;
+          commitTerminal(states);
+        },
+        () => {
+          terminalPending = false;
+          if (token === terminalToken) terminalFallback = true;
+        },
+      );
+    };
     const step = (dt: number): void => {
       const lead = units[0].sim;
-      let drewNow = false; // 本帧画没画（快进节流下 HUD 跟着画面走）
       if (skipRef.current && !lead.done) {
-        // 跳过成形：按时间预算尽快推到终态（与「运转」无关——勾的就是「我只要结果」）。
-        // 定步不变 ⇒ 轨迹与正常播放逐位相同，只是中间帧不画
-        const t0 = performance.now();
-        while (!lead.done && performance.now() - t0 < SKIP_BUDGET_MS) {
-          for (const v of units) v.sim.advance();
-          // 残影帧要停下画一笔：一帧跨几百步会把 500/1000 步那两笔画成「跨过之后」的形。
-          // 四个单元同步推进，读 lead 的 step 即可
-          if (GHOST_STEPS.includes(lead.step)) units.forEach((v) => drawUnit(v, Infinity));
+        requestTerminal();
+        // Worker 失败时才在主线程短片兜底；仍不绘制中间态，算完只提交一次。
+        if (terminalFallback) {
+          const t0 = performance.now();
+          while (!lead.done && performance.now() - t0 < SKIP_FALLBACK_BUDGET_MS)
+            for (const v of units) v.sim.advance();
+          if (lead.done) {
+            const states = units.map((v) => v.sim.terminalState());
+            commitTerminal(states);
+          }
         }
-        acc = 0;
-        holdT = 0;
-        // 节流重绘（终态那一帧照画）。Infinity ⇒ 平滑直接对齐：一帧几百步还按系数追会拖出追不上的尾巴
-        const nowMs = performance.now();
-        if (lead.done || nowMs - lastSkipDraw >= SKIP_DRAW_MS) {
-          units.forEach((v) => drawUnit(v, Infinity));
-          lastSkipDraw = nowMs;
-          drewNow = true;
-        }
+        return;
       } else if (runningRef.current && !lead.done) {
         acc += dt * RATE * speedRef.current;
         let n = Math.floor(acc);
@@ -319,11 +350,6 @@ export function SkinBench({
         holdT += dt;
         if (holdT >= REPLAY_HOLD_S) replay();
       }
-      // 快进时 HUD 跟着画面一起节流：step 每帧跳几十 ⇒ key 必变 ⇒ 每帧一次 setState +
-      // 整台重渲染，比一帧物理还贵，读数又快得没人看得清（终态那一次照常更新）
-      // 判据是「本帧画没画」而不是再比一次 lastSkipDraw——后者刚被绘制设成 now，
-      // 紧接着判 now - lastSkipDraw < 200 恒成立 ⇒ HUD 会永远停在勾选那一刻的读数（实测即此）
-      if (skipRef.current && !lead.done && !drewNow) return;
       const locked = units.reduce((s, v) => s + v.sim.locked.length, 0);
       const phase: keyof (typeof COPY)['zh']['phase'] = lead.done
         ? skipRef.current
@@ -346,6 +372,7 @@ export function SkinBench({
     units.forEach((v) => drawUnit(v));
     stateRef.current = { step, replay, redraw: () => units.forEach((v) => drawUnit(v)) };
     return () => {
+      terminalToken++;
       stateRef.current = null;
     };
   }, []);
@@ -389,7 +416,7 @@ export function SkinBench({
               />
               运转
             </label>
-            <label title="勾上直接看收缩完的样子（成形过程只是不画，仍照常算——引擎路径依赖，终态没有解析解）">
+            <label title="勾上后在后台求终态；画面不播放快进过程，算完只显示一次结果">
               <input
                 type="checkbox"
                 checked={skip}

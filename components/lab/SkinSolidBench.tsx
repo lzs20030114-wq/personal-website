@@ -28,6 +28,7 @@ import {
   type SkinUnitOpts,
 } from '../../src/lib/space/skin-unit';
 import { useBenchLoop } from './useBenchLoop';
+import { requestSkinTerminal } from './skinTerminal';
 
 /**
  * Lab.07 · 项目二第二台：皮肤单元立体带（用户 2026-08-19 立项「也是这四个，
@@ -48,21 +49,8 @@ import { useBenchLoop } from './useBenchLoop';
 const RATE = 110; // 协议步/秒（与 Lab.06 同）
 const MAX_STEPS_PER_FRAME = 3;
 const REPLAY_HOLD_S = 3.2;
-/**
- * 「跳过成形」每帧的推进预算（ms）。**终态只能真跑出来**——引擎是路径依赖的
- * （键锁定不可逆、Verlet 隐式速度），没有解析解，所以这个开关是快进不是传送：
- * 按时间预算一帧尽量多推几步，而不是按 rate 节流。预算取 28ms（约两帧）——
- * 快进期间掉帧无所谓，但不能把主线程整段占死（页面还要响应勾选/滚动）。
- * 省下多少随编制差很多：轻的（2-1 四形态、2-5 同形环）0.7–3s 到位、省十来秒；
- * 重的（2-6 捏分、2-11 方环）本来就在 CPU 极限上跑，快进省不下几秒。
- */
-const SKIP_BUDGET_MS = 28;
-/**
- * 快进时画面的最小重绘间隔（ms）。实测（/lab 生产构建、软件 GL）：不节流时快进只有
- * 80 步/s，而同一编制纯物理能跑 3000 步/s——**画一帧比算几十步还贵**，每帧都画
- * 等于把「跳过」的预算全喂给了渲染。节流到 5 次/秒：进度照样看得见，其余时间全给物理。
- */
-const SKIP_DRAW_MS = 200;
+/** Worker 不可用时的兜底预算；中间态不画，算完只提交一次终态。 */
+const SKIP_FALLBACK_BUDGET_MS = 4;
 const VIEW_ANIM_S = 0.35;
 /** 四单元沿 X 排布的间距与画面枢轴（世界单位 = 2D px 尺度） */
 const UNIT_GAP_X = 175;
@@ -648,6 +636,10 @@ export function SkinSolidBench({
     let planList: readonly (readonly number[])[] = ringPlansRef.current ?? [plan];
     let sims: SolidSim[] = [];
     let insts: SolidInst[] = [];
+    // 换键谱会让在途终态失效；代号随 seed 增长，旧 Worker 结果回来时直接丢弃。
+    let terminalGeneration = 0;
+    let terminalPendingGeneration: number | null = null;
+    let terminalFallbackGeneration: number | null = null;
     const makeSims = (): SolidSim[] => defs.map((def) => {
       const sim = createSkinUnit(def.spec, def.opts);
       const [smoothW, smoothP] = def.smooth;
@@ -758,6 +750,9 @@ export function SkinSolidBench({
     };
     /** 建/重建整场（换键谱走这条，不重挂 WebGL 上下文） */
     const seed = (): void => {
+      terminalGeneration++;
+      terminalPendingGeneration = null;
+      terminalFallbackGeneration = null;
       sims = makeSims();
       insts = makeInsts();
       footAlign();
@@ -1043,7 +1038,6 @@ export function SkinSolidBench({
 
     let acc = 0;
     let holdT = 0;
-    let lastSkipDraw = 0; // 快进时的重绘节流（见 SKIP_DRAW_MS）
     let lastHud = '';
     /** 全场时钟（协议步，含起步延迟前的等待）；错相下引擎按各自的 delay 晚几步再推 */
     let tick = 0;
@@ -1056,6 +1050,66 @@ export function SkinSolidBench({
       acc = 0;
       holdT = 0;
       tick = 0;
+    };
+
+    const terminalInputs = () =>
+      defs.map((def) => ({ spec: def.spec, opts: def.opts, delay: def.delay ?? 0 }));
+
+    const lockedOnStage = (): number => {
+      const planCells = (pi: number): number =>
+        hasCells() ? cellList.reduce((a, c) => a + (c.plan === pi ? 1 : 0), 0) : 1;
+      return insts.reduce(
+        (total, inst) => total + sims[inst.simIdx].sim.locked.length * planCells(inst.plan),
+        0,
+      );
+    };
+
+    const commitTerminal = (
+      result: Awaited<ReturnType<typeof requestSkinTerminal>>,
+      generation: number,
+    ): void => {
+      if (generation !== terminalGeneration || !skipRef.current) return;
+      sims.forEach((v, u) => {
+        v.sim.applyTerminalState(result.states[u]);
+        // 旧 EMA 属于勾选前的画面；清空后 render 会从终态建一份，不发生追帧动画。
+        v.emaX = null;
+        v.emaY = null;
+      });
+      tick = result.tick;
+      acc = 0;
+      holdT = 0;
+      render();
+      const locked = lockedOnStage();
+      lastHud = `${SKIN.STEPS}|${locked}|锁定 · 终态`;
+      setHud((h) => ({
+        ...h,
+        r: sims[sims.length - 1].sim.r,
+        step: SKIN.STEPS,
+        locked,
+        phase: '锁定 · 终态',
+      }));
+    };
+
+    const requestTerminal = (): void => {
+      const generation = terminalGeneration;
+      if (
+        terminalPendingGeneration === generation ||
+        terminalFallbackGeneration === generation
+      )
+        return;
+      terminalPendingGeneration = generation;
+      setHud((h) => ({ ...h, phase: '终态计算中' }));
+      requestSkinTerminal(terminalInputs()).then(
+        (result) => {
+          if (terminalPendingGeneration === generation) terminalPendingGeneration = null;
+          commitTerminal(result, generation);
+        },
+        () => {
+          if (generation !== terminalGeneration) return;
+          terminalPendingGeneration = null;
+          terminalFallbackGeneration = generation;
+        },
+      );
     };
 
     const step = (dt: number): void => {
@@ -1080,16 +1134,27 @@ export function SkinSolidBench({
       const allDone = sims.every((v) => v.sim.done);
       let n = 0;
       if (skipRef.current && !allDone) {
-        // 跳过成形：按时间预算尽快推到终态。与「运转」无关——勾的就是「我只要结果」，
-        // 停着的台架也该给出结果。定步不变 ⇒ 轨迹与正常播放逐位相同，只是没画中间帧
-        const t0 = performance.now();
-        while (!sims.every((v) => v.sim.done) && performance.now() - t0 < SKIP_BUDGET_MS) {
-          tick++;
-          for (const v of sims) if (tick > v.delay) v.sim.advance();
-          n++;
+        requestTerminal();
+        // 极旧浏览器或 Worker 装载失败时才走主线程兜底；预算压到 4ms，且绝不画中间态。
+        if (terminalFallbackGeneration === terminalGeneration) {
+          const t0 = performance.now();
+          while (
+            !sims.every((v) => v.sim.done) &&
+            performance.now() - t0 < SKIP_FALLBACK_BUDGET_MS
+          ) {
+            tick++;
+            for (const v of sims) if (tick > v.delay) v.sim.advance();
+          }
+          if (sims.every((v) => v.sim.done))
+            commitTerminal(
+              { tick, states: sims.map((v) => v.sim.terminalState()) },
+              terminalGeneration,
+            );
+        } else {
+          // 物理在 Worker 里跑；装置保持勾选前那一帧，完成后再直切终态。
+          // 这里不逐帧 render：重台架即使不推进物理，整场 WebGL 重画也足以拖慢手机。
         }
-        acc = 0;
-        holdT = 0;
+        return;
       } else if (runningRef.current && !allDone) {
         acc += dt * rateRef.current * speedRef.current;
         n = Math.floor(acc);
@@ -1109,9 +1174,7 @@ export function SkinSolidBench({
       }
       // 帧间 EMA（Lab.06 同款纪律：物理不动，只平滑画面时间轴）
       if (n > 0) {
-        // 快进时平滑直接对齐：帧间 EMA 是给「一帧几步」的展示节奏用的，一帧几百步
-        // 还按系数追会拖出一条追不上的尾巴（画面比物理慢半拍，终态也就歪着）
-        const a = skipRef.current ? 1 : 1 - Math.pow(0.45, n / 20);
+        const a = 1 - Math.pow(0.45, n / 20);
         for (const v of sims) {
           if (!v.emaX || !v.emaY) continue;
           for (let i = 0; i < v.sim.n; i++) {
@@ -1120,35 +1183,20 @@ export function SkinSolidBench({
           }
         }
       }
-      // 快进时按 SKIP_DRAW_MS 节流「画面 + HUD」（终态那一帧与正常播放一律照画）。
-      // HUD 一起节流是有实测依据的：快进时 step 每帧跳几十 ⇒ key 必变 ⇒ 每帧一次
-      // setState + 整台重渲染，那比一帧物理还贵，读数又快得没人看得清
-      const nowMs = performance.now();
-      if (!skipRef.current || allDone || nowMs - lastSkipDraw >= SKIP_DRAW_MS) {
-        render();
-        lastSkipDraw = nowMs;
-        // 报的是**场上**的锁定键数（实例数 × 各自引擎），不是引擎数；
-        // 环阵列下一条带摆在若干格里，每一份都要数进去
-        const planCells = (pi: number): number =>
-          hasCells() ? cellList.reduce((a, c) => a + (c.plan === pi ? 1 : 0), 0) : 1;
-        const locked = insts.reduce(
-          (acc, i) => acc + sims[i.simIdx].sim.locked.length * planCells(i.plan),
-          0,
-        );
-        const phase = allDone
-          ? skipRef.current
-            ? '锁定 · 终态'
-            : '锁定 · 即将重播'
-          : skipRef.current
-            ? '快进中'
-            : lead.step < 900
-              ? '收缩中'
-              : '张紧 · 排泡';
-        const key = `${lead.step}|${locked}|${phase}`;
-        if (key !== lastHud) {
-          lastHud = key;
-          setHud((h) => ({ ...h, r: sims[sims.length - 1].sim.r, step: lead.step, locked, phase }));
-        }
+      render();
+      // 报的是**场上**的锁定键数（实例数 × 各自引擎），不是引擎数。
+      const locked = lockedOnStage();
+      const phase = allDone
+        ? skipRef.current
+          ? '锁定 · 终态'
+          : '锁定 · 即将重播'
+        : lead.step < 900
+          ? '收缩中'
+          : '张紧 · 排泡';
+      const key = `${lead.step}|${locked}|${phase}`;
+      if (key !== lastHud) {
+        lastHud = key;
+        setHud((h) => ({ ...h, r: sims[sims.length - 1].sim.r, step: lead.step, locked, phase }));
       }
     };
 
@@ -1252,6 +1300,7 @@ export function SkinSolidBench({
 
     render();
     return () => {
+      terminalGeneration++;
       apiRef.current = null;
       canvas.removeEventListener('contextmenu', onCtx);
       canvas.removeEventListener('pointerdown', onDown);
@@ -1356,7 +1405,7 @@ export function SkinSolidBench({
           />
           运转
         </label>
-        <label title="勾上直接看收缩完的样子（成形过程只是不画，仍照常算——引擎路径依赖，终态没有解析解）">
+        <label title="勾上后在后台求终态；画面不播放快进过程，算完只显示一次结果">
           <input
             type="checkbox"
             checked={skip}
