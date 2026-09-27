@@ -62,12 +62,13 @@ export const SERIES_LAYOUTS = [
   { key: 'spread', label: '分列' },
 ] as const;
 
-/** Lab.10 圆筒环：Lab.09 三种编制 + Lab.13 捏分环（2026-09-03 合并） */
+/** Lab 2-5 圆筒环：原四编制 + 全圈均匀双层台（2026-09-27） */
 export const RING_PLANS = [
   { key: 'wave', label: '一圈起伏' },
   { key: 'single', label: '整环同形' },
   { key: 'gradient', label: '一圈渐变' },
   { key: 'split', label: '捏分' },
+  { key: 'double', label: '双层台' },
 ] as const;
 export type RingPlanKey = (typeof RING_PLANS)[number]['key'];
 

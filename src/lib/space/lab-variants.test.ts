@@ -18,7 +18,7 @@ const FROZEN = [
   '2-4:gradient:spread',
   '2-4:split:merged',
   '2-4:split:spread',
-  // Ⅲ 环 · 一圈（Lab 2-4 三编制 × 形态 + Lab 2-8 捏分 ⇒ 4 + 4 + 1 + 1）
+  // Ⅲ 环 · 一圈（Lab 2-5：起伏 4 + 同形 4 + 渐变 + 捏分 + 双层台）
   '2-5:wave.pocket',
   '2-5:wave.bulb',
   '2-5:wave.ledge',
@@ -29,6 +29,7 @@ const FROZEN = [
   '2-5:single.stepped',
   '2-5:gradient',
   '2-5:split',
+  '2-5:double',
   // Lab 2-9 方形环 ⇒ (5 + 5 + 1) × 排布 2
   '2-6:flat.m0:single',
   '2-6:flat.m0:grid',
@@ -442,15 +443,15 @@ describe('lab-variants · 项目二台架差分清单', () => {
     expect(new Set(LAB_VARIANTS.map((b) => b.key)).size).toBe(LAB_VARIANTS.length);
   });
 
-  it('418 种离散组合逐条与冻结清单相同（少一档即红）', () => {
+  it('419 种离散组合逐条与冻结清单相同（少一档即红）', () => {
     const combos = allCombos();
-    expect(combos.length).toBe(418);
+    expect(combos.length).toBe(419);
     expect(combos).toEqual(FROZEN);
   });
 
-  it('每台组合数 = 收纳前各台组合之和（1 + 1 + 3 + (2+2) + (9+1) + 22 + 5）+ Lab 2-8 的 160 + Lab 2-9 的 72 + Lab 2-10 的 12 + Lab 2-11 的 128', () => {
+  it('各台组合数保留全部旧档，并增加 Lab 2-5 双层台', () => {
     const per = Object.fromEntries(LAB_VARIANTS.map((b) => [b.no, benchCombos(b).length]));
-    expect(per).toEqual({ '2-1': 1, '2-2': 1, '2-3': 3, '2-4': 4, '2-5': 10, '2-6': 22, '2-7': 5, '2-8': 160, '2-9': 72, '2-10': 12, '2-11': 128 });
+    expect(per).toEqual({ '2-1': 1, '2-2': 1, '2-3': 3, '2-4': 4, '2-5': 11, '2-6': 22, '2-7': 5, '2-8': 160, '2-9': 72, '2-10': 12, '2-11': 128 });
   });
 
   it('组合 id 唯一（同名档不会在清单里被折叠掉）', () => {

@@ -30,7 +30,7 @@ import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
  * 然后把表皮向外偏移一点然后复制 20 个围成一圈，形成一个圆筒，
  * 这个圆筒收缩就可以形成一个环形平台」）。
  *
- * 四种编制，控制条第一层上切（2026-09-03 收纳：原 Lab.13 捏分环并入为第四种——
+ * 五种编制，控制条第一层上切（2026-09-03 收纳：原 Lab.13 捏分环并入为第四种——
  * 两台参数几乎同一份：同半径量程、圆环板天花、固定立杆、同带深与厚度、同轴测机位）：
  * - **一圈起伏**（默认，用户 2026-08-23「一圈的形状 从低到高再到低一圈下来」）=
  *   同一种键谱、每个位置一个不同的 lead（形状在带上的高度，2px/节）⇒ 环沿圆周升上去
@@ -45,6 +45,8 @@ import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
  *   一次循环 · 变高（台高钉死 16、缝从 0 张到 100、总高等步 132 → 32）· 居中（缝心一圈恒定）·
  *   一圈等挑出（十条引擎全按面类深度标定 ⇒ 俯视是圆）。构造逐字复用 skin-square-split，
  *   编制是 20 位镜像（skin-split-ring.ts：10 对配 20 位有精确解）。
+ * - **双层台**（2026-09-27）= 捏分第 0 档（t=1）沿整圈重复，取消向单层的渐变；
+ *   上下两片台全圈等高，层间缝 100。解一条、摆二十处，复用捏分的构造与取景。
  *
  * 台架整台复用 SkinSolidBench（引擎与摆放分开 + 环列 + 圆环板天花 + 半径滑块 +
  * 换键谱就地重建），零第二份实现。多引擎的编制（渐变 11 条、起伏 11 条、捏分 10 条）
@@ -67,13 +69,19 @@ const GRAD_UNITS: readonly SolidUnitDef[] = buildRingGradient().map(({ spec, opt
   smooth,
 }));
 const WAVE_ORDER = buildWaveOrder();
-let splitCache: { units: readonly SolidUnitDef[]; order: readonly number[] } | null = null;
+let splitCache: {
+  units: readonly SolidUnitDef[];
+  doubleUnits: readonly SolidUnitDef[];
+  order: readonly number[];
+} | null = null;
 const splitRing = () =>
   (splitCache ??= (() => {
-    const levels = buildSplitRingUnits();
+    const units = buildSplitRingUnits().map(({ spec, opts, smooth, seam }) => ({ spec, opts, smooth, seam }));
     return {
-      units: levels.map(({ spec, opts, smooth, seam }) => ({ spec, opts, smooth, seam })),
-      order: buildSplitRingOrder(levels.length),
+      units,
+      // j0 已是全开双平台；只传这一条给台架，二十处共享同一份求解与终态资源。
+      doubleUnits: [units[0]],
+      order: buildSplitRingOrder(units.length),
     };
   })());
 
@@ -107,8 +115,10 @@ export function SkinRingBench({
   const grad = plan === 'gradient';
   const wave = plan === 'wave';
   const split = plan === 'split';
-  /** 形态按钮只在同形／起伏下有意义；渐变与捏分由各自的级表决定，留位变灰不隐藏 */
-  const formLocked = grad || split;
+  const double = plan === 'double';
+  const splitFamily = split || double;
+  /** 形态按钮只在同形／起伏下有意义；其余编制固定键谱，留位变灰不隐藏 */
+  const formLocked = grad || splitFamily;
   const singleUnits = useMemo<readonly SolidUnitDef[]>(
     () => [{ spec: def.spec, opts: def.opts, smooth: def.smooth }],
     [def],
@@ -118,7 +128,7 @@ export function SkinRingBench({
     () => buildWaveUnits(def).map(({ spec, opts, smooth }) => ({ spec, opts, smooth })),
     [def],
   );
-  const units = split ? splitRing().units : grad ? GRAD_UNITS : wave ? waveUnits : singleUnits;
+  const units = double ? splitRing().doubleUnits : split ? splitRing().units : grad ? GRAD_UNITS : wave ? waveUnits : singleUnits;
   const order = split ? splitRing().order : grad ? GRAD_ORDER : wave ? WAVE_ORDER : RING_ORDER;
 
   return (
@@ -128,16 +138,16 @@ export function SkinRingBench({
       controls={controls}
       units={units}
       order={order}
-      unitsKey={split ? 'split' : grad ? 'gradient' : `${plan}:${def.key}`}
-      rate={plan === 'single' ? 110 : 80}
+      unitsKey={formLocked ? plan : `${plan}:${def.key}`}
+      rate={plan === 'single' || double ? 110 : 80}
       ring
       radius={{ min: RING.RADIUS_MIN, max: RING.RADIUS_MAX, def: RING.RADIUS_DEF }}
       depth={RING.DEPTH}
       thick={RING.THICK}
       skin={{ def: 0.35 }}
-      skinValue={split ? 0.15 : 0.35}
-      pivotY={split ? PIVOT_Y_SPLIT : PIVOT_Y}
-      camScaleFor={() => (split ? CAM_SCALE_SPLIT : CAM_SCALE)}
+      skinValue={splitFamily ? 0.15 : 0.35}
+      pivotY={splitFamily ? PIVOT_Y_SPLIT : PIVOT_Y}
+      camScaleFor={() => (splitFamily ? CAM_SCALE_SPLIT : CAM_SCALE)}
       ceiling="ring"
       // 灰立杆是房间的固定结构，不跟着外皮缩（用户 2026-08-23：起点始终和天花板
       // 在一起、尾端固定在现在固定的位置）——Lab.06–08 仍是「轨即芯」的旧读法
@@ -147,7 +157,7 @@ export function SkinRingBench({
       axon={{ pitch: -0.45, yaw: -0.62 }}
       extraControls={
         <>
-          <div className="grp">
+          <div className="grp grp--ring-plans">
             <span className="k">编制</span>
             <span className="seg">
               {RING_PLANS.map((p) => (
@@ -176,7 +186,9 @@ export function SkinRingBench({
                       ? '渐变编制下由 11 级键谱决定'
                       : split
                         ? '捏分编制下由 10 级键谱决定'
-                        : `${f.zh} · ${f.en}`
+                        : double
+                          ? '双层台沿整圈复用捏分的全开双平台'
+                          : `${f.zh} · ${f.en}`
                   }
                   onClick={() => setForm(i)}
                 >
@@ -189,18 +201,22 @@ export function SkinRingBench({
       }
       hud={{
         kicker: 'Lab 2-5 / Project II',
-        title: split ? '圆筒环 · 捏分 · 一圈里裂开再合上' : '圆筒环 · 收缩成环形平台',
-        sub: split
-          ? `${SPLIT_RING_COUNT} 条窄带 · 一圈一个来回：一侧两片台隔 ${SPLIT_RING_W_END}px → 对面合成一块 · 台高钉死 ${SPLIT_RING_LOBE}px · 挑出 ${SPLIT_RING_TARGET}`
-          : grad
-            ? `${RING.COUNT} 条窄带 · 蘑菇挑台 → 阶梯方箱 → 蘑菇挑台 · ${GRAD_LEVELS} 级键谱`
-            : wave
-              ? `${RING.COUNT} 条窄带 · ${def.zh} · 高度沿圆周起伏 · ${RING_WAVE.LEVELS} 级`
-              : `${RING.COUNT} 条窄带 · 同一键谱：${def.zh} · 同一收缩协议`,
-        hint: split
-          ? `缝心一圈恒定、两台各升降一半 · 10 条引擎摆二十处 · 侧看两台分开 · 编制 / 半径可调 · 拖拽旋转`
-          : '编制 / 形态 / 半径可调 · 顶视看环 · 拖拽旋转',
-        aria: '圆筒环：二十条窄织物带围成一圈，收缩后各自扣出挑台、连成绕筒一圈的环形平台；可切一圈起伏、整环同形、一圈渐变或捏分，形态与半径可调，可拖拽旋转',
+        title: double ? '圆筒环 · 双层台 · 整圈均匀双层' : split ? '圆筒环 · 捏分 · 一圈里裂开再合上' : '圆筒环 · 收缩成环形平台',
+        sub: double
+          ? `${SPLIT_RING_COUNT} 条窄带 · 上下两片环形台 · 层间缝 ${SPLIT_RING_W_END}px · 每片台高 ${SPLIT_RING_LOBE}px · 全圈等高、等挑出`
+          : split
+            ? `${SPLIT_RING_COUNT} 条窄带 · 一圈一个来回：一侧两片台隔 ${SPLIT_RING_W_END}px → 对面合成一块 · 台高钉死 ${SPLIT_RING_LOBE}px · 挑出 ${SPLIT_RING_TARGET}`
+            : grad
+              ? `${RING.COUNT} 条窄带 · 蘑菇挑台 → 阶梯方箱 → 蘑菇挑台 · ${GRAD_LEVELS} 级键谱`
+              : wave
+                ? `${RING.COUNT} 条窄带 · ${def.zh} · 高度沿圆周起伏 · ${RING_WAVE.LEVELS} 级`
+                : `${RING.COUNT} 条窄带 · 同一键谱：${def.zh} · 同一收缩协议`,
+        hint: double
+          ? '整圈保持双层 · 编制 / 半径可调 · 侧视看上下两台 · 拖拽旋转'
+          : split
+            ? `缝心一圈恒定、两台各升降一半 · 10 条引擎摆二十处 · 侧看两台分开 · 编制 / 半径可调 · 拖拽旋转`
+            : '编制 / 形态 / 半径可调 · 顶视看环 · 拖拽旋转',
+        aria: '圆筒环：二十条窄织物带围成一圈，收缩后各自扣出挑台、连成绕筒一圈的环形平台；可切一圈起伏、整环同形、一圈渐变、捏分或双层台，形态与半径可调，可拖拽旋转',
       }}
     />
   );

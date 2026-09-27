@@ -17,6 +17,7 @@ export function skinTerminalCatalog(): SkinTerminalInput[] {
   for (const mid of DUAL_MID_OPTIONS) inputs.push(...buildDualDisplay({ mid }));
   inputs.push(...buildTransitionArray(), ...buildSplitLevels());
   const rings = buildRingUnits();
+  // Lab 2-5 双层台只取捏分 j0，下面的整组已覆盖；摆放不进入终态键。
   inputs.push(...rings, ...rings.flatMap(buildWaveUnits), ...buildRingGradient(), ...buildSplitRingUnits());
   for (let s = 0; s < SQUARE_MORPH.STEPS; s++) {
     const tiers = squareMorphTiers(s);

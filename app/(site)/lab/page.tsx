@@ -448,16 +448,17 @@ export default function LabPage() {
 
         <Bench
           no="2-5"
-          lede="Twenty narrow bands stood in a circle: hanging slack they close into a tube, and as they contract each one folds out its ledge — together, a platform ringing the cylinder. Four plans. By default the ledge climbs and falls once around, a stair wrapped on the tube; hold it level on one form; let the form drift bulb → box → bulb; or pinch it apart — on one side two shelves 100 px apart, on the opposite side one slab, ten steps of gap between, the same construction as the square ring's pinch with every band at one depth so the plan stays a circle. The seam centre stays level all round, so the platform reads as one band that opens and shuts, not as twenty different shelves. Set the radius yourself."
+          lede="Twenty narrow bands stood in a circle: hanging slack they close into a tube, and as they contract each one folds out its ledge — together, a platform ringing the cylinder. Five plans. By default the ledge climbs and falls once around, a stair wrapped on the tube; hold it level on one form; let the form drift bulb → box → bulb; or pinch it apart — on one side two shelves 100 px apart, on the opposite side one slab, ten steps of gap between, the same construction as the square ring's pinch with every band at one depth so the plan stays a circle. The seam centre stays level all round, so the platform reads as one band that opens and shuts, not as twenty different shelves. The double platform repeats the fully open pair all the way round: two level ring shelves, with the same gap everywhere. Set the radius yourself."
           specs={[
-            ['Ring', '20 bands · level, undulating, drifting, or pinched'],
+            ['Ring', '20 bands · level, undulating, drifting, pinched, or double platform'],
             ['Height', 'Same form, one lead per station — 18% ↔ 71%'],
             ['Solve', '1 / 11 / 10 engines, 20 placements — same run'],
             ['Closure', 'Palindrome (11 levels) or exact mirror (10) — the seam is one step wide'],
             ['Pinch', 'Shelves 16 px, gap 0 → 100, height in even steps — Lab 2-6’s construction, one reach (83 px) all round'],
+            ['Double', 'Two shelves all round · each 16 px, gap 100 · one fully open section repeated 20 times'],
             ['Flat', 'Pinched: seam centre level all round (symmetric padding) — the shelves part evenly'],
             ['Radius', 'Live slider · gaps widen with it'],
-            ['Skin', 'Membrane 0–1 · 0.35 by default, 0.15 under the pinch'],
+            ['Skin', 'Membrane 0–1 · 0.35 by default, 0.15 for pinched and double platforms'],
             ['Ceiling', 'Ring plate · fixed masts, skin gathers down them'],
             ['Caveat', 'Bands do not touch each other — 2D sections'],
           ]}

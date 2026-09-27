@@ -2409,6 +2409,23 @@ button.log-heat__cell {
 .lab-ctl .seg button:last-child {
   border-right-width: 1px;
 }
+/* Lab 2-5 五种编制：窄屏分行，避免新增双层台把控制条撑出图框。 */
+@media (max-width: 640px) {
+  .lab-ctl .grp--ring-plans {
+    flex-direction: column;
+    gap: 6px;
+    max-width: 100%;
+    padding: 0;
+  }
+  .lab-ctl .grp--ring-plans .seg {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+  }
+  .lab-ctl .grp--ring-plans .seg button {
+    border-right-width: 1px;
+  }
+}
 .lab-ctl input[type='range'] {
   appearance: none;
   -webkit-appearance: none;
