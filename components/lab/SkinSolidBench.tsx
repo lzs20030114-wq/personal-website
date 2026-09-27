@@ -49,8 +49,6 @@ import { requestSkinTerminal } from './skinTerminal';
 const RATE = 110; // 协议步/秒（与 Lab.06 同）
 const MAX_STEPS_PER_FRAME = 3;
 const REPLAY_HOLD_S = 3.2;
-/** Worker 不可用时的兜底预算；中间态不画，算完只提交一次终态。 */
-const SKIP_FALLBACK_BUDGET_MS = 4;
 const VIEW_ANIM_S = 0.35;
 /** 四单元沿 X 排布的间距与画面枢轴（世界单位 = 2D px 尺度） */
 const UNIT_GAP_X = 175;
@@ -472,6 +470,7 @@ export function SkinSolidBench({
   const apiRef = useRef<{
     step: (dt: number) => void;
     replay: () => void;
+    setSkip: (on: boolean) => void;
     setPersp: (on: boolean) => void;
     setRadius: (r: number) => void;
     reflowCells: () => void;
@@ -535,7 +534,7 @@ export function SkinSolidBench({
   const [skinV, setSkinV] = useState(skin?.def ?? 0);
   const skinRef = useRef(skin?.def ?? 0);
   const [running, setRunning] = useState(true);
-  // 跳过成形：勾上即冲到终态并停在那儿（不再自动重播——否则每隔 3.2s 又闪回直带子）
+  // 跳过成形：直接读取发布前的终态，保持可旋转的模型，不补跑物理。
   const [skip, setSkip] = useState(false);
   const skipRef = useRef(false);
   const [bonds, setBonds] = useState(true);
@@ -636,10 +635,10 @@ export function SkinSolidBench({
     let planList: readonly (readonly number[])[] = ringPlansRef.current ?? [plan];
     let sims: SolidSim[] = [];
     let insts: SolidInst[] = [];
-    // 换键谱会让在途终态失效；代号随 seed 增长，旧 Worker 结果回来时直接丢弃。
+    // 换键谱/重播/取消跳过会让在途读取失效，旧结果不能覆盖新选择。
     let terminalGeneration = 0;
     let terminalPendingGeneration: number | null = null;
-    let terminalFallbackGeneration: number | null = null;
+    let terminalFailedGeneration: number | null = null;
     const makeSims = (): SolidSim[] => defs.map((def) => {
       const sim = createSkinUnit(def.spec, def.opts);
       const [smoothW, smoothP] = def.smooth;
@@ -752,7 +751,7 @@ export function SkinSolidBench({
     const seed = (): void => {
       terminalGeneration++;
       terminalPendingGeneration = null;
-      terminalFallbackGeneration = null;
+      terminalFailedGeneration = null;
       sims = makeSims();
       insts = makeInsts();
       footAlign();
@@ -1042,6 +1041,9 @@ export function SkinSolidBench({
     /** 全场时钟（协议步，含起步延迟前的等待）；错相下引擎按各自的 delay 晚几步再推 */
     let tick = 0;
     const replay = (): void => {
+      terminalGeneration++;
+      terminalPendingGeneration = null;
+      terminalFailedGeneration = null;
       sims.forEach((v, u) => {
         v.sim = createSkinUnit(defs[u].spec, defs[u].opts);
         v.emaX = null;
@@ -1094,20 +1096,21 @@ export function SkinSolidBench({
       const generation = terminalGeneration;
       if (
         terminalPendingGeneration === generation ||
-        terminalFallbackGeneration === generation
+        terminalFailedGeneration === generation
       )
         return;
       terminalPendingGeneration = generation;
-      setHud((h) => ({ ...h, phase: '终态计算中' }));
+      setHud((h) => ({ ...h, phase: '终态加载中' }));
       requestSkinTerminal(terminalInputs()).then(
         (result) => {
           if (terminalPendingGeneration === generation) terminalPendingGeneration = null;
           commitTerminal(result, generation);
         },
         () => {
-          if (generation !== terminalGeneration) return;
+          if (generation !== terminalGeneration || !skipRef.current) return;
           terminalPendingGeneration = null;
-          terminalFallbackGeneration = generation;
+          terminalFailedGeneration = generation;
+          setHud((h) => ({ ...h, phase: '终态加载失败 · 点重播重试' }));
         },
       );
     };
@@ -1135,25 +1138,7 @@ export function SkinSolidBench({
       let n = 0;
       if (skipRef.current && !allDone) {
         requestTerminal();
-        // 极旧浏览器或 Worker 装载失败时才走主线程兜底；预算压到 4ms，且绝不画中间态。
-        if (terminalFallbackGeneration === terminalGeneration) {
-          const t0 = performance.now();
-          while (
-            !sims.every((v) => v.sim.done) &&
-            performance.now() - t0 < SKIP_FALLBACK_BUDGET_MS
-          ) {
-            tick++;
-            for (const v of sims) if (tick > v.delay) v.sim.advance();
-          }
-          if (sims.every((v) => v.sim.done))
-            commitTerminal(
-              { tick, states: sims.map((v) => v.sim.terminalState()) },
-              terminalGeneration,
-            );
-        } else {
-          // 物理在 Worker 里跑；装置保持勾选前那一帧，完成后再直切终态。
-          // 这里不逐帧 render：重台架即使不推进物理，整场 WebGL 重画也足以拖慢手机。
-        }
+        // 等文件期间保持当前帧；加载失败也不偷偷回退到现场求解。
         return;
       } else if (runningRef.current && !allDone) {
         acc += dt * rateRef.current * speedRef.current;
@@ -1204,7 +1189,18 @@ export function SkinSolidBench({
       step,
       replay: () => {
         replay();
-        render();
+        if (skipRef.current) requestTerminal();
+        else render();
+      },
+      setSkip: (on) => {
+        terminalGeneration++;
+        terminalPendingGeneration = null;
+        terminalFailedGeneration = null;
+        if (on) requestTerminal();
+        else {
+          replay();
+          render();
+        }
       },
       setPersp: (on) => R.setPerspective(on ? 900 : 0),
       setSkin: (v) => {
@@ -1236,7 +1232,8 @@ export function SkinSolidBench({
         holdT = 0;
         tick = 0;
         lastHud = '';
-        render();
+        if (skipRef.current) requestTerminal();
+        else render();
       },
       viewTo: (k) => {
         const target = presets[k];
@@ -1405,13 +1402,14 @@ export function SkinSolidBench({
           />
           运转
         </label>
-        <label title="勾上后在后台求终态；画面不播放快进过程，算完只显示一次结果">
+        <label title="直接载入已算好的成形状态；取消勾选可从头观看成形过程">
           <input
             type="checkbox"
             checked={skip}
             onChange={(e) => {
               skipRef.current = e.target.checked;
               setSkip(e.target.checked);
+              apiRef.current?.setSkip(e.target.checked);
             }}
           />
           跳过成形
@@ -1444,7 +1442,7 @@ export function SkinSolidBench({
           apiRef.current?.replay();
           runningRef.current = true;
           setRunning(true);
-          // 跳过开着时点重播 = 重新解一遍再冲到终态（不是停在直带子上等）
+          // 跳过开着时重播复用终态，取消跳过再看完整过程。
         }}>
           重播
         </button>

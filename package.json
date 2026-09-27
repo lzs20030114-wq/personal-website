@@ -10,7 +10,9 @@
     "start": "next start",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "predev": "node scripts/copy-assets.mjs",
+    "skin:terminals": "node scripts/skin-terminal/generate.mjs",
+    "pretest": "npm run skin:terminals",
+    "predev": "node scripts/copy-assets.mjs && npm run skin:terminals",
     "prebuild": "node scripts/copy-assets.mjs"
   },
   "devDependencies": {

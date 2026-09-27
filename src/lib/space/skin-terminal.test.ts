@@ -9,7 +9,7 @@ const SMALL: SkinSpec = [
 ];
 
 describe('skin terminal snapshots', () => {
-  it('后台终态可装回新实例，位置、芯与完成状态逐位一致', () => {
+  it('预计算终态可装回新实例，位置、芯与完成状态逐位一致', () => {
     const result = solveSkinTerminal([{ spec: SMALL, opts: { anchorEnd: true } }]);
     const direct = createSkinUnit(SMALL, { anchorEnd: true });
     while (!direct.done) direct.advance();

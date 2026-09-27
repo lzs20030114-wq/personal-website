@@ -61,8 +61,8 @@ export interface SkinBuild {
 }
 
 /**
- * 可跨线程传递的终态快照。只包含绘制终态与判定 `done` 所需的数据；求解仍完整走
- * `advance()`，这里不提供绕过物理的第二条路径。
+ * 可保存的终态快照。只包含绘制终态与判定 `done` 所需的数据；资源由发布前完整
+ * 运行 `advance()` 得到，浏览器可直接恢复，不制造近似形态。
  */
 export interface SkinTerminalState {
   px: Float64Array;
@@ -525,7 +525,7 @@ export class SkinUnit {
     return this.ys[0];
   }
 
-  /** 导出已求得的终态，供 Lab 的后台求解线程缓存。 */
+  /** 导出已求得的终态，供发布前生成 Lab 的终态资源。 */
   terminalState(): SkinTerminalState {
     if (!this.done) throw new Error('SkinUnit terminalState requires a completed solve');
     return {
@@ -538,7 +538,7 @@ export class SkinUnit {
   }
 
   /**
-   * 把后台线程算出的终态装回同一规格的实例。位置、芯长与键集合逐项恢复；历史速度
+   * 把预先算出的终态装回同一规格的实例。位置、芯长与键集合逐项恢复；历史速度
    * 清零，因为终态不会再推进，取消「跳过」后也会先按既有重播逻辑新建实例。
    */
   applyTerminalState(state: SkinTerminalState): void {

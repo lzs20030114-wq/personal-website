@@ -18,8 +18,8 @@ export interface SkinTerminalResult {
 }
 
 /**
- * 完整重放既有物理，直到全场终态。放在独立模块是为了让 Web Worker 与守门测试共用
- * 同一条求解路径；它不插值、不放宽迭代，也不制造一份新的“近似终态”。
+ * 发布前生成资源与守门测试使用：完整重放既有物理，直到全场终态。
+ * 浏览器的跳过路径只读生成的文件；不插值、不放宽迭代，也不制造“近似终态”。
  */
 export function solveSkinTerminal(inputs: readonly SkinTerminalInput[]): SkinTerminalResult {
   const units = inputs.map(({ spec, opts }) => createSkinUnit(spec, opts));
