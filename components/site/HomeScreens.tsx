@@ -4,6 +4,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { HomeLab } from './HomeLab';
 import { StageRotator } from '../lab/StageRotator';
 import { MachineBench } from '../lab/MachineBench';
 import { snapshotCanvas } from '../lab/snapshot';
@@ -76,188 +77,19 @@ export interface HomeWork {
   summary: string;
 }
 
-// Lab 十卡（文案照搬 Home-Screens 稿；链接改指站内 /lab 台架页，MAPPING §6.3；
-// 2026-07-29 加 Lab.05，网格随之 4 列→5 列（用户：卡片后续再优化，先把新的加进来）；
-// 2026-08-18 加 Lab.06（项目二第一台，皮肤单元引擎），网格 5 列→6 列——顺带结清
-// 「小屏两列时 5 张有一张单行」的待优化项（6 张两列正好铺满）；
-// bar/hover = 迭代稿按内核家族双色编码：SVG=绿、WebGL=紫）
-const LABS = [
-  {
-    kicker: 'Lab 1-1',
-    title: 'Four-bar linkage',
-    body: '2D PBD testbench — the kernel behind Fig. 01.',
-    meta: '36 tests · SVG',
-    href: '/lab#lab1-1',
-    bar: 'var(--g500)',
-    hover: 'var(--g100)',
-    kickerColor: 'var(--accent)',
-  },
-  {
-    kicker: 'Lab 1-2',
-    title: 'Arch ring solver',
-    body: 'Angulated scissor arch + crank-slider, from the S4 ring.',
-    meta: 'Kernel untouched · SVG',
-    href: '/lab#lab1-2',
-    bar: 'var(--g700)',
-    hover: 'var(--g100)',
-    kickerColor: 'var(--accent)',
-  },
-  {
-    kicker: 'Lab 1-3',
-    title: 'Tendon tentacle',
-    body: '16 vertebrae, three tendons at 120° — full 3D kernel.',
-    meta: 'Orbit camera · WebGL',
-    href: '/lab#lab1-3',
-    bar: 'var(--p500)',
-    hover: 'var(--p100)',
-    kickerColor: 'var(--accent-2)',
-  },
-  {
-    kicker: 'Lab 1-4',
-    title: 'Five-ring shell',
-    body: 'S1–S5 ring family choreography — a breathing body.',
-    meta: 'Calibrated stops · WebGL',
-    href: '/lab#lab1-4',
-    bar: 'var(--p700)',
-    hover: 'var(--p100)',
-    kickerColor: 'var(--accent-2)',
-  },
-  {
-    kicker: 'Lab 1-5',
-    title: 'Full assembly',
-    body: 'One shaft opens and closes five rings; the arm curls on three tendons.',
-    meta: 'Real solids · WebGL',
-    href: '/lab#lab1-5',
-    bar: 'var(--p700)',
-    hover: 'var(--p100)',
-    kickerColor: 'var(--accent-2)',
-  },
-  // 项目二七台四段（2026-09-03 收纳：原 08+12 合成 09 序列、原 09+13 合成 10 圆筒环，
-  // 编号按新页序连续；折进编制按钮的差分用 /lab#labNN-<plan> 直达）
-  {
-    kicker: 'Lab 2-1',
-    title: 'Contractile skin',
-    body: "Four bond maps under one contraction — Project II's structure engine.",
-    meta: 'Python parity · SVG',
-    href: '/lab#lab2-1',
-    bar: 'var(--g600)',
-    hover: 'var(--g100)',
-    kickerColor: 'var(--accent)',
-  },
-  {
-    kicker: 'Lab 2-2',
-    title: 'Skin, solid',
-    body: 'The same four units extruded into fabric bands — orbit them in space.',
-    meta: 'Shared 3D rig · WebGL',
-    href: '/lab#lab2-2',
-    bar: 'var(--p500)',
-    hover: 'var(--p100)',
-    kickerColor: 'var(--accent-2)',
-  },
-  {
-    kicker: 'Lab 2-3',
-    title: 'Two structures, one band',
-    body: 'One strip folds an upper and a lower structure — two zippers, one pull.',
-    meta: '5 dual bands · WebGL',
-    href: '/lab#lab2-3',
-    bar: 'var(--p700)',
-    hover: 'var(--p100)',
-    kickerColor: 'var(--accent-2)',
-  },
-  {
-    kicker: 'Lab 2-4',
-    title: 'Series',
-    body: 'A graded catalogue, or a box pinched into two platforms — every band a real unit, packed or spread.',
-    meta: '2 plans · WebGL',
-    href: '/lab#lab2-4',
-    bar: 'var(--p700)',
-    hover: 'var(--p100)',
-    kickerColor: 'var(--accent-2)',
-  },
-  {
-    kicker: 'Lab 2-5',
-    title: 'Cylinder of units',
-    body: 'Twenty bands ring a tube — level, undulating, drifting, or pinched apart once around.',
-    meta: '4 plans · radius · WebGL',
-    href: '/lab#lab2-5',
-    bar: 'var(--p700)',
-    hover: 'var(--p100)',
-    kickerColor: 'var(--accent-2)',
-  },
-  {
-    kicker: 'Lab 2-6',
-    title: 'A square ring',
-    body: 'The mast stays round; how far each band reaches makes the plan a square — flat, undulating, or pinched.',
-    meta: 'Three depths · WebGL',
-    href: '/lab#lab2-6',
-    bar: 'var(--p700)',
-    hover: 'var(--p100)',
-    kickerColor: 'var(--accent-2)',
-  },
-  {
-    kicker: 'Lab 2-7',
-    title: 'Four by four',
-    body: 'Sixteen of those cylinders hung in a room, with a 1.70 m figure for scale.',
-    meta: '16 live rings · WebGL',
-    href: '/lab#lab2-7',
-    bar: 'var(--p700)',
-    hover: 'var(--p100)',
-    kickerColor: 'var(--accent-2)',
-  },
-  {
-    kicker: 'Lab 2-8',
-    title: 'Between units',
-    body: 'Two, three, four or nine of those rings — apart, touching, stepped, interleaved at two heights, together or wave by wave.',
-    meta: '4 clusters · 5 relations · 2 timings · WebGL',
-    href: '/lab#lab2-8',
-    bar: 'var(--p700)',
-    hover: 'var(--p100)',
-    kickerColor: 'var(--accent-2)',
-  },
-  {
-    kicker: 'Lab 2-9',
-    title: 'A person walks through',
-    body: 'One person crosses a room of 64 small units. The floor remembers; the units that read enough of it form — and stay formed.',
-    meta: '6 behaviours · 3 grids · canvas',
-    href: '/lab#lab2-9',
-    bar: 'var(--g600)',
-    hover: 'var(--g100)',
-    kickerColor: 'var(--accent)',
-  },
-  {
-    kicker: 'Lab 2-10',
-    title: 'A few people',
-    body: 'Place people, drag them, or let them wander — the units form live, and two people together form twice as fast.',
-    meta: 'Up to 8 people · live · canvas',
-    href: '/lab#lab2-10',
-    bar: 'var(--g600)',
-    hover: 'var(--g100)',
-    kickerColor: 'var(--accent)',
-  },
-  {
-    kicker: 'Lab 2-11',
-    title: 'Joined platforms',
-    body: 'Undulating and split rings hung edge to edge — a descent onto a landing, a rise from a shelf, two mouths enclosing a cavity — round and square.',
-    meta: '8 figures · round & square · WebGL',
-    href: '/lab#lab2-11',
-    bar: 'var(--p700)',
-    hover: 'var(--p100)',
-    kickerColor: 'var(--accent-2)',
-  },
-];
-
 // Work log 预览三条：2026-07-27 起改接内容池最新三条（此前为 Home 稿硬编码字面，
 // 会与 /archive 脱节）。主页恒为英文——中英切换是 Log 页专属（MAPPING §5.2 修订）。
 export interface HomeLog {
+  href: string;
   date: string;
   text: string;
 }
 
-// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-09-21 vitest 实测 564；
+// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-09-27 vitest 实测 639；
 // 迭代稿配色：Tests=绿 700、Kernels=紫 700、Demos=绿 600）
 const STATS = [
   { n: '04', label: 'Projects', color: 'var(--ink)' },
-  { n: '564', label: 'Tests green', color: 'var(--accent)' },
+  { n: '639', label: 'Tests green', color: 'var(--accent)' },
   { n: '03', label: 'Solver kernels', color: 'var(--accent-2)' },
   { n: '16', label: 'Live demos', color: 'var(--g600)' },
 ];
@@ -805,7 +637,8 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
         const href = a.getAttribute('href');
         if (!href) return;
         const panel = a.closest<HTMLElement>('[id^="wp"]');
-        goPT(href, panel ? panel.querySelector<HTMLElement>('[data-ptm]') : a);
+        // S2 的台架并非全部登记了 canvas 快照，使用既有淡出支路，避免克隆空画布。
+        goPT(href, a.dataset.pt === 'fade' ? null : panel ? panel.querySelector<HTMLElement>('[data-ptm]') : a);
       }),
     );
     // goPT 目标路由预取（卡片 + data-pt 链接）
@@ -955,7 +788,7 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
     on(vp, 'pointerup', tup);
     on(vp, 'pointercancel', tup);
     on(document, 'keydown', (e) => {
-      if (!engine) return;
+      if (!engine || e.defaultPrevented) return;
       const ke = e as KeyboardEvent;
       const t = (ke.target as HTMLElement | null)?.tagName;
       if (t === 'INPUT' || t === 'TEXTAREA') return;
@@ -1161,7 +994,8 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
     }
 
     // ---------- 模式切换：引擎（桌面）↔ 文档流（<1024 / reduced-motion） ----------
-    const mqS = window.matchMedia('(max-width: 1023px)');
+    // 矮窗口也回落文档流，避免固定幕把展开目录与页脚夹住。
+    const mqS = window.matchMedia('(max-width: 1023px), (max-height: 679px)');
     const applyMode = () => {
       small = mqS.matches;
       engine = wantPaging && !small;
@@ -1213,18 +1047,25 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
     });
     setCards();
     // 深链：/#lab（SiteNav 自内页链回）→ 引擎态直接落到 S2
-    if (engine && window.location.hash === '#lab') {
-      window.scrollTo(0, 0);
-      cur = 2;
-      setTrack(-H(), 0);
-      setS2(0, 0);
-      setRail(2);
-      setInert(2);
+    let labAnchorFrame = 0;
+    if (window.location.hash === '#lab') {
+      if (engine) {
+        window.scrollTo(0, 0);
+        cur = 2;
+        setTrack(-H(), 0);
+        setS2(0, 0);
+        setRail(2);
+        setInert(2);
+      } else {
+        // SSR 的暂定幕高经 hydration 改成文档流后，重新对齐深链。
+        labAnchorFrame = requestAnimationFrame(() => s2el.scrollIntoView({ block: 'start' }));
+      }
     }
 
     return () => {
       offs.forEach((f) => f());
       if (craf) cancelAnimationFrame(craf);
+      if (labAnchorFrame) cancelAnimationFrame(labAnchorFrame);
       clearTimeout(pauseTimer);
       clearTimeout(hoverT);
       clearTimeout(swapT);
@@ -1767,114 +1608,11 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
           </section>
 
           {/* ——— S2 Lab + Log + 页脚幕 ——— */}
-          <section id="s2" style={{ ...SECTION_BASE, background: GRID_BG, borderTop: 'var(--hair)' }}>
+          <section id="s2" className="home-lab-screen" style={{ ...SECTION_BASE, background: GRID_BG, borderTop: 'var(--hair)' }}>
             <span id="lab" />
-            <div
-              className="flex flex-col"
-              style={{
-                flex: 1,
-                minHeight: 0,
-                maxWidth: 1400,
-                width: '100%',
-                margin: '0 auto',
-                padding: '24px 64px 0 48px',
-                boxSizing: 'border-box',
-                gap: 14,
-              }}
-            >
-              <div data-row className="flex items-baseline justify-between" style={{ minHeight: 24 }}>
-                <h2 style={SCREEN_H2}>
-                  <span style={{ color: 'var(--accent-2)' }}>S2</span> The lab
-                </h2>
-                <span className="flex items-center" style={{ ...UPPER_11, gap: 14 }}>
-                  <span className="flex items-center" style={{ gap: 6 }}>
-                    <span style={{ width: 9, height: 9, background: 'var(--g500)' }} />
-                    SVG
-                  </span>
-                  <span className="flex items-center" style={{ gap: 6 }}>
-                    <span style={{ width: 9, height: 9, background: 'var(--p500)' }} />
-                    WebGL
-                  </span>
-                  <span>All live</span>
-                </span>
-              </div>
-              <div
-                data-row
-                className="grid grid-cols-2 lg:grid-cols-16"
-                style={{ gap: 1, background: 'oklch(0.235 0.025 215 / 0.22)' }}
-              >
-                {LABS.map((lab) => (
-                  <a
-                    key={lab.kicker}
-                    href={lab.href}
-                    className="card lab-card"
-                    style={{ '--lab-bar': lab.bar, '--lab-hover': lab.hover } as CSSProperties}
-                  >
-                    <div
-                      className="card-kicker"
-                      style={{ alignSelf: 'flex-start', color: lab.kickerColor }}
-                    >
-                      {lab.kicker}
-                    </div>
-                    <div className="card-title">{lab.title}</div>
-                    <p className="card-body">{lab.body}</p>
-                    <div className="card-meta">{lab.meta}</div>
-                  </a>
-                ))}
-              </div>
-              <div
-                data-row
-                className="flex items-baseline justify-between"
-                style={{ marginTop: 6 }}
-              >
-                <h2 style={SCREEN_H2}>Work log</h2>
-                <a data-pt href="/archive" style={LINK_11}>
-                  All entries →
-                </a>
-              </div>
-              <div data-row style={{ flex: 1, minHeight: 0 }}>
-                {logs.map((e, i) => (
-                  <div
-                    key={`${e.date}-${i}`}
-                    className="log-row"
-                    style={i === logs.length - 1 ? { borderBottom: 'var(--hair)' } : undefined}
-                  >
-                    <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)' }}>
-                      {e.date}
-                    </span>
-                    {/* 池里条目长短不一，钳到两行——S2 幕高度固定，不能让预览把页脚顶出去 */}
-                    <span
-                      style={{
-                        fontSize: 13,
-                        color: 'var(--n700)',
-                        display: '-webkit-box',
-                        WebkitBoxOrient: 'vertical',
-                        WebkitLineClamp: 2,
-                        overflow: 'hidden',
-                      }}
-                    >
-                      {e.text}
-                    </span>
-                  </div>
-                ))}
-                <p
-                  style={{
-                    margin: '8px 0 0',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    letterSpacing: '0.1em',
-                    textTransform: 'uppercase',
-                    color: 'var(--n600)',
-                  }}
-                >
-                  Colophon —{' '}
-                  <span style={{ borderBottom: '1px dashed var(--n400)' }}>
-                    [待作者供稿] 一句：这个站本身如何被构建
-                  </span>
-                </p>
-              </div>
-            </div>
+            <HomeLab logs={logs} />
             <footer
+              className="home-lab-footer"
               style={{
                 position: 'relative',
                 overflow: 'hidden',
@@ -1885,13 +1623,12 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
               <Dots mask="linear-gradient(92deg,#000 0%,transparent 55%)" opacity={0.26} />
               <Grain opacity={0.1} />
               <div
-                className="flex items-baseline justify-between"
+                className="home-lab-footer-inner flex items-baseline justify-between"
                 style={{
                   position: 'relative',
                   zIndex: 1,
                   maxWidth: 1400,
                   margin: '0 auto',
-                  padding: '24px 64px 24px 48px',
                   gap: 32,
                 }}
               >

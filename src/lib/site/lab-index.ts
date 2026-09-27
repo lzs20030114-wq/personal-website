@@ -19,6 +19,9 @@ export interface LabBench {
   no: string;
   title: string;
   kernel: LabKernel;
+  /** 原主页预览文案，现与台架目录共用编号。 */
+  description: string;
+  meta: string;
 }
 
 export interface LabSegment {
@@ -50,11 +53,11 @@ export const LAB_INDEX: readonly LabGroup[] = [
         label: "",
         sub: "",
         benches: [
-          { no: "1-1", title: "Four-bar linkage", kernel: "2d" },
-          { no: "1-2", title: "Arch ring solver", kernel: "2d" },
-          { no: "1-3", title: "Tendon tentacle", kernel: "3d" },
-          { no: "1-4", title: "Five-ring shell", kernel: "3d" },
-          { no: "1-5", title: "Full assembly", kernel: "3d" },
+          { no: "1-1", title: "Four-bar linkage", kernel: "2d", description: '2D PBD testbench — the kernel behind Fig. 01.', meta: '36 tests · SVG' },
+          { no: "1-2", title: "Arch ring solver", kernel: "2d", description: 'Angulated scissor arch + crank-slider, from the S4 ring.', meta: 'Kernel untouched · SVG' },
+          { no: "1-3", title: "Tendon tentacle", kernel: "3d", description: '16 vertebrae, three tendons at 120° — full 3D kernel.', meta: 'Orbit camera · WebGL' },
+          { no: "1-4", title: "Five-ring shell", kernel: "3d", description: 'S1–S5 ring family choreography — a breathing body.', meta: 'Calibrated stops · WebGL' },
+          { no: "1-5", title: "Full assembly", kernel: "3d", description: 'One shaft opens and closes five rings; the arm curls on three tendons.', meta: 'Real solids · WebGL' },
         ],
       },
     ],
@@ -69,52 +72,52 @@ export const LAB_INDEX: readonly LabGroup[] = [
         label: "One band",
         sub: "Lab 2-1 – 2-3 · what a unit is",
         benches: [
-          { no: "2-1", title: "Contractile skin units", kernel: "2d" },
-          { no: "2-2", title: "Skin units, solid", kernel: "3d" },
-          { no: "2-3", title: "Two structures, one band", kernel: "3d" },
+          { no: "2-1", title: "Contractile skin units", kernel: "2d", description: "Four bond maps under one contraction — Project II's structure engine.", meta: 'Python parity · SVG' },
+          { no: "2-2", title: "Skin units, solid", kernel: "3d", description: 'The same four units extruded into fabric bands — orbit them in space.', meta: 'Shared 3D rig · WebGL' },
+          { no: "2-3", title: "Two structures, one band", kernel: "3d", description: 'One strip folds an upper and a lower structure — two zippers, one pull.', meta: '5 dual bands · WebGL' },
         ],
       },
       {
         n: "Ⅱ",
         label: "A row",
         sub: "Lab 2-4 · transitions along a line",
-        benches: [{ no: "2-4", title: "Series", kernel: "3d" }],
+        benches: [{ no: "2-4", title: "Series", kernel: "3d", description: 'A graded catalogue, or a box pinched into two platforms — every band a real unit, packed or spread.', meta: '2 plans · WebGL' }],
       },
       {
         n: "Ⅲ",
         label: "A ring",
         sub: "Lab 2-5 – 2-6 · the row closed into a loop",
         benches: [
-          { no: "2-5", title: "Cylinder of units", kernel: "3d" },
-          { no: "2-6", title: "A square ring", kernel: "3d" },
+          { no: "2-5", title: "Cylinder of units", kernel: "3d", description: 'Twenty bands ring a tube — level, undulating, drifting, or pinched apart once around.', meta: '4 plans · radius · WebGL' },
+          { no: "2-6", title: "A square ring", kernel: "3d", description: 'The mast stays round; how far each band reaches makes the plan a square — flat, undulating, or pinched.', meta: 'Three depths · WebGL' },
         ],
       },
       {
         n: "Ⅳ",
         label: "A room",
         sub: "Lab 2-7 · the field at real scale",
-        benches: [{ no: "2-7", title: "Four by four", kernel: "3d" }],
+        benches: [{ no: "2-7", title: "Four by four", kernel: "3d", description: 'Sixteen of those cylinders hung in a room, with a 1.70 m figure for scale.', meta: '16 live rings · WebGL' }],
       },
       {
         n: "Ⅴ",
         label: "Between units",
         sub: "Lab 2-8 · what two, three, four, nine units can be to each other",
-        benches: [{ no: "2-8", title: "Between units", kernel: "3d" }],
+        benches: [{ no: "2-8", title: "Between units", kernel: "3d", description: 'Two, three, four or nine of those rings — apart, touching, stepped, interleaved at two heights, together or wave by wave.', meta: '4 clusters · 5 relations · 2 timings · WebGL' }],
       },
       {
         n: "Ⅵ",
         label: "People",
         sub: "Lab 2-9 – 2-10 · behaviour reaching the units",
         benches: [
-          { no: "2-9", title: "A person walks through", kernel: "2d" },
-          { no: "2-10", title: "A few people", kernel: "2d" },
+          { no: "2-9", title: "A person walks through", kernel: "2d", description: 'One person crosses a room of 64 small units. The floor remembers; the units that read enough of it form — and stay formed.', meta: '6 behaviours · 3 grids · canvas' },
+          { no: "2-10", title: "A few people", kernel: "2d", description: 'Place people, drag them, or let them wander — the units form live, and two people together form twice as fast.', meta: 'Up to 8 people · live · canvas' },
         ],
       },
       {
         n: "Ⅶ",
         label: "Compositions",
         sub: "Lab 2-11 · platforms joined high to low",
-        benches: [{ no: "2-11", title: "Joined platforms", kernel: "3d" }],
+        benches: [{ no: "2-11", title: "Joined platforms", kernel: "3d", description: 'Undulating and split rings hung edge to edge — a descent onto a landing, a rise from a shelf, two mouths enclosing a cavity — round and square.', meta: '8 figures · round & square · WebGL' }],
       },
     ],
   },

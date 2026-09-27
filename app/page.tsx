@@ -1,6 +1,7 @@
 import { HomeScreens } from '../components/site/HomeScreens';
 import { getSelectedWork } from '../src/lib/site/content';
 import { getLogEntries } from '../src/lib/site/log';
+import { withAnchors } from '../src/lib/site/log-facets';
 
 /**
  * 主页 = Home-Screens 整屏分幕（design-ref/Home-Screens.dc.html，MAPPING §6）。
@@ -17,8 +18,8 @@ export default function Home() {
   }));
   // S2 幕的 Log 预览 = 池里最新三条（英文面）——不再硬编码，与 /archive 同源。
   // 只取 lead：改写成说明性文案后每条 lead 已是完整一句「做了什么」，正文太长塞不进预览行。
-  const logs = getLogEntries()
+  const logs = withAnchors(getLogEntries())
     .slice(0, 3)
-    .map((e) => ({ date: e.date, text: e.lead.en }));
+    .map(({ entry, anchor }) => ({ date: entry.date, text: entry.lead.en, href: `/archive#${anchor}` }));
   return <HomeScreens works={works} logs={logs} />;
 }

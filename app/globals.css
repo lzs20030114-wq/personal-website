@@ -822,38 +822,14 @@ a:hover {
   }
 }
 
-/* S2 Lab 四卡（迭代稿：paper 底 + 3px 色顶边按内核家族双色编码，hover 同族 100 级底） */
-.lab-card {
-  background: var(--paper);
-  border-top: 3px solid var(--lab-bar);
+/* S2 内容布局在 HomeLab.module.css；保留原稿的渐变页脚。 */
+.home-lab-footer { flex-shrink: 0; }
+.home-lab-footer-inner { padding: 18px 64px 18px 48px; }
+@media (max-width: 1023px) {
+  .home-lab-footer-inner { padding: 22px 28px; flex-wrap: wrap; row-gap: 12px !important; }
 }
-@media (hover: hover) and (pointer: fine) {
-  a.lab-card {
-    transition: background var(--dur-micro) var(--ease-site);
-  }
-  a.lab-card:hover {
-    background: var(--lab-hover);
-  }
-  a.lab-card:hover .card-title {
-    color: inherit;
-  }
-}
-
-/* S2 Work log 行（迭代稿：发丝线 + hover 淡绿底） */
-.log-row {
-  display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: 14px;
-  padding: 11px 0;
-  border-top: var(--hair);
-}
-@media (hover: hover) and (pointer: fine) {
-  .log-row {
-    transition: background var(--dur-micro) var(--ease-site);
-  }
-  .log-row:hover {
-    background: var(--g100);
-  }
+@media (max-width: 639px) {
+  .home-lab-footer-inner { padding-left: 20px; padding-right: 20px; }
 }
 
 /* ── Work log 页（/archive）：中英切换滑块 + 分组条目行（2026-07-27 版式修订） ──
