@@ -248,6 +248,19 @@ export interface SolidUnitDef {
   seam?: number;
 }
 
+/** 完整表面装配复用同一播放/终态系统。坐标为原始解，不交出可变求解器。 */
+export interface SolidSurfaceFrame {
+  px: Float64Array;
+  py: Float64Array;
+  locked: readonly (readonly [number, number, number])[];
+  step: number;
+}
+export type SolidSurface = (frames: readonly SolidSurfaceFrame[], layout: string) => {
+  meshes: readonly { verts: Float32Array; idx: Uint32Array; dark: [number, number, number]; light: [number, number, number] }[];
+  lines?: readonly { a: Vec3; b: Vec3 }[];
+  bonds?: readonly { a: Vec3; b: Vec3 }[];
+} | null;
+
 /**
  * 织物网一条（`bridges` 的对象写法；元组 [a, b] = 两格整条带对整条带）。`plateA`/`plateB` 只对
  * 带缝底标记（`seam`）的捏分档有意义：外缘只读缝底那一侧的节点——上板 = 缝底之前、下板 = 缝底
@@ -339,6 +352,7 @@ export function SkinSolidBench({
   bridges,
   extraControls,
   raw = false,
+  surface,
 }: {
   active?: boolean;
   onLight?: boolean;
@@ -468,9 +482,12 @@ export function SkinSolidBench({
   extraControls?: ReactNode;
   /** 原始成形审查：关闭节点平滑和时间 EMA；挂载时固定，旧台架默认保持原画法。 */
   raw?: boolean;
+  /** 挂载时选择表面模式；回调更新只重画，保留求解进度。 */
+  surface?: SolidSurface;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const apiRef = useRef<{
+    redraw: () => void;
     step: (dt: number) => void;
     replay: () => void;
     setSkip: (on: boolean) => void;
@@ -489,6 +506,8 @@ export function SkinSolidBench({
     setLayout: (li: number) => void;
   } | null>(null);
   const runningRef = useRef(true);
+  const surfaceRef = useRef(surface);
+  useEffect(() => { surfaceRef.current = surface; apiRef.current?.redraw(); }, [surface]);
   const speedRef = useRef(1);
   const bondsRef = useRef(true);
   const radiusRef = useRef(radius?.def ?? 0);
@@ -830,8 +849,20 @@ export function SkinSolidBench({
     const home0 = layoutList[layoutIdx].home;
     if (home0) cam.setOrientation(presets[home0]);
 
+    const surfaceBakes = new WeakMap<Float32Array, Float32Array>();
     const render = (): void => {
       R.beginFrame(cam);
+      const result = surfaceRef.current?.(sims.map(s => ({ px: s.sim.px, py: s.sim.py, locked: s.sim.locked, step: s.sim.step })), layoutList[layoutIdx].key);
+      if (result) {
+        for (const m of result.meshes) {
+          let baked = surfaceBakes.get(m.verts);
+          if (!baked) { baked = bakeIndexed(m.verts, m.idx); surfaceBakes.set(m.verts, baked); }
+          R.drawDynamicMesh(baked, m.dark, m.light);
+        }
+        if (result.lines) R.drawLines(result.lines, [0.7, 0.77, 0.73], 0.001);
+        if (bondsRef.current && result.bonds) R.drawLines(result.bonds, C_BOND, 0.004);
+        return;
+      }
       // 布景先画：不透明、写深度，装置的遮挡关系交给 z-buffer
       for (const m of setMeshes)
         R.drawDynamicMesh(
@@ -1192,6 +1223,7 @@ export function SkinSolidBench({
     };
 
     apiRef.current = {
+      redraw: render,
       step,
       replay: () => {
         replay();

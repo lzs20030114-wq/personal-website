@@ -10,12 +10,8 @@ import { buildLayerGeometry, layerAngles, layerBaseline, layerColumns, layerCove
 import { useBenchLoop } from './useBenchLoop';
 import { planFromHash } from './planHash';
 import { SkinLayersForming } from './SkinLayersForming';
+import { LAYER_COLORS as COLORS } from '../../src/lib/space/skin-layers-surface';
 
-const COLORS: Record<LayerMaterial, { dark: [number, number, number]; light: [number, number, number]; svg: string }> = {
-  upper: { dark: [0.08, 0.18, 0.14], light: [0.48, 0.77, 0.61], svg: '#8bc5a1' },
-  lower: { dark: [0.16, 0.13, 0.23], light: [0.69, 0.63, 0.84], svg: '#b5a8d5' },
-  join: { dark: [0.23, 0.17, 0.1], light: [0.83, 0.70, 0.47], svg: '#d4b278' },
-};
 const VIEWS = [{ key: 'axon', label: '轴测' }, { key: 'front', label: '正' }, { key: 'side', label: '侧' }, { key: 'top', label: '顶' }] as const;
 type View = (typeof VIEWS)[number]['key'];
 function orientation(view: View): number[] {
@@ -67,21 +63,20 @@ export function SkinLayersBench({ active = true, controls = true, onLight = fals
   const [stage, setStage] = useState<'target' | 'forming'>('target');
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
-    if (planFromHash('2-6', ['forming'])) { setStage('forming'); setLoaded(true); }
+    if (planFromHash('2-6', ['forming', 'formed'])) { setStage('forming'); setLoaded(true); }
   }, []);
   if (!controls) return <SkinLayersTarget active={active} controls={false} onLight={onLight} />;
   return <div className="layer-lab">
     <div className="lab-ctl"><div className="grp"><span className="k">查看</span><span className="seg">
       <button type="button" aria-pressed={stage === 'target'} className={stage === 'target' ? 'active' : undefined} onClick={() => setStage('target')}>目标形态</button>
-      <button type="button" aria-pressed={stage === 'forming'} className={stage === 'forming' ? 'active' : undefined} onClick={() => { setLoaded(true); setStage('forming'); }}>成形截面</button>
+      <button type="button" aria-pressed={stage === 'forming'} className={stage === 'forming' ? 'active' : undefined} onClick={() => { setLoaded(true); setStage('forming'); }}>完整形体成形</button>
     </span></div></div>
-    <div hidden={stage !== 'target'}><SkinLayersTarget active={active && stage === 'target'} controls onLight={onLight} /></div>
-    {loaded && <div hidden={stage !== 'forming'}><SkinLayersForming active={active && stage === 'forming'} onLight={onLight} /></div>}
+    <SkinLayersTarget active={active} controls onLight={onLight} forming={stage === 'forming'} loaded={loaded} />
   </div>;
 }
 
 /** 目标台架不建立 SkinUnit，不显示虚构的锁定/成形数。 */
-function SkinLayersTarget({ active, controls, onLight }: { active: boolean; controls: boolean; onLight: boolean }) {
+function SkinLayersTarget({ active, controls, onLight, forming = false, loaded = false }: { active: boolean; controls: boolean; onLight: boolean; forming?: boolean; loaded?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [study, setStudy] = useState<LayerStudy>(layerBaseline);
   const [selected, setSelected] = useState<'upper' | 'lower'>('upper');
@@ -99,6 +94,7 @@ function SkinLayersTarget({ active, controls, onLight }: { active: boolean; cont
   useEffect(() => {
     const p = planFromHash('2-6', LAYER_EXAMPLES.map(v => v.key));
     if (p) { setStudy(layerExample(p)); setExample(p); }
+    if (planFromHash('2-6', ['formed'])) { setStudy(layerExample('study')); setExample('study'); }
   }, []);
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -134,18 +130,19 @@ function SkinLayersTarget({ active, controls, onLight }: { active: boolean; cont
       canvas.removeEventListener('wheel', wheel); canvas.removeEventListener('contextmenu', context);
     };
   }, []);
-  useBenchLoop(canvasRef, () => api.current?.draw(), [], active);
+  useBenchLoop(canvasRef, () => api.current?.draw(), [], active && !forming);
   const layer = study[selected];
   const edit = (v: Partial<LayerShape>) => { setExample('custom'); setStudy(s => ({ ...s, [selected]: { ...s[selected], ...v } })); };
   const join = (v: Partial<LayerStudy>) => { setExample('custom'); setStudy(s => ({ ...s, ...v })); };
   const stats = layerStats(study);
   return <div className={`lab-wrap layer-study${onLight ? ' on-light' : ''}`}>
-    <div className="lab-fig">
+    {loaded && <div hidden={!forming}><SkinLayersForming active={active && forming} onLight={onLight} study={study} /></div>}
+    <div hidden={forming}><div className="lab-fig">
       <canvas ref={canvasRef} width="1400" height="880" aria-label="单元内的多层台：可旋转的目标几何，绿色上层、紫色下层、金色连接区域" />
       <div className="lab-hud tl"><div style={{ color: 'var(--accent-2)' }}>Lab 2-6 / Project II</div><div>单元内的多层台</div><div className="dim">目标形态 · 几何原型</div></div>
       <div className="lab-hud bl dim">{error || '拖拽旋转 · 滚轮缩放'}</div>
       <div className="lab-hud br"><div>{study.joinMode === 'opposed' ? '对向连接' : '连接'} {Math.round(stats.joined)}°</div><div className="dim">上层绿 · 下层紫 · 连接金</div></div>
-    </div>
+    </div></div>
     {controls && <>
       <StudyDrawings study={study} cut={cut} />
       <div className="lab-ctl lab-ctl--tiered">
@@ -167,9 +164,9 @@ function SkinLayersTarget({ active, controls, onLight }: { active: boolean; cont
           </div>
           <span className="layer-note" role="status">{study.joinMode === 'opposed' && <>起点 {layerJoinSpans(study).map(span => `${span.start}°`).join(' / ')} · 两区相隔 180°，一起转动<br /></>}{study.joinSweep > 0 && stats.joined === 0 ? '所选扇区没有上下重叠，未形成连接。' : `实际连接合计 ${Math.round(stats.joined)}° · 只连接上下层共同覆盖的部分`}</span>
         </div>
-        <div className="lab-ctl__row"><div className="grp"><span className="k">视角</span><span className="seg">{VIEWS.map(v => <button type="button" key={v.key} className={view === v.key ? 'active' : undefined} onClick={() => { setView(v.key); api.current?.view(v.key); }}>{v.label}</button>)}</span><button type="button" onClick={() => { api.current?.home(); setView('axon'); }}>归位</button></div><Slider label="剖面方向" value={cut} max={175} step={5} change={setCut} /></div>
+        <div className="lab-ctl__row">{!forming && <div className="grp"><span className="k">视角</span><span className="seg">{VIEWS.map(v => <button type="button" key={v.key} className={view === v.key ? 'active' : undefined} onClick={() => { setView(v.key); api.current?.view(v.key); }}>{v.label}</button>)}</span><button type="button" onClick={() => { api.current?.home(); setView('axon'); }}>归位</button></div>}<Slider label="目标剖面方向" value={cut} max={175} step={5} change={setCut} /></div>
       </div>
-      <p className="layer-footnote">俯视轮廓固定；两层可独立倾斜。此处用于讨论目标形态，尚未接入成形求解。</p>
+      <p className="layer-footnote">上方图纸为目标轮廓与目标剖面；两种查看方式共用这组参数。</p>
     </>}
   </div>;
 }

@@ -79,5 +79,5 @@ describe('多层台目标几何', () => {
       }
       expect([...edges.values()].every(v => v === 2), `${mode.key}/${upper.key}/${lower.key}/${width}`).toBe(true);
     }
-  });
+  }, 20000); // 200 组闭合检查；全套物理测试并行时超过默认 5 秒，几何判据不放宽。
 });

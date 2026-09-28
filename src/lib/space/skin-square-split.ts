@@ -309,14 +309,16 @@ export function sqSplitStructure(tier: SqSplitTier, wEnd: number = SQSPLIT.W_END
  * 垫 + 结构 = F_TOT 恒定 ⇒ 缝心 = 2(tail+ISO) + r(F_TOT−1) 与位置无关。
  * 与平档的 `squareWrap` 同构，只是带长/尾段用这一编制自己的（塞不进 305）。
  */
-export function sqSplitWrap(seg: SkinSeg, fTotal: number = SQSPLIT.F_TOT, who = ''): { spec: SkinSpec; base: number } {
+export function sqSplitWrap(seg: SkinSeg, fTotal: number = SQSPLIT.F_TOT, who = '', shift = 0): { spec: SkinSpec; base: number } {
   const fs = seg[1];
   const p = (fTotal - fs) / 2;
   if (p < 0) throw new Error(`捏分档自由段超预算：${who} 结构 ${fs} > ${fTotal}`);
   if (p % 1 !== 0) throw new Error(`配平垫 ${p} 非整数（自由段应为奇数）：${who}`);
-  const head: SkinSeg[] = p > 0 ? [['g', SQSPLIT.LEAD], ['f', p, []], ['g', SQUARE.ISO]] : [['g', SQSPLIT.LEAD + SQUARE.ISO]];
-  const foot: SkinSeg[] = p > 0 ? [['g', SQUARE.ISO], ['f', p, []], ['g', SQSPLIT.TAIL]] : [['g', SQUARE.ISO + SQSPLIT.TAIL]];
-  return { spec: [...head, seg, ...foot], base: SQSPLIT.LEAD + p + SQUARE.ISO };
+  // 只在上下配平垫之间移材料，改变台在带上的位置；总带长与收缩协议不变。
+  if (!Number.isInteger(shift) || Math.abs(shift) > p) throw new Error(`配平偏移超预算：${who} ${shift}`);
+  const head: SkinSeg[] = p + shift > 0 ? [['g', SQSPLIT.LEAD], ['f', p + shift, []], ['g', SQUARE.ISO]] : [['g', SQSPLIT.LEAD + SQUARE.ISO]];
+  const foot: SkinSeg[] = p - shift > 0 ? [['g', SQUARE.ISO], ['f', p - shift, []], ['g', SQSPLIT.TAIL]] : [['g', SQUARE.ISO + SQSPLIT.TAIL]];
+  return { spec: [...head, seg, ...foot], base: SQSPLIT.LEAD + p + shift + SQUARE.ISO };
 }
 
 /** 缝心离下缘（构造式）：2(tail+ISO) + r·(F_TOT−1)，与位置无关 */

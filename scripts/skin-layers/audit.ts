@@ -33,7 +33,8 @@ export function auditLayerProfile(kind: LayerProfileKind) {
   const last = frames[frames.length - 1];
   const center = (last.top + last.bottom) / 2;
   const reach = (point(m.faceA)[0] + point(m.faceB)[0]) / 2;
-  const target = sqSplitTarget(kind === 'double' ? 1 : 0, LAYER_FORMING.reach, LAYER_FORMING.gap, LAYER_FORMING.height);
+  const single = kind === 'upper' || kind === 'lower';
+  const target = sqSplitTarget(kind === 'double' ? 1 : 0, LAYER_FORMING.reach, single ? 0 : LAYER_FORMING.gap, single ? 16 : LAYER_FORMING.height);
   const a = silhouette(last.points.map(p => [p[0], p[1] - center]), -70, 70);
   const b = silhouette(target, -70, 70);
   const silD = a.reduce((sum, x, i) => sum + Math.abs(x - b[i]), 0) / a.length;

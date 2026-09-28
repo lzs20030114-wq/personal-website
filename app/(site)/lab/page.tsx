@@ -469,15 +469,15 @@ export default function LabPage() {
 
         <Bench
           no="2-6"
-          lede="Two shelves within a single unit can shape the space between them. Each has its own inclination and outline: a full ring, a half, a quarter, two thirds, or two separate quarters. Selected sectors can connect the upper and lower edges into straight sides, making thick shelves there. The target study keeps the plan footprint fixed. Switch to forming profiles to compare two real skin simulations: a horizontal double shelf and a thick shelf with the same overall height. Their ring boundaries, inclined planes and incomplete outlines still need forming validation."
+          lede="Two shelves within a single unit can shape the space between them. Each has its own inclination and outline. Selected sectors join their outer edges into straight sides, making thick shelves there. Switch to the forming view to watch the complete surface emerge from four simulated profiles: double, thick, upper only and lower only. The two views share all shape controls. Inclination is currently a spatial assembly of the solved profiles; circumferential forces and the mechanism for forming inclined shelves are not simulated."
           specs={[
-            ['Study', 'Target geometry + two real forming profiles · complete ring not yet solved'],
+            ['Study', 'Target geometry + complete surface from live forming profiles'],
             ['Baseline', 'Lab 2-5 double platform · thickness 16 · gap 100 · reach 83.2'],
-            ['Inclination', 'Each layer 0–20° · independent downhill direction'],
+            ['Inclination', 'Each layer 0–20° · assembly preview, not a solved slope mechanism'],
             ['Outline', '360° / 180° / 90° / 240° / two separate 90° sectors'],
             ['Connection', 'One sector or two equal sectors 180° apart · rotate together · outer top and bottom stay in place'],
             ['Read together', 'Orbit view · plan of each layer · rotatable section'],
-            ['Forming profiles', 'Horizontal double / thick · same height 132 · replay and terminal view'],
+            ['Forming', '4 profiles · exact angular boundaries · replay / pause / terminal view'],
           ]}
         >
           <SkinLayersBench />

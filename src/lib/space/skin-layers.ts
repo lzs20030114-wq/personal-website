@@ -27,6 +27,7 @@ export const LAYER_EXAMPLES = [
   { key: 'baseline', label: '双层基准' }, { key: 'tilt', label: '对向倾斜' },
   { key: 'sectors', label: '错位缺口' }, { key: 'join', label: '局部厚台' },
   { key: 'opposed', label: '对称厚台' },
+  { key: 'study', label: '图示组合' },
 ] as const;
 export function layerExample(key: string): LayerStudy {
   const s = layerBaseline();
@@ -34,6 +35,11 @@ export function layerExample(key: string): LayerStudy {
   if (key === 'sectors') { s.upper.outline = 'half'; s.lower.outline = 'opposed'; s.lower.rotation = 45; }
   if (key === 'join') s.joinSweep = 60;
   if (key === 'opposed') { s.joinMode = 'opposed'; s.joinSweep = 60; }
+  if (key === 'study') {
+    s.upper = { outline: 'thirds', rotation: 0, tilt: 15, direction: 0 };
+    s.lower = { outline: 'thirds', rotation: 5, tilt: 7, direction: 180 };
+    s.joinMode = 'opposed'; s.joinStart = 190; s.joinSweep = 70;
+  }
   return s;
 }
 const rad = (a: number) => a * Math.PI / 180;
