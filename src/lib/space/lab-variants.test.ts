@@ -30,32 +30,57 @@ const FROZEN = [
   '2-5:gradient',
   '2-5:split',
   '2-5:double',
-  // Lab 2-6 多层台目标几何 ⇒ 上层轮廓 5 × 下层轮廓 5
-  '2-6:-:full:full',
-  '2-6:-:full:half',
-  '2-6:-:full:quarter',
-  '2-6:-:full:thirds',
-  '2-6:-:full:opposed',
-  '2-6:-:half:full',
-  '2-6:-:half:half',
-  '2-6:-:half:quarter',
-  '2-6:-:half:thirds',
-  '2-6:-:half:opposed',
-  '2-6:-:quarter:full',
-  '2-6:-:quarter:half',
-  '2-6:-:quarter:quarter',
-  '2-6:-:quarter:thirds',
-  '2-6:-:quarter:opposed',
-  '2-6:-:thirds:full',
-  '2-6:-:thirds:half',
-  '2-6:-:thirds:quarter',
-  '2-6:-:thirds:thirds',
-  '2-6:-:thirds:opposed',
-  '2-6:-:opposed:full',
-  '2-6:-:opposed:half',
-  '2-6:-:opposed:quarter',
-  '2-6:-:opposed:thirds',
-  '2-6:-:opposed:opposed',
+  // Lab 2-6 多层台目标几何 ⇒ 上层轮廓 5 × 下层轮廓 5 × 连接分布 2
+  '2-6:-:full:full:single',
+  '2-6:-:full:full:opposed',
+  '2-6:-:full:half:single',
+  '2-6:-:full:half:opposed',
+  '2-6:-:full:quarter:single',
+  '2-6:-:full:quarter:opposed',
+  '2-6:-:full:thirds:single',
+  '2-6:-:full:thirds:opposed',
+  '2-6:-:full:opposed:single',
+  '2-6:-:full:opposed:opposed',
+  '2-6:-:half:full:single',
+  '2-6:-:half:full:opposed',
+  '2-6:-:half:half:single',
+  '2-6:-:half:half:opposed',
+  '2-6:-:half:quarter:single',
+  '2-6:-:half:quarter:opposed',
+  '2-6:-:half:thirds:single',
+  '2-6:-:half:thirds:opposed',
+  '2-6:-:half:opposed:single',
+  '2-6:-:half:opposed:opposed',
+  '2-6:-:quarter:full:single',
+  '2-6:-:quarter:full:opposed',
+  '2-6:-:quarter:half:single',
+  '2-6:-:quarter:half:opposed',
+  '2-6:-:quarter:quarter:single',
+  '2-6:-:quarter:quarter:opposed',
+  '2-6:-:quarter:thirds:single',
+  '2-6:-:quarter:thirds:opposed',
+  '2-6:-:quarter:opposed:single',
+  '2-6:-:quarter:opposed:opposed',
+  '2-6:-:thirds:full:single',
+  '2-6:-:thirds:full:opposed',
+  '2-6:-:thirds:half:single',
+  '2-6:-:thirds:half:opposed',
+  '2-6:-:thirds:quarter:single',
+  '2-6:-:thirds:quarter:opposed',
+  '2-6:-:thirds:thirds:single',
+  '2-6:-:thirds:thirds:opposed',
+  '2-6:-:thirds:opposed:single',
+  '2-6:-:thirds:opposed:opposed',
+  '2-6:-:opposed:full:single',
+  '2-6:-:opposed:full:opposed',
+  '2-6:-:opposed:half:single',
+  '2-6:-:opposed:half:opposed',
+  '2-6:-:opposed:quarter:single',
+  '2-6:-:opposed:quarter:opposed',
+  '2-6:-:opposed:thirds:single',
+  '2-6:-:opposed:thirds:opposed',
+  '2-6:-:opposed:opposed:single',
+  '2-6:-:opposed:opposed:opposed',
   // Lab 2-7 方形环 ⇒ (5 + 5 + 1) × 排布 2
   '2-7:flat.m0:single',
   '2-7:flat.m0:grid',
@@ -469,15 +494,15 @@ describe('lab-variants · 项目二台架差分清单', () => {
     expect(new Set(LAB_VARIANTS.map((b) => b.key)).size).toBe(LAB_VARIANTS.length);
   });
 
-  it('444 种离散组合逐条与冻结清单相同（少一档即红）', () => {
+  it('469 种离散组合逐条与冻结清单相同（少一档即红）', () => {
     const combos = allCombos();
-    expect(combos.length).toBe(444);
+    expect(combos.length).toBe(469);
     expect(combos).toEqual(FROZEN);
   });
 
-  it('各台组合数保留全部旧档，并增加多层台的 25 种轮廓组合', () => {
+  it('各台组合数保留全部旧档，多层台有 50 种轮廓和连接分布组合', () => {
     const per = Object.fromEntries(LAB_VARIANTS.map((b) => [b.no, benchCombos(b).length]));
-    expect(per).toEqual({ '2-1': 1, '2-2': 1, '2-3': 3, '2-4': 4, '2-5': 11, '2-6': 25, '2-7': 22, '2-8': 5, '2-9': 160, '2-10': 72, '2-11': 12, '2-12': 128 });
+    expect(per).toEqual({ '2-1': 1, '2-2': 1, '2-3': 3, '2-4': 4, '2-5': 11, '2-6': 50, '2-7': 22, '2-8': 5, '2-9': 160, '2-10': 72, '2-11': 12, '2-12': 128 });
   });
 
   it('组合 id 唯一（同名档不会在清单里被折叠掉）', () => {

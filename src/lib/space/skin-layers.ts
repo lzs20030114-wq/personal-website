@@ -13,23 +13,27 @@ export const LAYER_OUTLINES = [
   { key: 'opposed', label: '分离双扇', spans: [[0, 90], [180, 270]] },
 ] as const;
 export type LayerOutline = (typeof LAYER_OUTLINES)[number]['key'];
+export const LAYER_JOINS = [{ key: 'single', label: '单区' }, { key: 'opposed', label: '对向双区' }] as const;
+export type LayerJoinMode = (typeof LAYER_JOINS)[number]['key'];
 export interface LayerShape { outline: LayerOutline; rotation: number; tilt: number; direction: number }
-export interface LayerStudy { upper: LayerShape; lower: LayerShape; joinStart: number; joinSweep: number }
+export interface LayerStudy { upper: LayerShape; lower: LayerShape; joinMode: LayerJoinMode; joinStart: number; joinSweep: number }
 export const LAYERS = { inner: RING.RADIUS_DEF, outer: RING.RADIUS_DEF + SPLIT_RING_TARGET,
   thickness: SPLIT_RING_LOBE, gap: SPLIT_RING_W_END, maxTilt: 20 } as const;
 export const layerBaseline = (): LayerStudy => ({
   upper: { outline: 'full', rotation: 0, tilt: 0, direction: 0 },
-  lower: { outline: 'full', rotation: 0, tilt: 0, direction: 180 }, joinStart: 20, joinSweep: 0,
+  lower: { outline: 'full', rotation: 0, tilt: 0, direction: 180 }, joinMode: 'single', joinStart: 20, joinSweep: 0,
 });
 export const LAYER_EXAMPLES = [
   { key: 'baseline', label: '双层基准' }, { key: 'tilt', label: '对向倾斜' },
   { key: 'sectors', label: '错位缺口' }, { key: 'join', label: '局部厚台' },
+  { key: 'opposed', label: '对称厚台' },
 ] as const;
 export function layerExample(key: string): LayerStudy {
   const s = layerBaseline();
   if (key === 'tilt') { s.upper.tilt = 14; s.lower.tilt = 14; }
   if (key === 'sectors') { s.upper.outline = 'half'; s.lower.outline = 'opposed'; s.lower.rotation = 45; }
   if (key === 'join') s.joinSweep = 60;
+  if (key === 'opposed') { s.joinMode = 'opposed'; s.joinSweep = 60; }
   return s;
 }
 const rad = (a: number) => a * Math.PI / 180;
@@ -38,9 +42,14 @@ export function layerCovers(layer: LayerShape, angle: number): boolean {
   const a = wrapAngle(angle - layer.rotation);
   return LAYER_OUTLINES.find(o => o.key === layer.outline)!.spans.some(([lo, hi]) => a >= lo && a < hi);
 }
+/** 两块等宽扇区共用方位，第二块固定相隔 180°；每块达到 180° 时并成整环。 */
+export function layerJoinSpans(s: LayerStudy): { start: number; sweep: number }[] {
+  const sweep = Math.max(0, Math.min(s.joinSweep, s.joinMode === 'opposed' ? 180 : 360));
+  return (s.joinMode === 'opposed' ? [0, 180] : [0]).map(offset => ({ start: wrapAngle(s.joinStart + offset), sweep }));
+}
 export function layersJoin(s: LayerStudy, angle: number): boolean {
   return layerCovers(s.upper, angle) && layerCovers(s.lower, angle)
-    && wrapAngle(angle - s.joinStart) < s.joinSweep;
+    && layerJoinSpans(s).some(span => wrapAngle(angle - span.start) < span.sweep);
 }
 /** Y 沿屏幕向下，方向表示下坡方向；厚度沿中轴方向量。 */
 export function layerHeight(s: LayerStudy, surface: number, r: number, angle: number): number {
@@ -66,7 +75,9 @@ export function layerAngles(s: LayerStudy): number[] {
     for (const span of LAYER_OUTLINES.find(o => o.key === layer.outline)!.spans)
       for (const a of span) angles.add(wrapAngle(a + layer.rotation));
   }
-  angles.add(wrapAngle(s.joinStart)); angles.add(wrapAngle(s.joinStart + s.joinSweep));
+  for (const span of layerJoinSpans(s)) {
+    angles.add(span.start); angles.add(wrapAngle(span.start + span.sweep));
+  }
   return [...angles].sort((a, b) => a - b);
 }
 export function layerStats(s: LayerStudy) {

@@ -475,7 +475,7 @@ export default function LabPage() {
             ['Baseline', 'Lab 2-5 double platform · thickness 16 · gap 100 · reach 83.2'],
             ['Inclination', 'Each layer 0–20° · independent downhill direction'],
             ['Outline', '360° / 180° / 90° / 240° / two separate 90° sectors'],
-            ['Connection', 'A straight side over the shared sector · outer top and bottom stay in place'],
+            ['Connection', 'One sector or two equal sectors 180° apart · rotate together · outer top and bottom stay in place'],
             ['Read together', 'Orbit view · plan of each layer · rotatable section'],
           ]}
         >

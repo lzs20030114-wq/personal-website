@@ -5,7 +5,7 @@ import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import { FlatRenderer, bakeIndexed } from '../../src/lib/linkage/gl3d';
 import { ringPlateVerts } from '../../src/lib/space/skin-solid';
 import { buildLayerGeometry, layerAngles, layerBaseline, layerColumns, layerCovers, layerExample,
-  layerHeight, layersJoin, layerStats, LAYERS, LAYER_EXAMPLES, LAYER_OUTLINES,
+  layerHeight, layerJoinSpans, layersJoin, layerStats, LAYERS, LAYER_EXAMPLES, LAYER_OUTLINES, LAYER_JOINS,
   type LayerMaterial, type LayerShape, type LayerStudy } from '../../src/lib/space/skin-layers';
 import { useBenchLoop } from './useBenchLoop';
 import { planFromHash } from './planHash';
@@ -125,7 +125,7 @@ export function SkinLayersBench({ active = true, controls = true, onLight = fals
       <canvas ref={canvasRef} width="1400" height="880" aria-label="单元内的多层台：可旋转的目标几何，绿色上层、紫色下层、金色连接区域" />
       <div className="lab-hud tl"><div style={{ color: 'var(--accent-2)' }}>Lab 2-6 / Project II</div><div>单元内的多层台</div><div className="dim">目标形态 · 几何原型</div></div>
       <div className="lab-hud bl dim">{error || '拖拽旋转 · 滚轮缩放'}</div>
-      <div className="lab-hud br"><div>连接 {Math.round(stats.joined)}°</div><div className="dim">上层绿 · 下层紫 · 连接金</div></div>
+      <div className="lab-hud br"><div>{study.joinMode === 'opposed' ? '对向连接' : '连接'} {Math.round(stats.joined)}°</div><div className="dim">上层绿 · 下层紫 · 连接金</div></div>
     </div>
     {controls && <>
       <StudyDrawings study={study} cut={cut} />
@@ -140,11 +140,13 @@ export function SkinLayersBench({ active = true, controls = true, onLight = fals
             <Slider label="轮廓方位" value={layer.rotation} max={355} step={5} change={rotation => edit({ rotation })} />
           </div>
         </div>
-        <div className="lab-ctl__row lab-ctl__solve layer-join">
-          <span className="k">局部厚台</span>
-          <Slider label="连接范围" value={study.joinSweep} max={360} step={5} change={joinSweep => join({ joinSweep })} />
-          <Slider label="连接起点" value={study.joinStart} max={355} step={5} change={joinStart => join({ joinStart })} />
-          <span className="layer-note" role="status">{study.joinSweep > 0 && stats.joined === 0 ? '所选扇区没有上下重叠，未形成连接。' : `实际连接 ${Math.round(stats.joined)}° · 只连接上下层共同覆盖的部分`}</span>
+        <div className="lab-ctl__row lab-ctl__solve layer-join" role="group" aria-label="局部厚台连接">
+          <div className="grp"><span className="k">局部厚台</span><span className="seg">{LAYER_JOINS.map(mode => <button type="button" key={mode.key} className={study.joinMode === mode.key ? 'active' : undefined} aria-pressed={study.joinMode === mode.key} onClick={() => join({ joinMode: mode.key, joinSweep: Math.min(study.joinSweep, mode.key === 'opposed' ? 180 : 360) })}>{mode.label}</button>)}</span></div>
+          <div className="layer-sliders layer-join-sliders">
+            <Slider label="单区范围" value={study.joinSweep} max={study.joinMode === 'opposed' ? 180 : 360} step={5} change={joinSweep => join({ joinSweep })} />
+            <Slider label="起点方位" value={study.joinStart} max={355} step={5} change={joinStart => join({ joinStart })} />
+          </div>
+          <span className="layer-note" role="status">{study.joinMode === 'opposed' && <>起点 {layerJoinSpans(study).map(span => `${span.start}°`).join(' / ')} · 两区相隔 180°，一起转动<br /></>}{study.joinSweep > 0 && stats.joined === 0 ? '所选扇区没有上下重叠，未形成连接。' : `实际连接合计 ${Math.round(stats.joined)}° · 只连接上下层共同覆盖的部分`}</span>
         </div>
         <div className="lab-ctl__row"><div className="grp"><span className="k">视角</span><span className="seg">{VIEWS.map(v => <button type="button" key={v.key} className={view === v.key ? 'active' : undefined} onClick={() => { setView(v.key); api.current?.view(v.key); }}>{v.label}</button>)}</span><button type="button" onClick={() => { api.current?.home(); setView('axon'); }}>归位</button></div><Slider label="剖面方向" value={cut} max={175} step={5} change={setCut} /></div>
       </div>

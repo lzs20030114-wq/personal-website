@@ -2213,6 +2213,7 @@ button.log-heat__cell {
 .layer-slider output { color: var(--accent-2); font-variant-numeric: tabular-nums; }
 .layer-study .layer-slider input { width: 100%; min-width: 0; }
 .layer-study .layer-join { column-gap: 16px; }
+.layer-join-sliders { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .layer-note { width: 100%; text-align: center; color: var(--n600); font-weight: 400; letter-spacing: 0; text-transform: none; }
 .layer-footnote { font-size: 11px; line-height: 1.7; color: var(--n600); padding: 10px 16px; margin: 0; border-top: 1px solid color-mix(in srgb, var(--ink) 14%, transparent); }
 @media (max-width: 640px) {
