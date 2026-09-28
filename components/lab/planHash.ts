@@ -13,7 +13,8 @@ export function legacyLabNo(nn: string): string | null {
   if (!/^\d\d$/.test(nn)) return null;
   const n = Number(nn);
   if (n < 1 || n > 15) return null;
-  return n <= 5 ? `1-${n}` : `2-${n - 5}`;
+  // 2026-09-28 插入「层」：旧 Lab.11 方环及之后各台顺延，旧 Lab.10 圆环不动。
+  return n <= 5 ? `1-${n}` : `2-${n - (n >= 11 ? 4 : 5)}`;
 }
 
 /** 当前哈希，旧号换成新号（`#lab10-split` → `#lab2-5-split`）；非 lab 哈希原样返回 */

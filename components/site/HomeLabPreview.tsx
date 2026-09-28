@@ -18,12 +18,13 @@ const PREVIEWS: Record<string, ComponentType<PreviewProps>> = {
   '2-3': dynamic(() => import('../lab/SkinDualBench').then(m => m.SkinDualBench), { loading }),
   '2-4': dynamic(() => import('../lab/SkinSeriesBench').then(m => m.SkinSeriesBench), { loading }),
   '2-5': dynamic(() => import('../lab/SkinRingBench').then(m => m.SkinRingBench), { loading }),
-  '2-6': dynamic(() => import('../lab/SquareRingBench').then(m => m.SquareRingBench), { loading }),
-  '2-7': dynamic(() => import('../lab/SkinGridBench').then(m => m.SkinGridBench), { loading }),
-  '2-8': dynamic(() => import('../lab/SkinClusterBench').then(m => m.SkinClusterBench), { loading }),
-  '2-9': dynamic(() => import('../lab/WalkPlanBench').then(m => m.WalkPlanBench), { loading }),
-  '2-10': dynamic(() => import('../lab/CrowdPlanBench').then(m => m.CrowdPlanBench), { loading }),
-  '2-11': dynamic(() => import('../lab/SkinComboBench').then(m => m.SkinComboBench), { loading }),
+  '2-6': dynamic(() => import('../lab/SkinLayersBench').then(m => m.SkinLayersBench), { loading }),
+  '2-7': dynamic(() => import('../lab/SquareRingBench').then(m => m.SquareRingBench), { loading }),
+  '2-8': dynamic(() => import('../lab/SkinGridBench').then(m => m.SkinGridBench), { loading }),
+  '2-9': dynamic(() => import('../lab/SkinClusterBench').then(m => m.SkinClusterBench), { loading }),
+  '2-10': dynamic(() => import('../lab/WalkPlanBench').then(m => m.WalkPlanBench), { loading }),
+  '2-11': dynamic(() => import('../lab/CrowdPlanBench').then(m => m.CrowdPlanBench), { loading }),
+  '2-12': dynamic(() => import('../lab/SkinComboBench').then(m => m.SkinComboBench), { loading }),
 };
 
 export function HomeLabPreview({ no, active }: { no: string; active: boolean }) {

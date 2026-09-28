@@ -19,6 +19,7 @@ import { SQUARE_GRID, SQUARE_MORPH } from './skin-square';
 import { CLUSTER_PLANS, CLUSTER_RELATIONS, CLUSTER_TIMINGS } from './unit-cluster';
 import { COMBO_FAMILIES, COMBO_PLANS, COMBO_SPACINGS } from './unit-combo';
 import { PATHS, PLAN, READINGS, RESPONSES } from './unit-activation';
+import { LAYER_OUTLINES } from './skin-layers';
 
 export interface VariantOption {
   key: string;
@@ -124,7 +125,7 @@ const WALK_READING_AXIS: VariantAxis = { axis: '读法', options: READINGS.map((
 /** 单元怎么响应读数：跟随（人走了收回去）/ 锁定（滞回）——2026-09-04 用户要的那一档与项目论点那一档 */
 const WALK_RESPONSE_AXIS: VariantAxis = { axis: '响应', options: RESPONSES.map((r) => ({ key: r.key, label: r.zh })) };
 
-/** Lab 2-11 单元组合（2026-09-17 立项，2026-09-20 用户纠偏为「同一种平台一圈起伏、首尾相接」+ 三张图形）：
+/** Lab 2-12 单元组合（2026-09-17 立项，2026-09-20 用户纠偏为「同一种平台一圈起伏、首尾相接」+ 三张图形）：
  *  编制 = 图形（① 坡降 / ② 升台 / ③ 合腔 + 五种接法），形态四档为子选项（只管圆环的起伏单元，方环下变灰），
  *  单元两族（圆环 / 方环）与距离两档为正交轴。 */
 export const COMBO_PLAN_OPTIONS = COMBO_PLANS.map((p) => ({ key: p.key, label: p.label }));
@@ -133,7 +134,7 @@ export const COMBO_FAMILY_OPTIONS = COMBO_FAMILIES.map((f) => ({ key: f.key, lab
 const COMBO_FAMILY_AXIS: VariantAxis = { axis: '单元', options: COMBO_FAMILY_OPTIONS };
 const COMBO_SPACING_AXIS: VariantAxis = { axis: '距离', options: COMBO_SPACING_OPTIONS };
 
-/** 十一台七段（页序）：Ⅰ 单元 06–08 · Ⅱ 序列 09 · Ⅲ 环 10–11 · Ⅳ 场 12 · Ⅴ 单元之间 13 · Ⅵ 人 14–15 · Ⅶ 组合 2-11 */
+/** 十二台七段（页序）：Ⅰ 单元 2-1–3 · Ⅱ 序列 2-4 · Ⅲ 环 2-5–7 · Ⅳ 场 2-8 · Ⅴ 单元之间 2-9 · Ⅵ 人 2-10–11 · Ⅶ 组合 2-12 */
 export const LAB_VARIANTS: readonly BenchVariants[] = [
   { no: '2-1', key: 'unit', zh: '二维皮肤单元', en: 'Contractile skin units', plans: [], axes: [] },
   { no: '2-2', key: 'solid', zh: '立体带', en: 'Skin units, solid', plans: [], axes: [] },
@@ -158,6 +159,14 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
   },
   {
     no: '2-6',
+    key: 'layers',
+    zh: '单元内的多层台',
+    en: 'Layers within one unit',
+    plans: [],
+    axes: [{ axis: '上层轮廓', options: LAYER_OUTLINES }, { axis: '下层轮廓', options: LAYER_OUTLINES }],
+  },
+  {
+    no: '2-7',
     key: 'square',
     zh: '方形环',
     en: 'A square ring',
@@ -165,7 +174,7 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     axes: [{ axis: '排布', options: SQUARE_LAYOUTS }],
   },
   {
-    no: '2-7',
+    no: '2-8',
     key: 'grid',
     zh: '环阵列场地',
     en: 'Four by four',
@@ -173,7 +182,7 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     axes: [],
   },
   {
-    no: '2-8',
+    no: '2-9',
     key: 'cluster',
     zh: '单元关系',
     en: 'Between units',
@@ -183,7 +192,7 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     axes: [CLUSTER_RELATION_AXIS, CLUSTER_TIMING_AXIS],
   },
   {
-    no: '2-9',
+    no: '2-10',
     key: 'walk',
     zh: '一个人走过',
     en: 'A person walks through',
@@ -191,7 +200,7 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     axes: [WALK_GRID_AXIS, WALK_READING_AXIS, WALK_RESPONSE_AXIS],
   },
   {
-    no: '2-10',
+    no: '2-11',
     key: 'crowd',
     zh: '几个人在场',
     en: 'A few people',
@@ -200,7 +209,7 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     axes: [WALK_GRID_AXIS, WALK_READING_AXIS, WALK_RESPONSE_AXIS],
   },
   {
-    no: '2-11',
+    no: '2-12',
     key: 'combo',
     zh: '单元组合',
     en: 'Compositions',

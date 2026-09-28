@@ -2196,6 +2196,38 @@ button.log-heat__cell {
   border-left: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
 }
 
+/* Lab 2-6 目标形态：复用台架控件，补齐逐层编辑与正投影视图。 */
+.layer-study .lab-fig canvas { aspect-ratio: 700 / 440; }
+.layer-drawings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid color-mix(in srgb, var(--ink) 18%, transparent); }
+.layer-drawings svg { width: 100%; display: block; padding: 8px; }
+.layer-drawings svg + svg { border-left: 1px solid color-mix(in srgb, var(--ink) 14%, transparent); }
+.layer-drawings text { fill: var(--n700); font: 12px var(--font-mono, monospace); }
+.layer-guide { fill: none; stroke: var(--n500); stroke-width: 0.8; opacity: 0.45; stroke-dasharray: 3 4; }
+.layer-cut { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 5 4; opacity: 0.5; }
+.layer-study .layer-seg { display: flex; flex-wrap: wrap; }
+.layer-study .layer-edit { justify-content: flex-start; }
+.layer-study .layer-outline { flex-wrap: wrap; }
+.layer-sliders { display: grid; width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; padding: 6px 16px 0; }
+.layer-study .layer-slider { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; padding: 0 6px; }
+.layer-slider > span { display: flex; justify-content: space-between; gap: 8px; }
+.layer-slider output { color: var(--accent-2); font-variant-numeric: tabular-nums; }
+.layer-study .layer-slider input { width: 100%; min-width: 0; }
+.layer-study .layer-join { column-gap: 16px; }
+.layer-note { width: 100%; text-align: center; color: var(--n600); font-weight: 400; letter-spacing: 0; text-transform: none; }
+.layer-footnote { font-size: 11px; line-height: 1.7; color: var(--n600); padding: 10px 16px; margin: 0; border-top: 1px solid color-mix(in srgb, var(--ink) 14%, transparent); }
+@media (max-width: 640px) {
+  .layer-study .lab-hud { font-size: 9px; }
+  .layer-study .lab-hud.tl { top: 8px; left: 12px; }
+  .layer-study .lab-hud.bl { display: none; }
+  .layer-study .lab-hud.br { right: 10px; bottom: 8px; }
+  .layer-study .lab-ctl .grp { padding: 0 8px; gap: 7px; }
+  .layer-study .lab-ctl .seg button { padding: 5px 7px; }
+  .layer-sliders { gap: 10px; padding: 6px 4px 0; }
+  .layer-study .layer-slider { font-size: 9px; padding: 0; }
+  .layer-study .layer-join { column-gap: 10px; }
+  .layer-drawings svg { padding: 2px; }
+}
+
 /* ── 控制条竖排在画面右侧（.lab-wrap--side，案例页主图用；用户拍板 2026-07-28）──
    横排控制条挂在画面下面会把整件变高，而案例页主图高度是首屏预算里的硬约束；
    竖排到右侧则**只变宽不变高**。组间分隔线相应从竖线转横线。 */

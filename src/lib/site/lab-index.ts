@@ -10,7 +10,7 @@
  * （2026-09-03 收纳 + 09-03/09-04 追加的 Ⅴ Ⅵ + 09-17/09-20 的 Ⅶ 单元组合）。编号按项目（2026-09-13 拍板）。
  *
  * kernel：'2d' = 2D 内核（绿）· '3d' = 3D 内核（紫），与图框顶线同一套编码
- * （稿内：2D 绿 / 3D 紫）；Lab 2-9 / 2-10 是 2D canvas 平面，按 2D 记。
+ * （稿内：2D 绿 / 3D 紫）；Lab 2-10 / 2-11 是 2D canvas 平面，按 2D 记。
  */
 export type LabKernel = "2d" | "3d";
 
@@ -65,7 +65,7 @@ export const LAB_INDEX: readonly LabGroup[] = [
   {
     key: "project-ii",
     label: "Project II — Spatial simulation",
-    sub: "Lab 2-1 – 2-11 · skin-unit engine",
+    sub: "Lab 2-1 – 2-12 · skin-unit engine & geometry studies",
     segments: [
       {
         n: "Ⅰ",
@@ -86,38 +86,39 @@ export const LAB_INDEX: readonly LabGroup[] = [
       {
         n: "Ⅲ",
         label: "A ring",
-        sub: "Lab 2-5 – 2-6 · the row closed into a loop",
+        sub: "Lab 2-5 – 2-7 · the row closed into a loop",
         benches: [
-          { no: "2-5", title: "Cylinder of units", kernel: "3d", description: 'Twenty bands ring a tube — level, undulating, drifting, or pinched apart once around.', meta: '4 plans · radius · WebGL' },
-          { no: "2-6", title: "A square ring", kernel: "3d", description: 'The mast stays round; how far each band reaches makes the plan a square — flat, undulating, or pinched.', meta: 'Three depths · WebGL' },
+          { no: "2-5", title: "Cylinder of units", kernel: "3d", description: 'Twenty bands ring a tube — level, undulating, drifting, pinched, or uniformly double.', meta: '5 plans · radius · WebGL' },
+          { no: "2-6", title: "Layers within one unit", kernel: "3d", description: 'Two shelves around one mast: tilt each plane, open its outline, or join a sector into one thick shelf. A geometric study before forming.', meta: 'Target geometry · 2 layers · WebGL' },
+          { no: "2-7", title: "A square ring", kernel: "3d", description: 'The mast stays round; how far each band reaches makes the plan a square — flat, undulating, or pinched.', meta: 'Three depths · WebGL' },
         ],
       },
       {
         n: "Ⅳ",
         label: "A room",
-        sub: "Lab 2-7 · the field at real scale",
-        benches: [{ no: "2-7", title: "Four by four", kernel: "3d", description: 'Sixteen of those cylinders hung in a room, with a 1.70 m figure for scale.', meta: '16 live rings · WebGL' }],
+        sub: "Lab 2-8 · the field at real scale",
+        benches: [{ no: "2-8", title: "Four by four", kernel: "3d", description: 'Sixteen of those cylinders hung in a room, with a 1.70 m figure for scale.', meta: '16 live rings · WebGL' }],
       },
       {
         n: "Ⅴ",
         label: "Between units",
-        sub: "Lab 2-8 · what two, three, four, nine units can be to each other",
-        benches: [{ no: "2-8", title: "Between units", kernel: "3d", description: 'Two, three, four or nine of those rings — apart, touching, stepped, interleaved at two heights, together or wave by wave.', meta: '4 clusters · 5 relations · 2 timings · WebGL' }],
+        sub: "Lab 2-9 · what two, three, four, nine units can be to each other",
+        benches: [{ no: "2-9", title: "Between units", kernel: "3d", description: 'Two, three, four or nine of those rings — apart, touching, stepped, interleaved at two heights, together or wave by wave.', meta: '4 clusters · 5 relations · 2 timings · WebGL' }],
       },
       {
         n: "Ⅵ",
         label: "People",
-        sub: "Lab 2-9 – 2-10 · behaviour reaching the units",
+        sub: "Lab 2-10 – 2-11 · behaviour reaching the units",
         benches: [
-          { no: "2-9", title: "A person walks through", kernel: "2d", description: 'One person crosses a room of 64 small units. The floor remembers; the units that read enough of it form — and stay formed.', meta: '6 behaviours · 3 grids · canvas' },
-          { no: "2-10", title: "A few people", kernel: "2d", description: 'Place people, drag them, or let them wander — the units form live, and two people together form twice as fast.', meta: 'Up to 8 people · live · canvas' },
+          { no: "2-10", title: "A person walks through", kernel: "2d", description: 'One person crosses a room of 64 small units. The floor remembers; the units that read enough of it form — and stay formed.', meta: '6 behaviours · 3 grids · canvas' },
+          { no: "2-11", title: "A few people", kernel: "2d", description: 'Place people, drag them, or let them wander — the units form live, and two people together form twice as fast.', meta: 'Up to 8 people · live · canvas' },
         ],
       },
       {
         n: "Ⅶ",
         label: "Compositions",
-        sub: "Lab 2-11 · platforms joined high to low",
-        benches: [{ no: "2-11", title: "Joined platforms", kernel: "3d", description: 'Undulating and split rings hung edge to edge — a descent onto a landing, a rise from a shelf, two mouths enclosing a cavity — round and square.', meta: '8 figures · round & square · WebGL' }],
+        sub: "Lab 2-12 · platforms joined high to low",
+        benches: [{ no: "2-12", title: "Joined platforms", kernel: "3d", description: 'Undulating and split rings hung edge to edge — a descent onto a landing, a rise from a shelf, two mouths enclosing a cavity — round and square.', meta: '8 figures · round & square · WebGL' }],
       },
     ],
   },

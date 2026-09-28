@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { LabCopyScroll } from '../../../components/lab/LabCopyScroll';
 import { LegacyLabHash } from '../../../components/lab/LegacyLabHash';
 import { LabIndex } from '../../../components/lab/LabIndex';
-import { LAB_INDEX, labAccent, labBench } from '../../../src/lib/site/lab-index';
+import { LAB_BENCHES, LAB_INDEX, labAccent, labBench } from '../../../src/lib/site/lab-index';
 import { PageEnter } from '../../../components/site/PageEnter';
 import { FourBarBench } from '../../../components/lab/FourBarBench';
 import { ArchBench } from '../../../components/lab/ArchBench';
@@ -13,6 +13,7 @@ import { MachineBench } from '../../../components/lab/MachineBench';
 import { SkinBench } from '../../../components/lab/SkinBench';
 import { SkinSolidBench } from '../../../components/lab/SkinSolidBench';
 import { SkinRingBench } from '../../../components/lab/SkinRingBench';
+import { SkinLayersBench } from '../../../components/lab/SkinLayersBench';
 import { SkinSeriesBench } from '../../../components/lab/SkinSeriesBench';
 import { SkinGridBench } from '../../../components/lab/SkinGridBench';
 import { SkinDualBench } from '../../../components/lab/SkinDualBench';
@@ -25,10 +26,11 @@ import { SkinComboBench } from '../../../components/lab/SkinComboBench';
 export const metadata = { title: 'The lab' };
 
 /**
- * The lab（Lab-Modernist 稿 → MAPPING §7）：十五台真求解器台架，深色语言与 case/log 一致。
+ * The lab（Lab-Modernist 稿 → MAPPING §7）：台架目录见 lab-index，深色语言与 case/log 一致。
+ * 2026-09-28 插入 Lab 2-6 多层台目标几何，后续编号顺延；该台明确标注尚未接入成形求解。
  * ★ 版式逐项对稿：300px 定宽左栏 + 44px 间距；规格表竖排行（92px 标签列 + 发丝线分隔）；
  *   图框 3px 彩色顶线（2D 绿 / 3D 紫）+ 极淡填充；标题 72px；页脚两链。
- * 每台跑的是站内 TS 内核，不是视频、不是二次实现：Lab.01–05 = src/lib/linkage（封盘零改，
+ * 原有求解台架跑的是站内 TS 内核，不是视频、不是二次实现：Lab.01–05 = src/lib/linkage（封盘零改，
  * 项目一），Lab.06–13 = src/lib/space（项目二皮肤单元引擎，Python 研究代码的 1:1 移植）；
  * Lab.14–15 = src/lib/space/unit-activation + crowd-plan（项目二带行为层的两台：一个人走过 / 几个人在场——
  * 平面、2D canvas，规则来自作者 07-20 的原型；2026-09-04 立项，第六段 Ⅵ People）。
@@ -44,9 +46,9 @@ export const metadata = { title: 'The lab' };
  * ——几个单元**之间**能是什么关系（距离 / 高度 / 形态），编号顺延不重排。
  * 2026-09-04 加第六段 Ⅵ A person（Lab.14 一个人走过）：行为层第一次接进来，问的是「人这样走一遍，哪一群单元被激活」。
  * 2026-08-18 起页面按项目分组（MAPPING §16）——log 页先例：多项目共用一条主线。
- * 2026-09-17 加第七段 Ⅶ Compositions（Lab 2-11 单元组合）；2026-09-20 用户纠偏为「同一种平台一圈起伏、几个单元首尾相接、
+ * 2026-09-17 加第七段 Ⅶ Compositions（Lab 2-12 单元组合）；2026-09-20 用户纠偏为「同一种平台一圈起伏、几个单元首尾相接、
  * 接缝处接高接低」（首版按目录形态换槽位，读错了）：每个单元一个相位 + 一段高度，接法五种预设，用户的图形按预设追加；编号顺延不重排。
- * 2026-09-13 编号改按项目（用户拍板）：Lab.01–05 → Lab 1-1…1-5，Lab.06–15 → Lab 2-1…2-10；
+ * 2026-09-13 编号改按项目（用户拍板）：Lab.01–05 → Lab 1-1…1-5，Lab.06–15 → Lab 2-1…2-11；
  * 锚点 `#lab1-1`／`#lab2-5-split`，旧哈希 `#lab10(-split)` 由 LegacyLabHash + planFromHash 照认。
  * 上面各条注释里的两位编号是写下时的号（历史），对照见 CLAUDE.md「Lab 编号对照」。
  * 2026-09-17 左栏目录（用户手绘立项）：`.lab-layout` 两列——左 `.lab-rail` 吸顶目录（LabIndex，
@@ -82,7 +84,7 @@ const SPEC_KEY: CSSProperties = {
 };
 const HAIR_14 = '1px solid color-mix(in srgb, var(--ink) 14%, transparent)';
 
-/** 项目分组头：台架从此按项目归组（Lab 1-1…1-5 = 项目一，Lab 2-1…2-10 = 项目二；项目二内再按尺度分四段，见 ScaleRule） */
+/** 项目分组头：台架从此按项目归组（Lab 1-1…1-5 = 项目一，Lab 2-1…2-11 = 项目二；项目二内再按尺度分四段，见 ScaleRule） */
 function ProjectRule({ label, sub }: { label: string; sub: string }) {
   return (
     <div
@@ -230,7 +232,7 @@ function Bench({
           borderTop: `3px solid ${accent}`,
           background: 'color-mix(in srgb, var(--ink) 4.5%, transparent)',
           // 框贴着台架自己的高度，**不跟着 grid 拉满行高**：左栏（正文 + 规格表）比它长时
-          // 拉伸出来的是一个空框，框线一路画到底下什么也没有（原 Lab.14 方形环 = 今 Lab 2-6，实测空了 614px）。
+          // 拉伸出来的是一个空框，框线一路画到底下什么也没有（原 Lab.14 方形环 = 今 Lab 2-7，实测空了 614px）。
           // 单列（窄屏）下 grid 只有一列，这条不起作用。
           alignSelf: 'start',
         }}
@@ -258,7 +260,7 @@ export default function LabPage() {
         <div className="lab-main">
         <header style={{ padding: '64px 0 40px', borderBottom: 'var(--hair)' }}>
           <div className="flex items-baseline justify-between" style={{ gap: 32 }}>
-            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · eighteen live instruments</p>
+            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · {LAB_BENCHES.length} interactive studies</p>
             <span style={LEGEND}>
               <span className="flex items-center" style={{ gap: 6 }}>
                 <span style={{ width: 9, height: 9, background: 'var(--accent)' }} />
@@ -268,7 +270,7 @@ export default function LabPage() {
                 <span style={{ width: 9, height: 9, background: 'var(--accent-2)' }} />
                 3D kernel
               </span>
-              <span>All live</span>
+              <span>Interactive</span>
             </span>
           </div>
           <h1
@@ -297,10 +299,9 @@ export default function LabPage() {
             <line x1="0" y1="10" x2="150" y2="10" stroke="var(--accent-2)" strokeWidth="1.5" />
           </svg>
           <p style={{ fontSize: 19, lineHeight: 1.5, margin: '24px 0 0', maxWidth: '56ch' }}>
-            Every figure below runs a real solver — nothing here is a video. Project I&apos;s
-            benches run the same kernels, tests and stops as the hardware; Project II&apos;s
-            benches run its structure engine, ported line-for-line from the research code, at four
-            scales — one band, a row, a ring, a room.
+            Live solvers and target geometry, each labelled on its bench. Project I&apos;s
+            benches run the same kernels, tests and stops as the hardware; Project II follows
+            a skin structure from one band to a room, alongside studies of target shapes and human activity.
           </p>
         </header>
 
@@ -454,7 +455,7 @@ export default function LabPage() {
             ['Height', 'Same form, one lead per station — 18% ↔ 71%'],
             ['Solve', '1 / 11 / 10 engines, 20 placements — same run'],
             ['Closure', 'Palindrome (11 levels) or exact mirror (10) — the seam is one step wide'],
-            ['Pinch', 'Shelves 16 px, gap 0 → 100, height in even steps — Lab 2-6’s construction, one reach (83 px) all round'],
+            ['Pinch', 'Shelves 16 px, gap 0 → 100, height in even steps — Lab 2-7’s construction, one reach (83 px) all round'],
             ['Double', 'Two shelves all round · each 16 px, gap 100 · one fully open section repeated 20 times'],
             ['Flat', 'Pinched: seam centre level all round (symmetric padding) — the shelves part evenly'],
             ['Radius', 'Live slider · gaps widen with it'],
@@ -468,6 +469,21 @@ export default function LabPage() {
 
         <Bench
           no="2-6"
+          lede="Two shelves within a single unit can shape the space between them. Each has its own inclination and outline: a full ring, a half, a quarter, two thirds, or two separate quarters. A selected sector can connect the upper and lower edges into a straight side, making one thick shelf there. This geometric study keeps the plan footprint fixed; the plans and section below show exactly where each layer exists. It defines target shapes for the skin engine and does not yet simulate their formation."
+          specs={[
+            ['Study', 'Target geometry · not a solved skin configuration'],
+            ['Baseline', 'Lab 2-5 double platform · thickness 16 · gap 100 · reach 83.2'],
+            ['Inclination', 'Each layer 0–20° · independent downhill direction'],
+            ['Outline', '360° / 180° / 90° / 240° / two separate 90° sectors'],
+            ['Connection', 'A straight side over the shared sector · outer top and bottom stay in place'],
+            ['Read together', 'Orbit view · plan of each layer · rotatable section'],
+          ]}
+        >
+          <SkinLayersBench />
+        </Bench>
+
+        <Bench
+          no="2-7"
           lede="The mast stays round; the plan does not. Each of the twenty bands reaches out a different distance — four at the corners, eight along the edges, eight on the faces — so the rim lands on a square, and since the membrane between neighbours is a ruled panel, the chord it draws is the edge itself. Only the reach changes: the box is the same height the whole way round, its ladder the same ten rungs, squeezed closer as the shelf gets shallower. Two conditions decide whether that works, and both were learnt the hard way: the end panel must end on a locked rung or the end face bows out, and the box has to fit inside the free run it lives in — when it does not, the lower buffer is pulled straight and the mouth curls the wrong way. The plan is a dial, not a fixed shape: hold the inscribed circle, push only the corners out, and the same twenty bands walk from circle to square in five steps."
           specs={[
             ['Ring', '20 bands · three depths — 8 face · 8 edge · 4 corner'],
@@ -496,7 +512,7 @@ export default function LabPage() {
         <ScaleRule n={P2.segments[3].n} label={P2.segments[3].label} sub={P2.segments[3].sub} />
 
         <Bench
-          no="2-7"
+          no="2-8"
           lede="Sixteen of the cylinders from Lab 2-5 hung in a room — 320 bands, one solved section. A 1.70 m figure stands on the floor beside them, and that figure is what sets the scale: everything else on this page had none until now. How far a ledge reaches is set by how much material its outermost bond captures — not by how hard the unit contracts. So this family folds more of the same strip: 202 nodes as before, but the fan spans 2.1× the catalogue's, and the slack hugging the mast is what pays for it. Each ring keeps its own clearance, and pulling the radius breathes the whole field."
           specs={[
             ['Field', '4 × 4 rings · 20 bands each · 320 placements'],
@@ -515,8 +531,8 @@ export default function LabPage() {
         <ScaleRule n={P2.segments[4].n} label={P2.segments[4].label} sub={P2.segments[4].sub} />
 
         <Bench
-          no="2-8"
-          lede="Call one of those cylinders a unit — twenty bands round a mast that contract into a ring platform. This bench asks what a few of them can be to each other. Two, three, four or nine hang in Lab 2-7's room; the relations are measured, not styled: apart (Lab 2-7's clearance), touching (platform edge to platform edge, with a fabric web growing across each seam once the rims meet), stepped (the same shape carried higher on its band — up to 0.35 m), or interleaved, where a lower platform slides under a higher one and stops short of its neighbour's mast. Interleaving has a physical gate: the step must clear the folded body at its fattest moment, so some form–cluster pairs grey out rather than collide. Timing is a second axis: all at once, or wave by wave across the cluster."
+          no="2-9"
+          lede="Call one of those cylinders a unit — twenty bands round a mast that contract into a ring platform. This bench asks what a few of them can be to each other. Two, three, four or nine hang in Lab 2-8's room; the relations are measured, not styled: apart (Lab 2-8's clearance), touching (platform edge to platform edge, with a fabric web growing across each seam once the rims meet), stepped (the same shape carried higher on its band — up to 0.35 m), or interleaved, where a lower platform slides under a higher one and stops short of its neighbour's mast. Interleaving has a physical gate: the step must clear the folded body at its fattest moment, so some form–cluster pairs grey out rather than collide. Timing is a second axis: all at once, or wave by wave across the cluster."
           specs={[
             ['Unit', 'One Lab 2-5 ring — 20 bands · 202 nodes · same bond maps'],
             ['Clusters', 'Pair · triad · two-by-two · three-by-three'],
@@ -527,7 +543,7 @@ export default function LabPage() {
             ['Timing', 'Together, or one wave every 150 steps — one solver per unit'],
             ['Seams', 'Touching, level: a 16 cm fabric web bridges each seam'],
             ['Switching', 'Relation re-places without re-solving; form, timing or level count re-solves'],
-            ['Scale', 'Lab 2-7\'s room and 1.70 m figure, whatever the cluster size'],
+            ['Scale', 'Lab 2-8\'s room and 1.70 m figure, whatever the cluster size'],
           ]}
         >
           <SkinClusterBench />
@@ -536,10 +552,10 @@ export default function LabPage() {
         <ScaleRule n={P2.segments[5].n} label={P2.segments[5].label} sub={P2.segments[5].sub} />
 
         <Bench
-          no="2-9"
-          lede="The first bench with a behaviour layer. One person walks through Lab 2-7’s room — passing, crossing, standing, looping, pacing, or wherever you click — and every second of presence marks the floor within reach. Each unit reads the floor it owns; once that floor has held presence long enough on average, the unit comes down; whether it stays down after they leave is a switch — follow, where it withdraws, or lock, the hysteresis the project argues for. The units are smaller and more numerous than Lab 2-7’s so that what forms is a group, not a point. The person faces somewhere and has a body: the trace lands only inside a 180° field of view, nothing comes down within a clearance distance of the body (a platform there would hit them — those units are held back, marked with a rose ×), and while walking a lane straight ahead stays clear, so structure grows along the sides of the path and, when they stop, as an arc in front of them. As a demo it runs fast — two seconds of standing brings the arc down, six seconds after the person leaves it is gone — with the author’s July prototype (2 %/s decay, a 15 s threshold) still one slider away; reach, field of view and clearance are the behavioural knobs."
+          no="2-10"
+          lede="The first bench with a behaviour layer. One person walks through Lab 2-8’s room — passing, crossing, standing, looping, pacing, or wherever you click — and every second of presence marks the floor within reach. Each unit reads the floor it owns; once that floor has held presence long enough on average, the unit comes down; whether it stays down after they leave is a switch — follow, where it withdraws, or lock, the hysteresis the project argues for. The units are smaller and more numerous than Lab 2-8’s so that what forms is a group, not a point. The person faces somewhere and has a body: the trace lands only inside a 180° field of view, nothing comes down within a clearance distance of the body (a platform there would hit them — those units are held back, marked with a rose ×), and while walking a lane straight ahead stays clear, so structure grows along the sides of the path and, when they stop, as an arc in front of them. As a demo it runs fast — two seconds of standing brings the arc down, six seconds after the person leaves it is gone — with the author’s July prototype (2 %/s decay, a 15 s threshold) still one slider away; reach, field of view and clearance are the behavioural knobs."
           specs={[
-            ['Field', 'Lab 2-7’s room and field · 4×4 / 6×6 / 8×8 · unit scaled with pitch (4×4 = Lab 2-7 verbatim)'],
+            ['Field', 'Lab 2-8’s room and field · 4×4 / 6×6 / 8×8 · unit scaled with pitch (4×4 = Lab 2-8 verbatim)'],
             ['Trace', 'Presence-seconds on a 0.1 m floor grid, within reach of the person · on the bench it caps at the threshold and fades away linearly (fade slider); the prototype’s own rule is 2 %/s with no cap and no zero'],
             ['Reading', 'By cell (Voronoi = the aisle lines) or footprint only · mean over the cells a unit owns'],
             ['Forming', 'Mean over the floor a unit owns ≥ threshold × floor share ⇒ down (floor share 25–100 %, default half — at 100 % only units wholly inside the wedge ever form) · purple ring grows from mast to rim'],
@@ -556,15 +572,15 @@ export default function LabPage() {
         </Bench>
 
         <Bench
-          no="2-10"
-          lede="Lab 2-9 replayed one person along a preset path; this bench is live. Click the floor to place people (up to eight), hold one to drag it, or let them wander on their own — at an indoor 0.7 m/s, a hop of half a metre to two, then eight to forty-five seconds standing; a demo device rather than a behaviour rule, but paced like people in a room, not like particles. The floor records presence as they move and the units form in front of you. Where two reaches overlap the floor counts both people, so a pair standing together forms the unit underfoot twice as fast, and a small crowd reshapes more of the room than one person ever could. Same mechanism as Lab 2-9, same knobs, nothing re-tuned."
+          no="2-11"
+          lede="Lab 2-10 replayed one person along a preset path; this bench is live. Click the floor to place people (up to eight), hold one to drag it, or let them wander on their own — at an indoor 0.7 m/s, a hop of half a metre to two, then eight to forty-five seconds standing; a demo device rather than a behaviour rule, but paced like people in a room, not like particles. The floor records presence as they move and the units form in front of you. Where two reaches overlap the floor counts both people, so a pair standing together forms the unit underfoot twice as fast, and a small crowd reshapes more of the room than one person ever could. Same mechanism as Lab 2-10, same knobs, nothing re-tuned."
           specs={[
             ['People', 'Up to 8 · click empty floor to place · hover for the grab cursor, hold to drag · − removes the last'],
             ['Wander', 'Indoor pace 0.7 m/s · a hop of 0.5–2 m (now and then 3.5) · then 8–45 s standing · seeded · a demo device, not a rule'],
-            ['Mechanism', 'Lab 2-9’s, untouched: presence-seconds within each person’s field of view, outside their clearance · trace decays · mean ≥ threshold brings the unit down · a unit within anyone’s clearance is held back'],
+            ['Mechanism', 'Lab 2-10’s, untouched: presence-seconds within each person’s field of view, outside their clearance · trace decays · mean ≥ threshold brings the unit down · a unit within anyone’s clearance is held back'],
             ['Response', 'Follow (default) — units withdraw when people leave · Lock — they stay, which is the project’s hysteresis'],
             ['Overlap', 'Reaches add: two people on one spot form the unit underfoot in half the time'],
-            ['Field', '4×4 / 6×6 / 8×8 on Lab 2-7’s field · unit scaled with pitch'],
+            ['Field', '4×4 / 6×6 / 8×8 on Lab 2-8’s field · unit scaled with pitch'],
             ['Not here', 'Cats, and any rule for how a real person moves — those are the author’s to write'],
           ]}
         >
@@ -574,10 +590,10 @@ export default function LabPage() {
         <ScaleRule n={P2.segments[6].n} label={P2.segments[6].label} sub={P2.segments[6].sub} />
 
         <Bench
-          no="2-11"
-          lede="Take one platform and give it Lab 2-5’s undulation: the ring rises from a trough to a crest and back, the shape itself never changing. Hang two or three edge to edge and each brings to the seam whatever height its undulation puts on that side. Three figures from the author’s sketch: a descent — two rings sharing the range so the seam stays level, landing on a flat ring at the bottom; a rise — a split unit’s lower shelf (Lab 2-5’s pinch plan, mouth turned toward the neighbour) meets the trough of a ramp within half a centimetre, and the ramp’s crest meets a flat ring at the top; and an enclosure — two split units mouth to mouth, their cavities joining into one 0.39 m pocket. Five plainer joins stay as presets: step, ramp, ramp in three, hollow, arch. Each undulating unit has two knobs (crest band, height slice), each split unit one (which band its mouth faces), and the seam reading falls out of them. The square family repeats every figure with Lab 2-6’s rings — its undulation spans only 0.16 m, so the square rise keeps an 8 cm step where the ramp leaves the shelf, and the bench says so rather than hiding it."
+          no="2-12"
+          lede="Take one platform and give it Lab 2-5’s undulation: the ring rises from a trough to a crest and back, the shape itself never changing. Hang two or three edge to edge and each brings to the seam whatever height its undulation puts on that side. Three figures from the author’s sketch: a descent — two rings sharing the range so the seam stays level, landing on a flat ring at the bottom; a rise — a split unit’s lower shelf (Lab 2-5’s pinch plan, mouth turned toward the neighbour) meets the trough of a ramp within half a centimetre, and the ramp’s crest meets a flat ring at the top; and an enclosure — two split units mouth to mouth, their cavities joining into one 0.39 m pocket. Five plainer joins stay as presets: step, ramp, ramp in three, hollow, arch. Each undulating unit has two knobs (crest band, height slice), each split unit one (which band its mouth faces), and the seam reading falls out of them. The square family repeats every figure with Lab 2-7’s rings — its undulation spans only 0.16 m, so the square rise keeps an 8 cm step where the ramp leaves the shelf, and the bench says so rather than hiding it."
           specs={[
-            ['Units', 'Round: Lab 2-5 ring (202 nodes) undulating, or its pinch plan (338) · Square: Lab 2-6 ring (305) undulating, or its one-loop pinch (338)'],
+            ['Units', 'Round: Lab 2-5 ring (202 nodes) undulating, or its pinch plan (338) · Square: Lab 2-7 ring (305) undulating, or its one-loop pinch (338)'],
             ['Knobs', 'Undulating: crest band 0–19 · height slice 0–100 % of the range · Split: mouth band'],
             ['Range', 'Round lead 58–14 = 0.35 m · Square lead 135–115 = 0.16 m — a ramp shares it, a step spends it at the seam'],
             ['Figures', '① descent onto a landing · ② rise from a split shelf · ③ two splits enclosing one cavity · + step, ramp, ramp in three, hollow, arch'],
@@ -585,7 +601,7 @@ export default function LabPage() {
             ['Spacing', 'Touching = half-widths by peak reach (split and undulating differ) · apart adds the family’s gap'],
             ['Solved', 'One solver per lead (and per depth class on the square) · the pinch family solved once however many splits'],
             ['Switching', 'Spacing re-places without re-solving; figure, family or form re-solves · the square family fixes the radius at 30'],
-            ['Scale', 'Lab 2-7’s room and 1.70 m figure · round surface 1.39–1.73 m, cavity 0.39 m headroom'],
+            ['Scale', 'Lab 2-8’s room and 1.70 m figure · round surface 1.39–1.73 m, cavity 0.39 m headroom'],
             ['Not here', 'Interaction between units · figures beyond a single row · what a person or cat would do with them'],
           ]}
         >
@@ -605,7 +621,7 @@ export default function LabPage() {
               color: 'var(--n500)',
             }}
           >
-            18 instruments · 03 kernels · all live
+            {LAB_BENCHES.length} studies · 03 kernels · interactive
           </span>
           <span
             className="flex"

@@ -6,7 +6,7 @@ import type { HomeLog } from './HomeScreens';
 import { HomeLabPreview } from './HomeLabPreview';
 import styles from './HomeLab.module.css';
 
-const DEFAULTS = ['1-4', '2-11'];
+const DEFAULTS = ['1-4', '2-12'];
 const pad = (n: number) => String(n).padStart(2, '0');
 
 /** S2 的展示层；项目/台架次序来自与 /lab 共用的目录，日志仍来自服务端内容池。 */
