@@ -382,15 +382,15 @@ export default function LabPage() {
 
         <Bench
           no="2-6"
-          lede="Two shelves within a single unit can shape the space between them. Each has its own inclination and outline. Selected sectors join their outer edges into straight sides, making thick shelves there. Switch to the forming view to watch the complete surface emerge from four simulated profiles: double, thick, upper only and lower only. The two views share all shape controls. Inclination is currently a spatial assembly of the solved profiles; circumferential forces and the mechanism for forming inclined shelves are not simulated."
+          lede="Two shelves within a single unit can shape the space between them. Each has its own inclination and outline. Selected sectors join their outer edges into straight sides, making thick shelves there. The forming view uses separate narrow bands, as in Lab 2-5: you can see each band's thickness, section and locking bonds, with gaps between neighbouring bands. Four simulated profiles make double, thick, upper-only and lower-only regions. Inclination remains a spatial assembly preview; circumferential forces and the mechanism for forming inclined shelves are not simulated."
           specs={[
-            ['Study', 'Target geometry + complete surface from live forming profiles'],
+            ['Study', 'Target geometry + separate forming bands around one axis'],
             ['Baseline', 'Lab 2-5 double platform · thickness 16 · gap 100 · reach 83.2'],
             ['Inclination', 'Each layer 0–20° · assembly preview, not a solved slope mechanism'],
             ['Outline', '360° / 180° / 90° / 240° / two separate 90° sectors'],
             ['Connection', 'One sector or two equal sectors 180° apart · rotate together · outer top and bottom stay in place'],
             ['Read together', 'Orbit view · plan of each layer · rotatable section'],
-            ['Forming', '4 profiles · exact angular boundaries · replay / pause / terminal view'],
+            ['Forming', '4 profiles · 20 base slots split at outline boundaries · replay / pause / terminal view'],
           ]}
         >
           <SkinLayersBench />

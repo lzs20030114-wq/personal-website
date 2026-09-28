@@ -70,7 +70,7 @@ export function SkinLayersBench({ active = true, controls = true, onLight = fals
   return <div className="layer-lab">
     <div className="lab-ctl"><div className="grp"><span className="k">查看</span><span className="seg">
       <button type="button" aria-pressed={stage === 'target'} className={stage === 'target' ? 'active' : undefined} onClick={() => setStage('target')}>目标形态</button>
-      <button type="button" aria-pressed={stage === 'forming'} className={stage === 'forming' ? 'active' : undefined} onClick={() => { setLoaded(true); setStage('forming'); }}>完整形体成形</button>
+      <button type="button" aria-pressed={stage === 'forming'} className={stage === 'forming' ? 'active' : undefined} onClick={() => { setLoaded(true); setStage('forming'); }}>条带成形</button>
     </span></div></div>
     <SkinLayersTarget active={active} controls onLight={onLight} forming={stage === 'forming'} loaded={loaded} />
   </div>;
@@ -145,6 +145,8 @@ function SkinLayersTarget({ active, controls, onLight, forming = false, loaded =
       <div className="lab-hud br"><div>{study.joinMode === 'opposed' ? '对向连接' : '连接'} {Math.round(stats.joined)}°</div><div className="dim">上层绿 · 下层紫 · 连接金</div></div>
     </div></div>
     {controls && <>
+      <details className="layer-parameters" open={!forming || undefined}>
+      <summary className="lab-ctl" hidden={!forming}>形态参数与图纸 · 点击展开 / 收起</summary>
       <StudyDrawings study={study} cut={cut} />
       <div className="lab-ctl lab-ctl--tiered">
         <div className="lab-ctl__row lab-ctl__solve"><div className="grp"><span className="k">示例</span><span className="seg layer-seg">{LAYER_EXAMPLES.map(p => <button type="button" key={p.key} className={example === p.key ? 'active' : undefined} aria-pressed={example === p.key} onClick={() => { setStudy(layerExample(p.key)); setExample(p.key); }}>{p.label}</button>)}</span></div></div>
@@ -168,6 +170,7 @@ function SkinLayersTarget({ active, controls, onLight, forming = false, loaded =
         <div className="lab-ctl__row">{!forming && <div className="grp"><span className="k">视角</span><span className="seg">{VIEWS.map(v => <button type="button" key={v.key} className={view === v.key ? 'active' : undefined} onClick={() => { setView(v.key); api.current?.view(v.key); }}>{v.label}</button>)}</span><button type="button" onClick={() => { api.current?.home(); setView('axon'); }}>归位</button></div>}<Slider label="目标剖面方向" value={cut} max={175} step={5} change={setCut} /></div>
       </div>
       <p className="layer-footnote">上方图纸为目标轮廓与目标剖面；两种查看方式共用这组参数。</p>
+      </details>
     </>}
   </div>;
 }

@@ -850,14 +850,17 @@ export function SkinSolidBench({
     const home0 = layoutList[layoutIdx].home;
     if (home0) cam.setOrientation(presets[home0]);
 
-    const surfaceBakes = new WeakMap<Float32Array, Float32Array>();
+    // 条带双色共用顶点、使用不同索引；两者共同决定烘焙结果。
+    const surfaceBakes = new WeakMap<Float32Array, WeakMap<Uint32Array, Float32Array>>();
     const render = (): void => {
       R.beginFrame(cam);
       const result = surfaceRef.current?.(sims.map(s => ({ px: s.sim.px, py: s.sim.py, locked: s.sim.locked, step: s.sim.step })), layoutList[layoutIdx].key);
       if (result) {
         for (const m of result.meshes) {
-          let baked = surfaceBakes.get(m.verts);
-          if (!baked) { baked = bakeIndexed(m.verts, m.idx); surfaceBakes.set(m.verts, baked); }
+          let parts = surfaceBakes.get(m.verts);
+          if (!parts) { parts = new WeakMap(); surfaceBakes.set(m.verts, parts); }
+          let baked = parts.get(m.idx);
+          if (!baked) { baked = bakeIndexed(m.verts, m.idx); parts.set(m.idx, baked); }
           R.drawDynamicMesh(baked, m.dark, m.light);
         }
         if (result.lines) R.drawLines(result.lines, [0.7, 0.77, 0.73], 0.001);

@@ -13,6 +13,7 @@ const host = vi.hoisted(() => ({
   cleanups: [] as (() => void)[],
   frame: (_dt: number) => {},
   matrices: [] as number[][],
+  meshes: [] as Float32Array[],
   hud: { step: 0, phase: '' },
   terminal: vi.fn<(...args: unknown[]) => Promise<SkinTerminalResult>>(),
 }));
@@ -43,7 +44,7 @@ vi.mock('../../src/lib/linkage/gl3d', async (original) => ({
     beginFrame(cam: OrbitCamera) { host.matrices.push([...cam.matrix]); }
     addMesh() {}
     drawMesh() {}
-    drawDynamicMesh() {}
+    drawDynamicMesh(data: Float32Array) { host.meshes.push(data); }
     drawLines() {}
     setPerspective() {}
   },
@@ -58,8 +59,8 @@ function elements(node: ReactNode): { type: unknown; props: Props }[] {
 }
 const unit = buildSplitRingUnits()[0]; // Lab 2-5 双层台
 
-function mount() {
-  const nodes = elements(SkinSolidBench({ units: [unit], ring: true, order: [0] }));
+function mount(options: Partial<Parameters<typeof SkinSolidBench>[0]> = {}) {
+  const nodes = elements(SkinSolidBench({ units: [unit], ring: true, order: [0], ...options }));
   const events = new Map<string, (e: object) => void>();
   const canvas = {
     dataset: {},
@@ -88,7 +89,7 @@ function mount() {
 }
 
 beforeEach(() => {
-  host.effects = []; host.cleanups = []; host.matrices = [];
+  host.effects = []; host.cleanups = []; host.matrices = []; host.meshes = [];
   host.hud = { step: 0, phase: '' };
   host.terminal.mockReset();
   vi.stubGlobal('window', { matchMedia: () => ({ matches: false }) });
@@ -99,6 +100,15 @@ afterEach(() => {
 });
 
 describe('SkinSolidBench 跳过成形', () => {
+  it('双色条带共用顶点时，两组索引仍各自烘焙，重画不丢掉半条带', () => {
+    const verts = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 2]);
+    const result = { meshes: [new Uint32Array([0, 1, 2]), new Uint32Array([0, 1, 3])].map(idx => ({ verts, idx, dark: [0, 0, 0] as [number, number, number], light: [1, 1, 1] as [number, number, number] })) };
+    mount({ surface: () => result });
+    const [a, b] = host.meshes;
+    expect(a).not.toEqual(b);
+    host.frame(.01);
+    expect(host.meshes.slice(-2)).toEqual([a, b]);
+  });
   it.each(['pending', 'failed'])('%s 期间相机持续绘制，拖拽与预设仍有效', async (status) => {
     host.terminal.mockImplementation(() => status === 'failed'
       ? Promise.reject(new Error('fixture failure')) : new Promise(() => {}));

@@ -85,11 +85,11 @@ export interface HomeLog {
   text: string;
 }
 
-// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-09-29 vitest 实测 668；
+// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-09-29 vitest 实测 675；
 // 迭代稿配色：Tests=绿 700、Kernels=紫 700、Demos=绿 600）
 const STATS = [
   { n: '04', label: 'Projects', color: 'var(--ink)' },
-  { n: '668', label: 'Tests green', color: 'var(--accent)' },
+  { n: '675', label: 'Tests green', color: 'var(--accent)' },
   { n: '03', label: 'Solver kernels', color: 'var(--accent-2)' },
   { n: '16', label: 'Live demos', color: 'var(--g600)' },
 ];

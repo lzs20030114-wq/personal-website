@@ -20,6 +20,17 @@ export function layerProfileAt(s: LayerStudy, angle: number): LayerProfileKind |
   return u && l ? 'double' : u ? 'upper' : l ? 'lower' : null;
 }
 
+/** 共用于截面表面和独立条带的姿态预览；不修改实际节点或键谱。 */
+export function layerPoseOffset(s: LayerStudy, f: LayerFrame, k: number, i: number, r: number, angle: number) {
+  const b = PROFILES[k], m = b.marks, kind = LAYER_PROFILE_KINDS[k];
+  const lo = kind === 'double' ? m.mouthA : m.faceA;
+  const hi = kind === 'double' ? m.mouthB : m.faceB;
+  const t = kind === 'upper' ? 0 : kind === 'lower' ? 1 : clamp((f.py[lo] - f.py[i]) / Math.max(1e-8, f.py[lo] - f.py[hi]));
+  const slope = (key: 'upper' | 'lower') => Math.tan(rad(s[key].tilt)) * Math.cos(rad(angle - s[key].direction));
+  const weight = i < m.outA ? clamp((i - b.lead) / (m.outA - b.lead)) : i > m.outB ? clamp((b.lead + b.free - 1 - i) / (b.lead + b.free - 1 - m.outB)) : 1;
+  return weight * r * ((1 - t) * slope('upper') + t * slope('lower'));
+}
+
 /** 简单凹多边形的耳切，用于真实截面的扇区端盖。不会将凹入的层间空间扇形填满。 */
 function capTriangles(p: readonly (readonly [number, number])[]): number[] {
   const cross = (a: number, b: number, c: number) =>
@@ -51,19 +62,9 @@ export function buildLayerSurface(s: LayerStudy, frames: readonly LayerFrame[], 
   const aa = layerAngles(s), kinds = aa.slice(0, -1).map((a, i) => layerProfileAt(s, (a + aa[i + 1]) / 2));
   const caps = new Map<number, number[]>();
   const point = (k: number, i: number, angle: number, axis = false) => {
-    const f = frames[k], b = PROFILES[k], m = b.marks;
+    const f = frames[k];
     const r = axis ? LAYERS.inner - 1 : LAYERS.inner + f.px[i] * 100;
-    let y = -f.py[i] * 100;
-    if (pose) {
-      const kind = LAYER_PROFILE_KINDS[k];
-      const lo = kind === 'double' ? m.mouthA : m.faceA;
-      const hi = kind === 'double' ? m.mouthB : m.faceB;
-      const t = kind === 'upper' ? 0 : kind === 'lower' ? 1 : clamp((f.py[lo] - f.py[i]) / Math.max(1e-8, f.py[lo] - f.py[hi]));
-      const slope = (key: 'upper' | 'lower') => Math.tan(rad(s[key].tilt)) * Math.cos(rad(angle - s[key].direction));
-      // 固定带的两端保持原位；姿态变化只在台部及其两侧过渡段应用。
-      const weight = i < m.outA ? clamp((i - b.lead) / (m.outA - b.lead)) : i > m.outB ? clamp((b.lead + b.free - 1 - i) / (b.lead + b.free - 1 - m.outB)) : 1;
-      y += weight * r * ((1 - t) * slope('upper') + t * slope('lower'));
-    }
+    const y = -f.py[i] * 100 + (pose ? layerPoseOffset(s, f, k, i, r, angle) : 0);
     return { x: r * Math.cos(rad(angle)), y, z: r * Math.sin(rad(angle)) };
   };
   const material = (k: number, i: number): LayerMaterial => k === 1 ? 'join' : k === 2 ? 'upper' : k === 3 ? 'lower' : i < PROFILES[k].marks.center ? 'upper' : 'lower';
