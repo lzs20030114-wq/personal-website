@@ -27,7 +27,7 @@ export const metadata = { title: 'The lab' };
 
 /**
  * The lab（Lab-Modernist 稿 → MAPPING §7）：台架目录见 lab-index，深色语言与 case/log 一致。
- * 2026-09-28 插入 Lab 2-6 多层台目标几何，后续编号顺延；该台明确标注尚未接入成形求解。
+ * 2026-09-28 插入 Lab 2-6 多层台，后续编号顺延；目标几何与首轮真实截面成形分开呈现。
  * ★ 版式逐项对稿：300px 定宽左栏 + 44px 间距；规格表竖排行（92px 标签列 + 发丝线分隔）；
  *   图框 3px 彩色顶线（2D 绿 / 3D 紫）+ 极淡填充；标题 72px；页脚两链。
  * 原有求解台架跑的是站内 TS 内核，不是视频、不是二次实现：Lab.01–05 = src/lib/linkage（封盘零改，
@@ -469,14 +469,15 @@ export default function LabPage() {
 
         <Bench
           no="2-6"
-          lede="Two shelves within a single unit can shape the space between them. Each has its own inclination and outline: a full ring, a half, a quarter, two thirds, or two separate quarters. A selected sector can connect the upper and lower edges into a straight side, making one thick shelf there. This geometric study keeps the plan footprint fixed; the plans and section below show exactly where each layer exists. It defines target shapes for the skin engine and does not yet simulate their formation."
+          lede="Two shelves within a single unit can shape the space between them. Each has its own inclination and outline: a full ring, a half, a quarter, two thirds, or two separate quarters. Selected sectors can connect the upper and lower edges into straight sides, making thick shelves there. The target study keeps the plan footprint fixed. Switch to forming profiles to compare two real skin simulations: a horizontal double shelf and a thick shelf with the same overall height. Their ring boundaries, inclined planes and incomplete outlines still need forming validation."
           specs={[
-            ['Study', 'Target geometry · not a solved skin configuration'],
+            ['Study', 'Target geometry + two real forming profiles · complete ring not yet solved'],
             ['Baseline', 'Lab 2-5 double platform · thickness 16 · gap 100 · reach 83.2'],
             ['Inclination', 'Each layer 0–20° · independent downhill direction'],
             ['Outline', '360° / 180° / 90° / 240° / two separate 90° sectors'],
             ['Connection', 'One sector or two equal sectors 180° apart · rotate together · outer top and bottom stay in place'],
             ['Read together', 'Orbit view · plan of each layer · rotatable section'],
+            ['Forming profiles', 'Horizontal double / thick · same height 132 · replay and terminal view'],
           ]}
         >
           <SkinLayersBench />

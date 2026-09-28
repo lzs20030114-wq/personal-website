@@ -8,6 +8,7 @@ import { buildRingGradient } from './skin-ring-gradient';
 import { buildSplitRingUnits } from './skin-split-ring';
 import { SQUARE_MORPH, squareMorphTiers, buildSquareUnits, buildSquareWave } from './skin-square';
 import { buildSquareSplitUnits } from './skin-square-split';
+import { buildLayerProfiles } from './skin-layers-forming';
 import { CLUSTER_PLANS, CLUSTER_RELATIONS, CLUSTER_TIMINGS, clusterBuild, clusterForms } from './unit-cluster';
 import { COMBO_PLANS, COMBO_FAMILIES, comboBuild, comboForms } from './unit-combo';
 import type { SkinTerminalInput } from './skin-terminal';
@@ -23,7 +24,7 @@ export function skinTerminalCatalog(): SkinTerminalInput[] {
     const tiers = squareMorphTiers(s);
     inputs.push(...buildSquareUnits(tiers), ...buildSquareWave(tiers).units);
   }
-  inputs.push(...buildSquareSplitUnits());
+  inputs.push(...buildSquareSplitUnits(), ...buildLayerProfiles());
   for (const form of clusterForms())
     for (const plan of CLUSTER_PLANS)
       for (const relation of CLUSTER_RELATIONS)

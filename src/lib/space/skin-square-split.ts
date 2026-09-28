@@ -12,7 +12,7 @@
  *   （十对各自一个 t，总高从 132 到 32 每对差 11.1px；此前沿用捏分族那张十级 t 表，
  *   末尾三级 84→53→32 一步压掉 31、21px，就是那个「突然压缩」）。
  *
- * ## 为什么恒高做不到这么高的缝（探针实测，缝 100）
+ * ## 原收缩终点 r1=0.3 下，恒高做不到这么高的缝（探针实测，缝 100）
  *
  * 恒高读法整圈箱高 = 2·台高 + 缝 = 132，整块那条边是同样高的实心箱；而实心箱必须
  * 「深 ≥ 1.17 × 高」（`SQUARE.E_MAX`：箱高一大、缓冲富余就超上限、折叠体浮起来）⇒ 面类挑出
@@ -44,7 +44,7 @@
  *    按平档定（207）装不下，这一编制的阵列用自己的格距。
  * 3. **外缘偏差 / 成形中段的对位散布**按实测钉住（见守门）。
  */
-import { SKIN_ROOT_FIX, type SkinBond, type SkinPanel, type SkinSeg, type SkinSpec, type SkinUnitOpts } from './skin-unit';
+import { SKIN, SKIN_ROOT_FIX, type SkinBond, type SkinPanel, type SkinSeg, type SkinSpec, type SkinUnitOpts } from './skin-unit';
 import { skinSiteOpts, SKIN_UNITS } from './skin-data';
 import {
   SQUARE, SQUARE_RUNGS, squareAngle, squareBuffer, squareClassOf,
@@ -116,9 +116,9 @@ export function sqSplitTarget(t: number, D: number, wEnd: number = SQSPLIT.W_END
 }
 
 /** 缓冲：折得起来（余量 ≥ E_MIN）且住得下（间隙 ≥ G_MIN）；富余超 E_MAX 构造期抛错 */
-export function sqSplitBuffer(M: number, h: number): number {
+export function sqSplitBuffer(M: number, h: number, r1: number = SKIN.R1): number {
   for (let b = SQUARE.BUF_MIN; b < 60; b++) {
-    const span = 1.2 * (M + b);
+    const span = 4 * r1 * (M + b);
     const slack = 4 * b - (span - h);
     if (span - h < SQUARE.G_MIN || slack < SQUARE.E_MIN) continue;
     if (slack > SQUARE.E_MAX)
@@ -219,12 +219,17 @@ export interface SqSplitStructure {
   optsAt: (base: number) => SkinUnitOpts;
 }
 
-/** 一档的结构段（不含两端分配）：t=0 走平档原谱那套梯子（只是箱矮），t>0 是刻缝箱 */
-export function sqSplitStructure(tier: SqSplitTier, wEnd: number = SQSPLIT.W_END): SqSplitStructure {
-  const h = sqSplitH(tier.t, wEnd);
+/** 新台可指定恒高与共用收缩终点；省略时完整保留旧变高构造。 */
+export interface SqSplitShape { height?: number; r1?: number }
+/** 一档的结构段（不含两端分配）：t=0 走厚箱梯子，t>0 是刻缝箱。 */
+export function sqSplitStructure(tier: SqSplitTier, wEnd: number = SQSPLIT.W_END, shape: SqSplitShape = {}): SqSplitStructure {
+  const h = shape.height ?? sqSplitH(tier.t, wEnd);
+  const end = shape.r1 === undefined ? {} : { r1: shape.r1 };
+  if (!Number.isFinite(h) || h <= sqSplitSeamW(tier.t, wEnd)) throw new Error('箱高必须大于层间缝宽');
+  if (shape.r1 !== undefined && !(shape.r1 > 0 && shape.r1 <= SKIN.R0)) throw new Error('收缩终点必须在 (0, R0] 内');
   if (tier.t <= 0) {
     const k = tier.k!;
-    const b = squareBuffer(k, h);
+    const b = shape.r1 === undefined ? squareBuffer(k, h) : sqSplitBuffer(k, h, shape.r1);
     const fs = squareFree(k, b);
     const c = (fs - 1) / 2;
     const pw = squarePw(h);
@@ -235,14 +240,14 @@ export function sqSplitStructure(tier: SqSplitTier, wEnd: number = SQSPLIT.W_END
       buf: b,
       M: k,
       rel: { center: c, mouthA: c, mouthB: c, faceA: c - pw, faceB: c + pw, outA: c - k, outB: c + k },
-      optsAt: () => ({ ...skinSiteOpts(STEPPED), ...FORM }),
+      optsAt: () => ({ ...skinSiteOpts(STEPPED), ...FORM, ...end }),
     };
   }
   const w = sqSplitSeamW(tier.t, wEnd);
   const D = tier.D!;
   const dv = sqSplitSink(tier.t, D);
   const wt = w * sqSplitTip(tier.t);
-  const lobe = SQSPLIT.LOBE; // = (h − w)/2，变高读法下恒等于台高
+  const lobe = shape.height === undefined ? SQSPLIT.LOBE : (h - w) / 2;
   const faceN = Math.round(lobe / 2);
   const a = Math.max(1, Math.round(wt / 4));
   const wallN = Math.max(1, Math.round(dv / 2));
@@ -250,7 +255,7 @@ export function sqSplitStructure(tier: SqSplitTier, wEnd: number = SQSPLIT.W_END
   const m = a + wallN; // 缝角
   const f = m + faceN; // 面角
   const M = f + boxD / 2; // 轴嘴
-  const buf = sqSplitBuffer(M, h);
+  const buf = sqSplitBuffer(M, h, shape.r1);
   const fs = 2 * (M + buf) + 1;
   const c = buf + M;
   const wv = (w + wt) / 2;
@@ -288,6 +293,7 @@ export function sqSplitStructure(tier: SqSplitTier, wEnd: number = SQSPLIT.W_END
         anchorEnd: true,
         boxSquare: true,
         ...FORM,
+        ...end,
         sqChains: [0],
         coreTether: tether,
         coreTetherRel: crease,

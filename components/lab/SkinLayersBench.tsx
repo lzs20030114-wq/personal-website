@@ -9,6 +9,7 @@ import { buildLayerGeometry, layerAngles, layerBaseline, layerColumns, layerCove
   type LayerMaterial, type LayerShape, type LayerStudy } from '../../src/lib/space/skin-layers';
 import { useBenchLoop } from './useBenchLoop';
 import { planFromHash } from './planHash';
+import { SkinLayersForming } from './SkinLayersForming';
 
 const COLORS: Record<LayerMaterial, { dark: [number, number, number]; light: [number, number, number]; svg: string }> = {
   upper: { dark: [0.08, 0.18, 0.14], light: [0.48, 0.77, 0.61], svg: '#8bc5a1' },
@@ -61,8 +62,26 @@ function Slider({ label, value, min = 0, max, step = 1, change }: { label: strin
   </label>;
 }
 
-/** 独立目标台架复用公共相机、WebGL 和停启循环；不建立 SkinUnit，不显示虚构的锁定/成形数。 */
+/** 目标几何与真实截面分开查看；切换保留已有几何设置与播放进度。 */
 export function SkinLayersBench({ active = true, controls = true, onLight = false }: { active?: boolean; controls?: boolean; onLight?: boolean }) {
+  const [stage, setStage] = useState<'target' | 'forming'>('target');
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    if (planFromHash('2-6', ['forming'])) { setStage('forming'); setLoaded(true); }
+  }, []);
+  if (!controls) return <SkinLayersTarget active={active} controls={false} onLight={onLight} />;
+  return <div className="layer-lab">
+    <div className="lab-ctl"><div className="grp"><span className="k">查看</span><span className="seg">
+      <button type="button" aria-pressed={stage === 'target'} className={stage === 'target' ? 'active' : undefined} onClick={() => setStage('target')}>目标形态</button>
+      <button type="button" aria-pressed={stage === 'forming'} className={stage === 'forming' ? 'active' : undefined} onClick={() => { setLoaded(true); setStage('forming'); }}>成形截面</button>
+    </span></div></div>
+    <div hidden={stage !== 'target'}><SkinLayersTarget active={active && stage === 'target'} controls onLight={onLight} /></div>
+    {loaded && <div hidden={stage !== 'forming'}><SkinLayersForming active={active && stage === 'forming'} onLight={onLight} /></div>}
+  </div>;
+}
+
+/** 目标台架不建立 SkinUnit，不显示虚构的锁定/成形数。 */
+function SkinLayersTarget({ active, controls, onLight }: { active: boolean; controls: boolean; onLight: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [study, setStudy] = useState<LayerStudy>(layerBaseline);
   const [selected, setSelected] = useState<'upper' | 'lower'>('upper');

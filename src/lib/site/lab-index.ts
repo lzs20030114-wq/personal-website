@@ -89,7 +89,7 @@ export const LAB_INDEX: readonly LabGroup[] = [
         sub: "Lab 2-5 – 2-7 · the row closed into a loop",
         benches: [
           { no: "2-5", title: "Cylinder of units", kernel: "3d", description: 'Twenty bands ring a tube — level, undulating, drifting, pinched, or uniformly double.', meta: '5 plans · radius · WebGL' },
-          { no: "2-6", title: "Layers within one unit", kernel: "3d", description: 'Two shelves around one mast: tilt each plane, open its outline, or join a sector into one thick shelf. A geometric study before forming.', meta: 'Target geometry · 2 layers · WebGL' },
+          { no: "2-6", title: "Layers within one unit", kernel: "3d", description: 'Two shelves around one mast: tilt each plane, open its outline, or join a sector into one thick shelf. Compare target geometry with the first two forming profiles.', meta: 'Target geometry + forming profiles · WebGL' },
           { no: "2-7", title: "A square ring", kernel: "3d", description: 'The mast stays round; how far each band reaches makes the plan a square — flat, undulating, or pinched.', meta: 'Three depths · WebGL' },
         ],
       },

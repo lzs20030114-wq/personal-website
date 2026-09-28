@@ -338,6 +338,7 @@ export function SkinSolidBench({
   cellsKey,
   bridges,
   extraControls,
+  raw = false,
 }: {
   active?: boolean;
   onLight?: boolean;
@@ -465,6 +466,8 @@ export function SkinSolidBench({
   bridges?: readonly (readonly [number, number] | SolidBridge)[];
   /** 台架自己的控件（塞进控制条第一层）——Lab.09 的形态选择 */
   extraControls?: ReactNode;
+  /** 原始成形审查：关闭节点平滑和时间 EMA；挂载时固定，旧台架默认保持原画法。 */
+  raw?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const apiRef = useRef<{
@@ -842,6 +845,7 @@ export function SkinSolidBench({
         R.drawDynamicMesh(ceilRing(), RAIL_DARK, RAIL_LITE, undefined, cellPlaces());
       // 绘图平滑按引擎算一次，它的全部实例共用（圆筒 4 条引擎摆 20 处）
       for (const s of sims) {
+        if (raw) { s.sx = s.sim.px; s.sy = s.sim.py; continue; }
         if (!s.emaX || !s.emaY) {
           s.emaX = Float64Array.from(s.sim.px);
           s.emaY = Float64Array.from(s.sim.py);
@@ -1160,7 +1164,7 @@ export function SkinSolidBench({
         if (holdT >= REPLAY_HOLD_S) replay();
       }
       // 帧间 EMA（Lab.06 同款纪律：物理不动，只平滑画面时间轴）
-      if (n > 0) {
+      if (n > 0 && !raw) {
         const a = 1 - Math.pow(0.45, n / 20);
         for (const v of sims) {
           if (!v.emaX || !v.emaY) continue;
