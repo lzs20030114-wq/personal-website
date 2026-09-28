@@ -1138,7 +1138,9 @@ export function SkinSolidBench({
       let n = 0;
       if (skipRef.current && !allDone) {
         requestTerminal();
-        // 等文件期间保持当前帧；加载失败也不偷偷回退到现场求解。
+        // 只停物理推进，相机、缩放和视角动画仍须每帧绘制。
+        // 包括终态提交前的这一帧和异常路径，不能把半成品连同相机一起冻住。
+        render();
         return;
       } else if (runningRef.current && !allDone) {
         acc += dt * rateRef.current * speedRef.current;

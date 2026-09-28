@@ -7,6 +7,7 @@ import { createServer } from 'vite';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const out = resolve(root, 'public/skin-terminal');
+const bundlePath = resolve(root, 'src/lib/space/skin-terminal.generated.json');
 const check = process.argv.includes('--check');
 const server = await createServer({ root, configFile: false, server: { middlewareMode: true, watch: null }, appType: 'custom' });
 try {
@@ -23,6 +24,7 @@ try {
   if (!check) mkdirSync(out, { recursive: true });
   let generated = 0;
   let bytes = 0;
+  const bundled = {};
   const started = performance.now();
   console.log(`[skin-terminal] ${unique.size} unique physical states${check ? ' · checking' : ''}`);
   for (const [signature, input] of unique) {
@@ -40,6 +42,7 @@ try {
     }
     const json = readFileSync(path, 'utf8');
     restoreSkinTerminal(JSON.parse(json), nodes, SKIN.STEPS);
+    bundled[signature] = JSON.parse(json);
     bytes += Buffer.byteLength(json);
   }
   const manifest = { format: SKIN_TERMINAL_FORMAT, revision, count: unique.size };
@@ -48,6 +51,13 @@ try {
     if (JSON.stringify(JSON.parse(readFileSync(manifestPath, 'utf8'))) !== JSON.stringify(manifest))
       throw new Error('Stale skin terminal manifest');
   } else writeFileSync(manifestPath, JSON.stringify(manifest));
+  // 与台架代码一起交付：点击跳过时不再依赖第二轮网络请求或 Web Crypto。
+  // 继续复用上面的版本化预计算缓存，终态坐标不做舍入或重新求解。
+  const bundleJson = JSON.stringify(bundled);
+  const previousBundle = existsSync(bundlePath) ? readFileSync(bundlePath, 'utf8') : null;
+  if (check) {
+    if (previousBundle !== bundleJson) throw new Error('Missing or stale bundled skin terminal states');
+  } else if (previousBundle !== bundleJson) writeFileSync(bundlePath, bundleJson);
   console.log(`[skin-terminal] ${generated} generated, ${(bytes / 1024 / 1024).toFixed(2)} MiB total, ${((performance.now() - started) / 1000).toFixed(1)}s`);
 } finally {
   await server.close();

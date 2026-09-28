@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "skin:terminals": "node scripts/skin-terminal/generate.mjs",
     "pretest": "npm run skin:terminals",
+    "pretypecheck": "npm run skin:terminals",
     "predev": "node scripts/copy-assets.mjs && npm run skin:terminals",
     "prebuild": "node scripts/copy-assets.mjs"
   },

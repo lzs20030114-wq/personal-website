@@ -14,4 +14,5 @@ public/demo/
 # 站内台架组件用的资源副本（prebuild/predev 生成，不进 git）
 public/mesh/
 public/skin-terminal/
+src/lib/space/skin-terminal.generated.json
 scripts/model-extract/.venv/
