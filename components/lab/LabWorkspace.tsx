@@ -43,6 +43,8 @@ export function LabWorkspace({ index, children }: { index: ReactNode; children: 
   const [detailWidth, setDetailWidth] = useState(296);
   const [expanded, expand] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const directoryButton = useRef<HTMLButtonElement>(null);
+  const customWidths = navWidth !== 208 || detailWidth !== 296;
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('lab-layout-v1') || 'null');
@@ -60,20 +62,29 @@ export function LabWorkspace({ index, children }: { index: ReactNode; children: 
   }, [navWidth, detailWidth, ready]);
   return <Workspace.Provider value={{ expanded, expand, detailWidth, resizeDetails: setDetailWidth }}>
     <div className="lab-workspace" data-nav-open={navOpen || undefined} style={{ '--lab-nav-width': `${navWidth}px`, '--lab-detail-width': `${detailWidth}px` } as CSSProperties}>
-      <div className="lab-workspace-tools">
-        <button type="button" aria-expanded={navOpen} aria-controls="lab-directory" onClick={() => setNavOpen(!navOpen)}><WorkspaceIcon name="index" />Index <span lang="zh">目录</span></button>
-        <span className="lab-workspace-hint">Scroll to browse. Expand to explore.</span>
-        <button type="button" className="lab-text-button" onClick={() => { setNavWidth(208); setDetailWidth(296); }}><WorkspaceIcon name="reset" />Reset widths <span lang="zh">恢复宽度</span></button>
-      </div>
       <div className="lab-workspace-grid">
-        <aside className="lab-sidebar" id="lab-directory" hidden={!navOpen}>
+        <aside className="lab-sidebar" aria-label="实验目录">
           <div className="lab-sidebar-sticky">
-            <div className="lab-sidebar-tools"><span>INDEX <span lang="zh">目录</span></span><div>
-              <button type="button" title="缩窄目录" aria-label="缩窄目录" disabled={navWidth <= 176} onClick={() => setNavWidth(clamp(navWidth - 24, 176, 280))}>−</button>
-              <button type="button" title="加宽目录" aria-label="加宽目录" disabled={navWidth >= 280} onClick={() => setNavWidth(clamp(navWidth + 24, 176, 280))}>+</button>
-              <button type="button" title="收起目录" aria-label="收起目录" onClick={() => setNavOpen(false)}><WorkspaceIcon name="collapse" /></button>
-            </div></div>
-            {index}
+            <button ref={directoryButton} type="button" className="lab-directory-toggle" title={navOpen ? '收起目录' : '展开目录'} aria-label={navOpen ? '收起目录' : '展开目录'} aria-expanded={navOpen} aria-controls="lab-directory" onClick={() => setNavOpen(!navOpen)}>
+              <span className="lab-directory-label">Index</span><WorkspaceIcon name={navOpen ? 'collapse' : 'index'} />
+            </button>
+            <div id="lab-directory" hidden={!navOpen} onClick={e => {
+              const link = e.target instanceof Element ? e.target.closest<HTMLAnchorElement>('a[href]') : null;
+              if (window.innerWidth < 1100 && link && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+                setNavOpen(false);
+                directoryButton.current?.focus({ preventScroll: true });
+                // Collapsing the mobile directory changes the target's document position.
+                requestAnimationFrame(() => document.getElementById(link.hash.slice(1))?.scrollIntoView({
+                  behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start',
+                }));
+              }
+            }}>
+              {index}
+              {customWidths && <button type="button" className="lab-layout-reset" title="恢复目录与说明的默认宽度" aria-label="恢复默认宽度" onClick={() => {
+                setNavWidth(208); setDetailWidth(296);
+                directoryButton.current?.focus({ preventScroll: true });
+              }}><WorkspaceIcon name="reset" />Reset widths</button>}
+            </div>
           </div>
         </aside>
         <div className="lab-nav-divider" hidden={!navOpen}><Splitter label="目录宽度" value={navWidth} min={176} max={280} change={setNavWidth} controls="lab-directory" /></div>
