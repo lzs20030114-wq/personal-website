@@ -28,6 +28,7 @@ import {
   type SkinUnitOpts,
 } from '../../src/lib/space/skin-unit';
 import { useBenchLoop } from './useBenchLoop';
+import { attachLabCamera } from './labCameraInput';
 import { requestSkinTerminal } from './skinTerminal';
 
 /**
@@ -310,7 +311,7 @@ const DEFAULT_HUD: SolidHud = {
   kicker: 'Lab 2-2 / Project II',
   title: '皮肤单元 · 立体带',
   sub: `剖面挤出 · 织物厚度 ${SOLID.THICK}px · 同一收缩协议`,
-  hint: '拖拽旋转 · 右键平移 · 滚轮缩放',
+  hint: '拖拽旋转 · 右键平移',
   aria: '皮肤单元立体带：四个键谱的剖面挤出成有厚度的织物带，可拖拽旋转',
 };
 
@@ -1322,16 +1323,12 @@ export function SkinSolidBench({
     };
     const onMove = (ev: PointerEvent): void => cam.pointerMove(ev.pointerId, ev.clientX, ev.clientY);
     const onUp = (ev: PointerEvent): void => cam.pointerUp(ev.pointerId);
-    const onWheel = (ev: WheelEvent): void => {
-      ev.preventDefault();
-      cam.wheel(ev.deltaY);
-    };
+    const detachCamera = attachLabCamera(canvas, { wheel: delta => cam.wheel(delta), home: () => apiRef.current?.viewHome() });
     canvas.addEventListener('contextmenu', onCtx);
     canvas.addEventListener('pointerdown', onDown);
     canvas.addEventListener('pointermove', onMove);
     canvas.addEventListener('pointerup', onUp);
     canvas.addEventListener('pointercancel', onUp);
-    canvas.addEventListener('wheel', onWheel, { passive: false });
 
     render();
     return () => {
@@ -1342,7 +1339,7 @@ export function SkinSolidBench({
       canvas.removeEventListener('pointermove', onMove);
       canvas.removeEventListener('pointerup', onUp);
       canvas.removeEventListener('pointercancel', onUp);
-      canvas.removeEventListener('wheel', onWheel);
+      detachCamera();
     };
   }, []);
 

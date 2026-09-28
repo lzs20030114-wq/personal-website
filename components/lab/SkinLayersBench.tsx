@@ -8,6 +8,7 @@ import { buildLayerGeometry, layerAngles, layerBaseline, layerColumns, layerCove
   layerHeight, layerJoinSpans, layersJoin, layerStats, LAYERS, LAYER_EXAMPLES, LAYER_OUTLINES, LAYER_JOINS,
   type LayerMaterial, type LayerShape, type LayerStudy } from '../../src/lib/space/skin-layers';
 import { useBenchLoop } from './useBenchLoop';
+import { attachLabCamera } from './labCameraInput';
 import { planFromHash } from './planHash';
 import { SkinLayersForming } from './SkinLayersForming';
 import { LAYER_COLORS as COLORS } from '../../src/lib/space/skin-layers-surface';
@@ -115,19 +116,19 @@ function SkinLayersTarget({ active, controls, onLight, forming = false, loaded =
     const down = (e: PointerEvent) => { cam.pointerDown(e.pointerId, e.clientX, e.clientY, e.button === 2); canvas.setPointerCapture(e.pointerId); };
     const move = (e: PointerEvent) => { cam.pointerMove(e.pointerId, e.clientX, e.clientY); draw(); };
     const up = (e: PointerEvent) => cam.pointerUp(e.pointerId);
-    const wheel = (e: WheelEvent) => { e.preventDefault(); cam.wheel(e.deltaY); draw(); };
+    const detachCamera = attachLabCamera(canvas, { wheel: delta => { cam.wheel(delta); draw(); }, home: () => api.current?.home() });
     const context = (e: Event) => e.preventDefault();
     canvas.addEventListener('pointerdown', down); canvas.addEventListener('pointermove', move);
     canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
     canvas.addEventListener('lostpointercapture', up);
-    canvas.addEventListener('wheel', wheel, { passive: false }); canvas.addEventListener('contextmenu', context);
+    canvas.addEventListener('contextmenu', context);
     draw();
     return () => {
       api.current = null;
       canvas.removeEventListener('pointerdown', down); canvas.removeEventListener('pointermove', move);
       canvas.removeEventListener('pointerup', up); canvas.removeEventListener('pointercancel', up);
       canvas.removeEventListener('lostpointercapture', up);
-      canvas.removeEventListener('wheel', wheel); canvas.removeEventListener('contextmenu', context);
+      detachCamera(); canvas.removeEventListener('contextmenu', context);
     };
   }, []);
   useBenchLoop(canvasRef, () => api.current?.draw(), [], active && !forming);
@@ -140,7 +141,7 @@ function SkinLayersTarget({ active, controls, onLight, forming = false, loaded =
     <div hidden={forming}><div className="lab-fig">
       <canvas ref={canvasRef} width="1400" height="880" aria-label="单元内的多层台：可旋转的目标几何，绿色上层、紫色下层、金色连接区域" />
       <div className="lab-hud tl"><div style={{ color: 'var(--accent-2)' }}>Lab 2-6 / Project II</div><div>单元内的多层台</div><div className="dim">目标形态 · 几何原型</div></div>
-      <div className="lab-hud bl dim">{error || '拖拽旋转 · 滚轮缩放'}</div>
+      <div className="lab-hud bl dim">{error || '拖拽旋转'}</div>
       <div className="lab-hud br"><div>{study.joinMode === 'opposed' ? '对向连接' : '连接'} {Math.round(stats.joined)}°</div><div className="dim">上层绿 · 下层紫 · 连接金</div></div>
     </div></div>
     {controls && <>

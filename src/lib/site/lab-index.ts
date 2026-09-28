@@ -55,7 +55,7 @@ export const LAB_INDEX: readonly LabGroup[] = [
         benches: [
           { no: "1-1", title: "Four-bar linkage", kernel: "2d", description: '2D PBD testbench — the kernel behind Fig. 01.', meta: '36 tests · SVG' },
           { no: "1-2", title: "Arch ring solver", kernel: "2d", description: 'Angulated scissor arch + crank-slider, from the S4 ring.', meta: 'Kernel untouched · SVG' },
-          { no: "1-3", title: "Tendon tentacle", kernel: "3d", description: '16 vertebrae, three tendons at 120° — full 3D kernel.', meta: 'Orbit camera · WebGL' },
+          { no: "1-3", title: "Tendon tentacle", kernel: "3d", description: 'Seven box vertebrae, three tendons at 120° — full 3D kernel.', meta: 'Orbit camera · WebGL' },
           { no: "1-4", title: "Five-ring shell", kernel: "3d", description: 'S1–S5 ring family choreography — a breathing body.', meta: 'Calibrated stops · WebGL' },
           { no: "1-5", title: "Full assembly", kernel: "3d", description: 'One shaft opens and closes five rings; the arm curls on three tendons.', meta: 'Real solids · WebGL' },
         ],

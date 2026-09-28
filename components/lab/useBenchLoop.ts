@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, type RefObject } from 'react';
+import { useContext, useEffect, type RefObject } from 'react';
+import { LabActivity } from './LabActivity';
 
 /**
  * 台架公共 rAF 循环：IntersectionObserver 停启（离屏不烧 CPU）+ 页面隐藏暂停 +
@@ -14,12 +15,14 @@ export function useBenchLoop(
   deps: unknown[] = [],
   enabled = true,
 ): void {
+  const panelActive = useContext(LabActivity);
   useEffect(() => {
     const node = ref.current;
-    if (!node || !enabled) return;
+    if (!node || !enabled || !panelActive) return;
     let raf = 0;
     let running = false;
     let last = performance.now();
+    let intersecting = !('IntersectionObserver' in window);
 
     const tick = (now: number): void => {
       if (!running) return;
@@ -39,7 +42,7 @@ export function useBenchLoop(
       cancelAnimationFrame(raf);
     };
 
-    const onVis = (): void => (document.hidden ? stop() : start());
+    const onVis = (): void => (document.hidden || !intersecting ? stop() : start());
     document.addEventListener('visibilitychange', onVis);
 
     let io: IntersectionObserver | null = null;
@@ -50,6 +53,7 @@ export function useBenchLoop(
       io = new IntersectionObserver(
         (entries) => {
           const entry = entries[entries.length - 1];
+          intersecting = entry.isIntersecting;
           if (entry.isIntersecting && !document.hidden) start();
           else stop();
         },
@@ -65,5 +69,5 @@ export function useBenchLoop(
       stop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...deps, enabled]);
+  }, [...deps, enabled, panelActive]);
 }

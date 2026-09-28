@@ -62,6 +62,9 @@ function mount() {
   const nodes = elements(SkinSolidBench({ units: [unit], ring: true, order: [0] }));
   const events = new Map<string, (e: object) => void>();
   const canvas = {
+    dataset: {},
+    closest: () => null,
+    clientHeight: 520,
     addEventListener: (name: string, fn: (e: object) => void) => events.set(name, fn),
     removeEventListener: (name: string) => events.delete(name),
     setPointerCapture() {},

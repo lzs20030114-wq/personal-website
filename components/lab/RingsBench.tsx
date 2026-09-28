@@ -16,6 +16,7 @@ import {
 } from '../../src/lib/linkage/shell3d';
 import { setSnapshot } from './snapshot';
 import { useBenchLoop } from './useBenchLoop';
+import { attachLabCamera } from './labCameraInput';
 
 /**
  * Lab.04 五环立体台架（Lab-Modernist 稿暗色版，逐项对稿）。
@@ -228,7 +229,7 @@ const COPY = {
     views: { axon: '轴测', front: '正', left: '左', right: '右', top: '顶' },
     title: 'S1–S5 伏丘壳体',
     sub: '85 mm 等距 · 同相呼吸 · 槽端逐环标定 [0/2/4/8]',
-    hint: '拖拽旋转 · 右键平移 · 滚轮缩放',
+    hint: '拖拽旋转 · 右键平移',
     drive: { spin: '自转', slider: '滑杆' },
     aria: '五环立体编排台架；拖拽旋转，呼吸/相位驱动',
   },
@@ -526,16 +527,12 @@ export function RingsBench({
     };
     const onMove = (ev: PointerEvent): void => cam.pointerMove(ev.pointerId, ev.clientX, ev.clientY);
     const onUp = (ev: PointerEvent): void => cam.pointerUp(ev.pointerId);
-    const onWheel = (ev: WheelEvent): void => {
-      ev.preventDefault();
-      cam.wheel(ev.deltaY);
-    };
+    const detachCamera = attachLabCamera(canvas, { wheel: delta => cam.wheel(delta), home: () => apiRef.current?.viewHome() });
     canvas.addEventListener('contextmenu', onCtx);
     canvas.addEventListener('pointerdown', onDown);
     canvas.addEventListener('pointermove', onMove);
     canvas.addEventListener('pointerup', onUp);
     canvas.addEventListener('pointercancel', onUp);
-    canvas.addEventListener('wheel', onWheel, { passive: false });
 
     // 转场克隆用的画面快照：重绘一帧后立刻读回（同任务内绘制缓冲仍在，见 snapshot.ts）
     setSnapshot(canvas, () => {
@@ -552,7 +549,7 @@ export function RingsBench({
       canvas.removeEventListener('pointermove', onMove);
       canvas.removeEventListener('pointerup', onUp);
       canvas.removeEventListener('pointercancel', onUp);
-      canvas.removeEventListener('wheel', onWheel);
+      detachCamera();
     };
   }, [spin]);
 

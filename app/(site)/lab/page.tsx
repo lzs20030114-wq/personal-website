@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
-import { LabCopyScroll } from '../../../components/lab/LabCopyScroll';
+import { LabPanel, LabWorkspace } from '../../../components/lab/LabWorkspace';
+import './workspace.css';
 import { LegacyLabHash } from '../../../components/lab/LegacyLabHash';
 import { LabIndex } from '../../../components/lab/LabIndex';
 import { LAB_BENCHES, LAB_INDEX, labAccent, labBench } from '../../../src/lib/site/lab-index';
@@ -28,8 +29,8 @@ export const metadata = { title: 'The lab' };
 /**
  * The lab（Lab-Modernist 稿 → MAPPING §7）：台架目录见 lab-index，深色语言与 case/log 一致。
  * 2026-09-28 插入 Lab 2-6 多层台，后续编号顺延；目标几何与首轮真实截面成形分开呈现。
- * ★ 版式逐项对稿：300px 定宽左栏 + 44px 间距；规格表竖排行（92px 标签列 + 发丝线分隔）；
- *   图框 3px 彩色顶线（2D 绿 / 3D 紫）+ 极淡填充；标题 72px；页脚两链。
+ * 2026-09-29 UI 试用版：LabWorkspace / LabPanel 复用原台架，提供可调目录、可收说明与原位放大。
+ * 原稿的固定 300px 说明栏由自适应分栏替代；完整正文、规格、颜色编码及项目/尺度编排保留。
  * 原有求解台架跑的是站内 TS 内核，不是视频、不是二次实现：Lab.01–05 = src/lib/linkage（封盘零改，
  * 项目一），Lab.06–13 = src/lib/space（项目二皮肤单元引擎，Python 研究代码的 1:1 移植）；
  * Lab.14–15 = src/lib/space/unit-activation + crowd-plan（项目二带行为层的两台：一个人走过 / 几个人在场——
@@ -74,16 +75,6 @@ const LEGEND: CSSProperties = {
   textTransform: 'uppercase',
   color: 'var(--n600)',
 };
-const SPEC_KEY: CSSProperties = {
-  fontSize: 10,
-  fontWeight: 700,
-  letterSpacing: '0.1em',
-  textTransform: 'uppercase',
-  color: 'var(--n500)',
-  paddingTop: 2,
-};
-const HAIR_14 = '1px solid color-mix(in srgb, var(--ink) 14%, transparent)';
-
 /** 项目分组头：台架从此按项目归组（Lab 1-1…1-5 = 项目一，Lab 2-1…2-11 = 项目二；项目二内再按尺度分四段，见 ScaleRule） */
 function ProjectRule({ label, sub }: { label: string; sub: string }) {
   return (
@@ -166,81 +157,8 @@ function Bench({
   specs: [string, string][];
   children: ReactNode;
 }) {
-  // 题头与图框顶线（2D 绿 / 3D 紫）从目录取：目录是唯一清单，页面不另抄一份（lab-index.test 守门）
-  const { title, kernel } = labBench(no);
-  const accent = labAccent(kernel);
-  return (
-    <section
-      id={`lab${no}`}
-      className="lab-section"
-      style={{ padding: '44px 0 52px', borderBottom: 'var(--hair)', scrollMarginTop: 16 }}
-    >
-      <div className="lab-copy">
-        <div className="lab-copy__inner flex flex-col" style={{ gap: 14 }}>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 12,
-            fontWeight: 800,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--accent)',
-          }}
-        >
-          Lab {no}
-        </p>
-        <h2
-          style={{
-            margin: 0,
-            fontSize: 26,
-            fontWeight: 800,
-            lineHeight: 1.05,
-            letterSpacing: '-0.01em',
-            textTransform: 'uppercase',
-          }}
-        >
-          {title}
-        </h2>
-        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: 'var(--n700)', maxWidth: '30ch' }}>
-          {lede}
-        </p>
-        <div style={{ marginTop: 10 }}>
-          {specs.map(([k, v], i) => (
-            <div
-              key={k}
-              className="grid"
-              style={{
-                gridTemplateColumns: '92px 1fr',
-                gap: 12,
-                padding: '8px 0',
-                borderTop: HAIR_14,
-                ...(i === specs.length - 1 ? { borderBottom: HAIR_14 } : {}),
-                fontSize: 12,
-              }}
-            >
-              <span style={SPEC_KEY}>{k}</span>
-              <span>{v}</span>
-            </div>
-          ))}
-        </div>
-        </div>
-      </div>
-      <div
-        style={{
-          position: 'relative',
-          border: 'var(--hair)',
-          borderTop: `3px solid ${accent}`,
-          background: 'color-mix(in srgb, var(--ink) 4.5%, transparent)',
-          // 框贴着台架自己的高度，**不跟着 grid 拉满行高**：左栏（正文 + 规格表）比它长时
-          // 拉伸出来的是一个空框，框线一路画到底下什么也没有（原 Lab.14 方形环 = 今 Lab 2-7，实测空了 614px）。
-          // 单列（窄屏）下 grid 只有一列，这条不起作用。
-          alignSelf: 'start',
-        }}
-      >
-        {children}
-      </div>
-    </section>
-  );
+  const { title, kernel, description } = labBench(no);
+  return <LabPanel no={no} title={title} description={description} accent={labAccent(kernel)} lede={lede} specs={specs}>{children}</LabPanel>;
 }
 
 const [P1, P2] = LAB_INDEX;
@@ -250,16 +168,11 @@ export default function LabPage() {
     <>
       <div className="ground-plane" aria-hidden />
       <PageEnter />
-      <LabCopyScroll />
       <LegacyLabHash />
       <div className="shell shell--lab pg-dark" data-pt-content>
-        <div className="lab-layout">
-        <aside className="lab-rail">
-          <LabIndex />
-        </aside>
-        <div className="lab-main">
-        <header style={{ padding: '64px 0 40px', borderBottom: 'var(--hair)' }}>
-          <div className="flex items-baseline justify-between" style={{ gap: 32 }}>
+        <LabWorkspace index={<LabIndex />}>
+        <header className="lab-page-intro" style={{ padding: '38px 0 36px', borderBottom: 'var(--hair)' }}>
+          <div className="flex flex-wrap items-baseline justify-between" style={{ gap: 16 }}>
             <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · {LAB_BENCHES.length} interactive studies</p>
             <span style={LEGEND}>
               <span className="flex items-center" style={{ gap: 6 }}>
@@ -339,7 +252,7 @@ export default function LabPage() {
           specs={[
             ['Kernel', 'LinkageSolver3D · symmetric GS'],
             ['Mesh', '107k tri · real scan'],
-            ['Camera', 'Trackball · wheel zoom · RMB pan'],
+            ['Camera', 'Drag to orbit · zoom controls · wheel zoom when expanded'],
             ['Drive', 'Tendon sliders · critical damping'],
           ]}
         >
@@ -642,8 +555,7 @@ export default function LabPage() {
             </Link>
           </span>
         </footer>
-        </div>
-        </div>
+        </LabWorkspace>
       </div>
     </>
   );
