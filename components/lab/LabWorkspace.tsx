@@ -7,6 +7,19 @@ import { CAMERA_COMMAND, type CameraCommand } from './labCameraInput';
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 const Workspace = createContext({ expanded: null as string | null, expand: (_id: string | null) => {}, detailWidth: 296, resizeDetails: (_width: number) => {} });
 
+/** Small outlined controls follow the site's existing inline-SVG convention. */
+function WorkspaceIcon({ name }: { name: 'index' | 'reset' | 'collapse' | 'expand' | 'restore' | 'details' }) {
+  const paths = {
+    index: 'M2 2.5h12v11H2z M6 2.5v11 M8.5 6h3 M8.5 9h3',
+    reset: 'M3 6a5 5 0 1 1 0 4 M3 2v4h4',
+    collapse: 'M10 3 5 8l5 5',
+    expand: 'M9 2h5v5 M14 2 9 7 M7 14H2V9 M2 14l5-5',
+    restore: 'M14 7H9V2 M9 7l5-5 M2 9h5v5 M7 9l-5 5',
+    details: 'M2 2.5h12v11H2z M10 2.5v11',
+  };
+  return <svg className="lab-ui-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d={paths[name]} /></svg>;
+}
+
 function Splitter({ label, value, min, max, change, reverse = false, controls }: {
   label: string; value: number; min: number; max: number; change: (value: number) => void; reverse?: boolean; controls: string;
 }) {
@@ -21,7 +34,7 @@ function Splitter({ label, value, min, max, change, reverse = false, controls }:
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
       e.preventDefault();
       change(e.key === 'Home' ? min : e.key === 'End' ? max : clamp(value + (e.key === 'ArrowRight' ? 16 : -16) * (reverse ? -1 : 1), min, max));
-    }}><span aria-hidden>⋮</span></div>;
+    }}><span aria-hidden /></div>;
 }
 
 export function LabWorkspace({ index, children }: { index: ReactNode; children: ReactNode }) {
@@ -48,17 +61,17 @@ export function LabWorkspace({ index, children }: { index: ReactNode; children: 
   return <Workspace.Provider value={{ expanded, expand, detailWidth, resizeDetails: setDetailWidth }}>
     <div className="lab-workspace" data-nav-open={navOpen || undefined} style={{ '--lab-nav-width': `${navWidth}px`, '--lab-detail-width': `${detailWidth}px` } as CSSProperties}>
       <div className="lab-workspace-tools">
-        <button type="button" aria-expanded={navOpen} aria-controls="lab-directory" onClick={() => setNavOpen(!navOpen)}>☰ <span>Index / 目录</span></button>
+        <button type="button" aria-expanded={navOpen} aria-controls="lab-directory" onClick={() => setNavOpen(!navOpen)}><WorkspaceIcon name="index" />Index <span lang="zh">目录</span></button>
         <span className="lab-workspace-hint">Scroll to browse. Expand to explore.</span>
-        <button type="button" className="lab-text-button" onClick={() => { setNavWidth(208); setDetailWidth(296); }}>Reset widths / 恢复宽度</button>
+        <button type="button" className="lab-text-button" onClick={() => { setNavWidth(208); setDetailWidth(296); }}><WorkspaceIcon name="reset" />Reset widths <span lang="zh">恢复宽度</span></button>
       </div>
       <div className="lab-workspace-grid">
         <aside className="lab-sidebar" id="lab-directory" hidden={!navOpen}>
           <div className="lab-sidebar-sticky">
-            <div className="lab-sidebar-tools"><span>INDEX / 目录</span><div>
+            <div className="lab-sidebar-tools"><span>INDEX <span lang="zh">目录</span></span><div>
               <button type="button" title="缩窄目录" aria-label="缩窄目录" disabled={navWidth <= 176} onClick={() => setNavWidth(clamp(navWidth - 24, 176, 280))}>−</button>
               <button type="button" title="加宽目录" aria-label="加宽目录" disabled={navWidth >= 280} onClick={() => setNavWidth(clamp(navWidth + 24, 176, 280))}>+</button>
-              <button type="button" title="收起目录" aria-label="收起目录" onClick={() => setNavOpen(false)}>←</button>
+              <button type="button" title="收起目录" aria-label="收起目录" onClick={() => setNavOpen(false)}><WorkspaceIcon name="collapse" /></button>
             </div></div>
             {index}
           </div>
@@ -89,7 +102,8 @@ export function LabPanel({ no, title, description, lede, specs, accent, children
   const expandButton = useRef<HTMLButtonElement>(null);
   const [placeholder, setPlaceholder] = useState(0);
   const close = useCallback(() => workspace.expand(null), [workspace.expand]);
-  const maxDetails = clamp(Math.floor(panelWidth - 642), 260, 400);
+  // Keep 620px for the stage and the 32px gutter from the spacing system.
+  const maxDetails = clamp(Math.floor(panelWidth - 652), 260, 400);
   const appliedDetailWidth = Math.min(workspace.detailWidth, maxDetails);
   useEffect(() => {
     if (window.innerWidth < 1100) setDetails(false);
@@ -191,8 +205,8 @@ export function LabPanel({ no, title, description, lede, specs, accent, children
           <div className="lab-panel-number"><span className="lab-live-dot" />LAB {no}</div>
           <div className="lab-panel-title"><h2 id={`lab-title-${no}`}>{title}</h2><p>{description}</p></div>
           <div className="lab-panel-actions">
-            <button type="button" aria-expanded={details} aria-controls={`lab-details-${no}`} onClick={() => setDetails(!details)} data-on={details || undefined}>Details <span>说明</span> {details ? '−' : '+'}</button>
-            <button ref={expandButton} type="button" className="lab-expand" aria-label={`${expanded ? '恢复' : '放大'} Lab ${no}`} onClick={toggleExpand}>{expanded ? '↙ Restore' : '↗ Expand'} <span>{expanded ? '恢复' : '放大'}</span></button>
+            <button type="button" aria-expanded={details} aria-controls={`lab-details-${no}`} onClick={() => setDetails(!details)} data-on={details || undefined}><WorkspaceIcon name="details" />Details <span lang="zh">说明</span></button>
+            <button ref={expandButton} type="button" className="lab-expand" aria-label={`${expanded ? '恢复' : '放大'} Lab ${no}`} onClick={toggleExpand}><WorkspaceIcon name={expanded ? 'restore' : 'expand'} />{expanded ? 'Restore' : 'Expand'} <span lang="zh">{expanded ? '恢复' : '放大'}</span></button>
           </div>
         </header>
         <div className="lab-panel-body">
