@@ -47,7 +47,7 @@ export function layerRadialOffset(s: LayerStudy, f: LayerFrame, k: number, i: nu
 }
 
 /** 简单凹多边形的耳切，用于真实截面的扇区端盖。不会将凹入的层间空间扇形填满。 */
-function capTriangles(p: readonly (readonly [number, number])[]): number[] {
+export function capTriangles(p: readonly (readonly [number, number])[]): number[] {
   const cross = (a: number, b: number, c: number) =>
     (p[b][0] - p[a][0]) * (p[c][1] - p[a][1]) - (p[b][1] - p[a][1]) * (p[c][0] - p[a][0]);
   const ids = p.map((_, i) => i);

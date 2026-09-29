@@ -7,6 +7,78 @@ import { createSkinTerminalLoader } from '../../../components/lab/skinTerminal';
 import { RING } from './skin-ring';
 
 describe('多层台 · 分开的窄带', () => {
+  it('暴露截面补膜与带间膜逐点相接，圆方与异径倾斜下均无遗漏的大侧面', async () => {
+    const { states } = await createSkinTerminalLoader()(buildLayerProfiles());
+    for (const morph of [0, 1, 2, 3, 4]) {
+      const s = layerExample('study'); s.morph = morph;
+      s.upper.radius = 70; s.lower.radius = 130;
+      const result = buildLayerBands(s, states, true, false);
+      const plan = layerBandPlan(s), strips = plan.filter(p => p.kind).length * 2;
+      const caps = result.membranes.slice(strips);
+      expect(caps).toHaveLength(12); // 两个缺口端 + 五处异截面交界各两侧。
+      let panel = 0, cap = 0;
+      for (let b = 0; b < plan.length; b++) {
+        if (!plan[b].kind) continue;
+        for (const side of [-1, 1]) {
+          const membrane = result.membranes[panel++];
+          if (plan[(b + side + plan.length) % plan.length].kind === plan[b].kind) continue;
+          const end = caps[cap++], boundary = membrane.verts.slice(membrane.verts.length / 2);
+          expect(end.verts.slice(3, -3)).toEqual(boundary);
+          const p = Array.from({ length: end.verts.length / 3 }, (_, i) =>
+            [Math.hypot(end.verts[i * 3], end.verts[i * 3 + 2]), end.verts[i * 3 + 1]]);
+          // 按轮廓的奇偶规则独立取内部采样，再检查三角面覆盖；不能只有端框。
+          // 折回处 3 单位厚带的法向偏移会局部重叠，排除距边不足半个带厚的点。
+          for (let r = 34; r < 132; r += 4) for (let y = 370; y < 620; y += 4) {
+            let inside = false, distance = Infinity;
+            for (let i = 0; i < p.length; i++) {
+              const a = p[i], b = p[(i + 1) % p.length], dx = b[0] - a[0], dy = b[1] - a[1];
+              if ((a[1] > y) !== (b[1] > y) && r < dx * (y - a[1]) / dy + a[0]) inside = !inside;
+              const t = Math.max(0, Math.min(1, ((r - a[0]) * dx + (y - a[1]) * dy) / (dx * dx + dy * dy || 1)));
+              distance = Math.min(distance, Math.hypot(r - a[0] - t * dx, y - a[1] - t * dy));
+            }
+            if (!inside || distance < RING.THICK / 2) continue;
+            let covered = false;
+            const cross = (a: number[], b: number[]) => (b[0] - a[0]) * (y - a[1]) - (b[1] - a[1]) * (r - a[0]);
+            for (let i = 0; i < end.idx.length && !covered; i += 3) {
+              const [a, b, c] = [p[end.idx[i]], p[end.idx[i + 1]], p[end.idx[i + 2]]];
+              const signs = [cross(a, b), cross(b, c), cross(c, a)];
+              covered = signs.every(x => x >= -1e-5) || signs.every(x => x <= 1e-5);
+            }
+            expect(covered, `${morph}/${cap}: ${r},${y}`).toBe(true);
+          }
+        }
+      }
+      const changed = buildLayerBands(s, states.map(f => ({ ...f, px: Float64Array.from(f.px, x => x * .8) })), true, false);
+      expect(changed.membranes[strips].verts).not.toEqual(caps[0].verts);
+    }
+  });
+
+  it('半环端面封住厚台内部，但不填满双层之间的设计空隙；整环没有内部隔墙', async () => {
+    const { states } = await createSkinTerminalLoader()(buildLayerProfiles());
+    const s = layerBaseline(); s.upper.outline = s.lower.outline = 'half';
+    const contains = (m: ReturnType<typeof buildLayerBands>['membranes'][number], r: number, y: number) => {
+      const p = (i: number) => [Math.hypot(m.verts[i * 3], m.verts[i * 3 + 2]), m.verts[i * 3 + 1]];
+      const cross = (a: number[], b: number[]) => (b[0] - a[0]) * (y - a[1]) - (b[1] - a[1]) * (r - a[0]);
+      for (let i = 0; i < m.idx.length; i += 3) {
+        const [a, b, c] = [p(m.idx[i]), p(m.idx[i + 1]), p(m.idx[i + 2])];
+        const signs = [cross(a, b), cross(b, c), cross(c, a)];
+        if (signs.every(x => x >= -1e-5) || signs.every(x => x <= 1e-5)) return true;
+      }
+      return false;
+    };
+    for (const join of [0, 360]) {
+      s.joinSweep = join;
+      const result = buildLayerBands(s, states, false, false), caps = result.membranes.slice(-2);
+      expect(result.membranes).toHaveLength(22);
+      for (const m of caps) {
+        expect(contains(m, 70, 435)).toBe(true);
+        expect(contains(m, 70, 493)).toBe(join > 0);
+      }
+    }
+    const closed = buildLayerBands(layerBaseline(), states, false, false);
+    expect(closed.membranes).toHaveLength(40);
+  });
+
   it('蒙皮接在条带外侧，半径变化不跨缺口、不修改原始截面', async () => {
     const defs = buildLayerProfiles(), { states } = await createSkinTerminalLoader()(defs);
     const before = states.map(f => ({ x: [...f.px], y: [...f.py] }));
@@ -15,7 +87,7 @@ describe('多层台 · 分开的窄带', () => {
     const result = buildLayerBands(s, states, true, false);
     const narrower = buildLayerBands(s, states.map(f => ({ ...f, px: Float64Array.from(f.px, x => x * .8) })), true, false);
     expect(narrower.membranes[0].verts).not.toEqual(result.membranes[0].verts);
-    expect(result.membranes).toHaveLength(layerBandPlan(s).filter(b => b.kind).length * 2);
+    expect(result.membranes.length).toBeGreaterThan(layerBandPlan(s).filter(b => b.kind).length * 2);
     for (const m of result.membranes) {
       expect([...m.verts].every(Number.isFinite)).toBe(true);
       for (let i = 0; i < m.verts.length; i += 3) {

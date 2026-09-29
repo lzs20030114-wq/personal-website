@@ -1,7 +1,7 @@
 /** Lab 2-6 的成形读法：独立的窄织物带围成一圈，沿用 Lab 2-5 的挤出与条纹。 */
 import { buildLayerProfiles, LAYER_PROFILE_KINDS } from './skin-layers-forming';
 import { layerAngles, LAYERS, LAYER_MORPHS, type LayerStudy, type LayerLine } from './skin-layers';
-import { layerPoseOffset, layerRadialOffset, layerProfileAt, type LayerFrame } from './skin-layers-surface';
+import { capTriangles, layerPoseOffset, layerRadialOffset, layerProfileAt, type LayerFrame } from './skin-layers-surface';
 import { bandVerts, bandTriIndex } from '../linkage/skin';
 import type { Vec3 } from '../linkage/solver3d';
 import { RING } from './skin-ring';
@@ -36,9 +36,11 @@ const topology = new Map<number, ReturnType<typeof buildSolidTopology>>();
 export function buildLayerBands(s: LayerStudy, frames: readonly LayerFrame[], pose = true, whole = true) {
   const meshes: Mesh[] = [], bonds: LayerLine[] = [];
   const membranes: { verts: Float32Array; idx: Uint32Array; center: Vec3 }[] = [];
+  const endCaps: typeof membranes = [];
+  const capIndices = new Map<number, Uint32Array>();
   const placements = layerBandPlan(s);
   const foot = -frames[0].py[frames[0].py.length - 1] * 100;
-  for (const band of placements) {
+  for (const [slot, band] of placements.entries()) {
     const ring = { radius: LAYERS.inner, angle: band.angle * RAD };
     const railTop = whole ? -3 : 358, railBottom = whole ? foot : 628;
     const rail = boxVerts(LAYERS.inner - 3.4, (railTop + railBottom) / 2, 0, 2.4, (railBottom - railTop) / 2, Math.min(6, band.depth / 4));
@@ -84,6 +86,26 @@ export function buildLayerBands(s: LayerStudy, frames: readonly LayerFrame[], po
       }
       const center = [...edge, ...boundary].reduce((sum, p) => ({ x: sum.x + p.x / (2 * n), y: sum.y + p.y / (2 * n), z: sum.z + p.z / (2 * n) }), { x: 0, y: 0, z: 0 });
       membranes.push({ verts: bandVerts(edge, boundary), idx: Uint32Array.from(bandTriIndex(n)), center });
+      // 厚台/双层/单层的交界，以及缺口边缘，都有暴露的径向截面。
+      // 从同一片带间膜的边界直接封口，避免另画目标壳体或跨过轮廓缺口。
+      const neighbor = placements[(slot + side + placements.length) % placements.length];
+      if (neighbor.kind !== band.kind) {
+        const inner = LAYERS.inner - RING.THICK / 2;
+        const axisPoint = (i: number): Vec3 => ({ x: inner * Math.cos(a), z: inner * Math.sin(a),
+          y: -f.py[i] * 100 + (pose ? layerPoseOffset(s, f, k, i, inner, angle) : 0) });
+        const contour = [axisPoint(start), ...boundary, axisPoint(end - 1)];
+        // 拓扑沿用原始截面的耳切；厚度偏移在急折处会自交，不能拿偏移线
+        // 重新判拓扑，否则耳切提前退出，反而漏掉一大片侧面。顶点仍贴合膜边。
+        if (!capIndices.has(k)) capIndices.set(k, Uint32Array.from(capTriangles([
+          [inner, -f.py[start] * 100],
+          ...Array.from({ length: n }, (_, j) => [LAYERS.inner + f.px[start + j] * 100, -f.py[start + j] * 100] as [number, number]),
+          [inner, -f.py[end - 1] * 100],
+        ])));
+        const idx = capIndices.get(k)!;
+        if (idx.length) endCaps.push({ verts: Float32Array.from(contour.flatMap(p => [p.x, p.y, p.z])),
+          idx, center: contour.reduce((sum, p) => ({ x: sum.x + p.x / contour.length,
+            y: sum.y + p.y / contour.length, z: sum.z + p.z / contour.length }), { x: 0, y: 0, z: 0 }) });
+      }
     }
     // 姿态仍是可关闭的装配映射；每个角点取自己的方位，带宽方向也遵循同一坡度。
     if (pose) for (let v = 0; v < 4 * n; v++) {
@@ -104,6 +126,7 @@ export function buildLayerBands(s: LayerStudy, frames: readonly LayerFrame[], po
       }
     }
   }
+  membranes.push(...endCaps);
   if (whole) meshes.push(mesh(ringPlateVerts(LAYERS.inner - 12, LAYERS.inner + 11, -3, 3, 72), RAIL));
   return { meshes, bonds, membranes };
 }
