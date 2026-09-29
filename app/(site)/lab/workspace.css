@@ -330,6 +330,8 @@
   [data-lab-panel="2-6"] .layer-settings .lab-ctl__row { flex-direction: column; align-items: stretch; padding: 8px 0; gap: 8px; }
   [data-lab-panel="2-6"] .layer-settings .grp { padding: 0; border: 0; justify-content: space-between; gap: 6px; flex-wrap: nowrap; }
   [data-lab-panel="2-6"] .layer-settings button { padding: 4px 6px; min-height: 26px; font-size: 10px; text-transform: none; }
+  [data-lab-panel="2-6"] .layer-join .seg { flex-wrap: nowrap; }
+  [data-lab-panel="2-6"] .layer-settings .layer-join button { padding-inline: 4px; }
   [data-lab-panel="2-6"] .layer-settings .layer-outline { flex-direction: column; align-items: stretch; }
   [data-lab-panel="2-6"] .layer-outline .seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   [data-lab-panel="2-6"] .layer-outline button { white-space: normal; line-height: 1.25; padding: 4px 2px; }

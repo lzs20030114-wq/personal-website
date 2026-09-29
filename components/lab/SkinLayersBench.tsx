@@ -9,7 +9,7 @@ import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import { FlatRenderer, bakeIndexed } from '../../src/lib/linkage/gl3d';
 import { ringPlateVerts } from '../../src/lib/space/skin-solid';
 import { buildLayerGeometry, layerAngles, layerBaseline, layerColumns, layerCovers, layerExample,
-  layerHeight, layerRadius, layerJoinSpans, layersJoin, layerStats, LAYERS, LAYER_EXAMPLES, LAYER_OUTLINES, LAYER_JOINS, LAYER_MORPHS,
+  layerDepthFraction, layerFractionRadius, layerHeight, layerRadius, layerRadialStops, layerJoinSpans, layersJoin, layerStats, LAYERS, LAYER_EXAMPLES, LAYER_OUTLINES, LAYER_JOINS, LAYER_MORPHS,
   type LayerMaterial, type LayerShape, type LayerStudy } from '../../src/lib/space/skin-layers';
 import { useBenchLoop } from './useBenchLoop';
 import { attachLabCamera } from './labCameraInput';
@@ -32,7 +32,7 @@ function StudyDrawings({ study, cut }: { study: LayerStudy; cut: number }) {
   const aa = layerAngles(study);
   const polar = (r: number, a: number) => [r * Math.cos(a * Math.PI / 180), r * Math.sin(a * Math.PI / 180)];
   // SSR 与浏览器的三角函数末位可能不同；图纸坐标统一到 0.001，避免水合属性漂移。
-  const wedge = (a: number, b: number, surface: number) => 'M' + [polar(LAYERS.inner, a), polar(layerRadius(study, surface, a), a), polar(layerRadius(study, surface, b), b), polar(LAYERS.inner, b)].map(p => p.map(v => v.toFixed(3)).join(',')).join('L') + 'Z';
+  const wedge = (a: number, b: number, surface: number, depth = 1) => 'M' + [polar(LAYERS.inner, a), polar(layerFractionRadius(study, surface, a, depth), a), polar(layerFractionRadius(study, surface, b, depth), b), polar(LAYERS.inner, b)].map(p => p.map(v => v.toFixed(3)).join(',')).join('L') + 'Z';
   const rim = (surface: number) => 'M' + aa.map(a => polar(layerRadius(study, surface, a), a).map(v => v.toFixed(3)).join(',')).join('L') + 'Z';
   return <div className="layer-drawings">
     {(['upper', 'lower'] as const).map(key => <svg key={key} viewBox="-135 -155 270 290" role="img" aria-label={`${tx(key === 'upper' ? '上层' : '下层')} · ${tx('俯视轮廓')}`}>
@@ -40,7 +40,7 @@ function StudyDrawings({ study, cut }: { study: LayerStudy; cut: number }) {
       <path d={rim(key === 'upper' ? 0 : 2)} className="layer-guide" /><circle r={LAYERS.inner} className="layer-guide" />
       {([key, 'join'] as const).map(material => <path key={material} fill={COLORS[material].svg} fillOpacity="0.6" d={aa.slice(0, -1).map((a, i) => {
         const mid = (a + aa[i + 1]) / 2;
-        return layerCovers(study[key], mid) && (layersJoin(study, mid) ? 'join' : key) === material ? wedge(a, aa[i + 1], key === 'upper' ? 0 : 2) : '';
+        return layerCovers(study[key], mid) && (material !== 'join' || layersJoin(study, mid)) ? wedge(a, aa[i + 1], key === 'upper' ? 0 : 2, material === 'join' ? layerDepthFraction(study) : 1) : '';
       }).join('')} />)}
       <line x1={-124} x2={124} transform={`rotate(${cut})`} className="layer-cut" />
       <text x="103" y="-7">0°</text>
@@ -50,12 +50,14 @@ function StudyDrawings({ study, cut }: { study: LayerStudy; cut: number }) {
       <rect x={-LAYERS.inner} y="-120" width={2 * LAYERS.inner} height="240" className="layer-guide" />
       {([1, -1] as const).flatMap(sign => {
         const a = cut + (sign < 0 ? 180 : 0);
-        return layerColumns(study, a).map((col, i) => {
-          const outer = Array.from({ length: col.bottom - col.top + 1 }, (_, j) => col.top + j).map(h => [layerRadius(study, h, a), h]);
-          const pts = [[LAYERS.inner, col.top], ...outer, [LAYERS.inner, col.bottom]]
+        const stops = layerRadialStops(study);
+        return stops.slice(0, -1).flatMap((lo, cell) => layerColumns(study, a, (lo + stops[cell + 1]) / 2).map((col, i) => {
+          const radius = (h: number, fraction: number) => layerFractionRadius(study, h, a, fraction);
+          const outer = Array.from({ length: col.bottom - col.top + 1 }, (_, j) => col.top + j).map(h => [radius(h, stops[cell + 1]), h]);
+          const pts = [[radius(col.top, lo), col.top], ...outer, [radius(col.bottom, lo), col.bottom]]
             .map(([r, h]) => `${(sign * r).toFixed(3)},${layerHeight(study, h, r, a).toFixed(3)}`).join(' ');
-          return <polygon key={`${sign}:${i}`} points={pts} fill={COLORS[col.material].svg} fillOpacity="0.25" stroke={COLORS[col.material].svg} strokeWidth="1.5" />;
-        });
+          return <polygon key={`${sign}:${cell}:${i}`} points={pts} fill={COLORS[col.material].svg} fillOpacity="0.25" stroke={COLORS[col.material].svg} strokeWidth="1.5" />;
+        }));
       })}
     </svg>
   </div>;
@@ -167,7 +169,7 @@ function SkinLayersTarget({ active, controls, onLight, forming = false, loaded =
         </div>
       </div>
       <div className="lab-ctl lab-ctl--tiered layer-config">
-        <div className="lab-ctl__row lab-ctl__solve layer-examples"><div className="grp"><LabControlLabel help={["载入一组上下层轮廓、倾角和连接设置，保留圆方选择。", "Load outlines, tilts and joins while keeping the ring shape."]}>{tx("示例")}</LabControlLabel><select aria-label={tx("示例")} value={example} onChange={e => { const key = e.target.value; setStudy(s => ({ ...layerExample(key), morph: s.morph })); setExample(key); }}>
+        <div className="lab-ctl__row lab-ctl__solve layer-examples"><div className="grp"><LabControlLabel help={["载入一组上下层轮廓、倾角和连接分布，保留圆方选择与连接深度。", "Load outlines, tilts and joined sectors while keeping the ring shape and join depth."]}>{tx("示例")}</LabControlLabel><select aria-label={tx("示例")} value={example} onChange={e => { const key = e.target.value; setStudy(s => ({ ...layerExample(key), morph: s.morph, joinDepth: s.joinDepth })); setExample(key); }}>
           <option value="custom" disabled>{lang === 'zh' ? '自定义' : 'Custom'}</option>
           {LAYER_EXAMPLES.map(p => <option key={p.key} value={p.key}>{tx(p.label)}</option>)}
         </select></div></div>
@@ -184,12 +186,13 @@ function SkinLayersTarget({ active, controls, onLight, forming = false, loaded =
           </div>
         </div>
         <div className="lab-ctl__row lab-ctl__solve layer-join" role="group" aria-label={tx("局部厚台连接")}>
-          <div className="grp"><LabControlLabel help={["在上下层共同覆盖处连接外缘，形成局部厚台。", "Join outer edges where both layers overlap to form a thick shelf."]}>{tx("局部厚台")}</LabControlLabel><span className="seg">{LAYER_JOINS.map(mode => <button type="button" key={mode.key} className={study.joinMode === mode.key ? 'active' : undefined} aria-pressed={study.joinMode === mode.key} onClick={() => join({ joinMode: mode.key, joinSweep: Math.min(study.joinSweep, mode.key === 'opposed' ? 180 : 360) })}>{tx(mode.label)}</button>)}</span></div>
+          <div className="grp"><LabControlLabel help={["在上下层共同覆盖处形成厚台，可分别调整扇区范围和从中轴向外的连接深度。", "Join overlapping layers, with independent controls for sector angle and outward depth."]}>{tx("局部厚台")}</LabControlLabel><span className="seg">{LAYER_JOINS.map(mode => <button type="button" key={mode.key} className={study.joinMode === mode.key ? 'active' : undefined} aria-pressed={study.joinMode === mode.key} onClick={() => join({ joinMode: mode.key, joinSweep: Math.min(study.joinSweep, mode.key === 'opposed' ? 180 : 360) })}>{tx(mode.label)}</button>)}</span></div>
           <div className="layer-sliders layer-join-sliders">
+            <Slider label={tx("连接深度")} help={lang === 'zh' ? '从中轴外壁向外算：100% 与上下台外缘齐平，50% 只占内半段，20% 只占内两成；0% 取消连接。平台大小不变；成形中为装配预览。' : 'Measured outwards from the core: 100% reaches both rims, 50% fills the inner half, 20% the inner fifth; 0% removes the join. Shelf sizes stay fixed. In Forming, this previews the assembly.'} value={study.joinDepth} max={100} step={5} unit="%" change={joinDepth => join({ joinDepth })} />
             <Slider label={tx("单区范围")} help="每个连接扇区的角度；只连接上下层重叠处。" value={study.joinSweep} max={study.joinMode === 'opposed' ? 180 : 360} step={5} change={joinSweep => join({ joinSweep })} />
             <Slider label={tx("起点方位")} help="旋转连接扇区；对向双区一起转动。" value={study.joinStart} max={355} step={5} change={joinStart => join({ joinStart })} />
           </div>
-          <span className="layer-note" role="status">{study.joinMode === 'opposed' && <>{tx("起点")} {layerJoinSpans(study).map(span => `${span.start}°`).join(' / ')} · </>}{study.joinSweep > 0 && stats.joined === 0 ? tx('所选扇区没有上下重叠，未形成连接。') : (lang === 'zh' ? `实际连接合计 ${Math.round(stats.joined)}°` : `${Math.round(stats.joined)}° joined`)}</span>
+          <span className="layer-note" role="status">{study.joinMode === 'opposed' && <>{tx("起点")} {layerJoinSpans(study).map(span => `${span.start}°`).join(' / ')} · </>}{study.joinDepth === 0 ? (lang === 'zh' ? '深度为 0%，上下层分开。' : '0% depth: layers remain separate.') : study.joinSweep > 0 && stats.joined === 0 ? tx('所选扇区没有上下重叠，未形成连接。') : (lang === 'zh' ? `实际连接合计 ${Math.round(stats.joined)}°` : `${Math.round(stats.joined)}° joined`)}</span>
         </div>
         </div>
         {!forming && <div className="lab-ctl__row layer-view"><div className="grp"><LabControlLabel help={["切换轴测、正面、侧面或顶视图，不改变模型。", "Switch camera views without changing the model."]}>{tx("视角")}</LabControlLabel><span className="seg">{VIEWS.map(v => <button type="button" key={v.key} className={view === v.key ? 'active' : undefined} onClick={() => { setView(v.key); api.current?.view(v.key); }}>{tx(v.label)}</button>)}</span><button type="button" onClick={() => { api.current?.home(); setView('axon'); }}>{tx("归位")}</button></div></div>}

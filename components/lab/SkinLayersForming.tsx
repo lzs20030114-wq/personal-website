@@ -37,13 +37,13 @@ export function SkinLayersForming({ active, onLight, study }: { active: boolean;
       ceiling="span" depth={9} thick={1.5} rail="fixed" rate={110} skin={{ def: 0.35 }}
       extraControls={<div className="grp"><label><input type="checkbox" checked={pose} onChange={e => setPose(e.target.checked)} />{tx("倾斜装配")}</label></div>}
       hud={lang === 'en' ? { kicker: 'Lab 2-6 / Forming study', title: 'Layers within one unit',
-        sub: `${count} bands · shape, size and tilt: assembly preview`,
+        sub: `${count} bands · shape, size, joins and tilt: assembly preview`,
         hint: 'Section solve + assembly preview · drag to orbit',
         aria: 'Independent bands form a layered unit; inspect sections, gaps and locked bonds',
       } : { kicker: 'Lab 2-6 / 成形验证', title: '单元内的多层台',
-        sub: `${count} 条窄带 · 圆方、尺寸与倾斜：装配预览`,
+        sub: `${count} 条窄带 · 圆方、尺寸、连接与倾斜：装配预览`,
         hint: '截面求解 + 装配预览 · 拖拽旋转',
         aria: '多层台条带成形：独立窄带围成整个单元，可查看各带截面、带间空隙与锁定键线，支持缺口与对向厚台' }} />
-    <p className="layer-footnote">{lang === 'zh' ? '蒙皮连接带间空隙并包住暴露的侧面，保留轮廓缺口。圆方、尺寸与倾斜为装配预览；截面对照保留原始尺寸，未模拟环向受力。' : 'Skin fills the gaps between bands and covers exposed ends, keeping the cutouts open. Shape, size and tilt preview the assembly; Sections keeps the original size. No circumferential forces are simulated.'}</p>
+    <p className="layer-footnote">{lang === 'zh' ? '蒙皮包住带间空隙与暴露侧面。圆方、尺寸、连接深度与倾斜为装配预览；截面对照保留原解，未模拟环向受力。' : 'Skin covers gaps between bands and exposed ends. Shape, size, join depth and tilt preview the assembly; Sections keeps the original solve. No circumferential forces are simulated.'}</p>
   </div>;
 }

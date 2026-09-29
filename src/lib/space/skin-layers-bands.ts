@@ -1,7 +1,7 @@
 /** Lab 2-6 的成形读法：独立的窄织物带围成一圈，沿用 Lab 2-5 的挤出与条纹。 */
 import { buildLayerProfiles, LAYER_PROFILE_KINDS } from './skin-layers-forming';
 import { layerAngles, LAYERS, LAYER_MORPHS, type LayerStudy, type LayerLine } from './skin-layers';
-import { capTriangles, layerPoseOffset, layerRadialOffset, layerProfileAt, type LayerFrame } from './skin-layers-surface';
+import { capTriangles, layerAssemblyProfiles, layerPoseOffset, layerRadialOffset, layerProfileAt, type LayerFrame } from './skin-layers-surface';
 import { bandVerts, bandTriIndex } from '../linkage/skin';
 import type { Vec3 } from '../linkage/solver3d';
 import { RING } from './skin-ring';
@@ -38,6 +38,7 @@ export function buildLayerBands(s: LayerStudy, frames: readonly LayerFrame[], po
   const membranes: { verts: Float32Array; idx: Uint32Array; center: Vec3 }[] = [];
   const endCaps: typeof membranes = [];
   const capIndices = new Map<number, Uint32Array>();
+  const profiles = layerAssemblyProfiles(s, frames);
   const placements = layerBandPlan(s);
   const foot = -frames[0].py[frames[0].py.length - 1] * 100;
   for (const [slot, band] of placements.entries()) {
@@ -46,7 +47,7 @@ export function buildLayerBands(s: LayerStudy, frames: readonly LayerFrame[], po
     const rail = boxVerts(LAYERS.inner - 3.4, (railTop + railBottom) / 2, 0, 2.4, (railBottom - railTop) / 2, Math.min(6, band.depth / 4));
     rotateVertsY(rail.verts, ring); meshes.push(mesh(rail, RAIL));
     if (!band.kind) continue;
-    const k = LAYER_PROFILE_KINDS.indexOf(band.kind), f = frames[k], def = PROFILES[k];
+    const region = LAYER_PROFILE_KINDS.indexOf(band.kind), { frame: f, k } = profiles[region], def = PROFILES[k];
     const start = whole ? 0 : def.lead, end = whole ? f.px.length : def.lead + def.free, n = end - start;
     if (!topology.has(n)) topology.set(n, buildSolidTopology(n, SKIN.STRIPE));
     const topo = topology.get(n)!;
@@ -94,14 +95,14 @@ export function buildLayerBands(s: LayerStudy, frames: readonly LayerFrame[], po
         const axisPoint = (i: number): Vec3 => ({ x: inner * Math.cos(a), z: inner * Math.sin(a),
           y: -f.py[i] * 100 + (pose ? layerPoseOffset(s, f, k, i, inner, angle) : 0) });
         const contour = [axisPoint(start), ...boundary, axisPoint(end - 1)];
-        // 拓扑沿用原始截面的耳切；厚度偏移在急折处会自交，不能拿偏移线
-        // 重新判拓扑，否则耳切提前退出，反而漏掉一大片侧面。顶点仍贴合膜边。
-        if (!capIndices.has(k)) capIndices.set(k, Uint32Array.from(capTriangles([
+        // 以未加厚的截面判拓扑（内缩区先映射凹口）；厚度偏移在急折处
+        // 会自交，不能拿偏移线耳切，否则漏掉大片侧面。顶点仍贴合膜边。
+        if (!capIndices.has(region)) capIndices.set(region, Uint32Array.from(capTriangles([
           [inner, -f.py[start] * 100],
           ...Array.from({ length: n }, (_, j) => [LAYERS.inner + f.px[start + j] * 100, -f.py[start + j] * 100] as [number, number]),
           [inner, -f.py[end - 1] * 100],
         ])));
-        const idx = capIndices.get(k)!;
+        const idx = capIndices.get(region)!;
         if (idx.length) endCaps.push({ verts: Float32Array.from(contour.flatMap(p => [p.x, p.y, p.z])),
           idx, center: contour.reduce((sum, p) => ({ x: sum.x + p.x / contour.length,
             y: sum.y + p.y / contour.length, z: sum.z + p.z / contour.length }), { x: 0, y: 0, z: 0 }) });

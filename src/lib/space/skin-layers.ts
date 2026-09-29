@@ -17,12 +17,12 @@ export type LayerOutline = (typeof LAYER_OUTLINES)[number]['key'];
 export const LAYER_JOINS = [{ key: 'single', label: '单区' }, { key: 'opposed', label: '对向双区' }] as const;
 export type LayerJoinMode = (typeof LAYER_JOINS)[number]['key'];
 export interface LayerShape { outline: LayerOutline; rotation: number; tilt: number; direction: number; radius: number }
-export interface LayerStudy { upper: LayerShape; lower: LayerShape; morph: number; joinMode: LayerJoinMode; joinStart: number; joinSweep: number }
+export interface LayerStudy { upper: LayerShape; lower: LayerShape; morph: number; joinMode: LayerJoinMode; joinStart: number; joinSweep: number; joinDepth: number }
 export const LAYER_MORPHS = SQUARE_MORPH.LABELS.map((label, step) => ({ key: `m${step}`, label }));
 export const LAYERS = { inner: RING.RADIUS_DEF, outer: RING.RADIUS_DEF + SPLIT_RING_TARGET,
   thickness: SPLIT_RING_LOBE, gap: SPLIT_RING_W_END, maxTilt: 20, minRadius: 70, maxRadius: 130 } as const;
 export const layerBaseline = (): LayerStudy => ({
-  morph: 0,
+  morph: 0, joinDepth: 100,
   upper: { outline: 'full', rotation: 0, tilt: 0, direction: 0, radius: LAYERS.outer },
   lower: { outline: 'full', rotation: 0, tilt: 0, direction: 180, radius: LAYERS.outer }, joinMode: 'single', joinStart: 20, joinSweep: 0,
 });
@@ -57,7 +57,7 @@ export function layerJoinSpans(s: LayerStudy): { start: number; sweep: number }[
   return (s.joinMode === 'opposed' ? [0, 180] : [0]).map(offset => ({ start: wrapAngle(s.joinStart + offset), sweep }));
 }
 export function layersJoin(s: LayerStudy, angle: number): boolean {
-  return layerCovers(s.upper, angle) && layerCovers(s.lower, angle)
+  return s.joinDepth > 0 && layerCovers(s.upper, angle) && layerCovers(s.lower, angle)
     && layerJoinSpans(s).some(span => wrapAngle(angle - span.start) < span.sweep);
 }
 /** Y 沿屏幕向下，方向表示下坡方向；厚度沿中轴方向量。 */
@@ -78,8 +78,16 @@ export function layerRadius(s: LayerStudy, surface: number, angle = 0): number {
 }
 export type LayerMaterial = 'upper' | 'lower' | 'join';
 export interface LayerColumn { top: number; bottom: number; material: LayerMaterial }
-export function layerColumns(s: LayerStudy, angle: number): LayerColumn[] {
-  if (layersJoin(s, angle)) return [{ top: 0, bottom: 3, material: 'join' }];
+/** 比例从中轴外壁起算；上下层各自按所在方位的实际挑出取值。 */
+export const layerDepthFraction = (s: LayerStudy) => Math.max(0, Math.min(1, s.joinDepth / 100));
+export const layerFractionRadius = (s: LayerStudy, surface: number, angle: number, fraction: number) =>
+  LAYERS.inner + fraction * (layerRadius(s, surface, angle) - LAYERS.inner);
+export function layerRadialStops(s: LayerStudy): number[] {
+  const depth = layerDepthFraction(s);
+  return depth > 0 && depth < 1 ? [0, depth, 1] : [0, 1];
+}
+export function layerColumns(s: LayerStudy, angle: number, fraction = 0): LayerColumn[] {
+  if (layersJoin(s, angle) && fraction < layerDepthFraction(s)) return [{ top: 0, bottom: 3, material: 'join' }];
   return [
     ...(layerCovers(s.upper, angle) ? [{ top: 0, bottom: 1, material: 'upper' as const }] : []),
     ...(layerCovers(s.lower, angle) ? [{ top: 2, bottom: 3, material: 'lower' as const }] : []),
@@ -113,8 +121,8 @@ export interface LayerLine { a: Vec3; b: Vec3 }
 export function buildLayerGeometry(s: LayerStudy): { meshes: Record<LayerMaterial, LayerMesh>; lines: LayerLine[] } {
   const raw = { upper: { v: [] as number[], i: [] as number[] }, lower: { v: [] as number[], i: [] as number[] }, join: { v: [] as number[], i: [] as number[] } };
   const lines: LayerLine[] = [];
-  const point = (surface: number, r: number, angle: number): Vec3 => {
-    const radius = r === LAYERS.outer ? layerRadius(s, surface, angle) : r;
+  const point = (surface: number, fraction: number, angle: number): Vec3 => {
+    const radius = layerFractionRadius(s, surface, angle, fraction);
     return { x: radius * Math.cos(rad(angle)), y: layerHeight(s, surface, radius, angle), z: radius * Math.sin(rad(angle)) };
   };
   const quad = (m: LayerMaterial, a: Vec3, b: Vec3, c: Vec3, d: Vec3) => {
@@ -122,9 +130,11 @@ export function buildLayerGeometry(s: LayerStudy): { meshes: Record<LayerMateria
     for (const p of [a, b, c, d]) q.v.push(p.x, p.y, p.z);
     q.i.push(n, n + 1, n + 2, n, n + 2, n + 3);
   };
-  const aa = layerAngles(s), ri = LAYERS.inner, ro = LAYERS.outer;
-  const cols = aa.slice(0, -1).map((a, i) => layerColumns(s, (a + aa[i + 1]) / 2));
-  for (let i = 0; i < cols.length; i++) {
+  const aa = layerAngles(s), rr = layerRadialStops(s);
+  const cells = rr.slice(0, -1).map((r, j) => aa.slice(0, -1).map((a, i) => layerColumns(s, (a + aa[i + 1]) / 2, (r + rr[j + 1]) / 2)));
+  const covers = (cols: LayerColumn[] | undefined, h: number) => cols?.some(n => n.top <= h && n.bottom >= h + 1);
+  for (let j = 0; j < cells.length; j++) for (let i = 0; i < cells[j].length; i++) {
+    const cols = cells[j], ri = rr[j], ro = rr[j + 1];
     const a = aa[i], b = aa[i + 1];
     for (const col of cols[i]) {
       const { top: t, bottom: d, material: m } = col;
@@ -133,12 +143,14 @@ export function buildLayerGeometry(s: LayerStudy): { meshes: Record<LayerMateria
         for (const r of [ri, ro]) lines.push({ a: point(h, r, a), b: point(h, r, b) });
       }
       // 直侧面仍在每层边界处分段，使厚台／双台相邻时没有 T 形网格接缝。
-      for (const r of [ri, ro]) for (let h = t; h < d; h++)
+      for (const [r, neighbor] of [[ri, j - 1], [ro, j + 1]]) for (let h = t; h < d; h++) {
+        if (covers(cells[neighbor]?.[i], h)) continue;
         quad(m, point(h, r, a), point(h + 1, r, a), point(h + 1, r, b), point(h, r, b));
+      }
       // 仅封真实暴露的端面：相邻厚台／双台之间只封中间的间隙，避免内部重叠面。
       for (const [angle, neighbor] of [[a, (i + cols.length - 1) % cols.length], [b, (i + 1) % cols.length]]) {
         for (let h = t; h < d; h++) {
-          if (cols[neighbor].some(n => n.top <= h && n.bottom >= h + 1)) continue;
+          if (covers(cols[neighbor], h)) continue;
           const ps = [point(h, ri, angle), point(h, ro, angle), point(h + 1, ro, angle), point(h + 1, ri, angle)];
           quad(m, ps[0], ps[1], ps[2], ps[3]);
           for (let k = 0; k < 4; k++) lines.push({ a: ps[k], b: ps[(k + 1) % 4] });

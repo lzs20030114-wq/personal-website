@@ -209,6 +209,7 @@ export const LAB_UI_COPY: readonly (readonly [string, string])[] = [
   ["图示组合", "Sketch assembly"],
   ["下坡方向", "Downhill direction"],
   ["平台半径", "Shelf radius"],
+  ["连接深度", "Join depth"],
   ["轮廓方位", "Outline rotation"],
   ["单区范围", "Sector angle"],
   ["起点方位", "Start angle"],

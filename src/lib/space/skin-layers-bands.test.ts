@@ -9,8 +9,8 @@ import { RING } from './skin-ring';
 describe('多层台 · 分开的窄带', () => {
   it('暴露截面补膜与带间膜逐点相接，圆方与异径倾斜下均无遗漏的大侧面', async () => {
     const { states } = await createSkinTerminalLoader()(buildLayerProfiles());
-    for (const morph of [0, 1, 2, 3, 4]) {
-      const s = layerExample('study'); s.morph = morph;
+    for (const morph of [0, 1, 2, 3, 4]) for (const depth of [20, 50, 100]) {
+      const s = layerExample('study'); s.morph = morph; s.joinDepth = depth;
       s.upper.radius = 70; s.lower.radius = 130;
       const result = buildLayerBands(s, states, true, false);
       const plan = layerBandPlan(s), strips = plan.filter(p => p.kind).length * 2;
@@ -44,7 +44,7 @@ describe('多层台 · 分开的窄带', () => {
               const signs = [cross(a, b), cross(b, c), cross(c, a)];
               covered = signs.every(x => x >= -1e-5) || signs.every(x => x <= 1e-5);
             }
-            expect(covered, `${morph}/${cap}: ${r},${y}`).toBe(true);
+            expect(covered, `${morph}/${depth}/${cap}: ${r},${y}`).toBe(true);
           }
         }
       }

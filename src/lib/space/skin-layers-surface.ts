@@ -1,7 +1,7 @@
 /** 原始截面逐帧绕轴扫掠。缺口由截面编制决定，不用目标几何插值冒充成形。
  * 倾斜是明确独立的空间装配映射；不反馈给二维引擎，也不代表三维力学验证。 */
 import { buildLayerProfiles, LAYER_PROFILE_KINDS, type LayerProfileKind } from './skin-layers-forming';
-import { layerAngles, layerCovers, layerRadius, layersJoin, LAYERS, type LayerStudy, type LayerMaterial, type LayerLine } from './skin-layers';
+import { layerAngles, layerCovers, layerDepthFraction, layerRadius, layersJoin, LAYERS, type LayerStudy, type LayerMaterial, type LayerLine } from './skin-layers';
 import { ringPlateVerts } from './skin-solid';
 
 export const LAYER_COLORS = {
@@ -18,6 +18,24 @@ export function layerProfileAt(s: LayerStudy, angle: number): LayerProfileKind |
   if (layersJoin(s, angle)) return 'solid';
   const u = layerCovers(s.upper, angle), l = layerCovers(s.lower, angle);
   return u && l ? 'double' : u ? 'upper' : l ? 'lower' : null;
+}
+
+/** 内缩连接使用真实双层截面的凹口，按当前缝嘴位置缩短其径向凹入。
+ * 只映射 mouthA..mouthB，顶底台面与原始节点/键谱均不改写。
+ * 100% 保留原厚台截面；0% 由覆盖判定回到双层截面。不是新成形配方。 */
+export function layerAssemblyProfiles(s: LayerStudy, frames: readonly LayerFrame[]) {
+  const profiles = frames.map((frame, k) => ({ frame, k }));
+  const depth = layerDepthFraction(s);
+  if (!(depth > 0 && depth < 1)) return profiles;
+  const f = frames[0], { mouthA, mouthB } = PROFILES[0].marks;
+  const px = f.px.slice();
+  for (let i = mouthA + 1; i < mouthB; i++) {
+    const t = clamp((f.py[mouthA] - f.py[i]) / Math.max(1e-8, f.py[mouthA] - f.py[mouthB]));
+    const mouth = (1 - t) * f.px[mouthA] + t * f.px[mouthB];
+    px[i] += depth * Math.max(0, mouth - px[i]);
+  }
+  profiles[1] = { frame: { ...f, px }, k: 0 };
+  return profiles;
 }
 
 /** 共用于截面表面和独立条带的姿态预览；不修改实际节点或键谱。 */
@@ -72,14 +90,15 @@ export function capTriangles(p: readonly (readonly [number, number])[]): number[
 }
 
 export function buildLayerSurface(s: LayerStudy, frames: readonly LayerFrame[], pose = true, whole = false) {
+  const profiles = layerAssemblyProfiles(s, frames);
   const raw = Object.fromEntries((['upper', 'lower', 'join'] as const).map(k => [k, { v: [] as number[], idx: [] as number[] }])) as Record<LayerMaterial, { v: number[]; idx: number[] }>;
   const lines: LayerLine[] = [], bonds: LayerLine[] = [];
   const aa = layerAngles(s), kinds = aa.slice(0, -1).map((a, i) => layerProfileAt(s, (a + aa[i + 1]) / 2));
   const caps = new Map<number, number[]>();
   const point = (k: number, i: number, angle: number, axis = false) => {
-    const f = frames[k];
-    const r = axis ? LAYERS.inner - 1 : LAYERS.inner + f.px[i] * 100 + layerRadialOffset(s, f, k, i, angle);
-    const y = -f.py[i] * 100 + (pose ? layerPoseOffset(s, f, k, i, r, angle) : 0);
+    const { frame: f, k: source } = profiles[k];
+    const r = axis ? LAYERS.inner - 1 : LAYERS.inner + f.px[i] * 100 + layerRadialOffset(s, f, source, i, angle);
+    const y = -f.py[i] * 100 + (pose ? layerPoseOffset(s, f, source, i, r, angle) : 0);
     return { x: r * Math.cos(rad(angle)), y, z: r * Math.sin(rad(angle)) };
   };
   const material = (k: number, i: number): LayerMaterial => k === 1 ? 'join' : k === 2 ? 'upper' : k === 3 ? 'lower' : i < PROFILES[k].marks.center ? 'upper' : 'lower';
@@ -91,7 +110,7 @@ export function buildLayerSurface(s: LayerStudy, frames: readonly LayerFrame[], 
   for (let j = 0; j < kinds.length; j++) {
     const kind = kinds[j];
     if (!kind) continue; // 缺口没有跨过去的膜；中轴单独绘制。
-    const k = LAYER_PROFILE_KINDS.indexOf(kind), f = frames[k], b = PROFILES[k], a = aa[j], z = aa[j + 1];
+    const k = LAYER_PROFILE_KINDS.indexOf(kind), { frame: f, k: source } = profiles[k], b = PROFILES[source], a = aa[j], z = aa[j + 1];
     const start = whole ? 0 : b.lead, end = whole ? f.px.length - 1 : b.lead + b.free - 1, n = end - start + 1;
     for (let i = start; i < end; i++) {
       const p = point(k, i, a), q = point(k, i + 1, a), r = point(k, i + 1, z), t = point(k, i, z), m = material(k, i);
@@ -116,7 +135,7 @@ export function buildLayerSurface(s: LayerStudy, frames: readonly LayerFrame[], 
       for (let i = 0; i < cc.length; i += 3) triangle(material(k, start + Math.max(0, cc[i + 1] - 1)), p(cc[i]), p(cc[i + 1]), p(cc[i + 2]));
       for (let i = start; i < end; i++) lines.push({ a: point(k, i, angle), b: point(k, i + 1, angle) });
     }
-    for (const i of [PROFILES[k].marks.faceA, PROFILES[k].marks.faceB]) lines.push({ a: point(k, i, a), b: point(k, i, z) });
+    for (const i of [b.marks.faceA, b.marks.faceB]) lines.push({ a: point(k, i, a), b: point(k, i, z) });
     // 每 30° 展示一条真正锁定的键谱；外壳遮挡关系由深度缓冲处理。
     if (a % 30 === 0) for (const [i, h] of f.locked) {
       if (b.seam !== undefined && (i - b.seam) * (h - b.seam) < 0) continue;
