@@ -1,5 +1,7 @@
 "use client";
 
+import { useBenchLang, useLabText } from './LabLanguage';
+
 import {
   useEffect,
   useMemo,
@@ -35,6 +37,8 @@ interface Row {
 }
 
 export function LabIndex() {
+  const lang = useBenchLang();
+  const tx = useLabText(lang);
   const rows = useMemo<Row[]>(
     () =>
       LAB_INDEX.flatMap((g) =>
@@ -102,7 +106,7 @@ export function LabIndex() {
     const ro = new ResizeObserver(place);
     ro.observe(list);
     return () => ro.disconnect();
-  }, [active]);
+  }, [active, lang]);
 
   const onJump = (e: MouseEvent<HTMLAnchorElement>, no: string): void => {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)
@@ -125,13 +129,13 @@ export function LabIndex() {
   return (
     <nav
       className="lab-index"
-      aria-label="Lab index"
+      aria-label={tx("Lab index")}
       style={
         { "--idx-color": activeRow?.color ?? "var(--accent)" } as CSSProperties
       }
     >
       <div className="lab-index__head">
-        <span className="lab-index__kicker">Index</span>
+        <span className="lab-index__kicker">{tx("Index")}</span>
         <span className="lab-index__count" aria-live="polite">
           <span className="lab-index__count-cur">
             {String(activeIdx + 1).padStart(2, "0")}
@@ -160,9 +164,9 @@ export function LabIndex() {
               className="lab-index__project"
               style={{ "--i": i++ } as CSSProperties}
             >
-              <span>{g.label.split(" — ")[0]}</span>
+              <span>{tx(g.label.split(" — ")[0])}</span>
               <span className="lab-index__project-sub">
-                {g.label.split(" — ")[1]}
+                {tx(g.label.split(" — ")[1])}
               </span>
             </p>
             {g.segments.map((s, si) => (
@@ -173,7 +177,7 @@ export function LabIndex() {
                     style={{ "--i": i++ } as CSSProperties}
                   >
                     <span className="lab-index__scale-n">{s.n}</span>
-                    {s.label}
+                    {tx(s.label)}
                   </p>
                 ) : null}
                 {s.benches.map((b) => {
@@ -198,7 +202,7 @@ export function LabIndex() {
                       onClick={(e) => onJump(e, b.no)}
                     >
                       <span className="lab-index__no">{b.no}</span>
-                      <span className="lab-index__title">{b.title}</span>
+                      <span className="lab-index__title">{tx(b.title)}</span>
                       <span className="lab-index__dot" aria-hidden />
                     </a>
                   );
@@ -210,7 +214,7 @@ export function LabIndex() {
       </div>
       <div className="lab-index__foot" aria-hidden>
         <span className="lab-index__foot-dot" data-pulse />
-        <span>All live</span>
+        <span>{tx("All live")}</span>
       </div>
       <span className="lab-index__rule" aria-hidden>
         <span

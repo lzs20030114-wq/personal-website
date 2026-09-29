@@ -1,5 +1,6 @@
 import { SiteNav } from '../../components/site/SiteNav';
 import { SiteFooter } from '../../components/site/SiteFooter';
+import { LabLanguageRoot } from '../../components/lab/LabLanguage';
 
 /**
  * 内页布局（/work /archive /about）：共享 SiteNav + SiteFooter。
@@ -7,10 +8,10 @@ import { SiteFooter } from '../../components/site/SiteFooter';
  */
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
+    <LabLanguageRoot>
       <SiteNav />
       <main>{children}</main>
       <SiteFooter />
-    </>
+    </LabLanguageRoot>
   );
 }

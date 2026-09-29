@@ -1,5 +1,9 @@
 'use client';
 
+import { useBenchLang, useLabText } from './LabLanguage';
+
+import { LabControlLabel } from './LabControlLabel';
+
 import { useEffect, useMemo, useState } from 'react';
 import {
   CLUSTER_PLAN_OPTIONS,
@@ -62,13 +66,15 @@ export function SkinClusterBench({
   active = true,
   onLight = false,
   controls = true,
-  lang = 'zh',
+  lang: explicitLang,
 }: {
   active?: boolean;
   onLight?: boolean;
   controls?: boolean;
   lang?: 'zh' | 'en';
 }) {
+  const lang = useBenchLang(explicitLang);
+  const tx = useLabText(lang);
   const [plan, setPlan] = useState<ClusterPlanKey>(DEFAULT_PLAN);
   const [rel, setRel] = useState<ClusterRelationKey>(DEFAULT_REL);
   const [timing, setTiming] = useState<ClusterTimingKey>(DEFAULT_TIMING);
@@ -108,7 +114,7 @@ export function SkinClusterBench({
     : `${P.n} 个单元 · ${Rl.label}${stagger ? ` · 错相，每波晚 ${STAGGER_STEPS} 步起步` : ''} · 芯心距 ${met.pitchM.toFixed(2)} m · 平台 ⌀${met.platformM.toFixed(2)} m${met.levels > 1 ? ` · ${met.levels} 级，每级高差 ≥ ${met.stepM.toFixed(2)} m` : ''}${met.overlapM > 1e-6 ? ` · 平台盖过去 ${met.overlapM.toFixed(2)} m` : met.overlapM < -1e-6 ? ` · 空地 ${(-met.overlapM).toFixed(2)} m` : bridges.length ? ' · 边贴边，缝用织物网糊上' : ' · 边贴边'}`;
 
   return (
-    <SkinSolidBench
+    <SkinSolidBench lang={lang}
       active={active}
       onLight={onLight}
       controls={controls}
@@ -138,7 +144,7 @@ export function SkinClusterBench({
       extraControls={
         <>
           <div className="grp">
-            <span className="k">编制</span>
+            <LabControlLabel help={["选择 2、3、4 或 9 个环的组合。", "Choose a cluster of 2, 3, 4 or 9 rings."]}>{tx("编制")}</LabControlLabel>
             <span className="seg">
               {CLUSTER_PLAN_OPTIONS.map((p) => (
                 <button
@@ -147,13 +153,13 @@ export function SkinClusterBench({
                   className={p.key === plan ? 'active' : undefined}
                   onClick={() => setPlan(p.key)}
                 >
-                  {p.label}
+                  {tx(p.label)}
                 </button>
               ))}
             </span>
           </div>
           <div className="grp">
-            <span className="k">关系</span>
+            <LabControlLabel help={["调整间距和高差；会碰撞的组合不可选。", "Change spacing and height differences; colliding combinations are disabled."]}>{tx("关系")}</LabControlLabel>
             <span className="seg">
               {CLUSTER_RELATION_OPTIONS.map((r) => {
                 const dead = r.key === 'overlap' && !feasible;
@@ -164,46 +170,46 @@ export function SkinClusterBench({
                     className={r.key === relEff ? 'active' : undefined}
                     disabled={dead}
                     title={
-                      dead
-                        ? `${def.zh}在${P.zh}里装不下交叠：相邻两级高差比折叠体成形期的竖向跨度还小 ${(-overlapMargin(plan, form)).toFixed(0)} px（下层的平台要从上层底下穿过去）`
-                        : r.label
+                      tx(dead
+                        ? (lang === 'zh' ? `${def.zh}在${P.zh}里装不下交叠：层间距离还差 ${(-overlapMargin(plan, form)).toFixed(0)} px，成形时会相互穿过。` : `${def.en} cannot interleave in this layout: ${(-overlapMargin(plan, form)).toFixed(0)} px more clearance is needed during forming.`)
+                        : r.label)
                     }
                     onClick={() => setRel(r.key)}
                   >
-                    {r.label}
+                    {tx(r.label)}
                   </button>
                 );
               })}
             </span>
           </div>
           <div className="grp">
-            <span className="k">时序</span>
+            <LabControlLabel help={["同时成形，或按波次依次启动。", "Form all units together or start them in successive waves."]}>{tx("时序")}</LabControlLabel>
             <span className="seg">
               {CLUSTER_TIMING_OPTIONS.map((t) => (
                 <button
                   key={t.key}
                   type="button"
                   className={t.key === timing ? 'active' : undefined}
-                  title={t.key === 'stagger' ? `每个单元比前一波晚 ${STAGGER_STEPS} 步起步，收缩在簇里传过去` : '全场一个时钟'}
+                  title={tx(t.key === 'stagger' ? (lang === 'zh' ? `每一波晚 ${STAGGER_STEPS} 步开始收缩。` : `Each wave starts ${STAGGER_STEPS} steps after the previous one.`) : '全场一个时钟')}
                   onClick={() => setTiming(t.key)}
                 >
-                  {t.label}
+                  {tx(t.label)}
                 </button>
               ))}
             </span>
           </div>
           <div className="grp">
-            <span className="k">形态</span>
+            <LabControlLabel help={["选择条带收缩后形成的截面形状。", "Choose the cross-section formed by a contracting band."]}>{tx("形态")}</LabControlLabel>
             <span className="seg">
               {FORMS.map((f, i) => (
                 <button
                   key={f.key}
                   type="button"
                   className={i === form ? 'active' : undefined}
-                  title={`${f.zh} · ${f.en}`}
+                  title={tx((lang === 'zh' ? f.zh : f.en))}
                   onClick={() => setForm(i)}
                 >
-                  {f.zh}
+                  {lang === 'zh' ? f.zh : f.en}
                 </button>
               ))}
             </span>

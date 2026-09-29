@@ -1,5 +1,7 @@
 'use client';
 
+import { useBenchLang, useLabText } from './LabLanguage';
+
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { LabActivity } from './LabActivity';
 import { CAMERA_COMMAND, type CameraCommand } from './labCameraInput';
@@ -23,10 +25,12 @@ function WorkspaceIcon({ name }: { name: 'index' | 'reset' | 'collapse' | 'expan
 function Splitter({ label, value, min, max, change, reverse = false, controls }: {
   label: string; value: number; min: number; max: number; change: (value: number) => void; reverse?: boolean; controls: string;
 }) {
+  const lang = useBenchLang();
+  const tx = useLabText(lang);
   const drag = useRef<{ id: number; x: number; value: number } | null>(null);
   return <div className="lab-splitter" role="separator" tabIndex={0} aria-label={label} aria-orientation="vertical"
-    aria-valuenow={value} aria-valuemin={min} aria-valuemax={max} aria-valuetext={`${value} pixels`} aria-controls={controls}
-    title={`${label} · 拖动或方向键调节`}
+    aria-valuenow={value} aria-valuemin={min} aria-valuemax={max} aria-valuetext={`${value} ${tx("pixels")}`} aria-controls={controls}
+    title={`${label} · ${tx("拖动或方向键调节")}`}
     onPointerDown={e => { if (e.button !== 0) return; e.preventDefault(); e.currentTarget.focus(); e.currentTarget.setPointerCapture(e.pointerId); drag.current = { id: e.pointerId, x: e.clientX, value }; }}
     onPointerMove={e => { const d = drag.current; if (d?.id === e.pointerId) change(clamp(Math.round(d.value + (e.clientX - d.x) * (reverse ? -1 : 1)), min, max)); }}
     onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }} onLostPointerCapture={() => { drag.current = null; }}
@@ -38,6 +42,8 @@ function Splitter({ label, value, min, max, change, reverse = false, controls }:
 }
 
 export function LabWorkspace({ index, children }: { index: ReactNode; children: ReactNode }) {
+  const lang = useBenchLang();
+  const tx = useLabText(lang);
   const [navOpen, setNavOpen] = useState(true);
   const [navWidth, setNavWidth] = useState(208);
   const [detailWidth, setDetailWidth] = useState(296);
@@ -63,10 +69,10 @@ export function LabWorkspace({ index, children }: { index: ReactNode; children: 
   return <Workspace.Provider value={{ expanded, expand, detailWidth, resizeDetails: setDetailWidth }}>
     <div className="lab-workspace" data-nav-open={navOpen || undefined} style={{ '--lab-nav-width': `${navWidth}px`, '--lab-detail-width': `${detailWidth}px` } as CSSProperties}>
       <div className="lab-workspace-grid">
-        <aside className="lab-sidebar" aria-label="实验目录">
+        <aside className="lab-sidebar" aria-label={tx("实验目录")}>
           <div className="lab-sidebar-sticky">
-            <button ref={directoryButton} type="button" className="lab-directory-toggle" title={navOpen ? '收起目录' : '展开目录'} aria-label={navOpen ? '收起目录' : '展开目录'} aria-expanded={navOpen} aria-controls="lab-directory" onClick={() => setNavOpen(!navOpen)}>
-              <span className="lab-directory-label">Index</span><WorkspaceIcon name={navOpen ? 'collapse' : 'index'} />
+            <button ref={directoryButton} type="button" className="lab-directory-toggle" title={tx(navOpen ? '收起目录' : '展开目录')} aria-label={tx(navOpen ? '收起目录' : '展开目录')} aria-expanded={navOpen} aria-controls="lab-directory" onClick={() => setNavOpen(!navOpen)}>
+              <span className="lab-directory-label">{tx(navOpen ? '收起目录' : '展开目录')}</span><WorkspaceIcon name={navOpen ? 'collapse' : 'index'} />
             </button>
             <div id="lab-directory" hidden={!navOpen} onClick={e => {
               const link = e.target instanceof Element ? e.target.closest<HTMLAnchorElement>('a[href]') : null;
@@ -80,14 +86,14 @@ export function LabWorkspace({ index, children }: { index: ReactNode; children: 
               }
             }}>
               {index}
-              {customWidths && <button type="button" className="lab-layout-reset" title="恢复目录与说明的默认宽度" aria-label="恢复默认宽度" onClick={() => {
+              {customWidths && <button type="button" className="lab-layout-reset" title={tx("恢复目录与说明的默认宽度")} aria-label={tx("恢复默认宽度")} onClick={() => {
                 setNavWidth(208); setDetailWidth(296);
                 directoryButton.current?.focus({ preventScroll: true });
-              }}><WorkspaceIcon name="reset" />Reset widths</button>}
+              }}><WorkspaceIcon name="reset" />{tx("Reset widths")}</button>}
             </div>
           </div>
         </aside>
-        <div className="lab-nav-divider" hidden={!navOpen}><Splitter label="目录宽度" value={navWidth} min={176} max={280} change={setNavWidth} controls="lab-directory" /></div>
+        <div className="lab-nav-divider" hidden={!navOpen}><Splitter label={tx("目录宽度")} value={navWidth} min={176} max={280} change={setNavWidth} controls="lab-directory" /></div>
         <div className="lab-main">{children}</div>
       </div>
     </div>
@@ -98,9 +104,11 @@ function visibleCamera(root: HTMLElement | null) {
   return Array.from(root?.querySelectorAll<HTMLCanvasElement>('canvas[data-lab-camera]') ?? []).find(canvas => canvas.getBoundingClientRect().width > 0 && !canvas.closest('[hidden]'));
 }
 
-export function LabPanel({ no, title, description, lede, specs, accent, children }: {
-  no: string; title: string; description: string; lede: string; specs: [string, string][]; accent: string; children: ReactNode;
+export function LabPanel({ no, title, description, lede, specs, accent, children, notes }: {
+  no: string; title: string; description: string; lede: string; specs: [string, string][]; accent: string; children: ReactNode; notes?: ReactNode;
 }) {
+  const lang = useBenchLang();
+  const tx = useLabText(lang);
   const workspace = useContext(Workspace);
   const expanded = workspace.expanded === no;
   const [details, setDetails] = useState(true);
@@ -117,7 +125,7 @@ export function LabPanel({ no, title, description, lede, specs, accent, children
   const maxDetails = clamp(Math.floor(panelWidth - 652), 260, 400);
   const appliedDetailWidth = Math.min(workspace.detailWidth, maxDetails);
   useEffect(() => {
-    if (window.innerWidth < 1100) setDetails(false);
+    if (window.innerWidth < 1100 && !['2-6', '2-10', '2-11', '2-12'].includes(no)) setDetails(false);
     const node = stage.current;
     if (!node) return;
     const update = () => setHasCamera(!!visibleCamera(node));
@@ -130,7 +138,7 @@ export function LabPanel({ no, title, description, lede, specs, accent, children
     });
     if (root.current) ro.observe(root.current);
     return () => { mo.disconnect(); ro.disconnect(); };
-  }, []);
+  }, [no]);
   useEffect(() => {
     const node = stage.current;
     const heading = root.current?.querySelector('.lab-panel-heading');
@@ -141,8 +149,14 @@ export function LabPanel({ no, title, description, lede, specs, accent, children
       raf = requestAnimationFrame(() => {
         const figure = Array.from(node.querySelectorAll<HTMLElement>('.lab-fig')).find(el => el.getBoundingClientRect().height > 0 && !el.closest('[hidden]'));
         if (!figure) return;
-        const controlsHeight = node.getBoundingClientRect().height - figure.getBoundingClientRect().height;
         const toolsHeight = root.current?.querySelector('.lab-view-tools')?.getBoundingClientRect().height ?? 42;
+        // Side-control benches: controls sit beside the drawing. Budget the whole workbench,
+        // not the drawing after subtracting a stack of controls; other benches keep their sizing.
+        if (['2-6', '2-10', '2-11', '2-12'].includes(no) && window.innerWidth >= 1100) {
+          setFigureHeight(Math.max(380, Math.floor(window.innerHeight - heading.getBoundingClientRect().height - toolsHeight - (expanded ? 32 : 48))));
+          return;
+        }
+        const controlsHeight = node.getBoundingClientRect().height - figure.getBoundingClientRect().height;
         // Reserve visible controls first. Complex multi-view benches can still scroll inside the expanded panel.
         setFigureHeight(clamp(Math.floor(window.innerHeight - heading.getBoundingClientRect().height - controlsHeight - toolsHeight - (expanded ? 32 : 100)), 240, 720));
       });
@@ -152,7 +166,7 @@ export function LabPanel({ no, title, description, lede, specs, accent, children
     window.addEventListener('resize', measure);
     measure();
     return () => { ro.disconnect(); cancelAnimationFrame(raf); window.removeEventListener('resize', measure); };
-  }, [expanded]);
+  }, [expanded, no]);
   useEffect(() => {
     if (!expanded || !root.current) return;
     const node = root.current;
@@ -213,33 +227,35 @@ export function LabPanel({ no, title, description, lede, specs, accent, children
           if (!expanded && e.pointerType === 'touch' && e.target instanceof Element && e.target.closest('.lab-fig')) e.stopPropagation();
         }}>
         <header className="lab-panel-heading">
-          <div className="lab-panel-number"><span className="lab-live-dot" />LAB {no}</div>
-          <div className="lab-panel-title"><h2 id={`lab-title-${no}`}>{title}</h2><p>{description}</p></div>
+          <div className="lab-panel-number"><span className="lab-live-dot" />{tx("LAB")} {no}</div>
+          <div className="lab-panel-title"><h2 id={`lab-title-${no}`}>{tx(title)}</h2><p>{tx(description)}</p></div>
           <div className="lab-panel-actions">
-            <button type="button" aria-expanded={details} aria-controls={`lab-details-${no}`} onClick={() => setDetails(!details)} data-on={details || undefined}><WorkspaceIcon name="details" />Details <span lang="zh">说明</span></button>
-            <button ref={expandButton} type="button" className="lab-expand" aria-label={`${expanded ? '恢复' : '放大'} Lab ${no}`} onClick={toggleExpand}><WorkspaceIcon name={expanded ? 'restore' : 'expand'} />{expanded ? 'Restore' : 'Expand'} <span lang="zh">{expanded ? '恢复' : '放大'}</span></button>
+            <button type="button" aria-expanded={details} aria-controls={`lab-details-${no}`} onClick={() => setDetails(!details)} data-on={details || undefined}><WorkspaceIcon name="details" />{tx("Details")} </button>
+            <button ref={expandButton} type="button" className="lab-expand" aria-label={`${tx(expanded ? '恢复' : '放大')} ${tx('Lab')} ${no}`} onClick={toggleExpand}><WorkspaceIcon name={expanded ? 'restore' : 'expand'} />{expanded ? tx('Restore') : tx('Expand')}</button>
           </div>
         </header>
         <div className="lab-panel-body">
           <div className="lab-stage-column">
             <div className="lab-stage" ref={stage}>{children}</div>
             <div className="lab-view-tools">
-              <p>{expanded ? (hasCamera ? '滚轮缩放 · 拖动查看' : '直接操作实验') : '滚轮浏览页面'}<span className="lab-touch-note"> · 放大后可触摸拖动</span></p>
-              {hasCamera && <div className="lab-zoom-controls" role="group" aria-label={`Lab ${no} 相机控制`}>
-                <button type="button" aria-label="缩小模型" onClick={() => cameraCommand('out')}>−</button>
-                <button type="button" aria-label="放大模型" onClick={() => cameraCommand('in')}>+</button>
-                <button type="button" onClick={() => cameraCommand('home')}>归位</button>
+              <p>{expanded ? tx(hasCamera ? '滚轮缩放 · 拖动查看' : '直接操作实验') : tx('滚轮浏览页面')}<span className="lab-touch-note"> {tx("· 放大后可触摸拖动")}</span></p>
+              {hasCamera && <div className="lab-zoom-controls" role="group" aria-label={`${tx('Lab')} ${no} ${tx('相机控制')}`}>
+                <button type="button" aria-label={tx("缩小模型")} onClick={() => cameraCommand('out')}>−</button>
+                <button type="button" aria-label={tx("放大模型")} onClick={() => cameraCommand('in')}>+</button>
+                <button type="button" onClick={() => cameraCommand('home')}>{tx("归位")}</button>
               </div>}
             </div>
           </div>
-          <div className="lab-detail-divider" hidden={!details}><Splitter label={`Lab ${no} 说明宽度`} value={appliedDetailWidth} min={260} max={maxDetails} change={workspace.resizeDetails} reverse controls={`lab-details-${no}`} /></div>
-          <aside className="lab-details" id={`lab-details-${no}`} hidden={!details} aria-label={`Lab ${no} 说明与规格`}>
-            <div className="lab-details-head"><span>ABOUT THIS STUDY</span><div className="lab-detail-size">
-              <button type="button" aria-label="缩窄说明" disabled={appliedDetailWidth <= 260} onClick={() => workspace.resizeDetails(clamp(appliedDetailWidth - 24, 260, maxDetails))}>−</button>
-              <button type="button" aria-label="加宽说明" disabled={appliedDetailWidth >= maxDetails} onClick={() => workspace.resizeDetails(clamp(appliedDetailWidth + 24, 260, maxDetails))}>+</button>
+          <div className="lab-detail-divider" hidden={!details}><Splitter label={`${tx('Lab')} ${no} ${tx('说明宽度')}`} value={appliedDetailWidth} min={260} max={maxDetails} change={workspace.resizeDetails} reverse controls={`lab-details-${no}`} /></div>
+          <aside className="lab-details" id={`lab-details-${no}`} hidden={!details} aria-label={`${tx('Lab')} ${no} ${tx('说明与规格')}`}>
+            <div className="lab-details-head"><span>{tx("ABOUT THIS STUDY")}</span><div className="lab-detail-size">
+              <button type="button" aria-label={tx("缩窄说明")} disabled={appliedDetailWidth <= 260} onClick={() => workspace.resizeDetails(clamp(appliedDetailWidth - 24, 260, maxDetails))}>−</button>
+              <button type="button" aria-label={tx("加宽说明")} disabled={appliedDetailWidth >= maxDetails} onClick={() => workspace.resizeDetails(clamp(appliedDetailWidth + 24, 260, maxDetails))}>+</button>
             </div></div>
-            <div className="lab-details-scroll" tabIndex={0}><p className="lab-description">{lede}</p>
-              <h3>Specifications</h3><dl>{specs.map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl>
+            <div className="lab-details-scroll" tabIndex={0}>
+              {notes && <div>{notes}</div>}
+              <p className="lab-description">{tx(lede)}</p>
+              <h3>{tx("Specifications")}</h3><dl>{specs.map(([key, value]) => <div key={key}><dt>{tx(key)}</dt><dd>{tx(value)}</dd></div>)}</dl>
             </div>
           </aside>
         </div>

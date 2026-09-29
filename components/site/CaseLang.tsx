@@ -25,10 +25,14 @@ import { langAttr, readStoredLang, storeLang, type SiteLang } from '../../src/li
  */
 
 type Ctx = { lang: SiteLang; setLang: (l: SiteLang) => void };
-const LangCtx = createContext<Ctx>({ lang: 'en', setLang: () => {} });
+const LangCtx = createContext<Ctx | null>(null);
+
+export function useOptionalCaseLang(): SiteLang | undefined {
+  return useContext(LangCtx)?.lang;
+}
 
 export function useCaseLang(): SiteLang {
-  return useContext(LangCtx).lang;
+  return useContext(LangCtx)?.lang ?? 'en';
 }
 
 /** 包住整页：提供语言状态 + 把 lang 属性挂到内容根上（CJK 字体回退与断行看它）。 */
@@ -59,7 +63,7 @@ export function CaseLangRoot({
 
 /** 滑块本体——与 log 页同一套 .lang-switch 皮肤（globals.css，样式零改）。 */
 export function CaseLangSwitch() {
-  const { lang, setLang } = useContext(LangCtx);
+  const { lang, setLang } = useContext(LangCtx) ?? { lang: 'en', setLang: () => {} };
   return (
     <div className="lang-switch" role="group" aria-label={lang === 'zh' ? '语言' : 'Language'}>
       <span className="lang-switch__thumb" data-at={lang} aria-hidden />

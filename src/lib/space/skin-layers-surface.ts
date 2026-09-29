@@ -31,6 +31,21 @@ export function layerPoseOffset(s: LayerStudy, f: LayerFrame, k: number, i: numb
   return weight * r * ((1 - t) * slope('upper') + t * slope('lower'));
 }
 
+/** 逐层外缘尺寸的装配预览；固定中轴，不改原始节点或终态缓存。 */
+export function layerRadialOffset(s: LayerStudy, f: LayerFrame, k: number, i: number): number {
+  if (s.upper.radius === LAYERS.outer && s.lower.radius === LAYERS.outer) return 0;
+  const m = PROFILES[k].marks, kind = LAYER_PROFILE_KINDS[k];
+  const lo = kind === 'double' ? m.mouthA : m.faceA;
+  const hi = kind === 'double' ? m.mouthB : m.faceB;
+  let t = clamp((f.py[lo] - f.py[i]) / Math.max(1e-8, f.py[lo] - f.py[hi]));
+  // 厚台上下各保留一个台面的厚度，变化集中在连接两层外缘的侧壁。
+  if (kind === 'solid') t = clamp((t * (LAYERS.gap + 2 * LAYERS.thickness) - LAYERS.thickness) / LAYERS.gap);
+  if (kind === 'upper') t = 0;
+  if (kind === 'lower') t = 1;
+  const reach = (1 - t) * (s.upper.radius - LAYERS.inner) + t * (s.lower.radius - LAYERS.inner);
+  return f.px[i] * 100 * (reach / (LAYERS.outer - LAYERS.inner) - 1);
+}
+
 /** 简单凹多边形的耳切，用于真实截面的扇区端盖。不会将凹入的层间空间扇形填满。 */
 function capTriangles(p: readonly (readonly [number, number])[]): number[] {
   const cross = (a: number, b: number, c: number) =>
@@ -63,7 +78,7 @@ export function buildLayerSurface(s: LayerStudy, frames: readonly LayerFrame[], 
   const caps = new Map<number, number[]>();
   const point = (k: number, i: number, angle: number, axis = false) => {
     const f = frames[k];
-    const r = axis ? LAYERS.inner - 1 : LAYERS.inner + f.px[i] * 100;
+    const r = axis ? LAYERS.inner - 1 : LAYERS.inner + f.px[i] * 100 + layerRadialOffset(s, f, k, i);
     const y = -f.py[i] * 100 + (pose ? layerPoseOffset(s, f, k, i, r, angle) : 0);
     return { x: r * Math.cos(rad(angle)), y, z: r * Math.sin(rad(angle)) };
   };

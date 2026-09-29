@@ -1,5 +1,9 @@
 'use client';
 
+import { useBenchLang, useLabText } from './LabLanguage';
+
+import { LabControlLabel } from './LabControlLabel';
+
 import { useEffect, useMemo, useState } from 'react';
 import { SERIES_LAYOUTS, SERIES_PLANS, type SeriesPlanKey } from '../../src/lib/space/lab-variants';
 import { buildTransitionArray } from '../../src/lib/space/skin-array';
@@ -121,7 +125,7 @@ export function SkinSeriesBench({
   active = true,
   onLight = false,
   controls = true,
-  lang = 'zh',
+  lang: explicitLang,
   plan: plan0 = 'gradient',
   layout = 0,
 }: {
@@ -134,6 +138,8 @@ export function SkinSeriesBench({
   /** 开场停在第几种排布（0 并拢 / 1 分列）。案例页正文取分列——侧视下十二条带互相遮挡 */
   layout?: number;
 }) {
+  const lang = useBenchLang(explicitLang);
+  const tx = useLabText(lang);
   const [plan, setPlan] = useState<SeriesPlanKey>(plan0);
   // `/lab#lab09-split` 直达捏分（合并进来的编制没有自己的卡片与锚点，这是它的 URL 入口）
   useEffect(() => {
@@ -148,7 +154,7 @@ export function SkinSeriesBench({
   const T = HUD[lang][plan];
 
   return (
-    <SkinSolidBench
+    <SkinSolidBench lang={lang}
       active={active}
       onLight={onLight}
       controls={controls}
@@ -165,7 +171,7 @@ export function SkinSeriesBench({
       camScaleFor={(_r, _v, k) => CAM[plan][k as LayoutKey].scale}
       extraControls={
         <div className="grp">
-          <span className="k">编制</span>
+          <LabControlLabel help={["切换形态渐变序列与平台捏分序列。", "Switch between a graded shape series and a platform splitting in two."]}>{tx("编制")}</LabControlLabel>
           <span className="seg">
             {SERIES_PLANS.map((p) => (
               <button
@@ -174,7 +180,7 @@ export function SkinSeriesBench({
                 className={p.key === plan ? 'active' : undefined}
                 onClick={() => setPlan(p.key)}
               >
-                {p.label}
+                {tx(p.label)}
               </button>
             ))}
           </span>

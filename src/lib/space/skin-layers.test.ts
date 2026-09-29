@@ -3,6 +3,27 @@ import { buildLayerGeometry, layerAngles, layerBaseline, layerColumns, layerCove
   layerHeight, layerJoinSpans, layersJoin, layerStats, LAYERS, LAYER_OUTLINES, LAYER_JOINS } from './skin-layers';
 
 describe('多层台目标几何', () => {
+  it('上下层半径独立，异径厚台仍闭合，最大半径与倾角组合仍留净空', () => {
+    const s = layerBaseline(), baseline = buildLayerGeometry(s);
+    s.upper.radius = LAYERS.minRadius;
+    const changed = buildLayerGeometry(s);
+    expect(changed.meshes.lower).toEqual(baseline.meshes.lower);
+    const radius = (v: Float32Array) => Math.max(...Array.from({ length: v.length / 3 }, (_, i) => Math.hypot(v[i * 3], v[i * 3 + 2])));
+    expect(radius(changed.meshes.upper.verts)).toBeCloseTo(LAYERS.minRadius, 4);
+    s.lower.radius = LAYERS.maxRadius; s.joinSweep = 95;
+    const edges = new Map<string, number>();
+    for (const m of Object.values(buildLayerGeometry(s).meshes)) {
+      const key = (i: number) => Array.from(m.verts.slice(i * 3, i * 3 + 3), v => Math.round(v * 1000)).join(',');
+      for (let i = 0; i < m.idx.length; i += 3) for (let j = 0; j < 3; j++) {
+        const edge = [key(m.idx[i + j]), key(m.idx[i + (j + 1) % 3])].sort().join('|');
+        edges.set(edge, (edges.get(edge) ?? 0) + 1);
+      }
+    }
+    expect([...edges.values()].every(n => n === 2)).toBe(true);
+    s.upper.radius = LAYERS.maxRadius;
+    s.upper.tilt = s.lower.tilt = LAYERS.maxTilt;
+    expect(layerStats(s).clearance).toBeGreaterThan(5);
+  });
   it('复用双层台尺寸，连接只把凹口变直边，最外顶底面不移动', () => {
     const s = layerBaseline();
     expect(layerHeight(s, 0, LAYERS.outer, 0)).toBe(-66);

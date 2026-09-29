@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useOptionalCaseLang } from './CaseLang';
 
 /**
  * 共享导航（Home/Log/Case/About 复用）——Modernist 稿：brand + Work/Lab/Log/About。
@@ -10,6 +11,7 @@ import { usePathname } from 'next/navigation';
  */
 export function SiteNav() {
   const pathname = usePathname() ?? '/';
+  const zh = useOptionalCaseLang() === 'zh';
   const onHome = pathname === '/' || pathname.startsWith('/work');
   const onLog = pathname.startsWith('/archive');
   const onAbout = pathname.startsWith('/about');
@@ -20,21 +22,20 @@ export function SiteNav() {
 
   return (
     <nav className={dark ? 'nav nav-dark' : 'nav'}>
-      {/* brand 文案维持占位（MAPPING §3：作者定名前 [NAME·占位]） */}
       <Link href="/" className="nav-brand">
-        [NAME·占位]
+        ZISHUO LI
       </Link>
       <Link href="/#work" {...current(onHome)}>
-        Work
+        {zh ? '作品' : 'Work'}
       </Link>
       <Link href="/lab" {...current(pathname.startsWith('/lab'))}>
-        Lab
+        {zh ? '实验室' : 'Lab'}
       </Link>
       <Link href="/archive" {...current(onLog)}>
-        Log
+        {zh ? '日志' : 'Log'}
       </Link>
       <Link href="/about" {...current(onAbout)}>
-        About
+        {zh ? '关于' : 'About'}
       </Link>
     </nav>
   );

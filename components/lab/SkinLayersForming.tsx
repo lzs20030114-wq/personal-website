@@ -1,5 +1,7 @@
 'use client';
 
+import { useBenchLang, useLabText } from './LabLanguage';
+
 import { useMemo, useState } from 'react';
 import { buildLayerProfiles } from '../../src/lib/space/skin-layers-forming';
 import { buildLayerBands, layerBandPlan } from '../../src/lib/space/skin-layers-bands';
@@ -15,6 +17,8 @@ const LAYOUTS: readonly SolidLayout[] = [
 
 /** 一圈独立窄带与截面对照共用四条引擎；改变装配参数不重播。 */
 export function SkinLayersForming({ active, onLight, study }: { active: boolean; onLight: boolean; study: LayerStudy }) {
+  const lang = useBenchLang();
+  const tx = useLabText(lang);
   const [pose, setPose] = useState(true);
   const surface = useMemo<SolidSurface>(() => {
     let key = '', first: Float64Array | undefined, result: ReturnType<typeof buildLayerBands>;
@@ -29,13 +33,17 @@ export function SkinLayersForming({ active, onLight, study }: { active: boolean;
   }, [study, pose]);
   const count = useMemo(() => layerBandPlan(study).filter(b => b.kind).length, [study]);
   return <div className="layer-forming">
-    <SkinSolidBench active={active} onLight={onLight} units={UNITS} raw layouts={LAYOUTS} surface={surface}
-      ceiling="span" depth={9} thick={1.5} rail="fixed" rate={110}
-      extraControls={<div className="grp"><label><input type="checkbox" checked={pose} onChange={e => setPose(e.target.checked)} />倾斜装配</label></div>}
-      hud={{ kicker: 'Lab 2-6 / 成形验证', title: '单元内的多层台',
-        sub: `${count} 条窄带 · 每条带独立成形 · 带间留缝`,
-        hint: '原始求解节点 · 拖拽旋转 · 滚轮缩放',
+    <SkinSolidBench lang={lang} active={active} onLight={onLight} units={UNITS} raw layouts={LAYOUTS} surface={surface} workspace
+      ceiling="span" depth={9} thick={1.5} rail="fixed" rate={110} skin={{ def: 0.35 }}
+      extraControls={<div className="grp"><label><input type="checkbox" checked={pose} onChange={e => setPose(e.target.checked)} />{tx("倾斜装配")}</label></div>}
+      hud={lang === 'en' ? { kicker: 'Lab 2-6 / Forming study', title: 'Layers within one unit',
+        sub: `${count} bands · radius and tilt: assembly preview`,
+        hint: 'Section solve + assembly preview · drag to orbit',
+        aria: 'Independent bands form a layered unit; inspect sections, gaps and locked bonds',
+      } : { kicker: 'Lab 2-6 / 成形验证', title: '单元内的多层台',
+        sub: `${count} 条窄带 · 半径与倾斜：装配预览`,
+        hint: '截面求解 + 装配预览 · 拖拽旋转',
         aria: '多层台条带成形：独立窄带围成整个单元，可查看各带截面、带间空隙与锁定键线，支持缺口与对向厚台' }} />
-    <p className="layer-footnote">与 Lab 2-5 相同的窄带、条纹和键线；每条带随真实截面成形，条带之间留空。倾斜仍为可关闭的装配预览，尚未模拟环向受力及倾斜成形机制。截面对照从左至右为双层、厚台、仅上层、仅下层；键数为这四类截面的合计。</p>
+    <p className="layer-footnote">{lang === 'zh' ? '蒙皮连接带间空隙，保留轮廓缺口。半径与倾斜为装配预览；截面对照保留原始尺寸，未模拟环向受力。' : 'Skin fills the gaps between bands, keeping the cutouts open. Radius and tilt preview the assembly; Sections keeps the original size. No circumferential forces are simulated.'}</p>
   </div>;
 }

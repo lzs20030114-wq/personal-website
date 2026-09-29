@@ -47,14 +47,14 @@ export function HomeLab({ logs }: { logs: HomeLog[] }) {
   };
   const navigateList = (e: KeyboardEvent<HTMLDivElement>) => {
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
-    const buttons = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('button[data-experiment]'));
-    const i = buttons.indexOf(e.target as HTMLButtonElement);
+    const links = Array.from(e.currentTarget.querySelectorAll<HTMLAnchorElement>('a[data-experiment]'));
+    const i = links.indexOf(e.target as HTMLAnchorElement);
     if (i < 0) return;
     e.preventDefault();
     e.stopPropagation();
-    const next = e.key === 'Home' ? 0 : e.key === 'End' ? buttons.length - 1
-      : (i + (e.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length;
-    buttons[next].focus();
+    const next = e.key === 'Home' ? 0 : e.key === 'End' ? links.length - 1
+      : (i + (e.key === 'ArrowDown' ? 1 : -1) + links.length) % links.length;
+    links[next].focus();
   };
 
   return (
@@ -95,10 +95,11 @@ export function HomeLab({ logs }: { logs: HomeLog[] }) {
                       onKeyDown={navigateList} onPointerLeave={() => clearTimeout(hoverTimer.current)}>
                       {benches.map(b => (
                         <div key={b.no} className={styles.itemWrap} data-selected={selected === b.no}>
-                          <button type="button" data-experiment={b.no} className={styles.item}
+                          <a href={`/lab#${labAnchor(b.no)}`} data-pt="fade"
+                            data-experiment={b.no} className={styles.item}
                             style={{ '--item-accent': labAccent(b.kernel) } as CSSProperties}
-                            aria-pressed={selected === b.no} aria-controls="home-lab-preview"
-                            onFocus={() => choose(b.no)} onClick={() => choose(b.no)}
+                            aria-controls="home-lab-preview"
+                            onFocus={() => choose(b.no)}
                             onPointerEnter={e => {
                               if (e.pointerType !== 'mouse' || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
                               clearTimeout(hoverTimer.current);
@@ -107,7 +108,7 @@ export function HomeLab({ logs }: { logs: HomeLog[] }) {
                             <span className={styles.itemNo}>{b.no}</span>
                             <span className={styles.itemTitle}>{b.title}</span>
                             <span className={styles.itemArrow} aria-hidden>↗</span>
-                          </button>
+                          </a>
                           {selected === b.no && <div className={styles.mobileDetail}>
                             <p>{b.description}</p><a href={`/lab#${labAnchor(b.no)}`}>Open experiment ↗</a>
                           </div>}
@@ -119,7 +120,7 @@ export function HomeLab({ logs }: { logs: HomeLog[] }) {
               </div>
             );
           })}
-          <div className={styles.catalogFoot}><span>Choose an experiment to preview</span><span aria-hidden>↗</span></div>
+          <div className={styles.catalogFoot}><span>Choose an experiment to open</span><span aria-hidden>↗</span></div>
         </div>
 
         <div className={styles.preview} id="home-lab-preview">

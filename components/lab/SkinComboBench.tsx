@@ -1,5 +1,9 @@
 'use client';
 
+import { useBenchLang, useLabText } from './LabLanguage';
+
+import { LabControlLabel } from './LabControlLabel';
+
 import { useEffect, useMemo, useState } from 'react';
 import { COMBO_FAMILY_OPTIONS, COMBO_PLAN_OPTIONS, COMBO_SPACING_OPTIONS } from '../../src/lib/space/lab-variants';
 import { RING } from '../../src/lib/space/skin-ring';
@@ -47,13 +51,17 @@ export function SkinComboBench({
   active = true,
   onLight = false,
   controls = true,
-  lang = 'zh',
+  workspace = false,
+  lang: explicitLang,
 }: {
   active?: boolean;
   onLight?: boolean;
   controls?: boolean;
+  workspace?: boolean;
   lang?: 'zh' | 'en';
 }) {
+  const lang = useBenchLang(explicitLang);
+  const tx = useLabText(lang);
   const [plan, setPlan] = useState<ComboPlanKey>(DEFAULT_PLAN);
   const [fam, setFam] = useState<ComboFamilyKey>(DEFAULT_FAMILY);
   const [spacing, setSpacing] = useState<ComboSpacingKey>(DEFAULT_SPACING);
@@ -90,10 +98,11 @@ export function SkinComboBench({
   const hasWave = P.units.some((u) => u.kind === 'wave');
 
   return (
-    <SkinSolidBench
+    <SkinSolidBench lang={lang}
       active={active}
       onLight={onLight}
       controls={controls}
+      workspace={workspace}
       units={units}
       ringPlans={build.plans}
       // 引擎只跟「族 + 用到哪些引擎」走：换距离不重解
@@ -119,40 +128,40 @@ export function SkinComboBench({
       axon={RING_GRID_AXON}
       extraControls={
         <>
-          <div className="grp">
-            <span className="k">图形</span>
+          <div className="grp combo-plans">
+            <LabControlLabel help={["选择台阶、坡道或围合等预设组合。", "Choose a preset step, ramp or enclosure."]}>{tx("图形")}</LabControlLabel>
             <span className="seg">
               {COMBO_PLAN_OPTIONS.map((p) => (
                 <button
                   key={p.key}
                   type="button"
                   className={p.key === plan ? 'active' : undefined}
-                  title={`${comboPlan(p.key).zh} · ${comboPlan(p.key).en}`}
+                  title={tx((lang === 'zh' ? comboPlan(p.key).zh : comboPlan(p.key).en))}
                   onClick={() => setPlan(p.key)}
                 >
-                  {p.label}
+                  {tx(p.label)}
                 </button>
               ))}
             </span>
           </div>
-          <div className="grp">
-            <span className="k">单元</span>
+          <div className="grp combo-family">
+            <LabControlLabel help={["切换圆环和方环，两者可用的高度范围不同。", "Switch round and square rings; each has a different height range."]}>{tx("单元")}</LabControlLabel>
             <span className="seg">
               {COMBO_FAMILY_OPTIONS.map((f) => (
                 <button
                   key={f.key}
                   type="button"
                   className={f.key === fam ? 'active' : undefined}
-                  title={f.key === 'round' ? '圆筒环（Lab 2-5）· 起伏量程 0.35 m · 半径可调' : '方形环（Lab 2-7）· 起伏量程 0.16 m · 半径按 30 标定'}
+                  title={tx(f.key === 'round' ? '圆筒环（Lab 2-5）· 起伏量程 0.35 m · 半径可调' : '方形环（Lab 2-7）· 起伏量程 0.16 m · 半径按 30 标定')}
                   onClick={() => setFam(f.key)}
                 >
-                  {f.label}
+                  {tx(f.label)}
                 </button>
               ))}
             </span>
           </div>
-          <div className="grp">
-            <span className="k">形态</span>
+          <div className="grp combo-forms">
+            <LabControlLabel help={["选择条带收缩后形成的截面形状。", "Choose the cross-section formed by a contracting band."]}>{tx("形态")}</LabControlLabel>
             <span className="seg">
               {FORMS.map((f, i) => {
                 const dead = fam !== 'round' || !hasWave;
@@ -162,27 +171,27 @@ export function SkinComboBench({
                     type="button"
                     className={i === form ? 'active' : undefined}
                     disabled={dead}
-                    title={dead ? (fam !== 'round' ? '方环只有它自己的箱' : '这张图形没有起伏单元') : `${f.zh} · ${f.en}（只管圆环的起伏单元）`}
+                    title={tx(dead ? (fam !== 'round' ? '方环只有它自己的箱' : '这张图形没有起伏单元') : (lang === 'zh' ? `${f.zh}（只管圆环的起伏单元）` : `${f.en} (undulating round rings only)`))}
                     onClick={() => setForm(i)}
                   >
-                    {f.zh}
+                    {lang === 'zh' ? f.zh : f.en}
                   </button>
                 );
               })}
             </span>
           </div>
-          <div className="grp">
-            <span className="k">距离</span>
+          <div className="grp combo-spacing">
+            <LabControlLabel help={["让平台边缘相接，或留出间隙。", "Bring platform edges together or leave a gap."]}>{tx("距离")}</LabControlLabel>
             <span className="seg">
               {COMBO_SPACING_OPTIONS.map((s) => (
                 <button
                   key={s.key}
                   type="button"
                   className={s.key === spacing ? 'active' : undefined}
-                  title={s.key === 'touch' ? '边贴边（按挑出峰值）' : '再加各族自己的环间缝'}
+                  title={tx(s.key === 'touch' ? '边贴边（按挑出峰值）' : '再加各族自己的环间缝')}
                   onClick={() => setSpacing(s.key)}
                 >
-                  {s.label}
+                  {tx(s.label)}
                 </button>
               ))}
             </span>

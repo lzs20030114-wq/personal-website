@@ -32,19 +32,27 @@ const FX = {
   railFlip: true,
 } as const;
 
-// ---- 手感标定项（分页引擎参数，用户拍板对象——原样移植，不改数值）----
-const COMMIT_DIST = 360;
-const FLICK_V = 140;
-const COMMIT_P = 0.5;
+// ---- 手感标定项（MAPPING §6；2026-09-29 用户要求加强滚轮阻尼）----
+const COMMIT_DIST = 280;
+// 单次大滚轮值也要先蓄力，不能跳过起步阻力。连续输入约三格后越过阈值。
+const WHEEL_STEP_CAP = 120;
+const CHARGE_MS = 180;
+// 翻幕单独标定，避免改变项目卡片跳页的速度曲线。
+const PAGE_MS = 760;
+const PAGE_EASE = 'cubic-bezier(0.18,0.9,0.25,1)';
+const PEEK_MS = 180;
+const PEEK_EASE = 'cubic-bezier(0.25,0.05,0.35,1)';
+const RETURN_EASE = 'cubic-bezier(0.22,0.78,0.18,1)';
 const PUSH_MS = 620;
 // 直飞转场（/work/*）跳页前：底板从预览块的框展开到铺满视口的时长，铺满即 push。
 // 调大 = 展开看得更清楚、但飞之前等更久；调小 = 更利落、但展开会显得赶。
 const EXPAND_MS = 380;
 const LOCK_TAIL = 160;
 const SILENCE = 200;
-const PAUSE_SNAP = 120;
-const SPRING_MS = 280;
-const MAX_PEEK = 0.1;
+const PAUSE_SNAP = 300;
+const SPRING_MS = 440;
+const MAX_PEEK = 0.065;
+const CHARGE_SCALE = 0.026;
 const TOUCH_COMMIT = 0.18;
 const RETURN_DELAY = 300;
 // ----------------------------------
@@ -85,11 +93,11 @@ export interface HomeLog {
   text: string;
 }
 
-// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-09-29 vitest 实测 675；
+// 统计条（MAPPING §4：当前实测测试数，硬编码，发版时人工更新——2026-09-29 vitest 实测 611；
 // 迭代稿配色：Tests=绿 700、Kernels=紫 700、Demos=绿 600）
 const STATS = [
   { n: '04', label: 'Projects', color: 'var(--ink)' },
-  { n: '675', label: 'Tests green', color: 'var(--accent)' },
+  { n: '611', label: 'Tests green', color: 'var(--accent)' },
   { n: '03', label: 'Solver kernels', color: 'var(--accent-2)' },
   { n: '16', label: 'Live demos', color: 'var(--g600)' },
 ];
@@ -385,14 +393,38 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
     let small = false;
     const H = () => vp.clientHeight;
     const W = () => vp.clientWidth;
-    const setTrack = (y: number, ms: number) => {
-      track.style.transition = ms ? `transform ${ms}ms ${EASE}` : 'none';
+    const setTrack = (y: number, ms: number, easing = PAGE_EASE) => {
+      track.style.transition = ms ? `transform ${ms}ms ${easing}` : 'none';
       track.style.transform = `translate3d(0,${y}px,0)`;
     };
+    let s2X = 0;
+    let s2Scale = 1;
     // S2 从右侧水平推入（s1↔s2 为横向转场，设计稿原样）
-    const setS2 = (x: number, ms: number) => {
-      s2el.style.transition = ms ? `transform ${ms}ms ${EASE}` : 'none';
-      s2el.style.transform = `translate3d(${x}px,0,0)`;
+    const setS2 = (x: number, ms: number, easing = PAGE_EASE) => {
+      s2X = x;
+      s2el.style.transition = ms ? `transform ${ms}ms ${easing}` : 'none';
+      s2el.style.transform = `translate3d(${x}px,0,0) scale(${s2Scale})`;
+    };
+    // 让同一份蓄力量驱动画面退让与现有进度线，不额外增加等待提示或文字。
+    const showCharge = (amount: number, sign: number, ms: number, easing = PEEK_EASE) => {
+      sections.forEach((sec, i) => {
+        const scale = i === cur ? 1 - CHARGE_SCALE * amount : 1;
+        if (i === 2) s2Scale = scale;
+        else {
+          sec.style.transition = ms ? `transform ${ms}ms ${easing}` : 'none';
+          sec.style.transform = scale === 1 ? '' : `scale(${scale})`;
+        }
+      });
+      if (engine) setS2(s2X, ms, easing);
+      else {
+        s2el.style.transition = 'none';
+        s2el.style.transform = '';
+      }
+      if (prog) {
+        const next = Math.max(0, Math.min(N, cur + sign));
+        prog.style.transition = ms ? `transform ${ms}ms ${easing}` : 'none';
+        prog.style.transform = `scaleX(${(cur + 1 + (next - cur) * amount) / (N + 1)})`;
+      }
     };
     const setRail = (n: number) =>
       railItems.forEach((it, i) => {
@@ -653,51 +685,61 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
     });
     ptTargets.forEach((h) => router.prefetch(h));
 
-    // ---------- 分页引擎（物理原样移植） ----------
+    // ---------- 分页引擎：小幅蓄力 → 越过阈值释放 → 减速停稳 ----------
     let acc = 0;
+    let chargeStart = 0;
     let lockUntil = 0;
     let lockDir = 0;
     let needRearm = false;
     let lastInputT = 0;
     let pauseTimer: ReturnType<typeof setTimeout> | undefined;
-    const easeOut = (x: number) => 1 - Math.pow(1 - x, 3);
+    let releaseTimer: ReturnType<typeof setTimeout> | undefined;
     const applyOffset = () => {
       const sign = Math.sign(acc) || 1;
       const pv = Math.min(Math.abs(acc) / COMMIT_DIST, 1);
+      // 第一格也有可见的退让；越接近阈值，露出的下一幕与进度线越明显。
+      const load = pv * 0.35 + pv * pv * 0.65;
+      showCharge(pv, sign, PEEK_MS);
       if (cur === 1 && sign > 0) {
-        setS2(W() - MAX_PEEK * W() * easeOut(pv), 0);
+        setTrack(-H(), PEEK_MS, PEEK_EASE);
+        setS2(W() - MAX_PEEK * W() * load, PEEK_MS, PEEK_EASE);
         return;
       }
       if (cur === 2) {
-        setS2(sign < 0 ? MAX_PEEK * W() * easeOut(pv) : -0.03 * W() * easeOut(pv), 0);
+        setS2(sign < 0 ? MAX_PEEK * W() * load : -0.015 * W() * load, PEEK_MS, PEEK_EASE);
         return;
       }
       const end = cur === 0 && sign < 0;
-      const off = (end ? 0.03 : MAX_PEEK) * H() * easeOut(pv) * sign;
-      setTrack(-Math.min(cur, 1) * H() - off, 0);
+      const off = (end ? 0.015 : MAX_PEEK) * H() * load * sign;
+      setS2(W(), PEEK_MS, PEEK_EASE);
+      setTrack(-Math.min(cur, 1) * H() - off, PEEK_MS, PEEK_EASE);
     };
     const springBack = () => {
+      clearTimeout(releaseTimer);
       acc = 0;
-      setTrack(-Math.min(cur, 1) * H(), SPRING_MS);
-      setS2(cur === 2 ? 0 : W(), SPRING_MS);
+      showCharge(0, 0, SPRING_MS, RETURN_EASE);
+      setTrack(-Math.min(cur, 1) * H(), SPRING_MS, RETURN_EASE);
+      setS2(cur === 2 ? 0 : W(), SPRING_MS, RETURN_EASE);
     };
     const commit = (n: number, sign: number) => {
       n = Math.max(0, Math.min(N, n));
       clearTimeout(pauseTimer);
+      clearTimeout(releaseTimer);
       if (n === cur) {
         springBack();
         return;
       }
       lockDir = sign || Math.sign(n - cur);
-      lockUntil = performance.now() + PUSH_MS + LOCK_TAIL;
+      lockUntil = performance.now() + PAGE_MS + LOCK_TAIL;
       needRearm = true;
       acc = 0;
+      showCharge(0, 0, PAGE_MS, PAGE_EASE);
       cur = n;
-      setTrack(-Math.min(n, 1) * H(), PUSH_MS);
-      setS2(n === 2 ? 0 : W(), PUSH_MS);
+      setTrack(-Math.min(n, 1) * H(), PAGE_MS);
+      setS2(n === 2 ? 0 : W(), PAGE_MS);
       setRail(n);
       setInert(n);
-      setTimeout(() => enter(n), PUSH_MS);
+      setTimeout(() => enter(n), PAGE_MS);
     };
     const goScreen = (n: number) => {
       if (performance.now() < lockUntil) return;
@@ -713,6 +755,8 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
         const now = performance.now();
         let dy = we.deltaY;
         if (we.deltaMode === 1) dy *= 16;
+        if (we.deltaMode === 2) dy *= H();
+        if (!dy) return;
         const sign = Math.sign(dy) || 1;
         if (now < lockUntil) {
           if (sign === lockDir) {
@@ -728,13 +772,20 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
           }
         }
         lastInputT = now;
-        if (Math.sign(acc) !== sign) acc = 0;
-        acc += dy;
+        clearTimeout(releaseTimer);
+        if (Math.sign(acc) !== sign) {
+          acc = 0;
+          chargeStart = now;
+        }
+        acc += sign * Math.min(Math.abs(dy), WHEEL_STEP_CAP);
         const p = Math.abs(acc) / COMMIT_DIST;
         applyOffset();
         clearTimeout(pauseTimer);
-        if (p >= COMMIT_P || Math.abs(dy) >= FLICK_V) {
-          commit(cur + sign, sign);
+        if (p >= 1) {
+          // 极快的连续输入也显示一小段受力过程；反向输入、回位或换模式都会撤销。
+          const remaining = CHARGE_MS - (now - chargeStart);
+          if (remaining > 0) releaseTimer = setTimeout(() => commit(cur + sign, sign), remaining);
+          else commit(cur + sign, sign);
           return;
         }
         pauseTimer = setTimeout(springBack, PAUSE_SNAP);
@@ -753,6 +804,10 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
         )
       )
         return;
+      clearTimeout(releaseTimer);
+      clearTimeout(pauseTimer);
+      acc = 0;
+      showCharge(0, 0, SPRING_MS, RETURN_EASE);
       tch = { y: pe.clientY, t: performance.now() };
     });
     on(vp, 'pointermove', (e) => {
@@ -997,10 +1052,14 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
     // 矮窗口也回落文档流，避免固定幕把展开目录与页脚夹住。
     const mqS = window.matchMedia('(max-width: 1023px), (max-height: 679px)');
     const applyMode = () => {
+      clearTimeout(releaseTimer);
+      clearTimeout(pauseTimer);
+      showCharge(0, 0, 0);
       small = mqS.matches;
       engine = wantPaging && !small;
       vp.style.height = engine ? '100svh' : 'auto';
       vp.style.overflow = engine ? 'hidden' : 'visible';
+      vp.style.background = engine ? PT_BG : '';
       track.style.transition = 'none';
       track.style.transform = engine ? `translate3d(0,${-Math.min(cur, 1) * H()}px,0)` : '';
       if (engine) {
@@ -1011,8 +1070,7 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
         // 稿内隐性层叠 bug 的落地修正：track 的 willChange 建层叠上下文后，S1 内容层 z1
         // 会盖穿横向推入的 s2（transform 上下文 z auto）——引擎态显式抬 s2。
         s2el.style.zIndex = '2';
-        s2el.style.transition = 'none';
-        s2el.style.transform = cur === 2 ? 'translate3d(0,0,0)' : `translate3d(${W()}px,0,0)`;
+        setS2(cur === 2 ? 0 : W(), 0);
       } else {
         s2el.style.position = 'relative';
         s2el.style.top = '';
@@ -1040,6 +1098,10 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
     applyMode();
     on(mqS, 'change', applyMode);
     on(window, 'resize', () => {
+      clearTimeout(releaseTimer);
+      clearTimeout(pauseTimer);
+      acc = 0;
+      showCharge(0, 0, 0);
       if (engine) {
         setTrack(-Math.min(cur, 1) * H(), 0);
         setS2(cur === 2 ? 0 : W(), 0);
@@ -1067,9 +1129,11 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
       if (craf) cancelAnimationFrame(craf);
       if (labAnchorFrame) cancelAnimationFrame(labAnchorFrame);
       clearTimeout(pauseTimer);
+      clearTimeout(releaseTimer);
       clearTimeout(hoverT);
       clearTimeout(swapT);
       clearTimeout(returnT);
+      showCharge(0, 0, 0);
     };
   }, [router, works]);
 
@@ -1194,7 +1258,7 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
                   }}
                 >
                   <span>
-                    <span style={{ color: 'var(--ink)', fontWeight: 800 }}>[Name]</span> — Portfolio
+                    <span style={{ color: 'var(--ink)', fontWeight: 800 }}>ZISHUO LI</span> — Portfolio
                     2026
                   </span>
                   <span
@@ -1632,17 +1696,19 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
                   gap: 32,
                 }}
               >
-                <span
+                <a
+                  href="mailto:lzs20030114@gmail.com"
                   className="hub-footer-email"
                   style={{
                     fontSize: 'clamp(22px, 2.2vw, 32px)',
                     fontWeight: 800,
-                    textTransform: 'uppercase',
+                    textTransform: 'none',
+                    overflowWrap: 'anywhere',
                     letterSpacing: '-0.01em',
                   }}
                 >
-                  [email placeholder]
-                </span>
+                  lzs20030114@gmail.com
+                </a>
                 <span
                   style={{
                     fontSize: 11,

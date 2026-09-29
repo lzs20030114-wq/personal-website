@@ -1,5 +1,9 @@
 'use client';
 
+import { useBenchLang, useLabText } from './LabLanguage';
+
+import { LabControlLabel } from './LabControlLabel';
+
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import { FlatRenderer, bakeIndexed, type MeshPlace } from '../../src/lib/linkage/gl3d';
@@ -260,6 +264,8 @@ export type SolidSurface = (frames: readonly SolidSurfaceFrame[], layout: string
   meshes: readonly { verts: Float32Array; idx: Uint32Array; dark: [number, number, number]; light: [number, number, number] }[];
   lines?: readonly { a: Vec3; b: Vec3 }[];
   bonds?: readonly { a: Vec3; b: Vec3 }[];
+  /** 可选的带间蒙皮；沿用统一透明度、深度与远近排序，实体条带仍保留。 */
+  membranes?: readonly { verts: Float32Array; idx: Uint32Array; center: Vec3 }[];
 } | null;
 
 /**
@@ -319,6 +325,7 @@ export function SkinSolidBench({
   active = true,
   onLight = false,
   controls = true,
+  workspace = false,
   units,
   gapX = UNIT_GAP_X,
   gapZ = 0,
@@ -327,7 +334,8 @@ export function SkinSolidBench({
   camScale = CAM_SCALE,
   ceiling = 'per-unit',
   rate = RATE,
-  hud: hudCopy = DEFAULT_HUD,
+  hud: providedHud = DEFAULT_HUD,
+  lang: explicitLang,
   layouts,
   layout0 = 0,
   order,
@@ -358,6 +366,8 @@ export function SkinSolidBench({
   active?: boolean;
   onLight?: boolean;
   controls?: boolean;
+  /** Lab-only side controls and a separate drawing area; other embeds keep the original layout. */
+  workspace?: boolean;
   /** 场景单元（默认 = Lab.06 那四台 × skinSiteOpts）；Lab.08 阵列传自己的序列 */
   units?: readonly SolidUnitDef[];
   gapX?: number;
@@ -373,6 +383,7 @@ export function SkinSolidBench({
   ceiling?: 'per-unit' | 'span' | 'ring';
   rate?: number;
   hud?: SolidHud;
+  lang?: 'en' | 'zh';
   /** 多排布（≥2 出「排列」切换，首项为默认）；省略 = 单排布（gapX/pivot/camScale） */
   layouts?: readonly SolidLayout[];
   /**
@@ -486,6 +497,14 @@ export function SkinSolidBench({
   /** 挂载时选择表面模式；回调更新只重画，保留求解进度。 */
   surface?: SolidSurface;
 }) {
+  const lang = useBenchLang(explicitLang);
+  const tx = useLabText(lang);
+  const hudCopy = providedHud === DEFAULT_HUD && lang === 'en' ? {
+    kicker: 'Lab 2-2 / Project II', title: 'Skin units · solid bands',
+    sub: `Extruded sections · fabric thickness ${SOLID.THICK}px · one contraction protocol`,
+    hint: 'Drag to orbit · right-drag to pan',
+    aria: 'Four bond maps extruded into fabric bands; drag to orbit',
+  } : providedHud;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const apiRef = useRef<{
     redraw: () => void;
@@ -852,19 +871,30 @@ export function SkinSolidBench({
 
     // 条带双色共用顶点、使用不同索引；两者共同决定烘焙结果。
     const surfaceBakes = new WeakMap<Float32Array, WeakMap<Uint32Array, Float32Array>>();
+    const bakeSurface = (m: { verts: Float32Array; idx: Uint32Array }) => {
+      let parts = surfaceBakes.get(m.verts);
+      if (!parts) { parts = new WeakMap(); surfaceBakes.set(m.verts, parts); }
+      let baked = parts.get(m.idx);
+      if (!baked) { baked = bakeIndexed(m.verts, m.idx); parts.set(m.idx, baked); }
+      return baked;
+    };
     const render = (): void => {
       R.beginFrame(cam);
       const result = surfaceRef.current?.(sims.map(s => ({ px: s.sim.px, py: s.sim.py, locked: s.sim.locked, step: s.sim.step })), layoutList[layoutIdx].key);
       if (result) {
         for (const m of result.meshes) {
-          let parts = surfaceBakes.get(m.verts);
-          if (!parts) { parts = new WeakMap(); surfaceBakes.set(m.verts, parts); }
-          let baked = parts.get(m.idx);
-          if (!baked) { baked = bakeIndexed(m.verts, m.idx); parts.set(m.idx, baked); }
-          R.drawDynamicMesh(baked, m.dark, m.light);
+          R.drawDynamicMesh(bakeSurface(m), m.dark, m.light);
         }
         if (result.lines) R.drawLines(result.lines, [0.7, 0.77, 0.73], 0.001);
         if (bondsRef.current && result.bonds) R.drawLines(result.bonds, C_BOND, 0.004);
+        const panels = result.membranes;
+        if (skin && panels?.length && skinRef.current > 0.004) {
+          const M = cam.matrix;
+          for (const i of bandsFarToNear(panels.length, i => {
+            const p = panels[i].center;
+            return M[6] * p.x + M[7] * p.y + M[8] * p.z;
+          })) R.drawDynamicMesh(bakeSurface(panels[i]), MEM_DARK, MEM_LITE, skinRef.current);
+        }
         return;
       }
       // 布景先画：不透明、写深度，装置的遮挡关系交给 z-buffer
@@ -1410,7 +1440,7 @@ export function SkinSolidBench({
   // 那种）仍是原来那一行、逐位不变。排列切换本属第一层（它改摆放），故从第二层挪出来。
   const layoutGroup = layouts && layouts.length > 1 ? (
       <div className="grp">
-        <span className="k">排列</span>
+        <LabControlLabel help={["切换模型的排列和查看方式。", "Choose the model arrangement or inspection view."]}>{tx("排列")}</LabControlLabel>
         <span className="seg">
           {layouts.map((L, li) => (
             <button
@@ -1419,7 +1449,7 @@ export function SkinSolidBench({
               className={li === layout ? 'active' : undefined}
               onClick={() => goLayout(li)}
             >
-              {L.label}
+              {tx(L.label)}
             </button>
           ))}
         </span>
@@ -1438,9 +1468,9 @@ export function SkinSolidBench({
               setRunning(e.target.checked);
             }}
           />
-          运转
+          {tx("运转")}
         </label>
-        <label title="直接载入已算好的成形状态；取消勾选可从头观看成形过程">
+        <label title={tx("直接载入已算好的成形状态；取消勾选可从头观看成形过程")}>
           <input
             type="checkbox"
             checked={skip}
@@ -1450,7 +1480,7 @@ export function SkinSolidBench({
               apiRef.current?.setSkip(e.target.checked);
             }}
           />
-          跳过成形
+          {tx("跳过成形")}
         </label>
         <label>
           <input
@@ -1461,7 +1491,7 @@ export function SkinSolidBench({
               setBonds(e.target.checked);
             }}
           />
-          键线
+          {tx("键线")}
         </label>
         <label>
           <input
@@ -1472,7 +1502,7 @@ export function SkinSolidBench({
               apiRef.current?.setPersp(e.target.checked);
             }}
           />
-          透视
+          {tx("透视")}
         </label>
       </div>
       <div className="grp">
@@ -1482,18 +1512,18 @@ export function SkinSolidBench({
           setRunning(true);
           // 跳过开着时重播复用终态，取消跳过再看完整过程。
         }}>
-          重播
+          {tx("重播")}
         </button>
       </div>
       <div className="grp">
-        <span className="k">速度</span>
+        <LabControlLabel help={["调整演示速度，不改变结构参数。", "Change playback speed without changing the structure."]}>{tx("速度")}</LabControlLabel>
         <input
           type="range"
           min={0.5}
           max={2}
           step={0.05}
           value={speed}
-          aria-label="播放速度（协议步/秒的倍率，不是物理量）"
+          aria-label={tx("播放速度（协议步/秒的倍率，不是物理量）")}
           style={{ width: 96 }}
           onChange={(e) => {
             const v = Number(e.target.value);
@@ -1504,14 +1534,14 @@ export function SkinSolidBench({
       </div>
       {skin ? (
         <div className="grp">
-          <span className="k">蒙皮</span>
+          <LabControlLabel help={["调整蒙皮的不透明度；调低可看清内部结构。", "Adjust skin opacity to inspect the structure inside."]}>{tx("蒙皮")}</LabControlLabel>
           <input
             type="range"
             min={0}
             max={1}
             step={0.01}
             value={skinV}
-            aria-label="环间织物膜的不透明度（0 = 只剩带子，1 = 封闭的筒）"
+            aria-label={tx("环间织物膜的不透明度（0 = 只剩带子，1 = 封闭的筒）")}
             style={{ width: 96 }}
             onChange={(e) => {
               const v = Number(e.target.value);
@@ -1526,14 +1556,14 @@ export function SkinSolidBench({
       ) : null}
       {radius && radius.max > radius.min ? (
         <div className="grp">
-          <span className="k">半径</span>
+          <LabControlLabel help={["改变条带围绕中轴排列的半径。", "Change the radius of the bands around the axis."]}>{tx("半径")}</LabControlLabel>
           <input
             type="range"
             min={radius.min}
             max={radius.max}
             step={1}
             value={radiusV}
-            aria-label="圆筒半径（世界单位；越大缝越宽）"
+            aria-label={tx("圆筒半径（世界单位；越大缝越宽）")}
             style={{ width: 96 }}
             onChange={(e) => {
               const v = Number(e.target.value);
@@ -1545,7 +1575,7 @@ export function SkinSolidBench({
         </div>
       ) : null}
       <div className="grp">
-        <span className="k">视角</span>
+        <LabControlLabel help={["切换轴测、正面、侧面或顶视图，不改变模型。", "Switch camera views without changing the model."]}>{tx("视角")}</LabControlLabel>
         <span className="seg">
           {VIEWS.map((v) => (
             <button
@@ -1554,39 +1584,37 @@ export function SkinSolidBench({
               className={v.key === view ? 'active' : undefined}
               onClick={() => goView(v.key)}
             >
-              {v.label}
+              {tx(v.label)}
             </button>
           ))}
         </span>
         <button type="button" onClick={() => apiRef.current?.viewHome()}>
-          归位
+          {tx("归位")}
         </button>
       </div>
     </>
   );
 
+  const canvas = (
+    <canvas ref={canvasRef} width={1400} height={1040} aria-label={hudCopy.aria} />
+  );
   return (
-    <div className={`lab-wrap${onLight ? ' on-light' : ''}`}>
+    <div className={`lab-wrap${onLight ? ' on-light' : ''}${workspace && controls ? ' solid-workbench' : ''}`}>
       <div className="lab-fig" {...(ptTarget ? { 'data-pt-target': '' } : {})}>
-        <canvas
-          ref={canvasRef}
-          width={1400}
-          height={1040}
-          aria-label={hudCopy.aria}
-        />
+        {workspace && controls ? <div className="solid-map">{canvas}</div> : canvas}
         <div className="lab-hud tl">
-          <div style={{ color: 'var(--accent-2)' }}>{hudCopy.kicker}</div>
-          <div>{hudCopy.title}</div>
+          <div style={{ color: 'var(--accent-2)' }}>{tx(hudCopy.kicker)}</div>
+          <div>{tx(hudCopy.title)}</div>
           <div className="dim">{hudCopy.sub}</div>
         </div>
         <div className="lab-hud br">
-          <div className="num">r {hud.r.toFixed(2)}</div>
+          <div className="num">{tx("r")} {hud.r.toFixed(2)}</div>
           <div className="dim">
-            step {hud.step}/{SKIN.STEPS} · 键 {hud.locked} · {hud.phase}
+            {tx("step")} {hud.step}/{SKIN.STEPS} {tx("· 键")} {hud.locked} · {tx(hud.phase)}
           </div>
         </div>
         <div className="lab-hud bl dim">
-          {hud.note || hudCopy.hint}
+          {hud.note ? tx('3D preview unavailable') : tx(hudCopy.hint)}
         </div>
       </div>
       {controls ? (

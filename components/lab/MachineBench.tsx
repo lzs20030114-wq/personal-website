@@ -1,5 +1,9 @@
 'use client';
 
+import { useBenchLang, useLabText } from './LabLanguage';
+
+import { LabControlLabel } from './LabControlLabel';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import { FlatRenderer, bakeIndexed, bakeRuledPoints, bakeSkinned, type CellFrame } from '../../src/lib/linkage/gl3d';
@@ -349,7 +353,7 @@ export function MachineBench({
   onLight = false,
   sideControls = false,
   ptTarget = false,
-  lang = 'zh',
+  lang: explicitLang,
 }: {
   spin?: boolean;
   active?: boolean;
@@ -359,6 +363,8 @@ export function MachineBench({
   ptTarget?: boolean;
   lang?: 'zh' | 'en';
 }) {
+  const lang = useBenchLang(explicitLang);
+  const tx = useLabText(lang);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const apiRef = useRef<{
     step: (dt: number) => void;
@@ -1079,16 +1085,16 @@ export function MachineBench({
         <div className="lab-hud tl">
           {/* 只写台架编号：这台同时是项目 01 案例页的主图，而该页图号 2026-09-13 起是 N01–N20，
               再印一个 Fig. 14 会被读成本页的某张图（ArchBench / RingsBench 同此处理）。 */}
-          <div style={{ color: 'var(--p300)' }}>Lab 1-5</div>
-          <div>{L.title}</div>
+          <div style={{ color: 'var(--p300)' }}>{tx("Lab 1-5")}</div>
+          <div>{tx(L.title)}</div>
           <div className="dim">{L.sub}</div>
         </div>
         <div className="lab-hud br">
-          <div className="num">φ {phase.toFixed(1)}°</div>
+          <div className="num">{tx("φ")} {phase.toFixed(1)}°</div>
           <div className="dim">
             {hud.note
-              ? hud.note
-              : `apex(S${hud.ring + 1}) ${hud.apex.toFixed(1)} mm · err ${hud.err.toFixed(2)} · ${
+              ? tx('3D preview unavailable')
+              : `${tx('apex')}(S${hud.ring + 1}) ${hud.apex.toFixed(1)} mm · ${tx('err')} ${hud.err.toFixed(2)} · ${
                   run ? (hud.folding ? L.going.fold : L.going.open) : L.drive.slider
                 }`}
           </div>
@@ -1124,10 +1130,10 @@ export function MachineBench({
             </label>
           </div>
           <div className="grp grp--half">
-            <span className="k">
+            <LabControlLabel help={["调整演示速度，不改变结构参数。", "Change playback speed without changing the structure."]} lang={lang}>
               {L.speed}
               {sideControls ? <b className="v">{omega.toFixed(2)}</b> : null}
-            </span>
+            </LabControlLabel>
             <input
               type="range"
               min={OMEGA_MIN}
@@ -1144,10 +1150,10 @@ export function MachineBench({
             />
           </div>
           <div className="grp grp--half">
-            <span className="k">
-              {L.phase}
+            <LabControlLabel help={["暂停自动运转，手动查看运动周期中的位置。", "Pause automatic motion and choose a position in the cycle."]} lang={lang}>
+              {tx(L.phase)}
               {sideControls ? <b className="v">{phase.toFixed(1)}°</b> : null}
-            </span>
+            </LabControlLabel>
             <input
               type="range"
               min={0}
@@ -1167,10 +1173,10 @@ export function MachineBench({
               这台同时是项目 01 主图，主图先要读出形态。滑到 0 = 看穿到传动链，滑到 1 = 实体壳。
               环身关掉时蒙皮一并不画（皮附在环上，环没了皮也就无所附） */}
           <div className="grp grp--half">
-            <span className="k">
+            <LabControlLabel help={["调整蒙皮的不透明度；调低可看清内部结构。", "Adjust skin opacity to inspect the structure inside."]} lang={lang}>
               {L.skin}
               {sideControls ? <b className="v">{Math.round(skin * 100)}%</b> : null}
-            </span>
+            </LabControlLabel>
             <input
               type="range"
               min={0}
@@ -1189,7 +1195,7 @@ export function MachineBench({
           {/* 部件显隐 —— 整机独有：这台是一堆零件的装配，「看哪些」本身就是操作。
               关掉机架能看清传动链怎么走，关掉环身能单看一轴五曲柄。 */}
           <div className="grp grp--parts">
-            <span className="k">{L.parts}</span>
+            <LabControlLabel help={["显示或隐藏部件，查看传动链和装配关系。", "Show or hide parts to inspect the transmission and assembly."]} lang={lang}>{L.parts}</LabControlLabel>
             {PARTS.map((p) => (
               <label key={p}>
                 <input
@@ -1211,7 +1217,7 @@ export function MachineBench({
               回转的弯向 + 更慢的整体舒卷——不让它直挺挺伸着（用户 2026-07-29）。
               一碰滑块就交出控制权，「交还待机」把它交回去。 */}
           <div className="grp grp--tendons">
-            <span className="k">{L.arm}</span>
+            <LabControlLabel help={["分别调整三条肌腱的收缩量，改变大触手弯向。", "Adjust three tendon contractions to bend the large arm."]} lang={lang}>{L.arm}</LabControlLabel>
             {[0, 1, 2].map((k) => (
               <input
                 key={k}
@@ -1248,8 +1254,8 @@ export function MachineBench({
               案例页语境用默认值即可，要调去 /lab（同一台仪器）。 */}
           {sideControls ? null : (
             <div className="grp">
-              <span className="k">{L.sarm}</span>
-              <span className="k">{L.sarmAmp}</span>
+              <LabControlLabel help={["调节小触手的演示摆动。", "Adjust the small arms’ display motion."]} lang={lang}>{L.sarm}</LabControlLabel>
+              <LabControlLabel help={["小触手左右摆动的角度范围。", "The angular range of the small arms’ swing."]} lang={lang}>{L.sarmAmp}</LabControlLabel>
               <input
                 type="range"
                 min={0}
@@ -1264,7 +1270,7 @@ export function MachineBench({
                   apiRef.current?.setSaSwing(v, saFreq);
                 }}
               />
-              <span className="k">{L.sarmFreq}</span>
+              <LabControlLabel help={["小触手摆动的频率。", "The frequency of the small arms’ swing."]} lang={lang}>{L.sarmFreq}</LabControlLabel>
               <input
                 type="range"
                 min={0.1}
@@ -1284,7 +1290,7 @@ export function MachineBench({
           {/* 单环隔离 —— 五个环同相但行程各异，单独看一个才比得出半径差。
               只筛环件：机架/轴/触手仍按各自开关，否则「只看 S3」会连驱动它的轴一起切掉。 */}
           <div className="grp grp--seg">
-            <span className="k">{L.ring}</span>
+            <LabControlLabel help={["单独查看某一环；其余部件仍按显隐设置显示。", "Isolate one ring; other parts follow their visibility settings."]} lang={lang}>{L.ring}</LabControlLabel>
             <span className="seg">
               {RING_KEYS.map((k) => (
                 <button
@@ -1302,7 +1308,7 @@ export function MachineBench({
             </span>
           </div>
           <div className="grp grp--seg">
-            <span className="k">{L.view}</span>
+            <LabControlLabel help={["切换轴测、正面、侧面或顶视图，不改变模型。", "Switch camera views without changing the model."]} lang={lang}>{L.view}</LabControlLabel>
             <span className="seg">
               {VIEWS.map((v) => (
                 <button

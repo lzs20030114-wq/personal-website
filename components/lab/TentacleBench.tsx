@@ -1,5 +1,9 @@
 'use client';
 
+import { useBenchLang, useLabText } from './LabLanguage';
+
+import { LabControlLabel } from './LabControlLabel';
+
 import { useEffect, useRef, useState } from 'react';
 import {
   GUIDE3,
@@ -63,7 +67,7 @@ export function TentacleBench({
   active = true,
   controls = true,
   onLight = false,
-  lang = 'zh',
+  lang: explicitLang,
 }: {
   spin?: boolean;
   active?: boolean;
@@ -74,6 +78,8 @@ export function TentacleBench({
   /** true = 置于浅色页（主页舞台）：自带深底与深色 token */
   onLight?: boolean;
 }) {
+  const lang = useBenchLang(explicitLang);
+  const tx = useLabText(lang);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const apiRef = useRef<{
     step: (dt: number) => void;
@@ -332,14 +338,14 @@ export function TentacleBench({
       <div className="lab-fig">
         <canvas ref={canvasRef} width={1400} height={1040} aria-label={COPY[lang].aria} />
         <div className="lab-hud tl">
-          <div style={{ color: 'var(--accent-2)' }}>Lab 1-3</div>
-          <div>{COPY[lang].title}</div>
+          <div style={{ color: 'var(--accent-2)' }}>{tx("Lab 1-3")}</div>
+          <div>{tx(COPY[lang].title)}</div>
           <div className="dim">{COPY[lang].sub}</div>
         </div>
         <div className="lab-hud br">
-          <div className="num">T {tendons.map((v) => Math.round(v * 100)).join(' / ')} %</div>
+          <div className="num">{tx("T")} {tendons.map((v) => Math.round(v * 100)).join(' / ')} %</div>
           <div className="dim">
-            {hud.note ? hud.note : `err ${hud.err.toFixed(2)} px · ×${hud.zoom.toFixed(2)}`}
+            {hud.note ? tx('3D preview unavailable') : `${tx('err')} ${hud.err.toFixed(2)} px · ×${hud.zoom.toFixed(2)}`}
           </div>
         </div>
         <div className="lab-hud bl dim">{COPY[lang].foot}</div>
@@ -347,7 +353,7 @@ export function TentacleBench({
       {controls ? (
         <div className="lab-ctl">
           <div className="grp">
-            <span className="k">肌腱</span>
+            <LabControlLabel help={["分别调整三条肌腱的收缩量，改变触手弯向。", "Adjust three tendon contractions to bend the arm."]} lang={lang}>{tx("肌腱")}</LabControlLabel>
             {[0, 1, 2].map((k) => (
               <label key={k}>
                 {k + 1}
@@ -363,11 +369,11 @@ export function TentacleBench({
             ))}
           </div>
           <div className="grp">
-            <span className="k">联动</span>
+            <LabControlLabel help={["让选定的两条肌腱一起收缩。", "Contract the selected pair of tendons together."]} lang={lang}>{tx("联动")}</LabControlLabel>
             <span className="seg">
               {LINK_LABELS.map((lbl, i) => (
                 <button
-                  key={lbl}
+                  key={tx(lbl)}
                   type="button"
                   className={i === link ? 'active' : undefined}
                   onClick={() => {
@@ -377,7 +383,7 @@ export function TentacleBench({
                     if (pair) apiRef.current?.setTarget(pair[0], tendons[pair[0]]);
                   }}
                 >
-                  {lbl}
+                  {tx(lbl)}
                 </button>
               ))}
             </span>
@@ -387,13 +393,13 @@ export function TentacleBench({
               type="button"
               onClick={() => [0, 1, 2].forEach((k) => apiRef.current?.setTarget(k, 0))}
             >
-              放松
+              {tx("放松")}
             </button>
             <button type="button" onClick={() => apiRef.current?.home()}>
-              归位
+              {tx("归位")}
             </button>
             <button type="button" onClick={() => apiRef.current?.viewHome()}>
-              视角归位
+              {tx("视角归位")}
             </button>
           </div>
         </div>

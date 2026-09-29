@@ -1,5 +1,9 @@
 'use client';
 
+import { useBenchLang, useLabText } from './LabLanguage';
+
+import { LabControlLabel } from './LabControlLabel';
+
 import { useMemo, useState } from 'react';
 import {
   DUAL_MID,
@@ -41,6 +45,8 @@ export function SkinDualBench({
   onLight?: boolean;
   controls?: boolean;
 }) {
+  const lang = useBenchLang();
+  const tx = useLabText(lang);
   const [mid, setMid] = useState<number>(DUAL_MID);
   const units = useMemo<readonly SolidUnitDef[]>(
     () => buildDualDisplay({ mid }).map(({ spec, opts, smooth }) => ({ spec, opts, smooth })),
@@ -48,7 +54,7 @@ export function SkinDualBench({
   );
 
   return (
-    <SkinSolidBench
+    <SkinSolidBench lang={lang}
       active={active}
       onLight={onLight}
       controls={controls}
@@ -63,14 +69,14 @@ export function SkinDualBench({
       camScale={0.88}
       extraControls={
         <div className="grp">
-          <span className="k">间距</span>
+          <LabControlLabel help={["调整上下两段结构之间固定在中轴上的条带长度。", "Adjust the length fixed to the mast between the two structures."]}>{tx("间距")}</LabControlLabel>
           <span className="seg">
             {DUAL_MID_OPTIONS.map((m) => (
               <button
                 key={m}
                 type="button"
                 className={m === mid ? 'active' : undefined}
-                title={MID_TITLES[m]}
+                title={tx(MID_TITLES[m])}
                 onClick={() => setMid(m)}
               >
                 {m}
@@ -79,7 +85,12 @@ export function SkinDualBench({
           </span>
         </div>
       }
-      hud={{
+      hud={lang === 'en' ? {
+        kicker: 'Lab 2-3 / Project II', title: 'Two structures in one band',
+        sub: '5 bands · two independent bond maps and zippers per band · one contraction protocol',
+        hint: 'Four matched pairs and one mixed pair · adjust spacing · drag to orbit',
+        aria: 'Five fabric bands, each with two independent structures; adjust their spacing or drag to orbit',
+      } : {
         kicker: 'Lab 2-3 / Project II',
         title: '双结构带 · 一条带两个结构',
         sub: `5 条带 · 每条两个键谱、两条拉链各自独立 · 同一收缩协议`,

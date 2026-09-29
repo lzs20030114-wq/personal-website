@@ -1,5 +1,9 @@
 'use client';
 
+import { useBenchLang, useLabText } from './LabLanguage';
+
+import { LabControlLabel } from './LabControlLabel';
+
 import { useEffect, useRef, useState } from 'react';
 import { SKIN_UNITS, skinSiteOpts } from '../../src/lib/space/skin-data';
 import { SKIN, createSkinUnit, renderSmooth, type SkinUnit } from '../../src/lib/space/skin-unit';
@@ -90,13 +94,15 @@ export function SkinBench({
   active = true,
   onLight = false,
   controls = true,
-  lang = 'zh',
+  lang: explicitLang,
 }: {
   active?: boolean;
   onLight?: boolean;
   controls?: boolean;
   lang?: 'en' | 'zh';
 }) {
+  const lang = useBenchLang(explicitLang);
+  const tx = useLabText(lang);
   const t = COPY[lang];
   const svgRef = useRef<SVGSVGElement | null>(null);
   const stateRef = useRef<{
@@ -183,7 +189,8 @@ export function SkinBench({
       }
       // 题名（中 · 英，照 v7 目录）
       const label = el('text', 'label', g);
-      label.textContent = `${def.zh} · ${def.en}`;
+      label.setAttribute('data-unit-label', def.key);
+      label.textContent = lang === 'en' ? def.en : def.zh;
       attrs(label, { x: x0 + UNIT_W / 2, y: VB_H - 52, 'text-anchor': 'middle' });
       const [smoothW, smoothP] = def.smooth ?? [3, 1];
       return {
@@ -387,6 +394,13 @@ export function SkinBench({
 
   useBenchLoop(svgRef, (dt) => stateRef.current?.step(dt), [], active);
 
+  useEffect(() => {
+    for (const def of SKIN_UNITS) {
+      const label = svgRef.current?.querySelector(`[data-unit-label="${def.key}"]`);
+      if (label) label.textContent = lang === 'en' ? def.en : def.zh;
+    }
+  }, [lang]);
+
   return (
     <div className={`lab-wrap${onLight ? ' on-light' : ''}`}>
       <div className="lab-fig">
@@ -398,14 +412,14 @@ export function SkinBench({
           style={{ cursor: 'default', touchAction: 'auto' }}
         />
         <div className="lab-hud tl">
-          <div style={{ color: 'var(--accent)' }}>Lab 2-1 / Project II</div>
-          <div>{t.title}</div>
+          <div style={{ color: 'var(--accent)' }}>{tx("Lab 2-1 / Project II")}</div>
+          <div>{tx(t.title)}</div>
           <div className="dim">{t.sub}</div>
         </div>
         <div className="lab-hud br">
-          <div className="num">r {hud.r.toFixed(2)}</div>
+          <div className="num">{tx("r")} {hud.r.toFixed(2)}</div>
           <div className="dim">
-            step {hud.step}/{SKIN.STEPS} · {t.bonds(hud.locked)} · {t.phase[hud.phase]}
+            {tx("step")} {hud.step}/{SKIN.STEPS} · {t.bonds(hud.locked)} · {t.phase[hud.phase]}
           </div>
         </div>
         <div className="lab-hud bl dim">{t.foot}</div>
@@ -422,9 +436,9 @@ export function SkinBench({
                   setRunning(e.target.checked);
                 }}
               />
-              运转
+              {tx("运转")}
             </label>
-            <label title="直接载入已算好的成形状态；取消勾选可从头观看成形过程">
+            <label title={tx("直接载入已算好的成形状态；取消勾选可从头观看成形过程")}>
               <input
                 type="checkbox"
                 checked={skip}
@@ -434,7 +448,7 @@ export function SkinBench({
                   stateRef.current?.setSkip(e.target.checked);
                 }}
               />
-              跳过成形
+              {tx("跳过成形")}
             </label>
             <label>
               <input
@@ -446,7 +460,7 @@ export function SkinBench({
                   stateRef.current?.redraw(); // 暂停态也立即生效（平时由逐帧重绘接手）
                 }}
               />
-              键线
+              {tx("键线")}
             </label>
           </div>
           <div className="grp">
@@ -458,18 +472,18 @@ export function SkinBench({
                 setRunning(true);
               }}
             >
-              重播
+              {tx("重播")}
             </button>
           </div>
           <div className="grp">
-            <span className="k">速度</span>
+            <LabControlLabel help={["调整演示速度，不改变结构参数。", "Change playback speed without changing the structure."]}>{tx("速度")}</LabControlLabel>
             <input
               type="range"
               min={0.5}
               max={2}
               step={0.05}
               value={speed}
-              aria-label="播放速度（协议步/秒的倍率，不是物理量）"
+              aria-label={tx("播放速度（协议步/秒的倍率，不是物理量）")}
               style={{ width: 96 }}
               onChange={(e) => {
                 const v = Number(e.target.value);

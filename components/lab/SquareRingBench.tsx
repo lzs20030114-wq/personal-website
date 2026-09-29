@@ -1,5 +1,9 @@
 'use client';
 
+import { useBenchLang, useLabText } from './LabLanguage';
+
+import { LabControlLabel } from './LabControlLabel';
+
 import { useMemo, useState } from 'react';
 import {
   SQUARE_LAYOUTS,
@@ -199,13 +203,15 @@ export function SquareRingBench({
   active = true,
   onLight = false,
   controls = true,
-  lang = 'zh',
+  lang: explicitLang,
 }: {
   active?: boolean;
   onLight?: boolean;
   controls?: boolean;
   lang?: 'en' | 'zh';
 }) {
+  const lang = useBenchLang(explicitLang);
+  const tx = useLabText(lang);
   const T = HUD[lang];
   const side = useMemo(() => Math.round(2 * squareHalfSide()), []);
   const [plan, setPlan] = useState<PlanKey>('flat');
@@ -224,7 +230,7 @@ export function SquareRingBench({
         ? T.square(side)
         : T.round(m.n.toFixed(1), Math.round(2 * (SQUARE.RADIUS + m.reach[2])));
   return (
-    <SkinSolidBench
+    <SkinSolidBench lang={lang}
       active={active}
       onLight={onLight}
       controls={controls}
@@ -276,11 +282,11 @@ export function SquareRingBench({
       extraControls={
         <>
           <div className="grp">
-            <span className="k">轮廓</span>
+            <LabControlLabel help={["从圆形逐步切换到方形，只改变各条带的伸出距离。", "Change the outline from round to square by varying each band’s reach."]}>{tx("轮廓")}</LabControlLabel>
             <span className="seg">
               {SQUARE_MORPH.LABELS.map((lb, i) => (
                 <button
-                  key={lb}
+                  key={tx(lb)}
                   type="button"
                   className={!split && i === shape ? 'active' : undefined}
                   // 捏分下变灰：「缝只能在面档最深、角档为零」是**方形专有**的材料账推论，
@@ -288,13 +294,13 @@ export function SquareRingBench({
                   disabled={split}
                   onClick={() => setShape(i)}
                 >
-                  {lb}
+                  {tx(lb)}
                 </button>
               ))}
             </span>
           </div>
           <div className="grp">
-            <span className="k">编制</span>
+            <LabControlLabel help={["选择平台整圈等高、起伏或分成上下两层。", "Choose a level, undulating or split platform."]}>{tx("编制")}</LabControlLabel>
             <span className="seg">
               {PLANS.map((p) => (
                 <button
@@ -303,13 +309,13 @@ export function SquareRingBench({
                   className={p.key === plan ? 'active' : undefined}
                   onClick={() => setPlan(p.key)}
                 >
-                  {p.label}
+                  {tx(p.label)}
                 </button>
               ))}
             </span>
           </div>
           <div className="grp">
-            <span className="k">排布</span>
+            <LabControlLabel help={["查看单个环，或将同一环排成 4×4 阵列。", "View one ring or a 4×4 array of the same ring."]}>{tx("排布")}</LabControlLabel>
             <span className="seg">
               {LAYOUTS.map((l) => (
                 <button
@@ -318,7 +324,7 @@ export function SquareRingBench({
                   className={l.key === layout ? 'active' : undefined}
                   onClick={() => setLayout(l.key)}
                 >
-                  {l.label}
+                  {tx(l.label)}
                 </button>
               ))}
             </span>

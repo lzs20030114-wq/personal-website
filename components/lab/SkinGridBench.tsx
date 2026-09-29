@@ -1,5 +1,9 @@
 'use client';
 
+import { useBenchLang, useLabText } from './LabLanguage';
+
+import { LabControlLabel } from './LabControlLabel';
+
 import { useMemo, useState } from 'react';
 import { GRID_PLANS } from '../../src/lib/space/lab-variants';
 import { RING, buildRingUnits } from '../../src/lib/space/skin-ring';
@@ -53,7 +57,7 @@ export function SkinGridBench({
   onLight = false,
   controls = true,
   ptTarget = false,
-  lang = 'zh',
+  lang: explicitLang,
 }: {
   active?: boolean;
   onLight?: boolean;
@@ -63,6 +67,8 @@ export function SkinGridBench({
   /** HUD 语言——案例页有中英切换，主图只能有一份，故由外层壳读语言再传进来 */
   lang?: 'zh' | 'en';
 }) {
+  const lang = useBenchLang(explicitLang);
+  const tx = useLabText(lang);
   const [mode, setMode] = useState<RingGridMode>('uniform');
   const [form, setForm] = useState(RING_GRID_DEFAULT_FORM);
   const perRow = mode === 'perRow';
@@ -77,7 +83,7 @@ export function SkinGridBench({
   const cells = useMemo(() => (r: number) => ringGridCells(r, mode), [mode]);
 
   return (
-    <SkinSolidBench
+    <SkinSolidBench lang={lang}
       active={active}
       onLight={onLight}
       controls={controls}
@@ -103,7 +109,7 @@ export function SkinGridBench({
       extraControls={
         <>
           <div className="grp">
-            <span className="k">编制</span>
+            <LabControlLabel help={["全场使用同一形态，或每行使用一种形态。", "Use one form across the field or a different form per row."]}>{tx("编制")}</LabControlLabel>
             <span className="seg">
               {PLANS.map((p) => (
                 <button
@@ -112,13 +118,13 @@ export function SkinGridBench({
                   className={p.key === mode ? 'active' : undefined}
                   onClick={() => setMode(p.key)}
                 >
-                  {p.label}
+                  {tx(p.label)}
                 </button>
               ))}
             </span>
           </div>
           <div className="grp" style={perRow ? { opacity: 0.35 } : undefined}>
-            <span className="k">形态</span>
+            <LabControlLabel help={["选择条带收缩后形成的截面形状。", "Choose the cross-section formed by a contracting band."]}>{tx("形态")}</LabControlLabel>
             <span className="seg">
               {FORMS.map((f, i) => (
                 <button
@@ -126,10 +132,10 @@ export function SkinGridBench({
                   type="button"
                   className={!perRow && i === form ? 'active' : undefined}
                   disabled={perRow}
-                  title={perRow ? '每行一种编制下由行号决定' : `${f.zh} · ${f.en}`}
+                  title={tx(perRow ? '每行一种编制下由行号决定' : (lang === 'zh' ? f.zh : f.en))}
                   onClick={() => setForm(i)}
                 >
-                  {f.zh}
+                  {lang === 'zh' ? f.zh : f.en}
                 </button>
               ))}
             </span>

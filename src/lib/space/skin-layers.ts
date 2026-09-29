@@ -15,13 +15,13 @@ export const LAYER_OUTLINES = [
 export type LayerOutline = (typeof LAYER_OUTLINES)[number]['key'];
 export const LAYER_JOINS = [{ key: 'single', label: '单区' }, { key: 'opposed', label: '对向双区' }] as const;
 export type LayerJoinMode = (typeof LAYER_JOINS)[number]['key'];
-export interface LayerShape { outline: LayerOutline; rotation: number; tilt: number; direction: number }
+export interface LayerShape { outline: LayerOutline; rotation: number; tilt: number; direction: number; radius: number }
 export interface LayerStudy { upper: LayerShape; lower: LayerShape; joinMode: LayerJoinMode; joinStart: number; joinSweep: number }
 export const LAYERS = { inner: RING.RADIUS_DEF, outer: RING.RADIUS_DEF + SPLIT_RING_TARGET,
-  thickness: SPLIT_RING_LOBE, gap: SPLIT_RING_W_END, maxTilt: 20 } as const;
+  thickness: SPLIT_RING_LOBE, gap: SPLIT_RING_W_END, maxTilt: 20, minRadius: 70, maxRadius: 130 } as const;
 export const layerBaseline = (): LayerStudy => ({
-  upper: { outline: 'full', rotation: 0, tilt: 0, direction: 0 },
-  lower: { outline: 'full', rotation: 0, tilt: 0, direction: 180 }, joinMode: 'single', joinStart: 20, joinSweep: 0,
+  upper: { outline: 'full', rotation: 0, tilt: 0, direction: 0, radius: LAYERS.outer },
+  lower: { outline: 'full', rotation: 0, tilt: 0, direction: 180, radius: LAYERS.outer }, joinMode: 'single', joinStart: 20, joinSweep: 0,
 });
 export const LAYER_EXAMPLES = [
   { key: 'baseline', label: '双层基准' }, { key: 'tilt', label: '对向倾斜' },
@@ -36,8 +36,8 @@ export function layerExample(key: string): LayerStudy {
   if (key === 'join') s.joinSweep = 60;
   if (key === 'opposed') { s.joinMode = 'opposed'; s.joinSweep = 60; }
   if (key === 'study') {
-    s.upper = { outline: 'thirds', rotation: 0, tilt: 15, direction: 0 };
-    s.lower = { outline: 'thirds', rotation: 5, tilt: 7, direction: 180 };
+    s.upper = { ...s.upper, outline: 'thirds', rotation: 0, tilt: 15, direction: 0 };
+    s.lower = { ...s.lower, outline: 'thirds', rotation: 5, tilt: 7, direction: 180 };
     s.joinMode = 'opposed'; s.joinStart = 190; s.joinSweep = 70;
   }
   return s;
@@ -65,6 +65,8 @@ export function layerHeight(s: LayerStudy, surface: number, r: number, angle: nu
   return center + (surface % 2 === 0 ? -1 : 1) * LAYERS.thickness / 2
     + r * Math.tan(rad(layer.tilt)) * Math.cos(rad(angle - layer.direction));
 }
+/** 外缘半径逐层独立；厚台中间侧壁连接两层各自的外缘。 */
+export const layerRadius = (s: LayerStudy, surface: number): number => (surface < 2 ? s.upper : s.lower).radius;
 export type LayerMaterial = 'upper' | 'lower' | 'join';
 export interface LayerColumn { top: number; bottom: number; material: LayerMaterial }
 export function layerColumns(s: LayerStudy, angle: number): LayerColumn[] {
@@ -95,14 +97,17 @@ export function layerStats(s: LayerStudy) {
   const dx = a * Math.cos(rad(s.lower.direction)) - b * Math.cos(rad(s.upper.direction));
   const dz = a * Math.sin(rad(s.lower.direction)) - b * Math.sin(rad(s.upper.direction));
   // 完整圆环上的保守净空；UI 量程保证任意方位不会相交。
-  return { joined, clearance: LAYERS.gap - LAYERS.outer * Math.hypot(dx, dz) };
+  return { joined, clearance: LAYERS.gap - Math.max(s.upper.radius, s.lower.radius) * Math.hypot(dx, dz) };
 }
 export interface LayerMesh { verts: Float32Array; idx: Uint32Array }
 export interface LayerLine { a: Vec3; b: Vec3 }
 export function buildLayerGeometry(s: LayerStudy): { meshes: Record<LayerMaterial, LayerMesh>; lines: LayerLine[] } {
   const raw = { upper: { v: [] as number[], i: [] as number[] }, lower: { v: [] as number[], i: [] as number[] }, join: { v: [] as number[], i: [] as number[] } };
   const lines: LayerLine[] = [];
-  const point = (surface: number, r: number, angle: number): Vec3 => ({ x: r * Math.cos(rad(angle)), y: layerHeight(s, surface, r, angle), z: r * Math.sin(rad(angle)) });
+  const point = (surface: number, r: number, angle: number): Vec3 => {
+    const radius = r === LAYERS.outer ? layerRadius(s, surface) : r;
+    return { x: radius * Math.cos(rad(angle)), y: layerHeight(s, surface, radius, angle), z: radius * Math.sin(rad(angle)) };
+  };
   const quad = (m: LayerMaterial, a: Vec3, b: Vec3, c: Vec3, d: Vec3) => {
     const q = raw[m], n = q.v.length / 3;
     for (const p of [a, b, c, d]) q.v.push(p.x, p.y, p.z);

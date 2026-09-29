@@ -1,5 +1,9 @@
 'use client';
 
+import { useBenchLang, useLabText } from './LabLanguage';
+
+import { LabControlLabel } from './LabControlLabel';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import { FlatRenderer, bakeIndexed, bakeRuledPoints } from '../../src/lib/linkage/gl3d';
@@ -258,7 +262,7 @@ export function RingsBench({
   onLight = false,
   sideControls = false,
   ptTarget = false,
-  lang = 'zh',
+  lang: explicitLang,
 }: {
   spin?: boolean;
   active?: boolean;
@@ -281,6 +285,8 @@ export function RingsBench({
   /** 界面语言：'zh' = 稿的中文（/lab）；'en' = 英文（案例页主图，用户拍板 2026-07-28） */
   lang?: 'zh' | 'en';
 }) {
+  const lang = useBenchLang(explicitLang);
+  const tx = useLabText(lang);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const apiRef = useRef<{
     step: (dt: number) => void;
@@ -578,16 +584,16 @@ export function RingsBench({
         <div className="lab-hud tl">
           {/* 只写台架编号：「Fig. 13」是主页舞台给这台起的图号（StageRotator），不是台架自己的身份；
               案例页正文嵌这台时，页内图号已是 N01–N20，再印一个 Fig. 13 会读成本页的某张图。 */}
-          <div style={{ color: 'var(--p300)' }}>Lab 1-4</div>
-          <div>{L.title}</div>
+          <div style={{ color: 'var(--p300)' }}>{tx("Lab 1-4")}</div>
+          <div>{tx(L.title)}</div>
           <div className="dim">{L.sub}</div>
         </div>
         <div className="lab-hud br">
-          <div className="num">φ {phase.toFixed(1)}°</div>
+          <div className="num">{tx("φ")} {phase.toFixed(1)}°</div>
           <div className="dim">
             {hud.note
-              ? hud.note
-              : `apex(S2) ${hud.apex.toFixed(1)} mm · err ${hud.err.toFixed(2)} · ${breathe ? L.drive.spin : L.drive.slider}`}
+              ? tx('3D preview unavailable')
+              : `${tx('apex')}(S2) ${hud.apex.toFixed(1)} mm · ${tx('err')} ${hud.err.toFixed(2)} · ${breathe ? L.drive.spin : L.drive.slider}`}
           </div>
         </div>
         {sideControls && controls ? null : <div className="lab-hud bl dim">{L.hint}</div>}
@@ -595,7 +601,7 @@ export function RingsBench({
       {controls ? (
         <div className="lab-ctl">
           <div className="grp">
-            {sideControls ? <span className="k">{L.display}</span> : null}
+            {sideControls ? <LabControlLabel help={["开启自动开合，或切换透视显示。", "Toggle automatic motion or perspective."]} lang={lang}>{L.display}</LabControlLabel> : null}
             <label>
               <input
                 type="checkbox"
@@ -623,10 +629,10 @@ export function RingsBench({
               取代原来的「蒙皮」复选框——开关的两端就是这条滑轨的两端，
               两者并存会出现「蒙皮开着但透明度 0」这种自相矛盾的状态。 */}
           <div className="grp">
-            <span className="k">
+            <LabControlLabel help={["调整蒙皮的不透明度；调低可看清内部结构。", "Adjust skin opacity to inspect the structure inside."]} lang={lang}>
               {L.skin}
               {sideControls ? <b className="v">{Math.round(skin * 100)}%</b> : null}
-            </span>
+            </LabControlLabel>
             <input
               type="range"
               min={0}
@@ -643,10 +649,10 @@ export function RingsBench({
             />
           </div>
           <div className="grp">
-            <span className="k">
-              {L.phase}
+            <LabControlLabel help={["暂停自动运转，手动查看运动周期中的位置。", "Pause automatic motion and choose a position in the cycle."]} lang={lang}>
+              {tx(L.phase)}
               {sideControls ? <b className="v">{phase.toFixed(1)}°</b> : null}
-            </span>
+            </LabControlLabel>
             <input
               type="range"
               min={0}
@@ -664,7 +670,7 @@ export function RingsBench({
             />
           </div>
           <div className="grp">
-            <span className="k">{L.view}</span>
+            <LabControlLabel help={["切换轴测、正面、侧面或顶视图，不改变模型。", "Switch camera views without changing the model."]} lang={lang}>{L.view}</LabControlLabel>
             <span className="seg">
               {VIEWS.map((v) => (
                 <button

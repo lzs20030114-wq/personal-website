@@ -1,12 +1,46 @@
 import { describe, expect, it } from 'vitest';
 import { buildLayerBands, layerBandPlan } from './skin-layers-bands';
 import { layerBaseline, layerExample, LAYERS } from './skin-layers';
-import { layerProfileAt } from './skin-layers-surface';
+import { layerProfileAt, layerRadialOffset } from './skin-layers-surface';
 import { buildLayerProfiles } from './skin-layers-forming';
 import { createSkinTerminalLoader } from '../../../components/lab/skinTerminal';
 import { RING } from './skin-ring';
 
 describe('多层台 · 分开的窄带', () => {
+  it('蒙皮接在条带外侧，半径变化不跨缺口、不修改原始截面', async () => {
+    const defs = buildLayerProfiles(), { states } = await createSkinTerminalLoader()(defs);
+    const before = states.map(f => ({ x: [...f.px], y: [...f.py] }));
+    const s = layerExample('study');
+    s.upper.radius = LAYERS.minRadius; s.lower.radius = LAYERS.maxRadius;
+    const result = buildLayerBands(s, states, true, false);
+    const narrower = buildLayerBands(s, states.map(f => ({ ...f, px: Float64Array.from(f.px, x => x * .8) })), true, false);
+    expect(narrower.membranes[0].verts).not.toEqual(result.membranes[0].verts);
+    expect(result.membranes).toHaveLength(layerBandPlan(s).filter(b => b.kind).length * 2);
+    for (const m of result.membranes) {
+      expect([...m.verts].every(Number.isFinite)).toBe(true);
+      for (let i = 0; i < m.verts.length; i += 3) {
+        const a = (Math.atan2(m.verts[i + 2], m.verts[i]) * 180 / Math.PI + 360) % 360;
+        expect(a > 245.01 && a < 359.99).toBe(false);
+      }
+    }
+    // 蒙皮的条带端与实体外前/外后边逐点重合，不能盖一层目标外壳冒充布。
+    let mesh = 0, panel = 0;
+    for (const band of layerBandPlan(s)) {
+      mesh++; // 立杆
+      if (!band.kind) continue;
+      const v = result.meshes[mesh].verts, n = v.length / 12;
+      expect(result.membranes[panel++].verts.slice(0, n * 3)).toEqual(v.slice(n * 3, 2 * n * 3));
+      expect(result.membranes[panel++].verts.slice(0, n * 3)).toEqual(v.slice(0, n * 3));
+      mesh += 2;
+    }
+    const up = defs[2].marks.faceA, down = defs[3].marks.faceA;
+    expect(layerRadialOffset(s, states[2], 2, up)).toBeLessThan(-30);
+    expect(layerRadialOffset(s, states[3], 3, down)).toBeGreaterThan(10);
+    s.upper.radius = LAYERS.outer;
+    expect(layerRadialOffset(s, states[2], 2, up)).toBe(0);
+    expect(layerRadialOffset(s, states[3], 3, down)).toBeGreaterThan(10);
+    expect(states.map(f => ({ x: [...f.px], y: [...f.py] }))).toEqual(before);
+  });
   it('完整基准摆 20 条；轮廓边界分槽，窄带不跨缺口，也不遗漏 5° 独占区', () => {
     const base = layerBandPlan(layerBaseline());
     expect(base).toHaveLength(20);

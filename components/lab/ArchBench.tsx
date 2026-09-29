@@ -1,5 +1,7 @@
 'use client';
 
+import { useBenchLang, useLabText } from './LabLanguage';
+
 import { useEffect, useRef, useState } from 'react';
 import {
   ARCH_APEX,
@@ -53,7 +55,7 @@ export function ArchBench({
   grid = true,
   active = true,
   onLight = false,
-  lang = 'zh',
+  lang: explicitLang,
 }: {
   grid?: boolean;
   active?: boolean;
@@ -61,6 +63,8 @@ export function ArchBench({
   /** 界面语言：'zh' = /lab；'en' = 英文案例页正文 */
   lang?: 'en' | 'zh';
 }) {
+  const lang = useBenchLang(explicitLang);
+  const tx = useLabText(lang);
   const t = COPY[lang];
   const svgRef = useRef<SVGSVGElement | null>(null);
   const stateRef = useRef<{ ctl: LinkageController; step: (dt: number) => void } | null>(null);
@@ -206,14 +210,14 @@ export function ArchBench({
         onPointerCancel={(ev) => stateRef.current?.ctl.pointerUp(ev.pointerId)}
       />
       <div className="lab-hud tl">
-        <div style={{ color: 'var(--accent)' }}>Lab 1-2</div>
-        <div>{t.title}</div>
+        <div style={{ color: 'var(--accent)' }}>{tx("Lab 1-2")}</div>
+        <div>{tx(t.title)}</div>
         <div className="dim">{t.sub}</div>
       </div>
       <div className="lab-hud br">
-        <div className="num">φ {hud.phi.toFixed(1)}°</div>
+        <div className="num">{tx("φ")} {hud.phi.toFixed(1)}°</div>
         <div className="dim">
-          apex {hud.apex.toFixed(1)} mm · err {hud.err.toFixed(2)} · {hud.mode}
+          {tx("apex")} {hud.apex.toFixed(1)} {tx("mm · err")} {hud.err.toFixed(2)} · {tx(hud.mode)}
         </div>
       </div>
       <div className="lab-hud bl dim">{t.foot}</div>

@@ -1,5 +1,9 @@
 'use client';
 
+import { useBenchLang, useLabText } from './LabLanguage';
+
+import { LabControlLabel } from './LabControlLabel';
+
 import { useEffect, useMemo, useState } from 'react';
 import { RING_PLANS, type RingPlanKey } from '../../src/lib/space/lab-variants';
 import {
@@ -101,6 +105,8 @@ export function SkinRingBench({
   onLight?: boolean;
   controls?: boolean;
 }) {
+  const lang = useBenchLang();
+  const tx = useLabText(lang);
   const [plan, setPlan] = useState<RingPlanKey>('wave');
   const [form, setForm] = useState(RING_DEFAULT_FORM);
   // `/lab#lab10-split` 直达捏分（合并进来的编制没有自己的卡片与锚点，这是它的 URL 入口）
@@ -132,7 +138,7 @@ export function SkinRingBench({
   const order = split ? splitRing().order : grad ? GRAD_ORDER : wave ? WAVE_ORDER : RING_ORDER;
 
   return (
-    <SkinSolidBench
+    <SkinSolidBench lang={lang}
       active={active}
       onLight={onLight}
       controls={controls}
@@ -158,7 +164,7 @@ export function SkinRingBench({
       extraControls={
         <>
           <div className="grp grp--ring-plans">
-            <span className="k">编制</span>
+            <LabControlLabel help={["选择整圈条带的形态和高度分布。", "Choose the shapes and heights around the ring."]}>{tx("编制")}</LabControlLabel>
             <span className="seg">
               {RING_PLANS.map((p) => (
                 <button
@@ -167,13 +173,13 @@ export function SkinRingBench({
                   className={p.key === plan ? 'active' : undefined}
                   onClick={() => setPlan(p.key)}
                 >
-                  {p.label}
+                  {tx(p.label)}
                 </button>
               ))}
             </span>
           </div>
           <div className="grp" style={formLocked ? { opacity: 0.35 } : undefined}>
-            <span className="k">形态</span>
+            <LabControlLabel help={["选择条带收缩后形成的截面形状。", "Choose the cross-section formed by a contracting band."]}>{tx("形态")}</LabControlLabel>
             <span className="seg">
               {FORMS.map((f, i) => (
                 <button
@@ -182,24 +188,36 @@ export function SkinRingBench({
                   className={!formLocked && i === form ? 'active' : undefined}
                   disabled={formLocked}
                   title={
-                    grad
+                    tx(grad
                       ? '渐变编制下由 11 级键谱决定'
                       : split
                         ? '捏分编制下由 10 级键谱决定'
                         : double
                           ? '双层台沿整圈复用捏分的全开双平台'
-                          : `${f.zh} · ${f.en}`
+                          : (lang === 'zh' ? f.zh : f.en))
                   }
                   onClick={() => setForm(i)}
                 >
-                  {f.zh}
+                  {lang === 'zh' ? f.zh : f.en}
                 </button>
               ))}
             </span>
           </div>
         </>
       }
-      hud={{
+      hud={lang === 'en' ? {
+        kicker: 'Lab 2-5 / Project II',
+        title: double ? 'Cylinder · double shelf' : split ? 'Cylinder · splitting and rejoining' : 'Cylinder · an annular platform',
+        sub: double ? `${SPLIT_RING_COUNT} bands · two level shelves · gap ${SPLIT_RING_W_END}px · each shelf ${SPLIT_RING_LOBE}px high`
+          : split ? `${SPLIT_RING_COUNT} bands · gap varies from ${SPLIT_RING_W_END}px to zero · shelf height ${SPLIT_RING_LOBE}px · reach ${SPLIT_RING_TARGET}`
+          : grad ? `${RING.COUNT} bands · bulb flange → stepped box → bulb flange · ${GRAD_LEVELS} bond maps`
+          : wave ? `${RING.COUNT} bands · ${def.en} · height varies around the ring · ${RING_WAVE.LEVELS} levels`
+          : `${RING.COUNT} bands · ${def.en} · one contraction protocol`,
+        hint: double ? 'Two shelves around the ring · adjust pattern and radius · use side view'
+          : split ? 'Fixed gap centre · shelves move apart equally · adjust pattern and radius'
+          : 'Adjust pattern, form and radius · top view shows the ring · drag to orbit',
+        aria: 'Twenty contracting fabric bands form a ring; adjust the pattern, form and radius or drag to orbit',
+      } : {
         kicker: 'Lab 2-5 / Project II',
         title: double ? '圆筒环 · 双层台 · 整圈均匀双层' : split ? '圆筒环 · 捏分 · 一圈里裂开再合上' : '圆筒环 · 收缩成环形平台',
         sub: double

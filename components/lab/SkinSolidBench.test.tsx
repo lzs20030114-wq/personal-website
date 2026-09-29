@@ -14,11 +14,13 @@ const host = vi.hoisted(() => ({
   frame: (_dt: number) => {},
   matrices: [] as number[][],
   meshes: [] as Float32Array[],
+  alphas: [] as (number | undefined)[],
   hud: { step: 0, phase: '' },
   terminal: vi.fn<(...args: unknown[]) => Promise<SkinTerminalResult>>(),
 }));
 vi.mock('react', async (original) => ({
   ...await original<typeof import('react')>(),
+  useContext: () => null, // No page language provider in this isolated bench harness.
   useRef: (current: unknown) => ({ current }),
   useCallback: (fn: unknown) => fn,
   useEffect: (effect: () => void | (() => void)) => { host.effects.push(effect); },
@@ -44,7 +46,7 @@ vi.mock('../../src/lib/linkage/gl3d', async (original) => ({
     beginFrame(cam: OrbitCamera) { host.matrices.push([...cam.matrix]); }
     addMesh() {}
     drawMesh() {}
-    drawDynamicMesh(data: Float32Array) { host.meshes.push(data); }
+    drawDynamicMesh(data: Float32Array, _dark: unknown, _light: unknown, alpha?: number) { host.meshes.push(data); host.alphas.push(alpha); }
     drawLines() {}
     setPerspective() {}
   },
@@ -90,6 +92,7 @@ function mount(options: Partial<Parameters<typeof SkinSolidBench>[0]> = {}) {
 
 beforeEach(() => {
   host.effects = []; host.cleanups = []; host.matrices = []; host.meshes = [];
+  host.alphas = [];
   host.hud = { step: 0, phase: '' };
   host.terminal.mockReset();
   vi.stubGlobal('window', { matchMedia: () => ({ matches: false }) });
@@ -100,6 +103,14 @@ afterEach(() => {
 });
 
 describe('SkinSolidBench 跳过成形', () => {
+  it.each([0, .35, 1])('自定义表面的蒙皮沿用透明度 %s，实体先画且零透明度不绘制', alpha => {
+    const verts = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]), idx = new Uint32Array([0, 1, 2]);
+    mount({ skin: { def: alpha }, surface: () => ({
+      meshes: [{ verts, idx, dark: [0, 0, 0], light: [1, 1, 1] }],
+      membranes: [{ verts, idx, center: { x: 0, y: 0, z: 0 } }],
+    }) });
+    expect(host.alphas).toEqual(alpha === 0 ? [undefined] : [undefined, alpha]);
+  });
   it('双色条带共用顶点时，两组索引仍各自烘焙，重画不丢掉半条带', () => {
     const verts = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 2]);
     const result = { meshes: [new Uint32Array([0, 1, 2]), new Uint32Array([0, 1, 3])].map(idx => ({ verts, idx, dark: [0, 0, 0] as [number, number, number], light: [1, 1, 1] as [number, number, number] })) };

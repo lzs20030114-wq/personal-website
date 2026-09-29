@@ -1,5 +1,7 @@
 'use client';
 
+import { useBenchLang, useLabText } from './LabLanguage';
+
 import { useEffect, useRef, useState } from 'react';
 import { LinkageController } from '../../src/lib/linkage/controller';
 import { CRANK, N, THETA0, createCrankRocker } from '../../src/lib/linkage/presets';
@@ -16,6 +18,8 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const LABELS = ['A', 'B', 'C', 'D', 'P'] as const;
 
 export function FourBarBench({ grid = true, spin = true, active = true, onLight = false }: { grid?: boolean; spin?: boolean; active?: boolean; onLight?: boolean }) {
+  const lang = useBenchLang();
+  const tx = useLabText(lang);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const stateRef = useRef<{
     solver: ReturnType<typeof createCrankRocker>;
@@ -154,7 +158,7 @@ export function FourBarBench({ grid = true, spin = true, active = true, onLight 
         ref={svgRef}
         viewBox="0 0 700 520"
         role="img"
-        aria-label="Grashof 曲柄摇杆台架；拖任意自由节点驱动"
+        aria-label={tx("Grashof 曲柄摇杆台架；拖任意自由节点驱动")}
         onPointerDown={(ev) => {
           const p = toVB(ev);
           if (p && stateRef.current?.ctl.pointerDown(ev.pointerId, p.x, p.y)) {
@@ -173,17 +177,17 @@ export function FourBarBench({ grid = true, spin = true, active = true, onLight 
         onPointerCancel={(ev) => stateRef.current?.ctl.pointerUp(ev.pointerId)}
       />
       <div className="lab-hud tl">
-        <div style={{ color: 'var(--accent)' }}>Lab 1-1 / Fig. 01</div>
-        <div>Grashof 曲柄摇杆</div>
-        <div className="dim">2D PBD · Gauss–Seidel · L 66·178·127 · 板 132·100</div>
+        <div style={{ color: 'var(--accent)' }}>{tx("Lab 1-1 / Fig. 01")}</div>
+        <div>{tx("Grashof 曲柄摇杆")}</div>
+        <div className="dim">{tx("2D PBD · Gauss–Seidel · L 66·178·127 · 板 132·100")}</div>
       </div>
       <div className="lab-hud br">
-        <div className="num">θ {hud.theta.toFixed(1)}°</div>
+        <div className="num">{tx("θ")} {hud.theta.toFixed(1)}°</div>
         <div className="dim">
-          ω {hud.omega.toFixed(2)} · err {hud.err.toFixed(3)} · {hud.mode}
+          {tx("ω")} {hud.omega.toFixed(2)} {tx("· err")} {hud.err.toFixed(3)} · {tx(hud.mode)}
         </div>
       </div>
-      <div className="lab-hud bl dim">拖任意自由节点 · 松手继承角速度</div>
+      <div className="lab-hud bl dim">{tx("拖任意自由节点 · 松手继承角速度")}</div>
       </div>
     </div>
   );

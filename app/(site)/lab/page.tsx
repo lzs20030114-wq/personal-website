@@ -2,9 +2,10 @@ import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { LabPanel, LabWorkspace } from '../../../components/lab/LabWorkspace';
 import './workspace.css';
+import { LabPageText, LabLanguageSwitch, LabPageCount } from '../../../components/lab/LabLanguage';
 import { LegacyLabHash } from '../../../components/lab/LegacyLabHash';
 import { LabIndex } from '../../../components/lab/LabIndex';
-import { LAB_BENCHES, LAB_INDEX, labAccent, labBench } from '../../../src/lib/site/lab-index';
+import { LAB_INDEX, labAccent, labBench } from '../../../src/lib/site/lab-index';
 import { PageEnter } from '../../../components/site/PageEnter';
 import { FourBarBench } from '../../../components/lab/FourBarBench';
 import { ArchBench } from '../../../components/lab/ArchBench';
@@ -20,8 +21,8 @@ import { SkinGridBench } from '../../../components/lab/SkinGridBench';
 import { SkinDualBench } from '../../../components/lab/SkinDualBench';
 import { SquareRingBench } from '../../../components/lab/SquareRingBench';
 import { SkinClusterBench } from '../../../components/lab/SkinClusterBench';
-import { WalkPlanBench } from '../../../components/lab/WalkPlanBench';
-import { CrowdPlanBench } from '../../../components/lab/CrowdPlanBench';
+import { WalkPlanBench, WalkPlanNotes } from '../../../components/lab/WalkPlanBench';
+import { CrowdPlanBench, CrowdPlanNotes } from '../../../components/lab/CrowdPlanBench';
 import { SkinComboBench } from '../../../components/lab/SkinComboBench';
 
 export const metadata = { title: 'The lab' };
@@ -91,7 +92,7 @@ function ProjectRule({ label, sub }: { label: string; sub: string }) {
           textTransform: 'uppercase',
         }}
       >
-        {label}
+        <LabPageText text={label} />
       </p>
       <span
         style={{
@@ -102,7 +103,7 @@ function ProjectRule({ label, sub }: { label: string; sub: string }) {
           color: 'var(--n500)',
         }}
       >
-        {sub}
+        <LabPageText text={sub} />
       </span>
     </div>
   );
@@ -129,7 +130,7 @@ function ScaleRule({ n, label, sub }: { n: string; label: string; sub: string })
         }}
       >
         <span style={{ display: 'inline-block', minWidth: 26, color: 'var(--accent-2)' }}>{n}</span>
-        {label}
+        <LabPageText text={label} />
       </p>
       <span
         style={{
@@ -140,7 +141,7 @@ function ScaleRule({ n, label, sub }: { n: string; label: string; sub: string })
           color: 'var(--n500)',
         }}
       >
-        {sub}
+        <LabPageText text={sub} />
       </span>
     </div>
   );
@@ -151,14 +152,16 @@ function Bench({
   lede,
   specs,
   children,
+  notes,
 }: {
   no: string;
   lede: string;
   specs: [string, string][];
   children: ReactNode;
+  notes?: ReactNode;
 }) {
   const { title, kernel, description } = labBench(no);
-  return <LabPanel no={no} title={title} description={description} accent={labAccent(kernel)} lede={lede} specs={specs}>{children}</LabPanel>;
+  return <LabPanel no={no} title={title} description={description} accent={labAccent(kernel)} lede={lede} specs={specs} notes={notes}>{children}</LabPanel>;
 }
 
 const [P1, P2] = LAB_INDEX;
@@ -173,20 +176,20 @@ export default function LabPage() {
         <LabWorkspace index={<LabIndex />}>
         <header className="lab-page-intro" style={{ padding: '38px 0 36px', borderBottom: 'var(--hair)' }}>
           <div className="flex flex-wrap items-baseline justify-between" style={{ gap: 16 }}>
-            <p style={{ ...KICKER, margin: '0 0 16px' }}>S2 — The lab · {LAB_BENCHES.length} interactive studies</p>
+            <p style={{ ...KICKER, margin: '0 0 16px' }}><LabPageCount /></p>
             <span style={LEGEND}>
               <span className="flex items-center" style={{ gap: 6 }}>
                 <span style={{ width: 9, height: 9, background: 'var(--accent)' }} />
-                2D kernel
+                <LabPageText text="2D kernel" />
               </span>
               <span className="flex items-center" style={{ gap: 6 }}>
                 <span style={{ width: 9, height: 9, background: 'var(--accent-2)' }} />
-                3D kernel
+                <LabPageText text="3D kernel" />
               </span>
-              <span>Interactive</span>
+              <span><LabPageText text="Interactive" /></span>
             </span>
           </div>
-          <h1
+          <div className="lab-title-line"><h1
             style={{
               fontSize: 'clamp(44px, 7vw, 72px)',
               fontWeight: 800,
@@ -196,8 +199,8 @@ export default function LabPage() {
               textTransform: 'uppercase',
             }}
           >
-            The lab
-          </h1>
+            <LabPageText text="The lab" />
+          </h1><LabLanguageSwitch /></div>
           <svg width="230" height="12" style={{ display: 'block', margin: '16px 0 0', overflow: 'visible' }}>
             <line
               className="dash-rule"
@@ -212,9 +215,7 @@ export default function LabPage() {
             <line x1="0" y1="10" x2="150" y2="10" stroke="var(--accent-2)" strokeWidth="1.5" />
           </svg>
           <p style={{ fontSize: 19, lineHeight: 1.5, margin: '24px 0 0', maxWidth: '56ch' }}>
-            Live solvers and target geometry, each labelled on its bench. Project I&apos;s
-            benches run the same kernels, tests and stops as the hardware; Project II follows
-            a skin structure from one band to a room, alongside studies of target shapes and human activity.
+            <LabPageText text="Interactive studies of linkages, fabric structures and spatial behaviour. Drag the models and adjust their controls to compare how they move and form." />
           </p>
         </header>
 
@@ -222,10 +223,10 @@ export default function LabPage() {
 
         <Bench
           no="1-1"
-          lede="The 2D testbench behind Fig. 01 — position-based dynamics with a Gauss–Seidel pass, driven from the crank."
+          lede="Drag a free joint to drive the four-bar linkage. Release it to see the crank resume and the coupler trace its path."
           specs={[
             ['Kernel', '2D PBD · Gauss–Seidel'],
-            ['Tests', '36 green'],
+            ['Tests', '36 tests'],
             ['Render', 'SVG · live coupler trace'],
             ['Drive', 'Any free node · release damping'],
           ]}
@@ -235,9 +236,9 @@ export default function LabPage() {
 
         <Bench
           no="1-2"
-          lede="The physical S4 ring — angulated plates on a crank-slider, run as a preset of the untouched 2D kernel."
+          lede="Drag the apex, feet or crank pin to move the S4 scissor arch. Slot stops limit its travel."
           specs={[
-            ['Kernel', 'Same 2D core — untouched'],
+            ['Kernel', 'Shared 2D core'],
             ['Instance', 'S4 M3×1.000 · 14 plates'],
             ['Stops', 'Dual-end slot clamp · fixed step'],
             ['Drive', 'Apex / feet / crank pin'],
@@ -248,7 +249,7 @@ export default function LabPage() {
 
         <Bench
           no="1-3"
-          lede="Seven box vertebrae on three tendons at 120° — the independent 3D kernel, rendered from the real scanned mesh."
+          lede="Adjust three tendons to bend seven box vertebrae. Drag to rotate the scanned model."
           specs={[
             ['Kernel', 'LinkageSolver3D · symmetric GS'],
             ['Mesh', '107k tri · real scan'],
@@ -261,12 +262,12 @@ export default function LabPage() {
 
         <Bench
           no="1-4"
-          lede="Five ring instances breathing in phase — 85 mm pitch, foot slots auto-calibrated per ring."
+          lede="Five rings open and close together at 85 mm spacing. Adjust the phase and skin to inspect the structure."
           specs={[
             ['Family', 'S1–S5 · ladder 0 / 2 / 4 / 8'],
             ['Choreo', 'In-phase · ω 0.8 · step 1/120 s'],
             ['Peaks', '0.24–0.42 mm'],
-            ['Drive', 'Breathe · phase · skin · views'],
+            ['Drive', 'Run · phase · skin · views'],
           ]}
         >
           <RingsBench />
@@ -274,13 +275,13 @@ export default function LabPage() {
 
         <Bench
           no="1-5"
-          lede="The whole machine on one motor — one shaft swings 180° back and forth, five cranks of different radii open and close the rings, and the big arm curls on its three tendons."
+          lede="A shaft swings through 180° to open and close five rings. Three tendons bend the large arm."
           specs={[
             ['Bodies', 'Real solids · adjustable skin'],
             ['Drive', 'One shaft · five cranks · in phase'],
             ['Stroke', '180° reciprocating · apex ≡ 2R'],
             ['Arm', 'Three tendons · same solver as Lab 1-3'],
-            ['Caveats', 'Speed not to scale · small arms static'],
+            ['Caveats', 'Speed not to scale · small-arm motion choreographed'],
           ]}
         >
           <MachineBench />
@@ -293,14 +294,13 @@ export default function LabPage() {
 
         <Bench
           no="2-1"
-          lede="Project II's structure system — a ceiling-hung strip contracts, surplus fabric gathers, and a pre-embedded bond map decides what it becomes: pocket, bulb, ledge or stairs."
+          lede="A hanging strip contracts into a pocket, bulb, ledge or stairs. Each shape uses a different pattern of locking bonds."
           specs={[
             ['Kernel', 'Position-based · Verlet + projection'],
-            ['Port', '1:1 from research code · parity ≤ 1e-9'],
-            ['Bonds', 'Zipper lock · permanent — hysteresis'],
-            ['Roots', 'Hug the shaft · solid-core wall (author rev.)'],
+            ['Source', 'Research-code port · parity ≤ 1e-9'],
+            ['Bonds', 'Permanent zipper locks'],
             ['Drive', 'One contraction ℓ · four bond maps'],
-            ['Render', 'SVG · smoothing is draw-only'],
+            ['Render', 'SVG · smoothing affects drawing only'],
           ]}
         >
           <SkinBench />
@@ -308,13 +308,13 @@ export default function LabPage() {
 
         <Bench
           no="2-2"
-          lede="The same four bond maps, extruded into fabric bands with real thickness — the section cut shows the skin as material, and the whole catalog turns in space."
+          lede="Rotate the four shapes from Lab 2-1 as solid fabric bands. Section edges show the material thickness and locking bonds."
           specs={[
-            ['Kernel', 'Same 2D engine as Lab 2-1 · one protocol'],
-            ['Solid', 'Extruded band · fabric thickness 5'],
-            ['Camera', 'Orbit + presets — shared 3D rig'],
-            ['Bonds', 'Zipper rungs on both section cuts'],
-            ['Render', 'WebGL z-buffer · bake per frame'],
+            ['Kernel', 'Lab 2-1’s 2D engine'],
+            ['Band', 'Extruded section · thickness 5'],
+            ['Camera', 'Drag to orbit · preset views'],
+            ['Bonds', 'Visible on both section edges'],
+            ['Render', 'WebGL'],
           ]}
         >
           <SkinSolidBench />
@@ -322,14 +322,13 @@ export default function LabPage() {
 
         <Bench
           no="2-3"
-          lede="One strip, two bond maps — a five-segment spectrum folds an upper and a lower structure out of a single contraction. The glued run between them is pinned to the mast every pass, so the two zippers never feel each other: drop one map and the other folds identically. Four same-form pairs plus one mixed band; set how far apart they sit."
+          lede="One strip forms two structures under the same contraction. Choose a pair and adjust the fixed segment between them to compare how independently they fold."
           specs={[
-            ['Band', 'Five segments: glue · free A · glue · free B · glue'],
-            ['Engine', 'Same 2D kernel — the spec was always a list'],
-            ['Decouple', 'Gap ≥ 29 nodes ⇒ bit-identical; ≥ 16 ⇒ < 1 px'],
-            ['Drive', 'One contraction ℓ — both structures share it'],
-            ['Pairs', 'Same-form × 4 + bulb over ledge'],
-            ['Gap', '16 / 29 / 48 nodes · live switch'],
+            ['Band', 'Fixed · free A · fixed · free B · fixed'],
+            ['Pairs', 'Four matching pairs · bulb above ledge'],
+            ['Gap', '16 / 29 / 48 nodes'],
+            ['Independence', 'Gap ≥ 29: identical to separate runs; ≥ 16: difference < 1 px'],
+            ['Drive', 'One contraction ℓ for both structures'],
           ]}
         >
           <SkinDualBench />
@@ -339,20 +338,14 @@ export default function LabPage() {
 
         <Bench
           no="2-4"
-          lede="Two transition series on one line, every band a real unit. The graded catalogue walks twelve narrow slices from bulb flange to stepped box — each bond map shifts a little, and the transition grows out of the physics, not out of an interpolation. Pinched apart walks ten bands from a single box until it is two platforms: the seam is cut, not carved — an outer ladder folds the box while a second zipper inside it holds the crack open, and every level was designed on its own and measured against the drawn target by silhouette; the numbers agreed three times while the shape was wrong, so only the picture counts. Pack them into one body to read the section, or spread them to read band by band."
+          lede="Compare a 12-band transition from bulb to stepped box with a 10-stage split from one box into two platforms. Pack the bands together or spread them into a row."
           specs={[
-            ['Plans', 'Graded catalogue (12 bands) · pinched apart (10 levels)'],
-            ['Gradient', 'Bond length 0.10 → 0.32 in even steps · endpoints Lab 2-1 unit 2 → 4, verbatim'],
-            ['Pinch', 'One box ⇒ two platforms · platform 12 px · depth 40 · final seam 28'],
-            ['Design', 'Per level — no single parameter sweeps it'],
-            ['Chains', 'Outer ladder + seam zipper + two face-corner bonds'],
-            ['Tether', 'Skin-to-mast, one-sided — a ceiling, not a pin'],
-            ['Forming', 'Zipper reversed — the box grows rung by rung from the nose; no warp'],
-            ['Fit', 'Silhouette Δ 0.3–3.7 px · neighbours within 1.8×'],
-            ['Align', 'Symmetric padding ⇒ the seam centre sits at 138 + 114·r px on every level'],
-            ['Mast', 'Gradient: the mast is the core · pinch: fixed mast, skin gathers down it'],
-            ['Layouts', 'Packed body ↔ spread row · same run, both plans'],
-            ['Render', 'Shared solid bench · WebGL'],
+            ['Series', 'Graded: 12 bands · split: 10 stages'],
+            ['Gradient', 'Bond length 0.10 → 0.32'],
+            ['Split', 'Platforms 12 px thick · depth 40 px · final gap 28 px'],
+            ['Bonds', 'Outer ladder · seam zipper · face-corner bonds'],
+            ['Shape fit', 'Silhouette difference 0.3–3.7 px'],
+            ['Layout', 'Packed body or spread row'],
           ]}
         >
           <SkinSeriesBench />
@@ -362,19 +355,15 @@ export default function LabPage() {
 
         <Bench
           no="2-5"
-          lede="Twenty narrow bands stood in a circle: hanging slack they close into a tube, and as they contract each one folds out its ledge — together, a platform ringing the cylinder. Five plans. By default the ledge climbs and falls once around, a stair wrapped on the tube; hold it level on one form; let the form drift bulb → box → bulb; or pinch it apart — on one side two shelves 100 px apart, on the opposite side one slab, ten steps of gap between, the same construction as the square ring's pinch with every band at one depth so the plan stays a circle. The seam centre stays level all round, so the platform reads as one band that opens and shuts, not as twenty different shelves. The double platform repeats the fully open pair all the way round: two level ring shelves, with the same gap everywhere. Set the radius yourself."
+          lede="Twenty contracting bands form a platform around a tube. Choose a level, undulating, changing, split or double platform, then adjust the radius."
           specs={[
-            ['Ring', '20 bands · level, undulating, drifting, pinched, or double platform'],
-            ['Height', 'Same form, one lead per station — 18% ↔ 71%'],
-            ['Solve', '1 / 11 / 10 engines, 20 placements — same run'],
-            ['Closure', 'Palindrome (11 levels) or exact mirror (10) — the seam is one step wide'],
-            ['Pinch', 'Shelves 16 px, gap 0 → 100, height in even steps — Lab 2-7’s construction, one reach (83 px) all round'],
-            ['Double', 'Two shelves all round · each 16 px, gap 100 · one fully open section repeated 20 times'],
-            ['Flat', 'Pinched: seam centre level all round (symmetric padding) — the shelves part evenly'],
-            ['Radius', 'Live slider · gaps widen with it'],
-            ['Skin', 'Membrane 0–1 · 0.35 by default, 0.15 for pinched and double platforms'],
-            ['Ceiling', 'Ring plate · fixed masts, skin gathers down them'],
-            ['Caveat', 'Bands do not touch each other — 2D sections'],
+            ['Ring', '20 bands · five arrangements'],
+            ['Undulation', 'One shape placed at heights from 18% to 71% of the strip'],
+            ['Split', 'Two shelves, each 16 px thick · gap varies from 0 to 100 px'],
+            ['Double', 'Two level shelves · constant 100 px gap'],
+            ['Radius', 'Adjustable · gaps between bands widen with it'],
+            ['Skin', 'Opacity 0–1 · default 0.35; split/double 0.15'],
+            ['Limit', 'Independent 2D sections; no forces between bands'],
           ]}
         >
           <SkinRingBench />
@@ -382,15 +371,17 @@ export default function LabPage() {
 
         <Bench
           no="2-6"
-          lede="Two shelves within a single unit can shape the space between them. Each has its own inclination and outline. Selected sectors join their outer edges into straight sides, making thick shelves there. The forming view uses separate narrow bands, as in Lab 2-5: you can see each band's thickness, section and locking bonds, with gaps between neighbouring bands. Four simulated profiles make double, thick, upper-only and lower-only regions. Inclination remains a spatial assembly preview; circumferential forces and the mechanism for forming inclined shelves are not simulated."
+          lede="Adjust each shelf’s radius, tilt and outline, or join their edges. In forming bands, use Skin to see the surface or expose the bands. Radius and tilt preview the assembly; Sections shows the original solved dimensions."
           specs={[
-            ['Study', 'Target geometry + separate forming bands around one axis'],
+            ['Views', 'Target geometry · forming bands'],
             ['Baseline', 'Lab 2-5 double platform · thickness 16 · gap 100 · reach 83.2'],
-            ['Inclination', 'Each layer 0–20° · assembly preview, not a solved slope mechanism'],
-            ['Outline', '360° / 180° / 90° / 240° / two separate 90° sectors'],
-            ['Connection', 'One sector or two equal sectors 180° apart · rotate together · outer top and bottom stay in place'],
-            ['Read together', 'Orbit view · plan of each layer · rotatable section'],
-            ['Forming', '4 profiles · 20 base slots split at outline boundaries · replay / pause / terminal view'],
+            ['Tilt', '0–20° per layer · assembly preview'],
+            ['Radius', '70–130 per layer · axis to rim · assembly preview'],
+            ['Skin', 'Opacity 0–100% · default 35% · cutouts stay open'],
+            ['Outline', '360° / 180° / 90° / 240° / two 90° sectors'],
+            ['Joins', 'One sector or two opposite sectors'],
+            ['Forming', 'Four profiles · 20 base slots, split at outline edges'],
+            ['Limit', 'No circumferential forces; radius and tilt do not re-solve the sections'],
           ]}
         >
           <SkinLayersBench />
@@ -398,26 +389,17 @@ export default function LabPage() {
 
         <Bench
           no="2-7"
-          lede="The mast stays round; the plan does not. Each of the twenty bands reaches out a different distance — four at the corners, eight along the edges, eight on the faces — so the rim lands on a square, and since the membrane between neighbours is a ruled panel, the chord it draws is the edge itself. Only the reach changes: the box is the same height the whole way round, its ladder the same ten rungs, squeezed closer as the shelf gets shallower. Two conditions decide whether that works, and both were learnt the hard way: the end panel must end on a locked rung or the end face bows out, and the box has to fit inside the free run it lives in — when it does not, the lower buffer is pulled straight and the mouth curls the wrong way. The plan is a dial, not a fixed shape: hold the inscribed circle, push only the corners out, and the same twenty bands walk from circle to square in five steps."
+          lede="Twenty bands with different reaches form a square around a round mast. Change the outline from circle to square, or choose an undulating or split platform."
           specs={[
-            ['Ring', '20 bands · three depths — 8 face · 8 edge · 4 corner'],
-            ['Plans', 'Flat, undulating — or pinched, where the box splits into two shelves'],
-            ['Layout', 'One ring, or sixteen — pitch set edge-to-edge'],
-            ['Plan', 'Circle to square in five (|x|ⁿ+|z|ⁿ = aⁿ) · square side 169 px, rim within 0.9 px'],
-            ['Reach', '54 / 54 / 54 round · 56 / 64 / 89 square'],
-            ['Box', 'Height 36 px everywhere · faces flat within 0.1 px'],
-            ['Ladder', '10 rungs on every band, pitched closer when shallow'],
-            ['Flat', 'Platform spread 0.0 px — the padding makes it, not a fit'],
-            ['Wave', '40 px swing · shape unchanged, only where it sits'],
-            ['Pinch', 'One round trip: two shelves 100 px apart on one side, one slab on the opposite side, ten steps between'],
-            ['Shelves', '16 px thick, fixed — the gap opens from 0 to 100 px, so the height grows from 32 to 132 px around the ring'],
-            ['Why the height varies', 'A solid box must be deeper than it is tall (the buffer rule); a 132 px box would need a 358 px square — so the slab side stays 32 px'],
-            ['Forming', 'Tall boxes fold their top face into the seam while forming — the faces are kept straight (a placement rule), and the fold never appears'],
-            ['Ten engines', 'One per pair of bands, ten steps of gap from 100 px to 0 — the height drops 11 px a pair, evenly, all the way round'],
-            ['Square', 'Side 223 px (flat plan 169), rim within 0.9 px · own band of 338 nodes, own grid pitch'],
-            ['Level', 'The seam centre stays level (symmetric padding); the two shelves part evenly above and below it'],
-            ['Radius', 'Fixed: the depths are calibrated against it'],
-            ['Ceiling', 'Ring plate · fixed masts, skin gathers down them'],
+            ['Bands', '20 total: 8 face · 8 edge · 4 corner'],
+            ['Outline', 'Five steps from circle to square'],
+            ['Flat', 'Side 169 px · platform height 36 px · rim error < 0.9 px'],
+            ['Reach', 'Round 54 px · square 56 / 64 / 89 px'],
+            ['Undulation', '40 px height range'],
+            ['Split', 'Shelves 16 px thick · gap 0–100 px · seam centre stays level'],
+            ['Split outline', 'Side 223 px · 338 nodes per band'],
+            ['Layout', 'Single ring or 4×4 · fixed radius'],
+            ['Limit', 'Split faces held straight by a placement rule during forming'],
           ]}
         >
           <SquareRingBench />
@@ -427,16 +409,14 @@ export default function LabPage() {
 
         <Bench
           no="2-8"
-          lede="Sixteen of the cylinders from Lab 2-5 hung in a room — 320 bands, one solved section. A 1.70 m figure stands on the floor beside them, and that figure is what sets the scale: everything else on this page had none until now. How far a ledge reaches is set by how much material its outermost bond captures — not by how hard the unit contracts. So this family folds more of the same strip: 202 nodes as before, but the fan spans 2.1× the catalogue's, and the slack hugging the mast is what pays for it. Each ring keeps its own clearance, and pulling the radius breathes the whole field."
+          lede="Sixteen rings fill a room beside a 1.70 m figure. Change the form for the whole field or by row; adjust the radius to change the spacing."
           specs={[
-            ['Field', '4 × 4 rings · 20 bands each · 320 placements'],
-            ['Solved', 'One section — the field is that section, placed'],
-            ['Scale', 'Figure 1.70 m ⇒ room 3.74 m · ring 1.04 m across'],
-            ['Rig', 'Half size, hung lower — underside stays at 1.08 m'],
-            ['Pitch', '2 × (radius + peak swell 101.1) + gap · tracks the slider'],
-            ['Gap', '1.5 × the gap inside a ring — rings stay separate'],
-            ['Plans', 'One form ↔ one form per row'],
-            ['Skin', 'A membrane bridges the gaps between bands · 0–1'],
+            ['Field', '4×4 rings · 20 bands each'],
+            ['Scale', 'Figure 1.70 m · room 3.74 m · ring width 1.04 m'],
+            ['Height', 'Platform underside 1.08 m'],
+            ['Spacing', 'Tracks radius · ring gap = 1.5× gap between bands'],
+            ['Forms', 'Same throughout or one per row'],
+            ['Skin', 'Adjustable membrane opacity, 0–1'],
           ]}
         >
           <SkinGridBench />
@@ -446,18 +426,16 @@ export default function LabPage() {
 
         <Bench
           no="2-9"
-          lede="Call one of those cylinders a unit — twenty bands round a mast that contract into a ring platform. This bench asks what a few of them can be to each other. Two, three, four or nine hang in Lab 2-8's room; the relations are measured, not styled: apart (Lab 2-8's clearance), touching (platform edge to platform edge, with a fabric web growing across each seam once the rims meet), stepped (the same shape carried higher on its band — up to 0.35 m), or interleaved, where a lower platform slides under a higher one and stops short of its neighbour's mast. Interleaving has a physical gate: the step must clear the folded body at its fattest moment, so some form–cluster pairs grey out rather than collide. Timing is a second axis: all at once, or wave by wave across the cluster."
+          lede="Arrange two, three, four or nine rings. Compare gaps, touching edges, steps and interleaving, then make them form together or in sequence. Combinations that would collide are disabled."
           specs={[
-            ['Unit', 'One Lab 2-5 ring — 20 bands · 202 nodes · same bond maps'],
-            ['Clusters', 'Pair · triad · two-by-two · three-by-three'],
+            ['Unit', 'Lab 2-5 ring · 20 bands · 202 nodes'],
+            ['Clusters', '2 / 3 / 4 / 9 rings'],
             ['Relations', 'Apart · touching · apart stepped · touching stepped · interleaved'],
-            ['Spacing', 'Derived per relation from peak reach — never a styled number'],
-            ['Height', 'lead knob, 14–58 nodes ⇒ up to 0.35 m; shape unchanged'],
-            ['Interleave', 'Step ≥ body swell + 6 px · greyed out where it fails'],
-            ['Timing', 'Together, or one wave every 150 steps — one solver per unit'],
-            ['Seams', 'Touching, level: a 16 cm fabric web bridges each seam'],
-            ['Switching', 'Relation re-places without re-solving; form, timing or level count re-solves'],
-            ['Scale', 'Lab 2-8\'s room and 1.70 m figure, whatever the cluster size'],
+            ['Height', 'Up to 0.35 m; shape stays unchanged'],
+            ['Interleave', 'Step must clear the forming body by 6 px'],
+            ['Timing', 'Together or staggered by 150 steps'],
+            ['Seams', 'Level touching edges joined by a 16 cm fabric web'],
+            ['Scale', 'Lab 2-8 room · 1.70 m figure'],
           ]}
         >
           <SkinClusterBench />
@@ -467,59 +445,56 @@ export default function LabPage() {
 
         <Bench
           no="2-10"
-          lede="The first bench with a behaviour layer. One person walks through Lab 2-8’s room — passing, crossing, standing, looping, pacing, or wherever you click — and every second of presence marks the floor within reach. Each unit reads the floor it owns; once that floor has held presence long enough on average, the unit comes down; whether it stays down after they leave is a switch — follow, where it withdraws, or lock, the hysteresis the project argues for. The units are smaller and more numerous than Lab 2-8’s so that what forms is a group, not a point. The person faces somewhere and has a body: the trace lands only inside a 180° field of view, nothing comes down within a clearance distance of the body (a platform there would hit them — those units are held back, marked with a rose ×), and while walking a lane straight ahead stays clear, so structure grows along the sides of the path and, when they stop, as an arc in front of them. As a demo it runs fast — two seconds of standing brings the arc down, six seconds after the person leaves it is gone — with the author’s July prototype (2 %/s decay, a 15 s threshold) still one slider away; reach, field of view and clearance are the behavioural knobs."
+          notes={<WalkPlanNotes />}
+          lede="Move one person through the room and watch nearby units form. The floor records time spent within view. Follow mode withdraws the structure as that trace fades; lock mode keeps it formed."
           specs={[
-            ['Field', 'Lab 2-8’s room and field · 4×4 / 6×6 / 8×8 · unit scaled with pitch (4×4 = Lab 2-8 verbatim)'],
-            ['Trace', 'Presence-seconds on a 0.1 m floor grid, within reach of the person · on the bench it caps at the threshold and fades away linearly (fade slider); the prototype’s own rule is 2 %/s with no cap and no zero'],
-            ['Reading', 'By cell (Voronoi = the aisle lines) or footprint only · mean over the cells a unit owns'],
-            ['Forming', 'Mean over the floor a unit owns ≥ threshold × floor share ⇒ down (floor share 25–100 %, default half — at 100 % only units wholly inside the wedge ever form) · purple ring grows from mast to rim'],
-            ['Response', 'Follow — the structure tracks the reading and withdraws once people leave (default; 2 s to form, gone 6 s after they leave) · Lock — bonds stay locked, the hysteresis the project argues for (the prototype: threshold 15 s, decay 2 %/s)'],
-            ['Reach', '0.22–2.0 m, default 1.5 m (how far they look; Hall’s near social distance) · the prototype’s 1.0 m is one slider away'],
-            ['Facing', 'Field of view 60°–360°, default 180° — the trace lands only where they look · body faces the last direction walked; standing, the head turns (a glance every 1.5–6 s within ±110° of the body, a demo device) so a long stand spreads the arc'],
-            ['Clearance', 'D = platform radius + body 0.22 + clearance 0.15 m (an elbow) · no trace within D, units whose mast is within D are held back (rose ×) · while walking a lane 2D wide ahead stays clear · off = the 09-04 reading'],
-            ['Behaviours', 'Passing · diagonal (aisle-wise steps) · dwell 20 s at an aisle crossing · loop ×6 · pacing ×8 · free (click the floor) · hold the person to drag — every route keeps to the aisles; a unit centre is a mast'],
-            ['Result', 'Under the prototype’s own numbers with facing and clearance on: passing forms none · a 20 s stand forms an arc of 3 ahead (+3 half) · pacing lines the corridor without filling it · loop a ring'],
-            ['Not here', 'Which form a unit takes — the behaviour → form rules are the author’s to write'],
+            ['Grid', '4×4 / 6×6 / 8×8 · Lab 2-8 room'],
+            ['Trace', '0.1 m floor cells · capped at the threshold · linear fade'],
+            ['Reading', 'Mean trace by cell or footprint'],
+            ['Forming', 'Mean ≥ threshold × floor share; default share 50%'],
+            ['Demo', 'Threshold 2 s · fade 6 s · follow mode'],
+            ['View', 'Reach 0.22–2.0 m, default 1.5 m · angle 60°–360°, default 180°'],
+            ['Clearance', 'Platform radius + body 0.22 m + margin 0.15 m; walking lane twice this width'],
+            ['Prototype', '15 s threshold · 2%/s decay, uncapped; differs from this demo'],
+            ['Limit', 'Activation only; no behaviour-to-shape rule'],
           ]}
         >
-          <WalkPlanBench />
+          <WalkPlanBench workspace />
         </Bench>
 
         <Bench
           no="2-11"
-          lede="Lab 2-10 replayed one person along a preset path; this bench is live. Click the floor to place people (up to eight), hold one to drag it, or let them wander on their own — at an indoor 0.7 m/s, a hop of half a metre to two, then eight to forty-five seconds standing; a demo device rather than a behaviour rule, but paced like people in a room, not like particles. The floor records presence as they move and the units form in front of you. Where two reaches overlap the floor counts both people, so a pair standing together forms the unit underfoot twice as fast, and a small crowd reshapes more of the room than one person ever could. Same mechanism as Lab 2-10, same knobs, nothing re-tuned."
+          notes={<CrowdPlanNotes />}
+          lede="Place up to eight people, drag them or let them wander. Their floor traces add where their views overlap, so units can form sooner. Activation and clearance use the same rules as Lab 2-10."
           specs={[
-            ['People', 'Up to 8 · click empty floor to place · hover for the grab cursor, hold to drag · − removes the last'],
-            ['Wander', 'Indoor pace 0.7 m/s · a hop of 0.5–2 m (now and then 3.5) · then 8–45 s standing · seeded · a demo device, not a rule'],
-            ['Mechanism', 'Lab 2-10’s, untouched: presence-seconds within each person’s field of view, outside their clearance · trace decays · mean ≥ threshold brings the unit down · a unit within anyone’s clearance is held back'],
-            ['Response', 'Follow (default) — units withdraw when people leave · Lock — they stay, which is the project’s hysteresis'],
-            ['Overlap', 'Reaches add: two people on one spot form the unit underfoot in half the time'],
-            ['Field', '4×4 / 6×6 / 8×8 on Lab 2-8’s field · unit scaled with pitch'],
-            ['Not here', 'Cats, and any rule for how a real person moves — those are the author’s to write'],
+            ['People', 'Click to add · hold to drag · − removes the last'],
+            ['Wander', '0.7 m/s · walks 0.5–2 m, occasionally 3.5 m · pauses 8–45 s'],
+            ['Response', 'Follow: withdraw as traces fade · lock: keep formed'],
+            ['Overlap', 'Two simultaneous views add trace at twice the rate'],
+            ['Grid', '4×4 / 6×6 / 8×8 · Lab 2-8 room'],
+            ['Limit', 'Random wandering for demonstration; not a model of human behaviour'],
           ]}
         >
-          <CrowdPlanBench />
+          <CrowdPlanBench workspace />
         </Bench>
 
         <ScaleRule n={P2.segments[6].n} label={P2.segments[6].label} sub={P2.segments[6].sub} />
 
         <Bench
           no="2-12"
-          lede="Take one platform and give it Lab 2-5’s undulation: the ring rises from a trough to a crest and back, the shape itself never changing. Hang two or three edge to edge and each brings to the seam whatever height its undulation puts on that side. Three figures from the author’s sketch: a descent — two rings sharing the range so the seam stays level, landing on a flat ring at the bottom; a rise — a split unit’s lower shelf (Lab 2-5’s pinch plan, mouth turned toward the neighbour) meets the trough of a ramp within half a centimetre, and the ramp’s crest meets a flat ring at the top; and an enclosure — two split units mouth to mouth, their cavities joining into one 0.39 m pocket. Five plainer joins stay as presets: step, ramp, ramp in three, hollow, arch. Each undulating unit has two knobs (crest band, height slice), each split unit one (which band its mouth faces), and the seam reading falls out of them. The square family repeats every figure with Lab 2-7’s rings — its undulation spans only 0.16 m, so the square rise keeps an 8 cm step where the ramp leaves the shelf, and the bench says so rather than hiding it."
+          lede="Join round or square platforms into steps, ramps and enclosures. Adjust each unit’s height range and orientation, then read the height difference at each seam. The square rising arrangement retains an 8 cm step."
           specs={[
-            ['Units', 'Round: Lab 2-5 ring (202 nodes) undulating, or its pinch plan (338) · Square: Lab 2-7 ring (305) undulating, or its one-loop pinch (338)'],
-            ['Knobs', 'Undulating: crest band 0–19 · height slice 0–100 % of the range · Split: mouth band'],
-            ['Range', 'Round lead 58–14 = 0.35 m · Square lead 135–115 = 0.16 m — a ramp shares it, a step spends it at the seam'],
-            ['Figures', '① descent onto a landing · ② rise from a split shelf · ③ two splits enclosing one cavity · + step, ramp, ramp in three, hollow, arch'],
-            ['Seam', 'Read on the band facing the neighbour; level within 3 cm · round ② shelf-to-trough 1.2 px · square ② 8 cm step'],
-            ['Spacing', 'Touching = half-widths by peak reach (split and undulating differ) · apart adds the family’s gap'],
-            ['Solved', 'One solver per lead (and per depth class on the square) · the pinch family solved once however many splits'],
-            ['Switching', 'Spacing re-places without re-solving; figure, family or form re-solves · the square family fixes the radius at 30'],
-            ['Scale', 'Lab 2-8’s room and 1.70 m figure · round surface 1.39–1.73 m, cavity 0.39 m headroom'],
-            ['Not here', 'Interaction between units · figures beyond a single row · what a person or cat would do with them'],
+            ['Figures', 'Descent · rise · enclosure · step · ramp · three-part ramp · hollow · arch'],
+            ['Units', 'Round from Lab 2-5 · square from Lab 2-7'],
+            ['Controls', 'Crest band 0–19 · height slice 0–100% · split opening direction'],
+            ['Range', 'Round 0.35 m · square 0.16 m'],
+            ['Seams', 'Level within 3 cm · square rise includes an 8 cm step'],
+            ['Spacing', 'Touching at peak reach or separated by the family’s gap'],
+            ['Scale', '1.70 m figure · round surface 1.39–1.73 m · cavity height 0.39 m'],
+            ['Limit', 'Single-row assembly; no interaction between units'],
           ]}
         >
-          <SkinComboBench />
+          <SkinComboBench workspace />
         </Bench>
 
         <footer
@@ -535,7 +510,7 @@ export default function LabPage() {
               color: 'var(--n500)',
             }}
           >
-            {LAB_BENCHES.length} studies · 03 kernels · interactive
+            <LabPageCount footer />
           </span>
           <span
             className="flex"
@@ -548,10 +523,10 @@ export default function LabPage() {
             }}
           >
             <Link href="/work/reincarnation-machine" style={{ textDecoration: 'none', color: 'var(--g300)' }}>
-              Work →
+              <LabPageText text="Work →" />
             </Link>
             <Link href="/archive" style={{ textDecoration: 'none', color: 'var(--g300)' }}>
-              Log →
+              <LabPageText text="Log →" />
             </Link>
           </span>
         </footer>
