@@ -9,7 +9,7 @@ import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import { FlatRenderer, bakeIndexed } from '../../src/lib/linkage/gl3d';
 import { ringPlateVerts } from '../../src/lib/space/skin-solid';
 import { buildLayerGeometry, layerAngles, layerBaseline, layerColumns, layerCovers, layerExample,
-  layerHeight, layerRadius, layerJoinSpans, layersJoin, layerStats, LAYERS, LAYER_EXAMPLES, LAYER_OUTLINES, LAYER_JOINS,
+  layerHeight, layerRadius, layerJoinSpans, layersJoin, layerStats, LAYERS, LAYER_EXAMPLES, LAYER_OUTLINES, LAYER_JOINS, LAYER_MORPHS,
   type LayerMaterial, type LayerShape, type LayerStudy } from '../../src/lib/space/skin-layers';
 import { useBenchLoop } from './useBenchLoop';
 import { attachLabCamera } from './labCameraInput';
@@ -32,14 +32,15 @@ function StudyDrawings({ study, cut }: { study: LayerStudy; cut: number }) {
   const aa = layerAngles(study);
   const polar = (r: number, a: number) => [r * Math.cos(a * Math.PI / 180), r * Math.sin(a * Math.PI / 180)];
   // SSR 与浏览器的三角函数末位可能不同；图纸坐标统一到 0.001，避免水合属性漂移。
-  const wedge = (a: number, b: number, radius: number) => 'M' + [polar(LAYERS.inner, a), polar(radius, a), polar(radius, b), polar(LAYERS.inner, b)].map(p => p.map(v => v.toFixed(3)).join(',')).join('L') + 'Z';
+  const wedge = (a: number, b: number, surface: number) => 'M' + [polar(LAYERS.inner, a), polar(layerRadius(study, surface, a), a), polar(layerRadius(study, surface, b), b), polar(LAYERS.inner, b)].map(p => p.map(v => v.toFixed(3)).join(',')).join('L') + 'Z';
+  const rim = (surface: number) => 'M' + aa.map(a => polar(layerRadius(study, surface, a), a).map(v => v.toFixed(3)).join(',')).join('L') + 'Z';
   return <div className="layer-drawings">
     {(['upper', 'lower'] as const).map(key => <svg key={key} viewBox="-135 -155 270 290" role="img" aria-label={`${tx(key === 'upper' ? '上层' : '下层')} · ${tx('俯视轮廓')}`}>
       <text x="-120" y="-133">{key === 'upper' ? tx('上层') : tx('下层')} {tx("· 俯视")}</text>
-      <circle r={study[key].radius} className="layer-guide" /><circle r={LAYERS.inner} className="layer-guide" />
+      <path d={rim(key === 'upper' ? 0 : 2)} className="layer-guide" /><circle r={LAYERS.inner} className="layer-guide" />
       {([key, 'join'] as const).map(material => <path key={material} fill={COLORS[material].svg} fillOpacity="0.6" d={aa.slice(0, -1).map((a, i) => {
         const mid = (a + aa[i + 1]) / 2;
-        return layerCovers(study[key], mid) && (layersJoin(study, mid) ? 'join' : key) === material ? wedge(a, aa[i + 1], study[key].radius) : '';
+        return layerCovers(study[key], mid) && (layersJoin(study, mid) ? 'join' : key) === material ? wedge(a, aa[i + 1], key === 'upper' ? 0 : 2) : '';
       }).join('')} />)}
       <line x1={-124} x2={124} transform={`rotate(${cut})`} className="layer-cut" />
       <text x="103" y="-7">0°</text>
@@ -50,7 +51,7 @@ function StudyDrawings({ study, cut }: { study: LayerStudy; cut: number }) {
       {([1, -1] as const).flatMap(sign => {
         const a = cut + (sign < 0 ? 180 : 0);
         return layerColumns(study, a).map((col, i) => {
-          const outer = Array.from({ length: col.bottom - col.top + 1 }, (_, j) => col.top + j).map(h => [layerRadius(study, h), h]);
+          const outer = Array.from({ length: col.bottom - col.top + 1 }, (_, j) => col.top + j).map(h => [layerRadius(study, h, a), h]);
           const pts = [[LAYERS.inner, col.top], ...outer, [LAYERS.inner, col.bottom]]
             .map(([r, h]) => `${(sign * r).toFixed(3)},${layerHeight(study, h, r, a).toFixed(3)}`).join(' ');
           return <polygon key={`${sign}:${i}`} points={pts} fill={COLORS[col.material].svg} fillOpacity="0.25" stroke={COLORS[col.material].svg} strokeWidth="1.5" />;
@@ -166,16 +167,17 @@ function SkinLayersTarget({ active, controls, onLight, forming = false, loaded =
         </div>
       </div>
       <div className="lab-ctl lab-ctl--tiered layer-config">
-        <div className="lab-ctl__row lab-ctl__solve layer-examples"><div className="grp"><LabControlLabel help={["载入一组上下层轮廓、倾角和连接设置。", "Load a preset of outlines, tilts and joins."]}>{tx("示例")}</LabControlLabel><select aria-label={tx("示例")} value={example} onChange={e => { setStudy(layerExample(e.target.value)); setExample(e.target.value); }}>
+        <div className="lab-ctl__row lab-ctl__solve layer-examples"><div className="grp"><LabControlLabel help={["载入一组上下层轮廓、倾角和连接设置，保留圆方选择。", "Load outlines, tilts and joins while keeping the ring shape."]}>{tx("示例")}</LabControlLabel><select aria-label={tx("示例")} value={example} onChange={e => { const key = e.target.value; setStudy(s => ({ ...layerExample(key), morph: s.morph })); setExample(key); }}>
           <option value="custom" disabled>{lang === 'zh' ? '自定义' : 'Custom'}</option>
           {LAYER_EXAMPLES.map(p => <option key={p.key} value={p.key}>{tx(p.label)}</option>)}
         </select></div></div>
         <div className="layer-settings">
         <div className="lab-ctl__row lab-ctl__solve layer-edit">
+          <div className="grp layer-morph"><LabControlLabel help={["上下层一起由圆变方，最大外伸尺寸不变；保留缺口、倾斜、连接与成形进度。", "Morph both layers from round to square at the same maximum radius, keeping gaps, tilts, joins and forming progress."]}>{tx("环形轮廓")}</LabControlLabel><select aria-label={tx("环形轮廓")} value={study.morph} onChange={e => { const morph = Number(e.target.value); setStudy(s => ({ ...s, morph })); }}>{LAYER_MORPHS.map((p, i) => <option key={p.key} value={i}>{tx(p.label)}</option>)}</select></div>
           <div className="grp"><LabControlLabel help={["选择下方参数要修改的层。", "Select the layer to edit."]}>{tx("编辑")}</LabControlLabel><span className="seg">{(['upper', 'lower'] as const).map(k => <button type="button" key={k} className={selected === k ? 'active' : undefined} aria-pressed={selected === k} onClick={() => setSelected(k)}>{k === 'upper' ? tx('上层') : tx('下层')}</button>)}</span></div>
           <div className="grp layer-outline"><LabControlLabel help={["选择该层保留的圆周范围与缺口。", "Choose the sectors and gaps in this layer."]}>{tx("完整度")}</LabControlLabel><span className="seg layer-seg">{LAYER_OUTLINES.map(p => <button type="button" key={p.key} className={layer.outline === p.key ? 'active' : undefined} aria-pressed={layer.outline === p.key} onClick={() => edit({ outline: p.key })}>{tx(p.label)}</button>)}</span></div>
           <div className="layer-sliders">
-            <Slider label={tx("平台半径")} help={lang === 'zh' ? '从中轴到本层外缘的距离。上下层独立调节；尺寸为装配预览，不重算截面。' : 'Distance from the axis to this shelf’s rim. Each layer is independent; sizing previews the assembly, without re-solving the section.'} value={layer.radius} min={LAYERS.minRadius} max={LAYERS.maxRadius} step={0.1} unit="" change={radius => edit({ radius })} />
+            <Slider label={tx("平台半径")} help={lang === 'zh' ? '从中轴到本层最远外缘的距离，方环量到角部。上下层独立；轮廓与尺寸为装配预览，不重算截面。' : 'Maximum distance from the axis to the rim, measured to a corner for a square. Each layer is independent; shape and size preview the assembly without re-solving sections.'} value={layer.radius} min={LAYERS.minRadius} max={LAYERS.maxRadius} step={0.1} unit="" change={radius => edit({ radius })} />
             <Slider label={`${tx(selected === 'upper' ? '上层' : '下层')} · ${tx('倾角')}`} help="该层相对水平面的倾斜角度，仅用于装配预览。" value={layer.tilt} max={LAYERS.maxTilt} change={tilt => edit({ tilt })} />
             <Slider label={tx("下坡方向")} help="改变该层向哪一侧倾斜。" value={layer.direction} max={355} step={5} change={direction => edit({ direction })} />
             <Slider label={tx("轮廓方位")} help="旋转该层轮廓，调整缺口朝向。" value={layer.rotation} max={355} step={5} change={rotation => edit({ rotation })} />

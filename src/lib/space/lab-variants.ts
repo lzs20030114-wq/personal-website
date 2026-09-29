@@ -19,7 +19,7 @@ import { SQUARE_GRID, SQUARE_MORPH } from './skin-square';
 import { CLUSTER_PLANS, CLUSTER_RELATIONS, CLUSTER_TIMINGS } from './unit-cluster';
 import { COMBO_FAMILIES, COMBO_PLANS, COMBO_SPACINGS } from './unit-combo';
 import { PATHS, PLAN, READINGS, RESPONSES } from './unit-activation';
-import { LAYER_OUTLINES, LAYER_JOINS } from './skin-layers';
+import { LAYER_OUTLINES, LAYER_JOINS, LAYER_MORPHS } from './skin-layers';
 
 export interface VariantOption {
   key: string;
@@ -163,7 +163,7 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     zh: '单元内的多层台',
     en: 'Layers within one unit',
     plans: [],
-    axes: [{ axis: '上层轮廓', options: LAYER_OUTLINES }, { axis: '下层轮廓', options: LAYER_OUTLINES }, { axis: '连接分布', options: LAYER_JOINS }],
+    axes: [{ axis: '上层轮廓', options: LAYER_OUTLINES }, { axis: '下层轮廓', options: LAYER_OUTLINES }, { axis: '连接分布', options: LAYER_JOINS }, { axis: '环形轮廓', options: LAYER_MORPHS }],
   },
   {
     no: '2-7',

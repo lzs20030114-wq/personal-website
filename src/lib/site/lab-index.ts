@@ -89,7 +89,7 @@ export const LAB_INDEX: readonly LabGroup[] = [
         sub: "Lab 2-5 – 2-7 · the row closed into a loop",
         benches: [
           { no: "2-5", title: "Cylinder of units", kernel: "3d", description: 'Twenty bands form a level, undulating, changing, split or double platform.', meta: '5 plans · radius · WebGL' },
-          { no: "2-6", title: "Layers within one unit", kernel: "3d", description: 'Adjust each shelf’s radius, outline, tilt and joined sectors.', meta: 'Target + forming bands · WebGL' },
+          { no: "2-6", title: "Layers within one unit", kernel: "3d", description: 'Round to square, with independent shelf sizes, tilts, gaps and joins.', meta: 'Target + forming bands · WebGL' },
           { no: "2-7", title: "A square ring", kernel: "3d", description: 'Vary each band’s reach to change a round platform into a square.', meta: 'Three depths · WebGL' },
         ],
       },

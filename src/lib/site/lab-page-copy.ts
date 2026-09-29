@@ -2,6 +2,13 @@ import type { SiteLang } from './lang';
 
 /** Paired page copy; order and technical values follow the existing Lab page. */
 export const LAB_PAGE_COPY: readonly (readonly [string, string])[] = [
+  ["Round to square, with independent shelf sizes, tilts, gaps and joins.", "圆环变方环，同时保留各层尺寸、倾斜、缺口与局部连接。"],
+  ["Morph the ring from round to square while keeping each shelf’s size, tilt, gaps and joined sectors. Forming bands shows the moving strips and optional skin. Shape, size and tilt preview the assembly; Sections shows the original solved dimensions.", "从圆环逐档变成方环，同时保留上下层尺寸、倾斜、缺口和局部厚台。条带成形中可看运动过程并调节蒙皮。圆方、尺寸与倾斜是装配预览；截面对照保留原始求解尺寸。"],
+  ["70–130 per layer · maximum axis-to-rim distance", "每层 70–130 · 中轴到最远外缘"],
+  ["Ring shape", "环形轮廓"],
+  ["Five steps from circle to square · fixed maximum radius", "圆到方五档 · 最大外伸半径不变"],
+  ["Four profiles · 20 base slots, split at gaps and square corners", "四类截面 · 20 个基础槽，缺口与方角处分槽"],
+  ["No circumferential forces; shape, size and tilt do not re-solve the sections", "未模拟环向受力；圆方、尺寸与倾斜不重算截面"],
   ["Drag a free joint to drive the four-bar linkage. Release it to see the crank resume and the coupler trace its path.", "拖动自由节点可以带动四杆连杆。松手后曲柄恢复运转，连杆上的标记点继续留下轨迹。"],
   ["2D PBD · Gauss–Seidel", "二维位置动力学 · 高斯–赛德尔"],
   ["36 tests", "36 项测试"],
@@ -69,7 +76,7 @@ export const LAB_PAGE_COPY: readonly (readonly [string, string])[] = [
   ["No circumferential forces; radius and tilt do not re-solve the sections", "未模拟环向受力；半径与倾斜不重算截面"],
   ["Lab 2-5 double platform · thickness 16 · gap 100 · reach 83.2", "实验 2-5 双层台 · 厚 16 · 间隙 100 · 挑出 83.2"],
   ["0–20° per layer · assembly preview", "每层 0–20° · 装配预览"],
-  ["360° / 180° / 90° / 240° / two 90° sectors", "整圆／半圆／90°／240°／两个 90° 扇区"],
+  ["360° / 180° / 90° / 240° / two 90° sectors", "整环／半环／90°／240°／两个 90° 扇区"],
   ["One sector or two opposite sectors", "单个扇区或两个对向扇区"],
   ["Four profiles · 20 base slots, split at outline edges", "四种剖面 · 20 个基准槽在轮廓边界细分"],
   ["No circumferential forces or simulated tilt mechanism", "未模拟环向力和倾斜成形机制"],

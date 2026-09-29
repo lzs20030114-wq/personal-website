@@ -371,17 +371,18 @@ export default function LabPage() {
 
         <Bench
           no="2-6"
-          lede="Adjust each shelf’s radius, tilt and outline, or join their edges. In forming bands, use Skin to see the surface or expose the bands. Radius and tilt preview the assembly; Sections shows the original solved dimensions."
+          lede="Morph the ring from round to square while keeping each shelf’s size, tilt, gaps and joined sectors. Forming bands shows the moving strips and optional skin. Shape, size and tilt preview the assembly; Sections shows the original solved dimensions."
           specs={[
             ['Views', 'Target geometry · forming bands'],
             ['Baseline', 'Lab 2-5 double platform · thickness 16 · gap 100 · reach 83.2'],
             ['Tilt', '0–20° per layer · assembly preview'],
-            ['Radius', '70–130 per layer · axis to rim · assembly preview'],
+            ['Radius', '70–130 per layer · maximum axis-to-rim distance'],
+            ['Ring shape', 'Five steps from circle to square · fixed maximum radius'],
             ['Skin', 'Opacity 0–100% · default 35% · cutouts stay open'],
             ['Outline', '360° / 180° / 90° / 240° / two 90° sectors'],
             ['Joins', 'One sector or two opposite sectors'],
-            ['Forming', 'Four profiles · 20 base slots, split at outline edges'],
-            ['Limit', 'No circumferential forces; radius and tilt do not re-solve the sections'],
+            ['Forming', 'Four profiles · 20 base slots, split at gaps and square corners'],
+            ['Limit', 'No circumferential forces; shape, size and tilt do not re-solve the sections'],
           ]}
         >
           <SkinLayersBench />

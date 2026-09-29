@@ -1,7 +1,7 @@
 /** 原始截面逐帧绕轴扫掠。缺口由截面编制决定，不用目标几何插值冒充成形。
  * 倾斜是明确独立的空间装配映射；不反馈给二维引擎，也不代表三维力学验证。 */
 import { buildLayerProfiles, LAYER_PROFILE_KINDS, type LayerProfileKind } from './skin-layers-forming';
-import { layerAngles, layerCovers, layersJoin, LAYERS, type LayerStudy, type LayerMaterial, type LayerLine } from './skin-layers';
+import { layerAngles, layerCovers, layerRadius, layersJoin, LAYERS, type LayerStudy, type LayerMaterial, type LayerLine } from './skin-layers';
 import { ringPlateVerts } from './skin-solid';
 
 export const LAYER_COLORS = {
@@ -32,8 +32,8 @@ export function layerPoseOffset(s: LayerStudy, f: LayerFrame, k: number, i: numb
 }
 
 /** 逐层外缘尺寸的装配预览；固定中轴，不改原始节点或终态缓存。 */
-export function layerRadialOffset(s: LayerStudy, f: LayerFrame, k: number, i: number): number {
-  if (s.upper.radius === LAYERS.outer && s.lower.radius === LAYERS.outer) return 0;
+export function layerRadialOffset(s: LayerStudy, f: LayerFrame, k: number, i: number, angle = 0): number {
+  if (s.morph === 0 && s.upper.radius === LAYERS.outer && s.lower.radius === LAYERS.outer) return 0;
   const m = PROFILES[k].marks, kind = LAYER_PROFILE_KINDS[k];
   const lo = kind === 'double' ? m.mouthA : m.faceA;
   const hi = kind === 'double' ? m.mouthB : m.faceB;
@@ -42,7 +42,7 @@ export function layerRadialOffset(s: LayerStudy, f: LayerFrame, k: number, i: nu
   if (kind === 'solid') t = clamp((t * (LAYERS.gap + 2 * LAYERS.thickness) - LAYERS.thickness) / LAYERS.gap);
   if (kind === 'upper') t = 0;
   if (kind === 'lower') t = 1;
-  const reach = (1 - t) * (s.upper.radius - LAYERS.inner) + t * (s.lower.radius - LAYERS.inner);
+  const reach = (1 - t) * (layerRadius(s, 0, angle) - LAYERS.inner) + t * (layerRadius(s, 2, angle) - LAYERS.inner);
   return f.px[i] * 100 * (reach / (LAYERS.outer - LAYERS.inner) - 1);
 }
 
@@ -78,7 +78,7 @@ export function buildLayerSurface(s: LayerStudy, frames: readonly LayerFrame[], 
   const caps = new Map<number, number[]>();
   const point = (k: number, i: number, angle: number, axis = false) => {
     const f = frames[k];
-    const r = axis ? LAYERS.inner - 1 : LAYERS.inner + f.px[i] * 100 + layerRadialOffset(s, f, k, i);
+    const r = axis ? LAYERS.inner - 1 : LAYERS.inner + f.px[i] * 100 + layerRadialOffset(s, f, k, i, angle);
     const y = -f.py[i] * 100 + (pose ? layerPoseOffset(s, f, k, i, r, angle) : 0);
     return { x: r * Math.cos(rad(angle)), y, z: r * Math.sin(rad(angle)) };
   };

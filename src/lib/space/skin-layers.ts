@@ -1,13 +1,14 @@
 /** Lab 2-6 · 目标几何。只定义空间轮廓，不冒充皮肤求解终态。
- * 基准尺寸取既有双层台；保持俯视圆环足迹，台面为穿过中轴基准高度的斜平面。
+ * 基准尺寸取既有双层台；圆方五档保持外接半径，台面为穿过中轴基准高度的斜平面。
  * 覆盖范围用角度区间，网格显式插入区间端点（240° 不量化成 20 位）。 */
 import { RING } from './skin-ring';
 import { SPLIT_RING_LOBE, SPLIT_RING_TARGET, SPLIT_RING_W_END } from './skin-split-ring';
+import { squareMorphRadiusAt, SQUARE_MORPH } from './skin-square';
 import type { Vec3 } from '../linkage/solver3d';
 
 export const LAYER_OUTLINES = [
-  { key: 'full', label: '整圆', spans: [[0, 360]] },
-  { key: 'half', label: '半圆', spans: [[0, 180]] },
+  { key: 'full', label: '整环', spans: [[0, 360]] },
+  { key: 'half', label: '半环', spans: [[0, 180]] },
   { key: 'quarter', label: '四分之一', spans: [[0, 90]] },
   { key: 'thirds', label: '三分之二', spans: [[0, 240]] },
   { key: 'opposed', label: '分离双扇', spans: [[0, 90], [180, 270]] },
@@ -16,10 +17,12 @@ export type LayerOutline = (typeof LAYER_OUTLINES)[number]['key'];
 export const LAYER_JOINS = [{ key: 'single', label: '单区' }, { key: 'opposed', label: '对向双区' }] as const;
 export type LayerJoinMode = (typeof LAYER_JOINS)[number]['key'];
 export interface LayerShape { outline: LayerOutline; rotation: number; tilt: number; direction: number; radius: number }
-export interface LayerStudy { upper: LayerShape; lower: LayerShape; joinMode: LayerJoinMode; joinStart: number; joinSweep: number }
+export interface LayerStudy { upper: LayerShape; lower: LayerShape; morph: number; joinMode: LayerJoinMode; joinStart: number; joinSweep: number }
+export const LAYER_MORPHS = SQUARE_MORPH.LABELS.map((label, step) => ({ key: `m${step}`, label }));
 export const LAYERS = { inner: RING.RADIUS_DEF, outer: RING.RADIUS_DEF + SPLIT_RING_TARGET,
   thickness: SPLIT_RING_LOBE, gap: SPLIT_RING_W_END, maxTilt: 20, minRadius: 70, maxRadius: 130 } as const;
 export const layerBaseline = (): LayerStudy => ({
+  morph: 0,
   upper: { outline: 'full', rotation: 0, tilt: 0, direction: 0, radius: LAYERS.outer },
   lower: { outline: 'full', rotation: 0, tilt: 0, direction: 180, radius: LAYERS.outer }, joinMode: 'single', joinStart: 20, joinSweep: 0,
 });
@@ -65,8 +68,14 @@ export function layerHeight(s: LayerStudy, surface: number, r: number, angle: nu
   return center + (surface % 2 === 0 ? -1 : 1) * LAYERS.thickness / 2
     + r * Math.tan(rad(layer.tilt)) * Math.cos(rad(angle - layer.direction));
 }
-/** 外缘半径逐层独立；厚台中间侧壁连接两层各自的外缘。 */
-export const layerRadius = (s: LayerStudy, surface: number): number => (surface < 2 ? s.upper : s.lower).radius;
+/** 同一外接半径下的圆方轮廓，保持现有倾角/尺寸的净空边界。
+ * 默认圆档直接返回原值，避免引入三角函数舍入造成旧路径漂移。 */
+export function layerRadius(s: LayerStudy, surface: number, angle = 0): number {
+  const radius = (surface < 2 ? s.upper : s.lower).radius;
+  if (s.morph === 0) return radius;
+  return radius * squareMorphRadiusAt(rad(angle), s.morph, 1)
+    / squareMorphRadiusAt(Math.PI / 4, s.morph, 1);
+}
 export type LayerMaterial = 'upper' | 'lower' | 'join';
 export interface LayerColumn { top: number; bottom: number; material: LayerMaterial }
 export function layerColumns(s: LayerStudy, angle: number): LayerColumn[] {
@@ -105,7 +114,7 @@ export function buildLayerGeometry(s: LayerStudy): { meshes: Record<LayerMateria
   const raw = { upper: { v: [] as number[], i: [] as number[] }, lower: { v: [] as number[], i: [] as number[] }, join: { v: [] as number[], i: [] as number[] } };
   const lines: LayerLine[] = [];
   const point = (surface: number, r: number, angle: number): Vec3 => {
-    const radius = r === LAYERS.outer ? layerRadius(s, surface) : r;
+    const radius = r === LAYERS.outer ? layerRadius(s, surface, angle) : r;
     return { x: radius * Math.cos(rad(angle)), y: layerHeight(s, surface, radius, angle), z: radius * Math.sin(rad(angle)) };
   };
   const quad = (m: LayerMaterial, a: Vec3, b: Vec3, c: Vec3, d: Vec3) => {

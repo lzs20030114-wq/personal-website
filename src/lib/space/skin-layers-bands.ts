@@ -1,6 +1,6 @@
 /** Lab 2-6 的成形读法：独立的窄织物带围成一圈，沿用 Lab 2-5 的挤出与条纹。 */
 import { buildLayerProfiles, LAYER_PROFILE_KINDS } from './skin-layers-forming';
-import { layerAngles, LAYERS, type LayerStudy, type LayerLine } from './skin-layers';
+import { layerAngles, LAYERS, LAYER_MORPHS, type LayerStudy, type LayerLine } from './skin-layers';
 import { layerPoseOffset, layerRadialOffset, layerProfileAt, type LayerFrame } from './skin-layers-surface';
 import { bandVerts, bandTriIndex } from '../linkage/skin';
 import type { Vec3 } from '../linkage/solver3d';
@@ -19,6 +19,8 @@ const mesh = (g: { verts: Float32Array; idx: Uint32Array }, c: typeof GREEN | ty
 /** 20 等分为基准；真实轮廓/连接边界落在槽内时分开该槽，防止 5° 独占区消失。 */
 export function layerBandPlan(s: LayerStudy) {
   const edges = new Set(Array.from({ length: RING.COUNT + 1 }, (_, i) => i * 360 / RING.COUNT));
+  // 尖方角必须是膜的真实边界，不能在一块直纹膜中间被削成斜角。
+  if (s.morph === LAYER_MORPHS.length - 1) for (const a of [45, 135, 225, 315]) edges.add(a);
   const aa = layerAngles(s), kinds = aa.slice(0, -1).map((a, i) => layerProfileAt(s, (a + aa[i + 1]) / 2));
   for (let i = 0; i < kinds.length; i++) if (kinds[i] !== kinds[(i + kinds.length - 1) % kinds.length]) edges.add(aa[i]);
   const sorted = [...edges].sort((a, b) => a - b);
@@ -48,10 +50,23 @@ export function buildLayerBands(s: LayerStudy, frames: readonly LayerFrame[], po
     const topo = topology.get(n)!;
     const verts = fillSolidVerts(f.px.subarray(start, end), f.py.subarray(start, end), n, 0, band.depth, RING.THICK, 100, undefined, 0, 0, ring);
     const c = Math.cos(ring.angle), sn = Math.sin(ring.angle);
+    // 固定带宽，按剖口真实方位取挑出。只按带中线取值会让方边出现锯齿。
+    // 切向距离远小于半径，四次固定点更新足以把角度与径向位置对齐。
+    const radialAt = (base: number, tangent: number, index: number) => {
+      let r = base + layerRadialOffset(s, f, k, index, band.angle);
+      if (s.morph > 0) for (let pass = 0; pass < 4; pass++)
+        r = base + layerRadialOffset(s, f, k, index, band.angle + Math.atan2(tangent, r) / RAD);
+      return r;
+    };
     // 半径只改变平台向外的挑出；固定立杆、轴和带宽不跟着放大。
     for (let v = 0; v < 4 * n; v++) {
-      const p = v * 3, d = layerRadialOffset(s, f, k, start + v % n);
-      verts[p] += d * c; verts[p + 2] += d * sn;
+      const p = v * 3, d = layerRadialOffset(s, f, k, start + v % n, band.angle);
+      if (s.morph === 0) { verts[p] += d * c; verts[p + 2] += d * sn; }
+      else {
+        const tangent = -verts[p] * sn + verts[p + 2] * c;
+        const r = radialAt(verts[p] * c + verts[p + 2] * sn, tangent, start + v % n);
+        verts[p] = r * c - tangent * sn; verts[p + 2] = r * sn + tangent * c;
+      }
     }
     // 两片直纹膜从本带的外侧剖口伸到各自扇区边界。只填带间缝；遇轮廓
     // 缺口立即停止，不将不同截面的节点强行配对，也不跨过被切掉的台面。
@@ -62,7 +77,10 @@ export function buildLayerBands(s: LayerStudy, frames: readonly LayerFrame[], po
         const p = ((side < 0 ? n : 0) + i) * 3;
         const x = verts[p], y = verts[p + 1], z = verts[p + 2], r = x * c + z * sn;
         edge.push({ x, y: y + (pose ? layerPoseOffset(s, f, k, start + i, Math.hypot(x, z), Math.atan2(z, x) / RAD) : 0), z });
-        boundary.push({ x: r * Math.cos(a), y: y + (pose ? layerPoseOffset(s, f, k, start + i, r, angle) : 0), z: r * Math.sin(a) });
+        // 沿边界自己的方位取轮廓，圆方档都与目标图同源；保留挤出厚度。
+        const edgeAngle = s.morph === 0 ? band.angle : Math.atan2(z, x) / RAD;
+        const boundaryR = r + layerRadialOffset(s, f, k, start + i, angle) - layerRadialOffset(s, f, k, start + i, edgeAngle);
+        boundary.push({ x: boundaryR * Math.cos(a), y: y + (pose ? layerPoseOffset(s, f, k, start + i, boundaryR, angle) : 0), z: boundaryR * Math.sin(a) });
       }
       const center = [...edge, ...boundary].reduce((sum, p) => ({ x: sum.x + p.x / (2 * n), y: sum.y + p.y / (2 * n), z: sum.z + p.z / (2 * n) }), { x: 0, y: 0, z: 0 });
       membranes.push({ verts: bandVerts(edge, boundary), idx: Uint32Array.from(bandTriIndex(n)), center });
@@ -78,7 +96,7 @@ export function buildLayerBands(s: LayerStudy, frames: readonly LayerFrame[], po
       if (i < start || j >= end || (def.seam !== undefined && (i - def.seam) * (j - def.seam) < 0)) continue;
       for (const tangent of [-band.depth / 2, band.depth / 2]) {
         const point = (index: number) => {
-          const p = placePoint(LAYERS.inner + f.px[index] * 100 + layerRadialOffset(s, f, k, index), -f.py[index] * 100, tangent, ring);
+          const p = placePoint(radialAt(LAYERS.inner + f.px[index] * 100, tangent, index), -f.py[index] * 100, tangent, ring);
           if (pose) p.y += layerPoseOffset(s, f, k, index, Math.hypot(p.x, p.z), Math.atan2(p.z, p.x) / RAD);
           return p;
         };
