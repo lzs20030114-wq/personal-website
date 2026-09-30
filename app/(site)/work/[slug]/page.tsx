@@ -198,13 +198,13 @@ const SLOT_COPY: Record<string, { en: SlotCopy; zh: SlotCopy }> = {
       video: 'Simulation video — the domestic human–cat scenario',
       heroLabel: 'hero image · to be supplied',
       heroDesc: 'Hero image',
-      heroLive: '[stand-in] Lab 2-7 sixteen-ring floor · live',
+      heroLive: '[stand-in] Lab 2-8 sixteen-ring floor · live',
     },
     zh: {
       video: '仿真演示视频——居家人猫场景',
       heroLabel: '主图 · 待供图',
       heroDesc: '主图',
-      heroLive: '[顶替] Lab 2-7 十六环场地活件',
+      heroLive: '[顶替] Lab 2-8 十六环场地活件',
     },
   },
 };

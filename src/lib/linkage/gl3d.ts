@@ -440,7 +440,8 @@ export class FlatRenderer {
 
   addMesh(id: string, data: Float32Array): void {
     const gl = this.gl;
-    const buf = gl.createBuffer() as WebGLBuffer;
+    // 同名更新只重传顶点，保留缓冲区；台架切换形态时会重复注册同一 id。
+    const buf = this.meshes.get(id)?.buf ?? (gl.createBuffer() as WebGLBuffer);
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
     this.meshes.set(id, { buf, n: data.length / 6 });
@@ -561,7 +562,7 @@ export class FlatRenderer {
   /** 蒙皮网格（bakeSkinned 产物，步长 7 float） */
   addSkinnedMesh(id: string, data: Float32Array): void {
     const gl = this.gl;
-    const buf = gl.createBuffer() as WebGLBuffer;
+    const buf = this.skins.get(id)?.buf ?? (gl.createBuffer() as WebGLBuffer);
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
     this.skins.set(id, { buf, n: data.length / 7 });

@@ -70,14 +70,14 @@ export function StageRotator() {
 
   // 自动轮播
   useEffect(() => {
-    if (!rotating) return;
+    if (!rotating || reduced) return;
     const t = setTimeout(() => activate((curRef.current + 1) % SLIDES.length), DWELL_MS);
     return () => clearTimeout(t);
-  }, [rotating, cur, activate]);
+  }, [rotating, reduced, cur, activate]);
 
   // 预挂载下一片（停在待入位，供转场使用）
   useEffect(() => {
-    if (!rotating) return;
+    if (!rotating || reduced) return;
     const next = (cur + 1) % SLIDES.length;
     if (mounted.includes(next)) return;
     const t = setTimeout(
@@ -85,14 +85,18 @@ export function StageRotator() {
       PREMOUNT_MS,
     );
     return () => clearTimeout(t);
-  }, [cur, rotating, mounted]);
+  }, [cur, rotating, reduced, mounted]);
 
   // 台架上有指针动作 → 暂停轮播，静置后恢复
   const hold = useCallback((): void => {
     setRotating(false);
     clearTimeout(holdRef.current);
-    holdRef.current = setTimeout(() => setRotating(true), RESUME_MS);
-  }, []);
+    if (reduced || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    holdRef.current = setTimeout(() => {
+      // 等待期间系统偏好也可能改变，恢复前再确认一次。
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) setRotating(true);
+    }, RESUME_MS);
+  }, [reduced]);
   useEffect(() => () => clearTimeout(holdRef.current), []);
 
   const slide = SLIDES[cur];

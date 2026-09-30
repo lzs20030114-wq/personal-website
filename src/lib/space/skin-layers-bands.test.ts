@@ -51,7 +51,7 @@ describe('多层台 · 分开的窄带', () => {
       const changed = buildLayerBands(s, states.map(f => ({ ...f, px: Float64Array.from(f.px, x => x * .8) })), true, false);
       expect(changed.membranes[strips].verts).not.toEqual(caps[0].verts);
     }
-  });
+  }, 20000); // 15 组形态 × 12 个侧面的密集覆盖检查；保留判据，允许全套并行运行。
 
   it('半环端面封住厚台内部，但不填满双层之间的设计空隙；整环没有内部隔墙', async () => {
     const { states } = await createSkinTerminalLoader()(buildLayerProfiles());

@@ -89,6 +89,10 @@
 - **人像位**：稿内 image-slot + duotone 机件；本站以 g200 底 + 点阵占位块落地（主页无图片机制），作者供图后按 §1 duotone-g 接入。
 - 统计条仍用当前实测数（§4 纪律）；Stage 默认位仍空占位（07-24 拍板不变）；引擎手感常量数值原样。
 
+#### 6.1.1 首页 About 文案入位（2026-09-29）
+
+作者本轮明确授权从个人记忆与资料总结自我介绍并填入首页第二屏。`HomeScreens.tsx` 的 S1 复用现有布局与翻屏机制，摘要换成英文三段（清华美院环境设计背景、机械装置与空间仿真、未来实验室智慧睡眠研究实习），Contact 复用既有邮箱，Currently / Approach / Tools 换成有出处的内容。标题改为 “From spaces to interactions.”。摘要撤供稿虚线框，正文用 15px / 1.65、行长上限 60ch；深色渐变、点阵、双栏和人像席位保留。原始出处、中文对照及证据边界见根目录 `首页自我介绍_文案与依据.md`。本轮授权只覆盖该介绍，独立 `/about` 与案例正文不动。
+
 ### 6.2 case / log 深色化 + 转场进入段落地（2026-07-27）
 
 迭代稿 standalone 内含三页——除 pgHome 外还有 **pgCase / pgLog 深色改版**与转场进入段（caseInit/logInit 的 clip 揭开）。§6.1 只落地了主页；本次补齐 case（`/work/[slug]`）与 log（`/archive`）的深色版并接通转场。源出处：从用户上传 standalone 解包的 pgCase/pgLog（DesignSync 授权在云端失效，无 .dc.html 源，实现依据已在代码中固化）。

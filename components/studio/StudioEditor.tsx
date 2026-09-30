@@ -152,7 +152,8 @@ export function StudioEditor({
 
   function addEntry() {
     const item = { id: nextId(), entry: blankEntry() };
-    setItems((prev) => [item, ...prev]);
+    // 日期倒序由 shown / sortEntries 负责；同日新条目排在末尾，避免挤动既有日志锚点。
+    setItems((prev) => [...prev, item]);
     setSelected(item.id);
     setResult(null);
   }

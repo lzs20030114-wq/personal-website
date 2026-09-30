@@ -1557,7 +1557,7 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
                   color: 'var(--g100)',
                 }}
               >
-                Builder first, <span style={{ color: 'var(--g400)' }}>researcher by method.</span>
+                From spaces to <span style={{ color: 'var(--g400)' }}>interactions.</span>
               </h2>
               <svg data-row width={230} height={8} style={{ display: 'block', overflow: 'visible' }}>
                 <line
@@ -1579,29 +1579,46 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
                 <div className="flex flex-col" style={{ gap: 16 }}>
                   <div
                     style={{
-                      border: '1px dashed oklch(0.71 0.098 145 / 0.45)',
-                      padding: '12px 16px',
-                      fontSize: 13,
+                      fontSize: 15,
+                      lineHeight: 1.65,
                       color: S1_BODY,
                       maxWidth: '60ch',
                     }}
                   >
-                    <span style={{ fontWeight: 800, color: 'var(--g400)' }}>[待作者供稿]</span> 摘要 —
-                    两三句：背景、方向、申请目标。
+                    <p style={{ margin: '0 0 12px' }}>
+                      I’m Zishuo Li, an environmental design graduate of Tsinghua University’s
+                      Academy of Arts &amp; Design. I explore how people relate to objects and
+                      spaces that respond to them.
+                    </p>
+                    <p style={{ margin: '0 0 12px' }}>
+                      My projects include Reincarnation Machine, a mechanical installation
+                      exploring how behavior gives a machine its character, and spatial
+                      simulations of environments that change through use. I work between
+                      parametric models and physical prototypes to develop these ideas.
+                    </p>
+                    <p style={{ margin: 0 }}>
+                      During my design research internship at Tsinghua’s Future Lab, I contributed
+                      literature and competitor research, survey design, and interview planning
+                      to the 2030 Sleep Foresight Study with DeRucci.
+                    </p>
                   </div>
                   <div className="grid grid-cols-2" style={{ borderTop: HAIR_LIGHT }}>
                     <div style={{ padding: '12px 16px 0 0', borderRight: HAIR_LIGHT }}>
                       <div style={{ ...CELL_LABEL, color: 'var(--g100)' }}>Contact</div>
                       <div style={{ fontSize: 13, lineHeight: 1.55, color: S1_BODY }}>
-                        [email placeholder]
-                        <br />
-                        GitHub · plain URLs · no password
+                        <a
+                          href="mailto:lzs20030114@gmail.com"
+                          style={{ color: 'inherit', overflowWrap: 'anywhere' }}
+                        >
+                          lzs20030114@gmail.com
+                        </a>
                       </div>
                     </div>
                     <div style={{ padding: '12px 0 0 16px' }}>
                       <div style={{ ...CELL_LABEL, color: 'var(--g100)' }}>Currently</div>
                       <div style={{ fontSize: 13, lineHeight: 1.55, color: S1_BODY }}>
-                        <span style={{ color: 'var(--rose)' }}>●</span> [待作者供稿] 状态一行
+                        <span style={{ color: 'var(--rose)' }} aria-hidden="true">●</span>{' '}
+                        Computational design &amp; human–computer interaction
                       </div>
                     </div>
                   </div>
@@ -1610,16 +1627,15 @@ export function HomeScreens({ works, logs }: { works: HomeWork[]; logs: HomeLog[
                     style={{ marginTop: 'auto', borderTop: HAIR_LIGHT }}
                   >
                     <div style={{ padding: '12px 16px 0 0', borderRight: HAIR_LIGHT }}>
-                      <div style={{ ...CELL_LABEL, color: 'var(--g100)' }}>Role</div>
+                      <div style={{ ...CELL_LABEL, color: 'var(--g100)' }}>Approach</div>
                       <div style={{ fontSize: 13, lineHeight: 1.55, color: S1_BODY }}>
-                        Concept &amp; research design · mechanism &amp; fabrication · electronics &amp;
-                        behavior · HRI study
+                        Research through design · parametric modeling · physical prototyping
                       </div>
                     </div>
                     <div style={{ padding: '12px 0 0 16px' }}>
                       <div style={{ ...CELL_LABEL, color: 'var(--g100)' }}>Tools</div>
                       <div style={{ fontSize: 13, lineHeight: 1.55, color: S1_BODY }}>
-                        Rhino / Grasshopper · SLS / FDM / resin · ESP32 · ELAN · TypeScript solvers
+                        Rhino / Grasshopper · Python · 3D printing
                       </div>
                     </div>
                   </div>
