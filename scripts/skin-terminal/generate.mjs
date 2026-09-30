@@ -4,9 +4,12 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
+import { materializeSkinTerminal } from './cache.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const out = resolve(root, 'public/skin-terminal');
+// Vercel 的 Next.js 构建会保留 .next/cache/**，public/ 下的产物不会跨部署恢复。
+const cache = resolve(root, '.next/cache/skin-terminal');
 const bundlePath = resolve(root, 'src/lib/space/skin-terminal.generated.json');
 const check = process.argv.includes('--check');
 const server = await createServer({ root, configFile: false, server: { middlewareMode: true, watch: null }, appType: 'custom' });
@@ -23,6 +26,8 @@ try {
   const unique = new Map(skinTerminalCatalog().map((input) => [skinTerminalSignature(input), input]));
   if (!check) mkdirSync(out, { recursive: true });
   let generated = 0;
+  let restored = 0;
+  let local = 0;
   let bytes = 0;
   const bundled = {};
   const started = performance.now();
@@ -31,17 +36,21 @@ try {
     const key = createHash('sha256').update(`${revision}\n${signature}`).digest('hex');
     const path = resolve(out, `${key}.json`);
     const nodes = input.spec.reduce((n, seg) => n + seg[1], 0);
-    if (!existsSync(path)) {
-      if (check) throw new Error(`Missing precomputed skin state: ${key}`);
-      const result = solveSkinTerminal([{ spec: input.spec, opts: input.opts }]);
-      const json = JSON.stringify(storeSkinTerminal(result.states[0]));
-      restoreSkinTerminal(JSON.parse(json), nodes, SKIN.STEPS);
-      writeFileSync(path, json);
+    const { json, source } = materializeSkinTerminal({
+      outputPath: path,
+      cachePath: resolve(cache, `${key}.json`),
+      check,
+      validate: (value) => restoreSkinTerminal(value, nodes, SKIN.STEPS),
+      generate: () => {
+        const result = solveSkinTerminal([{ spec: input.spec, opts: input.opts }]);
+        return JSON.stringify(storeSkinTerminal(result.states[0]));
+      },
+    });
+    if (source === 'generated') {
       generated++;
       if (generated % 10 === 0) console.log(`[skin-terminal] generated ${generated}/${unique.size}`);
-    }
-    const json = readFileSync(path, 'utf8');
-    restoreSkinTerminal(JSON.parse(json), nodes, SKIN.STEPS);
+    } else if (source === 'cache') restored++;
+    else local++;
     bundled[signature] = JSON.parse(json);
     bytes += Buffer.byteLength(json);
   }
@@ -58,7 +67,7 @@ try {
   if (check) {
     if (previousBundle !== bundleJson) throw new Error('Missing or stale bundled skin terminal states');
   } else if (previousBundle !== bundleJson) writeFileSync(bundlePath, bundleJson);
-  console.log(`[skin-terminal] ${generated} generated, ${(bytes / 1024 / 1024).toFixed(2)} MiB total, ${((performance.now() - started) / 1000).toFixed(1)}s`);
+  console.log(`[skin-terminal] ${generated} generated, ${restored} restored from build cache, ${local} reused locally, ${(bytes / 1024 / 1024).toFixed(2)} MiB total, ${((performance.now() - started) / 1000).toFixed(1)}s`);
 } finally {
   await server.close();
 }
