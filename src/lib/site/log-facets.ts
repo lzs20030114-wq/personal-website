@@ -55,6 +55,13 @@ export const PROJECT_GROUPS: readonly ProjectGroup[] = [
     buckets: ['Space'],
   },
   {
+    key: 'project-iii',
+    // 独立开题讨论；此前智能床实习继续归 other work，不追溯改属。
+    label: { en: 'Project III · Sleep Research (in development)', zh: '项目三 · 睡眠研究（开题中）' },
+    short: { en: 'Project III', zh: '项目三' },
+    buckets: ['Sleep research'],
+  },
+  {
     key: 'other-work',
     // 智能床按作者拍板暂列 other work，不计为主项目。
     label: { en: 'Other work · Smart Bed', zh: '其他工作 · 智能床' },

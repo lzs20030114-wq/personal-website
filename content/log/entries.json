@@ -1,5 +1,412 @@
 [
   {
+    "date": "2026-09-30",
+    "lead": {
+      "en": "Added adjustable connection depth without shrinking the upper and lower platforms.",
+      "zh": "让局部厚台的连接深度可调，同时保留上下平台大小。"
+    },
+    "body": {
+      "en": "- The connection can occupy part of the radial depth or be removed entirely.\n- Kept the outer platform edges fixed and updated the membrane boundaries.\n- Intermediate depths are an assembly preview based on existing sections, not newly validated forming recipes.",
+      "zh": "- 连接可只占径向深度的一部分，也可完全取消。\n- 保持外侧平台边缘不动，并同步调整膜的边界。\n- 中间深度是基于已有截面的装配预览，还不是新验证过的成形配方。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-09-30",
+    "lead": {
+      "en": "Reused validated forming states between builds instead of solving them all again.",
+      "zh": "让构建复用已校验的成形终态，避免整批重复求解。"
+    },
+    "body": {
+      "en": "- Added the forming states to the framework’s retained build cache.\n- Kept version and input checks so changed or damaged states are recalculated.\n- Retained the full test and build steps; the cloud speedup still depends on the cache actually being restored.",
+      "zh": "- 把成形终态纳入框架会保留的构建缓存。\n- 继续检查版本和输入，改动或损坏的数据仍会重算。\n- 完整测试和构建步骤继续保留，云端加速仍取决于缓存是否实际恢复。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-09-29",
+    "lead": {
+      "en": "Assembled the multilayer form from distinct strips driven by real section simulations.",
+      "zh": "用真实截面仿真驱动独立条带，装配多层形体。"
+    },
+    "body": {
+      "en": "- Added upper-only and lower-only sections alongside the two-level and thick sections.\n- Replaced the continuous surface display with visible strips and membranes between them.\n- Tilt, layer size and circular-to-square changes remain assembly mappings; they do not feed back into a coupled 3D solver.",
+      "zh": "- 在双层及厚台截面之外，补入仅上层和仅下层的截面。\n- 把连续表面改为可辨认的独立条带，并补上带间及暴露端面的膜。\n- 倾斜、逐层大小和圆方变化仍是装配映射，没有反馈到耦合的三维求解器。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-09-29",
+    "lead": {
+      "en": "Reviewed recent sleep research to compare methods, tools and deployment questions.",
+      "zh": "检索近期睡眠研究，比较方法、工具和部署问题。"
+    },
+    "body": {
+      "en": "- Organized an index of 18 studies and recorded how deeply each source had been checked.\n- Shifted the project priority toward research and design evidence rather than a complete consumer product.\n- Kept hotel sensing and monitoring transparency as candidates; the tutor’s sensor-placement example was not a selected topic.",
+      "zh": "- 整理 18 项研究索引，并记录每项来源的核查深度。\n- 把项目重点转向研究与设计能力的证据，降低完整消费产品的优先级。\n- 酒店感知和监测可理解性仍是候选；老师的传感器布置例子没有被当作已定题目。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep research", "zh": "睡眠研究" }, "variant": "outline" },
+      { "label": { "en": "Research", "zh": "调研" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-09-29",
+    "lead": {
+      "en": "Reworked the Lab layout so models and controls fit together on screen.",
+      "zh": "重排 Lab 版式，让模型和控制区在同屏可见。"
+    },
+    "body": {
+      "en": "- Compared the earlier desktop and phone views before adjusting the directory and columns.\n- Returned the preview to the existing visual rules after review.\n- Kept the mobile document flow and added the shared language switch.",
+      "zh": "- 先对比原有桌面及手机页面，再调整目录与分栏。\n- 检查后让预览回到已有视觉规范。\n- 保留手机上的页面流，并补上共用语言切换。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "image",
+        "src": "/log/site-20260929-original-current-1280.png",
+        "alt": {
+          "en": "Original desktop layout before the revision, captured on 28 September.",
+          "zh": "9 月 28 日记录的改版前桌面布局原图。"
+        },
+        "caption": {
+          "en": "Original desktop layout before the revision, captured on 28 September.",
+          "zh": "9 月 28 日记录的改版前桌面布局原图。"
+        },
+        "width": 1265,
+        "height": 791
+      },
+      {
+        "kind": "image",
+        "src": "/log/site-20260929-original-current-mobile.png",
+        "alt": {
+          "en": "Original phone layout before the revision, captured on 28 September.",
+          "zh": "9 月 28 日记录的改版前手机布局原图。"
+        },
+        "caption": {
+          "en": "Original phone layout before the revision, captured on 28 September.",
+          "zh": "9 月 28 日记录的改版前手机布局原图。"
+        },
+        "width": 375,
+        "height": 812
+      },
+      {
+        "kind": "image",
+        "src": "/log/site-20260929-original-header-simplified-desktop.png",
+        "alt": {
+          "en": "Original desktop screenshot after simplifying the directory controls on 29 September.",
+          "zh": "9 月 29 日简化目录操作后的桌面截图原图。"
+        },
+        "caption": {
+          "en": "Original desktop screenshot after simplifying the directory controls on 29 September.",
+          "zh": "9 月 29 日简化目录操作后的桌面截图原图。"
+        },
+        "width": 1265,
+        "height": 712
+      },
+      {
+        "kind": "image",
+        "src": "/log/site-20260929-original-header-simplified-mobile.png",
+        "alt": {
+          "en": "Original phone screenshot after simplifying the directory controls on 29 September.",
+          "zh": "9 月 29 日简化目录操作后的手机截图原图。"
+        },
+        "caption": {
+          "en": "Original phone screenshot after simplifying the directory controls on 29 September.",
+          "zh": "9 月 29 日简化目录操作后的手机截图原图。"
+        },
+        "width": 375,
+        "height": 812
+      }
+    ]
+  },
+  {
+    "date": "2026-09-29",
+    "lead": {
+      "en": "Adjusted the home-page turning response and connected the Lab catalog to direct entries.",
+      "zh": "调整主页翻幕响应，并让实验目录可以直达台架。"
+    },
+    "body": {
+      "en": "- Added visible feedback while wheel input builds toward the page-turn threshold.\n- Connected catalog variants to their registered destinations.\n- Placed the supplied introduction and signature in the home-page layout.",
+      "zh": "- 滚轮输入达到翻幕阈值之前，加入可见的蓄力反馈。\n- 让目录中的形态指向对应登记入口。\n- 把作者的自我介绍和署名放入主页版式。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-09-28",
+    "lead": {
+      "en": "Built a target model for independently tilted, incomplete platform layers.",
+      "zh": "建立上下层可分别倾斜和留缺口的目标模型。"
+    },
+    "body": {
+      "en": "- Added separate layer outlines and local thick connections.\n- Labeled this view as target geometry while investigating which sections the forming mechanism could produce.",
+      "zh": "- 增加独立的层轮廓和局部厚台连接。\n- 明确这是目标几何，同时研究现有成形机制能产生哪些截面。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-09-28",
+    "lead": {
+      "en": "Solved real two-level and thick-platform sections for the multilayer target.",
+      "zh": "为多层目标求解真实的双层和厚台截面。"
+    },
+    "body": {
+      "en": "- Redistributed the material and used the same contraction ratio for both regions.\n- Compared the solved outlines with the target and checked the full forming process.\n- Success for these two sections did not establish arbitrary tilted 3D forms.",
+      "zh": "- 重新分配材料，让两类区域使用相同收缩比例。\n- 对照目标检查实际轮廓，同时检查完整成形过程。\n- 两种截面成功还不能证明任意倾斜立体形态都能成形。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "image",
+        "src": "/log/space-20260928-original-process.png",
+        "alt": {
+          "en": "Original forming-process plot, sampled every 100 steps; two section types, not two whole units.",
+          "zh": "原始成形过程图，每 100 步取样；对比两类截面，不是两个完整单元。"
+        },
+        "caption": {
+          "en": "Original forming-process plot, sampled every 100 steps; two section types, not two whole units.",
+          "zh": "原始成形过程图，每 100 步取样；对比两类截面，不是两个完整单元。"
+        },
+        "width": 1200,
+        "height": 1380
+      },
+      {
+        "kind": "image",
+        "src": "/log/space-20260928-original-terminal.png",
+        "alt": {
+          "en": "Original terminal-section comparison with target lines; shared origin and scale, without smoothing.",
+          "zh": "原始终态截面与目标线对照；原点和比例相同，未作平滑。"
+        },
+        "caption": {
+          "en": "Original terminal-section comparison with target lines; shared origin and scale, without smoothing.",
+          "zh": "原始终态截面与目标线对照；原点和比例相同，未作平滑。"
+        },
+        "width": 900,
+        "height": 570
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "Recorded solver readings from the 28 September section study; display units, not real-world dimensions.",
+          "zh": "9 月 28 日截面研究存档中的求解读数；单位为展示单位，不是现实尺寸。"
+        },
+        "head": [
+          { "en": "Measure", "zh": "读数" },
+          { "en": "Two-level section", "zh": "双层截面" },
+          { "en": "Thick section", "zh": "厚台截面" }
+        ],
+        "rows": [
+          [{ "en": "Height", "zh": "总高" }, "131.999986", "131.999959"],
+          [{ "en": "Reach", "zh": "外端挑出" }, "83.369350", "83.220442"],
+          [{ "en": "Mean silhouette error", "zh": "剪影平均差" }, "0.380958", "0.188147"],
+          [{ "en": "Locked connections", "zh": "锁定连接" }, "33 / 33", "10 / 10"],
+          [{ "en": "Maximum sampled self-intersection span", "zh": "采样最大自交跨度" }, "0", "0"]
+        ]
+      }
+    ]
+  },
+  {
+    "date": "2026-09-28",
+    "lead": {
+      "en": "Made skipping formation restore a saved terminal state while keeping the camera responsive.",
+      "zh": "让跳过成形直接恢复已存终态，同时保留相机操作。"
+    },
+    "body": {
+      "en": "- After a reported loading failure, corrected the waiting path that had stopped drawing the camera.\n- Delivered the validated terminal data with the bench code rather than depending on a separate browser request.\n- Kept replay, cancellation and normal formation playback working through the existing controls.",
+      "zh": "- 用户反馈加载失败后，修正等待分支停止绘制相机的问题。\n- 把已校验终态与台架代码一同交付，减少对独立浏览器请求的依赖。\n- 仍通过已有控件完成重播、取消及正常成形播放。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-09-27",
+    "lead": {
+      "en": "Clarified that the emerging passages and platforms are intended for cats.",
+      "zh": "明确当前组合中的通道、平台和停留空间面向猫。"
+    },
+    "body": {
+      "en": "- Separated human-triggered activation from the space that the forming units provide for cats.\n- Focused the next study on a few local pairings rather than an exhaustive catalog.\n- The geometry alone does not establish access, preference or actual use by cats.",
+      "zh": "- 区分由人的行为启动单元，与单元为猫构成的空间。\n- 下一轮集中检查少量局部配合，不做形态组合穷举。\n- 仅有模型几何还不能证明猫的可达性、偏好或实际使用。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Research", "zh": "调研" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-09-27",
+    "lead": {
+      "en": "Made a ring with the same two-level platform section all the way around.",
+      "zh": "建立整圈截面一致的双层平台环。"
+    },
+    "body": {
+      "en": "- Repeated the fully split section from the existing series around the circumference.\n- Kept the older gradual splitting arrangement available.\n- Reused the existing solved section and its terminal state.",
+      "zh": "- 沿圆周重复已有系列中完全分开的双层截面。\n- 原来的渐变捏分编排继续保留。\n- 复用已求解截面和终态数据。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-09-27",
+    "lead": {
+      "en": "Reopened Project III around the broader future sleep environment.",
+      "zh": "围绕未来睡眠环境重新打开项目三的选题范围。"
+    },
+    "body": {
+      "en": "- Included travel, hotels, workplaces and different household situations rather than assuming a bed as the final medium.\n- Separated the team’s research background from the personal question and new work still to be done.\n- The scope remained exploratory and did not constitute a final topic.",
+      "zh": "- 把差旅、酒店、办公和不同家庭情境纳入比较，没有预设最终载体是一张床。\n- 区分团队研究背景与个人还需确定的问题及新增工作。\n- 范围仍用于开题讨论，没有定题。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep research", "zh": "睡眠研究" }, "variant": "outline" },
+      { "label": { "en": "Research", "zh": "调研" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-09-27",
+    "lead": {
+      "en": "Added a home-page Lab catalog with the same hierarchy as the Lab page.",
+      "zh": "在主页加入与 Lab 页层级一致的实验目录。"
+    },
+    "body": {
+      "en": "- Grouped the catalog by project, bench and available variants.\n- Kept it connected to the existing registry rather than maintaining another list by hand.",
+      "zh": "- 按项目、台架和可用形态组织目录。\n- 读取已有登记表，没有另维护一份手工名单。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-09-21",
+    "lead": {
+      "en": "Fixed the fabric bridges so they connect platforms without closing the cavity.",
+      "zh": "修正接缝织物，让平台相连而腔口保持敞开。"
+    },
+    "body": {
+      "en": "- The first bridge treated the entire split unit as one tall platform and blocked the opening.\n- Connected upper platforms to upper platforms and lower ones to lower ones.\n- Retained the square-family step where the two ranges cannot meet flush.",
+      "zh": "- 首版把整个捏分单元当成一块高平台，织物因而挡住开口。\n- 改成上板接上板、下板接下板。\n- 方环量程不足以齐平的接缝仍保留台阶，没有掩盖。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-09-20",
+    "lead": {
+      "en": "Defined unit combinations through adjoining platform heights rather than swapping whole shapes.",
+      "zh": "通过相邻平台的高度配合定义单元组合，而不是只换整台形态。"
+    },
+    "body": {
+      "en": "- Corrected the first interpretation of the combination study.\n- Used rises, slopes and facing slit openings to construct the proposed spatial arrangements.\n- Checked circular and square families separately because their available height ranges differ.",
+      "zh": "- 纠正首版对组合研究的理解。\n- 用起伏、坡面和相对的缝口构造空间关系。\n- 圆环与方环的高度量程不同，因此分别核查。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-09-17",
+    "lead": {
+      "en": "Outlined a rubber-sheet experiment to test whether preprocessing can encode the form.",
+      "zh": "提出用橡胶片实体实验检验预处理能否编码形态。"
+    },
+    "body": {
+      "en": "- Following the tutor’s suggestion, considered two bonded sheets with different cuts on their front and back.\n- The intended test was whether one pull could produce the prearranged shape.\n- The export contains the plan and an uploaded sketch, not a completed sample or test result.",
+      "zh": "- 根据老师建议，考虑前后切割方式不同的双层贴合橡胶片。\n- 希望检验能否只施加一次拉力，就形成预先编排的形态。\n- 导出记录中有方案和草图，没有完成的样件或实验结果。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Study", "zh": "实验设计" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-09-13",
+    "lead": {
+      "en": "Changed Lab numbering to show which project each bench belongs to.",
+      "zh": "调整 Lab 编号，使每台的项目归属更清楚。"
+    },
+    "body": {
+      "en": "- Used project-based numbers in the directory and bench headings.\n- Retained older entry links so previously shared references still resolved.",
+      "zh": "- 目录和台架标题改用按项目编排的编号。\n- 保留旧入口链接，避免此前分享的引用失效。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-09-13",
+    "lead": {
+      "en": "Restructured the Machine case study around the author’s ten-part argument.",
+      "zh": "按作者的十段论证重排轮回机器案例页。"
+    },
+    "body": {
+      "en": "- Reorganized the supplied text and figure directory while leaving missing material as placeholders.\n- Aligned the English structure with the Chinese revision and removed withdrawn claims.\n- Linked evidence sections to the corresponding dated logs.",
+      "zh": "- 重排供稿和图目录，缺失材料继续留作占位。\n- 英文结构与中文调整对齐，并删除已撤回的表述。\n- 把证据段落接到对应日期的日志。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Writing", "zh": "写作" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-09-10",
+    "lead": {
+      "en": "Clarified that loss and death serve the study rather than define its entire subject.",
+      "zh": "明确失去和死亡是实验方法，不是项目的全部主题。"
+    },
+    "body": {
+      "en": "- Reworked the explanation around the contrast between personalities and repeated encounters.\n- Reviewed the sensing and introduction scheme without claiming that all proposed features were implemented.",
+      "zh": "- 围绕性格差异和反复相遇的体验，调整项目说明。\n- 继续检查感知和初次介绍方案，未把所有提议的功能写成已实现。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Writing", "zh": "写作" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-09-09",
+    "lead": {
+      "en": "Revised the experiment around differences between successive lives.",
+      "zh": "把实验重点重新放在不同轮回带来的感受差异上。"
+    },
+    "body": {
+      "en": "- Planned four fixed personalities and balanced their presentation order across participants.\n- Removed the eye feature from the planned presentation.\n- Kept the experiment as a plan: imagined outcomes were not accepted as collected results.",
+      "zh": "- 计划采用四种固定性格，并平衡不同参与者的呈现顺序。\n- 从计划的呈现中撤去眼部特征。\n- 实验仍待实施，不用假想结果代替实际收集的数据。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Study", "zh": "实验设计" }, "variant": "neutral" }
+    ]
+  },
+  {
     "date": "2026-09-05",
     "lead": {
       "en": "Gave the person on the plan bench a facing, a body and a wandering gaze, so structure now forms in front of them, never on top of them.",
@@ -351,6 +758,583 @@
     ]
   },
   {
+    "date": "2026-09-02",
+    "lead": {
+      "en": "Reworked the square ring so its form changes once around the perimeter.",
+      "zh": "重做方环编排，让形态沿周边只变化一轮。"
+    },
+    "body": {
+      "en": "- The earlier arrangement repeated the splitting pattern on every side.\n- Redistributed the sections around the whole perimeter and retained the different corner behavior.\n- This was a square-ring simulation and assembly check, not a manufactured sample.",
+      "zh": "- 此前每条边都重复一次捏分模式。\n- 把截面系列分布到完整周边，并保留转角与边段的不同处理。\n- 这轮核查的是方环仿真和装配，没有完成制造样件。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-30",
+    "lead": {
+      "en": "Wrapped the splitting series around a ring and corrected its height alignment.",
+      "zh": "把捏分系列编成环，并修正各条带的高度对齐。"
+    },
+    "body": {
+      "en": "- Balanced the attached and free material so the strip ends stayed aligned through contraction.\n- Rolled back an attempted timing adjustment after it was rejected in use.\n- Reused the existing section series for the ring assembly.",
+      "zh": "- 配平贴合材料和自由材料，使收缩过程中的条带端部保持对齐。\n- 一度尝试节拍调整，实测被否决后回滚。\n- 圆环装配继续复用已有截面系列。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-29",
+    "lead": {
+      "en": "Completed a forming series from a solid box to two separated platforms.",
+      "zh": "完成从整块方箱到两层平台的成形系列。"
+    },
+    "body": {
+      "en": "- Varied the slit and material arrangement through a sequence of sections.\n- Reworked the locking sequence and excess material after intermediate forms tangled.\n- Kept the original solver and exposed the series in the live bench.",
+      "zh": "- 通过一组截面逐步改变缝口及材料编排。\n- 针对中间形态打结，调整锁定时序和富余材料。\n- 保留原求解器，并在台架中展示这组系列。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-27",
+    "lead": {
+      "en": "Reframed the next form as splitting one solid box into two platforms.",
+      "zh": "把下一种形态明确为从实心方箱分出两层平台。"
+    },
+    "body": {
+      "en": "- Rejected the earlier budding interpretation.\n- Required target sections and a feasible material arrangement before treating the transition as solved.",
+      "zh": "- 撤回此前向外长芽的理解。\n- 先明确目标截面和可行的材料构造，没有把初轮尝试当作成形成功。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-26",
+    "lead": {
+      "en": "Combined two forming structures on one strip.",
+      "zh": "在同一条带上组合两个成形结构。"
+    },
+    "body": {
+      "en": "- Reused existing connecting constraints rather than starting a new engine.\n- Checked the line drawings first, then brought the approved arrangement into 3D.",
+      "zh": "- 复用已有连接约束，没有另起一套引擎。\n- 先检查线稿，再把确认的构造接入立体台架。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-25",
+    "lead": {
+      "en": "Rescaled the unit array to a room and kept the person outside the units.",
+      "zh": "按房间尺度重排单元阵列，让人位于单元之外。"
+    },
+    "body": {
+      "en": "- Corrected the array to repeated single-ring units and checked the room and person scale.\n- Increased reach through material distribution and added membranes between strips.\n- Considered body clearance instead of placing the person inside the mechanism.",
+      "zh": "- 把阵列修正为单环单元重复排列，并核对房间和人的比例。\n- 通过材料分布增加挑出，补入条带间的膜。\n- 考虑身体避让，不再把人放在机构内部。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-25",
+    "lead": {
+      "en": "Related the hotel cases to existing personas and drafted their travel journeys.",
+      "zh": "将酒店案例关联到已有画像，并尝试展开差旅旅程。"
+    },
+    "body": {
+      "en": "- Worked backward from the competitor review rather than inventing a new health-conscious persona.\n- Mapped three candidate groups through their stays and reconsidered the first journey table.\n- These were research hypotheses for follow-up, not findings from observed travelers.",
+      "zh": "- 从竞品调研倒推人群关联，没有另造现有人群表里不存在的主动健康画像。\n- 尝试展开三类候选人群的住宿旅程，并重新审视首版旅程表。\n- 这些是后续调研假设，还不是对真实旅者观察得到的结论。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
+      { "label": { "en": "Personas", "zh": "画像" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-24",
+    "lead": {
+      "en": "Recorded the travel of all five rings before sizing the rack drive.",
+      "zh": "在设计齿条传动前，记录五环各自的行程。"
+    },
+    "body": {
+      "en": "- The source table lists five travels, from 78.8 to 104.2 mm.\n- Used these as inputs to common-shaft sizing. The gearing proposed that day was an intermediate scheme, later revised.",
+      "zh": "- 原表列出五种行程，范围为 78.8–104.2 mm。\n- 用这些读数讨论共轴传动；当天建议的齿轮参数属于中间方案，后来又有修改。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "table",
+        "caption": {
+          "en": "Original position readings supplied on 24 August; historical input, not the final gear specification. S5 lists 78.8 mm, while the printed endpoints differ by 78.7 mm; the original figures are retained pending a check.",
+          "zh": "8 月 24 日作者提供的原始位置读数；历史设计输入，不是最终齿轮规格。 S5 原记行程 78.8 mm，而所列端点相减为 78.7 mm；原数保留，待复核。"
+        },
+        "head": [
+          { "en": "Ring", "zh": "环" },
+          { "en": "Inner position (mm)", "zh": "内侧位置（mm）" },
+          { "en": "Outer position (mm)", "zh": "外侧位置（mm）" },
+          { "en": "Travel (mm)", "zh": "行程（mm）" }
+        ],
+        "rows": [
+          ["S1", "58.1", "157.1", "99.0"],
+          ["S2", "57.4", "161.6", "104.2"],
+          ["S3", "46.6", "147.6", "101.0"],
+          ["S4", "55.1", "147.9", "92.8"],
+          ["S5", "48.8", "127.5", "78.8"]
+        ]
+      }
+    ]
+  },
+  {
+    "date": "2026-08-23",
+    "lead": {
+      "en": "Returned to a rack drive after the central rod kept binding.",
+      "zh": "中央单杆因摩擦卡滞难以实现，转回齿条驱动。"
+    },
+    "body": {
+      "en": "- The single central rod was not working as intended.\n- Revisited paired push-pull action at the feet while keeping the aim of driving all five rings from one shaft.",
+      "zh": "- 中央单杆的实际运动达不到预期。\n- 重新考虑脚部双向推拉的齿条方案，仍希望一根轴同步驱动五环。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-23",
+    "lead": {
+      "en": "Arranged the forming strips around a cylindrical ring.",
+      "zh": "把成形条带编排成圆筒环。"
+    },
+    "body": {
+      "en": "- Repeated the existing sections around the circumference while retaining the fixed supports.\n- Compared a full-ring change from the mushroom form to the projecting ledge.\n- The ring was assembled from section simulations rather than solved as a coupled 3D material.",
+      "zh": "- 沿圆周重复编排已有截面，并保留固定支撑。\n- 比较整圈从蘑菇形到直挑台的变化。\n- 圆环由截面仿真装配，尚未求解环向耦合的三维材料。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-22",
+    "lead": {
+      "en": "Aligned the form series by redistributing material rather than shifting the rendered image.",
+      "zh": "通过调整材料分布对齐形态系列，而不是平移画面。"
+    },
+    "body": {
+      "en": "- Used equal upper and lower buffer lengths to make the placement rule independent of each form.\n- Changed the contraction registration to keep the bottom end fixed.\n- Kept the remaining shape-dependent offset visible instead of reporting perfect alignment.",
+      "zh": "- 让上下缓冲材料等长，使位置规则不再依赖每种形态。\n- 调整收缩的注册端，让底端固定。\n- 保留形态自身引起的残余偏差，没有宣称完全对齐。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-21",
+    "lead": {
+      "en": "Pruned the hotel AI comparison when the claimed service could not be verified.",
+      "zh": "在无法确认具体服务时，删除酒店 AI 对比中的案例。"
+    },
+    "body": {
+      "en": "- Removed the MLily case after its claimed AI room service lacked strong confirmation.\n- Removed Eight Sleep from the requested final table.\n- Kept evidence gaps explicit rather than filling them with product claims.",
+      "zh": "- 梦百合案例缺少强确认的 AI 客房服务证据，因而删除。\n- 按要求从最终表格中移除 Eight Sleep。\n- 保留证据缺口，没有用产品宣传补成既定事实。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
+      { "label": { "en": "Research", "zh": "调研" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-20",
+    "lead": {
+      "en": "Rebuilt the form series after its first transition jumped between shapes.",
+      "zh": "首版形态过渡发生突跳，因而重做渐变系列。"
+    },
+    "body": {
+      "en": "- Inspected simulated line drawings before returning to the 3D bench.\n- Introduced intermediate squaring strength instead of switching directly from rounded to square.\n- Rejected a display-only vertical shift as the way to align the forms.",
+      "zh": "- 先检查仿真线稿，再接回立体台架。\n- 让方化强度逐级变化，替代从圆直接跳到方。\n- 没有接受单靠画面纵向平移来对齐形态的办法。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-20",
+    "lead": {
+      "en": "Redirected the hotel review toward commercially deployed AI for sleep.",
+      "zh": "把酒店调研转向已经商用的睡眠 AI 能力。"
+    },
+    "body": {
+      "en": "- Set aside cases focused only on comfortable hardware.\n- Asked what the system actually senses or adjusts and whether that capability is available in a hotel room.\n- Requested direct checks of official and booking pages.",
+      "zh": "- 不再仅围绕舒适硬件筛选案例。\n- 追问系统实际感知或调整什么，以及酒店客房是否真的提供这种能力。\n- 要求直接检查官方与预订页面。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
+      { "label": { "en": "Research", "zh": "调研" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-19",
+    "lead": {
+      "en": "Corrected the square skin form and extended the sections into 3D strips.",
+      "zh": "修正表皮方形轮廓，并把截面扩成立体条带。"
+    },
+    "body": {
+      "en": "- Worked on flat edges and instability after the first forms remained rounded and shaky.\n- Reused the same simulated sections for the 3D display.\n- The extrusion showed the construction; it did not add a separate 3D force model.",
+      "zh": "- 针对首版仍然偏圆、抖动的问题，继续修正直边和稳定性。\n- 立体展示继续使用同一套仿真截面。\n- 挤出用于展示构造，没有另加三维受力模型。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-18",
+    "lead": {
+      "en": "Brought the skin simulation into the website and checked it against the Python version.",
+      "zh": "把表皮仿真接入网站，并与 Python 原版对照。"
+    },
+    "body": {
+      "en": "- Reused the contraction and locking mechanism from the archived engine.\n- Added a live 2D bench for inspecting the shape and its connecting constraints.\n- Simulation agreement was the check at this stage, not a material experiment.",
+      "zh": "- 复用存档引擎的收缩与锁定机制。\n- 加入可检查形态和连接约束的二维台架。\n- 这一阶段核查的是仿真对照，没有据此宣称材料实验通过。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-18",
+    "lead": {
+      "en": "Reduced the travel interview guide to open questions about sleep.",
+      "zh": "把差旅访谈提纲收敛到围绕睡眠的开放问题。"
+    },
+    "body": {
+      "en": "- Prepared separate guides for frequent domestic travelers and people traveling across time zones.\n- Removed excessive background questions and fixed answer choices after reviewing the first draft.\n- This record covers guide design, not completed hotel interviews.",
+      "zh": "- 分别面向国内频繁差旅者和跨时区旅者准备提纲。\n- 检查首稿后，删去过多背景问题和固定选项。\n- 这条记录的是提纲设计，没有记成酒店访谈已经完成。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
+      { "label": { "en": "Interviews", "zh": "访谈" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-18",
+    "lead": {
+      "en": "Separated the Lab directory by project as the skin benches joined the site.",
+      "zh": "随着表皮台架进站，按项目整理 Lab 目录。"
+    },
+    "body": {
+      "en": "- Kept the machine mechanisms and spatial simulation as separate groups.\n- Updated the home-page entries to point to the same registered benches.",
+      "zh": "- 把机器机构与空间仿真分成各自的目录组。\n- 同步主页入口，使它们指向同一批登记台架。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-17",
+    "lead": {
+      "en": "Moved from a hanging net to a preprocessed skin that forms when its core contracts.",
+      "zh": "从悬吊网转向通过预处理、随芯收缩成形的表皮。"
+    },
+    "body": {
+      "en": "- The intended input was a simple contraction, with different shapes encoded in the skin beforehand.\n- Asked for four distinguishable forms and rejected arbitrary bending that did not reproduce them.",
+      "zh": "- 希望驱动输入只是简单收缩，不同形态提前编排在表皮里。\n- 要求四种形态可以明确区分，不接受不能对应目标形态的任意弯曲。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-17",
+    "lead": {
+      "en": "Expanded the hotel competitor review and removed weakly related cases.",
+      "zh": "补充酒店竞品细节，并剔除关联较弱的案例。"
+    },
+    "body": {
+      "en": "- Compared prices, service differences and the role of each sleep product in the hotel.\n- Removed repeated or peripheral examples and explicitly removed Bryte from this comparison.\n- The comparison was a dated research draft, not a statement of today’s market.",
+      "zh": "- 比较价格、服务差异，以及睡眠产品在酒店中的作用。\n- 删除重复或不相干的例子，并明确从这轮对比中移除 Bryte。\n- 材料属于当时的调研稿，没有作为当前市场情况发布。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
+      { "label": { "en": "Research", "zh": "调研" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-15",
+    "lead": {
+      "en": "Considered waking up as a possible research moment and discussed the required depth.",
+      "zh": "把起床时刻列为候选，并讨论项目要做到什么程度。"
+    },
+    "body": {
+      "en": "- Compared a focused study with a much broader household sleep system.\n- Raised waking up as one possible entry point; the suggested study scale was advice, not an approved protocol.",
+      "zh": "- 比较聚焦研究与更大的家庭睡眠系统所需投入。\n- 提出起床时刻这一切入点；讨论中的研究规模只是建议，还不是已确定的实验方案。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep research", "zh": "睡眠研究" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-14",
+    "lead": {
+      "en": "Archived the updated five-ring CAD drawing without changing the live bench.",
+      "zh": "存档新版五环 CAD 图纸，保留原台架。"
+    },
+    "body": {
+      "en": "- The final instruction limited the update to the selected reference model.\n- Saved the drawing without replacing the mechanism code or treating the upload as an assembly result.",
+      "zh": "- 最终要求将更新范围限定为选中的参考模型。\n- 只保存图纸，没有替换机构代码，也没有把上传当成装配结果。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-14",
+    "lead": {
+      "en": "Opened a separate discussion on developing Project III from the sleep research.",
+      "zh": "开始讨论如何从睡眠研究中发展独立的项目三。"
+    },
+    "body": {
+      "en": "- Considered what the third project should add to the portfolio alongside Projects I and II.\n- Kept the internship deliverables separate from the proposed independent design work.\n- No topic or finished design was selected in this discussion.",
+      "zh": "- 先讨论第三个项目相对项目一、二需要补充什么能力。\n- 将已有实习交付与拟开展的个人设计工作区分开。\n- 这轮尚未确定题目，也没有完成设计。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep research", "zh": "睡眠研究" }, "variant": "outline" },
+      { "label": { "en": "Strategy", "zh": "战略" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-14",
+    "lead": {
+      "en": "Published the supplied Project II text in the case-study structure.",
+      "zh": "把作者提供的项目二正文填入案例页结构。"
+    },
+    "body": {
+      "en": "- Mapped the bilingual material to the existing sections and figure slots.\n- Used a descriptive project label while its final name remained undecided.",
+      "zh": "- 把双语材料对应到已有章节和图位。\n- 项目尚未定名，继续使用描述性名称。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Writing", "zh": "写作" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-13",
+    "lead": {
+      "en": "Modeled paired drive plates and compared reinforcement options.",
+      "zh": "建立前后双传动板模型，并比较加强办法。"
+    },
+    "body": {
+      "en": "- Examined paired rods, ribs and stronger materials for the crowded mechanism.\n- Kept the analysis tied to the uploaded model; suggested load limits were not physical test results.",
+      "zh": "- 针对紧凑机构研究双杆、加强筋和更强材料。\n- 以当天上传的模型为分析对象，没有把建议的承载值写成实测结果。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "image",
+        "src": "/log/machine-20260813-012e2490.webp",
+        "alt": {
+          "en": "Original CAD screenshot uploaded during the paired-drive-plate discussion; historical geometry, not a stress-test result.",
+          "zh": "双传动板讨论时上传的原 CAD 截图；历史几何版本，不是应力测试结果。"
+        },
+        "caption": {
+          "en": "Original CAD screenshot uploaded during the paired-drive-plate discussion; historical geometry, not a stress-test result.",
+          "zh": "双传动板讨论时上传的原 CAD 截图；历史几何版本，不是应力测试结果。"
+        },
+        "width": 951,
+        "height": 1117
+      },
+      {
+        "kind": "image",
+        "src": "/log/machine-20260813-7dfc6be8.png",
+        "alt": {
+          "en": "Original CAD screenshot uploaded during the paired-drive-plate discussion; historical geometry, not a stress-test result.",
+          "zh": "双传动板讨论时上传的原 CAD 截图；历史几何版本，不是应力测试结果。"
+        },
+        "caption": {
+          "en": "Original CAD screenshot uploaded during the paired-drive-plate discussion; historical geometry, not a stress-test result.",
+          "zh": "双传动板讨论时上传的原 CAD 截图；历史几何版本，不是应力测试结果。"
+        },
+        "width": 442,
+        "height": 554
+      }
+    ]
+  },
+  {
+    "date": "2026-08-13",
+    "lead": {
+      "en": "Started a focused review of sleep during hotel stays and business travel.",
+      "zh": "开始酒店住宿与差旅睡眠的场景调研。"
+    },
+    "body": {
+      "en": "- Organized the review into research questions, topics, participants and competitors.\n- Compared commercial offerings with academic work and requested a factual review before drafting the report.",
+      "zh": "- 按核心研究问题、调研内容、人群和竞品组织材料。\n- 区分商用方案与学术研究，并在成稿前要求核实信息。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
+      { "label": { "en": "Research", "zh": "调研" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-10",
+    "lead": {
+      "en": "Traced poor pushrod motion to its offset from the guide.",
+      "zh": "检查推杆偏离导向线造成的变形和拉动困难。"
+    },
+    "body": {
+      "en": "- The rod did not pull smoothly in the physical arrangement, prompting a review of the force path.\n- Corrected the material assumption: the part was resin printed, so earlier advice based on filament printing could not be carried over.",
+      "zh": "- 实际布置中杆件拉动不顺，因而重新检查力的传递路径。\n- 纠正材料前提：零件是树脂打印，不能直接套用此前按熔融打印给出的判断。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-10",
+    "lead": {
+      "en": "Explored suspended structures at different heights.",
+      "zh": "讨论让悬吊结构在不同高度参与空间交互。"
+    },
+    "body": {
+      "en": "- Considered elements descending from the ceiling around bodies.\n- Set aside an overly complex pneumatic reference and looked for a simpler changing medium.",
+      "zh": "- 考虑结构从天花向下伸出，在身体周围改变空间。\n- 放下过于复杂的气动参考，寻找更简单的可变介质。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-10",
+    "lead": {
+      "en": "Organized the existing human–cat behaviors into a nine-cell matrix.",
+      "zh": "把已有的人猫行为整理成九格交互矩阵。"
+    },
+    "body": {
+      "en": "- Used the existing behavior table instead of inventing a new set of behaviors.\n- The later messages record the conflict rule and its flowchart being written to Miro.\n- The proposed balance between attraction and avoidance still required parameter choices and validation.",
+      "zh": "- 以已有行为表为基础，没有另造一套行为。\n- 后续消息记载，已把冲突规则及其流程图写入 Miro。\n- 招引与回避如何平衡仍需选定参数并验证。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Research", "zh": "调研" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-09",
+    "lead": {
+      "en": "Rechecked the reinforced shaft with the motor and mounting loads included.",
+      "zh": "把电机和安装载荷补进加强轴的复核。"
+    },
+    "body": {
+      "en": "- Updated the assembly after reinforcing the shaft.\n- Required the analysis to account for the motor weight and support positions rather than the shaft alone.",
+      "zh": "- 加强轴后更新总成。\n- 要求把电机重量和支撑位置纳入分析，不能只算单根轴。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-06",
+    "lead": {
+      "en": "Reworked the base model and asked for analysis of the actual assembly.",
+      "zh": "调整底座模型，要求按真实总成做受力分析。"
+    },
+    "body": {
+      "en": "- Added reinforcement and required all five guide assemblies to be included.\n- Rejected simplified geometry that omitted important parts; the analysis was still a model-based estimate.",
+      "zh": "- 加入加强结构，并要求把五套导向组件都纳入分析。\n- 纠正遗漏关键部件的简化几何；当时的受力判断仍是模型估算。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-06",
+    "lead": {
+      "en": "Restricted the working simulation to interactions on a minute scale.",
+      "zh": "把当前仿真的工作范围收敛到分钟尺度的交互。"
+    },
+    "body": {
+      "en": "- Retained the wider multi-species, multi-scale research framing.\n- Removed the clock metaphor and the proposed internal cascade from the working description.\n- Kept the project name open.",
+      "zh": "- 保留多物种、多尺度的研究框架。\n- 从当前工作描述中删除时钟比喻和内生级联设想。\n- 项目名称继续待定。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Writing", "zh": "写作" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-04",
+    "lead": {
+      "en": "Reconsidered the narrative after finding the project difficult to explain briefly.",
+      "zh": "因难以用几句话解释项目，重新梳理叙事重心。"
+    },
+    "body": {
+      "en": "- Reviewed how the long mechanical development related to the research question.\n- Compared an instrument-based research account with a conventional problem-and-product account.\n- Distinguished the planned study from research results that had not yet been collected.",
+      "zh": "- 重新检查长期的机构开发如何服务研究问题。\n- 比较以研究仪器为主线的叙述和常见的问题—产品叙述。\n- 将已规划的研究与尚未取得的研究结果分开。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Writing", "zh": "写作" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-04",
+    "lead": {
+      "en": "Explored a ceiling-mounted folding medium for the behavioral study.",
+      "zh": "探索用天花悬挂的折叠介质承载行为研究。"
+    },
+    "body": {
+      "en": "- Moved beyond a cat-only play object toward a medium that could change the shared space.\n- Compared tension nets and established transforming structures; no physical installation was completed in this discussion.",
+      "zh": "- 从只供猫玩耍的物件，转向能够改变共享空间的介质。\n- 比较张紧网和已有变形结构；这轮讨论尚未完成实体装置。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Research", "zh": "调研" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-08-02",
+    "lead": {
+      "en": "Reconsidered the rotating base because the machine was too light for the bearing preload.",
+      "zh": "因机器重量不足以提供预紧，重新选择旋转底座。"
+    },
+    "body": {
+      "en": "- The earlier turntable-bearing arrangement relied on a load that this small machine did not provide.\n- Compared motorized stages and their mounting details; a purchased final model is not documented.",
+      "zh": "- 此前转盘轴承的方案依赖载荷预紧，小机器本身不够重。\n- 转而比较电动旋转台及安装方式，记录里没有确认最终购入型号。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
+    ]
+  },
+  {
     "date": "2026-07-31",
     "lead": {
       "en": "Ran a finite-element check on the chassis frames: over-built for strength, and the display stand matters far more than the thickness.",
@@ -407,6 +1391,51 @@
         "width": 1600,
         "height": 620
       }
+    ]
+  },
+  {
+    "date": "2026-07-31",
+    "lead": {
+      "en": "Saved the improved base model as a dated reference in the repository.",
+      "zh": "把改进后的底架模型保存为仓库参考。"
+    },
+    "body": {
+      "en": "- Archived the supplied CAD file alongside the other mechanism models.\n- The upload preserved a design reference; it did not establish a new physical test or modify the Lab mechanism.",
+      "zh": "- 将作者提供的 CAD 文件与其他机构模型并列存档。\n- 这次上传保存的是设计参考，没有因此完成新实体试验或修改台架机构。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-07-31",
+    "lead": {
+      "en": "Rewrote the work logs as one-sentence leads and short bullet points.",
+      "zh": "把工作日志改成一句概括和简短分条正文。"
+    },
+    "body": {
+      "en": "- Removed dense prose and internal shorthand that made the work hard to understand.\n- Made the writing rule part of the shared checks used by the site and editor.",
+      "zh": "- 删去难读的成段文字和内部黑话。\n- 把写作纪律纳入网站与编辑后台共用的检查。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Writing", "zh": "写作" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-07-30",
+    "lead": {
+      "en": "Set the rule that historical log figures must come from the original work.",
+      "zh": "明确历史日志配图必须来自当时的原件。"
+    },
+    "body": {
+      "en": "- Asked to match work-in-progress images to the dates of the work.\n- Found that a text-only recap did not recover the actual attachments.\n- Required original uploads or outputs, including failed and rejected versions, rather than retrospective redraws.",
+      "zh": "- 提出按工作日期对应过程图片。\n- 发现只拿到文字总结，并没有找回实际附件。\n- 要求使用当时上传或产出的原件，保留失败和被否版本，不允许事后重画。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Record", "zh": "记录" }, "variant": "neutral" }
     ]
   },
   {
@@ -568,6 +1597,66 @@
     ]
   },
   {
+    "date": "2026-07-29",
+    "lead": {
+      "en": "Investigated the ring getting stuck at its widest opening.",
+      "zh": "排查环在最大展开位置卡住的问题。"
+    },
+    "body": {
+      "en": "- Considered shortening the limiting guide by 2 mm to avoid the troublesome end position.\n- The record establishes the jam and the proposed change, but does not establish a successful physical fix.",
+      "zh": "- 考虑把限位导向缩短 2 mm，避开容易卡住的终点。\n- 原记录能确认卡滞和修改设想，尚不能确认实体修改后已经解决。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-07-29",
+    "lead": {
+      "en": "Added project labels and a separate artifact column to each log entry.",
+      "zh": "给每条日志标注项目，并将图表移到独立栏。"
+    },
+    "body": {
+      "en": "- Kept the short account of the work on the left and selectable images or tables on the right.\n- Used one open artifact at a time so long attachments do not overwhelm the text.",
+      "zh": "- 左侧保留工作说明，右侧选择图片或表格。\n- 每次展开一个附件，避免长图表挤压正文。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-07-29",
+    "lead": {
+      "en": "Preserved the live mechanism’s working state when entering its case study.",
+      "zh": "进入案例页时保留动态机构的工作状态。"
+    },
+    "body": {
+      "en": "- Carried the current phase, camera and skin settings across the page transition.\n- Rearranged the case-study controls so they remained reachable.",
+      "zh": "- 把当前相位、相机和蒙皮设置带入页面转场。\n- 调整案例页控制区，避免操作面板被截断。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-07-29",
+    "lead": {
+      "en": "Gave every home-page project its own destination page.",
+      "zh": "让主页的每个项目都进入各自的详情页。"
+    },
+    "body": {
+      "en": "- Connected all four selected project cards to their own routes.\n- Used preparation pages for projects whose authored case-study text was not ready.",
+      "zh": "- 把四个入选项目的卡片分别接到自己的路由。\n- 尚未交正文的项目显示筹备页。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
     "date": "2026-07-28",
     "lead": {
       "en": "Searched exhaustively for how close a person can get to a cat before it moves away, and confirmed nobody has measured it.",
@@ -613,6 +1702,51 @@
           ]
         ]
       }
+    ]
+  },
+  {
+    "date": "2026-07-28",
+    "lead": {
+      "en": "Filled the first case study and corrected its layout against the saved draft.",
+      "zh": "填入项目一正文，并对照存档设计稿修正版式。"
+    },
+    "body": {
+      "en": "- Transcribed the author’s material into the existing section and figure structure.\n- Restored missing caption rules, section marks and paired figures.\n- Kept the concealed study mechanism out of the public explanation at that stage.",
+      "zh": "- 把作者供稿填入已有章节及图位结构。\n- 补回遗漏的图注线、章节刻度和并置图。\n- 当时按实验要求保留隐蔽机制，不放入公开说明。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Writing", "zh": "写作" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-07-28",
+    "lead": {
+      "en": "Added a language switch for the project case studies.",
+      "zh": "给项目案例页加入中英文切换。"
+    },
+    "body": {
+      "en": "- Used separate authored MDX files for English and Chinese within the existing route.\n- Shared the language preference with the work log and kept figure slots synchronized.",
+      "zh": "- 在原路由内使用中英文各自的 MDX 正文。\n- 与工作日志共享语言偏好，并保持图位同步。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-07-28",
+    "lead": {
+      "en": "Added a self-service editor for creating and revising work logs.",
+      "zh": "加入可以新增及修改工作日志的自助编辑后台。"
+    },
+    "body": {
+      "en": "- Kept log data and attachments in the repository so edits use the same publishing path as the site.\n- Reused the log schema and validation rules in the editor preview and before submission.",
+      "zh": "- 日志及附件继续保存在仓库中，编辑使用网站已有发布路径。\n- 编辑器预览和提交前检查复用日志的结构与校验规则。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
     ]
   },
   {
@@ -840,6 +1974,51 @@
     ]
   },
   {
+    "date": "2026-07-27",
+    "lead": {
+      "en": "Brought the existing live benches into the site and the home-page stage.",
+      "zh": "把已有动态台架接入网站和主页舞台。"
+    },
+    "body": {
+      "en": "- Reused the site’s mechanism kernels and the original scanned meshes.\n- Added a stage rotation that pauses during interaction.\n- Corrected the first visual pass after it lost details from the design draft.",
+      "zh": "- 复用站内机构内核和原始扫描网格。\n- 加入交互时暂停的舞台轮播。\n- 首版遗漏设计稿细节，随后按稿返工。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "3D", "zh": "立体" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-07-27",
+    "lead": {
+      "en": "Made the work log bilingual and searchable by project, aspect and month.",
+      "zh": "让工作日志支持双语及项目、方面、月份筛选。"
+    },
+    "body": {
+      "en": "- Imported the supplied Machine, Spatial Simulation and Smart Bed logs into one content pool.\n- Added collapsed entries and a clickable activity calendar.\n- Kept the log preview on the home page connected to the same pool.",
+      "zh": "- 把作者提供的机器、空间仿真和智能床日志并入同一内容池。\n- 加入折叠条目及可点击的活动日历。\n- 主页日志预览也读取这份内容池。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-07-26",
+    "lead": {
+      "en": "Transferred the revised visual language and page transition from the supplied draft.",
+      "zh": "从新版设计稿移植视觉语言和页面转场。"
+    },
+    "body": {
+      "en": "- Replaced the earlier presentation with fine rules, grids, dark gradients and the supplied color system.\n- Connected card clicks to the destination page through the growing media plane.",
+      "zh": "- 按供稿更新发丝线、网格、深色渐变和配色。\n- 把卡片点击接到媒体平面生长后的页面跳转。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
     "date": "2026-07-24",
     "lead": {
       "en": "Settled the fifth direction — space shared between people and pets — and fixed how the 3D work connects to the simulation.",
@@ -852,6 +2031,66 @@
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
       { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-07-24",
+    "lead": {
+      "en": "Built the three-screen home page from the approved interaction draft.",
+      "zh": "按确认的交互稿搭建三幕主页。"
+    },
+    "body": {
+      "en": "- Connected the card hub, About screen and Lab/Log screen with the drafted page-turning behavior.\n- Provided a normal document flow for small screens and reduced-motion preferences.",
+      "zh": "- 把卡片枢纽、About 和 Lab／Log 三幕接入设计稿的翻页行为。\n- 窄屏及减少动态效果时回落为普通页面流。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-07-21",
+    "lead": {
+      "en": "Built the earlier Modernist layout across the home, log and case-study pages.",
+      "zh": "把早期 Modernist 版式接入主页、日志和案例页。"
+    },
+    "body": {
+      "en": "- Used flush-left typography, square corners and strong dividing rules.\n- Kept the existing routes and mechanism kernel.\n- Recovered this missing log from a preserved Git commit; later drafts changed the presentation.",
+      "zh": "- 采用左对齐文字、直角和明确的分隔线。\n- 沿用已有路由和机构内核。\n- 这条遗漏日志从保留的历史提交中找回；后续设计稿又调整了表现形式。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-07-21",
+    "lead": {
+      "en": "Established the green and violet color system in the site’s shared tokens.",
+      "zh": "在网站共用样式中确定绿紫配色。"
+    },
+    "body": {
+      "en": "- Built the color ramps on a shared perceptual lightness curve.\n- Recorded the contrast readings in the original log while changing tokens rather than individual components.\n- Recovered the entry from the old branch; the readings describe that version.",
+      "zh": "- 让色阶共用感知明度曲线。\n- 在原日志中记录对比度，通过样式变量调整配色，不逐个改组件。\n- 从旧分支找回这条记录；读数对应当时版本。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "table",
+        "caption": {
+          "en": "Contrast ratios recorded in the original 21 July log; not a new measurement of the current site.",
+          "zh": "7 月 21 日原日志记录的对比度；不是对当前网站的新测量。"
+        },
+        "head": [{ "en": "Role", "zh": "用途" }, { "en": "Recorded contrast", "zh": "原记录对比度" }],
+        "rows": [
+          [{ "en": "Ink", "zh": "正文" }, "15.0:1"],
+          [{ "en": "Accent", "zh": "强调色" }, "7.2:1"],
+          [{ "en": "Captions", "zh": "图注" }, "5.2:1"]
+        ]
+      }
     ]
   },
   {
@@ -1075,6 +2314,21 @@
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
       { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-07-17",
+    "lead": {
+      "en": "Cleaned the athlete interview transcript and separated the speakers.",
+      "zh": "整理运动员访谈转写，并区分说话角色。"
+    },
+    "body": {
+      "en": "- Checked the transcript against speaker cues and removed identifying details for the research summary.\n- Kept personal techniques as interview accounts rather than validated sleep methods.",
+      "zh": "- 根据声线和上下文检查角色归属，并在研究摘要中去除身份细节。\n- 受访者提到的个人办法保留为经验陈述，没有升级为已验证的睡眠方法。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
+      { "label": { "en": "Interviews", "zh": "访谈" }, "variant": "neutral" }
     ]
   },
   {
@@ -2012,6 +3266,21 @@
     ]
   },
   {
+    "date": "2026-07-05",
+    "lead": {
+      "en": "Prepared the website brief and looked for design references before choosing a visual direction.",
+      "zh": "在确定视觉方向之前，梳理建站交接需求并寻找设计参考。"
+    },
+    "body": {
+      "en": "- Raised the missing project context in the coding environment and asked for a brief that could carry it across.\n- Kept the visual style open rather than accepting the first suggested direction.\n- Compared reference orientations before the later site specification was established.",
+      "zh": "- 指出编程环境缺少项目背景，需要能传递这些材料的建站说明。\n- 没有直接接受首个风格建议，继续保留视觉选择。\n- 在后来的正式网站规范形成前，先比较参考案例的取向。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ]
+  },
+  {
     "date": "2026-06-30",
     "lead": {
       "en": "Finished evidence audits and persona manuscripts for two groups — shift workers and solo-living young adults — and threw out two inherited persona conventions along the way.",
@@ -2315,6 +3584,21 @@
     ]
   },
   {
+    "date": "2026-06-06",
+    "lead": {
+      "en": "Started planning a personal site for both portfolio presentation and learning to code.",
+      "zh": "开始规划兼顾作品展示与代码学习的个人网站。"
+    },
+    "body": {
+      "en": "- Discussed the kinds of project material and personal information the site would need.\n- The conversation lacked the full project context, so the first proposed structure remained preliminary.\n- No website was built in this exchange.",
+      "zh": "- 讨论网站需要哪些项目材料和个人信息。\n- 当时对话没有完整项目背景，首轮结构建议仍是初步设想。\n- 这一轮没有实际搭建网站。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ]
+  },
+  {
     "date": "2026-06-05",
     "lead": {
       "en": "Drafted the report section on future sleep populations in full over five days, built on a \"full inventory, then four kinds of evolution\" frame.",
@@ -2405,6 +3689,77 @@
     ]
   },
   {
+    "date": "2026-06-01",
+    "lead": {
+      "en": "Started exploring how spatial forms could adapt to bodily behavior.",
+      "zh": "开始探索空间形态如何与身体行为相互适应。"
+    },
+    "body": {
+      "en": "- Used Sou Fujimoto’s Final Wooden House as a starting reference for how arrangements of similar elements support different actions.\n- Clarified that the project should explore broader spatial possibilities rather than reproduce the wooden-block house.\n- Compared possible directions before the later simulation framework was established.",
+      "zh": "- 从藤本壮介的最终木屋出发，观察相似单元的不同组合如何支持不同身体行为。\n- 明确木屋只是起点，项目应探索更广的空间可能，而不是复制木块房子。\n- 当时仍在比较方向，尚未形成后来的仿真框架。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-05-29",
+    "lead": {
+      "en": "Analyzed the music and vibration study across relaxation, sleep and waking conditions.",
+      "zh": "分析放松、助眠和唤醒三个场景下的音乐与振动数据。"
+    },
+    "body": {
+      "en": "- Organized 20 participants’ repeated ratings and compared music alone, constant vibration and synchronized vibration.\n- Corrected the scoring workflow so the already reversed anxiety items were not reversed again.\n- Produced an HTML report with means and standard deviations; song rankings were exploratory, not proof of a treatment effect.",
+      "zh": "- 整理 20 位参与者的重复评分，比较仅音乐、恒定振动和同步振动。\n- 修正计分流程，避免把已经反向计分的焦虑题再次反转。\n- 形成包含均值和标准差的 HTML 分析报告；歌曲排名属于探索性结果，不是干预有效的证明。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
+      { "label": { "en": "Study", "zh": "实验设计" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "image",
+        "src": "/log/sleep-20260529-original-report.png",
+        "alt": {
+          "en": "Original analysis-report preview recovered locally; rankings are descriptive, not confirmed efficacy.",
+          "zh": "本地回收的原分析报告预览；排名是样本描述，不代表效果已获验证。"
+        },
+        "caption": {
+          "en": "Original analysis-report preview recovered locally; rankings are descriptive, not confirmed efficacy.",
+          "zh": "本地回收的原分析报告预览；排名是样本描述，不代表效果已获验证。"
+        },
+        "width": 1440,
+        "height": 1600
+      },
+      {
+        "kind": "table",
+        "caption": {
+          "en": "Extract from the original results.json: positive benefit is improvement from baseline. A = music; B = constant vibration; C = synchronized vibration. Rating counts are repeated observations, not independent participants; no efficacy inference from this table alone.",
+          "zh": "原 results.json 数值摘录：正数表示相对基线改善。A＝音乐；B＝恒定振动；C＝同步振动。评分条数为重复观测，不是独立参与者人数；不能仅凭此表判断干预效果。"
+        },
+        "head": [
+          { "en": "Scene", "zh": "场景" },
+          { "en": "Condition", "zh": "条件" },
+          { "en": "Mean change", "zh": "改善均值" },
+          { "en": "Standard deviation", "zh": "标准差" },
+          { "en": "Ratings", "zh": "评分条数" }
+        ],
+        "rows": [
+          [{ "en": "Relaxation", "zh": "放松" }, "A", "0.9", "3.713", "40"],
+          [{ "en": "Relaxation", "zh": "放松" }, "B", "1.375", "3.614", "40"],
+          [{ "en": "Relaxation", "zh": "放松" }, "C", "0.825", "3.948", "40"],
+          [{ "en": "Sleep onset", "zh": "助眠" }, "A", "1.925", "2.105", "40"],
+          [{ "en": "Sleep onset", "zh": "助眠" }, "B", "2.125", "2.002", "40"],
+          [{ "en": "Sleep onset", "zh": "助眠" }, "C", "1.9", "2.061", "40"],
+          [{ "en": "Waking", "zh": "唤醒" }, "A", "0.9", "1.336", "40"],
+          [{ "en": "Waking", "zh": "唤醒" }, "B", "0.872", "1.704", "39"],
+          [{ "en": "Waking", "zh": "唤醒" }, "C", "1.0", "1.449", "41"]
+        ]
+      }
+    ]
+  },
+  {
     "date": "2026-05-26",
     "lead": {
       "en": "Built an evidence base of roughly 40 sources into a 14-page lab-meeting deck, with every key citation checked by hand.",
@@ -2420,6 +3775,21 @@
     ]
   },
   {
+    "date": "2026-05-22",
+    "lead": {
+      "en": "Limited clearance adjustments to the mating faces of resin parts.",
+      "zh": "把树脂件的间隙调整限定在配合面。"
+    },
+    "body": {
+      "en": "- Reviewed a 0.2 mm offset for the faces that meet, rather than shrinking the entire part.\n- Treated the value as a modeling choice to check by printing, not a measured manufacturing tolerance.",
+      "zh": "- 讨论对相接触的面做 0.2 mm 偏移，而不是整体缩小零件。\n- 这个数是待打印检查的建模选择，没有写成已测得的加工公差。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
+    ]
+  },
+  {
     "date": "2026-05-19",
     "lead": {
       "en": "Finished the first round of research and competitive analysis for the smart bed project, landing on four market gaps as design entry points.",
@@ -2432,6 +3802,21 @@
     "tags": [
       { "label": { "en": "Sleep", "zh": "睡眠" }, "variant": "outline" },
       { "label": { "en": "Research", "zh": "调研" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-05-12",
+    "lead": {
+      "en": "Examined how a small bearing could be retained in printed joints.",
+      "zh": "研究怎样把微型轴承固定在打印关节里。"
+    },
+    "body": {
+      "en": "- Distinguished the rotating and fixed sides before choosing glue or mechanical retention.\n- Checked the space available around both connected parts; an end cap could not be specified from only one side.",
+      "zh": "- 先分清转动侧和固定侧，再讨论粘接或机械限位。\n- 检查相连两片杆件的空间，不能只看单侧就决定端帽。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
     ]
   },
   {
@@ -2473,6 +3858,66 @@
     "body": {
       "en": "- The Jansen walking-linkage leg was finished first, independently.\n- The finger: each segment a rigid body, hinges defined by two points the bodies share, tendons as chains of springs routed through guide points; the wrap test passes.\n- The key tuning: constraint strengths separated by orders of magnitude — anchors 10000, rigid bodies 1000, collisions 100, springs 1–3 — they only behave once clearly apart.\n- Best configuration: four tapering segments (25/20/15/10 mm) with three tendons.\n- A finding kept: friction closes the joints one after another rather than all at once, and that lag should not be designed away — it is what makes the motion read as alive.",
       "zh": "- 先自己独立做完了 Jansen 仿生步行连杆腿。\n- 手指做法：每节一个刚体，铰链由两个刚体共有的两点定义，肌腱是穿过导向点的一串弹簧；缠绕测试通过。\n- 关键调参：约束强度按数量级拉开——锚点 10000、刚体 1000、碰撞 100、弹簧 1–3，拉不开就互相打架。\n- 最优配置：四节渐变指节（25/20/15/10mm）配三根肌腱。\n- 一条留下的发现：摩擦让关节一节接一节地合拢而不是同时闭合，这个延迟不该消掉——它正是运动像活的原因。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-04-24",
+    "lead": {
+      "en": "Checked tendon routing against the small modeled structure.",
+      "zh": "根据小尺寸模型检查肌腱的走线空间。"
+    },
+    "body": {
+      "en": "- The modeled paths crossed, so the routing had to account for opposite pulling directions and clearance.\n- Compared separation options without claiming that the proposed routing had been built.",
+      "zh": "- 模型中的走线发生交叉，需要同时考虑相反的拉力方向和避让空间。\n- 比较分离走线的办法，记录停留在方案讨论阶段。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-04-13",
+    "lead": {
+      "en": "Explored three tendons for bending the appendage in multiple directions.",
+      "zh": "探索用三条肌腱控制附肢向不同方向弯曲。"
+    },
+    "body": {
+      "en": "- Placed the tendons around the section at 120-degree intervals.\n- Examined how differential shortening could steer bending; this preceded the later working 3D simulator.",
+      "zh": "- 将三条肌腱沿截面按 120° 分布。\n- 研究不同收缩量如何控制弯曲方向；此时还不是后来可运行的立体台架。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-04-12",
+    "lead": {
+      "en": "Compared ways to drive a half-ring expanding linkage.",
+      "zh": "比较半环伸缩连杆的驱动方式。"
+    },
+    "body": {
+      "en": "- Worked from the modeled half-ring rather than the full sphere assumed in earlier advice.\n- Compared crank and shared-drive arrangements with the available space and budget.\n- The drive layout was still being selected.",
+      "zh": "- 以已经建出的半环为对象，纠正此前把结构当作完整球体的理解。\n- 结合空间和预算比较曲柄及共用驱动方案。\n- 当时仍在选择传动布局。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-04-06",
+    "lead": {
+      "en": "Got the shell simulation running after correcting its constraints.",
+      "zh": "修正约束后，让膨胀外壳的仿真基本运行起来。"
+    },
+    "body": {
+      "en": "- Worked through the Grasshopper constraint setup rather than treating the first suggested wiring as correct.\n- Compared the motion with and without damping; the damped version flipped unexpectedly.\n- Moved on to the expanding shell once the basic motion was usable.",
+      "zh": "- 逐步检查 Grasshopper 的约束接法，没有直接沿用最初给出的错误接线。\n- 对比有无阻尼的运动，发现加阻尼时出现意外翻转。\n- 基础运动基本可用后，继续搭膨胀外壳。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
@@ -3520,14 +4965,45 @@
     ]
   },
   {
+    "date": "2026-03-22",
+    "lead": {
+      "en": "Separated everyday coexistence from direct touch in the interaction plan.",
+      "zh": "把日常共处和直接触摸分成两种交互情境。"
+    },
+    "body": {
+      "en": "- Mapped breathing, small movements and quiet sounds for periods without contact.\n- Mapped touch, lifting and holding to bodily responses; these were design proposals, not implemented sensing.\n- Kept a non-animal form so the sense of life would come from behavior rather than a familiar face.",
+      "zh": "- 梳理没有接触时的呼吸、微动和轻微声音。\n- 另列触摸、拿起和握持后的身体反馈；此时是交互设想，尚未实现感知。\n- 保留非动物外形，希望生命感来自行为，而不是熟悉的面孔。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "image",
+        "src": "/log/machine-20260322-original-touch-reference.png",
+        "alt": {
+          "en": "Original somatosensory research reference uploaded on 22 March; a source image, not a drawing of the machine.",
+          "zh": "3 月 22 日上传的体感研究参考原图；属于研究参考，不是机器设计图。"
+        },
+        "caption": {
+          "en": "Original somatosensory research reference uploaded on 22 March; a source image, not a drawing of the machine.",
+          "zh": "3 月 22 日上传的体感研究参考原图；属于研究参考，不是机器设计图。"
+        },
+        "width": 1252,
+        "height": 798
+      }
+    ]
+  },
+  {
     "date": "2026-03-20",
     "lead": {
       "en": "Locked down the research question.",
       "zh": "把研究问题定下来。"
     },
     "body": {
-      "en": "- The question: under what conditions does a person come to feel about a non-living object the way they feel about a pet, and how does that show when they lose it.\n- One correction: an early drift toward \"how do we make people sadder\" — death and rebirth are instruments for studying attachment, not the point of the piece.\n- Mechanics settled: a new personality overwrites the old instead of accumulating; the ending is a loss of control, not a clean goodbye; the timing of death is unpredictable but preceded by visible signs of aging.\n- One rule the participant is never told: the more they interact with it, the sooner it dies.",
-      "zh": "- 问题定为：人在什么条件下会对一个非生命的东西产生像对宠物那样的感情，失去它时又会如何表现。\n- 纠偏一次：早期一度跑偏成「怎么让人更难过」——死亡和轮回是研究依恋的手段，不是作品的目的。\n- 定下机制：新人格覆写旧的、不叠加；结局是失控、不是好好告别；死亡时间不可预测，但事先有明显的衰老征兆。\n- 一条不告诉被试的规则：越是和它互动，它死得越快。"
+      "en": "- The question: under what conditions does a person come to feel about a non-living object the way they feel about a pet, and how does that show when they lose it.\n- One correction: an early drift toward \"how do we make people sadder\" — death and rebirth are instruments for studying attachment, not the point of the piece.\n- Mechanics settled: a new personality overwrites the old instead of accumulating; the ending is a loss of control, not a clean goodbye; the timing of death is unpredictable but preceded by visible signs of aging.",
+      "zh": "- 问题定为：人在什么条件下会对一个非生命的东西产生像对宠物那样的感情，失去它时又会如何表现。\n- 纠偏一次：早期一度跑偏成「怎么让人更难过」——死亡和轮回是研究依恋的手段，不是作品的目的。\n- 定下机制：新人格覆写旧的、不叠加；结局是失控、不是好好告别；死亡时间不可预测，但事先有明显的衰老征兆。"
     },
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },

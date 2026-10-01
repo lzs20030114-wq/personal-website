@@ -15,6 +15,11 @@ const RAW: unknown[] = JSON.parse(
 );
 
 describe('log 内容池', () => {
+  it('公开日志不带回作者要求隐去的实验细节（MAPPING §10.3）', () => {
+    const entries = getLogEntries();
+    expect(entries.some(e => /the more they interact with it, the sooner it dies/i.test(e.body.en))).toBe(false);
+    expect(entries.some(e => /越是和它互动，它死得越快/.test(e.body.zh))).toBe(false);
+  });
   it('非空，且条数与源文件一致', () => {
     const entries = getLogEntries();
     expect(entries.length).toBe(RAW.length);

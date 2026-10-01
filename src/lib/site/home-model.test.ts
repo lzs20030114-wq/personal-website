@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { getAllWork } from './content';
 import { LAB_BENCHES } from './lab-index';
 import { getLogEntries } from './log';
-import { withAnchors } from './log-facets';
+import { projectOf, withAnchors } from './log-facets';
 import { buildCards, buildHomeLog, buildLabGroups } from './home-model';
 
 const cards = () =>
@@ -63,5 +63,18 @@ describe('主页数据派生（home-model）', () => {
     const tickIs = new Set(log.lanes.flatMap((l) => l.ticks.map((t) => t.i)));
     log.latest.forEach((l) => expect(tickIs.has(l.i)).toBe(true));
     expect(log.latest.map((l) => l.i)).toEqual([0, 1, 2]);
+  });
+
+  it('项目三开题单列，不归到智能床实习与建站泳道', () => {
+    const entries = getLogEntries();
+    const expected = withAnchors(entries)
+      .filter(({ entry }) => projectOf(entry) === 'project-iii')
+      .map(({ anchor }) => `/archive#${anchor}`);
+    expect(expected.length).toBeGreaterThan(0);
+    const log = buildHomeLog(entries);
+    const research = log.lanes.find((lane) => lane.label === 'Sleep research');
+    expect(research?.ticks.map((tick) => tick.href)).toEqual(expected);
+    const other = log.lanes.find((lane) => lane.label === 'Smart Bed · site');
+    expect(other?.ticks.some((tick) => expected.includes(tick.href))).toBe(false);
   });
 });

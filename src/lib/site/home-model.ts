@@ -152,10 +152,11 @@ export function buildLabGroups(cards: HomeCard[]): HomeLabGroup[] {
 
 /* ───────────────────────── Log：节奏时间线 + 最新三条 ───────────────────────── */
 
-/** 泳道：稿内四条（Lab 单列，不并入项目一——泳道看的是「在做什么」，与一级筛选的项目归组不同）。 */
+/** 泳道：保留稿内四条；新增项目三独立归属，避免与智能床实习混读。Lab 仍单列。 */
 const LANES = [
   { keys: ['Machine'], label: 'Reincarnation Machine', ink: 'var(--g700)' },
   { keys: ['Space'], label: 'Spatial simulation', ink: 'var(--p700)' },
+  { keys: ['Sleep research'], label: 'Sleep research', ink: TONE_S.ink },
   { keys: ['Lab'], label: 'Lab benches', ink: 'var(--ink)' },
   { keys: ['Sleep', 'Site'], label: 'Smart Bed · site', ink: 'oklch(0.6 0.02 200)' },
 ] as const;
@@ -164,6 +165,7 @@ const LANES = [
 const PROJECT_INK: Record<string, string> = {
   'project-i': TONE_G.ink,
   'project-ii': TONE_V.ink,
+  'project-iii': TONE_S.ink,
   'other-work': TONE_S.ink,
   'this-site': 'var(--n600)',
 };
