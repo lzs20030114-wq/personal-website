@@ -1384,4 +1384,8 @@ Lab 2-12 复用 §39.3–39.4 的标题、默认展开说明栏和整台高度�
 - **新依赖**：`@fontsource/jetbrains-mono`（稿的标签字体，只引 latin 400/500，自托管，与 §2「不引 Google Fonts」一致）。
 - **深链**：`/#work` `/#about` `/#lab` `/#log` 直落对应页（不走翻页转场），SiteNav 与 BackTransition 的 `/#work` `/#lab` 仍可用。
 - **坑**：站内全局 `a:hover { color: var(--accent) }` 会让悬停的卡片/条目/刻度整行变绿（稿里不变色）——在 `home.css` 末尾钉回；LAB_INDEX 的分组 key（`project-i`）≠ 路由 slug（`reincarnation-machine`），首版「Case study」链到 `/work/project-i`，被守门测试抓出，改走 `GROUP_SLUG`；验证时旧 `next start` 进程留着会拿新构建的静态资源 500/MIME 报错，换构建必须先杀旧进程（`pkill -f` 会匹配并杀掉自己的 shell）。
-- **验证**：typecheck 干净；全套 642 测试（含新增 4 项）中 `skin-layers-forming` 真跑一条在套件负载下 5000ms 超时（单独跑通过，已知负载型偶发，与本次无关）；`next build` 过；生产构建 + 无头 Chromium（swiftshader）对照稿原版 1280×800 逐页截图，Hook 两张 / Work / About / Lab / Log / 页脚版式与稿一致；导航、卡片悬停与点击进 `/work/project-ii`、日志刻度跳 `/archive#log-…`、四个深链、手机 390 宽文档流全部实测通过，无 pageerror。**待用户真机拍板**：翻页手感（稿内常量原样，未调）、Lab 预览悬停停留 120ms、活台架在舞台里的取景。
+- **验证**：typecheck 干净；全套 642 测试（含新增 4 项）中 `skin-layers-forming` 真跑一条在套件负载下 5000ms 超时（单独跑通过）；`next build` 过；生产构建 + 无头 Chromium（swiftshader）对照稿原版 1280×800 逐页截图，Hook 两张 / Work / About / Lab / Log / 页脚版式与稿一致；导航、卡片悬停与点击进 `/work/project-ii`、日志刻度跳 `/archive#log-…`、四个深链、手机 390 宽文档流全部实测通过，无 pageerror。**待用户真机拍板**：翻页手感（稿内常量原样，未调）、Lab 预览悬停停留 120ms、活台架在舞台里的取景。
+
+### 42.1 合并 master 后 Vercel 构建失败：测试超时（2026-10-01）
+
+主页合并 master 后 Vercel 部署失败：`npm run build` 把 `npm test` 放在最前面，`skin-layers-forming` / `skin-layers-surface` 两条**真跑求解器**的测试在构建机上超过 vitest 默认的 5000ms，整个构建退出 1，生产没更新。**上一节验证里我把这条超时当成「负载型偶发、与本次无关」放过去是错的**——本机单独跑就要 4.8–5.7s，本来就贴着线，换到更慢的构建机必挂；它不是偶发，是会阻断部署的真问题，不该以「已知」带过。修法：`vite.config.ts` 加 `test.testTimeout: 60_000` 全局兜底（逐条显式预算照旧有效；压到 1ms 实测确认配置被读取），`defineConfig` 改从 `vitest/config` 引入（`vite build` 不受影响，实测通过）。教训：凡在 `npm run build` 里同步跑的测试，超时预算必须按构建机算，不按开发机算；新增真跑求解的测试要么显式给预算，要么靠这条全局兜底。642 测试全绿。
