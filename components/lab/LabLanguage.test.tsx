@@ -35,8 +35,8 @@ describe('Lab language coverage', () => {
     preference.lang = 'en';
     const html = renderToStaticMarkup(createElement(LabPage));
     expect(html.match(/data-lab-panel=/g)).toHaveLength(LAB_BENCHES.length);
-    // The language selector is the one intentional Chinese label in English mode.
-    expect(html.replace(/中文/g, '').match(/[\u4e00-\u9fff]+/g)).toBeNull();
+    // The language selector (中文 / 中) is the one intentional Chinese label in English mode.
+    expect(html.replace(/中文/g, '').replace(/>中</g, '><').match(/[\u4e00-\u9fff]+/g)).toBeNull();
   });
 
   it('also translates the lazily mounted forming view', () => {

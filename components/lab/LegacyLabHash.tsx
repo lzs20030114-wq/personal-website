@@ -33,7 +33,7 @@ export function LegacyLabHash() {
     observer.observe(document.body);
     events.forEach(event => window.addEventListener(event, stop, { once: true, passive: true, capture: true }));
     place();
-    const deadline = window.setTimeout(stop, 1500);
+    const deadline = window.setTimeout(stop, 4000);
     return () => {
       stop();
       window.clearTimeout(deadline);

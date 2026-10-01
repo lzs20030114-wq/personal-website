@@ -5,9 +5,18 @@ import { useBenchLang, useLabText } from './LabLanguage';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { LabActivity } from './LabActivity';
 import { CAMERA_COMMAND, type CameraCommand } from './labCameraInput';
+import { LAB_BENCHES, LAB_INDEX, labAccent } from '../../src/lib/site/lab-index';
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
-const Workspace = createContext({ expanded: null as string | null, expand: (_id: string | null) => {}, detailWidth: 296, resizeDetails: (_width: number) => {} });
+/** 说明栏默认只列前 4 条规格，其余点「全部 N 项规格」展开（09 Lab Page 稿的 specRows 默认值）。 */
+const SPEC_ROWS = 4;
+const cap = (s: string, lang: string) => (lang === 'zh' || !s ? s : s[0].toUpperCase() + s.slice(1));
+const NOOP_CURSOR = { show: (_verb: string) => {}, move: (_x: number, _y: number) => {}, hide: () => {} };
+const Workspace = createContext({ expanded: null as string | null, expand: (_id: string | null) => {}, detailWidth: 296, resizeDetails: (_width: number) => {}, cursor: NOOP_CURSOR });
+/** 目录读位（LabIndex 量出来）→ 工作区顶部的「1-1 / 2-12」读数与收起后的刻度竖条。 */
+const NavActive = createContext((_no: string) => {});
+export const useLabNavActive = () => useContext(NavActive);
+const LAST_NO = LAB_BENCHES[LAB_BENCHES.length - 1].no;
 
 /** Small outlined controls follow the site's existing inline-SVG convention. */
 function WorkspaceIcon({ name }: { name: 'index' | 'reset' | 'collapse' | 'expand' | 'restore' | 'details' }) {
@@ -49,6 +58,14 @@ export function LabWorkspace({ index, children }: { index: ReactNode; children: 
   const [detailWidth, setDetailWidth] = useState(296);
   const [expanded, expand] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [active, setActive] = useState<string>(LAB_BENCHES[0].no);
+  const cursorEl = useRef<HTMLDivElement>(null);
+  const cursorVerb = useRef<HTMLSpanElement>(null);
+  const cursor = useRef({
+    show: (verb: string) => { const el = cursorEl.current; if (!el) return; if (cursorVerb.current && cursorVerb.current.textContent !== verb) cursorVerb.current.textContent = verb; el.style.opacity = '1'; },
+    move: (x: number, y: number) => { const el = cursorEl.current; if (el) el.style.transform = `translate(${x}px,${y}px)`; },
+    hide: () => { const el = cursorEl.current; if (el) el.style.opacity = '0'; },
+  }).current;
   const directoryButton = useRef<HTMLButtonElement>(null);
   const customWidths = navWidth !== 208 || detailWidth !== 296;
   useEffect(() => {
@@ -66,14 +83,18 @@ export function LabWorkspace({ index, children }: { index: ReactNode; children: 
     if (!ready) return;
     try { localStorage.setItem('lab-layout-v1', JSON.stringify({ nav: navWidth, details: detailWidth })); } catch { /* Optional preference. */ }
   }, [navWidth, detailWidth, ready]);
-  return <Workspace.Provider value={{ expanded, expand, detailWidth, resizeDetails: setDetailWidth }}>
+  return <Workspace.Provider value={{ expanded, expand, detailWidth, resizeDetails: setDetailWidth, cursor }}><NavActive.Provider value={setActive}>
     <div className="lab-workspace" data-nav-open={navOpen || undefined} style={{ '--lab-nav-width': `${navWidth}px`, '--lab-detail-width': `${detailWidth}px` } as CSSProperties}>
       <div className="lab-workspace-grid">
         <aside className="lab-sidebar" aria-label={tx("实验目录")}>
           <div className="lab-sidebar-sticky">
-            <button ref={directoryButton} type="button" className="lab-directory-toggle" title={tx(navOpen ? '收起目录' : '展开目录')} aria-label={tx(navOpen ? '收起目录' : '展开目录')} aria-expanded={navOpen} aria-controls="lab-directory" onClick={() => setNavOpen(!navOpen)}>
-              <span className="lab-directory-label">{tx(navOpen ? '收起目录' : '展开目录')}</span><WorkspaceIcon name={navOpen ? 'collapse' : 'index'} />
-            </button>
+            <div className="lab-directory-head">
+              <button ref={directoryButton} type="button" className="lab-directory-toggle" title={tx(navOpen ? '收起目录' : '展开目录')} aria-label={tx(navOpen ? '收起目录' : '展开目录')} aria-expanded={navOpen} aria-controls="lab-directory" onClick={() => setNavOpen(!navOpen)}>
+                <span className="lab-directory-icon" aria-hidden>{navOpen ? '‹' : '›'}</span>
+                <span className="lab-directory-label">{tx(navOpen ? 'Index · collapse' : 'Index · expand')}</span>
+              </button>
+              <span className="lab-directory-count" aria-hidden>{active} / {LAST_NO}</span>
+            </div>
             <div id="lab-directory" hidden={!navOpen} onClick={e => {
               const link = e.target instanceof Element ? e.target.closest<HTMLAnchorElement>('a[href]') : null;
               if (window.innerWidth < 1100 && link && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
@@ -91,21 +112,29 @@ export function LabWorkspace({ index, children }: { index: ReactNode; children: 
                 directoryButton.current?.focus({ preventScroll: true });
               }}><WorkspaceIcon name="reset" />{tx("Reset widths")}</button>}
             </div>
+            {!navOpen && <nav className="lab-rail" aria-label={tx("实验目录")}>
+              {LAB_INDEX.flatMap((g, gi) => g.segments.flatMap(sg => sg.benches.map((b, bi) => ({ b, gi, first: bi === 0 })))).map(({ b }, i, all) => {
+                const on = b.no === active;
+                const newProject = i > 0 && LAB_INDEX.findIndex(g => g.segments.some(sg => sg.benches.includes(b))) !== LAB_INDEX.findIndex(g => g.segments.some(sg => sg.benches.includes(all[i - 1].b)));
+                return <a key={b.no} href={`#lab${b.no}`} className="lab-rail__tick" data-new-project={newProject || undefined} data-on={on || undefined} aria-current={on ? 'true' : undefined} title={`${tx('Lab')} ${b.no} · ${tx(b.title)}`} aria-label={`${tx('Lab')} ${b.no} · ${tx(b.title)}`} style={{ '--tick': labAccent(b.kernel) } as CSSProperties}><span aria-hidden /></a>;
+              })}
+            </nav>}
           </div>
         </aside>
         <div className="lab-nav-divider" hidden={!navOpen}><Splitter label={tx("目录宽度")} value={navWidth} min={176} max={280} change={setNavWidth} controls="lab-directory" /></div>
         <div className="lab-main">{children}</div>
       </div>
+      <div ref={cursorEl} className="lab-cursor" aria-hidden><span className="lab-cursor__ring"><span /></span><span ref={cursorVerb} className="lab-cursor__verb" /></div>
     </div>
-  </Workspace.Provider>;
+  </NavActive.Provider></Workspace.Provider>;
 }
 
 function visibleCamera(root: HTMLElement | null) {
   return Array.from(root?.querySelectorAll<HTMLCanvasElement>('canvas[data-lab-camera]') ?? []).find(canvas => canvas.getBoundingClientRect().width > 0 && !canvas.closest('[hidden]'));
 }
 
-export function LabPanel({ no, title, description, lede, specs, accent, children, notes }: {
-  no: string; title: string; description: string; lede: string; specs: [string, string][]; accent: string; children: ReactNode; notes?: ReactNode;
+export function LabPanel({ no, title, description, lede, specs, accent, kind, verb, children, notes }: {
+  no: string; title: string; description: string; lede: string; specs: [string, string][]; accent: string; kind: string; verb: string; children: ReactNode; notes?: ReactNode;
 }) {
   const lang = useBenchLang();
   const tx = useLabText(lang);
@@ -120,7 +149,24 @@ export function LabPanel({ no, title, description, lede, specs, accent, children
   const stage = useRef<HTMLDivElement>(null);
   const expandButton = useRef<HTMLButtonElement>(null);
   const [placeholder, setPlaceholder] = useState(0);
+  const [allSpecs, setAllSpecs] = useState(false);
+  const [solving, setSolving] = useState(false);
+  const solveBar = useRef<HTMLSpanElement>(null);
+  const solveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const close = useCallback(() => workspace.expand(null), [workspace.expand]);
+  // 稿的放大 / 恢复：从面板自己的框沿 clip-path 铺满屏，恢复时收回到占位框（reduced-motion 直接切）。
+  const fromRect = useRef<DOMRect | null>(null);
+  const closing = useRef(false);
+  const requestClose = useCallback(() => {
+    const node = root.current, a = anchor.current;
+    if (!node || !a || closing.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { close(); return; }
+    closing.current = true;
+    const r = a.getBoundingClientRect();
+    const anim = node.animate([{ clipPath: 'inset(0 0 0 0)' }, { clipPath: `inset(${Math.max(0, r.top)}px ${window.innerWidth - r.right}px ${Math.max(0, window.innerHeight - r.bottom)}px ${r.left}px)` }], { duration: 560, easing: 'cubic-bezier(.76,0,.24,1)', fill: 'forwards' });
+    anim.onfinish = () => { closing.current = false; close(); requestAnimationFrame(() => anim.cancel()); };
+  }, [close]);
+  const closeRef = useRef(requestClose);
+  closeRef.current = requestClose;
   // Keep 620px for the stage and the 32px gutter from the spacing system.
   const maxDetails = clamp(Math.floor(panelWidth - 652), 260, 400);
   const appliedDetailWidth = Math.min(workspace.detailWidth, maxDetails);
@@ -167,6 +213,23 @@ export function LabPanel({ no, title, description, lede, specs, accent, children
     measure();
     return () => { ro.disconnect(); cancelAnimationFrame(raf); window.removeEventListener('resize', measure); };
   }, [expanded, no]);
+  // 控件一动：顶线扫一下 + 状态读「求解中…」（稿的 solve 反馈；不接真实求解进度）
+  useEffect(() => {
+    const node = stage.current;
+    if (!node) return;
+    const flash = (e: Event) => {
+      if (!(e.target instanceof Element) || !e.target.closest('.lab-ctl, .lab-ctl__row')) return;
+      clearTimeout(solveTimer.current);
+      setSolving(true);
+      solveTimer.current = setTimeout(() => setSolving(false), 900);
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        solveBar.current?.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)', offset: 0.7 }, { transform: 'scaleX(1)', opacity: 0 }], { duration: 900, easing: 'cubic-bezier(.2,.7,.1,1)' });
+      }
+    };
+    node.addEventListener('click', flash);
+    node.addEventListener('input', flash);
+    return () => { node.removeEventListener('click', flash); node.removeEventListener('input', flash); clearTimeout(solveTimer.current); };
+  }, []);
   useEffect(() => {
     if (!expanded || !root.current) return;
     const node = root.current;
@@ -185,7 +248,7 @@ export function LabPanel({ no, title, description, lede, specs, accent, children
     }
     expandButton.current?.focus({ preventScroll: true });
     const key = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+      if (e.key === 'Escape') { e.preventDefault(); closeRef.current(); return; }
       if (e.key !== 'Tab') return;
       const items = Array.from(node.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), [tabindex="0"]')).filter(el => el.getClientRects().length && !el.closest('[hidden], [inert]'));
       const first = items[0], last = items[items.length - 1];
@@ -214,9 +277,15 @@ export function LabPanel({ no, title, description, lede, specs, accent, children
     };
   }, [expanded, close]);
   const toggleExpand = () => {
-    if (expanded) close();
-    else { setPlaceholder(root.current?.getBoundingClientRect().height ?? 0); workspace.expand(no); }
+    if (expanded) requestClose();
+    else { fromRect.current = root.current?.getBoundingClientRect() ?? null; setPlaceholder(root.current?.getBoundingClientRect().height ?? 0); workspace.expand(no); }
   };
+  useEffect(() => {
+    const node = root.current, r = fromRect.current;
+    if (!expanded || !node || !r || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const a = node.animate([{ clipPath: `inset(${r.top}px ${window.innerWidth - r.right}px ${window.innerHeight - r.bottom}px ${r.left}px)` }, { clipPath: 'inset(0 0 0 0)' }], { duration: 760, easing: 'cubic-bezier(.76,0,.24,1)' });
+    return () => a.cancel();
+  }, [expanded]);
   const cameraCommand = (command: CameraCommand) => visibleCamera(stage.current)?.dispatchEvent(new CustomEvent(CAMERA_COMMAND, { detail: command }));
   return <div ref={anchor} className="lab-panel-anchor" id={`lab${no}`} style={expanded ? { height: placeholder } : undefined}>
     <LabActivity.Provider value={!workspace.expanded || expanded}>
@@ -227,18 +296,26 @@ export function LabPanel({ no, title, description, lede, specs, accent, children
           if (!expanded && e.pointerType === 'touch' && e.target instanceof Element && e.target.closest('.lab-fig')) e.stopPropagation();
         }}>
         <header className="lab-panel-heading">
-          <div className="lab-panel-number"><span className="lab-live-dot" />{tx("LAB")} {no}</div>
+          <div className="lab-panel-number"><span className="lab-panel-no" style={{ color: 'var(--lab-tone)' }}>{tx("LAB")} {no}</span><span className="lab-panel-dash" aria-hidden /><span className="lab-panel-kind">{tx(kind)}</span></div>
           <div className="lab-panel-title"><h2 id={`lab-title-${no}`}>{tx(title)}</h2><p>{tx(description)}</p></div>
           <div className="lab-panel-actions">
-            <button type="button" aria-expanded={details} aria-controls={`lab-details-${no}`} onClick={() => setDetails(!details)} data-on={details || undefined}><WorkspaceIcon name="details" />{tx("Details")} </button>
-            <button ref={expandButton} type="button" className="lab-expand" aria-label={`${tx(expanded ? '恢复' : '放大')} ${tx('Lab')} ${no}`} onClick={toggleExpand}><WorkspaceIcon name={expanded ? 'restore' : 'expand'} />{expanded ? tx('Restore') : tx('Expand')}</button>
+            <button type="button" className="lab-notes-toggle" aria-pressed={details} aria-controls={`lab-details-${no}`} onClick={() => setDetails(!details)}><span className="lab-check" data-on={details || undefined} aria-hidden />{tx("Notes")}</button>
+            <button ref={expandButton} type="button" className="lab-expand" aria-label={`${tx(expanded ? '恢复' : '放大')} ${tx('Lab')} ${no}`} onClick={toggleExpand}>{expanded ? tx('Restore ↙') : tx('Expand ↗')}</button>
           </div>
         </header>
         <div className="lab-panel-body">
           <div className="lab-stage-column">
-            <div className="lab-stage" ref={stage}>{children}</div>
+            <span className="lab-solve-bar" ref={solveBar} aria-hidden />
+            <div className="lab-stage" ref={stage}
+              onPointerMove={e => {
+                if (e.pointerType !== 'mouse' || expanded) return;
+                if (e.target instanceof Element && e.target.closest('.lab-fig')) { workspace.cursor.show(tx(verb)); workspace.cursor.move(e.clientX, e.clientY); }
+                else workspace.cursor.hide();
+              }}
+              onPointerLeave={() => workspace.cursor.hide()}>{children}</div>
             <div className="lab-view-tools">
-              <p>{expanded ? tx(hasCamera ? '滚轮缩放 · 拖动查看' : '直接操作实验') : tx('滚轮浏览页面')}<span className="lab-touch-note"> {tx("· 放大后可触摸拖动")}</span></p>
+              <p><span className="lab-hint-dot" aria-hidden />{expanded ? (hasCamera ? tx('Wheel zooms the model · drag to orbit · Esc restores') : cap(tx(verb), lang) + tx(' · Esc restores')) : no === '1-5' ? tx('Fixed view · switch it with the buttons') : cap(tx(verb), lang) + tx(' · wheel scrolls the page')}</p>
+              <span className="lab-status" data-solving={solving || undefined}><i aria-hidden />{solving ? tx('solving…') : tx('live')}</span>
               {hasCamera && <div className="lab-zoom-controls" role="group" aria-label={`${tx('Lab')} ${no} ${tx('相机控制')}`}>
                 <button type="button" aria-label={tx("缩小模型")} onClick={() => cameraCommand('out')}>−</button>
                 <button type="button" aria-label={tx("放大模型")} onClick={() => cameraCommand('in')}>+</button>
@@ -248,14 +325,13 @@ export function LabPanel({ no, title, description, lede, specs, accent, children
           </div>
           <div className="lab-detail-divider" hidden={!details}><Splitter label={`${tx('Lab')} ${no} ${tx('说明宽度')}`} value={appliedDetailWidth} min={260} max={maxDetails} change={workspace.resizeDetails} reverse controls={`lab-details-${no}`} /></div>
           <aside className="lab-details" id={`lab-details-${no}`} hidden={!details} aria-label={`${tx('Lab')} ${no} ${tx('说明与规格')}`}>
-            <div className="lab-details-head"><span>{tx("ABOUT THIS STUDY")}</span><div className="lab-detail-size">
-              <button type="button" aria-label={tx("缩窄说明")} disabled={appliedDetailWidth <= 260} onClick={() => workspace.resizeDetails(clamp(appliedDetailWidth - 24, 260, maxDetails))}>−</button>
-              <button type="button" aria-label={tx("加宽说明")} disabled={appliedDetailWidth >= maxDetails} onClick={() => workspace.resizeDetails(clamp(appliedDetailWidth + 24, 260, maxDetails))}>+</button>
-            </div></div>
+            <div className="lab-details-head"><span>{tx("About this study")}</span></div>
             <div className="lab-details-scroll" tabIndex={0}>
               {notes && <div>{notes}</div>}
               <p className="lab-description">{tx(lede)}</p>
-              <h3>{tx("Specifications")}</h3><dl>{specs.map(([key, value]) => <div key={key}><dt>{tx(key)}</dt><dd>{tx(value)}</dd></div>)}</dl>
+              <h3 className="lab-sr-only">{tx("Specifications")}</h3>
+              <dl>{(allSpecs ? specs : specs.slice(0, SPEC_ROWS)).map(([key, value]) => <div key={key}><dt>{tx(key)}</dt><dd>{tx(value)}</dd></div>)}</dl>
+              {specs.length > SPEC_ROWS && <button type="button" className="lab-specs-more" aria-expanded={allSpecs} onClick={() => setAllSpecs(!allSpecs)}>{allSpecs ? tx('Fewer specs ↑') : (lang === 'zh' ? `全部 ${specs.length} 项规格 ↓` : `All ${specs.length} specs ↓`)}</button>}
             </div>
           </aside>
         </div>

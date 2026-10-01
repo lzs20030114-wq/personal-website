@@ -1,11 +1,11 @@
-import type { CSSProperties, ReactNode } from 'react';
-import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { LabPanel, LabWorkspace } from '../../../components/lab/LabWorkspace';
 import './workspace.css';
-import { LabPageText, LabLanguageSwitch, LabPageCount } from '../../../components/lab/LabLanguage';
+import './lab-dark.css';
+import { LabIntro, LabProjectRule, LabProjectEmpty, LabScaleRule } from '../../../components/lab/LabChrome';
 import { LegacyLabHash } from '../../../components/lab/LegacyLabHash';
 import { LabIndex } from '../../../components/lab/LabIndex';
-import { LAB_INDEX, labAccent, labBench } from '../../../src/lib/site/lab-index';
+import { labAccent, labBench } from '../../../src/lib/site/lab-index';
 import { PageEnter } from '../../../components/site/PageEnter';
 import { FourBarBench } from '../../../components/lab/FourBarBench';
 import { ArchBench } from '../../../components/lab/ArchBench';
@@ -58,95 +58,6 @@ export const metadata = { title: 'The lab' };
  * = src/lib/site/lab-index.ts：Bench 的题头与顶线色、ProjectRule / ScaleRule 的字都从它取。
  * 页宽为此放到 1560（`.shell--lab`），否则台架图框要让出目录那一列；<1280 目录回落成页顶芯片带。
  */
-const KICKER: CSSProperties = {
-  margin: 0,
-  fontSize: 13,
-  fontWeight: 600,
-  letterSpacing: '0.14em',
-  textTransform: 'uppercase',
-  color: 'var(--n600)',
-};
-const LEGEND: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 14,
-  fontSize: 11,
-  fontWeight: 600,
-  letterSpacing: '0.1em',
-  textTransform: 'uppercase',
-  color: 'var(--n600)',
-};
-/** 项目分组头：台架从此按项目归组（Lab 1-1…1-5 = 项目一，Lab 2-1…2-11 = 项目二；项目二内再按尺度分四段，见 ScaleRule） */
-function ProjectRule({ label, sub }: { label: string; sub: string }) {
-  return (
-    <div
-      className="flex flex-wrap items-baseline justify-between"
-      style={{ gap: 24, padding: '44px 0 0' }}
-    >
-      <p
-        style={{
-          margin: 0,
-          fontSize: 13,
-          fontWeight: 800,
-          letterSpacing: '0.16em',
-          textTransform: 'uppercase',
-        }}
-      >
-        <LabPageText text={label} />
-      </p>
-      <span
-        style={{
-          fontSize: 11,
-          fontWeight: 600,
-          letterSpacing: '0.1em',
-          textTransform: 'uppercase',
-          color: 'var(--n500)',
-        }}
-      >
-        <LabPageText text={sub} />
-      </span>
-    </div>
-  );
-}
-
-/**
- * 尺度段头（项目二专用，2026-09-03 收纳）：Ⅰ 一条带 / Ⅱ 一排 / Ⅲ 一圈 / Ⅳ 一间房。
- * 比 ProjectRule 轻一档（11px、n700），读作项目内的目录而不是又一个项目。
- */
-function ScaleRule({ n, label, sub }: { n: string; label: string; sub: string }) {
-  return (
-    <div
-      className="flex flex-wrap items-baseline justify-between"
-      style={{ gap: 24, padding: '40px 0 0' }}
-    >
-      <p
-        style={{
-          margin: 0,
-          fontSize: 11,
-          fontWeight: 800,
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: 'var(--n700)',
-        }}
-      >
-        <span style={{ display: 'inline-block', minWidth: 26, color: 'var(--accent-2)' }}>{n}</span>
-        <LabPageText text={label} />
-      </p>
-      <span
-        style={{
-          fontSize: 11,
-          fontWeight: 600,
-          letterSpacing: '0.1em',
-          textTransform: 'uppercase',
-          color: 'var(--n500)',
-        }}
-      >
-        <LabPageText text={sub} />
-      </span>
-    </div>
-  );
-}
-
 function Bench({
   no,
   lede,
@@ -160,66 +71,21 @@ function Bench({
   children: ReactNode;
   notes?: ReactNode;
 }) {
-  const { title, kernel, description } = labBench(no);
-  return <LabPanel no={no} title={title} description={description} accent={labAccent(kernel)} lede={lede} specs={specs} notes={notes}>{children}</LabPanel>;
+  const { title, kernel, description, kind, verb } = labBench(no);
+  return <LabPanel no={no} title={title} description={description} accent={labAccent(kernel)} kind={kind} verb={verb} lede={lede} specs={specs} notes={notes}>{children}</LabPanel>;
 }
-
-const [P1, P2] = LAB_INDEX;
 
 export default function LabPage() {
   return (
     <>
-      <div className="ground-plane" aria-hidden />
+      <div className="ground-plane ld-ground" aria-hidden />
+      <div className="ld-dots" aria-hidden />
       <PageEnter />
       <LegacyLabHash />
       <div className="shell shell--lab pg-dark" data-pt-content>
+        <LabIntro />
         <LabWorkspace index={<LabIndex />}>
-        <header className="lab-page-intro" style={{ padding: '38px 0 36px', borderBottom: 'var(--hair)' }}>
-          <div className="flex flex-wrap items-baseline justify-between" style={{ gap: 16 }}>
-            <p style={{ ...KICKER, margin: '0 0 16px' }}><LabPageCount /></p>
-            <span style={LEGEND}>
-              <span className="flex items-center" style={{ gap: 6 }}>
-                <span style={{ width: 9, height: 9, background: 'var(--accent)' }} />
-                <LabPageText text="2D kernel" />
-              </span>
-              <span className="flex items-center" style={{ gap: 6 }}>
-                <span style={{ width: 9, height: 9, background: 'var(--accent-2)' }} />
-                <LabPageText text="3D kernel" />
-              </span>
-              <span><LabPageText text="Interactive" /></span>
-            </span>
-          </div>
-          <div className="lab-title-line"><h1
-            style={{
-              fontSize: 'clamp(44px, 7vw, 72px)',
-              fontWeight: 800,
-              lineHeight: 0.98,
-              letterSpacing: '-0.02em',
-              margin: 0,
-              textTransform: 'uppercase',
-            }}
-          >
-            <LabPageText text="The lab" />
-          </h1><LabLanguageSwitch /></div>
-          <svg width="230" height="12" style={{ display: 'block', margin: '16px 0 0', overflow: 'visible' }}>
-            <line
-              className="dash-rule"
-              x1="0"
-              y1="4"
-              x2="230"
-              y2="4"
-              stroke="var(--accent)"
-              strokeWidth="1.5"
-              strokeDasharray="8 6"
-            />
-            <line x1="0" y1="10" x2="150" y2="10" stroke="var(--accent-2)" strokeWidth="1.5" />
-          </svg>
-          <p style={{ fontSize: 19, lineHeight: 1.5, margin: '24px 0 0', maxWidth: '56ch' }}>
-            <LabPageText text="Interactive studies of linkages, fabric structures and spatial behaviour. Drag the models and adjust their controls to compare how they move and form." />
-          </p>
-        </header>
-
-        <ProjectRule label={P1.label} sub={P1.sub} />
+        <LabProjectRule i={0} />
 
         <Bench
           no="1-1"
@@ -288,9 +154,9 @@ export default function LabPage() {
         </Bench>
 
         {/* 项目二尚未定名：与 log 页 PROJECT_GROUPS 同一措辞（描述而非标题），定名后一并改 */}
-        <ProjectRule label={P2.label} sub={P2.sub} />
+        <LabProjectRule i={1} />
 
-        <ScaleRule n={P2.segments[0].n} label={P2.segments[0].label} sub={P2.segments[0].sub} />
+        <LabScaleRule i={0} />
 
         <Bench
           no="2-1"
@@ -334,7 +200,7 @@ export default function LabPage() {
           <SkinDualBench />
         </Bench>
 
-        <ScaleRule n={P2.segments[1].n} label={P2.segments[1].label} sub={P2.segments[1].sub} />
+        <LabScaleRule i={1} />
 
         <Bench
           no="2-4"
@@ -351,7 +217,7 @@ export default function LabPage() {
           <SkinSeriesBench />
         </Bench>
 
-        <ScaleRule n={P2.segments[2].n} label={P2.segments[2].label} sub={P2.segments[2].sub} />
+        <LabScaleRule i={2} />
 
         <Bench
           no="2-5"
@@ -406,7 +272,7 @@ export default function LabPage() {
           <SquareRingBench />
         </Bench>
 
-        <ScaleRule n={P2.segments[3].n} label={P2.segments[3].label} sub={P2.segments[3].sub} />
+        <LabScaleRule i={3} />
 
         <Bench
           no="2-8"
@@ -423,7 +289,7 @@ export default function LabPage() {
           <SkinGridBench />
         </Bench>
 
-        <ScaleRule n={P2.segments[4].n} label={P2.segments[4].label} sub={P2.segments[4].sub} />
+        <LabScaleRule i={4} />
 
         <Bench
           no="2-9"
@@ -442,7 +308,7 @@ export default function LabPage() {
           <SkinClusterBench />
         </Bench>
 
-        <ScaleRule n={P2.segments[5].n} label={P2.segments[5].label} sub={P2.segments[5].sub} />
+        <LabScaleRule i={5} />
 
         <Bench
           no="2-10"
@@ -479,7 +345,7 @@ export default function LabPage() {
           <CrowdPlanBench workspace />
         </Bench>
 
-        <ScaleRule n={P2.segments[6].n} label={P2.segments[6].label} sub={P2.segments[6].sub} />
+        <LabScaleRule i={6} />
 
         <Bench
           no="2-12"
@@ -498,39 +364,7 @@ export default function LabPage() {
           <SkinComboBench workspace />
         </Bench>
 
-        <footer
-          className="flex flex-wrap items-baseline justify-between"
-          style={{ gap: 32, padding: '26px 0 72px' }}
-        >
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              color: 'var(--n500)',
-            }}
-          >
-            <LabPageCount footer />
-          </span>
-          <span
-            className="flex"
-            style={{
-              gap: 24,
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-            }}
-          >
-            <Link href="/work/reincarnation-machine" style={{ textDecoration: 'none', color: 'var(--g300)' }}>
-              <LabPageText text="Work →" />
-            </Link>
-            <Link href="/archive" style={{ textDecoration: 'none', color: 'var(--g300)' }}>
-              <LabPageText text="Log →" />
-            </Link>
-          </span>
-        </footer>
+        <LabProjectEmpty />
         </LabWorkspace>
       </div>
     </>

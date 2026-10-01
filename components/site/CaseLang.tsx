@@ -31,6 +31,11 @@ export function useOptionalCaseLang(): SiteLang | undefined {
   return useContext(LangCtx)?.lang;
 }
 
+/** 语言 + 设置器——Lab 页顶栏的 EN / 中 方块按钮用（滑块组件之外的第二种皮肤）。 */
+export function useCaseLangControl(): Ctx {
+  return useContext(LangCtx) ?? { lang: 'en', setLang: () => {} };
+}
+
 export function useCaseLang(): SiteLang {
   return useContext(LangCtx)?.lang ?? 'en';
 }

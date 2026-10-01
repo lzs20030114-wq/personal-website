@@ -22,6 +22,10 @@ export interface LabBench {
   /** 原主页预览文案，现与台架目录共用编号。 */
   description: string;
   meta: string;
+  /** 台架类型一行（题头「LAB 1-1 — 类型」）——09 Lab Page 稿 */
+  kind: string;
+  /** 画面框里自绘光标的动词（「drag to orbit」）——09 Lab Page 稿 */
+  verb: string;
 }
 
 export interface LabSegment {
@@ -53,11 +57,11 @@ export const LAB_INDEX: readonly LabGroup[] = [
         label: "",
         sub: "",
         benches: [
-          { no: "1-1", title: "Four-bar linkage", kernel: "2d", description: 'Drag a joint to move the four-bar mechanism and trace its path.', meta: '36 tests · SVG' },
-          { no: "1-2", title: "Arch ring solver", kernel: "2d", description: 'The S4 scissor arch, driven by a crank-slider.', meta: 'Kernel untouched · SVG' },
-          { no: "1-3", title: "Tendon tentacle", kernel: "3d", description: 'Bend seven vertebrae with three tendons spaced at 120°.', meta: 'Orbit camera · WebGL' },
-          { no: "1-4", title: "Five-ring shell", kernel: "3d", description: 'Five rings opening and closing together.', meta: 'Calibrated stops · WebGL' },
-          { no: "1-5", title: "Full assembly", kernel: "3d", description: 'One shaft drives five rings; three tendons bend the arm.', meta: 'Real solids · WebGL' },
+          { no: "1-1", title: "Four-bar linkage", kernel: "2d", description: 'Drag a joint to move the four-bar mechanism and trace its path.', meta: '36 tests · SVG', kind: 'SVG · 2D kernel', verb: 'drag a joint' },
+          { no: "1-2", title: "Arch ring solver", kernel: "2d", description: 'The S4 scissor arch, driven by a crank-slider.', meta: 'Kernel untouched · SVG', kind: 'SVG · 2D kernel', verb: 'drag the apex' },
+          { no: "1-3", title: "Tendon tentacle", kernel: "3d", description: 'Bend seven vertebrae with three tendons spaced at 120°.', meta: 'Orbit camera · WebGL', kind: 'WebGL · 3D kernel', verb: 'drag to orbit' },
+          { no: "1-4", title: "Five-ring shell", kernel: "3d", description: 'Five rings opening and closing together.', meta: 'Calibrated stops · WebGL', kind: 'WebGL · 3D kernel', verb: 'drag to orbit' },
+          { no: "1-5", title: "Full assembly", kernel: "3d", description: 'One shaft drives five rings; three tendons bend the arm.', meta: 'Real solids · WebGL', kind: 'WebGL · fixed view', verb: 'views by button' },
         ],
       },
     ],
@@ -72,53 +76,53 @@ export const LAB_INDEX: readonly LabGroup[] = [
         label: "One band",
         sub: "Lab 2-1 – 2-3 · what a unit is",
         benches: [
-          { no: "2-1", title: "Contractile skin units", kernel: "2d", description: 'Four bond patterns turn a contracting strip into four shapes.', meta: 'Python parity · SVG' },
-          { no: "2-2", title: "Skin units, solid", kernel: "3d", description: 'The four fabric bands in 3D, with visible sections and bonds.', meta: 'Shared 3D rig · WebGL' },
-          { no: "2-3", title: "Two structures, one band", kernel: "3d", description: 'Two structures on one strip, with an adjustable gap.', meta: '5 dual bands · WebGL' },
+          { no: "2-1", title: "Contractile skin units", kernel: "2d", description: 'Four bond patterns turn a contracting strip into four shapes.', meta: 'Python parity · SVG', kind: 'SVG · research-code port', verb: 'drag ℓ' },
+          { no: "2-2", title: "Skin units, solid", kernel: "3d", description: 'The four fabric bands in 3D, with visible sections and bonds.', meta: 'Shared 3D rig · WebGL', kind: 'WebGL', verb: 'drag to orbit' },
+          { no: "2-3", title: "Two structures, one band", kernel: "3d", description: 'Two structures on one strip, with an adjustable gap.', meta: '5 dual bands · WebGL', kind: 'WebGL', verb: 'drag to orbit' },
         ],
       },
       {
         n: "Ⅱ",
         label: "A row",
         sub: "Lab 2-4 · transitions along a line",
-        benches: [{ no: "2-4", title: "Series", kernel: "3d", description: 'Compare a graded series with a platform splitting in two.', meta: '2 plans · WebGL' }],
+        benches: [{ no: "2-4", title: "Series", kernel: "3d", description: 'Compare a graded series with a platform splitting in two.', meta: '2 plans · WebGL', kind: 'WebGL', verb: 'drag to orbit' }],
       },
       {
         n: "Ⅲ",
         label: "A ring",
         sub: "Lab 2-5 – 2-7 · the row closed into a loop",
         benches: [
-          { no: "2-5", title: "Cylinder of units", kernel: "3d", description: 'Twenty bands form a level, undulating, changing, split or double platform.', meta: '5 plans · radius · WebGL' },
-          { no: "2-6", title: "Layers within one unit", kernel: "3d", description: 'Round to square, with independent shelf sizes, tilts, gaps and joins.', meta: 'Target + forming bands · WebGL' },
-          { no: "2-7", title: "A square ring", kernel: "3d", description: 'Vary each band’s reach to change a round platform into a square.', meta: 'Three depths · WebGL' },
+          { no: "2-5", title: "Cylinder of units", kernel: "3d", description: 'Twenty bands form a level, undulating, changing, split or double platform.', meta: '5 plans · radius · WebGL', kind: 'WebGL', verb: 'drag to orbit' },
+          { no: "2-6", title: "Layers within one unit", kernel: "3d", description: 'Round to square, with independent shelf sizes, tilts, gaps and joins.', meta: 'Target + forming bands · WebGL', kind: 'WebGL · multi-view', verb: 'drag to orbit' },
+          { no: "2-7", title: "A square ring", kernel: "3d", description: 'Vary each band’s reach to change a round platform into a square.', meta: 'Three depths · WebGL', kind: 'WebGL', verb: 'drag to orbit' },
         ],
       },
       {
         n: "Ⅳ",
         label: "A room",
         sub: "Lab 2-8 · the field at real scale",
-        benches: [{ no: "2-8", title: "Four by four", kernel: "3d", description: 'Sixteen rings in a room, with a 1.70 m figure for scale.', meta: '16 live rings · WebGL' }],
+        benches: [{ no: "2-8", title: "Four by four", kernel: "3d", description: 'Sixteen rings in a room, with a 1.70 m figure for scale.', meta: '16 live rings · WebGL', kind: 'WebGL · 16 live rings', verb: 'drag to orbit' }],
       },
       {
         n: "Ⅴ",
         label: "Between units",
         sub: "Lab 2-9 · what two, three, four, nine units can be to each other",
-        benches: [{ no: "2-9", title: "Between units", kernel: "3d", description: 'Arrange 2, 3, 4 or 9 rings and compare their spacing, heights and timing.', meta: '4 clusters · 5 relations · 2 timings · WebGL' }],
+        benches: [{ no: "2-9", title: "Between units", kernel: "3d", description: 'Arrange 2, 3, 4 or 9 rings and compare their spacing, heights and timing.', meta: '4 clusters · 5 relations · 2 timings · WebGL', kind: 'WebGL', verb: 'drag to orbit' }],
       },
       {
         n: "Ⅵ",
         label: "People",
         sub: "Lab 2-10 – 2-11 · behaviour reaching the units",
         benches: [
-          { no: "2-10", title: "A person walks through", kernel: "2d", description: 'Move one person and watch nearby units respond to their floor trace.', meta: '6 behaviours · 3 grids · canvas' },
-          { no: "2-11", title: "A few people", kernel: "2d", description: 'Place or drag people to see how their overlapping views affect the units.', meta: 'Up to 8 people · live · canvas' },
+          { no: "2-10", title: "A person walks through", kernel: "2d", description: 'Move one person and watch nearby units respond to their floor trace.', meta: '6 behaviours · 3 grids · canvas', kind: 'Canvas · plan', verb: 'drag the person' },
+          { no: "2-11", title: "A few people", kernel: "2d", description: 'Place or drag people to see how their overlapping views affect the units.', meta: 'Up to 8 people · live · canvas', kind: 'Canvas · up to 8 people', verb: 'click to add' },
         ],
       },
       {
         n: "Ⅶ",
         label: "Compositions",
         sub: "Lab 2-12 · platforms joined high to low",
-        benches: [{ no: "2-12", title: "Joined platforms", kernel: "3d", description: 'Join round or square platforms into steps, ramps and enclosures.', meta: '8 figures · round & square · WebGL' }],
+        benches: [{ no: "2-12", title: "Joined platforms", kernel: "3d", description: 'Join round or square platforms into steps, ramps and enclosures.', meta: '8 figures · round & square · WebGL', kind: 'WebGL', verb: 'drag to orbit' }],
       },
     ],
   },

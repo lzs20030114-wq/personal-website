@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { useOptionalCaseLang } from './CaseLang';
+import { LabFooter } from '../lab/LabShell';
 
 /**
  * 共享页脚（Modernist 稿）——左侧联系邮箱、右侧链接说明。
@@ -13,6 +14,8 @@ export function SiteFooter() {
   const zh = useOptionalCaseLang() === 'zh';
   const deep =
     pathname.startsWith('/work') || pathname.startsWith('/archive') || pathname.startsWith('/lab');
+
+  if (pathname.startsWith('/lab')) return <LabFooter />;
 
   return (
     <footer className={deep ? 'site-footer site-footer--deep' : 'site-footer'}>

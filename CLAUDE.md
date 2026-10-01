@@ -216,6 +216,8 @@
 
 - **主页更替为「07 Home · Scroll Zone」（2026-10-01，用户拍板「视觉和交互都以它为准」）**：设计源 `design-ref/home-scroll-zone/`；四页（Hook / Work / About 翻页，Lab + Log 自由滚）+ HUD + rail，取代 Home-Screens 三幕与此前调过的翻幕手感（旧 HomeScreens/HomeLab 已删）。数据全部走现有来源（LAB_INDEX / 内容池 / 日志池，纯派生在 `src/lib/site/home-model.ts`），Hook 舞台与 Lab 预览是 /lab 的活台架（用户拍板）；稿无响应式，补了 <1024px 与 reduced-motion 回落文档流。只动首页，Lab / case / 日志页零改。新依赖 `@fontsource/jetbrains-mono`。映射与有意差异 = MAPPING §42。余项：用户真机手感拍板。
 
+- **Lab 页换「09 Lab Page - Dark」稿（2026-10-01，用户交来 Claude Design 交接包「做吧」）**：设计源存档 `design-ref/lab-page-dark/`。只换 `/lab` 的页面外壳与视觉层（吸顶顶栏 + EN/中、开头区与项目芯片、目录头与收起刻度竖条、题头类型行、Notes/Expand、规格 4 条 + 展开、光标动词、求解扫线、clip-path 放大），台架本体与同屏四台 / 深链 / 文案表沿用。新增 `kind` / `verb` 两列进 `lab-index.ts`；样式在 `app/(site)/lab/lab-dark.css`。有意差异（保留目录拖拽、不做缩放读数、去掉无来源的日期等）见 MAPPING §43。余项：用户真机看对稿程度。
+
 ## Lab 编号对照（2026-09-03 收纳 · 2026-09-13 改按项目编号）
 
 **2026-09-13 起页面编号按项目**（用户拍板「lab1-1 就是项目 1 第一个」）：`Lab 项目-序号`，锚点 `#lab1-1`／`#lab2-5-split`，旧哈希 `#lab10(-split)` 照认（`components/lab/planHash.ts` 的 `normalizedLabHash` + `LegacyLabHash`）。项目一 Lab.01–05 → **1-1…1-5**（四杆 / 拱环 / 触手 / 五环 / 整机）；项目二见下表首列。改的只是页面上看得见的号（台架题头、主页卡片、案例页图注、规格表引用、差分清单 id）——**代码注释与本文件上方条目里的两位号一律是写下时的号（历史，不改）**，对话里提编号先说清是哪套。

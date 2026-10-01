@@ -11,6 +11,7 @@ import {
   type MouseEvent,
 } from "react";
 import { LAB_INDEX, labAccent, labAnchor } from "../../src/lib/site/lab-index";
+import { useLabNavActive } from './LabWorkspace';
 
 /**
  * /lab 左栏目录（2026-09-17，用户手绘立项：「左边加一列目录，可以直接概览整体，
@@ -29,6 +30,7 @@ import { LAB_INDEX, labAccent, labAnchor } from "../../src/lib/site/lab-index";
  * 窄屏（<1280）由 CSS 收成一条可换行的芯片带，标记与进度线不画（见 globals.css .lab-index）。
  */
 const READ_LINE = 0.3;
+const PROJECT_TITLE = ["Reincarnation Machine", "Spatial simulation"];
 
 interface Row {
   no: string;
@@ -57,6 +59,7 @@ export function LabIndex() {
   const [active, setActive] = useState<string>(rows[0]?.no ?? "");
   const [marker, setMarker] = useState<{ y: number; h: number } | null>(null);
   const [progress, setProgress] = useState(0);
+  const reportActive = useLabNavActive();
 
   // 滚动读位 + 进度（rAF 节流）
   useEffect(() => {
@@ -72,6 +75,7 @@ export function LabIndex() {
         else break;
       }
       setActive(cur);
+      reportActive(cur);
       const doc = document.documentElement;
       const span = doc.scrollHeight - window.innerHeight;
       setProgress(
@@ -93,7 +97,7 @@ export function LabIndex() {
       ro.disconnect();
       if (raf) window.cancelAnimationFrame(raf);
     };
-  }, [rows]);
+  }, [rows, reportActive]);
 
   // 标记跟到当前项（量 offsetTop，列表是 offsetParent）
   useEffect(() => {
@@ -164,9 +168,12 @@ export function LabIndex() {
               className="lab-index__project"
               style={{ "--i": i++ } as CSSProperties}
             >
-              <span>{tx(g.label.split(" — ")[0])}</span>
-              <span className="lab-index__project-sub">
-                {tx(g.label.split(" — ")[1])}
+              <span>
+                {String(LAB_INDEX.indexOf(g) + 1).padStart(2, "0")} ·{" "}
+                {tx(PROJECT_TITLE[LAB_INDEX.indexOf(g)] ?? g.label)}
+              </span>
+              <span className="lab-index__project-count">
+                {g.segments.reduce((a, sg) => a + sg.benches.length, 0)}
               </span>
             </p>
             {g.segments.map((s, si) => (
@@ -212,6 +219,7 @@ export function LabIndex() {
           </div>
         ))}
       </div>
+      <p className="lab-index__p3">{tx("03 · Project III — to come")}</p>
       <div className="lab-index__foot" aria-hidden>
         <span className="lab-index__foot-dot" data-pulse />
         <span>{tx("All live")}</span>
