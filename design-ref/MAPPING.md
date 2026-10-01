@@ -1371,3 +1371,17 @@ Lab 2-12 复用 §39.3–39.4 的标题、默认展开说明栏和整台高度�
 ### 41.1 发布前按提交范围复核（2026-09-29）
 
 用户确认推送。将本轮 45 个改动文件和此前 8 个本地提交一并发布；独立审查修复、研究草稿与内嵌旧仓库留在本地。从 Git 暂存区导出待发布版本独立验收，实际为 51 个测试文件、611 项测试通过。此前工作目录的 692 项包含内嵌旧仓库重复运行的 73 项，以及本轮未提交的独立审查测试 8 项；历史验收条目保留原记录，首页统计更正为本次发布实测 611。
+
+## 42. 主页更替为「07 Home · Scroll Zone」（2026-10-01，用户「视觉和交互都以它为准」）
+
+设计源 = `design-ref/home-scroll-zone/`（静态 HTML/CSS/JS 实现，README 见该目录）。**取代** §6 / §34 / §40 / §41 的 Home-Screens 三幕、S2 目录与已调过的翻幕手感；旧 `HomeScreens.tsx` / `HomeLab.tsx` / `HomeLab.module.css` 已删（只有主页用，不留两套并存）。用户明确选「按新的」引擎：§40 的蓄力 / 阻尼 / 起步反馈整套被稿内引擎（阈值 36、锁定 1000ms、手感常量原样）有意取代，不保留。§41「实验条目可直接进入台架」的结论保留（条目就是真实链接）。
+
+- **结构**：四页——01 Hook（标题 + 两张轮播的舞台）→ 02 Work（三张项目卡 + Other works）→ 03 About（深色渐变）按页翻、卡片叠放；03 向上收起，露出 04 Lab + 05 Log 自由滚（分组表头吸顶 + 进度线、悬停预览、日志节奏时间线、深色页脚）。右缘 rail 01–05 + 顶部 HUD（Work/About/Lab/Log）。署名按稿为 Zishuo Li（§40 的大写署名随旧版一并取代）。
+- **落地方式**：`app/page.tsx`（服务端读内容池 / 台架目录 / 日志池）→ `src/lib/site/home-model.ts`（纯派生，不碰 fs，守门 `home-model.test.ts` 4 项）→ `components/site/home/`（`HomeScroll` 引擎与状态、`HookPage`、`WorkAboutPages`、`ZonePage`）。标记与状态在 React，页引擎（wheel/键盘/touch 分页、WAAPI 编排、IO 显现）照稿 `home.js` 命令式移植。样式 = 稿 `home.css` 机械加 `hs-` 前缀（`home.css`，数值零改），避免与站内 `.link/.rule/.btn` 等全局类互相漏。
+- **数据来源（稿内硬编码 → 站内来源）**：Lab 17 台 = `LAB_INDEX`（编号/标题/说明/元数据/分段）；项目卡标题年份状态角色简介 = 内容池（`getAllWork`）；日志泳道/刻度/最新三条 = 日志池，**链接用 `withAnchors` 锚点 `/archive#log-日期-序号`**（不用日期，同 §31）；时间轴跨度与月份刻度从池里现算。泳道四条沿稿（Lab 单列，不并入项目一——泳道看「在做什么」，与一级筛选的项目归组是两件事）。
+- **活台架（用户拍板）**：Hook 舞台两张 = Lab 1-5 整机、Lab 2-11 人群；Lab 区预览 = 当前悬停台架——一律经 `HomeLabPreview` 直接用 /lab 的组件（`controls={false}`，HUD 与控制条收起，700×520 渲染面等比放进盒子）。非当前片/非当前页停跑；Lab 预览要**轮到第四页才建**（IO 只看几何，隐藏页也「可见」，不加这条首屏会白占一个 WebGL 上下文，实测首屏 3→2 个画布）。**项目卡主图仍是稿里的两张静态截图**（`public/home/`，稿自带 stand-in，卡上有 stand-in 戳），作者供图后替换。
+- **与稿的有意差异**：① 稿无响应式——补 <1024px / reduced-motion 回落文档流（引擎不接管，`flow` 判定 CSS 与 JS 同一条件，窄屏 HUD 常驻条）；② Lab 区悬停切台架加 120ms 停留（稿是即时；活台架每切一次要挂载/卸载 WebGL）；③ Hook 舞台底注换成「live solver · same kernels as the lab」（稿写的是静态图 stand-in 说明，已不适用）；④ Smart Bed 无自己的 /work 页（稿的 `/work/smart-bed` 会 404），链到 `/archive`；⑤ 项目二卡片题用稿的描述名 Spatial simulation（项目未定名，内容池 title 仍是 Project II，定名后删 `home-model.ts` 里的覆写）；⑥ project-iv 不上首页（稿内三卡）；⑦ 旧主页的统计条与 goPT 卡片飞入转场不再从主页发出——案例页 `PageEnter` 的无转场标记路径本就处理直接访问，`BackTransition` 回主页的遮罩淡出照旧可用，`flip.ts` 几何与测试保留。
+- **新依赖**：`@fontsource/jetbrains-mono`（稿的标签字体，只引 latin 400/500，自托管，与 §2「不引 Google Fonts」一致）。
+- **深链**：`/#work` `/#about` `/#lab` `/#log` 直落对应页（不走翻页转场），SiteNav 与 BackTransition 的 `/#work` `/#lab` 仍可用。
+- **坑**：站内全局 `a:hover { color: var(--accent) }` 会让悬停的卡片/条目/刻度整行变绿（稿里不变色）——在 `home.css` 末尾钉回；LAB_INDEX 的分组 key（`project-i`）≠ 路由 slug（`reincarnation-machine`），首版「Case study」链到 `/work/project-i`，被守门测试抓出，改走 `GROUP_SLUG`；验证时旧 `next start` 进程留着会拿新构建的静态资源 500/MIME 报错，换构建必须先杀旧进程（`pkill -f` 会匹配并杀掉自己的 shell）。
+- **验证**：typecheck 干净；全套 642 测试（含新增 4 项）中 `skin-layers-forming` 真跑一条在套件负载下 5000ms 超时（单独跑通过，已知负载型偶发，与本次无关）；`next build` 过；生产构建 + 无头 Chromium（swiftshader）对照稿原版 1280×800 逐页截图，Hook 两张 / Work / About / Lab / Log / 页脚版式与稿一致；导航、卡片悬停与点击进 `/work/project-ii`、日志刻度跳 `/archive#log-…`、四个深链、手机 390 宽文档流全部实测通过，无 pageerror。**待用户真机拍板**：翻页手感（稿内常量原样，未调）、Lab 预览悬停停留 120ms、活台架在舞台里的取景。

@@ -214,6 +214,8 @@
 
 - **「跳过成形」真机纠偏（2026-09-23，用户「依然是加速的成形过程而且卡顿；要直接变成结果」）**：上一条的定义错了——每 200ms 画一次中间态，视觉上当然还是快进；每帧在主线程抢 28ms 算物理，卡顿也是实现本身造成的。改成**当前帧保持不动 → Web Worker 完整跑同一条 1500 步物理 → 只提交一次终态**，中间没有任何几何/HUD 进度帧；phase 只报「终态计算中」，完成后一步变成「锁定 · 终态」。Worker 在单核设备上也会争 CPU，故按 **6ms 求解 / 4ms 主动让时**分片，并且全页只开一个 Worker、任务串行，避免多台一起把核吃满；主线程不再逐帧重画等待中的重台架。终态按键谱/选项对象身份缓存（不能用 `JSON.stringify` 重扫几百个键对——那会把卡顿搬到点击当下），同一配置重播直接命中。`SkinUnit.terminalState/applyTerminalState` 只负责跨线程搬运位置、芯长与锁定键，求解仍逐步走 `advance()`，内核公式/约束次序一个字没改；Worker 不可用时退到 4ms 主线程短片，仍然不画中间态。新增守门：后台结果装回后 px/py/core/locked 与直跑逐位相同 + 错相全场 tick 正确。生产浏览器实测 2-1 SVG 与 2-2 WebGL：勾选后 300ms 内 step 与几何保持原值，完成时一次跳到 1500/1500；同配置重播命中缓存；零 pageerror。639 测试绿、typecheck + 双构建过。
 
+- **主页更替为「07 Home · Scroll Zone」（2026-10-01，用户拍板「视觉和交互都以它为准」）**：设计源 `design-ref/home-scroll-zone/`；四页（Hook / Work / About 翻页，Lab + Log 自由滚）+ HUD + rail，取代 Home-Screens 三幕与此前调过的翻幕手感（旧 HomeScreens/HomeLab 已删）。数据全部走现有来源（LAB_INDEX / 内容池 / 日志池，纯派生在 `src/lib/site/home-model.ts`），Hook 舞台与 Lab 预览是 /lab 的活台架（用户拍板）；稿无响应式，补了 <1024px 与 reduced-motion 回落文档流。只动首页，Lab / case / 日志页零改。新依赖 `@fontsource/jetbrains-mono`。映射与有意差异 = MAPPING §42。余项：用户真机手感拍板。
+
 ## Lab 编号对照（2026-09-03 收纳 · 2026-09-13 改按项目编号）
 
 **2026-09-13 起页面编号按项目**（用户拍板「lab1-1 就是项目 1 第一个」）：`Lab 项目-序号`，锚点 `#lab1-1`／`#lab2-5-split`，旧哈希 `#lab10(-split)` 照认（`components/lab/planHash.ts` 的 `normalizedLabHash` + `LegacyLabHash`）。项目一 Lab.01–05 → **1-1…1-5**（四杆 / 拱环 / 触手 / 五环 / 整机）；项目二见下表首列。改的只是页面上看得见的号（台架题头、主页卡片、案例页图注、规格表引用、差分清单 id）——**代码注释与本文件上方条目里的两位号一律是写下时的号（历史，不改）**，对话里提编号先说清是哪套。

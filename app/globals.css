@@ -682,7 +682,7 @@ a:hover {
 
 /* ════════════════════════════════════════════════════════════════════════════
    主页 Home-Screens（design-ref/Home-Screens.dc.html → MAPPING §6）
-   动效 token 全站唯一来源；分页引擎常量在 HomeScreens.tsx（手感标定项，不进 CSS）。
+   动效 token 全站唯一来源；主页分页引擎常量在 components/site/home/HomeScroll.tsx（手感标定项，不进 CSS）。
    ════════════════════════════════════════════════════════════════════════ */
 :root {
   --dur-micro: 180ms;
@@ -820,16 +820,6 @@ a:hover {
   .figchip:hover {
     color: var(--accent-2);
   }
-}
-
-/* S2 内容布局在 HomeLab.module.css；保留原稿的渐变页脚。 */
-.home-lab-footer { flex-shrink: 0; }
-.home-lab-footer-inner { padding: 18px 64px 18px 48px; }
-@media (max-width: 1023px) {
-  .home-lab-footer-inner { padding: 22px 28px; flex-wrap: wrap; row-gap: 12px !important; }
-}
-@media (max-width: 639px) {
-  .home-lab-footer-inner { padding-left: 20px; padding-right: 20px; }
 }
 
 /* ── Work log 页（/archive）：中英切换滑块 + 分组条目行（2026-07-27 版式修订） ──
