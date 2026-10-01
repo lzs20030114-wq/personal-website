@@ -20,6 +20,8 @@ const ZhMetaSchema = z
     summary: z.string().max(160),
     role: z.array(z.string()).min(1),
     tools: z.array(z.string()).optional(),
+    period: z.string().optional(),
+    progress: z.array(z.string()).optional(),
   })
   .strict();
 
@@ -34,6 +36,13 @@ const WorkEntrySchema = z.object({
   role: z.array(z.string()).min(1), // 跨校硬要求（ADMISSIONS_RESEARCH §三.1），必填
   credits: z.array(CreditSchema).optional(),
   tools: z.array(z.string()).optional(),
+  /**
+   * 案例页首屏元数据条的「时间」与「状态」两列（「10 Case 01」稿，MAPPING §45）。
+   * period 缺省退回 date（只到月）；progress 是状态小签清单，第一条带琥珀点（= 当前阶段），其余灰点；
+   * 缺省则不出「状态」那一列。作者写的状态字，模型不代填。
+   */
+  period: z.string().optional(),
+  progress: z.array(z.string()).optional(),
   video: VideoSchema.optional(),
   zh: ZhMetaSchema.optional(), // published 条目必填，见 loadAllWork 的门禁
   status: z.enum(['draft', 'published']),

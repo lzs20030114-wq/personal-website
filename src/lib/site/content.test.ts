@@ -9,11 +9,17 @@ import { getAllWork, getRoutableWork } from './content';
  * 所以这里卡的是「两侧的结构必须一致」，措辞则各写各的（中英各自成文是既定纪律）。
  */
 
-/** 抓正文里所有带编号的插槽（图 / 交互件 / 视频），按出现顺序。 */
+/**
+ * 抓正文里所有带编号的插槽（图 / 交互件 / 视频 / 「10 Case 01」稿的编号构件），按出现顺序。
+ * 构件（LifeCycle N05、PersonaBench N06、ClosureCards N08–N09、AgeingCurve N17、SystemLogic N18）
+ * 在稿里就是图目录里的那几号，换成了活的——所以同样要两侧一致。
+ */
 function slotIds(body: string): string[] {
-  return [...body.matchAll(/<(?:FigSlot|InteractiveSlot|VideoSlot)\b[^>]*?\bid="([^"]+)"/g)].map(
-    (m) => m[1],
-  );
+  return [
+    ...body.matchAll(
+      /<(?:FigSlot|InteractiveSlot|VideoSlot|LifeCycle|PersonaBench|ClosureCards|AgeingCurve|SystemLogic)\b[^>]*?\bid="([^"]+)"/g,
+    ),
+  ].map((m) => m[1]);
 }
 
 /** h2 = 编号 section（CSS counter 按它排 01、02…），两侧数目必须一致。 */

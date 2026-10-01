@@ -1,0 +1,75 @@
+/* 深色内页共用的「壳」：设计 token + 底色/点阵 + 吸顶顶栏 + 页脚。
+   原在 lab/lab-dark.css（「09 Lab Page - Dark」稿，MAPPING §43），2026-10-01 案例页换
+   「10 Case 01」稿时发现两张稿的顶栏/页脚是同一套——抽到这里给 /lab 与 /work/* 共用，
+   规则本身一字未改。由 (site)/layout.tsx 引入，所以两个路由都能拿到。 */
+
+:root {
+  --ld-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ld-cream: oklch(0.95 0.032 120);
+  --ld-mute: oklch(0.7 0.03 168);
+  --ld-soft: oklch(0.8 0.035 162);
+  --ld-paper: oklch(0.19 0.032 228);
+  --ld-g: oklch(0.74 0.1 150);
+  --ld-g-hi: oklch(0.86 0.08 130);
+  --ld-v: oklch(0.72 0.095 291);
+  --ld-slate: oklch(0.74 0.06 235);
+  --ld-eo: cubic-bezier(0.2, 0.7, 0.1, 1);
+  --ld-eio: cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+/* ── 页底与点阵：稿的 160° 渐变（比站内 ground-plane 更深）+ 顶部 760px 的点阵 ── */
+.ld-ground { background: linear-gradient(160deg, oklch(0.235 0.045 200) 0%, oklch(0.2 0.038 232) 50%, oklch(0.215 0.045 282) 100%); }
+.ld-ground::before { display: none; }
+.ld-dots {
+  position: absolute; left: 0; right: 0; top: 0; height: 760px; pointer-events: none; z-index: -1;
+  background-image: radial-gradient(oklch(0.71 0.098 145) 1px, transparent 1.2px); background-size: 6px 6px; opacity: 0.12;
+  -webkit-mask-image: linear-gradient(115deg, #000 0%, transparent 42%); mask-image: linear-gradient(115deg, #000 0%, transparent 42%);
+}
+
+/* ── 顶栏 ── */
+.ld-header {
+  position: sticky; top: 0; z-index: 40; height: 64px;
+  background: oklch(0.18 0.032 228 / 0.82); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid oklch(0.95 0.032 120 / 0); transition: border-color 0.3s;
+}
+.ld-header[data-scrolled] { border-bottom-color: oklch(0.95 0.032 120 / 0.1); }
+.ld-header__in { height: 100%; max-width: 1440px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 48px); box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; gap: 24px; color: var(--ld-cream); }
+.ld-header a, .ld-header button { color: var(--ld-cream); }
+.ld-brand { font-size: 15px; font-weight: 600; letter-spacing: 0; }
+.ld-header__right { display: flex; align-items: center; gap: 22px; }
+.ld-nav { display: flex; gap: 28px; font-size: 13px; font-weight: 500; }
+.ld-nav a { position: relative; padding: 5px 0; opacity: 0.5; transition: opacity 0.3s; }
+.ld-nav a:hover, .ld-nav a[aria-current='page'] { opacity: 1; color: var(--ld-cream); }
+.ld-nav a::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1.5px; background: currentColor; transform-origin: 0 50%; transform: scaleX(0); }
+.ld-nav a[aria-current='page']::after { transform: scaleX(1); }
+.ld-lang { display: flex; align-items: center; padding-left: 20px; border-left: 1px solid oklch(0.95 0.032 120 / 0.2); }
+.ld-lang button {
+  margin-left: -1px; padding: 4px 9px; border: 1px solid oklch(0.95 0.032 120 / 0.25); background: transparent; cursor: pointer;
+  font: 500 12px var(--ld-mono), 'PingFang SC', monospace; letter-spacing: 0; transition: background 0.25s, color 0.25s, border-color 0.25s;
+}
+.ld-lang button:hover { border-color: oklch(0.95 0.032 120 / 0.6); }
+.ld-lang button[aria-pressed='true'] { background: var(--ld-cream); color: var(--ld-paper); }
+
+/* 阅读进度（案例页，稿 data-readbar）：顶栏下缘 1.5px 绿线 */
+.ld-readbar { position: absolute; left: 0; bottom: -1px; height: 1.5px; width: 0; background: var(--ld-g); }
+
+/* ── 页脚 ── */
+.ld-footer { margin-top: 96px; border-top: 1px solid oklch(0.95 0.032 120 / 0.16); color: var(--ld-mute); }
+.ld-footer__in { max-width: 1440px; margin: 0 auto; padding: 22px clamp(20px, 4vw, 48px) 40px; box-sizing: border-box; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px 32px; font: 400 12px var(--ld-mono); }
+.ld-footer__links { display: flex; gap: 24px; }
+.ld-footer a, .ld-footer button { color: var(--ld-g); font: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+.ld-footer a:hover, .ld-footer button:hover { color: var(--ld-cream); }
+
+/* ── 响应式 + reduced-motion（顶栏） ── */
+@media (max-width: 1099px) {
+  .ld-nav { gap: 18px; }
+  .ld-header__right { gap: 14px; }
+  .ld-lang { padding-left: 12px; }
+}
+@media (max-width: 600px) {
+  .ld-nav { display: none; }
+  .ld-header__in { gap: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ld-header, .ld-nav a { transition: none; }
+}

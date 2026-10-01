@@ -1,0 +1,462 @@
+/* 案例页视觉层——「10 Case 01 - Reincarnation Machine」稿（design-ref/case-01-dark，MAPPING §45）。
+   稿是 oklch 字面值 + 行内样式；这里逐项翻成类（行内样式接不了媒体查询 / hover），数值零改。
+   顶栏 / 页脚 / 底色 / token 在 app/(site)/dark-chrome.css（与 /lab 共用）；
+   类名前缀 cs-（case screen）。根节点同时带 .pg-dark——内嵌的旧台架与 2D 连杆还吃它重定义的语义 token。 */
+
+.cs {
+  --cs-ink: oklch(0.95 0.032 120);
+  --cs-paper: oklch(0.19 0.032 228);
+  --cs-mute: oklch(0.8 0.035 162);
+  --cs-dim: oklch(0.7 0.03 168);
+  --cs-g: oklch(0.74 0.1 150);
+  --cs-gh: oklch(0.86 0.08 130);
+  --cs-v: oklch(0.72 0.095 291);
+  --cs-am: oklch(0.83 0.12 85);
+  --cs-bl: oklch(0.74 0.06 235);
+  --cs-body: oklch(0.88 0.03 150);
+  --cs-mono: 'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --cs-eo: cubic-bezier(0.2, 0.7, 0.1, 1);
+  --cs-eio: cubic-bezier(0.76, 0, 0.24, 1);
+  position: relative;
+  min-height: 100vh;
+  color: var(--cs-ink);
+  -webkit-font-smoothing: antialiased;
+}
+.cs ::selection { background: oklch(0.71 0.098 145); color: oklch(0.15 0.03 235); }
+/* 站内全局 .pg-dark a / a:hover 把链接染成 accent / accent-2；稿是 绿 → 奶白（specificity 加一档压过） */
+.cs.pg-dark a { color: var(--cs-g); text-decoration: none; }
+.cs.pg-dark a:hover { color: var(--cs-ink); }
+:where(.cs) button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+.cs-dots {
+  position: absolute; left: 0; right: 0; top: 0; height: 900px; pointer-events: none;
+  background-image: radial-gradient(oklch(0.71 0.098 145) 1px, transparent 1.2px); background-size: 6px 6px; opacity: 0.12;
+  -webkit-mask-image: linear-gradient(115deg, #000 0%, transparent 42%); mask-image: linear-gradient(115deg, #000 0%, transparent 42%);
+}
+.cs-mono { font-family: var(--cs-mono); }
+
+/* ═══ 首屏 ═══════════════════════════════════════════════════════════════════ */
+.cs-hero {
+  position: relative; max-width: 1440px; margin: 0 auto; padding: 16px clamp(20px, 4vw, 48px) 0; box-sizing: border-box;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.cs-hero__screen {
+  height: calc(100svh - 64px); min-height: 520px; box-sizing: border-box; margin-top: -16px; padding: 16px 0 20px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+.cs-hero__row1 {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 12px 32px;
+  font: 400 12px var(--cs-mono); color: var(--cs-dim);
+}
+.cs-hero__row1 .cs-back { color: var(--cs-g); }
+.cs-hero__meta { display: flex; gap: 18px; flex-wrap: wrap; }
+.cs-state { display: flex; align-items: center; gap: 7px; color: oklch(0.9 0.058 124); }
+.cs-state i { width: 6px; height: 6px; border-radius: 50%; background: var(--cs-am); display: block; }
+.cs-hero__row2 { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 28px 64px; }
+.cs-hero__lead { flex: 1 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.cs-title {
+  margin: 0; font-weight: 500; font-size: clamp(46px, min(7.6vw, 12vh), 120px); line-height: 0.92; letter-spacing: -0.05em;
+  text-transform: none; max-width: none;
+}
+.cs-rule { display: block; overflow: visible; }
+.cs-lede { flex: 0 1 440px; margin: 0; font: 400 clamp(17px, 1.5vw, 21px) / 1.55 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: oklch(0.86 0.04 160); text-wrap: pretty; }
+.cs-fig { margin: 0; flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.cs-stage {
+  position: relative; flex: 1 1 0; min-height: 200px; overflow: hidden;
+  background: linear-gradient(135deg, oklch(0.3 0.06 170), oklch(0.22 0.05 250) 60%, oklch(0.26 0.07 290));
+  box-shadow: inset 0 0 0 1px oklch(0.95 0.032 120 / 0.1);
+}
+.cs-stage::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--cs-g); z-index: 3; }
+.cs-stage__vignette { position: absolute; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse at 50% 40%, transparent 30%, oklch(0.17 0.03 235 / 0.55) 100%); }
+/* 活件：画面按自身 700/520 比例在框里居中、等比缩放（框是宽扁的，台架是 4:3 —— 两侧留渐变底） */
+.cs-stage__bench { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 0; }
+.cs-stage__bench > .lab-wrap { height: 100%; width: auto; aspect-ratio: 700 / 520; max-width: 100%; max-height: 100%; }
+.cs-stage__bench .lab-fig { height: 100%; }
+.cs-stage__bench .lab-fig canvas { height: 100%; }
+.cs-stage__bench > .lab-wrap.on-light .lab-fig { background: transparent; border: 0; }
+/* 台架自带的操作提示（「视角由下方按钮设定」）在这里不成立——主图框没有控制条；由框自己的动词行取代 */
+.cs-stage__bench .lab-hud.bl { display: none; }
+.cs-corner { position: absolute; width: 12px; height: 12px; z-index: 3; pointer-events: none; border: 0 solid oklch(0.9 0.058 124 / 0.5); }
+.cs-corner--tl { left: 14px; top: 14px; border-left-width: 1px; border-top-width: 1px; }
+.cs-corner--tr { right: 14px; top: 14px; border-right-width: 1px; border-top-width: 1px; }
+.cs-corner--bl { left: 14px; bottom: 14px; border-left-width: 1px; border-bottom-width: 1px; }
+.cs-corner--br { right: 14px; bottom: 14px; border-right-width: 1px; border-bottom-width: 1px; }
+.cs-stage__top, .cs-stage__bot { position: absolute; left: 34px; right: 34px; z-index: 3; pointer-events: none; display: flex; justify-content: space-between; gap: 16px; }
+.cs-stage__top { top: 18px; font: 500 11px var(--cs-mono); }
+.cs-stage__top .cs-id { color: var(--cs-gh); }
+.cs-live { display: flex; align-items: center; gap: 7px; color: oklch(0.9 0.058 124); }
+.cs-live i { width: 6px; height: 6px; border-radius: 50%; background: var(--cs-gh); display: block; animation: pulse 1.2s ease-in-out infinite alternate; }
+.cs-stage__bot { bottom: 20px; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; }
+.cs-stage__verb { font: 400 11px var(--cs-mono); color: oklch(0.8 0.02 150); }
+.cs-open { pointer-events: auto; padding: 8px 13px; background: var(--cs-ink); font: 500 12px var(--cs-mono); transition: background 0.25s; }
+.cs.pg-dark a.cs-open { color: var(--cs-paper); }
+.cs.pg-dark a.cs-open:hover { background: var(--cs-g); color: var(--cs-paper); }
+.cs-figcap { display: flex; flex-wrap: wrap; gap: 6px 16px; font: 400 12px var(--cs-mono); color: var(--cs-dim); text-transform: none; letter-spacing: 0; }
+.cs-figcap > :first-child { color: var(--cs-g); }
+/* 筹备页 / 无活件项目的占位主图 */
+.cs-stage__ph { position: absolute; inset: 0; z-index: 0; display: flex; align-items: center; justify-content: center; padding: 0 34px; text-align: center; font: 400 11.5px/1.6 var(--cs-mono); color: oklch(0.74 0.02 150); background: repeating-linear-gradient(45deg, oklch(0.95 0.032 120 / 0.045) 0 1px, transparent 1px 10px); }
+
+.cs-meta { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px 32px; }
+.cs-meta > div { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid oklch(0.95 0.032 120 / 0.2); }
+.cs-meta dt { font: 500 11px var(--cs-mono); color: var(--cs-g); letter-spacing: 0; text-transform: none; }
+.cs-meta dd { margin: 0; display: flex; flex-direction: column; gap: 4px; font: 400 14px / 1.45 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; }
+.cs-meta .cs-chip { display: flex; align-items: center; gap: 8px; }
+.cs-meta .cs-chip i { width: 6px; height: 6px; border-radius: 50%; display: block; }
+
+/* ═══ 目录 + 正文两栏 ════════════════════════════════════════════════════════ */
+.cs-layout { max-width: 1440px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 48px); box-sizing: border-box; position: relative; display: flex; gap: 56px; align-items: flex-start; }
+.cs-index {
+  flex: none; box-sizing: content-box; margin-left: calc(-12px - clamp(0px, 1.8vw, 24px));
+  transition: width 0.55s var(--cs-eio); position: sticky; top: 76px; max-height: calc(100vh - 92px);
+  overflow-y: auto; overflow-x: hidden; scrollbar-width: none; padding: 0 0 24px 12px;
+}
+.cs-index::-webkit-scrollbar { display: none; }
+.cs-index__head { width: 212px; display: flex; align-items: center; justify-content: space-between; gap: 4px; margin: 0 0 16px; white-space: nowrap; }
+.cs-index__toggle { display: flex; align-items: center; gap: 8px; font: 400 10.5px var(--cs-mono); color: var(--cs-dim); transition: color 0.2s; }
+.cs-index__toggle:hover { color: var(--cs-ink); }
+.cs-index__toggle > b { flex: none; width: 28px; height: 28px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1px solid oklch(0.95 0.032 120 / 0.25); font: 500 13px var(--cs-mono); color: var(--cs-ink); }
+.cs-index__count { font: 400 10.5px var(--cs-mono); color: var(--cs-dim); }
+.cs-index__fade { transition: opacity 0.3s; }
+.cs-index__rail { flex-direction: column; width: 28px; }
+.cs-index__rail button { height: 14px; display: flex; align-items: center; justify-content: center; }
+.cs-index__rail span { display: block; height: 2px; transition: width 0.4s var(--cs-eo), background 0.3s; }
+.cs-index__list { width: 212px; flex-direction: column; border-top: 1px solid oklch(0.95 0.032 120 / 0.16); padding-top: 8px; }
+.cs-index__item { position: relative; display: grid; grid-template-columns: 32px minmax(0, 1fr); align-items: baseline; padding: 6px 0; transition: color 0.25s; }
+.cs-index__item:hover { color: var(--cs-ink) !important; }
+.cs-index__bar { position: absolute; left: -12px; top: 7px; bottom: 7px; width: 2px; background: var(--cs-g); transition: transform 0.4s var(--cs-eo); }
+.cs-index__n { font: 500 11px var(--cs-mono); }
+.cs-index__t { font-size: 13.5px; line-height: 1.35; transition: transform 0.4s var(--cs-eo); }
+@media (max-width: 1039px) { .cs-index { display: none; } .cs-layout { display: block; } }
+
+.cs-main { flex: 1; min-width: 0; padding-bottom: 40px; }
+
+/* ═══ 正文排印（MDX 直出的块）═══════════════════════════════════════════════ */
+.cs-body { counter-reset: cs-sec; display: flex; flex-direction: column; gap: 30px; padding-top: 64px; }
+.cs-body > * { margin: 0; min-width: 0; }
+.cs-body p { max-width: 40em; font: 400 17px / 1.8 'Archivo Variable', Archivo, 'PingFang SC', 'Microsoft YaHei', sans-serif; color: var(--cs-body); text-wrap: pretty; }
+.cs-body strong { font-weight: 600; color: var(--cs-ink); }
+.cs-body em { font-style: italic; }
+.cs-body ul, .cs-body ol { max-width: 40em; margin: 0; padding-left: 22px; font-size: 16px; line-height: 1.75; color: var(--cs-body); }
+.cs-body ul { list-style: disc; }
+.cs-body ol { list-style: decimal; }
+.cs-body li { margin: 0 0 6px; }
+.cs-body li::marker { color: var(--cs-g); }
+/* 日志引用：读作旁注（稿 mono 11.5 / 500，与句末隔 10px） */
+.cs-body .cs-cite { margin-left: 10px; font: 500 11.5px var(--cs-mono); white-space: nowrap; letter-spacing: 0; text-transform: none; }
+.cs-body code { font: 400 0.88em var(--cs-mono); padding: 2px 6px; background: oklch(0.95 0.032 120 / 0.08); }
+
+/* 章节标题：2px 奶白上线 + 编号（mono 13 绿）+ 标题 */
+.cs-body h2 {
+  counter-increment: cs-sec; counter-reset: cs-sub; position: relative; display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 22px;
+  padding-top: 18px; margin: 90px 0 6px; font: 600 clamp(30px, 3.4vw, 50px) / 1.05 'Archivo Variable', Archivo, 'PingFang SC', sans-serif;
+  letter-spacing: -0.035em; text-transform: none; text-wrap: balance; border: 0; color: var(--cs-ink);
+}
+.cs-body h2::before { content: counter(cs-sec, decimal-leading-zero); font: 500 13px var(--cs-mono); letter-spacing: 0; color: var(--cs-g); }
+.cs-body h2::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--cs-ink); }
+.cs-body h3 {
+  counter-increment: cs-sub; display: flex; align-items: baseline; gap: 16px; margin: 28px 0 0; padding-top: 14px;
+  border-top: 1px solid oklch(0.95 0.032 120 / 0.16); font: 600 clamp(21px, 1.9vw, 27px) / 1.15 'Archivo Variable', Archivo, 'PingFang SC', sans-serif;
+  letter-spacing: -0.022em; text-transform: none; color: var(--cs-ink);
+}
+.cs-body h3::before { content: counter(cs-sec) '.' counter(cs-sub); font: 500 12px var(--cs-mono); letter-spacing: 0; color: var(--cs-g); }
+:is([data-lang='zh']) .cs-body h2, :is([data-lang='zh']) .cs-body h3 { letter-spacing: 0; }
+:is([data-lang='zh']) .cs-body p { line-height: 1.9; }
+
+/* 开场三段：lead / accent */
+/* 宽度由里面的 p 按自己的字号（em）定——外层 div 是 15px 的 em，卡在这里会把大字压成窄栏 */
+.cs-lead, .cs-accent { max-width: none; }
+.cs-body .cs-lead p { max-width: 30em; font: 400 clamp(22px, 2.3vw, 32px) / 1.45 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; letter-spacing: -0.012em; color: var(--cs-ink); }
+.cs-body .cs-accent p { max-width: 26em; font: 500 clamp(24px, 2.6vw, 38px) / 1.35 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; letter-spacing: -0.02em; color: var(--cs-gh); text-wrap: balance; }
+/* 研究问题 */
+.cs-rq { display: flex; flex-direction: column; gap: 14px; padding: 6px 0 4px; }
+.cs-rq__k { font: 500 11px var(--cs-mono); color: var(--cs-v); letter-spacing: 0; text-transform: none; }
+.cs-body .cs-rq p { max-width: 24em; font: 500 clamp(26px, 2.9vw, 42px) / 1.3 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; letter-spacing: -0.025em; color: var(--cs-ink); text-wrap: balance; }
+/* 待补 */
+.cs-todo { max-width: 44em; display: flex; gap: 12px; align-items: baseline; padding: 10px 14px; border: 1px dashed oklch(0.83 0.12 85 / 0.45); font: 400 13.5px / 1.6 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: oklch(0.82 0.03 130); }
+.cs-todo__tag { flex: none; font: 500 10.5px var(--cs-mono); color: var(--cs-am); letter-spacing: 0; text-transform: none; }
+.cs-body .cs-todo p, .cs-todo p { margin: 0; max-width: none; font: inherit; color: inherit; }
+/* 过程 · 参照 */
+.cs-aside { max-width: 44em; display: flex; flex-direction: column; gap: 10px; padding: 20px 22px; background: oklch(0.95 0.032 120 / 0.04); box-shadow: inset 0 0 0 1px oklch(0.95 0.032 120 / 0.08); }
+.cs-aside__k { font: 500 11px var(--cs-mono); color: var(--cs-v); letter-spacing: 0; text-transform: none; }
+.cs-body .cs-aside p { max-width: none; margin: 0; font: 400 15px / 1.7 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: oklch(0.86 0.03 150); }
+.cs-body .cs-aside p.cs-aside__pend { font: 400 12.5px / 1.55 var(--cs-mono); color: oklch(0.83 0.12 85 / 0.9); }
+
+/* 概念卡 */
+.cs-concepts { counter-reset: cs-card; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 1px; background: oklch(0.95 0.032 120 / 0.12); box-shadow: 0 0 0 1px oklch(0.95 0.032 120 / 0.12); }
+.cs-concept { counter-increment: cs-card; position: relative; display: flex; flex-direction: column; gap: 14px; padding: 22px 22px 26px; background: var(--cs-paper); transition: background 0.3s; }
+.cs-concept:hover { background: oklch(0.215 0.035 222); }
+.cs-concept::before { content: counter(cs-card, decimal-leading-zero); font: 500 11px var(--cs-mono); color: var(--cs-g); }
+.cs-concept__t { display: flex; flex-direction: column; gap: 4px; }
+.cs-concept__big { font: 600 clamp(22px, 2vw, 28px) / 1.15 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; letter-spacing: -0.02em; }
+.cs-concept__small { font: 400 11.5px var(--cs-mono); color: var(--cs-dim); }
+.cs-body .cs-concept p { max-width: none; margin: 0; font: 400 14.5px / 1.65 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: oklch(0.82 0.035 160); }
+
+/* 组成 */
+.cs-parts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 28px; }
+.cs-part { display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid oklch(0.95 0.032 120 / 0.2); }
+.cs-part__h { display: flex; align-items: baseline; gap: 10px; }
+.cs-part__n { font: 500 clamp(40px, 4vw, 56px) / 0.9 'Archivo Variable', Archivo, sans-serif; letter-spacing: -0.04em; color: var(--cs-gh); }
+.cs-part__name { font: 600 16px 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; }
+.cs-body .cs-part p { max-width: none; font: 400 14px / 1.6 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: var(--cs-mute); }
+
+/* 图（FigSlot）：稿 figs */
+.cs-figs { width: 100%; max-width: 640px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 28px 24px; margin: 8px 0; }
+.cs-figs--wide { max-width: 100%; }
+.cs-figs--pair { max-width: 100%; margin: 0; }
+.cs-figs--pair .cs-figure { max-width: none; margin: 0; }
+/* 正文列里直接站着的一张图：inline = 640px，wide = 占满 */
+.cs-body > .cs-figure { width: 100%; max-width: 640px; margin: 8px 0; }
+.cs-body > .cs-figure--wide { max-width: 100%; }
+.cs-figure { margin: 0; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.cs-figure__frame { position: relative; overflow: hidden; background: linear-gradient(135deg, oklch(0.175 0.03 212), oklch(0.155 0.03 248)); box-shadow: inset 0 0 0 1px oklch(0.95 0.032 120 / 0.1); }
+.cs-figure__frame--shot { background: oklch(0.97 0.006 100); }
+.cs-figure__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+.cs-figure__ph { position: absolute; inset: 0; background: repeating-linear-gradient(45deg, oklch(0.95 0.032 120 / 0.045) 0 1px, transparent 1px 10px); display: flex; align-items: center; justify-content: center; padding: 40px 32px; box-sizing: border-box; text-align: center; font: 400 11.5px / 1.6 var(--cs-mono); color: oklch(0.74 0.02 150); }
+.cs-figure__c { position: absolute; width: 10px; height: 10px; border: 0 solid oklch(0.9 0.058 124 / 0.45); }
+.cs-figure__c--tl { left: 12px; top: 12px; border-left-width: 1px; border-top-width: 1px; }
+.cs-figure__c--br { right: 12px; bottom: 12px; border-right-width: 1px; border-bottom-width: 1px; }
+.cs-figure__tag { position: absolute; left: 30px; right: 30px; top: 14px; display: flex; justify-content: space-between; gap: 12px; font: 500 11px var(--cs-mono); letter-spacing: 0; text-transform: none; }
+.cs-figure__tag .cs-id { color: var(--cs-gh); }
+.cs-stat { display: flex; align-items: center; gap: 7px; color: oklch(0.9 0.058 124); }
+.cs-stat i { width: 6px; height: 6px; border-radius: 50%; display: block; }
+.cs-figure figcaption { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; align-items: baseline; margin: 0; letter-spacing: 0; text-transform: none; font-weight: 400; }
+.cs-cap__id { font: 500 11px var(--cs-mono); color: var(--cs-g); }
+.cs-cap__t { display: flex; flex-direction: column; gap: 3px; }
+.cs-cap__cap { font: 500 14px / 1.45 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: var(--cs-ink); }
+.cs-cap__sub { font: 400 13px / 1.5 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: var(--cs-dim); }
+
+/* 活件框（InteractiveSlot）：稿 lab 块——渐变底 + 内环 + 顶线 + 四角标，上下各一条标签行，台架在中间 */
+.cs-lab { margin: 8px 0; display: flex; flex-direction: column; gap: 12px; }
+.cs-lab__frame { position: relative; overflow: hidden; background: linear-gradient(135deg, oklch(0.165 0.03 210), oklch(0.145 0.03 250)); box-shadow: inset 0 0 0 1px oklch(0.95 0.032 120 / 0.1); padding: 44px 32px 48px; }
+.cs-lab__frame::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--cs-g); z-index: 3; }
+.cs-lab__c { position: absolute; width: 12px; height: 12px; z-index: 3; pointer-events: none; border: 0 solid oklch(0.9 0.058 124 / 0.5); }
+.cs-lab__c--tl { left: 12px; top: 12px; border-left-width: 1px; border-top-width: 1px; }
+.cs-lab__c--tr { right: 12px; top: 12px; border-right-width: 1px; border-top-width: 1px; }
+.cs-lab__c--bl { left: 12px; bottom: 12px; border-left-width: 1px; border-bottom-width: 1px; }
+.cs-lab__c--br { right: 12px; bottom: 12px; border-right-width: 1px; border-bottom-width: 1px; }
+.cs-lab__top, .cs-lab__bot { position: absolute; left: 32px; right: 32px; z-index: 3; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.cs-lab__top { top: 16px; font: 500 11px var(--cs-mono); }
+.cs-lab__top .cs-id { color: var(--cs-gh); }
+.cs-lab__bot { bottom: 12px; font: 400 11px var(--cs-mono); color: oklch(0.78 0.015 150); }
+.cs-lab__bot a { padding: 6px 11px; border: 1px solid oklch(0.95 0.032 120 / 0.3); background: oklch(0.15 0.03 235 / 0.6); font: 500 11px var(--cs-mono); }
+.cs.pg-dark .cs-lab__bot a { color: var(--cs-ink); }
+.cs.pg-dark .cs-lab__bot a:hover { background: oklch(0.95 0.032 120 / 0.12); }
+.cs-lab__stage { position: relative; z-index: 1; }
+/* 2D 连杆（SVG、浅色配色封盘）：台架自己的纸面放在框里 */
+.cs-lab__stage--paper { background: oklch(0.955 0.009 118); border: 1px solid oklch(0.95 0.032 120 / 0.1); }
+.cs-lab__cap { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: baseline; margin: 0; }
+.cs-lab__cap .cs-cap__id { font: 500 11px var(--cs-mono); color: var(--cs-g); }
+.cs-lab__cap span:last-child { font: 400 13.5px / 1.5 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: oklch(0.8 0.035 162); }
+
+/* ═══ 构件 ═══════════════════════════════════════════════════════════════════ */
+.cs-panel { margin: 8px 0; display: flex; flex-direction: column; gap: 16px; padding: 22px 22px 20px; background: oklch(0.165 0.03 222 / 0.7); box-shadow: inset 0 0 0 1px oklch(0.95 0.032 120 / 0.1); }
+.cs-panel__row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; font: 500 11px var(--cs-mono); letter-spacing: 0; text-transform: none; }
+.cs-panel__row .cs-id { color: var(--cs-gh); }
+.cs-panel__row .cs-dim { color: var(--cs-dim); }
+.cs-note { margin: 0; font: 400 13px / 1.55 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: var(--cs-dim); }
+
+/* 生命周期（N05） */
+.cs-life__bar { position: relative; display: flex; gap: 2px; min-height: 76px; }
+.cs-life__seg { flex-basis: 0; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; padding: 10px 10px 9px; box-sizing: border-box; transition: opacity 0.4s; overflow: hidden; }
+.cs-life__seg b { font: 600 13.5px / 1.2 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; white-space: nowrap; }
+.cs-life__seg span { font: 400 11px var(--cs-mono); opacity: 0.8; }
+.cs-life__head { position: absolute; top: -6px; bottom: -6px; left: 0; width: 2px; margin-left: -1px; background: var(--cs-ink); box-shadow: 0 0 0 3px oklch(0.95 0.032 120 / 0.12); }
+.cs-life__lives { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; }
+.cs-life__lives > div { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 9px 10px; border-top: 2px solid; transition: border-color 0.4s; }
+.cs-life__lives span:first-child { font: 400 11px var(--cs-mono); color: var(--cs-dim); }
+.cs-life__lives span:last-child { font: 600 14px 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; transition: color 0.4s; }
+
+/* 人格示意台（N06） */
+.cs-pz { margin: 8px 0; display: flex; flex-direction: column; gap: 0; }
+.cs-pz__head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 24px; padding-bottom: 14px; }
+.cs-pz__kick { display: flex; flex-direction: column; gap: 4px; }
+.cs-pz__kick span:first-child { font: 500 11px var(--cs-mono); color: var(--cs-gh); }
+.cs-pz__kick span:last-child { font: 600 20px / 1.2 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; letter-spacing: -0.015em; }
+.cs-seg { display: flex; }
+.cs-seg button { margin-left: -1px; display: flex; align-items: center; gap: 8px; padding: 8px 13px; border: 1px solid oklch(0.95 0.032 120 / 0.22); font: 500 12.5px 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; white-space: nowrap; transition: background 0.25s, color 0.25s; }
+.cs-seg button:hover { border-color: oklch(0.95 0.032 120 / 0.55); }
+.cs-seg button[aria-pressed='true'], .cs-seg button[aria-selected='true'] { background: var(--cs-ink); color: var(--cs-paper); }
+.cs-seg button span { font: 500 11px var(--cs-mono); }
+.cs-seg--mono button { padding: 7px 12px; font: 500 12px var(--cs-mono); }
+.cs-plate { position: relative; background: linear-gradient(135deg, oklch(0.165 0.03 210), oklch(0.145 0.03 250)); box-shadow: inset 0 0 0 1px oklch(0.95 0.032 120 / 0.1); overflow: hidden; }
+.cs-plate--pz { height: clamp(280px, 40vh, 380px); }
+.cs-plate--ag { height: clamp(260px, 36vh, 340px); }
+.cs-plate__line { position: absolute; left: 0; right: 0; top: 0; height: 2px; transition: background 0.4s; z-index: 2; }
+.cs-plate canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cs-plate__top { position: absolute; left: 24px; right: 24px; top: 16px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; font: 500 11px var(--cs-mono); z-index: 2; }
+.cs-plate__bot { position: absolute; left: 24px; right: 24px; bottom: 16px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 10px 16px; z-index: 2; font: 400 11px var(--cs-mono); color: oklch(0.78 0.015 150); }
+.cs-touch { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--cs-ink); color: var(--cs-paper); font: 500 13px 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; transition: background 0.25s, transform 0.15s; }
+.cs-touch:hover { background: var(--cs-gh); }
+.cs-touch:active { transform: scale(0.97); }
+.cs-touch i { width: 8px; height: 8px; border-radius: 50%; display: block; }
+.cs-pz__note { padding: 12px 0 0; }
+.cs-table-wrap { margin-top: 22px; overflow-x: auto; overflow-y: hidden; }
+.cs-table { min-width: 680px; display: flex; flex-direction: column; }
+.cs-table__row { display: grid; grid-template-columns: 132px repeat(4, minmax(0, 1fr)); border-bottom: 1px solid oklch(0.95 0.032 120 / 0.08); }
+.cs-table__row--h { border-bottom-color: oklch(0.95 0.032 120 / 0.2); }
+.cs-table__row > span:first-child { padding: 9px 12px 9px 0; font: 400 12.5px / 1.4 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: oklch(0.8 0.035 162); }
+.cs-table__row--h > span:first-child { padding: 10px 12px 10px 0; font: 400 11px var(--cs-mono); color: var(--cs-dim); }
+.cs-table__row > span:not(:first-child) { padding: 9px 12px; font-size: 13px; line-height: 1.45; transition: background 0.3s, color 0.3s; }
+.cs-table__colh { padding: 10px 12px; display: flex; gap: 8px; align-items: baseline; font: 600 13px 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; transition: background 0.3s, color 0.3s; }
+.cs-table__colh i { font: 500 11px var(--cs-mono); font-style: normal; }
+
+/* 五层 */
+.cs-layers { display: flex; flex-direction: column; gap: 14px; }
+.cs-layers__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 20px; }
+.cs-layer { display: flex; flex-direction: column; gap: 8px; transition: opacity 0.9s; }
+.cs-layer__line { position: relative; height: 2px; background: oklch(0.95 0.032 120 / 0.12); overflow: hidden; }
+.cs-layer__line i { position: absolute; inset: 0; background: var(--cs-g); transform-origin: 0 50%; transition: transform 1.4s var(--cs-eio); }
+.cs-layer__n { font: 500 11px var(--cs-mono); color: var(--cs-g); }
+.cs-layer__name { font: 600 15.5px / 1.25 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; }
+.cs-layer__x { font: 400 13.5px / 1.55 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: oklch(0.78 0.035 162); }
+.cs-layers__act { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
+.cs-ghostbtn { padding: 7px 12px; border: 1px solid oklch(0.95 0.032 120 / 0.25); font: 500 12px var(--cs-mono); }
+.cs-ghostbtn:hover { background: oklch(0.95 0.032 120 / 0.06); }
+
+/* 闭合 / 数字对比 */
+.cs-cells { display: grid; gap: 1px; background: oklch(0.95 0.032 120 / 0.12); box-shadow: 0 0 0 1px oklch(0.95 0.032 120 / 0.12); }
+.cs-cells--closure { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+.cs-cells--stats { grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); }
+.cs-cell { display: flex; flex-direction: column; background: var(--cs-paper); }
+.cs-cell--closure { gap: 12px; padding: 22px 24px 24px; }
+.cs-cell--stat { gap: 10px; padding: 20px 20px 22px; }
+.cs-cell__row { display: flex; justify-content: space-between; gap: 12px; font: 500 11px var(--cs-mono); }
+.cs-cell__row span:first-child { color: var(--cs-gh); }
+.cs-cell__row span:last-child { color: var(--cs-dim); }
+.cs-formula { font: 500 clamp(30px, 3.2vw, 46px) / 1 var(--cs-mono); letter-spacing: -0.04em; white-space: nowrap; }
+.cs-cell__x { font: 400 14px / 1.6 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: var(--cs-mute); text-wrap: pretty; }
+.cs-stat__k { font: 400 11px var(--cs-mono); color: var(--cs-dim); }
+.cs-stat__v { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.cs-stat__from { font: 400 17px var(--cs-mono); color: oklch(0.62 0.03 175); text-decoration: line-through; text-decoration-color: oklch(0.62 0.03 175 / 0.6); }
+.cs-stat__arrow { color: var(--cs-g); }
+.cs-stat__to { font: 500 clamp(36px, 3.4vw, 50px) / 1 'Archivo Variable', Archivo, sans-serif; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.cs-stat__unit { font: 400 13px var(--cs-mono); color: var(--cs-mute); }
+.cs-stat__note { font: 400 13px / 1.5 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: oklch(0.78 0.035 162); }
+
+/* 衰老曲线（N17） */
+.cs-ageing { margin: 8px 0; display: flex; flex-direction: column; gap: 0; }
+.cs-ageing__mark { position: absolute; top: 18px; bottom: 40px; opacity: 0; transition: opacity 0.5s; border-left: 1px dashed oklch(0.95 0.032 120 / 0.25); z-index: 1; pointer-events: none; }
+.cs-ageing__mark span { position: absolute; top: 0; left: 7px; font: 400 11px var(--cs-mono); color: oklch(0.9 0.04 130); white-space: nowrap; }
+.cs-ageing__axis { position: absolute; left: 24px; right: 24px; bottom: 14px; display: flex; justify-content: space-between; gap: 16px; font: 400 11px var(--cs-mono); color: oklch(0.7 0.02 160); z-index: 2; }
+
+/* 系统逻辑（N18） */
+.cs-sys { margin: 8px 0; display: flex; flex-direction: column; gap: 14px; }
+.cs-sys__flow { position: relative; height: 2px; background: oklch(0.95 0.032 120 / 0.12); }
+.cs-sys__flow i { position: absolute; top: -3px; left: 0; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: var(--cs-gh); box-shadow: 0 0 12px var(--cs-gh); animation: cs-flow 3.6s linear infinite; }
+@keyframes cs-flow { 0% { left: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { left: 100%; opacity: 0; } }
+.cs-sys__cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 1px; background: oklch(0.95 0.032 120 / 0.12); box-shadow: 0 0 0 1px oklch(0.95 0.032 120 / 0.12); }
+.cs-sys__col { display: flex; flex-direction: column; gap: 12px; padding: 16px 16px 18px; background: var(--cs-paper); }
+.cs-sys__col > span:first-child { display: flex; justify-content: space-between; gap: 8px; font: 500 11px var(--cs-mono); }
+.cs-sys__col > span:first-child b { font-weight: 500; color: var(--cs-g); }
+.cs-sys__col > span:first-child i { font-style: normal; color: var(--cs-dim); }
+.cs-sys__items { display: flex; flex-direction: column; gap: 6px; }
+.cs-sys__items span { padding: 6px 9px; border: 1px solid oklch(0.95 0.032 120 / 0.14); font: 400 12.5px / 1.4 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: oklch(0.88 0.03 150); }
+.cs-sys__items span[data-pend] { border-style: dashed; border-color: oklch(0.95 0.032 120 / 0.3); color: var(--cs-am); }
+.cs-sys__out { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px; }
+.cs-sys__out span { display: flex; align-items: center; gap: 10px; padding: 10px 14px; font: 500 13px 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; }
+.cs-sys__out span i { font: 500 11px var(--cs-mono); font-style: normal; }
+.cs-sys__out span:nth-child(1) { background: oklch(0.74 0.1 150 / 0.12); }
+.cs-sys__out span:nth-child(1) i { color: var(--cs-g); }
+.cs-sys__out span:nth-child(2) { background: oklch(0.72 0.095 291 / 0.14); }
+.cs-sys__out span:nth-child(2) i { color: var(--cs-v); }
+
+/* 自干扰 */
+.cs-interf { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 20px 28px; }
+.cs-interf > div { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid oklch(0.95 0.032 120 / 0.18); }
+.cs-interf__n { font: 500 11px var(--cs-mono); color: var(--cs-am); }
+.cs-interf__ab { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font: 600 15px / 1.35 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; }
+.cs-interf__ab i { font: 400 12px var(--cs-mono); font-style: normal; color: var(--cs-dim); }
+.cs-interf__ab span:last-child { color: oklch(0.86 0.04 160); }
+
+/* 现状 */
+.cs-status { margin: 0; display: flex; flex-direction: column; border-top: 1px solid oklch(0.95 0.032 120 / 0.2); }
+.cs-status > div { display: grid; grid-template-columns: minmax(120px, 180px) minmax(0, 1fr); gap: 8px 24px; align-items: baseline; padding: 14px 0; border-bottom: 1px solid oklch(0.95 0.032 120 / 0.1); }
+.cs-status dt { display: flex; align-items: center; gap: 10px; font: 600 15px 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; }
+.cs-status dt i { width: 7px; height: 7px; border-radius: 50%; display: block; }
+.cs-status dd { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.cs-status dd > span:first-child { font: 500 11px var(--cs-mono); }
+.cs-status .cs-cite { margin-left: 10px; font: 500 11.5px var(--cs-mono); white-space: nowrap; }
+.cs-status dd > span:last-child { font: 400 15px / 1.65 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: oklch(0.86 0.03 150); text-wrap: pretty; }
+
+/* 预测 */
+.cs-pred { margin: 8px 0; display: flex; flex-direction: column; gap: 20px; padding: 22px; background: oklch(0.165 0.03 222 / 0.7); box-shadow: inset 0 0 0 1px oklch(0.95 0.032 120 / 0.1); }
+.cs-pred__head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 24px; }
+.cs-pred__kick { display: flex; flex-direction: column; gap: 4px; }
+.cs-pred__kick span:first-child { font: 500 11px var(--cs-mono); color: var(--cs-am); }
+.cs-pred__kick span:last-child { font: 600 20px / 1.2 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; letter-spacing: -0.015em; }
+.cs-pred__bars { display: flex; flex-direction: column; gap: 9px; }
+.cs-pred__bar { display: grid; grid-template-columns: 72px minmax(0, 1fr) 92px; gap: 14px; align-items: center; transition: opacity 0.3s; width: 100%; }
+.cs-pred__bar > span:first-child { font: 400 11.5px var(--cs-mono); color: var(--cs-mute); }
+.cs-pred__track { position: relative; height: 12px; background: oklch(0.95 0.032 120 / 0.06); }
+.cs-pred__track i { position: absolute; top: 0; bottom: 0; border: 1px solid var(--cs-am); box-sizing: border-box; transition: background 0.3s; }
+.cs-pred__bar > span:last-child { font: 500 11.5px var(--cs-mono); color: var(--cs-am); text-align: right; }
+.cs-pred__axis { display: grid; grid-template-columns: 72px minmax(0, 1fr) 92px; gap: 14px; font: 400 10.5px var(--cs-mono); color: oklch(0.6 0.025 185); }
+.cs-pred__axis > span:nth-child(2) { display: flex; justify-content: space-between; }
+.cs-pred__axis > span:last-child { text-align: right; }
+.cs-pred__cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 20px 28px; }
+.cs-pred__cols > div { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid oklch(0.95 0.032 120 / 0.18); }
+.cs-pred__cols span:first-child { font: 500 11px var(--cs-mono); color: var(--cs-g); }
+.cs-pred__cols span:last-child { font: 400 15px / 1.6 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; text-wrap: pretty; }
+
+/* 技术参数 */
+.cs-specs { display: flex; flex-direction: column; gap: 14px; }
+.cs-specs dl { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); column-gap: 40px; border-top: 1px solid oklch(0.95 0.032 120 / 0.2); }
+.cs-specs dl > div { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 16px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid oklch(0.95 0.032 120 / 0.1); }
+.cs-specs dt { font: 400 11.5px var(--cs-mono); color: var(--cs-dim); }
+.cs-specs dd { margin: 0; font: 400 14px / 1.5 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: oklch(0.9 0.035 140); }
+.cs-specs dd[data-pend] { color: var(--cs-am); }
+.cs-more { align-self: flex-start; font: 500 12px var(--cs-mono); color: var(--cs-g); }
+.cs-more:hover { color: var(--cs-ink); }
+
+/* 兜底：MDX 里的 GFM 表（项目 II 的「项目信息」等）——发丝线、mono 表头 */
+.cs-body table { display: block; width: max-content; max-width: 100%; overflow-x: auto; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.cs-body th, .cs-body td { text-align: left; vertical-align: top; padding: 9px 20px 9px 0; border-bottom: 1px solid oklch(0.95 0.032 120 / 0.1); font-size: 14px; line-height: 1.5; }
+.cs-body th { font: 500 11px var(--cs-mono); color: var(--cs-dim); border-bottom-color: oklch(0.95 0.032 120 / 0.2); text-transform: none; letter-spacing: 0; }
+.cs-body tbody td:first-child { font-weight: 600; white-space: nowrap; }
+/* 空表头（| | |）不占一行 */
+.cs-body thead:has(th:empty) { display: none; }
+
+/* ═══ 尾段 ═══════════════════════════════════════════════════════════════════ */
+.cs-tail { padding-top: 112px; display: flex; flex-direction: column; gap: 40px; }
+.cs-video { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.cs-video__frame { position: relative; aspect-ratio: 16 / 8; display: flex; align-items: center; justify-content: center; background: repeating-linear-gradient(45deg, oklch(0.95 0.032 120 / 0.045) 0 1px, transparent 1px 10px), linear-gradient(135deg, oklch(0.165 0.03 210), oklch(0.145 0.03 250)); box-shadow: inset 0 0 0 1px oklch(0.95 0.032 120 / 0.1); }
+.cs-video__frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cs-video__play { width: 68px; height: 68px; border-radius: 50%; border: 1px solid oklch(0.95 0.032 120 / 0.5); display: flex; align-items: center; justify-content: center; font: 400 18px 'Archivo Variable', Archivo, sans-serif; padding-left: 4px; box-sizing: border-box; }
+.cs-video__tag { position: absolute; left: 28px; right: 28px; top: 16px; display: flex; justify-content: space-between; gap: 12px; font: 500 11px var(--cs-mono); }
+.cs-video__tag span:first-child { color: var(--cs-gh); }
+.cs-video figcaption { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; font: 400 13.5px / 1.5 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: var(--cs-mute); margin: 0; }
+.cs-video figcaption span:first-child { font: 500 11px var(--cs-mono); color: var(--cs-g); }
+.cs-ai { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: baseline; padding: 16px 18px; border: 1px dashed oklch(0.95 0.032 120 / 0.25); }
+.cs-ai span:first-child { font: 500 11px var(--cs-mono); color: var(--cs-v); }
+.cs-ai span:last-child { font: 400 14px / 1.6 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: var(--cs-mute); }
+.cs-next { position: relative; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px 32px; padding: 22px 0 8px; margin-top: 24px; }
+.cs-next::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--cs-v); }
+.cs-next > span:first-child { display: flex; flex-direction: column; gap: 10px; }
+.cs-next__k { font: 500 12px var(--cs-mono); color: var(--cs-v); }
+.cs-next__t { font: 600 clamp(30px, 3.6vw, 52px) / 1 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; letter-spacing: -0.035em; color: var(--cs-ink); }
+.cs-next__arrow { font: 400 clamp(30px, 3.6vw, 52px) / 1 'Archivo Variable', Archivo, sans-serif; color: var(--cs-v); }
+.cs.pg-dark a.cs-next:hover .cs-next__t, .cs.pg-dark a.cs-next:hover .cs-next__k { color: oklch(0.85 0.06 295); }
+
+/* ═══ 窄屏 ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 760px) {
+  .cs-hero__screen { height: auto; min-height: 0; }
+  .cs-fig { flex: none; }
+  .cs-stage { flex: none; aspect-ratio: 700 / 620; min-height: 0; }
+  .cs-stage__top, .cs-stage__bot { left: 22px; right: 22px; }
+  /* 窄屏：台架自己的 HUD 已经占了角落——框的编号与动词行让位，只留「活件」点与按钮 */
+  .cs-stage__top .cs-id, .cs-stage__verb { display: none; }
+  .cs-stage__top { justify-content: flex-end; }
+  .cs-stage__bot { justify-content: flex-start; }
+  .cs-body { padding-top: 40px; }
+  .cs-body h2 { margin-top: 64px; }
+  .cs-lab__frame { padding: 44px 12px 48px; }
+  .cs-life__lives { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cs-pred__bar, .cs-pred__axis { grid-template-columns: 56px minmax(0, 1fr) 72px; gap: 10px; }
+}
+
+/* 打印 / 另存 PDF：尚未滚到的块还是 opacity 0（滚动显现），打印时一律可见 */
+@media print { .cs [style*='opacity: 0'] { opacity: 1 !important; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .cs-live i, .cs-sys__flow i { animation: none; }
+  .cs-index, .cs-index__t, .cs-index__bar { transition: none; }
+}

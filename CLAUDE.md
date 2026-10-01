@@ -33,6 +33,7 @@
 | "网站架构"、"脚手架"、"内容池/双轨/部署" | SITE_SPEC.md |
 | "自己传日志"、"后台/编辑器"、"studio 怎么登录"、"环境变量配哪些" | SITE_SPEC.md §12（`/studio` 编辑后台） |
 | "设计稿"、"对稿"、"案例页/主页/Lab 稿在哪" | design-ref/（`.dc.html` 副本 + MAPPING.md 映射表） |
+| "案例页换稿"、"10 Case 01"、"目录栏/人格示意台/衰老曲线/预测条" | design-ref/case-01-dark/ + MAPPING.md §45（外壳 · 构件 · 文案处置 · 与稿的有意差异） |
 | "横屏排版"、"版式研究"、"排版原则" | LAYOUT_NOTES.md |
 | "网站 review"、"调研报告"、"获奖站案例"、"弱模型工单" | SITE_REVIEW_2026-07.md |
 | "拱环"、"S4 环"、"真机机构求解器"、"伸缩外壳演示" | 轮回机器_拱环求解器.md |
@@ -217,6 +218,8 @@
 - **主页更替为「07 Home · Scroll Zone」（2026-10-01，用户拍板「视觉和交互都以它为准」）**：设计源 `design-ref/home-scroll-zone/`；四页（Hook / Work / About 翻页，Lab + Log 自由滚）+ HUD + rail，取代 Home-Screens 三幕与此前调过的翻幕手感（旧 HomeScreens/HomeLab 已删）。数据全部走现有来源（LAB_INDEX / 内容池 / 日志池，纯派生在 `src/lib/site/home-model.ts`），Hook 舞台与 Lab 预览是 /lab 的活台架（用户拍板）；稿无响应式，补了 <1024px 与 reduced-motion 回落文档流。只动首页，Lab / case / 日志页零改。新依赖 `@fontsource/jetbrains-mono`。映射与有意差异 = MAPPING §42。余项：用户真机手感拍板。
 
 - **Lab 页换「09 Lab Page - Dark」稿（2026-10-01，用户交来 Claude Design 交接包「做吧」）**：设计源存档 `design-ref/lab-page-dark/`。只换 `/lab` 的页面外壳与视觉层（吸顶顶栏 + EN/中、开头区与项目芯片、目录头与收起刻度竖条、题头类型行、Notes/Expand、规格 4 条 + 展开、光标动词、求解扫线、clip-path 放大），台架本体与同屏四台 / 深链 / 文案表沿用。新增 `kind` / `verb` 两列进 `lab-index.ts`；样式在 `app/(site)/lab/lab-dark.css`。有意差异（保留目录拖拽、不做缩放读数、去掉无来源的日期等）见 MAPPING §43。余项：用户真机看对稿程度。
+
+- **案例页换「10 Case 01」稿（2026-10-01，用户交来 Claude Design 交接包「做这个」）**：设计源存档 `design-ref/case-01-dark/`。换的是 `/work/[slug]` 的**外壳 + 视觉层 + 一批正文构件**，内容池 / MDX 驱动、四路由、中英机制、台架内核、日志锚点全部不动。首屏整屏（标题 + 双线尺 + 一句话 + 主图框 + 元数据四列，主图框 = 活的 Lab 1-5 整机，**不出控制条**——取代 07-28 的侧栏控制条，`CaseHeroLive` 一行可恢复）；左**目录栏**（可收、读位 + 点击滚动，标题由服务端从 MDX 抽）；顶栏 / 页脚与 `/lab` 同一套，抽成 `app/(site)/dark-chrome.css` + `DarkHeader`（带阅读进度），**语言上下文挪到布局层**（页面里不许再嵌 `CaseLangRoot`）；插槽整体换皮（`slots.tsx`）。**新构件**（`components/site/case/` + 数据 `src/lib/site/case-reincarnation.ts`，`.test` 30 项）：生命周期状态图（N05）、人格示意台（N06，**非实测**）、五层开关、数字对比、衰老曲线（N17，**只画趋势**）、系统逻辑（N18）、预测条、技术参数折叠，另有滚动显现。**文案**：散文保持线上原文，只做稿的结构重排；被稿改成构件的块用稿内数据；人格表 / 预测表 / 技术参数与线上**逐字一致**（脚本对 `git HEAD` 旧 MDX 逐格比对）；稿重写的几处散文（五层、感知首段、自干扰、闭合首句）按稿压缩，**「不做姿态」一句因此不再出现**，清单见 MAPPING §45。项目 II 页与筹备页同吃新外壳。frontmatter 新增可选 `period` / `progress`。674 测试绿（+30）、`npm run build` 过、CDP 实测中英 / 五档宽度 / reduced-motion / 转场无异常。映射与有意差异 = MAPPING §45。余项：用户真机看对稿程度（主图占幅、暗角、显现手感）与是否请回主图控制条。
 
 ## Lab 编号对照（2026-09-03 收纳 · 2026-09-13 改按项目编号）
 

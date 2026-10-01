@@ -1,3 +1,4 @@
+import './dark-chrome.css';
 import { SiteNav } from '../../components/site/SiteNav';
 import { SiteFooter } from '../../components/site/SiteFooter';
 import { LabLanguageRoot } from '../../components/lab/LabLanguage';

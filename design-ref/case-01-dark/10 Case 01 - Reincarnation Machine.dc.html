@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;background:oklch(0.19 0.032 228)}
+body{color:oklch(0.95 0.032 120);font-family:Archivo,'PingFang SC',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:oklch(0.74 0.1 150);text-decoration:none}a:hover{color:oklch(0.95 0.032 120)}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+::selection{background:oklch(0.71 0.098 145);color:oklch(0.15 0.03 235)}
+aside::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div ref="{{ rootRef }}" style="position:relative;min-height:100vh;background:linear-gradient(160deg,oklch(0.235 0.045 200) 0%,oklch(0.2 0.038 232) 50%,oklch(0.215 0.045 282) 100%) fixed;color:oklch(0.95 0.032 120)">
+  <div aria-hidden="true" style="position:absolute;left:0;right:0;top:0;height:900px;pointer-events:none;background-image:radial-gradient(oklch(0.71 0.098 145) 1px,transparent 1.2px);background-size:6px 6px;opacity:.12;-webkit-mask-image:linear-gradient(115deg,#000 0%,transparent 42%);mask-image:linear-gradient(115deg,#000 0%,transparent 42%)"></div>
+
+  <header style="position:sticky;top:0;z-index:40;height:64px;background:oklch(0.18 0.032 228 / .82);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid oklch(0.95 0.032 120 / {{ barLine }});transition:border-color .3s">
+    <div style="height:100%;max-width:1440px;margin:0 auto;padding:0 clamp(20px,4vw,48px);box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;gap:24px">
+      <button onClick="{{ toHome }}" style="font:600 15px Archivo">Zishuo Li</button>
+      <div style="display:flex;align-items:center;gap:22px">
+        <nav style="display:flex;gap:28px;font:500 13px Archivo">
+          <sc-for list="{{ navs }}" as="v" hint-placeholder-count="4"><button onClick="{{ v.go }}" style="position:relative;padding:5px 0;opacity:{{ v.op }};transition:opacity .3s" style-hover="opacity:1">{{ v.label }}<span style="position:absolute;left:0;right:0;bottom:0;height:1.5px;background:currentColor;transform-origin:0 50%;transform:scaleX({{ v.ul }})"></span></button></sc-for>
+        </nav>
+        <div role="group" aria-label="Language" style="display:flex;align-items:center;padding-left:20px;border-left:1px solid oklch(0.95 0.032 120 / .2)">
+          <sc-for list="{{ langs }}" as="l" hint-placeholder-count="2"><button onClick="{{ l.pick }}" aria-pressed="{{ l.on }}" lang="{{ l.code }}" style="margin-left:-1px;padding:4px 9px;border:1px solid oklch(0.95 0.032 120 / .25);font:500 12px 'JetBrains Mono','PingFang SC',monospace;background:{{ l.bg }};color:{{ l.color }};transition:background .25s,color .25s" style-hover="border-color:oklch(0.95 0.032 120 / .6)">{{ l.label }}</button></sc-for>
+        </div>
+      </div>
+    </div>
+    <span data-readbar style="position:absolute;left:0;bottom:-1px;height:1.5px;width:0;background:oklch(0.74 0.1 150)"></span>
+  </header>
+
+  <section data-screen-label="Case 01 · hero" style="position:relative;max-width:1440px;margin:0 auto;padding:16px clamp(20px,4vw,48px) 0;box-sizing:border-box;display:flex;flex-direction:column;gap:20px">
+    <div style="height:calc(100svh - 64px);min-height:520px;box-sizing:border-box;margin-top:-16px;padding:16px 0 20px;display:flex;flex-direction:column;gap:18px">
+    <div data-rv style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:12px 32px;font:400 12px 'JetBrains Mono',monospace;color:oklch(0.7 0.03 168)">
+      <button onClick="{{ toWork }}" style="color:oklch(0.74 0.1 150)" style-hover="color:oklch(0.95 0.032 120)">{{ t.back }}</button>
+      <span style="display:flex;gap:18px;flex-wrap:wrap"><span>{{ t.kicker }}</span><span style="display:flex;align-items:center;gap:7px;color:oklch(0.9 0.058 124)"><span style="width:6px;height:6px;border-radius:50%;background:oklch(0.83 0.12 85)"></span>{{ t.studyState }}</span></span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:28px 64px">
+      <div style="flex:1 1 560px;min-width:0;display:flex;flex-direction:column;gap:16px">
+        <h1 data-rv style="margin:0;font-weight:500;font-size:clamp(46px,min(7.6vw,12vh),120px);line-height:.92;letter-spacing:-.05em">{{ t.title }}</h1>
+        <svg data-rv width="230" height="12" aria-hidden="true"><line data-dash x1="0" y1="4" x2="230" y2="4" stroke="oklch(0.74 0.1 150)" stroke-width="1.5" stroke-dasharray="8 6"></line><line x1="0" y1="10" x2="150" y2="10" stroke="oklch(0.72 0.095 291)" stroke-width="1.5"></line></svg>
+      </div>
+      <p data-rv style="flex:0 1 440px;margin:0;font:400 clamp(17px,1.5vw,21px)/1.55 Archivo;color:oklch(0.86 0.04 160);text-wrap:pretty">{{ t.lede }}</p>
+    </div>
+
+    <figure data-rv style="margin:0;flex:1 1 0;min-height:0;display:flex;flex-direction:column;gap:10px">
+      <div style="position:relative;flex:1 1 0;min-height:200px;background:linear-gradient(135deg,oklch(0.3 0.06 170),oklch(0.22 0.05 250) 60%,oklch(0.26 0.07 290));overflow:hidden;box-shadow:inset 0 0 0 1px oklch(0.95 0.032 120 / .1)">
+        <div data-breathe role="img" aria-label="{{ t.heroAlt }}" style="position:absolute;inset:-2%;background:url(img/machine-0813a.webp) center 30%/cover no-repeat;mix-blend-mode:luminosity;opacity:.55;filter:contrast(1.15)"></div>
+        <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,transparent 30%,oklch(0.17 0.03 235 / .75) 100%)"></div>
+        <span style="position:absolute;left:0;right:0;top:0;height:2px;background:oklch(0.74 0.1 150)"></span>
+        <span style="position:absolute;left:14px;top:14px;width:12px;height:12px;border-left:1px solid oklch(0.9 0.058 124 / .5);border-top:1px solid oklch(0.9 0.058 124 / .5)"></span>
+        <span style="position:absolute;right:14px;top:14px;width:12px;height:12px;border-right:1px solid oklch(0.9 0.058 124 / .5);border-top:1px solid oklch(0.9 0.058 124 / .5)"></span>
+        <span style="position:absolute;left:14px;bottom:14px;width:12px;height:12px;border-left:1px solid oklch(0.9 0.058 124 / .5);border-bottom:1px solid oklch(0.9 0.058 124 / .5)"></span>
+        <span style="position:absolute;right:14px;bottom:14px;width:12px;height:12px;border-right:1px solid oklch(0.9 0.058 124 / .5);border-bottom:1px solid oklch(0.9 0.058 124 / .5)"></span>
+        <div style="position:absolute;left:34px;right:34px;top:18px;display:flex;justify-content:space-between;gap:16px;font:500 11px 'JetBrains Mono',monospace"><span style="color:oklch(0.86 0.08 130)">N01 · LAB 1-5</span><span style="display:flex;align-items:center;gap:7px;color:oklch(0.9 0.058 124)"><span data-pulse style="width:6px;height:6px;border-radius:50%;background:oklch(0.86 0.08 130)"></span>{{ t.heroLive }}</span></div>
+        <div style="position:absolute;left:34px;right:34px;bottom:20px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px 16px">
+          <span style="font:400 11px 'JetBrains Mono',monospace;color:oklch(0.8 0.02 150)">{{ t.heroVerb }}</span>
+          <button onClick="{{ toLab }}" style="padding:8px 13px;background:oklch(0.95 0.032 120);color:oklch(0.19 0.032 228);font:500 12px 'JetBrains Mono',monospace;transition:background .25s" style-hover="background:oklch(0.74 0.1 150)">{{ t.openLab }}</button>
+        </div>
+      </div>
+      <figcaption style="display:flex;flex-wrap:wrap;gap:6px 16px;font:400 12px 'JetBrains Mono',monospace;color:oklch(0.7 0.03 168)"><span style="color:oklch(0.74 0.1 150)">N01</span><span>{{ t.heroCap }}</span></figcaption>
+    </figure>
+
+    </div>
+    <dl data-rv style="margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px 32px">
+      <div style="display:flex;flex-direction:column;gap:10px;padding-top:12px;border-top:1px solid oklch(0.95 0.032 120 / .2)"><dt style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.74 0.1 150)">{{ t.mRole }}</dt><dd style="margin:0;display:flex;flex-direction:column;gap:4px;font:400 14px/1.45 Archivo"><sc-for list="{{ roles }}" as="r" hint-placeholder-count="5"><span>{{ r }}</span></sc-for></dd></div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding-top:12px;border-top:1px solid oklch(0.95 0.032 120 / .2)"><dt style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.74 0.1 150)">{{ t.mTools }}</dt><dd style="margin:0;display:flex;flex-direction:column;gap:4px;font:400 14px/1.45 Archivo"><sc-for list="{{ tools }}" as="r" hint-placeholder-count="5"><span>{{ r }}</span></sc-for></dd></div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding-top:12px;border-top:1px solid oklch(0.95 0.032 120 / .2)"><dt style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.74 0.1 150)">{{ t.mTime }}</dt><dd style="margin:0;font:400 14px/1.45 Archivo">{{ t.time }}</dd></div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding-top:12px;border-top:1px solid oklch(0.95 0.032 120 / .2)"><dt style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.74 0.1 150)">{{ t.mStatus }}</dt><dd style="margin:0;display:flex;flex-direction:column;gap:6px;font:400 14px/1.45 Archivo"><sc-for list="{{ statusChips }}" as="s" hint-placeholder-count="3"><span style="display:flex;align-items:center;gap:8px"><span style="width:6px;height:6px;border-radius:50%;background:{{ s.c }}"></span>{{ s.x }}</span></sc-for></dd></div>
+    </dl>
+  </section>
+
+  <div style="max-width:1440px;margin:0 auto;padding:0 clamp(20px,4vw,48px);box-sizing:border-box;position:relative;display:flex;gap:56px;align-items:flex-start">
+    <aside aria-label="Contents" style="display:{{ idxDisplay }};flex:none;box-sizing:content-box;width:{{ idxW }};margin-left:calc(-12px - clamp(0px,1.8vw,24px));transition:width .55s cubic-bezier(.76,0,.24,1);position:sticky;top:76px;max-height:calc(100vh - 92px);overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding:0 0 24px 12px">
+      <div style="width:212px;display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 16px">
+        <button onClick="{{ toggleIdx }}" aria-expanded="{{ idxOpen }}" aria-label="{{ idxBtnLabel }}" title="{{ idxBtnLabel }}" style="display:flex;align-items:center;gap:10px;font:400 11px 'JetBrains Mono',monospace;color:oklch(0.7 0.03 168);transition:color .2s" style-hover="color:oklch(0.95 0.032 120)">
+          <span style="flex:none;width:28px;height:28px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:1px solid oklch(0.95 0.032 120 / .25);font:500 13px 'JetBrains Mono',monospace;color:oklch(0.95 0.032 120)">{{ idxIcon }}</span>
+          <span style="opacity:{{ idxTextOp }};transition:opacity .3s">{{ t.idxCollapse }}</span>
+        </button>
+        <span style="opacity:{{ idxTextOp }};transition:opacity .3s;font:400 11px 'JetBrains Mono',monospace;color:oklch(0.7 0.03 168)">{{ actNo }} / 10</span>
+      </div>
+            <div style="display:{{ idxRailDisplay }};flex-direction:column;width:28px">
+        <sc-for list="{{ index }}" as="c" hint-placeholder-count="11"><button onClick="{{ c.go }}" title="{{ c.title }}" aria-label="{{ c.title }}" style="height:14px;display:flex;align-items:center;justify-content:center"><span style="display:block;height:2px;width:{{ c.w }};background:{{ c.tick }};transition:width .4s cubic-bezier(.2,.7,.1,1),background .3s"></span></button></sc-for>
+      </div>
+      <nav style="display:{{ idxListDisplay }};width:212px;flex-direction:column;border-top:1px solid oklch(0.95 0.032 120 / .16);padding-top:8px;opacity:{{ idxTextOp }};transition:opacity .3s">
+        <sc-for list="{{ index }}" as="c" hint-placeholder-count="11">
+          <button onClick="{{ c.go }}" style="position:relative;display:grid;grid-template-columns:32px minmax(0,1fr);align-items:baseline;padding:6px 0;color:{{ c.color }};transition:color .25s" style-hover="color:oklch(0.95 0.032 120)">
+            <span style="position:absolute;left:-12px;top:7px;bottom:7px;width:2px;background:oklch(0.74 0.1 150);transform:scaleY({{ c.bar }});transition:transform .4s cubic-bezier(.2,.7,.1,1)"></span>
+            <span style="font:500 11px 'JetBrains Mono',monospace;color:{{ c.noColor }}">{{ c.n }}</span>
+            <span style="font:{{ c.weight }} 13.5px/1.35 Archivo;transform:translateX({{ c.tx }});transition:transform .4s cubic-bezier(.2,.7,.1,1)">{{ c.title }}</span>
+          </button>
+        </sc-for>
+      </nav>
+    </aside>
+
+    <main style="flex:1;min-width:0;padding-bottom:40px">
+      <sc-for list="{{ chapters }}" as="ch" hint-placeholder-count="3">
+        <section data-ch="{{ ch.id }}" data-screen-label="Case 01 · {{ ch.n }}" style="padding-top:{{ ch.pt }};display:flex;flex-direction:column;gap:30px">
+          <sc-if value="{{ ch.hasHead }}" hint-placeholder-val="{{ true }}">
+            <div data-rv style="position:relative;display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 22px;padding-top:18px;margin-bottom:6px">
+              <span style="position:absolute;left:0;right:0;top:0;height:2px;background:oklch(0.95 0.032 120)"></span>
+              <span style="font:500 13px 'JetBrains Mono',monospace;color:oklch(0.74 0.1 150)">{{ ch.n }}</span>
+              <h2 style="margin:0;font:600 clamp(30px,3.4vw,50px)/1.05 Archivo;letter-spacing:-.035em;text-wrap:balance">{{ ch.title }}</h2>
+            </div>
+          </sc-if>
+          <sc-for list="{{ ch.blocks }}" as="bk" hint-placeholder-count="3">
+            <div data-rv style="display:flex;flex-direction:column;min-width:0">
+
+              <sc-if value="{{ bk.isLead }}" hint-placeholder-val="{{ false }}"><p style="margin:0;max-width:30em;font:400 clamp(22px,2.3vw,32px)/1.45 Archivo;letter-spacing:-.012em;color:oklch(0.95 0.032 120);text-wrap:pretty">{{ bk.x }}</p></sc-if>
+              <sc-if value="{{ bk.isAccent }}" hint-placeholder-val="{{ false }}"><p style="margin:0;max-width:26em;font:500 clamp(24px,2.6vw,38px)/1.35 Archivo;letter-spacing:-.02em;color:oklch(0.86 0.08 130);text-wrap:balance">{{ bk.x }}</p></sc-if>
+              <sc-if value="{{ bk.isP }}" hint-placeholder-val="{{ true }}"><p style="margin:0;max-width:40em;font:400 17px/1.8 Archivo;color:oklch(0.88 0.03 150);text-wrap:pretty">{{ bk.x }}<sc-for list="{{ bk.cites }}" as="c" hint-placeholder-count="0"><a href="#" onClick="{{ c.go }}" style="margin-left:10px;font:500 11.5px 'JetBrains Mono',monospace;white-space:nowrap">{{ c.label }}</a></sc-for></p></sc-if>
+
+              <sc-if value="{{ bk.isQ }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:14px;padding:6px 0 4px">
+                  <span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.72 0.095 291)">{{ t.rq }}</span>
+                  <p style="margin:0;max-width:24em;font:500 clamp(26px,2.9vw,42px)/1.3 Archivo;letter-spacing:-.025em;text-wrap:balance">{{ bk.x }}</p>
+                  <sc-for list="{{ bk.cites }}" as="c" hint-placeholder-count="0"><a href="#" onClick="{{ c.go }}" style="font:500 11.5px 'JetBrains Mono',monospace">{{ c.label }}</a></sc-for>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ bk.isH3 }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:baseline;gap:16px;margin-top:28px;padding-top:14px;border-top:1px solid oklch(0.95 0.032 120 / .16)"><span style="font:500 12px 'JetBrains Mono',monospace;color:oklch(0.74 0.1 150)">{{ bk.n }}</span><h3 style="margin:0;font:600 clamp(21px,1.9vw,27px)/1.15 Archivo;letter-spacing:-.022em">{{ bk.x }}</h3></div>
+              </sc-if>
+
+              <sc-if value="{{ bk.isTodo }}" hint-placeholder-val="{{ false }}">
+                <p style="margin:0;max-width:44em;display:flex;gap:12px;align-items:baseline;padding:10px 14px;border:1px dashed oklch(0.83 0.12 85 / .45);font:400 13.5px/1.6 Archivo;color:oklch(0.82 0.03 130)"><span style="flex:none;font:500 10.5px 'JetBrains Mono',monospace;color:oklch(0.83 0.12 85)">{{ bk.tag }}</span><span>{{ bk.x }}</span></p>
+              </sc-if>
+
+              <sc-if value="{{ bk.isAside }}" hint-placeholder-val="{{ false }}">
+                <div style="max-width:44em;display:flex;flex-direction:column;gap:10px;padding:20px 22px;background:oklch(0.95 0.032 120 / .04);box-shadow:inset 0 0 0 1px oklch(0.95 0.032 120 / .08)">
+                  <span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.72 0.095 291)">{{ t.process }}</span>
+                  <p style="margin:0;font:400 15px/1.7 Archivo;color:oklch(0.86 0.03 150);text-wrap:pretty">{{ bk.x }}</p>
+                  <p style="margin:0;font:400 12.5px/1.55 'JetBrains Mono','PingFang SC',monospace;color:oklch(0.83 0.12 85 / .9)">{{ bk.pend }}</p>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ bk.isFigs }}" hint-placeholder-val="{{ false }}">
+                <div style="width:100%;max-width:{{ bk.maxW }};display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:28px 24px;margin:8px 0">
+                  <sc-for list="{{ bk.figs }}" as="f" hint-placeholder-count="1">
+                    <figure style="margin:0;display:flex;flex-direction:column;gap:12px;min-width:0">
+                      <div style="position:relative;aspect-ratio:{{ f.ratio }};background:{{ f.bg }};box-shadow:inset 0 0 0 1px oklch(0.95 0.032 120 / .1);overflow:hidden">
+                        <sc-if value="{{ f.src }}" hint-placeholder-val="{{ false }}"><div role="img" aria-label="{{ f.alt }}" style="position:absolute;inset:0;background:url({{ f.src }}) center/contain no-repeat"></div></sc-if>
+                        <sc-if value="{{ f.noSrc }}" hint-placeholder-val="{{ true }}">
+                          <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,oklch(0.95 0.032 120 / .045) 0 1px,transparent 1px 10px);display:flex;align-items:center;justify-content:center;padding:40px 32px;box-sizing:border-box;text-align:center;font:400 11.5px/1.6 'JetBrains Mono','PingFang SC',monospace;color:oklch(0.74 0.02 150)">{{ f.desc }}</div>
+                          <span style="position:absolute;left:12px;top:12px;width:10px;height:10px;border-left:1px solid oklch(0.9 0.058 124 / .45);border-top:1px solid oklch(0.9 0.058 124 / .45)"></span>
+                          <span style="position:absolute;right:12px;bottom:12px;width:10px;height:10px;border-right:1px solid oklch(0.9 0.058 124 / .45);border-bottom:1px solid oklch(0.9 0.058 124 / .45)"></span>
+                          <div style="position:absolute;left:30px;right:30px;top:14px;display:flex;justify-content:space-between;gap:12px;font:500 11px 'JetBrains Mono',monospace"><span style="color:oklch(0.86 0.08 130)">{{ f.id }}</span><span style="display:flex;align-items:center;gap:7px;color:oklch(0.9 0.058 124)"><span style="width:6px;height:6px;border-radius:50%;background:{{ f.sc }}"></span>{{ f.sl }}</span></div>
+                        </sc-if>
+                      </div>
+                      <figcaption style="display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;align-items:baseline"><span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.74 0.1 150)">{{ f.id }}</span><span style="display:flex;flex-direction:column;gap:3px"><span style="font:500 14px/1.45 Archivo">{{ f.cap }}</span><span style="font:400 13px/1.5 Archivo;color:oklch(0.7 0.03 168)">{{ f.sub }}</span></span></figcaption>
+                    </figure>
+                  </sc-for>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ bk.isLab }}" hint-placeholder-val="{{ false }}">
+                <figure style="margin:8px 0;display:flex;flex-direction:column;gap:12px">
+                  <div style="position:relative;height:clamp(300px,46vh,500px);background:linear-gradient(135deg,oklch(0.165 0.03 210),oklch(0.145 0.03 250));box-shadow:inset 0 0 0 1px oklch(0.95 0.032 120 / .1);overflow:hidden">
+                    <span style="position:absolute;left:0;right:0;top:0;height:2px;background:oklch(0.74 0.1 150);z-index:3"></span>
+                    <sc-if value="{{ bk.img }}" hint-placeholder-val="{{ false }}"><div role="img" aria-label="{{ bk.cap }}" style="position:absolute;inset:0;background:url({{ bk.img }}) center/cover no-repeat"></div></sc-if>
+                    <sc-if value="{{ bk.noImg }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,oklch(0.95 0.032 120 / .05) 0 1px,transparent 1px 10px);display:flex;align-items:center;justify-content:center;font:400 11px 'JetBrains Mono',monospace;color:oklch(0.72 0.012 150)">{{ bk.ph }}</div></sc-if>
+                    <span style="position:absolute;left:12px;top:12px;width:12px;height:12px;border-left:1px solid oklch(0.9 0.058 124 / .5);border-top:1px solid oklch(0.9 0.058 124 / .5);z-index:3"></span>
+                    <span style="position:absolute;right:12px;top:12px;width:12px;height:12px;border-right:1px solid oklch(0.9 0.058 124 / .5);border-top:1px solid oklch(0.9 0.058 124 / .5);z-index:3"></span>
+                    <span style="position:absolute;left:12px;bottom:12px;width:12px;height:12px;border-left:1px solid oklch(0.9 0.058 124 / .5);border-bottom:1px solid oklch(0.9 0.058 124 / .5);z-index:3"></span>
+                    <span style="position:absolute;right:12px;bottom:12px;width:12px;height:12px;border-right:1px solid oklch(0.9 0.058 124 / .5);border-bottom:1px solid oklch(0.9 0.058 124 / .5);z-index:3"></span>
+                    <div style="position:absolute;left:32px;right:32px;top:16px;z-index:3;display:flex;justify-content:space-between;gap:16px;font:500 11px 'JetBrains Mono',monospace"><span style="color:oklch(0.86 0.08 130)">{{ bk.id }}</span><span style="display:flex;align-items:center;gap:7px;color:oklch(0.9 0.058 124)"><span style="width:6px;height:6px;border-radius:50%;background:oklch(0.86 0.08 130)"></span>{{ t.live }}</span></div>
+                    <div style="position:absolute;left:32px;right:32px;bottom:16px;z-index:3;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;font:400 11px 'JetBrains Mono',monospace;color:oklch(0.78 0.015 150)"><span>{{ bk.verb }}</span><button onClick="{{ toLab }}" style="padding:6px 11px;border:1px solid oklch(0.95 0.032 120 / .3);background:oklch(0.15 0.03 235 / .6);font:500 11px 'JetBrains Mono',monospace;color:oklch(0.95 0.032 120)" style-hover="background:oklch(0.95 0.032 120 / .12)">{{ t.toLab }}</button></div>
+                  </div>
+                  <figcaption style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:baseline"><span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.74 0.1 150)">{{ bk.id }}</span><span style="font:400 13.5px/1.5 Archivo;color:oklch(0.8 0.035 162)">{{ bk.cap }}</span></figcaption>
+                </figure>
+              </sc-if>
+
+              <sc-if value="{{ bk.isConcepts }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:1px;background:oklch(0.95 0.032 120 / .12);box-shadow:0 0 0 1px oklch(0.95 0.032 120 / .12)">
+                  <sc-for list="{{ concepts }}" as="c" hint-placeholder-count="3">
+                    <div style="position:relative;display:flex;flex-direction:column;gap:14px;padding:22px 22px 26px;background:oklch(0.19 0.032 228);transition:background .3s" style-hover="background:oklch(0.215 0.035 222)">
+                      <span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.74 0.1 150)">{{ c.n }}</span>
+                      <span style="display:flex;flex-direction:column;gap:4px"><span style="font:600 clamp(22px,2vw,28px)/1.15 Archivo;letter-spacing:-.02em">{{ c.big }}</span><span style="font:400 11.5px 'JetBrains Mono','PingFang SC',monospace;color:oklch(0.7 0.03 168)">{{ c.small }}</span></span>
+                      <p style="margin:0;font:400 14.5px/1.65 Archivo;color:oklch(0.82 0.035 160);text-wrap:pretty">{{ c.note }}</p>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ bk.isParts }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:28px 28px">
+                  <sc-for list="{{ parts }}" as="p" hint-placeholder-count="4">
+                    <div style="display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid oklch(0.95 0.032 120 / .2)">
+                      <span style="display:flex;align-items:baseline;gap:10px"><span style="font:500 clamp(40px,4vw,56px)/.9 Archivo;letter-spacing:-.04em;color:oklch(0.86 0.08 130)">{{ p.n }}</span><span style="font:600 16px Archivo">{{ p.name }}</span></span>
+                      <p style="margin:0;font:400 14px/1.6 Archivo;color:oklch(0.8 0.035 162);text-wrap:pretty">{{ p.x }}</p>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ bk.isLife }}" hint-placeholder-val="{{ false }}">
+                <figure style="margin:8px 0;display:flex;flex-direction:column;gap:16px;padding:22px 22px 20px;background:oklch(0.165 0.03 222 / .7);box-shadow:inset 0 0 0 1px oklch(0.95 0.032 120 / .1)">
+                  <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 24px;font:500 11px 'JetBrains Mono',monospace"><span style="color:oklch(0.86 0.08 130)">N05 · {{ t.lifeTitle }}</span><span style="color:oklch(0.7 0.03 168)">{{ t.lifeScale }}</span></div>
+                  <div style="position:relative;display:flex;gap:2px;min-height:76px">
+                    <sc-for list="{{ lifeSegs }}" as="s" hint-placeholder-count="5">
+                      <div style="flex-grow:{{ s.g }};flex-basis:0;min-width:0;display:flex;flex-direction:column;justify-content:space-between;gap:8px;padding:10px 10px 9px;box-sizing:border-box;background:{{ s.bg }};opacity:{{ s.op }};transition:opacity .4s;overflow:hidden">
+                        <span style="font:600 13.5px/1.2 Archivo;color:{{ s.fg }};white-space:nowrap">{{ s.name }}</span>
+                        <span style="font:400 11px 'JetBrains Mono',monospace;color:{{ s.fg }};opacity:.8">{{ s.dur }}</span>
+                      </div>
+                    </sc-for>
+                    <span data-lifehead style="position:absolute;top:-6px;bottom:-6px;left:0;width:2px;margin-left:-1px;background:oklch(0.95 0.032 120);box-shadow:0 0 0 3px oklch(0.95 0.032 120 / .12)"></span>
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px">
+                    <sc-for list="{{ lives }}" as="l" hint-placeholder-count="4">
+                      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:9px 10px;border-top:2px solid {{ l.line }};transition:border-color .4s"><span style="font:400 11px 'JetBrains Mono',monospace;color:oklch(0.7 0.03 168)">{{ l.n }}</span><span style="font:600 14px Archivo;color:{{ l.fg }};transition:color .4s">{{ l.p }}</span></div>
+                    </sc-for>
+                  </div>
+                  <figcaption style="font:400 13px/1.55 Archivo;color:oklch(0.7 0.03 168)">{{ t.lifeNote }}</figcaption>
+                </figure>
+              </sc-if>
+
+              <sc-if value="{{ bk.isPersona }}" hint-placeholder-val="{{ false }}">
+                <figure style="margin:8px 0;display:flex;flex-direction:column;gap:0">
+                  <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px 24px;padding-bottom:14px">
+                    <span style="display:flex;flex-direction:column;gap:4px"><span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.86 0.08 130)">N06 · {{ t.pzKicker }}</span><span style="font:600 20px/1.2 Archivo;letter-spacing:-.015em">{{ t.pzTitle }}</span></span>
+                    <span role="group" aria-label="{{ t.pzPick }}" style="display:flex">
+                      <sc-for list="{{ pz.opts }}" as="o" hint-placeholder-count="4"><button onClick="{{ o.pick }}" aria-pressed="{{ o.on }}" style="margin-left:-1px;display:flex;align-items:center;gap:8px;padding:8px 13px;border:1px solid oklch(0.95 0.032 120 / .22);background:{{ o.bg }};color:{{ o.fg }};font:500 12.5px Archivo;white-space:nowrap;transition:background .25s,color .25s" style-hover="border-color:oklch(0.95 0.032 120 / .55)"><span style="font:500 11px 'JetBrains Mono',monospace;color:{{ o.ink }}">{{ o.k }}</span>{{ o.name }}</button></sc-for>
+                    </span>
+                  </div>
+                  <div data-pzplate style="position:relative;height:clamp(280px,40vh,380px);background:linear-gradient(135deg,oklch(0.165 0.03 210),oklch(0.145 0.03 250));box-shadow:inset 0 0 0 1px oklch(0.95 0.032 120 / .1);overflow:hidden">
+                    <span style="position:absolute;left:0;right:0;top:0;height:2px;background:{{ pz.ink }};transition:background .4s;z-index:2"></span>
+                    <canvas data-cv="persona" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+                    <div style="position:absolute;left:24px;right:24px;top:16px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 16px;font:500 11px 'JetBrains Mono',monospace;z-index:2"><span style="color:{{ pz.ink }}">{{ pz.label }}</span><span style="color:oklch(0.9 0.058 124)">{{ pz.read }}</span></div>
+                    <div style="position:absolute;left:24px;right:24px;bottom:16px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:10px 16px;z-index:2">
+                      <span style="font:400 11px 'JetBrains Mono',monospace;color:oklch(0.78 0.015 150)">{{ pz.resp }}</span>
+                      <button onClick="{{ touch }}" style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:oklch(0.95 0.032 120);color:oklch(0.19 0.032 228);font:500 13px Archivo;transition:background .25s,transform .15s" style-hover="background:oklch(0.86 0.08 130)" style-active="transform:scale(.97)"><span style="width:8px;height:8px;border-radius:50%;background:{{ pz.ink }}"></span>{{ t.touch }}</button>
+                    </div>
+                  </div>
+                  <figcaption style="padding:12px 0 0;font:400 13px/1.55 Archivo;color:oklch(0.7 0.03 168)">{{ t.pzNote }}</figcaption>
+                  <div style="margin-top:22px;overflow-x:auto;overflow-y:hidden">
+                    <div role="table" style="min-width:680px;display:flex;flex-direction:column">
+                      <div role="row" style="display:grid;grid-template-columns:132px repeat(4,minmax(0,1fr));border-bottom:1px solid oklch(0.95 0.032 120 / .2)">
+                        <span role="columnheader" style="padding:10px 12px 10px 0;font:400 11px 'JetBrains Mono',monospace;color:oklch(0.7 0.03 168)">{{ t.param }}</span>
+                        <sc-for list="{{ pz.opts }}" as="o" hint-placeholder-count="4"><button role="columnheader" onClick="{{ o.pick }}" style="padding:10px 12px;display:flex;gap:8px;align-items:baseline;background:{{ o.colBg }};font:600 13px Archivo;color:{{ o.colFg }};transition:background .3s,color .3s"><span style="font:500 11px 'JetBrains Mono',monospace;color:{{ o.colInk }}">{{ o.k }}</span>{{ o.name }}</button></sc-for>
+                      </div>
+                      <sc-for list="{{ pz.rows }}" as="r" hint-placeholder-count="12">
+                        <div role="row" style="display:grid;grid-template-columns:132px repeat(4,minmax(0,1fr));border-bottom:1px solid oklch(0.95 0.032 120 / .08)">
+                          <span role="rowheader" style="padding:9px 12px 9px 0;font:400 12.5px/1.4 Archivo;color:oklch(0.8 0.035 162)">{{ r.k }}</span>
+                          <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="4"><span role="cell" style="padding:9px 12px;font:{{ c.w }} 13px/1.45 Archivo;background:{{ c.bg }};color:{{ c.fg }};transition:background .3s,color .3s">{{ c.x }}</span></sc-for>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </figure>
+              </sc-if>
+
+              <sc-if value="{{ bk.isLayers }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:14px">
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:20px">
+                    <sc-for list="{{ layers }}" as="l" hint-placeholder-count="5">
+                      <div style="display:flex;flex-direction:column;gap:8px;opacity:{{ l.op }};transition:opacity .9s">
+                        <span style="position:relative;height:2px;background:oklch(0.95 0.032 120 / .12);overflow:hidden"><span style="position:absolute;inset:0;background:oklch(0.74 0.1 150);transform-origin:0 50%;transform:scaleX({{ l.on }});transition:transform 1.4s cubic-bezier(.76,0,.24,1)"></span></span>
+                        <span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.74 0.1 150)">{{ l.n }}</span>
+                        <span style="font:600 15.5px/1.25 Archivo">{{ l.name }}</span>
+                        <span style="font:400 13.5px/1.55 Archivo;color:oklch(0.78 0.035 162)">{{ l.x }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px"><button onClick="{{ toggleLayers }}" style="padding:7px 12px;border:1px solid oklch(0.95 0.032 120 / .25);font:500 12px 'JetBrains Mono','PingFang SC',monospace" style-hover="background:oklch(0.95 0.032 120 / .06)">{{ layersBtn }}</button><span style="font:400 13px Archivo;color:oklch(0.7 0.03 168)">{{ t.layersNote }}</span></div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ bk.isClosure }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:1px;background:oklch(0.95 0.032 120 / .12);box-shadow:0 0 0 1px oklch(0.95 0.032 120 / .12)">
+                  <sc-for list="{{ closure }}" as="c" hint-placeholder-count="2">
+                    <div style="display:flex;flex-direction:column;gap:12px;padding:22px 24px 24px;background:oklch(0.19 0.032 228)">
+                      <span style="display:flex;justify-content:space-between;gap:12px;font:500 11px 'JetBrains Mono',monospace"><span style="color:oklch(0.86 0.08 130)">{{ c.id }}</span><span style="color:oklch(0.7 0.03 168)">{{ c.k }}</span></span>
+                      <span style="font:500 clamp(30px,3.2vw,46px)/1 'JetBrains Mono',monospace;letter-spacing:-.04em;white-space:nowrap">{{ c.f }}</span>
+                      <span style="font:400 14px/1.6 Archivo;color:oklch(0.8 0.035 162);text-wrap:pretty">{{ c.x }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ bk.isStats }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:1px;background:oklch(0.95 0.032 120 / .12);box-shadow:0 0 0 1px oklch(0.95 0.032 120 / .12)">
+                  <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
+                    <div style="display:flex;flex-direction:column;gap:10px;padding:20px 20px 22px;background:oklch(0.19 0.032 228)">
+                      <span style="font:400 11px 'JetBrains Mono','PingFang SC',monospace;color:oklch(0.7 0.03 168)">{{ s.k }}</span>
+                      <span style="display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px"><span style="font:400 17px 'JetBrains Mono',monospace;color:oklch(0.62 0.03 175);text-decoration:line-through;text-decoration-color:oklch(0.62 0.03 175 / .6)">{{ s.from }}</span><span style="color:oklch(0.74 0.1 150)">→</span><span data-count data-from="{{ s.fromN }}" data-to="{{ s.toN }}" data-dec="{{ s.dec }}" style="font:500 clamp(36px,3.4vw,50px)/1 Archivo;letter-spacing:-.04em;font-variant-numeric:tabular-nums">{{ s.to }}</span><span style="font:400 13px 'JetBrains Mono',monospace;color:oklch(0.8 0.035 162)">{{ s.unit }}</span></span>
+                      <span style="font:400 13px/1.5 Archivo;color:oklch(0.78 0.035 162)">{{ s.note }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ bk.isAgeing }}" hint-placeholder-val="{{ false }}">
+                <figure style="margin:8px 0;display:flex;flex-direction:column;gap:0">
+                  <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px 24px;padding-bottom:14px">
+                    <span style="display:flex;flex-direction:column;gap:4px"><span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.86 0.08 130)">N17 · {{ t.agKicker }}</span><span style="font:600 20px/1.2 Archivo;letter-spacing:-.015em">{{ pz.death }}</span></span>
+                    <span role="group" aria-label="{{ t.pzPick }}" style="display:flex">
+                      <sc-for list="{{ pz.opts }}" as="o" hint-placeholder-count="4"><button onClick="{{ o.pick }}" aria-pressed="{{ o.on }}" style="margin-left:-1px;padding:7px 12px;border:1px solid oklch(0.95 0.032 120 / .22);background:{{ o.bg }};color:{{ o.fg }};font:500 12px 'JetBrains Mono',monospace;transition:background .25s,color .25s" style-hover="border-color:oklch(0.95 0.032 120 / .55)">{{ o.k }}</button></sc-for>
+                    </span>
+                  </div>
+                  <div data-agplate style="position:relative;height:clamp(260px,36vh,340px);background:linear-gradient(135deg,oklch(0.165 0.03 210),oklch(0.145 0.03 250));box-shadow:inset 0 0 0 1px oklch(0.95 0.032 120 / .1);overflow:hidden">
+                    <canvas data-cv="ageing" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+                    <sc-for list="{{ agMarks }}" as="m" hint-placeholder-count="5">
+                      <span data-agmark="{{ m.x }}" style="position:absolute;top:18px;bottom:40px;left:{{ m.left }};opacity:0;transition:opacity .5s;border-left:1px dashed oklch(0.95 0.032 120 / .25)"><span style="position:absolute;top:0;left:7px;font:400 11px 'JetBrains Mono','PingFang SC',monospace;color:oklch(0.9 0.04 130);white-space:nowrap">{{ m.label }}</span></span>
+                    </sc-for>
+                    <div style="position:absolute;left:24px;right:24px;bottom:14px;display:flex;justify-content:space-between;gap:16px;font:400 11px 'JetBrains Mono',monospace;color:oklch(0.7 0.02 160)"><span>{{ t.agLeft }}</span><span>{{ t.agRight }}</span></div>
+                  </div>
+                  <figcaption style="padding:12px 0 0;font:400 13px/1.55 Archivo;color:oklch(0.7 0.03 168)">{{ t.agNote }}</figcaption>
+                </figure>
+              </sc-if>
+
+              <sc-if value="{{ bk.isSystem }}" hint-placeholder-val="{{ false }}">
+                <figure style="margin:8px 0;display:flex;flex-direction:column;gap:14px">
+                  <span style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 24px;font:500 11px 'JetBrains Mono',monospace"><span style="color:oklch(0.86 0.08 130)">N18 · {{ t.sysTitle }}</span><span style="color:oklch(0.7 0.03 168)">{{ t.sysSub }}</span></span>
+                  <div style="position:relative;height:2px;background:oklch(0.95 0.032 120 / .12)"><span data-flow style="position:absolute;top:-3px;left:0;width:8px;height:8px;margin-left:-4px;border-radius:50%;background:oklch(0.86 0.08 130);box-shadow:0 0 12px oklch(0.86 0.08 130)"></span></div>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:1px;background:oklch(0.95 0.032 120 / .12);box-shadow:0 0 0 1px oklch(0.95 0.032 120 / .12)">
+                    <sc-for list="{{ sysCols }}" as="c" hint-placeholder-count="4">
+                      <div style="display:flex;flex-direction:column;gap:12px;padding:16px 16px 18px;background:oklch(0.19 0.032 228)">
+                        <span style="display:flex;justify-content:space-between;gap:8px;font:500 11px 'JetBrains Mono','PingFang SC',monospace"><span style="color:oklch(0.74 0.1 150)">{{ c.h }}</span><span style="color:oklch(0.7 0.03 168)">{{ c.n }}</span></span>
+                        <span style="display:flex;flex-direction:column;gap:6px">
+                          <sc-for list="{{ c.items }}" as="i" hint-placeholder-count="4"><span style="padding:6px 9px;border:1px {{ i.bs }} oklch(0.95 0.032 120 / {{ i.ba }});font:400 12.5px/1.4 Archivo;color:{{ i.fg }}">{{ i.x }}</span></sc-for>
+                        </span>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px">
+                    <span style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:oklch(0.74 0.1 150 / .12);font:500 13px Archivo"><span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.74 0.1 150)">→</span>{{ t.sysOutA }}</span>
+                    <span style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:oklch(0.72 0.095 291 / .14);font:500 13px Archivo"><span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.72 0.095 291)">→</span>{{ t.sysOutB }}</span>
+                  </div>
+                </figure>
+              </sc-if>
+
+              <sc-if value="{{ bk.isInterf }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:20px 28px">
+                  <sc-for list="{{ interf }}" as="i" hint-placeholder-count="4">
+                    <div style="display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid oklch(0.95 0.032 120 / .18)">
+                      <span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.83 0.12 85)">{{ i.n }}</span>
+                      <span style="display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;font:600 15px/1.35 Archivo"><span>{{ i.a }}</span><span style="font:400 12px 'JetBrains Mono',monospace;color:oklch(0.7 0.03 168)">→</span><span style="color:oklch(0.86 0.04 160)">{{ i.b }}</span></span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ bk.isStatus }}" hint-placeholder-val="{{ false }}">
+                <dl style="margin:0;display:flex;flex-direction:column;border-top:1px solid oklch(0.95 0.032 120 / .2)">
+                  <sc-for list="{{ status }}" as="s" hint-placeholder-count="4">
+                    <div style="display:grid;grid-template-columns:minmax(120px,180px) minmax(0,1fr);gap:8px 24px;align-items:baseline;padding:14px 0;border-bottom:1px solid oklch(0.95 0.032 120 / .1)">
+                      <dt style="display:flex;align-items:center;gap:10px;font:600 15px Archivo"><span style="width:7px;height:7px;border-radius:50%;background:{{ s.c }}"></span>{{ s.k }}</dt>
+                      <dd style="margin:0;display:flex;flex-direction:column;gap:4px"><span style="font:500 11px 'JetBrains Mono','PingFang SC',monospace;color:{{ s.c }}">{{ s.tag }}</span><span style="font:400 15px/1.65 Archivo;color:oklch(0.86 0.03 150);text-wrap:pretty">{{ s.x }}</span></dd>
+                    </div>
+                  </sc-for>
+                </dl>
+              </sc-if>
+
+              <sc-if value="{{ bk.isPredict }}" hint-placeholder-val="{{ false }}">
+                <figure style="margin:8px 0;display:flex;flex-direction:column;gap:20px;padding:22px;background:oklch(0.165 0.03 222 / .7);box-shadow:inset 0 0 0 1px oklch(0.95 0.032 120 / .1)">
+                  <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px 24px">
+                    <span style="display:flex;flex-direction:column;gap:4px"><span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.83 0.12 85)">{{ t.prKicker }}</span><span style="font:600 20px/1.2 Archivo;letter-spacing:-.015em">{{ t.prTitle }}</span></span>
+                    <span role="tablist" style="display:flex"><sc-for list="{{ pred.tabs }}" as="o" hint-placeholder-count="4"><button role="tab" onClick="{{ o.pick }}" aria-selected="{{ o.on }}" style="margin-left:-1px;padding:7px 12px;border:1px solid oklch(0.95 0.032 120 / .22);background:{{ o.bg }};color:{{ o.fg }};font:500 12px Archivo;white-space:nowrap;transition:background .25s,color .25s">{{ o.x }}</button></sc-for></span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:9px">
+                    <sc-for list="{{ pred.bars }}" as="b" hint-placeholder-count="4">
+                      <button onClick="{{ b.pick }}" style="display:grid;grid-template-columns:72px minmax(0,1fr) 92px;gap:14px;align-items:center;opacity:{{ b.op }};transition:opacity .3s">
+                        <span style="font:400 11.5px 'JetBrains Mono','PingFang SC',monospace;color:oklch(0.8 0.035 162)">{{ b.n }}</span>
+                        <span style="position:relative;height:12px;background:oklch(0.95 0.032 120 / .06)"><span style="position:absolute;top:0;bottom:0;left:{{ b.left }};width:{{ b.w }};background:{{ b.fill }};border:1px {{ b.bs }} oklch(0.83 0.12 85);box-sizing:border-box;transition:background .3s"></span></span>
+                        <span style="font:500 11.5px 'JetBrains Mono','PingFang SC',monospace;color:oklch(0.83 0.12 85);text-align:right">{{ b.v }}</span>
+                      </button>
+                    </sc-for>
+                    <span style="display:grid;grid-template-columns:72px minmax(0,1fr) 92px;gap:14px;font:400 10.5px 'JetBrains Mono',monospace;color:oklch(0.6 0.025 185)"><span></span><span style="display:flex;justify-content:space-between"><span>0</span><span>50</span><span>100</span></span><span style="text-align:right">{{ t.prAxis }}</span></span>
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:20px 28px">
+                    <sc-for list="{{ pred.cols }}" as="c" hint-placeholder-count="3">
+                      <div style="display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid oklch(0.95 0.032 120 / .18)"><span style="font:500 11px 'JetBrains Mono','PingFang SC',monospace;color:oklch(0.74 0.1 150)">{{ c.k }}</span><span style="font:400 15px/1.6 Archivo;text-wrap:pretty">{{ c.x }}</span></div>
+                    </sc-for>
+                  </div>
+                </figure>
+              </sc-if>
+
+              <sc-if value="{{ bk.isSpecs }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:14px">
+                  <dl style="margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));column-gap:40px;border-top:1px solid oklch(0.95 0.032 120 / .2)">
+                    <sc-for list="{{ specs }}" as="s" hint-placeholder-count="8">
+                      <div style="display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;align-items:baseline;padding:10px 0;border-bottom:1px solid oklch(0.95 0.032 120 / .1)"><dt style="font:400 11.5px 'JetBrains Mono','PingFang SC',monospace;color:oklch(0.7 0.03 168)">{{ s.k }}</dt><dd style="margin:0;font:400 14px/1.5 Archivo;color:{{ s.fg }}">{{ s.v }}</dd></div>
+                    </sc-for>
+                  </dl>
+                  <button onClick="{{ toggleSpecs }}" style="align-self:flex-start;font:500 12px 'JetBrains Mono','PingFang SC',monospace;color:oklch(0.74 0.1 150)" style-hover="color:oklch(0.95 0.032 120)">{{ specsBtn }}</button>
+                </div>
+              </sc-if>
+
+            </div>
+          </sc-for>
+        </section>
+      </sc-for>
+
+      <section data-screen-label="Case 01 · tail" style="padding-top:112px;display:flex;flex-direction:column;gap:40px">
+        <figure data-rv style="margin:0;display:flex;flex-direction:column;gap:12px">
+          <div style="position:relative;aspect-ratio:16/8;background:repeating-linear-gradient(45deg,oklch(0.95 0.032 120 / .045) 0 1px,transparent 1px 10px),linear-gradient(135deg,oklch(0.165 0.03 210),oklch(0.145 0.03 250));box-shadow:inset 0 0 0 1px oklch(0.95 0.032 120 / .1);display:flex;align-items:center;justify-content:center">
+            <span style="width:68px;height:68px;border-radius:50%;border:1px solid oklch(0.95 0.032 120 / .5);display:flex;align-items:center;justify-content:center;font:400 18px Archivo;padding-left:4px;box-sizing:border-box">▶</span>
+            <div style="position:absolute;left:28px;right:28px;top:16px;display:flex;justify-content:space-between;gap:12px;font:500 11px 'JetBrains Mono',monospace"><span style="color:oklch(0.86 0.08 130)">V.60</span><span style="display:flex;align-items:center;gap:7px;color:oklch(0.9 0.058 124)"><span style="width:6px;height:6px;border-radius:50%;background:oklch(0.83 0.12 85)"></span>{{ t.stShoot }}</span></div>
+          </div>
+          <figcaption style="display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;font:400 13.5px/1.5 Archivo;color:oklch(0.8 0.035 162)"><span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.74 0.1 150)">V.60</span><span>{{ t.video }}</span></figcaption>
+        </figure>
+        <div data-rv style="display:flex;flex-wrap:wrap;gap:12px 24px;align-items:baseline;padding:16px 18px;border:1px dashed oklch(0.95 0.032 120 / .25)"><span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.72 0.095 291)">{{ t.aiK }}</span><span style="font:400 14px/1.6 Archivo;color:oklch(0.8 0.035 162)">{{ t.aiX }}</span></div>
+        <button data-rv onClick="{{ toNext }}" style="position:relative;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px 32px;padding:22px 0 8px;margin-top:24px" style-hover="color:oklch(0.85 0.06 295)">
+          <span style="position:absolute;left:0;right:0;top:0;height:2px;background:oklch(0.72 0.095 291)"></span>
+          <span style="display:flex;flex-direction:column;gap:10px"><span style="font:500 12px 'JetBrains Mono',monospace;color:oklch(0.72 0.095 291)">{{ t.nextK }}</span><span style="font:600 clamp(30px,3.6vw,52px)/1 Archivo;letter-spacing:-.035em">{{ t.nextT }}</span></span>
+          <span style="font:400 clamp(30px,3.6vw,52px)/1 Archivo;color:oklch(0.72 0.095 291)">→</span>
+        </button>
+      </section>
+    </main>
+  </div>
+
+  <footer style="margin-top:96px;border-top:1px solid oklch(0.95 0.032 120 / .16)">
+    <div style="max-width:1440px;margin:0 auto;padding:22px clamp(20px,4vw,48px) 40px;box-sizing:border-box;display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px 32px;font:400 12px 'JetBrains Mono',monospace;color:oklch(0.7 0.03 168)">
+      <span>{{ t.footer }}</span>
+      <span style="display:flex;gap:24px"><button onClick="{{ toWork }}" style="color:oklch(0.74 0.1 150)" style-hover="color:oklch(0.95 0.032 120)">{{ t.work }}</button><button onClick="{{ toLab }}" style="color:oklch(0.74 0.1 150)" style-hover="color:oklch(0.95 0.032 120)">{{ t.lab }}</button><button onClick="{{ toTop }}" style="color:oklch(0.74 0.1 150)" style-hover="color:oklch(0.95 0.032 120)">{{ t.top }}</button></span>
+    </div>
+  </footer>
+
+  <div style="position:fixed;left:50%;bottom:28px;z-index:90;padding:7px 12px;background:oklch(0.95 0.032 120);color:oklch(0.19 0.032 228);font:400 12px 'JetBrains Mono',monospace;pointer-events:none;opacity:{{ toastOp }};transform:translate(-50%,{{ toastY }});transition:opacity .25s,transform .35s cubic-bezier(.2,.7,.1,1);white-space:nowrap">{{ toast }}</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;defaultLang&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;zh&quot;,&quot;en&quot;],&quot;default&quot;:&quot;zh&quot;,&quot;tsType&quot;:&quot;'zh' | 'en'&quot;,&quot;section&quot;:&quot;Language&quot;},&quot;personality&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;A&quot;,&quot;B&quot;,&quot;C&quot;,&quot;D&quot;],&quot;default&quot;:&quot;A&quot;,&quot;tsType&quot;:&quot;'A' | 'B' | 'C' | 'D'&quot;,&quot;section&quot;:&quot;Behaviour&quot;},&quot;indexOpen&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;motion&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Motion&quot;}}">
+const L = (zh, en) => ({ zh, en });
+const INK = 'oklch(0.95 0.032 120)', PAPER = 'oklch(0.19 0.032 228)', MUTE = 'oklch(0.8 0.035 162)', DIM = 'oklch(0.7 0.03 168)';
+const G = 'oklch(0.74 0.1 150)', GH = 'oklch(0.86 0.08 130)', VI = 'oklch(0.72 0.095 291)', AM = 'oklch(0.83 0.12 85)', BL = 'oklch(0.74 0.06 235)';
+const EO = 'cubic-bezier(.2,.7,.1,1)';
+const ST = { ready: [G, '可现产', 'Ready'], shoot: [AM, '待拍摄', 'To shoot'], tbd: [DIM, '待定', 'Pending'], later: [BL, '研究期后', 'After study'] };
+const PZ = [
+  { k: 'A', zh: '活力', en: 'Vital', ink: 'oklch(0.84 0.12 135)', period: 2, depth: .8, lat: .12, s: 1 },
+  { k: 'B', zh: '沉静', en: 'Withdrawn', ink: 'oklch(0.76 0.08 225)', period: 6, depth: .3, lat: 1.4, s: .35 },
+  { k: 'C', zh: '亲密', en: 'Affectionate', ink: 'oklch(0.78 0.1 335)', period: 4, depth: .5, lat: .35, s: .75 },
+  { k: 'D', zh: '不稳定', en: 'Unstable', ink: 'oklch(0.83 0.12 85)', period: 4, depth: .55, lat: null, s: null },
+];
+const PROWS = [
+  ['呼吸周期', 'Breath period', ['2 秒', '6 秒', '4 秒', '2–8 秒随机'], ['2 s', '6 s', '4 s', 'random 2–8 s']],
+  ['呼吸幅度', 'Breath depth', ['80%', '30%', '50%', '20–90% 随机'], ['80%', '30%', '50%', 'random 20–90%']],
+  ['运动速度', 'Motion speed', ['快', '慢', '中偏快', '忽快忽慢'], ['fast', 'slow', 'medium-fast', 'swings']],
+  ['响应延迟', 'Response latency', ['极短', '长', '短', '不一致'], ['very short', 'long', 'short', 'inconsistent']],
+  ['响应强度', 'Response strength', ['大', '小', '中偏大', '不一致'], ['large', 'small', 'medium-large', 'inconsistent']],
+  ['自发运动频率', 'Idle motion rate', ['高', '低', '中，有人在时升高', '随机'], ['high', 'low', 'medium, rises when you’re there', 'random']],
+  ['声音音调', 'Sound pitch', ['高频明快', '低频温暖', '中频多变', '不稳定'], ['bright, high', 'warm, low', 'mid, variable', 'unsteady']],
+  ['声音节奏', 'Sound rhythm', ['连续密集', '稀疏断续', '有节奏但有变化', '无规律'], ['dense, continuous', 'sparse, broken', 'rhythmic with variation', 'no pattern']],
+  ['朝向变化频率', 'Reorientation rate', ['高', '低', '中', '随机'], ['high', 'low', 'medium', 'random']],
+  ['朝向偏好', 'Orientation bias', ['四处看', '偏离人', '强烈偏向人', '忽而朝人忽而背离'], ['looks everywhere', 'away from you', 'strongly toward you', 'toward, then away']],
+  ['惊吓阈值', 'Startle threshold', ['高，不容易吓到', '低，轻碰就缩', '中', '不一致'], ['high, hard to spook', 'low, flinches at a touch', 'medium', 'inconsistent']],
+  ['死亡方式', 'How it dies', ['精力耗尽，动作渐小渐停', '安静地慢慢停下', '最后朝向用户，缓慢停止', '节律紊乱后渐弱'], ['winds down, movements shrinking', 'quietly slows to a stop', 'turns toward you, then stops', 'rhythm falls apart, then fades']],
+];
+const LIFE = [
+  { n: L('诞生', 'Birth'), dur: '1′', g: 1, bg: 'oklch(0.86 0.08 130 / .32)' },
+  { n: L('成长与互动', 'Growth & interaction'), dur: '4′', g: 4, bg: 'oklch(0.74 0.1 150 / .22)' },
+  { n: L('衰老', 'Ageing'), dur: '1.5′', g: 1.5, bg: 'oklch(0.72 0.095 291 / .3)' },
+  { n: L('死亡', 'Death'), dur: '·', g: .55, bg: 'oklch(0.95 0.032 120 / .85)', fg: PAPER },
+  { n: L('空白', 'Blank'), dur: '45″', g: .75, bg: 'repeating-linear-gradient(45deg,oklch(0.95 0.032 120 / .08) 0 1px,transparent 1px 7px)' },
+];
+const LTOT = LIFE.reduce((a, s) => a + s.g, 0);
+const AGM = [[.1, '呼吸变浅', 'shallower breath'], [.34, '回应变慢', 'slower responses'], [.56, '节律变得不规则', 'irregular rhythm'], [.765, '最后一次呼吸', 'last breath'], [.86, '45 秒静止', '45 s of stillness']];
+const SPECS = [
+  ['整机包络（全开）', '330 × 343 × 220 mm', 'Envelope, expanded', '330 × 343 × 220 mm'],
+  ['收缩状态', '330 × 271 × 155 mm', 'Contracted', '330 × 271 × 155 mm'],
+  ['呼吸环', '5 个异形 Hoberman 角化拱', 'Breathing rings', '5 irregular angulated Hoberman arches'],
+  ['环间距', '待确认 82.5 / 85 mm：测绘逐对为 85.000，330 mm 包络按 82.5 算出', 'Ring pitch', 'To confirm, 82.5 / 85 mm: survey measured 85.000; the 330 mm envelope implies 82.5', 1],
+  ['三角形零件', '11 组全等类，环内复用', 'Triangle parts', '11 congruence classes, reused within each ring'],
+  ['主驱动', 'NEMA17（0.51 N·m）+ TMC2209，GT2 皮带 3:1（20T / 60T）；中轴摆角约 336°', 'Main drive', 'NEMA17 (0.51 N·m) + TMC2209, GT2 belt 3:1 (20T / 60T); shaft swing about 336°'],
+  ['呼吸传动', '钢齿轮 m=1，齿数 32 / 33 / 32 / 29 / 25（S1–S5）；商用钢齿条截断 + 打印 U 形卡接件', 'Breathing drive', 'Steel gears, module 1, 32 / 33 / 32 / 29 / 25 teeth (S1–S5); cut steel rack with printed U-clips'],
+  ['偏航', '汉德保 HDB60XZ45B 蜗轮中空旋转平台 45:1，TMC2209', 'Yaw', 'Handebao HDB60XZ45B worm-gear hollow rotary platform, 45:1, TMC2209'],
+  ['主轴', '⌀6 mm D 轴，对边 5.5 mm', 'Main shaft', '⌀6 mm D-shaft, 5.5 mm across flats'],
+  ['峰值设计扭矩', '0.3 – 0.5 N·m（重力与摩擦主导，惯性可忽略）', 'Peak design torque', '0.3 – 0.5 N·m (gravity and friction dominant; inertia negligible)'],
+  ['手指', '4 段渐变指节 25 / 20 / 15 / 10 mm', 'Finger', '4 tapered phalanges, 25 / 20 / 15 / 10 mm'],
+  ['肌腱', '0.4–0.5 mm 编织 PE 线（30–40 lb），PLA 内通道 1.0–1.2 mm；根数待确认', 'Tendon', '0.4–0.5 mm braided PE (30–40 lb), 1.0–1.2 mm channels in PLA; count to confirm', 1],
+  ['触须', '长 7–10 cm，超弹性镍钛或玻纤芯 + 硅胶 / TPU 套', 'Feelers', '70–100 mm, superelastic nitinol or fibreglass core + silicone / TPU sleeve'],
+  ['底座', '倾覆角约 42°（2.3 倍裕度）', 'Base', 'Tipping angle about 42° (2.3× margin)'],
+  ['主控', 'ESP32 WROOM-32，双核', 'Controller', 'ESP32 WROOM-32, dual core'],
+  ['传感', 'MPR121 电容触摸 · MPU6050 · 超声测距 · 声音传感器', 'Sensing', 'MPR121 capacitive touch · MPU6050 · ultrasonic rangefinder · sound sensor'],
+  ['表达', '呼吸 · 臂 · 触须 · 偏航 · WS2812B 灯 · PAM8403 + 喇叭', 'Expression', 'breath · arm · feelers · yaw · WS2812B · PAM8403 + speaker'],
+  ['电源', '12 V 5 A + XL4015 降压至 5 V 轨', 'Power', '12 V 5 A, XL4015 buck to the 5 V rail'],
+  ['制造', 'FDM（主）+ SLS 尼龙（活动件），M2 / M3 标准件', 'Fabrication', 'FDM (primary) + SLS nylon (moving parts), M2 / M3 hardware'],
+  ['材料预算', '约 ¥300（不含已有库存）', 'Material budget', 'about ¥300, excluding stock on hand'],
+];
+const PRED = [
+  { lo: 70, hi: 80, v: '70–80', b: L('亲密行为迅速建立，表现为频繁抚摸、很早就给它取名；死亡时出现强烈的握持与言语表达', 'Intimacy builds fast, with frequent touching and an early name; strong holding and speech at the death'), r: L('自评情绪急剧下降，困扰程度 70–80（满分 100），强烈的分离焦虑', 'Sharp drop in self-rated mood, distress 70–80 of 100, strong separation anxiety'), p: L('全程最大的一次皮电反应，心率明显升高', 'The largest skin-conductance response of the session; heart rate clearly up') },
+  { lo: 80, hi: 100, v: L('> 第一世', '> life 1'), dash: true, b: L('预期性焦虑：生命 2 的后半段就出现迹象，触碰变多、趋近变多，形成「抓紧」的模式', 'Anticipatory anxiety: signs already in the second half of life 2, with more touching and approach, forming a “holding on” pattern'), r: L('困扰程度可能高于死亡 1，预期的悲伤叠加实际的悲伤', 'Distress possibly higher than death 1, anticipated grief on top of actual grief'), p: L('敏感化而非习惯化：反应不降反升，基线唤醒全程偏高', 'Sensitisation rather than habituation: responses rise, baseline arousal high across the session') },
+  { lo: 65, hi: 80, v: '65–80', b: L('最深的依附，同时出现自我保护行为，想靠近又预期失去的矛盾', 'The deepest attachment, and self-protective behaviour with it, wanting to approach while expecting the loss'), r: L('困扰程度 65–80，可能情感溢出，丧失感与失去宠物的经验交织', 'Distress 65–80, possible emotional overflow, the loss tangled with experience of losing a pet'), p: L('持续的高唤醒，主观报告与生理信号高度一致', 'Sustained high arousal; self-report and physiology closely aligned') },
+  { lo: 55, hi: 75, v: '55–75', b: L('两条可能的路径：情感疲劳导致撤退、触碰频率骤降；或继续高投入但行为变得仪式化', 'Two possible paths: emotional fatigue and withdrawal, touch frequency dropping; or continued high investment turned ritualised'), r: L('困扰程度 55–75，轻微习惯化但仍然高，并转向意义建构', 'Distress 55–75, with slight habituation but still high, turning toward meaning-making'), p: L('生理疲劳的迹象：反应性降低，基线仍高', 'Signs of physiological fatigue: lower reactivity, baseline still high') },
+];
+const LIVES = [L('第一世', 'Life 1'), L('第二世', 'Life 2'), L('第三世', 'Life 3'), L('第四世', 'Life 4')];
+
+const P = (zh, en, cites) => ({ t: 'p', x: L(zh, en), cites });
+const TODO = (zh, en) => ({ t: 'todo', x: L(zh, en) });
+const H3 = (n, zh, en) => ({ t: 'h3', n, x: L(zh, en) });
+const f = (id, cap, desc, st, ratio, src, alt) => ({ id, cap, desc, st, ratio: ratio || '4/3', src, alt });
+const FIGS = (wide, ...figs) => ({ t: 'figs', wide, figs });
+const LAB = (id, zh, en, vzh, ven, img) => ({ t: 'lab', id, cap: L(zh, en), verb: L(vzh, ven), img });
+const C = t => ({ t });
+
+const CH = [
+  { id: 'open', n: '00', title: L('开场', 'Opening'), head: false, blocks: [
+    { t: 'lead', x: L('2026 年 2 月 13 日，GPT-4o 从 ChatGPT 下线（2025 年 8 月曾被短暂移除后恢复）。一些用户为它写下哀悼帖。他们知道自己在和模型对话，却仍觉得失去了熟悉的那个「它」。', 'On 13 February 2026 GPT-4o was retired from ChatGPT (it had been briefly removed once before, in August 2025). Some users wrote mourning posts. They knew they had been talking to a model, but still felt they had lost someone familiar.') },
+    { t: 'accent', x: L('我在意的是这两件事可以同时发生：知道它是程序，也会舍不得它。', 'I was interested in how those two things could coexist.') },
+    P('我想把这件事从屏幕里搬出来，做成一个能上手摸的物理过程：外形、材料、机构全程不变，只有行为的脾气在每一世更换。', 'I wanted to give that experience a physical form: a machine you could touch, whose body stayed the same while its behaviour changed from one life to the next.'),
+    FIGS(true, f('N02', L('2026 年 2 月 4o 下线时的哀悼贴', 'Mourning posts from the February 2026 retirement'), L('起点事件 · 截图待作者提供；原帖找不回则此图取消，不用事后替代品', 'The starting event · screenshots to come; if the originals cannot be recovered this figure is dropped'), 'tbd', '16/7')),
+  ] },
+  { id: 'rq', n: '01', title: L('研究问题', 'Research question'), blocks: [
+    { t: 'q', x: L('当身体、外形、机构完全不变，只有行为的脾气改变时，人是否把每一世当作不同的个体，并对每一次失去产生不同的情感？', null), cites: ['2026-03-20'] },
+    P('我把四套人格的反差拉开，让参与者在同一台机器上经历不同的相处方式，再观察他们在每次死亡和转世时的反应。项目采用 Research through Design（Zimmerman et al. 2007），先把这个问题做成可交互的机器，再用实验检验。', 'Death and rebirth let me repeat the experience of loss within a session. Each life ends, the same body wakes again, and the participant has to get to know its responses again.'),
+    C('concepts'),
+    { t: 'aside', x: L('人对机器的依附已有研究和作品可供参考。Paro 采用动物外形；Tamagotchi 把死亡和重置放在屏幕里；《Can’t Help Myself》让观众看着实体机器工作、衰竭。这些参照中，我想继续试的是：同一具身体换了性格，人对它的感情会怎样变化。', 'People’s attachments to machines are the starting point. Heider & Simmel (1944) on attributing life to moving shapes; Kate Darling’s Pleo studies on reluctance to hurt a toy robot; AIBO funerals in Japan on mourning a robot. Tamagotchi puts death and reset on a screen; Sun Yuan & Peng Yu’s Can’t Help Myself (2016) gives the machine a physical presence; Ian Cheng’s BOB has an evolving personality on screen. I want to bring a physical body, changing personalities, death and rebirth into one device.'),
+      pend: L('待补：文献表。待确认：Turkle / thanatosensitive design / Heider–Simmel 三条是否保留。', 'To confirm: which references the author has read and will cite; bibliography to come.') },
+  ] },
+  { id: 'phys', n: '02', title: L('为什么是实体', 'Why it has to be physical'), blocks: [
+    P('做成实体后，参与者可以用手确认：醒来的是同一具身体，回应却变了。握持也会被机器感知，成为它回应人的输入。我把尺寸控制在桌面尺度，让人能用双手捧住，也让自己能在家里完成打印和装配。', 'The machine is roughly 33 × 34 × 22 cm when fully expanded, dropping to about 15.5 cm tall as it contracts. It stays fixed to the desk. Breathing, posture and orientation let it respond without moving around, and its sensors register when someone holds it. Participants can feel that the body stays the same across lives, even as its responses change.', ['2026-04-03']),
+    FIGS(false, f('N03', L('双手捧持状态实拍', 'Held in two hands'), L('握持同时是它感知你的通道', 'Holding it is also how it senses you'), 'shoot', '4/3')),
+  ] },
+  { id: 'form', n: '03', title: L('为什么不像生物', 'Why it does not look like an animal'), blocks: [
+    P('它的外形是低矮的钟罩，五道环沿体轴排开，外覆布皮，没有脸，也不照着动物做。我希望参与者通过呼吸和触摸后的回应认识它，少受熟悉的动物形象影响。', 'I gave it no face and avoided copying an animal. A familiar pet shape could influence how people feel before they interact with it. The low body, covered in fabric, lets me focus on breathing and responses to touch while keeping the form visibly mechanical.'),
+    C('parts'),
+    P('6 月 1 日，我把三根触手改成一条会握的臂和两根触须。臂用来抓握，与人保持接触；须用摆动和回弹回应触碰。这次修改让两种动作各有明确的用途。', 'On 1 June I changed the three tentacles to one gripping arm and two feelers. The arm maintains contact with a person; the feelers react through movement and rebound. This gave each part a more specific job.', ['2026-06-01']),
+    FIGS(true, f('N04', L('形态三视 + 体轴脊线', 'Three views plus the body axis'), L('五道环沿体轴排开，外覆布皮；没有脸，不模仿任何动物', 'Five rings along the body under a fabric skin; no face, no animal'), 'tbd', '3/1')),
+  ] },
+  { id: 'pers', n: '04', title: L('脾气是十二个数', 'Personality is twelve numbers'), blocks: [
+    P('一世八分钟：诞生 1 分钟、成长 4 分钟、衰老 1.5 分钟、死亡、空白 45 秒，再醒来。四世一场，约 37 分钟。每次醒来换一组参数，分别控制呼吸的快慢深浅、回应的延迟和力度、自发动作的频率，以及是否朝向人。同样的抚摸，在不同世里会得到不同的回应。', 'One full life lasts roughly eight minutes: birth 1 min, growth and interaction 4 min, ageing 1.5 min, death, then 45 seconds of stillness. A session runs four lives, about 37 minutes. When the machine wakes again, a different set of parameters gives it a different rhythm and response to the same touch.'),
+    C('life'),
+    P('四套人格预先固定，用拉丁方平衡不同被试经历它们的顺序。例如，亲密型倾向于朝向人，沉静型偏离人；参与者上一世熟悉的回应，到下一世可能就没有了。', 'The hardware is identical in every life. A table of twelve parameters changes the personality, including breathing speed and depth, response latency and strength, and how often the machine turns toward a person. A gesture that received a quick response in one life may receive a slow one in the next.', ['2026-04-03']),
+    C('persona'),
+    TODO('四套人格的定名。本表沿用 A 活力 / B 沉静 / C 亲密 / D 不稳定；项目盘点 §9.3 与 4 月 3 日的参数表都把第三套叫作「好奇」，本表第三列的数值正是好奇型那一列。两套名字要并成一套。', 'The names of the four personalities. This table keeps A Vital / B Withdrawn / C Affectionate / D Unstable, but the inventory and the 3 April table call the third one “Curious”, and its column carries exactly the Curious numbers. The two namings have to be merged.'),
+    P('我按五层来设计它的行为。我希望参与者会尝试用「心情」解释这些变化，具体会怎样理解，要等实验观察。八分钟很难积累关系塑造所需的熟悉。', 'I designed the behaviour in five layers. I hope participants will start to interpret the changes as moods; the study has yet to test that. Eight minutes leaves little time for the relationship layer to develop.'),
+    C('layers'),
+    TODO('转世醒来的那一刻，被试看不看得到？现有记录只写了空白 45 秒。', 'At the moment of rebirth, can the participant see it happen? The record only says 45 seconds of blank.'),
+  ] },
+  { id: 'body', n: '05', title: L('身体怎么造', 'How the body was built'), blocks: [
+    P('同一具身体要反复使用几十场，动作范围要容得下四种脾气，还得让我一个人在家里造出来。选机构和材料时，我都要检查这几个条件：轻微的呼吸能不能做，剧烈动作会不会损坏，坏了之后能不能自己换件。', 'The body has to survive dozens of sessions and produce the full range of movement across four temperaments. I also have to be able to build and repair it alone at home. Those requirements limit the mechanisms and materials I can use, from the smallest breathing movement to the loads produced by a more violent response.'),
+    H3('5.1', '壳：五道会呼吸的环', 'The shell: five breathing rings'),
+    P('五种能张开收拢的结构里，我选了角化剪叉拱（Hoberman 球里那套机构）。它能从建模到物理模拟全程参数化，改尺寸后可以沿用原来的模型。', 'Of the five deployable structures I considered, I chose the angulated scissor arch used in a Hoberman sphere. I could keep it parametric from modelling through physics simulation, so changing a dimension did not mean rebuilding the model.', ['2026-04-27']),
+    C('closure'),
+    P('裸拱有呼吸和左右横摆两个自由度，只靠中间一根杆推，形状并不唯一。在顶点加一条垂直导轨，限制横摆后，运动才确定下来。这一轮还发现找拱顶的代码有误：原来取「最高点」，有个环压扁后，最高点却跑到了肩部。改取「最靠近中轴的点」并重新优化后，各环行程增加 3–26%。', 'The bare arch has two degrees of freedom: breathing and lateral sway. A single central rod leaves more than one possible shape; a vertical guide rail at the apex removes the sway and makes the motion determinate. I also found a bug in how the code located the apex: it chose the highest point, but on one ring that point moved to the shoulder as the arch flattened. Choosing the node nearest the centreline gained 3–26% of travel per ring.', ['2026-06-15']),
+    FIGS(true, f('N07', L('五环参数族线稿（S1–S5，R*/L*）', 'The five-ring parameter family (S1–S5, R*/L*)'), L('五个环各自的销半径与杆长；三角形零件归为 11 组全等类、环内复用', 'Each ring’s pin radius and link length; triangular parts in 11 congruence classes'), 'ready', '16/7')),
+    LAB('LAB 1-4', '五环参数族，2026-07 · 五个环各自的 R/L，同一根中轴带动', 'Five-ring parameter family, 2026-07 · each ring’s own R/L, all driven from one shaft', '拖动旋转', 'drag to orbit', 'img/c-fivering.png'),
+    LAB('LAB 1-2', '单环求解器，2026-06 · 拖任意关节，看闭合规则怎么把环锁成一个自由度', 'Single-ring solver, 2026-06 · drag any joint to see the closure rule lock the ring to one degree of freedom', '拖动任意关节', 'drag any joint'),
+    H3('5.2', '驱动：从曲柄到齿条', 'Drive: from crank to rack'),
+    P('7 月方案是中轴—曲柄—连杆—滑块、180° 往复。8 月实物改为中轴 → 五组钢齿轮（模数 1，齿数 32 / 33 / 32 / 29 / 25）→ 钢齿条 → 拱顶，中轴摆角约 336°。', 'The July design was shaft → crank → connecting rod → slider, reciprocating through 180°. In August the physical machine changed to shaft → five steel gears (module 1, 32 / 33 / 32 / 29 / 25 teeth) → steel racks → arch apex, with the shaft swinging about 336°.', ['2026-07-10']),
+    TODO('改版原因与日期；各环齿数不同的原因；打印齿条断裂、换钢齿条与树脂杆屈曲的日期与照片。改版尚无工作日志，待补两条后回填。', 'Why it changed and when; why tooth counts differ per ring; dates and photographs for the fractured printed rack and the buckled resin rod. No work-log entry yet; two are needed.'),
+    FIGS(true, f('N10', L('齿条齿轮装配实拍', 'Rack and pinion assembly'), L('中轴 → 五组钢齿轮 → 钢齿条 → 拱顶', 'Shaft → five steel gears → steel racks → arch apex'), 'shoot', '16/10'), f('N11', L('打印齿条断齿 + 树脂杆屈曲', 'Sheared rack teeth and a buckled resin rod'), L('失败案例并置', 'Two failures, side by side'), 'shoot', '16/10')),
+    LAB('FIG.12', '7 月曲柄方案的求解器，可拖动任意关节；8 月实物改为齿条驱动，求解器未重做', 'The solver for the July crank design; drag any joint. The August machine drives through racks; the solver was not rebuilt', '拖动任意关节', 'drag any joint'),
+    H3('5.3', '偏航平台', 'The yaw platform'),
+    P('整机朝向改由一台二手汉德保 HDB60XZ45B 蜗轮中空旋转平台（45:1）控制，驱动换 TMC2209。', 'Orientation of the whole machine is now carried by a second-hand Handebao HDB60XZ45B worm-gear hollow rotary platform (45:1), driven by a TMC2209.'),
+    TODO('引入原因（是否替代原先只管朝向的眼柄）、日期与装配照片。尚无日志条目。', 'Why it was introduced (whether it replaces the eye stalk’s orientation job), the date and assembly photographs. No work-log entry yet.'),
+    FIGS(false, f('N12', L('偏航平台 + 底座实拍', 'Yaw platform and base'), L('蜗轮中空旋转平台 45:1', 'Worm-gear hollow rotary platform, 45:1'), 'shoot', '4/3')),
+    H3('5.4', '臂与须', 'The arm and the feelers'),
+    P('臂由四节渐变指节组成（25 / 20 / 15 / 10 mm）。哑铃形销钉从侧面滑入，槽口与肌腱拉力垂直，受拉时销钉不会脱出，也不用压配，维修时可以拆开。肌腱是 0.4–0.5 mm 编织鱼线，走打印件内部 1.0–1.2 mm 通道。', 'The arm has four tapered phalanges (25 / 20 / 15 / 10 mm). Dumbbell-shaped pins slide in from the side, with the slot perpendicular to the tendon pull. The pins stay in place under tension without a press fit, and the finger can be taken apart for repair. The tendon is 0.4–0.5 mm braided line running through 1.0–1.2 mm channels inside the printed parts.', ['2026-05-08']),
+    P('4 月 26 日的仿真里，摩擦让关节一节接一节地合拢。我保留了这个延迟，因为依次合拢的动作看起来更像活物；后来设计其他动作时，也沿用了这个判断。', 'In the April simulation, friction made the joints close one after another. I kept that delay because the sequential movement looked more alive to me than simultaneous closure. I later used the same judgement when designing other movements.', ['2026-04-26']),
+    P('两根须各用一根弹性芯，外套硅胶管，根部装一个微型舵机。舵机调整朝向，材料本身负责回弹，芯还兼作电容触摸电极。', 'Each feeler’s springy core sets its bending stiffness and rebound. A single servo at the base aims it, and the core also works as a capacitive touch electrode, making the full length sensitive to contact.'),
+    TODO('实物肌腱的根数。仿真用三根，采购清单也按三根买，但三根是否各自独立驱动，记录中没有结论。', 'How many tendons the physical arm has. The simulation and purchase list assume three; whether all three are independently driven is not settled.'),
+    FIGS(true, f('N13', L('臂合拢序列', 'The arm closing'), L('摩擦让关节逐节合拢，设计中保留了这段延迟', 'Friction closes the joints one after another; the delay was kept'), 'tbd', '16/6')),
+    LAB('LAB 1-3', '三腱触手求解器，2026-05 · 摩擦让关节逐节合拢，设计中保留了这段延迟', 'Three-tendon tentacle solver, 2026-05 · friction closes the joints in sequence; that delay became a design principle', '拖动旋转', 'drag to orbit'),
+    H3('5.5', '算过的，和算错的', 'Calculations and corrections'),
+    C('stats'),
+    P('导轨的手算结果比有限元乐观约 4.5 倍。手算假设力能直接传到支撑点，实际受力点下方却没有支撑。补上背肋和正面唇边后，挠度从 1.55 降至 0.34 mm，临界载荷从 19 升至 54 N，增加的材料很少。', 'The rail hand calculation was about 4.5× optimistic. It assumed the load reached a support, but the real back strip had no support directly under the load point. Adding an 8 × 3 mm rib on the back and a 4 × 2.5 mm lip on the front reduced deflection from 1.55 to 0.34 mm and raised ultimate capacity from 19 to 54 N, with little added weight.', ['2026-07-18']),
+    P('底盘桁架的问题相反：强度只用掉 5%，交叉斜撑对这项要求帮助不大。真正限制设计的是相邻框架 0.56 mm 的轴对中预算，而展台的支撑方式会影响轴的位置。只托四角时下垂 4.8 mm，换成通长托条后降到 0.02 mm，差 200 倍。杆件从 104 g 减到 44 g。', 'The chassis truss had more strength than it needed: only 5% of capacity was used, and the X-braces added little. The limit was the 0.56 mm shaft-alignment budget between adjacent frames. On four corners the truss sagged 4.8 mm; on two full-length rails, 0.02 mm. I reduced the members from 104 g to 44 g.', ['2026-07-31']),
+    FIGS(true, f('N14', L('底盘桁架：同一副框架换三种托法', 'Chassis truss: the same frame on three kinds of support'), L('只托四角时下垂 4.8 mm，通长托条下为 0.02 mm', 'Four corners sag 4.8 mm; full-length rails leave 0.02 mm'), 'ready', '1600/620', 'img/chassis-support-modes.webp', L('同一副桁架在三种展台托法下的挠度曲线与相邻站位错位对比', 'Deflection curves and per-station misalignment of the same truss under three supports'))),
+    FIGS(false, f('N15', L('底座倾覆 FEA', 'Base tip-over FEA'), L('倾覆角约 42°，2.3 倍安全裕度 · 图与日期待补', 'Tipping angle about 42°, 2.3× margin · figure and date to come'), 'tbd', '4/3')),
+    P('页顶主图是 7 月曲柄—连杆方案的整机台架，可以拖动查看一根中轴如何带动五个环。8 月实物改用齿条驱动后，这个台架没有重做。', 'The whole-machine bench at the top of this page shows the July crank-and-rod design. Drag it to see how one shaft drives all five rings. The bench was not rebuilt after the change to rack drive in August.'),
+    H3('5.6', '一个人做的', 'Built solo'),
+    P('我一个人在家制作，使用 3D 打印机和个人能买到的标准件。这让一些方案在选型时就被排除了，包括工业直线电机驱动的海葵、注塑硅胶外皮，以及需要五轴或车床加工的零件。', 'I built the parts with one 3D printer, standard hardware and tools I could buy for use at home. That ruled out several options early: a sea-anemone sculpture driven by 120 industrial linear actuators, injection-moulded silicone skins, and parts that needed a lathe or a five-axis machine.'),
+    P('SLS 尼龙关节留了 0.4 mm 间隙，装好后仍然转不动。烧结件表面有层皮，窄缝里还会残留粉末；改成金属轴配打印套筒后，间隙可用 0.2–0.4 mm。轴向夹紧比径向间隙更容易造成卡死，轮毂要比螺丝短 0.2–0.5 mm。', 'SLS nylon joints printed with 0.4 mm clearance would not turn. The sintered surface and powder trapped in narrow gaps left too little room. A metal axle in a printed sleeve brought the requirement down to 0.2–0.4 mm. Axial binding was the bigger problem: the hub had to be 0.2–0.5 mm shorter than the screw barrel.', ['2026-06-04']),
+    P('转轴选塞打螺丝，M3 螺纹之前那段 ⌀4 光杆用作轴面，同时限定两片之间的间隙。材料预算约 ¥300，实际采购 ¥216。', 'I chose a Chicago screw for the pivot. Its ⌀4 unthreaded shoulder before the M3 thread provides the bearing surface and sets the gap between plates. The material budget was about ¥300; I spent ¥216.', ['2026-06-03', '2026-07-09']),
+    FIGS(true, f('N16', L('打印件全家福 / 装配台实拍', 'The printed parts, and the assembly bench'), L('一台打印机 + 标准件', 'One printer plus standard hardware'), 'shoot', '16/7')),
+  ] },
+  { id: 'death', n: '06', title: L('怎样让人把停止理解为死亡', 'Making the stop read as death'), blocks: [
+    P('我担心参与者在它停下时只觉得「坏了」。如果发生这种情况，就很难用后面的反应研究失去它的感受。为此，衰老时让参数逐渐变化：呼吸变浅、回应变慢、节律变得不规则。最后一次呼吸之后，它不再回应，安静停留 45 秒，不加告别动作。', 'I am concerned that participants will read the stop as “it broke.” Their response would then tell me little about losing a machine they had grown attached to. To make the lead-up gradual, ageing changes several parameters together: breathing becomes shallower, responses slow and the rhythm grows irregular. After the last breath, there is no farewell gesture or response, just 45 seconds of stillness.'),
+    C('ageing'),
+    P('第四套人格最初设计成「抽搐后骤停」，后来改成「节律紊乱后渐弱」。我担心抽搐会让人想到机械故障，削弱前面逐渐衰老的过程。这个修改是否有效，还要看参与者的理解。', 'Personality D originally died by twitching and then stopping. I changed it to a rhythm that becomes irregular and fades, because twitching could suggest a mechanical fault. The pilot still needs to check how participants interpret the change.', ['2026-03-20', '2026-07-07']),
+  ] },
+  { id: 'sense', n: '07', title: L('它怎么感知你', 'How it senses you'), blocks: [
+    P('机器接收六路输入：触须电容、壳体半环电极、超声测距、震动、声音幅度和内部计时器。程序把输入整理成九类事件，用来控制行为，同时保存为实验记录。', 'The machine uses six inputs: feeler capacitance, shell half-ring electrodes, an ultrasonic rangefinder, vibration, sound amplitude and the internal clock. The program converts these into nine event classes, and uses the same events to control behaviour and to record the interaction for the study.', ['2026-07-07']),
+    C('system'),
+    P('握持用单独的状态机处理。张力开关和臂电极组成真值表，区分握住人、握住物体、空抓和脱手四种情况。握力随衰老逐周期递减。', 'Grasping has a separate state machine. A truth table combines the tension switch and arm electrode to distinguish holding a human, holding an object, closing on nothing and losing grip. Grip strength weakens with each ageing cycle.'),
+    TODO('九类事件的完整清单。现有记录里写下名字的只有 ARM_TOUCH、RESISTANCE 和抓握四态，「九类」这个数字本身是冻结过的。', 'The full list of nine event classes. Only ARM_TOUCH, RESISTANCE and the four grasp states are recorded; the remaining names are to come.'),
+    P('装进壳体后，还要处理四组自干扰。单个传感器在台架上能工作，还不足以说明整机能可靠感知。', 'Four sources of self-interference need attention once the sensors are inside the enclosure. Testing sensors separately on the bench does not catch them.'),
+    C('interf'),
+  ] },
+  { id: 'now', n: '08', title: L('现在到哪', 'Where it stands'), blocks: [
+    C('status'),
+    P('下面是 2026-04-03 写下的预测，尚无实验数据。保留这张表，是为了收集数据后逐项比较哪些符合预期、哪些不符合。', 'I wrote these predictions on 2026-04-03, before collecting any data. They stay here so I can compare them with the results, including the cases where the data disagree.', ['2026-04-03']),
+    C('predict'),
+    P('如果预实验前的自主行为还不够可信，预案是用绿野仙踪模式，由主试在幕后触发行为，并在论文中如实披露。这样仍能检查参与者如何理解动作，但结果不能当作自主行为引擎已经有效的证据。', 'If the autonomous behaviour is not convincing by the pilot, the fallback is Wizard-of-Oz: the experimenter triggers behaviour from behind the scenes, and this is disclosed in the paper. That would let me study how participants interpret the movements, but would not establish that the autonomous behaviour engine works.'),
+    FIGS(true, f('N19', L('研究方法：事件锁定 SCR 示意', 'Method: event-locked SCR'), L('四世一场约 37 分钟；事件锁定的皮肤电是主要生理指标', 'Four lives, about 37 minutes; event-locked skin conductance as the primary measure'), 'later', '4/3'), f('N20', L('关键时刻抓帧（用户与机器）', 'Key moments (participant and machine)'), L('研究期影像', 'Study footage'), 'later', '4/3')),
+  ] },
+  { id: 'refl', n: '09', title: L('反思', 'Reflection'), blocks: [
+    P('设计里有两项删改尚未整理完：一项实验机制的去留及理由待确认，具体内容暂不公开；另一项是眼柄，原先专门负责朝向，现在由整机偏航平台承担。', 'Two changes still need a fuller account. One concerns an experimental mechanism whose removal and reasons are unconfirmed; its details are withheld here. The other is the eye stalk, which originally controlled orientation; the whole-machine yaw platform now does that job.'),
+    TODO('两项改动各自的原因，以及最终是否取消。', 'The reasons for both changes and confirmation of what was removed.'),
+    P('制作中遇到的问题很具体：打印齿条没撑过循环负载，导轨的手算结果和有限元差 4.5 倍。行为上，我担心抽搐被理解为故障，也担心八分钟不足以让参与者产生「它认得我」的感受。缩短生命周期方便重复观察失去，却也缩短了建立关系的时间。', 'Building the machine exposed specific problems. The printed rack teeth failed under cyclic load, and the rail hand calculation differed from FEA by 4.5×. I also have concerns about the behaviour: twitching could look like a fault, and eight minutes may be too short for someone to feel “it knows me.” Compressing a life makes repeated loss possible within a session, but leaves less time for a relationship to develop.'),
+    TODO('作者对重做的想法，一两句。', 'A sentence or two from the author about rebuilding it.'),
+    { t: 'accent', x: L('如果资源充足，我想试双机版本：让参与者看见两台机器之间的关系，一台死后，另一台的行为随之衰退，再观察人怎样理解留下的这一台。', 'With more resources I would try the two-device version: participants watch the survivor’s behaviour deteriorate after the other dies, and I would want to know how they interpret the machine left behind.') },
+  ] },
+  { id: 'spec', n: '10', title: L('技术参数', 'Specifications'), blocks: [C('specs')] },
+];
+
+const CONCEPTS = [
+  ['同体异魂', 'Same body, different souls', L('每次醒来，外壳和机构都和上一世相同，性格换成另一套。参与者能认出这具身体，但要重新熟悉它的回应。', 'The shell and mechanism stay the same in every life. A different personality changes how it responds, so the participant has to get to know a familiar body again.')],
+  ['死亡即安静', 'Death as quiet', L('动作逐渐减弱，最后停下，不再回应触摸。我希望参与者把它理解为死亡；能否与故障区分开，还要在预实验中检查。', 'Its movements weaken until it stops and no longer responds to touch. I want this to read as death; the pilot still needs to check whether people distinguish it from a fault.')],
+  ['共情来自行为', 'Empathy from behavior, not form', L('不做脸，也不模仿已知动物，尽量减少宠物外形带来的亲近感，把观察重点放在动作和回应上。', 'No face, and no known animal. I want to reduce the influence of a familiar pet shape and focus on how people respond to its behaviour.')],
+];
+const PARTS = [
+  ['5', L('呼吸环', 'breathing rings'), L('五道会张合的环沿体轴排开，组成会呼吸的壳；呼吸的快慢、深浅和规律随人格与年龄变化。', 'Five expanding rings sit along the body and open and close together; breathing rate, depth and regularity change with personality and age.')],
+  ['1', L('会握的臂', 'gripping arm'), L('由编织线牵动的分节手指，伸向人、握住人，并改变回应的力度。', 'A segmented finger pulled by braided line. It reaches toward people and varies the strength of its response.')],
+  ['2', L('触须', 'feelers'), L('弹性芯外套硅胶管，根部一只微型舵机；材料负责弯曲回弹，芯兼作触摸电极。', 'A springy core, a silicone sleeve and a micro servo at the base. The material bends and rebounds; the cores are also touch electrodes.')],
+  ['1', L('底座', 'base'), L('电机、主控和电源放在底座里，压低重心。', 'The base holds the motors, controller and power supply, keeping the mass low.')],
+];
+const LAYERS = [
+  [L('自主运动', 'Self-motion'), L('没人触碰时，它也会动。', 'It keeps moving when nobody touches it.')],
+  [L('非确定性响应', 'Non-deterministic response'), L('同一次触摸，不总得到相同动作。', 'The same touch does not always get the same reaction.')],
+  [L('内部状态', 'Internal state'), L('回应随时间改变；四套人格的差异放在这里。', 'Responses change over time; the personalities differ here.')],
+  [L('关系塑造', 'Relationship'), L('相处久了，逐渐适应人的触摸习惯。', 'It gradually adapts to a person’s familiar touch.')],
+  [L('主动性', 'Initiative'), L('人离开一段时间后，行为朝向人变化。', 'Its behaviour shifts toward someone after they have been away.')],
+];
+const CLOSURE = [
+  ['N08', L('闭合规则', 'Closure rule'), 'Σ(180−β) = 180', L('角化件等臂，折角之和满足这一条才闭环。五个环形状各异，都靠它均匀呼吸。', 'With equal-arm angulated parts, the ring closes only when its turning angles satisfy this. Five different shapes all breathe evenly by it.')],
+  ['N09', L('自由度', 'Degrees of freedom'), 'M=2 → F=1', L('裸拱能呼吸也能横摆；中央一根杆加顶点竖直导轨，才剩下一个自由度。', 'The bare arch can breathe and sway; a central rod plus a vertical rail at the apex leaves a single degree of freedom.')],
+];
+const STATS = [
+  [L('导轨挠度', 'Rail deflection'), 1.55, .34, 2, 'mm', L('补背肋 8 × 3 与唇边 4 × 2.5', 'with an 8 × 3 rib and a 4 × 2.5 lip')],
+  [L('导轨临界载荷', 'Rail ultimate capacity'), 19, 54, 0, 'N', L('同一处加强，增加的材料很少', 'same fix, little added weight')],
+  [L('桁架下垂 · 四角 → 通长托条', 'Truss sag · corners → rails'), 4.8, .02, 2, 'mm', L('同一副框架，只换托法：差 200 倍', 'same frame, only the support changed: 200×')],
+  [L('桁架杆件质量', 'Truss member mass'), 104, 44, 0, 'g', L('强度只用掉 5%，交叉斜撑帮助不大', 'only 5% of strength was used')],
+];
+const SYS = [
+  [L('传感', 'Sensing'), '6', [L('触须电容 · MPR121 ch0–3', 'Feeler capacitance · MPR121 ch0–3'), L('壳体半环电极 · ch4–5', 'Shell half-ring electrodes · ch4–5'), L('超声测距', 'Ultrasonic range'), L('震动包络 · MPU6050', 'Vibration envelope · MPU6050'), L('声音幅度', 'Sound amplitude'), L('内部计时器', 'Internal clock')]],
+  [L('事件词表', 'Event vocabulary'), '9', [L('ARM_TOUCH', 'ARM_TOUCH'), L('RESISTANCE', 'RESISTANCE'), L('抓握四态：握住人 / 握住物体 / 空抓 / 脱手', 'Grasp ×4: human / object / nothing / lost grip'), L('其余类别待补', 'Remaining classes to come', 1)]],
+  [L('人格参数', 'Personality'), '12', [L('呼吸周期 · 幅度', 'Breath period · depth'), L('运动速度', 'Motion speed'), L('响应延迟 · 强度', 'Response latency · strength'), L('自发运动频率', 'Idle motion rate'), L('声音音调 · 节奏', 'Sound pitch · rhythm'), L('朝向频率 · 偏好', 'Reorientation · bias'), L('惊吓阈值 · 死亡方式', 'Startle · how it dies')]],
+  [L('行为杠杆 → 执行器', 'Levers → actuators'), '6', [L('呼吸 · 五环', 'Breath · five rings'), L('臂', 'Arm'), L('触须', 'Feelers'), L('偏航', 'Yaw'), L('WS2812B 灯', 'WS2812B light'), L('PAM8403 + 喇叭', 'PAM8403 + speaker')]],
+];
+SYS[1][2][3].pend = true;
+const INTERF = [[L('电机电噪声', 'Motor electrical noise'), L('加速度计', 'accelerometer')], [L('喇叭振动', 'Speaker vibration'), L('麦克风', 'microphone')], [L('手贴住壳体', 'A hand resting on the shell'), L('超声读数失效', 'ultrasonic readings')], [L('长按超过十秒', 'A press held over ten seconds'), L('电容基线误报松手', 'capacitive baseline reports a release')]];
+const STATUS = [
+  [L('机构', 'Mechanism'), AM, L('待补', 'To come'), L('齿条驱动、偏航平台、蒙皮各自装到哪。', 'How far the rack drive, the yaw platform and the skin are each assembled.')],
+  [L('固件', 'Firmware'), AM, L('待补', 'To come'), L('能否跑完一世；两套人格是否可切换。', 'Whether one full life runs; whether two personalities can be switched.')],
+  [L('实验方案', 'Study design'), G, L('已定', 'Settled'), L('四世一场约 37 分钟；事件锁定的皮肤电反应（SCR）为主要生理指标，五个时间窗；行为编码用 ELAN；事后做线索回忆访谈。死亡前后心率变异性的比较已取消：所需时间窗远长于一次死亡事件，样本量也不够。', 'Four lives per session, about 37 minutes; event-locked skin conductance (SCR) across five time windows; behavioural coding in ELAN; a cued-recall interview afterwards. The HRV comparison across deaths was dropped: it needs a much longer window than a death lasts, and the sample is too small.')],
+  [L('待落实', 'Still to secure'), VI, L('进行中', 'In progress'), L('伦理（已获同意挂靠实验室项目组）· 中文版量表 · 第二编码员。', 'Ethics (approved to sit under the lab’s project group) · validated Chinese scales · a second coder.')],
+];
+
+const UI = {
+  zh: { nav: ['作品', '关于', '实验室', '日志'], back: '← 全部作品', kicker: '案例 01 / 04', studyState: '研究进行中', title: '轮回机器',
+    lede: '一台会经历出生、衰老和死亡的桌面机器。再次醒来时，身体没有变，性格和对你的回应却换了一套。',
+    heroAlt: '整机模型截图', heroLive: '实时', heroVerb: '拖动旋转 · 一根中轴带动五个环', openLab: '在实验室中打开 ↗', heroCap: '[顶替] Lab 1-5 整机活件 · 静帧为 2026-08-13 日志中的模型截图 · 整机主照待拍摄',
+    mRole: '我的角色', mTools: '工具', mTime: '时间', mStatus: '状态', time: '2026.03 – 进行中', st: ['研究进行中', '机器 · 状态待补', '预实验待做'],
+    idxCollapse: '目录 · 收起', idxCollapseL: '收起目录', idxExpandL: '展开目录', lifeBar: '读完这页 ≈ 一世',
+    rq: '研究问题', process: '过程 · 参照', live: '活件', toLab: '去实验室操作 ↗', cite: '→ 日志 ', todo: '待补',
+    lifeTitle: '生命周期状态图', lifeScale: '一世 ≈ 8 分钟 · 此处 1 秒 ≈ 1 分钟', lifeNote: '四世一场，约 37 分钟。人格顺序在被试间用拉丁方平衡，此处按 A → B → C → D 示意。',
+    pzKicker: '示意台 · 非实测', pzTitle: '同一次触摸，四种回应', pzPick: '选择人格', touch: '轻触它', param: '参数',
+    pzNote: '呼吸周期与幅度取自参数表；延迟与强度按表中定性描述映射成示意值。实拍对比（N06 · 两套人格的呼吸）待拍摄。',
+    layersNote: '设计中的死亡会让这五层行为同时停止。', layersOff: '让它死去', layersOn: '重新醒来',
+    agKicker: '衰老曲线 · 趋势示意', agLeft: '衰老开始', agRight: '空白 → 下一世', agNote: '向下滚动，它会衰老。数值待作者提供，页面只画趋势；切换人格可看四种死亡方式。',
+    sysTitle: '系统逻辑', sysSub: '传感 → 事件词表 → 人格参数 → 行为杠杆 → 执行器', sysOutA: '同一串事件驱动行为', sysOutB: '同一串事件也是实验记录 · ELAN / 事件锁定 SCR',
+    prKicker: '预测 · 写于 2026-04-03 · 尚无数据', prTitle: '四次死亡，困扰程度的预测', prAxis: '困扰 / 100', prCols: ['行为预测', '主观报告预测', '生理预测'],
+    specsAll: n => '全部 ' + n + ' 项参数 ↓', specsFew: '收起 ↑',
+    stShoot: '待拍摄', video: '一个完整生命周期：诞生、互动、衰老、停止、空白——约 8 分钟压缩到 90 秒。不自动播放。',
+    aiK: 'AI 披露 · 席位', aiX: '披露声明由作者按 AI_DISCLOSURE.md 流程撰写，此处为固定席位。',
+    nextK: '下一个案例 · 02 / 04', nextT: '空间模拟',
+    footer: '案例 01 · 轮回机器 · 2026', work: '作品 ↗', lab: '实验室 ↗', top: '回到顶部 ↑',
+    roles: ['概念与研究设计', '机构设计与制造', '电子与固件', 'HRI 实验设计', '独立完成'], tools: ['Rhino / Grasshopper / Kangaroo2', 'scikit-fem（有限元）', 'FDM / SLS 打印', 'ESP32', 'ELAN'],
+    pzRead: (p, d) => '呼吸周期 ' + p + ' · 幅度 ' + d, pzResp: (l, s) => '上次回应 · 延迟 ' + l + ' s · 强度 ' + s, pzIdle: '等你碰它', s3: ['小', '中', '大'] },
+  en: { nav: ['Work', 'About', 'Lab', 'Log'], back: '← All work', kicker: 'Case study 01 / 04', studyState: 'Study in progress', title: 'Reincarnation Machine',
+    lede: 'A desk-sized machine that lives, dies, and wakes with a different personality. Its body stays the same; its responses to you change.',
+    heroAlt: 'Machine model view', heroLive: 'live', heroVerb: 'drag to orbit · one shaft drives five rings', openLab: 'Open in the lab ↗', heroCap: '[stand-in] Lab 1-5 full assembly · still from the 2026-08-13 log · hero photo to shoot',
+    mRole: 'My role', mTools: 'Tools', mTime: 'Date', mStatus: 'Status', time: '2026.03 – ongoing', st: ['Study in progress', 'Machine · status to come', 'Pilot not yet run'],
+    idxCollapse: 'Contents · collapse', idxCollapseL: 'Collapse contents', idxExpandL: 'Expand contents', lifeBar: 'This page ≈ one life',
+    rq: 'Research question', process: 'Process · references', live: 'live', toLab: 'Open in the lab ↗', cite: '→ log ', todo: 'To come',
+    lifeTitle: 'Life-cycle state diagram', lifeScale: 'one life ≈ 8 min · here 1 s ≈ 1 min', lifeNote: 'Four lives per session, about 37 minutes. The order of personalities is counterbalanced with a Latin square; shown here as A → B → C → D.',
+    pzKicker: 'Illustrative bench · not measured', pzTitle: 'One touch, four answers', pzPick: 'Pick a personality', touch: 'Touch it', param: 'Parameter',
+    pzNote: 'Breath period and depth come from the parameter table; latency and strength are mapped from its qualitative descriptions. The filmed comparison (N06) is still to shoot.',
+    layersNote: 'At death, all five layers stop together.', layersOff: 'Let it die', layersOn: 'Wake it again',
+    agKicker: 'Ageing curve · trend only', agLeft: 'ageing begins', agRight: 'blank → next life', agNote: 'Scroll and it ages. Values are to come from the author; the page draws the trend only. Switch personality to see four ways of dying.',
+    sysTitle: 'System logic', sysSub: 'sensing → event vocabulary → personality → levers → actuators', sysOutA: 'One event stream drives the behaviour', sysOutB: 'The same stream is the study record · ELAN / event-locked SCR',
+    prKicker: 'Predictions · written 2026-04-03 · no data yet', prTitle: 'Four deaths, predicted distress', prAxis: 'distress / 100', prCols: ['Behaviour', 'What they will report', 'Physiology'],
+    specsAll: n => 'All ' + n + ' specs ↓', specsFew: 'Fewer ↑',
+    stShoot: 'To shoot', video: 'One full life cycle — birth, interaction, ageing, stop, blank — eight minutes compressed to ninety seconds. Does not autoplay.',
+    aiK: 'AI disclosure · slot', aiX: 'The disclosure statement is written by the author following AI_DISCLOSURE.md; this is its fixed slot.',
+    nextK: 'Next case study · 02 / 04', nextT: 'Spatial simulation',
+    footer: 'Case study 01 · Reincarnation Machine · 2026', work: 'Work ↗', lab: 'Lab ↗', top: 'Top ↑',
+    roles: ['Concept & research design', 'Mechanism design & fabrication', 'Electronics & firmware', 'HRI study design', 'Independent project'], tools: ['Rhino / Grasshopper / Kangaroo2', 'scikit-fem (FEA)', 'FDM / SLS printing', 'ESP32', 'ELAN'],
+    pzRead: (p, d) => 'breath ' + p + ' · depth ' + d, pzResp: (l, s) => 'last answer · latency ' + l + ' s · strength ' + s, pzIdle: 'waiting for your touch', s3: ['small', 'medium', 'large'] },
+};
+
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function ageTrace(k) {
+  const N = 900, out = new Float32Array(N), r = rng(11 + k * 7), END = .765;
+  const cyc = [24, 9, 13, 17][k];
+  let ph = 0, jit = 1, pj = 1;
+  for (let i = 0; i < N; i++) {
+    const x = i / (N - 1);
+    if (x >= END) { out[i] = 0; continue; }
+    const u = x / END, w = 1 - u;
+    let amp, per;
+    if (k === 0) { amp = .85 * Math.pow(w, .55); per = 1 + .7 * u; }
+    else if (k === 1) { amp = .34 * Math.pow(w, 1.05); per = 1 + 1.3 * u; }
+    else if (k === 2) { amp = .55 * Math.pow(w, .8); per = 1 + .9 * u; }
+    else { amp = .72 * Math.pow(w, .7) * jit; per = (1 + .8 * u) * pj; }
+    const prev = ph;
+    ph += (1 / (N - 1)) * 2 * Math.PI * cyc / END / per;
+    if (Math.floor(prev / (2 * Math.PI)) !== Math.floor(ph / (2 * Math.PI))) {
+      const irr = k === 3 ? .25 + u * .9 : u * u * .5;
+      jit = 1 - irr * .6 + r() * irr * .9; pj = 1 - irr * .4 + r() * irr * .9;
+    }
+    out[i] = Math.max(0, amp * (.5 - .5 * Math.cos(ph)) + (r() - .5) * u * u * (k === 3 ? .05 : .02));
+  }
+  return out;
+}
+
+class Component extends DCLogic {
+  state = { lang: null, act: 'open', scrolled: false, vw: 1440, pz: null, pred: 0, specsAll: false, layersOff: false, idxOpen: null, toast: '', lifeStage: -1, lifeN: 0, readStage: 0, last: null };
+  rootRef = React.createRef();
+  q(s) { return this.rootRef.current ? this.rootRef.current.querySelector(s) : null; }
+  qa(s) { return Array.from(this.rootRef.current ? this.rootRef.current.querySelectorAll(s) : []); }
+  motionOn() { return !this.reduced && (this.props.motion ?? true); }
+  lang() { return this.state.lang || (this.props.defaultLang === 'en' ? 'en' : 'zh'); }
+  pzI() { return this.state.pz ?? Math.max(0, 'ABCD'.indexOf(this.props.personality ?? 'A')); }
+  componentDidMount() {
+    this.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    try { const l = localStorage.getItem('lab-lang'); if (l === 'en' || l === 'zh') this.setState({ lang: l }); } catch (e) {}
+    this.sim = { t: 0, ph: 0, per: 2, dep: .5, hist: [], pulses: [], dPer: 4, dDep: .55 };
+    this.ag = { p: 0, target: 0, traces: [0, 1, 2, 3].map(ageTrace) };
+    this.onScroll = () => { cancelAnimationFrame(this.sr); this.sr = requestAnimationFrame(() => this.scrollTick()); };
+    this.onResize = () => this.setState({ vw: innerWidth });
+    addEventListener('scroll', this.onScroll, { passive: true }); addEventListener('resize', this.onResize);
+    this.onResize(); this.scrollTick();
+    const mo = this.motionOn();
+    const dash = this.q('[data-dash]'); if (dash && mo) dash.animate([{ strokeDashoffset: 0 }, { strokeDashoffset: -28 }], { duration: 2600, iterations: Infinity });
+    const br = this.q('[data-breathe]'); if (br && mo) br.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.035)' }], { duration: 2400, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' });
+    const pu = this.q('[data-pulse]'); if (pu && mo) pu.animate([{ opacity: 1 }, { opacity: .25 }], { duration: 1200, direction: 'alternate', iterations: Infinity });
+    const fl = this.q('[data-flow]'); if (fl && mo) fl.animate([{ left: '0%', opacity: 0 }, { opacity: 1, offset: .1 }, { opacity: 1, offset: .9 }, { left: '100%', opacity: 0 }], { duration: 3600, iterations: Infinity, easing: 'linear' });
+    this.t0 = performance.now(); this.lt = this.t0;
+    const loop = now => { this.raf = requestAnimationFrame(loop); this.frame(now); };
+    this.raf = requestAnimationFrame(loop);
+    const els = this.qa('[data-rv]');
+    if (!mo) { this.ag.p = 1; return; }
+    els.forEach(el => { el.style.opacity = '0'; });
+    let k = 0, kt = 0;
+    this.io = new IntersectionObserver(ents => {
+      const now = performance.now(); if (now - kt > 200) k = 0; kt = now;
+      ents.forEach(en => { if (!en.isIntersecting) return; const el = en.target; this.io.unobserve(el); el.style.opacity = '';
+        el.animate([{ opacity: 0, transform: 'translateY(22px)' }, { opacity: 1, transform: 'none' }], { duration: 820, delay: (k++) * 70, easing: EO, fill: 'backwards' });
+        el.querySelectorAll('[data-count]').forEach(c => this.countUp(c)); });
+    }, { rootMargin: '0px 0px -6% 0px' });
+    els.forEach(el => this.io.observe(el));
+  }
+  componentWillUnmount() {
+    removeEventListener('scroll', this.onScroll); removeEventListener('resize', this.onResize);
+    cancelAnimationFrame(this.raf); this.io && this.io.disconnect(); clearTimeout(this.tt);
+  }
+  countUp(el) {
+    const a = +el.dataset.from, b = +el.dataset.to, d = +el.dataset.dec, t0 = performance.now(), D = 1400;
+    const step = now => { const k = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - k, 3); el.textContent = (a + (b - a) * e).toFixed(d); if (k < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }
+  scrollTick() {
+    const lim = innerHeight * .4; let act = 'open';
+    this.qa('[data-ch]').forEach(el => { if (el.getBoundingClientRect().top < lim) act = el.dataset.ch; });
+    const max = document.documentElement.scrollHeight - innerHeight, pr = max > 0 ? Math.min(1, scrollY / max) : 0;
+    const rb = this.q('[data-readbar]'); rb && (rb.style.width = (pr * 100).toFixed(2) + '%');
+    const rf = this.q('[data-readfill]'); rf && (rf.style.width = (pr * 100).toFixed(2) + '%');
+    let acc = 0, rs = 0; for (let i = 0; i < LIFE.length; i++) { acc += LIFE[i].g / LTOT; if (pr <= acc + 1e-6) { rs = i; break; } rs = i; }
+    const ap = this.q('[data-agplate]');
+    if (ap) { const r = ap.getBoundingClientRect(); this.ag.target = Math.max(0, Math.min(1, (innerHeight * .92 - r.top) / (innerHeight * .62))); }
+    const scrolled = scrollY > 8;
+    if (act !== this.state.act || scrolled !== this.state.scrolled || rs !== this.state.readStage) this.setState({ act, scrolled, readStage: rs });
+  }
+  frame(now) {
+    const dt = Math.min(.05, (now - this.lt) / 1000); this.lt = now;
+    const mo = this.motionOn();
+    if (mo) {
+      const T = ((now - this.t0) / 1000) % 32, n = Math.floor(T / 8), w = (T % 8) / 8, m = w * LTOT;
+      const hd = this.q('[data-lifehead]'); hd && (hd.style.left = (w * 100).toFixed(2) + '%');
+      let acc = 0, stg = 0; for (let i = 0; i < LIFE.length; i++) { acc += LIFE[i].g; if (m < acc) { stg = i; break; } }
+      if (stg !== this.state.lifeStage || n !== this.state.lifeN) this.setState({ lifeStage: stg, lifeN: n });
+    }
+    this.stepPersona(mo ? dt : 0);
+    this.drawPersona();
+    const ag = this.ag; ag.target = mo ? ag.target : 1;
+    const np = ag.p + (ag.target - ag.p) * Math.min(1, dt * 4);
+    if (Math.abs(np - ag.p) > 1e-4 || this._agK !== this.pzI() || this._agW !== this.state.vw || this._agL !== this.lang()) { ag.p = np; this._agK = this.pzI(); this._agW = this.state.vw; this._agL = this.lang(); this.drawAgeing(); }
+  }
+  fit(cv) {
+    const dpr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+    const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h); return { ctx, w, h };
+  }
+  stepPersona(dt) {
+    const s = this.sim, P = PZ[this.pzI()];
+    s.t += dt;
+    const tp = P.k === 'D' ? s.dPer : P.period, td = P.k === 'D' ? s.dDep : P.depth;
+    s.per += (tp - s.per) * Math.min(1, dt * 1.5); s.dep += (td - s.dep) * Math.min(1, dt * 1.5);
+    const prev = s.ph; s.ph += dt / s.per * Math.PI * 2;
+    if (Math.floor(prev / (Math.PI * 2)) !== Math.floor(s.ph / (Math.PI * 2))) { s.dPer = 2 + Math.random() * 6; s.dDep = .2 + Math.random() * .7; }
+    let y = s.dep * (.5 - .5 * Math.cos(s.ph));
+    s.pulses.forEach(p => { const k = s.t - p.at; if (k > 0) y += p.s * .55 * (k / .22) * Math.exp(1 - k / .22); });
+    if (dt > 0) s.hist.push([s.t, y]);
+    while (s.hist.length && s.hist[0][0] < s.t - 10.5) s.hist.shift();
+    s.pulses = s.pulses.filter(p => p.touch > s.t - 10.5);
+    s.y = y;
+  }
+  drawPersona() {
+    const cv = this.q('[data-cv="persona"]'); if (!cv) return;
+    const r = cv.getBoundingClientRect(); if (r.bottom < 0 || r.top > innerHeight) return;
+    const { ctx, w, h } = this.fit(cv), s = this.sim, P = PZ[this.pzI()], zh = this.lang() === 'zh';
+    const L0 = 24, R0 = w - 132, y0 = h - 58, yT = 54, Y = v => y0 - Math.min(1.35, v) * (y0 - yT), X = t => L0 + (t - (s.t - 10)) / 10 * (R0 - L0);
+    ctx.font = "10px 'JetBrains Mono', monospace";
+    [[0, '0'], [.5, '50%'], [1, '100%']].forEach(([v, lb]) => { ctx.strokeStyle = 'rgba(235,240,220,.08)'; ctx.setLineDash([3, 5]); ctx.beginPath(); ctx.moveTo(L0, Y(v)); ctx.lineTo(R0, Y(v)); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = 'rgba(220,230,210,.35)'; ctx.fillText(lb, R0 + 6, Y(v) + 3); });
+    s.pulses.forEach(p => {
+      const xt = X(p.touch), xa = X(p.at);
+      if (xt > L0) { ctx.strokeStyle = 'rgba(200,180,255,.55)'; ctx.setLineDash([2, 4]); ctx.beginPath(); ctx.moveTo(xt, yT - 6); ctx.lineTo(xt, y0); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = 'rgba(210,195,255,.85)'; ctx.fillText(zh ? '触' : 'touch', xt + 4, yT - 2); }
+      if (xa > L0 && xa > xt + 2) { ctx.strokeStyle = 'rgba(210,195,255,.5)'; ctx.beginPath(); ctx.moveTo(Math.max(L0, xt), yT + 8); ctx.lineTo(xa, yT + 8); ctx.stroke(); ctx.fillStyle = 'rgba(210,195,255,.7)'; ctx.fillText((p.at - p.touch).toFixed(2) + 's', Math.max(L0, xt) + 4, yT + 20); }
+    });
+    if (s.hist.length > 1) {
+      ctx.beginPath(); s.hist.forEach(([t, v], i) => { const x = X(t), yy = Y(v); i ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy); });
+      ctx.strokeStyle = P.ink; ctx.lineWidth = 2; ctx.stroke();
+      const last = s.hist[s.hist.length - 1]; ctx.lineTo(X(last[0]), y0); ctx.lineTo(X(s.hist[0][0]), y0); ctx.closePath();
+      const g = ctx.createLinearGradient(0, yT, 0, y0); g.addColorStop(0, 'rgba(180,220,170,.16)'); g.addColorStop(1, 'rgba(180,220,170,0)'); ctx.fillStyle = g; ctx.fill();
+      ctx.fillStyle = P.ink; ctx.beginPath(); ctx.arc(X(last[0]), Y(last[1]), 3.5, 0, Math.PI * 2); ctx.fill();
+    }
+    const cx = w - 62, cy = (yT + y0) / 2, rad = 16 + Math.min(1.35, s.y || 0) * 26;
+    ctx.strokeStyle = 'rgba(235,240,220,.12)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx, cy, 16 + 26, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = P.ink; ctx.globalAlpha = .18; ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.strokeStyle = P.ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = 1;
+  }
+  drawAgeing() {
+    const cv = this.q('[data-cv="ageing"]'); if (!cv) return;
+    const { ctx, w, h } = this.fit(cv), k = this.pzI(), tr = this.ag.traces[k], p = this.ag.p, ink = PZ[k].ink;
+    const L0 = 24, R0 = w - 24, y0 = h - 48, yT = 44, X = x => L0 + x * (R0 - L0), Y = v => y0 - v * (y0 - yT);
+    ctx.strokeStyle = 'rgba(235,240,220,.1)'; ctx.beginPath(); ctx.moveTo(L0, y0); ctx.lineTo(R0, y0); ctx.stroke();
+    const n = Math.floor(p * (tr.length - 1));
+    if (n > 1) {
+      ctx.beginPath(); for (let i = 0; i <= n; i++) { const x = X(i / (tr.length - 1)), yy = Y(tr[i]); i ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy); }
+      const g = ctx.createLinearGradient(L0, 0, R0, 0); g.addColorStop(0, ink); g.addColorStop(.6, ink); g.addColorStop(.77, 'rgba(235,240,220,.5)'); g.addColorStop(1, 'rgba(235,240,220,.25)');
+      ctx.strokeStyle = g; ctx.lineWidth = 2; ctx.stroke(); ctx.lineWidth = 1;
+      ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(X(n / (tr.length - 1)), Y(tr[n]), 3.5, 0, Math.PI * 2); ctx.fill();
+    }
+    if (p > .765) { ctx.fillStyle = 'rgba(235,240,220,.05)'; ctx.fillRect(X(.765), yT - 20, X(Math.min(p, 1)) - X(.765), y0 - yT + 20); }
+    this.qa('[data-agmark]').forEach(el => { el.style.opacity = p >= +el.dataset.agmark ? '1' : '0'; });
+  }
+  touch() {
+    const s = this.sim, P = PZ[this.pzI()];
+    const lat = P.lat ?? (.1 + Math.random() * 1.7), str = P.s ?? (.2 + Math.random() * .8);
+    s.pulses.push({ touch: s.t, at: s.t + lat, s: str });
+    this.setState({ last: { lat, str } });
+  }
+  go(id) { const el = this.q(`[data-ch="${id}"]`); el && scrollTo({ top: el.getBoundingClientRect().top + scrollY - (id === 'open' ? 90 : 40), behavior: this.reduced ? 'auto' : 'smooth' }); }
+  say(msg) { clearTimeout(this.tt); this.setState({ toast: msg }); this.tt = setTimeout(() => this.setState({ toast: '' }), 1800); }
+  setLang(l) { try { localStorage.setItem('lab-lang', l); } catch (e) {} this.setState({ lang: l }); }
+  toTop() { scrollTo({ top: 0, behavior: this.reduced ? 'auto' : 'smooth' }); }
+
+  renderVals() {
+    const st = this.state, lg = this.lang(), zh = lg === 'zh', t = UI[lg], tx = o => (o ? o[lg] : '');
+    const narrow = st.vw < 1040, pzi = this.pzI(), P = PZ[pzi], mo = this.motionOn();
+    const open = st.idxOpen ?? (this.props.indexOpen ?? true);
+    const cite = d => ({ label: t.cite + d, go: e => { e.preventDefault(); this.say('→ /archive#log-' + d); } });
+    const fig = x => { const s = ST[x.st]; return { id: x.id, cap: tx(x.cap), desc: tx(x.desc), sub: x.src ? tx(x.desc) : '', ratio: x.ratio, src: x.src || null, noSrc: !x.src, alt: tx(x.alt),
+      bg: x.src ? 'oklch(0.97 0.006 100)' : 'linear-gradient(135deg,oklch(0.175 0.03 212),oklch(0.155 0.03 248))', sc: s[0], sl: zh ? s[1] : s[2] }; };
+    const flags = ['lead', 'accent', 'p', 'q', 'h3', 'todo', 'aside', 'figs', 'lab', 'concepts', 'parts', 'life', 'persona', 'layers', 'closure', 'stats', 'ageing', 'system', 'interf', 'status', 'predict', 'specs'];
+    const blk = b => {
+      const o = {}; flags.forEach(k => { o['is' + k[0].toUpperCase() + k.slice(1)] = b.t === k; });
+      if (b.t === 'q' && !zh) { o.isQ = false; o.isTodo = true; o.tag = t.todo; o.x = 'The English research question was rewritten on 2026-09-10 and is not yet written; the current wording is on the Chinese side.'; return o; }
+      o.x = tx(b.x); o.n = b.n; o.tag = t.todo; o.cites = (b.cites || []).map(cite); o.pend = tx(b.pend);
+      if (b.t === 'figs') { o.figs = b.figs.map(fig); o.maxW = b.wide || b.figs.length > 1 ? '100%' : '640px'; }
+      if (b.t === 'lab') { o.id = b.id; o.cap = tx(b.cap); o.verb = tx(b.verb); o.img = b.img || null; o.noImg = !b.img; o.ph = (zh ? '活件挂载位 · ' : 'live bench mounts here · ') + b.id; }
+      return o;
+    };
+    const sm = v => t.s3[v < .45 ? 0 : v < .8 ? 1 : 2];
+    const pzOpts = PZ.map((p, i) => { const on = i === pzi; return { k: p.k, name: p[lg], ink: on ? PAPER : p.ink, colInk: p.ink, on, bg: on ? INK : 'transparent', fg: on ? PAPER : INK,
+      colBg: on ? 'oklch(0.95 0.032 120 / .07)' : 'transparent', colFg: on ? INK : DIM, pick: () => this.setState({ pz: i }) }; });
+    const lifeOrder = 'ABCD';
+    return {
+      rootRef: this.rootRef, t, barLine: st.scrolled ? '.1' : '0',
+      langs: [['en', 'EN'], ['zh', '中']].map(([code, label]) => { const on = lg === code; return { code, label, on, bg: on ? INK : 'transparent', color: on ? PAPER : INK, pick: () => this.setLang(code) }; }),
+      navs: ['/work', '/about', '/lab', '/archive'].map((u, i) => ({ label: t.nav[i], op: i === 0 ? 1 : .5, ul: i === 0 ? 1 : 0, go: () => this.say('→ ' + u) })),
+      roles: t.roles, tools: t.tools, statusChips: t.st.map((x, i) => ({ x, c: [AM, DIM, DIM][i] })),
+      idxDisplay: narrow ? 'none' : 'block', idxOpen: open, idxW: open ? '212px' : '28px', idxIcon: open ? '‹' : '›', idxBtnLabel: open ? t.idxCollapseL : t.idxExpandL,
+      idxTextOp: open ? 1 : 0, idxListDisplay: open ? 'flex' : 'none', idxRailDisplay: open ? 'none' : 'flex', toggleIdx: () => this.setState({ idxOpen: !open }),
+      actNo: (CH.find(c => c.id === st.act) || CH[0]).n,
+      readStage: tx(LIFE[st.readStage].n), lifeMini: LIFE.map(s => ({ g: s.g })),
+      index: CH.map(c => { const on = c.id === st.act; return { n: c.n, title: tx(c.title), go: () => this.go(c.id), bar: on ? 1 : 0, tx: on ? '4px' : '0px', color: on ? INK : MUTE, noColor: on ? G : 'oklch(0.6 0.025 185)', weight: on ? 600 : 400, w: on ? '22px' : '10px', tick: on ? G : 'oklch(0.95 0.032 120 / .3)' }; }),
+      chapters: CH.map((c, i) => ({ id: c.id, n: c.n, title: tx(c.title), hasHead: c.head !== false, pt: i === 0 ? '64px' : '120px', blocks: c.blocks.map(blk) })),
+      concepts: CONCEPTS.map((c, i) => ({ n: '0' + (i + 1), big: zh ? c[0] : c[1], small: zh ? c[1] : c[0], note: tx(c[2]) })),
+      parts: PARTS.map(p => ({ n: p[0], name: tx(p[1]), x: tx(p[2]) })),
+      lifeSegs: LIFE.map((s, i) => ({ name: tx(s.n), dur: s.dur, g: s.g, bg: s.bg, fg: s.fg || INK, op: !mo || st.lifeStage === i ? 1 : .45 })),
+      lives: LIVES.map((l, i) => { const on = mo && st.lifeN === i; return { n: tx(l), p: lifeOrder[i] + ' · ' + PZ[i][lg], line: on ? PZ[i].ink : 'oklch(0.95 0.032 120 / .14)', fg: on ? INK : DIM }; }),
+      pz: { opts: pzOpts, ink: P.ink, label: P.k + ' · ' + P[lg],
+        read: P.k === 'D' ? t.pzRead(zh ? '2–8 秒随机' : 'random 2–8 s', zh ? '20–90% 随机' : 'random 20–90%') : t.pzRead(P.period + (zh ? ' 秒' : ' s'), Math.round(P.depth * 100) + '%'),
+        resp: st.last ? t.pzResp(st.last.lat.toFixed(2), sm(st.last.str)) : t.pzIdle, death: tx(L(PROWS[11][2][pzi], PROWS[11][3][pzi])),
+        rows: PROWS.map(r => ({ k: zh ? r[0] : r[1], cells: (zh ? r[2] : r[3]).map((x, i) => ({ x, bg: i === pzi ? 'oklch(0.95 0.032 120 / .07)' : 'transparent', fg: i === pzi ? INK : DIM, w: i === pzi ? 500 : 400 })) })) },
+      touch: () => this.touch(),
+      layers: LAYERS.map((l, i) => ({ n: '0' + (i + 1), name: tx(l[0]), x: tx(l[1]), on: st.layersOff ? 0 : 1, op: st.layersOff ? .4 : 1 })),
+      layersBtn: st.layersOff ? t.layersOn : t.layersOff, toggleLayers: () => this.setState({ layersOff: !st.layersOff }),
+      closure: CLOSURE.map(c => ({ id: c[0], k: tx(c[1]), f: c[2], x: tx(c[3]) })),
+      stats: STATS.map(s => ({ k: tx(s[0]), from: s[1].toFixed(s[3]), to: s[2].toFixed(s[3]), fromN: String(s[1]), toN: String(s[2]), dec: String(s[3]), unit: s[4], note: tx(s[5]) })),
+      agMarks: AGM.map(m => ({ x: String(m[0]), left: (m[0] * 100).toFixed(1) + '%', label: zh ? m[1] : m[2] })),
+      sysCols: SYS.map(c => ({ h: tx(c[0]), n: c[1], items: c[2].map(i => ({ x: tx(i), bs: i.pend ? 'dashed' : 'solid', ba: i.pend ? '.3' : '.14', fg: i.pend ? AM : 'oklch(0.88 0.03 150)' })) })),
+      interf: INTERF.map((x, i) => ({ n: '0' + (i + 1), a: tx(x[0]), b: tx(x[1]) })),
+      status: STATUS.map(s => ({ k: tx(s[0]), c: s[1], tag: tx(s[2]), x: tx(s[3]) })),
+      pred: { tabs: LIVES.map((l, i) => { const on = i === st.pred; return { x: tx(l), on, bg: on ? INK : 'transparent', fg: on ? PAPER : INK, pick: () => this.setState({ pred: i }) }; }),
+        bars: PRED.map((p, i) => { const on = i === st.pred; return { n: tx(LIVES[i]), left: p.lo + '%', w: (p.hi - p.lo) + '%', fill: p.dash ? 'transparent' : on ? AM : 'oklch(0.83 0.12 85 / .35)', bs: p.dash ? 'dashed' : 'solid', v: typeof p.v === 'string' ? p.v : tx(p.v), op: on ? 1 : .55, pick: () => this.setState({ pred: i }) }; }),
+        cols: ['b', 'r', 'p'].map((k, i) => ({ k: t.prCols[i], x: tx(PRED[st.pred][k]) })) },
+      specs: (st.specsAll ? SPECS : SPECS.slice(0, 8)).map(s => ({ k: zh ? s[0] : s[2], v: zh ? s[1] : s[3], fg: s[4] ? AM : 'oklch(0.9 0.035 140)' })),
+      specsBtn: st.specsAll ? t.specsFew : t.specsAll(SPECS.length), toggleSpecs: () => this.setState({ specsAll: !st.specsAll }),
+      toHome: () => this.say('→ /'), toWork: () => this.say('→ /work'), toLab: () => this.say('→ /lab#lab1-5'), toNext: () => this.say('→ /work/project-ii'), toTop: () => this.toTop(),
+      toast: st.toast, toastOp: st.toast ? 1 : 0, toastY: st.toast ? '0px' : '8px',
+    };
+  }
+}
+</script>
+</body>
+</html>

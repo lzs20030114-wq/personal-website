@@ -16,6 +16,8 @@ export function SiteFooter() {
     pathname.startsWith('/work') || pathname.startsWith('/archive') || pathname.startsWith('/lab');
 
   if (pathname.startsWith('/lab')) return <LabFooter />;
+  // /work/* 的页脚由页面自己渲染（要带案例序号与标题，布局层拿不到）
+  if (pathname.startsWith('/work')) return null;
 
   return (
     <footer className={deep ? 'site-footer site-footer--deep' : 'site-footer'}>
