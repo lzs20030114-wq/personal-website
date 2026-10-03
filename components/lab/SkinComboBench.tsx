@@ -30,7 +30,7 @@ import { planFromHash } from './planHash';
 import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
 
 /**
- * Lab 2-12 · 单元组合（用户 2026-09-17 草图立项；2026-09-20 纠偏为「同一种平台一圈起伏，几个单元首尾相接、
+ * Lab 2-13 · 单元组合（用户 2026-09-17 草图立项；2026-09-20 纠偏为「同一种平台一圈起伏，几个单元首尾相接、
  * 接缝处接高接低」，确认「这个思路是对的」，并交来三张图形 + 要求「包括方单元版本」）。
  *
  * 单元两族：圆环（Lab 2-5 圆筒环 + 一圈起伏；捏分 = Lab 2-5 捏分编制）/ 方环（Lab 2-7 方形环 + 它自己的起伏；
@@ -66,10 +66,10 @@ export function SkinComboBench({
   const [fam, setFam] = useState<ComboFamilyKey>(DEFAULT_FAMILY);
   const [spacing, setSpacing] = useState<ComboSpacingKey>(DEFAULT_SPACING);
   const [form, setForm] = useState(COMBO_DEFAULT_FORM);
-  // `/lab#lab2-12-enclose` 直达某张图形
+  // `/lab#lab2-13-enclose` 直达某张图形
   useEffect(() => {
     const k = planFromHash(
-      '2-12',
+      '2-13',
       COMBO_PLAN_OPTIONS.map((p) => p.key),
     );
     if (k) setPlan(k);
@@ -201,7 +201,7 @@ export function SkinComboBench({
       hud={
         en
           ? {
-              kicker: 'Lab 2-12 / Project II',
+              kicker: 'Lab 2-13 / Project II',
               title: 'Joined platforms',
               sub: relLine,
               hint: 'Figure / unit family / form / spacing switchable · spacing re-places, no re-solve · drag to orbit',
@@ -209,7 +209,7 @@ export function SkinComboBench({
                 'Joined platforms: two or three contracting-skin rings — round or square, undulating or split — hung edge to edge in a room so that the high side of one meets the low or high side of the next: a descent onto a landing, a rise from a split unit’s shelf, two split units enclosing one cavity, a step, a ramp, a hollow, an arch; a 1.7 m figure stands on the floor for scale.',
             }
           : {
-              kicker: 'Lab 2-12 / Project II',
+              kicker: 'Lab 2-13 / Project II',
               title: `单元组合 · ${famDef.zh}首尾相接`,
               sub: relLine,
               hint: '图形 / 单元 / 形态 / 距离可切 · 换距离不重解 · 拖拽旋转',

@@ -2,6 +2,13 @@ import type { SiteLang } from './lang';
 
 /** Paired page copy; order and technical values follow the existing Lab page. */
 export const LAB_PAGE_COPY: readonly (readonly [string, string])[] = [
+  ["Behaviour", "行为"],
+  ["Watch a cat pass, pause and play; drag it to compare which units respond.", "观察猫通行、停留和玩耍，拖动它比较哪些单元被激发。"],
+  ["Choose a repeatable behaviour or let the cat wander. Its activity leaves floor traces that activate nearby units. Drag it to try another position.", "选择可重播的行为，或让猫自由行动。活动留下的地面痕迹激发附近单元，也可以拖动猫尝试别的位置。"],
+  ["Pass through · pause and watch · play · free movement", "通行 · 停留观察 · 玩耍 · 自由运动"],
+  ["Activity radius; not a model of feline vision", "活动半径；不代表猫的视野模型"],
+  ["Shared trace and activation model with Lab 2-10 / 2-11", "与实验 2-10 / 2-11 共用痕迹与激活模型"],
+  ["Demo timings; no calibrated prediction, jumping or human–cat interaction", "演示节奏；不含校准预测、跳跃或人猫互动"],
   ["Round to square, with independent shelf sizes, tilts, gaps and joins.", "圆环变方环，同时保留各层尺寸、倾斜、缺口与局部连接。"],
   ["Morph the ring from round to square and adjust shelf sizes, tilts and gaps. Join depth ranges from 0% to 100%: 100% meets both rims; 50% fills the inner half. Forming bands and skin follow the assembly; Sections shows the original solve.", "从圆环逐档变成方环，调整上下层尺寸、倾斜与缺口。连接深度可调 0–100%：100% 与外缘齐平，50% 只占内半段。条带与蒙皮随装配变化；截面对照保留原始求解结果。"],
   ["70–130 per layer · maximum axis-to-rim distance", "每层 70–130 · 中轴到最远外缘"],

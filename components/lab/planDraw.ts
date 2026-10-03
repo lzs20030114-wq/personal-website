@@ -39,6 +39,9 @@ export function frame(roomM: number): { sc: number; ox: number; oy: number } {
 }
 
 export interface PlanPerson {
+  /** Optional animal rendering; human drawing remains the default. */
+  kind?: 'cat';
+  bodyR?: number;
   x: number;
   y: number;
   heading: number;
@@ -56,6 +59,7 @@ export interface PlanPerson {
 }
 
 export interface PlanScene {
+  toy?: { x: number; y: number } | null;
   layout: PlanLayout;
   field: TraceField;
   catchment: Catchment;
@@ -354,11 +358,48 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
     ctx.globalAlpha = 1;
   }
 
-  // 人：注意力区域（视野扇形 − 让位圈 − 走廊；全圆不让位时就是旧的影响圈虚线）+ 身体 + 朝向；被按着的画粗一圈
+  if (s.toy) {
+    ctx.strokeStyle = pal.warn;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(X(s.toy.x), Y(s.toy.y), 5, 0, Math.PI * 2);
+    ctx.moveTo(X(s.toy.x) - 8, Y(s.toy.y));
+    ctx.lineTo(X(s.toy.x) + 8, Y(s.toy.y));
+    ctx.stroke();
+  }
+
+  // Actors share attention and floor drawing; the cat has a distinct silhouette.
   for (const p of s.people) {
     const cx = X(p.x);
     const cy = Y(p.y);
     drawAttention(ctx, p, cx, cy, sc, pal);
+    if (p.kind === 'cat') {
+      const r = (p.bodyR ?? 0.14) * sc;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(p.heading);
+      ctx.strokeStyle = p.held ? pal.accent : pal.ink;
+      ctx.fillStyle = pal.paper;
+      ctx.lineWidth = p.held ? 2.5 : 1.8;
+      ctx.lineCap = 'round';
+      // Tail, oval back and an independently turning head with pointed ears.
+      ctx.beginPath();
+      ctx.moveTo(-r, 0);
+      ctx.bezierCurveTo(-r * 2.5, -r * 0.2, -r * 2.1, r * 1.4, -r * 2.6, r * 0.8);
+      ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(-r * 0.2, 0, r * 1.15, r * 0.65, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.translate(r * 0.85, 0);
+      ctx.rotate((p.gaze ?? p.heading) - p.heading);
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.35, -r * 0.55); ctx.lineTo(r * 0.15, -r * 0.85);
+      ctx.lineTo(r * 0.45, -r * 0.35); ctx.lineTo(r * 0.65, 0);
+      ctx.lineTo(r * 0.45, r * 0.35); ctx.lineTo(r * 0.15, r * 0.85);
+      ctx.lineTo(-r * 0.35, r * 0.55); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = pal.accent;
+      ctx.beginPath(); ctx.arc(r * 0.3, -r * 0.22, 1.2, 0, Math.PI * 2); ctx.arc(r * 0.3, r * 0.22, 1.2, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      continue;
+    }
     const r = PLAN.BODY_R * sc;
     ctx.fillStyle = pal.paper;
     ctx.strokeStyle = p.held ? pal.accent : pal.ink;

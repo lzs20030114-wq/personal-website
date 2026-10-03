@@ -19,6 +19,8 @@ export function legacyLabNo(nn: string): string | null {
 
 /** 当前哈希，旧号换成新号（`#lab10-split` → `#lab2-5-split`）；非 lab 哈希原样返回 */
 export function normalizedLabHash(hash: string): string {
+  // The old composition presets remain unambiguous after inserting the cat study.
+  if (/^#lab2-12-(descend|rise|enclose|step|ramp|ramp3|valley|arch)$/.test(hash)) return hash.replace('#lab2-12-', '#lab2-13-');
   const m = /^#lab(\d\d)(-[a-z]+)?$/.exec(hash);
   const no = m && legacyLabNo(m[1]);
   return no ? `#lab${no}${m[2] ?? ''}` : hash;
@@ -27,7 +29,7 @@ export function normalizedLabHash(hash: string): string {
 export function planFromHash<K extends string>(no: string, keys: readonly K[]): K | null {
   if (typeof window === 'undefined') return null;
   const hash = normalizedLabHash(window.location.hash);
-  const m = new RegExp(`^#lab${no}-([a-z]+)$`).exec(hash);
+  const m = new RegExp(`^#lab${no}-([a-z][a-z0-9]*)$`).exec(hash);
   if (!m) return null;
   const k = keys.find((key) => key === m[1]);
   if (!k) return null;

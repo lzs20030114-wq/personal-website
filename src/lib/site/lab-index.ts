@@ -69,7 +69,7 @@ export const LAB_INDEX: readonly LabGroup[] = [
   {
     key: "project-ii",
     label: "Project II — Spatial simulation",
-    sub: "Lab 2-1 – 2-12 · skin-unit engine & geometry studies",
+    sub: "Lab 2-1 – 2-13 · skin-unit engine & geometry studies",
     segments: [
       {
         n: "Ⅰ",
@@ -112,17 +112,18 @@ export const LAB_INDEX: readonly LabGroup[] = [
       {
         n: "Ⅵ",
         label: "People",
-        sub: "Lab 2-10 – 2-11 · behaviour reaching the units",
+        sub: "Lab 2-10 – 2-12 · behaviour reaching the units",
         benches: [
           { no: "2-10", title: "A person walks through", kernel: "2d", description: 'Move one person and watch nearby units respond to their floor trace.', meta: '6 behaviours · 3 grids · canvas', kind: 'Canvas · plan', verb: 'drag the person' },
           { no: "2-11", title: "A few people", kernel: "2d", description: 'Place or drag people to see how their overlapping views affect the units.', meta: 'Up to 8 people · live · canvas', kind: 'Canvas · up to 8 people', verb: 'click to add' },
+          { no: "2-12", title: "A cat in the room", kernel: "2d", description: 'Watch a cat pass, pause and play; drag it to compare which units respond.', meta: '3 sequences + free movement · canvas', kind: 'Canvas · cat behaviour', verb: 'drag the cat' },
         ],
       },
       {
         n: "Ⅶ",
         label: "Compositions",
-        sub: "Lab 2-12 · platforms joined high to low",
-        benches: [{ no: "2-12", title: "Joined platforms", kernel: "3d", description: 'Join round or square platforms into steps, ramps and enclosures.', meta: '8 figures · round & square · WebGL', kind: 'WebGL', verb: 'drag to orbit' }],
+        sub: "Lab 2-13 · platforms joined high to low",
+        benches: [{ no: "2-13", title: "Joined platforms", kernel: "3d", description: 'Join round or square platforms into steps, ramps and enclosures.', meta: '8 figures · round & square · WebGL', kind: 'WebGL', verb: 'drag to orbit' }],
       },
     ],
   },

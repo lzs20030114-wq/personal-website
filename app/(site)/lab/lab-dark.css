@@ -201,7 +201,7 @@
 .lab-workspace .lab-stage .lab-ctl--tiered { padding: 14px 0; gap: 12px; }
 .lab-workspace .lab-stage .lab-ctl--tiered .lab-ctl__row { padding: 0; border: 0; }
 .lab-workspace .lab-stage .lab-ctl--tiered .lab-ctl__row::before { flex: none; font: 400 11px var(--ld-mono); color: var(--ld-mute); }
-:is([data-lab-panel='2-6'], [data-lab-panel='2-10'], [data-lab-panel='2-11'], [data-lab-panel='2-12']) .lab-ctl--tiered .lab-ctl__row::before { align-self: flex-start; }
+:is([data-lab-panel='2-6'], [data-lab-panel='2-10'], [data-lab-panel='2-11'], [data-lab-panel='2-12'], [data-lab-panel='2-13']) .lab-ctl--tiered .lab-ctl__row::before { align-self: flex-start; }
 .lab-workspace .lab-stage .lab-ctl__solve::before { content: 'solve'; }
 .lab-workspace .lab-stage .lab-ctl__row:not(.lab-ctl__solve)::before { content: 'view'; }
 .lab-language-root[data-lang='zh'] .lab-ctl__solve::before { content: '解什么'; }

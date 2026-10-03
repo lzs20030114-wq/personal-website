@@ -171,7 +171,7 @@ export function LabPanel({ no, title, description, lede, specs, accent, kind, ve
   const maxDetails = clamp(Math.floor(panelWidth - 652), 260, 400);
   const appliedDetailWidth = Math.min(workspace.detailWidth, maxDetails);
   useEffect(() => {
-    if (window.innerWidth < 1100 && !['2-6', '2-10', '2-11', '2-12'].includes(no)) setDetails(false);
+    if (window.innerWidth < 1100 && !['2-6', '2-10', '2-11', '2-12', '2-13'].includes(no)) setDetails(false);
     const node = stage.current;
     if (!node) return;
     const update = () => setHasCamera(!!visibleCamera(node));
@@ -198,8 +198,8 @@ export function LabPanel({ no, title, description, lede, specs, accent, kind, ve
         const toolsHeight = root.current?.querySelector('.lab-view-tools')?.getBoundingClientRect().height ?? 42;
         // Side-control benches: controls sit beside the drawing. Budget the whole workbench,
         // not the drawing after subtracting a stack of controls; other benches keep their sizing.
-        if (['2-6', '2-10', '2-11', '2-12'].includes(no) && window.innerWidth >= 1100) {
-          setFigureHeight(Math.max(380, Math.floor(window.innerHeight - heading.getBoundingClientRect().height - toolsHeight - (expanded ? 32 : 48))));
+        if (['2-6', '2-10', '2-11', '2-12', '2-13'].includes(no) && window.innerWidth >= 1100) {
+          setFigureHeight(Math.max(380, Math.floor(window.innerHeight - heading.getBoundingClientRect().height - toolsHeight - (expanded ? 32 : no === '2-12' ? 128 : 48))));
           return;
         }
         const controlsHeight = node.getBoundingClientRect().height - figure.getBoundingClientRect().height;

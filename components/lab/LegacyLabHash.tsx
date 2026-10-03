@@ -12,7 +12,7 @@ export function LegacyLabHash() {
     const { hash } = window.location;
     const next = normalizedLabHash(hash);
     if (next !== hash) window.history.replaceState(null, '', next);
-    const id = /^#(lab[12]-\d+)(?:-[a-z]+)?$/.exec(next)?.[1];
+    const id = /^#(lab[12]-\d+)(?:-[a-z][a-z0-9]*)?$/.exec(next)?.[1];
     if (!id) return;
     // Responsive controls and bounded canvas heights settle after hydration. Keep a direct
     // link on its bench during that initial layout, but never fight the reader's first input.

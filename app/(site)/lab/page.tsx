@@ -23,6 +23,7 @@ import { SquareRingBench } from '../../../components/lab/SquareRingBench';
 import { SkinClusterBench } from '../../../components/lab/SkinClusterBench';
 import { WalkPlanBench, WalkPlanNotes } from '../../../components/lab/WalkPlanBench';
 import { CrowdPlanBench, CrowdPlanNotes } from '../../../components/lab/CrowdPlanBench';
+import { CatPlanBench, CatPlanNotes } from '../../../components/lab/CatPlanBench';
 import { SkinComboBench } from '../../../components/lab/SkinComboBench';
 
 export const metadata = { title: 'The lab' };
@@ -48,7 +49,7 @@ export const metadata = { title: 'The lab' };
  * ——几个单元**之间**能是什么关系（距离 / 高度 / 形态），编号顺延不重排。
  * 2026-09-04 加第六段 Ⅵ A person（Lab.14 一个人走过）：行为层第一次接进来，问的是「人这样走一遍，哪一群单元被激活」。
  * 2026-08-18 起页面按项目分组（MAPPING §16）——log 页先例：多项目共用一条主线。
- * 2026-09-17 加第七段 Ⅶ Compositions（Lab 2-12 单元组合）；2026-09-20 用户纠偏为「同一种平台一圈起伏、几个单元首尾相接、
+ * 2026-09-17 加第七段 Ⅶ Compositions（Lab 2-13 单元组合）；2026-09-20 用户纠偏为「同一种平台一圈起伏、几个单元首尾相接、
  * 接缝处接高接低」（首版按目录形态换槽位，读错了）：每个单元一个相位 + 一段高度，接法五种预设，用户的图形按预设追加；编号顺延不重排。
  * 2026-09-13 编号改按项目（用户拍板）：Lab.01–05 → Lab 1-1…1-5，Lab.06–15 → Lab 2-1…2-11；
  * 锚点 `#lab1-1`／`#lab2-5-split`，旧哈希 `#lab10(-split)` 由 LegacyLabHash + planFromHash 照认。
@@ -345,10 +346,24 @@ export default function LabPage() {
           <CrowdPlanBench workspace />
         </Bench>
 
+        <Bench
+          no="2-12"
+          notes={<CatPlanNotes />}
+          lede="Choose a repeatable behaviour or let the cat wander. Its activity leaves floor traces that activate nearby units. Drag it to try another position."
+          specs={[
+            ['Behaviour', 'Pass through · pause and watch · play · free movement'],
+            ['Trace', 'Activity radius; not a model of feline vision'],
+            ['Response', 'Shared trace and activation model with Lab 2-10 / 2-11'],
+            ['Limit', 'Demo timings; no calibrated prediction, jumping or human–cat interaction'],
+          ]}
+        >
+          <CatPlanBench workspace />
+        </Bench>
+
         <LabScaleRule i={6} />
 
         <Bench
-          no="2-12"
+          no="2-13"
           lede="Join round or square platforms into steps, ramps and enclosures. Adjust each unit’s height range and orientation, then read the height difference at each seam. The square rising arrangement retains an 8 cm step."
           specs={[
             ['Figures', 'Descent · rise · enclosure · step · ramp · three-part ramp · hollow · arch'],

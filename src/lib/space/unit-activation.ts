@@ -188,8 +188,8 @@ export function seededRng(seed: number): () => number {
 }
 
 /** 让位距离 D（m，芯到人）：平台外缘 + 身体 + 让位——近于这个距离的平台会打到人 */
-export function keepOut(layout: PlanLayout, clearance: number): number {
-  return layout.platR + PLAN.BODY_R + clearance;
+export function keepOut(layout: PlanLayout, clearance: number, bodyR: number = PLAN.BODY_R): number {
+  return layout.platR + bodyR + clearance;
 }
 
 // ── 平面布局：Lab.12 那间房与那块场地，N×N 个按比例缩小的单元 ────────────────
@@ -584,11 +584,12 @@ export function blockedUnits(
   people: readonly { x: number; y: number; present: boolean }[],
   clearance: number | null,
   out?: Uint8Array,
+  bodyR: number = PLAN.BODY_R,
 ): Uint8Array {
   const res = out ?? new Uint8Array(layout.units.length);
   res.fill(0);
   if (clearance === null) return res;
-  const lim = keepOut(layout, clearance);
+  const lim = keepOut(layout, clearance, bodyR);
   for (const p of people) {
     if (!p.present) continue;
     for (const u of layout.units) {
@@ -908,6 +909,8 @@ export function pathPreset(key: PathKey): PathPreset {
 // ── 整台仿真：把上面几件接起来 ──────────────────────────────────────────────
 
 export interface PlanSimOpts {
+  /** Optional actor footprint; defaults to the existing human radius. */
+  bodyR?: number;
   path?: PathKey;
   /** 每边格数（PLAN.GRIDS 之一；守门也跑别的 N） */
   grid?: number;
@@ -944,6 +947,7 @@ export interface PlanSimOpts {
 const MAX_SUB_DT = 0.05;
 
 export class PlanSim {
+  readonly bodyR: number;
   readonly layout: PlanLayout;
   readonly field: TraceField;
   readonly walker: Walker;
@@ -977,6 +981,7 @@ export class PlanSim {
   private readonly seed: number;
 
   constructor(opts: PlanSimOpts = {}) {
+    this.bodyR = opts.bodyR ?? PLAN.BODY_R;
     this.layout = planLayout(opts.grid ?? PLAN.GRID_DEF, opts.radius ?? RING.RADIUS_DEF);
     const threshold = opts.threshold ?? PLAN.THRESHOLD;
     this.fade = opts.fade ?? null;
@@ -1073,7 +1078,7 @@ export class PlanSim {
 
   /** 让位距离 D（m）；让位关着时 0 */
   get keepOutM(): number {
-    return this.clearance === null ? 0 : keepOut(this.layout, this.clearance);
+    return this.clearance === null ? 0 : keepOut(this.layout, this.clearance, this.bodyR);
   }
 
   /** 被指针按着（拖）：位置直接给、不经步速；松手站在原地 */
@@ -1092,7 +1097,7 @@ export class PlanSim {
 
   drag(x: number, y: number): void {
     if (!this.held) return;
-    const h = this.layout.roomM / 2 - PLAN.BODY_R;
+    const h = this.layout.roomM / 2 - this.bodyR;
     const nx = Math.max(-h, Math.min(h, x));
     const ny = Math.max(-h, Math.min(h, y));
     const dx = nx - this.walker.x;
@@ -1171,7 +1176,7 @@ export class PlanSim {
     }
     if (this.fade !== null) this.field.relax(dt, this.fade);
     else this.field.decay(dt, this.decay);
-    blockedUnits(this.layout, [this.walker], this.clearance, this.blocked);
+    blockedUnits(this.layout, [this.walker], this.clearance, this.blocked, this.bodyR);
     // 锁定档传 Infinity = 旧路径逐位不变（守门与线稿的结论钉在那上面）；跟随档才按机构速率限速
     this.act.update(unitInputs(this.field, this.catchment, this.inputsBuf), this.act.mode === 'follow' ? dt : Infinity, this.clearance === null ? null : this.blocked);
     this.t += dt;

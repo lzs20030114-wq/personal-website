@@ -24,7 +24,8 @@ const PREVIEWS: Record<string, ComponentType<PreviewProps>> = {
   '2-9': dynamic(() => import('../lab/SkinClusterBench').then(m => m.SkinClusterBench), { loading }),
   '2-10': dynamic(() => import('../lab/WalkPlanBench').then(m => m.WalkPlanBench), { loading }),
   '2-11': dynamic(() => import('../lab/CrowdPlanBench').then(m => m.CrowdPlanBench), { loading }),
-  '2-12': dynamic(() => import('../lab/SkinComboBench').then(m => m.SkinComboBench), { loading }),
+  '2-12': dynamic(() => import('../lab/CatPlanBench').then(m => m.CatPlanBench), { loading }),
+  '2-13': dynamic(() => import('../lab/SkinComboBench').then(m => m.SkinComboBench), { loading }),
 };
 
 export function HomeLabPreview({ no, active }: { no: string; active: boolean }) {

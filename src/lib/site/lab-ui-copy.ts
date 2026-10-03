@@ -2,6 +2,10 @@ import type { SiteLang } from './lang';
 
 /** Labels only: numerical parameters and solver keys are never translated. */
 export const LAB_UI_COPY: readonly (readonly [string, string])[] = [
+  ["一只猫在场", "A cat in the room"],
+  ["拖动猫", "drag the cat"],
+  ["画布 · 猫的行为", "Canvas · cat behaviour"],
+  ["三类行为与自由运动 · 画布", "3 sequences + free movement · canvas"],
   ["实验室", "The lab"],
   ["实验目录", "Lab index"],
   ["目录", "Index"],
@@ -37,7 +41,7 @@ export const LAB_UI_COPY: readonly (readonly [string, string])[] = [
   ["轮回机器", "Reincarnation machine"],
   ["空间仿真", "Spatial simulation"],
   ["实验 1-1 – 1-5 · 两种连杆内核", "Lab 1-1 – 1-5 · two linkage kernels"],
-  ["实验 2-1 – 2-12 · 皮肤单元引擎与几何研究", "Lab 2-1 – 2-12 · skin-unit engine & geometry studies"],
+  ["实验 2-1 – 2-13 · 皮肤单元引擎与几何研究", "Lab 2-1 – 2-13 · skin-unit engine & geometry studies"],
   ["一条带", "One band"],
   ["一排", "A row"],
   ["一圈", "A ring"],
@@ -49,8 +53,8 @@ export const LAB_UI_COPY: readonly (readonly [string, string])[] = [
   ["实验 2-5 – 2-7 · 将一排条带围成环", "Lab 2-5 – 2-7 · the row closed into a loop"],
   ["实验 2-8 · 真实比例的场地", "Lab 2-8 · the field at real scale"],
   ["实验 2-9 · 二、三、四、九个单元之间的关系", "Lab 2-9 · what two, three, four, nine units can be to each other"],
-  ["实验 2-10 – 2-11 · 人的行为与单元响应", "Lab 2-10 – 2-11 · behaviour reaching the units"],
-  ["实验 2-12 · 平台的高低连接", "Lab 2-12 · platforms joined high to low"],
+  ["实验 2-10 – 2-12 · 行为与单元响应", "Lab 2-10 – 2-12 · behaviour reaching the units"],
+  ["实验 2-13 · 平台的高低连接", "Lab 2-13 · platforms joined high to low"],
   ["连杆、织物结构与空间行为的交互实验。拖动模型、调节控件，比较它们的运动和成形过程。", "Interactive studies of linkages, fabric structures and spatial behaviour. Drag the models and adjust their controls to compare how they move and form."],
   ["作品 →", "Work →"],
   ["日志 →", "Log →"],

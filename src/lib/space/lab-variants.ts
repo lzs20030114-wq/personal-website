@@ -1,3 +1,4 @@
+import { CAT_BEHAVIOURS } from './cat-plan';
 /**
  * 项目二台架的差分清单（2026-09-03，用户拍板「收纳成七台四段」+「千万不要丢差分的可能性」）。
  *
@@ -125,7 +126,7 @@ const WALK_READING_AXIS: VariantAxis = { axis: '读法', options: READINGS.map((
 /** 单元怎么响应读数：跟随（人走了收回去）/ 锁定（滞回）——2026-09-04 用户要的那一档与项目论点那一档 */
 const WALK_RESPONSE_AXIS: VariantAxis = { axis: '响应', options: RESPONSES.map((r) => ({ key: r.key, label: r.zh })) };
 
-/** Lab 2-12 单元组合（2026-09-17 立项，2026-09-20 用户纠偏为「同一种平台一圈起伏、首尾相接」+ 三张图形）：
+/** Lab 2-13 单元组合（2026-09-17 立项，2026-09-20 用户纠偏为「同一种平台一圈起伏、首尾相接」+ 三张图形）：
  *  编制 = 图形（① 坡降 / ② 升台 / ③ 合腔 + 五种接法），形态四档为子选项（只管圆环的起伏单元，方环下变灰），
  *  单元两族（圆环 / 方环）与距离两档为正交轴。 */
 export const COMBO_PLAN_OPTIONS = COMBO_PLANS.map((p) => ({ key: p.key, label: p.label }));
@@ -134,7 +135,7 @@ export const COMBO_FAMILY_OPTIONS = COMBO_FAMILIES.map((f) => ({ key: f.key, lab
 const COMBO_FAMILY_AXIS: VariantAxis = { axis: '单元', options: COMBO_FAMILY_OPTIONS };
 const COMBO_SPACING_AXIS: VariantAxis = { axis: '距离', options: COMBO_SPACING_OPTIONS };
 
-/** 十二台七段（页序）：Ⅰ 单元 2-1–3 · Ⅱ 序列 2-4 · Ⅲ 环 2-5–7 · Ⅳ 场 2-8 · Ⅴ 单元之间 2-9 · Ⅵ 人 2-10–11 · Ⅶ 组合 2-12 */
+/** 十三台七段（页序）：Ⅰ 单元 2-1–3 · Ⅱ 序列 2-4 · Ⅲ 环 2-5–7 · Ⅳ 场 2-8 · Ⅴ 单元之间 2-9 · Ⅵ 人与猫 2-10–12 · Ⅶ 组合 2-13 */
 export const LAB_VARIANTS: readonly BenchVariants[] = [
   { no: '2-1', key: 'unit', zh: '二维皮肤单元', en: 'Contractile skin units', plans: [], axes: [] },
   { no: '2-2', key: 'solid', zh: '立体带', en: 'Skin units, solid', plans: [], axes: [] },
@@ -210,6 +211,14 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
   },
   {
     no: '2-12',
+    key: 'cat',
+    zh: '一只猫在场',
+    en: 'A cat in the room',
+    plans: CAT_BEHAVIOURS.map(b => ({ key: b.key, label: b.zh })),
+    axes: [WALK_GRID_AXIS, WALK_READING_AXIS, WALK_RESPONSE_AXIS],
+  },
+  {
+    no: '2-13',
     key: 'combo',
     zh: '单元组合',
     en: 'Compositions',
