@@ -349,12 +349,12 @@ export default function LabPage() {
         <Bench
           no="2-12"
           notes={<CatPlanNotes />}
-          lede="Choose a repeatable behaviour or let the cat wander. Its activity leaves floor traces that activate nearby units. Drag it to try another position."
+          lede="The cat lives on the units. Its current platform stays open; the next landing forms before it moves. Choose a behaviour, click a destination or drag the cat onto a unit."
           specs={[
             ['Behaviour', 'Pass through · pause and watch · play · free movement'],
-            ['Trace', 'Activity radius; not a model of feline vision'],
-            ['Response', 'Shared trace and activation model with Lab 2-10 / 2-11'],
-            ['Limit', 'Demo timings; no calibrated prediction, jumping or human–cat interaction'],
+            ['Trace', 'Visits leave traces on platform surfaces'],
+            ['Response', 'Occupied units stay open; the next landing activates before departure'],
+            ['Limit', 'Plan view only; transfer reach, jump height and loads are not simulated'],
           ]}
         >
           <CatPlanBench workspace />

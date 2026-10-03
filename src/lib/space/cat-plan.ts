@@ -1,6 +1,6 @@
-import { PlanSim, aisleLines, nearestCrossing, seededRng, type PlanSimOpts, type Waypoint } from './unit-activation';
+import { PlanSim, nearestUnit, seededRng, type PlanSimOpts, type PlanUnit, type Waypoint } from './unit-activation';
 
-/** Categories informed by the project research; all timing/geometry below is a demo choice. */
+/** Behaviour categories informed by research; timings are demonstration choices. */
 export const CAT_BEHAVIOURS = [
   { key: 'pass', zh: '通行', en: 'Pass through' },
   { key: 'rest', zh: '停留观察', en: 'Pause & watch' },
@@ -9,10 +9,10 @@ export const CAT_BEHAVIOURS = [
 ] as const;
 export type CatBehaviour = typeof CAT_BEHAVIOURS[number]['key'];
 type Episode = Exclude<CatBehaviour, 'free'>;
-export const CAT = { bodyR: 0.14, reach: 1.1, clearance: 0.08, speed: 0.55, seed: 20261003 } as const;
-interface Leg { point: Waypoint; speed: number; }
+export const CAT = { bodyR: 0.14, prepare: 1, speed: 0.55, seed: 20261003 } as const;
+interface Leg { point: Waypoint; speed: number; unit: PlanUnit; }
 
-/** Cat-specific scheduling around the shared floor/activation simulation. No second trace engine. */
+/** Cats occupy the units. Human exclusion circles and aisle routes do not apply. */
 export class CatPlanSim extends PlanSim {
   behaviour: CatBehaviour = 'free';
   episode: Episode = 'rest';
@@ -20,13 +20,23 @@ export class CatPlanSim extends PlanSim {
   pace = 1;
   toy: { x: number; y: number } | null = null;
   private legs: Leg[] = [];
+  private pending: Leg | null = null;
+  private transfer: { from: PlanUnit; to: PlanUnit } | null = null;
+  private prepared = 0;
   private random = seededRng(CAT.seed);
   private legSpeed: number = CAT.speed;
 
-  constructor(opts: PlanSimOpts & { behaviour?: CatBehaviour } = {}) {
-    super({ path: 'free', reach: CAT.reach, threshold: 2, fade: 6, mode: 'follow', fill: 0.5,
-      clearance: CAT.clearance, look: true, ...opts, bodyR: CAT.bodyR, fov: Math.PI * 2, lane: false });
+  constructor(opts: Pick<PlanSimOpts, 'grid' | 'threshold' | 'fade' | 'mode'> & { behaviour?: CatBehaviour } = {}) {
+    super({ path: 'free', threshold: CAT.prepare, fade: 6, mode: 'follow', look: true, ...opts,
+      bodyR: CAT.bodyR, reach: 0, reading: 'disk', fill: 1, clearance: null, lane: false });
     this.replay(opts.behaviour ?? 'free');
+  }
+
+  get currentUnit(): PlanUnit { return nearestUnit(this.layout, this.walker.x, this.walker.y); }
+  get landingUnit(): PlanUnit | null { return this.pending?.unit ?? this.transfer?.to ?? null; }
+  get supportUnits(): PlanUnit[] {
+    if (!this.walker.present) return [];
+    return this.transfer ? [this.transfer.from, this.transfer.to] : [this.currentUnit];
   }
 
   replay(behaviour = this.behaviour): void {
@@ -34,47 +44,50 @@ export class CatPlanSim extends PlanSim {
     this.behaviour = behaviour;
     this.auto = true;
     this.random = seededRng(CAT.seed);
-    const a = aisleLines(this.layout);
-    this.walker.place(a.x[0], a.y[Math.floor(a.y.length / 2)]);
-    this.trail.splice(0, this.trail.length, this.walker.x, this.walker.y);
-    this.legs = [];
+    const first = this.layout.units[Math.floor(this.layout.n / 2) * this.layout.n];
+    this.walker.place(first.x, first.y);
+    this.trail.splice(0, this.trail.length, first.x, first.y);
+    this.legs = []; this.pending = null; this.transfer = null; this.prepared = 0;
+    this.keepSupport();
     this.begin(behaviour === 'free' ? 'pass' : behaviour);
   }
 
-  private add(x: number, y: number, dwell = 0, speed = CAT.speed as number): void {
-    // Orthogonal aisle waypoints avoid the unit cores at every grid density.
-    const end = nearestCrossing(this.layout, x, y);
-    if (!this.legs.length) this.rejoinAisle(speed);
-    const from = this.legs[this.legs.length - 1]?.point ?? this.walker;
-    this.legs.push({ point: { x: end.x, y: from.y }, speed }, { point: { ...end, dwell }, speed });
+  private keepSupport(): void {
+    // Starting/dragged placement supplies a platform; automatic transfers wait
+    // for the destination to finish forming before leaving the current unit.
+    for (const u of this.supportUnits) {
+      this.act.degree[u.i] = 1;
+      this.act.input[u.i] = this.act.threshold;
+    }
   }
 
-  private rejoinAisle(speed: number): void {
-    const w = this.walker, c = nearestCrossing(this.layout, w.x, w.y);
-    const first = Math.abs(c.x - w.x) < Math.abs(c.y - w.y) ? { x: c.x, y: w.y } : { x: w.x, y: c.y };
-    this.legs.push({ point: first, speed }, { point: c, speed });
+  private add(x: number, y: number, dwell = 0, speed = CAT.speed as number): void {
+    const end = nearestUnit(this.layout, x, y);
+    let from = this.legs[this.legs.length - 1]?.unit ?? this.currentUnit;
+    const push = (u: PlanUnit) => { this.legs.push({ point: { x: u.x, y: u.y }, speed, unit: u }); from = u; };
+    // Adjacent unit centres form the route, with no diagonal cut through aisles.
+    while (from.col !== end.col) push(this.layout.units[from.i + Math.sign(end.col - from.col)]);
+    while (from.row !== end.row) push(this.layout.units[from.i + Math.sign(end.row - from.row) * this.layout.n]);
+    if (!this.legs.length) push(end);
+    this.legs[this.legs.length - 1].point.dwell = dwell;
   }
 
   private begin(episode: Episode): void {
     this.episode = episode;
     this.toy = null;
-    const a = aisleLines(this.layout);
-    const centre = this.behaviour === 'free'
-      ? { x: a.x[Math.floor(this.random() * a.x.length)], y: a.y[Math.floor(this.random() * a.y.length)] }
-      : nearestCrossing(this.layout, 0, 0);
-    const far = a.x[a.x.length - 1];
+    const { units, n } = this.layout;
+    const centre = this.behaviour === 'free' ? units[Math.floor(this.random() * units.length)] : units[Math.floor(n / 2) * n + Math.floor(n / 2)];
     if (episode === 'pass') {
-      const target = this.behaviour === 'free' ? centre.x : this.walker.x < 0 ? far : a.x[0];
-      this.add(target, centre.y, 3);
+      const target = this.behaviour === 'free' ? centre : units[centre.row * n + (this.currentUnit.col < n / 2 ? n - 1 : 0)];
+      this.add(target.x, target.y, 3);
     } else if (episode === 'rest') {
       this.add(centre.x, centre.y, 14);
     } else {
-      const centreIndex = a.x.indexOf(centre.x);
-      const next = a.x[centreIndex === a.x.length - 1 ? centreIndex - 1 : centreIndex + 1];
-      this.toy = { x: next, y: centre.y };
+      const next = units[centre.i + (centre.col === n - 1 ? -1 : 1)];
+      this.toy = { x: next.x, y: next.y };
       this.add(centre.x, centre.y, 2, 0.35);
       for (let i = 0; i < 3; i++) {
-        this.add(next, centre.y, 0.8, 1.15);
+        this.add(next.x, next.y, 0.8, 1.15);
         this.add(centre.x, centre.y, 1.5, 0.65);
       }
       this.add(centre.x, centre.y, 5);
@@ -84,45 +97,51 @@ export class CatPlanSim extends PlanSim {
   setAuto(on: boolean): void {
     this.auto = on;
     if (!on) {
-      this.walker.place(this.walker.x, this.walker.y);
-      this.legs = [];
-      this.toy = null;
+      const u = this.currentUnit;
+      this.walker.place(u.x, u.y);
+      this.legs = []; this.pending = null; this.transfer = null; this.toy = null;
+      this.keepSupport();
     }
   }
 
   override hold(x: number, y: number): void {
-    this.behaviour = 'free';
-    this.setAuto(false);
-    super.hold(x, y);
+    this.behaviour = 'free'; this.setAuto(false); super.hold(x, y);
   }
 
   override drag(x: number, y: number): void {
-    // Snap only out of solid cores; the pointer can otherwise place the cat anywhere.
-    let nx = x, ny = y;
-    for (const u of this.layout.units) {
-      const r = this.layout.mastR + this.bodyR;
-      const d = Math.hypot(nx - u.x, ny - u.y);
-      if (d < r) {
-        const angle = d < 1e-9 ? 0 : Math.atan2(ny - u.y, nx - u.x);
-        nx = u.x + Math.cos(angle) * r;
-        ny = u.y + Math.sin(angle) * r;
-      }
-    }
-    super.drag(nx, ny);
+    if (!this.held) return;
+    const u = nearestUnit(this.layout, x, y);
+    super.drag(u.x, u.y);
+    this.keepSupport();
   }
 
   override pointerTarget(x: number, y: number): void {
-    this.behaviour = 'free';
-    this.setAuto(false);
-    this.episode = 'pass';
-    // First reach the closest aisle via its nearer axis after a manual drag.
-    this.add(x, y, 0);
+    this.behaviour = 'free'; this.setAuto(false); this.episode = 'pass';
+    this.add(x, y);
   }
 
-  clearTraces(): void { this.field.clear(); this.act.reset(); this.trail.length = 0; }
+  clearTraces(): void {
+    this.field.clear(); this.act.reset(); this.trail.length = 0;
+    this.prepared = 0;
+    this.keepSupport();
+  }
 
-  get state(): 'held' | 'walk' | 'watch' | 'chase' | 'rest' {
+  protected override imprint(dt: number): void {
+    for (const u of this.supportUnits) this.field.imprint(u.x, u.y, this.layout.platR, dt);
+  }
+
+  protected override activationInputs(): Float64Array {
+    const inputs = super.activationInputs();
+    // Occupancy maintains support; only the next planned landing gets an
+    // anticipatory request. Past visits continue through shared trace decay.
+    for (const u of this.supportUnits) inputs[u.i] = this.act.threshold;
+    if (this.pending) inputs[this.pending.unit.i] = Math.max(inputs[this.pending.unit.i], Math.min(this.act.threshold, this.prepared));
+    return inputs;
+  }
+
+  get state(): 'held' | 'prepare' | 'walk' | 'watch' | 'chase' | 'rest' {
     if (this.held) return 'held';
+    if (this.pending) return 'prepare';
     if (this.walker.state === 'walk') return this.episode === 'play' ? 'chase' : 'walk';
     return this.episode === 'play' ? 'watch' : 'rest';
   }
@@ -131,23 +150,29 @@ export class CatPlanSim extends PlanSim {
     if (!Number.isFinite(dt) || dt <= 0) return;
     let left = Math.min(dt, 1);
     while (left > 1e-9) {
-      const h = Math.min(left, 1 / 60);
-      left -= h;
-      if (!this.held && this.walker.state === 'idle') {
-        if (!this.legs.length && this.auto) {
-          const r = this.random();
-          const next = this.behaviour === 'free' ? (r < 0.4 ? 'rest' : r < 0.7 ? 'pass' : 'play') : this.behaviour;
-          this.begin(next);
+      const h = Math.min(left, 1 / 60); left -= h;
+      if (this.walker.state !== 'walk') this.transfer = null;
+      if (!this.held && this.walker.present && this.walker.state === 'idle') {
+        if (!this.pending) {
+          if (!this.legs.length && this.auto) {
+            const r = this.random();
+            this.begin(this.behaviour === 'free' ? (r < 0.4 ? 'rest' : r < 0.7 ? 'pass' : 'play') : this.behaviour);
+          }
+          this.pending = this.legs.shift() ?? null;
+          this.prepared = 0;
         }
-        const leg = this.legs.shift();
-        if (leg) {
-          this.legSpeed = leg.speed;
-          this.walker.pushTarget(leg.point);
+        if (this.pending) {
+          this.prepared += h;
+          if (this.act.degree[this.pending.unit.i] >= 1 - 1e-9) {
+            this.transfer = this.currentUnit.i === this.pending.unit.i ? null : { from: this.currentUnit, to: this.pending.unit };
+            this.legSpeed = this.pending.speed;
+            this.walker.pushTarget(this.pending.point);
+            this.pending = null;
+          }
         }
       }
       this.walker.speed = this.legSpeed * this.pace;
       super.step(h);
-      // A free session has bounded drawing history.
       if (this.trail.length > 1600) this.trail.splice(0, this.trail.length - 1600);
     }
   }

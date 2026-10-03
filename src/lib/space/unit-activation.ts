@@ -1031,7 +1031,7 @@ export class PlanSim {
   /** 换读法只换「谁读哪片地」：痕迹与已成形的都留着 */
   setReading(reading: Reading): void {
     this.catchment = buildCatchment(this.layout, this.field, reading);
-    this.act.update(unitInputs(this.field, this.catchment, this.inputsBuf));
+    this.act.update(this.activationInputs());
   }
 
   setSpeed(v: number): void {
@@ -1043,7 +1043,7 @@ export class PlanSim {
   setThreshold(v: number): void {
     this.act.threshold = v;
     if (this.fade !== null) this.field.cap = v; // 封顶跟着阈值走
-    this.act.update(unitInputs(this.field, this.catchment, this.inputsBuf));
+    this.act.update(this.activationInputs());
   }
   setDecay(v: number): void {
     this.decay = v;
@@ -1073,7 +1073,7 @@ export class PlanSim {
   /** 成形占比（跟随档下当即按新口径重算） */
   setFill(v: number): void {
     this.act.fill = v;
-    this.act.update(unitInputs(this.field, this.catchment, this.inputsBuf), this.act.mode === 'follow' ? 0 : Infinity, this.clearance === null ? null : this.blocked);
+    this.act.update(this.activationInputs(), this.act.mode === 'follow' ? 0 : Infinity, this.clearance === null ? null : this.blocked);
   }
 
   /** 让位距离 D（m）；让位关着时 0 */
@@ -1142,6 +1142,16 @@ export class PlanSim {
     this.walker.pushTarget(pt(d.x, d.y, { exit: true }));
   }
 
+  /** Actor-specific contact can reuse the same field, decay and activation machinery. */
+  protected imprint(dt: number, moving: boolean): void {
+    const hole = this.keepOutM;
+    this.field.imprintShaped(this.walker.x, this.walker.y, this.reach, dt, this.walker.heading, this.fov, hole, this.lane && moving ? hole : 0, this.walker.gaze);
+  }
+
+  protected activationInputs(): Float64Array {
+    return unitInputs(this.field, this.catchment, this.inputsBuf);
+  }
+
   /** 推进 dt 秒仿真时间：行走与落痕迹按 ≤ MAX_SUB_DT 子步，衰减与读数按整段一次（线性，逐位等价） */
   step(dt: number): void {
     if (dt <= 0) return;
@@ -1160,8 +1170,7 @@ export class PlanSim {
         // 走着 = 这一子步位置动了（预设按步速走、拖着按指针给，两条路一个判据）
         const moving = Math.hypot(this.walker.x - this.lastX, this.walker.y - this.lastY) > 1e-9;
         this.moving = moving;
-        const hole = this.keepOutM;
-        this.field.imprintShaped(this.walker.x, this.walker.y, this.reach, sdt, this.walker.heading, this.fov, hole, this.lane && moving ? hole : 0, this.walker.gaze);
+        this.imprint(sdt, moving);
         this.trailAcc += moved;
         if (this.trailAcc >= 0.1) {
           this.trail.push(this.walker.x, this.walker.y);
@@ -1178,7 +1187,7 @@ export class PlanSim {
     else this.field.decay(dt, this.decay);
     blockedUnits(this.layout, [this.walker], this.clearance, this.blocked, this.bodyR);
     // 锁定档传 Infinity = 旧路径逐位不变（守门与线稿的结论钉在那上面）；跟随档才按机构速率限速
-    this.act.update(unitInputs(this.field, this.catchment, this.inputsBuf), this.act.mode === 'follow' ? dt : Infinity, this.clearance === null ? null : this.blocked);
+    this.act.update(this.activationInputs(), this.act.mode === 'follow' ? dt : Infinity, this.clearance === null ? null : this.blocked);
     this.t += dt;
   }
 

@@ -3,12 +3,12 @@ import type { SiteLang } from './lang';
 /** Paired page copy; order and technical values follow the existing Lab page. */
 export const LAB_PAGE_COPY: readonly (readonly [string, string])[] = [
   ["Behaviour", "行为"],
-  ["Watch a cat pass, pause and play; drag it to compare which units respond.", "观察猫通行、停留和玩耍，拖动它比较哪些单元被激发。"],
-  ["Choose a repeatable behaviour or let the cat wander. Its activity leaves floor traces that activate nearby units. Drag it to try another position.", "选择可重播的行为，或让猫自由行动。活动留下的地面痕迹激发附近单元，也可以拖动猫尝试别的位置。"],
+  ["Watch a cat move across the units; occupied platforms stay open and the next landing activates ahead.", "观察猫在单元上移动：脚下平台维持展开，下一落点提前激活。"],
+  ["The cat lives on the units. Its current platform stays open; the next landing forms before it moves. Choose a behaviour, click a destination or drag the cat onto a unit.", "猫在单元上生活。脚下平台保持展开，下一落点成形后再移动。选择行为、点击目标，或把猫拖到单元上。"],
   ["Pass through · pause and watch · play · free movement", "通行 · 停留观察 · 玩耍 · 自由运动"],
-  ["Activity radius; not a model of feline vision", "活动半径；不代表猫的视野模型"],
-  ["Shared trace and activation model with Lab 2-10 / 2-11", "与实验 2-10 / 2-11 共用痕迹与激活模型"],
-  ["Demo timings; no calibrated prediction, jumping or human–cat interaction", "演示节奏；不含校准预测、跳跃或人猫互动"],
+  ["Visits leave traces on platform surfaces", "使用痕迹留在经过的平台表面"],
+  ["Occupied units stay open; the next landing activates before departure", "脚下单元保持展开；下一落点在出发前激活"],
+  ["Plan view only; transfer reach, jump height and loads are not simulated", "仅俯视演示；尚未模拟转移可达性、跳跃高度与承重"],
   ["Round to square, with independent shelf sizes, tilts, gaps and joins.", "圆环变方环，同时保留各层尺寸、倾斜、缺口与局部连接。"],
   ["Morph the ring from round to square and adjust shelf sizes, tilts and gaps. Join depth ranges from 0% to 100%: 100% meets both rims; 50% fills the inner half. Forming bands and skin follow the assembly; Sections shows the original solve.", "从圆环逐档变成方环，调整上下层尺寸、倾斜与缺口。连接深度可调 0–100%：100% 与外缘齐平，50% 只占内半段。条带与蒙皮随装配变化；截面对照保留原始求解结果。"],
   ["70–130 per layer · maximum axis-to-rim distance", "每层 70–130 · 中轴到最远外缘"],

@@ -215,7 +215,7 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     zh: '一只猫在场',
     en: 'A cat in the room',
     plans: CAT_BEHAVIOURS.map(b => ({ key: b.key, label: b.zh })),
-    axes: [WALK_GRID_AXIS, WALK_READING_AXIS, WALK_RESPONSE_AXIS],
+    axes: [WALK_GRID_AXIS, WALK_RESPONSE_AXIS],
   },
   {
     no: '2-13',

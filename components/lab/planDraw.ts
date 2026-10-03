@@ -59,6 +59,9 @@ export interface PlanPerson {
 }
 
 export interface PlanScene {
+  /** Cat platforms: occupied units and the single next landing (not an exclusion zone). */
+  supportIds?: readonly number[];
+  landingId?: number | null;
   toy?: { x: number; y: number } | null;
   layout: PlanLayout;
   field: TraceField;
@@ -345,6 +348,24 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
   }
   ctx.globalAlpha = 1;
 
+  if (s.supportIds) {
+    for (const id of new Set([...s.supportIds, ...(s.landingId == null ? [] : [s.landingId])])) {
+      const u = L.units[id];
+      const occupied = s.supportIds.includes(id);
+      ctx.strokeStyle = occupied ? pal.ink : pal.accent;
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.globalAlpha = occupied ? 0.95 : 0.8;
+      ctx.lineWidth = occupied ? 1.5 : 1;
+      ctx.setLineDash(occupied ? [] : [3, 3]);
+      ctx.beginPath(); ctx.arc(X(u.x), Y(u.y), platPx + 4, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = '600 9px ui-sans-serif, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(String(id + 1).padStart(2, '0'), X(u.x), Y(u.y) + platPx + 15);
+    }
+    ctx.globalAlpha = 1;
+  }
+
   // 走过的路
   if (s.trail && s.trail.length > 2) {
     ctx.strokeStyle = pal.ink;
@@ -368,11 +389,10 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
     ctx.stroke();
   }
 
-  // Actors share attention and floor drawing; the cat has a distinct silhouette.
+  // Cats are drawn on the platform surface, without a human attention/clearance ring.
   for (const p of s.people) {
     const cx = X(p.x);
     const cy = Y(p.y);
-    drawAttention(ctx, p, cx, cy, sc, pal);
     if (p.kind === 'cat') {
       const r = (p.bodyR ?? 0.14) * sc;
       ctx.save();
@@ -400,6 +420,7 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
       ctx.restore();
       continue;
     }
+    drawAttention(ctx, p, cx, cy, sc, pal);
     const r = PLAN.BODY_R * sc;
     ctx.fillStyle = pal.paper;
     ctx.strokeStyle = p.held ? pal.accent : pal.ink;
