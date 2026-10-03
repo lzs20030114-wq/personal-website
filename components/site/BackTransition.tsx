@@ -20,8 +20,8 @@ const HOLD_MS = 60; // 盖满到换页之间的停顿（稿是 40ms + 文档跳�
 const OUT_DELAY = 140; // 换页后给新页面一帧落位再撤平面
 const OUT_MS = 420;
 
-const PLANE =
-  'linear-gradient(160deg,oklch(0.27 0.052 200) 0%,oklch(0.24 0.048 232) 55%,oklch(0.26 0.052 282) 100%)';
+// 与深色页底同色（配色 v2 起为夜色平涂，MAPPING §46）：平面淡入时不在页面上叠出另一种色相
+const PLANE = 'oklch(0.19 0.032 228)';
 
 export function BackTransition() {
   const router = useRouter();

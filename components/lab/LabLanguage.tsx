@@ -9,10 +9,17 @@ import { labUiText } from '../../src/lib/site/lab-ui-copy';
 import { LAB_BENCHES } from '../../src/lib/site/lab-index';
 import { labPageText } from '../../src/lib/site/lab-page-copy';
 
-/** Share the existing site preference, including navigation and footer on /lab. */
+/**
+ * Share the existing site preference, including navigation and footer on /lab.
+ * /work/* 同理（2026-10-01）：案例页的顶栏在布局层、语言钮在顶栏里，所以语言状态必须由
+ * 布局层这一个 provider 持有——页面里不能再嵌第二个 CaseLangRoot，否则顶栏切的是外层、
+ * 正文读的是内层。
+ */
 export function LabLanguageRoot({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
-  return pathname === '/lab' ? <CaseLangRoot className="lab-language-root">{children}</CaseLangRoot> : <>{children}</>;
+  const pathname = usePathname() ?? '';
+  if (pathname === '/lab') return <CaseLangRoot className="lab-language-root">{children}</CaseLangRoot>;
+  if (pathname.startsWith('/work')) return <CaseLangRoot className="case-language-root">{children}</CaseLangRoot>;
+  return <>{children}</>;
 }
 
 export function useBenchLang(explicit?: SiteLang): SiteLang {

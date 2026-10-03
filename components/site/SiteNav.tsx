@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useOptionalCaseLang } from './CaseLang';
-import { LabHeader } from '../lab/LabShell';
+import { DarkHeader, LabHeader } from '../lab/LabShell';
 
 /**
  * 共享导航（Home/Log/Case/About 复用）——Modernist 稿：brand + Work/Lab/Log/About。
@@ -23,6 +23,8 @@ export function SiteNav() {
 
   // /lab 用「09 Lab Page - Dark」稿自己的吸顶顶栏（含 EN / 中），其余页面不变
   if (pathname.startsWith('/lab')) return <LabHeader />;
+  // /work/*（案例页与筹备页）用「10 Case 01」稿的同一套顶栏，另带阅读进度（MAPPING §45）
+  if (pathname.startsWith('/work')) return <DarkHeader active="work" readbar />;
 
   return (
     <nav className={dark ? 'nav nav-dark' : 'nav'}>
