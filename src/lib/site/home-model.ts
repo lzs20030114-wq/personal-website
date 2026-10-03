@@ -158,7 +158,7 @@ const LANES = [
   { keys: ['Space'], label: 'Spatial simulation', ink: 'var(--p700)' },
   { keys: ['Sleep research'], label: 'Sleep research', ink: TONE_S.ink },
   { keys: ['Lab'], label: 'Lab benches', ink: 'var(--ink)' },
-  { keys: ['Sleep', 'Site'], label: 'Smart Bed · site', ink: 'oklch(0.6 0.02 200)' },
+  { keys: ['Sleep', 'Site'], label: 'Smart Bed · site', ink: 'oklch(0.5 0.02 200)' }, // 配色 v2：苔色带上加深一档
 ] as const;
 
 /** 项目组 → 日志条目上的项目色（与 Work 区同一套编码）。 */

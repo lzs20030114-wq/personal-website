@@ -10,10 +10,11 @@
 
 
 /* ── 开头区 ── */
-.ld-intro { position: relative; padding-top: 72px; }
+/* 配色 v2：开头区是整段深潭色带（border-image 把底色向左右铺满视口，不占版心、不产生横向滚动） */
+.ld-intro { position: relative; padding-top: 72px; padding-bottom: 44px; background: var(--ld-deep); border-image: conic-gradient(var(--ld-deep) 0 0) fill 0 // 0 100vmax; }
 .ld-intro__top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 40px 64px; }
 .ld-intro__lead { flex: 1 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
-.ld-meta { margin: 0; font: 400 12px var(--ld-mono); letter-spacing: 0; text-transform: none; color: var(--ld-mute); }
+.ld-meta { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font: 400 12px var(--ld-mono); letter-spacing: 0; text-transform: none; color: var(--ld-mute); }
 .ld-h1 { margin: 0; font-weight: 500; font-size: clamp(48px, 6.4vw, 92px); line-height: 0.96; letter-spacing: -0.045em; text-transform: none; }
 .ld-h1__dot { color: var(--ld-g); }
 .ld-lede { margin: 0; max-width: 52ch; font-size: clamp(17px, 1.5vw, 20px); font-weight: 400; line-height: 1.5; color: oklch(0.86 0.04 160); text-wrap: pretty; }
@@ -25,6 +26,8 @@
 .ld-chip { position: relative; display: flex; flex-direction: column; gap: 8px; padding: 14px 0 4px; color: var(--ld-cream); transition: opacity 0.2s; }
 .ld-chip[data-dim] { opacity: 0.6; }
 .ld-chip:hover { opacity: 1; color: var(--ld-cream); }
+/* 稿里芯片是 button、字色继承奶白；站上是 <a>，会被 .pg-dark a / a:hover 染成绿 / 紫——提一档压回 */
+.pg-dark a.ld-chip, .pg-dark a.ld-chip:hover { color: var(--ld-cream); }
 .ld-chip::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--chip); }
 .ld-chip__row { display: flex; justify-content: space-between; gap: 12px; font: 500 12px var(--ld-mono); letter-spacing: 0; }
 .ld-chip__k { color: var(--chip); }
@@ -189,8 +192,9 @@
 .lab-workspace .lab-zoom-controls button:last-child { font-size: 11px; }
 .lab-workspace .lab-zoom-controls button:hover { background: oklch(0.95 0.032 120 / 0.06); }
 
-/* ── 说明栏 ── */
-.lab-workspace .lab-details { border-top: 1px solid oklch(0.95 0.032 120 / 0.2); padding-top: 14px; gap: 16px; }
+/* ── 说明栏：配色 v2 起是夜色上浮起一档的面板（原为顶部发丝线） ── */
+/* align-self: start —— 稿这一行是 align-items: flex-start，面板只占内容高；网格默认拉伸会多出一截空面板 */
+.lab-workspace .lab-details { align-self: start; border-top: 0; padding: 16px 18px 18px; gap: 16px; background: var(--ld-panel); }
 .lab-workspace .lab-details-head { min-height: 0; padding: 0; border-bottom: 0; font: 400 11px var(--ld-mono); letter-spacing: 0; text-transform: none; color: var(--ld-mute); }
 .lab-workspace .lab-details-scroll { padding: 16px 8px 4px 0; }
 .lab-workspace .lab-description { max-width: none; margin: 0; font-size: 15px; line-height: 1.6; color: var(--ld-cream); text-wrap: pretty; }

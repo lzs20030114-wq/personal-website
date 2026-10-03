@@ -214,7 +214,10 @@ export function ZonePage({
             </div>
           </div>
           <div className="hs-head__aside" data-a="fade" data-d="220">
-            <span className="hs-lbl">{benchCount} benches · three projects</span>
+            <span className="hs-lbl">
+              <span className="hs-live">Live</span>
+              {benchCount} benches · three projects
+            </span>
             <Link className="hs-btn" href="/lab">
               Explore the lab ↗
             </Link>

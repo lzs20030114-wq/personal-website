@@ -26,6 +26,9 @@
 /* 站内全局 .pg-dark a / a:hover 把链接染成 accent / accent-2；稿是 绿 → 奶白（specificity 加一档压过） */
 .cs.pg-dark a { color: var(--cs-g); text-decoration: none; }
 .cs.pg-dark a:hover { color: var(--cs-ink); }
+/* 页脚长在 .cs 里，上一条会把它的链接染回绿；配色 v2 页脚是主青色面，链接走青柠亮档（dark-chrome.css） */
+.cs.pg-dark .ld-footer a { color: var(--ld-lime-hi); }
+.cs.pg-dark .ld-footer a:hover { color: var(--ld-cream); }
 :where(.cs) button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
 .cs-dots {
   position: absolute; left: 0; right: 0; top: 0; height: 900px; pointer-events: none;
@@ -425,9 +428,10 @@
 .cs-video__tag span:first-child { color: var(--cs-gh); }
 .cs-video figcaption { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; font: 400 13.5px / 1.5 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: var(--cs-mute); margin: 0; }
 .cs-video figcaption span:first-child { font: 500 11px var(--cs-mono); color: var(--cs-g); }
-.cs-ai { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: baseline; padding: 16px 18px; border: 1px dashed oklch(0.95 0.032 120 / 0.25); }
-.cs-ai span:first-child { font: 500 11px var(--cs-mono); color: var(--cs-v); }
-.cs-ai span:last-child { font: 400 14px / 1.6 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: var(--cs-mute); }
+/* 配色 v2：AI 披露席位是浅紫色面 + 墨字（原为虚线框）——紫色面只给「实验 / 进行中」，这里是待作者填写的席位 */
+.cs-ai { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: baseline; padding: 18px 20px; background: oklch(0.925 0.022 290); color: oklch(0.235 0.025 215); }
+.cs-ai span:first-child { font: 500 11px var(--cs-mono); color: oklch(0.42 0.09 282); }
+.cs-ai span:last-child { font: 400 14px / 1.6 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: oklch(0.3 0.03 240); }
 .cs-next { position: relative; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px 32px; padding: 22px 0 8px; margin-top: 24px; }
 .cs-next::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--cs-v); }
 .cs-next > span:first-child { display: flex; flex-direction: column; gap: 10px; }

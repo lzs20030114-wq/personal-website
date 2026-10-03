@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;background:oklch(0.96 0.004 210)}
+body{color:oklch(0.27 0.035 215);font-family:Archivo,'PingFang SC',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:oklch(0.5 0.095 182);text-decoration:none}a:hover{color:oklch(0.27 0.035 215)}
+</style>
+</helmet>
+<section id="2" data-screen-label="Tonal layers" style="padding:56px 56px 72px;display:flex;flex-direction:column;gap:40px;border-bottom:1px solid oklch(0.235 0.025 215 / .12)">
+  <header style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px 48px;max-width:1840px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="display:flex;gap:10px;align-items:center;font:500 12px 'JetBrains Mono',monospace;color:oklch(0.42 0.088 178)"><a href="#2" style="padding:3px 8px;background:oklch(0.42 0.088 178);color:oklch(0.965 0.01 115)">2</a>TONAL LAYERS · 沿用现有配色</span>
+      <h1 style="margin:0;font:500 44px/1.05 Archivo;letter-spacing:-.03em">补上中间层：黑白之间的 7 级色面</h1>
+    </div>
+    <p style="margin:0;max-width:640px;font:400 15px/1.6 Archivo;color:oklch(0.43 0.013 192);text-wrap:pretty">问题不在颜色本身，而在用法：现在的青、青柠、紫几乎只出现在<b style="font-weight:600;color:oklch(0.235 0.025 215)">文字</b>上，大面积的背景只有纸白（L .965）和墨黑（L .19–.235）两档。方案：色相全部沿用，只在两者之间补上带色的<b style="font-weight:600;color:oklch(0.235 0.025 215)">背景层</b>，文字仍然只用墨色或纸色。</p>
+  </header>
+
+  <!-- diagnosis + ladder -->
+  <div style="display:grid;grid-template-columns:minmax(0,1fr);gap:14px;max-width:1840px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;font:500 12px 'JetBrains Mono',monospace;color:oklch(0.51 0.014 180)"><span>明度分布 · 现在用到的背景</span><span>L 0 ←→ 1</span></div>
+    <div style="position:relative;height:44px;background:linear-gradient(90deg,oklch(0.15 0.03 220),oklch(0.42 0.088 178) 40%,oklch(0.88 0.04 158) 85%,oklch(0.97 0.01 115));opacity:.18"></div>
+    <div style="position:relative;height:0">
+      <span style="position:absolute;left:19%;top:-44px;width:2px;height:44px;background:oklch(0.235 0.025 215)"></span>
+      <span style="position:absolute;left:23.5%;top:-44px;width:2px;height:44px;background:oklch(0.235 0.025 215)"></span>
+      <span style="position:absolute;left:96.5%;top:-44px;width:2px;height:44px;background:oklch(0.235 0.025 215)"></span>
+      <span style="position:absolute;left:26%;right:5%;top:-30px;display:flex;justify-content:center;font:500 12px 'JetBrains Mono',monospace;color:oklch(0.235 0.025 215)">— L .24 到 .96 之间没有任何背景面 —</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;margin-top:22px">
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:120px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;background:oklch(0.965 0.01 115);box-shadow:inset 0 0 0 1px oklch(0.235 0.025 215 / .1);color:oklch(0.235 0.025 215);font:500 13px Archivo"><span>S0 纸 Paper</span><span style="font:400 11px 'JetBrains Mono',monospace;color:oklch(0.51 0.014 180)">现有 · 主底</span></div><span style="font:400 10.5px/1.4 'JetBrains Mono',monospace;color:oklch(0.43 0.013 192)">.965 .010 115<br>墨字 15:1</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:120px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;background:oklch(0.935 0.02 150);color:oklch(0.235 0.025 215);font:500 13px Archivo"><span>S1 雾 Mist</span><span style="font:400 11px 'JetBrains Mono',monospace;color:oklch(0.43 0.013 192)">新 · 卡片 / 面板</span></div><span style="font:400 10.5px/1.4 'JetBrains Mono',monospace;color:oklch(0.43 0.013 192)">.935 .020 150<br>墨字 14:1</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:120px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;background:oklch(0.88 0.042 158);color:oklch(0.235 0.025 215);font:500 13px Archivo"><span>S2 苔 Sage</span><span style="font:400 11px 'JetBrains Mono',monospace;color:oklch(0.35 0.018 200)">新 · 整段色带</span></div><span style="font:400 10.5px/1.4 'JetBrains Mono',monospace;color:oklch(0.43 0.013 192)">.880 .042 158<br>墨字 11:1</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:120px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;background:oklch(0.9 0.075 128);color:oklch(0.235 0.025 215);font:500 13px Archivo"><span>S2′ 柠 Lime wash</span><span style="font:400 11px 'JetBrains Mono',monospace;color:oklch(0.35 0.018 200)">新 · 强调面 ≤1/页</span></div><span style="font:400 10.5px/1.4 'JetBrains Mono',monospace;color:oklch(0.43 0.013 192)">.900 .075 128<br>墨字 12:1</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:120px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;background:oklch(0.91 0.035 290);color:oklch(0.235 0.025 215);font:500 13px Archivo"><span>S2″ 紫雾 Lilac</span><span style="font:400 11px 'JetBrains Mono',monospace;color:oklch(0.42 0.09 282)">新 · Lab / 实验标识</span></div><span style="font:400 10.5px/1.4 'JetBrains Mono',monospace;color:oklch(0.43 0.013 192)">.910 .035 290<br>墨字 12:1 · 紫字 6:1</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:120px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;background:oklch(0.68 0.08 172);color:oklch(0.235 0.025 215);font:500 13px Archivo"><span>S3 青 Teal mid</span><span style="font:400 11px 'JetBrains Mono',monospace;color:oklch(0.27 0.04 200)">新 · 仅墨字</span></div><span style="font:400 10.5px/1.4 'JetBrains Mono',monospace;color:oklch(0.43 0.013 192)">.680 .080 172<br>墨字 5.8:1</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:120px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;background:oklch(0.42 0.088 178);color:oklch(0.965 0.01 115);font:500 13px Archivo"><span>S4 主青 Teal</span><span style="font:400 11px 'JetBrains Mono',monospace;color:oklch(0.86 0.04 160)">现有色 · 首次作面</span></div><span style="font:400 10.5px/1.4 'JetBrains Mono',monospace;color:oklch(0.43 0.013 192)">.420 .088 178<br>纸字 7.7:1</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:120px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;background:oklch(0.3 0.062 196);color:oklch(0.965 0.01 115);font:500 13px Archivo"><span>S5 深潭 Deep</span><span style="font:400 11px 'JetBrains Mono',monospace;color:oklch(0.78 0.035 162)">现有色 · 扩大用</span></div><span style="font:400 10.5px/1.4 'JetBrains Mono',monospace;color:oklch(0.43 0.013 192)">.300 .062 196<br>纸字 12:1</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:120px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;background:oklch(0.235 0.025 215);color:oklch(0.965 0.01 115);font:500 13px Archivo"><span>S6 墨 Ink</span><span style="font:400 11px 'JetBrains Mono',monospace;color:oklch(0.72 0.012 150)">现有</span></div><span style="font:400 10.5px/1.4 'JetBrains Mono',monospace;color:oklch(0.43 0.013 192)">.235 .025 215<br>纸字 15:1</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="height:120px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;background:oklch(0.19 0.032 228);color:oklch(0.95 0.032 120);font:500 13px Archivo"><span>S7 夜 Night</span><span style="font:400 11px 'JetBrains Mono',monospace;color:oklch(0.7 0.03 168)">现有 · 案例页底</span></div><span style="font:400 10.5px/1.4 'JetBrains Mono',monospace;color:oklch(0.43 0.013 192)">.190 .032 228<br>纸字 16:1</span></div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px 28px;font:400 12px 'JetBrains Mono',monospace;color:oklch(0.43 0.013 192)">
+      <span style="display:flex;gap:8px;align-items:center"><span style="width:14px;height:14px;background:oklch(0.42 0.09 282)"></span>紫 .42 .090 282 — 浅底上的紫字 / 圆点</span><span style="display:flex;gap:8px;align-items:center"><span style="width:14px;height:14px;background:oklch(0.72 0.095 291)"></span>亮紫 .72 .095 291 — 暗底上的标签字（夜色上 7:1）</span>
+      <span style="display:flex;gap:8px;align-items:center"><span style="width:14px;height:14px;background:oklch(0.83 0.082 132)"></span>青柠 .83 .082 132 保持现状，只做按钮 / 标签</span>
+    </div>
+  </div>
+
+  <!-- applied: home -->
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+    <div style="width:520px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;gap:10px;align-items:baseline"><span style="font:500 12px 'JetBrains Mono',monospace;color:oklch(0.51 0.014 180)">首页 · 现在</span><span style="font:400 13px Archivo;color:oklch(0.43 0.013 192)">白 → 白 → 白 → 黑</span></div>
+      <div style="display:flex;flex-direction:column;box-shadow:0 0 0 1px oklch(0.235 0.025 215 / .1)">
+        <div style="background:oklch(0.965 0.01 115);color:oklch(0.235 0.025 215);padding:0 24px 28px;display:flex;flex-direction:column;gap:18px"><div style="height:44px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid oklch(0.235 0.025 215 / .12);font:500 12px Archivo"><span style="font-weight:600">Zishuo Li</span><span style="display:flex;gap:14px;color:oklch(0.51 0.014 180)"><span>Work</span><span>About</span><span>Lab</span><span>Log</span></span></div><h3 style="margin:0;font:500 30px/1 Archivo;letter-spacing:-.04em">Machines that read<br>and respond to bodies.</h3></div>
+        <div style="background:oklch(0.965 0.01 115);color:oklch(0.235 0.025 215);padding:20px 24px;display:grid;grid-template-columns:1fr 1fr;gap:10px;border-top:1px solid oklch(0.235 0.025 215 / .08)"><div style="height:96px;box-shadow:inset 0 0 0 1px oklch(0.235 0.025 215 / .12);padding:10px;font:500 12px Archivo">01 Reincarnation Machine</div><div style="height:96px;box-shadow:inset 0 0 0 1px oklch(0.235 0.025 215 / .12);padding:10px;font:500 12px Archivo">02 Skin Units</div></div>
+        <div style="background:oklch(0.965 0.01 115);color:oklch(0.235 0.025 215);padding:20px 24px;font:400 13px/1.5 Archivo;border-top:1px solid oklch(0.235 0.025 215 / .08)"><span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.51 0.014 180)">ABOUT</span><p style="margin:6px 0 0">Designer working between architecture, robotics and interaction.</p></div>
+        <div style="background:oklch(0.965 0.01 115);color:oklch(0.235 0.025 215);padding:20px 24px;font:400 13px/1.5 Archivo;border-top:1px solid oklch(0.235 0.025 215 / .08)"><span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.42 0.088 178)">LAB</span><p style="margin:6px 0 0">Live solvers and simulations from the studio.</p></div>
+        <div style="background:oklch(0.235 0.025 215);color:oklch(0.95 0.032 120);padding:24px;display:flex;justify-content:space-between;font:500 12px Archivo"><span>Say hello →</span><span style="color:oklch(0.72 0.012 150)">© 2026</span></div>
+      </div>
+    </div>
+
+    <div style="width:520px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;gap:10px;align-items:baseline"><span style="font:500 12px 'JetBrains Mono',monospace;color:oklch(0.42 0.088 178)">首页 · 加中间层</span><span style="font:400 13px Archivo;color:oklch(0.43 0.013 192)">纸 → 雾 → 苔 → 主青 → 墨，紫点缀实验内容</span></div>
+      <div style="display:flex;flex-direction:column;box-shadow:0 0 0 1px oklch(0.235 0.025 215 / .1)">
+        <div style="background:oklch(0.965 0.01 115);color:oklch(0.235 0.025 215);padding:0 24px 28px;display:flex;flex-direction:column;gap:18px"><div style="height:44px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid oklch(0.235 0.025 215 / .12);font:500 12px Archivo"><span style="font-weight:600">Zishuo Li</span><span style="display:flex;gap:14px;color:oklch(0.51 0.014 180)"><span>Work</span><span>About</span><span>Lab</span><span>Log</span></span></div><h3 style="margin:0;font:500 30px/1 Archivo;letter-spacing:-.04em">Machines that read<br>and respond to bodies.</h3><span style="align-self:flex-start;display:flex;gap:7px;align-items:center;padding:5px 10px 5px 8px;background:oklch(0.91 0.035 290);color:oklch(0.42 0.09 282);font:500 11px 'JetBrains Mono',monospace"><span style="width:6px;height:6px;border-radius:50%;background:oklch(0.42 0.09 282)"></span>Now: tentacle solver v3</span></div>
+        <div style="background:oklch(0.965 0.01 115);color:oklch(0.235 0.025 215);padding:4px 24px 24px;display:grid;grid-template-columns:1fr 1fr;gap:10px"><div style="height:96px;background:oklch(0.935 0.02 150);padding:10px;font:500 12px Archivo">01 Reincarnation Machine</div><div style="height:96px;background:oklch(0.935 0.02 150);padding:10px;font:500 12px Archivo">02 Skin Units</div></div>
+        <div style="background:oklch(0.88 0.042 158);color:oklch(0.235 0.025 215);padding:20px 24px;font:400 13px/1.5 Archivo"><span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.35 0.018 200)">ABOUT</span><p style="margin:6px 0 0">Designer working between architecture, robotics and interaction.</p></div>
+        <div style="background:oklch(0.42 0.088 178);color:oklch(0.965 0.01 115);padding:20px 24px;font:400 13px/1.5 Archivo;display:flex;justify-content:space-between;align-items:flex-end;gap:16px"><div><span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.86 0.04 160)">LAB</span><p style="margin:6px 0 0">Live solvers and simulations from the studio.</p></div><span style="flex:none;display:flex;gap:6px"><span style="padding:6px 10px;background:oklch(0.91 0.035 290);color:oklch(0.42 0.09 282);font:500 11px 'JetBrains Mono',monospace">Live</span><span style="padding:6px 10px;background:oklch(0.83 0.082 132);color:oklch(0.235 0.025 215);font:500 11px 'JetBrains Mono',monospace">Open →</span></span></div>
+        <div style="background:oklch(0.235 0.025 215);color:oklch(0.95 0.032 120);padding:24px;display:flex;justify-content:space-between;font:500 12px Archivo"><span>Say hello →</span><span style="color:oklch(0.72 0.012 150)">© 2026</span></div>
+      </div>
+    </div>
+
+    <!-- applied: case -->
+    <div style="width:520px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;gap:10px;align-items:baseline"><span style="font:500 12px 'JetBrains Mono',monospace;color:oklch(0.51 0.014 180)">案例页 · 现在</span><span style="font:400 13px Archivo;color:oklch(0.43 0.013 192)">夜色从头铺到尾</span></div>
+      <div style="display:flex;flex-direction:column;background:oklch(0.19 0.032 228);color:oklch(0.95 0.032 120)">
+        <div style="padding:28px 24px;display:flex;flex-direction:column;gap:8px"><span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.74 0.1 150)">CASE 01</span><h3 style="margin:0;font:500 30px/1 Archivo;letter-spacing:-.04em">Reincarnation Machine</h3></div>
+        <div style="padding:20px 24px;border-top:1px solid oklch(0.95 0.032 120 / .08);font:400 13px/1.5 Archivo"><span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.74 0.1 150)">02 · HOW IT WORKS</span><p style="margin:6px 0 0;color:oklch(0.7 0.03 168)">Three seconds of your face become one of 4,096 possible lives.</p></div>
+        <div style="padding:20px 24px;border-top:1px solid oklch(0.95 0.032 120 / .08);display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font:400 12px Archivo;color:oklch(0.7 0.03 168)"><span>Camera</span><span>Solver</span><span>Printer</span></div>
+        <div style="padding:20px 24px;border-top:1px solid oklch(0.95 0.032 120 / .08);font:400 13px/1.5 Archivo"><span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.74 0.1 150)">04 · BUILD LOG</span><p style="margin:6px 0 0;color:oklch(0.7 0.03 168)">Arch ring, chassis truss, tentacle tests.</p></div>
+        <div style="padding:20px 24px;border-top:1px solid oklch(0.95 0.032 120 / .08);font:500 12px Archivo">Next: Skin Units →</div>
+      </div>
+    </div>
+
+    <div style="width:520px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;gap:10px;align-items:baseline"><span style="font:500 12px 'JetBrains Mono',monospace;color:oklch(0.42 0.088 178)">案例页 · 加中间层</span><span style="font:400 13px Archivo;color:oklch(0.43 0.013 192)">夜 → 深潭 → 雾（换气）→ 夜 → 主青</span></div>
+      <div style="display:flex;flex-direction:column">
+        <div style="background:oklch(0.19 0.032 228);color:oklch(0.95 0.032 120);padding:28px 24px;display:flex;flex-direction:column;gap:8px"><span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.74 0.1 150)">CASE 01</span><h3 style="margin:0;font:500 30px/1 Archivo;letter-spacing:-.04em">Reincarnation Machine</h3></div>
+        <div style="background:oklch(0.3 0.062 196);color:oklch(0.965 0.01 115);padding:20px 24px;font:400 13px/1.5 Archivo"><span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.86 0.08 130)">02 · HOW IT WORKS</span><p style="margin:6px 0 0;color:oklch(0.86 0.04 160)">Three seconds of your face become one of 4,096 possible lives.</p></div>
+        <div style="background:oklch(0.935 0.02 150);color:oklch(0.235 0.025 215);padding:20px 24px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font:500 12px Archivo"><span style="padding:10px;background:oklch(0.965 0.01 115)">Camera</span><span style="padding:10px;background:oklch(0.91 0.035 290);color:oklch(0.42 0.09 282)">Solver · Lab</span><span style="padding:10px;background:oklch(0.965 0.01 115)">Printer</span></div>
+        <div style="background:oklch(0.19 0.032 228);color:oklch(0.95 0.032 120);padding:20px 24px;font:400 13px/1.5 Archivo"><span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.72 0.095 291)">04 · BUILD LOG</span><p style="margin:6px 0 0;color:oklch(0.7 0.03 168)">Arch ring, chassis truss, tentacle tests.</p></div>
+        <div style="background:oklch(0.42 0.088 178);color:oklch(0.965 0.01 115);padding:20px 24px;font:500 12px Archivo">Next: Skin Units →</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- rules -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:28px;max-width:1840px;padding-top:28px;border-top:1px solid oklch(0.235 0.025 215 / .12)">
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font:500 12px 'JetBrains Mono',monospace;color:oklch(0.42 0.088 178)">01 · 颜色给面，不给字</span><p style="margin:0;font:400 14px/1.6 Archivo;color:oklch(0.43 0.013 192);text-wrap:pretty">正文只用墨 / 纸两色。青、青柠只在标签、按钮和整块背景上出现。</p></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font:500 12px 'JetBrains Mono',monospace;color:oklch(0.42 0.088 178)">02 · 相邻不跳两级以上</span><p style="margin:0;font:400 14px/1.6 Archivo;color:oklch(0.43 0.013 192);text-wrap:pretty">纸 → 雾 → 苔 → 主青 → 墨，一级一级过渡，不再从白直接跳到黑。</p></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font:500 12px 'JetBrains Mono',monospace;color:oklch(0.42 0.088 178)">03 · 一屏最多一块饱和面</span><p style="margin:0;font:400 14px/1.6 Archivo;color:oklch(0.43 0.013 192);text-wrap:pretty">主青和青柠面每屏最多出现一次；雾和苔可以多用，因为它们够安静。紫色只表示“实验 / 进行中”（Lab、Live、Now、Build log），不用作装饰。</p></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font:500 12px 'JetBrains Mono',monospace;color:oklch(0.42 0.088 178)">04 · 比例约 6 : 2.5 : 1 : 0.5</span><p style="margin:0;font:400 14px/1.6 Archivo;color:oklch(0.43 0.013 192);text-wrap:pretty">纸 / 浅中间层（雾、苔） / 深色面（主青、深潭、墨） / 强调色（青柠、紫）。</p></div>
+  </div>
+</section>
+<section data-screen-label="Palette study" style="padding:56px 56px 80px;display:flex;flex-direction:column;gap:36px">
+  <header style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px 48px;max-width:2560px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font:500 12px 'JetBrains Mono',monospace;color:oklch(0.5 0.095 182)">11 · PALETTE STUDY</span>
+      <h1 style="margin:0;font:500 44px/1 Archivo;letter-spacing:-.03em">配色重设计 — 清亮 · 透气 · 灵动</h1>
+    </div>
+    <p style="margin:0;max-width:620px;font:400 15px/1.6 Archivo;color:oklch(0.45 0.02 210);text-wrap:pretty">色相不动（青绿 178–230 为主，青柠 125 点亮，紫 290 少量点缀）。变的是明度与纯度：底色去掉偏黄的灰，白更冷更净；主色提亮提纯；暗色页去掉三色泥状渐变。每列上半为浅色页（首页 / Lab），下半为暗色页（案例）。</p>
+  </header>
+
+  <div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start">
+
+    <!-- CURRENT -->
+    <div id="0" style="width:560px;display:flex;flex-direction:column;gap:14px;opacity:.92">
+      <div style="display:flex;align-items:center;gap:10px"><span style="font:500 12px 'JetBrains Mono',monospace;padding:3px 8px;background:oklch(0.5 0.01 210);color:#fff">当前</span><span style="font:500 17px Archivo">Current</span><span style="font:400 13px Archivo;color:oklch(0.5 0.02 210)">偏黄的米灰底 · 深暗青 · 三色暗渐变</span></div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+        <div style="height:40px;background:oklch(0.965 0.01 115);box-shadow:inset 0 0 0 1px oklch(0 0 0 / .08)"></div>
+        <div style="height:40px;background:oklch(0.235 0.025 215)"></div>
+        <div style="height:40px;background:oklch(0.51 0.014 180)"></div>
+        <div style="height:40px;background:oklch(0.42 0.088 178)"></div>
+        <div style="height:40px;background:oklch(0.83 0.082 132)"></div>
+        <div style="height:40px;background:oklch(0.42 0.09 282)"></div>
+        <div style="height:40px;background:linear-gradient(160deg,oklch(0.235 0.045 200),oklch(0.2 0.038 232),oklch(0.215 0.045 282))"></div>
+      </div>
+      <div style="background:oklch(0.965 0.01 115);color:oklch(0.235 0.025 215);padding:0 28px 28px;display:flex;flex-direction:column;gap:18px;box-shadow:0 1px 0 oklch(0 0 0 / .06)">
+        <div style="height:52px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid oklch(0.235 0.025 215 / .12);font:500 13px Archivo"><span style="font-weight:600">Zishuo Li</span><span style="display:flex;gap:18px;color:oklch(0.51 0.014 180)"><span style="color:oklch(0.235 0.025 215);box-shadow:0 1.5px 0 oklch(0.42 0.088 178)">Work</span><span>About</span><span>Lab</span><span>Log</span></span></div>
+        <div style="display:flex;justify-content:space-between;font:400 11px 'JetBrains Mono',monospace;color:oklch(0.51 0.014 180)"><span style="color:oklch(0.42 0.088 178)">← All work</span><span>CASE 01 · 2025</span></div>
+        <h2 style="margin:0;font:500 50px/.94 Archivo;letter-spacing:-.05em">Reincarnation Machine</h2>
+        <p style="margin:0;font:400 15px/1.55 Archivo;color:oklch(0.43 0.013 192)">A coin-operated installation that reads your face and prints the creature you'll come back as.</p>
+        <div style="position:relative;height:170px;background:oklch(0.9 0.02 150);overflow:hidden"><div style="position:absolute;inset:0;background:url(img/machine-0813a.webp) center 30%/cover;mix-blend-mode:multiply;opacity:.8"></div><span style="position:absolute;left:0;right:0;top:0;height:2px;background:oklch(0.42 0.088 178)"></span></div>
+        <div style="display:flex;gap:8px;font:500 11px 'JetBrains Mono',monospace"><span style="padding:5px 9px;background:oklch(0.83 0.082 132)">Generative</span><span style="padding:5px 9px;box-shadow:inset 0 0 0 1px oklch(0.235 0.025 215 / .25)">Installation</span><span style="padding:5px 9px;box-shadow:inset 0 0 0 1px oklch(0.235 0.025 215 / .25)">Real-time</span></div>
+      </div>
+      <div style="background:linear-gradient(160deg,oklch(0.235 0.045 200),oklch(0.2 0.038 232) 50%,oklch(0.215 0.045 282));color:oklch(0.95 0.032 120);padding:26px 28px;display:flex;flex-direction:column;gap:14px">
+        <span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.74 0.1 150)">02 · HOW IT WORKS</span>
+        <p style="margin:0;font:400 22px/1.3 Archivo;letter-spacing:-.02em">Three seconds of your face become one of 4,096 possible lives.</p>
+        <p style="margin:0;font:400 14px/1.55 Archivo;color:oklch(0.7 0.03 168)">The camera never stores an image — only twelve numbers.</p>
+        <div style="display:flex;gap:16px;align-items:center;font:500 12px 'JetBrains Mono',monospace"><span style="padding:8px 13px;background:oklch(0.95 0.032 120);color:oklch(0.19 0.032 228)">Open in Lab →</span><span style="color:oklch(0.9 0.058 124)">Watch video</span></div>
+      </div>
+    </div>
+
+    <!-- 1a MINT MORNING -->
+    <div id="1a" style="width:560px;display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:10px"><a href="#1a" style="font:500 12px 'JetBrains Mono',monospace;padding:3px 8px;background:oklch(0.6 0.105 180);color:#fff">1a</a><span style="font:500 17px Archivo">薄荷晨光 Mint Morning</span><span style="font:400 13px Archivo;color:oklch(0.5 0.02 210)">最贴近现状，只做“洗净”</span></div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font:400 9.5px/1.35 'JetBrains Mono',monospace;color:oklch(0.45 0.02 210)">
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:oklch(0.988 0.006 175);box-shadow:inset 0 0 0 1px oklch(0 0 0 / .08)"></div><span>底 Paper<br>.988 .006 175</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:oklch(0.27 0.035 215)"></div><span>墨 Ink<br>.27 .035 215</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:oklch(0.52 0.022 205)"></div><span>辅 Muted<br>.52 .022 205</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:oklch(0.6 0.105 180)"></div><span>主 Teal<br>.60 .105 180</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:oklch(0.93 0.12 125)"></div><span>亮 Lime<br>.93 .12 125</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:oklch(0.64 0.12 290)"></div><span>点 Violet<br>.64 .12 290</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:oklch(0.23 0.035 210)"></div><span>夜 Night<br>.23 .035 210</span></div>
+      </div>
+      <div style="background:oklch(0.988 0.006 175);color:oklch(0.27 0.035 215);padding:0 28px 28px;display:flex;flex-direction:column;gap:18px;box-shadow:0 1px 0 oklch(0 0 0 / .05)">
+        <div style="height:52px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid oklch(0.89 0.02 185);font:500 13px Archivo"><span style="font-weight:600">Zishuo Li</span><span style="display:flex;gap:18px;color:oklch(0.52 0.022 205)"><span style="color:oklch(0.27 0.035 215);box-shadow:0 1.5px 0 oklch(0.6 0.105 180)">Work</span><span>About</span><span>Lab</span><span>Log</span></span></div>
+        <div style="display:flex;justify-content:space-between;font:400 11px 'JetBrains Mono',monospace;color:oklch(0.52 0.022 205)"><span style="color:oklch(0.5 0.095 182)">← All work</span><span style="display:flex;gap:7px;align-items:center">CASE 01 · 2025<span style="width:6px;height:6px;border-radius:50%;background:oklch(0.6 0.105 180);box-shadow:0 0 0 3px oklch(0.93 0.12 125)"></span></span></div>
+        <h2 style="margin:0;font:500 50px/.94 Archivo;letter-spacing:-.05em">Reincarnation <span style="background:linear-gradient(transparent 62%,oklch(0.93 0.12 125) 62%)">Machine</span></h2>
+        <p style="margin:0;font:400 15px/1.55 Archivo;color:oklch(0.45 0.025 210)">A coin-operated installation that reads your face and prints the creature you'll come back as.</p>
+        <div style="position:relative;height:170px;background:linear-gradient(135deg,oklch(0.93 0.05 175),oklch(0.95 0.03 215));overflow:hidden"><div style="position:absolute;inset:0;background:url(img/machine-0813a.webp) center 30%/cover;mix-blend-mode:multiply;opacity:.88"></div><span style="position:absolute;left:0;right:0;top:0;height:2px;background:oklch(0.6 0.105 180)"></span></div>
+        <div style="display:flex;gap:8px;font:500 11px 'JetBrains Mono',monospace"><span style="padding:5px 9px;background:oklch(0.93 0.12 125)">Generative</span><span style="padding:5px 9px;background:oklch(0.962 0.016 178);color:oklch(0.42 0.06 190)">Installation</span><span style="padding:5px 9px;background:oklch(0.962 0.016 178);color:oklch(0.42 0.06 190)">Real-time</span></div>
+      </div>
+      <div style="background:oklch(0.23 0.035 210);color:oklch(0.975 0.006 180);padding:26px 28px;display:flex;flex-direction:column;gap:14px">
+        <span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.84 0.11 175)">02 · HOW IT WORKS</span>
+        <p style="margin:0;font:400 22px/1.3 Archivo;letter-spacing:-.02em">Three seconds of your face become one of 4,096 possible lives.</p>
+        <p style="margin:0;font:400 14px/1.55 Archivo;color:oklch(0.78 0.025 195)">The camera never stores an image — only twelve numbers.</p>
+        <div style="display:flex;gap:16px;align-items:center;font:500 12px 'JetBrains Mono',monospace"><span style="padding:8px 13px;background:oklch(0.93 0.12 125);color:oklch(0.23 0.035 210)">Open in Lab →</span><span style="color:oklch(0.84 0.11 175)">Watch video</span></div>
+      </div>
+      <p style="margin:0;font:400 13px/1.6 Archivo;color:oklch(0.45 0.02 210);text-wrap:pretty">底色从黄米灰换成带一丝薄荷的冷白；主青提亮 0.42→0.60；青柠只作“荧光笔”出现（下划高亮、圆点光环、主按钮）。暗色页改为单色平涂，不再三色渐变。</p>
+    </div>
+
+    <!-- 1b AQUA AIR -->
+    <div id="1b" style="width:560px;display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:10px"><a href="#1b" style="font:500 12px 'JetBrains Mono',monospace;padding:3px 8px;background:oklch(0.6 0.12 222);color:#fff">1b</a><span style="font:500 17px Archivo">水色 Aqua Air</span><span style="font:400 13px Archivo;color:oklch(0.5 0.02 210)">偏蓝一点，更“空气感”</span></div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font:400 9.5px/1.35 'JetBrains Mono',monospace;color:oklch(0.45 0.02 210)">
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:oklch(0.978 0.01 215);box-shadow:inset 0 0 0 1px oklch(0 0 0 / .08)"></div><span>底 Sky<br>.978 .010 215</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:oklch(0.29 0.05 238)"></div><span>墨 Ink<br>.29 .050 238</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:oklch(0.53 0.03 230)"></div><span>辅 Muted<br>.53 .030 230</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:oklch(0.62 0.12 215)"></div><span>主 Aqua<br>.62 .120 215</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:oklch(0.91 0.14 128)"></div><span>亮 Lime<br>.91 .140 128</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:oklch(0.7 0.11 292)"></div><span>点 Lilac<br>.70 .110 292</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:oklch(0.26 0.055 245)"></div><span>夜 Night<br>.26 .055 245</span></div>
+      </div>
+      <div style="background:oklch(0.978 0.01 215);color:oklch(0.29 0.05 238);padding:0 28px 28px;display:flex;flex-direction:column;gap:18px;box-shadow:0 1px 0 oklch(0 0 0 / .05)">
+        <div style="height:52px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid oklch(0.9 0.02 220);font:500 13px Archivo"><span style="font-weight:600">Zishuo Li</span><span style="display:flex;gap:18px;color:oklch(0.53 0.03 230)"><span style="color:oklch(0.29 0.05 238);box-shadow:0 1.5px 0 oklch(0.62 0.12 215)">Work</span><span>About</span><span>Lab</span><span>Log</span></span></div>
+        <div style="display:flex;justify-content:space-between;font:400 11px 'JetBrains Mono',monospace;color:oklch(0.53 0.03 230)"><span style="color:oklch(0.5 0.11 225)">← All work</span><span style="display:flex;gap:7px;align-items:center">CASE 01 · 2025<span style="width:6px;height:6px;border-radius:50%;background:oklch(0.91 0.14 128);box-shadow:0 0 0 1px oklch(0.29 0.05 238 / .3)"></span></span></div>
+        <h2 style="margin:0;font:500 50px/.94 Archivo;letter-spacing:-.05em">Reincarnation Machine</h2>
+        <p style="margin:0;font:400 15px/1.55 Archivo;color:oklch(0.46 0.035 232)">A coin-operated installation that reads your face and prints the creature you'll come back as.</p>
+        <div style="position:relative;height:170px;background:linear-gradient(120deg,oklch(0.93 0.045 205),oklch(0.94 0.04 280));overflow:hidden"><div style="position:absolute;inset:0;background:url(img/machine-0813a.webp) center 30%/cover;mix-blend-mode:multiply;opacity:.85"></div><span style="position:absolute;left:0;top:0;height:2px;width:38%;background:oklch(0.62 0.12 215)"></span><span style="position:absolute;left:38%;top:0;height:2px;width:14%;background:oklch(0.91 0.14 128)"></span></div>
+        <div style="display:flex;gap:8px;font:500 11px 'JetBrains Mono',monospace"><span style="padding:5px 9px;border-radius:99px;background:oklch(0.91 0.14 128)">Generative</span><span style="padding:5px 9px;border-radius:99px;background:oklch(0.997 0.002 215);box-shadow:inset 0 0 0 1px oklch(0.9 0.02 220)">Installation</span><span style="padding:5px 9px;border-radius:99px;background:oklch(0.997 0.002 215);box-shadow:inset 0 0 0 1px oklch(0.9 0.02 220)">Real-time</span></div>
+      </div>
+      <div style="background:oklch(0.26 0.055 245);color:oklch(0.98 0.006 220);padding:26px 28px;display:flex;flex-direction:column;gap:14px">
+        <span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.82 0.1 210)">02 · HOW IT WORKS</span>
+        <p style="margin:0;font:400 22px/1.3 Archivo;letter-spacing:-.02em">Three seconds of your face become one of 4,096 possible lives.</p>
+        <p style="margin:0;font:400 14px/1.55 Archivo;color:oklch(0.8 0.03 230)">The camera never stores an image — only twelve numbers.</p>
+        <div style="display:flex;gap:16px;align-items:center;font:500 12px 'JetBrains Mono',monospace"><span style="padding:8px 13px;border-radius:99px;background:oklch(0.91 0.14 128);color:oklch(0.26 0.055 245)">Open in Lab →</span><span style="color:oklch(0.85 0.08 292)">Watch video</span></div>
+      </div>
+      <p style="margin:0;font:400 13px/1.6 Archivo;color:oklch(0.45 0.02 210);text-wrap:pretty">主色往蓝侧移 178→215（仍在原青蓝区间内），底是极淡天空色，卡片用纯白浮起。青柠+淡紫成对出现，更活泼；胶囊形标签/按钮增加灵动感。暗色页为清透靛蓝。</p>
+    </div>
+
+    <!-- 1c CLEAR POOL -->
+    <div id="1c" style="width:560px;display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:10px"><a href="#1c" style="font:500 12px 'JetBrains Mono',monospace;padding:3px 8px;background:oklch(0.56 0.1 188);color:#fff">1c</a><span style="font:500 17px Archivo">清潭 Clear Pool</span><span style="font:400 13px Archivo;color:oklch(0.5 0.02 210)">保留三色渐变，但改成“水彩”</span></div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font:400 9.5px/1.35 'JetBrains Mono',monospace;color:oklch(0.45 0.02 210)">
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:oklch(0.99 0.004 200);box-shadow:inset 0 0 0 1px oklch(0 0 0 / .08)"></div><span>底 White<br>.990 .004 200</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:oklch(0.25 0.04 228)"></div><span>墨 Ink<br>.25 .040 228</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:oklch(0.5 0.025 215)"></div><span>辅 Muted<br>.50 .025 215</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:oklch(0.56 0.1 188)"></div><span>主 Teal<br>.56 .100 188</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:oklch(0.9 0.13 125)"></div><span>亮 Lime<br>.90 .130 125</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:linear-gradient(160deg,oklch(0.95 0.045 185),oklch(0.94 0.035 230),oklch(0.94 0.045 285))"></div><span>雾 Wash<br>185→230→285</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px"><div style="height:40px;background:linear-gradient(160deg,oklch(0.29 0.06 195),oklch(0.26 0.055 232),oklch(0.28 0.06 285))"></div><span>夜 Night<br>L .26–.29</span></div>
+      </div>
+      <div style="background:oklch(0.99 0.004 200);color:oklch(0.25 0.04 228);padding:0 28px 28px;display:flex;flex-direction:column;gap:18px;position:relative;overflow:hidden;box-shadow:0 1px 0 oklch(0 0 0 / .05)">
+        <div aria-hidden="true" style="position:absolute;left:-10%;right:-10%;top:0;height:260px;background:linear-gradient(160deg,oklch(0.95 0.045 185),oklch(0.96 0.03 230) 50%,oklch(0.95 0.04 285));mask-image:linear-gradient(#000 40%,transparent);-webkit-mask-image:linear-gradient(#000 40%,transparent)"></div>
+        <div style="position:relative;height:52px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid oklch(0.25 0.04 228 / .1);font:500 13px Archivo"><span style="font-weight:600">Zishuo Li</span><span style="display:flex;gap:18px;color:oklch(0.5 0.025 215)"><span style="color:oklch(0.25 0.04 228);box-shadow:0 1.5px 0 oklch(0.56 0.1 188)">Work</span><span>About</span><span>Lab</span><span>Log</span></span></div>
+        <div style="position:relative;display:flex;justify-content:space-between;font:400 11px 'JetBrains Mono',monospace;color:oklch(0.5 0.025 215)"><span style="color:oklch(0.48 0.09 190)">← All work</span><span style="display:flex;gap:7px;align-items:center">CASE 01 · 2025<span style="width:6px;height:6px;border-radius:50%;background:oklch(0.6 0.13 288)"></span></span></div>
+        <h2 style="position:relative;margin:0;font:500 50px/.94 Archivo;letter-spacing:-.05em">Reincarnation Machine</h2>
+        <p style="position:relative;margin:0;font:400 15px/1.55 Archivo;color:oklch(0.44 0.03 220)">A coin-operated installation that reads your face and prints the creature you'll come back as.</p>
+        <div style="position:relative;height:170px;background:linear-gradient(160deg,oklch(0.92 0.05 185),oklch(0.92 0.04 232),oklch(0.92 0.05 285));overflow:hidden"><div style="position:absolute;inset:0;background:url(img/machine-0813a.webp) center 30%/cover;mix-blend-mode:multiply;opacity:.85"></div><span style="position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,oklch(0.56 0.1 188),oklch(0.6 0.13 288))"></span></div>
+        <div style="position:relative;display:flex;gap:8px;font:500 11px 'JetBrains Mono',monospace"><span style="padding:5px 9px;background:oklch(0.9 0.13 125)">Generative</span><span style="padding:5px 9px;box-shadow:inset 0 0 0 1px oklch(0.25 0.04 228 / .16)">Installation</span><span style="padding:5px 9px;box-shadow:inset 0 0 0 1px oklch(0.25 0.04 228 / .16)">Real-time</span></div>
+      </div>
+      <div style="background:linear-gradient(160deg,oklch(0.29 0.06 195),oklch(0.26 0.055 232) 50%,oklch(0.28 0.06 285));color:oklch(0.98 0.006 200);padding:26px 28px;display:flex;flex-direction:column;gap:14px">
+        <span style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.86 0.11 180)">02 · HOW IT WORKS</span>
+        <p style="margin:0;font:400 22px/1.3 Archivo;letter-spacing:-.02em">Three seconds of your face become one of 4,096 possible lives.</p>
+        <p style="margin:0;font:400 14px/1.55 Archivo;color:oklch(0.82 0.03 210)">The camera never stores an image — only twelve numbers.</p>
+        <div style="display:flex;gap:16px;align-items:center;font:500 12px 'JetBrains Mono',monospace"><span style="padding:8px 13px;background:oklch(0.98 0.006 200);color:oklch(0.26 0.055 232)">Open in Lab →</span><span style="color:oklch(0.92 0.13 125)">Watch video</span></div>
+      </div>
+      <p style="margin:0;font:400 13px/1.6 Archivo;color:oklch(0.45 0.02 210);text-wrap:pretty">保留现有“青→蓝→紫”的签名渐变，但浅色页里只作顶部一层薄雾，向下淡出到近白。暗色页渐变整体提亮、提纯（L .20→.28），从“泥”变成“宝石”。文字白去掉偏黄。</p>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

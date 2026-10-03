@@ -126,12 +126,12 @@ export function AboutPage() {
           ))}
         </dl>
         <div className="hs-about__body">
-          <p className="hs-eyebrow hs-eyebrow--mint" data-a="up" data-d="0">
+          <p className="hs-eyebrow hs-eyebrow--lime" data-a="up" data-d="0">
             03 — About
           </p>
           <div className="hs-mask">
             <h2 className="hs-h2" data-a="rise" data-d="60">
-              From spaces <span className="hs-accent--mint">to interactions.</span>
+              From spaces <span className="hs-accent--lime">to interactions.</span>
             </h2>
           </div>
           <div className="hs-about__text">

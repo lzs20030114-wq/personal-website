@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;background:oklch(0.19 0.032 228)}
+body{color:oklch(0.95 0.032 120);font-family:Archivo,'PingFang SC',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:oklch(0.74 0.1 150);text-decoration:none}a:hover{color:oklch(0.95 0.032 120)}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+::selection{background:oklch(0.71 0.098 145);color:oklch(0.15 0.03 235)}
+aside::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div ref="{{ rootRef }}" style="position:relative;min-height:100vh;background:oklch(0.19 0.032 228);color:oklch(0.95 0.032 120)">
+  <div aria-hidden="true" style="position:absolute;left:0;right:0;top:0;height:760px;pointer-events:none;background-image:radial-gradient(oklch(0.71 0.098 145) 1px,transparent 1.2px);background-size:6px 6px;opacity:.12;-webkit-mask-image:linear-gradient(115deg,#000 0%,transparent 42%);mask-image:linear-gradient(115deg,#000 0%,transparent 42%)"></div>
+
+  <header style="position:sticky;top:0;z-index:40;height:64px;background:oklch(0.18 0.032 228 / .82);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid oklch(0.95 0.032 120 / {{ barLine }});transition:border-color .3s">
+    <div style="height:100%;max-width:1440px;margin:0 auto;padding:0 clamp(20px,4vw,48px);box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;gap:24px">
+      <button onClick="{{ toHome }}" style="font:600 15px Archivo">Zishuo Li</button>
+      <div style="display:flex;align-items:center;gap:22px"><nav style="display:flex;gap:28px;font:500 13px Archivo">
+        <sc-for list="{{ navs }}" as="v" hint-placeholder-count="4"><button onClick="{{ v.go }}" style="position:relative;padding:5px 0;opacity:{{ v.op }};transition:opacity .3s" style-hover="opacity:1">{{ v.label }}<span style="position:absolute;left:0;right:0;bottom:0;height:1.5px;background:currentColor;transform-origin:0 50%;transform:scaleX({{ v.ul }})"></span></button></sc-for>
+      </nav>
+        <div role="group" aria-label="Language" style="display:flex;align-items:center;padding-left:20px;border-left:1px solid oklch(0.95 0.032 120 / .2)">
+          <sc-for list="{{ langs }}" as="l" hint-placeholder-count="2"><button onClick="{{ l.pick }}" aria-pressed="{{ l.on }}" lang="{{ l.code }}" style="margin-left:-1px;padding:4px 9px;border:1px solid oklch(0.95 0.032 120 / .25);font:500 12px 'JetBrains Mono','PingFang SC',monospace;background:{{ l.bg }};color:{{ l.color }};transition:background .25s,color .25s" style-hover="border-color:oklch(0.95 0.032 120 / .6)">{{ l.label }}</button></sc-for>
+        </div></div>
+    </div>
+  </header>
+
+  <section data-screen-label="Lab · intro" style="position:relative;max-width:1440px;margin:0 auto;padding:72px clamp(20px,4vw,48px) 44px;box-sizing:border-box;background:oklch(0.3 0.032 205);border-image:conic-gradient(oklch(0.3 0.032 205) 0 0) fill 0 // 0 100vmax;">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:40px 64px">
+      <div style="flex:1 1 520px;min-width:0;display:flex;flex-direction:column;gap:20px">
+        <p data-rv style="margin:0;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font:400 12px 'JetBrains Mono',monospace;color:oklch(0.7 0.03 168)"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 8px;background:oklch(0.33 0.045 288);color:oklch(0.88 0.05 295);font:500 11px 'JetBrains Mono',monospace"><span style="width:5px;height:5px;border-radius:50%;background:oklch(0.88 0.05 295)"></span>Live</span>{{ t.meta }}</p>
+        <h1 data-rv style="margin:0;font-weight:500;font-size:clamp(48px,6.4vw,92px);line-height:.96;letter-spacing:-.045em">{{ t.h1 }}<span style="color:oklch(0.74 0.1 150)">{{ t.dot }}</span></h1>
+        <p data-rv style="margin:0;max-width:52ch;font:400 clamp(17px,1.5vw,20px)/1.5 Archivo;color:oklch(0.86 0.04 160);text-wrap:pretty">{{ t.lede }}</p>
+      </div>
+      <dl data-rv style="flex:0 1 380px;margin:0;display:flex;flex-direction:column;border-top:1px solid oklch(0.95 0.032 120 / .2)">
+        <div style="display:grid;grid-template-columns:96px minmax(0,1fr);gap:16px;align-items:baseline;padding:11px 0;border-bottom:1px solid oklch(0.95 0.032 120 / .1)"><dt style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.74 0.1 150)">{{ t.scroll }}</dt><dd style="margin:0;font:400 14px/1.45 Archivo">{{ t.scrollD }}</dd></div>
+        <div style="display:grid;grid-template-columns:96px minmax(0,1fr);gap:16px;align-items:baseline;padding:11px 0;border-bottom:1px solid oklch(0.95 0.032 120 / .1)"><dt style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.74 0.1 150)">{{ t.drag }}</dt><dd style="margin:0;font:400 14px/1.45 Archivo">{{ t.dragD }}</dd></div>
+        <div style="display:grid;grid-template-columns:96px minmax(0,1fr);gap:16px;align-items:baseline;padding:11px 0;border-bottom:1px solid oklch(0.95 0.032 120 / .1)"><dt style="font:500 11px 'JetBrains Mono',monospace;color:oklch(0.74 0.1 150)">{{ t.expand }}</dt><dd style="margin:0;font:400 14px/1.45 Archivo">{{ t.expandD }}</dd></div>
+      </dl>
+    </div>
+    <div data-rv style="margin-top:56px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px">
+      <sc-for list="{{ chips }}" as="c" hint-placeholder-count="3">
+        <button onClick="{{ c.go }}" style="position:relative;display:flex;flex-direction:column;gap:8px;padding:14px 0 4px;opacity:{{ c.op }}" style-hover="opacity:1">
+          <span style="position:absolute;left:0;right:0;top:0;height:2px;background:{{ c.ink }}"></span>
+          <span style="display:flex;justify-content:space-between;gap:12px;font:500 12px 'JetBrains Mono',monospace"><span style="color:{{ c.ink }}">{{ c.n }} · {{ c.kicker }}</span><span style="color:oklch(0.7 0.03 168)">{{ c.count }}</span></span>
+          <span style="font:600 clamp(18px,1.6vw,22px)/1.15 Archivo;letter-spacing:-.018em">{{ c.title }} <span style="color:{{ c.ink }}">↓</span></span>
+        </button>
+      </sc-for>
+    </div>
+  </section>
+
+  <div style="max-width:1440px;margin:0 auto;padding:0 clamp(20px,4vw,48px);box-sizing:border-box;position:relative;display:flex;gap:48px;align-items:flex-start">
+
+    <aside aria-label="Lab index" style="display:{{ idxDisplay }};flex:none;box-sizing:content-box;width:{{ idxW }};margin-left:calc(-12px - clamp(0px,1.8vw,24px));transition:width .55s cubic-bezier(.76,0,.24,1);position:sticky;top:76px;max-height:calc(100vh - 92px);overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding:20px 0 24px 12px">
+      <div style="width:212px;display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 14px">
+        <button onClick="{{ toggleIdx }}" aria-expanded="{{ idxOpen }}" aria-controls="lab-index-list" aria-label="{{ idxBtnLabel }}" title="{{ idxBtnLabel }}" style="display:flex;align-items:center;gap:10px;font:400 11px 'JetBrains Mono',monospace;color:oklch(0.7 0.03 168);transition:color .2s" style-hover="color:oklch(0.95 0.032 120)">
+          <span style="flex:none;width:28px;height:28px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:1px solid oklch(0.95 0.032 120 / .25);font:500 13px 'JetBrains Mono',monospace;color:oklch(0.95 0.032 120)">{{ idxIcon }}</span>
+          <span style="opacity:{{ idxTextOp }};transition:opacity .3s">{{ t.idxCollapse }}</span>
+        </button>
+        <span style="opacity:{{ idxTextOp }};transition:opacity .3s;font:400 11px 'JetBrains Mono',monospace;color:oklch(0.7 0.03 168);white-space:nowrap">{{ actNo }} / 2-12</span>
+      </div>
+      <div style="display:{{ idxRailDisplay }};flex-direction:column;width:28px">
+        <sc-for list="{{ rail }}" as="t" hint-placeholder-count="17"><button onClick="{{ t.go }}" title="{{ t.label }}" aria-label="{{ t.label }}" style="height:12px;margin-top:{{ t.mt }};display:flex;align-items:center;justify-content:center"><span style="display:block;height:2px;width:{{ t.w }};background:{{ t.c }};transition:width .4s cubic-bezier(.2,.7,.1,1),background .3s"></span></button></sc-for>
+      </div>
+      <div id="lab-index-list" style="display:{{ idxListDisplay }};width:212px;opacity:{{ idxTextOp }};transition:opacity .3s">
+      <sc-for list="{{ index }}" as="p" hint-placeholder-count="2">
+        <div style="display:flex;flex-direction:column;padding:12px 0 14px;border-top:1px solid oklch(0.95 0.032 120 / .16)">
+          <span style="display:flex;justify-content:space-between;gap:8px;padding-bottom:8px;font:500 11px 'JetBrains Mono',monospace"><span style="color:{{ p.ink }}">{{ p.n }} · {{ p.short }}</span><span style="color:oklch(0.6 0.025 185)">{{ p.count }}</span></span>
+          <sc-for list="{{ p.rows }}" as="r" hint-placeholder-count="5">
+            <div style="display:flex;flex-direction:column">
+              <sc-if value="{{ r.isSeg }}" hint-placeholder-val="{{ false }}"><span style="padding:9px 0 3px 36px;font:400 10.5px 'JetBrains Mono',monospace;color:oklch(0.72 0.095 291)">{{ r.label }}</span></sc-if>
+              <sc-if value="{{ r.isBench }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ r.go }}" style="position:relative;display:grid;grid-template-columns:36px minmax(0,1fr);align-items:baseline;padding:5px 0;color:{{ r.color }};transition:color .25s" style-hover="color:oklch(0.95 0.032 120)">
+                  <span style="position:absolute;left:-12px;top:6px;bottom:6px;width:2px;background:{{ r.ink }};transform:scaleY({{ r.bar }});transition:transform .4s cubic-bezier(.2,.7,.1,1)"></span>
+                  <span style="font:500 11px 'JetBrains Mono',monospace;color:{{ r.noColor }}">{{ r.no }}</span>
+                  <span style="font:{{ r.weight }} 13.5px/1.3 Archivo;transform:translateX({{ r.tx }});transition:transform .4s cubic-bezier(.2,.7,.1,1)">{{ r.title }}</span>
+                </button>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+      <p style="margin:0;padding-top:12px;border-top:1px solid oklch(0.95 0.032 120 / .16);font:400 11px 'JetBrains Mono',monospace;color:oklch(0.74 0.06 235)">{{ t.p3Index }}</p>
+      </div>
+    </aside>
+
+    <main style="flex:1;min-width:0;padding-bottom:40px">
+      <sc-for list="{{ projects }}" as="p" hint-placeholder-count="2">
+        <div data-proj="{{ p.i }}" style="padding-top:56px">
+          <div data-rv style="position:relative;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:12px 32px;padding-top:16px">
+            <span style="position:absolute;left:0;right:0;top:0;height:2px;background:oklch(0.95 0.032 120)"></span>
+            <span style="display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;min-width:0"><span style="font:500 13px 'JetBrains Mono',monospace;color:{{ p.ink }}">{{ p.n }}</span><span style="font:600 clamp(26px,2.6vw,36px)/1.05 Archivo;letter-spacing:-.03em">{{ p.title }}</span><span style="font:400 12px 'JetBrains Mono',monospace;color:oklch(0.7 0.03 168)">{{ p.sub }}</span></span>
+            <span style="display:flex;gap:24px;align-items:baseline;font:400 12px 'JetBrains Mono',monospace;color:oklch(0.7 0.03 168)">{{ p.count }}<button onClick="{{ p.openCase }}" style="font:500 12px 'JetBrains Mono',monospace;color:{{ p.ink }}" style-hover="color:oklch(0.95 0.032 120)">{{ t.caseStudy }}</button></span>
+          </div>
+          <sc-for list="{{ p.segs }}" as="s" hint-placeholder-count="2">
+            <div style="display:flex;flex-direction:column">
+              <sc-if value="{{ s.hasLabel }}" hint-placeholder-val="{{ false }}">
+                <p data-rv style="margin:48px 0 0;display:flex;align-items:center;gap:14px;font:500 11px 'JetBrains Mono',monospace;color:oklch(0.72 0.095 291)"><span>{{ s.n }} · {{ s.label }}</span><span style="flex:1;height:1px;background:oklch(0.42 0.09 282 / .25)"></span><span style="color:oklch(0.7 0.03 168)">{{ s.count }}</span></p>
+              </sc-if>
+              <sc-for list="{{ s.benches }}" as="b" hint-placeholder-count="2">
+                <div data-bench="{{ b.no }}" id="lab{{ b.no }}" style="min-height:{{ b.holdH }}">
+                  <article data-art="{{ b.no }}" aria-label="Lab {{ b.no }} · {{ b.title }}" style="position:{{ b.pos }};inset:{{ b.inset }};z-index:{{ b.z }};overflow-y:{{ b.ov }};padding:{{ b.pad }};box-sizing:border-box;background:oklch(0.19 0.032 228);display:flex;flex-direction:column;gap:18px">
+                    <div data-rv style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:14px 32px">
+                      <div style="flex:1 1 380px;min-width:0;display:flex;flex-direction:column;gap:8px">
+                        <span style="display:flex;align-items:center;gap:10px;white-space:nowrap;font:500 12px 'JetBrains Mono',monospace"><span style="flex:none;color:{{ b.ink }}">{{ b.labNo }}</span><span style="flex:none;width:16px;height:1px;background:oklch(0.95 0.032 120 / .3)"></span><span style="color:oklch(0.7 0.03 168)">{{ b.kind }}</span></span>
+                        <h3 style="margin:0;font:600 clamp(22px,2vw,28px)/1.1 Archivo;letter-spacing:-.024em">{{ b.title }}</h3>
+                        <p style="margin:0;max-width:62ch;font:400 15px/1.5 Archivo;color:oklch(0.8 0.035 162);text-wrap:pretty">{{ b.desc }}</p>
+                      </div>
+                      <div style="display:flex;gap:8px;align-items:center">
+                        <button onClick="{{ b.toggleNotes }}" aria-pressed="{{ b.notesOn }}" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid oklch(0.95 0.032 120 / .2);font:500 12px 'JetBrains Mono',monospace;transition:background .2s" style-hover="background:oklch(0.95 0.032 120 / .05)"><span style="width:9px;height:9px;box-sizing:border-box;border:1.5px solid oklch(0.95 0.032 120);background:{{ b.notesMark }}"></span>{{ t.notes }}</button>
+                        <button onClick="{{ b.toggleExpand }}" style="padding:8px 13px;background:oklch(0.95 0.032 120);color:oklch(0.19 0.032 228);font:500 12px 'JetBrains Mono',monospace;transition:background .25s" style-hover="background:oklch(0.74 0.1 150)">{{ b.expandLabel }}</button>
+                      </div>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:24px 32px;align-items:flex-start">
+                      <div style="flex:1 1 520px;min-width:0;display:flex;flex-direction:column">
+                        <div data-rv data-plate="{{ b.no }}" onMouseEnter="{{ b.plateIn }}" onMouseLeave="{{ plateOut }}" onMouseMove="{{ plateMove }}" style="position:relative;height:{{ b.plateH }};min-height:300px;background:linear-gradient(135deg,oklch(0.165 0.03 210),oklch(0.145 0.03 250));box-shadow:inset 0 0 0 1px oklch(0.95 0.032 120 / .1);overflow:hidden;cursor:none">
+                          <span style="position:absolute;left:0;right:0;top:0;height:2px;background:{{ b.ink }};z-index:3"></span>
+                          <span data-solve="{{ b.no }}" style="position:absolute;left:0;right:0;top:0;height:2px;background:{{ b.hi }};z-index:4;transform-origin:0 50%;transform:scaleX(0)"></span>
+                          <sc-if value="{{ b.img }}" hint-placeholder-val="{{ false }}"><div role="img" aria-label="Lab {{ b.no }} · {{ b.title }}" style="position:absolute;inset:0;background:url({{ b.img }}) center/cover no-repeat;transform:scale({{ b.imgScale }});transition:transform .5s cubic-bezier(.2,.7,.1,1)"></div></sc-if>
+                          <sc-if value="{{ b.noImg }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,oklch(0.95 0.032 120 / .05) 0 1px,transparent 1px 10px);display:flex;align-items:center;justify-content:center;font:400 11px 'JetBrains Mono',monospace;color:oklch(0.72 0.012 150)">{{ b.ph }}</div></sc-if>
+                          <span style="position:absolute;left:12px;top:12px;width:12px;height:12px;border-left:1px solid oklch(0.9 0.058 124 / .5);border-top:1px solid oklch(0.9 0.058 124 / .5);z-index:3"></span>
+                          <span style="position:absolute;right:12px;top:12px;width:12px;height:12px;border-right:1px solid oklch(0.9 0.058 124 / .5);border-top:1px solid oklch(0.9 0.058 124 / .5);z-index:3"></span>
+                          <span style="position:absolute;left:12px;bottom:12px;width:12px;height:12px;border-left:1px solid oklch(0.9 0.058 124 / .5);border-bottom:1px solid oklch(0.9 0.058 124 / .5);z-index:3"></span>
+                          <span style="position:absolute;right:12px;bottom:12px;width:12px;height:12px;border-right:1px solid oklch(0.9 0.058 124 / .5);border-bottom:1px solid oklch(0.9 0.058 124 / .5);z-index:3"></span>
+                          <div style="position:absolute;left:32px;right:32px;top:16px;z-index:3;display:flex;justify-content:space-between;gap:16px;font:500 11px 'JetBrains Mono',monospace"><span style="color:{{ b.hi }}">FIG. {{ b.no }}</span><span style="display:flex;align-items:center;gap:7px;color:oklch(0.9 0.058 124)"><span style="width:6px;height:6px;border-radius:50%;background:{{ b.dot }};transition:background .3s"></span>{{ b.status }}</span></div>
+                          <div style="position:absolute;left:32px;right:32px;bottom:16px;z-index:3;display:flex;justify-content:space-between;gap:16px;font:400 11px 'JetBrains Mono',monospace;color:oklch(0.72 0.012 150)"><span>{{ b.readout }}</span><span>{{ b.zoomTxt }}</span></div>
+                        </div>
+                        <div data-rv style="display:flex;flex-wrap:wrap;row-gap:12px;column-gap:32px;padding:14px 0;border-bottom:1px solid oklch(0.95 0.032 120 / .12)">
+                          <sc-for list="{{ b.groups }}" as="g" hint-placeholder-count="2">
+                            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px">
+                              <span style="font:400 11px 'JetBrains Mono',monospace;color:oklch(0.7 0.03 168)">{{ g.k }}</span>
+                              <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="2">
+                                <div style="display:flex;align-items:center">
+                                  <sc-if value="{{ it.isSeg }}" hint-placeholder-val="{{ false }}">
+                                    <span role="group" aria-label="{{ it.label }}" style="display:flex;align-items:center;gap:8px"><span style="font:500 12.5px Archivo;color:oklch(0.8 0.035 162)">{{ it.label }}</span><span style="display:flex">
+                                      <sc-for list="{{ it.opts }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.pick }}" aria-pressed="{{ o.on }}" style="margin-left:-1px;padding:6px 10px;border:1px solid oklch(0.95 0.032 120 / .2);background:{{ o.bg }};color:{{ o.color }};font:500 12px Archivo;white-space:nowrap;transition:background .25s,color .25s" style-hover="border-color:oklch(0.95 0.032 120 / .5)">{{ o.label }}</button></sc-for>
+                                    </span></span>
+                                  </sc-if>
+                                  <sc-if value="{{ it.isSl }}" hint-placeholder-val="{{ false }}">
+                                    <span style="display:flex;align-items:center;gap:10px"><span style="font:500 12.5px Archivo;color:oklch(0.8 0.035 162)">{{ it.label }}</span>
+                                      <span role="slider" tabindex="0" aria-label="{{ it.label }}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ it.now }}" onPointerDown="{{ it.down }}" onPointerMove="{{ it.move }}" onPointerUp="{{ it.up }}" onKeyDown="{{ it.key }}" style="position:relative;width:112px;height:22px;cursor:ew-resize;touch-action:none;outline-offset:3px">
+                                        <span style="position:absolute;left:0;right:0;top:10px;height:2px;background:oklch(0.95 0.032 120 / .14)"></span>
+                                        <span style="position:absolute;left:0;top:10px;height:2px;width:{{ it.pct }};background:{{ b.ink }}"></span>
+                                        <span style="position:absolute;top:6px;left:{{ it.pct }};width:10px;height:10px;margin-left:-5px;background:oklch(0.19 0.032 228);border:2px solid {{ b.ink }};box-sizing:border-box"></span>
+                                      </span>
+                                      <span style="width:30px;font:400 11px 'JetBrains Mono',monospace;color:oklch(0.7 0.03 168)">{{ it.val }}</span></span>
+                                  </sc-if>
+                                  <sc-if value="{{ it.isTg }}" hint-placeholder-val="{{ false }}">
+                                    <button onClick="{{ it.flip }}" aria-pressed="{{ it.on }}" style="display:flex;align-items:center;gap:7px;padding:6px 2px;font:500 12.5px Archivo;color:{{ it.color }};transition:color .2s"><span style="width:11px;height:11px;box-sizing:border-box;border:1.5px solid {{ b.ink }};background:{{ it.mark }};transition:background .2s"></span>{{ it.label }}</button>
+                                  </sc-if>
+                                  <sc-if value="{{ it.isBt }}" hint-placeholder-val="{{ false }}">
+                                    <button onClick="{{ it.click }}" style="padding:6px 11px;border:1px solid oklch(0.95 0.032 120 / .25);font:500 12px Archivo;transition:background .2s" style-hover="background:oklch(0.95 0.032 120 / .06)">{{ it.label }}</button>
+                                  </sc-if>
+                                </div>
+                              </sc-for>
+                            </div>
+                          </sc-for>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:28px;padding-top:10px">
+                          <span style="display:flex;align-items:center;gap:8px;font:400 11px 'JetBrains Mono',monospace;color:oklch(0.7 0.03 168)"><span style="width:6px;height:6px;background:{{ b.hintDot }}"></span>{{ b.hint }}</span>
+                          <sc-if value="{{ b.cam }}" hint-placeholder-val="{{ false }}">
+                            <span role="group" aria-label="Camera" style="display:flex">
+                              <button onClick="{{ b.zOut }}" aria-label="Zoom out" style="width:28px;height:28px;margin-left:-1px;display:flex;align-items:center;justify-content:center;border:1px solid oklch(0.95 0.032 120 / .2);font:500 13px 'JetBrains Mono',monospace" style-hover="background:oklch(0.95 0.032 120 / .06)">−</button>
+                              <button onClick="{{ b.zIn }}" aria-label="Zoom in" style="width:28px;height:28px;margin-left:-1px;display:flex;align-items:center;justify-content:center;border:1px solid oklch(0.95 0.032 120 / .2);font:500 13px 'JetBrains Mono',monospace" style-hover="background:oklch(0.95 0.032 120 / .06)">+</button>
+                              <button onClick="{{ b.zHome }}" style="height:28px;margin-left:-1px;padding:0 10px;display:flex;align-items:center;border:1px solid oklch(0.95 0.032 120 / .2);font:500 11px 'JetBrains Mono',monospace" style-hover="background:oklch(0.95 0.032 120 / .06)">{{ t.home }}</button>
+                            </span>
+                          </sc-if>
+                        </div>
+                      </div>
+                      <aside data-rv aria-label="Lab {{ b.no }} notes" style="display:{{ b.notesDisplay }};flex:{{ b.detFlex }};min-width:260px;flex-direction:column;gap:16px;padding:16px 18px 18px;background:oklch(0.25 0.022 212)">
+                        <span style="font:400 11px 'JetBrains Mono',monospace;color:oklch(0.7 0.03 168)">{{ t.about }}</span>
+                        <p style="margin:0;font:400 15px/1.6 Archivo;text-wrap:pretty">{{ b.lede }}</p>
+                        <dl style="margin:6px 0 0;display:flex;flex-direction:column;border-top:1px solid oklch(0.95 0.032 120 / .12)">
+                          <sc-for list="{{ b.specs }}" as="sp" hint-placeholder-count="4">
+                            <div style="display:grid;grid-template-columns:88px minmax(0,1fr);gap:12px;align-items:baseline;padding:8px 0;border-bottom:1px solid oklch(0.95 0.032 120 / .1)"><dt style="font:400 11px 'JetBrains Mono',monospace;color:oklch(0.7 0.03 168)">{{ sp.k }}</dt><dd style="margin:0;font:400 13.5px/1.45 Archivo;color:oklch(0.9 0.035 140)">{{ sp.v }}</dd></div>
+                          </sc-for>
+                        </dl>
+                        <sc-if value="{{ b.hasMore }}" hint-placeholder-val="{{ false }}"><button onClick="{{ b.toggleSpecs }}" style="align-self:flex-start;font:500 12px 'JetBrains Mono',monospace;color:{{ b.ink }}" style-hover="color:oklch(0.95 0.032 120)">{{ b.moreLabel }}</button></sc-if>
+                      </aside>
+                    </div>
+                  </article>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+
+      <div data-rv data-proj="2" style="margin-top:72px;position:relative;padding:16px 0 0;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:12px 32px">
+        <span style="position:absolute;left:0;right:0;top:0;height:2px;background:oklch(0.95 0.032 120)"></span>
+        <span style="display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px"><span style="font:500 13px 'JetBrains Mono',monospace;color:oklch(0.74 0.06 235)">03</span><span style="font:600 clamp(26px,2.6vw,36px)/1.05 Archivo;letter-spacing:-.03em">{{ t.p3 }}</span></span>
+        <span style="font:500 12px 'JetBrains Mono',monospace;color:oklch(0.74 0.06 235)">{{ t.inProgress }}</span>
+      </div>
+      <p data-rv style="margin:16px 0 0;max-width:46ch;font:400 15px/1.55 Archivo;color:oklch(0.8 0.035 162)">{{ t.p3Empty }}</p>
+    </main>
+  </div>
+
+  <footer style="margin-top:96px;background:oklch(0.41 0.042 192);color:oklch(0.965 0.01 115)">
+    <div style="max-width:1440px;margin:0 auto;padding:28px clamp(20px,4vw,48px) 44px;box-sizing:border-box;display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px 32px;font:400 12px 'JetBrains Mono',monospace;color:oklch(0.86 0.04 160)">
+      <span>{{ t.footer }}</span>
+      <span style="display:flex;gap:24px"><button onClick="{{ toWork }}" style="color:oklch(0.9 0.058 124)" style-hover="color:oklch(0.95 0.032 120)">{{ t.work }}</button><button onClick="{{ toLog }}" style="color:oklch(0.9 0.058 124)" style-hover="color:oklch(0.95 0.032 120)">{{ t.log }}</button><button onClick="{{ toTop }}" style="color:oklch(0.9 0.058 124)" style-hover="color:oklch(0.95 0.032 120)">{{ t.top }}</button></span>
+    </div>
+  </footer>
+
+  <div data-cursor style="position:fixed;left:0;top:0;z-index:80;pointer-events:none;opacity:0;transition:opacity .2s;display:flex;align-items:center;gap:8px;will-change:transform"><span style="width:30px;height:30px;margin:-15px 0 0 -15px;border:1px solid oklch(0.95 0.032 120 / .8);border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center"><span style="width:3px;height:3px;border-radius:50%;background:oklch(0.95 0.032 120)"></span></span><span style="margin-top:-15px;font:500 10px 'JetBrains Mono',monospace;color:oklch(0.95 0.032 120);padding:3px 6px;background:oklch(0.15 0.03 235 / .75);white-space:nowrap">{{ cursorVerb }}</span></div>
+
+  <div style="position:fixed;left:50%;bottom:28px;z-index:90;padding:7px 12px;background:oklch(0.95 0.032 120);color:oklch(0.19 0.032 228);font:400 12px 'JetBrains Mono',monospace;pointer-events:none;opacity:{{ toastOp }};transform:translate(-50%,{{ toastY }});transition:opacity .25s,transform .35s cubic-bezier(.2,.7,.1,1);white-space:nowrap">{{ toast }}</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;defaultLang&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;zh&quot;,&quot;en&quot;],&quot;default&quot;:&quot;zh&quot;,&quot;tsType&quot;:&quot;'zh' | 'en'&quot;,&quot;section&quot;:&quot;Language&quot;},&quot;indexOpen&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;notesOpen&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;specRows&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:4,&quot;min&quot;:2,&quot;max&quot;:10,&quot;step&quot;:1,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;entrance&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Motion&quot;}}">
+const G = { ink: 'oklch(0.74 0.1 150)', hi: 'oklch(0.86 0.08 130)' };
+const V = { ink: 'oklch(0.72 0.095 291)', hi: 'oklch(0.85 0.06 295)' };
+const INK = 'oklch(0.95 0.032 120)', PAPER = 'oklch(0.19 0.032 228)', MUTE = 'oklch(0.8 0.035 162)';
+const EO = 'cubic-bezier(.2,.7,.1,1)', EIO = 'cubic-bezier(.76,0,.24,1)';
+const IMG = { '1-4': 'img/c-fivering.png', '2-5': 'img/c-cylinder.png', '2-8': 'img/cluster-nine.webp', '2-9': 'img/c-nine.png', '2-10': 'img/c-formed.png', '2-11': 'img/c-crowd.png' };
+const ORBIT = 'drag to orbit';
+// no, title, desc, verb, cam, kind, lede, specs, solve, view
+const B = (no, title, desc, verb, cam, kind, lede, specs, solve, view) => ({ no, title, desc, verb, cam, kind, lede,
+  specs: specs.split('|').map(x => { const [k, v] = x.split('='); return { k, v }; }), solve, view });
+const PROJECTS = [
+  { n: '01', c: G, kicker: 'Project I', title: 'Reincarnation Machine', short: 'Reincarnation Machine', sub: 'two linkage kernels', slug: 'reincarnation-machine',
+    segs: [{ n: '', label: '', benches: [
+      B('1-1', 'Four-bar linkage', 'Drag a joint to move the four-bar mechanism and trace its path.', 'drag a joint', false, 'SVG · 2D kernel', 'Drag a free joint to drive the four-bar linkage. Release it to see the crank resume and the coupler trace its path.', 'Kernel=2D PBD · Gauss–Seidel|Tests=36 tests|Render=SVG · live coupler trace|Drive=Any free node · release damping', 'tg:Trace:1;tg:Crank:1;bt:Reset', ''),
+      B('1-2', 'Arch ring solver', 'The S4 scissor arch, driven by a crank-slider.', 'drag the apex', false, 'SVG · 2D kernel', 'Drag the apex, feet or crank pin to move the S4 scissor arch. Slot stops limit its travel.', 'Kernel=Shared 2D core|Instance=S4 M3×1.000 · 14 plates|Stops=Dual-end slot clamp · fixed step|Drive=Apex / feet / crank pin', 'seg:Drive:Crank,Apex,Feet:0;tg:Slot stops:1;bt:Reset', ''),
+      B('1-3', 'Tendon tentacle', 'Bend seven vertebrae with three tendons spaced at 120°.', ORBIT, true, 'WebGL · 3D kernel', 'Adjust three tendons to bend seven box vertebrae. Drag to rotate the scanned model.', 'Kernel=LinkageSolver3D · symmetric GS|Mesh=107k tri · real scan|Camera=Drag to orbit · zoom controls · wheel zoom when expanded|Drive=Tendon sliders · critical damping', 'sl:Tendon A:.62;sl:Tendon B:.28;sl:Tendon C:.45', 'seg:View:Iso,Front,Top:0'),
+      B('1-4', 'Five-ring shell', 'Five rings opening and closing together.', ORBIT, true, 'WebGL · 3D kernel', 'Five rings open and close together at 85 mm spacing. Adjust the phase and skin to inspect the structure.', 'Family=S1–S5 · ladder 0 / 2 / 4 / 8|Choreo=In-phase · ω 0.8 · step 1/120 s|Peaks=0.24–0.42 mm|Drive=Run · phase · skin · views', 'tg:Breathe:1;sl:Phase:.12;sl:Skin:.35', 'seg:View:Iso,Front,Left,Right,Top:0;tg:X-ray:0'),
+      B('1-5', 'Full assembly', 'One shaft drives five rings; three tendons bend the arm.', 'views by button', false, 'WebGL · fixed view', 'A shaft swings through 180° to open and close five rings. Three tendons bend the large arm.', 'Bodies=Real solids · adjustable skin|Drive=One shaft · five cranks · in phase|Stroke=180° reciprocating · apex ≡ 2R|Arm=Three tendons · same solver as Lab 1-3|Caveats=Speed not to scale · small-arm motion choreographed', 'tg:Run:1;sl:Skin:.5', 'seg:View:Iso,Front,Side,Top:0'),
+    ] }] },
+  { n: '02', c: V, kicker: 'Project II', title: 'Spatial simulation', short: 'Spatial simulation', sub: 'skin-unit engine & geometry studies', slug: 'project-ii',
+    segs: [
+      { n: 'Ⅰ', label: 'One band', benches: [
+        B('2-1', 'Contractile skin units', 'Four bond patterns turn a contracting strip into four shapes.', 'drag ℓ', false, 'SVG · research-code port', 'A hanging strip contracts into a pocket, bulb, ledge or stairs. Each shape uses a different pattern of locking bonds.', 'Kernel=Position-based · Verlet + projection|Source=Research-code port · parity ≤ 1e-9|Bonds=Permanent zipper locks|Drive=One contraction ℓ · four bond maps|Render=SVG · smoothing affects drawing only', 'seg:Shape:Pocket,Bulb,Ledge,Stairs:1;sl:Contraction ℓ:.7', 'tg:Bonds:1;tg:Smooth:1'),
+        B('2-2', 'Skin units, solid', 'The four fabric bands in 3D, with visible sections and bonds.', ORBIT, true, 'WebGL', 'Rotate the four shapes from Lab 2-1 as solid fabric bands. Section edges show the material thickness and locking bonds.', 'Kernel=Lab 2-1’s 2D engine|Band=Extruded section · thickness 5|Camera=Drag to orbit · preset views|Bonds=Visible on both section edges|Render=WebGL', 'seg:Shape:Pocket,Bulb,Ledge,Stairs:1;sl:Contraction ℓ:.7', 'seg:View:Iso,Section,Top:0;tg:Bonds:1'),
+        B('2-3', 'Two structures, one band', 'Two structures on one strip, with an adjustable gap.', ORBIT, true, 'WebGL', 'One strip forms two structures under the same contraction. Choose a pair and adjust the fixed segment between them to compare how independently they fold.', 'Band=Fixed · free A · fixed · free B · fixed|Pairs=Four matching pairs · bulb above ledge|Gap=16 / 29 / 48 nodes|Independence=Gap ≥ 29: identical to separate runs; ≥ 16: difference < 1 px|Drive=One contraction ℓ for both structures', 'seg:Pair:I,II,III,IV:0;seg:Gap:16,29,48:1;sl:Contraction ℓ:.6', '')] },
+      { n: 'Ⅱ', label: 'A row', benches: [
+        B('2-4', 'Series', 'Compare a graded series with a platform splitting in two.', ORBIT, true, 'WebGL', 'Compare a 12-band transition from bulb to stepped box with a 10-stage split from one box into two platforms. Pack the bands together or spread them into a row.', 'Series=Graded: 12 bands · split: 10 stages|Gradient=Bond length 0.10 → 0.32|Split=Platforms 12 px thick · depth 40 px · final gap 28 px|Bonds=Outer ladder · seam zipper · face-corner bonds|Shape fit=Silhouette difference 0.3–3.7 px|Layout=Packed body or spread row', 'seg:Series:Graded,Split:0;sl:Contraction ℓ:.8', 'seg:Layout:Packed,Row:0')] },
+      { n: 'Ⅲ', label: 'A ring', benches: [
+        B('2-5', 'Cylinder of units', 'Twenty bands form a level, undulating, changing, split or double platform.', ORBIT, true, 'WebGL', 'Twenty contracting bands form a platform around a tube. Choose a level, undulating, changing, split or double platform, then adjust the radius.', 'Ring=20 bands · five arrangements|Undulation=One shape placed at heights from 18% to 71% of the strip|Split=Two shelves, each 16 px thick · gap varies from 0 to 100 px|Double=Two level shelves · constant 100 px gap|Radius=Adjustable · gaps between bands widen with it|Skin=Opacity 0–1 · default 0.35; split/double 0.15|Limit=Independent 2D sections; no forces between bands', 'seg:Plan:Level,Undulating,Changing,Split,Double:0;sl:Radius:.5', 'sl:Skin:.35'),
+        B('2-6', 'Layers within one unit', 'Round to square, with independent shelf sizes, tilts, gaps and joins.', ORBIT, true, 'WebGL · multi-view', 'Morph the ring from round to square and adjust shelf sizes, tilts and gaps. Join depth ranges from 0% to 100%: 100% meets both rims; 50% fills the inner half. Forming bands and skin follow the assembly; Sections shows the original solve.', 'Views=Target geometry · forming bands|Baseline=Lab 2-5 double platform · thickness 16 · gap 100 · reach 83.2|Tilt=0–20° per layer · assembly preview|Radius=70–130 per layer · maximum axis-to-rim distance|Ring shape=Five steps from circle to square · fixed maximum radius|Skin=Opacity 0–100% · default 35% · cutouts stay open|Outline=360° / 180° / 90° / 240° / two 90° sectors|Joins=One sector or two opposite sectors · depth 0–100%|Forming=Four profiles · 20 base slots, split at gaps and square corners|Limit=No circumferential forces; shape, size, join depth and tilt are assembly previews', 'sl:Round → square:0;sl:Tilt:.2;sl:Join depth:.5', 'seg:View:Target,Forming,Sections:0;sl:Skin:.35'),
+        B('2-7', 'A square ring', 'Vary each band’s reach to change a round platform into a square.', ORBIT, true, 'WebGL', 'Twenty bands with different reaches form a square around a round mast. Change the outline from circle to square, or choose an undulating or split platform.', 'Bands=20 total: 8 face · 8 edge · 4 corner|Outline=Five steps from circle to square|Flat=Side 169 px · platform height 36 px · rim error < 0.9 px|Reach=Round 54 px · square 56 / 64 / 89 px|Undulation=40 px height range|Split=Shelves 16 px thick · gap 0–100 px · seam centre stays level|Split outline=Side 223 px · 338 nodes per band|Layout=Single ring or 4×4 · fixed radius|Limit=Split faces held straight by a placement rule during forming', 'sl:Circle → square:1;seg:Platform:Flat,Undulating,Split:0', 'seg:Layout:Ring,4×4:0')] },
+      { n: 'Ⅳ', label: 'A room', benches: [
+        B('2-8', 'Four by four', 'Sixteen rings in a room, with a 1.70 m figure for scale.', ORBIT, true, 'WebGL · 16 live rings', 'Sixteen rings fill a room beside a 1.70 m figure. Change the form for the whole field or by row; adjust the radius to change the spacing.', 'Field=4×4 rings · 20 bands each|Scale=Figure 1.70 m · room 3.74 m · ring width 1.04 m|Height=Platform underside 1.08 m|Spacing=Tracks radius · ring gap = 1.5× gap between bands|Forms=Same throughout or one per row|Skin=Adjustable membrane opacity, 0–1', 'seg:Forms:Same,By row:0;sl:Radius:.5', 'sl:Skin:.35')] },
+      { n: 'Ⅴ', label: 'Between units', benches: [
+        B('2-9', 'Between units', 'Arrange 2, 3, 4 or 9 rings and compare their spacing, heights and timing.', ORBIT, true, 'WebGL', 'Arrange two, three, four or nine rings. Compare gaps, touching edges, steps and interleaving, then make them form together or in sequence. Combinations that would collide are disabled.', 'Unit=Lab 2-5 ring · 20 bands · 202 nodes|Clusters=2 / 3 / 4 / 9 rings|Relations=Apart · touching · apart stepped · touching stepped · interleaved|Height=Up to 0.35 m; shape stays unchanged|Interleave=Step must clear the forming body by 6 px|Timing=Together or staggered by 150 steps|Seams=Level touching edges joined by a 16 cm fabric web|Scale=Lab 2-8 room · 1.70 m figure', 'seg:Rings:2,3,4,9:3;seg:Relation:Apart,Touching,Stepped,Interleaved:1', 'seg:Timing:Together,Staggered:0')] },
+      { n: 'Ⅵ', label: 'People', benches: [
+        B('2-10', 'A person walks through', 'Move one person and watch nearby units respond to their floor trace.', 'drag the person', false, 'Canvas · plan', 'Move one person through the room and watch nearby units form. The floor records time spent within view. Follow mode withdraws the structure as that trace fades; lock mode keeps it formed.', 'Grid=4×4 / 6×6 / 8×8 · Lab 2-8 room|Trace=0.1 m floor cells · capped at the threshold · linear fade|Reading=Mean trace by cell or footprint|Forming=Mean ≥ threshold × floor share; default share 50%|Demo=Threshold 2 s · fade 6 s · follow mode|View=Reach 0.22–2.0 m, default 1.5 m · angle 60°–360°, default 180°|Clearance=Platform radius + body 0.22 m + margin 0.15 m; walking lane twice this width|Prototype=15 s threshold · 2%/s decay, uncapped; differs from this demo|Limit=Activation only; no behaviour-to-shape rule', 'seg:Mode:Follow,Lock:0;sl:Reach:.7', 'seg:Grid:4×4,6×6,8×8:1;tg:Trace:1'),
+        B('2-11', 'A few people', 'Place or drag people to see how their overlapping views affect the units.', 'click to add', false, 'Canvas · up to 8 people', 'Place up to eight people, drag them or let them wander. Their floor traces add where their views overlap, so units can form sooner. Activation and clearance use the same rules as Lab 2-10.', 'People=Click to add · hold to drag · − removes the last|Wander=0.7 m/s · walks 0.5–2 m, occasionally 3.5 m · pauses 8–45 s|Response=Follow: withdraw as traces fade · lock: keep formed|Overlap=Two simultaneous views add trace at twice the rate|Grid=4×4 / 6×6 / 8×8 · Lab 2-8 room|Limit=Random wandering for demonstration; not a model of human behaviour', 'bt:+ Person;bt:− Person;tg:Wander:1;seg:Mode:Follow,Lock:0', 'seg:Grid:4×4,6×6,8×8:1')] },
+      { n: 'Ⅶ', label: 'Compositions', benches: [
+        B('2-12', 'Joined platforms', 'Join round or square platforms into steps, ramps and enclosures.', ORBIT, true, 'WebGL', 'Join round or square platforms into steps, ramps and enclosures. Adjust each unit’s height range and orientation, then read the height difference at each seam. The square rising arrangement retains an 8 cm step.', 'Figures=Descent · rise · enclosure · step · ramp · three-part ramp · hollow · arch|Units=Round from Lab 2-5 · square from Lab 2-7|Controls=Crest band 0–19 · height slice 0–100% · split opening direction|Range=Round 0.35 m · square 0.16 m|Seams=Level within 3 cm · square rise includes an 8 cm step|Spacing=Touching at peak reach or separated by the family’s gap|Scale=1.70 m figure · round surface 1.39–1.73 m · cavity height 0.39 m|Limit=Single-row assembly; no interaction between units', 'seg:Figure:Descent,Rise,Enclosure,Step,Ramp:1;seg:Family:Round,Square:0', 'sl:Crest band:.4')] },
+    ] },
+];
+const ALL = PROJECTS.flatMap((p, pi) => p.segs.flatMap(s => s.benches.map(b => ({ ...b, pi }))));
+const parse = str => (str ? str.split(';').map(x => { const [t, label, a, d] = x.split(':'); return t === 'seg' ? { t, label, opts: a.split(','), def: +d } : t === 'sl' ? { t, label, def: +a } : t === 'tg' ? { t, label, def: a === '1' } : { t, label }; }) : []);
+const ZH = {"copy":{"Round to square, with independent shelf sizes, tilts, gaps and joins.":"圆环变方环，同时保留各层尺寸、倾斜、缺口与局部连接。","Morph the ring from round to square and adjust shelf sizes, tilts and gaps. Join depth ranges from 0% to 100%: 100% meets both rims; 50% fills the inner half. Forming bands and skin follow the assembly; Sections shows the original solve.":"从圆环逐档变成方环，调整上下层尺寸、倾斜与缺口。连接深度可调 0–100%：100% 与外缘齐平，50% 只占内半段。条带与蒙皮随装配变化；截面对照保留原始求解结果。","70–130 per layer · maximum axis-to-rim distance":"每层 70–130 · 中轴到最远外缘","Ring shape":"环形轮廓","Five steps from circle to square · fixed maximum radius":"圆到方五档 · 最大外伸半径不变","Four profiles · 20 base slots, split at gaps and square corners":"四类截面 · 20 个基础槽，缺口与方角处分槽","No circumferential forces; shape, size, join depth and tilt are assembly previews":"未模拟环向受力；圆方、尺寸、连接深度与倾斜为装配预览","One sector or two opposite sectors · depth 0–100%":"单区或对向双区 · 连接深度 0–100%","Drag a free joint to drive the four-bar linkage. Release it to see the crank resume and the coupler trace its path.":"拖动自由节点可以带动四杆连杆。松手后曲柄恢复运转，连杆上的标记点继续留下轨迹。","2D PBD · Gauss–Seidel":"二维位置动力学 · 高斯–赛德尔","36 tests":"36 项测试","SVG · live coupler trace":"矢量绘制 · 实时轨迹","Any free node · release damping":"拖动自由节点 · 松手阻尼","Drag the apex, feet or crank pin to move the S4 scissor arch. Slot stops limit its travel.":"拖动拱顶、底脚或曲柄销，观察 S4 剪式拱环的开合。槽端止程限制它的活动范围。","Shared 2D core":"共用二维内核","S4 M3×1.000 · 14 plates":"S4 M3×1.000 · 14 块板","Dual-end slot clamp · fixed step":"双向槽端止程 · 固定步长","Apex / feet / crank pin":"拱顶／底脚／曲柄销","Adjust three tendons to bend seven box vertebrae. Drag to rotate the scanned model.":"调节三条肌腱，使七节方盒椎节弯曲。拖动可旋转查看扫描模型。","LinkageSolver3D · symmetric GS":"三维连杆求解器 · 对称高斯–赛德尔","107k tri · real scan":"10.7 万三角面 · 实物扫描","Drag to orbit · zoom controls · wheel zoom when expanded":"拖动旋转 · 按钮缩放 · 放大后可用滚轮缩放","Tendon sliders · critical damping":"肌腱滑块 · 临界阻尼","Five rings open and close together at 85 mm spacing. Adjust the phase and skin to inspect the structure.":"五个环以 85 毫米间距同步开合。调节相位和蒙皮，可以查看内部结构。","S1–S5 · ladder 0 / 2 / 4 / 8":"S1–S5 · 止程余量 0／2／4／8","In-phase · ω 0.8 · step 1/120 s":"同相 · 角速度 0.8 · 步长 1/120 秒","0.24–0.42 mm":"0.24–0.42 毫米","Run · phase · skin · views":"运转 · 相位 · 蒙皮 · 视角","A shaft swings through 180° to open and close five rings. Three tendons bend the large arm.":"一根轴往复转动 180°，驱动五个环开合。三条肌腱控制大触手弯曲。","Real solids · adjustable skin":"实物实体 · 蒙皮可调","One shaft · five cranks · in phase":"一根轴 · 五个曲柄 · 同相","180° reciprocating · apex ≡ 2R":"往复 180° · 拱顶行程等于 2R","Three tendons · same solver as Lab 1-3":"三条肌腱 · 沿用实验 1-3 求解器","Speed not to scale · small-arm motion choreographed":"速度不按实物比例 · 小触手动作是展示编排","A hanging strip contracts into a pocket, bulb, ledge or stairs. Each shape uses a different pattern of locking bonds.":"悬挂的条带收缩成袋、蘑菇挑台、直挑台或阶梯挑台。每种形态由不同的锁定键排布决定。","Position-based · Verlet + projection":"位置约束 · 韦尔莱积分＋投影","Research-code port · parity ≤ 1e-9":"研究代码移植 · 数值误差 ≤ 1e-9","Permanent zipper locks":"拉链键永久锁定","One contraction ℓ · four bond maps":"同一收缩量 ℓ · 四种键谱","SVG · smoothing affects drawing only":"矢量绘制 · 平滑仅影响画面","Rotate the four shapes from Lab 2-1 as solid fabric bands. Section edges show the material thickness and locking bonds.":"旋转查看实验 2-1 的四种织物带。剖面边缘显示材料厚度和锁定键。","Lab 2-1’s 2D engine":"实验 2-1 的二维引擎","Extruded section · thickness 5":"剖面挤出 · 厚度 5","Drag to orbit · preset views":"拖动旋转 · 预设视角","Visible on both section edges":"两侧剖口均可见","WebGL":"WebGL","One strip forms two structures under the same contraction. Choose a pair and adjust the fixed segment between them to compare how independently they fold.":"一条带在同一次收缩中形成两个结构。选择形态组合，调节中间固定段长度，比较两段成形是否相互影响。","Fixed · free A · fixed · free B · fixed":"固定 · 自由段 A · 固定 · 自由段 B · 固定","Four matching pairs · bulb above ledge":"四种同形对 · 蘑菇挑台在直挑台上方","16 / 29 / 48 nodes":"16／29／48 个节点","Gap ≥ 29: identical to separate runs; ≥ 16: difference < 1 px":"间距 ≥ 29：与独立运行一致；≥ 16：误差 < 1 像素","One contraction ℓ for both structures":"两个结构共用收缩量 ℓ","Compare a 12-band transition from bulb to stepped box with a 10-stage split from one box into two platforms. Pack the bands together or spread them into a row.":"对比两组序列：十二条带从蘑菇挑台渐变为阶梯方箱，十个阶段从单箱分成上下平台。可并拢查看整体，也可分列逐条比较。","Graded: 12 bands · split: 10 stages":"渐变：12 条带 · 捏分：10 个阶段","Bond length 0.10 → 0.32":"键长 0.10 → 0.32","Platforms 12 px thick · depth 40 px · final gap 28 px":"平台厚 12 像素 · 深 40 像素 · 最终缝宽 28 像素","Outer ladder · seam zipper · face-corner bonds":"外梯挡 · 缝内拉链 · 面角锁定键","Silhouette difference 0.3–3.7 px":"轮廓偏差 0.3–3.7 像素","Packed body or spread row":"并拢成体或分列成排","Twenty contracting bands form a platform around a tube. Choose a level, undulating, changing, split or double platform, then adjust the radius.":"二十条收缩带围绕中轴形成平台。选择等高、起伏、渐变、捏分或双层平台，再调节环的半径。","20 bands · five arrangements":"20 条带 · 五种编制","One shape placed at heights from 18% to 71% of the strip":"同一形态在条带 18%–71% 的高度范围内排列","Two shelves, each 16 px thick · gap varies from 0 to 100 px":"两片台各厚 16 像素 · 间隙由 0 到 100 像素","Two level shelves · constant 100 px gap":"两片等高环台 · 间隙恒为 100 像素","Adjustable · gaps between bands widen with it":"半径可调 · 带间缝随之增大","Opacity 0–1 · default 0.35; split/double 0.15":"不透明度 0–1 · 默认 0.35；捏分／双层为 0.15","Independent 2D sections; no forces between bands":"独立二维剖面；未模拟带间作用力","Adjust two shelves around one axis: tilt them, cut away sectors or join their edges. Switch to forming bands to inspect the sections and locking bonds. Tilt is an assembly preview; its forming mechanism is not simulated.":"调节同轴的两层台：改变倾角、切去扇区，或连接上下外缘。切到条带成形可查看剖面和锁定键。倾斜仅作装配预览，尚未模拟其成形机制。","Target geometry · forming bands":"目标几何 · 条带成形","Adjust each shelf’s radius, tilt and outline, or join their edges. In forming bands, use Skin to see the surface or expose the bands. Radius and tilt preview the assembly; Sections shows the original solved dimensions.":"分别调节上下层的半径、倾角和轮廓，也可连接两层外缘。成形演示中可调蒙皮透明度，查看表面或内部条带。半径与倾斜为装配预览，截面对照保留原始求解尺寸。","70–130 per layer · axis to rim · assembly preview":"每层 70–130 · 中轴至外缘 · 装配预览","Opacity 0–100% · default 35% · cutouts stay open":"不透明度 0–100% · 默认 35% · 保留缺口","No circumferential forces; radius and tilt do not re-solve the sections":"未模拟环向受力；半径与倾斜不重算截面","Lab 2-5 double platform · thickness 16 · gap 100 · reach 83.2":"实验 2-5 双层台 · 厚 16 · 间隙 100 · 挑出 83.2","0–20° per layer · assembly preview":"每层 0–20° · 装配预览","360° / 180° / 90° / 240° / two 90° sectors":"整环／半环／90°／240°／两个 90° 扇区","One sector or two opposite sectors":"单个扇区或两个对向扇区","Four profiles · 20 base slots, split at outline edges":"四种剖面 · 20 个基准槽在轮廓边界细分","No circumferential forces or simulated tilt mechanism":"未模拟环向力和倾斜成形机制","Twenty bands with different reaches form a square around a round mast. Change the outline from circle to square, or choose an undulating or split platform.":"二十条带以不同的挑出距离围绕圆轴形成方环。可将轮廓从圆调到方，也可选择起伏或捏分平台。","20 total: 8 face · 8 edge · 4 corner":"共 20 条：面部 8 · 边部 8 · 角部 4","Five steps from circle to square":"五档，从圆到方","Side 169 px · platform height 36 px · rim error < 0.9 px":"边长 169 像素 · 台高 36 像素 · 外缘误差 < 0.9 像素","Round 54 px · square 56 / 64 / 89 px":"圆形 54 像素 · 方形 56／64／89 像素","40 px height range":"高度范围 40 像素","Shelves 16 px thick · gap 0–100 px · seam centre stays level":"台厚 16 像素 · 间隙 0–100 像素 · 缝心等高","Side 223 px · 338 nodes per band":"边长 223 像素 · 每条带 338 节点","Single ring or 4×4 · fixed radius":"单环或 4×4 · 半径固定","Split faces held straight by a placement rule during forming":"捏分成形时，由摆放规则保持端面平直","Sixteen rings fill a room beside a 1.70 m figure. Change the form for the whole field or by row; adjust the radius to change the spacing.":"十六个环布置在房间内，以 1.70 米人物标示比例。可统一切换形态，也可每行一种；调节半径时，间距随之变化。","4×4 rings · 20 bands each":"4×4 个环 · 每环 20 条带","Figure 1.70 m · room 3.74 m · ring width 1.04 m":"人物 1.70 米 · 房高 3.74 米 · 环宽 1.04 米","Platform underside 1.08 m":"平台底面离地 1.08 米","Tracks radius · ring gap = 1.5× gap between bands":"随半径变化 · 环间缝为带间缝的 1.5 倍","Same throughout or one per row":"全场同形或每行一种","Adjustable membrane opacity, 0–1":"织物膜不透明度 0–1","Arrange two, three, four or nine rings. Compare gaps, touching edges, steps and interleaving, then make them form together or in sequence. Combinations that would collide are disabled.":"组合二、三、四或九个环，比较分离、相切、错层和交叠关系，再选择同步或依次成形。会发生碰撞的组合不可选。","Lab 2-5 ring · 20 bands · 202 nodes":"实验 2-5 的环 · 20 条带 · 202 节点","2 / 3 / 4 / 9 rings":"2／3／4／9 个环","Apart · touching · apart stepped · touching stepped · interleaved":"分离 · 相切 · 分离错层 · 相切错层 · 交叠","Up to 0.35 m; shape stays unchanged":"最高 0.35 米，形态不变","Step must clear the forming body by 6 px":"高差需超出成形中的结构厚度 6 像素","Together or staggered by 150 steps":"同步或每隔 150 步启动一波","Level touching edges joined by a 16 cm fabric web":"等高相切边用 16 厘米织物网连接","Lab 2-8 room · 1.70 m figure":"实验 2-8 房间 · 1.70 米人物","Move one person through the room and watch nearby units form. The floor records time spent within view. Follow mode withdraws the structure as that trace fades; lock mode keeps it formed.":"移动一个人，观察附近单元成形。地面记录视野范围内的停留时间。跟随模式随痕迹消退而收回结构；锁定模式保留成形。","4×4 / 6×6 / 8×8 · Lab 2-8 room":"4×4／6×6／8×8 · 实验 2-8 房间","0.1 m floor cells · capped at the threshold · linear fade":"0.1 米地面格 · 读数上限为阈值 · 线性消退","Mean trace by cell or footprint":"按单元分区或平台投影读取均值","Mean ≥ threshold × floor share; default share 50%":"均值 ≥ 阈值 × 占比；默认占比 50%","Threshold 2 s · fade 6 s · follow mode":"阈值 2 秒 · 消退 6 秒 · 跟随模式","Reach 0.22–2.0 m, default 1.5 m · angle 60°–360°, default 180°":"半径 0.22–2.0 米，默认 1.5 米 · 视角 60°–360°，默认 180°","Platform radius + body 0.22 m + margin 0.15 m; walking lane twice this width":"平台半径＋身体 0.22 米＋余量 0.15 米；通道宽为其两倍","15 s threshold · 2%/s decay, uncapped; differs from this demo":"阈值 15 秒 · 每秒衰减 2%，不封顶；与本演示不同","Activation only; no behaviour-to-shape rule":"只研究激活，尚无行为到形态的规则","Place up to eight people, drag them or let them wander. Their floor traces add where their views overlap, so units can form sooner. Activation and clearance use the same rules as Lab 2-10.":"最多放置八个人，可以拖动，也可以让他们自走。视野重叠处的地面痕迹会叠加，使单元更早成形。激活与让位规则沿用实验 2-10。","Click to add · hold to drag · − removes the last":"点击添加 · 按住拖动 · 减号移除最后一人","0.7 m/s · walks 0.5–2 m, occasionally 3.5 m · pauses 8–45 s":"步速 0.7 米/秒 · 每次走 0.5–2 米，偶尔 3.5 米 · 停留 8–45 秒","Follow: withdraw as traces fade · lock: keep formed":"跟随：随痕迹消退收回 · 锁定：保留成形","Two simultaneous views add trace at twice the rate":"两个视野同时覆盖时，痕迹累积速度翻倍","Random wandering for demonstration; not a model of human behaviour":"随机漫步仅用于演示，不是人的行为模型","Join round or square platforms into steps, ramps and enclosures. Adjust each unit’s height range and orientation, then read the height difference at each seam. The square rising arrangement retains an 8 cm step.":"用圆环或方环连接出台阶、坡道和围合空间。调节每个单元的高度范围和朝向，查看接缝高差。方环升台组合保留一道 8 厘米台阶。","Descent · rise · enclosure · step · ramp · three-part ramp · hollow · arch":"坡降 · 升台 · 合腔 · 台阶 · 续坡 · 三段坡 · 凹 · 拱","Round from Lab 2-5 · square from Lab 2-7":"圆环来自实验 2-5 · 方环来自实验 2-7","Crest band 0–19 · height slice 0–100% · split opening direction":"波峰条带 0–19 · 高度区间 0–100% · 捏分开口朝向","Round 0.35 m · square 0.16 m":"圆环 0.35 米 · 方环 0.16 米","Level within 3 cm · square rise includes an 8 cm step":"高差 3 厘米内视为齐平 · 方环升台有 8 厘米台阶","Touching at peak reach or separated by the family’s gap":"按最大挑出相接，或留出该族环间缝","1.70 m figure · round surface 1.39–1.73 m · cavity height 0.39 m":"人物 1.70 米 · 圆环走面 1.39–1.73 米 · 腔高 0.39 米","Single-row assembly; no interaction between units":"单排装配；未模拟单元间相互作用","Four-bar linkage":"四杆连杆","Drag a joint to move the four-bar mechanism and trace its path.":"拖动节点，观察四杆机构的运动与轨迹。","Arch ring solver":"拱环求解器","The S4 scissor arch, driven by a crank-slider.":"由曲柄滑块驱动的 S4 剪式拱环。","Tendon tentacle":"肌腱触手","Bend seven vertebrae with three tendons spaced at 120°.":"三条相隔 120° 的肌腱控制七节触手弯曲。","Five-ring shell":"五环外壳","Five rings opening and closing together.":"五个环同步开合。","Full assembly":"整机装配","One shaft drives five rings; three tendons bend the arm.":"一根轴驱动五环，三条肌腱控制触手。","Contractile skin units":"收缩张紧外皮单元","Four bond patterns turn a contracting strip into four shapes.":"四种锁定键排布，让同一条带收缩成四种形态。","Skin units, solid":"皮肤单元立体带","The four fabric bands in 3D, with visible sections and bonds.":"在三维视图中查看四种织物带的剖面与键。","Two structures, one band":"一条带、两个结构","Two structures on one strip, with an adjustable gap.":"同一条带形成两个结构，中间间距可调。","Series":"序列","Compare a graded series with a platform splitting in two.":"对比形态渐变序列与平台捏分序列。","Cylinder of units":"圆筒环","Twenty bands form a level, undulating, changing, split or double platform.":"二十条带围成等高、起伏、渐变、捏分或双层平台。","Layers within one unit":"单元内的多层台","Adjust each shelf’s radius, outline, tilt and joined sectors.":"分别调节上下层的半径、轮廓、倾角和连接区域。","A square ring":"方形环","Vary each band’s reach to change a round platform into a square.":"改变各条带的挑出距离，让圆形平台逐步变方。","Four by four":"四乘四阵列","Sixteen rings in a room, with a 1.70 m figure for scale.":"十六个环放入房间，以 1.70 米人物标示比例。","Between units":"单元关系","Arrange 2, 3, 4 or 9 rings and compare their spacing, heights and timing.":"组合 2、3、4 或 9 个环，比较间距、高差与成形时序。","A person walks through":"一个人走过","Move one person and watch nearby units respond to their floor trace.":"移动一个人，观察附近单元如何响应地面痕迹。","A few people":"几个人在场","Place or drag people to see how their overlapping views affect the units.":"放置或拖动人物，观察视野重叠对单元的影响。","Joined platforms":"平台组合","Join round or square platforms into steps, ramps and enclosures.":"用圆环或方环连接出台阶、坡道和围合空间。","Reincarnation Machine":"轮回机器","Spatial simulation":"空间模拟","two linkage kernels":"两套连杆内核","skin-unit engine & geometry studies":"皮肤单元引擎与几何研究","Project I":"项目一","Project II":"项目二","Project III":"项目三","Benches to come":"实验待建","One band":"一条带","A row":"一排","A ring":"一圈","A room":"一间房","People":"人","Compositions":"组合"},"spec":{"Kernel":"内核","Tests":"测试","Render":"渲染","Drive":"驱动","Instance":"实例","Stops":"止程","Mesh":"网格","Camera":"相机","Family":"族","Choreo":"编排","Peaks":"峰值","Bodies":"实体","Stroke":"行程","Arm":"触手","Caveats":"注意","Source":"来源","Bonds":"键","Band":"条带","Pairs":"组合","Gap":"间距","Independence":"独立性","Series":"序列","Gradient":"渐变","Split":"捏分","Shape fit":"轮廓拟合","Layout":"排布","Ring":"环","Undulation":"起伏","Double":"双层","Radius":"半径","Skin":"蒙皮","Limit":"局限","Views":"视图","Baseline":"基准","Tilt":"倾斜","Ring shape":"环形轮廓","Outline":"轮廓","Joins":"连接","Forming":"成形","Bands":"条带","Flat":"平台","Reach":"挑出","Split outline":"捏分轮廓","Field":"场地","Scale":"比例","Height":"高度","Spacing":"间距","Forms":"形态","Unit":"单元","Clusters":"组合","Relations":"关系","Interleave":"交叠","Timing":"时序","Seams":"接缝","Grid":"网格","Trace":"痕迹","Reading":"读数","Demo":"演示","View":"视野","Clearance":"让位","Prototype":"原型","People":"人物","Wander":"漫步","Response":"响应","Overlap":"重叠","Figures":"图形","Units":"单元","Controls":"控件","Range":"范围"},"ctl":{"Trace":"轨迹","Crank":"曲柄","Reset":"重置","Drive":"驱动","Apex":"拱顶","Feet":"底脚","Slot stops":"槽端止程","Tendon A":"肌腱 A","Tendon B":"肌腱 B","Tendon C":"肌腱 C","View":"视角","Iso":"轴测","Front":"正","Top":"顶","Left":"左","Right":"右","Side":"侧","Breathe":"呼吸","Phase":"相位","Skin":"遮罩","X-ray":"透视","Run":"运转","Shape":"形态","Pocket":"袋","Bulb":"蘑菇挑台","Ledge":"直挑台","Stairs":"阶梯","Contraction ℓ":"收缩 ℓ","Bonds":"键","Smooth":"平滑","Section":"剖面","Pair":"组合","Gap":"间距","Series":"序列","Graded":"渐变","Split":"捏分","Layout":"排布","Packed":"并拢","Row":"分列","Plan":"编制","Level":"等高","Undulating":"起伏","Changing":"渐变","Double":"双层","Radius":"半径","Round → square":"圆 → 方","Tilt":"倾斜","Join depth":"连接深度","Target":"目标几何","Forming":"条带成形","Sections":"截面对照","Circle → square":"圆 → 方","Platform":"平台","Flat":"平直","Ring":"单环","Forms":"形态","Same":"全场同形","By row":"每行一种","Rings":"环数","Relation":"关系","Apart":"分离","Touching":"相切","Stepped":"错层","Interleaved":"交叠","Timing":"时序","Together":"同步","Staggered":"依次","Mode":"模式","Follow":"跟随","Lock":"锁定","Reach":"视野半径","Grid":"网格","+ Person":"+ 人","− Person":"− 人","Wander":"自走","Figure":"图形","Descent":"坡降","Rise":"升台","Enclosure":"合腔","Step":"台阶","Ramp":"续坡","Crest band":"波峰条带","Round":"圆环","Square":"方环","drag a joint":"拖动节点","drag the apex":"拖动拱顶","drag to orbit":"拖动旋转","views by button":"按钮切换视角","drag ℓ":"拖动 ℓ","drag the person":"拖动人物","click to add":"点击添加人物","SVG · 2D kernel":"矢量 · 二维内核","WebGL · 3D kernel":"WebGL · 三维内核","WebGL · fixed view":"WebGL · 固定视角","SVG · research-code port":"矢量 · 研究代码移植","WebGL · multi-view":"WebGL · 多视图","WebGL · 16 live rings":"WebGL · 16 个实时环","Canvas · plan":"Canvas · 平面","Canvas · up to 8 people":"Canvas · 最多 8 人"}};
+const UI = {"en":{"meta":"Lab · 17 interactive benches · last bench added Sep 17, 2026","h1":"The lab","dot":".","lede":"Interactive studies of linkages, fabric structures and spatial behaviour. Drag the models and adjust their controls to compare how they move and form.","scroll":"scroll","scrollD":"Moves the page — never the model.","drag":"drag","dragD":"Works straight away: orbit, pull a joint, move a person.","expand":"expand ↗","expandD":"Gives one bench the screen. The wheel then zooms; Esc restores.","idxCollapse":"Index · collapse","idxCollapseL":"Collapse index","idxExpandL":"Expand index","p3Index":"03 · Project III — to come","caseStudy":"Case study ↗","notes":"Notes","about":"About this study","home":"home","p3":"Project III","inProgress":"In progress","p3Empty":"No benches yet. They will appear here, in build order, as the project takes shape.","footer":"17 benches · two projects · all running live in the browser","work":"Work ↗","log":"Log ↗","top":"Top ↑","lab":"Lab","expandB":"Expand ↗","restoreB":"Restore ↙","live":"live","solving":"solving…","fewer":"Fewer specs ↑","ph":"live bench mounts here · Lab ","hintCam":"Drag to orbit · wheel scrolls the page","hintFixed":"Fixed view · switch it with the buttons","hintWheel":" · wheel scrolls the page","hintZoom":"Wheel zooms the model · drag to orbit · Esc restores","hintEsc":" · Esc restores","solve":"solve","view":"view","inProg":"in progress","nav":["Work","About","Lab","Log"]},"zh":{"meta":"实验室 · 17 项交互实验 · 最近新增于 2026-09-17","h1":"实验室","dot":"","lede":"连杆、织物结构与空间行为的交互研究。拖动模型、调节控件，比较它们如何运动与成形。","scroll":"滚动","scrollD":"只翻页面，不动模型。","drag":"拖动","dragD":"直接可用：旋转视角、拉动节点、移动人物。","expand":"放大 ↗","expandD":"让一台实验占满屏幕，此时滚轮缩放模型；Esc 恢复。","idxCollapse":"目录 · 收起","idxCollapseL":"收起目录","idxExpandL":"展开目录","p3Index":"03 · 项目三 — 待建","caseStudy":"案例 ↗","notes":"说明","about":"关于这项实验","home":"归位","p3":"项目三","inProgress":"进行中","p3Empty":"暂无实验。项目成形后，实验会按搭建顺序列在这里。","footer":"17 项实验 · 两个项目 · 均在浏览器中实时运行","work":"作品 ↗","log":"日志 ↗","top":"顶部 ↑","lab":"实验","expandB":"放大 ↗","restoreB":"恢复 ↙","live":"运行中","solving":"求解中…","fewer":"收起规格 ↑","ph":"实时台架挂载于此 · 实验 ","hintCam":"拖动旋转 · 滚轮浏览页面","hintFixed":"固定视角 · 用按钮切换","hintWheel":" · 滚轮浏览页面","hintZoom":"滚轮缩放 · 拖动旋转 · Esc 恢复","hintEsc":" · Esc 恢复","solve":"解什么","view":"怎么看","inProg":"进行中","nav":["作品","关于","实验室","日志"]}};
+const KF_UP = [{ opacity: 0, transform: 'translateY(22px)' }, { opacity: 1, transform: 'none' }];
+
+class Component extends DCLogic {
+  state = { lang: null, ctl: {}, notes: {}, more: {}, zoom: {}, solving: {}, focus: null, holdH: 0, act: '1-1', scrolled: false, hv: null, vw: 1440, toast: '' };
+  rootRef = React.createRef();
+  q(s) { return this.rootRef.current ? this.rootRef.current.querySelector(s) : null; }
+  qa(s) { return Array.from(this.rootRef.current ? this.rootRef.current.querySelectorAll(s) : []); }
+  motionOn() { return !this.reduced && (this.props.entrance ?? true); }
+  componentDidMount() {
+    this.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    try { const l = localStorage.getItem('lab-lang'); if (l === 'en' || l === 'zh') this.setState({ lang: l }); } catch (e) {}
+    this.onScroll = () => { cancelAnimationFrame(this.sr); this.sr = requestAnimationFrame(() => {
+      const lim = innerHeight * .42; let act = ALL[0].no;
+      this.qa('[data-bench]').forEach(el => { if (el.getBoundingClientRect().top < lim) act = el.dataset.bench; });
+      const scrolled = scrollY > 8;
+      if (act !== this.state.act || scrolled !== this.state.scrolled) this.setState({ act, scrolled });
+    }); };
+    this.onResize = () => this.setState({ vw: innerWidth });
+    this.onKey = e => { if (e.key === 'Escape' && this.state.focus) this.close(); };
+    this.onWheel = e => {
+      const f = this.state.focus; if (!f) return;
+      const pl = e.target.closest && e.target.closest('[data-plate]');
+      if (!pl || pl.dataset.plate !== f || e.ctrlKey) return;
+      const b = ALL.find(x => x.no === f); if (!b || !b.cam) return;
+      e.preventDefault(); this.zoomBy(f, Math.exp(-e.deltaY * 0.0015));
+    };
+    addEventListener('scroll', this.onScroll, { passive: true }); addEventListener('resize', this.onResize);
+    addEventListener('keydown', this.onKey); addEventListener('wheel', this.onWheel, { passive: false });
+    this.onResize(); this.onScroll();
+    const els = this.qa('[data-rv]');
+    if (!this.motionOn()) return;
+    els.forEach(el => { el.style.opacity = '0'; });
+    let k = 0, kt = 0;
+    this.io = new IntersectionObserver(ents => {
+      const now = performance.now(); if (now - kt > 200) k = 0; kt = now;
+      ents.forEach(en => { if (!en.isIntersecting) return; const el = en.target; this.io.unobserve(el); el.style.opacity = '';
+        el.animate(KF_UP, { duration: 820, delay: (k++) * 70, easing: EO, fill: 'backwards' }); });
+    }, { rootMargin: '0px 0px -6% 0px' });
+    els.forEach(el => this.io.observe(el));
+  }
+  componentWillUnmount() {
+    removeEventListener('scroll', this.onScroll); removeEventListener('resize', this.onResize);
+    removeEventListener('keydown', this.onKey); removeEventListener('wheel', this.onWheel);
+    this.io && this.io.disconnect(); clearTimeout(this.tt); document.body.style.overflow = '';
+  }
+  componentDidUpdate() {
+    const pf = this._pf ?? null; this._pf = this.state.focus;
+    if (pf !== this.state.focus) {
+      document.body.style.overflow = this.state.focus ? 'hidden' : '';
+      if (this.state.focus && this.fromRect && this.motionOn()) {
+        const art = this.q(`[data-art="${this.state.focus}"]`), r = this.fromRect;
+        art && art.animate([{ clipPath: `inset(${r.top}px ${innerWidth - r.right}px ${innerHeight - r.bottom}px ${r.left}px)` }, { clipPath: 'inset(0 0 0 0)' }], { duration: 760, easing: EIO });
+      }
+    }
+  }
+  expand(no) {
+    const art = this.q(`[data-art="${no}"]`); if (!art) return;
+    const r = art.getBoundingClientRect(); this.fromRect = r;
+    this.setState({ focus: no, holdH: r.height, hv: null });
+    const c = this.q('[data-cursor]'); c && (c.style.opacity = '0');
+  }
+  close() {
+    const no = this.state.focus; if (!no) return;
+    const art = this.q(`[data-art="${no}"]`), hold = this.q(`[data-bench="${no}"]`);
+    if (!art || !hold || !this.motionOn()) { this.setState({ focus: null }); return; }
+    const r = hold.getBoundingClientRect();
+    const a = art.animate([{ clipPath: 'inset(0 0 0 0)' }, { clipPath: `inset(${Math.max(0, r.top)}px ${innerWidth - r.right}px ${Math.max(0, innerHeight - r.bottom)}px ${r.left}px)` }], { duration: 560, easing: EIO, fill: 'forwards' });
+    a.onfinish = () => { art.scrollTop = 0; this.setState({ focus: null }, () => requestAnimationFrame(() => a.cancel())); };
+  }
+  go(no) {
+    if (this.state.focus) return;
+    const el = this.q(`[data-bench="${no}"]`); if (!el) return;
+    scrollTo({ top: el.getBoundingClientRect().top + scrollY - 76, behavior: this.reduced ? 'auto' : 'smooth' });
+  }
+  goProj(i) { const el = this.q(`[data-proj="${i}"]`); el && scrollTo({ top: el.getBoundingClientRect().top + scrollY - 40, behavior: this.reduced ? 'auto' : 'smooth' }); }
+  setCtl(key, v) { this.setState(s => ({ ctl: { ...s.ctl, [key]: v } })); }
+  solve(no) {
+    const bar = this.q(`[data-solve="${no}"]`);
+    if (bar && this.motionOn()) bar.animate([{ transform: 'scaleX(0)', transformOrigin: '0 50%' }, { transform: 'scaleX(1)', transformOrigin: '0 50%', offset: .7 }, { transform: 'scaleX(1)', opacity: 0 }], { duration: 900, easing: EO });
+    clearTimeout(this['sv' + no]);
+    this.setState(s => ({ solving: { ...s.solving, [no]: true } }));
+    this['sv' + no] = setTimeout(() => this.setState(s => ({ solving: { ...s.solving, [no]: false } })), 900);
+  }
+  zoomBy(no, f) { this.setState(s => ({ zoom: { ...s.zoom, [no]: Math.max(.6, Math.min(2.4, (s.zoom[no] ?? 1) * f)) } })); }
+  say(msg) { clearTimeout(this.tt); this.setState({ toast: msg }); this.tt = setTimeout(() => this.setState({ toast: '' }), 1800); }
+
+  lang() { return this.state.lang || (this.props.defaultLang === 'en' ? 'en' : 'zh'); }
+  setLang(l) { try { localStorage.setItem('lab-lang', l); } catch (e) {} this.setState({ lang: l }); }
+  renderVals() {
+    const st = this.state, zh = this.lang() === 'zh', notesDef = this.props.notesOpen ?? true, rows = this.props.specRows ?? 4;
+    const tx = s => (zh ? ZH.copy[s] ?? s : s), tc = s => (zh ? ZH.ctl[s] ?? s : s), tk = s => (zh ? ZH.spec[s] ?? s : s);
+    const t = zh ? UI.zh : UI.en, cap = s => (zh ? s : s[0].toUpperCase() + s.slice(1));
+    const nB = n => (zh ? n + ' 项实验' : n + (n === 1 ? ' bench' : ' benches'));
+    const narrow = st.vw < 1040;
+    const mkItems = (b, list, gk, c) => list.map((it, ii) => {
+      const key = b.no + ':' + gk + ii, v = st.ctl[key] ?? it.def, base = { label: tc(it.label), isSeg: it.t === 'seg', isSl: it.t === 'sl', isTg: it.t === 'tg', isBt: it.t === 'bt' };
+      if (it.t === 'seg') return { ...base, opts: it.opts.map((o, oi) => ({ label: tc(o), on: oi === v, bg: oi === v ? INK : 'transparent', color: oi === v ? PAPER : INK,
+        pick: () => { if (oi !== v) { this.setCtl(key, oi); this.solve(b.no); } } })) };
+      if (it.t === 'sl') {
+        const set = (e, r) => this.setCtl(key, Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)));
+        return { ...base, pct: (v * 100).toFixed(1) + '%', val: v.toFixed(2), now: String(Math.round(v * 100)),
+          down: e => { const el = e.currentTarget; el.setPointerCapture(e.pointerId); this.drag = { key, r: el.getBoundingClientRect() }; set(e, this.drag.r); },
+          move: e => { if (this.drag && this.drag.key === key) set(e, this.drag.r); },
+          up: () => { if (this.drag && this.drag.key === key) { this.drag = null; this.solve(b.no); } },
+          key: e => { const d = { ArrowRight: .05, ArrowUp: .05, ArrowLeft: -.05, ArrowDown: -.05 }[e.key]; if (d == null) return; e.preventDefault(); this.setCtl(key, Math.max(0, Math.min(1, v + d))); this.solve(b.no); } };
+      }
+      if (it.t === 'tg') return { ...base, on: v, mark: v ? c.ink : 'transparent', color: v ? INK : MUTE, flip: () => { this.setCtl(key, !v); this.solve(b.no); } };
+      return { ...base, click: () => { this.solve(b.no); this.say(t.lab + ' ' + b.no + ' · ' + tc(it.label)); } };
+    });
+    const mkBench = (b, p) => {
+      const c = p.c, on = st.focus === b.no, notesOn = st.notes[b.no] ?? (narrow ? false : notesDef), more = !!st.more[b.no];
+      const z = st.zoom[b.no] ?? 1, solving = !!st.solving[b.no], verb = tc(b.verb);
+      const groups = [{ k: t.solve, items: mkItems(b, parse(b.solve), 's', c) }, { k: t.view, items: mkItems(b, parse(b.view), 'v', c) }].filter(g => g.items.length);
+      const hint = on ? (b.cam ? t.hintZoom : cap(verb) + t.hintEsc) : b.cam ? t.hintCam : b.no === '1-5' ? t.hintFixed : cap(verb) + t.hintWheel;
+      const specs = b.specs.map(s => ({ k: tk(s.k), v: tx(s.v) }));
+      return { no: b.no, labNo: t.lab + ' ' + b.no, ph: t.ph + b.no, title: tx(b.title), desc: tx(b.desc), kind: tc(b.kind), lede: tx(b.lede), ink: c.ink, hi: c.hi, cam: b.cam,
+        img: IMG[b.no] || null, noImg: !IMG[b.no], imgScale: (z * (st.hv === b.no && !on ? 1.025 : 1)).toFixed(3),
+        status: solving ? t.solving : t.live, dot: solving ? 'oklch(0.83 0.12 85)' : c.hi,
+        readout: verb, zoomTxt: b.cam ? '×' + z.toFixed(2) : '',
+        groups, hint, hintDot: on ? c.ink : 'oklch(0.95 0.032 120 / .25)',
+        pos: on ? 'fixed' : 'relative', inset: on ? '0px' : 'auto', z: on ? '60' : 'auto', ov: on ? 'auto' : 'visible',
+        pad: on ? '24px clamp(20px,3vw,40px) 28px' : '44px 0 8px', holdH: on ? st.holdH + 'px' : '0px',
+        plateH: on ? 'calc(100vh - 250px)' : 'clamp(320px, 56vh, 580px)', detFlex: on ? '0 1 360px' : '0 1 300px',
+        notesOn, notesDisplay: notesOn ? 'flex' : 'none', notesMark: notesOn ? INK : 'transparent',
+        toggleNotes: () => this.setState(s => ({ notes: { ...s.notes, [b.no]: !notesOn } })),
+        specs: more ? specs : specs.slice(0, rows), hasMore: specs.length > rows,
+        moreLabel: more ? t.fewer : (zh ? '全部 ' + specs.length + ' 项规格 ↓' : 'All ' + specs.length + ' specs ↓'), toggleSpecs: () => this.setState(s => ({ more: { ...s.more, [b.no]: !more } })),
+        expandLabel: on ? t.restoreB : t.expandB, toggleExpand: () => (on ? this.close() : this.expand(b.no)),
+        plateIn: () => { this.setState({ hv: b.no }); const el = this.q('[data-cursor]'); el && (el.style.opacity = '1'); },
+        zIn: () => this.zoomBy(b.no, 1.2), zOut: () => this.zoomBy(b.no, 1 / 1.2), zHome: () => this.setState(s => ({ zoom: { ...s.zoom, [b.no]: 1 } })) };
+    };
+    const actB = ALL.find(b => b.no === st.act) || ALL[0];
+    const cnt = p => p.segs.reduce((a, s) => a + s.benches.length, 0);
+    const open = st.idxOpen ?? (this.props.indexOpen ?? true);
+    return {
+      rootRef: this.rootRef, barLine: st.scrolled ? '.1' : '0', t,
+      langs: [['en', 'EN'], ['zh', '中']].map(([code, label]) => { const on = this.lang() === code; return { code, label, on, bg: on ? INK : 'transparent', color: on ? PAPER : INK, pick: () => this.setLang(code) }; }),
+      navs: [['/work', 0], ['/about', 1], [null, 2], ['/archive', 3]].map(([url, i]) => ({ label: t.nav[i], op: url ? .5 : 1, ul: url ? 0 : 1, go: () => (url ? this.say('→ ' + url) : this.toTop()) })),
+      chips: [...PROJECTS.map((p, i) => ({ n: p.n, kicker: tx(p.kicker), title: tx(p.title), ink: p.c.ink, count: nB(cnt(p)), op: 1, go: () => this.goProj(i) })),
+        { n: '03', kicker: tx('Project III'), title: tx('Benches to come'), ink: 'oklch(0.74 0.06 235)', count: t.inProg, op: .6, go: () => this.goProj(2) }],
+      idxDisplay: narrow ? 'none' : 'block', actNo: st.act,
+      idxOpen: open, idxW: open ? '212px' : '28px', idxIcon: open ? '‹' : '›', idxBtnLabel: open ? t.idxCollapseL : t.idxExpandL,
+      idxTextOp: open ? 1 : 0, idxListDisplay: open ? 'block' : 'none', idxRailDisplay: open ? 'none' : 'flex',
+      toggleIdx: () => this.setState({ idxOpen: !open }),
+      rail: ALL.map((b, i) => { const on = b.no === st.act, c = PROJECTS[b.pi].c; return { label: t.lab + ' ' + b.no + ' · ' + tx(b.title), mt: i > 0 && ALL[i - 1].pi !== b.pi ? '14px' : '0px',
+        w: on ? '22px' : '10px', c: on ? c.ink : 'oklch(0.95 0.032 120 / .3)', go: () => this.go(b.no) }; }),
+      index: PROJECTS.map(p => ({ n: p.n, short: tx(p.short), ink: p.c.ink, count: String(cnt(p)),
+        rows: p.segs.flatMap(s => [...(s.label ? [{ isSeg: true, isBench: false, label: s.n + ' ' + tx(s.label) }] : []),
+          ...s.benches.map(b => { const on = b.no === st.act; return { isSeg: false, isBench: true, no: b.no, title: tx(b.title), ink: p.c.ink, bar: on ? 1 : 0, tx: on ? '4px' : '0px',
+            color: on ? INK : MUTE, noColor: on ? p.c.ink : 'oklch(0.6 0.025 185)', weight: on ? 600 : 400, go: () => this.go(b.no) }; })]) })),
+      projects: PROJECTS.map((p, i) => ({ i: String(i), n: p.n, title: tx(p.title), sub: tx(p.sub), ink: p.c.ink,
+        count: nB(cnt(p)), openCase: () => this.say('→ /work/' + p.slug),
+        segs: p.segs.map(s => ({ n: s.n, label: tx(s.label), hasLabel: !!s.label, count: nB(s.benches.length), benches: s.benches.map(b => mkBench(b, p)) })) })),
+      plateMove: e => { const el = this.q('[data-cursor]'); if (el) el.style.transform = 'translate(' + e.clientX + 'px,' + e.clientY + 'px)'; },
+      plateOut: () => { this.setState({ hv: null }); const el = this.q('[data-cursor]'); el && (el.style.opacity = '0'); },
+      cursorVerb: tc((ALL.find(b => b.no === st.hv) || actB).verb),
+      toHome: () => this.say('→ /'), toWork: () => this.say('→ /work'), toLog: () => this.say('→ /archive'), toTop: () => this.toTop(),
+      toast: st.toast, toastOp: st.toast ? 1 : 0, toastY: st.toast ? '0px' : '8px',
+    };
+  }
+  toTop() { scrollTo({ top: 0, behavior: this.reduced ? 'auto' : 'smooth' }); }
+}
+</script>
+</body>
+</html>

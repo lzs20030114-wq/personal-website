@@ -13,12 +13,18 @@
   --ld-g-hi: oklch(0.86 0.08 130);
   --ld-v: oklch(0.72 0.095 291);
   --ld-slate: oklch(0.74 0.06 235);
+  /* 配色 v2「中间色面」（design-ref/palette-study，MAPPING §46）：黑白之间补带色的背景层，字仍只用墨 / 纸 */
+  --ld-deep: oklch(0.3 0.032 205); /* S5 深潭：Lab 开头区整段色带 */
+  --ld-face: oklch(0.41 0.042 192); /* 主青（降纯度）：页脚色面 */
+  --ld-face-ink: oklch(0.86 0.04 160); /* 主青面上的次级字 */
+  --ld-panel: oklch(0.25 0.022 212); /* 夜色上浮起一档：说明栏面板 */
+  --ld-lime-hi: oklch(0.9 0.058 124); /* 青柠亮档：色面上的链接 */
   --ld-eo: cubic-bezier(0.2, 0.7, 0.1, 1);
   --ld-eio: cubic-bezier(0.76, 0, 0.24, 1);
 }
 
-/* ── 页底与点阵：稿的 160° 渐变（比站内 ground-plane 更深）+ 顶部 760px 的点阵 ── */
-.ld-ground { background: linear-gradient(160deg, oklch(0.235 0.045 200) 0%, oklch(0.2 0.038 232) 50%, oklch(0.215 0.045 282) 100%); }
+/* ── 页底与点阵：配色 v2 起为夜色平涂（原 160° 三色渐变撤掉）+ 顶部 760px 的点阵 ── */
+.ld-ground { background: var(--ld-paper); }
 .ld-ground::before { display: none; }
 .ld-dots {
   position: absolute; left: 0; right: 0; top: 0; height: 760px; pointer-events: none; z-index: -1;
@@ -53,12 +59,16 @@
 /* 阅读进度（案例页，稿 data-readbar）：顶栏下缘 1.5px 绿线 */
 .ld-readbar { position: absolute; left: 0; bottom: -1px; height: 1.5px; width: 0; background: var(--ld-g); }
 
-/* ── 页脚 ── */
-.ld-footer { margin-top: 96px; border-top: 1px solid oklch(0.95 0.032 120 / 0.16); color: var(--ld-mute); }
-.ld-footer__in { max-width: 1440px; margin: 0 auto; padding: 22px clamp(20px, 4vw, 48px) 40px; box-sizing: border-box; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px 32px; font: 400 12px var(--ld-mono); }
+/* ── 页脚：配色 v2 起是主青色面（原为发丝线），链接改青柠亮档 ── */
+.ld-footer { margin-top: 96px; background: var(--ld-face); color: var(--ld-face-ink); }
+.ld-footer__in { max-width: 1440px; margin: 0 auto; padding: 28px clamp(20px, 4vw, 48px) 44px; box-sizing: border-box; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px 32px; font: 400 12px var(--ld-mono); }
 .ld-footer__links { display: flex; gap: 24px; }
-.ld-footer a, .ld-footer button { color: var(--ld-g); font: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+.ld-footer a, .ld-footer button { color: var(--ld-lime-hi); font: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 .ld-footer a:hover, .ld-footer button:hover { color: var(--ld-cream); }
+
+/* 「Live」标：紫只表示「实验 / 进行中」（配色 v2 规则 03）。深底版；首页浅底版在 home.css */
+.ld-live { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; background: oklch(0.33 0.045 288); color: oklch(0.88 0.05 295); font: 500 11px var(--ld-mono); letter-spacing: 0; text-transform: none; }
+.ld-live::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 
 /* ── 响应式 + reduced-motion（顶栏） ── */
 @media (max-width: 1099px) {

@@ -40,7 +40,7 @@ export function LabIntro() {
     <section className="ld-intro" aria-label={tx('The lab')}>
       <div className="ld-intro__top">
         <div className="ld-intro__lead">
-          <p className="ld-meta">{zh ? `实验室 · ${LAB_BENCHES.length} 项交互实验` : `Lab · ${LAB_BENCHES.length} interactive benches`}</p>
+          <p className="ld-meta"><span className="ld-live">{zh ? '实时' : 'Live'}</span>{zh ? `实验室 · ${LAB_BENCHES.length} 项交互实验` : `Lab · ${LAB_BENCHES.length} interactive benches`}</p>
           <h1 className="ld-h1">{tx('The lab')}{zh ? '' : <span className="ld-h1__dot">.</span>}</h1>
           <p className="ld-lede">{tx('Interactive studies of linkages, fabric structures and spatial behaviour. Drag the models and adjust their controls to compare how they move and form.')}</p>
         </div>
