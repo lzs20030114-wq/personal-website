@@ -1,4 +1,5 @@
 import { PLAN, aisleLines, type Activation, type Catchment, type PlanLayout, type TraceField } from '../../src/lib/space/unit-activation';
+import type { CatPose } from '../../src/lib/space/cat-rules';
 
 /**
  * 平面台架共用的画法（Lab.14 一个人走过 / Lab.15 几个人在场）：房间 + 痕迹场 + 单元 + 人。
@@ -41,6 +42,8 @@ export function frame(roomM: number): { sc: number; ox: number; oy: number } {
 export interface PlanPerson {
   /** Optional animal rendering; human drawing remains the default. */
   kind?: 'cat';
+  pose?: CatPose;
+  motionTime?: number;
   bodyR?: number;
   x: number;
   y: number;
@@ -395,29 +398,7 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
     const cy = Y(p.y);
     if (p.kind === 'cat') {
       const r = (p.bodyR ?? 0.14) * sc;
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(p.heading);
-      ctx.strokeStyle = p.held ? pal.accent : pal.ink;
-      ctx.fillStyle = pal.paper;
-      ctx.lineWidth = p.held ? 2.5 : 1.8;
-      ctx.lineCap = 'round';
-      // Tail, oval back and an independently turning head with pointed ears.
-      ctx.beginPath();
-      ctx.moveTo(-r, 0);
-      ctx.bezierCurveTo(-r * 2.5, -r * 0.2, -r * 2.1, r * 1.4, -r * 2.6, r * 0.8);
-      ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(-r * 0.2, 0, r * 1.15, r * 0.65, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.translate(r * 0.85, 0);
-      ctx.rotate((p.gaze ?? p.heading) - p.heading);
-      ctx.beginPath();
-      ctx.moveTo(-r * 0.35, -r * 0.55); ctx.lineTo(r * 0.15, -r * 0.85);
-      ctx.lineTo(r * 0.45, -r * 0.35); ctx.lineTo(r * 0.65, 0);
-      ctx.lineTo(r * 0.45, r * 0.35); ctx.lineTo(r * 0.15, r * 0.85);
-      ctx.lineTo(-r * 0.35, r * 0.55); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = pal.accent;
-      ctx.beginPath(); ctx.arc(r * 0.3, -r * 0.22, 1.2, 0, Math.PI * 2); ctx.arc(r * 0.3, r * 0.22, 1.2, 0, Math.PI * 2); ctx.fill();
-      ctx.restore();
+      drawCat(ctx, p, cx, cy, r, pal);
       continue;
     }
     drawAttention(ctx, p, cx, cy, sc, pal);
@@ -472,4 +453,45 @@ export function canvasToRoom(canvas: HTMLCanvasElement, clientX: number, clientY
   const ly = ((clientY - rect.top) / rect.height) * H;
   const { sc, ox, oy } = frame(roomM);
   return { x: (lx - ox) / sc, y: (ly - oy) / sc };
+}
+
+/** Same cat silhouette at map scale and in the readable action detail. */
+export function drawCat(ctx: CanvasRenderingContext2D, p: PlanPerson, cx: number, cy: number, r: number, pal: Palette): void {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(p.heading);
+  ctx.strokeStyle = p.held ? pal.accent : pal.ink;
+  ctx.fillStyle = pal.paper;
+  ctx.lineWidth = p.held ? 2.5 : 1.8;
+  ctx.lineCap = 'round';
+  // Schematic postures from the action definitions; animation amplitudes are illustrative.
+  const pose = p.pose ?? 'stand', t = p.motionTime ?? 0;
+  const lying = pose === 'lie', sitting = pose === 'sit', crouched = pose === 'crouch';
+  const length = lying ? 1.02 : sitting ? 0.72 : pose === 'chase' ? 1.35 : 1.15;
+  const width = lying ? 0.88 : sitting ? 0.8 : crouched ? 0.82 : 0.65;
+  ctx.beginPath();
+  ctx.moveTo(-r, 0);
+  if (lying || sitting) ctx.bezierCurveTo(-r * 1.8, r * 1.6, r * 0.9, r * 1.5, r * 1.1, r * 0.45);
+  else ctx.bezierCurveTo(-r * 2.5, -r * 0.2, -r * 2.1, r * 1.4, -r * 2.6, r * 0.8);
+  ctx.stroke();
+  if (!lying) {
+    for (const side of [-1, 1]) for (const front of [-1, 1]) {
+      const stride = pose === 'walk' || pose === 'chase' ? Math.sin(t * (pose === 'chase' ? 20 : 10) + side * front) * 0.25 : 0;
+      const paw = pose === 'paw' && front === 1 ? 0.3 + Math.sin(t * 8 + side) * 0.25 : 0;
+      ctx.beginPath();
+      ctx.moveTo(front * r * 0.6, side * r * 0.45);
+      ctx.lineTo((front * 0.8 + stride + paw) * r, side * r * (crouched ? 0.85 : 0.72)); ctx.stroke();
+    }
+  }
+  ctx.beginPath(); ctx.ellipse(-r * 0.2, 0, r * length, r * width, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.translate(r * (lying ? 0.5 : sitting ? 0.65 : 0.85), lying ? -r * 0.24 : 0);
+  ctx.rotate(lying ? -0.6 : (p.gaze ?? p.heading) - p.heading);
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.35, -r * 0.55); ctx.lineTo(r * 0.15, -r * 0.85);
+  ctx.lineTo(r * 0.45, -r * 0.35); ctx.lineTo(r * 0.65, 0);
+  ctx.lineTo(r * 0.45, r * 0.35); ctx.lineTo(r * 0.15, r * 0.85);
+  ctx.lineTo(-r * 0.35, r * 0.55); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = pal.accent;
+  ctx.beginPath(); ctx.arc(r * 0.3, -r * 0.22, 1.2, 0, Math.PI * 2); ctx.arc(r * 0.3, r * 0.22, 1.2, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
 }

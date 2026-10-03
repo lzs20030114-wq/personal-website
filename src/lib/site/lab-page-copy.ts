@@ -5,7 +5,7 @@ export const LAB_PAGE_COPY: readonly (readonly [string, string])[] = [
   ["Behaviour", "行为"],
   ["Watch a cat move across the units; occupied platforms stay open and the next landing activates ahead.", "观察猫在单元上移动：脚下平台维持展开，下一落点提前激活。"],
   ["The cat lives on the units. Its current platform stays open; the next landing forms before it moves. Choose a behaviour, click a destination or drag the cat onto a unit.", "猫在单元上生活。脚下平台保持展开，下一落点成形后再移动。选择行为、点击目标，或把猫拖到单元上。"],
-  ["Pass through · pause and watch · play · free movement", "通行 · 停留观察 · 玩耍 · 自由运动"],
+  ["Pass through · seated / lying rest · toy play · free sequence", "通行 · 坐卧休息 · 玩具游戏 · 自由轮换"],
   ["Visits leave traces on platform surfaces", "使用痕迹留在经过的平台表面"],
   ["Occupied units stay open; the next landing activates before departure", "脚下单元保持展开；下一落点在出发前激活"],
   ["Plan view only; transfer reach, jump height and loads are not simulated", "仅俯视演示；尚未模拟转移可达性、跳跃高度与承重"],
