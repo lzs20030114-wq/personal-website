@@ -349,11 +349,11 @@ export default function LabPage() {
         <Bench
           no="2-12"
           notes={<CatPlanNotes />}
-          lede="The cat lives on the units. Its current platform stays open; the next landing forms before it moves. Choose a behaviour, click a destination or drag the cat onto a unit."
+          lede="The cat lives on the units. Its current platform stays open; the unit it fixates opens, and it moves once that landing has fully formed. Choose a behaviour, click a destination or drag the cat onto a unit."
           specs={[
             ['Behaviour', 'Pass through · seated / lying rest · toy play · free sequence'],
-            ['Trace', 'Visits leave traces on platform surfaces'],
-            ['Response', 'Occupied units stay open; the next landing activates before departure'],
+            ['Trace', 'Gaze traces on fixated units · use traces on occupied platforms'],
+            ['Response', 'Occupied units stay open; landings open from gaze, glanced options retract'],
             ['Limit', 'Plan view only; transfer reach, jump height and loads are not simulated'],
           ]}
         >

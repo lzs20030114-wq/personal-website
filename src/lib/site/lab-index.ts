@@ -116,7 +116,7 @@ export const LAB_INDEX: readonly LabGroup[] = [
         benches: [
           { no: "2-10", title: "A person walks through", kernel: "2d", description: 'Move one person and watch nearby units respond to their floor trace.', meta: '6 behaviours · 3 grids · canvas', kind: 'Canvas · plan', verb: 'drag the person' },
           { no: "2-11", title: "A few people", kernel: "2d", description: 'Place or drag people to see how their overlapping views affect the units.', meta: 'Up to 8 people · live · canvas', kind: 'Canvas · up to 8 people', verb: 'click to add' },
-          { no: "2-12", title: "A cat in the room", kernel: "2d", description: 'Watch a cat move across the units; occupied platforms stay open and the next landing activates ahead.', meta: '3 sequences + free movement · canvas', kind: 'Canvas · cat behaviour', verb: 'drag the cat' },
+          { no: "2-12", title: "A cat in the room", kernel: "2d", description: 'Watch a cat move across the units; occupied platforms stay open and the unit it looks at opens.', meta: '3 sequences + free movement · canvas', kind: 'Canvas · cat behaviour', verb: 'drag the cat' },
         ],
       },
       {

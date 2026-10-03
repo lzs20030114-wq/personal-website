@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CAT_BEHAVIOURS, CatPlanSim } from './cat-plan';
-import { PLAN, PlanSim, keepOut, nearestUnit } from './unit-activation';
+import { PLAN, PlanSim, keepOut, nearestUnit, type PlanUnit } from './unit-activation';
 
 const run = (s: CatPlanSim, seconds: number) => { for (let i = 0; i < seconds * 60; i++) s.step(1 / 60); };
 
@@ -26,21 +26,132 @@ describe('cat plan · activity on platforms', () => {
     }
   });
 
-  it('prepares only the next landing and waits for it before departing', () => {
-    const s = new CatPlanSim({ behaviour: 'pass', threshold: 3 });
-    const start = s.currentUnit;
-    s.step(1 / 60);
-    const next = s.landingUnit!;
-    expect(next.i).toBe(start.i + 1);
-    expect(s.state).toBe('prepare');
-    run(s, 1);
+  it('the route is planned from the start, yet a landing opens only once the cat fixates it', () => {
+    const s = new CatPlanSim({ behaviour: 'pass' });
+    const start = s.currentUnit, n = s.layout.n;
+    const north = s.layout.units[start.i - n], south = s.layout.units[start.i + n], east = s.layout.units[start.i + 1];
+    run(s, 0.4);
+    // First glance: the north neighbour part-opens; the chosen landing is still shut.
+    expect(s.phase).toBe('scan'); expect(s.gazeUnit?.i).toBe(north.i);
+    expect(s.act.degree[north.i]).toBeGreaterThan(0.3); expect(s.act.degree[north.i]).toBeLessThan(0.6);
+    expect(s.act.degree[east.i]).toBe(0);
+    run(s, 0.5);
+    expect(s.gazeUnit?.i).toBe(south.i); expect(s.act.degree[east.i]).toBe(0);
+    run(s, 0.5);
+    // Fixating the landing: it opens with fixation time while the cat waits on its platform.
+    expect(s.state).toBe('prepare'); expect(s.gazeUnit?.i).toBe(east.i);
     expect([s.walker.x, s.walker.y]).toEqual([start.x, start.y]);
-    expect(s.act.degree[next.i]).toBeGreaterThan(0);
-    expect(s.act.degree[next.i]).toBeLessThan(1);
-    for (const u of s.layout.units) if (u.i !== start.i && u.i !== next.i) expect(s.act.degree[u.i]).toBe(0);
-    run(s, 2.1);
-    expect(s.walker.x).toBeGreaterThan(start.x);
-    expect(s.act.degree[next.i]).toBe(1);
+    expect(s.act.degree[east.i]).toBeGreaterThan(0); expect(s.act.degree[east.i]).toBeLessThan(1);
+    run(s, 1);
+    expect(s.walker.x).toBeGreaterThan(start.x); expect(s.act.degree[east.i]).toBe(1);
+    // Glanced options that were not taken retract.
+    run(s, 3);
+    expect(s.act.degree[north.i]).toBe(0); expect(s.act.degree[south.i]).toBe(0);
+  });
+
+  it('activation reads gaze and use traces only, never the planned route', () => {
+    const s = new CatPlanSim({ behaviour: 'pass' });
+    run(s, 1.4);
+    expect(s.state).toBe('prepare');
+    const inputs = () => Array.from((s as unknown as { activationInputs(): Float64Array }).activationInputs());
+    const before = inputs();
+    const plan = s as unknown as { pending: PlanUnit | null; actions: unknown[] };
+    plan.pending = s.layout.units[0]; plan.actions = [];
+    expect(inputs()).toEqual(before);
+  });
+
+  it('looks ahead while crossing a row, so units open in front and the cat seldom stops', () => {
+    const s = new CatPlanSim({ behaviour: 'pass' });
+    run(s, 2.5);
+    let waiting = 0, walking = 0;
+    for (let i = 0; i < 60 * 8; i++) {
+      s.step(1 / 60);
+      if (s.state === 'prepare') waiting++; else if (s.walker.state === 'walk') walking++;
+      for (const u of s.supportUnits) expect(s.act.degree[u.i]).toBe(1);
+    }
+    expect(waiting).toBeLessThan(walking * 0.25);
+  });
+
+  it('a landing around a corner is seen only after the cat stops and turns', () => {
+    const s = new CatPlanSim();
+    const at = (r: number, c: number) => s.layout.units[r * s.layout.n + c];
+    const a = at(2, 1), mid = at(2, 2), end = at(2, 3), corner = at(3, 3);
+    s.hold(a.x, a.y); s.release(); run(s, 1);
+    s.pointerTarget(corner.x, corner.y);
+    let cornerBeforeStop = 0, endOnArrival = -1, stoppedAtEnd = false;
+    for (let i = 0; i < 60 * 15; i++) {
+      s.step(1 / 60);
+      const idle = s.walker.state !== 'walk';
+      if (endOnArrival < 0 && idle && s.currentUnit.i === mid.i) endOnArrival = s.act.degree[end.i];
+      if (idle && s.currentUnit.i === end.i) stoppedAtEnd = true;
+      if (!stoppedAtEnd) cornerBeforeStop = Math.max(cornerBeforeStop, s.act.degree[corner.i]);
+    }
+    expect(endOnArrival).toBeGreaterThan(0.3);
+    expect(cornerBeforeStop).toBe(0);
+    expect(s.currentUnit.i).toBe(corner.i); expect(s.act.degree[corner.i]).toBe(1);
+  });
+
+  it('gaze-to-open and stay-to-fill are separate knobs', () => {
+    for (const gazeOpen of [1, 2]) {
+      const s = new CatPlanSim({ gazeOpen, threshold: 4 });
+      const a = s.layout.units[10], b = s.layout.units[11];
+      s.hold(a.x, a.y); s.release(); run(s, 1);
+      s.pointerTarget(b.x, b.y);
+      const t0 = s.t;
+      let departed = -1;
+      for (let i = 0; i < 60 * 5 && departed < 0; i++) { s.step(1 / 60); if (s.walker.state === 'walk') departed = s.t - t0; }
+      expect(departed).toBeGreaterThan(gazeOpen - 0.05); expect(departed).toBeLessThan(gazeOpen + 0.2);
+    }
+    const s = new CatPlanSim({ gazeOpen: 1, threshold: 4 });
+    s.setThreshold(8); expect(s.gazeOpen).toBe(1);
+    s.setGazeOpen(2); expect(s.act.threshold).toBe(8);
+  });
+
+  it('a platform used longer retracts later than one only crossed', () => {
+    const s = new CatPlanSim({ threshold: 4 });
+    const a = s.layout.units[10], b = s.layout.units[11], c = s.layout.units[12];
+    s.hold(a.x, a.y); s.release(); run(s, 10);
+    s.pointerTarget(c.x, c.y);
+    const used = new Set<number>(), left: Record<number, number> = {}, gone: Record<number, number> = {};
+    for (let i = 0; i < 60 * 20; i++) {
+      s.step(1 / 60);
+      const support = new Set(s.supportUnits.map(u => u.i));
+      for (const u of [a, b]) {
+        if (support.has(u.i)) used.add(u.i);
+        else if (used.has(u.i) && left[u.i] === undefined) left[u.i] = s.t;
+        if (left[u.i] !== undefined && gone[u.i] === undefined && s.act.degree[u.i] === 0) gone[u.i] = s.t;
+      }
+    }
+    expect(gone[a.i] - left[a.i]).toBeGreaterThan(5);
+    expect(gone[b.i] - left[b.i]).toBeLessThan(gone[a.i] - left[a.i] - 1);
+  });
+
+  it('a resting cat and a cat pawing its toy fixate nothing', () => {
+    const rest = new CatPlanSim({ behaviour: 'rest' });
+    const play = new CatPlanSim({ behaviour: 'play' });
+    let pawed = false;
+    for (let i = 0; i < 60 * 30; i++) {
+      rest.step(1 / 60); play.step(1 / 60);
+      expect(rest.gazeUnit).toBeNull();
+      if (play.state === 'capture') { pawed = true; expect(play.gazeUnit).toBeNull(); }
+    }
+    expect(pawed).toBe(true);
+    expect(rest.act.formed()).toEqual([rest.currentUnit.i]);
+  });
+
+  it('watching the toy opens the play landing before the cat sets off', () => {
+    const s = new CatPlanSim({ behaviour: 'play' });
+    let last = s.phase;
+    for (let i = 0; i < 60 * 5; i++) {
+      s.step(1 / 60);
+      if (last === 'watch' && s.phase === 'stalk') {
+        expect(s.state).toBe('stalk');
+        expect(s.act.degree[s.landingUnit!.i]).toBe(1);
+        return;
+      }
+      last = s.phase;
+    }
+    throw new Error('watch → stalk not reached');
   });
 
   it('replay reproduces free movement and readings', () => {
@@ -119,7 +230,7 @@ describe('cat plan · activity on platforms', () => {
 
   it('clearing traces during a transfer retains both platforms', () => {
     const s = new CatPlanSim({ behaviour: 'pass' });
-    run(s, 1.2);
+    for (let i = 0; i < 60 * 5 && s.supportUnits.length < 2; i++) s.step(1 / 60);
     expect(s.supportUnits.length).toBe(2);
     s.clearTraces();
     for (const u of s.supportUnits) expect(s.act.degree[u.i]).toBe(1);

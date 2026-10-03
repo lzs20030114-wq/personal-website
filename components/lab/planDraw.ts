@@ -62,9 +62,11 @@ export interface PlanPerson {
 }
 
 export interface PlanScene {
-  /** Cat platforms: occupied units and the single next landing (not an exclusion zone). */
+  /** Cat platforms: occupied units and the unit the cat is fixating (not an exclusion zone). */
   supportIds?: readonly number[];
   landingId?: number | null;
+  /** Cat line of sight to the fixated unit, room coordinates [x0, y0, x1, y1]. */
+  gazeLine?: readonly [number, number, number, number] | null;
   toy?: { x: number; y: number } | null;
   layout: PlanLayout;
   field: TraceField;
@@ -379,6 +381,17 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
     for (let k = 2; k < s.trail.length; k += 2) ctx.lineTo(X(s.trail[k]), Y(s.trail[k + 1]));
     if (s.trailEnd) ctx.lineTo(X(s.trailEnd.x), Y(s.trailEnd.y));
     ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  if (s.gazeLine) {
+    const [x0, y0, x1, y1] = s.gazeLine;
+    ctx.strokeStyle = pal.accent;
+    ctx.globalAlpha = 0.75;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 3]);
+    ctx.beginPath(); ctx.moveTo(X(x0), Y(y0)); ctx.lineTo(X(x1), Y(y1)); ctx.stroke();
+    ctx.setLineDash([]);
     ctx.globalAlpha = 1;
   }
 

@@ -9,10 +9,23 @@ export const CAT_BEHAVIOURS = [
   { key: 'free', zh: '自由', en: 'Free' },
 ] as const;
 export type CatBehaviour = typeof CAT_BEHAVIOURS[number]['key'];
-export const CAT = { bodyR: 0.14, prepare: 1, speed: CAT_DEMO.walkSpeed } as const;
-interface Action { phase: CatPhase; seconds?: number; speed?: number; unit?: PlanUnit; toy?: PlanUnit; }
+/**
+ * Trigger settings (2026-10-04 revision, see 项目二_猫行为lab.md §5). Demo values, not measurements.
+ * - `gazeOpen`: seconds of fixation that fully open a unit (the landing is opened by gaze, not by the plan).
+ * - `useFull`: seconds of occupancy that fill a platform's use trace; longer stays retract later.
+ * - `gazeReach`: fixation only reaches units one transfer away (in grid pitches).
+ */
+export const CAT = { bodyR: 0.14, gazeOpen: 1, useFull: 4, gazeReach: 1.5, speed: CAT_DEMO.walkSpeed } as const;
+/** `look`: a unit fixated without moving (a glance at one possible landing). */
+interface Action { phase: CatPhase; seconds?: number; speed?: number; unit?: PlanUnit; toy?: PlanUnit; look?: PlanUnit; }
 
-/** Cats occupy the units. Human exclusion circles and aisle routes do not apply. */
+/**
+ * Cats occupy the units. Human exclusion circles and aisle routes do not apply.
+ *
+ * Two observable channels reach the units, and nothing else does (case page, Method: traces are the only
+ * channel between the layers): platform occupancy (`field`) and the cat's fixation (`gazeTrace`).
+ * `activationInputs` never reads the planned route — the space anticipates from where the cat looks.
+ */
 export class CatPlanSim extends PlanSim {
   behaviour: CatBehaviour = 'free';
   episode: CatEpisode = 'rest';
@@ -25,15 +38,24 @@ export class CatPlanSim extends PlanSim {
   private action: Action | null = null;
   private pending: PlanUnit | null = null;
   private transfer: { from: PlanUnit; to: PlanUnit } | null = null;
-  private prepared = 0;
   private tourIndex = 0;
+  /** Seconds of fixation per unit, capped at `gazeOpen`; fades over `fade` like the use trace. */
+  readonly gazeTrace: Float64Array;
+  private readonly gazeTouched: Uint8Array;
+  gazeOpen: number;
+  /** The unit the cat's fixation reached in the latest sub-step (null = not fixating any unit). */
+  gazeUnit: PlanUnit | null = null;
   private toyFrom = { x: 0, y: 0 };
   private toyElapsed = 0;
   readonly visited = new Set<number>();
 
-  constructor(opts: Pick<PlanSimOpts, 'grid' | 'threshold' | 'fade' | 'mode'> & { behaviour?: CatBehaviour } = {}) {
-    super({ path: 'free', threshold: CAT.prepare, fade: 6, mode: 'follow', look: false, ...opts,
+  /** `threshold` = seconds of occupancy that fill a use trace; `gazeOpen` = seconds of fixation that open a unit. */
+  constructor(opts: Pick<PlanSimOpts, 'grid' | 'threshold' | 'fade' | 'mode'> & { behaviour?: CatBehaviour; gazeOpen?: number } = {}) {
+    super({ path: 'free', threshold: CAT.useFull, fade: 6, mode: 'follow', look: false, ...opts,
       bodyR: CAT.bodyR, reach: 0, reading: 'disk', fill: 1, clearance: null, lane: false });
+    this.gazeTrace = new Float64Array(this.layout.units.length);
+    this.gazeTouched = new Uint8Array(this.layout.units.length);
+    this.gazeOpen = opts.gazeOpen ?? CAT.gazeOpen;
     this.replay(opts.behaviour ?? 'free');
   }
 
@@ -54,7 +76,8 @@ export class CatPlanSim extends PlanSim {
     this.walker.heading = 0;
     this.walker.place(first.x, first.y);
     this.trail.splice(0, this.trail.length, first.x, first.y);
-    this.actions = []; this.action = null; this.pending = null; this.transfer = null; this.prepared = 0;
+    this.actions = []; this.action = null; this.pending = null; this.transfer = null;
+    this.gazeTrace.fill(0); this.gazeTouched.fill(0); this.gazeUnit = null;
     this.visited.clear(); this.visited.add(first.i);
     this.keepSupport();
     this.begin(behaviour === 'free' ? 'pass' : behaviour);
@@ -86,6 +109,13 @@ export class CatPlanSim extends PlanSim {
     const start = this.currentUnit;
     if (episode === 'pass') {
       const target = units[start.row * n + (start.col < n / 2 ? n - 1 : 0)];
+      // D1: before choosing a direction the cat glances at the other neighbouring units. Each glance
+      // part-opens that unit (a possible landing the space anticipates); the unchosen ones retract.
+      const way = Math.sign(target.col - start.col);
+      for (const [dc, dr] of [[0, -1], [0, 1], [-way, 0]]) {
+        const c = start.col + dc, r = start.row + dr;
+        if (c >= 0 && r >= 0 && c < n && r < n) this.actions.push({ phase: 'scan', seconds: CAT_DEMO.glanceSeconds, look: units[r * n + c] });
+      }
       this.add(target.x, target.y);
       this.actions.push({ phase: 'sit', seconds: CAT_DEMO.arrivalSeconds });
     } else if (episode === 'rest') {
@@ -106,7 +136,7 @@ export class CatPlanSim extends PlanSim {
 
   private nextAction(): void {
     this.action = this.actions.shift() ?? null;
-    this.prepared = 0; this.phaseTime = 0; this.toyElapsed = 0;
+    this.phaseTime = 0; this.toyElapsed = 0;
     if (!this.action) return;
     this.phase = this.action.phase;
     this.pending = this.action.unit ?? null;
@@ -139,7 +169,7 @@ export class CatPlanSim extends PlanSim {
       const u = this.currentUnit;
       this.walker.place(u.x, u.y);
       this.actions = []; this.action = null; this.pending = null; this.transfer = null; this.toy = null;
-      this.episode = 'rest'; this.phase = 'sit'; this.phaseTime = 0;
+      this.episode = 'rest'; this.phase = 'sit'; this.phaseTime = 0; this.gazeUnit = null;
       this.keepSupport();
     }
   }
@@ -163,20 +193,81 @@ export class CatPlanSim extends PlanSim {
 
   clearTraces(): void {
     this.field.clear(); this.act.reset(); this.trail.length = 0;
-    this.prepared = 0;
+    this.gazeTrace.fill(0); this.gazeTouched.fill(0);
     this.keepSupport();
   }
 
+  /** Seconds of fixation that fully open a unit. Independent of the use-trace threshold. */
+  setGazeOpen(v: number): void {
+    this.gazeOpen = v;
+    for (let i = 0; i < this.gazeTrace.length; i++) this.gazeTrace[i] = Math.min(v, this.gazeTrace[i]);
+  }
+
+  /**
+   * What the cat is fixating, as a point: the toy, a glanced unit, the landing it is about to take, or —
+   * while crossing — the landing after this one (looking ahead). Idle sitting and lying are not fixation,
+   * and a carried cat looks at nothing. The line of sight still has to reach the unit (`fixatedUnit`),
+   * so a landing that requires a turn is only seen once the cat has stopped and turned.
+   */
+  private fixationPoint(): { x: number; y: number } | null {
+    if (this.held || !this.walker.present || this.phase === 'lie') return null;
+    if (this.toy) return this.toy;
+    const target = this.action?.look ?? this.pending ?? (this.transfer ? this.actions[0]?.unit : undefined);
+    return target ? { x: target.x, y: target.y } : null;
+  }
+
+  /**
+   * The first unit (other than the supports) that the line of sight enters before reaching the fixation
+   * point, within one transfer's reach. Uses the observable gaze direction and the fixated point only.
+   */
+  private fixatedUnit(): PlanUnit | null {
+    const p = this.fixationPoint();
+    if (!p) return null;
+    const { x, y } = this.walker, g = this.walker.gaze;
+    const dx = Math.cos(g), dy = Math.sin(g), R = this.layout.platR;
+    const limit = Math.min(Math.hypot(p.x - x, p.y - y), CAT.gazeReach * this.layout.pitchM);
+    const supports = new Set(this.supportUnits.map(u => u.i));
+    let best: PlanUnit | null = null, bestEntry = Infinity;
+    for (const u of this.layout.units) {
+      if (supports.has(u.i)) continue;
+      const ux = u.x - x, uy = u.y - y, t = ux * dx + uy * dy, perp = Math.abs(ux * dy - uy * dx);
+      if (t <= 0 || perp > R) continue;
+      const entry = t - Math.sqrt(R * R - perp * perp);
+      if (entry <= limit + 1e-9 && entry < bestEntry) { best = u; bestEntry = entry; }
+    }
+    return best;
+  }
+
   protected override imprint(dt: number): void {
-    for (const u of this.supportUnits) this.field.imprint(u.x, u.y, this.layout.platR, dt);
+    // Standing on a unit settles its anticipation: the gaze trace there is consumed, and what remains
+    // is the use trace — so a unit only crossed retracts sooner than one used for longer.
+    for (const u of this.supportUnits) {
+      this.field.imprint(u.x, u.y, this.layout.platR, dt);
+      this.gazeTrace[u.i] = 0;
+    }
+    // Fixation trace, same shape as the use trace: capped, and linear fade over `fade` when not fixated.
+    const hit = this.fixatedUnit();
+    this.gazeUnit = hit;
+    if (hit) {
+      this.gazeTrace[hit.i] = Math.min(this.gazeOpen, this.gazeTrace[hit.i] + dt);
+      this.gazeTouched[hit.i] = 1;
+    }
+    const fall = this.fade === null ? 0 : (this.gazeOpen * dt) / this.fade;
+    const keep = this.fade === null ? Math.pow(1 - this.decay, dt) : 1;
+    for (let i = 0; i < this.gazeTrace.length; i++) {
+      if (this.gazeTouched[i]) { this.gazeTouched[i] = 0; continue; }
+      const v = this.fade === null ? this.gazeTrace[i] * keep : this.gazeTrace[i] - fall;
+      this.gazeTrace[i] = v > 1e-6 ? v : 0;
+    }
   }
 
   protected override activationInputs(): Float64Array {
     const inputs = super.activationInputs();
-    // Occupancy maintains support; only the next planned landing gets an
-    // anticipatory request. Past visits continue through shared trace decay.
+    // Occupied platforms stay open (author's rule, 2026-10-04). Every other unit reads its traces only:
+    // past use, and how long the cat has fixated it. The planned route is not an input.
+    const scale = this.act.threshold / this.gazeOpen;
+    for (let i = 0; i < inputs.length; i++) inputs[i] = Math.max(inputs[i], this.gazeTrace[i] * scale);
     for (const u of this.supportUnits) inputs[u.i] = this.act.threshold;
-    if (this.pending) inputs[this.pending.i] = Math.max(inputs[this.pending.i], Math.min(this.act.threshold, this.prepared));
     return inputs;
   }
 
@@ -189,7 +280,7 @@ export class CatPlanSim extends PlanSim {
   get pose(): CatPose {
     if (this.held) return 'stand';
     if (this.pending) return this.episode === 'play' ? 'crouch' : 'stand';
-    return ({ walk: 'walk', sit: 'sit', lie: 'lie', watch: 'crouch', stalk: 'crouch', chase: 'chase', capture: 'paw' } as const)[this.phase];
+    return ({ scan: 'stand', walk: 'walk', sit: 'sit', lie: 'lie', watch: 'crouch', stalk: 'crouch', chase: 'chase', capture: 'paw' } as const)[this.phase];
   }
 
   override step(dt: number): void {
@@ -203,8 +294,11 @@ export class CatPlanSim extends PlanSim {
           if (!this.actions.length && this.auto) this.begin(this.behaviour === 'free' ? CAT_DEMO.tour[++this.tourIndex % CAT_DEMO.tour.length] : this.behaviour);
           this.nextAction();
         }
+        // Face what is being fixated (a glance target or the landing); the toy steers gaze in updateToy.
+        const look = this.action?.look ?? this.pending;
+        if (look && !this.toy && this.walker.state !== 'walk') this.walker.heading = Math.atan2(look.y - this.walker.y, look.x - this.walker.x);
         if (this.pending) {
-          this.prepared += h;
+          // The cat checks the structure: it leaves only once the fixated landing has fully opened.
           if (this.act.degree[this.pending.i] >= 1 - 1e-9) {
             this.transfer = { from: this.currentUnit, to: this.pending };
             this.walker.pushTarget({ x: this.pending.x, y: this.pending.y });
