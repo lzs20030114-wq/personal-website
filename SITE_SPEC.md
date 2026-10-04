@@ -51,7 +51,7 @@ LINKAGE_SPEC.md 等文档       # 保留在根
 
 ## 4. 信息架构
 
-- `/` 首页：名字 + 一句定位 → **FIG. 01 连杆活物**（可交互 hero）→ selected 作品（恒 4 个，order 排序）→ 页脚（邮箱、GitHub、明文完整 URL）。
+- `/` 首页：名字 + 一句定位 → **FIG. 01 连杆活物**（可交互 hero）→ selected 作品（恒 3 个，order 排序；2026-10-04 用户拍板由 4 改 3）→ 页脚（邮箱、GitHub、明文完整 URL）。
 - `/work/[slug]` case study 页（模板见 §9）。
 - `/archive` 全量索引：published 且非 selected 的条目，**只标 YYYY-MM**，无 last-updated。允许长期为空——**申请季前不为凑数填内容（防「第五个项目化」）**。
 - `/about` 一页：背景、方法、**colophon 段**（「这个站怎么做的」——技术栈/自研求解器/性能与无障碍决策；2026-07-10 拍板新增，v1 只留席位，正文用户写）、AI 披露席位（§9）。
@@ -64,7 +64,7 @@ const WorkEntry = z.object({
   title: z.string(),
   slug: z.string(),
   date: z.string().regex(/^\d{4}-\d{2}$/),   // 只到月
-  selected: z.boolean(),                      // true → 首页；全站恒 4 个 true，多/少即构建失败
+  selected: z.boolean(),                      // true → 首页；全站恒 3 个 true（MAIN_PROJECTS，2026-10-04 由 4 改 3），多/少即构建失败
   order: z.number().optional(),
   summary: z.string().max(160),               // 列表与 OG 共用
   cover: z.string().optional(),               // 相对 figures/

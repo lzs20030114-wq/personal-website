@@ -4,7 +4,7 @@ import type { ComponentProps } from 'react';
 import { notFound } from 'next/navigation';
 import { MDXRemote } from 'next-mdx-remote/rsc';
 import remarkGfm from 'remark-gfm';
-import { getRoutableWork, getRoutableWorkBySlug, type WorkEntry } from '../../../../src/lib/site/content';
+import { MAIN_PROJECTS, getRoutableWork, getRoutableWorkBySlug, type WorkEntry } from '../../../../src/lib/site/content';
 import { OPENING_TITLE, extractChapterTitles } from '../../../../src/lib/site/case-headings';
 import { BLOCK_UI } from '../../../../src/lib/site/case-reincarnation';
 import {
@@ -60,8 +60,8 @@ export function generateStaticParams() {
 }
 
 /**
- * 作品路由只允许构建期列出的 slug（published + 四个主项目）；其余 draft/未知 slug
- * 不做按需渲染。四个主项目里未发稿的三个渲「筹备中」页（用户拍板 2026-07-29）。
+ * 作品路由只允许构建期列出的 slug（published + 主项目）；其余 draft/未知 slug
+ * 不做按需渲染。主项目里未发稿的渲「筹备中」页（用户拍板 2026-07-29；主项目 2026-10-04 起为三个）。
  */
 export const dynamicParams = false;
 
@@ -199,11 +199,14 @@ const mdxComponents = (lang: SlotLang) => ({
 
 const mdxOptions = { mdxOptions: { remarkPlugins: [remarkGfm] } };
 
+/** 「案例 01 / 03」里的分母 = 主项目数（2026-10-04 起为 3）。 */
+const TOTAL = String(MAIN_PROJECTS).padStart(2, '0');
+
 /** 页面框架字（正文之外的固定词）；正文两侧各自成文，不在这里。 */
 const COPY = {
   en: {
     back: '← All work',
-    kicker: (n: string) => `Case study ${n} / 04`,
+    kicker: (n: string) => `Case study ${n} / ${TOTAL}`,
     mRole: 'My role',
     mTools: 'Tools',
     mTime: 'Date',
@@ -211,13 +214,13 @@ const COPY = {
     mCredits: 'Credits',
     aiK: 'AI disclosure · slot',
     aiX: 'The disclosure statement is written by the author following AI_DISCLOSURE.md; this is its fixed slot.',
-    nextK: (n: string) => `Next case study · ${n} / 04`,
+    nextK: (n: string) => `Next case study · ${n} / ${TOTAL}`,
     footer: (n: string, t: string, y: string) => `Case study ${n} · ${t} · ${y}`,
     openLab: 'Open in the lab ↗',
   },
   zh: {
     back: '← 全部作品',
-    kicker: (n: string) => `案例 ${n} / 04`,
+    kicker: (n: string) => `案例 ${n} / ${TOTAL}`,
     mRole: '我的角色',
     mTools: '工具',
     mTime: '时间',
@@ -225,7 +228,7 @@ const COPY = {
     mCredits: '协作',
     aiK: 'AI 披露 · 席位',
     aiX: '披露声明由作者按 AI_DISCLOSURE.md 流程撰写，此处为固定席位。',
-    nextK: (n: string) => `下一个案例 · ${n} / 04`,
+    nextK: (n: string) => `下一个案例 · ${n} / ${TOTAL}`,
     footer: (n: string, t: string, y: string) => `案例 ${n} · ${t} · ${y}`,
     openLab: '在实验室中打开 ↗',
   },
@@ -374,7 +377,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const entry = getRoutableWorkBySlug(slug);
   if (!entry) notFound();
-  // 四个主项目里还没发稿的：同一条路由、同一套外壳，正文位换成「筹备中」框架字（不代写）
+  // 主项目里还没发稿的：同一条路由、同一套外壳，正文位换成「筹备中」框架字（不代写）
   if (entry.status !== 'published') return <WorkInPreparation entry={entry} />;
 
   const caseNo = String(entry.order ?? 1).padStart(2, '0');
