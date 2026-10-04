@@ -301,7 +301,7 @@ const SLOT_COPY_FALLBACK: { lab?: string; en: SlotCopy; zh: SlotCopy } = {
 
 /** 「下一个案例」卡上的名字：项目 II 尚未定名，沿用主页卡片的描述名（home-model.ts 里同一处覆写，定名后一并删）。 */
 const NEXT_TITLE: Record<string, { en: string; zh: string }> = {
-  'project-ii': { en: 'Spatial simulation', zh: '空间模拟' },
+  'project-ii': { en: 'Cross-species space', zh: '跨物种空间' },
 };
 
 /** 首屏元数据条（稿 dl）：我的角色 / 工具 / 时间 / 状态；状态一列只有写了 progress 的项目才有。 */

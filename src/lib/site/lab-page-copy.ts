@@ -216,9 +216,9 @@ export const LAB_PAGE_COPY: readonly (readonly [string, string])[] = [
   ["live", "运行中"],
   ["solving…", "求解中…"],
   ["Reincarnation Machine", "轮回机器"],
-  ["Spatial simulation", "空间模拟"],
+  ["Cross-species space", "跨物种空间"],
   ["two linkage kernels", "两套连杆内核"],
-  ["skin-unit engine & geometry studies", "皮肤单元引擎与几何研究"],
+  ["shape-changing units and the behaviour that moves them", "会变形的单元，以及驱动它的行为"],
   ["Project III", "项目三"],
   ["Benches to come", "实验待建"]
 ];

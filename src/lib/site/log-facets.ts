@@ -50,7 +50,7 @@ export const PROJECT_GROUPS: readonly ProjectGroup[] = [
   {
     key: 'project-ii',
     // 项目二尚未定名，这里给的是描述而非标题（作者定名后连同 /work 页一并改）。
-    label: { en: 'Project II · Spatial Simulation', zh: '项目二 · 空间仿真' },
+    label: { en: 'Project II · Cross-species Space', zh: '项目二 · 跨物种空间' },
     short: { en: 'Project II', zh: '项目二' },
     buckets: ['Space'],
   },
