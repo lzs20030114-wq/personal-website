@@ -68,6 +68,10 @@ export interface PlanScene {
   /** Cat line of sight to the fixated unit, room coordinates [x0, y0, x1, y1]. */
   gazeLine?: readonly [number, number, number, number] | null;
   toy?: { x: number; y: number } | null;
+  /** Which toy (a swap changes its colour), whether the viewer holds it, whether the cat has dropped it. */
+  toyKind?: number;
+  toyHeld?: boolean;
+  toyDropped?: boolean;
   layout: PlanLayout;
   field: TraceField;
   catchment: Catchment;
@@ -396,13 +400,22 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
   }
 
   if (s.toy) {
-    ctx.strokeStyle = pal.warn;
+    // A swapped toy has a contrasting colour; a dropped one is dimmed; a held one gets a pointer ring.
+    const kind = s.toyKind ?? 1, tx = X(s.toy.x), ty = Y(s.toy.y);
+    ctx.strokeStyle = [pal.warn, pal.accent2, pal.accent][(kind - 1) % 3];
+    ctx.globalAlpha = s.toyDropped ? 0.4 : 1;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(X(s.toy.x), Y(s.toy.y), 5, 0, Math.PI * 2);
-    ctx.moveTo(X(s.toy.x) - 8, Y(s.toy.y));
-    ctx.lineTo(X(s.toy.x) + 8, Y(s.toy.y));
+    ctx.arc(tx, ty, 5, 0, Math.PI * 2);
+    ctx.moveTo(tx - 8, ty);
+    ctx.lineTo(tx + 8, ty);
     ctx.stroke();
+    if (s.toyHeld) {
+      ctx.setLineDash([2, 3]);
+      ctx.beginPath(); ctx.arc(tx, ty, 11, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.globalAlpha = 1;
   }
 
   // Cats are drawn on the platform surface, without a human attention/clearance ring.

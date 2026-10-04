@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CAT_BEHAVIOURS, CatPlanSim } from './cat-plan';
+import { CAT, CAT_BEHAVIOURS, CatPlanSim } from './cat-plan';
+import { CAT_PLAY } from './cat-rules';
 import { PLAN, PlanSim, keepOut, nearestUnit, type PlanUnit } from './unit-activation';
 
 const run = (s: CatPlanSim, seconds: number) => { for (let i = 0; i < seconds * 60; i++) s.step(1 / 60); };
@@ -14,11 +15,20 @@ describe('cat plan · activity on platforms', () => {
         for (const u of s.supportUnits) expect(s.act.degree[u.i]).toBe(1);
         expect(s.blocked.some(Boolean)).toBe(false);
         const u = s.currentUnit;
-        // Routes follow rows/columns of platform centres, never the aisle lines.
-        expect(Math.min(Math.abs(s.walker.x - u.x), Math.abs(s.walker.y - u.y))).toBeLessThan(1e-8);
-        if (s.supportUnits.length === 2) {
+        if (s.episode !== 'play') {
+          // Pass and rest routes follow rows/columns of platform centres, never the aisle lines.
+          expect(Math.min(Math.abs(s.walker.x - u.x), Math.abs(s.walker.y - u.y))).toBeLessThan(1e-8);
+          if (s.supportUnits.length === 2) {
+            const [a, b] = s.supportUnits;
+            expect(Math.abs(a.row - b.row) + Math.abs(a.col - b.col)).toBeLessThanOrEqual(1);
+          }
+        } else if (s.supportUnits.length === 2) {
+          // Play jumps to one of the eight neighbours.
           const [a, b] = s.supportUnits;
-          expect(Math.abs(a.row - b.row) + Math.abs(a.col - b.col)).toBeLessThanOrEqual(1);
+          expect(Math.max(Math.abs(a.row - b.row), Math.abs(a.col - b.col))).toBe(1);
+        } else {
+          // Standing in play: anywhere on the platform, body mostly over it.
+          expect(Math.hypot(s.walker.x - u.x, s.walker.y - u.y)).toBeLessThanOrEqual(s.layout.platR - CAT.bodyR * 0.5 + 1e-9);
         }
       }
       if (b.key === 'rest') expect(s.walker.distance).toBe(0);
@@ -139,19 +149,98 @@ describe('cat plan · activity on platforms', () => {
     expect(rest.act.formed()).toEqual([rest.currentUnit.i]);
   });
 
-  it('watching the toy opens the play landing before the cat sets off', () => {
-    const s = new CatPlanSim({ behaviour: 'play' });
-    let last = s.phase;
-    for (let i = 0; i < 60 * 5; i++) {
+  it.each([4, 6, 8])('play follows the toy across the field instead of looping a fixed route on grid %i', grid => {
+    const s = new CatPlanSim({ grid, behaviour: 'play' });
+    const moves: number[] = [];
+    let prev = s.currentUnit.i;
+    const phases = new Set<string>();
+    for (let i = 0; i < 60 * 120; i++) {
       s.step(1 / 60);
-      if (last === 'watch' && s.phase === 'stalk') {
-        expect(s.state).toBe('stalk');
-        expect(s.act.degree[s.landingUnit!.i]).toBe(1);
-        return;
+      phases.add(s.phase);
+      if (s.currentUnit.i !== prev) { prev = s.currentUnit.i; moves.push(prev); }
+      if (s.state === 'capture') {
+        expect(Math.hypot(s.toy!.x - s.walker.x, s.toy!.y - s.walker.y)).toBeLessThanOrEqual(CAT_PLAY.pawReach);
       }
-      last = s.phase;
     }
-    throw new Error('watch → stalk not reached');
+    for (const ph of ['watch', 'stalk', 'chase', 'capture']) expect(phases.has(ph)).toBe(true);
+    expect(s.catches).toBeGreaterThanOrEqual(4);
+    expect(s.visited.size).toBeGreaterThanOrEqual(Math.min(7, grid * grid));
+    const used = [...s.visited].map(i => s.layout.units[i]);
+    expect(new Set(used.map(u => u.row)).size).toBeGreaterThanOrEqual(3);
+    expect(new Set(used.map(u => u.col)).size).toBeGreaterThanOrEqual(3);
+    // Not a short cycle: some step differs from the one 2, 3 and 4 moves earlier.
+    for (const period of [2, 3, 4]) expect(moves.some((m, k) => k >= period && m !== moves[k - period])).toBe(true);
+  });
+
+  it('play responds to the toy the viewer holds: the cat stalks a still toy and catches it', () => {
+    const s = new CatPlanSim({ behaviour: 'play' });
+    run(s, 0.2);
+    const far = s.layout.units[0];
+    expect(s.holdToy(far.x, far.y)).toBe(true);
+    const d0 = Math.hypot(far.x - s.walker.x, far.y - s.walker.y);
+    let caught = false, stalked = false;
+    for (let i = 0; i < 60 * 30 && !caught; i++) {
+      s.dragToy(far.x, far.y);
+      s.step(1 / 60);
+      if (s.phase === 'stalk') stalked = true;
+      if (s.state === 'capture') caught = true;
+    }
+    expect(stalked).toBe(true);
+    expect(caught).toBe(true);
+    expect(Math.hypot(far.x - s.walker.x, far.y - s.walker.y)).toBeLessThan(d0 / 3);
+  });
+
+  it('interest drains with play and catches; the cat quits, lies down, and a new toy renews play', () => {
+    const s = new CatPlanSim({ behaviour: 'play' });
+    let last = s.interest, quitAt = -1;
+    for (let i = 0; i < 60 * 90 && quitAt < 0; i++) {
+      s.step(1 / 60);
+      expect(s.interest).toBeLessThanOrEqual(last + 1e-12);
+      last = s.interest;
+      if (s.phase === 'sit' && s.toyMode === 'dropped') quitAt = s.t;
+    }
+    expect(quitAt).toBeGreaterThan(15);
+    expect(s.interest).toBeLessThanOrEqual(CAT_PLAY.stop);
+    run(s, CAT_PLAY.quitSit + 0.5);
+    expect(s.phase).toBe('lie');
+    expect(s.gazeUnit).toBeNull();
+    const kind = s.toyKind;
+    run(s, CAT_PLAY.swapAfter - CAT_PLAY.quitSit);
+    // Hall et al. 2002: a contrasting toy renews play after habituation.
+    expect(s.toyKind).toBe(kind + 1);
+    expect(s.interest).toBeGreaterThan(0.9);
+    run(s, 2);
+    expect(['watch', 'stalk', 'chase', 'capture']).toContain(s.phase);
+    // The viewer's "new toy" does the same at once.
+    s.interest = 0.3; s.newToy();
+    expect(s.interest).toBe(1); expect(s.toyKind).toBe(kind + 2);
+  });
+
+  it('a cat with little interest left only watches a moving toy', () => {
+    const s = new CatPlanSim({ behaviour: 'play' });
+    run(s, 0.5);
+    let watched = 0;
+    for (let i = 0; i < 60 * 40; i++) {
+      s.interest = (CAT_PLAY.stop + CAT_PLAY.vigorous) / 2;
+      s.step(1 / 60);
+      // Standing (not mid-jump) while the toy travels: it watches, never chases.
+      if (s.toyMoving && s.supportUnits.length === 1 && s.state !== 'capture') {
+        expect(s.phase).toBe('watch');
+        watched++;
+      }
+    }
+    expect(watched).toBeGreaterThan(10);
+  });
+
+  it('a toy twitching in place reads as still: the reading does not flicker', () => {
+    const s = new CatPlanSim({ behaviour: 'play' });
+    let flips = 0, last = s.toyMoving;
+    for (let i = 0; i < 60 * 30; i++) {
+      s.step(1 / 60);
+      if (s.toyMode === 'twitch' && s.toyMoving !== last) flips++;
+      last = s.toyMoving;
+    }
+    expect(flips).toBeLessThanOrEqual(6);
   });
 
   it('replay reproduces free movement and readings', () => {
@@ -162,27 +251,18 @@ describe('cat plan · activity on platforms', () => {
     expect({ x: s.walker.x, y: s.walker.y, trace: Array.from(s.field.data), degree: Array.from(s.act.degree) }).toEqual(before);
   });
 
-  it.each([4, 6, 8])('distinguishes a full row, one resting platform, and a local play area on grid %i', grid => {
+  it.each([4, 6, 8])('distinguishes a full row and one resting platform on grid %i', grid => {
     const pass = new CatPlanSim({ grid, behaviour: 'pass' });
     const rest = new CatPlanSim({ grid, behaviour: 'rest' });
-    const play = new CatPlanSim({ grid, behaviour: 'play' });
-    const poses = new Set<string>(), phases = new Set<string>();
-    let toyMoved = false, previousToy = play.toy && { ...play.toy };
+    const poses = new Set<string>();
     for (let i = 0; i < 60 * 60; i++) {
-      for (const s of [pass, rest, play]) s.step(1 / 60);
-      poses.add(rest.pose); phases.add(play.state);
-      if (previousToy && play.toy && Math.hypot(play.toy.x - previousToy.x, play.toy.y - previousToy.y) > 0.001) toyMoved = true;
-      previousToy = play.toy && { ...play.toy };
-      if (play.state === 'capture') expect(Math.hypot(play.toy!.x - play.walker.x, play.toy!.y - play.walker.y)).toBeLessThan(play.layout.platR);
+      for (const s of [pass, rest]) s.step(1 / 60);
+      poses.add(rest.pose);
     }
     expect(pass.visited.size).toBe(grid);
     expect(new Set([...pass.visited].map(i => pass.layout.units[i].row)).size).toBe(1);
     expect(rest.visited.size).toBe(1); expect(rest.act.formed()).toEqual([rest.currentUnit.i]);
     expect(poses).toEqual(new Set(['sit', 'lie']));
-    expect(play.visited.size).toBe(4);
-    expect(new Set([...play.visited].map(i => play.layout.units[i].row)).size).toBe(2);
-    for (const phase of ['watch', 'stalk', 'chase', 'capture']) expect(phases.has(phase)).toBe(true);
-    expect(toyMoved).toBe(true);
   });
 
   it('free mode reaches all episodes without unsupported random choice weights', () => {
