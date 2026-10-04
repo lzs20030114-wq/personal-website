@@ -67,6 +67,7 @@ export interface PlanScene {
   landingId?: number | null;
   /** Cat line of sight to the fixated unit, room coordinates [x0, y0, x1, y1]. */
   gazeLine?: readonly [number, number, number, number] | null;
+  /** Wand toy: no bench draws it now — kept for the parked wand play (src/lib/space/cat-wand.ts). */
   toy?: { x: number; y: number } | null;
   /** Which toy (a swap changes its colour), whether the viewer holds it, whether the cat has dropped it. */
   toyKind?: number;
@@ -510,8 +511,11 @@ export function drawCat(ctx: CanvasRenderingContext2D, p: PlanPerson, cx: number
     }
   }
   ctx.beginPath(); ctx.ellipse(-r * 0.2, 0, r * length, r * width, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  ctx.translate(r * (lying ? 0.5 : sitting ? 0.65 : 0.85), lying ? -r * 0.24 : 0);
-  ctx.rotate(lying ? -0.6 : (p.gaze ?? p.heading) - p.heading);
+  // Investigating the platform: nose lowered and reaching forward (reads smaller from above), sweeping slowly.
+  const sniff = pose === 'sniff';
+  ctx.translate(r * (lying ? 0.5 : sitting ? 0.65 : sniff ? 1.0 : 0.85), lying ? -r * 0.24 : 0);
+  ctx.rotate(lying ? -0.6 : (p.gaze ?? p.heading) - p.heading + (sniff ? Math.sin(t * 2.4) * 0.35 : 0));
+  if (sniff) ctx.scale(0.82, 0.82);
   ctx.beginPath();
   ctx.moveTo(-r * 0.35, -r * 0.55); ctx.lineTo(r * 0.15, -r * 0.85);
   ctx.lineTo(r * 0.45, -r * 0.35); ctx.lineTo(r * 0.65, 0);

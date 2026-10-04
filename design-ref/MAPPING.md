@@ -1510,3 +1510,12 @@ planDraw 的猫分支去掉注意力圈，增加支撑、落点外圈与单元�
 - `cat-plan.ts`：玩耍不走动作队列，改 `operate()`（操作者）+ `playStep()`（猫）；落点 = 八邻里「站上去离玩具最近」的台，仍由注视展开、展开后才跳；台面内可站偏；斜跳途中 `currentUnit` 取起落两台较近者。新增 `holdToy/dragToy/releaseToy/newToy`、`interest`、`toyMoving`。通行、停留、§47.4 的触发规则不动。
 - `planDraw.ts`：玩具按轮换颜色画、拖动时加虚线圈、被丢下时变淡（加法式字段，旧调用不变）。`CatPlanBench.tsx`：拖逗猫棒优先于拖猫、「换玩具」按钮、HUD 兴趣读数、画出的朝向缓动转身（只影响画法）。
 - 实测（3 格数 × 8 种子 × 120 s）：捕捉 4–16 次、走过 9–33 台；旧版固定 4 台。
+
+### 47.6 撤下玩具，玩耍换成探索（2026-10-04，用户拍板）
+
+用户问「什么时候加入了玩具这个概念」。玩具自本台首版起就是玩耍的目标点，§47.5 又把它扩成看不见的逗猫棒操作者，等于把人藏进只有猫的一台。用户拍板：本台去掉玩具，玩耍换成探索；逗猫棒存档留给人猫同台。规则、两版被否的设计与实测见《项目二_猫行为lab.md》§7。
+
+- `cat-wand.ts`（新）：`CatWandSim extends CatPlanSim`，§47.5 的逗猫棒玩耍原样搬入，`CAT_PLAY` → `WAND_PLAY`；`cat-wand.test.ts` 13 项，其中一项卡「app/、components/ 不许 import 它」。
+- `cat-plan.ts`：去掉玩具；新增探索（`planHop` / `rankTargets` / `stepToward`，熟悉度 `familiar` 是猫的记忆、不进单元输入）；子类钩子 `reactive/react/moveSpeed/afterStep`，`fixationPoint`、`begin` 改 protected；类加泛型 `<WP, WE>` 给子类加阶段与行为。`cat-rules.ts`：新阶段 `investigate`（来源 Hirsch §3.2）、`CAT_EXPLORE` 参数块，自由轮换改 通行→停留→探索，玩耍四阶段移到 `WAND_RULES`。
+- `planDraw.ts`：新姿态 `sniff`（头前伸、略小、缓慢摆动）。玩具绘制字段保留不动（留给存档模块）。`CatPlanBench.tsx`：拖逗猫棒、「换玩具」、兴趣读数撤掉，说明改写；`#lab2-12-play` 落到探索。
+- /lab 规格行、目录动词（「拖动猫」）、中文对照同步；差分清单 `2-12:play:*` → `2-12:explore:*`，总数不变。

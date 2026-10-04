@@ -3,7 +3,7 @@ import type { SiteLang } from './lang';
 /** Labels only: numerical parameters and solver keys are never translated. */
 export const LAB_UI_COPY: readonly (readonly [string, string])[] = [
   ["一只猫在场", "A cat in the room"],
-  ["拖动猫或逗猫棒", "drag the cat or the wand"],
+  ["拖动猫", "drag the cat"],
   ["画布 · 猫的行为", "Canvas · cat behaviour"],
   ["三类行为与自由运动 · 画布", "3 sequences + free movement · canvas"],
   ["实验室", "The lab"],

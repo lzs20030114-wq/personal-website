@@ -1,11 +1,11 @@
-import { PlanSim, nearestUnit, seededRng, type PlanSimOpts, type PlanUnit } from './unit-activation';
-import { CAT_DEMO, CAT_PLAY, type CatEpisode, type CatPhase, type CatPose } from './cat-rules';
+import { PlanSim, nearestUnit, wrapAngle, type PlanSimOpts, type PlanUnit } from './unit-activation';
+import { CAT_DEMO, CAT_EXPLORE, type CatEpisode, type CatPhase, type CatPose } from './cat-rules';
 
 /** Behaviour categories informed by research; timings are demonstration choices. */
 export const CAT_BEHAVIOURS = [
   { key: 'pass', zh: '通行', en: 'Pass through' },
   { key: 'rest', zh: '停留休息', en: 'Rest' },
-  { key: 'play', zh: '玩耍', en: 'Play' },
+  { key: 'explore', zh: '探索', en: 'Explore' },
   { key: 'free', zh: '自由', en: 'Free' },
 ] as const;
 export type CatBehaviour = typeof CAT_BEHAVIOURS[number]['key'];
@@ -17,12 +17,10 @@ export type CatBehaviour = typeof CAT_BEHAVIOURS[number]['key'];
  */
 export const CAT = { bodyR: 0.14, gazeOpen: 1, useFull: 4, gazeReach: 1.5, speed: CAT_DEMO.walkSpeed } as const;
 /** `look`: a unit fixated without moving (a glance at one possible landing). */
-interface Action { phase: CatPhase; seconds?: number; speed?: number; unit?: PlanUnit; look?: PlanUnit; }
-/** How the demonstration operator is moving the toy (or the viewer, `held`). */
-export type ToyMode = 'twitch' | 'pause' | 'dart' | 'caught' | 'held' | 'dropped';
-interface Operator { mode: ToyMode; t: number; dur: number; bx: number; by: number; tx: number; ty: number; speed: number;
-  /** Seconds since the last dart, and the hesitation drawn once the cat came near (waiting modes only). */
-  waited?: number; hesitate?: number; nearFor?: number; }
+interface Action<P extends string> { phase: CatPhase | P; seconds?: number; speed?: number; unit?: PlanUnit; look?: PlanUnit; }
+export type CatSimOpts = Pick<PlanSimOpts, 'grid' | 'threshold' | 'fade' | 'mode'> & { gazeOpen?: number };
+
+const POSES: Record<CatPhase, CatPose> = { scan: 'stand', walk: 'walk', sit: 'sit', lie: 'lie', investigate: 'sniff' };
 
 /**
  * Cats occupy the units. Human exclusion circles and aisle routes do not apply.
@@ -30,20 +28,22 @@ interface Operator { mode: ToyMode; t: number; dur: number; bx: number; by: numb
  * Two observable channels reach the units, and nothing else does (case page, Method: traces are the only
  * channel between the layers): platform occupancy (`field`) and the cat's fixation (`gazeTrace`).
  * `activationInputs` never reads the planned route — the space anticipates from where the cat looks.
+ *
+ * `WP`/`WE` let a subclass add phases and an episode of its own: the wand-toy play parked for the
+ * human+cat lab (cat-wand.ts) uses them. Lab 2-12 uses this class as is — the cat alone.
  */
-export class CatPlanSim extends PlanSim {
-  behaviour: CatBehaviour = 'free';
-  episode: CatEpisode = 'rest';
-  phase: CatPhase = 'sit';
+export class CatPlanSim<WP extends string = never, WE extends string = never> extends PlanSim {
+  behaviour: CatBehaviour | WE = 'free';
+  episode: CatEpisode | WE = 'rest';
+  phase: CatPhase | WP = 'sit';
   phaseTime = 0;
   auto = true;
   pace = 1;
-  toy: { x: number; y: number } | null = null;
-  private actions: Action[] = [];
-  private action: Action | null = null;
-  private pending: PlanUnit | null = null;
-  private transfer: { from: PlanUnit; to: PlanUnit } | null = null;
-  private tourIndex = 0;
+  protected actions: Action<WP>[] = [];
+  protected action: Action<WP> | null = null;
+  protected pending: PlanUnit | null = null;
+  protected transfer: { from: PlanUnit; to: PlanUnit } | null = null;
+  protected tourIndex = 0;
   /** Seconds of fixation per unit, capped at `gazeOpen`; fades over `fade` like the use trace. */
   readonly gazeTrace: Float64Array;
   private readonly gazeTouched: Uint8Array;
@@ -51,32 +51,22 @@ export class CatPlanSim extends PlanSim {
   /** The unit the cat's fixation reached in the latest sub-step (null = not fixating any unit). */
   gazeUnit: PlanUnit | null = null;
   readonly visited = new Set<number>();
-  /** Play only. Interest drains while playing and with each catch; a new toy restores it (Hall et al. 2002). */
-  interest = 1;
-  /** Counts toys offered (start of a bout, swaps); the drawing changes the toy's colour with it. */
-  toyKind = 0;
-  catches = 0;
-  private op: Operator | null = null;
-  private toySpeed = 0;
-  /** Two lagged copies of the toy position; their gap over `speedTau` is the smoothed speed. */
-  private lagToy = { x: 0, y: 0 };
-  private lagToy2 = { x: 0, y: 0 };
-  /** Does the cat read the toy as travelling (with hysteresis — see CAT_PLAY.moveOn/moveOff)? */
-  toyMoving = false;
-  private quitTime = -1;
-  /** Seconds since the last catch ended; the cat recovers before it can catch again (D1). */
-  private sinceCatch = Infinity;
-  private playSpeed: number = CAT.speed;
-  private rng = seededRng(CAT_PLAY.seed);
+  /** Explore: seconds spent on each platform, forgotten over time. The cat's memory — not a unit input. */
+  readonly familiar: Float64Array;
+  /** Explore: platforms left in this episode, and whether the one it is heading to is new to it. */
+  private exploreLeft = 0;
+  private arrivingNew = true;
 
   /** `threshold` = seconds of occupancy that fill a use trace; `gazeOpen` = seconds of fixation that open a unit. */
-  constructor(opts: Pick<PlanSimOpts, 'grid' | 'threshold' | 'fade' | 'mode'> & { behaviour?: CatBehaviour; gazeOpen?: number } = {}) {
+  constructor(opts: CatSimOpts & { behaviour?: CatBehaviour | NoInfer<WE> } = {}) {
     super({ path: 'free', threshold: CAT.useFull, fade: 6, mode: 'follow', look: false, ...opts,
       bodyR: CAT.bodyR, reach: 0, reading: 'disk', fill: 1, clearance: null, lane: false });
     this.gazeTrace = new Float64Array(this.layout.units.length);
     this.gazeTouched = new Uint8Array(this.layout.units.length);
+    this.familiar = new Float64Array(this.layout.units.length);
     this.gazeOpen = opts.gazeOpen ?? CAT.gazeOpen;
-    this.replay(opts.behaviour ?? 'free');
+    // A subclass replays from its own constructor, once its fields exist.
+    if (new.target === CatPlanSim) this.replay(opts.behaviour ?? 'free');
   }
 
   /** The platform the cat is on; mid-jump, the nearer of the two it is jumping between (a diagonal jump's
@@ -92,26 +82,31 @@ export class CatPlanSim extends PlanSim {
     return this.transfer ? [this.transfer.from, this.transfer.to] : [this.currentUnit];
   }
 
-  replay(behaviour = this.behaviour): void {
+  /** Free mode cycles through these episodes. */
+  protected get tour(): readonly (CatEpisode | WE)[] { return CAT_DEMO.tour; }
+  /** Behaviours that start on the platform in the middle of the field rather than at a row's end. */
+  protected startsCentral(behaviour: CatBehaviour | WE): boolean { return behaviour === 'rest' || behaviour === 'explore'; }
+
+  replay(behaviour: CatBehaviour | WE = this.behaviour): void {
     super.reset();
     this.behaviour = behaviour;
     this.auto = true;
     this.tourIndex = 0;
     const { n, units } = this.layout;
-    const first = units[Math.floor(n / 2) * n + (behaviour === 'rest' || behaviour === 'play' ? Math.floor(n / 2) - 1 : 0)];
+    const first = units[Math.floor(n / 2) * n + (this.startsCentral(behaviour) ? Math.floor(n / 2) - 1 : 0)];
     this.walker.heading = 0;
     this.walker.place(first.x, first.y);
     this.trail.splice(0, this.trail.length, first.x, first.y);
     this.actions = []; this.action = null; this.pending = null; this.transfer = null;
     this.gazeTrace.fill(0); this.gazeTouched.fill(0); this.gazeUnit = null;
-    this.rng = seededRng(CAT_PLAY.seed); this.toyKind = 0; this.catches = 0; this.op = null; this.toy = null;
+    this.familiar.fill(0); this.exploreLeft = 0; this.arrivingNew = true;
     this.visited.clear(); this.visited.add(first.i);
     this.keepSupport();
-    this.begin(behaviour === 'free' ? 'pass' : behaviour);
+    this.begin(behaviour === 'free' ? this.tour[0] : behaviour);
     this.nextAction();
   }
 
-  private keepSupport(): void {
+  protected keepSupport(): void {
     // Starting/dragged placement supplies a platform; automatic transfers wait
     // for the destination to finish forming before leaving the current unit.
     for (const u of this.supportUnits) {
@@ -129,9 +124,8 @@ export class CatPlanSim extends PlanSim {
     while (from.row !== end.row) push(this.layout.units[from.i + Math.sign(end.row - from.row) * this.layout.n]);
   }
 
-  private begin(episode: CatEpisode): void {
+  protected begin(episode: CatEpisode | WE): void {
     this.episode = episode;
-    this.toy = null; this.op = null;
     const { units, n } = this.layout;
     const start = this.currentUnit;
     if (episode === 'pass') {
@@ -147,13 +141,78 @@ export class CatPlanSim extends PlanSim {
       this.actions.push({ phase: 'sit', seconds: CAT_DEMO.arrivalSeconds });
     } else if (episode === 'rest') {
       this.actions.push({ phase: 'sit', seconds: CAT_DEMO.sitSeconds }, { phase: 'lie', seconds: CAT_DEMO.lieSeconds });
-    } else {
-      // Play has no route: the cat reacts to the toy every step (playStep), the operator moves the toy.
-      this.offerToy();
+    } else if (episode === 'explore') {
+      this.exploreLeft = CAT_EXPLORE.bouts;
+      this.arrivingNew = this.familiar[start.i] < CAT_EXPLORE.newBelow;
+      this.planHop();
     }
   }
 
-  private nextAction(): void {
+  /**
+   * Explore, in short bouts (项目二_猫行为lab.md §7; all D1 except the category). On reaching a platform the
+   * cat investigates it (longer if it is new), then glances toward the few least-explored parts of the room —
+   * each glance falls on the first platform it would step onto that way — and sets off toward the least
+   * explored, up to `boutHops` platforms, looking ahead as it goes. "Least explored" is a whole area, not the
+   * next platform: a cat that only follows the edge of what it has seen ends up circling the room.
+   */
+  private planHop(): void {
+    this.exploreLeft--;
+    const here = this.currentUnit, targets = this.rankTargets(here);
+    this.actions.push({ phase: 'investigate', seconds: this.arrivingNew ? CAT_EXPLORE.newSeconds : CAT_EXPLORE.knownSeconds });
+    // One glance per direction: the first platform toward each of the best few targets.
+    const options: PlanUnit[] = [];
+    for (const t of targets) {
+      const first = this.stepToward(here, t);
+      if (!options.some(o => o.i === first.i)) options.push(first);
+      if (options.length === CAT_EXPLORE.options) break;
+    }
+    const turn = (u: PlanUnit) => wrapAngle(Math.atan2(u.y - here.y, u.x - here.x) - this.walker.heading);
+    // The head sweeps across the options from one side to the other.
+    for (const o of [...options].sort((a, b) => turn(a) - turn(b))) this.actions.push({ phase: 'scan', seconds: CAT_DEMO.glanceSeconds, look: o });
+    let at = here;
+    for (let k = 0; k < CAT_EXPLORE.boutHops && at.i !== targets[0].i; k++) {
+      at = this.stepToward(at, targets[0]);
+      this.actions.push({ phase: 'walk', unit: at });
+    }
+    this.arrivingNew = this.familiar[at.i] < CAT_EXPLORE.newBelow;
+  }
+
+  /**
+   * Platforms ranked as places to explore: how unfamiliar the area around each one is (Gaussian-weighted
+   * mean over `areaSigma` grid pitches, a platform counting as unfamiliar by exp(−familiarity / knownAfter)).
+   * Equally unfamiliar areas: the farther one first (so the cat crosses the room), then the one it faces.
+   */
+  private rankTargets(here: PlanUnit): PlanUnit[] {
+    const { units, pitchM } = this.layout, s2 = 2 * (CAT_EXPLORE.areaSigma * pitchM) ** 2;
+    const fresh = units.map(v => Math.exp(-this.familiar[v.i] / CAT_EXPLORE.knownAfter));
+    const ranked = units.filter(u => u.i !== here.i).map(u => {
+      let sw = 0, sf = 0;
+      for (const v of units) { const w = Math.exp(-((v.x - u.x) ** 2 + (v.y - u.y) ** 2) / s2); sw += w; sf += w * fresh[v.i]; }
+      return { u, area: sf / sw, far: Math.hypot(u.x - here.x, u.y - here.y), turn: Math.abs(wrapAngle(Math.atan2(u.y - here.y, u.x - here.x) - this.walker.heading)) };
+    });
+    ranked.sort((a, b) => Math.abs(a.area - b.area) > 1e-3 ? b.area - a.area
+      : Math.abs(a.far - b.far) > 1e-9 ? b.far - a.far : a.turn !== b.turn ? a.turn - b.turn : a.u.i - b.u.i);
+    return ranked.map(r => r.u);
+  }
+
+  /** The neighbouring platform (8-way) that gets closest to `to`; ties go to the one the cat faces. */
+  private stepToward(from: PlanUnit, to: PlanUnit): PlanUnit {
+    let best = from, bestD = Infinity, bestTurn = Infinity;
+    for (const u of this.layout.units) {
+      if (u.i === from.i || Math.max(Math.abs(u.row - from.row), Math.abs(u.col - from.col)) > 1) continue;
+      const d = Math.hypot(u.x - to.x, u.y - to.y), turn = Math.abs(wrapAngle(Math.atan2(u.y - from.y, u.x - from.x) - this.walker.heading));
+      if (d < bestD - 1e-9 || (Math.abs(d - bestD) <= 1e-9 && turn < bestTurn)) { best = u; bestD = d; bestTurn = turn; }
+    }
+    return best;
+  }
+
+  /** When the queued actions run out: the next platform while exploring, else the next episode. */
+  protected refill(): void {
+    if (this.episode === 'explore' && this.exploreLeft > 0) this.planHop();
+    else this.begin(this.behaviour === 'free' ? this.tour[++this.tourIndex % this.tour.length] : this.behaviour as CatEpisode | WE);
+  }
+
+  protected nextAction(): void {
     this.action = this.actions.shift() ?? null;
     this.phaseTime = 0;
     if (!this.action) return;
@@ -161,199 +220,24 @@ export class CatPlanSim extends PlanSim {
     this.pending = this.action.unit ?? null;
   }
 
-  private setPhase(p: CatPhase): void {
+  protected setPhase(p: CatPhase | WP): void {
     if (this.phase !== p) { this.phase = p; this.phaseTime = 0; }
   }
 
-  // ── Play: the operator moves the toy; the cat reacts to it ─────────────────────────────────────────
+  // ── Hooks for a subclass whose episode reacts every step instead of queuing actions (cat-wand.ts) ───
 
-  /** Toy bounds: over the unit array, so the cat can always get near it. */
-  private clampToField(x: number, y: number): { x: number; y: number } {
-    const m = this.layout.fieldM / 2 - 0.05;
-    return { x: Math.max(-m, Math.min(m, x)), y: Math.max(-m, Math.min(m, y)) };
-  }
-
-  private between(a: number, b: number): number { return a + (b - a) * this.rng(); }
-
-  /** The operator drops a toy near the cat (bout start, or a swap). A new toy restores interest. */
-  private offerToy(): void {
-    const a = this.rng() * Math.PI * 2, d = this.between(CAT_PLAY.appearMin, CAT_PLAY.appearMax);
-    const p = this.clampToField(this.walker.x + Math.cos(a) * d, this.walker.y + Math.sin(a) * d);
-    this.toy = p; this.toyKind++; this.interest = 1; this.quitTime = -1; this.toySpeed = 0;
-    this.lagToy = { ...p }; this.lagToy2 = { ...p }; this.toyMoving = false;
-    this.sinceCatch = Infinity;
-    this.wait(0, 'twitch');
-    this.actions = []; this.action = null; this.pending = null;
-    this.setPhase('watch');
-  }
-
-  /** Swap in a contrasting toy (Hall et al. 2002: renews play after habituation). Play episodes only. */
-  newToy(): void {
-    if (this.episode !== 'play' || !this.auto || this.held) return;
-    this.offerToy();
-  }
-
-  /** D1 operator: dart to a new spot (away from a close cat), then pause or twitch, then dart again. */
-  private dart(escape: boolean): void {
-    const t = this.toy!, cat = this.walker;
-    const away = Math.atan2(t.y - cat.y, t.x - cat.x);
-    const close = Math.hypot(t.x - cat.x, t.y - cat.y) < 0.8;
-    let a = escape || close ? away + (this.rng() - 0.5) * (Math.PI * 2 / 3) : this.rng() * Math.PI * 2;
-    const d = escape ? this.between(CAT_PLAY.escapeMin, CAT_PLAY.escapeMax) : this.between(CAT_PLAY.dartMin, CAT_PLAY.dartMax);
-    let to = this.clampToField(t.x + Math.cos(a) * d, t.y + Math.sin(a) * d);
-    // A dart cut short by the wall turns back into the open room (otherwise the toy pins the cat to an edge).
-    if (Math.hypot(to.x - t.x, to.y - t.y) < 0.6 * d) {
-      a = Math.atan2(-t.y, -t.x) + (this.rng() - 0.5) * (Math.PI * 2 / 3);
-      to = this.clampToField(t.x + Math.cos(a) * d, t.y + Math.sin(a) * d);
-    }
-    this.op = { mode: 'dart', t: 0, dur: Infinity, bx: t.x, by: t.y, tx: to.x, ty: to.y, speed: escape ? CAT_PLAY.escapeSpeed : CAT_PLAY.dartSpeed };
-  }
-
-  private operate(h: number): void {
-    const op = this.op, t = this.toy;
-    if (!op || !t) return;
-    op.t += h;
-    if (op.mode === 'caught') {
-      // Under the forepaws while caught; then the operator pulls it away (prey escape).
-      const reach = CAT.bodyR * 1.05;
-      t.x = this.walker.x + Math.cos(this.walker.heading) * reach; t.y = this.walker.y + Math.sin(this.walker.heading) * reach;
-      if (op.t >= op.dur) this.dart(true);
-    } else if (op.mode === 'dart') {
-      const dx = op.tx - t.x, dy = op.ty - t.y, d = Math.hypot(dx, dy), step = op.speed * h;
-      if (d <= step) { t.x = op.tx; t.y = op.ty; this.wait(0); }
-      else { t.x += (dx / d) * step; t.y += (dy / d) * step; }
-    } else if (op.mode === 'twitch' || op.mode === 'pause') {
-      if (op.mode === 'twitch') {
-        const w = 2 * Math.PI * CAT_PLAY.twitchHz * op.t, A = CAT_PLAY.twitchAmp;
-        t.x = op.bx + Math.sin(w) * A; t.y = op.by + Math.sin(w * 0.7 + 1) * A * 0.6;
-      }
-      op.waited = (op.waited ?? 0) + h;
-      const near = Math.hypot(this.walker.x - op.bx, this.walker.y - op.by) < CAT_PLAY.near;
-      if (near) {
-        // The cat is close: hesitate a moment (its chance to pounce), then escape.
-        op.hesitate ??= this.between(CAT_PLAY.hesitateMin, CAT_PLAY.hesitateMax);
-        op.nearFor = (op.nearFor ?? 0) + h;
-        if (op.nearFor >= op.hesitate) { t.x = op.bx; t.y = op.by; this.dart(true); }
-      } else if (op.t >= op.dur) {
-        t.x = op.bx; t.y = op.by;
-        if (op.waited >= CAT_PLAY.lureMax) this.dart(false);
-        else this.wait(op.waited, op.mode === 'twitch' ? 'pause' : 'twitch');
-      }
-    }
-    // Smoothed speed: the first lag filters the twitch out, the gap between the two lags is the travel.
-    const k = 1 - Math.exp(-h / CAT_PLAY.speedTau);
-    this.lagToy = { x: this.lagToy.x + (t.x - this.lagToy.x) * k, y: this.lagToy.y + (t.y - this.lagToy.y) * k };
-    this.lagToy2 = { x: this.lagToy2.x + (this.lagToy.x - this.lagToy2.x) * k, y: this.lagToy2.y + (this.lagToy.y - this.lagToy2.y) * k };
-    this.toySpeed = Math.hypot(this.lagToy.x - this.lagToy2.x, this.lagToy.y - this.lagToy2.y) / CAT_PLAY.speedTau;
-    this.toyMoving = this.toyMoving ? this.toySpeed > CAT_PLAY.moveOff : this.toySpeed > CAT_PLAY.moveOn;
-  }
-
-  /** The toy waits where it is (twitching or still) to lure the cat; `waited` carries over between the two. */
-  private wait(waited: number, mode?: 'twitch' | 'pause'): void {
-    const t = this.toy!, m = mode ?? (this.rng() < 0.5 ? 'twitch' : 'pause');
-    this.op = { mode: m, t: 0, bx: t.x, by: t.y, tx: t.x, ty: t.y, speed: 0, waited,
-      dur: m === 'twitch' ? this.between(CAT_PLAY.twitchMin, CAT_PLAY.twitchMax) : this.between(CAT_PLAY.pauseMin, CAT_PLAY.pauseMax) };
-  }
-
-  /** Keep a point on a platform: within the disk, leaving room for the cat's body. */
-  private onPlatform(u: PlanUnit, x: number, y: number): { x: number; y: number } {
-    const lim = Math.max(0, this.layout.platR - CAT.bodyR * 0.5), dx = x - u.x, dy = y - u.y, d = Math.hypot(dx, dy);
-    return d <= lim ? { x, y } : { x: u.x + (dx / d) * lim, y: u.y + (dy / d) * lim };
-  }
-
-  /** Where on unit u the cat would get closest to the toy, and how close that is. */
-  private reachFrom(u: PlanUnit): { p: { x: number; y: number }; d: number } {
-    const t = this.toy!, p = this.onPlatform(u, t.x, t.y);
-    return { p, d: Math.hypot(t.x - p.x, t.y - p.y) };
-  }
-
-  private quit(): void {
-    this.quitTime = 0; this.pending = null;
-    if (this.op) this.op = { ...this.op, mode: 'dropped', t: 0 };
-    // Turns away from the toy (schematic); a quitting cat does not fixate it.
-    if (this.toy) this.walker.heading = Math.atan2(this.walker.y - this.toy.y, this.walker.x - this.toy.x);
-    this.setPhase('sit');
-  }
-
-  /**
-   * One decision step of play. Rules are deterministic in the toy's state; variety comes from the toy.
-   * - toy within paw reach → capture (the operator holds it under the paws, then pulls it away);
-   * - interest below `stop` → quit: sit, then lie; a new toy is offered after `swapAfter`;
-   * - toy moving and interest below `vigorous` → only watch;
-   * - toy closest to the cat's own platform → move within the platform toward it;
-   * - otherwise the neighbouring unit (8-way) from which the cat gets closest is the landing: the cat looks
-   *   at it, the space opens it from that gaze, and the cat jumps once it is fully open — chasing a moving
-   *   toy fast, stalking a still one slowly.
-   */
-  private playStep(h: number): void {
-    const cat = this.walker;
-    if (this.quitTime >= 0) {
-      this.quitTime += h;
-      this.setPhase(this.quitTime < CAT_PLAY.quitSit ? 'sit' : 'lie');
-      if (this.behaviour === 'free' && this.quitTime >= CAT_PLAY.quitSit) {
-        this.toy = null; this.op = null; this.quitTime = -1;
-        this.begin(CAT_DEMO.tour[++this.tourIndex % CAT_DEMO.tour.length]);
-        this.nextAction();
-      } else if (this.quitTime >= CAT_PLAY.swapAfter) this.offerToy();
-      return;
-    }
-    const toy = this.toy;
-    if (!toy) return;
-    if (this.transfer) return; // mid-jump: committed
-    const d = Math.hypot(toy.x - cat.x, toy.y - cat.y);
-    if (this.phase === 'capture') {
-      if (this.op?.mode === 'caught') return;
-      this.setPhase('watch'); this.sinceCatch = 0;
-    }
-    this.sinceCatch += h;
-    if (d <= CAT_PLAY.pawReach && this.sinceCatch >= CAT_PLAY.recover) {
-      if (cat.state === 'walk') cat.place(cat.x, cat.y);
-      cat.heading = Math.atan2(toy.y - cat.y, toy.x - cat.x);
-      this.pending = null; this.catches++;
-      this.interest = Math.max(0, this.interest - CAT_PLAY.catchCost);
-      this.setPhase('capture');
-      this.op = { mode: 'caught', t: 0, dur: CAT_DEMO.captureSeconds, bx: toy.x, by: toy.y, tx: toy.x, ty: toy.y, speed: 0 };
-      return;
-    }
-    if (this.interest <= CAT_PLAY.stop) { this.quit(); return; }
-    const moving = this.toyMoving, vigorous = this.interest > CAT_PLAY.vigorous;
-    if (moving && !vigorous) { this.pending = null; this.setPhase('watch'); return; }
-    // A moving toy is chased. A still one is walked up to, stalked within `stalkFrom`, rushed within `pounce`.
-    const phase: CatPhase = moving || d <= CAT_PLAY.pounce ? 'chase' : d <= CAT_PLAY.stalkFrom ? 'stalk' : 'walk';
-    this.setPhase(phase);
-    this.playSpeed = phase === 'chase' ? CAT_DEMO.chaseSpeed : phase === 'stalk' ? CAT_DEMO.stalkSpeed : CAT_DEMO.walkSpeed;
-    const here = this.currentUnit, own = this.reachFrom(here);
-    let best: PlanUnit | null = null, bestD = own.d - 1e-6;
-    for (const u of this.layout.units) {
-      if (u.i === here.i || Math.max(Math.abs(u.row - here.row), Math.abs(u.col - here.col)) > 1) continue;
-      const r = this.reachFrom(u);
-      if (r.d < bestD) { best = u; bestD = r.d; }
-    }
-    // Keep the landing already picked unless another is clearly better (a twitching toy must not flip it).
-    const kept = this.pending;
-    if (best && kept && kept.i !== best.i && Math.max(Math.abs(kept.row - here.row), Math.abs(kept.col - here.col)) <= 1
-      && this.reachFrom(kept).d <= bestD + 0.08) best = kept;
-    if (!best) {
-      this.pending = null;
-      if (Math.hypot(own.p.x - cat.x, own.p.y - cat.y) > 0.02 && cat.state !== 'walk') cat.pushTarget(own.p);
-      return;
-    }
-    this.pending = best;
-    if (cat.state === 'walk') cat.place(cat.x, cat.y);
-    if (this.act.degree[best.i] >= 1 - 1e-9) {
-      this.transfer = { from: here, to: best };
-      cat.pushTarget(this.reachFrom(best).p);
-      this.pending = null;
-    }
-  }
+  /** True while such an episode is running; then `react` drives the cat instead of the action queue. */
+  protected get reactive(): boolean { return false; }
+  protected react(_h: number): void {}
+  protected moveSpeed(): number { return this.action?.speed ?? CAT.speed; }
+  protected afterStep(_h: number): void {}
 
   setAuto(on: boolean): void {
     this.auto = on;
     if (!on) {
       const u = this.currentUnit;
       this.walker.place(u.x, u.y);
-      this.actions = []; this.action = null; this.pending = null; this.transfer = null; this.toy = null; this.op = null;
-      this.quitTime = -1;
+      this.actions = []; this.action = null; this.pending = null; this.transfer = null;
       this.episode = 'rest'; this.phase = 'sit'; this.phaseTime = 0; this.gazeUnit = null;
       this.keepSupport();
     }
@@ -376,25 +260,6 @@ export class CatPlanSim extends PlanSim {
     this.add(x, y);
   }
 
-  get toyMode(): ToyMode | null { return this.toy ? this.op?.mode ?? null : null; }
-
-  /** The viewer takes the wand: the toy follows the pointer; the cat keeps reacting. */
-  holdToy(x: number, y: number): boolean {
-    if (!this.toy || !this.op || this.op.mode === 'caught') return false;
-    this.op = { ...this.op, mode: 'held', t: 0 };
-    this.dragToy(x, y);
-    return true;
-  }
-  dragToy(x: number, y: number): void {
-    if (this.op?.mode !== 'held' || !this.toy) return;
-    const p = this.clampToField(x, y);
-    this.toy.x = p.x; this.toy.y = p.y;
-  }
-  releaseToy(): void {
-    if (this.op?.mode !== 'held' || !this.toy) return;
-    this.wait(0, 'pause');
-  }
-
   clearTraces(): void {
     this.field.clear(); this.act.reset(); this.trail.length = 0;
     this.gazeTrace.fill(0); this.gazeTouched.fill(0);
@@ -408,17 +273,14 @@ export class CatPlanSim extends PlanSim {
   }
 
   /**
-   * What the cat is fixating, as a point: the toy, a glanced unit, the landing it is about to take, or —
-   * while crossing — the landing after this one (looking ahead). Idle sitting and lying are not fixation,
-   * and a carried cat looks at nothing. The line of sight still has to reach the unit (`fixatedUnit`),
-   * so a landing that requires a turn is only seen once the cat has stopped and turned.
+   * What the cat is fixating, as a point: a glanced unit, the landing it is about to take, or — while
+   * crossing — the landing after this one (looking ahead). Idle sitting, lying and investigating its own
+   * platform (nose down) are not fixation, and a carried cat looks at nothing. The line of sight still has
+   * to reach the unit (`fixatedUnit`), so a landing that requires a turn is only seen once the cat has
+   * stopped and turned.
    */
-  private fixationPoint(): { x: number; y: number } | null {
-    // Lying, quitting, or pawing the toy under its feet: not looking out at any unit.
-    if (this.held || !this.walker.present || this.phase === 'lie' || this.phase === 'capture' || this.quitTime >= 0) return null;
-    // In play the cat looks at the landing it has picked, otherwise at the toy itself.
-    if (this.episode === 'play' && this.pending) return this.pending;
-    if (this.toy) return this.toy;
+  protected fixationPoint(): { x: number; y: number } | null {
+    if (this.held || !this.walker.present || this.phase === 'lie' || this.phase === 'investigate') return null;
     const target = this.action?.look ?? this.pending ?? (this.transfer ? this.actions[0]?.unit : undefined);
     return target ? { x: target.x, y: target.y } : null;
   }
@@ -466,6 +328,10 @@ export class CatPlanSim extends PlanSim {
       const v = this.fade === null ? this.gazeTrace[i] * keep : this.gazeTrace[i] - fall;
       this.gazeTrace[i] = v > 1e-6 ? v : 0;
     }
+    // The cat's own memory of where it has been (explore prefers the less familiar); units never read it.
+    const forget = Math.pow(0.5, dt / CAT_EXPLORE.forgetHalfLife);
+    for (let i = 0; i < this.familiar.length; i++) this.familiar[i] *= forget;
+    for (const u of this.supportUnits) this.familiar[u.i] += dt;
   }
 
   protected override activationInputs(): Float64Array {
@@ -478,17 +344,15 @@ export class CatPlanSim extends PlanSim {
     return inputs;
   }
 
-  get state(): CatPhase | 'held' | 'prepare' {
+  get state(): CatPhase | WP | 'held' | 'prepare' {
     if (this.held) return 'held';
     if (this.pending) return 'prepare';
     return this.phase;
   }
 
   get pose(): CatPose {
-    if (this.held) return 'stand';
-    // Waiting for a landing: crouched when stalking or about to rush, standing otherwise.
-    if (this.pending) return this.episode === 'play' && this.phase !== 'walk' ? 'crouch' : 'stand';
-    return ({ scan: 'stand', walk: 'walk', sit: 'sit', lie: 'lie', watch: 'crouch', stalk: 'crouch', chase: 'chase', capture: 'paw' } as const)[this.phase];
+    if (this.held || this.pending) return 'stand';
+    return (POSES as Record<string, CatPose>)[this.phase] ?? 'stand';
   }
 
   override step(dt: number): void {
@@ -497,17 +361,16 @@ export class CatPlanSim extends PlanSim {
     while (left > 1e-9) {
       const h = Math.min(left, 1 / 60); left -= h;
       if (this.walker.state !== 'walk') this.transfer = null;
-      const playing = this.episode === 'play' && this.auto;
-      if (playing) this.operate(h);
-      if (!this.held && this.walker.present && playing) this.playStep(h);
+      const reactive = this.reactive;
+      if (reactive) this.react(h);
       else if (!this.held && this.walker.present) {
         if (!this.action) {
-          if (!this.actions.length && this.auto) this.begin(this.behaviour === 'free' ? CAT_DEMO.tour[++this.tourIndex % CAT_DEMO.tour.length] : this.behaviour);
-          if (this.episode !== 'play') this.nextAction();
+          if (!this.actions.length && this.auto) this.refill();
+          if (!this.reactive) this.nextAction();
         }
         // Face what is being fixated (a glance target or the landing).
         const look = this.action?.look ?? this.pending;
-        if (look && !this.toy && this.walker.state !== 'walk') this.walker.heading = Math.atan2(look.y - this.walker.y, look.x - this.walker.x);
+        if (look && this.walker.state !== 'walk') this.walker.heading = Math.atan2(look.y - this.walker.y, look.x - this.walker.x);
         if (this.pending) {
           // The cat checks the structure: it leaves only once the fixated landing has fully opened.
           if (this.act.degree[this.pending.i] >= 1 - 1e-9) {
@@ -518,17 +381,12 @@ export class CatPlanSim extends PlanSim {
           }
         }
       }
-      this.walker.speed = (playing ? this.playSpeed : this.action?.speed ?? CAT.speed) * this.pace;
-      // In play the cat faces what it is looking at while it stands (the landing it picked, else the toy).
-      if (playing && this.quitTime < 0 && this.walker.state !== 'walk') {
-        const f = this.pending ?? this.toy;
-        if (f && Math.hypot(f.x - this.walker.x, f.y - this.walker.y) > 1e-6) this.walker.heading = Math.atan2(f.y - this.walker.y, f.x - this.walker.x);
-      }
+      this.walker.speed = this.moveSpeed() * this.pace;
       super.step(h);
       this.phaseTime += h;
       this.visited.add(this.currentUnit.i);
-      if (playing && this.quitTime < 0) this.interest = Math.max(0, this.interest - CAT_PLAY.drainPerSecond * h);
-      if (!playing && this.action && !this.pending && this.walker.state === 'idle' && (this.action.unit || this.phaseTime >= (this.action.seconds ?? 0))) {
+      this.afterStep(h);
+      if (!reactive && this.action && !this.pending && this.walker.state === 'idle' && (this.action.unit || this.phaseTime >= (this.action.seconds ?? 0))) {
         this.action = null;
         if (!this.auto && !this.actions.length) { this.phase = 'sit'; this.phaseTime = 0; }
       }
