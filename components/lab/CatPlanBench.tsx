@@ -161,7 +161,7 @@ export function CatPlanBench({ active = true, onLight = false, controls = true, 
     <div className="lab-fig">
       <div className="walk-map" style={workspace ? undefined : { display: 'contents' }}>
         <canvas ref={canvas} role="img" tabIndex={controls ? 0 : -1}
-          aria-label={label('猫在单元上的活动；拖动猫到单元，点击或方向键选择落点', 'Cat on the units; drag onto a unit, click or use arrow keys to choose a landing')}
+          aria-label={label('猫在单元上的活动；拖动猫到单元，点击或方向键选择落点，玩耍时可拖动逗猫棒', 'Cat on the units; drag onto a unit, click or use arrow keys to choose a landing, drag the wand toy during play')}
           style={{ aspectRatio: `${W}/${H}`, touchAction: 'none', cursor: 'grab' }}
           onPointerDown={down} onPointerMove={e => { if (pointer.current === e.pointerId && sim.current) { const p = position(e); if (pointerToy.current) sim.current.dragToy(p.x, p.y); else sim.current.drag(p.x, p.y); paint(); } }}
           onPointerUp={up} onPointerCancel={up} onLostPointerCapture={up}
