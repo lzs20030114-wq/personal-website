@@ -21,6 +21,7 @@ import {
 } from '../../src/lib/site/log-facets';
 import { blockCounts, countsLabel } from '../../src/lib/site/log-blocks';
 import { LogBody } from './LogBody';
+import { afterPageTransition } from './pageTransitionState';
 
 /**
  * Work log 列表 + 中英切换（用户拍板 2026-07-27）。
@@ -331,16 +332,24 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
 
   useEffect(() => {
     if (flash === null) return;
-    const el = listRef.current?.querySelector(
-      flash.anchor ? `#${CSS.escape(flash.anchor)}` : `[data-date="${flash.date}"]`,
-    );
-    if (el) {
-      const reduce =
-        typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-      el.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' });
-    }
-    const t = setTimeout(() => setFlash(null), 1600);
-    return () => clearTimeout(t);
+    let t: ReturnType<typeof setTimeout> | undefined;
+    // 经页面转场进来（主页日志条目 / 案例页引用 → 这里）：先让这一页落定，再滚到那一条、
+    // 再开始计闪烁的时长——在转场途中滚，看见的是一张纸一边升起一边自己卷动（MAPPING §48）
+    const cancel = afterPageTransition(() => {
+      const el = listRef.current?.querySelector(
+        flash.anchor ? `#${CSS.escape(flash.anchor)}` : `[data-date="${flash.date}"]`,
+      );
+      if (el) {
+        const reduce =
+          typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+        el.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' });
+      }
+      t = setTimeout(() => setFlash(null), 1600);
+    });
+    return () => {
+      cancel();
+      clearTimeout(t);
+    };
   }, [flash]);
 
   /* 从案例页链进来：`/archive#log-2026-06-15-1`（2026-09-13）。

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { pageTransitionActive } from '../pageTransitionState';
 
 const EO = 'cubic-bezier(.2,.7,.1,1)';
 
@@ -13,7 +14,10 @@ const EO = 'cubic-bezier(.2,.7,.1,1)';
  * - 等两帧再动手：语言偏好在挂载后才恢复，`Pick` 会把已水合的 EN 树换成 ZH 树，立即隐藏的话
  *   会隐藏到马上被丢掉的那一棵；
  * - 只在首次挂载时隐藏 + 观察——之后切语言换进来的新节点本来就是可见的，不再重播；
- * - reduced-motion 完全不碰；转场进行中（有 [data-pt-morph] 克隆）也不碰，免得和 PageEnter 抢 hero。
+ * - reduced-motion 完全不碰。
+ * - 经页面转场进来（MAPPING §48）：首屏已经随转场整张进来了，不再把它藏起来重演一遍——
+ *   否则滑进来的是一张空纸、内容晚半拍才浮出来（实测「下一个案例」那一翻最明显）。
+ *   首屏以下照旧滚到才显现。
  */
 export function CaseReveal() {
   const done = useRef(false);
@@ -29,8 +33,12 @@ export function CaseReveal() {
     const raf1 = requestAnimationFrame(() => {
       raf2 = requestAnimationFrame(() => {
         done.current = true;
-        if (document.querySelector('[data-pt-morph]') || typeof IntersectionObserver === 'undefined') return;
-        const els = Array.from(document.querySelectorAll<HTMLElement>('.cs [data-rv], .cs-body > *, .cs-tail > *'));
+        if (typeof IntersectionObserver === 'undefined') return;
+        const vh = window.innerHeight;
+        const arriving = pageTransitionActive();
+        const els = Array.from(
+          document.querySelectorAll<HTMLElement>('.cs [data-rv], .cs-body > *, .cs-tail > *'),
+        ).filter((el) => !arriving || el.getBoundingClientRect().top >= vh);
         els.forEach((el) => {
           el.style.opacity = '0';
         });

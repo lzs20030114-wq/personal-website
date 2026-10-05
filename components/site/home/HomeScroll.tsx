@@ -7,11 +7,12 @@
 import '@fontsource/jetbrains-mono/latin-400.css';
 import '@fontsource/jetbrains-mono/latin-500.css';
 import './home.css';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { HomeCard, HomeLabGroup, HomeLogData } from '../../../src/lib/site/home-model';
 import { HookPage, buildSlides, type HookCtl } from './HookPage';
 import { AboutPage, WorkPage } from './WorkAboutPages';
 import { ZonePage } from './ZonePage';
+import { HOME_ZONE_KEY, pageTransitionActive } from '../pageTransitionState';
 
 const ROTATE_S = 7;
 const HOLD_MS = 15000;
@@ -29,6 +30,20 @@ const PAGES = ['Hook', 'Work', 'About', 'Lab', 'Log + Contact'];
 const NAV: [string, number][] = [['Work', 1], ['About', 2], ['Lab', 3], ['Log', 4]];
 /** 引擎只在桌面且允许动效时接管；窄屏 / reduced-motion 回落常规文档流（MAPPING §6，CSS 里同一条件） */
 const FLOW_QUERY = '(max-width: 1023px), (prefers-reduced-motion: reduce)';
+/** 离开 Lab / Log 区时记下的滚动位置多久内还算数（只为「按返回落回原处」） */
+const ZONE_MEMORY_MS = 30 * 60 * 1000;
+
+/** 取一次「离开时 Lab / Log 区滚到哪了」（页面转场写的，MAPPING §48）；取过即删，太旧不用。 */
+function takeZoneMemory(): number | null {
+  try {
+    const raw = sessionStorage.getItem(HOME_ZONE_KEY);
+    sessionStorage.removeItem(HOME_ZONE_KEY);
+    const v = raw ? (JSON.parse(raw) as { top?: number; at?: number }) : null;
+    return v && typeof v.top === 'number' && Date.now() - (v.at ?? 0) < ZONE_MEMORY_MS ? v.top : null;
+  } catch {
+    return null;
+  }
+}
 
 export interface HomeScrollProps {
   cards: HomeCard[];
@@ -73,8 +88,11 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
     return () => clearTimeout(t);
   }, []);
 
-  /* ───────── 命令式引擎（稿 js/home.js 的移植） ───────── */
-  useEffect(() => {
+  /* ───────── 命令式引擎（稿 js/home.js 的移植） ─────────
+     layout effect 而不是 effect：深链（/#work 等）的落位要在首帧之前做完——
+     否则首帧先画出第一页再跳走；页面转场（MAPPING §48）也要在截新画面之前看到落好的那一页
+     （转场等新页时浏览器暂停渲染，passive effect 什么时候跑不归它管）。 */
+  useLayoutEffect(() => {
     const root = rootRef.current!;
     const sections = secRefs.map((r) => r.current!);
     const zoneEl = sections[3];
@@ -83,6 +101,9 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
     const motionOn = () => !reducedMq.matches;
     const $$ = <T extends Element = HTMLElement>(s: string, el: ParentNode = root) => Array.from(el.querySelectorAll<T>(s));
     const flow = () => flowMq.matches;
+    // 经页面转场回到首页（从案例页 / Lab 返回）：底下这一页「一直在那儿」，不重播入场编排
+    const arriving = pageTransitionActive();
+    const arrivingZone = arriving && (window.location.hash === '#lab' || window.location.hash === '#log');
 
     const st = { page: 0, from: 0 };
     let topSince = 0;
@@ -147,7 +168,7 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
       });
     };
     const startReveal = () => {
-      if (io || !motionOn() || flow()) return;
+      if (io || !motionOn() || flow() || arrivingZone) return;
       io = new IntersectionObserver(
         (ents) => {
           let k = 0;
@@ -161,10 +182,10 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
       });
       if (zoneEl.scrollTop + zoneEl.clientHeight >= zoneEl.scrollHeight - 2) requestAnimationFrame(revealTail);
     };
-    if (motionOn() && !flow()) $$('[data-rv]', zoneEl).forEach((el) => (el.style.opacity = '0'));
+    if (motionOn() && !flow() && !arrivingZone) $$('[data-rv]', zoneEl).forEach((el) => (el.style.opacity = '0'));
 
-    /* 页位置 */
-    const applyPages = () => {
+    /* 页位置（instant = 深链直落：不走 1.1s 的翻页过渡） */
+    const applyPages = (instant = false) => {
       const pg = st.page;
       sections.forEach((sec, i) => {
         if (flow()) {
@@ -190,7 +211,7 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
           t = pg === 3 ? 'translateY(0)' : 'translateY(7%)';
           v = pg >= 2 ? 'visible' : 'hidden';
         }
-        sec.style.transition = i === pg || i === st.from ? `transform 1.1s ${EIO}, visibility 1.1s` : 'none';
+        sec.style.transition = !instant && (i === pg || i === st.from) ? `transform 1.1s ${EIO}, visibility 1.1s` : 'none';
         sec.style.transform = t;
         sec.style.visibility = v;
         sec.inert = i !== pg;
@@ -240,17 +261,22 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
       }
     };
     const goIdx = (i: number) => (i < 3 ? go(i) : goZone(i === 3 ? 'lab' : 'log'));
-    /** 深链直落：不走翻页转场 */
+    /** 深链直落：不走翻页转场（窄屏文档流里就是滚到那一节） */
     const jump = (p: number, where?: 'lab' | 'log') => {
       st.page = p;
       st.from = p;
-      applyPages();
+      applyPages(true);
       setPage(p);
+      if (flow()) {
+        (where === 'log' ? logRef.current : sections[p])?.scrollIntoView({ behavior: 'auto', block: 'start' });
+        return;
+      }
       if (p === 3) {
-        zoneEl.scrollTop = where === 'log' ? (logRef.current?.offsetTop ?? 0) + 30 : 0;
+        const back = takeZoneMemory();
+        zoneEl.scrollTop = back ?? (where === 'log' ? (logRef.current?.offsetTop ?? 0) + 30 : 0);
         startReveal();
       }
-      choreo(p, 120);
+      if (!arriving) choreo(p, 120);
     };
     api.current.goIdx = goIdx;
     api.current.toTop = () => go(0);
@@ -432,7 +458,8 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
     cardsEl.addEventListener('focusout', onFocusOut);
 
     /* 窄屏 / 偏好切换时重排 */
-    flowMq.addEventListener('change', applyPages);
+    const onFlowChange = () => applyPages();
+    flowMq.addEventListener('change', onFlowChange);
 
     /* 启动 */
     applyPages();
@@ -442,8 +469,8 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
     else if (hash === '#about') jump(2);
     else if (hash === '#lab') jump(3, 'lab');
     else if (hash === '#log') jump(3, 'log');
-    else choreo(0, 120);
-    const bootT = setTimeout(() => !flow() && (st.page === 0 ? hkIn() : undefined), 500);
+    else if (!arriving) choreo(0, 120);
+    const bootT = setTimeout(() => !flow() && !arriving && (st.page === 0 ? hkIn() : undefined), 500);
     api.current.hkIn = hkIn;
 
     return () => {
@@ -463,7 +490,7 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
       });
       cardsEl.removeEventListener('mouseleave', workOut);
       cardsEl.removeEventListener('focusout', onFocusOut);
-      flowMq.removeEventListener('change', applyPages);
+      flowMq.removeEventListener('change', onFlowChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -487,7 +514,8 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
   };
 
   return (
-    <div className={`hs-root${ready ? ' hs-ready' : ''}`} ref={rootRef} data-hs-root>
+    // data-hs-page / data-hs-zone：页面转场离开首页时据此把地址写成 /#work 等，按返回落回原处（MAPPING §48）
+    <div className={`hs-root${ready ? ' hs-ready' : ''}`} ref={rootRef} data-hs-root data-hs-page={page} data-hs-zone={zone}>
       <section className="hs-page hs-page--hook" data-page="0" aria-label="01 Hook" ref={secRefs[0]}>
         <HookPage slides={slides} hk={hk} held={held} active={page === 0} mounted={mounted} ctl={ctl} onTab={onTab} rotateS={ROTATE_S} />
       </section>

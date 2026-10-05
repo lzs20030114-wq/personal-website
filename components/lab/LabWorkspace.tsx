@@ -2,7 +2,7 @@
 
 import { useBenchLang, useLabText } from './LabLanguage';
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { LabActivity } from './LabActivity';
 import { CAMERA_COMMAND, type CameraCommand } from './labCameraInput';
 import { LAB_BENCHES, LAB_INDEX, labAccent } from '../../src/lib/site/lab-index';
@@ -185,32 +185,37 @@ export function LabPanel({ no, title, description, lede, specs, accent, kind, ve
     if (root.current) ro.observe(root.current);
     return () => { mo.disconnect(); ro.disconnect(); };
   }, [no]);
-  useEffect(() => {
+  // Layout effect + one synchronous first measurement: the figure is sized before the first paint,
+  // and before a page transition captures the lab (MAPPING §48 — during that capture the browser
+  // runs neither rAF nor ResizeObserver, so a rAF-only first measurement would land after the
+  // frame has already flown to the CSS-default size). Later changes still go through rAF.
+  useLayoutEffect(() => {
     const node = stage.current;
     const heading = root.current?.querySelector('.lab-panel-heading');
     if (!node || !heading) return;
     let raf = 0;
+    const compute = () => {
+      const figure = Array.from(node.querySelectorAll<HTMLElement>('.lab-fig')).find(el => el.getBoundingClientRect().height > 0 && !el.closest('[hidden]'));
+      if (!figure) return;
+      const toolsHeight = root.current?.querySelector('.lab-view-tools')?.getBoundingClientRect().height ?? 42;
+      // Side-control benches: controls sit beside the drawing. Budget the whole workbench,
+      // not the drawing after subtracting a stack of controls; other benches keep their sizing.
+      if (['2-6', '2-10', '2-11', '2-12', '2-13'].includes(no) && window.innerWidth >= 1100) {
+        setFigureHeight(Math.max(380, Math.floor(window.innerHeight - heading.getBoundingClientRect().height - toolsHeight - (expanded ? 32 : no === '2-12' ? 128 : 48))));
+        return;
+      }
+      const controlsHeight = node.getBoundingClientRect().height - figure.getBoundingClientRect().height;
+      // Reserve visible controls first. Complex multi-view benches can still scroll inside the expanded panel.
+      setFigureHeight(clamp(Math.floor(window.innerHeight - heading.getBoundingClientRect().height - controlsHeight - toolsHeight - (expanded ? 32 : 100)), 240, 720));
+    };
     const measure = () => {
       cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const figure = Array.from(node.querySelectorAll<HTMLElement>('.lab-fig')).find(el => el.getBoundingClientRect().height > 0 && !el.closest('[hidden]'));
-        if (!figure) return;
-        const toolsHeight = root.current?.querySelector('.lab-view-tools')?.getBoundingClientRect().height ?? 42;
-        // Side-control benches: controls sit beside the drawing. Budget the whole workbench,
-        // not the drawing after subtracting a stack of controls; other benches keep their sizing.
-        if (['2-6', '2-10', '2-11', '2-12', '2-13'].includes(no) && window.innerWidth >= 1100) {
-          setFigureHeight(Math.max(380, Math.floor(window.innerHeight - heading.getBoundingClientRect().height - toolsHeight - (expanded ? 32 : no === '2-12' ? 128 : 48))));
-          return;
-        }
-        const controlsHeight = node.getBoundingClientRect().height - figure.getBoundingClientRect().height;
-        // Reserve visible controls first. Complex multi-view benches can still scroll inside the expanded panel.
-        setFigureHeight(clamp(Math.floor(window.innerHeight - heading.getBoundingClientRect().height - controlsHeight - toolsHeight - (expanded ? 32 : 100)), 240, 720));
-      });
+      raf = requestAnimationFrame(compute);
     };
     const ro = new ResizeObserver(measure);
     ro.observe(node); ro.observe(heading);
     window.addEventListener('resize', measure);
-    measure();
+    compute();
     return () => { ro.disconnect(); cancelAnimationFrame(raf); window.removeEventListener('resize', measure); };
   }, [expanded, no]);
   // 控件一动：顶线扫一下 + 状态读「求解中…」（稿的 solve 反馈；不接真实求解进度）

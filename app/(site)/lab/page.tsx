@@ -6,7 +6,6 @@ import { LabIntro, LabProjectRule, LabProjectEmpty, LabScaleRule } from '../../.
 import { LegacyLabHash } from '../../../components/lab/LegacyLabHash';
 import { LabIndex } from '../../../components/lab/LabIndex';
 import { labAccent, labBench } from '../../../src/lib/site/lab-index';
-import { PageEnter } from '../../../components/site/PageEnter';
 import { FourBarBench } from '../../../components/lab/FourBarBench';
 import { ArchBench } from '../../../components/lab/ArchBench';
 import { TentacleBench } from '../../../components/lab/TentacleBench';
@@ -81,9 +80,8 @@ export default function LabPage() {
     <>
       <div className="ground-plane ld-ground" aria-hidden />
       <div className="ld-dots" aria-hidden />
-      <PageEnter />
       <LegacyLabHash />
-      <div className="shell shell--lab pg-dark" data-pt-content>
+      <div className="shell shell--lab pg-dark">
         <LabIntro />
         <LabWorkspace index={<LabIndex />}>
         <LabProjectRule i={0} />
