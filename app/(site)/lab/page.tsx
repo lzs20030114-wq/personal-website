@@ -163,7 +163,7 @@ export default function LabPage() {
           specs={[
             ['Kernel', 'Position-based · Verlet + projection'],
             ['Source', 'Research-code port · parity ≤ 1e-9'],
-            ['Bonds', 'Permanent zipper locks'],
+            ['Bonds', 'Zipper locks · forming only'],
             ['Drive', 'One contraction ℓ · four bond maps'],
             ['Render', 'SVG · smoothing affects drawing only'],
           ]}

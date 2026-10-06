@@ -165,8 +165,8 @@ const mdxComponents = (lang: SlotLang) => ({
       }
     />
   ),
-  // 「方法」那节讲的滞回（痕迹衰减比身体离场慢 ⇒ 形态不回退），在引擎里就是
-  // **键锁定不可逆**：同一收缩协议下四张键谱各自扣出一种形态，松开也不还原。
+  // 「方法」那节的滞后 2026-10-06 起搬到痕迹层（痕迹慢褪 + 猫占用钉住，松键已解禁）；
+  // 这台只演示成形那一程：同一收缩协议下四张键谱各自扣出一种形态。图注不替它承诺回程。
   // Lab 2-1 是 2D 剖面、画的是 SVG，正文里最轻的一件。
   SkinUnitFigure: () => <SkinBench controls={false} onLight lang={lang} />,
   // 「行为条款与交互矩阵」那节要的是**形态的连续词汇**：十二条带的键谱逐级微变，
@@ -277,7 +277,7 @@ const SLOT_COPY: Record<string, { lab?: string; en: SlotCopy; zh: SlotCopy }> = 
   'project-ii': {
     lab: '2-8',
     en: {
-      video: 'Simulation video — the domestic human–cat scenario',
+      video: 'Simulation video — the cat café scenario',
       heroLabel: 'hero image · to be supplied',
       heroDesc: 'Hero image',
       heroLive: '[stand-in] Lab 2-8 sixteen-ring floor · live',
@@ -285,7 +285,7 @@ const SLOT_COPY: Record<string, { lab?: string; en: SlotCopy; zh: SlotCopy }> = 
       heroCap: '[stand-in] Lab 2-8 sixteen-ring floor · hero image to be supplied',
     },
     zh: {
-      video: '仿真演示视频——居家人猫场景',
+      video: '仿真演示视频——猫咖人猫场景',
       heroLabel: '主图 · 待供图',
       heroDesc: '主图',
       heroLive: '[顶替] Lab 2-8 十六环场地活件',

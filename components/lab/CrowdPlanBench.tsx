@@ -414,8 +414,8 @@ export function CrowdPlanBench({
                           ? '结构追着读数涨落，人走了收回去'
                           : 'the structure tracks the reading and withdraws once people leave'
                         : lang === 'zh'
-                          ? '键锁死、不回退——项目立论的滞回'
-                          : 'bonds lock and never release — the hysteresis the project argues for')
+                          ? '只升不降——作者第一个原型里的固化'
+                          : 'rises and never falls — the fixing rule of the first prototype')
                     }
                     onClick={() => setMode(r.key)}
                   >

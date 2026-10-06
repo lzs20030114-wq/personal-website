@@ -24,8 +24,9 @@ import { requestSkinTerminal } from './skinTerminal';
  * 推进是定步的：协议以 step 为时钟（r、外压衰减、拉链纪律解除全按 step 索引），
  * 按 RATE steps/s 折算真实时间、每帧封顶 MAX_STEPS_PER_FRAME——慢设备上表现为
  * 放慢而非轨迹漂移（与 Lab.02/04 的定步纪律同一取向）。跑完整个协议后静置片刻
- * 自动重播；这不是循环机构——每次重播都是一次全新的收缩（键锁定不可逆，
- * 想看滞回证据即在于此：收缩完成后形态被锁死，不随外压撤除回弹）。
+ * 自动重播；这不是循环机构——每次重播都是一次全新的收缩。这台只演示成形那一程：
+ * 收缩完成后键锁着、形态不随外压撤除回弹。回程松键（2026-10-06 解禁，引擎 retractStep）
+ * 不在这台上演示，留给行为驱动的立体收回台。
  */
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const RATE = 110; // 协议步/秒（收缩段 900 步 ≈ 8.2s）——展示节奏，不是物理量
@@ -75,7 +76,7 @@ const COPY = {
     aria: '收缩张紧外皮单元：四个键谱在同一收缩协议下分别成形为袋、蘑菇挑台、直挑台、阶梯挑台',
     title: '收缩张紧外皮单元',
     sub: '软皮 · 键生成刚度 · 四键谱同一收缩协议',
-    foot: '芯收缩 → 皮富余 → 键扣合 · 键锁定永久（滞回）',
+    foot: '芯收缩 → 皮富余 → 键扣合 · 这台只演示成形',
     bonds: (n: number) => `键 ${n}`,
     phase: { run: '收缩中', tension: '张紧 · 排泡', done: '锁定 · 即将重播', skip: '终态加载中', held: '锁定 · 终态', error: '终态加载失败 · 点重播重试' },
   },
@@ -84,7 +85,7 @@ const COPY = {
       'A contracting tensioned skin unit: four bond maps run the same contraction protocol and settle into a pocket, a bulb flange, a straight ledge and a stepped box.',
     title: 'Contracting tensioned skin',
     sub: 'Soft skin · stiffness made by bonds · four maps, one protocol',
-    foot: 'Core contracts → skin goes slack → bonds catch · a locked bond never releases (hysteresis)',
+    foot: 'Core contracts → skin goes slack → bonds catch · forming only',
     bonds: (n: number) => `${n} locked`,
     phase: { run: 'contracting', tension: 'tensioning', done: 'locked · replaying', skip: 'loading final state', held: 'locked', error: 'Loading failed · replay to retry' },
   },
