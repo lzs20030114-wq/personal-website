@@ -299,8 +299,21 @@ export class SkinUnit {
 
   px: Float64Array;
   py: Float64Array;
-  /** 锁定键（追加序 = 锁定时间序；永久，不解开） */
+  /** 锁定键（追加序 = 锁定时间序；正向协议里永久——回程松键见 retractStep） */
   locked: [number, number, number][] = [];
+  /**
+   * 每颗锁定键锁上时的收缩比 r（与 locked 同序）。**只在回程松键时读**
+   * （a 路径，2026-10-06）：回程 r 回升、经过某颗键锁上的那个 r，它就解开——
+   * 「按锁定顺序倒着解」。正向协议一个数都不读它，默认路径逐位不变。
+   */
+  private lockR: number[] = [];
+  /** 键 (i,j) → [链下标, 链内序]，松键时从 chainLocked 里摘掉用；构造期建一次 */
+  private bondChain = new Map<number, readonly [number, number]>();
+  /** 回程起点的 r（null = 不在回程）与已走的回程步数 */
+  private retractFrom: number | null = null;
+  private retractK = 0;
+  /** 回程里解开的键（解开序；探针与守门读） */
+  readonly released: [number, number, number][] = [];
 
   /** 已完成的协议步数（0..STEPS） */
   step = 0;
@@ -385,6 +398,9 @@ export class SkinUnit {
     for (const g of glued) this.freeMask[g] = 0;
     this.chainLocked = chains.map(() => []);
     this.chainLastLock = chains.map(() => -Infinity);
+    for (let c = 0; c < chains.length; c++)
+      for (let t = 0; t < chains[c].length; t++)
+        this.bondChain.set(chains[c][t][0] * 1024 + chains[c][t][1], [c, t]);
     // 根部缓冲料 = 自由节点里不落在任何键谱围合区（链的最外键跨）内的那些
     const inSpan = new Uint8Array(n);
     for (const ch of chains) {
@@ -549,7 +565,11 @@ export class SkinUnit {
     this.ppx.set(state.px);
     this.ppy.set(state.py);
     this.locked = state.locked.map(([i, j, rb]) => [i, j, rb]);
+    this.lockR = this.locked.map(() => state.r); // 装回的键不知道各自锁上的 r，一律按装回时的 r
     this.lockedSet = new Set(this.locked.map(([i, j]) => i * 1024 + j));
+    this.retractFrom = null;
+    this.retractK = 0;
+    this.released.length = 0;
     this.chainLocked = this.chains.map((chain) => {
       const out: number[] = [];
       for (let t = 0; t < chain.length; t++)
@@ -568,12 +588,21 @@ export class SkinUnit {
   /** 推进一个协议步（step 索引即 Python 侧 for step in range(STEPS) 的 step） */
   advance(): void {
     if (this.done) return;
-    const { px, py, ppx, ppy, ys, n, chains, panels, locked, lockedSet } = this;
     const step = this.step;
 
     const u = Math.min(step / 900, 1.0);
     // warp = 1 时不走 pow：默认路径逐位不变（Python 对照守门的前提）
     const r = SKIN.R0 + (this.r1 - SKIN.R0) * (this.warp === 1 ? u : Math.pow(u, this.warp));
+    this.setCore(r);
+    const pressNow =
+      SKIN.PRESS * (step < 900 ? 1.0 : Math.max(0.0, 1.0 - (step - 900) / 200));
+    this.relax(step, pressNow, step > 950, true);
+    this.step = step + 1;
+  }
+
+  /** 按收缩比 r 排芯（贴合段 SEG、自由段 SEG·r）；anchorEnd 时整条芯平移让末节点钉在锚位 */
+  private setCore(r: number): void {
+    const { ys, n } = this;
     this.r = r;
     this.coreLen = coreY(this.spec, r, ys);
     if (this.anchorEnd) {
@@ -582,7 +611,61 @@ export class SkinUnit {
       const d = this.anchorRef - ys[n - 1];
       for (let i = 0; i < n; i++) ys[i] += d;
     }
+  }
 
+  /**
+   * **回程一步**（a 路径，用户 2026-10-06 拍板「收回 = 松键」，有意重开交接件冻结决定 4
+   * 「锁定永久」；规则草案 §8.1）：r 从回程起点按正向同款的 900 步线性曲线回到 R0，
+   * 每步先按「锁定时的 r 倒序」解开已被回程经过的键（后锁的先解——展开像成形倒放，
+   * 且不引入任何没有出处的阈值；拉力超阈崩开的做法留作第二候选），再做与正向
+   * 完全相同的一步物理（拉伸 / 抗弯 / 剩余锁定键 / 直化 / 整形 / 限位），**只是不开
+   * 拉链**（不吸引、不新锁——回程里材料靠芯伸长自己走直）。外压取协议结束后的 0。
+   * 正向协议（advance）一个数都不碰这里的状态 ⇒ 默认路径逐位不变。
+   */
+  retractStep(): void {
+    if (this.retractFrom === null) {
+      this.retractFrom = this.r;
+      this.retractK = 0;
+    }
+    const k = this.retractK;
+    const v = Math.min(k / 900, 1.0);
+    const r = this.retractFrom + (SKIN.R0 - this.retractFrom) * v;
+    this.setCore(r);
+    this.releaseUpTo(r);
+    this.relax(k, 0, true, false);
+    this.retractK = k + 1;
+  }
+
+  /** 是否在回程里（第一次 retractStep 后为真，装回终态 / 新建实例后为假） */
+  get retracting(): boolean {
+    return this.retractFrom !== null;
+  }
+
+  /** 松开所有「锁上时的 r 小于当前 r」的键，从后往前扫 ⇒ 同一步内也是后锁先解 */
+  private releaseUpTo(r: number): void {
+    for (let b = this.locked.length - 1; b >= 0; b--) {
+      if (!(this.lockR[b] < r)) continue;
+      const bond = this.locked[b];
+      this.locked.splice(b, 1);
+      this.lockR.splice(b, 1);
+      this.lockedSet.delete(bond[0] * 1024 + bond[1]);
+      const ct = this.bondChain.get(bond[0] * 1024 + bond[1]);
+      if (ct) {
+        const arr = this.chainLocked[ct[0]];
+        const p = arr.indexOf(ct[1]);
+        if (p >= 0) arr.splice(p, 1);
+      }
+      this.released.push(bond);
+    }
+  }
+
+  /**
+   * 一个协议步的物理本体（正向与回程共用）：Verlet 积分 → 重力 → 外压 → ITERS 次
+   * 约束迭代（顺序不可乱，见文件头）→ 限速。zip=false 时跳过拉链块（不吸引、不新锁），
+   * 其余逐条与 v7 相同。
+   */
+  private relax(step: number, pressNow: number, late: boolean, zip: boolean): void {
+    const { px, py, ppx, ppy, n, chains, panels, locked, lockedSet } = this;
     for (let i = 0; i < n; i++) {
       const vx = (px[i] - ppx[i]) * SKIN.DAMP;
       const vy = (py[i] - ppy[i]) * SKIN.DAMP;
@@ -593,12 +676,10 @@ export class SkinUnit {
     }
     const g = SKIN.GRAV * SKIN.DT * SKIN.DT;
     for (let i = 0; i < n; i++) py[i] += g;
-    const pressNow =
-      SKIN.PRESS * (step < 900 ? 1.0 : Math.max(0.0, 1.0 - (step - 900) / 200));
-    const pr = pressNow * SKIN.DT * SKIN.DT; // 外压随收缩结束衰减
+    const pr = pressNow * SKIN.DT * SKIN.DT; // 外压随收缩结束衰减（回程 = 0）
     for (let i = 0; i < n; i++) if (this.freeMask[i]) px[i] += pr;
 
-    const late = step > 950; // 收缩完成后拉链纪律解除
+    // late（step > 950）= 收缩完成后拉链纪律解除；由调用方按协议步算
     for (let iter = 0; iter < SKIN.ITERS; iter++) {
       this.pinGlued();
       this.projectSpan(0, n - 1, 1, 1.0); // 拉伸（k=1 → 系数 0.5）
@@ -660,7 +741,7 @@ export class SkinUnit {
         for (let i = a; i <= b; i++) px[i] += 0.3 * (mean - px[i]);
       }
 
-      for (let c = 0; c < chains.length; c++) {
+      for (let c = 0; zip && c < chains.length; c++) {
         const ch = chains[c];
         const paced =
           this.lockGap > 0 && (!this.lockGapChains || this.lockGapChains.includes(c));
@@ -685,6 +766,7 @@ export class SkinUnit {
             (late || !paced || step - this.chainLastLock[c] >= this.lockGap)
           ) {
             locked.push([i, j, rb]);
+            this.lockR.push(this.r);
             lockedSet.add(i * 1024 + j);
             this.addChainLock(c, t);
             this.chainLastLock[c] = step;
@@ -866,7 +948,6 @@ export class SkinUnit {
         }
       }
     }
-    this.step = step + 1;
   }
 }
 
