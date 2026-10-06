@@ -629,9 +629,12 @@ export class SkinUnit {
     }
     const k = this.retractK;
     const v = Math.min(k / 900, 1.0);
-    const r = this.retractFrom + (SKIN.R0 - this.retractFrom) * v;
+    // 走满 900 步起 r 精确回到 R0（a + (b−a)·1 在浮点里未必等于 b），并把剩下的键**全部**解开：
+    // 在 r = R0 就锁上的键（捏分缝链的预锁，step 0 即锁）按「回程经过锁定时的 r」永远等不到
+    // ——r 不会高过 R0；而 a 的定义是收回 = 松键，回到起点就不该还挂着键（守门：通道回程后 0 键）。
+    const r = v >= 1 ? SKIN.R0 : this.retractFrom + (SKIN.R0 - this.retractFrom) * v;
     this.setCore(r);
-    this.releaseUpTo(r);
+    this.releaseUpTo(r, v >= 1);
     this.relax(k, 0, true, false);
     this.retractK = k + 1;
   }
@@ -641,10 +644,10 @@ export class SkinUnit {
     return this.retractFrom !== null;
   }
 
-  /** 松开所有「锁上时的 r 小于当前 r」的键，从后往前扫 ⇒ 同一步内也是后锁先解 */
-  private releaseUpTo(r: number): void {
+  /** 松开所有「锁上时的 r 小于当前 r」的键（all = 不看 r、全部解开），从后往前扫 ⇒ 同一步内也是后锁先解 */
+  private releaseUpTo(r: number, all = false): void {
     for (let b = this.locked.length - 1; b >= 0; b--) {
-      if (!(this.lockR[b] < r)) continue;
+      if (!all && !(this.lockR[b] < r)) continue;
       const bond = this.locked[b];
       this.locked.splice(b, 1);
       this.lockR.splice(b, 1);
