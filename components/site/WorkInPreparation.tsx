@@ -4,9 +4,7 @@ import { MAIN_PROJECTS, type WorkEntry } from '../../src/lib/site/content';
 import { getLogEntries } from '../../src/lib/site/log';
 import { projectOf } from '../../src/lib/site/log-facets';
 import { CaseFooter } from '../lab/LabShell';
-import { BackTransition } from './BackTransition';
 import { Pick } from './CaseLang';
-import { PageEnter } from './PageEnter';
 import { CaseReveal } from './case/CaseReveal';
 
 /**
@@ -44,10 +42,8 @@ export function WorkInPreparation({ entry }: { entry: WorkEntry }) {
   return (
     <>
       <div className="ground-plane ld-ground" aria-hidden />
-      <PageEnter />
-      <BackTransition />
       <CaseReveal />
-      <div className="cs pg-dark" data-pt-content>
+      <div className="cs pg-dark" data-case-order={order}>
         <div className="cs-dots" aria-hidden style={{ top: -64 }} />
         <section className="cs-hero">
           <div className="cs-hero__screen">
@@ -93,9 +89,8 @@ export function WorkInPreparation({ entry }: { entry: WorkEntry }) {
                 />
               </p>
             </div>
-            {/* 转场落点：主页卡片飞过来落在这一框上（无 data-pt-target 的路由会退回着陆平面路） */}
             <figure className="cs-fig" data-rv>
-              <div className="cs-stage" data-pt-target>
+              <div className="cs-stage">
                 <div className="cs-stage__ph">
                   <Pick en="[in preparation] hero image · to shoot" zh="[筹备中] 主图 · 待拍摄" />
                 </div>
@@ -176,8 +171,6 @@ export function WorkInPreparation({ entry }: { entry: WorkEntry }) {
                 }
               />
               <p style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-                {/* 不打 data-pt：那是主页引擎认的属性，案例页这边只有 BackTransition
-                    接管「回主页」一类链接，其余链接原样走路由 */}
                 <Link href="/archive" className="cs-cite" style={{ marginLeft: 0 }}>
                   <Pick en="Work log →" zh="工作日志 →" />
                 </Link>

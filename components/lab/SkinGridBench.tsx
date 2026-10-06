@@ -56,14 +56,11 @@ export function SkinGridBench({
   active = true,
   onLight = false,
   controls = true,
-  ptTarget = false,
   lang: explicitLang,
 }: {
   active?: boolean;
   onLight?: boolean;
   controls?: boolean;
-  /** 案例页主图位：转场落点 */
-  ptTarget?: boolean;
   /** HUD 语言——案例页有中英切换，主图只能有一份，故由外层壳读语言再传进来 */
   lang?: 'zh' | 'en';
 }) {
@@ -142,7 +139,6 @@ export function SkinGridBench({
           </div>
         </>
       }
-      ptTarget={ptTarget}
       hud={
         lang === 'en'
           ? {

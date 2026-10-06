@@ -1,0 +1,394 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+   页面之间的转场（MAPPING §48）
+
+   形式由 <html data-pt="…"> 选；时长与几何由 components/site/PageTransitions.tsx 写在 <html> 上：
+     --pt-d        总时长（唯一的数在 src/lib/site/page-transition.ts 的 PT_DURATION）
+     --pt-bg       转场期间垫在最底下的颜色（夜色 / 纸色 / 暗影）
+     --pt-x --pt-y --pt-sx --pt-sy   容器（open 的底板 / close 的卡片）的版式盒 → 铺满视口
+   转场伪元素从 <html> 继承这些变量（Chromium 实测）。
+
+   全部只动 transform / opacity（close 的底板颜色是唯一例外），交给合成器跑——
+   新页挂载时主线程再忙（台架建 WebGL、标定机构），动画也不掉帧。
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* 站内入场用的那条：一开始就动、长长地停稳 */
+  --pt-eo: cubic-bezier(0.2, 0.7, 0.1, 1);
+  /* 容器开合：先沉后稳的那一类里起步较早的一条——点下去马上要看到它动 */
+  --pt-lift: cubic-bezier(0.7, 0, 0.2, 1);
+  /* 整张纸的升落 / 横翻：同首页翻页（cubic-bezier(.76,0,.24,1)）一样先沉后稳，但起步更早——
+     点链接换页前已经等过一拍（截旧画面 + 新页渲染），再从几乎静止起步会显得迟钝。
+     实测首页那条在 30% 处才走 8%，这条走 ~15% */
+  --pt-sheet: cubic-bezier(0.65, 0, 0.2, 1);
+  --pt-night: oklch(0.19 0.032 228);
+}
+
+/* ── 共同底子：关掉浏览器默认的交叉淡化（它用 plus-lighter 叠色——一张纸压一张纸时会发白） ── */
+html[data-pt]::view-transition {
+  background: var(--pt-bg);
+}
+html[data-pt]::view-transition-group(root) {
+  animation: none;
+}
+html[data-pt]::view-transition-old(root),
+html[data-pt]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* ── 顶栏原地不动（深色内页之间）：两页同一条顶栏，截成一组，前后两张一样，看着就是没动 ── */
+html[data-pt-header] .ld-header,
+html[data-pt-header] nav.nav {
+  view-transition-name: pt-header;
+}
+html[data-pt-header]::view-transition-group(pt-header) {
+  animation-duration: var(--pt-d);
+  animation-timing-function: var(--pt-eo);
+}
+
+/* ── 升起 rise：首页 → 章节页。新页整张从下方升起，旧页退后变暗（首页自己翻页的语法） ── */
+html[data-pt='rise']::view-transition-old(root) {
+  animation: pt-recede-y var(--pt-d) var(--pt-sheet) both;
+}
+html[data-pt='rise']::view-transition-new(root) {
+  animation: pt-enter-y var(--pt-d) var(--pt-sheet) both;
+}
+@keyframes pt-recede-y {
+  to {
+    transform: translateY(-14%);
+    opacity: 0.42;
+  }
+}
+@keyframes pt-enter-y {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+/* ── 落下 sink：章节页 → 首页。这张纸落下去，露出一直在底下的首页 ── */
+html[data-pt='sink']::view-transition-old(root) {
+  z-index: 1;
+  animation: pt-leave-y var(--pt-d) var(--pt-sheet) both;
+}
+html[data-pt='sink']::view-transition-new(root) {
+  animation: pt-return-y var(--pt-d) var(--pt-sheet) both;
+}
+@keyframes pt-leave-y {
+  to {
+    transform: translateY(100%);
+  }
+}
+@keyframes pt-return-y {
+  from {
+    transform: translateY(-14%);
+    opacity: 0.42;
+  }
+}
+
+/* ── 横翻 next / prev：案例 → 下一个案例（首页轮播「下一个项目」从右边进来）。顶栏不动 ── */
+html[data-pt='next']::view-transition-old(root) {
+  animation: pt-recede-x var(--pt-d) var(--pt-sheet) both;
+}
+html[data-pt='next']::view-transition-new(root) {
+  animation: pt-enter-x var(--pt-d) var(--pt-sheet) both;
+}
+html[data-pt='prev']::view-transition-old(root) {
+  z-index: 1;
+  animation: pt-leave-x var(--pt-d) var(--pt-sheet) both;
+}
+html[data-pt='prev']::view-transition-new(root) {
+  animation: pt-return-x var(--pt-d) var(--pt-sheet) both;
+}
+@keyframes pt-recede-x {
+  to {
+    transform: translateX(-14%);
+    opacity: 0.42;
+  }
+}
+@keyframes pt-enter-x {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes pt-leave-x {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes pt-return-x {
+  from {
+    transform: translateX(-14%);
+    opacity: 0.42;
+  }
+}
+
+/* ── 淡换 swap：深色内页之间的平级跳转。顶栏不动，旧正文先退、新正文后进（fade through），
+      中间不叠印两页的字 ── */
+html[data-pt='swap']::view-transition-old(root) {
+  animation: pt-fade-out var(--pt-d) var(--pt-eo) both;
+}
+html[data-pt='swap']::view-transition-new(root) {
+  animation: pt-fade-in var(--pt-d) var(--pt-eo) both;
+}
+@keyframes pt-fade-out {
+  40%,
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+@keyframes pt-fade-in {
+  0%,
+  22% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── 展开 open：首页作品卡 → 案例页（容器变换）。
+      悬停时卡片本来就是一块深色底幕——让它长成深色的案例页：
+      0–40%  底板从卡片的框铺满视口（只动 transform；平色非等比缩放看不出来），
+             卡片上的标题与正文另起一层，原地先淡出（不跟着拉伸，字不变形）；
+      40%    新页在铺满的底板下面就位；
+      40–80% 底板溶开，案例页从同色的夜里显出来，顺势上浮一点落定。
+      铺满与溶开首尾相接——中间若停在一整屏平色上，读起来是「卡住了」。 ── */
+html[data-pt='open']::view-transition-group(pt-plate) {
+  transform-origin: 0 0;
+  background: var(--pt-night);
+  animation:
+    pt-plate-open var(--pt-d) both,
+    pt-plate-dissolve var(--pt-d) both;
+}
+html[data-pt='open']::view-transition-old(pt-plate) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+@keyframes pt-plate-open {
+  0% {
+    transform: translate(var(--pt-x), var(--pt-y));
+    animation-timing-function: var(--pt-lift);
+  }
+  40%,
+  100% {
+    transform: translate(0px, 0px) scale(var(--pt-sx), var(--pt-sy));
+  }
+}
+@keyframes pt-plate-dissolve {
+  0%,
+  40% {
+    opacity: 1;
+    animation-timing-function: var(--pt-eo);
+  }
+  80%,
+  100% {
+    opacity: 0;
+  }
+}
+/* 标题与正文：exit-only 组的位置由浏览器写在 transform 上，这里只叠一个独立的 translate，不去碰它 */
+html[data-pt='open']::view-transition-group(pt-head),
+html[data-pt='open']::view-transition-group(pt-thesis) {
+  animation: pt-text-out calc(var(--pt-d) * 0.26) var(--pt-eo) both;
+}
+html[data-pt='open']::view-transition-old(pt-head),
+html[data-pt='open']::view-transition-old(pt-thesis) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+@keyframes pt-text-out {
+  to {
+    opacity: 0;
+    translate: 0 -8px;
+  }
+}
+html[data-pt='open']::view-transition-old(root) {
+  animation: pt-open-behind var(--pt-d) var(--pt-eo) both;
+}
+html[data-pt='open']::view-transition-new(root) {
+  animation: pt-open-under var(--pt-d) var(--pt-eo) both;
+}
+@keyframes pt-open-behind {
+  40%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.985);
+  }
+}
+@keyframes pt-open-under {
+  0%,
+  38% {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(18px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── 收回 close：案例页 → 首页作品区（open 倒过来）。
+      0–16%  案例页溶进一块铺满的夜色底板（底板一边溶入一边已经开始收）；
+      8–76%  底板缩回它那张卡片的框，首页在四周重新亮起来；
+      58–92% 卡片本身的画面在底板里浮出，底板颜色退掉——落地就是那张卡。 ── */
+html[data-pt='close']::view-transition-old(root) {
+  animation: pt-close-out var(--pt-d) var(--pt-eo) both;
+}
+html[data-pt='close']::view-transition-new(root) {
+  animation: pt-close-under var(--pt-d) var(--pt-eo) both;
+}
+@keyframes pt-close-out {
+  18%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes pt-close-under {
+  0%,
+  13% {
+    opacity: 0;
+  }
+  14% {
+    opacity: 0.45;
+    transform: scale(0.985);
+  }
+  90%,
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+html[data-pt='close']::view-transition-group(pt-card) {
+  transform-origin: 0 0;
+  animation:
+    pt-card-close var(--pt-d) both,
+    pt-card-plate var(--pt-d) both;
+}
+html[data-pt='close']::view-transition-new(pt-card) {
+  animation: pt-card-reveal var(--pt-d) linear both;
+  mix-blend-mode: normal;
+}
+@keyframes pt-card-close {
+  0%,
+  8% {
+    transform: translate(0px, 0px) scale(var(--pt-sx), var(--pt-sy));
+    animation-timing-function: var(--pt-lift);
+  }
+  76%,
+  100% {
+    transform: translate(var(--pt-x), var(--pt-y));
+  }
+}
+@keyframes pt-card-plate {
+  0% {
+    opacity: 0;
+    background-color: var(--pt-night);
+  }
+  14%,
+  66% {
+    opacity: 1;
+    background-color: var(--pt-night);
+  }
+  92%,
+  100% {
+    opacity: 1;
+    background-color: oklch(0.19 0.032 228 / 0);
+  }
+}
+@keyframes pt-card-reveal {
+  0%,
+  58% {
+    opacity: 0;
+  }
+  92%,
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ── 原位 morph：同一台台架换到另一页的位置（主页实验预览 / 案例主图 / 正文活件 → 实验室那一格）。
+      画框沿浏览器算好的几何飞过去，两张画面按框裁切（不拉变形）后交叉换手；四周的页淡换。 ── */
+html[data-pt='morph']::view-transition-group(pt-frame) {
+  animation-duration: var(--pt-d);
+  animation-timing-function: var(--pt-lift);
+}
+html[data-pt='morph']::view-transition-old(pt-frame),
+html[data-pt='morph']::view-transition-new(pt-frame) {
+  height: 100%;
+  object-fit: cover;
+  mix-blend-mode: normal;
+}
+html[data-pt='morph']::view-transition-old(pt-frame) {
+  animation: pt-frame-out var(--pt-d) linear both;
+}
+html[data-pt='morph']::view-transition-new(pt-frame) {
+  animation: pt-frame-in var(--pt-d) linear both;
+}
+@keyframes pt-frame-out {
+  0%,
+  32% {
+    opacity: 1;
+  }
+  62%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes pt-frame-in {
+  0%,
+  38% {
+    opacity: 0;
+  }
+  70%,
+  100% {
+    opacity: 1;
+  }
+}
+html[data-pt='morph']::view-transition-old(root) {
+  animation: pt-morph-out var(--pt-d) var(--pt-eo) both;
+}
+html[data-pt='morph']::view-transition-new(root) {
+  animation: pt-morph-in var(--pt-d) var(--pt-eo) both;
+}
+@keyframes pt-morph-out {
+  28%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes pt-morph-in {
+  0%,
+  30% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 画框已经截下、落点却没找到（转场退成了别的形式）：画框跟着旧页一起淡掉，不悬在半空 */
+html[data-pt]:not([data-pt='morph'])::view-transition-group(pt-frame) {
+  animation: pt-frame-gone calc(var(--pt-d) * 0.35) var(--pt-eo) both;
+}
+@keyframes pt-frame-gone {
+  to {
+    opacity: 0;
+  }
+}
+
+/* 编排层在「减少动态效果」下根本不起转场；这里再兜一层 */
+@media (prefers-reduced-motion: reduce) {
+  html[data-pt]::view-transition-group(*),
+  html[data-pt]::view-transition-old(*),
+  html[data-pt]::view-transition-new(*) {
+    animation: none !important;
+  }
+}

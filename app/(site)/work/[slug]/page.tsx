@@ -51,8 +51,6 @@ import { RingsBench } from '../../../../components/lab/RingsBench';
 import { TentacleBench } from '../../../../components/lab/TentacleBench';
 import { SkinSeriesBench } from '../../../../components/lab/SkinSeriesBench';
 import { SquareRingBench } from '../../../../components/lab/SquareRingBench';
-import { PageEnter } from '../../../../components/site/PageEnter';
-import { BackTransition } from '../../../../components/site/BackTransition';
 import { WorkInPreparation } from '../../../../components/site/WorkInPreparation';
 
 export function generateStaticParams() {
@@ -399,12 +397,11 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
 
   return (
     <>
-      {/* 深色底铺满视口 + 转场进入段（MAPPING §6.1）；顶栏 / 语言上下文在布局层（LabLanguageRoot 对 /work 生效） */}
+      {/* 深色底铺满视口；顶栏 / 语言上下文在布局层（LabLanguageRoot 对 /work 生效）。
+          页面转场在根布局（MAPPING §48）：data-case-order 供「下一个案例」判断左右 */}
       <div className="ground-plane ld-ground" aria-hidden />
-      <PageEnter />
-      <BackTransition />
       <CaseReveal />
-      <div className="cs pg-dark" data-pt-content>
+      <div className="cs pg-dark" data-case-order={entry.order ?? undefined}>
         <div className="cs-dots" aria-hidden style={{ top: -64 }} />
 
         <section className="cs-hero" data-screen-label={`Case ${caseNo} · hero`}>
@@ -455,10 +452,11 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
             </div>
 
             {/* 主图框（稿 hero figure）：渐变底 + 暗角 + 顶线 + 四角标 + 框内标签；图注在框外。
-                转场落点（data-pt-target）就是这个框。主图只能有一份活台架（两份 = 两个 WebGL 上下文），
+                页面转场里它是共享元素（data-pt-frame = 框里那台台架的编号：点「在实验室中打开」时
+                这个框飞到实验室那一格，MAPPING §48）。主图只能有一份活台架（两份 = 两个 WebGL 上下文），
                 所以它不进 Pick，由一层客户端壳读语言上下文。首屏完整性由 .cs-hero__screen 的高度预算保证。 */}
             <figure className="cs-fig" data-rv>
-              <div className="cs-stage" data-pt-target>
+              <div className="cs-stage" data-pt-frame={liveHero && sc.lab ? sc.lab : undefined}>
                 {liveHero ? (
                   <div className="cs-stage__bench">
                     {/* 项目 01 临时主图 = Lab 1-5 整机活件（用户拍板 2026-07-27 先用活件顶上、07-29 从五环换成整机；
@@ -495,7 +493,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
                     <span className="cs-stage__verb">
                       <Pick en={sc.en.heroVerb ?? ''} zh={sc.zh.heroVerb ?? ''} />
                     </span>
-                    <Link href={`/lab#lab${sc.lab}`} className="cs-open">
+                    <Link href={`/lab#lab${sc.lab}`} className="cs-open" data-pt="frame">
                       <Pick en={COPY.en.openLab} zh={COPY.zh.openLab} />
                     </Link>
                   </div>
@@ -576,7 +574,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
                 </span>
               </div>
               {next ? (
-                <Link href={`/work/${next.slug}`} className="cs-next">
+                <Link href={`/work/${next.slug}`} className="cs-next" data-pt="next">
                   <span>
                     <span className="cs-next__k">
                       <Pick

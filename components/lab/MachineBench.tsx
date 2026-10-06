@@ -60,7 +60,7 @@ import {
 } from '../../src/lib/linkage/machine-smallarm';
 import { SMALLARM_PLACEMENTS } from '../../src/lib/linkage/machine-shape';
 import { stashBench, takeBench } from './handoff';
-import { setSnapshot } from './snapshot';
+import { setStash } from './snapshot';
 import { useBenchLoop } from './useBenchLoop';
 
 /**
@@ -352,7 +352,6 @@ export function MachineBench({
   controls = true,
   onLight = false,
   sideControls = false,
-  ptTarget = false,
   lang: explicitLang,
 }: {
   spin?: boolean;
@@ -360,7 +359,6 @@ export function MachineBench({
   controls?: boolean;
   onLight?: boolean;
   sideControls?: boolean;
-  ptTarget?: boolean;
   lang?: 'zh' | 'en';
 }) {
   const lang = useBenchLang(explicitLang);
@@ -1044,15 +1042,10 @@ export function MachineBench({
     canvas.addEventListener('pointerdown', onPointerDown);
     canvas.addEventListener('pointermove', onPointerMove);
 
-    // 转场克隆用的画面快照（canvas 的像素不随 cloneNode 复制，见 snapshot.ts）。
-    // **状态交接也在这里留**——它跑在点击那一刻，与快照像素是同一个瞬间；
-    // 若改在卸载时留，中间还隔着底板铺开的 380ms，落地的活件会比飞过来的快照
-    // 超前那么一截，交叉淡出就成了「跳一下」。这里留，则第一帧与快照严丝合缝。
-    setSnapshot(canvas, () => {
-      render();
-      stashBench(HANDOFF_KEY, capture());
-      return canvas.toDataURL('image/png');
-    });
+    // 状态交接（见 snapshot.ts / handoff.ts）：页面转场把这个画框飞到另一页之前调一次，
+    // 跑在点击那一刻——与浏览器截下的旧画面是同一个瞬间；若改在卸载时留，中间还隔着
+    // 一段转场，落地的活件会比飞过来的画面超前一截，交叉淡出就成了「跳一下」。
+    setStash(canvas, () => stashBench(HANDOFF_KEY, capture()));
 
     render();
     return () => {
@@ -1061,7 +1054,7 @@ export function MachineBench({
       canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.style.cursor = '';
-      setSnapshot(canvas, null);
+      setStash(canvas, null);
     };
   }, [spin]);
 
@@ -1080,7 +1073,7 @@ export function MachineBench({
         sideControls && controls ? ' lab-wrap--side' : ''
       }`}
     >
-      <div className="lab-fig" {...(ptTarget ? { 'data-pt-target': '' } : {})}>
+      <div className="lab-fig">
         <canvas ref={canvasRef} width={1400} height={1040} aria-label={L.aria} />
         <div className="lab-hud tl">
           {/* 只写台架编号：这台同时是项目 01 案例页的主图，而该页图号 2026-09-13 起是 N01–N20，

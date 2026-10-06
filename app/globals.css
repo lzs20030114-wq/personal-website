@@ -701,6 +701,15 @@ a:hover {
      整项换行才对——从中间断开会读成两个筛选项。 */
   white-space: nowrap;
 }
+/* 手机上最长的项目名一行放不下（390 宽实测超出 4.5px）：只在窄屏允许折行，
+   否则整页被撑宽——手机浏览器会放宽布局视口、整页缩小，页面转场也会被浏览器放弃（MAPPING §48） */
+@media (max-width: 640px) {
+  .log-filter__opt {
+    max-width: 100%;
+    white-space: normal;
+    text-align: left;
+  }
+}
 .log-filter__opt[aria-pressed='true'] {
   color: var(--accent);
   border-bottom-color: var(--accent);
@@ -1518,41 +1527,6 @@ button.log-heat__cell {
 }
 .site-footer--deep .footer-note {
   color: oklch(0.95 0.032 120);
-}
-
-/* ── 页面转场进入段（PageEnter）：着陆平面从满屏 clip 收回到 hero 位置揭开 ──
-   goPT（主页）媒体块生长满屏 → router.push → 本层接力：不透明平面盖场、
-   内容 blur 揭入、平面 clip 到 hero 后移除。强兜底：任何情况超时必清（防白屏）。 */
-.pt-veil {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  pointer-events: none;
-  background: oklch(0.19 0.032 228); /* 与 .ground-plane 同色：着陆平面揭开时不变色相 */
-}
-.pt-veil::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(oklch(0.71 0.098 145) 1px, transparent 1.2px);
-  background-size: 6px 6px;
-  opacity: 0.26;
-  -webkit-mask-image: linear-gradient(150deg, #000 0%, transparent 55%);
-  mask-image: linear-gradient(150deg, #000 0%, transparent 55%);
-}
-@keyframes pt-reveal {
-  to {
-    filter: blur(0);
-    transform: scale(1);
-  }
-}
-.pt-enter {
-  animation: pt-reveal var(--dur-struct) var(--ease-site) 80ms backwards;
-}
-@media (prefers-reduced-motion: reduce) {
-  .pt-enter {
-    animation: none;
-  }
 }
 
 /* ════════════════════════════════════════════════════════════════════════════

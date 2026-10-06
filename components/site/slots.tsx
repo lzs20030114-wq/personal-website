@@ -173,8 +173,10 @@ export function InteractiveSlot({
   lang?: SlotLang;
 }) {
   const ui = BLOCK_UI[lang];
+  // 页面转场（MAPPING §48）：点「去实验室操作」时，台架画面这一块飞到实验室里它那一格。
+  // data-pt-scope 圈出链接与画框同属一件；data-pt-frame 只在真有活件时挂（占位框没有可飞的东西）
   return (
-    <figure className="cs-lab">
+    <figure className="cs-lab" data-pt-scope>
       <div className="cs-lab__frame">
         <span className="cs-lab__c cs-lab__c--tl" />
         <span className="cs-lab__c cs-lab__c--tr" />
@@ -191,12 +193,19 @@ export function InteractiveSlot({
             <StatusSign status={status} lang={lang} />
           )}
         </div>
-        <div className={`cs-lab__stage${paper ? ' cs-lab__stage--paper' : ''}`}>
+        <div
+          className={`cs-lab__stage${paper ? ' cs-lab__stage--paper' : ''}`}
+          data-pt-frame={children && lab ? lab : undefined}
+        >
           {children ?? <div className="cs-figure__ph" style={{ position: 'static', minHeight: 260 }}>{id} · live bench</div>}
         </div>
         <div className="cs-lab__bot">
           <span>{verb ?? ''}</span>
-          {lab ? <Link href={`/lab#lab${lab}`}>{ui.toLab}</Link> : null}
+          {lab ? (
+            <Link href={`/lab#lab${lab}`} data-pt="frame">
+              {ui.toLab}
+            </Link>
+          ) : null}
         </div>
       </div>
       <figcaption className="cs-lab__cap">

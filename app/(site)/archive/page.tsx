@@ -1,6 +1,5 @@
 import { getLogEntries } from '../../../src/lib/site/log';
 import { LogList } from '../../../components/site/LogList';
-import { PageEnter } from '../../../components/site/PageEnter';
 
 export const metadata = { title: 'Work log' };
 
@@ -15,8 +14,7 @@ export default function ArchivePage() {
   return (
     <>
       <div className="ground-plane" aria-hidden />
-      <PageEnter />
-      <div className="shell pg-dark" data-pt-content>
+      <div className="shell pg-dark">
         <LogList entries={entries} />
       </div>
     </>

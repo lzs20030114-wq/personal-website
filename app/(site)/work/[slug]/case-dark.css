@@ -144,7 +144,8 @@
 .cs-body li { margin: 0 0 6px; }
 .cs-body li::marker { color: var(--cs-g); }
 /* 日志引用：读作旁注（稿 mono 11.5 / 500，与句末隔 10px） */
-.cs-body .cs-cite { margin-left: 10px; font: 500 11.5px var(--cs-mono); white-space: nowrap; letter-spacing: 0; text-transform: none; }
+/* inline-block：引用整条不断开（nowrap），行尾放不下就整条换到下一行——不然 360 宽的手机上会顶出页面 25px（MAPPING §48） */
+.cs-body .cs-cite { display: inline-block; margin-left: 10px; font: 500 11.5px var(--cs-mono); white-space: nowrap; letter-spacing: 0; text-transform: none; }
 .cs-body code { font: 400 0.88em var(--cs-mono); padding: 2px 6px; background: oklch(0.95 0.032 120 / 0.08); }
 
 /* 章节标题：2px 奶白上线 + 编号（mono 13 绿）+ 标题 */
@@ -274,7 +275,9 @@
 .cs-pz__kick { display: flex; flex-direction: column; gap: 4px; }
 .cs-pz__kick span:first-child { font: 500 11px var(--cs-mono); color: var(--cs-gh); }
 .cs-pz__kick span:last-child { font: 600 20px / 1.2 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; letter-spacing: -0.015em; }
-.cs-seg { display: flex; }
+/* flex-wrap：窄屏上四个人格钮一行放不下（390 宽实测超出 3px）——宁可折行也不撑宽页面：
+   手机浏览器遇到横向溢出会把布局视口放宽，整页缩小一点，且页面转场会因视口变了被浏览器放弃（MAPPING §48） */
+.cs-seg { display: flex; flex-wrap: wrap; max-width: 100%; }
 .cs-seg button { margin-left: -1px; display: flex; align-items: center; gap: 8px; padding: 8px 13px; border: 1px solid oklch(0.95 0.032 120 / 0.22); font: 500 12.5px 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; white-space: nowrap; transition: background 0.25s, color 0.25s; }
 .cs-seg button:hover { border-color: oklch(0.95 0.032 120 / 0.55); }
 .cs-seg button[aria-pressed='true'], .cs-seg button[aria-selected='true'] { background: var(--cs-ink); color: var(--cs-paper); }
@@ -377,7 +380,7 @@
 .cs-status dt i { width: 7px; height: 7px; border-radius: 50%; display: block; }
 .cs-status dd { margin: 0; display: flex; flex-direction: column; gap: 4px; }
 .cs-status dd > span:first-child { font: 500 11px var(--cs-mono); }
-.cs-status .cs-cite { margin-left: 10px; font: 500 11.5px var(--cs-mono); white-space: nowrap; }
+.cs-status .cs-cite { display: inline-block; margin-left: 10px; font: 500 11.5px var(--cs-mono); white-space: nowrap; }
 .cs-status dd > span:last-child { font: 400 15px / 1.65 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: oklch(0.86 0.03 150); text-wrap: pretty; }
 
 /* 预测 */

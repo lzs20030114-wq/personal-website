@@ -36,6 +36,9 @@ export function WorkPage({ cards }: { cards: HomeCard[] }) {
               className="hs-card"
               href={`/work/${w.slug}`}
               data-card={i}
+              // 页面转场（MAPPING §48）：点卡片 = 这张卡展开成它的案例页；从案例页回作品区 = 收回到这张卡
+              data-pt="card"
+              data-pt-card={w.slug}
               style={cardVars(w)}
             >
               <span className="hs-card__kick" data-a="up" data-d={160 + i * 90}>

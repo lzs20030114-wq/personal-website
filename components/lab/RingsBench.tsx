@@ -18,7 +18,6 @@ import {
   shellMaxError,
   stepRing,
 } from '../../src/lib/linkage/shell3d';
-import { setSnapshot } from './snapshot';
 import { useBenchLoop } from './useBenchLoop';
 import { attachLabCamera } from './labCameraInput';
 
@@ -261,7 +260,6 @@ export function RingsBench({
   controls = true,
   onLight = false,
   sideControls = false,
-  ptTarget = false,
   lang: explicitLang,
 }: {
   spin?: boolean;
@@ -276,12 +274,6 @@ export function RingsBench({
    * 放右边则只变宽不变高。/lab 页不用（那里没有首屏约束，横排读着更顺）。
    */
   sideControls?: boolean;
-  /**
-   * true = 把转场落点 data-pt-target 打在**画面盒**（.lab-fig）而不是外层。
-   * 侧栏控制条会把外层撑宽近 200px，落点若还框着外层，主页飞过来的那张画面快照
-   * 会被拉到整件宽度、交接那一帧明显一跳。落点必须只框画面本身。
-   */
-  ptTarget?: boolean;
   /** 界面语言：'zh' = 稿的中文（/lab）；'en' = 英文（案例页主图，用户拍板 2026-07-28） */
   lang?: 'zh' | 'en';
 }) {
@@ -540,16 +532,9 @@ export function RingsBench({
     canvas.addEventListener('pointerup', onUp);
     canvas.addEventListener('pointercancel', onUp);
 
-    // 转场克隆用的画面快照：重绘一帧后立刻读回（同任务内绘制缓冲仍在，见 snapshot.ts）
-    setSnapshot(canvas, () => {
-      render();
-      return canvas.toDataURL('image/png');
-    });
-
     render();
     return () => {
       apiRef.current = null;
-      setSnapshot(canvas, null);
       canvas.removeEventListener('contextmenu', onCtx);
       canvas.removeEventListener('pointerdown', onDown);
       canvas.removeEventListener('pointermove', onMove);
@@ -574,7 +559,7 @@ export function RingsBench({
         sideControls && controls ? ' lab-wrap--side' : ''
       }`}
     >
-      <div className="lab-fig" {...(ptTarget ? { 'data-pt-target': '' } : {})}>
+      <div className="lab-fig">
         <canvas
           ref={canvasRef}
           width={1400}

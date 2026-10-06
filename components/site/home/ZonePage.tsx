@@ -70,7 +70,8 @@ function LabGroup({
   }, [cur?.no]);
 
   return (
-    <div className="hs-group" data-group={gi} ref={rootRef} style={{ '--c-ink': g.tone.ink } as CSSProperties}>
+    // data-pt-scope / data-pt-frame：点目录里正在预览的那一台，预览框飞到实验室里它那一格（MAPPING §48）
+    <div className="hs-group" data-group={gi} data-pt-scope ref={rootRef} style={{ '--c-ink': g.tone.ink } as CSSProperties}>
       <div className="hs-group__head">
         <div className="hs-group__row">
           <span className="hs-group__n">{g.n}</span>
@@ -101,6 +102,7 @@ function LabGroup({
                   href={`/lab#lab${b.no}`}
                   data-rv
                   data-bench={b.no}
+                  data-pt="frame"
                   // 鼠标 / 笔：悬停预览；触屏：第一下预览，第二下进入
                   onPointerEnter={(e) => {
                     if (e.pointerType === 'touch') return;
@@ -146,7 +148,11 @@ function LabGroup({
           </Link>
         </div>
         <div className="hs-pv">
-          <div className={`hs-pv__plate${g.cover ? '' : ' hs-pv__plate--empty'}`} ref={plateRef}>
+          <div
+            className={`hs-pv__plate${g.cover ? '' : ' hs-pv__plate--empty'}`}
+            ref={plateRef}
+            data-pt-frame={cur ? cur.no : undefined}
+          >
             <span className="hs-pv__bar" />
             {cur ? (
               <div className="hs-pv__live" aria-label={`Live preview · Lab ${cur.no}`}>

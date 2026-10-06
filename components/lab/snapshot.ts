@@ -1,37 +1,43 @@
 'use client';
 
 /**
- * 台架画面快照登记处（供页面转场的克隆用）。
+ * 台架出场登记处（页面转场用，MAPPING §48）。
  *
- * 为什么需要：转场靠 `cloneNode(true)` 复制预览块，而 **canvas 的像素不随 cloneNode 复制**——
- * 克隆出来的是一张空画布。3D 台架（五环 / 触手）在主页预览位就是 canvas，点卡片那一刻
- * 机构会凭空消失、只剩一个深色方块放大（2026-07-27 落地前的实况）。
+ * 这里原先（2026-07-27 起）登记的是「重绘一帧 + 立即读回 PNG」的快照闭包：那时转场靠
+ * `cloneNode(true)` 复制预览块，而 canvas 像素不随 cloneNode 复制。现在页面转场改用浏览器
+ * 原生的 View Transitions——画面由浏览器自己截（WebGL 画布也截得到，preserveDrawingBuffer
+ * 关着也行，已在 Chromium 实测），PNG 那一半随之退役，三台的读回闭包一并删掉。
  *
- * 为什么不直接 toDataURL：WebGL 上下文没开 preserveDrawingBuffer（开了全站每帧都要多留一份
- * 缓冲，代价加在常态渲染上），合成之后读回来是空的。所以由台架自己登记一个 `重绘 + 立即读回`
- * 的闭包——在同一个任务里读，绘制缓冲还在，且**只在点击转场时才跑一帧**，常态零开销。
- *
- * 装备（gl3d/camera3d）零改：登记是台架层的事。
+ * 留下来的是**状态交接**这一半：画框飞到另一页之前，让源画框里的台架把此刻的位形留给
+ * 落地后的同一台（handoff.ts）——否则新实例从初始位起步，落地那一下机器「倒带」。
+ * 交接只在点击转场那一刻跑一次，常态零开销。
  */
 
-type SnapFn = () => string | null;
+type StashFn = () => void;
 
-const KEY = '__labSnapshot';
+const KEY = '__labStash';
 
-type Snapshottable = HTMLCanvasElement & { [KEY]?: SnapFn };
+type Stashable = HTMLCanvasElement & { [KEY]?: StashFn };
 
-/** 台架挂载时登记；卸载传 null 注销。 */
-export function setSnapshot(canvas: HTMLCanvasElement | null, fn: SnapFn | null): void {
+/** 台架挂载时登记「把此刻的状态留下」；卸载传 null 注销。 */
+export function setStash(canvas: HTMLCanvasElement | null, fn: StashFn | null): void {
   if (!canvas) return;
-  if (fn) (canvas as Snapshottable)[KEY] = fn;
-  else delete (canvas as Snapshottable)[KEY];
+  if (fn) (canvas as Stashable)[KEY] = fn;
+  else delete (canvas as Stashable)[KEY];
 }
 
-/** 取快照 data URL；没登记、或读回失败（跨域污染 / 上下文丢失）一律返回 null，调用方自行降级。 */
-export function snapshotCanvas(canvas: HTMLCanvasElement): string | null {
-  try {
-    return (canvas as Snapshottable)[KEY]?.() ?? null;
-  } catch {
-    return null;
-  }
+/** 让 root 里所有登记过的台架留下状态；返回留了几台。出错一律吞掉——交接失败只是落地从头跑。 */
+export function stashWithin(root: ParentNode): number {
+  let n = 0;
+  root.querySelectorAll('canvas').forEach((canvas) => {
+    const fn = (canvas as Stashable)[KEY];
+    if (!fn) return;
+    try {
+      fn();
+      n += 1;
+    } catch {
+      /* 交接是锦上添花，不能挡住换页 */
+    }
+  });
+  return n;
 }
