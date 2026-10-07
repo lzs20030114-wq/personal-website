@@ -672,3 +672,56 @@ describe('cohabit · 猫按 Mertens & Turner 1988 标定（COHABIT.CAT_MT）', (
     expect(mt.cat.sit).toBe(COHABIT.CAT.sit);
   });
 });
+
+describe('cohabit · 台上靠近沿落着的台走过去（approachTravel，与地面「朝人走过去」同一条规则）', () => {
+  // 钉死档：偶数行（座位三态下按 R5 剔掉几台）一直落着——猫在第 0 行，有人站在第 0 行另一头看着它
+  const setup = (travel: number) => {
+    // 自己的节奏（卧完换格 / 靠近完走开）关掉，只看「靠近」本身；人站在 3 m 内（够得上「盯着看」）
+    const sim = new CohabitSim({ trigger: 'posture', space: 'fixed', seed: 7, opening: false, cat: { ...COHABIT.CAT_MT, approachTravel: travel, approachP: 1, approachMid: 0, roamAfterApproach: 0, roamP: 0, passiveP: 0 } });
+    const row0 = sim.act.formed().filter((u) => sim.layout.units[u].row === 0).sort((a, b) => a - b);
+    const cat = sim.addCat(sim.layout.units[row0[0]])!;
+    const start = sim.layout.units[row0[0]];
+    const far = row0.map((i) => sim.layout.units[i]).filter((u) => Math.hypot(u.x - start.x, u.y - start.y) < 2.4).pop()!;
+    const p = sim.addPerson(far.x, far.y - sim.layout.pitchM / 2 - 0.3)!;
+    p.mode = 'manual';
+    p.watching = cat.id;
+    return { sim, cat, p, start: row0[0], far: far.i };
+  };
+
+  it('approachTravel = 1：被看着的猫沿落着的台一台一台走到离那个人最近的那台', () => {
+    const { sim, cat, start, far } = setup(1);
+    const seen = new Set<number>();
+    for (let t = 0; t < 40; t += 1 / 30) {
+      sim.step(1 / 30);
+      seen.add(cat.unit!.i);
+    }
+    expect(seen.size).toBeGreaterThan(2);
+    expect(cat.unit!.i).not.toBe(start);
+    expect(seen.has(far)).toBe(true);
+    for (const u of seen) expect(sim.act.degree[u]).toBe(1); // 只走落着的台
+  });
+
+  it('approachTravel = 0（演示值的旧口径）：只挪到本台边缘，不过台', () => {
+    const { sim, cat, start } = setup(0);
+    for (let t = 0; t < 40; t += 1 / 30) sim.step(1 / 30);
+    expect(cat.unit!.i).toBe(start);
+  });
+
+  it('整条路一次铺好：坐下后从猫脚下到目标一路都落，一次一步只落下一步', () => {
+    const count = (whole: boolean) => {
+      const sim = new CohabitSim({ trigger: 'posture', opening: false, faces: true, seed: 2, guide: { target: 'meet', whole }, cat: { ...COHABIT.CAT_MT, approachP: 0, passiveP: 0 } });
+      const seat = sim.seats[4];
+      const p = sim.addPerson(seat.x, seat.y)!;
+      p.mode = 'manual';
+      const cat = sim.addCat(sim.layout.units[0])!;
+      cat.mode = 'manual';
+      for (let t = 0; t < 4; t += 1 / 30) sim.step(1 / 30);
+      return { formed: sim.act.formed().length, path: sim.guides[0].path.length };
+    };
+    const step = count(false);
+    const whole = count(true);
+    expect(step.formed).toBe(2); // 猫脚下 + 下一步
+    expect(whole.formed).toBe(whole.path); // 整条路
+    expect(whole.path).toBeGreaterThan(3);
+  });
+});

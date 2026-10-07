@@ -18,10 +18,19 @@ const only = args[5] ? args[5].split(',') : null;
 
 /** 方案：cat = 覆盖 COHABIT.CAT 的常量（猫的标定），guide = 引导方式 */
 const CONFIGS = [
-  { name: 'demo-meet', zh: '演示值 · 会面台', cat: {}, guide: { target: 'meet' } },
-  { name: 'mt-meet', zh: 'M&T 标定 · 会面台', cat: 'MT', guide: { target: 'meet' } },
-  { name: 'mt-side', zh: 'M&T 标定 · 身边台', cat: 'MT', guide: { target: 'side' } },
-  { name: 'mt-meetThenSide', zh: 'M&T 标定 · 先会面台再身边台', cat: 'MT', guide: { target: 'meetThenSide' } },
+  { name: 'demo-meet', zh: '演示值 · 会面台 · 一次一步', cat: {}, guide: { target: 'meet' } },
+  { name: 'mt-meet', zh: 'M&T 标定 · 会面台 · 一次一步', cat: 'MT', guide: { target: 'meet' } },
+  { name: 'mt-side', zh: 'M&T 标定 · 身边台 · 一次一步', cat: 'MT', guide: { target: 'side' } },
+  { name: 'mt-mts', zh: 'M&T 标定 · 先会面再身边 · 一次一步', cat: 'MT', guide: { target: 'meetThenSide' } },
+  { name: 'mt-side-whole', zh: 'M&T 标定 · 身边台 · 整条路', cat: 'MT', guide: { target: 'side', whole: true } },
+  { name: 'mt-mts-whole', zh: 'M&T 标定 · 先会面再身边 · 整条路', cat: 'MT', guide: { target: 'meetThenSide', whole: true } },
+  // 人群中开阔处停留代价（只作用于地面上的猫 = 空房间档）的敏感性：没有实测数，0.5 / 0.25 两档
+  { name: 'mt-mts-crowd05', zh: 'M&T 标定 · 先会面再身边 · 开阔处代价 0.5', cat: 'MT', catExtra: { crowdTolMul: 0.5 }, guide: { target: 'meetThenSide' } },
+  { name: 'mt-mts-crowd025', zh: 'M&T 标定 · 先会面再身边 · 开阔处代价 0.25', cat: 'MT', catExtra: { crowdTolMul: 0.25 }, guide: { target: 'meetThenSide' } },
+  { name: 'mt-meet-crowd05', zh: 'M&T 标定 · 会面台 · 开阔处代价 0.5', cat: 'MT', catExtra: { crowdTolMul: 0.5 }, guide: { target: 'meet' } },
+  { name: 'mt-meet-crowd025', zh: 'M&T 标定 · 会面台 · 开阔处代价 0.25', cat: 'MT', catExtra: { crowdTolMul: 0.25 }, guide: { target: 'meet' } },
+  { name: 'mt-sidew-crowd05', zh: 'M&T 标定 · 身边台 · 整条路 · 开阔处代价 0.5', cat: 'MT', catExtra: { crowdTolMul: 0.5 }, guide: { target: 'side', whole: true } },
+  { name: 'mt-sidew-crowd025', zh: 'M&T 标定 · 身边台 · 整条路 · 开阔处代价 0.25', cat: 'MT', catExtra: { crowdTolMul: 0.25 }, guide: { target: 'side', whole: true } },
 ];
 const SPACES = ['live', 'fixed', 'empty'];
 const METRICS = [
@@ -38,8 +47,8 @@ try {
   const out = [];
   for (const c of CONFIGS) {
     if (only && !only.includes(c.name)) continue;
-    const patch = c.cat === 'MT' ? MT : c.cat;
-    if (patch === null) throw new Error('COHABIT.CAT_MT 未定义');
+    const patch = { ...(c.cat === 'MT' ? MT : c.cat), ...c.catExtra };
+    if (c.cat === 'MT' && !MT) throw new Error('COHABIT.CAT_MT 未定义');
     const runs = {};
     for (const space of SPACES) {
       runs[space] = [];

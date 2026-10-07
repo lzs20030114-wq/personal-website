@@ -80,6 +80,8 @@ export type GuideTarget = 'meet' | 'side' | 'meetThenSide';
 export interface GuideCfg {
   target: GuideTarget;
   sideAfter: number;
+  /** 整条路一次铺好（true）还是一次只落下一步（false，§11 的做法） */
+  whole: boolean;
 }
 export const GUIDE_TARGETS = [
   { key: 'meet', zh: '会面台', en: 'meeting unit' },
@@ -144,6 +146,15 @@ export const COHABIT = {
     /** 靠近完一段之后走开去别处的几率（其余留在原地坐卧）——M&T 主动条件里猫 66% 的时间待在 1 m 内，
      *  要猫靠近后多留一会儿。模块默认 = roamP（旧口径逐位不变） */
     roamAfterApproach: 0.5,
+    /** 台上的猫「靠近」怎么走：0 = 只挪到本台边缘（旧口径）；1 = 沿已经落着的台一台一台走到离那个人最合适的
+     *  那台再挪到台边——与地面上的猫「朝人走过去」同一条规则（2026-10-07 第二轮查明两种地面口径不一致后加） */
+    approachTravel: 0,
+    /** 走在半路、下一台还在往下落时最多等多久（s） */
+    homeWait: 3,
+    /** 人群中的开阔处停留代价（作者 07-27 日志定性：「猫可以走到人群中的开阔处，但不会久留」；Hirsch 2025 的方向：
+     *  客流高时猫上高处）——只作用于地面上的猫：1.5 m 内每多一位访客（第二位起），能忍的秒数乘一次这个数。
+     *  没有实测数，模块默认 1 = 不启用；研究里做敏感性扫描 */
+    crowdTolMul: 1,
     /** 坐 / 卧（Lab 2-12 演示值） */
     sit: CAT_DEMO.sitSeconds,
     lie: CAT_DEMO.lieSeconds,
@@ -233,6 +244,7 @@ export const COHABIT = {
     passiveP: 0.005,
     passiveD: 0.75,
     roamAfterApproach: 0.2,
+    approachTravel: 1,
   },
   /**
    * 引导方式（座位三态 · 会动的单元，2026-10-07 起研究用的旋钮）：坐着的人把猫引到哪一台。
@@ -240,7 +252,7 @@ export const COHABIT = {
    *   side = 身边台（平台不盖头顶的最近一台，猫走到台边离人最近——共触只可能发生在这儿）；
    *   meetThenSide = 先到会面台，坐着的人看着它满 sideAfter 秒，再递一步到身边台（让猫自己走近最后一段）。
    */
-  GUIDE: { target: 'meet' as GuideTarget, sideAfter: 10 },
+  GUIDE: { target: 'meet' as GuideTarget, sideAfter: 10, whole: false },
   /** 一开场放谁（场地坐标按 pitch4 的倍数；猫按单元下标） */
   OPENING: { people: [{ x: 0, y: 1 }], cats: [0] },
 } as const;
@@ -629,6 +641,8 @@ export interface Cat {
   approaching: number | null;
   /** 下一次判「被动靠近」还要等多久（s） */
   passiveIn: number;
+  /** 台上靠近：正朝哪个访客走、要停在离他多远、等下一台落下等了多久（approachTravel = 1 时用） */
+  homing: { person: number; stop: number; wait: number } | null;
   /** 统计：最近访客 > 1 m 的时长、在场时长、在一格上安稳待着的时长 */
   farTime: number;
   presentTime: number;
@@ -1124,6 +1138,7 @@ export class CohabitSim {
       waited: 0,
       approaching: null,
       passiveIn: 1,
+      homing: null,
       farTime: 0,
       presentTime: 0,
       settledTime: 0,
@@ -1210,6 +1225,7 @@ export class CohabitSim {
       c.pending = null;
       c.transfer = null;
       c.approaching = null;
+      c.homing = null;
     }
   }
 
@@ -1914,11 +1930,20 @@ export class CohabitSim {
       c.state = 'retreat';
       c.latency = this.cat.latency;
       c.tolerated = 0;
+      c.homing = null;
       return;
     }
-    // K3：有人站着看它、潜伏期过了 ⇒ 按几率靠到台面边缘
+    // 台上靠近走在半路：接着走（不再掷骰）
+    if (c.homing && this.homeStep(c, dt)) return;
+    // K3：有人站着看它、潜伏期过了 ⇒ 按几率靠过去（旧口径只挪到本台边缘；approachTravel = 1 时沿落着的台走过去）
     if (att && c.latency <= 0 && c.state !== 'approach' && c.phaseTime >= 1) {
       if (this.rng() < this.cat.approachP) {
+        if (this.cat.approachTravel > 0) {
+          const stop = this.cat.approachMid > 0 && this.rng() < this.cat.approachMid ? this.cat.passiveD : PLAN.BODY_R + this.cat.bodyR;
+          c.homing = { person: att.id, stop, wait: 0 };
+          c.phaseTime = 0;
+          if (this.homeStep(c, 0)) return;
+        }
         this.toRim(c, Math.atan2(att.walker.y - w.y, att.walker.x - w.x));
         c.state = 'approach';
         c.approaching = att.id;
@@ -1927,9 +1952,14 @@ export class CohabitSim {
       }
       c.phaseTime = 0;
     }
-    // K3′ 被动靠近：在台面上挪到朝那个人的边缘（离不开台）
+    // K3′ 被动靠近：旧口径在台面上挪到朝那个人的边缘；approachTravel = 1 时沿落着的台走到离他 passiveD 处
     const pq = this.passiveTarget(c, att, dt);
     if (pq) {
+      if (this.cat.approachTravel > 0) {
+        c.homing = { person: pq.id, stop: this.cat.passiveD, wait: 0 };
+        c.phaseTime = 0;
+        if (this.homeStep(c, 0)) return;
+      }
       this.toRim(c, Math.atan2(pq.walker.y - w.y, pq.walker.x - w.x));
       c.state = 'approach';
       c.approaching = pq.id;
@@ -1984,6 +2014,63 @@ export class CohabitSim {
     return this.neighboursOf(c.unit).filter((u) => this.act.degree[u.i] >= 1 - 1e-9 && !taken.has(u.i));
   }
 
+  /**
+   * 台上靠近走一步（approachTravel = 1）：在已经落着的台里（从脚下沿四邻 BFS）找一台——猫走到它朝那个人的台边时，
+   * 离人最接近 homing.stop——就是目的地。目的地是脚下这台 ⇒ 挪到台边、靠近完成；否则订下一跳（已经落着，立刻走）。
+   * 有一台更合适的正往下落 ⇒ 等它（≤ homeWait 秒）。那个人走了、离开了 ⇒ 放弃。返回 true = 这一步有动作或在等。
+   */
+  private homeStep(c: Cat, dt: number): boolean {
+    const h = c.homing!;
+    const p = this.people.find((v) => v.id === h.person);
+    if (!p || !p.walker.present || p.mode === 'held' || !c.unit) {
+      c.homing = null;
+      return false;
+    }
+    const units = this.layout.units;
+    const px = p.walker.x;
+    const py = p.walker.y;
+    const rimOff = Math.max(0, this.layout.platR - this.cat.bodyR);
+    const score = (u: PlanUnit) => Math.abs(Math.max(0, Math.hypot(u.x - px, u.y - py) - rimOff) - h.stop);
+    const formed = (i: number) => this.act.degree[i] >= 1 - 1e-9;
+    // BFS 只走落着的台
+    const prev = new Int32Array(units.length).fill(-1);
+    const start = c.unit.i;
+    prev[start] = start;
+    const q = [start];
+    let best = start;
+    for (let k = 0; k < q.length; k++) {
+      const v = q[k];
+      if (score(units[v]) < score(units[best]) - 1e-9) best = v;
+      for (const nb of this.neighboursOf(units[v])) {
+        if (prev[nb.i] !== -1 || !formed(nb.i)) continue;
+        prev[nb.i] = v;
+        q.push(nb.i);
+      }
+    }
+    if (best === start) {
+      // 有更合适的邻台正在往下落：等一会儿（空间也许正在为它铺这一步）
+      const coming = this.neighboursOf(c.unit).some((u) => !formed(u.i) && this.act.degree[u.i] > 0.05 && score(u) < score(c.unit!) - 1e-9);
+      if (coming && h.wait < this.cat.homeWait) {
+        h.wait += dt;
+        return true;
+      }
+      this.toRim(c, Math.atan2(py - c.walker.y, px - c.walker.x));
+      c.state = 'approach';
+      c.approaching = p.id;
+      c.phaseTime = 0;
+      c.homing = null;
+      return true;
+    }
+    let hop = best;
+    while (prev[hop] !== start) hop = prev[hop];
+    c.pending = units[hop];
+    c.waited = 0;
+    c.state = 'approach';
+    c.approaching = p.id;
+    h.wait = 0;
+    return true;
+  }
+
   /** 在台面上挪到朝某方向的边缘（不离开单元） */
   private toRim(c: Cat, ang: number): void {
     const u = c.unit!;
@@ -2000,7 +2087,13 @@ export class CohabitSim {
     if (c.state === 'sit' || c.state === 'lie') c.settledTime += dt;
     if (c.mode !== 'auto') return;
     const half = this.layout.fieldM / 2;
-    const tol = att ? this.cat.tolerateAttended : this.cat.tolerate;
+    let tol = att ? this.cat.tolerateAttended : this.cat.tolerate;
+    if (this.cat.crowdTolMul !== 1) {
+      // 人群中的开阔处：1.5 m 内第二位访客起，每多一位能忍的秒数乘一次 crowdTolMul
+      let n = 0;
+      for (const v of this.people) if (v.walker.present && Math.hypot(v.walker.x - w.x, v.walker.y - w.y) < COHABIT.BAND.far) n++;
+      if (n > 1) tol *= this.cat.crowdTolMul ** (n - 1);
+    }
     if (cost && c.tolerated > tol && c.state !== 'retreat') {
       let bx = w.x;
       let by = w.y;
@@ -2189,7 +2282,8 @@ export class CohabitSim {
       }
       if (!best) continue;
       taken.add(best.c.id);
-      if (best.path.length > 1) offer(best.path[1]);
+      // 一次一步：只落下一步；整条路：从猫脚下到目标一路都落（被猫一台一台走过去）
+      if (best.path.length > 1) for (let k = 1; k < (this.guide.whole ? best.path.length : 2); k++) offer(best.path[k]);
       this.guides.push({ kind: 'sit', person: p.id, cat: best.c.id, path: best.path });
     }
     for (const p of this.people) {
