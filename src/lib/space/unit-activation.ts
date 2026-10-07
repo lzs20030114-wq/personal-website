@@ -724,6 +724,11 @@ export class Walker {
     this.gazeTarget = this.heading;
   }
 
+  /** 还没走到的路点（只读；Lab 2-14 按带让路沿它提前开门） */
+  get route(): readonly Waypoint[] {
+    return this.queue;
+  }
+
   /** 追加一个目标（自由模式：点哪走哪） */
   pushTarget(w: Waypoint, replace = true): void {
     if (!this.present) return;
