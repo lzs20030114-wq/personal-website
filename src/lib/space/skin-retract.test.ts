@@ -31,6 +31,24 @@ const maxDiff = (a: SkinUnit, b: SkinUnit) => {
 const lockKey = (s: SkinUnit) => s.locked.map(([i, j]) => `${i}-${j}`).sort().join(' ');
 
 describe('回程松键（retractStep）', () => {
+  it('收直：retractStep(1.0) 把芯拉到与布等长——回程后挑出 < 1 px、键 0；默认 rEnd = R0 仍留 R0 的自然松弛（> 20 px）', () => {
+    const reachOf = (s: SkinUnit) => {
+      let m = 0;
+      for (let i = 0; i < s.n; i++) m = Math.max(m, s.px[i] * 100);
+      return m;
+    };
+    for (const def of [A, B]) {
+      const straight = contract(def);
+      for (let k = 0; k < SKIN.STEPS; k++) straight.retractStep(1.0);
+      expect(straight.locked).toHaveLength(0);
+      expect(Math.abs(straight.r - 1.0)).toBeLessThan(1e-12);
+      expect(reachOf(straight)).toBeLessThan(1);
+      const slack = retract(contract(def));
+      expect(reachOf(slack)).toBeGreaterThan(20);
+      for (let i = 0; i < straight.n; i++) expect(straight.px[i]).toBeGreaterThanOrEqual(-1e-9); // 皮不穿芯
+    }
+  });
+
   it('回程后：键全部解开、r 回到 R0、无 NaN、皮不穿芯', () => {
     const s = contract(A);
     const nLocked = s.locked.length;

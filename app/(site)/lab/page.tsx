@@ -23,6 +23,7 @@ import { SkinClusterBench } from '../../../components/lab/SkinClusterBench';
 import { WalkPlanBench, WalkPlanNotes } from '../../../components/lab/WalkPlanBench';
 import { CrowdPlanBench, CrowdPlanNotes } from '../../../components/lab/CrowdPlanBench';
 import { CatPlanBench, CatPlanNotes } from '../../../components/lab/CatPlanBench';
+import { CohabitBench, CohabitNotes } from '../../../components/lab/CohabitBench';
 import { SkinComboBench } from '../../../components/lab/SkinComboBench';
 
 export const metadata = { title: 'The lab' };
@@ -395,6 +396,27 @@ export default function LabPage() {
           ]}
         >
           <SkinComboBench workspace />
+        </Bench>
+
+        <LabScaleRule i={7} />
+
+        <Bench
+          no="2-14"
+          notes={<CohabitNotes />}
+          lede="Visitors walk the floor; resident cats live on the units. Formed units are walls for people and footing for cats. The space pins a cat’s unit, fills the neighbour with the strongest people trace, and holds back any unit that would trap someone. Four encounter events are counted as they happen."
+          specs={[
+            ['Room', 'Lab 2-8 room · 4×4 real units · 6×6 / 8×8 scaled'],
+            ['Passage cost', 'Formed unit = wall for people (≥ 50% formed) · not for cats · people route along the aisles'],
+            ['Giving way', 'By band (default): of a unit’s 20 bands, those within body + clearance of a person or in the corridor ahead on their route retract to the post (cloth back up, engine retractStep to r = 1) in ≈ 2 s and come back behind them · bands under a cat never retract · whole unit: the Lab 2-11 clearance gate'],
+            ['Staying cost', 'Person: another within 1.35 m for 2 s → leave · Cat: visitor within 1 m tolerated 6 s (14 s when watched) → retreat, 15 s latency'],
+            ['Rules', 'R1 space writes units only · R2 bodies read costs only · R3 bodies choose · R4 judged by events · R5 nobody trapped (by band: a door, so it only bites when cat-held bands close the last exit)'],
+            ['Events', 'Co-gaze ≥ 1 s · co-warmth 0.5–1.5 m ≥ 2 s · contact < 0.5 m · crossing through the 1.5 m domain'],
+            ['Comparison', 'Live units · fixed (even rows formed) · empty room'],
+            ['Sources', '1.35 m stranger distance (42-country survey) · 1 m cat band and 78% reference (Mertens & Turner 1988)'],
+            ['Limit', 'Timings and the 1/3 approach chance are demonstration values; no invitation gesture, so the empty event is not counted'],
+          ]}
+        >
+          <CohabitBench workspace />
         </Bench>
 
         <LabProjectEmpty />

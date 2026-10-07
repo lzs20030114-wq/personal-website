@@ -72,7 +72,7 @@ export const LAB_INDEX: readonly LabGroup[] = [
   {
     key: "project-ii",
     label: "Project II — Cross-species space",
-    sub: "Lab 2-1 – 2-13 · shape-changing units and the behaviour that moves them",
+    sub: "Lab 2-1 – 2-14 · shape-changing units and the behaviour that moves them",
     segments: [
       {
         n: "Ⅰ",
@@ -127,6 +127,12 @@ export const LAB_INDEX: readonly LabGroup[] = [
         label: "Compositions",
         sub: "Lab 2-13 · platforms joined high to low",
         benches: [{ no: "2-13", title: "Joined platforms", kernel: "3d", description: 'Join round or square platforms into steps, ramps and enclosures.', meta: '8 figures · round & square · WebGL', kind: 'WebGL', verb: 'drag to orbit' }],
+      },
+      {
+        n: "Ⅷ",
+        label: "Together",
+        sub: "Lab 2-14 · people and cats in one room, with the loop closed",
+        benches: [{ no: "2-14", title: "People and cats together", kernel: "2d", description: 'Visitors walk the floor and cats live on the units; the units follow both and the four encounter events are counted.', meta: '3 spaces · 4 events · canvas', kind: 'Canvas · two species', verb: 'drag a body' }],
       },
     ],
   },

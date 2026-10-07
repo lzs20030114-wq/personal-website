@@ -150,48 +150,48 @@
 
 /* People-plan benches share their drawing layout. Lab 2-13 also uses the same
    heading, details and viewport budget, with its own solid drawing layout below. */
-:is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .walk-map { display: contents; }
-:is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .walk-notes { color: var(--n700); font-size: 13px; line-height: 1.75; }
-:is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .walk-notes h3 { margin-top: 0; color: var(--ink); font-size: 11px; letter-spacing: .04em; }
-:is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .walk-notes p { margin: 0 0 20px; }
-:is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .lab-details-scroll > div + .lab-description { padding-top: 20px; border-top: 1px solid var(--lab-line); }
+:is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .walk-map { display: contents; }
+:is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .walk-notes { color: var(--n700); font-size: 13px; line-height: 1.75; }
+:is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .walk-notes h3 { margin-top: 0; color: var(--ink); font-size: 11px; letter-spacing: .04em; }
+:is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .walk-notes p { margin: 0 0 20px; }
+:is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .lab-details-scroll > div + .lab-description { padding-top: 20px; border-top: 1px solid var(--lab-line); }
 @media (min-width: 1100px) {
-  :is([data-lab-panel="2-6"], [data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-13"]) .lab-panel-heading { gap: 10px 24px; padding-block: 12px 16px; }
-  :is([data-lab-panel="2-6"], [data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-13"])[data-details] .lab-panel-body { grid-template-columns: minmax(0, 1fr) 32px var(--lab-detail-width); gap: 0; }
-  :is([data-lab-panel="2-6"], [data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-13"]) .lab-detail-divider:not([hidden]) { display: block; }
-  :is([data-lab-panel="2-6"], [data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-13"]) .lab-details { grid-column: 3; max-height: calc(var(--lab-figure-height) + 32px); }
-  :is([data-lab-panel="2-6"], [data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-13"]) .lab-detail-size { display: flex; }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .walk-workbench { display: grid; grid-template-columns: minmax(0, 1fr) 216px; grid-template-rows: minmax(0, 1fr) auto; height: var(--lab-figure-height); }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .walk-workbench > .lab-ctl { display: contents; }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .lab-fig { grid-column: 1; grid-row: 1; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; min-width: 0; min-height: 0; padding: 14px 14px 10px; }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .walk-map { display: block; grid-row: 2; position: relative; min-width: 0; min-height: 0; overflow: hidden; container-type: size; }
+  :is([data-lab-panel="2-6"], [data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-13"], [data-lab-panel="2-14"]) .lab-panel-heading { gap: 10px 24px; padding-block: 12px 16px; }
+  :is([data-lab-panel="2-6"], [data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-13"], [data-lab-panel="2-14"])[data-details] .lab-panel-body { grid-template-columns: minmax(0, 1fr) 32px var(--lab-detail-width); gap: 0; }
+  :is([data-lab-panel="2-6"], [data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-13"], [data-lab-panel="2-14"]) .lab-detail-divider:not([hidden]) { display: block; }
+  :is([data-lab-panel="2-6"], [data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-13"], [data-lab-panel="2-14"]) .lab-details { grid-column: 3; max-height: calc(var(--lab-figure-height) + 32px); }
+  :is([data-lab-panel="2-6"], [data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-13"], [data-lab-panel="2-14"]) .lab-detail-size { display: flex; }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .walk-workbench { display: grid; grid-template-columns: minmax(0, 1fr) 216px; grid-template-rows: minmax(0, 1fr) auto; height: var(--lab-figure-height); }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .walk-workbench > .lab-ctl { display: contents; }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .lab-fig { grid-column: 1; grid-row: 1; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; min-width: 0; min-height: 0; padding: 14px 14px 10px; }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .walk-map { display: block; grid-row: 2; position: relative; min-width: 0; min-height: 0; overflow: hidden; container-type: size; }
   /* The drawing's logical 700×520 frame has wide blank sides. Fit its occupied
      500×480 region without changing the renderer or pointer coordinate mapping. */
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .walk-map canvas { position: absolute; top: 50%; left: 50%; width: min(calc(100cqw * 700 / 500), calc(100cqh * 700 / 480)); max-width: none; height: auto; transform: translate(-50%, -50%); }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .lab-hud { position: static; max-width: none; font-size: 10px; line-height: 1.6; letter-spacing: .01em; }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .lab-hud.tl { grid-row: 1; padding-bottom: 6px; }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .lab-hud.tl > div:first-child { display: inline; margin-right: 12px; font-size: 9px; letter-spacing: .06em; }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .lab-hud.tl > div:nth-child(2) { display: inline; font-size: 12px; }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .lab-hud.br { grid-row: 3; display: flex; align-items: center; gap: 12px; text-align: left; padding-top: 6px; }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .lab-hud.br .num { flex: none; margin: 0; font-size: 18px; }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .lab-hud.bl { grid-row: 4; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--lab-line); }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .lab-ctl__solve { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; flex-wrap: nowrap; justify-content: space-evenly; align-items: stretch; gap: 0; min-height: 0; padding: 8px 12px; border-left: 1px solid var(--lab-line); border-bottom: 0; }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .lab-ctl__solve .grp { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; flex: none; padding: 5px 0; border: 0; border-bottom: 1px solid var(--lab-line); }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .lab-ctl__solve .grp:last-child { border-bottom: 0; }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .lab-ctl__solve .grp.walk-behaviour { grid-template-columns: minmax(0, 1fr); }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .walk-behaviour .seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  [data-lab-panel="2-11"] .crowd-people .seg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  [data-lab-panel="2-11"] .crowd-people .seg button:nth-child(even) { border-right-width: 1px; }
-  [data-lab-panel="2-11"] .crowd-people .seg button:nth-child(n + 3) { border-top-width: 0; }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .lab-ctl__solve .seg button { min-width: 0; padding: 4px 8px; }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .lab-ctl__solve .seg { flex-wrap: nowrap; }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .lab-ctl__solve input[type="range"] { width: 76px !important; }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .lab-ctl__solve .walk-fov label { grid-column: 1 / -1; }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .walk-playback { grid-column: 1 / -1; grid-row: 2; gap: 8px 0; padding: 10px 4px; min-height: 52px; border-top: 1px solid var(--lab-line); }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .walk-playback .grp { gap: 6px; padding-inline: 8px; }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .walk-playback button { padding: 4px 8px; }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .walk-playback input[type="range"] { width: 64px !important; }
-  :is([data-lab-panel="2-6"], [data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-13"]) .lab-view-tools { min-height: 32px; padding: 6px 14px; }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .walk-map canvas { position: absolute; top: 50%; left: 50%; width: min(calc(100cqw * 700 / 500), calc(100cqh * 700 / 480)); max-width: none; height: auto; transform: translate(-50%, -50%); }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .lab-hud { position: static; max-width: none; font-size: 10px; line-height: 1.6; letter-spacing: .01em; }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .lab-hud.tl { grid-row: 1; padding-bottom: 6px; }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .lab-hud.tl > div:first-child { display: inline; margin-right: 12px; font-size: 9px; letter-spacing: .06em; }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .lab-hud.tl > div:nth-child(2) { display: inline; font-size: 12px; }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .lab-hud.br { grid-row: 3; display: flex; align-items: center; gap: 12px; text-align: left; padding-top: 6px; }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .lab-hud.br .num { flex: none; margin: 0; font-size: 18px; }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .lab-hud.bl { grid-row: 4; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--lab-line); }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .lab-ctl__solve { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; flex-wrap: nowrap; justify-content: space-evenly; align-items: stretch; gap: 0; min-height: 0; padding: 8px 12px; border-left: 1px solid var(--lab-line); border-bottom: 0; }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .lab-ctl__solve .grp { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; flex: none; padding: 5px 0; border: 0; border-bottom: 1px solid var(--lab-line); }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .lab-ctl__solve .grp:last-child { border-bottom: 0; }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .lab-ctl__solve .grp.walk-behaviour { grid-template-columns: minmax(0, 1fr); }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .walk-behaviour .seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  [data-lab-panel="2-11"] .crowd-people .seg, [data-lab-panel="2-14"] .crowd-people .seg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  [data-lab-panel="2-11"] .crowd-people .seg button:nth-child(even), [data-lab-panel="2-14"] .crowd-people .seg button:nth-child(even) { border-right-width: 1px; }
+  [data-lab-panel="2-11"] .crowd-people .seg button:nth-child(n + 3), [data-lab-panel="2-14"] .crowd-people .seg button:nth-child(n + 3) { border-top-width: 0; }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .lab-ctl__solve .seg button { min-width: 0; padding: 4px 8px; }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .lab-ctl__solve .seg { flex-wrap: nowrap; }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .lab-ctl__solve input[type="range"] { width: 76px !important; }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .lab-ctl__solve .walk-fov label { grid-column: 1 / -1; }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .walk-playback { grid-column: 1 / -1; grid-row: 2; gap: 8px 0; padding: 10px 4px; min-height: 52px; border-top: 1px solid var(--lab-line); }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .walk-playback .grp { gap: 6px; padding-inline: 8px; }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .walk-playback button { padding: 4px 8px; }
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .walk-playback input[type="range"] { width: 64px !important; }
+  :is([data-lab-panel="2-6"], [data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-13"], [data-lab-panel="2-14"]) .lab-view-tools { min-height: 32px; padding: 6px 14px; }
 }
 @media (min-width: 1100px) and (max-height: 699px) {
   [data-lab-panel="2-11"] .lab-ctl__solve .grp { padding-block: 3px; }
@@ -199,7 +199,7 @@
 
 /* English controls need room for words such as “footprint” and “clearance”. */
 @media (min-width: 1100px) {
-  .lab-language-root[data-lang='en'] :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"]) .walk-workbench {
+  .lab-language-root[data-lang='en'] :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .walk-workbench {
     grid-template-columns: minmax(0, 1fr) 240px;
   }
 }

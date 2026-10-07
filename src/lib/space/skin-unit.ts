@@ -624,17 +624,19 @@ export class SkinUnit {
    * 拉链**（不吸引、不新锁——回程里材料靠芯伸长自己走直）。外压取协议结束后的 0。
    * 正向协议（advance）一个数都不碰这里的状态 ⇒ 默认路径逐位不变。
    */
-  retractStep(): void {
+  retractStep(rEnd: number = SKIN.R0): void {
     if (this.retractFrom === null) {
       this.retractFrom = this.r;
       this.retractK = 0;
     }
     const k = this.retractK;
     const v = Math.min(k / 900, 1.0);
-    // 走满 900 步起 r 精确回到 R0（a + (b−a)·1 在浮点里未必等于 b），并把剩下的键**全部**解开：
+    // 走满 900 步起 r 精确回到 rEnd（a + (b−a)·1 在浮点里未必等于 b），并把剩下的键**全部**解开：
     // 在 r = R0 就锁上的键（捏分缝链的预锁，step 0 即锁）按「回程经过锁定时的 r」永远等不到
     // ——r 不会高过 R0；而 a 的定义是收回 = 松键，回到起点就不该还挂着键（守门：通道回程后 0 键）。
-    const r = v >= 1 ? SKIN.R0 : this.retractFrom + (SKIN.R0 - this.retractFrom) * v;
+    // rEnd 默认 R0（v7 的起始松弛态，布比芯长 5%，回直后留一道自然鼓弧）；传 1.0 = 芯与布等长，
+    // 布沿杆拉直（作者 2026-10-07「直接给它收直了不就得了」——按带让路用这一档）。
+    const r = v >= 1 ? rEnd : this.retractFrom + (rEnd - this.retractFrom) * v;
     this.setCore(r);
     this.releaseUpTo(r, v >= 1);
     this.relax(k, 0, true, false);
