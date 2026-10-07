@@ -1051,7 +1051,8 @@ export class CohabitSim {
       watch = c.id;
     }
     if (goal < 0) goal = this.randomNode(from);
-    const planWall = this.faces ? this.bandHard : null;
+    // 按带只在会动的单元上成立：钉死 / 空房间档没有带在动，规划照旧认整台的墙（否则人会规划穿过钉死的墙、没人等门）
+    const planWall = this.faces && this.space === 'live' ? this.bandHard : null;
     const path = shortestPath(this.layout, g, from, new Set([goal]), this.wall, planWall);
     if (!path || path.length < 2) {
       // 不通（或已在原地）：换一个随机点；仍不通就站着再等

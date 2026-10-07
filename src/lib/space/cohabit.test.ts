@@ -203,6 +203,14 @@ describe('cohabit · 按带让路', () => {
     expect(a.bandsOpen).toBeGreaterThanOrEqual(0);
   });
 
+  it('钉死 / 空房间档里带不起作用：按带与整台同种子读数逐位相同（规划照旧认整台的墙，不会穿墙）', () => {
+    for (const space of ['fixed', 'empty'] as const) {
+      const a = runCohabit({ seed: 12, seconds: 120, space, faces: true });
+      const b = runCohabit({ seed: 12, seconds: 120, space, faces: false });
+      expect({ ...a, bandsOpen: 0 }).toEqual({ ...b, bandsOpen: 0 });
+    }
+  });
+
   it('人站在交叉点：四邻单元照落、各只收回朝人的那条带、R5 不钉；整台口径下四台全被闸住', () => {
     const sim = new CohabitSim({ seed: 1, opening: false, auto: false, faces: true, fade: null, threshold: 1 });
     const p = sim.addPerson(0, 0)!;
