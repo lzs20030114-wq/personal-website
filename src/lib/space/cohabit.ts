@@ -73,6 +73,20 @@ export const FACE_MODES = [
   { key: 'whole', zh: '整台', en: 'whole unit' },
 ] as const satisfies readonly { key: FaceMode; zh: string; en: string }[];
 
+/** 猫的常量（COHABIT.CAT 的可改副本）：每个仿真一份，台架 / 研究脚本按方案换 */
+export type CatCfg = { [K in keyof typeof COHABIT.CAT]: number };
+
+export type GuideTarget = 'meet' | 'side' | 'meetThenSide';
+export interface GuideCfg {
+  target: GuideTarget;
+  sideAfter: number;
+}
+export const GUIDE_TARGETS = [
+  { key: 'meet', zh: '会面台', en: 'meeting unit' },
+  { key: 'side', zh: '身边台', en: 'side unit' },
+  { key: 'meetThenSide', zh: '先会面再身边', en: 'meeting, then side' },
+] as const satisfies readonly { key: GuideTarget; zh: string; en: string }[];
+
 /** 触发两档（台架「规则」开关与差分清单同源）：座位三态 = COHABIT.SEATS；痕迹 = 旧口径（模块默认） */
 export type TriggerMode = 'posture' | 'trace';
 export const TRIGGER_MODES = [
@@ -120,6 +134,16 @@ export const COHABIT = {
     latency: 15,
     /** 有人专注驻留时，猫靠过去的几率（M&T 1/3，推断） */
     approachP: 1 / 3,
+    /** 没人看它时，猫走到一个静止访客 passiveD 处停下的几率（每秒判一次）——M&T 1988 被动条件：人坐着看书、
+     *  不理猫，猫仍有 22% 的时间在 1 m 内、接触只占 2%。模块默认 0 = 不启用（旧口径逐位不变） */
+    passiveP: 0,
+    passiveD: 0.75,
+    /** 有人看着时靠过去，停在 passiveD 处（不接触）的那一份——M&T 主动条件：1 m 内 66% 里接触占 33%、
+     *  另一半停在 0.5–1 m。模块默认 0 = 都走到跟前（旧口径） */
+    approachMid: 0,
+    /** 靠近完一段之后走开去别处的几率（其余留在原地坐卧）——M&T 主动条件里猫 66% 的时间待在 1 m 内，
+     *  要猫靠近后多留一会儿。模块默认 = roamP（旧口径逐位不变） */
+    roamAfterApproach: 0.5,
     /** 坐 / 卧（Lab 2-12 演示值） */
     sit: CAT_DEMO.sitSeconds,
     lie: CAT_DEMO.lieSeconds,
@@ -175,12 +199,13 @@ export const COHABIT = {
       { kind: 'sofa', at: [2, 2.1], face: [0, -1] },
       { kind: 'chair', at: [-2, 2.1], face: [0, -1] },
     ],
-    /** 尺寸（m）：w 沿宽、d 进深；seats = 座位离中线的偏移；座位点 = 家具中心往前 SEAT_IN（坐着的人身体中心） */
+    /** 尺寸（m）：w 沿宽、d 进深；seats = 座位离中线的偏移；座位点 = 坐着的人躯干中心 = 家具中心往前 SEAT_IN
+     *  （负 = 往靠背那边：人靠着靠背坐，躯干在靠背前约 0.25 m；首版取 +0.1 等于坐在沙发前沿，2026-10-07 改正） */
     KINDS: {
       sofa: { w: 1.4, d: 0.8, seats: [-0.35, 0.35] },
       chair: { w: 0.75, d: 0.75, seats: [0] },
     },
-    SEAT_IN: 0.1,
+    SEAT_IN: -0.15,
     /** 家具离墙、彼此之间至少留多远（m） */
     GAP: 0.05,
     /** 站定的部分触发：停住满这么久（s）、且看着一只猫（≤ GAZE_D、视线 ±GAZE_HALF.person）⇒ 空间朝这个人给猫铺一步 */
@@ -190,6 +215,32 @@ export const COHABIT = {
     /** 坐多久（s；演示值） */
     SIT: { min: 90, max: 240 },
   },
+  /**
+   * 猫的停留代价按 Mertens & Turner 1988 标定（2026-10-07，`scripts/cohabit/calibrate-mt.mjs`）：仓库里唯一的
+   * 人猫实测（19 只猫各见 12 位陌生人，人坐着；被动 = 看书不理猫，主动 = 互动，工作日志原稿 2026-07-28）。
+   * 场景复现 = 空房间 · 一位陌生人坐着 · 一只猫在地面 · 600 s；网格搜索取误差最小的一组，读数（8 种子）对参照：
+   *   被动  > 1 m 78.1%（78）· 接触 1.3%（2）· > 2 m 62.8%（约 40，取决于房间大小）· 首次接触 504 s（279，出处只在 AI 摘要里）
+   *   主动  > 1 m 37.1%（34）· 0.5–1 m 27.4%（33）· 接触 35.5%（33）· 首次接触 96 s（74）
+   * 「接触」= 猫停着、离人 < 0.5 m（走过身边不算）。七个参数对五个目标，是**标定不是验证**：只说明这组常量能
+   * 复现那一个实验的聚合读数，不说明猫咖里的猫就这样。座位三态台架用这一组；COHABIT.CAT 保留演示值（痕迹档与守门用）。
+   */
+  CAT_MT: {
+    tolerate: 60,
+    tolerateAttended: 480,
+    latency: 30,
+    approachP: 0.1,
+    approachMid: 0.8,
+    passiveP: 0.005,
+    passiveD: 0.75,
+    roamAfterApproach: 0.2,
+  },
+  /**
+   * 引导方式（座位三态 · 会动的单元，2026-10-07 起研究用的旋钮）：坐着的人把猫引到哪一台。
+   *   meet = 会面台（坐着的人面前、离座位 1.0–1.5 m，猫在台面中心不付停留代价、又在共温带里）；
+   *   side = 身边台（平台不盖头顶的最近一台，猫走到台边离人最近——共触只可能发生在这儿）；
+   *   meetThenSide = 先到会面台，坐着的人看着它满 sideAfter 秒，再递一步到身边台（让猫自己走近最后一段）。
+   */
+  GUIDE: { target: 'meet' as GuideTarget, sideAfter: 10 },
   /** 一开场放谁（场地坐标按 pitch4 的倍数；猫按单元下标） */
   OPENING: { people: [{ x: 0, y: 1 }], cats: [0] },
 } as const;
@@ -256,6 +307,8 @@ export interface Seat {
   node: number;
   /** 会面台：坐着的人面前、离座位 CAT_NEAR–BAND.far 的那台（猫在台面中心不付停留代价、又在共温带里） */
   meet: number;
+  /** 身边台：平台不盖坐着的人头顶（中心离座位 > 平台半径 + 身体）的最近一台；与入口四角不重合时优先 */
+  side: number;
 }
 
 /** 点到轴对齐矩形的距离 */
@@ -495,7 +548,9 @@ export function placeSeats(l: PlanLayout, g: AisleGraph): Seat[] {
         cand.find((q) => q.front && q.d >= COHABIT.CAT_NEAR && q.d < COHABIT.BAND.far && !corner(q.u)) ??
         cand.find((q) => q.front && q.d >= COHABIT.CAT_NEAR) ??
         cand[0];
-      seats.push({ i: seats.length, furn: fi, slot, x, y, face: r.face, node, meet: pick.u.i });
+      const headR = l.platR + PLAN.BODY_R;
+      const side = cand.find((q) => q.d > headR && !corner(q.u)) ?? cand.find((q) => q.d > headR) ?? cand[cand.length - 1];
+      seats.push({ i: seats.length, furn: fi, slot, x, y, face: r.face, node, meet: pick.u.i, side: side.u.i });
     });
   });
   return seats;
@@ -535,6 +590,10 @@ export interface Visitor {
   /** 这次站定空间递出的那一步（猫从 from 到 unit）；offered = 这次站定已经给过了（只给一次） */
   offer: { cat: number; from: number; unit: number } | null;
   offered: boolean;
+  /** 不理猫（Mertens & Turner 1988 的「被动」条件：人坐着看书、不看猫）——坐着时不转头看猫。默认 false */
+  ignores: boolean;
+  /** 坐着时：被引来的猫已经在会面台上、他也看着它，累计了多久（s；meetThenSide 用） */
+  meetHeld: number;
 }
 
 /** 空间此刻为谁给哪只猫铺的路（画虚线用）：sit = 坐着（一路铺到会面台）、stand = 站定（只一步） */
@@ -568,6 +627,8 @@ export interface Cat {
   waited: number;
   /** 正在靠近的访客 */
   approaching: number | null;
+  /** 下一次判「被动靠近」还要等多久（s） */
+  passiveIn: number;
   /** 统计：最近访客 > 1 m 的时长、在场时长、在一格上安稳待着的时长 */
   farTime: number;
   presentTime: number;
@@ -622,6 +683,10 @@ export interface CohabitOpts {
   faces?: boolean;
   /** 触发档（默认 trace = 旧口径；posture = 座位三态，格数默认随之取 COHABIT.SEATS.GRID） */
   trigger?: TriggerMode;
+  /** 引导方式（座位三态 · 会动的单元；省略 = COHABIT.GUIDE） */
+  guide?: Partial<GuideCfg>;
+  /** 猫的常量：省略 = COHABIT.CAT（演示值）；部分覆盖逐项替换 */
+  cat?: Partial<CatCfg>;
 }
 
 export class CohabitSim {
@@ -671,6 +736,9 @@ export class CohabitSim {
   seats: Seat[];
   guides: Guide[] = [];
   catArrivals = 0;
+  guide: GuideCfg;
+  /** 猫的常量（构造时从 COHABIT.CAT + opts.cat 拷一份） */
+  readonly cat: CatCfg;
   t = 0;
   private nextId = 1;
   private readonly seed: number;
@@ -688,6 +756,8 @@ export class CohabitSim {
     this.furn = posture ? furnishRoom(this.layout, this.furniture) : null;
     this.graph = aisleGraph(this.layout, this.furn ?? undefined);
     this.seats = placeSeats(this.layout, this.graph);
+    this.guide = { ...COHABIT.GUIDE, ...opts.guide };
+    this.cat = { ...COHABIT.CAT, ...opts.cat };
     const threshold = opts.threshold ?? PLAN.DEMO.threshold;
     this.fade = opts.fade === undefined ? PLAN.DEMO.fade : opts.fade;
     const cap = this.fade === null ? Infinity : threshold;
@@ -838,6 +908,8 @@ export class CohabitSim {
       watchFor: 0,
       offer: null,
       offered: false,
+      ignores: false,
+      meetHeld: 0,
     };
     this.people.push(v);
     // 座位三态：放在空座上 = 直接坐下
@@ -870,6 +942,7 @@ export class CohabitSim {
 
   private sitDown(p: Visitor, i: number): void {
     const s = this.seats[i];
+    p.meetHeld = 0;
     p.walker.place(s.x, s.y);
     p.walker.heading = Math.atan2(s.face[1], s.face[0]);
     p.walker.gaze = p.walker.heading;
@@ -1019,7 +1092,7 @@ export class CohabitSim {
   addCat(at?: PlanUnit | { x: number; y: number }): Cat | null {
     if (this.cats.length >= COHABIT.MAX_CATS) return null;
     const id = this.nextId++;
-    const walker = new Walker(COHABIT.CAT.speed, this.seed + id * 104729);
+    const walker = new Walker(this.cat.speed, this.seed + id * 104729);
     walker.lookAround = false;
     let unit: PlanUnit | null = null;
     let x: number;
@@ -1050,6 +1123,7 @@ export class CohabitSim {
       latency: 0,
       waited: 0,
       approaching: null,
+      passiveIn: 1,
       farTime: 0,
       presentTime: 0,
       settledTime: 0,
@@ -1258,7 +1332,7 @@ export class CohabitSim {
   /** 猫身下（与它正要走去的那一处）的带不许收；转移中起落两台整台护住 */
   private holdBands(): void {
     this.bandHold.fill(0);
-    const R = COHABIT.CAT.bodyR + COHABIT.FACES.catMargin;
+    const R = this.cat.bodyR + COHABIT.FACES.catMargin;
     for (const c of this.cats) {
       if (!c.unit) continue;
       if (c.transfer) {
@@ -1404,7 +1478,7 @@ export class CohabitSim {
     let bd = Infinity;
     for (const p of this.people) {
       const w = p.walker;
-      if (!w.present || w.state === 'walk' || p.mode === 'held') continue;
+      if (!w.present || w.state === 'walk' || p.mode === 'held' || p.ignores) continue; // 不理猫的人（看书）从不算盯着
       const dx = c.walker.x - w.x;
       const dy = c.walker.y - w.y;
       const d = Math.hypot(dx, dy);
@@ -1416,6 +1490,33 @@ export class CohabitSim {
       }
     }
     return best;
+  }
+
+  /** 离猫最近、没在走、没被拿着、在 GAZE_D 以内的访客（被动靠近的对象）；没有 = null */
+  stillVisitor(c: Cat): Visitor | null {
+    let best: Visitor | null = null;
+    let bd: number = COHABIT.GAZE_D;
+    for (const p of this.people) {
+      const w = p.walker;
+      if (!w.present || w.state === 'walk' || p.mode === 'held') continue;
+      const d = Math.hypot(w.x - c.walker.x, w.y - c.walker.y);
+      if (d < bd) {
+        bd = d;
+        best = p;
+      }
+    }
+    return best;
+  }
+
+  /** K3′ 被动靠近：没人看它、潜伏期过了，每秒按 passiveP 判一次 ⇒ 返回要靠近的那个静止访客 */
+  private passiveTarget(c: Cat, att: Visitor | null, dt: number): Visitor | null {
+    if (att || this.cat.passiveP <= 0 || c.latency > 0 || c.state === 'approach' || c.state === 'retreat') return null;
+    c.passiveIn -= dt;
+    if (c.passiveIn > 0) return null;
+    c.passiveIn = 1;
+    const q = this.stillVisitor(c);
+    if (!q || this.rng() >= this.cat.passiveP) return null;
+    return q;
   }
 
   /** 猫的四邻（同一排布里上下左右） */
@@ -1489,7 +1590,7 @@ export class CohabitSim {
       // 坐着：看 3 m 内最近的那只猫（身子跟着转）；没有猫就面朝座位的朝向
       if (p.seated && p.seat !== null) {
         let best: Cat | null = null;
-        let bd: number = COHABIT.GAZE_D;
+        let bd: number = p.ignores ? -1 : COHABIT.GAZE_D;
         for (const c of this.cats) {
           const d = Math.hypot(c.walker.x - w.x, c.walker.y - w.y);
           if (d <= bd) {
@@ -1512,7 +1613,7 @@ export class CohabitSim {
           w.heading = g;
           w.gaze = g;
         } else p.watching = null;
-      } else w.lookAround = this.look;
+      } else w.lookAround = this.look && !(p.seated && p.ignores); // 不理猫 = 坐着看书，不转头
       // 按带让路：门还没开就在门口等（等太久另选路——猫可能在计划之后坐到了门上）
       if (this.faces && this.space === 'live' && w.state === 'walk' && this.aheadBlocked(p)) {
         p.waitFor += dt;
@@ -1764,7 +1865,7 @@ export class CohabitSim {
         c.state = 'walk';
         c.pending = null;
         c.waited = 0;
-      } else if (c.waited > COHABIT.CAT.waitMax) {
+      } else if (c.waited > this.cat.waitMax) {
         c.pending = null;
         c.waited = 0;
         c.state = 'sit';
@@ -1792,7 +1893,7 @@ export class CohabitSim {
     if (c.state === 'sit' || c.state === 'lie') c.settledTime += dt;
     if (c.mode !== 'auto') return;
 
-    const tol = att ? COHABIT.CAT.tolerateAttended : COHABIT.CAT.tolerate;
+    const tol = att ? this.cat.tolerateAttended : this.cat.tolerate;
     // K2：忍够了就退到离人最远的邻格
     if (cost && c.tolerated > tol && c.state !== 'retreat') {
       const nb = this.neighboursOf(c.unit!);
@@ -1802,7 +1903,7 @@ export class CohabitSim {
         if (this.nearestVisitor(far.x, far.y).d > near.d) {
           c.pending = far;
           c.state = 'retreat';
-          c.latency = COHABIT.CAT.latency;
+          c.latency = this.cat.latency;
           c.tolerated = 0;
           c.approaching = null;
           return;
@@ -1811,13 +1912,13 @@ export class CohabitSim {
       // 没有更远的格子：退到台面远端
       this.toRim(c, near.p ? Math.atan2(w.y - near.p.walker.y, w.x - near.p.walker.x) : w.heading);
       c.state = 'retreat';
-      c.latency = COHABIT.CAT.latency;
+      c.latency = this.cat.latency;
       c.tolerated = 0;
       return;
     }
     // K3：有人站着看它、潜伏期过了 ⇒ 按几率靠到台面边缘
     if (att && c.latency <= 0 && c.state !== 'approach' && c.phaseTime >= 1) {
-      if (this.rng() < COHABIT.CAT.approachP) {
+      if (this.rng() < this.cat.approachP) {
         this.toRim(c, Math.atan2(att.walker.y - w.y, att.walker.x - w.x));
         c.state = 'approach';
         c.approaching = att.id;
@@ -1826,11 +1927,20 @@ export class CohabitSim {
       }
       c.phaseTime = 0;
     }
+    // K3′ 被动靠近：在台面上挪到朝那个人的边缘（离不开台）
+    const pq = this.passiveTarget(c, att, dt);
+    if (pq) {
+      this.toRim(c, Math.atan2(pq.walker.y - w.y, pq.walker.x - w.x));
+      c.state = 'approach';
+      c.approaching = pq.id;
+      c.phaseTime = 0;
+      return;
+    }
     // 节奏：坐 → 卧 → （一半几率）换一格
-    if (c.state === 'sit' && c.phaseTime >= COHABIT.CAT.sit) {
+    if (c.state === 'sit' && c.phaseTime >= this.cat.sit) {
       // 座位三态：坐满了、旁边有一台空间刚递过来的（落着、没别的猫占着）⇒ 按同样的几率挪过去，不走才卧下（R3：走不走仍是猫的事）
       const offered = this.offeredNext(c);
-      if (offered.length && this.rng() < COHABIT.CAT.roamP) {
+      if (offered.length && this.rng() < this.cat.roamP) {
         c.pending = offered[Math.floor(this.rng() * offered.length)];
         c.waited = 0;
         c.state = 'wait';
@@ -1838,9 +1948,10 @@ export class CohabitSim {
       }
       c.state = 'lie';
       c.phaseTime = 0;
-    } else if ((c.state === 'lie' && c.phaseTime >= COHABIT.CAT.lie) || (c.state === 'retreat' && c.phaseTime >= COHABIT.CAT.sit) || (c.state === 'approach' && c.phaseTime >= COHABIT.CAT.sit * 2)) {
+    } else if ((c.state === 'lie' && c.phaseTime >= this.cat.lie) || (c.state === 'retreat' && c.phaseTime >= this.cat.sit) || (c.state === 'approach' && c.phaseTime >= this.cat.sit * 2)) {
+      const roam = c.state === 'approach' ? this.cat.roamAfterApproach : this.cat.roamP;
       c.approaching = null;
-      if (this.rng() < COHABIT.CAT.roamP) {
+      if (this.rng() < roam) {
         const nb = this.neighboursOf(c.unit!);
         const ok = nb.filter((u) => {
           if (this.space === 'fixed' && this.act.degree[u.i] < 1) return false;
@@ -1876,7 +1987,7 @@ export class CohabitSim {
   /** 在台面上挪到朝某方向的边缘（不离开单元） */
   private toRim(c: Cat, ang: number): void {
     const u = c.unit!;
-    const r = Math.max(0, this.layout.platR - COHABIT.CAT.bodyR);
+    const r = Math.max(0, this.layout.platR - this.cat.bodyR);
     c.walker.pushTarget({ x: u.x + Math.cos(ang) * r, y: u.y + Math.sin(ang) * r });
   }
 
@@ -1889,7 +2000,7 @@ export class CohabitSim {
     if (c.state === 'sit' || c.state === 'lie') c.settledTime += dt;
     if (c.mode !== 'auto') return;
     const half = this.layout.fieldM / 2;
-    const tol = att ? COHABIT.CAT.tolerateAttended : COHABIT.CAT.tolerate;
+    const tol = att ? this.cat.tolerateAttended : this.cat.tolerate;
     if (cost && c.tolerated > tol && c.state !== 'retreat') {
       let bx = w.x;
       let by = w.y;
@@ -1906,15 +2017,17 @@ export class CohabitSim {
       }
       w.pushTarget({ x: bx, y: by });
       c.state = 'retreat';
-      c.latency = COHABIT.CAT.latency;
+      c.latency = this.cat.latency;
       c.tolerated = 0;
       c.phaseTime = 0;
       return;
     }
     if (att && c.latency <= 0 && c.state !== 'approach' && c.phaseTime >= 1) {
-      if (this.rng() < COHABIT.CAT.approachP) {
+      if (this.rng() < this.cat.approachP) {
         const ang = Math.atan2(att.walker.y - w.y, att.walker.x - w.x);
-        const d = Math.hypot(att.walker.x - w.x, att.walker.y - w.y) - (PLAN.BODY_R + COHABIT.CAT.bodyR);
+        // 一部分停在 passiveD（不接触），其余走到跟前；approachMid = 0 时不多抽随机数（旧口径逐位不变）
+        const stop = this.cat.approachMid > 0 && this.rng() < this.cat.approachMid ? this.cat.passiveD : PLAN.BODY_R + this.cat.bodyR;
+        const d = Math.hypot(att.walker.x - w.x, att.walker.y - w.y) - stop;
         w.pushTarget({ x: w.x + Math.cos(ang) * Math.max(0, d), y: w.y + Math.sin(ang) * Math.max(0, d) });
         c.state = 'approach';
         c.approaching = att.id;
@@ -1923,12 +2036,28 @@ export class CohabitSim {
       }
       c.phaseTime = 0;
     }
-    if (c.state === 'sit' && c.phaseTime >= COHABIT.CAT.sit) {
+    // K3′ 被动靠近：走到离那个人 passiveD 处停下（不接触）
+    const pq = this.passiveTarget(c, att, dt);
+    if (pq) {
+      const dx = w.x - pq.walker.x;
+      const dy = w.y - pq.walker.y;
+      const d = Math.hypot(dx, dy);
+      if (d > this.cat.passiveD) {
+        const k = this.cat.passiveD / d;
+        w.pushTarget({ x: pq.walker.x + dx * k, y: pq.walker.y + dy * k });
+        c.state = 'approach';
+        c.approaching = pq.id;
+        c.phaseTime = 0;
+        return;
+      }
+    }
+    if (c.state === 'sit' && c.phaseTime >= this.cat.sit) {
       c.state = 'lie';
       c.phaseTime = 0;
-    } else if ((c.state === 'lie' && c.phaseTime >= COHABIT.CAT.lie) || (c.state !== 'lie' && c.state !== 'sit' && c.phaseTime >= COHABIT.CAT.sit * 2)) {
+    } else if ((c.state === 'lie' && c.phaseTime >= this.cat.lie) || (c.state !== 'lie' && c.state !== 'sit' && c.phaseTime >= this.cat.sit * 2)) {
+      const roam = c.state === 'approach' ? this.cat.roamAfterApproach : this.cat.roamP;
       c.approaching = null;
-      if (this.rng() < COHABIT.CAT.roamP) {
+      if (this.rng() < roam) {
         for (let k = 0; k < 8; k++) {
           const x = (this.rng() * 2 - 1) * half;
           const y = (this.rng() * 2 - 1) * half;
@@ -1977,7 +2106,7 @@ export class CohabitSim {
       if (!c.unit) continue;
       // 占用维持展开；下一落点按预备时长加请求（Lab 2-12）
       for (const u of this.supportOf(c)) inputs[u.i] = Math.max(inputs[u.i], thr);
-      if (c.pending) inputs[c.pending.i] = Math.max(inputs[c.pending.i], Math.min(thr, c.waited / COHABIT.CAT.prepare * thr));
+      if (c.pending) inputs[c.pending.i] = Math.max(inputs[c.pending.i], Math.min(thr, c.waited / this.cat.prepare * thr));
       // S2：猫的四邻里人的痕迹最高的那格补满——路铺向人多的地方（痕迹档；座位三态走 guide()）
       if (this.goal && this.trigger === 'trace') {
         let best: PlanUnit | null = null;
@@ -1992,7 +2121,8 @@ export class CohabitSim {
         if (best) inputs[best.i] = Math.max(inputs[best.i], thr);
       }
     }
-    if (this.goal && this.trigger === 'posture') this.guide(inputs, thr);
+    this.lastDt = dt;
+    if (this.goal && this.trigger === 'posture') this.guideStep(inputs, thr);
     const before = Float64Array.from(this.act.degree);
     const gate = (this.clearance !== null && !this.faces) || this.people.some((p) => p.seated) ? this.blocked : null;
     this.act.update(inputs, this.act.mode === 'follow' ? dt : Infinity, gate);
@@ -2033,7 +2163,8 @@ export class CohabitSim {
    *   走着 = 不触发（地面不留痕迹）。
    * 落不落仍过 R5；走不走仍是猫的事（它优先走递过来的那台，见 offeredNext）。
    */
-  private guide(inputs: Float64Array, thr: number): void {
+  private lastDt = 0;
+  private guideStep(inputs: Float64Array, thr: number): void {
     const S = COHABIT.SEATS;
     const taken = new Set<number>();
     const offer = (u: number) => {
@@ -2042,7 +2173,13 @@ export class CohabitSim {
     const free = (c: Cat) => !taken.has(c.id) && !!c.unit && c.mode !== 'held' && c.latency <= 0;
     for (const p of this.people) {
       if (!p.seated || p.seat === null) continue;
-      const meet = this.seats[p.seat].meet;
+      const seat = this.seats[p.seat];
+      // 引到哪台（COHABIT.GUIDE）：会面台 / 身边台 / 先会面台、看着满 sideAfter 秒再身边台
+      const g = this.guide;
+      const near = this.cats.find((c) => c.unit && c.unit.i === seat.meet && p.watching === c.id);
+      // 满了 sideAfter 就一直引向身边台（直到起身），否则猫一挪开又被引回会面台、来回打转
+      p.meetHeld = near || p.meetHeld >= g.sideAfter ? p.meetHeld + this.lastDt : 0;
+      const meet = g.target === 'side' || (g.target === 'meetThenSide' && p.meetHeld >= g.sideAfter) ? seat.side : seat.meet;
       let best: { c: Cat; path: number[] } | null = null;
       for (const c of this.cats) {
         if (!free(c)) continue;

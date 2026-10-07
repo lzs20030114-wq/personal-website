@@ -589,3 +589,86 @@ describe('cohabit · 家具可加减、拖动（独立一层，标准布置随�
     expect(sim.furnitureFits(sim.furniture)).toBe(true);
   });
 });
+
+describe('cohabit · 引导方式（座位三态 · 会动的单元）', () => {
+  const posture = (o: ConstructorParameters<typeof CohabitSim>[0] = {}) => new CohabitSim({ trigger: 'posture', opening: false, faces: true, ...o });
+
+  it('身边台：平台不盖坐着的人头顶、比会面台近；标准布置下沙发座位的身边台够得着（猫走到台边离人 < 0.5 m = 共触带）', () => {
+    const sim = posture();
+    const rim = sim.layout.platR - COHABIT.CAT.bodyR;
+    for (const s of sim.seats) {
+      const u = sim.layout.units[s.side];
+      const m = sim.layout.units[s.meet];
+      expect(sim.overHead(u, s.x, s.y)).toBe(false);
+      const d = Math.hypot(u.x - s.x, u.y - s.y);
+      expect(d).toBeLessThan(Math.hypot(m.x - s.x, m.y - s.y));
+      if (sim.furn!.rects[s.furn].kind === 'sofa') expect(d - rim).toBeLessThan(COHABIT.BAND.near);
+    }
+  });
+
+  it('引到身边台：猫一路走到座位身边那台；先会面再身边：先到会面台、坐着的人看满 sideAfter 秒后再挪到身边台', () => {
+    const run = (target: 'side' | 'meetThenSide') => {
+      const sim = posture({ seed: 3, guide: { target } });
+      const seat = sim.seats[0];
+      const p = sim.addPerson(seat.x, seat.y)!;
+      p.mode = 'manual';
+      const cat = sim.addCat(sim.layout.units[60])!;
+      const visits: number[] = [];
+      for (let t = 0; t < 900; t += 1 / 30) {
+        sim.step(1 / 30);
+        const u = cat.unit!.i;
+        if (visits[visits.length - 1] !== u) visits.push(u);
+        if (u === seat.side) break;
+      }
+      return { seat, visits };
+    };
+    const a = run('side');
+    expect(a.visits[a.visits.length - 1]).toBe(a.seat.side);
+    const b = run('meetThenSide');
+    expect(b.visits[b.visits.length - 1]).toBe(b.seat.side);
+    expect(b.visits).toContain(b.seat.meet);
+    expect(b.visits.indexOf(b.seat.meet)).toBeLessThan(b.visits.length - 1);
+  });
+});
+
+describe('cohabit · 猫按 Mertens & Turner 1988 标定（COHABIT.CAT_MT）', () => {
+  /** 场景复现与 scripts/cohabit/calibrate-mt.mjs 相同：空房间 · 一位陌生人坐着 · 一只猫在地面 · 600 s */
+  const shares = (ignores: boolean) => {
+    let far = 0;
+    let near = 0;
+    let T = 0;
+    for (let seed = 1; seed <= 4; seed++) {
+      const sim = new CohabitSim({ trigger: 'posture', space: 'empty', seed, opening: false, cat: COHABIT.CAT_MT });
+      const s = sim.seats[2];
+      const p = sim.addPerson(s.x, s.y)!;
+      p.mode = 'manual';
+      p.ignores = ignores;
+      const cat = sim.addCat({ x: 0, y: 1.5 })!;
+      for (let t = 0; t < 600; t += 1 / 30) {
+        sim.step(1 / 30);
+        const d = Math.hypot(p.walker.x - cat.walker.x, p.walker.y - cat.walker.y);
+        if (d > 1) far += 1 / 30;
+        if (d < 0.5 && cat.walker.state !== 'walk') near += 1 / 30;
+        T += 1 / 30;
+      }
+    }
+    return { far: (far / T) * 100, near: (near / T) * 100 };
+  };
+
+  it('被动（看书不理猫）：> 1 m ≈ 78%、接触 ≈ 2%；主动（看着它）：> 1 m ≈ 34%、接触 ≈ 33%（容差 ±10 个百分点，4 种子）', () => {
+    const p = shares(true);
+    expect(Math.abs(p.far - 78)).toBeLessThan(10);
+    expect(p.near).toBeLessThan(6);
+    const a = shares(false);
+    expect(Math.abs(a.far - 34)).toBeLessThan(10);
+    expect(Math.abs(a.near - 33)).toBeLessThan(10);
+  }, 120_000);
+
+  it('两套常量各自生效：不传 cat 用演示值（痕迹档与旧守门不变），传 CAT_MT 只覆盖标定的那几项', () => {
+    const sim = new CohabitSim({ opening: false });
+    expect(sim.cat.tolerateAttended).toBe(COHABIT.CAT.tolerateAttended);
+    const mt = new CohabitSim({ opening: false, cat: COHABIT.CAT_MT });
+    expect(mt.cat.tolerateAttended).toBe(COHABIT.CAT_MT.tolerateAttended);
+    expect(mt.cat.sit).toBe(COHABIT.CAT.sit);
+  });
+});

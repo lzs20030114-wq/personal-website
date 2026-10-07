@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useBenchLang, useLabText } from './LabLanguage';
 import { LabControlLabel } from './LabControlLabel';
-import { COHABIT, CohabitSim, FACE_MODES, SPACE_MODES, TRIGGER_MODES, nearestNode, type Cat, type FaceMode, type SpaceMode, type TriggerMode, type Visitor } from '../../src/lib/space/cohabit';
+import { COHABIT, CohabitSim, FACE_MODES, GUIDE_TARGETS, SPACE_MODES, TRIGGER_MODES, nearestNode, type GuideTarget, type Cat, type FaceMode, type SpaceMode, type TriggerMode, type Visitor } from '../../src/lib/space/cohabit';
 import { PLAN, RESPONSES, type ResponseMode } from '../../src/lib/space/unit-activation';
 import type { CatPose } from '../../src/lib/space/cat-rules';
 import { H, W, canvasToRoom, drawPlan, readPalette, type Palette, type PlanPerson } from './planDraw';
@@ -42,6 +42,7 @@ const COPY = {
     rules: '通行代价：落下的单元对人是墙、对猫不是。停留代价：访客被别人贴到 1.35 m 以内就走；猫被访客贴到 1 m 以内撑过几秒就退到更远的格，之后一阵不再靠人；有人站着盯着它，它有三分之一几率靠到台边。空间只写单元：猫脚下钉住，猫四邻里人的痕迹最高的一格补满，落下会困住人的不落。让路按带：一个单元二十条带，挡在人身边或人路上的那几条各自收回到杆上（布回到顶上），其余照落；猫身下的带不收；人走到门口门正好开，走过去再落回。',
     space: '空间',
     rule: '规则',
+    guide: '引导',
     grid: '格数',
     response: '响应',
     goal: '促成相遇',
@@ -86,6 +87,7 @@ const COPY = {
     rules: 'Passage cost: a formed unit is a wall for people, not for cats. Staying cost: a visitor leaves when another comes within 1.35 m; a cat tolerates a visitor within 1 m for a few seconds, then retreats to a farther unit and keeps away for a while; when someone stands watching it, it approaches the platform edge one time in three. The space only writes units: the cat’s own unit stays formed, the neighbour with the strongest people trace is filled, and a unit that would trap someone is held back. Giving way by band: a unit has twenty bands; the few beside a person or on their route retract to the post (the cloth goes back up) while the rest come down; bands under a cat never retract; the door is open by the time the person reaches it and closes behind them.',
     space: 'space',
     rule: 'rule',
+    guide: 'lead to',
     grid: 'grid',
     response: 'response',
     goal: 'promote encounters',
@@ -249,6 +251,7 @@ export function CohabitBench({
   const [showTrace, setShowTrace] = useState(true);
   const [timeScale, setTimeScale] = useState<number>(TIME_DEF);
   const [trigger, setTrigger] = useState<TriggerMode>('posture');
+  const [guideTarget, setGuideTarget] = useState<GuideTarget>(COHABIT.GUIDE.target);
   const [grid, setGrid] = useState<number>(COHABIT.SEATS.GRID);
   const [space, setSpace] = useState<SpaceMode>('live');
   const seatsMode = trigger === 'posture';
@@ -289,7 +292,8 @@ export function CohabitBench({
 
   // 建仿真（换格数或规则才重建——座位三态的家具改了过道图；换「空间」档走 setSpace，人与猫留在原地）
   useEffect(() => {
-    const sim = new CohabitSim({ trigger, grid, space, mode, goal, look, threshold, fade, auto, clearance: clearanceOpt, lane: clearanceOpt !== null, faces: faceMode === 'bands' });
+    // 座位三态用按 Mertens & Turner 1988 标定的猫（COHABIT.CAT_MT）；痕迹（旧）保留演示值
+    const sim = new CohabitSim({ trigger, grid, space, mode, goal, look, threshold, fade, auto, clearance: clearanceOpt, lane: clearanceOpt !== null, faces: faceMode === 'bands', guide: { target: guideTarget }, cat: trigger === 'posture' ? COHABIT.CAT_MT : undefined });
     sim.setSpeed(speed);
     simRef.current = sim;
     heldRef.current = null;
@@ -309,6 +313,9 @@ export function CohabitBench({
   useEffect(() => {
     if (simRef.current) simRef.current.goal = goal;
   }, [goal]);
+  useEffect(() => {
+    if (simRef.current) simRef.current.guide.target = guideTarget;
+  }, [guideTarget]);
   useEffect(() => {
     simRef.current?.setFaces(faceMode === 'bands');
     paint();
@@ -608,6 +615,18 @@ export function CohabitBench({
                 {FACE_MODES.map((m) => (
                   <button key={m.key} type="button" className={m.key === faceMode ? 'active' : undefined} onClick={() => setFaceMode(m.key)}>
                     {lang === 'zh' ? m.zh : m.en}
+                  </button>
+                ))}
+              </span>
+            </div>
+            <div className="grp">
+              <LabControlLabel help={['坐着的人把猫引到哪一台。会面台：面前 1.0–1.5 m，猫在台面中心不付停留代价、又在共温带里；身边台：平台不盖头顶的最近一台，猫走到台边离人最近（共触只能发生在这儿）；先会面再身边：先到会面台，坐着的人看满 10 秒再递一步到身边台。只在座位三态下起作用。', 'Which unit a seated person leads the cat to. Meeting unit: in front, 1.0–1.5 m away, where the cat pays no staying cost and is inside the co-warmth band. Side unit: the nearest unit that does not hang over the head; at its edge the cat is closest (contact can only happen here). Meeting, then side: the meeting unit first, then after 10 s of being watched one more step to the side unit. Seats rule only.']} lang={lang}>
+                {t.guide}
+              </LabControlLabel>
+              <span className="seg">
+                {GUIDE_TARGETS.map((g) => (
+                  <button key={g.key} type="button" disabled={!seatsMode} className={g.key === guideTarget ? 'active' : undefined} onClick={() => setGuideTarget(g.key)}>
+                    {lang === 'zh' ? g.zh : g.en}
                   </button>
                 ))}
               </span>
