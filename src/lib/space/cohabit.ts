@@ -58,6 +58,13 @@ export const SPACE_MODES = [
   { key: 'empty', zh: '空房间', en: 'Empty room' },
 ] as const satisfies readonly { key: SpaceMode; zh: string; en: string }[];
 
+/** 让路两档（台架控件与差分清单同源）：按带 = COHABIT.FACES；整台 = 2-11 的让位闸（旧口径） */
+export type FaceMode = 'bands' | 'whole';
+export const FACE_MODES = [
+  { key: 'bands', zh: '按带', en: 'by band' },
+  { key: 'whole', zh: '整台', en: 'whole unit' },
+] as const satisfies readonly { key: FaceMode; zh: string; en: string }[];
+
 export type EventKind = 'gaze' | 'warmth' | 'touch' | 'pass';
 export const EVENT_KINDS = [
   { key: 'gaze', zh: '共视', en: 'Co-gaze' },
@@ -117,9 +124,42 @@ export const COHABIT = {
     /** 别人进到 1.35 m 以内要持续这么久才走（s；「上升的快慢」草案待定，演示值） */
     crowdS: 2,
   },
+  /**
+   * 按带让路（作者 2026-10-07「人从两个单元之间穿过，只收相对的两个面就够了」+「松键之后多余的布可以往上去，
+   * 就像它还没成型之前那样」= 引擎的按带回程 `retractStep(1.0)`，布沿杆收直、挑出回到芯半径）：
+   * 一个单元 BANDS 条带（与圆筒环同 20 条、18° 一条），**挡在人身边或人路上的带各自收回到芯上，其余照落**；
+   * 猫身下的带不收。让位从「整台落不落」变成「这一条带落不落」，R5 从「不许落」变成「开一道门」。
+   * 模块默认关（守门与对照的旧口径逐位不变），台架默认开。
+   */
+  FACES: {
+    BANDS: 20,
+    /** 收回 / 落回的速率（程度 / 秒）：与单元跟随档同一对数——收回 = 放、落回 = 收（回程快慢作者 10-06「不纠结」） */
+    open: PLAN.RESPONSE.fall,
+    close: PLAN.RESPONSE.rise,
+    /** 沿路线提前开门：路程 = 步速 × 收回时长 + 这个余量（m）——人走到门口门正好开 */
+    ahead: 0.5,
+    /** 猫身周围再多护住的距离（m）：猫身下与它要去的那几条带不收 */
+    catMargin: 0.1,
+    /** 门没开就在门口等；等超过这么久（s）就另选路（猫可能在计划之后坐到了门上） */
+    waitMax: 4,
+  },
   /** 一开场放谁（场地坐标按 pitch4 的倍数；猫按单元下标） */
   OPENING: { people: [{ x: 0, y: 1 }], cats: [0] },
 } as const;
+
+const BANDS = COHABIT.FACES.BANDS;
+/** 第 j 条带的中心方位角（弧度，房间坐标）——与圆筒环的带序同向 */
+export function bandAngle(j: number): number {
+  return ((j + 0.5) * 2 * Math.PI) / BANDS;
+}
+/** 点到线段的距离 */
+function segDist(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
+  const vx = bx - ax;
+  const vy = by - ay;
+  const L2 = vx * vx + vy * vy;
+  const t = L2 > 1e-12 ? Math.max(0, Math.min(1, ((px - ax) * vx + (py - ay) * vy) / L2)) : 0;
+  return Math.hypot(px - (ax + vx * t), py - (ay + vy * t));
+}
 
 /** 每条边的通行条件：空余宽度 ≥ 一个身体直径 */
 const BODY_W = PLAN.BODY_R * 2;
@@ -164,18 +204,35 @@ export function aisleGraph(l: PlanLayout): AisleGraph {
   return { n, nodes, door: [left, left + 1], edges, adj };
 }
 
-/** 一条边两侧各留多少空：单元那一侧 = 半格距 − 障碍半径（墙 = 平台、没落 = 芯）；房间墙那一侧 = 外侧线到墙的距离 */
-function sideClear(l: PlanLayout, u: number, wall: Uint8Array | null): number {
+/**
+ * 一条边两侧各留多少空：单元那一侧 = 半格距 − 障碍半径（墙 = 平台、没落 = 芯）；房间墙那一侧 = 外侧线到墙的距离。
+ * 给了 `bandWall`（按带让路：每单元 BANDS 条带各自是不是墙）就按带算——朝这条边的每条墙带外缘点在边法向上的
+ * 投影取最大（平台半径 × cos(带向 − 边法向)），没有墙带时只剩芯；收回的带不挡。
+ */
+function sideClear(l: PlanLayout, u: number, wall: Uint8Array | null, bandWall: Uint8Array | null, mx: number, my: number): number {
   if (u < 0) return l.roomM / 2 - (l.n / 2) * l.pitchM;
-  const r = wall && wall[u] ? l.platR : l.mastR;
+  if (!bandWall) {
+    const r = wall && wall[u] ? l.platR : l.mastR;
+    return l.pitchM / 2 - r;
+  }
+  const c = l.units[u];
+  const phi = Math.atan2(my - c.y, mx - c.x);
+  let r = l.mastR;
+  for (let j = 0; j < BANDS; j++) {
+    if (!bandWall[u * BANDS + j]) continue;
+    const cs = Math.cos(bandAngle(j) - phi);
+    if (cs > 0) r = Math.max(r, l.platR * cs);
+  }
   return l.pitchM / 2 - r;
 }
 
-/** 这条边人能不能过：两侧空余之和 ≥ 身体直径 */
-export function edgeOpen(l: PlanLayout, g: AisleGraph, k: number, wall: Uint8Array | null): boolean {
+/** 这条边人能不能过：两侧空余之和 ≥ 身体直径。`bandWall` 给了就按带算（见 sideClear） */
+export function edgeOpen(l: PlanLayout, g: AisleGraph, k: number, wall: Uint8Array | null, bandWall: Uint8Array | null = null): boolean {
   const e = g.edges[k];
   if (e.sideA === -1 && e.sideB === -1 && e.a >= g.door[0]) return true; // 门道
-  return sideClear(l, e.sideA, wall) + sideClear(l, e.sideB, wall) >= BODY_W - 1e-9;
+  const mx = (g.nodes[e.a].x + g.nodes[e.b].x) / 2;
+  const my = (g.nodes[e.a].y + g.nodes[e.b].y) / 2;
+  return sideClear(l, e.sideA, wall, bandWall, mx, my) + sideClear(l, e.sideB, wall, bandWall, mx, my) >= BODY_W - 1e-9;
 }
 
 /** 离 (x,y) 最近的交叉点（不含门） */
@@ -193,7 +250,7 @@ export function nearestNode(g: AisleGraph, x: number, y: number): number {
 }
 
 /** BFS：从 from 到 goals 里任一节点的最短路（节点序列，含两端）；不通 = null */
-export function shortestPath(l: PlanLayout, g: AisleGraph, from: number, goals: ReadonlySet<number>, wall: Uint8Array | null): number[] | null {
+export function shortestPath(l: PlanLayout, g: AisleGraph, from: number, goals: ReadonlySet<number>, wall: Uint8Array | null, bandWall: Uint8Array | null = null): number[] | null {
   if (goals.has(from)) return [from];
   const prev = new Int32Array(g.nodes.length).fill(-1);
   const seen = new Uint8Array(g.nodes.length);
@@ -202,7 +259,7 @@ export function shortestPath(l: PlanLayout, g: AisleGraph, from: number, goals: 
   for (let h = 0; h < q.length; h++) {
     const v = q[h];
     for (const k of g.adj[v]) {
-      if (!edgeOpen(l, g, k, wall)) continue;
+      if (!edgeOpen(l, g, k, wall, bandWall)) continue;
       const e = g.edges[k];
       const w = e.a === v ? e.b : e.a;
       if (seen[w]) continue;
@@ -224,11 +281,11 @@ export function shortestPath(l: PlanLayout, g: AisleGraph, from: number, goals: 
 }
 
 /** R5：这组墙之下，每个在场访客都还有路到某扇门 */
-export function everyoneHasExit(l: PlanLayout, g: AisleGraph, people: readonly { x: number; y: number; present: boolean }[], wall: Uint8Array): boolean {
+export function everyoneHasExit(l: PlanLayout, g: AisleGraph, people: readonly { x: number; y: number; present: boolean }[], wall: Uint8Array, bandWall: Uint8Array | null = null): boolean {
   const doors = new Set(g.door);
   for (const p of people) {
     if (!p.present) continue;
-    if (!shortestPath(l, g, nearestNode(g, p.x, p.y), doors, wall)) return false;
+    if (!shortestPath(l, g, nearestNode(g, p.x, p.y), doors, wall, bandWall)) return false;
   }
   return true;
 }
@@ -253,6 +310,8 @@ export interface Visitor {
   legPath: number;
   /** 别人进到 1.35 m 以内持续了多久（s）——停留代价要撑过 CROWD_S 才算（演示值） */
   crowdedFor: number;
+  /** 在还没开的门口等了多久（s，按带让路） */
+  waitFor: number;
   /** 累计：走过的路程里，比直线多走的部分（m） */
   detour: number;
   straight: number;
@@ -330,6 +389,8 @@ export interface CohabitOpts {
   auto?: boolean;
   /** 空间的目的「促成相遇」规则开关（默认开；关 = 单元只跟痕迹） */
   goal?: boolean;
+  /** 按带让路（COHABIT.FACES）；默认关 = 整台让位的旧口径 */
+  faces?: boolean;
 }
 
 export class CohabitSim {
@@ -363,6 +424,14 @@ export class CohabitSim {
   readonly wall: Uint8Array;
   /** 被 R5 钉在墙线以下的单元（想落、落了会困住人） */
   readonly heldR5: Uint8Array;
+  /** 按带让路（faces）：每单元 BANDS 条带各自的收回程度 0–1（1 = 收直到芯上）、本步被请求、猫身下不许收、此刻是墙、
+   *  开不了的墙（猫身下 ⇒ 规划与 R5 只认这些） */
+  faces: boolean;
+  readonly bandOpen: Float32Array;
+  readonly bandWant: Uint8Array;
+  readonly bandHold: Uint8Array;
+  readonly bandWall: Uint8Array;
+  readonly bandHard: Uint8Array;
   t = 0;
   private nextId = 1;
   private readonly seed: number;
@@ -403,6 +472,12 @@ export class CohabitSim {
     this.wall = new Uint8Array(n);
     this.heldR5 = new Uint8Array(n);
     this.wallScratch = new Uint8Array(n);
+    this.faces = opts.faces ?? false;
+    this.bandOpen = new Float32Array(n * BANDS);
+    this.bandWant = new Uint8Array(n * BANDS);
+    this.bandHold = new Uint8Array(n * BANDS);
+    this.bandWall = new Uint8Array(n * BANDS);
+    this.bandHard = new Uint8Array(n * BANDS);
     this.applySpace();
     if (opts.opening ?? true) {
       for (const o of COHABIT.OPENING.people) {
@@ -424,6 +499,7 @@ export class CohabitSim {
   private applySpace(): void {
     this.act.reset();
     this.heldR5.fill(0);
+    this.resetBands();
     if (this.space === 'fixed') {
       for (const u of this.layout.units) if (u.row % 2 === 0) this.act.degree[u.i] = 1;
     }
@@ -469,6 +545,7 @@ export class CohabitSim {
       legFrom: null,
       legPath: 0,
       crowdedFor: 0,
+      waitFor: 0,
       detour: 0,
       straight: 0,
     };
@@ -529,7 +606,10 @@ export class CohabitSim {
   clearTraces(): void {
     this.field.clear();
     this.catField.clear();
-    if (this.space === 'live') this.act.reset();
+    if (this.space === 'live') {
+      this.act.reset();
+      this.resetBands();
+    }
     for (const c of this.cats) this.keepSupport(c);
     this.refreshWalls();
   }
@@ -673,6 +753,143 @@ export class CohabitSim {
     this.clearance = v;
     this.lane = v !== null;
   }
+  /** 按带让路开关；关掉时带全部落回 */
+  setFaces(on: boolean): void {
+    this.faces = on;
+    if (!on) this.resetBands();
+  }
+  private resetBands(): void {
+    this.bandOpen.fill(0);
+    this.bandWant.fill(0);
+    this.bandHold.fill(0);
+    this.bandWall.fill(0);
+    this.bandHard.fill(0);
+  }
+
+  // ── 按带让路 ─────────────────────────────────────────────────────────────
+
+  /** 带离身体至少留多远（m）= 身体 + 让位；让位关着时只剩身体 */
+  get marginM(): number {
+    return PLAN.BODY_R + (this.clearance ?? 0);
+  }
+
+  /** 第 u 台第 j 条带的径向段（芯外缘 → 平台外缘）。`full` = 按全落的长度（问「它落下来挡不挡人」），
+   *  否则按它此刻的收回程度（问「它现在挡没挡着」）——请求必须按全长判，按现长判会越收越够不着人、刚收又落回 */
+  private bandSeg(u: PlanUnit, j: number, full = false): [number, number, number, number] {
+    const a = bandAngle(j);
+    const cx = Math.cos(a);
+    const cy = Math.sin(a);
+    const r = full ? this.layout.platR : this.layout.mastR + (this.layout.platR - this.layout.mastR) * (1 - this.bandOpen[u.i * BANDS + j]);
+    return [u.x + cx * this.layout.mastR, u.y + cy * this.layout.mastR, u.x + cx * r, u.y + cy * r];
+  }
+
+  /** 猫身下（与它正要走去的那一处）的带不许收；转移中起落两台整台护住 */
+  private holdBands(): void {
+    this.bandHold.fill(0);
+    const R = COHABIT.CAT.bodyR + COHABIT.FACES.catMargin;
+    for (const c of this.cats) {
+      if (!c.unit) continue;
+      if (c.transfer) {
+        for (const u of this.supportOf(c)) this.bandHold.fill(1, u.i * BANDS, (u.i + 1) * BANDS);
+        continue;
+      }
+      const spots: { x: number; y: number }[] = [{ x: c.walker.x, y: c.walker.y }];
+      if (c.walker.state === 'walk' && c.walker.route.length) spots.push(c.walker.route[0]);
+      const u = c.unit;
+      for (const s of spots) {
+        const dx = s.x - u.x;
+        const dy = s.y - u.y;
+        const d = Math.hypot(dx, dy);
+        if (d < R) {
+          this.bandHold.fill(1, u.i * BANDS, (u.i + 1) * BANDS);
+          continue;
+        }
+        const ang = Math.atan2(dy, dx);
+        const half = Math.asin(Math.min(1, R / d)) + Math.PI / BANDS;
+        for (let j = 0; j < BANDS; j++) if (Math.abs(wrapAngle(bandAngle(j) - ang)) <= half) this.bandHold[u.i * BANDS + j] = 1;
+      }
+    }
+  }
+
+  /**
+   * 谁的身边、谁的路上有带，就请求那条带收回：
+   *   身边 = 带的径向段离身体中心 < 身体 + 让位；
+   *   路上 = 沿还没走的路线往前 `步速 × 收回时长 + 余量` 的路程内，带外缘点落在这条走廊（半宽同上）里。
+   * 只请求，收不收还要看猫（holdBands）。
+   */
+  private requestBands(): void {
+    this.bandWant.fill(0);
+    const l = this.layout;
+    const margin = this.marginM;
+    for (const p of this.people) {
+      const w = p.walker;
+      if (!w.present) continue;
+      const ahead = w.state === 'walk' && p.mode !== 'held' ? w.speed / COHABIT.FACES.open + COHABIT.FACES.ahead : 0;
+      // 路线折线（从当前位置起），截到 ahead 路程
+      const path: { x: number; y: number }[] = [{ x: w.x, y: w.y }];
+      if (ahead > 0) {
+        let left = ahead;
+        let px = w.x;
+        let py = w.y;
+        for (const wp of w.route) {
+          const d = Math.hypot(wp.x - px, wp.y - py);
+          if (d <= left) {
+            path.push({ x: wp.x, y: wp.y });
+            left -= d;
+            px = wp.x;
+            py = wp.y;
+          } else {
+            path.push({ x: px + ((wp.x - px) * left) / d, y: py + ((wp.y - py) * left) / d });
+            break;
+          }
+        }
+      }
+      const near = l.platR + margin + ahead + 0.5;
+      for (const u of l.units) {
+        if (Math.hypot(u.x - w.x, u.y - w.y) > near) continue;
+        for (let j = 0; j < BANDS; j++) {
+          const [ax, ay, bx, by] = this.bandSeg(u, j, true);
+          let hit = segDist(w.x, w.y, ax, ay, bx, by) < margin;
+          // 带外缘点（全落的位置）离路线这一段 < 走廊半宽
+          for (let k = 1; !hit && k < path.length; k++) hit = segDist(bx, by, path[k - 1].x, path[k - 1].y, path[k].x, path[k].y) < margin;
+          if (hit) this.bandWant[u.i * BANDS + j] = 1;
+        }
+      }
+    }
+  }
+
+  /** 带按速率收回 / 落回；算出此刻哪些带是墙、哪些是开不了的墙 */
+  private advanceBands(dt: number): void {
+    const up = COHABIT.FACES.open * dt;
+    const down = COHABIT.FACES.close * dt;
+    for (let i = 0; i < this.bandOpen.length; i++) {
+      const target = this.bandWant[i] && !this.bandHold[i] ? 1 : 0;
+      const o = this.bandOpen[i];
+      this.bandOpen[i] = target > o ? Math.min(1, o + up) : Math.max(0, o - down);
+      const u = (i / BANDS) | 0;
+      const wall = this.act.degree[u] * (1 - this.bandOpen[i]) >= COHABIT.WALL_AT ? 1 : 0;
+      this.bandWall[i] = wall;
+      this.bandHard[i] = wall && this.bandHold[i] ? 1 : 0;
+    }
+  }
+
+  /** 人正前方贴着一条还是墙的带（门没开）：这一步不往前走 */
+  private aheadBlocked(p: Visitor): boolean {
+    const w = p.walker;
+    const hx = Math.cos(w.heading);
+    const hy = Math.sin(w.heading);
+    const lim = PLAN.BODY_R + 0.05;
+    for (const u of this.layout.units) {
+      if (Math.hypot(u.x - w.x, u.y - w.y) > this.layout.platR + lim) continue;
+      for (let j = 0; j < BANDS; j++) {
+        if (!this.bandWall[u.i * BANDS + j]) continue;
+        const [ax, ay, bx, by] = this.bandSeg(u, j);
+        if ((bx - w.x) * hx + (by - w.y) * hy <= 0) continue; // 在身后
+        if (segDist(w.x, w.y, ax, ay, bx, by) < lim) return true;
+      }
+    }
+    return false;
+  }
 
   // ── 读数 ──────────────────────────────────────────────────────────────────
 
@@ -775,15 +992,32 @@ export class CohabitSim {
           w.gaze = g;
         } else p.watching = null;
       } else w.lookAround = this.look;
-      w.step(dt);
+      // 按带让路：门还没开就在门口等（等太久另选路——猫可能在计划之后坐到了门上）
+      if (this.faces && this.space === 'live' && w.state === 'walk' && this.aheadBlocked(p)) {
+        p.waitFor += dt;
+        if (p.waitFor > COHABIT.FACES.waitMax) {
+          p.waitFor = 0;
+          w.place(w.x, w.y);
+          p.pause = 0;
+        } else {
+          const sp = w.speed;
+          w.speed = 0;
+          w.step(dt);
+          w.speed = sp;
+        }
+      } else {
+        p.waitFor = 0;
+        w.step(dt);
+      }
     }
     const moved = Math.hypot(w.x - p.lastX, w.y - p.lastY);
     p.moving = moved > 1e-9;
     p.lastX = w.x;
     p.lastY = w.y;
     if (w.present) {
-      const hole = this.keepOutM;
-      this.field.imprintShaped(w.x, w.y, this.reach, dt, w.heading, this.fov, hole, this.lane && p.moving ? hole : 0, w.gaze);
+      // 按带让路下不挖洞、不开走廊：单元可以落在人身边，挡人的带自己收
+      const hole = this.faces ? 0 : this.keepOutM;
+      this.field.imprintShaped(w.x, w.y, this.reach, dt, w.heading, this.fov, hole, !this.faces && this.lane && p.moving ? hole : 0, w.gaze);
     }
     // 一程走完：记绕行
     if (p.legFrom && w.state !== 'walk') {
@@ -817,11 +1051,12 @@ export class CohabitSim {
       watch = c.id;
     }
     if (goal < 0) goal = this.randomNode(from);
-    const path = shortestPath(this.layout, g, from, new Set([goal]), this.wall);
+    const planWall = this.faces ? this.bandHard : null;
+    const path = shortestPath(this.layout, g, from, new Set([goal]), this.wall, planWall);
     if (!path || path.length < 2) {
       // 不通（或已在原地）：换一个随机点；仍不通就站着再等
       const alt = this.randomNode(from);
-      const p2 = shortestPath(this.layout, g, from, new Set([alt]), this.wall);
+      const p2 = shortestPath(this.layout, g, from, new Set([alt]), this.wall, planWall);
       if (!p2 || p2.length < 2) {
         p.pause = this.pick({ min: 2, max: 6 });
         return;
@@ -1108,11 +1343,21 @@ export class CohabitSim {
         if (best) inputs[best.i] = Math.max(inputs[best.i], thr);
       }
     }
-    // 让位：平台下来会打到人的不落；已经落下的不算（它早就在那儿，人是走到它跟前的）
-    blockedUnits(this.layout, this.people.map((p) => p.walker), this.clearance, this.blocked);
-    for (let u = 0; u < this.blocked.length; u++) if (this.wall[u]) this.blocked[u] = 0;
+    // 让位：整台口径 = 平台下来会打到人的不落（已经落下的不算：它早就在那儿，人是走到它跟前的）；
+    // 按带口径 = 不闸整台，挡人的带各自收回（下面）
+    if (this.faces) this.blocked.fill(0);
+    else {
+      blockedUnits(this.layout, this.people.map((p) => p.walker), this.clearance, this.blocked);
+      for (let u = 0; u < this.blocked.length; u++) if (this.wall[u]) this.blocked[u] = 0;
+    }
     const before = Float64Array.from(this.act.degree);
-    this.act.update(inputs, this.act.mode === 'follow' ? dt : Infinity, this.clearance === null ? null : this.blocked);
+    this.act.update(inputs, this.act.mode === 'follow' ? dt : Infinity, this.clearance === null || this.faces ? null : this.blocked);
+    if (this.faces) {
+      this.holdBands();
+      this.requestBands();
+      this.advanceBands(dt);
+    }
+    const planWall = this.faces ? this.bandHard : null;
     // R5：这一步要成墙的单元按读数从高到低逐个试加，加了会困住人的钉回墙线以下
     this.wallScratch.set(this.wall);
     const rising: number[] = [];
@@ -1124,7 +1369,7 @@ export class CohabitSim {
     this.heldR5.fill(0);
     for (const u of rising) {
       this.wallScratch[u] = 1;
-      if (!everyoneHasExit(this.layout, this.graph, this.people.map((p) => p.walker), this.wallScratch)) {
+      if (!everyoneHasExit(this.layout, this.graph, this.people.map((p) => p.walker), this.wallScratch, planWall)) {
         this.wallScratch[u] = 0;
         this.act.degree[u] = COHABIT.WALL_AT - 1e-3;
         this.heldR5[u] = 1;
@@ -1207,6 +1452,9 @@ export class CohabitSim {
     }
     let held = 0;
     for (let u = 0; u < this.heldR5.length; u++) held += this.heldR5[u];
+    let bandsOpen = 0;
+    if (this.faces)
+      for (let i = 0; i < this.bandOpen.length; i++) if (this.bandOpen[i] >= 0.5 && this.act.degree[(i / BANDS) | 0] >= COHABIT.WALL_AT) bandsOpen++;
     return {
       t: this.t,
       ledger: { counts: { ...this.ledger.counts }, seconds: { ...this.ledger.seconds } },
@@ -1218,6 +1466,7 @@ export class CohabitSim {
       formed: this.act.formed().length,
       walls: this.wall.reduce((a, b) => a + b, 0),
       heldR5: held,
+      bandsOpen,
       people: this.people.length,
       cats: this.cats.length,
     };
@@ -1238,6 +1487,8 @@ export interface CohabitSummary {
   formed: number;
   walls: number;
   heldR5: number;
+  /** 按带让路：此刻收回着的带（在成了墙的单元上）有几条 */
+  bandsOpen: number;
   people: number;
   cats: number;
 }

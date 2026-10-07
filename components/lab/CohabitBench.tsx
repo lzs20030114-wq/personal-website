@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useBenchLang, useLabText } from './LabLanguage';
 import { LabControlLabel } from './LabControlLabel';
-import { COHABIT, CohabitSim, SPACE_MODES, type Cat, type SpaceMode } from '../../src/lib/space/cohabit';
+import { COHABIT, CohabitSim, FACE_MODES, SPACE_MODES, type Cat, type FaceMode, type SpaceMode } from '../../src/lib/space/cohabit';
 import { PLAN, RESPONSES, type ResponseMode } from '../../src/lib/space/unit-activation';
 import type { CatPose } from '../../src/lib/space/cat-rules';
 import { H, W, canvasToRoom, drawPlan, readPalette, type Palette, type PlanPerson } from './planDraw';
@@ -15,6 +15,7 @@ import { useBenchLoop } from './useBenchLoop';
  * 2-11 的访客与 2-12 的住户猫放进同一间房、同一片单元：两种代价（墙 / 停留）· R1–R5 · 四类相遇事件记账
  * · 空间的目的「促成相遇」。模型 = src/lib/space/cohabit.ts；画法复用 planDraw（墙 / R5 / 事件线三层是本轮加的）。
  * 三档「空间」给对照（会动 / 钉死 / 空房间），HUD 实时读四类事件数与猫在 1 m 外的时间占比（参照 M&T 0.78）。
+ * 让路两档（2026-10-07 作者「人穿过只收相对的两个面」）：按带 = 挡人的带各自收回到芯上（默认）；整台 = 2-11 的让位闸。
  */
 const TIME_SCALES = [1, 3, 8] as const;
 const TIME_DEF = 1;
@@ -28,16 +29,17 @@ const COPY = {
     formed: (n: number, total: number) => `成形 ${n} / ${total}`,
     events: (c: Record<string, number>, s: Record<string, number>) =>
       `共视 ${c.gaze}（${s.gaze.toFixed(0)} s）· 共温 ${c.warmth}（${s.warmth.toFixed(0)} s）· 共触 ${c.touch} · 交接 ${c.pass}`,
-    line: (t: number, people: number, cats: number, far: number, held: number, detour: number) =>
-      `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${people} 人 · ${cats} 猫 · 猫在 1 m 外 ${(far * 100).toFixed(0)}%（参照 78%）· 绕行 ${detour.toFixed(1)} m${held ? ` · R5 钉住 ${held}` : ''}`,
-    legend: '实墨圈 = 对人是墙 · 紫环 = 成形 · 芯上短横 = R5 钉住 · 连线：绿虚 共视 / 紫 共温 / 粉 共触 / 墨 交接',
+    line: (t: number, people: number, cats: number, far: number, held: number, detour: number, bands: number | null) =>
+      `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${people} 人 · ${cats} 猫 · 猫在 1 m 外 ${(far * 100).toFixed(0)}%（参照 78%）· 绕行 ${detour.toFixed(1)} m${bands !== null ? ` · 让路 ${bands} 条带` : ''}${held ? ` · R5 钉住 ${held}` : ''}`,
+    legend: '实墨圈 = 对人是墙 · 紫环 = 成形（缺口 = 收回的带）· 芯上短横 = R5 钉住 · 连线：绿虚 共视 / 紫 共温 / 粉 共触 / 墨 交接',
     hint: `点空地放访客，按住拖；猫可拖到任一单元。「自走」让访客漫步（一半几率去看猫）、猫按坐 / 卧 / 换格的节奏活动。最多 ${COHABIT.MAX_PEOPLE} 人 ${COHABIT.MAX_CATS} 猫。`,
-    rules: '通行代价：落下的单元对人是墙、对猫不是。停留代价：访客被别人贴到 1.35 m 以内就走；猫被访客贴到 1 m 以内撑过几秒就退到更远的格，之后一阵不再靠人；有人站着盯着它，它有三分之一几率靠到台边。空间只写单元：猫脚下钉住，猫四邻里人的痕迹最高的一格补满，落下会困住人的不落。',
+    rules: '通行代价：落下的单元对人是墙、对猫不是。停留代价：访客被别人贴到 1.35 m 以内就走；猫被访客贴到 1 m 以内撑过几秒就退到更远的格，之后一阵不再靠人；有人站着盯着它，它有三分之一几率靠到台边。空间只写单元：猫脚下钉住，猫四邻里人的痕迹最高的一格补满，落下会困住人的不落。让路按带：一个单元二十条带，挡在人身边或人路上的那几条各自收回到杆上（布回到顶上），其余照落；猫身下的带不收；人走到门口门正好开，走过去再落回。',
     space: '空间',
     grid: '格数',
     response: '响应',
     goal: '促成相遇',
     look: '转头',
+    faces: '让路',
     clearance: '让位',
     threshold: '阈值',
     fade: '散掉',
@@ -61,16 +63,17 @@ const COPY = {
     formed: (n: number, total: number) => `formed ${n} / ${total}`,
     events: (c: Record<string, number>, s: Record<string, number>) =>
       `co-gaze ${c.gaze} (${s.gaze.toFixed(0)} s) · co-warmth ${c.warmth} (${s.warmth.toFixed(0)} s) · contact ${c.touch} · crossing ${c.pass}`,
-    line: (t: number, people: number, cats: number, far: number, held: number, detour: number) =>
-      `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${people} people · ${cats} cats · cat beyond 1 m ${(far * 100).toFixed(0)}% (reference 78%) · detour ${detour.toFixed(1)} m${held ? ` · R5 held ${held}` : ''}`,
-    legend: 'Solid ink ring = wall for people · purple ring = formed · bar on the mast = held by R5 · links: green dashed co-gaze / purple co-warmth / rose contact / ink crossing',
+    line: (t: number, people: number, cats: number, far: number, held: number, detour: number, bands: number | null) =>
+      `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${people} people · ${cats} cats · cat beyond 1 m ${(far * 100).toFixed(0)}% (reference 78%) · detour ${detour.toFixed(1)} m${bands !== null ? ` · ${bands} bands giving way` : ''}${held ? ` · R5 held ${held}` : ''}`,
+    legend: 'Solid ink ring = wall for people · purple ring = formed (notch = retracted band) · bar on the mast = held by R5 · links: green dashed co-gaze / purple co-warmth / rose contact / ink crossing',
     hint: `Click empty floor to add a visitor and hold to drag; a cat can be dragged onto any unit. Wander lets visitors roam (half the time towards a cat) and cats sit, lie and move between units. Up to ${COHABIT.MAX_PEOPLE} people and ${COHABIT.MAX_CATS} cats.`,
-    rules: 'Passage cost: a formed unit is a wall for people, not for cats. Staying cost: a visitor leaves when another comes within 1.35 m; a cat tolerates a visitor within 1 m for a few seconds, then retreats to a farther unit and keeps away for a while; when someone stands watching it, it approaches the platform edge one time in three. The space only writes units: the cat’s own unit stays formed, the neighbour with the strongest people trace is filled, and a unit that would trap someone is held back.',
+    rules: 'Passage cost: a formed unit is a wall for people, not for cats. Staying cost: a visitor leaves when another comes within 1.35 m; a cat tolerates a visitor within 1 m for a few seconds, then retreats to a farther unit and keeps away for a while; when someone stands watching it, it approaches the platform edge one time in three. The space only writes units: the cat’s own unit stays formed, the neighbour with the strongest people trace is filled, and a unit that would trap someone is held back. Giving way by band: a unit has twenty bands; the few beside a person or on their route retract to the post (the cloth goes back up) while the rest come down; bands under a cat never retract; the door is open by the time the person reaches it and closes behind them.',
     space: 'space',
     grid: 'grid',
     response: 'response',
     goal: 'promote encounters',
     look: 'look around',
+    faces: 'giving way',
     clearance: 'clearance',
     threshold: 'threshold',
     fade: 'fade',
@@ -106,8 +109,9 @@ function sceneOf(sim: CohabitSim, showTrace: boolean) {
     reach: sim.reach,
     held: p.mode === 'held',
     fov: sim.fov,
-    keepOut: sim.keepOutM,
-    lane: sim.lane && p.moving,
+    // 按带：画的是身体 + 让位那一小圈（带离它就收）；整台：画让位距离 D（芯到人）
+    keepOut: sim.faces ? sim.marginM : sim.keepOutM,
+    lane: !sim.faces && sim.lane && p.moving,
   }));
   for (const c of sim.cats)
     people.push({
@@ -131,7 +135,8 @@ function sceneOf(sim: CohabitSim, showTrace: boolean) {
     act: sim.act,
     people,
     showTrace,
-    blocked: sim.clearance === null ? null : sim.blocked,
+    blocked: sim.clearance === null || sim.faces ? null : sim.blocked,
+    bands: sim.faces && sim.space === 'live' ? { open: sim.bandOpen, hold: sim.bandHold, count: COHABIT.FACES.BANDS } : null,
     supportIds: sim.space === 'empty' ? undefined : supportIds,
     landingId: sim.space === 'empty' ? null : landing,
     walls: sim.space === 'empty' ? null : sim.wall,
@@ -193,6 +198,7 @@ export function CohabitBench({
   const [space, setSpace] = useState<SpaceMode>('live');
   const [mode, setMode] = useState<ResponseMode>('follow');
   const [goal, setGoal] = useState(true);
+  const [faceMode, setFaceMode] = useState<FaceMode>('bands');
   const [look, setLook] = useState<boolean>(PLAN.ATTENTION.look);
   const [clearOn, setClearOn] = useState(true);
   const [clearance, setClearance] = useState<number>(PLAN.ATTENTION.clearance);
@@ -210,6 +216,7 @@ export function CohabitBench({
     far: 1,
     held: 0,
     detour: 0,
+    bands: 0 as number | null,
     counts: { gaze: 0, warmth: 0, touch: 0, pass: 0 } as Record<string, number>,
     seconds: { gaze: 0, warmth: 0, touch: 0, pass: 0 } as Record<string, number>,
   }));
@@ -225,7 +232,7 @@ export function CohabitBench({
 
   // 建仿真（换格数才重建；换「空间」档走 setSpace，人与猫留在原地）
   useEffect(() => {
-    const sim = new CohabitSim({ grid, space, mode, goal, look, threshold, fade, auto, clearance: clearanceOpt, lane: clearanceOpt !== null });
+    const sim = new CohabitSim({ grid, space, mode, goal, look, threshold, fade, auto, clearance: clearanceOpt, lane: clearanceOpt !== null, faces: faceMode === 'bands' });
     sim.setSpeed(speed);
     simRef.current = sim;
     heldRef.current = null;
@@ -243,6 +250,11 @@ export function CohabitBench({
   useEffect(() => {
     if (simRef.current) simRef.current.goal = goal;
   }, [goal]);
+  useEffect(() => {
+    simRef.current?.setFaces(faceMode === 'bands');
+    paint();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [faceMode]);
   useEffect(() => {
     simRef.current?.setLook(look);
   }, [look]);
@@ -292,7 +304,7 @@ export function CohabitBench({
       if (runningRef.current) sim.step(Math.min(MAX_SIM_DT, dt * timeRef.current));
       paint();
       const s = sim.summary();
-      const key = `${Math.floor(s.t)}|${s.formed}|${s.people}|${s.cats}|${s.ledger.counts.gaze}|${s.ledger.counts.warmth}|${s.ledger.counts.touch}|${s.ledger.counts.pass}|${s.heldR5}`;
+      const key = `${Math.floor(s.t)}|${s.formed}|${s.people}|${s.cats}|${s.ledger.counts.gaze}|${s.ledger.counts.warmth}|${s.ledger.counts.touch}|${s.ledger.counts.pass}|${s.heldR5}|${sim.faces ? s.bandsOpen : '-'}`;
       if (key !== lastHud.current) {
         lastHud.current = key;
         setHud({
@@ -304,6 +316,7 @@ export function CohabitBench({
           far: s.catFarShare,
           held: s.heldR5,
           detour: s.detour,
+          bands: sim.faces && sim.space === 'live' ? s.bandsOpen : null,
           counts: { ...s.ledger.counts },
           seconds: { ...s.ledger.seconds },
         });
@@ -422,7 +435,7 @@ export function CohabitBench({
           <div className="dim" data-cohabit-events>
             {t.events(hud.counts, hud.seconds)}
             <br />
-            {t.line(hud.t, hud.people, hud.cats, hud.far, hud.held, hud.detour)}
+            {t.line(hud.t, hud.people, hud.cats, hud.far, hud.held, hud.detour, hud.bands)}
           </div>
         </div>
         <div className="lab-hud bl dim">{t.legend}</div>
@@ -437,6 +450,18 @@ export function CohabitBench({
               <span className="seg">
                 {SPACE_MODES.map((m) => (
                   <button key={m.key} type="button" className={m.key === space ? 'active' : undefined} onClick={() => setSpace(m.key)}>
+                    {lang === 'zh' ? m.zh : m.en}
+                  </button>
+                ))}
+              </span>
+            </div>
+            <div className="grp">
+              <LabControlLabel help={['按带：一个单元二十条带，挡在人身边或人路上的那几条各自收回到杆上，其余照落、猫身下的不收，门在人走到之前开好；整台：平台会打到人的单元整台不落（2-11 的让位闸）。', 'By band: a unit has twenty bands; the few beside a person or on their route retract to the post while the rest come down, bands under a cat never retract, the door opens before the person arrives. Whole unit: a unit whose platform would hit someone holds back entirely (the Lab 2-11 clearance gate).']} lang={lang}>
+                {t.faces}
+              </LabControlLabel>
+              <span className="seg">
+                {FACE_MODES.map((m) => (
+                  <button key={m.key} type="button" className={m.key === faceMode ? 'active' : undefined} onClick={() => setFaceMode(m.key)}>
                     {lang === 'zh' ? m.zh : m.en}
                   </button>
                 ))}
@@ -482,7 +507,7 @@ export function CohabitBench({
                 <input
                   type="checkbox"
                   checked={clearOn}
-                  title={tx(lang === 'zh' ? '平台外缘离身体至少留这么远才许下来。4×4 真实单元下，站在交叉点的人离四邻单元中心 0.87 m，让位 0.15 m（D 0.89）会把四台都闸住，≤ 0.13 m 才放行' : 'a platform must keep this far from a body before it may come down. At 4×4 a person at a crossing is 0.87 m from the four neighbouring units; 0.15 m (D 0.89) holds all four back, 0.13 m or less lets them form')}
+                  title={tx(lang === 'zh' ? '布离身体至少留这么远。按带：离身体不到「身体 + 让位」的带收回；整台：平台外缘离身体不到这么远的单元整台不落（4×4 下站在交叉点的人离四邻单元中心 0.87 m，0.15 m 会把四台都闸住）' : 'how far the cloth keeps from a body. By band: bands closer than body + clearance retract; whole unit: a unit whose platform edge would come closer holds back entirely (at 4×4 a person at a crossing is 0.87 m from the four neighbours, so 0.15 m holds all four back)')}
                   onChange={(e) => setClearOn(e.target.checked)}
                 />
                 {t.clearance} {clearance.toFixed(2)} {tx('m')}

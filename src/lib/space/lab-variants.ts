@@ -1,5 +1,5 @@
 import { CAT_BEHAVIOURS } from './cat-plan';
-import { SPACE_MODES } from './cohabit';
+import { FACE_MODES, SPACE_MODES } from './cohabit';
 /**
  * 项目二台架的差分清单（2026-09-03，用户拍板「收纳成七台四段」+「千万不要丢差分的可能性」）。
  *
@@ -126,6 +126,8 @@ const WALK_GRID_AXIS: VariantAxis = {
 const WALK_READING_AXIS: VariantAxis = { axis: '读法', options: READINGS.map((r) => ({ key: r.key, label: r.zh })) };
 /** 单元怎么响应读数：跟随（人走了收回去）/ 锁定（滞回）——2026-09-04 用户要的那一档与项目论点那一档 */
 const WALK_RESPONSE_AXIS: VariantAxis = { axis: '响应', options: RESPONSES.map((r) => ({ key: r.key, label: r.zh })) };
+/** Lab 2-14 让路两档（2026-10-07 作者「只收相对的两个面」）：按带 = 挡人的带各自收回；整台 = 2-11 的让位闸 */
+const COHABIT_FACES_AXIS: VariantAxis = { axis: '让路', options: FACE_MODES.map((m) => ({ key: m.key, label: m.zh })) };
 
 /** Lab 2-13 单元组合（2026-09-17 立项，2026-09-20 用户纠偏为「同一种平台一圈起伏、首尾相接」+ 三张图形）：
  *  编制 = 图形（① 坡降 / ② 升台 / ③ 合腔 + 五种接法），形态四档为子选项（只管圆环的起伏单元，方环下变灰），
@@ -233,7 +235,7 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     en: 'People and cats together',
     // 编制 = 空间三档（会动 / 钉死 / 空房间，对照用）；人数 / 猫数 / 拖 / 自走是现场操作不是档
     plans: SPACE_MODES.map((m) => ({ key: m.key, label: m.zh })),
-    axes: [WALK_GRID_AXIS, WALK_RESPONSE_AXIS],
+    axes: [WALK_GRID_AXIS, WALK_RESPONSE_AXIS, COHABIT_FACES_AXIS],
   },
 ];
 

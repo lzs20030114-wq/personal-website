@@ -3,6 +3,7 @@ import {
   COHABIT,
   CohabitSim,
   aisleGraph,
+  bandAngle,
   edgeOpen,
   everyoneHasExit,
   nearestNode,
@@ -10,6 +11,16 @@ import {
   shortestPath,
 } from './cohabit';
 import { PLAN, planLayout } from './unit-activation';
+
+const B = COHABIT.FACES.BANDS;
+const openBands = (sim: CohabitSim, u: number) => {
+  let n = 0;
+  for (let j = 0; j < B; j++) if (sim.bandOpen[u * B + j] >= 0.5) n++;
+  return n;
+};
+const feed = (sim: CohabitSim, units: number[], dt: number) => {
+  for (const u of units) sim.field.imprint(sim.layout.units[u].x, sim.layout.units[u].y, sim.layout.platR, dt);
+};
 
 /**
  * 人猫同台守门（Lab 2-14）：规则草案 §3 §4 §6 里写成代码的那几条，每条一项——
@@ -176,5 +187,126 @@ describe('cohabit · 仿真', () => {
     const total = s.ledger.counts.gaze + s.ledger.counts.warmth + s.ledger.counts.touch + s.ledger.counts.pass;
     expect(total).toBeGreaterThan(0);
     expect(PLAN.BODY_R).toBe(0.22);
+  });
+});
+
+/**
+ * 按带让路（作者 2026-10-07「人穿过只收两单元相对的两个面」+「松键之后多余的布可以往上去」）：
+ * 一台 20 条带，挡人的带各自收回；猫身下的不收；通行按带几何；R5 只认开不了的墙。模块默认关 ⇒ 上面的旧口径逐位不变。
+ */
+describe('cohabit · 按带让路', () => {
+  it('模块默认关；开着时同种子逐位复现', () => {
+    expect(new CohabitSim({ opening: false }).faces).toBe(false);
+    const a = runCohabit({ seed: 11, seconds: 60, faces: true });
+    const b = runCohabit({ seed: 11, seconds: 60, faces: true });
+    expect(a).toEqual(b);
+    expect(a.bandsOpen).toBeGreaterThanOrEqual(0);
+  });
+
+  it('人站在交叉点：四邻单元照落、各只收回朝人的那条带、R5 不钉；整台口径下四台全被闸住', () => {
+    const sim = new CohabitSim({ seed: 1, opening: false, auto: false, faces: true, fade: null, threshold: 1 });
+    const p = sim.addPerson(0, 0)!;
+    p.mode = 'manual';
+    for (let i = 0; i < 300; i++) {
+      feed(sim, [5, 6, 9, 10], 1 / 30);
+      sim.step(1 / 30);
+    }
+    for (const u of [5, 6, 9, 10]) {
+      expect(sim.act.degree[u]).toBeCloseTo(1, 6);
+      expect(openBands(sim, u)).toBe(1);
+      // 收回的正是指向交叉点的那条（45° 一族）
+      const j = [...Array(B).keys()].find((k) => sim.bandOpen[u * B + k] >= 0.5)!;
+      const ox = sim.layout.units[u].x + Math.cos(bandAngle(j)) * sim.layout.platR;
+      const oy = sim.layout.units[u].y + Math.sin(bandAngle(j)) * sim.layout.platR;
+      expect(Math.hypot(ox, oy)).toBeLessThan(PLAN.BODY_R + PLAN.ATTENTION.clearance);
+    }
+    expect(sim.heldR5.reduce((a, b) => a + b, 0)).toBe(0);
+    expect(sim.blocked.reduce((a, b) => a + b, 0)).toBe(0);
+    const whole = new CohabitSim({ seed: 1, opening: false, auto: false, faces: false, fade: null, threshold: 1 });
+    const q = whole.addPerson(0, 0)!;
+    q.mode = 'manual';
+    for (let i = 0; i < 300; i++) {
+      feed(whole, [5, 6, 9, 10], 1 / 30);
+      whole.step(1 / 30);
+    }
+    expect(whole.blocked.reduce((a, b) => a + b, 0)).toBe(4);
+    for (const u of [5, 6, 9, 10]) expect(whole.act.degree[u]).toBe(0);
+  });
+
+  it('过道：两台都落下的边按此刻是堵、按「开得了的」能过；人沿路走门提前开、走完带落回', () => {
+    const sim = new CohabitSim({ seed: 2, opening: false, auto: false, faces: true, fade: null, threshold: 1 });
+    const { layout: l, graph: g } = sim;
+    for (let i = 0; i < 120; i++) {
+      feed(sim, [5, 9], 1 / 30);
+      sim.step(1 / 30);
+    }
+    const k = g.edges.findIndex((e) => (e.sideA === 5 && e.sideB === 9) || (e.sideA === 9 && e.sideB === 5));
+    expect(edgeOpen(l, g, k, sim.wall, sim.bandWall)).toBe(false);
+    expect(edgeOpen(l, g, k, sim.wall, sim.bandHard)).toBe(true);
+    const a = g.nodes[g.edges[k].a];
+    const b = g.nodes[g.edges[k].b];
+    const p = sim.addPerson(a.x, a.y)!;
+    p.mode = 'manual';
+    p.walker.pushTarget({ x: b.x, y: b.y });
+    let t = 0;
+    let passed = -1;
+    let peak = 0;
+    for (let i = 0; i < 30 * 20 && passed < 0; i++) {
+      feed(sim, [5, 9], 1 / 30);
+      sim.step(1 / 30);
+      t += 1 / 30;
+      peak = Math.max(peak, openBands(sim, 5), openBands(sim, 9));
+      if (p.walker.state !== 'walk') passed = t;
+    }
+    const straight = Math.hypot(b.x - a.x, b.y - a.y) / COHABIT.VISITOR.speed;
+    expect(passed).toBeGreaterThan(0);
+    expect(passed).toBeLessThan(straight + 2.5);
+    expect(peak).toBeGreaterThanOrEqual(3); // 走过时两侧朝过道的几条带是开着的
+    for (let i = 0; i < 60; i++) sim.step(1 / 30);
+    expect(openBands(sim, 5) + openBands(sim, 9)).toBeLessThanOrEqual(2); // 人站在端点，只剩指向它的那条
+  });
+
+  it('猫身下的带不收：猫坐在中心护住整台、邻台照收；猫到台边朝人只护那几条', () => {
+    const sim = new CohabitSim({ seed: 3, opening: false, auto: false, faces: true, fade: null, threshold: 1 });
+    const cat = sim.addCat(sim.layout.units[5])!;
+    cat.mode = 'manual';
+    const u5 = sim.layout.units[5];
+    const u9 = sim.layout.units[9];
+    const p = sim.addPerson((u5.x + u9.x) / 2 - 0.3, (u5.y + u9.y) / 2)!;
+    p.mode = 'manual';
+    for (let i = 0; i < 300; i++) {
+      feed(sim, [5, 9], 1 / 30);
+      sim.step(1 / 30);
+    }
+    expect(sim.bandHold.slice(5 * B, 6 * B).reduce((a, b) => a + b, 0)).toBe(B);
+    expect(openBands(sim, 5)).toBe(0);
+    expect(openBands(sim, 9)).toBeGreaterThanOrEqual(2);
+    expect(sim.bandHard.reduce((a, b) => a + b, 0)).toBe(B);
+    const d = Math.hypot(p.walker.x - u5.x, p.walker.y - u5.y);
+    const r = sim.layout.platR - COHABIT.CAT.bodyR;
+    cat.walker.place(u5.x + ((p.walker.x - u5.x) / d) * r, u5.y + ((p.walker.y - u5.y) / d) * r);
+    for (let i = 0; i < 120; i++) {
+      feed(sim, [5, 9], 1 / 30);
+      sim.step(1 / 30);
+    }
+    const held = sim.bandHold.slice(5 * B, 6 * B).reduce((a, b) => a + b, 0);
+    expect(held).toBeGreaterThanOrEqual(3);
+    expect(held).toBeLessThanOrEqual(7);
+    expect(openBands(sim, 5)).toBe(0);
+  });
+
+  it('R5 按带：只有猫身下的墙带算数——四台整台封死时不通，其中一台的带能开就通', () => {
+    const l = planLayout(4);
+    const g = aisleGraph(l);
+    const wall = new Uint8Array(16);
+    const hard = new Uint8Array(16 * B);
+    for (const u of [5, 6, 9, 10]) {
+      wall[u] = 1;
+      hard.fill(1, u * B, (u + 1) * B);
+    }
+    const person = { x: 0, y: 0, present: true };
+    expect(everyoneHasExit(l, g, [person], wall, hard)).toBe(false);
+    hard.fill(0, 10 * B, 11 * B);
+    expect(everyoneHasExit(l, g, [person], wall, hard)).toBe(true);
   });
 });

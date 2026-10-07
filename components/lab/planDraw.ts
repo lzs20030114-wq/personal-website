@@ -85,6 +85,17 @@ export interface PlanScene {
   heldR5?: Uint8Array | null;
   links?: readonly { x1: number; y1: number; x2: number; y2: number; kind: 'gaze' | 'warmth' | 'touch' | 'pass' }[];
   hideUnits?: boolean;
+  /** 按带让路（Lab 2-14，加法式）：每单元 count 条带各自的收回程度 0–1——成形盘 / 紫环 / 墙圈按带画，
+   *  收回的带画成缺口（半径退到芯上）；猫身下护住的带不另标（猫就画在那儿）。省略 = 整圈。 */
+  bands?: { open: Float32Array; hold: Uint8Array; count: number } | null;
+}
+
+/** 按带半径围一圈：第 j 条带占 [j, j+1]·2π/count 的扇区（与 cohabit.bandAngle 同向），arc 之间自动连径向线 */
+function ringPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, radii: readonly number[]): void {
+  const n = radii.length;
+  ctx.beginPath();
+  for (let j = 0; j < n; j++) ctx.arc(cx, cy, Math.max(0, radii[j]), (j * 2 * Math.PI) / n, ((j + 1) * 2 * Math.PI) / n);
+  ctx.closePath();
 }
 
 /** 注意力区域用的离屏画布（缺口要用 destination-out 抠，不能直接在主画布上擦——会把地板一起擦掉） */
@@ -296,12 +307,22 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
   const mastPx = Math.max(1.6, L.mastR * sc);
   const span = platPx - mastPx;
   const scale = traceScale(s);
+  const nb = s.bands?.count ?? 0;
+  const radii: number[] = new Array(nb).fill(0);
   for (const u of s.hideUnits ? [] : L.units) {
     const cx = X(u.x);
     const cy = Y(u.y);
     const d = s.act.degree[u.i];
     const frac = Math.min(1, s.act.input[u.i] / scale);
     const gated = !!s.blocked && s.blocked[u.i] === 1;
+    // 按带：第 j 条带此刻的伸展比例（1 = 全落、0 = 收直到芯上）
+    const bandF = (j: number) => 1 - (s.bands ? s.bands.open[u.i * nb + j] : 0);
+    const ring = (r: (j: number) => number) => {
+      if (!s.bands) return false;
+      for (let j = 0; j < nb; j++) radii[j] = r(j);
+      ringPath(ctx, cx, cy, radii);
+      return true;
+    };
     // 潜在占位；闸住的（平台下来会打到人）画成莲粉虚线圈
     ctx.strokeStyle = gated ? pal.warn : pal.ink;
     ctx.globalAlpha = gated ? 0.85 : 0.2;
@@ -311,12 +332,14 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
     ctx.arc(cx, cy, platPx, 0, Math.PI * 2);
     ctx.stroke();
     ctx.setLineDash([]);
-    // 已成形：淡紫底
+    // 已成形：淡紫底（按带时收回的带是缺口）
     if (d >= 1 - 1e-9) {
       ctx.fillStyle = pal.accent2;
       ctx.globalAlpha = 0.3;
-      ctx.beginPath();
-      ctx.arc(cx, cy, platPx, 0, Math.PI * 2);
+      if (!ring((j) => mastPx + span * bandF(j))) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, platPx, 0, Math.PI * 2);
+      }
       ctx.fill();
     }
     // 当前读数：实心绿盘
@@ -327,22 +350,30 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
       ctx.arc(cx, cy, mastPx + frac * span, 0, Math.PI * 2);
       ctx.fill();
     }
-    // 成形进度：紫环（不回退）
+    // 成形进度：紫环（不回退；按带时收回的带退到芯上）
     if (d > 1e-6) {
       ctx.strokeStyle = pal.accent2;
       ctx.globalAlpha = d >= 1 - 1e-9 ? 1 : 0.85;
       ctx.lineWidth = d >= 1 - 1e-9 ? 3 : 1.6;
-      ctx.beginPath();
-      ctx.arc(cx, cy, mastPx + d * span, 0, Math.PI * 2);
+      if (!ring((j) => mastPx + d * span * bandF(j))) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, mastPx + d * span, 0, Math.PI * 2);
+      }
       ctx.stroke();
     }
-    // 墙（Lab 2-14）：对人过不去的那一圈画实墨
+    // 墙（Lab 2-14）：对人过不去的那一圈画实墨；按带时只画还是墙的带（程度 × 伸展 ≥ 墙线）
     if (s.walls && s.walls[u.i]) {
       ctx.strokeStyle = pal.ink;
       ctx.globalAlpha = 0.75;
       ctx.lineWidth = 1.6;
       ctx.beginPath();
-      ctx.arc(cx, cy, platPx + 1.5, 0, Math.PI * 2);
+      if (s.bands) {
+        for (let j = 0; j < nb; j++) {
+          if (d * bandF(j) < 0.5) continue;
+          ctx.moveTo(cx + Math.cos((j * 2 * Math.PI) / nb) * (platPx + 1.5), cy + Math.sin((j * 2 * Math.PI) / nb) * (platPx + 1.5));
+          ctx.arc(cx, cy, platPx + 1.5, (j * 2 * Math.PI) / nb, ((j + 1) * 2 * Math.PI) / nb);
+        }
+      } else ctx.arc(cx, cy, platPx + 1.5, 0, Math.PI * 2);
       ctx.stroke();
     }
     // 芯
