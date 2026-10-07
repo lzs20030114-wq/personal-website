@@ -8,7 +8,7 @@ export const LAB_PAGE_COPY: readonly (readonly [string, string])[] = [
   ["Room", "房间"],
   ["Lab 2-8 room · seats rule: 8×8 scaled units (pitch 0.60 m) · trace rule: 4×4 real units, 6×6 / 8×8 scaled", "Lab 2-8 那间 · 座位三态：8×8 等比缩小的单元（格距 0.60 m）· 痕迹：4×4 真实单元，6×6 / 8×8 等比缩小"],
   ["Seats", "座位"],
-  ["Two sofas (1.4 × 0.8 m) and two chairs (0.75 m) in the middle of the room, 6 seats · no unit over the furniture (24 of 64 left out) · each seat’s meeting unit is 1.0–1.5 m away", "两张沙发（1.4 × 0.8 m）、两把椅子（0.75 m）摆在房间中间，共 6 个座位 · 家具上方不放单元（64 台让出 24 台）· 每个座位的会面台离座位 1.0–1.5 m"],
+  ["Furniture is its own layer: standard layout two sofas (1.4 × 0.8 m) and two chairs (0.75 m) in the middle of the room, 6 seats; add, remove and drag pieces · units still hang over the furniture, only those over a seated head stay up · each seat’s meeting unit is in front, 1.0–1.5 m away", "家具是独立的一层：标准布置为两张沙发（1.4 × 0.8 m）、两把椅子（0.75 m）摆在房间中间，共 6 个座位，可加减、拖动 · 单元照常挂在家具上方，只有坐着的人头顶那几台不落 · 每个座位的会面台在面前、离座位 1.0–1.5 m"],
   ["Postures", "三态"],
   ["Walk: no trigger, no trace · stand 3 s watching a cat (≤ 3 m, ±25°): one step for that cat, once per stop · sit: a route from the nearest free cat to the meeting unit, one step formed at a time · the cat takes an offered step half the time", "走：不触发、不留痕迹 · 站：停住满 3 s 且看着一只猫（≤ 3 m、±25°），给那只猫铺一步，每次站定只一次 · 坐：从最近一只能来的猫脚下铺到会面台，一次只落下一步 · 递过来的那一步，猫一半几率走"],
   ["Passage cost", "通行代价"],

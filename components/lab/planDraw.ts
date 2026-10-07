@@ -90,14 +90,14 @@ export interface PlanScene {
   /** 按带让路（Lab 2-14，加法式）：每单元 count 条带各自的收回程度 0–1——成形盘 / 紫环 / 墙圈按带画，
    *  收回的带画成缺口（半径退到芯上）；猫身下护住的带不另标（猫就画在那儿）。省略 = 整圈。 */
   bands?: { open: Float32Array; hold: Uint8Array; count: number } | null;
-  /** 座位三态（Lab 2-14，加法式；省略 = 旧画法逐位不变）：家具（沙发 / 椅子，靠背画在朝向的反侧）与座位点；
-   *  absent = 家具上方不存在的单元（连芯都不画）；meet = 各座位的会面台（紫点线圈，有人坐时加重）；
+  /** 座位三态（Lab 2-14，加法式；省略 = 旧画法逐位不变）：家具是地面上独立的一层（画在单元底下，靠背在朝向的
+   *  反侧，selected = 正被选中 / 拖动的那件加亮）与座位点；meet = 各座位的会面台（紫点线圈，有人坐时加重）；
    *  guides = 空间此刻铺的路（绿虚线串起单元中心：坐着 = 一路到会面台，站定 = 只一步） */
   furniture?: {
     rects: readonly { x0: number; x1: number; y0: number; y1: number; face: readonly [number, number] }[];
     seats: readonly { x: number; y: number; meet: number; taken: boolean }[];
+    selected?: number;
   } | null;
-  absent?: Uint8Array | null;
   guides?: readonly { kind: 'sit' | 'stand'; pts: readonly { x: number; y: number }[] }[];
 }
 
@@ -307,7 +307,8 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
 
   // 家具（座位三态）：淡墨面 + 发丝边，靠背 = 朝向反侧一道粗边；座位点 = 小虚线圈
   if (s.furniture) {
-    for (const r of s.furniture.rects) {
+    s.furniture.rects.forEach((r, fi) => {
+      const sel = s.furniture!.selected === fi;
       const x = X(r.x0);
       const y = Y(r.y0);
       const w = (r.x1 - r.x0) * sc;
@@ -317,10 +318,11 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
       ctx.beginPath();
       ctx.roundRect(x, y, w, hh, 4);
       ctx.fill();
-      ctx.strokeStyle = pal.ink;
-      ctx.globalAlpha = 0.55;
-      ctx.lineWidth = 0.9;
+      ctx.strokeStyle = sel ? pal.accent : pal.ink;
+      ctx.globalAlpha = sel ? 0.95 : 0.55;
+      ctx.lineWidth = sel ? 1.8 : 0.9;
       ctx.stroke();
+      ctx.strokeStyle = pal.ink;
       // 靠背：朝向反侧那条边，往里收一点
       const k = Math.min(w, hh) * 0.18;
       ctx.globalAlpha = 0.6;
@@ -331,7 +333,7 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
       else if (r.face[0] > 0) { ctx.moveTo(x + k, y + 3); ctx.lineTo(x + k, y + hh - 3); }
       else { ctx.moveTo(x + w - k, y + 3); ctx.lineTo(x + w - k, y + hh - 3); }
       ctx.stroke();
-    }
+    });
     ctx.strokeStyle = pal.ink;
     ctx.lineWidth = 0.8;
     ctx.setLineDash([2, 2]);
@@ -361,7 +363,6 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
   const nb = s.bands?.count ?? 0;
   const radii: number[] = new Array(nb).fill(0);
   for (const u of s.hideUnits ? [] : L.units) {
-    if (s.absent && s.absent[u.i]) continue;
     const cx = X(u.x);
     const cy = Y(u.y);
     const d = s.act.degree[u.i];
