@@ -181,8 +181,12 @@ const CHOREO_SCALE = 0.75;
 
 // ── 行为引擎档（M2）的手感常量 ─────────────────────────────────────────────
 type DriveSource = 'choreo' | 'engine';
-/** 生命时钟档：只压缩一世各段的时长，呼吸与动作仍按真实秒（spec §5.5）。×1 = 实验口径 */
-const LIFE_RATES = [1, 5, 10, 20] as const;
+/**
+ * 生命时钟档：只压缩一世各段的时长，呼吸与动作仍按真实秒（spec §5.5）。×1 = 实验口径；
+ * ×60 = 一世约 9 秒、四世约 35 秒，快速看一遍轮回（与案例页 N05 播放头同口径；段落短到
+ * 跟随器追不满，看的是生命节奏，不是呼吸细节）。用户 2026-10-07：「生命时钟可以倍速调节」。
+ */
+const LIFE_RATES = [1, 5, 10, 20, 60] as const;
 /** 默认 ×10：一世约 50 秒，访客等得到一次死亡与轮回 */
 const LIFE_RATE_DEFAULT = 10;
 const BANDS: readonly PresenceBand[] = ['gone', 'far', 'mid', 'near'];
@@ -395,8 +399,8 @@ const COPY = {
       srcNames: { choreo: '编排', engine: '行为引擎' },
       clock: '生命时钟',
       clockHelp: [
-        '只压缩一世各段的时长（诞生 → 成长 → 衰老 → 死亡 → 空白），呼吸与动作仍按真实速度。×1 是实验口径，一世约 9 分钟。',
-        'Compresses only the life stages (birth → growth → ageing → dying → blank); breathing and gestures stay real-time. ×1 is the experiment timing, about 9 minutes per life.',
+        '只压缩一世各段的时长（诞生 → 成长 → 衰老 → 死亡 → 空白），呼吸与动作仍按真实速度。×1 是实验口径，一世约 9 分钟；×10 约 50 秒；×60 约 9 秒，四世一轮约 35 秒。',
+        'Compresses only the life stages (birth → growth → ageing → dying → blank); breathing and gestures stay real-time. ×1 is the experiment timing, about 9 minutes per life; ×10 about 50 seconds; ×60 about 9 seconds, four lives in about 35 seconds.',
       ] as [string, string],
       first: '首世',
       firstHelp: [
@@ -485,8 +489,8 @@ const COPY = {
       srcNames: { choreo: 'Choreo', engine: 'Behaviour engine' },
       clock: 'Life clock',
       clockHelp: [
-        '只压缩一世各段的时长（诞生 → 成长 → 衰老 → 死亡 → 空白），呼吸与动作仍按真实速度。×1 是实验口径，一世约 9 分钟。',
-        'Compresses only the life stages (birth → growth → ageing → dying → blank); breathing and gestures stay real-time. ×1 is the experiment timing, about 9 minutes per life.',
+        '只压缩一世各段的时长（诞生 → 成长 → 衰老 → 死亡 → 空白），呼吸与动作仍按真实速度。×1 是实验口径，一世约 9 分钟；×10 约 50 秒；×60 约 9 秒，四世一轮约 35 秒。',
+        'Compresses only the life stages (birth → growth → ageing → dying → blank); breathing and gestures stay real-time. ×1 is the experiment timing, about 9 minutes per life; ×10 about 50 seconds; ×60 about 9 seconds, four lives in about 35 seconds.',
       ] as [string, string],
       first: 'First life',
       firstHelp: [

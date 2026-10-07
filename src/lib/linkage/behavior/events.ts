@@ -176,6 +176,8 @@ export const ENGINE_EVENTS = [
   'GRASP_EMPTY',
   'GRASP_LOST',
   'RELEASE_DONE',
+  /** 手碰臂时正忙，手一直没离开：机器空下来补认一次（带强度与去向，to 指回那次触碰） */
+  'CONTACT',
   'LIFE_BIRTH',
   'LIFE_GROW',
   'LIFE_AGE',

@@ -23,7 +23,7 @@
 
 import { consumeFixedSteps } from '../fixed-step';
 import { type DampState, dampStep } from '../motion';
-import { type Outcome, type PresenceBand, type SensorInput, type SensorKind, intensityOf, sensorPayload } from './events';
+import { INTENSITY, type Outcome, type PresenceBand, type SensorInput, type SensorKind, intensityOf, sensorPayload } from './events';
 import { GRASP, type GraspPhase, emptySearches, graspVerdict, lostReaction } from './grasp';
 import { type AgeFactors, DEATH_ACTIVITY_MIN, type DeathFrame, LIFE, type Phase, ageing, deathFrame } from './life';
 import { type LogHeader, type LogRecord, type LogValue, sessionHeader } from './log';
@@ -286,6 +286,11 @@ export interface EngineState {
   gesture: Gesture | null;
   pending: Pending | null;
   grasp: GraspMem;
+  /**
+   * 手碰臂那一刻正忙、没被回应：记下那条触碰记录的 id，手还在、机器空下来时补认一次；−1 = 没有
+   * （2026-10-07 拍板「忙完再认一次」，见 recheckContact）
+   */
+  armWaiting: number;
   vigor: number;
   done: boolean;
   inbox: SensorInput[];
@@ -435,6 +440,7 @@ export class BehaviorEngine {
       gesture: null,
       pending: null,
       grasp: idleGrasp(),
+      armWaiting: -1,
       vigor: 0,
       done: false,
       inbox: [],
@@ -587,6 +593,7 @@ export class BehaviorEngine {
     s.speed = ctx.alive || ctx.death ? s.speedBase * ctx.age.speed * (ctx.death ? Math.max(0.2, ctx.death.tone) : 1) : 1;
     if (s.pending && t >= s.pending.due) this.startResponse(t, ctx);
     if (s.gesture && t >= s.gesture.t0 + s.gesture.dur) s.gesture = null;
+    if (s.armWaiting >= 0) this.recheckContact(t, ctx);
     this.stepGrasp(t, ctx);
     if (t >= s.nextSpont) this.spontaneous(t, ctx);
     if (t >= s.nextOrient) this.orient(t, ctx);
@@ -713,6 +720,7 @@ export class BehaviorEngine {
     s.gesture = null;
     s.pending = null;
     s.grasp = idleGrasp();
+    s.armWaiting = -1;
     s.reflex = [noReflex(), noReflex()];
     s.sighNext = false;
     s.sighNow = false;
@@ -798,21 +806,48 @@ export class BehaviorEngine {
       if (!ctx.responsive) out = 'muted';
       else {
         s.arousal = Math.min(1, s.arousal + ENGINE.arousal.gain * I);
-        const th = sampleRange(s.rng, ctx.p.startle);
-        if (I > th) {
-          const g = s.gesture;
-          out = g && g.kind === 'startle' && t < g.t0 + g.dur ? 'busy' : 'startle';
-          if (out === 'startle') this.startle(e, rec.id, I, th, t, ctx);
-        } else if (s.pending || (s.gesture && s.gesture.kind !== 'spont')) {
-          out = 'busy';
-        } else {
-          const tau = sampleRange(s.rng, ctx.p.latency, VARIABILITY.response) * ctx.age.latency;
-          s.pending = { due: t + tau, at: t, id: rec.id, kind: e.kind, bearing: this.stimulusBearing(e) };
-          out = 'respond';
-        }
+        out = this.evaluate(e, I, rec.id, t, ctx);
       }
     }
     rec.out = out;
+    // 手碰臂时正忙：电极电平还在，就等机器空下来再认一次（recheckContact）；松手即作罢
+    if (e.kind === 'ARM_TOUCH') s.armWaiting = e.on && out === 'busy' ? rec.id : -1;
+  }
+
+  /** 一个刺激（已过静默期、唤醒已加）怎么处理：惊跳 / 正忙 / 排进响应。id = 它那条记录 */
+  private evaluate(e: SensorInput, I: number, id: number, t: number, ctx: Ctx): Outcome {
+    const s = this.s;
+    const th = sampleRange(s.rng, ctx.p.startle);
+    if (I > th) {
+      const g = s.gesture;
+      if (g && g.kind === 'startle' && t < g.t0 + g.dur) return 'busy';
+      this.startle(e, id, I, th, t, ctx);
+      return 'startle';
+    }
+    if (s.pending || (s.gesture && s.gesture.kind !== 'spont')) return 'busy';
+    const tau = sampleRange(s.rng, ctx.p.latency, VARIABILITY.response) * ctx.age.latency;
+    s.pending = { due: t + tau, at: t, id, kind: e.kind, bearing: this.stimulusBearing(e) };
+    return 'respond';
+  }
+
+  /**
+   * 「忙完再认一次」（2026-10-07 拍板）：手碰臂那一刻正在做上一个回应，那次记 busy；电极电平一直在，
+   * 等机器空下来（没有待发响应、没有回应 / 惊跳动作、臂没在抓握）就把这次持续接触当一次刺激再认——
+   * **只认一次**。记一条引擎记录 CONTACT（带强度与去向，to 指回原来那条触碰），之后的回应链照常指回它；
+   * 唤醒度不再加（那次触碰已经加过）。中途松手、死亡开始、新一世都作罢。
+   */
+  private recheckContact(t: number, ctx: Ctx): void {
+    const s = this.s;
+    if (!s.electrode || !ctx.responsive) {
+      s.armWaiting = -1;
+      return;
+    }
+    if (s.pending || (s.gesture && s.gesture.kind !== 'spont') || s.grasp.phase !== 'IDLE') return;
+    const to = s.armWaiting;
+    s.armWaiting = -1;
+    const I = INTENSITY.arm;
+    const rec = this.emit('CONTACT', { to }, 'engine', I, 'none');
+    rec.out = this.evaluate({ kind: 'ARM_TOUCH', on: true }, I, rec.id, t, ctx);
   }
 
   /** 触须反射：记下触发时刻；波形由执行层按 startleSwing 画 */

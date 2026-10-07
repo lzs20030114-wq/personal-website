@@ -122,6 +122,8 @@ function what(r: LogRecord, lang: DescribeLang): string {
       return pick(LOST[str(p.reaction)] ?? ['脱手', 'loses grip'], lang);
     case 'RELEASE_DONE':
       return zh ? '松开' : 'released';
+    case 'CONTACT':
+      return zh ? '手还在臂上' : 'hand still on arm';
     case 'LIFE_BIRTH':
       return zh ? `诞生 · ${personaName(r.persona, 'zh')}` : `born · ${personaName(r.persona, 'en')}`;
     case 'LIFE_GROW':

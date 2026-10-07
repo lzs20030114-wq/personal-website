@@ -273,8 +273,20 @@ describe('事件流：刺激与响应一一对得上（同一条流既驱动行�
           if ((r.I ?? 0) > 0) expect(r.out === 'muted').toBe(silent);
           else expect(r.out).toBe('none');
         }
+        // 「忙完再认一次」的补认也是一次刺激：恰有一个回答、指回一次 busy 的碰臂
+        if (r.ev === 'CONTACT') {
+          const answers = log.filter((x) => (x.ev === 'RESPONSE' || x.ev === 'RESPONSE_DROP') && x.p?.to === r.id);
+          expect(answers).toHaveLength(r.out === 'respond' ? 1 : 0);
+          expect(['respond', 'startle']).toContain(r.out);
+          const touch = byId.get(r.p!.to as number);
+          expect(touch?.ev).toBe('ARM_TOUCH');
+          expect(touch?.out).toBe('busy');
+        }
         if (r.ev === 'STARTLE') expect(byId.get(r.p!.to as number)?.out).toBe('startle');
-        if (r.ev === 'REFLEX') expect(byId.get(r.p!.to as number)?.src).toBe('sensor');
+        if (r.ev === 'REFLEX') {
+          const src = byId.get(r.p!.to as number);
+          expect(src?.src === 'sensor' || src?.ev === 'CONTACT').toBe(true);
+        }
         if (r.ev === 'RESPONSE' || r.ev === 'STARTLE') expect(['BIRTH', 'GROW', 'AGE']).toContain(r.phase);
       }
     }
@@ -373,6 +385,39 @@ describe('抓握（真值表接进行为）', () => {
     expect(bend.human).toBeGreaterThan(0.25);
     expect(bend.human).toBeLessThan(0.45);
     expect(bend.object).toBeGreaterThan(0.55);
+  });
+
+  it('碰臂时正忙：手一直在，就等它空下来认一次（只认一次）；中途松手就作罢', () => {
+    // 活力型：先轻抚一下让它去回应（约 1.8 s），回应途中碰臂 → busy
+    const stroke = at(100, { kind: 'SHELL_STROKE', half: 'L', touch: 'stroke' });
+    const held = runSession({
+      seed: 171,
+      order: first('A'),
+      inputs: [stroke, at(100.6, { kind: 'ARM_TOUCH', on: true })],
+      until: 130,
+    }).log;
+    const touch = held.find((r) => r.ev === 'ARM_TOUCH')!;
+    expect(touch.out).toBe('busy');
+    const contacts = evs(held, 'CONTACT');
+    expect(contacts).toHaveLength(1); // 手一直按到最后，也只补认这一次
+    const c = contacts[0];
+    expect(c.p!.to).toBe(touch.id);
+    expect(c.out).toBe('respond');
+    const answer = held.find((r) => r.ev === 'RESPONSE' && r.p?.to === c.id)!;
+    expect(answer.p!.grasp).toBe(true); // 迎上来就缠
+    const firstResponse = held.find((r) => r.ev === 'RESPONSE')!;
+    const gestureEnd = firstResponse.t + Math.min(12, Math.max(0.6, 2.5 / Math.sqrt(3 / 1.5)));
+    expect(c.t).toBeGreaterThanOrEqual(gestureEnd - 1 / HZ);
+    expect(c.t).toBeLessThan(gestureEnd + 0.1);
+    // 中途松手：不补认
+    const left = runSession({
+      seed: 171,
+      order: first('A'),
+      inputs: [stroke, at(100.6, { kind: 'ARM_TOUCH', on: true }), at(101, { kind: 'ARM_TOUCH', on: false })],
+      until: 130,
+    }).log;
+    expect(evs(left, 'CONTACT')).toHaveLength(0);
+    expect(evs(left, 'GRASP_START')).toHaveLength(0);
   });
 
   it('沉静型被碰臂是惊吓（阈值 0.2 < 0.4），只缩不抓', () => {
