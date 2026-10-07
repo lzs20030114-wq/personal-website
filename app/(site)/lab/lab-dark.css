@@ -180,7 +180,7 @@
 .lab-workspace .lab-stage .lab-ctl input[type='checkbox']:checked { background: var(--lab-tone); border-color: var(--lab-tone); }
 .lab-workspace .lab-stage .lab-ctl .grp--clock > .k { line-height: 22px; }
 .lab-workspace .lab-stage .lab-clock { --lab-clock-thumb: 10px; }
-.lab-workspace .lab-stage .lab-clock__ticks span { font: 400 10px var(--ld-mono); color: var(--ld-mute); }
+.lab-workspace .lab-stage .lab-clock__ticks span { font: 400 10px/12px var(--ld-mono); color: var(--ld-mute); }
 .lab-workspace .lab-stage .lab-clock__ticks span[data-on] { color: var(--ld-cream); }
 
 /* 提示行 + 状态 + 相机钮 */

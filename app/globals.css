@@ -1599,9 +1599,13 @@ button.log-heat__cell {
   box-shadow: 0 0 0 4px oklch(0.83 0.082 132 / 0.35);
 }
 /* Lab 1-6 生命时钟：四档滑条 + 刻度（2026-10-07 第六批）。刻度中心对准各档拇指中心
-   （拇指宽 = --lab-clock-thumb，与该皮肤的滑块拇指同宽）；组名与滑轨同高对齐，刻度垂在下面。 */
+   （拇指宽 = --lab-clock-thumb，与该皮肤的滑块拇指同宽）；组名与滑轨同高对齐，刻度垂在下面。
+   整组 = 滑轨 + 12px 刻度条，控制条按组居中会把滑轨抬高 6px（审查实测，与「首世」错开）：
+   上外边距 6、下外边距 −6，外框中心正好落在滑轨中心上（上 = 12 + 下），行高不变，
+   刻度向下伸进行距 6px（两套 lab 皮肤的行距都是 12px，单独占一行时仍留 6px）。 */
 .lab-ctl .grp.grp--clock {
   align-items: flex-start;
+  margin: 6px 0 -6px;
 }
 .lab-ctl .grp.grp--clock > .k {
   line-height: 20px;
