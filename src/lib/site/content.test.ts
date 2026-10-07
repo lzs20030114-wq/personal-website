@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getAllWork, getRoutableWork } from './content';
+import { MAIN_PROJECTS, getAllWork, getRoutableWork } from './content';
 
 /**
  * 作品内容池守门（2026-07-28，案例页加中英切换后新增）。
@@ -30,16 +30,18 @@ function h2Count(body: string): number {
 const published = getAllWork().filter((w) => w.status === 'published');
 
 /**
- * 路由守门（2026-07-29）：四个主项目各有各的详情页——未发稿的渲「筹备中」页。
+ * 路由守门（2026-07-29）：每个主项目各有各的详情页——未发稿的渲「筹备中」页。
+ * 主项目数 2026-10-04 由 4 改为 3（用户拍板）。
  * 会退化的地方是有人把某个主项目从 selected 里拿掉、或往池里塞了个不该出路由的 draft，
  * 那时主页卡片会指向一个 404（generateStaticParams 与卡片 href 读的是同一份名单）。
  */
 describe('work 路由名单', () => {
   const routable = new Set(getRoutableWork().map((w) => w.slug));
 
-  it('四个主项目每个都有自己的详情页地址', () => {
+  it('三个主项目每个都有自己的详情页地址', () => {
+    expect(MAIN_PROJECTS).toBe(3);
     const selected = getAllWork().filter((w) => w.selected);
-    expect(selected).toHaveLength(4);
+    expect(selected).toHaveLength(MAIN_PROJECTS);
     for (const w of selected) expect(routable.has(w.slug)).toBe(true);
   });
 

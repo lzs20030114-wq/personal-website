@@ -30,7 +30,7 @@ import { useLabNavActive } from './LabWorkspace';
  * 窄屏（<1280）由 CSS 收成一条可换行的芯片带，标记与进度线不画（见 globals.css .lab-index）。
  */
 const READ_LINE = 0.3;
-const PROJECT_TITLE = ["Reincarnation Machine", "Spatial simulation"];
+const PROJECT_TITLE = ["Reincarnation Machine", "Cross-species space"];
 
 interface Row {
   no: string;

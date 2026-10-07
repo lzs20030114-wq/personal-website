@@ -86,10 +86,11 @@ const loadAllWork = cache((): WorkEntry[] => {
     return { ...parsed.data, body: content, bodyZh };
   });
 
-  // SITE_SPEC §5：selected 恒等于 4（四个主项目）——防「第五个项目化」，机器强制。
+  // SITE_SPEC §5：selected 恒等于 MAIN_PROJECTS（主项目数）——防「多一个项目化」，机器强制。
+  // 2026-10-04 用户拍板由四个改为三个（项目三 = 智能睡眠实习里开的新题；原第四个占位移出）。
   const selected = entries.filter((e) => e.selected);
-  if (selected.length !== 4) {
-    throw new Error(`selected: true 的条目必须恰为 4 个（当前 ${selected.length}）——见 SITE_SPEC §5`);
+  if (selected.length !== MAIN_PROJECTS) {
+    throw new Error(`selected: true 的条目必须恰为 ${MAIN_PROJECTS} 个（当前 ${selected.length}）——见 SITE_SPEC §5`);
   }
   const seenOrders = new Map<number, string>();
   for (const entry of entries) {
@@ -106,6 +107,9 @@ const loadAllWork = cache((): WorkEntry[] => {
 export function getAllWork(): WorkEntry[] {
   return loadAllWork();
 }
+
+/** 主项目数（SITE_SPEC §5）。2026-07-07 定为 4，2026-10-04 用户拍板改为 3。 */
+export const MAIN_PROJECTS = 3;
 
 export function getSelectedWork(): WorkEntry[] {
   return getAllWork().filter((e) => e.selected);
@@ -124,10 +128,10 @@ export function getPublishedWorkBySlug(slug: string): WorkEntry | undefined {
 }
 
 /**
- * 有自己路由的作品 = published ∪ 四个主项目（selected）。
+ * 有自己路由的作品 = published ∪ 主项目（selected；2026-10-04 起为三个）。
  *
- * 用户拍板 2026-07-29：主页四张卡片各进各的详情页。此前只有 01 是 published，
- * 另外三张一律指 /archive——四个项目在 IA 上地位同等（CLAUDE.md 定位与边界），
+ * 用户拍板 2026-07-29：主页卡片各进各的详情页。此前只有 01 是 published，
+ * 另外几张一律指 /archive——主项目在 IA 上地位同等（CLAUDE.md 定位与边界），
  * 导航上却三个没有地址、点下去还落到同一页。未发稿的三个改渲「筹备中」页
  * （components/site/WorkInPreparation），正文仍由作者来写。
  *

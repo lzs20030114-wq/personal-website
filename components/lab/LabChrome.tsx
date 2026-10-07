@@ -12,7 +12,7 @@ import { useLabText } from './LabLanguage';
  * LabWorkspace / LabPanel；这里只管稿里的「页面级」那一圈，数据全部来自 lab-index。
  */
 
-const PROJECT_TITLE = ['Reincarnation Machine', 'Spatial simulation'] as const;
+const PROJECT_TITLE = ['Reincarnation Machine', 'Cross-species space'] as const;
 const countOf = (n: number, zh: boolean) => (zh ? `${n} 项实验` : `${n} ${n === 1 ? 'bench' : 'benches'}`);
 
 const benchCount = (g: (typeof LAB_INDEX)[number]) => g.segments.reduce((a, s) => a + s.benches.length, 0);

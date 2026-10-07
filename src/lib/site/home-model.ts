@@ -19,8 +19,9 @@ export const TONE_S: Tone = { ink: 'oklch(0.45 0.06 235)', hi: 'oklch(0.74 0.06 
 /** 主页展示的三个项目（稿内三卡；project-iv 不上首页——用户拍板 2026-10-01）。 */
 const HOME_PROJECTS = [
   { slug: 'reincarnation-machine', kicker: 'Project I', tone: TONE_G, img: '/home/c-fivering.png', title: null },
-  // 项目二尚未定名（pool title 仍是 "Project II"），卡片题用稿内描述名；定名后删 title 覆写即回内容池。
-  { slug: 'project-ii', kicker: 'Project II', tone: TONE_V, img: '/home/c-nine.png', title: 'Spatial simulation' },
+  // 项目二尚未定名（pool title 仍是 "Project II"），卡片题用描述名；2026-10-04 作者拍板由稿内的 "Spatial simulation"
+  // 改为能体现物种的 "Cross-species space"（与 lab-index / log-facets 同步）。定名后删 title 覆写即回内容池。
+  { slug: 'project-ii', kicker: 'Project II', tone: TONE_V, img: '/home/c-nine.png', title: 'Cross-species space' },
   { slug: 'project-iii', kicker: 'Project III', tone: TONE_S, img: null, title: null },
 ] as const;
 
@@ -155,7 +156,7 @@ export function buildLabGroups(cards: HomeCard[]): HomeLabGroup[] {
 /** 泳道：保留稿内四条；新增项目三独立归属，避免与智能床实习混读。Lab 仍单列。 */
 const LANES = [
   { keys: ['Machine'], label: 'Reincarnation Machine', ink: 'var(--g700)' },
-  { keys: ['Space'], label: 'Spatial simulation', ink: 'var(--p700)' },
+  { keys: ['Space'], label: 'Cross-species space', ink: 'var(--p700)' },
   { keys: ['Sleep research'], label: 'Sleep research', ink: TONE_S.ink },
   { keys: ['Lab'], label: 'Lab benches', ink: 'var(--ink)' },
   { keys: ['Sleep', 'Site'], label: 'Smart Bed · site', ink: 'oklch(0.5 0.02 200)' }, // 配色 v2：苔色带上加深一档

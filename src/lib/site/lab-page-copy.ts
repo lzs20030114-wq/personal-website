@@ -46,7 +46,7 @@ export const LAB_PAGE_COPY: readonly (readonly [string, string])[] = [
   ["A hanging strip contracts into a pocket, bulb, ledge or stairs. Each shape uses a different pattern of locking bonds.", "悬挂的条带收缩成袋、蘑菇挑台、直挑台或阶梯挑台。每种形态由不同的锁定键排布决定。"],
   ["Position-based · Verlet + projection", "位置约束 · 韦尔莱积分＋投影"],
   ["Research-code port · parity ≤ 1e-9", "研究代码移植 · 数值误差 ≤ 1e-9"],
-  ["Permanent zipper locks", "拉链键永久锁定"],
+  ["Zipper locks · forming only", "拉链键锁定 · 只演示成形"],
   ["One contraction ℓ · four bond maps", "同一收缩量 ℓ · 四种键谱"],
   ["SVG · smoothing affects drawing only", "矢量绘制 · 平滑仅影响画面"],
   ["Rotate the four shapes from Lab 2-1 as solid fabric bands. Section edges show the material thickness and locking bonds.", "旋转查看实验 2-1 的四种织物带。剖面边缘显示材料厚度和锁定键。"],
@@ -216,9 +216,9 @@ export const LAB_PAGE_COPY: readonly (readonly [string, string])[] = [
   ["live", "运行中"],
   ["solving…", "求解中…"],
   ["Reincarnation Machine", "轮回机器"],
-  ["Spatial simulation", "空间模拟"],
+  ["Cross-species space", "跨物种空间"],
   ["two linkage kernels", "两套连杆内核"],
-  ["skin-unit engine & geometry studies", "皮肤单元引擎与几何研究"],
+  ["shape-changing units and the behaviour that moves them", "会变形的单元，以及驱动它的行为"],
   ["Project III", "项目三"],
   ["Benches to come", "实验待建"]
 ];

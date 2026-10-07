@@ -1,6 +1,6 @@
 import '../../app/(site)/work/[slug]/case-dark.css';
 import Link from 'next/link';
-import type { WorkEntry } from '../../src/lib/site/content';
+import { MAIN_PROJECTS, type WorkEntry } from '../../src/lib/site/content';
 import { getLogEntries } from '../../src/lib/site/log';
 import { projectOf } from '../../src/lib/site/log-facets';
 import { CaseFooter } from '../lab/LabShell';
@@ -10,9 +10,9 @@ import { CaseReveal } from './case/CaseReveal';
 /**
  * 「筹备中」详情页（用户拍板 2026-07-29：「主页进 1234 项目，2/3/4 也都进各自的详情页」）。
  *
- * 此前只有 01 是 published，主页另外三张卡片一律指 /archive——四个项目在 IA 上地位同等
- * （CLAUDE.md 定位与边界），导航上却三个没有自己的地址，点下去还全落到同一页。
- * 现在四个各有各的 /work/[slug]，未发稿的落到这里。
+ * 此前只有 01 是 published，主页另外几张卡片一律指 /archive——主项目在 IA 上地位同等
+ * （CLAUDE.md 定位与边界），导航上却没有自己的地址，点下去还全落到同一页。
+ * 现在每个主项目各有各的 /work/[slug]（2026-10-04 起主项目为三个），未发稿的落到这里。
  *
  * 页面本身**不含任何项目正文**：正文是作者的活（SITE_SPEC「模型不代写」），这里只有
  * 站方的框架字——它是什么状态、发稿后会长成什么样、现在能去哪看到相关记录。
@@ -21,6 +21,8 @@ import { CaseReveal } from './case/CaseReveal';
 
 /** 中文侧的项目序号（英文侧直接用 frontmatter 的 title：Project II / III / IV）。 */
 const ZH_ORDINAL = ['一', '二', '三', '四'];
+/** 「案例 03 / 03」里的分母 = 主项目数（2026-10-04 起为 3）。 */
+const TOTAL = String(MAIN_PROJECTS).padStart(2, '0');
 
 /** 案例页正文里 log 的落点：项目组 key 与 work slug 同名的（现为 project-ii）才数得出来。 */
 function logCountFor(slug: string): { count: number; since: string } | null {
@@ -51,7 +53,7 @@ export function WorkInPreparation({ entry }: { entry: WorkEntry }) {
               </Link>
               <span className="cs-hero__meta">
                 <span>
-                  <Pick en={`Case study ${caseNo} / 04`} zh={`案例 ${caseNo} / 04`} />
+                  <Pick en={`Case study ${caseNo} / ${TOTAL}`} zh={`案例 ${caseNo} / ${TOTAL}`} />
                 </span>
                 <span className="cs-state">
                   <i />
@@ -82,8 +84,8 @@ export function WorkInPreparation({ entry }: { entry: WorkEntry }) {
               </div>
               <p className="cs-lede" data-rv>
                 <Pick
-                  en="One of the four main projects. The case study has not been written yet — this page is its address, and the writing will land here."
-                  zh="四个主项目之一。案例正文尚未写就——这一页是它的固定地址，写好后就落在这里。"
+                  en="One of the three main projects. The case study has not been written yet — this page is its address, and the writing will land here."
+                  zh="三个主项目之一。案例正文尚未写就——这一页是它的固定地址，写好后就落在这里。"
                 />
               </p>
             </div>
