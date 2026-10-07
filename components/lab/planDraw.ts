@@ -59,6 +59,8 @@ export interface PlanPerson {
   lane?: boolean;
   /** 视线（弧度）；省略 = 朝向。视野扇形沿它，走廊沿朝向 */
   gaze?: number;
+  /** 三态（Lab 2-14 座位三态，加法式）：走 = 灰空心 · 站 = 墨空心加粗 · 坐 = 墨实心。省略 = 旧画法 */
+  posture?: 'walk' | 'stand' | 'sit';
 }
 
 export interface PlanScene {
@@ -88,6 +90,15 @@ export interface PlanScene {
   /** 按带让路（Lab 2-14，加法式）：每单元 count 条带各自的收回程度 0–1——成形盘 / 紫环 / 墙圈按带画，
    *  收回的带画成缺口（半径退到芯上）；猫身下护住的带不另标（猫就画在那儿）。省略 = 整圈。 */
   bands?: { open: Float32Array; hold: Uint8Array; count: number } | null;
+  /** 座位三态（Lab 2-14，加法式；省略 = 旧画法逐位不变）：家具（沙发 / 椅子，靠背画在朝向的反侧）与座位点；
+   *  absent = 家具上方不存在的单元（连芯都不画）；meet = 各座位的会面台（紫点线圈，有人坐时加重）；
+   *  guides = 空间此刻铺的路（绿虚线串起单元中心：坐着 = 一路到会面台，站定 = 只一步） */
+  furniture?: {
+    rects: readonly { x0: number; x1: number; y0: number; y1: number; face: readonly [number, number] }[];
+    seats: readonly { x: number; y: number; meet: number; taken: boolean }[];
+  } | null;
+  absent?: Uint8Array | null;
+  guides?: readonly { kind: 'sit' | 'stand'; pts: readonly { x: number; y: number }[] }[];
 }
 
 /** 按带半径围一圈：第 j 条带占 [j, j+1]·2π/count 的扇区（与 cohabit.bandAngle 同向），arc 之间自动连径向线 */
@@ -294,6 +305,46 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
   ctx.stroke();
   ctx.globalAlpha = 1;
 
+  // 家具（座位三态）：淡墨面 + 发丝边，靠背 = 朝向反侧一道粗边；座位点 = 小虚线圈
+  if (s.furniture) {
+    for (const r of s.furniture.rects) {
+      const x = X(r.x0);
+      const y = Y(r.y0);
+      const w = (r.x1 - r.x0) * sc;
+      const hh = (r.y1 - r.y0) * sc;
+      ctx.fillStyle = pal.ink;
+      ctx.globalAlpha = 0.1;
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, hh, 4);
+      ctx.fill();
+      ctx.strokeStyle = pal.ink;
+      ctx.globalAlpha = 0.55;
+      ctx.lineWidth = 0.9;
+      ctx.stroke();
+      // 靠背：朝向反侧那条边，往里收一点
+      const k = Math.min(w, hh) * 0.18;
+      ctx.globalAlpha = 0.6;
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      if (r.face[1] > 0) { ctx.moveTo(x + 3, y + k); ctx.lineTo(x + w - 3, y + k); }
+      else if (r.face[1] < 0) { ctx.moveTo(x + 3, y + hh - k); ctx.lineTo(x + w - 3, y + hh - k); }
+      else if (r.face[0] > 0) { ctx.moveTo(x + k, y + 3); ctx.lineTo(x + k, y + hh - 3); }
+      else { ctx.moveTo(x + w - k, y + 3); ctx.lineTo(x + w - k, y + hh - 3); }
+      ctx.stroke();
+    }
+    ctx.strokeStyle = pal.ink;
+    ctx.lineWidth = 0.8;
+    ctx.setLineDash([2, 2]);
+    for (const q of s.furniture.seats) {
+      ctx.globalAlpha = q.taken ? 0 : 0.45;
+      ctx.beginPath();
+      ctx.arc(X(q.x), Y(q.y), PLAN.BODY_R * sc * 0.8, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+  }
+
   // 单元：两个量分开画（用户看真机「每个单元的状态显示不明显」——首版把当前读数画成芯外两像素的细弧，
   // 成形程度画成半透明紫盘压在绿痕迹上，两者糊成一团）：
   //   · **当前读数**（会退的量）= 实心绿盘，半径从芯长到平台外缘随「读数 / 阈值」涨缩——人走了它就缩回去；
@@ -310,6 +361,7 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
   const nb = s.bands?.count ?? 0;
   const radii: number[] = new Array(nb).fill(0);
   for (const u of s.hideUnits ? [] : L.units) {
+    if (s.absent && s.absent[u.i]) continue;
     const cx = X(u.x);
     const cy = Y(u.y);
     const d = s.act.degree[u.i];
@@ -427,6 +479,51 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
     ctx.globalAlpha = 1;
   }
 
+  // 会面台（座位三态）：紫点线圈，有人坐着时加重
+  if (s.furniture && !s.hideUnits) {
+    ctx.strokeStyle = pal.accent2;
+    ctx.setLineDash([2, 3]);
+    for (const q of s.furniture.seats) {
+      const u = L.units[q.meet];
+      ctx.globalAlpha = q.taken ? 0.95 : 0.4;
+      ctx.lineWidth = q.taken ? 1.6 : 0.9;
+      ctx.beginPath();
+      ctx.arc(X(u.x), Y(u.y), platPx + 7, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+  }
+  // 空间此刻铺的路：绿虚线串起单元中心，箭头指向下一步
+  if (s.guides) {
+    for (const g of s.guides) {
+      if (g.pts.length < 2) continue;
+      ctx.strokeStyle = pal.accent;
+      ctx.globalAlpha = g.kind === 'sit' ? 0.85 : 0.95;
+      ctx.lineWidth = g.kind === 'sit' ? 1.4 : 2;
+      ctx.setLineDash(g.kind === 'sit' ? [5, 4] : [2, 3]);
+      ctx.beginPath();
+      ctx.moveTo(X(g.pts[0].x), Y(g.pts[0].y));
+      for (let k = 1; k < g.pts.length; k++) ctx.lineTo(X(g.pts[k].x), Y(g.pts[k].y));
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // 下一步那台的箭头
+      const a = g.pts[0];
+      const b = g.pts[1];
+      const ang = Math.atan2(b.y - a.y, b.x - a.x);
+      const tx = X(b.x) - Math.cos(ang) * (platPx * 0.55);
+      const ty = Y(b.y) - Math.sin(ang) * (platPx * 0.55);
+      ctx.fillStyle = pal.accent;
+      ctx.beginPath();
+      ctx.moveTo(tx + Math.cos(ang) * 6, ty + Math.sin(ang) * 6);
+      ctx.lineTo(tx + Math.cos(ang + 2.5) * 6, ty + Math.sin(ang + 2.5) * 6);
+      ctx.lineTo(tx + Math.cos(ang - 2.5) * 6, ty + Math.sin(ang - 2.5) * 6);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
   // 走过的路
   if (s.trail && s.trail.length > 2) {
     ctx.strokeStyle = pal.ink;
@@ -477,14 +574,17 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
     }
     drawAttention(ctx, p, cx, cy, sc, pal);
     const r = PLAN.BODY_R * sc;
-    ctx.fillStyle = pal.paper;
-    ctx.strokeStyle = p.held ? pal.accent : pal.ink;
+    // 三态（座位三态）：走 = 灰空心 · 站 = 墨空心加粗 · 坐 = 墨实心（朝向线改纸色）
+    const sitting = p.posture === 'sit';
+    ctx.fillStyle = sitting ? pal.ink : pal.paper;
+    ctx.strokeStyle = p.held ? pal.accent : p.posture === 'walk' ? pal.muted : pal.ink;
     ctx.globalAlpha = 1;
-    ctx.lineWidth = p.held ? 2.4 : 1.5;
+    ctx.lineWidth = p.held ? 2.4 : p.posture === 'stand' ? 2.2 : 1.5;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
+    if (sitting) ctx.strokeStyle = pal.paper;
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.lineTo(cx + Math.cos(p.heading) * r, cy + Math.sin(p.heading) * r);

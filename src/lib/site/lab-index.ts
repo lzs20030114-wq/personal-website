@@ -132,7 +132,7 @@ export const LAB_INDEX: readonly LabGroup[] = [
         n: "Ⅷ",
         label: "Together",
         sub: "Lab 2-14 · people and cats in one room, with the loop closed",
-        benches: [{ no: "2-14", title: "People and cats together", kernel: "2d", description: 'Visitors walk the floor and cats live on the units; the units follow both and the four encounter events are counted.', meta: '3 spaces · 4 events · canvas', kind: 'Canvas · two species', verb: 'drag a body' }],
+        benches: [{ no: "2-14", title: "People and cats together", kernel: "2d", description: 'Visitors walk, stand or sit; resident cats live on the units. Sitting down leads a cat over, and the four encounter events are counted.', meta: '2 rules · 3 spaces · 4 events · canvas', kind: 'Canvas · two species', verb: 'drag a body' }],
       },
     ],
   },

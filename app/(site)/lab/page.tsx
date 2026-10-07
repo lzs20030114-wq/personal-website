@@ -402,17 +402,19 @@ export default function LabPage() {
         <Bench
           no="2-14"
           notes={<CohabitNotes />}
-          lede="Visitors walk the floor; resident cats live on the units. Formed units are walls for people and footing for cats. The space pins a cat’s unit, fills the neighbour with the strongest people trace, and holds back any unit that would trap someone. Four encounter events are counted as they happen."
+          lede="Visitors walk the floor; resident cats live on the units. In the default rule the café has two sofas and two chairs in the middle of the room: walking triggers nothing, standing still to watch a cat lays one step for it, and sitting down leads a cat step by step to the seat’s meeting unit. Formed units are walls for people and footing for cats, and a unit that would trap someone holds back. Four encounter events are counted as they happen."
           specs={[
-            ['Room', 'Lab 2-8 room · 4×4 real units · 6×6 / 8×8 scaled'],
+            ['Room', 'Lab 2-8 room · seats rule: 8×8 scaled units (pitch 0.60 m) · trace rule: 4×4 real units, 6×6 / 8×8 scaled'],
+            ['Seats', 'Two sofas (1.4 × 0.8 m) and two chairs (0.75 m) in the middle of the room, 6 seats · no unit over the furniture (24 of 64 left out) · each seat’s meeting unit is 1.0–1.5 m away'],
+            ['Postures', 'Walk: no trigger, no trace · stand 3 s watching a cat (≤ 3 m, ±25°): one step for that cat, once per stop · sit: a route from the nearest free cat to the meeting unit, one step formed at a time · the cat takes an offered step half the time'],
             ['Passage cost', 'Formed unit = wall for people (≥ 50% formed) · not for cats · people route along the aisles'],
             ['Giving way', 'By band (default): of a unit’s 20 bands, those within body + clearance of a person or in the corridor ahead on their route retract to the post (cloth back up, engine retractStep to r = 1) in ≈ 2 s and come back behind them · bands under a cat never retract · whole unit: the Lab 2-11 clearance gate'],
             ['Staying cost', 'Person: another within 1.35 m for 2 s → leave · Cat: visitor within 1 m tolerated 6 s (14 s when watched) → retreat, 15 s latency'],
             ['Rules', 'R1 space writes units only · R2 bodies read costs only · R3 bodies choose · R4 judged by events · R5 nobody trapped (by band: a door, so it only bites when cat-held bands close the last exit)'],
             ['Events', 'Co-gaze ≥ 1 s · co-warmth 0.5–1.5 m ≥ 2 s · contact < 0.5 m · crossing through the 1.5 m domain'],
-            ['Comparison', 'Live units · fixed (even rows formed) · empty room'],
+            ['Comparison', 'Live units · fixed (even rows formed; in the seats rule the units that would box someone in are left out) · empty room · all three with the same seats'],
             ['Sources', '1.35 m stranger distance (42-country survey) · 1 m cat band and 78% reference (Mertens & Turner 1988)'],
-            ['Limit', 'Timings and the 1/3 approach chance are demonstration values; no invitation gesture, so the empty event is not counted'],
+            ['Limit', 'Timings, sitting times and the 1/3 approach chance are demonstration values; no invitation gesture, so the empty event is not counted'],
           ]}
         >
           <CohabitBench workspace />

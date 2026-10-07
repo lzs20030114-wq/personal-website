@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useBenchLang, useLabText } from './LabLanguage';
 import { LabControlLabel } from './LabControlLabel';
-import { COHABIT, CohabitSim, FACE_MODES, SPACE_MODES, type Cat, type FaceMode, type SpaceMode } from '../../src/lib/space/cohabit';
+import { COHABIT, CohabitSim, FACE_MODES, SPACE_MODES, TRIGGER_MODES, nearestNode, type Cat, type FaceMode, type SpaceMode, type TriggerMode, type Visitor } from '../../src/lib/space/cohabit';
 import { PLAN, RESPONSES, type ResponseMode } from '../../src/lib/space/unit-activation';
 import type { CatPose } from '../../src/lib/space/cat-rules';
 import { H, W, canvasToRoom, drawPlan, readPalette, type Palette, type PlanPerson } from './planDraw';
@@ -16,6 +16,8 @@ import { useBenchLoop } from './useBenchLoop';
  * · 空间的目的「促成相遇」。模型 = src/lib/space/cohabit.ts；画法复用 planDraw（墙 / R5 / 事件线三层是本轮加的）。
  * 三档「空间」给对照（会动 / 钉死 / 空房间），HUD 实时读四类事件数与猫在 1 m 外的时间占比（参照 M&T 0.78）。
  * 让路两档（2026-10-07 作者「人穿过只收相对的两个面」）：按带 = 挡人的带各自收回到芯上（默认）；整台 = 2-11 的让位闸。
+ * 规则两档（2026-10-07 作者「座位做据点，人分走 / 站 / 坐三态」+「先以 8×8 设计，座位摆在空间中间」）：
+ * 座位三态（默认，8×8，四件家具）= 走着不触发、站定看猫给一步、坐着一步步把猫引到会面台；痕迹（旧）= 上一版口径，留作对照。
  */
 const TIME_SCALES = [1, 3, 8] as const;
 const TIME_DEF = 1;
@@ -32,9 +34,14 @@ const COPY = {
     line: (t: number, people: number, cats: number, far: number, held: number, detour: number, bands: number | null) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${people} 人 · ${cats} 猫 · 猫在 1 m 外 ${(far * 100).toFixed(0)}%（参照 78%）· 绕行 ${detour.toFixed(1)} m${bands !== null ? ` · 让路 ${bands} 条带` : ''}${held ? ` · R5 钉住 ${held}` : ''}`,
     legend: '实墨圈 = 对人是墙 · 紫环 = 成形（缺口 = 收回的带）· 芯上短横 = R5 钉住 · 连线：绿虚 共视 / 紫 共温 / 粉 共触 / 墨 交接',
+    legendSeats: '人：灰空心 走 · 墨空心 站 · 墨实心 坐 · 紫点线圈 = 座位的会面台 · 绿虚线 = 空间为猫铺的路（箭头 = 下一步）· 紫环 = 成形 · 实墨圈 = 对人是墙 · 连线：绿虚 共视 / 紫 共温 / 粉 共触',
+    seats: (sitting: number, guides: number, arrivals: number) => ` · 坐着 ${sitting} · 铺路 ${guides} · 猫到会面台 ${arrivals} 次`,
     hint: `点空地放访客，按住拖；猫可拖到任一单元。「自走」让访客漫步（一半几率去看猫）、猫按坐 / 卧 / 换格的节奏活动。最多 ${COHABIT.MAX_PEOPLE} 人 ${COHABIT.MAX_CATS} 猫。`,
+    hintSeats: `点空地放访客、点座位让他坐下，按住拖（拖到座位上松手 = 坐下）；猫可拖到任一单元。「自走」让访客漫步：一半几率找空座坐 ${COHABIT.SEATS.SIT.min / 60}–${COHABIT.SEATS.SIT.max / 60} 分钟，否则一半几率去看猫。最多 ${COHABIT.MAX_PEOPLE} 人 ${COHABIT.MAX_CATS} 猫。`,
+    rulesSeats: '座位三态：猫咖里摆了两张沙发、两把椅子，在房间中间，不贴墙；家具上方不放单元（平台离地 1.08 m，比坐着的头顶低）。人走着不触发，地面也不留痕迹。站定满 3 秒、且看着一只猫，空间朝这个人给那只猫铺一步，这次站定只给一次。坐下 = 全力：空间从最近一只能来的猫脚下，一步一步铺到这个座位的会面台（离座位 1.0–1.5 m，猫卧在那儿不用付停留代价、又在共温带里）；落着的始终只有猫脚下和下一步。走不走仍是猫的事：它坐满 3 秒，旁边有一台空间递过来的，就一半几率挪过去，不走就卧下；挪窝时也优先走那台。其余照旧：落下的单元对人是墙；猫被访客贴到 1 m 以内撑过几秒就退开、之后一阵不跟人走；落下会困住人的不落；按带让路时挡人的带各自收回。',
     rules: '通行代价：落下的单元对人是墙、对猫不是。停留代价：访客被别人贴到 1.35 m 以内就走；猫被访客贴到 1 m 以内撑过几秒就退到更远的格，之后一阵不再靠人；有人站着盯着它，它有三分之一几率靠到台边。空间只写单元：猫脚下钉住，猫四邻里人的痕迹最高的一格补满，落下会困住人的不落。让路按带：一个单元二十条带，挡在人身边或人路上的那几条各自收回到杆上（布回到顶上），其余照落；猫身下的带不收；人走到门口门正好开，走过去再落回。',
     space: '空间',
+    rule: '规则',
     grid: '格数',
     response: '响应',
     goal: '促成相遇',
@@ -66,9 +73,14 @@ const COPY = {
     line: (t: number, people: number, cats: number, far: number, held: number, detour: number, bands: number | null) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${people} people · ${cats} cats · cat beyond 1 m ${(far * 100).toFixed(0)}% (reference 78%) · detour ${detour.toFixed(1)} m${bands !== null ? ` · ${bands} bands giving way` : ''}${held ? ` · R5 held ${held}` : ''}`,
     legend: 'Solid ink ring = wall for people · purple ring = formed (notch = retracted band) · bar on the mast = held by R5 · links: green dashed co-gaze / purple co-warmth / rose contact / ink crossing',
+    legendSeats: 'People: grey outline walking · ink outline standing · solid ink sitting · dotted purple ring = a seat’s meeting unit · green dashes = the route the space lays for the cat (arrow = next step) · purple ring = formed · solid ink ring = wall for people · links: green dashed co-gaze / purple co-warmth / rose contact',
+    seats: (sitting: number, guides: number, arrivals: number) => ` · ${sitting} seated · ${guides} routes · cat reached a meeting unit ${arrivals}×`,
     hint: `Click empty floor to add a visitor and hold to drag; a cat can be dragged onto any unit. Wander lets visitors roam (half the time towards a cat) and cats sit, lie and move between units. Up to ${COHABIT.MAX_PEOPLE} people and ${COHABIT.MAX_CATS} cats.`,
+    hintSeats: `Click empty floor to add a visitor, click a seat to sit someone down, hold to drag (release on a seat to sit). A cat can be dragged onto any unit. Wander lets visitors roam: half the time they take a free seat for ${COHABIT.SEATS.SIT.min / 60}–${COHABIT.SEATS.SIT.max / 60} minutes, otherwise half the time they go and look at a cat. Up to ${COHABIT.MAX_PEOPLE} people and ${COHABIT.MAX_CATS} cats.`,
+    rulesSeats: 'Seats, three postures: the café has two sofas and two chairs in the middle of the room, away from the walls; no units hang over the furniture (platforms sit 1.08 m above the floor, below a seated head). Walking triggers nothing and leaves no trace. Standing still for 3 s while watching a cat makes the space lay one step for that cat towards the person, once per stop. Sitting down is full strength: from the nearest cat that can come, the space lays a route to the seat’s meeting unit (1.0–1.5 m from the seat, where a cat pays no staying cost and is inside the co-warmth band) one step at a time; only the cat’s unit and the next step are formed. Whether to go is still the cat’s choice: after sitting for 3 s it takes an offered step half the time, otherwise it lies down, and when it moves it prefers the offered unit. The rest is unchanged: formed units are walls for people; a cat with a visitor inside 1 m for a few seconds retreats and keeps away for a while; a unit that would trap someone holds back; by band, the bands in someone’s way retract.',
     rules: 'Passage cost: a formed unit is a wall for people, not for cats. Staying cost: a visitor leaves when another comes within 1.35 m; a cat tolerates a visitor within 1 m for a few seconds, then retreats to a farther unit and keeps away for a while; when someone stands watching it, it approaches the platform edge one time in three. The space only writes units: the cat’s own unit stays formed, the neighbour with the strongest people trace is filled, and a unit that would trap someone is held back. Giving way by band: a unit has twenty bands; the few beside a person or on their route retract to the post (the cloth goes back up) while the rest come down; bands under a cat never retract; the door is open by the time the person reaches it and closes behind them.',
     space: 'space',
+    rule: 'rule',
     grid: 'grid',
     response: 'response',
     goal: 'promote encounters',
@@ -100,18 +112,26 @@ function poseOf(c: Cat): CatPose {
   return 'sit';
 }
 
+function postureOf(p: Visitor): 'walk' | 'stand' | 'sit' {
+  if (p.seated) return 'sit';
+  return p.walker.state === 'walk' && p.moving ? 'walk' : 'stand';
+}
+
 function sceneOf(sim: CohabitSim, showTrace: boolean) {
+  const seats = sim.trigger === 'posture';
   const people: PlanPerson[] = sim.people.map((p) => ({
     x: p.walker.x,
     y: p.walker.y,
     heading: p.walker.heading,
     gaze: p.walker.gaze,
-    reach: sim.reach,
+    // 座位三态下地面不留痕迹：不画视野扇面（坐着的人连让位圈也不画——四周本就没有单元）
+    reach: seats ? 0 : sim.reach,
     held: p.mode === 'held',
     fov: sim.fov,
     // 按带：画的是身体 + 让位那一小圈（带离它就收）；整台：画让位距离 D（芯到人）
-    keepOut: sim.faces ? sim.marginM : sim.keepOutM,
-    lane: !sim.faces && sim.lane && p.moving,
+    keepOut: seats && p.seated ? 0 : sim.faces ? sim.marginM : sim.keepOutM,
+    lane: !seats && !sim.faces && sim.lane && p.moving,
+    posture: seats ? postureOf(p) : undefined,
   }));
   for (const c of sim.cats)
     people.push({
@@ -143,6 +163,20 @@ function sceneOf(sim: CohabitSim, showTrace: boolean) {
     heldR5: sim.space === 'live' ? sim.heldR5 : null,
     links: sim.links,
     hideUnits: sim.space === 'empty',
+    furniture: sim.furn
+      ? {
+          rects: sim.furn.rects,
+          seats: sim.seats.map((q) => ({ x: q.x, y: q.y, meet: q.meet, taken: sim.people.some((v) => v.seat === q.i) })),
+        }
+      : null,
+    absent: sim.furn ? sim.furn.absent : null,
+    guides: sim.guides.map((g) => {
+      const cat = sim.cats.find((c) => c.id === g.cat);
+      const pts = g.path.map((i) => ({ x: sim.layout.units[i].x, y: sim.layout.units[i].y }));
+      // 从猫身上起笔（它可能在台边）
+      if (cat) pts[0] = { x: cat.walker.x, y: cat.walker.y };
+      return { kind: g.kind, pts };
+    }),
   };
 }
 
@@ -153,8 +187,10 @@ export function CohabitNotes({ lang: explicitLang }: { lang?: 'zh' | 'en' }) {
   return (
     <div className="walk-notes">
       <h3>{lang === 'zh' ? tx('操作说明') : tx('How to use')}</h3>
-      <p>{t.hint}</p>
-      <h3>{lang === 'zh' ? '规则' : 'Rules'}</h3>
+      <p>{t.hintSeats}</p>
+      <h3>{lang === 'zh' ? '规则 · 座位三态（默认）' : 'Rules · seats, three postures (default)'}</h3>
+      <p>{t.rulesSeats}</p>
+      <h3>{lang === 'zh' ? '规则 · 痕迹（旧）' : 'Rules · trace (earlier)'}</h3>
       <p>{t.rules}</p>
       <h3>{lang === 'zh' ? '读数' : 'Readings'}</h3>
       <p>
@@ -194,8 +230,10 @@ export function CohabitBench({
   const [auto, setAuto] = useState(true);
   const [showTrace, setShowTrace] = useState(true);
   const [timeScale, setTimeScale] = useState<number>(TIME_DEF);
-  const [grid, setGrid] = useState<number>(COHABIT.GRID_DEF);
+  const [trigger, setTrigger] = useState<TriggerMode>('posture');
+  const [grid, setGrid] = useState<number>(COHABIT.SEATS.GRID);
   const [space, setSpace] = useState<SpaceMode>('live');
+  const seatsMode = trigger === 'posture';
   const [mode, setMode] = useState<ResponseMode>('follow');
   const [goal, setGoal] = useState(true);
   const [faceMode, setFaceMode] = useState<FaceMode>('bands');
@@ -209,7 +247,7 @@ export function CohabitBench({
   const [cursor, setCursor] = useState<'crosshair' | 'grab' | 'grabbing'>('crosshair');
   const [hud, setHud] = useState(() => ({
     formed: 0,
-    total: COHABIT.GRID_DEF * COHABIT.GRID_DEF,
+    total: COHABIT.SEATS.GRID * COHABIT.SEATS.GRID,
     t: 0,
     people: 1,
     cats: 1,
@@ -217,6 +255,7 @@ export function CohabitBench({
     held: 0,
     detour: 0,
     bands: 0 as number | null,
+    seats: null as { sitting: number; guides: number; arrivals: number } | null,
     counts: { gaze: 0, warmth: 0, touch: 0, pass: 0 } as Record<string, number>,
     seconds: { gaze: 0, warmth: 0, touch: 0, pass: 0 } as Record<string, number>,
   }));
@@ -230,15 +269,15 @@ export function CohabitBench({
     if (ctx) drawPlan(ctx, sceneOf(sim, traceRef.current), pal);
   };
 
-  // 建仿真（换格数才重建；换「空间」档走 setSpace，人与猫留在原地）
+  // 建仿真（换格数或规则才重建——座位三态的家具改了过道图；换「空间」档走 setSpace，人与猫留在原地）
   useEffect(() => {
-    const sim = new CohabitSim({ grid, space, mode, goal, look, threshold, fade, auto, clearance: clearanceOpt, lane: clearanceOpt !== null, faces: faceMode === 'bands' });
+    const sim = new CohabitSim({ trigger, grid, space, mode, goal, look, threshold, fade, auto, clearance: clearanceOpt, lane: clearanceOpt !== null, faces: faceMode === 'bands' });
     sim.setSpeed(speed);
     simRef.current = sim;
     heldRef.current = null;
     paint();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [grid]);
+  }, [grid, trigger]);
   useEffect(() => {
     simRef.current?.setSpace(space);
     paint();
@@ -304,7 +343,7 @@ export function CohabitBench({
       if (runningRef.current) sim.step(Math.min(MAX_SIM_DT, dt * timeRef.current));
       paint();
       const s = sim.summary();
-      const key = `${Math.floor(s.t)}|${s.formed}|${s.people}|${s.cats}|${s.ledger.counts.gaze}|${s.ledger.counts.warmth}|${s.ledger.counts.touch}|${s.ledger.counts.pass}|${s.heldR5}|${sim.faces ? s.bandsOpen : '-'}`;
+      const key = `${Math.floor(s.t)}|${s.formed}|${s.people}|${s.cats}|${s.ledger.counts.gaze}|${s.ledger.counts.warmth}|${s.ledger.counts.touch}|${s.ledger.counts.pass}|${s.heldR5}|${sim.faces ? s.bandsOpen : '-'}|${s.seated}|${s.guides}|${s.catArrivals}`;
       if (key !== lastHud.current) {
         lastHud.current = key;
         setHud({
@@ -317,6 +356,7 @@ export function CohabitBench({
           held: s.heldR5,
           detour: s.detour,
           bands: sim.faces && sim.space === 'live' ? s.bandsOpen : null,
+          seats: sim.trigger === 'posture' ? { sitting: s.seated, guides: s.guides, arrivals: s.catArrivals } : null,
           counts: { ...s.ledger.counts },
           seconds: { ...s.ledger.seconds },
         });
@@ -384,7 +424,12 @@ export function CohabitBench({
             const sim = simRef.current;
             if (!sim) return;
             const half = sim.layout.fieldM / 2;
-            sim.addPerson((Math.random() * 2 - 1) * half, (Math.random() * 2 - 1) * half);
+            const x = (Math.random() * 2 - 1) * half;
+            const y = (Math.random() * 2 - 1) * half;
+            // 座位三态：落在最近一个能站的交叉点（别放进家具里）
+            const k = sim.furn ? nearestNode(sim.graph, x, y) : -1;
+            if (k >= 0) sim.addPerson(sim.graph.nodes[k].x, sim.graph.nodes[k].y);
+            else sim.addPerson(x, y);
             paint();
           }}
         >
@@ -436,15 +481,36 @@ export function CohabitBench({
             {t.events(hud.counts, hud.seconds)}
             <br />
             {t.line(hud.t, hud.people, hud.cats, hud.far, hud.held, hud.detour, hud.bands)}
+            {hud.seats && t.seats(hud.seats.sitting, hud.seats.guides, hud.seats.arrivals)}
           </div>
         </div>
-        <div className="lab-hud bl dim">{t.legend}</div>
+        <div className="lab-hud bl dim">{seatsMode ? t.legendSeats : t.legend}</div>
       </div>
       {controls ? (
         <div className="lab-ctl lab-ctl--tiered">
           <div className="lab-ctl__row lab-ctl__solve">
             <div className="grp walk-behaviour">
-              <LabControlLabel help={['会动：单元按两边的痕迹落下收回；钉死：偶数行永远落着，不响应；空房间：没有单元，猫在地面走。三档给对照用。', 'Live: units follow both traces. Fixed: even rows stay formed and never respond. Empty: no units, the cat walks the floor. The three settings are for comparison.']} lang={lang}>
+              <LabControlLabel help={['座位三态：房间中间摆两张沙发、两把椅子，人走着不触发，站定看猫满 3 秒给猫铺一步，坐下就一步一步把猫引到座位的会面台（只在 8×8 下）。痕迹（旧）：上一版，人的视野在地面留痕迹、单元跟痕迹落下，留作对照。', 'Seats, three postures: two sofas and two chairs in the middle of the room; walking triggers nothing, standing 3 s while watching a cat lays one step for it, sitting down leads a cat step by step to the seat’s meeting unit (8×8 only). Trace (earlier): the previous version, where people’s gaze leaves a floor trace that the units follow, kept for comparison.']} lang={lang}>
+                {t.rule}
+              </LabControlLabel>
+              <span className="seg">
+                {TRIGGER_MODES.map((m) => (
+                  <button
+                    key={m.key}
+                    type="button"
+                    className={m.key === trigger ? 'active' : undefined}
+                    onClick={() => {
+                      setTrigger(m.key);
+                      if (m.key === 'posture') setGrid(COHABIT.SEATS.GRID);
+                    }}
+                  >
+                    {lang === 'zh' ? m.zh : m.en}
+                  </button>
+                ))}
+              </span>
+            </div>
+            <div className="grp walk-behaviour">
+              <LabControlLabel help={['会动：单元按规则落下收回；钉死：偶数行一直落着、不响应（座位三态下圈死人的那几台不落）；空房间：没有单元，猫在地面走。三档给对照用，座位都一样。', 'Live: units come down and withdraw by the rules. Fixed: even rows stay formed and never respond (in the seats rule, units that would box someone in are left out). Empty: no units, the cat walks the floor. The three settings are for comparison and share the same seats.']} lang={lang}>
                 {t.space}
               </LabControlLabel>
               <span className="seg">
@@ -469,12 +535,12 @@ export function CohabitBench({
             </div>
             {workspace && bodyControls}
             <div className="grp">
-              <LabControlLabel help={['4×4 是 Lab 2-8 那间房的真实单元尺寸；6×6、8×8 是等比缩小的单元。', '4×4 is the real unit size of the Lab 2-8 room; 6×6 and 8×8 are scaled-down units.']} lang={lang}>
+              <LabControlLabel help={['4×4 是 Lab 2-8 那间房的真实单元尺寸；6×6、8×8 是等比缩小的单元。座位三态只有 8×8：4×4 的一台平台直径 1.04 m，一张沙发会吃掉一个象限。', '4×4 is the real unit size of the Lab 2-8 room; 6×6 and 8×8 are scaled-down units. The seats rule is 8×8 only: a 4×4 platform is 1.04 m across, so one sofa would take a whole quadrant.']} lang={lang}>
                 {t.grid}
               </LabControlLabel>
               <span className="seg">
                 {PLAN.GRIDS.map((n) => (
-                  <button key={n} type="button" className={n === grid ? 'active' : undefined} onClick={() => setGrid(n)}>
+                  <button key={n} type="button" className={n === grid ? 'active' : undefined} disabled={seatsMode && n !== COHABIT.SEATS.GRID} onClick={() => setGrid(n)}>
                     {n}×{n}
                   </button>
                 ))}
@@ -494,7 +560,20 @@ export function CohabitBench({
             </div>
             <div className="grp">
               <label>
-                <input type="checkbox" checked={goal} title={tx(lang === 'zh' ? '空间的目的：猫四邻里人的痕迹最高的一格由空间补满，把猫能走的路铺向人多的地方；关 = 单元只跟痕迹' : 'the space’s purpose: the cat’s neighbour with the strongest people trace is filled, laying a route towards people; off = units only follow traces')} onChange={(e) => setGoal(e.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={goal}
+                  title={tx(
+                    seatsMode
+                      ? lang === 'zh'
+                        ? '空间的目的：有人坐下就一步一步把猫引到座位的会面台，有人站定看猫就给猫铺一步；关 = 单元只给猫脚下与它自己要去的那一台'
+                        : 'the space’s purpose: when someone sits, lead a cat step by step to the seat’s meeting unit; when someone stands watching a cat, lay one step; off = units only hold the cat’s own footing and its chosen landing'
+                      : lang === 'zh'
+                        ? '空间的目的：猫四邻里人的痕迹最高的一格由空间补满，把猫能走的路铺向人多的地方；关 = 单元只跟痕迹'
+                        : 'the space’s purpose: the cat’s neighbour with the strongest people trace is filled, laying a route towards people; off = units only follow traces',
+                  )}
+                  onChange={(e) => setGoal(e.target.checked)}
+                />
                 {t.goal}
               </label>
               <label>
@@ -518,13 +597,13 @@ export function CohabitBench({
               <LabControlLabel help={['地面读数达到阈值时单元成形；猫的落点预备用同一个数。', 'A unit forms when its floor reading reaches the threshold; the cat’s landing uses the same number.']} lang={lang}>
                 {t.threshold} {threshold.toFixed(0)} {tx('s')}
               </LabControlLabel>
-              <input type="range" min={1} max={40} step={1} value={threshold} aria-label={t.threshold} style={{ width: 84 }} onChange={(e) => setThreshold(Number(e.target.value))} />
+              <input type="range" min={1} max={40} step={1} value={threshold} disabled={seatsMode} aria-label={t.threshold} style={{ width: 84 }} onChange={(e) => setThreshold(Number(e.target.value))} />
             </div>
             <div className="grp">
               <LabControlLabel help={['人与猫离开后，痕迹退光所需的时间。', 'Time for a full trace to fade after people and cats leave.']} lang={lang}>
                 {t.fade} {fade.toFixed(0)} {tx('s')}
               </LabControlLabel>
-              <input type="range" min={2} max={60} step={1} value={fade} aria-label={t.fade} style={{ width: 84 }} onChange={(e) => setFade(Number(e.target.value))} />
+              <input type="range" min={2} max={60} step={1} value={fade} disabled={seatsMode} aria-label={t.fade} style={{ width: 84 }} onChange={(e) => setFade(Number(e.target.value))} />
             </div>
           </div>
           <div className="lab-ctl__row walk-playback">
@@ -548,6 +627,7 @@ export function CohabitBench({
                 <input
                   type="checkbox"
                   checked={showTrace}
+                  disabled={seatsMode}
                   onChange={(e) => {
                     traceRef.current = e.target.checked;
                     setShowTrace(e.target.checked);
@@ -586,8 +666,8 @@ export function CohabitBench({
             </div>
             {!workspace && (
               <>
-                <p className="lab-ctl__hint">{t.rules}</p>
-                <p className="lab-ctl__hint">{t.hint}</p>
+                <p className="lab-ctl__hint">{seatsMode ? t.rulesSeats : t.rules}</p>
+                <p className="lab-ctl__hint">{seatsMode ? t.hintSeats : t.hint}</p>
               </>
             )}
           </div>

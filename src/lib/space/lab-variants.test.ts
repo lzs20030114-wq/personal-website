@@ -510,43 +510,55 @@ const FROZEN = [
   '2-13:arch.stepped:round:apart',
   '2-13:arch.stepped:square:touch',
   '2-13:arch.stepped:square:apart',
-  // Ⅷ 同台（Lab 2-14：空间三档 × 格数 3 × 响应 2 × 让路 2）
-  '2-14:live:g4:follow:bands',
-  '2-14:live:g4:follow:whole',
-  '2-14:live:g4:ratchet:bands',
-  '2-14:live:g4:ratchet:whole',
-  '2-14:live:g6:follow:bands',
-  '2-14:live:g6:follow:whole',
-  '2-14:live:g6:ratchet:bands',
-  '2-14:live:g6:ratchet:whole',
-  '2-14:live:g8:follow:bands',
-  '2-14:live:g8:follow:whole',
-  '2-14:live:g8:ratchet:bands',
-  '2-14:live:g8:ratchet:whole',
-  '2-14:fixed:g4:follow:bands',
-  '2-14:fixed:g4:follow:whole',
-  '2-14:fixed:g4:ratchet:bands',
-  '2-14:fixed:g4:ratchet:whole',
-  '2-14:fixed:g6:follow:bands',
-  '2-14:fixed:g6:follow:whole',
-  '2-14:fixed:g6:ratchet:bands',
-  '2-14:fixed:g6:ratchet:whole',
-  '2-14:fixed:g8:follow:bands',
-  '2-14:fixed:g8:follow:whole',
-  '2-14:fixed:g8:ratchet:bands',
-  '2-14:fixed:g8:ratchet:whole',
-  '2-14:empty:g4:follow:bands',
-  '2-14:empty:g4:follow:whole',
-  '2-14:empty:g4:ratchet:bands',
-  '2-14:empty:g4:ratchet:whole',
-  '2-14:empty:g6:follow:bands',
-  '2-14:empty:g6:follow:whole',
-  '2-14:empty:g6:ratchet:bands',
-  '2-14:empty:g6:ratchet:whole',
-  '2-14:empty:g8:follow:bands',
-  '2-14:empty:g8:follow:whole',
-  '2-14:empty:g8:ratchet:bands',
-  '2-14:empty:g8:ratchet:whole',
+  // Ⅷ 同台（Lab 2-14：空间三档 × 规则 2 × 格数 × 响应 2 × 让路 2；座位三态只有 8×8——家具只在 8×8 下摆）
+  '2-14:live:posture:g8:follow:bands',
+  '2-14:live:posture:g8:follow:whole',
+  '2-14:live:posture:g8:ratchet:bands',
+  '2-14:live:posture:g8:ratchet:whole',
+  '2-14:live:trace:g4:follow:bands',
+  '2-14:live:trace:g4:follow:whole',
+  '2-14:live:trace:g4:ratchet:bands',
+  '2-14:live:trace:g4:ratchet:whole',
+  '2-14:live:trace:g6:follow:bands',
+  '2-14:live:trace:g6:follow:whole',
+  '2-14:live:trace:g6:ratchet:bands',
+  '2-14:live:trace:g6:ratchet:whole',
+  '2-14:live:trace:g8:follow:bands',
+  '2-14:live:trace:g8:follow:whole',
+  '2-14:live:trace:g8:ratchet:bands',
+  '2-14:live:trace:g8:ratchet:whole',
+  '2-14:fixed:posture:g8:follow:bands',
+  '2-14:fixed:posture:g8:follow:whole',
+  '2-14:fixed:posture:g8:ratchet:bands',
+  '2-14:fixed:posture:g8:ratchet:whole',
+  '2-14:fixed:trace:g4:follow:bands',
+  '2-14:fixed:trace:g4:follow:whole',
+  '2-14:fixed:trace:g4:ratchet:bands',
+  '2-14:fixed:trace:g4:ratchet:whole',
+  '2-14:fixed:trace:g6:follow:bands',
+  '2-14:fixed:trace:g6:follow:whole',
+  '2-14:fixed:trace:g6:ratchet:bands',
+  '2-14:fixed:trace:g6:ratchet:whole',
+  '2-14:fixed:trace:g8:follow:bands',
+  '2-14:fixed:trace:g8:follow:whole',
+  '2-14:fixed:trace:g8:ratchet:bands',
+  '2-14:fixed:trace:g8:ratchet:whole',
+  '2-14:empty:posture:g8:follow:bands',
+  '2-14:empty:posture:g8:follow:whole',
+  '2-14:empty:posture:g8:ratchet:bands',
+  '2-14:empty:posture:g8:ratchet:whole',
+  '2-14:empty:trace:g4:follow:bands',
+  '2-14:empty:trace:g4:follow:whole',
+  '2-14:empty:trace:g4:ratchet:bands',
+  '2-14:empty:trace:g4:ratchet:whole',
+  '2-14:empty:trace:g6:follow:bands',
+  '2-14:empty:trace:g6:follow:whole',
+  '2-14:empty:trace:g6:ratchet:bands',
+  '2-14:empty:trace:g6:ratchet:whole',
+  '2-14:empty:trace:g8:follow:bands',
+  '2-14:empty:trace:g8:follow:whole',
+  '2-14:empty:trace:g8:ratchet:bands',
+  '2-14:empty:trace:g8:ratchet:whole',
 ];
 
 describe('lab-variants · 项目二台架差分清单', () => {
@@ -555,16 +567,16 @@ describe('lab-variants · 项目二台架差分清单', () => {
     expect(new Set(LAB_VARIANTS.map((b) => b.key)).size).toBe(LAB_VARIANTS.length);
   });
 
-  it('729 种离散组合逐条与冻结清单相同（多层台原 50 组各保留五档圆方；2-14 加 36）', () => {
+  it('741 种离散组合逐条与冻结清单相同（多层台原 50 组各保留五档圆方；2-14 = 痕迹 36 + 座位三态 12）', () => {
     const combos = allCombos();
-    expect(combos.length).toBe(729);
+    expect(combos.length).toBe(741);
     expect(combos).toEqual(FROZEN.flatMap(id => id.startsWith('2-6:')
       ? ['m0', 'm1', 'm2', 'm3', 'm4'].map(m => `${id}:${m}`) : [id]));
   });
 
   it('各台组合数保留全部旧档，多层台有 250 种轮廓和连接分布组合', () => {
     const per = Object.fromEntries(LAB_VARIANTS.map((b) => [b.no, benchCombos(b).length]));
-    expect(per).toEqual({ '2-1': 1, '2-2': 1, '2-3': 3, '2-4': 4, '2-5': 11, '2-6': 250, '2-7': 22, '2-8': 5, '2-9': 160, '2-10': 72, '2-11': 12, '2-12': 24, '2-13': 128, '2-14': 36 });
+    expect(per).toEqual({ '2-1': 1, '2-2': 1, '2-3': 3, '2-4': 4, '2-5': 11, '2-6': 250, '2-7': 22, '2-8': 5, '2-9': 160, '2-10': 72, '2-11': 12, '2-12': 24, '2-13': 128, '2-14': 48 });
   });
 
   it('组合 id 唯一（同名档不会在清单里被折叠掉）', () => {
