@@ -140,13 +140,31 @@ export default function LabPage() {
 
         <Bench
           no="1-5"
-          lede="A shaft swings through 180° to open and close five rings. Three tendons bend the large arm. Switch the drive to the behaviour engine and the machine lives four lives, one persona each, responding to touch."
+          lede="A shaft swings through 180° to open and close five rings. Three tendons bend the large arm."
           specs={[
             ['Bodies', 'Real solids · adjustable skin'],
             ['Drive', 'One shaft · five cranks · in phase'],
-            ['Behaviour', 'Four personas · life cycle · JSONL event log'],
             ['Stroke', '180° reciprocating · apex ≡ 2R'],
             ['Arm', 'Three tendons · same solver as Lab 1-3'],
+            ['Caveats', 'Speed not to scale · small-arm motion choreographed'],
+          ]}
+        >
+          <MachineBench />
+        </Bench>
+
+        {/* 2026-10-07 用户拍板把行为引擎从 1-5 拆出来单独成台：同一台整机、同一个 MachineBench，
+            behavior = 驱动换成行为引擎（spec = 轮回机器_行为引擎spec.md §6.3）。旧深链 #lab1-5-behavior 由
+            planHash.normalizedLabHash 转到这里。 */}
+        <Bench
+          no="1-6"
+          lede="The machine lives four lives, one persona each, and responds to touch. Click a small arm or the shell, press the large arm, or use the controls to simulate a person nearby, sounds or being lifted."
+          specs={[
+            ['Personas', 'Vital · Withdrawn · Curious · Unstable · one per life'],
+            ['Life', 'Birth · growth · ageing · dying · blank'],
+            ['Stimuli', 'Presence · touch · grasp · sound · lift'],
+            ['Clock', 'Life clock ×1–×60 · motion stays real-time'],
+            ['Log', 'JSON Lines · sensor, engine and life events'],
+            ['Machine', 'Same assembly as Lab 1-5 · breath drives the crank'],
             ['Caveats', 'Rhythms not hardware-verified · yaw is a placeholder'],
           ]}
         >
