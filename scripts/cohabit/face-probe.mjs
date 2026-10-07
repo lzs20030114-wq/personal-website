@@ -1,5 +1,7 @@
 // 探针（作者 2026-10-07 提问「人穿过两单元之间，只收相对的两个面够不够」）：
 // 同一个芯收缩（ℓ 不变）下，一条带把键全松开会鼓成多大？与成形的挑出比；再按 4×4 真实尺度算走廊要几条带让路。
+// 注意：这里的「全松键」是**顶端不放、ℓ 不变**的读法，量出来是鼓包——作者当日纠正「松键之后多余的布可以往上去」，
+// 那是引擎的按带回程（retractStep），正确的账见 retract-probe.mjs；本脚本只留几何账（走廊要几条带让路）作记录。
 import { createServer } from 'vite';
 const server = await createServer({ root: process.cwd(), configFile: false, server: { middlewareMode: true, watch: null, hmr: false }, appType: 'custom', logLevel: 'error' });
 try {
