@@ -78,6 +78,13 @@ export interface PlanScene {
   showTrace: boolean;
   /** 此刻被身体让位闸住的单元（省略 = 没有） */
   blocked?: Uint8Array | null;
+  /** Lab 2-14 人猫同台（加法式，省略 = 旧画法逐位不变）：
+   *  对人是墙的单元（程度 ≥ 墙线）画一圈实墨；被 R5 钉住的（想落、落了会困住人）芯上画一道短横；
+   *  正在发生的事件在人猫之间连一条线（共视 绿虚 / 共温 紫 / 共触 粉 / 交接 墨细）；空房间档不画单元。 */
+  walls?: Uint8Array | null;
+  heldR5?: Uint8Array | null;
+  links?: readonly { x1: number; y1: number; x2: number; y2: number; kind: 'gaze' | 'warmth' | 'touch' | 'pass' }[];
+  hideUnits?: boolean;
 }
 
 /** 注意力区域用的离屏画布（缺口要用 destination-out 抠，不能直接在主画布上擦——会把地板一起擦掉） */
@@ -289,7 +296,7 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
   const mastPx = Math.max(1.6, L.mastR * sc);
   const span = platPx - mastPx;
   const scale = traceScale(s);
-  for (const u of L.units) {
+  for (const u of s.hideUnits ? [] : L.units) {
     const cx = X(u.x);
     const cy = Y(u.y);
     const d = s.act.degree[u.i];
@@ -329,12 +336,32 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
       ctx.arc(cx, cy, mastPx + d * span, 0, Math.PI * 2);
       ctx.stroke();
     }
+    // 墙（Lab 2-14）：对人过不去的那一圈画实墨
+    if (s.walls && s.walls[u.i]) {
+      ctx.strokeStyle = pal.ink;
+      ctx.globalAlpha = 0.75;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(cx, cy, platPx + 1.5, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     // 芯
     ctx.fillStyle = pal.ink;
     ctx.globalAlpha = 0.9;
     ctx.beginPath();
     ctx.arc(cx, cy, mastPx, 0, Math.PI * 2);
     ctx.fill();
+    // R5 钉住：芯上一道短横（它想落，落了会把人困住）
+    if (s.heldR5 && s.heldR5[u.i]) {
+      const k = Math.max(4, mastPx * 1.8);
+      ctx.strokeStyle = pal.accent2;
+      ctx.globalAlpha = 0.95;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx - k, cy);
+      ctx.lineTo(cx + k, cy);
+      ctx.stroke();
+    }
     // 闸住：芯上一个小 ×
     if (gated) {
       const k = Math.max(3, mastPx * 1.4);
@@ -379,6 +406,22 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
     for (let k = 2; k < s.trail.length; k += 2) ctx.lineTo(X(s.trail[k]), Y(s.trail[k + 1]));
     if (s.trailEnd) ctx.lineTo(X(s.trailEnd.x), Y(s.trailEnd.y));
     ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  // 事件连线（Lab 2-14）
+  if (s.links) {
+    for (const k of s.links) {
+      ctx.strokeStyle = k.kind === 'gaze' ? pal.accent : k.kind === 'warmth' ? pal.accent2 : k.kind === 'touch' ? pal.warn : pal.ink;
+      ctx.globalAlpha = k.kind === 'pass' ? 0.5 : 0.85;
+      ctx.lineWidth = k.kind === 'touch' ? 2.2 : k.kind === 'pass' ? 0.8 : 1.4;
+      ctx.setLineDash(k.kind === 'gaze' ? [4, 3] : []);
+      ctx.beginPath();
+      ctx.moveTo(X(k.x1), Y(k.y1));
+      ctx.lineTo(X(k.x2), Y(k.y2));
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
     ctx.globalAlpha = 1;
   }
 

@@ -1,4 +1,5 @@
 import { CAT_BEHAVIOURS } from './cat-plan';
+import { SPACE_MODES } from './cohabit';
 /**
  * 项目二台架的差分清单（2026-09-03，用户拍板「收纳成七台四段」+「千万不要丢差分的可能性」）。
  *
@@ -135,7 +136,7 @@ export const COMBO_FAMILY_OPTIONS = COMBO_FAMILIES.map((f) => ({ key: f.key, lab
 const COMBO_FAMILY_AXIS: VariantAxis = { axis: '单元', options: COMBO_FAMILY_OPTIONS };
 const COMBO_SPACING_AXIS: VariantAxis = { axis: '距离', options: COMBO_SPACING_OPTIONS };
 
-/** 十三台七段（页序）：Ⅰ 单元 2-1–3 · Ⅱ 序列 2-4 · Ⅲ 环 2-5–7 · Ⅳ 场 2-8 · Ⅴ 单元之间 2-9 · Ⅵ 人与猫 2-10–12 · Ⅶ 组合 2-13 */
+/** 十四台八段（页序）：Ⅰ 单元 2-1–3 · Ⅱ 序列 2-4 · Ⅲ 环 2-5–7 · Ⅳ 场 2-8 · Ⅴ 单元之间 2-9 · Ⅵ 人与猫 2-10–12 · Ⅶ 组合 2-13 · Ⅷ 同台 2-14 */
 export const LAB_VARIANTS: readonly BenchVariants[] = [
   { no: '2-1', key: 'unit', zh: '二维皮肤单元', en: 'Contractile skin units', plans: [], axes: [] },
   { no: '2-2', key: 'solid', zh: '立体带', en: 'Skin units, solid', plans: [], axes: [] },
@@ -224,6 +225,15 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     en: 'Compositions',
     plans: COMBO_PLAN_OPTIONS.map((p) => ({ ...p, sub: FORM_SUB })),
     axes: [COMBO_FAMILY_AXIS, COMBO_SPACING_AXIS],
+  },
+  {
+    no: '2-14',
+    key: 'cohabit',
+    zh: '人猫同台',
+    en: 'People and cats together',
+    // 编制 = 空间三档（会动 / 钉死 / 空房间，对照用）；人数 / 猫数 / 拖 / 自走是现场操作不是档
+    plans: SPACE_MODES.map((m) => ({ key: m.key, label: m.zh })),
+    axes: [WALK_GRID_AXIS, WALK_RESPONSE_AXIS],
   },
 ];
 
