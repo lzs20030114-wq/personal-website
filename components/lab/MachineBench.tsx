@@ -213,7 +213,7 @@ const CATCH_AT = 0.6;
 const HAND_UI = {
   /** 指针在 touch 以内待够这么久（秒）、且移动不快于 maxSpeed 才算碰到——划过去不算（距离阈值见 HAND_MM） */
   dwell: 0.12,
-  /** 碰到之前这段时间（秒）里指针挪动不到 still：是臂伸过来碰到了不动的手（ARM_TOUCH by: 'arm'） */
+  /** 指针进到「碰到」圈里之前已经这么久（秒）没挪动（挪动 = 超过 3 px）：是臂伸过来碰到了不动的手（ARM_TOUCH by: 'arm'） */
   stillFor: 0.2,
   send: 0.1,
   dBearing: 0.02,
@@ -235,7 +235,6 @@ const HAND_MM = {
   touch: 32,
   release: 68,
   anchor: 80,
-  still: 6,
   maxSpeed: 800,
 } as const;
 const clampN = (x: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, x));
@@ -903,6 +902,10 @@ export function MachineBench({
     let bandCandAt = 0;
     /** 碰臂：指针进了 touch 圈的时刻（待够 dwell 才算碰到）、碰着没有、碰到那一刻的位置 */
     let nearSince = -1;
+    /** 指针第一次进到「碰到」圈里的时刻（不管快慢）与它上一次真的挪动的时刻：判是谁碰的谁 */
+    let enteredAt = -1;
+    let lastMoveAt = -Infinity;
+    let lastMovePos = { x: -1e9, y: -1e9 };
     let hoverTouch = false;
     let hoverBy: 'hand' | 'arm' = 'hand';
     let hoverAt = { x: 0, y: 0 };
@@ -960,7 +963,6 @@ export function MachineBench({
         logHeader = eng.header();
         logBuf.length = 0;
         rateNow = eng.status().lifeRate;
-        // 交接来的引擎里若记着手 / 电极，下一帧按此刻的指针重新对一遍
         // 引擎眼里还有手 / 电极：标成「已报过」，下一帧 syncHand 按此刻的指针对一遍（不在画布上就报离开）
         const eh = eng.state.hand;
         handSent = eh?.present
@@ -1016,6 +1018,7 @@ export function MachineBench({
       const eng = engine;
       hoverTouch = false;
       nearSince = -1;
+      enteredAt = -1;
       syncContact();
       if (handSent) {
         handSent = null;
@@ -1405,7 +1408,7 @@ export function MachineBench({
                 bearing: eng.state.hand.bearing,
                 dist: eng.state.hand.dist,
                 touch: electrodeSent,
-                held: tensionOn,
+                held: tensionOn && electrodeSent,
               }
             : null,
           view: [cam.matrix[0], cam.matrix[1]],
@@ -1577,7 +1580,9 @@ export function MachineBench({
       skip: () => engine?.skip(),
       presence: (b, bearing) => {
         presenceNow = { band: b, bearing };
-        engine?.push(b === 'gone' ? { kind: 'PRESENCE', band: b } : { kind: 'PRESENCE', band: b, bearing });
+        // 指针正当着手：生效档 = 面板档与手档里近的那个（与 syncHand 同一条规矩）
+        const eff = handBand !== null && BAND_RANK[handBand] > BAND_RANK[b] ? handBand : b;
+        engine?.push(eff === 'gone' ? { kind: 'PRESENCE', band: eff } : { kind: 'PRESENCE', band: eff, bearing });
       },
       touch: (t) => {
         const eng = engine;
@@ -1745,6 +1750,8 @@ export function MachineBench({
         handSent = { ...send, at: now };
         eng.push({ kind: 'HAND', on: true, ...send });
       }
+      // 暂停时只报手的读数（收件箱里连着的 HAND 只留一条）；在场与碰臂的跳变不报——否则继续时一步里涌进一串
+      if (!running) return;
       // ② 在场档：手的距离带滞回、驻留够了才换；生效档 = 面板档与手档里近的那个，变了才报（不带方位：
       //    机器要先看见手才知道人在哪）
       const hb = handBandOf(read.dist, handBand);
@@ -1775,7 +1782,6 @@ export function MachineBench({
       const touchPx = clampN(HAND_MM.touch * pxPerMm, p0.touch ? 20 : 8, p0.touch ? 44 : 28);
       const releasePx = touchPx * (HAND_MM.release / HAND_MM.touch);
       const anchorPx = touchPx * (HAND_MM.anchor / HAND_MM.touch);
-      const stillPx = Math.max(2, HAND_MM.still * pxPerMm);
       const maxSpeed = HAND_MM.maxSpeed * pxPerMm;
       const d = armDist(px, py);
       // 按住大触手再拖开够远 = 抽手（不必等松开鼠标）
@@ -1785,14 +1791,16 @@ export function MachineBench({
       const t0 = trail[0];
       const speed = t0 && now - t0.t > 0.02 ? Math.hypot(px - t0.x, py - t0.y) / (now - t0.t) : 0;
       if (!hoverTouch) {
+        if (d <= touchPx) {
+          if (enteredAt < 0) enteredAt = now;
+        } else enteredAt = -1;
         if (d <= touchPx && speed <= maxSpeed) {
           if (nearSince < 0) nearSince = now;
           if (now - nearSince >= HAND_UI.dwell) {
             hoverTouch = true;
             hoverAt = { x: px, y: py };
-            const recent = trail.filter((q) => now - q.t <= HAND_UI.stillFor);
-            const span = recent.reduce((m, q) => Math.max(m, Math.hypot(q.x - px, q.y - py)), 0);
-            hoverBy = span < stillPx ? 'arm' : 'hand';
+            // 进圈那一刻指针已经静止了一阵 = 臂伸过来碰到了不动的手；进圈时还在动 = 手伸过去碰臂
+            hoverBy = enteredAt - lastMoveAt >= HAND_UI.stillFor ? 'arm' : 'hand';
           }
         } else nearSince = -1;
       } else {
@@ -1802,6 +1810,7 @@ export function MachineBench({
         if (d > releasePx && !stay) {
           hoverTouch = false;
           nearSince = -1;
+          enteredAt = -1;
         }
       }
       syncContact();
@@ -1831,13 +1840,17 @@ export function MachineBench({
         return;
       }
       el.dataset.on = '1';
-      el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+      // 圈的定位块是 .lab-fig，画布在 /lab 上比它窄、居中：加上画布在它里面的偏移
+      const ox = x + canvas.offsetLeft;
+      const oy = y + canvas.offsetTop;
+      el.style.transform = `translate(${ox.toFixed(1)}px, ${oy.toFixed(1)}px)`;
       const h = engine?.state.hand;
       const mode = h && h.seen && h.mode ? h.mode : 'unseen';
       if (el.dataset.mode !== mode) el.dataset.mode = mode;
       const touch = electrodeSent ? '1' : '';
       if ((el.dataset.touch ?? '') !== touch) el.dataset.touch = touch;
-      const held = tensionOn ? '1' : '';
+      // 握住 = 张力在、手还碰着（勾了「留物件」抽手以后，臂里握的是物件，不是这只手）
+      const held = tensionOn && electrodeSent ? '1' : '';
       if ((el.dataset.held ?? '') !== held) el.dataset.held = held;
     };
 
@@ -1890,6 +1903,9 @@ export function MachineBench({
         if (e.pointerType === 'touch' && e.isPrimary && handFollowNow && !pointer) {
           pointer = { cx: e.clientX, cy: e.clientY, touch: true, id: e.pointerId };
           camMoved = false;
+          // 手指落下就是手在动（不会被当成臂伸过来碰到它）
+          lastMoveAt = performance.now() / 1000;
+          lastMovePos = { x: px, y: py };
         }
         behaviorPointerDown(e, px, py);
         return;
@@ -1918,8 +1934,13 @@ export function MachineBench({
         if (handFollowNow && (e.pointerType !== 'touch' || (pointer && pointer.id === e.pointerId))) {
           pointer = { cx: e.clientX, cy: e.clientY, touch: e.pointerType === 'touch', id: e.pointerId };
           camMoved = false;
-          trail.push({ t: performance.now() / 1000, x: px, y: py });
+          const tNow = performance.now() / 1000;
+          trail.push({ t: tNow, x: px, y: py });
           if (trail.length > 64) trail.shift();
+          if (Math.hypot(px - lastMovePos.x, py - lastMovePos.y) > 3) {
+            lastMoveAt = tNow;
+            lastMovePos = { x: px, y: py };
+          }
         }
         canvas.style.cursor =
           armHeld || shellGesture
@@ -2499,8 +2520,10 @@ export function MachineBench({
                 <line x1={0} y1={0} x2={fx} y2={fy} stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" />
                 {bhud.hand ? (
                   (() => {
-                    // 手：离电机轴 0.6 m（臂梢那一圈）画在内圈，3 m 以外贴外圈
-                    const [hx, hy] = at(bhud.hand.bearing, Math.min(27, 6 + (bhud.hand.dist / 600) * 12));
+                    // 手：离电机轴 0.6 m（臂梢那一圈）画在内圈，再往外按距离铺到 3 m 贴外圈
+                    const hd = bhud.hand.dist;
+                    const hr = hd <= 600 ? 6 + (hd / 600) * 12 : 18 + (Math.min(hd, 3000) - 600) * (9 / 2400);
+                    const [hx, hy] = at(bhud.hand.bearing, hr);
                     return (
                       <circle
                         cx={hx}

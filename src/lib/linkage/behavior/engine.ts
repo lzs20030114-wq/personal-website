@@ -870,6 +870,8 @@ export class BehaviorEngine {
 
   private onDeathStart(t: number): void {
     const s = this.s;
+    // 注意力在死亡开始时清零——要在定「最后朝向人」之前清（清的时候会把绕回中的偏航目标就地停下）
+    if (s.hand) this.forgetHand();
     const ctx = this.context();
     if (s.pending) {
       this.emit('RESPONSE_DROP', { to: s.pending.id, reason: 'death' });
@@ -1314,6 +1316,11 @@ export class BehaviorEngine {
     const free = s.grasp.phase === 'IDLE' || s.grasp.phase === 'RELEASE';
     if (h.mode === null || h.mode === 'look' || !h.present || !ctx.orientOk || startled || !free || this.handOnBody(h)) {
       h.turning = false;
+      // 不跟了：正在绕回的长路作废、就地停下（惊跳那一下的转向留着）
+      if (h.unwind) {
+        h.unwind = false;
+        if (!startled) s.yawTarget = s.yawGoal;
+      }
       return;
     }
     // 迎：转到让臂线对准手的朝向（臂偏在机身中线右侧）；躲：机身中线背对手
@@ -1386,12 +1393,18 @@ export class BehaviorEngine {
     h.mode = mode;
     h.turning = false;
     h.turnSign = 0;
+    // 重新决定打断了正在绕回的长路：就地停下（下面的「看别处」会另给目标）
+    if (h.unwind) {
+      h.unwind = false;
+      if (!cause) s.yawTarget = s.yawGoal;
+    }
+    const free = s.grasp.phase === 'IDLE' || s.grasp.phase === 'RELEASE';
     const rec: Record<string, LogValue> = { mode, again };
     if (cause) rec.cause = cause;
     // 迎 / 躲：此前（没看见手时）定下的张望目标作废，朝向从此由手的跟踪接管（就地停住，要不要转由分层判）
-    if (mode !== 'look' && !cause && ctx.orientOk && s.grasp.phase === 'IDLE') s.yawTarget = s.yawGoal;
+    if (mode !== 'look' && !cause && ctx.orientOk && free) s.yawTarget = s.yawGoal;
     // 看别处：相对当前朝向转 30–70°，转向背着手的那一侧（不整圈乱转）
-    if (mode === 'look' && !cause && ctx.orientOk && s.grasp.phase === 'IDLE') {
+    if (mode === 'look' && !cause && ctx.orientOk && free) {
       const side = wrapPi(h.steer - s.yaw.x) >= 0 ? -1 : 1;
       s.yawTarget = clampYaw(s.yaw.x + side * uniform(s.rng, HAND.lookMin, HAND.lookMax));
       rec.look = s.yawTarget;
@@ -1448,8 +1461,8 @@ export class BehaviorEngine {
       case 'WRAP':
         return g.from + (GRASP.limit - g.from) * smooth((t - g.t0) / g.dur);
       case 'HOLD_HUMAN':
-        // 有手：保住缠住时的形状（力小不等于松开）；没有手：照旧极轻
-        return (this.s.hand ? Math.max(GRASP.human, HAND.holdKeep * g.contact) : GRASP.human) * ctx.grip;
+        // 有手抓住的（记下了深缠）：保住缠住时的形状（力小不等于松开）；没有手抓的：照旧极轻
+        return (g.contactW > 0.01 ? Math.max(GRASP.human, HAND.holdKeep * g.contact) : GRASP.human) * ctx.grip;
       case 'HOLD_OBJECT':
         return Math.max(g.contact, GRASP.object) * ctx.grip;
       default:
@@ -1627,13 +1640,12 @@ export class BehaviorEngine {
       const step = HAND.wrapFollow * Math.sqrt(s.speed) * DT;
       g.dir = wrapPi(g.dir + clamp(wrapPi(h.aimDir - g.dir), -step, step));
     }
-    // 深缠（只在有手时）：缠到底、握住时保住形状；没有手恒为 0
+    // 深缠：缠的时候只在有手时往深里卷；握住以后按抓住那一刻记下的深缠保形（没有手抓的恒为 0）——
+    // 看的是抓握的记忆，不是此刻指针在不在（手移开画布、或握着时指针才进来，形状都不该变）
     let wT = 0;
-    if (h) {
-      if (g.phase === 'WRAP') wT = smooth((t - g.t0) / g.dur);
-      else if (g.phase === 'HOLD_HUMAN') wT = HAND.holdWrap * g.contactW * ctx.grip;
-      else if (g.phase === 'HOLD_OBJECT') wT = g.contactW * ctx.grip;
-    }
+    if (g.phase === 'WRAP') wT = h ? smooth((t - g.t0) / g.dur) : 0;
+    else if (g.phase === 'HOLD_HUMAN') wT = HAND.holdWrap * g.contactW * ctx.grip;
+    else if (g.phase === 'HOLD_OBJECT') wT = g.contactW * ctx.grip;
     dampStep(s.wrap, wT, MOTION.armOmega * Math.sqrt(s.speed), DT);
     if (g.phase !== 'IDLE') {
       const b = this.graspBend(t, ctx);

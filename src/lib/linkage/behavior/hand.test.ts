@@ -245,6 +245,40 @@ describe('跟踪', () => {
     }
   });
 
+  it('绕回限位的途中重新决定（看别处）：长路作废、就地停下；手出了视野照样 3 s 后忘掉', () => {
+    for (let seed = 1; seed < 80; seed++) {
+      const g = grown('A', seed);
+      const e = withYaw(g.e, 2.9);
+      const log: LogRecord[] = [];
+      e.push(farHand(-1.6));
+      run(e, log, 25);
+      const unwind = log.find((r) => r.ev === 'ORIENT' && r.p?.mode === 'unwind');
+      const look = log.find((r) => r.ev === 'HAND_SEEN' && r.p?.mode === 'look' && unwind && r.t > unwind.t);
+      if (!unwind || !look) continue;
+      // 看别处以后不再沿长路转：不会再有一条 unwind，偏航目标就是看别处给的那个（或之后的新决定）
+      expect(e.state.hand === null || e.state.hand.unwind === false).toBe(true);
+      return;
+    }
+    throw new Error('没有种子在绕回途中抽到看别处');
+  });
+
+  it('死亡开始时正在绕回：最后朝向人的那一转照样做（不被清注意力抹掉）', () => {
+    const g = grown('C', seedFor('C', 'toward', 0));
+    const e = withYaw(g.e, 3.1);
+    const log: LogRecord[] = [];
+    e.push(farHand(-2.083));
+    run(e, log, 1.2);
+    expect(e.state.hand?.unwind).toBe(true);
+    // 直接跳到死亡：成长 → 衰老 → 死亡
+    e.skip();
+    run(e, log, 0.05);
+    e.skip();
+    run(e, log, 0.05);
+    const fin = log.find((r) => r.ev === 'ORIENT' && r.p?.mode === 'final');
+    expect(fin).toBeDefined();
+    expect(e.state.yawTarget).toBeCloseTo(fin!.p!.to as number, 9);
+  });
+
   it('躲开时手在正背后抖动（±0.5°）：转向锁定，不来回掉头', () => {
     // 沉静型：⑨ 30–45 s 才重新决定，8 s 里一直是躲；转得慢，8 s 里一直在转
     const { e, log } = grown('B', seedFor('B', 'away', 0));
@@ -330,6 +364,37 @@ describe('臂与缠', () => {
     expect(g.contact).toBeGreaterThan(GRASP.human);
     expect(g2.e.targets().arm.bend).toBeGreaterThan(0.8 * g.contact * 0.98);
     expect(g2.e.targets().arm.wrap).toBeCloseTo(0.5 * g.contactW, 1);
+  });
+
+  it('握住以后形状看抓握的记忆：手抓住的物件在指针离开后仍保形；没手抓住的，指针进来也不变紧', () => {
+    // 有手抓 → 留物件（电极落、张力在）→ 指针离开 4 s
+    const a = grown('C', seedFor('C', 'toward', 0));
+    a.e.push(hand(0, 420, 0.8, 0.5));
+    run(a.e, a.log, 2);
+    a.e.push({ kind: 'ARM_TOUCH', on: true });
+    run(a.e, a.log, 2.4);
+    a.e.push({ kind: 'RESISTANCE', on: true });
+    run(a.e, a.log, 1);
+    a.e.push({ kind: 'ARM_TOUCH', on: false });
+    run(a.e, a.log, 1.5);
+    expect(a.e.state.grasp.phase).toBe('HOLD_OBJECT');
+    const w0 = a.e.targets().arm.wrap;
+    a.e.push({ kind: 'HAND', on: false });
+    run(a.e, a.log, 4);
+    expect(a.e.state.hand).toBeNull();
+    expect(a.e.targets().arm.wrap).toBeGreaterThan(0.8 * w0);
+    // 没手抓 → 握人（极轻）→ 指针才进来
+    const b = grown('C', 31);
+    b.e.push({ kind: 'ARM_TOUCH', on: true });
+    run(b.e, b.log, 2.4);
+    b.e.push({ kind: 'RESISTANCE', on: true });
+    run(b.e, b.log, 3);
+    expect(b.e.state.grasp.phase).toBe('HOLD_HUMAN');
+    const bend0 = b.e.targets().arm.bend;
+    b.e.push(hand(0, 420, 0.8, 0.5));
+    run(b.e, b.log, 2);
+    expect(b.e.targets().arm.bend).toBeLessThan(bend0 + 0.05);
+    expect(b.e.targets().arm.wrap).toBe(0);
   });
 
   it('没有手时缠法照旧（握人 = 极轻、wrap 恒 0）', () => {

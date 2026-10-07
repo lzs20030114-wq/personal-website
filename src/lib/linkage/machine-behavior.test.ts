@@ -565,6 +565,40 @@ describe('手（指针）→ 传感', () => {
     expect(r.side).toBeLessThan(1e-6);
   });
 
+  it('指针在伸出机身外廓的那段臂旁边（轴测，机身朝着手转过去也一样）：不算摸壳', () => {
+    for (const yaw of [0, -0.5, 0.9]) {
+      const B = yawPoint(ARM_GEOM.base, yaw);
+      const T = yawPoint(ARM_GEOM.tip, yaw);
+      for (const u of [0.4, 0.6, 0.9]) {
+        const p = { x: B.x + (T.x - B.x) * u, y: B.y + (T.y - B.y) * u, z: B.z + (T.z - B.z) * u + 30 };
+        const r = handReading(axon, projectLogical(axon, p), yaw);
+        expect(r.onBody, `${yaw} ${u}`).toBe(false);
+        expect(r.dist, `${yaw} ${u}`).toBeGreaterThan(R_HULL);
+      }
+    }
+  });
+
+  it('手指第一下就按在机身顶上（没有上一个方位）：方位取机身朝向，不在电机轴附近乱跳', () => {
+    const c = projectLogical(top, { x: 0, y: 0, z: 230 });
+    for (const [dx, dy] of [[0, 0], [3, 0], [-3, 0], [0, 3]]) {
+      const r = handReading(top, { x: c.x + dx, y: c.y + dy }, 0.7);
+      expect(r.onBody).toBe(true);
+      expect(r.bearing).toBeCloseTo(0.7, 9);
+    }
+  });
+
+  it('手绕到臂基座附近：弯曲连续地渐隐（不会挪半个像素就从弯到底跳到不弯）', () => {
+    for (const yaw of [0, 0.8]) {
+      let prev: number | null = null;
+      const B = projectLogical(axon, yawPoint(ARM_GEOM.base, yaw));
+      for (let dx = -40; dx <= 40; dx += 0.5) {
+        const r = handReading(axon, { x: B.x + dx, y: B.y + 3 }, yaw);
+        if (prev !== null) expect(Math.abs(r.aimBend - prev), `${yaw} ${dx}`).toBeLessThan(0.25);
+        prev = r.aimBend;
+      }
+    }
+  });
+
   it('机身转动不改变同一个指针读出的方位与距离（两个平面都与机器姿态无关）', () => {
     for (const v of [axon, top, front]) {
       const l = { x: -120, y: 40 };

@@ -1562,7 +1562,7 @@ button.log-heat__cell {
   border: 1px solid oklch(0.95 0.032 120 / 0.25);
 }
 /* Lab 1-6：指针 = 人的手（2026-10-07）。圈跟着指针走，样子 = 机器此刻怎么对待这只手：
-   虚线 = 还没看见；绿 = 迎过去；莲粉 = 背过身；淡实线 = 不理；碰着 = 圈里填色；握住 = 外加一圈。
+   虚线 = 还没看见；绿 = 迎过去；莲粉 = 背过身；淡实线 = 看别处；碰着 = 圈里填色；握住 = 外加一圈。
    台架逐帧写 transform 与 data-*，不走 React 状态。 */
 .lab-hand {
   position: absolute;
@@ -1588,7 +1588,7 @@ button.log-heat__cell {
   border-style: solid;
   border-color: var(--rose);
 }
-.lab-hand[data-mode='ignore'] {
+.lab-hand[data-mode='look'] {
   border-style: solid;
   border-color: oklch(0.95 0.02 120 / 0.55);
 }

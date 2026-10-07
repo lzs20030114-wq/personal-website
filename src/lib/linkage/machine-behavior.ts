@@ -466,6 +466,10 @@ export const R_FRONT = 600;
  */
 export const R_HULL = 300;
 export const HULL_Z = [-160, 230] as const;
+/** 射线离（伸出外廓的那段）臂轴不到这么远（mm）：指针在臂旁边，不算摸壳 */
+export const ARM_NEAR = 50;
+/** 手离臂基座不到这么远（mm）时「往哪弯」没意义：弯曲渐隐到 0 */
+export const R_NEAR_BASE = 40;
 
 /** 视线（相机轴）与水平面的夹角够大时用「臂高水平面」，否则用「朝相机的圆柱面」——按视图定，不按每根射线定 */
 const PLANE_MIN = Math.sin((15 * Math.PI) / 180);
@@ -532,53 +536,8 @@ const front = (v: ViewParams, q: number): boolean => v.persp <= 0 || q < v.persp
 export function handReading(v: ViewParams, l: P2, yaw: number, hold?: number): HandReading {
   const zArm = ARM_GEOM.base.z;
   const ray = rayOf(v, l);
-  let hit: Vec3 | null = null;
-  let onBody = false;
-  let holdBearing = false;
-  // 射线先碰到机身外廓的哪一面（侧面 / 顶面，取离相机近的那个 = q 大的）
-  let qBody = -Infinity;
-  const hull = cylRoots(ray, R_HULL);
-  if (hull && front(v, hull[0])) {
-    const p = at(ray, hull[0]);
-    if (p.z >= HULL_Z[0] && p.z <= HULL_Z[1]) {
-      hit = p;
-      qBody = hull[0];
-    }
-  }
-  if (ray.d.z !== 0) {
-    const qTop = (HULL_Z[1] - ray.a.z) / ray.d.z;
-    const pt = at(ray, qTop);
-    if (qTop > qBody && front(v, qTop) && Math.hypot(pt.x - YAW_AXIS.x, pt.y - YAW_AXIS.y) <= R_HULL) {
-      // 从顶上压在机身上：那一面上方位没意义（离电机轴太近），沿用上一个
-      hit = pt;
-      qBody = qTop;
-      holdBearing = true;
-    }
-  }
-  onBody = hit !== null;
-  if (!hit) {
-    if (Math.abs(v.m[8]) >= PLANE_MIN) {
-      if (ray.d.z !== 0) {
-        const q = (zArm - ray.a.z) / ray.d.z;
-        const p = at(ray, q);
-        if (front(v, q) && Math.hypot(p.x - YAW_AXIS.x, p.y - YAW_AXIS.y) <= HAND_FAR) hit = p;
-      }
-      if (!hit) {
-        const far = cylRoots(ray, HAND_FAR);
-        hit = far ? at(ray, far[1]) : at(ray, closestToAxis(ray));
-      }
-    } else hit = hitCylinder(v, l);
-  }
-  const hx = hit.x - YAW_AXIS.x;
-  const hy = hit.y - YAW_AXIS.y;
-  const dist = onBody ? R_HULL : Math.min(HAND_FAR, Math.hypot(hx, hy));
-  const bearing =
-    holdBearing && hold !== undefined ? hold : wrapPiLocal(Math.atan2(hy, hx) - FACING);
-  // 臂线对准手：臂在机身中线右侧 e（右为正），机身要往左多转 asin(e / dist)
-  const e = ARM_GEOM.base.y - YAW_AXIS.y;
-  const face = dist >= 1.2 * Math.abs(e) ? wrapPiLocal(bearing + Math.asin(clamp(e / dist, -1, 1))) : bearing;
 
-  // —— 臂怎么弯
+  // —— 射线离（此刻朝向下的）笔直臂轴最近的点：既是「臂怎么弯」的依据，也用来判「指针在臂旁边」
   const B = yawPoint(ARM_GEOM.base, yaw);
   const T = yawPoint(ARM_GEOM.tip, yaw);
   const L = ARM_GEOM.length;
@@ -594,16 +553,89 @@ export function handReading(v: ViewParams, l: P2, yaw: number, hold?: number): H
   const D = d.x * wx + d.y * wy + d.z * wz;
   const E = ex * wx + ey * wy + ez * wz;
   const den = A - bb * bb;
-  const hTip = unprojectAt(v, l, viewDepth(v, T));
-  let h = hTip;
+  let hc: Vec3 | null = null;
+  let k = 0;
+  let nearArm = false;
   if (den > 1e-12 * A) {
     const u = clamp((A * E - bb * D) / den, 0, 2 * L);
     let q = (d.x * (B.x + u * ex - ray.a.x) + d.y * (B.y + u * ey - ray.a.y) + d.z * (B.z + u * ez - ray.a.z)) / A;
     if (v.persp > 0) q = Math.min(q, v.persp * 0.95);
-    const hc = at(ray, q);
-    const k = smoothstep(0.15, 0.35, Math.sqrt(den / A));
-    h = { x: hTip.x + (hc.x - hTip.x) * k, y: hTip.y + (hc.y - hTip.y) * k, z: hTip.z + (hc.z - hTip.z) * k };
+    hc = at(ray, q);
+    k = smoothstep(0.15, 0.35, Math.sqrt(den / A));
+    // 指针就在伸出机身外廓的那段臂旁边：那是手在臂边上，不是在摸壳
+    const qa = { x: B.x + u * ex, y: B.y + u * ey, z: B.z + u * ez };
+    const gap = Math.hypot(hc.x - qa.x, hc.y - qa.y, hc.z - qa.z);
+    nearArm = k > 0.5 && u <= 1.1 * L && gap < ARM_NEAR && Math.hypot(qa.x - YAW_AXIS.x, qa.y - YAW_AXIS.y) > 0.9 * R_HULL;
   }
+
+  // —— 人在哪
+  let hit: Vec3 | null = null;
+  let holdBearing = false;
+  // 臂高水平面的交点（俯视 / 轴测用；摸壳判定也要拿它比先后）
+  const planeMode = Math.abs(v.m[8]) >= PLANE_MIN;
+  let qPlane = -Infinity;
+  let pPlane: Vec3 | null = null;
+  if (planeMode && ray.d.z !== 0) {
+    const q = (zArm - ray.a.z) / ray.d.z;
+    const p = at(ray, q);
+    if (front(v, q)) {
+      qPlane = q;
+      pPlane = p;
+    }
+  }
+  if (!nearArm) {
+    // 射线先碰到机身外廓的哪一面（侧面 / 顶面，取离相机近的那个 = q 大的）
+    let qBody = -Infinity;
+    const hull = cylRoots(ray, R_HULL);
+    if (hull && front(v, hull[0])) {
+      const p = at(ray, hull[0]);
+      if (p.z >= HULL_Z[0] && p.z <= HULL_Z[1]) {
+        hit = p;
+        qBody = hull[0];
+      }
+    }
+    if (ray.d.z !== 0) {
+      const qTop = (HULL_Z[1] - ray.a.z) / ray.d.z;
+      const pt = at(ray, qTop);
+      if (qTop > qBody && front(v, qTop) && Math.hypot(pt.x - YAW_AXIS.x, pt.y - YAW_AXIS.y) <= R_HULL) {
+        // 从顶上压在机身上：那一面上方位没意义（离电机轴太近），沿用上一个
+        hit = pt;
+        qBody = qTop;
+        holdBearing = true;
+      }
+    }
+    // 射线先落到外廓外面的臂高平面上（手在机身前面、比外廓那一面离相机近）：不算摸壳
+    if (hit && pPlane && qPlane > qBody && Math.hypot(pPlane.x - YAW_AXIS.x, pPlane.y - YAW_AXIS.y) > R_HULL) {
+      hit = null;
+      holdBearing = false;
+    }
+  }
+  const onBody = hit !== null;
+  if (!hit) {
+    if (planeMode) {
+      if (pPlane && Math.hypot(pPlane.x - YAW_AXIS.x, pPlane.y - YAW_AXIS.y) <= HAND_FAR) hit = pPlane;
+      else {
+        const far = cylRoots(ray, HAND_FAR);
+        hit = far ? at(ray, far[1]) : at(ray, closestToAxis(ray));
+      }
+    } else hit = hitCylinder(v, l);
+  }
+  const hx = hit.x - YAW_AXIS.x;
+  const hy = hit.y - YAW_AXIS.y;
+  const dist = onBody ? R_HULL : Math.min(HAND_FAR, Math.hypot(hx, hy));
+  let bearing = wrapPiLocal(Math.atan2(hy, hx) - FACING);
+  if (holdBearing) {
+    // 压在机身顶上：沿用上一个读数的方位；没有上一个（手指第一下就按在顶上）时，离轴太近的点方位乱跳，取机身此刻的朝向
+    if (hold !== undefined) bearing = hold;
+    else if (Math.hypot(hx, hy) < 0.6 * R_HULL) bearing = wrapPiLocal(yaw);
+  }
+  // 臂线对准手：臂在机身中线右侧 e（右为正），机身要往左多转 asin(e / dist)
+  const e = ARM_GEOM.base.y - YAW_AXIS.y;
+  const face = dist >= 1.2 * Math.abs(e) ? wrapPiLocal(bearing + Math.asin(clamp(e / dist, -1, 1))) : bearing;
+
+  // —— 臂怎么弯：射线上离臂轴最近的点；顺着臂轴看（臂几乎正对相机）时渐变到过臂梢、垂直视线的平面
+  const hTip = unprojectAt(v, l, viewDepth(v, T));
+  const h = hc ? { x: hTip.x + (hc.x - hTip.x) * k, y: hTip.y + (hc.y - hTip.y) * k, z: hTip.z + (hc.z - hTip.z) * k } : hTip;
   // 机身局部系（转回 yaw = 0）：前 = −X、左 = −Y、上 = +Z
   const c = Math.cos(-yaw);
   const sn = Math.sin(-yaw);
@@ -617,10 +649,15 @@ export function handReading(v: ViewParams, l: P2, yaw: number, hold?: number): H
   const off = Math.atan2(side, along);
   const aimDir = side > 1e-6 ? Math.atan2(left, up) : 0;
   const maxDeg = ARM_CHORD[ARM_CHORD.length - 1][1];
+  // 梢端弦角。手在臂长以外取 off；以内取经过手的切弧在梢端的弦角 L·sin(off)/r（两式在 r·off/sin(off) = L 处相等）；
+  // 手在基座后面取 off → π/2 那一端的值（同一式 sin = 1，接得上）。手离基座不到 R_NEAR_BASE 时方向没意义：
+  // 半径下限钳住、再整体渐隐到 0（各段都连续，不会挪半个像素就从弯到底跳到不弯）
+  const rr = Math.max(r, R_NEAR_BASE);
+  const fade = smoothstep(0, R_NEAR_BASE, r);
   let need: number;
-  if (off >= Math.PI / 2) need = maxDeg * smoothstep(0, 60, side); // 手在基座后面：弯到底（机身该转了）；就在轴上时方向没意义，不弯
+  if (off >= Math.PI / 2) need = Math.min(maxDeg, (L / rr) * (180 / Math.PI)) * fade;
   else if (off < 1e-9 || (r * off) / Math.sin(off) >= L) need = (off * 180) / Math.PI;
-  else need = ((L * Math.sin(off)) / r) * (180 / Math.PI);
+  else need = Math.min(maxDeg, ((L * Math.sin(off)) / rr) * (180 / Math.PI)) * fade;
   return { bearing, dist, face, aimDir, aimBend: driveOfChord(need) / ARM_DRIVE.span, aimDist: r, side, onBody };
 }
 
