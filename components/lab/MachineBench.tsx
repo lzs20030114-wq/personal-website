@@ -7,8 +7,27 @@ import { LabControlLabel } from './LabControlLabel';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import { FlatRenderer, bakeIndexed, bakeRuledPoints, bakeSkinned, type CellFrame } from '../../src/lib/linkage/gl3d';
-import { CriticallyDamped } from '../../src/lib/linkage/motion';
-import { armFrame, armPolyline, idleContraction } from '../../src/lib/linkage/machine-arm';
+import { CriticallyDamped, type DampState, dampStep } from '../../src/lib/linkage/motion';
+import { armFrame, armPoint, armPolyline, idleContraction } from '../../src/lib/linkage/machine-arm';
+import { type ActuatorTargets, BehaviorEngine, type EngineState } from '../../src/lib/linkage/behavior/engine';
+import { describeRecord, personaName, phaseName } from '../../src/lib/linkage/behavior/describe';
+import type { PresenceBand, SensorInput } from '../../src/lib/linkage/behavior/events';
+import type { Phase } from '../../src/lib/linkage/behavior/life';
+import { type LogHeader, type LogRecord, toJsonl } from '../../src/lib/linkage/behavior/log';
+import { PERSONA_KEYS, type PersonaKey } from '../../src/lib/linkage/behavior/persona';
+import {
+  feelerAngle,
+  feelerSide,
+  followBreath,
+  halfTowardPerson,
+  hitBand,
+  polylineDist,
+  shellHalf,
+  sweepFraming,
+  tendonContractions,
+  yawFrame,
+  yawPoint,
+} from '../../src/lib/linkage/machine-behavior';
 import {
   MESH_GROUPS as ARM_MESH_GROUPS,
   STATIONS as ARM_STATIONS,
@@ -60,6 +79,7 @@ import {
 } from '../../src/lib/linkage/machine-smallarm';
 import { SMALLARM_PLACEMENTS } from '../../src/lib/linkage/machine-shape';
 import { stashBench, takeBench } from './handoff';
+import { planFromHash } from './planHash';
 import { setStash } from './snapshot';
 import { useBenchLoop } from './useBenchLoop';
 
@@ -86,6 +106,12 @@ import { useBenchLoop } from './useBenchLoop';
  *
  * 规格表须写明的局限（spec §7）：转速非真机节律（减速比无出处）、小触手波形是
  * 展示编排非真机节律、脚槽止程是仿真标定值非真机实测。
+ *
+ * **两种驱动源**（行为引擎 M2，2026-10-07；spec = 轮回机器_行为引擎spec.md §6）：
+ * 「编排」= 上面这些按时间走的展示动画（现状，默认）；「行为引擎」= 机器按人格与生命阶段
+ * 对刺激作出反应——呼吸给曲柄、臂给三腱、触须给舵机、朝向给整机绕竖轴转（占位）。
+ * 引擎是零 DOM 的纯模块（src/lib/linkage/behavior/），换算在 machine-behavior.ts；
+ * 这里只接线。`behavior` prop 不传 = 没有驱动源开关，主页预览与案例页主图逐位不变。
  */
 
 const VIEWS = [
@@ -149,6 +175,51 @@ const ARM_SHADE = { dark: [0.1, 0.11, 0.11], lite: [0.52, 0.54, 0.5] } as const;
 const CHASE_OMEGA = 2.5;
 const VIEW_ANIM_S = 0.35;
 
+/** 编排档机位（实测运动包络定的值，见 OrbitCamera 构造处的长注）。行为档切回来时逐位还原 */
+const CHOREO_PIVOT = { x: -158.02, y: 39.22, z: -24.37 };
+const CHOREO_SCALE = 0.75;
+
+// ── 行为引擎档（M2）的手感常量 ─────────────────────────────────────────────
+type DriveSource = 'choreo' | 'engine';
+/** 生命时钟档：只压缩一世各段的时长，呼吸与动作仍按真实秒（spec §5.5）。×1 = 实验口径 */
+const LIFE_RATES = [1, 5, 10, 20] as const;
+/** 默认 ×10：一世约 50 秒，访客等得到一次死亡与轮回 */
+const LIFE_RATE_DEFAULT = 10;
+const BANDS: readonly PresenceBand[] = ['gone', 'far', 'mid', 'near'];
+/** 日志缓冲上限（条）：一场四世约 500 条，这个数够跑十几个小时；超了丢最早的 */
+const LOG_CAP = 20000;
+/** 按住壳多久算「按住」（秒）、拖多远算「抚摸」（CSS px） */
+const HOLD_AFTER = 0.5;
+const STROKE_PX = 10;
+/** 缠到几成时手指被卡住、张力开关触发（抓握演示：按住大触手 = 手指在臂里） */
+const CATCH_AT = 0.6;
+/** 回编排档时机身转回原朝向的跟随器角频率（rad/s） */
+const YAW_HOME_OMEGA = 3;
+
+/** 从某种人格开始，其余按 A→B→C→D 循环（台架的「首世」档） */
+function rotateOrder(first: PersonaKey): PersonaKey[] {
+  const i = PERSONA_KEYS.indexOf(first);
+  return [...PERSONA_KEYS.slice(i), ...PERSONA_KEYS.slice(0, i)];
+}
+
+/** 行为档 HUD 的读数（约每 0.2 秒刷新一次；文字在渲染时按语言现拼） */
+interface BehaviorHud {
+  life: number;
+  persona: PersonaKey;
+  phase: Phase;
+  /** 本段剩余（真实秒，已按生命时钟折算） */
+  remain: number;
+  rate: number;
+  arousal: number;
+  soundOn: boolean;
+  soundF: number;
+  light: number;
+  yaw: number;
+  bearing: number | null;
+  band: PresenceBand;
+  recent: LogRecord[];
+}
+
 /**
  * 跨路由交接的状态包（handoff.ts）。存的是**机构此刻的位形**，不是组件实例——
  * 五环各自的节点坐标 + 曲柄角，触手的节点坐标 + 三腱收缩率 + 待机时钟。
@@ -170,6 +241,8 @@ interface MachineHandoff {
   saPts: Float32Array[];
   saTheta: number[];
   saClock: number;
+  /** 行为档（M2）：引擎整块状态 + 当时的朝向与首世。编排档不带这一支 */
+  behavior?: { engine: EngineState; yaw: number; first: PersonaKey };
 }
 const HANDOFF_KEY = 'machine';
 
@@ -313,6 +386,66 @@ const COPY = {
     going: { fold: '折叠 ↓', open: '伸展 ↑' },
     aria: '轮回机器整机台架；曲柄角与肌腱驱动，视角按钮切换',
     loading: '载入实体…',
+    beh: {
+      src: '驱动',
+      srcHelp: [
+        '编排：按时间走的展示动画。行为引擎：机器按人格与生命阶段对刺激作出反应，一世接一世。',
+        'Choreo: time-driven display motion. Behaviour engine: the machine responds to stimuli by persona and life stage, life after life.',
+      ] as [string, string],
+      srcNames: { choreo: '编排', engine: '行为引擎' },
+      clock: '生命时钟',
+      clockHelp: [
+        '只压缩一世各段的时长（诞生 → 成长 → 衰老 → 死亡 → 空白），呼吸与动作仍按真实速度。×1 是实验口径，一世约 9 分钟。',
+        'Compresses only the life stages (birth → growth → ageing → dying → blank); breathing and gestures stay real-time. ×1 is the experiment timing, about 9 minutes per life.',
+      ] as [string, string],
+      first: '首世',
+      firstHelp: [
+        '从哪种人格开始，其余按 A → B → C → D 循环。换了就重开一场。',
+        'Which persona comes first; the rest follow A → B → C → D in turn. Changing it starts a new session.',
+      ] as [string, string],
+      restart: '重来',
+      skip: '下一段',
+      presence: '在场',
+      presenceHelp: [
+        '有没有人、离多远（真机用超声测距）。方位 0° 是机身初始朝向，左为正。',
+        'Whether someone is there and how close (ultrasonic on the machine). Bearing 0° is the machine’s initial facing; left is positive.',
+      ] as [string, string],
+      bands: { gone: '无人', far: '远', mid: '中', near: '近' },
+      bearing: '方位',
+      bearingAria: '人相对机身初始朝向的方位（度，左为正）',
+      touch: '触碰',
+      touchHelp: [
+        '碰离人近的那一半壳。也可以直接点画面：点壳 = 轻拍，拖动 = 抚摸，按住不放 = 按住；点小触手、按住大触手也行。',
+        'Touches the half of the shell nearer the person. Or use the canvas: click the shell to pat, drag to stroke, press and hold to hold; click a small arm or press the large arm.',
+      ] as [string, string],
+      touches: { pat: '轻拍', stroke: '抚摸', poke: '戳', hold: '按住' },
+      env: '环境',
+      envHelp: ['拿起机器、敲桌面、拍手或说话。', 'Lift the machine, knock, clap or talk.'] as [string, string],
+      envs: { lift: '拿起', knock: '敲', clap: '拍手', talk: '说话' },
+      grasp: '抓握',
+      graspHelp: [
+        '按住大触手 = 手指碰到臂。它若迎上来就会缠住手指（张力开关触发）。勾选「留物件」，松手后臂里留着东西。',
+        'Press the large arm to put a finger on it. If it responds, it wraps the finger (the tension switch closes). With “Leave object”, something stays in the arm after you let go.',
+      ] as [string, string],
+      leave: '留物件',
+      log: '日志',
+      logHelp: [
+        '下载本场的事件日志（JSON Lines）：传感事件、引擎的回应与生命事件同一条流。',
+        'Download this session’s event log (JSON Lines): sensor events, responses and life events in one stream.',
+      ] as [string, string],
+      export: '导出',
+      title: '行为引擎',
+      lifeN: (n: number) => `第 ${n} 世`,
+      remain: (s: number) => `剩 ${s} 秒`,
+      rateAt: (r: number) => `生命时钟 ×${r}`,
+      arousal: '唤醒',
+      sound: '声',
+      light: '灯',
+      caveat: '节律非真机 · 偏航为占位',
+      hint: '点小触手、大触手或壳体与它互动 · 视角由下方按钮切换',
+      compass: '俯视：箭头 = 机身朝向，圆点 = 人',
+      aria: '轮回机器整机台架（行为引擎驱动）；点触手或壳体注入刺激，视角按钮切换',
+    },
   },
   en: {
     run: 'Run',
@@ -343,6 +476,66 @@ const COPY = {
     going: { fold: 'folding ↓', open: 'extending ↑' },
     aria: 'Reincarnation machine full-assembly bench; crank and tendon driven, view set by buttons',
     loading: 'loading solids…',
+    beh: {
+      src: 'Drive',
+      srcHelp: [
+        '编排：按时间走的展示动画。行为引擎：机器按人格与生命阶段对刺激作出反应，一世接一世。',
+        'Choreo: time-driven display motion. Behaviour engine: the machine responds to stimuli by persona and life stage, life after life.',
+      ] as [string, string],
+      srcNames: { choreo: 'Choreo', engine: 'Behaviour engine' },
+      clock: 'Life clock',
+      clockHelp: [
+        '只压缩一世各段的时长（诞生 → 成长 → 衰老 → 死亡 → 空白），呼吸与动作仍按真实速度。×1 是实验口径，一世约 9 分钟。',
+        'Compresses only the life stages (birth → growth → ageing → dying → blank); breathing and gestures stay real-time. ×1 is the experiment timing, about 9 minutes per life.',
+      ] as [string, string],
+      first: 'First life',
+      firstHelp: [
+        '从哪种人格开始，其余按 A → B → C → D 循环。换了就重开一场。',
+        'Which persona comes first; the rest follow A → B → C → D in turn. Changing it starts a new session.',
+      ] as [string, string],
+      restart: 'Restart',
+      skip: 'Next stage',
+      presence: 'Presence',
+      presenceHelp: [
+        '有没有人、离多远（真机用超声测距）。方位 0° 是机身初始朝向，左为正。',
+        'Whether someone is there and how close (ultrasonic on the machine). Bearing 0° is the machine’s initial facing; left is positive.',
+      ] as [string, string],
+      bands: { gone: 'Away', far: 'Far', mid: 'Mid', near: 'Near' },
+      bearing: 'Bearing',
+      bearingAria: 'Bearing of the person from the machine’s initial facing (degrees, left positive)',
+      touch: 'Touch',
+      touchHelp: [
+        '碰离人近的那一半壳。也可以直接点画面：点壳 = 轻拍，拖动 = 抚摸，按住不放 = 按住；点小触手、按住大触手也行。',
+        'Touches the half of the shell nearer the person. Or use the canvas: click the shell to pat, drag to stroke, press and hold to hold; click a small arm or press the large arm.',
+      ] as [string, string],
+      touches: { pat: 'Pat', stroke: 'Stroke', poke: 'Poke', hold: 'Hold' },
+      env: 'Surroundings',
+      envHelp: ['拿起机器、敲桌面、拍手或说话。', 'Lift the machine, knock, clap or talk.'] as [string, string],
+      envs: { lift: 'Lift', knock: 'Knock', clap: 'Clap', talk: 'Talk' },
+      grasp: 'Grasp',
+      graspHelp: [
+        '按住大触手 = 手指碰到臂。它若迎上来就会缠住手指（张力开关触发）。勾选「留物件」，松手后臂里留着东西。',
+        'Press the large arm to put a finger on it. If it responds, it wraps the finger (the tension switch closes). With “Leave object”, something stays in the arm after you let go.',
+      ] as [string, string],
+      leave: 'Leave object',
+      log: 'Log',
+      logHelp: [
+        '下载本场的事件日志（JSON Lines）：传感事件、引擎的回应与生命事件同一条流。',
+        'Download this session’s event log (JSON Lines): sensor events, responses and life events in one stream.',
+      ] as [string, string],
+      export: 'Export',
+      title: 'Behaviour engine',
+      lifeN: (n: number) => `Life ${n}`,
+      remain: (s: number) => `${s} s left`,
+      rateAt: (r: number) => `life clock ×${r}`,
+      arousal: 'Arousal',
+      sound: 'Sound',
+      light: 'Light',
+      caveat: 'Rhythms not hardware-verified · yaw is a placeholder',
+      hint: 'Touch a small arm, the large arm or the shell · views by the buttons below',
+      compass: 'Top view: arrow = machine facing, dot = person',
+      aria: 'Reincarnation machine bench driven by the behaviour engine; touch the arms or shell to add stimuli, views by buttons',
+    },
   },
 } as const;
 
@@ -352,6 +545,7 @@ export function MachineBench({
   controls = true,
   onLight = false,
   sideControls = false,
+  behavior = false,
   lang: explicitLang,
 }: {
   spin?: boolean;
@@ -359,6 +553,8 @@ export function MachineBench({
   controls?: boolean;
   onLight?: boolean;
   sideControls?: boolean;
+  /** 出「驱动源」开关（编排 / 行为引擎，M2）。不传 = 没有这个开关，台架与 M2 之前逐位相同 */
+  behavior?: boolean;
   lang?: 'zh' | 'en';
 }) {
   const lang = useBenchLang(explicitLang);
@@ -377,6 +573,16 @@ export function MachineBench({
     armHome: () => void;
     setSaSwing: (ampDeg: number, freqHz: number) => void;
     viewTo: (k: ViewKey) => void;
+    // —— 行为档（M2）
+    setSource: (s: DriveSource) => void;
+    setLifeRate: (r: number) => void;
+    restart: (first: PersonaKey) => void;
+    skip: () => void;
+    presence: (band: PresenceBand, bearing: number) => void;
+    touch: (t: 'pat' | 'stroke' | 'poke') => void;
+    inject: (e: SensorInput) => void;
+    setLeaveObject: (on: boolean) => void;
+    exportLog: () => { text: string; seed: number } | null;
   } | null>(null);
   const [run, setRun] = useState(spin);
   const [persp, setPersp] = useState(false);
@@ -395,6 +601,16 @@ export function MachineBench({
   const [saAmp, setSaAmp] = useState(Math.round((SMALLARM_IDLE.amp * 180) / Math.PI));
   const [saFreq, setSaFreq] = useState<number>(SMALLARM_IDLE.freq);
   const [hud, setHud] = useState({ err: 0, apex: 0, ring: 2, folding: true, note: '' });
+  // —— 行为档（M2）的面板状态；behavior 不开时这些都不出现在界面上
+  const [src, setSrc] = useState<DriveSource>('choreo');
+  const [lifeRate, setLifeRate] = useState<number>(LIFE_RATE_DEFAULT);
+  const [firstK, setFirstK] = useState<PersonaKey>('A');
+  const [band, setBand] = useState<PresenceBand>('gone');
+  const [bearingDeg, setBearingDeg] = useState(0);
+  const [lifted, setLifted] = useState(false);
+  const [holding, setHolding] = useState(false);
+  const [leaveObj, setLeaveObj] = useState(false);
+  const [bhud, setBhud] = useState<BehaviorHud | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -426,8 +642,8 @@ export function MachineBench({
     const cam = new OrbitCamera({
       cx: 350,
       cy: 260,
-      pivot: { x: -158.02, y: 39.22, z: -24.37 },
-      scale: 0.75,
+      pivot: { ...CHOREO_PIVOT },
+      scale: CHOREO_SCALE,
       roll0: -1.053336,
       pitch0: 0.735843,
       yaw0: 0.867459,
@@ -551,6 +767,109 @@ export function MachineBench({
     let skinA = SKIN_DEFAULT;
     let perspNow = false;
 
+    // ── 行为档（M2）────────────────────────────────────────────────────────────
+    // 引擎只在切到「行为引擎」时才建；编排档下这些变量全不动，渲染与 M2 之前逐位相同
+    // （偏航恒 0 时 yawFrame / yawPoint 原样返回同一个对象）。
+    let mode: DriveSource = 'choreo';
+    let engine: BehaviorEngine | null = null;
+    let logHeader: LogHeader | null = null;
+    const logBuf: LogRecord[] = [];
+    let hudDirty = false;
+    let hudClock = 0;
+    let firstNow: PersonaKey = 'A';
+    let rateNow: number = LIFE_RATE_DEFAULT;
+    // 台架记着的「传感事实」：重开一场时原样再告诉新引擎（人还站在那里，机器还被拿着）
+    let presenceNow: { band: PresenceBand; bearing: number } = { band: 'gone', bearing: 0 };
+    let liftedNow = false;
+    let holdNow = false;
+    let leaveObjNow = false;
+    // 指针手势：按住大触手（手指在臂里）、壳上的拍 / 摸 / 按住
+    let armHeld = false;
+    let tensionOn = false;
+    let shellGesture: {
+      id: number;
+      half: 'L' | 'R';
+      x0: number;
+      y0: number;
+      t0: number;
+      stroked: boolean;
+      held: boolean;
+    } | null = null;
+    // 偏航（整机绕竖轴，占位）：行为档 = 引擎给的值；回编排档后用跟随器转回 0
+    let yawNow = 0;
+    const yawHome: DampState = { x: 0, v: 0 };
+    const yf = (f: CellFrame): CellFrame => yawFrame(f, yawNow);
+    const yp = (p: Vec3): Vec3 => yawPoint(p, yawNow);
+    // 取景：行为档按「绕电机轴的扫掠圆柱」逐视角取景，编排档还原实测包络定的机位
+    let viewNow: ViewKey = 'axon';
+    let framing: { p0: Vec3; s0: number; p1: Vec3; s1: number; t: number } | null = null;
+
+    /** 换取景：行为档 = 扫掠圆柱装进当前视角；编排档 = 原机位（逐位还原）。动画与视角切换同长同缓动 */
+    const frameTo = (m: DriveSource, k: ViewKey): void => {
+      const to = m === 'engine' ? sweepFraming(PRESET_VIEWS[k]) : { pivot: CHOREO_PIVOT, scale: CHOREO_SCALE };
+      if (reduced) {
+        cam.retarget({ ...to.pivot }, to.scale);
+        framing = null;
+        return;
+      }
+      framing = { p0: { ...cam.pivotPoint }, s0: cam.viewScale / cam.zoom, p1: { ...to.pivot }, s1: to.scale, t: 0 };
+    };
+
+    /** 新开一场：种子每场随机（非确定是论点的一部分），会话头里记着，导出的日志照样可复现 */
+    const startEngine = (): void => {
+      const seed = (Math.random() * 0x100000000) >>> 0;
+      const eng = new BehaviorEngine({ seed, order: rotateOrder(firstNow), loop: true, lifeRate: rateNow });
+      engine = eng;
+      logHeader = eng.header();
+      logBuf.length = 0;
+      logBuf.push(...eng.drain());
+      armHeld = false;
+      tensionOn = false;
+      shellGesture = null;
+      // 传感事实接着成立：人还站在那里、机器还被拿着、壳还被按着
+      if (presenceNow.band !== 'gone') eng.push({ kind: 'PRESENCE', band: presenceNow.band, bearing: presenceNow.bearing });
+      if (liftedNow) eng.push({ kind: 'LIFT', lifted: true });
+      if (holdNow) eng.push({ kind: 'SHELL_HOLD', half: 'both', on: true });
+      hudDirty = true;
+    };
+
+    /** 接过交接来的引擎状态（纯数据）；版本不符就当没有，重开一场 */
+    const adoptEngine = (state: EngineState): boolean => {
+      try {
+        const eng = BehaviorEngine.restore(state);
+        engine = eng;
+        logHeader = eng.header();
+        logBuf.length = 0;
+        rateNow = eng.status().lifeRate;
+        hudDirty = true;
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    /**
+     * 松开手上的一切（换回编排档 / 指针取消时）。cancel = 不是「点了一下」：不补轻拍。
+     * 手离开臂时张力也随之消失——除非勾了「留物件」（臂里还卡着东西）。
+     */
+    const releaseGestures = (id?: number, cancel = false): void => {
+      const eng = engine;
+      if (armHeld) {
+        armHeld = false;
+        eng?.push({ kind: 'ARM_TOUCH', on: false });
+        if (tensionOn && (cancel || !leaveObjNow)) {
+          tensionOn = false;
+          eng?.push({ kind: 'RESISTANCE', on: false });
+        }
+      }
+      const g = shellGesture;
+      if (g && (id === undefined || id === g.id)) {
+        if (g.held) eng?.push({ kind: 'SHELL_HOLD', half: g.half, on: false });
+        else if (!g.stroked && !cancel) eng?.push({ kind: 'SHELL_STROKE', half: g.half, touch: 'pat' });
+        shellGesture = null;
+      }
+    };
+
     // 蒙皮：相邻环外侧支点之间的直纹带（锚点在装配位选定后固定跟销，同 Lab.04）
     const profiles = machine.rings.map((r) => ringOuterProfile(r.data));
     const profileWorld = (ri: number): Vec3[] =>
@@ -558,18 +877,20 @@ export function MachineBench({
         const n = machine.rings[ri].solver.nodes[j];
         return ringPoint(machine.rings[ri].data, n.x, n.y);
       });
+    /** 画面里的轮廓（带偏航）。编排档偏航恒 0，yp 原样返回同一个点 */
+    const profileView = (ri: number): Vec3[] => profileWorld(ri).map(yp);
     const skinMesh = (ri: number): Float32Array =>
       bakeIndexed(
         bandVerts(
-          resample(profileWorld(ri), SKIN_SAMPLES),
-          resample(profileWorld(ri + 1), SKIN_SAMPLES),
+          resample(profileView(ri), SKIN_SAMPLES),
+          resample(profileView(ri + 1), SKIN_SAMPLES),
         ),
         SKIN_IDX,
       );
     const skinPoints = (ri: number): Float32Array =>
       bakeRuledPoints(
-        resample(profileWorld(ri), SKIN_U),
-        resample(profileWorld(ri + 1), SKIN_U),
+        resample(profileView(ri), SKIN_U),
+        resample(profileView(ri + 1), SKIN_U),
         SKIN_V,
       );
     // 站元胞刚架：与 Lab.03 同一公式（前站→后站中央切线 + 导向点正交化）。
@@ -624,19 +945,19 @@ export function MachineBench({
     const drawArm = (): void => {
       if (!armReady) return;
       for (let ci = 0; ci <= N_ARM; ci++) {
-        R.drawMesh(`a_c${ci}`, armCell(ci), [...ARM_SHADE.dark], [...ARM_SHADE.lite]);
+        R.drawMesh(`a_c${ci}`, yf(armCell(ci)), [...ARM_SHADE.dark], [...ARM_SHADE.lite]);
       }
-      R.drawMesh('a_mnt', ARM_MNT, [...ARM_SHADE.dark], [...ARM_SHADE.lite]);
+      R.drawMesh('a_mnt', yf(ARM_MNT), [...ARM_SHADE.dark], [...ARM_SHADE.lite]);
       for (const j of armJoints) {
-        if (j.gap < 0) R.drawSkinned(`a_${j.name}`, armRootFrame(), armCell(0), armRootDy);
+        if (j.gap < 0) R.drawSkinned(`a_${j.name}`, yf(armRootFrame()), yf(armCell(0)), armRootDy);
         else {
           const dy = ARM_STATIONS[j.gap + 1][1] - ARM_STATIONS[j.gap][1];
-          R.drawSkinned(`a_${j.name}`, armCell(j.gap), armCell(j.gap + 1), dy);
+          R.drawSkinned(`a_${j.name}`, yf(armCell(j.gap)), yf(armCell(j.gap + 1)), dy);
         }
       }
       // 三根肌腱走线——不画的话「牵拉」看不见是谁在拉
       for (let k = 0; k < 3; k++) {
-        const pts = armPolyline(tendonVisual3(arm.solver, k));
+        const pts = armPolyline(tendonVisual3(arm.solver, k)).map(yp);
         const segs = [];
         for (let i = 1; i < pts.length; i++) segs.push({ a: pts[i - 1], b: pts[i] });
         R.drawLines(segs, TENDON_C[k], 0.004);
@@ -648,10 +969,10 @@ export function MachineBench({
       if (!ready) return; // 网格与整机同一个 bin，ready 一起到
       for (let pi = 0; pi < smallArms.length; pi++) {
         const pose = smallArmPose(smallArms[pi], pi);
-        R.drawMesh('sa_mount', pose.mount, [...FRAME_SHADE.dark], [...FRAME_SHADE.lite]);
-        R.drawMesh('sa_seg1', pose.seg1, [...ARM_SHADE.dark], [...ARM_SHADE.lite]);
-        R.drawSkinned('sa_soft', pose.soft[0], pose.soft[1], pose.soft[2]);
-        R.drawMesh('sa_seg2', pose.seg2, [...ARM_SHADE.dark], [...ARM_SHADE.lite]);
+        R.drawMesh('sa_mount', yf(pose.mount), [...FRAME_SHADE.dark], [...FRAME_SHADE.lite]);
+        R.drawMesh('sa_seg1', yf(pose.seg1), [...ARM_SHADE.dark], [...ARM_SHADE.lite]);
+        R.drawSkinned('sa_soft', yf(pose.soft[0]), yf(pose.soft[1]), pose.soft[2]);
+        R.drawMesh('sa_seg2', yf(pose.seg2), [...ARM_SHADE.dark], [...ARM_SHADE.lite]);
       }
     };
 
@@ -660,8 +981,8 @@ export function MachineBench({
       const mtx = cam.matrix;
       const pv = cam.pivotPoint;
       return bandsFarToNear(machine.rings.length - 1, (ri) => {
-        const a = ringPoint(machine.rings[ri].data, 0, 0);
-        const b = ringPoint(machine.rings[ri + 1].data, 0, 0);
+        const a = yp(ringPoint(machine.rings[ri].data, 0, 0));
+        const b = yp(ringPoint(machine.rings[ri + 1].data, 0, 0));
         return (
           mtx[6] * ((a.x + b.x) / 2 - pv.x) +
           mtx[7] * ((a.y + b.y) / 2 - pv.y) +
@@ -711,6 +1032,10 @@ export function MachineBench({
         running,
         dir,
         omega: omegaNow,
+        // 行为档才带这一支（编排档的交接包与 M2 之前同形）
+        ...(mode === 'engine' && engine
+          ? { behavior: { engine: engine.snapshot(), yaw: yawNow, first: firstNow } }
+          : {}),
       };
     };
 
@@ -777,6 +1102,16 @@ export function MachineBench({
       setOmega(s.omega);
       setTendons([s.tendons[0], s.tendons[1], s.tendons[2]]);
       setPhase(Number(phaseDeg(machine.theta).toFixed(1)));
+      // 行为档的交接：引擎整块状态接着跑（只有开着驱动源开关的台架才接）
+      if (s.behavior && behavior && adoptEngine(s.behavior.engine)) {
+        mode = 'engine';
+        firstNow = s.behavior.first;
+        yawNow = s.behavior.yaw;
+        setSrc('engine');
+        setFirstK(s.behavior.first);
+        setLifeRate(rateNow);
+        frameTo('engine', viewNow);
+      }
       return true;
     };
 
@@ -819,7 +1154,7 @@ export function MachineBench({
       }
       for (const g of visibleGroups(showNow, isolateNow)) {
         const s = groupShade(g.name);
-        R.drawMesh(g.name, machineFrame(g, machine), s.dark, s.lite);
+        R.drawMesh(g.name, yf(machineFrame(g, machine)), s.dark, s.lite);
       }
       if (showNow.tentacle) {
         drawArm();
@@ -838,6 +1173,67 @@ export function MachineBench({
     };
 
     let acc = 0;
+
+    /**
+     * 行为档的一帧：引擎按真实时间定步推进 → 取执行器指令 → 换成曲柄 / 三腱 / 偏航目标。
+     * 小触手的舵机角在 step() 里与解算一起给（同编排档的位置）。返回此刻的指令，没有引擎返回 null。
+     */
+    const stepEngine = (dt: number): ActuatorTargets | null => {
+      const eng = engine;
+      if (!eng) return null;
+      // 壳上按着不动够久 = 「按住」（与引擎时钟无关，暂停时照样认手势）
+      const g = shellGesture;
+      if (g && !g.stroked && !g.held && performance.now() / 1000 - g.t0 >= HOLD_AFTER) {
+        g.held = true;
+        eng.push({ kind: 'SHELL_HOLD', half: g.half, on: true });
+      }
+      if (running) eng.advance(dt, 8);
+      const recs = eng.drain();
+      if (recs.length) {
+        for (const r of recs) logBuf.push(r);
+        if (logBuf.length > LOG_CAP) logBuf.splice(0, logBuf.length - LOG_CAP);
+        hudDirty = true;
+      }
+      const tg = eng.targets();
+      // 呼吸 → 曲柄：限速追，每子步 ≤1°（machine-behavior.ts 的 §6.2 实测）
+      followBreath(machine, tg.breath.s, dt);
+      // 臂：抽象指令 → 三腱目标，之后照旧走肌肉的临界阻尼限速
+      const c = tendonContractions(tg.arm);
+      for (let k = 0; k < 3; k++) muscles[k].target = c[k];
+      yawNow = tg.yaw;
+      // 抓握演示的张力开关：手指在臂里、缠到六成 → 卡住；臂一松（惊跳 / 死亡 / 放弃）→ 东西掉出来
+      const gr = eng.state.grasp;
+      if (armHeld && !tensionOn && gr.phase === 'WRAP' && (eng.time - gr.t0) / gr.dur >= CATCH_AT) {
+        tensionOn = true;
+        eng.push({ kind: 'RESISTANCE', on: true });
+      } else if (tensionOn && (gr.phase === 'RELEASE' || gr.phase === 'IDLE')) {
+        tensionOn = false;
+        eng.push({ kind: 'RESISTANCE', on: false });
+      }
+      hudClock += dt;
+      if (hudDirty || hudClock >= 0.2) {
+        hudDirty = false;
+        hudClock = 0;
+        const st = eng.status();
+        setBhud({
+          life: st.life,
+          persona: st.persona,
+          phase: st.phase,
+          remain: Math.max(0, (st.phaseLen - st.phaseElapsed) / st.lifeRate),
+          rate: st.lifeRate,
+          arousal: st.arousal,
+          soundOn: tg.sound.on,
+          soundF: tg.sound.f,
+          light: tg.light.level,
+          yaw: tg.yaw,
+          bearing: eng.state.bearing,
+          band: st.band,
+          recent: logBuf.slice(-4),
+        });
+      }
+      return tg;
+    };
+
     const step = (dt: number): void => {
       if (viewAnim) {
         viewAnim.t = Math.min(1, viewAnim.t + dt / VIEW_ANIM_S);
@@ -847,46 +1243,77 @@ export function MachineBench({
       } else {
         cam.tick(dt);
       }
-      acc = Math.min(acc + dt, SHELL_STEP_DT * 8);
-      while (acc >= SHELL_STEP_DT) {
-        substep();
-        acc -= SHELL_STEP_DT;
-      }
-      // 大触手：与整机同帧推进（自己的 3D 内核，与五环解算互不相干）
-      if (running && !armManual) {
-        armClock += dt;
-        const next: [number, number, number] = [0, 0, 0];
-        for (let k = 0; k < 3; k++) {
-          const c = idleContraction(armClock, k);
-          muscles[k].target = c;
-          next[k] = c;
+      // 换驱动源 / 行为档换视角时的取景过渡（编排档从不触发；收尾一帧把机位逐位落回去）
+      if (framing) {
+        const f = framing;
+        f.t = Math.min(1, f.t + dt / VIEW_ANIM_S);
+        if (f.t >= 1) {
+          cam.retarget({ ...f.p1 }, f.s1);
+          framing = null;
+        } else {
+          const e = f.t < 0.5 ? 2 * f.t ** 2 : 1 - (-2 * f.t + 2) ** 2 / 2;
+          cam.retarget(
+            { x: f.p0.x + (f.p1.x - f.p0.x) * e, y: f.p0.y + (f.p1.y - f.p0.y) * e, z: f.p0.z + (f.p1.z - f.p0.z) * e },
+            f.s0 + (f.s1 - f.s0) * e,
+          );
         }
-        // 滑块跟着走（看得出此刻是谁在拉）；按整数百分比比较，避免逐帧空转重渲染
-        setTendons((prev) =>
-          prev.every((v, k) => Math.round(v * 100) === Math.round(next[k] * 100)) ? prev : next,
-        );
+      }
+      const tg = mode === 'engine' ? stepEngine(dt) : null;
+      if (!tg) {
+        // 刚从行为档切回来：机身转回原朝向（编排档本身偏航恒 0，这一支不进）
+        if (yawNow !== 0) {
+          dampStep(yawHome, 0, YAW_HOME_OMEGA, dt);
+          yawNow = yawHome.x;
+        }
+        acc = Math.min(acc + dt, SHELL_STEP_DT * 8);
+        while (acc >= SHELL_STEP_DT) {
+          substep();
+          acc -= SHELL_STEP_DT;
+        }
+        // 大触手：与整机同帧推进（自己的 3D 内核，与五环解算互不相干）
+        if (running && !armManual) {
+          armClock += dt;
+          const next: [number, number, number] = [0, 0, 0];
+          for (let k = 0; k < 3; k++) {
+            const c = idleContraction(armClock, k);
+            muscles[k].target = c;
+            next[k] = c;
+          }
+          // 滑块跟着走（看得出此刻是谁在拉）；按整数百分比比较，避免逐帧空转重渲染
+          setTendons((prev) =>
+            prev.every((v, k) => Math.round(v * 100) === Math.round(next[k] * 100)) ? prev : next,
+          );
+        }
       }
       muscles.forEach((m, k) => {
         if (m.update(dt)) applyContraction3(arm.solver, arm.tendons[k], m.value);
       });
       arm.solver.step(dt, TENTACLE3D.sweeps);
-      // 小触手：运转中按波形甩，停下时保持最后角度（物理继续松弛到静止）。
-      // 受惊（点击）叠加在待机之上，且**暂停时也生效**——戳它就该有反应，
-      // 波形过了寿命就停止覆盖，暂停态回到「保持不动」。
-      if (running) saClock += dt;
-      smallArms.forEach((sa, k) => {
-        if (running) saBase[k] = idleSwing(saClock, k, saAmpNow, saFreqNow);
-        const st = saStartle[k];
-        if (Number.isFinite(st.t)) {
-          st.t += dt;
-          if (st.t >= SMALLARM_STARTLE.duration) st.t = Infinity;
-        }
-        const startled = Number.isFinite(st.t);
-        if (running || startled) {
-          driveSmallArm(sa, clampSwing(saBase[k] + (startled ? startleSwing(st.t, st.dir) : 0)));
-        }
-        stepSmallArm(sa, dt);
-      });
+      if (tg) {
+        // 行为档：触须 = 引擎给的基角 + 反射（波形仍是 startleSwing）。死了就没有反射
+        smallArms.forEach((sa, k) => {
+          driveSmallArm(sa, feelerAngle(tg.feelers[k]));
+          stepSmallArm(sa, dt);
+        });
+      } else {
+        // 小触手：运转中按波形甩，停下时保持最后角度（物理继续松弛到静止）。
+        // 受惊（点击）叠加在待机之上，且**暂停时也生效**——戳它就该有反应，
+        // 波形过了寿命就停止覆盖，暂停态回到「保持不动」。
+        if (running) saClock += dt;
+        smallArms.forEach((sa, k) => {
+          if (running) saBase[k] = idleSwing(saClock, k, saAmpNow, saFreqNow);
+          const st = saStartle[k];
+          if (Number.isFinite(st.t)) {
+            st.t += dt;
+            if (st.t >= SMALLARM_STARTLE.duration) st.t = Infinity;
+          }
+          const startled = Number.isFinite(st.t);
+          if (running || startled) {
+            driveSmallArm(sa, clampSwing(saBase[k] + (startled ? startleSwing(st.t, st.dir) : 0)));
+          }
+          stepSmallArm(sa, dt);
+        });
+      }
       render();
       // 读数跟着「单环」走：隔离哪一环就报哪一环的拱顶，全部时报中间那环（S3）
       const ri = isolateNow ?? 2;
@@ -947,6 +1374,9 @@ export function MachineBench({
         R.setPerspective(on ? 900 : 0);
       },
       viewTo: (k) => {
+        viewNow = k;
+        // 行为档逐视角取景（扫掠圆柱）；编排档机位不随视角变，与 M2 之前同
+        if (mode === 'engine') frameTo('engine', k);
         const target = PRESET_VIEWS[k];
         if (reduced) {
           viewAnim = null;
@@ -955,6 +1385,54 @@ export function MachineBench({
         }
         viewAnim = { q0: m2q(cam.matrix), q1: m2q(target), t: 0 };
       },
+      // —— 行为档（M2）
+      setSource: (next) => {
+        if (next === mode) return;
+        if (next === 'engine') {
+          mode = 'engine';
+          if (!engine) startEngine();
+        } else {
+          releaseGestures(undefined, true);
+          mode = 'choreo';
+          yawHome.x = yawNow;
+          yawHome.v = 0;
+          // 滑杆态别把机器拽回切换前的位置：目标角就地对齐
+          targetTheta = machine.theta;
+          setPhase(Number(phiDeg().toFixed(1)));
+        }
+        frameTo(mode, viewNow);
+      },
+      setLifeRate: (r) => {
+        rateNow = r;
+        engine?.setLifeRate(r);
+      },
+      restart: (first) => {
+        firstNow = first;
+        if (engine) startEngine();
+      },
+      skip: () => engine?.skip(),
+      presence: (b, bearing) => {
+        presenceNow = { band: b, bearing };
+        engine?.push(b === 'gone' ? { kind: 'PRESENCE', band: b } : { kind: 'PRESENCE', band: b, bearing });
+      },
+      touch: (t) => {
+        const eng = engine;
+        if (!eng) return;
+        eng.push({ kind: 'SHELL_STROKE', half: halfTowardPerson(eng.state.bearing, eng.state.yaw.x), touch: t });
+      },
+      inject: (e) => {
+        if (e.kind === 'LIFT') liftedNow = e.lifted;
+        if (e.kind === 'SHELL_HOLD') holdNow = e.on;
+        engine?.push(e);
+      },
+      setLeaveObject: (on) => {
+        leaveObjNow = on;
+        if (!on && tensionOn && !armHeld) {
+          tensionOn = false;
+          engine?.push({ kind: 'RESISTANCE', on: false });
+        }
+      },
+      exportLog: () => (engine && logHeader ? { text: toJsonl(logBuf, logHeader), seed: logHeader.seed } : null),
     };
 
     // 机位**只由下面的固定视角按钮控制**（用户拍板 2026-07-29：取消拖拽视角移动）。
@@ -1002,7 +1480,7 @@ export function MachineBench({
       let best = radius;
       let hit: number | null = null;
       for (let k = 0; k < smallArms.length; k++) {
-        const pts = saChainWorld(smallArms[k], k).map(cssPoint);
+        const pts = saChainWorld(smallArms[k], k).map(yp).map(cssPoint);
         for (let i = 1; i < pts.length; i++) {
           const d = segDist({ x: px, y: py }, pts[i - 1], pts[i]);
           if (d < best) {
@@ -1014,33 +1492,110 @@ export function MachineBench({
       return hit;
     };
 
+    /**
+     * 点击落在小触手 k 摆平面的哪一侧：把世界 h 轴投到屏幕，取点击相对轴心的分量符号。
+     * 视线恰好沿 h 轴时投影退化（分量 ≈0）→ 返回 0，由调用方兜底。
+     */
+    const clickSide = (k: number, px: number, py: number): number => {
+      const p = SMALLARM_PLACEMENTS[k];
+      const o = cssPoint(yp({ x: p.o[0], y: p.o[1], z: p.o[2] }));
+      const hTip = cssPoint(yp({ x: p.o[0] + p.h[0] * 10, y: p.o[1] + p.h[1] * 10, z: p.o[2] + p.h[2] * 10 }));
+      const hs = { x: hTip.x - o.x, y: hTip.y - o.y };
+      const hLen = Math.hypot(hs.x, hs.y);
+      return hLen > 1 ? Math.sign(((px - o.x) * hs.x + (py - o.y) * hs.y) / hLen) : 0;
+    };
+
+    /** 行为档：大触手的脊线（画面上）。按住它 = 手指碰到臂 */
+    const armHit = (px: number, py: number, radius: number): boolean => {
+      if (!showNow.tentacle || !armReady) return false;
+      const pts: { x: number; y: number }[] = [];
+      for (let i = 0; i <= N_ARM; i++) pts.push(cssPoint(yp(armPoint(arm.solver.nodes[SPINE3(i)]))));
+      return polylineDist({ x: px, y: py }, pts) <= radius;
+    };
+
+    /** 行为档：壳 = 相邻两环外侧轮廓之间的直纹带（蒙皮透明度多少都算）。命中返回机身哪一半 */
+    const shellHit = (px: number, py: number): 'L' | 'R' | null => {
+      if (!showNow.rings || !ready) return null;
+      for (let ri = 0; ri + 1 < machine.rings.length; ri++) {
+        const A = resample(profileWorld(ri), SKIN_SAMPLES);
+        const B = resample(profileWorld(ri + 1), SKIN_SAMPLES);
+        const i = hitBand({ x: px, y: py }, A.map((q) => cssPoint(yp(q))), B.map((q) => cssPoint(yp(q))));
+        // 左右半按机身局部（未转）的位置判：机身转了，壳的左半还是它自己的左半
+        if (i >= 0) return shellHalf({ x: (A[i].x + B[i].x) / 2, y: (A[i].y + B[i].y) / 2 });
+      }
+      return null;
+    };
+
+    /** 行为档的按下：小触手 → 碰触须（立即）；大触手 → 手碰臂（按着不放）；壳 → 开始一个手势 */
+    const behaviorPointerDown = (e: PointerEvent, px: number, py: number): void => {
+      const eng = engine;
+      if (!eng) return;
+      const k = hitSmallArm(px, py, 30);
+      if (k !== null) {
+        eng.push({ kind: 'FEELER_TOUCH', feeler: k === 0 ? 0 : 1, side: feelerSide(clickSide(k, px, py)) });
+        return;
+      }
+      if (armHit(px, py, 22)) {
+        armHeld = true;
+        canvas.setPointerCapture?.(e.pointerId);
+        eng.push({ kind: 'ARM_TOUCH', on: true });
+        return;
+      }
+      const half = shellHit(px, py);
+      if (half) {
+        shellGesture = { id: e.pointerId, half, x0: px, y0: py, t0: performance.now() / 1000, stroked: false, held: false };
+        canvas.setPointerCapture?.(e.pointerId);
+      }
+    };
+
     const onPointerDown = (e: PointerEvent): void => {
       if (e.button !== 0) return;
       const r = canvas.getBoundingClientRect();
       const px = e.clientX - r.left;
       const py = e.clientY - r.top;
+      if (mode === 'engine') {
+        behaviorPointerDown(e, px, py);
+        return;
+      }
       const k = hitSmallArm(px, py, 30);
       if (k === null) return;
-      // 甩开方向 = 点击落在摆平面哪一侧的**反面**。侧别在屏幕上量：
-      // 把世界 h 轴投到屏幕，取点击相对轴心的水平分量的符号。
-      // 视线恰好沿 h 轴时投影退化（分量 ≈0）——退到「远离当前倾角」兜底。
-      const p = SMALLARM_PLACEMENTS[k];
-      const o = cssPoint({ x: p.o[0], y: p.o[1], z: p.o[2] });
-      const hTip = cssPoint({ x: p.o[0] + p.h[0] * 10, y: p.o[1] + p.h[1] * 10, z: p.o[2] + p.h[2] * 10 });
-      const hs = { x: hTip.x - o.x, y: hTip.y - o.y };
-      const hLen = Math.hypot(hs.x, hs.y);
-      const side = hLen > 1 ? Math.sign(((px - o.x) * hs.x + (py - o.y) * hs.y) / hLen) : 0;
+      // 甩开方向 = 点击落在摆平面哪一侧的**反面**（侧别见 clickSide）。
+      // 视线恰好沿 h 轴时投影退化——退到「远离当前倾角」兜底。
+      const side = clickSide(k, px, py);
       const st = saStartle[k];
       st.dir = (side !== 0 ? -side : -Math.sign(smallArms[k].theta) || -1) as 1 | -1;
       st.t = 0;
     };
     const onPointerMove = (e: PointerEvent): void => {
       const r = canvas.getBoundingClientRect();
-      canvas.style.cursor =
-        hitSmallArm(e.clientX - r.left, e.clientY - r.top, 30) !== null ? 'pointer' : '';
+      const px = e.clientX - r.left;
+      const py = e.clientY - r.top;
+      if (mode === 'engine') {
+        const g = shellGesture;
+        if (g && e.pointerId === g.id && !g.stroked && !g.held && Math.hypot(px - g.x0, py - g.y0) > STROKE_PX) {
+          g.stroked = true;
+          engine?.push({ kind: 'SHELL_STROKE', half: g.half, touch: 'stroke' });
+        }
+        canvas.style.cursor =
+          armHeld || shellGesture
+            ? 'grabbing'
+            : hitSmallArm(px, py, 30) !== null || armHit(px, py, 22) || shellHit(px, py)
+              ? 'pointer'
+              : '';
+        return;
+      }
+      canvas.style.cursor = hitSmallArm(px, py, 30) !== null ? 'pointer' : '';
+    };
+    const onPointerUp = (e: PointerEvent): void => {
+      if (mode === 'engine') releaseGestures(e.pointerId);
+    };
+    const onPointerCancel = (e: PointerEvent): void => {
+      if (mode === 'engine') releaseGestures(e.pointerId, true);
     };
     canvas.addEventListener('pointerdown', onPointerDown);
     canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('pointercancel', onPointerCancel);
 
     // 状态交接（见 snapshot.ts / handoff.ts）：页面转场把这个画框飞到另一页之前调一次，
     // 跑在点击那一刻——与浏览器截下的旧画面是同一个瞬间；若改在卸载时留，中间还隔着
@@ -1053,10 +1608,12 @@ export function MachineBench({
       apiRef.current = null;
       canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointermove', onPointerMove);
+      canvas.removeEventListener('pointerup', onPointerUp);
+      canvas.removeEventListener('pointercancel', onPointerCancel);
       canvas.style.cursor = '';
       setStash(canvas, null);
     };
-  }, [spin]);
+  }, [spin, behavior]);
 
   useBenchLoop(canvasRef, (dt) => apiRef.current?.step(dt), [spin], active);
 
@@ -1065,7 +1622,436 @@ export function MachineBench({
     apiRef.current?.viewTo(k);
   }, []);
 
+  // 深链 `/lab#lab1-5-behavior`：直接开在行为档（与项目二各台的编制哈希同一套读法）
+  useEffect(() => {
+    if (!behavior || sideControls) return;
+    if (planFromHash('1-5', ['behavior'] as const) === 'behavior') {
+      setSrc('engine');
+      apiRef.current?.setSource('engine');
+    }
+  }, [behavior, sideControls]);
+
+  const goSource = useCallback((k: DriveSource) => {
+    setSrc(k);
+    apiRef.current?.setSource(k);
+  }, []);
+
+  const downloadLog = useCallback(() => {
+    const out = apiRef.current?.exportLog();
+    if (!out) return;
+    const url = URL.createObjectURL(new Blob([out.text], { type: 'application/x-ndjson' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `reincarnation-machine-behavior-${out.seed}.jsonl`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, []);
+
   const L = COPY[lang];
+  const B = L.beh;
+  // 行为档的界面只在 /lab 出（behavior 开、横排面板）；主页预览与案例页主图不传 behavior，逐位不变
+  const behaviorUi = behavior && !sideControls;
+  const engineOn = behaviorUi && src === 'engine';
+  const lightBar = (v: number): string => {
+    const n = Math.round(Math.min(1, Math.max(0, v)) * 5);
+    return '▮'.repeat(n) + '▯'.repeat(5 - n);
+  };
+
+  const groups = (
+    <>
+      {/* 驱动 —— 运转 / 转速 / 透视。转速滑块是这台专有的：
+          转速本就是待拍板的手感常量，与其我替你定一个数，不如给你滑块自己找。
+          行为档里「运转」= 暂停 / 继续引擎；转速、相位、肌腱、小触手交给引擎，不出。 */}
+      <div className="grp grp--half">
+        <label>
+          <input
+            type="checkbox"
+            checked={run}
+            onChange={(e) => {
+              setRun(e.target.checked);
+              apiRef.current?.setRun(e.target.checked);
+            }}
+          />
+          {L.run}
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={persp}
+            onChange={(e) => {
+              setPersp(e.target.checked);
+              apiRef.current?.setPersp(e.target.checked);
+            }}
+          />
+          {L.persp}
+        </label>
+      </div>
+      {engineOn ? null : (
+        <div className="grp grp--half">
+          <LabControlLabel help={["调整演示速度，不改变结构参数。", "Change playback speed without changing the structure."]} lang={lang}>
+            {L.speed}
+            {sideControls ? <b className="v">{omega.toFixed(2)}</b> : null}
+          </LabControlLabel>
+          <input
+            type="range"
+            min={OMEGA_MIN}
+            max={OMEGA_MAX}
+            step={0.05}
+            value={omega}
+            aria-label={L.speedAria}
+            style={sideControls ? { width: '100%' } : { width: 84 }}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              setOmega(v);
+              apiRef.current?.setOmega(v);
+            }}
+          />
+        </div>
+      )}
+      {engineOn ? null : (
+        <div className="grp grp--half">
+          <LabControlLabel help={["暂停自动运转，手动查看运动周期中的位置。", "Pause automatic motion and choose a position in the cycle."]} lang={lang}>
+            {tx(L.phase)}
+            {sideControls ? <b className="v">{phase.toFixed(1)}°</b> : null}
+          </LabControlLabel>
+          <input
+            type="range"
+            min={0}
+            max={PHASE_MAX}
+            step={0.5}
+            value={phase}
+            style={sideControls ? { width: '100%' } : { width: 132 }}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              setRun(false);
+              setPhase(v);
+              apiRef.current?.setPhase(v);
+            }}
+          />
+        </div>
+      )}
+      {/* 蒙皮遮罩 —— 与 Lab.04 同一套直纹带，默认 0.67（用户 2026-07-29 拍板）：
+          这台同时是项目 01 主图，主图先要读出形态。滑到 0 = 看穿到传动链，滑到 1 = 实体壳。
+          环身关掉时蒙皮一并不画（皮附在环上，环没了皮也就无所附） */}
+      <div className="grp grp--half">
+        <LabControlLabel help={["调整蒙皮的不透明度；调低可看清内部结构。", "Adjust skin opacity to inspect the structure inside."]} lang={lang}>
+          {L.skin}
+          {sideControls ? <b className="v">{Math.round(skin * 100)}%</b> : null}
+        </LabControlLabel>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={skin}
+          aria-label={L.skinAria}
+          style={sideControls ? { width: '100%' } : { width: 96 }}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            setSkin(v);
+            apiRef.current?.setSkin(v);
+          }}
+        />
+      </div>
+      {/* 部件显隐 —— 整机独有：这台是一堆零件的装配，「看哪些」本身就是操作。
+          关掉机架能看清传动链怎么走，关掉环身能单看一轴五曲柄。 */}
+      <div className="grp grp--parts">
+        <LabControlLabel help={["显示或隐藏部件，查看传动链和装配关系。", "Show or hide parts to inspect the transmission and assembly."]} lang={lang}>{L.parts}</LabControlLabel>
+        {PARTS.map((p) => (
+          <label key={p}>
+            <input
+              type="checkbox"
+              checked={show[p]}
+              onChange={(e) => {
+                const next = { ...show, [p]: e.target.checked };
+                setShow(next);
+                apiRef.current?.setShow(next);
+              }}
+            />
+            {L.partNames[p]}
+          </label>
+        ))}
+      </div>
+      {/* 大触手三肌腱 —— 与 Lab.03 同一条触手、同一套解算，只是摆到了机器上。
+          滑块 = 各腱收缩率；限速用临界阻尼（真机肌肉不会瞬间到位）。
+          待机时（运转中且没碰滑块）三腱按 120° 相位轮流轻收，合成一个缓慢
+          回转的弯向 + 更慢的整体舒卷——不让它直挺挺伸着（用户 2026-07-29）。
+          一碰滑块就交出控制权，「交还待机」把它交回去。 */}
+      {engineOn ? null : (
+        <div className="grp grp--tendons">
+          <LabControlLabel help={["分别调整三条肌腱的收缩量，改变大触手弯向。", "Adjust three tendon contractions to bend the large arm."]} lang={lang}>{L.arm}</LabControlLabel>
+          {[0, 1, 2].map((k) => (
+            <input
+              key={k}
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round(tendons[k] * 100)}
+              aria-label={L.armAria[k]}
+              style={{ width: sideControls ? '100%' : 62 }}
+              onChange={(e) => {
+                const v = Number(e.target.value) / 100;
+                setTendons((t) => {
+                  const n = [...t] as [number, number, number];
+                  n[k] = v;
+                  return n;
+                });
+                apiRef.current?.setTendon(k, v);
+              }}
+            />
+          ))}
+          <button
+            type="button"
+            onClick={() => {
+              setTendons([0, 0, 0]);
+              apiRef.current?.armHome();
+            }}
+          >
+            {L.armHome}
+          </button>
+        </div>
+      )}
+      {/* 小触手 —— 摆幅/频率（用户 2026-07-30 机构说明后活化；波形是展示编排，
+          幅频是待拍板的手感常量，给滑块自己找）。**只在横排面板出**：
+          案例页侧栏的高度预算在 §13.2 已经顶满，加一组就会重新被裁；
+          案例页语境用默认值即可，要调去 /lab（同一台仪器）。 */}
+      {sideControls || engineOn ? null : (
+        <div className="grp">
+          <LabControlLabel help={["调节小触手的演示摆动。", "Adjust the small arms’ display motion."]} lang={lang}>{L.sarm}</LabControlLabel>
+          <LabControlLabel help={["小触手左右摆动的角度范围。", "The angular range of the small arms’ swing."]} lang={lang}>{L.sarmAmp}</LabControlLabel>
+          <input
+            type="range"
+            min={0}
+            max={60}
+            step={1}
+            value={saAmp}
+            aria-label={L.sarmAmpAria}
+            style={{ width: 84 }}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              setSaAmp(v);
+              apiRef.current?.setSaSwing(v, saFreq);
+            }}
+          />
+          <LabControlLabel help={["小触手摆动的频率。", "The frequency of the small arms’ swing."]} lang={lang}>{L.sarmFreq}</LabControlLabel>
+          <input
+            type="range"
+            min={0.1}
+            max={1}
+            step={0.05}
+            value={saFreq}
+            aria-label={L.sarmFreqAria}
+            style={{ width: 84 }}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              setSaFreq(v);
+              apiRef.current?.setSaSwing(saAmp, v);
+            }}
+          />
+        </div>
+      )}
+      {/* 单环隔离 —— 五个环同相但行程各异，单独看一个才比得出半径差。
+          只筛环件：机架/轴/触手仍按各自开关，否则「只看 S3」会连驱动它的轴一起切掉。 */}
+      <div className="grp grp--seg">
+        <LabControlLabel help={["单独查看某一环；其余部件仍按显隐设置显示。", "Isolate one ring; other parts follow their visibility settings."]} lang={lang}>{L.ring}</LabControlLabel>
+        <span className="seg">
+          {RING_KEYS.map((k) => (
+            <button
+              key={k === null ? 'all' : k}
+              type="button"
+              className={k === isolate ? 'active' : undefined}
+              onClick={() => {
+                setIsolate(k);
+                apiRef.current?.setIsolate(k);
+              }}
+            >
+              {k === null ? L.ringAll : `S${k + 1}`}
+            </button>
+          ))}
+        </span>
+      </div>
+      <div className="grp grp--seg">
+        <LabControlLabel help={["切换轴测、正面、侧面或顶视图，不改变模型。", "Switch camera views without changing the model."]} lang={lang}>{L.view}</LabControlLabel>
+        <span className="seg">
+          {VIEWS.map((v) => (
+            <button
+              key={v.key}
+              type="button"
+              className={v.key === view ? 'active' : undefined}
+              onClick={() => goView(v.key)}
+            >
+              {L.views[v.key]}
+            </button>
+          ))}
+        </span>
+      </div>
+      {sideControls ? <p className="lab-ctl__hint">{L.hint}</p> : null}
+    </>
+  );
+
+  // 行为档的第一层（「解什么」）：驱动源开关常在；切到行为引擎后才出人格 / 生命时钟 / 刺激注入 / 日志
+  const behaviorGroups = behaviorUi ? (
+    <>
+      <div className="grp grp--seg">
+        <LabControlLabel help={B.srcHelp} lang={lang}>{B.src}</LabControlLabel>
+        <span className="seg">
+          {(['choreo', 'engine'] as const).map((k) => (
+            <button key={k} type="button" className={k === src ? 'active' : undefined} onClick={() => goSource(k)}>
+              {B.srcNames[k]}
+            </button>
+          ))}
+        </span>
+      </div>
+      {engineOn ? (
+        <>
+          <div className="grp grp--seg">
+            <LabControlLabel help={B.clockHelp} lang={lang}>{B.clock}</LabControlLabel>
+            <span className="seg">
+              {LIFE_RATES.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  className={r === lifeRate ? 'active' : undefined}
+                  onClick={() => {
+                    setLifeRate(r);
+                    apiRef.current?.setLifeRate(r);
+                  }}
+                >
+                  ×{r}
+                </button>
+              ))}
+            </span>
+          </div>
+          <div className="grp grp--seg">
+            <LabControlLabel help={B.firstHelp} lang={lang}>{B.first}</LabControlLabel>
+            <span className="seg">
+              {PERSONA_KEYS.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  title={personaName(k, lang)}
+                  className={k === firstK ? 'active' : undefined}
+                  onClick={() => {
+                    setFirstK(k);
+                    apiRef.current?.restart(k);
+                  }}
+                >
+                  {k}
+                </button>
+              ))}
+            </span>
+            <button type="button" onClick={() => apiRef.current?.restart(firstK)}>
+              {B.restart}
+            </button>
+            <button type="button" onClick={() => apiRef.current?.skip()}>
+              {B.skip}
+            </button>
+          </div>
+          <div className="grp grp--seg">
+            <LabControlLabel help={B.presenceHelp} lang={lang}>{B.presence}</LabControlLabel>
+            <span className="seg">
+              {BANDS.map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  className={b === band ? 'active' : undefined}
+                  onClick={() => {
+                    setBand(b);
+                    apiRef.current?.presence(b, (bearingDeg * Math.PI) / 180);
+                  }}
+                >
+                  {B.bands[b]}
+                </button>
+              ))}
+            </span>
+            <span className="k">{B.bearing}</span>
+            <input
+              type="range"
+              min={-180}
+              max={180}
+              step={5}
+              value={bearingDeg}
+              disabled={band === 'gone'}
+              aria-label={B.bearingAria}
+              style={{ width: 96 }}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setBearingDeg(v);
+                apiRef.current?.presence(band, (v * Math.PI) / 180);
+              }}
+            />
+            <span className="k">{bearingDeg > 0 ? '+' : ''}{bearingDeg}°</span>
+          </div>
+          <div className="grp">
+            <LabControlLabel help={B.touchHelp} lang={lang}>{B.touch}</LabControlLabel>
+            {(['pat', 'stroke', 'poke'] as const).map((t) => (
+              <button key={t} type="button" onClick={() => apiRef.current?.touch(t)}>
+                {B.touches[t]}
+              </button>
+            ))}
+            <button
+              type="button"
+              aria-pressed={holding}
+              className={holding ? 'active' : undefined}
+              onClick={() => {
+                const on = !holding;
+                setHolding(on);
+                apiRef.current?.inject({ kind: 'SHELL_HOLD', half: 'both', on });
+              }}
+            >
+              {B.touches.hold}
+            </button>
+          </div>
+          <div className="grp">
+            <LabControlLabel help={B.envHelp} lang={lang}>{B.env}</LabControlLabel>
+            <button
+              type="button"
+              aria-pressed={lifted}
+              className={lifted ? 'active' : undefined}
+              onClick={() => {
+                const on = !lifted;
+                setLifted(on);
+                apiRef.current?.inject({ kind: 'LIFT', lifted: on });
+              }}
+            >
+              {B.envs.lift}
+            </button>
+            <button type="button" onClick={() => apiRef.current?.inject({ kind: 'KNOCK', intensity: 0.6 })}>
+              {B.envs.knock}
+            </button>
+            <button type="button" onClick={() => apiRef.current?.inject({ kind: 'SOUND', level: 0.8 })}>
+              {B.envs.clap}
+            </button>
+            <button type="button" onClick={() => apiRef.current?.inject({ kind: 'SOUND', level: 0.3 })}>
+              {B.envs.talk}
+            </button>
+          </div>
+          <div className="grp">
+            <LabControlLabel help={B.graspHelp} lang={lang}>{B.grasp}</LabControlLabel>
+            <label>
+              <input
+                type="checkbox"
+                checked={leaveObj}
+                onChange={(e) => {
+                  setLeaveObj(e.target.checked);
+                  apiRef.current?.setLeaveObject(e.target.checked);
+                }}
+              />
+              {B.leave}
+            </label>
+          </div>
+          <div className="grp">
+            <LabControlLabel help={B.logHelp} lang={lang}>{B.log}</LabControlLabel>
+            <button type="button" onClick={downloadLog}>
+              {B.export}
+            </button>
+          </div>
+        </>
+      ) : null}
+    </>
+  ) : null;
 
   return (
     <div
@@ -1074,249 +2060,102 @@ export function MachineBench({
       }`}
     >
       <div className="lab-fig">
-        <canvas ref={canvasRef} width={1400} height={1040} aria-label={L.aria} />
+        <canvas ref={canvasRef} width={1400} height={1040} aria-label={engineOn ? B.aria : L.aria} />
         <div className="lab-hud tl">
           {/* 只写台架编号：这台同时是项目 01 案例页的主图，而该页图号 2026-09-13 起是 N01–N20，
               再印一个 Fig. 14 会被读成本页的某张图（ArchBench / RingsBench 同此处理）。 */}
           <div style={{ color: 'var(--p300)' }}>{tx("Lab 1-5")}</div>
-          <div>{tx(L.title)}</div>
-          <div className="dim">{L.sub}</div>
+          <div>{engineOn ? B.title : tx(L.title)}</div>
+          {engineOn && bhud ? (
+            <>
+              <div className="dim">
+                {B.lifeN(bhud.life)} · {personaName(bhud.persona, lang)} {bhud.persona} · {phaseName(bhud.phase, lang)}
+              </div>
+              <div className="dim">
+                {B.remain(Math.ceil(bhud.remain))} · {B.rateAt(bhud.rate)}
+              </div>
+            </>
+          ) : (
+            <div className="dim">{L.sub}</div>
+          )}
         </div>
+        {engineOn && bhud ? (
+          // 俯视罗盘：上 = 机身初始朝向；箭头 = 此刻朝向（偏航，占位）；圆点 = 人（近 / 中 / 远三圈）
+          <svg
+            className="lab-hud"
+            // 尺寸必须写在 style 里：.lab-fig svg 规则给台架的 SVG 画布设了 width:100%，属性压不过它
+            style={{ top: 14, right: 18, width: 62, height: 62 }}
+            width={62}
+            height={62}
+            viewBox="-31 -31 62 62"
+            role="img"
+            aria-label={B.compass}
+          >
+            <circle r={27} fill="none" stroke="currentColor" strokeOpacity={0.3} />
+            <circle r={18} fill="none" stroke="currentColor" strokeOpacity={0.14} />
+            <line x1={0} y1={-27} x2={0} y2={-23} stroke="currentColor" strokeOpacity={0.5} />
+            <line
+              x1={0}
+              y1={0}
+              x2={-Math.sin(bhud.yaw) * 21}
+              y2={-Math.cos(bhud.yaw) * 21}
+              stroke="currentColor"
+              strokeWidth={2.2}
+              strokeLinecap="round"
+            />
+            {bhud.band !== 'gone' && bhud.bearing !== null ? (
+              <circle
+                cx={-Math.sin(bhud.bearing) * (bhud.band === 'near' ? 11 : bhud.band === 'mid' ? 18 : 25)}
+                cy={-Math.cos(bhud.bearing) * (bhud.band === 'near' ? 11 : bhud.band === 'mid' ? 18 : 25)}
+                r={3.6}
+                fill="var(--p300)"
+              />
+            ) : null}
+          </svg>
+        ) : null}
         <div className="lab-hud br">
           <div className="num">{tx("φ")} {phase.toFixed(1)}°</div>
-          <div className="dim">
-            {hud.note
-              ? tx('3D preview unavailable')
-              : `${tx('apex')}(S${hud.ring + 1}) ${hud.apex.toFixed(1)} mm · ${tx('err')} ${hud.err.toFixed(2)} · ${
-                  run ? (hud.folding ? L.going.fold : L.going.open) : L.drive.slider
-                }`}
-          </div>
-        </div>
-        {sideControls && controls ? null : <div className="lab-hud bl dim">{L.hint}</div>}
-      </div>
-      {controls ? (
-        <div className="lab-ctl">
-          {/* 驱动 —— 运转 / 转速 / 透视。转速滑块是这台专有的：
-              转速本就是待拍板的手感常量，与其我替你定一个数，不如给你滑块自己找。 */}
-          <div className="grp grp--half">
-            <label>
-              <input
-                type="checkbox"
-                checked={run}
-                onChange={(e) => {
-                  setRun(e.target.checked);
-                  apiRef.current?.setRun(e.target.checked);
-                }}
-              />
-              {L.run}
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={persp}
-                onChange={(e) => {
-                  setPersp(e.target.checked);
-                  apiRef.current?.setPersp(e.target.checked);
-                }}
-              />
-              {L.persp}
-            </label>
-          </div>
-          <div className="grp grp--half">
-            <LabControlLabel help={["调整演示速度，不改变结构参数。", "Change playback speed without changing the structure."]} lang={lang}>
-              {L.speed}
-              {sideControls ? <b className="v">{omega.toFixed(2)}</b> : null}
-            </LabControlLabel>
-            <input
-              type="range"
-              min={OMEGA_MIN}
-              max={OMEGA_MAX}
-              step={0.05}
-              value={omega}
-              aria-label={L.speedAria}
-              style={sideControls ? { width: '100%' } : { width: 84 }}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                setOmega(v);
-                apiRef.current?.setOmega(v);
-              }}
-            />
-          </div>
-          <div className="grp grp--half">
-            <LabControlLabel help={["暂停自动运转，手动查看运动周期中的位置。", "Pause automatic motion and choose a position in the cycle."]} lang={lang}>
-              {tx(L.phase)}
-              {sideControls ? <b className="v">{phase.toFixed(1)}°</b> : null}
-            </LabControlLabel>
-            <input
-              type="range"
-              min={0}
-              max={PHASE_MAX}
-              step={0.5}
-              value={phase}
-              style={sideControls ? { width: '100%' } : { width: 132 }}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                setRun(false);
-                setPhase(v);
-                apiRef.current?.setPhase(v);
-              }}
-            />
-          </div>
-          {/* 蒙皮遮罩 —— 与 Lab.04 同一套直纹带，默认 0.67（用户 2026-07-29 拍板）：
-              这台同时是项目 01 主图，主图先要读出形态。滑到 0 = 看穿到传动链，滑到 1 = 实体壳。
-              环身关掉时蒙皮一并不画（皮附在环上，环没了皮也就无所附） */}
-          <div className="grp grp--half">
-            <LabControlLabel help={["调整蒙皮的不透明度；调低可看清内部结构。", "Adjust skin opacity to inspect the structure inside."]} lang={lang}>
-              {L.skin}
-              {sideControls ? <b className="v">{Math.round(skin * 100)}%</b> : null}
-            </LabControlLabel>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={skin}
-              aria-label={L.skinAria}
-              style={sideControls ? { width: '100%' } : { width: 96 }}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                setSkin(v);
-                apiRef.current?.setSkin(v);
-              }}
-            />
-          </div>
-          {/* 部件显隐 —— 整机独有：这台是一堆零件的装配，「看哪些」本身就是操作。
-              关掉机架能看清传动链怎么走，关掉环身能单看一轴五曲柄。 */}
-          <div className="grp grp--parts">
-            <LabControlLabel help={["显示或隐藏部件，查看传动链和装配关系。", "Show or hide parts to inspect the transmission and assembly."]} lang={lang}>{L.parts}</LabControlLabel>
-            {PARTS.map((p) => (
-              <label key={p}>
-                <input
-                  type="checkbox"
-                  checked={show[p]}
-                  onChange={(e) => {
-                    const next = { ...show, [p]: e.target.checked };
-                    setShow(next);
-                    apiRef.current?.setShow(next);
-                  }}
-                />
-                {L.partNames[p]}
-              </label>
-            ))}
-          </div>
-          {/* 大触手三肌腱 —— 与 Lab.03 同一条触手、同一套解算，只是摆到了机器上。
-              滑块 = 各腱收缩率；限速用临界阻尼（真机肌肉不会瞬间到位）。
-              待机时（运转中且没碰滑块）三腱按 120° 相位轮流轻收，合成一个缓慢
-              回转的弯向 + 更慢的整体舒卷——不让它直挺挺伸着（用户 2026-07-29）。
-              一碰滑块就交出控制权，「交还待机」把它交回去。 */}
-          <div className="grp grp--tendons">
-            <LabControlLabel help={["分别调整三条肌腱的收缩量，改变大触手弯向。", "Adjust three tendon contractions to bend the large arm."]} lang={lang}>{L.arm}</LabControlLabel>
-            {[0, 1, 2].map((k) => (
-              <input
-                key={k}
-                type="range"
-                min={0}
-                max={100}
-                value={Math.round(tendons[k] * 100)}
-                aria-label={L.armAria[k]}
-                style={{ width: sideControls ? '100%' : 62 }}
-                onChange={(e) => {
-                  const v = Number(e.target.value) / 100;
-                  setTendons((t) => {
-                    const n = [...t] as [number, number, number];
-                    n[k] = v;
-                    return n;
-                  });
-                  apiRef.current?.setTendon(k, v);
-                }}
-              />
-            ))}
-            <button
-              type="button"
-              onClick={() => {
-                setTendons([0, 0, 0]);
-                apiRef.current?.armHome();
-              }}
-            >
-              {L.armHome}
-            </button>
-          </div>
-          {/* 小触手 —— 摆幅/频率（用户 2026-07-30 机构说明后活化；波形是展示编排，
-              幅频是待拍板的手感常量，给滑块自己找）。**只在横排面板出**：
-              案例页侧栏的高度预算在 §13.2 已经顶满，加一组就会重新被裁；
-              案例页语境用默认值即可，要调去 /lab（同一台仪器）。 */}
-          {sideControls ? null : (
-            <div className="grp">
-              <LabControlLabel help={["调节小触手的演示摆动。", "Adjust the small arms’ display motion."]} lang={lang}>{L.sarm}</LabControlLabel>
-              <LabControlLabel help={["小触手左右摆动的角度范围。", "The angular range of the small arms’ swing."]} lang={lang}>{L.sarmAmp}</LabControlLabel>
-              <input
-                type="range"
-                min={0}
-                max={60}
-                step={1}
-                value={saAmp}
-                aria-label={L.sarmAmpAria}
-                style={{ width: 84 }}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  setSaAmp(v);
-                  apiRef.current?.setSaSwing(v, saFreq);
-                }}
-              />
-              <LabControlLabel help={["小触手摆动的频率。", "The frequency of the small arms’ swing."]} lang={lang}>{L.sarmFreq}</LabControlLabel>
-              <input
-                type="range"
-                min={0.1}
-                max={1}
-                step={0.05}
-                value={saFreq}
-                aria-label={L.sarmFreqAria}
-                style={{ width: 84 }}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  setSaFreq(v);
-                  apiRef.current?.setSaSwing(saAmp, v);
-                }}
-              />
+          {engineOn && bhud ? (
+            <>
+              <div className="dim">
+                {B.arousal} {bhud.arousal.toFixed(2)} · {B.sound} {bhud.soundOn ? `● ${Math.round(bhud.soundF)} Hz` : '○'} · {B.light}{' '}
+                {lightBar(bhud.light)}
+              </div>
+              <div className="dim">{B.caveat}</div>
+            </>
+          ) : (
+            <div className="dim">
+              {hud.note
+                ? tx('3D preview unavailable')
+                : `${tx('apex')}(S${hud.ring + 1}) ${hud.apex.toFixed(1)} mm · ${tx('err')} ${hud.err.toFixed(2)} · ${
+                    run ? (hud.folding ? L.going.fold : L.going.open) : L.drive.slider
+                  }`}
             </div>
           )}
-          {/* 单环隔离 —— 五个环同相但行程各异，单独看一个才比得出半径差。
-              只筛环件：机架/轴/触手仍按各自开关，否则「只看 S3」会连驱动它的轴一起切掉。 */}
-          <div className="grp grp--seg">
-            <LabControlLabel help={["单独查看某一环；其余部件仍按显隐设置显示。", "Isolate one ring; other parts follow their visibility settings."]} lang={lang}>{L.ring}</LabControlLabel>
-            <span className="seg">
-              {RING_KEYS.map((k) => (
-                <button
-                  key={k === null ? 'all' : k}
-                  type="button"
-                  className={k === isolate ? 'active' : undefined}
-                  onClick={() => {
-                    setIsolate(k);
-                    apiRef.current?.setIsolate(k);
-                  }}
-                >
-                  {k === null ? L.ringAll : `S${k + 1}`}
-                </button>
-              ))}
-            </span>
-          </div>
-          <div className="grp grp--seg">
-            <LabControlLabel help={["切换轴测、正面、侧面或顶视图，不改变模型。", "Switch camera views without changing the model."]} lang={lang}>{L.view}</LabControlLabel>
-            <span className="seg">
-              {VIEWS.map((v) => (
-                <button
-                  key={v.key}
-                  type="button"
-                  className={v.key === view ? 'active' : undefined}
-                  onClick={() => goView(v.key)}
-                >
-                  {L.views[v.key]}
-                </button>
-              ))}
-            </span>
-          </div>
-          {sideControls ? <p className="lab-ctl__hint">{L.hint}</p> : null}
         </div>
+        {sideControls && controls ? null : engineOn ? (
+          <div className="lab-hud bl dim">
+            {bhud && bhud.recent.length
+              ? bhud.recent.map((r) => (
+                  <div key={r.id}>
+                    {r.t.toFixed(1)} s · {describeRecord(r, lang)}
+                  </div>
+                ))
+              : B.hint}
+          </div>
+        ) : (
+          <div className="lab-hud bl dim">{L.hint}</div>
+        )}
+      </div>
+      {controls ? (
+        behaviorUi ? (
+          <div className="lab-ctl lab-ctl--tiered">
+            <div className="lab-ctl__row lab-ctl__solve">{behaviorGroups}</div>
+            <div className="lab-ctl__row">{groups}</div>
+          </div>
+        ) : (
+          <div className="lab-ctl">{groups}</div>
+        )
       ) : null}
     </div>
   );

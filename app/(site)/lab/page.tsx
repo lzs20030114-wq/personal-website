@@ -140,16 +140,17 @@ export default function LabPage() {
 
         <Bench
           no="1-5"
-          lede="A shaft swings through 180° to open and close five rings. Three tendons bend the large arm."
+          lede="A shaft swings through 180° to open and close five rings. Three tendons bend the large arm. Switch the drive to the behaviour engine and the machine lives four lives, one persona each, responding to touch."
           specs={[
             ['Bodies', 'Real solids · adjustable skin'],
             ['Drive', 'One shaft · five cranks · in phase'],
+            ['Behaviour', 'Four personas · life cycle · JSONL event log'],
             ['Stroke', '180° reciprocating · apex ≡ 2R'],
             ['Arm', 'Three tendons · same solver as Lab 1-3'],
-            ['Caveats', 'Speed not to scale · small-arm motion choreographed'],
+            ['Caveats', 'Rhythms not hardware-verified · yaw is a placeholder'],
           ]}
         >
-          <MachineBench />
+          <MachineBench behavior />
         </Bench>
 
         {/* 项目二尚未定名：与 log 页 PROJECT_GROUPS 同一措辞（描述而非标题），定名后一并改 */}

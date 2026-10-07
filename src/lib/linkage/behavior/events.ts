@@ -186,6 +186,13 @@ export const ENGINE_EVENTS = [
 export type EngineEvent = (typeof ENGINE_EVENTS)[number];
 
 /**
+ * 台架操作（日志 src = 'operator'，M2 加）：不是刺激、不进行为，只为让导出的日志看得出
+ * 哪一段是加速跑的、哪一段是被跳过的。RATE {rate} = 改生命钟倍率；SKIP {from} = 跳到下一段。
+ */
+export const OPERATOR_EVENTS = ['RATE', 'SKIP'] as const;
+export type OperatorEvent = (typeof OPERATOR_EVENTS)[number];
+
+/**
  * 传感事件的去向（记在该条传感记录上）：
  * respond = 排进响应（RESPONSE 晚 τ 秒出现，to 指回本条）· startle = 惊吓 ·
  * busy = 响应位被占（已有待发 / 正在做的响应或惊吓）· muted = 此刻不响应（诞生头 20 s、死亡、空白）·

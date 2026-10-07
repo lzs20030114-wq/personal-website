@@ -7,6 +7,11 @@
  *
  * 时间只认仿真秒，定步 1/60 s。同种子 + 同事件序列 ⇒ 执行器指令逐位相同、日志逐字相同。
  *
+ * 两只钟（spec §5.5，M2 定）：**动作钟**是仿真秒——呼吸、动作、自发与转向的节奏都按它走；
+ * **生命钟**只管一世里各段的时长，可按 `lifeRate` 倍率加快（台架「生命时钟」档：×10 时一世
+ * 约 50 秒，呼吸仍是真实节律）。倍率 1 = 实验口径，与 M1 逐位相同。不能用「把 dt 乘上倍数」
+ * 去加速：那会让呼吸也快几十倍，曲柄与观众都跟不上。
+ *
  * 分层（spec §6.1）：引擎给的是**抽象指令**，与具体机构无关——
  *   呼吸给「行程分数 s」（0 全开 / 1 折叠），曲柄台架把它换成曲柄角、齿条实物换成齿条位置；
  *   臂给「张力 / 弯曲量 / 弯向」，台架按肌腱标定（预张力 0.34、差动 0.34）换成三腱收缩率；
@@ -145,9 +150,10 @@ export interface EngineStatus {
   life: number;
   persona: PersonaKey;
   phase: Phase;
-  /** 本段已过 / 本段总长（秒） */
+  /** 本段已过 / 本段总长（生命秒；倍率 ≠ 1 时折成真实秒要 ÷ lifeRate） */
   phaseElapsed: number;
   phaseLen: number;
+  lifeRate: number;
   arousal: number;
   vigor: number;
   grasp: GraspPhase;
@@ -208,12 +214,18 @@ interface GraspMem {
   reason: string;
 }
 
+/** 状态格式版本（快照恢复时核对；v2 = M2 加生命钟） */
+export const STATE_VERSION = 2;
+
 /** 引擎的全部状态：纯数据，JSON 往返无损（快照 / 交接 / 固件对照） */
 export interface EngineState {
-  v: 1;
+  v: typeof STATE_VERSION;
   seed: number;
   order: PersonaKey[];
   loop: boolean;
+  /** 生命钟倍率（此刻）与开场时的倍率（会话头记它；中途改档另记 RATE 操作记录） */
+  lifeRate: number;
+  lifeRate0: number;
   tick: number;
   /** advance() 的余量 */
   rem: number;
@@ -225,7 +237,9 @@ export interface EngineState {
   seq: number;
   life: number;
   phase: Phase;
-  phaseTick: number;
+  /** 本段已过的生命步数（每个定步 += lifeRate；倍率 1 时就是步数，与 M1 的 tick − phaseTick 逐位相同） */
+  phaseLt: number;
+  /** 本段总长（生命步数） */
   phaseLen: number;
   // 传感状态（电平）
   band: PresenceBand;
@@ -283,7 +297,11 @@ export interface EngineOpts {
   order?: readonly PersonaKey[];
   /** 四世之后是否从头再来（台架用）；默认 false = 第四世空白结束即会话结束 */
   loop?: boolean;
+  /** 生命钟倍率（默认 1 = 实验口径）。只压缩一世各段的时长，呼吸与动作仍按真实秒 */
+  lifeRate?: number;
 }
+
+const isRate = (r: number): boolean => Number.isFinite(r) && r > 0;
 
 interface Ctx {
   p: PersonaSpec;
@@ -350,6 +368,7 @@ export class BehaviorEngine {
 
   constructor(opts: EngineOpts, restore?: EngineState) {
     if (restore) {
+      if (restore.v !== STATE_VERSION) throw new Error(`快照版本 ${String(restore.v)} 与引擎 v${STATE_VERSION} 不符`);
       this.s = JSON.parse(JSON.stringify(restore)) as EngineState;
       return;
     }
@@ -357,11 +376,15 @@ export class BehaviorEngine {
     if (!isPersonaOrder(raw)) throw new Error(`人格顺序必须是 A–D 各一次：${raw.join(',')}`);
     const order = [...raw];
     const seed = opts.seed >>> 0;
+    const lifeRate = opts.lifeRate ?? 1;
+    if (!isRate(lifeRate)) throw new Error(`生命钟倍率必须是正数：${lifeRate}`);
     this.s = {
-      v: 1,
+      v: STATE_VERSION,
       seed,
       order,
       loop: opts.loop ?? false,
+      lifeRate,
+      lifeRate0: lifeRate,
       tick: 0,
       rem: 0,
       rng: makeRng(seed),
@@ -370,7 +393,7 @@ export class BehaviorEngine {
       seq: 0,
       life: 1,
       phase: 'BIRTH',
-      phaseTick: 0,
+      phaseLt: 0,
       phaseLen: 0,
       band: 'gone',
       bearing: null,
@@ -448,7 +471,44 @@ export class BehaviorEngine {
   }
 
   header(): LogHeader {
-    return sessionHeader(this.s.seed, this.s.order, HZ);
+    return sessionHeader(this.s.seed, this.s.order, HZ, this.s.lifeRate0);
+  }
+
+  /**
+   * 生命钟倍率（台架「生命时钟」档）。只压缩一世各段的时长，动作节奏不变；
+   * 中途改档记一条操作记录（src = 'operator'），导出的日志看得出哪一段是加速跑的。
+   */
+  setLifeRate(rate: number): void {
+    const s = this.s;
+    if (!isRate(rate)) throw new Error(`生命钟倍率必须是正数：${rate}`);
+    if (rate === s.lifeRate || s.done) return;
+    s.lifeRate = rate;
+    // 诞生段「40 s 起有自发与转向」是生命时间：还没到的那道门按新倍率改到正确的真实时刻
+    if (s.phase === 'BIRTH') {
+      const left = LIFE.spontAt - s.phaseLt / HZ;
+      if (left > 0) {
+        const due = s.tick / HZ + left / rate;
+        s.nextSpont = due;
+        s.nextOrient = due;
+      }
+    }
+    this.emit('RATE', { rate }, 'operator');
+  }
+
+  /**
+   * 跳到下一段（台架「下一段」）：本段视为已满，下一步照常换段、照常记生命事件。
+   * 记一条操作记录。诞生段还没到自发那道门就被跳过时，把门一并放开。
+   */
+  skip(): void {
+    const s = this.s;
+    if (s.done) return;
+    this.emit('SKIP', { from: s.phase }, 'operator');
+    if (s.phase === 'BIRTH' && s.phaseLt / HZ < LIFE.spontAt) {
+      const now = s.tick / HZ;
+      s.nextSpont = Math.min(s.nextSpont, now);
+      s.nextOrient = Math.min(s.nextOrient, now);
+    }
+    s.phaseLt = s.phaseLen;
   }
 
   /** 收一条传感事件；下一步开始时处理，时间戳 = 那一步的时刻 */
@@ -480,8 +540,9 @@ export class BehaviorEngine {
       life: s.life,
       persona: this.persona(),
       phase: s.phase,
-      phaseElapsed: (s.tick - s.phaseTick) / HZ,
+      phaseElapsed: s.phaseLt / HZ,
       phaseLen: s.phaseLen / HZ,
+      lifeRate: s.lifeRate,
       arousal: s.arousal,
       vigor: s.vigor,
       grasp: s.grasp.phase,
@@ -515,7 +576,7 @@ export class BehaviorEngine {
     const s = this.s;
     if (s.done) return;
     const t = s.tick / HZ;
-    if (s.tick - s.phaseTick >= s.phaseLen) this.advancePhase(t);
+    if (s.phaseLt >= s.phaseLen) this.advancePhase(t);
     if (s.done) return;
     const ctx = this.context();
     for (const e of s.inbox) this.handle(e, t, ctx);
@@ -536,6 +597,7 @@ export class BehaviorEngine {
     s.vigor = ctx.vigor;
     const exhale = (s.phi + 0.5) % 1 < s.voiceDuty;
     s.voiceOn = s.phase !== 'BLANK' && ctx.vigor > 0.05 && (t < s.voiceUntil || exhale);
+    s.phaseLt += s.lifeRate;
     s.tick++;
   }
 
@@ -544,7 +606,7 @@ export class BehaviorEngine {
   private context(): Ctx {
     const s = this.s;
     const p = PERSONAS[this.persona()];
-    const el = (s.tick - s.phaseTick) / HZ;
+    const el = s.phaseLt / HZ;
     const len = s.phaseLen / HZ;
     const none = ageing(0);
     switch (s.phase) {
@@ -594,7 +656,7 @@ export class BehaviorEngine {
   private enter(phase: Phase, seconds: number): void {
     const s = this.s;
     s.phase = phase;
-    s.phaseTick = s.tick;
+    s.phaseLt = 0;
     s.phaseLen = Math.round(seconds * HZ);
   }
 
@@ -661,8 +723,9 @@ export class BehaviorEngine {
     if (s.band === 'gone') s.bearing = null;
     s.speedBase = sampleRange(s.rng, p.speed) / ENGINE.speedRef;
     s.restDir = uniform(s.rng, -Math.PI, Math.PI);
-    s.nextSpont = t + LIFE.spontAt;
-    s.nextOrient = t + LIFE.spontAt;
+    // 「诞生 40 s 起」是生命时间，折成真实秒要 ÷ 倍率（倍率 1 时与 M1 逐位相同）
+    s.nextSpont = t + LIFE.spontAt / s.lifeRate;
+    s.nextOrient = t + LIFE.spontAt / s.lifeRate;
     this.newBreath(this.context());
     this.emit('LIFE_BIRTH', { zh: p.zh });
   }
@@ -1162,7 +1225,7 @@ export class BehaviorEngine {
   private emit(
     ev: string,
     p?: Record<string, LogValue>,
-    src: 'sensor' | 'engine' = 'engine',
+    src: LogRecord['src'] = 'engine',
     I?: number,
     out?: Outcome,
   ): LogRecord {

@@ -24,8 +24,9 @@ export interface LogRecord {
   life: number;
   persona: PersonaKey;
   phase: Phase;
-  src: 'sensor' | 'engine';
-  /** 传感事件类别（九类之一）或引擎事件名 */
+  /** sensor = 传感事件 · engine = 引擎自己产生的 · operator = 台架操作（改生命钟倍率、跳段），不是被试的刺激 */
+  src: 'sensor' | 'engine' | 'operator';
+  /** 传感事件类别（九类之一）、引擎事件名或操作名（RATE / SKIP） */
   ev: string;
   /** 刺激强度（仅传感事件） */
   I?: number;
@@ -44,6 +45,8 @@ export interface LogHeader {
   seed: number;
   order: readonly PersonaKey[];
   hz: number;
+  /** 开场时的生命钟倍率；只在 ≠ 1 时出现（实验口径的会话头与 M1 逐字相同） */
+  lifeRate?: number;
 }
 
 /** 取整到 d 位小数（去掉 -0，免得同一个量序列化出两种写法） */
@@ -78,8 +81,10 @@ export function formatRecord(r: LogRecord): string {
   return JSON.stringify(o);
 }
 
-export function sessionHeader(seed: number, order: readonly PersonaKey[], hz: number): LogHeader {
-  return { schema: LOG_SCHEMA, v: LOG_VERSION, seed, order: [...order], hz };
+export function sessionHeader(seed: number, order: readonly PersonaKey[], hz: number, lifeRate = 1): LogHeader {
+  const h: LogHeader = { schema: LOG_SCHEMA, v: LOG_VERSION, seed, order: [...order], hz };
+  if (lifeRate !== 1) h.lifeRate = lifeRate;
+  return h;
 }
 
 export function toJsonl(records: readonly LogRecord[], header?: LogHeader): string {

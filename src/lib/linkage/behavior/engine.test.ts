@@ -143,7 +143,7 @@ describe('生命周期', () => {
     const births: number[] = [];
     drive(e, feeder(busy()), Infinity, (eng) => {
       const s = eng.state;
-      if (s.phase === 'BIRTH' && s.tick - s.phaseTick === 1 && s.life > 1) {
+      if (s.phase === 'BIRTH' && s.phaseLt === 1 && s.life > 1) {
         births.push(s.life);
         expect(s.arousal).toBe(0);
         expect(s.gesture).toBeNull();
@@ -423,5 +423,102 @@ describe('输出能直接喂执行器', () => {
       expect(m.dArm).toBeLessThan(0.04);
       expect(m.dFeeler).toBeLessThan(0.15);
     }
+  });
+});
+
+describe('生命钟（M2：台架「生命时钟」档）', () => {
+  /** 一场里各段的起点（生命事件时刻），按出现顺序 */
+  const marks = (log: LogRecord[]): { ev: string; t: number }[] =>
+    log.filter((r) => r.ev.startsWith('LIFE_') || r.ev === 'SESSION_END').map((r) => ({ ev: r.ev, t: r.t }));
+
+  it('倍率 10：每一段时长 = 生命秒 ÷ 10（逐段差不过一步），交互仍挪不动死亡时点', () => {
+    const slow = marks(runSession({ seed: 5 }).log);
+    const fast = marks(runSession({ seed: 5, lifeRate: 10 }).log);
+    const busyFast = marks(runSession({ seed: 5, lifeRate: 10, inputs: busy(230, 0.7) }).log);
+    expect(fast.map((m) => m.ev)).toEqual(slow.map((m) => m.ev));
+    for (let i = 1; i < fast.length; i++) {
+      const d1 = slow[i].t - slow[i - 1].t;
+      const d10 = fast[i].t - fast[i - 1].t;
+      expect(Math.abs(d10 - d1 / 10)).toBeLessThanOrEqual(1 / HZ + 1e-9);
+    }
+    expect(busyFast.filter((m) => m.ev === 'LIFE_DEATH')).toEqual(fast.filter((m) => m.ev === 'LIFE_DEATH'));
+  });
+
+  it('倍率只压生命、不压动作：×10 下活力型成长段的呼吸周期仍约 2 秒', () => {
+    const e = new BehaviorEngine({ seed: 41, order: first('A'), lifeRate: 10 });
+    const period: number[] = [];
+    let phi = e.state.phi;
+    drive(e, () => undefined, (LIFE.birth + LIFE.grow) / 10, (eng) => {
+      const s = eng.state;
+      if (s.phase === 'GROW' && s.phi < phi && !s.sighNow) period.push(s.period);
+      phi = s.phi;
+    });
+    expect(period.length).toBeGreaterThan(8);
+    expect(Math.abs(mean(period) / PERSONAS.A.breathPeriod[0] - 1)).toBeLessThan(0.06);
+  });
+
+  it('诞生的两道门按生命秒折算：×10 下真实 2 秒前的刺激记 muted、之后回应；4 秒起才有自发动作', () => {
+    const { log } = runSession({
+      seed: 3,
+      lifeRate: 10,
+      until: 6,
+      inputs: [
+        at(1.5, { kind: 'SHELL_STROKE', half: 'L', touch: 'stroke' }),
+        at(2.5, { kind: 'SHELL_STROKE', half: 'R', touch: 'stroke' }),
+      ],
+    });
+    const strokes = evs(log, 'SHELL_STROKE');
+    expect(strokes.map((r) => r.out)).toEqual(['muted', 'respond']);
+    const sp = evs(log, 'SPONTANEOUS');
+    expect(sp.length).toBeGreaterThan(0);
+    expect(sp[0].t).toBeGreaterThanOrEqual(4 - 1e-9);
+  });
+
+  it('中途改档：记一条操作记录；诞生剩下的部分与那道自发门按新倍率改到正确的真实时刻', () => {
+    const e = new BehaviorEngine({ seed: 9 });
+    const log = drive(e, () => undefined, 10);
+    e.setLifeRate(10);
+    e.setLifeRate(10); // 同值不重复记
+    log.push(...drive(e, () => undefined, 20));
+    const rate = log.filter((r) => r.src === 'operator');
+    expect(rate).toHaveLength(1);
+    expect(rate[0]).toMatchObject({ ev: 'RATE', t: 10, p: { rate: 10 } });
+    // 诞生还剩 50 生命秒 = 5 真实秒；自发门在生命 40 秒 = 再过 3 真实秒
+    expect(Math.abs(evs(log, 'LIFE_GROW')[0].t - 15)).toBeLessThanOrEqual(1 / HZ + 1e-9);
+    const sp = evs(log, 'SPONTANEOUS');
+    expect(sp[0].t).toBeGreaterThanOrEqual(13 - 1e-9);
+    expect(sp[0].t).toBeLessThan(13.6);
+    expect(() => e.setLifeRate(0)).toThrow();
+    expect(() => new BehaviorEngine({ seed: 1, lifeRate: -2 })).toThrow();
+  });
+
+  it('跳段：记 SKIP，下一步就换段并照常记生命事件；诞生头 40 秒被跳过时自发门一并放开', () => {
+    const e = new BehaviorEngine({ seed: 13 });
+    const log = drive(e, () => undefined, 5);
+    e.skip();
+    log.push(...drive(e, () => undefined, 6));
+    const skip = log.filter((r) => r.src === 'operator');
+    expect(skip).toHaveLength(1);
+    expect(skip[0]).toMatchObject({ ev: 'SKIP', t: 5, phase: 'BIRTH', p: { from: 'BIRTH' } });
+    expect(evs(log, 'LIFE_GROW')[0].t).toBe(5);
+    expect(evs(log, 'SPONTANEOUS')[0].t).toBeLessThan(5.1);
+    // 跳过的是这一段，下一段照常走满
+    const g = drive(e, () => undefined, 5 + LIFE.grow + 1);
+    expect(Math.abs(evs(g, 'LIFE_AGE')[0].t - (5 + LIFE.grow))).toBeLessThanOrEqual(1 / HZ + 1e-9);
+  });
+
+  it('会话头只在倍率 ≠ 1 时记开场倍率；快照带着倍率走；旧版快照拒收', () => {
+    expect(new BehaviorEngine({ seed: 2 }).header()).not.toHaveProperty('lifeRate');
+    const e = new BehaviorEngine({ seed: 2, lifeRate: 5 });
+    e.advance(3, 1000);
+    e.setLifeRate(20);
+    expect(e.header().lifeRate).toBe(5);
+    e.drain(); // 日志缓冲不在状态里：快照前取走，两边从同一处开始比
+    const snap = JSON.parse(JSON.stringify(e.snapshot()));
+    const back = BehaviorEngine.restore(snap);
+    expect(back.status().lifeRate).toBe(20);
+    const whole = drive(e, () => undefined, 60);
+    expect(toJsonl(drive(back, () => undefined, 60))).toBe(toJsonl(whole));
+    expect(() => BehaviorEngine.restore({ ...snap, v: 1 })).toThrow();
   });
 });
