@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { OrbitCamera } from './camera3d';
-import { CriticallyDamped } from './motion';
+import { CriticallyDamped, dampStep } from './motion';
 import { bakeSkinned, jointScrew, type CellFrame, type ScrewParams } from './gl3d';
 
 // 3D 台架公共装备（立体求解器 spec）：相机 / WebGL 几何变换 / 肌肉缓动。
@@ -293,6 +293,17 @@ describe('CriticallyDamped（肌肉缓动）', () => {
     }
     expect(m.value).toBe(1);
     expect(m.update(1 / 60)).toBe(false);
+  });
+
+  it('纯数据版 dampStep 与类逐位相同（行为引擎用它；抽出前后算式不变）', () => {
+    const m = new CriticallyDamped(4, 0.2);
+    const s = { x: 0.2, v: 0 };
+    for (let f = 0; f < 400; f++) {
+      const target = f < 150 ? 0.9 : -0.3 + 0.001 * f;
+      m.target = target;
+      expect(dampStep(s, target, 4, 1 / 60)).toBe(m.update(1 / 60));
+      expect(s.x).toBe(m.value);
+    }
   });
 
   it('jumpTo 硬复位：值/目标/速度全清（归位语义）', () => {

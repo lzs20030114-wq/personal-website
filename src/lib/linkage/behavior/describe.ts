@@ -1,0 +1,154 @@
+/**
+ * 日志记录 → 一句人读的话（台架 HUD 用，中英两份）。纯函数。
+ *
+ * 措辞守 THESIS_NOTES：写**行为**不写感受——「惊跳」（startle reflex 的通行译名）而不是
+ * 「害怕」，「转向人」而不是「想看你」。生命感是观众的知觉，HUD 不替机器宣布情绪。
+ */
+
+import type { Phase } from './life';
+import type { LogRecord, LogValue } from './log';
+import { PERSONAS, type PersonaKey } from './persona';
+
+export type DescribeLang = 'zh' | 'en';
+type Pair = readonly [zh: string, en: string];
+
+const pick = (p: Pair, lang: DescribeLang): string => (lang === 'zh' ? p[0] : p[1]);
+
+export const PHASE_NAMES: Record<Phase, Pair> = {
+  BIRTH: ['诞生', 'Birth'],
+  GROW: ['成长', 'Growth'],
+  AGE: ['衰老', 'Ageing'],
+  DEATH: ['死亡', 'Dying'],
+  BLANK: ['空白', 'Blank'],
+  END: ['结束', 'End'],
+};
+
+export function phaseName(p: Phase, lang: DescribeLang): string {
+  return pick(PHASE_NAMES[p], lang);
+}
+
+export function personaName(k: PersonaKey, lang: DescribeLang): string {
+  return lang === 'zh' ? PERSONAS[k].zh : PERSONAS[k].en;
+}
+
+const OUTCOME: Record<string, Pair> = {
+  respond: ['回应', 'responds'],
+  startle: ['惊跳', 'startles'],
+  busy: ['正忙', 'busy'],
+  muted: ['不响应', 'no response'],
+};
+
+const BAND: Record<string, Pair> = {
+  gone: ['人离开', 'person leaves'],
+  far: ['人在远处', 'person far'],
+  mid: ['人在中距离', 'person mid-range'],
+  near: ['人靠近', 'person near'],
+};
+const SHELL_TOUCH: Record<string, Pair> = {
+  pat: ['轻拍壳', 'shell pat'],
+  stroke: ['抚摸壳', 'shell stroke'],
+  poke: ['戳壳', 'shell poke'],
+};
+const SIDE: Record<string, Pair> = { L: ['左', 'L'], R: ['右', 'R'], both: ['两侧', 'both'] };
+const SPONT: Record<string, Pair> = {
+  curl: ['卷臂', 'curls arm'],
+  sway: ['扫臂', 'sweeps arm'],
+  flick: ['抖触须', 'flicks feelers'],
+  sigh: ['叹气', 'sighs'],
+  search: ['搜寻', 'searches'],
+};
+const ORIENT: Record<string, Pair> = {
+  toward: ['转向人', 'turns to person'],
+  away: ['背过身', 'turns away'],
+  random: ['四处看', 'looks around'],
+  final: ['最后朝向人', 'final turn to person'],
+};
+const LOST: Record<string, Pair> = {
+  chase: ['脱手 · 追', 'loses grip · chases'],
+  giveUp: ['脱手 · 放弃', 'loses grip · gives up'],
+};
+
+const num = (v: LogValue | undefined, d = 1): string => (typeof v === 'number' ? v.toFixed(d) : '');
+const str = (v: LogValue | undefined): string => (typeof v === 'string' ? v : '');
+
+/** 事件本身那半句（不含去向） */
+function what(r: LogRecord, lang: DescribeLang): string {
+  const p = r.p ?? {};
+  const zh = lang === 'zh';
+  switch (r.ev) {
+    // —— 传感
+    case 'PRESENCE':
+      return pick(BAND[str(p.band)] ?? ['在场', 'presence'], lang);
+    case 'FEELER_TOUCH':
+      return zh ? `碰触须 ${Number(p.feeler) + 1}` : `feeler ${Number(p.feeler) + 1} touched`;
+    case 'SHELL_STROKE': {
+      const t = pick(SHELL_TOUCH[str(p.touch)] ?? ['碰壳', 'shell touch'], lang);
+      return `${t}${zh ? '（' : ' ('}${pick(SIDE[str(p.half)] ?? ['?', '?'], lang)}${zh ? '）' : ')'}`;
+    }
+    case 'SHELL_HOLD':
+      return p.on ? (zh ? '按住壳' : 'shell held') : zh ? '松开壳' : 'shell released';
+    case 'LIFT':
+      return p.lifted ? (zh ? '被拿起' : 'lifted') : zh ? '被放下' : 'put down';
+    case 'KNOCK':
+      return zh ? '敲' : 'knock';
+    case 'SOUND':
+      return Number(p.level) >= 0.6 ? (zh ? '拍手声' : 'clap') : zh ? '说话声' : 'voice';
+    case 'ARM_TOUCH':
+      return p.on ? (zh ? '手碰臂' : 'arm touched') : zh ? '手离开臂' : 'hand off arm';
+    case 'RESISTANCE':
+      return p.on ? (zh ? '臂里有张力' : 'tension on') : zh ? '张力消失' : 'tension off';
+    // —— 引擎
+    case 'RESPONSE':
+      return zh ? `回应（${num(p.latency)} s）` : `response (${num(p.latency)} s)`;
+    case 'RESPONSE_DROP':
+      return zh ? '响应作废' : 'response dropped';
+    case 'STARTLE':
+      return zh ? '惊跳' : 'startle';
+    case 'REFLEX':
+      return zh ? `触须 ${Number(p.feeler) + 1} 反射` : `feeler ${Number(p.feeler) + 1} reflex`;
+    case 'SPONTANEOUS':
+      return pick(SPONT[str(p.action)] ?? ['自发动作', 'spontaneous'], lang);
+    case 'ORIENT':
+      return pick(ORIENT[str(p.mode)] ?? ['转向', 'turns'], lang);
+    case 'GRASP_START':
+      return p.chase ? (zh ? '再缠' : 'wraps again') : zh ? '缠' : 'wraps';
+    case 'GRASP_HOLD_HUMAN':
+      return zh ? '握住手' : 'holds hand';
+    case 'GRASP_HOLD_OBJECT':
+      return zh ? '握住物件' : 'holds object';
+    case 'GRASP_EMPTY':
+      return zh ? '抓空' : 'grasps nothing';
+    case 'GRASP_LOST':
+      return pick(LOST[str(p.reaction)] ?? ['脱手', 'loses grip'], lang);
+    case 'RELEASE_DONE':
+      return zh ? '松开' : 'released';
+    case 'CONTACT':
+      return zh ? '手还在臂上' : 'hand still on arm';
+    case 'LIFE_BIRTH':
+      return zh ? `诞生 · ${personaName(r.persona, 'zh')}` : `born · ${personaName(r.persona, 'en')}`;
+    case 'LIFE_GROW':
+      return zh ? '进入成长' : 'growth';
+    case 'LIFE_AGE':
+      return zh ? '开始衰老' : 'ageing begins';
+    case 'LIFE_DEATH_START':
+      return zh ? '开始死亡' : 'dying begins';
+    case 'LIFE_DEATH':
+      return zh ? '死亡' : 'death';
+    case 'SESSION_END':
+      return zh ? '会话结束' : 'session ended';
+    // —— 台架操作
+    case 'RATE':
+      return zh ? `生命时钟 ×${num(p.rate, 0)}` : `life clock ×${num(p.rate, 0)}`;
+    case 'SKIP':
+      return zh ? '跳到下一段' : 'skipped stage';
+    default:
+      return r.ev;
+  }
+}
+
+/** 一条记录的一句话：传感事件带去向（「轻拍壳（左）→ 回应」），去向为 none 时不带 */
+export function describeRecord(r: LogRecord, lang: DescribeLang): string {
+  const w = what(r, lang);
+  const o = r.out ? OUTCOME[r.out] : undefined;
+  return o ? `${w} → ${pick(o, lang)}` : w;
+}
