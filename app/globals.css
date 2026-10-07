@@ -1561,6 +1561,48 @@ button.log-heat__cell {
   background: oklch(0.22 0.042 235);
   border: 1px solid oklch(0.95 0.032 120 / 0.25);
 }
+/* Lab 1-6：指针 = 人的手（2026-10-07）。圈跟着指针走，样子 = 机器此刻怎么对待这只手：
+   虚线 = 还没看见；绿 = 迎过去；莲粉 = 背过身；淡实线 = 不理；碰着 = 圈里填色；握住 = 外加一圈。
+   台架逐帧写 transform 与 data-*，不走 React 状态。 */
+.lab-hand {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border-radius: 50%;
+  border: 1.5px dashed oklch(0.95 0.02 120 / 0.5);
+  pointer-events: none;
+  display: none;
+  transition: border-color 0.25s, background-color 0.25s, box-shadow 0.25s;
+}
+.lab-hand[data-on] {
+  display: block;
+}
+.lab-hand[data-mode='toward'] {
+  border-style: solid;
+  border-color: var(--g300);
+}
+.lab-hand[data-mode='away'] {
+  border-style: solid;
+  border-color: var(--rose);
+}
+.lab-hand[data-mode='ignore'] {
+  border-style: solid;
+  border-color: oklch(0.95 0.02 120 / 0.55);
+}
+.lab-hand[data-touch='1'] {
+  background-color: oklch(0.95 0.02 120 / 0.18);
+}
+.lab-hand[data-held='1'] {
+  box-shadow: 0 0 0 4px oklch(0.83 0.082 132 / 0.35);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lab-hand {
+    transition: none;
+  }
+}
 .lab-fig {
   position: relative;
   /* flex 容器里不加会收缩成内容宽（svg width:100% 无参照 → 退回固有宽，实测缩成小图） */

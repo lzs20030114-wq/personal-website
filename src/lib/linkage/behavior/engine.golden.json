@@ -1,0 +1,41 @@
+{
+  "source": "d06bc0a",
+  "cases": [
+    {
+      "seed": 11,
+      "lifeRate": 1,
+      "log": "7cdf55d668e3d687",
+      "frames": "bdab6628af94822d"
+    },
+    {
+      "seed": 23,
+      "lifeRate": 1,
+      "log": "70f0a5b5cc3d3712",
+      "frames": "ea5ec74adc47ded1"
+    },
+    {
+      "seed": 131,
+      "lifeRate": 10,
+      "log": "727eed185c2259f7",
+      "frames": "ce949291ffcf94c6"
+    },
+    {
+      "seed": 151,
+      "lifeRate": 10,
+      "log": "9e0794d96ea28748",
+      "frames": "17264506403e1117"
+    },
+    {
+      "seed": 161,
+      "lifeRate": 60,
+      "log": "28161711515c2f52",
+      "frames": "6678f9452d4a2068"
+    },
+    {
+      "seed": 171,
+      "lifeRate": 60,
+      "log": "4907b7eb90cc68ce",
+      "frames": "af4d32996062a2b8"
+    }
+  ]
+}

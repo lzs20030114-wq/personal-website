@@ -8,9 +8,11 @@ import {
   clampTheta,
   stepMachine,
 } from './machine';
-import { ARM_IDLE } from './machine-arm';
+import { ARM_IDLE, armPoint } from './machine-arm';
 import { clampSwing, startleSwing } from './machine-smallarm';
 import type { Vec3 } from './solver3d';
+import { TENTACLE3D } from './tentacle3d-data';
+import { STATIONS } from './tentacle3d-shape';
 
 /**
  * 行为引擎 → Lab 1-5 整机台架的适配层（轮回机器_行为引擎spec.md §6，M2）。纯函数、零 DOM。
@@ -101,11 +103,108 @@ export function followBreath(m: Machine, s: number, dt: number): number {
 // ------------------------------------------------------------------ 臂与触须
 
 /**
- * 臂的抽象指令 → 三腱收缩率。与待机波形同一式（machine-arm.ts 的 ARM_IDLE）：
- * 预张力 tone 吃掉肌腱的松弛量（实测 0.28 以下全是空行程），弯曲 bend 是叠在上面的差动，
- * 按 120° 相位分到三根腱上、负值截零（肌腱只能拉不能推）。dir = 0 是腱 0（臂梢朝上）。
+ * 三腱换算的标定（2026-10-07，Lab 1-6 手交互；数字出自 `scripts/behavior/arm-drive-calib.mjs`，
+ * Lab 1-3 同一个求解器、稳态）。
+ *
+ * - span：标准满差动（引擎 bend = 1），与待机波形同值。
+ * - wrapSpan：抓握深缠 / 近处够手时叠在 span 之上的额外差动（引擎 arm.wrap = 1）。
+ * - dMax = span + wrapSpan：差动封顶。0.55 起两腱之间（60°）开始失稳（两根同时拉到 0.9 以上，
+ *   臂沿轴被压、弯向乱跳），0.5 时各方向仍稳。
+ * - floor：拮抗腱最多回松到缆刚绷直那一点再紧 0.01（再松就是空行程，弯向会抖）。
  */
-export function tendonContractions(arm: ActuatorTargets['arm']): [number, number, number] {
+/** 臂指令（引擎 ActuatorTargets.arm；wrap 可省 = 0） */
+export type ArmCmd = Omit<ActuatorTargets['arm'], 'wrap'> & { wrap?: number };
+
+export const ARM_DRIVE = {
+  span: ARM_IDLE.span,
+  wrapSpan: 0.16,
+  dMax: ARM_IDLE.span + 0.16,
+  floor: TENTACLE3D.slack / (TENTACLE3D.slack + TENTACLE3D.pullMax) + 0.01,
+} as const;
+
+/**
+ * 差动 D → 梢端弦角（基座 → 梢端连线偏离笔直臂轴的角，度）。标定各方向平均（新分解下
+ * 各方向相差 ≤ 3°）；总卷曲约为弦角的 2 倍。分段线性。
+ */
+export const ARM_CHORD: ReadonlyArray<readonly [number, number]> = [
+  [0, 0],
+  [0.1, 9],
+  [0.2, 17],
+  [0.34, 27.5],
+  [0.45, 34.5],
+  [0.5, 37.5],
+];
+
+/** 差动 → 弦角（度） */
+export function chordOfDrive(d: number): number {
+  const t = ARM_CHORD;
+  if (d <= 0) return 0;
+  for (let i = 1; i < t.length; i++) {
+    if (d <= t[i][0]) return t[i - 1][1] + ((d - t[i - 1][0]) / (t[i][0] - t[i - 1][0])) * (t[i][1] - t[i - 1][1]);
+  }
+  return t[t.length - 1][1];
+}
+
+/** 弦角（度）→ 差动（上式的逆，超出表尾封顶在 dMax） */
+export function driveOfChord(deg: number): number {
+  const t = ARM_CHORD;
+  if (deg <= 0) return 0;
+  for (let i = 1; i < t.length; i++) {
+    if (deg <= t[i][1]) return t[i - 1][0] + ((deg - t[i - 1][1]) / (t[i][1] - t[i - 1][1])) * (t[i][0] - t[i - 1][0]);
+  }
+  return t[t.length - 1][0];
+}
+
+/**
+ * 弯向的系统偏差（度，实际 − 指令）：朝下半圈（±150°、180°）臂会往顺时针偏，差动越大偏得越多
+ * （D 0.45 时 −16 ~ −25°）。12 个方向 × 3 档差动最小二乘拟合，残差 rms 1.7°。
+ */
+export function bendDirError(dir: number, d: number): number {
+  return (
+    d *
+    (-16.9 + 17.9 * Math.cos(dir) - 0.4 * Math.sin(dir) - 11.5 * Math.cos(2 * dir) - 8.3 * Math.sin(2 * dir)) *
+    (Math.PI / 180)
+  );
+}
+
+/** 要弯向 dir 时该下的指令方向：三次不动点迭代抵掉上面的偏差（实测补偿后各方向误差 ≤ 7°，D ≤ 0.34 时 ≤ 2°） */
+export function bendCommandDir(dir: number, d: number): number {
+  let c = dir;
+  for (let i = 0; i < 3; i++) c = dir - bendDirError(c, d);
+  return c;
+}
+
+/**
+ * 臂的抽象指令 → 三腱收缩率（2026-10-07 换分解，原式见 tendonContractionsClip）。
+ *
+ * 差动 D = span·bend + wrapSpan·wrap（封顶 dMax），按 (2/3)·cos(dir − 2πk/3) 分到三根腱上：
+ * 弯向正对某根腱时主腱多拉 2D/3、两根拮抗腱各回松 D/3（「最紧 − 最松」= D）；夹在两腱之间时
+ * 这个差在 D 与 2D/√3 之间——标定量的就是这个式子，弦角对 D 各方向一致（见 ARM_CHORD）。拮抗腱回松到
+ * 低于 min(预张力, floor) 时三根一起往上抬（不让它掉进空行程）；tone = 0 时下限也是 0，死了照样松垮。
+ * 指令方向先过 bendCommandDir 抵掉系统偏差。dir = 0 是腱 0（臂梢朝上），左为正。
+ *
+ * 为什么换：原式负份额截零，在两根腱之间（60°）只出一半弯曲——D 0.34 时腱向弦角 28°、
+ * 两腱之间 15°；新式各方向 26–29°。要「伸向手」就得各方向一样准。
+ */
+export function tendonContractions(arm: ArmCmd): [number, number, number] {
+  const d = Math.min(ARM_DRIVE.dMax, ARM_DRIVE.span * arm.bend + ARM_DRIVE.wrapSpan * (arm.wrap ?? 0));
+  const base = ARM_IDLE.base * arm.tone;
+  const out: [number, number, number] = [base, base, base];
+  if (d <= 0) return out;
+  const dir = bendCommandDir(arm.dir, d);
+  for (let k = 0; k < 3; k++) out[k] = base + d * (2 / 3) * Math.cos(dir - (2 * Math.PI * k) / 3);
+  const lo = Math.min(out[0], out[1], out[2]);
+  const floor = Math.min(base, ARM_DRIVE.floor);
+  if (lo < floor) for (let k = 0; k < 3; k++) out[k] += floor - lo;
+  for (let k = 0; k < 3; k++) out[k] = clamp01(out[k]);
+  return out;
+}
+
+/**
+ * 原分解（M2–2026-10-06）：与待机波形同一式（machine-arm.ts 的 ARM_IDLE）——预张力 tone 吃掉肌腱的
+ * 松弛量，弯曲 bend 是叠在上面的差动，按 120° 相位分到三根腱上、负值截零。留着作对照（探针与守门）。
+ */
+export function tendonContractionsClip(arm: ArmCmd): [number, number, number] {
   const out: [number, number, number] = [0, 0, 0];
   for (let k = 0; k < 3; k++) {
     const share = Math.max(0, Math.cos(arm.dir - (2 * Math.PI * k) / 3));
@@ -252,4 +351,280 @@ export function hitBand(p: P2, A: readonly P2[], B: readonly P2[]): number {
     if (inTri(p, A[i], A[i + 1], B[i + 1]) || inTri(p, A[i], B[i + 1], B[i])) return i;
   }
   return -1;
+}
+
+// ------------------------------------------------------------------ 手（指针）→ 传感（Lab 1-6）
+
+/**
+ * 台架的视图参数（与 gl3d 顶点着色器同一投影）：view = M·(p − pivot)；q.z > 0 朝相机；
+ * 逻辑像素 xl = q.x·scale/pw + pan.x（700×520、中心为 0），pw = persp > 0 ? 1 − q.z/persp : 1。
+ */
+export interface ViewParams {
+  m: readonly number[];
+  pivot: Vec3;
+  scale: number;
+  pan: P2;
+  /** 透视焦距（台架 900）；0 = 正交 */
+  persp: number;
+}
+
+/** 世界点的视深 q.z（朝相机为正） */
+export function viewDepth(v: ViewParams, p: Vec3): number {
+  const m = v.m;
+  return m[6] * (p.x - v.pivot.x) + m[7] * (p.y - v.pivot.y) + m[8] * (p.z - v.pivot.z);
+}
+
+/** 世界点 → 逻辑像素（gl3d 同式；测试与反投影往返用） */
+export function projectLogical(v: ViewParams, p: Vec3): P2 {
+  const m = v.m;
+  const dx = p.x - v.pivot.x;
+  const dy = p.y - v.pivot.y;
+  const dz = p.z - v.pivot.z;
+  const qz = m[6] * dx + m[7] * dy + m[8] * dz;
+  const pw = v.persp > 0 ? 1 - qz / v.persp : 1;
+  return {
+    x: ((m[0] * dx + m[1] * dy + m[2] * dz) * v.scale) / pw + v.pan.x,
+    y: ((m[3] * dx + m[4] * dy + m[5] * dz) * v.scale) / pw + v.pan.y,
+  };
+}
+
+/** 逻辑像素 (xl, yl) 在视深 qz 处的世界点（projectLogical 的逆；M 正交，逆 = 转置） */
+export function unprojectAt(v: ViewParams, l: P2, qz: number): Vec3 {
+  const m = v.m;
+  const pw = v.persp > 0 ? 1 - qz / v.persp : 1;
+  const qx = ((l.x - v.pan.x) * pw) / v.scale;
+  const qy = ((l.y - v.pan.y) * pw) / v.scale;
+  return {
+    x: v.pivot.x + m[0] * qx + m[3] * qy + m[6] * qz,
+    y: v.pivot.y + m[1] * qx + m[4] * qy + m[7] * qz,
+    z: v.pivot.z + m[2] * qx + m[5] * qy + m[8] * qz,
+  };
+}
+
+/**
+ * 指针射线与水平面 z = z0 的交点。射线与水平面夹角小于 minAngle（正视 / 侧视那种平视）、
+ * 或交点在相机背后时返回 null——交点会飞到无穷远，没意义。
+ */
+export function rayHitZ(v: ViewParams, l: P2, z0: number, minAngle = (15 * Math.PI) / 180): Vec3 | null {
+  const a = unprojectAt(v, l, 0);
+  const b = unprojectAt(v, l, 1);
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const dz = b.z - a.z;
+  if (Math.abs(dz) < Math.sin(minAngle) * Math.hypot(dx, dy, dz)) return null;
+  const qz = (z0 - a.z) / dz;
+  if (v.persp > 0 && qz >= v.persp * 0.95) return null;
+  return { x: a.x + dx * qz, y: a.y + dy * qz, z: z0 };
+}
+
+/** 手的传感读数（引擎 HAND 事件的载荷）：方位、距离、臂要怎么弯才碰得到它 */
+export interface HandReading {
+  /** 世界系 rad（0 = 机器初始正前方，逆时针为正），已归到 [−π, π) */
+  bearing: number;
+  /** 离电机轴的水平距离（mm）；手在机身上（摸壳）时 = R_HULL */
+  dist: number;
+  /**
+   * 要让臂对准手，机身该朝哪（世界系 rad）。臂不在机身中线上（偏右约 109 mm），机身中线对准手时
+   * 臂是偏的；这里按臂线算好，引擎「迎」就转到这里（引擎不认几何）。
+   */
+  face: number;
+  /** 臂要弯向哪（腱系 rad：0 = 上，左为正，归到 [−π, π)） */
+  aimDir: number;
+  /** 要弯多少（引擎 bend 单位：1 = 标准满差动；> 1 = 满差动也够不着，封顶 dMax/span） */
+  aimBend: number;
+  /** 手离臂基座多远（mm） */
+  aimDist: number;
+  /** 手偏离臂轴的侧向距离（mm）：很小时 aimDir 读不准（手就在臂轴上，往哪边都差不多），台架据此留用上一个弯向 */
+  side: number;
+  /** 指针落在机身上（射线先碰到机身外廓）：那是在摸壳 */
+  onBody: boolean;
+}
+
+/** 大触手的几何：基座（世界，未转）、笔直时的梢端、静息弦长 */
+export const ARM_GEOM = (() => {
+  const s0 = STATIONS[0];
+  const s1 = STATIONS[STATIONS.length - 1];
+  const base = armPoint({ x: s0[0], y: s0[1], z: s0[2] });
+  const tip = armPoint({ x: s1[0], y: s1[1], z: s1[2] });
+  return { base, tip, length: Math.hypot(tip.x - base.x, tip.y - base.y, tip.z - base.z) };
+})();
+
+/** 手离电机轴多远算远（mm）：再远方位还在，距离截住，不让射线把它甩到无穷远 */
+export const HAND_FAR = 3000;
+
+/**
+ * 平视（正视 / 侧视）时手在哪：射线与水平面几乎平行，没法取地面交点。约定手在机器朝相机这一侧、
+ * 离电机轴 R_FRONT（= 臂梢那一圈）的竖直圆柱面上——屏幕上左右移动，方位在朝相机的半圈里平滑地变；
+ * 射线擦不到圆柱（指针在机器外侧更远处）时取射线离轴最近的那一点（相切处两种取法重合，不跳）。
+ */
+export const R_FRONT = 600;
+
+/**
+ * 机身外廓（竖直圆柱，绕电机轴）：半径 ≥ 机架角点 281 mm，高度含拱顶与底盘。指针射线先碰到它 =
+ * 手放在机身上（摸壳），读数取外廓朝相机那一面上的点（距离恒为 R_HULL）；从顶上压下来（俯视正对机身）
+ * 那一面上方位没意义，沿用上一个读数的方位。
+ */
+export const R_HULL = 300;
+export const HULL_Z = [-160, 230] as const;
+
+/** 视线（相机轴）与水平面的夹角够大时用「臂高水平面」，否则用「朝相机的圆柱面」——按视图定，不按每根射线定 */
+const PLANE_MIN = Math.sin((15 * Math.PI) / 180);
+
+interface Ray {
+  a: Vec3;
+  d: Vec3;
+}
+function rayOf(v: ViewParams, l: P2): Ray {
+  const a = unprojectAt(v, l, 0);
+  const b = unprojectAt(v, l, 1);
+  return { a, d: { x: b.x - a.x, y: b.y - a.y, z: b.z - a.z } };
+}
+const at = (r: Ray, q: number): Vec3 => ({ x: r.a.x + r.d.x * q, y: r.a.y + r.d.y * q, z: r.a.z + r.d.z * q });
+/** 射线与绕电机轴半径 R 的竖直圆柱的两个交点参数（q 大 = 朝相机那个在前）；擦不到返回 null */
+function cylRoots(r: Ray, R: number): [number, number] | null {
+  const ox = r.a.x - YAW_AXIS.x;
+  const oy = r.a.y - YAW_AXIS.y;
+  const A = r.d.x * r.d.x + r.d.y * r.d.y;
+  if (A < 1e-12) return null;
+  const B = 2 * (ox * r.d.x + oy * r.d.y);
+  const C = ox * ox + oy * oy - R * R;
+  const disc = B * B - 4 * A * C;
+  if (disc < 0) return null;
+  const sq = Math.sqrt(disc);
+  return [(-B + sq) / (2 * A), (-B - sq) / (2 * A)];
+}
+/** 射线上离电机轴最近的点的参数 */
+function closestToAxis(r: Ray): number {
+  const A = r.d.x * r.d.x + r.d.y * r.d.y;
+  if (A < 1e-12) return 0;
+  return -((r.a.x - YAW_AXIS.x) * r.d.x + (r.a.y - YAW_AXIS.y) * r.d.y) / A;
+}
+
+function hitCylinder(v: ViewParams, l: P2): Vec3 {
+  const r = rayOf(v, l);
+  const roots = cylRoots(r, R_FRONT);
+  // 擦不到：离轴最近的点；擦得到：朝相机那一侧
+  return at(r, roots ? roots[0] : closestToAxis(r));
+}
+
+const wrapPiLocal = (a: number): number => a - 2 * Math.PI * Math.floor((a + Math.PI) / (2 * Math.PI));
+const smoothstep = (e0: number, e1: number, x: number): number => {
+  const u = clamp((x - e0) / (e1 - e0), 0, 1);
+  return u * u * (3 - 2 * u);
+};
+const front = (v: ViewParams, q: number): boolean => v.persp <= 0 || q < v.persp * 0.95;
+
+/**
+ * 指针 → 手（Lab 1-6，2026-10-07）。鼠标只有两个自由度，第三个（视深）要约定，两件事用两个约定：
+ *
+ * - **方位 / 距离**（人在哪）：先看射线有没有先碰到机身外廓（R_HULL）——碰到 = 手在摸壳。否则按视图：
+ *   俯视 / 轴测取射线 ∩ 臂所在的水平面（z = 臂高），屏幕越往上 = 越远，指针压在笔直的臂梢上 = 交点
+ *   就是臂梢；交点太远（> HAND_FAR）或在相机背后时取射线穿出 HAND_FAR 圆柱的那一点（与平面交点在
+ *   HAND_FAR 处接上，不跳）。平视（正视 / 侧视）取朝相机那一侧、离轴 R_FRONT 的竖直圆柱面。
+ *   这些面都**与机器此刻的姿态无关**——否则机身一转，同一个指针的方位就跟着漂，「转向手」会变成追自己的尾巴。
+ * - **臂怎么弯**（手离臂多远、在哪边）：取射线上离（此刻朝向下的）笔直臂轴最近的点——屏幕上指针压在臂上，
+ *   这个点就在臂轴上（不用弯）；在臂旁边，它就在臂旁边（所见即所得）。顺着臂轴看（臂几乎正对相机）时
+ *   这个点不稳，渐变到「过臂梢、垂直视线的平面」上的点。转到机身局部系，相对臂基座：偏离臂轴的角 off、
+ *   弯向 aimDir。要碰到它，梢端弦角：手在臂长以外取 off；以内取过基座、与臂轴相切、经过手的那段圆弧在
+ *   梢端的弦角 L·sin(off)/r（离得越近要卷得越深；两式在 r·off/sin(off) = L 处相等，换式不跳）。查标定表换成差动。
+ * - hold：上一个读数的方位（台架传），手在机身顶上时沿用。
+ */
+export function handReading(v: ViewParams, l: P2, yaw: number, hold?: number): HandReading {
+  const zArm = ARM_GEOM.base.z;
+  const ray = rayOf(v, l);
+  let hit: Vec3 | null = null;
+  let onBody = false;
+  let holdBearing = false;
+  // 射线先碰到机身外廓的哪一面（侧面 / 顶面，取离相机近的那个 = q 大的）
+  let qBody = -Infinity;
+  const hull = cylRoots(ray, R_HULL);
+  if (hull && front(v, hull[0])) {
+    const p = at(ray, hull[0]);
+    if (p.z >= HULL_Z[0] && p.z <= HULL_Z[1]) {
+      hit = p;
+      qBody = hull[0];
+    }
+  }
+  if (ray.d.z !== 0) {
+    const qTop = (HULL_Z[1] - ray.a.z) / ray.d.z;
+    const pt = at(ray, qTop);
+    if (qTop > qBody && front(v, qTop) && Math.hypot(pt.x - YAW_AXIS.x, pt.y - YAW_AXIS.y) <= R_HULL) {
+      // 从顶上压在机身上：那一面上方位没意义（离电机轴太近），沿用上一个
+      hit = pt;
+      qBody = qTop;
+      holdBearing = true;
+    }
+  }
+  onBody = hit !== null;
+  if (!hit) {
+    if (Math.abs(v.m[8]) >= PLANE_MIN) {
+      if (ray.d.z !== 0) {
+        const q = (zArm - ray.a.z) / ray.d.z;
+        const p = at(ray, q);
+        if (front(v, q) && Math.hypot(p.x - YAW_AXIS.x, p.y - YAW_AXIS.y) <= HAND_FAR) hit = p;
+      }
+      if (!hit) {
+        const far = cylRoots(ray, HAND_FAR);
+        hit = far ? at(ray, far[1]) : at(ray, closestToAxis(ray));
+      }
+    } else hit = hitCylinder(v, l);
+  }
+  const hx = hit.x - YAW_AXIS.x;
+  const hy = hit.y - YAW_AXIS.y;
+  const dist = onBody ? R_HULL : Math.min(HAND_FAR, Math.hypot(hx, hy));
+  const bearing =
+    holdBearing && hold !== undefined ? hold : wrapPiLocal(Math.atan2(hy, hx) - FACING);
+  // 臂线对准手：臂在机身中线右侧 e（右为正），机身要往左多转 asin(e / dist)
+  const e = ARM_GEOM.base.y - YAW_AXIS.y;
+  const face = dist >= 1.2 * Math.abs(e) ? wrapPiLocal(bearing + Math.asin(clamp(e / dist, -1, 1))) : bearing;
+
+  // —— 臂怎么弯
+  const B = yawPoint(ARM_GEOM.base, yaw);
+  const T = yawPoint(ARM_GEOM.tip, yaw);
+  const L = ARM_GEOM.length;
+  const ex = (T.x - B.x) / L;
+  const ey = (T.y - B.y) / L;
+  const ez = (T.z - B.z) / L;
+  const d = ray.d;
+  const wx = ray.a.x - B.x;
+  const wy = ray.a.y - B.y;
+  const wz = ray.a.z - B.z;
+  const A = d.x * d.x + d.y * d.y + d.z * d.z;
+  const bb = d.x * ex + d.y * ey + d.z * ez;
+  const D = d.x * wx + d.y * wy + d.z * wz;
+  const E = ex * wx + ey * wy + ez * wz;
+  const den = A - bb * bb;
+  const hTip = unprojectAt(v, l, viewDepth(v, T));
+  let h = hTip;
+  if (den > 1e-12 * A) {
+    const u = clamp((A * E - bb * D) / den, 0, 2 * L);
+    let q = (d.x * (B.x + u * ex - ray.a.x) + d.y * (B.y + u * ey - ray.a.y) + d.z * (B.z + u * ez - ray.a.z)) / A;
+    if (v.persp > 0) q = Math.min(q, v.persp * 0.95);
+    const hc = at(ray, q);
+    const k = smoothstep(0.15, 0.35, Math.sqrt(den / A));
+    h = { x: hTip.x + (hc.x - hTip.x) * k, y: hTip.y + (hc.y - hTip.y) * k, z: hTip.z + (hc.z - hTip.z) * k };
+  }
+  // 机身局部系（转回 yaw = 0）：前 = −X、左 = −Y、上 = +Z
+  const c = Math.cos(-yaw);
+  const sn = Math.sin(-yaw);
+  const rx = h.x - B.x;
+  const ry = h.y - B.y;
+  const along = -(c * rx - sn * ry);
+  const left = -(sn * rx + c * ry);
+  const up = h.z - B.z;
+  const side = Math.hypot(left, up);
+  const r = Math.hypot(along, side);
+  const off = Math.atan2(side, along);
+  const aimDir = side > 1e-6 ? Math.atan2(left, up) : 0;
+  const maxDeg = ARM_CHORD[ARM_CHORD.length - 1][1];
+  let need: number;
+  if (off >= Math.PI / 2) need = maxDeg * smoothstep(0, 60, side); // 手在基座后面：弯到底（机身该转了）；就在轴上时方向没意义，不弯
+  else if (off < 1e-9 || (r * off) / Math.sin(off) >= L) need = (off * 180) / Math.PI;
+  else need = ((L * Math.sin(off)) / r) * (180 / Math.PI);
+  return { bearing, dist, face, aimDir, aimBend: driveOfChord(need) / ARM_DRIVE.span, aimDist: r, side, onBody };
+}
+
+/** 逻辑像素 ↔ 画布 CSS 像素（gl3d 的逻辑视口 700×520 铺满画布） */
+export function cssToLogical(px: number, py: number, w: number, h: number): P2 {
+  return { x: (px - w / 2) * (HALF_W / (w / 2)), y: (py - h / 2) * (HALF_H / (h / 2)) };
 }

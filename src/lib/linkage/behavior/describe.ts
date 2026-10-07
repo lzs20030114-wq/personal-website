@@ -62,6 +62,16 @@ const ORIENT: Record<string, Pair> = {
   away: ['背过身', 'turns away'],
   random: ['四处看', 'looks around'],
   final: ['最后朝向人', 'final turn to person'],
+  unwind: ['转台到限位，绕回去', 'turntable at its limit, turns back the long way'],
+};
+const HAND_MODE: Record<string, Pair> = {
+  toward: ['迎过去', 'reaches toward it'],
+  away: ['背过身', 'turns away'],
+  look: ['看别处', 'looks elsewhere'],
+};
+const HAND_LOST: Record<string, Pair> = {
+  gone: ['手离开', 'hand gone'],
+  unseen: ['手出了视野', 'hand out of view'],
 };
 const LOST: Record<string, Pair> = {
   chase: ['脱手 · 追', 'loses grip · chases'],
@@ -97,6 +107,8 @@ function what(r: LogRecord, lang: DescribeLang): string {
       return p.on ? (zh ? '手碰臂' : 'arm touched') : zh ? '手离开臂' : 'hand off arm';
     case 'RESISTANCE':
       return p.on ? (zh ? '臂里有张力' : 'tension on') : zh ? '张力消失' : 'tension off';
+    case 'HAND':
+      return p.on === false ? (zh ? '手移开' : 'hand away') : zh ? '手在动' : 'hand moves';
     // —— 引擎
     case 'RESPONSE':
       return zh ? `回应（${num(p.latency)} s）` : `response (${num(p.latency)} s)`;
@@ -124,6 +136,14 @@ function what(r: LogRecord, lang: DescribeLang): string {
       return zh ? '松开' : 'released';
     case 'CONTACT':
       return zh ? '手还在臂上' : 'hand still on arm';
+    case 'HAND_SEEN': {
+      const m = pick(HAND_MODE[str(p.mode)] ?? ['看着', 'watches'], lang);
+      if (p.cause === 'startle') return zh ? `惊跳之后 · ${m}` : `after the startle · ${m}`;
+      if (p.again) return zh ? `再看手一眼 · ${m}` : `looks at the hand again · ${m}`;
+      return zh ? `注意到手 · ${m}` : `notices the hand · ${m}`;
+    }
+    case 'HAND_LOST':
+      return pick(HAND_LOST[str(p.reason)] ?? ['手不见了', 'hand lost'], lang);
     case 'LIFE_BIRTH':
       return zh ? `诞生 · ${personaName(r.persona, 'zh')}` : `born · ${personaName(r.persona, 'en')}`;
     case 'LIFE_GROW':

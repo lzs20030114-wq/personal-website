@@ -18,6 +18,7 @@ export const SENSOR_KINDS = [
   'SOUND',
   'ARM_TOUCH',
   'RESISTANCE',
+  'HAND',
 ] as const;
 export type SensorKind = (typeof SENSOR_KINDS)[number];
 
@@ -37,6 +38,13 @@ export type ShellTouch = 'pat' | 'stroke' | 'poke';
  *   HC-SR04 只测距、测不出方位；只有测距头装在偏航平台上随机身转时，前端才能把
  *   「测到人那一刻机身朝哪」当方位报上来。网页面板直接给。
  * - ARM_TOUCH / RESISTANCE 带 on：抓握真值表（T-0707-1）要的是电平，不是脉冲。
+ * - HAND（第十类，**可选**，2026-10-07 Lab 1-6 加）：人的手在哪、臂要怎么弯才碰得到它。网页上是鼠标指针，
+ *   真机对应臂端的近距传感（spec §3.2 P2-b 那一类）。不是刺激本身（强度 0；人走近仍是 PRESENCE），
+ *   引擎拿它决定看不看见、迎上去还是躲开。几何由前端算好：bearing 世界系 rad、dist 离电机轴的水平距离 mm、
+ *   face 要让臂对准手机身该朝哪（世界系 rad；臂不在机身中线上）、aimDir 臂要弯向哪（腱系，0 = 上、左为正）、
+ *   aimBend 要弯多少（bend 单位，> 1 = 满差动也够不着）、aimDist 手离臂基座多远 mm。
+ * - ARM_TOUCH 的 by（可选，2026-10-07 加）：'arm' = 是臂伸过来碰到了不动的手（手没动），强度按轻抚算
+ *   （不至于每次自己碰到手就惊跳）；'hand' 或不写 = 手伸过来碰臂，强度照旧。
  */
 export type SensorInput =
   | { kind: 'PRESENCE'; band: PresenceBand; bearing?: number }
@@ -46,8 +54,10 @@ export type SensorInput =
   | { kind: 'LIFT'; lifted: boolean }
   | { kind: 'KNOCK'; intensity: number }
   | { kind: 'SOUND'; level: number }
-  | { kind: 'ARM_TOUCH'; on: boolean }
-  | { kind: 'RESISTANCE'; on: boolean };
+  | { kind: 'ARM_TOUCH'; on: boolean; by?: 'hand' | 'arm' }
+  | { kind: 'RESISTANCE'; on: boolean }
+  | { kind: 'HAND'; on: false }
+  | { kind: 'HAND'; on: true; bearing: number; dist: number; face: number; aimDir: number; aimBend: number; aimDist: number };
 
 /** 刺激强度 I ∈ [0,1]：与人格的惊吓阈值比（I > 阈值 = 惊吓，§4.2） */
 export const INTENSITY = {
@@ -60,6 +70,8 @@ export const INTENSITY = {
   hold: 0.2,
   lift: 0.7,
   arm: 0.4,
+  /** 臂自己伸过去碰到不动的手（ARM_TOUCH by: 'arm'）：按轻抚算，低于所有人格的惊吓阈值（待拍板） */
+  armReach: 0.1,
 } as const;
 
 const BAND_RANK: Record<PresenceBand, number> = { gone: 0, far: 1, mid: 2, near: 3 };
@@ -97,14 +109,16 @@ export function intensityOf(e: SensorInput, prevBand: PresenceBand): number {
     case 'SOUND':
       return clamp01(e.level);
     case 'ARM_TOUCH':
-      return e.on ? INTENSITY.arm : 0;
+      return e.on ? (e.by === 'arm' ? INTENSITY.armReach : INTENSITY.arm) : 0;
     case 'RESISTANCE':
+    case 'HAND':
       return 0;
   }
 }
 
 const isSide = (v: unknown): v is Side => v === 'L' || v === 'R';
 const isBool = (v: unknown): v is boolean => typeof v === 'boolean';
+const isFiniteNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isUnit = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1;
 
 /** 外来事件（台架面板 / 日志回放 / 将来的串口）进引擎前的形状检查 */
@@ -130,8 +144,18 @@ export function isSensorInput(x: unknown): x is SensorInput {
     case 'SOUND':
       return isUnit(e.level);
     case 'ARM_TOUCH':
+      return isBool(e.on) && (e.by === undefined || e.by === 'hand' || e.by === 'arm');
     case 'RESISTANCE':
       return isBool(e.on);
+    case 'HAND':
+      if (e.on === false) return true;
+      return (
+        e.on === true &&
+        [e.bearing, e.dist, e.face, e.aimDir, e.aimBend, e.aimDist].every(isFiniteNum) &&
+        (e.dist as number) >= 0 &&
+        (e.aimBend as number) >= 0 &&
+        (e.aimDist as number) >= 0
+      );
     default:
       return false;
   }
@@ -178,6 +202,10 @@ export const ENGINE_EVENTS = [
   'RELEASE_DONE',
   /** 手碰臂时正忙，手一直没离开：机器空下来补认一次（带强度与去向，to 指回那次触碰） */
   'CONTACT',
+  /** 看见手 / ⑨ 到点重新决定：mode = toward 迎 / away 躲 / look 看别处，again = 是不是重新决定，cause = startle：被手吓到后改的态度（不抽随机数） */
+  'HAND_SEEN',
+  /** 看见过的手不见了：reason = gone 离开 / unseen 出了视野太久 */
+  'HAND_LOST',
   'LIFE_BIRTH',
   'LIFE_GROW',
   'LIFE_AGE',

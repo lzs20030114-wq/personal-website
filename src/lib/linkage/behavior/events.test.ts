@@ -11,8 +11,8 @@ import {
   type SensorInput,
 } from './events';
 
-describe('九类事件词表（spec §3.2，2026-10-07 拍板）', () => {
-  it('恰好九类，名字与 spec 一致', () => {
+describe('九类事件词表（spec §3.2，2026-10-07 拍板）+ 可选的第十类 HAND', () => {
+  it('九类，名字与 spec 一致；手（HAND，Lab 1-6 加）排在最后、可选', () => {
     expect([...SENSOR_KINDS]).toEqual([
       'PRESENCE',
       'FEELER_TOUCH',
@@ -23,7 +23,12 @@ describe('九类事件词表（spec §3.2，2026-10-07 拍板）', () => {
       'SOUND',
       'ARM_TOUCH',
       'RESISTANCE',
+      'HAND',
     ]);
+    // 手不是刺激本身：强度 0，走近仍是 PRESENCE
+    expect(intensityOf({ kind: 'HAND', on: true, bearing: 0, dist: 300, face: 0, aimDir: 0, aimBend: 0.5, aimDist: 80 }, 'gone')).toBe(0);
+    // 臂伸过去碰到不动的手：按轻抚算
+    expect(intensityOf({ kind: 'ARM_TOUCH', on: true, by: 'arm' }, 'gone')).toBe(0.1);
     // 派生事件不占九类名额，也不与之重名
     for (const e of ENGINE_EVENTS) expect(SENSOR_KINDS as readonly string[]).not.toContain(e);
   });
@@ -80,6 +85,12 @@ describe('九类事件词表（spec §3.2，2026-10-07 拍板）', () => {
     expect(isSensorInput({ kind: 'SOUND', level: Number.NaN })).toBe(false);
     expect(isSensorInput({ kind: 'ARM_TOUCH' })).toBe(false);
     expect(isSensorInput({ kind: 'DEATH_NOW' })).toBe(false);
+    expect(isSensorInput({ kind: 'HAND', on: false })).toBe(true);
+    expect(isSensorInput({ kind: 'HAND', on: true, bearing: 1, dist: 400, face: 1.2, aimDir: -2, aimBend: 1.2, aimDist: 300 })).toBe(true);
+    expect(isSensorInput({ kind: 'HAND', on: true, bearing: 1, dist: 400, aimDir: -2, aimBend: 1.2 })).toBe(false);
+    expect(isSensorInput({ kind: 'HAND', on: true, bearing: 1, dist: -1, face: 1, aimDir: 0, aimBend: 0, aimDist: 0 })).toBe(false);
+    expect(isSensorInput({ kind: 'ARM_TOUCH', on: true, by: 'arm' })).toBe(true);
+    expect(isSensorInput({ kind: 'ARM_TOUCH', on: true, by: 'foot' })).toBe(false);
     expect(isSensorInput(null)).toBe(false);
   });
 

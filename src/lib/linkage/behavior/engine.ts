@@ -116,7 +116,76 @@ export const MOTION = {
   dirSpread: 0.6,
 } as const;
 
+/**
+ * 手（HAND，Lab 1-6 鼠标 = 人的手，2026-10-07）：看见、决定、跟踪的手感常量（均待拍板）。
+ * 人格表里的数一个不改——看见要过 ④ 响应延迟，重新决定按 ⑨ 朝向间隔，迎 / 躲按 ⑩。
+ * 距离一律 mm：dist = 离电机轴的水平距离，aimDist = 离臂基座的距离（臂长 L ≈ 358）。
+ */
+export const HAND = {
+  /** 视野半角（rad）：手进了机身朝向 ±120° 才开始「看」；正在看 / 看见了以后放宽到 ±130°（边上不闪） */
+  fov: (2 * Math.PI) / 3,
+  fovKeep: (130 * Math.PI) / 180,
+  /** 手出了视野（或离开画布）多久算丢（秒）；这段时间里回来接着原来的态度，不重新决定 */
+  loseAfter: 3,
+  /** 手在机身上方（离电机轴这么近，mm）：那是在摸壳，不转身、不去够 */
+  bodyR: 320,
+  /** 臂长（mm，静息弦长；与台架 ARM_GEOM.length 同值，守门里核） */
+  armL: 357.5,
+  /**
+   * 分层转向（迎）：臂够得着（aimBend ≤ 1 且离基座 ≤ 1.3 L）就只动臂；够不着、或偏出 20° 又在臂长以外，
+   * 才转身；转到偏差 4° 以内停。躲：偏出 20° 就转，4° 停。
+   */
+  turnAt: (20 * Math.PI) / 180,
+  settle: (4 * Math.PI) / 180,
+  reachBend: 1,
+  reachFar: 1.3,
+  /** 取近路：方位差超过 150° 时锁定转的方向（不因手抖来回掉头），回到 90° 以内解锁 */
+  antipode: (150 * Math.PI) / 180,
+  unlock: Math.PI / 2,
+  /** ±π 行程：越限不到 60° 停在限位等，超过才绕回去（记一条 ORIENT unwind） */
+  unwindAt: Math.PI / 3,
+  /** 臂去够手的权重：离基座 ≤ 1.2 L 满、≥ 2.5 L 归零 */
+  reachNear: 1.2,
+  reachZero: 2.5,
+  /** 够手的姿态上叠一点静息的晃动与随呼吸的起伏，不像炮塔 */
+  wobble: 0.4,
+  breathe: 0.04,
+  /** 躲：背着手弯，离得越近弯得越多（bend 从 awayMin 到 awayMin + awaySpan；离电机轴 near → far 减弱）；
+   *  手就在臂梢上（aimBend 很小，方向不准）时往下缩 */
+  awayMin: 0.35,
+  awaySpan: 0.55,
+  awayNear: 500,
+  awayFar: 1200,
+  awayDirAt: 0.15,
+  /** 看见那一下（秒 ÷ √k_v）：迎 = 先轻轻一伸，躲 = 往回一缩，看别处 = 瞥一眼 */
+  notice: 0.9,
+  noticeBend: 0.5,
+  noticeBreath: 0.15,
+  noticePush: 0.1,
+  /** 看别处：相对当前朝向转 30–70°，转向背着手的那一侧 */
+  lookMin: (30 * Math.PI) / 180,
+  lookMax: (70 * Math.PI) / 180,
+  /** 缠：弯向追着手转（rad/s × √k_v），缠过四成就定住 */
+  wrapFollow: 1,
+  wrapLock: 0.4,
+  /** 握人时保住缠的形状（接触那一刻弯曲的这么多倍）——「极轻」是力小，不是松开；网页没有手指挡着，形状松了就读成放手 */
+  holdKeep: 0.85,
+  holdWrap: 0.5,
+  /** 回应时朝手 / 背手的弯向散布（rad；没有手时是 MOTION.dirSpread） */
+  dirSpread: 0.18,
+  /** 迎的时候自发卷臂围着手的方向（± rad） */
+  spontAround: 0.4,
+} as const;
+
+/**
+ * 深缠的行程（执行器 arm.wrap = 1 时，差动在满差动之上再加的比例）：台架是 span 0.34 之上再加 0.16，
+ * 差动封顶 0.5（再大两腱之间失稳，见 machine-behavior.ts 的 ARM_DRIVE）。引擎只在有手时用它：
+ * 缠到底、握住时保住形状；没有手的会话 wrap 恒为 0，与改动前逐位相同。
+ */
+export const ARM_BEND_MAX = 1.47;
+
 const AROUSAL_DECAY = Math.exp(-DT / ENGINE.arousal.tau);
+
 
 // ------------------------------------------------------------------ 输出
 
@@ -134,8 +203,11 @@ export interface FeelerDrive {
 export interface ActuatorTargets {
   /** 呼吸：行程分数 s（0 全开 / 1 折叠），已是平滑轨迹 */
   breath: { s: number };
-  /** 臂：tone = 预张力 0–1（0 = 松弛无力），bend = 弯曲量（差动幅度分数）0–1，dir = 弯向（rad，腱系） */
-  arm: { tone: number; bend: number; dir: number };
+  /**
+   * 臂：tone = 预张力 0–1（0 = 松弛无力），bend = 弯曲量（差动幅度分数）0–1，dir = 弯向（rad，腱系），
+   * wrap = 满差动之上再卷深多少 0–1（抓握深缠、近处够手；执行层另给一段行程，见 ARM_BEND_MAX）
+   */
+  arm: { tone: number; bend: number; dir: number; wrap: number };
   feelers: [FeelerDrive, FeelerDrive];
   /** 机身朝向（世界系 rad，0 = 正前方），限在 ±π 内不缠线 */
   yaw: number;
@@ -207,15 +279,51 @@ interface GraspMem {
   dir: number;
   /** 进入当前阶段时的弯曲（缠绕起点 / 松开起点） */
   from: number;
-  /** 抓住那一刻的弯曲（握物至少这么紧） */
+  /** 抓住那一刻的弯曲（握物至少这么紧）与深缠（有手时握住保住它） */
   contact: number;
+  contactW: number;
   chases: number;
   searches: number;
   reason: string;
 }
 
-/** 状态格式版本（快照恢复时核对；v2 = M2 加生命钟） */
-export const STATE_VERSION = 2;
+/** 看见手以后的态度：迎 / 躲 / 看别处（⑩ 的「不朝人时随便看」） */
+export type HandMode = 'toward' | 'away' | 'look';
+
+interface HandMem {
+  /** 最近一次传感读数（HAND 事件原样） */
+  bearing: number;
+  dist: number;
+  aimDir: number;
+  aimBend: number;
+  aimDist: number;
+  /** 要让臂对准手，机身该朝哪（世界系；「迎」转到这里） */
+  face: number;
+  /** 传感此刻读得到它（离开画布后留 loseAfter 秒的记忆，回来接着原来的态度） */
+  present: boolean;
+  goneAt: number;
+  /** 看见了没有（没看见时机器不知道手在哪，只是传感层有读数） */
+  seen: boolean;
+  /** 看见以后的态度；没看见 = null */
+  mode: HandMode | null;
+  /** 什么时候「看见」（第一次进视野那一刻 + 响应延迟，只抽一次）；NEVER = 还没排 */
+  noticeAt: number;
+  /** 出视野的时刻（在视野里 = NEVER） */
+  outSince: number;
+  /** 最后一次在视野里时的方位：出了视野按它转，不偷看 */
+  steer: number;
+  /** 最后一次在视野里时「臂对准它」该有的朝向 */
+  steerFace: number;
+  /** 分层转向：正在转身对准（迎）/ 背过去（躲） */
+  turning: boolean;
+  /** 取近路：方位差过了 150° 以后锁定的转向（+1 / −1；0 = 没锁） */
+  turnSign: number;
+  /** 越过 ±π 限位那一侧，正在绕回去 */
+  unwind: boolean;
+}
+
+/** 状态格式版本（快照恢复时核对；v2 = M2 加生命钟；v3 = 手） */
+export const STATE_VERSION = 3;
 
 /** 引擎的全部状态：纯数据，JSON 往返无损（快照 / 交接 / 固件对照） */
 export interface EngineState {
@@ -291,6 +399,12 @@ export interface EngineState {
    * （2026-10-07 拍板「忙完再认一次」，见 recheckContact）
    */
   armWaiting: number;
+  /** 这次碰臂是谁动的（ARM_TOUCH by；不写 = 手）：补认时按同一个强度 */
+  touchBy: 'hand' | 'arm';
+  /** 手（HAND 传感）；null = 没有手（画布上没有指针 / 真机上没有近距读数） */
+  hand: HandMem | null;
+  /** 深缠（执行器 arm.wrap 的跟随器）：只在有手时动，没有手恒为 0 */
+  wrap: DampState;
   vigor: number;
   done: boolean;
   inbox: SensorInput[];
@@ -350,6 +464,7 @@ const idleGrasp = (): GraspMem => ({
   dir: MOTION.up,
   from: 0,
   contact: 0,
+  contactW: 0,
   chases: 0,
   searches: 0,
   reason: '',
@@ -441,6 +556,9 @@ export class BehaviorEngine {
       pending: null,
       grasp: idleGrasp(),
       armWaiting: -1,
+      touchBy: 'hand',
+      hand: null,
+      wrap: { x: 0, v: 0 },
       vigor: 0,
       done: false,
       inbox: [],
@@ -517,9 +635,14 @@ export class BehaviorEngine {
     s.phaseLt = s.phaseLen;
   }
 
-  /** 收一条传感事件；下一步开始时处理，时间戳 = 那一步的时刻 */
+  /**
+   * 收一条传感事件；下一步开始时处理，时间戳 = 那一步的时刻。连着的两条 HAND 只留后一条——同一步里
+   * 处理时间戳一样，前一条只是被后一条覆盖（台架暂停时读数不会越积越多；日志记的就是引擎吃的那条，回放照样逐位一致）。
+   */
   push(input: SensorInput): void {
-    this.s.inbox.push(input);
+    const box = this.s.inbox;
+    if (input.kind === 'HAND' && box.length > 0 && box[box.length - 1].kind === 'HAND') box[box.length - 1] = input;
+    else box.push(input);
   }
 
   /** 取走新产生的日志记录 */
@@ -569,7 +692,12 @@ export class BehaviorEngine {
     };
     return {
       breath: { s: breath },
-      arm: { tone: s.tone, bend, dir: bend > 1e-9 ? Math.atan2(s.armY.x, s.armX.x) : 0 },
+      arm: {
+        tone: s.tone,
+        bend,
+        dir: bend > 1e-9 ? Math.atan2(s.armY.x, s.armX.x) : 0,
+        wrap: s.wrap.x,
+      },
       feelers: [drive(0), drive(1)],
       yaw: s.yaw.x,
       light: { level: s.vigor * (0.35 + 0.65 * (1 - breath)) },
@@ -594,6 +722,7 @@ export class BehaviorEngine {
     if (s.pending && t >= s.pending.due) this.startResponse(t, ctx);
     if (s.gesture && t >= s.gesture.t0 + s.gesture.dur) s.gesture = null;
     if (s.armWaiting >= 0) this.recheckContact(t, ctx);
+    if (s.hand) this.stepHand(t, ctx);
     this.stepGrasp(t, ctx);
     if (t >= s.nextSpont) this.spontaneous(t, ctx);
     if (t >= s.nextOrient) this.orient(t, ctx);
@@ -721,6 +850,7 @@ export class BehaviorEngine {
     s.pending = null;
     s.grasp = idleGrasp();
     s.armWaiting = -1;
+    if (s.hand) this.forgetHand();
     s.reflex = [noReflex(), noReflex()];
     s.sighNext = false;
     s.sighNow = false;
@@ -728,7 +858,7 @@ export class BehaviorEngine {
     s.periodScale = 1;
     s.phi = 0;
     // 人此刻在不在是传感事实（保留）；人「曾经」在哪是上一世的记忆（清掉）
-    if (s.band === 'gone') s.bearing = null;
+    if (s.band === 'gone' || s.hand) s.bearing = null;
     s.speedBase = sampleRange(s.rng, p.speed) / ENGINE.speedRef;
     s.restDir = uniform(s.rng, -Math.PI, Math.PI);
     // 「诞生 40 s 起」是生命时间，折成真实秒要 ÷ 倍率（倍率 1 时与 M1 逐位相同）
@@ -791,9 +921,13 @@ export class BehaviorEngine {
         break;
       case 'ARM_TOUCH':
         s.electrode = e.on;
+        if (e.on) s.touchBy = e.by ?? 'hand';
         break;
       case 'RESISTANCE':
         s.tension = e.on;
+        break;
+      case 'HAND':
+        this.handFact(e, t);
         break;
       default:
         break;
@@ -845,9 +979,10 @@ export class BehaviorEngine {
     if (s.pending || (s.gesture && s.gesture.kind !== 'spont') || s.grasp.phase !== 'IDLE') return;
     const to = s.armWaiting;
     s.armWaiting = -1;
-    const I = INTENSITY.arm;
+    const reach = s.touchBy === 'arm';
+    const I = reach ? INTENSITY.armReach : INTENSITY.arm;
     const rec = this.emit('CONTACT', { to }, 'engine', I, 'none');
-    rec.out = this.evaluate({ kind: 'ARM_TOUCH', on: true }, I, rec.id, t, ctx);
+    rec.out = this.evaluate(reach ? { kind: 'ARM_TOUCH', on: true, by: 'arm' } : { kind: 'ARM_TOUCH', on: true }, I, rec.id, t, ctx);
   }
 
   /** 触须反射：记下触发时刻；波形由执行层按 startleSwing 画 */
@@ -866,13 +1001,15 @@ export class BehaviorEngine {
     }
     if (s.grasp.phase !== 'IDLE' && s.grasp.phase !== 'RELEASE') this.beginRelease(t, ctx, 'startle');
     const t0 = t + ENGINE.startleLatency;
+    // 缩：看见了手就背着手缩（手就在臂梢上、方向读不准时还是往下缩），否则往下缩
+    const flinch = s.hand?.seen ? this.awayDir(s.hand) : MOTION.down;
     s.gesture = {
       kind: 'startle',
       action: 'flinch',
       t0,
       dur: MOTION.startle,
-      dir: MOTION.down,
-      dir2: MOTION.down,
+      dir: flinch,
+      dir2: flinch,
       bend: MOTION.flinchBend * ctx.vigor,
       feeler: 0,
       breath: 0,
@@ -891,6 +1028,8 @@ export class BehaviorEngine {
     }
     s.voiceUntil = t0 + MOTION.voiceBurst;
     this.emit('STARTLE', { to: id, I, th });
+    // 被手吓到（碰臂惊跳）：这只手先不迎了，直到下一次 ⑨ 重新决定
+    if (e.kind === 'ARM_TOUCH' && s.hand?.seen) this.decideHand(t, ctx, true, 'startle');
   }
 
   private gestureDur(base: number): number {
@@ -927,17 +1066,22 @@ export class BehaviorEngine {
     }
     const arm = !grasp && s.grasp.phase === 'IDLE' && chance(s.rng, 0.75);
     const feeler = chance(s.rng, 0.6);
-    let turn: 'toward' | 'away' | 'none' = 'none';
-    if (pd.bearing !== null) {
+    let turn: 'toward' | 'away' | 'none' | 'hand' = 'none';
+    if (s.hand?.seen) turn = 'hand'; // 看见了手：朝向交给手的跟踪（不抽随机数）
+    else if (pd.bearing !== null) {
       if (sign < 0) turn = 'away';
       else if (chance(s.rng, p.toward)) turn = 'toward';
     }
-    if (turn !== 'none' && pd.bearing !== null) {
+    if ((turn === 'toward' || turn === 'away') && pd.bearing !== null) {
       const b = turn === 'toward' ? pd.bearing : wrapPi(pd.bearing + Math.PI);
       const d = clamp(wrapPi(b - s.yaw.x), -MOTION.turnMax, MOTION.turnMax);
       s.yawTarget = clampYaw(s.yaw.x + d);
     }
-    const dir = (sign > 0 ? MOTION.up : MOTION.down) + uniform(s.rng, -MOTION.dirSpread, MOTION.dirSpread);
+    // 看见了手：迎 = 弯向手、缩 = 背着手（随机数照抽一次，没有手时与原来逐位相同）
+    const h = s.hand?.seen ? s.hand : null;
+    const lim = h ? HAND.dirSpread : MOTION.dirSpread;
+    const dir =
+      (h ? (sign > 0 ? h.aimDir : this.awayDir(h)) : sign > 0 ? MOTION.up : MOTION.down) + uniform(s.rng, -lim, lim);
     s.gesture = {
       kind: 'response',
       action: 'attend',
@@ -995,7 +1139,10 @@ export class BehaviorEngine {
         s.sighNext = true;
         break;
       case 'curl': {
-        const dir = uniform(s.rng, -Math.PI, Math.PI);
+        // 迎着手的时候，卷臂围着手的方向（像在手边摸索）；否则整圈随便卷
+        const hh = s.hand;
+        const around = hh !== null && hh.seen && hh.present && hh.mode === 'toward';
+        const dir = around ? hh.aimDir + uniform(s.rng, -HAND.spontAround, HAND.spontAround) : uniform(s.rng, -Math.PI, Math.PI);
         const bend = uniform(s.rng, 0.3, 0.7) * ctx.vigor;
         s.gesture = { ...base, action, dur: this.gestureDur(MOTION.curl), dir, dir2: dir, bend };
         break;
@@ -1032,6 +1179,12 @@ export class BehaviorEngine {
       s.nextOrient = t + 1;
       return;
     }
+    // 看见了手：⑨ 朝向间隔到点 = 对这只手重新决定一次（迎 / 躲 / 不理），不再在整圈里随便挑方向
+    if (s.hand?.seen) {
+      if (s.grasp.phase !== 'IDLE' && s.grasp.phase !== 'RELEASE') s.nextOrient = t + 1;
+      else this.decideHand(t, ctx, true);
+      return;
+    }
     const p = ctx.p;
     let mode: 'toward' | 'away' | 'random';
     let to: number;
@@ -1050,6 +1203,243 @@ export class BehaviorEngine {
     s.nextOrient = t + sampleRange(s.rng, p.orient);
   }
 
+  // ---------------------------------------------------------------- 手（HAND）
+
+  /**
+   * HAND 传感事实（2026-10-07，Lab 1-6）。出现（之前没有手）：人在哪的旧方位作废——手就是这个人，
+   * 看见手以后才知道人在哪。读数更新：看见着又在视野里就跟着更新人的方位。离开：没看见过的手直接作废；
+   * 看见过的留 loseAfter 秒记忆（stepHand 到点记 HAND_LOST gone），这段时间里回来接着原来的态度。
+   */
+  private handFact(e: Extract<SensorInput, { kind: 'HAND' }>, t: number): void {
+    const s = this.s;
+    let h = s.hand;
+    if (!e.on) {
+      if (!h) return;
+      if (!h.seen) s.hand = null;
+      else if (h.present) {
+        h.present = false;
+        h.goneAt = t;
+        h.turning = false;
+      }
+      return;
+    }
+    if (!h) {
+      h = {
+        bearing: 0, dist: 0, aimDir: 0, aimBend: 0, aimDist: 0, face: 0,
+        present: true, goneAt: NEVER, seen: false, mode: null, noticeAt: NEVER, outSince: NEVER,
+        steer: 0, steerFace: 0, turning: false, turnSign: 0, unwind: false,
+      };
+      s.hand = h;
+      s.bearing = null;
+    }
+    h.present = true;
+    h.goneAt = NEVER;
+    h.bearing = wrapPi(e.bearing);
+    h.dist = e.dist;
+    h.aimDir = wrapPi(e.aimDir);
+    h.aimBend = clamp(e.aimBend, 0, ARM_BEND_MAX);
+    h.aimDist = e.aimDist;
+    h.face = wrapPi(e.face);
+  }
+
+  /** 背着手的弯向：手就在臂梢上（要弯得很少，弯向读不准）时渐变成往下缩 */
+  private awayDir(h: HandMem): number {
+    return lerpAngle(MOTION.down, h.aimDir + Math.PI, smooth(h.aimBend / HAND.awayDirAt));
+  }
+
+  /** 手在机身上方（在摸壳）：不转身、不去够 */
+  private handOnBody(h: HandMem): boolean {
+    return h.dist < HAND.bodyR;
+  }
+
+  /**
+   * 手（2026-10-07，Lab 1-6）：看见 → 决定 → 跟踪。有手时每步调一次（tick 里固定位置：补认之后、抓握之前）。
+   *
+   * - **看见**：活着且有响应时，手第一次进视野（机身朝向 ±120°），或正碰着臂——抽一次响应延迟（人格 ④，
+   *   随衰老变慢），到点还在视野里（放宽到 ±130°）就算看见。延迟没到手又出了视野：等着，出视野超过
+   *   3 s 才作罢（不在视野边上反复抽随机数）。看见之前机器不知道手在哪。
+   * - **决定**：看见那一刻，以及之后每个 ⑨ 朝向间隔（经 orient），按 ⑩ 抽：迎；否则沉静 / 不稳定躲、
+   *   活力 / 好奇看别处。看见那一下有个动作（迎 = 轻轻一伸，躲 = 往回一缩，看别处 = 瞥一眼再转开）。
+   * - **丢失**：看见以后手出了视野（或离开画布）3 s——回到没看见；再进视野再重新看、重新决定。
+   *   出了视野按最后看见的方位转，不偷看。正在绕回限位时不算丢（转身途中手会暂时出视野）。
+   * - **跟踪**：只在可以转向时（诞生 40 s 后）、没有惊跳正在做、臂没在缠 / 握时写偏航目标。
+   */
+  private stepHand(t: number, ctx: Ctx): void {
+    const s = this.s;
+    const h = s.hand;
+    if (!h) return;
+    if (!h.present && t - h.goneAt > HAND.loseAfter) {
+      if (h.seen) this.emit('HAND_LOST', { reason: 'gone' });
+      s.hand = null;
+      return;
+    }
+    if (!ctx.responsive) {
+      if (h.seen || h.noticeAt < NEVER) this.forgetHand();
+      return;
+    }
+    const keep = h.seen || h.noticeAt < NEVER;
+    const inView =
+      h.present && (Math.abs(wrapPi(h.bearing - s.yaw.x)) <= (keep ? HAND.fovKeep : HAND.fov) || s.electrode);
+    if (inView) {
+      h.outSince = NEVER;
+      h.steer = h.bearing;
+      h.steerFace = h.face;
+    } else if (h.outSince >= NEVER || (h.seen && (h.turning || h.unwind))) {
+      // 正在朝它转（或绕回限位）时手暂时出视野不算丢：记忆从转完那一刻才开始倒数
+      h.outSince = t;
+    }
+    if (!h.seen) {
+      if (h.noticeAt >= NEVER) {
+        if (inView) h.noticeAt = t + sampleRange(s.rng, ctx.p.latency, VARIABILITY.response) * ctx.age.latency;
+        return;
+      }
+      if (!inView) {
+        if (t - h.outSince > HAND.loseAfter) h.noticeAt = NEVER;
+        return;
+      }
+      if (t < h.noticeAt) return;
+      h.seen = true;
+      s.bearing = h.bearing;
+      this.decideHand(t, ctx, false);
+      return;
+    }
+    if (!inView && t - h.outSince > HAND.loseAfter) {
+      this.emit('HAND_LOST', { reason: 'unseen' });
+      this.forgetHand();
+      return;
+    }
+    if (inView) s.bearing = h.bearing;
+    const g = s.gesture;
+    const startled = g !== null && g.kind === 'startle' && t < g.t0 + g.dur;
+    const free = s.grasp.phase === 'IDLE' || s.grasp.phase === 'RELEASE';
+    if (h.mode === null || h.mode === 'look' || !h.present || !ctx.orientOk || startled || !free || this.handOnBody(h)) {
+      h.turning = false;
+      return;
+    }
+    // 迎：转到让臂线对准手的朝向（臂偏在机身中线右侧）；躲：机身中线背对手
+    const want = h.mode === 'toward' ? h.steerFace : wrapPi(h.steer + Math.PI);
+    const off = Math.abs(wrapPi(want - s.yaw.x));
+    if (!h.turning) {
+      const reach = h.aimBend <= HAND.reachBend && h.aimDist <= HAND.reachFar * HAND.armL;
+      const need = h.mode === 'away' ? off > HAND.turnAt : h.aimBend > HAND.reachBend || (off > HAND.turnAt && !reach);
+      if (need) h.turning = true;
+    }
+    if (h.turning) {
+      s.yawTarget = this.handYawGoal(want);
+      // 转到了（或停在 ±π 限位上等着、已经到位）：不再转
+      const parked = !h.unwind && Math.abs(s.yaw.x - s.yawTarget) < HAND.settle && Math.abs(s.yawGoal - s.yawTarget) < 1e-9;
+      if (off < HAND.settle || parked) h.turning = false;
+    }
+  }
+
+  /**
+   * 转向 want（世界系方位）的偏航目标，参考点取限速后的 yawGoal（实际朝向有滞后，拿它算会提前掉头）：
+   * - 取近路；方位差过了 150°（手几乎在正背后）就锁定转向，回到 90° 以内才解锁——躲开时手抖一下不来回掉头；
+   *   刚锁时两个方向都在行程内，取往行程中间去的那个（不缠线）；
+   * - 近路越过 ±π 限位不到 60°：停在限位等（臂还能补一点）；超过：绕回去（记一条 ORIENT unwind），
+   *   一直绕到近路回到行程内为止。
+   */
+  private handYawGoal(want: number): number {
+    const s = this.s;
+    const h = s.hand;
+    if (!h) return s.yawTarget;
+    const ref = s.yawGoal;
+    let d = wrapPi(want - ref);
+    if (Math.abs(d) > HAND.antipode) {
+      if (h.turnSign === 0) {
+        const alt = d - Math.sign(d) * TAU;
+        const okD = Math.abs(ref + d) <= Math.PI;
+        const okA = Math.abs(ref + alt) <= Math.PI;
+        const pickAlt = okA && (!okD || Math.abs(ref + alt) < Math.abs(ref + d));
+        h.turnSign = Math.sign(pickAlt ? alt : d) || 1;
+      }
+      if (h.turnSign > 0 && d < 0) d += TAU;
+      else if (h.turnSign < 0 && d > 0) d -= TAU;
+    } else if (Math.abs(d) < HAND.unlock) h.turnSign = 0;
+    const T = ref + d;
+    if (Math.abs(T) <= Math.PI) {
+      h.unwind = false;
+      return T;
+    }
+    if (h.unwind || Math.abs(T) - Math.PI >= HAND.unwindAt) {
+      const goal = T - Math.sign(T) * TAU;
+      if (!h.unwind) {
+        h.unwind = true;
+        this.emit('ORIENT', { mode: 'unwind', to: goal });
+      }
+      return goal;
+    }
+    return Math.sign(T) * Math.PI;
+  }
+
+  /**
+   * 看见手 / ⑨ 到点（经 orient）：迎、躲还是看别处（按 ⑩，抽一次随机数）。cause = 'startle'：被手吓到后
+   * 不抽，直接换成 ⑩ 的「不朝人时」那一项（沉静 / 不稳定躲、活力 / 好奇看别处），免得「伸过去—碰到—惊跳—再伸」打转。
+   */
+  private decideHand(t: number, ctx: Ctx, again: boolean, cause?: 'startle'): void {
+    const s = this.s;
+    const h = s.hand;
+    if (!h) return;
+    const p = ctx.p;
+    const other: HandMode = p.otherwise === 'away' ? 'away' : 'look';
+    const mode: HandMode = cause ? other : chance(s.rng, p.toward) ? 'toward' : other;
+    h.mode = mode;
+    h.turning = false;
+    h.turnSign = 0;
+    const rec: Record<string, LogValue> = { mode, again };
+    if (cause) rec.cause = cause;
+    // 迎 / 躲：此前（没看见手时）定下的张望目标作废，朝向从此由手的跟踪接管（就地停住，要不要转由分层判）
+    if (mode !== 'look' && !cause && ctx.orientOk && s.grasp.phase === 'IDLE') s.yawTarget = s.yawGoal;
+    // 看别处：相对当前朝向转 30–70°，转向背着手的那一侧（不整圈乱转）
+    if (mode === 'look' && !cause && ctx.orientOk && s.grasp.phase === 'IDLE') {
+      const side = wrapPi(h.steer - s.yaw.x) >= 0 ? -1 : 1;
+      s.yawTarget = clampYaw(s.yaw.x + side * uniform(s.rng, HAND.lookMin, HAND.lookMax));
+      rec.look = s.yawTarget;
+    }
+    this.emit('HAND_SEEN', rec);
+    if (!cause) s.nextOrient = t + sampleRange(s.rng, p.orient);
+    if (!again && !s.gesture && !s.pending && s.grasp.phase === 'IDLE') this.noticeBeat(t, ctx, mode);
+  }
+
+  /** 看见那一下：迎 = 朝手轻轻一伸（吸一口气、触须一抖、出一声）；躲 = 背着手一缩；看别处 = 朝手瞥一眼 */
+  private noticeBeat(t: number, ctx: Ctx, mode: HandMode): void {
+    const s = this.s;
+    const h = s.hand;
+    if (!h) return;
+    const toward = mode !== 'away';
+    const dir = toward ? h.aimDir : h.aimDir + Math.PI;
+    const bend = (toward ? Math.min(1, h.aimBend) * HAND.noticeBend + 0.15 : HAND.noticeBend + 0.15) * ctx.vigor;
+    s.gesture = {
+      kind: 'spont',
+      action: 'attend',
+      t0: t,
+      dur: this.gestureDur(HAND.notice),
+      dir,
+      dir2: dir,
+      bend,
+      feeler: MOTION.flickAmp * 0.6 * ctx.vigor,
+      breath: toward ? HAND.noticeBreath : 0,
+      push: toward ? 0 : HAND.noticePush,
+      to: -1,
+    };
+    s.voiceUntil = t + MOTION.voiceBurst;
+  }
+
+  /** 注意力清零（新一世、死亡、手丢了）：传感事实留着，看见与态度作废；正在绕回的转身就地停下 */
+  private forgetHand(): void {
+    const s = this.s;
+    const h = s.hand;
+    if (!h) return;
+    if (h.unwind) s.yawTarget = s.yawGoal;
+    h.seen = false;
+    h.mode = null;
+    h.noticeAt = NEVER;
+    h.outSince = NEVER;
+    h.turning = false;
+    h.turnSign = 0;
+    h.unwind = false;
+  }
+
   // ---------------------------------------------------------------- 抓握
 
   private graspBend(t: number, ctx: Ctx): number {
@@ -1058,7 +1448,8 @@ export class BehaviorEngine {
       case 'WRAP':
         return g.from + (GRASP.limit - g.from) * smooth((t - g.t0) / g.dur);
       case 'HOLD_HUMAN':
-        return GRASP.human * ctx.grip;
+        // 有手：保住缠住时的形状（力小不等于松开）；没有手：照旧极轻
+        return (this.s.hand ? Math.max(GRASP.human, HAND.holdKeep * g.contact) : GRASP.human) * ctx.grip;
       case 'HOLD_OBJECT':
         return Math.max(g.contact, GRASP.object) * ctx.grip;
       default:
@@ -1069,12 +1460,15 @@ export class BehaviorEngine {
   private beginWrap(t: number, chase: boolean): void {
     const s = this.s;
     const bend = Math.hypot(s.armX.x, s.armY.x);
+    // 看见了手：朝手缠；否则顺着臂此刻的弯向缠
+    const hh = s.hand;
+    const dir = hh?.seen && hh.present ? hh.aimDir : bend > 0.05 ? Math.atan2(s.armY.x, s.armX.x) : MOTION.up;
     s.grasp = {
       ...s.grasp,
       phase: 'WRAP',
       t0: t,
       dur: this.gestureDur(GRASP.wrap),
-      dir: bend > 0.05 ? Math.atan2(s.armY.x, s.armX.x) : MOTION.up,
+      dir,
       from: bend,
       chases: chase ? s.grasp.chases : 0,
     };
@@ -1096,6 +1490,7 @@ export class BehaviorEngine {
         const v = graspVerdict({ tension: s.tension, electrode: s.electrode, atLimit: t - g.t0 >= g.dur });
         if (v === 'HOLD_HUMAN' || v === 'HOLD_OBJECT') {
           g.contact = this.graspBend(t, ctx);
+          g.contactW = s.wrap.x;
           g.phase = v;
           this.emit(v === 'HOLD_HUMAN' ? 'GRASP_HOLD_HUMAN' : 'GRASP_HOLD_OBJECT');
         } else if (v === 'EMPTY') {
@@ -1209,7 +1604,37 @@ export class BehaviorEngine {
     const rest = MOTION.restBend * ctx.vigor;
     let bx = rest * Math.cos(s.restDir);
     let by = rest * Math.sin(s.restDir);
+    // 看见了手（在、不在机身上方）：静息姿态换成「够手」（迎）或「背着手弯」（躲）。没有手时这段整个跳过
+    const h = s.hand;
+    if (h && h.seen && h.present && ctx.responsive && !this.handOnBody(h) && (h.mode === 'toward' || h.mode === 'away')) {
+      if (h.mode === 'toward') {
+        const L = HAND.armL;
+        const w = 1 - smooth((h.aimDist - HAND.reachNear * L) / ((HAND.reachZero - HAND.reachNear) * L));
+        const amt = (Math.min(1, h.aimBend) + HAND.breathe * Math.cos(TAU * s.phi)) * ctx.vigor;
+        bx = w * (amt * Math.cos(h.aimDir) + HAND.wobble * bx) + (1 - w) * bx;
+        by = w * (amt * Math.sin(h.aimDir) + HAND.wobble * by) + (1 - w) * by;
+      } else {
+        const close = 1 - smooth((h.dist - HAND.awayNear) / (HAND.awayFar - HAND.awayNear));
+        const amt = (HAND.awayMin + HAND.awaySpan * close) * ctx.vigor;
+        const dir = this.awayDir(h);
+        bx = amt * Math.cos(dir);
+        by = amt * Math.sin(dir);
+      }
+    }
     const g = s.grasp;
+    // 缠的头四成：弯向追着手转（脱手后再缠 = 伸手去追）；过了就定住，免得甩
+    if (g.phase === 'WRAP' && h && h.seen && h.present && (t - g.t0) / g.dur < HAND.wrapLock) {
+      const step = HAND.wrapFollow * Math.sqrt(s.speed) * DT;
+      g.dir = wrapPi(g.dir + clamp(wrapPi(h.aimDir - g.dir), -step, step));
+    }
+    // 深缠（只在有手时）：缠到底、握住时保住形状；没有手恒为 0
+    let wT = 0;
+    if (h) {
+      if (g.phase === 'WRAP') wT = smooth((t - g.t0) / g.dur);
+      else if (g.phase === 'HOLD_HUMAN') wT = HAND.holdWrap * g.contactW * ctx.grip;
+      else if (g.phase === 'HOLD_OBJECT') wT = g.contactW * ctx.grip;
+    }
+    dampStep(s.wrap, wT, MOTION.armOmega * Math.sqrt(s.speed), DT);
     if (g.phase !== 'IDLE') {
       const b = this.graspBend(t, ctx);
       let gx = b * Math.cos(g.dir);

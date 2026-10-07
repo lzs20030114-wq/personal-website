@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HZ, runSession, type ScheduledInput } from './behavior/engine';
+import { ARM_BEND_MAX, HZ, runSession, type ScheduledInput } from './behavior/engine';
 import type { PersonaKey } from './behavior/persona';
 import { PERSONA_KEYS } from './behavior/persona';
 import {
@@ -16,8 +16,26 @@ import {
 } from './machine';
 import { ARM_IDLE, idleContraction, idleEase, idleSwayAngle } from './machine-arm';
 import {
+  ARM_CHORD,
+  ARM_DRIVE,
+  ARM_GEOM,
   CRANK,
   FACING,
+  HAND_FAR,
+  R_FRONT,
+  R_HULL,
+  bendCommandDir,
+  bendDirError,
+  chordOfDrive,
+  cssToLogical,
+  driveOfChord,
+  handReading,
+  projectLogical,
+  rayHitZ,
+  tendonContractionsClip,
+  unprojectAt,
+  viewDepth,
+  type ViewParams,
   SWEEP,
   crankPlan,
   feelerAngle,
@@ -226,16 +244,60 @@ describe('曲柄追随：限速与子步', () => {
 });
 
 describe('臂与触须', () => {
-  it('三腱：与待机波形同一式（预张力 0.34 + 差动 0.34 按 120° 分配、负值截零）', () => {
+  it('原分解（对照）：与待机波形同一式（预张力 0.34 + 差动 0.34 按 120° 分配、负值截零）', () => {
     for (const t of [3, 7.3, 12, 20.5, 41]) {
       const curl = ARM_IDLE.floor + (1 - ARM_IDLE.floor) * (0.5 + 0.5 * Math.sin(ARM_IDLE.curl * t));
-      const c = tendonContractions({ tone: 1, bend: curl * idleEase(t), dir: idleSwayAngle(t) });
+      const c = tendonContractionsClip({ tone: 1, bend: curl * idleEase(t), dir: idleSwayAngle(t) });
       for (let k = 0; k < 3; k++) expect(c[k]).toBeCloseTo(idleContraction(t, k), 12);
     }
-    expect(tendonContractions({ tone: 0, bend: 0, dir: 1 })).toEqual([0, 0, 0]);
-    const full = tendonContractions({ tone: 1, bend: 1, dir: 0 });
+    expect(tendonContractionsClip({ tone: 0, bend: 0, dir: 1 })).toEqual([0, 0, 0]);
+    const full = tendonContractionsClip({ tone: 1, bend: 1, dir: 0 });
     expect(full[0]).toBeCloseTo(ARM_IDLE.base + ARM_IDLE.span, 12);
     expect(full[1]).toBeCloseTo(ARM_IDLE.base, 12); // cos(−120°) < 0：只剩预张力
+  });
+
+  it('三腱（2026-10-07 新分解）：不弯 = 预张力；「最紧 − 最松」在 D 与 2D/√3 之间；拮抗腱不掉进空行程；死了松垮；D 封顶', () => {
+    expect(tendonContractions({ tone: 1, bend: 0, dir: 2 })).toEqual([ARM_IDLE.base, ARM_IDLE.base, ARM_IDLE.base]);
+    expect(tendonContractions({ tone: 0, bend: 0, dir: 2 })).toEqual([0, 0, 0]);
+    for (let deg = -180; deg < 180; deg += 15) {
+      const dir = (deg * Math.PI) / 180;
+      for (const bend of [0.3, 0.7, 1]) {
+        const c = tendonContractions({ tone: 1, bend, dir });
+        const spread = (Math.max(...c) - Math.min(...c)) / (ARM_DRIVE.span * bend);
+        expect(spread).toBeGreaterThanOrEqual(1 - 1e-9);
+        expect(spread).toBeLessThanOrEqual(2 / Math.sqrt(3) + 1e-9);
+        expect(Math.min(...c)).toBeGreaterThanOrEqual(ARM_DRIVE.floor - 1e-12);
+        expect(Math.max(...c)).toBeLessThanOrEqual(1);
+      }
+      // 深缠：差动 = span + wrapSpan，再多也封顶 dMax
+      const deep = tendonContractions({ tone: 1, bend: 1, dir, wrap: 1 });
+      expect((Math.max(...deep) - Math.min(...deep)) / ARM_DRIVE.dMax).toBeGreaterThanOrEqual(1 - 1e-9);
+      expect(Math.max(...deep)).toBeLessThanOrEqual(1);
+      const over = tendonContractions({ tone: 1, bend: 1, dir, wrap: 3 });
+      expect(over).toEqual(deep);
+    }
+    // 松垮的臂（tone = 0）弯起来：只有主腱收紧，拮抗腱不会被抬到绷直点
+    const limp = tendonContractions({ tone: 0, bend: 0.5, dir: 0 });
+    expect(Math.min(...limp)).toBeCloseTo(0, 12);
+    expect(ARM_DRIVE.dMax / ARM_DRIVE.span).toBeCloseTo(ARM_BEND_MAX, 2);
+  });
+
+  it('弯向补偿：三次迭代后「指令 + 偏差 ≈ 目标」（残差 < 1.2°）；朝上补得少、朝下补得多；差动为 0 不补', () => {
+    for (let deg = -180; deg < 180; deg += 10) {
+      const dir = (deg * Math.PI) / 180;
+      const c = bendCommandDir(dir, 0.45);
+      expect(Math.abs(c + bendDirError(c, 0.45) - dir)).toBeLessThan(0.02);
+    }
+    expect(Math.abs(bendCommandDir(0, 0.45))).toBeLessThan((8 * Math.PI) / 180);
+    expect(Math.abs(bendCommandDir(Math.PI, 0.45) - Math.PI)).toBeGreaterThan((15 * Math.PI) / 180);
+    expect(bendCommandDir(1.2, 0)).toBe(1.2);
+  });
+
+  it('弦角表：单调、互逆、两端封顶', () => {
+    for (let d = 0; d <= ARM_DRIVE.dMax; d += 0.01) expect(driveOfChord(chordOfDrive(d))).toBeCloseTo(d, 9);
+    for (let i = 1; i < ARM_CHORD.length; i++) expect(ARM_CHORD[i][1]).toBeGreaterThan(ARM_CHORD[i - 1][1]);
+    expect(driveOfChord(90)).toBe(ARM_DRIVE.dMax);
+    expect(chordOfDrive(-1)).toBe(0);
   });
 
   it('触须：没有反射 = 基角；有反射 = 基角 + 增益 × 甩开波形；整体钳在 ±75°', () => {
@@ -342,5 +404,177 @@ describe('取景与命中', () => {
     expect(hitBand({ x: 15, y: 5 }, A, B)).toBe(1);
     expect(hitBand({ x: 5, y: 5 }, A, B)).toBe(0);
     expect(hitBand({ x: 25, y: 5 }, A, B)).toBe(-1);
+  });
+});
+
+describe('手（指针）→ 传感', () => {
+  type M3 = number[];
+  const mul3 = (a: M3, b: M3): M3 => {
+    const r = new Array<number>(9).fill(0);
+    for (let i = 0; i < 3; i++)
+      for (let j = 0; j < 3; j++) r[i * 3 + j] = a[i * 3] * b[j] + a[i * 3 + 1] * b[3 + j] + a[i * 3 + 2] * b[6 + j];
+    return r;
+  };
+  const rx = (t: number): M3 => [1, 0, 0, 0, Math.cos(t), -Math.sin(t), 0, Math.sin(t), Math.cos(t)];
+  const ry = (t: number): M3 => [Math.cos(t), 0, Math.sin(t), 0, 1, 0, -Math.sin(t), 0, Math.cos(t)];
+  const rz = (t: number): M3 => [Math.cos(t), -Math.sin(t), 0, Math.sin(t), Math.cos(t), 0, 0, 0, 1];
+  // 与 MachineBench 的 PRESET_VIEWS 同式
+  const PRESET_AXON = mul3(rz(-1.053336), mul3(rx(0.735843), ry(0.867459)));
+  const PRESET_TOP = rz(0);
+  const PRESET_FRONT = rx(Math.PI / 2);
+  const axon: ViewParams = { ...sweepFraming(PRESET_AXON), m: PRESET_AXON, pan: { x: 0, y: 0 }, persp: 0 };
+  const top: ViewParams = { ...sweepFraming(PRESET_TOP), m: PRESET_TOP, pan: { x: 0, y: 0 }, persp: 0 };
+  const front: ViewParams = { ...sweepFraming(PRESET_FRONT), m: PRESET_FRONT, pan: { x: 0, y: 0 }, persp: 0 };
+  const persp: ViewParams = { ...axon, persp: 900, pan: { x: 12, y: -7 } };
+  const deg = (r: number): number => (r * 180) / Math.PI;
+
+  it('反投影是投影的逆（正交与透视、带平移）；画布 CSS 像素 ↔ 逻辑像素', () => {
+    for (const v of [axon, top, front, persp]) {
+      for (const p of [
+        { x: -300, y: 120, z: -40 },
+        { x: 210, y: -90, z: 150 },
+        { x: 0, y: 0, z: 0 },
+      ]) {
+        const l = projectLogical(v, p);
+        const back = unprojectAt(v, l, viewDepth(v, p));
+        expect(Math.hypot(back.x - p.x, back.y - p.y, back.z - p.z)).toBeLessThan(1e-6);
+      }
+    }
+    expect(cssToLogical(439, 326, 878, 652)).toEqual({ x: 0, y: 0 });
+    const c = cssToLogical(878, 0, 878, 652);
+    expect(c.x).toBeCloseTo(350, 9);
+    expect(c.y).toBeCloseTo(-260, 9);
+  });
+
+  it('射线 ∩ 臂高水平面：轴测 / 俯视落在投影点上；平视返回 null（交点会飞到无穷远）', () => {
+    const p = { x: -420, y: 260, z: ARM_GEOM.base.z };
+    for (const v of [axon, top, persp]) {
+      const hit = rayHitZ(v, projectLogical(v, p), p.z);
+      expect(hit).not.toBeNull();
+      expect(Math.hypot(hit!.x - p.x, hit!.y - p.y)).toBeLessThan(1e-6);
+    }
+    expect(rayHitZ(front, projectLogical(front, p), p.z)).toBeNull();
+  });
+
+  it('指针压在笔直的臂梢上：方位 = 臂梢的方位、臂不用弯；机身转了也一样', () => {
+    for (const v of [axon, top, persp]) {
+      for (const yaw of [0, 0.9, -2.4]) {
+        const tip = yawPoint(ARM_GEOM.tip, yaw);
+        const r = handReading(v, projectLogical(v, tip), yaw);
+        expect(r.aimBend).toBeLessThan(1e-6);
+        const want = Math.atan2(tip.y, tip.x) - FACING;
+        expect(Math.abs(Math.atan2(Math.sin(r.bearing - want), Math.cos(r.bearing - want)))).toBeLessThan(1e-6);
+        expect(r.dist).toBeCloseTo(Math.hypot(tip.x, tip.y), 6);
+      }
+    }
+  });
+
+  it('俯视：手在臂梢左边 → 弯向左（+90°）、右边 → −90°；离得越远弯得越多，够不着就封顶', () => {
+    const tip = ARM_GEOM.tip;
+    // 机身朝 −X 时左 = −Y
+    const left = handReading(top, projectLogical(top, { x: tip.x, y: tip.y - 60, z: tip.z }), 0);
+    const right = handReading(top, projectLogical(top, { x: tip.x, y: tip.y + 60, z: tip.z }), 0);
+    expect(deg(left.aimDir)).toBeCloseTo(90, 6);
+    expect(deg(right.aimDir)).toBeCloseTo(-90, 6);
+    expect(left.aimBend).toBeGreaterThan(0.1);
+    const far = handReading(top, projectLogical(top, { x: tip.x, y: tip.y - 200, z: tip.z }), 0);
+    expect(far.aimBend).toBeGreaterThan(left.aimBend);
+    const behind = handReading(top, projectLogical(top, { x: 300, y: 0, z: tip.z }), 0);
+    expect(behind.aimBend).toBeCloseTo(ARM_DRIVE.dMax / ARM_DRIVE.span, 9);
+    // 正视：手在臂梢上方 → 弯向上（0）
+    const upF = handReading(front, projectLogical(front, { x: tip.x, y: tip.y, z: tip.z + 80 }), 0);
+    expect(Math.abs(deg(upF.aimDir))).toBeLessThan(1e-6);
+    expect(upF.aimBend).toBeGreaterThan(0.1);
+  });
+
+  it('平视（正视）：指针横扫过机器——在机身上读成摸壳（距离 = 外廓半径），方位平滑地变（不在 0° / 180° 之间跳）', () => {
+    const c = projectLogical(front, { x: 0, y: 0, z: ARM_GEOM.base.z });
+    let prev: number | null = null;
+    for (let dx = -40; dx <= 40; dx += 4) {
+      const r = handReading(front, { x: c.x + dx, y: c.y }, 0);
+      if (prev !== null) expect(Math.abs(Math.atan2(Math.sin(r.bearing - prev), Math.cos(r.bearing - prev)))).toBeLessThan((20 * Math.PI) / 180);
+      prev = r.bearing;
+      expect(r.onBody).toBe(true);
+      expect(r.dist).toBe(R_HULL);
+    }
+    // 机身外侧：在朝相机的圆柱面上；更远处取射线离轴最近的点，距离继续变大
+    const side = handReading(front, { x: c.x + 160, y: c.y }, 0);
+    expect(side.onBody).toBe(false);
+    expect(side.dist).toBeCloseTo(R_FRONT, 6);
+    const far = handReading(front, { x: c.x + 340, y: c.y }, 0);
+    expect(far.dist).toBeGreaterThan(R_FRONT);
+  });
+
+  it('轴测：指针在机身上方 → 摸壳，方位朝相机那一侧、挪 1 px 方位几乎不变（不在电机轴附近乱转）', () => {
+    const apex = projectLogical(axon, { x: 0, y: 0, z: 157 });
+    const r0 = handReading(axon, apex, 0);
+    expect(r0.onBody).toBe(true);
+    for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
+      const r = handReading(axon, { x: apex.x + dx, y: apex.y + dy }, 0, r0.bearing);
+      expect(Math.abs(Math.atan2(Math.sin(r.bearing - r0.bearing), Math.cos(r.bearing - r0.bearing)))).toBeLessThan((5 * Math.PI) / 180);
+    }
+  });
+
+  it('各视角 × 正交 / 透视：纵向扫过整个画面，方位与距离逐像素连续（机身边缘的进出不算）', () => {
+    for (const m of [PRESET_AXON, PRESET_TOP, PRESET_FRONT]) {
+      for (const persp of [0, 900]) {
+        const v: ViewParams = { ...sweepFraming(m), m, pan: { x: 0, y: 0 }, persp };
+        for (const lx of [-300, 0, 300]) {
+          let prev: ReturnType<typeof handReading> | null = null;
+          for (let ly = -259; ly <= 259; ly += 1) {
+            const r = handReading(v, { x: lx, y: ly }, 0, prev?.bearing);
+            if (prev && !prev.onBody && !r.onBody) {
+              const dB = Math.abs(Math.atan2(Math.sin(r.bearing - prev.bearing), Math.cos(r.bearing - prev.bearing)));
+              expect(dB, `${persp} ${lx} ${ly}`).toBeLessThan((10 * Math.PI) / 180);
+              expect(Math.abs(r.dist - prev.dist), `${persp} ${lx} ${ly}`).toBeLessThan(80);
+            }
+            prev = r;
+          }
+        }
+      }
+    }
+  });
+
+  it('指针压在（笔直的）臂上或它的延长线上：臂不用弯（取射线上离臂轴最近的点，不是臂梢那个平面）', () => {
+    for (const m of [PRESET_AXON, PRESET_TOP, PRESET_FRONT]) {
+      for (const persp of [0, 900]) {
+        const v: ViewParams = { ...sweepFraming(m), m, pan: { x: 0, y: 0 }, persp };
+        for (const yaw of [0, 0.7]) {
+          const B = yawPoint(ARM_GEOM.base, yaw);
+          const T = yawPoint(ARM_GEOM.tip, yaw);
+          for (const u of [0.25, 0.5, 0.75, 1, 1.3]) {
+            const p = { x: B.x + (T.x - B.x) * u, y: B.y + (T.y - B.y) * u, z: B.z + (T.z - B.z) * u };
+            expect(handReading(v, projectLogical(v, p), yaw).aimBend, `${persp} ${yaw} ${u}`).toBeLessThan(0.05);
+          }
+        }
+      }
+    }
+  });
+
+  it('臂不在机身中线上（偏右约 109 mm）：「迎」的朝向按臂线算——笔直臂梢的读数 face = 机身此刻朝向', () => {
+    for (const yaw of [0, 0.8, -1.9]) {
+      const r = handReading(top, projectLogical(top, yawPoint(ARM_GEOM.tip, yaw)), yaw);
+      expect(Math.abs(Math.atan2(Math.sin(r.face - yaw), Math.cos(r.face - yaw)))).toBeLessThan(1e-3);
+      expect(Math.abs(r.bearing - yaw)).toBeGreaterThan(0.15); // 中线方位与臂梢方位差约 11°
+    }
+  });
+
+  it('读数带着离臂基座的距离与侧偏：指针压在臂梢上 → 离基座 = 臂长、侧偏 0', () => {
+    const r = handReading(top, projectLogical(top, ARM_GEOM.tip), 0);
+    expect(r.aimDist).toBeCloseTo(ARM_GEOM.length, 6);
+    expect(r.side).toBeLessThan(1e-6);
+  });
+
+  it('机身转动不改变同一个指针读出的方位与距离（两个平面都与机器姿态无关）', () => {
+    for (const v of [axon, top, front]) {
+      const l = { x: -120, y: 40 };
+      const a = handReading(v, l, 0);
+      const b = handReading(v, l, 1.7);
+      expect(b.bearing).toBeCloseTo(a.bearing, 12);
+      expect(b.dist).toBeCloseTo(a.dist, 12);
+    }
+    // 远处截住
+    const sky = handReading(axon, { x: 0, y: -259 }, 0);
+    expect(sky.dist).toBeLessThanOrEqual(HAND_FAR);
   });
 });
