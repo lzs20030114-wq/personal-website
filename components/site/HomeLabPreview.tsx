@@ -13,6 +13,10 @@ const PREVIEWS: Record<string, ComponentType<PreviewProps>> = {
   '1-3': dynamic(() => import('../lab/TentacleBench').then(m => m.TentacleBench), { loading }),
   '1-4': dynamic(() => import('../lab/RingsBench').then(m => m.RingsBench), { loading }),
   '1-5': dynamic(() => import('../lab/MachineBench').then(m => m.MachineBench), { loading }),
+  // 同一台整机，驱动换成行为引擎（/lab 上 1-6 就是 <MachineBench behavior />）
+  '1-6': dynamic(() => import('../lab/MachineBench').then(m => function BehaviorPreview(p: PreviewProps) {
+    return <m.MachineBench {...p} behavior />;
+  }), { loading }),
   '2-1': dynamic(() => import('../lab/SkinBench').then(m => m.SkinBench), { loading }),
   '2-2': dynamic(() => import('../lab/SkinSolidBench').then(m => m.SkinSolidBench), { loading }),
   '2-3': dynamic(() => import('../lab/SkinDualBench').then(m => m.SkinDualBench), { loading }),

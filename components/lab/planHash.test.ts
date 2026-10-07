@@ -13,6 +13,11 @@ describe('插入多层台后的 Lab 深链', () => {
     expect(normalizedLabHash('#lab2-12-ramp3')).toBe('#lab2-13-ramp3');
     expect(normalizedLabHash('#lab2-12-play')).toBe('#lab2-12-play');
   });
+  it('行为引擎从 1-5 的一档拆成 1-6：旧深链转过去，1-5 本身不动', () => {
+    expect(normalizedLabHash('#lab1-5-behavior')).toBe('#lab1-6');
+    expect(normalizedLabHash('#lab1-5')).toBe('#lab1-5');
+    expect(normalizedLabHash('#lab1-6')).toBe('#lab1-6');
+  });
   it('新的项目编号与非台架哈希不改写', () => {
     for (const h of ['#lab2-6-join', '#lab2-5-double', '#lab2-12-play', '#lab2-13-enclose', '#about']) expect(normalizedLabHash(h)).toBe(h);
   });

@@ -7,7 +7,7 @@ import { LabControlLabel } from './LabControlLabel';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import { FlatRenderer, bakeIndexed, bakeRuledPoints, bakeSkinned, type CellFrame } from '../../src/lib/linkage/gl3d';
-import { CriticallyDamped, type DampState, dampStep } from '../../src/lib/linkage/motion';
+import { CriticallyDamped } from '../../src/lib/linkage/motion';
 import { armFrame, armPoint, armPolyline, idleContraction } from '../../src/lib/linkage/machine-arm';
 import { type ActuatorTargets, BehaviorEngine, type EngineState } from '../../src/lib/linkage/behavior/engine';
 import { describeRecord, personaName, phaseName } from '../../src/lib/linkage/behavior/describe';
@@ -79,7 +79,6 @@ import {
 } from '../../src/lib/linkage/machine-smallarm';
 import { SMALLARM_PLACEMENTS } from '../../src/lib/linkage/machine-shape';
 import { stashBench, takeBench } from './handoff';
-import { planFromHash } from './planHash';
 import { setStash } from './snapshot';
 import { useBenchLoop } from './useBenchLoop';
 
@@ -108,10 +107,14 @@ import { useBenchLoop } from './useBenchLoop';
  * 展示编排非真机节律、脚槽止程是仿真标定值非真机实测。
  *
  * **两种驱动源**（行为引擎 M2，2026-10-07；spec = 轮回机器_行为引擎spec.md §6）：
- * 「编排」= 上面这些按时间走的展示动画（现状，默认）；「行为引擎」= 机器按人格与生命阶段
- * 对刺激作出反应——呼吸给曲柄、臂给三腱、触须给舵机、朝向给整机绕竖轴转（占位）。
- * 引擎是零 DOM 的纯模块（src/lib/linkage/behavior/），换算在 machine-behavior.ts；
- * 这里只接线。`behavior` prop 不传 = 没有驱动源开关，主页预览与案例页主图逐位不变。
+ * 「编排」= 上面这些按时间走的展示动画（Lab 1-5、主页预览、案例页主图）；「行为引擎」=
+ * 机器按人格与生命阶段对刺激作出反应——呼吸给曲柄、臂给三腱、触须给舵机、朝向给整机
+ * 绕竖轴转（占位）。引擎是零 DOM 的纯模块（src/lib/linkage/behavior/），换算在
+ * machine-behavior.ts；这里只接线。
+ *
+ * 驱动源在挂载时定死、台架上不能切（用户 2026-10-07「行为引擎单独拆一个 lab 作为 1-6」）：
+ * `behavior` 不传 = 编排，与 M2 之前逐位相同；传 = Lab 1-6，从第一帧起就是行为引擎。
+ * 两种的交接状态各用一个键（HANDOFF_KEY），主页预览 / 案例主图交给 1-5 的位形不会被 1-6 取走。
  */
 
 const VIEWS = [
@@ -175,12 +178,11 @@ const ARM_SHADE = { dark: [0.1, 0.11, 0.11], lite: [0.52, 0.54, 0.5] } as const;
 const CHASE_OMEGA = 2.5;
 const VIEW_ANIM_S = 0.35;
 
-/** 编排档机位（实测运动包络定的值，见 OrbitCamera 构造处的长注）。行为档切回来时逐位还原 */
+/** 编排档机位（实测运动包络定的值，见 OrbitCamera 构造处的长注） */
 const CHOREO_PIVOT = { x: -158.02, y: 39.22, z: -24.37 };
 const CHOREO_SCALE = 0.75;
 
-// ── 行为引擎档（M2）的手感常量 ─────────────────────────────────────────────
-type DriveSource = 'choreo' | 'engine';
+// ── 行为引擎档（M2，Lab 1-6）的手感常量 ────────────────────────────────────
 /**
  * 生命时钟档：只压缩一世各段的时长，呼吸与动作仍按真实秒（spec §5.5）。×1 = 实验口径；
  * ×60 = 一世约 9 秒、四世约 35 秒，快速看一遍轮回（与案例页 N05 播放头同口径；段落短到
@@ -197,8 +199,6 @@ const HOLD_AFTER = 0.5;
 const STROKE_PX = 10;
 /** 缠到几成时手指被卡住、张力开关触发（抓握演示：按住大触手 = 手指在臂里） */
 const CATCH_AT = 0.6;
-/** 回编排档时机身转回原朝向的跟随器角频率（rad/s） */
-const YAW_HOME_OMEGA = 3;
 
 /** 从某种人格开始，其余按 A→B→C→D 循环（台架的「首世」档） */
 function rotateOrder(first: PersonaKey): PersonaKey[] {
@@ -245,10 +245,15 @@ interface MachineHandoff {
   saPts: Float32Array[];
   saTheta: number[];
   saClock: number;
-  /** 行为档（M2）：引擎整块状态 + 当时的朝向与首世。编排档不带这一支 */
+  /** 行为档（Lab 1-6）：引擎整块状态 + 当时的朝向与首世。编排档不带这一支 */
   behavior?: { engine: EngineState; yaw: number; first: PersonaKey };
 }
-const HANDOFF_KEY = 'machine';
+/**
+ * 交接键按驱动源分：编排 = 主页 Hook 舞台 / 案例主图 / Lab 1-5 之间传；行为引擎 = 主页实验目录里
+ * 1-6 的预览与 Lab 1-6 之间传。两台同在 /lab 上，共用一个键的话两台都会取到同一份
+ * （handoff.ts 的宽限期允许重复取回），1-6 就会接上案例主图那份编排位形。
+ */
+const HANDOFF_KEY = { choreo: 'machine', engine: 'machine-behavior' } as const;
 
 type M3 = number[];
 type Quat = [number, number, number, number];
@@ -391,12 +396,6 @@ const COPY = {
     aria: '轮回机器整机台架；曲柄角与肌腱驱动，视角按钮切换',
     loading: '载入实体…',
     beh: {
-      src: '驱动',
-      srcHelp: [
-        '编排：按时间走的展示动画。行为引擎：机器按人格与生命阶段对刺激作出反应，一世接一世。',
-        'Choreo: time-driven display motion. Behaviour engine: the machine responds to stimuli by persona and life stage, life after life.',
-      ] as [string, string],
-      srcNames: { choreo: '编排', engine: '行为引擎' },
       clock: '生命时钟',
       clockHelp: [
         '只压缩一世各段的时长（诞生 → 成长 → 衰老 → 死亡 → 空白），呼吸与动作仍按真实速度。×1 是实验口径，一世约 9 分钟；×10 约 50 秒；×60 约 9 秒，四世一轮约 35 秒。',
@@ -481,12 +480,6 @@ const COPY = {
     aria: 'Reincarnation machine full-assembly bench; crank and tendon driven, view set by buttons',
     loading: 'loading solids…',
     beh: {
-      src: 'Drive',
-      srcHelp: [
-        '编排：按时间走的展示动画。行为引擎：机器按人格与生命阶段对刺激作出反应，一世接一世。',
-        'Choreo: time-driven display motion. Behaviour engine: the machine responds to stimuli by persona and life stage, life after life.',
-      ] as [string, string],
-      srcNames: { choreo: 'Choreo', engine: 'Behaviour engine' },
       clock: 'Life clock',
       clockHelp: [
         '只压缩一世各段的时长（诞生 → 成长 → 衰老 → 死亡 → 空白），呼吸与动作仍按真实速度。×1 是实验口径，一世约 9 分钟；×10 约 50 秒；×60 约 9 秒，四世一轮约 35 秒。',
@@ -557,7 +550,7 @@ export function MachineBench({
   controls?: boolean;
   onLight?: boolean;
   sideControls?: boolean;
-  /** 出「驱动源」开关（编排 / 行为引擎，M2）。不传 = 没有这个开关，台架与 M2 之前逐位相同 */
+  /** 由行为引擎驱动（Lab 1-6）。不传 = 编排驱动（Lab 1-5、主页 Hook 舞台、案例页主图），与 M2 之前逐位相同 */
   behavior?: boolean;
   lang?: 'zh' | 'en';
 }) {
@@ -577,8 +570,7 @@ export function MachineBench({
     armHome: () => void;
     setSaSwing: (ampDeg: number, freqHz: number) => void;
     viewTo: (k: ViewKey) => void;
-    // —— 行为档（M2）
-    setSource: (s: DriveSource) => void;
+    // —— 行为档（Lab 1-6）
     setLifeRate: (r: number) => void;
     restart: (first: PersonaKey) => void;
     skip: () => void;
@@ -605,8 +597,7 @@ export function MachineBench({
   const [saAmp, setSaAmp] = useState(Math.round((SMALLARM_IDLE.amp * 180) / Math.PI));
   const [saFreq, setSaFreq] = useState<number>(SMALLARM_IDLE.freq);
   const [hud, setHud] = useState({ err: 0, apex: 0, ring: 2, folding: true, note: '' });
-  // —— 行为档（M2）的面板状态；behavior 不开时这些都不出现在界面上
-  const [src, setSrc] = useState<DriveSource>('choreo');
+  // —— 行为档（Lab 1-6）的面板状态；behavior 不开时这些都不出现在界面上
   const [lifeRate, setLifeRate] = useState<number>(LIFE_RATE_DEFAULT);
   const [firstK, setFirstK] = useState<PersonaKey>('A');
   const [band, setBand] = useState<PresenceBand>('gone');
@@ -623,7 +614,8 @@ export function MachineBench({
     // 交接状态**必须在这里取**，不能等下面用到时再取：createMachine() 里有五环的
     // 脚槽止程标定（每环扫 360 步 × 四档余量），开发模式下要跑好几秒。等它跑完再取，
     // 保质期早过了——第一版就是这么写的，实测取到时 age 已经 7.1s。
-    const handed = takeBench<MachineHandoff>(HANDOFF_KEY);
+    const handoffKey = HANDOFF_KEY[behavior ? 'engine' : 'choreo'];
+    const handed = takeBench<MachineHandoff>(handoffKey);
     const machine = createMachine();
 
     // 开场机位：朝向与 Lab.04 同（两台并读时视角一致），但**框的是整台机器**。
@@ -643,11 +635,15 @@ export function MachineBench({
     // pivot（或 pan），改 cx/cy 毫无效果。② 量之前先把 .lab-hud 藏掉——φ / apex 读数
     // 逐帧变，会被当成「形体」算进包络（右下角因此恒被吃满）。
     // 两个数仍是手感常量，待用户真机拍板（spec M4）。
+    //
+    // 行为档（Lab 1-6）另有取景：机身会绕竖轴转，按「绕电机轴的扫掠圆柱」逐视角装框
+    // （machine-behavior.ts 的 sweepFraming），开场就是轴测那一档。
+    const frame0 = behavior ? sweepFraming(PRESET_VIEWS.axon) : { pivot: CHOREO_PIVOT, scale: CHOREO_SCALE };
     const cam = new OrbitCamera({
       cx: 350,
       cy: 260,
-      pivot: { ...CHOREO_PIVOT },
-      scale: CHOREO_SCALE,
+      pivot: { ...frame0.pivot },
+      scale: frame0.scale,
       roll0: -1.053336,
       pitch0: 0.735843,
       yaw0: 0.867459,
@@ -771,10 +767,9 @@ export function MachineBench({
     let skinA = SKIN_DEFAULT;
     let perspNow = false;
 
-    // ── 行为档（M2）────────────────────────────────────────────────────────────
-    // 引擎只在切到「行为引擎」时才建；编排档下这些变量全不动，渲染与 M2 之前逐位相同
+    // ── 行为档（Lab 1-6）────────────────────────────────────────────────────────
+    // 引擎只在 behavior 开时才建；编排档下这些变量全不动，渲染与 M2 之前逐位相同
     // （偏航恒 0 时 yawFrame / yawPoint 原样返回同一个对象）。
-    let mode: DriveSource = 'choreo';
     let engine: BehaviorEngine | null = null;
     let logHeader: LogHeader | null = null;
     const logBuf: LogRecord[] = [];
@@ -799,18 +794,16 @@ export function MachineBench({
       stroked: boolean;
       held: boolean;
     } | null = null;
-    // 偏航（整机绕竖轴，占位）：行为档 = 引擎给的值；回编排档后用跟随器转回 0
+    // 偏航（整机绕竖轴，占位）：行为档 = 引擎给的值；编排档恒 0
     let yawNow = 0;
-    const yawHome: DampState = { x: 0, v: 0 };
     const yf = (f: CellFrame): CellFrame => yawFrame(f, yawNow);
     const yp = (p: Vec3): Vec3 => yawPoint(p, yawNow);
-    // 取景：行为档按「绕电机轴的扫掠圆柱」逐视角取景，编排档还原实测包络定的机位
-    let viewNow: ViewKey = 'axon';
+    // 取景：行为档按「绕电机轴的扫掠圆柱」逐视角取景；编排档机位不随视角变（实测包络定的那一个）
     let framing: { p0: Vec3; s0: number; p1: Vec3; s1: number; t: number } | null = null;
 
-    /** 换取景：行为档 = 扫掠圆柱装进当前视角；编排档 = 原机位（逐位还原）。动画与视角切换同长同缓动 */
-    const frameTo = (m: DriveSource, k: ViewKey): void => {
-      const to = m === 'engine' ? sweepFraming(PRESET_VIEWS[k]) : { pivot: CHOREO_PIVOT, scale: CHOREO_SCALE };
+    /** 行为档换视角时跟着换取景：扫掠圆柱装进新视角。动画与视角切换同长同缓动 */
+    const frameTo = (k: ViewKey): void => {
+      const to = sweepFraming(PRESET_VIEWS[k]);
       if (reduced) {
         cam.retarget({ ...to.pivot }, to.scale);
         framing = null;
@@ -1037,7 +1030,7 @@ export function MachineBench({
         dir,
         omega: omegaNow,
         // 行为档才带这一支（编排档的交接包与 M2 之前同形）
-        ...(mode === 'engine' && engine
+        ...(behavior && engine
           ? { behavior: { engine: engine.snapshot(), yaw: yawNow, first: firstNow } }
           : {}),
       };
@@ -1106,20 +1099,19 @@ export function MachineBench({
       setOmega(s.omega);
       setTendons([s.tendons[0], s.tendons[1], s.tendons[2]]);
       setPhase(Number(phaseDeg(machine.theta).toFixed(1)));
-      // 行为档的交接：引擎整块状态接着跑（只有开着驱动源开关的台架才接）
+      // 行为档的交接：引擎整块状态接着跑（只有行为档台架才接；键已按驱动源分开，这里再守一道）
       if (s.behavior && behavior && adoptEngine(s.behavior.engine)) {
-        mode = 'engine';
         firstNow = s.behavior.first;
         yawNow = s.behavior.yaw;
-        setSrc('engine');
         setFirstK(s.behavior.first);
         setLifeRate(rateNow);
-        frameTo('engine', viewNow);
       }
       return true;
     };
 
     if (handed) restore(handed);
+    // 行为档：没接到交接（或版本不符）就从诞生开一场
+    if (behavior && !engine) startEngine();
 
     let targetTheta = machine.theta;
     let viewAnim: { q0: Quat; q1: Quat; t: number } | null = null;
@@ -1247,7 +1239,7 @@ export function MachineBench({
       } else {
         cam.tick(dt);
       }
-      // 换驱动源 / 行为档换视角时的取景过渡（编排档从不触发；收尾一帧把机位逐位落回去）
+      // 行为档换视角时的取景过渡（编排档从不触发；收尾一帧把机位逐位落回去）
       if (framing) {
         const f = framing;
         f.t = Math.min(1, f.t + dt / VIEW_ANIM_S);
@@ -1262,13 +1254,8 @@ export function MachineBench({
           );
         }
       }
-      const tg = mode === 'engine' ? stepEngine(dt) : null;
+      const tg = behavior ? stepEngine(dt) : null;
       if (!tg) {
-        // 刚从行为档切回来：机身转回原朝向（编排档本身偏航恒 0，这一支不进）
-        if (yawNow !== 0) {
-          dampStep(yawHome, 0, YAW_HOME_OMEGA, dt);
-          yawNow = yawHome.x;
-        }
         acc = Math.min(acc + dt, SHELL_STEP_DT * 8);
         while (acc >= SHELL_STEP_DT) {
           substep();
@@ -1378,9 +1365,8 @@ export function MachineBench({
         R.setPerspective(on ? 900 : 0);
       },
       viewTo: (k) => {
-        viewNow = k;
         // 行为档逐视角取景（扫掠圆柱）；编排档机位不随视角变，与 M2 之前同
-        if (mode === 'engine') frameTo('engine', k);
+        if (behavior) frameTo(k);
         const target = PRESET_VIEWS[k];
         if (reduced) {
           viewAnim = null;
@@ -1389,23 +1375,7 @@ export function MachineBench({
         }
         viewAnim = { q0: m2q(cam.matrix), q1: m2q(target), t: 0 };
       },
-      // —— 行为档（M2）
-      setSource: (next) => {
-        if (next === mode) return;
-        if (next === 'engine') {
-          mode = 'engine';
-          if (!engine) startEngine();
-        } else {
-          releaseGestures(undefined, true);
-          mode = 'choreo';
-          yawHome.x = yawNow;
-          yawHome.v = 0;
-          // 滑杆态别把机器拽回切换前的位置：目标角就地对齐
-          targetTheta = machine.theta;
-          setPhase(Number(phiDeg().toFixed(1)));
-        }
-        frameTo(mode, viewNow);
-      },
+      // —— 行为档（Lab 1-6）
       setLifeRate: (r) => {
         rateNow = r;
         engine?.setLifeRate(r);
@@ -1557,7 +1527,7 @@ export function MachineBench({
       const r = canvas.getBoundingClientRect();
       const px = e.clientX - r.left;
       const py = e.clientY - r.top;
-      if (mode === 'engine') {
+      if (behavior) {
         behaviorPointerDown(e, px, py);
         return;
       }
@@ -1574,7 +1544,7 @@ export function MachineBench({
       const r = canvas.getBoundingClientRect();
       const px = e.clientX - r.left;
       const py = e.clientY - r.top;
-      if (mode === 'engine') {
+      if (behavior) {
         const g = shellGesture;
         if (g && e.pointerId === g.id && !g.stroked && !g.held && Math.hypot(px - g.x0, py - g.y0) > STROKE_PX) {
           g.stroked = true;
@@ -1591,10 +1561,10 @@ export function MachineBench({
       canvas.style.cursor = hitSmallArm(px, py, 30) !== null ? 'pointer' : '';
     };
     const onPointerUp = (e: PointerEvent): void => {
-      if (mode === 'engine') releaseGestures(e.pointerId);
+      if (behavior) releaseGestures(e.pointerId);
     };
     const onPointerCancel = (e: PointerEvent): void => {
-      if (mode === 'engine') releaseGestures(e.pointerId, true);
+      if (behavior) releaseGestures(e.pointerId, true);
     };
     canvas.addEventListener('pointerdown', onPointerDown);
     canvas.addEventListener('pointermove', onPointerMove);
@@ -1604,7 +1574,7 @@ export function MachineBench({
     // 状态交接（见 snapshot.ts / handoff.ts）：页面转场把这个画框飞到另一页之前调一次，
     // 跑在点击那一刻——与浏览器截下的旧画面是同一个瞬间；若改在卸载时留，中间还隔着
     // 一段转场，落地的活件会比飞过来的画面超前一截，交叉淡出就成了「跳一下」。
-    setStash(canvas, () => stashBench(HANDOFF_KEY, capture()));
+    setStash(canvas, () => stashBench(handoffKey, capture()));
 
     render();
     return () => {
@@ -1626,20 +1596,6 @@ export function MachineBench({
     apiRef.current?.viewTo(k);
   }, []);
 
-  // 深链 `/lab#lab1-5-behavior`：直接开在行为档（与项目二各台的编制哈希同一套读法）
-  useEffect(() => {
-    if (!behavior || sideControls) return;
-    if (planFromHash('1-5', ['behavior'] as const) === 'behavior') {
-      setSrc('engine');
-      apiRef.current?.setSource('engine');
-    }
-  }, [behavior, sideControls]);
-
-  const goSource = useCallback((k: DriveSource) => {
-    setSrc(k);
-    apiRef.current?.setSource(k);
-  }, []);
-
   const downloadLog = useCallback(() => {
     const out = apiRef.current?.exportLog();
     if (!out) return;
@@ -1655,9 +1611,10 @@ export function MachineBench({
 
   const L = COPY[lang];
   const B = L.beh;
-  // 行为档的界面只在 /lab 出（behavior 开、横排面板）；主页预览与案例页主图不传 behavior，逐位不变
+  // 行为档（Lab 1-6）：HUD 读引擎；控制条分两层（第一层 = 刺激与生命时钟）。不传 behavior 的三处
+  // （Lab 1-5、主页 Hook 舞台、案例页主图）逐位不变
+  const engineOn = behavior;
   const behaviorUi = behavior && !sideControls;
-  const engineOn = behaviorUi && src === 'engine';
   const lightBar = (v: number): string => {
     const n = Math.round(Math.min(1, Math.max(0, v)) * 5);
     return '▮'.repeat(n) + '▯'.repeat(5 - n);
@@ -1895,165 +1852,151 @@ export function MachineBench({
     </>
   );
 
-  // 行为档的第一层（「解什么」）：驱动源开关常在；切到行为引擎后才出人格 / 生命时钟 / 刺激注入 / 日志
+  // 行为档的第一层（「解什么」）：生命时钟 / 人格 / 刺激注入 / 日志
   const behaviorGroups = behaviorUi ? (
     <>
       <div className="grp grp--seg">
-        <LabControlLabel help={B.srcHelp} lang={lang}>{B.src}</LabControlLabel>
+        <LabControlLabel help={B.clockHelp} lang={lang}>{B.clock}</LabControlLabel>
         <span className="seg">
-          {(['choreo', 'engine'] as const).map((k) => (
-            <button key={k} type="button" className={k === src ? 'active' : undefined} onClick={() => goSource(k)}>
-              {B.srcNames[k]}
+          {LIFE_RATES.map((r) => (
+            <button
+              key={r}
+              type="button"
+              className={r === lifeRate ? 'active' : undefined}
+              onClick={() => {
+                setLifeRate(r);
+                apiRef.current?.setLifeRate(r);
+              }}
+            >
+              ×{r}
             </button>
           ))}
         </span>
       </div>
-      {engineOn ? (
-        <>
-          <div className="grp grp--seg">
-            <LabControlLabel help={B.clockHelp} lang={lang}>{B.clock}</LabControlLabel>
-            <span className="seg">
-              {LIFE_RATES.map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  className={r === lifeRate ? 'active' : undefined}
-                  onClick={() => {
-                    setLifeRate(r);
-                    apiRef.current?.setLifeRate(r);
-                  }}
-                >
-                  ×{r}
-                </button>
-              ))}
-            </span>
-          </div>
-          <div className="grp grp--seg">
-            <LabControlLabel help={B.firstHelp} lang={lang}>{B.first}</LabControlLabel>
-            <span className="seg">
-              {PERSONA_KEYS.map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  title={personaName(k, lang)}
-                  className={k === firstK ? 'active' : undefined}
-                  onClick={() => {
-                    setFirstK(k);
-                    apiRef.current?.restart(k);
-                  }}
-                >
-                  {k}
-                </button>
-              ))}
-            </span>
-            <button type="button" onClick={() => apiRef.current?.restart(firstK)}>
-              {B.restart}
-            </button>
-            <button type="button" onClick={() => apiRef.current?.skip()}>
-              {B.skip}
-            </button>
-          </div>
-          <div className="grp grp--seg">
-            <LabControlLabel help={B.presenceHelp} lang={lang}>{B.presence}</LabControlLabel>
-            <span className="seg">
-              {BANDS.map((b) => (
-                <button
-                  key={b}
-                  type="button"
-                  className={b === band ? 'active' : undefined}
-                  onClick={() => {
-                    setBand(b);
-                    apiRef.current?.presence(b, (bearingDeg * Math.PI) / 180);
-                  }}
-                >
-                  {B.bands[b]}
-                </button>
-              ))}
-            </span>
-            <span className="k">{B.bearing}</span>
-            <input
-              type="range"
-              min={-180}
-              max={180}
-              step={5}
-              value={bearingDeg}
-              disabled={band === 'gone'}
-              aria-label={B.bearingAria}
-              style={{ width: 96 }}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                setBearingDeg(v);
-                apiRef.current?.presence(band, (v * Math.PI) / 180);
-              }}
-            />
-            <span className="k">{bearingDeg > 0 ? '+' : ''}{bearingDeg}°</span>
-          </div>
-          <div className="grp">
-            <LabControlLabel help={B.touchHelp} lang={lang}>{B.touch}</LabControlLabel>
-            {(['pat', 'stroke', 'poke'] as const).map((t) => (
-              <button key={t} type="button" onClick={() => apiRef.current?.touch(t)}>
-                {B.touches[t]}
-              </button>
-            ))}
+      <div className="grp grp--seg">
+        <LabControlLabel help={B.firstHelp} lang={lang}>{B.first}</LabControlLabel>
+        <span className="seg">
+          {PERSONA_KEYS.map((k) => (
             <button
+              key={k}
               type="button"
-              aria-pressed={holding}
-              className={holding ? 'active' : undefined}
+              title={personaName(k, lang)}
+              className={k === firstK ? 'active' : undefined}
               onClick={() => {
-                const on = !holding;
-                setHolding(on);
-                apiRef.current?.inject({ kind: 'SHELL_HOLD', half: 'both', on });
+                setFirstK(k);
+                apiRef.current?.restart(k);
               }}
             >
-              {B.touches.hold}
+              {k}
             </button>
-          </div>
-          <div className="grp">
-            <LabControlLabel help={B.envHelp} lang={lang}>{B.env}</LabControlLabel>
+          ))}
+        </span>
+        <button type="button" onClick={() => apiRef.current?.restart(firstK)}>
+          {B.restart}
+        </button>
+        <button type="button" onClick={() => apiRef.current?.skip()}>
+          {B.skip}
+        </button>
+      </div>
+      <div className="grp grp--seg">
+        <LabControlLabel help={B.presenceHelp} lang={lang}>{B.presence}</LabControlLabel>
+        <span className="seg">
+          {BANDS.map((b) => (
             <button
+              key={b}
               type="button"
-              aria-pressed={lifted}
-              className={lifted ? 'active' : undefined}
+              className={b === band ? 'active' : undefined}
               onClick={() => {
-                const on = !lifted;
-                setLifted(on);
-                apiRef.current?.inject({ kind: 'LIFT', lifted: on });
+                setBand(b);
+                apiRef.current?.presence(b, (bearingDeg * Math.PI) / 180);
               }}
             >
-              {B.envs.lift}
+              {B.bands[b]}
             </button>
-            <button type="button" onClick={() => apiRef.current?.inject({ kind: 'KNOCK', intensity: 0.6 })}>
-              {B.envs.knock}
-            </button>
-            <button type="button" onClick={() => apiRef.current?.inject({ kind: 'SOUND', level: 0.8 })}>
-              {B.envs.clap}
-            </button>
-            <button type="button" onClick={() => apiRef.current?.inject({ kind: 'SOUND', level: 0.3 })}>
-              {B.envs.talk}
-            </button>
-          </div>
-          <div className="grp">
-            <LabControlLabel help={B.graspHelp} lang={lang}>{B.grasp}</LabControlLabel>
-            <label>
-              <input
-                type="checkbox"
-                checked={leaveObj}
-                onChange={(e) => {
-                  setLeaveObj(e.target.checked);
-                  apiRef.current?.setLeaveObject(e.target.checked);
-                }}
-              />
-              {B.leave}
-            </label>
-          </div>
-          <div className="grp">
-            <LabControlLabel help={B.logHelp} lang={lang}>{B.log}</LabControlLabel>
-            <button type="button" onClick={downloadLog}>
-              {B.export}
-            </button>
-          </div>
-        </>
-      ) : null}
+          ))}
+        </span>
+        <span className="k">{B.bearing}</span>
+        <input
+          type="range"
+          min={-180}
+          max={180}
+          step={5}
+          value={bearingDeg}
+          disabled={band === 'gone'}
+          aria-label={B.bearingAria}
+          style={{ width: 96 }}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            setBearingDeg(v);
+            apiRef.current?.presence(band, (v * Math.PI) / 180);
+          }}
+        />
+        <span className="k">{bearingDeg > 0 ? '+' : ''}{bearingDeg}°</span>
+      </div>
+      <div className="grp">
+        <LabControlLabel help={B.touchHelp} lang={lang}>{B.touch}</LabControlLabel>
+        {(['pat', 'stroke', 'poke'] as const).map((t) => (
+          <button key={t} type="button" onClick={() => apiRef.current?.touch(t)}>
+            {B.touches[t]}
+          </button>
+        ))}
+        <button
+          type="button"
+          aria-pressed={holding}
+          className={holding ? 'active' : undefined}
+          onClick={() => {
+            const on = !holding;
+            setHolding(on);
+            apiRef.current?.inject({ kind: 'SHELL_HOLD', half: 'both', on });
+          }}
+        >
+          {B.touches.hold}
+        </button>
+      </div>
+      <div className="grp">
+        <LabControlLabel help={B.envHelp} lang={lang}>{B.env}</LabControlLabel>
+        <button
+          type="button"
+          aria-pressed={lifted}
+          className={lifted ? 'active' : undefined}
+          onClick={() => {
+            const on = !lifted;
+            setLifted(on);
+            apiRef.current?.inject({ kind: 'LIFT', lifted: on });
+          }}
+        >
+          {B.envs.lift}
+        </button>
+        <button type="button" onClick={() => apiRef.current?.inject({ kind: 'KNOCK', intensity: 0.6 })}>
+          {B.envs.knock}
+        </button>
+        <button type="button" onClick={() => apiRef.current?.inject({ kind: 'SOUND', level: 0.8 })}>
+          {B.envs.clap}
+        </button>
+        <button type="button" onClick={() => apiRef.current?.inject({ kind: 'SOUND', level: 0.3 })}>
+          {B.envs.talk}
+        </button>
+      </div>
+      <div className="grp">
+        <LabControlLabel help={B.graspHelp} lang={lang}>{B.grasp}</LabControlLabel>
+        <label>
+          <input
+            type="checkbox"
+            checked={leaveObj}
+            onChange={(e) => {
+              setLeaveObj(e.target.checked);
+              apiRef.current?.setLeaveObject(e.target.checked);
+            }}
+          />
+          {B.leave}
+        </label>
+      </div>
+      <div className="grp">
+        <LabControlLabel help={B.logHelp} lang={lang}>{B.log}</LabControlLabel>
+        <button type="button" onClick={downloadLog}>
+          {B.export}
+        </button>
+      </div>
     </>
   ) : null;
 
@@ -2068,17 +2011,24 @@ export function MachineBench({
         <div className="lab-hud tl">
           {/* 只写台架编号：这台同时是项目 01 案例页的主图，而该页图号 2026-09-13 起是 N01–N20，
               再印一个 Fig. 14 会被读成本页的某张图（ArchBench / RingsBench 同此处理）。 */}
-          <div style={{ color: 'var(--p300)' }}>{tx("Lab 1-5")}</div>
+          <div style={{ color: 'var(--p300)' }}>{tx(behavior ? 'Lab 1-6' : 'Lab 1-5')}</div>
           <div>{engineOn ? B.title : tx(L.title)}</div>
-          {engineOn && bhud ? (
-            <>
+          {engineOn ? (
+            bhud ? (
+              <>
+                <div className="dim">
+                  {B.lifeN(bhud.life)} · {personaName(bhud.persona, lang)} {bhud.persona} · {phaseName(bhud.phase, lang)}
+                </div>
+                <div className="dim">
+                  {B.remain(Math.ceil(bhud.remain))} · {B.rateAt(bhud.rate)}
+                </div>
+              </>
+            ) : (
+              // 引擎还没走第一帧（服务端渲染 / 台架还在屏外）：读数就是一场的起点
               <div className="dim">
-                {B.lifeN(bhud.life)} · {personaName(bhud.persona, lang)} {bhud.persona} · {phaseName(bhud.phase, lang)}
+                {B.lifeN(1)} · {personaName(firstK, lang)} {firstK} · {phaseName('BIRTH', lang)}
               </div>
-              <div className="dim">
-                {B.remain(Math.ceil(bhud.remain))} · {B.rateAt(bhud.rate)}
-              </div>
-            </>
+            )
           ) : (
             <div className="dim">{L.sub}</div>
           )}
@@ -2119,12 +2069,16 @@ export function MachineBench({
         ) : null}
         <div className="lab-hud br">
           <div className="num">{tx("φ")} {phase.toFixed(1)}°</div>
-          {engineOn && bhud ? (
+          {engineOn ? (
             <>
-              <div className="dim">
-                {B.arousal} {bhud.arousal.toFixed(2)} · {B.sound} {bhud.soundOn ? `● ${Math.round(bhud.soundF)} Hz` : '○'} · {B.light}{' '}
-                {lightBar(bhud.light)}
-              </div>
+              {hud.note ? (
+                <div className="dim">{tx('3D preview unavailable')}</div>
+              ) : bhud ? (
+                <div className="dim">
+                  {B.arousal} {bhud.arousal.toFixed(2)} · {B.sound} {bhud.soundOn ? `● ${Math.round(bhud.soundF)} Hz` : '○'} · {B.light}{' '}
+                  {lightBar(bhud.light)}
+                </div>
+              ) : null}
               <div className="dim">{B.caveat}</div>
             </>
           ) : (

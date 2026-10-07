@@ -21,6 +21,8 @@ export function legacyLabNo(nn: string): string | null {
 export function normalizedLabHash(hash: string): string {
   // The old composition presets remain unambiguous after inserting the cat study.
   if (/^#lab2-12-(descend|rise|enclose|step|ramp|ramp3|valley|arch)$/.test(hash)) return hash.replace('#lab2-12-', '#lab2-13-');
+  // 行为引擎 2026-10-07 先作为 1-5 的一档上线（深链 #lab1-5-behavior），当天拆成独立的 1-6
+  if (hash === '#lab1-5-behavior') return '#lab1-6';
   const m = /^#lab(\d\d)(-[a-z]+)?$/.exec(hash);
   const no = m && legacyLabNo(m[1]);
   return no ? `#lab${no}${m[2] ?? ''}` : hash;

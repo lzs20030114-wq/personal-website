@@ -6,7 +6,7 @@
  * `no=` 都登记在此、此处每条都在页面里」）。
  *
  * 结构 = 项目 → 段 → 台架，与页面上的 ProjectRule / ScaleRule 一一对应：
- * 项目一没有段（五台直接挂项目下，segment 只有一条、不出段头）；项目二按尺度六段
+ * 项目一没有段（六台直接挂项目下，segment 只有一条、不出段头）；项目二按尺度六段
  * （2026-09-03 收纳 + 09-03/09-04 追加的 Ⅴ Ⅵ + 09-17/09-20 的 Ⅶ 单元组合）。编号按项目（2026-09-13 拍板）。
  *
  * kernel：'2d' = 2D 内核（绿）· '3d' = 3D 内核（紫），与图框顶线同一套编码
@@ -50,7 +50,7 @@ export const LAB_INDEX: readonly LabGroup[] = [
   {
     key: "project-i",
     label: "Project I — Reincarnation machine",
-    sub: "Lab 1-1 – 1-5 · two linkage kernels",
+    sub: "Lab 1-1 – 1-6 · two linkage kernels and a behaviour engine",
     segments: [
       {
         n: "",
@@ -62,6 +62,9 @@ export const LAB_INDEX: readonly LabGroup[] = [
           { no: "1-3", title: "Tendon tentacle", kernel: "3d", description: 'Bend seven vertebrae with three tendons spaced at 120°.', meta: 'Orbit camera · WebGL', kind: 'WebGL · 3D kernel', verb: 'drag to orbit' },
           { no: "1-4", title: "Five-ring shell", kernel: "3d", description: 'Five rings opening and closing together.', meta: 'Calibrated stops · WebGL', kind: 'WebGL · 3D kernel', verb: 'drag to orbit' },
           { no: "1-5", title: "Full assembly", kernel: "3d", description: 'One shaft drives five rings; three tendons bend the arm.', meta: 'Real solids · WebGL', kind: 'WebGL · fixed view', verb: 'views by button' },
+          // 2026-10-07 用户拍板「行为引擎单独拆一个 lab 作为 1-6」：同一台整机、同一个 MachineBench，
+          // 驱动换成行为引擎（src/lib/linkage/behavior/），1-5 回到纯编排。
+          { no: "1-6", title: "Behaviour engine", kernel: "3d", description: 'The full machine lives four lives, one persona each, and responds to touch.', meta: 'Four personas · WebGL', kind: 'WebGL · behaviour engine', verb: 'touch the machine' },
         ],
       },
     ],

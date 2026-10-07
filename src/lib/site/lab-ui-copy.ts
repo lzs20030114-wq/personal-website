@@ -40,7 +40,7 @@ export const LAB_UI_COPY: readonly (readonly [string, string])[] = [
   ["项目二", "Project II"],
   ["轮回机器", "Reincarnation machine"],
   ["跨物种空间", "Cross-species space"],
-  ["实验 1-1 – 1-5 · 两种连杆内核", "Lab 1-1 – 1-5 · two linkage kernels"],
+  ["实验 1-1 – 1-6 · 两种连杆内核与一个行为引擎", "Lab 1-1 – 1-6 · two linkage kernels and a behaviour engine"],
   ["实验 2-1 – 2-14 · 会变形的单元，以及驱动它的行为", "Lab 2-1 – 2-14 · shape-changing units and the behaviour that moves them"],
   ["一条带", "One band"],
   ["一排", "A row"],
