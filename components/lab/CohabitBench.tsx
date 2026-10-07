@@ -19,6 +19,8 @@ import { useBenchLoop } from './useBenchLoop';
  */
 const TIME_SCALES = [1, 3, 8] as const;
 const TIME_DEF = 1;
+/** 页面默认用 8×8，离线对照仍用 COHABIT.GRID_DEF 的 4×4 真实单元。 */
+const GRID_DEF = 8;
 const MAX_SIM_DT = 0.05 * 8 * 1.01;
 
 const COPY = {
@@ -32,7 +34,7 @@ const COPY = {
     line: (t: number, people: number, cats: number, far: number, held: number, detour: number, bands: number | null) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${people} 人 · ${cats} 猫 · 猫在 1 m 外 ${(far * 100).toFixed(0)}%（参照 78%）· 绕行 ${detour.toFixed(1)} m${bands !== null ? ` · 让路 ${bands} 条带` : ''}${held ? ` · R5 钉住 ${held}` : ''}`,
     legend: '实墨圈 = 对人是墙 · 紫环 = 成形（缺口 = 收回的带）· 芯上短横 = R5 钉住 · 连线：绿虚 共视 / 紫 共温 / 粉 共触 / 墨 交接',
-    hint: `点空地放访客，按住拖；猫可拖到任一单元。「自走」让访客漫步（一半几率去看猫）、猫按坐 / 卧 / 换格的节奏活动。最多 ${COHABIT.MAX_PEOPLE} 人 ${COHABIT.MAX_CATS} 猫。`,
+    hint: `用「+ 人」「+ 猫」添加人物，按住人物可拖动。猫可拖到任一单元。「自走」让访客漫步（一半几率去看猫）、猫按坐 / 卧 / 换格的节奏活动。最多 ${COHABIT.MAX_PEOPLE} 人 ${COHABIT.MAX_CATS} 猫。`,
     rules: '通行代价：落下的单元对人是墙、对猫不是。停留代价：访客被别人贴到 1.35 m 以内就走；猫被访客贴到 1 m 以内撑过几秒就退到更远的格，之后一阵不再靠人；有人站着盯着它，它有三分之一几率靠到台边。空间只写单元：猫脚下钉住，猫四邻里人的痕迹最高的一格补满，落下会困住人的不落。让路按带：一个单元二十条带，挡在人身边或人路上的那几条各自收回到杆上（布回到顶上），其余照落；猫身下的带不收；人走到门口门正好开，走过去再落回。',
     space: '空间',
     grid: '格数',
@@ -66,7 +68,7 @@ const COPY = {
     line: (t: number, people: number, cats: number, far: number, held: number, detour: number, bands: number | null) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${people} people · ${cats} cats · cat beyond 1 m ${(far * 100).toFixed(0)}% (reference 78%) · detour ${detour.toFixed(1)} m${bands !== null ? ` · ${bands} bands giving way` : ''}${held ? ` · R5 held ${held}` : ''}`,
     legend: 'Solid ink ring = wall for people · purple ring = formed (notch = retracted band) · bar on the mast = held by R5 · links: green dashed co-gaze / purple co-warmth / rose contact / ink crossing',
-    hint: `Click empty floor to add a visitor and hold to drag; a cat can be dragged onto any unit. Wander lets visitors roam (half the time towards a cat) and cats sit, lie and move between units. Up to ${COHABIT.MAX_PEOPLE} people and ${COHABIT.MAX_CATS} cats.`,
+    hint: `Use “+ person” and “+ cat” to add bodies, then hold a body to drag it. A cat can be dragged onto any unit. Wander lets visitors roam (half the time towards a cat) and cats sit, lie and move between units. Up to ${COHABIT.MAX_PEOPLE} people and ${COHABIT.MAX_CATS} cats.`,
     rules: 'Passage cost: a formed unit is a wall for people, not for cats. Staying cost: a visitor leaves when another comes within 1.35 m; a cat tolerates a visitor within 1 m for a few seconds, then retreats to a farther unit and keeps away for a while; when someone stands watching it, it approaches the platform edge one time in three. The space only writes units: the cat’s own unit stays formed, the neighbour with the strongest people trace is filled, and a unit that would trap someone is held back. Giving way by band: a unit has twenty bands; the few beside a person or on their route retract to the post (the cloth goes back up) while the rest come down; bands under a cat never retract; the door is open by the time the person reaches it and closes behind them.',
     space: 'space',
     grid: 'grid',
@@ -194,7 +196,7 @@ export function CohabitBench({
   const [auto, setAuto] = useState(true);
   const [showTrace, setShowTrace] = useState(true);
   const [timeScale, setTimeScale] = useState<number>(TIME_DEF);
-  const [grid, setGrid] = useState<number>(COHABIT.GRID_DEF);
+  const [grid, setGrid] = useState<number>(GRID_DEF);
   const [space, setSpace] = useState<SpaceMode>('live');
   const [mode, setMode] = useState<ResponseMode>('follow');
   const [goal, setGoal] = useState(true);
@@ -206,10 +208,10 @@ export function CohabitBench({
   const [threshold, setThreshold] = useState<number>(PLAN.DEMO.threshold);
   const [fade, setFade] = useState<number>(PLAN.DEMO.fade);
   const [speed, setSpeed] = useState<number>(COHABIT.VISITOR.speed);
-  const [cursor, setCursor] = useState<'crosshair' | 'grab' | 'grabbing'>('crosshair');
+  const [cursor, setCursor] = useState<'default' | 'grab' | 'grabbing'>('default');
   const [hud, setHud] = useState(() => ({
     formed: 0,
-    total: COHABIT.GRID_DEF * COHABIT.GRID_DEF,
+    total: GRID_DEF * GRID_DEF,
     t: 0,
     people: 1,
     cats: 1,
@@ -304,7 +306,7 @@ export function CohabitBench({
       if (runningRef.current) sim.step(Math.min(MAX_SIM_DT, dt * timeRef.current));
       paint();
       const s = sim.summary();
-      const key = `${Math.floor(s.t)}|${s.formed}|${s.people}|${s.cats}|${s.ledger.counts.gaze}|${s.ledger.counts.warmth}|${s.ledger.counts.touch}|${s.ledger.counts.pass}|${s.heldR5}|${sim.faces ? s.bandsOpen : '-'}`;
+      const key = `${sim.layout.n}|${Math.floor(s.t)}|${s.formed}|${s.people}|${s.cats}|${s.ledger.counts.gaze}|${s.ledger.counts.warmth}|${s.ledger.counts.touch}|${s.ledger.counts.pass}|${s.heldR5}|${sim.faces ? s.bandsOpen : '-'}`;
       if (key !== lastHud.current) {
         lastHud.current = key;
         setHud({
@@ -326,7 +328,7 @@ export function CohabitBench({
     active,
   );
 
-  // 指针：按住人或猫 = 拖；按空地 = 放访客
+  // 指针：按住人或猫 = 拖；添加人物只走控制条按钮。
   const onPointerDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     const sim = simRef.current;
     const canvas = canvasRef.current;
@@ -338,9 +340,6 @@ export function CohabitBench({
       sim.hold(hit.kind, hit.id, x, y);
       canvas.setPointerCapture(e.pointerId);
       setCursor('grabbing');
-    } else {
-      const h = sim.layout.roomM / 2;
-      if (Math.abs(x) <= h && Math.abs(y) <= h) sim.addPerson(x, y);
     }
     paint();
   };
@@ -355,7 +354,7 @@ export function CohabitBench({
       if (!runningRef.current) paint();
       return;
     }
-    const next = sim.bodyAt(x, y) ? 'grab' : 'crosshair';
+    const next = sim.bodyAt(x, y) ? 'grab' : 'default';
     if (next !== cursor) setCursor(next);
   };
   const onPointerUp = (e: ReactPointerEvent<HTMLCanvasElement>) => {
