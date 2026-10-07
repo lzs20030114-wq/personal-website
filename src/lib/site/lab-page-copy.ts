@@ -72,7 +72,7 @@ export const LAB_PAGE_COPY: readonly (readonly [string, string])[] = [
   ["Hand", "手"],
   ["Seen within ±120° after its reaction time · reach, turn away or look elsewhere", "进了 ±120° 视野、过一个反应时间才看见 · 迎、背过身或看别处"],
   ["Clock", "时钟"],
-  ["Life clock ×1–×60 · motion stays real-time", "生命时钟 ×1–×60 · 动作仍按真实速度"],
+  ["Life clock ×1–×20 · motion stays real-time", "生命时钟 ×1–×20 · 动作仍按真实速度"],
   ["Log", "日志"],
   ["JSON Lines · sensor, engine and life events", "JSON Lines · 传感、引擎与生命事件"],
   ["Machine", "整机"],

@@ -189,13 +189,22 @@ const CHOREO_SCALE = 0.75;
 
 // ── 行为引擎档（M2，Lab 1-6）的手感常量 ────────────────────────────────────
 /**
- * 生命时钟档：只压缩一世各段的时长，呼吸与动作仍按真实秒（spec §5.5）。×1 = 实验口径；
- * ×60 = 一世约 9 秒、四世约 35 秒，快速看一遍轮回（与案例页 N05 播放头同口径；段落短到
- * 跟随器追不满，看的是生命节奏，不是呼吸细节）。用户 2026-10-07：「生命时钟可以倍速调节」。
+ * 生命时钟档：只压缩一世各段的时长，呼吸与动作仍按真实秒（spec §5.5）。×1 = 实验口径，一世约
+ * 9 分钟；×5 约 1 分 45 秒；×10 约 50 秒；×20 约 25 秒。面板上是一根四档滑条（用户 2026-10-07
+ * 第六批：「加个条，1 倍速 5 倍 10 倍速 20 倍速都有就行了」）；此前的 ×60 档随之撤掉。引擎
+ * 本身接受任意正倍率，只是台架不再给这一档。
  */
-const LIFE_RATES = [1, 5, 10, 20, 60] as const;
+const LIFE_RATES = [1, 5, 10, 20] as const;
 /** 默认 ×10：一世约 50 秒，访客等得到一次死亡与轮回 */
 const LIFE_RATE_DEFAULT = 10;
+/** 倍率 → 滑条档位（最近的一档）。交接来的状态若不在档上，接手时按它改到这一档 */
+const lifeRateStop = (r: number): number => {
+  let best = 0;
+  LIFE_RATES.forEach((v, i) => {
+    if (Math.abs(v - r) < Math.abs(LIFE_RATES[best] - r)) best = i;
+  });
+  return best;
+};
 const BANDS: readonly PresenceBand[] = ['gone', 'far', 'mid', 'near'];
 /** 日志缓冲上限（条）：一场四世约 500 条，这个数够跑十几个小时；超了丢最早的 */
 const LOG_CAP = 60000;
@@ -454,8 +463,8 @@ const COPY = {
     beh: {
       clock: '生命时钟',
       clockHelp: [
-        '只压缩一世各段的时长（诞生 → 成长 → 衰老 → 死亡 → 空白），呼吸与动作仍按真实速度。×1 是实验口径，一世约 9 分钟；×10 约 50 秒；×60 约 9 秒，四世一轮约 35 秒。',
-        'Compresses only the life stages (birth → growth → ageing → dying → blank); breathing and gestures stay real-time. ×1 is the experiment timing, about 9 minutes per life; ×10 about 50 seconds; ×60 about 9 seconds, four lives in about 35 seconds.',
+        '只压缩一世各段的时长（诞生 → 成长 → 衰老 → 死亡 → 空白），呼吸与动作仍按真实速度。×1 是实验口径，一世约 9 分钟；×5 约 1 分 45 秒；×10 约 50 秒；×20 约 25 秒。',
+        'Compresses only the life stages (birth → growth → ageing → dying → blank); breathing and gestures stay real-time. ×1 is the experiment timing, about 9 minutes per life; ×5 about 1 min 45 s; ×10 about 50 seconds; ×20 about 25 seconds.',
       ] as [string, string],
       first: '首世',
       firstHelp: [
@@ -546,8 +555,8 @@ const COPY = {
     beh: {
       clock: 'Life clock',
       clockHelp: [
-        '只压缩一世各段的时长（诞生 → 成长 → 衰老 → 死亡 → 空白），呼吸与动作仍按真实速度。×1 是实验口径，一世约 9 分钟；×10 约 50 秒；×60 约 9 秒，四世一轮约 35 秒。',
-        'Compresses only the life stages (birth → growth → ageing → dying → blank); breathing and gestures stay real-time. ×1 is the experiment timing, about 9 minutes per life; ×10 about 50 seconds; ×60 about 9 seconds, four lives in about 35 seconds.',
+        '只压缩一世各段的时长（诞生 → 成长 → 衰老 → 死亡 → 空白），呼吸与动作仍按真实速度。×1 是实验口径，一世约 9 分钟；×5 约 1 分 45 秒；×10 约 50 秒；×20 约 25 秒。',
+        'Compresses only the life stages (birth → growth → ageing → dying → blank); breathing and gestures stay real-time. ×1 is the experiment timing, about 9 minutes per life; ×5 about 1 min 45 s; ×10 about 50 seconds; ×20 about 25 seconds.',
       ] as [string, string],
       first: 'First life',
       firstHelp: [
@@ -962,7 +971,9 @@ export function MachineBench({
         engine = eng;
         logHeader = eng.header();
         logBuf.length = 0;
-        rateNow = eng.status().lifeRate;
+        // 倍率落到滑条的某一档（本来就在档上时 setLifeRate 直接返回，不记操作日志）
+        rateNow = LIFE_RATES[lifeRateStop(eng.status().lifeRate)];
+        eng.setLifeRate(rateNow);
         // 引擎眼里还有手 / 电极：标成「已报过」，下一帧 syncHand 按此刻的指针对一遍（不在画布上就报离开）
         const eh = eng.state.hand;
         handSent = eh?.present
@@ -2277,22 +2288,35 @@ export function MachineBench({
   // 行为档的第一层（「解什么」）：生命时钟 / 人格 / 刺激注入 / 日志
   const behaviorGroups = behaviorUi ? (
     <>
-      <div className="grp grp--seg">
+      {/* 生命时钟 —— 四档滑条（10-07 第六批），档位刻度写在滑条下面，当前档点亮 */}
+      <div className="grp grp--clock">
         <LabControlLabel help={B.clockHelp} lang={lang}>{B.clock}</LabControlLabel>
-        <span className="seg">
-          {LIFE_RATES.map((r) => (
-            <button
-              key={r}
-              type="button"
-              className={r === lifeRate ? 'active' : undefined}
-              onClick={() => {
-                setLifeRate(r);
-                apiRef.current?.setLifeRate(r);
-              }}
-            >
-              ×{r}
-            </button>
-          ))}
+        <span className="lab-clock">
+          <input
+            type="range"
+            min={0}
+            max={LIFE_RATES.length - 1}
+            step={1}
+            value={lifeRateStop(lifeRate)}
+            aria-label={B.clock}
+            aria-valuetext={`×${lifeRate}`}
+            onChange={(e) => {
+              const r = LIFE_RATES[Number(e.target.value)];
+              setLifeRate(r);
+              apiRef.current?.setLifeRate(r);
+            }}
+          />
+          <span className="lab-clock__ticks" aria-hidden="true">
+            {LIFE_RATES.map((r, i) => (
+              <span
+                key={r}
+                data-on={r === lifeRate ? '' : undefined}
+                style={{ left: `calc(var(--lab-clock-thumb) / 2 + (100% - var(--lab-clock-thumb)) * ${i / (LIFE_RATES.length - 1)})` }}
+              >
+                ×{r}
+              </span>
+            ))}
+          </span>
         </span>
       </div>
       <div className="grp grp--seg">

@@ -164,7 +164,7 @@ export default function LabPage() {
             ['Life', 'Birth · growth · ageing · dying · blank'],
             ['Stimuli', 'Presence · hand · touch · grasp · sound · lift'],
             ['Hand', 'Seen within ±120° after its reaction time · reach, turn away or look elsewhere'],
-            ['Clock', 'Life clock ×1–×60 · motion stays real-time'],
+            ['Clock', 'Life clock ×1–×20 · motion stays real-time'],
             ['Log', 'JSON Lines · sensor, engine and life events'],
             ['Machine', 'Same assembly as Lab 1-5 · breath drives the crank'],
             ['Caveats', 'Rhythms not hardware-verified · yaw is a placeholder'],
