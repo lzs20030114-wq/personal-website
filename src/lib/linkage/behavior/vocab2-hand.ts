@@ -41,6 +41,10 @@ export const HC = {
   flatMax: 0.48,
   /** 深卷（只在腱轴 0 上、门全部满足时）的差动上限：主腱约 0.9，不到惊跳的 0.717 那么满 */
   deepMax: 0.62,
+  /** 深卷预算：每轮（一次 ⑨）深卷行程里的总时长 4 s，**松开的 1.3 s 也算在内**（卷满 2.7 s 就开始松）；之后冷却 45 s */
+  deepBudget: 4,
+  deepRelease: 1.3,
+  deepCooldown: 45,
   /** 接触灵敏度 G(r, D) = k·clamp(r/L, 0.25, 1)^e·(1 − drop·min(D, 0.5))（mm / 差动） */
   gainK: 480,
   gainExp: 1.6,
@@ -184,6 +188,17 @@ export function axisPose(D: number): Pose {
   // 原先按「超出 0.34 记深卷」会让深卷占时显示成 100%，而执行层其实一直在平卷行程里
   if (d <= HC.flatMax) return flatH(d, 0);
   return { bend: HC.flatMax / D_SPAN, dir: 0, deep: (d - HC.flatMax) / D_DEEP_SPAN };
+}
+
+/**
+ * 规范表示（同一个差动，执行层给出同一组三腱）：0.48 以内只用平卷，超出 0.48 的那一截才记深卷。程序在平卷与深卷姿态
+ * 之间插值时，中途会出现「deep > 0 而差动还不到 0.48」——执行层看不出区别，但深卷占时与预算记账就对不上了
+ */
+export function canonDeep(p: Pose): Pose {
+  if (p.deep <= 0) return p;
+  const D = dOf(p);
+  if (D <= HC.flatMax) return { bend: D / D_SPAN, dir: p.dir, deep: 0 };
+  return { bend: HC.flatMax / D_SPAN, dir: p.dir, deep: (D - HC.flatMax) / D_DEEP_SPAN };
 }
 
 /** 迎手链看到的手：读数在建表那一刻的快照 */

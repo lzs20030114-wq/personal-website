@@ -283,6 +283,8 @@ describe('迎手链：深卷预算与纯数据', () => {
     const run = (deepOk: boolean): { used: number; maxD: number; maxDeep: number } => {
       const r = new Rig('A', seed, { deepOk });
       r.move(deepHand, 0);
+      // 不让碰到：卷一直卷到上限 0.62（这个粗糙的碰到模型在差动 0.31 就判碰到，到不了深卷行程）
+      r.contact = false;
       let used = 0;
       let maxD = 0;
       let maxDeep = 0;
@@ -292,7 +294,9 @@ describe('迎手链：深卷预算与纯数据', () => {
         maxDeep = Math.max(maxDeep, a.deep ?? 0);
         if ((a.deep ?? 0) > 0) {
           maxD = Math.max(maxD, D);
-          if (D > HC.flatMax) used += 1 / 60;
+          // 规范表示：deep > 0 ⇔ 差动 > 0.48
+          expect(D).toBeGreaterThan(HC.flatMax - 1e-9);
+          used += 1 / 60;
           expect(Math.abs(a.dir)).toBeLessThan(0.15);
         }
       });

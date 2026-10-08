@@ -81,11 +81,11 @@ import {
   buildStrain,
   buildTake,
   buildWrap,
+  canonDeep,
   chasePlan,
   cinchCount,
   dwellOf,
   epsOf,
-  flatH,
   gainAt,
   holdCue,
   holdDrive,
@@ -466,10 +466,11 @@ interface HandChain {
   turnAt: number;
   /** 握着被牵着走时转身慢一半 */
   yawSlow: boolean;
-  /** 深卷：本轮累计秒数、冷却到何时、被预算收回的时刻（之后 1.3 s 平滑松到 0.48） */
+  /** 深卷：本轮累计秒数、冷却到何时、开始松开的时刻与那一刻的深卷（之后 1.3 s 内深卷的上限从它平滑降到 0） */
   deepUsed: number;
   deepCool: number;
   deepOffAt: number;
+  deepFrom: number;
   /** 握持控制器开始那一刻锁定的深卷模式（中途不再进深卷；离开窗口按预算用完处理） */
   holdDeep: boolean;
   /** 本阶段（追 / 握）记过绕回没有：只记一条 ORIENT unwind */
@@ -536,6 +537,7 @@ const idleHand = (): HandChain => ({
   deepUsed: 0,
   deepCool: -NEVER,
   deepOffAt: NEVER,
+  deepFrom: 0,
   holdDeep: false,
   unwindLogged: false,
 });
@@ -2452,7 +2454,7 @@ export class BehaviorEngine {
     if (Math.abs(wrapPi(h.aimDir)) > (8 * Math.PI) / 180) return false;
     if (h.aimBend < 1.45 || h.aimDist > 0.95 * HAND.armL) return false;
     if (Math.sqrt(s.speed) < 0.8) return false;
-    return t >= hc.deepCool && hc.deepUsed < 4 && hc.deepOffAt >= NEVER;
+    return t >= hc.deepCool && hc.deepUsed < HC.deepBudget - HC.deepRelease && hc.deepOffAt >= NEVER;
   }
 
   /** 握着时还在不在深卷窗口里（比进门宽一点：±12°、aimBend ≥ 1.40、≤ 0.98 L——指针抖一像素不该把深卷松掉） */
@@ -2465,7 +2467,7 @@ export class BehaviorEngine {
   private deepEnd(t: number): void {
     const hc = this.s.m2!.hc;
     if (hc.deepUsed > 0) {
-      hc.deepCool = t + 45;
+      hc.deepCool = t + HC.deepCooldown;
       hc.deepUsed = 0;
     }
     hc.deepOffAt = NEVER;
@@ -3041,12 +3043,8 @@ export class BehaviorEngine {
         this.enterPhase(t, r.phase);
       }
       if (r.done) hc.prog = null;
-      let pose = r.pose;
-      // 深卷预算在程序里用完（缠的贴上 / 收紧不看预算）：带深卷的段同样 1.3 s 平滑松到离轴；松完（冷却中）一律离轴
-      if (pose.deep > 0 && (hc.deepOffAt < NEVER || t < hc.deepCool)) {
-        const u = hc.deepOffAt < NEVER ? smooth((t - hc.deepOffAt) / 1.3) : 1;
-        pose = blendPose(pose, flatH(dOf(pose), pose.dir), u);
-      }
+      // 深卷在松开 / 冷却中（缠的贴上 / 收紧不看预算）：程序里带深卷的段同样受深卷上限
+      const pose = this.capDeep(canonDeep(r.pose), t);
       this.writePose(pose, r.done);
       this.deepBook(t, pose);
       return true;
@@ -3060,7 +3058,7 @@ export class BehaviorEngine {
         hc.holdDeep = hc.deepUsed > 0 || (this.deepGate(h, t) && h.aimBend >= 1.45);
       }
       // 锁着深卷、手离开了窗口（想要的已经不是深卷）：按预算用完处理，同一条 1.3 s 松开
-      if (hc.holdDeep && hc.deepOffAt >= NEVER && t >= hc.deepCool && !this.deepWindow(h)) hc.deepOffAt = t;
+      if (hc.holdDeep && hc.deepOffAt >= NEVER && t >= hc.deepCool && !this.deepWindow(h)) this.deepRelease(t, m.deep);
       const ev = hc.ev ? holdEventMm(hc.ev.kind, t - hc.ev.t0, s.period) : 0;
       const T = s.period * (1 - ENGINE.arousal.breath * s.arousal) * 1.15;
       let pose = holdDrive({
@@ -3077,32 +3075,50 @@ export class BehaviorEngine {
         // 松开的混合（下面）要两端不同：松开途中仍按深卷算，混合走完（deepEnd → 冷却）才换成离轴
         deep: hc.holdDeep && t >= hc.deepCool,
       });
-      // 深卷预算用完：1.3 s 内平滑松到 0.48（仍是握着）
-      if (hc.deepOffAt < NEVER) {
-        const flat = flatH(dOf(pose), hc.dirRef);
-        pose = blendPose(pose, flat, smooth((t - hc.deepOffAt) / 1.3));
-      }
       if (hc.holdFrom) pose = blendPose(hc.holdFrom, pose, smooth((t - hc.holdT0) / HC.holdBlend));
+      // 深卷预算用完：1.3 s 内平滑松到 0.48（仍是握着）
+      pose = this.capDeep(canonDeep(pose), t);
       this.writePose(pose, false);
       this.deepBook(t, pose);
       return true;
     }
     if (g.phase === 'HOLD_OBJECT' || g.phase === 'HOLD_HUMAN' || (g.phase === 'RELEASE' && !ENGAGED.has(hc.stage))) return false;
-    // 拍间：保持此刻的指令
+    // 拍间：保持此刻的指令（深卷正在松开时照样跟着上限往下走，不然下一拍一起就一帧掉下去）
     s.armX.v = 0;
     s.armY.v = 0;
     s.wrap.v = 0;
+    m.deep = Math.min(m.deep, this.deepCap(t));
     return true;
   }
 
-  /** 深卷记账：执行层真的放开深卷的帧（差动 > 0.48）才算；本轮满 4 s 收回、开始冷却 */
+  /** 深卷记账：执行层真的放开深卷的帧（deep > 0 ⇔ 差动 > 0.48）才算；本轮累计到预算减去松开时长就开始松，松完开始冷却 */
   private deepBook(t: number, pose: Pose): void {
     const m = this.s.m2!;
     const hc = m.hc;
     if (pose.deep > 0 && dOf(pose) > HC.flatMax) {
       hc.deepUsed += DT;
-      if (hc.deepUsed >= 4 && hc.deepOffAt >= NEVER) hc.deepOffAt = t;
-    } else if (hc.deepUsed > 0 && pose.deep <= 0 && (hc.deepOffAt >= NEVER || t - hc.deepOffAt >= 1.3)) this.deepEnd(t);
+      if (hc.deepUsed >= HC.deepBudget - HC.deepRelease && hc.deepOffAt >= NEVER) this.deepRelease(t, pose.deep);
+    } else if (hc.deepUsed > 0 && pose.deep <= 0 && (hc.deepOffAt >= NEVER || t - hc.deepOffAt >= HC.deepRelease)) this.deepEnd(t);
+  }
+
+  /** 开始松开深卷（预算用完 / 握着时手离开了窗口）：记下此刻的深卷，之后 deepRelease 秒内上限从它平滑降到 0 */
+  private deepRelease(t: number, from: number): void {
+    const hc = this.s.m2!.hc;
+    hc.deepOffAt = t;
+    hc.deepFrom = Math.max(0, from);
+  }
+
+  /** 此刻深卷的上限：没在松开 / 冷却 = 不限；松开中按时间平滑降到 0；冷却中 = 0 */
+  private deepCap(t: number): number {
+    const hc = this.s.m2!.hc;
+    if (hc.deepOffAt < NEVER) return hc.deepFrom * (1 - smooth((t - hc.deepOffAt) / HC.deepRelease));
+    return t < hc.deepCool ? 0 : Infinity;
+  }
+
+  /** 把姿态的深卷压到上限以内（只动深卷那一截：差动往 0.48 收，弯向与离轴的部分不变） */
+  private capDeep(pose: Pose, t: number): Pose {
+    const cap = this.deepCap(t);
+    return pose.deep > cap ? { ...pose, deep: Math.max(0, cap) } : pose;
   }
 
   /** 此刻的挤压相位 0–1（台架标记圈随它缩放；不在握人时 = null） */

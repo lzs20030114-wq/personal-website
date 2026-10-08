@@ -718,7 +718,8 @@ async function job(P, OUT) {
       for (let j = 0; j < idx.length; j++) {
         if (fr[idx[j]].deep > 1e-3) cnt++;
         if (j >= W && fr[idx[j - W]].deep > 1e-3) cnt--;
-        win49 = Math.max(win49, cnt / Math.min(W, j + 1));
+        // 任意 49 s 窗口里的占比：一律除以 49 s（场次比 49 s 短时，窗口外按没有深卷算——不是除以已跑的时长）
+        win49 = Math.max(win49, cnt / W);
       }
       return {
         deepS: on.length / HZ,
