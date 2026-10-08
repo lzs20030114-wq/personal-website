@@ -37,5 +37,75 @@
       "log": "4907b7eb90cc68ce",
       "frames": "af4d32996062a2b8"
     }
-  ]
+  ],
+  "v2": {
+    "source": "74615e1",
+    "cases": [
+      {
+        "seed": 11,
+        "lifeRate": 1,
+        "log": "829732c020a35b99",
+        "frames": "8ef35f11c275f66c"
+      },
+      {
+        "seed": 23,
+        "lifeRate": 1,
+        "log": "83eaab0480056f6b",
+        "frames": "b538010074e7eb49"
+      },
+      {
+        "seed": 131,
+        "lifeRate": 10,
+        "log": "fde676ed4ba5d3f6",
+        "frames": "1dc223460b2936dd"
+      },
+      {
+        "seed": 151,
+        "lifeRate": 10,
+        "log": "2bcb0175f5aeeb76",
+        "frames": "e875bdf9063a9dc4"
+      },
+      {
+        "seed": 161,
+        "lifeRate": 60,
+        "log": "dd16f788ba175167",
+        "frames": "f87b1306eaf0d7df"
+      },
+      {
+        "seed": 171,
+        "lifeRate": 60,
+        "log": "ae958a616f778794",
+        "frames": "92096e621490c3fb"
+      }
+    ]
+  },
+  "hand": {
+    "source": "74615e1",
+    "cases": [
+      {
+        "seed": 211,
+        "lifeRate": 1,
+        "log": "03bbc256f4aef8df",
+        "frames": "77672d2dd25c69d6"
+      },
+      {
+        "seed": 223,
+        "lifeRate": 1,
+        "log": "e7d477e80cb617c5",
+        "frames": "8ae851673a1f199a"
+      },
+      {
+        "seed": 241,
+        "lifeRate": 10,
+        "log": "a86f076b85b2e17a",
+        "frames": "38aa238832967927"
+      },
+      {
+        "seed": 251,
+        "lifeRate": 10,
+        "log": "d7d1338e91c6f943",
+        "frames": "622add2dc17b162c"
+      }
+    ]
+  }
 }
