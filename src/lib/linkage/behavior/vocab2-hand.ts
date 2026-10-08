@@ -22,7 +22,7 @@
  */
 import type { PersonaKey } from './persona';
 import { type Cues, type FeelerPose, type Phase, type Pose, lerpPoseLine } from './programs';
-import { type BuildCtx, D_DEEP_SPAN, D_SPAN, PEAK, type Tier, V2, anticPose, dOf, govern, pathLen, ph, poseOfD, tierSpeed, unhook } from './vocab2';
+import { type BuildCtx, D_DEEP_SPAN, D_SPAN, PEAK, type Tier, V2, anticPose, dOf, govern, pathLen, ph, tierSpeed, unhook } from './vocab2';
 
 const TAU = 2 * Math.PI;
 const DEG = Math.PI / 180;
@@ -116,8 +116,8 @@ export const HC = {
   winHi: 24,
   /** 握：压过手 8 mm、挤压峰峰 6 + 10·②、指令提前 0.45 s、满足 fade = 0.55 + 0.45·e^(−n/3) */
   holdCenter: 8,
-  holdAmp0: 6,
-  holdAmp1: 10,
+  holdAmp0: 14,
+  holdAmp1: 16,
   holdLead: 0.45,
   fade0: 0.55,
   fade1: 0.45,
@@ -178,7 +178,12 @@ export function flatH(D: number, dir: number): Pose {
 
 /** 腱轴 0（臂梢朝上）上的深卷姿态（深卷门开着时用；差动封顶 0.62） */
 export function axisPose(D: number): Pose {
-  return poseOfD(clamp(D, 0, HC.deepMax), 0);
+  const d = clamp(D, 0, HC.deepMax);
+  // 0.48 以内与离轴同一个表示（执行层两条路给出同一个差动）；只有超出 0.48 的那一截记作深卷——
+  // deep > 0 ⇔ 真的进了深卷行程（预算按它记、观众看到的「深卷」也是它）。握着手时差动常在 0.4 上下，
+  // 原先按「超出 0.34 记深卷」会让深卷占时显示成 100%，而执行层其实一直在平卷行程里
+  if (d <= HC.flatMax) return flatH(d, 0);
+  return { bend: HC.flatMax / D_SPAN, dir: 0, deep: (d - HC.flatMax) / D_DEEP_SPAN };
 }
 
 /** 迎手链看到的手：读数在建表那一刻的快照 */

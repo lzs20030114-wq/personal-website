@@ -775,7 +775,8 @@ async function job(P, OUT) {
         const f = frAt(fr, t);
         return hasStage ? ENGAGED20.includes(f.stage) : f.gp === 'WRAP' || f.gp === 'HOLD_HUMAN' || f.gp === 'HOLD_OBJECT';
       };
-      const again = evs.filter((x) => x.ev === 'HAND_SEEN' && x.p?.again);
+      // ⑨ 到点的重新决定（带 cause 的是手链自己引起的态度变化：放弃改躲、⑤ 抽到负撤开、被手吓到——不算 ⑨）
+      const again = evs.filter((x) => x.ev === 'HAND_SEEN' && x.p?.again && !x.p?.cause);
       const ds = deepStats(fr, win(fr, 0, winEnd));
       const noDeep = hasStage
         ? win(fr, 0, winEnd).filter((i) => fr[i].deep > 1e-3 && !isStartle(fr[i]) && (NO_DEEP_STAGES.includes(fr[i].stage) || BEATS.pounce.includes(fr[i].beat))).length
@@ -937,7 +938,10 @@ async function job(P, OUT) {
         );
         // 前 3 口气从握持控制器接手算（有 hold 阶段就从它开始，没有就从握住那一刻）——缠的余振也在里面；
         // 另记稳态（握住 4 s 后的 3 口气，与 scratch 版「稳态峰峰」同口径）
-        const hs = r.stages.find((x) => x.stage === 'hold' && x.tr >= tHold - 1e-9)?.tr ?? tHold;
+        // 缠程序剩下的收紧（贴上之后每口呼气一级）还在跑时控制器没接手：窗口从缠程序走完的那一帧起
+        const hs0 = r.stages.find((x) => x.stage === 'hold' && x.tr >= tHold - 1e-9)?.tr ?? tHold;
+        const iCtl = fr.findIndex((f) => f.tr >= hs0 && !(f.prog ?? '').startsWith('grasp.wrap'));
+        const hs = iCtl >= 0 ? fr[iCtl].tr : hs0;
         const o = oscOf(fr, win(fr, hs, afterBreaths(fr, hs, 3)), 0.45);
         holdP2P = o.p2p;
         holdR = o.r;
