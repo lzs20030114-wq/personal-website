@@ -413,8 +413,9 @@ export function buildApproachBeat(c: BuildCtx, g: HandGeom, beat: ApproachBeat, 
         P === 'B' ? 'creep' : 'deliberate',
       );
     case 'curl':
-      // 深卷门开着（手在臂中段正上方、平卷够不着）：沿腱轴 0 慢慢卷进去，碰到即停，最多 0.62
-      return gov([ph('curl', 1.2 / k, 'mj', atMmDeep(g, HC.reachLand, deepRef), { breath: { rate: 0.5 }, feel: pointAt(P, { antennate: 0.06 }), voice: 'mute' })], c, 'creep');
+      // 深卷门开着（手在臂中段正上方、平卷够不着）：读数已经饱和（看不出还差多少），沿腱轴 0 慢慢往 0.62 卷，碰到即停
+      void deepRef;
+      return gov([ph('curl', 1.2 / k, 'mj', axisPose(HC.deepMax), { breath: { rate: 0.5 }, feel: pointAt(P, { antennate: 0.06 }), voice: 'mute' })], c, 'creep');
     case 'nudge':
       return gov([ph('nudge', 0.5 / k, 'mj', addD(c.cur, HC.nudge), { feel: pointAt(P), voice: 'mute' })], c, 'creep');
     case 'balk':

@@ -2102,8 +2102,9 @@ export class BehaviorEngine {
     if (!h.turning) {
       let need: boolean;
       if (hc && h.mode === 'toward') {
-        // v2 够得着的判据更严（≤ 0.98 L、aimBend ≤ 1.41）：够不着才转身；臂先身后（偏航目标晚 0.25/k s 才写）
-        need = !reachable(h.aimBend, h.aimDist) && (off > HAND.turnAt || h.aimBend > HC.reachBend);
+        // v2 够得着的判据更严（≤ 0.98 L、aimBend ≤ 1.41）：够不着、而且没对准才转身（对准了还够不着，转身也没用——
+        // 交给够不着那一串）；臂先身后（偏航目标晚 0.25/k s 才写）
+        need = !reachable(h.aimBend, h.aimDist) && off > HAND.turnAt;
         if (need) hc.turnAt = t + HC.armLead / Math.sqrt(s.speed);
       } else {
         const reach = h.aimBend <= HAND.reachBend && h.aimDist <= HAND.reachFar * HAND.armL;
@@ -2365,13 +2366,19 @@ export class BehaviorEngine {
    * （平卷 0.48 够不着）、离基座 ≤ 0.95 L、√k_v ≥ 0.8 且本回合 |⑤|/0.5 ≥ 0.4（沉静型永远不开）、本轮预算没用完、不在冷却
    */
   private deepGate(h: HandMem, t: number): boolean {
+    const hc = this.s.m2!.hc;
+    return this.deepGeom(h, t) && hc.gDrawn && Math.abs(hc.g) / 0.5 >= 0.4;
+  }
+
+  /** 深卷门里与本回合 ⑤ 无关的那几条（几何、√k_v、预算、冷却）：凑之前先看它，开着才去抽 ⑤ 判整道门 */
+  private deepGeom(h: HandMem, t: number): boolean {
     const s = this.s;
     const m = s.m2!;
     const hc = m.hc;
-    if (!m.deepOk || !hc.gDrawn) return false;
+    if (!m.deepOk) return false;
     if (Math.abs(wrapPi(h.aimDir)) > (8 * Math.PI) / 180) return false;
     if (h.aimBend < 1.45 || h.aimDist > 0.95 * HAND.armL) return false;
-    if (Math.sqrt(s.speed) < 0.8 || Math.abs(hc.g) / 0.5 < 0.4) return false;
+    if (Math.sqrt(s.speed) < 0.8) return false;
     return t >= hc.deepCool && hc.deepUsed < 4 && hc.deepOffAt >= NEVER;
   }
 
@@ -2694,7 +2701,8 @@ export class BehaviorEngine {
         const inFix = !hc.prog ? Infinity : ph && ph.name === 'fixate' ? t - hc.prog.ts : -1;
         const still = t - hc.stillAt;
         if (fixating && !h.turning && !this.handOnBody(h) && still >= stillOf(hc.tau) && hc.v < HC.vMove) {
-          if (reachable(h.aimBend, h.aimDist) || this.deepGate(h, t)) {
+          // 平卷够得着就凑；平卷够不着但深卷的几何对（手在臂中段正上方）：抽 ⑤，整道门开了才凑（沉静型永远开不了）
+          if (reachable(h.aimBend, h.aimDist) || (this.deepGeom(h, t) && (this.hcGain(ctx), this.deepGate(h, t)))) {
             this.beginApproach(t, ctx, h);
             return;
           }
