@@ -16,6 +16,7 @@ import {
   stepMachine,
 } from './machine';
 import { ARM_IDLE, idleContraction, idleEase, idleSwayAngle } from './machine-arm';
+import type { GraspPhase } from './behavior/grasp';
 import {
   ARM_CHORD,
   ARM_DRIVE,
@@ -23,6 +24,18 @@ import {
   CRANK,
   FACING,
   HAND_FAR,
+  HAND_MM,
+  HAND_UI,
+  type ContactState,
+  contactIdle,
+  contactRadiusMm,
+  contactStep,
+  contactThresholds,
+  pointerTrack,
+  trackMark,
+  trackMove,
+  trackSpeed,
+  trackTrim,
   R_FRONT,
   R_HULL,
   bendCommandDir,
@@ -655,5 +668,392 @@ describe('手（指针）→ 传感', () => {
     // 远处截住
     const sky = handReading(axon, { x: 0, y: -259 }, 0);
     expect(sky.dist).toBeLessThanOrEqual(HAND_FAR);
+  });
+});
+
+// ------------------------------------------------------------------ 碰臂判定（contactStep，台架 syncHand ③ 搬来）
+
+/**
+ * 搬之前的台架（MachineBench 2026-10-07 版）碰臂那一段，逐字抄来当对照：syncHand ③ 与它依赖的指针事件
+ * （pointermove 记轨迹、手指落下记一次挪动、按住 / 抬起大触手）。闭包变量收进一个对象，阈值写字面值
+ * （顺带守着搬过去的 HAND_UI / HAND_MM 一个数没改）。cover 记下这段序列走过哪些分支——对照只有在
+ * 分支都被走到时才说明问题。
+ */
+class RefContact {
+  armHeld = false;
+  pressAt = { x: 0, y: 0 };
+  trail: { t: number; x: number; y: number }[] = [];
+  nearSince = -1;
+  enteredAt = -1;
+  lastMoveAt = -Infinity;
+  lastMovePos = { x: -1e9, y: -1e9 };
+  hoverTouch = false;
+  hoverBy: 'hand' | 'arm' = 'hand';
+  hoverAt = { x: 0, y: 0 };
+  cover = new Set<string>();
+
+  move(tNow: number, px: number, py: number): void {
+    this.trail.push({ t: tNow, x: px, y: py });
+    if (this.trail.length > 64) this.trail.shift();
+    if (Math.hypot(px - this.lastMovePos.x, py - this.lastMovePos.y) > 3) {
+      this.lastMoveAt = tNow;
+      this.lastMovePos = { x: px, y: py };
+    }
+  }
+
+  fingerDown(t: number, px: number, py: number): void {
+    this.lastMoveAt = t;
+    this.lastMovePos = { x: px, y: py };
+  }
+
+  frame(now: number, px: number, py: number, d: number, pxPerMm: number, touch: boolean, frozen: boolean, gp: GraspPhase): void {
+    const clampN = (x: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, x));
+    const trail = this.trail;
+    while (trail.length && now - trail[0].t > 0.3) trail.shift();
+    if (frozen) {
+      this.cover.add('frozen');
+      return;
+    }
+    const touchPx = clampN(32 * pxPerMm, touch ? 20 : 8, touch ? 44 : 28);
+    if (touchPx !== 32 * pxPerMm) this.cover.add(touch ? 'clamp-finger' : 'clamp-mouse');
+    const releasePx = touchPx * (68 / 32);
+    const anchorPx = touchPx * (80 / 32);
+    const maxSpeed = 800 * pxPerMm;
+    if (this.armHeld && d > releasePx && Math.hypot(px - this.pressAt.x, py - this.pressAt.y) > anchorPx) {
+      this.armHeld = false;
+      this.cover.add('drag-off');
+    }
+    const t0 = trail[0];
+    const speed = t0 && now - t0.t > 0.02 ? Math.hypot(px - t0.x, py - t0.y) / (now - t0.t) : 0;
+    if (!this.hoverTouch) {
+      if (d <= touchPx) {
+        if (this.enteredAt < 0) this.enteredAt = now;
+      } else this.enteredAt = -1;
+      if (d <= touchPx && speed <= maxSpeed) {
+        if (this.nearSince < 0) this.nearSince = now;
+        if (now - this.nearSince >= 0.12) {
+          this.hoverTouch = true;
+          this.hoverAt = { x: px, y: py };
+          this.hoverBy = this.enteredAt - this.lastMoveAt >= 0.2 ? 'arm' : 'hand';
+          this.cover.add(`touch-${this.hoverBy}`);
+        }
+      } else {
+        if (d <= touchPx) this.cover.add('swipe');
+        this.nearSince = -1;
+      }
+    } else {
+      const coiled = gp === 'WRAP' || gp === 'HOLD_HUMAN' || gp === 'HOLD_OBJECT';
+      const stay = coiled && Math.hypot(px - this.hoverAt.x, py - this.hoverAt.y) <= anchorPx;
+      if (d > releasePx && stay) this.cover.add('stay');
+      if (d > releasePx && !stay) {
+        this.hoverTouch = false;
+        this.nearSince = -1;
+        this.enteredAt = -1;
+        this.cover.add(coiled ? 'release-coiled' : 'release');
+      }
+    }
+  }
+}
+
+interface CFrame {
+  t: number;
+  x: number;
+  y: number;
+  d: number;
+  ppm: number;
+  finger: boolean;
+  gp: GraspPhase;
+  frozen?: boolean;
+  /** 本帧之前的指针事件 / 台架重置 */
+  ev?: 'press' | 'lift' | 'fingerDown' | 'resetEngine' | 'gone';
+}
+
+/**
+ * 一段写死的逐帧输入：帧间隔带抖动与偶尔的卡顿（台架帧不均匀）。几何是示意的：臂是一条水平线 y = armY，
+ * 指针离臂 = |指针 y − armY|（contactStep 只认这个距离与指针位置，不认几何）。
+ */
+function contactScript(): CFrame[] {
+  const frames: CFrame[] = [];
+  let seed = 12345;
+  const rnd = (): number => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+  let t = 10;
+  const seg = (
+    dur: number,
+    f: (u: number) => { x: number; y: number; armY: number; gp?: GraspPhase; ppm?: number; finger?: boolean; frozen?: boolean },
+    ev?: CFrame['ev'],
+  ): void => {
+    let u = 0;
+    let first = true;
+    while (u < dur) {
+      const k = f(u);
+      frames.push({
+        t,
+        x: k.x,
+        y: k.y,
+        d: Math.abs(k.y - k.armY),
+        ppm: k.ppm ?? 0.6,
+        finger: k.finger ?? false,
+        gp: k.gp ?? 'IDLE',
+        frozen: k.frozen,
+        ev: first ? ev : undefined,
+      });
+      first = false;
+      const dt = rnd() < 0.04 ? 0.05 : (1 / 60) * (0.7 + 0.6 * rnd());
+      t += dt;
+      u += dt;
+    }
+  };
+  const lerp = (a: number, b: number, u: number): number => a + (b - a) * Math.min(1, Math.max(0, u));
+  // 鼠标、桌面画幅（0.6 px/mm：碰到 19.2 · 松开 40.8 · 锚 48 px · 限速 480 px/s）
+  // ① 手不动、臂伸过来碰到（by arm）→ 手往外抽走（没在缠：一出 release 就松）
+  seg(1.6, (u) => ({ x: 200, y: 100, armY: lerp(160, 95, (u - 0.5) / 0.6) }));
+  seg(0.6, (u) => ({ x: 200, y: lerp(100, 200, u / 0.3), armY: 95 }));
+  // ② 手伸过去碰臂（进圈时还在动：by hand）→ 抽走
+  seg(1.5, (u) => ({ x: 260, y: lerp(200, 100, u / 0.83), armY: 95 }));
+  seg(0.5, (u) => ({ x: 260, y: lerp(100, 220, u / 0.2), armY: 95 }));
+  // ③ 飞快划过（2500 px/s，超过限速：进了圈也不算碰到）
+  seg(0.5, (u) => ({ x: 260, y: lerp(220, -30, u / 0.1), armY: 95 }));
+  // ④ 不快但待不够 dwell（400 px/s 穿过 38 px 宽的圈）
+  seg(0.8, (u) => ({ x: 260, y: lerp(-30, 260, u / 0.725), armY: 95 }));
+  // ⑤ 碰到 → 缠 → 握着；臂在晃（离脊线最远约 55 px > 松开），手在锚点附近晃：一直算碰着；
+  //    之后手慢慢拖开（30 px/s）出了锚圈、离脊线又超过松开 → 松开；臂随后放开
+  seg(1.2, (u) => ({ x: 300, y: lerp(260, 100, u / 0.5), armY: 95 }));
+  seg(6, (u) => {
+    const gp: GraspPhase = u < 1.5 ? 'WRAP' : 'HOLD_HUMAN';
+    const drag = Math.max(0, u - 3) * 30;
+    return {
+      x: 300 + 15 * Math.sin(2 * Math.PI * 1.3 * u) + drag,
+      y: 100 + 10 * Math.cos(2 * Math.PI * 1.1 * u),
+      armY: 95 + 50 * Math.sin(2 * Math.PI * 0.7 * u),
+      gp,
+    };
+  });
+  seg(1, (u) => ({ x: 390, y: 100, armY: 160, gp: u < 0.5 ? 'RELEASE' : 'IDLE' }));
+  // ⑥ 按住大触手（手指在臂里）→ 拖开 30 px（锚圈以内，臂已挪开）照样按着 → 再拖到 70 px 外 = 抽手 → 抬起
+  seg(0.3, () => ({ x: 400, y: 160, armY: 160 }), 'press');
+  seg(1.2, (u) => ({ x: lerp(400, 430, u / 0.4), y: 160, armY: lerp(160, 225, u / 0.2) }));
+  seg(1, (u) => ({ x: lerp(430, 470, u / 0.4), y: 160, armY: 225 }));
+  seg(0.3, () => ({ x: 470, y: 160, armY: 225 }), 'lift');
+  // ⑦ 按住后在锚圈内松开（抬起时还按着）
+  seg(0.4, () => ({ x: 480, y: 225, armY: 225 }), 'press');
+  seg(0.3, () => ({ x: 480, y: 225, armY: 300 }), 'lift');
+  // ⑧ 触屏手指，小画幅（0.3 px/mm：碰到圈钳到 20 px）：手指落下 → 臂伸过来碰到 → 拖开
+  seg(1.2, (u) => ({ x: 500, y: 60, armY: lerp(95, 70, (u - 0.2) / 0.4), ppm: 0.3, finger: true }), 'fingerDown');
+  seg(0.8, (u) => ({ x: 500, y: lerp(60, 160, u / 0.5), armY: 70, ppm: 0.3, finger: true }));
+  // ⑨ 触屏手指，大画幅（2 px/mm：碰到圈钳到 44 px、松开 93.5 px）：80 px 还碰着、100 px 松开
+  seg(1, (u) => ({ x: 520, y: lerp(160, 90, u / 0.4), armY: 70, ppm: 2, finger: true }));
+  seg(0.8, (u) => ({ x: 520, y: lerp(90, 150, u / 0.3), armY: 70, ppm: 2, finger: true }));
+  seg(0.8, (u) => ({ x: 520, y: lerp(150, 175, u / 0.3), armY: 70, ppm: 2, finger: true }));
+  // ⑩ 鼠标，大画幅（1.2 px/mm：碰到圈钳到 28 px）+ 透视里每帧在变的 px/mm；中途相机动过（冻住）
+  seg(1.5, (u) => ({
+    x: 560,
+    y: lerp(200, 80, u / 0.6),
+    armY: 70,
+    ppm: 1.2 + 0.1 * Math.sin(5 * u),
+    frozen: u > 0.55 && u < 0.75,
+  }));
+  // ⑪ 碰着的时候重开一场（台架只清 held / touching / nearSince，enteredAt 留着）→ 手还在圈里，又碰到
+  seg(0.8, () => ({ x: 560, y: 80, armY: 70, ppm: 1.2 }), 'resetEngine');
+  // ⑫ 手离开（handGone：清 touching / nearSince / enteredAt）→ 手回来、不动，臂再伸过来
+  seg(0.5, () => ({ x: 560, y: 80, armY: 70, ppm: 1.2 }), 'gone');
+  seg(1.2, (u) => ({ x: 600, y: 300, armY: lerp(200, 290, (u - 0.4) / 0.5) }));
+  return frames;
+}
+
+/** 跑一遍：搬之前（ref）与搬之后（track + contactStep）逐帧并排，返回两份快照与 ref 的分支覆盖 */
+function runContactScript(frames: CFrame[]) {
+  const ref = new RefContact();
+  const track = pointerTrack();
+  let c: ContactState = contactIdle();
+  let last: { x: number; y: number } | null = null;
+  const want: unknown[] = [];
+  const got: unknown[] = [];
+  for (const f of frames) {
+    // 指针事件（帧前 3 ms）：挪了才有 pointermove
+    if (f.ev === 'fingerDown') {
+      ref.fingerDown(f.t - 0.003, f.x, f.y);
+      trackMark(track, f.t - 0.003, f.x, f.y);
+    }
+    if (!last || last.x !== f.x || last.y !== f.y) {
+      ref.move(f.t - 0.003, f.x, f.y);
+      trackMove(track, f.t - 0.003, f.x, f.y);
+    }
+    last = { x: f.x, y: f.y };
+    if (f.ev === 'press') {
+      ref.armHeld = true;
+      ref.pressAt = { x: f.x, y: f.y };
+      c.held = true;
+      c.pressAt = { x: f.x, y: f.y };
+    } else if (f.ev === 'lift') {
+      ref.armHeld = false;
+      c.held = false;
+    } else if (f.ev === 'resetEngine') {
+      ref.armHeld = false;
+      ref.hoverTouch = false;
+      ref.nearSince = -1;
+      c.held = false;
+      c.touching = false;
+      c.nearSince = -1;
+    } else if (f.ev === 'gone') {
+      ref.hoverTouch = false;
+      ref.nearSince = -1;
+      ref.enteredAt = -1;
+      c.touching = false;
+      c.nearSince = -1;
+      c.enteredAt = -1;
+    }
+    ref.frame(f.t, f.x, f.y, f.d, f.ppm, f.finger, !!f.frozen, f.gp);
+    trackTrim(track, f.t);
+    if (!f.frozen) {
+      c = contactStep(c, {
+        now: f.t,
+        x: f.x,
+        y: f.y,
+        d: f.d,
+        pxPerMm: f.ppm,
+        finger: f.finger,
+        speed: trackSpeed(track, f.t, f.x, f.y),
+        lastMoveAt: track.lastMoveAt,
+        grasp: f.gp,
+      }).next;
+    }
+    want.push({
+      touching: ref.hoverTouch,
+      by: ref.hoverBy,
+      at: ref.hoverAt,
+      nearSince: ref.nearSince,
+      enteredAt: ref.enteredAt,
+      held: ref.armHeld,
+      pressAt: ref.pressAt,
+      lastMoveAt: ref.lastMoveAt,
+      trail: ref.trail.length,
+    });
+    got.push({ ...c, lastMoveAt: track.lastMoveAt, trail: track.trail.length });
+  }
+  return { want, got, cover: ref.cover };
+}
+
+describe('碰臂判定（contactStep：台架 syncHand ③ 搬到纯函数）', () => {
+  it('写死的逐帧序列：与搬之前的台架那一段逐帧逐位相同（碰着 / 谁碰谁 / 锚点 / 进圈与待够时刻 / 按住 / 轨迹）', () => {
+    const frames = contactScript();
+    const { want, got, cover } = runContactScript(frames);
+    // 序列真的走过了各条分支
+    for (const k of ['touch-arm', 'touch-hand', 'swipe', 'stay', 'release', 'release-coiled', 'drag-off', 'clamp-finger', 'clamp-mouse', 'frozen']) {
+      expect(cover.has(k), k).toBe(true);
+    }
+    expect(frames.length).toBeGreaterThan(1000);
+    const bad = want.findIndex((w, i) => JSON.stringify(w) !== JSON.stringify(got[i]));
+    if (bad >= 0) expect({ i: bad, t: frames[bad].t, got: got[bad] }).toEqual({ i: bad, t: frames[bad].t, got: want[bad] });
+    expect(bad).toBe(-1);
+  });
+
+  it('牵引（opts.traction，台架现在不传）：缠 / 握着时慢慢牵着走锚点跟手、不松开；臂没跟上时锚点冻住，再拉出锚圈才松', () => {
+    const ppm = 0.6;
+    const th = contactThresholds(ppm, false);
+    const slow = 40 * ppm; // 40 mm/s（≤ 60）
+    const fast = 100 * ppm; // 100 mm/s（> 60）
+    const touched: ContactState = { ...contactIdle(), touching: true, by: 'arm', at: { x: 100, y: 100 } };
+    /** 指针沿 x 以 v px/s 走 sec 秒（臂离指针 d），返回最后的状态 */
+    const drag = (c0: ContactState, traction: boolean, grasp: GraspPhase, v: number, d: number, sec: number, x0: number, t0: number) => {
+      let c = c0;
+      let x = x0;
+      let t = t0;
+      for (let i = 0; i < sec * 60; i++) {
+        t += 1 / 60;
+        x += v / 60;
+        c = contactStep(c, { now: t, x, y: 100, d, pxPerMm: ppm, finger: false, speed: v, lastMoveAt: t, grasp }, { traction }).next;
+      }
+      return { c, x, t };
+    };
+    // 牵 5 s（120 px，远超锚圈 48 px）、臂跟得上（离脊线 10 px）：两种都还碰着；只有牵引让锚点跟着走
+    const on = drag(touched, true, 'HOLD_HUMAN', slow, 10, 5, 100, 0);
+    const off = drag(touched, false, 'HOLD_HUMAN', slow, 10, 5, 100, 0);
+    expect(on.c.touching && off.c.touching).toBe(true);
+    expect(on.c.at.x).toBeCloseTo(on.x, 9);
+    expect(off.c.at).toEqual({ x: 100, y: 100 });
+    // 臂一下没跟上（离脊线 60 px > 松开 40.8）、手停着：不牵引 = 锚点在 120 px 外 → 松开；牵引 = 手就在锚点上 → 照样碰着
+    const lag = (c: ContactState, traction: boolean, x: number, t: number) =>
+      contactStep(c, { now: t + 1 / 60, x, y: 100, d: 60, pxPerMm: ppm, finger: false, speed: 0, lastMoveAt: t, grasp: 'HOLD_HUMAN' }, { traction }).next;
+    expect(lag(off.c, false, off.x, off.t).touching).toBe(false);
+    const held = lag(on.c, true, on.x, on.t);
+    expect(held.touching).toBe(true);
+    // 臂还是没跟上、手接着慢慢走：锚点冻住，走出锚圈（48 px）那一刻松开
+    let c = held;
+    let x = on.x;
+    let t = on.t + 1 / 60;
+    let releasedAt = NaN;
+    for (let i = 0; i < 4 * 60 && Number.isNaN(releasedAt); i++) {
+      t += 1 / 60;
+      x += slow / 60;
+      c = contactStep(c, { now: t, x, y: 100, d: 60, pxPerMm: ppm, finger: false, speed: slow, lastMoveAt: t, grasp: 'HOLD_HUMAN' }, { traction: true }).next;
+      expect(c.at.x).toBeCloseTo(on.x, 9);
+      if (!c.touching) releasedAt = x - on.x;
+    }
+    expect(releasedAt).toBeGreaterThan(th.anchorPx);
+    expect(releasedAt).toBeLessThan(th.anchorPx + slow / 60 + 1e-9);
+    // 拉得快（100 mm/s > 60）：锚点不跟，臂一跟不上就松（与不牵引相同）
+    const quick = drag(touched, true, 'HOLD_HUMAN', fast, 10, 2, 100, 0);
+    expect(quick.c.at).toEqual({ x: 100, y: 100 });
+    expect(lag(quick.c, true, quick.x, quick.t).touching).toBe(false);
+    // 没在缠 / 握：牵引不起作用（锚点不动；离脊线一超过松开就松）
+    const idle = drag(touched, true, 'IDLE', slow, 10, 2, 100, 0);
+    expect(idle.c.at).toEqual({ x: 100, y: 100 });
+    // 牵引关着的整段与不传 opts 逐位相同
+    const plain = (() => {
+      let cc = touched;
+      let xx = 100;
+      for (let i = 0; i < 120; i++) {
+        xx += slow / 60;
+        cc = contactStep(cc, { now: i / 60, x: xx, y: 100, d: 10 + i, pxPerMm: ppm, finger: false, speed: slow, lastMoveAt: 0, grasp: 'WRAP' }).next;
+      }
+      return cc;
+    })();
+    const offAll = (() => {
+      let cc = touched;
+      let xx = 100;
+      for (let i = 0; i < 120; i++) {
+        xx += slow / 60;
+        cc = contactStep(cc, { now: i / 60, x: xx, y: 100, d: 10 + i, pxPerMm: ppm, finger: false, speed: slow, lastMoveAt: 0, grasp: 'WRAP' }, { traction: false }).next;
+      }
+      return cc;
+    })();
+    expect(offAll).toEqual(plain);
+    expect(HAND_MM.tractionSpeed).toBe(60);
+  });
+
+  it('有效碰到半径：桌面默认画幅 = 32 mm；像素钳位（鼠标 8–28 px、手指 20–44 px）让小画幅 / 手指时变大、大画幅时变小', () => {
+    expect(contactRadiusMm(0.6, false)).toBeCloseTo(32, 9);
+    expect(contactRadiusMm(0.1, false)).toBeCloseTo(80, 9); // 3.2 px → 钳到 8 px
+    expect(contactRadiusMm(2, false)).toBeCloseTo(14, 9); // 64 px → 钳到 28 px
+    expect(contactRadiusMm(0.3, true)).toBeCloseTo(20 / 0.3, 9); // 手指 9.6 px → 钳到 20 px（≈ 67 mm，手机上那种）
+    expect(contactRadiusMm(0.8, true)).toBeCloseTo(32, 9); // 25.6 px 在钳位以内
+    expect(contactRadiusMm(2, true)).toBeCloseTo(22, 9); // 64 px → 钳到 44 px
+    // 松开 / 锚圈跟着碰到圈一起钳（比例 68 / 80 : 32 不变）；限速不钳
+    for (const [ppm, finger] of [
+      [0.1, false],
+      [0.6, false],
+      [2, false],
+      [0.3, true],
+      [2, true],
+    ] as const) {
+      const th = contactThresholds(ppm, finger);
+      expect(th.releasePx / th.touchPx).toBeCloseTo(68 / 32, 12);
+      expect(th.anchorPx / th.touchPx).toBeCloseTo(80 / 32, 12);
+      expect(th.maxSpeed).toBeCloseTo(800 * ppm, 9);
+    }
+    // 画面越大（px/mm 越大）有效半径不增
+    let prev = Infinity;
+    for (let ppm = 0.05; ppm < 3; ppm += 0.05) {
+      const r = contactRadiusMm(ppm, false);
+      expect(r).toBeLessThanOrEqual(prev + 1e-9);
+      prev = r;
+    }
+    // 搬过去的手感常量一个数没改
+    expect(HAND_UI.dwell).toBe(0.12);
+    expect(HAND_UI.stillFor).toBe(0.2);
+    expect([HAND_MM.touch, HAND_MM.release, HAND_MM.anchor, HAND_MM.maxSpeed]).toEqual([32, 68, 80, 800]);
   });
 });

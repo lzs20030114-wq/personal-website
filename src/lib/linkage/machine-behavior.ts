@@ -1,4 +1,5 @@
 import type { ActuatorTargets, FeelerDrive } from './behavior/engine';
+import type { GraspPhase } from './behavior/grasp';
 import type { CellFrame } from './gl3d';
 import {
   MACHINE_DIR,
@@ -709,4 +710,216 @@ export function handReading(v: ViewParams, l: P2, yaw: number, hold?: number): H
 /** 逻辑像素 ↔ 画布 CSS 像素（gl3d 的逻辑视口 700×520 铺满画布） */
 export function cssToLogical(px: number, py: number, w: number, h: number): P2 {
   return { x: (px - w / 2) * (HALF_W / (w / 2)), y: (py - h / 2) * (HALF_H / (h / 2)) };
+}
+
+// ------------------------------------------------------------------ 碰臂判定（Lab 1-6，台架 syncHand ③ 搬来）
+
+/**
+ * 指针 = 手（2026-10-07）的台架手感常量（秒 / rad / mm，待拍板）：
+ * 手离臂脊线 touch 以内算碰到；碰到以后，离臂超过 release 才算松开——缠着的时候臂会动，
+ * 只要手还在碰到那一刻的位置附近（anchor 以内）就一直算碰着（距离见 HAND_MM）。HAND 读数每 send 秒
+ * 最多报一次、变化超过阈值才报（日志不被逐帧刷爆）。
+ * （2026-10-08 从 MachineBench 搬来：台架、vitest 闭环、hand-probe 共用一份；数值未改）
+ */
+export const HAND_UI = {
+  /** 指针在 touch 以内待够这么久（秒）、且移动不快于 maxSpeed 才算碰到——划过去不算（距离阈值见 HAND_MM） */
+  dwell: 0.12,
+  /** 指针进到「碰到」圈里之前已经这么久（秒）没挪动（挪动 = 超过 3 px）：是臂伸过来碰到了不动的手（ARM_TOUCH by: 'arm'） */
+  stillFor: 0.2,
+  send: 0.1,
+  dBearing: 0.02,
+  dDist: 15,
+  dAimDir: 0.05,
+  dAimBend: 0.03,
+  /** 手偏离臂轴不到这么多（mm）时弯向读不准，沿用上一个 */
+  sideMin: 10,
+  /** 在场档的滞回（mm）与驻留（秒）：手在档位边上晃，不反复报「走近」 */
+  bandHys: 50,
+  bandDwell: 0.4,
+} as const;
+
+/**
+ * 碰臂的距离阈值按世界毫米给，用的时候换成此刻画面上的像素（画布多宽、哪个视角，碰到的实际距离都一样）。
+ * 数值让桌面默认画幅（约 712 px 宽、轴测）下与像素版手感相同；像素再钳一道（HAND_PX：鼠标 8–28 px，手指 20–44 px）。
+ * tractionSpeed：牵引时锚点跟手的指针速度上限（mm/s，只在 contactStep 的 opts.traction 下用；迎手链 v2 §7.2 第 3 条）。
+ */
+export const HAND_MM = {
+  touch: 32,
+  release: 68,
+  anchor: 80,
+  maxSpeed: 800,
+  tractionSpeed: 60,
+} as const;
+
+/** 碰到半径的像素钳位（CSS px）：鼠标 / 手指（手指粗、又挡着视线，下限放宽） */
+export const HAND_PX = {
+  mouse: [8, 28],
+  finger: [20, 44],
+} as const;
+
+/** 此刻画面上的碰臂阈值（CSS px；maxSpeed 是 px/s） */
+export interface ContactThresholds {
+  touchPx: number;
+  releasePx: number;
+  anchorPx: number;
+  maxSpeed: number;
+}
+
+/**
+ * 毫米阈值 → 此刻的像素阈值。pxPerMm = 臂梢那一处画面上一毫米几个 CSS px（台架按视角 / 画幅 / 透视现算）；
+ * finger = 触屏手指（钳位不同）。release / anchor 跟着 touch 的钳位一起缩放（比例不变）。
+ */
+export function contactThresholds(pxPerMm: number, finger: boolean): ContactThresholds {
+  const [lo, hi] = finger ? HAND_PX.finger : HAND_PX.mouse;
+  const touchPx = clamp(HAND_MM.touch * pxPerMm, lo, hi);
+  return {
+    touchPx,
+    releasePx: touchPx * (HAND_MM.release / HAND_MM.touch),
+    anchorPx: touchPx * (HAND_MM.anchor / HAND_MM.touch),
+    maxSpeed: HAND_MM.maxSpeed * pxPerMm,
+  };
+}
+
+/**
+ * 此刻的有效碰到半径（世界 mm，含像素钳位）：画幅小 / 手指时比 HAND_MM.touch 大，画幅大时比它小。
+ * 迎手链 v2 的 HAND.touch 字段就是它（引擎按它留停距，不让「停在手前」落进碰到圈）。
+ */
+export function contactRadiusMm(pxPerMm: number, finger: boolean): number {
+  return contactThresholds(pxPerMm, finger).touchPx / pxPerMm;
+}
+
+/** 指针轨迹的常量：速度按最近 window 秒算；轨迹最多留 cap 个点；挪动超过 movePx（CSS px）才算真的动了 */
+export const TRACK = {
+  window: 0.3,
+  cap: 64,
+  movePx: 3,
+} as const;
+
+/**
+ * 指针轨迹（指针事件更新，与帧无关）：最近 0.3 s 的位置（判速度），最后一次真的挪动的时刻与位置
+ * （判「是谁碰的谁」）。下面四个函数就地改它（台架的 pointermove / pointerdown 与每帧的修剪各调一个）。
+ */
+export interface PointerTrack {
+  trail: { t: number; x: number; y: number }[];
+  lastMoveAt: number;
+  lastMovePos: P2;
+}
+
+export function pointerTrack(): PointerTrack {
+  return { trail: [], lastMoveAt: -Infinity, lastMovePos: { x: -1e9, y: -1e9 } };
+}
+
+/** 指针移动（pointermove）：记一个轨迹点；离上一次「真的挪动」超过 movePx 才更新挪动时刻 */
+export function trackMove(tr: PointerTrack, t: number, x: number, y: number): void {
+  tr.trail.push({ t, x, y });
+  if (tr.trail.length > TRACK.cap) tr.trail.shift();
+  if (Math.hypot(x - tr.lastMovePos.x, y - tr.lastMovePos.y) > TRACK.movePx) trackMark(tr, t, x, y);
+}
+
+/** 记一次「真的挪动」但不进轨迹（台架：手指落下就是手在动，不会被当成臂伸过来碰到它） */
+export function trackMark(tr: PointerTrack, t: number, x: number, y: number): void {
+  tr.lastMoveAt = t;
+  tr.lastMovePos = { x, y };
+}
+
+/** 每帧：丢掉 window 秒以前的轨迹点 */
+export function trackTrim(tr: PointerTrack, now: number): void {
+  while (tr.trail.length && now - tr.trail[0].t > TRACK.window) tr.trail.shift();
+}
+
+/** 指针速度（CSS px/s）：此刻位置 ↔ 轨迹里最早那个点；轨迹不足 0.02 s 时记 0 */
+export function trackSpeed(tr: PointerTrack, now: number, x: number, y: number): number {
+  const t0 = tr.trail[0];
+  return t0 && now - t0.t > 0.02 ? Math.hypot(x - t0.x, y - t0.y) / (now - t0.t) : 0;
+}
+
+/** 碰臂的状态（纯数据；台架每帧换成 contactStep 的输出，几处重置就地改字段） */
+export interface ContactState {
+  /** 悬停碰着（电极 = touching ∪ held） */
+  touching: boolean;
+  /** 碰到那一刻判的谁碰谁：'arm' = 臂伸过来碰到不动的手（ARM_TOUCH by: 'arm'） */
+  by: 'hand' | 'arm';
+  /** 锚点：碰到那一刻指针的位置（CSS px）；opts.traction 下牵引时跟着指针走 */
+  at: P2;
+  /** 指针进了 touch 圈、且不快的时刻（待够 dwell 才算碰到）；−1 = 不在 */
+  nearSince: number;
+  /** 指针第一次进到 touch 圈里的时刻（不管快慢）；−1 = 不在 */
+  enteredAt: number;
+  /** 按住大触手（手指在臂里；台架 pointerdown 置、抬起清） */
+  held: boolean;
+  /** 按下那一刻的位置（拖开够远 = 抽手） */
+  pressAt: P2;
+}
+
+export function contactIdle(): ContactState {
+  return { touching: false, by: 'hand', at: { x: 0, y: 0 }, nearSince: -1, enteredAt: -1, held: false, pressAt: { x: 0, y: 0 } };
+}
+
+/** 一帧的输入（全部 CSS px / 秒） */
+export interface ContactSample {
+  now: number;
+  /** 指针此刻的位置 */
+  x: number;
+  y: number;
+  /** 指针离大触手脊线（画面上）多远 */
+  d: number;
+  /** 臂梢那一处画面上一毫米几个 CSS px */
+  pxPerMm: number;
+  /** 触屏手指 */
+  finger: boolean;
+  /** 指针速度（trackSpeed） */
+  speed: number;
+  /** 指针最后一次真的挪动的时刻（PointerTrack.lastMoveAt） */
+  lastMoveAt: number;
+  /** 引擎此刻的抓握阶段（缠 / 握着时手没挪开锚点就一直算碰着） */
+  grasp: GraspPhase;
+}
+
+/**
+ * 碰臂（台架 syncHand ③，2026-10-08 原样搬来；台架、vitest 闭环、hand-probe 共用）。阈值按毫米给、换成此刻画面上的像素。
+ *
+ * - 按住大触手再拖开够远（离脊线 > release 且离按下处 > anchor）= 抽手（不必等松开鼠标）。
+ * - 碰到：指针在 touch 以内待够 dwell、且不是飞快划过（≤ maxSpeed）。进圈那一刻指针已经静止了 stillFor 以上
+ *   = 臂伸过来碰到了不动的手（by 'arm'）；进圈时还在动 = 手伸过去碰臂（by 'hand'）。
+ * - 碰着以后：离脊线 > release 才松开；缠 / 握着（WRAP / HOLD_HUMAN / HOLD_OBJECT）的时候臂会动，
+ *   手没挪开（离锚点 anchor 以内）就一直算碰着。
+ * - opts.traction（迎手链 v2 §7.2 第 3 条，台架现在不传）：缠 / 握着时指针慢（≤ tractionSpeed mm/s）且离脊线
+ *   ≤ release，锚点每帧跟到指针——慢慢牵着走不会判松开；离脊线 > release（臂没跟上）锚点冻住，再拉出 anchor 即松开。
+ *
+ * 不传 opts.traction 时逐帧输出与搬之前的台架逐位相同（machine-behavior.test.ts 拿原段落对照）。
+ */
+export function contactStep(
+  prev: ContactState,
+  s: ContactSample,
+  opts: { traction?: boolean } = {},
+): { next: ContactState; th: ContactThresholds } {
+  const th = contactThresholds(s.pxPerMm, s.finger);
+  const n: ContactState = { ...prev };
+  const { now, x, y, d, speed } = s;
+  if (n.held && d > th.releasePx && Math.hypot(x - n.pressAt.x, y - n.pressAt.y) > th.anchorPx) n.held = false;
+  if (!n.touching) {
+    if (d <= th.touchPx) {
+      if (n.enteredAt < 0) n.enteredAt = now;
+    } else n.enteredAt = -1;
+    if (d <= th.touchPx && speed <= th.maxSpeed) {
+      if (n.nearSince < 0) n.nearSince = now;
+      if (now - n.nearSince >= HAND_UI.dwell) {
+        n.touching = true;
+        n.at = { x, y };
+        n.by = n.enteredAt - s.lastMoveAt >= HAND_UI.stillFor ? 'arm' : 'hand';
+      }
+    } else n.nearSince = -1;
+  } else {
+    const gp = s.grasp;
+    const coiled = gp === 'WRAP' || gp === 'HOLD_HUMAN' || gp === 'HOLD_OBJECT';
+    // 牵引：臂跟得上（离脊线 ≤ release）且手慢——锚点跟着指针；臂没跟上时锚点冻住
+    if (opts.traction && coiled && d <= th.releasePx && speed <= HAND_MM.tractionSpeed * s.pxPerMm) n.at = { x, y };
+    const stay = coiled && Math.hypot(x - n.at.x, y - n.at.y) <= th.anchorPx;
+    if (d > th.releasePx && !stay) {
+      n.touching = false;
+      n.nearSince = -1;
+      n.enteredAt = -1;
+    }
+  }
+  return { next: n, th };
 }
