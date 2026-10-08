@@ -370,6 +370,19 @@ describe('动作词汇 v2 · 引擎', () => {
     expect(BehaviorEngine.restore(v1).vocab()).toBe(1);
   });
 
+  it('会话头记动作词汇（只在 v2 时出现）：照会话头回放，日志逐字相同', () => {
+    const inputs: ScheduledInput[] = [
+      { t: 66, input: { kind: 'SHELL_STROKE', half: 'L', touch: 'stroke' } },
+      { t: 74, input: { kind: 'KNOCK', intensity: 0.9 } },
+    ];
+    const a = runSession({ seed: 9, vocab: 2, lifeRate: 10, inputs, until: 110 });
+    expect(a.header.vocab).toBe(2);
+    expect(runSession({ seed: 9, until: 1 }).header).not.toHaveProperty('vocab');
+    const h = a.header;
+    const b = runSession({ seed: h.seed, order: [...h.order], lifeRate: h.lifeRate, vocab: h.vocab ?? 1, inputs, until: 110 });
+    expect(toJsonl(b.log, b.header)).toBe(toJsonl(a.log, a.header));
+  });
+
   it('非确定性：同一次轻抚连发 20 次，动作组合（变体 / 臂 / 触须 / 转身）不止一种', () => {
     for (const k of ['A', 'B', 'C'] as const) {
       const strokes = Array.from({ length: 20 }, (_, i) => ({ t: 64 + i * 12, input: { kind: 'SHELL_STROKE', half: 'L', touch: 'stroke' } as SensorInput }));

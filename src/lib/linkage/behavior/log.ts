@@ -47,6 +47,8 @@ export interface LogHeader {
   hz: number;
   /** 开场时的生命钟倍率；只在 ≠ 1 时出现（实验口径的会话头与 M1 逐字相同） */
   lifeRate?: number;
+  /** 动作词汇：只在研究原型（2）时出现——它的随机数抽法与程序都不同，按会话头回放必须知道（现行会话头逐字不变） */
+  vocab?: 2;
 }
 
 /** 取整到 d 位小数（去掉 -0，免得同一个量序列化出两种写法） */
@@ -81,9 +83,10 @@ export function formatRecord(r: LogRecord): string {
   return JSON.stringify(o);
 }
 
-export function sessionHeader(seed: number, order: readonly PersonaKey[], hz: number, lifeRate = 1): LogHeader {
+export function sessionHeader(seed: number, order: readonly PersonaKey[], hz: number, lifeRate = 1, vocab: 1 | 2 = 1): LogHeader {
   const h: LogHeader = { schema: LOG_SCHEMA, v: LOG_VERSION, seed, order: [...order], hz };
   if (lifeRate !== 1) h.lifeRate = lifeRate;
+  if (vocab === 2) h.vocab = 2;
   return h;
 }
 

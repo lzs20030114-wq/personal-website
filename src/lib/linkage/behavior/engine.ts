@@ -663,7 +663,7 @@ export class BehaviorEngine {
   }
 
   header(): LogHeader {
-    return sessionHeader(this.s.seed, this.s.order, HZ, this.s.lifeRate0);
+    return sessionHeader(this.s.seed, this.s.order, HZ, this.s.lifeRate0, this.vocab());
   }
 
   /**
@@ -1340,7 +1340,8 @@ export class BehaviorEngine {
         else if (variant === 'avoid') turn = 'away';
       }
       if ((turn === 'toward' || turn === 'away') && pd.bearing !== null) yaw = yawTo(turn === 'toward' ? pd.bearing : wrapPi(pd.bearing + Math.PI));
-      motion = `respond.${kind}${directed || variant === 'avoid' ? `.${variant}` : ''}`;
+      // 与 buildResponse 选「躲」的规则一致：没方向的「震 / 声」只有负回应才躲
+      motion = `respond.${kind}${directed ? `.${variant}` : sign < 0 ? '.avoid' : ''}`;
       const c = this.buildCtx(ctx, pd.tau ?? pd.due - pd.at, g);
       const phases = buildResponse(c, { kind, side: pd.side ?? 0, variant, arm, feeler, turn: yaw });
       this.run(motion, t, phases, 'response', 'attend', pd.id);
@@ -2020,13 +2021,16 @@ export class BehaviorEngine {
         // 抓握握着（缠 / 握人 / 握物）时臂归抓握：程序照走，只放它的呼吸 / 声 / 光 / 触须 / 转身提示，不写臂；
         // 松开（RELEASE，惊跳会先叫它）时程序接管臂
         const restPose: Pose = { bend: Math.hypot(bx, by), dir: Math.atan2(by, bx), deep: 0 };
+        const progT0 = m.prog.t0;
         const r = stepProgram(m.prog, t, restPose);
         if (r.phase && m.prog.idx !== m.seen) {
           m.seen = m.prog.idx;
           this.enterPhase(t, r.phase);
         }
         if (r.done) m.prog = null;
-        if (s.grasp.phase === 'IDLE' || s.grasp.phase === 'RELEASE') {
+        // 抓握握着时起的程序（比如触须抖）松手时不接管臂：它的起点是当时的抓握姿态，接管会让臂一帧跳过去；
+        // 惊跳是先叫松开、同一帧起程序（t0 = 松开时刻），照样接管
+        if (s.grasp.phase === 'IDLE' || (s.grasp.phase === 'RELEASE' && progT0 >= s.grasp.t0)) {
           const x = r.pose.bend * Math.cos(r.pose.dir);
           const y = r.pose.bend * Math.sin(r.pose.dir);
           // 走完那一帧不把速度交给跟随器（D 生硬的直线落回带着速度，交过去会冲过静息再弹回来）
