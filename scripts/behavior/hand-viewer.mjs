@@ -135,7 +135,7 @@ for (const sec of D.sections) {
       if (i < r.series.length && keyOf(b) === keyOf(a) && beatOf(b) === beatOf(a)) continue;
       const k = keyOf(a);
       if (k) {
-        const x0 = x(a.t), x1 = x(i < r.series.length ? b.t : a.t + 0.1);
+        const x0 = x(a.t), x1 = x(i < r.series.length ? b.t : r.series[r.series.length - 1].t + 0.1);
         el('rect', { x: x0, y: sy, width: Math.max(1, x1 - x0 - 0.5), height: sh, rx: 2, fill: 'var(--' + k + ')' }, svg);
         if (x1 - x0 > 34) { const tx = el('text', { x: x0 + 3, y: sy + 15, 'font-size': 10, fill: '#fff' }, svg); tx.textContent = beatOf(a) || STAGE_ZH[k]; }
       }
