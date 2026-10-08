@@ -38,7 +38,25 @@ import {
 } from './persona';
 import { type Cues, type Phase as ProgPhase, type Pose, type Program, startProgram, stepProgram, totalDur } from './programs';
 import { type Rng, chance, deriveSeed, makeRng, pick, uniform } from './rng';
-import { type BuildCtx, type RegKind, type RespKind, STARTLE_PRE, type SpontKind, type Variant, V2, buildNotice, buildRegister, buildResponse, buildSettle, buildSpont, buildStartle, dOf, nearestAxisDir } from './vocab2';
+import {
+  type BuildCtx,
+  D_DEEP_SPAN,
+  type RegKind,
+  type RespKind,
+  STARTLE_PRE,
+  type SpontKind,
+  type Variant,
+  V2,
+  buildNotice,
+  buildRegister,
+  buildResponse,
+  buildSettle,
+  buildSpont,
+  buildStartle,
+  dOf,
+  nearestAxisDir,
+  tierSpeed,
+} from './vocab2';
 import {
   type ApproachBeat,
   type ChaseBeat,
@@ -78,6 +96,7 @@ import {
   poseDist,
   reachable,
   squeezePhase,
+  standOf,
   stillOf,
   strainTries,
 } from './vocab2-hand';
@@ -325,6 +344,11 @@ interface Pending {
 interface MotionV2 {
   /** 正在执行的动作程序（programs.ts）；null = 臂交回静息 / 手 / 抓握 */
   prog: Program | null;
+  /**
+   * 这个程序只放提示、不写臂：迎手链投入中起的回应 / 自发，或陪着 / 看着 / 躲时的触须抖。它照走时间线，
+   * 起点却停在开始那一刻——手链一退出投入就接管臂会一帧跳过去，所以它到走完都不写臂（也不暂停手链）
+   */
+  progCue: boolean;
   /** 已经发过入口提示（叹气、转身、短促发声）的段号；−1 = 还没有 */
   seen: number;
   /** 肌腱轴深卷（直接交给执行层） */
@@ -446,6 +470,10 @@ interface HandChain {
   deepUsed: number;
   deepCool: number;
   deepOffAt: number;
+  /** 握持控制器开始那一刻锁定的深卷模式（中途不再进深卷；离开窗口按预算用完处理） */
+  holdDeep: boolean;
+  /** 本阶段（追 / 握）记过绕回没有：只记一条 ORIENT unwind */
+  unwindLogged: boolean;
 }
 
 const idleHand = (): HandChain => ({
@@ -508,6 +536,8 @@ const idleHand = (): HandChain => ({
   deepUsed: 0,
   deepCool: -NEVER,
   deepOffAt: NEVER,
+  holdDeep: false,
+  unwindLogged: false,
 });
 
 /**
@@ -883,6 +913,7 @@ export class BehaviorEngine {
       this.s.v = STATE_VERSION_V2;
       this.s.m2 = {
         prog: null,
+        progCue: false,
         seen: -1,
         deep: 0,
         rate: { x: 1, v: 0 },
@@ -1005,7 +1036,9 @@ export class BehaviorEngine {
   motion(): { name: string; phase: string } | null {
     const m = this.s.m2;
     if (!m) return null;
-    const p = m.prog ?? m.hc.prog;
+    // 只放提示的程序（投入中起的回应 / 自发）不是臂在做的事：报手链的
+    const cueOnly = !!m.prog && m.prog.name !== 'startle' && (m.progCue || ENGAGED.has(m.hc.stage));
+    const p = cueOnly ? (m.hc.prog ?? m.prog) : (m.prog ?? m.hc.prog);
     if (!p) return null;
     const ph = p.phases[p.idx];
     return { name: p.name, phase: ph ? ph.name : '' };
@@ -1527,10 +1560,12 @@ export class BehaviorEngine {
    */
   private writePose(pose: Pose, done: boolean): void {
     const s = this.s;
-    const b = Math.min(1, pose.bend);
+    // 直线插值算出的 1 + 2e-16 不算深缠（没有手的会话要与改动前逐位相同）
+    const flat = pose.bend <= 1 + 1e-9;
+    const b = flat ? pose.bend : 1;
     const x = b * Math.cos(pose.dir);
     const y = b * Math.sin(pose.dir);
-    const w = Math.max(0, pose.bend - 1) * WRAP_PER_BEND;
+    const w = flat ? 0 : (pose.bend - 1) * WRAP_PER_BEND;
     s.armX.v = done ? 0 : (x - s.armX.x) / DT;
     s.armY.v = done ? 0 : (y - s.armY.x) / DT;
     s.wrap.v = done ? 0 : (w - s.wrap.x) / DT;
@@ -1599,6 +1634,7 @@ export class BehaviorEngine {
     const m = s.m2;
     if (!m) return;
     m.prog = startProgram(name, t, phases, this.curPose());
+    m.progCue = name !== 'startle' && ENGAGED.has(m.hc.stage);
     m.seen = -1;
     s.gesture = { kind, action, t0: t, dur: Math.max(DT, totalDur(m.prog)), dir: 0, dir2: 0, bend: 0, feeler: 0, breath: 0, push: 0, to };
   }
@@ -1832,6 +1868,8 @@ export class BehaviorEngine {
       const hh = s.hand;
       const around = action === 'curl' && hh !== null && hh.seen && hh.present && hh.mode === 'toward' ? hh.aimDir : undefined;
       this.run(action, t, buildSpont(this.buildCtx(ctx, 0, 0), action as SpontKind, around), 'spont', action, -1);
+      // 迎手链开着（陪着 / 看着 / 躲 / 投入中）：触须抖只出触须提示，不把臂拉回静息、不打断手链
+      if (action === 'flick' && hst !== 'off') s.m2.progCue = true;
     } else switch (action) {
       case 'sigh':
         s.sighNext = true;
@@ -1884,12 +1922,12 @@ export class BehaviorEngine {
       else if (!hc.ev) hc.ev = { kind, t0: t };
       action = 'fidget';
       this.emit('SPONTANEOUS', { action, kind });
-    } else if (hc.stage === 'avoid' && h && h.present && h.seen && !hc.prog && hc.v < HC.vMove) {
+    } else if (hc.stage === 'avoid' && h && h.present && h.seen && !hc.prog && hc.v < HC.vMove && !this.foreignGrasp()) {
       this.hcSet(t, 'avoid', 'peek');
       this.hcRun(t, 'hand.peek', buildPeek(this.hcCtx(ctx), this.handGeom(h), hc.close, hc.awayDir));
       action = 'peek';
       this.emit('SPONTANEOUS', { action });
-    } else if (hc.stage === 'watch' && this.persona() === 'B' && h && h.present && !hc.prog) {
+    } else if (hc.stage === 'watch' && this.persona() === 'B' && h && h.present && !hc.prog && !this.foreignGrasp()) {
       this.hcRun(t, 'hand.leanIn', buildLeanIn(this.hcCtx(ctx), this.handGeom(h)));
       action = 'lean';
       this.emit('SPONTANEOUS', { action });
@@ -2106,7 +2144,14 @@ export class BehaviorEngine {
       return;
     }
     // 迎：转到让臂线对准手的朝向（臂偏在机身中线右侧）；躲：机身中线背对手（v2：侧身，手留在 ±105°，不背对、不会忘掉手）
-    const want = h.mode === 'toward' ? h.steerFace : hc ? wrapPi(h.steer - hc.side * HC.avoidSide) : wrapPi(h.steer + Math.PI);
+    let want = h.mode === 'toward' ? h.steerFace : hc ? wrapPi(h.steer - hc.side * HC.avoidSide) : wrapPi(h.steer + Math.PI);
+    if (hc && h.mode === 'toward' && h.aimDist < HAND.armL) {
+      // v2：手在臂长以内时不让笔直的臂线穿过手——机身转过去会把直臂整根扫向手，陪着的时候就碰上了。
+      // 从对准的朝向往当前朝向退一个角度，直臂停在手旁边、隔一个停距，之后由臂去弯、去凑
+      const a = Math.asin(Math.min(1, (standOf(this.handGeom(h)) + 20) / Math.max(1e-6, h.aimDist)));
+      const d = wrapPi(h.steerFace - s.yaw.x);
+      want = Math.abs(d) <= a ? s.yaw.x : wrapPi(h.steerFace - Math.sign(d) * a);
+    }
     const off = Math.abs(wrapPi(want - s.yaw.x));
     if (!h.turning) {
       let need: boolean;
@@ -2120,6 +2165,13 @@ export class BehaviorEngine {
         need = h.mode === 'away' ? off > HAND.turnAt : h.aimBend > HAND.reachBend || (off > HAND.turnAt && !reach);
       }
       if (need) h.turning = true;
+    }
+    // v2 迎：转身途中手已经够得着了——停转，剩下的交给臂
+    if (h.turning && hc && h.mode === 'toward' && reachable(h.aimBend, h.aimDist)) {
+      h.turning = false;
+      h.unwind = false;
+      s.yawTarget = s.yawGoal;
+      return;
     }
     if (h.turning && hc && t < hc.turnAt) return;
     if (h.turning) {
@@ -2163,7 +2215,11 @@ export class BehaviorEngine {
       const goal = T - Math.sign(T) * TAU;
       if (!h.unwind) {
         h.unwind = true;
-        this.emit('ORIENT', { mode: 'unwind', to: goal });
+        // 追 / 握着被牵着走：抓握中 stepHand 每帧清掉 unwind，这里每帧都会重判成新的绕回——一个阶段只记一条
+        const hc = s.m2?.hc;
+        const dedupe = !!hc && (hc.stage === 'chase' || hc.stage === 'hold');
+        if (!dedupe || !hc.unwindLogged) this.emit('ORIENT', { mode: 'unwind', to: goal });
+        if (dedupe) hc.unwindLogged = true;
       }
       return goal;
     }
@@ -2251,7 +2307,13 @@ export class BehaviorEngine {
     const s = this.s;
     const h = s.hand;
     if (!h) return;
-    if (s.m2) this.hcReset(s.tick / HZ, 'off');
+    if (s.m2) {
+      const t = s.tick / HZ;
+      // 手链的缠（追途中手丢了）：清手链之前把它的限位提前到 0.5 s 后——清掉以后没人再缩短它，
+      // 会按 hcLost 的兜底时长一直缠下去（真值表照旧：到限位无张力 = 抓空）
+      if (s.grasp.phase === 'WRAP' && this.hcGrasp()) s.grasp.dur = Math.min(s.grasp.dur, t - s.grasp.t0 + 0.5);
+      this.hcReset(t, 'off');
+    }
     if (h.unwind) s.yawTarget = s.yawGoal;
     h.seen = false;
     h.mode = null;
@@ -2278,6 +2340,7 @@ export class BehaviorEngine {
     if (hc.stage !== stage) {
       hc.stage = stage;
       hc.st0 = t;
+      hc.unwindLogged = false;
     }
     hc.beat = beat;
     hc.bt0 = t;
@@ -2307,6 +2370,7 @@ export class BehaviorEngine {
     hc.seatEnd = NEVER;
     hc.searches = 0;
     hc.yawSlow = false;
+    hc.unwindLogged = false;
     this.deepEnd(t);
     this.hcSet(t, to);
   }
@@ -2391,6 +2455,12 @@ export class BehaviorEngine {
     return t >= hc.deepCool && hc.deepUsed < 4 && hc.deepOffAt >= NEVER;
   }
 
+  /** 握着时还在不在深卷窗口里（比进门宽一点：±12°、aimBend ≥ 1.40、≤ 0.98 L——指针抖一像素不该把深卷松掉） */
+  private deepWindow(h: HandMem): boolean {
+    if (!this.s.m2!.deepOk) return false;
+    return Math.abs(wrapPi(h.aimDir)) <= (12 * Math.PI) / 180 && h.aimBend >= 1.4 && h.aimDist <= 0.98 * HAND.armL;
+  }
+
   /** 深卷用完 / 回合结束：开始冷却 45 s */
   private deepEnd(t: number): void {
     const hc = this.s.m2!.hc;
@@ -2419,7 +2489,7 @@ export class BehaviorEngine {
       this.hcBout(ctx);
       this.hcArmRef(h);
       // 看见那一下：先「看」（触须先指过去、吸一口、一声上扬），臂再第一跳（先转方向后伸长）。正在做别的动作就先等它
-      if (!m.prog && h.present) {
+      if (!m.prog && h.present && !this.foreignGrasp()) {
         const ph = buildTake(this.hcCtx(ctx), this.handGeom(h));
         this.hcRun(t, 'hand.take', ph);
         const to = ph.find((p) => p.name === 'firstHop')?.arm;
@@ -2435,7 +2505,7 @@ export class BehaviorEngine {
       hc.relieved = false;
       hc.farSince = NEVER;
       this.avoidRef(h);
-      if (!m.prog) this.hcRun(t, 'hand.shrink', buildShrink(this.hcCtx(ctx), hc.close, hc.awayDir, was !== 'avoid'));
+      if (!m.prog && !this.foreignGrasp()) this.hcRun(t, 'hand.shrink', buildShrink(this.hcCtx(ctx), hc.close, hc.awayDir, was !== 'avoid'));
       return;
     }
     this.hcReset(t, 'off');
@@ -2447,6 +2517,8 @@ export class BehaviorEngine {
     const m = s.m2;
     const h = s.hand;
     if (!m || !h || !h.seen || !h.present || h.mode !== 'toward') return false;
+    // 惊跳正忙（反射 + 凝住 + 恢复的第一段）：照常记正忙、做完再补认，不当场起缠抢走惊跳的臂
+    if (m.prog?.name === 'startle' && s.tick / HZ < m.startleBusy) return false;
     const st = m.hc.stage;
     if (st === 'chase') return s.grasp.phase === 'WRAP';
     if (st === 'wrap' || st === 'hold') return true;
@@ -2636,7 +2708,8 @@ export class BehaviorEngine {
   /** 凑走完没碰到：推两下 → 算一次够不着（泄气）→ 看着 */
   private approachFailed(t: number, ctx: Ctx, h: HandMem): void {
     const hc = this.s.m2!.hc;
-    if (hc.nudges < HC.nudges) {
+    // 深卷的卷已经卷到上限：再推只会被离轴封顶拉回 0.48（读作缩手），直接算一次够不着
+    if (hc.nudges < HC.nudges && hc.beat !== 'curl') {
       hc.nudges++;
       this.hcSet(t, 'approach', 'nudge');
       this.hcRun(t, 'hand.nudge', buildApproachBeat(this.hcCtx(ctx), this.handGeom(h), 'nudge'));
@@ -2682,8 +2755,15 @@ export class BehaviorEngine {
       if (hc.stage !== 'off' || hc.prog) this.hcReset(t, 'off');
       return;
     }
-    // 别的程序（回应 / 注意到 / 看别处 / 自发 / 惊跳）在写臂时，陪着的跳暂停（程序作废，走完从此刻重跳）
-    if (m.prog && !ENGAGED.has(hc.stage)) {
+    // 旧路的抓握在走（不归手链管）：手链不起程序、不写臂。投入中的阶段（找 / 放开……）就地收掉，抓握走完再从此刻重来
+    if (this.foreignGrasp()) {
+      hc.prog = null;
+      if (ENGAGED.has(hc.stage)) this.hcReset(t, seen && h!.mode === 'toward' ? 'track' : 'off');
+      return;
+    }
+    // 别的程序（回应 / 注意到 / 看别处 / 自发 / 惊跳）在写臂时，陪着的跳暂停（程序作废，走完从此刻重跳）。
+    // 只放提示的程序（投入中 / 陪着时起的触须抖、回应）不暂停手链
+    if (m.prog && !m.progCue && !ENGAGED.has(hc.stage)) {
       hc.prog = null;
       return;
     }
@@ -2711,7 +2791,9 @@ export class BehaviorEngine {
       case 'track': {
         if (!h || !gm || h.mode !== 'toward') return;
         if (!h.present) return;
-        // 放开后手不动 / 蹭过去的手停在了臂上：到点再来一次（抓空后每 ⑨ 至多一次）
+        // 放开后手不动 / 蹭过去的手停在了臂上：到点再来一次（抓空后每 ⑨ 至多一次）。没排过的（惊跳、新一世、
+        // 旧路松手以后手一直搭在臂上）从此刻排一次——不然这道门永远打不开
+        if (s.electrode && !grasping && hc.rearmAt >= NEVER) hc.rearmAt = t + HC.rearm;
         if (s.electrode && !grasping && t >= hc.rearmAt && hc.v < HC.vMove && !(hc.emptyLast && hc.rearmed)) {
           hc.rearmAt = NEVER;
           if (hc.emptyLast) hc.rearmed = true;
@@ -2723,7 +2805,8 @@ export class BehaviorEngine {
         const fixating = !hc.prog || (ph !== null && ph !== undefined && ph.name === 'fixate');
         const inFix = !hc.prog ? Infinity : ph && ph.name === 'fixate' ? t - hc.prog.ts : -1;
         const still = t - hc.stillAt;
-        if (fixating && !h.turning && !this.handOnBody(h) && still >= stillOf(hc.tau) && hc.v < HC.vMove) {
+        // 手已经搭在臂上（电极开着）：不凑、不撑——等上面的重新武装再缠
+        if (fixating && !h.turning && !this.handOnBody(h) && !s.electrode && still >= stillOf(hc.tau) && hc.v < HC.vMove) {
           // 平卷够得着就凑；平卷够不着但深卷的几何对（手在臂中段正上方）：抽 ⑤，整道门开了才凑（沉静型永远开不了）
           if (reachable(h.aimBend, h.aimDist) || (this.deepGeom(h, t) && (this.hcGain(ctx), this.deepGate(h, t)))) {
             this.beginApproach(t, ctx, h);
@@ -2949,6 +3032,8 @@ export class BehaviorEngine {
     const m = s.m2!;
     const hc = m.hc;
     const g = s.grasp;
+    // 旧路的抓握：臂交回旧的抓握代码
+    if (this.foreignGrasp()) return false;
     if (hc.prog) {
       const r = stepProgram(hc.prog, t, restPose);
       if (r.phase && hc.prog.idx !== hc.seen) {
@@ -2956,8 +3041,14 @@ export class BehaviorEngine {
         this.enterPhase(t, r.phase);
       }
       if (r.done) hc.prog = null;
-      this.writePose(r.pose, r.done);
-      this.deepBook(t, r.pose);
+      let pose = r.pose;
+      // 深卷预算在程序里用完（缠的贴上 / 收紧不看预算）：带深卷的段同样 1.3 s 平滑松到离轴；松完（冷却中）一律离轴
+      if (pose.deep > 0 && (hc.deepOffAt < NEVER || t < hc.deepCool)) {
+        const u = hc.deepOffAt < NEVER ? smooth((t - hc.deepOffAt) / 1.3) : 1;
+        pose = blendPose(pose, flatH(dOf(pose), pose.dir), u);
+      }
+      this.writePose(pose, r.done);
+      this.deepBook(t, pose);
       return true;
     }
     const h = s.hand;
@@ -2965,8 +3056,11 @@ export class BehaviorEngine {
       if (hc.holdT0 >= NEVER) {
         hc.holdT0 = t;
         hc.holdFrom = this.curPose();
+        // 深卷模式在控制器开始那一刻锁定：中途不再进深卷（冷却到点、手被牵进窗口都不切——那是一帧翻上去的台阶）
+        hc.holdDeep = hc.deepUsed > 0 || (this.deepGate(h, t) && h.aimBend >= 1.45);
       }
-      const deep = hc.deepUsed > 0 || (this.deepGate(h, t) && h.aimBend >= 1.45);
+      // 锁着深卷、手离开了窗口（想要的已经不是深卷）：按预算用完处理，同一条 1.3 s 松开
+      if (hc.holdDeep && hc.deepOffAt >= NEVER && t >= hc.deepCool && !this.deepWindow(h)) hc.deepOffAt = t;
       const ev = hc.ev ? holdEventMm(hc.ev.kind, t - hc.ev.t0, s.period) : 0;
       const T = s.period * (1 - ENGINE.arousal.breath * s.arousal) * 1.15;
       let pose = holdDrive({
@@ -2980,7 +3074,8 @@ export class BehaviorEngine {
         breaths: hc.breaths,
         grip: ctx.grip,
         evMm: ev,
-        deep: deep && hc.deepOffAt >= NEVER,
+        // 松开的混合（下面）要两端不同：松开途中仍按深卷算，混合走完（deepEnd → 冷却）才换成离轴
+        deep: hc.holdDeep && t >= hc.deepCool,
       });
       // 深卷预算用完：1.3 s 内平滑松到 0.48（仍是握着）
       if (hc.deepOffAt < NEVER) {
@@ -3007,7 +3102,7 @@ export class BehaviorEngine {
     if (pose.deep > 0 && dOf(pose) > HC.flatMax) {
       hc.deepUsed += DT;
       if (hc.deepUsed >= 4 && hc.deepOffAt >= NEVER) hc.deepOffAt = t;
-    } else if (hc.deepUsed > 0 && pose.deep <= 0) this.deepEnd(t);
+    } else if (hc.deepUsed > 0 && pose.deep <= 0 && (hc.deepOffAt >= NEVER || t - hc.deepOffAt >= 1.3)) this.deepEnd(t);
   }
 
   /** 此刻的挤压相位 0–1（台架标记圈随它缩放；不在握人时 = null） */
@@ -3031,6 +3126,15 @@ export class BehaviorEngine {
     if (!m || this.s.grasp.catchT === undefined) return null;
     const st = m.hc.stage;
     return st === 'wrap' || st === 'hold' || st === 'chase' ? m.hc : null;
+  }
+
+  /**
+   * 此刻有抓握（缠 / 握人 / 握物），但不是迎手链在管：旧路的抓握（没看见手时碰臂起的缠），或者手链的抓握已经没人管了。
+   * 这时手链不起程序、不写臂——臂归旧的抓握代码（否则台架显示「握着」的同时臂在蹲、扑、推）
+   */
+  private foreignGrasp(): boolean {
+    const ph = this.s.grasp.phase;
+    return ph !== 'IDLE' && ph !== 'RELEASE' && this.hcGrasp() === null;
   }
 
   /** 抓空（真值表 EMPTY）：先按人格做一拍（再抓一下 / 摸一摸 / 慢慢张开 / 生硬落回），放开；搜寻次数照 emptySearches */
@@ -3068,7 +3172,8 @@ export class BehaviorEngine {
       // 衰老过了六成：扑过去换成伸过去送一下（先拿掉花样）
       const fast = t - hc.pullT <= 0.3 && hc.pullV >= HC.chaseFast && this.ageU(ctx) <= 0.6;
       hc.plan = chasePlan(fast);
-      s.grasp = { ...g, phase: 'WRAP', t0: t, dur: 60, from: Math.min(1, cur.bend), catchT: NEVER };
+      // 到限位的兜底：追的拍走完时 chase 分支会把它缩到 +0.5 s；这里只防拍序意外卡住
+      s.grasp = { ...g, phase: 'WRAP', t0: t, dur: HC.chaseCap, from: Math.min(1, cur.bend), catchT: NEVER };
       this.emit('GRASP_START', { chase: true });
       const beat = hc.plan.shift() as ChaseBeat;
       this.hcSet(t, 'chase', beat);
@@ -3356,7 +3461,7 @@ export class BehaviorEngine {
         if (r.done) m.prog = null;
         // 抓握握着时起的程序（比如触须抖）松手时不接管臂：它的起点是当时的抓握姿态，接管会让臂一帧跳过去；
         // 惊跳是先叫松开、同一帧起程序（t0 = 松开时刻），照样接管
-        if ((s.grasp.phase === 'IDLE' || (s.grasp.phase === 'RELEASE' && progT0 >= s.grasp.t0)) && (startle || !engaged)) {
+        if ((s.grasp.phase === 'IDLE' || (s.grasp.phase === 'RELEASE' && progT0 >= s.grasp.t0)) && (startle || (!engaged && !m.progCue))) {
           this.writePose(r.pose, r.done);
           s.tone = ctx.tone;
           return;
@@ -3366,7 +3471,9 @@ export class BehaviorEngine {
         s.tone = ctx.tone;
         return;
       }
-      m.deep = 0;
+      // 臂交回旧的抓握 / 跟随器代码（握物、手链被清掉：死亡、手丢了）：手链留下的深卷沿腱轴限速收回，
+      // 不在交接那一帧清零（三腱会一帧跳 0.1–0.26）。没有手的会话走到这里时深卷恒为 0
+      if (m.deep > 0) m.deep = Math.max(0, m.deep - (tierSpeed('deliberate', Math.sqrt(s.speed), ctx.vigor) / D_DEEP_SPAN) * DT);
     }
     const g = s.grasp;
     // 缠的头四成：弯向追着手转（脱手后再缠 = 伸手去追）；过了就定住，免得甩

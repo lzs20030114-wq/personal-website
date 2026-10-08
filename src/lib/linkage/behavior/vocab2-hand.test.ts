@@ -124,6 +124,8 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
         if (w.p.name === 'pounce') {
           pounces++;
           expect(w.v, name).toBeLessThanOrEqual(tierSpeed('strike', c.k) + 1e-9);
+          // 段首 → 段末的直线行程（落点那 4 mm 也算在内）
+          expect(pathLen(w.from, w.to, 'line'), name).toBeLessThanOrEqual(HC.strikeMax + 1e-9);
           continue;
         }
         if (w.p.name === 'latency') continue;
@@ -148,11 +150,14 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
   });
 
   it('不出臂的通带：摆动 ≤ 0.6 Hz、叠上去不超弯曲上限；一跳一停的周期 ≥ 1.4 s', () => {
-    for (const { name, phases } of allTables()) {
-      for (const p of phases) {
+    for (const { name, c, phases } of allTables()) {
+      for (const w of walk(phases, c)) {
+        const p = w.p;
         if (!p.osc) continue;
         expect(p.osc.hz, name).toBeLessThanOrEqual(ARM_OSC_MAX_HZ);
-        if (p.arm !== 'hold' && p.arm !== 'rest') expect(p.arm.bend + p.osc.amp, name).toBeLessThanOrEqual(1.47 + 1e-9);
+        // 摆动叠在这一段的段末（hold 段 = 上一段的段末）上：离轴摆到波峰也 ≤ 0.48（不被钳位削顶）；带深卷的 ≤ 1.47
+        if (w.to.deep > 0) expect(w.to.bend + p.osc.amp, `${name} · ${p.name}`).toBeLessThanOrEqual(1.47 + 1e-9);
+        else expect(dOf(w.to) + p.osc.amp * D_SPAN, `${name} · ${p.name}`).toBeLessThanOrEqual(HC.flatMax + 1e-9);
       }
     }
     for (const P of ['A', 'B', 'C', 'D'] as PersonaKey[]) {

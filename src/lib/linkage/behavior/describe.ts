@@ -75,7 +75,7 @@ const HAND_LOST: Record<string, Pair> = {
 };
 /** 迎手链（v2）的阶段与拍 */
 const HC_STAGE: Record<string, Pair> = {
-  off: ['手链停下', 'stands down'],
+  off: ['不再跟手', 'stops following'],
   track: ['陪着手', 'keeps pace with the hand'],
   approach: ['凑过去', 'closes in'],
   strain: ['够不着 · 探身', 'stretches for it'],
@@ -103,7 +103,7 @@ const HC_BEAT: Record<string, Pair> = {
   touch: ['慢慢碰', 'touches slowly'],
   curl: ['卷过去', 'curls over'],
   nudge: ['推一下', 'nudges'],
-  balk: ['犹豫', 'hesitates'],
+  balk: ['停住不前', 'stops short'],
   stall: ['愣住', 'stalls'],
   drop: ['撤开', 'pulls away'],
   grab: ['抓住', 'grabs'],
@@ -121,14 +121,17 @@ const HC_BEAT: Record<string, Pair> = {
   open: ['慢慢张开', 'opens slowly'],
   giveUp: ['放弃', 'gives up'],
   cast: ['来回找', 'casts about'],
-  deflate: ['泄气', 'deflates'],
+  deflate: ['垂下来', 'sinks'],
   stretch: ['探身', 'stretches'],
   peek: ['偷看', 'peeks'],
   snap: ['缩回', 'snaps back'],
   cringe: ['一缩', 'cringes'],
   reshrink: ['再收', 'shrinks back'],
-  relief: ['松一口气', 'relaxes'],
+  relief: ['呼一口气', 'exhales'],
 };
+
+/** 守门用（describe.test 逐条查措辞） */
+export const HAND_STAGE_TEXT: { stage: Readonly<Record<string, Pair>>; beat: Readonly<Record<string, Pair>> } = { stage: HC_STAGE, beat: HC_BEAT };
 
 const LOST: Record<string, Pair> = {
   chase: ['脱手 · 追', 'loses grip · chases'],
@@ -202,7 +205,7 @@ function what(r: LogRecord, lang: DescribeLang): string {
     case 'HAND_LOST':
       return pick(HAND_LOST[str(p.reason)] ?? ['手不见了', 'hand lost'], lang);
     case 'HAND_STAGE': {
-      const st = pick(HC_STAGE[str(p.stage)] ?? ['手链', 'hand chain'], lang);
+      const st = pick(HC_STAGE[str(p.stage)] ?? ['手', 'hand'], lang);
       const b = HC_BEAT[str(p.beat)];
       return b ? `${st} · ${pick(b, lang)}` : st;
     }

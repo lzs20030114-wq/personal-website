@@ -28,6 +28,7 @@ import {
   feelerSide,
   followBreath,
   handReading,
+  handSendDue,
   halfTowardPerson,
   hitBand,
   pointerTrack,
@@ -1745,17 +1746,8 @@ export function MachineBench({
       const qz = viewDepthOf(tipW);
       const pxPerMm = (cam.viewScale * (r.width / 700)) / (perspNow ? 1 - qz / 900 : 1);
       const v2 = eng.vocab() === 2;
-      const ang = (a: number, b: number): number => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
-      // ① 手的读数（先于在场：同一帧里引擎先知道手、再收到「走近」）
-      const last = handSent;
-      const moved =
-        !last ||
-        ang(read.bearing, last.bearing) > HAND_UI.dBearing ||
-        ang(read.face, last.face) > HAND_UI.dBearing ||
-        Math.abs(read.dist - last.dist) > HAND_UI.dDist ||
-        Math.abs(read.aimBend - last.aimBend) > HAND_UI.dAimBend ||
-        (read.aimBend > 0.05 && ang(lastAimDir, last.aimDir) > HAND_UI.dAimDir);
-      if (moved && (!last || now - last.at >= HAND_UI.send)) {
+      // ① 手的读数（先于在场：同一帧里引擎先知道手、再收到「走近」）。发不发的规矩在 handSendDue（v2 下指针还在挪也发）
+      if (handSendDue(read, handSent, lastAimDir, now, { v2, lastMoveAt: track.lastMoveAt })) {
         // 日志里不要 17 位小数：角度 / 弯曲到千分之一、距离到毫米（引擎吃的就是日志里那个数，回放逐位一致）
         const r3 = (x: number): number => Math.round(x * 1000) / 1000;
         const send = {

@@ -4,6 +4,18 @@ import type { SensorInput } from './events';
 import type { LogRecord } from './log';
 import { PERSONA_KEYS, type PersonaKey } from './persona';
 import { HC, gainAt } from './vocab2-hand';
+import {
+  ARM_GEOM,
+  type HandSent,
+  HAND_UI,
+  type ViewParams,
+  handReading,
+  handSendDue,
+  projectLogical,
+  sweepFraming,
+  tendonContractions,
+  yawPoint,
+} from '../machine-behavior';
 
 /**
  * 迎手链（动作词汇 v2 + 有手，2026-10-08 第八批）的引擎守门。开环的手（读数不随机身转动重算，闭环见
@@ -35,6 +47,8 @@ class Rig {
   contact = true;
   /** 张力开关跟不跟（关掉 = 抓空） */
   catches = true;
+  /** 每 6 帧自动报一条 HAND（关掉 = 调用方自己报） */
+  autoHand = true;
   t0: number;
   constructor(P: PersonaKey, seed: number, opts: { deepOk?: boolean } = {}) {
     this.e = new BehaviorEngine({ seed, order: order(P), lifeRate: 1, vocab: 2, deepOk: opts.deepOk ?? true });
@@ -58,7 +72,7 @@ class Rig {
   run(sec: number, each?: () => void): void {
     for (let i = 0; i < Math.round(sec * 60); i++) {
       const h = this.hand;
-      if (this.e.ticks % 6 === 0) {
+      if (this.autoHand && this.e.ticks % 6 === 0) {
         if (h) {
           const still = Math.max(0, this.t - this.movedAt);
           this.push({ kind: 'HAND', on: true, ...h, touch: 32, still: Math.min(9.9, Math.round(still * 10) / 10), v: still < 0.3 ? this.v : 0 });
@@ -320,5 +334,273 @@ describe('迎手链：深卷预算与纯数据', () => {
     expect(Math.abs(t - f)).toBeLessThan(1 / 30);
     expect(t).toBeGreaterThan(1);
     expect(OBS.za).toBeCloseTo(0.12, 9);
+  });
+});
+
+/** 三腱指令逐帧变化的最大值（惊跳程序在跑的帧不算：它本来就是一下猛缩） */
+function jumpWatch(r: Rig): { step: () => void; worst: () => { d: number; t: number; at: string } } {
+  let prev: [number, number, number] | null = null;
+  let worst = { d: 0, t: -1, at: '' };
+  return {
+    step: () => {
+      const c = tendonContractions(r.e.targets().arm, { deep: true });
+      const startle = r.e.motion()?.name === 'startle';
+      if (prev && !startle) {
+        const d = Math.max(...c.map((x, i) => Math.abs(x - prev![i])));
+        if (d > worst.d) {
+          const hs = r.e.handStage();
+          worst = { d, t: r.t, at: `${hs?.stage ?? 'off'}.${hs?.beat ?? ''} ${r.e.state.grasp.phase} ${r.e.motion()?.name ?? ''}` };
+        }
+      }
+      prev = c;
+    },
+    worst: () => worst,
+  };
+}
+
+/** 俯视台架（与 MachineBench 的预设同式）：闭环读数——每帧按此刻的偏航重算 */
+const TOP: ViewParams = { ...sweepFraming([1, 0, 0, 0, 1, 0, 0, 0, 1]), m: [1, 0, 0, 0, 1, 0, 0, 0, 1], pan: { x: 0, y: 0 }, persp: 0 };
+type V3 = { x: number; y: number; z: number };
+const segDist3 = (p: V3, a: V3, b: V3): number => {
+  const ab = { x: b.x - a.x, y: b.y - a.y, z: b.z - a.z };
+  const u = Math.max(0, Math.min(1, ((p.x - a.x) * ab.x + (p.y - a.y) * ab.y + (p.z - a.z) * ab.z) / (ab.x ** 2 + ab.y ** 2 + ab.z ** 2)));
+  return Math.hypot(p.x - a.x - u * ab.x, p.y - a.y - u * ab.y, p.z - a.z - u * ab.z);
+};
+/** 臂坐标系里的一点（沿臂 s mm、水平侧偏 lat mm，+ = 左）换成世界点 */
+function armFramePoint(s: number, lat: number): V3 {
+  const B = ARM_GEOM.base;
+  const T = ARM_GEOM.tip;
+  const L = ARM_GEOM.length;
+  const e = { x: (T.x - B.x) / L, y: (T.y - B.y) / L, z: (T.z - B.z) / L };
+  const h = Math.hypot(e.x, e.y);
+  const n = { x: -e.y / h, y: e.x / h };
+  return { x: B.x + e.x * s + n.x * lat, y: B.y + e.y * s + n.y * lat, z: B.z + e.z * s };
+}
+/**
+ * 闭环报手：每帧按此刻偏航重算读数，发不发调台架同一个 handSendDue（v2 下指针还在挪也发）。where(t) = 指针此刻的世界点；
+ * moving(t) = 指针此刻在不在挪、多快（mm/s）
+ */
+function closedLoopHand(r: Rig, where: (t: number) => V3, speed: (t: number) => number): () => void {
+  r.autoHand = false;
+  r.hand = null;
+  let sent: HandSent | null = null;
+  let aimDir = 0;
+  let lastMoveAt = 0;
+  return () => {
+    const t = r.t;
+    const v = speed(t);
+    if (v > 0) lastMoveAt = t;
+    const read = handReading(TOP, projectLogical(TOP, where(t)), r.e.targets().yaw, sent?.bearing);
+    if (read.side >= HAND_UI.sideMin || !sent) aimDir = read.aimDir;
+    if (handSendDue(read, sent, aimDir, t, { v2: true, lastMoveAt })) {
+      const r3 = (x: number): number => Math.round(x * 1000) / 1000;
+      const send = { bearing: r3(read.bearing), dist: Math.round(read.dist), face: r3(read.face), aimDir: r3(aimDir), aimBend: r3(read.aimBend), aimDist: Math.round(read.aimDist) };
+      sent = { ...send, at: t };
+      r.push({ kind: 'HAND', on: true, ...send, touch: 32, still: Math.min(9.9, Math.round((t - lastMoveAt) * 10) / 10), v: Math.round(v) });
+    }
+  };
+}
+
+describe('迎手链：评审第二轮的守门（2026-10-08）', () => {
+  it('旧路抓握（没看见手时碰臂起的缠 / 握）期间看见了手：手链不起程序、不写臂、不凑不撑', () => {
+    let seenDuring = 0;
+    for (const P of ['A', 'C', 'D'] as PersonaKey[]) {
+      for (let seed = 1; seed <= 6; seed++) {
+        const r = new Rig(P, seed);
+        r.contact = false;
+        r.hand = null;
+        r.run(0.5);
+        r.push({ kind: 'ARM_TOUCH', on: true, by: 'hand' });
+        r.touch = true;
+        r.run(4);
+        if (!r.ev('GRASP_START').length) continue;
+        r.hand = { ...NEAR };
+        r.movedAt = r.t;
+        let bad = '';
+        let seen = false;
+        r.run(10, () => {
+          const ph = r.e.state.grasp.phase;
+          if (ph !== 'WRAP' && ph !== 'HOLD_HUMAN' && ph !== 'HOLD_OBJECT') return;
+          if (r.e.state.hand?.seen) seen = true;
+          const mo = r.e.motion();
+          const st = r.e.state.m2!.hc.stage;
+          if (!bad && ((mo && mo.name.startsWith('hand.')) || st === 'approach' || st === 'strain')) bad = `${r.t.toFixed(2)} ${st} ${mo?.name ?? ''}`;
+        });
+        if (seen) seenDuring++;
+        expect(bad, `${P} ${seed}`).toBe('');
+      }
+    }
+    expect(seenDuring).toBeGreaterThan(3);
+  });
+
+  it('追的途中手出了视野、3 s 后丢掉：抓握当即判抓空，不按兜底时长一直缠下去', () => {
+    for (const P of ['A', 'C'] as PersonaKey[]) {
+      const r = new Rig(P, seedFor(P, 'toward'));
+      r.run(20);
+      expect(r.e.state.grasp.phase, P).toBe('HOLD_HUMAN');
+      r.withdraw(600);
+      r.contact = false;
+      r.move({ bearing: 3.0, face: 3.0, dist: 650, aimBend: 1.47, aimDist: 520 }, 600);
+      r.run(12);
+      const lostAt = r.ev('GRASP_LOST')[0].t;
+      expect(r.ev('GRASP_LOST')[0].p?.reaction, P).toBe('chase');
+      const empty = r.ev('GRASP_EMPTY').find((x) => x.t >= lostAt);
+      expect(empty, `${P} ${r.beats().join(' ')}`).toBeDefined();
+      const unseen = r.ev('HAND_LOST').find((x) => x.p?.reason === 'unseen' && x.t >= lostAt);
+      if (unseen && unseen.t <= empty!.t) expect(empty!.t - unseen.t, P).toBeLessThanOrEqual(0.6);
+      expect(empty!.t - lostAt, P).toBeLessThan(6);
+    }
+  });
+
+  it('惊跳以后手一直搭在臂上（电极没断）：照样重新武装、再缠一次（不会永远等不到）', () => {
+    let cases = 0;
+    let regrabs = 0;
+    for (const P of ['A', 'C'] as PersonaKey[]) {
+      for (const from of [1, 100, 200]) {
+        const r = new Rig(P, seedFor(P, 'toward', from));
+        r.run(20);
+        if (r.e.state.grasp.phase !== 'HOLD_HUMAN') continue;
+        r.push({ kind: 'KNOCK', intensity: 0.98 });
+        r.run(1);
+        if (!r.ev('STARTLE').length) continue;
+        const n0 = r.ev('GRASP_START').length;
+        r.run(12);
+        if (r.e.state.hand?.mode !== 'toward') continue;
+        cases++;
+        if (r.ev('GRASP_START').length > n0) regrabs++;
+      }
+    }
+    expect(cases).toBeGreaterThan(0);
+    expect(regrabs).toBe(cases);
+  });
+
+  it('惊跳正忙时手碰臂：记正忙、惊跳做完再补认，不当场起缠抢走惊跳的臂', () => {
+    const r = new Rig('C', seedFor('C', 'toward'));
+    r.contact = false;
+    for (let i = 0; i < 60 && !r.e.state.hand?.seen; i++) r.run(0.1);
+    expect(r.e.state.hand?.seen).toBe(true);
+    r.push({ kind: 'KNOCK', intensity: 0.98 });
+    r.run(0.4);
+    expect(r.ev('STARTLE')).toHaveLength(1);
+    const busyUntil = r.e.state.m2!.startleBusy;
+    r.push({ kind: 'ARM_TOUCH', on: true, by: 'hand' });
+    r.touch = true;
+    r.run(0.1);
+    const touch = r.log.filter((x) => x.ev === 'ARM_TOUCH' && x.p?.on).pop()!;
+    expect(touch.out).toBe('busy');
+    r.run(10);
+    const gs = r.ev('GRASP_START');
+    for (const g of gs) expect(g.t + r.t0).toBeGreaterThanOrEqual(busyUntil - 1e-9);
+  });
+
+  it('投入中起的回应 / 触须抖只放提示：手链退出投入时不接管臂（三腱逐帧 ≤ 0.06）', () => {
+    const far: Hand = { bearing: 0, dist: 700, face: 0.1, aimDir: 0.62, aimBend: 1.47, aimDist: 420 };
+    for (const P of ['A', 'C', 'D'] as PersonaKey[]) {
+      for (const from of [1, 50, 150]) {
+        const r = new Rig(P, seedFor(P, 'toward', from));
+        r.contact = false;
+        r.move(far, 0);
+        const j = jumpWatch(r);
+        let patted = false;
+        r.run(40, () => {
+          j.step();
+          if (!patted && r.e.state.m2!.hc.stage === 'strain') {
+            patted = true;
+            r.push({ kind: 'SHELL_STROKE', half: 'L', touch: 'pat' });
+          }
+        });
+        expect(j.worst().d, `${P} ${from} ${JSON.stringify(j.worst())}`).toBeLessThanOrEqual(0.06);
+      }
+    }
+  });
+
+  it('深卷交接不跳：握着时留物件（握人 → 握物）、深卷途中手离开画布丢掉——三腱逐帧 ≤ 0.06', () => {
+    const deepHand: Hand = { bearing: 0, dist: 480, face: 0.25, aimDir: 0, aimBend: 1.47, aimDist: 250 };
+    let holds = 0;
+    let curls = 0;
+    for (const from of [1, 100, 200, 300]) {
+      const seed = seedFor('A', 'toward', from);
+      // 握人（深卷）→ 留物件
+      const a = new Rig('A', seed);
+      a.move(deepHand, 0);
+      let deepHold = false;
+      a.run(30, () => {
+        if (!deepHold && a.e.state.grasp.phase === 'HOLD_HUMAN' && (a.e.targets().arm.deep ?? 0) > 0.1 && a.t - (a.ev('GRASP_HOLD_HUMAN')[0]?.t ?? 1e9) + a.t0 > 1) deepHold = true;
+      });
+      if (deepHold || (a.e.state.grasp.phase === 'HOLD_HUMAN' && (a.e.targets().arm.deep ?? 0) > 0.1)) {
+        holds++;
+        const j = jumpWatch(a);
+        a.push({ kind: 'ARM_TOUCH', on: false });
+        a.touch = false;
+        a.contact = false;
+        a.hand = null;
+        a.run(4, j.step);
+        expect(a.e.state.grasp.phase).toBe('HOLD_OBJECT');
+        expect(j.worst().d, `hold ${from} ${JSON.stringify(j.worst())}`).toBeLessThanOrEqual(0.06);
+      }
+      // 卷到一半手离开画布 → 3 s 后丢掉 → 手链关
+      const b = new Rig('A', seed);
+      b.move(deepHand, 0);
+      b.contact = false;
+      let cut = false;
+      const j = jumpWatch(b);
+      b.run(30, () => {
+        if (!cut && b.e.handStage()?.beat === 'curl' && (b.e.targets().arm.deep ?? 0) > 0.3) {
+          cut = true;
+          b.hand = null;
+        }
+        if (cut) j.step();
+      });
+      if (cut) {
+        curls++;
+        expect(j.worst().d, `curl ${from} ${JSON.stringify(j.worst())}`).toBeLessThanOrEqual(0.06);
+      }
+    }
+    expect(holds + curls).toBeGreaterThan(1);
+  });
+
+  it('指针 40 mm/s 慢慢挪个不停（台架按 handSendDue 报）：引擎不把它当停稳——不凑、不撑、不缠', () => {
+    for (const P of ['A', 'C'] as PersonaKey[]) {
+      for (const from of [1, 100]) {
+        const r = new Rig(P, seedFor(P, 'toward', from));
+        r.contact = false;
+        const send = closedLoopHand(
+          r,
+          (t) => armFramePoint(150 + 40 * Math.min(t, 4), 150),
+          (t) => (t <= 4 ? 40 : 0),
+        );
+        const stages = new Set<string>();
+        for (let i = 0; i < 4 * 60; i++) {
+          send();
+          r.run(1 / 60);
+          stages.add(r.e.handStage()?.stage ?? 'off');
+        }
+        expect([...stages].filter((x) => x === 'approach' || x === 'strain' || x === 'wrap'), `${P} ${from}`).toEqual([]);
+        expect(r.ev('GRASP_START'), `${P} ${from}`).toHaveLength(0);
+      }
+    }
+  });
+
+  it('手静止放在臂侧、靠近基座（闭环：读数随偏航重算）：迎的转身不把笔直的臂扫到手上', () => {
+    for (const P of ['A', 'C'] as PersonaKey[]) {
+      for (const lat of [150, -150, 180]) {
+        const r = new Rig(P, seedFor(P, 'toward'));
+        r.contact = false;
+        const P0 = armFramePoint(108, lat);
+        const send = closedLoopHand(r, () => P0, () => 0);
+        let minClear = Infinity;
+        let engaged = false;
+        for (let i = 0; i < 6 * 60; i++) {
+          send();
+          r.run(1 / 60);
+          const st = r.e.handStage()?.stage ?? 'off';
+          if (st !== 'off' && st !== 'track') engaged = true;
+          if (engaged) continue;
+          const yaw = r.e.targets().yaw;
+          minClear = Math.min(minClear, segDist3(P0, yawPoint(ARM_GEOM.base, yaw), yawPoint(ARM_GEOM.tip, yaw)));
+        }
+        expect(minClear, `${P} ${lat}`).toBeGreaterThan(60);
+      }
+    }
   });
 });

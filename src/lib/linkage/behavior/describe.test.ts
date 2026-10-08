@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { describeRecord, phaseName } from './describe';
+import { HAND_STAGE_TEXT, describeRecord, phaseName } from './describe';
 import { runSession } from './engine';
 import { ENGINE_EVENTS, OPERATOR_EVENTS, SENSOR_KINDS } from './events';
 import type { Phase } from './life';
 import type { LogRecord } from './log';
 
 const CJK = /[一-鿿]/;
+/** 写行为不写感受（HUD 不替机器宣布情绪）；内部名「手链」不给观众看 */
+const BANNED = /害怕|开心|想要|喜欢|泄气|犹豫|松一口气|手链|afraid|happy|wants|likes|deflates|hesitates|relaxes|hand chain/;
 
 describe('日志 → HUD 一句话', () => {
   it('九类传感、全部引擎事件、两种台架操作都有中英两句，英文里不夹中文、不漏成事件名', () => {
@@ -39,7 +41,15 @@ describe('日志 → HUD 一句话', () => {
         const s = describeRecord(r, lang);
         expect(s.length).toBeGreaterThan(0);
         if (r.src === 'sensor' && r.out && r.out !== 'none') expect(s).toContain('→');
-        expect(s).not.toMatch(/害怕|开心|想要|喜欢|afraid|happy|wants|likes/);
+        expect(s).not.toMatch(BANNED);
+      }
+    }
+    // 迎手链的每个阶段 × 每一拍
+    const base: Omit<LogRecord, 'ev' | 'p'> = { id: 0, t: 1, life: 1, persona: 'C', phase: 'GROW', src: 'engine' };
+    for (const stage of [...Object.keys(HAND_STAGE_TEXT.stage), 'nonexistent']) {
+      for (const beat of ['', ...Object.keys(HAND_STAGE_TEXT.beat)]) {
+        const r: LogRecord = { ...base, ev: 'HAND_STAGE', p: beat ? { stage, beat } : { stage } };
+        for (const lang of ['zh', 'en'] as const) expect(describeRecord(r, lang), `${stage} ${beat}`).not.toMatch(BANNED);
       }
     }
     const stroke = log.find((r) => r.ev === 'SHELL_STROKE');

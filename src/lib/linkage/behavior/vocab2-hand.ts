@@ -21,7 +21,7 @@
  * 人格表 12 个数一个不改，读法均为推断（研究笔记 §9.5）。方向约定同引擎：弯向 0 = 臂梢朝上，左为正。
  */
 import type { PersonaKey } from './persona';
-import type { Cues, FeelerPose, Phase, Pose } from './programs';
+import { type Cues, type FeelerPose, type Phase, type Pose, lerpPoseLine } from './programs';
 import { type BuildCtx, D_DEEP_SPAN, D_SPAN, PEAK, type Tier, V2, anticPose, dOf, govern, pathLen, ph, poseOfD, tierSpeed, unhook } from './vocab2';
 
 const TAU = 2 * Math.PI;
@@ -34,7 +34,10 @@ const lerpAngle = (a: number, b: number, u: number): number => wrapPi(a + wrapPi
 export const HC = {
   /** 臂长（mm，与 engine HAND.armL / 台架 ARM_GEOM.length 同值） */
   armL: 357.5,
-  /** 离轴的差动上限（迎手链比回应多用到 0.48：超过 0.34 的部分走执行层的深缠行程；两腱之间 0.5 起失稳） */
+  /**
+   * 离轴的差动上限（迎手链比回应多用到 0.48：超过 0.34 的部分走执行层的深缠行程）。执行层 dMax 0.5 在验过的范围内，
+   * 实测失稳在两腱之间 0.55；带摆动的段基姿态要让出摆幅，摆到波峰也 ≤ 0.48
+   */
   flatMax: 0.48,
   /** 深卷（只在腱轴 0 上、门全部满足时）的差动上限：主腱约 0.9，不到惊跳的 0.717 那么满 */
   deepMax: 0.62,
@@ -139,6 +142,8 @@ export const HC = {
   chaseNear: 14,
   chaseExtend: 0.8,
   yawLag: 0.3,
+  /** 追的缠到限位的兜底（s）：拍走完时引擎会缩到 +0.5 s，这里只防拍序意外卡住（四拍最慢的 creep 档也远在其下） */
+  chaseCap: 20,
   /** 躲：手留在身侧 ±105°；收的时候身体晚 0.4 s；手挪得 close 变 0.15 或方向变 20° 再收一次 */
   avoidSide: 105 * DEG,
   avoidLag: 0.4,
@@ -394,8 +399,21 @@ export function buildApproachBeat(c: BuildCtx, g: HandGeom, beat: ApproachBeat, 
     case 'cocked':
       return [ph('cocked', HC.cockedMax, 'hold', 'hold', { breath: { rate: 0 }, feel: feel('still'), voice: 'mute', light: 1.15 })];
     case 'pounce': {
-      // 扑：直线落在手上 +4 mm，屏住、不出声（重音在碰到那一刻）。总行程 ≤ 0.22：梢端 ≤ ~230 mm/s，到不了惊跳
-      const to = atMm(g, HC.pounceLand);
+      // 扑：直线落在手上 +4 mm，屏住、不出声（重音在碰到那一刻）。总行程 ≤ 0.22：梢端 ≤ ~230 mm/s，到不了惊跳。
+      // 落点按剩余余量收（pounceFits 的 S 没算落点那 4 mm；余量不够时少落一点，再不够就沿直线截在 0.22）
+      let to = atMm(g, HC.pounceLand);
+      if (pathLen(c.cur, to, 'line') > HC.strikeMax) {
+        let lo = 0;
+        let hi: number = HC.pounceLand;
+        for (let i = 0; i < 12; i++) {
+          const mid = (lo + hi) / 2;
+          if (pathLen(c.cur, atMm(g, mid), 'line') > HC.strikeMax) hi = mid;
+          else lo = mid;
+        }
+        to = atMm(g, lo);
+        const S0 = pathLen(c.cur, to, 'line');
+        if (S0 > HC.strikeMax) to = lerpPoseLine(c.cur, to, HC.strikeMax / S0);
+      }
       const S = pathLen(c.cur, to, 'line');
       const dur = Math.max(0.2, (PEAK.out * S) / tierSpeed('strike', k, c.vigor));
       return [ph('pounce', dur, P === 'D' ? 'lin' : 'out', to, { path: 'line', breath: { rate: 0 }, feel: pointAt(P, { antennate: 0 }), voice: 'mute', light: 1.15 })];
@@ -436,7 +454,8 @@ export function buildApproachBeat(c: BuildCtx, g: HandGeom, beat: ApproachBeat, 
 export function buildStrain(c: BuildCtx, g: HandGeom, tries: number): Phase[] {
   const k = c.k;
   const P = c.persona;
-  const stretch = flatH(Math.min(HC.flatMax, g.Dh), g.dir);
+  // 摆动（撑 ±0.035、再撑 ±0.05）叠在伸长的姿态上：基姿态留出最大摆幅，波峰正好碰到 0.48、不被削顶
+  const stretch = flatH(Math.min(HC.flatMax - 0.05, g.Dh), g.dir);
   const down = wrapPi(g.dir + 0.5 * (Math.sign(wrapPi(Math.PI - g.dir)) || 1));
   const out: Phase[] = [
     ph('gather', 0.3 / k, 'mj', addD(c.cur, -0.04), { breath: { rate: 1, amp: 1.2 }, feel: feel('raise') }),
@@ -634,6 +653,9 @@ export function holdEventDur(kind: string, period: number): number {
       return 1.5;
     case 'palpate':
       return 1.5 * Math.max(0.5, period);
+    case 'freeze':
+      // 屏气定住（沉静型的抓握反射）：不动臂，呼吸停 0.5 s
+      return 0.5;
     default:
       return 0;
   }
@@ -721,9 +743,12 @@ export function buildEmpty(c: BuildCtx, kind: EmptyKind, g: HandGeom | null): Ph
       out.push(ph('regrab', 0.4, 'mj', flatH(Dc + 15 / gainAt(r, Dc), c.cur.dir), { breath: { rate: 1 }, voice: 'huff', feel: feel('point', { antennate: 0.1 }) }));
       break;
     }
-    case 'palpate':
-      out.push(ph('palpate', 2, 'hold', 'hold', { osc: { amp: 0.04 / D_SPAN, hz: 0.5, decay: 0 }, voice: 'query', feel: feel('point', { antennate: 0.2 }) }));
+    case 'palpate': {
+      // 摸一摸叠在此刻的姿态上：离轴时摆幅让到 0.48 以内（深卷姿态的摆动由执行层的深卷窗口兜着）
+      const amp = c.cur.deep > 0 ? 0.04 : Math.min(0.04, Math.max(0, HC.flatMax - dOf(c.cur)));
+      out.push(ph('palpate', 2, 'hold', 'hold', { osc: { amp: amp / D_SPAN, hz: 0.5, decay: 0 }, voice: 'query', feel: feel('point', { antennate: 0.2 }) }));
       break;
+    }
     case 'open':
       out.push(ph('open', 2 / k, 'in', addD(c.cur, -0.4 * dOf(c.cur)), { breath: { rate: 1, sigh: true }, voice: 'mute' }));
       break;
@@ -743,7 +768,8 @@ export function buildSearch(c: BuildCtx, last: { D: number; dir: number }, n: nu
   const out: Phase[] = [];
   for (let i = 0; i < Math.min(3, n); i++) {
     out.push(
-      ph(`cast${i + 1}`, (0.9 + 0.3 * i) / k, 'mj', flatH(last.D + legD[i], last.dir + legA[i]), {
+      // 每一头的探（±0.04）叠在这里：落点让出摆幅
+      ph(`cast${i + 1}`, (0.9 + 0.3 * i) / k, 'mj', flatH(Math.min(HC.flatMax - 0.04, last.D + legD[i]), last.dir + legA[i]), {
         breath: { rate: 1, period: 0.85 },
         feel: feel('free', { antennate: 0.15 }),
         voice: i === 0 ? 'query' : undefined,

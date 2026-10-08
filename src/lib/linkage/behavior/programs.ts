@@ -107,10 +107,12 @@ export const ARM_OSC_MAX_HZ = 0.6;
 
 /**
  * 弯曲量的上限：1 = 只用差动的满幅（0.34）；迎手链（2026-10-08）要把手那一点上的毫米换成差动，离轴最多到 0.48，
- * 超出 1 的部分由执行层的深缠行程给（engine 的 ARM_BEND_MAX，同一个数）。摆动叠上去也只钳到这里——此前的程序
- * 带摆动时弯曲都 ≤ 1，钳位放宽对它们不起作用
+ * 超出 1 的部分由执行层的深缠行程给。1.47（engine 的 ARM_BEND_MAX，同一个数）对应差动 0.4998，只给带深卷的姿态；
+ * 离轴姿态摆动叠上去钳在 POSE_FLAT_MAX（0.48 / 0.34）。此前的程序带摆动时弯曲都 ≤ 1，两道钳位对它们都不起作用
  */
 export const POSE_BEND_MAX = 1.47;
+/** 离轴（不带深卷）姿态的弯曲上限：差动 0.48（与 vocab2-hand 的 HC.flatMax 同值） */
+export const POSE_FLAT_MAX = 0.48 / 0.34;
 
 export function totalDur(p: { phases: readonly Phase[] }): number {
   return p.phases.reduce((s, ph) => s + ph.dur, 0);
@@ -182,7 +184,7 @@ export function stepProgram(p: Program, t: number, rest: Pose): { pose: Pose; ph
     const left = (ph.dur - tau) / fade;
     const win = left >= 1 ? 1 : left <= 0 ? 0 : left * left * (3 - 2 * left);
     const w = win * ph.osc.amp * Math.exp(-ph.osc.decay * tau) * Math.sin(TAU * ph.osc.hz * tau);
-    pose = { ...pose, bend: Math.min(POSE_BEND_MAX, Math.max(0, pose.bend + w)) };
+    pose = { ...pose, bend: Math.min(pose.deep > 0 ? POSE_BEND_MAX : POSE_FLAT_MAX, Math.max(0, pose.bend + w)) };
   }
   p.out = pose;
   return { pose, phase: ph, done: false, tau };

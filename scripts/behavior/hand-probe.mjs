@@ -21,7 +21,7 @@
 // 手 = 画面上的指针（台架同式）：
 //   - 视角：sweepFraming(预设矩阵)（台架行为档取景），画布 712 CSS px 宽（桌面默认画幅），正交。
 //   - 指针移动 = 台架的 pointermove：trackMove（machine-behavior.ts，台架同一份）。
-//   - HAND：台架 syncHand ① 原样——handReading(此刻偏航, 上一个方位)，读数变化超过 HAND_UI 的阈值、且离上次 ≥ 0.1 s 才报；
+//   - HAND：台架 syncHand ① 原样——handReading(此刻偏航, 上一个方位)，发不发调 MB.handSendDue（读数变化过阈值、v2 下指针还在挪，且离上次 ≥ 0.1 s）；
 //     侧偏 < 10 mm 沿用上一个弯向。v2 时多带 touch（有效碰到半径 mm，contactRadiusMm）· still（指针已静止多少秒，≤ 9.9，一位小数）
 //     · v（指针 0.3 s 轨迹速度 mm/s）；v1 一字不带（v1 日志逐字不变）。是否带见 HAND_V2_FIELDS。
 //   - 在场（只 S1p）：台架 syncHand ② 原样（handBandOf 滞回 + 驻留，面板在场 = 没人）。
@@ -130,7 +130,6 @@ const quant = (xs, q) => {
   return s[Math.min(s.length - 1, Math.max(0, Math.round(q * (s.length - 1))))];
 };
 const r3 = (x) => Math.round(x * 1000) / 1000;
-const ang = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
 
 // 3×3（行主序）——与 MachineBench 的 PRESET_VIEWS 逐字相同
 const mul3 = (a, b) => {
@@ -417,15 +416,7 @@ async function job(P, OUT) {
           // ① 手的读数（台架 syncHand ①）
           const rd = MB.handReading(view.v, ptrL, yaw0, handSent?.bearing);
           if (rd.side >= HAND_UI.sideMin || !handSent) lastAimDir = rd.aimDir;
-          const last = handSent;
-          const moved =
-            !last ||
-            ang(rd.bearing, last.bearing) > HAND_UI.dBearing ||
-            ang(rd.face, last.face) > HAND_UI.dBearing ||
-            Math.abs(rd.dist - last.dist) > HAND_UI.dDist ||
-            Math.abs(rd.aimBend - last.aimBend) > HAND_UI.dAimBend ||
-            (rd.aimBend > 0.05 && ang(lastAimDir, last.aimDir) > HAND_UI.dAimDir);
-          if (moved && (!last || t - last.at >= HAND_UI.send)) {
+          if (MB.handSendDue(rd, handSent, lastAimDir, t, { v2: e.vocab() === 2 && V2_FIELDS, lastMoveAt: track.lastMoveAt })) {
             const send = {
               bearing: r3(rd.bearing),
               dist: Math.round(rd.dist),

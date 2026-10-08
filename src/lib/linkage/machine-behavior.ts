@@ -738,6 +738,44 @@ export const HAND_UI = {
   bandDwell: 0.4,
 } as const;
 
+/** 上一条发给引擎的 HAND（台架记着它判下一条发不发） */
+export interface HandSent {
+  bearing: number;
+  dist: number;
+  face: number;
+  aimDir: number;
+  aimBend: number;
+  aimDist: number;
+  /** 发的时刻（秒） */
+  at: number;
+}
+
+/**
+ * 台架这一帧要不要给引擎发一条 HAND（syncHand ①；探针与守门调同一个函数）。读数变化过阈值才发；迎手链 v2 下
+ * 指针还在挪（读数变得慢，比如 40 mm/s 慢慢挪）也发——引擎按上一条 HAND 外推「静止多久」、0.25 s 没有新读数就当
+ * 速度为 0，只看读数变化会让它把一直在动的手当成停稳了，去撑、去凑、去缠。都受 HAND_UI.send 节流；指针停下就不再补发。
+ * aimDir = 这一帧要报的弯向（侧偏太小时沿用上一个）；lastMoveAt = 指针最后挪过（> 3 px）的时刻
+ */
+export function handSendDue(
+  read: Pick<HandReading, 'bearing' | 'face' | 'dist' | 'aimBend'>,
+  last: HandSent | null,
+  aimDir: number,
+  now: number,
+  o: { v2: boolean; lastMoveAt: number },
+): boolean {
+  if (!last) return true;
+  if (now - last.at < HAND_UI.send) return false;
+  const ang = (a: number, b: number): number => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+  return (
+    ang(read.bearing, last.bearing) > HAND_UI.dBearing ||
+    ang(read.face, last.face) > HAND_UI.dBearing ||
+    Math.abs(read.dist - last.dist) > HAND_UI.dDist ||
+    Math.abs(read.aimBend - last.aimBend) > HAND_UI.dAimBend ||
+    (read.aimBend > 0.05 && ang(aimDir, last.aimDir) > HAND_UI.dAimDir) ||
+    (o.v2 && o.lastMoveAt > last.at)
+  );
+}
+
 /**
  * 碰臂的距离阈值按世界毫米给，用的时候换成此刻画面上的像素（画布多宽、哪个视角，碰到的实际距离都一样）。
  * 数值让桌面默认画幅（约 712 px 宽、轴测）下与像素版手感相同；像素再钳一道（HAND_PX：鼠标 8–28 px，手指 20–44 px）。
