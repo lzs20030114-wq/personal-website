@@ -120,7 +120,30 @@ export const ARM_DRIVE = {
   wrapSpan: 0.16,
   dMax: ARM_IDLE.span + 0.16,
   floor: TENTACLE3D.slack / (TENTACLE3D.slack + TENTACLE3D.pullMax) + 0.01,
+  /**
+   * 肌腱轴深卷（动作词汇 v2，2026-10-08 研究原型；轮回机器_触手与转向研究.md §8）：弯向落在某根腱的轴上
+   * （±axisTol 以内，硬窗）时，差动可以超过 dMax，一直到 dDeep——主腱拉满 1.0、两根拮抗腱停在 floor
+   * （2026-10-08 设计探针：轴上主腱 1.0、拮抗 0.283 稳定，梢端离静息约 365 mm）。窗外与两腱之间永远
+   * ≤ dMax（那里 0.55 起失稳）——原型里 12°–20° 的线性过渡从没扫过，已删；动作程序带深卷时弯向一律
+   * 正对腱轴，离开前先在轴上把深卷收回（vocab2.ts 的 unhook）。
+   *
+   * 默认关（tendonContractions 的 opts.deep）：真机的缆与绞盘没验过主腱拉满，关着时 deep 只当普通差动、
+   * 封顶 dMax。台架 Lab 1-6 开着。引擎不给 deep（v1）时两种都与原式逐位相同。
+   */
+  dDeep: 1 - (TENTACLE3D.slack / (TENTACLE3D.slack + TENTACLE3D.pullMax) + 0.01),
+  // deep 从「只用弯曲的满幅」（span）一直加到 dDeep：deep = 1、bend = 1 时差动正好 = dDeep（主腱 1.0、拮抗 floor）。
+  // 动作程序按「D = span·bend + deepSpan·deep」换算（vocab2.ts 的 poseOfD），两边同一个数
+  deepSpan: 1 - (TENTACLE3D.slack / (TENTACLE3D.slack + TENTACLE3D.pullMax) + 0.01) - ARM_IDLE.span,
+  axisTol: (12 * Math.PI) / 180,
 } as const;
+
+/** 弯向离最近一根腱轴（0 / ±120°）的角距（rad）与那根轴的方向 */
+export function nearestAxis(dir: number): { axis: number; off: number } {
+  const step = (2 * Math.PI) / 3;
+  const k = Math.round(dir / step);
+  const axis = k * step;
+  return { axis: wrapPiLocal(axis), off: Math.abs(dir - axis) };
+}
 
 /**
  * 差动 D → 梢端弦角（基座 → 梢端连线偏离笔直臂轴的角，度）。标定各方向平均（新分解下
@@ -186,12 +209,24 @@ export function bendCommandDir(dir: number, d: number): number {
  * 为什么换：原式负份额截零，在两根腱之间（60°）只出一半弯曲——D 0.34 时腱向弦角 28°、
  * 两腱之间 15°；新式各方向 26–29°。要「伸向手」就得各方向一样准。
  */
-export function tendonContractions(arm: ArmCmd): [number, number, number] {
-  const d = Math.min(ARM_DRIVE.dMax, ARM_DRIVE.span * arm.bend + ARM_DRIVE.wrapSpan * (arm.wrap ?? 0));
+export function tendonContractions(arm: ArmCmd, opts: { deep?: boolean } = {}): [number, number, number] {
+  let d = Math.min(ARM_DRIVE.dMax, ARM_DRIVE.span * arm.bend + ARM_DRIVE.wrapSpan * (arm.wrap ?? 0));
+  let axisDir: number | null = null;
+  // 肌腱轴深卷（v2）：给了 deep 时先当普通差动（封顶 dMax）；开着深卷、且弯向在某根腱轴的硬窗里，才放开到 dDeep
+  if (arm.deep !== undefined && arm.deep > 0) {
+    const raw = ARM_DRIVE.span * arm.bend + ARM_DRIVE.wrapSpan * (arm.wrap ?? 0) + ARM_DRIVE.deepSpan * arm.deep;
+    d = Math.min(ARM_DRIVE.dMax, raw);
+    const { axis, off } = nearestAxis(wrapPiLocal(arm.dir));
+    if (opts.deep && off <= ARM_DRIVE.axisTol) {
+      d = Math.min(ARM_DRIVE.dDeep, raw);
+      // 贴轴时直接对准那根腱：弯向补偿的拟合只在 D ≤ 0.45 内成立
+      axisDir = axis;
+    }
+  }
   const base = ARM_IDLE.base * arm.tone;
   const out: [number, number, number] = [base, base, base];
   if (d <= 0) return out;
-  const dir = bendCommandDir(arm.dir, d);
+  const dir = axisDir ?? bendCommandDir(arm.dir, d);
   for (let k = 0; k < 3; k++) out[k] = base + d * (2 / 3) * Math.cos(dir - (2 * Math.PI * k) / 3);
   const lo = Math.min(out[0], out[1], out[2]);
   const floor = Math.min(base, ARM_DRIVE.floor);

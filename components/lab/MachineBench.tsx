@@ -287,6 +287,8 @@ interface BehaviorHud {
   hand: { seen: boolean; mode: HandMode | null; bearing: number; dist: number; touch: boolean; held: boolean } | null;
   /** 此刻视角的水平朝向（世界 x̂ 在屏幕右方向上的分量 m0、m1）：罗盘按它转，左右与画面一致 */
   view: [number, number];
+  /** 研究原型（动作词汇 v2）正在执行的程序 · 段；现行词汇或没有程序 = null */
+  motion: string | null;
 }
 
 /**
@@ -472,6 +474,13 @@ const COPY = {
         'Which persona comes first; the rest follow A → B → C → D in turn. Changing it starts a new session.',
       ] as [string, string],
       restart: '重来',
+      motion: '动作',
+      motionHelp: [
+        '大触手与全身的动作词汇。现行 = 已上线的读法；新 = 2026-10-08 的研究原型（惊跳是 0.1 s 的反射、回应按刺激分动词、自发动作变小变慢、人格差在恢复的结构里），待作者拍板。换了就重开一场。',
+        'The motion vocabulary of the big arm and the body. Current = the live reading; New = the 2026-10-08 research prototype (startle as a 0.1 s reflex, one response verb per stimulus, smaller and slower spontaneous gestures, personas differ in how they recover), pending the author’s decision. Changing it starts a new session.',
+      ] as [string, string],
+      motionOld: '现行',
+      motionNew: '新 · 研究',
       skip: '下一段',
       presence: '在场',
       presenceHelp: [
@@ -564,6 +573,13 @@ const COPY = {
         'Which persona comes first; the rest follow A → B → C → D in turn. Changing it starts a new session.',
       ] as [string, string],
       restart: 'Restart',
+      motion: 'Motion',
+      motionHelp: [
+        '大触手与全身的动作词汇。现行 = 已上线的读法；新 = 2026-10-08 的研究原型（惊跳是 0.1 s 的反射、回应按刺激分动词、自发动作变小变慢、人格差在恢复的结构里），待作者拍板。换了就重开一场。',
+        'The motion vocabulary of the big arm and the body. Current = the live reading; New = the 2026-10-08 research prototype (startle as a 0.1 s reflex, one response verb per stimulus, smaller and slower spontaneous gestures, personas differ in how they recover), pending the author’s decision. Changing it starts a new session.',
+      ] as [string, string],
+      motionOld: 'Current',
+      motionNew: 'New · research',
       skip: 'Next stage',
       presence: 'Presence',
       presenceHelp: [
@@ -654,6 +670,7 @@ export function MachineBench({
     // —— 行为档（Lab 1-6）
     setLifeRate: (r: number) => void;
     restart: (first: PersonaKey) => void;
+    setVocab: (v: 1 | 2) => void;
     skip: () => void;
     presence: (band: PresenceBand, bearing: number) => void;
     touch: (t: 'pat' | 'stroke' | 'poke') => void;
@@ -684,6 +701,7 @@ export function MachineBench({
   // —— 行为档（Lab 1-6）的面板状态；behavior 不开时这些都不出现在界面上
   const [lifeRate, setLifeRate] = useState<number>(LIFE_RATE_DEFAULT);
   const [firstK, setFirstK] = useState<PersonaKey>('A');
+  const [vocab, setVocab] = useState<1 | 2>(1);
   const [band, setBand] = useState<PresenceBand>('gone');
   const [bearingDeg, setBearingDeg] = useState(0);
   const [lifted, setLifted] = useState(false);
@@ -861,6 +879,8 @@ export function MachineBench({
     let hudDirty = false;
     let hudClock = 0;
     let firstNow: PersonaKey = 'A';
+    /** 动作词汇（现行 1 / 研究原型 2）：换了重开一场；交接来的引擎带着它自己的词汇，面板跟着它 */
+    let vocabNow: 1 | 2 = 1;
     let rateNow: number = LIFE_RATE_DEFAULT;
     // 台架记着的「传感事实」：重开一场时原样再告诉新引擎（人还站在那里，机器还被拿着）
     let presenceNow: { band: PresenceBand; bearing: number } = { band: 'gone', bearing: 0 };
@@ -943,7 +963,7 @@ export function MachineBench({
     /** 新开一场：种子每场随机（非确定是论点的一部分），会话头里记着，导出的日志照样可复现 */
     const startEngine = (): void => {
       const seed = (Math.random() * 0x100000000) >>> 0;
-      const eng = new BehaviorEngine({ seed, order: rotateOrder(firstNow), loop: true, lifeRate: rateNow });
+      const eng = new BehaviorEngine({ seed, order: rotateOrder(firstNow), loop: true, lifeRate: rateNow, vocab: vocabNow });
       engine = eng;
       logHeader = eng.header();
       logBuf.length = 0;
@@ -969,6 +989,8 @@ export function MachineBench({
       try {
         const eng = BehaviorEngine.restore(state);
         engine = eng;
+        vocabNow = eng.vocab();
+        setVocab(vocabNow);
         logHeader = eng.header();
         logBuf.length = 0;
         // 倍率落到滑条的某一档（本来就在档上时 setLifeRate 直接返回，不记操作日志）
@@ -1376,7 +1398,8 @@ export function MachineBench({
       // 呼吸 → 曲柄：限速追，每子步 ≤1°（machine-behavior.ts 的 §6.2 实测）
       followBreath(machine, tg.breath.s, dt);
       // 臂：抽象指令 → 三腱目标，之后照旧走肌肉的临界阻尼限速
-      const c = tendonContractions(tg.arm);
+      // 台架开着肌腱轴深卷（研究原型的惊跳会用到；现行词汇不给 deep，这一项对它不起作用）
+      const c = tendonContractions(tg.arm, { deep: true });
       for (let k = 0; k < 3; k++) muscles[k].target = c[k];
       yawNow = tg.yaw;
       // 抓握演示的张力开关：手在臂上（悬停碰着或按着）、缠到六成 → 卡住；臂一松（惊跳 / 死亡 / 放弃）→ 东西掉出来
@@ -1393,7 +1416,9 @@ export function MachineBench({
         hudDirty = false;
         hudClock = 0;
         const st = eng.status();
+        const mo = eng.motion();
         setBhud({
+          motion: mo ? `${mo.name} · ${mo.phase}` : null,
           life: st.life,
           persona: st.persona,
           phase: st.phase,
@@ -1586,6 +1611,10 @@ export function MachineBench({
       },
       restart: (first) => {
         firstNow = first;
+        if (engine) startEngine();
+      },
+      setVocab: (v) => {
+        vocabNow = v;
         if (engine) startEngine();
       },
       skip: () => engine?.skip(),
@@ -2345,6 +2374,24 @@ export function MachineBench({
         </button>
       </div>
       <div className="grp grp--seg">
+        <LabControlLabel help={B.motionHelp} lang={lang}>{B.motion}</LabControlLabel>
+        <span className="seg">
+          {([1, 2] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              className={v === vocab ? 'active' : undefined}
+              onClick={() => {
+                setVocab(v);
+                apiRef.current?.setVocab(v);
+              }}
+            >
+              {v === 1 ? B.motionOld : B.motionNew}
+            </button>
+          ))}
+        </span>
+      </div>
+      <div className="grp grp--seg">
         <LabControlLabel help={B.presenceHelp} lang={lang}>{B.presence}</LabControlLabel>
         <span className="seg">
           {BANDS.map((b) => (
@@ -2579,6 +2626,11 @@ export function MachineBench({
                 <div className="dim">
                   {B.arousal} {bhud.arousal.toFixed(2)} · {B.sound} {bhud.soundOn ? `● ${Math.round(bhud.soundF)} Hz` : '○'} · {B.light}{' '}
                   {lightBar(bhud.light)}
+                </div>
+              ) : null}
+              {bhud?.motion ? (
+                <div className="dim">
+                  {B.motion} {bhud.motion}
                 </div>
               ) : null}
               <div className="dim">{B.caveat}</div>

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { D_DEEP_SPAN, D_SPAN } from './behavior/vocab2';
 import { ARM_BEND_MAX, HZ, runSession, type ScheduledInput } from './behavior/engine';
 import type { PersonaKey } from './behavior/persona';
 import { PERSONA_KEYS } from './behavior/persona';
@@ -280,6 +281,35 @@ describe('臂与触须', () => {
     const limp = tendonContractions({ tone: 0, bend: 0.5, dir: 0 });
     expect(Math.min(...limp)).toBeCloseTo(0, 12);
     expect(ARM_DRIVE.dMax / ARM_DRIVE.span).toBeCloseTo(ARM_BEND_MAX, 2);
+  });
+
+  it('肌腱轴深卷（动作词汇 v2，默认关）：不给 deep 时开不开逐位相同；关着时 deep 只当普通差动、封顶 dMax；开着且正对腱轴（±12° 硬窗）主腱拉满、拮抗停在 floor；窗外照旧封顶', () => {
+    for (let deg = -180; deg < 180; deg += 7) {
+      const dir = (deg * Math.PI) / 180;
+      for (const bend of [0, 0.4, 1]) {
+        const arm = { tone: 1, bend, dir, wrap: 0.5 };
+        expect(tendonContractions(arm, { deep: true })).toEqual(tendonContractions(arm));
+        // 关着：deep 1 也只到 dMax
+        const off = tendonContractions({ ...arm, deep: 1 });
+        expect(Math.max(...off) - Math.min(...off)).toBeLessThanOrEqual((2 / Math.sqrt(3)) * ARM_DRIVE.dMax + 1e-9);
+      }
+    }
+    const AX = (2 * Math.PI) / 3;
+    for (const axis of [0, AX, -AX]) {
+      for (const off of [0, 11.9, -11.9]) {
+        const c = tendonContractions({ tone: 1, bend: 1, dir: axis + (off * Math.PI) / 180, deep: 1 }, { deep: true });
+        expect(Math.max(...c)).toBeCloseTo(1, 9);
+        expect(Math.min(...c)).toBeCloseTo(ARM_DRIVE.floor, 9);
+      }
+      // 窗外 12.1°：退回 dMax 封顶
+      const out = tendonContractions({ tone: 1, bend: 1, dir: axis + (12.1 * Math.PI) / 180, deep: 1 }, { deep: true });
+      expect(Math.max(...out) - Math.min(...out)).toBeLessThanOrEqual((2 / Math.sqrt(3)) * ARM_DRIVE.dMax + 1e-9);
+    }
+    expect(ARM_DRIVE.dDeep).toBeCloseTo(1 - ARM_DRIVE.floor, 12);
+    // 动作程序（vocab2.ts）按同一个跨度把差动 D 换成 bend + deep：两边不一致 = 惊跳根本到不了设计的深度
+    expect(D_SPAN).toBe(ARM_DRIVE.span);
+    expect(D_DEEP_SPAN).toBeCloseTo(ARM_DRIVE.deepSpan, 4);
+    expect(ARM_DRIVE.span + ARM_DRIVE.deepSpan).toBeCloseTo(ARM_DRIVE.dDeep, 12);
   });
 
   it('弯向补偿：三次迭代后「指令 + 偏差 ≈ 目标」（残差 < 1.2°）；朝上补得少、朝下补得多；差动为 0 不补', () => {
