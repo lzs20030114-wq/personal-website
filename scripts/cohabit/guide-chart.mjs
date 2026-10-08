@@ -1,14 +1,19 @@
 // 引导方式研究的图（guide-study.mjs 的 JSON → SVG）：每个方案一行，共温秒数 / 共触秒数两格，
 // 三档空间各一条（会动 = 站内绿，基准 = 灰），条 = 种子均值、须 = ±1 SD、点 = 单个种子；
 // 右侧标「会动 vs 钉死」「会动 vs 空房间」的置换检验星号与效应量 d（星号：*** p<.001 · ** <.01 · * <.05）。
-// 用法：node scripts/cohabit/guide-chart.mjs out.svg a.json [b.json …]（多个 JSON 的方案按给定顺序拼起来）
+// 用法：node scripts/cohabit/guide-chart.mjs out.svg a.json [b.json …] [--only=方案名,…]（多个 JSON 的方案按给定顺序拼起来；
+//   场景（人数 / 猫数）不止一种时每行开头标场景）
 import { readFileSync, writeFileSync } from 'node:fs';
 import { stars } from './stats.mjs';
 
-const [outPath, ...inPaths] = process.argv.slice(2);
-if (!outPath || !inPaths.length) throw new Error('用法：node scripts/cohabit/guide-chart.mjs out.svg a.json [b.json …]');
+const argv = process.argv.slice(2);
+const onlyArg = argv.find((a) => a.startsWith('--only='));
+const only = onlyArg ? onlyArg.slice(7).split(',') : null;
+const [outPath, ...inPaths] = argv.filter((a) => !a.startsWith('--'));
+if (!outPath || !inPaths.length) throw new Error('用法：node scripts/cohabit/guide-chart.mjs out.svg a.json [b.json …] [--only=方案名,…]');
 const docs = inPaths.map((p) => JSON.parse(readFileSync(p, 'utf8')));
-const configs = docs.flatMap((d) => d.configs);
+const multi = new Set(docs.map((d) => `${d.people}/${d.cats}`)).size > 1;
+const configs = docs.flatMap((d) => d.configs.filter((c) => !only || only.includes(c.name)).map((c) => ({ ...c, scen: `${d.people} 人 ${d.cats} 猫` })));
 const meta = docs[0];
 
 function oklch(L, C, h) {
@@ -27,7 +32,7 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 const FONT = `font-family="Archivo, 'PingFang SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif"`;
 const LEFT = 32, TOP = 96, ROWH = 112, TITLEW = 210, PW = 300, STATW = 210, GAP = 24;
 const W = LEFT * 2 + TITLEW + MET.length * (PW + STATW + GAP);
-const H = TOP + configs.length * ROWH + 70;
+const H = TOP + configs.length * ROWH + 90;
 // 每个读数一把共用的尺子（不同方案之间可比）
 const xmax = Object.fromEntries(MET.map(([k]) => {
   const all = configs.flatMap((c) => SP.flatMap(([sp]) => [...c.metrics[k].v[sp], c.metrics[k].mean[sp] + c.metrics[k].sd[sp]]));
@@ -37,7 +42,7 @@ const xmax = Object.fromEntries(MET.map(([k]) => {
 }));
 const out = [];
 out.push(`<text x="${LEFT}" y="38" font-size="18" font-weight="600" fill="${C.ink}">引导方式研究 · 人猫同台（Lab 2-14 · 座位三态）</text>`);
-out.push(`<text x="${LEFT}" y="60" font-size="12" fill="${C.graphite}">${esc(`${meta.seconds} s 一场 · ${meta.seeds} 个种子 · ${meta.people} 名访客 ${meta.cats} 只猫 · 8×8 · 按带让路 · 条 = 均值，须 = ±1 SD，点 = 单个种子 · 星号 = 会动的单元对该基准的双侧置换检验`)}</text>`);
+out.push(`<text x="${LEFT}" y="60" font-size="12" fill="${C.graphite}">${esc(`${meta.seconds} s 一场 · ${meta.seeds} 个种子 · ${multi ? '' : `${meta.people} 名访客 ${meta.cats} 只猫 · `}8×8 · 按带让路 · 条 = 均值，须 = ±1 SD，点 = 单个种子 · 星号 = 会动的单元对该基准的双侧置换检验`)}</text>`);
 MET.forEach(([k, title, note], mi) => {
   const ox = LEFT + TITLEW + mi * (PW + STATW + GAP);
   out.push(`<text x="${ox}" y="${TOP - 18}" font-size="14" font-weight="600" fill="${C.ink}">${esc(title)}<tspan font-size="11" font-weight="400" fill="${C.graphite}">　${esc(note)}</tspan></text>`);
@@ -45,7 +50,7 @@ MET.forEach(([k, title, note], mi) => {
 configs.forEach((c, ci) => {
   const oy = TOP + ci * ROWH;
   out.push(`<line x1="${LEFT}" y1="${oy - 6}" x2="${W - LEFT}" y2="${oy - 6}" stroke="${C.hairline}"/>`);
-  const words = c.zh.split(' · ');
+  const words = multi ? [c.scen, ...c.zh.split(' · ')] : c.zh.split(' · ');
   words.forEach((w, i) => out.push(`<text x="${LEFT}" y="${oy + 16 + i * 16}" font-size="${i ? 11 : 12}" ${i ? '' : 'font-weight="600"'} fill="${i ? C.graphite : C.ink}">${esc(w)}</text>`));
   MET.forEach(([k], mi) => {
     const ox = LEFT + TITLEW + mi * (PW + STATW + GAP);
@@ -66,6 +71,16 @@ configs.forEach((c, ci) => {
     out.push(`<text x="${ox + PW + 44}" y="${oy + 52}" font-size="11" fill="${C.ink}">${esc(t(m.vsEmpty, '对空房间'))}</text>`);
   });
 });
-out.push(`<text x="${LEFT}" y="${H - 34}" font-size="11" fill="${C.graphite}">${esc('阈值与秒数常量：猫按 Mertens & Turner 1988 标定（单人单猫场景，标定不是验证），其余多为演示值；「开阔处代价」没有实测数，只做敏感性。这张图只说在这套规则下的差别。')}</text>`);
+const foot = configs.some((c) => c.social)
+  ? '猫按 Mertens & Turner 1988 标定（单人单猫场景，标定不是验证）；访客有身体、约七成结伴（社会层）；三档的猫都能下地，上台偏好按 Hirsch 等 2025 的方向标定（台上 ≈ 49%），人多更想上台的力度没有实测数（flat / mid / steep 三档）。这张图只说在这套规则下的差别。'
+  : '阈值与秒数常量：猫按 Mertens & Turner 1988 标定（单人单猫场景，标定不是验证），其余多为演示值；「开阔处代价」没有实测数，只做敏感性。这张图只说在这套规则下的差别。';
+// 脚注按「；」折行（一行约 80 字），图高已为三行留了地方
+const lines = foot.split('；').reduce((acc, part, i, arr) => {
+  const seg = part + (i < arr.length - 1 ? '；' : '');
+  if (acc.length && (acc[acc.length - 1] + seg).length <= 80) acc[acc.length - 1] += seg;
+  else acc.push(seg);
+  return acc;
+}, []);
+lines.forEach((ln, i) => out.push(`<text x="${LEFT}" y="${H - 50 + i * 16}" font-size="11" fill="${C.graphite}">${esc(ln)}</text>`));
 writeFileSync(outPath, `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" ${FONT}><rect width="${W}" height="${H}" fill="${C.paper}"/>${out.join('\n')}</svg>\n`);
 console.log(`图 → ${outPath}（${W}×${H}）`);
