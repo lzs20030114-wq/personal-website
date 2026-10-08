@@ -21,6 +21,7 @@ import {
   HAND_UI,
   type ViewParams,
   contactIdle,
+  contactRadiusMm,
   contactStep,
   cssToLogical,
   feelerAngle,
@@ -932,7 +933,8 @@ export function MachineBench({
     /** 新开一场：种子每场随机（非确定是论点的一部分），会话头里记着，导出的日志照样可复现 */
     const startEngine = (): void => {
       const seed = (Math.random() * 0x100000000) >>> 0;
-      const eng = new BehaviorEngine({ seed, order: rotateOrder(firstNow), loop: true, lifeRate: rateNow, vocab: vocabNow });
+      // 台架开着肌腱轴深卷（tendonContractions 的 deep），迎手链 v2 的深卷门要知道这一点（每轮 ≤ 4 s、冷却 45 s）
+      const eng = new BehaviorEngine({ seed, order: rotateOrder(firstNow), loop: true, lifeRate: rateNow, vocab: vocabNow, deepOk: vocabNow === 2 });
       engine = eng;
       logHeader = eng.header();
       logBuf.length = 0;
@@ -1373,7 +1375,9 @@ export function MachineBench({
       yawNow = tg.yaw;
       // 抓握演示的张力开关：手在臂上（悬停碰着或按着）、缠到六成 → 卡住；臂一松（惊跳 / 死亡 / 放弃）→ 东西掉出来
       const gr = eng.state.grasp;
-      if (electrodeSent && !tensionOn && gr.phase === 'WRAP' && (eng.time - gr.t0) / gr.dur >= CATCH_AT) {
+      // 迎手链 v2 的缠写 catchT（贴上做完、臂停稳的那一刻）：手指在那一刻之后才算被卡住；现行照旧缠到六成
+      const caught = gr.catchT !== undefined ? eng.time >= gr.catchT : (eng.time - gr.t0) / gr.dur >= CATCH_AT;
+      if (electrodeSent && !tensionOn && gr.phase === 'WRAP' && caught) {
         tensionOn = true;
         eng.push({ kind: 'RESISTANCE', on: true });
       } else if (tensionOn && (gr.phase === 'RELEASE' || gr.phase === 'IDLE')) {
@@ -1735,6 +1739,12 @@ export function MachineBench({
       const read = handReading(viewParams(), cssToLogical(px, py, r.width, r.height), yawNow, handSent?.bearing);
       if (read.side >= HAND_UI.sideMin || !handSent) lastAimDir = read.aimDir;
       const now = performance.now() / 1000;
+      trackTrim(track, now);
+      // 臂梢那一处画面上一毫米几个 CSS px（碰臂阈值与迎手链 v2 的读数都按它换算）
+      const tipW = yawPoint(ARM_GEOM.tip, yawNow);
+      const qz = viewDepthOf(tipW);
+      const pxPerMm = (cam.viewScale * (r.width / 700)) / (perspNow ? 1 - qz / 900 : 1);
+      const v2 = eng.vocab() === 2;
       const ang = (a: number, b: number): number => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
       // ① 手的读数（先于在场：同一帧里引擎先知道手、再收到「走近」）
       const last = handSent;
@@ -1757,7 +1767,15 @@ export function MachineBench({
           aimDist: Math.round(read.aimDist),
         };
         handSent = { ...send, at: now };
-        eng.push({ kind: 'HAND', on: true, ...send });
+        // 迎手链 v2 还要三样（现行不带，日志一字不变）：此刻的有效碰到半径 mm（引擎按它留停距）、指针已静止多久、指针速度 mm/s
+        const extra = v2
+          ? {
+              touch: Math.round(contactRadiusMm(pxPerMm, p0.touch)),
+              still: Math.min(9.9, Math.round((now - track.lastMoveAt) * 10) / 10),
+              v: Math.round(trackSpeed(track, now, px, py) / pxPerMm),
+            }
+          : {};
+        eng.push({ kind: 'HAND', on: true, ...send, ...extra });
       }
       // 暂停时只报手的读数（收件箱里连着的 HAND 只留一条）；在场与碰臂的跳变不报——否则继续时一步里涌进一串
       if (!running) return;
@@ -1781,14 +1799,11 @@ export function MachineBench({
       // ③ 碰臂。阈值按毫米给、换成此刻画面上的像素（画布多宽、哪个视角，碰到的实际距离都一样）。
       //    相机刚动过、触手藏着 / 还没载入：接触状态先冻住。判定本身在 machine-behavior.ts 的 contactStep
       //    （按住拖开 = 抽手；待够 dwell、不是飞快划过才算碰到；by 分谁碰谁；缠 / 握着时手没挪开锚点就一直算碰着）
-      trackTrim(track, now);
       if (camMoved || !showNow.tentacle || !armReady) {
         syncContact();
         return;
       }
-      const tipW = yawPoint(ARM_GEOM.tip, yawNow);
-      const qz = viewDepthOf(tipW);
-      const pxPerMm = (cam.viewScale * (r.width / 700)) / (perspNow ? 1 - qz / 900 : 1);
+      // 迎手链 v2：缠 / 握着时慢慢挪手 = 被牵着走，锚点跟着指针（不判松开）
       contact = contactStep(contact, {
         now,
         x: px,
@@ -1799,7 +1814,7 @@ export function MachineBench({
         speed: trackSpeed(track, now, px, py),
         lastMoveAt: track.lastMoveAt,
         grasp: eng.state.grasp.phase,
-      }).next;
+      }, { traction: v2 }).next;
       syncContact();
     };
 
@@ -1830,7 +1845,10 @@ export function MachineBench({
       // 圈的定位块是 .lab-fig，画布在 /lab 上比它窄、居中：加上画布在它里面的偏移
       const ox = x + canvas.offsetLeft;
       const oy = y + canvas.offsetTop;
-      el.style.transform = `translate(${ox.toFixed(1)}px, ${oy.toFixed(1)}px)`;
+      // 迎手链 v2 握着手时：圈随挤压一紧一松（±12%）——网页的手没有身体，「被握着」靠标记读出来
+      const sq = tensionOn && electrodeSent ? engine?.handSqueeze() ?? null : null;
+      const sc = sq === null ? '' : ` scale(${(1 - 0.12 * (2 * sq - 1)).toFixed(3)})`;
+      el.style.transform = `translate(${ox.toFixed(1)}px, ${oy.toFixed(1)}px)${sc}`;
       const h = engine?.state.hand;
       const mode = h && h.seen && h.mode ? h.mode : 'unseen';
       if (el.dataset.mode !== mode) el.dataset.mode = mode;
