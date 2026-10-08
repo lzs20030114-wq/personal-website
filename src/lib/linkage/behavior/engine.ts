@@ -36,9 +36,51 @@ import {
   isPersonaOrder,
   sampleRange,
 } from './persona';
-import { type Phase as ProgPhase, type Pose, type Program, startProgram, stepProgram, totalDur } from './programs';
+import { type Cues, type Phase as ProgPhase, type Pose, type Program, startProgram, stepProgram, totalDur } from './programs';
 import { type Rng, chance, deriveSeed, makeRng, pick, uniform } from './rng';
-import { type BuildCtx, type RegKind, type RespKind, STARTLE_PRE, type SpontKind, type Variant, V2, buildNotice, buildRegister, buildResponse, buildSettle, buildSpont, buildStartle, nearestAxisDir } from './vocab2';
+import { type BuildCtx, type RegKind, type RespKind, STARTLE_PRE, type SpontKind, type Variant, V2, buildNotice, buildRegister, buildResponse, buildSettle, buildSpont, buildStartle, dOf, nearestAxisDir } from './vocab2';
+import {
+  type ApproachBeat,
+  type ChaseBeat,
+  type EmptyKind,
+  HC,
+  type HandGeom,
+  approachPlan,
+  avoidPose,
+  buildApproachBeat,
+  buildChaseBeat,
+  buildCringe,
+  buildEmpty,
+  buildGiveUp,
+  buildHop,
+  buildLeanIn,
+  buildPeek,
+  buildRecoil,
+  buildRelief,
+  buildSearch,
+  buildShrink,
+  buildSnap,
+  buildStrain,
+  buildTake,
+  buildWrap,
+  chasePlan,
+  cinchCount,
+  dwellOf,
+  epsOf,
+  flatH,
+  gainAt,
+  holdCue,
+  holdDrive,
+  holdEventDur,
+  holdEventMm,
+  hopTarget,
+  hoverMinOf,
+  poseDist,
+  reachable,
+  squeezePhase,
+  stillOf,
+  strainTries,
+} from './vocab2-hand';
 
 /** 定步频率 */
 export const HZ = 60;
@@ -304,6 +346,194 @@ interface MotionV2 {
   startles: number[];
   /** 惊跳「正忙」到何时：反射 + 凝住 + 恢复的第一段；之后的恢复里再超阈值 = 再缩一次，低于阈值 = 正忙 */
   startleBusy: number;
+  /** 迎手链（2026-10-08 第八批，vocab2-hand.ts）：看见手以后的跟 · 凑 · 缠 · 握 · 脱手 · 躲。没有手时恒为 off */
+  hc: HandChain;
+  /** 臂余振观测器：差动平面 X / Y 各 [肌肉, 肌肉速度, 臂, 臂速度]，从自己的指令历史开环预测梢端停没停（固件同样能算） */
+  obs: number[];
+  /** 表情子流：只用于「怎么演」的抽样（τ、不稳定型的随机小动作），决策类抽样仍走主流——调表不改决策日志 */
+  xr: Rng;
+  /** 执行层放不放开肌腱轴深卷（台架 Lab 1-6 = true，与 tendonContractions(deep) 同口径；固件默认 false） */
+  deepOk: boolean;
+}
+
+/** 迎手链的阶段 */
+export type HcStage = 'off' | 'track' | 'approach' | 'strain' | 'watch' | 'wrap' | 'hold' | 'chase' | 'release' | 'avoid' | 'search';
+/** 「投入中」：⑨ 顺延、自发动作只剩触须抖 / 叹气、别的回应只出提示不抢臂 */
+const ENGAGED: ReadonlySet<HcStage> = new Set<HcStage>(['approach', 'strain', 'wrap', 'hold', 'chase', 'release', 'search']);
+
+/** 迎手链的状态（纯数据；所有时刻是仿真秒，「永不」= NEVER） */
+interface HandChain {
+  stage: HcStage;
+  /** 本阶段 / 本拍开始的时刻与拍名 */
+  st0: number;
+  beat: string;
+  bt0: number;
+  /** 凑 / 追里还没做的拍 */
+  plan: string[];
+  /** 手链自己的臂程序（与 m2.prog 分槽）与已发过入口提示的段号 */
+  prog: Program | null;
+  seen: number;
+  /** 本回合抽到的 ④（表情子流）：take、停半拍、定住感觉等的长短 */
+  tau: number;
+  /** HAND 的 v2 字段：有效碰到半径 mm、指针开始静止的时刻、指针速度 mm/s 与最近一次读数的时刻 */
+  touch: number;
+  stillAt: number;
+  v: number;
+  vAt: number;
+  /** 脱手前指针速度的近期峰值（0.3 s 内）与它的时刻 */
+  pullV: number;
+  pullT: number;
+  /** 这一跳的目标（差动平面）：新目标离它超过 jump = 手猛挪，不等停稳就重跳 */
+  tgtX: number;
+  tgtY: number;
+  /** 读数在差动平面上的位置、时刻与速度估计（活力型冲在手前面用） */
+  ax: number;
+  ay: number;
+  at: number;
+  vx: number;
+  vy: number;
+  /** 读数一步跳太大（被抽走）的时刻：握着时这一下不跟；手往外走的时刻 */
+  jumpAt: number;
+  outAt: number;
+  /** 本回合的 ⑤（抽过没有 / 值） */
+  gDrawn: boolean;
+  g: number;
+  /** 推过几下 */
+  nudges: number;
+  /** 贴上那一段结束的时刻（catchT 的门） */
+  seatEnd: number;
+  /** 握：跟手的差动与弯向、握住以来的呼吸数、上一步的呼吸相位、控制器开始的时刻与起点姿态 */
+  Dref: number;
+  dirRef: number;
+  breaths: number;
+  lastPhi: number;
+  holdT0: number;
+  holdFrom: Pose | null;
+  /** 握着时的小动静 / 小动作（squeeze / give / tug / loosen / palpate / freeze） */
+  ev: { kind: string; t0: number } | null;
+  /** 牵引开始的时刻（慢慢挪手）、微动反射的冷却 */
+  tracT: number;
+  reflexAt: number;
+  /** 够不着：本手位武装了没有、武装参照（差动平面 + 离基座距离） */
+  armed: boolean;
+  refX: number;
+  refY: number;
+  refR: number;
+  /** 最后碰到的那一点（搜寻中心） */
+  lastD: number;
+  lastDir: number;
+  /** 抓空后还要搜几次 */
+  searches: number;
+  /** 躲：手在哪一侧（+1 = 手在机身左边）、当前收的姿态参照、离开多久 */
+  side: number;
+  close: number;
+  awayDir: number;
+  farSince: number;
+  relieved: boolean;
+  /** 放开后的重新武装：到这一刻可以再来；上一回合是不是抓空；本 ⑨ 用过没有 */
+  rearmAt: number;
+  emptyLast: boolean;
+  rearmed: boolean;
+  /** 臂先身后：偏航目标到这一刻才写 */
+  turnAt: number;
+  /** 握着被牵着走时转身慢一半 */
+  yawSlow: boolean;
+  /** 深卷：本轮累计秒数、冷却到何时、被预算收回的时刻（之后 1.3 s 平滑松到 0.48） */
+  deepUsed: number;
+  deepCool: number;
+  deepOffAt: number;
+}
+
+const idleHand = (): HandChain => ({
+  stage: 'off',
+  st0: 0,
+  beat: '',
+  bt0: 0,
+  plan: [],
+  prog: null,
+  seen: -1,
+  tau: 0,
+  touch: 32,
+  stillAt: 0,
+  v: 0,
+  vAt: -1,
+  pullV: 0,
+  pullT: -1,
+  tgtX: 0,
+  tgtY: 0,
+  ax: 0,
+  ay: 0,
+  at: -1,
+  vx: 0,
+  vy: 0,
+  jumpAt: -1,
+  outAt: -1,
+  gDrawn: false,
+  g: 0,
+  nudges: 0,
+  seatEnd: NEVER,
+  Dref: 0,
+  dirRef: 0,
+  breaths: 0,
+  lastPhi: 0,
+  holdT0: NEVER,
+  holdFrom: null,
+  ev: null,
+  tracT: NEVER,
+  reflexAt: -NEVER,
+  armed: true,
+  refX: 0,
+  refY: 0,
+  refR: 0,
+  lastD: 0,
+  lastDir: 0,
+  searches: 0,
+  side: 1,
+  close: 0,
+  awayDir: 0,
+  farSince: NEVER,
+  relieved: false,
+  rearmAt: NEVER,
+  emptyLast: false,
+  rearmed: false,
+  turnAt: -NEVER,
+  yawSlow: false,
+  deepUsed: 0,
+  deepCool: -NEVER,
+  deepOffAt: NEVER,
+});
+
+/**
+ * 臂余振观测器的常数（研究笔记 §9.2；Lab 1-3 求解器上标的，真机要重标）：肌肉临界阻尼 ω 5，臂摆动模态
+ * 周期 1.42 s、阻尼比 0.15。settled(ε) = 臂速度 < ε（差动/秒）且离指令 < 0.01
+ */
+export const OBS = { wm: 5, wa: (2 * Math.PI) / 1.42, za: 0.15, posTol: 0.01 } as const;
+
+/** 观测器推进一步（指令 c = 差动平面上的 (x, y)） */
+export function obsStep(o: number[], cx: number, cy: number, dt: number): void {
+  const c = [cx, cy];
+  for (let j = 0; j < 2; j++) {
+    const i = 4 * j;
+    o[i + 1] += (OBS.wm * OBS.wm * (c[j] - o[i]) - 2 * OBS.wm * o[i + 1]) * dt;
+    o[i] += o[i + 1] * dt;
+    o[i + 3] += (OBS.wa * OBS.wa * (o[i] - o[i + 2]) - 2 * OBS.za * OBS.wa * o[i + 3]) * dt;
+    o[i + 2] += o[i + 3] * dt;
+  }
+}
+
+/** 臂（按观测器）停稳了没有 */
+export function obsSettled(o: readonly number[], cx: number, cy: number, ev: number): boolean {
+  return Math.hypot(o[3], o[7]) < ev && Math.hypot(cx - o[2], cy - o[6]) < OBS.posTol;
+}
+
+/** 指令保持不变时，预计还要多久停稳（≤ max 秒；到 max 还没停就返回 max） */
+export function obsForecast(o: readonly number[], cx: number, cy: number, ev: number, max = 1.5, dt = 1 / 60): number {
+  const q = [...o];
+  for (let t = 0; t < max; t += dt) {
+    if (obsSettled(q, cx, cy, ev)) return t;
+    obsStep(q, cx, cy, dt);
+  }
+  return max;
 }
 
 interface Reflex {
@@ -326,6 +556,11 @@ interface GraspMem {
   chases: number;
   searches: number;
   reason: string;
+  /**
+   * 「手指被卡住」的时刻（只有迎手链 v2 的缠写它：贴上做完、臂停稳的那一帧；初值永不）。台架此后才闭合张力开关；
+   * 没有这个字段（现行）时照旧「缠到 60%」
+   */
+  catchT?: number;
 }
 
 /** 看见手以后的态度：迎 / 躲 / 看别处（⑩ 的「不朝人时随便看」） */
@@ -363,9 +598,12 @@ interface HandMem {
   unwind: boolean;
 }
 
-/** 状态格式版本（快照恢复时核对；v2 = M2 加生命钟；v3 = 手）。动作词汇 v2 的会话记 STATE_VERSION_V2（多一块 m2） */
+/**
+ * 状态格式版本（快照恢复时核对；v2 = M2 加生命钟；v3 = 手）。动作词汇 v2 的会话记 STATE_VERSION_V2（多一块 m2；
+ * 4 → 5 = 迎手链：m2 多了 hc / obs / xr / deepOk，研究原型的 v4 快照不能恢复，台架接手失败会重开一场）
+ */
 export const STATE_VERSION = 3;
-export const STATE_VERSION_V2 = 4;
+export const STATE_VERSION_V2 = 5;
 
 /** 引擎的全部状态：纯数据，JSON 往返无损（快照 / 交接 / 固件对照） */
 export interface EngineState {
@@ -467,6 +705,11 @@ export interface EngineOpts {
    * 凝住 + 按人格的恢复，回应按刺激种类分动词，自发动作变小；见 vocab2.ts）。待作者拍板。
    */
   vocab?: 1 | 2;
+  /**
+   * 执行层放不放开肌腱轴深卷（只对 vocab 2 的迎手链有意义；台架 Lab 1-6 传 true，与 tendonContractions 的 deep 同口径；
+   * 固件 / 默认 false）。深卷只在腱轴 0、手在臂中段正上方平卷够不着时用，每轮 ≤ 4 s、冷却 45 s（研究笔记 §9.6）
+   */
+  deepOk?: boolean;
 }
 
 const isRate = (r: number): boolean => Number.isFinite(r) && r > 0;
@@ -505,6 +748,19 @@ export const wrapPi = (a: number): number => a - TAU * Math.floor((a + Math.PI) 
 const lerpAngle = (a: number, b: number, u: number): number => a + wrapPi(b - a) * u;
 /** 偏航限位（±π，不缠线；新加的旋转电机行程待用户更新模型后确认） */
 const clampYaw = (a: number): number => clamp(a, -Math.PI, Math.PI);
+/** 弯曲超过 1 的部分换成深缠行程（执行层：差动 = 0.34·bend + 0.16·wrap） */
+const WRAP_PER_BEND = 0.34 / 0.16;
+/** 两个臂姿态在差动平面上按直线混合（深卷线性） */
+function blendPose(a: Pose, b: Pose, u: number): Pose {
+  if (u <= 0) return a;
+  if (u >= 1) return b;
+  const da = 0.34 * a.bend;
+  const db = 0.34 * b.bend;
+  const x = da * Math.cos(a.dir) + (db * Math.cos(b.dir) - da * Math.cos(a.dir)) * u;
+  const y = da * Math.sin(a.dir) + (db * Math.sin(b.dir) - da * Math.sin(a.dir)) * u;
+  const D = Math.hypot(x, y);
+  return { bend: D / 0.34, dir: D > 1e-9 ? Math.atan2(y, x) : b.dir, deep: a.deep + (b.deep - a.deep) * u };
+}
 
 const idleGrasp = (): GraspMem => ({
   phase: 'IDLE',
@@ -534,6 +790,8 @@ function envelope(g: Gesture, t: number): number {
 export class BehaviorEngine {
   private s: EngineState;
   private readonly buf: LogRecord[] = [];
+  /** 这一条传感事件走了预期接触（handle 内部用完即清；不是状态，快照不带） */
+  private expected = false;
 
   constructor(opts: EngineOpts, restore?: EngineState) {
     if (restore) {
@@ -629,6 +887,10 @@ export class BehaviorEngine {
         push: { x: 0, v: 0 },
         startles: [],
         startleBusy: -1,
+        hc: idleHand(),
+        obs: [0, 0, 0, 0, 0, 0, 0, 0],
+        xr: makeRng(deriveSeed(seed, 2)),
+        deepOk: opts.deepOk ?? false,
       };
     }
     this.drawSchedule();
@@ -734,9 +996,11 @@ export class BehaviorEngine {
   /** v2 正在执行的动作程序名与段名（台架 HUD 用；没有 = null） */
   motion(): { name: string; phase: string } | null {
     const m = this.s.m2;
-    if (!m || !m.prog) return null;
-    const ph = m.prog.phases[m.prog.idx];
-    return { name: m.prog.name, phase: ph ? ph.name : '' };
+    if (!m) return null;
+    const p = m.prog ?? m.hc.prog;
+    if (!p) return null;
+    const ph = p.phases[p.idx];
+    return { name: p.name, phase: ph ? ph.name : '' };
   }
 
   persona(): PersonaKey {
@@ -792,7 +1056,7 @@ export class BehaviorEngine {
     if (s.m2) {
       // v2：深卷、按段的灯光倍数与发声音高（v1 不经过这里，输出逐位不变）
       out.arm.deep = s.m2.deep;
-      out.light.level = Math.min(1, out.light.level * (this.progPhase()?.light ?? 1));
+      out.light.level = Math.min(1, out.light.level * (this.cueNow(t)?.ph.light ?? 1));
       out.sound.f = s.voiceF * this.voiceMul(t);
     }
     return out;
@@ -816,21 +1080,28 @@ export class BehaviorEngine {
     if (s.gesture && t >= s.gesture.t0 + s.gesture.dur) s.gesture = null;
     if (s.armWaiting >= 0) this.recheckContact(t, ctx);
     if (s.hand) this.stepHand(t, ctx);
+    if (s.m2 && (s.hand || s.m2.hc.stage !== 'off' || s.m2.hc.prog)) this.stepHandChain(t, ctx);
     this.stepGrasp(t, ctx);
     if (t >= s.nextSpont) this.spontaneous(t, ctx);
     if (t >= s.nextOrient) this.orient(t, ctx);
     this.stepBreath(t, ctx);
     this.stepArm(t, ctx);
+    if (s.m2) {
+      // 臂余振观测器跟着此刻给出的指令走（只是状态，不进执行器指令）
+      const [cx, cy] = this.cmdXY();
+      obsStep(s.m2.obs, cx, cy, DT);
+    }
     this.stepFeelers(t, ctx);
     this.stepYaw();
     s.vigor = ctx.vigor;
     const exhale = (s.phi + 0.5) % 1 < s.voiceDuty;
     s.voiceOn = s.phase !== 'BLANK' && ctx.vigor > 0.05 && (t < s.voiceUntil || exhale);
     if (s.m2) {
-      // v2：凝住 / 定向停顿时连呼气声也收住（短促的那一声照出）；呼噜、询问、下沉的那几段一直出声
-      const v = this.progPhase()?.voice;
+      // v2：凝住 / 定向停顿时连呼气声也收住（短促的那一声照出）；呼噜、询问、下沉的那几段一直出声；握着时呼气的那半口一直哼
+      const v = this.cueNow(t)?.ph.voice;
       if (v === 'mute' && !(t < s.voiceUntil)) s.voiceOn = false;
       else if ((v === 'purr' || v === 'query' || v === 'fall') && s.phase !== 'BLANK' && ctx.vigor > 0.05) s.voiceOn = true;
+      else if (v === 'hum' && s.phase !== 'BLANK' && ctx.vigor > 0.05) s.voiceOn = t < s.voiceUntil || (s.phi + 0.5) % 1 < 0.5;
     }
     s.phaseLt += s.lifeRate;
     s.tick++;
@@ -916,7 +1187,10 @@ export class BehaviorEngine {
         this.enter('BLANK', LIFE.blank);
         this.emit('LIFE_DEATH');
         s.gesture = null;
-        if (s.m2) s.m2.prog = null;
+        if (s.m2) {
+          s.m2.prog = null;
+          this.hcReset(t, 'off');
+        }
         s.pending = null;
         s.grasp = idleGrasp();
         s.nextSpont = NEVER;
@@ -951,6 +1225,8 @@ export class BehaviorEngine {
       s.m2.prog = null;
       s.m2.startles = [];
       s.m2.startleBusy = -1;
+      this.hcReset(t, 'off');
+      s.m2.hc.rearmAt = NEVER;
     }
     s.pending = null;
     s.grasp = idleGrasp();
@@ -1053,13 +1329,26 @@ export class BehaviorEngine {
       }
     }
     rec.out = out;
-    // 手碰臂时正忙：电极电平还在，就等机器空下来再认一次（recheckContact）；松手即作罢
-    if (e.kind === 'ARM_TOUCH') s.armWaiting = e.on && out === 'busy' ? rec.id : -1;
+    // 手碰臂时正忙：电极电平还在，就等机器空下来再认一次（recheckContact）；松手即作罢。预期接触不补认（迎手链自己重新武装）
+    if (e.kind === 'ARM_TOUCH') s.armWaiting = e.on && out === 'busy' && !this.expected ? rec.id : -1;
+    this.expected = false;
   }
 
   /** 一个刺激（已过静默期、唤醒已加）怎么处理：惊跳 / 正忙 / 排进响应。id = 它那条记录 */
   private evaluate(e: SensorInput, I: number, id: number, t: number, ctx: Ctx): Outcome {
     const s = this.s;
+    if (s.m2) {
+      // v2 迎手链：迎着、看得见的手碰臂 = 预期接触（不判惊跳、不排队、不再付 ④）
+      if (e.kind === 'ARM_TOUCH' && e.on && this.expectedStage()) {
+        this.expected = true;
+        return this.expectedTouch(e, I, id, t, ctx);
+      }
+      // 看见手以后人走近：吸收（唤醒照加，不起程序、不抽 ⑩、不占「正忙」）
+      if (e.kind === 'PRESENCE' && s.hand && s.hand.seen && s.hand.present) {
+        this.emit('RESPONSE', { to: id, latency: 0, motion: 'hand.absorb' });
+        return 'respond';
+      }
+    }
     const th = sampleRange(s.rng, ctx.p.startle);
     if (I > th) {
       const g = s.gesture;
@@ -1114,6 +1403,7 @@ export class BehaviorEngine {
     const I = reach ? INTENSITY.armReach : INTENSITY.arm;
     const rec = this.emit('CONTACT', { to }, 'engine', I, 'none');
     rec.out = this.evaluate(reach ? { kind: 'ARM_TOUCH', on: true, by: 'arm' } : { kind: 'ARM_TOUCH', on: true }, I, rec.id, t, ctx);
+    this.expected = false;
   }
 
   /** 触须反射：记下触发时刻；波形由执行层按 startleSwing 画 */
@@ -1132,7 +1422,9 @@ export class BehaviorEngine {
     }
     if (s.grasp.phase !== 'IDLE' && s.grasp.phase !== 'RELEASE') this.beginRelease(t, ctx, 'startle');
     if (s.m2) {
-      // v2：反射（0.1 s 后沿背离刺激的腱轴深卷、环身猛收屏气）→ 凝住（长短看 τ）→ 按人格的恢复
+      // v2：反射（0.1 s 后沿背离刺激的腱轴深卷、环身猛收屏气）→ 凝住（长短看 τ）→ 按人格的恢复。迎手链作废（惊跳之后从此刻重来）
+      const hh = s.hand;
+      this.hcReset(t, hh && hh.seen && hh.mode === 'toward' ? 'track' : hh && hh.seen && hh.mode === 'away' ? 'avoid' : 'off');
       this.resampleSpeed(ctx);
       const m = s.m2;
       const tau = sampleRange(s.rng, ctx.p.latency, VARIABILITY.response) * ctx.age.latency;
@@ -1211,18 +1503,56 @@ export class BehaviorEngine {
 
   // ---------------------------------------------------------------- 动作词汇 v2（研究原型）
 
-  /** v2：此刻正在执行的那一段（没有程序 = null） */
-  private progPhase(): ProgPhase | null {
-    const m = this.s.m2;
-    if (!m || !m.prog) return null;
-    return m.prog.phases[m.prog.idx] ?? null;
-  }
-
-  /** 此刻给出的臂姿态（极坐标） */
+  /** 此刻给出的臂姿态（极坐标；v2 把深缠行程折回弯曲——迎手链的姿态可以超过 1，没有手的会话 wrap 恒为 0） */
   private curPose(): Pose {
     const s = this.s;
-    const bend = Math.hypot(s.armX.x, s.armY.x);
-    return { bend, dir: bend > 1e-9 ? Math.atan2(s.armY.x, s.armX.x) : s.restDir, deep: s.m2?.deep ?? 0 };
+    const b = Math.hypot(s.armX.x, s.armY.x);
+    const bend = b + (s.m2 ? s.wrap.x / WRAP_PER_BEND : 0);
+    return { bend, dir: b > 1e-9 ? Math.atan2(s.armY.x, s.armX.x) : s.restDir, deep: s.m2?.deep ?? 0 };
+  }
+
+  /**
+   * v2：把一个臂姿态直接写进指令（不经人格跟随器）。弯曲超过 1 的部分走深缠行程；速度按差分记下，之后交回跟随器不跳；
+   * done = 走完那一帧不把速度交给跟随器（D 生硬的直线落回带着速度，交过去会冲过静息再弹回来）
+   */
+  private writePose(pose: Pose, done: boolean): void {
+    const s = this.s;
+    const b = Math.min(1, pose.bend);
+    const x = b * Math.cos(pose.dir);
+    const y = b * Math.sin(pose.dir);
+    const w = Math.max(0, pose.bend - 1) * WRAP_PER_BEND;
+    s.armX.v = done ? 0 : (x - s.armX.x) / DT;
+    s.armY.v = done ? 0 : (y - s.armY.x) / DT;
+    s.wrap.v = done ? 0 : (w - s.wrap.x) / DT;
+    s.armX.x = x;
+    s.armY.x = y;
+    s.wrap.x = w;
+    s.m2!.deep = pose.deep;
+  }
+
+  /**
+   * v2 此刻生效的提示段（呼吸 / 声 / 光 / 触须读它）与段内进度。优先级：惊跳 > 回应 / 注意到 > 手链的程序 >
+   * 握人时的提示表 > 自发 / 看别处的程序。手链关着时就是 m2.prog 那一段（没有手的会话逐位不变）
+   */
+  private cueNow(t: number): { ph: Cues; u: number } | null {
+    const s = this.s;
+    const m = s.m2;
+    if (!m) return null;
+    const from = (p: Program | null): { ph: Cues; u: number } | null => {
+      const ph = p ? p.phases[p.idx] : undefined;
+      return p && ph ? { ph, u: ph.dur > 0 ? clamp01((t - p.ts) / ph.dur) : 1 } : null;
+    };
+    const hc = m.hc;
+    if (hc.stage === 'off' && !hc.prog) return from(m.prog);
+    const name = m.prog?.name ?? '';
+    if (m.prog && (name === 'startle' || name === 'register' || name.startsWith('respond'))) {
+      const r = from(m.prog);
+      if (r) return r;
+    }
+    const hp = from(hc.prog);
+    if (hp) return hp;
+    if (hc.stage === 'hold' && s.grasp.phase === 'HOLD_HUMAN') return { ph: this.holdCueNow(), u: 0 };
+    return from(m.prog);
   }
 
   /** 衰老进度 0–1（成长段 0，死亡 / 空白 1） */
@@ -1356,20 +1686,22 @@ export class BehaviorEngine {
 
   /** v2 的发声频率倍数：短促（chirp / huff）· 呼噜 0.7 · 询问 1.0→1.3 · 下沉 1.3→0.7 */
   private voiceMul(t: number): number {
-    const m = this.s.m2;
+    const s = this.s;
+    const m = s.m2;
     if (!m) return 1;
-    if (t < this.s.voiceUntil) return m.burstF;
-    const prog = m.prog;
-    const ph = prog ? prog.phases[prog.idx] : undefined;
-    if (!prog || !ph) return 1;
-    const u = ph.dur > 0 ? clamp01((t - prog.ts) / ph.dur) : 1;
-    switch (ph.voice) {
+    if (t < s.voiceUntil) return m.burstF;
+    const c = this.cueNow(t);
+    if (!c) return 1;
+    const u = c.u;
+    switch (c.ph.voice) {
       case 'purr':
         return 0.7;
       case 'query':
         return 1 + 0.3 * u;
       case 'fall':
         return 1.3 - 0.6 * u;
+      case 'hum':
+        return 0.75 + 0.1 * squeezePhase(s.phi, s.period * 1.15);
       default:
         return 1;
     }
@@ -1400,7 +1732,12 @@ export class BehaviorEngine {
     // 臂被人碰到、此刻愿意迎上去：缠（抓握状态机接手臂）
     let grasp = false;
     if (pd.kind === 'ARM_TOUCH' && sign > 0 && s.electrode && s.grasp.phase === 'IDLE') {
-      this.beginWrap(t, false);
+      if (s.m2 && s.hand && s.hand.seen && s.hand.present) {
+        // v2 看见了手（没在迎它时碰的，④ 已经等过）：按迎手链缠，定住 0.12 s
+        s.m2.hc.g = g;
+        s.m2.hc.gDrawn = true;
+        this.beginWrapV2(t, ctx, { byHand: s.touchBy !== 'arm', wince: false, chase: false, waited: true });
+      } else this.beginWrap(t, false);
       grasp = true;
     }
     if (s.m2) {
@@ -1456,7 +1793,8 @@ export class BehaviorEngine {
       return;
     }
     this.resampleSpeed(ctx);
-    const armFree = s.grasp.phase === 'IDLE';
+    if (s.m2 && this.spontHand(t, ctx)) return;
+    const armFree = s.grasp.phase === 'IDLE' && !(s.m2 && ENGAGED.has(s.m2.hc.stage));
     let action: GestureAction | 'sigh';
     if (armFree && s.grasp.searches > 0) {
       action = 'search';
@@ -1517,6 +1855,40 @@ export class BehaviorEngine {
     s.nextSpont = t + gap;
   }
 
+  /**
+   * v2 迎手链里的 ⑥（返回 true = 已经处理、排好下一次）：握着人时不起程序，交给握持控制器演一个小动作（活力拽一下、
+   * 好奇摩挲、沉静只叹气、不稳定随机）；侧身躲时偷看一眼；沉静型够不着时前倾一点
+   */
+  private spontHand(t: number, ctx: Ctx): boolean {
+    const s = this.s;
+    const m = s.m2!;
+    const hc = m.hc;
+    const h = s.hand;
+    let action: string | null = null;
+    if (hc.stage === 'hold' && s.grasp.phase === 'HOLD_HUMAN' && !hc.prog) {
+      const P = this.persona();
+      const kind = P === 'A' ? 'tug' : P === 'C' ? 'palpate' : P === 'B' ? 'sigh' : pick(m.xr, ['tug', 'loosen', 'sigh'] as const);
+      if (kind === 'sigh') s.sighNext = true;
+      else if (!hc.ev) hc.ev = { kind, t0: t };
+      action = 'fidget';
+      this.emit('SPONTANEOUS', { action, kind });
+    } else if (hc.stage === 'avoid' && h && h.present && h.seen && !hc.prog && hc.v < HC.vMove) {
+      this.hcSet(t, 'avoid', 'peek');
+      this.hcRun(t, 'hand.peek', buildPeek(this.hcCtx(ctx), this.handGeom(h), hc.close, hc.awayDir));
+      action = 'peek';
+      this.emit('SPONTANEOUS', { action });
+    } else if (hc.stage === 'watch' && this.persona() === 'B' && h && h.present && !hc.prog) {
+      this.hcRun(t, 'hand.leanIn', buildLeanIn(this.hcCtx(ctx), this.handGeom(h)));
+      action = 'lean';
+      this.emit('SPONTANEOUS', { action });
+    }
+    if (action === null) return false;
+    const p = ctx.p;
+    const range = s.band !== 'gone' && p.spontPresent ? p.spontPresent : p.spont;
+    s.nextSpont = t + (sampleRange(s.rng, range) * ctx.age.spont * (1 - ENGINE.arousal.spont * s.arousal)) / Math.max(ctx.activity, 1e-3);
+    return true;
+  }
+
   private orient(t: number, ctx: Ctx): void {
     const s = this.s;
     if (!ctx.orientOk) {
@@ -1529,6 +1901,11 @@ export class BehaviorEngine {
     }
     // v2：潜伏期里「注意到」= 一切停住，这时不张望（不然身体在屏气、触须指着刺激的时候自己转开）
     if (s.m2 && s.pending) {
+      s.nextOrient = t + 1;
+      return;
+    }
+    // v2 迎手链投入中（凑 / 缠 / 握 / 追 / 放开 / 找）：⑨ 顺延——别在伸手的半路上改主意
+    if (s.m2 && ENGAGED.has(s.m2.hc.stage)) {
       s.nextOrient = t + 1;
       return;
     }
@@ -1567,6 +1944,7 @@ export class BehaviorEngine {
     const s = this.s;
     let h = s.hand;
     if (!e.on) {
+      if (s.m2) s.m2.hc.v = 0;
       if (!h) return;
       if (!h.seen) s.hand = null;
       else if (h.present) {
@@ -1576,6 +1954,7 @@ export class BehaviorEngine {
       }
       return;
     }
+    if (s.m2) this.handFactV2(e, t, h);
     if (!h) {
       h = {
         bearing: 0, dist: 0, aimDir: 0, aimBend: 0, aimDist: 0, face: 0,
@@ -1593,6 +1972,43 @@ export class BehaviorEngine {
     h.aimBend = clamp(e.aimBend, 0, ARM_BEND_MAX);
     h.aimDist = e.aimDist;
     h.face = wrapPi(e.face);
+  }
+
+  /**
+   * v2 迎手链要的读数：有效碰到半径、指针静止多久、指针速度（台架带；没带时按读数变化估），读数在差动平面上的
+   * 速度（活力型往前看），以及读数一步跳太大（被抽走）的时刻。在 h 被这条读数改写之前调
+   */
+  private handFactV2(e: Extract<SensorInput, { kind: 'HAND'; on: true }>, t: number, h: HandMem | null): void {
+    const hc = this.s.m2!.hc;
+    const D = Math.min(0.5, 0.34 * clamp(e.aimBend, 0, ARM_BEND_MAX));
+    const x = D * Math.cos(e.aimDir);
+    const y = D * Math.sin(e.aimDir);
+    hc.touch = e.touch ?? 32;
+    const moved = !h || Math.hypot(x - hc.ax, y - hc.ay) > 0.01 || Math.abs(e.dist - h.dist) > 15;
+    if (e.still !== undefined) hc.stillAt = t - e.still;
+    else if (moved) hc.stillAt = t;
+    hc.v = e.v ?? (h && hc.at >= 0 && t > hc.at ? Math.min(2000, (Math.abs(e.dist - h.dist) + Math.hypot(x - hc.ax, y - hc.ay) * gainAt(e.aimDist, D)) / (t - hc.at)) : 0);
+    hc.vAt = t;
+    if (hc.v >= hc.pullV || t - hc.pullT > 0.3) {
+      hc.pullV = hc.v;
+      hc.pullT = t;
+    }
+    if (h && hc.at >= 0 && t - hc.at > 1e-6 && t - hc.at < 0.5) {
+      const dt = t - hc.at;
+      hc.vx = 0.5 * hc.vx + 0.5 * ((x - hc.ax) / dt);
+      hc.vy = 0.5 * hc.vy + 0.5 * ((y - hc.ay) / dt);
+      // 读数一步跳过 0.06 / 20° = 被抽走（握着时这一下不跟）；手往外走（差动变小 / 离基座变远）= 往外拉
+      const Dp = Math.hypot(hc.ax, hc.ay);
+      const dDir = Math.abs(wrapPi(Math.atan2(y, x) - Math.atan2(hc.ay, hc.ax)));
+      if (Math.abs(D - Dp) > HC.jumpD || (D > 0.05 && Dp > 0.05 && dDir > HC.jumpDir)) hc.jumpAt = t;
+      if (D < Dp - 0.01 || e.aimDist > h.aimDist + 8) hc.outAt = t;
+    } else {
+      hc.vx = 0;
+      hc.vy = 0;
+    }
+    hc.ax = x;
+    hc.ay = y;
+    hc.at = t;
   }
 
   /** 背着手的弯向：手就在臂梢上（要弯得很少，弯向读不准）时渐变成往下缩 */
@@ -1665,7 +2081,10 @@ export class BehaviorEngine {
     const g = s.gesture;
     const startled = g !== null && g.kind === 'startle' && t < g.t0 + g.dur;
     const free = s.grasp.phase === 'IDLE' || s.grasp.phase === 'RELEASE';
-    if (h.mode === null || h.mode === 'look' || !h.present || !ctx.orientOk || startled || !free || this.handOnBody(h)) {
+    // v2：凑、够不着（探身 / 撑）的时候身体不动——扑以「身体静止」为门；看着 / 陪着 / 躲照常转
+    const hc = s.m2?.hc;
+    const still = !!hc && (hc.stage === 'approach' || hc.stage === 'strain');
+    if (h.mode === null || h.mode === 'look' || !h.present || !ctx.orientOk || startled || !free || this.handOnBody(h) || still) {
       h.turning = false;
       // 不跟了：正在绕回的长路作废、就地停下（惊跳那一下的转向留着）
       if (h.unwind) {
@@ -1674,14 +2093,22 @@ export class BehaviorEngine {
       }
       return;
     }
-    // 迎：转到让臂线对准手的朝向（臂偏在机身中线右侧）；躲：机身中线背对手
-    const want = h.mode === 'toward' ? h.steerFace : wrapPi(h.steer + Math.PI);
+    // 迎：转到让臂线对准手的朝向（臂偏在机身中线右侧）；躲：机身中线背对手（v2：侧身，手留在 ±105°，不背对、不会忘掉手）
+    const want = h.mode === 'toward' ? h.steerFace : hc ? wrapPi(h.steer - hc.side * HC.avoidSide) : wrapPi(h.steer + Math.PI);
     const off = Math.abs(wrapPi(want - s.yaw.x));
     if (!h.turning) {
-      const reach = h.aimBend <= HAND.reachBend && h.aimDist <= HAND.reachFar * HAND.armL;
-      const need = h.mode === 'away' ? off > HAND.turnAt : h.aimBend > HAND.reachBend || (off > HAND.turnAt && !reach);
+      let need: boolean;
+      if (hc && h.mode === 'toward') {
+        // v2 够得着的判据更严（≤ 0.98 L、aimBend ≤ 1.41）：够不着才转身；臂先身后（偏航目标晚 0.25/k s 才写）
+        need = !reachable(h.aimBend, h.aimDist) && (off > HAND.turnAt || h.aimBend > HC.reachBend);
+        if (need) hc.turnAt = t + HC.armLead / Math.sqrt(s.speed);
+      } else {
+        const reach = h.aimBend <= HAND.reachBend && h.aimDist <= HAND.reachFar * HAND.armL;
+        need = h.mode === 'away' ? off > HAND.turnAt : h.aimBend > HAND.reachBend || (off > HAND.turnAt && !reach);
+      }
       if (need) h.turning = true;
     }
+    if (h.turning && hc && t < hc.turnAt) return;
     if (h.turning) {
       s.yawTarget = this.handYawGoal(want);
       // 转到了（或停在 ±π 限位上等着、已经到位）：不再转
@@ -1762,6 +2189,19 @@ export class BehaviorEngine {
     }
     this.emit('HAND_SEEN', rec);
     if (!cause) s.nextOrient = t + sampleRange(s.rng, p.orient);
+    if (s.m2) {
+      // v2 第一次看见：还没发的在场回应作废（看见手以后在场档被吸收，不另起程序、不另抽 ⑩），在跑的「注意到」收掉
+      if (!again) {
+        if (s.pending && s.pending.kind === 'PRESENCE') {
+          this.emit('RESPONSE_DROP', { to: s.pending.id, reason: 'hand' });
+          s.pending = null;
+          if (s.m2.prog && s.m2.prog.name === 'register') this.cutProg();
+        }
+      }
+      this.hcDecide(t, ctx, mode, cause);
+      if (!again && mode === 'look' && !s.gesture && !s.pending && s.grasp.phase === 'IDLE') this.noticeBeat(t, ctx, mode);
+      return;
+    }
     if (!again && !s.gesture && !s.pending && s.grasp.phase === 'IDLE') this.noticeBeat(t, ctx, mode);
   }
 
@@ -1798,6 +2238,7 @@ export class BehaviorEngine {
     const s = this.s;
     const h = s.hand;
     if (!h) return;
+    if (s.m2) this.hcReset(s.tick / HZ, 'off');
     if (h.unwind) s.yawTarget = s.yawGoal;
     h.seen = false;
     h.mode = null;
@@ -1806,6 +2247,822 @@ export class BehaviorEngine {
     h.turning = false;
     h.turnSign = 0;
     h.unwind = false;
+  }
+
+
+  // ---------------------------------------------------------------- 迎手链（动作词汇 v2，2026-10-08 第八批）
+
+  /** 读数 → 建表用的手 */
+  private handGeom(h: HandMem): HandGeom {
+    const hc = this.s.m2!.hc;
+    return { Dh: Math.min(0.5, 0.34 * h.aimBend), dir: h.aimDir, r: h.aimDist, touch: hc.touch, v: hc.v };
+  }
+
+  /** 换阶段 / 拍（变了才记 HAND_STAGE） */
+  private hcSet(t: number, stage: HcStage, beat = ''): void {
+    const hc = this.s.m2!.hc;
+    if (hc.stage === stage && hc.beat === beat) return;
+    if (hc.stage !== stage) {
+      hc.stage = stage;
+      hc.st0 = t;
+    }
+    hc.beat = beat;
+    hc.bt0 = t;
+    this.emit('HAND_STAGE', beat ? { stage, beat } : { stage });
+  }
+
+  /** 起手链的一个程序（起点 = 此刻给出的姿态） */
+  private hcRun(t: number, name: string, phases: ProgPhase[]): void {
+    const hc = this.s.m2!.hc;
+    hc.prog = startProgram(name, t, phases, this.curPose());
+    hc.seen = -1;
+  }
+
+  /** 迎手链清零：程序作废，回合的抽值作废，阶段回 to（off / track / avoid） */
+  private hcReset(t: number, to: HcStage = 'off'): void {
+    const m = this.s.m2;
+    if (!m) return;
+    const hc = m.hc;
+    hc.prog = null;
+    hc.plan = [];
+    hc.ev = null;
+    hc.holdFrom = null;
+    hc.holdT0 = NEVER;
+    hc.tracT = NEVER;
+    hc.gDrawn = false;
+    hc.nudges = 0;
+    hc.seatEnd = NEVER;
+    hc.searches = 0;
+    hc.yawSlow = false;
+    this.deepEnd(t);
+    this.hcSet(t, to);
+  }
+
+  /** 迎手链的 BuildCtx：τ 用本回合抽到的那个 */
+  private hcCtx(ctx: Ctx): BuildCtx {
+    return this.buildCtx(ctx, this.s.m2!.hc.tau, 0);
+  }
+
+  /** 回合开始（看见手决定迎 / 躲）：用表情子流抽一个 ④，之后这一回合的 take、停半拍、定住感觉都按它 */
+  private hcBout(ctx: Ctx): void {
+    const s = this.s;
+    const hc = s.m2!.hc;
+    hc.tau = sampleRange(s.m2!.xr, ctx.p.latency, VARIABILITY.response) * ctx.age.latency;
+    hc.gDrawn = false;
+    hc.armed = true;
+  }
+
+  /** 本回合的 ⑤（主随机流；D 带符号）：凑 / 碰到时才抽，一回合一次 */
+  private hcGain(ctx: Ctx): number {
+    const s = this.s;
+    const hc = s.m2!.hc;
+    if (!hc.gDrawn) {
+      let g = sampleRange(s.rng, ctx.p.gain, VARIABILITY.response) * ctx.age.gain;
+      if (ctx.p.gainSigned && chance(s.rng, 0.5)) g = -g;
+      hc.g = g;
+      hc.gDrawn = true;
+    }
+    return hc.g;
+  }
+
+  /** 读数（差动平面）离武装参照多少 mm */
+  private hcMovedMm(h: HandMem): number {
+    const hc = this.s.m2!.hc;
+    const D = Math.min(0.5, 0.34 * h.aimBend);
+    const x = D * Math.cos(h.aimDir);
+    const y = D * Math.sin(h.aimDir);
+    return Math.hypot(Math.hypot(x - hc.refX, y - hc.refY) * gainAt(h.aimDist, D), h.aimDist - hc.refR);
+  }
+
+  private hcArmRef(h: HandMem): void {
+    const hc = this.s.m2!.hc;
+    const D = Math.min(0.5, 0.34 * h.aimBend);
+    hc.refX = D * Math.cos(h.aimDir);
+    hc.refY = D * Math.sin(h.aimDir);
+    hc.refR = h.aimDist;
+  }
+
+  /** 躲的侧别：转得少的那边；差不多（10° 内）时选让手在左（臂在右，离手远） */
+  private avoidSide(h: HandMem): number {
+    const s = this.s;
+    const left = wrapPi(h.steer - HC.avoidSide - s.yaw.x);
+    const right = wrapPi(h.steer + HC.avoidSide - s.yaw.x);
+    return Math.abs(left) <= Math.abs(right) + (10 * Math.PI) / 180 ? 1 : -1;
+  }
+
+  /** 躲的姿态参照：越近越缩、背着手 */
+  private avoidRef(h: HandMem): void {
+    const hc = this.s.m2!.hc;
+    hc.close = 1 - smooth((h.dist - HAND.awayNear) / (HAND.awayFar - HAND.awayNear));
+    hc.awayDir = this.awayDir(h);
+  }
+
+  /**
+   * 深卷门（研究笔记 §9.6，「用，但不要用太多」）：执行层放开深卷、手的弯向在腱轴 0（臂梢朝上）±8°、读数饱和
+   * （平卷 0.48 够不着）、离基座 ≤ 0.95 L、√k_v ≥ 0.8 且本回合 |⑤|/0.5 ≥ 0.4（沉静型永远不开）、本轮预算没用完、不在冷却
+   */
+  private deepGate(h: HandMem, t: number): boolean {
+    const s = this.s;
+    const m = s.m2!;
+    const hc = m.hc;
+    if (!m.deepOk || !hc.gDrawn) return false;
+    if (Math.abs(wrapPi(h.aimDir)) > (8 * Math.PI) / 180) return false;
+    if (h.aimBend < 1.45 || h.aimDist > 0.95 * HAND.armL) return false;
+    if (Math.sqrt(s.speed) < 0.8 || Math.abs(hc.g) / 0.5 < 0.4) return false;
+    return t >= hc.deepCool && hc.deepUsed < 4 && hc.deepOffAt >= NEVER;
+  }
+
+  /** 深卷用完 / 回合结束：开始冷却 45 s */
+  private deepEnd(t: number): void {
+    const hc = this.s.m2!.hc;
+    if (hc.deepUsed > 0) {
+      hc.deepCool = t + 45;
+      hc.deepUsed = 0;
+    }
+    hc.deepOffAt = NEVER;
+  }
+
+  /**
+   * 看见手以后的决定落到手链（decideHand 调；v2 才有）：迎 → 陪着（take + 第一跳）；躲 → 侧身（定住 → 收）；
+   * 看别处 → 手链关（现行的 glance）。投入中（凑 / 缠 / 握……）不打断——⑨ 在投入中本来就顺延
+   */
+  private hcDecide(t: number, ctx: Ctx, mode: HandMode, cause?: string): void {
+    const s = this.s;
+    const m = s.m2!;
+    const hc = m.hc;
+    const h = s.hand!;
+    if (ENGAGED.has(hc.stage) && !cause) return;
+    const was = hc.stage;
+    hc.rearmed = false;
+    if (mode === 'toward') {
+      if (was === 'track' && !cause) return;
+      this.hcReset(t, 'track');
+      this.hcBout(ctx);
+      this.hcArmRef(h);
+      // 看见那一下：先「看」（触须先指过去、吸一口、一声上扬），臂再第一跳（先转方向后伸长）。正在做别的动作就先等它
+      if (!m.prog && h.present) {
+        const ph = buildTake(this.hcCtx(ctx), this.handGeom(h));
+        this.hcRun(t, 'hand.take', ph);
+        const to = ph.find((p) => p.name === 'firstHop')?.arm;
+        if (to && typeof to === 'object') this.hcTarget(to);
+      }
+      return;
+    }
+    if (mode === 'away') {
+      this.hcReset(t, 'avoid');
+      this.hcBout(ctx);
+      hc.side = this.avoidSide(h);
+      hc.turnAt = t + HC.avoidLag;
+      hc.relieved = false;
+      hc.farSince = NEVER;
+      this.avoidRef(h);
+      if (!m.prog) this.hcRun(t, 'hand.shrink', buildShrink(this.hcCtx(ctx), hc.close, hc.awayDir, was !== 'avoid'));
+      return;
+    }
+    this.hcReset(t, 'off');
+  }
+
+  /** 预期接触：看见着、在视野里、态度是迎、手链在陪 / 凑 / 够 / 看 / 找（或追）的时候碰到臂 */
+  private expectedStage(): boolean {
+    const s = this.s;
+    const m = s.m2;
+    const h = s.hand;
+    if (!m || !h || !h.seen || !h.present || h.mode !== 'toward') return false;
+    const st = m.hc.stage;
+    if (st === 'chase') return s.grasp.phase === 'WRAP';
+    if (st === 'wrap' || st === 'hold') return true;
+    return (st === 'track' || st === 'approach' || st === 'strain' || st === 'watch' || st === 'search' || st === 'off') && s.grasp.phase === 'IDLE';
+  }
+
+  /**
+   * 预期接触（取代乘法打折的显式规则，研究笔记 §9.3）：**不判惊跳、不排队、不再付一次 ④**。只抽 ⑪ 判要不要先一缩
+   * （0.5·I/θ ≥ 0.65）；手伸过来碰（没在凑）时抽 ⑤，不稳定型抽到负就缩回去转躲；否则当帧起缠。返回传感记录的去向
+   */
+  private expectedTouch(e: Extract<SensorInput, { kind: 'ARM_TOUCH' }>, I: number, id: number, t: number, ctx: Ctx): Outcome {
+    const s = this.s;
+    const m = s.m2!;
+    const hc = m.hc;
+    const h = s.hand!;
+    if (hc.stage === 'wrap' || hc.stage === 'hold') return 'busy';
+    const th = sampleRange(s.rng, ctx.p.startle);
+    const wince = th > 0 && (0.5 * I) / th >= V2.nearThreshold;
+    const byHand = e.by !== 'arm';
+    const by = byHand ? 'hand' : 'arm';
+    if (hc.stage === 'chase') {
+      this.beginWrapV2(t, ctx, { byHand, wince: false, chase: true });
+      this.emit('RESPONSE', { to: id, latency: 0, gain: hc.g, arm: true, feeler: true, turn: 'hand', grasp: true, motion: 'grasp.wrap', expected: true, by });
+      return 'respond';
+    }
+    const g = this.hcGain(ctx);
+    if (g < 0) {
+      // 不稳定型 ⑤ 抽到负：缩回去，侧身躲到下一次 ⑨
+      this.avoidRef(h);
+      h.mode = 'away';
+      this.hcReset(t, 'avoid');
+      hc.side = this.avoidSide(h);
+      hc.turnAt = t + HC.avoidLag;
+      if (m.prog && m.prog.name !== 'startle') this.cutProg();
+      this.hcRun(t, 'hand.recoil', buildRecoil(this.hcCtx(ctx), hc.awayDir));
+      this.emit('RESPONSE', { to: id, latency: 0, gain: g, arm: true, feeler: false, turn: 'hand', grasp: false, motion: 'grasp.recoil', expected: true, by });
+      this.emit('HAND_SEEN', { mode: 'away', again: true, cause: 'recoil' });
+      return 'respond';
+    }
+    this.beginWrapV2(t, ctx, { byHand, wince, chase: false });
+    const rec: Record<string, LogValue> = { to: id, latency: 0, gain: g, arm: true, feeler: true, turn: 'hand', grasp: true, motion: 'grasp.wrap', expected: true, by };
+    if (wince) rec.wince = true;
+    this.emit('RESPONSE', rec);
+    return 'respond';
+  }
+
+  /** 收掉正在跑的非惊跳程序（进缠时；它的提示不再盖住缠） */
+  private cutProg(): string | null {
+    const s = this.s;
+    const m = s.m2!;
+    if (!m.prog || m.prog.name === 'startle') return null;
+    const name = m.prog.name;
+    m.prog = null;
+    if (s.gesture && s.gesture.kind !== 'startle') s.gesture = null;
+    return name;
+  }
+
+  /**
+   * v2 的缠（看见了手）：[一缩] → 定住感觉 → 贴上 / 合拢 → 等呼气 → 收紧 × n。抓握状态机照旧（WRAP，真值表不变），
+   * 到限位的时长 = 程序全长 + 0.5 s；catchT 初值「永不」，贴上做完且臂停稳时由 stepHandChain 写
+   */
+  private beginWrapV2(t: number, ctx: Ctx, o: { byHand: boolean; wince: boolean; chase: boolean; waited?: boolean }): void {
+    const s = this.s;
+    const m = s.m2!;
+    const hc = m.hc;
+    const h = s.hand!;
+    const cut = this.cutProg();
+    const gm = this.handGeom(h);
+    const cur = this.curPose();
+    const Dc = dOf(cur);
+    const deep = this.deepGate(h, t);
+    const sat = h.aimBend >= 1.45;
+    const Dref = sat || deep ? Dc : gm.Dh;
+    const gN = Math.min(1, Math.abs(this.hcGain(ctx)) / 0.5);
+    const [cx, cy] = this.cmdXY();
+    const settle = obsForecast(m.obs, cx, cy, 0.05, 0.8);
+    const T = s.period * (1 - ENGINE.arousal.breath * s.arousal);
+    const pounced = hc.stage === 'approach' && hc.beat === 'pounce';
+    const { phases, seat } = buildWrap(this.hcCtx(ctx), gm, {
+      byHand: o.byHand,
+      wince: o.wince,
+      chase: o.chase,
+      waited: o.waited ?? false,
+      pounced,
+      n: cinchCount(gN),
+      phi: s.phi,
+      period: T,
+      settle,
+      Dref,
+      deep,
+    });
+    hc.plan = [];
+    hc.Dref = Dref;
+    hc.dirRef = deep ? 0 : gm.dir;
+    hc.lastD = Dref;
+    hc.lastDir = gm.dir;
+    this.hcSet(t, 'wrap', o.chase ? 'regrab' : o.byHand ? 'receive' : 'grab');
+    this.hcRun(t, 'grasp.wrap', phases);
+    hc.seatEnd = t + phases.slice(0, seat + 1).reduce((a, p) => a + p.dur, 0);
+    const chases = o.chase ? s.grasp.chases : 0;
+    // 到限位（真值表 EMPTY）= 贴上做完再等 1.5 s（臂停稳 ≤ 1 s 之后才会卡住；之后的收紧是握住以后的事，不必等它）
+    s.grasp = {
+      ...s.grasp,
+      phase: 'WRAP',
+      t0: t,
+      dur: hc.seatEnd - t + 1.5,
+      dir: gm.dir,
+      from: Math.min(1, cur.bend),
+      chases,
+      catchT: NEVER,
+    };
+    const rec: Record<string, LogValue> = { chase: o.chase };
+    if (cut) rec.cut = cut;
+    this.emit('GRASP_START', rec);
+  }
+
+  /** 此刻给出的指令在差动平面上的位置（观测器的输入，与台架同一换算） */
+  private cmdXY(): [number, number] {
+    const s = this.s;
+    const b = Math.min(1, Math.hypot(s.armX.x, s.armY.x));
+    const dir = b > 1e-9 ? Math.atan2(s.armY.x, s.armX.x) : 0;
+    const D = 0.34 * b + 0.16 * s.wrap.x + (s.m2 && s.m2.deepOk ? 0.3773 * s.m2.deep : 0);
+    return [D * Math.cos(dir), D * Math.sin(dir)];
+  }
+
+  /** 观测器说臂停稳了没有 */
+  private settled(ev: number): boolean {
+    const [cx, cy] = this.cmdXY();
+    return obsSettled(this.s.m2!.obs, cx, cy, ev);
+  }
+
+  /** 记下这一跳的目标（差动平面）：手猛挪 = 新目标离它超过 jump */
+  private hcTarget(p: Pose): void {
+    const hc = this.s.m2!.hc;
+    hc.tgtX = dOf(p) * Math.cos(p.dir);
+    hc.tgtY = dOf(p) * Math.sin(p.dir);
+  }
+
+  /** 凑：手停稳、够得着 → 抽 ⑤，按人格排拍序 */
+  private beginApproach(t: number, ctx: Ctx, h: HandMem): void {
+    const hc = this.s.m2!.hc;
+    this.hcArmRef(h);
+    const g = this.hcGain(ctx);
+    const deep = this.deepGate(h, t);
+    hc.plan = approachPlan(this.hcCtx(ctx), this.handGeom(h), { negative: g < 0, deep });
+    hc.nudges = 0;
+    this.nextApproachBeat(t, ctx, h);
+  }
+
+  private nextApproachBeat(t: number, ctx: Ctx, h: HandMem): void {
+    const hc = this.s.m2!.hc;
+    const beat = hc.plan.shift() as ApproachBeat | undefined;
+    if (!beat) return;
+    this.hcSet(t, 'approach', beat);
+    const gm = this.handGeom(h);
+    const Dref = this.deepGate(h, t) ? dOf(this.curPose()) : gm.Dh;
+    this.hcRun(t, `hand.${beat}`, buildApproachBeat(this.hcCtx(ctx), gm, beat, Dref));
+  }
+
+  /** 够不着：探身 · 撑 · 再撑 · 泄气 → 看着（沉静型不探身，直接看着） */
+  private beginStrain(t: number, ctx: Ctx, h: HandMem): void {
+    const hc = this.s.m2!.hc;
+    hc.armed = false;
+    this.hcArmRef(h);
+    if (this.persona() === 'B') {
+      this.hcSet(t, 'watch');
+      hc.prog = null;
+      return;
+    }
+    this.hcSet(t, 'strain', 'stretch');
+    this.hcRun(t, 'hand.strain', buildStrain(this.hcCtx(ctx), this.handGeom(h), strainTries(ctx.p.toward)));
+  }
+
+  /** 凑走完没碰到：推两下 → 算一次够不着（泄气）→ 看着 */
+  private approachFailed(t: number, ctx: Ctx, h: HandMem): void {
+    const hc = this.s.m2!.hc;
+    if (hc.nudges < HC.nudges) {
+      hc.nudges++;
+      this.hcSet(t, 'approach', 'nudge');
+      this.hcRun(t, 'hand.nudge', buildApproachBeat(this.hcCtx(ctx), this.handGeom(h), 'nudge'));
+      return;
+    }
+    hc.armed = false;
+    this.hcArmRef(h);
+    this.hcSet(t, 'watch', 'deflate');
+    this.hcRun(t, 'hand.deflate', buildStrain(this.hcCtx(ctx), this.handGeom(h), 0).filter((p) => p.name === 'deflate'));
+  }
+
+  /** 握着时的提示：持续的哼 + 小动静（屏气一下）覆盖 */
+  private holdCueNow(): Cues {
+    const s = this.s;
+    const hc = s.m2!.hc;
+    const base = holdCue(this.persona());
+    if (hc.ev && hc.ev.kind === 'freeze') return { ...base, breath: { rate: 0 }, feel: { pose: 'still' } };
+    return base;
+  }
+
+  /**
+   * 迎手链每步（tick 里紧接 stepHand 之后；只有 v2）：拍间推进、门、跟手、握持的小动静、躲与偷看、重新武装。
+   * 臂由 stepArm 按优先级写（§9.3：惊跳 > 投入中的手链 > 其它程序 > 陪着 / 看着 / 躲的手链 > 静息）
+   */
+  private stepHandChain(t: number, ctx: Ctx): void {
+    const s = this.s;
+    const m = s.m2!;
+    const hc = m.hc;
+    const h = s.hand;
+    hc.yawSlow = false;
+    if (t - hc.vAt > 0.25) hc.v = 0;
+    if (!ctx.responsive) {
+      if (hc.stage !== 'off' || hc.prog) this.hcReset(t, 'off');
+      return;
+    }
+    const grasping = s.grasp.phase !== 'IDLE';
+    const seen = !!h && h.seen;
+    // 手没看见了（丢了 / 新一世）：抓握还在走时让它走完（真值表管），放开与找也做完（在丢手的地方找）；否则手链关
+    const st0 = hc.stage;
+    const carryOn = st0 === 'search' || st0 === 'release' || (grasping && (st0 === 'wrap' || st0 === 'hold' || st0 === 'chase'));
+    if (!seen && !carryOn && !(st0 === 'off' && hc.prog)) {
+      if (hc.stage !== 'off' || hc.prog) this.hcReset(t, 'off');
+      return;
+    }
+    // 别的程序（回应 / 注意到 / 看别处 / 自发 / 惊跳）在写臂时，陪着的跳暂停（程序作废，走完从此刻重跳）
+    if (m.prog && !ENGAGED.has(hc.stage)) {
+      hc.prog = null;
+      return;
+    }
+    const stage = hc.stage;
+    const gm = h ? this.handGeom(h) : null;
+    const k = Math.sqrt(s.speed);
+    switch (stage) {
+      case 'off': {
+        if (!h || !h.present) return;
+        if (h.mode === 'toward') {
+          this.hcSet(t, 'track');
+          return;
+        }
+        if (h.mode === 'away' && hc.relieved && h.dist < HC.reliefR) {
+          // 松了口气以后手又回来：重新侧身收起
+          hc.relieved = false;
+          this.hcSet(t, 'avoid');
+          this.avoidRef(h);
+          hc.side = this.avoidSide(h);
+          hc.turnAt = t + HC.avoidLag;
+          this.hcRun(t, 'hand.shrink', buildShrink(this.hcCtx(ctx), hc.close, hc.awayDir, true));
+        }
+        return;
+      }
+      case 'track': {
+        if (!h || !gm || h.mode !== 'toward') return;
+        if (!h.present) return;
+        // 放开后手不动：3 s 后再来一次（抓空后每 ⑨ 至多一次）
+        if (s.electrode && !grasping && t >= hc.rearmAt && !(hc.emptyLast && hc.rearmed)) {
+          hc.rearmAt = NEVER;
+          if (hc.emptyLast) hc.rearmed = true;
+          this.emit('CONTACT', { to: -1, rearm: true });
+          this.beginWrapV2(t, ctx, { byHand: false, wince: false, chase: false });
+          return;
+        }
+        const ph = hc.prog ? hc.prog.phases[hc.prog.idx] : null;
+        const fixating = !hc.prog || (ph !== null && ph !== undefined && ph.name === 'fixate');
+        const inFix = !hc.prog ? Infinity : ph && ph.name === 'fixate' ? t - hc.prog.ts : -1;
+        const still = t - hc.stillAt;
+        if (fixating && !h.turning && !this.handOnBody(h) && still >= stillOf(hc.tau) && hc.v < HC.vMove) {
+          if (reachable(h.aimBend, h.aimDist) || this.deepGate(h, t)) {
+            this.beginApproach(t, ctx, h);
+            return;
+          }
+          if (hc.armed || this.hcMovedMm(h) > HC.strainRearm) {
+            this.beginStrain(t, ctx, h);
+            return;
+          }
+        }
+        // 一跳一停：停够了、臂停稳了、目标挪开了才跳；手猛挪就不等
+        const lead = { x: Math.max(-HC.leadMax, Math.min(HC.leadMax, hc.vx * HC.leadT)), y: Math.max(-HC.leadMax, Math.min(HC.leadMax, hc.vy * HC.leadT)) };
+        const c = this.hcCtx(ctx);
+        const target = hopTarget(c, gm, lead);
+        const err = poseDist(this.curPose(), target);
+        const moved = hc.prog ? Math.hypot(dOf(target) * Math.cos(target.dir) - hc.tgtX, dOf(target) * Math.sin(target.dir) - hc.tgtY) : 0;
+        if (moved > HC.jump || (fixating && inFix >= dwellOf(c) && this.settled(0.05) && err > epsOf(this.persona(), hc.tau))) {
+          this.hcRun(t, 'hand.hop', buildHop(c, gm, lead));
+          this.hcTarget(target);
+        }
+        return;
+      }
+      case 'approach': {
+        if (!h || !gm) return;
+        const beat = hc.beat as ApproachBeat;
+        // 手又动了（扑已经起了的除外）：回去陪着，从此刻跳
+        const hx = gm.Dh * Math.cos(gm.dir) - hc.refX;
+        const hy = gm.Dh * Math.sin(gm.dir) - hc.refY;
+        if (beat !== 'pounce' && beat !== 'drop' && h.present && (hc.v > HC.vMove || Math.hypot(hx, hy) > 0.06)) {
+          this.hcReset(t, 'track');
+          hc.gDrawn = true;
+          return;
+        }
+        const el = t - hc.bt0;
+        let next = !hc.prog;
+        if (beat === 'hover') {
+          const ev = this.persona() === 'D' ? 0.06 : 0.03;
+          next = next || (el >= hoverMinOf(hc.tau) && this.settled(ev) && t - hc.stillAt >= stillOf(hc.tau));
+        } else if (beat === 'cocked') {
+          next = next || (el >= HC.cockedMin && this.settled(this.persona() === 'A' ? 0.08 : 0.06) && !h.turning);
+        }
+        if (!next) return;
+        if (hc.plan.length) {
+          this.nextApproachBeat(t, ctx, h);
+          return;
+        }
+        if (beat === 'drop') {
+          // 撤掉：态度改躲，到下一次 ⑨
+          h.mode = 'away';
+          this.emit('HAND_SEEN', { mode: 'away', again: true, cause: 'balk' });
+          this.hcReset(t, 'avoid');
+          hc.side = this.avoidSide(h);
+          hc.turnAt = t + HC.avoidLag;
+          this.avoidRef(h);
+          this.hcRun(t, 'hand.shrink', buildShrink(this.hcCtx(ctx), hc.close, hc.awayDir, false));
+          return;
+        }
+        this.approachFailed(t, ctx, h);
+        return;
+      }
+      case 'strain':
+        if (!hc.prog) this.hcSet(t, 'watch');
+        return;
+      case 'watch': {
+        if (!h || !gm || !h.present) return;
+        if (hc.prog) return;
+        if (h.mode !== 'toward') return;
+        if (this.hcMovedMm(h) > HC.strainRearm) {
+          hc.armed = true;
+          this.hcSet(t, 'track');
+        }
+        return;
+      }
+      case 'wrap': {
+        const g = s.grasp;
+        if (g.phase === 'WRAP' && (g.catchT ?? NEVER) >= NEVER && t >= hc.seatEnd && (this.settled(0.04) || t - hc.seatEnd >= 1)) g.catchT = t;
+        return;
+      }
+      case 'hold':
+        this.stepHold(t, ctx, h);
+        return;
+      case 'chase': {
+        const g = s.grasp;
+        if (g.phase !== 'WRAP') return;
+        // 身体晚 0.3 s 跟、常速
+        if (h && h.present && t - hc.st0 >= HC.yawLag && ctx.orientOk && !reachable(h.aimBend, h.aimDist)) {
+          if (Math.abs(wrapPi(h.steerFace - s.yaw.x)) > HAND.turnAt) s.yawTarget = this.handYawGoal(h.steerFace);
+        }
+        if (hc.prog) return;
+        const beat = hc.plan.shift() as ChaseBeat | undefined;
+        if (beat && gm) {
+          this.hcSet(t, 'chase', beat);
+          this.hcRun(t, `hand.${beat}`, buildChaseBeat(this.hcCtx(ctx), gm, beat, reachable(h!.aimBend, h!.aimDist)));
+          return;
+        }
+        // 拍走完了还没碰到：到限位（真值表 EMPTY）
+        if (g.dur > t - g.t0 + 0.5) g.dur = t - g.t0 + 0.5;
+        return;
+      }
+      case 'release':
+        return;
+      case 'search': {
+        if (!hc.prog) {
+          this.hcSet(t, h && h.mode === 'toward' ? 'track' : 'off');
+          return;
+        }
+        // 搜的途中手又停在够得着处、态度是迎：回去陪着
+        if (h && h.present && h.mode === 'toward' && reachable(h.aimBend, h.aimDist) && t - hc.stillAt > 0.3 && t - hc.st0 > 1) {
+          this.hcReset(t, 'track');
+        }
+        return;
+      }
+      case 'avoid':
+        this.stepAvoid(t, ctx, h, k);
+        return;
+      default:
+        return;
+    }
+  }
+
+  /** 握（HOLD_HUMAN）：跟手、数呼吸、手的小动静（攥 / 屏气 / 让）、被牵着走、深卷预算 */
+  private stepHold(t: number, ctx: Ctx, h: HandMem | null): void {
+    const s = this.s;
+    const m = s.m2!;
+    const hc = m.hc;
+    if (s.phi < hc.lastPhi) hc.breaths++;
+    hc.lastPhi = s.phi;
+    if (hc.ev && t - hc.ev.t0 > holdEventDur(hc.ev.kind, s.period)) hc.ev = null;
+    if (!h || !h.present || s.grasp.phase !== 'HOLD_HUMAN') return;
+    const gm = this.handGeom(h);
+    // 跟手（读数一步跳太大 = 被抽走：这一下不跟；深卷时钉住）
+    if (t - hc.jumpAt > 0.2 && hc.deepUsed <= 0) {
+      const a = 1 - Math.exp(-DT / HC.followTau);
+      hc.Dref += (Math.min(gm.Dh, HC.flatMax) - hc.Dref) * a;
+      const d = wrapPi(gm.dir - hc.dirRef);
+      const step = HC.followRate * DT;
+      hc.dirRef = wrapPi(hc.dirRef + clamp(d, -step, step));
+    }
+    // 手怎么动
+    const v = hc.v;
+    if (v >= HC.vStill && v < HC.vMicro) {
+      if (hc.tracT >= NEVER) hc.tracT = t;
+    } else hc.tracT = NEVER;
+    const outward = t - hc.outAt < 0.3;
+    if (v >= HC.vMicro && outward && (!hc.ev || hc.ev.kind !== 'give')) hc.ev = { kind: 'give', t0: t };
+    else if (v >= HC.vStill && v < HC.vMicro && !hc.ev && t - hc.reflexAt > 2 && t - hc.tracT < 0.5) {
+      // 抓握反射：活力 / 好奇攥一下、沉静屏气定住、不稳定三者里抽（表情子流）
+      const P = this.persona();
+      const kind = P === 'A' || P === 'C' ? 'squeeze' : P === 'B' ? 'freeze' : pick(m.xr, ['squeeze', 'freeze', 'give'] as const);
+      hc.ev = { kind, t0: t };
+      hc.reflexAt = t;
+    }
+    // 被牵着走：慢慢挪手持续 0.5 s、臂线偏出 25° → 身体以一半的速度跟
+    if (hc.tracT < NEVER && t - hc.tracT > HC.tractionT && ctx.orientOk && Math.abs(wrapPi(h.face - s.yaw.x)) > (25 * Math.PI) / 180) {
+      s.yawTarget = this.handYawGoal(h.steerFace);
+      hc.yawSlow = true;
+    }
+  }
+
+  /** 躲（侧身警戒）：再收 / 逼近时一缩 / 手走了松一口气；偷看由 ⑥ 起（spontaneous） */
+  private stepAvoid(t: number, ctx: Ctx, h: HandMem | null, k: number): void {
+    const hc = this.s.m2!.hc;
+    void k;
+    if (!h) return;
+    if (h.mode !== 'away') {
+      if (h.mode === 'toward') this.hcSet(t, 'track');
+      else this.hcReset(t, 'off');
+      return;
+    }
+    // 手走了（离开画布或远于 1.2 m 持续 1 s）：松一口气（遗忘不算）
+    if (!h.present || h.dist > HC.reliefR) {
+      if (hc.farSince >= NEVER) hc.farSince = t;
+      if (t - hc.farSince >= HC.reliefT || !h.present) {
+        hc.farSince = NEVER;
+        hc.relieved = true;
+        this.hcSet(t, 'off', 'relief');
+        this.hcRun(t, 'hand.relief', buildRelief(this.hcCtx(ctx)));
+      }
+      return;
+    }
+    hc.farSince = NEVER;
+    const busy = hc.prog !== null;
+    const ph = busy ? hc.prog!.phases[hc.prog!.idx] : null;
+    // 偷看时手动了：缩回去
+    if (ph && ph.name === 'look' && hc.v > HC.vMove) {
+      this.hcRun(t, 'hand.snap', buildSnap(this.hcCtx(ctx), hc.close, hc.awayDir));
+      this.hcSet(t, 'avoid', 'snap');
+      return;
+    }
+    // 逼近：一缩
+    if (hc.v > HC.cringeV && h.dist < HC.cringeR && hc.beat !== 'cringe') {
+      this.avoidRef(h);
+      this.hcSet(t, 'avoid', 'cringe');
+      this.hcRun(t, 'hand.cringe', buildCringe(this.hcCtx(ctx), hc.close, hc.awayDir));
+      return;
+    }
+    if (busy) return;
+    // 手挪了：再收一次
+    const close = 1 - smooth((h.dist - HAND.awayNear) / (HAND.awayFar - HAND.awayNear));
+    const away = this.awayDir(h);
+    if (Math.abs(close - hc.close) > HC.reshrinkClose || Math.abs(wrapPi(away - hc.awayDir)) > HC.reshrinkDir || poseDist(this.curPose(), avoidPose(close, away)) > 0.06) {
+      hc.close = close;
+      hc.awayDir = away;
+      this.hcSet(t, 'avoid', 'reshrink');
+      this.hcRun(t, 'hand.reshrink', buildShrink(this.hcCtx(ctx), close, away, false));
+    }
+  }
+
+  /**
+   * 手链写臂（stepArm 调）：有程序走程序；握人时握持控制器；握物 / 现行的松开交回旧的抓握代码（返回 false）；
+   * 拍间保持此刻的姿态
+   */
+  private hcArm(t: number, ctx: Ctx, restPose: Pose): boolean {
+    const s = this.s;
+    const m = s.m2!;
+    const hc = m.hc;
+    const g = s.grasp;
+    if (hc.prog) {
+      const r = stepProgram(hc.prog, t, restPose);
+      if (r.phase && hc.prog.idx !== hc.seen) {
+        hc.seen = hc.prog.idx;
+        this.enterPhase(t, r.phase);
+      }
+      if (r.done) hc.prog = null;
+      this.writePose(r.pose, r.done);
+      this.deepBook(t, r.pose);
+      return true;
+    }
+    const h = s.hand;
+    if (hc.stage === 'hold' && g.phase === 'HOLD_HUMAN' && h) {
+      if (hc.holdT0 >= NEVER) {
+        hc.holdT0 = t;
+        hc.holdFrom = this.curPose();
+      }
+      const deep = hc.deepUsed > 0 || (this.deepGate(h, t) && h.aimBend >= 1.45);
+      const ev = hc.ev ? holdEventMm(hc.ev.kind, t - hc.ev.t0, s.period) : 0;
+      const T = s.period * (1 - ENGINE.arousal.breath * s.arousal) * 1.15;
+      let pose = holdDrive({
+        persona: this.persona(),
+        g: this.handGeom(h),
+        Dref: hc.Dref,
+        dirRef: hc.dirRef,
+        phi: s.phi,
+        period: T,
+        breathAmp: s.ampBase,
+        breaths: hc.breaths,
+        grip: ctx.grip,
+        evMm: ev,
+        deep: deep && hc.deepOffAt >= NEVER,
+      });
+      // 深卷预算用完：1.3 s 内平滑松到 0.48（仍是握着）
+      if (hc.deepOffAt < NEVER) {
+        const flat = flatH(dOf(pose), hc.dirRef);
+        pose = blendPose(pose, flat, smooth((t - hc.deepOffAt) / 1.3));
+      }
+      if (hc.holdFrom) pose = blendPose(hc.holdFrom, pose, smooth((t - hc.holdT0) / HC.holdBlend));
+      this.writePose(pose, false);
+      this.deepBook(t, pose);
+      return true;
+    }
+    if (g.phase === 'HOLD_OBJECT' || g.phase === 'HOLD_HUMAN' || (g.phase === 'RELEASE' && !ENGAGED.has(hc.stage))) return false;
+    // 拍间：保持此刻的指令
+    s.armX.v = 0;
+    s.armY.v = 0;
+    s.wrap.v = 0;
+    return true;
+  }
+
+  /** 深卷记账：执行层真的放开深卷的帧（差动 > 0.48）才算；本轮满 4 s 收回、开始冷却 */
+  private deepBook(t: number, pose: Pose): void {
+    const m = this.s.m2!;
+    const hc = m.hc;
+    if (pose.deep > 0 && dOf(pose) > HC.flatMax) {
+      hc.deepUsed += DT;
+      if (hc.deepUsed >= 4 && hc.deepOffAt >= NEVER) hc.deepOffAt = t;
+    } else if (hc.deepUsed > 0 && pose.deep <= 0) this.deepEnd(t);
+  }
+
+  /** 此刻的挤压相位 0–1（台架标记圈随它缩放；不在握人时 = null） */
+  handSqueeze(): number | null {
+    const s = this.s;
+    const m = s.m2;
+    if (!m || m.hc.stage !== 'hold' || s.grasp.phase !== 'HOLD_HUMAN') return null;
+    return squeezePhase(s.phi, s.period * 1.15);
+  }
+
+  /** 迎手链此刻的阶段与拍（台架 HUD；没有 = null） */
+  handStage(): { stage: HcStage; beat: string } | null {
+    const m = this.s.m2;
+    if (!m || m.hc.stage === 'off') return null;
+    return { stage: m.hc.stage, beat: m.hc.beat };
+  }
+
+  /** 此刻的抓握是不是迎手链在管（v2 + 它的缠写过 catchT + 手链投入中）；是的话返回手链状态 */
+  private hcGrasp(): HandChain | null {
+    const m = this.s.m2;
+    if (!m || this.s.grasp.catchT === undefined) return null;
+    const st = m.hc.stage;
+    return st === 'wrap' || st === 'hold' || st === 'chase' ? m.hc : null;
+  }
+
+  /** 抓空（真值表 EMPTY）：先按人格做一拍（再抓一下 / 摸一摸 / 慢慢张开 / 生硬落回），放开；搜寻次数照 emptySearches */
+  private hcEmpty(t: number, ctx: Ctx, searches: number): void {
+    const s = this.s;
+    const m = s.m2!;
+    const hc = m.hc;
+    const P = this.persona();
+    const kind: EmptyKind = P === 'A' ? 'regrab' : P === 'C' ? 'palpate' : P === 'B' ? 'open' : pick(m.xr, ['regrab', 'palpate', 'open', 'drop'] as const);
+    hc.searches = searches;
+    hc.emptyLast = true;
+    const cur = this.curPose();
+    this.hcSet(t, 'release', kind);
+    this.hcRun(t, `hand.empty.${kind}`, buildEmpty(this.hcCtx(ctx), kind, s.hand ? this.handGeom(s.hand) : null));
+    s.grasp = { ...s.grasp, phase: 'RELEASE', t0: t, dur: totalDur(hc.prog!), from: Math.min(1, cur.bend), dir: cur.dir, reason: 'empty', searches: 0 };
+  }
+
+  /**
+   * 握着时脱手（真值表 LOST，人格反应照 lostReaction）：追 = 按脱手前指针多快选扑过去（≥ 150 mm/s）或伸过去送一下，
+   * 抓握回到 WRAP（追途中碰到 = 预期接触，再缠）；放弃 = 沉静型愣一下、收回自己一侧、改躲，不稳定型生硬落回
+   */
+  private hcLost(t: number, ctx: Ctx, reaction: 'chase' | 'giveUp'): void {
+    const s = this.s;
+    const m = s.m2!;
+    const hc = m.hc;
+    const h = s.hand;
+    const g = s.grasp;
+    const cur = this.curPose();
+    hc.ev = null;
+    hc.holdFrom = null;
+    hc.holdT0 = NEVER;
+    this.deepEnd(t);
+    if (reaction === 'chase' && h) {
+      g.chases++;
+      const fast = t - hc.pullT <= 0.3 && hc.pullV >= HC.chaseFast;
+      hc.plan = chasePlan(fast);
+      s.grasp = { ...g, phase: 'WRAP', t0: t, dur: 60, from: Math.min(1, cur.bend), catchT: NEVER };
+      this.emit('GRASP_START', { chase: true });
+      const beat = hc.plan.shift() as ChaseBeat;
+      this.hcSet(t, 'chase', beat);
+      this.hcRun(t, `hand.${beat}`, buildChaseBeat(this.hcCtx(ctx), this.handGeom(h), beat, reachable(h.aimBend, h.aimDist)));
+      return;
+    }
+    if (this.persona() === 'B' && h && h.seen) {
+      h.mode = 'away';
+      this.emit('HAND_SEEN', { mode: 'away', again: true, cause: 'giveUp' });
+      hc.side = this.avoidSide(h);
+      hc.turnAt = t + HC.avoidLag;
+      this.avoidRef(h);
+    }
+    const away = h ? this.awayDir(h) : MOTION.down;
+    this.hcSet(t, 'release', 'giveUp');
+    this.hcRun(t, 'hand.giveUp', buildGiveUp(this.hcCtx(ctx), away));
+    s.grasp = { ...s.grasp, phase: 'RELEASE', t0: t, dur: totalDur(hc.prog!), from: Math.min(1, cur.bend), dir: cur.dir, reason: 'lost' };
+  }
+
+  /** 放开做完：还要找就以最后碰到处为中心找；否则回陪着 / 侧身躲 / 关。放开以后 3 s 手还搭在臂上就再来一次 */
+  private hcReleased(t: number, ctx: Ctx): void {
+    const s = this.s;
+    const hc = s.m2!.hc;
+    const h = s.hand;
+    hc.rearmAt = t + HC.rearm;
+    if (hc.searches > 0) {
+      const n = hc.searches;
+      hc.searches = 0;
+      this.hcSet(t, 'search', 'cast');
+      this.hcRun(t, 'hand.search', buildSearch(this.hcCtx(ctx), { D: hc.lastD, dir: hc.lastDir }, n));
+      return;
+    }
+    if (h && h.seen && h.mode === 'toward') this.hcSet(t, 'track');
+    else if (h && h.seen && h.mode === 'away') {
+      this.avoidRef(h);
+      this.hcSet(t, 'avoid');
+    } else this.hcReset(t, 'off');
   }
 
   // ---------------------------------------------------------------- 抓握
@@ -1840,14 +3097,20 @@ export class BehaviorEngine {
       from: bend,
       chases: chase ? s.grasp.chases : 0,
     };
+    // v2 里没看见手的缠走这条旧路：上一回合迎手链留下的 catchT 不许带过来（台架会按它判张力）
+    if (s.m2) delete s.grasp.catchT;
     this.emit('GRASP_START', { chase });
   }
 
   private beginRelease(t: number, ctx: Ctx, reason: string): void {
     const s = this.s;
-    const from = this.graspBend(t, ctx);
+    // 迎手链的缠（只有它写 catchT）：起点取此刻实际给出的姿态（它不是旧的缠绕公式算出来的）
+    const hcGrasp = !!s.m2 && s.grasp.catchT !== undefined;
+    const cur = hcGrasp ? this.curPose() : null;
+    const from = cur ? Math.min(1, cur.bend) : this.graspBend(t, ctx);
     const slow = reason === 'death' ? GRASP.deathRelease : 1;
     s.grasp = { ...s.grasp, phase: 'RELEASE', t0: t, dur: this.gestureDur(GRASP.release) * slow, from, reason };
+    if (cur) s.grasp.dir = cur.dir;
   }
 
   private stepGrasp(t: number, ctx: Ctx): void {
@@ -1856,16 +3119,29 @@ export class BehaviorEngine {
     switch (g.phase) {
       case 'WRAP': {
         const v = graspVerdict({ tension: s.tension, electrode: s.electrode, atLimit: t - g.t0 >= g.dur });
+        const hc = this.hcGrasp();
         if (v === 'HOLD_HUMAN' || v === 'HOLD_OBJECT') {
-          g.contact = this.graspBend(t, ctx);
+          if (hc) {
+            // 迎手链：握姿是此刻实际的姿态（由手定，不是旧的缠绕进度）；缠程序剩下的收紧照走，走完交给握持控制器
+            const cur = this.curPose();
+            g.contact = Math.min(1, cur.bend);
+            g.dir = cur.dir;
+            hc.breaths = 0;
+            hc.lastPhi = s.phi;
+            hc.holdT0 = NEVER;
+            this.hcSet(t, 'hold');
+          } else g.contact = this.graspBend(t, ctx);
           g.contactW = s.wrap.x;
           g.phase = v;
           this.emit(v === 'HOLD_HUMAN' ? 'GRASP_HOLD_HUMAN' : 'GRASP_HOLD_OBJECT');
         } else if (v === 'EMPTY') {
           const searches = emptySearches(this.persona(), s.rng);
           this.emit('GRASP_EMPTY', { searches });
-          this.beginRelease(t, ctx, 'empty');
-          s.grasp.searches = searches;
+          if (hc) this.hcEmpty(t, ctx, searches);
+          else {
+            this.beginRelease(t, ctx, 'empty');
+            s.grasp.searches = searches;
+          }
         }
         return;
       }
@@ -1874,7 +3150,8 @@ export class BehaviorEngine {
         if (!s.tension) {
           const reaction = g.chases < GRASP.maxChases ? lostReaction(this.persona(), s.rng) : 'giveUp';
           this.emit('GRASP_LOST', { reaction });
-          if (reaction === 'chase') {
+          if (this.hcGrasp()) this.hcLost(t, ctx, reaction);
+          else if (reaction === 'chase') {
             g.chases++;
             this.beginWrap(t, true);
           } else this.beginRelease(t, ctx, 'lost');
@@ -1883,6 +3160,7 @@ export class BehaviorEngine {
         const want: GraspPhase = s.electrode ? 'HOLD_HUMAN' : 'HOLD_OBJECT';
         if (want !== g.phase) {
           g.phase = want;
+          if (want === 'HOLD_HUMAN' && s.m2) s.m2.hc.holdT0 = NEVER;
           this.emit(want === 'HOLD_HUMAN' ? 'GRASP_HOLD_HUMAN' : 'GRASP_HOLD_OBJECT');
         }
         return;
@@ -1891,8 +3169,9 @@ export class BehaviorEngine {
         if (t - g.t0 >= g.dur) {
           this.emit('RELEASE_DONE', { after: g.reason });
           g.phase = 'IDLE';
+          if (s.m2 && s.m2.hc.stage === 'release') this.hcReleased(t, ctx);
           // 抓空后的搜寻：尽快排上（自发调度见 spontaneous 的 search 分支）
-          if (g.searches > 0) s.nextSpont = Math.min(s.nextSpont, t + 0.3);
+          else if (g.searches > 0) s.nextSpont = Math.min(s.nextSpont, t + 0.3);
         }
         return;
       default:
@@ -1939,7 +3218,7 @@ export class BehaviorEngine {
     const still = s.phase === 'BLANK' || s.phase === 'END';
     // v2：这一段对呼吸的提示（屏住 / 放慢 / 加深 / 猛收 / 往收拢端推）；死亡里一律不用（呼吸归死亡的脚本）。
     // v1 没有这一块，下面的算式逐位不变
-    const br = s.m2 && !ctx.death ? this.progPhase()?.breath : undefined;
+    const br = s.m2 && !ctx.death ? this.cueNow(t)?.ph.breath : undefined;
     if (s.m2) dampStep(s.m2.rate, br?.rate ?? 1, V2.breathRateOmega, DT);
     if (!still) {
       const T = s.period * (1 - ENGINE.arousal.breath * s.arousal);
@@ -1988,9 +3267,10 @@ export class BehaviorEngine {
     const rest = MOTION.restBend * ctx.vigor;
     let bx = rest * Math.cos(s.restDir);
     let by = rest * Math.sin(s.restDir);
-    // 看见了手（在、不在机身上方）：静息姿态换成「够手」（迎）或「背着手弯」（躲）。没有手时这段整个跳过
+    // 看见了手（在、不在机身上方）：静息姿态换成「够手」（迎）或「背着手弯」（躲）。没有手时这段整个跳过；
+    // v2 有手时不走这一段——迎手链按拍写臂（§9.3），不再是「够手静息 + 人格跟随器」
     const h = s.hand;
-    if (h && h.seen && h.present && ctx.responsive && !this.handOnBody(h) && (h.mode === 'toward' || h.mode === 'away')) {
+    if (!s.m2 && h && h.seen && h.present && ctx.responsive && !this.handOnBody(h) && (h.mode === 'toward' || h.mode === 'away')) {
       if (h.mode === 'toward') {
         const L = HAND.armL;
         const w = 1 - smooth((h.aimDist - HAND.reachNear * L) / ((HAND.reachZero - HAND.reachNear) * L));
@@ -2016,12 +3296,15 @@ export class BehaviorEngine {
           by *= f;
         }
       }
+      const restPose: Pose = { bend: Math.hypot(bx, by), dir: Math.atan2(by, bx), deep: 0 };
+      // 迎手链投入中（凑 / 缠 / 握 / 追 / 放开 / 找）：除了惊跳，别的程序只出提示、不抢臂
+      const engaged = ENGAGED.has(m.hc.stage);
       if (m.prog) {
         // 动作程序直接给臂（不经人格跟随器）；速度按差分记下，程序走完跟随器接着走不跳。
         // 抓握握着（缠 / 握人 / 握物）时臂归抓握：程序照走，只放它的呼吸 / 声 / 光 / 触须 / 转身提示，不写臂；
         // 松开（RELEASE，惊跳会先叫它）时程序接管臂
-        const restPose: Pose = { bend: Math.hypot(bx, by), dir: Math.atan2(by, bx), deep: 0 };
         const progT0 = m.prog.t0;
+        const startle = m.prog.name === 'startle';
         const r = stepProgram(m.prog, t, restPose);
         if (r.phase && m.prog.idx !== m.seen) {
           m.seen = m.prog.idx;
@@ -2030,19 +3313,15 @@ export class BehaviorEngine {
         if (r.done) m.prog = null;
         // 抓握握着时起的程序（比如触须抖）松手时不接管臂：它的起点是当时的抓握姿态，接管会让臂一帧跳过去；
         // 惊跳是先叫松开、同一帧起程序（t0 = 松开时刻），照样接管
-        if (s.grasp.phase === 'IDLE' || (s.grasp.phase === 'RELEASE' && progT0 >= s.grasp.t0)) {
-          const x = r.pose.bend * Math.cos(r.pose.dir);
-          const y = r.pose.bend * Math.sin(r.pose.dir);
-          // 走完那一帧不把速度交给跟随器（D 生硬的直线落回带着速度，交过去会冲过静息再弹回来）
-          s.armX.v = r.done ? 0 : (x - s.armX.x) / DT;
-          s.armY.v = r.done ? 0 : (y - s.armY.x) / DT;
-          s.armX.x = x;
-          s.armY.x = y;
-          m.deep = r.pose.deep;
-          dampStep(s.wrap, 0, MOTION.armOmega * Math.sqrt(s.speed), DT);
+        if ((s.grasp.phase === 'IDLE' || (s.grasp.phase === 'RELEASE' && progT0 >= s.grasp.t0)) && (startle || !engaged)) {
+          this.writePose(r.pose, r.done);
           s.tone = ctx.tone;
           return;
         }
+      }
+      if ((m.hc.stage !== 'off' || m.hc.prog) && this.hcArm(t, ctx, restPose)) {
+        s.tone = ctx.tone;
+        return;
       }
       m.deep = 0;
     }
@@ -2090,7 +3369,9 @@ export class BehaviorEngine {
     const prog = s.m2?.prog ?? null;
     const reflexNow = !s.m2 || (prog !== null && prog.name === 'startle' && STARTLE_PRE.has(prog.phases[prog.idx]?.name ?? ''));
     const fast = s.gesture && s.gesture.kind === 'startle' && reflexNow ? MOTION.yawRateStartle : 1;
-    const step = MOTION.yawRate * k * fast * DT;
+    // 握着被牵着走：身体以一半的速度跟（只有 v2 迎手链会置）
+    const slow = s.m2?.hc.yawSlow ? 0.5 : 1;
+    const step = MOTION.yawRate * k * fast * slow * DT;
     s.yawGoal += clamp(s.yawTarget - s.yawGoal, -step, step);
     dampStep(s.yaw, s.yawGoal, MOTION.yawOmega * k, DT);
   }
@@ -2102,10 +3383,13 @@ export class BehaviorEngine {
     if (s.m2) {
       // v2：两条触须不再是双胞胎——姿势（收 / 指向一侧 / 张开 / 竖起 / 静止）+ 颤 + 交替探
       const m = s.m2;
-      const f = this.progPhase()?.feel;
+      const f = this.cueNow(t)?.ph.feel;
       const pose = f?.pose ?? 'free';
       const sweep = pose === 'free' ? MOTION.feelerAmp * ctx.vigor * (1 + ENGINE.arousal.feeler * s.arousal) * Math.sin(s.psi) : 0;
-      const side = f?.side ?? 0;
+      // 指向没写侧别、又看见了手：按手的相对方位连续指（迎手链：眼一直跟、臂一跳一停）
+      const hh = s.hand;
+      const side =
+        f?.side ?? (pose === 'point' && f && hh && hh.seen && hh.present ? clamp(wrapPi(hh.bearing - s.yaw.x) / (Math.PI / 2), -1, 1) : 0);
       for (const j of [0, 1] as const) {
         const off = V2.feelerPose[pose][j] + (pose === 'point' ? V2.feelerPoint * side : 0);
         dampStep(m.feel[j], off * ctx.vigor, V2.feelerPoseOmega, DT);

@@ -159,25 +159,33 @@ const side3 = (s: number): -1 | 0 | 1 => (s > 0 ? 1 : s < 0 ? -1 : 0);
  * 速度分档（指令空间，差动 D 每秒；随 √k_v 走，各有上下限——A 永远比 B 快，但 A 的刻意动作也到不了惊跳的一半）：
  *   reflex 不限（屈曲固定 0.15 s）· recover clamp(0.9k, 0.45, 1.2)×(0.5 + 0.5·活力) · urgent clamp(0.35k, 0.22, 0.45)
  *   · deliberate clamp(0.20k, 0.15, 0.26) · spont clamp(0.11k, 0.07, 0.15)
+ * 迎手链（2026-10-08）另加三档：strike clamp(1.2k, 0.8, 1.5)（扑；总行程另封顶 0.22，见 vocab2-hand.ts）·
+ *   pursue clamp(0.42k, 0.20, 0.50)（跳、转运、追、探身）· creep clamp(0.08k, 0.05, 0.10)（慢碰、贴上、收紧）
  * 每段的时长至少要让「缓动的峰值速度 ≤ 档位」。
  */
-export type Tier = 'reflex' | 'recover' | 'urgent' | 'deliberate' | 'spont';
+export type Tier = 'reflex' | 'recover' | 'strike' | 'pursue' | 'urgent' | 'deliberate' | 'spont' | 'creep';
 export function tierSpeed(tier: Tier, k: number, vigor = 1): number {
   switch (tier) {
     case 'reflex':
       return Infinity;
     case 'recover':
       return clamp(0.9 * k, 0.45, 1.2) * (0.5 + 0.5 * vigor);
+    case 'strike':
+      return clamp(1.2 * k, 0.8, 1.5);
+    case 'pursue':
+      return clamp(0.42 * k, 0.2, 0.5);
     case 'urgent':
       return clamp(0.35 * k, 0.22, 0.45);
     case 'deliberate':
       return clamp(0.2 * k, 0.15, 0.26);
+    case 'creep':
+      return clamp(0.08 * k, 0.05, 0.1);
     default:
       return clamp(0.11 * k, 0.07, 0.15);
   }
 }
 /** 各缓动的「峰值速度 / 平均速度」 */
-const PEAK: Record<Phase['ease'], number> = { hold: 0, lin: 1, mj: 1.875, out: 3, out4: 4, in: 3 };
+export const PEAK: Record<Phase['ease'], number> = { hold: 0, lin: 1, mj: 1.875, out: 3, out4: 4, in: 3 };
 
 /** 两个姿态之间走过的差动路程：直线路径 = 弦长；弧路径 ≈ √(ΔD² + (D̄·Δθ)²) */
 export function pathLen(a: Pose, b: Pose, path: Phase['path'] = 'polar'): number {
@@ -248,7 +256,7 @@ export function anticPose(cur: Pose, to: Pose, amount: number): Pose {
   return { bend: Math.min(D, OFF_AXIS_DMAX) / SPAN, dir: D > 1e-9 ? Math.atan2(y, x) : cur.dir, deep: 0 };
 }
 
-const ph = (name: string, dur: number, ease: Phase['ease'], arm: Phase['arm'], extra: Partial<Phase> = {}): Phase => ({
+export const ph = (name: string, dur: number, ease: Phase['ease'], arm: Phase['arm'], extra: Partial<Phase> = {}): Phase => ({
   name,
   dur: Math.max(0, dur),
   ease,

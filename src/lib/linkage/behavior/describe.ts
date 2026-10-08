@@ -73,6 +73,63 @@ const HAND_LOST: Record<string, Pair> = {
   gone: ['手离开', 'hand gone'],
   unseen: ['手出了视野', 'hand out of view'],
 };
+/** 迎手链（v2）的阶段与拍 */
+const HC_STAGE: Record<string, Pair> = {
+  off: ['手链停下', 'stands down'],
+  track: ['陪着手', 'keeps pace with the hand'],
+  approach: ['凑过去', 'closes in'],
+  strain: ['够不着 · 探身', 'stretches for it'],
+  watch: ['看着手', 'watches the hand'],
+  wrap: ['缠', 'wraps'],
+  hold: ['握着', 'holding'],
+  chase: ['追', 'goes after it'],
+  release: ['放开', 'lets go'],
+  search: ['找', 'searches'],
+  avoid: ['侧身躲开', 'turns aside'],
+};
+const HC_BEAT: Record<string, Pair> = {
+  transport: ['靠近', 'moves closer'],
+  edge: ['试探着靠近', 'edges closer'],
+  wait: ['停住', 'pauses'],
+  retreat: ['退一点', 'backs off a little'],
+  wait2: ['再停', 'pauses again'],
+  edge2: ['再靠近', 'edges in again'],
+  hover: ['停半拍', 'holds just short'],
+  crouch: ['蹲', 'crouches'],
+  cocked: ['蓄住', 'holds, coiled'],
+  pounce: ['扑', 'pounces'],
+  sight: ['瞄准', 'takes aim'],
+  reach: ['伸过去', 'reaches'],
+  touch: ['慢慢碰', 'touches slowly'],
+  curl: ['卷过去', 'curls over'],
+  nudge: ['推一下', 'nudges'],
+  balk: ['犹豫', 'hesitates'],
+  stall: ['愣住', 'stalls'],
+  drop: ['撤开', 'pulls away'],
+  grab: ['抓住', 'grabs'],
+  receive: ['接住', 'takes it'],
+  regrab: ['再抓', 'grabs again'],
+  let: ['一松', 'lets slip'],
+  lunge: ['扑过去', 'lunges after it'],
+  creep: ['摸过去', 'creeps over'],
+  grope: ['摸索', 'gropes'],
+  letSlow: ['一松', 'lets slip'],
+  extend: ['伸过去送', 'reaches after it'],
+  linger: ['停着', 'lingers'],
+  sag: ['垂下', 'sags'],
+  palpate: ['摸一摸', 'feels around'],
+  open: ['慢慢张开', 'opens slowly'],
+  giveUp: ['放弃', 'gives up'],
+  cast: ['来回找', 'casts about'],
+  deflate: ['泄气', 'deflates'],
+  stretch: ['探身', 'stretches'],
+  peek: ['偷看', 'peeks'],
+  snap: ['缩回', 'snaps back'],
+  cringe: ['一缩', 'cringes'],
+  reshrink: ['再收', 'shrinks back'],
+  relief: ['松一口气', 'relaxes'],
+};
+
 const LOST: Record<string, Pair> = {
   chase: ['脱手 · 追', 'loses grip · chases'],
   giveUp: ['脱手 · 放弃', 'loses grip · gives up'],
@@ -144,6 +201,11 @@ function what(r: LogRecord, lang: DescribeLang): string {
     }
     case 'HAND_LOST':
       return pick(HAND_LOST[str(p.reason)] ?? ['手不见了', 'hand lost'], lang);
+    case 'HAND_STAGE': {
+      const st = pick(HC_STAGE[str(p.stage)] ?? ['手链', 'hand chain'], lang);
+      const b = HC_BEAT[str(p.beat)];
+      return b ? `${st} · ${pick(b, lang)}` : st;
+    }
     case 'LIFE_BIRTH':
       return zh ? `诞生 · ${personaName(r.persona, 'zh')}` : `born · ${personaName(r.persona, 'en')}`;
     case 'LIFE_GROW':

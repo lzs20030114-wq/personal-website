@@ -57,7 +57,20 @@ export type SensorInput =
   | { kind: 'ARM_TOUCH'; on: boolean; by?: 'hand' | 'arm' }
   | { kind: 'RESISTANCE'; on: boolean }
   | { kind: 'HAND'; on: false }
-  | { kind: 'HAND'; on: true; bearing: number; dist: number; face: number; aimDir: number; aimBend: number; aimDist: number };
+  | {
+      kind: 'HAND';
+      on: true;
+      bearing: number;
+      dist: number;
+      face: number;
+      aimDir: number;
+      aimBend: number;
+      aimDist: number;
+      /** 以下三个只有动作词汇 v2 的台架才带（v1 日志一字不变）：此刻的有效碰到半径 mm、指针已静止多少秒（≤ 9.9）、指针速度 mm/s */
+      touch?: number;
+      still?: number;
+      v?: number;
+    };
 
 /** 刺激强度 I ∈ [0,1]：与人格的惊吓阈值比（I > 阈值 = 惊吓，§4.2） */
 export const INTENSITY = {
@@ -154,7 +167,8 @@ export function isSensorInput(x: unknown): x is SensorInput {
         [e.bearing, e.dist, e.face, e.aimDir, e.aimBend, e.aimDist].every(isFiniteNum) &&
         (e.dist as number) >= 0 &&
         (e.aimBend as number) >= 0 &&
-        (e.aimDist as number) >= 0
+        (e.aimDist as number) >= 0 &&
+        [e.touch, e.still, e.v].every((x) => x === undefined || (isFiniteNum(x) && x >= 0))
       );
     default:
       return false;
@@ -206,6 +220,12 @@ export const ENGINE_EVENTS = [
   'HAND_SEEN',
   /** 看见过的手不见了：reason = gone 离开 / unseen 出了视野太久 */
   'HAND_LOST',
+  /**
+   * 迎手链（动作词汇 v2 才有，2026-10-08）：stage = 阶段（track 陪着 · approach 凑 · strain 够不着 · watch 看着 ·
+   * wrap 缠 · hold 握 · chase 追 · release 放开 · search 找 · avoid 侧身躲 · off），beat = 这一拍的名字（transport、
+   * hover、pounce、seat、lunge、peek…）
+   */
+  'HAND_STAGE',
   'LIFE_BIRTH',
   'LIFE_GROW',
   'LIFE_AGE',

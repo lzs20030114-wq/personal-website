@@ -45,7 +45,8 @@ export interface Pose {
 }
 
 export type FeelerPose = 'free' | 'tuck' | 'point' | 'splay' | 'raise' | 'still';
-export type VoiceCue = 'chirp' | 'mute' | 'purr' | 'query' | 'huff' | 'fall' | 'tsk';
+/** hum = 握着手时随呼气出声（迎手链，2026-10-08） */
+export type VoiceCue = 'chirp' | 'mute' | 'purr' | 'query' | 'huff' | 'fall' | 'tsk' | 'hum';
 
 /** 一段里身体其它通道的提示（都可省 = 照常） */
 export interface Cues {
@@ -103,6 +104,13 @@ export interface Program {
 
 /** 臂通带上限（Hz）：再快的摆动到不了梢端（§8.2 探针：1.2 Hz 时只剩 6–10 mm） */
 export const ARM_OSC_MAX_HZ = 0.6;
+
+/**
+ * 弯曲量的上限：1 = 只用差动的满幅（0.34）；迎手链（2026-10-08）要把手那一点上的毫米换成差动，离轴最多到 0.48，
+ * 超出 1 的部分由执行层的深缠行程给（engine 的 ARM_BEND_MAX，同一个数）。摆动叠上去也只钳到这里——此前的程序
+ * 带摆动时弯曲都 ≤ 1，钳位放宽对它们不起作用
+ */
+export const POSE_BEND_MAX = 1.47;
 
 export function totalDur(p: { phases: readonly Phase[] }): number {
   return p.phases.reduce((s, ph) => s + ph.dur, 0);
@@ -174,7 +182,7 @@ export function stepProgram(p: Program, t: number, rest: Pose): { pose: Pose; ph
     const left = (ph.dur - tau) / fade;
     const win = left >= 1 ? 1 : left <= 0 ? 0 : left * left * (3 - 2 * left);
     const w = win * ph.osc.amp * Math.exp(-ph.osc.decay * tau) * Math.sin(TAU * ph.osc.hz * tau);
-    pose = { ...pose, bend: Math.min(1, Math.max(0, pose.bend + w)) };
+    pose = { ...pose, bend: Math.min(POSE_BEND_MAX, Math.max(0, pose.bend + w)) };
   }
   p.out = pose;
   return { pose, phase: ph, done: false, tau };
