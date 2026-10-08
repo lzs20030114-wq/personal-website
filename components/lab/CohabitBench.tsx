@@ -34,11 +34,11 @@ const COPY = {
     line: (t: number, people: number, cats: number, far: number, held: number, detour: number, bands: number | null) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${people} 人 · ${cats} 猫 · 猫在 1 m 外 ${(far * 100).toFixed(0)}%（参照 78%）· 绕行 ${detour.toFixed(1)} m${bands !== null ? ` · 让路 ${bands} 条带` : ''}${held ? ` · R5 钉住 ${held}` : ''}`,
     legend: '实墨圈 = 对人是墙 · 紫环 = 成形（缺口 = 收回的带）· 芯上短横 = R5 钉住 · 连线：绿虚 共视 / 紫 共温 / 粉 共触 / 墨 交接',
-    legendSeats: '人：灰空心 走 · 墨空心 站 · 墨实心 坐 · 紫点线圈 = 座位的会面台 · 绿虚线 = 空间为猫铺的路（箭头 = 下一步）· 紫环 = 成形 · 实墨圈 = 对人是墙 · 连线：绿虚 共视 / 紫 共温 / 粉 共触',
+    legendSeats: '人：灰空心 走 · 墨空心 站 · 墨实心 坐 · 灰细线 = 同一组 · 猫身下灰虚线圈 = 猫在地面 · 紫点线圈 = 座位的会面台 · 绿虚线 = 空间为猫铺的路（箭头 = 下一步）· 紫环 = 成形 · 实墨圈 = 对人是墙 · 连线：绿虚 共视 / 紫 共温 / 粉 共触',
     seats: (sitting: number, guides: number, arrivals: number) => ` · 坐着 ${sitting} · 铺路 ${guides} · 猫到会面台 ${arrivals} 次`,
     hint: `点空地放访客，按住拖；猫可拖到任一单元。「自走」让访客漫步（一半几率去看猫）、猫按坐 / 卧 / 换格的节奏活动。最多 ${COHABIT.MAX_PEOPLE} 人 ${COHABIT.MAX_CATS} 猫。`,
-    hintSeats: `点空地放访客、点座位让他坐下，按住人拖（拖到座位上松手 = 坐下）；猫可拖到任一单元；按住家具拖动换位置（摆不下的地方它不动），「家具」一栏加减、回到标准布置。「自走」让访客漫步：一半几率找空座坐 ${COHABIT.SEATS.SIT.min / 60}–${COHABIT.SEATS.SIT.max / 60} 分钟，否则一半几率去看猫。最多 ${COHABIT.MAX_PEOPLE} 人 ${COHABIT.MAX_CATS} 猫。`,
-    rulesSeats: '座位三态：家具是地面上独立的一层，标准布置是两张沙发、两把椅子摆在房间中间、不贴墙；单元照常挂在家具上方，只有坐着的人头顶那几台不落（平台离地 1.08 m，比坐着的头顶低）。人走着不触发，地面也不留痕迹。站定满 3 秒、且看着一只猫，空间朝这个人给那只猫铺一步，这次站定只给一次。坐下 = 全力：空间从最近一只能来的猫脚下，一步一步铺到这个座位的会面台（离座位 1.0–1.5 m，猫卧在那儿不用付停留代价、又在共温带里）；落着的始终只有猫脚下和下一步。走不走仍是猫的事：它坐满 3 秒，旁边有一台空间递过来的，就一半几率挪过去，不走就卧下；挪窝时也优先走那台。其余照旧：落下的单元对人是墙；猫被访客贴到 1 m 以内撑过几秒就退开、之后一阵不跟人走；落下会困住人的不落；按带让路时挡人的带各自收回。',
+    hintSeats: `点空地放一位访客，「+ 一组」放结伴的两人；点座位让人坐下，按住人拖（拖到座位上松手 = 坐下）；猫可拖到任一单元；按住家具拖动换位置（摆不下的地方它不动），「家具」一栏加减、回到标准布置。「自走」让访客漫步：一半几率找空座坐 ${COHABIT.SEATS.SIT.min / 60}–${COHABIT.SEATS.SIT.max / 60} 分钟，否则一半几率去看猫，同组的人一起走、一起坐。最多 ${COHABIT.MAX_PEOPLE} 人 ${COHABIT.MAX_CATS} 猫。`,
+    rulesSeats: '座位三态：家具是地面上独立的一层，标准布置是四张沙发、两把椅子共 10 个座，摆在房间中间、不贴墙。人有身体：一个交叉点只站一个人，过道里两人错不开身，就在交叉点等一下，等久了绕路。约七成访客结伴来（多是两人），一起走、一起坐，站着时挨着领头站。陌生人之间不再是有人靠近就走，改成挑位置时离陌生人远一点（能离 1.35 m 就离 1.35 m，不行至少 1 m），选定了就不换。猫可以从台上跳到地面，也可以跳回台上：身边人越多越想待在台上；从地面直接跳上台要多等一会儿，从沙发上借道就快。单元照常挂在家具上方，只有坐着的人头顶那几台不落（平台离地 1.08 m，比坐着的头顶低）。人走着不触发，地面也不留痕迹。站定满 3 秒、且看着一只猫，空间朝这个人给那只猫铺一步，这次站定只给一次。坐下 = 全力：空间从最近一只能来的猫脚下，一步一步铺到这个座位的会面台（离座位 1.0–1.5 m，猫卧在那儿不用付停留代价、又在共温带里）；落着的始终只有猫脚下和下一步。走不走仍是猫的事：它坐满 3 秒，旁边有一台空间递过来的，就一半几率挪过去，不走就卧下；挪窝时也优先走那台。其余照旧：落下的单元对人是墙；猫被访客贴到 1 m 以内撑过几秒就退开、之后一阵不跟人走；落下会困住人的不落；按带让路时挡人的带各自收回。',
     rules: '通行代价：落下的单元对人是墙、对猫不是。停留代价：访客被别人贴到 1.35 m 以内就走；猫被访客贴到 1 m 以内撑过几秒就退到更远的格，之后一阵不再靠人；有人站着盯着它，它有三分之一几率靠到台边。空间只写单元：猫脚下钉住，猫四邻里人的痕迹最高的一格补满，落下会困住人的不落。让路按带：一个单元二十条带，挡在人身边或人路上的那几条各自收回到杆上（布回到顶上），其余照落；猫身下的带不收；人走到门口门正好开，走过去再落回。',
     space: '空间',
     rule: '规则',
@@ -61,6 +61,7 @@ const COPY = {
     auto: '自走',
     trace: '痕迹',
     addP: '+ 人',
+    addParty: '+ 一组',
     removeP: '− 人',
     addC: '+ 猫',
     removeC: '− 猫',
@@ -79,11 +80,11 @@ const COPY = {
     line: (t: number, people: number, cats: number, far: number, held: number, detour: number, bands: number | null) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${people} people · ${cats} cats · cat beyond 1 m ${(far * 100).toFixed(0)}% (reference 78%) · detour ${detour.toFixed(1)} m${bands !== null ? ` · ${bands} bands giving way` : ''}${held ? ` · R5 held ${held}` : ''}`,
     legend: 'Solid ink ring = wall for people · purple ring = formed (notch = retracted band) · bar on the mast = held by R5 · links: green dashed co-gaze / purple co-warmth / rose contact / ink crossing',
-    legendSeats: 'People: grey outline walking · ink outline standing · solid ink sitting · dotted purple ring = a seat’s meeting unit · green dashes = the route the space lays for the cat (arrow = next step) · purple ring = formed · solid ink ring = wall for people · links: green dashed co-gaze / purple co-warmth / rose contact',
+    legendSeats: 'People: grey outline walking · ink outline standing · solid ink sitting · thin grey line = same party · grey dashed ring under a cat = cat on the floor · dotted purple ring = a seat’s meeting unit · green dashes = the route the space lays for the cat (arrow = next step) · purple ring = formed · solid ink ring = wall for people · links: green dashed co-gaze / purple co-warmth / rose contact',
     seats: (sitting: number, guides: number, arrivals: number) => ` · ${sitting} seated · ${guides} routes · cat reached a meeting unit ${arrivals}×`,
     hint: `Click empty floor to add a visitor and hold to drag; a cat can be dragged onto any unit. Wander lets visitors roam (half the time towards a cat) and cats sit, lie and move between units. Up to ${COHABIT.MAX_PEOPLE} people and ${COHABIT.MAX_CATS} cats.`,
-    hintSeats: `Click empty floor to add a visitor, click a seat to sit someone down, hold a person to drag (release on a seat to sit). A cat can be dragged onto any unit. Hold a piece of furniture to move it (it stays put where it does not fit); the Furniture group adds and removes pieces and restores the standard layout. Wander lets visitors roam: half the time they take a free seat for ${COHABIT.SEATS.SIT.min / 60}–${COHABIT.SEATS.SIT.max / 60} minutes, otherwise half the time they go and look at a cat. Up to ${COHABIT.MAX_PEOPLE} people and ${COHABIT.MAX_CATS} cats.`,
-    rulesSeats: 'Seats, three postures: furniture is its own layer on the floor; the standard layout is two sofas and two chairs in the middle of the room, away from the walls. Units still hang over the furniture; only the ones over a seated person’s head stay up (platforms sit 1.08 m above the floor, below a seated head). Walking triggers nothing and leaves no trace. Standing still for 3 s while watching a cat makes the space lay one step for that cat towards the person, once per stop. Sitting down is full strength: from the nearest cat that can come, the space lays a route to the seat’s meeting unit (1.0–1.5 m from the seat, where a cat pays no staying cost and is inside the co-warmth band) one step at a time; only the cat’s unit and the next step are formed. Whether to go is still the cat’s choice: after sitting for 3 s it takes an offered step half the time, otherwise it lies down, and when it moves it prefers the offered unit. The rest is unchanged: formed units are walls for people; a cat with a visitor inside 1 m for a few seconds retreats and keeps away for a while; a unit that would trap someone holds back; by band, the bands in someone’s way retract.',
+    hintSeats: `Click empty floor to add a visitor, “+ party” adds two who came together; click a seat to sit someone down, hold a person to drag (release on a seat to sit). A cat can be dragged onto any unit. Hold a piece of furniture to move it (it stays put where it does not fit); the Furniture group adds and removes pieces and restores the standard layout. Wander lets visitors roam: half the time they take a free seat for ${COHABIT.SEATS.SIT.min / 60}–${COHABIT.SEATS.SIT.max / 60} minutes, otherwise half the time they go and look at a cat; people in a party move and sit together. Up to ${COHABIT.MAX_PEOPLE} people and ${COHABIT.MAX_CATS} cats.`,
+    rulesSeats: 'Seats, three postures: furniture is its own layer on the floor; the standard layout is four sofas and two chairs, ten seats, in the middle of the room and away from the walls. People have bodies: one person per aisle crossing; two cannot pass each other in an aisle, so one waits at the crossing and, after a while, takes another way. About seven in ten visitors come with someone (mostly in pairs); a party walks and sits together and its members stand next to whoever leads. Strangers no longer leave as soon as someone comes close; instead people pick spots away from strangers (1.35 m if they can, at least 1 m otherwise) and stay once they have chosen. Cats can jump down to the floor and back up: the more people around, the more a cat prefers the platforms; jumping straight up from the floor takes a while, going up by way of a sofa is quick. Units still hang over the furniture; only the ones over a seated person’s head stay up (platforms sit 1.08 m above the floor, below a seated head). Walking triggers nothing and leaves no trace. Standing still for 3 s while watching a cat makes the space lay one step for that cat towards the person, once per stop. Sitting down is full strength: from the nearest cat that can come, the space lays a route to the seat’s meeting unit (1.0–1.5 m from the seat, where a cat pays no staying cost and is inside the co-warmth band) one step at a time; only the cat’s unit and the next step are formed. Whether to go is still the cat’s choice: after sitting for 3 s it takes an offered step half the time, otherwise it lies down, and when it moves it prefers the offered unit. The rest is unchanged: formed units are walls for people; a cat with a visitor inside 1 m for a few seconds retreats and keeps away for a while; a unit that would trap someone holds back; by band, the bands in someone’s way retract.',
     rules: 'Passage cost: a formed unit is a wall for people, not for cats. Staying cost: a visitor leaves when another comes within 1.35 m; a cat tolerates a visitor within 1 m for a few seconds, then retreats to a farther unit and keeps away for a while; when someone stands watching it, it approaches the platform edge one time in three. The space only writes units: the cat’s own unit stays formed, the neighbour with the strongest people trace is filled, and a unit that would trap someone is held back. Giving way by band: a unit has twenty bands; the few beside a person or on their route retract to the post (the cloth goes back up) while the rest come down; bands under a cat never retract; the door is open by the time the person reaches it and closes behind them.',
     space: 'space',
     rule: 'rule',
@@ -106,6 +107,7 @@ const COPY = {
     auto: 'wander',
     trace: 'trace',
     addP: '+ person',
+    addParty: '+ party',
     removeP: '− person',
     addC: '+ cat',
     removeC: '− cat',
@@ -144,6 +146,7 @@ function sceneOf(sim: CohabitSim, showTrace: boolean, selected = -1) {
     keepOut: seats && p.seated ? 0 : sim.faces ? sim.marginM : sim.keepOutM,
     lane: !seats && !sim.faces && sim.lane && p.moving,
     posture: seats ? postureOf(p) : undefined,
+    party: sim.social ? p.party : undefined,
   }));
   for (const c of sim.cats)
     people.push({
@@ -157,6 +160,7 @@ function sceneOf(sim: CohabitSim, showTrace: boolean, selected = -1) {
       gaze: c.walker.gaze,
       reach: 0,
       held: c.mode === 'held',
+      onFloor: sim.catFloor && sim.space !== 'empty' && !c.unit,
     });
   const supportIds = sim.cats.flatMap((c) => sim.supportOf(c).map((u) => u.i));
   const landing = sim.cats.find((c) => c.pending)?.pending?.i ?? null;
@@ -293,7 +297,9 @@ export function CohabitBench({
   // 建仿真（换格数或规则才重建——座位三态的家具改了过道图；换「空间」档走 setSpace，人与猫留在原地）
   useEffect(() => {
     // 座位三态用按 Mertens & Turner 1988 标定的猫（COHABIT.CAT_MT）；痕迹（旧）保留演示值
-    const sim = new CohabitSim({ trigger, grid, space, mode, goal, look, threshold, fade, auto, clearance: clearanceOpt, lane: clearanceOpt !== null, faces: faceMode === 'bands', guide: { target: guideTarget }, cat: trigger === 'posture' ? COHABIT.CAT_MT : undefined });
+    // 座位三态另开两层（作者 2026-10-08）：访客的社会层（身体占位 · 结伴 · 陌生人软规则）与猫换层（会动 / 钉死档也能下地）
+    const posture = trigger === 'posture';
+    const sim = new CohabitSim({ trigger, grid, space, mode, goal, look, threshold, fade, auto, clearance: clearanceOpt, lane: clearanceOpt !== null, faces: faceMode === 'bands', guide: { target: guideTarget }, cat: posture ? { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid } : undefined, social: posture, catFloor: posture });
     sim.setSpeed(speed);
     simRef.current = sim;
     heldRef.current = null;
@@ -495,6 +501,20 @@ export function CohabitBench({
         >
           {t.addP}
         </button>
+        {seatsMode && (
+          <button
+            type="button"
+            onClick={() => {
+              const sim = simRef.current;
+              if (!sim) return;
+              const half = sim.layout.fieldM / 2;
+              sim.addParty((Math.random() * 2 - 1) * half, (Math.random() * 2 - 1) * half, 2);
+              paint();
+            }}
+          >
+            {t.addParty}
+          </button>
+        )}
         <button type="button" onClick={() => { simRef.current?.removeLastPerson(); paint(); }}>{t.removeP}</button>
         <button
           type="button"
@@ -517,7 +537,7 @@ export function CohabitBench({
 
   const furnitureControls = (
     <div className={`grp${workspace ? ' walk-behaviour crowd-people' : ''}`}>
-      <LabControlLabel help={['家具是地面上独立的一层：按住拖动换位置（摆不下、或会把一块地面围死的位置不挪），点空座放一个人坐下。加减家具、回到标准布置（两沙发两椅子摆在房间中间）。只在座位三态下可用。', 'Furniture is its own layer on the floor: hold a piece to move it (it will not go where it does not fit or would box in a patch of floor), click a free seat to sit someone down. Add or remove pieces, or restore the standard layout (two sofas and two chairs in the middle of the room). Seats rule only.']} lang={lang}>
+      <LabControlLabel help={['家具是地面上独立的一层：按住拖动换位置（摆不下、或会把一块地面围死的位置不挪），点空座放一个人坐下。加减家具、回到标准布置（四张沙发、两把椅子摆在房间中间）。只在座位三态下可用。', 'Furniture is its own layer on the floor: hold a piece to move it (it will not go where it does not fit or would box in a patch of floor), click a free seat to sit someone down. Add or remove pieces, or restore the standard layout (four sofas and two chairs in the middle of the room). Seats rule only.']} lang={lang}>
         {t.furniture}
       </LabControlLabel>
       <span className="seg">
@@ -576,7 +596,7 @@ export function CohabitBench({
         <div className="lab-ctl lab-ctl--tiered">
           <div className="lab-ctl__row lab-ctl__solve">
             <div className="grp walk-behaviour">
-              <LabControlLabel help={['座位三态：房间中间摆两张沙发、两把椅子，人走着不触发，站定看猫满 3 秒给猫铺一步，坐下就一步一步把猫引到座位的会面台（只在 8×8 下）。痕迹（旧）：上一版，人的视野在地面留痕迹、单元跟痕迹落下，留作对照。', 'Seats, three postures: two sofas and two chairs in the middle of the room; walking triggers nothing, standing 3 s while watching a cat lays one step for it, sitting down leads a cat step by step to the seat’s meeting unit (8×8 only). Trace (earlier): the previous version, where people’s gaze leaves a floor trace that the units follow, kept for comparison.']} lang={lang}>
+              <LabControlLabel help={['座位三态：房间中间摆四张沙发、两把椅子，人走着不触发，站定看猫满 3 秒给猫铺一步，坐下就一步一步把猫引到座位的会面台（只在 8×8 下）。痕迹（旧）：上一版，人的视野在地面留痕迹、单元跟痕迹落下，留作对照。', 'Seats, three postures: four sofas and two chairs in the middle of the room; walking triggers nothing, standing 3 s while watching a cat lays one step for it, sitting down leads a cat step by step to the seat’s meeting unit (8×8 only). Trace (earlier): the previous version, where people’s gaze leaves a floor trace that the units follow, kept for comparison.']} lang={lang}>
                 {t.rule}
               </LabControlLabel>
               <span className="seg">

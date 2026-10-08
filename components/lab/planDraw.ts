@@ -61,6 +61,10 @@ export interface PlanPerson {
   gaze?: number;
   /** 三态（Lab 2-14 座位三态，加法式）：走 = 灰空心 · 站 = 墨空心加粗 · 坐 = 墨实心。省略 = 旧画法 */
   posture?: 'walk' | 'stand' | 'sit';
+  /** 同组编号（Lab 2-14 社会层，加法式）：同组的人之间画一条细线连到领头（组里排在最前的那位）。省略 = 不画 */
+  party?: number;
+  /** 猫在地面上（Lab 2-14 换层，加法式）：身下画一圈灰虚线（台上的猫没有）。省略 = 旧画法 */
+  onFloor?: boolean;
 }
 
 export interface PlanScene {
@@ -564,12 +568,41 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
     ctx.stroke();
   }
 
+  // 同组的人（Lab 2-14 社会层）：细线连到领头
+  const leaders = new Map<number, PlanPerson>();
+  for (const p of s.people) {
+    if (p.kind === 'cat' || p.party === undefined) continue;
+    const L = leaders.get(p.party);
+    if (!L) {
+      leaders.set(p.party, p);
+      continue;
+    }
+    ctx.strokeStyle = pal.muted;
+    ctx.globalAlpha = 0.7;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(X(L.x), Y(L.y));
+    ctx.lineTo(X(p.x), Y(p.y));
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
   // Cats are drawn on the platform surface, without a human attention/clearance ring.
   for (const p of s.people) {
     const cx = X(p.x);
     const cy = Y(p.y);
     if (p.kind === 'cat') {
       const r = (p.bodyR ?? 0.14) * sc;
+      if (p.onFloor) {
+        // 在地面上：身下一圈灰虚线（台上的猫没有）
+        ctx.strokeStyle = pal.muted;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 2]);
+        ctx.beginPath();
+        ctx.arc(cx, cy, r * 2.1, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
       drawCat(ctx, p, cx, cy, r, pal);
       continue;
     }

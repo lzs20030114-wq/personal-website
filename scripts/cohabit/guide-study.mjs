@@ -31,6 +31,16 @@ const CONFIGS = [
   { name: 'mt-meet-crowd025', zh: 'M&T 标定 · 会面台 · 开阔处代价 0.25', cat: 'MT', catExtra: { crowdTolMul: 0.25 }, guide: { target: 'meet' } },
   { name: 'mt-sidew-crowd05', zh: 'M&T 标定 · 身边台 · 整条路 · 开阔处代价 0.5', cat: 'MT', catExtra: { crowdTolMul: 0.5 }, guide: { target: 'side', whole: true } },
   { name: 'mt-sidew-crowd025', zh: 'M&T 标定 · 身边台 · 整条路 · 开阔处代价 0.25', cat: 'MT', catExtra: { crowdTolMul: 0.25 }, guide: { target: 'side', whole: true } },
+  // 第三轮（2026-10-08）：访客社会层（身体占位 · 结伴 · 陌生人软规则）+ 猫换层（会动 / 钉死档也能下地），10 座标准布置。
+  // levels = COHABIT.CAT_LEVELS 的哪一档：mid 台架默认（人多更想上台的力度 0.5）· flat 不随人多变 · steep 力度 1.0
+  { name: 'v3-meet', zh: '社会层 + 换层（mid）· 会面台', cat: 'MT', levels: 'mid', social: true, guide: { target: 'meet' } },
+  { name: 'v3-sidew', zh: '社会层 + 换层（mid）· 身边台 · 整条路', cat: 'MT', levels: 'mid', social: true, guide: { target: 'side', whole: true } },
+  { name: 'v3-meet-flat', zh: '社会层 + 换层（flat）· 会面台', cat: 'MT', levels: 'flat', social: true, guide: { target: 'meet' } },
+  { name: 'v3-sidew-flat', zh: '社会层 + 换层（flat）· 身边台 · 整条路', cat: 'MT', levels: 'flat', social: true, guide: { target: 'side', whole: true } },
+  { name: 'v3-meet-steep', zh: '社会层 + 换层（steep）· 会面台', cat: 'MT', levels: 'steep', social: true, guide: { target: 'meet' } },
+  { name: 'v3-sidew-steep', zh: '社会层 + 换层（steep）· 身边台 · 整条路', cat: 'MT', levels: 'steep', social: true, guide: { target: 'side', whole: true } },
+  // 对照：只开社会层、猫不换层（会动 / 钉死档的猫只在台上，同前两轮）
+  { name: 'v3-meet-nofloor', zh: '社会层 · 猫不换层 · 会面台', cat: 'MT', social: true, guide: { target: 'meet' } },
 ];
 const SPACES = ['live', 'fixed', 'empty'];
 const METRICS = [
@@ -47,15 +57,17 @@ try {
   const out = [];
   for (const c of CONFIGS) {
     if (only && !only.includes(c.name)) continue;
-    const patch = { ...(c.cat === 'MT' ? MT : c.cat), ...c.catExtra };
+    if (c.levels && !m.COHABIT.CAT_LEVELS?.[c.levels]) throw new Error(`COHABIT.CAT_LEVELS.${c.levels} 未定义`);
+    const patch = { ...(c.cat === 'MT' ? MT : c.cat), ...(c.levels ? m.COHABIT.CAT_LEVELS[c.levels] : {}), ...c.catExtra };
     if (c.cat === 'MT' && !MT) throw new Error('COHABIT.CAT_MT 未定义');
     const runs = {};
     for (const space of SPACES) {
       runs[space] = [];
       for (let s = 1; s <= seeds; s++)
-        runs[space].push(m.runCohabit({ trigger: 'posture', space, seed: 100 + s, seconds, people, cats, faces: true, guide: c.guide, cat: patch }));
+        runs[space].push(m.runCohabit({ trigger: 'posture', space, seed: 100 + s, seconds, people, cats, faces: true, guide: c.guide, cat: patch, social: !!c.social, catFloor: !!c.levels }));
     }
-    const row = { name: c.name, zh: c.zh, cat: patch, guide: c.guide, metrics: {} };
+    const row = { name: c.name, zh: c.zh, cat: patch, guide: c.guide, social: !!c.social, levels: c.levels ?? null, metrics: {} };
+    row.floorShare = Object.fromEntries(SPACES.map((sp) => [sp, mean(runs[sp].map((r) => r.catFloorShare))]));
     for (const M of METRICS) {
       const v = Object.fromEntries(SPACES.map((sp) => [sp, runs[sp].map(M.f)]));
       row.metrics[M.key] = {
