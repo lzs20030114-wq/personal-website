@@ -10,7 +10,6 @@ import {
   OFF_AXIS_DMAX,
   anticPose,
   buildSettle,
-  onAxis,
   pathLen,
   type BuildCtx,
   type RespKind,
@@ -260,7 +259,7 @@ describe('动作词汇 v2 · 审查抓到的（2026-10-08）', () => {
     }
   });
 
-  it('深卷只给正对腱轴的姿态：所有回应的目标姿态，不在轴上的 deep = 0、差动 ≤ OFF_AXIS_DMAX（给摆动留余量）', () => {
+  it('深卷只给惊跳：所有回应的目标姿态 deep = 0、差动 ≤ OFF_AXIS_DMAX（正对腱轴也一样，给点头 / 蹭留余量）', () => {
     for (const P of PERSONA_KEYS) {
       for (const g of [0.1, 0.4, 0.5]) {
         for (const side of [-1, 0, 1]) {
@@ -268,8 +267,8 @@ describe('动作词汇 v2 · 审查抓到的（2026-10-08）', () => {
             for (const variant of VARIANTS) {
               const ph = buildResponse(ctx(P, { gAbs: g }), { kind, side, variant, arm: true, feeler: true, turn: side * 0.3 });
               for (const q of ends(ph)) {
-                if (q.deep > 0) expect(onAxis(q.dir)).toBe(true);
-                else if (!onAxis(q.dir)) expect(dOf(q)).toBeLessThanOrEqual(OFF_AXIS_DMAX + 1e-9);
+                expect(q.deep).toBe(0);
+                expect(dOf(q)).toBeLessThanOrEqual(OFF_AXIS_DMAX + 1e-9);
               }
             }
           }

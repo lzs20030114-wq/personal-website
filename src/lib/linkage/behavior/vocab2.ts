@@ -258,7 +258,7 @@ const ph = (name: string, dur: number, ease: Phase['ease'], arm: Phase['arm'], e
 
 /** 把目标往外推，直到离此刻的姿态至少 minD（差动）：臂已经朝那边时，动作也不会凭空消失 */
 function atLeast(target: Pose, cur: Pose, minD: number): Pose {
-  const cap = target.deep > 0 || onAxis(target.dir) ? 1 : OFF_AXIS_DMAX / SPAN;
+  const cap = target.deep > 0 ? 1 : OFF_AXIS_DMAX / SPAN;
   let t = target;
   for (let i = 0; i < 60 && pathLen(cur, t, 'line') < minD && t.bend < cap; i++) t = { ...t, bend: Math.min(cap, t.bend + 0.02) };
   return t;
@@ -458,7 +458,14 @@ export function buildResponse(c: BuildCtx, r: RespIn): Phase[] {
   return govern(unhook(phases, c.cur, c.rest), c, 'deliberate', { perk: 'urgent' });
 }
 
+/**
+ * 回应 / 自发 / 看见手用的姿态：只用弯曲、封顶 OFF_AXIS_DMAX，正对腱轴也一样——深卷只给惊跳。不然朝正上
+ * （「原地」变体、两侧一起按住）时弯曲顶到 1，后面的点头 / 蹭被削掉上半截（审查复核实测：活力型两侧按住 26/60 次）
+ */
+const flat = (D: number, dir: number): Pose => ({ bend: Math.min(Math.max(0, D), OFF_AXIS_DMAX) / SPAN, dir: wrapPi(dir), deep: 0 });
+
 function responsePhases(c: BuildCtx, r: RespIn): Phase[] {
+  const poseOfD = flat;
   const k = c.k;
   const s3 = side3(r.side);
   const flourish = 1 - c.ageU;
@@ -605,6 +612,7 @@ export function buildSpont(c: BuildCtx, kind: SpontKind, around?: number): Phase
 }
 
 function spontPhases(c: BuildCtx, kind: SpontKind, around?: number): Phase[] {
+  const poseOfD = flat;
   const k = c.k;
   const E = spontE(c);
   const rD = dOf(c.rest);
