@@ -1,7 +1,7 @@
-// 换层标定（Lab 2-14 · 2026-10-08）：钉死档（= 有固定层架的普通猫咖）· 6 位访客（社会层开）· 1 只猫 · 600 s 一场，
+// 猫上台几率标定（Lab 2-14 · 2026-10-08）：钉死档（= 有固定层架的普通猫咖）· 6 位访客（social 开）· 1 只猫 · 600 s 一场，
 // 扫「上台几率 = logistic(upBias + upCrowd · 猫 1.5 m 内访客数)」的两个数，读猫在台上的时间占比。
 // 目标 ≈ 49%：Hirsch 等 2025（瑞典一家猫咖，27 只猫，227 小时）的「高层 49.3%」，原文没写清分母（层架 / 家具 + 层架）。
-// upCrowd 没有实测，每档 upCrowd 各自找让占比贴近 49% 的 upBias → COHABIT.CAT_LEVELS 的 flat / mid / steep。
+// upCrowd 没有实测，每档 upCrowd 各自找让占比贴近 49% 的 upBias → COHABIT.CAT_LEVELS 的 flat（不随人数变）/ mid（中）/ steep（强）。
 // 用法：node scripts/cohabit/calibrate-levels.mjs [seeds=24] [upCrowd 列表=0,0.5,1] [upBias 列表=-0.5,0,0.5,1,1.5]
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';

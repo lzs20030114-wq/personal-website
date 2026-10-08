@@ -194,10 +194,10 @@ describe('cohabit · 仿真', () => {
 });
 
 /**
- * 按带让路（作者 2026-10-07「人穿过只收两单元相对的两个面」+「松键之后多余的布可以往上去」）：
- * 一台 20 条带，挡人的带各自收回；猫身下的不收；通行按带几何；R5 只认开不了的墙。模块默认关 ⇒ 上面的旧口径逐位不变。
+ * 让路只收挡路的带（作者 2026-10-07「人穿过只收两单元相对的两个面」+「松键之后多余的布可以往上去」）：
+ * 一台 20 条带，挡人的带各自收回；猫身下的不收；通行按每条带的几何算；R5 只认开不了的墙。模块默认关 ⇒ 上面的旧口径逐位不变。
  */
-describe('cohabit · 按带让路', () => {
+describe('cohabit · 让路只收挡路的带', () => {
   it('模块默认关；开着时同种子逐位复现', () => {
     expect(new CohabitSim({ opening: false }).faces).toBe(false);
     const a = runCohabit({ seed: 11, seconds: 60, faces: true });
@@ -206,7 +206,7 @@ describe('cohabit · 按带让路', () => {
     expect(a.bandsOpen).toBeGreaterThanOrEqual(0);
   });
 
-  it('钉死 / 空房间档里带不起作用：按带与整台同种子读数逐位相同（规划照旧认整台的墙，不会穿墙）', () => {
+  it('钉死 / 空房间档里带不起作用：只收带与整个单元同种子读数逐位相同（规划照旧认整个单元的墙，不会穿墙）', () => {
     for (const space of ['fixed', 'empty'] as const) {
       const a = runCohabit({ seed: 12, seconds: 120, space, faces: true });
       const b = runCohabit({ seed: 12, seconds: 120, space, faces: false });
@@ -214,7 +214,7 @@ describe('cohabit · 按带让路', () => {
     }
   });
 
-  it('人站在交叉点：四邻单元照落、各只收回朝人的那条带、R5 不钉；整台口径下四台全被闸住', () => {
+  it('人站在交叉点：四邻单元照落、各只收回朝人的那条带、R5 不钉；整个单元让路时四台全被闸住', () => {
     const sim = new CohabitSim({ seed: 1, opening: false, auto: false, faces: true, fade: null, threshold: 1 });
     const p = sim.addPerson(0, 0)!;
     p.mode = 'manual';
@@ -277,7 +277,7 @@ describe('cohabit · 按带让路', () => {
     expect(openBands(sim, 5) + openBands(sim, 9)).toBeLessThanOrEqual(2); // 人站在端点，只剩指向它的那条
   });
 
-  it('猫身下的带不收：猫坐在中心护住整台、邻台照收；猫到台边朝人只护那几条', () => {
+  it('猫身下的带不收：猫坐在中心护住整个单元、邻台照收；猫到台边朝人只护那几条', () => {
     const sim = new CohabitSim({ seed: 3, opening: false, auto: false, faces: true, fade: null, threshold: 1 });
     const cat = sim.addCat(sim.layout.units[5])!;
     cat.mode = 'manual';
@@ -306,7 +306,7 @@ describe('cohabit · 按带让路', () => {
     expect(openBands(sim, 5)).toBe(0);
   });
 
-  it('R5 按带：只有猫身下的墙带算数——四台整台封死时不通，其中一台的带能开就通', () => {
+  it('R5（只收挡路的带）：只有猫身下的墙带算数——四台整个封死时不通，其中一台的带能开就通', () => {
     const l = planLayout(4);
     const g = aisleGraph(l);
     const wall = new Uint8Array(16);
@@ -323,15 +323,15 @@ describe('cohabit · 按带让路', () => {
 });
 
 /**
- * 座位三态（作者 2026-10-07：坐着的地方做据点，人分走 / 站 / 坐三态；8×8；座位摆在房间中间）。
- * 守的是几条写成代码的规则本身：家具上方没有单元 · 人到得了每个座位 · 走着不触发 · 坐着一步一步把猫引到会面台
+ * 「走 · 站 · 坐」（作者 2026-10-07：坐着的地方做据点，人分走 / 站 / 坐三种状态；8×8；座位摆在房间中间）。
+ * 守的是几条写成代码的规则本身：家具上方没有单元 · 人到得了每个座位 · 走着不触发 · 坐着一步一步把猫引到座位前方那台
  * · 站定只给一步 · 坐着也算共温 · 猫优先走递过来的那台 · 钉死档不圈死人 · 痕迹档（旧口径）不受影响。
  */
-describe('cohabit · 座位三态', () => {
+describe('cohabit · 「走 · 站 · 坐」', () => {
   const posture = (o: ConstructorParameters<typeof CohabitSim>[0] = {}) => new CohabitSim({ trigger: 'posture', opening: false, faces: true, ...o });
   const formedSet = (sim: CohabitSim) => new Set(sim.act.formed());
 
-  it('模块默认仍是痕迹档（4×4、没有家具）；座位三态默认 8×8、标准布置六件家具十个座位（2026-10-08 加座），家具是独立一层（64 台单元都在）', () => {
+  it('模块默认仍是痕迹档（4×4、没有家具）；「走 · 站 · 坐」默认 8×8、标准布置六件家具十个座位（2026-10-08 加座），家具是独立一层（64 台单元都在）', () => {
     const old = new CohabitSim({ opening: false });
     expect(old.trigger).toBe('trace');
     expect(old.layout.n).toBe(COHABIT.GRID_DEF);
@@ -385,7 +385,7 @@ describe('cohabit · 座位三态', () => {
     expect(sim2.seatFree(0)).toBe(false);
   });
 
-  it('会面台离座位 1.0–1.5 m（猫在台面中心不付停留代价、又在共温带里），且不是入口四角那几台', () => {
+  it('座位前方那台离座位 1.0–1.5 m（猫在台面中心不付停留代价、又在共温带里），且不是入口四角那几台', () => {
     const sim = posture();
     for (const s of sim.seats) {
       const m = sim.layout.units[s.meet];
@@ -415,7 +415,7 @@ describe('cohabit · 座位三态', () => {
     expect(sim.summary().seatedTime).toBeGreaterThan(0); // 有人坐过（坐着但没有猫可引）
   });
 
-  it('坐着 = 全力：空间从猫脚下一步一步铺到会面台，猫走到；途中落着的只有猫脚下与下一步', () => {
+  it('坐着 = 全力：空间从猫脚下一步一步铺到座位前方那台，猫走到；途中落着的只有猫脚下与下一步', () => {
     for (const seed of [1, 2, 3]) {
       const sim = posture({ seed });
       const seat = sim.seats[4];
@@ -493,7 +493,7 @@ describe('cohabit · 座位三态', () => {
     expect(afterMove).toBe(0);
   });
 
-  it('坐着也算共温：猫卧在会面台中心，坐着的人与它之间记一次共温、秒数一直涨', () => {
+  it('坐着也算共温：猫卧在座位前方那台中心，坐着的人与它之间记一次共温、秒数一直涨', () => {
     const sim = posture({ seed: 9 });
     const seat = sim.seats[2];
     const p = sim.addPerson(seat.x, seat.y)!;
@@ -506,7 +506,7 @@ describe('cohabit · 座位三态', () => {
     expect(sim.ledger.seconds.warmth).toBeGreaterThan(7);
   });
 
-  it('钉死档（座位三态）：偶数行逐台试落、圈死人的不落、盖到座位头顶的不落——每个能站的交叉点仍走得到门', () => {
+  it('钉死档（「走 · 站 · 坐」）：偶数行逐台试落、圈死人的不落、盖到座位头顶的不落——每个能站的交叉点仍走得到门', () => {
     const sim = posture({ space: 'fixed' });
     const fixed = new Uint8Array(sim.layout.units.length);
     for (const u of sim.act.formed()) fixed[u] = 1;
@@ -527,7 +527,7 @@ describe('cohabit · 座位三态', () => {
   });
 });
 
-describe('cohabit · 按带让路 · 猫护住的交叉点', () => {
+describe('cohabit · 让路只收挡路的带 · 猫护住的交叉点', () => {
   it('8×8 下猫坐上去，平台外缘离四角交叉点只剩 0.17 m：人不再把那个点当路点，挨着它也走得开', () => {
     const sim = new CohabitSim({ grid: 8, seed: 5, opening: false, faces: true });
     const cat = sim.addCat(sim.layout.units[27])!;
@@ -597,10 +597,10 @@ describe('cohabit · 家具可加减、拖动（独立一层，标准布置随�
   });
 });
 
-describe('cohabit · 引导方式（座位三态 · 会动的单元）', () => {
+describe('cohabit · 引导方式（「走 · 站 · 坐」 · 会动的单元）', () => {
   const posture = (o: ConstructorParameters<typeof CohabitSim>[0] = {}) => new CohabitSim({ trigger: 'posture', opening: false, faces: true, ...o });
 
-  it('身边台：平台不盖坐着的人头顶、比会面台近；标准布置下沙发座位的身边台够得着（猫走到台边离人 < 0.5 m = 共触带）', () => {
+  it('座位旁边那台：平台不盖坐着的人头顶、比座位前方那台近；标准布置下沙发座位旁边那台够得着（猫走到台边离人 < 0.5 m = 共触带）', () => {
     const sim = posture();
     const rim = sim.layout.platR - COHABIT.CAT.bodyR;
     for (const s of sim.seats) {
@@ -613,7 +613,7 @@ describe('cohabit · 引导方式（座位三态 · 会动的单元）', () => {
     }
   });
 
-  it('引到身边台：猫一路走到座位身边那台；先会面再身边：先到会面台、坐着的人看满 sideAfter 秒后再挪到身边台', () => {
+  it('引到座位旁边：猫一路走到座位旁边那台；先前方再旁边：先到座位前方那台、坐着的人看满 sideAfter 秒后再挪到旁边那台', () => {
     const run = (target: 'side' | 'meetThenSide') => {
       const sim = posture({ seed: 3, guide: { target } });
       const seat = sim.seats[0];
@@ -681,7 +681,7 @@ describe('cohabit · 猫按 Mertens & Turner 1988 标定（COHABIT.CAT_MT）', (
 });
 
 describe('cohabit · 台上靠近沿落着的台走过去（approachTravel，与地面「朝人走过去」同一条规则）', () => {
-  // 钉死档：偶数行（座位三态下按 R5 剔掉几台）一直落着——猫在第 0 行，有人站在第 0 行另一头看着它
+  // 钉死档：偶数行（「走 · 站 · 坐」规则下按 R5 剔掉几台）一直落着——猫在第 0 行，有人站在第 0 行另一头看着它
   const setup = (travel: number) => {
     // 自己的节奏（卧完换格 / 靠近完走开）关掉，只看「靠近」本身；人站在 3 m 内（够得上「盯着看」）
     const sim = new CohabitSim({ trigger: 'posture', space: 'fixed', seed: 7, opening: false, cat: { ...COHABIT.CAT_MT, approachTravel: travel, approachP: 1, approachMid: 0, roamAfterApproach: 0, roamP: 0, passiveP: 0 } });
@@ -714,7 +714,7 @@ describe('cohabit · 台上靠近沿落着的台走过去（approachTravel，与
     expect(cat.unit!.i).toBe(start);
   });
 
-  it('整条路一次铺好：坐下后从猫脚下到目标一路都落，一次一步只落下一步', () => {
+  it('整条路一次铺好：坐下后从猫脚下到目标一路都落；关着时每次只落下一步', () => {
     const count = (whole: boolean) => {
       const sim = new CohabitSim({ trigger: 'posture', opening: false, faces: true, seed: 2, guide: { target: 'meet', whole }, cat: { ...COHABIT.CAT_MT, approachP: 0, passiveP: 0 } });
       const seat = sim.seats[4];
@@ -733,7 +733,7 @@ describe('cohabit · 台上靠近沿落着的台走过去（approachTravel，与
   });
 });
 
-describe('cohabit · 社会层（身体 · 结伴 · 陌生人软规则，作者 2026-10-08）', () => {
+describe('cohabit · 访客有身体、结伴、挑位置时离陌生人远一点（social，作者 2026-10-08）', () => {
   const S = COHABIT.SOCIAL;
   const run12 = (space: 'live' | 'empty', seed = 7, seconds = 240) => {
     const sim = new CohabitSim({ trigger: 'posture', opening: false, faces: true, space, seed, social: true, cat: COHABIT.CAT_MT });
@@ -839,7 +839,7 @@ describe('cohabit · 社会层（身体 · 结伴 · 陌生人软规则，作者
   });
 });
 
-describe('cohabit · 换层：会动 / 钉死两档的猫也能下地（作者 2026-10-08）', () => {
+describe('cohabit · 猫能下地：会动 / 钉死两档的猫也能下地（catFloor，作者 2026-10-08）', () => {
   const up = (o: Partial<CatCfg> = {}): Partial<CatCfg> => ({ ...COHABIT.CAT_MT, upBias: 0, upCrowd: 0, ...o });
 
   it('模块默认关：不传 catFloor 与 catFloor: false 逐位相同；猫在地面的时间占比 会动 / 钉死 = 0、空房间 = 1', () => {

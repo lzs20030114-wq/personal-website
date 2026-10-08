@@ -510,7 +510,7 @@ const FROZEN = [
   '2-13:arch.stepped:round:apart',
   '2-13:arch.stepped:square:touch',
   '2-13:arch.stepped:square:apart',
-  // Ⅷ 同台（Lab 2-14：空间三档 × 规则 2 × 格数 × 响应 2 × 让路 2 × 引导；座位三态只有 8×8——家具只在 8×8 下摆；痕迹档没有引导，记成会面台）
+  // Ⅷ 同台（Lab 2-14：空间三档 × 规则 2 × 格数 × 响应 2 × 让路 2 × 引导；「走 · 站 · 坐」规则只有 8×8——家具只在 8×8 下摆；痕迹档没有引导，记成「座位前方」）
   '2-14:live:posture:g8:follow:bands:meet',
   '2-14:live:posture:g8:follow:bands:side',
   '2-14:live:posture:g8:follow:bands:meetThenSide',
@@ -591,7 +591,7 @@ describe('lab-variants · 项目二台架差分清单', () => {
     expect(new Set(LAB_VARIANTS.map((b) => b.key)).size).toBe(LAB_VARIANTS.length);
   });
 
-  it('765 种离散组合逐条与冻结清单相同（多层台原 50 组各保留五档圆方；2-14 = 痕迹 36 + 座位三态 12 × 引导 3）', () => {
+  it('765 种离散组合逐条与冻结清单相同（多层台原 50 组各保留五档圆方；2-14 = 痕迹 36 + 「走 · 站 · 坐」 12 × 引导 3）', () => {
     const combos = allCombos();
     expect(combos.length).toBe(765);
     expect(combos).toEqual(FROZEN.flatMap(id => id.startsWith('2-6:')

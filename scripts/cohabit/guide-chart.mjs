@@ -41,7 +41,7 @@ const xmax = Object.fromEntries(MET.map(([k]) => {
   return [k, Math.ceil(mx / (step * (mx / step > 40 ? 5 : 2))) * step * (mx / step > 40 ? 5 : 2)];
 }));
 const out = [];
-out.push(`<text x="${LEFT}" y="38" font-size="18" font-weight="600" fill="${C.ink}">引导方式研究 · 人猫同台（Lab 2-14 · 座位三态）</text>`);
+out.push(`<text x="${LEFT}" y="38" font-size="18" font-weight="600" fill="${C.ink}">引导方式研究 · 人猫同台（Lab 2-14 · 「走 · 站 · 坐」）</text>`);
 out.push(`<text x="${LEFT}" y="60" font-size="12" fill="${C.graphite}">${esc(`${meta.seconds} s 一场 · ${meta.seeds} 个种子 · ${multi ? '' : `${meta.people} 名访客 ${meta.cats} 只猫 · `}8×8 · 按带让路 · 条 = 均值，须 = ±1 SD，点 = 单个种子 · 星号 = 会动的单元对该基准的双侧置换检验`)}</text>`);
 MET.forEach(([k, title, note], mi) => {
   const ox = LEFT + TITLEW + mi * (PW + STATW + GAP);
@@ -72,8 +72,8 @@ configs.forEach((c, ci) => {
   });
 });
 const foot = configs.some((c) => c.social)
-  ? '猫按 Mertens & Turner 1988 标定（单人单猫场景，标定不是验证）；访客有身体、约七成结伴（社会层）；三档的猫都能下地，上台偏好按 Hirsch 等 2025 的方向标定（台上 ≈ 49%），人多更想上台的力度没有实测数（flat / mid / steep 三档）。这张图只说在这套规则下的差别。'
-  : '阈值与秒数常量：猫按 Mertens & Turner 1988 标定（单人单猫场景，标定不是验证），其余多为演示值；「开阔处代价」没有实测数，只做敏感性。这张图只说在这套规则下的差别。';
+  ? '猫按 Mertens & Turner 1988 标定（单人单猫场景，标定不是验证）；访客有身体、约七成结伴；三档的猫都能下地，上台偏好按 Hirsch 等 2025 的方向标定（台上 ≈ 49%），人多更想上台的力度没有实测数（不随人数变 / 中 / 强 三组参数）。这张图只说在这套规则下的差别。'
+  : '阈值与秒数常量：猫按 Mertens & Turner 1988 标定（单人单猫场景，标定不是验证），其余多为演示值；人群中开阔处的停留代价没有实测数，只做敏感性。这张图只说在这套规则下的差别。';
 // 脚注按「；」折行（一行约 80 字），图高已为三行留了地方
 const lines = foot.split('；').reduce((acc, part, i, arr) => {
   const seg = part + (i < arr.length - 1 ? '；' : '');

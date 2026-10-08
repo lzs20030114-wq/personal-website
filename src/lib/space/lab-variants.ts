@@ -133,11 +133,11 @@ const WALK_GRID_AXIS: VariantAxis = {
 const WALK_READING_AXIS: VariantAxis = { axis: '读法', options: READINGS.map((r) => ({ key: r.key, label: r.zh })) };
 /** 单元怎么响应读数：跟随（人走了收回去）/ 锁定（滞回）——2026-09-04 用户要的那一档与项目论点那一档 */
 const WALK_RESPONSE_AXIS: VariantAxis = { axis: '响应', options: RESPONSES.map((r) => ({ key: r.key, label: r.zh })) };
-/** Lab 2-14 让路两档（2026-10-07 作者「只收相对的两个面」）：按带 = 挡人的带各自收回；整台 = 2-11 的让位闸 */
+/** Lab 2-14 让路两档（2026-10-07 作者「只收相对的两个面」）：只收挡路的带 = 挡人的带各自收回；整个单元 = 2-11 的让位闸 */
 const COHABIT_FACES_AXIS: VariantAxis = { axis: '让路', options: FACE_MODES.map((m) => ({ key: m.key, label: m.zh })) };
-/** Lab 2-14 触发两档（2026-10-07 作者「座位做据点、人分走 / 站 / 坐三态」）：座位三态（台架默认）/ 痕迹（旧口径） */
+/** Lab 2-14 触发两档（2026-10-07 作者「座位做据点、人分走 / 站 / 坐三种状态」）：「走 · 站 · 坐」（台架默认）/ 痕迹（旧口径） */
 const COHABIT_TRIGGER_AXIS: VariantAxis = { axis: '规则', options: TRIGGER_MODES.map((m) => ({ key: m.key, label: m.zh })) };
-/** Lab 2-14 引导方式（2026-10-07 研究轮）：坐着的人把猫引到会面台 / 身边台 / 先会面再身边——只在座位三态下有意义 */
+/** Lab 2-14 引导方式（2026-10-07 研究轮）：坐着的人把猫引到座位前方那台 / 座位旁边那台 / 先前方再旁边——只在「走 · 站 · 坐」规则下有意义 */
 const COHABIT_GUIDE_AXIS: VariantAxis = { axis: '引导', options: GUIDE_TARGETS.map((g) => ({ key: g.key, label: g.zh })) };
 
 /** Lab 2-13 单元组合（2026-09-17 立项，2026-09-20 用户纠偏为「同一种平台一圈起伏、首尾相接」+ 三张图形）：
@@ -247,8 +247,8 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     // 编制 = 空间三档（会动 / 钉死 / 空房间，对照用）；人数 / 猫数 / 拖 / 自走是现场操作不是档
     plans: SPACE_MODES.map((m) => ({ key: m.key, label: m.zh })),
     axes: [COHABIT_TRIGGER_AXIS, WALK_GRID_AXIS, WALK_RESPONSE_AXIS, COHABIT_FACES_AXIS, COHABIT_GUIDE_AXIS],
-    // 家具只在 8×8 下摆（4×4 一张沙发吃掉一个象限）：座位三态只有 8×8 这一档，4×4 / 6×6 按钮变灰；
-    // 痕迹档没有引导方式（按钮变灰），清单里记成会面台一档
+    // 家具只在 8×8 下摆（4×4 一张沙发吃掉一个象限）：「走 · 站 · 坐」规则只有 8×8 这一档，4×4 / 6×6 按钮变灰；
+    // 痕迹档没有引导方式（按钮变灰），清单里记成「座位前方」一档
     only: [
       { when: { axis: '规则', key: 'posture' }, axis: '格数', keys: [`g${COHABIT.SEATS.GRID}`] },
       { when: { axis: '规则', key: 'trace' }, axis: '引导', keys: ['meet'] },

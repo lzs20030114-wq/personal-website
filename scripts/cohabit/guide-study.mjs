@@ -1,4 +1,4 @@
-// 引导方式研究（Lab 2-14 · 座位三态）：几套「猫的标定 × 引导方式」各跑三档空间（会动 / 钉死 / 空房间），
+// 引导方式研究（Lab 2-14 · 「走 · 站 · 坐」）：几套「猫的标定 × 引导方式」各跑三档空间（会动 / 钉死 / 空房间），
 // 多种子取样，用置换检验看「会动的单元」在共温、共触上比两个基准高得显不显著。
 // 用法：node scripts/cohabit/guide-study.mjs [seconds=300] [seeds=32] [people=3] [cats=1] [json|-] [configs=all]
 //   configs = 逗号分隔的方案名（见 CONFIGS），省略 = 全部
@@ -18,29 +18,29 @@ const only = args[5] ? args[5].split(',') : null;
 
 /** 方案：cat = 覆盖 COHABIT.CAT 的常量（猫的标定），guide = 引导方式 */
 const CONFIGS = [
-  { name: 'demo-meet', zh: '演示值 · 会面台 · 一次一步', cat: {}, guide: { target: 'meet' } },
-  { name: 'mt-meet', zh: 'M&T 标定 · 会面台 · 一次一步', cat: 'MT', guide: { target: 'meet' } },
-  { name: 'mt-side', zh: 'M&T 标定 · 身边台 · 一次一步', cat: 'MT', guide: { target: 'side' } },
-  { name: 'mt-mts', zh: 'M&T 标定 · 先会面再身边 · 一次一步', cat: 'MT', guide: { target: 'meetThenSide' } },
-  { name: 'mt-side-whole', zh: 'M&T 标定 · 身边台 · 整条路', cat: 'MT', guide: { target: 'side', whole: true } },
-  { name: 'mt-mts-whole', zh: 'M&T 标定 · 先会面再身边 · 整条路', cat: 'MT', guide: { target: 'meetThenSide', whole: true } },
-  // 人群中开阔处停留代价（只作用于地面上的猫 = 空房间档）的敏感性：没有实测数，0.5 / 0.25 两档
-  { name: 'mt-mts-crowd05', zh: 'M&T 标定 · 先会面再身边 · 开阔处代价 0.5', cat: 'MT', catExtra: { crowdTolMul: 0.5 }, guide: { target: 'meetThenSide' } },
-  { name: 'mt-mts-crowd025', zh: 'M&T 标定 · 先会面再身边 · 开阔处代价 0.25', cat: 'MT', catExtra: { crowdTolMul: 0.25 }, guide: { target: 'meetThenSide' } },
-  { name: 'mt-meet-crowd05', zh: 'M&T 标定 · 会面台 · 开阔处代价 0.5', cat: 'MT', catExtra: { crowdTolMul: 0.5 }, guide: { target: 'meet' } },
-  { name: 'mt-meet-crowd025', zh: 'M&T 标定 · 会面台 · 开阔处代价 0.25', cat: 'MT', catExtra: { crowdTolMul: 0.25 }, guide: { target: 'meet' } },
-  { name: 'mt-sidew-crowd05', zh: 'M&T 标定 · 身边台 · 整条路 · 开阔处代价 0.5', cat: 'MT', catExtra: { crowdTolMul: 0.5 }, guide: { target: 'side', whole: true } },
-  { name: 'mt-sidew-crowd025', zh: 'M&T 标定 · 身边台 · 整条路 · 开阔处代价 0.25', cat: 'MT', catExtra: { crowdTolMul: 0.25 }, guide: { target: 'side', whole: true } },
-  // 第三轮（2026-10-08）：访客社会层（身体占位 · 结伴 · 陌生人软规则）+ 猫换层（会动 / 钉死档也能下地），10 座标准布置。
-  // levels = COHABIT.CAT_LEVELS 的哪一档：mid 台架默认（人多更想上台的力度 0.5）· flat 不随人多变 · steep 力度 1.0
-  { name: 'v3-meet', zh: '社会层 + 换层（mid）· 会面台', cat: 'MT', levels: 'mid', social: true, guide: { target: 'meet' } },
-  { name: 'v3-sidew', zh: '社会层 + 换层（mid）· 身边台 · 整条路', cat: 'MT', levels: 'mid', social: true, guide: { target: 'side', whole: true } },
-  { name: 'v3-meet-flat', zh: '社会层 + 换层（flat）· 会面台', cat: 'MT', levels: 'flat', social: true, guide: { target: 'meet' } },
-  { name: 'v3-sidew-flat', zh: '社会层 + 换层（flat）· 身边台 · 整条路', cat: 'MT', levels: 'flat', social: true, guide: { target: 'side', whole: true } },
-  { name: 'v3-meet-steep', zh: '社会层 + 换层（steep）· 会面台', cat: 'MT', levels: 'steep', social: true, guide: { target: 'meet' } },
-  { name: 'v3-sidew-steep', zh: '社会层 + 换层（steep）· 身边台 · 整条路', cat: 'MT', levels: 'steep', social: true, guide: { target: 'side', whole: true } },
-  // 对照：只开社会层、猫不换层（会动 / 钉死档的猫只在台上，同前两轮）
-  { name: 'v3-meet-nofloor', zh: '社会层 · 猫不换层 · 会面台', cat: 'MT', social: true, guide: { target: 'meet' } },
+  { name: 'demo-meet', zh: '演示值 · 座位前方 · 每次一步', cat: {}, guide: { target: 'meet' } },
+  { name: 'mt-meet', zh: 'M&T 标定 · 座位前方 · 每次一步', cat: 'MT', guide: { target: 'meet' } },
+  { name: 'mt-side', zh: 'M&T 标定 · 座位旁边 · 每次一步', cat: 'MT', guide: { target: 'side' } },
+  { name: 'mt-mts', zh: 'M&T 标定 · 先前方再旁边 · 每次一步', cat: 'MT', guide: { target: 'meetThenSide' } },
+  { name: 'mt-side-whole', zh: 'M&T 标定 · 座位旁边 · 整条路一次落', cat: 'MT', guide: { target: 'side', whole: true } },
+  { name: 'mt-mts-whole', zh: 'M&T 标定 · 先前方再旁边 · 整条路一次落', cat: 'MT', guide: { target: 'meetThenSide', whole: true } },
+  // 人群中开阔处的停留代价（只作用于地面上的猫 = 空房间档）的敏感性：没有实测数，0.5 / 0.25 两档
+  { name: 'mt-mts-crowd05', zh: 'M&T 标定 · 先前方再旁边 · 人群中开阔处停留代价 ×0.5', cat: 'MT', catExtra: { crowdTolMul: 0.5 }, guide: { target: 'meetThenSide' } },
+  { name: 'mt-mts-crowd025', zh: 'M&T 标定 · 先前方再旁边 · 人群中开阔处停留代价 ×0.25', cat: 'MT', catExtra: { crowdTolMul: 0.25 }, guide: { target: 'meetThenSide' } },
+  { name: 'mt-meet-crowd05', zh: 'M&T 标定 · 座位前方 · 人群中开阔处停留代价 ×0.5', cat: 'MT', catExtra: { crowdTolMul: 0.5 }, guide: { target: 'meet' } },
+  { name: 'mt-meet-crowd025', zh: 'M&T 标定 · 座位前方 · 人群中开阔处停留代价 ×0.25', cat: 'MT', catExtra: { crowdTolMul: 0.25 }, guide: { target: 'meet' } },
+  { name: 'mt-sidew-crowd05', zh: 'M&T 标定 · 座位旁边 · 整条路一次落 · 人群中开阔处停留代价 ×0.5', cat: 'MT', catExtra: { crowdTolMul: 0.5 }, guide: { target: 'side', whole: true } },
+  { name: 'mt-sidew-crowd025', zh: 'M&T 标定 · 座位旁边 · 整条路一次落 · 人群中开阔处停留代价 ×0.25', cat: 'MT', catExtra: { crowdTolMul: 0.25 }, guide: { target: 'side', whole: true } },
+  // 第三轮（2026-10-08）：访客有身体、结伴、挑位置时离陌生人远一点（social）+ 猫能下地（catFloor，会动 / 钉死档也能），10 座标准布置。
+  // levels = COHABIT.CAT_LEVELS 的哪一组：mid 台架默认（人多更想上台的力度 0.5）· flat 不随人多变 · steep 力度 1.0
+  { name: 'v3-meet', zh: '访客有身体、结伴 · 猫能下地 · 上台几率随人数中等升高· 座位前方', cat: 'MT', levels: 'mid', social: true, guide: { target: 'meet' } },
+  { name: 'v3-sidew', zh: '访客有身体、结伴 · 猫能下地 · 上台几率随人数中等升高· 座位旁边 · 整条路一次落', cat: 'MT', levels: 'mid', social: true, guide: { target: 'side', whole: true } },
+  { name: 'v3-meet-flat', zh: '访客有身体、结伴 · 猫能下地 · 上台几率不随人数变· 座位前方', cat: 'MT', levels: 'flat', social: true, guide: { target: 'meet' } },
+  { name: 'v3-sidew-flat', zh: '访客有身体、结伴 · 猫能下地 · 上台几率不随人数变· 座位旁边 · 整条路一次落', cat: 'MT', levels: 'flat', social: true, guide: { target: 'side', whole: true } },
+  { name: 'v3-meet-steep', zh: '访客有身体、结伴 · 猫能下地 · 上台几率随人数明显升高· 座位前方', cat: 'MT', levels: 'steep', social: true, guide: { target: 'meet' } },
+  { name: 'v3-sidew-steep', zh: '访客有身体、结伴 · 猫能下地 · 上台几率随人数明显升高· 座位旁边 · 整条路一次落', cat: 'MT', levels: 'steep', social: true, guide: { target: 'side', whole: true } },
+  // 对照：只开 social、猫不下地（会动 / 钉死档的猫只在台上，同前两轮）
+  { name: 'v3-meet-nofloor', zh: '访客有身体、结伴 · 猫不下地 · 座位前方', cat: 'MT', social: true, guide: { target: 'meet' } },
 ];
 const SPACES = ['live', 'fixed', 'empty'];
 const METRICS = [
