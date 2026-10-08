@@ -4,7 +4,14 @@ import type { SensorInput } from './events';
 import { toJsonl } from './log';
 import { PERSONAS, PERSONA_KEYS, type PersonaKey } from './persona';
 import { type Phase, type Pose, startProgram, stepProgram } from './programs';
+import { tendonContractions } from '../machine-behavior';
+import { arcDelta } from './programs';
 import {
+  OFF_AXIS_DMAX,
+  anticPose,
+  buildSettle,
+  onAxis,
+  pathLen,
   type BuildCtx,
   type RespKind,
   STARTLE_PRE,
@@ -225,6 +232,93 @@ describe('动作词汇 v2 · 程序表', () => {
   });
 });
 
+describe('动作词汇 v2 · 审查抓到的（2026-10-08）', () => {
+  const S = (P: PersonaKey, cur: Pose, side: number, repeats = 0) =>
+    buildStartle(ctx(P, { cur }), { I: 0.95, th: 0.3, side, recoilYaw: 0, turnBack: 0, repeats, axis: side === 0 ? undefined : undefined });
+
+  it('再吓一次时臂还卷在另一根轴上：反射照样 0.1 s 起动（解钩不许插到屈曲前面），「正忙」盖住屈曲与凝住', () => {
+    for (const P of PERSONA_KEYS) {
+      const curled: Pose = { bend: 1, dir: -AX, deep: 0.64 };
+      const { phases, busy } = S(P, curled, -1);
+      expect(phases.slice(0, 2).map((p) => [p.name, p.dur])).toEqual([
+        ['latency', V2.startleLatency],
+        ['flex', V2.startleFlex],
+      ]);
+      const pre = phases.filter((p) => STARTLE_PRE.has(p.name)).reduce((a, p) => a + p.dur, 0);
+      expect(busy).toBeGreaterThan(pre);
+    }
+  });
+
+  it('臂已经沿这根轴卷着：惊跳只会卷得更深，不会把臂打开（递减的深度、慢的人格第一步都不低于此刻）', () => {
+    const curled: Pose = { bend: 1, dir: -AX, deep: 0.4 };
+    for (const P of PERSONA_KEYS) {
+      for (const repeats of [0, 1, 3]) {
+        const { phases } = S(P, curled, 1, repeats);
+        const flex = phases.find((p) => p.name === 'flex')!.arm as Pose;
+        expect(dOf(flex)).toBeGreaterThanOrEqual(dOf(curled) - 1e-9);
+      }
+    }
+  });
+
+  it('深卷只给正对腱轴的姿态：所有回应的目标姿态，不在轴上的 deep = 0、差动 ≤ OFF_AXIS_DMAX（给摆动留余量）', () => {
+    for (const P of PERSONA_KEYS) {
+      for (const g of [0.1, 0.4, 0.5]) {
+        for (const side of [-1, 0, 1]) {
+          for (const kind of DIRECTED) {
+            for (const variant of VARIANTS) {
+              const ph = buildResponse(ctx(P, { gAbs: g }), { kind, side, variant, arm: true, feeler: true, turn: side * 0.3 });
+              for (const q of ends(ph)) {
+                if (q.deep > 0) expect(onAxis(q.dir)).toBe(true);
+                else if (!onAxis(q.dir)) expect(dOf(q)).toBeLessThanOrEqual(OFF_AXIS_DMAX + 1e-9);
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it('预备只是往反方向挪一小步：离此刻 0.04、主动作从它出发不绕半圈', () => {
+    const to: Pose = { bend: 0.8, dir: 70 * DEG, deep: 0 };
+    for (const cur of [rest, { bend: 0.25, dir: -1.9, deep: 0 }, { bend: 0.05, dir: 2.5, deep: 0 }]) {
+      const a = anticPose(cur, to, 0.04);
+      const [ax, ay] = vec(a);
+      const [cx, cy] = vec(cur);
+      expect(Math.hypot(ax - cx, ay - cy)).toBeCloseTo(0.04, 6);
+    }
+    // 主动作从预备点出发：弧不绕过 90°（绕得多的段改走直线，穿过中心）
+    for (const cur of [rest, { bend: 0.25, dir: -1.9, deep: 0 }, { bend: 0.05, dir: 2.5, deep: 0 }]) {
+      for (const variant of ['toward', 'inplace'] as Variant[]) {
+        const ph = buildResponse(ctx('A', { cur }), { kind: 'stroke', side: 1, variant, arm: true, feeler: true, turn: 0 });
+        const ai = ph.findIndex((p) => p.name === 'antic');
+        const lean = ph[ai + 1];
+        if (lean.path !== 'line') expect(Math.abs(arcDelta(ph[ai].arm as Pose, lean.arm as Pose))).toBeLessThanOrEqual(Math.PI / 2);
+        expect(pathLen(ph[ai].arm as Pose, lean.arm as Pose, lean.path)).toBeLessThanOrEqual(pathLen(cur, lean.arm as Pose, 'line') + 0.1);
+      }
+    }
+    // 活力型抚摸「迎」：倚过去那一段不再被拉长到几秒
+    const ph = buildResponse(ctx('A'), { kind: 'stroke', side: 1, variant: 'toward', arm: true, feeler: true, turn: 0 });
+    expect(ph.find((p) => p.name === 'lean')!.dur).toBeLessThan(2.5);
+  });
+
+  it('死亡时的收场：从深卷的钩出发也先在轴上解钩；时长 0.6–1.2 s', () => {
+    const p = buildSettle(ctx('B', { cur: { bend: 1, dir: -AX, deep: 0.9 } }));
+    expect(p[0].name).toBe('unhook');
+    expect(p[p.length - 1].dur).toBeGreaterThanOrEqual(0.6);
+    expect(p[p.length - 1].dur).toBeLessThanOrEqual(1.2);
+  });
+
+  it('摆动的峰速不超档（沉静型点头、嗅探收小）', () => {
+    for (const P of PERSONA_KEYS) {
+      for (const kind of ['pat', 'feeler', 'stroke'] as RespKind[]) {
+        for (const p of buildResponse(ctx(P), { kind, side: 1, variant: 'toward', arm: true, feeler: true, turn: 0 })) {
+          if (p.osc) expect(2 * Math.PI * p.osc.hz * p.osc.amp * 0.34).toBeLessThanOrEqual(tierSpeed('deliberate', K[P]) + 1e-9);
+        }
+      }
+    }
+  });
+});
+
 // ------------------------------------------------------------------ v2 引擎
 
 /** 跳过诞生、关掉自发与张望，给一个干净的成长段 */
@@ -342,6 +436,20 @@ describe('动作词汇 v2 · 引擎', () => {
     expect(e.motion()?.name).toBe('register');
   });
 
+  it('握着人的时候被吓：惊跳程序不被吞掉（猛收、短叫、凝住照样有），臂由程序接管', () => {
+    const e = grown('A', 141);
+    e.push({ kind: 'ARM_TOUCH', on: true });
+    e.advance(1.5, 1000);
+    e.push({ kind: 'RESISTANCE', on: true });
+    e.advance(3, 1000);
+    expect(e.state.grasp.phase).toBe('HOLD_HUMAN');
+    e.push({ kind: 'KNOCK', intensity: 0.99 });
+    e.advance(0.5, 1000);
+    expect(e.motion()?.name).toBe('startle');
+    expect(e.state.m2!.clench.x).toBeGreaterThan(0.1);
+    expect(armD(e)).toBeGreaterThan(V2.startleDMin - 0.05);
+  });
+
   it('死亡开始时还在做的动作不演完：换成平平的收场，死亡里没有任何呼吸 / 声 / 光提示', () => {
     const e = new BehaviorEngine({ seed: 11, order: ['C', 'A', 'B', 'D'], loop: false, vocab: 2, lifeRate: 20 });
     let sawSettle = false;
@@ -387,7 +495,8 @@ describe('动作词汇 v2 · 引擎', () => {
     for (const seed of [161, 162]) {
       const e = new BehaviorEngine({ seed, order: [PERSONA_KEYS[seed % 4], ...PERSONA_KEYS.filter((k) => k !== PERSONA_KEYS[seed % 4])], vocab: 2, lifeRate: 5 });
       let prev = e.targets();
-      const m = { sLo: 1, sHi: 0, bend: 0, deep: 0, dS: 0, dYaw: 0, dArm: 0, dFeeler: 0 };
+      const m = { sLo: 1, sHi: 0, bend: 0, deep: 0, dS: 0, dYaw: 0, dArm: 0, dFeeler: 0, dTendon: 0 };
+      let prevC = tendonContractions(prev.arm, { deep: true });
       let next = 3.3;
       let n = 0;
       while (!e.done && e.time < 480) {
@@ -410,6 +519,10 @@ describe('动作词汇 v2 · 引擎', () => {
           const dy = tg.arm.bend * Math.sin(tg.arm.dir) - prev.arm.bend * Math.sin(prev.arm.dir);
           m.dArm = Math.max(m.dArm, Math.hypot(dx, dy));
         }
+        // 三腱指令（台架开着深卷）：反射段以外逐帧不跳——两腱之间带深卷扫过腱轴硬窗，就是在这里跳的
+        const c = tendonContractions(tg.arm, { deep: true });
+        if (!REFLEX.has(ph)) m.dTendon = Math.max(m.dTendon, ...c.map((x, j) => Math.abs(x - prevC[j])));
+        prevC = c;
         for (const k of [0, 1] as const) m.dFeeler = Math.max(m.dFeeler, Math.abs(tg.feelers[k].base - prev.feelers[k].base));
         prev = tg;
       }
@@ -422,6 +535,7 @@ describe('动作词汇 v2 · 引擎', () => {
       // 反射段以外，最快的是惊跳后的恢复档（≤ 1.2 D/s ≈ 3.5 弯曲/s ≈ 每帧 0.059）；v1 的跟随器是每帧 < 0.04
       expect(m.dArm).toBeLessThan(0.062);
       expect(m.dFeeler).toBeLessThan(0.15);
+      expect(m.dTendon).toBeLessThan(0.06);
     }
   });
 });

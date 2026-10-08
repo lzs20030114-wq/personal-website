@@ -180,6 +180,12 @@ function build() {
     card.append(el('h2', {}, [R.zh]));
     const pair = el('div', { class: 'pair' });
     const nums = el('div', { class: 'nums' });
+    // 偏离曲线与截面的量程：这一格两版里最大的偏离，取整到 50 mm（两版同一把尺子，至少 100 mm）
+    let maxD = 100;
+    for (let v = 0; v < N; v++) {
+      const e = D.v[v].ex[persona]?.[R.key];
+      if (e) maxD = Math.max(maxD, Math.ceil(Math.max(...e.disp) / 50) * 50);
+    }
     for (let v = 0; v < N; v++) {
       const ex = D.v[v].ex[persona]?.[R.key];
       const col = COLORS[N === 1 ? 1 : v];
@@ -205,7 +211,7 @@ function build() {
       const xtrail = el('polyline', { fill: 'none', stroke: col, 'stroke-width': 1.2, opacity: 0.5 });
       const xdot = el('circle', { r: 3.5, fill: col });
       svg.append(xtrail, xdot);
-      svg.append(el('text', { x: BX, y: BY - 4, 'font-size': 9, fill: 'var(--ink-3)' }, ['梢端截面']));
+      svg.append(el('text', { x: BX, y: BY - 4, 'font-size': 9, fill: 'var(--ink-3)' }, ['梢端截面 ±' + maxD + ' mm']));
       // 转身表盘
       const dial = el('g', { transform: 'translate(' + (W - 22) + ',22)' });
       dial.append(el('circle', { r: 13, fill: 'none', stroke: 'var(--line)' }));
@@ -221,7 +227,6 @@ function build() {
       // 位移曲线
       const SW = W, SH = 54;
       const strip = el('svg', { class: 'strip', viewBox: '0 0 ' + SW + ' ' + SH });
-      const maxD = 160;
       const px = (tt) => 6 + ((tt - T0) / (T1 - T0)) * (SW - 12);
       const py = (d) => SH - 6 - (Math.min(d, maxD) / maxD) * (SH - 12);
       strip.append(el('line', { x1: px(0), y1: 2, x2: px(0), y2: SH - 2, stroke: 'var(--hot)', 'stroke-dasharray': '2 3', opacity: 0.6 }));
@@ -235,7 +240,7 @@ function build() {
       const sm = D.v[v].sm[persona]?.[R.key] ?? {};
       const f = (x, d = 0) => (x === null || x === undefined ? '—' : x.toFixed(d));
       nums.append(el('div', {}, ['峰值 ' + f(sm.peak) + ' mm · 起动 ' + f(sm.onset, 2) + ' s · 到峰 ' + f(sm.tPeak, 2) + ' s · 峰速 ' + f(sm.vPeak) + ' mm/s']));
-      panes.push({ ex, body, fA, fB, ghost, trail, arm, xtrail, xdot, needle, snd, evTag, head, px, BX, BY, BS });
+      panes.push({ ex, body, fA, fB, ghost, trail, arm, xtrail, xdot, needle, snd, evTag, head, px, BX, BY, BS, maxD });
     }
     card.append(pair, nums);
     grid.append(card);
@@ -261,10 +266,11 @@ function draw() {
     const tr = [];
     for (let j = Math.max(0, i - 30); j <= i; j++) { const sp = ex.sp[j]; tr.push(sx(sp[sp.length - 2]) + ',' + sy(sp[sp.length - 1])); }
     p.trail.setAttribute('points', tr.join(' '));
-    // 截面：梢端相对刺激前的偏移（x 左右、z 上下），±160 mm 填满方框
-    const sc = p.BS / 2 / 160;
-    const cx = (j) => p.BX + p.BS / 2 + Math.max(-160, Math.min(160, ex.tx[j] - ex.tx[i0])) * sc;
-    const cz = (j) => { const a = ex.sp[j], b = ex.sp[i0]; return p.BY + p.BS / 2 - Math.max(-160, Math.min(160, a[a.length - 1] - b[b.length - 1])) * sc; };
+    // 截面：梢端相对刺激前的偏移（x 左右、z 上下），这一格的量程填满方框
+    const M = p.maxD;
+    const sc = p.BS / 2 / M;
+    const cx = (j) => p.BX + p.BS / 2 + Math.max(-M, Math.min(M, ex.tx[j] - ex.tx[i0])) * sc;
+    const cz = (j) => { const a = ex.sp[j], b = ex.sp[i0]; return p.BY + p.BS / 2 - Math.max(-M, Math.min(M, a[a.length - 1] - b[b.length - 1])) * sc; };
     const xt = [];
     for (let j = Math.max(0, i - 45); j <= i; j++) xt.push(cx(j) + ',' + cz(j));
     p.xtrail.setAttribute('points', xt.join(' '));

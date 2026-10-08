@@ -174,7 +174,7 @@ export function stepProgram(p: Program, t: number, rest: Pose): { pose: Pose; ph
     const left = (ph.dur - tau) / fade;
     const win = left >= 1 ? 1 : left <= 0 ? 0 : left * left * (3 - 2 * left);
     const w = win * ph.osc.amp * Math.exp(-ph.osc.decay * tau) * Math.sin(TAU * ph.osc.hz * tau);
-    pose = { ...pose, bend: Math.max(0, pose.bend + w) };
+    pose = { ...pose, bend: Math.min(1, Math.max(0, pose.bend + w)) };
   }
   p.out = pose;
   return { pose, phase: ph, done: false, tau };

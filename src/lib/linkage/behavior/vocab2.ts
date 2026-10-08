@@ -14,7 +14,7 @@
  * 左边来的（side = +1）→ −120°，右边来的 → +120°。
  */
 import type { PersonaKey } from './persona';
-import type { Cues, Phase, Pose } from './programs';
+import { type Cues, type Phase, type Pose, arcDelta } from './programs';
 
 const TAU = 2 * Math.PI;
 const AXIS = (2 * Math.PI) / 3;
@@ -120,9 +120,19 @@ export interface BuildCtx {
 /** 姿态 → 差动 D（含深卷） */
 export const dOf = (p: Pose): number => SPAN * p.bend + DEEP_SPAN * p.deep;
 
-/** 差动 D → 姿态（D ≤ 0.34 只用 bend；超出部分走肌腱轴深卷——只在弯向正对腱轴时执行层才放开） */
+/** 不在腱轴上的姿态的差动上限：只用弯曲、且给摆动（osc ≤ 0.14）留出余量，弯曲不会被执行层削到 1 */
+export const OFF_AXIS_DMAX = SPAN * 0.86;
+
+/** 弯向是否正对某根腱轴（深卷只给这种姿态） */
+export const onAxis = (dir: number): boolean => Math.abs(wrapPi(dir - Math.round(dir / AXIS) * AXIS)) < 1e-9;
+
+/**
+ * 差动 D → 姿态。正对腱轴时 D > 0.34 的部分走肌腱轴深卷（执行层只在硬窗里放开）；不在轴上时只用弯曲、
+ * 封顶 OFF_AXIS_DMAX——两腱之间带着深卷，弧路径一扫过某根腱的硬窗，三腱指令就会跳（审查实测 0.13 / 帧）
+ */
 export function poseOfD(D: number, dir: number): Pose {
   const d = Math.max(0, D);
+  if (!onAxis(dir)) return { bend: Math.min(d, OFF_AXIS_DMAX) / SPAN, dir: wrapPi(dir), deep: 0 };
   const bend = Math.min(1, d / SPAN);
   const deep = d > SPAN ? clamp((d - SPAN) / DEEP_SPAN, 0, 1) : 0;
   return { bend, dir: wrapPi(dir), deep };
@@ -204,17 +214,38 @@ export function unhook(phases: Phase[], from: Pose, rest: Pose): Phase[] {
   return out;
 }
 
-/** 按档位拉长太快的段（就地改 dur）；tiers 按段名覆盖默认档 */
+/** 按档位拉长太快的段（就地改 dur）；tiers 按段名覆盖默认档。没指定路径、弧要转过 90° 以上的段改走直线（穿过中心，不绕到另一侧去） */
 export function govern(phases: Phase[], c: BuildCtx, tier: Tier, tiers?: Partial<Record<string, Tier>>): Phase[] {
   let at = c.cur;
   for (const p of phases) {
+    if (p.path === undefined && p.ease !== 'hold') {
+      const to0 = endOf(p, at, c.rest);
+      if (Math.abs(arcDelta(at, to0)) > Math.PI / 2) p.path = 'line';
+    }
     const tr = tiers?.[p.name] ?? (p.name === 'unhook' ? 'recover' : tier);
     const to = endOf(p, at, c.rest);
     const v = tierSpeed(tr, c.k, c.vigor);
     if (Number.isFinite(v) && p.ease !== 'hold') p.dur = Math.max(p.dur, (PEAK[p.ease] * pathLen(at, to, p.path)) / v);
+    // 摆动的峰速 2π·hz·amp·span 也不超档（慢的人格点头、嗅探收小）
+    if (Number.isFinite(v) && p.osc) p.osc = { ...p.osc, amp: Math.min(p.osc.amp, v / (TAU * p.osc.hz * SPAN)) };
     at = to;
   }
   return phases;
+}
+
+/**
+ * 预备：从此刻的姿态往「与将要的运动相反」的方向挪 amount（差动），只是一个小的反向——不是把臂甩到另一侧
+ * （审查抓到：原来瞄的是 dir + π 的绝对姿态，下一段就成了绕半圈的大弧）
+ */
+export function anticPose(cur: Pose, to: Pose, amount: number): Pose {
+  const [cx, cy] = [dOf(cur) * Math.cos(cur.dir), dOf(cur) * Math.sin(cur.dir)];
+  const [tx, ty] = [dOf(to) * Math.cos(to.dir), dOf(to) * Math.sin(to.dir)];
+  const L = Math.hypot(tx - cx, ty - cy);
+  if (L < 1e-9) return { ...cur, deep: 0 };
+  const x = cx - (amount * (tx - cx)) / L;
+  const y = cy - (amount * (ty - cy)) / L;
+  const D = Math.hypot(x, y);
+  return { bend: Math.min(D, OFF_AXIS_DMAX) / SPAN, dir: D > 1e-9 ? Math.atan2(y, x) : cur.dir, deep: 0 };
 }
 
 const ph = (name: string, dur: number, ease: Phase['ease'], arm: Phase['arm'], extra: Partial<Phase> = {}): Phase => ({
@@ -227,8 +258,9 @@ const ph = (name: string, dur: number, ease: Phase['ease'], arm: Phase['arm'], e
 
 /** 把目标往外推，直到离此刻的姿态至少 minD（差动）：臂已经朝那边时，动作也不会凭空消失 */
 function atLeast(target: Pose, cur: Pose, minD: number): Pose {
+  const cap = target.deep > 0 || onAxis(target.dir) ? 1 : OFF_AXIS_DMAX / SPAN;
   let t = target;
-  for (let i = 0; i < 60 && pathLen(cur, t, 'line') < minD && t.bend < 1; i++) t = { ...t, bend: Math.min(1, t.bend + 0.02) };
+  for (let i = 0; i < 60 && pathLen(cur, t, 'line') < minD && t.bend < cap; i++) t = { ...t, bend: Math.min(cap, t.bend + 0.02) };
   return t;
 }
 
@@ -264,8 +296,12 @@ export function buildStartle(c: BuildCtx, s: StartleIn): { phases: Phase[]; busy
   let D = clamp(V2.startleDMin + (V2.startleDMax - V2.startleDMin) * m, V2.startleDMin, V2.startleDMax) * (0.75 + 0.25 * c.vigor);
   D = s.retract ? V2.startleDMin : Math.max(V2.startleDMin, D * V2.repeatDecay ** s.repeats);
   const axis = s.retract ? nearestAxisDir(c.cur.dir) : s.axis ?? awayAxis(s.side, c.cur);
+  // 臂已经沿这根轴卷着（再吓一次、恢复途中）：惊跳只会卷得更深，不会把臂打开（审查抓到：递减后的目标比此刻还浅）
+  const along = dOf(c.cur) * Math.cos(wrapPi(c.cur.dir - axis));
+  D = Math.max(D, Math.min(V2.startleDMax, along + 0.05));
   const at = (f: number): Pose => poseOfD(D * f, axis);
   const hook = at(1);
+  const first = poseOfD(Math.max(D * V2.zvFirst, along), axis);
   const clench = V2.clench0 + V2.clench1 * m;
   const F = Math.min(V2.freezeCap, (V2.freezeA + c.tau) * (0.6 + 0.4 * m) * (1 + 0.5 * c.ageU)) * (s.repeats > 0 ? 0.5 : 1);
   const quiver = c.persona === 'B' || c.persona === 'D' ? 0.06 + 0.03 * c.ageU : 0.03 * c.ageU;
@@ -276,7 +312,7 @@ export function buildStartle(c: BuildCtx, s: StartleIn): { phases: Phase[]; busy
   if (c.k < V2.zvSlow) {
     // 慢的人格：两步缩（零振动整形），钩落定不晃——B 的「缩」是收紧，不是甩
     out.push(
-      ph('flex', V2.startleFlex, 'out4', at(V2.zvFirst), flexCue),
+      ph('flex', V2.startleFlex, 'out4', first, flexCue),
       ph('zvHold', V2.zvDelay - V2.startleFlex, 'hold', 'hold', { ...held, feel: { pose: 'splay' } }),
       ph('zv2', V2.startleFlex, 'out4', hook, { ...held, path: 'line' }),
       ph('freeze', Math.max(0.2, F - V2.zvDelay), 'hold', 'hold', held),
@@ -343,7 +379,8 @@ export function buildStartle(c: BuildCtx, s: StartleIn): { phases: Phase[]; busy
       break;
     }
   }
-  const phases = govern(unhook([...out, ...rec], c.cur, c.rest), c, 'recover', tiers);
+  // 解钩只管恢复：反射段从此刻（哪怕还卷在另一根轴上）直线猛缩过去，0.1 s 起动不许被推迟
+  const phases = govern([...out, ...unhook(rec, hook, c.rest)], c, 'recover', tiers);
   let busy = 0;
   let i = 0;
   for (; i < phases.length && STARTLE_PRE.has(phases[i].name); i++) busy += phases[i].dur;
@@ -378,7 +415,8 @@ export function buildRegister(c: BuildCtx, o: { dur: number; side: number; kind:
       ph('wince', 0.25, 'mj', atLeast(w, c.cur, V2.winceD), { path: 'line', breath: { rate: 1, push: 0.06 }, voice: 'tsk', feel: { pose: 'tuck' } }),
       ph('catch', 0.3, 'hold', 'hold', { breath: { rate: 1, push: 0.06 }, voice: 'mute', feel }),
     );
-    govern(out, c, 'urgent', { latency: 'reflex' });
+    const gov = govern(unhook(out, c.cur, c.rest), c, 'urgent', { latency: 'reflex' });
+    out.splice(0, out.length, ...gov);
     left -= out.reduce((a, p) => a + p.dur, 0);
   }
   if (left > 0) {
@@ -417,7 +455,7 @@ export const respD = (c: BuildCtx): number => (V2.respD0 + V2.respD1 * clamp(c.g
 export function buildResponse(c: BuildCtx, r: RespIn): Phase[] {
   let phases = responsePhases(c, r);
   if (!r.feeler) phases = phases.map((p) => (p.feel && p.feel.pose === 'point' ? { ...p, feel: undefined } : p));
-  return govern(phases, c, 'deliberate', { perk: 'urgent' });
+  return govern(unhook(phases, c.cur, c.rest), c, 'deliberate', { perk: 'urgent' });
 }
 
 function responsePhases(c: BuildCtx, r: RespIn): Phase[] {
@@ -431,15 +469,17 @@ function responsePhases(c: BuildCtx, r: RespIn): Phase[] {
   const anticipates = c.persona === 'A' || c.persona === 'C' || (c.persona === 'D' && springy);
   const creep = c.k < V2.zvSlow;
   const turnCue = r.turn ? { yaw: r.turn } : {};
-  /** 动作的方向：迎 = 朝刺激那侧的 deg；原地 = 正上 */
-  const dirOf = (deg: number): number => (r.variant === 'inplace' ? 0 : toward(s3, deg));
+  /**
+   * 动作的方向：迎 = 朝刺激那侧的 deg；原地 = 正上。要转身时扣掉转身的角度——身体转过去以后，臂指的还是
+   * 原来那个方向（不然转完身臂又多偏出去一截）
+   */
+  const dirOf = (deg: number): number => (r.variant === 'inplace' ? 0 : clamp(wrapPi(toward(s3, deg) - r.turn), -Math.PI, Math.PI));
   const reach = (deg: number, D: number): Pose => atLeast(poseOfD(r.variant === 'inplace' ? 0.8 * D : D, dirOf(deg)), c.cur, minEx);
   /** 预备：反方向先缩一点（活泼的、好奇的人格有，沉静的没有） */
-  const antic = (dir: number): Phase[] =>
-    anticipates && flourish > 0.2 ? [ph('antic', 0.25 / k, 'mj', poseOfD(Math.max(0, dOf(c.cur) - 0.04 * flourish), wrapPi(dir + Math.PI)), { path: 'line' })] : [];
+  const antic = (to: Pose): Phase[] => (anticipates && flourish > 0.2 ? [ph('antic', 0.25 / k, 'mj', anticPose(c.cur, to, 0.04 * flourish), { path: 'line' })] : []);
   // 躲：往另一侧平着让开、慢、呼吸浅、往收拢端缩一点、触须收起、不出声、灯暗一点——等手走
   const avoid = (holdT: number, leaveT = 2.5): Phase[] => {
-    const dir = s3 ? toward(-s3, 90) : c.cur.dir;
+    const dir = s3 ? wrapPi(toward(-s3, 90) - r.turn) : c.cur.dir;
     const D = Math.max(respD(c), 0.16) * scale;
     const shy: Partial<Phase> = { breath: { rate: 1, amp: 0.6, push: 0.06 }, voice: 'mute', feel: { pose: 'tuck' }, light: 0.85 };
     return [
@@ -459,7 +499,7 @@ function responsePhases(c: BuildCtx, r: RespIn): Phase[] {
       const breath: Cues['breath'] = { rate: 1, amp: 1 + 0.5 * c.gAbs, period: 1.25 };
       const hz = Math.min(0.5, 1 / (c.period * 1.25));
       return [
-        ...antic(to.dir),
+        ...antic(to),
         ph('lean', 1.6 / k, creep ? 'in' : 'mj', to, { breath, voice: 'purr', feel: { pose: 'point', side: s3 }, light: 1.15, ...turnCue }),
         ph('nuzzle', (r.kind === 'hold' ? 3.0 : 1.6) / k, 'hold', 'hold', { osc: { amp: 0.12 * scale, hz, decay: 0 }, breath, voice: 'purr', light: 1.15 }),
         ph('return', 2.0 / k, 'mj', 'rest', { breath: { rate: 1, period: 1.1 } }),
@@ -521,7 +561,7 @@ function responsePhases(c: BuildCtx, r: RespIn): Phase[] {
     case 'approach': {
       if (r.variant === 'toward') {
         // 有人走近、迎：臂抬起来朝那边伸，呼吸加快、一声上扬，身体跟在臂后面转
-        const to = atLeast(poseOfD(Math.max(0.8 * Dr, dOf(c.rest) + 0.12 * scale), s3 ? toward(s3, 45) : 0), c.cur, minEx);
+        const to = atLeast(poseOfD(Math.max(0.8 * Dr, dOf(c.rest) + 0.12 * scale), s3 ? dirOf(45) : 0), c.cur, minEx);
         return [
           ph('reach', 1.0 / k, 'mj', to, { breath: { rate: 1, period: 0.8, amp: 1 + 0.5 * c.gAbs }, voice: 'query', feel: { pose: 'point', side: s3 }, light: 1.1, ...turnCue }),
           ph('gaze', 1.5 / k, 'hold', 'hold', { osc: { amp: 0.05, hz: 0.3, decay: 0 }, breath: { rate: 1, period: 0.8 } }),
@@ -540,7 +580,7 @@ function responsePhases(c: BuildCtx, r: RespIn): Phase[] {
       // 其它（没有专门动词的）：朝刺激那边抬起、停一下、回来
       const to = reach(40, Dr);
       return [
-        ...antic(to.dir),
+        ...antic(to),
         ph('lift', 1.0 / k, 'mj', to, { breath: { rate: 1, amp: 1 + 0.5 * c.gAbs }, feel: { pose: 'point', side: s3 }, ...turnCue }),
         ph('hold', 1.0 / k, 'hold', 'hold'),
         ph('return', 1.5 / k, 'mj', 'rest'),
@@ -561,7 +601,7 @@ export const spontE = (c: BuildCtx): number => {
 
 /** 自发动作：小、慢、只在自己身边、不朝任何人（限速 spont） */
 export function buildSpont(c: BuildCtx, kind: SpontKind, around?: number): Phase[] {
-  return govern(spontPhases(c, kind, around), c, 'spont');
+  return govern(unhook(spontPhases(c, kind, around), c.cur, c.rest), c, 'spont');
 }
 
 function spontPhases(c: BuildCtx, kind: SpontKind, around?: number): Phase[] {
@@ -613,14 +653,14 @@ export type NoticeMode = 'toward' | 'away' | 'look';
 
 /** 看见手那一下（v2）：迎 = 先往回收一点再伸过去；躲 = 往背着手的腱轴一缩；看别处 = 瞥一眼。都限速，追不上惊跳 */
 export function buildNotice(c: BuildCtx, mode: NoticeMode, aimDir: number, aimBend: number, awayDir: number): Phase[] {
-  return govern(noticePhases(c, mode, aimDir, aimBend, awayDir), c, mode === 'away' ? 'urgent' : 'deliberate');
+  return govern(unhook(noticePhases(c, mode, aimDir, aimBend, awayDir), c.cur, c.rest), c, mode === 'away' ? 'urgent' : 'deliberate');
 }
 
 function noticePhases(c: BuildCtx, mode: NoticeMode, aimDir: number, aimBend: number, awayDir: number): Phase[] {
   const k = c.k;
   if (mode === 'toward') {
     return [
-      ph('antic', 0.2 / k, 'mj', poseOfD(Math.max(0, dOf(c.cur) - 0.04), wrapPi(aimDir + Math.PI)), { path: 'line' }),
+      ph('antic', 0.2 / k, 'mj', anticPose(c.cur, { bend: (Math.min(1, aimBend) * 0.5 + 0.15) * c.vigor, dir: aimDir, deep: 0 }, 0.04), { path: 'line' }),
       ph('reach', 0.9 / k, 'mj', { bend: (Math.min(1, aimBend) * 0.5 + 0.15) * c.vigor, dir: aimDir, deep: 0 }, { breath: { rate: 1, amp: 1.15 }, voice: 'query', feel: { pose: 'point', side: 0 } }),
       ph('handoff', 0.8 / k, 'mj', 'rest'),
     ];
@@ -643,7 +683,8 @@ function noticePhases(c: BuildCtx, mode: NoticeMode, aimDir: number, aimBend: nu
 
 /** 收场：死亡开始时还在做的动作不演完，平平地落回静息（限速 spont，0.6–1.2 s），所有提示交还给死亡的脚本 */
 export function buildSettle(c: BuildCtx): Phase[] {
-  const p = govern([ph('settle', 0.6, 'mj', 'rest')], c, 'spont');
-  p[0].dur = clamp(p[0].dur, 0.6, 1.2);
+  const p = govern(unhook([ph('settle', 0.6, 'mj', 'rest')], c.cur, c.rest), c, 'spont', { unhook: 'recover' });
+  const last = p[p.length - 1];
+  last.dur = clamp(last.dur, 0.6, 1.2);
   return p;
 }

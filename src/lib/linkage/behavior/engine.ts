@@ -38,7 +38,7 @@ import {
 } from './persona';
 import { type Phase as ProgPhase, type Pose, type Program, startProgram, stepProgram, totalDur } from './programs';
 import { type Rng, chance, deriveSeed, makeRng, pick, uniform } from './rng';
-import { type BuildCtx, type RegKind, type RespKind, type SpontKind, type Variant, V2, buildNotice, buildRegister, buildResponse, buildSettle, buildSpont, buildStartle, nearestAxisDir } from './vocab2';
+import { type BuildCtx, type RegKind, type RespKind, STARTLE_PRE, type SpontKind, type Variant, V2, buildNotice, buildRegister, buildResponse, buildSettle, buildSpont, buildStartle, nearestAxisDir } from './vocab2';
 
 /** 定步频率 */
 export const HZ = 60;
@@ -1154,7 +1154,7 @@ export class BehaviorEngine {
       // 安全规则：不知道哪边、人就在近处、方位读不出 → 就近缩，不往任何一边甩
       const retract = !side && axis === undefined && s.band === 'near' && s.bearing === null;
       if (retract) rule = 'retract';
-      const rb = b ?? s.bearing;
+      const rb = b ?? (s.band !== 'gone' ? s.bearing : null);
       const recoil = rb !== null ? (Math.sign(wrapPi(s.yaw.x - rb)) || 1) * V2.startleRecoil : 0;
       // 恢复里转回去看：活力、好奇按 ⑩ 抽（只在知道方向时；随机数只在那时抽）
       const P = this.persona();
@@ -1340,7 +1340,7 @@ export class BehaviorEngine {
         else if (variant === 'avoid') turn = 'away';
       }
       if ((turn === 'toward' || turn === 'away') && pd.bearing !== null) yaw = yawTo(turn === 'toward' ? pd.bearing : wrapPi(pd.bearing + Math.PI));
-      motion = `respond.${kind}${directed ? `.${variant}` : ''}`;
+      motion = `respond.${kind}${directed || variant === 'avoid' ? `.${variant}` : ''}`;
       const c = this.buildCtx(ctx, pd.tau ?? pd.due - pd.at, g);
       const phases = buildResponse(c, { kind, side: pd.side ?? 0, variant, arm, feeler, turn: yaw });
       this.run(motion, t, phases, 'response', 'attend', pd.id);
@@ -1523,6 +1523,11 @@ export class BehaviorEngine {
       return;
     }
     if (s.gesture && s.gesture.kind !== 'spont') {
+      s.nextOrient = t + 1;
+      return;
+    }
+    // v2：潜伏期里「注意到」= 一切停住，这时不张望（不然身体在屏气、触须指着刺激的时候自己转开）
+    if (s.m2 && s.pending) {
       s.nextOrient = t + 1;
       return;
     }
@@ -2010,26 +2015,30 @@ export class BehaviorEngine {
           by *= f;
         }
       }
-      if (s.grasp.phase !== 'IDLE') m.prog = null;
       if (m.prog) {
-        // 动作程序直接给臂（不经人格跟随器）；速度按差分记下，程序走完跟随器接着走不跳
+        // 动作程序直接给臂（不经人格跟随器）；速度按差分记下，程序走完跟随器接着走不跳。
+        // 抓握握着（缠 / 握人 / 握物）时臂归抓握：程序照走，只放它的呼吸 / 声 / 光 / 触须 / 转身提示，不写臂；
+        // 松开（RELEASE，惊跳会先叫它）时程序接管臂
         const restPose: Pose = { bend: Math.hypot(bx, by), dir: Math.atan2(by, bx), deep: 0 };
         const r = stepProgram(m.prog, t, restPose);
         if (r.phase && m.prog.idx !== m.seen) {
           m.seen = m.prog.idx;
           this.enterPhase(t, r.phase);
         }
-        const x = r.pose.bend * Math.cos(r.pose.dir);
-        const y = r.pose.bend * Math.sin(r.pose.dir);
-        s.armX.v = (x - s.armX.x) / DT;
-        s.armY.v = (y - s.armY.x) / DT;
-        s.armX.x = x;
-        s.armY.x = y;
-        m.deep = r.pose.deep;
         if (r.done) m.prog = null;
-        dampStep(s.wrap, 0, MOTION.armOmega * Math.sqrt(s.speed), DT);
-        s.tone = ctx.tone;
-        return;
+        if (s.grasp.phase === 'IDLE' || s.grasp.phase === 'RELEASE') {
+          const x = r.pose.bend * Math.cos(r.pose.dir);
+          const y = r.pose.bend * Math.sin(r.pose.dir);
+          // 走完那一帧不把速度交给跟随器（D 生硬的直线落回带着速度，交过去会冲过静息再弹回来）
+          s.armX.v = r.done ? 0 : (x - s.armX.x) / DT;
+          s.armY.v = r.done ? 0 : (y - s.armY.x) / DT;
+          s.armX.x = x;
+          s.armY.x = y;
+          m.deep = r.pose.deep;
+          dampStep(s.wrap, 0, MOTION.armOmega * Math.sqrt(s.speed), DT);
+          s.tone = ctx.tone;
+          return;
+        }
       }
       m.deep = 0;
     }
@@ -2074,7 +2083,8 @@ export class BehaviorEngine {
     const s = this.s;
     const k = Math.sqrt(s.speed);
     // v2 的惊跳只在反射与凝住那几段快转（恢复里回头看是刻意的，照常速）
-    const reflexNow = !s.m2 || (s.m2.prog !== null && s.m2.prog.name === 'startle' && s.m2.prog.idx <= 2);
+    const prog = s.m2?.prog ?? null;
+    const reflexNow = !s.m2 || (prog !== null && prog.name === 'startle' && STARTLE_PRE.has(prog.phases[prog.idx]?.name ?? ''));
     const fast = s.gesture && s.gesture.kind === 'startle' && reflexNow ? MOTION.yawRateStartle : 1;
     const step = MOTION.yawRate * k * fast * DT;
     s.yawGoal += clamp(s.yawTarget - s.yawGoal, -step, step);

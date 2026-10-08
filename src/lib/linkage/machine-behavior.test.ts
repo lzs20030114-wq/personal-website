@@ -296,14 +296,29 @@ describe('臂与触须', () => {
     }
     const AX = (2 * Math.PI) / 3;
     for (const axis of [0, AX, -AX]) {
-      for (const off of [0, 11.9, -11.9]) {
+      for (const off of [0, 7.9, -7.9]) {
         const c = tendonContractions({ tone: 1, bend: 1, dir: axis + (off * Math.PI) / 180, deep: 1 }, { deep: true });
         expect(Math.max(...c)).toBeCloseTo(1, 9);
         expect(Math.min(...c)).toBeCloseTo(ARM_DRIVE.floor, 9);
       }
-      // 窗外 12.1°：退回 dMax 封顶
-      const out = tendonContractions({ tone: 1, bend: 1, dir: axis + (12.1 * Math.PI) / 180, deep: 1 }, { deep: true });
+      // 窗外 12°：退回 dMax 封顶
+      const out = tendonContractions({ tone: 1, bend: 1, dir: axis + (12 * Math.PI) / 180, deep: 1 }, { deep: true });
       expect(Math.max(...out) - Math.min(...out)).toBeLessThanOrEqual((2 / Math.sqrt(3)) * ARM_DRIVE.dMax + 1e-9);
+    }
+    // 连续：深卷满 / 一点点 / 收到 0，弯向从 −20° 扫到 +20°（穿过腱轴窗）；深卷从 0.2 收到 0 停在轴上——三腱每一小步都不跳
+    for (const deep of [1, 0.3, 0.01]) {
+      let prev = tendonContractions({ tone: 1, bend: 1, dir: (-20 * Math.PI) / 180, deep }, { deep: true });
+      for (let i = 1; i <= 400; i++) {
+        const c = tendonContractions({ tone: 1, bend: 1, dir: ((-20 + 0.1 * i) * Math.PI) / 180, deep }, { deep: true });
+        expect(Math.max(...c.map((x, j) => Math.abs(x - prev[j])))).toBeLessThan(0.02);
+        prev = c;
+      }
+    }
+    let prev = tendonContractions({ tone: 1, bend: 1, dir: AX, deep: 0.2 }, { deep: true });
+    for (let i = 1; i <= 200; i++) {
+      const c = tendonContractions({ tone: 1, bend: 1, dir: AX, deep: 0.2 * (1 - i / 200) }, { deep: true });
+      expect(Math.max(...c.map((x, j) => Math.abs(x - prev[j])))).toBeLessThan(0.02);
+      prev = c;
     }
     expect(ARM_DRIVE.dDeep).toBeCloseTo(1 - ARM_DRIVE.floor, 12);
     // 动作程序（vocab2.ts）按同一个跨度把差动 D 换成 bend + deep：两边不一致 = 惊跳根本到不了设计的深度
