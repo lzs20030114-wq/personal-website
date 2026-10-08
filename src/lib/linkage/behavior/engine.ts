@@ -1795,13 +1795,15 @@ export class BehaviorEngine {
     }
     this.resampleSpeed(ctx);
     if (s.m2 && this.spontHand(t, ctx)) return;
-    const armFree = s.grasp.phase === 'IDLE' && !(s.m2 && ENGAGED.has(s.m2.hc.stage));
+    // v2 迎手链：投入中、侧身躲、看着的时候臂不做自发动作（只抖触须 / 叹气）；陪着手的时候只卷（围着手）
+    const hst = s.m2 ? s.m2.hc.stage : 'off';
+    const armFree = s.grasp.phase === 'IDLE' && !ENGAGED.has(hst) && hst !== 'avoid' && hst !== 'watch';
     let action: GestureAction | 'sigh';
     if (armFree && s.grasp.searches > 0) {
       action = 'search';
       s.grasp.searches--;
     } else {
-      const choices: readonly (GestureAction | 'sigh')[] = armFree ? ['curl', 'sway', 'flick', 'sigh'] : ['flick', 'sigh'];
+      const choices: readonly (GestureAction | 'sigh')[] = !armFree ? ['flick', 'sigh'] : hst === 'track' ? ['curl', 'flick', 'sigh'] : ['curl', 'sway', 'flick', 'sigh'];
       action = pick(s.rng, choices);
     }
     const cur = Math.atan2(s.armY.x, s.armX.x);
@@ -3024,7 +3026,8 @@ export class BehaviorEngine {
     this.deepEnd(t);
     if (reaction === 'chase' && h) {
       g.chases++;
-      const fast = t - hc.pullT <= 0.3 && hc.pullV >= HC.chaseFast;
+      // 衰老过了六成：扑过去换成伸过去送一下（先拿掉花样）
+      const fast = t - hc.pullT <= 0.3 && hc.pullV >= HC.chaseFast && this.ageU(ctx) <= 0.6;
       hc.plan = chasePlan(fast);
       s.grasp = { ...g, phase: 'WRAP', t0: t, dur: 60, from: Math.min(1, cur.bend), catchT: NEVER };
       this.emit('GRASP_START', { chase: true });
