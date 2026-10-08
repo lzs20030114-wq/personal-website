@@ -398,8 +398,12 @@ interface HandChain {
   /** 本回合的 ⑤（抽过没有 / 值） */
   gDrawn: boolean;
   g: number;
-  /** 推过几下 */
+  /** 推过几下；这一拍程序走完的时刻（最后一拍走完要等臂落定才判「没碰到」） */
   nudges: number;
+  beatEnd: number;
+  /** 缠 / 握的基准：开缠那一刻的差动基准与当时的读数（握着跟手跟的是读数的变化，不是读数本身） */
+  dBase: number;
+  dhAt: number;
   /** 贴上那一段结束的时刻（catchT 的门） */
   seatEnd: number;
   /** 握：跟手的差动与弯向、握住以来的呼吸数、上一步的呼吸相位、控制器开始的时刻与起点姿态 */
@@ -471,6 +475,9 @@ const idleHand = (): HandChain => ({
   gDrawn: false,
   g: 0,
   nudges: 0,
+  beatEnd: NEVER,
+  dBase: 0,
+  dhAt: 0,
   seatEnd: NEVER,
   Dref: 0,
   dirRef: 0,
@@ -1344,8 +1351,10 @@ export class BehaviorEngine {
         this.expected = true;
         return this.expectedTouch(e, I, id, t, ctx);
       }
-      // 看见手以后人走近：吸收（唤醒照加，不起程序、不抽 ⑩、不占「正忙」）
-      if (e.kind === 'PRESENCE' && s.hand && s.hand.seen && s.hand.present) {
+      // 看见手以后人走近：吸收（唤醒照加，不起程序、不抽 ⑩、不占「正忙」）。手已经在视野里、还没过 ④ 的也算——
+      // 台架上手一出现就同时报一档在场，两者其实是同一个人（不然在场回应与「看见」同一步撞车）
+      const hh = s.hand;
+      if (e.kind === 'PRESENCE' && hh && hh.present && (hh.seen || Math.abs(wrapPi(hh.bearing - s.yaw.x)) <= HAND.fov)) {
         this.emit('RESPONSE', { to: id, latency: 0, motion: 'hand.absorb' });
         return 'respond';
       }
@@ -2463,6 +2472,13 @@ export class BehaviorEngine {
       this.emit('RESPONSE', { to: id, latency: 0, gain: hc.g, arm: true, feeler: true, turn: 'hand', grasp: true, motion: 'grasp.wrap', expected: true, by });
       return 'respond';
     }
+    // 一只正在动的手从臂上蹭过去（不是凑过去碰到的）：不缠，只是注意到；手若停在臂上，0.4 s 后再缠（重新武装）
+    if (byHand && hc.v >= HC.vMicro && hc.stage !== 'approach') {
+      hc.rearmAt = t + 0.4;
+      hc.emptyLast = false;
+      this.emit('RESPONSE', { to: id, latency: 0, motion: 'hand.brush', expected: true, by });
+      return 'respond';
+    }
     const g = this.hcGain(ctx);
     if (g < 0) {
       // 不稳定型 ⑤ 抽到负：缩回去，侧身躲到下一次 ⑨
@@ -2510,7 +2526,10 @@ export class BehaviorEngine {
     const Dc = dOf(cur);
     const deep = this.deepGate(h, t);
     const sat = h.aimBend >= 1.45;
-    const Dref = sat || deep ? Dc : gm.Dh;
+    // 基准：读数给的「刚好穿过手」与臂此刻（按观测器）实际所在的差动取大——碰到时臂常常已经越过读数估的那一点，
+    // 拿读数当基准会让「贴上」先把臂往回拉离手（探针实测往回 36 mm，读作被碰一缩）
+    const Darm = Math.hypot(m.obs[2], m.obs[6]);
+    const Dref = sat || deep ? Dc : Math.min(HC.flatMax, Math.max(gm.Dh, Darm));
     const gN = Math.min(1, Math.abs(this.hcGain(ctx)) / 0.5);
     const [cx, cy] = this.cmdXY();
     const settle = obsForecast(m.obs, cx, cy, 0.05, 0.8);
@@ -2531,6 +2550,8 @@ export class BehaviorEngine {
     });
     hc.plan = [];
     hc.Dref = Dref;
+    hc.dBase = Dref;
+    hc.dhAt = Math.min(gm.Dh, HC.flatMax);
     hc.dirRef = deep ? 0 : gm.dir;
     hc.lastD = Dref;
     hc.lastDir = gm.dir;
@@ -2595,6 +2616,7 @@ export class BehaviorEngine {
     const gm = this.handGeom(h);
     const Dref = this.deepGate(h, t) ? dOf(this.curPose()) : gm.Dh;
     this.hcRun(t, `hand.${beat}`, buildApproachBeat(this.hcCtx(ctx), gm, beat, Dref));
+    hc.beatEnd = t + totalDur(hc.prog!);
   }
 
   /** 够不着：探身 · 撑 · 再撑 · 泄气 → 看着（沉静型不探身，直接看着） */
@@ -2618,6 +2640,7 @@ export class BehaviorEngine {
       hc.nudges++;
       this.hcSet(t, 'approach', 'nudge');
       this.hcRun(t, 'hand.nudge', buildApproachBeat(this.hcCtx(ctx), this.handGeom(h), 'nudge'));
+      hc.beatEnd = t + totalDur(hc.prog!);
       return;
     }
     hc.armed = false;
@@ -2688,8 +2711,8 @@ export class BehaviorEngine {
       case 'track': {
         if (!h || !gm || h.mode !== 'toward') return;
         if (!h.present) return;
-        // 放开后手不动：3 s 后再来一次（抓空后每 ⑨ 至多一次）
-        if (s.electrode && !grasping && t >= hc.rearmAt && !(hc.emptyLast && hc.rearmed)) {
+        // 放开后手不动 / 蹭过去的手停在了臂上：到点再来一次（抓空后每 ⑨ 至多一次）
+        if (s.electrode && !grasping && t >= hc.rearmAt && hc.v < HC.vMove && !(hc.emptyLast && hc.rearmed)) {
           hc.rearmAt = NEVER;
           if (hc.emptyLast) hc.rearmed = true;
           this.emit('CONTACT', { to: -1, rearm: true });
@@ -2747,6 +2770,8 @@ export class BehaviorEngine {
           this.nextApproachBeat(t, ctx, h);
           return;
         }
+        // 最后一拍的指令走完了，臂还在路上（肌肉 + 臂的滞后约半秒）：等它落定（或 1 s）再判「没碰到」
+        if (beat !== 'drop' && !this.settled(0.05) && t - hc.beatEnd < 1) return;
         if (beat === 'drop') {
           // 撤掉：态度改躲，到下一次 ⑨
           h.mode = 'away';
@@ -2776,7 +2801,11 @@ export class BehaviorEngine {
       }
       case 'wrap': {
         const g = s.grasp;
-        if (g.phase === 'WRAP' && (g.catchT ?? NEVER) >= NEVER && t >= hc.seatEnd && (this.settled(0.04) || t - hc.seatEnd >= 1)) g.catchT = t;
+        if (g.phase === 'WRAP' && (g.catchT ?? NEVER) >= NEVER) {
+          // 手在卡住之前就离开了臂：不必等到限位，马上判（真值表照旧：到限位无张力 = 抓空）
+          if (!s.electrode && t - g.t0 > 0.3) g.dur = Math.min(g.dur, t - g.t0);
+          else if (t >= hc.seatEnd && (this.settled(0.04) || t - hc.seatEnd >= 1)) g.catchT = t;
+        }
         return;
       }
       case 'hold':
@@ -2833,8 +2862,10 @@ export class BehaviorEngine {
     const gm = this.handGeom(h);
     // 跟手（读数一步跳太大 = 被抽走：这一下不跟；深卷时钉住）
     if (t - hc.jumpAt > 0.2 && hc.deepUsed <= 0) {
+      // 跟的是读数的变化（手挪了多少），不是读数本身：基准从开缠那一刻的实际位置起
       const a = 1 - Math.exp(-DT / HC.followTau);
-      hc.Dref += (Math.min(gm.Dh, HC.flatMax) - hc.Dref) * a;
+      const want = Math.min(HC.flatMax, Math.max(0, hc.dBase + Math.min(gm.Dh, HC.flatMax) - hc.dhAt));
+      hc.Dref += (want - hc.Dref) * a;
       const d = wrapPi(gm.dir - hc.dirRef);
       const step = HC.followRate * DT;
       hc.dirRef = wrapPi(hc.dirRef + clamp(d, -step, step));

@@ -194,19 +194,18 @@ describe('迎手链：看见 → 凑 → 缠 → 握', () => {
     expect(a.ev('STARTLE')).toHaveLength(1);
   });
 
-  it('看见手以后在场档被吸收：看见那一刻作废还没发的在场回应；之后走近不起程序、不抽 ⑩', () => {
-    // 沉静型：看见要 2 s（④），在场回应也要 2 s——手出现 1.5 s 后人走近，回应还没发手就先看见了
+  it('手在视野里（看见了或正要看见）时人走近被吸收：不起在场回应程序、不抽 ⑩、不占「正忙」', () => {
+    // 台架上手一出现就同时报一档在场：两者是同一个人，不让在场回应与「看见」同一步撞车
     const r = new Rig('B', seedFor('B', 'toward'));
     r.contact = false;
-    r.run(1.5);
+    r.run(0.5);
     r.push({ kind: 'PRESENCE', band: 'far' });
     r.run(3);
-    const seenAt = r.ev('HAND_SEEN')[0].t;
-    expect(r.ev('RESPONSE_DROP').filter((x) => x.p?.reason === 'hand')).toHaveLength(1);
     r.push({ kind: 'PRESENCE', band: 'near' });
     r.run(3);
-    expect(r.ev('RESPONSE').filter((x) => x.p?.motion === 'hand.absorb')).toHaveLength(1);
-    expect(r.ev('RESPONSE').filter((x) => x.t >= seenAt && String(x.p?.motion ?? '').startsWith('respond.approach'))).toHaveLength(0);
+    expect(r.ev('RESPONSE').filter((x) => x.p?.motion === 'hand.absorb')).toHaveLength(2);
+    expect(r.ev('RESPONSE').filter((x) => String(x.p?.motion ?? '').startsWith('respond.approach'))).toHaveLength(0);
+    expect(r.log.filter((x) => x.ev === 'PRESENCE' && x.out === 'busy')).toHaveLength(0);
   });
 });
 

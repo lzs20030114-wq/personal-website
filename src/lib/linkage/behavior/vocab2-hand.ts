@@ -722,7 +722,7 @@ export function buildEmpty(c: BuildCtx, kind: EmptyKind, g: HandGeom | null): Ph
       break;
     }
     case 'palpate':
-      out.push(ph('palpate', 4, 'hold', 'hold', { osc: { amp: 0.04 / D_SPAN, hz: 0.5, decay: 0 }, voice: 'query', feel: feel('point', { antennate: 0.2 }) }));
+      out.push(ph('palpate', 2, 'hold', 'hold', { osc: { amp: 0.04 / D_SPAN, hz: 0.5, decay: 0 }, voice: 'query', feel: feel('point', { antennate: 0.2 }) }));
       break;
     case 'open':
       out.push(ph('open', 2 / k, 'in', addD(c.cur, -0.4 * dOf(c.cur)), { breath: { rate: 1, sigh: true }, voice: 'mute' }));
