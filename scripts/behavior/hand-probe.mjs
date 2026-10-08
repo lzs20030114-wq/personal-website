@@ -873,9 +873,12 @@ async function job(P, OUT) {
           out.deflateRatio = frAt(fr, defl[0].t1).bend / (bMax || 1);
         }
       }
-      // 触发起动：每次进入新阶段（迎手链段的触发）到梢端动 5 mm
+      // 触发起动：外来触发（看见手、脱手）到梢端动 5 mm——§9.2 #3 要的是「对人的事迎手链永远比惊跳慢」。
+      // 不算内部换阶段（陪着 → 凑是它自己等手停稳后的决定）和碰到 → 缠（碰到时臂本来就在动，缠的第一拍是定住）
       const trig = [];
-      for (let j = 0; j < segs.length; j++) if (j === 0 || segs[j].stage !== segs[j - 1].stage) trig.push(moveOnset(fr, segs[j].t0));
+      for (const e of r.events) {
+        if ((e.ev === 'HAND_SEEN' && e.p?.again === false) || e.ev === 'GRASP_LOST') trig.push(moveOnset(fr, e.t));
+      }
       out.trigOnsetMin = fin(trig).length ? Math.min(...fin(trig)) : NaN;
       out.lunge = of(BEATS.lunge).length ? 1 : 0;
       out.reachAfter = of(BEATS.reachAfter).length ? 1 : 0;
