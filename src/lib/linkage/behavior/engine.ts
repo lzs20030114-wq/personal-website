@@ -505,9 +505,10 @@ const idleHand = (): HandChain => ({
 
 /**
  * 臂余振观测器的常数（研究笔记 §9.2；Lab 1-3 求解器上标的，真机要重标）：肌肉临界阻尼 ω 5，臂摆动模态
- * 周期 1.42 s、阻尼比 0.15。settled(ε) = 臂速度 < ε（差动/秒）且离指令 < 0.01
+ * 周期 1.45 s、阻尼比 0.12（求解器阶跃响应拟合：过冲 26%、相邻同号峰比 0.45；综合方案原写 1.42 s / 0.15，
+ * 预测停稳会早 0.6–1.8 s）。settled(ε) = 臂速度 < ε（差动/秒）且离指令 < 0.01
  */
-export const OBS = { wm: 5, wa: (2 * Math.PI) / 1.42, za: 0.15, posTol: 0.01 } as const;
+export const OBS = { wm: 5, wa: (2 * Math.PI) / 1.45, za: 0.12, posTol: 0.01 } as const;
 
 /** 观测器推进一步（指令 c = 差动平面上的 (x, y)） */
 export function obsStep(o: number[], cx: number, cy: number, dt: number): void {

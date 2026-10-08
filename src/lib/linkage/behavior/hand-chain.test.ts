@@ -320,6 +320,6 @@ describe('迎手链：深卷预算与纯数据', () => {
     }
     expect(Math.abs(t - f)).toBeLessThan(1 / 30);
     expect(t).toBeGreaterThan(1);
-    expect(OBS.za).toBeCloseTo(0.15, 9);
+    expect(OBS.za).toBeCloseTo(0.12, 9);
   });
 });
