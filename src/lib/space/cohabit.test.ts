@@ -4,12 +4,15 @@ import {
   CohabitSim,
   aisleGraph,
   bandAngle,
+  doorReach,
   edgeOpen,
   everyoneHasExit,
   nearestNode,
+  partySizes,
   runCohabit,
   shortestPath,
 } from './cohabit';
+import type { CatCfg } from './cohabit';
 import { PLAN, planLayout } from './unit-activation';
 
 const B = COHABIT.FACES.BANDS;
@@ -191,10 +194,10 @@ describe('cohabit · 仿真', () => {
 });
 
 /**
- * 按带让路（作者 2026-10-07「人穿过只收两单元相对的两个面」+「松键之后多余的布可以往上去」）：
- * 一台 20 条带，挡人的带各自收回；猫身下的不收；通行按带几何；R5 只认开不了的墙。模块默认关 ⇒ 上面的旧口径逐位不变。
+ * 让路只收挡路的带（作者 2026-10-07「人穿过只收两单元相对的两个面」+「松键之后多余的布可以往上去」）：
+ * 一台 20 条带，挡人的带各自收回；猫身下的不收；通行按每条带的几何算；R5 只认开不了的墙。模块默认关 ⇒ 上面的旧口径逐位不变。
  */
-describe('cohabit · 按带让路', () => {
+describe('cohabit · 让路只收挡路的带', () => {
   it('模块默认关；开着时同种子逐位复现', () => {
     expect(new CohabitSim({ opening: false }).faces).toBe(false);
     const a = runCohabit({ seed: 11, seconds: 60, faces: true });
@@ -203,7 +206,7 @@ describe('cohabit · 按带让路', () => {
     expect(a.bandsOpen).toBeGreaterThanOrEqual(0);
   });
 
-  it('钉死 / 空房间档里带不起作用：按带与整台同种子读数逐位相同（规划照旧认整台的墙，不会穿墙）', () => {
+  it('钉死 / 空房间档里带不起作用：只收带与整个单元同种子读数逐位相同（规划照旧认整个单元的墙，不会穿墙）', () => {
     for (const space of ['fixed', 'empty'] as const) {
       const a = runCohabit({ seed: 12, seconds: 120, space, faces: true });
       const b = runCohabit({ seed: 12, seconds: 120, space, faces: false });
@@ -211,7 +214,7 @@ describe('cohabit · 按带让路', () => {
     }
   });
 
-  it('人站在交叉点：四邻单元照落、各只收回朝人的那条带、R5 不钉；整台口径下四台全被闸住', () => {
+  it('人站在交叉点：四邻单元照落、各只收回朝人的那条带、R5 不钉；整个单元让路时四台全被闸住', () => {
     const sim = new CohabitSim({ seed: 1, opening: false, auto: false, faces: true, fade: null, threshold: 1 });
     const p = sim.addPerson(0, 0)!;
     p.mode = 'manual';
@@ -274,7 +277,7 @@ describe('cohabit · 按带让路', () => {
     expect(openBands(sim, 5) + openBands(sim, 9)).toBeLessThanOrEqual(2); // 人站在端点，只剩指向它的那条
   });
 
-  it('猫身下的带不收：猫坐在中心护住整台、邻台照收；猫到台边朝人只护那几条', () => {
+  it('猫身下的带不收：猫坐在中心护住整个单元、邻台照收；猫到台边朝人只护那几条', () => {
     const sim = new CohabitSim({ seed: 3, opening: false, auto: false, faces: true, fade: null, threshold: 1 });
     const cat = sim.addCat(sim.layout.units[5])!;
     cat.mode = 'manual';
@@ -303,7 +306,7 @@ describe('cohabit · 按带让路', () => {
     expect(openBands(sim, 5)).toBe(0);
   });
 
-  it('R5 按带：只有猫身下的墙带算数——四台整台封死时不通，其中一台的带能开就通', () => {
+  it('R5（只收挡路的带）：只有猫身下的墙带算数——四台整个封死时不通，其中一台的带能开就通', () => {
     const l = planLayout(4);
     const g = aisleGraph(l);
     const wall = new Uint8Array(16);
@@ -316,5 +319,603 @@ describe('cohabit · 按带让路', () => {
     expect(everyoneHasExit(l, g, [person], wall, hard)).toBe(false);
     hard.fill(0, 10 * B, 11 * B);
     expect(everyoneHasExit(l, g, [person], wall, hard)).toBe(true);
+  });
+});
+
+/**
+ * 「走 · 站 · 坐」（作者 2026-10-07：坐着的地方做据点，人分走 / 站 / 坐三种状态；8×8；座位摆在房间中间）。
+ * 守的是几条写成代码的规则本身：家具上方没有单元 · 人到得了每个座位 · 走着不触发 · 坐着一步一步把猫引到座位前方那台
+ * · 站定只给一步 · 坐着也算共温 · 猫优先走递过来的那台 · 钉死档不圈死人 · 痕迹档（旧口径）不受影响。
+ */
+describe('cohabit · 「走 · 站 · 坐」', () => {
+  const posture = (o: ConstructorParameters<typeof CohabitSim>[0] = {}) => new CohabitSim({ trigger: 'posture', opening: false, faces: true, ...o });
+  const formedSet = (sim: CohabitSim) => new Set(sim.act.formed());
+
+  it('模块默认仍是痕迹档（4×4、没有家具）；「走 · 站 · 坐」默认 8×8、标准布置六件家具十个座位（2026-10-08 加座），家具是独立一层（64 台单元都在）', () => {
+    const old = new CohabitSim({ opening: false });
+    expect(old.trigger).toBe('trace');
+    expect(old.layout.n).toBe(COHABIT.GRID_DEF);
+    expect(old.furn).toBeNull();
+    expect(old.seats).toHaveLength(0);
+    const sim = posture();
+    expect(sim.layout.n).toBe(COHABIT.SEATS.GRID);
+    expect(sim.furn!.rects).toHaveLength(6);
+    expect(sim.seats).toHaveLength(10);
+    // 每个座位的入口各不相同（一组人坐一张沙发时互不挡路）
+    expect(new Set(sim.seats.map((q) => q.node)).size).toBe(10);
+    // 家具上方的单元照样在：四邻表与没有家具时逐个相同
+    const bare = new CohabitSim({ grid: 8, opening: false });
+    for (const u of sim.layout.units) expect(sim.neighboursOf(u).map((v) => v.i)).toEqual(bare.neighboursOf(u).map((v) => v.i));
+    // 标准布置不贴墙：离房间墙至少 0.8 m（加座后上下正中那两把椅子离墙 0.83 m，其余 > 1 m）
+    for (const r of sim.furn!.rects) expect(sim.layout.roomM / 2 - Math.max(-r.x0, r.x1, -r.y0, r.y1)).toBeGreaterThan(0.8);
+  });
+
+  it('没有墙时：每个能站的交叉点都走得到门，每个座位的入口也是；单元四邻连成一片（猫哪儿都去得了）', () => {
+    const sim = posture();
+    const reach = doorReach(sim.layout, sim.graph, null);
+    for (let i = 0; i < sim.graph.door[0]; i++) if (!sim.furn!.nodeOff[i]) expect(reach[i]).toBe(1);
+    for (const s of sim.seats) expect(reach[s.node]).toBe(1);
+    for (const u of sim.layout.units) expect(sim.unitPath(0, u.i)).not.toBeNull();
+  });
+
+  it('空沙发上方的单元能落（猫可以住在沙发上方）；有人坐下，盖到他头顶的那几台不落、落着的也收回', () => {
+    const sim = posture({ seed: 2 });
+    const seat = sim.seats[0];
+    const over = sim.layout.units.filter((u) => sim.overHead(u, seat.x, seat.y));
+    expect(over.length).toBeGreaterThan(0);
+    const cat = sim.addCat(over[0])!;
+    cat.mode = 'manual';
+    for (let t = 0; t < 2; t += 1 / 30) sim.step(1 / 30);
+    expect(sim.act.degree[over[0].i]).toBe(1);
+    // 猫挪开，有人坐下：头顶那台退回去，之后一直不落
+    sim.hold('cat', cat.id, cat.walker.x, cat.walker.y);
+    sim.drag('cat', cat.id, 2.1, 2.1);
+    sim.release('cat', cat.id);
+    cat.mode = 'manual';
+    const p = sim.addPerson(seat.x, seat.y)!;
+    p.mode = 'manual';
+    expect(p.seated).toBe(true);
+    for (let t = 0; t < 30; t += 1 / 30) {
+      sim.step(1 / 30);
+      if (t > 3) for (const u of over) expect(sim.act.degree[u.i]).toBeLessThan(COHABIT.WALL_AT);
+    }
+    // 猫占着的台盖在座位头顶时，这个座位不算空
+    const sim2 = posture({ seed: 3 });
+    sim2.addCat(over[0]);
+    expect(sim2.seatFree(0)).toBe(false);
+  });
+
+  it('座位前方那台离座位 1.0–1.5 m（猫在台面中心不付停留代价、又在共温带里），且不是入口四角那几台', () => {
+    const sim = posture();
+    for (const s of sim.seats) {
+      const m = sim.layout.units[s.meet];
+      const d = Math.hypot(m.x - s.x, m.y - s.y);
+      expect(d).toBeGreaterThanOrEqual(COHABIT.CAT_NEAR);
+      expect(d).toBeLessThan(COHABIT.BAND.far);
+      const n = sim.graph.nodes[s.node];
+      expect(Math.abs(m.x - n.x) < sim.layout.pitchM * 0.75 && Math.abs(m.y - n.y) < sim.layout.pitchM * 0.75).toBe(false);
+      // 在坐着的人面前
+      expect((m.x - s.x) * s.face[0] + (m.y - s.y) * s.face[1]).toBeGreaterThan(0);
+    }
+  });
+
+  it('走着不触发：没有猫时访客漫步十分钟，地面不留痕迹、一台都不落', () => {
+    const sim = posture({ seed: 21 });
+    for (let i = 0; i < 3; i++) {
+      const k = nearestNode(sim.graph, (i - 1) * 1.2, 0);
+      sim.addPerson(sim.graph.nodes[k].x, sim.graph.nodes[k].y);
+    }
+    let maxFormed = 0;
+    for (let t = 0; t < 600; t += 1 / 30) {
+      sim.step(1 / 30);
+      maxFormed = Math.max(maxFormed, sim.act.countAtLeast(1e-6));
+    }
+    expect(maxFormed).toBe(0);
+    expect(sim.field.data.every((v) => v === 0)).toBe(true);
+    expect(sim.summary().seatedTime).toBeGreaterThan(0); // 有人坐过（坐着但没有猫可引）
+  });
+
+  it('坐着 = 全力：空间从猫脚下一步一步铺到座位前方那台，猫走到；途中落着的只有猫脚下与下一步', () => {
+    for (const seed of [1, 2, 3]) {
+      const sim = posture({ seed });
+      const seat = sim.seats[4];
+      const p = sim.addPerson(seat.x, seat.y)!;
+      expect(p.seated).toBe(true);
+      p.mode = 'manual';
+      const cat = sim.addCat(sim.layout.units[0])!;
+      let arrived = -1;
+      for (let t = 0; t < 600 && arrived < 0; t += 1 / 30) {
+        sim.step(1 / 30);
+        const allowed = new Set(sim.supportOf(cat).map((u) => u.i));
+        for (const g of sim.guides) if (g.path.length > 1) allowed.add(g.path[1]);
+        for (const u of formedSet(sim)) expect(allowed.has(u)).toBe(true);
+        expect(sim.guides.every((g) => g.kind === 'sit' && g.cat === cat.id)).toBe(true);
+        if (cat.unit!.i === seat.meet) arrived = t;
+      }
+      expect(arrived).toBeGreaterThan(0);
+      expect(sim.catArrivals).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it('猫优先走空间递过来的那一台：有人坐着时，猫的每一次挪窝都落在引路的下一步上（不在潜伏期、没被拿着）', () => {
+    for (const seed of [4, 5, 6, 7]) {
+      const sim = posture({ seed });
+      const seat = sim.seats[0];
+      const p = sim.addPerson(seat.x, seat.y)!;
+      p.mode = 'manual';
+      const cat = sim.addCat(sim.layout.units[63])!;
+      let lastUnit = cat.unit!.i;
+      let expected = sim.unitPath(lastUnit, seat.meet)![1];
+      let moves = 0;
+      for (let t = 0; t < 300; t += 1 / 30) {
+        sim.step(1 / 30);
+        if (cat.unit!.i !== lastUnit) {
+          if (cat.latency <= 0 && cat.state !== 'retreat') expect(cat.unit!.i).toBe(expected);
+          moves++;
+          lastUnit = cat.unit!.i;
+          const path = sim.unitPath(lastUnit, seat.meet)!;
+          if (path.length < 2) break;
+          expected = path[1];
+        }
+      }
+      expect(moves).toBeGreaterThan(0);
+    }
+  });
+
+  it('站定 = 部分：停住满 3 s 且看着一只猫，空间朝这个人只给一步；这次站定里猫挪过一次就不再给', () => {
+    const sim = posture({ seed: 8 });
+    const cat = sim.addCat(sim.layout.units[27])!; // (−0.30, −0.30)
+    const k = nearestNode(sim.graph, 1.8, -0.3);
+    const p = sim.addPerson(sim.graph.nodes[k].x, sim.graph.nodes[k].y)!;
+    p.mode = 'manual';
+    p.watching = cat.id;
+    for (let t = 0; t < COHABIT.SEATS.STAND_S - 0.2; t += 1 / 30) sim.step(1 / 30);
+    expect(sim.guides).toHaveLength(0);
+    for (let t = 0; t < 0.5; t += 1 / 30) sim.step(1 / 30);
+    expect(sim.guides).toHaveLength(1);
+    const g = sim.guides[0];
+    expect(g.kind).toBe('stand');
+    const [from, to] = g.path;
+    const w = p.walker;
+    const d = (i: number) => Math.hypot(sim.layout.units[i].x - w.x, sim.layout.units[i].y - w.y);
+    expect(d(to)).toBeLessThan(d(from));
+    const offered = new Set<number>();
+    let moved = false;
+    let afterMove = 0;
+    for (let t = 0; t < 120; t += 1 / 30) {
+      sim.step(1 / 30);
+      for (const x of sim.guides) offered.add(x.path[1]);
+      if (cat.unit!.i !== from) moved = true;
+      if (moved) afterMove += sim.guides.length;
+    }
+    expect(moved).toBe(true);
+    expect(offered).toEqual(new Set([to]));
+    expect(afterMove).toBe(0);
+  });
+
+  it('坐着也算共温：猫卧在座位前方那台中心，坐着的人与它之间记一次共温、秒数一直涨', () => {
+    const sim = posture({ seed: 9 });
+    const seat = sim.seats[2];
+    const p = sim.addPerson(seat.x, seat.y)!;
+    p.mode = 'manual';
+    const cat = sim.addCat(sim.layout.units[seat.meet])!;
+    cat.mode = 'manual';
+    for (let t = 0; t < 10; t += 1 / 30) sim.step(1 / 30);
+    expect(p.seated).toBe(true);
+    expect(sim.ledger.counts.warmth).toBe(1);
+    expect(sim.ledger.seconds.warmth).toBeGreaterThan(7);
+  });
+
+  it('钉死档（「走 · 站 · 坐」）：偶数行逐台试落、圈死人的不落、盖到座位头顶的不落——每个能站的交叉点仍走得到门', () => {
+    const sim = posture({ space: 'fixed' });
+    const fixed = new Uint8Array(sim.layout.units.length);
+    for (const u of sim.act.formed()) fixed[u] = 1;
+    expect(sim.act.formed().length).toBeGreaterThan(8);
+    for (const u of sim.act.formed()) {
+      expect(sim.layout.units[u].row % 2).toBe(0);
+      for (const q of sim.seats) expect(sim.overHead(sim.layout.units[u], q.x, q.y)).toBe(false);
+    }
+    const reach = doorReach(sim.layout, sim.graph, fixed);
+    for (let i = 0; i < sim.graph.door[0]; i++) if (!sim.furn!.nodeOff[i]) expect(reach[i]).toBe(1);
+  });
+
+  it('同种子逐位复现；三档空间都摆同样的家具', () => {
+    const a = runCohabit({ trigger: 'posture', seed: 31, seconds: 90, people: 3, cats: 1, faces: true });
+    const b = runCohabit({ trigger: 'posture', seed: 31, seconds: 90, people: 3, cats: 1, faces: true });
+    expect(a).toEqual(b);
+    for (const space of ['live', 'fixed', 'empty'] as const) expect(posture({ space }).seats).toHaveLength(10);
+  });
+});
+
+describe('cohabit · 让路只收挡路的带 · 猫护住的交叉点', () => {
+  it('8×8 下猫坐上去，平台外缘离四角交叉点只剩 0.17 m：人不再把那个点当路点，挨着它也走得开', () => {
+    const sim = new CohabitSim({ grid: 8, seed: 5, opening: false, faces: true });
+    const cat = sim.addCat(sim.layout.units[27])!;
+    cat.mode = 'manual';
+    const u = sim.layout.units[27];
+    // 站在猫那台右下角交叉点往下 0.1 m（就是那个点最近）
+    const p = sim.addPerson(u.x + sim.layout.pitchM / 2, u.y + sim.layout.pitchM / 2 + 0.1)!;
+    p.pause = 0;
+    for (let t = 0; t < 20; t += 1 / 30) sim.step(1 / 30);
+    expect(p.walker.distance).toBeGreaterThan(1);
+  });
+});
+
+describe('cohabit · 家具可加减、拖动（独立一层，标准布置随时回去）', () => {
+  const posture = (o: ConstructorParameters<typeof CohabitSim>[0] = {}) => new CohabitSim({ trigger: 'posture', opening: false, faces: true, ...o });
+
+  it('拖动：摆得下就挪、朝向自动朝房间中线，座位跟着重算；压到墙外 / 叠到别的家具上 / 把一块地面围死都不许', () => {
+    const sim = posture();
+    const C = 4; // 上方正中那把椅子
+    const f0 = sim.furniture[C];
+    expect(f0.kind).toBe('chair');
+    expect(sim.moveFurniture(C, f0.x, f0.y + 0.6)).toBe(true);
+    expect(sim.furniture[C].y).toBeCloseTo(f0.y + 0.6);
+    expect(sim.seats.filter((q) => q.furn === C)).toHaveLength(1);
+    expect(sim.moveFurniture(C, sim.furniture[2].x, sim.furniture[2].y)).toBe(false); // 与右下沙发叠
+    // 拖过中线：朝向翻过来
+    expect(sim.moveFurniture(C, 0, 0.7)).toBe(true);
+    expect(sim.furniture[C].face).toEqual([0, -1]);
+    // 墙外
+    expect(sim.moveFurniture(C, sim.layout.roomM / 2, 0)).toBe(false);
+    // 叠到左上沙发上
+    expect(sim.moveFurniture(C, sim.furniture[0].x, sim.furniture[0].y)).toBe(false);
+    // 每次成功挪完：能站的交叉点都走得到门
+    const reach = doorReach(sim.layout, sim.graph, null);
+    for (let i = 0; i < sim.graph.door[0]; i++) if (!sim.furn!.nodeOff[i]) expect(reach[i]).toBe(1);
+  });
+
+  it('坐在被挪那件上的人起身，坐在别的家具上的人不受影响；删掉一件后后面件上的人座位号对得回去', () => {
+    const sim = posture();
+    const a = sim.addPerson(sim.seats[0].x, sim.seats[0].y)!; // 左上沙发
+    const s3 = sim.seats.find((q) => q.furn === 3)!; // 左下沙发（第 3 件）
+    const b = sim.addPerson(s3.x, s3.y)!;
+    expect(a.seated && b.seated).toBe(true);
+    expect(sim.moveFurniture(0, sim.furniture[0].x + 0.3, sim.furniture[0].y)).toBe(true);
+    expect(a.seated).toBe(false);
+    expect(b.seated).toBe(true);
+    expect(sim.seats[b.seat!].furn).toBe(3);
+    sim.removeFurniture(1);
+    expect(sim.furniture).toHaveLength(5);
+    expect(b.seated).toBe(true);
+    expect(sim.seats[b.seat!].furn).toBe(2);
+    expect(Math.hypot(sim.seats[b.seat!].x - b.walker.x, sim.seats[b.seat!].y - b.walker.y)).toBeLessThan(1e-9);
+  });
+
+  it('加一件：找房间里第一个摆得下的位置；回到标准布置：六件、十个座位、所有人起身', () => {
+    const sim = posture();
+    const k = sim.addFurniture('chair');
+    expect(k).toBe(6);
+    expect(sim.seats).toHaveLength(11);
+    const p = sim.addPerson(sim.seats[10].x, sim.seats[10].y)!;
+    expect(p.seated).toBe(true);
+    sim.resetFurniture();
+    expect(sim.furniture).toHaveLength(6);
+    expect(sim.seats).toHaveLength(10);
+    expect(p.seated).toBe(false);
+    expect(sim.furnitureFits(sim.furniture)).toBe(true);
+  });
+});
+
+describe('cohabit · 引导方式（「走 · 站 · 坐」 · 会动的单元）', () => {
+  const posture = (o: ConstructorParameters<typeof CohabitSim>[0] = {}) => new CohabitSim({ trigger: 'posture', opening: false, faces: true, ...o });
+
+  it('座位旁边那台：平台不盖坐着的人头顶、比座位前方那台近；标准布置下沙发座位旁边那台够得着（猫走到台边离人 < 0.5 m = 共触带）', () => {
+    const sim = posture();
+    const rim = sim.layout.platR - COHABIT.CAT.bodyR;
+    for (const s of sim.seats) {
+      const u = sim.layout.units[s.side];
+      const m = sim.layout.units[s.meet];
+      expect(sim.overHead(u, s.x, s.y)).toBe(false);
+      const d = Math.hypot(u.x - s.x, u.y - s.y);
+      expect(d).toBeLessThan(Math.hypot(m.x - s.x, m.y - s.y));
+      if (sim.furn!.rects[s.furn].kind === 'sofa') expect(d - rim).toBeLessThan(COHABIT.BAND.near);
+    }
+  });
+
+  it('引到座位旁边：猫一路走到座位旁边那台；先前方再旁边：先到座位前方那台、坐着的人看满 sideAfter 秒后再挪到旁边那台', () => {
+    const run = (target: 'side' | 'meetThenSide') => {
+      const sim = posture({ seed: 3, guide: { target } });
+      const seat = sim.seats[0];
+      const p = sim.addPerson(seat.x, seat.y)!;
+      p.mode = 'manual';
+      const cat = sim.addCat(sim.layout.units[60])!;
+      const visits: number[] = [];
+      for (let t = 0; t < 900; t += 1 / 30) {
+        sim.step(1 / 30);
+        const u = cat.unit!.i;
+        if (visits[visits.length - 1] !== u) visits.push(u);
+        if (u === seat.side) break;
+      }
+      return { seat, visits };
+    };
+    const a = run('side');
+    expect(a.visits[a.visits.length - 1]).toBe(a.seat.side);
+    const b = run('meetThenSide');
+    expect(b.visits[b.visits.length - 1]).toBe(b.seat.side);
+    expect(b.visits).toContain(b.seat.meet);
+    expect(b.visits.indexOf(b.seat.meet)).toBeLessThan(b.visits.length - 1);
+  });
+});
+
+describe('cohabit · 猫按 Mertens & Turner 1988 标定（COHABIT.CAT_MT）', () => {
+  /** 场景复现与 scripts/cohabit/calibrate-mt.mjs 相同：空房间 · 一位陌生人坐着 · 一只猫在地面 · 600 s */
+  const shares = (ignores: boolean) => {
+    let far = 0;
+    let near = 0;
+    let T = 0;
+    for (let seed = 1; seed <= 4; seed++) {
+      const sim = new CohabitSim({ trigger: 'posture', space: 'empty', seed, opening: false, cat: COHABIT.CAT_MT });
+      const s = sim.seats[2];
+      const p = sim.addPerson(s.x, s.y)!;
+      p.mode = 'manual';
+      p.ignores = ignores;
+      const cat = sim.addCat({ x: 0, y: 1.5 })!;
+      for (let t = 0; t < 600; t += 1 / 30) {
+        sim.step(1 / 30);
+        const d = Math.hypot(p.walker.x - cat.walker.x, p.walker.y - cat.walker.y);
+        if (d > 1) far += 1 / 30;
+        if (d < 0.5 && cat.walker.state !== 'walk') near += 1 / 30;
+        T += 1 / 30;
+      }
+    }
+    return { far: (far / T) * 100, near: (near / T) * 100 };
+  };
+
+  it('被动（看书不理猫）：> 1 m ≈ 78%、接触 ≈ 2%；主动（看着它）：> 1 m ≈ 34%、接触 ≈ 33%（容差 ±10 个百分点，4 种子）', () => {
+    const p = shares(true);
+    expect(Math.abs(p.far - 78)).toBeLessThan(10);
+    expect(p.near).toBeLessThan(6);
+    const a = shares(false);
+    expect(Math.abs(a.far - 34)).toBeLessThan(10);
+    expect(Math.abs(a.near - 33)).toBeLessThan(10);
+  }, 120_000);
+
+  it('两套常量各自生效：不传 cat 用演示值（痕迹档与旧守门不变），传 CAT_MT 只覆盖标定的那几项', () => {
+    const sim = new CohabitSim({ opening: false });
+    expect(sim.cat.tolerateAttended).toBe(COHABIT.CAT.tolerateAttended);
+    const mt = new CohabitSim({ opening: false, cat: COHABIT.CAT_MT });
+    expect(mt.cat.tolerateAttended).toBe(COHABIT.CAT_MT.tolerateAttended);
+    expect(mt.cat.sit).toBe(COHABIT.CAT.sit);
+  });
+});
+
+describe('cohabit · 台上靠近沿落着的台走过去（approachTravel，与地面「朝人走过去」同一条规则）', () => {
+  // 钉死档：偶数行（「走 · 站 · 坐」规则下按 R5 剔掉几台）一直落着——猫在第 0 行，有人站在第 0 行另一头看着它
+  const setup = (travel: number) => {
+    // 自己的节奏（卧完换格 / 靠近完走开）关掉，只看「靠近」本身；人站在 3 m 内（够得上「盯着看」）
+    const sim = new CohabitSim({ trigger: 'posture', space: 'fixed', seed: 7, opening: false, cat: { ...COHABIT.CAT_MT, approachTravel: travel, approachP: 1, approachMid: 0, roamAfterApproach: 0, roamP: 0, passiveP: 0 } });
+    const row0 = sim.act.formed().filter((u) => sim.layout.units[u].row === 0).sort((a, b) => a - b);
+    const cat = sim.addCat(sim.layout.units[row0[0]])!;
+    const start = sim.layout.units[row0[0]];
+    const far = row0.map((i) => sim.layout.units[i]).filter((u) => Math.hypot(u.x - start.x, u.y - start.y) < 2.4).pop()!;
+    const p = sim.addPerson(far.x, far.y - sim.layout.pitchM / 2 - 0.3)!;
+    p.mode = 'manual';
+    p.watching = cat.id;
+    return { sim, cat, p, start: row0[0], far: far.i };
+  };
+
+  it('approachTravel = 1：被看着的猫沿落着的台一台一台走到离那个人最近的那台', () => {
+    const { sim, cat, start, far } = setup(1);
+    const seen = new Set<number>();
+    for (let t = 0; t < 40; t += 1 / 30) {
+      sim.step(1 / 30);
+      seen.add(cat.unit!.i);
+    }
+    expect(seen.size).toBeGreaterThan(2);
+    expect(cat.unit!.i).not.toBe(start);
+    expect(seen.has(far)).toBe(true);
+    for (const u of seen) expect(sim.act.degree[u]).toBe(1); // 只走落着的台
+  });
+
+  it('approachTravel = 0（演示值的旧口径）：只挪到本台边缘，不过台', () => {
+    const { sim, cat, start } = setup(0);
+    for (let t = 0; t < 40; t += 1 / 30) sim.step(1 / 30);
+    expect(cat.unit!.i).toBe(start);
+  });
+
+  it('整条路一次铺好：坐下后从猫脚下到目标一路都落；关着时每次只落下一步', () => {
+    const count = (whole: boolean) => {
+      const sim = new CohabitSim({ trigger: 'posture', opening: false, faces: true, seed: 2, guide: { target: 'meet', whole }, cat: { ...COHABIT.CAT_MT, approachP: 0, passiveP: 0 } });
+      const seat = sim.seats[4];
+      const p = sim.addPerson(seat.x, seat.y)!;
+      p.mode = 'manual';
+      const cat = sim.addCat(sim.layout.units[0])!;
+      cat.mode = 'manual';
+      for (let t = 0; t < 4; t += 1 / 30) sim.step(1 / 30);
+      return { formed: sim.act.formed().length, path: sim.guides[0].path.length };
+    };
+    const step = count(false);
+    const whole = count(true);
+    expect(step.formed).toBe(2); // 猫脚下 + 下一步
+    expect(whole.formed).toBe(whole.path); // 整条路
+    expect(whole.path).toBeGreaterThan(3);
+  });
+});
+
+describe('cohabit · 访客有身体、结伴、挑位置时离陌生人远一点（social，作者 2026-10-08）', () => {
+  const S = COHABIT.SOCIAL;
+  const run12 = (space: 'live' | 'empty', seed = 7, seconds = 240) => {
+    const sim = new CohabitSim({ trigger: 'posture', opening: false, faces: true, space, seed, social: true, cat: COHABIT.CAT_MT });
+    const half = sim.layout.fieldM / 2;
+    const sizes = partySizes(12);
+    sizes.forEach((sz, i) => {
+      const a = (i / sizes.length) * 2 * Math.PI + 0.3;
+      sim.addParty(Math.cos(a) * half * 0.6, Math.sin(a) * half * 0.6, sz);
+    });
+    sim.addCat(sim.layout.units[0]);
+    return { sim, seconds };
+  };
+
+  it('分组：约七成结伴、两人一组为主，凑出单数时有一组三人，其余单独来', () => {
+    expect(partySizes(3)).toEqual([2, 1]);
+    expect(partySizes(6)).toEqual([2, 2, 1, 1]);
+    expect(partySizes(12)).toEqual([2, 2, 2, 2, 1, 1, 1, 1]);
+    expect(partySizes(7)).toEqual([2, 3, 1, 1]);
+    expect(partySizes(1)).toEqual([1]);
+    for (const n of [3, 6, 12, 20]) expect(partySizes(n).reduce((a, b) => a + b, 0)).toBe(n);
+  });
+
+  it('模块默认关：不传 social 与 social: false 逐位相同，读数里没有身体间距', () => {
+    const a = runCohabit({ trigger: 'posture', seed: 5, seconds: 60, people: 3, cats: 1, faces: true });
+    const b = runCohabit({ trigger: 'posture', seed: 5, seconds: 60, people: 3, cats: 1, faces: true, social: false });
+    expect(a).toEqual(b);
+    expect(a.minGap).toBe(Infinity);
+  });
+
+  it('同种子逐位复现', () => {
+    const o = { trigger: 'posture' as const, seed: 11, seconds: 90, people: 6, cats: 1, faces: true, social: true, cat: COHABIT.CAT_MT };
+    expect(runCohabit(o)).toEqual(runCohabit(o));
+  });
+
+  it('身体：12 人在场，站着 / 走着的任意两人身体从不重叠（中心距 ≥ 身体直径 0.44 m），也没人一直卡着走不动', () => {
+    for (const space of ['live', 'empty'] as const) {
+      const { sim, seconds } = run12(space);
+      const stuck = new Map<number, number>();
+      let worst = 0;
+      for (let t = 0; t < seconds; t += 1 / 30) {
+        sim.step(1 / 30);
+        for (const p of sim.people) {
+          const st = p.walker.state === 'walk' && !p.moving ? (stuck.get(p.id) ?? 0) + 1 / 30 : 0;
+          stuck.set(p.id, st);
+          worst = Math.max(worst, st);
+        }
+      }
+      expect(sim.minGap).toBeGreaterThanOrEqual(2 * PLAN.BODY_R);
+      // 等人让路最多 YIELD_S，门口等带开最多 FACES.waitMax，再加两步余量
+      expect(worst).toBeLessThan(S.YIELD_S + COHABIT.FACES.waitMax + 1);
+    }
+  }, 60000);
+
+  it('结伴：同组站定时离领头 ≤ 熟人距离（领头坐着时在他座位 1.3 m 内），一起坐时座位彼此相距 ≤ PARTY_SEAT', () => {
+    const { sim, seconds } = run12('empty', 3);
+    let samples = 0;
+    let apart = 0;
+    let together = 0;
+    for (let t = 0, f = 0; t < seconds; t += 1 / 30, f++) {
+      sim.step(1 / 30);
+      if (f % 30) continue;
+      for (const p of sim.people) {
+        const L = sim.leaderOf(p);
+        if (L === p) continue;
+        if (p.seated && L.seated) {
+          together++;
+          expect(Math.hypot(sim.seats[p.seat!].x - sim.seats[L.seat!].x, sim.seats[p.seat!].y - sim.seats[L.seat!].y)).toBeLessThanOrEqual(S.PARTY_SEAT);
+          continue;
+        }
+        if (p.seated || p.walker.state === 'walk' || L.walker.state === 'walk' || L.seat !== null) continue;
+        samples++;
+        if (Math.hypot(p.walker.x - L.walker.x, p.walker.y - L.walker.y) > S.PARTY_D + 1e-6) apart++;
+      }
+    }
+    expect(together).toBeGreaterThan(0);
+    expect(samples).toBeGreaterThan(0);
+    expect(apart / samples).toBeLessThan(0.1);
+  }, 60000);
+
+  it('陌生人：选站位离陌生人 ≥ 1.35 m 的优先；站定后不因陌生人走近而离开', () => {
+    // 痕迹档没有座位：漫步只挑站位。一位陌生人站在场地中间，另一人一次次挑下一站
+    for (let seed = 1; seed <= 6; seed++) {
+      const sim = new CohabitSim({ opening: false, grid: 8, seed, social: true });
+      const a = sim.addPerson(0, 0)!;
+      a.mode = 'manual';
+      const b = sim.addPerson(sim.layout.fieldM / 2 - 0.6, 0)!;
+      b.pause = 0;
+      sim.step(1 / 30);
+      expect(b.goalNode).toBeGreaterThanOrEqual(0);
+      const g = sim.graph.nodes[b.goalNode];
+      expect(Math.hypot(g.x - a.walker.x, g.y - a.walker.y)).toBeGreaterThanOrEqual(S.PREFER);
+    }
+    // 站定后：陌生人站到隔壁交叉点（0.6 m）也不走
+    const sim = new CohabitSim({ opening: false, grid: 8, seed: 2, social: true });
+    const a = sim.addPerson(0, 0)!;
+    a.pause = 30;
+    const b = sim.addPerson(sim.layout.pitchM, 0)!;
+    b.mode = 'manual';
+    const x0 = a.walker.x;
+    for (let t = 0; t < 20; t += 1 / 30) sim.step(1 / 30);
+    expect(a.walker.x).toBe(x0);
+    expect(a.walker.state).not.toBe('walk');
+  });
+});
+
+describe('cohabit · 猫能下地：会动 / 钉死两档的猫也能下地（catFloor，作者 2026-10-08）', () => {
+  const up = (o: Partial<CatCfg> = {}): Partial<CatCfg> => ({ ...COHABIT.CAT_MT, upBias: 0, upCrowd: 0, ...o });
+
+  it('模块默认关：不传 catFloor 与 catFloor: false 逐位相同；猫在地面的时间占比 会动 / 钉死 = 0、空房间 = 1', () => {
+    const o = { trigger: 'posture' as const, seed: 9, seconds: 60, people: 3, cats: 1, faces: true, cat: COHABIT.CAT_MT };
+    expect(runCohabit(o)).toEqual(runCohabit({ ...o, catFloor: false }));
+    expect(runCohabit({ ...o, space: 'live' }).catFloorShare).toBe(0);
+    expect(runCohabit({ ...o, space: 'fixed' }).catFloorShare).toBe(0);
+    expect(runCohabit({ ...o, space: 'empty' }).catFloorShare).toBe(1);
+  });
+
+  it('同种子逐位复现；开着时三档都有地面时间（会动 / 钉死里猫上下过）', () => {
+    const o = { trigger: 'posture' as const, seed: 4, seconds: 300, people: 6, cats: 1, faces: true, social: true, catFloor: true, cat: up() };
+    expect(runCohabit(o)).toEqual(runCohabit(o));
+    for (const space of ['live', 'fixed'] as const) {
+      const f = runCohabit({ ...o, space }).catFloorShare;
+      expect(f).toBeGreaterThan(0);
+      expect(f).toBeLessThan(1);
+    }
+  }, 30000);
+
+  it('被人看着要靠近、落着的台送不到他跟前 ⇒ 下地走过去（与空房间同一条）', () => {
+    const sim = new CohabitSim({ trigger: 'posture', opening: false, faces: true, space: 'fixed', seed: 1, catFloor: true, cat: up({ approachP: 1, approachMid: 0, passiveP: 0, roamP: 0 }) });
+    const cat = sim.addCat(sim.layout.units[0])!;
+    // 站在 2.6 m 外看着它：钉死档的偶数行最多把它送到离他 1.4 m 处
+    const far = sim.graph.nodes[3 * (sim.layout.n + 1) + sim.layout.n / 2];
+    const p = sim.addPerson(far.x, far.y)!;
+    p.mode = 'manual';
+    p.walker.heading = Math.atan2(cat.walker.y - p.walker.y, cat.walker.x - p.walker.x);
+    p.walker.gaze = p.walker.heading;
+    p.watching = cat.id;
+    const d0 = Math.hypot(cat.walker.x - p.walker.x, cat.walker.y - p.walker.y);
+    expect(d0).toBeLessThan(COHABIT.GAZE_D);
+    let wentDown = false;
+    for (let t = 0; t < 20; t += 1 / 30) {
+      sim.step(1 / 30);
+      if (!cat.unit) wentDown = true;
+    }
+    expect(wentDown).toBe(true);
+    expect(Math.hypot(cat.walker.x - p.walker.x, cat.walker.y - p.walker.y)).toBeLessThan(0.6);
+  });
+
+  it('上台：从地面直接跳要多等 jumpUpS，从家具上借道只等 prepare；空间（会动档）为它落下要跳的那台', () => {
+    const sim = new CohabitSim({ trigger: 'posture', opening: false, faces: true, space: 'live', seed: 1, catFloor: true, cat: up({ upBias: 20, roamP: 1, jumpUpS: 10 }) });
+    const cat = sim.addCat(sim.layout.units[27])!;
+    // 先放到地面上
+    cat.unit = null;
+    cat.state = 'lie';
+    cat.phaseTime = 1e3;
+    const viaFurn = (u: (typeof sim.layout.units)[number]) => sim.furn!.rects.some((r) => Math.hypot(Math.max(r.x0 - u.x, 0, u.x - r.x1), Math.max(r.y0 - u.y, 0, u.y - r.y1)) < sim.layout.platR + 0.1);
+    sim.step(1 / 30);
+    expect(cat.climb).not.toBeNull();
+    const cl = cat.climb!;
+    expect(cl.need).toBeCloseTo(COHABIT.CAT.prepare + (viaFurn(cl.unit) ? 0 : 10));
+    let upAt = -1;
+    for (let t = 0; t < 30 && upAt < 0; t += 1 / 30) {
+      sim.step(1 / 30);
+      if (cat.unit) upAt = t;
+    }
+    expect(cat.unit).toBe(cl.unit);
+    expect(sim.act.degree[cl.unit.i]).toBeCloseTo(1);
+    expect(upAt).toBeGreaterThanOrEqual(cl.need - 0.1);
+  });
+
+  it('坐着的人也引地面上的猫：空间从离猫最近、落得下来的那台起铺，第一步就是它要跳上去的那台', () => {
+    const sim = new CohabitSim({ trigger: 'posture', opening: false, faces: true, space: 'live', seed: 3, catFloor: true, cat: up({ approachP: 0, passiveP: 0 }) });
+    const seat = sim.seats[0];
+    const p = sim.addPerson(seat.x, seat.y)!;
+    p.mode = 'manual';
+    const cat = sim.addCat(sim.layout.units[63])!;
+    cat.unit = null;
+    cat.mode = 'manual';
+    for (let t = 0; t < 4; t += 1 / 30) sim.step(1 / 30);
+    const g = sim.guides.find((k) => k.cat === cat.id)!;
+    expect(g).toBeTruthy();
+    const first = sim.layout.units[g.path[0]];
+    expect(Math.hypot(first.x - cat.walker.x, first.y - cat.walker.y)).toBeLessThan(sim.layout.pitchM);
+    expect(sim.act.degree[g.path[0]]).toBeCloseTo(1);
   });
 });

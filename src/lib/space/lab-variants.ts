@@ -1,5 +1,5 @@
 import { CAT_BEHAVIOURS } from './cat-plan';
-import { FACE_MODES, SPACE_MODES } from './cohabit';
+import { COHABIT, FACE_MODES, GUIDE_TARGETS, SPACE_MODES, TRIGGER_MODES } from './cohabit';
 /**
  * 项目二台架的差分清单（2026-09-03，用户拍板「收纳成七台四段」+「千万不要丢差分的可能性」）。
  *
@@ -40,6 +40,12 @@ export interface VariantAxis {
   axis: string;
   options: readonly VariantOption[];
 }
+/** 只在某一档下成立的组合：`when` 那一档在场时，`axis` 只许取 `keys` 里的键——其余组合不存在（不是变灰），不进清单 */
+export interface VariantOnly {
+  when: { axis: string; key: string };
+  axis: string;
+  keys: readonly string[];
+}
 export interface BenchVariants {
   /** /lab 页序编号（Lab.NN），连续 */
   no: string;
@@ -49,6 +55,7 @@ export interface BenchVariants {
   /** 空 = 这台没有编制切换（一个组合） */
   plans: readonly VariantPlan[];
   axes: readonly VariantAxis[];
+  only?: readonly VariantOnly[];
 }
 
 // ── 各台的编制／排布表（wrapper 从这里取；顺序 = 控制条上的顺序，首项 = 默认）────────
@@ -126,8 +133,12 @@ const WALK_GRID_AXIS: VariantAxis = {
 const WALK_READING_AXIS: VariantAxis = { axis: '读法', options: READINGS.map((r) => ({ key: r.key, label: r.zh })) };
 /** 单元怎么响应读数：跟随（人走了收回去）/ 锁定（滞回）——2026-09-04 用户要的那一档与项目论点那一档 */
 const WALK_RESPONSE_AXIS: VariantAxis = { axis: '响应', options: RESPONSES.map((r) => ({ key: r.key, label: r.zh })) };
-/** Lab 2-14 让路两档（2026-10-07 作者「只收相对的两个面」）：按带 = 挡人的带各自收回；整台 = 2-11 的让位闸 */
+/** Lab 2-14 让路两档（2026-10-07 作者「只收相对的两个面」）：只收挡路的带 = 挡人的带各自收回；整个单元 = 2-11 的让位闸 */
 const COHABIT_FACES_AXIS: VariantAxis = { axis: '让路', options: FACE_MODES.map((m) => ({ key: m.key, label: m.zh })) };
+/** Lab 2-14 触发两档（2026-10-07 作者「座位做据点、人分走 / 站 / 坐三种状态」）：「走 · 站 · 坐」（台架默认）/ 痕迹（旧口径） */
+const COHABIT_TRIGGER_AXIS: VariantAxis = { axis: '规则', options: TRIGGER_MODES.map((m) => ({ key: m.key, label: m.zh })) };
+/** Lab 2-14 引导方式（2026-10-07 研究轮）：坐着的人把猫引到座位前方那台 / 座位旁边那台 / 先前方再旁边——只在「走 · 站 · 坐」规则下有意义 */
+const COHABIT_GUIDE_AXIS: VariantAxis = { axis: '引导', options: GUIDE_TARGETS.map((g) => ({ key: g.key, label: g.zh })) };
 
 /** Lab 2-13 单元组合（2026-09-17 立项，2026-09-20 用户纠偏为「同一种平台一圈起伏、首尾相接」+ 三张图形）：
  *  编制 = 图形（① 坡降 / ② 升台 / ③ 合腔 + 五种接法），形态四档为子选项（只管圆环的起伏单元，方环下变灰），
@@ -235,7 +246,13 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     en: 'People and cats together',
     // 编制 = 空间三档（会动 / 钉死 / 空房间，对照用）；人数 / 猫数 / 拖 / 自走是现场操作不是档
     plans: SPACE_MODES.map((m) => ({ key: m.key, label: m.zh })),
-    axes: [WALK_GRID_AXIS, WALK_RESPONSE_AXIS, COHABIT_FACES_AXIS],
+    axes: [COHABIT_TRIGGER_AXIS, WALK_GRID_AXIS, WALK_RESPONSE_AXIS, COHABIT_FACES_AXIS, COHABIT_GUIDE_AXIS],
+    // 家具只在 8×8 下摆（4×4 一张沙发吃掉一个象限）：「走 · 站 · 坐」规则只有 8×8 这一档，4×4 / 6×6 按钮变灰；
+    // 痕迹档没有引导方式（按钮变灰），清单里记成「座位前方」一档
+    only: [
+      { when: { axis: '规则', key: 'posture' }, axis: '格数', keys: [`g${COHABIT.SEATS.GRID}`] },
+      { when: { axis: '规则', key: 'trace' }, axis: '引导', keys: ['meet'] },
+    ],
   },
 ];
 
@@ -247,9 +264,10 @@ export function benchCombos(b: BenchVariants): string[] {
   const heads: string[] = b.plans.length
     ? b.plans.flatMap((p) => (p.sub ? p.sub.options.map((o) => `${p.key}.${o.key}`) : [p.key]))
     : ['-'];
-  let out = heads.map((h) => `${b.no}:${h}`);
-  for (const ax of b.axes) out = out.flatMap((id) => ax.options.map((o) => `${id}:${o.key}`));
-  return out;
+  let out = heads.map((h) => ({ id: `${b.no}:${h}`, parts: {} as Record<string, string> }));
+  for (const ax of b.axes) out = out.flatMap((c) => ax.options.map((o) => ({ id: `${c.id}:${o.key}`, parts: { ...c.parts, [ax.axis]: o.key } })));
+  if (b.only) out = out.filter((c) => b.only!.every((r) => c.parts[r.when.axis] !== r.when.key || r.keys.includes(c.parts[r.axis])));
+  return out.map((c) => c.id);
 }
 
 /** 全部台架的组合清单（守门冻结的对象） */
