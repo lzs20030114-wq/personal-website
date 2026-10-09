@@ -52,7 +52,7 @@ export const LAB_UI_COPY: readonly (readonly [string, string])[] = [
   ["人猫同台", "People and cats together"],
   ["画布 · 两个物种", "Canvas · two species"],
   ["拖动人或猫", "drag a body"],
-  ["3 档空间 · 4 类事件 · 画布", "3 spaces · 4 events · canvas"],
+  ["2 种规则 · 3 档空间 · 4 类事件 · 画布", "2 rules · 3 spaces · 4 events · canvas"],
   ["实验 2-14 / 项目二", "Lab 2-14 / Project II"],
   ["实验 2-1 – 2-3 · 单元的结构", "Lab 2-1 – 2-3 · what a unit is"],
   ["实验 2-4 · 沿一排条带渐变", "Lab 2-4 · transitions along a line"],

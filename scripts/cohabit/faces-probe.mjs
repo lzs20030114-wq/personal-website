@@ -1,5 +1,5 @@
-// 探针（按带让路，2026-10-07）：三个场景看机制对不对——
-//  ① 人站在中心交叉点：四邻单元照落（不再被整台闸住）、只有朝人的那几条带收回；
+// 探针（让路只收挡路的带，2026-10-07）：三个场景看机制对不对——
+//  ① 人站在中心交叉点：四邻单元照落（不再整个单元被闸住）、只有朝人的那几条带收回；
 //  ② 人沿两台落下单元之间的过道走：门提前开、人等多久、过得去不；
 //  ③ 猫坐在单元中心：那台一条带都不收，邻台照收。
 import { createServer } from 'vite';
@@ -20,7 +20,7 @@ try {
     const whole = new CohabitSim({ seed: 1, opening: false, auto: false, faces: false, fade: null, threshold: 1 });
     const q = whole.addPerson(0, 0); q.mode = 'manual';
     for (let i = 0; i < 300; i++) { feed(whole, [5, 6, 9, 10], 1 / 30); whole.step(1 / 30); }
-    console.log(`   整台口径对照 · 四邻程度 ${[5, 6, 9, 10].map((u) => whole.act.degree[u].toFixed(2)).join(' ')} · 闸住 ${whole.blocked.reduce((a, b) => a + b, 0)}`);
+    console.log(`   整个单元让路对照 · 四邻程度 ${[5, 6, 9, 10].map((u) => whole.act.degree[u].toFixed(2)).join(' ')} · 闸住 ${whole.blocked.reduce((a, b) => a + b, 0)}`);
   }
   // ② 过道
   {
