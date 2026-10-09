@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MACHINE_BASE_AXIS as YAW_AXIS } from './machine-base';
 import { D_DEEP_SPAN, D_SPAN } from './behavior/vocab2';
 import { ARM_BEND_MAX, HZ, runSession, type ScheduledInput } from './behavior/engine';
 import type { PersonaKey } from './behavior/persona';
@@ -381,7 +382,7 @@ describe('偏航占位与朝向约定', () => {
     expect(yawPoint(f.o, 0)).toBe(f.o);
     expect(yawFrame(f, 0)).toBe(f);
     const p = yawPoint(f.o, 0.7);
-    expect(Math.hypot(p.x, p.y)).toBeCloseTo(Math.hypot(f.o.x, f.o.y), 12);
+    expect(Math.hypot(p.x - YAW_AXIS.x, p.y - YAW_AXIS.y)).toBeCloseTo(Math.hypot(f.o.x - YAW_AXIS.x, f.o.y - YAW_AXIS.y), 12);
     expect(p.z).toBe(f.o.z);
     const g = yawFrame(f, 0.7);
     const dot = (a: number[], b: number[]) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -520,9 +521,9 @@ describe('手（指针）→ 传感', () => {
         const tip = yawPoint(ARM_GEOM.tip, yaw);
         const r = handReading(v, projectLogical(v, tip), yaw);
         expect(r.aimBend).toBeLessThan(1e-6);
-        const want = Math.atan2(tip.y, tip.x) - FACING;
+        const want = Math.atan2(tip.y - YAW_AXIS.y, tip.x - YAW_AXIS.x) - FACING;
         expect(Math.abs(Math.atan2(Math.sin(r.bearing - want), Math.cos(r.bearing - want)))).toBeLessThan(1e-6);
-        expect(r.dist).toBeCloseTo(Math.hypot(tip.x, tip.y), 6);
+        expect(r.dist).toBeCloseTo(Math.hypot(tip.x - YAW_AXIS.x, tip.y - YAW_AXIS.y), 6);
       }
     }
   });
@@ -546,7 +547,7 @@ describe('手（指针）→ 传感', () => {
   });
 
   it('平视（正视）：指针横扫过机器——在机身上读成摸壳（距离 = 外廓半径），方位平滑地变（不在 0° / 180° 之间跳）', () => {
-    const c = projectLogical(front, { x: 0, y: 0, z: ARM_GEOM.base.z });
+    const c = projectLogical(front, { ...YAW_AXIS, z: ARM_GEOM.base.z });
     let prev: number | null = null;
     for (let dx = -40; dx <= 40; dx += 4) {
       const r = handReading(front, { x: c.x + dx, y: c.y }, 0);

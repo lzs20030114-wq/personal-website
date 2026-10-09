@@ -1,6 +1,7 @@
 import type { ActuatorTargets, FeelerDrive } from './behavior/engine';
 import type { GraspPhase } from './behavior/grasp';
 import type { CellFrame } from './gl3d';
+import { MACHINE_BASE_AXIS as YAW_AXIS, MACHINE_PLINTH } from './machine-base';
 import {
   MACHINE_DIR,
   MACHINE_DRIVE,
@@ -274,14 +275,14 @@ export function feelerSide(alongH: number): 'L' | 'R' {
   return alongH > 0 ? 'L' : 'R';
 }
 
-// ------------------------------------------------------------------ 偏航（占位）
+// ------------------------------------------------------------------ 偏航
 
 /**
  * 偏航占位（用户 2026-10-06：朝向由底部新加的旋转电机承担，模型稍后更新）：
- * 整机绕竖轴（世界 z）刚体旋转。轴心取环身中轴 (0, 0)——底盘落地框中心离它不到 6 mm。
- * 电机实际落位到了以后只换这里，引擎输出不动。
+ * 上部绕底座圆柱的竖轴（世界 z）旋转，落地底座固定。轴心取 815 原模型圆柱中心。
+ * 新电机实际行程仍待更新，引擎输出不动。
  */
-export const YAW_AXIS = { x: 0, y: 0 } as const;
+export { MACHINE_BASE_AXIS as YAW_AXIS } from './machine-base';
 
 /**
  * 机身「正前方」= 世界 −X（大触手伸出的那一端）。不是随手定的：引擎里「触须 0 在左」
@@ -346,8 +347,15 @@ const HALF_H = 260;
  */
 export function sweepFraming(m: readonly number[], margin = 0.92): { pivot: Vec3; scale: number } {
   const dz = (SWEEP.z1 - SWEEP.z0) / 2;
-  const ex = SWEEP.r * Math.hypot(m[0], m[1]) + Math.abs(m[2]) * dz;
-  const ey = SWEEP.r * Math.hypot(m[3], m[4]) + Math.abs(m[5]) * dz;
+  const floorDz = (SWEEP.z0 + SWEEP.z1) / 2 - (MACHINE_PLINTH.top - MACHINE_PLINTH.depth);
+  const ex = Math.max(
+    SWEEP.r * Math.hypot(m[0], m[1]) + Math.abs(m[2]) * dz,
+    MACHINE_PLINTH.half * (Math.abs(m[0]) + Math.abs(m[1])) + Math.abs(m[2]) * floorDz,
+  );
+  const ey = Math.max(
+    SWEEP.r * Math.hypot(m[3], m[4]) + Math.abs(m[5]) * dz,
+    MACHINE_PLINTH.half * (Math.abs(m[3]) + Math.abs(m[4])) + Math.abs(m[5]) * floorDz,
+  );
   return {
     pivot: { x: YAW_AXIS.x, y: YAW_AXIS.y, z: (SWEEP.z0 + SWEEP.z1) / 2 },
     scale: margin * Math.min(HALF_W / ex, HALF_H / ey),
