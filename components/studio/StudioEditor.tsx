@@ -236,6 +236,9 @@ export function StudioEditor({
           </span>
         </div>
         <div className="studio-row">
+          <a className="studio-mini" href="/studio/visitors">
+            访客记录
+          </a>
           <a className="studio-mini" href="/archive" target="_blank" rel="noreferrer">
             看线上 ↗
           </a>

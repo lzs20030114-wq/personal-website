@@ -4,6 +4,7 @@ dist/
 next-env.d.ts
 *.local
 *.tsbuildinfo
+.local/
 
 # Rhino 锁文件不进 git（模型文件夹本体已于 2026-07-10 应用户要求入库）
 *.rhl

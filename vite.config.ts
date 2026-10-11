@@ -5,6 +5,13 @@ import { resolve } from "node:path";
 // 随 Next 产物静态上线（线上 /demo/、/demo/arch.html）。
 // dev（npm run demo）base 保持 "/"，本地台架行为不变——SITE_SPEC §2 双构建共存。
 export default defineConfig(({ command }) => ({
+  define: {
+    __VISITOR_TRACKING_ENABLED__: JSON.stringify(
+      process.env.VERCEL_ENV === 'production'
+        ? Boolean(process.env.VISITOR_SUPABASE_URL && process.env.VISITOR_SUPABASE_SERVICE_ROLE_KEY && process.env.STUDIO_PASSWORD)
+        : !process.env.VERCEL && process.env.VISITOR_LOCAL_ENABLED === '1',
+    ),
+  },
   base: command === "build" ? "/demo/" : "/",
   // 台架不消费 Next 的 public/ 源目录；禁用复制可避免 publicDir 包住 outDir 的冲突。
   publicDir: false,

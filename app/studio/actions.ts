@@ -25,7 +25,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   const expires = Date.now() + SESSION_MS;
   const jar = await cookies();
   jar.set(STUDIO_COOKIE, signSession(secret, expires), sessionCookieOptions(expires));
-  redirect('/studio');
+  redirect(formData.get('returnTo') === '/studio/visitors' ? '/studio/visitors' : '/studio');
 }
 
 export async function logoutAction(): Promise<void> {

@@ -85,6 +85,7 @@ export function LabFooter() {
         <span className="ld-footer__links">
           <Link href="/#work">{zh ? '作品 ↗' : 'Work ↗'}</Link>
           <Link href="/archive">{zh ? '日志 ↗' : 'Log ↗'}</Link>
+          <Link href="/privacy">{zh ? '访客隐私' : 'Visitor privacy'}</Link>
           <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}>{zh ? '顶部 ↑' : 'Top ↑'}</button>
         </span>
       </div>
@@ -104,6 +105,7 @@ export function CaseFooter({ labelEn, labelZh }: { labelEn: string; labelZh: str
         <span className="ld-footer__links">
           <Link href="/#work">{zh ? '作品 ↗' : 'Work ↗'}</Link>
           <Link href="/lab">{zh ? '实验室 ↗' : 'Lab ↗'}</Link>
+          <Link href="/privacy">{zh ? '访客隐私' : 'Visitor privacy'}</Link>
           <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}>{zh ? '回到顶部 ↑' : 'Top ↑'}</button>
         </span>
       </div>
