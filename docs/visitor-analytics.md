@@ -15,7 +15,7 @@
 
 ## 线上启用
 
-1. 在用户已确认的组织 `lzs20030114-wq's Org`（`xhilqdthtojkxhzwmvfr`）新建专供本网站使用的项目 `personal-website-visitors`。执行 `db/visitor-analytics.sql`，按脚本末尾说明启用定期清理。随后执行 `db/visitor-analytics-verify.sql` 中的验证查询，确认 RLS、权限与清理任务。
+1. 本网站专用数据库为组织 `lzs20030114-wq's Org` 下的 `personal_website`（项目 ID `pldutzqktzxqxutqafwk`，用户自行创建）。重建时执行 `db/visitor-analytics.sql`，按脚本末尾说明启用定期清理；随后执行 `db/visitor-analytics-verify.sql`，确认 RLS、权限与清理任务。
 2. 在网站 Vercel 项目的 **Production** 环境添加以下服务器变量。密钥不得加 `NEXT_PUBLIC_`，不得进 Git 或聊天消息。
 
 | 变量 | 用途 |
@@ -45,11 +45,13 @@ IP／地域接口依据：[Vercel Request Headers](https://vercel.com/docs/heade
 
 移除 `VISITOR_SUPABASE_URL` 或服务端 key 并重新部署可关闭采集。删除历史数据在 Supabase 管理端执行针对 `portfolio_visits` 的删除；不要公开增加无鉴权删除接口。原始记录不进入 GitHub 内容仓库。
 
-## 当前交付边界
+## 接入检查（2026-10-12）
 
-2026-10-12：代码、SQL 和本地验证完成。用户已选择新建网站专用数据库并确认所属组织，尚未创建远程项目、配置生产密钥或部署。
+专用数据库已建表，Vercel 生产变量已配置；这两项不等同于部署成功。实际发布应在 Vercel 核对目标提交为 Ready，再执行上述线上验收。
 
-- Supabase 连接能读取组织和项目，但创建流程所需的 `get_cost` 返回 `UNAVAILABLE`（服务端未提供此工具）。网页替代流程停在登录页，等待用户登录；没有修改 TOEFL 数据库。
-- Vercel 连接能列出 `personal-website-848r`（`prj_evCUeCulidzWiqkhd4T4rOpZVJmD`），但读取网站团队 `zishuos-projects-87b82d2a` 的环境变量配置返回 403，需要重新授权正确团队。
+- 用户自行创建的 `personal_website` 状态为 `ACTIVE_HEALTHY`；未修改 TOEFL 数据库。访客表和两个 RPC 已安装；`pg_cron` 1.6.4 已启用，清理任务 `portfolio-visits-retention` 为 active，每 10 分钟执行一次。
+- 数据库验证脚本整体事务执行通过，验证数据已回滚，表中没有残留测试记录。验证覆盖 RLS、匿名权限隔离、service_role 仅能调用 RPC、幂等、60 次/分钟限流、分页、服务端时间与实际过期删除。
+- Supabase 安全检查仅有 `RLS Enabled No Policy` 信息提示，这是私有表刻意不开放客户端访问的结果；没有添加允许客户端读写的策略。
+- Vercel 插件读取网站团队配置仍返回 403；已通过用户登录的网页完成配置。网站 `personal-website-848r`（`prj_evCUeCulidzWiqkhd4T4rOpZVJmD`）的 `VISITOR_SUPABASE_URL` 与 `VISITOR_SUPABASE_SERVICE_ROLE_KEY` 均以 Production Secret 保存，沿用已有 `STUDIO_PASSWORD`。密钥未写入本地文件或 Git。
 - 本地全套 93 个测试文件、1067 项测试通过；Vite 与 Next 生产构建通过，最终 typecheck 通过。浏览器实测登录、匿名查询 401、真实浏览采集、SPA 切页、刷新、返回、静态 demo、页面筛选、作者访问排除与手机布局。展示中的 6 条记录均为本地验证数据，IP／地域按设计显示未知。
-- 数据库 SQL 与权限验证脚本尚未在真实 PostgreSQL 执行；部署后仍需核对真实 IP／地域和清理任务执行记录，不能把本地通过视为线上验收。
+- 首次计划执行后，使用验证脚本末尾查询确认清理任务 `status = succeeded`；部署后另核对真实浏览产生的 IP／地域记录。
