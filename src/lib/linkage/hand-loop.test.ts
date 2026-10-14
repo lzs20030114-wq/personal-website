@@ -65,16 +65,16 @@ function loop(first: PersonaKey, seed: number, p: { x: number; y: number }, sec:
 /** 第一次看见手时抽到 mode 的种子 */
 function seedFor(first: PersonaKey, mode: string, p: { x: number; y: number }): number {
   for (let seed = 1; seed < 300; seed++) {
-    const { log } = loop(first, seed, p, 2.5);
+    const { log } = loop(first, seed, p, 3.5);
     if (log.find((r) => r.ev === 'HAND_SEEN')?.p?.mode === mode) return seed;
   }
   throw new Error(`no seed ${first} ${mode}`);
 }
 
 describe('闭环：画面上不动的指针 → 机器怎么对它', () => {
-  it('迎（好奇）：臂够不着的手 → 机身转过去，臂线对准手（不是机身中线）', () => {
+  it('迎（沉静，转得慢）：臂够不着的手 → 机身转过去，臂线对准手（不是机身中线）', () => {
     const p = pointerAt(1.3, 1100);
-    const { e, log } = loop('C', seedFor('C', 'toward', p), p, 12);
+    const { e, log } = loop('B', seedFor('B', 'toward', p), p, 18);
     expect(log.filter((r) => r.ev === 'HAND_SEEN').every((r) => r.p?.mode === 'toward')).toBe(true);
     const r = handReading(view, p, e.targets().yaw);
     // 转完：此刻读出的 face（臂线对准手该有的朝向）就是机身朝向
@@ -88,9 +88,9 @@ describe('闭环：画面上不动的指针 → 机器怎么对它', () => {
     expect(Math.abs(wrap(aArm - aHand))).toBeLessThan((20 * Math.PI) / 180);
   });
 
-  it('躲（沉静）：机身背过去，手出了视野以后被忘掉', () => {
+  it('躲（回避）：机身背过去，手出了视野以后提防一阵再忘掉', () => {
     const p = pointerAt(0.2, 900);
-    const { e, log } = loop('B', seedFor('B', 'away', p), p, 30);
+    const { e, log } = loop('C', seedFor('C', 'away', p), p, 30);
     expect(log.some((r) => r.ev === 'HAND_SEEN' && r.p?.mode === 'away')).toBe(true);
     expect(Math.abs(wrap(e.targets().yaw - (0.2 + Math.PI)))).toBeLessThan(Math.PI / 3);
     expect(log.some((r) => r.ev === 'HAND_LOST' && r.p?.reason === 'unseen')).toBe(true);
@@ -100,7 +100,8 @@ describe('闭环：画面上不动的指针 → 机器怎么对它', () => {
     const tip = ARM_GEOM.tip;
     // 臂梢左边 60 mm、同高（俯视意义上的左 = 世界 −Y）
     const p = projectLogical(view, { x: tip.x + 30, y: tip.y - 60, z: tip.z });
-    const { e, log } = loop('C', seedFor('C', 'toward', p), p, 6);
+    // 热情：0.2 s 就看见（慢的沉静要 2.5 s，成长段开头那一下张望先把身子转开了，手就够不着了）
+    const { e, log } = loop('A', seedFor('A', 'toward', p), p, 6);
     // 看见以后没有为它转身（看见之前的张望可以有：成长段开头 ⑨ 正好到点）
     const seenAt = log.find((r) => r.ev === 'HAND_SEEN')!.t;
     expect(e.state.hand?.turning).toBe(false);

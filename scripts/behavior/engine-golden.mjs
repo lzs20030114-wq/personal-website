@@ -7,6 +7,7 @@
 //   base = 现行、没有手（2026-10-07 的基准取自 d06bc0a，Lab 1-6 加手之前）；
 //   v2   = 同一组用例、动作词汇 v2、没有手（2026-10-08 迎手链 v2 动工前，取自 74615e1）；
 //   hand = 现行、写死的手脚本（同上，取自 74615e1）。
+// 2026-10-14 人格重分类（spec v0.9）：人格表整体换了，三组都用当时的引擎（engine root = 本仓库）重生成。
 // 只重生成某几组时，其余组从现有的 engine.golden.json 原样带过来（来源标记不变）。
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';

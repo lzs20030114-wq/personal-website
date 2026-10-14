@@ -16,18 +16,18 @@ describe('抓握真值表 T-0707-1', () => {
     expect(graspVerdict({ tension: false, electrode: true, atLimit: true })).toBe('EMPTY');
   });
 
-  it('脱手：活力 / 好奇追，沉静放弃，不稳定两种都有', () => {
+  it('脱手：热情追，沉静与回避放弃，乱序随机两种都有', () => {
     const r = makeRng(5);
     expect(lostReaction('A', r)).toBe('chase');
-    expect(lostReaction('C', r)).toBe('chase');
     expect(lostReaction('B', r)).toBe('giveUp');
+    expect(lostReaction('C', r)).toBe('giveUp');
     const seen = new Set(Array.from({ length: 40 }, () => lostReaction('D', r)));
     expect(seen).toEqual(new Set(['chase', 'giveUp']));
   });
 
-  it('抓空后搜寻：好奇 2、活力 1、沉静 0、不稳定 0–2', () => {
+  it('抓空后搜寻：热情 2、沉静 1、回避 0、乱序随机 0–2', () => {
     const r = makeRng(6);
-    expect([emptySearches('A', r), emptySearches('B', r), emptySearches('C', r)]).toEqual([1, 0, 2]);
+    expect([emptySearches('A', r), emptySearches('B', r), emptySearches('C', r)]).toEqual([2, 1, 0]);
     const d = new Set(Array.from({ length: 60 }, () => emptySearches('D', r)));
     expect(d).toEqual(new Set([0, 1, 2]));
   });

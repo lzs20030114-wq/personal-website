@@ -160,7 +160,7 @@ export default function LabPage() {
           no="1-6"
           lede="The machine lives four lives, one persona each. Your pointer is a person’s hand: the machine has to see it first, then reaches toward it, turns away or looks elsewhere by persona; bring it to the large arm and the arm may wrap it. Click a small arm or the shell, or use the controls to simulate a person nearby, sounds or being lifted."
           specs={[
-            ['Personas', 'Vital · Withdrawn · Curious · Unstable · one per life'],
+            ['Personas', 'Warm · Calm · Avoidant · Random · one per life'],
             ['Life', 'Birth · growth · ageing · dying · blank'],
             ['Stimuli', 'Presence · hand · touch · grasp · sound · lift'],
             ['Hand', 'Seen within ±120° after its reaction time · reach, turn away or look elsewhere'],

@@ -34,7 +34,8 @@ import {
 
 const DEG = Math.PI / 180;
 const AX = 120 * DEG;
-const K: Record<PersonaKey, number> = { A: Math.sqrt(3 / ENGINE.speedRef), B: Math.sqrt(0.5 / ENGINE.speedRef), C: Math.sqrt(1.5 / ENGINE.speedRef), D: 1 };
+/** √k_v 按人格表的速度（D 是区间，取 1：不快不慢） */
+const K: Record<PersonaKey, number> = { A: Math.sqrt(3 / ENGINE.speedRef), B: Math.sqrt(0.5 / ENGINE.speedRef), C: Math.sqrt(2 / ENGINE.speedRef), D: 1 };
 const rest: Pose = { bend: 0.25, dir: 0.4, deep: 0 };
 
 /** 人格表的单值直接取；D 取区间中点 */
@@ -44,6 +45,7 @@ function ctx(P: PersonaKey, over: Partial<BuildCtx> = {}): BuildCtx {
   let i = 0;
   return {
     persona: P,
+    temper: p.temper,
     k: K[P],
     tau: mid(p.latency),
     gAbs: mid(p.gain),
@@ -144,19 +146,23 @@ describe('动作词汇 v2 · 程序表', () => {
     }
   });
 
-  it('人格的差别在恢复的结构里：A 抬起弹回、B 探出又缩回、C 回头朝刺激那边查看、D 先松一半再余震或生硬落回', () => {
+  it('人格的差别在恢复的结构里：热情回头朝刺激那边查看、沉静停一下叹口气慢慢放回、回避探出又缩回、乱序随机先松一半再余震或生硬落回', () => {
     const names = (P: PersonaKey, rnd?: () => number): string[] =>
       buildStartle(ctx(P, rnd ? { rnd } : {}), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0, repeats: 0 })
         .phases.map((p) => p.name)
         .filter((n) => !STARTLE_PRE.has(n) && n !== 'unhook');
-    expect(names('A')).toEqual(['probe', 'rebound', 'look', 'settle']);
-    expect(names('B')).toEqual(['probe', 'peek', 'pause', 'reflinch', 'pause', 'unfurl']);
-    expect(names('C')).toEqual(['probe', 'orient', 'inspect', 'return']);
+    expect(names('A')).toEqual(['probe', 'orient', 'inspect', 'return']);
+    expect(names('B')).toEqual(['probe', 'settle']);
+    expect(names('C')).toEqual(['probe', 'peek', 'pause', 'reflinch', 'pause', 'unfurl']);
     expect(names('D', () => 0.1)).toEqual(['loosen', 'aftershock', 'hold2', 'drop']);
     expect(names('D', () => 0.9)).toEqual(['loosen', 'hold2', 'drop']);
-    // C 的查看朝刺激那一侧（左 = 正）
-    const c = buildStartle(ctx('C'), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0, repeats: 0 }).phases.find((p) => p.name === 'orient')!;
+    // 热情的查看朝刺激那一侧（左 = 正）
+    const c = buildStartle(ctx('A'), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0, repeats: 0 }).phases.find((p) => p.name === 'orient')!;
     expect((c.arm as Pose).dir).toBeGreaterThan(0);
+    // 回避的恢复一直在发抖、不出声；沉静的不抖
+    const startleOf = (P: PersonaKey) => buildStartle(ctx(P), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0, repeats: 0 }).phases;
+    expect(startleOf('C').filter((p) => p.name === 'peek').every((p) => (p.feel?.quiver ?? 0) > 0 && p.voice === 'mute')).toBe(true);
+    expect(startleOf('B').filter((p) => p.name === 'settle').every((p) => !p.feel?.quiver)).toBe(true);
     // 慢的两步缩、快的指令回弹
     expect(buildStartle(ctx('B'), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0, repeats: 0 }).phases.some((p) => p.name === 'zv2')).toBe(true);
     expect(buildStartle(ctx('A'), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0, repeats: 0 }).phases.some((p) => p.name === 'recoil')).toBe(true);
@@ -179,9 +185,9 @@ describe('动作词汇 v2 · 程序表', () => {
       expect(sp).toBeLessThanOrEqual(0.16);
       expect(spontE(ctx(P))).toBeLessThan(respD(ctx(P)));
     }
-    // 自发幅度跟着 ② 呼吸幅度走：A > C > B，D 封顶
-    expect(spontE(ctx('A'))).toBeGreaterThan(spontE(ctx('C')));
-    expect(spontE(ctx('C'))).toBeGreaterThan(spontE(ctx('B')));
+    // 自发幅度跟着 ② 呼吸幅度走：热情 > 沉静 > 回避，乱序随机封顶
+    expect(spontE(ctx('A'))).toBeGreaterThan(spontE(ctx('B')));
+    expect(spontE(ctx('B'))).toBeGreaterThan(spontE(ctx('C')));
     expect(spontE(ctx('D', { breathAmp: 0.9 }))).toBeLessThanOrEqual(V2.spontDMax);
   });
 
@@ -295,7 +301,7 @@ describe('动作词汇 v2 · 审查抓到的（2026-10-08）', () => {
         expect(pathLen(ph[ai].arm as Pose, lean.arm as Pose, lean.path)).toBeLessThanOrEqual(pathLen(cur, lean.arm as Pose, 'line') + 0.1);
       }
     }
-    // 活力型抚摸「迎」：倚过去那一段不再被拉长到几秒
+    // 热情型抚摸「迎」：倚过去那一段不再被拉长到几秒
     const ph = buildResponse(ctx('A'), { kind: 'stroke', side: 1, variant: 'toward', arm: true, feeler: true, turn: 0 });
     expect(ph.find((p) => p.name === 'lean')!.dur).toBeLessThan(2.5);
   });
@@ -415,7 +421,7 @@ describe('动作词汇 v2 · 引擎', () => {
     expect(starts.size).toBe(1);
   });
 
-  it('惊跳时环身猛收：呼吸在行程中段时，输出往收拢端走 ≥ 0.15（活力型原型里被呼吸中心夹住，只收得动 +0.09）', () => {
+  it('惊跳时环身猛收：呼吸在行程中段时，输出往收拢端走 ≥ 0.15（热情型（幅度 0.8）原型里被呼吸中心夹住，只收得动 +0.09）', () => {
     const e = grown('A');
     // 等到呼吸走到中段（在收拢端时本来就收着，猛收看不出来）
     while (Math.abs(e.targets().breath.s - 0.5) > 0.05) e.tick();

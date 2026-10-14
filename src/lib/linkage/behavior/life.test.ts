@@ -56,8 +56,8 @@ describe('四种死法（死亡即安静：不做临终表演）', () => {
     }
   });
 
-  it('活力 / 好奇 / 沉静：幅度单调递减；沉静从一开始就没有自发动作、呼吸逐次拉长', () => {
-    for (const kind of ['exhaust', 'turn', 'quiet'] as const) {
+  it('热情 / 回避 / 沉静：幅度单调递减；沉静从一开始就没有自发动作、呼吸逐次拉长', () => {
+    for (const kind of ['turn', 'withdraw', 'quiet'] as const) {
       let prev = deathFrame(kind, 0).amp;
       expect(prev).toBeCloseTo(1, 12);
       for (let i = 1; i <= 100; i++) {

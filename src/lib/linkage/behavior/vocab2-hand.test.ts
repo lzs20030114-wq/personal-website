@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { PersonaKey } from './persona';
+import { PERSONAS, type PersonaKey } from './persona';
 import { ARM_OSC_MAX_HZ, type Phase, type Pose } from './programs';
 import { type BuildCtx, D_DEEP_SPAN, D_SPAN, PEAK, STARTLE_PRE, buildStartle, dOf, pathLen, tierSpeed } from './vocab2';
 import {
@@ -40,12 +40,14 @@ import {
  *   ⑤ 人格结构看得见（A 蹲 + 扑、B 进退、C 瞄准、D 生硬 / 撤掉）；
  *   ⑥ 握持控制器的窗口、满足、相位提前；表是纯数据（JSON 往返无损）。
  */
-const K: Record<PersonaKey, number> = { A: Math.SQRT2, B: Math.sqrt(1 / 3), C: 1, D: 0.9 };
-const TAU: Record<PersonaKey, number> = { A: 0.2, B: 2, C: 0.5, D: 1.2 };
+/** √k_v 与 τ 按人格表（区间：D 取 0.9 / 1.2，落在中间——生硬、不扑） */
+const K: Record<PersonaKey, number> = { A: Math.sqrt(3 / 1.5), B: Math.sqrt(0.5 / 1.5), C: Math.sqrt(2 / 1.5), D: 0.9 };
+const TAU: Record<PersonaKey, number> = { A: 0.2, B: 2.5, C: 0.3, D: 1.2 };
 
 function ctx(persona: PersonaKey, cur: Pose = { bend: 0.25, dir: 0.4, deep: 0 }, over: Partial<BuildCtx> = {}): BuildCtx {
   return {
     persona,
+    temper: PERSONAS[persona].temper,
     k: K[persona],
     tau: TAU[persona],
     gAbs: 0.3,
@@ -206,31 +208,31 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
       }
     }
     for (const P of ['A', 'B', 'C', 'D'] as PersonaKey[]) {
-      const cue = holdCue(P);
+      const cue = holdCue(PERSONAS[P].temper);
       expect(cue.voice).toBe('hum');
       expect(cue.breath?.clench ?? 0).toBe(0);
     }
   });
 
-  it('人格结构看得见：A 蹲 + 扑、B 进—停—退—停—再进、C 瞄准后伸（没有蹲）、D 生硬（匀速）或撤掉', () => {
+  it('性格结构看得见：热情蹲 + 扑、沉静瞄准后伸（没有蹲）、回避进—停—退—停—再进、乱序随机生硬（匀速）或撤掉', () => {
     const g = geom();
     expect(approachPlan(ctx('A'), g, { negative: false, deep: false })).toEqual(['transport', 'crouch', 'cocked', 'pounce']);
-    expect(approachPlan(ctx('B'), g, { negative: false, deep: false })).toEqual(['edge', 'wait', 'retreat', 'wait2', 'edge2', 'hover', 'touch']);
-    expect(approachPlan(ctx('C'), g, { negative: false, deep: false })).toEqual(['transport', 'hover', 'sight', 'reach']);
+    expect(approachPlan(ctx('C'), g, { negative: false, deep: false })).toEqual(['edge', 'wait', 'retreat', 'wait2', 'edge2', 'hover', 'touch']);
+    expect(approachPlan(ctx('B'), g, { negative: false, deep: false })).toEqual(['transport', 'hover', 'sight', 'reach']);
     expect(approachPlan(ctx('D', undefined, { k: 0.7 }), g, { negative: false, deep: false })).toEqual(['transport', 'hover', 'touch']);
     expect(approachPlan(ctx('D', undefined, { k: 1.5, tau: 0.3 }), g, { negative: false, deep: false })).toContain('pounce');
     expect(approachPlan(ctx('D'), g, { negative: true, deep: false })).toEqual(['balk', 'stall', 'drop']);
     // 衰老过半不扑（先拿掉花样）
     expect(approachPlan(ctx('A', undefined, { ageU: 0.6 }), g, { negative: false, deep: false })).not.toContain('pounce');
-    // D 的段是匀速（生硬），A / C 是最小急动
+    // 乱序随机的段是匀速（生硬），热情 / 沉静是最小急动
     expect(buildApproachBeat(ctx('D'), g, 'transport')[0].ease).toBe('lin');
-    expect(buildApproachBeat(ctx('C'), g, 'transport')[0].ease).toBe('mj');
-    // B 的退：梢端背离手（比进的那一步离手远）
-    const edge = buildApproachBeat(ctx('B'), g, 'edge')[0].arm as Pose;
-    const retreat = buildApproachBeat(ctx('B'), g, 'retreat')[0].arm as Pose;
+    expect(buildApproachBeat(ctx('B'), g, 'transport')[0].ease).toBe('mj');
+    // 回避的退：梢端背离手（比进的那一步离手远）
+    const edge = buildApproachBeat(ctx('C'), g, 'edge')[0].arm as Pose;
+    const retreat = buildApproachBeat(ctx('C'), g, 'retreat')[0].arm as Pose;
     expect(dOf(retreat)).toBeLessThan(dOf(edge));
     // 停半拍：屏气、触须定住、不出声、灯亮
-    const hover = buildApproachBeat(ctx('C'), g, 'hover')[0];
+    const hover = buildApproachBeat(ctx('B'), g, 'hover')[0];
     expect(hover.breath?.rate).toBe(0);
     expect(hover.feel?.pose).toBe('still');
     expect(hover.voice).toBe('mute');

@@ -102,9 +102,9 @@ export interface DeathFrame {
   activity: number;
   /** 肌张力（臂预张力、动作幅度）1 → 0 */
   tone: number;
-  /** 节律紊乱段（D 的前 2/3）：每次呼吸的周期与幅度乱抽 */
+  /** 节律紊乱段（乱序随机的前 2/3）：每次呼吸的周期与幅度乱抽 */
   irregular: boolean;
-  /** 每次呼吸周期再乘的系数（B 的「慢慢停下」：1.08） */
+  /** 每次呼吸周期再乘的系数（沉静的「慢慢停下」：1.08） */
   periodGrowth: number;
 }
 
@@ -114,18 +114,19 @@ export const DEATH_ACTIVITY_MIN = 0.1;
 const E3 = Math.exp(-3);
 
 /**
- * 四种死法（参数表第 12 行；D 按 2026-10-06 拍板）。共同点：终点幅度 0、中心沉到折叠端、
- * 张力归零——「死亡即安静」，不做临终表演。
- * - exhaust（A 精力耗尽渐停）：指数衰减 e^(−3x)，归一到 x=1 恰为 0；
- * - quiet（B 安静慢慢停下）：幅度线性归零，每次呼吸周期 ×1.08，从一开始就没有自发动作；
- * - turn（C 最后朝向用户缓慢停止）：形状同 exhaust，朝向由引擎在死亡开始时锁定；
- * - arrhythmia（D 节律紊乱后渐弱）：前 2/3 节律紊乱、后 1/3 线性渐弱。**不做抽搐骤停**。
+ * 四种死法（参数表第 12 行；D 按 2026-10-06 拍板；2026-10-14 人格重分类后热情 / 回避各一种，待作者拍板）。
+ * 共同点：终点幅度 0、中心沉到折叠端、张力归零——「死亡即安静」，不做临终表演。
+ * - turn（A 热情：精力渐尽，最后朝向人停下）：指数衰减 e^(−3x)，归一到 x=1 恰为 0（原活力型「精力耗尽渐停」的形状）；
+ *   朝向由引擎在死亡开始时锁定到这一世最后已知的人位（原好奇型的死法）；
+ * - quiet（B 沉静：安静慢慢停下）：幅度线性归零，每次呼吸周期 ×1.08，从一开始就没有自发动作；
+ * - withdraw（C 回避：背过身慢慢停下）：形状同 turn，朝向锁定到背对最后已知的人位；
+ * - arrhythmia（D 乱序随机：节律紊乱后渐弱）：前 2/3 节律紊乱、后 1/3 线性渐弱。**不做抽搐骤停**。
  */
 export function deathFrame(kind: DeathKind, x: number): DeathFrame {
   const p = Math.min(1, Math.max(0, x));
   switch (kind) {
-    case 'exhaust':
-    case 'turn': {
+    case 'turn':
+    case 'withdraw': {
       const L = (Math.exp(-3 * p) - E3) / (1 - E3);
       return { amp: L, sink: 1 - L, activity: L, tone: L, irregular: false, periodGrowth: 1 };
     }

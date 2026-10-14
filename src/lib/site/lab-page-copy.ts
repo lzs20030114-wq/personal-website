@@ -74,7 +74,7 @@ export const LAB_PAGE_COPY: readonly (readonly [string, string])[] = [
   ["Speed not to scale · small-arm motion choreographed", "速度不按实物比例 · 小触手动作是展示编排"],
   ["The machine lives four lives, one persona each. Your pointer is a person’s hand: the machine has to see it first, then reaches toward it, turns away or looks elsewhere by persona; bring it to the large arm and the arm may wrap it. Click a small arm or the shell, or use the controls to simulate a person nearby, sounds or being lifted.", "机器按四种人格过完四世。指针就是人的手：机器要先看见它，再按性格迎过去、背过身或看别处；把手凑到大触手边，它可能把手缠住。点小触手或壳体，或用控制条模拟有人靠近、声音或被拿起。"],
   ["Personas", "人格"],
-  ["Vital · Withdrawn · Curious · Unstable · one per life", "活力 · 沉静 · 好奇 · 不稳定 · 一世一种"],
+  ["Warm · Calm · Avoidant · Random · one per life", "热情 · 沉静 · 回避 · 乱序随机 · 一世一种"],
   ["Life", "一世"],
   ["Birth · growth · ageing · dying · blank", "诞生 · 成长 · 衰老 · 死亡 · 空白"],
   ["Stimuli", "刺激"],

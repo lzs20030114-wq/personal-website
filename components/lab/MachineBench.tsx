@@ -2312,7 +2312,7 @@ export function MachineBench({
                 apiRef.current?.restart(k);
               }}
             >
-              {k}
+              {k} {personaName(k, lang)}
             </button>
           ))}
         </span>

@@ -62,6 +62,7 @@ const ORIENT: Record<string, Pair> = {
   away: ['背过身', 'turns away'],
   random: ['四处看', 'looks around'],
   final: ['最后朝向人', 'final turn to person'],
+  finalAway: ['最后背过身', 'final turn away'],
   unwind: ['转台到限位，绕回去', 'turntable at its limit, turns back the long way'],
 };
 const HAND_MODE: Record<string, Pair> = {
@@ -171,6 +172,8 @@ function what(r: LogRecord, lang: DescribeLang): string {
       return p.on === false ? (zh ? '手移开' : 'hand away') : zh ? '手在动' : 'hand moves';
     // —— 引擎
     case 'RESPONSE':
+      // 2026-10-14 起现行动作也按 ⑩ 分迎 / 原地 / 躲：躲的回应单独写出来（不写情绪，只写动作）
+      if (p.variant === 'avoid') return zh ? `躲开（${num(p.latency)} s）` : `draws back (${num(p.latency)} s)`;
       return zh ? `回应（${num(p.latency)} s）` : `response (${num(p.latency)} s)`;
     case 'RESPONSE_DROP':
       return zh ? '响应作废' : 'response dropped';

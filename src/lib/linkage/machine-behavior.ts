@@ -71,6 +71,8 @@ export function thetaToStroke(theta: number): number {
  * 表里的呼吸要多快（同日测，引擎轨迹 → 理想反解）：活力型成长段平均 2.85 rad/s、峰值约 5；
  * 沉静 / 好奇 / 不稳定平时都在 2.4 以下。上限取 4°/帧（60 帧 = 4.19 rad/s）：活力型兴奋时
  * 最快的几口气会被限速拖慢一点，其余全部跟得上。实物（齿条）是另一回事，见 spec §6.2。
+ * 2026-10-14 人格重分类后：热情型沿用原活力型的呼吸；乱序随机的区间偏向两端抽，每口气的行程速度封在 0.9/s
+ * （engine.ts EXTREME_BREATH_RATE），照样跟得上；回避型人近时呼吸浅快，但幅度小，远低于上限。
  */
 export const CRANK = {
   maxSubstep: Math.PI / 180,

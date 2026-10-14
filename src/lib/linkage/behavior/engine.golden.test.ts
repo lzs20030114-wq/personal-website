@@ -9,6 +9,8 @@ import { GOLDEN_CASES, GOLDEN_HAND_CASES, fnv64, goldenDigest } from './golden';
  * - **动作词汇 v2、没有手**（取自 74615e1，迎手链 v2 动工前）：迎手链只在有手时起作用，没有手的研究会话一个字不变。
  * - **现行、有手**（取自 74615e1）：迎手链 v2 的改动不许漏进现行（vocab 1）的手路径。
  * 以后改引擎时某道红了：先确认是不是有意改了那条路径，是的话只重生成那一组，并在提交说明里写清楚哪里变了。
+ * **2026-10-14 人格重分类**（热情 / 沉静 / 回避 / 乱序随机，spec v0.9）是有意的整体变化：人格表一改，三组都按新引擎重生成
+ * （来源标记见 engine.golden.json）；此后三组守的是重分类之后的行为。
  */
 const run = runSession as unknown as Parameters<typeof goldenDigest>[0];
 

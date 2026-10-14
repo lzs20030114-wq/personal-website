@@ -1,110 +1,110 @@
 {
-  "source": "d06bc0a",
+  "source": "2026-10-14 人格重分类（热情 / 沉静 / 回避 / 乱序随机）后的引擎",
   "cases": [
     {
       "seed": 11,
       "lifeRate": 1,
-      "log": "7cdf55d668e3d687",
-      "frames": "bdab6628af94822d"
+      "log": "bb60e83ce6d4c5fd",
+      "frames": "887d8a015bcb564c"
     },
     {
       "seed": 23,
       "lifeRate": 1,
-      "log": "70f0a5b5cc3d3712",
-      "frames": "ea5ec74adc47ded1"
+      "log": "a84d7caf4a00ad8c",
+      "frames": "a648266358cc6318"
     },
     {
       "seed": 131,
       "lifeRate": 10,
-      "log": "727eed185c2259f7",
-      "frames": "ce949291ffcf94c6"
+      "log": "5b1055af7c95ad4a",
+      "frames": "41847f538eabf7d8"
     },
     {
       "seed": 151,
       "lifeRate": 10,
-      "log": "9e0794d96ea28748",
-      "frames": "17264506403e1117"
+      "log": "cd451a0d30f8fb16",
+      "frames": "893185b3e58472fc"
     },
     {
       "seed": 161,
       "lifeRate": 60,
-      "log": "28161711515c2f52",
-      "frames": "6678f9452d4a2068"
+      "log": "aa0272bd40bcf5a4",
+      "frames": "eedb1a2ec6ca96ef"
     },
     {
       "seed": 171,
       "lifeRate": 60,
-      "log": "4907b7eb90cc68ce",
-      "frames": "af4d32996062a2b8"
+      "log": "38bda0dcfc6e6941",
+      "frames": "9620ddf8a86144af"
     }
   ],
   "v2": {
-    "source": "74615e1",
+    "source": "2026-10-14 人格重分类（热情 / 沉静 / 回避 / 乱序随机）后的引擎",
     "cases": [
       {
         "seed": 11,
         "lifeRate": 1,
-        "log": "829732c020a35b99",
-        "frames": "8ef35f11c275f66c"
+        "log": "1a1bfdbf43bdac38",
+        "frames": "353024244cfd5559"
       },
       {
         "seed": 23,
         "lifeRate": 1,
-        "log": "83eaab0480056f6b",
-        "frames": "b538010074e7eb49"
+        "log": "590978d0c20af7cd",
+        "frames": "7ae669e65557b6e3"
       },
       {
         "seed": 131,
         "lifeRate": 10,
-        "log": "fde676ed4ba5d3f6",
-        "frames": "1dc223460b2936dd"
+        "log": "0f758a9cd3133f5f",
+        "frames": "ab4f149365356d24"
       },
       {
         "seed": 151,
         "lifeRate": 10,
-        "log": "2bcb0175f5aeeb76",
-        "frames": "e875bdf9063a9dc4"
+        "log": "f2bb6dd3a6c8c844",
+        "frames": "6fbc6310783f0a41"
       },
       {
         "seed": 161,
         "lifeRate": 60,
-        "log": "dd16f788ba175167",
-        "frames": "f87b1306eaf0d7df"
+        "log": "2f4ec8692f75c96c",
+        "frames": "710ccb75262313c4"
       },
       {
         "seed": 171,
         "lifeRate": 60,
-        "log": "ae958a616f778794",
-        "frames": "92096e621490c3fb"
+        "log": "f1ed2a7adcaaf9ab",
+        "frames": "e1710c1eea69de39"
       }
     ]
   },
   "hand": {
-    "source": "74615e1",
+    "source": "2026-10-14 人格重分类（热情 / 沉静 / 回避 / 乱序随机）后的引擎",
     "cases": [
       {
         "seed": 211,
         "lifeRate": 1,
-        "log": "03bbc256f4aef8df",
-        "frames": "77672d2dd25c69d6"
+        "log": "ec4d7303ec2e6248",
+        "frames": "79c89f6f3af9a884"
       },
       {
         "seed": 223,
         "lifeRate": 1,
-        "log": "e7d477e80cb617c5",
-        "frames": "8ae851673a1f199a"
+        "log": "2d6389aa810c14e9",
+        "frames": "3bc6590a6e59b5e9"
       },
       {
         "seed": 241,
         "lifeRate": 10,
-        "log": "a86f076b85b2e17a",
-        "frames": "38aa238832967927"
+        "log": "86a44b7216bdfa97",
+        "frames": "4a9a82b4b32c6911"
       },
       {
         "seed": 251,
         "lifeRate": 10,
-        "log": "d7d1338e91c6f943",
-        "frames": "622add2dc17b162c"
+        "log": "3d32e7ccd5b4dde1",
+        "frames": "a947925236c3b5c5"
       }
     ]
   }

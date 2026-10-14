@@ -155,8 +155,8 @@ describe('迎手链：看见 → 凑 → 缠 → 握', () => {
     expect(r.ev('HAND_SEEN').filter((x) => x.t > t0 && x.t <= hold)).toHaveLength(0);
   });
 
-  it('好奇型：停半拍 → 瞄准 → 精确伸；看见 → 指令朝手动 ≤ 1 s；握着时随呼吸一紧一松、哼', () => {
-    const r = new Rig('C', seedFor('C', 'toward'));
+  it('沉静型（迎的时候）：停半拍 → 瞄准 → 精确伸；看见 → 指令朝手动 ≤ 1 s；握着时随呼吸一紧一松、哼', () => {
+    const r = new Rig('B', seedFor('B', 'toward'));
     let seenAt = -1;
     let movedAt = -1;
     let d0 = -1;
@@ -168,7 +168,7 @@ describe('迎手链：看见 → 凑 → 缠 → 握', () => {
       if (seenAt >= 0 && movedAt < 0 && Math.abs(r.e.targets().arm.bend - d0) > 0.05) movedAt = r.t;
     });
     expect(movedAt - seenAt).toBeLessThan(1);
-    r.run(16);
+    r.run(26);
     const b = r.beats();
     expect(b).toContain('approach.hover');
     expect(b.indexOf('approach.sight')).toBeGreaterThan(b.indexOf('approach.hover'));
@@ -188,10 +188,12 @@ describe('迎手链：看见 → 凑 → 缠 → 握', () => {
     expect(hum).toBeGreaterThan(60);
   });
 
-  it('沉静型迎着被手主动碰（I 0.4 > 阈值 0.2）：不惊跳，一缩再接；躲着时被碰照旧惊跳', () => {
-    const r = new Rig('B', seedFor('B', 'toward'));
+  it('回避型迎着（⑩ 那 5%）被手主动碰（I 0.4 > 阈值 0.25）：不惊跳，一缩再接；躲着时被碰照旧惊跳', () => {
+    const r = new Rig('C', seedFor('C', 'toward'));
     r.contact = false;
-    r.run(4);
+    // 回避型人在时 1.5–3 s 就重新决定一次（95% 改躲），迎的那一回合很短：看见以后 0.8 s 内碰
+    r.run(1.1);
+    expect(r.e.state.hand?.mode).toBe('toward');
     r.push({ kind: 'ARM_TOUCH', on: true });
     r.run(1);
     expect(r.ev('STARTLE')).toHaveLength(0);
@@ -200,7 +202,7 @@ describe('迎手链：看见 → 凑 → 缠 → 握', () => {
     expect(resp.p?.by).toBe('hand');
     expect(r.ev('GRASP_START')).toHaveLength(1);
     expect(r.beats()).toContain('wrap.receive');
-    const a = new Rig('B', seedFor('B', 'away'));
+    const a = new Rig('C', seedFor('C', 'away'));
     a.contact = false;
     a.run(4);
     a.push({ kind: 'ARM_TOUCH', on: true });
@@ -224,10 +226,10 @@ describe('迎手链：看见 → 凑 → 缠 → 握', () => {
 });
 
 describe('迎手链：脱手、抓空、躲', () => {
-  it('脱手：快抽 = 扑过去（lunge）、慢抽 = 伸过去送一下（extend）；沉静型放弃 → 侧身躲', () => {
+  it('脱手：热情快抽 = 扑过去（lunge）、慢抽 = 伸过去送一下（extend）；沉静放弃（不躲，回到陪着 / 关）', () => {
     const go = (P: PersonaKey, speed: number): Rig => {
       const r = new Rig(P, seedFor(P, 'toward'));
-      r.run(20);
+      r.run(P === 'B' ? 30 : 20);
       expect(r.e.state.grasp.phase, P).toBe('HOLD_HUMAN');
       r.withdraw(speed);
       r.run(1.5);
@@ -236,20 +238,20 @@ describe('迎手链：脱手、抓空、躲', () => {
     const fast = go('A', 600);
     expect(fast.ev('GRASP_LOST')[0].p?.reaction).toBe('chase');
     expect(fast.beats()).toContain('chase.lunge');
-    const slow = go('C', 60);
+    const slow = go('A', 60);
     expect(slow.beats()).toContain('chase.extend');
     expect(slow.beats()).not.toContain('chase.lunge');
     const b = go('B', 300);
     expect(b.ev('GRASP_LOST')[0].p?.reaction).toBe('giveUp');
-    expect(b.ev('HAND_SEEN')[b.ev('HAND_SEEN').length - 1]?.p).toMatchObject({ mode: 'away', cause: 'giveUp' });
+    expect(b.ev('HAND_SEEN').some((x) => x.p?.cause === 'giveUp')).toBe(false);
     b.run(8);
-    expect(b.e.state.m2?.hc.stage).toBe('avoid');
+    expect(b.e.state.m2?.hc.stage).not.toBe('avoid');
   });
 
-  it('抓空（张力一直没来）：到限位 → 人格那一拍 → 放开 → 以最后碰到处为中心找', () => {
-    const r = new Rig('C', seedFor('C', 'toward'));
+  it('抓空（张力一直没来）：到限位 → 性格那一拍（沉静：摸一摸）→ 放开 → 以最后碰到处为中心找', () => {
+    const r = new Rig('B', seedFor('B', 'toward'));
     r.catches = false;
-    r.run(24);
+    r.run(34);
     expect(r.ev('GRASP_EMPTY').length).toBeGreaterThan(0);
     expect(r.beats()).toContain('release.palpate');
     expect(r.beats()).toContain('search.cast');
@@ -257,8 +259,8 @@ describe('迎手链：脱手、抓空、躲', () => {
     expect(r.ev('CONTACT').filter((x) => x.p?.rearm).length).toBeLessThanOrEqual(1);
   });
 
-  it('沉静型躲：侧身（手留在身侧、视野内）、60 s 不丢手、偷看；手走了松一口气', () => {
-    const r = new Rig('B', seedFor('B', 'away'));
+  it('回避型躲：侧身（手留在身侧、视野边上）、60 s 不丢手、偷看；手走了松一口气', () => {
+    const r = new Rig('C', seedFor('C', 'away'));
     r.contact = false;
     r.move({ bearing: 0, dist: 900, aimBend: 1.2, aimDist: 700 }, 0);
     let worst = 0;
@@ -267,7 +269,7 @@ describe('迎手链：脱手、抓空、躲', () => {
       if (r.t > 8) worst = Math.max(worst, rel);
     });
     expect(r.ev('HAND_LOST')).toHaveLength(0);
-    expect(worst).toBeLessThan((125 * Math.PI) / 180);
+    expect(worst).toBeLessThan((130 * Math.PI) / 180);
     expect(worst).toBeGreaterThan((60 * Math.PI) / 180);
     expect(r.ev('SPONTANEOUS').filter((x) => x.p?.action === 'peek').length).toBeGreaterThan(0);
     r.hand = null;
@@ -438,7 +440,7 @@ describe('迎手链：评审第二轮的守门（2026-10-08）', () => {
   });
 
   it('追的途中手出了视野、3 s 后丢掉：抓握当即判抓空，不按兜底时长一直缠下去', () => {
-    for (const P of ['A', 'C'] as PersonaKey[]) {
+    for (const P of ['A'] as PersonaKey[]) {
       const r = new Rig(P, seedFor(P, 'toward'));
       r.run(20);
       expect(r.e.state.grasp.phase, P).toBe('HOLD_HUMAN');

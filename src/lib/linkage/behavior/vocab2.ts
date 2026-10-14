@@ -13,7 +13,7 @@
  * 方向约定同引擎：弯向 0 = 臂梢朝上，左为正；肌腱轴在 0、±120°。惊跳沿「背离刺激」的那根下方腱轴：
  * 左边来的（side = +1）→ −120°，右边来的 → +120°。
  */
-import type { PersonaKey } from './persona';
+import type { PersonaKey, Temper } from './persona';
 import { type Cues, type Phase, type Pose, arcDelta } from './programs';
 
 const TAU = 2 * Math.PI;
@@ -52,10 +52,10 @@ export const V2 = {
   /** 惊跳的环身猛收力度：0.45 + 0.4·m（输出朝 0.92 收拢的比例） */
   clench0: 0.45,
   clench1: 0.4,
-  /** 回应幅度 D_r = (0.10 + 0.30·clamp(|g|/0.5)) × 活力：A 0.34 · C 0.25 · B 0.16（表里 4:1 压成 2.1:1） */
+  /** 回应幅度 D_r = (0.10 + 0.30·clamp(|g|/0.5)) × 活力：热情 0.40 · 回避 0.34 · 沉静 0.16（表里 5:1 压成 2.5:1） */
   respD0: 0.1,
   respD1: 0.3,
-  /** 自发 E_s = (0.06 + 0.09·clamp((② − 0.2)/0.7)) × 活力：A 0.137 · C 0.099 · B 0.073；D 封顶 0.08 */
+  /** 自发 E_s = (0.06 + 0.09·clamp((② − 0.2)/0.7)) × 活力：热情 0.137 · 沉静 0.099 · 回避 0.073；乱序随机封顶 0.08 */
   spontE0: 0.06,
   spontE1: 0.09,
   spontDMax: 0.08,
@@ -94,6 +94,8 @@ export const V2 = {
 /** 解算一个程序需要的现场数（引擎在动作开始那一刻填） */
 export interface BuildCtx {
   persona: PersonaKey;
+  /** 性格（2026-10-14 重分类）：按性格换结构的地方读它，不读字母 */
+  temper: Temper;
   /** √k_v（含衰老与 D 的每次重抽）：刻意段落 ÷ 它，限速档随它走 */
   k: number;
   /** 本次抽到的响应延迟 τ（秒，已含噪声与衰老） */
@@ -312,7 +314,7 @@ export function buildStartle(c: BuildCtx, s: StartleIn): { phases: Phase[]; busy
   const first = poseOfD(Math.max(D * V2.zvFirst, along), axis);
   const clench = V2.clench0 + V2.clench1 * m;
   const F = Math.min(V2.freezeCap, (V2.freezeA + c.tau) * (0.6 + 0.4 * m) * (1 + 0.5 * c.ageU)) * (s.repeats > 0 ? 0.5 : 1);
-  const quiver = c.persona === 'B' || c.persona === 'D' ? 0.06 + 0.03 * c.ageU : 0.03 * c.ageU;
+  const quiver = c.temper === 'avoidant' || c.temper === 'random' ? 0.06 + 0.03 * c.ageU : 0.03 * c.ageU;
   const flourish = 1 - c.ageU;
   const flexCue: Partial<Phase> = { path: 'line', breath: { rate: 0, clench }, voice: 'chirp', light: 1.4, feel: { pose: 'splay' }, yaw: s.recoilYaw || undefined };
   const held: Partial<Phase> = { breath: { rate: 0, clench }, voice: 'mute', light: 0.45, feel: { pose: 'tuck', quiver } };
@@ -342,17 +344,23 @@ export function buildStartle(c: BuildCtx, s: StartleIn): { phases: Phase[]; busy
   const sd = side3(s.side);
   const rec: Phase[] = [];
   const tiers: Partial<Record<string, Tier>> = { latency: 'reflex', flex: 'reflex', zv2: 'reflex', recoil: 'reflex', aftershock: 'reflex', reflinch: 'urgent', drop: 'urgent' };
-  switch (c.persona) {
-    case 'A': // 弹回：抬起来看一眼（顶点一声 huff），再落回静息
+  switch (c.temper) {
+    case 'warm': // 回头去查看（原好奇型的恢复，并进热情）：直线穿过中心朝刺激那边、探两下、再回来
       rec.push(
-        ph('probe', 0.3, 'hold', 'hold', { breath: breathBack, feel: { pose: 'free' }, light: 0.7 }),
-        ph('rebound', 1.0 / k, 'mj', poseOfD(0.05 + 0.15 * flourish, 0), { path: 'line', breath: { rate: 1 }, light: 1, yaw: s.turnBack || undefined }),
-        ph('look', 0.3 / k, 'hold', 'hold', { voice: 'huff' }),
-        ph('settle', 1.0 / k, 'mj', 'rest'),
+        ph('probe', 0.3, 'hold', 'hold', { breath: breathBack, feel: { pose: 'point', side: sd }, light: 0.8 }),
+        ph('orient', 1.4 / k, 'mj', poseOfD(0.19, toward(sd, 60)), { path: 'line', breath: { rate: 1 }, voice: 'query', feel: { pose: 'point', side: sd, antennate: 0.15 }, light: 1, yaw: s.turnBack || undefined }),
+        ph('inspect', 3.3, 'hold', 'hold', { osc: { amp: 0.12 * flourish, hz: 0.6, decay: 0 }, breath: { rate: 1, period: 0.8 }, feel: { pose: 'point', side: sd, antennate: 0.15 } }),
+        ph('return', 1.5 / k, 'mj', 'rest'),
       );
       break;
-    case 'B': {
-      // 一步一步探出来：伸一点、停、又缩回一点、停、再展开——一直贴着那根轴，呼吸浅、不出声
+    case 'calm': // 沉静：不慌——停一会儿、深深叹一口气，慢慢放回静息（不探、不缩回、不发抖）
+      rec.push(
+        ph('probe', 0.6, 'hold', 'hold', { breath: breathBack, feel: { pose: 'free' }, light: 0.8 }),
+        ph('settle', 2.2 / k, 'mj', 'rest', { breath: { rate: 1, amp: 1.15, period: 1.1 }, feel: { pose: 'free' } }),
+      );
+      break;
+    case 'avoidant': {
+      // 回避：一步一步探出来——伸一点、停、又缩回一点、停、再展开；一直贴着那根轴，呼吸浅、不出声、发抖（原沉静型的恢复）
       const shallow: Cues['breath'] = { rate: 1, amp: 0.6, period: 0.8 };
       rec.push(
         ph('probe', 0.3, 'hold', 'hold', { breath: { ...shallow, sigh: true }, voice: 'mute', feel: { pose: 'free', quiver }, light: 0.7 }),
@@ -364,16 +372,8 @@ export function buildStartle(c: BuildCtx, s: StartleIn): { phases: Phase[]; busy
       );
       break;
     }
-    case 'C': // 回头去查看：直线穿过中心朝刺激那边、探两下、再回来
-      rec.push(
-        ph('probe', 0.3, 'hold', 'hold', { breath: breathBack, feel: { pose: 'point', side: sd }, light: 0.8 }),
-        ph('orient', 1.4 / k, 'mj', poseOfD(0.19, toward(sd, 60)), { path: 'line', breath: { rate: 1 }, voice: 'query', feel: { pose: 'point', side: sd, antennate: 0.15 }, light: 1, yaw: s.turnBack || undefined }),
-        ph('inspect', 3.3, 'hold', 'hold', { osc: { amp: 0.12 * flourish, hz: 0.6, decay: 0 }, breath: { rate: 1, period: 0.8 }, feel: { pose: 'point', side: sd, antennate: 0.15 } }),
-        ph('return', 1.5 / k, 'mj', 'rest'),
-      );
-      break;
     default: {
-      // D 自己的不稳：先松一半，然后 35% 余震（再猛缩一次）、65% 停一会儿发抖——都以生硬的直线落回收尾
+      // 乱序随机自己的不稳：先松一半，然后 35% 余震（再猛缩一次）、65% 停一会儿发抖——都以生硬的直线落回收尾
       rec.push(ph('loosen', 0.4 / k, 'mj', at(0.5), { breath: { rate: 1, clench: clench * 0.5 }, feel: { pose: 'splay', quiver: 0.08 }, light: 0.6 }));
       if (c.rnd() < 0.35) {
         rec.push(
@@ -402,7 +402,7 @@ export type RegKind = 'directed' | 'alert' | 'listen';
 
 /**
  * 注意到：刺激一进来（还在人格的响应延迟里）就有看得见的变化——正在做的自发动作停下、臂定住、
- * 呼吸放慢（τ ≥ 1 s 时先屏住，最多 2 s）、触须指向那一侧、灯稍亮、呼气声收住。沉静型 τ = 2 s，此前这两秒
+ * 呼吸放慢（τ ≥ 1 s 时先屏住，最多 2 s）、触须指向那一侧、灯稍亮、呼气声收住。沉静型 τ = 2.5 s，此前这两秒
  * 什么都不发生，读作「没反应」；现在读作「迟疑」。
  *   alert（震）= 一切同时停住、触须张开不动；listen（声）= 屏气、触须竖起不动。
  * 接近阈值的触碰（wince）先「一缩」：0.1 s 后差动 0.12 的小缩（限速 urgent），呼吸照走只往收拢端推一点、
@@ -481,7 +481,7 @@ function responsePhases(c: BuildCtx, r: RespIn): Phase[] {
   const Dr = respD(c) * scale;
   const minEx = Math.max(0.7 * Dr, 0.12 * scale);
   const springy = c.k >= V2.springK;
-  const anticipates = c.persona === 'A' || c.persona === 'C' || (c.persona === 'D' && springy);
+  const anticipates = c.temper === 'warm' || (c.temper === 'random' && springy);
   const creep = c.k < V2.zvSlow;
   const turnCue = r.turn ? { yaw: r.turn } : {};
   /**
@@ -490,7 +490,7 @@ function responsePhases(c: BuildCtx, r: RespIn): Phase[] {
    */
   const dirOf = (deg: number): number => (r.variant === 'inplace' ? 0 : clamp(wrapPi(toward(s3, deg) - r.turn), -Math.PI, Math.PI));
   const reach = (deg: number, D: number): Pose => atLeast(poseOfD(r.variant === 'inplace' ? 0.8 * D : D, dirOf(deg)), c.cur, minEx);
-  /** 预备：反方向先缩一点（活泼的、好奇的人格有，沉静的没有） */
+  /** 预备：反方向先缩一点（热情的有，乱序随机快的时候也有；沉静、回避没有） */
   const antic = (to: Pose): Phase[] => (anticipates && flourish > 0.2 ? [ph('antic', 0.25 / k, 'mj', anticPose(c.cur, to, 0.04 * flourish), { path: 'line' })] : []);
   // 躲：往另一侧平着让开、慢、呼吸浅、往收拢端缩一点、触须收起、不出声、灯暗一点——等手走
   const avoid = (holdT: number, leaveT = 2.5): Phase[] => {
@@ -537,8 +537,8 @@ function responsePhases(c: BuildCtx, r: RespIn): Phase[] {
         ph('return', 1.5 / k, 'mj', 'rest'),
       ];
     case 'feeler': {
-      // 碰了触须：臂平着摆到那一侧，屏气盯住，再探两下（呼吸短浅）；好奇的探三下
-      const probes = c.persona === 'C' ? 3 : 2;
+      // 碰了触须：臂平着摆到那一侧，屏气盯住，再探两下（呼吸短浅）；热情的探三下
+      const probes = c.temper === 'warm' ? 3 : 2;
       return [
         ph('orient', 1.0 / k, 'mj', reach(95, 0.8 * Dr), { breath: { rate: 1 }, voice: 'query', feel: { pose: 'point', side: s3 }, ...turnCue }),
         ph('stare', 0.6 / k, 'hold', 'hold', { breath: { rate: 0 }, voice: 'mute', feel: { pose: 'still' } }),
@@ -548,18 +548,18 @@ function responsePhases(c: BuildCtx, r: RespIn): Phase[] {
     }
     case 'knock':
     case 'lift': {
-      // 震了一下（没有方向）：潜伏期里一切已经停住；臂竖直挺起、静止不动（触须张开、沉静与不稳定的发抖），再叹一口气放开
+      // 震了一下（没有方向）：潜伏期里一切已经停住；臂竖直挺起、静止不动（触须张开、回避与乱序随机的发抖），再叹一口气放开
       const hold = Math.min(2.4, 0.8 + 0.8 * c.tau);
-      const still: Partial<Phase> = { breath: { rate: 0 }, voice: 'mute', feel: { pose: 'splay', quiver: c.persona === 'B' || c.persona === 'D' ? 0.05 : 0 }, light: 1.15 };
+      const still: Partial<Phase> = { breath: { rate: 0 }, voice: 'mute', feel: { pose: 'splay', quiver: c.temper === 'avoidant' || c.temper === 'random' ? 0.05 : 0 }, light: 1.15 };
       return [
-        ph('perk', 0.4, 'mj', atLeast(poseOfD(r.kind === 'lift' && c.persona === 'A' ? 0.3 : 0.2, 0), c.cur, 0.12), still),
+        ph('perk', 0.4, 'mj', atLeast(poseOfD(r.kind === 'lift' && c.temper === 'warm' ? 0.3 : 0.2, 0), c.cur, 0.12), still),
         ph('brace', r.kind === 'lift' ? hold + 1 : hold, 'hold', 'hold', still),
         ph('release', 1.5 / k, 'mj', 'rest', { breath: { rate: 1, amp: 1.2, sigh: true } }),
       ];
     }
     case 'sound': {
-      // 听见了、找不到来源：屏气、触须竖起来听，臂慢慢竖起（「抬头」），然后在正前方慢慢扫一遍；好奇的扫回来
-      const w = (c.persona === 'A' ? 60 : c.persona === 'B' ? 30 : c.persona === 'C' ? 50 : 45) * DEG;
+      // 听见了、找不到来源：屏气、触须竖起来听，臂慢慢竖起（「抬头」），然后在正前方慢慢扫一遍；热情的扫回来
+      const w = (c.temper === 'warm' ? 60 : c.temper === 'calm' ? 30 : c.temper === 'avoidant' ? 35 : 45) * DEG;
       const sgn = c.rnd() < 0.5 ? 1 : -1;
       const D = 0.16;
       const listen: Partial<Phase> = { breath: { rate: 0 }, voice: 'mute', feel: { pose: 'raise' } };
@@ -569,7 +569,7 @@ function responsePhases(c: BuildCtx, r: RespIn): Phase[] {
         ph('scanTo', 0.6 / k, 'mj', poseOfD(D, -sgn * w), { breath: { rate: 1, period: 0.9 }, feel: { pose: 'raise' } }),
         ph('scan', 2.4 / k, 'mj', poseOfD(D, sgn * w), { breath: { rate: 1, period: 0.9 }, voice: 'query' }),
       ];
-      if (c.persona === 'C') out.push(ph('scanBack', 2.4 / k, 'mj', poseOfD(D, -sgn * w), { breath: { rate: 1, period: 0.9 } }));
+      if (c.temper === 'warm') out.push(ph('scanBack', 2.4 / k, 'mj', poseOfD(D, -sgn * w), { breath: { rate: 1, period: 0.9 } }));
       out.push(ph('return', 1.5 / k, 'mj', 'rest'));
       return out;
     }
@@ -583,7 +583,7 @@ function responsePhases(c: BuildCtx, r: RespIn): Phase[] {
           ph('return', 2.0 / k, 'mj', 'rest'),
         ];
       }
-      // 原地（活力 / 好奇「不朝人就随便看」）：朝别处慢慢扫一眼——漫不经心
+      // 原地（热情 / 沉静「不朝人就随便看」）：朝别处慢慢扫一眼——漫不经心
       const away = s3 ? toward(-s3, 35) : 0.6 * (c.rnd() < 0.5 ? 1 : -1);
       return [
         ph('glance', 0.8 / k, 'mj', atLeast(poseOfD(0.8 * Dr, wrapPi(away - 0.3 * (s3 || 1))), c.cur, minEx), { breath: { rate: 1 }, feel: { pose: 'free' } }),
@@ -611,7 +611,7 @@ export type SpontKind = 'curl' | 'sway' | 'search' | 'flick';
 /** 自发动作的幅度 E_s（差动）：由 ② 呼吸幅度给，比任何回应都小 */
 export const spontE = (c: BuildCtx): number => {
   const e = (V2.spontE0 + V2.spontE1 * clamp((c.breathAmp - 0.2) / 0.7, 0, 1)) * c.vigor;
-  return c.persona === 'D' ? Math.min(e, V2.spontDMax) : e;
+  return c.temper === 'random' ? Math.min(e, V2.spontDMax) : e;
 };
 
 /** 自发动作：小、慢、只在自己身边、不朝任何人（限速 spont） */
@@ -638,7 +638,7 @@ function spontPhases(c: BuildCtx, kind: SpontKind, around?: number): Phase[] {
     }
     case 'sway': {
       // 环顾：抬一点，弯曲不变、弯向慢慢扫过去（A 1.0 rad · C、D 0.7 · B 0.5）——最慢的臂动作
-      const w = (c.persona === 'A' ? 1.0 : c.persona === 'B' ? 0.5 : 0.7) * (c.rnd() < 0.5 ? 1 : -1);
+      const w = (c.temper === 'warm' ? 1.0 : c.temper === 'calm' || c.temper === 'avoidant' ? 0.5 : 0.7) * (c.rnd() < 0.5 ? 1 : -1);
       const D = rD + 0.4 * E;
       return [
         ph('set', 0.8 / k, 'mj', poseOfD(D, wrapPi(base - w / 2))),

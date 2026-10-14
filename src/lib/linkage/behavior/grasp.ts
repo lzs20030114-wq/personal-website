@@ -12,10 +12,10 @@
  * | 握持中张力消失 | — | LOST | 追一下还是放弃（按人格） |
  *
  * 表里没写「走到限位、无张力、电极 ✓」（手碰着臂但没被缠住）：按没抓到处理（EMPTY）——
- * 没有张力就是什么也没握住。按人格的追 / 放弃与搜寻次数也是引擎的提案，spec §10 待拍板。
+ * 没有张力就是什么也没握住。按性格的追 / 放弃与搜寻次数也是引擎的提案，spec §10 待拍板。
  */
 
-import type { PersonaKey } from './persona';
+import { PERSONAS, type PersonaKey } from './persona';
 import { type Rng, chance, rand } from './rng';
 
 export type GraspPhase = 'IDLE' | 'WRAP' | 'HOLD_HUMAN' | 'HOLD_OBJECT' | 'RELEASE';
@@ -58,23 +58,27 @@ export const GRASP = {
 
 export type LostReaction = 'chase' | 'giveUp';
 
-/** 握持中脱手：活力 / 好奇追，沉静放弃，不稳定随机 */
+/**
+ * 握持中脱手：热情追，沉静与回避放弃，乱序随机一半一半（2026-10-07 拍板的「活力 / 好奇追、沉静放弃、不稳定随机」
+ * 按 2026-10-14 的重分类换到新的四种上：追的两型并进了热情，回避型被拉开是解脱、不追；待作者拍板）
+ */
 export function lostReaction(key: PersonaKey, r: Rng): LostReaction {
-  if (key === 'A' || key === 'C') return 'chase';
-  if (key === 'B') return 'giveUp';
+  const t = PERSONAS[key].temper;
+  if (t === 'warm') return 'chase';
+  if (t === 'calm' || t === 'avoidant') return 'giveUp';
   return chance(r, 0.5) ? 'chase' : 'giveUp';
 }
 
-/** 抓空后搜寻几次：好奇 2、活力 1、沉静 0、不稳定 0–2 */
+/** 抓空后搜寻几次：热情 2、沉静 1、回避 0、乱序随机 0–2（同上，待作者拍板） */
 export function emptySearches(key: PersonaKey, r: Rng): number {
-  switch (key) {
-    case 'A':
-      return 1;
-    case 'B':
-      return 0;
-    case 'C':
+  switch (PERSONAS[key].temper) {
+    case 'warm':
       return 2;
-    case 'D':
+    case 'calm':
+      return 1;
+    case 'avoidant':
+      return 0;
+    case 'random':
       return Math.floor(rand(r) * 3);
   }
 }
