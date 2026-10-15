@@ -178,6 +178,17 @@ export const HC = {
   dodgeTurnMax: 35 * DEG,
   dodgeTurnTau: 4,
   dodgeGap: 0.35,
+  /**
+   * 手凑到机身边上（离电机轴 0.6 → 0.32 m）再侧开 30°·N；侧身角（含躲开的那一截）封顶 160°——不整个背过去
+   * （用户 2026-10-15：「可以不完全背过去」）。躲手是 v2 里唯一在手搭在机身上方时也转身的态度（迎的时候不转）
+   */
+  avoidNear: 30 * DEG,
+  avoidNearR0: 320,
+  avoidNearR1: 600,
+  avoidSideMax: 160 * DEG,
+  /** 怕的时候，手在臂够不着的地方（读数 aimBend 1.0 → 1.4 饱和）：背着它弯的方向渐变成「往下、背着手那一侧」 */
+  awaySideFrom: 1,
+  awaySideSpan: 0.4,
   /** 逼近（> 250 mm/s、距离在减小、< 0.6 m）= 一缩；手走了（> 1.2 m 持续 1 s 或离开画布）= 松一口气 */
   cringeV: 250,
   cringeR: 600,

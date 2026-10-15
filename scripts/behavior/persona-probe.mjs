@@ -39,6 +39,8 @@ const OUT = resolve(process.argv[2] ?? 'persona-probe-out');
 const N = Number(process.argv[3] ?? 12);
 const VOCABS = (process.argv[4] ?? '1,2').split(',').map(Number);
 const SCENS = (process.env.SCEN ?? 'V,T,H').split(',');
+/** TRACE=1：每种人格第一个种子另存一份逐帧轨迹（trace-<场景><词汇>-<人格>.json，排查用） */
+const TRACE = !!process.env.TRACE;
 
 const HZ = 60;
 const DEG = 180 / Math.PI;
@@ -381,9 +383,11 @@ function trial(P, vocab, seed, sc) {
       voice: tg.sound.on ? 1 : 0,
       hand: handNow ? { beta: handNow.beta, r: handNow.r, rd: handNow.rd, W: handNow.W, gap: handNow.gap, phase: handNow.phase } : null,
       aim: lastAimDir,
+      hc: TRACE ? `${st.m2?.hc.stage ?? '-'}.${st.m2?.hc.beat ?? ''}` : undefined,
       tipW,
     });
   }
+  if (TRACE && seed === 1) writeFileSync(join(OUT, `trace-${sc}${vocab}-${P}.json`), JSON.stringify({ log, frames: frames.filter((_, i) => i % 3 === 0) }));
   // —— 指标
   const out = [];
   for (const v of visits) {

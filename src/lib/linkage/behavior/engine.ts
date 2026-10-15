@@ -2266,7 +2266,14 @@ export class BehaviorEngine {
 
   /** 背着手的弯向：手就在臂梢上（要弯得很少，弯向读不准）时渐变成往下缩 */
   private awayDir(h: HandMem): number {
-    return lerpAngle(MOTION.down, h.aimDir + Math.PI, smooth(h.aimBend / HAND.awayDirAt));
+    const base = lerpAngle(MOTION.down, h.aimDir + Math.PI, smooth(h.aimBend / HAND.awayDirAt));
+    const N = this.socialPN()[1];
+    if (!this.s.m2 || N <= 0) return base;
+    // v2、怕的时候：手在臂够不着的地方（读数饱和、多在身侧后方）时「背着它弯」说不清往哪——渐变成按手在机身哪一侧：
+    // 往下、背着那一侧（与 ⑬ 静息同一个规矩），读起来是把臂藏到另一边
+    const rel = clamp(wrapPi(h.bearing - this.s.yaw.x), -Math.PI / 2, Math.PI / 2);
+    const side = Math.PI + SOCIAL.awayTilt * rel;
+    return lerpAngle(base, side, N * smooth((h.aimBend - HC.awaySideFrom) / HC.awaySideSpan));
   }
 
   /** 手在机身上方（在摸壳）：不转身、不去够 */
@@ -2339,7 +2346,9 @@ export class BehaviorEngine {
     // v2：凑、够不着（探身 / 撑）的时候身体不动——扑以「身体静止」为门；看着 / 陪着 / 躲照常转
     const hc = s.m2?.hc;
     const still = !!hc && (hc.stage === 'approach' || hc.stage === 'strain');
-    if (h.mode === null || h.mode === 'look' || !h.present || !ctx.orientOk || startled || !free || this.handOnBody(h) || still) {
+    // 手在机身上方（摸壳）不转——但 v2 躲的时候恰恰要转开：手凑到机身边上，正是该躲的时候
+    const onBody = this.handOnBody(h) && !(hc && h.mode === 'away');
+    if (h.mode === null || h.mode === 'look' || !h.present || !ctx.orientOk || startled || !free || onBody || still) {
       h.turning = false;
       // 不跟了：正在绕回的长路作废、就地停下（惊跳那一下的转向留着）
       if (h.unwind) {
@@ -2350,7 +2359,7 @@ export class BehaviorEngine {
     }
     // 迎：转到让臂线对准手的朝向（臂偏在机身中线右侧）；躲：机身中线背对手（v2：侧身，手留在 ±105°，不背对、不会忘掉手）
     let want =
-      h.mode === 'toward' ? h.steerFace : hc ? wrapPi(h.steer - hc.side * this.avoidAngle()) : wrapPi(h.steer + Math.PI);
+      h.mode === 'toward' ? h.steerFace : hc ? wrapPi(h.steer - hc.side * this.avoidAngle(h)) : wrapPi(h.steer + Math.PI);
     if (hc && h.mode === 'toward' && h.aimDist < HAND.armL) {
       // v2：手在臂长以内时不让笔直的臂线穿过手——机身转过去会把直臂整根扫向手，陪着的时候就碰上了。
       // 从对准的朝向往当前朝向退一个角度，直臂停在手旁边、隔一个停距，之后由臂去弯、去凑
@@ -2442,7 +2451,10 @@ export class BehaviorEngine {
     if (!h) return;
     const p = ctx.p;
     const other: HandMode = p.otherwise === 'away' ? 'away' : 'look';
-    const mode: HandMode = cause ? other : chance(s.rng, p.toward) ? 'toward' : other;
+    // v2：怕的时候（⑬ 的躲那一半 N）不迎——⑩ × (1 − N)；人走远、N 回落了才偶尔试探。正负随机的人格不在此列
+    //（它的姿态正是由这一抽决定的）。随机数照抽一次，可复现性不变
+    const towardP = s.m2 && !p.stanceSigned ? p.toward * (1 - this.socialPN()[1]) : p.toward;
+    const mode: HandMode = cause ? other : chance(s.rng, towardP) ? 'toward' : other;
     h.mode = mode;
     // ⑬ 正负随机的人格：对这只手是凑还是躲，姿态跟着走
     if (p.stanceSigned && !cause && mode !== 'look') this.drawLean(p, mode === 'toward');
@@ -2630,15 +2642,20 @@ export class BehaviorEngine {
 
   /** 躲的侧别：转得少的那边；差不多（10° 内）时选让手在左（臂在右，离手远） */
   /** v2 侧身躲时手留在多少度：105°，⑬ 越怕侧得越多（回避型近处 125°） */
-  private avoidAngle(): number {
+  private avoidAngle(h: HandMem): number {
     const hc = this.s.m2?.hc;
-    return HC.avoidSide + SOCIAL.avoidSideClose * this.socialPN()[1] + (hc && hc.stage === 'avoid' ? hc.extraYaw : 0);
+    const N = this.socialPN()[1];
+    // 手凑到机身边上（离电机轴 0.6 m → 0.32 m）：再侧开 30°·N；加上躲开的那一截，封顶 160°——不整个背过去
+    const near = 1 - smooth((h.dist - HC.avoidNearR0) / (HC.avoidNearR1 - HC.avoidNearR0));
+    const extra = hc && hc.stage === 'avoid' ? hc.extraYaw : 0;
+    const a = HC.avoidSide + SOCIAL.avoidSideClose * N;
+    return N > 0 ? Math.min(HC.avoidSideMax, a + HC.avoidNear * N * near + extra) : a + extra;
   }
 
   private avoidSide(h: HandMem): number {
     const s = this.s;
-    const left = wrapPi(h.steer - this.avoidAngle() - s.yaw.x);
-    const right = wrapPi(h.steer + this.avoidAngle() - s.yaw.x);
+    const left = wrapPi(h.steer - this.avoidAngle(h) - s.yaw.x);
+    const right = wrapPi(h.steer + this.avoidAngle(h) - s.yaw.x);
     return Math.abs(left) <= Math.abs(right) + (10 * Math.PI) / 180 ? 1 : -1;
   }
 
@@ -2713,6 +2730,9 @@ export class BehaviorEngine {
       return;
     }
     if (mode === 'away') {
+      // 已经在躲、⑨ 到点又决定躲：接着躲（与迎的「已经在陪着」同理）——不重收、不重选侧别、不打断正在做的躲开 / 偷看。
+      // 2026-10-15 前每次都重开一遍：回避型人在时 1.5–3 s 就重新决定一次，躲开刚转出去的那一截随之清零
+      if (was === 'avoid' && !cause) return;
       this.hcReset(t, 'avoid');
       this.hcBout(ctx);
       hc.side = this.avoidSide(h);
@@ -3222,7 +3242,7 @@ export class BehaviorEngine {
       t - hc.inAt < 0.25 &&
       hc.v > HC.dodgeV &&
       t - hc.dodgeAt > HC.dodgeGap &&
-      !(ph && ph.name === 'dodge') &&
+      !(ph && (ph.name === 'dodge' || ph.name === 'cringe')) &&
       handArmGap(h.aimBend, h.aimDir, h.aimDist, this.curPose()) < HC.dodgeR0 + HC.dodgeR1 * N
     ) {
       this.avoidRef(h);
@@ -3241,7 +3261,7 @@ export class BehaviorEngine {
     // 逼近：一缩（怕的时候门更低、更远，但这一截要求手在朝机身来）
     const rush = hc.v > HC.cringeV && h.dist < HC.cringeR;
     const creep = N > 0 && t - hc.nearAt < 0.25 && hc.v > HC.cringeV * (1 - HC.cringeVN * N) && h.dist < HC.cringeR + HC.cringeRN * N;
-    if ((rush || creep) && hc.beat !== 'cringe' && !(ph && ph.name === 'dodge')) {
+    if ((rush || creep) && hc.beat !== 'cringe' && !(busy && hc.beat === 'dodge')) {
       this.avoidRef(h);
       if (N > 0) hc.extraYaw = Math.min(HC.dodgeTurnMax, hc.extraYaw + 0.5 * HC.dodgeTurn * N);
       this.hcSet(t, 'avoid', 'cringe');
