@@ -276,6 +276,63 @@ describe('迎手链：脱手、抓空、躲', () => {
     r.run(2);
     expect(r.beats()).toContain('off.relief');
   });
+
+  it('回避型躲得明显（2026-10-15）：臂紧紧背着手往下藏；手不动不躲开；手朝臂过来 → 躲开（臂甩开、身体再侧开）', () => {
+    const r = new Rig('C', seedFor('C', 'away'));
+    r.contact = false;
+    const H0 = { bearing: 0, dist: 650, face: 0.25, aimDir: 0.62, aimBend: 1.2, aimDist: 500 };
+    r.move(H0, 0);
+    r.run(10);
+    expect(r.e.state.m2?.hc.stage).toBe('avoid');
+    // 静止的手：一次都不躲开（机身转动不算手在逼近）
+    expect(r.beats().filter((b) => b === 'avoid.dodge')).toHaveLength(0);
+    const D = (): number => {
+      const a = r.e.targets().arm;
+      return 0.34 * a.bend + 0.16 * a.wrap + 0.3773 * (a.deep ?? 0);
+    };
+    const a0 = r.e.targets().arm;
+    // 紧：怕到 0.8 上下时差动 ≥ 0.33（改前同一处手 0.29）；背着手（弯向与手的方向差 > 120°）
+    expect(D()).toBeGreaterThan(0.33);
+    expect(Math.cos(a0.dir - H0.aimDir)).toBeLessThan(-0.5);
+    const rel = (): number => Math.abs(Math.atan2(Math.sin(H0.bearing - r.e.targets().yaw), Math.cos(H0.bearing - r.e.targets().yaw)));
+    const rel0 = rel();
+    // 手朝臂此刻的样子挪过来（200 mm/s）
+    r.move({ aimDir: a0.dir + 0.3, aimBend: a0.bend * 0.8, aimDist: 330, dist: 520 }, 200);
+    let relMax = rel0;
+    let dMax = 0;
+    r.run(1.5, () => {
+      relMax = Math.max(relMax, rel());
+      dMax = Math.max(dMax, D());
+    });
+    expect(r.beats()).toContain('avoid.dodge');
+    const dg = r.log.find((x) => x.ev === 'HAND_STAGE' && x.p?.beat === 'dodge')!;
+    expect(dg.t - r.t0 - 10).toBeLessThan(0.5);
+    // 臂甩开（比躲的姿态再紧）、身体再侧开 ≥ 10°
+    expect(dMax).toBeGreaterThan(0.4);
+    expect(relMax - rel0).toBeGreaterThan((10 * Math.PI) / 180);
+    // 侧开的那一截慢慢回落（4 s），不会一直累加
+    r.move({}, 0);
+    r.run(12);
+    expect(r.e.state.m2!.hc.extraYaw).toBeLessThan(0.1);
+  });
+
+  it('不怕的人格没有躲开：热情迎着、手朝臂过来是凑过去的事；沉静看别处', () => {
+    for (const P of ['A', 'B'] as PersonaKey[]) {
+      const r = new Rig(P, 7);
+      r.contact = false;
+      r.move({ bearing: 0, dist: 650, face: 0.25, aimDir: 0.62, aimBend: 1.2, aimDist: 500 }, 0);
+      r.run(8);
+      for (let k = 0; k < 4; k++) {
+        const a = r.e.targets().arm;
+        r.move({ aimDir: a.dir + 0.3, aimBend: a.bend * 0.8 + 0.3, aimDist: 330, dist: 520 }, 200);
+        r.run(1.5);
+        r.move({ aimDir: 0.62, aimBend: 1.2, aimDist: 500, dist: 650 }, 200);
+        r.run(1.5);
+      }
+      expect(r.beats().filter((b) => b === 'avoid.dodge'), P).toHaveLength(0);
+      expect(r.e.state.m2!.hc.extraYaw, P).toBe(0);
+    }
+  });
 });
 
 describe('迎手链：深卷预算与纯数据', () => {

@@ -153,9 +153,37 @@ export const HC = {
   avoidLag: 0.4,
   reshrinkClose: 0.15,
   reshrinkDir: 20 * DEG,
+  /**
+   * 越怕（⑬ 的躲那一半 N，0–1；回避型手在近处 ≈ 1）躲得越明显（2026-10-15 用户：「可以不完全背过去，但要有明显的躲着手的
+   * 表现，大触手也要明显回避」）：收得更紧（差动 +0.12·N·close）、弯向往下压 25°·N·close（往下藏）；手挪 8° / close 0.06 / 姿态差
+   * 0.03 就再收（N = 1 时），收得快（1.2 → 0.7 s ÷ k，档位 deliberate → pursue）；偷看只转回 0.3·(1 − 0.7N)。N = 0 时与改前逐位相同
+   */
+  avoidTight: 0.12,
+  avoidTuck: 25 * DEG,
+  reshrinkCloseN: 0.09,
+  reshrinkDirN: 12 * DEG,
+  reshrinkPoseN: 0.03,
+  shrinkFast: 0.5,
+  peekLeanN: 0.7,
+  /**
+   * 躲开（N ≥ 0.2 时才有）：手朝臂过来（读数一变、按此刻的臂姿估的臂—手距离就变小，0.25 s 内）、手在动（> 40 mm/s）、
+   * 臂—手距离 < 120 + 200·N mm——臂快速甩到背着手那边（差动再 +0.08，strike 档，与热情型扑手同一个最快档）、定住
+   * 0.6 + 0.8·N s；身体再侧开 25°·N（累加封顶 35°，之后按 4 s 慢慢回落）。两次之间至少 0.35 s
+   */
+  dodgeR0: 120,
+  dodgeR1: 200,
+  dodgeV: 40,
+  dodgeD: 0.08,
+  dodgeTurn: 25 * DEG,
+  dodgeTurnMax: 35 * DEG,
+  dodgeTurnTau: 4,
+  dodgeGap: 0.35,
   /** 逼近（> 250 mm/s、距离在减小、< 0.6 m）= 一缩；手走了（> 1.2 m 持续 1 s 或离开画布）= 松一口气 */
   cringeV: 250,
   cringeR: 600,
+  /** 怕的时候一缩的门更低、更远：速度 ×(1 − 0.68N)（N = 1 时 80 mm/s）、距离 +300·N mm——这一截要求手在朝机身来 */
+  cringeVN: 0.68,
+  cringeRN: 300,
   reliefR: 1200,
   reliefT: 1,
   /** 放开后手不动：3 s 后再来一次（抓空后每 ⑨ 至多一次） */
@@ -809,16 +837,40 @@ export function buildSearch(c: BuildCtx, last: { D: number; dir: number }, n: nu
 
 // ------------------------------------------------------------------ 躲（侧身警戒）与偷看
 
-/** 躲的姿态：背着手弯，越近越缩（0.12–0.31） */
-export const avoidPose = (close: number, awayDir: number): Pose => flatH(0.12 + 0.19 * clamp(close, 0, 1), awayDir);
+/** 从 a 往 b 转，最多转 max（rad） */
+const turnToward = (a: number, b: number, max: number): number => {
+  const d = wrapPi(b - a);
+  return wrapPi(a + Math.sign(d) * Math.min(Math.abs(d), max));
+};
 
-/** 看见手、决定躲：定住（0.3 + 0.1τ）→ 慢慢收（身体侧过去由引擎转） */
+/**
+ * 躲的姿态：背着手弯，越近越缩（0.12–0.31）。fear = ⑬ 的躲那一半 N：再紧 0.12·N·close（到 0.43）、弯向往下（腱轴 0 的
+ * 反向，臂梢朝下）压 25°·N·close——往下藏。fear = 0 与改前逐位相同
+ */
+export const avoidPose = (close: number, awayDir: number, fear = 0): Pose => {
+  const c = clamp(close, 0, 1);
+  const f = clamp(fear, 0, 1);
+  return flatH(0.12 + 0.19 * c + HC.avoidTight * f * c, f > 0 ? turnToward(awayDir, Math.PI, HC.avoidTuck * f * c) : awayDir);
+};
+
+/**
+ * 手离臂多远（mm，粗估）：手在差动平面上的位置（读数）与臂此刻的姿态之差 × 手那一点上的接触灵敏度，再加上手超出臂长的那一截。
+ * 只拿来比大小（在不在变近、近不近），不是几何真值
+ */
+export function handArmGap(aimBend: number, aimDir: number, aimDist: number, pose: Pose): number {
+  const Dh = Math.min(0.5, D_SPAN * Math.max(0, aimBend));
+  const dp = poseDist(pose, { bend: Dh / D_SPAN, dir: aimDir, deep: 0 });
+  return Math.hypot(dp * gainAt(aimDist, Dh), Math.max(0, aimDist - HC.armL));
+}
+
+/** 看见手、决定躲：定住（0.3 + 0.1τ）→ 慢慢收（身体侧过去由引擎转）。怕得越厉害收得越快、越紧 */
 export function buildShrink(c: BuildCtx, close: number, awayDir: number, freeze = true): Phase[] {
   const P = c.temper;
+  const f = clamp(c.fear ?? 0, 0, 1);
   const out: Phase[] = [];
   if (freeze) out.push(ph('freeze', 0.3 + 0.1 * c.tau, 'hold', 'hold', { breath: { rate: 0 }, feel: feel('tuck'), light: 0.9, voice: 'mute' }));
   out.push(
-    ph(freeze ? 'shrink' : 'reshrink', 1.2 / c.k, 'mj', avoidPose(close, awayDir), {
+    ph(freeze ? 'shrink' : 'reshrink', (1.2 - HC.shrinkFast * f) / c.k, 'mj', avoidPose(close, awayDir, f), {
       path: 'line',
       breath: { rate: 1, amp: 0.6, push: 0.04 },
       feel: feel('tuck', { quiver: P === 'avoidant' || P === 'random' ? 0.04 : undefined }),
@@ -826,17 +878,37 @@ export function buildShrink(c: BuildCtx, close: number, awayDir: number, freeze 
       light: 0.9,
     }),
   );
-  return gov(out, c, 'deliberate', { freeze: 'reflex' });
+  return gov(out, c, f > 0.5 ? 'pursue' : 'deliberate', { freeze: 'reflex' });
+}
+
+/**
+ * 躲开（手朝臂过来，⑬ 怕的时候）：臂快速甩到背着手那边、比躲的姿态再紧一截，定住屏着气；身体同时再侧开一点（引擎转）。
+ * 与热情型扑手用同一个最快档（strike），一个扑向手、一个从手边弹开
+ */
+export function buildDodge(c: BuildCtx, close: number, awayDir: number): Phase[] {
+  const f = clamp(c.fear ?? 0, 0, 1);
+  const to = flatH(dOf(avoidPose(close, awayDir, f)) + HC.dodgeD, awayDir);
+  const breath = { rate: 1, push: 0.08, amp: 0.4 };
+  return gov(
+    [
+      ph('dodge', 0.25, 'mj', to, { path: 'line', breath, feel: feel('tuck', { quiver: 0.06 }), voice: 'mute', light: 0.9 }),
+      ph('hold', 0.6 + 0.8 * f, 'hold', 'hold', { breath, feel: feel('tuck', { quiver: 0.04 }), voice: 'mute' }),
+    ],
+    c,
+    'strike',
+    { hold: 'reflex' },
+  );
 }
 
 /** 偷看：触须先指过去 → 臂转回三成 → 看一会儿 → 收回。乱序随机突然瞥一眼（生硬） */
 export function buildPeek(c: BuildCtx, g: HandGeom, close: number, awayDir: number): Phase[] {
-  const home = avoidPose(close, awayDir);
+  const f = clamp(c.fear ?? 0, 0, 1);
+  const home = avoidPose(close, awayDir, f);
   const k = c.k;
   if (c.temper === 'random') {
     return gov(
       [
-        ph('glance', 0.3, 'lin', flatH(dOf(home), lerpAngle(awayDir, g.dir, 0.4)), { feel: pointAt('random', { antennate: 0 }), voice: 'mute' }),
+        ph('glance', 0.3, 'lin', flatH(dOf(home), lerpAngle(home.dir, g.dir, 0.4 * (1 - HC.peekLeanN * f))), { feel: pointAt('random', { antennate: 0 }), voice: 'mute' }),
         ph('look', 0.4, 'hold', 'hold', { feel: pointAt('random', { antennate: 0, quiver: 0.04 }) }),
         ph('snap', 0.4, 'lin', home, { path: 'line', feel: feel('tuck'), voice: 'tsk' }),
       ],
@@ -846,7 +918,7 @@ export function buildPeek(c: BuildCtx, g: HandGeom, close: number, awayDir: numb
   }
   return gov(
     [
-      ph('lean', 1.2 / k, 'mj', flatH(Math.max(0, dOf(home) - 0.05), lerpAngle(awayDir, g.dir, 0.3)), { feel: pointAt(c.temper, { antennate: 0 }), breath: { rate: 0.3 }, voice: 'mute', light: 0.9 }),
+      ph('lean', 1.2 / k, 'mj', flatH(Math.max(0, dOf(home) - 0.05), lerpAngle(home.dir, g.dir, 0.3 * (1 - HC.peekLeanN * f))), { feel: pointAt(c.temper, { antennate: 0 }), breath: { rate: 0.3 }, voice: 'mute', light: 0.9 }),
       ph('look', 0.6 + 0.2 * c.tau, 'hold', 'hold', { feel: pointAt(c.temper, { antennate: 0, quiver: 0.04 }), breath: { rate: 0.3 }, voice: 'mute' }),
       ph('back', 1.2 / k, 'mj', home, { feel: feel('tuck') }),
     ],
@@ -857,12 +929,13 @@ export function buildPeek(c: BuildCtx, g: HandGeom, close: number, awayDir: numb
 
 /** 偷看时手动了：缩回去（urgent，一声 tsk）——观众学得会「别动它，它才敢看」 */
 export function buildSnap(c: BuildCtx, close: number, awayDir: number): Phase[] {
-  return gov([ph('snap', 0.4, 'mj', avoidPose(close, awayDir), { path: 'line', voice: 'tsk', feel: feel('tuck') })], c, 'urgent');
+  return gov([ph('snap', 0.4, 'mj', avoidPose(close, awayDir, c.fear ?? 0), { path: 'line', voice: 'tsk', feel: feel('tuck') })], c, 'urgent');
 }
 
 /** 手快速逼近：一缩（再背一点、环身往收拢端） */
 export function buildCringe(c: BuildCtx, close: number, awayDir: number): Phase[] {
-  const to = flatH(dOf(avoidPose(close, awayDir)) + 0.05, awayDir);
+  const home = avoidPose(close, awayDir, c.fear ?? 0);
+  const to = flatH(dOf(home) + 0.05, home.dir);
   return gov(
     [
       ph('cringe', 0.4, 'mj', to, { path: 'line', breath: { rate: 1, push: 0.06, amp: 0.5 }, feel: feel('tuck', { quiver: 0.05 }), voice: 'mute' }),

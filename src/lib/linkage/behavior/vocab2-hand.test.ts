@@ -8,8 +8,11 @@ import {
   type HandGeom,
   approachPlan,
   atMm,
+  avoidPose,
   buildApproachBeat,
   buildChaseBeat,
+  buildCringe,
+  buildDodge,
   buildEmpty,
   buildGiveUp,
   buildHop,
@@ -23,6 +26,7 @@ import {
   endPose,
   flatH,
   gainAt,
+  handArmGap,
   holdCue,
   holdDrive,
   holdEventMm,
@@ -98,6 +102,15 @@ function allTables(): { name: string; c: BuildCtx; phases: Phase[] }[] {
       out.push({ name: `${P} search`, c, phases: buildSearch(c, { D: 0.25, dir: 0.6 }, 3) });
       out.push({ name: `${P} shrink`, c, phases: buildShrink(c, 0.6, -2.5) });
       out.push({ name: `${P} peek`, c, phases: buildPeek(c, g, 0.6, -2.5) });
+      // ⑬ 怕到顶（fear 1）的躲：收、偷看、一缩、躲开（躲开走 strike 档，单独卡）
+      const cf = ctx(P, undefined, { fear: 1 });
+      out.push({ name: `${P} shrink fear`, c: cf, phases: buildShrink(cf, 0.6, -2.5) });
+      out.push({ name: `${P} peek fear`, c: cf, phases: buildPeek(cf, g, 0.6, -2.5) });
+      out.push({ name: `${P} cringe fear`, c: cf, phases: buildCringe(cf, 0.6, -2.5) });
+      for (const f of [0.2, 1]) {
+        const cd = ctx(P, avoidPose(0.6, 2.5, f), { fear: f });
+        out.push({ name: `${P} dodge ${f}`, c: cd, phases: buildDodge(cd, 0.8, -2.5) });
+      }
     }
   }
   return out;
@@ -131,6 +144,11 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
           continue;
         }
         if (w.p.name === 'latency') continue;
+        // 躲开（怕的时候手朝臂过来）：与扑同一个最快档，不限行程——它是从手边弹开，不是扑过去
+        if (w.p.name === 'dodge') {
+          expect(w.v, name).toBeLessThanOrEqual(tierSpeed('strike', c.k) + 1e-9);
+          continue;
+        }
         expect(w.v, `${name} · ${w.p.name}`).toBeLessThanOrEqual(tierSpeed('pursue', c.k) + 1e-9);
       }
     }
@@ -317,5 +335,57 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
     const far = sf[sf.length - 1].arm as Pose;
     expect(dOf(near)).toBeGreaterThan(dOf(far));
     expect(endPose(sp, c)).toEqual(c.rest);
+  });
+
+  it('越怕躲得越明显（2026-10-15）：fear 0 与改前逐位相同；fear 1 收得更紧、往下压、收得快，躲开再紧一截，偷看转回得少', () => {
+    // fear 0 / 缺省：改前的公式
+    for (const close of [0, 0.4, 1]) {
+      for (const dir of [-2.5, 0.3, 2]) {
+        const old = flatH(0.12 + 0.19 * close, dir);
+        expect(avoidPose(close, dir)).toEqual(old);
+        expect(avoidPose(close, dir, 0)).toEqual(old);
+      }
+    }
+    const c0 = ctx('C');
+    const s0 = buildShrink(c0, 0.6, -2.5);
+    const sh0 = s0[s0.length - 1];
+    expect(sh0.arm).toEqual(flatH(0.12 + 0.19 * 0.6, -2.5));
+    expect(sh0.dur).toBeGreaterThanOrEqual(1.2 / c0.k - 1e-9);
+    // fear 1：差动 +0.12·close、弯向往下（π）转 25°·close、收得快
+    const cf = ctx('C', undefined, { fear: 1 });
+    const f1 = avoidPose(1, 1.5, 1);
+    expect(dOf(f1)).toBeCloseTo(0.12 + 0.19 + HC.avoidTight, 12);
+    expect(f1.dir).toBeCloseTo(1.5 + HC.avoidTuck, 12);
+    expect(avoidPose(1, -1.5, 1).dir).toBeCloseTo(-1.5 - HC.avoidTuck, 12);
+    // 已经朝下的不再转过头
+    expect(Math.cos(avoidPose(1, Math.PI - 0.1, 1).dir)).toBeCloseTo(-1, 12);
+    const s1 = buildShrink(cf, 0.6, -2.5);
+    const sh1 = s1[s1.length - 1];
+    expect(dOf(sh1.arm as Pose)).toBeGreaterThan(dOf(sh0.arm as Pose) + 0.05);
+    expect(sh1.dur).toBeLessThan(sh0.dur);
+    // 躲开：比躲的姿态再紧 0.08、背着手、strike 档；后面定住
+    const home = avoidPose(0.8, -2.5, 1);
+    const cd = ctx('C', home, { fear: 1 });
+    const dg = buildDodge(cd, 0.8, -2.5);
+    expect(dg.map((p) => p.name)).toEqual(['dodge', 'hold']);
+    expect(dOf(dg[0].arm as Pose)).toBeCloseTo(Math.min(HC.flatMax, dOf(home) + HC.dodgeD), 12);
+    expect((dg[0].arm as Pose).dir).toBeCloseTo(-2.5, 12);
+    expect(dg[1].dur).toBeCloseTo(0.6 + 0.8, 12);
+    // 偷看：转回手那边的角度 0.3 → 0.09（fear 1）
+    const g = geom({ dir: 0.62 });
+    const lean0 = buildPeek(c0, g, 0.6, -2.5)[0].arm as Pose;
+    const lean1 = buildPeek(cf, g, 0.6, -2.5)[0].arm as Pose;
+    const off = (p: Pose): number => Math.abs(Math.atan2(Math.sin(p.dir - g.dir), Math.cos(p.dir - g.dir)));
+    expect(off(lean1)).toBeGreaterThan(off(lean0));
+  });
+
+  it('臂—手距离（粗估）：读数朝臂此刻的姿态挪，距离变小；手超出臂长的那一截算进去', () => {
+    const pose = flatH(0.3, -2.5);
+    const far = handArmGap(1.2, 0.6, 300, pose);
+    const mid = handArmGap(0.9, -1.5, 300, pose);
+    const at = handArmGap(0.3 / D_SPAN, -2.5, 300, pose);
+    expect(mid).toBeLessThan(far);
+    expect(at).toBeCloseTo(0, 9);
+    expect(handArmGap(0.3 / D_SPAN, -2.5, 600, pose)).toBeCloseTo(600 - HC.armL, 9);
   });
 });

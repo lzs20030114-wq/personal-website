@@ -9,6 +9,9 @@
 //   T  同 V，近处停留期间按时间表碰：12 s 拍朝人那半壳、18 s 摸、24 s 手碰臂 3 s、31 s 碰朝人那条触须。
 //   H  指针 = 手（台架同式闭环：handReading → HAND · handBandOf → 在场 · contactStep → 碰臂）：手在机身此刻朝向
 //      ±50° 处 1.2 m 出现，5 s 内移到 0.65 m，停 25 s（慢慢左右晃 ±8°），然后移出画布 15 s；三次，左右交替。
+//   M  同 H 的来访，但手停下以后一直去够大触手（2026-10-15 加，问「臂躲不躲手」）：从 6 s 起，指针在画面上追着此刻的
+//      臂梢走过去（400 mm/s，离梢不到 0.3 s 的路程时按距离减速，像人伸手），碰到就停 0.8 s，没碰到 3 s 就作罢；
+//      然后 250 mm/s 退回停手的地方、等 1.5 s，再够下一次。
 // 量（停留窗 = 近处的 30 s；对照窗 = 人不在的那 14 s）：
 //   face   机身朝向与人 / 手方位夹角的余弦，窗内均值（+1 正对，−1 背对）
 //   away   夹角 > 120° 的时间占比；toward = 夹角 < 45° 的占比
@@ -20,6 +23,10 @@
 //   voice  发声占比
 //   startle / respond  每次来访的惊跳 / 回应次数
 //   H 场景另有：tipNear = 梢端离手 < 120 mm 的时间占比；dTip = 梢端离手距离（mm）均值；touch = 碰到次数；wrap = 缠的次数
+//     armAway = 臂弯曲 × 弯向背着手的余弦（+ = 往背着手那边弯，− = 朝手弯；手在臂轴上读不准的那几帧用上一个弯向）
+//     dodge = 梢端离手 − 同一朝向下笔直的臂梢离手（mm；+ = 臂把梢挪开了，− = 臂把梢凑过去了）
+//   M 场景另有：reaches = 每次来访够了几次；touchRate = 够到（碰到臂）的比例；gapReach = 够的时候指针离臂（画面上
+//     的脊线，换成 mm）的平均距离；tTouch = 够到用了几秒（没够到的不算）
 // 汇总：每项指标的人格均值 ± 标准差、两两 Cohen's d；用标准化的指标向量做留一最近质心分类，正确率 = 「光看这些量
 // 能认出是哪种人格」的比例（四选一，瞎猜 25%）。
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -91,6 +98,9 @@ const cssOf = (w) => {
   return { x: q.x * CSS, y: q.y * CSS };
 };
 const Z_ARM = MB.ARM_GEOM.base.z;
+const HSC = (sc) => sc === 'H' || sc === 'M';
+/** 够臂（M）：指针追臂梢的速度、减速段、够不着作罢、碰到后停、退回速度、两次之间等（mm/s 与秒） */
+const REACH = { v: 400, slow: 0.3, giveUp: 3, hold: 0.8, back: 250, wait: 1.5, first: 6 };
 /** 世界系方位 β（0 = 机器初始正前方 = 世界 −X，逆时针为正）、离电机轴 r mm 的点（臂高水平面） */
 const worldAt = (beta, r) => ({ x: MB.YAW_AXIS.x - r * Math.cos(beta), y: MB.YAW_AXIS.y - r * Math.sin(beta), z: Z_ARM });
 
@@ -109,6 +119,8 @@ const makeArm = () => {
     spineSim: () => Array.from({ length: T3.TIP3 + 1 }, (_, i) => ({ ...arm.solver.nodes[T3.SPINE3(i)] })),
   };
 };
+/** 笔直的臂梢（臂系 → 世界，未转）：dodge 拿它当「臂不弯的话梢在哪」 */
+const TIP0 = armPoint(makeArm().tipSim());
 const handBandOf = (distMm, cur) => {
   const raw = bandOf(distMm / 1000);
   if (cur === null || cur === 'gone' || raw === cur) return raw;
@@ -133,14 +145,14 @@ function trial(P, vocab, seed, sc) {
   const r = rng(seed * 104729 + sc.charCodeAt(0));
   const t0 = e.time + 4;
   const visits = [];
-  if (sc === 'H') {
-    for (let k = 0; k < 3; k++) visits.push({ at: t0 + k * 45, side: k % 2 ? -1 : 1 });
+  if (HSC(sc)) {
+    for (let k = 0; k < 3; k++) visits.push({ at: t0 + k * 45, side: k % 2 ? -1 : 1, reaches: [] });
   } else {
     for (let k = 0; k < 4; k++) visits.push({ at: t0 + k * 50, bearing: (r() * 2 - 1) * Math.PI });
   }
-  const tEnd = sc === 'H' ? t0 + 3 * 45 : t0 + 4 * 50;
+  const tEnd = HSC(sc) ? t0 + 3 * 45 : t0 + 4 * 50;
   const inputs = [];
-  if (sc !== 'H') {
+  if (!HSC(sc)) {
     for (const v of visits) {
       const b = v.bearing;
       inputs.push({ t: v.at, i: { kind: 'PRESENCE', band: 'far', bearing: b } });
@@ -163,7 +175,8 @@ function trial(P, vocab, seed, sc) {
     }
     inputs.sort((a, b) => a.t - b.t);
   }
-  const arm = sc === 'H' ? makeArm() : null;
+  const arm = HSC(sc) ? makeArm() : null;
+  let tipCss = null;
   // H 的台架状态
   const track = MB.pointerTrack();
   let contact = MB.contactIdle();
@@ -188,6 +201,46 @@ function trial(P, vocab, seed, sc) {
     const wob = u < 5 ? 0 : (8 / DEG) * Math.sin((TAU * (u - 5)) / 12);
     return { beta: wrapPi(v.beta + wob), r: rr };
   };
+  /** M：手停下以后在画面上追臂梢（CSS px）；返回此刻指针的画面位置 */
+  const reachStep = (v, t, rest) => {
+    const m = (v.m ??= { phase: 'wait', until: v.at + REACH.first, p: { ...rest }, cur: null });
+    const dt = 1 / HZ;
+    const toward = (to, vMm) => {
+      const dx = to.x - m.p.x;
+      const dy = to.y - m.p.y;
+      const d = Math.hypot(dx, dy);
+      const stepPx = Math.min(d, vMm * PPM * dt);
+      if (d > 1e-9) {
+        m.p.x += (dx / d) * stepPx;
+        m.p.y += (dy / d) * stepPx;
+      }
+      return d;
+    };
+    if (m.phase === 'wait' && t >= m.until && tipCss) {
+      m.phase = 'reach';
+      m.until = t + REACH.giveUp;
+      m.cur = { t0: t, touched: false, tTouch: null, gaps: [] };
+      v.reaches.push(m.cur);
+    }
+    if (m.phase === 'reach') {
+      const d = Math.hypot(tipCss.x - m.p.x, tipCss.y - m.p.y) / PPM;
+      toward(tipCss, Math.min(REACH.v, d / REACH.slow + 20));
+      if (contact.touching) {
+        m.cur.touched = true;
+        m.cur.tTouch = t - m.cur.t0;
+        m.phase = 'hold';
+        m.until = t + REACH.hold;
+      } else if (t >= m.until) m.phase = 'back';
+    } else if (m.phase === 'hold') {
+      if (t >= m.until) m.phase = 'back';
+    } else if (m.phase === 'back') {
+      if (toward(rest, REACH.back) < 1) {
+        m.phase = 'wait';
+        m.until = t + REACH.wait;
+      }
+    }
+    return { x: m.p.x, y: m.p.y, phase: m.phase };
+  };
   while (e.time < tEnd) {
     const t = e.time;
     while (ii < inputs.length && inputs[ii].t <= t + 1e-9) {
@@ -195,15 +248,25 @@ function trial(P, vocab, seed, sc) {
       e.push(typeof it === 'function' ? it() : it);
     }
     let handNow = null;
-    if (sc === 'H') {
+    if (HSC(sc)) {
       const yaw0 = e.targets().yaw;
       const v = visits.find((x) => t >= x.at && t < x.at + 30);
       const hp = v ? handOf(v, t) : null;
       handNow = hp;
       if (hp) {
-        const W = worldAt(hp.beta, hp.r);
-        const ptrL = MB.projectLogical(VIEW, W);
-        const pc = { x: ptrL.x * CSS, y: ptrL.y * CSS };
+        let W = worldAt(hp.beta, hp.r);
+        let ptrL = MB.projectLogical(VIEW, W);
+        let pc = { x: ptrL.x * CSS, y: ptrL.y * CSS };
+        if (sc === 'M' && t - v.at >= 5) {
+          // 停手的地方（不晃）：够完退回这里
+          const R = MB.projectLogical(VIEW, worldAt(v.beta, 650));
+          const q = reachStep(v, t, { x: R.x * CSS, y: R.y * CSS });
+          pc = { x: q.x, y: q.y };
+          ptrL = { x: pc.x / CSS, y: pc.y / CSS };
+          W = MB.rayHitZ(VIEW, ptrL, Z_ARM) ?? W;
+          hp.phase = q.phase;
+        }
+        hp.W = W;
         if (!lastPtr || pc.x !== lastPtr.x || pc.y !== lastPtr.y) MB.trackMove(track, t, pc.x, pc.y);
         lastPtr = pc;
         const rd = MB.handReading(VIEW, ptrL, yaw0, handSent?.bearing);
@@ -244,6 +307,8 @@ function trial(P, vocab, seed, sc) {
         } else bandCand = null;
         MB.trackTrim(track, t);
         const spC = arm.spineSim().map((n) => cssOf(MB.yawPoint(armPoint(n), yaw0)));
+        hp.gap = MB.polylineDist(pc, spC) / PPM;
+        if (hp.phase === 'reach' && v.m?.cur) v.m.cur.gaps.push(hp.gap);
         contact = MB.contactStep(
           contact,
           {
@@ -290,7 +355,7 @@ function trial(P, vocab, seed, sc) {
     }
     e.tick();
     for (const rec of e.drain()) log.push(rec);
-    if (sc === 'H') {
+    if (HSC(sc)) {
       const gr = st.grasp;
       if (electrodeSent && !tensionOn && gr.phase === 'WRAP' && (gr.catchT !== undefined ? e.time >= gr.catchT : (e.time - gr.t0) / gr.dur >= CATCH_AT)) {
         tensionOn = true;
@@ -305,6 +370,7 @@ function trial(P, vocab, seed, sc) {
     if (arm) {
       arm.step(MB.tendonContractions(tg.arm, { deep: true }));
       tipW = MB.yawPoint(armPoint(arm.tipSim()), tg.yaw);
+      tipCss = cssOf(tipW);
     }
     frames.push({
       t: e.time,
@@ -313,19 +379,20 @@ function trial(P, vocab, seed, sc) {
       bend: tg.arm.bend,
       dir: tg.arm.dir,
       voice: tg.sound.on ? 1 : 0,
-      hand: handNow ? { beta: handNow.beta, r: handNow.r, rd: handNow.rd } : null,
+      hand: handNow ? { beta: handNow.beta, r: handNow.r, rd: handNow.rd, W: handNow.W, gap: handNow.gap, phase: handNow.phase } : null,
+      aim: lastAimDir,
       tipW,
     });
   }
   // —— 指标
   const out = [];
   for (const v of visits) {
-    const stay = sc === 'H' ? [v.at + 5, v.at + 30] : [v.at + 6, v.at + 36];
-    const ctrl = sc === 'H' ? [v.at + 31, v.at + 44] : [v.at + 37, v.at + 50];
+    const stay = HSC(sc) ? [v.at + 5, v.at + 30] : [v.at + 6, v.at + 36];
+    const ctrl = HSC(sc) ? [v.at + 31, v.at + 44] : [v.at + 37, v.at + 50];
     const inW = (w) => frames.filter((f) => f.t >= w[0] && f.t < w[1]);
     const S = inW(stay);
     const C = inW(ctrl);
-    const bearingOf = (f) => (sc === 'H' ? (f.hand ? f.hand.rd?.bearing ?? f.hand.beta : null) : v.bearing);
+    const bearingOf = (f) => (HSC(sc) ? (f.hand ? f.hand.rd?.bearing ?? f.hand.beta : null) : v.bearing);
     const ang = S.map((f) => {
       const b = bearingOf(f);
       return b === null ? null : Math.abs(wrapPi(f.yaw - b));
@@ -369,13 +436,30 @@ function trial(P, vocab, seed, sc) {
       startle: log.filter((x) => x.ev === 'STARTLE' && x.t >= v.at && x.t < v.at + 40).length,
       respond: log.filter((x) => x.ev === 'RESPONSE' && x.t >= v.at && x.t < v.at + 40).length,
     };
-    if (sc === 'H') {
-      const dd = S.filter((f) => f.hand && f.tipW).map((f) => {
-        const W = worldAt(f.hand.beta, f.hand.r);
+    if (HSC(sc)) {
+      const HF = S.filter((f) => f.hand && f.tipW && f.hand.W);
+      const dd = HF.map((f) => {
+        const W = f.hand.W;
         return Math.hypot(f.tipW.x - W.x, f.tipW.y - W.y, f.tipW.z - W.z);
       });
       row.dTip = mean(dd);
       row.tipNear = mean(dd.map((d) => (d < 120 ? 1 : 0)));
+      row.armAway = mean(HF.map((f) => -f.bend * Math.cos(f.dir - f.aim)));
+      row.dodge = mean(
+        HF.map((f, i) => {
+          const W = f.hand.W;
+          const T = MB.yawPoint(TIP0, f.yaw);
+          return dd[i] - Math.hypot(T.x - W.x, T.y - W.y, T.z - W.z);
+        }),
+      );
+      if (sc === 'M') {
+        const R = v.reaches;
+        row.reaches = R.length;
+        row.touchRate = R.length ? R.filter((x) => x.touched).length / R.length : NaN;
+        row.gapReach = mean(R.flatMap((x) => x.gaps));
+        const tt = R.filter((x) => x.touched).map((x) => x.tTouch);
+        row.tTouch = tt.length ? mean(tt) : NaN;
+      }
       row.touch = log.filter((x) => x.ev === 'ARM_TOUCH' && x.p?.on && x.t >= v.at && x.t < v.at + 31).length;
       row.wrap = log.filter((x) => x.ev === 'GRASP_START' && x.t >= v.at && x.t < v.at + 31).length;
       const seen = log.find((x) => x.ev === 'HAND_SEEN' && x.t >= v.at && x.t < v.at + 31);
@@ -390,7 +474,8 @@ function trial(P, vocab, seed, sc) {
 const METRICS = {
   V: ['face', 'away', 'toward', 'tTurn', 'turnSign', 'yawAct', 'open', 'dOpen', 'breathSd', 'bend', 'up', 'voice'],
   T: ['face', 'away', 'tTurn', 'open', 'dOpen', 'breathSd', 'bend', 'up', 'voice', 'startle', 'respond'],
-  H: ['face', 'away', 'toward', 'seenT', 'dTip', 'tipNear', 'touch', 'wrap', 'startle', 'open', 'dOpen', 'up', 'voice'],
+  H: ['face', 'away', 'toward', 'seenT', 'dTip', 'tipNear', 'armAway', 'dodge', 'touch', 'wrap', 'startle', 'open', 'dOpen', 'up', 'voice'],
+  M: ['face', 'away', 'armAway', 'dodge', 'dTip', 'touchRate', 'gapReach', 'tTouch', 'touch', 'wrap', 'startle'],
 };
 
 mkdirSync(OUT, { recursive: true });
@@ -408,7 +493,7 @@ for (const sc of SCENS) {
           const xs = vs.map((x) => x[k]).filter((x) => typeof x === 'number' && Number.isFinite(x));
           agg[k] = xs.length ? mean(xs) : NaN;
         }
-        if (sc === 'H') agg.modes = vs.map((x) => x.seenMode);
+        if (HSC(sc)) agg.modes = vs.map((x) => x.seenMode);
         rows.push(agg);
       }
       results[`${sc}|v${vocab}|${P}`] = rows;
@@ -477,7 +562,7 @@ for (const sc of SCENS) {
     lines.push(`| | ${PERSONA_KEYS.join(' | ')} |`);
     lines.push(`|---|${PERSONA_KEYS.map(() => '---').join('|')}|`);
     PERSONA_KEYS.forEach((P, i) => lines.push(`| ${P} | ${conf[i].join(' | ')} |`));
-    if (sc === 'H') {
+    if (HSC(sc)) {
       lines.push('\n第一次看见手时的态度（每次来访）：');
       for (const P of PERSONA_KEYS) {
         const ms2 = results[`${sc}|v${vocab}|${P}`].flatMap((r) => r.modes ?? []);

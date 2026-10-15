@@ -127,6 +127,7 @@ const HC_BEAT: Record<string, Pair> = {
   peek: ['偷看', 'peeks'],
   snap: ['缩回', 'snaps back'],
   cringe: ['一缩', 'cringes'],
+  dodge: ['躲开', 'dodges'],
   reshrink: ['再收', 'shrinks back'],
   relief: ['呼一口气', 'exhales'],
 };
