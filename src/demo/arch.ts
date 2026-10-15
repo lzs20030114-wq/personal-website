@@ -16,6 +16,9 @@ import {
   createArch,
 } from '../lib/linkage/arch';
 import { LinkageController } from '../lib/linkage/controller';
+import { startStaticVisitTracking } from '../lib/visitors/client';
+
+startStaticVisitTracking();
 
 // 轮回机器伏丘壳体 S4 环台架（真机机构的求解器实例，几何提取自 求解器结构演示.3dm）。
 // 与 main.ts（四杆台架）同构：状态机/交互规则全在 LinkageController，本文件只做

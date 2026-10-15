@@ -393,6 +393,7 @@ export function ZonePage({
           <div className="hs-foot__base" data-rv>
             <span>GitHub · plain URLs, no password</span>
             <span>© 2026</span>
+            <Link href="/privacy">Visitor privacy</Link>
             <button type="button" className="hs-foot__top-btn" onClick={onTop}>
               Back to top ↑
             </button>

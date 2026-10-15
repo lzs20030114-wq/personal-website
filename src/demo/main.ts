@@ -2,6 +2,9 @@ import { CRANK, N, THETA0, createCrankRocker } from '../lib/linkage/presets';
 import { LinkageController } from '../lib/linkage/controller';
 import { buildTracePath } from '../lib/linkage/trace';
 import type { Point } from '../lib/linkage/types';
+import { startStaticVisitTracking } from '../lib/visitors/client';
+
+startStaticVisitTracking();
 
 // M3 验收页（SPEC §8.1）：vanilla TS，无 React。
 // 状态机与全部交互规则在 LinkageController（可测），本文件只做 DOM 接线与渲染。

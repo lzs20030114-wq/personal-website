@@ -24,6 +24,7 @@ export function SiteFooter() {
       <div className="shell flex flex-wrap items-baseline justify-between" style={{ paddingBlock: 40, gap: 24 }}>
         <a className="footer-email" href="mailto:lzs20030114@gmail.com" style={{ textTransform: 'none', overflowWrap: 'anywhere', fontSize: 'clamp(18px, 2.2vw, 28px)' }}>lzs20030114@gmail.com</a>
         <span className="footer-note">{zh ? 'GitHub · 无需密码 · 直接访问' : 'GitHub · no password · plain URLs'}</span>
+        <a className="footer-note" href="/privacy">{zh ? '访客隐私' : 'Visitor privacy'}</a>
       </div>
     </footer>
   );

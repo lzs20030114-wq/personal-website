@@ -6,6 +6,7 @@ import { LabControlLabel } from './LabControlLabel';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
+import { MACHINE_BASE_FRAME, machineBaseGeometry, splitMachineFrame } from '../../src/lib/linkage/machine-base';
 import { FlatRenderer, bakeIndexed, bakeRuledPoints, bakeSkinned, type CellFrame } from '../../src/lib/linkage/gl3d';
 import { CriticallyDamped } from '../../src/lib/linkage/motion';
 import { armFrame, armPoint, armPolyline, idleContraction } from '../../src/lib/linkage/machine-arm';
@@ -496,7 +497,7 @@ const COPY = {
       arousal: '唤醒',
       sound: '声',
       light: '灯',
-      caveat: '节律非真机 · 偏航为占位',
+      caveat: '节律非真机 · 底座固定',
       hint: '移动指针 = 人的手 · 点小触手、按住大触手或点壳体与它互动 · 视角由下方按钮切换',
       compass: '俯视（按此刻视角转好，左右与画面一致）：箭头 = 机身朝向，短刻度 = 初始朝向，扇形 = 视野，圆点 = 人 / 手（空心 = 还没看见）',
       hand: '手',
@@ -595,7 +596,7 @@ const COPY = {
       arousal: 'Arousal',
       sound: 'Sound',
       light: 'Light',
-      caveat: 'Rhythms not hardware-verified · yaw is a placeholder',
+      caveat: 'Rhythms not hardware-verified · base fixed',
       hint: 'Move the pointer as a hand · click a small arm, press the large arm or the shell · views by the buttons below',
       compass: 'Top view, turned to match the current view: arrow = machine facing, tick = initial facing, wedge = field of view, dot = person / hand (hollow = not seen yet)',
       hand: 'Hand',
@@ -771,6 +772,12 @@ export function MachineBench({
       return;
     }
     const R = renderer;
+    if (behavior) {
+      const stage = machineBaseGeometry();
+      for (const [name, verts] of Object.entries(stage)) {
+        R.addMesh(`base_${name}`, bakeIndexed(verts, Uint32Array.from({ length: verts.length / 3 }, (_, i) => i)));
+      }
+    }
 
     // 实体载荷异步载入；未到之前画面是空的，HUD 出「载入实体…」
     let ready = false;
@@ -798,7 +805,12 @@ export function MachineBench({
             ? new Uint32Array(buf, g.iOff, g.tris * 3)
             : new Uint16Array(buf, g.iOff, g.tris * 3);
           // 带 blend 的组（sa_soft 软杆）= 双骨蒙皮：跟着两端关节标架弯
-          if (g.blend) R.addSkinnedMesh(g.name, bakeSkinned(verts, idx, g.blend[0], g.blend[1]));
+          if (behavior && g.name === 'frame') {
+            const split = splitMachineFrame(verts, idx);
+            R.addMesh('base_fixed', bakeIndexed(verts, split.base));
+            R.addMesh(g.name, bakeIndexed(verts, split.body));
+          }
+          else if (g.blend) R.addSkinnedMesh(g.name, bakeSkinned(verts, idx, g.blend[0], g.blend[1]));
           else R.addMesh(g.name, bakeIndexed(verts, idx));
         }
         ready = true;
@@ -913,7 +925,7 @@ export function MachineBench({
     let lastAimDir = 0;
     /** 最近一次报给引擎的电极电平（悬停碰到 ∪ 按住） */
     let electrodeSent = false;
-    // 偏航（整机绕竖轴，占位）：行为档 = 引擎给的值；编排档恒 0
+    // 偏航：仅上部绕底座圆柱轴心旋转，落地支承与展台用固定世界系。编排档恒 0。
     let yawNow = 0;
     const yf = (f: CellFrame): CellFrame => yawFrame(f, yawNow);
     const yp = (p: Vec3): Vec3 => yawPoint(p, yawNow);
@@ -1310,6 +1322,14 @@ export function MachineBench({
     const render = (): void => {
       R.beginFrame(cam);
       if (!ready) return;
+      if (behavior) {
+        R.drawMesh('base_plinth', MACHINE_BASE_FRAME, [0.08, 0.1, 0.11], [0.24, 0.28, 0.29]);
+        R.drawMesh('base_grid', MACHINE_BASE_FRAME, [0.22, 0.28, 0.29], [0.42, 0.48, 0.47]);
+        if (showNow.frame) {
+          R.drawMesh('base_fixed', MACHINE_BASE_FRAME, [...FRAME_SHADE.dark], [...FRAME_SHADE.lite]);
+          R.drawMesh('base_bearing', MACHINE_BASE_FRAME, [0.14, 0.16, 0.16], [0.64, 0.68, 0.66]);
+        }
+      }
       // 全实体、全部写深度——遮挡交给 z-buffer（这台没有半透明层，
       // 故不需要 Lab.04 那套「从远到近自己排序」）
       // 不透明档：遮罩面走实体路径——先画、写深度，遮挡由 z-buffer 精确给出

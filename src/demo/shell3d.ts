@@ -11,6 +11,9 @@ import {
   shellMaxError,
   stepRing,
 } from '../lib/linkage/shell3d';
+import { startStaticVisitTracking } from '../lib/visitors/client';
+
+startStaticVisitTracking();
 
 // 轮回机器伏丘壳体 五环立体台架（2026-07-17 用户立项：85mm 等距 / 同相呼吸 /
 // roll 按盘点 §7）。与 tentacle3d 同构：装备（camera3d/gl3d）零修改，本文件只做

@@ -8,6 +8,9 @@ import {
   createTentacle,
 } from '../lib/linkage/tentacle-data';
 import { LinkageController } from '../lib/linkage/controller';
+import { startStaticVisitTracking } from '../lib/visitors/client';
+
+startStaticVisitTracking();
 
 // 肌腱驱动触手台架（触手 spec v0.5，机制提取自 触手模拟1.ghx）：vanilla TS，无 React。
 // 左右滑块 = GH 的 contraction 滑块（差动收缩控弯曲）；拖拽 = GH 的 Grab。

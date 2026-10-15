@@ -12,6 +12,9 @@ import { OrbitCamera } from '../lib/linkage/camera3d';
 import { FlatRenderer, bakeIndexed, bakeSkinned, type CellFrame } from '../lib/linkage/gl3d';
 import meshUrl from './assets/tentacle3d-mesh.bin?url';
 import { CriticallyDamped } from '../lib/linkage/motion';
+import { startStaticVisitTracking } from '../lib/visitors/client';
+
+startStaticVisitTracking();
 
 // 立体触手台架（立体求解器 spec，渲染 v5——WebGL 解锁，用户拍板 2026-07-10）：
 // 零依赖裸 WebGL + z-buffer = 物理精确逐像素遮挡（SVG 画家算法对互穿零件
