@@ -9,7 +9,7 @@
 //   SCEN            场景，逗号分隔（默认全部：K,R,S1,S1n,S1p,S2,S3,S3s,S4,S4b,S4s,S5,S6,S7,S8,S9,S10）
 //   PERSONA         人格（默认 A,B,C,D）
 //   N               每格保留的种子数（默认 8；尾部分位门 p10 / p90 建议 16）
-//   VOCABS          动作词汇（默认 1,2）
+//   VOCABS          动作词汇（默认 2；2026-10-17 删掉现行动作后引擎只有一套，1 只对删之前的仓库有意义——REPO 指到旧版本时用）
 //   HAND_V2_FIELDS  v2 的 HAND 带不带 touch / still / v：1 带、0 不带；缺省 = 看 events.ts 收不收（isSensorInput 试一条带字段的 HAND）
 //   FRESH=1         不与 outDir 里已有的结果合并（默认合并：只覆盖这次跑的人格 × 版本 × 场景）
 //   SPONT=1         所有场景在手出现时把自发动作（⑥）放回来（默认只有 S7 放：偷看走 ⑥ 的调度）
@@ -68,7 +68,7 @@ const REPO = resolve(process.env.REPO ?? resolve(HERE, '../..'));
 const N = Number(process.env.N ?? 8);
 const ALL_SCENS = ['K', 'R', 'S1', 'S1n', 'S1p', 'S2', 'S3', 'S3s', 'S4', 'S4b', 'S4s', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10'];
 const SCENS = (process.env.SCEN ?? ALL_SCENS.join(',')).split(',').filter(Boolean);
-const VOCABS = (process.env.VOCABS ?? '1,2').split(',').map(Number);
+const VOCABS = (process.env.VOCABS ?? '2').split(',').map(Number);
 const PERSONAS = ['A', 'B', 'C', 'D'];
 
 const HZ = 60;
@@ -416,7 +416,7 @@ async function job(P, OUT) {
           // ① 手的读数（台架 syncHand ①）
           const rd = MB.handReading(view.v, ptrL, yaw0, handSent?.bearing);
           if (rd.side >= HAND_UI.sideMin || !handSent) lastAimDir = rd.aimDir;
-          if (MB.handSendDue(rd, handSent, lastAimDir, t, { v2: e.vocab() === 2 && V2_FIELDS, lastMoveAt: track.lastMoveAt })) {
+          if (MB.handSendDue(rd, handSent, lastAimDir, t, { v2: vocab === 2 && V2_FIELDS, lastMoveAt: track.lastMoveAt })) {
             const send = {
               bearing: r3(rd.bearing),
               dist: Math.round(rd.dist),
@@ -427,7 +427,7 @@ async function job(P, OUT) {
             };
             handSent = { ...send, at: t, onBody: rd.onBody };
             const ev = { kind: 'HAND', on: true, ...send };
-            if (e.vocab() === 2 && V2_FIELDS) {
+            if (vocab === 2 && V2_FIELDS) {
               ev.touch = Math.round(MB.contactRadiusMm(ppm, false));
               ev.still = Math.round(Math.min(9.9, t - track.lastMoveAt) * 10) / 10;
               ev.v = Math.round(MB.trackSpeed(track, t, pc.x, pc.y) / ppm);

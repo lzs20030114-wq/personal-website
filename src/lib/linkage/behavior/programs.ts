@@ -1,5 +1,5 @@
 /**
- * 动作程序（行为引擎「动作词汇 v2」，2026-10-08 研究原型；轮回机器_触手与转向研究.md §8）。
+ * 动作程序（行为引擎的动作，2026-10-08 研究原型立、2026-10-17 转为唯一的一套；轮回机器_触手与转向研究.md §8）。
  *
  * 一个动作 = 一张分段表：每段给时长、缓动、臂在段末的姿态（极坐标：弯曲量 + 弯向 + 肌腱轴深卷），
  * 可选一个低频摆动，以及这段里身体其它通道的提示（呼吸、触须、声、光、转身）。解释器每个定步
@@ -134,11 +134,16 @@ export function lerpPoseLine(a: Pose, b: Pose, u: number): Pose {
   return { bend, dir: bend > 1e-6 ? Math.atan2(y, x) : u < 0.5 ? a.dir : b.dir, deep: a.deep + (b.deep - a.deep) * u };
 }
 
-/** 弧路径的弯向增量：最短弧；给了参考增量 ref 时取离 ref 最近的那一支（连续展开，不翻面） */
+/**
+ * 弧路径的弯向增量：最短弧；给了参考增量 ref 时取离 ref 最近的那一支（连续展开，不翻面）。
+ * 段末几乎是直的（弯曲 < 0.03，弯向没有意义）：段首就这样 = 不转；段中途才变成这样 = 沿用已经在走的弧——
+ * 段末是「静息」时静息弯曲会在 0.03 上下来回（⑬ 收拢、随呼吸鼓起），此前在这一帧把增量归零，
+ * 臂在弯曲还有 0.65 时弯向一帧折回 0.38 rad（2026-10-17 删现行动作后全场守门测试抓到）
+ */
 export function arcDelta(a: Pose, b: Pose, ref: number | null = null): number {
   const dirA = a.bend < 0.03 ? b.dir : a.dir;
-  const dirB = b.bend < 0.03 ? dirA : b.dir;
-  const raw = wrapPi(dirB - dirA);
+  if (b.bend < 0.03) return ref ?? 0;
+  const raw = wrapPi(b.dir - dirA);
   return ref === null ? raw : ref + wrapPi(raw - ref);
 }
 
@@ -151,6 +156,21 @@ export function lerpPose(a: Pose, b: Pose, u: number, d: number = arcDelta(a, b)
     deep: a.deep + (b.deep - a.deep) * u,
   };
 }
+
+/** 两个姿态在差动平面上按直线混合（w = 0 取 a、1 取 b）；深卷线性 */
+function mixPose(a: Pose, b: Pose, w: number): Pose {
+  const x = (1 - w) * a.bend * Math.cos(a.dir) + w * b.bend * Math.cos(b.dir);
+  const y = (1 - w) * a.bend * Math.sin(a.dir) + w * b.bend * Math.sin(b.dir);
+  const bend = Math.hypot(x, y);
+  return { bend, dir: bend > 1e-9 ? Math.atan2(y, x) : b.dir, deep: a.deep + (b.deep - a.deep) * w };
+}
+
+/**
+ * 段末是「静息」时，静息弯曲小到这个以下，弧路径按静息弯曲渐变成直线：静息会穿过中心（⑬ 把它往人那边 / 背着人拉、
+ * 随呼吸鼓起），过中心时它的弯向一下转半圈，弧跟着它甩——臂在弯曲 0.4 时一帧转 0.48 rad、或连续几帧每帧 0.13 rad
+ * （2026-10-17 删现行动作后全场守门测试抓到）。直线在差动平面上是连续的，静息过不过中心都不跳
+ */
+export const REST_ARC_MIN = 0.15;
 
 /**
  * 推进到时刻 t，给出此刻的臂姿态与生效的那一段。rest = 此刻的静息姿态（引擎实时算）。
@@ -174,10 +194,15 @@ export function stepProgram(p: Program, t: number, rest: Pose): { pose: Pose; ph
   const u = ph.dur > 0 ? tau / ph.dur : 1;
   const to = target(ph, p.start, rest);
   let pose: Pose;
-  if (ph.path === 'line') pose = lerpPoseLine(p.start, to, ease(ph.ease, u));
+  const e = ease(ph.ease, u);
+  if (ph.path === 'line') pose = lerpPoseLine(p.start, to, e);
   else {
     p.dRef = arcDelta(p.start, to, p.dRef);
-    pose = lerpPose(p.start, to, ease(ph.ease, u), p.dRef);
+    pose = lerpPose(p.start, to, e, p.dRef);
+    if (ph.arm === 'rest' && to.bend < REST_ARC_MIN) {
+      const w = to.bend / REST_ARC_MIN;
+      pose = mixPose(lerpPoseLine(p.start, to, e), pose, w * w * (3 - 2 * w));
+    }
   }
   if (ph.osc && ph.osc.amp !== 0) {
     const fade = Math.min(0.4, ph.dur / 2);

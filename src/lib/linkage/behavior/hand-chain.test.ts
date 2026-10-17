@@ -51,7 +51,7 @@ class Rig {
   autoHand = true;
   t0: number;
   constructor(P: PersonaKey, seed: number, opts: { deepOk?: boolean } = {}) {
-    this.e = new BehaviorEngine({ seed, order: order(P), lifeRate: 1, vocab: 2, deepOk: opts.deepOk ?? true });
+    this.e = new BehaviorEngine({ seed, order: order(P), lifeRate: 1, deepOk: opts.deepOk ?? true });
     this.log.push(...this.e.drain());
     this.e.skip();
     this.e.tick();
@@ -455,7 +455,7 @@ function closedLoopHand(r: Rig, where: (t: number) => V3, speed: (t: number) => 
     if (v > 0) lastMoveAt = t;
     const read = handReading(TOP, projectLogical(TOP, where(t)), r.e.targets().yaw, sent?.bearing);
     if (read.side >= HAND_UI.sideMin || !sent) aimDir = read.aimDir;
-    if (handSendDue(read, sent, aimDir, t, { v2: true, lastMoveAt })) {
+    if (handSendDue(read, sent, aimDir, t, { lastMoveAt })) {
       const r3 = (x: number): number => Math.round(x * 1000) / 1000;
       const send = { bearing: r3(read.bearing), dist: Math.round(read.dist), face: r3(read.face), aimDir: r3(aimDir), aimBend: r3(read.aimBend), aimDist: Math.round(read.aimDist) };
       sent = { ...send, at: t };

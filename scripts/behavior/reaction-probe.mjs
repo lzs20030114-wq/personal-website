@@ -27,8 +27,8 @@ import { createServer } from 'vite';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const OUT = process.argv[2] ? resolve(process.argv[2]) : null;
 const N = Number(process.env.N ?? 12);
-/** 动作词汇：VOCAB=2 量研究原型（vocab2.ts），默认 1 = 现行 */
-const VOCAB = Number(process.env.VOCAB ?? 1) === 2 ? 2 : 1;
+/** 动作词汇：默认 2（2026-10-17 起引擎只有这一套）；VOCAB=1 只对删现行之前的版本有意义 */
+const VOCAB = Number(process.env.VOCAB ?? 2) === 1 ? 1 : 2;
 /** 肌腱轴深卷：DEEP=0 量「深卷关着」（真机默认，执行层封顶 D 0.5），默认开（台架 Lab 1-6） */
 const DEEP = process.env.DEEP !== '0';
 const HZ = 60;

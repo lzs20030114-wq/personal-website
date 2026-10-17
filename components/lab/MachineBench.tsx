@@ -266,7 +266,7 @@ interface BehaviorHud {
   hand: { seen: boolean; mode: HandMode | null; bearing: number; dist: number; touch: boolean; held: boolean } | null;
   /** 此刻视角的水平朝向（世界 x̂ 在屏幕右方向上的分量 m0、m1）：罗盘按它转，左右与画面一致 */
   view: [number, number];
-  /** 研究原型（动作词汇 v2）正在执行的程序 · 段；现行词汇或没有程序 = null */
+  /** 正在执行的动作程序 · 段；没有程序 = null */
   motion: string | null;
 }
 
@@ -454,12 +454,6 @@ const COPY = {
       ] as [string, string],
       restart: '重来',
       motion: '动作',
-      motionHelp: [
-        '大触手与全身的动作词汇。现行 = 已上线的读法；新 = 2026-10-08 的研究原型（惊跳是 0.1 s 的反射、回应按刺激分动词、自发动作变小变慢、人格差在恢复的结构里），待作者拍板。换了就重开一场。',
-        'The motion vocabulary of the big arm and the body. Current = the live reading; New = the 2026-10-08 research prototype (startle as a 0.1 s reflex, one response verb per stimulus, smaller and slower spontaneous gestures, personas differ in how they recover), pending the author’s decision. Changing it starts a new session.',
-      ] as [string, string],
-      motionOld: '现行',
-      motionNew: '新 · 研究',
       skip: '下一段',
       presence: '在场',
       presenceHelp: [
@@ -553,12 +547,6 @@ const COPY = {
       ] as [string, string],
       restart: 'Restart',
       motion: 'Motion',
-      motionHelp: [
-        '大触手与全身的动作词汇。现行 = 已上线的读法；新 = 2026-10-08 的研究原型（惊跳是 0.1 s 的反射、回应按刺激分动词、自发动作变小变慢、人格差在恢复的结构里），待作者拍板。换了就重开一场。',
-        'The motion vocabulary of the big arm and the body. Current = the live reading; New = the 2026-10-08 research prototype (startle as a 0.1 s reflex, one response verb per stimulus, smaller and slower spontaneous gestures, personas differ in how they recover), pending the author’s decision. Changing it starts a new session.',
-      ] as [string, string],
-      motionOld: 'Current',
-      motionNew: 'New · research',
       skip: 'Next stage',
       presence: 'Presence',
       presenceHelp: [
@@ -649,7 +637,6 @@ export function MachineBench({
     // —— 行为档（Lab 1-6）
     setLifeRate: (r: number) => void;
     restart: (first: PersonaKey) => void;
-    setVocab: (v: 1 | 2) => void;
     skip: () => void;
     presence: (band: PresenceBand, bearing: number) => void;
     touch: (t: 'pat' | 'stroke' | 'poke') => void;
@@ -680,7 +667,6 @@ export function MachineBench({
   // —— 行为档（Lab 1-6）的面板状态；behavior 不开时这些都不出现在界面上
   const [lifeRate, setLifeRate] = useState<number>(LIFE_RATE_DEFAULT);
   const [firstK, setFirstK] = useState<PersonaKey>('A');
-  const [vocab, setVocab] = useState<1 | 2>(1);
   const [band, setBand] = useState<PresenceBand>('gone');
   const [bearingDeg, setBearingDeg] = useState(0);
   const [lifted, setLifted] = useState(false);
@@ -869,8 +855,6 @@ export function MachineBench({
     let hudDirty = false;
     let hudClock = 0;
     let firstNow: PersonaKey = 'A';
-    /** 动作词汇（现行 1 / 研究原型 2）：换了重开一场；交接来的引擎带着它自己的词汇，面板跟着它 */
-    let vocabNow: 1 | 2 = 1;
     let rateNow: number = LIFE_RATE_DEFAULT;
     // 台架记着的「传感事实」：重开一场时原样再告诉新引擎（人还站在那里，机器还被拿着）
     let presenceNow: { band: PresenceBand; bearing: number } = { band: 'gone', bearing: 0 };
@@ -946,8 +930,8 @@ export function MachineBench({
     /** 新开一场：种子每场随机（非确定是论点的一部分），会话头里记着，导出的日志照样可复现 */
     const startEngine = (): void => {
       const seed = (Math.random() * 0x100000000) >>> 0;
-      // 台架开着肌腱轴深卷（tendonContractions 的 deep），迎手链 v2 的深卷门要知道这一点（每轮 ≤ 4 s、冷却 45 s）
-      const eng = new BehaviorEngine({ seed, order: rotateOrder(firstNow), loop: true, lifeRate: rateNow, vocab: vocabNow, deepOk: vocabNow === 2 });
+      // 台架开着肌腱轴深卷（tendonContractions 的 deep），引擎要知道这一点
+      const eng = new BehaviorEngine({ seed, order: rotateOrder(firstNow), loop: true, lifeRate: rateNow, deepOk: true });
       engine = eng;
       logHeader = eng.header();
       logBuf.length = 0;
@@ -973,8 +957,6 @@ export function MachineBench({
       try {
         const eng = BehaviorEngine.restore(state);
         engine = eng;
-        vocabNow = eng.vocab();
-        setVocab(vocabNow);
         logHeader = eng.header();
         logBuf.length = 0;
         // 倍率落到滑条的某一档（本来就在档上时 setLifeRate 直接返回，不记操作日志）
@@ -1390,13 +1372,13 @@ export function MachineBench({
       // 呼吸 → 曲柄：限速追，每子步 ≤1°（machine-behavior.ts 的 §6.2 实测）
       followBreath(machine, tg.breath.s, dt);
       // 臂：抽象指令 → 三腱目标，之后照旧走肌肉的临界阻尼限速
-      // 台架开着肌腱轴深卷（研究原型的惊跳会用到；现行词汇不给 deep，这一项对它不起作用）
+      // 台架开着肌腱轴深卷（惊跳会用到）
       const c = tendonContractions(tg.arm, { deep: true });
       for (let k = 0; k < 3; k++) muscles[k].target = c[k];
       yawNow = tg.yaw;
       // 抓握演示的张力开关：手在臂上（悬停碰着或按着）、缠到六成 → 卡住；臂一松（惊跳 / 死亡 / 放弃）→ 东西掉出来
       const gr = eng.state.grasp;
-      // 迎手链 v2 的缠写 catchT（贴上做完、臂停稳的那一刻）：手指在那一刻之后才算被卡住；现行照旧缠到六成
+      // 迎手链的缠写 catchT（贴上做完、臂停稳的那一刻）：手指在那一刻之后才算被卡住；没看见手就碰臂的缠照旧缠到六成
       const caught = gr.catchT !== undefined ? eng.time >= gr.catchT : (eng.time - gr.t0) / gr.dur >= CATCH_AT;
       if (electrodeSent && !tensionOn && gr.phase === 'WRAP' && caught) {
         tensionOn = true;
@@ -1607,10 +1589,6 @@ export function MachineBench({
         firstNow = first;
         if (engine) startEngine();
       },
-      setVocab: (v) => {
-        vocabNow = v;
-        if (engine) startEngine();
-      },
       skip: () => engine?.skip(),
       presence: (b, bearing) => {
         presenceNow = { band: b, bearing };
@@ -1761,13 +1739,12 @@ export function MachineBench({
       if (read.side >= HAND_UI.sideMin || !handSent) lastAimDir = read.aimDir;
       const now = performance.now() / 1000;
       trackTrim(track, now);
-      // 臂梢那一处画面上一毫米几个 CSS px（碰臂阈值与迎手链 v2 的读数都按它换算）
+      // 臂梢那一处画面上一毫米几个 CSS px（碰臂阈值与迎手链的读数都按它换算）
       const tipW = yawPoint(ARM_GEOM.tip, yawNow);
       const qz = viewDepthOf(tipW);
       const pxPerMm = (cam.viewScale * (r.width / 700)) / (perspNow ? 1 - qz / 900 : 1);
-      const v2 = eng.vocab() === 2;
-      // ① 手的读数（先于在场：同一帧里引擎先知道手、再收到「走近」）。发不发的规矩在 handSendDue（v2 下指针还在挪也发）
-      if (handSendDue(read, handSent, lastAimDir, now, { v2, lastMoveAt: track.lastMoveAt })) {
+      // ① 手的读数（先于在场：同一帧里引擎先知道手、再收到「走近」）。发不发的规矩在 handSendDue（指针还在挪也发）
+      if (handSendDue(read, handSent, lastAimDir, now, { lastMoveAt: track.lastMoveAt })) {
         // 日志里不要 17 位小数：角度 / 弯曲到千分之一、距离到毫米（引擎吃的就是日志里那个数，回放逐位一致）
         const r3 = (x: number): number => Math.round(x * 1000) / 1000;
         const send = {
@@ -1779,15 +1756,15 @@ export function MachineBench({
           aimDist: Math.round(read.aimDist),
         };
         handSent = { ...send, at: now };
-        // 迎手链 v2 还要三样（现行不带，日志一字不变）：此刻的有效碰到半径 mm（引擎按它留停距）、指针已静止多久、指针速度 mm/s
-        const extra = v2
-          ? {
-              touch: Math.round(contactRadiusMm(pxPerMm, p0.touch)),
-              still: Math.min(9.9, Math.round((now - track.lastMoveAt) * 10) / 10),
-              v: Math.round(trackSpeed(track, now, px, py) / pxPerMm),
-            }
-          : {};
-        eng.push({ kind: 'HAND', on: true, ...send, ...extra });
+        // 迎手链还要三样：此刻的有效碰到半径 mm（引擎按它留停距）、指针已静止多久、指针速度 mm/s
+        eng.push({
+          kind: 'HAND',
+          on: true,
+          ...send,
+          touch: Math.round(contactRadiusMm(pxPerMm, p0.touch)),
+          still: Math.min(9.9, Math.round((now - track.lastMoveAt) * 10) / 10),
+          v: Math.round(trackSpeed(track, now, px, py) / pxPerMm),
+        });
       }
       // 暂停时只报手的读数（收件箱里连着的 HAND 只留一条）；在场与碰臂的跳变不报——否则继续时一步里涌进一串
       if (!running) return;
@@ -1815,7 +1792,7 @@ export function MachineBench({
         syncContact();
         return;
       }
-      // 迎手链 v2：缠 / 握着时慢慢挪手 = 被牵着走，锚点跟着指针（不判松开）
+      // 迎手链：缠 / 握着时慢慢挪手 = 被牵着走，锚点跟着指针（不判松开）
       contact = contactStep(contact, {
         now,
         x: px,
@@ -1826,7 +1803,7 @@ export function MachineBench({
         speed: trackSpeed(track, now, px, py),
         lastMoveAt: track.lastMoveAt,
         grasp: eng.state.grasp.phase,
-      }, { traction: v2 }).next;
+      }, { traction: true }).next;
       syncContact();
     };
 
@@ -1857,7 +1834,7 @@ export function MachineBench({
       // 圈的定位块是 .lab-fig，画布在 /lab 上比它窄、居中：加上画布在它里面的偏移
       const ox = x + canvas.offsetLeft;
       const oy = y + canvas.offsetTop;
-      // 迎手链 v2 握着手时：圈随挤压一紧一松（±12%）——网页的手没有身体，「被握着」靠标记读出来
+      // 迎手链握着手时：圈随挤压一紧一松（±12%）——网页的手没有身体，「被握着」靠标记读出来
       const sq = tensionOn && electrodeSent ? engine?.handSqueeze() ?? null : null;
       const sc = sq === null ? '' : ` scale(${(1 - 0.12 * (2 * sq - 1)).toFixed(3)})`;
       el.style.transform = `translate(${ox.toFixed(1)}px, ${oy.toFixed(1)}px)${sc}`;
@@ -2342,24 +2319,6 @@ export function MachineBench({
         <button type="button" onClick={() => apiRef.current?.skip()}>
           {B.skip}
         </button>
-      </div>
-      <div className="grp grp--seg">
-        <LabControlLabel help={B.motionHelp} lang={lang}>{B.motion}</LabControlLabel>
-        <span className="seg">
-          {([1, 2] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              className={v === vocab ? 'active' : undefined}
-              onClick={() => {
-                setVocab(v);
-                apiRef.current?.setVocab(v);
-              }}
-            >
-              {v === 1 ? B.motionOld : B.motionNew}
-            </button>
-          ))}
-        </span>
       </div>
       <div className="grp grp--seg">
         <LabControlLabel help={B.presenceHelp} lang={lang}>{B.presence}</LabControlLabel>

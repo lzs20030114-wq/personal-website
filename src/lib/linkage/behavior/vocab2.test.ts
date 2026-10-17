@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BehaviorEngine, ENGINE, type EngineState, HZ, STATE_VERSION, STATE_VERSION_V2, runSession, type ScheduledInput } from './engine';
+import { BehaviorEngine, ENGINE, type EngineState, HZ, STATE_VERSION, runSession, type ScheduledInput } from './engine';
 import type { SensorInput } from './events';
 import { toJsonl } from './log';
 import { PERSONAS, PERSONA_KEYS, type PersonaKey } from './persona';
@@ -328,7 +328,7 @@ describe('动作词汇 v2 · 审查抓到的（2026-10-08）', () => {
 
 /** 跳过诞生、关掉自发与张望，给一个干净的成长段 */
 function grown(P: PersonaKey, seed = 7): BehaviorEngine {
-  const e = new BehaviorEngine({ seed, order: [P, ...PERSONA_KEYS.filter((k) => k !== P)], loop: false, vocab: 2 });
+  const e = new BehaviorEngine({ seed, order: [P, ...PERSONA_KEYS.filter((k) => k !== P)], loop: false });
   e.skip();
   e.tick();
   e.drain();
@@ -349,16 +349,15 @@ const armXY = (e: BehaviorEngine): [number, number] => {
 };
 
 describe('动作词汇 v2 · 引擎', () => {
-  it('vocab: 2 的会话：快照记 v4、JSON 往返后接着跑逐字相同；v3 / v4 与有没有 m2 对不上一律拒收', () => {
+  it('快照：JSON 往返后接着跑逐字相同；版本不对、或缺了动作程序那一块（m2）一律拒收', () => {
     const inputs: ScheduledInput[] = [
       { t: 70, input: { kind: 'SHELL_STROKE', half: 'L', touch: 'stroke' } },
       { t: 78, input: { kind: 'KNOCK', intensity: 0.95 } },
       { t: 80, input: { kind: 'FEELER_TOUCH', feeler: 1, side: 'R' } },
     ];
-    const head = runSession({ seed: 5, vocab: 2, inputs, until: 79 }).engine;
-    expect(head.vocab()).toBe(2);
+    const head = runSession({ seed: 5, inputs, until: 79 }).engine;
     const snap = JSON.parse(JSON.stringify(head.snapshot())) as EngineState;
-    expect(snap.v).toBe(STATE_VERSION_V2);
+    expect(snap.v).toBe(STATE_VERSION);
     const back = BehaviorEngine.restore(snap);
     const tail = (e: BehaviorEngine): string => {
       const out = [];
@@ -370,29 +369,30 @@ describe('动作词汇 v2 · 引擎', () => {
       return out.join('\n') + toJsonl(e.drain());
     };
     expect(tail(back)).toBe(tail(head));
-    expect(() => BehaviorEngine.restore({ ...snap, v: STATE_VERSION })).toThrow();
-    const v1 = runSession({ seed: 5, until: 3 }).engine.snapshot();
-    expect(() => BehaviorEngine.restore({ ...v1, v: STATE_VERSION_V2 })).toThrow();
-    expect(BehaviorEngine.restore(v1).vocab()).toBe(1);
+    // 删现行之前的两种旧版本（现行 4、研究原型 6）都不收
+    expect(() => BehaviorEngine.restore({ ...snap, v: 4 } as unknown as EngineState)).toThrow();
+    expect(() => BehaviorEngine.restore({ ...snap, v: 6 } as unknown as EngineState)).toThrow();
+    const { m2: _m2, ...noM2 } = snap;
+    expect(() => BehaviorEngine.restore(noM2 as unknown as EngineState)).toThrow();
   });
 
-  it('会话头记动作词汇（只在 v2 时出现）：照会话头回放，日志逐字相同', () => {
+  it('会话头记动作词汇（恒为 2，与删现行之前的研究会话头逐字相同）：照会话头回放，日志逐字相同', () => {
     const inputs: ScheduledInput[] = [
       { t: 66, input: { kind: 'SHELL_STROKE', half: 'L', touch: 'stroke' } },
       { t: 74, input: { kind: 'KNOCK', intensity: 0.9 } },
     ];
-    const a = runSession({ seed: 9, vocab: 2, lifeRate: 10, inputs, until: 110 });
+    const a = runSession({ seed: 9, lifeRate: 10, inputs, until: 110 });
     expect(a.header.vocab).toBe(2);
-    expect(runSession({ seed: 9, until: 1 }).header).not.toHaveProperty('vocab');
+    expect(JSON.stringify(a.header).endsWith('"lifeRate":10,"vocab":2}')).toBe(true);
     const h = a.header;
-    const b = runSession({ seed: h.seed, order: [...h.order], lifeRate: h.lifeRate, vocab: h.vocab ?? 1, inputs, until: 110 });
+    const b = runSession({ seed: h.seed, order: [...h.order], lifeRate: h.lifeRate, inputs, until: 110 });
     expect(toJsonl(b.log, b.header)).toBe(toJsonl(a.log, a.header));
   });
 
   it('非确定性：同一次轻抚连发 20 次，动作组合（变体 / 臂 / 触须 / 转身）不止一种', () => {
     for (const k of ['A', 'B', 'C'] as const) {
       const strokes = Array.from({ length: 20 }, (_, i) => ({ t: 64 + i * 12, input: { kind: 'SHELL_STROKE', half: 'L', touch: 'stroke' } as SensorInput }));
-      const { log } = runSession({ seed: 71, order: [k, ...PERSONA_KEYS.filter((x) => x !== k)], vocab: 2, inputs: strokes, until: 330 });
+      const { log } = runSession({ seed: 71, order: [k, ...PERSONA_KEYS.filter((x) => x !== k)], inputs: strokes, until: 330 });
       const resp = log.filter((r) => r.ev === 'RESPONSE');
       expect(resp.length).toBeGreaterThanOrEqual(12);
       const combos = new Set(resp.map((r) => `${r.p!.motion}/${r.p!.arm}/${r.p!.feeler}/${r.p!.turn}`));
@@ -469,7 +469,7 @@ describe('动作词汇 v2 · 引擎', () => {
   });
 
   it('死亡开始时还在做的动作不演完：换成平平的收场，死亡里没有任何呼吸 / 声 / 光提示', () => {
-    const e = new BehaviorEngine({ seed: 11, order: ['C', 'A', 'B', 'D'], loop: false, vocab: 2, lifeRate: 20 });
+    const e = new BehaviorEngine({ seed: 11, order: ['C', 'A', 'B', 'D'], loop: false, lifeRate: 20 });
     let sawSettle = false;
     let cueInDeath = false;
     let poked = false;
@@ -511,7 +511,7 @@ describe('动作词汇 v2 · 引擎', () => {
       { kind: 'PRESENCE', band: 'gone' },
     ];
     for (const seed of [161, 162]) {
-      const e = new BehaviorEngine({ seed, order: [PERSONA_KEYS[seed % 4], ...PERSONA_KEYS.filter((k) => k !== PERSONA_KEYS[seed % 4])], vocab: 2, lifeRate: 5 });
+      const e = new BehaviorEngine({ seed, order: [PERSONA_KEYS[seed % 4], ...PERSONA_KEYS.filter((k) => k !== PERSONA_KEYS[seed % 4])], lifeRate: 5 });
       let prev = e.targets();
       const m = { sLo: 1, sHi: 0, bend: 0, deep: 0, dS: 0, dYaw: 0, dArm: 0, dFeeler: 0, dTendon: 0 };
       let prevC = tendonContractions(prev.arm, { deep: true });

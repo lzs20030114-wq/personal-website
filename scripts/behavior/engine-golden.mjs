@@ -2,13 +2,10 @@
 //
 //   node scripts/behavior/engine-golden.mjs <引擎所在仓库根目录> [来源标记] [组别] > src/lib/linkage/behavior/engine.golden.json
 //
-// 引擎根目录传**改动前**的那一份（例如把 git show <rev>:src/lib/linkage/{behavior/*.ts,fixed-step.ts,motion.ts}
-// 导到一个临时目录）；用例与哈希取当前仓库的 golden.ts。组别（逗号分隔，默认全部）：
-//   base = 现行、没有手（2026-10-07 的基准取自 d06bc0a，Lab 1-6 加手之前）；
-//   v2   = 同一组用例、动作词汇 v2、没有手（2026-10-08 迎手链 v2 动工前，取自 74615e1）；
-//   hand = 现行、写死的手脚本（同上，取自 74615e1）。
-// 2026-10-14 人格重分类（spec v0.9）：人格表整体换了，三组都用当时的引擎（engine root = 本仓库）重生成。
-// 只重生成某几组时，其余组从现有的 engine.golden.json 原样带过来（来源标记不变）。
+// 引擎根目录传**改动前**的那一份（例如 git worktree add 一份旧版本）；用例与哈希取当前仓库的 golden.ts。
+// 组别（逗号分隔，默认全部）：base = 没有手；hand = 加写死的手脚本。
+// 沿革见 engine.golden.test.ts 头注（2026-10-17 删掉现行动作后只剩这两组）。
+// 只重生成某一组时，另一组从现有的 engine.golden.json 原样带过来（来源标记不变）。
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,7 +14,7 @@ import { createServer } from 'vite';
 const here = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const engineRoot = resolve(process.argv[2] ?? here);
 const source = process.argv[3] ?? 'unknown';
-const groups = (process.argv[4] ?? 'base,v2,hand').split(',');
+const groups = (process.argv[4] ?? 'base,hand').split(',');
 const prev = JSON.parse(readFileSync(resolve(here, 'src/lib/linkage/behavior/engine.golden.json'), 'utf8'));
 const mk = (root) =>
   createServer({ root, configFile: false, server: { middlewareMode: true, watch: null, hmr: false }, appType: 'custom', logLevel: 'error' });
@@ -34,7 +31,6 @@ try {
   const out = {
     source: groups.includes('base') ? source : prev.source,
     cases: groups.includes('base') ? digest(G.GOLDEN_CASES, 'base') : prev.cases,
-    v2: groups.includes('v2') ? { source, cases: digest(G.GOLDEN_CASES, 'v2') } : prev.v2,
     hand: groups.includes('hand') ? { source, cases: digest(G.GOLDEN_HAND_CASES, 'hand') } : prev.hand,
   };
   process.stdout.write(`${JSON.stringify(out, null, 2)}\n`);

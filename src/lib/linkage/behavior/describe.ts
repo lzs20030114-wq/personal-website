@@ -173,8 +173,8 @@ function what(r: LogRecord, lang: DescribeLang): string {
       return p.on === false ? (zh ? '手移开' : 'hand away') : zh ? '手在动' : 'hand moves';
     // —— 引擎
     case 'RESPONSE':
-      // 2026-10-14 起现行动作也按 ⑩ 分迎 / 原地 / 躲：躲的回应单独写出来（不写情绪，只写动作）
-      if (p.variant === 'avoid') return zh ? `躲开（${num(p.latency)} s）` : `draws back (${num(p.latency)} s)`;
+      // 回应按 ⑩ 分迎 / 原地 / 躲：躲的回应单独写出来（不写情绪，只写动作）。动作名以 .avoid 结尾的是躲
+      if (String(p.motion ?? '').endsWith('.avoid')) return zh ? `躲开（${num(p.latency)} s）` : `draws back (${num(p.latency)} s)`;
       return zh ? `回应（${num(p.latency)} s）` : `response (${num(p.latency)} s)`;
     case 'RESPONSE_DROP':
       return zh ? '响应作废' : 'response dropped';

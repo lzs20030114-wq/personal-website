@@ -219,23 +219,22 @@ describe('曲柄追随：限速与子步', () => {
   }
 
   /**
-   * 实测（2026-10-07，种子 7 / 11，成长段带轻拍与拍手）：活力型需求峰值 4.7 / 5.3 rad/s，
-   * 1.2% / 1.3% 的帧超过上限，p95 滞后为 0、最大 0.04 / 0.12 行程（兴奋时死点附近最快那几口）；
-   * 沉静 0.7、好奇 1.9、不稳定 2.7–3.3 rad/s，从不被限速。2026-10-14 重分类后：热情 = 原活力的呼吸；
-   * 乱序随机偏向两端抽、每口气的行程速度封在 0.9/s（engine.ts EXTREME_BREATH_RATE），照样不被限速。
+   * 实测（种子 7 / 11，成长段带轻拍与拍手）。2026-10-07 现行动作下活力型（= 现在的热情）需求峰值 4.7 / 5.3 rad/s、
+   * 1.2% 的帧被限速；2026-10-17 删掉现行动作后只剩动作程序那一套：呼吸提示的行程速度封在 π·a/T ≤ 1.2/s
+   *（vocab2.ts V2.breathRateCap），热情 2.8、沉静 0.7–0.8、回避 2.7–2.9 rad/s，从不被限速；乱序随机只有惊跳那一下
+   * 环身「猛收」（叠在输出上，快升 ω 10）快过曲柄：需求峰值 4.5–9.2 rad/s，只占 0.03% 的帧，最大滞后 0.008 行程。
    */
-  it('引擎轨迹跟得上：沉静 / 回避 / 乱序随机从不被限速；热情型只在兴奋时最快的几口气上拖一点', () => {
+  it('引擎轨迹跟得上：热情 / 沉静 / 回避从不被限速；乱序随机只在惊跳的猛收那一帧拖一点', () => {
     for (const seed of [7, 11]) {
-      for (const k of ['B', 'C', 'D'] as const) {
+      for (const k of ['A', 'B', 'C'] as const) {
         const r = track(k, seed);
         expect(r.need).toBeLessThan(CRANK.maxSpeed);
         expect(r.max).toBeLessThan(1e-9);
       }
-      const a = track('A', seed);
-      expect(a.need).toBeGreaterThan(CRANK.maxSpeed); // 如实：表里的节律在这里超过上限
-      expect(a.over).toBeLessThan(0.03);
-      expect(a.p95).toBeLessThan(0.01);
-      expect(a.max).toBeLessThan(0.2);
+      const d = track('D', seed);
+      expect(d.over).toBeLessThan(0.002);
+      expect(d.p95).toBeLessThan(1e-9);
+      expect(d.max).toBeLessThan(0.02);
     }
   });
 

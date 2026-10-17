@@ -67,8 +67,8 @@ export function goldenInputs(seed: number, T: number): { t: number; input: Recor
 }
 
 /**
- * 有手的用例（2026-10-08 迎手链 v2 动工前立）：同一组种子跑现行（v1）带手的会话，基准取自动工前的引擎，
- * 守「v2 的迎手链只改 v2，不漏进 v1」。手是开环的写死脚本（读数不随机身转动重算），只为把手的各条路径都走到：
+ * 有手的用例（2026-10-08 迎手链 v2 动工前立；2026-10-17 删现行动作后改守唯一那套动作的有手路径）。
+ * 手是开环的写死脚本（读数不随机身转动重算），只为把手的各条路径都走到：
  * 出现在臂够得着处、停住、慢慢挪、臂伸过去碰到（by: arm）/ 手伸过来碰（不写 by）、卡住、抽手、挪到远处、
  * 绕到背后、离开画布再回来。
  */
@@ -161,15 +161,17 @@ interface SessionLike {
 
 /**
  * 一个用例 → { log, frames } 两串哈希（frames 里去掉 arm.wrap）与新增字段的最大值。
- * mode：'base' = 现有基准（v1、没有手）；'v2' = 同一组用例、动作词汇 v2、没有手；'hand' = v1、写死的手脚本
- * （frames 保留 arm.wrap——有手时它不恒为 0，正是要守的东西）。
+ * mode：'base' = 没有手；'hand' = 加上写死的手脚本（frames 保留 arm.wrap——有手时它不恒为 0，正是要守的东西）。
+ * 2026-10-17 以前还有两组守现行动作（v1）的；现行删掉以后只剩这两组，守的都是唯一那套动作。
+ * 生成基准时传的引擎若还认 vocab 选项（删现行之前的版本），传 vocab: 2 选到同一套动作；现在的引擎忽略它。
  */
 export function goldenDigest(
   run: (o: object) => SessionLike,
   c: GoldenCase,
-  mode: 'base' | 'v2' | 'hand' = 'base',
+  mode: 'base' | 'hand' = 'base',
 ): { log: string; frames: string; wrapMax: number } {
-  const inputs = mode === 'hand' ? [...goldenInputs(c.seed, c.until), ...goldenHandInputs(c.seed, c.until)] : goldenInputs(c.seed, c.until);
+  const withHand = mode === 'hand';
+  const inputs = withHand ? [...goldenInputs(c.seed, c.until), ...goldenHandInputs(c.seed, c.until)] : goldenInputs(c.seed, c.until);
   const res = run({
     seed: c.seed,
     order: c.order,
@@ -177,13 +179,13 @@ export function goldenDigest(
     inputs,
     until: c.until,
     frameEvery: 0.5,
-    ...(mode === 'v2' ? { vocab: 2 } : {}),
+    vocab: 2,
   });
   let wrapMax = 0;
   const frames = res.frames.map((f) => {
     const { wrap, ...arm } = f.targets.arm;
     if (typeof wrap === 'number') wrapMax = Math.max(wrapMax, wrap);
-    return mode === 'hand' ? f : { ...f, targets: { ...f.targets, arm } };
+    return withHand ? f : { ...f, targets: { ...f.targets, arm } };
   });
   return { log: fnv64(JSON.stringify(res.log)), frames: fnv64(JSON.stringify(frames)), wrapMax };
 }

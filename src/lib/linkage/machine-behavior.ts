@@ -125,7 +125,7 @@ export const ARM_DRIVE = {
   dMax: ARM_IDLE.span + 0.16,
   floor: TENTACLE3D.slack / (TENTACLE3D.slack + TENTACLE3D.pullMax) + 0.01,
   /**
-   * 肌腱轴深卷（动作词汇 v2，2026-10-08 研究原型；轮回机器_触手与转向研究.md §8）：弯向落在某根腱的轴上
+   * 肌腱轴深卷（2026-10-08 随动作程序加；轮回机器_触手与转向研究.md §8）：弯向落在某根腱的轴上
    * 时，差动可以超过 dMax，一直到 dDeep——主腱拉满 1.0、两根拮抗腱停在 floor（2026-10-08 设计探针：轴上
    * 主腱 1.0、拮抗 0.283 稳定，梢端离静息约 365 mm）。±axisIn 以内全开，axisIn → axisTol 平滑退回 dMax，
    * 窗外与两腱之间永远 ≤ dMax（那里 0.55 起失稳）；整个过渡都在验过的 ±12° 以内（原型里 12°–20° 的过渡
@@ -134,7 +134,7 @@ export const ARM_DRIVE = {
    * 先在轴上把深卷收回（vocab2.ts 的 unhook）。
    *
    * 默认关（tendonContractions 的 opts.deep）：真机的缆与绞盘没验过主腱拉满，关着时 deep 只当普通差动、
-   * 封顶 dMax。台架 Lab 1-6 开着。引擎不给 deep（v1）时两种都与原式逐位相同。
+   * 封顶 dMax。台架 Lab 1-6 开着。deep 为 0（或不给）时两种都与原式逐位相同。
    */
   dDeep: 1 - (TENTACLE3D.slack / (TENTACLE3D.slack + TENTACLE3D.pullMax) + 0.01),
   // deep 从「只用弯曲的满幅」（span）一直加到 dDeep：deep = 1、bend = 1 时差动正好 = dDeep（主腱 1.0、拮抗 floor）。
@@ -221,7 +221,7 @@ export function bendCommandDir(dir: number, d: number): number {
 export function tendonContractions(arm: ArmCmd, opts: { deep?: boolean } = {}): [number, number, number] {
   let d = Math.min(ARM_DRIVE.dMax, ARM_DRIVE.span * arm.bend + ARM_DRIVE.wrapSpan * (arm.wrap ?? 0));
   let axisDir: number | null = null;
-  // 肌腱轴深卷（v2）：给了 deep 时先当普通差动（封顶 dMax）；开着深卷、且弯向在某根腱轴的窗里，才放开到 dDeep
+  // 肌腱轴深卷：给了 deep 时先当普通差动（封顶 dMax）；开着深卷、且弯向在某根腱轴的窗里，才放开到 dDeep
   let snap = 0;
   if (arm.deep !== undefined && arm.deep > 0) {
     const raw = ARM_DRIVE.span * arm.bend + ARM_DRIVE.wrapSpan * (arm.wrap ?? 0) + ARM_DRIVE.deepSpan * arm.deep;
@@ -761,7 +761,7 @@ export interface HandSent {
 }
 
 /**
- * 台架这一帧要不要给引擎发一条 HAND（syncHand ①；探针与守门调同一个函数）。读数变化过阈值才发；迎手链 v2 下
+ * 台架这一帧要不要给引擎发一条 HAND（syncHand ①；探针与守门调同一个函数）。读数变化过阈值才发；
  * 指针还在挪（读数变得慢，比如 40 mm/s 慢慢挪）也发——引擎按上一条 HAND 外推「静止多久」、0.25 s 没有新读数就当
  * 速度为 0，只看读数变化会让它把一直在动的手当成停稳了，去撑、去凑、去缠。都受 HAND_UI.send 节流；指针停下就不再补发。
  * aimDir = 这一帧要报的弯向（侧偏太小时沿用上一个）；lastMoveAt = 指针最后挪过（> 3 px）的时刻
@@ -771,7 +771,7 @@ export function handSendDue(
   last: HandSent | null,
   aimDir: number,
   now: number,
-  o: { v2: boolean; lastMoveAt: number },
+  o: { lastMoveAt: number },
 ): boolean {
   if (!last) return true;
   if (now - last.at < HAND_UI.send) return false;
@@ -782,7 +782,7 @@ export function handSendDue(
     Math.abs(read.dist - last.dist) > HAND_UI.dDist ||
     Math.abs(read.aimBend - last.aimBend) > HAND_UI.dAimBend ||
     (read.aimBend > 0.05 && ang(aimDir, last.aimDir) > HAND_UI.dAimDir) ||
-    (o.v2 && o.lastMoveAt > last.at)
+    o.lastMoveAt > last.at
   );
 }
 

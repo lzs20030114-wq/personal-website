@@ -1,110 +1,69 @@
 {
-  "source": "2026-10-14 人格重分类（热情 / 沉静 / 回避 / 乱序随机）后的引擎",
+  "source": "删现行（2026-10-17）+ 修动作程序两处臂指令跳变（arcDelta、松手时接管）",
   "cases": [
     {
       "seed": 11,
       "lifeRate": 1,
-      "log": "bb60e83ce6d4c5fd",
-      "frames": "887d8a015bcb564c"
+      "log": "1a1bfdbf43bdac38",
+      "frames": "a95eb1cc9737a0ff"
     },
     {
       "seed": 23,
       "lifeRate": 1,
-      "log": "a84d7caf4a00ad8c",
-      "frames": "a648266358cc6318"
+      "log": "590978d0c20af7cd",
+      "frames": "cd1df33b64e68896"
     },
     {
       "seed": 131,
       "lifeRate": 10,
-      "log": "5b1055af7c95ad4a",
-      "frames": "41847f538eabf7d8"
+      "log": "0f758a9cd3133f5f",
+      "frames": "89818274bd1aaefb"
     },
     {
       "seed": 151,
       "lifeRate": 10,
-      "log": "cd451a0d30f8fb16",
-      "frames": "893185b3e58472fc"
+      "log": "f2bb6dd3a6c8c844",
+      "frames": "8aacda4de4750930"
     },
     {
       "seed": 161,
       "lifeRate": 60,
-      "log": "aa0272bd40bcf5a4",
-      "frames": "eedb1a2ec6ca96ef"
+      "log": "2f4ec8692f75c96c",
+      "frames": "818ffbf4f557dffd"
     },
     {
       "seed": 171,
       "lifeRate": 60,
-      "log": "38bda0dcfc6e6941",
-      "frames": "9620ddf8a86144af"
+      "log": "f1ed2a7adcaaf9ab",
+      "frames": "223407a5f2e2dbe6"
     }
   ],
-  "v2": {
-    "source": "2026-10-14 人格重分类（热情 / 沉静 / 回避 / 乱序随机）后的引擎",
-    "cases": [
-      {
-        "seed": 11,
-        "lifeRate": 1,
-        "log": "1a1bfdbf43bdac38",
-        "frames": "353024244cfd5559"
-      },
-      {
-        "seed": 23,
-        "lifeRate": 1,
-        "log": "590978d0c20af7cd",
-        "frames": "7ae669e65557b6e3"
-      },
-      {
-        "seed": 131,
-        "lifeRate": 10,
-        "log": "0f758a9cd3133f5f",
-        "frames": "ab4f149365356d24"
-      },
-      {
-        "seed": 151,
-        "lifeRate": 10,
-        "log": "f2bb6dd3a6c8c844",
-        "frames": "6fbc6310783f0a41"
-      },
-      {
-        "seed": 161,
-        "lifeRate": 60,
-        "log": "2f4ec8692f75c96c",
-        "frames": "710ccb75262313c4"
-      },
-      {
-        "seed": 171,
-        "lifeRate": 60,
-        "log": "f1ed2a7adcaaf9ab",
-        "frames": "e1710c1eea69de39"
-      }
-    ]
-  },
   "hand": {
-    "source": "2026-10-14 人格重分类（热情 / 沉静 / 回避 / 乱序随机）后的引擎",
+    "source": "删现行（2026-10-17）+ 修动作程序两处臂指令跳变（arcDelta、松手时接管）",
     "cases": [
       {
         "seed": 211,
         "lifeRate": 1,
-        "log": "ec4d7303ec2e6248",
-        "frames": "79c89f6f3af9a884"
+        "log": "ee3ca8ed484c7412",
+        "frames": "2e4317719639f52e"
       },
       {
         "seed": 223,
         "lifeRate": 1,
-        "log": "2d6389aa810c14e9",
-        "frames": "3bc6590a6e59b5e9"
+        "log": "d3f7f64576e206b2",
+        "frames": "6f3d8b326a5a91cb"
       },
       {
         "seed": 241,
         "lifeRate": 10,
-        "log": "86a44b7216bdfa97",
-        "frames": "4a9a82b4b32c6911"
+        "log": "4db859a74dd62ede",
+        "frames": "687d3f5ab4a1e663"
       },
       {
         "seed": 251,
         "lifeRate": 10,
-        "log": "3d32e7ccd5b4dde1",
-        "frames": "a947925236c3b5c5"
+        "log": "34bd1d00601782bd",
+        "frames": "a92b030bf630d910"
       }
     ]
   }

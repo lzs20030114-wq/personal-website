@@ -29,13 +29,13 @@ describe('事件日志（JSON Lines）', () => {
     const text = toJsonl([rec(), rec({ id: 4, ev: 'LIFE_DEATH', p: undefined })], header);
     expect(text.split('\n')[0]).toBe(JSON.stringify(header));
     const back = parseJsonl(text);
-    expect(back.header).toEqual({ schema: LOG_SCHEMA, v: 1, seed: 11, order: ['B', 'A', 'D', 'C'], hz: 60 });
+    expect(back.header).toEqual({ schema: LOG_SCHEMA, v: 1, seed: 11, order: ['B', 'A', 'D', 'C'], hz: 60, vocab: 2 });
     expect(back.records.map((r) => formatRecord(r))).toEqual([formatRecord(rec()), formatRecord(rec({ id: 4, ev: 'LIFE_DEATH', p: undefined }))]);
   });
 
   it('加速跑的会话：会话头末尾记开场倍率；台架操作记 src = operator，与传感 / 引擎分得开', () => {
     expect(JSON.stringify(sessionHeader(7, ['A', 'B', 'C', 'D'], 60, 10))).toBe(
-      `{"schema":"${LOG_SCHEMA}","v":1,"seed":7,"order":["A","B","C","D"],"hz":60,"lifeRate":10}`,
+      `{"schema":"${LOG_SCHEMA}","v":1,"seed":7,"order":["A","B","C","D"],"hz":60,"lifeRate":10,"vocab":2}`,
     );
     expect(formatRecord(rec({ src: 'operator', ev: 'SKIP', p: { from: 'GROW' } }))).toBe(
       '{"id":3,"t":70.183,"life":1,"persona":"A","phase":"GROW","src":"operator","ev":"SKIP","p":{"from":"GROW"}}',
