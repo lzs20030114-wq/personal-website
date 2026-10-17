@@ -1,5 +1,5 @@
 {
-  "source": "删现行（2026-10-17）+ 修动作程序两处臂指令跳变（arcDelta、松手时接管）",
+  "source": "B⑤ 按 τ 两端插值、急并进追、跳的门一个值、再收一个门（2026-10-17）",
   "cases": [
     {
       "seed": 11,
@@ -10,60 +10,60 @@
     {
       "seed": 23,
       "lifeRate": 1,
-      "log": "590978d0c20af7cd",
-      "frames": "cd1df33b64e68896"
+      "log": "da7433acc31f5a5b",
+      "frames": "70fe0532298d6fd7"
     },
     {
       "seed": 131,
       "lifeRate": 10,
-      "log": "0f758a9cd3133f5f",
-      "frames": "89818274bd1aaefb"
+      "log": "e917b5bbbb8511ec",
+      "frames": "4bba8d8618ae7c87"
     },
     {
       "seed": 151,
       "lifeRate": 10,
-      "log": "f2bb6dd3a6c8c844",
-      "frames": "8aacda4de4750930"
+      "log": "26b9cc4f1330295c",
+      "frames": "d83914e6569b4027"
     },
     {
       "seed": 161,
       "lifeRate": 60,
-      "log": "2f4ec8692f75c96c",
-      "frames": "818ffbf4f557dffd"
+      "log": "397b12e711bb7214",
+      "frames": "320bd768ac95357d"
     },
     {
       "seed": 171,
       "lifeRate": 60,
-      "log": "f1ed2a7adcaaf9ab",
-      "frames": "223407a5f2e2dbe6"
+      "log": "29dbfd759431ef44",
+      "frames": "23a921a069f85921"
     }
   ],
   "hand": {
-    "source": "B④ 距离三档、手速四级（2026-10-17）",
+    "source": "B⑤ 按 τ 两端插值、急并进追、跳的门一个值、再收一个门（2026-10-17）",
     "cases": [
       {
         "seed": 211,
         "lifeRate": 1,
-        "log": "1d8d51666855a5d3",
-        "frames": "e7c563dbc2b3dec0"
+        "log": "40b6ad2bdf1a0c4a",
+        "frames": "e2c36bf34b868ccc"
       },
       {
         "seed": 223,
         "lifeRate": 1,
-        "log": "07ac8c88ccf6d32b",
-        "frames": "9f093830fad738d3"
+        "log": "8d692c9f2b1684c0",
+        "frames": "04b6c5c124da80a8"
       },
       {
         "seed": 241,
         "lifeRate": 10,
-        "log": "473f5e5e81fca8e7",
-        "frames": "fec1ac91ec5dfd8c"
+        "log": "d809521cbfebb3d1",
+        "frames": "e7ae12a1c9686e2c"
       },
       {
         "seed": 251,
         "lifeRate": 10,
-        "log": "feedf86c66cf07bd",
-        "frames": "5ba399abee1b08ae"
+        "log": "69326a716331b626",
+        "frames": "1ab77096fe173e6d"
       }
     ]
   }

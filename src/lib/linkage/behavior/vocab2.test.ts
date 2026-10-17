@@ -14,6 +14,9 @@ import {
   type BuildCtx,
   type RespKind,
   STARTLE_PRE,
+  TAU_FAST,
+  TAU_SLOW,
+  byTau,
   V2,
   type Variant,
   buildRegister,
@@ -93,15 +96,29 @@ const allResponses = (P: PersonaKey): Phase[][] => [
 ];
 
 describe('动作词汇 v2 · 程序表', () => {
-  it('速度五档：每种人格都是 自发 < 刻意 < 急 < 恢复；刻意档封顶 0.26（A 也到不了惊跳的一半）；A 永远比 B 快', () => {
+  it('速度分档：每种人格都是 自发 < 刻意 < 追（急并进来了）< 恢复；刻意档封顶 0.26（A 也到不了惊跳的一半）；A 永远比 B 快', () => {
     for (const k of [0.58, 1, 1.41, 1.63]) {
       expect(tierSpeed('spont', k)).toBeLessThan(tierSpeed('deliberate', k));
-      expect(tierSpeed('deliberate', k)).toBeLessThan(tierSpeed('urgent', k));
-      expect(tierSpeed('urgent', k)).toBeLessThan(tierSpeed('recover', k));
+      expect(tierSpeed('deliberate', k)).toBeLessThan(tierSpeed('pursue', k));
+      expect(tierSpeed('pursue', k)).toBeLessThan(tierSpeed('recover', k));
       expect(tierSpeed('deliberate', k)).toBeLessThanOrEqual(0.26);
     }
     expect(tierSpeed('reflex', 1)).toBe(Infinity);
     expect(tierSpeed('deliberate', K.A)).toBeGreaterThan(tierSpeed('deliberate', K.B));
+  });
+
+  it('迟钝度的两端 = 热情、沉静两型的响应延迟；按 τ 的等待在两端之间插值、之外截住', () => {
+    const warm = Object.values(PERSONAS).find((p) => p.temper === 'warm')!;
+    const calm = Object.values(PERSONAS).find((p) => p.temper === 'calm')!;
+    expect(TAU_FAST).toBe(warm.latency[0]);
+    expect(TAU_FAST).toBe(warm.latency[1]);
+    expect(TAU_SLOW).toBe(calm.latency[0]);
+    expect(TAU_SLOW).toBe(calm.latency[1]);
+    expect(byTau([1, 3], TAU_FAST)).toBe(1);
+    expect(byTau([1, 3], TAU_SLOW)).toBe(3);
+    expect(byTau([1, 3], 0)).toBe(1);
+    expect(byTau([1, 3], 9)).toBe(3);
+    expect(byTau([1, 3], (TAU_FAST + TAU_SLOW) / 2)).toBeCloseTo(2, 12);
   });
 
   it('惊跳的反射段四种人格逐位相同：0.1 s 后起动、0.15 s 屈曲、沿背离刺激的那根下方腱轴（左来 → −120°、右来 → +120°）', () => {

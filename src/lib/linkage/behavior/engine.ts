@@ -98,7 +98,6 @@ import {
   chasePlan,
   cinchCount,
   dwellOf,
-  epsOf,
   DIST,
   bodyness,
   gainAt,
@@ -2794,7 +2793,7 @@ export class BehaviorEngine {
         const target = hopTarget(c, gm, lead);
         const err = poseDist(this.curPose(), target);
         const moved = hc.prog ? Math.hypot(dOf(target) * Math.cos(target.dir) - hc.tgtX, dOf(target) * Math.sin(target.dir) - hc.tgtY) : 0;
-        if (moved > HC.jump || (fixating && inFix >= dwellOf(c) && this.settled(0.05) && err > epsOf(this.temper(), hc.tau))) {
+        if (moved > HC.jump || (fixating && inFix >= dwellOf(c) && this.settled(0.05) && err > HC.eps)) {
           this.hcRun(t, 'hand.hop', buildHop(c, gm, lead));
           this.hcTarget(target);
         }
@@ -2999,11 +2998,7 @@ export class BehaviorEngine {
     // 手挪了：再收一次（怕的时候挪一点就收）
     const cl = this.handClose(h);
     const away = this.awayDir(h);
-    if (
-      Math.abs(cl - hc.close) > HC.reshrinkClose - HC.reshrinkCloseN * N ||
-      Math.abs(wrapPi(away - hc.awayDir)) > HC.reshrinkDir - HC.reshrinkDirN * N ||
-      poseDist(this.curPose(), avoidPose(cl, away, N)) > 0.06 - HC.reshrinkPoseN * N
-    ) {
+    if (poseDist(this.curPose(), avoidPose(cl, away, N)) > HC.reshrinkPose - HC.reshrinkPoseN * N) {
       hc.close = cl;
       hc.awayDir = away;
       this.hcSet(t, 'avoid', 'reshrink');

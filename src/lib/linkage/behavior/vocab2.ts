@@ -39,8 +39,11 @@ export const V2 = {
   /** 12 s 内再吓一次：深度 × 0.8ⁿ（下限照旧）、凝住减半——反射生理的不应期，不是记忆，每世清零 */
   repeatWindow: 12,
   repeatDecay: 0.8,
-  /** 凝住 F = (a + τ)·(0.6 + 0.4·m)·(1 + 0.5·衰老)，封顶 cap：热情 0.30–0.50 · 回避 0.36–0.60 · 沉静 1.68–2.80 · 乱序随机 0.36–3 */
-  freezeA: 0.3,
+  /**
+   * 凝住 F = byTau(freeze)·(0.6 + 0.4·m)·(1 + 0.5·衰老)，封顶 cap：byTau 在热情（τ 0.2）0.5 → 沉静（τ 2.5）2.8 之间插值
+   *（2026-10-17 以前是 0.3 + τ，两端值不变）。热情 0.30–0.50 · 回避 0.32–0.54 · 沉静 1.68–2.80 · 乱序随机 0.32–2.8
+   */
+  freeze: [0.5, 2.8],
   freezeCap: 3.0,
   /** 慢的人格（√k_v < 0.8）分两步缩（零振动整形：第二步隔臂摆动的半周期 0.78 s，钩落定不晃）；快的（≥ 1.2）在 +0.55 s 回弹到 0.88 */
   zvSlow: 0.8,
@@ -159,19 +162,31 @@ export function nearestAxisDir(dir: number): number {
   return wrapPi(Math.round(dir / AXIS) * AXIS);
 }
 
+/**
+ * 迟钝度（2026-10-17，交互机制参数表 §12.3 第 1 条）：本回合抽到的响应延迟 τ 从热情型的 0.2 s 到沉静型的 2.5 s，
+ * slowness 从 0 到 1（之外截住）。凡是「越迟钝等得越久」的等待 / 停顿，一律 byTau([最快, 最慢], τ) 在两端之间插值——
+ * 端值取改之前热情、沉静两型的值，回避（τ 0.3）、乱序随机（0.3–3）略有变动。TAU_FAST / TAU_SLOW 与人格表核对（守门）
+ */
+export const TAU_FAST = 0.2;
+export const TAU_SLOW = 2.5;
+export const slowness = (tau: number): number => clamp((tau - TAU_FAST) / (TAU_SLOW - TAU_FAST), 0, 1);
+export const byTau = (ends: readonly [number, number], tau: number): number => ends[0] + (ends[1] - ends[0]) * slowness(tau);
+
 /** 朝刺激那一侧、偏上：side·deg（side = 0 时就是正上） */
 const toward = (side: number, deg: number): number => side * deg * DEG;
 const side3 = (s: number): -1 | 0 | 1 => (s > 0 ? 1 : s < 0 ? -1 : 0);
 
 /**
  * 速度分档（指令空间，差动 D 每秒；随 √k_v 走，各有上下限——A 永远比 B 快，但 A 的刻意动作也到不了惊跳的一半）：
- *   reflex 不限（屈曲固定 0.15 s）· recover clamp(0.9k, 0.45, 1.2)×(0.5 + 0.5·活力) · urgent clamp(0.35k, 0.22, 0.45)
+ *   reflex 不限（屈曲固定 0.15 s）· recover clamp(0.9k, 0.45, 1.2)×(0.5 + 0.5·活力) · pursue clamp(0.42k, 0.20, 0.50)
  *   · deliberate clamp(0.20k, 0.15, 0.26) · spont clamp(0.11k, 0.07, 0.15)
- * 迎手链（2026-10-08）另加三档：strike clamp(1.2k, 0.8, 1.5)（扑；总行程另封顶 0.22，见 vocab2-hand.ts）·
- *   pursue clamp(0.42k, 0.20, 0.50)（跳、转运、追、探身）· creep clamp(0.08k, 0.05, 0.10)（慢碰、贴上、收紧）
+ * 迎手链（2026-10-08）另加两档：strike clamp(1.2k, 0.8, 1.5)（扑；总行程另封顶 0.22，见 vocab2-hand.ts）·
+ *   creep clamp(0.08k, 0.05, 0.10)（慢碰、贴上、收紧）。
+ * 2026-10-17 「急」（urgent，clamp(0.35k, 0.22, 0.45)）并进 pursue（两者只差 10–20%）：惊跳里的再缩、落下，注意到里的一缩、
+ *   抬一下，看见手决定躲那一下，以及迎手链里的缩回 / 撤掉 / 再抓都走 pursue。
  * 每段的时长至少要让「缓动的峰值速度 ≤ 档位」。
  */
-export type Tier = 'reflex' | 'recover' | 'strike' | 'pursue' | 'urgent' | 'deliberate' | 'spont' | 'creep';
+export type Tier = 'reflex' | 'recover' | 'strike' | 'pursue' | 'deliberate' | 'spont' | 'creep';
 export function tierSpeed(tier: Tier, k: number, vigor = 1): number {
   switch (tier) {
     case 'reflex':
@@ -182,8 +197,6 @@ export function tierSpeed(tier: Tier, k: number, vigor = 1): number {
       return clamp(1.2 * k, 0.8, 1.5);
     case 'pursue':
       return clamp(0.42 * k, 0.2, 0.5);
-    case 'urgent':
-      return clamp(0.35 * k, 0.22, 0.45);
     case 'deliberate':
       return clamp(0.2 * k, 0.15, 0.26);
     case 'creep':
@@ -319,7 +332,7 @@ export function buildStartle(c: BuildCtx, s: StartleIn): { phases: Phase[]; busy
   const hook = at(1);
   const first = poseOfD(Math.max(D * V2.zvFirst, along), axis);
   const clench = V2.clench0 + V2.clench1 * m;
-  const F = Math.min(V2.freezeCap, (V2.freezeA + c.tau) * (0.6 + 0.4 * m) * (1 + 0.5 * c.ageU)) * (s.repeats > 0 ? 0.5 : 1);
+  const F = Math.min(V2.freezeCap, byTau(V2.freeze, c.tau) * (0.6 + 0.4 * m) * (1 + 0.5 * c.ageU)) * (s.repeats > 0 ? 0.5 : 1);
   const quiver = c.temper === 'avoidant' || c.temper === 'random' ? 0.06 + 0.03 * c.ageU : 0.03 * c.ageU;
   const flourish = 1 - c.ageU;
   const flexCue: Partial<Phase> = { path: 'line', breath: { rate: 0, clench }, voice: 'chirp', light: 1.4, feel: { pose: 'splay' }, yaw: s.recoilYaw || undefined };
@@ -349,7 +362,7 @@ export function buildStartle(c: BuildCtx, s: StartleIn): { phases: Phase[]; busy
   const breathBack: Cues['breath'] = { rate: 1, sigh: true };
   const sd = side3(s.side);
   const rec: Phase[] = [];
-  const tiers: Partial<Record<string, Tier>> = { latency: 'reflex', flex: 'reflex', zv2: 'reflex', recoil: 'reflex', aftershock: 'reflex', reflinch: 'urgent', drop: 'urgent' };
+  const tiers: Partial<Record<string, Tier>> = { latency: 'reflex', flex: 'reflex', zv2: 'reflex', recoil: 'reflex', aftershock: 'reflex', reflinch: 'pursue', drop: 'pursue' };
   switch (c.temper) {
     case 'warm': // 回头去查看（原好奇型的恢复，并进热情）：直线穿过中心朝刺激那边、探两下、再回来
       rec.push(
@@ -411,7 +424,7 @@ export type RegKind = 'directed' | 'alert' | 'listen';
  * 呼吸放慢（τ ≥ 1 s 时先屏住，最多 2 s）、触须指向那一侧、灯稍亮、呼气声收住。沉静型 τ = 2.5 s，此前这两秒
  * 什么都不发生，读作「没反应」；现在读作「迟疑」。
  *   alert（震）= 一切同时停住、触须张开不动；listen（声）= 屏气、触须竖起不动。
- * 接近阈值的触碰（wince）先「一缩」：0.1 s 后差动 0.12 的小缩（限速 urgent），呼吸照走只往收拢端推一点、
+ * 接近阈值的触碰（wince）先「一缩」：0.1 s 后差动 0.12 的小缩（限速 pursue），呼吸照走只往收拢端推一点、
  * 一声 tsk，停 0.3 s——惊跳的第一拍缩小版，没有它的后果。返回各段；引擎按全长推迟回应。
  */
 export function buildRegister(c: BuildCtx, o: { dur: number; side: number; kind: RegKind; wince?: boolean }): Phase[] {
@@ -429,7 +442,7 @@ export function buildRegister(c: BuildCtx, o: { dur: number; side: number; kind:
       ph('wince', 0.25, 'mj', atLeast(w, c.cur, V2.winceD), { path: 'line', breath: { rate: 1, push: 0.06 }, voice: 'tsk', feel: { pose: 'tuck' } }),
       ph('catch', 0.3, 'hold', 'hold', { breath: { rate: 1, push: 0.06 }, voice: 'mute', feel }),
     );
-    const gov = govern(unhook(out, c.cur, c.rest), c, 'urgent', { latency: 'reflex' });
+    const gov = govern(unhook(out, c.cur, c.rest), c, 'pursue', { latency: 'reflex' });
     out.splice(0, out.length, ...gov);
     left -= out.reduce((a, p) => a + p.dur, 0);
   }
@@ -469,7 +482,7 @@ export const respD = (c: BuildCtx): number => (V2.respD0 + V2.respD1 * clamp(c.g
 export function buildResponse(c: BuildCtx, r: RespIn): Phase[] {
   let phases = responsePhases(c, r);
   if (!r.feeler) phases = phases.map((p) => (p.feel && p.feel.pose === 'point' ? { ...p, feel: undefined } : p));
-  return govern(unhook(phases, c.cur, c.rest), c, 'deliberate', { perk: 'urgent' });
+  return govern(unhook(phases, c.cur, c.rest), c, 'deliberate', { perk: 'pursue' });
 }
 
 /**
@@ -675,7 +688,7 @@ export type NoticeMode = 'toward' | 'away' | 'look';
 
 /** 看见手那一下（v2）：迎 = 先往回收一点再伸过去；躲 = 往背着手的腱轴一缩；看别处 = 瞥一眼。都限速，追不上惊跳 */
 export function buildNotice(c: BuildCtx, mode: NoticeMode, aimDir: number, aimBend: number, awayDir: number): Phase[] {
-  return govern(unhook(noticePhases(c, mode, aimDir, aimBend, awayDir), c.cur, c.rest), c, mode === 'away' ? 'urgent' : 'deliberate');
+  return govern(unhook(noticePhases(c, mode, aimDir, aimBend, awayDir), c.cur, c.rest), c, mode === 'away' ? 'pursue' : 'deliberate');
 }
 
 function noticePhases(c: BuildCtx, mode: NoticeMode, aimDir: number, aimBend: number, awayDir: number): Phase[] {
