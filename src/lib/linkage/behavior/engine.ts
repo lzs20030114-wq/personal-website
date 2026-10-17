@@ -99,6 +99,8 @@ import {
   cinchCount,
   dwellOf,
   epsOf,
+  DIST,
+  bodyness,
   gainAt,
   handArmGap,
   handD,
@@ -106,6 +108,7 @@ import {
   holdDrive,
   holdEventDur,
   holdEventMm,
+  nearness,
   hopTarget,
   hoverMinOf,
   poseDist,
@@ -190,8 +193,6 @@ export const HAND = {
   fovKeep: (130 * Math.PI) / 180,
   /** 手出了视野（或离开画布）多久算丢（秒）；这段时间里回来接着原来的态度，不重新决定 */
   loseAfter: 3,
-  /** 手在机身上方（离电机轴这么近，mm）：那是在摸壳，不转身、不去够 */
-  bodyR: 320,
   /** 臂长（mm，静息弦长；唯一出处在 vocab2-hand.ts 的 HC.armL，台架 ARM_GEOM.length 由守门测试核对） */
   armL: HC.armL,
   /**
@@ -205,10 +206,7 @@ export const HAND = {
   unlock: Math.PI / 2,
   /** ±π 行程：越限不到 60° 停在限位等，超过才绕回去（记一条 ORIENT unwind） */
   unwindAt: Math.PI / 3,
-  /** 躲：手离电机轴 near → far，「有多近」从 1 落到 0（收的姿态、松一口气读它）；
-   *  手就在臂梢上（aimBend 很小，方向不准）时背着手弯渐变成往下缩 */
-  awayNear: 500,
-  awayFar: 1200,
+  /** 躲：手就在臂梢上（aimBend 很小，方向不准）时背着手弯渐变成往下缩 */
   awayDirAt: 0.15,
   /** 看别处：相对当前朝向转 30–70°，转向背着手的那一侧 */
   lookMin: (30 * Math.PI) / 180,
@@ -238,8 +236,6 @@ export const ARM_BEND_MAX = POSE_BEND_MAX;
  */
 export const SOCIAL = {
   band: { gone: 0, far: 0.35, mid: 0.7, near: 1 } as Record<PresenceBand, number>,
-  handFar: 1500,
-  handNear: 450,
   onBase: 0.25,
   onLatency: 0.5,
   /**
@@ -1348,7 +1344,7 @@ export class BehaviorEngine {
     const s = this.s;
     let w = SOCIAL.band[s.band];
     const h = s.hand;
-    if (h && h.present && h.seen) w = Math.max(w, 1 - smooth((h.dist - SOCIAL.handNear) / (SOCIAL.handFar - SOCIAL.handNear)));
+    if (h && h.present && h.seen) w = Math.max(w, nearness(h.dist));
     return w;
   }
 
@@ -1912,7 +1908,7 @@ export class BehaviorEngine {
       else if (!hc.ev) hc.ev = { kind, t0: t };
       action = 'fidget';
       this.emit('SPONTANEOUS', { action, kind });
-    } else if (hc.stage === 'avoid' && h && h.seen && this.handInView(h) && !hc.prog && hc.v < HC.vMove && !this.foreignGrasp()) {
+    } else if (hc.stage === 'avoid' && h && h.seen && this.handInView(h) && !hc.prog && hc.v < HC.vStill && !this.foreignGrasp()) {
       // 偷看只看得见的手（侧过身去、手出了视野时不偷看：它不知道手在哪）
       this.hcSet(t, 'avoid', 'peek');
       this.hcRun(t, 'hand.peek', buildPeek(this.hcCtx(ctx), this.handGeom(h), hc.close, hc.awayDir));
@@ -2083,14 +2079,14 @@ export class BehaviorEngine {
     return h.present && (Math.abs(wrapPi(h.bearing - this.s.yaw.x)) <= (keep ? HAND.fovKeep : HAND.fov) || this.s.electrode);
   }
 
-  /** 躲的「有多近」：手离电机轴 awayNear → awayFar，从 1 落到 0（收的姿态、松一口气读它） */
+  /** 躲的「有多近」：与 ⑬ 按手的那一份同一条曲线（nearness：远 1.5 m → 近 0.6 m） */
   private handClose(h: HandMem): number {
-    return 1 - smooth((h.dist - HAND.awayNear) / (HAND.awayFar - HAND.awayNear));
+    return nearness(h.dist);
   }
 
   /** 手在机身上方（在摸壳）：不转身、不去够 */
   private handOnBody(h: HandMem): boolean {
-    return h.dist < HAND.bodyR;
+    return h.dist < DIST.body;
   }
 
   /**
@@ -2426,7 +2422,7 @@ export class BehaviorEngine {
   private avoidAngle(h: HandMem): number {
     const hc = this.s.m2.hc;
     const N = this.socialPN()[1];
-    const near = 1 - smooth((h.steerDist - HC.avoidNearR0) / (HC.avoidNearR1 - HC.avoidNearR0));
+    const near = bodyness(h.steerDist);
     const extra = hc.stage === 'avoid' ? hc.extraYaw : 0;
     const span = HC.avoidSideMax - HC.avoidSide;
     return Math.min(HC.avoidSideMax, HC.avoidSide + span * N * (HC.avoidFarShare + (1 - HC.avoidFarShare) * near) + extra);
@@ -2524,7 +2520,7 @@ export class BehaviorEngine {
       return 'respond';
     }
     // 一只正在动的手从臂上蹭过去（不是凑过去碰到的）：不缠，只是注意到；手若停在臂上，0.4 s 后再缠（重新武装）
-    if (byHand && hc.v >= HC.vMicro && hc.stage !== 'approach') {
+    if (byHand && hc.v >= HC.vSlow && hc.stage !== 'approach') {
       hc.rearmAt = t + 0.4;
       hc.emptyLast = false;
       this.emit('RESPONSE', { to: id, latency: 0, motion: 'hand.brush', expected: true, by });
@@ -2752,7 +2748,7 @@ export class BehaviorEngine {
           this.hcSet(t, 'track');
           return;
         }
-        if (h.mode === 'away' && hc.relieved && h.dist < HC.reliefR) {
+        if (h.mode === 'away' && hc.relieved && h.dist < DIST.far) {
           // 松了口气以后手又回来：重新侧身收起
           hc.relieved = false;
           this.hcSet(t, 'avoid');
@@ -2769,7 +2765,7 @@ export class BehaviorEngine {
         // 放开后手不动 / 蹭过去的手停在了臂上：到点再来一次（抓空后每 ⑨ 至多一次）。没排过的（惊跳、新一世、
         // 旧路松手以后手一直搭在臂上）从此刻排一次——不然这道门永远打不开
         if (s.electrode && !grasping && hc.rearmAt >= NEVER) hc.rearmAt = t + HC.rearm;
-        if (s.electrode && !grasping && t >= hc.rearmAt && hc.v < HC.vMove && !(hc.emptyLast && hc.rearmed)) {
+        if (s.electrode && !grasping && t >= hc.rearmAt && hc.v < HC.vStill && !(hc.emptyLast && hc.rearmed)) {
           hc.rearmAt = NEVER;
           if (hc.emptyLast) hc.rearmed = true;
           this.emit('CONTACT', { to: -1, rearm: true });
@@ -2781,7 +2777,7 @@ export class BehaviorEngine {
         const inFix = !hc.prog ? Infinity : ph && ph.name === 'fixate' ? t - hc.prog.ts : -1;
         const still = t - hc.stillAt;
         // 手已经搭在臂上（电极开着）：不凑、不撑——等上面的重新武装再缠
-        if (fixating && !h.turning && !this.handOnBody(h) && !s.electrode && still >= stillOf(hc.tau) && hc.v < HC.vMove) {
+        if (fixating && !h.turning && !this.handOnBody(h) && !s.electrode && still >= stillOf(hc.tau) && hc.v < HC.vStill) {
           // 够得着就凑（2026-10-17 起迎手链不用深卷：平卷够不着的手交给够不着那一串）
           if (reachable(h.aimBend, h.aimDist)) {
             this.beginApproach(t, ctx, h);
@@ -2810,7 +2806,7 @@ export class BehaviorEngine {
         // 手又动了（扑已经起了的除外）：回去陪着，从此刻跳
         const hx = gm.Dh * Math.cos(gm.dir) - hc.refX;
         const hy = gm.Dh * Math.sin(gm.dir) - hc.refY;
-        if (beat !== 'pounce' && beat !== 'drop' && h.present && (hc.v > HC.vMove || Math.hypot(hx, hy) > 0.06)) {
+        if (beat !== 'pounce' && beat !== 'drop' && h.present && (hc.v > HC.vStill || Math.hypot(hx, hy) > 0.06)) {
           this.hcReset(t, 'track');
           hc.gDrawn = true;
           return;
@@ -2930,12 +2926,12 @@ export class BehaviorEngine {
     }
     // 手怎么动
     const v = hc.v;
-    if (v >= HC.vStill && v < HC.vMicro) {
+    if (v >= HC.vStill && v < HC.vSlow) {
       if (hc.tracT >= NEVER) hc.tracT = t;
     } else hc.tracT = NEVER;
     const outward = t - hc.outAt < 0.3;
-    if (v >= HC.vMicro && outward && (!hc.ev || hc.ev.kind !== 'give')) hc.ev = { kind: 'give', t0: t };
-    else if (v >= HC.vStill && v < HC.vMicro && !hc.ev && t - hc.reflexAt > 2 && t - hc.tracT < 0.5) {
+    if (v >= HC.vSlow && outward && (!hc.ev || hc.ev.kind !== 'give')) hc.ev = { kind: 'give', t0: t };
+    else if (v >= HC.vStill && v < HC.vSlow && !hc.ev && t - hc.reflexAt > 2 && t - hc.tracT < 0.5) {
       // 抓握反射：热情攥一下、沉静与回避屏气定住、乱序随机三者里抽（表情子流）
       const T = this.temper();
       const kind = T === 'warm' ? 'squeeze' : T === 'calm' || T === 'avoidant' ? 'freeze' : pick(m.xr, ['squeeze', 'freeze', 'give'] as const);
@@ -2959,8 +2955,8 @@ export class BehaviorEngine {
       else this.hcReset(t, 'off');
       return;
     }
-    // 手走了（离开画布或远于 1.2 m 持续 1 s）：松一口气（遗忘不算）
-    if (!h.present || h.dist > HC.reliefR) {
+    // 手走了（离开画布或远于 1.5 m 持续 1 s）：松一口气（遗忘不算）
+    if (!h.present || h.dist > DIST.far) {
       if (hc.farSince >= NEVER) hc.farSince = t;
       if (t - hc.farSince >= HC.reliefT || !h.present) {
         hc.farSince = NEVER;
@@ -2983,18 +2979,18 @@ export class BehaviorEngine {
     const afraid = N >= 0.2;
     const approaching = t - hc.inAt < 0.25 || t - hc.nearAt < 0.25;
     const close =
-      h.dist < HC.dodgeNearR || (afraid && handArmGap(h.aimBend, h.aimDir, h.aimDist, this.curPose()) < HC.dodgeR0 + HC.dodgeR1 * N);
-    if (approaching && close && hc.v >= (afraid ? HC.vStill : HC.chaseFast) && t - hc.dodgeAt > HC.dodgeGap && !(busy && hc.beat === 'dodge')) {
+      h.dist < DIST.near || (afraid && handArmGap(h.aimBend, h.aimDir, h.aimDist, this.curPose()) < HC.dodgeR0 + HC.dodgeR1 * N);
+    if (approaching && close && hc.v >= (afraid ? HC.vStill : HC.vFast) && t - hc.dodgeAt > HC.dodgeGap && !(busy && hc.beat === 'dodge')) {
       this.avoidRef(h);
       hc.dodgeAt = t;
       hc.extraYaw = Math.min(HC.dodgeTurnMax, hc.extraYaw + HC.dodgeTurn * N);
-      const size = Math.max(N, clamp01((hc.v - HC.vMicro) / (HC.vSwipe - HC.vMicro)));
+      const size = Math.max(N, clamp01((hc.v - HC.vSlow) / (HC.vSwipe - HC.vSlow)));
       this.hcSet(t, 'avoid', 'dodge');
       this.hcRun(t, 'hand.dodge', buildDodge(this.hcCtx(ctx), hc.close, hc.awayDir, size));
       return;
     }
     // 偷看时手动了：缩回去（再收的快档，一声咂）
-    if (ph && ph.name === 'look' && hc.v > HC.vMove) {
+    if (ph && ph.name === 'look' && hc.v > HC.vStill) {
       this.hcSet(t, 'avoid', 'reshrink');
       this.hcRun(t, 'hand.reshrink', buildShrink(this.hcCtx(ctx), hc.close, hc.awayDir, 'snap'));
       return;
@@ -3134,7 +3130,7 @@ export class BehaviorEngine {
     if (reaction === 'chase' && h) {
       g.chases++;
       // 衰老过了六成：扑过去换成伸过去送一下（先拿掉花样）
-      const fast = t - hc.pullT <= 0.3 && hc.pullV >= HC.chaseFast && this.ageU(ctx) <= 0.6;
+      const fast = t - hc.pullT <= 0.3 && hc.pullV >= HC.vFast && this.ageU(ctx) <= 0.6;
       hc.plan = chasePlan(fast);
       // 到限位的兜底：追的拍走完时 chase 分支会把它缩到 +0.5 s；这里只防拍序意外卡住
       s.grasp = { ...g, phase: 'WRAP', t0: t, dur: HC.chaseCap, from: Math.min(1, cur.bend), catchT: NEVER };

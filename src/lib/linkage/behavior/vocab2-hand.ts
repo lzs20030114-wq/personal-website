@@ -20,6 +20,7 @@
  *
  * 人格表 12 个数一个不改，读法均为推断（研究笔记 §9.5）。方向约定同引擎：弯向 0 = 臂梢朝上，左为正。
  */
+import { PRESENCE_EDGES } from './events';
 import type { PersonaKey, Temper } from './persona';
 import { type Cues, D_FLAT_MAX, D_MAX, type FeelerPose, type Phase, type Pose, lerpPoseLine } from './programs';
 import { type BuildCtx, D_DEEP_SPAN, D_SPAN, PEAK, type Tier, V2, anticPose, dOf, govern, pathLen, ph, tierSpeed, unhook } from './vocab2';
@@ -127,16 +128,22 @@ export const HC = {
   jumpDir: 20 * DEG,
   /** 缠的程序走完交给握持控制器时的混合时长（s） */
   holdBlend: 1,
-  /** 手怎么动（mm/s）：静 < 15 · 微动 15–60 · 牵引 < 60 且持续 0.5 s · 往外拉 ≥ 60；攥 +3 / 让 −3 mm */
+  /**
+   * 手速四级（mm/s，2026-10-17 收成一套，交互机制参数表 §12.3 第 3 条；此前 8 个门槛）：
+   * 静 < vStill 15 · 慢 vStill–vSlow 60 · 快 ≥ vFast 150 · 划过 > vSwipe 800（60–150 之间不单独起反应）。
+   * 用到的地方——静：凑、偷看、重新武装要手静着，偷看时 / 凑的途中手动了就缩回 / 回到陪着，怕的时候手一动就躲开；
+   * 慢：握着时的微动（反射一下）、被牵着走（< 60 且持续 0.5 s，= 台架 HAND_MM.tractionSpeed）、往外拉 ≥ 60 就让一让；
+   * 快：抽手快 = 扑过去追，不怕的时候手快速逼近也躲开；划过：台架判碰到时划过去的不算（= HAND_MM.maxSpeed），躲开的份量到顶。
+   * 攥 +3 / 让 −3 mm
+   */
   vStill: 15,
-  vMicro: 60,
+  vSlow: 60,
+  vFast: 150,
+  vSwipe: 800,
   tractionT: 0.5,
   squeeze: 3,
   give: 3,
-  /** 划过（mm/s，= 台架 HAND_MM.maxSpeed）：躲开的份量按手速在 60 → 800 之间的位置给 */
-  vSwipe: 800,
-  /** 追：抽手快（≥ 150 mm/s）= 扑过去；慢 = 伸过去送一下；let 0.15 s（慢的 0.3）；身体晚 0.3 s 跟 */
-  chaseFast: 150,
+  /** 追：抽手快（≥ vFast）= 扑过去；慢 = 伸过去送一下；let 0.15 s（慢的 0.3）；身体晚 0.3 s 跟 */
   chaseLet: 0.15,
   chaseLetSlow: 0.3,
   chaseNear: 14,
@@ -163,8 +170,8 @@ export const HC = {
   peekLeanN: 0.7,
   /**
    * 躲开（2026-10-17 与「一缩」合成一个）：手在逼近（0.25 s 内朝臂过来——按此刻的臂姿估的臂—手距离变小，或朝机身过来——
-   * 离电机轴变近）就触发。怕的时候（⑬ 的 N ≥ 0.2）手一动（≥ vStill）、臂—手距离 < 120 + 200·N mm 或手在近处（< near）
-   * 就躲；不怕的时候只有手快（≥ chaseFast）且在近处才躲。份量 σ = max(N, 手速在 60 → 800 mm/s 之间的位置)：
+   * 离电机轴变近）就触发。怕的时候（⑬ 的 N ≥ 0.2）手一动（≥ vStill）、臂—手距离 < 120 + 200·N mm 或手在近处（< DIST.near）
+   * 就躲；不怕的时候只有手快（≥ vFast）且在近处才躲。份量 σ = max(N, 手速在 vSlow → vSwipe 之间的位置)：
    * 臂甩到背着手那边、比躲的姿态再紧 0.08·(0.6 + 0.4σ)（strike 档，与热情型扑手同一个最快档），定住 0.6 + 0.8σ s，
    * 环身往收拢端推 0.06 + 0.02σ；身体再侧开 25°·N（累加封顶 35°，之后按 4 s 慢慢回落）。两次之间至少 0.35 s
    */
@@ -177,19 +184,15 @@ export const HC = {
   dodgeGap: 0.35,
   /**
    * 侧身角（2026-10-17 收成一条式子）：105° + 55°·N·(0.35 + 0.65·近)，再加躲开累加的那一截，封顶 160°——不整个背过去
-   * （用户 2026-10-15：「可以不完全背过去」）。近 = 手离电机轴 0.6 → 0.32 m 从 0 到 1，按最后看见手时的距离算（看不见就不知道它挪没挪）。
-   * N = 1 时：远处 124°、凑到机身边上 160°；N = 0 时 105°。躲手是唯一在手搭在机身上方时也转身的态度（迎的时候不转）
+   * （用户 2026-10-15：「可以不完全背过去」）。近 = bodyness（手离电机轴 0.6 → 0.32 m 从 0 到 1），按最后看见手时的距离算
+   *（看不见就不知道它挪没挪）。N = 1 时：远处 124°、凑到机身边上 160°；N = 0 时 105°。躲手是唯一在手搭在机身上方时也转身的态度
    */
   avoidSideMax: 160 * DEG,
   avoidFarShare: 0.35,
-  avoidNearR0: 320,
-  avoidNearR1: 600,
   /** 怕的时候，手在臂够不着的地方（读数 aimBend 1.0 → 1.4 饱和）：背着它弯的方向渐变成「往下、背着手那一侧」 */
   awaySideFrom: 1,
   awaySideSpan: 0.4,
-  /** 不怕的时候躲开要手在近处（离电机轴 < 0.6 m）；手走了（> 1.2 m 持续 1 s 或离开画布）= 松一口气 */
-  dodgeNearR: 600,
-  reliefR: 1200,
+  /** 手走了（远于 DIST.far 持续 1 s，或离开画布）= 松一口气 */
   reliefT: 1,
   /** 放开后手不动：3 s 后再来一次（抓空后每 ⑨ 至多一次） */
   rearm: 3,
@@ -197,9 +200,22 @@ export const HC = {
   armLead: 0.25,
   /** 够不着时：手挪 60 mm 才重新武装 */
   strainRearm: 60,
-  /** 偷看时手动了（> 30 mm/s）就缩回；凑的途中手动了（> 30 mm/s）回到陪着 */
-  vMove: 30,
 } as const;
+
+/**
+ * 手离机身（电机轴）的三档距离（mm，2026-10-17 收成一套，交互机制参数表 §12.2 第 2 条；此前六把尺）：
+ * 摸壳 body 0.32 m（台架机身外廓 0.30 m：手在机身上方 = 在摸壳，不转身、不去够）· 近 near 0.6 m · 远 far 1.5 m。
+ * 近 / 远与在场档的边界同一个数（events.ts PRESENCE_EDGES）
+ */
+export const DIST = { body: 320, near: PRESENCE_EDGES.near * 1000, far: PRESENCE_EDGES.far * 1000 } as const;
+const smooth01 = (x: number): number => {
+  const u = clamp(x, 0, 1);
+  return u * u * (3 - 2 * u);
+};
+/** 手有多近：远 → 近从 0 到 1（⑬ 按手的那一份、躲的收紧程度都读它——同一条曲线） */
+export const nearness = (dist: number): number => 1 - smooth01((dist - DIST.near) / (DIST.far - DIST.near));
+/** 手凑到机身边上：近 → 摸壳从 0 到 1（侧身角再侧开的那一截读它） */
+export const bodyness = (dist: number): number => 1 - smooth01((dist - DIST.body) / (DIST.near - DIST.body));
 
 // ------------------------------------------------------------------ 几何
 
@@ -699,10 +715,7 @@ export function holdEventDur(kind: string, period: number): number {
       return 0;
   }
 }
-const smoothstep = (x: number): number => {
-  const u = clamp(x, 0, 1);
-  return u * u * (3 - 2 * u);
-};
+const smoothstep = smooth01;
 
 // ------------------------------------------------------------------ 脱手
 

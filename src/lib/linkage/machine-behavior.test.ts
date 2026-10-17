@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { MACHINE_BASE_AXIS as YAW_AXIS } from './machine-base';
 import { D_DEEP_SPAN, D_FLAT_MAX, D_MAX, D_SPAN, D_WRAP_SPAN } from './behavior/programs';
 import { ARM_BEND_MAX, HAND, HZ, runSession, type ScheduledInput } from './behavior/engine';
-import { HC } from './behavior/vocab2-hand';
+import { DIST, HC } from './behavior/vocab2-hand';
+import { PRESENCE_EDGES } from './behavior/events';
 import type { PersonaKey } from './behavior/persona';
 import { PERSONA_KEYS } from './behavior/persona';
 import {
@@ -347,6 +348,14 @@ describe('臂与触须', () => {
     // 臂长：引擎 HAND.armL 取迎手链的 HC.armL，台架按模型算的弦长要对得上（≤ 0.5 mm）
     expect(HAND.armL).toBe(HC.armL);
     expect(Math.abs(HC.armL - ARM_GEOM.length)).toBeLessThan(0.5);
+    // 距离三档、手速四级里与台架共用的那几个数（2026-10-17 收成一套）
+    expect(DIST.near).toBe(PRESENCE_EDGES.near * 1000);
+    expect(DIST.far).toBe(PRESENCE_EDGES.far * 1000);
+    expect(DIST.body).toBeGreaterThan(R_HULL);
+    expect(HC.vSwipe).toBe(HAND_MM.maxSpeed);
+    expect(HC.vSlow).toBe(HAND_MM.tractionSpeed);
+    expect(HC.vStill).toBeLessThan(HC.vSlow);
+    expect(HC.vSlow).toBeLessThan(HC.vFast);
   });
 
   it('弯向补偿：三次迭代后「指令 + 偏差 ≈ 目标」（残差 < 1.2°）；朝上补得少、朝下补得多；差动为 0 不补', () => {

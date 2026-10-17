@@ -39,31 +39,31 @@
     }
   ],
   "hand": {
-    "source": "B③ 躲开与一缩合并、侧身角一条式子、看不见的手不躲（2026-10-17）",
+    "source": "B④ 距离三档、手速四级（2026-10-17）",
     "cases": [
       {
         "seed": 211,
         "lifeRate": 1,
-        "log": "ee3ca8ed484c7412",
-        "frames": "2e4317719639f52e"
+        "log": "1d8d51666855a5d3",
+        "frames": "e7c563dbc2b3dec0"
       },
       {
         "seed": 223,
         "lifeRate": 1,
-        "log": "593e256e4886edeb",
-        "frames": "1c6697aa078e4da9"
+        "log": "07ac8c88ccf6d32b",
+        "frames": "9f093830fad738d3"
       },
       {
         "seed": 241,
         "lifeRate": 10,
-        "log": "cf357894ce54d13b",
-        "frames": "c66794e81b92783b"
+        "log": "473f5e5e81fca8e7",
+        "frames": "fec1ac91ec5dfd8c"
       },
       {
         "seed": 251,
         "lifeRate": 10,
-        "log": "9c583fdb6d10078e",
-        "frames": "9e6c89a6a7693bed"
+        "log": "feedf86c66cf07bd",
+        "frames": "5ba399abee1b08ae"
       }
     ]
   }
