@@ -125,7 +125,7 @@ export const ENGINE = {
    * 作用三处：呼吸周期 ×(1 − breath·a)、自发间隔 ×(1 − spont·a)、触须扫幅 ×(1 + feeler·a)。
    */
   arousal: { gain: 0.5, tau: 15, breath: 0.3, spont: 0.4, feeler: 0.5 },
-  /** 参考速度（cm/s；原好奇型的速度）：速度系数 k_v = v / 1.5 */
+  /** 速度刻度（cm/s）：速度系数 k_v = v / 1.5。1.5 是重分类前好奇型的速度，现在只是刻度（改它所有 k 都变） */
   speedRef: 1.5,
   /** 响应强度归一：|g| / 0.5（表里最大 50%）；下限让最弱的响应也看得见 */
   gainRef: 0.5,

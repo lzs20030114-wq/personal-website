@@ -118,7 +118,7 @@ export const HC = {
   cinchStep: 5,
   winLo: -12,
   winHi: 24,
-  /** 握：压过手 8 mm、挤压峰峰 6 + 10·②、指令提前 0.45 s、满足 fade = 0.55 + 0.45·e^(−n/3) */
+  /** 握：压过手 8 mm、挤压峰峰 14 + 16·②、指令提前 0.45 s、满足 fade = 0.55 + 0.45·e^(−n/3) */
   holdCenter: 8,
   holdAmp0: 14,
   holdAmp1: 16,
@@ -304,7 +304,7 @@ export const epsOf = (T: Temper, tau: number): number => Math.min(HC.epsMax, HC.
 export const pounces = (c: BuildCtx): boolean => c.k >= V2.springK && c.ageU < 0.5;
 /** 够不着时再撑几次：floor(2.5·⑩)——越想要越会再撑（热情 2 · 沉静 1 · 回避 0 · 乱序随机 1） */
 export const strainTries = (toward: number): number => Math.floor(2.5 * toward);
-/** 握着的挤压峰峰（mm）：holdAmp0 + holdAmp1·②（热情 26.8 · 沉静 22 · 回避 18.8 · 乱序随机 16.4–28.4） */
+/** 握着的挤压峰峰（mm）：holdAmp0 + holdAmp1·②（热情 26.8 · 沉静 22 · 回避 18.8 · 乱序随机 17.2–28.4） */
 export const squeezeAmp = (breathAmp: number): number => HC.holdAmp0 + HC.holdAmp1 * breathAmp;
 /** 收紧几级：1 + [|g|/0.5 ≥ 0.4]（热情 2 · 回避 2 · 沉静 1 · 乱序随机 1–2） */
 export const cinchCount = (gN: number): number => 1 + (gN >= 0.4 ? 1 : 0);
