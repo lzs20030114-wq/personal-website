@@ -3,7 +3,7 @@ import { BehaviorEngine, type EngineState, OBS, obsForecast, obsSettled, obsStep
 import type { SensorInput } from './events';
 import type { LogRecord } from './log';
 import { PERSONA_KEYS, type PersonaKey } from './persona';
-import { HC, gainAt } from './vocab2-hand';
+import { gainAt } from './vocab2-hand';
 import {
   ARM_GEOM,
   type HandSent,
@@ -335,37 +335,25 @@ describe('迎手链：脱手、抓空、躲', () => {
   });
 });
 
-describe('迎手链：深卷预算与纯数据', () => {
-  it('深卷：门开着（手在腱轴 0 正上方、平卷够不着）才用，≤ 0.62、每轮 ≤ 4 s；deepOk = false 时恒 0', () => {
+describe('迎手链：不用深卷与纯数据', () => {
+  it('迎手链不用深卷（2026-10-17 去掉）：手在腱轴 0 正上方、平卷够不着——臂不进深卷、不凑（交给够不着那一串）；惊跳照样深卷', () => {
     const deepHand: Hand = { bearing: 0, dist: 480, face: 0.25, aimDir: 0, aimBend: 1.47, aimDist: 250 };
-    const seed = seedFor('A', 'toward');
-    const run = (deepOk: boolean): { used: number; maxD: number; maxDeep: number } => {
-      const r = new Rig('A', seed, { deepOk });
-      r.move(deepHand, 0);
-      // 不让碰到：卷一直卷到上限 0.62（这个粗糙的碰到模型在差动 0.31 就判碰到，到不了深卷行程）
-      r.contact = false;
-      let used = 0;
-      let maxD = 0;
-      let maxDeep = 0;
-      r.run(30, () => {
-        const a = r.e.targets().arm;
-        const D = 0.34 * a.bend + 0.16 * a.wrap + 0.3773 * (a.deep ?? 0);
-        maxDeep = Math.max(maxDeep, a.deep ?? 0);
-        if ((a.deep ?? 0) > 0) {
-          maxD = Math.max(maxD, D);
-          // 规范表示：deep > 0 ⇔ 差动 > 0.48
-          expect(D).toBeGreaterThan(HC.flatMax - 1e-9);
-          used += 1 / 60;
-          expect(Math.abs(a.dir)).toBeLessThan(0.15);
-        }
-      });
-      return { used, maxD, maxDeep };
-    };
-    const on = run(true);
-    expect(on.maxDeep).toBeGreaterThan(0);
-    expect(on.maxD).toBeLessThanOrEqual(HC.deepMax + 1e-6);
-    expect(on.used).toBeLessThanOrEqual(4 + 1 / 60 + 1e-9);
-    expect(run(false).maxDeep).toBe(0);
+    const r = new Rig('A', seedFor('A', 'toward'));
+    r.move(deepHand, 0);
+    r.contact = false;
+    let maxDeep = 0;
+    r.run(30, () => {
+      maxDeep = Math.max(maxDeep, r.e.targets().arm.deep ?? 0);
+    });
+    expect(maxDeep).toBe(0);
+    expect(r.beats().some((b) => b.startsWith('approach'))).toBe(false);
+    // 惊跳的深卷不受影响：敲一下（0.95 高于所有阈值）
+    r.push({ kind: 'KNOCK', intensity: 0.95 });
+    let startleDeep = 0;
+    r.run(1, () => {
+      startleDeep = Math.max(startleDeep, r.e.targets().arm.deep ?? 0);
+    });
+    expect(startleDeep).toBeGreaterThan(0.3);
   });
 
   it('凑 / 缠 / 握的中途快照 → JSON → 恢复，接着跑与一口气跑完逐位相同', () => {
@@ -577,49 +565,24 @@ describe('迎手链：评审第二轮的守门（2026-10-08）', () => {
     }
   });
 
-  it('深卷交接不跳：握着时留物件（握人 → 握物）、深卷途中手离开画布丢掉——三腱逐帧 ≤ 0.06', () => {
-    const deepHand: Hand = { bearing: 0, dist: 480, face: 0.25, aimDir: 0, aimBend: 1.47, aimDist: 250 };
+  it('交接不跳：握着时留物件（握人 → 握物）、手离开画布丢掉——三腱逐帧 ≤ 0.06', () => {
     let holds = 0;
-    let curls = 0;
     for (const from of [1, 100, 200, 300]) {
       const seed = seedFor('A', 'toward', from);
-      // 握人（深卷）→ 留物件
       const a = new Rig('A', seed);
-      a.move(deepHand, 0);
-      let deepHold = false;
-      a.run(30, () => {
-        if (!deepHold && a.e.state.grasp.phase === 'HOLD_HUMAN' && (a.e.targets().arm.deep ?? 0) > 0.1 && a.t - (a.ev('GRASP_HOLD_HUMAN')[0]?.t ?? 1e9) + a.t0 > 1) deepHold = true;
-      });
-      if (deepHold || (a.e.state.grasp.phase === 'HOLD_HUMAN' && (a.e.targets().arm.deep ?? 0) > 0.1)) {
-        holds++;
-        const j = jumpWatch(a);
-        a.push({ kind: 'ARM_TOUCH', on: false });
-        a.touch = false;
-        a.contact = false;
-        a.hand = null;
-        a.run(4, j.step);
-        expect(a.e.state.grasp.phase).toBe('HOLD_OBJECT');
-        expect(j.worst().d, `hold ${from} ${JSON.stringify(j.worst())}`).toBeLessThanOrEqual(0.06);
-      }
-      // 卷到一半手离开画布 → 3 s 后丢掉 → 手链关
-      const b = new Rig('A', seed);
-      b.move(deepHand, 0);
-      b.contact = false;
-      let cut = false;
-      const j = jumpWatch(b);
-      b.run(30, () => {
-        if (!cut && b.e.handStage()?.beat === 'curl' && (b.e.targets().arm.deep ?? 0) > 0.3) {
-          cut = true;
-          b.hand = null;
-        }
-        if (cut) j.step();
-      });
-      if (cut) {
-        curls++;
-        expect(j.worst().d, `curl ${from} ${JSON.stringify(j.worst())}`).toBeLessThanOrEqual(0.06);
-      }
+      a.run(30, () => undefined);
+      if (a.e.state.grasp.phase !== 'HOLD_HUMAN') continue;
+      holds++;
+      const j = jumpWatch(a);
+      a.push({ kind: 'ARM_TOUCH', on: false });
+      a.touch = false;
+      a.contact = false;
+      a.hand = null;
+      a.run(8, j.step);
+      expect(a.e.state.grasp.phase).toBe('HOLD_OBJECT');
+      expect(j.worst().d, `hold ${from} ${JSON.stringify(j.worst())}`).toBeLessThanOrEqual(0.06);
     }
-    expect(holds + curls).toBeGreaterThan(1);
+    expect(holds).toBeGreaterThan(1);
   });
 
   it('指针 40 mm/s 慢慢挪个不停（台架按 handSendDue 报）：引擎不把它当停稳——不凑、不撑、不缠', () => {

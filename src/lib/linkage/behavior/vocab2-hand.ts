@@ -39,12 +39,6 @@ export const HC = {
    * 实测失稳在两腱之间 0.55；带摆动的段基姿态要让出摆幅，摆到波峰也 ≤ 0.48
    */
   flatMax: 0.48,
-  /** 深卷（只在腱轴 0 上、门全部满足时）的差动上限：主腱约 0.9，不到惊跳的 0.717 那么满 */
-  deepMax: 0.62,
-  /** 深卷预算：每轮（一次 ⑨）深卷行程里的总时长 4 s，**松开的 1.3 s 也算在内**（卷满 2.7 s 就开始松）；之后冷却 45 s */
-  deepBudget: 4,
-  deepRelease: 1.3,
-  deepCooldown: 45,
   /** 接触灵敏度 G(r, D) = k·clamp(r/L, 0.25, 1)^e·(1 − drop·min(D, 0.5))（mm / 差动） */
   gainK: 480,
   gainExp: 1.6,
@@ -219,19 +213,9 @@ export function flatH(D: number, dir: number): Pose {
   return { bend: clamp(D, 0, HC.flatMax) / D_SPAN, dir: wrapPi(dir), deep: 0 };
 }
 
-/** 腱轴 0（臂梢朝上）上的深卷姿态（深卷门开着时用；差动封顶 0.62） */
-export function axisPose(D: number): Pose {
-  const d = clamp(D, 0, HC.deepMax);
-  // 0.48 以内与离轴同一个表示（执行层两条路给出同一个差动）；只有超出 0.48 的那一截记作深卷——
-  // deep > 0 ⇔ 真的进了深卷行程（预算按它记、观众看到的「深卷」也是它）。握着手时差动常在 0.4 上下，
-  // 原先按「超出 0.34 记深卷」会让深卷占时显示成 100%，而执行层其实一直在平卷行程里
-  if (d <= HC.flatMax) return flatH(d, 0);
-  return { bend: HC.flatMax / D_SPAN, dir: 0, deep: (d - HC.flatMax) / D_DEEP_SPAN };
-}
-
 /**
- * 规范表示（同一个差动，执行层给出同一组三腱）：0.48 以内只用平卷，超出 0.48 的那一截才记深卷。程序在平卷与深卷姿态
- * 之间插值时，中途会出现「deep > 0 而差动还不到 0.48」——执行层看不出区别，但深卷占时与预算记账就对不上了
+ * 规范表示（同一个差动，执行层给出同一组三腱）：0.48 以内只用平卷，超出 0.48 的那一截才记深卷。2026-10-17 起迎手链
+ * 自己不用深卷，只剩惊跳留下的深卷会进到手链的程序里（收回途中）：0.48 以内一律记成平卷，执行层不再按它贴轴吸附
  */
 export function canonDeep(p: Pose): Pose {
   if (p.deep <= 0) return p;
@@ -257,11 +241,6 @@ export interface HandGeom {
 /** 手那一点上的毫米 → 姿态：负 = 停在手前这么多、正 = 压过手这么多 */
 export function atMm(g: HandGeom, mm: number, Dref = g.Dh): Pose {
   return flatH(Dref + mm / gainAt(g.r, Dref), g.dir);
-}
-
-/** 同上，深卷门开着时走腱轴 0 */
-export function atMmDeep(g: HandGeom, mm: number, Dref: number): Pose {
-  return axisPose(Dref + mm / gainAt(g.r, Dref));
 }
 
 /** 两个姿态在差动平面上的距离 */
@@ -392,7 +371,6 @@ export type ApproachBeat =
   | 'sight'
   | 'reach'
   | 'touch'
-  | 'curl'
   | 'nudge'
   | 'balk'
   | 'stall'
@@ -405,14 +383,14 @@ export type ApproachBeat =
  *   回避（⑩ 只有 5%，迎的时候也是试探着）：edge → wait → retreat → wait2 → edge2 → hover → touch
  *   慢的乱序随机：transport → hover → touch
  *   乱序随机 ⑤ 抽到负：balk → stall → drop（撤掉）
- * 深卷门开着时最后一拍（reach / touch）换成 curl。走完没碰到：nudge × 2。
+ * 走完没碰到：nudge × 2。（2026-10-17 以前深卷门开着时最后一拍换成沿腱轴卷的 curl；闭环里一秒没用上，删掉）
  */
-export function approachPlan(c: BuildCtx, g: HandGeom, opts: { negative: boolean; deep: boolean }): ApproachBeat[] {
+export function approachPlan(c: BuildCtx, g: HandGeom, opts: { negative: boolean }): ApproachBeat[] {
   if (opts.negative) return ['balk', 'stall', 'drop'];
   const P = c.temper;
-  const last: ApproachBeat = opts.deep ? 'curl' : P === 'calm' || (P === 'warm' && !pounceFits(c, g)) ? 'reach' : 'touch';
+  const last: ApproachBeat = P === 'calm' || (P === 'warm' && !pounceFits(c, g)) ? 'reach' : 'touch';
   if (P === 'avoidant') return ['edge', 'wait', 'retreat', 'wait2', 'edge2', 'hover', last];
-  if ((P === 'warm' || P === 'random') && pounces(c) && pounceFits(c, g) && !opts.deep) return ['transport', 'crouch', 'cocked', 'pounce'];
+  if ((P === 'warm' || P === 'random') && pounces(c) && pounceFits(c, g)) return ['transport', 'crouch', 'cocked', 'pounce'];
   if (P === 'calm' || P === 'warm') return ['transport', 'hover', 'sight', last];
   return ['transport', 'hover', last];
 }
@@ -426,7 +404,7 @@ export function pounceGeom(c: BuildCtx, g: HandGeom): { gap: number; cock: numbe
 export const pounceFits = (c: BuildCtx, g: HandGeom): boolean => pounceGeom(c, g).S <= HC.strikeMax;
 
 /** 凑里的一拍。返回的段已按档定时长；hover / cocked 的段长是「最多等多久」，引擎在门过了就提前进下一拍 */
-export function buildApproachBeat(c: BuildCtx, g: HandGeom, beat: ApproachBeat, deepRef = 0): Phase[] {
+export function buildApproachBeat(c: BuildCtx, g: HandGeom, beat: ApproachBeat): Phase[] {
   const P = c.temper;
   const k = c.k;
   const H = hoverGap(g, c.tau);
@@ -489,10 +467,6 @@ export function buildApproachBeat(c: BuildCtx, g: HandGeom, beat: ApproachBeat, 
         c,
         P === 'avoidant' ? 'creep' : 'deliberate',
       );
-    case 'curl':
-      // 深卷门开着（手在臂中段正上方、平卷够不着）：读数已经饱和（看不出还差多少），沿腱轴 0 慢慢往 0.62 卷，碰到即停
-      void deepRef;
-      return gov([ph('curl', 1.2 / k, 'mj', axisPose(HC.deepMax), { breath: { rate: 0.5 }, feel: pointAt(P, { antennate: 0.06 }), voice: 'mute' })], c, 'creep');
     case 'nudge':
       return gov([ph('nudge', 0.5 / k, 'mj', addD(c.cur, HC.nudge), { feel: pointAt(P), voice: 'mute' })], c, 'creep');
     case 'balk':
@@ -571,8 +545,6 @@ export interface WrapIn {
   settle: number;
   /** 收紧的基准差动（读数饱和时取碰到那一刻的差动） */
   Dref: number;
-  /** 深卷门开着：贴上与收紧走腱轴 0 */
-  deep: boolean;
 }
 
 /**
@@ -585,7 +557,7 @@ export function buildWrap(c: BuildCtx, g: HandGeom, w: WrapIn): { phases: Phase[
   const out: Phase[] = [];
   const at = (mm: number): Pose => {
     const m = clamp(mm, HC.winLo, HC.winHi);
-    return w.deep ? atMmDeep(g, m, w.Dref) : atMm(g, m, w.Dref);
+    return atMm(g, m, w.Dref);
   };
   if (w.wince && !w.chase) {
     out.push(
@@ -639,9 +611,8 @@ export interface HoldIn {
   breathAmp: number;
   breaths: number;
   grip: number;
-  /** 事件叠加（mm，攥 + / 让 −；小动作）与深卷 */
+  /** 事件叠加（mm，攥 + / 让 −；小动作） */
   evMm: number;
-  deep: boolean;
 }
 
 /** 此刻挤压相位 0–1（1 = 最紧；指令提前 0.45 s，看得见的最紧落在呼气末） */
@@ -657,7 +628,7 @@ export function holdDrive(o: HoldIn): Pose {
   const sq = squeezePhase(o.phi, o.period);
   const mm = clamp(HC.holdCenter + 2 * half * fade * (sq - 0.5) + o.evMm, HC.winLo, HC.winHi);
   const D = (o.Dref + mm / gainAt(o.g.r, o.Dref)) * o.grip;
-  return o.deep ? axisPose(D) : flatH(D, o.dirRef);
+  return flatH(D, o.dirRef);
 }
 
 /** 握着时的提示（呼吸放慢一点、加深一点，呼气时哼，灯稳亮；触须按性格） */
