@@ -21,7 +21,7 @@
  * 人格表 12 个数一个不改，读法均为推断（研究笔记 §9.5）。方向约定同引擎：弯向 0 = 臂梢朝上，左为正。
  */
 import type { PersonaKey, Temper } from './persona';
-import { type Cues, type FeelerPose, type Phase, type Pose, lerpPoseLine } from './programs';
+import { type Cues, D_FLAT_MAX, D_MAX, type FeelerPose, type Phase, type Pose, lerpPoseLine } from './programs';
 import { type BuildCtx, D_DEEP_SPAN, D_SPAN, PEAK, type Tier, V2, anticPose, dOf, govern, pathLen, ph, tierSpeed, unhook } from './vocab2';
 
 const TAU = 2 * Math.PI;
@@ -32,13 +32,13 @@ const lerpAngle = (a: number, b: number, u: number): number => wrapPi(a + wrapPi
 
 /** 手感常量（均待作者拍板；出处见研究笔记 §9.8） */
 export const HC = {
-  /** 臂长（mm，与 engine HAND.armL / 台架 ARM_GEOM.length 同值） */
+  /** 臂长（mm，静息弦长；唯一出处——engine 的 HAND.armL 取它，台架 ARM_GEOM.length 由守门测试核对） */
   armL: 357.5,
   /**
-   * 离轴的差动上限（迎手链比回应多用到 0.48：超过 0.34 的部分走执行层的深缠行程）。执行层 dMax 0.5 在验过的范围内，
-   * 实测失稳在两腱之间 0.55；带摆动的段基姿态要让出摆幅，摆到波峰也 ≤ 0.48
+   * 离轴的差动上限（= programs.ts 的 D_FLAT_MAX：迎手链比回应多用到 0.48，超过 0.34 的部分走执行层的深缠行程）。
+   * 执行层 dMax 0.5 在验过的范围内，实测失稳在两腱之间 0.55；带摆动的段基姿态要让出摆幅，摆到波峰也 ≤ 0.48
    */
-  flatMax: 0.48,
+  flatMax: D_FLAT_MAX,
   /** 接触灵敏度 G(r, D) = k·clamp(r/L, 0.25, 1)^e·(1 − drop·min(D, 0.5))（mm / 差动） */
   gainK: 480,
   gainExp: 1.6,
@@ -224,9 +224,12 @@ export function canonDeep(p: Pose): Pose {
   return { bend: HC.flatMax / D_SPAN, dir: p.dir, deep: (D - HC.flatMax) / D_DEEP_SPAN };
 }
 
+/** 刚好穿过手的差动：min(D_MAX, D_SPAN·aimBend)（读数的 aimBend = 臂弯到穿过手要多少弯曲） */
+export const handD = (aimBend: number): number => Math.min(D_MAX, D_SPAN * aimBend);
+
 /** 迎手链看到的手：读数在建表那一刻的快照 */
 export interface HandGeom {
-  /** 刚好穿过手的差动 = min(0.5, 0.34·aimBend) */
+  /** 刚好穿过手的差动 = handD(aimBend) */
   Dh: number;
   /** 弯向（aimDir） */
   dir: number;

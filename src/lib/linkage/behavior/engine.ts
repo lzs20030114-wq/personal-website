@@ -39,11 +39,22 @@ import {
   midOf,
   sampleRange,
 } from './persona';
-import { type Cues, type Phase as ProgPhase, type Pose, type Program, startProgram, stepProgram, totalDur } from './programs';
+import {
+  type Cues,
+  D_DEEP_SPAN,
+  D_SPAN,
+  D_WRAP_SPAN,
+  POSE_BEND_MAX,
+  type Phase as ProgPhase,
+  type Pose,
+  type Program,
+  startProgram,
+  stepProgram,
+  totalDur,
+} from './programs';
 import { type Rng, chance, deriveSeed, makeRng, pick, uniform } from './rng';
 import {
   type BuildCtx,
-  D_DEEP_SPAN,
   type RegKind,
   type RespKind,
   STARTLE_PRE,
@@ -92,6 +103,7 @@ import {
   epsOf,
   gainAt,
   handArmGap,
+  handD,
   holdCue,
   holdDrive,
   holdEventDur,
@@ -127,8 +139,6 @@ export const ENGINE = {
   arousal: { gain: 0.5, tau: 15, breath: 0.3, spont: 0.4, feeler: 0.5 },
   /** 速度刻度（cm/s）：速度系数 k_v = v / 1.5。1.5 是重分类前好奇型的速度，现在只是刻度（改它所有 k 都变） */
   speedRef: 1.5,
-  /** 惊吓是反射：固定延迟，不吃人格的响应延迟 */
-  startleLatency: 0.1,
 } as const;
 
 /**
@@ -184,8 +194,8 @@ export const HAND = {
   loseAfter: 3,
   /** 手在机身上方（离电机轴这么近，mm）：那是在摸壳，不转身、不去够 */
   bodyR: 320,
-  /** 臂长（mm，静息弦长；与台架 ARM_GEOM.length 同值，守门里核） */
-  armL: 357.5,
+  /** 臂长（mm，静息弦长；唯一出处在 vocab2-hand.ts 的 HC.armL，台架 ARM_GEOM.length 由守门测试核对） */
+  armL: HC.armL,
   /**
    * 分层转向（迎）：臂够得着（见 vocab2-hand.ts 的 reachable）就只动臂；够不着、又偏出 20° 才转身；
    * 转到偏差 4° 以内停。躲：偏出 20° 就转，4° 停。
@@ -218,7 +228,7 @@ export const HAND = {
  * 差动封顶 0.5（再大两腱之间失稳，见 machine-behavior.ts 的 ARM_DRIVE）。引擎只在有手时用它：
  * 缠到底、握住时保住形状；没有手的会话 wrap 恒为 0，与改动前逐位相同。
  */
-export const ARM_BEND_MAX = 1.47;
+export const ARM_BEND_MAX = POSE_BEND_MAX;
 
 /**
  * ⑬ 对人的趋避（2026-10-14 人格重分类时加；均为手感常量，待拍板）。
@@ -275,7 +285,10 @@ export const SOCIAL = {
 } as const;
 
 const AROUSAL_DECAY = Math.exp(-DT / ENGINE.arousal.tau);
-/** 偏向两端抽的人格（乱序随机）每口气的行程速度上限 π·a/T（1/s）：唤醒再快 30% 也不超曲柄 4.19 rad/s */
+/**
+ * 偏向两端抽的人格（乱序随机）每口气的行程速度上限 π·a/T（1/s）：抽的时候就压，唤醒再快 30%（1.29/s）也只比
+ * 行程速度总上限 V2.breathRateCap（1.2/s）高一点——快的那几口自动变浅变慢，不靠总上限硬截。同样是经验值，见 V2.breathRateCap
+ */
 const EXTREME_BREATH_RATE = 0.9;
 
 
@@ -811,18 +824,18 @@ export const wrapPi = (a: number): number => a - TAU * Math.floor((a + Math.PI) 
 const lerpAngle = (a: number, b: number, u: number): number => a + wrapPi(b - a) * u;
 /** 偏航限位（±π，不缠线；新加的旋转电机行程待用户更新模型后确认） */
 const clampYaw = (a: number): number => clamp(a, -Math.PI, Math.PI);
-/** 弯曲超过 1 的部分换成深缠行程（执行层：差动 = 0.34·bend + 0.16·wrap） */
-const WRAP_PER_BEND = 0.34 / 0.16;
+/** 弯曲超过 1 的部分换成深缠行程（执行层：差动 = D_SPAN·bend + D_WRAP_SPAN·wrap） */
+const WRAP_PER_BEND = D_SPAN / D_WRAP_SPAN;
 /** 两个臂姿态在差动平面上按直线混合（深卷线性） */
 function blendPose(a: Pose, b: Pose, u: number): Pose {
   if (u <= 0) return a;
   if (u >= 1) return b;
-  const da = 0.34 * a.bend;
-  const db = 0.34 * b.bend;
+  const da = D_SPAN * a.bend;
+  const db = D_SPAN * b.bend;
   const x = da * Math.cos(a.dir) + (db * Math.cos(b.dir) - da * Math.cos(a.dir)) * u;
   const y = da * Math.sin(a.dir) + (db * Math.sin(b.dir) - da * Math.sin(a.dir)) * u;
   const D = Math.hypot(x, y);
-  return { bend: D / 0.34, dir: D > 1e-9 ? Math.atan2(y, x) : b.dir, deep: a.deep + (b.deep - a.deep) * u };
+  return { bend: D / D_SPAN, dir: D > 1e-9 ? Math.atan2(y, x) : b.dir, deep: a.deep + (b.deep - a.deep) * u };
 }
 
 const idleGrasp = (): GraspMem => ({
@@ -1584,7 +1597,7 @@ export class BehaviorEngine {
     m.startleBusy = t + busy;
     for (const k of [0, 1] as const) {
       if (e.kind === 'FEELER_TOUCH' && e.feeler === k) continue;
-      this.reflex(k, 1, t + ENGINE.startleLatency, ctx.vigor, id);
+      this.reflex(k, 1, t + V2.startleLatency, ctx.vigor, id);
     }
     this.emit('STARTLE', { to: id, I, th, motion: 'startle', rule, repeats });
     // 被手吓到（碰臂惊跳）：这只手先不迎了，直到下一次 ⑨ 重新决定
@@ -2019,7 +2032,7 @@ export class BehaviorEngine {
    */
   private handFactV2(e: Extract<SensorInput, { kind: 'HAND'; on: true }>, t: number, h: HandMem | null): void {
     const hc = this.s.m2.hc;
-    const D = Math.min(0.5, 0.34 * clamp(e.aimBend, 0, ARM_BEND_MAX));
+    const D = handD(clamp(e.aimBend, 0, ARM_BEND_MAX));
     const x = D * Math.cos(e.aimDir);
     const y = D * Math.sin(e.aimDir);
     hc.touch = e.touch ?? 32;
@@ -2064,6 +2077,11 @@ export class BehaviorEngine {
     const rel = clamp(wrapPi(h.bearing - this.s.yaw.x), -Math.PI / 2, Math.PI / 2);
     const side = Math.PI + SOCIAL.awayTilt * rel;
     return lerpAngle(base, side, N * smooth((h.aimBend - HC.awaySideFrom) / HC.awaySideSpan));
+  }
+
+  /** 躲的「有多近」：手离电机轴 awayNear → awayFar，从 1 落到 0（收的姿态、松一口气读它） */
+  private handClose(h: HandMem): number {
+    return 1 - smooth((h.dist - HAND.awayNear) / (HAND.awayFar - HAND.awayNear));
   }
 
   /** 手在机身上方（在摸壳）：不转身、不去够 */
@@ -2309,7 +2327,7 @@ export class BehaviorEngine {
   /** 读数 → 建表用的手 */
   private handGeom(h: HandMem): HandGeom {
     const hc = this.s.m2.hc;
-    return { Dh: Math.min(0.5, 0.34 * h.aimBend), dir: h.aimDir, r: h.aimDist, touch: hc.touch, v: hc.v };
+    return { Dh: handD(h.aimBend), dir: h.aimDir, r: h.aimDist, touch: hc.touch, v: hc.v };
   }
 
   /** 换阶段 / 拍（变了才记 HAND_STAGE） */
@@ -2383,7 +2401,7 @@ export class BehaviorEngine {
   /** 读数（差动平面）离武装参照多少 mm */
   private hcMovedMm(h: HandMem): number {
     const hc = this.s.m2.hc;
-    const D = Math.min(0.5, 0.34 * h.aimBend);
+    const D = handD(h.aimBend);
     const x = D * Math.cos(h.aimDir);
     const y = D * Math.sin(h.aimDir);
     return Math.hypot(Math.hypot(x - hc.refX, y - hc.refY) * gainAt(h.aimDist, D), h.aimDist - hc.refR);
@@ -2391,7 +2409,7 @@ export class BehaviorEngine {
 
   private hcArmRef(h: HandMem): void {
     const hc = this.s.m2.hc;
-    const D = Math.min(0.5, 0.34 * h.aimBend);
+    const D = handD(h.aimBend);
     hc.refX = D * Math.cos(h.aimDir);
     hc.refY = D * Math.sin(h.aimDir);
     hc.refR = h.aimDist;
@@ -2419,7 +2437,7 @@ export class BehaviorEngine {
   /** 躲的姿态参照：越近越缩、背着手 */
   private avoidRef(h: HandMem): void {
     const hc = this.s.m2.hc;
-    hc.close = 1 - smooth((h.dist - HAND.awayNear) / (HAND.awayFar - HAND.awayNear));
+    hc.close = this.handClose(h);
     hc.awayDir = this.awayDir(h);
   }
 
@@ -2606,7 +2624,7 @@ export class BehaviorEngine {
     const s = this.s;
     const b = Math.min(1, Math.hypot(s.armX.x, s.armY.x));
     const dir = b > 1e-9 ? Math.atan2(s.armY.x, s.armX.x) : 0;
-    const D = 0.34 * b + 0.16 * s.wrap.x + (s.m2 && s.m2.deepOk ? 0.3773 * s.m2.deep : 0);
+    const D = D_SPAN * b + D_WRAP_SPAN * s.wrap.x + (s.m2.deepOk ? D_DEEP_SPAN * s.m2.deep : 0);
     return [D * Math.cos(dir), D * Math.sin(dir)];
   }
 
@@ -2987,7 +3005,7 @@ export class BehaviorEngine {
     }
     if (busy) return;
     // 手挪了：再收一次（怕的时候挪一点就收）
-    const close = 1 - smooth((h.dist - HAND.awayNear) / (HAND.awayFar - HAND.awayNear));
+    const close = this.handClose(h);
     const away = this.awayDir(h);
     if (
       Math.abs(close - hc.close) > HC.reshrinkClose - HC.reshrinkCloseN * N ||

@@ -15,7 +15,7 @@
  * 左边来的（side = +1）→ −120°，右边来的 → +120°。
  */
 import type { PersonaKey, Temper } from './persona';
-import { type Cues, type Phase, type Pose, arcDelta } from './programs';
+import { type Cues, D_DEEP_SPAN, D_SPAN, type Phase, type Pose, arcDelta } from './programs';
 
 const TAU = 2 * Math.PI;
 const AXIS = (2 * Math.PI) / 3;
@@ -23,9 +23,8 @@ const DEG = Math.PI / 180;
 const wrapPi = (a: number): number => a - TAU * Math.floor((a + Math.PI) / TAU);
 const clamp = (x: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, x));
 
-/** 台架换算里的差动跨度（= ARM_DRIVE.span 与 ARM_DRIVE.deepSpan，守门测试核对；这里只用来把「差动 D」换成 bend + deep） */
-export const D_SPAN = 0.34;
-export const D_DEEP_SPAN = 0.3773;
+/** 差动跨度（唯一出处在 programs.ts；这里转出去给老的调用点，并用来把「差动 D」换成 bend + deep） */
+export { D_DEEP_SPAN, D_SPAN };
 const SPAN = D_SPAN;
 const DEEP_SPAN = D_DEEP_SPAN;
 
@@ -74,7 +73,11 @@ export const V2 = {
   breathRateOmega: 12,
   clenchUp: 10,
   clenchDown: 3,
-  /** 呼吸提示的曲柄限速：π·幅度/周期 ≤ 1.2 s⁻¹（曲柄 ≤ 4.19 rad/s） */
+  /**
+   * 呼吸的行程速度上限：π·幅度/周期 ≤ 1.2 s⁻¹（所有人格、所有提示叠起来之后）。它是按「曲柄 ≤ 4.19 rad/s」定的经验值，
+   * 推不出来：曲柄在行程两端 dθ/ds 发散，贴着死点的小口呼吸任何行程速度上限都保证不了（2026-10-17 审核时算过，
+   * 最坏情况 12.9 rad/s）。实际由 machine-behavior.test.ts「引擎轨迹跟得上」的实测守着
+   */
   breathRateCap: 1.2,
   /**
    * 触须姿势偏移（rad，[触须 0, 触须 1]；正 = 反射约定里的「甩向 L 侧」）。tuck 收、splay 张开、raise 竖起、

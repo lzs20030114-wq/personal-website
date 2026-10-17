@@ -106,13 +106,27 @@ export interface Program {
 export const ARM_OSC_MAX_HZ = 0.6;
 
 /**
- * 弯曲量的上限：1 = 只用差动的满幅（0.34）；迎手链（2026-10-08）要把手那一点上的毫米换成差动，离轴最多到 0.48，
- * 超出 1 的部分由执行层的深缠行程给。1.47（engine 的 ARM_BEND_MAX，同一个数）对应差动 0.4998，只给带深卷的姿态；
- * 离轴姿态摆动叠上去钳在 POSE_FLAT_MAX（0.48 / 0.34）。此前的程序带摆动时弯曲都 ≤ 1，两道钳位对它们都不起作用
+ * 「差动」——行为引擎与执行层之间的公共单位（台架把它换成三腱收缩率，见 machine-behavior.ts 的 ARM_DRIVE，守门测试逐个核对）。
+ * 唯一出处在这里（2026-10-17 交互机制参数表 §12.2 第 6 条：此前在 engine.ts 里写成字面量 9 处）：
+ * - 弯曲 1 = 差动 D_SPAN（只用弯曲的满幅）；
+ * - 深缠 1 在它之上再加 D_WRAP_SPAN；差动封顶 D_MAX（再大两腱之间失稳，0.55 起）；
+ * - 肌腱轴深卷 1 = D_DEEP_SPAN（只有正对腱轴时执行层才放开）；
+ * - 离轴姿态最多用到 D_FLAT_MAX：超出 D_SPAN 的部分由执行层的深缠行程给。
+ */
+export const D_SPAN = 0.34;
+export const D_WRAP_SPAN = 0.16;
+export const D_MAX = 0.5;
+export const D_DEEP_SPAN = 0.3773;
+export const D_FLAT_MAX = 0.48;
+
+/**
+ * 弯曲量的上限：1 = 只用差动的满幅（D_SPAN）；迎手链要把手那一点上的毫米换成差动，离轴最多到 D_FLAT_MAX，
+ * 超出 1 的部分由执行层的深缠行程给。1.47（engine 的 ARM_BEND_MAX 就是它）对应差动 0.4998，只给带深卷的姿态；
+ * 离轴姿态摆动叠上去钳在 POSE_FLAT_MAX（D_FLAT_MAX / D_SPAN）
  */
 export const POSE_BEND_MAX = 1.47;
-/** 离轴（不带深卷）姿态的弯曲上限：差动 0.48（与 vocab2-hand 的 HC.flatMax 同值） */
-export const POSE_FLAT_MAX = 0.48 / 0.34;
+/** 离轴（不带深卷）姿态的弯曲上限 */
+export const POSE_FLAT_MAX = D_FLAT_MAX / D_SPAN;
 
 export function totalDur(p: { phases: readonly Phase[] }): number {
   return p.phases.reduce((s, ph) => s + ph.dur, 0);
