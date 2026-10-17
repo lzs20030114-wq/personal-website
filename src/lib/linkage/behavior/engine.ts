@@ -2413,7 +2413,6 @@ export class BehaviorEngine {
     hc.refR = h.aimDist;
   }
 
-  /** 躲的侧别：转得少的那边；差不多（10° 内）时选让手在左（臂在右，离手远） */
   /**
    * 侧身躲时手留在多少度（一条式子，2026-10-17）：105° + 55°·N·(0.35 + 0.65·近) + 躲开累加的那一截，封顶 160°——不整个背过去。
    * 近 = 手离电机轴 0.6 → 0.32 m，按最后看见手时的距离（看不见手的时候不知道它挪没挪）
@@ -2427,6 +2426,7 @@ export class BehaviorEngine {
     return Math.min(HC.avoidSideMax, HC.avoidSide + span * N * (HC.avoidFarShare + (1 - HC.avoidFarShare) * near) + extra);
   }
 
+  /** 躲的侧别：转得少的那边；差不多（10° 内）时选让手在左（臂在右，离手远） */
   private avoidSide(h: HandMem): number {
     const s = this.s;
     const left = wrapPi(h.steer - this.avoidAngle(h) - s.yaw.x);
@@ -2979,7 +2979,9 @@ export class BehaviorEngine {
     const approaching = t - hc.inAt < 0.25 || t - hc.nearAt < 0.25;
     const close =
       h.dist < DIST.near || (afraid && handArmGap(h.aimBend, h.aimDir, h.aimDist, this.curPose()) < HC.dodgeR0 + HC.dodgeR1 * N);
-    if (approaching && close && hc.v >= (afraid ? HC.vStill : HC.vFast) && t - hc.dodgeAt > HC.dodgeGap && !(busy && hc.beat === 'dodge')) {
+    // 只在甩臂那一段里不再起躲开；定住的那一段手还在逼近就再躲开（2026-10-17 合并时首版整个程序都挡着，
+    // 伸手够臂的场景里回避型被够到的比例 62% → 76%，改回只挡甩臂段后回到 62%，与合并前相同）
+    if (approaching && close && hc.v >= (afraid ? HC.vStill : HC.vFast) && t - hc.dodgeAt > HC.dodgeGap && !(ph && ph.name === 'dodge')) {
       this.avoidRef(h);
       hc.dodgeAt = t;
       hc.extraYaw = Math.min(HC.dodgeTurnMax, hc.extraYaw + HC.dodgeTurn * N);

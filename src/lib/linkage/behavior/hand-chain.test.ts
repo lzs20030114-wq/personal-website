@@ -316,6 +316,40 @@ describe('迎手链：脱手、抓空、躲', () => {
     expect(r.e.state.m2!.hc.extraYaw).toBeLessThan(0.1);
   });
 
+  it('躲开定住的时候手还在逼近：接着再躲开（只有甩臂那一段不再起，定住那一段不挡）', () => {
+    const r = new Rig('C', seedFor('C', 'away'));
+    r.contact = false;
+    r.move({ bearing: 0, dist: 650, face: 0.25, aimDir: 0.62, aimBend: 1.2, aimDist: 500 }, 0);
+    r.run(10);
+    expect(r.e.state.m2?.hc.stage).toBe('avoid');
+    const toward = (): void => {
+      const a = r.e.targets().arm;
+      r.move({ aimDir: a.dir + 0.3, aimBend: a.bend * 0.8, aimDist: 330, dist: 520 }, 200);
+    };
+    const hc = (): NonNullable<typeof r.e.state.m2>['hc'] => r.e.state.m2!.hc;
+    const phase = (): string | undefined => {
+      const pr = hc().prog;
+      return pr ? pr.phases[pr.idx]?.name : undefined;
+    };
+    toward();
+    r.run(0.5);
+    expect(r.beats()).toContain('avoid.dodge');
+    const first = hc().dodgeAt;
+    // 等甩臂那段走完、进了定住（定 0.6 + 0.8σ s）
+    for (let i = 0; i < 120 && phase() === 'dodge'; i++) r.run(1 / 60);
+    expect(phase()).toBe('hold');
+    const tHold = r.e.time;
+    // 身体已经侧开：手跟到视野里（离此刻朝向 100°）再朝臂此刻的样子过来——看不见的手本来就不躲（下一条）
+    const y = r.e.targets().yaw;
+    const side = Math.sign(Math.atan2(Math.sin(0 - y), Math.cos(0 - y))) || 1;
+    r.move({ bearing: y + side * ((100 * Math.PI) / 180) }, 0);
+    toward();
+    r.run(0.5);
+    // 第二次落在第一次的定住里（定住 ≥ 0.6 s），不是等整个程序走完
+    expect(hc().dodgeAt).toBeGreaterThan(first);
+    expect(hc().dodgeAt - tHold).toBeLessThan(0.6);
+  });
+
   it('看不见的手不躲（交互机制参数表 §12.5）：侧过身去、手出了 ±130° 视野时臂保持最后的躲姿，手怎么挪都不躲开、不再收', () => {
     const r = new Rig('C', seedFor('C', 'away'));
     r.contact = false;
