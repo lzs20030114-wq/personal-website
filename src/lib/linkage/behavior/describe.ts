@@ -125,8 +125,6 @@ const HC_BEAT: Record<string, Pair> = {
   deflate: ['垂下来', 'sinks'],
   stretch: ['探身', 'stretches'],
   peek: ['偷看', 'peeks'],
-  snap: ['缩回', 'snaps back'],
-  cringe: ['一缩', 'cringes'],
   dodge: ['躲开', 'dodges'],
   reshrink: ['再收', 'shrinks back'],
   relief: ['呼一口气', 'exhales'],

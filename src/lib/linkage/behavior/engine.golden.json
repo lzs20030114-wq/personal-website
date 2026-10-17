@@ -39,7 +39,7 @@
     }
   ],
   "hand": {
-    "source": "删现行（2026-10-17）+ 修动作程序两处臂指令跳变（arcDelta、松手时接管）",
+    "source": "B③ 躲开与一缩合并、侧身角一条式子、看不见的手不躲（2026-10-17）",
     "cases": [
       {
         "seed": 211,
@@ -50,20 +50,20 @@
       {
         "seed": 223,
         "lifeRate": 1,
-        "log": "d3f7f64576e206b2",
-        "frames": "6f3d8b326a5a91cb"
+        "log": "593e256e4886edeb",
+        "frames": "1c6697aa078e4da9"
       },
       {
         "seed": 241,
         "lifeRate": 10,
-        "log": "4db859a74dd62ede",
-        "frames": "687d3f5ab4a1e663"
+        "log": "cf357894ce54d13b",
+        "frames": "c66794e81b92783b"
       },
       {
         "seed": 251,
         "lifeRate": 10,
-        "log": "34bd1d00601782bd",
-        "frames": "a92b030bf630d910"
+        "log": "9c583fdb6d10078e",
+        "frames": "9e6c89a6a7693bed"
       }
     ]
   }

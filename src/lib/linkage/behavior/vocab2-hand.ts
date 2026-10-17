@@ -133,6 +133,8 @@ export const HC = {
   tractionT: 0.5,
   squeeze: 3,
   give: 3,
+  /** 划过（mm/s，= 台架 HAND_MM.maxSpeed）：躲开的份量按手速在 60 → 800 之间的位置给 */
+  vSwipe: 800,
   /** 追：抽手快（≥ 150 mm/s）= 扑过去；慢 = 伸过去送一下；let 0.15 s（慢的 0.3）；身体晚 0.3 s 跟 */
   chaseFast: 150,
   chaseLet: 0.15,
@@ -160,35 +162,33 @@ export const HC = {
   shrinkFast: 0.5,
   peekLeanN: 0.7,
   /**
-   * 躲开（N ≥ 0.2 时才有）：手朝臂过来（读数一变、按此刻的臂姿估的臂—手距离就变小，0.25 s 内）、手在动（> 40 mm/s）、
-   * 臂—手距离 < 120 + 200·N mm——臂快速甩到背着手那边（差动再 +0.08，strike 档，与热情型扑手同一个最快档）、定住
-   * 0.6 + 0.8·N s；身体再侧开 25°·N（累加封顶 35°，之后按 4 s 慢慢回落）。两次之间至少 0.35 s
+   * 躲开（2026-10-17 与「一缩」合成一个）：手在逼近（0.25 s 内朝臂过来——按此刻的臂姿估的臂—手距离变小，或朝机身过来——
+   * 离电机轴变近）就触发。怕的时候（⑬ 的 N ≥ 0.2）手一动（≥ vStill）、臂—手距离 < 120 + 200·N mm 或手在近处（< near）
+   * 就躲；不怕的时候只有手快（≥ chaseFast）且在近处才躲。份量 σ = max(N, 手速在 60 → 800 mm/s 之间的位置)：
+   * 臂甩到背着手那边、比躲的姿态再紧 0.08·(0.6 + 0.4σ)（strike 档，与热情型扑手同一个最快档），定住 0.6 + 0.8σ s，
+   * 环身往收拢端推 0.06 + 0.02σ；身体再侧开 25°·N（累加封顶 35°，之后按 4 s 慢慢回落）。两次之间至少 0.35 s
    */
   dodgeR0: 120,
   dodgeR1: 200,
-  dodgeV: 40,
   dodgeD: 0.08,
   dodgeTurn: 25 * DEG,
   dodgeTurnMax: 35 * DEG,
   dodgeTurnTau: 4,
   dodgeGap: 0.35,
   /**
-   * 手凑到机身边上（离电机轴 0.6 → 0.32 m）再侧开 30°·N；侧身角（含躲开的那一截）封顶 160°——不整个背过去
-   * （用户 2026-10-15：「可以不完全背过去」）。躲手是 v2 里唯一在手搭在机身上方时也转身的态度（迎的时候不转）
+   * 侧身角（2026-10-17 收成一条式子）：105° + 55°·N·(0.35 + 0.65·近)，再加躲开累加的那一截，封顶 160°——不整个背过去
+   * （用户 2026-10-15：「可以不完全背过去」）。近 = 手离电机轴 0.6 → 0.32 m 从 0 到 1，按最后看见手时的距离算（看不见就不知道它挪没挪）。
+   * N = 1 时：远处 124°、凑到机身边上 160°；N = 0 时 105°。躲手是唯一在手搭在机身上方时也转身的态度（迎的时候不转）
    */
-  avoidNear: 30 * DEG,
+  avoidSideMax: 160 * DEG,
+  avoidFarShare: 0.35,
   avoidNearR0: 320,
   avoidNearR1: 600,
-  avoidSideMax: 160 * DEG,
   /** 怕的时候，手在臂够不着的地方（读数 aimBend 1.0 → 1.4 饱和）：背着它弯的方向渐变成「往下、背着手那一侧」 */
   awaySideFrom: 1,
   awaySideSpan: 0.4,
-  /** 逼近（> 250 mm/s、距离在减小、< 0.6 m）= 一缩；手走了（> 1.2 m 持续 1 s 或离开画布）= 松一口气 */
-  cringeV: 250,
-  cringeR: 600,
-  /** 怕的时候一缩的门更低、更远：速度 ×(1 − 0.68N)（N = 1 时 80 mm/s）、距离 +300·N mm——这一截要求手在朝机身来 */
-  cringeVN: 0.68,
-  cringeRN: 300,
+  /** 不怕的时候躲开要手在近处（离电机轴 < 0.6 m）；手走了（> 1.2 m 持续 1 s 或离开画布）= 松一口气 */
+  dodgeNearR: 600,
   reliefR: 1200,
   reliefT: 1,
   /** 放开后手不动：3 s 后再来一次（抓空后每 ⑨ 至多一次） */
@@ -848,36 +848,43 @@ export function handArmGap(aimBend: number, aimDir: number, aimDist: number, pos
   return Math.hypot(dp * gainAt(aimDist, Dh), Math.max(0, aimDist - HC.armL));
 }
 
-/** 看见手、决定躲：定住（0.3 + 0.1τ）→ 慢慢收（身体侧过去由引擎转）。怕得越厉害收得越快、越紧 */
-export function buildShrink(c: BuildCtx, close: number, awayDir: number, freeze = true): Phase[] {
+/**
+ * 收到躲的姿态。first = 看见手、决定躲：定住（0.3 + 0.1τ）→ 慢慢收（身体侧过去由引擎转）；again = 手挪了、再收一次；
+ * snap = 偷看时手动了、缩回去（2026-10-17 并进再收：同一个终点，只是快一档、带一声咂——观众学得会「别动它，它才敢看」）。
+ * 怕得越厉害收得越快、越紧
+ */
+export function buildShrink(c: BuildCtx, close: number, awayDir: number, mode: 'first' | 'again' | 'snap' = 'first'): Phase[] {
   const P = c.temper;
   const f = clamp(c.fear ?? 0, 0, 1);
   const out: Phase[] = [];
-  if (freeze) out.push(ph('freeze', 0.3 + 0.1 * c.tau, 'hold', 'hold', { breath: { rate: 0 }, feel: feel('tuck'), light: 0.9, voice: 'mute' }));
+  if (mode === 'first') out.push(ph('freeze', 0.3 + 0.1 * c.tau, 'hold', 'hold', { breath: { rate: 0 }, feel: feel('tuck'), light: 0.9, voice: 'mute' }));
+  const snap = mode === 'snap';
   out.push(
-    ph(freeze ? 'shrink' : 'reshrink', (1.2 - HC.shrinkFast * f) / c.k, 'mj', avoidPose(close, awayDir, f), {
+    ph(mode === 'first' ? 'shrink' : 'reshrink', snap ? 0.4 : (1.2 - HC.shrinkFast * f) / c.k, 'mj', avoidPose(close, awayDir, f), {
       path: 'line',
       breath: { rate: 1, amp: 0.6, push: 0.04 },
       feel: feel('tuck', { quiver: P === 'avoidant' || P === 'random' ? 0.04 : undefined }),
-      voice: 'mute',
+      voice: snap ? 'tsk' : 'mute',
       light: 0.9,
     }),
   );
-  return gov(out, c, f > 0.5 ? 'pursue' : 'deliberate', { freeze: 'reflex' });
+  return gov(out, c, snap || f > 0.5 ? 'pursue' : 'deliberate', { freeze: 'reflex' });
 }
 
 /**
- * 躲开（手朝臂过来，⑬ 怕的时候）：臂快速甩到背着手那边、比躲的姿态再紧一截，定住屏着气；身体同时再侧开一点（引擎转）。
- * 与热情型扑手用同一个最快档（strike），一个扑向手、一个从手边弹开
+ * 躲开（手在逼近）：臂快速甩到背着手那边、比躲的姿态再紧一截，定住屏着气；身体同时再侧开一点（引擎转）。
+ * 与热情型扑手用同一个最快档（strike），一个扑向手、一个从手边弹开。size = 份量 σ（0–1，见 HC.dodgeR0 注释）：
+ * 2026-10-17 以前分成躲开（怕的时候，σ = N）与一缩（手快速逼近，+0.05、定 0.6 s），两者隔 0.3 s 交替触发、要靠「互不打断」打补丁
  */
-export function buildDodge(c: BuildCtx, close: number, awayDir: number): Phase[] {
+export function buildDodge(c: BuildCtx, close: number, awayDir: number, size = clamp(c.fear ?? 0, 0, 1)): Phase[] {
   const f = clamp(c.fear ?? 0, 0, 1);
-  const to = flatH(dOf(avoidPose(close, awayDir, f)) + HC.dodgeD, awayDir);
-  const breath = { rate: 1, push: 0.08, amp: 0.4 };
+  const s = clamp(size, 0, 1);
+  const to = flatH(dOf(avoidPose(close, awayDir, f)) + HC.dodgeD * (0.6 + 0.4 * s), awayDir);
+  const breath = { rate: 1, push: 0.06 + 0.02 * s, amp: 0.5 - 0.1 * s };
   return gov(
     [
       ph('dodge', 0.25, 'mj', to, { path: 'line', breath, feel: feel('tuck', { quiver: 0.06 }), voice: 'mute', light: 0.9 }),
-      ph('hold', 0.6 + 0.8 * f, 'hold', 'hold', { breath, feel: feel('tuck', { quiver: 0.04 }), voice: 'mute' }),
+      ph('hold', 0.6 + 0.8 * s, 'hold', 'hold', { breath, feel: feel('tuck', { quiver: 0.04 }), voice: 'mute' }),
     ],
     c,
     'strike',
@@ -909,26 +916,6 @@ export function buildPeek(c: BuildCtx, g: HandGeom, close: number, awayDir: numb
     ],
     c,
     'spont',
-  );
-}
-
-/** 偷看时手动了：缩回去（urgent，一声 tsk）——观众学得会「别动它，它才敢看」 */
-export function buildSnap(c: BuildCtx, close: number, awayDir: number): Phase[] {
-  return gov([ph('snap', 0.4, 'mj', avoidPose(close, awayDir, c.fear ?? 0), { path: 'line', voice: 'tsk', feel: feel('tuck') })], c, 'urgent');
-}
-
-/** 手快速逼近：一缩（再背一点、环身往收拢端） */
-export function buildCringe(c: BuildCtx, close: number, awayDir: number): Phase[] {
-  const home = avoidPose(close, awayDir, c.fear ?? 0);
-  const to = flatH(dOf(home) + 0.05, home.dir);
-  return gov(
-    [
-      ph('cringe', 0.4, 'mj', to, { path: 'line', breath: { rate: 1, push: 0.06, amp: 0.5 }, feel: feel('tuck', { quiver: 0.05 }), voice: 'mute' }),
-      ph('hold', 0.6, 'hold', 'hold', { breath: { rate: 1, push: 0.06, amp: 0.5 }, feel: feel('tuck'), voice: 'mute' }),
-    ],
-    c,
-    'urgent',
-    { hold: 'reflex' },
   );
 }
 

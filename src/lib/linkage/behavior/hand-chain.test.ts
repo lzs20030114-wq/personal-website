@@ -316,6 +316,33 @@ describe('迎手链：脱手、抓空、躲', () => {
     expect(r.e.state.m2!.hc.extraYaw).toBeLessThan(0.1);
   });
 
+  it('看不见的手不躲（交互机制参数表 §12.5）：侧过身去、手出了 ±130° 视野时臂保持最后的躲姿，手怎么挪都不躲开、不再收', () => {
+    const r = new Rig('C', seedFor('C', 'away'));
+    r.contact = false;
+    // 手凑到机身边上：怕到顶，侧身角往 160° 去，手出了视野（±130°）
+    r.move({ bearing: 0, dist: 380, face: 0.25, aimDir: 0.62, aimBend: 1.2, aimDist: 300 }, 0);
+    r.run(12);
+    const rel = (): number => Math.abs(Math.atan2(Math.sin(0 - r.e.targets().yaw), Math.cos(0 - r.e.targets().yaw)));
+    expect(rel()).toBeGreaterThan((135 * Math.PI) / 180);
+    expect(rel()).toBeLessThanOrEqual((160 * Math.PI) / 180 + 1e-6);
+    // 看不见的手来回挪（朝臂、朝机身）：臂不动，不起躲开 / 再收 / 偷看
+    const n0 = r.ev('HAND_STAGE').length;
+    const arm0 = r.e.targets().arm;
+    let moved = 0;
+    for (let i = 0; i < 12; i++) {
+      r.move({ dist: i % 2 ? 360 : 420, aimDir: 0.62 + (i % 2 ? 0.4 : -0.4), aimBend: 1.0 + 0.1 * (i % 3), aimDist: 280 + 10 * (i % 2) }, 200);
+      r.run(0.4, () => {
+        if (rel() > (130 * Math.PI) / 180) {
+          const a = r.e.targets().arm;
+          moved = Math.max(moved, Math.hypot(a.bend * Math.cos(a.dir) - arm0.bend * Math.cos(arm0.dir), a.bend * Math.sin(a.dir) - arm0.bend * Math.sin(arm0.dir)));
+        }
+      });
+    }
+    const after = r.ev('HAND_STAGE').slice(n0).map((x) => String(x.p?.beat));
+    expect(after.filter((b) => b === 'dodge' || b === 'reshrink' || b === 'peek')).toHaveLength(0);
+    expect(moved).toBeLessThan(0.02);
+  });
+
   it('不怕的人格没有躲开：热情迎着、手朝臂过来是凑过去的事；沉静看别处', () => {
     for (const P of ['A', 'B'] as PersonaKey[]) {
       const r = new Rig(P, 7);

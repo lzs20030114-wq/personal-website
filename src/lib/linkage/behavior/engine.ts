@@ -81,7 +81,6 @@ import {
   avoidPose,
   buildApproachBeat,
   buildChaseBeat,
-  buildCringe,
   buildDodge,
   buildEmpty,
   buildGiveUp,
@@ -92,7 +91,6 @@ import {
   buildRelief,
   buildSearch,
   buildShrink,
-  buildSnap,
   buildStrain,
   buildTake,
   buildWrap,
@@ -280,8 +278,6 @@ export const SOCIAL = {
   flinchClose: 1.5,
   /** 躲开的手出了视野以后记多久：HAND.loseAfter × (1 + 3N)（回避型背过身也一直提防） */
   loseClose: 3,
-  /** 侧身躲：手留在 105° + 20°·N（回避型近处 125°，几乎背过去，但手还在视野边上——一直提防、偷看） */
-  avoidSideClose: (20 * Math.PI) / 180,
 } as const;
 
 const AROUSAL_DECAY = Math.exp(-DT / ENGINE.arousal.tau);
@@ -663,8 +659,9 @@ interface HandMem {
   outSince: number;
   /** 最后一次在视野里时的方位：出了视野按它转，不偷看 */
   steer: number;
-  /** 最后一次在视野里时「臂对准它」该有的朝向 */
+  /** 最后一次在视野里时「臂对准它」该有的朝向，与离电机轴的距离（侧身角按它：看不见就不知道手挪没挪） */
   steerFace: number;
+  steerDist: number;
   /** 分层转向：正在转身对准（迎）/ 背过去（躲） */
   turning: boolean;
   /** 取近路：方位差过了 150° 以后锁定的转向（+1 / −1；0 = 没锁） */
@@ -1915,7 +1912,8 @@ export class BehaviorEngine {
       else if (!hc.ev) hc.ev = { kind, t0: t };
       action = 'fidget';
       this.emit('SPONTANEOUS', { action, kind });
-    } else if (hc.stage === 'avoid' && h && h.present && h.seen && !hc.prog && hc.v < HC.vMove && !this.foreignGrasp()) {
+    } else if (hc.stage === 'avoid' && h && h.seen && this.handInView(h) && !hc.prog && hc.v < HC.vMove && !this.foreignGrasp()) {
+      // 偷看只看得见的手（侧过身去、手出了视野时不偷看：它不知道手在哪）
       this.hcSet(t, 'avoid', 'peek');
       this.hcRun(t, 'hand.peek', buildPeek(this.hcCtx(ctx), this.handGeom(h), hc.close, hc.awayDir));
       action = 'peek';
@@ -2011,7 +2009,7 @@ export class BehaviorEngine {
       h = {
         bearing: 0, dist: 0, aimDir: 0, aimBend: 0, aimDist: 0, face: 0,
         present: true, goneAt: NEVER, seen: false, mode: null, noticeAt: NEVER, outSince: NEVER,
-        steer: 0, steerFace: 0, turning: false, turnSign: 0, unwind: false,
+        steer: 0, steerFace: 0, steerDist: 0, turning: false, turnSign: 0, unwind: false,
       };
       s.hand = h;
       s.bearing = null;
@@ -2079,6 +2077,12 @@ export class BehaviorEngine {
     return lerpAngle(base, side, N * smooth((h.aimBend - HC.awaySideFrom) / HC.awaySideSpan));
   }
 
+  /** 手此刻在不在视野里：机身朝向 ±120°，正在看 / 看见了以后放宽到 ±130°；碰着臂另算（看不见的手，机器不知道它在哪） */
+  private handInView(h: HandMem): boolean {
+    const keep = h.seen || h.noticeAt < NEVER;
+    return h.present && (Math.abs(wrapPi(h.bearing - this.s.yaw.x)) <= (keep ? HAND.fovKeep : HAND.fov) || this.s.electrode);
+  }
+
   /** 躲的「有多近」：手离电机轴 awayNear → awayFar，从 1 落到 0（收的姿态、松一口气读它） */
   private handClose(h: HandMem): number {
     return 1 - smooth((h.dist - HAND.awayNear) / (HAND.awayFar - HAND.awayNear));
@@ -2114,13 +2118,12 @@ export class BehaviorEngine {
       if (h.seen || h.noticeAt < NEVER) this.forgetHand();
       return;
     }
-    const keep = h.seen || h.noticeAt < NEVER;
-    const inView =
-      h.present && (Math.abs(wrapPi(h.bearing - s.yaw.x)) <= (keep ? HAND.fovKeep : HAND.fov) || s.electrode);
+    const inView = this.handInView(h);
     if (inView) {
       h.outSince = NEVER;
       h.steer = h.bearing;
       h.steerFace = h.face;
+      h.steerDist = h.dist;
     } else if (h.outSince >= NEVER || (h.seen && (h.turning || h.unwind))) {
       // 正在朝它转（或绕回限位）时手暂时出视野不算丢：记忆从转完那一刻才开始倒数
       h.outSince = t;
@@ -2416,15 +2419,17 @@ export class BehaviorEngine {
   }
 
   /** 躲的侧别：转得少的那边；差不多（10° 内）时选让手在左（臂在右，离手远） */
-  /** 侧身躲时手留在多少度：105°，⑬ 越怕侧得越多（回避型近处 125°） */
+  /**
+   * 侧身躲时手留在多少度（一条式子，2026-10-17）：105° + 55°·N·(0.35 + 0.65·近) + 躲开累加的那一截，封顶 160°——不整个背过去。
+   * 近 = 手离电机轴 0.6 → 0.32 m，按最后看见手时的距离（看不见手的时候不知道它挪没挪）
+   */
   private avoidAngle(h: HandMem): number {
     const hc = this.s.m2.hc;
     const N = this.socialPN()[1];
-    // 手凑到机身边上（离电机轴 0.6 m → 0.32 m）：再侧开 30°·N；加上躲开的那一截，封顶 160°——不整个背过去
-    const near = 1 - smooth((h.dist - HC.avoidNearR0) / (HC.avoidNearR1 - HC.avoidNearR0));
+    const near = 1 - smooth((h.steerDist - HC.avoidNearR0) / (HC.avoidNearR1 - HC.avoidNearR0));
     const extra = hc.stage === 'avoid' ? hc.extraYaw : 0;
-    const a = HC.avoidSide + SOCIAL.avoidSideClose * N;
-    return N > 0 ? Math.min(HC.avoidSideMax, a + HC.avoidNear * N * near + extra) : a + extra;
+    const span = HC.avoidSideMax - HC.avoidSide;
+    return Math.min(HC.avoidSideMax, HC.avoidSide + span * N * (HC.avoidFarShare + (1 - HC.avoidFarShare) * near) + extra);
   }
 
   private avoidSide(h: HandMem): number {
@@ -2479,7 +2484,7 @@ export class BehaviorEngine {
       hc.relieved = false;
       hc.farSince = NEVER;
       this.avoidRef(h);
-      if (!m.prog && !this.foreignGrasp()) this.hcRun(t, 'hand.shrink', buildShrink(this.hcCtx(ctx), hc.close, hc.awayDir, was !== 'avoid'));
+      if (!m.prog && !this.foreignGrasp()) this.hcRun(t, 'hand.shrink', buildShrink(this.hcCtx(ctx), hc.close, hc.awayDir, was !== 'avoid' ? 'first' : 'again'));
       return;
     }
     this.hcReset(t, 'off');
@@ -2754,7 +2759,7 @@ export class BehaviorEngine {
           this.avoidRef(h);
           hc.side = this.avoidSide(h);
           hc.turnAt = t + HC.avoidLag;
-          this.hcRun(t, 'hand.shrink', buildShrink(this.hcCtx(ctx), hc.close, hc.awayDir, true));
+          this.hcRun(t, 'hand.shrink', buildShrink(this.hcCtx(ctx), hc.close, hc.awayDir, 'first'));
         }
         return;
       }
@@ -2833,7 +2838,7 @@ export class BehaviorEngine {
           hc.side = this.avoidSide(h);
           hc.turnAt = t + HC.avoidLag;
           this.avoidRef(h);
-          this.hcRun(t, 'hand.shrink', buildShrink(this.hcCtx(ctx), hc.close, hc.awayDir, false));
+          this.hcRun(t, 'hand.shrink', buildShrink(this.hcCtx(ctx), hc.close, hc.awayDir, 'again'));
           return;
         }
         this.approachFailed(t, ctx, h);
@@ -2968,54 +2973,45 @@ export class BehaviorEngine {
     hc.farSince = NEVER;
     const busy = hc.prog !== null;
     const ph = busy ? hc.prog!.phases[hc.prog!.idx] : null;
-    // ⑬ 怕的程度：躲得多明显全按它（回避型手在近处 ≈ 1；不怕 = 0，下面每一条都退回改前的判据）
+    // ⑬ 怕的程度：躲得多明显全按它（回避型手在近处 ≈ 1）
     const N = this.socialPN()[1];
     hc.extraYaw *= Math.exp(-DT / HC.dodgeTurnTau);
-    // 手朝臂过来（怕的时候）：躲开——臂甩到背着手那边、身体再侧开一点
-    if (
-      N >= 0.2 &&
-      t - hc.inAt < 0.25 &&
-      hc.v > HC.dodgeV &&
-      t - hc.dodgeAt > HC.dodgeGap &&
-      !(ph && (ph.name === 'dodge' || ph.name === 'cringe')) &&
-      handArmGap(h.aimBend, h.aimDir, h.aimDist, this.curPose()) < HC.dodgeR0 + HC.dodgeR1 * N
-    ) {
+    // 看不见手（侧过身去、手出了 ±130° 的视野）：臂保持最后的躲姿，不跟着手躲开、再收（交互机制参数表 §12.5：
+    // 此前身体按最后看见的方位转、臂却按手的实时读数躲开，等于背后长眼）
+    if (!this.handInView(h)) return;
+    // 手在逼近（朝臂或朝机身过来）：躲开——臂甩到背着手那边、身体再侧开一点。怕的时候手一动就躲，不怕的时候要快、要近
+    const afraid = N >= 0.2;
+    const approaching = t - hc.inAt < 0.25 || t - hc.nearAt < 0.25;
+    const close =
+      h.dist < HC.dodgeNearR || (afraid && handArmGap(h.aimBend, h.aimDir, h.aimDist, this.curPose()) < HC.dodgeR0 + HC.dodgeR1 * N);
+    if (approaching && close && hc.v >= (afraid ? HC.vStill : HC.chaseFast) && t - hc.dodgeAt > HC.dodgeGap && !(busy && hc.beat === 'dodge')) {
       this.avoidRef(h);
       hc.dodgeAt = t;
       hc.extraYaw = Math.min(HC.dodgeTurnMax, hc.extraYaw + HC.dodgeTurn * N);
+      const size = Math.max(N, clamp01((hc.v - HC.vMicro) / (HC.vSwipe - HC.vMicro)));
       this.hcSet(t, 'avoid', 'dodge');
-      this.hcRun(t, 'hand.dodge', buildDodge(this.hcCtx(ctx), hc.close, hc.awayDir));
+      this.hcRun(t, 'hand.dodge', buildDodge(this.hcCtx(ctx), hc.close, hc.awayDir, size));
       return;
     }
-    // 偷看时手动了：缩回去
+    // 偷看时手动了：缩回去（再收的快档，一声咂）
     if (ph && ph.name === 'look' && hc.v > HC.vMove) {
-      this.hcRun(t, 'hand.snap', buildSnap(this.hcCtx(ctx), hc.close, hc.awayDir));
-      this.hcSet(t, 'avoid', 'snap');
-      return;
-    }
-    // 逼近：一缩（怕的时候门更低、更远，但这一截要求手在朝机身来）
-    const rush = hc.v > HC.cringeV && h.dist < HC.cringeR;
-    const creep = N > 0 && t - hc.nearAt < 0.25 && hc.v > HC.cringeV * (1 - HC.cringeVN * N) && h.dist < HC.cringeR + HC.cringeRN * N;
-    if ((rush || creep) && hc.beat !== 'cringe' && !(busy && hc.beat === 'dodge')) {
-      this.avoidRef(h);
-      if (N > 0) hc.extraYaw = Math.min(HC.dodgeTurnMax, hc.extraYaw + 0.5 * HC.dodgeTurn * N);
-      this.hcSet(t, 'avoid', 'cringe');
-      this.hcRun(t, 'hand.cringe', buildCringe(this.hcCtx(ctx), hc.close, hc.awayDir));
+      this.hcSet(t, 'avoid', 'reshrink');
+      this.hcRun(t, 'hand.reshrink', buildShrink(this.hcCtx(ctx), hc.close, hc.awayDir, 'snap'));
       return;
     }
     if (busy) return;
     // 手挪了：再收一次（怕的时候挪一点就收）
-    const close = this.handClose(h);
+    const cl = this.handClose(h);
     const away = this.awayDir(h);
     if (
-      Math.abs(close - hc.close) > HC.reshrinkClose - HC.reshrinkCloseN * N ||
+      Math.abs(cl - hc.close) > HC.reshrinkClose - HC.reshrinkCloseN * N ||
       Math.abs(wrapPi(away - hc.awayDir)) > HC.reshrinkDir - HC.reshrinkDirN * N ||
-      poseDist(this.curPose(), avoidPose(close, away, N)) > 0.06 - HC.reshrinkPoseN * N
+      poseDist(this.curPose(), avoidPose(cl, away, N)) > 0.06 - HC.reshrinkPoseN * N
     ) {
-      hc.close = close;
+      hc.close = cl;
       hc.awayDir = away;
       this.hcSet(t, 'avoid', 'reshrink');
-      this.hcRun(t, 'hand.reshrink', buildShrink(this.hcCtx(ctx), close, away, false));
+      this.hcRun(t, 'hand.reshrink', buildShrink(this.hcCtx(ctx), cl, away, 'again'));
     }
   }
 

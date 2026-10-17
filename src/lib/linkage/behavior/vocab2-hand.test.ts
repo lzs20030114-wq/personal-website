@@ -11,7 +11,6 @@ import {
   avoidPose,
   buildApproachBeat,
   buildChaseBeat,
-  buildCringe,
   buildDodge,
   buildEmpty,
   buildGiveUp,
@@ -102,14 +101,15 @@ function allTables(): { name: string; c: BuildCtx; phases: Phase[] }[] {
       out.push({ name: `${P} search`, c, phases: buildSearch(c, { D: 0.25, dir: 0.6 }, 3) });
       out.push({ name: `${P} shrink`, c, phases: buildShrink(c, 0.6, -2.5) });
       out.push({ name: `${P} peek`, c, phases: buildPeek(c, g, 0.6, -2.5) });
-      // ⑬ 怕到顶（fear 1）的躲：收、偷看、一缩、躲开（躲开走 strike 档，单独卡）
+      // ⑬ 怕到顶（fear 1）的躲：收、再收、缩回（再收的快档）、偷看、躲开（躲开走 strike 档，单独卡）
       const cf = ctx(P, undefined, { fear: 1 });
       out.push({ name: `${P} shrink fear`, c: cf, phases: buildShrink(cf, 0.6, -2.5) });
+      out.push({ name: `${P} reshrink fear`, c: cf, phases: buildShrink(cf, 0.6, -2.5, 'again') });
+      out.push({ name: `${P} snap fear`, c: cf, phases: buildShrink(cf, 0.6, -2.5, 'snap') });
       out.push({ name: `${P} peek fear`, c: cf, phases: buildPeek(cf, g, 0.6, -2.5) });
-      out.push({ name: `${P} cringe fear`, c: cf, phases: buildCringe(cf, 0.6, -2.5) });
-      for (const f of [0.2, 1]) {
+      for (const f of [0, 0.2, 1]) {
         const cd = ctx(P, avoidPose(0.6, 2.5, f), { fear: f });
-        out.push({ name: `${P} dodge ${f}`, c: cd, phases: buildDodge(cd, 0.8, -2.5) });
+        for (const size of [0, 0.5, 1]) out.push({ name: `${P} dodge ${f}/${size}`, c: cd, phases: buildDodge(cd, 0.8, -2.5, size) });
       }
     }
   }
@@ -361,7 +361,7 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
     const sh1 = s1[s1.length - 1];
     expect(dOf(sh1.arm as Pose)).toBeGreaterThan(dOf(sh0.arm as Pose) + 0.05);
     expect(sh1.dur).toBeLessThan(sh0.dur);
-    // 躲开：比躲的姿态再紧 0.08、背着手、strike 档；后面定住
+    // 躲开：比躲的姿态再紧 0.08·(0.6 + 0.4·份量)、背着手、strike 档；后面定住 0.6 + 0.8·份量（份量缺省 = fear）
     const home = avoidPose(0.8, -2.5, 1);
     const cd = ctx('C', home, { fear: 1 });
     const dg = buildDodge(cd, 0.8, -2.5);
@@ -369,6 +369,16 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
     expect(dOf(dg[0].arm as Pose)).toBeCloseTo(Math.min(HC.flatMax, dOf(home) + HC.dodgeD), 12);
     expect((dg[0].arm as Pose).dir).toBeCloseTo(-2.5, 12);
     expect(dg[1].dur).toBeCloseTo(0.6 + 0.8, 12);
+    // 份量小（不怕、手不算快）= 原先的「一缩」那么大：再紧 0.048、定 0.6 s
+    const small = buildDodge(cd, 0.8, -2.5, 0);
+    expect(dOf(small[0].arm as Pose)).toBeCloseTo(Math.min(HC.flatMax, dOf(home) + 0.6 * HC.dodgeD), 12);
+    expect(small[1].dur).toBeCloseTo(0.6, 12);
+    // 缩回 = 再收的快档：同一个终点、0.4 s 起、一声咂
+    const sn = buildShrink(cf, 0.6, -2.5, 'snap');
+    expect(sn.map((p) => p.name)).toEqual(['reshrink']);
+    expect(sn[0].arm).toEqual(buildShrink(cf, 0.6, -2.5, 'again')[0].arm);
+    expect(sn[0].voice).toBe('tsk');
+    expect(sn[0].dur).toBeLessThan(buildShrink(cf, 0.6, -2.5, 'again')[0].dur + 1e-9);
     // 偷看：转回手那边的角度 0.3 → 0.09（fear 1）
     const g = geom({ dir: 0.62 });
     const lean0 = buildPeek(c0, g, 0.6, -2.5)[0].arm as Pose;
