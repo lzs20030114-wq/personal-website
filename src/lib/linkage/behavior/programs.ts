@@ -115,13 +115,13 @@ export const ARM_OSC_MAX_HZ = 0.6;
  */
 export const D_SPAN = 0.34;
 export const D_WRAP_SPAN = 0.16;
-export const D_MAX = 0.5;
+export const D_MAX = D_SPAN + D_WRAP_SPAN;
 export const D_DEEP_SPAN = 0.3773;
 export const D_FLAT_MAX = 0.48;
 
 /**
  * 弯曲量的上限：1 = 只用差动的满幅（D_SPAN）；迎手链要把手那一点上的毫米换成差动，离轴最多到 D_FLAT_MAX，
- * 超出 1 的部分由执行层的深缠行程给。1.47（engine 的 ARM_BEND_MAX 就是它）对应差动 0.4998，只给带深卷的姿态；
+ * 超出 1 的部分由执行层的深缠行程给。1.47（引擎钳手的读数也用它）对应差动 0.4998，只给带深卷的姿态；
  * 离轴姿态摆动叠上去钳在 POSE_FLAT_MAX（D_FLAT_MAX / D_SPAN）
  */
 export const POSE_BEND_MAX = 1.47;

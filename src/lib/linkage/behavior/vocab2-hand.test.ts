@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PERSONAS, type PersonaKey } from './persona';
-import { ARM_OSC_MAX_HZ, type Phase, type Pose } from './programs';
-import { type BuildCtx, D_SPAN, PEAK, STARTLE_PRE, buildStartle, dOf, pathLen, tierSpeed } from './vocab2';
+import { ARM_OSC_MAX_HZ, D_FLAT_MAX, D_SPAN, type Phase, type Pose } from './programs';
+import { type BuildCtx, PEAK, STARTLE_PRE, buildStartle, dOf, pathLen, tierSpeed } from './vocab2';
 import {
   type ApproachBeat,
   HC,
@@ -127,7 +127,7 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
     expect(dOf(atMm(g, 10))).toBeGreaterThan(g.Dh);
     // 离轴封顶 0.48、不带深卷（超过 0.34 的部分是 bend > 1，执行层的深缠行程给）
     const big = flatH(0.9, 0.62);
-    expect(dOf(big)).toBeCloseTo(HC.flatMax, 12);
+    expect(dOf(big)).toBeCloseTo(D_FLAT_MAX, 12);
     expect(big.deep).toBe(0);
     expect(big.bend).toBeGreaterThan(1);
   });
@@ -177,14 +177,14 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
         expect(p.osc.hz, name).toBeLessThanOrEqual(ARM_OSC_MAX_HZ);
         // 摆动叠在这一段的段末（hold 段 = 上一段的段末）上：离轴摆到波峰也 ≤ 0.48（不被钳位削顶）；带深卷的 ≤ 1.47
         if (w.to.deep > 0) expect(w.to.bend + p.osc.amp, `${name} · ${p.name}`).toBeLessThanOrEqual(1.47 + 1e-9);
-        else expect(dOf(w.to) + p.osc.amp * D_SPAN, `${name} · ${p.name}`).toBeLessThanOrEqual(HC.flatMax + 1e-9);
+        else expect(dOf(w.to) + p.osc.amp * D_SPAN, `${name} · ${p.name}`).toBeLessThanOrEqual(D_FLAT_MAX + 1e-9);
       }
     }
     for (const P of ['A', 'B', 'C', 'D'] as PersonaKey[]) {
       const hop = buildHop(ctx(P), geom(), { x: 0, y: 0 });
       const shift = hop.find((p) => p.name === 'shift')!;
       const fix = hop.find((p) => p.name === 'fixate')!;
-      expect(shift.dur).toBeGreaterThanOrEqual(HC.shiftMin - 1e-9);
+      expect(shift.dur).toBeGreaterThanOrEqual(HC.stepMin - 1e-9);
       expect(shift.dur + fix.dur - 1).toBeGreaterThanOrEqual(1.4 - 1e-9);
       // 停的那段带摆动时差动 ≤ 0.27（大弯曲上再摆会被执行层削掉一截）
       if (fix.osc) expect(dOf(shift.arm as Pose)).toBeLessThanOrEqual(0.27 + 1e-9);
@@ -196,7 +196,7 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
       for (const p of phases) {
         if (p.arm === 'hold' || p.arm === 'rest') continue;
         expect(p.arm.deep, `${name} · ${p.name}`).toBe(0);
-        expect(dOf(p.arm), `${name} · ${p.name}`).toBeLessThanOrEqual(HC.flatMax + 1e-9);
+        expect(dOf(p.arm), `${name} · ${p.name}`).toBeLessThanOrEqual(D_FLAT_MAX + 1e-9);
       }
     }
     // 2026-10-17 起迎手链不用深卷：手在腱轴 0 正上方、读数饱和（平卷够不着）时，缠与握也只走平卷
@@ -206,11 +206,11 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
     for (const p of wrap) {
       if (p.arm === 'hold' || p.arm === 'rest') continue;
       expect(p.arm.deep, p.name).toBe(0);
-      expect(dOf(p.arm), p.name).toBeLessThanOrEqual(HC.flatMax + 1e-9);
+      expect(dOf(p.arm), p.name).toBeLessThanOrEqual(D_FLAT_MAX + 1e-9);
     }
     const hold = holdDrive({ persona: 'A', g, Dref: 0.5, dirRef: 0, phi: 0, period: 4, breathAmp: 0.8, breaths: 0, grip: 1, evMm: 0 });
     expect(hold.deep).toBe(0);
-    expect(dOf(hold)).toBeLessThanOrEqual(HC.flatMax + 1e-9);
+    expect(dOf(hold)).toBeLessThanOrEqual(D_FLAT_MAX + 1e-9);
   });
 
   it('身体通道不是惊跳的：迎手链没有一段猛收、chirp、触须张开或闪灯（> 1.25）', () => {
@@ -238,8 +238,8 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
     expect(approachPlan(ctx('D', undefined, { k: 0.7 }), g, { negative: false })).toEqual(['transport', 'hover', 'touch']);
     expect(approachPlan(ctx('D', undefined, { k: 1.5, tau: 0.3 }), g, { negative: false })).toContain('pounce');
     expect(approachPlan(ctx('D'), g, { negative: true })).toEqual(['balk', 'stall', 'drop']);
-    // 衰老过半不扑（先拿掉花样）
-    expect(approachPlan(ctx('A', undefined, { ageU: 0.6 }), g, { negative: false })).not.toContain('pounce');
+    // 衰老过半不扑（先拿掉花样）：改成精确地伸，不走回避型那种带颤的慢碰（2026-10-18 审核：此前这里落到 touch）
+    expect(approachPlan(ctx('A', undefined, { ageU: 0.6 }), g, { negative: false })).toEqual(['transport', 'hover', 'sight', 'reach']);
     // 乱序随机的段是匀速（生硬），热情 / 沉静是最小急动
     expect(buildApproachBeat(ctx('D'), g, 'transport')[0].ease).toBe('lin');
     expect(buildApproachBeat(ctx('B'), g, 'transport')[0].ease).toBe('mj');
@@ -366,12 +366,12 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
     const cd = ctx('C', home, { fear: 1 });
     const dg = buildDodge(cd, 0.8, -2.5);
     expect(dg.map((p) => p.name)).toEqual(['dodge', 'hold']);
-    expect(dOf(dg[0].arm as Pose)).toBeCloseTo(Math.min(HC.flatMax, dOf(home) + HC.dodgeD), 12);
+    expect(dOf(dg[0].arm as Pose)).toBeCloseTo(Math.min(D_FLAT_MAX, dOf(home) + HC.dodgeD), 12);
     expect((dg[0].arm as Pose).dir).toBeCloseTo(-2.5, 12);
     expect(dg[1].dur).toBeCloseTo(0.6 + 0.8, 12);
     // 份量小（不怕、手不算快）= 原先的「一缩」那么大：再紧 0.048、定 0.6 s
     const small = buildDodge(cd, 0.8, -2.5, 0);
-    expect(dOf(small[0].arm as Pose)).toBeCloseTo(Math.min(HC.flatMax, dOf(home) + 0.6 * HC.dodgeD), 12);
+    expect(dOf(small[0].arm as Pose)).toBeCloseTo(Math.min(D_FLAT_MAX, dOf(home) + 0.6 * HC.dodgeD), 12);
     expect(small[1].dur).toBeCloseTo(0.6, 12);
     // 缩回 = 再收的快档：同一个终点、0.4 s 起、一声咂
     const sn = buildShrink(cf, 0.6, -2.5, 'snap');

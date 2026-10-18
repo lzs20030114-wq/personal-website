@@ -14,6 +14,7 @@ const V = await server.ssrLoadModule('/src/lib/linkage/behavior/vocab2.ts');
 const H = await server.ssrLoadModule('/src/lib/linkage/behavior/vocab2-hand.ts');
 const E = await server.ssrLoadModule('/src/lib/linkage/behavior/engine.ts');
 const MB = await server.ssrLoadModule('/src/lib/linkage/machine-behavior.ts');
+const P = await server.ssrLoadModule('/src/lib/linkage/behavior/programs.ts');
 const f = (x, d = 3) => (Number.isFinite(x) ? +x.toFixed(d) : x);
 const DEG = 180 / Math.PI;
 const tiers = ['recover', 'strike', 'pursue', 'deliberate', 'spont', 'creep'];
@@ -53,7 +54,7 @@ for (const [N, v] of [[0, 150], [0, 400], [0, 800], [0.5, 30], [1, 30]]) {
 }
 console.log('contact', JSON.stringify(MB.HAND_MM), JSON.stringify(MB.HAND_PX), JSON.stringify(MB.HAND_UI), JSON.stringify(MB.TRACK));
 console.log('gainAt L,0.3', f(H.gainAt(357.5, 0.3)), 'gainAt 0.5L,0.3', f(H.gainAt(178.75, 0.3)));
-console.log('ARM_BEND_MAX', E.ARM_BEND_MAX, 'D_SPAN', V.D_SPAN, 'D_DEEP_SPAN', V.D_DEEP_SPAN, 'DIST', JSON.stringify(H.DIST));
+console.log('POSE_BEND_MAX', P.POSE_BEND_MAX, 'D_SPAN', P.D_SPAN, 'D_DEEP_SPAN', P.D_DEEP_SPAN, 'DIST', JSON.stringify(H.DIST));
 for (const d of [320, 450, 600, 900, 1200, 1500]) console.log('dist', d, 'nearness', f(H.nearness(d)), 'bodyness', f(H.bodyness(d)));
 console.log('CRANK', JSON.stringify(MB.CRANK));
 await server.close();

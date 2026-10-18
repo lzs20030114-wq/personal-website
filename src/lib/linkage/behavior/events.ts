@@ -102,6 +102,11 @@ export function isCloser(b: PresenceBand, a: PresenceBand): boolean {
   return BAND_RANK[b] > BAND_RANK[a];
 }
 
+/** 两个档里近的那个（台架：面板的人与指针的手同时在时，生效档取近的） */
+export function nearerBand(a: PresenceBand, b: PresenceBand): PresenceBand {
+  return isCloser(b, a) ? b : a;
+}
+
 const clamp01 = (x: number): number => Math.min(1, Math.max(0, x));
 
 /** 刺激强度。prevBand = 引擎记着的上一档（PRESENCE 只在走近时有强度） */

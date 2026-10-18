@@ -56,6 +56,10 @@ const SPONT: Record<string, Pair> = {
   flick: ['抖触须', 'flicks feelers'],
   sigh: ['叹气', 'sighs'],
   search: ['搜寻', 'searches'],
+  // 迎手链里的 ⑥（engine 的 spontHand）
+  fidget: ['握着时动一下', 'shifts its grip'],
+  peek: ['偷看', 'peeks'],
+  lean: ['前倾一点', 'leans in'],
 };
 const ORIENT: Record<string, Pair> = {
   toward: ['转向人', 'turns to person'],
@@ -67,8 +71,15 @@ const ORIENT: Record<string, Pair> = {
 };
 const HAND_MODE: Record<string, Pair> = {
   toward: ['迎过去', 'reaches toward it'],
-  away: ['背过身', 'turns away'],
+  away: ['侧过身躲着', 'keeps away, side-on'],
   look: ['看别处', 'looks elsewhere'],
+};
+/** HAND_SEEN 的 cause：为什么改了态度（都是改成躲） */
+const SEEN_CAUSE: Record<string, Pair> = {
+  startle: ['惊跳之后', 'after the startle'],
+  recoil: ['碰到手又缩回去', 'touches the hand, then shrinks back'],
+  balk: ['凑到半路停住', 'stops halfway'],
+  giveUp: ['脱手后放弃', 'gives up after losing the hand'],
 };
 const HAND_LOST: Record<string, Pair> = {
   gone: ['手离开', 'hand gone'],
@@ -102,7 +113,6 @@ const HC_BEAT: Record<string, Pair> = {
   sight: ['瞄准', 'takes aim'],
   reach: ['伸过去', 'reaches'],
   touch: ['慢慢碰', 'touches slowly'],
-  curl: ['卷过去', 'curls over'],
   nudge: ['推一下', 'nudges'],
   balk: ['停住不前', 'stops short'],
   stall: ['愣住', 'stalls'],
@@ -200,7 +210,8 @@ function what(r: LogRecord, lang: DescribeLang): string {
       return zh ? '手还在臂上' : 'hand still on arm';
     case 'HAND_SEEN': {
       const m = pick(HAND_MODE[str(p.mode)] ?? ['看着', 'watches'], lang);
-      if (p.cause === 'startle') return zh ? `惊跳之后 · ${m}` : `after the startle · ${m}`;
+      const cause = SEEN_CAUSE[str(p.cause)];
+      if (cause) return `${pick(cause, lang)} · ${m}`;
       if (p.again) return zh ? `再看手一眼 · ${m}` : `looks at the hand again · ${m}`;
       return zh ? `注意到手 · ${m}` : `notices the hand · ${m}`;
     }

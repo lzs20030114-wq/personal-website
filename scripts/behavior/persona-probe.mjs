@@ -324,7 +324,8 @@ function trial(P, vocab, seed, sc) {
             lastMoveAt: track.lastMoveAt,
             grasp: st.grasp.phase,
           },
-          { traction: false },
+          // 与台架同口径：缠 / 握着时慢慢挪手 = 牵着走（2026-10-18 改；§12.7 复测二是两边都关着牵引测的）
+          { traction: true },
         ).next;
         const on = contact.touching || contact.held;
         if (on !== electrodeSent) {

@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { BehaviorEngine, type EngineState, OBS, obsForecast, obsSettled, obsStep } from './engine';
+import { BehaviorEngine, type EngineState, HAND, OBS, obsForecast, obsSettled, obsStep } from './engine';
 import type { SensorInput } from './events';
 import type { LogRecord } from './log';
 import { PERSONA_KEYS, type PersonaKey } from './persona';
-import { gainAt } from './vocab2-hand';
+import { gainAt, handD } from './vocab2-hand';
+import { D_DEEP_SPAN, D_SPAN, D_WRAP_SPAN } from './programs';
 import {
   ARM_GEOM,
   type HandSent,
   HAND_UI,
   type ViewParams,
+  graspCaught,
   handReading,
   handSendDue,
   projectLogical,
@@ -75,16 +77,16 @@ class Rig {
       if (this.autoHand && this.e.ticks % 6 === 0) {
         if (h) {
           const still = Math.max(0, this.t - this.movedAt);
-          this.push({ kind: 'HAND', on: true, ...h, touch: 32, still: Math.min(9.9, Math.round(still * 10) / 10), v: still < 0.3 ? this.v : 0 });
+          this.push({ kind: 'HAND', on: true, ...h, touch: HAND.touch, still: Math.min(9.9, Math.round(still * 10) / 10), v: still < 0.3 ? this.v : 0 });
         } else this.push({ kind: 'HAND', on: false });
       }
       const tg = this.e.targets();
       if (h && this.contact) {
-        const D = 0.34 * tg.arm.bend + 0.16 * tg.arm.wrap + 0.3773 * (tg.arm.deep ?? 0);
-        const Dh = Math.min(0.5, 0.34 * h.aimBend);
+        const D = D_SPAN * tg.arm.bend + D_WRAP_SPAN * tg.arm.wrap + D_DEEP_SPAN * (tg.arm.deep ?? 0);
+        const Dh = handD(h.aimBend);
         const mm = Math.hypot(D * Math.cos(tg.arm.dir) - Dh * Math.cos(h.aimDir), D * Math.sin(tg.arm.dir) - Dh * Math.sin(h.aimDir)) * gainAt(h.aimDist, Dh);
         if (!this.touch) {
-          this.near = mm < 32 ? this.near + 1 / 60 : 0;
+          this.near = mm < HAND.touch ? this.near + 1 / 60 : 0;
           if (this.near >= 0.12) {
             this.touch = true;
             this.push({ kind: 'ARM_TOUCH', on: true, by: 'arm' });
@@ -92,7 +94,7 @@ class Rig {
         }
       }
       const g = this.e.state.grasp;
-      if (this.catches && this.touch && !this.tension && g.phase === 'WRAP' && (g.catchT !== undefined ? this.e.time >= g.catchT : (this.e.time - g.t0) / g.dur >= 0.6)) {
+      if (this.catches && this.touch && !this.tension && graspCaught(g, this.e.time)) {
         this.tension = true;
         this.push({ kind: 'RESISTANCE', on: true });
       }

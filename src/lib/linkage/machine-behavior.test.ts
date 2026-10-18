@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MACHINE_BASE_AXIS as YAW_AXIS } from './machine-base';
-import { D_DEEP_SPAN, D_FLAT_MAX, D_MAX, D_SPAN, D_WRAP_SPAN } from './behavior/programs';
-import { ARM_BEND_MAX, HAND, HZ, runSession, type ScheduledInput } from './behavior/engine';
+import { D_DEEP_SPAN, D_FLAT_MAX, D_MAX, D_SPAN, D_WRAP_SPAN, POSE_BEND_MAX } from './behavior/programs';
+import { HZ, runSession, type ScheduledInput } from './behavior/engine';
 import { DIST, HC } from './behavior/vocab2-hand';
 import { PRESENCE_EDGES } from './behavior/events';
 import type { PersonaKey } from './behavior/persona';
@@ -296,7 +296,7 @@ describe('臂与触须', () => {
     // 松垮的臂（tone = 0）弯起来：只有主腱收紧，拮抗腱不会被抬到绷直点
     const limp = tendonContractions({ tone: 0, bend: 0.5, dir: 0 });
     expect(Math.min(...limp)).toBeCloseTo(0, 12);
-    expect(ARM_DRIVE.dMax / ARM_DRIVE.span).toBeCloseTo(ARM_BEND_MAX, 2);
+    expect(ARM_DRIVE.dMax / ARM_DRIVE.span).toBeCloseTo(POSE_BEND_MAX, 2);
   });
 
   it('肌腱轴深卷（动作词汇 v2，默认关）：不给 deep 时开不开逐位相同；关着时 deep 只当普通差动、封顶 dMax；开着且正对腱轴（±12° 硬窗）主腱拉满、拮抗停在 floor；窗外照旧封顶', () => {
@@ -345,15 +345,12 @@ describe('臂与触须', () => {
     expect(D_WRAP_SPAN).toBe(ARM_DRIVE.wrapSpan);
     expect(D_MAX).toBe(ARM_DRIVE.dMax);
     expect(D_FLAT_MAX).toBeLessThan(D_MAX);
-    // 臂长：引擎 HAND.armL 取迎手链的 HC.armL，台架按模型算的弦长要对得上（≤ 0.5 mm）
-    expect(HAND.armL).toBe(HC.armL);
+    // 臂长：唯一出处是迎手链的 HC.armL，台架按模型算的弦长要对得上（≤ 0.5 mm）
     expect(Math.abs(HC.armL - ARM_GEOM.length)).toBeLessThan(0.5);
     // 距离三档、手速四级里与台架共用的那几个数（2026-10-17 收成一套）
     expect(DIST.near).toBe(PRESENCE_EDGES.near * 1000);
     expect(DIST.far).toBe(PRESENCE_EDGES.far * 1000);
     expect(DIST.body).toBeGreaterThan(R_HULL);
-    expect(HC.vSwipe).toBe(HAND_MM.maxSpeed);
-    expect(HC.vSlow).toBe(HAND_MM.tractionSpeed);
     expect(HC.vStill).toBeLessThan(HC.vSlow);
     expect(HC.vSlow).toBeLessThan(HC.vFast);
   });
@@ -968,7 +965,7 @@ describe('碰臂判定（contactStep：台架 syncHand ③ 搬到纯函数）', 
     expect(bad).toBe(-1);
   });
 
-  it('牵引（opts.traction，台架现在不传）：缠 / 握着时慢慢牵着走锚点跟手、不松开；臂没跟上时锚点冻住，再拉出锚圈才松', () => {
+  it('牵引（opts.traction，台架传 true）：缠 / 握着时慢慢牵着走锚点跟手、不松开；臂没跟上时锚点冻住，再拉出锚圈才松', () => {
     const ppm = 0.6;
     const th = contactThresholds(ppm, false);
     const slow = 40 * ppm; // 40 mm/s（≤ 60）

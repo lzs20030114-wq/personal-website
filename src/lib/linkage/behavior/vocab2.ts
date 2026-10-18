@@ -3,13 +3,13 @@
  * 文件名里的 v2 是当年「第二套动作词汇」留下的。
  *
  * 只管「一个反应长什么样」：引擎决定做哪种反应、在什么时刻、带什么人格参数，这里按表解算成分段
- * 程序（programs.ts 执行）。人格表的 12 个数一个不改，只改读法（§8.4，均为推断、待拍板）：
+ * 程序（programs.ts 执行）。人格表的读法（§8.4，均为推断、待拍板）：
  *   - 三种时钟：反射（惊跳的潜伏与屈曲、一缩）用固定秒，四种人格一样；凝住与「听 / 定住」的长短从
  *     ④ 响应延迟 τ 来；刻意的段落 ÷ √k_v（③ 运动速度）；
- *   - 五档限速（差动 D 每秒，随 √k_v 走、各有上下限）：惊跳永远比任何刻意动作快一大截；
+ *   - 六档限速（差动 D 每秒，随 √k_v 走、各有上下限；反射另算，共七档）：惊跳永远比任何刻意动作快一大截；
  *   - 幅度预算：惊跳 D 0.45–0.72 > 回应 D_r（⑤ 响应强度给）> 自发 E_s（② 呼吸幅度给）> 静息；
  *   - ⑩ 朝人概率决定一次回应是「迎 / 原地 / 躲」；
- *   - 人格的差别在恢复的结构里（A 弹回、B 一步一步探出来、C 回头去查看、D 余震或生硬地落回），不只是快慢。
+ *   - 人格的差别在恢复的结构里（热情回头去查看、沉静停一会儿叹气放回、回避一步一步探出来、乱序随机余震或生硬地落回），不只是快慢。
  *
  * 方向约定同引擎：弯向 0 = 臂梢朝上，左为正；肌腱轴在 0、±120°。惊跳沿「背离刺激」的那根下方腱轴：
  * 左边来的（side = +1）→ −120°，右边来的 → +120°。
@@ -23,10 +23,6 @@ const DEG = Math.PI / 180;
 const wrapPi = (a: number): number => a - TAU * Math.floor((a + Math.PI) / TAU);
 const clamp = (x: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, x));
 
-/** 差动跨度（唯一出处在 programs.ts；这里转出去给老的调用点，并用来把「差动 D」换成 bend + deep） */
-export { D_DEEP_SPAN, D_SPAN };
-const SPAN = D_SPAN;
-const DEEP_SPAN = D_DEEP_SPAN;
 
 /** 手感常量（均待作者拍板） */
 export const V2 = {
@@ -129,10 +125,10 @@ export interface BuildCtx {
 // ------------------------------------------------------------------ 几何与限速
 
 /** 姿态 → 差动 D（含深卷） */
-export const dOf = (p: Pose): number => SPAN * p.bend + DEEP_SPAN * p.deep;
+export const dOf = (p: Pose): number => D_SPAN * p.bend + D_DEEP_SPAN * p.deep;
 
 /** 不在腱轴上的姿态的差动上限：只用弯曲、且给摆动（osc ≤ 0.14）留出余量，弯曲不会被执行层削到 1 */
-export const OFF_AXIS_DMAX = SPAN * 0.86;
+export const OFF_AXIS_DMAX = D_SPAN * 0.86;
 
 /** 弯向是否正对某根腱轴（深卷只给这种姿态） */
 export const onAxis = (dir: number): boolean => Math.abs(wrapPi(dir - Math.round(dir / AXIS) * AXIS)) < 1e-9;
@@ -143,9 +139,9 @@ export const onAxis = (dir: number): boolean => Math.abs(wrapPi(dir - Math.round
  */
 export function poseOfD(D: number, dir: number): Pose {
   const d = Math.max(0, D);
-  if (!onAxis(dir)) return { bend: Math.min(d, OFF_AXIS_DMAX) / SPAN, dir: wrapPi(dir), deep: 0 };
-  const bend = Math.min(1, d / SPAN);
-  const deep = d > SPAN ? clamp((d - SPAN) / DEEP_SPAN, 0, 1) : 0;
+  if (!onAxis(dir)) return { bend: Math.min(d, OFF_AXIS_DMAX) / D_SPAN, dir: wrapPi(dir), deep: 0 };
+  const bend = Math.min(1, d / D_SPAN);
+  const deep = d > D_SPAN ? clamp((d - D_SPAN) / D_DEEP_SPAN, 0, 1) : 0;
   return { bend, dir: wrapPi(dir), deep };
 }
 
@@ -256,7 +252,7 @@ export function govern(phases: Phase[], c: BuildCtx, tier: Tier, tiers?: Partial
     const v = tierSpeed(tr, c.k, c.vigor);
     if (Number.isFinite(v) && p.ease !== 'hold') p.dur = Math.max(p.dur, (PEAK[p.ease] * pathLen(at, to, p.path)) / v);
     // 摆动的峰速 2π·hz·amp·span 也不超档（慢的人格点头、嗅探收小）
-    if (Number.isFinite(v) && p.osc) p.osc = { ...p.osc, amp: Math.min(p.osc.amp, v / (TAU * p.osc.hz * SPAN)) };
+    if (Number.isFinite(v) && p.osc) p.osc = { ...p.osc, amp: Math.min(p.osc.amp, v / (TAU * p.osc.hz * D_SPAN)) };
     at = to;
   }
   return phases;
@@ -274,7 +270,7 @@ export function anticPose(cur: Pose, to: Pose, amount: number): Pose {
   const x = cx - (amount * (tx - cx)) / L;
   const y = cy - (amount * (ty - cy)) / L;
   const D = Math.hypot(x, y);
-  return { bend: Math.min(D, OFF_AXIS_DMAX) / SPAN, dir: D > 1e-9 ? Math.atan2(y, x) : cur.dir, deep: 0 };
+  return { bend: Math.min(D, OFF_AXIS_DMAX) / D_SPAN, dir: D > 1e-9 ? Math.atan2(y, x) : cur.dir, deep: 0 };
 }
 
 export const ph = (name: string, dur: number, ease: Phase['ease'], arm: Phase['arm'], extra: Partial<Phase> = {}): Phase => ({
@@ -285,9 +281,12 @@ export const ph = (name: string, dur: number, ease: Phase['ease'], arm: Phase['a
   ...extra,
 });
 
+/** 生硬地落回静息（乱序随机的收尾：惊跳恢复、放弃）：0.5 s 匀速直线、叹一口气 */
+export const dropPhase = (): Phase => ph('drop', 0.5, 'lin', 'rest', { path: 'line', breath: { rate: 1, sigh: true }, feel: { pose: 'free' } });
+
 /** 把目标往外推，直到离此刻的姿态至少 minD（差动）：臂已经朝那边时，动作也不会凭空消失 */
 function atLeast(target: Pose, cur: Pose, minD: number): Pose {
-  const cap = target.deep > 0 ? 1 : OFF_AXIS_DMAX / SPAN;
+  const cap = target.deep > 0 ? 1 : OFF_AXIS_DMAX / D_SPAN;
   let t = target;
   for (let i = 0; i < 60 && pathLen(cur, t, 'line') < minD && t.bend < cap; i++) t = { ...t, bend: Math.min(cap, t.bend + 0.02) };
   return t;
@@ -402,7 +401,7 @@ export function buildStartle(c: BuildCtx, s: StartleIn): { phases: Phase[]; busy
       } else {
         rec.push(ph('hold2', 0.3 + 1.2 * c.rnd(), 'hold', 'hold', { breath: { rate: 1 }, voice: 'mute', light: 0.6, feel: { pose: 'tuck', quiver: 0.08 } }));
       }
-      rec.push(ph('drop', 0.5, 'lin', 'rest', { path: 'line', breath: breathBack, feel: { pose: 'free' } }));
+      rec.push(dropPhase());
       break;
     }
   }
@@ -489,7 +488,7 @@ export function buildResponse(c: BuildCtx, r: RespIn): Phase[] {
  * 回应 / 自发 / 看见手用的姿态：只用弯曲、封顶 OFF_AXIS_DMAX，正对腱轴也一样——深卷只给惊跳。不然朝正上
  * （「原地」变体、两侧一起按住）时弯曲顶到 1，后面的点头 / 蹭被削掉上半截（审查复核实测：活力型两侧按住 26/60 次）
  */
-const flat = (D: number, dir: number): Pose => ({ bend: Math.min(Math.max(0, D), OFF_AXIS_DMAX) / SPAN, dir: wrapPi(dir), deep: 0 });
+const flat = (D: number, dir: number): Pose => ({ bend: Math.min(Math.max(0, D), OFF_AXIS_DMAX) / D_SPAN, dir: wrapPi(dir), deep: 0 });
 
 function responsePhases(c: BuildCtx, r: RespIn): Phase[] {
   const poseOfD = flat;
@@ -656,7 +655,7 @@ function spontPhases(c: BuildCtx, kind: SpontKind, around?: number): Phase[] {
       ];
     }
     case 'sway': {
-      // 环顾：抬一点，弯曲不变、弯向慢慢扫过去（A 1.0 rad · C、D 0.7 · B 0.5）——最慢的臂动作
+      // 环顾：抬一点，弯曲不变、弯向慢慢扫过去（热情 1.0 rad · 沉静、回避 0.5 · 乱序随机 0.7）——最慢的臂动作
       const w = (c.temper === 'warm' ? 1.0 : c.temper === 'calm' || c.temper === 'avoidant' ? 0.5 : 0.7) * (c.rnd() < 0.5 ? 1 : -1);
       const D = rD + 0.4 * E;
       return [
@@ -684,34 +683,15 @@ function spontPhases(c: BuildCtx, kind: SpontKind, around?: number): Phase[] {
 
 // ------------------------------------------------------------------ 看见手
 
-export type NoticeMode = 'toward' | 'away' | 'look';
-
-/** 看见手那一下（v2）：迎 = 先往回收一点再伸过去；躲 = 往背着手的腱轴一缩；看别处 = 瞥一眼。都限速，追不上惊跳 */
-export function buildNotice(c: BuildCtx, mode: NoticeMode, aimDir: number, aimBend: number, awayDir: number): Phase[] {
-  return govern(unhook(noticePhases(c, mode, aimDir, aimBend, awayDir), c.cur, c.rest), c, mode === 'away' ? 'pursue' : 'deliberate');
-}
-
-function noticePhases(c: BuildCtx, mode: NoticeMode, aimDir: number, aimBend: number, awayDir: number): Phase[] {
+/** 看见手那一下（只剩看别处；迎与躲由迎手链自己出拍）：朝手瞥一眼再回静息，限速 deliberate，追不上惊跳 */
+export function buildNotice(c: BuildCtx, aimDir: number): Phase[] {
   const k = c.k;
-  if (mode === 'toward') {
-    return [
-      ph('antic', 0.2 / k, 'mj', anticPose(c.cur, { bend: (Math.min(1, aimBend) * 0.5 + 0.15) * c.vigor, dir: aimDir, deep: 0 }, 0.04), { path: 'line' }),
-      ph('reach', 0.9 / k, 'mj', { bend: (Math.min(1, aimBend) * 0.5 + 0.15) * c.vigor, dir: aimDir, deep: 0 }, { breath: { rate: 1, amp: 1.15 }, voice: 'query', feel: { pose: 'point', side: 0 } }),
-      ph('handoff', 0.8 / k, 'mj', 'rest'),
-    ];
-  }
-  if (mode === 'away') {
-    return [
-      ph('flinch', 0.3, 'mj', poseOfD(0.22 * c.vigor, nearestAxisDir(awayDir)), { path: 'line', breath: { rate: 1, push: 0.08 }, voice: 'mute', feel: { pose: 'tuck' } }),
-      ph('hold', 0.4, 'hold', 'hold', { voice: 'mute', breath: { rate: 1, push: 0.08 } }),
-      ph('handoff', 1.0 / k, 'mj', 'rest'),
-    ];
-  }
-  return [
+  const phases = [
     ph('glance', 0.5 / k, 'mj', poseOfD(0.1 * c.vigor + dOf(c.rest) * 0.5, aimDir), { feel: { pose: 'point', side: 0, antennate: 0.1 } }),
     ph('hold', 0.3, 'hold', 'hold'),
     ph('back', 0.8 / k, 'mj', 'rest'),
   ];
+  return govern(unhook(phases, c.cur, c.rest), c, 'deliberate');
 }
 
 // ------------------------------------------------------------------ 收场
