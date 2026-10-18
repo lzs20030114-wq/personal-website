@@ -6,6 +6,8 @@ import { createContext, useCallback, useContext, useEffect, useLayoutEffect, use
 import { LabActivity } from './LabActivity';
 import { CAMERA_COMMAND, type CameraCommand } from './labCameraInput';
 import { LAB_BENCHES, LAB_INDEX, labAccent } from '../../src/lib/site/lab-index';
+import { BlockRail, BlockView } from '../site/LogBody';
+import type { Bilingual, LogBlock } from '../../src/lib/site/log-schema';
 
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 /** 说明栏默认只列前 4 条规格，其余点「全部 N 项规格」展开（09 Lab Page 稿的 specRows 默认值）。 */
@@ -133,8 +135,15 @@ function visibleCamera(root: HTMLElement | null) {
   return Array.from(root?.querySelectorAll<HTMLCanvasElement>('canvas[data-lab-camera]') ?? []).find(canvas => canvas.getBoundingClientRect().width > 0 && !canvas.closest('[hidden]'));
 }
 
-export function LabPanel({ no, title, description, lede, specs, accent, kind, verb, children, notes }: {
-  no: string; title: string; description: string; lede: string; specs: [string, string][]; accent: string; kind: string; verb: string; children: ReactNode; notes?: ReactNode;
+/**
+ * 台架的附件（2026-10-18 起 Lab 1-6 挂了交互机制表）：与日志条目同一套——说明栏里列卡片，
+ * 点一张就在面板正文下面占满整幅展开（表要宽度才读得动，说明栏只有 260–400 px）。
+ * 卡片编号、规格与展开视图都是 LogBody 导出的那两个组件，两处不会各画一套。
+ */
+export type LabAttachments = { title: Bilingual; blocks: LogBlock[] };
+
+export function LabPanel({ no, title, description, lede, specs, accent, kind, verb, children, notes, attachments }: {
+  no: string; title: string; description: string; lede: string; specs: [string, string][]; accent: string; kind: string; verb: string; children: ReactNode; notes?: ReactNode; attachments?: LabAttachments;
 }) {
   const lang = useBenchLang();
   const tx = useLabText(lang);
@@ -150,6 +159,9 @@ export function LabPanel({ no, title, description, lede, specs, accent, kind, ve
   const expandButton = useRef<HTMLButtonElement>(null);
   const [placeholder, setPlaceholder] = useState(0);
   const [allSpecs, setAllSpecs] = useState(false);
+  const [attachAt, setAttachAt] = useState<number | null>(null);
+  const attachRail = useRef<HTMLDivElement>(null);
+  const attachView = useRef<HTMLDivElement>(null);
   const [solving, setSolving] = useState(false);
   const solveBar = useRef<HTMLSpanElement>(null);
   const solveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -305,6 +317,7 @@ export function LabPanel({ no, title, description, lede, specs, accent, kind, ve
           <div className="lab-panel-title"><h2 id={`lab-title-${no}`}>{tx(title)}</h2><p>{tx(description)}</p></div>
           <div className="lab-panel-actions">
             <button type="button" className="lab-notes-toggle" aria-pressed={details} aria-controls={`lab-details-${no}`} onClick={() => setDetails(!details)}><span className="lab-check" data-on={details || undefined} aria-hidden />{tx("Notes")}</button>
+            {attachments && <button type="button" className="lab-attach-toggle" aria-controls={`lab-details-${no}`} onClick={() => { setDetails(true); requestAnimationFrame(() => attachRail.current?.scrollIntoView({ block: 'nearest' })); }}>{lang === 'zh' ? '附件' : 'Attachments'}<span className="lab-attach-n">{attachments.blocks.length}</span></button>}
             <button ref={expandButton} type="button" className="lab-expand" aria-label={`${tx(expanded ? '恢复' : '放大')} ${tx('Lab')} ${no}`} onClick={toggleExpand}>{expanded ? tx('Restore ↙') : tx('Expand ↗')}</button>
           </div>
         </header>
@@ -337,9 +350,19 @@ export function LabPanel({ no, title, description, lede, specs, accent, kind, ve
               <h3 className="lab-sr-only">{tx("Specifications")}</h3>
               <dl>{(allSpecs ? specs : specs.slice(0, SPEC_ROWS)).map(([key, value]) => <div key={key}><dt>{tx(key)}</dt><dd>{tx(value)}</dd></div>)}</dl>
               {specs.length > SPEC_ROWS && <button type="button" className="lab-specs-more" aria-expanded={allSpecs} onClick={() => setAllSpecs(!allSpecs)}>{allSpecs ? tx('Fewer specs ↑') : (lang === 'zh' ? `全部 ${specs.length} 项规格 ↓` : `All ${specs.length} specs ↓`)}</button>}
+              {attachments && <div ref={attachRail} className="lab-attachments">
+                <BlockRail blocks={attachments.blocks} lang={lang} title={attachments.title[lang]} openAt={attachAt} viewId={`lab-attach-${no}`}
+                  onToggle={i => {
+                    setAttachAt(attachAt === i ? null : i);
+                    requestAnimationFrame(() => attachView.current?.scrollIntoView({ block: 'nearest', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));
+                  }} />
+              </div>}
             </div>
           </aside>
         </div>
+        {attachments && <div className="lab-attach-view">
+          <BlockView id={`lab-attach-${no}`} viewRef={attachView} blocks={attachments.blocks} lang={lang} openAt={attachAt} onClose={() => setAttachAt(null)} />
+        </div>}
       </section>
     </LabActivity.Provider>
   </div>;

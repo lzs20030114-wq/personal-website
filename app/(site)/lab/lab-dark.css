@@ -211,6 +211,28 @@
 .lab-specs-more { margin-top: 14px; align-self: flex-start; font: 500 12px var(--ld-mono); color: var(--lab-tone); background: none; border: 0; padding: 0; cursor: pointer; }
 .lab-specs-more:hover { color: var(--ld-cream); }
 
+/* ── 附件（2026-10-18 起 Lab 1-6 挂交互机制表）：卡片在说明栏里，点开的那张在面板正文下面占满整幅。
+   卡片、展开视图、表格本身是日志那一套（globals.css 的 .log-rail / .log-card / .log-view / .log-table），这里只换台架的配色与字 ── */
+.lab-attachments, .lab-attach-view { --accent: var(--lab-tone); }
+.lab-attachments { margin-top: 18px; padding-top: 14px; border-top: 1px solid oklch(0.95 0.032 120 / 0.12); }
+.lab-attachments .log-rail { padding-top: 0; }
+.lab-attachments :is(.log-rail__title, .log-card__label, .log-card__meta), .lab-attach-view :is(.log-view__label, .log-view__meta, .log-view__close) { font-family: var(--ld-mono); letter-spacing: 0; }
+.lab-attachments .log-rail__title { font-size: 11px; color: var(--ld-mute); }
+.lab-attachments .log-card { padding: 9px 6px 9px 0; }
+.lab-attachments .log-card__cap { color: var(--ld-soft); }
+.lab-attach-view .log-view[data-open='true'] { margin-top: 20px; padding: 16px 18px 18px; border-top: 0; background: var(--ld-panel); }
+/* 点卡片后滚过来：标题栏要露在吸顶顶栏下面（同 .lab-panel-anchor 的 76px） */
+.lab-attach-view .log-view { scroll-margin-top: 80px; }
+.lab-attachments { scroll-margin-top: 80px; }
+.lab-attach-view .log-table table { font-size: 12.5px; }
+/* 窄屏不把五六列挤成一字一行：表保底 720 px 宽，在自己的滚动框里横着滚（.log-table__scroll） */
+.lab-attach-view .log-table table { min-width: 720px; }
+.lab-attach-view .log-table th { white-space: normal; font-family: var(--ld-mono); letter-spacing: 0; text-transform: none; color: var(--ld-mute); }
+.lab-attach-view .log-table td { color: oklch(0.9 0.035 140); }
+.lab-attach-view .log-table figcaption { max-width: 96ch; font-size: 12.5px; color: var(--ld-soft); }
+.lab-workspace .lab-panel-actions .lab-attach-toggle .lab-attach-n { color: var(--lab-tone); font-variant-numeric: tabular-nums; }
+.lab-language-root[data-lang='zh'] :is(.log-rail__title, .log-card__label, .log-view__label, .log-view__close) { text-transform: none; }
+
 /* ── 放大：稿的整屏 fixed + 深底；吸顶顶栏在放大时让位（面板在 .pg-dark 的层叠上下文里，z-index 压不过顶栏） ── */
 body:has(.lab-panel[data-expanded]) .ld-header { visibility: hidden; }
 .lab-panel[data-expanded] { background: var(--ld-paper); }

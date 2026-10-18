@@ -751,6 +751,21 @@ export function handBandOf(distMm: number, cur: PresenceBand | null): PresenceBa
   return raw;
 }
 
+/**
+ * 台架上点、拖、按的判法与面板按钮给的刺激强度（2026-10-18 从 MachineBench 搬来，交互机制表从这里取数）：
+ * 按住壳 holdAfter 秒算「按住」、拖过 strokePx 算「抚摸」；点小触手、按住大触手的命中半径（CSS px）；
+ * 面板「环境」三个按钮的读数（敲的强度、拍手 / 说话的声级，0–1）
+ */
+export const BENCH_INPUT = {
+  holdAfter: 0.5,
+  strokePx: 10,
+  smallArmHitPx: 30,
+  armPressPx: 22,
+  knock: 0.6,
+  clap: 0.8,
+  talk: 0.3,
+} as const;
+
 /** 没看见手就碰臂的缠（旧路），缠到这么多成算手指被卡住 */
 export const CATCH_AT = 0.6;
 

@@ -18,6 +18,7 @@ import { type LogHeader, type LogRecord, toJsonl } from '../../src/lib/linkage/b
 import { PERSONA_KEYS, type PersonaKey } from '../../src/lib/linkage/behavior/persona';
 import {
   ARM_GEOM,
+  BENCH_INPUT,
   FACING,
   HAND_UI,
   PERSP_FOCAL,
@@ -226,14 +227,9 @@ const lifeRateStop = (r: number): number => {
 };
 /** 日志缓冲上限（条）：一场四世约 500 条，这个数够跑十几个小时；超了丢最早的 */
 const LOG_CAP = 60000;
-/** 按住壳多久算「按住」（秒）、拖多远算「抚摸」（CSS px） */
-const HOLD_AFTER = 0.5;
-const STROKE_PX = 10;
 // 指针 = 手的台架手感常量（HAND_UI / HAND_MM）、碰臂判定（contactStep）、手的在场档（handBandOf）与张力开关
 // （graspCaught）在 machine-behavior.ts：台架、vitest 闭环与 scripts/behavior/hand-probe.mjs 共用一份
-/** 点小触手的命中半径、按住大触手的命中半径（CSS px） */
-const SMALL_ARM_HIT_PX = 30;
-const ARM_PRESS_PX = 22;
+// 点、拖、按的判法（按住多久、拖多远、命中半径）与面板按钮的刺激读数在 machine-behavior.ts 的 BENCH_INPUT
 
 /** 从某种人格开始，其余按 A→B→C→D 循环（台架的「首世」档） */
 function rotateOrder(first: PersonaKey): PersonaKey[] {
@@ -1340,7 +1336,7 @@ export function MachineBench({
       if (!eng) return null;
       // 壳上按着不动够久 = 「按住」（与引擎时钟无关，暂停时照样认手势）
       const g = shellGesture;
-      if (g && !g.stroked && !g.held && performance.now() / 1000 - g.t0 >= HOLD_AFTER) {
+      if (g && !g.stroked && !g.held && performance.now() / 1000 - g.t0 >= BENCH_INPUT.holdAfter) {
         g.held = true;
         eng.push({ kind: 'SHELL_HOLD', half: g.half, on: true });
       }
@@ -1819,12 +1815,12 @@ export function MachineBench({
     const behaviorPointerDown = (e: PointerEvent, px: number, py: number): void => {
       const eng = engine;
       if (!eng) return;
-      const k = hitSmallArm(px, py, SMALL_ARM_HIT_PX);
+      const k = hitSmallArm(px, py, BENCH_INPUT.smallArmHitPx);
       if (k !== null) {
         eng.push({ kind: 'FEELER_TOUCH', feeler: k === 0 ? 0 : 1, side: feelerSide(clickSide(k, px, py)) });
         return;
       }
-      if (armDist(px, py) <= ARM_PRESS_PX) {
+      if (armDist(px, py) <= BENCH_INPUT.armPressPx) {
         contact.held = true;
         contact.pressAt = { x: px, y: py };
         canvas.setPointerCapture?.(e.pointerId);
@@ -1857,7 +1853,7 @@ export function MachineBench({
         behaviorPointerDown(e, px, py);
         return;
       }
-      const k = hitSmallArm(px, py, SMALL_ARM_HIT_PX);
+      const k = hitSmallArm(px, py, BENCH_INPUT.smallArmHitPx);
       if (k === null) return;
       // 甩开方向 = 点击落在摆平面哪一侧的**反面**（侧别见 clickSide）。
       // 视线恰好沿 h 轴时投影退化——退到「远离当前倾角」兜底。
@@ -1873,7 +1869,7 @@ export function MachineBench({
       const py = e.clientY - r.top;
       if (behavior) {
         const g = shellGesture;
-        if (g && e.pointerId === g.id && !g.stroked && !g.held && Math.hypot(px - g.x0, py - g.y0) > STROKE_PX) {
+        if (g && e.pointerId === g.id && !g.stroked && !g.held && Math.hypot(px - g.x0, py - g.y0) > BENCH_INPUT.strokePx) {
           g.stroked = true;
           engine?.push({ kind: 'SHELL_STROKE', half: g.half, touch: 'stroke' });
         }
@@ -1886,12 +1882,12 @@ export function MachineBench({
         canvas.style.cursor =
           contact.held || shellGesture
             ? 'grabbing'
-            : hitSmallArm(px, py, SMALL_ARM_HIT_PX) !== null || armDist(px, py) <= ARM_PRESS_PX || shellHit(px, py)
+            : hitSmallArm(px, py, BENCH_INPUT.smallArmHitPx) !== null || armDist(px, py) <= BENCH_INPUT.armPressPx || shellHit(px, py)
               ? 'pointer'
               : '';
         return;
       }
-      canvas.style.cursor = hitSmallArm(px, py, SMALL_ARM_HIT_PX) !== null ? 'pointer' : '';
+      canvas.style.cursor = hitSmallArm(px, py, BENCH_INPUT.smallArmHitPx) !== null ? 'pointer' : '';
     };
     const onPointerUp = (e: PointerEvent): void => {
       if (!behavior) return;
@@ -2343,13 +2339,13 @@ export function MachineBench({
         >
           {B.envs.lift}
         </button>
-        <button type="button" onClick={() => apiRef.current?.inject({ kind: 'KNOCK', intensity: 0.6 })}>
+        <button type="button" onClick={() => apiRef.current?.inject({ kind: 'KNOCK', intensity: BENCH_INPUT.knock })}>
           {B.envs.knock}
         </button>
-        <button type="button" onClick={() => apiRef.current?.inject({ kind: 'SOUND', level: 0.8 })}>
+        <button type="button" onClick={() => apiRef.current?.inject({ kind: 'SOUND', level: BENCH_INPUT.clap })}>
           {B.envs.clap}
         </button>
-        <button type="button" onClick={() => apiRef.current?.inject({ kind: 'SOUND', level: 0.3 })}>
+        <button type="button" onClick={() => apiRef.current?.inject({ kind: 'SOUND', level: BENCH_INPUT.talk })}>
           {B.envs.talk}
         </button>
       </div>

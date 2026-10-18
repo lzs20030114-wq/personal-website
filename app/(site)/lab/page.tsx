@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { LabPanel, LabWorkspace } from '../../../components/lab/LabWorkspace';
+import { LabPanel, LabWorkspace, type LabAttachments } from '../../../components/lab/LabWorkspace';
+import { LAB_1_6_TABLES } from '../../../src/lib/site/lab-1-6-tables';
 import './workspace.css';
 import './lab-dark.css';
 import { LabIntro, LabProjectRule, LabProjectEmpty, LabScaleRule } from '../../../components/lab/LabChrome';
@@ -65,15 +66,17 @@ function Bench({
   specs,
   children,
   notes,
+  attachments,
 }: {
   no: string;
   lede: string;
   specs: [string, string][];
   children: ReactNode;
   notes?: ReactNode;
+  attachments?: LabAttachments;
 }) {
   const { title, kernel, description, kind, verb } = labBench(no);
-  return <LabPanel no={no} title={title} description={description} accent={labAccent(kernel)} kind={kind} verb={verb} lede={lede} specs={specs} notes={notes}>{children}</LabPanel>;
+  return <LabPanel no={no} title={title} description={description} accent={labAccent(kernel)} kind={kind} verb={verb} lede={lede} specs={specs} notes={notes} attachments={attachments}>{children}</LabPanel>;
 }
 
 export default function LabPage() {
@@ -169,6 +172,7 @@ export default function LabPage() {
             ['Machine', 'Same assembly as Lab 1-5 · breath drives the crank'],
             ['Caveats', 'Rhythms not hardware-verified · yaw is a placeholder'],
           ]}
+          attachments={LAB_1_6_TABLES}
         >
           <MachineBench behavior />
         </Bench>

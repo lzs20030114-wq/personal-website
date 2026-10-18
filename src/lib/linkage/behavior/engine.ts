@@ -182,6 +182,9 @@ export const MOTION = {
   down: Math.PI,
 } as const;
 
+/** 会先「一缩」的刺激：接近阈值的触碰类（摸 / 拍 / 戳 / 按壳、碰触须、人走近）；手碰臂、抱起、敲、声音不在其列 */
+export const WINCE_KINDS: ReadonlySet<SensorKind> = new Set<SensorKind>(['SHELL_STROKE', 'SHELL_HOLD', 'FEELER_TOUCH', 'PRESENCE']);
+
 /**
  * 手（HAND，Lab 1-6 鼠标 = 人的手，2026-10-07）：看见、决定、跟踪的手感常量（均待拍板）。
  * 人格表里的数一个不改——看见要过 ④ 响应延迟，重新决定按 ⑨ 朝向间隔，迎 / 躲按 ⑩。
@@ -1487,8 +1490,7 @@ export class BehaviorEngine {
     // 接近阈值的触碰先「一缩」，回应顺延到一缩做完
     if ((!s.m2.prog || s.gesture?.kind === 'spont') && s.grasp.phase === 'IDLE') {
       const kind: RegKind = e.kind === 'KNOCK' || e.kind === 'LIFT' ? 'alert' : e.kind === 'SOUND' ? 'listen' : 'directed';
-      const contact = e.kind === 'SHELL_STROKE' || e.kind === 'SHELL_HOLD' || e.kind === 'FEELER_TOUCH' || e.kind === 'PRESENCE';
-      const wince = contact && th > 0 && I / th >= V2.nearThreshold;
+      const wince = WINCE_KINDS.has(e.kind) && th > 0 && I / th >= V2.nearThreshold;
       const phases = buildRegister(this.buildCtx(ctx, tau, 0), { dur: tau, side: pd.side, kind, wince });
       const dur = totalDur({ phases });
       if (dur > DT) {
