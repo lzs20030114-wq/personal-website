@@ -18,7 +18,7 @@ const P = await server.ssrLoadModule('/src/lib/linkage/behavior/programs.ts');
 const f = (x, d = 3) => (Number.isFinite(x) ? +x.toFixed(d) : x);
 const DEG = 180 / Math.PI;
 const tiers = ['recover', 'strike', 'pursue', 'deliberate', 'spont', 'creep'];
-const TAU_ITEMS = ['take', 'dwell', 'still', 'hover', 'hoverMin', 'feel', 'avoidFreeze', 'peekLook', 'wait2', 'stall'];
+const TAU_ITEMS = ['take', 'dwell', 'still', 'hover', 'hoverMin', 'feel', 'avoidFreeze', 'stall'];
 for (const P of ['A', 'B', 'C', 'D']) {
   const p = PERSONAS[P];
   const kvs = [p.speed[0], p.speed[1]].map((v) => v / E.ENGINE.speedRef);

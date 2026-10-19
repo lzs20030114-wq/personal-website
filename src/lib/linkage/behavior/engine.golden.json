@@ -1,11 +1,11 @@
 {
-  "source": "B⑤ 按 τ 两端插值、急并进追、跳的门一个值、再收一个门（2026-10-17）",
+  "source": "第二轮审核 B 类九条：旧路不读手、旧路的找并进 buildSearch、握着时呼吸周期一种算法、缩回并进收、两处按 τ 改定值、2 mm 级的键并掉、泄气单写、乱序随机三开关并一、删时长钳位（2026-10-19）",
   "cases": [
     {
       "seed": 11,
       "lifeRate": 1,
-      "log": "1a1bfdbf43bdac38",
-      "frames": "a95eb1cc9737a0ff"
+      "log": "e75fa43d865ed404",
+      "frames": "2e4e1228d0a29db7"
     },
     {
       "seed": 23,
@@ -39,13 +39,13 @@
     }
   ],
   "hand": {
-    "source": "躲开只挡甩臂段、定住时手还在逼近可再躲开（2026-10-17）",
+    "source": "第二轮审核 B 类九条：旧路不读手、旧路的找并进 buildSearch、握着时呼吸周期一种算法、缩回并进收、两处按 τ 改定值、2 mm 级的键并掉、泄气单写、乱序随机三开关并一、删时长钳位（2026-10-19）",
     "cases": [
       {
         "seed": 211,
         "lifeRate": 1,
-        "log": "40b6ad2bdf1a0c4a",
-        "frames": "e2c36bf34b868ccc"
+        "log": "ce86d296bbae4c47",
+        "frames": "a9aece0514225d82"
       },
       {
         "seed": 223,
@@ -57,13 +57,13 @@
         "seed": 241,
         "lifeRate": 10,
         "log": "d809521cbfebb3d1",
-        "frames": "e7ae12a1c9686e2c"
+        "frames": "074a1c49cd53069a"
       },
       {
         "seed": 251,
         "lifeRate": 10,
         "log": "69326a716331b626",
-        "frames": "9b8f369f57550872"
+        "frames": "c468f3bf96917ac6"
       }
     ]
   }

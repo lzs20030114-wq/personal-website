@@ -31,6 +31,12 @@ const wrapPi = (a: number): number => a - TAU * Math.floor((a + Math.PI) / TAU);
 const clamp = (x: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, x));
 const lerpAngle = (a: number, b: number, u: number): number => wrapPi(a + wrapPi(b - a) * u);
 
+/**
+ * 停在碰到圈外这么多 mm（2026-10-19 第二轮审核第 6 条把三处并成一个：停半拍最快那一端 13.6、回避型先到的边 16、
+ * 追到手旁 14——差 2 mm 看不出来）
+ */
+const NEAR_GAP = 14;
+
 /** 手感常量（均待作者拍板；出处见研究笔记 §9.8） */
 export const HC = {
   /** 臂长（mm，静息弦长；唯一出处——引擎直接读它，台架 ARM_GEOM.length 由守门测试核对） */
@@ -43,18 +49,24 @@ export const HC = {
    * 按 τ 的等待 / 停顿（2026-10-17 一律写成 [最快, 最慢]，由 vocab2.ts 的 byTau 按迟钝度插值；端值 = 改之前热情 / 沉静的值）：
    * 看见 → 第一跳 take；跳完停多久 dwell（一跳一停的周期 ≥ 1.4 s，不超过臂的 0.7 Hz 通带）；手停稳多久才凑 still；
    * 停半拍的距离 hover（碰到半径之外再留 mm）与时长下限 hoverMin；缠前定住感觉 feel；决定躲那一下定住 avoidFreeze；
-   * 偷看看多久 peekLook；回避型凑之前第二次等 wait2；乱序随机 ⑤ 抽到负时愣住 stall
+   * 乱序随机 ⑤ 抽到负时愣住 stall
    */
   take: [0.12, 0.35],
   dwell: [0.7, 1.5],
   still: [0.25, 1.4],
-  hover: [13.6, 28],
+  hover: [NEAR_GAP, 28],
   hoverMin: [0.25, 0.7],
   feel: [0.16, 0.6],
   avoidFreeze: [0.32, 0.55],
-  peekLook: [0.64, 1.1],
-  wait2: [0.44, 0.9],
   stall: [0.56, 1.25],
+  /**
+   * 回避型偷看看多久、凑之前第二次等多久（秒，定值）：2026-10-19 以前按 τ 插值 [0.64, 1.1] / [0.44, 0.9]，
+   * 但只有回避型走得到、而它的 τ 0.3（衰老到头 0.6）只用到最快那一端，全程只差 0.09 s
+   */
+  peekLook: 0.7,
+  wait2: 0.5,
+  /** 停在碰到圈外多少 mm：回避型（迎的时候）先到的边、追到手旁（停半拍最快那一端同值） */
+  nearGap: NEAR_GAP,
   /** 第一跳只伸到「刚好碰到」的 0.55（先转方向、后伸长）；臂一步至少 0.7 s（陪着的每一跳、缠的贴上都按它） */
   firstHop: 0.55,
   stepMin: 0.7,
@@ -74,18 +86,19 @@ export const HC = {
   bStep: 0.65,
   /** 停半拍最多等 1.5 s */
   hoverMax: 1.5,
-  /** 回避型（迎的时候）：先到碰到圈外 16 mm，退到 64 mm，再回到停半拍位 */
-  bEdge: 16,
+  /** 回避型（迎的时候）：先到碰到圈外 nearGap，退到 64 mm，再回到停半拍位 */
   bRetreat: 64,
-  /** 蹲：clamp(0.14 − 剩余行程, 0.04, 0.08)·花样；停稳 ≥ 0.18 s（≤ 0.5）；扑落在手上 +4 mm；精确伸 / 慢碰落 +2 mm */
+  /**
+   * 蹲：clamp(0.14 − 剩余行程, 0.04, 0.08)·花样；停稳 ≥ 0.18 s（≤ 0.5）。落点 land：扑、精确伸、慢碰、追里的慢碰、
+   * 缠的贴上都落在手上 +2 mm，收紧从这里一级级加（2026-10-19 以前扑落 +4：碰到半径 32 mm，圈里 2 mm 与 4 mm 读不出差别）
+   */
   cockBase: 0.14,
   cockMin: 0.04,
   cockMax: 0.08,
   cockedMin: 0.18,
   cockedMax: 0.5,
   strikeMax: 0.22,
-  pounceLand: 4,
-  reachLand: 2,
+  land: 2,
   /** 乱序随机 ⑤ 抽到负：停在碰到圈外 40 mm、愣住、退到 110 mm 外 */
   balkNear: 40,
   balkFar: 110,
@@ -95,10 +108,9 @@ export const HC = {
   /** 推两下（每下 0.03）还没碰到 = 一次够不着 */
   nudge: 0.03,
   nudges: 2,
-  /** 缠：定住感觉见 feel（手伸过来 ×1.5、已经等过 ④ 的 0.12、追里 0.1）；贴上 ≥ max(stepMin, 0.6/k)；每级 +5 mm；窗口 −12…+24 mm */
-  feelWaited: 0.12,
+  /** 缠：定住感觉见 feel（手伸过来 ×1.5；已经等过 ④ 的、追里的一律 0.12）；贴上 ≥ max(stepMin, 0.6/k)；每级 +5 mm；窗口 −12…+24 mm */
+  feelShort: 0.12,
   feelByHand: 1.5,
-  feelChase: 0.1,
   seatK: 0.6,
   cinchStep: 5,
   winLo: -12,
@@ -133,7 +145,6 @@ export const HC = {
   /** 追：抽手快（≥ vFast）= 扑过去；慢 = 伸过去送一下；let 0.15 s（慢的 0.3）；身体晚 0.3 s 跟 */
   chaseLet: 0.15,
   chaseLetSlow: 0.3,
-  chaseNear: 14,
   chaseExtend: 0.8,
   yawLag: 0.3,
   /** 追的缠到限位的兜底（s）：拍走完时引擎会缩到 +0.5 s，这里只防拍序意外卡住（四拍最慢的 creep 档也远在其下） */
@@ -412,13 +423,13 @@ export function buildApproachBeat(c: BuildCtx, g: HandGeom, beat: ApproachBeat):
     case 'transport':
       return gov([ph('transport', 0.6 / k, lin, atMm(g, -H), { ...transportCue, voice: P === 'warm' ? 'query' : undefined })], c, 'pursue');
     case 'edge':
-      return gov([ph('edge', 0.6 / k, 'mj', atMm(g, -(g.touch + HC.bEdge)), shyCue)], c, 'pursue');
+      return gov([ph('edge', 0.6 / k, 'mj', atMm(g, -(g.touch + HC.nearGap)), shyCue)], c, 'pursue');
     case 'wait':
       return [ph('wait', 0.6, 'hold', 'hold', { breath: { rate: 0.3, amp: 0.6 }, feel: pointAt(P, { quiver: 0.05 }), voice: 'mute' })];
     case 'retreat':
       return gov([ph('retreat', 0.6 / k, 'mj', atMm(g, -(g.touch + HC.bRetreat)), { feel: feel('tuck'), voice: 'mute' })], c, 'deliberate');
     case 'wait2':
-      return [ph('wait2', byTau(HC.wait2, c.tau), 'hold', 'hold', { breath: { rate: 0.3 }, voice: 'mute' })];
+      return [ph('wait2', HC.wait2, 'hold', 'hold', { breath: { rate: 0.3 }, voice: 'mute' })];
     case 'edge2':
       return gov([ph('edge2', 0.6 / k, 'mj', atMm(g, -H), shyCue)], c, 'deliberate');
     case 'hover':
@@ -427,18 +438,18 @@ export function buildApproachBeat(c: BuildCtx, g: HandGeom, beat: ApproachBeat):
     case 'crouch': {
       // 蹲：往回收一点（看得见的预备 0.04–0.08），吸一口、张开，一声上扬——「玩扑」的信号，不读作捕猎
       const { cock } = pounceGeom(c, g);
-      const to = anticPose(c.cur, atMm(g, HC.pounceLand), cock);
+      const to = anticPose(c.cur, atMm(g, HC.land), cock);
       return gov([ph('crouch', 0.35 / k, 'mj', to, { path: 'line', breath: { rate: 1, amp: 1.2, push: -0.03 }, feel: pointAt(P), voice: 'query' })], c, 'deliberate');
     }
     case 'cocked':
       return [ph('cocked', HC.cockedMax, 'hold', 'hold', { breath: { rate: 0 }, feel: feel('still'), voice: 'mute', light: 1.15 })];
     case 'pounce': {
-      // 扑：直线落在手上 +4 mm，屏住、不出声（重音在碰到那一刻）。总行程 ≤ 0.22：梢端 ≤ ~230 mm/s，到不了惊跳。
-      // 落点按剩余余量收（pounceFits 的 S 没算落点那 4 mm；余量不够时少落一点，再不够就沿直线截在 0.22）
-      let to = atMm(g, HC.pounceLand);
+      // 扑：直线落在手上 +land，屏住、不出声（重音在碰到那一刻）。总行程 ≤ 0.22：梢端 ≤ ~230 mm/s，到不了惊跳。
+      // 落点按剩余余量收（pounceFits 的 S 没算落点那 land；余量不够时少落一点，再不够就沿直线截在 0.22）
+      let to = atMm(g, HC.land);
       if (pathLen(c.cur, to, 'line') > HC.strikeMax) {
         let lo = 0;
-        let hi: number = HC.pounceLand;
+        let hi: number = HC.land;
         for (let i = 0; i < 12; i++) {
           const mid = (lo + hi) / 2;
           if (pathLen(c.cur, atMm(g, mid), 'line') > HC.strikeMax) hi = mid;
@@ -456,11 +467,11 @@ export function buildApproachBeat(c: BuildCtx, g: HandGeom, beat: ApproachBeat):
       return [ph('sight', 0.25, 'hold', 'hold', { breath: { rate: 0.2 }, feel: feel('still'), voice: 'mute', light: 1.1 })];
     case 'reach':
       // 沉静型（以及扑不下的热情）：瞄准以后精确直伸、轻轻落下（亲和接触的末段是减速轻落）
-      return gov([ph('reach', 0.8 / k, 'mj', atMm(g, HC.reachLand), { breath: { rate: 0.5 }, feel: pointAt(P, { antennate: 0.08 }), voice: 'mute' })], c, 'deliberate');
+      return gov([ph('reach', 0.8 / k, 'mj', atMm(g, HC.land), { breath: { rate: 0.5 }, feel: pointAt(P, { antennate: 0.08 }), voice: 'mute' })], c, 'deliberate');
     case 'touch':
       // 回避型（creep）/ 慢的乱序随机（生硬）慢慢碰
       return gov(
-        [ph('touch', 0.8 / k, lin, atMm(g, HC.reachLand), { breath: { rate: 1, amp: 0.7 }, feel: pointAt(P, { antennate: 0, quiver: 0.04 }), voice: 'mute' })],
+        [ph('touch', 0.8 / k, lin, atMm(g, HC.land), { breath: { rate: 1, amp: 0.7 }, feel: pointAt(P, { antennate: 0, quiver: 0.04 }), voice: 'mute' })],
         c,
         P === 'avoidant' ? 'creep' : 'deliberate',
       );
@@ -486,7 +497,6 @@ export function buildStrain(c: BuildCtx, g: HandGeom, tries: number): Phase[] {
   const P = c.temper;
   // 摆动（撑 ±0.035、再撑 ±0.05）叠在伸长的姿态上：基姿态留出最大摆幅，波峰正好碰到 0.48、不被削顶
   const stretch = flatH(Math.min(D_FLAT_MAX - 0.05, g.Dh), g.dir);
-  const down = wrapPi(g.dir + 0.5 * (Math.sign(wrapPi(Math.PI - g.dir)) || 1));
   const out: Phase[] = [
     ph('gather', 0.3 / k, 'mj', addD(c.cur, -0.04), { breath: { rate: 1, amp: 1.2 }, feel: feel('raise') }),
     ph('stretch', 0.6 / k, 'mj', stretch, { breath: { rate: 1, push: -0.1, period: 0.8 }, voice: 'query', feel: pointAt(P, { antennate: 0.2 }), light: 1.2 }),
@@ -495,16 +505,26 @@ export function buildStrain(c: BuildCtx, g: HandGeom, tries: number): Phase[] {
   for (let i = 0; i < tries; i++) {
     out.push(ph(`pump${i + 1}`, 1.3, 'hold', 'hold', { osc: { amp: 0.05 / D_SPAN, hz: 0.5, decay: 0 }, breath: { rate: 1, push: -0.14 }, voice: 'query', feel: pointAt(P, { antennate: 0.2 }) }));
   }
-  out.push(
-    ph('deflate', 1.6 / k, 'out', flatH(0.6 * dOf(stretch), down), {
-      path: 'line',
-      breath: { rate: 1, push: 0.05, sigh: true },
-      voice: 'fall',
-      feel: feel('tuck'),
-      light: 0.75,
-    }),
-  );
+  out.push(deflatePhase(k, stretch, g.dir));
   return gov(out, c, 'pursue', { strain: 'reflex', deflate: 'deliberate' });
+}
+
+/** 泄气、叹气：从 from 沿直线往下垂到它差动的六成，弯向从手那边往下偏 0.5 rad */
+const deflatePhase = (k: number, from: Pose, handDir: number): Phase =>
+  ph('deflate', 1.6 / k, 'out', flatH(0.6 * dOf(from), wrapPi(handDir + 0.5 * (Math.sign(wrapPi(Math.PI - handDir)) || 1))), {
+    path: 'line',
+    breath: { rate: 1, push: 0.05, sigh: true },
+    voice: 'fall',
+    feel: feel('tuck'),
+    light: 0.75,
+  });
+
+/**
+ * 凑完推两下还没碰到（算一次够不着）：只泄气，从此刻的臂起。2026-10-19 以前是造一整套探身再滤出这一段，
+ * 终点与限速都按探身的终点（手那一点）算，而此刻的臂停在推过的地方
+ */
+export function buildDeflate(c: BuildCtx, g: HandGeom): Phase[] {
+  return gov([deflatePhase(c.k, c.cur, g.dir)], c, 'deliberate');
 }
 
 /** 沉静、回避够不着：不探身，每 ⑥ 前倾一点（0.03） */
@@ -562,11 +582,11 @@ export function buildWrap(c: BuildCtx, g: HandGeom, w: WrapIn): { phases: Phase[
       ph('wince', 0.25, 'mj', addD(c.cur, -0.02), { path: 'line', breath: { rate: 1, push: 0.04 }, voice: 'tsk', feel: feel('tuck') }),
     );
   }
-  const feelT = w.chase ? HC.feelChase : w.waited ? HC.feelWaited : byTau(HC.feel, c.tau) * (w.byHand ? HC.feelByHand : 1);
+  const feelT = w.chase || w.waited ? HC.feelShort : byTau(HC.feel, c.tau) * (w.byHand ? HC.feelByHand : 1);
   const accent: Partial<Phase> = w.pounced ? { voice: 'huff', light: 1.25 } : w.chase ? { voice: 'purr', light: 1.15 } : { breath: { rate: 0 }, light: 1.2 };
   out.push(ph('feel', feelT + Math.min(0.8, Math.max(0, w.settle)), 'hold', 'hold', { feel: pointAt(P, { antennate: 0 }), ...accent }));
   const seatName = w.byHand ? 'close' : 'seat';
-  out.push(ph(seatName, Math.max(HC.stepMin, HC.seatK / k), 'mj', at(HC.reachLand), { breath: { rate: 1, amp: 1.1 }, voice: 'purr', light: 1.15, feel: pointAt(P, { antennate: 0.06 }) }));
+  out.push(ph(seatName, Math.max(HC.stepMin, HC.seatK / k), 'mj', at(HC.land), { breath: { rate: 1, amp: 1.1 }, voice: 'purr', light: 1.15, feel: pointAt(P, { antennate: 0.06 }) }));
   const gv = gov(out, c, w.byHand ? 'deliberate' : 'creep', { latency: 'reflex', wince: 'pursue', feel: 'reflex' });
   const seat = gv.findIndex((p) => p.name === seatName);
   // 等到下一口呼气开始（φ = 0.5 起是呼气），收紧落在呼气上
@@ -577,7 +597,7 @@ export function buildWrap(c: BuildCtx, g: HandGeom, w: WrapIn): { phases: Phase[
   const rest: Phase[] = [ph('ready', ready * T, 'hold', 'hold', { feel: pointAt(P, { antennate: 0.06 }) })];
   for (let i = 1; i <= w.n; i++) {
     rest.push(
-      ph(`cinch${i}`, 0.4 * T, 'mj', at(HC.reachLand + HC.cinchStep * i), { breath: { rate: 1, amp: 1.1 }, voice: 'purr', light: 1.15 }),
+      ph(`cinch${i}`, 0.4 * T, 'mj', at(HC.land + HC.cinchStep * i), { breath: { rate: 1, amp: 1.1 }, voice: 'purr', light: 1.15 }),
       ph(`set${i}`, 0.6 * T, 'hold', 'hold', { feel: pointAt(P, { antennate: 0.06 }), voice: 'purr' }),
     );
   }
@@ -699,7 +719,7 @@ export function buildChaseBeat(c: BuildCtx, g: HandGeom, beat: ChaseBeat, canRea
     case 'let':
       return [ph('let', HC.chaseLet, 'hold', 'hold', { breath: { rate: 0 }, feel: pointAt(P, { antennate: 0 }), voice: 'mute' })];
     case 'lunge': {
-      const to = canReach ? atMm(g, -(g.touch + HC.chaseNear)) : flatH(0.06, g.dir);
+      const to = canReach ? atMm(g, -(g.touch + HC.nearGap)) : flatH(0.06, g.dir);
       return gov(
         [ph('lunge', 0.5 / k, 'mj', to, { path: 'line', breath: { rate: 1, period: 0.7, amp: 1.2 }, voice: 'query', feel: pointAt(P, { antennate: 0.15 }), light: 1.2 })],
         c,
@@ -707,7 +727,7 @@ export function buildChaseBeat(c: BuildCtx, g: HandGeom, beat: ChaseBeat, canRea
       );
     }
     case 'creep':
-      return gov([ph('creep', 0.6 / k, 'mj', atMm(g, HC.reachLand), { feel: pointAt(P), voice: 'mute' })], c, 'creep');
+      return gov([ph('creep', 0.6 / k, 'mj', atMm(g, HC.land), { feel: pointAt(P), voice: 'mute' })], c, 'creep');
     case 'grope': {
       const osc = dOf(c.cur) <= 0.25 ? { amp: 0.04 / D_SPAN, hz: 0.5, decay: 0.6 } : undefined;
       return [ph('grope', 0.5, 'hold', 'hold', { osc, feel: pointAt(P, { antennate: 0.2 }) })];
@@ -833,7 +853,7 @@ export function handArmGap(aimBend: number, aimDir: number, aimDist: number, pos
  * snap = 偷看时手动了、缩回去（2026-10-17 并进再收：同一个终点，只是快一档、带一声咂——观众学得会「别动它，它才敢看」）。
  * 怕得越厉害收得越快、越紧。只有回避与乱序随机会躲（不朝人时背过去的两型），收的时候触须都发抖
  */
-export function buildShrink(c: BuildCtx, close: number, awayDir: number, mode: 'first' | 'again' | 'snap' = 'first'): Phase[] {
+export function buildShrink(c: BuildCtx, close: number, awayDir: number, mode: 'first' | 'again' | 'snap' = 'first', hold = 0): Phase[] {
   const f = clamp(c.fear ?? 0, 0, 1);
   const out: Phase[] = [];
   if (mode === 'first') out.push(ph('freeze', byTau(HC.avoidFreeze, c.tau), 'hold', 'hold', { breath: { rate: 0 }, feel: feel('tuck'), light: 0.9, voice: 'mute' }));
@@ -847,7 +867,8 @@ export function buildShrink(c: BuildCtx, close: number, awayDir: number, mode: '
       light: 0.9,
     }),
   );
-  return gov(out, c, snap || f > 0.5 ? 'pursue' : 'deliberate', { freeze: 'reflex' });
+  if (hold > 0) out.push(ph('hold', hold, 'hold', 'hold', { feel: feel('tuck'), voice: 'mute' }));
+  return gov(out, c, snap || f > 0.5 ? 'pursue' : 'deliberate', { freeze: 'reflex', hold: 'reflex' });
 }
 
 /**
@@ -890,7 +911,7 @@ export function buildPeek(c: BuildCtx, g: HandGeom, close: number, awayDir: numb
   return gov(
     [
       ph('lean', 1.2 / k, 'mj', flatH(Math.max(0, dOf(home) - 0.05), lerpAngle(home.dir, g.dir, 0.3 * (1 - HC.peekLeanN * f))), { feel: pointAt(c.temper, { antennate: 0 }), breath: { rate: 0.3 }, voice: 'mute', light: 0.9 }),
-      ph('look', byTau(HC.peekLook, c.tau), 'hold', 'hold', { feel: pointAt(c.temper, { antennate: 0, quiver: 0.04 }), breath: { rate: 0.3 }, voice: 'mute' }),
+      ph('look', HC.peekLook, 'hold', 'hold', { feel: pointAt(c.temper, { antennate: 0, quiver: 0.04 }), breath: { rate: 0.3 }, voice: 'mute' }),
       ph('back', 1.2 / k, 'mj', home, { feel: feel('tuck') }),
     ],
     c,
@@ -903,15 +924,8 @@ export function buildRelief(c: BuildCtx): Phase[] {
   return gov([ph('relief', 1.5 / c.k, 'mj', 'rest', { breath: { rate: 1, sigh: true }, feel: feel('free') })], c, 'deliberate');
 }
 
-/** 乱序随机被迎着的手碰到、⑤ 抽到负：往背着手那边缩回（之后侧身躲） */
-export function buildRecoil(c: BuildCtx, awayDir: number): Phase[] {
-  return gov(
-    [
-      ph('recoil', 0.4, 'mj', avoidPose(1, awayDir), { path: 'line', breath: { rate: 1, push: 0.06 }, voice: 'tsk', feel: feel('tuck') }),
-      ph('hold', 0.5, 'hold', 'hold', { feel: feel('tuck'), voice: 'mute' }),
-    ],
-    c,
-    'pursue',
-    { hold: 'reflex' },
-  );
-}
+/**
+ * 乱序随机被迎着的手碰到、⑤ 抽到负：往背着手那边缩回、定 0.5 s（之后侧身躲）。2026-10-19 起就是躲的「收」那一下
+ *（snap，手就在臂上 close = 1）再定住——此前单写一段，只差呼吸推量与没传 fear，紧接着的躲又按 fear 收一次
+ */
+export const buildRecoil = (c: BuildCtx, awayDir: number): Phase[] => buildShrink(c, 1, awayDir, 'snap', 0.5);

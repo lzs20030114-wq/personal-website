@@ -172,8 +172,9 @@ function waitsTable(): LogTableBlock {
     [t('Holds still to feel before wrapping', '缠前定住感觉'), HC.feel, null],
     // 热情、沉静从不躲（不朝人时看别处），这两行只有回避与乱序随机走得到；乱序随机的偷看是定长的一瞥
     [t('Freezes when it decides to avoid', '决定躲那一下定住'), HC.avoidFreeze, ['C', 'D']],
-    [t('Peek lasts', '偷看看多久'), HC.peekLook, ['C', 'D'], { D: t('0.4 (fixed)', '0.4（定值）') }],
-    [t('Second wait before approaching', '凑之前第二次等'), HC.wait2, ['C']],
+    // 只有回避型按这两个数走（乱序随机的偷看是定长 0.4 s 的一瞥），定值不按 τ
+    [t('Peek lasts (fixed)', '偷看看多久（定值）'), [HC.peekLook, HC.peekLook], ['C', 'D'], { D: t('0.4 (fixed)', '0.4（定值）') }],
+    [t('Second wait before approaching (fixed)', '凑之前第二次等（定值）'), [HC.wait2, HC.wait2], ['C']],
     [t('Balks when its strength comes out negative', '响应强度抽到负时愣住'), HC.stall, ['D']],
     [t('Startle freeze, base', '惊跳凝住的基数'), V2.freeze, null],
   ];
@@ -611,7 +612,7 @@ function reachTable(): LogTableBlock {
     head: [t('Stage', '阶段'), t('What it does', '做什么'), t('Numbers', '数')],
     rows: [
       [t('Follow', '陪着'), t('hops and pauses, keeping just off the hand', '一跳一停，停在离手一点的地方'), t(`first hop to ${num(HC.firstHop)} of the way; each hop ≥ ${num(HC.stepMin)} s; stops min(${HC.standCap}, touch + ${HC.standGap} + ${num(HC.standLag)} s × hand speed) mm away; hops when off by > ${num(HC.eps)}, at once if the target jumps > ${num(HC.jump)}; Warm leads by ${num(HC.leadT)} s, Avoidant goes ${num(HC.bStep * 100, 0)}% each hop`, `第一跳伸到 ${num(HC.firstHop)}；每跳 ≥ ${num(HC.stepMin)} s；停在离手 min(${HC.standCap}, 碰到半径 + ${HC.standGap} + ${num(HC.standLag)} s × 手速) mm；目标误差 > ${num(HC.eps)} 才跳、跳 > ${num(HC.jump)} 立刻重跳；热情冲在手前 ${num(HC.leadT)} s，回避每跳只走 ${num(HC.bStep * 100, 0)}%`)],
-      [t('Approach', '凑'), t('once the hand is still and within reach: a half-beat pause, then the persona’s way in (Tab. 05)', '手停稳且够得着：停半拍，再按人格的做法凑上去（表 05）'), t(`hand slower than ${HC.vStill} mm/s; half-beat at most ${num(HC.hoverMax)} s; crouch ${num(HC.cockMin)}–${num(HC.cockMax)}; strike travel ≤ ${num(HC.strikeMax)}, lands ${HC.pounceLand} mm past the hand; precise or slow touch ${HC.reachLand} mm`, `手 < ${HC.vStill} mm/s；停半拍至多 ${num(HC.hoverMax)} s；蹲 ${num(HC.cockMin)}–${num(HC.cockMax)}；扑的总行程 ≤ ${num(HC.strikeMax)}、落在手上 +${HC.pounceLand} mm；精确伸 / 慢碰 +${HC.reachLand} mm`)],
+      [t('Approach', '凑'), t('once the hand is still and within reach: a half-beat pause, then the persona’s way in (Tab. 05)', '手停稳且够得着：停半拍，再按人格的做法凑上去（表 05）'), t(`hand slower than ${HC.vStill} mm/s; half-beat at most ${num(HC.hoverMax)} s; crouch ${num(HC.cockMin)}–${num(HC.cockMax)}; strike travel ≤ ${num(HC.strikeMax)}; strike, precise reach and slow touch all land ${HC.land} mm past the hand`, `手 < ${HC.vStill} mm/s；停半拍至多 ${num(HC.hoverMax)} s；蹲 ${num(HC.cockMin)}–${num(HC.cockMax)}；扑的总行程 ≤ ${num(HC.strikeMax)}；扑、精确伸、慢碰都落在手上 +${HC.land} mm`)],
       [t('Missed or out of reach', '没碰到 · 够不着'), t('missed: two nudges, then sags and watches; out of reach: Warm and Random lean and strain, then sag; Calm and Avoidant just watch', '没碰到：推两下，再垂下、看着；够不着：热情、乱序随机探身、撑、垂下，沉静、回避只看着'), t(`${HC.nudges} nudges of ${num(HC.nudge)}; re-arms after the hand moves ${HC.strainRearm} mm`, `推 ${HC.nudges} 下、每下 ${num(HC.nudge)}；手挪 ${HC.strainRearm} mm 才重来`)],
       [t('Touch', '碰到'), t('a hand it is reaching for does not startle it, is not queued and costs no reaction time', '正在迎的手碰臂：不判惊跳、不排队、不再等反应时间'), t(`flinches first only if 0.5·I/θ ≥ ${num(V2.nearThreshold)}`, `只有 0.5·I/θ ≥ ${num(V2.nearThreshold)} 时先一缩再接`)],
       [t('Wrap', '缠'), t('holds still to feel, seats, then tightens one step with each exhalation', '定住感觉 → 贴上 → 每口呼气收紧一级'), t(`feel per Tab. 04 (× ${num(HC.feelByHand)} when the hand came to it); seat ≥ max(${num(HC.stepMin)}, ${num(HC.seatK)} ÷ k) s; + ${HC.cinchStep} mm per step, window ${num(HC.winLo)}…+${HC.winHi} mm`, `定住按表 04（手伸过来 × ${num(HC.feelByHand)}）；贴上 ≥ max(${num(HC.stepMin)}, ${num(HC.seatK)} ÷ k) s；每级 +${HC.cinchStep} mm，窗口 ${num(HC.winLo)}…+${HC.winHi} mm`)],
@@ -691,7 +692,13 @@ function graspTable(): LogTableBlock {
       [t('Holding a person · an object', '握人 · 握物'), t(`very light ${num(GRASP.human)} (with a seen hand the hold follows Tab. 10 instead: ${HC.holdCenter} mm past the hand) · at least ${num(GRASP.object)}`, `极轻 ${num(GRASP.human)}（看见了的手改按表 10：压过手 ${HC.holdCenter} mm）· 至少 ${num(GRASP.object)}`)],
       [t('What it is holding', '握的是什么'), t('tension and touch = a person; tension only = an object (“leave object”); reached the stop with no tension = nothing', '张力 + 电极 = 人；只有张力 = 物（「留物件」）；到限位没有张力 = 抓空')],
       [t('Chases after losing it', '脱手后最多追'), t(`${GRASP.maxChases} time`, `${GRASP.maxChases} 次`)],
-      [t('Hand touches the arm unseen', '没看见手就碰臂'), t(`wraps the old way: the bench raises tension at ${num(CATCH_AT * 100, 0)}% of the wrap`, `走旧路的缠：缠到 ${num(CATCH_AT * 100, 0)}% 时台架判张力`)],
+      [
+        t('Hand touches the arm unseen', '没看见手就碰臂'),
+        t(
+          `wraps the old way, along the arm's current bend and without reading the hand; the bench raises tension at ${num(CATCH_AT * 100, 0)}% of the wrap; after an empty grab it searches around where the wrap began (the same search as after reaching for a seen hand)`,
+          `走旧路的缠：顺着臂此刻的弯向缠，不读手；缠到 ${num(CATCH_AT * 100, 0)}% 时台架判张力；抓空后以缠开始的地方为中心找（与迎手之后的找同一段）`,
+        ),
+      ],
     ],
     caption: t(
       'The grasp state machine (T-0707-1): wrap → hold a person or an object → pulled free → chase once, or grasp nothing → let go → search.',

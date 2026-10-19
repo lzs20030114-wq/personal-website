@@ -624,7 +624,7 @@ function responsePhases(c: BuildCtx, r: RespIn): Phase[] {
 
 // ------------------------------------------------------------------ 自发
 
-export type SpontKind = 'curl' | 'sway' | 'search' | 'flick';
+export type SpontKind = 'curl' | 'sway' | 'flick';
 
 /** 自发动作的幅度 E_s（差动）：由 ② 呼吸幅度给，比任何回应都小 */
 export const spontE = (c: BuildCtx): number => {
@@ -663,18 +663,6 @@ function spontPhases(c: BuildCtx, kind: SpontKind, around?: number): Phase[] {
         ph('pan', 3.2 / k, 'mj', poseOfD(D, wrapPi(base + w / 2))),
         ph('settle', 1.0 / k, 'mj', 'rest'),
       ];
-    }
-    case 'search': {
-      // 抓空之后：一边比一边宽地来回探，每到一头停一下（跟在抓空后面，是自发里唯一大一点的）
-      const D = Math.max(rD + E, 0.16) * c.vigor;
-      const legs = [-40, 55, -70];
-      const out: Phase[] = [];
-      legs.forEach((d, i) => {
-        out.push(ph(`cast${i + 1}`, (1.2 + 0.4 * i) / k, 'mj', poseOfD(D, d * DEG), { breath: { rate: 1, period: 0.85 }, feel: { pose: 'free', antennate: 0.15 }, voice: i === 0 ? 'query' : undefined }));
-        out.push(ph(`probe${i + 1}`, 0.5, 'hold', 'hold', { osc: { amp: 0.06, hz: 0.5, decay: 0 } }));
-      });
-      out.push(ph('return', 1.5 / k, 'mj', 'rest'));
-      return out;
     }
     default: // 触须抖：臂不动（照常跟着静息走）
       return [ph('flick', 1.5 / k, 'lin', 'rest', { feel: { pose: 'free', antennate: 0.3 } })];

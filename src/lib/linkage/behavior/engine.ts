@@ -84,6 +84,7 @@ import {
   avoidPose,
   buildApproachBeat,
   buildChaseBeat,
+  buildDeflate,
   buildDodge,
   buildEmpty,
   buildGiveUp,
@@ -212,12 +213,6 @@ export const HAND = {
   /** 看别处：相对当前朝向转 30–70°，转向背着手的那一侧 */
   lookMin: (30 * Math.PI) / 180,
   lookMax: (70 * Math.PI) / 180,
-  /** 缠：弯向追着手转（rad/s × √k_v），缠过四成就定住 */
-  wrapFollow: 1,
-  wrapLock: 0.4,
-  /** 握人时保住缠的形状（接触那一刻弯曲的这么多倍）——「极轻」是力小，不是松开；网页没有手指挡着，形状松了就读成放手 */
-  holdKeep: 0.85,
-  holdWrap: 0.5,
 } as const;
 
 /**
@@ -608,6 +603,11 @@ interface GraspMem {
   contactW: number;
   chases: number;
   searches: number;
+  /**
+   * 缠开始时臂在哪（差动）：没看见手的缠抓空以后，以它与弯向为中心找（迎手链的找用它自己记下的手位）。
+   * 2026-10-19 以前旧路的找是一段自发动作，摆向写死在绝对角度上（−40° / 55° / −70°），与碰在哪无关
+   */
+  touchD: number;
   reason: string;
   /**
    * 「手指被卡住」的时刻（只有迎手链的缠写它：贴上做完、臂停稳的那一帧；初值永不）。台架此后才闭合张力开关；
@@ -657,7 +657,7 @@ interface HandMem {
  * 2026-10-14 人格重分类两种都 +1）。2026-10-17 删掉现行动作、只剩一套：版本合并成 7（m2 恒在、
  * Gesture 不再带动作参数），旧快照一律不收，台架接手失败会重开一场
  */
-export const STATE_VERSION = 7;
+export const STATE_VERSION = 8;
 
 /** 引擎的全部状态：纯数据，JSON 往返无损（快照 / 交接 / 固件对照） */
 export interface EngineState {
@@ -825,6 +825,7 @@ const idleGrasp = (): GraspMem => ({
   contactW: 0,
   chases: 0,
   searches: 0,
+  touchD: 0,
   reason: '',
 });
 const noReflex = (): Reflex => ({ t0: -1, dir: 1, gain: 0 });
@@ -1789,7 +1790,7 @@ export class BehaviorEngine {
       case 'fall':
         return 1.3 - 0.6 * u;
       case 'hum':
-        return 0.75 + 0.1 * squeezePhase(s.phi, s.period * 1.15);
+        return 0.75 + 0.1 * squeezePhase(s.phi, this.breathPeriod(c.ph.breath));
       default:
         return 1;
     }
@@ -1850,16 +1851,19 @@ export class BehaviorEngine {
     // 迎手链：投入中、侧身躲、看着的时候臂不做自发动作（只抖触须 / 叹气）；陪着手的时候只卷（围着手）
     const hst = s.m2.hc.stage;
     const armFree = s.grasp.phase === 'IDLE' && !ENGAGED.has(hst) && hst !== 'avoid' && hst !== 'watch';
-    let action: SpontKind | 'sigh';
+    let action: SpontKind | 'sigh' | 'search';
     if (armFree && s.grasp.searches > 0) {
+      // 没看见手的缠抓空以后：找，与迎手链抓空后的找同一段（以缠开始的地方为中心，一边比一边宽，n 下）
       action = 'search';
-      s.grasp.searches--;
+      const n = s.grasp.searches;
+      s.grasp.searches = 0;
+      this.run('search', t, buildSearch(this.buildCtx(ctx, 0, 0), { D: s.grasp.touchD, dir: s.grasp.dir }, n), 'spont');
     } else {
       const choices: readonly (SpontKind | 'sigh')[] = !armFree ? ['flick', 'sigh'] : hst === 'track' ? ['curl', 'flick', 'sigh'] : ['curl', 'sway', 'flick', 'sigh'];
       action = pick(s.rng, choices);
     }
     if (action === 'sigh') s.sighNext = true;
-    else {
+    else if (action !== 'search') {
       // 自发动作是小而慢的程序（比任何回应都小）；迎着手的时候卷臂围着手的方向
       const hh = s.hand;
       const around = action === 'curl' && hh !== null && hh.seen && hh.present && hh.mode === 'toward' ? hh.aimDir : undefined;
@@ -2568,7 +2572,8 @@ export class BehaviorEngine {
     const gN = Math.min(1, Math.abs(this.hcGain(ctx)) / 0.5);
     const [cx, cy] = this.cmdXY();
     const settle = obsForecast(m.obs, cx, cy, 0.05, 0.8);
-    const T = s.period * (1 - ENGINE.arousal.breath * s.arousal);
+    // 缠的每一级收紧对着呼气开始：缠的各段不改呼吸的周期，就是此刻真在走的那一口
+    const T = this.breathPeriod(undefined);
     const pounced = hc.stage === 'approach' && hc.beat === 'pounce';
     const { phases, seat } = buildWrap(this.hcCtx(ctx), gm, {
       byHand: o.byHand,
@@ -2601,6 +2606,7 @@ export class BehaviorEngine {
       dur: hc.seatEnd - t + 1.5,
       dir: gm.dir,
       from: Math.min(1, cur.bend),
+      touchD: Dref,
       chases,
       catchT: NEVER,
     };
@@ -2678,7 +2684,7 @@ export class BehaviorEngine {
     hc.armed = false;
     this.hcArmRef(h);
     this.hcSet(t, 'watch', 'deflate');
-    this.hcRun(t, 'hand.deflate', buildStrain(this.hcCtx(ctx), this.handGeom(h), 0).filter((p) => p.name === 'deflate'));
+    this.hcRun(t, 'hand.deflate', buildDeflate(this.hcCtx(ctx), this.handGeom(h)));
   }
 
   /** 握着时的提示：持续的哼 + 小动静（屏气一下）覆盖 */
@@ -2894,7 +2900,7 @@ export class BehaviorEngine {
     const hc = m.hc;
     if (s.phi < hc.lastPhi) hc.breaths++;
     hc.lastPhi = s.phi;
-    if (hc.ev && t - hc.ev.t0 > holdEventDur(hc.ev.kind, s.period)) hc.ev = null;
+    if (hc.ev && t - hc.ev.t0 > holdEventDur(hc.ev.kind, this.breathPeriod(this.cueNow(t)?.ph.breath))) hc.ev = null;
     if (!h || !h.present || s.grasp.phase !== 'HOLD_HUMAN') return;
     const gm = this.handGeom(h);
     // 跟手（读数一步跳太大 = 被抽走：这一下不跟）
@@ -3019,8 +3025,8 @@ export class BehaviorEngine {
         hc.holdT0 = t;
         hc.holdFrom = this.curPose();
       }
-      const ev = hc.ev ? holdEventMm(hc.ev.kind, t - hc.ev.t0, s.period) : 0;
-      const T = s.period * (1 - ENGINE.arousal.breath * s.arousal) * 1.15;
+      const T = this.breathPeriod(this.cueNow(t)?.ph.breath);
+      const ev = hc.ev ? holdEventMm(hc.ev.kind, t - hc.ev.t0, T) : 0;
       let pose = holdDrive({
         persona: this.persona(),
         g: this.handGeom(h),
@@ -3050,7 +3056,7 @@ export class BehaviorEngine {
     const s = this.s;
     const m = s.m2;
     if (m.hc.stage !== 'hold' || s.grasp.phase !== 'HOLD_HUMAN') return null;
-    return squeezePhase(s.phi, s.period * 1.15);
+    return squeezePhase(s.phi, this.breathPeriod(this.cueNow(s.tick / HZ)?.ph.breath));
   }
 
   /** 迎手链此刻的阶段与拍（台架 HUD；没有 = null） */
@@ -3159,8 +3165,9 @@ export class BehaviorEngine {
       case 'WRAP':
         return g.from + (GRASP.limit - g.from) * smooth((t - g.t0) / g.dur);
       case 'HOLD_HUMAN':
-        // 有手抓住的（记下了深缠）：保住缠住时的形状（力小不等于松开）；没有手抓的：照旧极轻
-        return (g.contactW > 0.01 ? Math.max(GRASP.human, HAND.holdKeep * g.contact) : GRASP.human) * ctx.grip;
+        // 迎手链握住的（手链被清掉、交回这里时）：保住握住那一刻的形状——「极轻」是力小，不是松开，网页没有手指挡着，
+        // 形状松了就读成放手；没看见手的缠：照旧极轻
+        return (g.catchT !== undefined ? Math.max(GRASP.human, g.contact) : GRASP.human) * ctx.grip;
       case 'HOLD_OBJECT':
         return Math.max(g.contact, GRASP.object) * ctx.grip;
       default:
@@ -3171,9 +3178,8 @@ export class BehaviorEngine {
   private beginWrap(t: number, chase: boolean): void {
     const s = this.s;
     const bend = Math.hypot(s.armX.x, s.armY.x);
-    // 看见了手：朝手缠；否则顺着臂此刻的弯向缠
-    const hh = s.hand;
-    const dir = hh?.seen && hh.present ? hh.aimDir : bend > 0.05 ? Math.atan2(s.armY.x, s.armX.x) : MOTION.up;
+    // 没看见手的缠（看见了的走迎手链 beginWrapV2）：顺着臂此刻的弯向缠，不读手
+    const dir = bend > 0.05 ? Math.atan2(s.armY.x, s.armX.x) : MOTION.up;
     s.grasp = {
       ...s.grasp,
       phase: 'WRAP',
@@ -3181,6 +3187,7 @@ export class BehaviorEngine {
       dur: this.gestureDur(GRASP.wrap),
       dir,
       from: bend,
+      touchD: D_SPAN * Math.min(1, bend),
       chases: chase ? s.grasp.chases : 0,
     };
     // 没看见手的缠走这条路：上一回合迎手链留下的 catchT 不许带过来（台架会按它判张力）
@@ -3302,6 +3309,18 @@ export class BehaviorEngine {
    * 为什么呼吸的缓入缓出要由代码给（spec §4.2，2026-10-07 实现时查明）：人格幅度 < 100% 时，
    * 曲柄在行程**中途**换向，那里没有死点，匀速反转会顿一下；死点的天然缓动只在满行程时成立。
    */
+  /**
+   * 这一口气此刻实际走多长（秒）：抽到的周期 × 唤醒（越激动越短）× ⑬（躲的时候浅快；迎的时候周期不变，见 SOCIAL）
+   * × 这一段提示的放慢，再按曲柄限速封底（π·幅度/周期 ≤ 1.2 s⁻¹：加深、加快的提示叠起来也不超 4.19 rad/s）。
+   * 呼吸本身、握持控制器的一紧一松、握着时的摩挲、哼声的音高起伏、台架的握持标记圈都读它——2026-10-19 以前后面几处
+   * 各有一种算法（握持控制器只乘唤醒，哼声与标记圈都不乘），唤醒或怕的时候挤压与真的呼吸对不齐
+   */
+  private breathPeriod(br: Cues['breath']): number {
+    const s = this.s;
+    const T = s.period * (1 - ENGINE.arousal.breath * s.arousal) * (1 - SOCIAL.closePeriod * this.socialPN()[1]);
+    return Math.max(T * (br?.period ?? 1), (Math.PI * s.amp.x) / V2.breathRateCap);
+  }
+
   private stepBreath(t: number, ctx: Ctx): void {
     const s = this.s;
     const still = s.phase === 'BLANK' || s.phase === 'END';
@@ -3311,11 +3330,7 @@ export class BehaviorEngine {
     dampStep(m.rate, br?.rate ?? 1, V2.breathRateOmega, DT);
     const [sP, sN] = this.socialPN();
     if (!still) {
-      // ⑬：躲的时候呼吸浅快（迎的时候周期不变，见 SOCIAL）
-      const T = s.period * (1 - ENGINE.arousal.breath * s.arousal) * (1 - SOCIAL.closePeriod * sN);
-      // 曲柄限速：π·幅度/周期 ≤ 1.2 s⁻¹（加深、加快的提示叠起来也不超 4.19 rad/s）
-      const Tc = Math.max(T * (br?.period ?? 1), (Math.PI * s.amp.x) / V2.breathRateCap);
-      s.phi += (DT / Tc) * clamp01(m.rate.x);
+      s.phi += (DT / this.breathPeriod(br)) * clamp01(m.rate.x);
       if (s.phi >= 1) {
         s.phi -= 1;
         this.newBreath(ctx);
@@ -3393,17 +3408,11 @@ export class BehaviorEngine {
     // 不在交接那一帧清零（三腱会一帧跳 0.1–0.26）。没有手的会话走到这里时深卷恒为 0
     if (m.deep > 0) m.deep = Math.max(0, m.deep - (tierSpeed('deliberate', Math.sqrt(s.speed), ctx.vigor) / D_DEEP_SPAN) * DT);
     const g = s.grasp;
-    // 缠的头四成：弯向追着手转（脱手后再缠 = 伸手去追）；过了就定住，免得甩
-    if (g.phase === 'WRAP' && h && h.seen && h.present && (t - g.t0) / g.dur < HAND.wrapLock) {
-      const step = HAND.wrapFollow * Math.sqrt(s.speed) * DT;
-      g.dir = wrapPi(g.dir + clamp(wrapPi(h.aimDir - g.dir), -step, step));
-    }
-    // 深缠：缠的时候只在有手时往深里卷；握住以后按抓住那一刻记下的深缠保形（没有手抓的恒为 0）——
-    // 看的是抓握的记忆，不是此刻指针在不在（手移开画布、或握着时指针才进来，形状都不该变）
+    // 深缠：握住以后按抓住那一刻记下的深缠保形（只有迎手链的缠写得出深缠；没看见手的缠恒为 0）——看的是抓握的记忆，
+    // 不是此刻手在不在（手移开画布、或握着时指针才进来，形状都不该变）。2026-10-19 以前这里还读手：缠的头四成弯向追着
+    // 看见的手转、有手对象就往深里卷、握人保住 0.85 倍弯曲与一半深缠——旧路就是没看见手时（固件、无头会话）的那一条，不该看手
     let wT = 0;
-    if (g.phase === 'WRAP') wT = h ? smooth((t - g.t0) / g.dur) : 0;
-    else if (g.phase === 'HOLD_HUMAN') wT = HAND.holdWrap * g.contactW * ctx.grip;
-    else if (g.phase === 'HOLD_OBJECT') wT = g.contactW * ctx.grip;
+    if (g.phase === 'HOLD_HUMAN' || g.phase === 'HOLD_OBJECT') wT = g.contactW * ctx.grip;
     dampStep(s.wrap, wT, MOTION.armOmega * Math.sqrt(s.speed), DT);
     if (g.phase !== 'IDLE') {
       const b = this.graspBend(t, ctx);

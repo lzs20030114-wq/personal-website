@@ -400,6 +400,32 @@ describe('抓握（真值表接进行为）', () => {
     expect(bend.object).toBeGreaterThan(0.55);
   });
 
+  it('抓空以后的找以缠开始的地方为中心（与迎手链的找同一段）：摆过去又回来，不跑到写死的绝对角度上', () => {
+    // 2026-10-19 第二轮审核第 2 条：此前旧路的找是一段自发动作，摆向写死在 −40° / 55° / −70°（绝对），与碰在哪无关
+    const inputs = [at(100, { kind: 'ARM_TOUCH', on: true }), at(100.5, { kind: 'ARM_TOUCH', on: false })];
+    const e = new BehaviorEngine({ seed: 141, order: first('A') });
+    let dir0: number | null = null;
+    let searchAt = -1;
+    let maxOff = 0;
+    const log = drive(e, feeder(inputs), 125, (eng) => {
+      const g = eng.state.grasp;
+      if (dir0 === null && g.phase === 'WRAP') dir0 = g.dir;
+      const prog = eng.state.m2.prog;
+      if (prog?.name !== 'search') return;
+      if (searchAt < 0) searchAt = eng.time;
+      // 只看探的那几段（最后垂回静息那一段的弯向是静息的）
+      if (!/^(cast|probe)/.test(prog.phases[prog.idx]?.name ?? '') || dir0 === null) return;
+      const a = eng.targets().arm;
+      maxOff = Math.max(maxOff, Math.abs(Math.atan2(Math.sin(a.dir - dir0), Math.cos(a.dir - dir0))));
+    });
+    expect(evs(log, 'GRASP_EMPTY')[0].p!.searches).toBeGreaterThan(0);
+    expect(searchAt).toBeGreaterThan(0);
+    expect(dir0).not.toBeNull();
+    // 每一头的摆幅 30° / −30° / 45°，加上臂跟过去的余量
+    expect(maxOff * (180 / Math.PI)).toBeGreaterThan(15);
+    expect(maxOff * (180 / Math.PI)).toBeLessThan(55);
+  });
+
   it('碰臂时正忙：手一直在，就等它空下来认一次（只认一次）；中途松手就作罢', () => {
     // 热情型：先轻抚一下让它去回应，回应途中碰臂 → busy
     const stroke = at(100, { kind: 'SHELL_STROKE', half: 'L', touch: 'stroke' });

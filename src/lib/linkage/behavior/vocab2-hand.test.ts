@@ -12,11 +12,13 @@ import {
   buildApproachBeat,
   buildChaseBeat,
   buildDodge,
+  buildDeflate,
   buildEmpty,
   buildGiveUp,
   buildHop,
   buildPeek,
   buildSearch,
+  buildRecoil,
   buildShrink,
   buildStrain,
   buildTake,
@@ -94,6 +96,8 @@ function allTables(): { name: string; c: BuildCtx; phases: Phase[] }[] {
         out.push({ name: `${P} ${b}`, c: cb, phases: buildApproachBeat(cb, g, b) });
       }
       out.push({ name: `${P} strain`, c, phases: buildStrain(c, g, 2) });
+      out.push({ name: `${P} deflate`, c: ctx(P, atMm(g, 0)), phases: buildDeflate(ctx(P, atMm(g, 0)), g) });
+      out.push({ name: `${P} recoil`, c, phases: buildRecoil(c, -2.5) });
       out.push({ name: `${P} wrap`, c, phases: buildWrap(c, g, { byHand: false, wince: true, chase: false, pounced: false, n: 2, phi: 0.3, period: 4, settle: 0.3, Dref: g.Dh }).phases });
       for (const b of [...chasePlan(true), ...chasePlan(false)]) out.push({ name: `${P} chase ${b}`, c, phases: buildChaseBeat(c, g, b, true) });
       out.push({ name: `${P} giveUp`, c, phases: buildGiveUp(c, -2.5) });
@@ -236,7 +240,9 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
     expect(approachPlan(ctx('C'), g, { negative: false })).toEqual(['edge', 'wait', 'retreat', 'wait2', 'edge2', 'hover', 'touch']);
     expect(approachPlan(ctx('B'), g, { negative: false })).toEqual(['transport', 'hover', 'sight', 'reach']);
     expect(approachPlan(ctx('D', undefined, { k: 0.7 }), g, { negative: false })).toEqual(['transport', 'hover', 'touch']);
-    expect(approachPlan(ctx('D', undefined, { k: 1.5, tau: 0.3 }), g, { negative: false })).toContain('pounce');
+    // 扑够不够得着看几何（总行程 ≤ 0.22）：这一格 g 下 τ 0.3 的乱序随机刚好超出 0.22、扑不到（2026-10-19 停半拍最快端 13.6 → 14 mm），
+    // 手近一点就扑得到——这里考的是「k 够快的乱序随机会扑」
+    expect(approachPlan(ctx('D', undefined, { k: 1.5, tau: 0.3 }), geom({ Dh: 0.25 }), { negative: false })).toContain('pounce');
     expect(approachPlan(ctx('D'), g, { negative: true })).toEqual(['balk', 'stall', 'drop']);
     // 衰老过半不扑（先拿掉花样）：改成精确地伸，不走回避型那种带颤的慢碰（2026-10-18 审核：此前这里落到 touch）
     expect(approachPlan(ctx('A', undefined, { ageU: 0.6 }), g, { negative: false })).toEqual(['transport', 'hover', 'sight', 'reach']);
@@ -271,12 +277,12 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
     // 第一级收紧开始时呼吸相位正好到 0.5（呼气开始）
     const before = phases.slice(0, phases.indexOf(c1)).reduce((a, p) => a + p.dur, 0);
     expect(((0.2 + before / 4) % 1)).toBeCloseTo(0.5, 9);
-    // 手伸过来（接）：合拢，定住 × 1.5；追里：定住 0.1、不一缩
+    // 手伸过来（接）：合拢，定住 × 1.5；追里：定住 0.12、不一缩
     const recv = buildWrap(c, g, { byHand: true, wince: false, chase: false, pounced: false, n: 1, phi: 0, period: 4, settle: 0, Dref: g.Dh });
     expect(recv.phases[recv.seat].name).toBe('close');
     const chase = buildWrap(c, g, { byHand: false, wince: true, chase: true, pounced: false, n: 1, phi: 0, period: 4, settle: 0, Dref: g.Dh });
     expect(chase.phases[0].name).toBe('feel');
-    expect(chase.phases[0].dur).toBeCloseTo(HC.feelChase, 12);
+    expect(chase.phases[0].dur).toBeCloseTo(HC.feelShort, 12);
   });
 
   it('握持控制器：窗口 −12…+24 mm、满足了幅度变小、最紧落在呼气末（指令提前 0.45 s）、握力缩放', () => {
@@ -333,6 +339,25 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
     const far = sf[sf.length - 1].arm as Pose;
     expect(dOf(near)).toBeGreaterThan(dOf(far));
     expect(endPose(sp, c)).toEqual(c.rest);
+  });
+
+  it('乱序随机的缩回就是躲的「收」那一下再定住，按 fear 收；泄气从此刻的臂起（2026-10-19 第二轮审核第 4、7 条）', () => {
+    const c0 = ctx('D');
+    const c1 = ctx('D', undefined, { fear: 1 });
+    const r0 = buildRecoil(c0, -2.5);
+    const r1 = buildRecoil(c1, -2.5);
+    expect(r0.map((p) => p.name)).toEqual(['reshrink', 'hold']);
+    expect(r0[0].arm).toEqual(buildShrink(c0, 1, -2.5, 'snap')[0].arm);
+    expect(r0[1].dur).toBe(0.5);
+    // 怕的时候缩得更紧（此前缩回不看 fear，紧接着的躲再按 fear 收一次）
+    expect(dOf(r1[0].arm as Pose)).toBeGreaterThan(dOf(r0[0].arm as Pose));
+    // 泄气：落到此刻差动的六成，弯向从手那边往下偏
+    const g = geom();
+    for (const cur of [atMm(g, 0), atMm(g, -40), flatH(0.1, 1.2)]) {
+      const df = buildDeflate(ctx('A', cur), g);
+      expect(df.map((p) => p.name)).toEqual(['deflate']);
+      expect(dOf(df[0].arm as Pose)).toBeCloseTo(0.6 * dOf(cur), 12);
+    }
   });
 
   it('越怕躲得越明显（2026-10-15）：fear 0 与改前逐位相同；fear 1 收得更紧、往下压、收得快，躲开再紧一截，偷看转回得少', () => {

@@ -395,6 +395,31 @@ describe('臂与缠', () => {
     expect(e.targets().arm.bend).toBeLessThan(GRASP.human + 0.05);
   });
 
+  it('没看见手的缠（旧路）不读手：手在场但碰的那一刻还没看见，缠的弯向不追手、不往深里卷；缠着时手被看见了也一样', () => {
+    // 2026-10-19 第二轮审核第 1 条：此前缠的头四成弯向追着看见的手转、有手对象就往深里卷、握人保住 0.85 倍弯曲与一半深缠
+    let tried = 0;
+    for (let seed = 1; seed < 80 && tried < 3; seed++) {
+      const { e, log } = grown('A', seed);
+      e.push(hand(Math.PI * 0.95)); // 背后：碰到臂之前看不见
+      run(e, log, 1);
+      e.push({ kind: 'ARM_TOUCH', on: true }); // 一碰就进视野，看见要再过一个 ④——回应先到的那几场走旧路
+      until(e, log, 'GRASP_START', 2);
+      if (e.state.grasp.phase !== 'WRAP' || e.state.grasp.catchT !== undefined) continue;
+      tried++;
+      const dir0 = e.state.grasp.dir;
+      let maxWrap = 0;
+      let maxTurn = 0;
+      run(e, log, 2.5, () => {
+        maxWrap = Math.max(maxWrap, e.targets().arm.wrap);
+        if (e.state.grasp.phase === 'WRAP') maxTurn = Math.max(maxTurn, Math.abs(wrapPi(e.state.grasp.dir - dir0)));
+      });
+      expect(log.some((r) => r.ev === 'HAND_SEEN'), `种子 ${seed}：缠着的时候手被看见了`).toBe(true);
+      expect(maxWrap, `种子 ${seed}`).toBe(0);
+      expect(maxTurn, `种子 ${seed}`).toBe(0);
+    }
+    expect(tried).toBeGreaterThan(0);
+  });
+
   it('臂自己伸过去碰到不动的手（by: arm）：按轻抚算，回避型也不惊跳；手伸过来碰（不写 by）照旧会惊跳', () => {
     const reach = grown('C', 13);
     reach.e.push({ kind: 'ARM_TOUCH', on: true, by: 'arm' });
@@ -493,7 +518,7 @@ describe('纯数据', () => {
     expect(b.targets()).toEqual(a.targets());
     const old = { ...a.snapshot(), v: 2 } as unknown as EngineState;
     expect(() => BehaviorEngine.restore(old)).toThrow();
-    expect(STATE_VERSION).toBe(7);
+    expect(STATE_VERSION).toBe(8);
   });
 
   it('没有手的分支不碰随机数：同一场里推一个手 off（从来没有过手）不改变后面的任何东西', () => {
