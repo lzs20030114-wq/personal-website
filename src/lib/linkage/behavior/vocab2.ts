@@ -4,12 +4,15 @@
  *
  * 只管「一个反应长什么样」：引擎决定做哪种反应、在什么时刻、带什么人格参数，这里按表解算成分段
  * 程序（programs.ts 执行）。人格表的读法（§8.4，均为推断、待拍板）：
- *   - 三种时钟：反射（惊跳的潜伏与屈曲、一缩）用固定秒，四种人格一样；凝住与「听 / 定住」的长短从
+ *   - 三种时钟：反射（惊跳的潜伏与屈曲）用固定秒，四种人格一样；凝住与「听 / 定住」的长短从
  *     ④ 响应延迟 τ 来；刻意的段落 ÷ √k_v（③ 运动速度）；
- *   - 六档限速（差动 D 每秒，随 √k_v 走、各有上下限；反射另算，共七档）：惊跳永远比任何刻意动作快一大截；
+ *   - 三档限速（快 / 常 / 慢，差动 D 每秒，随 √k_v 走、各有上下限；反射另算）：惊跳永远比任何刻意动作快一大截；
  *   - 幅度预算：惊跳 D 0.45–0.72 > 回应 D_r（⑤ 响应强度给）> 自发 E_s（② 呼吸幅度给）> 静息；
  *   - ⑩ 朝人概率决定一次回应是「迎 / 原地 / 躲」；
- *   - 人格的差别在恢复的结构里（热情回头去查看、沉静停一会儿叹气放回、回避一步一步探出来、乱序随机余震或生硬地落回），不只是快慢。
+ *   - 人格的差别在恢复的结构里（热情回头去查看、沉静停一会儿叹气放回、回避一步一步探出来、乱序随机余震后生硬地落回），不只是快慢。
+ *
+ * 2026-10-19 交互机制整合（作者：只留观察者看得见的机制）：删掉「先一缩」、12 s 内再吓一次就减半、按迟钝度插值的等待；
+ * 速度从六档收成三档；惊跳后的四种恢复按作者「留着，试试能不能差异化更大」拉开了差别。
  *
  * 方向约定同引擎：弯向 0 = 臂梢朝上，左为正；肌腱轴在 0、±120°。惊跳沿「背离刺激」的那根下方腱轴：
  * 左边来的（side = +1）→ −120°，右边来的 → +120°。
@@ -22,15 +25,6 @@ const AXIS = (2 * Math.PI) / 3;
 const DEG = Math.PI / 180;
 const wrapPi = (a: number): number => a - TAU * Math.floor((a + Math.PI) / TAU);
 const clamp = (x: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, x));
-/**
- * 整数次方（连乘）。引擎里不用 `**` / Math.pow：Node 24 起 V8 换了乘方的实现，约一成的输入末位与 Node 22 不同，
- * 金样本逐位比对在 Vercel（Node 24）上会红（2026-10-19 部署事故）；连乘与 exp / log 在 Node 20 / 22 / 24 上逐位相同
- */
-const powInt = (b: number, n: number): number => {
-  let v = 1;
-  for (let i = 0; i < n; i++) v *= b;
-  return v;
-};
 
 
 /** 手感常量（均待作者拍板） */
@@ -41,14 +35,11 @@ export const V2 = {
   /** 惊跳深度（差动 D）：0.45 → 0.717 按超出阈值的程度分级，× (0.75 + 0.25·活力)，下限 0.45；上限 = 执行层的 ARM_DRIVE.dDeep（主腱拉满）；深卷关着时执行层封顶 0.5 */
   startleDMin: 0.45,
   startleDMax: 0.717,
-  /** 12 s 内再吓一次：深度 × 0.8ⁿ（下限照旧）、凝住减半——反射生理的不应期，不是记忆，每世清零 */
-  repeatWindow: 12,
-  repeatDecay: 0.8,
   /**
-   * 凝住 F = byTau(freeze)·(0.6 + 0.4·m)·(1 + 0.5·衰老)，封顶 cap：byTau 在热情（τ 0.2）0.5 → 沉静（τ 2.5）2.8 之间插值
-   *（2026-10-17 以前是 0.3 + τ，两端值不变）。热情 0.30–0.50 · 回避 0.36–0.60 · 沉静 1.68–2.80 · 乱序随机 0.36–2.80
+   * 凝住 F = min(cap, freeze + τ)（τ 已含衰老）：热情 0.5 · 回避 0.6 · 沉静 2.8 · 乱序随机 0.6–3。2026-10-19 以前另乘
+   * (0.6 + 0.4·超出阈值的程度)(1 + 0.5·衰老)、12 s 内再吓减半，差别都在零点几秒以内
    */
-  freeze: [0.5, 2.8],
+  freeze: 0.3,
   freezeCap: 3.0,
   /** 慢的人格（√k_v < 0.8）分两步缩（零振动整形：第二步隔臂摆动的半周期 0.78 s，钩落定不晃）；快的（≥ 1.2）在 +0.55 s 回弹到 0.88 */
   zvSlow: 0.8,
@@ -74,9 +65,6 @@ export const V2 = {
   /** 短促发声的长度（秒）：chirp / huff 0.15、tsk 0.08 */
   burst: 0.15,
   tsk: 0.08,
-  /** 一缩（接近阈值的触碰，0.65 ≤ I/θ ≤ 1）：差动 0.12，沿背离的腱轴，不凝住、不屏气、不闪灯 */
-  nearThreshold: 0.65,
-  winceD: 0.12,
   /** 呼吸相位速率的跟随器（屏住 / 放开在 ~0.1 s 内完成，曲柄不顿）；猛收快升（ω 10）慢放（ω 3） */
   breathRateOmega: 12,
   clenchUp: 10,
@@ -112,9 +100,8 @@ export interface BuildCtx {
   k: number;
   /** 本次抽到的响应延迟 τ（秒，已含噪声与衰老） */
   tau: number;
-  /** 本次的响应强度 |g| 与符号（D 可能为负 = 缩而不迎） */
+  /** 本次的响应强度 |g| */
   gAbs: number;
-  sign: 1 | -1;
   /** 活力（衰老 / 诞生时 < 1） */
   vigor: number;
   /** 衰老进度 0–1：先拿掉花样（预备、弹回、探头），再拿掉反射 */
@@ -127,8 +114,6 @@ export interface BuildCtx {
   cur: Pose;
   /** 均匀随机数 [0, 1)（引擎的种子流；调用次数确定，可复现） */
   rnd: () => number;
-  /** ⑬ 此刻怕的程度（趋避的躲那一半 N，0–1；没有人 / 不怕 = 0 或缺省）：迎手链的躲按它放大（vocab2-hand.ts HC.avoidTight 起） */
-  fear?: number;
 }
 
 // ------------------------------------------------------------------ 几何与限速
@@ -167,45 +152,26 @@ export function nearestAxisDir(dir: number): number {
   return wrapPi(Math.round(dir / AXIS) * AXIS);
 }
 
-/**
- * 迟钝度（2026-10-17，交互机制参数表 §12.3 第 1 条）：本回合抽到的响应延迟 τ 从热情型的 0.2 s 到沉静型的 2.5 s，
- * slowness 从 0 到 1（之外截住）。凡是「越迟钝等得越久」的等待 / 停顿，一律 byTau([最快, 最慢], τ) 在两端之间插值——
- * 端值取改之前热情、沉静两型的值，回避（τ 0.3）、乱序随机（0.3–3）略有变动。TAU_FAST / TAU_SLOW 与人格表核对（守门）
- */
-export const TAU_FAST = 0.2;
-export const TAU_SLOW = 2.5;
-export const slowness = (tau: number): number => clamp((tau - TAU_FAST) / (TAU_SLOW - TAU_FAST), 0, 1);
-export const byTau = (ends: readonly [number, number], tau: number): number => ends[0] + (ends[1] - ends[0]) * slowness(tau);
-
 /** 朝刺激那一侧、偏上：side·deg（side = 0 时就是正上） */
 const toward = (side: number, deg: number): number => side * deg * DEG;
 const side3 = (s: number): -1 | 0 | 1 => (s > 0 ? 1 : s < 0 ? -1 : 0);
 
 /**
  * 速度分档（指令空间，差动 D 每秒；随 √k_v 走，各有上下限——A 永远比 B 快，但 A 的刻意动作也到不了惊跳的一半）：
- *   reflex 不限（屈曲固定 0.15 s）· recover clamp(0.9k, 0.45, 1.2)×(0.5 + 0.5·活力) · pursue clamp(0.42k, 0.20, 0.50)
- *   · deliberate clamp(0.20k, 0.15, 0.26) · spont clamp(0.11k, 0.07, 0.15)
- * 迎手链（2026-10-08）另加两档：strike clamp(1.2k, 0.8, 1.5)（扑；总行程另封顶 0.22，见 vocab2-hand.ts）·
- *   creep clamp(0.08k, 0.05, 0.10)（慢碰、贴上、收紧）。
- * 2026-10-17 「急」（urgent，clamp(0.35k, 0.22, 0.45)）并进 pursue（两者只差 10–20%）：惊跳里的再缩、落下，注意到里的一缩、
- *   抬一下，看见手决定躲那一下，以及迎手链里的缩回 / 撤掉 / 再抓都走 pursue。
+ *   reflex 不限（惊跳的屈曲固定 0.15 s）· fast clamp(1.2k, 0.8, 1.5)（惊跳的恢复、扑、躲开、追）·
+ *   normal clamp(0.20k, 0.15, 0.26)（回应、陪着、凑、缠、收、放开、找）· slow clamp(0.11k, 0.07, 0.15)（自发动作）。
+ * 2026-10-19 交互整合以前是七档（另有 recover · pursue · creep，与相邻一档只差一两成），收成这三档。
  * 每段的时长至少要让「缓动的峰值速度 ≤ 档位」。
  */
-export type Tier = 'reflex' | 'recover' | 'strike' | 'pursue' | 'deliberate' | 'spont' | 'creep';
-export function tierSpeed(tier: Tier, k: number, vigor = 1): number {
+export type Tier = 'reflex' | 'fast' | 'normal' | 'slow';
+export function tierSpeed(tier: Tier, k: number): number {
   switch (tier) {
     case 'reflex':
       return Infinity;
-    case 'recover':
-      return clamp(0.9 * k, 0.45, 1.2) * (0.5 + 0.5 * vigor);
-    case 'strike':
+    case 'fast':
       return clamp(1.2 * k, 0.8, 1.5);
-    case 'pursue':
-      return clamp(0.42 * k, 0.2, 0.5);
-    case 'deliberate':
+    case 'normal':
       return clamp(0.2 * k, 0.15, 0.26);
-    case 'creep':
-      return clamp(0.08 * k, 0.05, 0.1);
     default:
       return clamp(0.11 * k, 0.07, 0.15);
   }
@@ -256,9 +222,9 @@ export function govern(phases: Phase[], c: BuildCtx, tier: Tier, tiers?: Partial
       const to0 = endOf(p, at, c.rest);
       if (Math.abs(arcDelta(at, to0)) > Math.PI / 2) p.path = 'line';
     }
-    const tr = tiers?.[p.name] ?? (p.name === 'unhook' ? 'recover' : tier);
+    const tr = tiers?.[p.name] ?? (p.name === 'unhook' ? 'fast' : tier);
     const to = endOf(p, at, c.rest);
-    const v = tierSpeed(tr, c.k, c.vigor);
+    const v = tierSpeed(tr, c.k);
     if (Number.isFinite(v) && p.ease !== 'hold') p.dur = Math.max(p.dur, (PEAK[p.ease] * pathLen(at, to, p.path)) / v);
     // 摆动的峰速 2π·hz·amp·span 也不超档（慢的人格点头、嗅探收小）
     if (Number.isFinite(v) && p.osc) p.osc = { ...p.osc, amp: Math.min(p.osc.amp, v / (TAU * p.osc.hz * D_SPAN)) };
@@ -290,7 +256,7 @@ export const ph = (name: string, dur: number, ease: Phase['ease'], arm: Phase['a
   ...extra,
 });
 
-/** 生硬地落回静息（乱序随机的收尾：惊跳恢复、放弃）：0.5 s 匀速直线、叹一口气 */
+/** 生硬地落回静息（乱序随机惊跳恢复的收尾）：0.5 s 匀速直线、叹一口气 */
 export const dropPhase = (): Phase => ph('drop', 0.5, 'lin', 'rest', { path: 'line', breath: { rate: 1, sigh: true }, feel: { pose: 'free' } });
 
 /** 把目标往外推，直到离此刻的姿态至少 minD（差动）：臂已经朝那边时，动作也不会凭空消失 */
@@ -314,14 +280,35 @@ export interface StartleIn {
   retract?: boolean;
   /** 知道人在哪时，机身往反方向避开多少（rad，带符号；0 = 不转） */
   recoilYaw: number;
-  /** 恢复里转回去看那个方向（rad，带符号；0 = 不转）——A、C 按 ⑩ 抽 */
+  /** 恢复里转回去看那个方向（rad，带符号；0 = 不转）——热情按 ⑩ 抽 */
   turnBack: number;
-  /** 12 s 内已经吓过几次 */
-  repeats: number;
 }
 
 /** 反射与凝住那几段的段名（之后第一段起就是恢复）：引擎据此定「惊跳正忙」的窗口 */
 export const STARTLE_PRE = new Set(['latency', 'flex', 'zvHold', 'zv2', 'recoilHold', 'recoil', 'freeze']);
+
+/**
+ * 惊跳后的四种恢复（2026-10-19 作者：「恢复的不同留着，试试能不能差异化更大一点」）：每种人格一个看得见的结构——
+ * 热情 = 甩到刺激那一侧去看（看得最远、最久）· 沉静 = 一直缩着，叹一大口气后一口气慢慢放回（全程只有一个方向）·
+ * 回避 = 探出一点又缩回去、再探又缩，两回以后才展开 · 乱序随机 = 先松、一下或两下余震、生硬直线落回。
+ * 数为差动或「惊跳深度的几成」；整合时只按这一条拉开，其余惊跳的数不动
+ */
+export const RECOVER = {
+  /** 热情：看过去的差动与偏向刺激那侧的角度、看多久（s）。差动 + 查看时的摆动（0.15 弯曲）摆到波峰也不超过平卷（0.34） */
+  warmLookD: 0.28,
+  warmLookDeg: 75,
+  warmInspect: 3,
+  /** 沉静：放回前再叹一口气停多久（s）、放回的时长（s × 1/k） */
+  calmPause: 1,
+  calmSettle: 3.2,
+  /** 回避：两回「探出到几成 → 缩回到几成」 */
+  avoidPeek: [0.5, 0.35] as readonly number[],
+  avoidBack: [0.9, 0.75] as readonly number[],
+  /** 乱序随机：先松到几成，余震缩回到几成；第二下余震的几率 */
+  randLoosen: 0.45,
+  randShock: 0.9,
+  randTwice: 0.5,
+} as const;
 
 /**
  * 惊跳 = 反射（四种人格的起动时刻与方向逐位相同）+ 凝住（长短看 τ）+ 恢复（结构看人格）。
@@ -331,7 +318,7 @@ export const STARTLE_PRE = new Set(['latency', 'flex', 'zvHold', 'zv2', 'recoilH
 export function buildStartle(c: BuildCtx, s: StartleIn): { phases: Phase[]; busy: number } {
   const m = clamp((s.I - s.th) / Math.max(1e-6, 1 - s.th), 0, 1);
   let D = clamp(V2.startleDMin + (V2.startleDMax - V2.startleDMin) * m, V2.startleDMin, V2.startleDMax) * (0.75 + 0.25 * c.vigor);
-  D = s.retract ? V2.startleDMin : Math.max(V2.startleDMin, D * powInt(V2.repeatDecay, s.repeats));
+  D = s.retract ? V2.startleDMin : Math.max(V2.startleDMin, D);
   const axis = s.retract ? nearestAxisDir(c.cur.dir) : s.axis ?? awayAxis(s.side, c.cur);
   // 臂已经沿这根轴卷着（再吓一次、恢复途中）：惊跳只会卷得更深，不会把臂打开（审查抓到：递减后的目标比此刻还浅）
   const along = dOf(c.cur) * Math.cos(wrapPi(c.cur.dir - axis));
@@ -340,7 +327,7 @@ export function buildStartle(c: BuildCtx, s: StartleIn): { phases: Phase[]; busy
   const hook = at(1);
   const first = poseOfD(Math.max(D * V2.zvFirst, along), axis);
   const clench = V2.clench0 + V2.clench1 * m;
-  const F = Math.min(V2.freezeCap, byTau(V2.freeze, c.tau) * (0.6 + 0.4 * m) * (1 + 0.5 * c.ageU)) * (s.repeats > 0 ? 0.5 : 1);
+  const F = Math.min(V2.freezeCap, V2.freeze + c.tau);
   const quiver = c.temper === 'avoidant' || c.temper === 'random' ? 0.06 + 0.03 * c.ageU : 0.03 * c.ageU;
   const flourish = 1 - c.ageU;
   const flexCue: Partial<Phase> = { path: 'line', breath: { rate: 0, clench }, voice: 'chirp', light: 1.4, feel: { pose: 'splay' }, yaw: s.recoilYaw || undefined };
@@ -369,53 +356,57 @@ export function buildStartle(c: BuildCtx, s: StartleIn): { phases: Phase[]; busy
   const k = c.k;
   const breathBack: Cues['breath'] = { rate: 1, sigh: true };
   const sd = side3(s.side);
+  const R = RECOVER;
   const rec: Phase[] = [];
-  const tiers: Partial<Record<string, Tier>> = { latency: 'reflex', flex: 'reflex', zv2: 'reflex', recoil: 'reflex', aftershock: 'reflex', reflinch: 'pursue', drop: 'pursue' };
+  const tiers: Partial<Record<string, Tier>> = { latency: 'reflex', flex: 'reflex', zv2: 'reflex', recoil: 'reflex', shock1: 'reflex', shock2: 'reflex', drop: 'fast' };
   switch (c.temper) {
-    case 'warm': // 回头去查看（原好奇型的恢复，并进热情）：直线穿过中心朝刺激那边、探两下、再回来
+    case 'warm': // 回头去查看：直线穿过中心甩到刺激那一侧、看一会儿（臂一摆一摆、触须交替探），再回来
       rec.push(
         ph('probe', 0.3, 'hold', 'hold', { breath: breathBack, feel: { pose: 'point', side: sd }, light: 0.8 }),
-        ph('orient', 1.4 / k, 'mj', poseOfD(0.19, toward(sd, 60)), { path: 'line', breath: { rate: 1 }, voice: 'query', feel: { pose: 'point', side: sd, antennate: 0.15 }, light: 1, yaw: s.turnBack || undefined }),
-        ph('inspect', 3.3, 'hold', 'hold', { osc: { amp: 0.12 * flourish, hz: 0.6, decay: 0 }, breath: { rate: 1, period: 0.8 }, feel: { pose: 'point', side: sd, antennate: 0.15 } }),
+        ph('orient', 1.2 / k, 'mj', poseOfD(R.warmLookD, toward(sd, R.warmLookDeg)), { path: 'line', breath: { rate: 1 }, voice: 'query', feel: { pose: 'point', side: sd, antennate: 0.15 }, light: 1.1, yaw: s.turnBack || undefined }),
+        ph('inspect', R.warmInspect, 'hold', 'hold', { osc: { amp: 0.15 * flourish, hz: 0.6, decay: 0 }, breath: { rate: 1, period: 0.8 }, voice: 'query', feel: { pose: 'point', side: sd, antennate: 0.15 }, light: 1.1 }),
         ph('return', 1.5 / k, 'mj', 'rest'),
       );
       break;
-    case 'calm': // 沉静：不慌——停一会儿、深深叹一口气，慢慢放回静息（不探、不缩回、不发抖）
+    case 'calm': // 沉静：不慌——一直缩着，深深叹一口气，再一口气慢慢放回静息（不探、不缩回、不发抖）
       rec.push(
-        ph('probe', 0.6, 'hold', 'hold', { breath: breathBack, feel: { pose: 'free' }, light: 0.8 }),
-        ph('settle', 2.2 / k, 'mj', 'rest', { breath: { rate: 1, amp: 1.15, period: 1.1 }, feel: { pose: 'free' } }),
+        ph('probe', R.calmPause, 'hold', 'hold', { breath: { rate: 1, amp: 1.3, period: 1.2, sigh: true }, feel: { pose: 'free' }, light: 0.7 }),
+        ph('settle', R.calmSettle / k, 'in', 'rest', { path: 'line', breath: { rate: 1, amp: 1.2, period: 1.2 }, feel: { pose: 'free' } }),
       );
       break;
     case 'avoidant': {
-      // 回避：一步一步探出来——伸一点、停、又缩回一点、停、再展开；一直贴着那根轴，呼吸浅、不出声、发抖（原沉静型的恢复）
+      // 回避：一步一步探出来——探出一点、停、又缩回去、停，再探、再缩，两回以后才展开；一直贴着那根轴，呼吸浅、不出声、发抖
       const shallow: Cues['breath'] = { rate: 1, amp: 0.6, period: 0.8 };
-      rec.push(
-        ph('probe', 0.3, 'hold', 'hold', { breath: { ...shallow, sigh: true }, voice: 'mute', feel: { pose: 'free', quiver }, light: 0.7 }),
-        ph('peek', 1.0 / k, 'in', at(0.55), { breath: shallow, voice: 'mute', feel: { pose: 'tuck', quiver }, light: 0.7 }),
-        ph('pause', 0.5, 'hold', 'hold', { breath: shallow, voice: 'mute', light: 0.75 }),
-        ph('reflinch', 0.3, 'mj', at(0.7), { breath: shallow, voice: 'mute', light: 0.75, feel: { pose: 'tuck' } }),
-        ph('pause', 0.4, 'hold', 'hold', { breath: shallow, voice: 'mute', light: 0.85 }),
-        ph('unfurl', 1.3 / k, 'mj', 'rest', { breath: shallow, voice: 'mute', feel: { pose: 'free' } }),
-      );
+      const shy: Partial<Phase> = { breath: shallow, voice: 'mute', feel: { pose: 'tuck', quiver }, light: 0.7 };
+      rec.push(ph('probe', 0.3, 'hold', 'hold', { ...shy, breath: { ...shallow, sigh: true } }));
+      R.avoidPeek.forEach((peek, i) => {
+        rec.push(
+          ph(`peek${i + 1}`, 0.9 / k, 'in', at(peek), shy),
+          ph(`pause${i + 1}`, 0.5, 'hold', 'hold', shy),
+          ph(`back${i + 1}`, 0.3, 'mj', at(R.avoidBack[i]), { ...shy, path: 'line' }),
+          ph(`still${i + 1}`, 0.5, 'hold', 'hold', shy),
+        );
+      });
+      rec.push(ph('unfurl', 1.3 / k, 'mj', 'rest', { breath: shallow, voice: 'mute', feel: { pose: 'free' } }));
       break;
     }
     default: {
-      // 乱序随机自己的不稳：先松一半，然后 35% 余震（再猛缩一次）、65% 停一会儿发抖——都以生硬的直线落回收尾
-      rec.push(ph('loosen', 0.4 / k, 'mj', at(0.5), { breath: { rate: 1, clench: clench * 0.5 }, feel: { pose: 'splay', quiver: 0.08 }, light: 0.6 }));
-      if (c.rnd() < 0.35) {
+      // 乱序随机自己的不稳：先松到四五成，然后一下余震（再猛缩一次）、一半几率再来一下——以生硬的直线落回收尾
+      rec.push(ph('loosen', 0.4 / k, 'mj', at(R.randLoosen), { breath: { rate: 1, clench: clench * 0.5 }, feel: { pose: 'splay', quiver: 0.08 }, light: 0.6 }));
+      const shocks = c.rnd() < R.randTwice ? 2 : 1;
+      for (let i = 1; i <= shocks; i++) {
         rec.push(
-          ph('aftershock', V2.startleFlex, 'out4', at(0.85), { path: 'line', breath: { rate: 0, clench }, voice: 'chirp', light: 1.3, feel: { pose: 'splay' } }),
-          ph('hold2', 0.5, 'hold', 'hold', { breath: { rate: 0, clench }, voice: 'mute', light: 0.5, feel: { pose: 'tuck', quiver: 0.08 } }),
+          ph(`shock${i}`, V2.startleFlex, 'out4', at(R.randShock), { path: 'line', breath: { rate: 0, clench }, voice: 'chirp', light: 1.3, feel: { pose: 'splay' } }),
+          ph(`hold${i}`, 0.5, 'hold', 'hold', { breath: { rate: 0, clench }, voice: 'mute', light: 0.5, feel: { pose: 'tuck', quiver: 0.08 } }),
         );
-      } else {
-        rec.push(ph('hold2', 0.3 + 1.2 * c.rnd(), 'hold', 'hold', { breath: { rate: 1 }, voice: 'mute', light: 0.6, feel: { pose: 'tuck', quiver: 0.08 } }));
+        if (i < shocks) rec.push(ph(`loosen${i + 1}`, 0.3 / k, 'mj', at(R.randLoosen), { breath: { rate: 1, clench: clench * 0.5 }, feel: { pose: 'splay', quiver: 0.08 } }));
       }
       rec.push(dropPhase());
       break;
     }
   }
   // 解钩只管恢复：反射段从此刻（哪怕还卷在另一根轴上）直线猛缩过去，0.1 s 起动不许被推迟
-  const phases = govern([...out, ...unhook(rec, hook, c.rest)], c, 'recover', tiers);
+  const phases = govern([...out, ...unhook(rec, hook, c.rest)], c, 'fast', tiers);
   let busy = 0;
   let i = 0;
   for (; i < phases.length && STARTLE_PRE.has(phases[i].name); i++) busy += phases[i].dur;
@@ -431,29 +422,15 @@ export type RegKind = 'directed' | 'alert' | 'listen';
  * 注意到：刺激一进来（还在人格的响应延迟里）就有看得见的变化——正在做的自发动作停下、臂定住、
  * 呼吸放慢（τ ≥ 1 s 时先屏住，最多 2 s）、触须指向那一侧、灯稍亮、呼气声收住。沉静型 τ = 2.5 s，此前这两秒
  * 什么都不发生，读作「没反应」；现在读作「迟疑」。
- *   alert（震）= 一切同时停住、触须张开不动；listen（声）= 屏气、触须竖起不动。
- * 接近阈值的触碰（wince）先「一缩」：0.1 s 后差动 0.12 的小缩（限速 pursue），呼吸照走只往收拢端推一点、
- * 一声 tsk，停 0.3 s——惊跳的第一拍缩小版，没有它的后果。返回各段；引擎按全长推迟回应。
+ *   alert（震）= 一切同时停住、触须张开不动；listen（声）= 屏气、触须竖起不动。返回各段；引擎按全长推迟回应。
  */
-export function buildRegister(c: BuildCtx, o: { dur: number; side: number; kind: RegKind; wince?: boolean }): Phase[] {
+export function buildRegister(c: BuildCtx, o: { dur: number; side: number; kind: RegKind }): Phase[] {
   const sd = side3(o.side);
   const feel: Cues['feel'] =
     o.kind === 'alert' ? { pose: 'splay' } : o.kind === 'listen' ? { pose: 'raise' } : sd ? { pose: 'point', side: sd } : { pose: 'raise' };
   const cue = (rate: number): Partial<Phase> => ({ breath: { rate }, voice: 'mute', light: 1.15, feel });
   const out: Phase[] = [];
-  let left = o.dur;
-  if (o.wince) {
-    const ax = awayAxis(o.side, c.cur);
-    const w = poseOfD(Math.max(V2.winceD, dOf(c.cur) * 0.5), ax);
-    out.push(
-      ph('latency', V2.startleLatency, 'hold', 'hold', { feel }),
-      ph('wince', 0.25, 'mj', atLeast(w, c.cur, V2.winceD), { path: 'line', breath: { rate: 1, push: 0.06 }, voice: 'tsk', feel: { pose: 'tuck' } }),
-      ph('catch', 0.3, 'hold', 'hold', { breath: { rate: 1, push: 0.06 }, voice: 'mute', feel }),
-    );
-    const gov = govern(unhook(out, c.cur, c.rest), c, 'pursue', { latency: 'reflex' });
-    out.splice(0, out.length, ...gov);
-    left -= out.reduce((a, p) => a + p.dur, 0);
-  }
+  const left = o.dur;
   if (left > 0) {
     if (o.kind !== 'directed') out.push(ph('register', left, 'hold', 'hold', cue(0)));
     else if (c.tau >= 1) {
@@ -486,11 +463,11 @@ export interface RespIn {
 /** 回应幅度 D_r（差动） */
 export const respD = (c: BuildCtx): number => (V2.respD0 + V2.respD1 * clamp(c.gAbs / 0.5, 0, 1)) * c.vigor;
 
-/** 回应 = （潜伏期里已经注意到了）→ 按刺激种类的一个动词 → 停留 → 回来。限速 deliberate，刻意段落 ÷ √k_v。D 的负回应 = 躲 */
+/** 回应 = （潜伏期里已经注意到了）→ 按刺激种类的一个动词 → 停留 → 回来。限速「常」，刻意段落 ÷ √k_v */
 export function buildResponse(c: BuildCtx, r: RespIn): Phase[] {
   let phases = responsePhases(c, r);
   if (!r.feeler) phases = phases.map((p) => (p.feel && p.feel.pose === 'point' ? { ...p, feel: undefined } : p));
-  return govern(unhook(phases, c.cur, c.rest), c, 'deliberate', { perk: 'pursue' });
+  return govern(unhook(phases, c.cur, c.rest), c, 'normal');
 }
 
 /**
@@ -530,7 +507,7 @@ function responsePhases(c: BuildCtx, r: RespIn): Phase[] {
       ph('return', leaveT / k, 'mj', 'rest', { breath: { rate: 1, amp: 0.85 } }),
     ];
   };
-  if (c.sign < 0 || (r.variant === 'avoid' && r.kind !== 'knock' && r.kind !== 'lift' && r.kind !== 'sound')) {
+  if (r.variant === 'avoid' && r.kind !== 'knock' && r.kind !== 'lift' && r.kind !== 'sound') {
     return avoid(r.kind === 'hold' ? 2.2 : 1.5);
   }
   switch (r.kind) {
@@ -641,9 +618,9 @@ export const spontE = (c: BuildCtx): number => {
   return c.temper === 'random' ? Math.min(e, V2.spontDMax) : e;
 };
 
-/** 自发动作：小、慢、只在自己身边、不朝任何人（限速 spont） */
+/** 自发动作：小、慢、只在自己身边、不朝任何人（限速「慢」） */
 export function buildSpont(c: BuildCtx, kind: SpontKind, around?: number): Phase[] {
-  return govern(unhook(spontPhases(c, kind, around), c.cur, c.rest), c, 'spont');
+  return govern(unhook(spontPhases(c, kind, around), c.cur, c.rest), c, 'slow');
 }
 
 function spontPhases(c: BuildCtx, kind: SpontKind, around?: number): Phase[] {
@@ -680,7 +657,7 @@ function spontPhases(c: BuildCtx, kind: SpontKind, around?: number): Phase[] {
 
 // ------------------------------------------------------------------ 看见手
 
-/** 看见手那一下（只剩看别处；迎与躲由迎手链自己出拍）：朝手瞥一眼再回静息，限速 deliberate，追不上惊跳 */
+/** 看见手那一下（只剩看别处；迎与躲由迎手链自己出拍）：朝手瞥一眼再回静息，限速「常」，追不上惊跳 */
 export function buildNotice(c: BuildCtx, aimDir: number): Phase[] {
   const k = c.k;
   const phases = [
@@ -688,14 +665,14 @@ export function buildNotice(c: BuildCtx, aimDir: number): Phase[] {
     ph('hold', 0.3, 'hold', 'hold'),
     ph('back', 0.8 / k, 'mj', 'rest'),
   ];
-  return govern(unhook(phases, c.cur, c.rest), c, 'deliberate');
+  return govern(unhook(phases, c.cur, c.rest), c, 'normal');
 }
 
 // ------------------------------------------------------------------ 收场
 
-/** 收场：死亡开始时还在做的动作不演完，平平地落回静息（限速 spont，0.6–1.2 s），所有提示交还给死亡的脚本 */
+/** 收场：死亡开始时还在做的动作不演完，平平地落回静息（限速「慢」，0.6–1.2 s），所有提示交还给死亡的脚本 */
 export function buildSettle(c: BuildCtx): Phase[] {
-  const p = govern(unhook([ph('settle', 0.6, 'mj', 'rest')], c.cur, c.rest), c, 'spont', { unhook: 'recover' });
+  const p = govern(unhook([ph('settle', 0.6, 'mj', 'rest')], c.cur, c.rest), c, 'slow', { unhook: 'fast' });
   const last = p[p.length - 1];
   last.dur = clamp(last.dur, 0.6, 1.2);
   return p;

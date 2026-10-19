@@ -7,7 +7,7 @@ import { PERSONAS, PERSONA_KEYS, type PersonaKey } from './persona';
 import { STARTLE_PRE } from './vocab2';
 
 /** 惊跳里走反射档的段（vocab2.ts buildStartle 的 tiers：反射前段 + 乱序随机的余震） */
-const REFLEX_PHASES: ReadonlySet<string> = new Set([...STARTLE_PRE, 'aftershock']);
+const REFLEX_PHASES: ReadonlySet<string> = new Set([...STARTLE_PRE, 'shock1', 'shock2']);
 
 /**
  * 行为引擎守门测试（spec §8）。三类事故各卡一道：
@@ -200,7 +200,7 @@ describe('人格在行为里读得出来', () => {
     expect(Math.abs(mean(all) / 5 - 1)).toBeLessThan(0.12);
   });
 
-  it('自发动作间隔：无人时 A/B/C 均值落在表的区间中点 ±12%；热情型有人在时变密（2–4 s，再等上一个自发程序做完）、回避型有人在时几乎不动（30–45 s）', () => {
+  it('自发动作间隔：A/B/C 均值落在表的区间中点 ±12%（2026-10-19 删掉了「人在时另一套间隔」）', () => {
     const gaps = (k: PersonaKey, inputs: ScheduledInput[] = []): number[] => {
       const { log } = runSession({ seed: 61, order: first(k), inputs, until: LIFE.birth + LIFE.grow });
       const t = evs(log, 'SPONTANEOUS').map((r) => r.t).filter((x) => x >= LIFE.birth);
@@ -210,12 +210,6 @@ describe('人格在行为里读得出来', () => {
       const [lo, hi] = PERSONAS[k].spont;
       expect(Math.abs(mean(gaps(k)) / ((lo + hi) / 2) - 1)).toBeLessThan(0.12);
     }
-    // 有人在：表的间隔 2–4 s，但上一个自发程序（1.5–3 s）做完才排下一个——实测均值 3.7 s，比无人时（4.2 s）密
-    const present = gaps('A', [at(1, { kind: 'PRESENCE', band: 'near' })]);
-    expect(mean(present)).toBeGreaterThan(3);
-    expect(mean(present)).toBeLessThan(Math.min(4, mean(gaps('A'))));
-    const frozen = gaps('C', [at(1, { kind: 'PRESENCE', band: 'near' })]);
-    expect(mean(frozen)).toBeGreaterThan(28);
   });
 
   it('非确定性：同一次轻抚连发 20 次，响应延迟与强度均值对得上表，但每次不同、动作组合也不同', () => {
@@ -230,7 +224,7 @@ describe('人格在行为里读得出来', () => {
       const lat = resp.map((r) => r.p!.latency as number);
       const gain = resp.map((r) => r.p!.gain as number);
       const p = PERSONAS[k];
-      // 记下的延迟 = 潜伏期里「注意到」那段程序的长度：至少等满抽到的 τ，接近阈值时先一缩、再顺延（实测均值 1.09–1.13 倍）
+      // 记下的延迟 = 潜伏期里「注意到」那段程序的长度：至少等满抽到的 τ
       expect(mean(lat) / p.latency[0]).toBeGreaterThan(0.95);
       expect(mean(lat) / p.latency[0]).toBeLessThan(1.2);
       expect(Math.abs(mean(gain) / p.gain[0] - 1)).toBeLessThan(0.08);
@@ -243,8 +237,9 @@ describe('人格在行为里读得出来', () => {
   it('惊吓阈值：I > 阈值必惊吓，I ≤ 阈值必不（热情、沉静难吓，回避一碰就缩）', () => {
     for (const k of ['A', 'B', 'C'] as const) {
       const th = PERSONAS[k].startle[0];
-      const knocks = Array.from({ length: 10 }, (_, i) => at(70 + i * 10, { kind: 'KNOCK', intensity: i % 2 ? th + 0.01 : th }));
-      const { log } = runSession({ seed: 81, order: first(k), inputs: knocks, until: 200 });
+      // 隔 14 s 一次：沉静型惊跳后慢慢放回要 10 s 出头，挨得太近后一下会落在「正忙」里
+      const knocks = Array.from({ length: 10 }, (_, i) => at(70 + i * 14, { kind: 'KNOCK', intensity: i % 2 ? th + 0.01 : th }));
+      const { log } = runSession({ seed: 81, order: first(k), inputs: knocks, until: 230 });
       const outs = log.filter((r) => r.ev === 'KNOCK').map((r) => r.out);
       expect(outs).toEqual(knocks.map((_, i) => (i % 2 ? 'startle' : 'respond')));
       expect(evs(log, 'STARTLE')).toHaveLength(5);
@@ -256,15 +251,17 @@ describe('人格在行为里读得出来', () => {
     for (const k of ['A', 'B'] as const) expect(runSession({ seed: 82, order: first(k), inputs: [at(70, lift)], until: 80 }).log.find((r) => r.ev === 'LIFT')?.out).toBe('respond');
   });
 
-  it('乱序随机：阈值每次重抽，同样的敲击有时惊吓有时只是回应；响应方向也会反（缩而不迎）', () => {
+  it('乱序随机：阈值每次重抽，同样的敲击有时惊吓有时只是回应；回应有时迎、有时躲', () => {
     const knocks = Array.from({ length: 26 }, (_, i) => at(64 + i * 8, { kind: 'KNOCK', intensity: 0.55 }));
     const { log } = runSession({ seed: 91, order: first('D'), inputs: knocks, until: 300 });
     const outs = log.filter((r) => r.ev === 'KNOCK').map((r) => r.out);
     expect(outs.filter((o) => o === 'startle').length).toBeGreaterThan(4);
     expect(outs.filter((o) => o === 'respond').length).toBeGreaterThan(4);
-    const gains = evs(log, 'RESPONSE').map((r) => r.p!.gain as number);
-    expect(gains.some((g) => g < 0)).toBe(true);
-    expect(gains.some((g) => g > 0)).toBe(true);
+    // 有方向的刺激（轻抚）：⑩ 一半一半，回应有时迎、有时躲（2026-10-19 以前还有「⑤ 抽到负 = 缩」，与躲是同一件事，并掉）
+    const strokes = Array.from({ length: 16 }, (_, i) => at(64 + i * 14, { kind: 'SHELL_STROKE', half: 'L', touch: 'stroke' }));
+    const motions = evs(runSession({ seed: 92, order: first('D'), inputs: strokes, until: 300 }).log, 'RESPONSE').map((r) => String(r.p!.motion));
+    expect(motions.some((m) => m.endsWith('.avoid'))).toBe(true);
+    expect(motions.some((m) => m.endsWith('.toward'))).toBe(true);
   });
 });
 
@@ -685,7 +682,7 @@ describe('⑬ 对人的趋避（2026-10-14 人格重分类）', () => {
     expect(Math.max(...a.rows.map((r) => r.social))).toBeGreaterThan(0.95);
   });
 
-  it('人走以后：回避一直提防（⑭ 15 s 才回落），热情 3 s 就回落', () => {
+  it('人走以后：姿态回落到 0（2026-10-19 删掉了 ⑭ 另一套回落时间，变强、回落同一个时间常数）', () => {
     const leave = LIFE.birth + 1 + 20;
     const tail = (k: PersonaKey) => {
       const { rows } = visit(k, 331, 0.4, 40, [at(leave, { kind: 'PRESENCE', band: 'gone' })]);
@@ -693,31 +690,8 @@ describe('⑬ 对人的趋避（2026-10-14 人格重分类）', () => {
       const at15 = rows.find((r) => r.t >= leave + 15)!;
       return at15.social / at0.social;
     };
-    expect(tail('C')).toBeGreaterThan(0.25);
-    expect(tail('C')).toBeLessThan(0.5);
-    expect(tail('A')).toBeLessThan(0.01);
-  });
-
-  it('越近越怕：同样 0.18 的敲击，没人时回避型只是回应，人站在近处就惊跳', () => {
-    const knock = { kind: 'KNOCK', intensity: 0.18 } as const;
-    const alone = runSession({ seed: 341, order: first('C'), inputs: [at(70, knock)], until: 80 }).log;
-    expect(alone.find((r) => r.ev === 'KNOCK')?.out).toBe('respond');
-    const { log } = visit('C', 341, 0.6, 12, [at(LIFE.birth + 1 + 10, knock)]);
-    expect(log.find((r) => r.ev === 'KNOCK')?.out).toBe('startle');
-  });
-
-  it('人在时回避、热情每两三秒就重新决定朝哪（⑨′）；沉静照旧 30–45 s', () => {
-    const gaps = (k: PersonaKey) => {
-      const { log } = visit(k, 351, 0.6, 40);
-      const t = evs(log, 'ORIENT').map((r) => r.t).filter((x) => x > LIFE.birth + 8);
-      return t.slice(1).map((x, i) => x - t[i]);
-    };
-    for (const k of ['A', 'C'] as const) {
-      const g = gaps(k);
-      expect(g.length, k).toBeGreaterThan(8);
-      expect(Math.max(...g), k).toBeLessThan(PERSONAS[k].orientPresent![1] + 1.1);
-    }
-    expect(gaps('B').length).toBeLessThanOrEqual(1);
+    expect(Math.abs(tail('C'))).toBeLessThan(0.01);
+    expect(Math.abs(tail('A'))).toBeLessThan(0.01);
   });
 
   it('乱序随机：每次重新决定朝向时姿态跟着翻——朝人的回合张开、背人的回合收拢，两种都会出现', () => {

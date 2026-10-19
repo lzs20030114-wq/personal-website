@@ -1,69 +1,69 @@
 {
-  "source": "引擎里的乘方改连乘 / exp·log，跨 Node 20 / 22 / 24 逐位相同（2026-10-19）；行为同第二轮审核 B 类九条",
+  "source": "2026-10-19 交互机制整合（作者：不造新机制和新词、删掉不易察觉的冗余、只留观察者看得见的机制），行为有意改变",
   "cases": [
     {
       "seed": 11,
       "lifeRate": 1,
-      "log": "e75fa43d865ed404",
-      "frames": "2e4e1228d0a29db7"
+      "log": "97c1da1a44d244bf",
+      "frames": "6c5f4ea38d978ec6"
     },
     {
       "seed": 23,
       "lifeRate": 1,
-      "log": "da7433acc31f5a5b",
-      "frames": "70fe0532298d6fd7"
+      "log": "dbad90e60551efd1",
+      "frames": "bd82cab69da67a73"
     },
     {
       "seed": 131,
       "lifeRate": 10,
-      "log": "e917b5bbbb8511ec",
-      "frames": "4bba8d8618ae7c87"
+      "log": "9cfc3e5a2bdb7dcf",
+      "frames": "585c57c940506dba"
     },
     {
       "seed": 151,
       "lifeRate": 10,
-      "log": "26b9cc4f1330295c",
-      "frames": "d83914e6569b4027"
+      "log": "835f9430378b23bd",
+      "frames": "ce0eab0813aef775"
     },
     {
       "seed": 161,
       "lifeRate": 60,
-      "log": "397b12e711bb7214",
-      "frames": "320bd768ac95357d"
+      "log": "c7a4d453744a6d4c",
+      "frames": "d8149c05d85db3d2"
     },
     {
       "seed": 171,
       "lifeRate": 60,
-      "log": "29dbfd759431ef44",
-      "frames": "23a921a069f85921"
+      "log": "077c7ac2d6bd1903",
+      "frames": "279ba69d196eed56"
     }
   ],
   "hand": {
-    "source": "热情型一路跟着手走，不再一跳一停（2026-10-19 作者）",
+    "source": "2026-10-19 交互机制整合（作者：不造新机制和新词、删掉不易察觉的冗余、只留观察者看得见的机制），行为有意改变",
     "cases": [
       {
         "seed": 211,
         "lifeRate": 1,
-        "log": "2ba30de97edcb86a",
-        "frames": "e9ccb0ae153cb8af"
+        "log": "d5508221eaa06040",
+        "frames": "f19375d8ec5dc487"
       },
       {
         "seed": 223,
         "lifeRate": 1,
-        "log": "8d692c9f2b1684c0",
-        "frames": "aad65695b70dcbd4"
+        "log": "ea8bb9aed5d4c287",
+        "frames": "566d9ce3d83637e0"
       },
       {
         "seed": 241,
         "lifeRate": 10,
-        "log": "6ad28ab8286fbb93",
-        "frames": "902aec5cd28e2175"
+        "log": "8c75b9848aec195f",
+        "frames": "92892063e22ba726"
       },
       {
         "seed": 251,
         "lifeRate": 10,
-        "log": "82a493d113ebdd00",
-        "frames": "1e1fc17a382c1d1d"
+        "log": "f68968367cc277dd",
+        "frames": "3c80d0d454c1741b"
       }
     ]
   }

@@ -14,9 +14,6 @@ import {
   type BuildCtx,
   type RespKind,
   STARTLE_PRE,
-  TAU_FAST,
-  TAU_SLOW,
-  byTau,
   V2,
   type Variant,
   buildRegister,
@@ -52,7 +49,6 @@ function ctx(P: PersonaKey, over: Partial<BuildCtx> = {}): BuildCtx {
     k: K[P],
     tau: mid(p.latency),
     gAbs: mid(p.gain),
-    sign: 1,
     vigor: 1,
     ageU: 0,
     breathAmp: mid(p.breathAmp),
@@ -96,33 +92,25 @@ const allResponses = (P: PersonaKey): Phase[][] => [
 ];
 
 describe('动作词汇 v2 · 程序表', () => {
-  it('速度分档：每种人格都是 自发 < 刻意 < 追（急并进来了）< 恢复；刻意档封顶 0.26（A 也到不了惊跳的一半）；A 永远比 B 快', () => {
+  it('速度分档（2026-10-19 五档并成三档 + 反射）：每种人格都是 慢 < 常速 < 快；常速档封顶 0.26（A 也到不了惊跳的一半）；A 永远比 B 快', () => {
     for (const k of [0.58, 1, 1.41, 1.63]) {
-      expect(tierSpeed('spont', k)).toBeLessThan(tierSpeed('deliberate', k));
-      expect(tierSpeed('deliberate', k)).toBeLessThan(tierSpeed('pursue', k));
-      expect(tierSpeed('pursue', k)).toBeLessThan(tierSpeed('recover', k));
-      expect(tierSpeed('deliberate', k)).toBeLessThanOrEqual(0.26);
+      expect(tierSpeed('slow', k)).toBeLessThan(tierSpeed('normal', k));
+      expect(tierSpeed('normal', k)).toBeLessThan(tierSpeed('fast', k));
+      expect(tierSpeed('normal', k)).toBeLessThanOrEqual(0.26);
     }
     expect(tierSpeed('reflex', 1)).toBe(Infinity);
-    expect(tierSpeed('deliberate', K.A)).toBeGreaterThan(tierSpeed('deliberate', K.B));
+    expect(tierSpeed('normal', K.A)).toBeGreaterThan(tierSpeed('normal', K.B));
   });
 
-  it('迟钝度的两端 = 热情、沉静两型的响应延迟；按 τ 的等待在两端之间插值、之外截住', () => {
-    const warm = Object.values(PERSONAS).find((p) => p.temper === 'warm')!;
-    const calm = Object.values(PERSONAS).find((p) => p.temper === 'calm')!;
-    expect(TAU_FAST).toBe(warm.latency[0]);
-    expect(TAU_FAST).toBe(warm.latency[1]);
-    expect(TAU_SLOW).toBe(calm.latency[0]);
-    expect(TAU_SLOW).toBe(calm.latency[1]);
-    expect(byTau([1, 3], TAU_FAST)).toBe(1);
-    expect(byTau([1, 3], TAU_SLOW)).toBe(3);
-    expect(byTau([1, 3], 0)).toBe(1);
-    expect(byTau([1, 3], 9)).toBe(3);
-    expect(byTau([1, 3], (TAU_FAST + TAU_SLOW) / 2)).toBeCloseTo(2, 12);
+  it('凝住 = 0.3 s + 一个响应延迟 τ（封顶 3 s）：慢的人格定得久', () => {
+    const freeze = (P: PersonaKey): number =>
+      buildStartle(ctx(P), { I: 1, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0 }).phases.filter((p) => STARTLE_PRE.has(p.name) && p.ease === 'hold' && p.name !== 'latency').reduce((a, p) => a + p.dur, 0);
+    expect(freeze('B')).toBeGreaterThan(freeze('A'));
+    for (const P of PERSONA_KEYS) expect(freeze(P)).toBeLessThanOrEqual(V2.freezeCap + 0.15 + 1e-9);
   });
 
   it('惊跳的反射段四种人格逐位相同：0.1 s 后起动、0.15 s 屈曲、沿背离刺激的那根下方腱轴（左来 → −120°、右来 → +120°）', () => {
-    const heads = PERSONA_KEYS.map((P) => buildStartle(ctx(P), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0, repeats: 0 }).phases.slice(0, 2));
+    const heads = PERSONA_KEYS.map((P) => buildStartle(ctx(P), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0 }).phases.slice(0, 2));
     for (const h of heads) {
       expect(h[0]).toMatchObject({ name: 'latency', dur: V2.startleLatency, arm: 'hold' });
       expect(h[1]).toMatchObject({ name: 'flex', dur: V2.startleFlex, ease: 'out4', path: 'line' });
@@ -131,27 +119,23 @@ describe('动作词汇 v2 · 程序表', () => {
       // 慢的人格两步缩（第一步到 0.6），其余一步到底；第一步就 ≥ 0.6 × 下限深度
       expect(dOf(arm)).toBeGreaterThanOrEqual(V2.zvFirst * V2.startleDMin - 1e-9);
     }
-    const right = buildStartle(ctx('C'), { I: 0.95, th: 0.5, side: -1, recoilYaw: 0, turnBack: 0, repeats: 0 }).phases[1].arm as Pose;
+    const right = buildStartle(ctx('C'), { I: 0.95, th: 0.5, side: -1, recoilYaw: 0, turnBack: 0 }).phases[1].arm as Pose;
     expect(right.dir).toBeCloseTo(AX, 12);
   });
 
-  it('惊跳深度按超出阈值的程度分级（0.45–0.72）；12 s 内再吓一次变浅、凝住减半；深度永不低于 0.45', () => {
-    const D = (I: number, repeats = 0): number => {
-      const ph = buildStartle(ctx('C'), { I, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0, repeats }).phases;
+  it('惊跳深度按超出阈值的程度分级（0.45–0.72）；深度永不低于 0.45（2026-10-19 删掉了「12 s 内再吓一次变浅」）', () => {
+    const D = (I: number): number => {
+      const ph = buildStartle(ctx('C'), { I, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0 }).phases;
       return Math.max(...ends(ph).map(dOf));
     };
     expect(D(0.51)).toBeCloseTo(V2.startleDMin + (V2.startleDMax - V2.startleDMin) * 0.02, 6);
     expect(D(1)).toBeCloseTo(V2.startleDMax, 6);
-    expect(D(1, 1)).toBeCloseTo(V2.startleDMax * 0.8, 6);
-    expect(D(1, 5)).toBeCloseTo(V2.startleDMin, 6);
-    const freeze = (repeats: number): number =>
-      buildStartle(ctx('C'), { I: 1, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0, repeats }).phases.find((p) => p.name === 'freeze')!.dur;
-    expect(freeze(1)).toBeCloseTo(freeze(0) / 2, 9);
+    expect(D(0.5)).toBeGreaterThanOrEqual(V2.startleDMin - 1e-9);
   });
 
   it('深卷只在正对腱轴的姿态上；要换弯向先在轴上把深卷收回（unhook），执行层的硬窗不会被一下子跨过去', () => {
     for (const P of PERSONA_KEYS) {
-      const { phases } = buildStartle(ctx(P), { I: 1, th: 0.3, side: 1, recoilYaw: 0, turnBack: 0, repeats: 0 });
+      const { phases } = buildStartle(ctx(P), { I: 1, th: 0.3, side: 1, recoilYaw: 0, turnBack: 0 });
       let at: Pose = rest;
       for (const p of phases) {
         const to = p.arm === 'hold' ? at : p.arm === 'rest' ? rest : p.arm;
@@ -163,30 +147,43 @@ describe('动作词汇 v2 · 程序表', () => {
     }
   });
 
-  it('人格的差别在恢复的结构里：热情回头朝刺激那边查看、沉静停一下叹口气慢慢放回、回避探出又缩回、乱序随机先松一半再余震或生硬落回', () => {
+  it('人格的差别在恢复的结构里：热情甩到刺激那边查看、沉静叹一大口气一口气慢慢放回、回避两回探出又缩回、乱序随机先松再一下或两下余震、生硬落回', () => {
     const names = (P: PersonaKey, rnd?: () => number): string[] =>
-      buildStartle(ctx(P, rnd ? { rnd } : {}), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0, repeats: 0 })
+      buildStartle(ctx(P, rnd ? { rnd } : {}), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0 })
         .phases.map((p) => p.name)
         .filter((n) => !STARTLE_PRE.has(n) && n !== 'unhook');
     expect(names('A')).toEqual(['probe', 'orient', 'inspect', 'return']);
     expect(names('B')).toEqual(['probe', 'settle']);
-    expect(names('C')).toEqual(['probe', 'peek', 'pause', 'reflinch', 'pause', 'unfurl']);
-    expect(names('D', () => 0.1)).toEqual(['loosen', 'aftershock', 'hold2', 'drop']);
-    expect(names('D', () => 0.9)).toEqual(['loosen', 'hold2', 'drop']);
+    expect(names('C')).toEqual(['probe', 'peek1', 'pause1', 'back1', 'still1', 'peek2', 'pause2', 'back2', 'still2', 'unfurl']);
+    expect(names('D', () => 0.1)).toEqual(['loosen', 'shock1', 'hold1', 'loosen2', 'shock2', 'hold2', 'drop']);
+    expect(names('D', () => 0.9)).toEqual(['loosen', 'shock1', 'hold1', 'drop']);
+    // 恢复里的摆动摆到波峰也不超过平卷（弯曲 ≤ 1）：超过的那截会被执行层当深缠，没有手的会话 wrap 要恒为 0
+    for (const P of PERSONA_KEYS) {
+      let at: Pose = rest;
+      for (const p of buildStartle(ctx(P), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0 }).phases) {
+        at = p.arm === 'hold' ? at : p.arm === 'rest' ? rest : p.arm;
+        if (p.osc && at.deep === 0) expect(at.bend + p.osc.amp, `${P} ${p.name}`).toBeLessThanOrEqual(1 + 1e-9);
+      }
+    }
     // 热情的查看朝刺激那一侧（左 = 正）
-    const c = buildStartle(ctx('A'), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0, repeats: 0 }).phases.find((p) => p.name === 'orient')!;
+    const c = buildStartle(ctx('A'), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0 }).phases.find((p) => p.name === 'orient')!;
     expect((c.arm as Pose).dir).toBeGreaterThan(0);
     // 回避的恢复一直在发抖、不出声；沉静的不抖
-    const startleOf = (P: PersonaKey) => buildStartle(ctx(P), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0, repeats: 0 }).phases;
-    expect(startleOf('C').filter((p) => p.name === 'peek').every((p) => (p.feel?.quiver ?? 0) > 0 && p.voice === 'mute')).toBe(true);
+    const startleOf = (P: PersonaKey) => buildStartle(ctx(P), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0 }).phases;
+    expect(startleOf('C').filter((p) => p.name.startsWith('peek')).every((p) => (p.feel?.quiver ?? 0) > 0 && p.voice === 'mute')).toBe(true);
+    // 沉静的放回只有一个方向（缓入、直线回静息）；回避第二回比第一回探得远（卷得少）
+    const settle = startleOf('B').find((p) => p.name === 'settle')!;
+    expect(settle).toMatchObject({ arm: 'rest', ease: 'in', path: 'line' });
+    const peeks = startleOf('C').filter((p) => p.name.startsWith('peek')).map((p) => dOf(p.arm as Pose));
+    expect(peeks[1]).toBeLessThan(peeks[0]);
     expect(startleOf('B').filter((p) => p.name === 'settle').every((p) => !p.feel?.quiver)).toBe(true);
     // 慢的两步缩、快的指令回弹
-    expect(buildStartle(ctx('B'), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0, repeats: 0 }).phases.some((p) => p.name === 'zv2')).toBe(true);
-    expect(buildStartle(ctx('A'), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0, repeats: 0 }).phases.some((p) => p.name === 'recoil')).toBe(true);
+    expect(buildStartle(ctx('B'), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0 }).phases.some((p) => p.name === 'zv2')).toBe(true);
+    expect(buildStartle(ctx('A'), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0 }).phases.some((p) => p.name === 'recoil')).toBe(true);
   });
 
   it('「正忙」窗口 = 反射 + 凝住 + 恢复的第一段（之后的恢复可以被再惊一次打断）', () => {
-    const { phases, busy } = buildStartle(ctx('B'), { I: 0.95, th: 0.2, side: 1, recoilYaw: 0, turnBack: 0, repeats: 0 });
+    const { phases, busy } = buildStartle(ctx('B'), { I: 0.95, th: 0.2, side: 1, recoilYaw: 0, turnBack: 0 });
     const i = phases.findIndex((p) => !STARTLE_PRE.has(p.name));
     expect(busy).toBeCloseTo(phases.slice(0, i + 1).reduce((s, p) => s + p.dur, 0), 12);
     expect(busy).toBeLessThan(phases.reduce((s, p) => s + p.dur, 0));
@@ -194,7 +191,7 @@ describe('动作词汇 v2 · 程序表', () => {
 
   it('幅度层级（指令）：惊跳 ≥ 0.45 > 任何回应 ≤ 0.40 > 自发离静息 ≤ 0.16；同一人格里自发 < 回应', () => {
     for (const P of PERSONA_KEYS) {
-      const st = Math.max(...ends(buildStartle(ctx(P), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0, repeats: 0 }).phases).map(dOf));
+      const st = Math.max(...ends(buildStartle(ctx(P), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0 }).phases).map(dOf));
       const resp = Math.max(...allResponses(P).flatMap(ends).map(dOf));
       const sp = Math.max(...(['curl', 'sway'] as const).flatMap((k) => ends(buildSpont(ctx(P), k))).map((q) => Math.hypot(...vec(q).map((x, j) => x - vec(rest)[j]) as [number, number])));
       expect(st).toBeGreaterThanOrEqual(V2.startleDMin);
@@ -210,16 +207,16 @@ describe('动作词汇 v2 · 程序表', () => {
 
   it('速度层级（指令）：惊跳的峰速 ≥ 任何回应的 2.5 倍、自发最慢', () => {
     for (const P of PERSONA_KEYS) {
-      const st = peakSpeed(sample(buildStartle(ctx(P), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0, repeats: 0 }).phases, rest));
+      const st = peakSpeed(sample(buildStartle(ctx(P), { I: 0.95, th: 0.5, side: 1, recoilYaw: 0, turnBack: 0 }).phases, rest));
       const resp = Math.max(...allResponses(P).map((ph) => peakSpeed(sample(ph, rest))));
       const sp = Math.max(...(['curl', 'sway'] as const).map((k) => peakSpeed(sample(buildSpont(ctx(P), k), rest))));
       expect(st).toBeGreaterThanOrEqual(2.5 * resp);
       expect(sp).toBeLessThan(resp);
-      expect(sp).toBeLessThanOrEqual(tierSpeed('spont', K[P]) * 1.25);
+      expect(sp).toBeLessThanOrEqual(tierSpeed('slow', K[P]) * 1.25);
     }
   });
 
-  it('注意到：潜伏期里臂不动；呼吸放慢（τ ≥ 1 s 先屏住，最多 2 s）；震 / 声一律屏住；接近阈值先一缩（0.1 s 后、差动 ≥ 0.12、背离刺激、一声 tsk、不猛收）', () => {
+  it('注意到：潜伏期里臂不动；呼吸放慢（τ ≥ 1 s 先屏住，最多 2 s）；震 / 声一律屏住', () => {
     const slow = buildRegister(ctx('B'), { dur: 2.5, side: 1, kind: 'directed' });
     expect(slow.map((p) => [p.dur, p.breath?.rate])).toEqual([
       [2, 0],
@@ -229,13 +226,6 @@ describe('动作词汇 v2 · 程序表', () => {
     expect(buildRegister(ctx('A'), { dur: 0.2, side: -1, kind: 'directed' }).map((p) => p.breath?.rate)).toEqual([0.3]);
     expect(buildRegister(ctx('A'), { dur: 0.2, side: 0, kind: 'alert' })[0]).toMatchObject({ breath: { rate: 0 }, feel: { pose: 'splay' } });
     expect(buildRegister(ctx('A'), { dur: 0.2, side: 0, kind: 'listen' })[0]).toMatchObject({ breath: { rate: 0 }, feel: { pose: 'raise' } });
-    const w = buildRegister(ctx('A'), { dur: 0.2, side: 1, kind: 'directed', wince: true });
-    expect(w[0]).toMatchObject({ name: 'latency', dur: V2.startleLatency, arm: 'hold' });
-    expect(w[1]).toMatchObject({ name: 'wince', voice: 'tsk' });
-    expect(w[1].breath?.clench).toBeUndefined();
-    const arm = w[1].arm as Pose;
-    expect(dOf(arm)).toBeGreaterThanOrEqual(V2.winceD - 1e-9);
-    expect(arm.dir).toBeCloseTo(-AX, 12);
   });
 
   it('回应的方向说意思：迎 = 朝刺激那侧偏上、原地 = 正上、躲 = 另一侧平着让开；没方向的「震 / 声」竖直', () => {
@@ -255,8 +245,7 @@ describe('动作词汇 v2 · 程序表', () => {
 });
 
 describe('动作词汇 v2 · 审查抓到的（2026-10-08）', () => {
-  const S = (P: PersonaKey, cur: Pose, side: number, repeats = 0) =>
-    buildStartle(ctx(P, { cur }), { I: 0.95, th: 0.3, side, recoilYaw: 0, turnBack: 0, repeats, axis: side === 0 ? undefined : undefined });
+  const S = (P: PersonaKey, cur: Pose, side: number, I = 0.95) => buildStartle(ctx(P, { cur }), { I, th: 0.3, side, recoilYaw: 0, turnBack: 0 });
 
   it('再吓一次时臂还卷在另一根轴上：反射照样 0.1 s 起动（解钩不许插到屈曲前面），「正忙」盖住屈曲与凝住', () => {
     for (const P of PERSONA_KEYS) {
@@ -274,8 +263,8 @@ describe('动作词汇 v2 · 审查抓到的（2026-10-08）', () => {
   it('臂已经沿这根轴卷着：惊跳只会卷得更深，不会把臂打开（递减的深度、慢的人格第一步都不低于此刻）', () => {
     const curled: Pose = { bend: 1, dir: -AX, deep: 0.4 };
     for (const P of PERSONA_KEYS) {
-      for (const repeats of [0, 1, 3]) {
-        const { phases } = S(P, curled, 1, repeats);
+      for (const I of [0.35, 0.6, 0.95]) {
+        const { phases } = S(P, curled, 1, I);
         const flex = phases.find((p) => p.name === 'flex')!.arm as Pose;
         expect(dOf(flex)).toBeGreaterThanOrEqual(dOf(curled) - 1e-9);
       }
@@ -334,7 +323,7 @@ describe('动作词汇 v2 · 审查抓到的（2026-10-08）', () => {
     for (const P of PERSONA_KEYS) {
       for (const kind of ['pat', 'feeler', 'stroke'] as RespKind[]) {
         for (const p of buildResponse(ctx(P), { kind, side: 1, variant: 'toward', arm: true, feeler: true, turn: 0 })) {
-          if (p.osc) expect(2 * Math.PI * p.osc.hz * p.osc.amp * 0.34).toBeLessThanOrEqual(tierSpeed('deliberate', K[P]) + 1e-9);
+          if (p.osc) expect(2 * Math.PI * p.osc.hz * p.osc.amp * 0.34).toBeLessThanOrEqual(tierSpeed('normal', K[P]) + 1e-9);
         }
       }
     }
@@ -512,7 +501,7 @@ describe('动作词汇 v2 · 引擎', () => {
   });
 
   it('全场：各通道在量程内；呼吸、偏航、触须逐步不跳；臂的指令只在反射段里阶跃（台架三根肌肉 ω 5 低通）', () => {
-    const REFLEX = new Set(['flex', 'zv2', 'aftershock', 'recoil', 'wince', 'unhook', 'antic']);
+    const REFLEX = new Set(['flex', 'zv2', 'shock1', 'shock2', 'recoil', 'unhook', 'antic', 'drop']);
     const CYCLE: SensorInput[] = [
       { kind: 'PRESENCE', band: 'far', bearing: 0.8 },
       { kind: 'SHELL_STROKE', half: 'L', touch: 'stroke' },

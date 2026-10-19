@@ -11,10 +11,10 @@ import { makeRng } from './rng';
  * spec §4.1 史料）。乱序随机的区间沿用原不稳定型的数，只是改成偏向两端抽。
  */
 const TABLE = {
-  A: { T: [2, 2], a: [0.8, 0.8], v: [3, 3], tau: [0.2, 0.2], g: [0.5, 0.5], spont: [3, 5], spontP: [2, 4], f: [800, 1200], duty: [0.7, 0.7], orient: [5, 8], orientP: [2, 4], toward: 0.9, otherwise: 'random', th: [0.8, 0.8], death: ['turn', 90], stance: [1, 1], settle: [3, 3] },
-  B: { T: [7, 7], a: [0.5, 0.5], v: [0.5, 0.5], tau: [2.5, 2.5], g: [0.1, 0.1], spont: [20, 30], spontP: null, f: [150, 300], duty: [0.25, 0.25], orient: [30, 45], orientP: null, toward: 0.4, otherwise: 'random', th: [0.95, 0.95], death: ['quiet', 120], stance: [0, 0], settle: [4, 4] },
-  C: { T: [3, 3], a: [0.3, 0.3], v: [2, 2], tau: [0.3, 0.3], g: [0.4, 0.4], spont: [10, 16], spontP: [30, 45], f: [1000, 1400], duty: [0.1, 0.1], orient: [8, 12], orientP: [1.5, 3], toward: 0.05, otherwise: 'away', th: [0.25, 0.25], death: ['withdraw', 90], stance: [-1, -1], settle: [15, 15] },
-  D: { T: [2, 8], a: [0.2, 0.9], v: [0.5, 4], tau: [0.3, 3], g: [0.1, 0.5], spont: [2, 30], spontP: null, f: [200, 1200], duty: [0.1, 0.8], orient: [3, 40], orientP: null, toward: 0.5, otherwise: 'away', th: [0.2, 0.9], death: ['arrhythmia', 60], stance: [0.4, 1], settle: [2, 20] },
+  A: { T: [2, 2], a: [0.8, 0.8], v: [3, 3], tau: [0.2, 0.2], g: [0.5, 0.5], spont: [3, 5], f: [800, 1200], duty: [0.7, 0.7], orient: [5, 8], toward: 0.9, otherwise: 'random', th: [0.8, 0.8], death: ['turn', 90], stance: [1, 1] },
+  B: { T: [7, 7], a: [0.5, 0.5], v: [0.5, 0.5], tau: [2.5, 2.5], g: [0.1, 0.1], spont: [20, 30], f: [150, 300], duty: [0.25, 0.25], orient: [30, 45], toward: 0.4, otherwise: 'random', th: [0.95, 0.95], death: ['quiet', 120], stance: [0, 0] },
+  C: { T: [3, 3], a: [0.3, 0.3], v: [2, 2], tau: [0.3, 0.3], g: [0.4, 0.4], spont: [10, 16], f: [1000, 1400], duty: [0.1, 0.1], orient: [8, 12], toward: 0.05, otherwise: 'away', th: [0.25, 0.25], death: ['withdraw', 90], stance: [-1, -1] },
+  D: { T: [2, 8], a: [0.2, 0.9], v: [0.5, 4], tau: [0.3, 3], g: [0.1, 0.5], spont: [2, 30], f: [200, 1200], duty: [0.1, 0.8], orient: [3, 40], toward: 0.5, otherwise: 'away', th: [0.2, 0.9], death: ['arrhythmia', 60], stance: [0.4, 1] },
 } as const;
 
 describe('四种人格（2026-10-14 重分类：热情 / 沉静 / 回避 / 乱序随机）', () => {
@@ -28,17 +28,14 @@ describe('四种人格（2026-10-14 重分类：热情 / 沉静 / 回避 / 乱�
       expect(p.latency).toEqual(t.tau);
       expect(p.gain).toEqual(t.g);
       expect(p.spont).toEqual(t.spont);
-      expect(p.spontPresent).toEqual(t.spontP);
       expect(p.voiceFreq).toEqual(t.f);
       expect(p.voiceDuty).toEqual(t.duty);
       expect(p.orient).toEqual(t.orient);
-      expect(p.orientPresent).toEqual(t.orientP);
       expect(p.toward).toBe(t.toward);
       expect(p.otherwise).toBe(t.otherwise);
       expect(p.startle).toEqual(t.th);
       expect([p.death.kind, p.death.dur]).toEqual(t.death);
       expect(p.stance).toEqual(t.stance);
-      expect(p.settle).toEqual(t.settle);
     }
     expect(PERSONA_KEYS.filter((k) => isRandom(PERSONAS[k]))).toEqual(['D']);
   });
@@ -62,7 +59,7 @@ describe('四种人格（2026-10-14 重分类：热情 / 沉静 / 回避 / 乱�
     expect(PERSONAS.D.death.zh).toBe('节律紊乱后渐弱');
   });
 
-  it('对比拉开的方向：趋避两端是热情与回避；沉静最慢、最难吓；回避最容易吓、人在时最常重新看人在哪', () => {
+  it('对比拉开的方向：趋避两端是热情与回避；沉静最慢、最难吓；回避最容易吓', () => {
     const v = (k: keyof typeof PERSONAS) => PERSONAS[k];
     expect(v('A').stance[0]).toBe(1);
     expect(v('C').stance[0]).toBe(-1);
@@ -72,9 +69,6 @@ describe('四种人格（2026-10-14 重分类：热情 / 沉静 / 回避 / 乱�
     expect(v('B').speed[0]).toBeLessThan(Math.min(v('A').speed[0], v('C').speed[0]));
     expect(v('B').startle[0]).toBeGreaterThan(v('A').startle[0]);
     expect(v('C').startle[0]).toBeLessThanOrEqual(0.25);
-    expect(v('C').orientPresent![1]).toBeLessThan(v('C').orient[0]);
-    // 回避的人走了恢复得最慢（一直提防）
-    expect(v('C').settle[0]).toBeGreaterThan(Math.max(v('A').settle[1], v('B').settle[1]));
   });
 
   it('取值：单值不加噪声时原样且不耗随机数；加噪声落在 ±jitter 内；区间均匀落在区间内', () => {

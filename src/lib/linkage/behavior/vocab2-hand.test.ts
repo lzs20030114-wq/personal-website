@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { PERSONAS, type PersonaKey } from './persona';
 import { ARM_OSC_MAX_HZ, D_FLAT_MAX, D_SPAN, type Phase, type Pose } from './programs';
-import { type BuildCtx, PEAK, STARTLE_PRE, buildStartle, dOf, pathLen, tierSpeed } from './vocab2';
+import { type BuildCtx, PEAK, buildStartle, dOf, pathLen, tierSpeed } from './vocab2';
 import {
   type ApproachBeat,
+  CHASE_PLAN,
   HC,
+  HOLD_CUE,
   type HandGeom,
   approachPlan,
   atMm,
@@ -12,40 +14,33 @@ import {
   buildApproachBeat,
   buildChaseBeat,
   buildDodge,
-  buildDeflate,
-  buildEmpty,
   buildGiveUp,
   buildHop,
-  buildPeek,
+  buildSag,
   buildSearch,
-  buildRecoil,
   buildShrink,
-  buildStrain,
   buildTake,
   buildWrap,
-  chasePlan,
   endPose,
   flatH,
   gainAt,
   handArmGap,
-  holdCue,
   holdDrive,
-  holdEventMm,
   pounceGeom,
-  squeezePhase,
+  trackTarget,
 } from './vocab2-hand';
 
 /**
- * 迎手链程序表（vocab2-hand.ts，2026-10-08 第八批）的守门。这些表要交给固件照表执行，坏了不报错，只会让
- * 「迎」追上惊跳、在段界处顿一下、或者走进两腱之间失稳的区域。逐条卡：
- *   ① 一击追不上惊跳（行程 ≤ 0.22、速率 ≤ strike 档；其余段 ≤ pursue）；
+ * 迎手链程序表（vocab2-hand.ts）的守门。这些表要交给固件照表执行，坏了不报错，只会让「迎」追上惊跳、
+ * 在段界处顿一下、或者走进两腱之间失稳的区域。2026-10-19 交互机制整合后逐条卡：
+ *   ① 一击追不上惊跳（扑的行程 ≤ 0.22、速率 ≤ 快档；躲开 / 扑过去 ≤ 快档；其余 ≤ 常速档）；
  *   ② 不出臂的通带（摆动 ≤ 0.6 Hz、一跳一停的周期 ≥ 1.4 s）；
- *   ③ 深卷只在腱轴 0、只在 curl / 缠 / 握（门开着时）出现、≤ 0.62；离轴 ≤ 0.48；
- *   ④ 每段的身体通道都不是惊跳的（不猛收、不 chirp、触须不张开、灯不闪）；
- *   ⑤ 人格结构看得见（A 蹲 + 扑、B 进退、C 瞄准、D 生硬 / 撤掉）；
- *   ⑥ 握持控制器的窗口、满足、相位提前；表是纯数据（JSON 往返无损）。
+ *   ③ 离轴 ≤ 0.48、不带深卷；
+ *   ④ 身体通道不是惊跳的（不猛收、不 chirp、触须不张开、灯不闪）；
+ *   ⑤ 人格看得见的那一处：热情 / 快的乱序随机蹲一下再扑，其余直接伸过去；
+ *   ⑥ 缠一下贴上、握着跟着手、躲的姿态固定；表是纯数据（JSON 往返无损）。
  */
-/** √k_v 与 τ 按人格表（区间：D 取 0.9 / 1.2，落在中间——生硬、不扑） */
+/** √k_v 与 τ 按人格表（区间：D 取 0.9 / 1.2，落在中间——不扑） */
 const K: Record<PersonaKey, number> = { A: Math.sqrt(3 / 1.5), B: Math.sqrt(0.5 / 1.5), C: Math.sqrt(2 / 1.5), D: 0.9 };
 const TAU: Record<PersonaKey, number> = { A: 0.2, B: 2.5, C: 0.3, D: 1.2 };
 
@@ -56,7 +51,6 @@ function ctx(persona: PersonaKey, cur: Pose = { bend: 0.25, dir: 0.4, deep: 0 },
     k: K[persona],
     tau: TAU[persona],
     gAbs: 0.3,
-    sign: 1,
     vigor: 1,
     ageU: 0,
     breathAmp: 0.5,
@@ -81,7 +75,9 @@ function walk(phases: readonly Phase[], c: BuildCtx): { p: Phase; from: Pose; to
   });
 }
 
-const ALL_BEATS: ApproachBeat[] = ['transport', 'edge', 'wait', 'retreat', 'wait2', 'edge2', 'hover', 'crouch', 'cocked', 'pounce', 'sight', 'reach', 'touch', 'nudge', 'balk', 'stall', 'drop'];
+const ALL_BEATS: ApproachBeat[] = ['transport', 'crouch', 'cocked', 'pounce', 'reach'];
+/** 快档的段：扑、躲开、扑过去（脱手后追） */
+const FAST = new Set(['pounce', 'dodge', 'lunge']);
 
 /** 所有表（不含握持控制器），按人格 × 几个手位 */
 function allTables(): { name: string; c: BuildCtx; phases: Phase[] }[] {
@@ -95,26 +91,16 @@ function allTables(): { name: string; c: BuildCtx; phases: Phase[] }[] {
         const cb = b === 'pounce' ? ctx(P, atMm(g, -40)) : c;
         out.push({ name: `${P} ${b}`, c: cb, phases: buildApproachBeat(cb, g, b) });
       }
-      out.push({ name: `${P} strain`, c, phases: buildStrain(c, g, 2) });
-      out.push({ name: `${P} deflate`, c: ctx(P, atMm(g, 0)), phases: buildDeflate(ctx(P, atMm(g, 0)), g) });
-      out.push({ name: `${P} recoil`, c, phases: buildRecoil(c, -2.5) });
-      out.push({ name: `${P} wrap`, c, phases: buildWrap(c, g, { byHand: false, wince: true, chase: false, pounced: false, n: 2, phi: 0.3, period: 4, settle: 0.3, Dref: g.Dh }).phases });
-      for (const b of [...chasePlan(true), ...chasePlan(false)]) out.push({ name: `${P} chase ${b}`, c, phases: buildChaseBeat(c, g, b, true) });
-      out.push({ name: `${P} giveUp`, c, phases: buildGiveUp(c, -2.5) });
-      for (const k of ['regrab', 'palpate', 'open', 'drop'] as const) out.push({ name: `${P} empty ${k}`, c, phases: buildEmpty(c, k, g) });
+      out.push({ name: `${P} sag`, c: ctx(P, atMm(g, 0)), phases: buildSag(ctx(P, atMm(g, 0))) });
+      out.push({ name: `${P} wrap`, c, phases: buildWrap(c, g, { byHand: false, Dref: g.Dh }).phases });
+      out.push({ name: `${P} receive`, c, phases: buildWrap(c, g, { byHand: true, Dref: g.Dh }).phases });
+      for (const b of CHASE_PLAN) out.push({ name: `${P} chase ${b}`, c, phases: buildChaseBeat(c, g, b, true) });
+      out.push({ name: `${P} chase lunge far`, c, phases: buildChaseBeat(c, g, 'lunge', false) });
+      out.push({ name: `${P} giveUp`, c, phases: buildGiveUp(c) });
       out.push({ name: `${P} search`, c, phases: buildSearch(c, { D: 0.25, dir: 0.6 }, 3) });
-      out.push({ name: `${P} shrink`, c, phases: buildShrink(c, 0.6, -2.5) });
-      out.push({ name: `${P} peek`, c, phases: buildPeek(c, g, 0.6, -2.5) });
-      // ⑬ 怕到顶（fear 1）的躲：收、再收、缩回（再收的快档）、偷看、躲开（躲开走 strike 档，单独卡）
-      const cf = ctx(P, undefined, { fear: 1 });
-      out.push({ name: `${P} shrink fear`, c: cf, phases: buildShrink(cf, 0.6, -2.5) });
-      out.push({ name: `${P} reshrink fear`, c: cf, phases: buildShrink(cf, 0.6, -2.5, 'again') });
-      out.push({ name: `${P} snap fear`, c: cf, phases: buildShrink(cf, 0.6, -2.5, 'snap') });
-      out.push({ name: `${P} peek fear`, c: cf, phases: buildPeek(cf, g, 0.6, -2.5) });
-      for (const f of [0, 0.2, 1]) {
-        const cd = ctx(P, avoidPose(0.6, 2.5, f), { fear: f });
-        for (const size of [0, 0.5, 1]) out.push({ name: `${P} dodge ${f}/${size}`, c: cd, phases: buildDodge(cd, 0.8, -2.5, size) });
-      }
+      out.push({ name: `${P} shrink`, c, phases: buildShrink(c, -2.5) });
+      const cd = ctx(P, avoidPose(-2.5));
+      out.push({ name: `${P} dodge`, c: cd, phases: buildDodge(cd, -2.5) });
     }
   }
   return out;
@@ -136,24 +122,20 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
     expect(big.bend).toBeGreaterThan(1);
   });
 
-  it('一击追不上惊跳：扑的行程（蹲 + 扑）≤ 0.22、速率 ≤ strike 档；其余任何一段 ≤ pursue 档', () => {
+  it('一击追不上惊跳：扑的行程（蹲 + 扑）≤ 0.22、速率 ≤ 快档；躲开 / 扑过去 ≤ 快档；其余任何一段 ≤ 常速档', () => {
     let pounces = 0;
     for (const { name, c, phases } of allTables()) {
       for (const w of walk(phases, c)) {
-        if (w.p.name === 'pounce') {
-          pounces++;
-          expect(w.v, name).toBeLessThanOrEqual(tierSpeed('strike', c.k) + 1e-9);
-          // 段首 → 段末的直线行程（落点那 4 mm 也算在内）
-          expect(pathLen(w.from, w.to, 'line'), name).toBeLessThanOrEqual(HC.strikeMax + 1e-9);
+        if (FAST.has(w.p.name)) {
+          expect(w.v, `${name} · ${w.p.name}`).toBeLessThanOrEqual(tierSpeed('fast', c.k) + 1e-9);
+          if (w.p.name === 'pounce') {
+            pounces++;
+            // 段首 → 段末的直线行程（落点那 2 mm 也算在内）
+            expect(pathLen(w.from, w.to, 'line'), name).toBeLessThanOrEqual(HC.strikeMax + 1e-9);
+          }
           continue;
         }
-        if (w.p.name === 'latency') continue;
-        // 躲开（怕的时候手朝臂过来）：与扑同一个最快档，不限行程——它是从手边弹开，不是扑过去
-        if (w.p.name === 'dodge') {
-          expect(w.v, name).toBeLessThanOrEqual(tierSpeed('strike', c.k) + 1e-9);
-          continue;
-        }
-        expect(w.v, `${name} · ${w.p.name}`).toBeLessThanOrEqual(tierSpeed('pursue', c.k) + 1e-9);
+        expect(w.v, `${name} · ${w.p.name}`).toBeLessThanOrEqual(tierSpeed('normal', c.k) + 1e-9);
       }
     }
     expect(pounces).toBeGreaterThan(0);
@@ -161,13 +143,13 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
     for (const P of ['A', 'D'] as PersonaKey[]) {
       for (const g of [geom(), geom({ Dh: 0.1, r: 340 }), geom({ Dh: 0.45, r: 120 })]) {
         const c = ctx(P, undefined, { k: 1.5 });
-        const plan = approachPlan(c, g, { negative: false });
+        const plan = approachPlan(c, g);
         const { S } = pounceGeom(c, g);
         expect(plan.includes('pounce'), `${P} ${g.r}`).toBe(S <= HC.strikeMax);
       }
     }
-    // 与惊跳比：最浅的惊跳也有 0.45 的行程、0.15 s 屈曲（reflex 档，不限速）
-    const st = buildStartle(ctx('A'), { I: 0.81, th: 0.8, side: 1, recoilYaw: 0, turnBack: 0, repeats: 3 });
+    // 与惊跳比：最浅的惊跳也有 0.45 的行程、0.15 s 屈曲（反射，不限速）
+    const st = buildStartle(ctx('A'), { I: 0.81, th: 0.8, side: 1, recoilYaw: 0, turnBack: 0 });
     const flex = st.phases.find((p) => p.name === 'flex')!;
     expect(dOf(flex.arm as Pose)).toBeGreaterThanOrEqual(0.45 - 1e-9);
     expect(HC.strikeMax).toBeLessThanOrEqual(0.5 * 0.45);
@@ -179,9 +161,7 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
         const p = w.p;
         if (!p.osc) continue;
         expect(p.osc.hz, name).toBeLessThanOrEqual(ARM_OSC_MAX_HZ);
-        // 摆动叠在这一段的段末（hold 段 = 上一段的段末）上：离轴摆到波峰也 ≤ 0.48（不被钳位削顶）；带深卷的 ≤ 1.47
-        if (w.to.deep > 0) expect(w.to.bend + p.osc.amp, `${name} · ${p.name}`).toBeLessThanOrEqual(1.47 + 1e-9);
-        else expect(dOf(w.to) + p.osc.amp * D_SPAN, `${name} · ${p.name}`).toBeLessThanOrEqual(D_FLAT_MAX + 1e-9);
+        expect(dOf(w.to) + p.osc.amp * D_SPAN, `${name} · ${p.name}`).toBeLessThanOrEqual(D_FLAT_MAX + 1e-9);
       }
     }
     for (const P of ['A', 'B', 'C', 'D'] as PersonaKey[]) {
@@ -195,7 +175,7 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
     }
   });
 
-  it('迎手链的表一律离轴 ≤ 0.48、不带深卷（2026-10-17 去掉迎手链的深卷）', () => {
+  it('迎手链的表一律离轴 ≤ 0.48、不带深卷', () => {
     for (const { name, phases } of allTables()) {
       for (const p of phases) {
         if (p.arm === 'hold' || p.arm === 'rest') continue;
@@ -203,16 +183,15 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
         expect(dOf(p.arm), `${name} · ${p.name}`).toBeLessThanOrEqual(D_FLAT_MAX + 1e-9);
       }
     }
-    // 2026-10-17 起迎手链不用深卷：手在腱轴 0 正上方、读数饱和（平卷够不着）时，缠与握也只走平卷
+    // 手在腱轴 0 正上方、读数饱和（平卷够不着）时，缠与握也只走平卷
     const g = geom({ Dh: 0.5, dir: 0, r: 250 });
     const c = ctx('A', { bend: 1.4, dir: 0, deep: 0 });
-    const wrap = buildWrap(c, g, { byHand: false, wince: false, chase: false, pounced: false, n: 2, phi: 0, period: 4, settle: 0, Dref: 0.5 }).phases;
-    for (const p of wrap) {
+    for (const p of buildWrap(c, g, { byHand: false, Dref: 0.5 }).phases) {
       if (p.arm === 'hold' || p.arm === 'rest') continue;
       expect(p.arm.deep, p.name).toBe(0);
       expect(dOf(p.arm), p.name).toBeLessThanOrEqual(D_FLAT_MAX + 1e-9);
     }
-    const hold = holdDrive({ persona: 'A', g, Dref: 0.5, dirRef: 0, phi: 0, period: 4, breathAmp: 0.8, breaths: 0, grip: 1, evMm: 0 });
+    const hold = holdDrive({ g, Dref: 0.5, dirRef: 0, grip: 1 });
     expect(hold.deep).toBe(0);
     expect(dOf(hold)).toBeLessThanOrEqual(D_FLAT_MAX + 1e-9);
   });
@@ -224,192 +203,105 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
         expect(p.voice, `${name} · ${p.name}`).not.toBe('chirp');
         expect(p.feel?.pose, `${name} · ${p.name}`).not.toBe('splay');
         expect(p.light ?? 1, `${name} · ${p.name}`).toBeLessThanOrEqual(1.25);
-        expect(STARTLE_PRE.has(p.name) && p.name !== 'latency' ? p.name : '', name).not.toBe('flex');
+        expect(p.name, name).not.toBe('flex');
       }
     }
-    for (const P of ['A', 'B', 'C', 'D'] as PersonaKey[]) {
-      const cue = holdCue(PERSONAS[P].temper);
-      expect(cue.voice).toBe('hum');
-      expect(cue.breath?.clench ?? 0).toBe(0);
-    }
+    expect(HOLD_CUE.voice).toBe('hum');
+    expect(HOLD_CUE.breath?.clench ?? 0).toBe(0);
   });
 
-  it('性格结构看得见：热情蹲 + 扑、沉静瞄准后伸（没有蹲）、回避进—停—退—停—再进、乱序随机生硬（匀速）或撤掉', () => {
+  it('凑：热情 / 快的乱序随机蹲一下再扑，其余（含衰老过半）直接伸过去', () => {
     const g = geom();
-    expect(approachPlan(ctx('A'), g, { negative: false })).toEqual(['transport', 'crouch', 'cocked', 'pounce']);
-    expect(approachPlan(ctx('C'), g, { negative: false })).toEqual(['edge', 'wait', 'retreat', 'wait2', 'edge2', 'hover', 'touch']);
-    expect(approachPlan(ctx('B'), g, { negative: false })).toEqual(['transport', 'hover', 'sight', 'reach']);
-    expect(approachPlan(ctx('D', undefined, { k: 0.7 }), g, { negative: false })).toEqual(['transport', 'hover', 'touch']);
-    // 扑够不够得着看几何（总行程 ≤ 0.22）：这一格 g 下 τ 0.3 的乱序随机刚好超出 0.22、扑不到（2026-10-19 停半拍最快端 13.6 → 14 mm），
-    // 手近一点就扑得到——这里考的是「k 够快的乱序随机会扑」
-    expect(approachPlan(ctx('D', undefined, { k: 1.5, tau: 0.3 }), geom({ Dh: 0.25 }), { negative: false })).toContain('pounce');
-    expect(approachPlan(ctx('D'), g, { negative: true })).toEqual(['balk', 'stall', 'drop']);
-    // 衰老过半不扑（先拿掉花样）：改成精确地伸，不走回避型那种带颤的慢碰（2026-10-18 审核：此前这里落到 touch）
-    expect(approachPlan(ctx('A', undefined, { ageU: 0.6 }), g, { negative: false })).toEqual(['transport', 'hover', 'sight', 'reach']);
-    // 乱序随机的段是匀速（生硬），热情 / 沉静是最小急动
+    expect(approachPlan(ctx('A'), g)).toEqual(['transport', 'crouch', 'cocked', 'pounce']);
+    expect(approachPlan(ctx('B'), g)).toEqual(['transport', 'reach']);
+    expect(approachPlan(ctx('C'), g)).toEqual(['transport', 'reach']);
+    expect(approachPlan(ctx('D'), g)).toEqual(['transport', 'reach']);
+    expect(approachPlan(ctx('D', undefined, { k: 1.5, tau: 0.3 }), geom({ Dh: 0.25 }))).toContain('pounce');
+    expect(approachPlan(ctx('A', undefined, { ageU: 0.6 }), g)).toEqual(['transport', 'reach']);
+    // 靠近停在碰到圈外 nearGap，伸 / 扑都落在手上 +land
+    const at = (mm: number): number => dOf(atMm(g, mm));
+    expect(dOf(buildApproachBeat(ctx('B'), g, 'transport')[0].arm as Pose)).toBeCloseTo(at(-(g.touch + HC.nearGap)), 12);
+    expect(dOf(buildApproachBeat(ctx('B'), g, 'reach')[0].arm as Pose)).toBeCloseTo(at(HC.land), 12);
+    // 乱序随机的段是匀速（生硬），其余最小急动
     expect(buildApproachBeat(ctx('D'), g, 'transport')[0].ease).toBe('lin');
     expect(buildApproachBeat(ctx('B'), g, 'transport')[0].ease).toBe('mj');
-    // 回避的退：梢端背离手（比进的那一步离手远）
-    const edge = buildApproachBeat(ctx('C'), g, 'edge')[0].arm as Pose;
-    const retreat = buildApproachBeat(ctx('C'), g, 'retreat')[0].arm as Pose;
-    expect(dOf(retreat)).toBeLessThan(dOf(edge));
-    // 停半拍：屏气、触须定住、不出声、灯亮
-    const hover = buildApproachBeat(ctx('B'), g, 'hover')[0];
-    expect(hover.breath?.rate).toBe(0);
-    expect(hover.feel?.pose).toBe('still');
-    expect(hover.voice).toBe('mute');
-    expect(hover.light).toBeGreaterThan(1);
+    // 没碰到：落回静息
+    expect(endPose(buildSag(ctx('B', atMm(g, 0))), ctx('B'))).toEqual(ctx('B').rest);
   });
 
-  it('缠：贴上落在手上 +2 mm、每级 +5 mm；等到呼气开始才收紧；一缩是反射时钟', () => {
+  it('热情型跟着手走：停在手旁碰到半径 + 20 mm 处，往手动的方向前看至多半个差动', () => {
+    const g = geom();
+    const still = trackTarget(g, { x: 0, y: 0 });
+    expect(dOf(still)).toBeCloseTo(dOf(atMm(g, -(g.touch + HC.standGap))), 12);
+    const lead = trackTarget(g, { x: 0.05 * Math.cos(g.dir + Math.PI / 2), y: 0.05 * Math.sin(g.dir + Math.PI / 2) });
+    expect(lead.dir).toBeGreaterThan(still.dir);
+    const huge = trackTarget(g, { x: 10, y: 0 });
+    const dx = dOf(huge) * Math.cos(huge.dir) - dOf(still) * Math.cos(still.dir);
+    expect(dx).toBeLessThanOrEqual(0.5 * dOf(still) + 1e-9);
+  });
+
+  it('缠：一下贴上并压过手 holdCenter mm；手伸过来碰的叫合拢', () => {
     const g = geom();
     const c = ctx('C');
-    const { phases, seat } = buildWrap(c, g, { byHand: false, wince: true, chase: false, pounced: false, n: 2, phi: 0.2, period: 4, settle: 0.2, Dref: g.Dh });
-    expect(phases[seat].name).toBe('seat');
-    expect(phases[0].name).toBe('latency');
-    expect(phases[0].dur).toBeCloseTo(0.1, 12);
-    const at = (mm: number): number => dOf(atMm(g, mm));
-    expect(dOf(phases[seat].arm as Pose)).toBeCloseTo(at(2), 12);
-    const c1 = phases.find((p) => p.name === 'cinch1')!;
-    const c2 = phases.find((p) => p.name === 'cinch2')!;
-    expect(dOf(c1.arm as Pose)).toBeCloseTo(at(7), 12);
-    expect(dOf(c2.arm as Pose)).toBeCloseTo(at(12), 12);
-    // 第一级收紧开始时呼吸相位正好到 0.5（呼气开始）
-    const before = phases.slice(0, phases.indexOf(c1)).reduce((a, p) => a + p.dur, 0);
-    expect(((0.2 + before / 4) % 1)).toBeCloseTo(0.5, 9);
-    // 手伸过来（接）：合拢，定住 × 1.5；追里：定住 0.12、不一缩
-    const recv = buildWrap(c, g, { byHand: true, wince: false, chase: false, pounced: false, n: 1, phi: 0, period: 4, settle: 0, Dref: g.Dh });
+    const grab = buildWrap(c, g, { byHand: false, Dref: g.Dh });
+    expect(grab.phases[grab.seat].name).toBe('seat');
+    expect(dOf(grab.phases[grab.seat].arm as Pose)).toBeCloseTo(dOf(atMm(g, HC.holdCenter)), 12);
+    expect(grab.phases[grab.seat].dur).toBeGreaterThanOrEqual(HC.stepMin - 1e-9);
+    const recv = buildWrap(c, g, { byHand: true, Dref: g.Dh });
     expect(recv.phases[recv.seat].name).toBe('close');
-    const chase = buildWrap(c, g, { byHand: false, wince: true, chase: true, pounced: false, n: 1, phi: 0, period: 4, settle: 0, Dref: g.Dh });
-    expect(chase.phases[0].name).toBe('feel');
-    expect(chase.phases[0].dur).toBeCloseTo(HC.feelShort, 12);
   });
 
-  it('握持控制器：窗口 −12…+24 mm、满足了幅度变小、最紧落在呼气末（指令提前 0.45 s）、握力缩放', () => {
+  it('握：压过手 holdCenter mm、跟着跟手的差动与弯向走，握力缩放', () => {
     const g = geom();
-    const base = { persona: 'A' as PersonaKey, g, Dref: g.Dh, dirRef: g.dir, period: 4, breathAmp: 0.8, grip: 1, evMm: 0 };
     const mmOf = (p: Pose): number => (dOf(p) - g.Dh) * gainAt(g.r, g.Dh);
-    const swing = (breaths: number): number => {
-      let lo = Infinity;
-      let hi = -Infinity;
-      for (let i = 0; i < 200; i++) {
-        const mm = mmOf(holdDrive({ ...base, phi: i / 200, breaths }));
-        lo = Math.min(lo, mm);
-        hi = Math.max(hi, mm);
-        expect(mm).toBeGreaterThanOrEqual(HC.winLo - 1e-6);
-        expect(mm).toBeLessThanOrEqual(HC.winHi + 1e-6);
-      }
-      return hi - lo;
-    };
-    expect(swing(0)).toBeGreaterThan(10);
-    expect(swing(12)).toBeLessThan(swing(0) * 0.75);
-    // 最紧的指令相位 = 呼气末（φ = 1）往前 0.45 s
-    let best = 0;
-    let bestPhi = 0;
-    for (let i = 0; i < 400; i++) {
-      const s = squeezePhase(i / 400, 4);
-      if (s > best) {
-        best = s;
-        bestPhi = i / 400;
-      }
-    }
-    expect(bestPhi).toBeCloseTo(1 - 0.45 / 4, 2);
-    const weak = holdDrive({ ...base, phi: 0, breaths: 0, grip: 0.5 });
-    expect(dOf(weak)).toBeLessThan(dOf(holdDrive({ ...base, phi: 0, breaths: 0 })));
-    // 小动静：攥一下 +3、让 −3，过了时长回 0
-    expect(holdEventMm('squeeze', 0.25, 4)).toBeCloseTo(3, 9);
-    expect(holdEventMm('give', 0.4, 4)).toBeCloseTo(-3, 9);
-    expect(holdEventMm('squeeze', 5, 4)).toBe(0);
+    const h = holdDrive({ g, Dref: g.Dh, dirRef: g.dir, grip: 1 });
+    expect(mmOf(h)).toBeCloseTo(HC.holdCenter, 9);
+    expect(h.dir).toBeCloseTo(g.dir, 12);
+    expect(holdDrive({ g, Dref: g.Dh, dirRef: 1.1, grip: 1 }).dir).toBeCloseTo(1.1, 12);
+    expect(dOf(holdDrive({ g, Dref: g.Dh, dirRef: g.dir, grip: 0.5 }))).toBeLessThan(dOf(h));
   });
 
-  it('表是纯数据：JSON 往返无损', () => {
-    for (const { phases } of allTables()) expect(JSON.parse(JSON.stringify(phases))).toEqual(phases);
+  it('脱手：追 = 先扑到手旁、再伸过去落在手上；放开回静息', () => {
+    const g = geom();
+    const c = ctx('A');
+    expect(CHASE_PLAN).toEqual(['lunge', 'creep']);
+    const lunge = buildChaseBeat(c, g, 'lunge', true)[0];
+    expect(dOf(lunge.arm as Pose)).toBeCloseTo(dOf(atMm(g, -(g.touch + HC.nearGap))), 12);
+    const creep = buildChaseBeat(c, g, 'creep', true)[0];
+    expect(dOf(creep.arm as Pose)).toBeCloseTo(dOf(atMm(g, HC.land)), 12);
+    expect(endPose(buildGiveUp(c), c)).toEqual(c.rest);
   });
 
-  it('搜寻以最后碰到的那一点为中心；找的段与放手、躲都不超 deliberate', () => {
+  it('搜寻以最后碰到的那一点为中心、一边比一边宽，最后垂回静息', () => {
     const c = ctx('C');
     const sp = buildSearch(c, { D: 0.3, dir: 1 }, 2);
     const cast1 = sp.find((p) => p.name === 'cast1')!.arm as Pose;
     expect(Math.abs(cast1.dir - (1 + Math.PI / 6))).toBeLessThan(1e-9);
-    for (const w of walk(sp, c)) expect(w.v, w.p.name).toBeLessThanOrEqual(tierSpeed('deliberate', c.k) + 1e-9);
-    // 躲的终点背着手、越近缩得越多
-    const sn = buildShrink(c, 1, -2.5);
-    const near = sn[sn.length - 1].arm as Pose;
-    const sf = buildShrink(c, 0, -2.5);
-    const far = sf[sf.length - 1].arm as Pose;
-    expect(dOf(near)).toBeGreaterThan(dOf(far));
+    expect(sp.filter((p) => p.name.startsWith('cast')).length).toBe(2);
     expect(endPose(sp, c)).toEqual(c.rest);
   });
 
-  it('乱序随机的缩回就是躲的「收」那一下再定住，按 fear 收；泄气从此刻的臂起（2026-10-19 第二轮审核第 4、7 条）', () => {
-    const c0 = ctx('D');
-    const c1 = ctx('D', undefined, { fear: 1 });
-    const r0 = buildRecoil(c0, -2.5);
-    const r1 = buildRecoil(c1, -2.5);
-    expect(r0.map((p) => p.name)).toEqual(['reshrink', 'hold']);
-    expect(r0[0].arm).toEqual(buildShrink(c0, 1, -2.5, 'snap')[0].arm);
-    expect(r0[1].dur).toBe(0.5);
-    // 怕的时候缩得更紧（此前缩回不看 fear，紧接着的躲再按 fear 收一次）
-    expect(dOf(r1[0].arm as Pose)).toBeGreaterThan(dOf(r0[0].arm as Pose));
-    // 泄气：落到此刻差动的六成，弯向从手那边往下偏
-    const g = geom();
-    for (const cur of [atMm(g, 0), atMm(g, -40), flatH(0.1, 1.2)]) {
-      const df = buildDeflate(ctx('A', cur), g);
-      expect(df.map((p) => p.name)).toEqual(['deflate']);
-      expect(dOf(df[0].arm as Pose)).toBeCloseTo(0.6 * dOf(cur), 12);
+  it('躲：背着手弯、往下压 25°、差动 0.4；躲开比躲姿再紧 0.08、定 1 s', () => {
+    for (const dir of [-2.5, 0.3, 1.5]) {
+      const p = avoidPose(dir);
+      expect(dOf(p)).toBeCloseTo(HC.avoidD, 12);
+      const toDown = Math.abs(Math.atan2(Math.sin(Math.PI - dir), Math.cos(Math.PI - dir)));
+      const turned = Math.abs(Math.atan2(Math.sin(p.dir - dir), Math.cos(p.dir - dir)));
+      expect(turned).toBeCloseTo(Math.min(toDown, HC.avoidTuck), 9);
     }
+    // 已经朝下的不再转过头
+    expect(Math.cos(avoidPose(Math.PI - 0.1).dir)).toBeCloseTo(-1, 12);
+    const c = ctx('C', avoidPose(-2.5));
+    expect(endPose(buildShrink(c, -2.5), c)).toEqual(avoidPose(-2.5));
+    const dg = buildDodge(c, -2.5);
+    expect(dg.map((p) => p.name)).toEqual(['dodge', 'hold']);
+    expect(dOf(dg[0].arm as Pose)).toBeCloseTo(HC.avoidD + HC.dodgeD, 12);
+    expect((dg[0].arm as Pose).dir).toBeCloseTo(-2.5, 12);
+    expect(dg[1].dur).toBeCloseTo(HC.dodgeHold, 12);
   });
 
-  it('越怕躲得越明显（2026-10-15）：fear 0 与改前逐位相同；fear 1 收得更紧、往下压、收得快，躲开再紧一截，偷看转回得少', () => {
-    // fear 0 / 缺省：改前的公式
-    for (const close of [0, 0.4, 1]) {
-      for (const dir of [-2.5, 0.3, 2]) {
-        const old = flatH(0.12 + 0.19 * close, dir);
-        expect(avoidPose(close, dir)).toEqual(old);
-        expect(avoidPose(close, dir, 0)).toEqual(old);
-      }
-    }
-    const c0 = ctx('C');
-    const s0 = buildShrink(c0, 0.6, -2.5);
-    const sh0 = s0[s0.length - 1];
-    expect(sh0.arm).toEqual(flatH(0.12 + 0.19 * 0.6, -2.5));
-    expect(sh0.dur).toBeGreaterThanOrEqual(1.2 / c0.k - 1e-9);
-    // fear 1：差动 +0.12·close、弯向往下（π）转 25°·close、收得快
-    const cf = ctx('C', undefined, { fear: 1 });
-    const f1 = avoidPose(1, 1.5, 1);
-    expect(dOf(f1)).toBeCloseTo(0.12 + 0.19 + HC.avoidTight, 12);
-    expect(f1.dir).toBeCloseTo(1.5 + HC.avoidTuck, 12);
-    expect(avoidPose(1, -1.5, 1).dir).toBeCloseTo(-1.5 - HC.avoidTuck, 12);
-    // 已经朝下的不再转过头
-    expect(Math.cos(avoidPose(1, Math.PI - 0.1, 1).dir)).toBeCloseTo(-1, 12);
-    const s1 = buildShrink(cf, 0.6, -2.5);
-    const sh1 = s1[s1.length - 1];
-    expect(dOf(sh1.arm as Pose)).toBeGreaterThan(dOf(sh0.arm as Pose) + 0.05);
-    expect(sh1.dur).toBeLessThan(sh0.dur);
-    // 躲开：比躲的姿态再紧 0.08·(0.6 + 0.4·份量)、背着手、strike 档；后面定住 0.6 + 0.8·份量（份量缺省 = fear）
-    const home = avoidPose(0.8, -2.5, 1);
-    const cd = ctx('C', home, { fear: 1 });
-    const dg = buildDodge(cd, 0.8, -2.5);
-    expect(dg.map((p) => p.name)).toEqual(['dodge', 'hold']);
-    expect(dOf(dg[0].arm as Pose)).toBeCloseTo(Math.min(D_FLAT_MAX, dOf(home) + HC.dodgeD), 12);
-    expect((dg[0].arm as Pose).dir).toBeCloseTo(-2.5, 12);
-    expect(dg[1].dur).toBeCloseTo(0.6 + 0.8, 12);
-    // 份量小（不怕、手不算快）= 原先的「一缩」那么大：再紧 0.048、定 0.6 s
-    const small = buildDodge(cd, 0.8, -2.5, 0);
-    expect(dOf(small[0].arm as Pose)).toBeCloseTo(Math.min(D_FLAT_MAX, dOf(home) + 0.6 * HC.dodgeD), 12);
-    expect(small[1].dur).toBeCloseTo(0.6, 12);
-    // 缩回 = 再收的快档：同一个终点、0.4 s 起、一声咂
-    const sn = buildShrink(cf, 0.6, -2.5, 'snap');
-    expect(sn.map((p) => p.name)).toEqual(['reshrink']);
-    expect(sn[0].arm).toEqual(buildShrink(cf, 0.6, -2.5, 'again')[0].arm);
-    expect(sn[0].voice).toBe('tsk');
-    expect(sn[0].dur).toBeLessThan(buildShrink(cf, 0.6, -2.5, 'again')[0].dur + 1e-9);
-    // 偷看：转回手那边的角度 0.3 → 0.09（fear 1）
-    const g = geom({ dir: 0.62 });
-    const lean0 = buildPeek(c0, g, 0.6, -2.5)[0].arm as Pose;
-    const lean1 = buildPeek(cf, g, 0.6, -2.5)[0].arm as Pose;
-    const off = (p: Pose): number => Math.abs(Math.atan2(Math.sin(p.dir - g.dir), Math.cos(p.dir - g.dir)));
-    expect(off(lean1)).toBeGreaterThan(off(lean0));
+  it('表是纯数据：JSON 往返无损', () => {
+    for (const { phases } of allTables()) expect(JSON.parse(JSON.stringify(phases))).toEqual(phases);
   });
 
   it('臂—手距离（粗估）：读数朝臂此刻的姿态挪，距离变小；手超出臂长的那一截算进去', () => {

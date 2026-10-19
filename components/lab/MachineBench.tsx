@@ -431,8 +431,8 @@ const BEH_HELP = {
     'Download this session’s event log (JSON Lines): sensor events, responses and life events in one stream.',
   ] as [string, string],
   hand: [
-    '指针就是人的手。机器先要看见它（在视野里、过一个反应时间），再按性格迎过去、侧过身躲着或看别处；臂碰到手会缠上来，把指针拉开 = 抽手，它可能追。关掉就只认点击。',
-    'The pointer is a person’s hand. The machine has to see it first (in view, after its reaction time), then, by persona, reaches toward it, turns side-on to keep away from it, or looks elsewhere; when the arm touches the hand it wraps, and if you pull the pointer away it may chase. Off = clicks only.',
+    '指针就是人的手。机器先要看见它（在视野里、过一个反应时间），再按性格迎过去、侧过身躲着或只瞥一眼；臂碰到手会缠上来，把指针拉开 = 抽手，它可能追。关掉就只认点击。',
+    'The pointer is a person’s hand. The machine has to see it first (in view, after its reaction time), then, by persona, reaches toward it, turns side-on to keep away from it, or only glances at it; when the arm touches the hand it wraps, and if you pull the pointer away it may chase. Off = clicks only.',
   ] as [string, string],
 } as const;
 
@@ -505,7 +505,7 @@ const COPY = {
       hand: '手',
       handHelp: BEH_HELP.hand,
       handFollow: '指针 = 手',
-      handModes: { unseen: '没看见', toward: '迎过去', away: '侧过身躲着', look: '看别处' },
+      handModes: { unseen: '没看见', toward: '迎过去', away: '侧过身躲着', look: '只瞥一眼' },
       handLine: (m: string, touch: boolean, held: boolean) => `手 · ${m}${held ? ' · 握住' : touch ? ' · 碰着' : ''}`,
       aria: '轮回机器整机台架（行为引擎驱动）；点触手或壳体注入刺激，视角按钮切换',
     },
@@ -577,7 +577,7 @@ const COPY = {
       hand: 'Hand',
       handHelp: BEH_HELP.hand,
       handFollow: 'Pointer = hand',
-      handModes: { unseen: 'not seen', toward: 'reaching toward', away: 'keeping away, side-on', look: 'looking elsewhere' },
+      handModes: { unseen: 'not seen', toward: 'reaching toward', away: 'keeping away, side-on', look: 'just glancing' },
       handLine: (m: string, touch: boolean, held: boolean) => `hand · ${m}${held ? ' · held' : touch ? ' · touching' : ''}`,
       aria: 'Reincarnation machine bench driven by the behaviour engine; touch the arms or shell to add stimuli, views by buttons',
     },
@@ -1784,10 +1784,7 @@ export function MachineBench({
       // 圈的定位块是 .lab-fig，画布在 /lab 上比它窄、居中：加上画布在它里面的偏移
       const ox = x + canvas.offsetLeft;
       const oy = y + canvas.offsetTop;
-      // 迎手链握着手时：圈随挤压一紧一松（±12%）——网页的手没有身体，「被握着」靠标记读出来
-      const sq = tensionOn && electrodeSent ? engine?.handSqueeze() ?? null : null;
-      const sc = sq === null ? '' : ` scale(${(1 - 0.12 * (2 * sq - 1)).toFixed(3)})`;
-      el.style.transform = `translate(${ox.toFixed(1)}px, ${oy.toFixed(1)}px)${sc}`;
+      el.style.transform = `translate(${ox.toFixed(1)}px, ${oy.toFixed(1)}px)`;
       const h = engine?.state.hand;
       const mode = h && h.seen && h.mode ? h.mode : 'unseen';
       if (el.dataset.mode !== mode) el.dataset.mode = mode;

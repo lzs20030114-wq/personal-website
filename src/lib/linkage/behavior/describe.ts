@@ -56,10 +56,6 @@ const SPONT: Record<string, Pair> = {
   flick: ['抖触须', 'flicks feelers'],
   sigh: ['叹气', 'sighs'],
   search: ['搜寻', 'searches'],
-  // 迎手链里的 ⑥（engine 的 spontHand）
-  fidget: ['握着时动一下', 'shifts its grip'],
-  peek: ['偷看', 'peeks'],
-  lean: ['前倾一点', 'leans in'],
 };
 const ORIENT: Record<string, Pair> = {
   toward: ['转向人', 'turns to person'],
@@ -72,13 +68,11 @@ const ORIENT: Record<string, Pair> = {
 const HAND_MODE: Record<string, Pair> = {
   toward: ['迎过去', 'reaches toward it'],
   away: ['侧过身躲着', 'keeps away, side-on'],
-  look: ['看别处', 'looks elsewhere'],
+  look: ['瞥一眼，不跟', 'glances, does not follow'],
 };
 /** HAND_SEEN 的 cause：为什么改了态度（都是改成躲） */
 const SEEN_CAUSE: Record<string, Pair> = {
   startle: ['惊跳之后', 'after the startle'],
-  recoil: ['碰到手又缩回去', 'touches the hand, then shrinks back'],
-  balk: ['凑到半路停住', 'stops halfway'],
   giveUp: ['脱手后放弃', 'gives up after losing the hand'],
 };
 const HAND_LOST: Record<string, Pair> = {
@@ -90,8 +84,6 @@ const HC_STAGE: Record<string, Pair> = {
   off: ['不再跟手', 'stops following'],
   track: ['陪着手', 'keeps pace with the hand'],
   approach: ['凑过去', 'closes in'],
-  strain: ['够不着 · 探身', 'stretches for it'],
-  watch: ['看着手', 'watches the hand'],
   wrap: ['缠', 'wraps'],
   hold: ['握着', 'holding'],
   chase: ['追', 'goes after it'],
@@ -101,43 +93,20 @@ const HC_STAGE: Record<string, Pair> = {
 };
 const HC_BEAT: Record<string, Pair> = {
   transport: ['靠近', 'moves closer'],
-  edge: ['试探着靠近', 'edges closer'],
-  wait: ['停住', 'pauses'],
-  retreat: ['退一点', 'backs off a little'],
-  wait2: ['再停', 'pauses again'],
-  edge2: ['再靠近', 'edges in again'],
-  hover: ['停半拍', 'holds just short'],
   crouch: ['蹲', 'crouches'],
   cocked: ['蓄住', 'holds, coiled'],
   pounce: ['扑', 'pounces'],
-  sight: ['瞄准', 'takes aim'],
   reach: ['伸过去', 'reaches'],
-  touch: ['慢慢碰', 'touches slowly'],
-  nudge: ['推一下', 'nudges'],
-  balk: ['停住不前', 'stops short'],
-  stall: ['愣住', 'stalls'],
-  drop: ['撤开', 'pulls away'],
   grab: ['抓住', 'grabs'],
   receive: ['接住', 'takes it'],
   regrab: ['再抓', 'grabs again'],
-  let: ['一松', 'lets slip'],
   lunge: ['扑过去', 'lunges after it'],
   creep: ['摸过去', 'creeps over'],
-  grope: ['摸索', 'gropes'],
-  letSlow: ['一松', 'lets slip'],
-  extend: ['伸过去送', 'reaches after it'],
-  linger: ['停着', 'lingers'],
-  sag: ['垂下', 'sags'],
-  palpate: ['摸一摸', 'feels around'],
-  open: ['慢慢张开', 'opens slowly'],
+  empty: ['抓空', 'grasps nothing'],
   giveUp: ['放弃', 'gives up'],
   cast: ['来回找', 'casts about'],
-  deflate: ['垂下来', 'sinks'],
-  stretch: ['探身', 'stretches'],
-  peek: ['偷看', 'peeks'],
   dodge: ['躲开', 'dodges'],
   reshrink: ['再收', 'shrinks back'],
-  relief: ['呼一口气', 'exhales'],
 };
 
 /** 守门用（describe.test 逐条查措辞） */

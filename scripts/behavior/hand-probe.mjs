@@ -482,9 +482,9 @@ async function job(P, OUT) {
             }
           }
         }
-        // 自发动作放回来（S7 / SPONT=1）：手出现那一刻起按人格 ⑥（人在时）的下限排第一次，之后引擎自己排
+        // 自发动作放回来（S7 / SPONT=1）：手出现那一刻起按人格 ⑥ 的下限排第一次，之后引擎自己排
         if ((SC.spont || process.env.SPONT === '1') && withHand && !SC.ref && !m.spontOn && tr >= -1e-9) {
-          st.nextSpont = e.time + (PT[P].spontPresent ?? PT[P].spont)[0];
+          st.nextSpont = e.time + PT[P].spont[0];
           m.spontOn = true;
         }
         // 参照场景的刺激；S8 握住 3 s 后的敲击

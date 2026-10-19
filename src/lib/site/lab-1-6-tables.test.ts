@@ -11,7 +11,7 @@ import { LogTableBlockSchema, type LogCell } from './log-schema';
  * Lab 1-6 附件（交互机制表）的守门。表是从引擎模块现算的，最可能的事故有三种：
  * ① 形状不合日志表格块的 schema（页面上的卡片与展开视图吃的就是它）；
  * ② 英文那一边混进中文（/lab 的英文 SSR 守门会挂，读者看到半中半英的表）；
- * ③ 表里写的「哪种刺激、哪种人格会惊跳 / 先一缩」与引擎实跑对不上——表只是把引擎的规矩抄成字，
+ * ③ 表里写的「哪种刺激、哪种人格会惊跳」与引擎实跑对不上——表只是把引擎的规矩抄成字，
  *    规矩一改表就该跟着变，这里拿引擎实跑核对，免得表悄悄说错。
  */
 
@@ -22,7 +22,8 @@ describe('Lab 1-6 交互机制表', () => {
   const { blocks, title } = LAB_1_6_TABLES;
 
   it('每张表都合日志表格块的 schema，每行与表头同宽', () => {
-    expect(blocks.length).toBeGreaterThanOrEqual(14);
+    // 2026-10-19 交互机制整合：14 张收成 5 张
+    expect(blocks.length).toBe(5);
     for (const [i, b] of blocks.entries()) {
       const parsed = LogTableBlockSchema.safeParse(b);
       expect(parsed.success, `表 ${i + 1}：${parsed.success ? '' : parsed.error.message}`).toBe(true);
@@ -53,8 +54,8 @@ describe('Lab 1-6 交互机制表', () => {
     expect(row('10').slice(2).map((c) => cells(c).en)).toEqual(PERSONA_KEYS.map((k) => String(PERSONAS[k].toward)));
   });
 
-  /** 引擎实跑：这一种人格先活到能回应，然后只来这一个刺激，看它怎么判（惊跳 / 回应、回应前有没有一缩） */
-  function trial(k: PersonaKey, e: SensorInput): { out: string | undefined; wince: boolean } {
+  /** 引擎实跑：这一种人格先活到能回应，然后只来这一个刺激，看它怎么判（惊跳 / 回应） */
+  function trial(k: PersonaKey, e: SensorInput): string | undefined {
     const order = [k, ...PERSONA_KEYS.filter((x) => x !== k)];
     const eng = new BehaviorEngine({ seed: 11, order });
     const t0 = LIFE.respondAt + 5;
@@ -66,9 +67,7 @@ describe('Lab 1-6 交互机制表', () => {
       eng.tick();
       log.push(...eng.drain());
     }
-    const rec = log.find((r) => r.src === 'sensor' && r.ev === e.kind);
-    const resp = rec ? log.find((r) => r.ev === 'RESPONSE' && r.p?.to === rec.id) : undefined;
-    return { out: rec?.out, wince: resp?.p?.wince === true };
+    return log.find((r) => r.src === 'sensor' && r.ev === e.kind)?.out;
   }
   const INPUT: Record<string, (I: number) => SensorInput> = {
     PRESENCE: () => ({ kind: 'PRESENCE', band: 'far', bearing: 0.6 }),
@@ -81,14 +80,11 @@ describe('Lab 1-6 交互机制表', () => {
     SOUND: (I) => ({ kind: 'SOUND', level: I }),
   };
 
-  it('表 01 / 06 的判定与引擎实跑一致：A、B、C（没人在近处）对每个刺激惊跳还是回应、回应前有没有一缩', () => {
+  it('表 01 / 03 的判定与引擎实跑一致：A、B、C 对每个刺激惊跳还是回应', () => {
     for (const s of STIMULI) {
       for (const k of ['A', 'B', 'C'] as const) {
-        const want = judge(s.kind, s.I, PERSONAS[k].startle[0]);
-        const got = trial(k, INPUT[s.kind](s.I));
-        const label = `${k} · ${s.label.en}`;
-        expect(got.out, label).toBe(want === 'startle' ? 'startle' : 'respond');
-        if (got.out === 'respond') expect(got.wince, `${label} 的一缩`).toBe(want === 'flinch');
+        const want = judge(s.I, PERSONAS[k].startle[0]);
+        expect(trial(k, INPUT[s.kind](s.I)), `${k} · ${s.label.en}`).toBe(want);
       }
     }
   }, 30_000);

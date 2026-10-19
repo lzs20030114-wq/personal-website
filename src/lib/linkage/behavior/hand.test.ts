@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { HC } from './vocab2-hand';
 import { BehaviorEngine, HAND, type EngineState, STATE_VERSION, runSession, wrapPi } from './engine';
 import type { SensorInput } from './events';
 import { GRASP } from './grasp';
@@ -148,16 +149,16 @@ describe('决定', () => {
     }
   });
 
-  it('看见以后按 ⑨′（人在时的间隔）重新决定（again），不再在整圈里随便挑方向', () => {
+  it('看见以后按 ⑨ 重新决定（again），不再在整圈里随便挑方向', () => {
     const { e, log } = grown('A', seedFor('A', 'toward'));
     e.push(hand(0));
     run(e, log, 30);
     const seen = log.filter((r) => r.ev === 'HAND_SEEN');
     expect(seen.length).toBeGreaterThanOrEqual(3);
     expect(seen.slice(1).every((r) => r.p?.again === true)).toBe(true);
-    const [lo, hi] = PERSONAS.A.orientPresent!;
-    // 迎手链投入中（凑 / 缠 / 握……）⑨ 顺延——别在伸手的半路上改主意；中间没投入过的两次之间才按 ⑨′ 的上限
-    const engaged = new Set(['approach', 'strain', 'wrap', 'hold', 'chase', 'release', 'search']);
+    const [lo, hi] = PERSONAS.A.orient;
+    // 迎手链投入中（凑 / 缠 / 握……）⑨ 顺延——别在伸手的半路上改主意；中间没投入过的两次之间才按 ⑨ 的上限
+    const engaged = new Set(['approach', 'wrap', 'hold', 'chase', 'release', 'search']);
     for (let i = 2; i < seen.length; i++) {
       const gap = seen[i].t - seen[i - 1].t;
       expect(gap).toBeGreaterThanOrEqual(lo - 0.05);
@@ -213,29 +214,26 @@ describe('跟踪', () => {
     expect(Math.abs(e.state.yawTarget)).toBeLessThan(1e-9);
   });
 
-  it('躲（回避）：很快背过身去，臂背着手弯；手出了视野以后还提防一阵（⑬：3 s × (1 + 3N)），再记 HAND_LOST unseen', () => {
+  it('躲（回避）：很快侧过身去（手留在身侧 115°，还在视野边上），臂背着手弯；手一直看得见，不丢手', () => {
     const b = 0.3;
     const { e, log } = grown('C', seedFor('C', 'away', b));
     e.push(hand(b, 400, 0.5, 0.3));
     let armAway = false;
-    let backAt = -1;
-    let yawAtLost: number | null = null;
+    let sideAt = -1;
     run(e, log, 28, () => {
       const h = e.state.hand;
+      // 躲的姿态：背着手弯、再往下压 25°
       if (h?.seen && h.mode === 'away' && e.targets().arm.bend > 0.3) {
-        armAway ||= Math.abs(wrapPi(e.targets().arm.dir - (0.5 + Math.PI))) < 0.4;
+        armAway ||= Math.abs(wrapPi(e.targets().arm.dir - (0.5 + Math.PI))) < 0.5;
       }
-      if (backAt < 0 && Math.abs(wrapPi(e.state.yaw.x - (b + Math.PI))) < Math.PI / 3) backAt = e.time;
-      if (yawAtLost === null && log.some((r) => r.ev === 'HAND_LOST')) yawAtLost = e.state.yaw.x;
+      if (sideAt < 0 && Math.abs(Math.abs(wrapPi(b - e.state.yaw.x)) - HC.avoidSide) < (10 * Math.PI) / 180) sideAt = e.time;
     });
     const seenT = log.find((r) => r.ev === 'HAND_SEEN')!.t;
-    // 回避转得快：看见以后 4 s 内已经背过去
-    expect(backAt - seenT).toBeLessThan(4);
-    const lost = log.find((r) => r.ev === 'HAND_LOST');
-    expect(lost?.p?.reason).toBe('unseen');
-    // 提防得久：出视野到忘掉 > 3 s 的老规矩
-    expect(lost!.t - backAt).toBeGreaterThan(HAND.loseAfter + 1);
-    expect(Math.abs(wrapPi(yawAtLost! - (b + Math.PI)))).toBeLessThan(Math.PI / 3);
+    // 转身快慢只按 ③ 速度（2026-10-19 删掉了「怕的时候转身快」）：看见以后 6 s 内已经侧过去（转 2 rad，实测 4.6 s）
+    expect(sideAt - seenT).toBeLessThan(6);
+    expect(Math.abs(wrapPi(b - e.state.yaw.x))).toBeLessThanOrEqual(HAND.fov);
+    expect(log.some((r) => r.ev === 'HAND_LOST')).toBe(false);
+    expect(e.state.hand?.mode).toBe('away');
     expect(armAway).toBe(true);
   });
 
@@ -453,8 +451,8 @@ describe('臂与缠', () => {
     expect(push.log.some((r) => r.ev === 'STARTLE')).toBe(true);
   });
 
-  it('被手吓到（碰臂惊跳）：这只手先不迎了——换成 ⑩ 的「不朝人时」，不抽随机数', () => {
-    const { e, log } = grown('C', seedFor('C', 'toward', 0)); // 回避：迎 5%，惊吓阈值 0.25
+  it('被手吓到（碰臂惊跳）：这只手不迎——换成 ⑩ 的「不朝人时」，不抽随机数（迎着时手碰臂是预期接触，不惊跳，见 hand-chain.test）', () => {
+    const { e, log } = grown('C', seedFor('C', 'away', 0)); // 回避：躲着，惊吓阈值 0.25
     e.push(hand(0, 420, 0.8, 0.5));
     run(e, log, 4);
     e.push({ kind: 'ARM_TOUCH', on: true });
@@ -538,7 +536,7 @@ describe('纯数据', () => {
     expect(b.targets()).toEqual(a.targets());
     const old = { ...a.snapshot(), v: 2 } as unknown as EngineState;
     expect(() => BehaviorEngine.restore(old)).toThrow();
-    expect(STATE_VERSION).toBe(9);
+    expect(STATE_VERSION).toBe(10);
   });
 
   it('没有手的分支不碰随机数：同一场里推一个手 off（从来没有过手）不改变后面的任何东西', () => {

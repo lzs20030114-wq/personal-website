@@ -111,7 +111,9 @@ describe('闭环：画面上不动的指针 → 机器怎么对它', () => {
     expect(log.some((r) => r.ev === 'ORIENT' && r.t > seenAt)).toBe(false);
     const r = handReading(view, p, e.targets().yaw);
     const arm = e.targets().arm;
-    expect(arm.bend).toBeGreaterThan(0.3);
+    // 成长段开头那一下张望转开了一点，手落在臂长外一截（读数离基座 460 mm）：热情只跟到手旁，
+    // 不探身（2026-10-19 删掉了够不着时的探身撑）
+    expect(arm.bend).toBeGreaterThan(0.1);
     expect(Math.abs(wrap(arm.dir - r.aimDir))).toBeLessThan(0.35);
   });
 
