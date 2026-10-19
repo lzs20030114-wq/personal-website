@@ -2,7 +2,8 @@
  * 迎手链的程序表（2026-10-08 第八批研究原型立、2026-10-17 随动作程序转为唯一的一套；轮回机器_触手与转向研究.md §9）。
  *
  * 用户问「除了惊跳，是不是还应该有顺应着人、往人手的方向凑、甚至缠绕的机制」。这条链把看见手以后的事
- * 重做成一串**节拍各不相同、每拍等臂真的停稳才进下一拍**的段落：眼（触须）先到 → 臂一跳一停地陪着 →
+ * 重做成一串**节拍各不相同、每拍等臂真的停稳才进下一拍**的段落：眼（触须）先到 → 臂陪着（热情型一路跟着手走，
+ * 其余一跳一停；2026-10-19 作者改热情型）→
  * 手停下才凑过去 → 在手前停半拍（全链唯一「张开着」的全静）→ 热情型先蹲一下再扑、其余精确地伸过去轻轻
  * 落下 → 碰到即定住感觉 → 贴上、每口呼气收紧一级 → 握着时随呼吸一紧一松地哼 → 手被抽走按人格扑过去或放手
  * → 扑空在丢手的地方找。不朝人的那一路（回避型的 95%）是侧身警戒 + 偷看（越怕侧得越多，封顶 160°，不整个背过去）。
@@ -80,7 +81,11 @@ export const HC = {
    */
   eps: 0.04,
   jump: 0.12,
-  /** 热情型冲在手前面：按读数速度往前看 0.4 s（封顶 0.05）；回避型每跳只走 65% */
+  /**
+   * 热情型不一跳一停，每一帧跟着手走（2026-10-19 作者：「热情型就得热情，跟着手走」）：指令按临界阻尼 ω 4 rad/s
+   * 追向手旁（停在碰到半径 + standGap 处，不随手速退后），按读数速度往前看 0.4 s（封顶 0.05）；回避型每跳只走 65%
+   */
+  trackOmega: 4,
   leadT: 0.4,
   leadMax: 0.05,
   bStep: 0.65,
@@ -298,7 +303,7 @@ export const cinchCount = (gN: number): number => 1 + (gN >= 0.4 ? 1 : 0);
 
 /** 跳与凑时触须的「交替探」幅度（rad）：热情 0.15 · 乱序随机 0.06 · 沉静 / 回避 0（乱序随机、回避另加颤 0.03） */
 const antOf = (T: Temper): number => (T === 'warm' ? 0.15 : T === 'random' ? 0.06 : 0);
-/** 指向手的触须提示：不写 side = 引擎按手的相对方位连续指（眼一直跟、臂一跳一停） */
+/** 指向手的触须提示：不写 side = 引擎按手的相对方位连续指（眼一直跟；臂：热情型一路跟着，其余一跳一停） */
 const pointAt = (T: Temper, extra: { antennate?: number; quiver?: number } = {}): Cues['feel'] => ({
   pose: 'point',
   antennate: extra.antennate ?? antOf(T),
@@ -323,6 +328,7 @@ function hopPhases(c: BuildCtx, to: Pose, first = false): Phase[] {
   if (first) {
     // take：先「看」——吸一口、放慢、触须先指过去、一声上扬；臂还不动（0.1 + 0.1τ）
     out.push(ph('take', take(c), 'hold', 'hold', { breath: { rate: 0.4, amp: 1.15 }, feel: pointAt(P), voice: 'query', light: 1.15 }));
+    if (P === 'warm') return gov(out, c, 'pursue', { take: 'reflex' });
   }
   out.push(
     ph(first ? 'firstHop' : 'shift', HC.stepMin, P === 'random' ? 'lin' : 'mj', to, { breath, feel: pointAt(P), light: 1.1 }),
@@ -337,30 +343,39 @@ export function standPose(g: HandGeom): Pose {
 }
 
 /**
- * 这一跳的目标（结构按性格，不只是快慢）：热情 = 往前看 0.4 s，冲在手前面；沉静 = 到位；回避 = 每次只走 65%，
- * 手停了再补；乱序随机 = 到位、匀速（生硬）。lead = 读数速度 × 0.4 s（差动平面，引擎给，已封顶 0.05）
+ * 这一跳的目标（结构按性格，不只是快慢）：沉静 = 到位；回避 = 每次只走 65%，手停了再补；乱序随机 = 到位、匀速（生硬）。
+ * 热情型不跳，见 trackTarget
  */
-export function hopTarget(c: BuildCtx, g: HandGeom, lead: { x: number; y: number }): Pose {
+export function hopTarget(c: BuildCtx, g: HandGeom): Pose {
   const st = standPose(g);
-  if (c.temper === 'warm') {
-    const x = dOf(st) * Math.cos(st.dir) + lead.x;
-    const y = dOf(st) * Math.sin(st.dir) + lead.y;
-    const D = Math.hypot(x, y);
-    return flatH(D, D > 1e-9 ? Math.atan2(y, x) : st.dir);
-  }
   if (c.temper === 'avoidant') return lerpPlane(c.cur, st, HC.bStep);
   return st;
 }
 
-/** 看见手、决定迎：take → 第一跳（先转方向：只伸到刚好碰到的 0.55）→ 停 */
+/**
+ * 热情型每一帧追的目标：手旁碰到半径 + standGap 处（不随手速退后），再往手动的方向前看 lead
+ *（= 读数速度 × leadT，差动平面，引擎给，已封顶 leadMax）。前看不超过这一点差动的一半：离手近、弯得浅时
+ * 前看会盖过手的方向，臂甩过头（手晃 ±34° 时臂到 ±57°）
+ */
+export function trackTarget(g: HandGeom, lead: { x: number; y: number }): Pose {
+  const st = atMm(g, -(g.touch + HC.standGap));
+  const L = Math.hypot(lead.x, lead.y);
+  const k = L > 1e-9 ? Math.min(1, (0.5 * dOf(st)) / L) : 0;
+  const x = dOf(st) * Math.cos(st.dir) + lead.x * k;
+  const y = dOf(st) * Math.sin(st.dir) + lead.y * k;
+  const D = Math.hypot(x, y);
+  return flatH(D, D > 1e-9 ? Math.atan2(y, x) : st.dir);
+}
+
+/** 看见手、决定迎：take → 第一跳（先转方向：只伸到刚好碰到的 0.55）→ 停。热情型只有 take，之后由引擎每一帧跟 */
 export function buildTake(c: BuildCtx, g: HandGeom): Phase[] {
   const st = standPose(g);
   return hopPhases(c, flatH(Math.min(dOf(st), HC.firstHop * g.Dh), g.dir), true);
 }
 
-/** 陪着手的一跳 */
-export function buildHop(c: BuildCtx, g: HandGeom, lead: { x: number; y: number }): Phase[] {
-  return hopPhases(c, hopTarget(c, g, lead));
+/** 陪着手的一跳（热情型不用） */
+export function buildHop(c: BuildCtx, g: HandGeom): Phase[] {
+  return hopPhases(c, hopTarget(c, g));
 }
 
 // ------------------------------------------------------------------ 凑

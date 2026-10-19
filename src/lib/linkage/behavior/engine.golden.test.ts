@@ -16,6 +16,7 @@ import { GOLDEN_CASES, GOLDEN_HAND_CASES, fnv64, goldenDigest } from './golden';
  * 删现行这一步本身两组都逐位通过（来源标记见 engine.golden.json）。
  * **2026-10-19 引擎里的乘方改连乘 / exp·log**（Vercel 用 Node 24 构建、乘方末位与 Node 22 不同，金样本连着几次在部署时红）：
  * 两组的事件日志一条没变，「有手」两个用例的逐帧哈希末位变了，按新写法重生成；现在 Node 20 / 22 / 24 生成的基准逐字节相同。
+ * 同日：热情型看见手以后一路跟着手走、不再一跳一停（作者），「有手」那组重生成（没有手那组不受影响）。
  */
 const run = runSession as unknown as Parameters<typeof goldenDigest>[0];
 

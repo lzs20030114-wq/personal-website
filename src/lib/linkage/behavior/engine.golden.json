@@ -39,13 +39,13 @@
     }
   ],
   "hand": {
-    "source": "引擎里的乘方改连乘 / exp·log，跨 Node 20 / 22 / 24 逐位相同（2026-10-19）；行为同第二轮审核 B 类九条",
+    "source": "热情型一路跟着手走，不再一跳一停（2026-10-19 作者）",
     "cases": [
       {
         "seed": 211,
         "lifeRate": 1,
-        "log": "c7587b4618a8fa3f",
-        "frames": "16ebc0629dc60075"
+        "log": "2ba30de97edcb86a",
+        "frames": "e9ccb0ae153cb8af"
       },
       {
         "seed": 223,
@@ -56,14 +56,14 @@
       {
         "seed": 241,
         "lifeRate": 10,
-        "log": "d809521cbfebb3d1",
-        "frames": "14af0cacb3368a4b"
+        "log": "6ad28ab8286fbb93",
+        "frames": "902aec5cd28e2175"
       },
       {
         "seed": 251,
         "lifeRate": 10,
-        "log": "69326a716331b626",
-        "frames": "e7eed1c2669c7c07"
+        "log": "82a493d113ebdd00",
+        "frames": "1e1fc17a382c1d1d"
       }
     ]
   }

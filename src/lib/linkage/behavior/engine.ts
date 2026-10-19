@@ -113,6 +113,7 @@ import {
   holdEventMm,
   nearness,
   hopTarget,
+  trackTarget,
   hoverMinOf,
   reachable,
   squeezePhase,
@@ -418,6 +419,8 @@ interface HandChain {
   /** 这一跳的目标（差动平面）：新目标离它超过 jump = 手猛挪，不等停稳就重跳 */
   tgtX: number;
   tgtY: number;
+  /** 热情型跟着手走的跟随器（差动平面，临界阻尼）与上次推进的时刻；null = 没在跟（起了程序、清零） */
+  fol: { x: DampState; y: DampState; t: number } | null;
   /** 读数在差动平面上的位置、时刻与速度估计（热情型冲在手前面用） */
   ax: number;
   ay: number;
@@ -503,6 +506,7 @@ const idleHand = (): HandChain => ({
   pullT: -1,
   tgtX: 0,
   tgtY: 0,
+  fol: null,
   ax: 0,
   ay: 0,
   at: -1,
@@ -657,7 +661,7 @@ interface HandMem {
  * 2026-10-14 人格重分类两种都 +1）。2026-10-17 删掉现行动作、只剩一套：版本合并成 7（m2 恒在、
  * Gesture 不再带动作参数），旧快照一律不收，台架接手失败会重开一场
  */
-export const STATE_VERSION = 8;
+export const STATE_VERSION = 9;
 
 /** 引擎的全部状态：纯数据，JSON 往返无损（快照 / 交接 / 固件对照） */
 export interface EngineState {
@@ -2340,6 +2344,7 @@ export class BehaviorEngine {
     const hc = this.s.m2.hc;
     hc.prog = startProgram(name, t, phases, this.curPose());
     hc.seen = -1;
+    hc.fol = null;
   }
 
   /** 迎手链清零：程序作废，回合的抽值作废，阶段回 to（off / track / avoid） */
@@ -2347,6 +2352,7 @@ export class BehaviorEngine {
     const m = this.s.m2;
     const hc = m.hc;
     hc.prog = null;
+    hc.fol = null;
     hc.plan = [];
     hc.ev = null;
     hc.holdFrom = null;
@@ -2780,14 +2786,15 @@ export class BehaviorEngine {
             return;
           }
         }
+        // 热情型不跳：take 做完以后由 hcArm 每一帧跟着手走
+        if (this.temper() === 'warm') return;
         // 一跳一停：停够了、臂停稳了、目标挪开了才跳；手猛挪就不等
-        const lead = { x: Math.max(-HC.leadMax, Math.min(HC.leadMax, hc.vx * HC.leadT)), y: Math.max(-HC.leadMax, Math.min(HC.leadMax, hc.vy * HC.leadT)) };
         const c = this.hcCtx(ctx);
-        const target = hopTarget(c, gm, lead);
+        const target = hopTarget(c, gm);
         const err = pathLen(this.curPose(), target, 'line');
         const moved = hc.prog ? Math.hypot(dOf(target) * Math.cos(target.dir) - hc.tgtX, dOf(target) * Math.sin(target.dir) - hc.tgtY) : 0;
         if (moved > HC.jump || (fixating && inFix >= dwellOf(c) && this.settled(0.05) && err > HC.eps)) {
-          this.hcRun(t, 'hand.hop', buildHop(c, gm, lead));
+          this.hcRun(t, 'hand.hop', buildHop(c, gm));
           this.hcTarget(target);
         }
         return;
@@ -3045,11 +3052,44 @@ export class BehaviorEngine {
       return true;
     }
     if (g.phase === 'HOLD_OBJECT' || g.phase === 'HOLD_HUMAN' || (g.phase === 'RELEASE' && !ENGAGED.has(hc.stage))) return false;
+    // 热情型陪着：每一帧跟着手走（手一停，track 里照常凑上去）
+    if (hc.stage === 'track' && this.temper() === 'warm' && h && h.present && h.mode === 'toward') {
+      this.writePose(this.hcFollow(t, ctx, h), false);
+      return true;
+    }
     // 拍间：保持此刻的指令
     s.armX.v = 0;
     s.armY.v = 0;
     s.wrap.v = 0;
     return true;
+  }
+
+  /**
+   * 热情型跟着手走的一步：差动平面上按临界阻尼（HC.trackOmega）追向 trackTarget。跟随器断过（别的程序写过臂）就从
+   * 此刻的指令重新起、速度从零起；残留的深卷按 deliberate 档收回（总差动照跟，深卷那份折回弯曲）
+   */
+  private hcFollow(t: number, ctx: Ctx, h: HandMem): Pose {
+    const s = this.s;
+    const m = s.m2;
+    const hc = m.hc;
+    const cl = (v: number): number => Math.max(-HC.leadMax, Math.min(HC.leadMax, v * HC.leadT));
+    const target = trackTarget(this.handGeom(h), { x: cl(hc.vx), y: cl(hc.vy) });
+    const cur = this.curPose();
+    if (!hc.fol || t - hc.fol.t > 1.5 * DT) {
+      const D = dOf(cur);
+      hc.fol = { x: { x: D * Math.cos(cur.dir), v: 0 }, y: { x: D * Math.sin(cur.dir), v: 0 }, t };
+    }
+    const D = dOf(target);
+    dampStep(hc.fol.x, D * Math.cos(target.dir), HC.trackOmega, DT);
+    dampStep(hc.fol.y, D * Math.sin(target.dir), HC.trackOmega, DT);
+    hc.fol.t = t;
+    const deep = m.deep > 0 ? Math.max(0, m.deep - (tierSpeed('deliberate', Math.sqrt(s.speed), ctx.vigor) / D_DEEP_SPAN) * DT) : 0;
+    const Df = Math.hypot(hc.fol.x.x, hc.fol.y.x);
+    return {
+      bend: Math.max(0, Df - D_DEEP_SPAN * deep) / D_SPAN,
+      dir: Df > 1e-9 ? Math.atan2(hc.fol.y.x, hc.fol.x.x) : cur.dir,
+      deep,
+    };
   }
 
   /** 此刻的挤压相位 0–1（台架标记圈随它缩放；不在握人时 = null） */

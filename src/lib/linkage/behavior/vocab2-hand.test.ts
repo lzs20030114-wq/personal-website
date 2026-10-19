@@ -90,7 +90,7 @@ function allTables(): { name: string; c: BuildCtx; phases: Phase[] }[] {
     for (const g of [geom(), geom({ Dh: 0.12, r: 330 }), geom({ Dh: 0.45, r: 180, dir: -2.5 }), geom({ v: 120 })]) {
       const c = ctx(P);
       out.push({ name: `${P} take`, c, phases: buildTake(c, g) });
-      out.push({ name: `${P} hop`, c, phases: buildHop(c, g, { x: 0.02, y: -0.01 }) });
+      out.push({ name: `${P} hop`, c, phases: buildHop(c, g) });
       for (const b of ALL_BEATS) {
         const cb = b === 'pounce' ? ctx(P, atMm(g, -40)) : c;
         out.push({ name: `${P} ${b}`, c: cb, phases: buildApproachBeat(cb, g, b) });
@@ -185,7 +185,7 @@ describe('迎手链程序表 vocab2-hand.ts', () => {
       }
     }
     for (const P of ['A', 'B', 'C', 'D'] as PersonaKey[]) {
-      const hop = buildHop(ctx(P), geom(), { x: 0, y: 0 });
+      const hop = buildHop(ctx(P), geom());
       const shift = hop.find((p) => p.name === 'shift')!;
       const fix = hop.find((p) => p.name === 'fixate')!;
       expect(shift.dur).toBeGreaterThanOrEqual(HC.stepMin - 1e-9);

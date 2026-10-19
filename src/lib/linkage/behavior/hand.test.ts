@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BehaviorEngine, HAND, type EngineState, STATE_VERSION, wrapPi } from './engine';
+import { BehaviorEngine, HAND, type EngineState, STATE_VERSION, runSession, wrapPi } from './engine';
 import type { SensorInput } from './events';
 import { GRASP } from './grasp';
 import type { LogRecord } from './log';
@@ -343,6 +343,26 @@ describe('跟踪', () => {
     run(e, log, 1);
     expect(e.state.yawTarget).toBe(target);
   });
+
+  it('热情型：手一直在动时一路跟着手走（2026-10-19 作者：不再一跳一停）', () => {
+    // 手在臂前方来回晃 ±34°、从不停下（够得着、读数速度 120 mm/s）：臂的弯向要跟着手，不是跳一下停一下
+    const aim = (t: number): number => 0.6 * Math.sin(2 * Math.PI * 0.12 * t);
+    const inputs: { t: number; input: SensorInput }[] = [];
+    for (let t = 0.5; t < 30; t += 0.05) {
+      inputs.push({ t: Math.round(t * 100) / 100, input: { kind: 'HAND', on: true, bearing: 0, dist: 350, face: 0, aimDir: aim(t), aimBend: 0.9, aimDist: 250, touch: 32, still: 0, v: 120 } });
+    }
+    const res = runSession({ seed: 2, order: ['A', 'B', 'C', 'D'], lifeRate: 1, inputs, until: 30, frameEvery: 0.05 });
+    const seen = res.log.find((r) => r.ev === 'HAND_SEEN');
+    expect(seen?.p?.mode).toBe('toward');
+    expect(res.log.some((r) => r.ev === 'HAND_STAGE' && r.p?.stage === 'track')).toBe(true);
+    const lag = res.frames
+      .filter((f) => f.persona === 'A' && f.t > seen!.t + 2)
+      .map((f) => Math.abs(wrapPi(f.targets.arm.dir - aim(f.t))))
+      .sort((a, b) => a - b);
+    expect(lag.length).toBeGreaterThan(100);
+    expect(lag[Math.floor(lag.length / 2)]).toBeLessThan((25 * Math.PI) / 180);
+    expect(lag[Math.floor(lag.length * 0.9)]).toBeLessThan((30 * Math.PI) / 180);
+  });
 });
 
 describe('臂与缠', () => {
@@ -518,7 +538,7 @@ describe('纯数据', () => {
     expect(b.targets()).toEqual(a.targets());
     const old = { ...a.snapshot(), v: 2 } as unknown as EngineState;
     expect(() => BehaviorEngine.restore(old)).toThrow();
-    expect(STATE_VERSION).toBe(8);
+    expect(STATE_VERSION).toBe(9);
   });
 
   it('没有手的分支不碰随机数：同一场里推一个手 off（从来没有过手）不改变后面的任何东西', () => {
