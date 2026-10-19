@@ -929,6 +929,7 @@ async function job(P, OUT) {
       let holdDp95 = NaN;
       let holdP2P = NaN;
       let holdR = NaN;
+      let holdRlag = NaN;
       let holdP2Pss = NaN;
       if (Number.isFinite(tHold)) {
         const i4 = win(fr, tHold, afterBreaths(fr, tHold, 4));
@@ -943,9 +944,18 @@ async function job(P, OUT) {
         const hs0 = r.stages.find((x) => x.stage === 'hold' && x.tr >= tHold - 1e-9)?.tr ?? tHold;
         const iCtl = fr.findIndex((f) => f.tr >= hs0 && !(f.prog ?? '').startsWith('grasp.wrap'));
         const hs = iCtl >= 0 ? fr[iCtl].tr : hs0;
-        const o = oscOf(fr, win(fr, hs, afterBreaths(fr, hs, 3)), 0.45);
+        // 跟着呼吸动没有：梢端（主方向投影）与呼吸 s 的相关，取 0–2 s 里最合适的那个滞后（2026-10-19 以前写死 0.45 s，
+        // 而梢端相对呼吸的滞后随人格的呼吸周期变：热情型实测在 1.2 s 附近，写死 0.45 s 时 |r| 0.27、取最合适的 0.95）
+        const iw = win(fr, hs, afterBreaths(fr, hs, 3));
+        const o = oscOf(fr, iw, 0);
         holdP2P = o.p2p;
-        holdR = o.r;
+        for (let L = 0; L <= 2 + 1e-9; L += 0.05) {
+          const q = oscOf(fr, iw, L);
+          if (!(q.r <= holdR)) {
+            holdR = q.r;
+            holdRlag = L;
+          }
+        }
         holdP2Pss = oscOf(fr, win(fr, tHold + 4, afterBreaths(fr, tHold + 4, 3))).p2p;
       }
       // 静息呼吸起伏：同种子不放手那一遍、臂从笔直落定以后（手出现前 4 s 起就在落定，取 tr ≥ 1 s 那一段）
@@ -970,6 +980,7 @@ async function job(P, OUT) {
         holdDp95,
         holdP2P,
         holdR,
+        holdRlag,
         holdP2Pss,
         restP2P: rest.p2p,
         minScr: Math.min(...iReach.map((i) => fr[i].dScr ?? Infinity)),
@@ -1495,14 +1506,14 @@ function aggregate(OUT) {
     {
       no: 13,
       name: '握着在动（前 3 口气）',
-      th: '梢端峰峰（握持控制器接手后前 3 口气）≥ 1.3·静息起伏且 ≥ 12 mm（C 8：呼吸幅度 30%）；与呼吸 s（滞后 0.45 s）相关 ≥ 0.6',
+      th: '梢端峰峰（握持控制器接手后前 3 口气）≥ 1.3·静息起伏且 ≥ 12 mm（C 8：呼吸幅度 30%）；与呼吸 s 相关 ≥ 0.6（滞后取 0–2 s 里最合适的，括号里是那个滞后）',
       f: (P, v) => {
         const R = runsOf(P, v, 'S1n');
         const ratio = median(R.map((r) => r.metrics.holdP2P / r.metrics.restP2P));
         const p2p = med(P, v, 'S1n', 'holdP2P');
         const rr = med(P, v, 'S1n', 'holdR');
         const mn = P === 'C' ? 8 : 12;
-        return { val: `${fmt(p2p, 1)} mm · ×${fmt(ratio, 2)} · r ${fmt(rr, 2)}`, ok: allOk(okNum(ratio, (x) => x >= 1.3), okNum(p2p, (x) => x >= mn), okNum(rr, (x) => x >= 0.6)) };
+        return { val: `${fmt(p2p, 1)} mm · ×${fmt(ratio, 2)} · r ${fmt(rr, 2)}（${fmt(med(P, v, 'S1n', 'holdRlag'), 2)} s）`, ok: allOk(okNum(ratio, (x) => x >= 1.3), okNum(p2p, (x) => x >= mn), okNum(rr, (x) => x >= 0.6)) };
       },
     },
     {

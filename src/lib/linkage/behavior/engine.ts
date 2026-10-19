@@ -2572,8 +2572,9 @@ export class BehaviorEngine {
     const gN = Math.min(1, Math.abs(this.hcGain(ctx)) / 0.5);
     const [cx, cy] = this.cmdXY();
     const settle = obsForecast(m.obs, cx, cy, 0.05, 0.8);
-    // 缠的每一级收紧对着呼气开始：缠的各段不改呼吸的周期，就是此刻真在走的那一口
-    const T = this.breathPeriod(undefined);
+    // 缠的每一级收紧对着呼气开始，周期按抽到的 × 唤醒估（不乘 ⑬ 与曲柄限速）。2026-10-19 试过改读 breathPeriod：
+    // 怕着的回避型（⑬ 让呼吸快近一半）收紧跟着变快，闭环实测缠的过冲 10 → 17 mm（只退这一行即复原），留给作者定
+    const T = s.period * (1 - ENGINE.arousal.breath * s.arousal);
     const pounced = hc.stage === 'approach' && hc.beat === 'pounce';
     const { phases, seat } = buildWrap(this.hcCtx(ctx), gm, {
       byHand: o.byHand,
@@ -3305,7 +3306,7 @@ export class BehaviorEngine {
    * 这一口气此刻实际走多长（秒）：抽到的周期 × 唤醒（越激动越短）× ⑬（躲的时候浅快；迎的时候周期不变，见 SOCIAL）
    * × 这一段提示的放慢，再按曲柄限速封底（π·幅度/周期 ≤ 1.2 s⁻¹：加深、加快的提示叠起来也不超 4.19 rad/s）。
    * 呼吸本身、握持控制器的一紧一松、握着时的摩挲、哼声的音高起伏、台架的握持标记圈都读它——2026-10-19 以前后面几处
-   * 各有一种算法（握持控制器只乘唤醒，哼声与标记圈都不乘），唤醒或怕的时候挤压与真的呼吸对不齐
+   * 各有一种算法（握持控制器只乘唤醒，哼声与标记圈都不乘），唤醒或怕的时候挤压与真的呼吸对不齐。缠的收紧时机没并进来，见 beginWrapV2
    */
   private breathPeriod(br: Cues['breath']): number {
     const s = this.s;
