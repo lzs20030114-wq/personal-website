@@ -68,7 +68,7 @@ const ORIENT: Record<string, Pair> = {
 const HAND_MODE: Record<string, Pair> = {
   toward: ['迎过去', 'reaches toward it'],
   away: ['侧过身躲着', 'keeps away, side-on'],
-  look: ['瞥一眼，不跟', 'glances, does not follow'],
+  look: ['看别处', 'looks elsewhere'],
 };
 /** HAND_SEEN 的 cause：为什么改了态度（都是改成躲） */
 const SEEN_CAUSE: Record<string, Pair> = {

@@ -11,6 +11,9 @@
  * 12 项之外新加的一行：⑬ 对人的趋避，以及乱序随机的「区间偏向两端抽」。2026-10-19 交互机制整合时删掉了
  * ⑥′ 人在时的自发间隔、⑨′ 人在时的朝向间隔、⑭ 人走后多久恢复（作者：只留观察者看得见的机制），⑬ 的回落改用与变强同一个时间常数。
  * 动作程序与迎手链里「按性格换结构」的地方读 `temper`，不再读字母。数值全部是手感常量，待作者拍板。
+ * 2026-10-19（整合后反查）：沉静型 ⑩ 0.4 → 0.25——它的「不在乎」要看得出来：多数时候看别处，少数时候才迎；
+ * 0.4 时指针 = 手的探针里它与乱序随机（0.5）混得最多。乱序随机 ⑨ 3–40 s → 3–15 s——它的「乱」是一会儿迎、
+ * 一会儿躲，40 s 才重新决定一次时一次来访里常常只有一种态度，看起来就是热情或回避；改短以后一次来访里就会翻态度。
  */
 
 import { type Rng, rand, uniform } from './rng';
@@ -108,7 +111,7 @@ export const PERSONAS: Readonly<Record<PersonaKey, PersonaSpec>> = {
     voiceFreq: [150, 300],
     voiceDuty: one(0.25),
     orient: [30, 45],
-    toward: 0.4,
+    toward: 0.25,
     otherwise: 'random',
     startle: one(0.95),
     death: { kind: 'quiet', dur: 120, zh: '安静慢慢停下' },
@@ -147,7 +150,7 @@ export const PERSONAS: Readonly<Record<PersonaKey, PersonaSpec>> = {
     spont: [2, 30],
     voiceFreq: [200, 1200],
     voiceDuty: [0.1, 0.8],
-    orient: [3, 40],
+    orient: [3, 15],
     toward: 0.5,
     otherwise: 'away',
     startle: [0.2, 0.9],

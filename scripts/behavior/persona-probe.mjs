@@ -41,6 +41,11 @@ const VOCABS = (process.argv[4] ?? '2').split(',').map(Number);
 const SCENS = (process.env.SCEN ?? 'V,T,H').split(',');
 /** TRACE=1：每种人格第一个种子另存一份逐帧轨迹（trace-<场景><词汇>-<人格>.json，排查用） */
 const TRACE = !!process.env.TRACE;
+/**
+ * SPREAD=1（2026-10-19 加）：指针 = 手场景另加三项观察者看得见、原口径没量的——呼吸起伏（breathSd）、转身量（yawAct）、
+ * 来访中朝向忽变（faceSd = 朝向余弦在来访中的标准差：一会儿迎一会儿躲的读得出来，均值读不出来）。不加时与此前逐字相同
+ */
+const SPREAD = !!process.env.SPREAD;
 
 const HZ = 60;
 const DEG = 180 / Math.PI;
@@ -403,6 +408,7 @@ function trial(P, vocab, seed, sc) {
       return b === null ? null : Math.abs(wrapPi(f.yaw - b));
     }).filter((x) => x !== null);
     const face = mean(ang.map(Math.cos));
+    const faceSd = sd(ang.map(Math.cos));
     const away = mean(ang.map((a) => (a > (120 / DEG) ? 1 : 0)));
     const toward = mean(ang.map((a) => (a < (45 / DEG) ? 1 : 0)));
     // 第一次转过 30°（从人出现那刻算）
@@ -427,6 +433,7 @@ function trial(P, vocab, seed, sc) {
     const openC = mean(C.map((f) => 1 - f.s));
     const row = {
       face,
+      faceSd,
       away,
       toward,
       tTurn,
@@ -479,7 +486,10 @@ function trial(P, vocab, seed, sc) {
 const METRICS = {
   V: ['face', 'away', 'toward', 'tTurn', 'turnSign', 'yawAct', 'open', 'dOpen', 'breathSd', 'bend', 'up', 'voice'],
   T: ['face', 'away', 'tTurn', 'open', 'dOpen', 'breathSd', 'bend', 'up', 'voice', 'startle', 'respond'],
-  H: ['face', 'away', 'toward', 'seenT', 'dTip', 'tipNear', 'armAway', 'dodge', 'touch', 'wrap', 'startle', 'open', 'dOpen', 'up', 'voice'],
+  H: [
+    'face', 'away', 'toward', 'seenT', 'dTip', 'tipNear', 'armAway', 'dodge', 'touch', 'wrap', 'startle', 'open', 'dOpen', 'up', 'voice',
+    ...(SPREAD ? ['breathSd', 'yawAct', 'faceSd'] : []),
+  ],
   M: ['face', 'away', 'armAway', 'dodge', 'dTip', 'touchRate', 'gapReach', 'tTouch', 'touch', 'wrap', 'startle'],
 };
 

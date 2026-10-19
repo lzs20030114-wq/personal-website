@@ -12,9 +12,9 @@ import { makeRng } from './rng';
  */
 const TABLE = {
   A: { T: [2, 2], a: [0.8, 0.8], v: [3, 3], tau: [0.2, 0.2], g: [0.5, 0.5], spont: [3, 5], f: [800, 1200], duty: [0.7, 0.7], orient: [5, 8], toward: 0.9, otherwise: 'random', th: [0.8, 0.8], death: ['turn', 90], stance: [1, 1] },
-  B: { T: [7, 7], a: [0.5, 0.5], v: [0.5, 0.5], tau: [2.5, 2.5], g: [0.1, 0.1], spont: [20, 30], f: [150, 300], duty: [0.25, 0.25], orient: [30, 45], toward: 0.4, otherwise: 'random', th: [0.95, 0.95], death: ['quiet', 120], stance: [0, 0] },
+  B: { T: [7, 7], a: [0.5, 0.5], v: [0.5, 0.5], tau: [2.5, 2.5], g: [0.1, 0.1], spont: [20, 30], f: [150, 300], duty: [0.25, 0.25], orient: [30, 45], toward: 0.25, otherwise: 'random', th: [0.95, 0.95], death: ['quiet', 120], stance: [0, 0] },
   C: { T: [3, 3], a: [0.3, 0.3], v: [2, 2], tau: [0.3, 0.3], g: [0.4, 0.4], spont: [10, 16], f: [1000, 1400], duty: [0.1, 0.1], orient: [8, 12], toward: 0.05, otherwise: 'away', th: [0.25, 0.25], death: ['withdraw', 90], stance: [-1, -1] },
-  D: { T: [2, 8], a: [0.2, 0.9], v: [0.5, 4], tau: [0.3, 3], g: [0.1, 0.5], spont: [2, 30], f: [200, 1200], duty: [0.1, 0.8], orient: [3, 40], toward: 0.5, otherwise: 'away', th: [0.2, 0.9], death: ['arrhythmia', 60], stance: [0.4, 1] },
+  D: { T: [2, 8], a: [0.2, 0.9], v: [0.5, 4], tau: [0.3, 3], g: [0.1, 0.5], spont: [2, 30], f: [200, 1200], duty: [0.1, 0.8], orient: [3, 15], toward: 0.5, otherwise: 'away', th: [0.2, 0.9], death: ['arrhythmia', 60], stance: [0.4, 1] },
 } as const;
 
 describe('四种人格（2026-10-14 重分类：热情 / 沉静 / 回避 / 乱序随机）', () => {

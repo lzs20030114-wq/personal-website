@@ -4,7 +4,7 @@ import { useBenchLang, useLabText } from './LabLanguage';
 
 import { LabControlLabel } from './LabControlLabel';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import { MACHINE_BASE_FRAME, machineBaseGeometry, splitMachineFrame } from '../../src/lib/linkage/machine-base';
 import { FlatRenderer, bakeIndexed, bakeRuledPoints, bakeSkinned, type CellFrame } from '../../src/lib/linkage/gl3d';
@@ -43,6 +43,7 @@ import {
   projectLogical,
   segDist,
   shellHalf,
+  strokeToTheta,
   sweepFraming,
   tendonContractions,
   trackMark,
@@ -106,6 +107,8 @@ import { SMALLARM_PLACEMENTS } from '../../src/lib/linkage/machine-shape';
 import { stashBench, takeBench } from './handoff';
 import { setStash } from './snapshot';
 import { useBenchLoop } from './useBenchLoop';
+import { ActuatorPanel, type ActuatorSnapshot } from './ActuatorPanel';
+import { ActuatorReadout, READOUT_CHANNELS, type ReadoutKey } from '../../src/lib/linkage/actuator-readout';
 
 /**
  * Lab.05 整机台架（spec = 轮回机器_整机spec.md，用户 2026-07-29 拍板「整机传动 + 真实实体」）。
@@ -431,8 +434,8 @@ const BEH_HELP = {
     'Download this session’s event log (JSON Lines): sensor events, responses and life events in one stream.',
   ] as [string, string],
   hand: [
-    '指针就是人的手。机器先要看见它（在视野里、过一个反应时间），再按性格迎过去、侧过身躲着或只瞥一眼；臂碰到手会缠上来，把指针拉开 = 抽手，它可能追。关掉就只认点击。',
-    'The pointer is a person’s hand. The machine has to see it first (in view, after its reaction time), then, by persona, reaches toward it, turns side-on to keep away from it, or only glances at it; when the arm touches the hand it wraps, and if you pull the pointer away it may chase. Off = clicks only.',
+    '指针就是人的手。机器先要看见它（在视野里、过一个反应时间），再按性格迎过去、侧过身躲着或看别处；臂碰到手会缠上来，把指针拉开 = 抽手，它可能追。关掉就只认点击。',
+    'The pointer is a person’s hand. The machine has to see it first (in view, after its reaction time), then, by persona, reaches toward it, turns side-on to keep away from it, or looks elsewhere; when the arm touches the hand it wraps, and if you pull the pointer away it may chase. Off = clicks only.',
   ] as [string, string],
 } as const;
 
@@ -505,7 +508,7 @@ const COPY = {
       hand: '手',
       handHelp: BEH_HELP.hand,
       handFollow: '指针 = 手',
-      handModes: { unseen: '没看见', toward: '迎过去', away: '侧过身躲着', look: '只瞥一眼' },
+      handModes: { unseen: '没看见', toward: '迎过去', away: '侧过身躲着', look: '看别处' },
       handLine: (m: string, touch: boolean, held: boolean) => `手 · ${m}${held ? ' · 握住' : touch ? ' · 碰着' : ''}`,
       aria: '轮回机器整机台架（行为引擎驱动）；点触手或壳体注入刺激，视角按钮切换',
     },
@@ -577,12 +580,23 @@ const COPY = {
       hand: 'Hand',
       handHelp: BEH_HELP.hand,
       handFollow: 'Pointer = hand',
-      handModes: { unseen: 'not seen', toward: 'reaching toward', away: 'keeping away, side-on', look: 'just glancing' },
+      handModes: { unseen: 'not seen', toward: 'reaching toward', away: 'keeping away, side-on', look: 'looking elsewhere' },
       handLine: (m: string, touch: boolean, held: boolean) => `hand · ${m}${held ? ' · held' : touch ? ' · touching' : ''}`,
       aria: 'Reincarnation machine bench driven by the behaviour engine; touch the arms or shell to add stimuli, views by buttons',
     },
   },
 } as const;
+
+/** 有面板时把画面与面板包进 .mb-split；没有时原样返回画面（不多一层 DOM） */
+function SplitIf({ on, panel, children }: { on: boolean; panel: ReactNode; children: ReactNode }) {
+  if (!on) return <>{children}</>;
+  return (
+    <div className="mb-split">
+      {children}
+      {panel}
+    </div>
+  );
+}
 
 export function MachineBench({
   spin = true,
@@ -658,6 +672,9 @@ export function MachineBench({
   const [leaveObj, setLeaveObj] = useState(false);
   const [handFollow, setHandFollow] = useState(true);
   const [bhud, setBhud] = useState<BehaviorHud | null>(null);
+  // 实时输出面板（2026-10-19）：与「指针 = 手」同一个条件——只在 /lab 的完整面板里出
+  const outPanel = behavior && controls && !sideControls;
+  const [outSnap, setOutSnap] = useState<ActuatorSnapshot | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -860,6 +877,9 @@ export function MachineBench({
     // 指针位置（画布 CSS px）；触屏只有手指按在空白处时才有手
     const handCapable = behavior && controls && !sideControls;
     let handFollowNow = handCapable;
+    // 实时输出面板的数据源：运转时每帧记一次，约每 1/12 秒交给面板重画一次
+    const readout = handCapable ? new ActuatorReadout() : null;
+    let readoutClock = 0;
     // 存视口坐标（clientX/Y），每帧按此刻的画布位置换算——页面滚动时指针不动、画布在动
     let pointer: { cx: number; cy: number; touch: boolean; id: number } | null = null;
     /** 相机刚变过（换视角 / 透视）：等指针再动一下才重新判接触（不让臂在不动的指针下扫过去就算碰到） */
@@ -1467,6 +1487,35 @@ export function MachineBench({
           driveSmallArm(sa, feelerAngle(tg.feelers[k]));
           stepSmallArm(sa, dt);
         });
+        if (readout && running && engine) {
+          readout.update(
+            {
+              tendons: [muscles[0].value, muscles[1].value, muscles[2].value],
+              tendonTargets: [muscles[0].target, muscles[1].target, muscles[2].target],
+              servos: [smallArms[0].theta, smallArms[1].theta],
+              crankDeg: phiDeg(),
+              crankTargetDeg: phaseDeg(strokeToTheta(tg.breath.s)),
+              yaw: tg.yaw,
+              yawTarget: engine.state.yawTarget,
+              sound: tg.sound,
+              light: tg.light.level,
+            },
+            dt,
+          );
+          readoutClock += dt;
+          if (readout.values && readoutClock >= 1 / 12) {
+            readoutClock = 0;
+            const series = {} as Record<ReadoutKey, number[]>;
+            for (const c of READOUT_CHANNELS) series[c.key] = readout.series(c.key);
+            setOutSnap({
+              values: { ...readout.values },
+              targets: { ...readout.targets },
+              series,
+              capacity: readout.capacity,
+              voicing: tg.sound.on,
+            });
+          }
+        }
       } else {
         // 小触手：运转中按波形甩，停下时保持最后角度（物理继续松弛到静止）。
         // 受惊（点击）叠加在待机之上，且**暂停时也生效**——戳它就该有反应，
@@ -2387,8 +2436,11 @@ export function MachineBench({
     <div
       className={`lab-wrap${onLight ? ' on-light' : ''}${
         sideControls && controls ? ' lab-wrap--side' : ''
-      }`}
+      }${outPanel ? ' lab-wrap--out' : ''}`}
     >
+      {/* 实时输出面板挂在画面右侧（窄时落到画面下方）：画面与面板同在 .mb-split 里，控制条仍在下面。
+          不出面板的三处（Lab 1-5、主页舞台、案例页主图）DOM 与此前逐个相同，不包这一层 */}
+      <SplitIf on={outPanel} panel={<ActuatorPanel snap={outSnap} lang={lang} />}>
       <div className="lab-fig">
         <canvas ref={canvasRef} width={1400} height={1040} aria-label={engineOn ? B.aria : L.aria} />
         {behaviorUi ? <div ref={handRef} className="lab-hand" aria-hidden="true" /> : null}
@@ -2535,6 +2587,7 @@ export function MachineBench({
           <div className="lab-hud bl dim">{L.hint}</div>
         )}
       </div>
+      </SplitIf>
       {controls ? (
         behaviorUi ? (
           <div className="lab-ctl lab-ctl--tiered">

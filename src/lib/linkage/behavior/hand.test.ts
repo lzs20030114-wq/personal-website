@@ -149,6 +149,24 @@ describe('决定', () => {
     }
   });
 
+  it('看别处：瞥一眼，身体转开 30–70°、转向背着手的那一侧（10-19 整合时删过，同日恢复——沉静型在有手时靠它认出来）', () => {
+    const b = 0.5; // 手在左前方
+    const { e, log } = grown('B', seedFor('B', 'look', b));
+    const y0 = e.state.yaw.x;
+    e.push(hand(b));
+    run(e, log, 4);
+    const seen = log.find((r) => r.ev === 'HAND_SEEN');
+    expect(seen?.p?.mode).toBe('look');
+    const goal = seen!.p!.look as number;
+    const turn = goal - y0;
+    expect(Math.abs(turn)).toBeGreaterThanOrEqual(HAND.lookMin - 1e-9);
+    expect(Math.abs(turn)).toBeLessThanOrEqual(HAND.lookMax + 1e-9);
+    expect(Math.sign(turn)).toBe(-Math.sign(b - y0)); // 转向背着手的那一侧
+    run(e, log, 20);
+    // 身体真的转过去了：离手的方位比看见时远
+    expect(Math.abs(e.state.yaw.x - b)).toBeGreaterThan(Math.abs(y0 - b) + HAND.lookMin * 0.8);
+  });
+
   it('看见以后按 ⑨ 重新决定（again），不再在整圈里随便挑方向', () => {
     const { e, log } = grown('A', seedFor('A', 'toward'));
     e.push(hand(0));

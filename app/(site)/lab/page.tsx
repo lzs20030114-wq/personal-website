@@ -161,14 +161,15 @@ export default function LabPage() {
             planHash.normalizedLabHash 转到这里。 */}
         <Bench
           no="1-6"
-          lede="The machine lives four lives, one persona each. Your pointer is a person’s hand: the machine has to see it first, then, by persona, reaches toward it, turns side-on to keep away from it, or only glances at it; bring it to the large arm and the arm may wrap it. Click a small arm or the shell, or use the controls to simulate a person nearby, sounds or being lifted."
+          lede="The machine lives four lives, one persona each. Your pointer is a person’s hand: the machine has to see it first, then, by persona, reaches toward it, turns side-on to keep away from it, or looks elsewhere; bring it to the large arm and the arm may wrap it. Click a small arm or the shell, or use the controls to simulate a person nearby, sounds or being lifted."
           specs={[
             ['Personas', 'Warm · Calm · Avoidant · Random · one per life'],
             ['Life', 'Birth · growth · ageing · dying · blank'],
             ['Stimuli', 'Presence · hand · touch · grasp · sound · lift'],
-            ['Hand', 'Seen within ±120° after its reaction time · reach, keep away side-on, or just glance'],
+            ['Hand', 'Seen within ±120° after its reaction time · reach, keep away side-on, or look elsewhere'],
             ['Clock', 'Life clock ×1–×20 · motion stays real-time'],
             ['Log', 'JSON Lines · sensor, engine and life events'],
+            ['Output', 'Live panel · tendon take-up mm · servo, shaft and turntable angles · sound · light'],
             ['Machine', 'Same assembly as Lab 1-5 · breath drives the crank'],
             ['Caveats', 'Rhythms not hardware-verified · yaw is a placeholder'],
           ]}

@@ -188,6 +188,9 @@ export const HAND = {
   unwindAt: Math.PI / 3,
   /** 躲：手就在臂梢上（aimBend 很小，方向不准）时背着手弯渐变成往下缩 */
   awayDirAt: 0.15,
+  /** 看别处：相对当前朝向转开 30–70°，转向背着手的那一侧 */
+  lookMin: (30 * Math.PI) / 180,
+  lookMax: (70 * Math.PI) / 180,
 } as const;
 
 /**
@@ -1793,7 +1796,7 @@ export class BehaviorEngine {
       s.nextOrient = t + 1;
       return;
     }
-    // 看见了手：⑨ 朝向间隔到点 = 对这只手重新决定一次（迎 / 躲 / 不理），不再在整圈里随便挑方向
+    // 看见了手：⑨ 朝向间隔到点 = 对这只手重新决定一次（迎 / 躲 / 看别处），不再在整圈里随便挑方向
     if (s.hand?.seen) {
       if (s.grasp.phase !== 'IDLE' && s.grasp.phase !== 'RELEASE') s.nextOrient = t + 1;
       else this.decideHand(t, ctx, true);
@@ -2045,8 +2048,8 @@ export class BehaviorEngine {
   }
 
   /**
-   * 看见手 / ⑨ 到点（经 orient）：迎、躲还是不理（按 ⑩，抽一次随机数；不理 = 看见时朝手瞥一眼，身体不跟）。
-   * cause = 'startle'：被手吓到后不抽，直接换成 ⑩ 的「不朝人时」那一项（回避 / 乱序随机躲、热情 / 沉静不理），
+   * 看见手 / ⑨ 到点（经 orient）：迎、躲还是看别处（按 ⑩，抽一次随机数；看别处 = 朝手瞥一眼，身体转开 30–70°）。
+   * cause = 'startle'：被手吓到后不抽，直接换成 ⑩ 的「不朝人时」那一项（回避 / 乱序随机躲、热情 / 沉静看别处），
    * 免得「伸过去—碰到—惊跳—再伸」打转。
    */
   private decideHand(t: number, ctx: Ctx, again: boolean, cause?: 'startle'): void {
@@ -2068,8 +2071,16 @@ export class BehaviorEngine {
     const free = s.grasp.phase === 'IDLE' || s.grasp.phase === 'RELEASE';
     const rec: Record<string, LogValue> = { mode, again };
     if (cause) rec.cause = cause;
-    // 此前（没看见手时）定下的张望目标作废：迎 / 躲由手的跟踪接管朝向（就地停住，要不要转由分层判），不理 = 就地停住
-    if (!cause && ctx.orientOk && free) s.yawTarget = s.yawGoal;
+    // 此前（没看见手时）定下的张望目标作废：迎 / 躲由手的跟踪接管朝向（就地停住，要不要转由分层判）。
+    // 看别处（2026-10-19 整合时当成冗余删过、同日恢复）：探针随即查出它是沉静型在有手时最看得出来的那一下——
+    // 身体转开 30–70°，「看见了，不在乎」。删掉以后沉静型几乎一直朝着手，与热情、乱序随机混在一起
+    if (mode !== 'look' && !cause && ctx.orientOk && free) s.yawTarget = s.yawGoal;
+    // 看别处：相对当前朝向转开 30–70°，转向背着手的那一侧（不整圈乱转）
+    if (mode === 'look' && !cause && ctx.orientOk && free) {
+      const side = wrapPi(h.steer - s.yaw.x) >= 0 ? -1 : 1;
+      s.yawTarget = clampYaw(s.yaw.x + side * uniform(s.rng, HAND.lookMin, HAND.lookMax));
+      rec.look = s.yawTarget;
+    }
     this.emit('HAND_SEEN', rec);
     if (!cause) s.nextOrient = t + this.draw(p.orient);
     // 第一次看见：还没发的在场回应作废（看见手以后在场档被吸收，不另起程序、不另抽 ⑩），在跑的「注意到」收掉

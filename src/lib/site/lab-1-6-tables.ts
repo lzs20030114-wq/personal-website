@@ -53,7 +53,7 @@ const kRange = (p: PersonaSpec): [number, number] => [kOf(p.speed[0]), kOf(p.spe
 const ctx = (o: Partial<BuildCtx>): BuildCtx => ({ vigor: 1, gAbs: 0, breathAmp: 0.5, temper: 'warm', ...o }) as BuildCtx;
 
 const OTHERWISE: Record<PersonaSpec['otherwise'], Bilingual> = {
-  random: t('only glances at it', '只瞥一眼'),
+  random: t('looks elsewhere', '看别处'),
   away: t('keeps away', '躲'),
 };
 const DEATH: Record<PersonaSpec['death']['kind'], Bilingual> = {
@@ -191,8 +191,8 @@ function interactionMap(): LogTableBlock {
         t('Move the pointer over the bench', '在画面上移动指针'),
         t(`HAND reading at most every ${num(HAND_UI.send)} s: bearing, distance, how the arm would bend to reach it, touch radius, still for, speed; plus a presence band from its distance (Tab. 04)`, `HAND 读数，至多每 ${num(HAND_UI.send)} s 一条：方位、距离、臂要怎么弯才碰得到、碰到半径、静止多久、速度；外加按距离给的在场档（表 04）`),
         t(`seen one τ after it enters ± ${deg(HAND.fov)}; then decides by row 10: reach, otherwise row 10′`, `进 ± ${deg(HAND.fov)} 视野、过一个 τ 才看见；然后按第 10 行决定：迎，否则看第 10′ 行`),
-        t('reach = Warm follows the hand all the way, the others follow it hop by hop; keep away = withdraws the arm and turns side-on; glance = looks at it once, the body does not follow', '迎 = 热情一路跟着手走，其余一跳一停地陪着；躲 = 收臂、侧过身；瞥一眼 = 看一下，身体不跟'),
-        t(`Warm reaches ${num(P.A.toward * 100, 0)}%; Calm ${num(P.B.toward * 100, 0)}%, otherwise glances; Avoidant ${num(P.C.toward * 100, 0)}%, otherwise keeps away; Random ${num(P.D.toward * 100, 0)}%, otherwise keeps away`, `热情 ${num(P.A.toward * 100, 0)}% 迎；沉静 ${num(P.B.toward * 100, 0)}% 迎、否则瞥一眼；回避 ${num(P.C.toward * 100, 0)}% 迎、否则躲；乱序随机 ${num(P.D.toward * 100, 0)}% 迎、否则躲`),
+        t(`reach = Warm follows the hand all the way, the others follow it hop by hop; keep away = withdraws the arm and turns side-on; look elsewhere = glances at it, then turns ${num(HAND.lookMin * DEG, 0)}–${deg(HAND.lookMax)} away`, `迎 = 热情一路跟着手走，其余一跳一停地陪着；躲 = 收臂、侧过身；看别处 = 瞥一眼，身体转开 ${num(HAND.lookMin * DEG, 0)}–${deg(HAND.lookMax)}`),
+        t(`Warm reaches ${num(P.A.toward * 100, 0)}%; Calm ${num(P.B.toward * 100, 0)}%, otherwise looks elsewhere; Avoidant ${num(P.C.toward * 100, 0)}%, otherwise keeps away; Random ${num(P.D.toward * 100, 0)}%, otherwise keeps away`, `热情 ${num(P.A.toward * 100, 0)}% 迎；沉静 ${num(P.B.toward * 100, 0)}% 迎、否则看别处；回避 ${num(P.C.toward * 100, 0)}% 迎、否则躲；乱序随机 ${num(P.D.toward * 100, 0)}% 迎、否则躲`),
       ),
       row(
         t('Hold the pointer still within the arm’s reach', '指针停在臂够得着的地方'),
@@ -415,7 +415,7 @@ function handTable(): LogTableBlock {
     rows: [
       [t('Sees it', '看见'), t('a hand that enters the field of view is seen one reaction time τ later, if it is still there; the machine does not know where a hand is until it has seen it', '手进了视野、过一个反应时间 τ 还在，才算看见；看见之前机器不知道手在哪'), t(`body heading ± ${deg(HAND.fov)}; a hand touching the arm is always in view`, `机身朝向 ± ${deg(HAND.fov)}；碰着臂的手一律算在视野里`)],
       [t('Forgets it', '忘掉'), t('out of view (or off the canvas) for a while: forgotten; seen again later = decided anew', '出了视野（或离开画布）一阵：忘掉；再看见就重新决定'), t(`${num(HAND.loseAfter)} s; not while a turn is still in progress`, `${num(HAND.loseAfter)} s；正在转身时不算，转完才开始倒数`)],
-      [t('Decides', '决定'), t('when it sees the hand, then every row 9: reach (row 10), otherwise row 10′ — keep away, or glance; startled by the hand = row 10′ until the next row 9', '看见那一刻、之后每个第 9 行：按第 10 行迎，否则看第 10′ 行——躲，或瞥一眼；被这只手吓到 = 直接换成第 10′ 行，到下一个第 9 行'), '—'],
+      [t('Decides', '决定'), t('when it sees the hand, then every row 9: reach (row 10), otherwise row 10′ — keep away, or look elsewhere; startled by the hand = row 10′ until the next row 9', '看见那一刻、之后每个第 9 行：按第 10 行迎，否则看第 10′ 行——躲，或看别处；被这只手吓到 = 直接换成第 10′ 行，到下一个第 9 行'), '—'],
       [t('Turns the body', '转身'), t('reach: only the arm moves if it can reach; out of reach, the body turns to line the arm up (a hand inside arm length is met beside the straight arm, not swept by it). Keep away: turns side-on', '迎：臂够得着就只动臂；够不着才转身，让臂线对准手（手在臂长以内时转到直臂停在手旁边，不让直臂扫到手）。躲：侧过身'), t(`reachable = bend ≤ ${num(HC.reachBend)} and within ${num(HC.reachFar)} × ${num(L, 1)} mm of the arm base; turns when more than ${deg(HAND.turnAt)} off, stops within ${deg(HAND.settle)}; ± 180° travel: past the stop by less than ${deg(HAND.unwindAt)} it waits there, otherwise unwinds the long way`, `够得着 = 弯曲 ≤ ${num(HC.reachBend)}、离臂基座 ≤ ${num(HC.reachFar)} × ${num(L, 1)} mm；偏出 ${deg(HAND.turnAt)} 才转、${deg(HAND.settle)} 以内停；行程 ± 180°：越限不到 ${deg(HAND.unwindAt)} 停在限位等，超过就绕回去`)],
       [t('Follows (Warm)', '陪着（热情）'), t('follows the hand all the way, close beside it', '一路跟着手走，贴在手旁'), t(`every frame, critically damped (ω ${HC.trackOmega} rad/s) toward touch + ${HC.standGap} mm from the hand, leading by ${num(HC.leadT)} s`, `每一帧按临界阻尼（ω ${HC.trackOmega} rad/s）追向离手「碰到半径 + ${HC.standGap}」mm 处，往手动的方向前看 ${num(HC.leadT)} s`)],
       [t('Follows (others)', '陪着（其余）'), t('hops and pauses, keeping just off the hand', '一跳一停，停在离手一点的地方'), t(`each hop ≥ ${num(HC.stepMin)} s, then a pause ≥ ${num(HC.stepMin)} s; stops min(${HC.standCap}, touch + ${HC.standGap} + ${num(HC.standLag)} s × hand speed) mm away`, `每跳 ≥ ${num(HC.stepMin)} s、跳完停 ≥ ${num(HC.stepMin)} s；停在离手 min(${HC.standCap}, 碰到半径 + ${HC.standGap} + ${num(HC.standLag)} s × 手速) mm`)],
@@ -435,8 +435,8 @@ function handTable(): LogTableBlock {
       [t('Bench: clicks', '台架：点击'), t('small arm = touch it; shell: click = tap, drag = stroke, hold = hold; pressing the large arm = hand on the arm', '小触手 = 碰触须；壳：点 = 拍、拖 = 摸、按住 = 按住；按住大触手 = 手碰臂'), t(`small arm within ${BENCH_INPUT.smallArmHitPx} px; drag > ${BENCH_INPUT.strokePx} px; hold ${num(BENCH_INPUT.holdAfter)} s; large arm within ${BENCH_INPUT.armPressPx} px`, `小触手 ${BENCH_INPUT.smallArmHitPx} px 内；拖过 ${BENCH_INPUT.strokePx} px；按住 ${num(BENCH_INPUT.holdAfter)} s；大触手 ${BENCH_INPUT.armPressPx} px 内`)],
     ],
     caption: t(
-      'The hand. The pointer is a person’s hand. Once it has seen the hand the machine reaches for it, keeps away from it, or only glances at it, by persona (Tab. 02 rows 9, 10, 10′). Each beat waits for the arm to settle before the next. Distances are world millimetres, converted to pixels for the current view, so a touch is the same physical size whatever the zoom.',
-      '手。指针 = 人的手。看见以后按人格迎、躲或只瞥一眼（表 02 第 9、10、10′ 行）。每一拍都等臂停稳才进下一拍。距离一律是世界毫米，再按此刻的画面换成像素——画布多大、哪个视角，碰到的实际距离都一样。',
+      'The hand. The pointer is a person’s hand. Once it has seen the hand the machine reaches for it, keeps away from it, or looks elsewhere, by persona (Tab. 02 rows 9, 10, 10′). Each beat waits for the arm to settle before the next. Distances are world millimetres, converted to pixels for the current view, so a touch is the same physical size whatever the zoom.',
+      '手。指针 = 人的手。看见以后按人格迎、躲或看别处（表 02 第 9、10、10′ 行）。每一拍都等臂停稳才进下一拍。距离一律是世界毫米，再按此刻的画面换成像素——画布多大、哪个视角，碰到的实际距离都一样。',
     ),
   };
 }
