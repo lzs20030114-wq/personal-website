@@ -39,10 +39,8 @@ export interface PersonaSpec {
   speed: Range;
   /** ④ 响应延迟（秒） */
   latency: Range;
-  /** ⑤ 响应强度（0.4 = +40%） */
+  /** ⑤ 响应强度（0.4 = +40%）；乱序随机带「±」：响应方向也随机，可能伸也可能缩 */
   gain: Range;
-  /** ⑤ 的「±」：响应方向也随机，可能伸也可能缩 */
-  gainSigned: boolean;
   /** ⑥ 自发运动间隔（秒） */
   spont: Range;
   /** ⑥′ 人在时的自发运动间隔；null = 不变。热情人在时更密，回避人在时几乎不动（僵住） */
@@ -65,15 +63,19 @@ export interface PersonaSpec {
   death: { kind: DeathKind; dur: number; zh: string };
   /**
    * ⑬ 对人的趋避（−1…+1，乘人有多近）：+ = 人来了张开、臂朝人那边抬、出声多；− = 收拢、臂往下背着人缩、
-   * 呼吸浅快、触须收起发抖、不出声、更容易受惊、转身快；0 = 不受影响。`stanceSigned` 时取 ±区间、每次重新决定朝向时重抽。
+   * 呼吸浅快、触须收起发抖、不出声、更容易受惊、转身快；0 = 不受影响。乱序随机取 ±区间、每次重新决定朝向时重抽。
    */
   stance: Range;
-  stanceSigned: boolean;
   /** ⑭ 人走后多久恢复（秒；趋避姿态回落的时间常数） */
   settle: Range;
-  /** 区间值怎么抽：uniform 均匀；extremes 偏向两端（乱序随机：忽快忽慢、忽深忽浅，少有中间值） */
-  spread: 'uniform' | 'extremes';
 }
+
+/**
+ * 乱序随机三件事一起带（2026-10-19 第二轮审核第 8 条：此前是人格表上三个开关，只有它为真）：
+ * ⑤ 强度带符号（一半抽到负 = 缩）· ⑬ 趋避带符号（每次重新决定朝向时按 ⑩ 重抽朝不朝人）·
+ * 区间偏向两端抽（忽快忽慢、忽深忽浅，少有中间值）
+ */
+export const isRandom = (p: PersonaSpec): boolean => p.temper === 'random';
 
 const one = (v: number): Range => [v, v];
 
@@ -88,7 +90,6 @@ export const PERSONAS: Readonly<Record<PersonaKey, PersonaSpec>> = {
     speed: one(3),
     latency: one(0.2),
     gain: one(0.5),
-    gainSigned: false,
     spont: [3, 5],
     spontPresent: [2, 4],
     voiceFreq: [800, 1200],
@@ -100,9 +101,7 @@ export const PERSONAS: Readonly<Record<PersonaKey, PersonaSpec>> = {
     startle: one(0.8),
     death: { kind: 'turn', dur: 90, zh: '精力渐尽，最后朝向人停下' },
     stance: one(1),
-    stanceSigned: false,
     settle: one(3),
-    spread: 'uniform',
   },
   B: {
     key: 'B',
@@ -114,7 +113,6 @@ export const PERSONAS: Readonly<Record<PersonaKey, PersonaSpec>> = {
     speed: one(0.5),
     latency: one(2.5),
     gain: one(0.1),
-    gainSigned: false,
     spont: [20, 30],
     spontPresent: null,
     voiceFreq: [150, 300],
@@ -126,9 +124,7 @@ export const PERSONAS: Readonly<Record<PersonaKey, PersonaSpec>> = {
     startle: one(0.95),
     death: { kind: 'quiet', dur: 120, zh: '安静慢慢停下' },
     stance: one(0),
-    stanceSigned: false,
     settle: one(4),
-    spread: 'uniform',
   },
   C: {
     key: 'C',
@@ -140,7 +136,6 @@ export const PERSONAS: Readonly<Record<PersonaKey, PersonaSpec>> = {
     speed: one(2),
     latency: one(0.3),
     gain: one(0.4),
-    gainSigned: false,
     spont: [10, 16],
     spontPresent: [30, 45],
     voiceFreq: [1000, 1400],
@@ -152,9 +147,7 @@ export const PERSONAS: Readonly<Record<PersonaKey, PersonaSpec>> = {
     startle: one(0.25),
     death: { kind: 'withdraw', dur: 90, zh: '背过身慢慢停下' },
     stance: one(-1),
-    stanceSigned: false,
     settle: one(15),
-    spread: 'uniform',
   },
   D: {
     key: 'D',
@@ -166,7 +159,6 @@ export const PERSONAS: Readonly<Record<PersonaKey, PersonaSpec>> = {
     speed: [0.5, 4],
     latency: [0.3, 3],
     gain: [0.1, 0.5],
-    gainSigned: true,
     spont: [2, 30],
     spontPresent: null,
     voiceFreq: [200, 1200],
@@ -178,9 +170,7 @@ export const PERSONAS: Readonly<Record<PersonaKey, PersonaSpec>> = {
     startle: [0.2, 0.9],
     death: { kind: 'arrhythmia', dur: 60, zh: '节律紊乱后渐弱' },
     stance: [0.4, 1],
-    stanceSigned: true,
     settle: [2, 20],
-    spread: 'extremes',
   },
 };
 

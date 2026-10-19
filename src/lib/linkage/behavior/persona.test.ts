@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { PERSONAS, PERSONA_KEYS, VARIABILITY, isPersonaOrder, sampleRange } from './persona';
+import { MOTION } from './engine';
+import { GRASP } from './grasp';
+import { AGEING_PLACEHOLDER } from './life';
+import { PERSONAS, PERSONA_KEYS, VARIABILITY, isPersonaOrder, isRandom, sampleRange } from './persona';
 import { makeRng } from './rng';
 
 /**
@@ -37,9 +40,20 @@ describe('四种人格（2026-10-14 重分类：热情 / 沉静 / 回避 / 乱�
       expect(p.stance).toEqual(t.stance);
       expect(p.settle).toEqual(t.settle);
     }
-    expect(PERSONAS.D.gainSigned).toBe(true);
-    expect(PERSONAS.D.stanceSigned).toBe(true);
-    expect(PERSONA_KEYS.filter((k) => PERSONAS[k].spread === 'extremes')).toEqual(['D']);
+    expect(PERSONA_KEYS.filter((k) => isRandom(PERSONAS[k]))).toEqual(['D']);
+  });
+
+  it('抓握 / 松开 / 回应的时长按 ③ 换算后落在 0.6–12 s（2026-10-19 删掉引擎里那道钳位的依据：按现表它永远不起作用）', () => {
+    // 能起缠、松手、回应的时候都还活着（死亡开始那一刻先松手，之后不再起），所以速度只乘衰老、不乘死亡的余力
+    for (const k of PERSONA_KEYS) {
+      const [lo, hi] = PERSONAS[k].speed;
+      const vMin = lo * (1 - VARIABILITY.response) * (1 - AGEING_PLACEHOLDER.speed);
+      const vMax = hi * (1 + VARIABILITY.response);
+      for (const base of [GRASP.wrap, GRASP.release, MOTION.response]) {
+        expect(base / Math.sqrt(vMin), `${k} ${base} 最慢`).toBeLessThan(12);
+        expect(base / Math.sqrt(vMax), `${k} ${base} 最快`).toBeGreaterThan(0.6);
+      }
+    }
   });
 
   it('四个名字与性格一一对应（v2 动作程序按性格换结构，不读字母）', () => {

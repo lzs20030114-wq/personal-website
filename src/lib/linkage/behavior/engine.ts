@@ -36,6 +36,7 @@ import {
   type Temper,
   VARIABILITY,
   isPersonaOrder,
+  isRandom,
   midOf,
   sampleRange,
 } from './persona';
@@ -149,9 +150,6 @@ export const ENGINE = {
 export const MOTION = {
   /** 抓握接手臂时那一笔回应的记账时长（秒；动作由抓握状态机给） */
   response: 2.5,
-  /** 抓握 / 松开的时长上下限（秒） */
-  durMin: 0.6,
-  durMax: 12,
   /** 回应一次最多转多少（rad）：手还搭在壳上时别把机身一下转走 */
   turnMax: 0.8,
   /** 臂的静息弯曲（差动幅度分数）与弯向漂移（rad/s × k_v）——「不要直挺挺地伸着」 */
@@ -1272,7 +1270,7 @@ export class BehaviorEngine {
     s.restDir = uniform(s.rng, -Math.PI, Math.PI);
     // ⑬ 趋避：姿态清零；倾向按人格（乱序随机先抽一个，之后每次重新决定朝向时重抽）
     s.social = 0;
-    this.drawLean(p, p.stanceSigned ? chance(s.rng, p.toward) : true);
+    this.drawLean(p, isRandom(p) ? chance(s.rng, p.toward) : true);
     // 「诞生 40 s 起」是生命时间，折成真实秒要 ÷ 倍率（倍率 1 时与 M1 逐位相同）
     s.nextSpont = t + LIFE.spontAt / s.lifeRate;
     s.nextOrient = t + LIFE.spontAt / s.lifeRate;
@@ -1306,7 +1304,7 @@ export class BehaviorEngine {
 
   /** 从这一世人格的一项参数取值（乱序随机的区间偏向两端抽） */
   private draw(range: Range, jitter = 0, rng: Rng = this.s.rng): number {
-    return sampleRange(rng, range, jitter, PERSONAS[this.persona()].spread === 'extremes');
+    return sampleRange(rng, range, jitter, isRandom(PERSONAS[this.persona()]));
   }
 
   /** 抽一次 ④ 响应延迟（± 变异性、× 衰老） */
@@ -1317,7 +1315,7 @@ export class BehaviorEngine {
   /** 抽一次 ⑤ 响应强度（± 变异性、× 衰老；乱序随机一半抽到负的） */
   private drawGain(ctx: Ctx): number {
     const g = this.draw(ctx.p.gain, VARIABILITY.response) * ctx.age.gain;
-    return ctx.p.gainSigned && chance(this.s.rng, 0.5) ? -g : g;
+    return isRandom(ctx.p) && chance(this.s.rng, 0.5) ? -g : g;
   }
 
   private temper(): Temper {
@@ -1330,7 +1328,7 @@ export class BehaviorEngine {
    */
   private drawLean(p: PersonaSpec, toward: boolean): void {
     const s = this.s;
-    s.lean = p.stanceSigned ? (toward ? 1 : -1) * this.draw(p.stance) : p.stance[0];
+    s.lean = isRandom(p) ? (toward ? 1 : -1) * this.draw(p.stance) : p.stance[0];
     s.settleT = this.draw(p.settle);
   }
 
@@ -1584,7 +1582,7 @@ export class BehaviorEngine {
   }
 
   private gestureDur(base: number): number {
-    return clamp(base / Math.sqrt(this.s.speed), MOTION.durMin, MOTION.durMax);
+    return base / Math.sqrt(this.s.speed);
   }
 
   // ---------------------------------------------------------------- 动作程序
@@ -1963,7 +1961,7 @@ export class BehaviorEngine {
       to = uniform(s.rng, -Math.PI, Math.PI);
     }
     // ⑬ 正负随机的人格：这一回合朝不朝人，姿态就跟着凑过来还是躲开
-    if (p.stanceSigned && mode !== 'random') this.drawLean(p, mode === 'toward');
+    if (isRandom(p) && mode !== 'random') this.drawLean(p, mode === 'toward');
     s.yawTarget = to;
     this.emit('ORIENT', { mode, to });
     s.nextOrient = t + this.draw(this.orientRange(p));
@@ -2246,11 +2244,11 @@ export class BehaviorEngine {
     const other: HandMode = p.otherwise === 'away' ? 'away' : 'look';
     // 怕的时候（⑬ 的躲那一半 N）不迎——⑩ × (1 − N)；人走远、N 回落了才偶尔试探。正负随机的人格不在此列
     //（它的姿态正是由这一抽决定的）。随机数照抽一次，可复现性不变
-    const towardP = !p.stanceSigned ? p.toward * (1 - this.socialPN()[1]) : p.toward;
+    const towardP = !isRandom(p) ? p.toward * (1 - this.socialPN()[1]) : p.toward;
     const mode: HandMode = cause ? other : chance(s.rng, towardP) ? 'toward' : other;
     h.mode = mode;
     // ⑬ 正负随机的人格：对这只手是凑还是躲，姿态跟着走
-    if (p.stanceSigned && !cause && mode !== 'look') this.drawLean(p, mode === 'toward');
+    if (isRandom(p) && !cause && mode !== 'look') this.drawLean(p, mode === 'toward');
     h.turning = false;
     h.turnSign = 0;
     // 重新决定打断了正在绕回的长路：就地停下（下面的「看别处」会另给目标）
@@ -3279,7 +3277,7 @@ export class BehaviorEngine {
     let a = this.draw(p.breathAmp, VARIABILITY.breath);
     // 偏向两端抽（乱序随机）时周期最短、幅度最大常常凑在同一口气上：行程速度 π·a/T 封在 0.9/s，
     // 免得曲柄（4.19 rad/s，spec §6.2）追不上——快的那几口自动变浅变慢一点
-    if (p.spread === 'extremes') T = Math.max(T, (Math.PI * a) / EXTREME_BREATH_RATE);
+    if (isRandom(p)) T = Math.max(T, (Math.PI * a) / EXTREME_BREATH_RATE);
     if (ctx.age.jitter > 0) T *= 1 + uniform(s.rng, -ctx.age.jitter, ctx.age.jitter);
     if (ctx.death) {
       if (ctx.death.irregular) {

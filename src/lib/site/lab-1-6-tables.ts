@@ -8,7 +8,7 @@
 //
 // 纯数据、零 DOM；守门 = lab-1-6-tables.test.ts（形状按日志的 schema 校、与引擎的判定一致）。
 import type { Bilingual, LogCell, LogTableBlock } from './log-schema';
-import { PERSONAS, PERSONA_KEYS, type PersonaKey, type PersonaSpec, type Range } from '../linkage/behavior/persona';
+import { PERSONAS, PERSONA_KEYS, type PersonaKey, type PersonaSpec, type Range, isRandom } from '../linkage/behavior/persona';
 import { ENGINE, HAND, MOTION, SOCIAL, WINCE_KINDS } from '../linkage/behavior/engine';
 import { TAU_FAST, TAU_SLOW, V2, byTau, respD, slowness, spontE, tierSpeed, type BuildCtx, type Tier } from '../linkage/behavior/vocab2';
 import { DIST, HC, strainTries } from '../linkage/behavior/vocab2-hand';
@@ -75,7 +75,7 @@ function personaTable(): LogTableBlock {
       row('2', t('Breath depth (share of the stroke)', '呼吸幅度（行程分数）'), (p) => range(p.breathAmp)),
       row('3', t('Movement speed (cm/s)', '运动速度（cm/s）'), (p) => range(p.speed)),
       row('4', t('Reaction time τ (s)', '响应延迟 τ（s）'), (p) => range(p.latency)),
-      row('5', t('Response strength', '响应强度'), (p) => (p.gainSigned ? `±${range(p.gain)}` : `+${range(p.gain)}`)),
+      row('5', t('Response strength', '响应强度'), (p) => (isRandom(p) ? `±${range(p.gain)}` : `+${range(p.gain)}`)),
       row('6', t('Spontaneous movement every (s)', '自发动作间隔（s）'), (p) => range(p.spont)),
       row('6′', t('… while someone is present (any band)', '… 有人在时（任一档）'), (p) => (p.spontPresent ? range(p.spontPresent) : SAME_AS('6'))),
       row('7', t('Voice pitch (Hz)', '声音基频（Hz）'), (p) => range(p.voiceFreq, 0)),
@@ -86,7 +86,7 @@ function personaTable(): LogTableBlock {
       row('10′', t('Otherwise', '不朝人时'), (p) => OTHERWISE[p.otherwise]),
       row('11', t('Startle threshold θ', '惊吓阈值 θ'), (p) => range(p.startle)),
       row('12', t('How it dies (s)', '死法（s）'), (p) => t(`${DEATH[p.death.kind].en} · ${p.death.dur}`, `${DEATH[p.death.kind].zh} · ${p.death.dur}`)),
-      row('13', t('Toward or away from people', '对人的趋避'), (p) => (p.stanceSigned ? `±${range(p.stance)}` : signed(p.stance[0]))),
+      row('13', t('Toward or away from people', '对人的趋避'), (p) => (isRandom(p) ? `±${range(p.stance)}` : signed(p.stance[0]))),
       row('14', t('Recovers after people leave (s)', '人走后多久恢复（s）'), (p) => range(p.settle)),
     ],
     caption: t(
@@ -337,11 +337,11 @@ const stim = (label: string): { kind: SensorKind; I: number } => {
 
 /** 有方向的回应按 ⑩ 抽变体：迎（概率第 10 行；乱序随机先要抽到正的强度），否则热情 / 沉静原地做、回避 / 乱序随机躲 */
 function variantShares(): Bilingual {
-  const towardOf = (k: PersonaKey) => P[k].toward * (P[k].gainSigned ? 0.5 : 1);
+  const towardOf = (k: PersonaKey) => P[k].toward * (isRandom(P[k]) ? 0.5 : 1);
   const pct = (x: number) => `${num(x * 100, 0)}%`;
   const parts = PERSONA_KEYS.map((k) => {
     const tw = towardOf(k);
-    const other = P[k].otherwise === 'away' || P[k].gainSigned ? t('avoids', '躲') : t('does it in place', '原地做');
+    const other = P[k].otherwise === 'away' || isRandom(P[k]) ? t('avoids', '躲') : t('does it in place', '原地做');
     return t(`${k} ${pct(tw)} toward, else ${other.en}`, `${k} ${pct(tw)} 迎、否则${other.zh}`);
   });
   return t(parts.map((x) => x.en).join(' · '), parts.map((x) => x.zh).join(' · '));
