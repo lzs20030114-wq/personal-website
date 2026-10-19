@@ -56,7 +56,8 @@ export interface LogHeader {
 
 /** 取整到 d 位小数（去掉 -0，免得同一个量序列化出两种写法） */
 const round = (n: number, d: number): number => {
-  const k = 10 ** d;
+  let k = 1;
+  for (let i = 0; i < d; i++) k *= 10;
   const v = Math.round(n * k) / k;
   return v === 0 ? 0 : v;
 };

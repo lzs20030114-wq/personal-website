@@ -22,6 +22,15 @@ const AXIS = (2 * Math.PI) / 3;
 const DEG = Math.PI / 180;
 const wrapPi = (a: number): number => a - TAU * Math.floor((a + Math.PI) / TAU);
 const clamp = (x: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, x));
+/**
+ * 整数次方（连乘）。引擎里不用 `**` / Math.pow：Node 24 起 V8 换了乘方的实现，约一成的输入末位与 Node 22 不同，
+ * 金样本逐位比对在 Vercel（Node 24）上会红（2026-10-19 部署事故）；连乘与 exp / log 在 Node 20 / 22 / 24 上逐位相同
+ */
+const powInt = (b: number, n: number): number => {
+  let v = 1;
+  for (let i = 0; i < n; i++) v *= b;
+  return v;
+};
 
 
 /** 手感常量（均待作者拍板） */
@@ -322,7 +331,7 @@ export const STARTLE_PRE = new Set(['latency', 'flex', 'zvHold', 'zv2', 'recoilH
 export function buildStartle(c: BuildCtx, s: StartleIn): { phases: Phase[]; busy: number } {
   const m = clamp((s.I - s.th) / Math.max(1e-6, 1 - s.th), 0, 1);
   let D = clamp(V2.startleDMin + (V2.startleDMax - V2.startleDMin) * m, V2.startleDMin, V2.startleDMax) * (0.75 + 0.25 * c.vigor);
-  D = s.retract ? V2.startleDMin : Math.max(V2.startleDMin, D * V2.repeatDecay ** s.repeats);
+  D = s.retract ? V2.startleDMin : Math.max(V2.startleDMin, D * powInt(V2.repeatDecay, s.repeats));
   const axis = s.retract ? nearestAxisDir(c.cur.dir) : s.axis ?? awayAxis(s.side, c.cur);
   // 臂已经沿这根轴卷着（再吓一次、恢复途中）：惊跳只会卷得更深，不会把臂打开（审查抓到：递减后的目标比此刻还浅）
   const along = dOf(c.cur) * Math.cos(wrapPi(c.cur.dir - axis));

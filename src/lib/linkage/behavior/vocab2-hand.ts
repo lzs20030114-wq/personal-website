@@ -216,8 +216,9 @@ export const bodyness = (dist: number): number => 1 - smooth01((dist - DIST.body
 // ------------------------------------------------------------------ 几何
 
 /** 接触灵敏度：臂在手那一点上每多一个差动走多少 mm（方案 3 标定，handReading 公式在这些点上误差 ≤ 0.025 差动） */
+// 非整数次方写成 exp(k·log x)，不用 `**`（理由见 vocab2.ts 的 powInt）
 export function gainAt(r: number, D: number): number {
-  return HC.gainK * clamp(r / HC.armL, 0.25, 1) ** HC.gainExp * (1 - HC.gainDrop * Math.min(Math.max(D, 0), 0.5));
+  return HC.gainK * Math.exp(HC.gainExp * Math.log(clamp(r / HC.armL, 0.25, 1))) * (1 - HC.gainDrop * Math.min(Math.max(D, 0), 0.5));
 }
 
 /** 离轴姿态：只用弯曲（超过 1 的部分由执行层的深缠行程给），封顶 0.48，不带深卷 */

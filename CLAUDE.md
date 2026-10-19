@@ -279,6 +279,7 @@
 - **Vercel Hobby 限额：100 次部署/天**——2026-07-10 因高频迭代烧穿（工作分支预览 + master 生产双倍计数），表现为「webhook 静默失灵、无任何新部署」，重连 Git 无效。
 - 防复发：vercel.json `git.deploymentEnabled` 已关工作分支预览（**换新工作分支名时需同步加条目**）；主线迭代**攒批次再推 master**，不要每改一轮推一次。
 - 限额撞墙时的辨认法：Vercel 项目 Deployments 页 Create Deployment 会报 `api-deployments-free-per-day`。
+- **Vercel 用 Node 24 构建，本机是 Node 22（2026-10-19 事故入档）**：Node 24 的 V8 换了乘方（`**` / `Math.pow`）的实现，约一成的输入末位与 22 不同（sin / cos / exp / log / hypot / atan2 / sqrt 三个版本逐位相同）。行为引擎金样本是逐位比对的，10-19 推的三次 master（7a9e80a / 88d9722 / ca21953）都在 Vercel 的测试步骤红掉、线上停在 10-15 的 9c27f5d。修法：行为引擎里不用乘方（连乘 / exp·log），`engine.golden.test.ts` 守门扫源码。**验证逐位类改动要拿 Node 24 跑一遍**（nodejs.org/dist 下载二进制即可，`PATH=<node24>/bin:$PATH npm test`）。
 
 ## 架构速记（M4 入档，2026-07-10）
 

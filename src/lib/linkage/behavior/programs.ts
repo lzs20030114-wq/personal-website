@@ -17,6 +17,7 @@ const clamp01 = (x: number): number => Math.min(1, Math.max(0, x));
 /** 缓动：hold 不动 · lin 匀速 · mj 最小急动（钟形速度，「刻意」的手）· out 先快后慢 · out4 更猛的先快 · in 先慢后快（「爬」） */
 export type Ease = 'hold' | 'lin' | 'mj' | 'out' | 'out4' | 'in';
 
+// 次方一律写成连乘，不用 `**`（理由见 vocab2.ts 的 powInt）
 export function ease(e: Ease, u: number): number {
   const x = clamp01(u);
   switch (e) {
@@ -26,10 +27,14 @@ export function ease(e: Ease, u: number): number {
       return x;
     case 'mj':
       return x * x * x * (10 + x * (-15 + 6 * x));
-    case 'out':
-      return 1 - (1 - x) ** 3;
-    case 'out4':
-      return 1 - (1 - x) ** 4;
+    case 'out': {
+      const y = 1 - x;
+      return 1 - y * y * y;
+    }
+    case 'out4': {
+      const y2 = (1 - x) * (1 - x);
+      return 1 - y2 * y2;
+    }
     case 'in':
       return x * x * x;
     default:
