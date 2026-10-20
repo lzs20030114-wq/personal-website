@@ -1,69 +1,69 @@
 {
-  "source": "2026-10-19 人格差异加强（看别处恢复 · 沉静 ⑩ 0.25 · 乱序随机 ⑨ 3–15 s）",
+  "source": "2026-10-20 呼吸收拢、唤醒改成呼吸变化的主要来源",
   "cases": [
     {
       "seed": 11,
       "lifeRate": 1,
-      "log": "97c1da1a44d244bf",
-      "frames": "6c5f4ea38d978ec6"
+      "log": "0c068b47376f9f7a",
+      "frames": "3a77b9a9bbb47f84"
     },
     {
       "seed": 23,
       "lifeRate": 1,
-      "log": "dbad90e60551efd1",
-      "frames": "bd82cab69da67a73"
+      "log": "42895ab6fa956f4b",
+      "frames": "1f6bce6c9f6fd6e5"
     },
     {
       "seed": 131,
       "lifeRate": 10,
-      "log": "21c3668bf2efc794",
-      "frames": "7f4170602d436a13"
+      "log": "8e49365861bebe37",
+      "frames": "51ee1c96225f27ff"
     },
     {
       "seed": 151,
       "lifeRate": 10,
-      "log": "6c43d8948797a213",
-      "frames": "f8ce69b8034c2615"
+      "log": "341f23bcfae50f09",
+      "frames": "65bf90f23ec06777"
     },
     {
       "seed": 161,
       "lifeRate": 60,
-      "log": "c7a4d453744a6d4c",
-      "frames": "d8149c05d85db3d2"
+      "log": "5c7f530f63db2622",
+      "frames": "ca58adebe0674a66"
     },
     {
       "seed": 171,
       "lifeRate": 60,
-      "log": "077c7ac2d6bd1903",
-      "frames": "279ba69d196eed56"
+      "log": "72f6a853151ba3e0",
+      "frames": "9af75ef19a22fd7a"
     }
   ],
   "hand": {
-    "source": "2026-10-19 人格差异加强（看别处恢复 · 沉静 ⑩ 0.25 · 乱序随机 ⑨ 3–15 s）",
+    "source": "2026-10-20 呼吸收拢、唤醒改成呼吸变化的主要来源",
     "cases": [
       {
         "seed": 211,
         "lifeRate": 1,
-        "log": "d84fe804d1b5f68f",
-        "frames": "9b5807de4cc5ff5d"
+        "log": "a6bdbb8911736152",
+        "frames": "4a258037d57d602c"
       },
       {
         "seed": 223,
         "lifeRate": 1,
-        "log": "ea8bb9aed5d4c287",
-        "frames": "566d9ce3d83637e0"
+        "log": "7287e077c51077dc",
+        "frames": "f5fbd6fe0057d285"
       },
       {
         "seed": 241,
         "lifeRate": 10,
-        "log": "5f9aee02d07e735f",
-        "frames": "d7f0f3feb8b11c27"
+        "log": "3e5217812df8a0da",
+        "frames": "08c937c4b59744e9"
       },
       {
         "seed": 251,
         "lifeRate": 10,
-        "log": "8173f4d2a786b4c5",
-        "frames": "11419a5b29018832"
+        "log": "8e4f7f7e32767d39",
+        "frames": "937b5b17c3d17f70"
       }
     ]
   }

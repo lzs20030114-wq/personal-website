@@ -74,7 +74,10 @@ function nearPerson(s: number): { breath: Bilingual; arm: Bilingual; feelers: Bi
   }
   if (p > 0) {
     return {
-      breath: t(`centre ${num(S.openCenter * p)} toward open · depth × ${num(1 + S.openAmp * p)}`, `中心往张开端 ${num(S.openCenter * p)} · 幅度 × ${num(1 + S.openAmp * p)}`),
+      breath: t(
+        `centre ${num(S.openCenter * p)} toward open · depth × ${num(1 + S.openAmp * p)} · period × ${num(1 - S.openPeriod * p)}: a little deeper and quicker`,
+        `中心往张开端 ${num(S.openCenter * p)} · 幅度 × ${num(1 + S.openAmp * p)} · 周期 × ${num(1 - S.openPeriod * p)}：深一点、快一点`,
+      ),
       arm: t(`raised toward the person, bend + ${num(S.openBend * p)}`, `朝人那一侧抬起，弯曲 + ${num(S.openBend * p)}`),
       feelers: t(`sweep × ${num(1 + S.feelerOpen * p)}`, `扫幅 × ${num(1 + S.feelerOpen * p)}`),
       voice: t(`× ${num(1 + S.voiceOpen * p)}`, `× ${num(1 + S.voiceOpen * p)}`),
@@ -307,8 +310,8 @@ function personaTable(): LogTableBlock {
     kind: 'table',
     head: ['#', t('Parameter', '参数'), ...PERSONA_HEAD],
     rows: [
-      row('1', t('Breath period (s)', '呼吸周期（s）'), (p) => range(p.breathPeriod)),
-      row('2', t('Breath depth (share of the stroke)', '呼吸幅度（行程分数）'), (p) => range(p.breathAmp)),
+      row('1', t('Breath period at rest (s)', '平时的呼吸周期（s）'), (p) => range(p.breathPeriod)),
+      row('2', t('Breath depth at rest (share of the stroke)', '平时的呼吸幅度（行程分数）'), (p) => range(p.breathAmp)),
       row('3', t('Movement speed (cm/s)', '运动速度（cm/s）'), (p) => range(p.speed)),
       row('4', t('Reaction time τ (s)', '响应延迟 τ（s）'), (p) => range(p.latency)),
       row('5', t('Response size', '回应幅度'), (p) => range(p.gain)),
@@ -450,10 +453,10 @@ function limitsTable(): LogTableBlock {
     rows: [
       [t('One life', '一世'), t(`birth ${LIFE.birth} · growth ${LIFE.grow} · ageing ${LIFE.age} ± ${LIFE.deathWindow} · dying (row 12) · blank ${LIFE.blank} s`, `诞生 ${LIFE.birth} · 成长 ${LIFE.grow} · 衰老 ${LIFE.age} ± ${LIFE.deathWindow} · 死亡（第 12 行）· 空白 ${LIFE.blank} s`), t('life clock ×1–×20 speeds up only this; breathing and movement stay real-time', '生命时钟 ×1–×20 只加快它，呼吸与动作不跟着快')],
       [t('After birth', '诞生以后'), t(`breathing eases in over ${LIFE.breathRamp} s; reacts from ${LIFE.respondAt} s; spontaneous moves and turning from ${LIFE.spontAt} s`, `呼吸 ${LIFE.breathRamp} s 缓入；${LIFE.respondAt} s 起回应；${LIFE.spontAt} s 起自发动作与转向`), '—'],
-      [t('Arousal', '唤醒度'), t(`+ ${num(A.gain)}·I per stimulus (≤ 1), falls with ${A.tau} s; breath period × (1 − ${num(A.breath)}a), spontaneous interval × (1 − ${num(A.spont)}a), small-arm sweep × (1 + ${num(A.feeler)}a)`, `每次刺激 + ${num(A.gain)}·I（≤ 1），回落 ${A.tau} s；呼吸周期 × (1 − ${num(A.breath)}a)、自发间隔 × (1 − ${num(A.spont)}a)、触须扫幅 × (1 + ${num(A.feeler)}a)`), t('excited after being touched: breathes faster, moves more often', '被碰过之后兴奋一阵：呼吸快、动得勤')],
+      [t('Arousal', '唤醒度'), t(`+ row 5 × I per stimulus (≤ 1), falls with ${A.tau} s; breathes (1 + ${num(A.breath)}a) × as fast and shallower (depth × (1 − ${num(A.shallow)}a)), spontaneous interval × (1 − ${num(A.spont)}a), small-arm sweep × (1 + ${num(A.feeler)}a)`, `每次刺激 + 第 5 行 × I（≤ 1），回落 ${A.tau} s；呼吸快到 (1 + ${num(A.breath)}a) 倍、变浅（幅度 × (1 − ${num(A.shallow)}a)），自发间隔 × (1 − ${num(A.spont)}a)、触须扫幅 × (1 + ${num(A.feeler)}a)`), t(`breathing is the same physiology in all four; what changes it is being stirred up: after being touched it breathes fast and shallow for a while and moves more often. Warm is stirred most (${num(P.A.gain[0])}·I), Calm hardly at all (${num(P.B.gain[0])}·I)`, `呼吸是四种人格共有的生理信号，让它变的是被搅动：被碰过之后一阵呼吸又快又浅、动得勤。热情最容易被搅动（${num(P.A.gain[0])}·I），沉静几乎不（${num(P.B.gain[0])}·I）`)],
       [t('Grasp', '抓握'), t(`wrap to the stop (hand not seen) ${num(GRASP.wrap)} s ÷ k, bench tension at ${num(CATCH_AT * 100, 0)}%; let go ${num(GRASP.release)} s ÷ k (${num(GRASP.deathRelease)} × slower when dying); bend at the stop ${num(GRASP.limit)}; holding a person very light ${num(GRASP.human)} (a seen hand: Tab. 04) · an object at least ${num(GRASP.object)}; chases at most ${GRASP.maxChases} time`, `缠到限位（没看见手时）${num(GRASP.wrap)} s ÷ k，缠到 ${num(CATCH_AT * 100, 0)}% 时台架判张力；松开 ${num(GRASP.release)} s ÷ k（死的时候慢 ${num(GRASP.deathRelease)} 倍）；限位处弯曲 ${num(GRASP.limit)}；握人极轻 ${num(GRASP.human)}（看见了的手按表 04）· 握物至少 ${num(GRASP.object)}；脱手后至多追 ${GRASP.maxChases} 次`), t('tension and touch = a person; tension only = an object; reached the stop with no tension = nothing (T-0707-1)', '张力 + 电极 = 人；只有张力 = 物；到限位没有张力 = 抓空（T-0707-1）')],
       [t('Crank', '曲柄'), t(`≤ ${num(CRANK.maxSpeed, 2)} rad/s (≤ 1° per substep, ≤ ${CRANK.maxSubsteps} substeps per frame)`, `≤ ${num(CRANK.maxSpeed, 2)} rad/s（每子步 ≤ 1°、每帧 ≤ ${CRANK.maxSubsteps} 子步）`), t('the five-ring solve stays on its branch only within 1° per substep', '五环解算每子步 1° 以内才不跳支')],
-      [t('Breathing stroke speed', '呼吸行程速度'), t(`π·depth / period ≤ ${num(V2.breathRateCap)}/s after all cues; Random draws are capped at 0.9/s`, `π·幅度 / 周期 ≤ ${num(V2.breathRateCap)}/s（叠完所有提示之后）；乱序随机抽的时候先封 0.9/s`), t('so the crank keeps up (set from measured engine traces)', '让曲柄追得上（按引擎实测轨迹定）')],
+      [t('Breathing stroke speed', '呼吸行程速度'), t(`π·depth / period ≤ ${num(V2.breathRateCap)}/s after all cues`, `π·幅度 / 周期 ≤ ${num(V2.breathRateCap)}/s（叠完所有提示之后）`), t('so the crank keeps up (set from measured engine traces)', '让曲柄追得上（按引擎实测轨迹定）')],
       [t('Arm bend off the tendon axes', '离轴差动'), `≤ ${num(D_FLAT_MAX)}`, t('0.55 between two tendons was measured unstable', '两腱之间实测 0.55 失稳')],
       [t('Arm bend, overall (except the deep curl)', '差动封顶（深卷之外）'), `${num(D_MAX)}`, t('same', '同上')],
       [t('Deep curl', '深卷'), t(`startle only, to ${num(D_SPAN + D_DEEP_SPAN, 3)} (main tendon fully pulled)`, `只有惊跳用，到 ${num(D_SPAN + D_DEEP_SPAN, 3)}（主腱拉满）`), t('“use it, but not too much”', '「用，但不要用太多」')],

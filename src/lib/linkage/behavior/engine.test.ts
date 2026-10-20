@@ -193,11 +193,44 @@ describe('人格在行为里读得出来', () => {
     }
   });
 
-  it('呼吸：D 每次重抽，周期铺满 2–8 s、均值约 5 s', () => {
+  it('呼吸：D 每次重抽，周期铺满表的区间、均值在中间（2026-10-20 起区间收到 3.2–4.8 s，呼吸不随性格大变）', () => {
     const all = [51, 52, 53].flatMap((seed) => growBreaths('D', seed).period);
-    expect(Math.min(...all)).toBeLessThan(2.6);
-    expect(Math.max(...all)).toBeGreaterThan(7.4);
-    expect(Math.abs(mean(all) / 5 - 1)).toBeLessThan(0.12);
+    const [lo, hi] = PERSONAS.D.breathPeriod;
+    expect(Math.min(...all)).toBeLessThan(lo + 0.1 * (hi - lo));
+    expect(Math.max(...all)).toBeGreaterThan(hi - 0.1 * (hi - lo));
+    expect(Math.abs(mean(all) / ((lo + hi) / 2) - 1)).toBeLessThan(0.08);
+  });
+
+  it('呼吸是生理信号（2026-10-20 作者）：四种人格平时的呼吸差得不多，被碰过之后才变急促——快、浅，热情最明显、沉静几乎不变', () => {
+    // 平时：四种人格每口气的周期都在 3–5 s 之间，最快与最慢差不到 1.5 倍
+    const rest = PERSONA_KEYS.map((k) => mean(growBreaths(k, 41).period));
+    expect(Math.min(...rest)).toBeGreaterThan(3);
+    expect(Math.max(...rest)).toBeLessThan(5);
+    expect(Math.max(...rest) / Math.min(...rest)).toBeLessThan(1.5);
+    // 被碰：戳 · 拍 · 戳，之后 8–23 s 一口气实际走多长（相位回绕之间）与没被碰的同一段相比
+    const breathLen = (k: PersonaKey, poked: boolean): number => {
+      const t0 = LIFE.birth + 20;
+      const inputs = poked
+        ? [
+            at(t0, { kind: 'SHELL_STROKE', half: 'L', touch: 'poke' }),
+            at(t0 + 3, { kind: 'SHELL_STROKE', half: 'L', touch: 'pat' }),
+            at(t0 + 6, { kind: 'SHELL_STROKE', half: 'L', touch: 'poke' }),
+          ]
+        : [];
+      const e = new BehaviorEngine({ seed: 43, order: first(k) });
+      const wraps: number[] = [];
+      let phi = e.state.phi;
+      drive(e, feeder(inputs), t0 + 23, (eng) => {
+        if (eng.state.phi < phi - 0.5 && eng.time >= t0 + 8) wraps.push(eng.time);
+        phi = eng.state.phi;
+      });
+      return (wraps[wraps.length - 1] - wraps[0]) / (wraps.length - 1);
+    };
+    const quicken = (k: PersonaKey) => breathLen(k, false) / breathLen(k, true);
+    expect(quicken('A')).toBeGreaterThan(1.3);
+    expect(quicken('C')).toBeGreaterThan(1.2);
+    expect(quicken('B')).toBeLessThan(1.15);
+    expect(quicken('A')).toBeGreaterThan(quicken('B'));
   });
 
   it('自发动作间隔：A/B/C 均值落在表的区间中点 ±12%（2026-10-19 删掉了「人在时另一套间隔」）', () => {
@@ -530,7 +563,7 @@ describe('生命钟（M2：台架「生命时钟」档）', () => {
     expect(busyFast.filter((m) => m.ev === 'LIFE_DEATH')).toEqual(fast.filter((m) => m.ev === 'LIFE_DEATH'));
   });
 
-  it('倍率只压生命、不压动作：×10 下热情型成长段的呼吸周期仍约 2 秒', () => {
+  it('倍率只压生命、不压动作：×10 下热情型成长段的呼吸周期仍是表里的值（不跟着快 10 倍）', () => {
     const e = new BehaviorEngine({ seed: 41, order: first('A'), lifeRate: 10 });
     const period: number[] = [];
     let phi = e.state.phi;
@@ -539,7 +572,7 @@ describe('生命钟（M2：台架「生命时钟」档）', () => {
       if (s.phase === 'GROW' && s.phi < phi && !s.sighNow) period.push(s.period);
       phi = s.phi;
     });
-    expect(period.length).toBeGreaterThan(8);
+    expect(period.length).toBeGreaterThan(5);
     expect(Math.abs(mean(period) / PERSONAS.A.breathPeriod[0] - 1)).toBeLessThan(0.06);
   });
 
@@ -670,7 +703,9 @@ describe('⑬ 对人的趋避（2026-10-14 人格重分类）', () => {
     const sC = mean(c.rows.map((r) => r.s));
     const s0 = mean(none.map((f) => f.targets.breath.s));
     expect(sC - s0).toBeGreaterThan(0.15);
-    expect(Math.max(...c.rows.map((r) => r.s)) - Math.min(...c.rows.map((r) => r.s))).toBeLessThan(0.3 * 0.6);
+    // 变浅：起伏比同一段没有人时小三成以上（2026-10-20 四种人格平时的呼吸收拢后改成与自己比）
+    const swing = (xs: number[]) => Math.max(...xs) - Math.min(...xs);
+    expect(swing(c.rows.map((r) => r.s))).toBeLessThan(0.7 * swing(none.map((f) => f.targets.breath.s)));
     expect(mean(c.rows.map((r) => r.up))).toBeLessThan(-0.3);
     expect(mean(c.rows.map((r) => r.bend))).toBeGreaterThan(0.45);
     expect(mean(c.rows.map((r) => r.feeler))).toBeGreaterThan(0.5);

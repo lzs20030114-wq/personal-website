@@ -367,7 +367,11 @@ describe('跟踪', () => {
     for (let t = 0.5; t < 30; t += 0.05) {
       inputs.push({ t: Math.round(t * 100) / 100, input: { kind: 'HAND', on: true, bearing: 0, dist: 350, face: 0, aimDir: aim(t), aimBend: 0.9, aimDist: 250, touch: 32, still: 0, v: 120 } });
     }
-    const res = runSession({ seed: 2, order: ['A', 'B', 'C', 'D'], lifeRate: 1, inputs, until: 30, frameEvery: 0.05 });
+    // 种子取第一个「看见手时决定迎」的（⑩ 0.9：十次里一次是看别处，那不是这条要测的）
+    let res = runSession({ seed: 1, order: ['A', 'B', 'C', 'D'], lifeRate: 1, inputs, until: 30, frameEvery: 0.05 });
+    for (let seed = 2; seed < 40 && res.log.find((r) => r.ev === 'HAND_SEEN')?.p?.mode !== 'toward'; seed++) {
+      res = runSession({ seed, order: ['A', 'B', 'C', 'D'], lifeRate: 1, inputs, until: 30, frameEvery: 0.05 });
+    }
     const seen = res.log.find((r) => r.ev === 'HAND_SEEN');
     expect(seen?.p?.mode).toBe('toward');
     expect(res.log.some((r) => r.ev === 'HAND_STAGE' && r.p?.stage === 'track')).toBe(true);

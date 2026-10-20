@@ -14,6 +14,10 @@
  * 2026-10-19（整合后反查）：沉静型 ⑩ 0.4 → 0.25——它的「不在乎」要看得出来：多数时候看别处，少数时候才迎；
  * 0.4 时指针 = 手的探针里它与乱序随机（0.5）混得最多。乱序随机 ⑨ 3–40 s → 3–15 s——它的「乱」是一会儿迎、
  * 一会儿躲，40 s 才重新决定一次时一次来访里常常只有一种态度，看起来就是热情或回避；改短以后一次来访里就会翻态度。
+ * 2026-10-20 作者：「呼吸本来就是生物的固有生理信号，它不会根据性格产生差异，倒是会因为互动产生的情绪变化造成呼吸的急促」——
+ * ① ② 收拢：原来 2 / 7 / 3 / 2–8 s、80% / 50% / 30% / 20–90%（每分钟 8–27 口气），现在四种人格都在 3.5–4.5 s 一口、
+ * 50–70% 行程（每分钟 13–17 口），只留一点差。呼吸跟着变的是唤醒（被碰之后急促，engine.ts ENGINE.arousal）与 ⑬（人在近处时
+ * 回避型怕得浅快、热情型高兴得快一点深一点，engine.ts SOCIAL）。
  */
 
 import { type Rng, rand, uniform } from './rng';
@@ -82,8 +86,8 @@ export const PERSONAS: Readonly<Record<PersonaKey, PersonaSpec>> = {
     temper: 'warm',
     zh: '热情',
     en: 'Warm',
-    breathPeriod: one(2),
-    breathAmp: one(0.8),
+    breathPeriod: one(3.5),
+    breathAmp: one(0.7),
     speed: one(3),
     latency: one(0.2),
     gain: one(0.5),
@@ -102,8 +106,8 @@ export const PERSONAS: Readonly<Record<PersonaKey, PersonaSpec>> = {
     temper: 'calm',
     zh: '沉静',
     en: 'Calm',
-    breathPeriod: one(7),
-    breathAmp: one(0.5),
+    breathPeriod: one(4.5),
+    breathAmp: one(0.6),
     speed: one(0.5),
     latency: one(2.5),
     gain: one(0.1),
@@ -122,8 +126,8 @@ export const PERSONAS: Readonly<Record<PersonaKey, PersonaSpec>> = {
     temper: 'avoidant',
     zh: '回避',
     en: 'Avoidant',
-    breathPeriod: one(3),
-    breathAmp: one(0.3),
+    breathPeriod: one(4),
+    breathAmp: one(0.5),
     speed: one(2),
     latency: one(0.3),
     gain: one(0.4),
@@ -142,8 +146,8 @@ export const PERSONAS: Readonly<Record<PersonaKey, PersonaSpec>> = {
     temper: 'random',
     zh: '乱序随机',
     en: 'Random',
-    breathPeriod: [2, 8],
-    breathAmp: [0.2, 0.9],
+    breathPeriod: [3.2, 4.8],
+    breathAmp: [0.45, 0.75],
     speed: [0.5, 4],
     latency: [0.3, 3],
     gain: [0.1, 0.5],

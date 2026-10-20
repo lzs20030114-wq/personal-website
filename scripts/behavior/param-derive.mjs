@@ -26,7 +26,7 @@ for (const P of ['A', 'B', 'C', 'D']) {
   for (const t of tiers) row[t] = ks.map((k) => f(V.tierSpeed(t, k)));
   row.onsetTau = f(E.SOCIAL.onBase + E.SOCIAL.onLatency * ((p.latency[0] + p.latency[1]) / 2));
   row.respD = f((V.V2.respD0 + V.V2.respD1 * Math.min(1, ((p.gain[0] + p.gain[1]) / 2) / 0.5)));
-  row.spontE = f(V.V2.spontE0 + V.V2.spontE1 * Math.min(1, Math.max(0, (((p.breathAmp[0] + p.breathAmp[1]) / 2) - 0.2) / 0.7)));
+  row.spontE = f(V.V2.spontE0 + V.V2.spontE1 * Math.min(1, Math.max(0, (((p.breathAmp[0] + p.breathAmp[1]) / 2) - V.V2.spontA0) / (V.V2.spontA1 - V.V2.spontA0))));
   row.yawRate = ks.map((k) => f(E.MOTION.yawRate * k));
   row.durResp = ks.map((k) => f(E.MOTION.response / k));
   // 惊跳的凝住 = 0.3 s + τ（封顶 3 s）；手停住多久才凑 = τ（τ 取表的区间两端）

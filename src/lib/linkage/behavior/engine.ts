@@ -121,10 +121,14 @@ export const ENGINE = {
   ampOmega: 2,
   centerOmega: 4,
   /**
-   * 唤醒度（内部状态层「快速波动」，03-20）：每次刺激 += gain·I（封顶 1），按 tau 秒指数回落。
-   * 作用三处：呼吸周期 ×(1 − breath·a)、自发间隔 ×(1 − spont·a)、触须扫幅 ×(1 + feeler·a)。
+   * 唤醒度（内部状态层「快速波动」，03-20）：每次刺激 += ⑤·I（⑤ = 这一世的响应强度 × 衰老；封顶 1），按 tau 秒指数回落。
+   * 作用四处：呼吸快 (1 + breath·a) 倍、每口气浅 (1 − shallow·a)、自发间隔 ×(1 − spont·a)、触须扫幅 ×(1 + feeler·a)。
+   * 2026-10-20 作者：「呼吸本来就是生物的固有生理信号，不会根据性格产生差异，倒是会因为互动产生的情绪变化造成呼吸的急促」——
+   * 四种人格平时的呼吸收到 3.5–4.5 s 一口（persona.ts），互动引起的唤醒改成呼吸变化的主要来源：呼吸周期原来 ×(1 − 0.3a)
+   * （碰三下只快一成，热情型贴着曲柄上限一点不变），现在唤醒 0.5 时快 1.75 倍、浅 15%。每次刺激加多少原来四种人格都是 0.5·I，
+   * 现在按 ⑤ 走——同样被碰，热情型 0.5·I、回避 0.4·I、沉静 0.1·I（沉静就是不怎么被搅动），乱序随机每次在 0.1–0.5 里抽
    */
-  arousal: { gain: 0.5, tau: 15, breath: 0.3, spont: 0.4, feeler: 0.5 },
+  arousal: { tau: 15, breath: 1.5, shallow: 0.3, spont: 0.4, feeler: 0.5 },
   /** 速度刻度（cm/s）：速度系数 k_v = v / 1.5。1.5 是重分类前好奇型的速度，现在只是刻度（改它所有 k 都变） */
   speedRef: 1.5,
 } as const;
@@ -207,14 +211,16 @@ export const SOCIAL = {
   onBase: 0.25,
   onLatency: 0.5,
   /**
-   * 呼吸：N 往收拢端沉 0.22、幅度 ×(1 − 0.55N)、周期 ×(1 − 0.45N)（浅、快）；P 往张开端 0.1、幅度 ×(1 + 0.15P)、周期不变——
-   * 热情型的呼吸本来就贴着曲柄的速度上限（spec §6.2），不能再加快
+   * 呼吸：N 往收拢端沉 0.22、幅度 ×(1 − 0.55N)、周期 ×(1 − 0.45N)（怕：浅、快）；P 往张开端 0.1、幅度 ×(1 + 0.15P)、
+   * 周期 ×(1 − 0.25P)（高兴：深一点、快一点）。2026-10-20 以前 P 不改周期——热情型那时 2 s 一口气，贴着曲柄的速度上限；
+   * 四种人格的呼吸收到 3.5–4.5 s 以后这条理由没了，人来了热情型也会呼吸加快
    */
   closeCenter: 0.22,
   openCenter: 0.1,
   closeAmp: 0.55,
   openAmp: 0.15,
   closePeriod: 0.45,
+  openPeriod: 0.25,
   /** 臂静息：P 朝人那边抬起（弯曲 +0.2）；N 往下、背着人那一侧缩（弯曲 +0.4）；弯向向它靠 0.85·|st| */
   openBend: 0.2,
   closeBend: 0.4,
@@ -231,11 +237,6 @@ export const SOCIAL = {
 } as const;
 
 const AROUSAL_DECAY = Math.exp(-DT / ENGINE.arousal.tau);
-/**
- * 偏向两端抽的人格（乱序随机）每口气的行程速度上限 π·a/T（1/s）：抽的时候就压，唤醒再快 30%（1.29/s）也只比
- * 行程速度总上限 V2.breathRateCap（1.2/s）高一点——快的那几口自动变浅变慢，不靠总上限硬截。同样是经验值，见 V2.breathRateCap
- */
-const EXTREME_BREATH_RATE = 0.9;
 
 
 // ------------------------------------------------------------------ 输出
@@ -1356,7 +1357,7 @@ export class BehaviorEngine {
     if (I > 0) {
       if (!ctx.responsive) out = 'muted';
       else {
-        s.arousal = Math.min(1, s.arousal + ENGINE.arousal.gain * I);
+        s.arousal = Math.min(1, s.arousal + this.draw(ctx.p.gain) * ctx.age.gain * I);
         out = this.evaluate(e, I, rec.id, t, ctx);
       }
     }
@@ -2909,9 +2910,6 @@ export class BehaviorEngine {
     s.sighNext = false;
     let T = this.draw(p.breathPeriod, VARIABILITY.breath) * ctx.age.period;
     let a = this.draw(p.breathAmp, VARIABILITY.breath);
-    // 偏向两端抽（乱序随机）时周期最短、幅度最大常常凑在同一口气上：行程速度 π·a/T 封在 0.9/s，
-    // 免得曲柄（4.19 rad/s，spec §6.2）追不上——快的那几口自动变浅变慢一点
-    if (isRandom(p)) T = Math.max(T, (Math.PI * a) / EXTREME_BREATH_RATE);
     if (ctx.age.jitter > 0) T *= 1 + uniform(s.rng, -ctx.age.jitter, ctx.age.jitter);
     if (ctx.death) {
       if (ctx.death.irregular) {
@@ -2929,14 +2927,15 @@ export class BehaviorEngine {
   }
 
   /**
-   * 这一口气此刻实际走多长（秒）：抽到的周期 × 唤醒（越激动越短）× ⑬（躲的时候浅快；迎的时候周期不变，见 SOCIAL）
+   * 这一口气此刻实际走多长（秒）：抽到的周期 ÷ 唤醒（越激动越快）× ⑬（躲的时候浅快、迎的时候快一点，见 SOCIAL）
    * × 这一段提示的放慢，再按曲柄限速封底（π·幅度/周期 ≤ 1.2 s⁻¹：加深、加快的提示叠起来也不超 4.19 rad/s）。
    * 呼吸本身、握持控制器的一紧一松、握着时的摩挲、哼声的音高起伏、台架的握持标记圈都读它——2026-10-19 以前后面几处
    * 各有一种算法（握持控制器只乘唤醒，哼声与标记圈都不乘），唤醒或怕的时候挤压与真的呼吸对不齐。缠的收紧时机没并进来，见 beginWrapV2
    */
   private breathPeriod(br: Cues['breath']): number {
     const s = this.s;
-    const T = s.period * (1 - ENGINE.arousal.breath * s.arousal) * (1 - SOCIAL.closePeriod * this.socialPN()[1]);
+    const [sP, sN] = this.socialPN();
+    const T = (s.period * (1 - SOCIAL.openPeriod * sP) * (1 - SOCIAL.closePeriod * sN)) / (1 + ENGINE.arousal.breath * s.arousal);
     return Math.max(T * (br?.period ?? 1), (Math.PI * s.amp.x) / V2.breathRateCap);
   }
 
@@ -2970,8 +2969,8 @@ export class BehaviorEngine {
       if (ctx.death) aT *= ctx.death.amp;
       cT = ENGINE.center + ctx.age.center;
       if (br && br.amp !== undefined) aT *= br.amp;
-      // ⑬：躲 = 往收拢端沉、浅；迎 = 往张开端、深一点
-      aT *= (1 + SOCIAL.openAmp * sP) * (1 - SOCIAL.closeAmp * sN);
+      // ⑬：躲 = 往收拢端沉、浅；迎 = 往张开端、深一点。唤醒：急促 = 快而浅
+      aT *= (1 + SOCIAL.openAmp * sP) * (1 - SOCIAL.closeAmp * sN) * (1 - ENGINE.arousal.shallow * s.arousal);
       cT += SOCIAL.closeCenter * sN - SOCIAL.openCenter * sP;
       aT = clamp01(aT);
       if (ctx.death) cT += (1 - cT) * ctx.death.sink;

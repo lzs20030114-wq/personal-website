@@ -54,9 +54,15 @@ export const V2 = {
   /** 回应幅度 D_r = (0.10 + 0.30·clamp(|g|/0.5)) × 活力：热情 0.40 · 回避 0.34 · 沉静 0.16（表里 5:1 压成 2.5:1） */
   respD0: 0.1,
   respD1: 0.3,
-  /** 自发 E_s = (0.06 + 0.09·clamp((② − 0.2)/0.7)) × 活力：热情 0.137 · 沉静 0.099 · 回避 0.073；乱序随机封顶 0.08 */
+  /**
+   * 自发 E_s = (0.06 + 0.09·clamp((② − 0.45)/0.3)) × 活力：热情 0.135 · 沉静 0.105 · 回避 0.075；乱序随机封顶 0.08。
+   * 2026-10-20 ② 收到 45–75% 后（呼吸不随性格大变，persona.ts）把读的区间跟着收到 0.45–0.75，四种人格的自发动作大小与改前几乎相同
+   * （改前读 0.2–0.9：0.137 / 0.099 / 0.073）
+   */
   spontE0: 0.06,
   spontE1: 0.09,
+  spontA0: 0.45,
+  spontA1: 0.75,
   spontDMax: 0.08,
   /** 静息姿态随呼吸起伏（弯曲 ±） */
   restBreathe: 0.03,
@@ -614,7 +620,7 @@ export type SpontKind = 'curl' | 'sway' | 'flick';
 
 /** 自发动作的幅度 E_s（差动）：由 ② 呼吸幅度给，比任何回应都小 */
 export const spontE = (c: BuildCtx): number => {
-  const e = (V2.spontE0 + V2.spontE1 * clamp((c.breathAmp - 0.2) / 0.7, 0, 1)) * c.vigor;
+  const e = (V2.spontE0 + V2.spontE1 * clamp((c.breathAmp - V2.spontA0) / (V2.spontA1 - V2.spontA0), 0, 1)) * c.vigor;
   return c.temper === 'random' ? Math.min(e, V2.spontDMax) : e;
 };
 
