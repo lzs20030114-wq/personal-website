@@ -10,6 +10,8 @@ import {
   LIFE_LOOP,
   LIVES,
   PARTS,
+  D_DEPTH,
+  D_PERIOD,
   PERSONAS,
   PERSONA_ROWS,
   PERSONA_WINDOW,
@@ -26,6 +28,7 @@ import {
   strengthWord,
   type Bi,
 } from './case-reincarnation';
+import { PERSONAS as ENGINE_PERSONAS } from '../linkage/behavior/persona';
 
 /** 把模块里导出的所有 Bi（{zh,en}）走一遍，断言两侧都非空——中英各自成文，缺一侧 = 切过去一块空白。 */
 function collectBi(x: unknown, out: Bi[] = []): Bi[] {
@@ -180,16 +183,18 @@ describe('人格示意台的呼吸模拟', () => {
     for (let t = 0; t < sec; t += 1 / 60) sim.step(1 / 60, p);
   };
 
-  it('稳态周期与幅度向目标人格收敛：A 快而深，B 慢而浅', () => {
+  it('稳态周期与幅度向目标人格收敛：峰值 ≈ 表里的幅度（2026-10-20 起四套差得不多：A 70%、B 60%）', () => {
     const peakOf = (i: number) => {
       const sim = new PersonaSim(rng(1));
       run(sim, PERSONAS[i], 30);
       const ys = sim.hist.map((h) => h[1]);
       return Math.max(...ys);
     };
-    expect(peakOf(0)).toBeGreaterThan(0.7);
-    expect(peakOf(0)).toBeLessThanOrEqual(0.82);
-    expect(peakOf(1)).toBeLessThan(0.35);
+    for (const i of [0, 1, 2]) {
+      expect(peakOf(i)).toBeGreaterThan(PERSONAS[i].depth - 0.02);
+      expect(peakOf(i)).toBeLessThanOrEqual(PERSONAS[i].depth + 0.02);
+    }
+    expect(peakOf(0)).toBeGreaterThan(peakOf(1));
   });
 
   it('历史只保留窗口内（≈ PERSONA_WINDOW + 0.5 秒）', () => {
@@ -236,15 +241,27 @@ describe('人格示意台的呼吸模拟', () => {
     }
   });
 
-  it('D 型周期 / 幅度每个呼吸周期重抽，且在 2–8 秒 / 20–90% 之内', () => {
+  it('D 型周期 / 幅度每个呼吸周期重抽，且在表的区间之内（2026-10-20 起 3.2–4.8 秒 / 45–75%，取自行为引擎）', () => {
     const sim = new PersonaSim(rng(5));
+    let lo = Infinity;
+    let hi = -Infinity;
     for (let t = 0; t < 120; t += 1 / 60) {
       sim.step(1 / 60, PERSONAS[3]);
-      expect(sim.per).toBeGreaterThan(1.5);
-      expect(sim.per).toBeLessThan(8.5);
-      expect(sim.dep).toBeGreaterThan(0.1);
-      expect(sim.dep).toBeLessThan(0.95);
+      if (t < 10) continue; // 起步从 2 s / 50% 缓动过来
+      expect(sim.per).toBeGreaterThanOrEqual(D_PERIOD[0] - 1e-9);
+      expect(sim.per).toBeLessThanOrEqual(D_PERIOD[1] + 1e-9);
+      expect(sim.dep).toBeGreaterThanOrEqual(D_DEPTH[0] - 1e-9);
+      expect(sim.dep).toBeLessThanOrEqual(D_DEPTH[1] + 1e-9);
+      lo = Math.min(lo, sim.per);
+      hi = Math.max(hi, sim.per);
     }
+    expect(hi - lo).toBeGreaterThan(0.5);
+  });
+
+  it('呼吸两行取自行为引擎的人格表（按槽位字母），D 写成区间', () => {
+    expect(PERSONAS.map((p) => p.period).slice(0, 3)).toEqual((['A', 'B', 'C'] as const).map((k) => ENGINE_PERSONAS[k].breathPeriod[0]));
+    expect(PERSONA_ROWS[0].cells.zh[3]).toBe(`${ENGINE_PERSONAS.D.breathPeriod[0]}–${ENGINE_PERSONAS.D.breathPeriod[1]} 秒随机`);
+    expect(PERSONA_ROWS[1].cells.en[3]).toBe('random 45–75%');
   });
 
   it('dt = 0（reduced-motion）时不推进时间也不写历史', () => {
