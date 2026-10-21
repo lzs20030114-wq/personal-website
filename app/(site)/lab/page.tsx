@@ -24,6 +24,7 @@ import { WalkPlanBench, WalkPlanNotes } from '../../../components/lab/WalkPlanBe
 import { CrowdPlanBench, CrowdPlanNotes } from '../../../components/lab/CrowdPlanBench';
 import { CatPlanBench, CatPlanNotes } from '../../../components/lab/CatPlanBench';
 import { CohabitBench, CohabitNotes } from '../../../components/lab/CohabitBench';
+import { CohabitSpaceBench } from '../../../components/lab/CohabitSpaceBench';
 import { SkinComboBench } from '../../../components/lab/SkinComboBench';
 
 export const metadata = { title: 'The lab' };
@@ -422,6 +423,23 @@ export default function LabPage() {
           ]}
         >
           <CohabitBench workspace />
+        </Bench>
+
+        <Bench
+          no="2-15"
+          lede="The Lab 2-14 simulation drawn in the Lab 2-8 room: sixty-four small units hang over the floor, six visitors walk, stand and sit, two cats live on the platforms. Units come down where the rules say, bands in a person's way retract on their own, and the four encounter events are counted at the bottom right. The band shapes are keyframes from one engine run; the units at this size are the Lab 2-8 ring scaled to the 8×8 pitch."
+          specs={[
+            ['Room', 'Lab 2-8 room (3.74 m high) · 8×8 units at 0.60 m pitch · platform ⌀0.51 m · lower edge 1.08 m above the floor'],
+            ['Driver', 'CohabitSim with the case study configuration: walk / stand / sit rule · only the bands in the way retract · visitors with bodies and parties · cats can use the floor · cat costs calibrated to Mertens & Turner 1988 · lead to the unit in front of the seat'],
+            ['Band shapes', 'One engine run baked to 32 forming and 24 retraction keyframes; each band picks its frame from its unit’s degree and how far it has retracted. Switching between the two runs can show a small jump'],
+            ['Scale', 'The Lab 2-8 ring scaled by the pitch ratio (0.49). A unit this small has not been built or solved at this size'],
+            ['Figures', 'Block figures: 1.70 m people in standing and seated poses, cats in four poses; no membrane between bands'],
+            ['Spaces', 'Live · fixed (even rows formed) · empty room, same seats and bodies'],
+            ['Events', 'Lines at chest height while an event lasts: green co-gaze · purple co-warmth · rose contact · grey crossing'],
+            ['Limit', 'The bands are not 1,280 separate solves; frames are taken from one trajectory. The platform shown is the terminal shape, smaller than the peak envelope the plan uses for walls and spacing'],
+          ]}
+        >
+          <CohabitSpaceBench workspace />
         </Bench>
 
         <LabProjectEmpty />

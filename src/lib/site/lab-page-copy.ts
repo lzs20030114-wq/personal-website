@@ -270,7 +270,21 @@ export const LAB_PAGE_COPY: readonly (readonly [string, string])[] = [
   ["two linkage kernels and a behaviour engine", "两套连杆内核与一个行为引擎"],
   ["shape-changing units and the behaviour that moves them", "会变形的单元，以及驱动它的行为"],
   ["Project III", "项目三"],
-  ["Benches to come", "实验待建"]
+  ["Benches to come", "实验待建"],
+  ["The Lab 2-14 simulation in the Lab 2-8 room: sixty-four small units descend, retract and give way over visitors and cats.", "实验 2-14 的仿真放进实验 2-8 那间房：六十四个小单元在访客与猫的头顶落下、收回、让路。"],
+  ["The Lab 2-14 simulation drawn in the Lab 2-8 room: sixty-four small units hang over the floor, six visitors walk, stand and sit, two cats live on the platforms. Units come down where the rules say, bands in a person's way retract on their own, and the four encounter events are counted at the bottom right. The band shapes are keyframes from one engine run; the units at this size are the Lab 2-8 ring scaled to the 8×8 pitch.", "实验 2-14 的仿真画进实验 2-8 那间房：六十四个小单元吊在地面上方，六位访客走、站、坐，两只猫住在平台上。单元按规则落下，挡在人路上的带各自收回，四类相遇事件在右下角计数。带子的形状是一条引擎跑出来的关键帧；这个尺寸的单元是实验 2-8 的环按 8×8 的格距缩小的。"],
+  ["Driver", "驱动"],
+  ["Band shapes", "带子形状"],
+  ["Figures", "人与猫"],
+  ["Spaces", "空间"],
+  ["Lab 2-8 room (3.74 m high) · 8×8 units at 0.60 m pitch · platform ⌀0.51 m · lower edge 1.08 m above the floor", "实验 2-8 那间房（高 3.74 m）· 8×8 个单元，格距 0.60 m · 平台 ⌀0.51 m · 下缘离地 1.08 m"],
+  ["CohabitSim with the case study configuration: walk / stand / sit rule · only the bands in the way retract · visitors with bodies and parties · cats can use the floor · cat costs calibrated to Mertens & Turner 1988 · lead to the unit in front of the seat", "与案例页对照图同一份配置的人猫仿真：「走 · 站 · 坐」规则 · 只收挡路的带 · 访客有身体、结伴 · 猫能下地 · 猫的停留代价按 Mertens & Turner 1988 标定 · 引到座位前方那台"],
+  ["One engine run baked to 32 forming and 24 retraction keyframes; each band picks its frame from its unit’s degree and how far it has retracted. Switching between the two runs can show a small jump", "一条引擎跑一遍，烘成 32 帧成形 + 24 帧回程的关键帧；每条带按所在单元的成形程度和自己收回了几成取帧。两条轨迹之间切换时会有一点小跳"],
+  ["The Lab 2-8 ring scaled by the pitch ratio (0.49). A unit this small has not been built or solved at this size", "实验 2-8 的环按格距比例（0.49）缩小。这么小的单元没有在这个尺寸上做过，也没有在这个尺寸上解过"],
+  ["Block figures: 1.70 m people in standing and seated poses, cats in four poses; no membrane between bands", "体块比例参考：1.70 m 的人分站、坐两种姿态，猫分四种姿态；带与带之间不画织物膜"],
+  ["Live · fixed (even rows formed) · empty room, same seats and bodies", "会动 · 钉死（偶数行落着）· 空房间，座位与人猫相同"],
+  ["Lines at chest height while an event lasts: green co-gaze · purple co-warmth · rose contact · grey crossing", "事件持续时在胸口高度连一条线：绿 共视 · 紫 共温 · 莲粉 共触 · 灰 交接"],
+  ["The bands are not 1,280 separate solves; frames are taken from one trajectory. The platform shown is the terminal shape, smaller than the peak envelope the plan uses for walls and spacing", "1280 条带不是各自解出来的，帧取自同一条轨迹。画出来的平台是终态的形，比平面模型用来定墙与格距的峰值包络小一圈"],
 ];
 
 const zhCopy = new Map(LAB_PAGE_COPY);

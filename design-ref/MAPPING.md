@@ -1534,3 +1534,13 @@ planDraw 的猫分支去掉注意力圈，增加支撑、落点外圈与单元�
 - 原位飞行里两台画面的机位不同（主图是宽幅取景、实验室是 4:3），交叉换手那一下会短暂叠出两个大小不同的机构；已把换手压到飞行中段最快的那 30%。
 - 日志页与 about 仍是旧 SiteNav 顶栏，与深色顶栏之间换页时顶栏不钉、随页面淡换。要统一需先给日志页换「09/10」稿的顶栏（另一件事）。
 - Next 自身的一个怪癖（与本次无关，未改）：若首页是以 `/#lab` 之类的地址**首次打开**的，之后点品牌回首页 Next 会把那个 hash 带回来。
+
+## 49. 项目二案例页「对照结果」图 + 立体演示主图（2026-10-21，作者主旨会诊后「步骤按顺序做」）
+
+设计稿里没有这两件：案例页稿（§45）的图目录是项目一的，项目二页一直只有正文与几台活件。本轮加的是站方构件，版式语言照 §45 的构件（编号 section、`.cs-*` token、裱框、题注行）。
+
+- **FIG.05 对照结果**（`components/site/case/CompareChart.tsx`）：三档空间 × 三种客流 × 四个读数的小多图。条 = 均值，须 = ±1 标准差，点 = 32 个种子；只有会动的单元用站内绿，两个基准是两档灰（图的话是「三档里的差」，不是三个类别）；基准行末的星号 = 会动的单元对它的双侧置换检验。两种引导可切（`.cs-seg`）、tooltip 每条一格、`<details>` 表格视图；数据 `src/lib/space/cohabit-compare.data.json`，守门 `cohabit-compare.test.ts`；`content.test.ts` 的插槽正则补 `CompareChart`（两侧编号顺序一致）。
+- **主图换 Lab 2-15**（`CaseHeroSpace.tsx`）：此前是 Lab 2-8（十六环的房 + 一个人）。同一台也挂 /lab 第八段与主页实验目录预览（`HomeLabPreview` 加 2-14 / 2-15 两条）。主图位不出控制条，拖拽旋转照常；`SLOT_COPY['project-ii']` 的 lab / heroLive / heroVerb / heroCap 改口。
+- **/lab 版式**：2-15 走 2-13 那套 3D 工作台布局（`workspace.css` 里 2-13 的全部选择器扩成 `:is(2-13, 2-15)`，`lab-dark.css` 的分层控制条同）。**坑**：只扩 `.solid-map` / `.solid-workbench` 不扩 `.lab-fig` 那条网格规则，画布 CSS 盒会是 0×0——GL 在画、像素都在，屏幕上什么都没有（CDP 读 `getBoundingClientRect` 才发现）。
+- **去 AI 味顺带改的台架 HUD 英文**：SkinSeriesBench / SquareRingBench 两处题头与 page.tsx 的 hint / video 题注里的破折号句。
+

@@ -72,7 +72,7 @@ export const LAB_INDEX: readonly LabGroup[] = [
   {
     key: "project-ii",
     label: "Project II — Cross-species space",
-    sub: "Lab 2-1 – 2-14 · shape-changing units and the behaviour that moves them",
+    sub: "Lab 2-1 – 2-15 · shape-changing units and the behaviour that moves them",
     segments: [
       {
         n: "Ⅰ",
@@ -131,8 +131,12 @@ export const LAB_INDEX: readonly LabGroup[] = [
       {
         n: "Ⅷ",
         label: "Together",
-        sub: "Lab 2-14 · people and cats in one room, with the loop closed",
-        benches: [{ no: "2-14", title: "People and cats together", kernel: "2d", description: 'Visitors walk, stand or sit; resident cats live on the units. Sitting down leads a cat over, and the four encounter events are counted.', meta: '2 rules · 3 spaces · 4 events · canvas', kind: 'Canvas · two species', verb: 'drag a body' }],
+        sub: "Lab 2-14 – 2-15 · people and cats in one room, with the loop closed",
+        benches: [
+          { no: "2-14", title: "People and cats together", kernel: "2d", description: 'Visitors walk, stand or sit; resident cats live on the units. Sitting down leads a cat over, and the four encounter events are counted.', meta: '2 rules · 3 spaces · 4 events · canvas', kind: 'Canvas · two species', verb: 'drag a body' },
+          // 2026-10-21：同一套仿真放进 Lab 2-8 那间房，立体看——作者「老师也说我们缺一个直接演示立体空间里单元改变空间和其中的动物的直观演示」
+          { no: "2-15", title: "People and cats together, in 3D", kernel: "3d", description: 'The Lab 2-14 simulation in the Lab 2-8 room: sixty-four small units descend, retract and give way over visitors and cats.', meta: '8×8 · 6 visitors · 2 cats · WebGL', kind: 'WebGL · two species', verb: 'drag to orbit' },
+        ],
       },
     ],
   },

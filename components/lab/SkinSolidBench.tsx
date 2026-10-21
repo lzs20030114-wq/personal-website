@@ -63,17 +63,17 @@ const UNIT_GAP_X = 175;
 const PIVOT = { x: 290, y: 168, z: 0 };
 const CAM_SCALE = 0.98;
 // 条纹双色（2D 目录的 GREEN/PALE 立体化）：A=族系绿、B=灰纱
-const DARK_A: [number, number, number] = [0.075, 0.16, 0.12];
-const LITE_A: [number, number, number] = [0.42, 0.76, 0.58];
-const DARK_B: [number, number, number] = [0.11, 0.12, 0.12];
-const LITE_B: [number, number, number] = [0.62, 0.66, 0.63];
+export const DARK_A: [number, number, number] = [0.075, 0.16, 0.12];
+export const LITE_A: [number, number, number] = [0.42, 0.76, 0.58];
+export const DARK_B: [number, number, number] = [0.11, 0.12, 0.12];
+export const LITE_B: [number, number, number] = [0.62, 0.66, 0.63];
 /** 环列天花圆环板（相对站位半径的内/外让量 + 板厚），用户 2026-08-23「天花改成圆环板」 */
 // inner/outer 收窄到刚够罩住带子的顶端：再宽一点在顶视里会盖掉环形平台的内圈
 // （首版 14/16 盖掉约三成，CDP 顶视图即此）
 const CEIL_RING = { inner: 12, outer: 11, y: -3, halfT: 3, segs: 72 } as const;
-const RAIL_DARK: [number, number, number] = [0.08, 0.09, 0.1];
-const RAIL_LITE: [number, number, number] = [0.4, 0.43, 0.46];
-const C_BOND: [number, number, number] = [0.88, 0.42, 0.24];
+export const RAIL_DARK: [number, number, number] = [0.08, 0.09, 0.1];
+export const RAIL_LITE: [number, number, number] = [0.4, 0.43, 0.46];
+export const C_BOND: [number, number, number] = [0.88, 0.42, 0.24];
 // 环间织物膜（用户 2026-08-25「加一个半透明蒙皮」）：比带子本身淡、偏纱灰，
 // 让它读作「带与带之间的那块布」而不是又一层结构
 const MEM_DARK: [number, number, number] = [0.1, 0.16, 0.14];
@@ -83,10 +83,10 @@ const BRIDGE_GAP = 14;
 const MEM_LITE: [number, number, number] = [0.5, 0.68, 0.58];
 // 布景（Lab.10 房间 + 比例小人，2026-08-25）：房间压得比芯轨还暗——它是背景不是展品；
 // 小人略亮且偏暖，在灰调的房间里一眼认得出是人
-const ROOM_DARK: [number, number, number] = [0.05, 0.06, 0.065];
-const ROOM_LITE: [number, number, number] = [0.24, 0.27, 0.29];
-const FIG_DARK: [number, number, number] = [0.12, 0.115, 0.105];
-const FIG_LITE: [number, number, number] = [0.62, 0.6, 0.56];
+export const ROOM_DARK: [number, number, number] = [0.05, 0.06, 0.065];
+export const ROOM_LITE: [number, number, number] = [0.24, 0.27, 0.29];
+export const FIG_DARK: [number, number, number] = [0.12, 0.115, 0.105];
+export const FIG_LITE: [number, number, number] = [0.62, 0.6, 0.56];
 
 type M3 = number[];
 type Quat = [number, number, number, number];

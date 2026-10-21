@@ -73,19 +73,33 @@ export interface FigureSpec {
   height: number;
   /** 朝向：绕世界 Y，0 = 面朝 +Z */
   yaw?: number;
+  /**
+   * 姿态（2026-10-21 人猫同台立体台架加）：站（默认，逐位不变）/ 坐——坐着的人躯干落到座面
+   * （0.265 身高 ≈ 0.45 m）、大腿前伸、小腿垂下；臂照旧垂在身侧。
+   */
+  pose?: 'stand' | 'sit';
 }
+
+/** 坐姿：座面离地占身高的比例（1.70 m 的人 ≈ 0.45 m 的沙发座面） */
+const SIT_SEAT = 0.265;
+/** 坐姿的腿（站姿的大腿 / 小腿 / 脚换成这三块；其余部件整体下移 0.49 − 0.265） */
+const SIT_LEGS: readonly Part[] = [
+  { t0: SIT_SEAT, t1: SIT_SEAT + 0.09, hw: 0.042, hd: 0.125, side: 0.052, fwd: 0.125, pair: true }, // 大腿（前伸）
+  { t0: 0.03, t1: SIT_SEAT + 0.03, hw: 0.032, hd: 0.035, side: 0.052, fwd: 0.23, pair: true }, // 小腿（垂下）
+  { t0: 0.0, t1: 0.035, hw: 0.032, hd: 0.062, side: 0.052, fwd: 0.26, pair: true }, // 脚
+];
 
 /**
  * 比例小人的三角网格（位置 + 索引；法向交给 bakeIndexed 从三角算）。
  * 世界 Y 向下为正 ⇒ 脚在 footY、头顶在 footY − height。
  */
 export function figureVerts(spec: FigureSpec): { verts: Float32Array; idx: Uint32Array } {
-  const { x, z, footY, height: H, yaw = 0 } = spec;
+  const { x, z, footY, height: H, yaw = 0, pose = 'stand' } = spec;
   const out: number[] = [];
   const idx: number[] = [];
-  const add = (p: Part, side: number, fwd: number): void => {
-    const yTop = footY - p.t1 * H;
-    const yBot = footY - p.t0 * H;
+  const add = (p: Part, side: number, fwd: number, drop = 0): void => {
+    const yTop = footY - (p.t1 - drop) * H;
+    const yBot = footY - (p.t0 - drop) * H;
     pushBox(
       out,
       idx,
@@ -97,14 +111,23 @@ export function figureVerts(spec: FigureSpec): { verts: Float32Array; idx: Uint3
       p.hd * H,
     );
   };
-  for (const p of PARTS) {
+  // 坐姿：上身整体落到座面（骨盆底 0.49 → 0.265），腿换成坐着的三块；两腿同向，不迈步
+  const sit = pose === 'sit';
+  const drop = sit ? 0.49 - SIT_SEAT : 0;
+  const upper = sit ? PARTS.slice(0, 6) : PARTS;
+  for (const p of upper) {
     if (p.pair) {
-      add(p, p.side ?? 0, p.fwd ?? 0);
-      add(p, -(p.side ?? 0), -(p.fwd ?? 0)); // 另一侧反向 ⇒ 迈步
+      add(p, p.side ?? 0, p.fwd ?? 0, drop);
+      add(p, -(p.side ?? 0), -(p.fwd ?? 0), drop); // 另一侧反向 ⇒ 迈步
     } else {
-      add(p, 0, 0);
+      add(p, 0, 0, drop);
     }
   }
+  if (sit)
+    for (const p of SIT_LEGS) {
+      add(p, p.side ?? 0, p.fwd ?? 0);
+      add(p, -(p.side ?? 0), p.fwd ?? 0);
+    }
   const verts = Float32Array.from(out);
   // 朝向绕世界 Y 转，再平移到站立点（先转后移：转的是人自己，不是绕房间中心转）
   rotateVertsY(verts, yaw ? { radius: 0, angle: yaw } : null);
@@ -128,4 +151,72 @@ export function figureBox(spec: FigureSpec): {
     z0 = Math.min(z0, verts[k + 2]); z1 = Math.max(z1, verts[k + 2]);
   }
   return { x0, x1, y0, y1, z0, z1 };
+}
+
+// ── 猫（2026-10-21 人猫同台立体台架加）────────────────────────────────────────
+//
+// 同一种体块画法：身子、头、四条腿、尾巴。尺寸写成米（家猫：体长 ≈ 0.45 m、肩高 ≈ 0.25 m），
+// 由 `unit`（一米 = 多少世界单位）换算，与小人同一把尺子。姿态只分四档，对应仿真里猫的
+// 状态（站 / 走 / 坐 / 卧）；它是比例参考不是动物模型，与小人同一句话。
+
+export type CatPose = 'stand' | 'walk' | 'sit' | 'lie';
+
+export interface CatSpec {
+  x: number;
+  z: number;
+  /** 脚底（或趴着的肚子）所在的面：地面或平台面的世界 Y */
+  footY: number;
+  /** 一米 = 多少世界单位 */
+  unit: number;
+  /** 朝向：绕世界 Y，0 = 面朝 +Z（与小人同） */
+  yaw?: number;
+  pose?: CatPose;
+}
+
+/** 猫的体块（米）：[中心 x, 中心离地高度, 中心 z（+ 为前）, 半宽, 半高, 半长] */
+function catBoxes(pose: CatPose): readonly (readonly [number, number, number, number, number, number])[] {
+  const legs = (h: number, front: number, back: number): (readonly [number, number, number, number, number, number])[] => [
+    [0.05, h / 2, front, 0.022, h / 2, 0.022],
+    [-0.05, h / 2, front, 0.022, h / 2, 0.022],
+    [0.05, h / 2, back, 0.022, h / 2, 0.022],
+    [-0.05, h / 2, back, 0.022, h / 2, 0.022],
+  ];
+  switch (pose) {
+    case 'lie':
+      return [
+        [0, 0.08, 0, 0.09, 0.08, 0.2], // 身子趴平
+        [0, 0.15, 0.24, 0.06, 0.06, 0.07], // 头
+        [0, 0.05, -0.28, 0.02, 0.02, 0.09], // 尾巴
+      ];
+    case 'sit':
+      return [
+        [0, 0.2, 0.0, 0.08, 0.11, 0.1], // 前身立起
+        [0, 0.09, -0.12, 0.09, 0.09, 0.1], // 后身蹲着
+        [0, 0.33, 0.07, 0.06, 0.06, 0.07], // 头
+        ...legs(0.1, 0.07, 0.07).slice(0, 2), // 前腿
+        [0, 0.05, -0.27, 0.02, 0.02, 0.07], // 尾巴
+      ];
+    default:
+      return [
+        [0, 0.21, 0, 0.08, 0.075, 0.2], // 身子
+        [0, 0.28, 0.25, 0.06, 0.06, 0.07], // 头
+        ...legs(0.14, 0.15, -0.15),
+        [0, 0.26, -0.27, 0.02, 0.02, 0.09], // 尾巴
+      ];
+  }
+}
+
+/** 猫的三角网格：与 figureVerts 同一套约定（世界 Y 向下为正，先转后移） */
+export function catVerts(spec: CatSpec): { verts: Float32Array; idx: Uint32Array } {
+  const { x, z, footY, unit: U, yaw = 0, pose = 'stand' } = spec;
+  const out: number[] = [];
+  const idx: number[] = [];
+  for (const [cx, h, cz, hx, hy, hz] of catBoxes(pose)) pushBox(out, idx, cx * U, footY - h * U, cz * U, hx * U, hy * U, hz * U);
+  const verts = Float32Array.from(out);
+  rotateVertsY(verts, yaw ? { radius: 0, angle: yaw } : null);
+  for (let k = 0; k < verts.length; k += 3) {
+    verts[k] += x;
+    verts[k + 2] += z;
+  }
+  return { verts, idx: Uint32Array.from(idx) };
 }

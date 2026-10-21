@@ -30,6 +30,8 @@ const PREVIEWS: Record<string, ComponentType<PreviewProps>> = {
   '2-11': dynamic(() => import('../lab/CrowdPlanBench').then(m => m.CrowdPlanBench), { loading }),
   '2-12': dynamic(() => import('../lab/CatPlanBench').then(m => m.CatPlanBench), { loading }),
   '2-13': dynamic(() => import('../lab/SkinComboBench').then(m => m.SkinComboBench), { loading }),
+  '2-14': dynamic(() => import('../lab/CohabitBench').then(m => m.CohabitBench), { loading }),
+  '2-15': dynamic(() => import('../lab/CohabitSpaceBench').then(m => m.CohabitSpaceBench), { loading }),
 };
 
 export function HomeLabPreview({ no, active }: { no: string; active: boolean }) {

@@ -632,6 +632,48 @@ export class FlatRenderer {
     if (lite) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uLite'), 0.95, 0.95, 0.92);
   }
 
+  /** 静态缓冲的网格摆到多处（2026-10-21 人猫同台立体台架加）：顶点上传一次（addMesh），
+   *  逐处只换模型变换各画一遍——与 drawDynamicMesh 的 places 同义，差别只在顶点不逐帧重传。
+   *  那台 64 个单元 × 20 条带的形状取自预烘的关键帧，顶点是静的、变的只是哪条带用哪一帧，
+   *  逐帧重传 1280 份顶点没有道理。加法式扩展：既有调用点零影响。 */
+  drawMeshAt(
+    id: string,
+    places: readonly MeshPlace[],
+    dark?: [number, number, number],
+    lite?: [number, number, number],
+  ): void {
+    if (!places.length) return;
+    const gl = this.gl;
+    const m = this.meshes.get(id);
+    if (!m) return;
+    gl.useProgram(this.meshProg);
+    if (dark) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uDark'), dark[0], dark[1], dark[2]);
+    if (lite) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uLite'), lite[0], lite[1], lite[2]);
+    const uR = gl.getUniformLocation(this.meshProg, 'uModelR');
+    const uT = gl.getUniformLocation(this.meshProg, 'uModelT');
+    gl.bindBuffer(gl.ARRAY_BUFFER, m.buf);
+    const aPos = gl.getAttribLocation(this.meshProg, 'aPos');
+    const aNrm = gl.getAttribLocation(this.meshProg, 'aNrm');
+    gl.enableVertexAttribArray(aPos);
+    gl.enableVertexAttribArray(aNrm);
+    gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 24, 0);
+    gl.vertexAttribPointer(aNrm, 3, gl.FLOAT, false, 24, 12);
+    for (const q of places) {
+      gl.uniformMatrix3fv(uR, false, yawColMajor(q.yaw, q.s));
+      gl.uniform3f(uT, q.x, q.y, q.z);
+      gl.drawArrays(gl.TRIANGLES, 0, m.n);
+    }
+    gl.uniformMatrix3fv(uR, false, IDENT3);
+    gl.uniform3f(uT, 0, 0, 0);
+    if (dark) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uDark'), 0.29, 0.29, 0.27);
+    if (lite) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uLite'), 0.95, 0.95, 0.92);
+  }
+
+  /** 有没有这个 id 的静态网格（关键帧网格按需烘、烘过的不重传） */
+  hasMesh(id: string): boolean {
+    return this.meshes.has(id);
+  }
+
   /** TPU 连接件：双骨蒙皮绘制（frA = 站 g 刚架，frB = 站 g+1 刚架，
    *  dy = 静息站间距——骨 B 局部坐标 = 骨 A 局部 − (dy,0,0)）。
    *  相对运动 CPU 螺旋分解（jointScrew），顶点着色器按 w 比例刚性应用。 */

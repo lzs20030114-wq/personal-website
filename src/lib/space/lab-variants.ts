@@ -254,6 +254,15 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
       { when: { axis: '规则', key: 'trace' }, axis: '引导', keys: ['meet'] },
     ],
   },
+  {
+    no: '2-15',
+    key: 'cohabit3d',
+    zh: '人猫同台 · 立体',
+    en: 'People and cats together, in 3D',
+    // 编制 = 空间三档（与 2-14 同一份对照）；规则钉死「走 · 站 · 坐」、格数钉死 8×8（作者 2026-10-21「立体演示用 8×8」），不另开档
+    plans: SPACE_MODES.map((m) => ({ key: m.key, label: m.zh })),
+    axes: [],
+  },
 ];
 
 /**
