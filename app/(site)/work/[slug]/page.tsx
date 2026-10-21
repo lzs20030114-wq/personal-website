@@ -33,6 +33,7 @@ import {
   SystemLogic,
 } from '../../../../components/site/case/CaseBlocks';
 import { AgeingCurve } from '../../../../components/site/case/AgeingCurve';
+import { CompareChart } from '../../../../components/site/case/CompareChart';
 import { CaseIndex } from '../../../../components/site/case/CaseIndex';
 import { CaseReveal } from '../../../../components/site/case/CaseReveal';
 import { LayersToggle } from '../../../../components/site/case/LayersToggle';
@@ -128,6 +129,8 @@ const mdxComponents = (lang: SlotLang) => ({
   LayersToggle: () => <LayersToggle lang={lang} />,
   StatCompare: () => <StatCompare lang={lang} />,
   AgeingCurve: (p: ComponentProps<typeof AgeingCurve>) => <AgeingCurve {...p} lang={lang} />,
+  // 项目二「对照结果」那张图（FIG.05）：Lab 2-14 最终配置下三档空间的读数，数据由脚本真跑生成，图与数表同源。
+  CompareChart: (p: ComponentProps<typeof CompareChart>) => <CompareChart {...p} lang={lang} />,
   SystemLogic: (p: ComponentProps<typeof SystemLogic>) => <SystemLogic {...p} lang={lang} />,
   Interference: () => <Interference lang={lang} />,
   StatusList: () => <StatusList lang={lang} />,
@@ -150,7 +153,7 @@ const mdxComponents = (lang: SlotLang) => ({
               kicker: 'Lab 2-2 / Project II',
               title: 'Four morphologies, one protocol',
               sub: 'Four bands · fabric 5 px · the same contraction run',
-              hint: 'Each band locks its own bond map — see /lab to drive it',
+              hint: 'Each band locks its own bond map. Drive it in /lab',
               aria:
                 'Four fabric bands contracting under one protocol; each bond map locks the surplus into a different morphology: pocket, bulb flange, straight ledge, stepped box.',
             }
@@ -158,7 +161,7 @@ const mdxComponents = (lang: SlotLang) => ({
               kicker: 'Lab 2-2 / Project II',
               title: '四种形态 · 同一收缩协议',
               sub: '四条带 · 织物厚度 5px · 同一次收缩',
-              hint: '每条带按自己的键谱扣合——要动手调去 /lab',
+              hint: '每条带按自己的键谱扣合，要动手调去 /lab',
               aria:
                 '四条织物带在同一收缩协议下运行，各自的键谱把富余材料扣成不同形态：袋、蘑菇挑台、直挑台、阶梯方箱。',
             }
@@ -277,7 +280,7 @@ const SLOT_COPY: Record<string, { lab?: string; en: SlotCopy; zh: SlotCopy }> = 
   'project-ii': {
     lab: '2-8',
     en: {
-      video: 'Simulation video — the cat café scenario',
+      video: 'Simulation video, the cat café scenario',
       heroLabel: 'hero image · to be supplied',
       heroDesc: 'Hero image',
       heroLive: '[stand-in] Lab 2-8 sixteen-ring floor · live',

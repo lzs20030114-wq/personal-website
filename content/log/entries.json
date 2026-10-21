@@ -60,6 +60,36 @@
     ]
   },
   {
+    "date": "2026-10-07",
+    "lead": {
+      "en": "Changed the space from ratifying traces to lowering units for a purpose, after the trace-following version lost to fixed shelves in the comparison.",
+      "zh": "把空间从只追认痕迹改成按目的落单元，因为追认痕迹的版本在对照里输给了固定层架。"
+    },
+    "body": {
+      "en": "- The first human–cat run kept the original position, with units following traces, so wherever a person went, something moved.\n- Three spaces were compared, live units, fixed units and an empty room, thirty-two seeds of five minutes each. Live units had the fewest stops beside a cat, 10.2 against 12.8 for fixed units and 12.6 for the empty room. A space that only ratifies traces thickens where bodies already are; it can ratify use, but it cannot bring about an encounter.\n- The space now lowers units for a purpose. Walking triggers nothing. Standing still for three seconds while looking at a cat lays one step toward that cat. Sitting down leads the nearest cat, one unit at a time, to the unit in front of the seat. The space changes only the cost of each position; where people and cats go stays their own decision.\n- In the first results, stops beside a cat matched the fixed units in number and ran about twenty seconds longer, not yet a difference that holds. The bottleneck is that a cat needs five to eight steps to arrive while people sit for only two or three minutes.\n- The old rule stays on the bench as the control.",
+      "zh": "- 第一版人猫同台按原来的立场做，单元跟着痕迹落，人走到哪儿哪儿就动。\n- 三档对照，会动的单元、单元钉死、空房间，三十二个种子各跑五分钟。人停在猫身边的次数会动的最少，10.2 次，钉死 12.8，空房间 12.6。只追认痕迹的空间在身体已经在的地方加厚，追认得出使用，追认不出相遇。\n- 改成按目的落单元。人走着不触发，站定三秒且看着一只猫，空间朝他给那只猫铺一步，坐下后空间从最近一只猫脚下一步一步把猫引到座位前方那台。空间只改每个位置的代价，去不去仍由人和猫自己定。\n- 首轮结果，人停在猫身边的次数与固定层架持平，秒数多二十来秒，差别还站不住。卡点是猫走五到八步才到，人只坐两三分钟。\n- 旧规则留在台架上当对照档。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "date": "2026-10-06",
+    "lead": {
+      "en": "Unlocked bond release and showed with a probe that the fabric itself keeps no memory, so the space's memory now lives in the trace layer.",
+      "zh": "解禁了键的松开，并用探针证明布本身没有记忆，空间的记忆改由痕迹层承担。"
+    },
+    "body": {
+      "en": "- Memory used to come from bonds locking for good, so a unit that had formed never went back. Once it was decided that units withdraw after people leave, bonds had to be releasable, which deliberately reopens the handoff's frozen decision that locks are permanent.\n- The engine gained an optional return pass that releases bonds in reverse order of locking. It is off by default, so the comparison against the Python original is untouched.\n- The probe runs a single strip: form a straight ledge, release and straighten, form a stepped box from its bond map, then straighten and form the straight ledge again. The straightened strip matches a never-formed strip to the last digit, the second forming matches a fresh unit to the last digit, and nothing knots along the way.\n- So the fabric keeps no memory in the simulation. Whatever the space remembers has to come from traces fading more slowly than people leave, and from a unit staying down while a cat stands on it.\n- One strip can now change shape, a channel last time and a platform this time. The cost is one more assumption, that bonds are controllable fasteners.",
+      "zh": "- 原来靠键永久锁定来做记忆，单元成形后不回去。现在定了人走了单元要收回，键就必须能松开，这是有意重开交接件里「锁定永久」那条冻结决定。\n- 引擎加了一条可选的回程，按锁定时的收缩量倒序松键，默认关着，与 Python 原版的对照不受影响。\n- 探针只跑一条带：成形为直挑台，松键回直，再按阶梯方箱的键谱成形，最后回直再成直挑台。回直后的带子与从未成形的带子逐位相同，第二次成形与全新单元逐位相同，全程没有打结。\n- 所以布在仿真里没有记忆。空间要记住什么，只能靠痕迹褪得比人离场慢，以及猫站着的台不收。\n- 连带的收获是一条带可以换形，上一次是通道，这一次可以是平台。代价是多了一条假设，键是可控的扣件。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
     "date": "2026-09-30",
     "lead": {
       "en": "Added adjustable connection depth without shrinking the upper and lower platforms.",

@@ -102,10 +102,10 @@ const HUD = {
   en: {
     gradient: {
       kicker: 'Lab 2-4 / Project II',
-      title: 'Series — a graded array, bulb flange to stepped box',
+      title: 'A graded series, bulb flange to stepped box',
       sub: 'Twelve narrow bands · bond length 0.10→0.32 in even steps · one protocol',
       hint: (ctl: boolean) =>
-        `A bulb flange at one end, a stepped box at the other — every band a real solve, not an interpolation${ctl ? ' · plan and layout switchable' : ''}`,
+        `A bulb flange at one end, a stepped box at the other, every band a real solve${ctl ? ' · plan and layout switchable' : ''}`,
       aria:
         'Twelve narrow fabric bands packed edge to edge into one continuous body; the bond map changes by a small step from band to band, so the form grades from a bulb flange to a stepped box.',
     },

@@ -178,7 +178,7 @@ const HUD = {
     aria: '方形环：二十条窄织物带围成一圈，每条带按自己在方形里的位置挑出不同长度，收缩后二十个挑台连成一圈俯视为正方形的平台；箱高一圈恒定，可拖拽旋转',
   },
   en: {
-    title: 'A square ring — the plan is made of reach',
+    title: 'A square ring, drawn by how far each band reaches',
     circle: (d: number) => `a circle, ⌀${d} px`,
     square: (side: number) => `a square, side ${side} px`,
     round: (n: string, d: number) => `a rounded square, n=${n} · corners ⌀${d} px`,
