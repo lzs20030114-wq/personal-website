@@ -32,6 +32,8 @@ import {
   postsMesh,
   rigFor,
   roomMesh,
+  unitDrop,
+  unitTopY,
   type BandTrajectory,
   type Rig,
 } from '../../src/lib/space/cohabit-solid';
@@ -45,8 +47,12 @@ import {
  * 一条引擎预烘的关键帧（正向协议 + 松键回程），每条带按「所在单元的成形程度 × 这条带收回了几成」取帧
  * （src/lib/space/cohabit-solid.ts 头注有这笔账）。人与猫是体块比例参考（figure.ts），站 / 坐 / 走 / 卧四档姿态。
  *
- * 画法上两件为了帧率：静止态（直带子 / 成形）的单元整环烘成一份静态网格、按单元摆（gl3d.drawMeshAt），
- * 只有正在落下、收回、开门的带子才逐条摆；房间、立杆、圆环板、家具都是烘一次的静件。
+ * **两段触发（2026-10-23 作者纠偏）**：非触发的单元收在天花下（整束布贴着圆环板缩成一团），触发才沿立杆
+ * 落到工位、再压缩成形——程度 < `HOIST.dropAt` 是升降段（整束布的高度与长度一起插值），之上是成形段。
+ * 挡路的带各自收回时也按同一条路往上收（顶端收放按带，正文「夹持位置随程序变」那条假设）。
+ *
+ * 画法上两件为了帧率：静止态（收起 / 直带子 / 成形）的单元整环烘成一份静态网格、按单元摆（gl3d.drawMeshAt），
+ * 只有正在升降、成形、收回、开门的带子才逐条摆；房间、立杆、圆环板、家具都是烘一次的静件。
  * 环间织物膜（Lab 2-8 的蒙皮）这台没画——相邻带的帧不同，膜要逐对现算，先不做。
  *
  * 案例页主图与主页预览用同一台（`controls={false}`）：没有控制条，拖拽旋转照常。
@@ -80,12 +86,12 @@ const COPY = {
   zh: {
     title: '人猫同台 · 立体',
     sub: (platD: number, roomH: number) => `8×8 · 平台 ⌀${platD.toFixed(2)} m · 房高 ${roomH.toFixed(2)} m · ${SCENE.people} 位访客 · ${SCENE.cats} 只猫`,
-    hint: '拖拽旋转 · 单元按实验 2-14 的规则落下、收回、给人让路 · 控制在实验室',
-    hintCtl: '拖拽旋转 · 空间三档对照 · 单元按实验 2-14 的规则落下收回，挡路的带各自收回 · 带子形状取自一条引擎的关键帧',
+    hint: '拖拽旋转 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回、给人让路 · 控制在实验室',
+    hintCtl: '拖拽旋转 · 空间三档对照 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回，挡路的带各自收回 · 带子形状取自一条引擎的关键帧',
     baking: (p: number) => `算带子轨迹 ${Math.round(p * 100)}%`,
     line: (t: number, formed: number, total: number, c: Record<EventKind, number>) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · 成形 ${formed} / ${total} · 共视 ${c.gaze} · 共温 ${c.warmth} · 共触 ${c.touch} · 交接 ${c.pass}`,
-    aria: '一间房里 8×8 个收缩张紧外皮单元吊在天花下，六位访客在地上走、站、坐，两只猫在平台上；单元按人猫同台的规则落下收回，挡路的带各自收回',
+    aria: '一间房里 8×8 个收缩张紧外皮单元平时收在天花下，六位访客在地上走、站、坐，两只猫在平台上；单元按人猫同台的规则落下成形、收回，挡路的带各自收回',
     space: '空间',
     run: '运转',
     reset: '重来',
@@ -95,12 +101,12 @@ const COPY = {
   en: {
     title: 'People and cats together, in 3D',
     sub: (platD: number, roomH: number) => `8×8 · platform ⌀${platD.toFixed(2)} m · room ${roomH.toFixed(2)} m high · ${SCENE.people} visitors · ${SCENE.cats} cats`,
-    hint: 'Drag to orbit · units descend, retract and give way under the Lab 2-14 rules · controls in the lab',
-    hintCtl: 'Drag to orbit · three spaces to compare · units descend and retract under the Lab 2-14 rules, bands in the way retract on their own · band shapes come from one engine run',
+    hint: 'Drag to orbit · units rest stowed at the ceiling, then descend, form, retract and give way under the Lab 2-14 rules · controls in the lab',
+    hintCtl: 'Drag to orbit · three spaces to compare · units rest stowed at the ceiling, then descend and form under the Lab 2-14 rules, bands in the way retract on their own · band shapes come from one engine run',
     baking: (p: number) => `baking band trajectory ${Math.round(p * 100)}%`,
     line: (t: number, formed: number, total: number, c: Record<EventKind, number>) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · formed ${formed} / ${total} · co-gaze ${c.gaze} · co-warmth ${c.warmth} · contact ${c.touch} · crossing ${c.pass}`,
-    aria: 'A room with an 8×8 field of contracting-skin units hung from the ceiling; six visitors walk, stand and sit on the floor, two cats live on the platforms; units descend and retract under the cohabitation rules and bands in the way retract on their own',
+    aria: 'A room with an 8×8 field of contracting-skin units stowed at the ceiling; six visitors walk, stand and sit on the floor, two cats live on the platforms; units descend, form and retract under the cohabitation rules and bands in the way retract on their own',
     space: 'space',
     run: 'run',
     reset: 'restart',
@@ -234,16 +240,16 @@ export function CohabitSpaceBench({
     bakeFurniture();
 
     // ── 带子轨迹：分片烘，烘完才开始跑仿真（否则头一秒里成形的单元没有形可画）────
-    // 烘完之前用预览（只有引擎初始摆位那一帧）先把立杆、圆环板、闲着的带子画出来，画面不空等
+    // 烘完之前用预览（引擎初始摆位压成的收起态）先把立杆、圆环板、收着的单元画出来，画面不空等
     const baker = new TrajectoryBaker();
     const topo = bandTopology(baker.n);
     let traj: BandTrajectory | null = null;
     const pre = baker.preview();
     let rig: Rig = rigFor(layout, pre);
     {
-      const idle = bakeRing(pre, 0, topo);
-      R.addMesh('ring-straight-a', idle.a);
-      R.addMesh('ring-straight-b', idle.b);
+      const idle = bakeRing(pre, 1, topo); // 预览的第 1 帧 = 收起态
+      R.addMesh('ring-stowed-a', idle.a);
+      R.addMesh('ring-stowed-b', idle.b);
       const posts = postsMesh(rig, layout);
       R.addMesh('posts', bakeIndexed(posts.verts, posts.idx));
     }
@@ -258,9 +264,12 @@ export function CohabitSpaceBench({
     const onBaked = (): void => {
       traj = baker.trajectory as BandTrajectory;
       rig = rigFor(layout, traj);
-      // 闲着的带子换成 r = R0 的自然松弛形（与初始摆位差十几 px，肉眼几乎看不出）
+      // 三个静止态各烘一份整环：收起（换成 r = R0 自然松弛形压成的，与预览差十几 px，肉眼几乎看不出）/ 直带子 / 成形
+      const stowed = bakeRing(traj, STEADY.stowed, topo);
       const straight = bakeRing(traj, STEADY.straight, topo);
       const formed = bakeRing(traj, STEADY.formed, topo);
+      R.addMesh('ring-stowed-a', stowed.a);
+      R.addMesh('ring-stowed-b', stowed.b);
       R.addMesh('ring-straight-a', straight.a);
       R.addMesh('ring-straight-b', straight.b);
       R.addMesh('ring-formed-a', formed.a);
@@ -278,18 +287,22 @@ export function CohabitSpaceBench({
       R.drawMesh('furniture', IDENT, FURN_DARK, FURN_LITE);
       if (sim.space !== 'empty') {
         R.drawMesh('posts', IDENT, RAIL_DARK, RAIL_LITE);
+        const stowedPlaces: MeshPlace[] = [];
         const straightPlaces: MeshPlace[] = [];
         const formedPlaces: MeshPlace[] = [];
         const perFrame = new Map<number, MeshPlace[]>();
-        const at = (c: { x: number; z: number }, yaw: number): MeshPlace => ({ yaw, x: c.x, y: rig.y, z: c.z, s: rig.s });
+        const at = (c: { x: number; z: number }, yaw: number, y: number): MeshPlace => ({ yaw, x: c.x, y, z: c.z, s: rig.s });
         for (let u = 0; u < layout.units.length; u++) {
           const c = rig.cells[u];
-          // 轨迹还没烘完：仿真没开跑，全场都是闲着的带子
+          // 轨迹还没烘完：仿真没开跑，全场都收在天花下
           if (!traj) {
-            straightPlaces.push(at(c, 0));
+            stowedPlaces.push(at(c, 0, rig.stowY));
             continue;
           }
           const deg = sim.act.degree[u];
+          // 整束布的高度跟单元的升降程度走；带子各自的长度跟自己的 f 走（开门的带往上收）
+          const top = unitTopY(rig, unitDrop(deg));
+          let allStowed = true;
           let allStraight = true;
           let allFormed = true;
           for (let j = 0; j < BANDS; j++) {
@@ -300,19 +313,23 @@ export function CohabitSpaceBench({
             fPrev[i] = f;
             const k = bandFrame(f, rising[i] === 1, FRAMES, traj.retractActive);
             frameOf[i] = k;
+            if (k !== STEADY.stowed) allStowed = false;
             if (k !== STEADY.straight) allStraight = false;
             if (k !== STEADY.formed) allFormed = false;
           }
-          if (allStraight) straightPlaces.push(at(c, 0));
-          else if (allFormed) formedPlaces.push(at(c, 0));
+          if (allStowed) stowedPlaces.push(at(c, 0, top));
+          else if (allStraight) straightPlaces.push(at(c, 0, top));
+          else if (allFormed) formedPlaces.push(at(c, 0, top));
           else
             for (let j = 0; j < BANDS; j++) {
               const k = frameOf[u * BANDS + j];
               let list = perFrame.get(k);
               if (!list) perFrame.set(k, (list = []));
-              list.push(at(c, bandAngle(j)));
+              list.push(at(c, bandAngle(j), top));
             }
         }
+        R.drawMeshAt('ring-stowed-a', stowedPlaces, DARK_A, LITE_A);
+        R.drawMeshAt('ring-stowed-b', stowedPlaces, DARK_B, LITE_B);
         R.drawMeshAt('ring-straight-a', straightPlaces, DARK_A, LITE_A);
         R.drawMeshAt('ring-straight-b', straightPlaces, DARK_B, LITE_B);
         R.drawMeshAt('ring-formed-a', formedPlaces, DARK_A, LITE_A);
@@ -343,7 +360,8 @@ export function CohabitSpaceBench({
         let unit = support[0] ?? null;
         if (support.length > 1) unit = support.reduce((b, u) => (Math.hypot(u.x - c.walker.x, u.y - c.walker.y) < Math.hypot(b.x - c.walker.x, b.y - c.walker.y) ? u : b), support[0]);
         const spot = catSpot(c.walker, sim.space === 'empty' ? null : unit, layout);
-        const onPlatform = !!unit && spot.onPlatform && traj !== null && sim.act.degree[unit.i] >= COHABIT.WALL_AT;
+        // 成形段才有台面（落到位的直筒还没有平台）：程度到顶才把猫画在平台面上
+        const onPlatform = !!unit && spot.onPlatform && traj !== null && sim.act.degree[unit.i] >= 1 - 1e-3;
         const cat = catVerts({
           x: spot.x * UNITS_PER_M,
           z: spot.y * UNITS_PER_M,

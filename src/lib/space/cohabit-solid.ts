@@ -21,6 +21,17 @@
  * 房间与人取 Lab 2-8 的世界尺度（`MM_PER_UNIT`：1.70 m 的人 = 215 单位）；8×8 的单元按格距等比缩小
  * （`planLayout` 的 pitchM / pitch4，与 Lab 2-10 以来的平面台架同一条规则），装置的下缘仍钉在离地 1.08 m
  * （`RIG_ANCHOR_Y`）——平面模型里「平台底比坐着的头顶低」那条账就是按它算的。
+ *
+ * ## 两段触发（2026-10-23 作者纠偏）
+ *
+ * 首版把「闲着」画成直带子挂在工位上——整间房六十四个单元全垂着，等于全都触发了。作者纠偏：非触发的单元
+ * 是**收在上端**的（蒙皮、可折叠的布、台子缩成一团贴着天花），只有被确认触发才垂下来、外皮再压缩成形；
+ * 触发分两个阶段——先是上下（存在上面还是挪到了下边），再是挪下来之后变成什么性质的台子（通道 / 平台 /
+ * 可停留的空间，待定）。这台此刻只分两种触发态：**收起**（整束布贴着天花圆环板）与**落下成形**。
+ * 平面模型的程度 0–1 在这里拆成两段（`HOIST.dropAt` 分界）：之下是升降段——整束布沿立杆从天花下滑到
+ * 工位、边下边放长（`hoistProfile`，直带子按长度比例压向顶端）；之上是成形段——引擎的正向协议与回程照旧。
+ * 分界取平面模型「对人成墙」那条线（`COHABIT.WALL_AT`）：落到位的直筒已经挡人，两边口径一致。
+ * 第二阶段「成什么」仍只有一种形（Lab 2-8 那只阶梯方箱），待作者定词汇表后再分。
  */
 import { RING, RING_DEFAULT_FORM, buildRingUnits, type RingUnitDef } from './skin-ring';
 import { SKIN, createSkinUnit, renderSmooth } from './skin-unit';
@@ -28,20 +39,32 @@ import { SOLID, boxVerts, buildSolidTopology, fillSolidVerts, ringPlateVerts, ro
 import { bakeIndexed } from '../linkage/gl3d';
 import { MM_PER_UNIT, RIG_ANCHOR_Y, RIG_SCALE, RING_GRID_FIT, RING_GRID_PIVOT_Y, ROOM, roomBoxesBySpan, viewFitBySpan, type RingGridView } from './skin-grid';
 import type { PlanLayout } from './unit-activation';
-import { bandAngle, type FurnRect } from './cohabit';
+import { COHABIT, bandAngle, type FurnRect } from './cohabit';
 
 /** 一米 = 多少世界单位（由「人 = 1.70 m = 215 单位」定） */
 export const UNITS_PER_M = 1000 / MM_PER_UNIT;
 
-/** 关键帧数：正向 0.67 s（跟随档 1.5/s）、回程 2 s（0.5/s）——按 60 fps 下不重帧的量级取 */
-export const FRAMES = { form: 32, retract: 24 } as const;
+/** 关键帧数：正向 0.67 s（跟随档 1.5/s）、回程 2 s（0.5/s）——按 60 fps 下不重帧的量级取；升降 16 帧（直带子按长度比例压向顶端，纯几何） */
+export const FRAMES = { form: 32, retract: 24, hoist: 16 } as const;
+
+/**
+ * 升降段（两段触发，见头注）。`dropAt` 之下程度全给升降：0 = 收在天花下，dropAt = 落到工位的直筒；
+ * 之上才是成形。`stowed` = 收起时布束保留的长度比例（折叠的布与台子缩成一团，演示值，待作者真机看）；
+ * `ceilGap` = 收起时带子顶端离圆环板下表面的净距（世界单位）。
+ */
+export const HOIST = {
+  dropAt: COHABIT.WALL_AT,
+  stowed: 0.15,
+  ceilGap: 2,
+} as const;
 
 /** 演示的场面：六位访客两只猫 = 对照研究的中档（案例页对照图的三档之一） */
 export const SCENE = { people: 6, cats: 2, seed: 11 } as const;
 
 export interface BandTrajectory {
   n: number;
-  /** 关键帧（正向在前、回程在后），每帧 = [px…, py…]（引擎单位，已做绘图平滑） */
+  /** 关键帧（正向、回程、升降依次排开），每帧 = [px…, py…]（引擎单位，已做绘图平滑）。
+   *  升降帧由回程末帧（闲着的直带子）按长度比例压向顶端得来，第 0 帧 = 收起态、末帧 = 直带子本身 */
   frames: Float64Array[];
   /** 带子钉住的那一端在装置自身坐标系里的高度（世界 Y 向下为正；注册在底端 ⇒ 全程不变） */
   footY: number;
@@ -67,6 +90,7 @@ export class TrajectoryBaker {
   private readonly smoothP: number;
   private readonly formAt: number[];
   private readonly retractAt: number[];
+  private readonly hoistN: number;
   private readonly frames: Float64Array[] = [];
   private step = 0;
   private phase: 'form' | 'retract' | 'done' = 'form';
@@ -79,6 +103,7 @@ export class TrajectoryBaker {
     const spread = (k: number, total: number): number[] => Array.from({ length: k }, (_, i) => Math.round((i / (k - 1)) * total));
     this.formAt = spread(frames.form, SKIN.STEPS);
     this.retractAt = spread(frames.retract, SKIN.STEPS);
+    this.hoistN = frames.hoist;
     this.capture(); // 正向第 0 帧 = 直带子
   }
 
@@ -127,14 +152,15 @@ export class TrajectoryBaker {
   }
 
   /**
-   * 烘完之前先给一份「预览」：只有正向第 0 帧（引擎的初始摆位）。钉住端的高度它已经给得出
-   * （注册在底端，全程不变），台架据此先把立杆、圆环板和闲着的带子画出来，不用等轨迹烘完才有画面；
+   * 烘完之前先给一份「预览」：正向第 0 帧（引擎的初始摆位）加它的收起态。钉住端的高度它已经给得出
+   * （注册在底端，全程不变），台架据此先把立杆、圆环板和收着的单元画出来，不用等轨迹烘完才有画面；
    * 平台顶面与回程段烘完才有（此时仿真还没开始跑，没有单元会去用它们）。
    */
   preview(): BandTrajectory {
     const n = this.n;
     const f0 = this.frames[0];
-    return { n, frames: [f0], footY: -f0[2 * n - 1] * SOLID.SCALE, platformTopY: -f0[2 * n - 1] * SOLID.SCALE, reach: RING.RADIUS_DEF, retractActive: 0 };
+    // frames[1] = 收起态（初始摆位压向顶端）：烘完之前满场都是收着的单元，台架拿它烘整环
+    return { n, frames: [f0, hoistProfile(f0, n, HOIST.stowed)], footY: -f0[2 * n - 1] * SOLID.SCALE, platformTopY: -f0[2 * n - 1] * SOLID.SCALE, reach: RING.RADIUS_DEF, retractActive: 0 };
   }
 
   /** 一口气烘完（守门与线稿用） */
@@ -164,6 +190,9 @@ export class TrajectoryBaker {
         break;
       }
     }
+    // 升降帧：由回程末帧（闲着的直带子）压向顶端，第 0 帧 = 收起态、末帧 = 直带子逐位相同
+    const straight = this.frames[F + this.retractAt.length - 1];
+    for (let j = 0; j < this.hoistN; j++) this.frames.push(hoistProfile(straight, n, HOIST.stowed + (1 - HOIST.stowed) * (j / (this.hoistN - 1))));
     this.result = {
       n,
       frames: this.frames,
@@ -176,34 +205,62 @@ export class TrajectoryBaker {
 }
 
 /**
- * 一条带该用哪一帧。f = 成形程度 × (1 − 收回几成)，rising = f 在涨。
- * 涨：正向第 round(f·(form−1)) 帧（第 0 帧是引擎的初始摆位，比自然松弛还直，跳过它）；
- * 退：回程第 round((1−f)·retractActive) 帧（回程第 0 帧 = 成形态，末帧 = r 回到 R0 后的自然松弛形）。
- * 两端钉死：f ≤ 0 一律「闲着的带子」= 回程末帧（一条从没落过的带挂在 r = R0 也是这个形，不是一条直线），
+ * 直带子按长度比例压向顶端（升降段的几何）：k = 保留的长度比例，顶端节点不动、其余节点的高度向它靠拢，
+ * 横向（挑出）不变。k = 1 逐位等于原帧。世界 Y 向下为正 ⇒ 引擎 py 最大的节点是顶端。
+ */
+export function hoistProfile(src: Float64Array, n: number, k: number): Float64Array {
+  let top = -Infinity;
+  for (let i = 0; i < n; i++) top = Math.max(top, src[n + i]);
+  const out = Float64Array.from(src);
+  for (let i = 0; i < n; i++) out[n + i] = top + (src[n + i] - top) * k;
+  return out;
+}
+
+/**
+ * 一条带该用哪一帧。f = 成形程度 × (1 − 收回几成)，rising = f 在涨。两段：
+ * - f < dropAt 升降段：升降第 round(f/dropAt·(hoist−1)) 帧（第 0 帧 = 收起态；末帧就是直带子，直接给 STEADY.straight）；
+ * - f ≥ dropAt 成形段，g = (f − dropAt)/(1 − dropAt)：
+ *   涨：正向第 round(g·(form−1)) 帧（第 0 帧是引擎的初始摆位，比自然松弛还直，跳过它）；
+ *   退：回程第 round((1−g)·retractActive) 帧（回程第 0 帧 = 成形态，末帧 = r 回到 R0 后的自然松弛形）。
+ * 三个静止态钉死：f ≤ 0 一律收起态，f = dropAt 一律直带子（回程末帧：一条挂在 r = R0 的带也是这个形，不是一条直线），
  * f ≥ 1 一律成形态——静止态不随方向变，好让台架把一整个环当一份网格摆
- * （绝大多数单元绝大多数时间停在这两个态上）。
+ * （绝大多数单元绝大多数时间停在收起态上，其次是成形态）。
  */
 export function bandFrame(
   f: number,
   rising: boolean,
-  frames: { form: number; retract: number } = FRAMES,
+  frames: { form: number; retract: number; hoist: number } = FRAMES,
   retractActive: number = frames.retract - 1,
+  dropAt: number = HOIST.dropAt,
 ): number {
-  if (f <= 1e-4) return frames.form + frames.retract - 1;
+  const straight = frames.form + frames.retract - 1;
+  if (f <= 1e-4) return straight + 1;
   if (f >= 1 - 1e-4) return frames.form - 1;
-  if (rising) return Math.max(1, Math.round(f * (frames.form - 1)));
-  return frames.form + Math.round((1 - f) * retractActive);
+  if (f < dropAt) {
+    const j = Math.round((f / dropAt) * (frames.hoist - 1));
+    return j >= frames.hoist - 1 ? straight : straight + 1 + j;
+  }
+  const g = (f - dropAt) / (1 - dropAt);
+  if (g <= 1e-4) return straight;
+  if (rising) return Math.max(1, Math.round(g * (frames.form - 1)));
+  return frames.form + Math.round((1 - g) * retractActive);
 }
 
-/** 闲着 / 成形态这两帧的下标（整环共用一份网格的两个静止态） */
-export const STEADY = { straight: FRAMES.form + FRAMES.retract - 1, formed: FRAMES.form - 1 } as const;
+/** 收起 / 直带子 / 成形态三帧的下标（整环共用一份网格的三个静止态） */
+export const STEADY = {
+  straight: FRAMES.form + FRAMES.retract - 1,
+  formed: FRAMES.form - 1,
+  stowed: FRAMES.form + FRAMES.retract,
+} as const;
 
 /** 装置的摆放：缩放、整体下移、格子的世界坐标 */
 export interface Rig {
   /** 装置自身坐标系 → 世界的均匀缩放（4×4 = RIG_SCALE，8×8 再按格距等比缩） */
   s: number;
-  /** 整体下移，使钉住端停在 RIG_ANCHOR_Y */
+  /** 工位：装置原点的世界高度（整体下移，使钉住端停在 RIG_ANCHOR_Y） */
   y: number;
+  /** 收起位：装置原点贴着天花圆环板时的世界高度（升降段在它与 y 之间插值） */
+  stowY: number;
   /** 每个单元芯心的世界坐标（plan x → X、plan y → Z） */
   cells: { x: number; z: number }[];
   /** 平台顶面的世界高度 */
@@ -216,9 +273,20 @@ export function rigFor(layout: PlanLayout, traj: Pick<BandTrajectory, 'footY' | 
   return {
     s,
     y,
+    stowY: HOIST.ceilGap,
     cells: layout.units.map((u) => ({ x: u.x * UNITS_PER_M, z: u.y * UNITS_PER_M })),
     platformY: y + s * traj.platformTopY,
   };
+}
+
+/** 单元的升降程度：程度 < dropAt 时整束布还在路上（0 = 收在天花下，1 = 到工位，之后只成形不再动） */
+export function unitDrop(degree: number, dropAt: number = HOIST.dropAt): number {
+  return Math.max(0, Math.min(1, degree / dropAt));
+}
+
+/** 单元此刻的装置原点世界高度：收起位与工位之间按升降程度插值（带子与它一起摆，圆环板与立杆不动） */
+export function unitTopY(rig: Pick<Rig, 'y' | 'stowY'>, drop: number): number {
+  return rig.stowY + (rig.y - rig.stowY) * drop;
 }
 
 /** 一条带在装置自身坐标系里的顶点（沿本地 +X 放在芯半径处，再由摆放表转到各方位角） */

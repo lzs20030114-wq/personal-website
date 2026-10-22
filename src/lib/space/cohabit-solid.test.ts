@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FRAMES, STEADY, TrajectoryBaker, UNITS_PER_M, bakeBand, bakeRing, bandFrame, bandTopology, catSpot, furnitureBoxes, postsMesh, rigFor, roomMesh } from './cohabit-solid';
+import { FRAMES, HOIST, STEADY, TrajectoryBaker, UNITS_PER_M, bakeBand, bakeRing, bandFrame, bandTopology, catSpot, furnitureBoxes, hoistProfile, postsMesh, rigFor, roomMesh, unitDrop, unitTopY } from './cohabit-solid';
 import { planLayout } from './unit-activation';
 import { PEAK_REACH, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
 import { RING } from './skin-ring';
@@ -13,14 +13,14 @@ const traj = new TrajectoryBaker().runAll();
 const layout8 = planLayout(8);
 
 describe('带子轨迹关键帧', () => {
-  it('正向 + 回程帧数齐全，每帧 2n 个数', () => {
-    expect(traj.frames).toHaveLength(FRAMES.form + FRAMES.retract);
+  it('正向 + 回程 + 升降帧数齐全，每帧 2n 个数', () => {
+    expect(traj.frames).toHaveLength(FRAMES.form + FRAMES.retract + FRAMES.hoist);
     for (const f of traj.frames) expect(f.length).toBe(2 * traj.n);
   });
 
-  it('钉住端全程不动（注册在底端），平台顶面在钉住端之上、挑出在环族的量级', () => {
+  it('钉住端在正向与回程里全程不动（注册在底端），平台顶面在钉住端之上、挑出在环族的量级', () => {
     const n = traj.n;
-    for (const f of traj.frames) expect(-f[2 * n - 1] * 100).toBeCloseTo(traj.footY, 3);
+    for (const f of traj.frames.slice(0, FRAMES.form + FRAMES.retract)) expect(-f[2 * n - 1] * 100).toBeCloseTo(traj.footY, 3);
     expect(traj.platformTopY).toBeLessThan(traj.footY);
     expect(traj.platformTopY).toBeGreaterThan(0);
     // 成形后挑出 ≈ 芯半径 + 环族峰值挑出（PEAK_REACH 是全程峰值，终态略小）
@@ -45,14 +45,55 @@ describe('带子轨迹关键帧', () => {
     for (let i = 0; i < 2 * n; i++) expect(tail[i]).toBeCloseTo(last[i], 5); // 静置段只剩 1e-8 量级的抖动
   });
 
-  it('取帧：两端钉死、涨查正向（跳过初始摆位那一帧）、退查回程的会动段，且各自单调', () => {
-    expect(bandFrame(0, true)).toBe(STEADY.straight);
-    expect(bandFrame(0, false)).toBe(STEADY.straight);
-    expect(STEADY.straight).toBe(traj.frames.length - 1);
+  it('升降帧：由直带子压向顶端——顶端不动、挑出不变、钉住端从收起位单调降到工位，末帧 = 直带子', () => {
+    const n = traj.n;
+    const straight = traj.frames[STEADY.straight];
+    const stowed = traj.frames[STEADY.stowed];
+    expect(STEADY.stowed).toBe(FRAMES.form + FRAMES.retract);
+    const topOf = (f: Float64Array): number => Math.max(...Array.from(f.subarray(n, 2 * n)));
+    const top = topOf(straight);
+    // 收起态：吊长只剩 HOIST.stowed 倍，顶端节点不动，横向逐位相同
+    expect(top - stowed[2 * n - 1]).toBeCloseTo((top - straight[2 * n - 1]) * HOIST.stowed, 9);
+    expect(topOf(stowed)).toBeCloseTo(top, 12);
+    for (let i = 0; i < n; i++) expect(stowed[i]).toBe(straight[i]);
+    let prevFoot = -Infinity;
+    for (let j = 0; j < FRAMES.hoist; j++) {
+      const f = traj.frames[STEADY.stowed + j];
+      const foot = -f[2 * n - 1] * 100;
+      expect(foot).toBeLessThanOrEqual(traj.footY + 1e-6);
+      expect(foot).toBeGreaterThan(prevFoot);
+      expect(topOf(f)).toBeCloseTo(top, 12);
+      prevFoot = foot;
+    }
+    const last = traj.frames[STEADY.stowed + FRAMES.hoist - 1];
+    for (let i = 0; i < 2 * n; i++) expect(last[i]).toBeCloseTo(straight[i], 12);
+    // 纯几何：k = 1 逐位等于原帧
+    const same = hoistProfile(straight, n, 1);
+    for (let i = 0; i < 2 * n; i++) expect(same[i]).toBeCloseTo(straight[i], 12);
+  });
+
+  it('取帧：三个静止态钉死、升降段只查升降帧、成形段涨查正向（跳过初始摆位那一帧）退查回程的会动段，且各自单调', () => {
+    const D = HOIST.dropAt;
+    expect(bandFrame(0, true)).toBe(STEADY.stowed);
+    expect(bandFrame(0, false)).toBe(STEADY.stowed);
+    expect(STEADY.stowed).toBe(traj.frames.length - FRAMES.hoist);
+    expect(bandFrame(D, true)).toBe(STEADY.straight);
+    expect(bandFrame(D, false)).toBe(STEADY.straight);
     expect(bandFrame(1, true)).toBe(STEADY.formed);
     expect(bandFrame(1, false)).toBe(STEADY.formed);
+    // 升降段：不分涨退，从收起态单调走到直带子
+    for (const rising of [true, false]) {
+      let prev = -1;
+      for (let f = 0.001; f < D; f += 0.005) {
+        const k = bandFrame(f, rising, FRAMES, traj.retractActive);
+        expect(k === STEADY.straight || (k >= STEADY.stowed && k < STEADY.stowed + FRAMES.hoist)).toBe(true);
+        const ord = k === STEADY.straight ? STEADY.stowed + FRAMES.hoist : k;
+        expect(ord).toBeGreaterThanOrEqual(prev);
+        prev = ord;
+      }
+    }
     let prev = -1;
-    for (let f = 0.001; f < 1; f += 0.01) {
+    for (let f = D + 0.001; f < 1; f += 0.005) {
       const k = bandFrame(f, true);
       expect(k).toBeGreaterThanOrEqual(1);
       expect(k).toBeGreaterThanOrEqual(prev);
@@ -60,26 +101,29 @@ describe('带子轨迹关键帧', () => {
       prev = k;
     }
     prev = Infinity;
-    for (let f = 0.001; f < 1; f += 0.01) {
+    for (let f = D + 0.001; f < 1; f += 0.005) {
       const k = bandFrame(f, false, FRAMES, traj.retractActive);
       expect(k).toBeLessThanOrEqual(prev);
       expect(k).toBeGreaterThanOrEqual(FRAMES.form);
       expect(k).toBeLessThanOrEqual(FRAMES.form + traj.retractActive);
       prev = k;
     }
-    // 退到底与「闲着」是同一个形（回程会动段的末帧之后逐位相同）
-    const kEnd = bandFrame(0.0005, false, FRAMES, traj.retractActive);
+    // 成形段退到底与直带子是同一个形（回程会动段的末帧之后逐位相同）
+    const kEnd = bandFrame(D + 0.0005, false, FRAMES, traj.retractActive);
     const a = traj.frames[kEnd];
     const b = traj.frames[STEADY.straight];
     for (let i = 0; i < 2 * traj.n; i++) expect(a[i]).toBeCloseTo(b[i], 5);
   });
 
-  it('预览（烘完之前）给的钉住端高度与烘完的一致，只有一帧', () => {
+  it('预览（烘完之前）给的钉住端高度与烘完的一致，两帧：初始摆位与它的收起态', () => {
     const b = new TrajectoryBaker();
     const pre = b.preview();
-    expect(pre.frames).toHaveLength(1);
+    expect(pre.frames).toHaveLength(2);
     expect(pre.footY).toBeCloseTo(traj.footY, 6);
     expect(rigFor(layout8, pre).y).toBeCloseTo(rigFor(layout8, traj).y, 6);
+    const n = pre.n;
+    const stowed = hoistProfile(pre.frames[0], n, HOIST.stowed);
+    for (let i = 0; i < 2 * n; i++) expect(pre.frames[1][i]).toBe(stowed[i]);
   });
 
   it('整环网格 = 二十条带的网格拼起来', () => {
@@ -111,6 +155,20 @@ describe('摆放与尺度', () => {
     expect(aboveM).toBeGreaterThan(0.05);
     expect(aboveM).toBeLessThan(0.3);
     expect((ROOM.FLOOR_Y - RIG_ANCHOR_Y) / UNITS_PER_M).toBeCloseTo(1.08, 1);
+  });
+
+  it('收起位：装置原点贴着圆环板下面，升降程度 0 → 1 从收起位插值到工位；收起的布束底在人头顶以上一大截', () => {
+    expect(rig.stowY).toBe(HOIST.ceilGap);
+    expect(unitTopY(rig, 0)).toBe(rig.stowY);
+    expect(unitTopY(rig, 1)).toBeCloseTo(rig.y, 12);
+    expect(unitDrop(0)).toBe(0);
+    expect(unitDrop(HOIST.dropAt / 2)).toBeCloseTo(0.5, 12);
+    expect(unitDrop(HOIST.dropAt)).toBe(1);
+    expect(unitDrop(1)).toBe(1);
+    const n = traj.n;
+    const stowedFoot = unitTopY(rig, 0) + rig.s * -traj.frames[STEADY.stowed][2 * n - 1] * 100;
+    expect((ROOM.FLOOR_Y - stowedFoot) / UNITS_PER_M).toBeGreaterThan(3.3); // 房高 3.74 m，收起的布束只占顶上十几厘米
+    expect(unitTopY(rig, 1) + rig.s * traj.footY).toBeCloseTo(RIG_ANCHOR_Y, 6);
   });
 
   it('64 个格子落在房间内净范围里，plan y → 世界 Z', () => {
