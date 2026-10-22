@@ -1,7 +1,7 @@
 // 人格对比探针（2026-10-14，人格分类重做的前后对照）。问的是：同一个人、同一只手，四种人格的反应差多少、
 // 「回避」那一型到底看不看得出在躲人。
 //
-//   node scripts/behavior/persona-probe.mjs <outDir> [N=12] [vocabs=1,2]
+//   node scripts/behavior/persona-probe.mjs <outDir> [N=12] [vocabs=2]   （2026-10-17 起引擎只有一套动作；1 只对删现行之前的版本有意义）
 //
 // 引擎、台架换算、触手求解器、碰臂判定一律取站上模块（vite ssrLoadModule），这里不另写一份。
 // 三个场景（每种人格 × 每个动作词汇 × N 个种子；成长段、生命钟 ×1、自发与转向照常）：
@@ -37,10 +37,15 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '../..');
 const OUT = resolve(process.argv[2] ?? 'persona-probe-out');
 const N = Number(process.argv[3] ?? 12);
-const VOCABS = (process.argv[4] ?? '1,2').split(',').map(Number);
+const VOCABS = (process.argv[4] ?? '2').split(',').map(Number);
 const SCENS = (process.env.SCEN ?? 'V,T,H').split(',');
 /** TRACE=1：每种人格第一个种子另存一份逐帧轨迹（trace-<场景><词汇>-<人格>.json，排查用） */
 const TRACE = !!process.env.TRACE;
+/**
+ * SPREAD=1（2026-10-19 加）：指针 = 手场景另加三项观察者看得见、原口径没量的——呼吸起伏（breathSd）、转身量（yawAct）、
+ * 来访中朝向忽变（faceSd = 朝向余弦在来访中的标准差：一会儿迎一会儿躲的读得出来，均值读不出来）。不加时与此前逐字相同
+ */
+const SPREAD = !!process.env.SPREAD;
 
 const HZ = 60;
 const DEG = 180 / Math.PI;
@@ -274,7 +279,7 @@ function trial(P, vocab, seed, sc) {
         const rd = MB.handReading(VIEW, ptrL, yaw0, handSent?.bearing);
         hp.rd = rd;
         if (rd.side >= HAND_UI.sideMin || !handSent) lastAimDir = rd.aimDir;
-        const v2f = e.vocab() === 2;
+        const v2f = vocab === 2;
         if (MB.handSendDue(rd, handSent, lastAimDir, t, { v2: v2f, lastMoveAt: track.lastMoveAt })) {
           const send = {
             bearing: Math.round(rd.bearing * 1000) / 1000,
@@ -324,7 +329,8 @@ function trial(P, vocab, seed, sc) {
             lastMoveAt: track.lastMoveAt,
             grasp: st.grasp.phase,
           },
-          { traction: false },
+          // 与台架同口径：缠 / 握着时慢慢挪手 = 牵着走（2026-10-18 改；§12.7 复测二是两边都关着牵引测的）
+          { traction: true },
         ).next;
         const on = contact.touching || contact.held;
         if (on !== electrodeSent) {
@@ -402,6 +408,7 @@ function trial(P, vocab, seed, sc) {
       return b === null ? null : Math.abs(wrapPi(f.yaw - b));
     }).filter((x) => x !== null);
     const face = mean(ang.map(Math.cos));
+    const faceSd = sd(ang.map(Math.cos));
     const away = mean(ang.map((a) => (a > (120 / DEG) ? 1 : 0)));
     const toward = mean(ang.map((a) => (a < (45 / DEG) ? 1 : 0)));
     // 第一次转过 30°（从人出现那刻算）
@@ -426,6 +433,7 @@ function trial(P, vocab, seed, sc) {
     const openC = mean(C.map((f) => 1 - f.s));
     const row = {
       face,
+      faceSd,
       away,
       toward,
       tTurn,
@@ -478,7 +486,10 @@ function trial(P, vocab, seed, sc) {
 const METRICS = {
   V: ['face', 'away', 'toward', 'tTurn', 'turnSign', 'yawAct', 'open', 'dOpen', 'breathSd', 'bend', 'up', 'voice'],
   T: ['face', 'away', 'tTurn', 'open', 'dOpen', 'breathSd', 'bend', 'up', 'voice', 'startle', 'respond'],
-  H: ['face', 'away', 'toward', 'seenT', 'dTip', 'tipNear', 'armAway', 'dodge', 'touch', 'wrap', 'startle', 'open', 'dOpen', 'up', 'voice'],
+  H: [
+    'face', 'away', 'toward', 'seenT', 'dTip', 'tipNear', 'armAway', 'dodge', 'touch', 'wrap', 'startle', 'open', 'dOpen', 'up', 'voice',
+    ...(SPREAD ? ['breathSd', 'yawAct', 'faceSd'] : []),
+  ],
   M: ['face', 'away', 'armAway', 'dodge', 'dTip', 'touchRate', 'gapReach', 'tTouch', 'touch', 'wrap', 'startle'],
 };
 

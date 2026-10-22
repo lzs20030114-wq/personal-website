@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { BehaviorEngine, type EngineState, OBS, obsForecast, obsSettled, obsStep } from './engine';
+import { BehaviorEngine, type EngineState, HAND, OBS, obsForecast, obsSettled, obsStep } from './engine';
 import type { SensorInput } from './events';
 import type { LogRecord } from './log';
 import { PERSONA_KEYS, type PersonaKey } from './persona';
-import { HC, gainAt } from './vocab2-hand';
+import { gainAt, handD } from './vocab2-hand';
+import { D_DEEP_SPAN, D_SPAN, D_WRAP_SPAN } from './programs';
 import {
   ARM_GEOM,
   type HandSent,
   HAND_UI,
   type ViewParams,
+  graspCaught,
   handReading,
   handSendDue,
   projectLogical,
@@ -51,7 +53,7 @@ class Rig {
   autoHand = true;
   t0: number;
   constructor(P: PersonaKey, seed: number, opts: { deepOk?: boolean } = {}) {
-    this.e = new BehaviorEngine({ seed, order: order(P), lifeRate: 1, vocab: 2, deepOk: opts.deepOk ?? true });
+    this.e = new BehaviorEngine({ seed, order: order(P), lifeRate: 1, deepOk: opts.deepOk ?? true });
     this.log.push(...this.e.drain());
     this.e.skip();
     this.e.tick();
@@ -75,16 +77,16 @@ class Rig {
       if (this.autoHand && this.e.ticks % 6 === 0) {
         if (h) {
           const still = Math.max(0, this.t - this.movedAt);
-          this.push({ kind: 'HAND', on: true, ...h, touch: 32, still: Math.min(9.9, Math.round(still * 10) / 10), v: still < 0.3 ? this.v : 0 });
+          this.push({ kind: 'HAND', on: true, ...h, touch: HAND.touch, still: Math.min(9.9, Math.round(still * 10) / 10), v: still < 0.3 ? this.v : 0 });
         } else this.push({ kind: 'HAND', on: false });
       }
       const tg = this.e.targets();
       if (h && this.contact) {
-        const D = 0.34 * tg.arm.bend + 0.16 * tg.arm.wrap + 0.3773 * (tg.arm.deep ?? 0);
-        const Dh = Math.min(0.5, 0.34 * h.aimBend);
+        const D = D_SPAN * tg.arm.bend + D_WRAP_SPAN * tg.arm.wrap + D_DEEP_SPAN * (tg.arm.deep ?? 0);
+        const Dh = handD(h.aimBend);
         const mm = Math.hypot(D * Math.cos(tg.arm.dir) - Dh * Math.cos(h.aimDir), D * Math.sin(tg.arm.dir) - Dh * Math.sin(h.aimDir)) * gainAt(h.aimDist, Dh);
         if (!this.touch) {
-          this.near = mm < 32 ? this.near + 1 / 60 : 0;
+          this.near = mm < HAND.touch ? this.near + 1 / 60 : 0;
           if (this.near >= 0.12) {
             this.touch = true;
             this.push({ kind: 'ARM_TOUCH', on: true, by: 'arm' });
@@ -92,7 +94,7 @@ class Rig {
         }
       }
       const g = this.e.state.grasp;
-      if (this.catches && this.touch && !this.tension && g.phase === 'WRAP' && (g.catchT !== undefined ? this.e.time >= g.catchT : (this.e.time - g.t0) / g.dur >= 0.6)) {
+      if (this.catches && this.touch && !this.tension && graspCaught(g, this.e.time)) {
         this.tension = true;
         this.push({ kind: 'RESISTANCE', on: true });
       }
@@ -155,7 +157,7 @@ describe('迎手链：看见 → 凑 → 缠 → 握', () => {
     expect(r.ev('HAND_SEEN').filter((x) => x.t > t0 && x.t <= hold)).toHaveLength(0);
   });
 
-  it('沉静型（迎的时候）：停半拍 → 瞄准 → 精确伸；看见 → 指令朝手动 ≤ 1 s；握着时随呼吸一紧一松、哼', () => {
+  it('沉静型（迎的时候）：靠近 → 直接伸过去（不蹲不扑）；看见 → 指令朝手动 ≤ 1 s；握着时哼、手慢慢挪就跟着走', () => {
     const r = new Rig('B', seedFor('B', 'toward'));
     let seenAt = -1;
     let movedAt = -1;
@@ -170,35 +172,40 @@ describe('迎手链：看见 → 凑 → 缠 → 握', () => {
     expect(movedAt - seenAt).toBeLessThan(1);
     r.run(26);
     const b = r.beats();
-    expect(b).toContain('approach.hover');
-    expect(b.indexOf('approach.sight')).toBeGreaterThan(b.indexOf('approach.hover'));
-    expect(b).toContain('approach.reach');
+    expect(b.indexOf('approach.reach')).toBeGreaterThan(b.indexOf('approach.transport'));
     expect(b).not.toContain('approach.crouch');
+    expect(b).not.toContain('approach.pounce');
     expect(r.ev('GRASP_HOLD_HUMAN').length).toBeGreaterThan(0);
-    // 握着：指令弯曲在动（不再逐位不变），哼在呼气时
-    const bends: number[] = [];
+    // 握着：哼；手不动时握姿不动（2026-10-19 删掉了随呼吸一紧一松）
     let hum = 0;
-    r.run(8, () => {
-      const tg = r.e.targets();
-      bends.push(0.34 * tg.arm.bend + 0.16 * tg.arm.wrap);
-      if (tg.sound.on) hum++;
+    r.run(4, () => {
+      if (r.e.targets().sound.on) hum++;
     });
     expect(r.e.state.grasp.phase).toBe('HOLD_HUMAN');
-    expect(Math.max(...bends) - Math.min(...bends)).toBeGreaterThan(0.01);
-    expect(hum).toBeGreaterThan(60);
+    expect(hum).toBeGreaterThan(30);
+    const dir0 = r.e.targets().arm.dir;
+    const a0 = r.e.targets().arm;
+    r.run(1);
+    expect(r.e.targets().arm).toEqual(a0);
+    // 手慢慢挪（40 mm/s，静与划过之间）：臂的弯向跟过去，还握着
+    for (let i = 0; i < 20; i++) {
+      r.move({ aimDir: (r.hand?.aimDir ?? 0.62) + 0.02 }, 40);
+      r.touch = true;
+      r.run(0.2);
+    }
+    expect(r.e.state.grasp.phase).toBe('HOLD_HUMAN');
+    expect(r.e.targets().arm.dir - dir0).toBeGreaterThan(0.1);
   });
 
-  it('回避型迎着（⑩ 那 5%）被手主动碰（I 0.4 > 阈值 0.25）：不惊跳，一缩再接；躲着时被碰照旧惊跳', () => {
+  it('回避型迎着（⑩ 那 5%）被手主动碰（I 0.4 > 阈值 0.25）：不惊跳，直接接住；躲着时被碰照旧惊跳', () => {
     const r = new Rig('C', seedFor('C', 'toward'));
     r.contact = false;
-    // 回避型人在时 1.5–3 s 就重新决定一次（95% 改躲），迎的那一回合很短：看见以后 0.8 s 内碰
     r.run(1.1);
     expect(r.e.state.hand?.mode).toBe('toward');
     r.push({ kind: 'ARM_TOUCH', on: true });
     r.run(1);
     expect(r.ev('STARTLE')).toHaveLength(0);
     const resp = r.ev('RESPONSE').find((x) => x.p?.expected)!;
-    expect(resp.p?.wince).toBe(true);
     expect(resp.p?.by).toBe('hand');
     expect(r.ev('GRASP_START')).toHaveLength(1);
     expect(r.beats()).toContain('wrap.receive');
@@ -226,7 +233,7 @@ describe('迎手链：看见 → 凑 → 缠 → 握', () => {
 });
 
 describe('迎手链：脱手、抓空、躲', () => {
-  it('脱手：热情快抽 = 扑过去（lunge）、慢抽 = 伸过去送一下（extend）；沉静放弃（不躲，回到陪着 / 关）', () => {
+  it('脱手：热情不管抽得快慢都追——先扑到手旁（lunge）；沉静放弃（不躲，回到陪着 / 关）', () => {
     const go = (P: PersonaKey, speed: number): Rig => {
       const r = new Rig(P, seedFor(P, 'toward'));
       r.run(P === 'B' ? 30 : 20);
@@ -239,8 +246,8 @@ describe('迎手链：脱手、抓空、躲', () => {
     expect(fast.ev('GRASP_LOST')[0].p?.reaction).toBe('chase');
     expect(fast.beats()).toContain('chase.lunge');
     const slow = go('A', 60);
-    expect(slow.beats()).toContain('chase.extend');
-    expect(slow.beats()).not.toContain('chase.lunge');
+    expect(slow.ev('GRASP_LOST')[0].p?.reaction).toBe('chase');
+    expect(slow.beats()).toContain('chase.lunge');
     const b = go('B', 300);
     expect(b.ev('GRASP_LOST')[0].p?.reaction).toBe('giveUp');
     expect(b.ev('HAND_SEEN').some((x) => x.p?.cause === 'giveUp')).toBe(false);
@@ -248,18 +255,18 @@ describe('迎手链：脱手、抓空、躲', () => {
     expect(b.e.state.m2?.hc.stage).not.toBe('avoid');
   });
 
-  it('抓空（张力一直没来）：到限位 → 性格那一拍（沉静：摸一摸）→ 放开 → 以最后碰到处为中心找', () => {
+  it('抓空（张力一直没来）：到限位 → 叹一口气放开 → 以最后碰到处为中心找', () => {
     const r = new Rig('B', seedFor('B', 'toward'));
     r.catches = false;
     r.run(34);
     expect(r.ev('GRASP_EMPTY').length).toBeGreaterThan(0);
-    expect(r.beats()).toContain('release.palpate');
+    expect(r.beats()).toContain('release.empty');
     expect(r.beats()).toContain('search.cast');
     // 放开以后手还搭着、手链回到陪着：3 s 后至多再来一次（抓空后每 ⑨ 一次），不成「缠 → 抓空 → 缠」的死循环
     expect(r.ev('CONTACT').filter((x) => x.p?.rearm).length).toBeLessThanOrEqual(1);
   });
 
-  it('回避型躲：侧身（手留在身侧、视野边上）、60 s 不丢手、偷看；手走了松一口气', () => {
+  it('回避型躲：侧身（手留在身侧 115°、视野边上）、60 s 不丢手；手走了不再躲', () => {
     const r = new Rig('C', seedFor('C', 'away'));
     r.contact = false;
     r.move({ bearing: 0, dist: 900, aimBend: 1.2, aimDist: 700 }, 0);
@@ -269,15 +276,15 @@ describe('迎手链：脱手、抓空、躲', () => {
       if (r.t > 8) worst = Math.max(worst, rel);
     });
     expect(r.ev('HAND_LOST')).toHaveLength(0);
-    expect(worst).toBeLessThan((130 * Math.PI) / 180);
-    expect(worst).toBeGreaterThan((60 * Math.PI) / 180);
-    expect(r.ev('SPONTANEOUS').filter((x) => x.p?.action === 'peek').length).toBeGreaterThan(0);
+    expect(worst).toBeLessThan((125 * Math.PI) / 180);
+    expect(worst).toBeGreaterThan((105 * Math.PI) / 180);
+    // 手走了：不再躲（⑨ 到点时有 5% 改成迎，这一场里可能已经在陪着）
     r.hand = null;
     r.run(2);
-    expect(r.beats()).toContain('off.relief');
+    expect(r.e.state.m2?.hc.stage).not.toBe('avoid');
   });
 
-  it('回避型躲得明显（2026-10-15）：臂紧紧背着手往下藏；手不动不躲开；手朝臂过来 → 躲开（臂甩开、身体再侧开）', () => {
+  it('回避型躲：臂背着手往下藏；手不动不躲开；手朝臂过来 → 躲开（臂甩开、比躲姿再紧）', () => {
     const r = new Rig('C', seedFor('C', 'away'));
     r.contact = false;
     const H0 = { bearing: 0, dist: 650, face: 0.25, aimDir: 0.62, aimBend: 1.2, aimDist: 500 };
@@ -291,32 +298,86 @@ describe('迎手链：脱手、抓空、躲', () => {
       return 0.34 * a.bend + 0.16 * a.wrap + 0.3773 * (a.deep ?? 0);
     };
     const a0 = r.e.targets().arm;
-    // 紧：怕到 0.8 上下时差动 ≥ 0.33（改前同一处手 0.29）；背着手（弯向与手的方向差 > 120°）
-    expect(D()).toBeGreaterThan(0.33);
+    // 躲姿差动 0.4；背着手（弯向与手的方向差 > 120°）
+    expect(D()).toBeGreaterThan(0.36);
     expect(Math.cos(a0.dir - H0.aimDir)).toBeLessThan(-0.5);
-    const rel = (): number => Math.abs(Math.atan2(Math.sin(H0.bearing - r.e.targets().yaw), Math.cos(H0.bearing - r.e.targets().yaw)));
-    const rel0 = rel();
     // 手朝臂此刻的样子挪过来（200 mm/s）
     r.move({ aimDir: a0.dir + 0.3, aimBend: a0.bend * 0.8, aimDist: 330, dist: 520 }, 200);
-    let relMax = rel0;
     let dMax = 0;
     r.run(1.5, () => {
-      relMax = Math.max(relMax, rel());
       dMax = Math.max(dMax, D());
     });
     expect(r.beats()).toContain('avoid.dodge');
     const dg = r.log.find((x) => x.ev === 'HAND_STAGE' && x.p?.beat === 'dodge')!;
     expect(dg.t - r.t0 - 10).toBeLessThan(0.5);
-    // 臂甩开（比躲的姿态再紧）、身体再侧开 ≥ 10°
-    expect(dMax).toBeGreaterThan(0.4);
-    expect(relMax - rel0).toBeGreaterThan((10 * Math.PI) / 180);
-    // 侧开的那一截慢慢回落（4 s），不会一直累加
-    r.move({}, 0);
-    r.run(12);
-    expect(r.e.state.m2!.hc.extraYaw).toBeLessThan(0.1);
+    // 臂甩开（比躲的姿态再紧 0.08）
+    expect(dMax).toBeGreaterThan(0.44);
   });
 
-  it('不怕的人格没有躲开：热情迎着、手朝臂过来是凑过去的事；沉静看别处', () => {
+  it('躲开定住的时候手还在逼近：接着再躲开（只有甩臂那一段不再起，定住那一段不挡）', () => {
+    const r = new Rig('C', seedFor('C', 'away'));
+    r.contact = false;
+    r.move({ bearing: 0, dist: 650, face: 0.25, aimDir: 0.62, aimBend: 1.2, aimDist: 500 }, 0);
+    r.run(10);
+    expect(r.e.state.m2?.hc.stage).toBe('avoid');
+    const toward = (): void => {
+      const a = r.e.targets().arm;
+      r.move({ aimDir: a.dir + 0.3, aimBend: a.bend * 0.8, aimDist: 330, dist: 520 }, 200);
+    };
+    const hc = (): NonNullable<typeof r.e.state.m2>['hc'] => r.e.state.m2!.hc;
+    const phase = (): string | undefined => {
+      const pr = hc().prog;
+      return pr ? pr.phases[pr.idx]?.name : undefined;
+    };
+    toward();
+    r.run(0.5);
+    expect(r.beats()).toContain('avoid.dodge');
+    const first = hc().dodgeAt;
+    // 等甩臂那段走完、进了定住（定 0.6 + 0.8σ s）
+    for (let i = 0; i < 120 && phase() === 'dodge'; i++) r.run(1 / 60);
+    expect(phase()).toBe('hold');
+    const tHold = r.e.time;
+    // 身体已经侧开：手跟到视野里（离此刻朝向 100°）再朝臂此刻的样子过来——看不见的手本来就不躲（下一条）
+    const y = r.e.targets().yaw;
+    const side = Math.sign(Math.atan2(Math.sin(0 - y), Math.cos(0 - y))) || 1;
+    r.move({ bearing: y + side * ((100 * Math.PI) / 180) }, 0);
+    toward();
+    r.run(0.5);
+    // 第二次落在第一次的定住里（定住 ≥ 0.6 s），不是等整个程序走完
+    expect(hc().dodgeAt).toBeGreaterThan(first);
+    expect(hc().dodgeAt - tHold).toBeLessThan(0.6);
+  });
+
+  it('看不见的手不躲（交互机制参数表 §12.5）：手绕到机身背后、出了 ±120° 视野——臂保持最后的躲姿，手怎么挪都不躲开、不再收；3 s 后忘掉', () => {
+    const r = new Rig('C', seedFor('C', 'away'));
+    r.contact = false;
+    r.move({ bearing: 0, dist: 650, face: 0.25, aimDir: 0.62, aimBend: 1.2, aimDist: 500 }, 0);
+    r.run(10);
+    expect(r.e.state.m2?.hc.stage).toBe('avoid');
+    // 手跳到机身正背后（视野外）来回挪（朝臂、朝机身）
+    const y = r.e.targets().yaw;
+    const n0 = r.ev('HAND_STAGE').length;
+    const arm0 = r.e.targets().arm;
+    const rel = (b: number): number => Math.abs(Math.atan2(Math.sin(b - r.e.targets().yaw), Math.cos(b - r.e.targets().yaw)));
+    let moved = 0;
+    for (let i = 0; i < 6; i++) {
+      const b = y + Math.PI + (i % 2 ? 0.2 : -0.2);
+      r.move({ bearing: b, dist: i % 2 ? 360 : 420, aimDir: 0.62 + (i % 2 ? 0.4 : -0.4), aimBend: 1.0 + 0.1 * (i % 3), aimDist: 280 + 10 * (i % 2) }, 200);
+      r.run(0.4, () => {
+        if (rel(b) > HAND.fov) {
+          const a = r.e.targets().arm;
+          moved = Math.max(moved, Math.hypot(a.bend * Math.cos(a.dir) - arm0.bend * Math.cos(arm0.dir), a.bend * Math.sin(a.dir) - arm0.bend * Math.sin(arm0.dir)));
+        }
+      });
+    }
+    const after = r.ev('HAND_STAGE').slice(n0).map((x) => String(x.p?.beat));
+    expect(after.filter((b) => b === 'dodge' || b === 'reshrink')).toHaveLength(0);
+    expect(moved).toBeLessThan(0.02);
+    r.run(2);
+    expect(r.ev('HAND_LOST').some((x) => x.p?.reason === 'unseen')).toBe(true);
+  });
+
+  it('不躲的人格没有躲开：热情迎着、手朝臂过来是凑过去的事；沉静不理', () => {
     for (const P of ['A', 'B'] as PersonaKey[]) {
       const r = new Rig(P, 7);
       r.contact = false;
@@ -330,42 +391,29 @@ describe('迎手链：脱手、抓空、躲', () => {
         r.run(1.5);
       }
       expect(r.beats().filter((b) => b === 'avoid.dodge'), P).toHaveLength(0);
-      expect(r.e.state.m2!.hc.extraYaw, P).toBe(0);
     }
   });
 });
 
-describe('迎手链：深卷预算与纯数据', () => {
-  it('深卷：门开着（手在腱轴 0 正上方、平卷够不着）才用，≤ 0.62、每轮 ≤ 4 s；deepOk = false 时恒 0', () => {
+describe('迎手链：不用深卷与纯数据', () => {
+  it('迎手链不用深卷（2026-10-17 去掉）：手在腱轴 0 正上方、平卷够不着——臂不进深卷、不凑（交给够不着那一串）；惊跳照样深卷', () => {
     const deepHand: Hand = { bearing: 0, dist: 480, face: 0.25, aimDir: 0, aimBend: 1.47, aimDist: 250 };
-    const seed = seedFor('A', 'toward');
-    const run = (deepOk: boolean): { used: number; maxD: number; maxDeep: number } => {
-      const r = new Rig('A', seed, { deepOk });
-      r.move(deepHand, 0);
-      // 不让碰到：卷一直卷到上限 0.62（这个粗糙的碰到模型在差动 0.31 就判碰到，到不了深卷行程）
-      r.contact = false;
-      let used = 0;
-      let maxD = 0;
-      let maxDeep = 0;
-      r.run(30, () => {
-        const a = r.e.targets().arm;
-        const D = 0.34 * a.bend + 0.16 * a.wrap + 0.3773 * (a.deep ?? 0);
-        maxDeep = Math.max(maxDeep, a.deep ?? 0);
-        if ((a.deep ?? 0) > 0) {
-          maxD = Math.max(maxD, D);
-          // 规范表示：deep > 0 ⇔ 差动 > 0.48
-          expect(D).toBeGreaterThan(HC.flatMax - 1e-9);
-          used += 1 / 60;
-          expect(Math.abs(a.dir)).toBeLessThan(0.15);
-        }
-      });
-      return { used, maxD, maxDeep };
-    };
-    const on = run(true);
-    expect(on.maxDeep).toBeGreaterThan(0);
-    expect(on.maxD).toBeLessThanOrEqual(HC.deepMax + 1e-6);
-    expect(on.used).toBeLessThanOrEqual(4 + 1 / 60 + 1e-9);
-    expect(run(false).maxDeep).toBe(0);
+    const r = new Rig('A', seedFor('A', 'toward'));
+    r.move(deepHand, 0);
+    r.contact = false;
+    let maxDeep = 0;
+    r.run(30, () => {
+      maxDeep = Math.max(maxDeep, r.e.targets().arm.deep ?? 0);
+    });
+    expect(maxDeep).toBe(0);
+    expect(r.beats().some((b) => b.startsWith('approach'))).toBe(false);
+    // 惊跳的深卷不受影响：敲一下（0.95 高于所有阈值）
+    r.push({ kind: 'KNOCK', intensity: 0.95 });
+    let startleDeep = 0;
+    r.run(1, () => {
+      startleDeep = Math.max(startleDeep, r.e.targets().arm.deep ?? 0);
+    });
+    expect(startleDeep).toBeGreaterThan(0.3);
   });
 
   it('凑 / 缠 / 握的中途快照 → JSON → 恢复，接着跑与一口气跑完逐位相同', () => {
@@ -455,7 +503,7 @@ function closedLoopHand(r: Rig, where: (t: number) => V3, speed: (t: number) => 
     if (v > 0) lastMoveAt = t;
     const read = handReading(TOP, projectLogical(TOP, where(t)), r.e.targets().yaw, sent?.bearing);
     if (read.side >= HAND_UI.sideMin || !sent) aimDir = read.aimDir;
-    if (handSendDue(read, sent, aimDir, t, { v2: true, lastMoveAt })) {
+    if (handSendDue(read, sent, aimDir, t, { lastMoveAt })) {
       const r3 = (x: number): number => Math.round(x * 1000) / 1000;
       const send = { bearing: r3(read.bearing), dist: Math.round(read.dist), face: r3(read.face), aimDir: r3(aimDir), aimBend: r3(read.aimBend), aimDist: Math.round(read.aimDist) };
       sent = { ...send, at: t };
@@ -487,7 +535,7 @@ describe('迎手链：评审第二轮的守门（2026-10-08）', () => {
           if (r.e.state.hand?.seen) seen = true;
           const mo = r.e.motion();
           const st = r.e.state.m2!.hc.stage;
-          if (!bad && ((mo && mo.name.startsWith('hand.')) || st === 'approach' || st === 'strain')) bad = `${r.t.toFixed(2)} ${st} ${mo?.name ?? ''}`;
+          if (!bad && ((mo && mo.name.startsWith('hand.')) || st === 'approach')) bad = `${r.t.toFixed(2)} ${st} ${mo?.name ?? ''}`;
         });
         if (seen) seenDuring++;
         expect(bad, `${P} ${seed}`).toBe('');
@@ -527,7 +575,8 @@ describe('迎手链：评审第二轮的守门（2026-10-08）', () => {
         r.run(1);
         if (!r.ev('STARTLE').length) continue;
         const n0 = r.ev('GRASP_START').length;
-        r.run(12);
+        // 热情型惊跳后的查看要做 6 s 出头，做完才轮到手链；中间赶上一次 ⑨ 抽到「不理」就要再等一轮 ⑨（5–8 s）
+        r.run(16);
         if (r.e.state.hand?.mode !== 'toward') continue;
         cases++;
         if (r.ev('GRASP_START').length > n0) regrabs++;
@@ -567,7 +616,7 @@ describe('迎手链：评审第二轮的守门（2026-10-08）', () => {
         let patted = false;
         r.run(40, () => {
           j.step();
-          if (!patted && r.e.state.m2!.hc.stage === 'strain') {
+          if (!patted && r.e.state.m2!.hc.stage === 'track' && r.t > 6) {
             patted = true;
             r.push({ kind: 'SHELL_STROKE', half: 'L', touch: 'pat' });
           }
@@ -577,49 +626,24 @@ describe('迎手链：评审第二轮的守门（2026-10-08）', () => {
     }
   });
 
-  it('深卷交接不跳：握着时留物件（握人 → 握物）、深卷途中手离开画布丢掉——三腱逐帧 ≤ 0.06', () => {
-    const deepHand: Hand = { bearing: 0, dist: 480, face: 0.25, aimDir: 0, aimBend: 1.47, aimDist: 250 };
+  it('交接不跳：握着时留物件（握人 → 握物）、手离开画布丢掉——三腱逐帧 ≤ 0.06', () => {
     let holds = 0;
-    let curls = 0;
     for (const from of [1, 100, 200, 300]) {
       const seed = seedFor('A', 'toward', from);
-      // 握人（深卷）→ 留物件
       const a = new Rig('A', seed);
-      a.move(deepHand, 0);
-      let deepHold = false;
-      a.run(30, () => {
-        if (!deepHold && a.e.state.grasp.phase === 'HOLD_HUMAN' && (a.e.targets().arm.deep ?? 0) > 0.1 && a.t - (a.ev('GRASP_HOLD_HUMAN')[0]?.t ?? 1e9) + a.t0 > 1) deepHold = true;
-      });
-      if (deepHold || (a.e.state.grasp.phase === 'HOLD_HUMAN' && (a.e.targets().arm.deep ?? 0) > 0.1)) {
-        holds++;
-        const j = jumpWatch(a);
-        a.push({ kind: 'ARM_TOUCH', on: false });
-        a.touch = false;
-        a.contact = false;
-        a.hand = null;
-        a.run(4, j.step);
-        expect(a.e.state.grasp.phase).toBe('HOLD_OBJECT');
-        expect(j.worst().d, `hold ${from} ${JSON.stringify(j.worst())}`).toBeLessThanOrEqual(0.06);
-      }
-      // 卷到一半手离开画布 → 3 s 后丢掉 → 手链关
-      const b = new Rig('A', seed);
-      b.move(deepHand, 0);
-      b.contact = false;
-      let cut = false;
-      const j = jumpWatch(b);
-      b.run(30, () => {
-        if (!cut && b.e.handStage()?.beat === 'curl' && (b.e.targets().arm.deep ?? 0) > 0.3) {
-          cut = true;
-          b.hand = null;
-        }
-        if (cut) j.step();
-      });
-      if (cut) {
-        curls++;
-        expect(j.worst().d, `curl ${from} ${JSON.stringify(j.worst())}`).toBeLessThanOrEqual(0.06);
-      }
+      a.run(30, () => undefined);
+      if (a.e.state.grasp.phase !== 'HOLD_HUMAN') continue;
+      holds++;
+      const j = jumpWatch(a);
+      a.push({ kind: 'ARM_TOUCH', on: false });
+      a.touch = false;
+      a.contact = false;
+      a.hand = null;
+      a.run(8, j.step);
+      expect(a.e.state.grasp.phase).toBe('HOLD_OBJECT');
+      expect(j.worst().d, `hold ${from} ${JSON.stringify(j.worst())}`).toBeLessThanOrEqual(0.06);
     }
-    expect(holds + curls).toBeGreaterThan(1);
+    expect(holds).toBeGreaterThan(1);
   });
 
   it('指针 40 mm/s 慢慢挪个不停（台架按 handSendDue 报）：引擎不把它当停稳——不凑、不撑、不缠', () => {
@@ -638,7 +662,7 @@ describe('迎手链：评审第二轮的守门（2026-10-08）', () => {
           r.run(1 / 60);
           stages.add(r.e.handStage()?.stage ?? 'off');
         }
-        expect([...stages].filter((x) => x === 'approach' || x === 'strain' || x === 'wrap'), `${P} ${from}`).toEqual([]);
+        expect([...stages].filter((x) => x === 'approach' || x === 'wrap'), `${P} ${from}`).toEqual([]);
         expect(r.ev('GRASP_START'), `${P} ${from}`).toHaveLength(0);
       }
     }

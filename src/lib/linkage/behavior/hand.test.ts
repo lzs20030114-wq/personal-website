@@ -1,16 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { ARM_BEND_MAX, BehaviorEngine, HAND, type EngineState, STATE_VERSION, wrapPi } from './engine';
+import { HC } from './vocab2-hand';
+import { BehaviorEngine, HAND, type EngineState, STATE_VERSION, runSession, wrapPi } from './engine';
 import type { SensorInput } from './events';
 import { GRASP } from './grasp';
 import type { LogRecord } from './log';
 import { PERSONAS, PERSONA_KEYS, type PersonaKey } from './persona';
+import { nearestAxisDir } from './vocab2';
 
 /**
  * 手（HAND，Lab 1-6 鼠标 = 人的手，2026-10-07）的守门。会坏的地方各卡一道：
  * ① 看见：要过人格的响应延迟、要在视野里（碰到臂另算），没看见之前机器不知道手在哪；
  * ② 决定：迎 / 躲 / 不理的比例按 ⑩，躲只给回避 / 乱序随机、不理只给热情 / 沉静（2026-10-14 重分类）；
  * ③ 跟踪：迎 = 转向手、躲 = 背过去（然后手出了视野会被忘掉）；分层（小偏差只动臂）；取近路，越限少就等、多就绕；
- * ④ 臂：迎 = 弯向手、躲 = 背着手；缠 = 朝手缠、缠得比以前深、脱手后追着手转；握人仍极轻；
+ * ④ 臂：迎手链怎么凑、缠、握在 hand-chain.test.ts；这里守抓握的记忆、没看见手时的旧路缠法、惊跳背着手；
  * ⑤ 纯数据：带手的快照恢复后续跑逐位相同，旧版本快照被拒。
  */
 
@@ -147,18 +149,39 @@ describe('决定', () => {
     }
   });
 
-  it('看见以后按 ⑨′（人在时的间隔）重新决定（again），不再在整圈里随便挑方向', () => {
+  it('看别处：瞥一眼，身体转开 30–70°、转向背着手的那一侧（10-19 整合时删过，同日恢复——沉静型在有手时靠它认出来）', () => {
+    const b = 0.5; // 手在左前方
+    const { e, log } = grown('B', seedFor('B', 'look', b));
+    const y0 = e.state.yaw.x;
+    e.push(hand(b));
+    run(e, log, 4);
+    const seen = log.find((r) => r.ev === 'HAND_SEEN');
+    expect(seen?.p?.mode).toBe('look');
+    const goal = seen!.p!.look as number;
+    const turn = goal - y0;
+    expect(Math.abs(turn)).toBeGreaterThanOrEqual(HAND.lookMin - 1e-9);
+    expect(Math.abs(turn)).toBeLessThanOrEqual(HAND.lookMax + 1e-9);
+    expect(Math.sign(turn)).toBe(-Math.sign(b - y0)); // 转向背着手的那一侧
+    run(e, log, 20);
+    // 身体真的转过去了：离手的方位比看见时远
+    expect(Math.abs(e.state.yaw.x - b)).toBeGreaterThan(Math.abs(y0 - b) + HAND.lookMin * 0.8);
+  });
+
+  it('看见以后按 ⑨ 重新决定（again），不再在整圈里随便挑方向', () => {
     const { e, log } = grown('A', seedFor('A', 'toward'));
     e.push(hand(0));
     run(e, log, 30);
     const seen = log.filter((r) => r.ev === 'HAND_SEEN');
     expect(seen.length).toBeGreaterThanOrEqual(3);
     expect(seen.slice(1).every((r) => r.p?.again === true)).toBe(true);
-    const [lo, hi] = PERSONAS.A.orientPresent!;
+    const [lo, hi] = PERSONAS.A.orient;
+    // 迎手链投入中（凑 / 缠 / 握……）⑨ 顺延——别在伸手的半路上改主意；中间没投入过的两次之间才按 ⑨ 的上限
+    const engaged = new Set(['approach', 'wrap', 'hold', 'chase', 'release', 'search']);
     for (let i = 2; i < seen.length; i++) {
       const gap = seen[i].t - seen[i - 1].t;
       expect(gap).toBeGreaterThanOrEqual(lo - 0.05);
-      expect(gap).toBeLessThanOrEqual(hi + 1.1);
+      const busy = log.some((r) => r.ev === 'HAND_STAGE' && r.t >= seen[i - 1].t && r.t < seen[i].t && engaged.has(String(r.p?.stage)));
+      if (!busy) expect(gap).toBeLessThanOrEqual(hi + 1.1);
     }
     // 看见手之前那一下张望可以有（成长段开头 ⑨ 正好到点）；看见以后就不再随便挑方向
     expect(log.some((r) => r.ev === 'ORIENT' && r.p?.mode === 'random' && r.t > seen[0].t)).toBe(false);
@@ -176,17 +199,17 @@ describe('跟踪', () => {
     expect(Math.abs(wrapPi(e.state.yaw.x - b))).toBeLessThan(HAND.turnAt);
   });
 
-  it('分层：臂够得着的手（哪怕偏出 20° 以上）机身不动，只有臂去够；够不着（aimBend > 1）就转身', () => {
+  it('分层：臂够得着的手（哪怕偏出 20° 以上）机身不动，只有臂去凑；在臂长以外够不着就转身', () => {
     const { e, log } = grown('B', seedFor('B', 'toward', 0.5));
     e.push(hand(0.5, 420, 1.2, 0.6, 300));
     run(e, log, 7);
     expect(Math.abs(e.state.yaw.x)).toBeLessThan(0.02);
     const arm = e.targets().arm;
     expect(Math.abs(wrapPi(arm.dir - 1.2))).toBeLessThan(0.15);
-    expect(arm.bend).toBeGreaterThan(0.45);
-    // 同一个方位，但臂满差动也够不着
-    e.push(hand(0.5, 420, 1.2, 1.3, 300));
-    run(e, log, 8);
+    expect(arm.bend).toBeGreaterThan(0.2);
+    // 同一个方位，离臂基座 600 mm（臂长 358）：够不着，转身对准。臂长以内的手不转（直臂会扫到手上，交给臂去撑）
+    e.push(hand(0.5, 800, 1.2, 1.3, 600));
+    run(e, log, 10);
     expect(Math.abs(wrapPi(e.state.yaw.x - 0.5))).toBeLessThan(HAND.turnAt);
   });
 
@@ -209,29 +232,26 @@ describe('跟踪', () => {
     expect(Math.abs(e.state.yawTarget)).toBeLessThan(1e-9);
   });
 
-  it('躲（回避）：很快背过身去，臂背着手弯；手出了视野以后还提防一阵（⑬：3 s × (1 + 3N)），再记 HAND_LOST unseen', () => {
+  it('躲（回避）：很快侧过身去（手留在身侧 115°，还在视野边上），臂背着手弯；手一直看得见，不丢手', () => {
     const b = 0.3;
     const { e, log } = grown('C', seedFor('C', 'away', b));
     e.push(hand(b, 400, 0.5, 0.3));
     let armAway = false;
-    let backAt = -1;
-    let yawAtLost: number | null = null;
+    let sideAt = -1;
     run(e, log, 28, () => {
       const h = e.state.hand;
+      // 躲的姿态：背着手弯、再往下压 25°
       if (h?.seen && h.mode === 'away' && e.targets().arm.bend > 0.3) {
-        armAway ||= Math.abs(wrapPi(e.targets().arm.dir - (0.5 + Math.PI))) < 0.4;
+        armAway ||= Math.abs(wrapPi(e.targets().arm.dir - (0.5 + Math.PI))) < 0.5;
       }
-      if (backAt < 0 && Math.abs(wrapPi(e.state.yaw.x - (b + Math.PI))) < Math.PI / 3) backAt = e.time;
-      if (yawAtLost === null && log.some((r) => r.ev === 'HAND_LOST')) yawAtLost = e.state.yaw.x;
+      if (sideAt < 0 && Math.abs(Math.abs(wrapPi(b - e.state.yaw.x)) - HC.avoidSide) < (10 * Math.PI) / 180) sideAt = e.time;
     });
     const seenT = log.find((r) => r.ev === 'HAND_SEEN')!.t;
-    // 回避转得快：看见以后 4 s 内已经背过去
-    expect(backAt - seenT).toBeLessThan(4);
-    const lost = log.find((r) => r.ev === 'HAND_LOST');
-    expect(lost?.p?.reason).toBe('unseen');
-    // 提防得久：出视野到忘掉 > 3 s 的老规矩
-    expect(lost!.t - backAt).toBeGreaterThan(HAND.loseAfter + 1);
-    expect(Math.abs(wrapPi(yawAtLost! - (b + Math.PI)))).toBeLessThan(Math.PI / 3);
+    // 转身快慢只按 ③ 速度（2026-10-19 删掉了「怕的时候转身快」）：看见以后 6 s 内已经侧过去（转 2 rad，实测 4.6 s）
+    expect(sideAt - seenT).toBeLessThan(6);
+    expect(Math.abs(wrapPi(b - e.state.yaw.x))).toBeLessThanOrEqual(HAND.fov);
+    expect(log.some((r) => r.ev === 'HAND_LOST')).toBe(false);
+    expect(e.state.hand?.mode).toBe('away');
     expect(armAway).toBe(true);
   });
 
@@ -339,59 +359,33 @@ describe('跟踪', () => {
     run(e, log, 1);
     expect(e.state.yawTarget).toBe(target);
   });
+
+  it('热情型：手一直在动时一路跟着手走（2026-10-19 作者：不再一跳一停）', () => {
+    // 手在臂前方来回晃 ±34°、从不停下（够得着、读数速度 120 mm/s）：臂的弯向要跟着手，不是跳一下停一下
+    const aim = (t: number): number => 0.6 * Math.sin(2 * Math.PI * 0.12 * t);
+    const inputs: { t: number; input: SensorInput }[] = [];
+    for (let t = 0.5; t < 30; t += 0.05) {
+      inputs.push({ t: Math.round(t * 100) / 100, input: { kind: 'HAND', on: true, bearing: 0, dist: 350, face: 0, aimDir: aim(t), aimBend: 0.9, aimDist: 250, touch: 32, still: 0, v: 120 } });
+    }
+    // 种子取第一个「看见手时决定迎」的（⑩ 0.9：十次里一次是看别处，那不是这条要测的）
+    let res = runSession({ seed: 1, order: ['A', 'B', 'C', 'D'], lifeRate: 1, inputs, until: 30, frameEvery: 0.05 });
+    for (let seed = 2; seed < 40 && res.log.find((r) => r.ev === 'HAND_SEEN')?.p?.mode !== 'toward'; seed++) {
+      res = runSession({ seed, order: ['A', 'B', 'C', 'D'], lifeRate: 1, inputs, until: 30, frameEvery: 0.05 });
+    }
+    const seen = res.log.find((r) => r.ev === 'HAND_SEEN');
+    expect(seen?.p?.mode).toBe('toward');
+    expect(res.log.some((r) => r.ev === 'HAND_STAGE' && r.p?.stage === 'track')).toBe(true);
+    const lag = res.frames
+      .filter((f) => f.persona === 'A' && f.t > seen!.t + 2)
+      .map((f) => Math.abs(wrapPi(f.targets.arm.dir - aim(f.t))))
+      .sort((a, b) => a - b);
+    expect(lag.length).toBeGreaterThan(100);
+    expect(lag[Math.floor(lag.length / 2)]).toBeLessThan((25 * Math.PI) / 180);
+    expect(lag[Math.floor(lag.length * 0.9)]).toBeLessThan((30 * Math.PI) / 180);
+  });
 });
 
 describe('臂与缠', () => {
-  it('迎：近处的手 → 臂弯向手，弯曲按离臂基座的距离加权（太远就不够）', () => {
-    const { e, log } = grown('B', seedFor('B', 'toward', 0));
-    e.push(hand(0, 500, -0.9, 0.7, 300));
-    run(e, log, 6);
-    const near = e.targets().arm;
-    expect(Math.abs(wrapPi(near.dir - -0.9))).toBeLessThan(0.3);
-    expect(near.bend).toBeGreaterThan(0.5);
-    e.push(hand(0, 2500, -0.9, 0.7, 2200));
-    run(e, log, 6);
-    expect(e.targets().arm.bend).toBeLessThan(0.35);
-  });
-
-  it('缠：朝手缠、缠得比满差动还深（arm.wrap > 0）；缠的头几成方向追着手；握人保住形状（不在握住那一刻伸直）', () => {
-    // 热情型碰臂必回应、回应必为正（gain 不带符号）→ 缠
-    const { e, log } = grown('A', seedFor('A', 'toward', 0));
-    e.push(hand(0, 420, 0.8, 0.5));
-    run(e, log, 2);
-    e.push({ kind: 'ARM_TOUCH', on: true });
-    until(e, log, 'GRASP_START', 2);
-    expect(log.some((r) => r.ev === 'GRASP_START')).toBe(true);
-    expect(Math.abs(wrapPi(e.state.grasp.dir - 0.8))).toBeLessThan(0.05);
-    // 手往另一边挪：缠的方向跟过去（≤ 1 rad/s × √k_v，缠过四成定住）
-    const d0 = e.state.grasp.dir;
-    e.push(hand(0, 420, -0.6, 0.5));
-    run(e, log, 0.3);
-    expect(e.state.grasp.dir).toBeLessThan(d0 - 0.2);
-    // 缠到限位附近：深缠那一档在用
-    let maxWrap = 0;
-    run(e, log, 2.5, () => {
-      maxWrap = Math.max(maxWrap, e.targets().arm.wrap);
-    });
-    expect(maxWrap).toBeGreaterThan(0.5);
-    expect(ARM_BEND_MAX).toBeGreaterThan(1);
-    // 手被卷住（张力 + 电极）→ 握人：极轻
-    const log2: LogRecord[] = [];
-    const g2 = grown('A', seedFor('A', 'toward', 0));
-    g2.e.push(hand(0, 420, 0.8, 0.5));
-    run(g2.e, log2, 2);
-    g2.e.push({ kind: 'ARM_TOUCH', on: true });
-    until(g2.e, log2, 'GRASP_START', 2);
-    run(g2.e, log2, 1);
-    g2.e.push({ kind: 'RESISTANCE', on: true });
-    run(g2.e, log2, 3);
-    expect(log2.some((r) => r.ev === 'GRASP_HOLD_HUMAN')).toBe(true);
-    const g = g2.e.state.grasp;
-    expect(g.contact).toBeGreaterThan(GRASP.human);
-    expect(g2.e.targets().arm.bend).toBeGreaterThan(0.8 * g.contact * 0.98);
-    expect(g2.e.targets().arm.wrap).toBeCloseTo(0.5 * g.contactW, 1);
-  });
-
   it('握住以后形状看抓握的记忆：手抓住的物件在指针离开后仍保形；没手抓住的，指针进来也不变紧', () => {
     // 有手抓 → 留物件（电极落、张力在）→ 指针离开 4 s
     const a = grown('A', seedFor('A', 'toward', 0));
@@ -405,11 +399,12 @@ describe('臂与缠', () => {
     a.e.push({ kind: 'ARM_TOUCH', on: false });
     run(a.e, a.log, 1.5);
     expect(a.e.state.grasp.phase).toBe('HOLD_OBJECT');
-    const w0 = a.e.targets().arm.wrap;
+    const b0 = a.e.targets().arm.bend;
+    expect(b0).toBeGreaterThan(0.4);
     a.e.push({ kind: 'HAND', on: false });
     run(a.e, a.log, 4);
     expect(a.e.state.hand).toBeNull();
-    expect(a.e.targets().arm.wrap).toBeGreaterThan(0.8 * w0);
+    expect(a.e.targets().arm.bend).toBeGreaterThan(0.8 * b0);
     // 没手抓 → 握人（极轻）→ 指针才进来
     const b = grown('A', 31);
     b.e.push({ kind: 'ARM_TOUCH', on: true });
@@ -440,6 +435,31 @@ describe('臂与缠', () => {
     expect(e.targets().arm.bend).toBeLessThan(GRASP.human + 0.05);
   });
 
+  it('没看见手的缠（旧路）不读手：手在场但碰的那一刻还没看见，缠的弯向不追手、不往深里卷；缠着时手被看见了也一样', () => {
+    // 2026-10-19 第二轮审核第 1 条：此前缠的头四成弯向追着看见的手转、有手对象就往深里卷、握人保住 0.85 倍弯曲与一半深缠
+    let tried = 0;
+    for (let seed = 1; seed < 80 && tried < 3; seed++) {
+      const { e, log } = grown('A', seed);
+      e.push(hand(Math.PI * 0.95)); // 背后：碰到臂之前看不见
+      run(e, log, 1);
+      e.push({ kind: 'ARM_TOUCH', on: true }); // 一碰就进视野，看见要再过一个 ④——回应先到的那几场走旧路
+      until(e, log, 'GRASP_START', 2);
+      if (e.state.grasp.phase !== 'WRAP' || e.state.grasp.catchT !== undefined) continue;
+      tried++;
+      const dir0 = e.state.grasp.dir;
+      let maxWrap = 0;
+      let maxTurn = 0;
+      run(e, log, 2.5, () => {
+        maxWrap = Math.max(maxWrap, e.targets().arm.wrap);
+        if (e.state.grasp.phase === 'WRAP') maxTurn = Math.max(maxTurn, Math.abs(wrapPi(e.state.grasp.dir - dir0)));
+      });
+      expect(log.some((r) => r.ev === 'HAND_SEEN'), `种子 ${seed}：缠着的时候手被看见了`).toBe(true);
+      expect(maxWrap, `种子 ${seed}`).toBe(0);
+      expect(maxTurn, `种子 ${seed}`).toBe(0);
+    }
+    expect(tried).toBeGreaterThan(0);
+  });
+
   it('臂自己伸过去碰到不动的手（by: arm）：按轻抚算，回避型也不惊跳；手伸过来碰（不写 by）照旧会惊跳', () => {
     const reach = grown('C', 13);
     reach.e.push({ kind: 'ARM_TOUCH', on: true, by: 'arm' });
@@ -453,8 +473,8 @@ describe('臂与缠', () => {
     expect(push.log.some((r) => r.ev === 'STARTLE')).toBe(true);
   });
 
-  it('被手吓到（碰臂惊跳）：这只手先不迎了——换成 ⑩ 的「不朝人时」，不抽随机数', () => {
-    const { e, log } = grown('C', seedFor('C', 'toward', 0)); // 回避：迎 5%，惊吓阈值 0.25
+  it('被手吓到（碰臂惊跳）：这只手不迎——换成 ⑩ 的「不朝人时」，不抽随机数（迎着时手碰臂是预期接触，不惊跳，见 hand-chain.test）', () => {
+    const { e, log } = grown('C', seedFor('C', 'away', 0)); // 回避：躲着，惊吓阈值 0.25
     e.push(hand(0, 420, 0.8, 0.5));
     run(e, log, 4);
     e.push({ kind: 'ARM_TOUCH', on: true });
@@ -465,16 +485,18 @@ describe('臂与缠', () => {
     expect(e.state.hand?.mode).toBe('away');
   });
 
-  it('惊跳：看见了手就背着手缩', () => {
+  it('惊跳：看见了手就沿背着手的那根腱轴缩', () => {
     const { e, log } = grown('C', seedFor('C', 'toward', 0)); // 回避：阈值 0.25，敲一下就惊跳
     e.push(hand(0, 420, 1.0, 0.3));
     run(e, log, 4);
     e.push({ kind: 'KNOCK', intensity: 0.9 });
-    run(e, log, 0.15);
-    expect(log.some((r) => r.ev === 'STARTLE')).toBe(true);
-    const g = e.state.gesture!;
-    expect(g.kind).toBe('startle');
-    expect(Math.abs(wrapPi(g.dir - (1.0 + Math.PI)))).toBeLessThan(1e-9);
+    run(e, log, 0.3);
+    const st = log.find((r) => r.ev === 'STARTLE');
+    expect(st?.p?.rule).toBe('hand');
+    expect(e.state.gesture?.kind).toBe('startle');
+    const arm = e.targets().arm;
+    expect(Math.abs(wrapPi(arm.dir - nearestAxisDir(1.0 + Math.PI)))).toBeLessThan(1e-9);
+    expect(arm.bend).toBeCloseTo(1, 9);
   });
 });
 
@@ -536,7 +558,7 @@ describe('纯数据', () => {
     expect(b.targets()).toEqual(a.targets());
     const old = { ...a.snapshot(), v: 2 } as unknown as EngineState;
     expect(() => BehaviorEngine.restore(old)).toThrow();
-    expect(STATE_VERSION).toBe(4);
+    expect(STATE_VERSION).toBe(10);
   });
 
   it('没有手的分支不碰随机数：同一场里推一个手 off（从来没有过手）不改变后面的任何东西', () => {

@@ -4,7 +4,7 @@ import { useBenchLang, useLabText } from './LabLanguage';
 
 import { LabControlLabel } from './LabControlLabel';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import { MACHINE_BASE_FRAME, machineBaseGeometry, splitMachineFrame } from '../../src/lib/linkage/machine-base';
 import { FlatRenderer, bakeIndexed, bakeRuledPoints, bakeSkinned, type CellFrame } from '../../src/lib/linkage/gl3d';
@@ -12,15 +12,18 @@ import { CriticallyDamped } from '../../src/lib/linkage/motion';
 import { armFrame, armPoint, armPolyline, idleContraction } from '../../src/lib/linkage/machine-arm';
 import { type ActuatorTargets, BehaviorEngine, type EngineState, HAND, type HandMode } from '../../src/lib/linkage/behavior/engine';
 import { describeRecord, personaName, phaseName } from '../../src/lib/linkage/behavior/describe';
-import { type PresenceBand, type SensorInput, bandOf } from '../../src/lib/linkage/behavior/events';
+import { PRESENCE_BANDS, type PresenceBand, type SensorInput, nearerBand } from '../../src/lib/linkage/behavior/events';
 import type { Phase } from '../../src/lib/linkage/behavior/life';
 import { type LogHeader, type LogRecord, toJsonl } from '../../src/lib/linkage/behavior/log';
 import { PERSONA_KEYS, type PersonaKey } from '../../src/lib/linkage/behavior/persona';
 import {
   ARM_GEOM,
+  BENCH_INPUT,
   FACING,
   HAND_UI,
+  PERSP_FOCAL,
   type ViewParams,
+  armTouchEvent,
   contactIdle,
   contactRadiusMm,
   contactStep,
@@ -28,19 +31,26 @@ import {
   feelerAngle,
   feelerSide,
   followBreath,
+  graspCaught,
+  handBandOf,
   handReading,
   handSendDue,
   halfTowardPerson,
   hitBand,
+  logicalToCss,
   pointerTrack,
   polylineDist,
+  projectLogical,
+  segDist,
   shellHalf,
+  strokeToTheta,
   sweepFraming,
   tendonContractions,
   trackMark,
   trackMove,
   trackSpeed,
   trackTrim,
+  viewDepth,
   yawFrame,
   yawPoint,
 } from '../../src/lib/linkage/machine-behavior';
@@ -97,6 +107,8 @@ import { SMALLARM_PLACEMENTS } from '../../src/lib/linkage/machine-shape';
 import { stashBench, takeBench } from './handoff';
 import { setStash } from './snapshot';
 import { useBenchLoop } from './useBenchLoop';
+import { ActuatorPanel, type ActuatorSnapshot } from './ActuatorPanel';
+import { ActuatorReadout, READOUT_CHANNELS, type ReadoutKey } from '../../src/lib/linkage/actuator-readout';
 
 /**
  * Lab.05 整机台架（spec = 轮回机器_整机spec.md，用户 2026-07-29 拍板「整机传动 + 真实实体」）。
@@ -216,29 +228,11 @@ const lifeRateStop = (r: number): number => {
   });
   return best;
 };
-const BANDS: readonly PresenceBand[] = ['gone', 'far', 'mid', 'near'];
 /** 日志缓冲上限（条）：一场四世约 500 条，这个数够跑十几个小时；超了丢最早的 */
 const LOG_CAP = 60000;
-/** 按住壳多久算「按住」（秒）、拖多远算「抚摸」（CSS px） */
-const HOLD_AFTER = 0.5;
-const STROKE_PX = 10;
-/** 缠到几成时手指被卡住、张力开关触发（抓握演示：按住大触手 = 手指在臂里） */
-const CATCH_AT = 0.6;
-// 指针 = 手的台架手感常量（HAND_UI / HAND_MM）与碰臂判定（contactStep）在 machine-behavior.ts：
-// 台架、vitest 闭环与 scripts/behavior/hand-probe.mjs 共用一份（2026-10-08 搬过去，数值未改）
-
-const BAND_RANK: Record<PresenceBand, number> = { gone: 0, far: 1, mid: 2, near: 3 };
-/** 手的距离 → 在场档，带滞回：离开当前档要越过边界 bandHys 才算 */
-function handBandOf(distMm: number, cur: PresenceBand | null): PresenceBand {
-  const raw = bandOf(distMm / 1000);
-  if (cur === null || cur === 'gone' || raw === cur) return raw;
-  const h = HAND_UI.bandHys / 1000;
-  const m = distMm / 1000;
-  if (cur === 'near' && m < 0.6 + h) return 'near';
-  if (cur === 'far' && m > 1.5 - h) return 'far';
-  if (cur === 'mid' && m > 0.6 - h && m < 1.5 + h) return 'mid';
-  return raw;
-}
+// 指针 = 手的台架手感常量（HAND_UI / HAND_MM）、碰臂判定（contactStep）、手的在场档（handBandOf）与张力开关
+// （graspCaught）在 machine-behavior.ts：台架、vitest 闭环与 scripts/behavior/hand-probe.mjs 共用一份
+// 点、拖、按的判法（按住多久、拖多远、命中半径）与面板按钮的刺激读数在 machine-behavior.ts 的 BENCH_INPUT
 
 /** 从某种人格开始，其余按 A→B→C→D 循环（台架的「首世」档） */
 function rotateOrder(first: PersonaKey): PersonaKey[] {
@@ -266,7 +260,7 @@ interface BehaviorHud {
   hand: { seen: boolean; mode: HandMode | null; bearing: number; dist: number; touch: boolean; held: boolean } | null;
   /** 此刻视角的水平朝向（世界 x̂ 在屏幕右方向上的分量 m0、m1）：罗盘按它转，左右与画面一致 */
   view: [number, number];
-  /** 研究原型（动作词汇 v2）正在执行的程序 · 段；现行词汇或没有程序 = null */
+  /** 正在执行的动作程序 · 段；没有程序 = null */
   motion: string | null;
 }
 
@@ -410,6 +404,41 @@ const PARTS: ReadonlyArray<MachinePartKind> = ['rings', 'drive', 'frame', 'tenta
 /** 环选择器：null = 全部 */
 const RING_KEYS = [null, 0, 1, 2, 3, 4] as const;
 
+/**
+ * 行为档（Lab 1-6）各组的说明气泡：[中, 英]，由 LabControlLabel 按语言挑一边——中英两套面板共用这一份
+ */
+const BEH_HELP = {
+  clock: [
+    '只压缩一世各段的时长（诞生 → 成长 → 衰老 → 死亡 → 空白），呼吸与动作仍按真实速度。×1 是实验口径，一世约 9 分钟；×5 约 1 分 45 秒；×10 约 50 秒；×20 约 25 秒。',
+    'Compresses only the life stages (birth → growth → ageing → dying → blank); breathing and gestures stay real-time. ×1 is the experiment timing, about 9 minutes per life; ×5 about 1 min 45 s; ×10 about 50 seconds; ×20 about 25 seconds.',
+  ] as [string, string],
+  first: [
+    '从哪种人格开始，其余按 A → B → C → D 循环。换了就重开一场。',
+    'Which persona comes first; the rest follow A → B → C → D in turn. Changing it starts a new session.',
+  ] as [string, string],
+  presence: [
+    '有没有人、离多远（真机用超声测距）。方位 0° 是机身初始朝向，左为正。',
+    'Whether someone is there and how close (ultrasonic on the machine). Bearing 0° is the machine’s initial facing; left is positive.',
+  ] as [string, string],
+  touch: [
+    '碰离人近的那一半壳。也可以直接点画面：点壳 = 轻拍，拖动 = 抚摸，按住不放 = 按住；点小触手、按住大触手也行。',
+    'Touches the half of the shell nearer the person. Or use the canvas: click the shell to pat, drag to stroke, press and hold to hold; click a small arm or press the large arm.',
+  ] as [string, string],
+  env: ['拿起机器、敲桌面、拍手或说话。', 'Lift the machine, knock, clap or talk.'] as [string, string],
+  grasp: [
+    '指针碰到大触手（或按住它）= 手碰到臂。它若迎上来就会缠住手，缠稳了、手还在就算手被卡住（张力开关）；把指针拉开 = 抽手。勾选「留物件」，抽手后臂里留着东西。',
+    'Touch the large arm with the pointer (or press it) to put a hand on it. If it responds, it wraps the hand; once the wrap has settled with the hand still there, the hand counts as caught (the tension switch). Pull the pointer away to withdraw. With “Leave object”, something stays in the arm after you withdraw.',
+  ] as [string, string],
+  log: [
+    '下载本场的事件日志（JSON Lines）：传感事件、引擎的回应与生命事件同一条流。',
+    'Download this session’s event log (JSON Lines): sensor events, responses and life events in one stream.',
+  ] as [string, string],
+  hand: [
+    '指针就是人的手。机器先要看见它（在视野里、过一个反应时间），再按性格迎过去、侧过身躲着或看别处；臂碰到手会缠上来，把指针拉开 = 抽手，它可能追。关掉就只认点击。',
+    'The pointer is a person’s hand. The machine has to see it first (in view, after its reaction time), then, by persona, reaches toward it, turns side-on to keep away from it, or looks elsewhere; when the arm touches the hand it wraps, and if you pull the pointer away it may chase. Off = clicks only.',
+  ] as [string, string],
+} as const;
+
 const COPY = {
   zh: {
     run: '运转',
@@ -443,52 +472,28 @@ const COPY = {
     loading: '载入实体…',
     beh: {
       clock: '生命时钟',
-      clockHelp: [
-        '只压缩一世各段的时长（诞生 → 成长 → 衰老 → 死亡 → 空白），呼吸与动作仍按真实速度。×1 是实验口径，一世约 9 分钟；×5 约 1 分 45 秒；×10 约 50 秒；×20 约 25 秒。',
-        'Compresses only the life stages (birth → growth → ageing → dying → blank); breathing and gestures stay real-time. ×1 is the experiment timing, about 9 minutes per life; ×5 about 1 min 45 s; ×10 about 50 seconds; ×20 about 25 seconds.',
-      ] as [string, string],
+      clockHelp: BEH_HELP.clock,
       first: '首世',
-      firstHelp: [
-        '从哪种人格开始，其余按 A → B → C → D 循环。换了就重开一场。',
-        'Which persona comes first; the rest follow A → B → C → D in turn. Changing it starts a new session.',
-      ] as [string, string],
+      firstHelp: BEH_HELP.first,
       restart: '重来',
       motion: '动作',
-      motionHelp: [
-        '大触手与全身的动作词汇。现行 = 已上线的读法；新 = 2026-10-08 的研究原型（惊跳是 0.1 s 的反射、回应按刺激分动词、自发动作变小变慢、人格差在恢复的结构里），待作者拍板。换了就重开一场。',
-        'The motion vocabulary of the big arm and the body. Current = the live reading; New = the 2026-10-08 research prototype (startle as a 0.1 s reflex, one response verb per stimulus, smaller and slower spontaneous gestures, personas differ in how they recover), pending the author’s decision. Changing it starts a new session.',
-      ] as [string, string],
-      motionOld: '现行',
-      motionNew: '新 · 研究',
       skip: '下一段',
       presence: '在场',
-      presenceHelp: [
-        '有没有人、离多远（真机用超声测距）。方位 0° 是机身初始朝向，左为正。',
-        'Whether someone is there and how close (ultrasonic on the machine). Bearing 0° is the machine’s initial facing; left is positive.',
-      ] as [string, string],
+      presenceHelp: BEH_HELP.presence,
       bands: { gone: '无人', far: '远', mid: '中', near: '近' },
       bearing: '方位',
       bearingAria: '人相对机身初始朝向的方位（度，左为正）',
       touch: '触碰',
-      touchHelp: [
-        '碰离人近的那一半壳。也可以直接点画面：点壳 = 轻拍，拖动 = 抚摸，按住不放 = 按住；点小触手、按住大触手也行。',
-        'Touches the half of the shell nearer the person. Or use the canvas: click the shell to pat, drag to stroke, press and hold to hold; click a small arm or press the large arm.',
-      ] as [string, string],
+      touchHelp: BEH_HELP.touch,
       touches: { pat: '轻拍', stroke: '抚摸', poke: '戳', hold: '按住' },
       env: '环境',
-      envHelp: ['拿起机器、敲桌面、拍手或说话。', 'Lift the machine, knock, clap or talk.'] as [string, string],
+      envHelp: BEH_HELP.env,
       envs: { lift: '拿起', knock: '敲', clap: '拍手', talk: '说话' },
       grasp: '抓握',
-      graspHelp: [
-        '指针碰到大触手（或按住它）= 手碰到臂。它若迎上来就会缠住手（缠到六成、手还在 = 张力开关触发）；把指针拉开 = 抽手。勾选「留物件」，抽手后臂里留着东西。',
-        'Touch the large arm with the pointer (or press it) to put a hand on it. If it responds, it wraps the hand (the tension switch closes once it is 60% wrapped and the hand is still there); pull the pointer away to withdraw. With “Leave object”, something stays in the arm after you withdraw.',
-      ] as [string, string],
+      graspHelp: BEH_HELP.grasp,
       leave: '留物件',
       log: '日志',
-      logHelp: [
-        '下载本场的事件日志（JSON Lines）：传感事件、引擎的回应与生命事件同一条流。',
-        'Download this session’s event log (JSON Lines): sensor events, responses and life events in one stream.',
-      ] as [string, string],
+      logHelp: BEH_HELP.log,
       export: '导出',
       title: '行为引擎',
       lifeN: (n: number) => `第 ${n} 世`,
@@ -501,12 +506,9 @@ const COPY = {
       hint: '移动指针 = 人的手 · 点小触手、按住大触手或点壳体与它互动 · 视角由下方按钮切换',
       compass: '俯视（按此刻视角转好，左右与画面一致）：箭头 = 机身朝向，短刻度 = 初始朝向，扇形 = 视野，圆点 = 人 / 手（空心 = 还没看见）',
       hand: '手',
-      handHelp: [
-        '指针就是人的手。机器先要看见它（在视野里、过一个反应时间），再按性格迎过去、背过身或看别处；臂碰到手会缠上来，把指针拉开 = 抽手，它可能追。关掉就只认点击。',
-        'The pointer is a person’s hand. The machine has to see it first (in view, after its reaction time), then, by persona, reaches toward it, turns away or looks elsewhere; when the arm touches the hand it wraps, and if you pull the pointer away it may chase. Off = clicks only.',
-      ] as [string, string],
+      handHelp: BEH_HELP.hand,
       handFollow: '指针 = 手',
-      handModes: { unseen: '没看见', toward: '迎过去', away: '背过身', look: '看别处' },
+      handModes: { unseen: '没看见', toward: '迎过去', away: '侧过身躲着', look: '看别处' },
       handLine: (m: string, touch: boolean, held: boolean) => `手 · ${m}${held ? ' · 握住' : touch ? ' · 碰着' : ''}`,
       aria: '轮回机器整机台架（行为引擎驱动）；点触手或壳体注入刺激，视角按钮切换',
     },
@@ -542,52 +544,28 @@ const COPY = {
     loading: 'loading solids…',
     beh: {
       clock: 'Life clock',
-      clockHelp: [
-        '只压缩一世各段的时长（诞生 → 成长 → 衰老 → 死亡 → 空白），呼吸与动作仍按真实速度。×1 是实验口径，一世约 9 分钟；×5 约 1 分 45 秒；×10 约 50 秒；×20 约 25 秒。',
-        'Compresses only the life stages (birth → growth → ageing → dying → blank); breathing and gestures stay real-time. ×1 is the experiment timing, about 9 minutes per life; ×5 about 1 min 45 s; ×10 about 50 seconds; ×20 about 25 seconds.',
-      ] as [string, string],
+      clockHelp: BEH_HELP.clock,
       first: 'First life',
-      firstHelp: [
-        '从哪种人格开始，其余按 A → B → C → D 循环。换了就重开一场。',
-        'Which persona comes first; the rest follow A → B → C → D in turn. Changing it starts a new session.',
-      ] as [string, string],
+      firstHelp: BEH_HELP.first,
       restart: 'Restart',
       motion: 'Motion',
-      motionHelp: [
-        '大触手与全身的动作词汇。现行 = 已上线的读法；新 = 2026-10-08 的研究原型（惊跳是 0.1 s 的反射、回应按刺激分动词、自发动作变小变慢、人格差在恢复的结构里），待作者拍板。换了就重开一场。',
-        'The motion vocabulary of the big arm and the body. Current = the live reading; New = the 2026-10-08 research prototype (startle as a 0.1 s reflex, one response verb per stimulus, smaller and slower spontaneous gestures, personas differ in how they recover), pending the author’s decision. Changing it starts a new session.',
-      ] as [string, string],
-      motionOld: 'Current',
-      motionNew: 'New · research',
       skip: 'Next stage',
       presence: 'Presence',
-      presenceHelp: [
-        '有没有人、离多远（真机用超声测距）。方位 0° 是机身初始朝向，左为正。',
-        'Whether someone is there and how close (ultrasonic on the machine). Bearing 0° is the machine’s initial facing; left is positive.',
-      ] as [string, string],
+      presenceHelp: BEH_HELP.presence,
       bands: { gone: 'Away', far: 'Far', mid: 'Mid', near: 'Near' },
       bearing: 'Bearing',
       bearingAria: 'Bearing of the person from the machine’s initial facing (degrees, left positive)',
       touch: 'Touch',
-      touchHelp: [
-        '碰离人近的那一半壳。也可以直接点画面：点壳 = 轻拍，拖动 = 抚摸，按住不放 = 按住；点小触手、按住大触手也行。',
-        'Touches the half of the shell nearer the person. Or use the canvas: click the shell to pat, drag to stroke, press and hold to hold; click a small arm or press the large arm.',
-      ] as [string, string],
+      touchHelp: BEH_HELP.touch,
       touches: { pat: 'Pat', stroke: 'Stroke', poke: 'Poke', hold: 'Hold' },
       env: 'Surroundings',
-      envHelp: ['拿起机器、敲桌面、拍手或说话。', 'Lift the machine, knock, clap or talk.'] as [string, string],
+      envHelp: BEH_HELP.env,
       envs: { lift: 'Lift', knock: 'Knock', clap: 'Clap', talk: 'Talk' },
       grasp: 'Grasp',
-      graspHelp: [
-        '指针碰到大触手（或按住它）= 手碰到臂。它若迎上来就会缠住手（缠到六成、手还在 = 张力开关触发）；把指针拉开 = 抽手。勾选「留物件」，抽手后臂里留着东西。',
-        'Touch the large arm with the pointer (or press it) to put a hand on it. If it responds, it wraps the hand (the tension switch closes once it is 60% wrapped and the hand is still there); pull the pointer away to withdraw. With “Leave object”, something stays in the arm after you withdraw.',
-      ] as [string, string],
+      graspHelp: BEH_HELP.grasp,
       leave: 'Leave object',
       log: 'Log',
-      logHelp: [
-        '下载本场的事件日志（JSON Lines）：传感事件、引擎的回应与生命事件同一条流。',
-        'Download this session’s event log (JSON Lines): sensor events, responses and life events in one stream.',
-      ] as [string, string],
+      logHelp: BEH_HELP.log,
       export: 'Export',
       title: 'Behaviour engine',
       lifeN: (n: number) => `Life ${n}`,
@@ -600,17 +578,25 @@ const COPY = {
       hint: 'Move the pointer as a hand · click a small arm, press the large arm or the shell · views by the buttons below',
       compass: 'Top view, turned to match the current view: arrow = machine facing, tick = initial facing, wedge = field of view, dot = person / hand (hollow = not seen yet)',
       hand: 'Hand',
-      handHelp: [
-        '指针就是人的手。机器先要看见它（在视野里、过一个反应时间），再按性格迎过去、背过身或看别处；臂碰到手会缠上来，把指针拉开 = 抽手，它可能追。关掉就只认点击。',
-        'The pointer is a person’s hand. The machine has to see it first (in view, after its reaction time), then, by persona, reaches toward it, turns away or looks elsewhere; when the arm touches the hand it wraps, and if you pull the pointer away it may chase. Off = clicks only.',
-      ] as [string, string],
+      handHelp: BEH_HELP.hand,
       handFollow: 'Pointer = hand',
-      handModes: { unseen: 'not seen', toward: 'reaching toward', away: 'turned away', look: 'looking elsewhere' },
+      handModes: { unseen: 'not seen', toward: 'reaching toward', away: 'keeping away, side-on', look: 'looking elsewhere' },
       handLine: (m: string, touch: boolean, held: boolean) => `hand · ${m}${held ? ' · held' : touch ? ' · touching' : ''}`,
       aria: 'Reincarnation machine bench driven by the behaviour engine; touch the arms or shell to add stimuli, views by buttons',
     },
   },
 } as const;
+
+/** 有面板时把画面与面板包进 .mb-split；没有时原样返回画面（不多一层 DOM） */
+function SplitIf({ on, panel, children }: { on: boolean; panel: ReactNode; children: ReactNode }) {
+  if (!on) return <>{children}</>;
+  return (
+    <div className="mb-split">
+      {children}
+      {panel}
+    </div>
+  );
+}
 
 export function MachineBench({
   spin = true,
@@ -649,7 +635,6 @@ export function MachineBench({
     // —— 行为档（Lab 1-6）
     setLifeRate: (r: number) => void;
     restart: (first: PersonaKey) => void;
-    setVocab: (v: 1 | 2) => void;
     skip: () => void;
     presence: (band: PresenceBand, bearing: number) => void;
     touch: (t: 'pat' | 'stroke' | 'poke') => void;
@@ -680,7 +665,6 @@ export function MachineBench({
   // —— 行为档（Lab 1-6）的面板状态；behavior 不开时这些都不出现在界面上
   const [lifeRate, setLifeRate] = useState<number>(LIFE_RATE_DEFAULT);
   const [firstK, setFirstK] = useState<PersonaKey>('A');
-  const [vocab, setVocab] = useState<1 | 2>(1);
   const [band, setBand] = useState<PresenceBand>('gone');
   const [bearingDeg, setBearingDeg] = useState(0);
   const [lifted, setLifted] = useState(false);
@@ -688,6 +672,9 @@ export function MachineBench({
   const [leaveObj, setLeaveObj] = useState(false);
   const [handFollow, setHandFollow] = useState(true);
   const [bhud, setBhud] = useState<BehaviorHud | null>(null);
+  // 实时输出面板（2026-10-19）：与「指针 = 手」同一个条件——只在 /lab 的完整面板里出
+  const outPanel = behavior && controls && !sideControls;
+  const [outSnap, setOutSnap] = useState<ActuatorSnapshot | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -869,8 +856,6 @@ export function MachineBench({
     let hudDirty = false;
     let hudClock = 0;
     let firstNow: PersonaKey = 'A';
-    /** 动作词汇（现行 1 / 研究原型 2）：换了重开一场；交接来的引擎带着它自己的词汇，面板跟着它 */
-    let vocabNow: 1 | 2 = 1;
     let rateNow: number = LIFE_RATE_DEFAULT;
     // 台架记着的「传感事实」：重开一场时原样再告诉新引擎（人还站在那里，机器还被拿着）
     let presenceNow: { band: PresenceBand; bearing: number } = { band: 'gone', bearing: 0 };
@@ -892,6 +877,9 @@ export function MachineBench({
     // 指针位置（画布 CSS px）；触屏只有手指按在空白处时才有手
     const handCapable = behavior && controls && !sideControls;
     let handFollowNow = handCapable;
+    // 实时输出面板的数据源：运转时每帧记一次，约每 1/12 秒交给面板重画一次
+    const readout = handCapable ? new ActuatorReadout() : null;
+    let readoutClock = 0;
     // 存视口坐标（clientX/Y），每帧按此刻的画布位置换算——页面滚动时指针不动、画布在动
     let pointer: { cx: number; cy: number; touch: boolean; id: number } | null = null;
     /** 相机刚变过（换视角 / 透视）：等指针再动一下才重新判接触（不让臂在不动的指针下扫过去就算碰到） */
@@ -946,8 +934,8 @@ export function MachineBench({
     /** 新开一场：种子每场随机（非确定是论点的一部分），会话头里记着，导出的日志照样可复现 */
     const startEngine = (): void => {
       const seed = (Math.random() * 0x100000000) >>> 0;
-      // 台架开着肌腱轴深卷（tendonContractions 的 deep），迎手链 v2 的深卷门要知道这一点（每轮 ≤ 4 s、冷却 45 s）
-      const eng = new BehaviorEngine({ seed, order: rotateOrder(firstNow), loop: true, lifeRate: rateNow, vocab: vocabNow, deepOk: vocabNow === 2 });
+      // 台架开着肌腱轴深卷（tendonContractions 的 deep），引擎要知道这一点
+      const eng = new BehaviorEngine({ seed, order: rotateOrder(firstNow), loop: true, lifeRate: rateNow, deepOk: true });
       engine = eng;
       logHeader = eng.header();
       logBuf.length = 0;
@@ -973,8 +961,6 @@ export function MachineBench({
       try {
         const eng = BehaviorEngine.restore(state);
         engine = eng;
-        vocabNow = eng.vocab();
-        setVocab(vocabNow);
         logHeader = eng.header();
         logBuf.length = 0;
         // 倍率落到滑条的某一档（本来就在档上时 setLifeRate 直接返回，不记操作日志）
@@ -1004,8 +990,7 @@ export function MachineBench({
       const on = contact.touching || contact.held;
       if (on === electrodeSent) return;
       electrodeSent = on;
-      // 臂伸过来碰到不动的手：by 'arm'（按轻抚算）；按住、或手伸过去碰：照旧
-      eng?.push(on && contact.touching && !contact.held && contact.by === 'arm' ? { kind: 'ARM_TOUCH', on, by: 'arm' } : { kind: 'ARM_TOUCH', on });
+      eng?.push(armTouchEvent(contact));
       if (!on && tensionOn && (cancel || !leaveObjNow)) {
         tensionOn = false;
         eng?.push({ kind: 'RESISTANCE', on: false });
@@ -1371,7 +1356,7 @@ export function MachineBench({
       if (!eng) return null;
       // 壳上按着不动够久 = 「按住」（与引擎时钟无关，暂停时照样认手势）
       const g = shellGesture;
-      if (g && !g.stroked && !g.held && performance.now() / 1000 - g.t0 >= HOLD_AFTER) {
+      if (g && !g.stroked && !g.held && performance.now() / 1000 - g.t0 >= BENCH_INPUT.holdAfter) {
         g.held = true;
         eng.push({ kind: 'SHELL_HOLD', half: g.half, on: true });
       }
@@ -1390,15 +1375,13 @@ export function MachineBench({
       // 呼吸 → 曲柄：限速追，每子步 ≤1°（machine-behavior.ts 的 §6.2 实测）
       followBreath(machine, tg.breath.s, dt);
       // 臂：抽象指令 → 三腱目标，之后照旧走肌肉的临界阻尼限速
-      // 台架开着肌腱轴深卷（研究原型的惊跳会用到；现行词汇不给 deep，这一项对它不起作用）
+      // 台架开着肌腱轴深卷（惊跳会用到）
       const c = tendonContractions(tg.arm, { deep: true });
       for (let k = 0; k < 3; k++) muscles[k].target = c[k];
       yawNow = tg.yaw;
       // 抓握演示的张力开关：手在臂上（悬停碰着或按着）、缠到六成 → 卡住；臂一松（惊跳 / 死亡 / 放弃）→ 东西掉出来
       const gr = eng.state.grasp;
-      // 迎手链 v2 的缠写 catchT（贴上做完、臂停稳的那一刻）：手指在那一刻之后才算被卡住；现行照旧缠到六成
-      const caught = gr.catchT !== undefined ? eng.time >= gr.catchT : (eng.time - gr.t0) / gr.dur >= CATCH_AT;
-      if (electrodeSent && !tensionOn && gr.phase === 'WRAP' && caught) {
+      if (electrodeSent && !tensionOn && graspCaught(gr, eng.time)) {
         tensionOn = true;
         eng.push({ kind: 'RESISTANCE', on: true });
       } else if (tensionOn && (gr.phase === 'RELEASE' || gr.phase === 'IDLE')) {
@@ -1504,6 +1487,35 @@ export function MachineBench({
           driveSmallArm(sa, feelerAngle(tg.feelers[k]));
           stepSmallArm(sa, dt);
         });
+        if (readout && running && engine) {
+          readout.update(
+            {
+              tendons: [muscles[0].value, muscles[1].value, muscles[2].value],
+              tendonTargets: [muscles[0].target, muscles[1].target, muscles[2].target],
+              servos: [smallArms[0].theta, smallArms[1].theta],
+              crankDeg: phiDeg(),
+              crankTargetDeg: phaseDeg(strokeToTheta(tg.breath.s)),
+              yaw: tg.yaw,
+              yawTarget: engine.state.yawTarget,
+              sound: tg.sound,
+              light: tg.light.level,
+            },
+            dt,
+          );
+          readoutClock += dt;
+          if (readout.values && readoutClock >= 1 / 12) {
+            readoutClock = 0;
+            const series = {} as Record<ReadoutKey, number[]>;
+            for (const c of READOUT_CHANNELS) series[c.key] = readout.series(c.key);
+            setOutSnap({
+              values: { ...readout.values },
+              targets: { ...readout.targets },
+              series,
+              capacity: readout.capacity,
+              voicing: tg.sound.on,
+            });
+          }
+        }
       } else {
         // 小触手：运转中按波形甩，停下时保持最后角度（物理继续松弛到静止）。
         // 受惊（点击）叠加在待机之上，且**暂停时也生效**——戳它就该有反应，
@@ -1582,7 +1594,7 @@ export function MachineBench({
       setPersp: (on) => {
         perspNow = on;
         camMoved = true;
-        R.setPerspective(on ? 900 : 0);
+        R.setPerspective(on ? PERSP_FOCAL : 0);
       },
       viewTo: (k) => {
         // 行为档逐视角取景（扫掠圆柱）；编排档机位不随视角变，与 M2 之前同
@@ -1607,15 +1619,11 @@ export function MachineBench({
         firstNow = first;
         if (engine) startEngine();
       },
-      setVocab: (v) => {
-        vocabNow = v;
-        if (engine) startEngine();
-      },
       skip: () => engine?.skip(),
       presence: (b, bearing) => {
         presenceNow = { band: b, bearing };
         // 指针正当着手：生效档 = 面板档与手档里近的那个（与 syncHand 同一条规矩）
-        const eff = handBand !== null && BAND_RANK[handBand] > BAND_RANK[b] ? handBand : b;
+        const eff = handBand !== null ? nearerBand(handBand, b) : b;
         engine?.push(eff === 'gone' ? { kind: 'PRESENCE', band: eff } : { kind: 'PRESENCE', band: eff, bearing });
       },
       touch: (t) => {
@@ -1653,35 +1661,20 @@ export function MachineBench({
     // 挂一个 **pointerdown 命中小触手 → 受惊甩开**，外加 pointermove 换光标做提示。
     // 这两个监听都不动相机、不 preventDefault，滚页不受影响。
 
-    // 世界点 → 画布 CSS 像素（照抄 gl3d 顶点着色器的投影式：视变换 → 透视 w →
-    // 逻辑 700×520 → CSS）。**cx/cy 不参与**——WebGL 屏幕中心恒为画布中心（§12.3 的坑）。
-    const cssPoint = (w: Vec3): { x: number; y: number } => {
-      const m = cam.matrix;
-      const pv = cam.pivotPoint;
-      const dx = w.x - pv.x;
-      const dy = w.y - pv.y;
-      const dz = w.z - pv.z;
-      const qx = m[0] * dx + m[1] * dy + m[2] * dz;
-      const qy = m[3] * dx + m[4] * dy + m[5] * dz;
-      const qz = m[6] * dx + m[7] * dy + m[8] * dz;
-      const pw = perspNow ? 1 - qz / 900 : 1;
-      const xl = (qx * cam.viewScale) / pw + cam.pan.x;
-      const yl = (qy * cam.viewScale) / pw + cam.pan.y;
-      const r = rectNow();
-      return { x: r.width / 2 + xl * (r.width / 700), y: r.height / 2 + yl * (r.height / 520) };
-    };
+    /** 此刻的视图参数（与 gl3d 同一投影；反投影指针用） */
+    const viewParams = (): ViewParams => ({
+      m: cam.matrix,
+      pivot: cam.pivotPoint,
+      scale: cam.viewScale,
+      pan: cam.pan,
+      persp: perspNow ? PERSP_FOCAL : 0,
+    });
 
-    /** 点到线段距离（CSS px 域） */
-    const segDist = (
-      p: { x: number; y: number },
-      a: { x: number; y: number },
-      b: { x: number; y: number },
-    ): number => {
-      const vx = b.x - a.x;
-      const vy = b.y - a.y;
-      const L2 = vx * vx + vy * vy || 1;
-      const u = Math.max(0, Math.min(1, ((p.x - a.x) * vx + (p.y - a.y) * vy) / L2));
-      return Math.hypot(p.x - (a.x + u * vx), p.y - (a.y + u * vy));
+    // 世界点 → 画布 CSS 像素（gl3d 顶点着色器同一投影式：视变换 → 透视 w → 逻辑 700×520 → CSS）。
+    // **cx/cy 不参与**——WebGL 屏幕中心恒为画布中心（§12.3 的坑）
+    const cssPoint = (w: Vec3): { x: number; y: number } => {
+      const r = rectNow();
+      return logicalToCss(projectLogical(viewParams(), w), r.width, r.height);
     };
 
     /** 命中哪条小触手（阈值 CSS px）；没中返回 null */
@@ -1723,15 +1716,6 @@ export function MachineBench({
       return polylineDist({ x: px, y: py }, pts);
     };
 
-    /** 此刻的视图参数（与 gl3d 同一投影；反投影指针用） */
-    const viewParams = (): ViewParams => ({
-      m: cam.matrix,
-      pivot: cam.pivotPoint,
-      scale: cam.viewScale,
-      pan: cam.pan,
-      persp: perspNow ? 900 : 0,
-    });
-
     /**
      * 每帧：指针 → 手（machine-behavior.ts 的 handReading），报给引擎；判悬停接触。
      * 机器在转、臂在动，指针不动读数也会变，所以逐帧算、按阈值节流着报。
@@ -1761,13 +1745,12 @@ export function MachineBench({
       if (read.side >= HAND_UI.sideMin || !handSent) lastAimDir = read.aimDir;
       const now = performance.now() / 1000;
       trackTrim(track, now);
-      // 臂梢那一处画面上一毫米几个 CSS px（碰臂阈值与迎手链 v2 的读数都按它换算）
+      // 臂梢那一处画面上一毫米几个 CSS px（碰臂阈值与迎手链的读数都按它换算）
       const tipW = yawPoint(ARM_GEOM.tip, yawNow);
-      const qz = viewDepthOf(tipW);
-      const pxPerMm = (cam.viewScale * (r.width / 700)) / (perspNow ? 1 - qz / 900 : 1);
-      const v2 = eng.vocab() === 2;
-      // ① 手的读数（先于在场：同一帧里引擎先知道手、再收到「走近」）。发不发的规矩在 handSendDue（v2 下指针还在挪也发）
-      if (handSendDue(read, handSent, lastAimDir, now, { v2, lastMoveAt: track.lastMoveAt })) {
+      const qz = viewDepth(viewParams(), tipW);
+      const pxPerMm = (cam.viewScale * (r.width / 700)) / (perspNow ? 1 - qz / PERSP_FOCAL : 1);
+      // ① 手的读数（先于在场：同一帧里引擎先知道手、再收到「走近」）。发不发的规矩在 handSendDue（指针还在挪也发）
+      if (handSendDue(read, handSent, lastAimDir, now, { lastMoveAt: track.lastMoveAt })) {
         // 日志里不要 17 位小数：角度 / 弯曲到千分之一、距离到毫米（引擎吃的就是日志里那个数，回放逐位一致）
         const r3 = (x: number): number => Math.round(x * 1000) / 1000;
         const send = {
@@ -1779,15 +1762,15 @@ export function MachineBench({
           aimDist: Math.round(read.aimDist),
         };
         handSent = { ...send, at: now };
-        // 迎手链 v2 还要三样（现行不带，日志一字不变）：此刻的有效碰到半径 mm（引擎按它留停距）、指针已静止多久、指针速度 mm/s
-        const extra = v2
-          ? {
-              touch: Math.round(contactRadiusMm(pxPerMm, p0.touch)),
-              still: Math.min(9.9, Math.round((now - track.lastMoveAt) * 10) / 10),
-              v: Math.round(trackSpeed(track, now, px, py) / pxPerMm),
-            }
-          : {};
-        eng.push({ kind: 'HAND', on: true, ...send, ...extra });
+        // 迎手链还要三样：此刻的有效碰到半径 mm（引擎按它留停距）、指针已静止多久、指针速度 mm/s
+        eng.push({
+          kind: 'HAND',
+          on: true,
+          ...send,
+          touch: Math.round(contactRadiusMm(pxPerMm, p0.touch)),
+          still: Math.min(9.9, Math.round((now - track.lastMoveAt) * 10) / 10),
+          v: Math.round(trackSpeed(track, now, px, py) / pxPerMm),
+        });
       }
       // 暂停时只报手的读数（收件箱里连着的 HAND 只留一条）；在场与碰臂的跳变不报——否则继续时一步里涌进一串
       if (!running) return;
@@ -1801,8 +1784,8 @@ export function MachineBench({
         }
         if (handBand === null || now - bandCandAt >= HAND_UI.bandDwell) {
           const pb = presenceNow.band;
-          const before = handBand === null ? pb : BAND_RANK[handBand] >= BAND_RANK[pb] ? handBand : pb;
-          const after = BAND_RANK[hb] >= BAND_RANK[pb] ? hb : pb;
+          const before = handBand === null ? pb : nearerBand(handBand, pb);
+          const after = nearerBand(hb, pb);
           handBand = hb;
           bandCand = null;
           if (after !== before) eng.push({ kind: 'PRESENCE', band: after });
@@ -1815,7 +1798,7 @@ export function MachineBench({
         syncContact();
         return;
       }
-      // 迎手链 v2：缠 / 握着时慢慢挪手 = 被牵着走，锚点跟着指针（不判松开）
+      // 迎手链：缠 / 握着时慢慢挪手 = 被牵着走，锚点跟着指针（不判松开）
       contact = contactStep(contact, {
         now,
         x: px,
@@ -1826,15 +1809,8 @@ export function MachineBench({
         speed: trackSpeed(track, now, px, py),
         lastMoveAt: track.lastMoveAt,
         grasp: eng.state.grasp.phase,
-      }, { traction: v2 }).next;
+      }, { traction: true }).next;
       syncContact();
-    };
-
-    /** 世界点的视深（朝相机为正；与 cssPoint 同一投影） */
-    const viewDepthOf = (w: Vec3): number => {
-      const m = cam.matrix;
-      const pv = cam.pivotPoint;
-      return m[6] * (w.x - pv.x) + m[7] * (w.y - pv.y) + m[8] * (w.z - pv.z);
     };
 
     /** 手的标记圈：跟着指针，样子 = 机器此刻怎么对待这只手（触屏画在手指上方，不被指尖盖住） */
@@ -1857,10 +1833,7 @@ export function MachineBench({
       // 圈的定位块是 .lab-fig，画布在 /lab 上比它窄、居中：加上画布在它里面的偏移
       const ox = x + canvas.offsetLeft;
       const oy = y + canvas.offsetTop;
-      // 迎手链 v2 握着手时：圈随挤压一紧一松（±12%）——网页的手没有身体，「被握着」靠标记读出来
-      const sq = tensionOn && electrodeSent ? engine?.handSqueeze() ?? null : null;
-      const sc = sq === null ? '' : ` scale(${(1 - 0.12 * (2 * sq - 1)).toFixed(3)})`;
-      el.style.transform = `translate(${ox.toFixed(1)}px, ${oy.toFixed(1)}px)${sc}`;
+      el.style.transform = `translate(${ox.toFixed(1)}px, ${oy.toFixed(1)}px)`;
       const h = engine?.state.hand;
       const mode = h && h.seen && h.mode ? h.mode : 'unseen';
       if (el.dataset.mode !== mode) el.dataset.mode = mode;
@@ -1888,12 +1861,12 @@ export function MachineBench({
     const behaviorPointerDown = (e: PointerEvent, px: number, py: number): void => {
       const eng = engine;
       if (!eng) return;
-      const k = hitSmallArm(px, py, 30);
+      const k = hitSmallArm(px, py, BENCH_INPUT.smallArmHitPx);
       if (k !== null) {
         eng.push({ kind: 'FEELER_TOUCH', feeler: k === 0 ? 0 : 1, side: feelerSide(clickSide(k, px, py)) });
         return;
       }
-      if (armDist(px, py) <= 22) {
+      if (armDist(px, py) <= BENCH_INPUT.armPressPx) {
         contact.held = true;
         contact.pressAt = { x: px, y: py };
         canvas.setPointerCapture?.(e.pointerId);
@@ -1926,7 +1899,7 @@ export function MachineBench({
         behaviorPointerDown(e, px, py);
         return;
       }
-      const k = hitSmallArm(px, py, 30);
+      const k = hitSmallArm(px, py, BENCH_INPUT.smallArmHitPx);
       if (k === null) return;
       // 甩开方向 = 点击落在摆平面哪一侧的**反面**（侧别见 clickSide）。
       // 视线恰好沿 h 轴时投影退化——退到「远离当前倾角」兜底。
@@ -1942,7 +1915,7 @@ export function MachineBench({
       const py = e.clientY - r.top;
       if (behavior) {
         const g = shellGesture;
-        if (g && e.pointerId === g.id && !g.stroked && !g.held && Math.hypot(px - g.x0, py - g.y0) > STROKE_PX) {
+        if (g && e.pointerId === g.id && !g.stroked && !g.held && Math.hypot(px - g.x0, py - g.y0) > BENCH_INPUT.strokePx) {
           g.stroked = true;
           engine?.push({ kind: 'SHELL_STROKE', half: g.half, touch: 'stroke' });
         }
@@ -1955,12 +1928,12 @@ export function MachineBench({
         canvas.style.cursor =
           contact.held || shellGesture
             ? 'grabbing'
-            : hitSmallArm(px, py, 30) !== null || armDist(px, py) <= 22 || shellHit(px, py)
+            : hitSmallArm(px, py, BENCH_INPUT.smallArmHitPx) !== null || armDist(px, py) <= BENCH_INPUT.armPressPx || shellHit(px, py)
               ? 'pointer'
               : '';
         return;
       }
-      canvas.style.cursor = hitSmallArm(px, py, 30) !== null ? 'pointer' : '';
+      canvas.style.cursor = hitSmallArm(px, py, BENCH_INPUT.smallArmHitPx) !== null ? 'pointer' : '';
     };
     const onPointerUp = (e: PointerEvent): void => {
       if (!behavior) return;
@@ -2344,27 +2317,9 @@ export function MachineBench({
         </button>
       </div>
       <div className="grp grp--seg">
-        <LabControlLabel help={B.motionHelp} lang={lang}>{B.motion}</LabControlLabel>
-        <span className="seg">
-          {([1, 2] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              className={v === vocab ? 'active' : undefined}
-              onClick={() => {
-                setVocab(v);
-                apiRef.current?.setVocab(v);
-              }}
-            >
-              {v === 1 ? B.motionOld : B.motionNew}
-            </button>
-          ))}
-        </span>
-      </div>
-      <div className="grp grp--seg">
         <LabControlLabel help={B.presenceHelp} lang={lang}>{B.presence}</LabControlLabel>
         <span className="seg">
-          {BANDS.map((b) => (
+          {PRESENCE_BANDS.map((b) => (
             <button
               key={b}
               type="button"
@@ -2430,13 +2385,13 @@ export function MachineBench({
         >
           {B.envs.lift}
         </button>
-        <button type="button" onClick={() => apiRef.current?.inject({ kind: 'KNOCK', intensity: 0.6 })}>
+        <button type="button" onClick={() => apiRef.current?.inject({ kind: 'KNOCK', intensity: BENCH_INPUT.knock })}>
           {B.envs.knock}
         </button>
-        <button type="button" onClick={() => apiRef.current?.inject({ kind: 'SOUND', level: 0.8 })}>
+        <button type="button" onClick={() => apiRef.current?.inject({ kind: 'SOUND', level: BENCH_INPUT.clap })}>
           {B.envs.clap}
         </button>
-        <button type="button" onClick={() => apiRef.current?.inject({ kind: 'SOUND', level: 0.3 })}>
+        <button type="button" onClick={() => apiRef.current?.inject({ kind: 'SOUND', level: BENCH_INPUT.talk })}>
           {B.envs.talk}
         </button>
       </div>
@@ -2481,8 +2436,11 @@ export function MachineBench({
     <div
       className={`lab-wrap${onLight ? ' on-light' : ''}${
         sideControls && controls ? ' lab-wrap--side' : ''
-      }`}
+      }${outPanel ? ' lab-wrap--out' : ''}`}
     >
+      {/* 实时输出面板挂在画面右侧（窄时落到画面下方）：画面与面板同在 .mb-split 里，控制条仍在下面。
+          不出面板的三处（Lab 1-5、主页舞台、案例页主图）DOM 与此前逐个相同，不包这一层 */}
+      <SplitIf on={outPanel} panel={<ActuatorPanel snap={outSnap} lang={lang} />}>
       <div className="lab-fig">
         <canvas ref={canvasRef} width={1400} height={1040} aria-label={engineOn ? B.aria : L.aria} />
         {behaviorUi ? <div ref={handRef} className="lab-hand" aria-hidden="true" /> : null}
@@ -2629,6 +2587,7 @@ export function MachineBench({
           <div className="lab-hud bl dim">{L.hint}</div>
         )}
       </div>
+      </SplitIf>
       {controls ? (
         behaviorUi ? (
           <div className="lab-ctl lab-ctl--tiered">

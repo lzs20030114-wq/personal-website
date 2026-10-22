@@ -9,7 +9,7 @@
 //   SCEN            场景，逗号分隔（默认全部：K,R,S1,S1n,S1p,S2,S3,S3s,S4,S4b,S4s,S5,S6,S7,S8,S9,S10）
 //   PERSONA         人格（默认 A,B,C,D）
 //   N               每格保留的种子数（默认 8；尾部分位门 p10 / p90 建议 16）
-//   VOCABS          动作词汇（默认 1,2）
+//   VOCABS          动作词汇（默认 2；2026-10-17 删掉现行动作后引擎只有一套，1 只对删之前的仓库有意义——REPO 指到旧版本时用）
 //   HAND_V2_FIELDS  v2 的 HAND 带不带 touch / still / v：1 带、0 不带；缺省 = 看 events.ts 收不收（isSensorInput 试一条带字段的 HAND）
 //   FRESH=1         不与 outDir 里已有的结果合并（默认合并：只覆盖这次跑的人格 × 版本 × 场景）
 //   SPONT=1         所有场景在手出现时把自发动作（⑥）放回来（默认只有 S7 放：偷看走 ⑥ 的调度）
@@ -31,7 +31,7 @@
 //     抓握进 RELEASE / IDLE → off。catchT 是迎手链 v2 新加的字段，现在的引擎没有时走老规则。
 //   - 引擎构造：v2 时传 deepOk: true（台架开着肌腱轴深卷；引擎不认的字段会被忽略）。
 // 隔离：skip 出诞生段，第一步前把自发与定时转向推到很远（nextSpont = nextOrient = 1e9）；看见手以后 ⑨ 由手的机制自己排。
-//   代价：靠 ⑥ 调度的东西（握着时的小动作、躲时的偷看、够不着时 B 每 ⑥ 前倾）在隔离下不出现——S7 与 SPONT=1 时，
+//   代价：靠 ⑥ 调度的东西（握着时的小动作、躲时的偷看、够不着时 B / C 每 ⑥ 前倾）在隔离下不出现——S7 与 SPONT=1 时，
 //   手出现那一刻把 nextSpont 放回「此刻 + 人格 ⑥（人在时）的下限」，之后由引擎自己排。
 //   臂与肌肉从笔直起，先静置 PRE 秒，手在 PRE 时刻出现（时刻一律从手出现算，tr）。
 // 种子：每格从 1 往上搜，只留「第一次看见手（HAND_SEEN again=false）时抽到想要的态度」的种子（默认迎；S7 躲），
@@ -51,7 +51,7 @@
 //   S4s  S1n 握住 3 s 后以 80 mm/s 往左慢慢抽走 400 mm（慢抽）
 //   S5   S1n 握住 3 s 后以 40 mm/s 沿臂往基座牵 3 s（被牵着走；v2 开牵引锚点）
 //   S6   正视，手在臂中段正上方 80 mm（读数饱和、弯向正上 = 腱轴 0：深卷几何），60 s
-//   S7   手在正前方 0.9 m 不动 60 s（只跑 B、D，只留第一次看见是躲的种子）
+//   S7   手在正前方 0.9 m 不动 60 s（只跑会躲的 C、D，只留第一次看见是躲的种子）
 //   S8   S1n 握住 3 s 后敲一下（0.95，惊跳让它松手），手不动、仍搭在臂上，再看 ≥ 10 s（重新武装）
 //   S9   衰老进度 0.8 时跑 S1n（先 skip 到衰老段，生命钟 ×40 推到 80%，再把生命钟放到 ×0.001 冻住进度）
 //   S10  正 / 左 / 顶视角跑 S1n（指针 = 画面上臂长 L−100 处往画面上方偏 120 mm；顶视等于 S1n 那一点）
@@ -68,7 +68,7 @@ const REPO = resolve(process.env.REPO ?? resolve(HERE, '../..'));
 const N = Number(process.env.N ?? 8);
 const ALL_SCENS = ['K', 'R', 'S1', 'S1n', 'S1p', 'S2', 'S3', 'S3s', 'S4', 'S4b', 'S4s', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10'];
 const SCENS = (process.env.SCEN ?? ALL_SCENS.join(',')).split(',').filter(Boolean);
-const VOCABS = (process.env.VOCABS ?? '1,2').split(',').map(Number);
+const VOCABS = (process.env.VOCABS ?? '2').split(',').map(Number);
 const PERSONAS = ['A', 'B', 'C', 'D'];
 
 const HZ = 60;
@@ -299,7 +299,7 @@ async function job(P, OUT) {
         kind: 'S5',
       },
       S6: { win: 60, view: 'front', hand: () => S6H, kind: 'S6' },
-      S7: { win: 60, view: 'axon', hand: () => S7H, want: 'away', only: ['B', 'D'], kind: 'S7', spont: true },
+      S7: { win: 60, view: 'axon', hand: () => S7H, want: 'away', only: ['C', 'D'], kind: 'S7', spont: true },
       S8: { win: 60, ...S1nFam, needHold: true, hand: () => S1nH, knock: true, after: 16, kind: 'S8' },
       S9: { win: 22, view: 'axon', hand: () => S1nH, age: 0.8, kind: 'S1' },
       S10: { multi: ['front', 'left', 'top'] },
@@ -416,7 +416,7 @@ async function job(P, OUT) {
           // ① 手的读数（台架 syncHand ①）
           const rd = MB.handReading(view.v, ptrL, yaw0, handSent?.bearing);
           if (rd.side >= HAND_UI.sideMin || !handSent) lastAimDir = rd.aimDir;
-          if (MB.handSendDue(rd, handSent, lastAimDir, t, { v2: e.vocab() === 2 && V2_FIELDS, lastMoveAt: track.lastMoveAt })) {
+          if (MB.handSendDue(rd, handSent, lastAimDir, t, { v2: vocab === 2 && V2_FIELDS, lastMoveAt: track.lastMoveAt })) {
             const send = {
               bearing: r3(rd.bearing),
               dist: Math.round(rd.dist),
@@ -427,7 +427,7 @@ async function job(P, OUT) {
             };
             handSent = { ...send, at: t, onBody: rd.onBody };
             const ev = { kind: 'HAND', on: true, ...send };
-            if (e.vocab() === 2 && V2_FIELDS) {
+            if (vocab === 2 && V2_FIELDS) {
               ev.touch = Math.round(MB.contactRadiusMm(ppm, false));
               ev.still = Math.round(Math.min(9.9, t - track.lastMoveAt) * 10) / 10;
               ev.v = Math.round(MB.trackSpeed(track, t, pc.x, pc.y) / ppm);
@@ -482,9 +482,9 @@ async function job(P, OUT) {
             }
           }
         }
-        // 自发动作放回来（S7 / SPONT=1）：手出现那一刻起按人格 ⑥（人在时）的下限排第一次，之后引擎自己排
+        // 自发动作放回来（S7 / SPONT=1）：手出现那一刻起按人格 ⑥ 的下限排第一次，之后引擎自己排
         if ((SC.spont || process.env.SPONT === '1') && withHand && !SC.ref && !m.spontOn && tr >= -1e-9) {
-          st.nextSpont = e.time + (PT[P].spontPresent ?? PT[P].spont)[0];
+          st.nextSpont = e.time + PT[P].spont[0];
           m.spontOn = true;
         }
         // 参照场景的刺激；S8 握住 3 s 后的敲击
@@ -929,6 +929,7 @@ async function job(P, OUT) {
       let holdDp95 = NaN;
       let holdP2P = NaN;
       let holdR = NaN;
+      let holdRlag = NaN;
       let holdP2Pss = NaN;
       if (Number.isFinite(tHold)) {
         const i4 = win(fr, tHold, afterBreaths(fr, tHold, 4));
@@ -943,9 +944,18 @@ async function job(P, OUT) {
         const hs0 = r.stages.find((x) => x.stage === 'hold' && x.tr >= tHold - 1e-9)?.tr ?? tHold;
         const iCtl = fr.findIndex((f) => f.tr >= hs0 && !(f.prog ?? '').startsWith('grasp.wrap'));
         const hs = iCtl >= 0 ? fr[iCtl].tr : hs0;
-        const o = oscOf(fr, win(fr, hs, afterBreaths(fr, hs, 3)), 0.45);
+        // 跟着呼吸动没有：梢端（主方向投影）与呼吸 s 的相关，取 0–2 s 里最合适的那个滞后（2026-10-19 以前写死 0.45 s，
+        // 而梢端相对呼吸的滞后随人格的呼吸周期变：热情型实测在 1.2 s 附近，写死 0.45 s 时 |r| 0.27、取最合适的 0.95）
+        const iw = win(fr, hs, afterBreaths(fr, hs, 3));
+        const o = oscOf(fr, iw, 0);
         holdP2P = o.p2p;
-        holdR = o.r;
+        for (let L = 0; L <= 2 + 1e-9; L += 0.05) {
+          const q = oscOf(fr, iw, L);
+          if (!(q.r <= holdR)) {
+            holdR = q.r;
+            holdRlag = L;
+          }
+        }
         holdP2Pss = oscOf(fr, win(fr, tHold + 4, afterBreaths(fr, tHold + 4, 3))).p2p;
       }
       // 静息呼吸起伏：同种子不放手那一遍、臂从笔直落定以后（手出现前 4 s 起就在落定，取 tr ≥ 1 s 那一段）
@@ -970,6 +980,7 @@ async function job(P, OUT) {
         holdDp95,
         holdP2P,
         holdR,
+        holdRlag,
         holdP2Pss,
         restP2P: rest.p2p,
         minScr: Math.min(...iReach.map((i) => fr[i].dScr ?? Infinity)),
@@ -1334,14 +1345,28 @@ function aggregate(OUT) {
   }
 
   // —— §9.2 验收总表
+  // 阈值按新四型重定（2026-10-19）。综合稿 §9.2 的提案写的是旧四型（A 活力 · B 沉静 · C 好奇 · D 不稳定），换法：
+  // - 结构跟着做法走：精确伸（旧 C）→ 新 B 沉静；进—退—再进（旧 B）→ 新 C 回避；扑（A）、乱序随机（D）不变。
+  // - 节奏按新表的 ③ 运动速度换算：时间类阈值 新 = 旧 × √(v旧 / v新)（速度档与 ÷ k 都随 √v 走）。
+  //   看见 → 碰到：B = 旧 C 2.6 × √(1.5/0.5) = 4.5 · C = 旧 B 8.5 × √(0.5/2) = 4.3；碰到 → 卡住（四型同一套缠）：C 在 v 2 = 旧 C 2.2 × √(1.5/2) = 1.9。
+  // - 只看节奏的（起动、跟的滞后）按节奏归：C 的 τ 0.3、v 2 与旧 A / C 同档，B 的 τ 2.5、v 0.5 与旧 B 同档。
+  // - 握着在动的幅度下限按 ② 呼吸幅度：旧 B 30% 给 8 mm，新表 30% 的是 C。
+  // - 只给有那个行为的人格：脱手追的是 A 与 D（D 只算抽到追的场）；躲的是 C 与 D；够不着不探身、只看着的是 B 与 C。
+  // 仍是提案，不是拍板过的数。
   const TH = {
     7: { A: [0.7, 1.0], C: [0.7, 1.0], D: [0.9, 1.0], B: [1.3, 1.5] },
-    8: { A: 2.0, C: 2.6, D: 3.5, B: 8.5 },
-    10: { A: 1.8, C: 2.2, D: 2.6, B: 3.2 },
+    8: { A: 2.0, C: 4.3, D: 3.5, B: 4.5 },
+    10: { A: 1.8, C: 1.9, D: 2.6, B: 3.2 },
     11: { A: 35, B: 15, C: 15, D: 25 },
     18: { A: 10, C: 10, D: 15, B: 20 },
     '18s': { A: 0.75, C: 0.6, D: 0.6, B: 0.35 },
-    16: { A: 3, D: 3, C: 6 },
+    16: { A: 3, D: 3 },
+  };
+  /** 乱序随机脱手一半追、一半放弃：追的那几条只算抽到追的场 */
+  const chaseRuns = (P, v, sc) => runsOf(P, v, sc).filter((r) => P !== 'D' || r.metrics.reaction === 'chase');
+  const chaseRate = (P, v, sc, k) => {
+    const R = chaseRuns(P, v, sc);
+    return { n: R.length ? R.filter((r) => r.metrics[k] === 1).length / R.length : NaN, txt: R.length ? `${R.filter((r) => r.metrics[k] === 1).length}/${R.length}` : '—' };
   };
   const verdict = (ok) => (ok === null || ok === undefined || Number.isNaN(ok) ? '—' : ok ? '过' : '不过');
   const allOk = (...xs) => (xs.some((x) => x === null) ? null : xs.every(Boolean));
@@ -1407,7 +1432,7 @@ function aggregate(OUT) {
     {
       no: 6,
       name: '最后一段放慢',
-      th: '最后一拍峰速 ≤ 0.4·转运峰速；停半拍期间梢端 ≤ 15 mm/s 的时间 ≥ 0.25 s（C、B、慢 D）',
+      th: '最后一拍峰速 ≤ 0.4·转运峰速；停半拍期间梢端 ≤ 15 mm/s 的时间 ≥ 0.25 s（不扑的 B、C、慢 D）',
       who: ['B', 'C', 'D'],
       f: (P, v) => {
         const R = runsOf(P, v, 'S1n').filter((r) => !r.metrics.pounces);
@@ -1430,7 +1455,7 @@ function aggregate(OUT) {
     {
       no: 8,
       name: '看见 → 碰到（S1n）',
-      th: 'p50 ≤ A 2.0 · C 2.6 · D 3.5 · B 8.5 s',
+      th: 'p50 ≤ A 2.0 · C 4.3 · D 3.5 · B 4.5 s',
       f: (P, v) => {
         const a = medA(P, v, 'S1n', 'tTouch');
         return {
@@ -1453,7 +1478,7 @@ function aggregate(OUT) {
     {
       no: 10,
       name: '碰到 → 卡住（张力）',
-      th: 'p50 ≤ A 1.8 · C 2.2 · D 2.6 · B 3.2 s',
+      th: 'p50 ≤ A 1.8 · C 1.9 · D 2.6 · B 3.2 s',
       f: (P, v) => {
         const a = medA(P, v, 'S1n', 'tTen');
         return { val: `${fmt(a, 2)}${preSeen(P, v, 'S1n')}`, ok: okNum(a, (x) => x <= TH[10][P]) };
@@ -1481,14 +1506,14 @@ function aggregate(OUT) {
     {
       no: 13,
       name: '握着在动（前 3 口气）',
-      th: '梢端峰峰（握持控制器接手后前 3 口气）≥ 1.3·静息起伏且 ≥ 12 mm（B 8）；与呼吸 s（滞后 0.45 s）相关 ≥ 0.6',
+      th: '梢端峰峰（握持控制器接手后前 3 口气）≥ 1.3·静息起伏且 ≥ 12 mm（C 8：呼吸幅度 30%）；与呼吸 s 相关 ≥ 0.6（滞后取 0–2 s 里最合适的，括号里是那个滞后）',
       f: (P, v) => {
         const R = runsOf(P, v, 'S1n');
         const ratio = median(R.map((r) => r.metrics.holdP2P / r.metrics.restP2P));
         const p2p = med(P, v, 'S1n', 'holdP2P');
         const rr = med(P, v, 'S1n', 'holdR');
-        const mn = P === 'B' ? 8 : 12;
-        return { val: `${fmt(p2p, 1)} mm · ×${fmt(ratio, 2)} · r ${fmt(rr, 2)}`, ok: allOk(okNum(ratio, (x) => x >= 1.3), okNum(p2p, (x) => x >= mn), okNum(rr, (x) => x >= 0.6)) };
+        const mn = P === 'C' ? 8 : 12;
+        return { val: `${fmt(p2p, 1)} mm · ×${fmt(ratio, 2)} · r ${fmt(rr, 2)}（${fmt(med(P, v, 'S1n', 'holdRlag'), 2)} s）`, ok: allOk(okNum(ratio, (x) => x >= 1.3), okNum(p2p, (x) => x >= mn), okNum(rr, (x) => x >= 0.6)) };
       },
     },
     {
@@ -1505,44 +1530,43 @@ function aggregate(OUT) {
     {
       no: 15,
       name: '慢抽 / 快抽（S4s / S4）',
-      th: 'S4s：送一下（reachAfter）、不扑（lunge）；S4：扑，12.5 s 内必有收尾',
+      th: 'S4s：送一下（reachAfter）、不扑（lunge）；S4：扑，12.5 s 内必有收尾（追的 A、D；D 只算抽到追的场；B、C 脱手就放弃，只列结局）',
       f: (P, v) => {
         if (!has(P, v, 'S4') && !has(P, v, 'S4s')) return { val: '—', ok: null };
         const anyStage = runsOf(P, v, 'S4').concat(runsOf(P, v, 'S4s')).some((r) => r.metrics.hasStage);
-        const sA = rateNum(P, v, 'S4s', 'reachAfter');
-        const sL = rateNum(P, v, 'S4s', 'lunge');
-        const fL = rateNum(P, v, 'S4', 'lunge');
-        const cl = rateNum(P, v, 'S4', 'closed');
-        const val = `S4s 送 ${rate(P, v, 'S4s', 'reachAfter')} 扑 ${rate(P, v, 'S4s', 'lunge')} · S4 扑 ${rate(P, v, 'S4', 'lunge')} 收尾 ${rate(P, v, 'S4', 'closed')} · 结局 ${countBy(P, v, 'S4', 'outcome')}`;
-        if (P === 'B') return { val, ok: null };
-        return { val, ok: anyStage ? allOk(okNum(sA, (x) => x === 1), okNum(sL, (x) => x === 0), okNum(fL, (x) => x === 1), okNum(cl, (x) => x === 1)) : null };
+        const sA = chaseRate(P, v, 'S4s', 'reachAfter');
+        const sL = chaseRate(P, v, 'S4s', 'lunge');
+        const fL = chaseRate(P, v, 'S4', 'lunge');
+        const cl = chaseRate(P, v, 'S4', 'closed');
+        const val = `S4s 送 ${sA.txt} 扑 ${sL.txt} · S4 扑 ${fL.txt} 收尾 ${cl.txt} · 结局 ${countBy(P, v, 'S4', 'outcome')}`;
+        if (P === 'B' || P === 'C') return { val, ok: null };
+        return { val, ok: anyStage ? allOk(okNum(sA.n, (x) => x === 1), okNum(sL.n, (x) => x === 0), okNum(fL.n, (x) => x === 1), okNum(cl.n, (x) => x === 1)) : null };
       },
     },
     {
       no: 16,
       name: '追能真的再碰到（S4b）',
-      th: '再碰到率 ≥ 2/3（A、D）且 ≤ 3 s；C ≤ 6 s',
-      who: ['A', 'C', 'D'],
+      th: '再碰到率 ≥ 2/3 且 ≤ 3 s（追的 A、D；D 只算抽到追的场）',
+      who: ['A', 'D'],
       f: (P, v) => {
         if (!has(P, v, 'S4b')) return { val: '—', ok: null };
-        const rt = rateNum(P, v, 'S4b', 'retouch');
-        const t = med(P, v, 'S4b', 'tRetouch');
-        const val = `${rate(P, v, 'S4b', 'retouch')} · ${fmt(t, 1)} s`;
-        if (P === 'C') return { val, ok: okNum(t, (x) => x <= 6) };
-        return { val, ok: allOk(okNum(rt, (x) => x >= 2 / 3), okNum(t, (x) => x <= 3)) };
+        const rt = chaseRate(P, v, 'S4b', 'retouch');
+        const t = median(chaseRuns(P, v, 'S4b').map((r) => r.metrics.tRetouch));
+        const val = `${rt.txt} · ${fmt(t, 1)} s`;
+        return { val, ok: allOk(okNum(rt.n, (x) => x >= 2 / 3), okNum(t, (x) => x <= TH[16][P])) };
       },
     },
     {
       no: 17,
       name: '够不着有收尾（S1、S2）',
-      th: '看见后 ≤ 8 s 内走完 strain → deflate（B 进 watch）；泄气后弯曲 ≤ 0.6·撑时',
+      th: '看见后 ≤ 8 s 内走完 strain → deflate（B、C 不探身，进 watch）；泄气后弯曲 ≤ 0.6·撑时',
       f: (P, v) => {
         const anyStage = runsOf(P, v, 'S1').concat(runsOf(P, v, 'S2')).some((r) => r.metrics.hasStage);
         if (!anyStage) return { val: '—（没有拍）', ok: null };
         const a = rateNum(P, v, 'S1', 'strainDone');
         const b = rateNum(P, v, 'S2', 'strainDone');
         const c = median([...vals(P, v, 'S1', 'deflateRatio'), ...vals(P, v, 'S2', 'deflateRatio')]);
-        return { val: `S1 ${rate(P, v, 'S1', 'strainDone')} · S2 ${rate(P, v, 'S2', 'strainDone')} · ×${fmt(c, 2)}`, ok: allOk(okNum(a, (x) => x === 1), okNum(b, (x) => x === 1), P === 'B' ? true : okNum(c, (x) => x <= 0.6)) };
+        return { val: `S1 ${rate(P, v, 'S1', 'strainDone')} · S2 ${rate(P, v, 'S2', 'strainDone')} · ×${fmt(c, 2)}`, ok: allOk(okNum(a, (x) => x === 1), okNum(b, (x) => x === 1), P === 'B' || P === 'C' ? true : okNum(c, (x) => x <= 0.6)) };
       },
     },
     {
@@ -1585,8 +1609,8 @@ function aggregate(OUT) {
     {
       no: 21,
       name: '躲的那一路（S7）',
-      th: '60 s 内 HAND_LOST unseen = 0；转完后（看见 3 s 起、仍在躲的帧）手的相对方位 95°–115°；B 偷看 ≥ 2 次',
-      who: ['B', 'D'],
+      th: '60 s 内 HAND_LOST unseen = 0；转完后（看见 3 s 起、仍在躲的帧）手的相对方位 95°–125°（身侧 105° 起，越怕越侧：手在 0.9 m 时到 124°）；C 偷看 ≥ 2 次',
+      who: ['C', 'D'],
       f: (P, v) => {
         if (!has(P, v, 'S7')) return { val: '—', ok: null };
         const lost = sum(P, v, 'S7', 'lostUnseen');
@@ -1595,7 +1619,7 @@ function aggregate(OUT) {
         const anyStage = runsOf(P, v, 'S7').some((r) => r.metrics.hasStage);
         return {
           val: `丢手 ${fmt(lost, 0)} · ${fmt(rel, 0)}° · 偷看 ${anyStage ? fmt(pk, 0) : '—'}`,
-          ok: allOk(okNum(lost, (x) => x === 0), okNum(rel, (x) => x >= 95 && x <= 115), P === 'B' ? (anyStage ? okNum(pk, (x) => x >= 2) : null) : true),
+          ok: allOk(okNum(lost, (x) => x === 0), okNum(rel, (x) => x >= 95 && x <= 125), P === 'C' ? (anyStage ? okNum(pk, (x) => x >= 2) : null) : true),
         };
       },
     },
@@ -1632,17 +1656,17 @@ function aggregate(OUT) {
     {
       no: 24,
       name: '人格结构看得见',
-      th: 'A 扑后越过指针 ≥ 10 mm；B 凑里背离手 ≥ 10 mm（retreat）；C 精确伸过冲 ≤ 8 mm；D 握住率 ≈ 0.5（⑤ 为正，± 2/8）',
+      th: 'A 扑后越过指针 ≥ 10 mm；B 精确伸过冲 ≤ 8 mm；C 凑里背离手 ≥ 10 mm（retreat）；D 握住率 ≈ 0.5（⑤ 为正，± 2/8）',
       f: (P, v) => {
         if (P === 'A') {
           const a = med(P, v, 'S1n', 'pounceOver');
           return { val: `${fmt(a, 0)} mm`, ok: okNum(a, (x) => x >= 10) };
         }
-        if (P === 'B') {
+        if (P === 'C') {
           const a = med(P, v, 'S1n', 'retreatAway');
           return { val: `${fmt(a, 0)} mm`, ok: okNum(a, (x) => x >= 10) };
         }
-        if (P === 'C') {
+        if (P === 'B') {
           const a = med(P, v, 'S1n', 'reachOver');
           return { val: `${fmt(a, 0)} mm`, ok: okNum(a, (x) => x <= 8) };
         }
@@ -1683,7 +1707,7 @@ function aggregate(OUT) {
     },
   ];
   lines.push('');
-  lines.push('## §9.2 验收总表（阈值是给 v2 的；v1 列是现行的对照）');
+  lines.push('## §9.2 验收总表（阈值是提案，2026-10-19 按新四型重定、换法见脚本 TH 处的注释；v1 列只在 REPO 指到删现行之前的仓库时有值）');
   lines.push('');
   lines.push('| # | 指标 | 阈值 | 人格 | v1 | v2 | v2 判定 |');
   lines.push('|---|---|---|---|---|---|---|');

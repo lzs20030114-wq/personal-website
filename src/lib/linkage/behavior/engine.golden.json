@@ -1,110 +1,69 @@
 {
-  "source": "2026-10-14 人格重分类（热情 / 沉静 / 回避 / 乱序随机）后的引擎",
+  "source": "2026-10-20 呼吸收拢、唤醒改成呼吸变化的主要来源",
   "cases": [
     {
       "seed": 11,
       "lifeRate": 1,
-      "log": "bb60e83ce6d4c5fd",
-      "frames": "887d8a015bcb564c"
+      "log": "0c068b47376f9f7a",
+      "frames": "3a77b9a9bbb47f84"
     },
     {
       "seed": 23,
       "lifeRate": 1,
-      "log": "a84d7caf4a00ad8c",
-      "frames": "a648266358cc6318"
+      "log": "42895ab6fa956f4b",
+      "frames": "1f6bce6c9f6fd6e5"
     },
     {
       "seed": 131,
       "lifeRate": 10,
-      "log": "5b1055af7c95ad4a",
-      "frames": "41847f538eabf7d8"
+      "log": "8e49365861bebe37",
+      "frames": "51ee1c96225f27ff"
     },
     {
       "seed": 151,
       "lifeRate": 10,
-      "log": "cd451a0d30f8fb16",
-      "frames": "893185b3e58472fc"
+      "log": "341f23bcfae50f09",
+      "frames": "65bf90f23ec06777"
     },
     {
       "seed": 161,
       "lifeRate": 60,
-      "log": "aa0272bd40bcf5a4",
-      "frames": "eedb1a2ec6ca96ef"
+      "log": "5c7f530f63db2622",
+      "frames": "ca58adebe0674a66"
     },
     {
       "seed": 171,
       "lifeRate": 60,
-      "log": "38bda0dcfc6e6941",
-      "frames": "9620ddf8a86144af"
+      "log": "72f6a853151ba3e0",
+      "frames": "9af75ef19a22fd7a"
     }
   ],
-  "v2": {
-    "source": "2026-10-14 人格重分类（热情 / 沉静 / 回避 / 乱序随机）后的引擎",
-    "cases": [
-      {
-        "seed": 11,
-        "lifeRate": 1,
-        "log": "1a1bfdbf43bdac38",
-        "frames": "353024244cfd5559"
-      },
-      {
-        "seed": 23,
-        "lifeRate": 1,
-        "log": "590978d0c20af7cd",
-        "frames": "7ae669e65557b6e3"
-      },
-      {
-        "seed": 131,
-        "lifeRate": 10,
-        "log": "0f758a9cd3133f5f",
-        "frames": "ab4f149365356d24"
-      },
-      {
-        "seed": 151,
-        "lifeRate": 10,
-        "log": "f2bb6dd3a6c8c844",
-        "frames": "6fbc6310783f0a41"
-      },
-      {
-        "seed": 161,
-        "lifeRate": 60,
-        "log": "2f4ec8692f75c96c",
-        "frames": "710ccb75262313c4"
-      },
-      {
-        "seed": 171,
-        "lifeRate": 60,
-        "log": "f1ed2a7adcaaf9ab",
-        "frames": "e1710c1eea69de39"
-      }
-    ]
-  },
   "hand": {
-    "source": "2026-10-14 人格重分类（热情 / 沉静 / 回避 / 乱序随机）后的引擎",
+    "source": "2026-10-20 呼吸收拢、唤醒改成呼吸变化的主要来源",
     "cases": [
       {
         "seed": 211,
         "lifeRate": 1,
-        "log": "ec4d7303ec2e6248",
-        "frames": "79c89f6f3af9a884"
+        "log": "a6bdbb8911736152",
+        "frames": "4a258037d57d602c"
       },
       {
         "seed": 223,
         "lifeRate": 1,
-        "log": "2d6389aa810c14e9",
-        "frames": "3bc6590a6e59b5e9"
+        "log": "7287e077c51077dc",
+        "frames": "f5fbd6fe0057d285"
       },
       {
         "seed": 241,
         "lifeRate": 10,
-        "log": "86a44b7216bdfa97",
-        "frames": "4a9a82b4b32c6911"
+        "log": "3e5217812df8a0da",
+        "frames": "08c937c4b59744e9"
       },
       {
         "seed": 251,
         "lifeRate": 10,
-        "log": "3d32e7ccd5b4dde1",
-        "frames": "a947925236c3b5c5"
+        "log": "8e4f7f7e32767d39",
+        "frames": "937b5b17c3d17f70"
       }
     ]
   }

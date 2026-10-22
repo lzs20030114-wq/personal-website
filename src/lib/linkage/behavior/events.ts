@@ -66,7 +66,7 @@ export type SensorInput =
       aimDir: number;
       aimBend: number;
       aimDist: number;
-      /** 以下三个只有动作词汇 v2 的台架才带（v1 日志一字不变）：此刻的有效碰到半径 mm、指针已静止多少秒（≤ 9.9）、指针速度 mm/s */
+      /** 台架带（不带时引擎按读数变化估）：此刻的有效碰到半径 mm、指针已静止多少秒（≤ 9.9）、指针速度 mm/s */
       touch?: number;
       still?: number;
       v?: number;
@@ -100,6 +100,11 @@ export function bandOf(dist: number | null): PresenceBand {
 /** b 是否比 a 近（走近才算刺激；退远、离场只更新状态） */
 export function isCloser(b: PresenceBand, a: PresenceBand): boolean {
   return BAND_RANK[b] > BAND_RANK[a];
+}
+
+/** 两个档里近的那个（台架：面板的人与指针的手同时在时，生效档取近的） */
+export function nearerBand(a: PresenceBand, b: PresenceBand): PresenceBand {
+  return isCloser(b, a) ? b : a;
 }
 
 const clamp01 = (x: number): number => Math.min(1, Math.max(0, x));
@@ -221,7 +226,7 @@ export const ENGINE_EVENTS = [
   /** 看见过的手不见了：reason = gone 离开 / unseen 出了视野太久 */
   'HAND_LOST',
   /**
-   * 迎手链（动作词汇 v2 才有，2026-10-08）：stage = 阶段（track 陪着 · approach 凑 · strain 够不着 · watch 看着 ·
+   * 迎手链（2026-10-08）：stage = 阶段（track 陪着 · approach 凑 · strain 够不着 · watch 看着 ·
    * wrap 缠 · hold 握 · chase 追 · release 放开 · search 找 · avoid 侧身躲 · off），beat = 这一拍的名字（transport、
    * hover、pounce、seat、lunge、peek…）
    */

@@ -67,8 +67,13 @@ const ORIENT: Record<string, Pair> = {
 };
 const HAND_MODE: Record<string, Pair> = {
   toward: ['迎过去', 'reaches toward it'],
-  away: ['背过身', 'turns away'],
+  away: ['侧过身躲着', 'keeps away, side-on'],
   look: ['看别处', 'looks elsewhere'],
+};
+/** HAND_SEEN 的 cause：为什么改了态度（都是改成躲） */
+const SEEN_CAUSE: Record<string, Pair> = {
+  startle: ['惊跳之后', 'after the startle'],
+  giveUp: ['脱手后放弃', 'gives up after losing the hand'],
 };
 const HAND_LOST: Record<string, Pair> = {
   gone: ['手离开', 'hand gone'],
@@ -79,8 +84,6 @@ const HC_STAGE: Record<string, Pair> = {
   off: ['不再跟手', 'stops following'],
   track: ['陪着手', 'keeps pace with the hand'],
   approach: ['凑过去', 'closes in'],
-  strain: ['够不着 · 探身', 'stretches for it'],
-  watch: ['看着手', 'watches the hand'],
   wrap: ['缠', 'wraps'],
   hold: ['握着', 'holding'],
   chase: ['追', 'goes after it'],
@@ -90,46 +93,20 @@ const HC_STAGE: Record<string, Pair> = {
 };
 const HC_BEAT: Record<string, Pair> = {
   transport: ['靠近', 'moves closer'],
-  edge: ['试探着靠近', 'edges closer'],
-  wait: ['停住', 'pauses'],
-  retreat: ['退一点', 'backs off a little'],
-  wait2: ['再停', 'pauses again'],
-  edge2: ['再靠近', 'edges in again'],
-  hover: ['停半拍', 'holds just short'],
   crouch: ['蹲', 'crouches'],
   cocked: ['蓄住', 'holds, coiled'],
   pounce: ['扑', 'pounces'],
-  sight: ['瞄准', 'takes aim'],
   reach: ['伸过去', 'reaches'],
-  touch: ['慢慢碰', 'touches slowly'],
-  curl: ['卷过去', 'curls over'],
-  nudge: ['推一下', 'nudges'],
-  balk: ['停住不前', 'stops short'],
-  stall: ['愣住', 'stalls'],
-  drop: ['撤开', 'pulls away'],
   grab: ['抓住', 'grabs'],
   receive: ['接住', 'takes it'],
   regrab: ['再抓', 'grabs again'],
-  let: ['一松', 'lets slip'],
   lunge: ['扑过去', 'lunges after it'],
   creep: ['摸过去', 'creeps over'],
-  grope: ['摸索', 'gropes'],
-  letSlow: ['一松', 'lets slip'],
-  extend: ['伸过去送', 'reaches after it'],
-  linger: ['停着', 'lingers'],
-  sag: ['垂下', 'sags'],
-  palpate: ['摸一摸', 'feels around'],
-  open: ['慢慢张开', 'opens slowly'],
+  empty: ['抓空', 'grasps nothing'],
   giveUp: ['放弃', 'gives up'],
   cast: ['来回找', 'casts about'],
-  deflate: ['垂下来', 'sinks'],
-  stretch: ['探身', 'stretches'],
-  peek: ['偷看', 'peeks'],
-  snap: ['缩回', 'snaps back'],
-  cringe: ['一缩', 'cringes'],
   dodge: ['躲开', 'dodges'],
   reshrink: ['再收', 'shrinks back'],
-  relief: ['呼一口气', 'exhales'],
 };
 
 /** 守门用（describe.test 逐条查措辞） */
@@ -173,8 +150,8 @@ function what(r: LogRecord, lang: DescribeLang): string {
       return p.on === false ? (zh ? '手移开' : 'hand away') : zh ? '手在动' : 'hand moves';
     // —— 引擎
     case 'RESPONSE':
-      // 2026-10-14 起现行动作也按 ⑩ 分迎 / 原地 / 躲：躲的回应单独写出来（不写情绪，只写动作）
-      if (p.variant === 'avoid') return zh ? `躲开（${num(p.latency)} s）` : `draws back (${num(p.latency)} s)`;
+      // 回应按 ⑩ 分迎 / 原地 / 躲：躲的回应单独写出来（不写情绪，只写动作）。动作名以 .avoid 结尾的是躲
+      if (String(p.motion ?? '').endsWith('.avoid')) return zh ? `躲开（${num(p.latency)} s）` : `draws back (${num(p.latency)} s)`;
       return zh ? `回应（${num(p.latency)} s）` : `response (${num(p.latency)} s)`;
     case 'RESPONSE_DROP':
       return zh ? '响应作废' : 'response dropped';
@@ -202,7 +179,8 @@ function what(r: LogRecord, lang: DescribeLang): string {
       return zh ? '手还在臂上' : 'hand still on arm';
     case 'HAND_SEEN': {
       const m = pick(HAND_MODE[str(p.mode)] ?? ['看着', 'watches'], lang);
-      if (p.cause === 'startle') return zh ? `惊跳之后 · ${m}` : `after the startle · ${m}`;
+      const cause = SEEN_CAUSE[str(p.cause)];
+      if (cause) return `${pick(cause, lang)} · ${m}`;
       if (p.again) return zh ? `再看手一眼 · ${m}` : `looks at the hand again · ${m}`;
       return zh ? `注意到手 · ${m}` : `notices the hand · ${m}`;
     }

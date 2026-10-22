@@ -1,5 +1,8 @@
-import type { ActuatorTargets, FeelerDrive } from './behavior/engine';
+import { type ActuatorTargets, type FeelerDrive, HAND } from './behavior/engine';
+import { PRESENCE_EDGES, type PresenceBand, type SensorInput, bandOf } from './behavior/events';
 import type { GraspPhase } from './behavior/grasp';
+import { D_MAX, D_WRAP_SPAN } from './behavior/programs';
+import { HC } from './behavior/vocab2-hand';
 import type { CellFrame } from './gl3d';
 import { MACHINE_BASE_AXIS as YAW_AXIS, MACHINE_PLINTH } from './machine-base';
 import {
@@ -17,7 +20,7 @@ import { TENTACLE3D } from './tentacle3d-data';
 import { STATIONS } from './tentacle3d-shape';
 
 /**
- * 行为引擎 → Lab 1-5 整机台架的适配层（轮回机器_行为引擎spec.md §6，M2）。纯函数、零 DOM。
+ * 行为引擎 → 整机台架（Lab 1-6）的适配层（轮回机器_行为引擎spec.md §6，M2）。纯函数、零 DOM。
  *
  * 引擎给的是与机构无关的抽象指令（行程分数 / 臂的张力弯曲弯向 / 触须基角与反射 / 偏航），
  * 这里把它们换成现有驱动的量：曲柄角、三腱收缩率、舵机角、整机刚体旋转。
@@ -33,7 +36,7 @@ const clamp01 = (x: number): number => clamp(x, 0, 1);
  * 换算呼吸用的参考环：S3（中间那环）。§6.2 实测（2026-10-07）：五环仿真出的拱顶与各自的
  * 理想曲柄滑块差 ≤0.4 mm，各环的实际行程分数与 S3 理想值差 ≤0.006——一环代表全机足够。
  */
-export const BREATH_REF_RING = 2;
+const BREATH_REF_RING = 2;
 const REF = MACHINE_DRIVE[BREATH_REF_RING];
 const CR = REF.crankR;
 const A0 = REF.apex0;
@@ -72,8 +75,9 @@ export function thetaToStroke(theta: number): number {
  * 表里的呼吸要多快（同日测，引擎轨迹 → 理想反解）：活力型成长段平均 2.85 rad/s、峰值约 5；
  * 沉静 / 好奇 / 不稳定平时都在 2.4 以下。上限取 4°/帧（60 帧 = 4.19 rad/s）：活力型兴奋时
  * 最快的几口气会被限速拖慢一点，其余全部跟得上。实物（齿条）是另一回事，见 spec §6.2。
- * 2026-10-14 人格重分类后：热情型沿用原活力型的呼吸；乱序随机的区间偏向两端抽，每口气的行程速度封在 0.9/s
- * （engine.ts EXTREME_BREATH_RATE），照样跟得上；回避型人近时呼吸浅快，但幅度小，远低于上限。
+ * 2026-10-14 人格重分类后：热情型沿用原活力型的呼吸；乱序随机的区间偏向两端抽，每口气的行程速度封在 0.9/s，
+ * 照样跟得上；回避型人近时呼吸浅快，但幅度小，远低于上限。2026-10-20 四种人格平时的呼吸收到 3.5–4.5 s、50–70%
+ * （行程速度 ≤ 0.74/s，乱序随机那道 0.9/s 删掉），呼吸快起来靠唤醒与 ⑬，叠完一律按 V2.breathRateCap 1.2/s 封顶。
  */
 export const CRANK = {
   maxSubstep: Math.PI / 180,
@@ -119,13 +123,17 @@ export function followBreath(m: Machine, s: number, dt: number): number {
 /** 臂指令（引擎 ActuatorTargets.arm；wrap 可省 = 0） */
 export type ArmCmd = Omit<ActuatorTargets['arm'], 'wrap'> & { wrap?: number };
 
+/** 拮抗腱的下限：缆刚绷直那一点再紧 0.01 */
+const TENDON_FLOOR = TENTACLE3D.slack / (TENTACLE3D.slack + TENTACLE3D.pullMax) + 0.01;
+
 export const ARM_DRIVE = {
   span: ARM_IDLE.span,
-  wrapSpan: 0.16,
-  dMax: ARM_IDLE.span + 0.16,
-  floor: TENTACLE3D.slack / (TENTACLE3D.slack + TENTACLE3D.pullMax) + 0.01,
+  /** 深缠的额外差动与封顶，唯一出处在 programs.ts（D_WRAP_SPAN 0.16、D_MAX 0.5） */
+  wrapSpan: D_WRAP_SPAN,
+  dMax: D_MAX,
+  floor: TENDON_FLOOR,
   /**
-   * 肌腱轴深卷（动作词汇 v2，2026-10-08 研究原型；轮回机器_触手与转向研究.md §8）：弯向落在某根腱的轴上
+   * 肌腱轴深卷（2026-10-08 随动作程序加；轮回机器_触手与转向研究.md §8）：弯向落在某根腱的轴上
    * 时，差动可以超过 dMax，一直到 dDeep——主腱拉满 1.0、两根拮抗腱停在 floor（2026-10-08 设计探针：轴上
    * 主腱 1.0、拮抗 0.283 稳定，梢端离静息约 365 mm）。±axisIn 以内全开，axisIn → axisTol 平滑退回 dMax，
    * 窗外与两腱之间永远 ≤ dMax（那里 0.55 起失稳）；整个过渡都在验过的 ±12° 以内（原型里 12°–20° 的过渡
@@ -134,12 +142,12 @@ export const ARM_DRIVE = {
    * 先在轴上把深卷收回（vocab2.ts 的 unhook）。
    *
    * 默认关（tendonContractions 的 opts.deep）：真机的缆与绞盘没验过主腱拉满，关着时 deep 只当普通差动、
-   * 封顶 dMax。台架 Lab 1-6 开着。引擎不给 deep（v1）时两种都与原式逐位相同。
+   * 封顶 dMax。台架 Lab 1-6 开着。deep 为 0（或不给）时两种都与原式逐位相同。
    */
-  dDeep: 1 - (TENTACLE3D.slack / (TENTACLE3D.slack + TENTACLE3D.pullMax) + 0.01),
+  dDeep: 1 - TENDON_FLOOR,
   // deep 从「只用弯曲的满幅」（span）一直加到 dDeep：deep = 1、bend = 1 时差动正好 = dDeep（主腱 1.0、拮抗 floor）。
   // 动作程序按「D = span·bend + deepSpan·deep」换算（vocab2.ts 的 poseOfD），两边同一个数
-  deepSpan: 1 - (TENTACLE3D.slack / (TENTACLE3D.slack + TENTACLE3D.pullMax) + 0.01) - ARM_IDLE.span,
+  deepSpan: 1 - TENDON_FLOOR - ARM_IDLE.span,
   axisTol: (12 * Math.PI) / 180,
   axisIn: (8 * Math.PI) / 180,
   /** 深卷到这么多（0–1）弯向才完全正对腱轴；更小时按比例靠向补偿后的方向 */
@@ -221,7 +229,7 @@ export function bendCommandDir(dir: number, d: number): number {
 export function tendonContractions(arm: ArmCmd, opts: { deep?: boolean } = {}): [number, number, number] {
   let d = Math.min(ARM_DRIVE.dMax, ARM_DRIVE.span * arm.bend + ARM_DRIVE.wrapSpan * (arm.wrap ?? 0));
   let axisDir: number | null = null;
-  // 肌腱轴深卷（v2）：给了 deep 时先当普通差动（封顶 dMax）；开着深卷、且弯向在某根腱轴的窗里，才放开到 dDeep
+  // 肌腱轴深卷：给了 deep 时先当普通差动（封顶 dMax）；开着深卷、且弯向在某根腱轴的窗里，才放开到 dDeep
   let snap = 0;
   if (arm.deep !== undefined && arm.deep > 0) {
     const raw = ARM_DRIVE.span * arm.bend + ARM_DRIVE.wrapSpan * (arm.wrap ?? 0) + ARM_DRIVE.deepSpan * arm.deep;
@@ -721,6 +729,55 @@ export function handReading(v: ViewParams, l: P2, yaw: number, hold?: number): H
 export function cssToLogical(px: number, py: number, w: number, h: number): P2 {
   return { x: (px - w / 2) * (HALF_W / (w / 2)), y: (py - h / 2) * (HALF_H / (h / 2)) };
 }
+export function logicalToCss(l: P2, w: number, h: number): P2 {
+  return { x: w / 2 + l.x * (w / (2 * HALF_W)), y: h / 2 + l.y * (h / (2 * HALF_H)) };
+}
+
+/** 台架透视的焦距（gl3d setPerspective 与反投影同一个数） */
+export const PERSP_FOCAL = 900;
+
+/**
+ * 手的距离（mm）→ 在场档，带滞回：离开当前档要越过边界 HAND_UI.bandHys 才算（边界 = 引擎的 PRESENCE_EDGES）。
+ * 台架另要驻留 HAND_UI.bandDwell 才换档。
+ */
+export function handBandOf(distMm: number, cur: PresenceBand | null): PresenceBand {
+  const raw = bandOf(distMm / 1000);
+  if (cur === null || cur === 'gone' || raw === cur) return raw;
+  const h = HAND_UI.bandHys / 1000;
+  const m = distMm / 1000;
+  const { near, far } = PRESENCE_EDGES;
+  if (cur === 'near' && m < near + h) return 'near';
+  if (cur === 'far' && m > far - h) return 'far';
+  if (cur === 'mid' && m > near - h && m < far + h) return 'mid';
+  return raw;
+}
+
+/**
+ * 台架上点、拖、按的判法与面板按钮给的刺激强度（2026-10-18 从 MachineBench 搬来，交互机制表从这里取数）：
+ * 按住壳 holdAfter 秒算「按住」、拖过 strokePx 算「抚摸」；点小触手、按住大触手的命中半径（CSS px）；
+ * 面板「环境」三个按钮的读数（敲的强度、拍手 / 说话的声级，0–1）
+ */
+export const BENCH_INPUT = {
+  holdAfter: 0.5,
+  strokePx: 10,
+  smallArmHitPx: 30,
+  armPressPx: 22,
+  knock: 0.6,
+  clap: 0.8,
+  talk: 0.3,
+} as const;
+
+/** 没看见手就碰臂的缠（旧路），缠到这么多成算手指被卡住 */
+export const CATCH_AT = 0.6;
+
+/**
+ * 抓握演示的张力开关：此刻手指算不算被缠住卡死（台架此后报 RESISTANCE on）。迎手链的缠到了 catchT
+ *（贴上做完、臂停稳）才算；没看见手就碰臂的缠（没有 catchT）缠到 CATCH_AT 就算。
+ */
+export function graspCaught(g: { phase: GraspPhase; t0: number; dur: number; catchT?: number }, now: number): boolean {
+  if (g.phase !== 'WRAP') return false;
+  return g.catchT !== undefined ? now >= g.catchT : (now - g.t0) / g.dur >= CATCH_AT;
+}
 
 // ------------------------------------------------------------------ 碰臂判定（Lab 1-6，台架 syncHand ③ 搬来）
 
@@ -761,7 +818,7 @@ export interface HandSent {
 }
 
 /**
- * 台架这一帧要不要给引擎发一条 HAND（syncHand ①；探针与守门调同一个函数）。读数变化过阈值才发；迎手链 v2 下
+ * 台架这一帧要不要给引擎发一条 HAND（syncHand ①；探针与守门调同一个函数）。读数变化过阈值才发；
  * 指针还在挪（读数变得慢，比如 40 mm/s 慢慢挪）也发——引擎按上一条 HAND 外推「静止多久」、0.25 s 没有新读数就当
  * 速度为 0，只看读数变化会让它把一直在动的手当成停稳了，去撑、去凑、去缠。都受 HAND_UI.send 节流；指针停下就不再补发。
  * aimDir = 这一帧要报的弯向（侧偏太小时沿用上一个）；lastMoveAt = 指针最后挪过（> 3 px）的时刻
@@ -771,7 +828,7 @@ export function handSendDue(
   last: HandSent | null,
   aimDir: number,
   now: number,
-  o: { v2: boolean; lastMoveAt: number },
+  o: { lastMoveAt: number },
 ): boolean {
   if (!last) return true;
   if (now - last.at < HAND_UI.send) return false;
@@ -782,21 +839,22 @@ export function handSendDue(
     Math.abs(read.dist - last.dist) > HAND_UI.dDist ||
     Math.abs(read.aimBend - last.aimBend) > HAND_UI.dAimBend ||
     (read.aimBend > 0.05 && ang(aimDir, last.aimDir) > HAND_UI.dAimDir) ||
-    (o.v2 && o.lastMoveAt > last.at)
+    o.lastMoveAt > last.at
   );
 }
 
 /**
  * 碰臂的距离阈值按世界毫米给，用的时候换成此刻画面上的像素（画布多宽、哪个视角，碰到的实际距离都一样）。
  * 数值让桌面默认画幅（约 712 px 宽、轴测）下与像素版手感相同；像素再钳一道（HAND_PX：鼠标 8–28 px，手指 20–44 px）。
- * tractionSpeed：牵引时锚点跟手的指针速度上限（mm/s，只在 contactStep 的 opts.traction 下用；迎手链 v2 §7.2 第 3 条）。
+ * maxSpeed / tractionSpeed 与引擎的手速四级同一组数（HC.vSwipe 划过 · HC.vSlow 慢）：快过 maxSpeed 的划过不算碰到；
+ * 缠 / 握着时慢过 tractionSpeed 的指针牵着锚点走（contactStep 的 opts.traction，迎手链 v2 §7.2 第 3 条）。
  */
 export const HAND_MM = {
-  touch: 32,
+  touch: HAND.touch,
   release: 68,
   anchor: 80,
-  maxSpeed: 800,
-  tractionSpeed: 60,
+  maxSpeed: HC.vSwipe,
+  tractionSpeed: HC.vSlow,
 } as const;
 
 /** 碰到半径的像素钳位（CSS px）：鼠标 / 手指（手指粗、又挡着视线，下限放宽） */
@@ -931,10 +989,10 @@ export interface ContactSample {
  *   = 臂伸过来碰到了不动的手（by 'arm'）；进圈时还在动 = 手伸过去碰臂（by 'hand'）。
  * - 碰着以后：离脊线 > release 才松开；缠 / 握着（WRAP / HOLD_HUMAN / HOLD_OBJECT）的时候臂会动，
  *   手没挪开（离锚点 anchor 以内）就一直算碰着。
- * - opts.traction（迎手链 v2 §7.2 第 3 条，台架现在不传）：缠 / 握着时指针慢（≤ tractionSpeed mm/s）且离脊线
+ * - opts.traction（迎手链 v2 §7.2 第 3 条；台架自 2026-10-17 起传 true）：缠 / 握着时指针慢（≤ tractionSpeed mm/s）且离脊线
  *   ≤ release，锚点每帧跟到指针——慢慢牵着走不会判松开；离脊线 > release（臂没跟上）锚点冻住，再拉出 anchor 即松开。
  *
- * 不传 opts.traction 时逐帧输出与搬之前的台架逐位相同（machine-behavior.test.ts 拿原段落对照）。
+ * 不传 opts.traction 时逐帧输出与搬过来之前的台架逐位相同（machine-behavior.test.ts 拿原段落对照）。
  */
 export function contactStep(
   prev: ContactState,
@@ -970,4 +1028,10 @@ export function contactStep(
     }
   }
   return { next: n, th };
+}
+
+/** 电极（碰着 ∪ 按住）变了要报的那条 ARM_TOUCH：臂伸过来碰到不动的手 = by 'arm'（按轻抚算）；按住、或手伸过去碰 = 照旧 */
+export function armTouchEvent(c: ContactState): SensorInput {
+  const on = c.touching || c.held;
+  return on && c.touching && !c.held && c.by === 'arm' ? { kind: 'ARM_TOUCH', on, by: 'arm' } : { kind: 'ARM_TOUCH', on };
 }

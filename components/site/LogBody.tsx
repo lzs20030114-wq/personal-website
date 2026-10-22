@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { type Ref, useEffect, useId, useRef, useState } from 'react';
 import { cellText, type LogBlock, type LogLang } from '../../src/lib/site/log-schema';
 import { blockRefs, type BlockRef } from '../../src/lib/site/log-blocks';
 import { parseMarkdown, type Inline } from '../../src/lib/site/md';
@@ -183,8 +183,6 @@ export function LogBody({
   // 右栏卡片就是这张视图的标题栏，同时开好几张就分不出「现在看的是哪一张」。
   const [openAt, setOpenAt] = useState<number | null>(null);
   const viewId = `${useId()}-view`;
-  const open = openAt !== null && blocks ? (blocks[openAt] ?? null) : null;
-  const openRef = openAt !== null ? refs.find((r) => r.index === openAt) : undefined;
 
   // 正文长的条目里，右栏卡片在顶上、展开的表在正文下面——不带一下的话点了像没反应。
   // block:'nearest'：已经看得见就不动，别把页面无谓地拽一下。
@@ -236,46 +234,115 @@ export function LogBody({
         </div>
 
         {blocks && refs.length > 0 && (
-          <aside className="log-rail" aria-label={copy.rail}>
-            <h4 className="log-rail__title">
-              {copy.rail}
-              <span className="log-rail__n">{refs.length}</span>
-            </h4>
-            <ul className="log-rail__list">
-              {refs.map((r) => (
-                <RailCard
-                  key={r.index}
-                  block={blocks[r.index]}
-                  ref_={r}
-                  lang={lang}
-                  open={openAt === r.index}
-                  viewId={viewId}
-                  onToggle={() => setOpenAt(openAt === r.index ? null : r.index)}
-                  resolve={resolve}
-                />
-              ))}
-            </ul>
-          </aside>
+          <BlockRail
+            blocks={blocks}
+            lang={lang}
+            title={copy.rail}
+            openAt={openAt}
+            viewId={viewId}
+            onToggle={(i) => setOpenAt(openAt === i ? null : i)}
+            resolve={resolve}
+          />
         )}
       </div>
 
       {/* 展开的那一张占满整幅宽度——表格塞进右栏读不动，图也看不清细节。
           容器恒在（aria-controls 指着它），空的时候不占高度。 */}
-      {refs.length > 0 && (
-        <div id={viewId} ref={viewEl} className="log-view" data-open={open !== null} role="region">
-          {open && openRef && (
-            <>
-              <div className="log-view__bar">
-                <span className="log-view__label">{openRef.label[lang]}</span>
-                <span className="log-view__meta">{openRef.meta}</span>
-                <button type="button" className="log-view__close" onClick={() => setOpenAt(null)}>
-                  {copy.close}
-                </button>
-              </div>
-              <Figure block={open} lang={lang} resolve={resolve} />
-            </>
-          )}
-        </div>
+      {blocks && refs.length > 0 && (
+        <BlockView
+          id={viewId}
+          viewRef={viewEl}
+          blocks={blocks}
+          lang={lang}
+          openAt={openAt}
+          onClose={() => setOpenAt(null)}
+          resolve={resolve}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * 附件清单（右栏）：一张图 / 表一张卡，点开 = 在 BlockView 里展开那一张。
+ * 日志条目与 /lab 台架的说明栏共用（2026-10-18 起 Lab 1-6 挂了交互机制表）——
+ * 卡片怎么编号、怎么写规格，两处必须是同一份 blockRefs。
+ */
+export function BlockRail({
+  blocks,
+  lang,
+  title,
+  openAt,
+  viewId,
+  onToggle,
+  resolve = (src) => src,
+}: {
+  blocks: LogBlock[];
+  lang: LogLang;
+  title: string;
+  openAt: number | null;
+  viewId: string;
+  onToggle: (index: number) => void;
+  resolve?: (src: string) => string;
+}) {
+  const refs = blockRefs(blocks);
+  return (
+    <aside className="log-rail" aria-label={title}>
+      <h4 className="log-rail__title">
+        {title}
+        <span className="log-rail__n">{refs.length}</span>
+      </h4>
+      <ul className="log-rail__list">
+        {refs.map((r) => (
+          <RailCard
+            key={r.index}
+            block={blocks[r.index]}
+            ref_={r}
+            lang={lang}
+            open={openAt === r.index}
+            viewId={viewId}
+            onToggle={() => onToggle(r.index)}
+            resolve={resolve}
+          />
+        ))}
+      </ul>
+    </aside>
+  );
+}
+
+/** 展开的那一张：标题栏（编号 · 规格 · 收起）+ 图 / 表本身；没开时只留一个空容器给 aria-controls 指。 */
+export function BlockView({
+  id,
+  viewRef,
+  blocks,
+  lang,
+  openAt,
+  onClose,
+  resolve = (src) => src,
+}: {
+  id: string;
+  viewRef?: Ref<HTMLDivElement>;
+  blocks: LogBlock[];
+  lang: LogLang;
+  openAt: number | null;
+  onClose: () => void;
+  resolve?: (src: string) => string;
+}) {
+  const open = openAt !== null ? (blocks[openAt] ?? null) : null;
+  const openRef = openAt !== null ? blockRefs(blocks).find((r) => r.index === openAt) : undefined;
+  return (
+    <div id={id} ref={viewRef} className="log-view" data-open={open !== null} role="region">
+      {open && openRef && (
+        <>
+          <div className="log-view__bar">
+            <span className="log-view__label">{openRef.label[lang]}</span>
+            <span className="log-view__meta">{openRef.meta}</span>
+            <button type="button" className="log-view__close" onClick={onClose}>
+              {COPY[lang].close}
+            </button>
+          </div>
+          <Figure block={open} lang={lang} resolve={resolve} />
+        </>
       )}
     </div>
   );

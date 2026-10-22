@@ -20,6 +20,8 @@
  *   「已取消：」那个引出原因的冒号改逗号；人格参数表、预测表、技术参数是作者原文，一字不动。
  */
 
+import { PERSONAS as ENGINE_PERSONAS } from '../linkage/behavior/persona';
+
 export type Lang = 'zh' | 'en';
 export type Bi = { zh: string; en: string };
 const L = (zh: string, en: string): Bi => ({ zh, en });
@@ -51,12 +53,23 @@ export interface Persona {
   /** 响应强度 0–1；null = 每次随机 */
   s: number | null;
 }
+/**
+ * 呼吸周期 / 幅度直接取行为引擎的人格表（按槽位字母 A–D）。2026-10-20 作者：呼吸是生理信号，不随性格大变，
+ * 会变的是互动引起的唤醒——引擎把四种人格平时的呼吸收到 3.5–4.5 s、50–70%，这张表与示意台跟着走（作者「表也相应的改了吧」）。
+ * 人格的名字仍是这一页原来的（A 活力 / B 沉静 / C 亲密 / D 不稳定），引擎那边 2026-10-14 起叫热情 / 沉静 / 回避 / 乱序随机，
+ * 定名见正文里作者自己的待确认。
+ */
+const BR = (k: PersonaKey) => ENGINE_PERSONAS[k];
+/** D 型每口气重抽的区间（示意台用） */
+export const D_PERIOD = BR('D').breathPeriod;
+export const D_DEPTH = BR('D').breathAmp;
 export const PERSONAS: readonly Persona[] = [
-  { k: 'A', name: L('活力', 'Vital'), ink: 'oklch(0.84 0.12 135)', period: 2, depth: 0.8, lat: 0.12, s: 1 },
-  { k: 'B', name: L('沉静', 'Withdrawn'), ink: 'oklch(0.76 0.08 225)', period: 6, depth: 0.3, lat: 1.4, s: 0.35 },
-  { k: 'C', name: L('亲密', 'Affectionate'), ink: 'oklch(0.78 0.1 335)', period: 4, depth: 0.5, lat: 0.35, s: 0.75 },
-  { k: 'D', name: L('不稳定', 'Unstable'), ink: 'oklch(0.83 0.12 85)', period: 4, depth: 0.55, lat: null, s: null },
+  { k: 'A', name: L('活力', 'Vital'), ink: 'oklch(0.84 0.12 135)', period: BR('A').breathPeriod[0], depth: BR('A').breathAmp[0], lat: 0.12, s: 1 },
+  { k: 'B', name: L('沉静', 'Withdrawn'), ink: 'oklch(0.76 0.08 225)', period: BR('B').breathPeriod[0], depth: BR('B').breathAmp[0], lat: 1.4, s: 0.35 },
+  { k: 'C', name: L('亲密', 'Affectionate'), ink: 'oklch(0.78 0.1 335)', period: BR('C').breathPeriod[0], depth: BR('C').breathAmp[0], lat: 0.35, s: 0.75 },
+  { k: 'D', name: L('不稳定', 'Unstable'), ink: 'oklch(0.83 0.12 85)', period: (D_PERIOD[0] + D_PERIOD[1]) / 2, depth: (D_DEPTH[0] + D_DEPTH[1]) / 2, lat: null, s: null },
 ];
+const pct = (v: number): string => `${Math.round(v * 100)}`;
 
 /** 参数表：十二行 × 四列（A/B/C/D）。与线上 MDX 的表逐字一致。 */
 export interface PersonaRow {
@@ -71,8 +84,18 @@ const row = (
 ): PersonaRow => ({ k: L(zhK, enK), cells: { zh, en } });
 
 export const PERSONA_ROWS: readonly PersonaRow[] = [
-  row('呼吸周期', 'Breath period', ['2 秒', '6 秒', '4 秒', '2–8 秒随机'], ['2 s', '6 s', '4 s', 'random 2–8 s']),
-  row('呼吸幅度', 'Breath depth', ['80%', '30%', '50%', '20–90% 随机'], ['80%', '30%', '50%', 'random 20–90%']),
+  row(
+    '呼吸周期（平时）',
+    'Breath period (at rest)',
+    [`${PERSONAS[0].period} 秒`, `${PERSONAS[1].period} 秒`, `${PERSONAS[2].period} 秒`, `${D_PERIOD[0]}–${D_PERIOD[1]} 秒随机`],
+    [`${PERSONAS[0].period} s`, `${PERSONAS[1].period} s`, `${PERSONAS[2].period} s`, `random ${D_PERIOD[0]}–${D_PERIOD[1]} s`],
+  ),
+  row(
+    '呼吸幅度（平时）',
+    'Breath depth (at rest)',
+    [`${pct(PERSONAS[0].depth)}%`, `${pct(PERSONAS[1].depth)}%`, `${pct(PERSONAS[2].depth)}%`, `${pct(D_DEPTH[0])}–${pct(D_DEPTH[1])}% 随机`],
+    [`${pct(PERSONAS[0].depth)}%`, `${pct(PERSONAS[1].depth)}%`, `${pct(PERSONAS[2].depth)}%`, `random ${pct(D_DEPTH[0])}–${pct(D_DEPTH[1])}%`],
+  ),
   row('运动速度', 'Motion speed', ['快', '慢', '中偏快', '忽快忽慢'], ['fast', 'slow', 'medium-fast', 'swings']),
   row('响应延迟', 'Response latency', ['极短', '长', '短', '不一致'], ['very short', 'long', 'short', 'inconsistent']),
   row('响应强度', 'Response strength', ['大', '小', '中偏大', '不一致'], ['large', 'small', 'medium-large', 'inconsistent']),
@@ -261,8 +284,8 @@ export class PersonaSim {
   y = 0;
   hist: [number, number][] = [];
   pulses: Pulse[] = [];
-  private dPer = 4;
-  private dDep = 0.55;
+  private dPer = (D_PERIOD[0] + D_PERIOD[1]) / 2;
+  private dDep = (D_DEPTH[0] + D_DEPTH[1]) / 2;
   constructor(private readonly rnd: () => number = Math.random) {}
 
   step(dt: number, p: Persona): void {
@@ -275,8 +298,8 @@ export class PersonaSim {
     const prev = this.ph;
     this.ph += (dt / this.per) * Math.PI * 2;
     if (Math.floor(prev / (Math.PI * 2)) !== Math.floor(this.ph / (Math.PI * 2))) {
-      this.dPer = 2 + this.rnd() * 6;
-      this.dDep = 0.2 + this.rnd() * 0.7;
+      this.dPer = D_PERIOD[0] + this.rnd() * (D_PERIOD[1] - D_PERIOD[0]);
+      this.dDep = D_DEPTH[0] + this.rnd() * (D_DEPTH[1] - D_DEPTH[0]);
     }
     let y = this.dep * (0.5 - 0.5 * Math.cos(this.ph));
     for (const pl of this.pulses) {

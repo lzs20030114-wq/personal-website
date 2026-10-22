@@ -8,8 +8,16 @@
  * 字母仍是四个槽位（台架「首世」、日志、跨被试平衡顺序都按它）：A 热情 · B 沉静 · C 回避 · D 乱序随机。
  * 活力型的「精力足」与好奇型的「朝人」并进了热情。
  *
- * 新加的几行（12 项之外）：⑨′ 人在时的朝向间隔、⑬ 对人的趋避、⑭ 人走后多久恢复，以及乱序随机的「区间偏向两端抽」。
- * 动作词汇 v2 与迎手链里「按性格换结构」的地方读 `temper`，不再读字母。数值全部是手感常量，待作者拍板。
+ * 12 项之外新加的一行：⑬ 对人的趋避，以及乱序随机的「区间偏向两端抽」。2026-10-19 交互机制整合时删掉了
+ * ⑥′ 人在时的自发间隔、⑨′ 人在时的朝向间隔、⑭ 人走后多久恢复（作者：只留观察者看得见的机制），⑬ 的回落改用与变强同一个时间常数。
+ * 动作程序与迎手链里「按性格换结构」的地方读 `temper`，不再读字母。数值全部是手感常量，待作者拍板。
+ * 2026-10-19（整合后反查）：沉静型 ⑩ 0.4 → 0.25——它的「不在乎」要看得出来：多数时候看别处，少数时候才迎；
+ * 0.4 时指针 = 手的探针里它与乱序随机（0.5）混得最多。乱序随机 ⑨ 3–40 s → 3–15 s——它的「乱」是一会儿迎、
+ * 一会儿躲，40 s 才重新决定一次时一次来访里常常只有一种态度，看起来就是热情或回避；改短以后一次来访里就会翻态度。
+ * 2026-10-20 作者：「呼吸本来就是生物的固有生理信号，它不会根据性格产生差异，倒是会因为互动产生的情绪变化造成呼吸的急促」——
+ * ① ② 收拢：原来 2 / 7 / 3 / 2–8 s、80% / 50% / 30% / 20–90%（每分钟 8–27 口气），现在四种人格都在 3.5–4.5 s 一口、
+ * 50–70% 行程（每分钟 13–17 口），只留一点差。呼吸跟着变的是唤醒（被碰之后急促，engine.ts ENGINE.arousal）与 ⑬（人在近处时
+ * 回避型怕得浅快、热情型高兴得快一点深一点，engine.ts SOCIAL）。
  */
 
 import { type Rng, rand, uniform } from './rng';
@@ -39,22 +47,16 @@ export interface PersonaSpec {
   speed: Range;
   /** ④ 响应延迟（秒） */
   latency: Range;
-  /** ⑤ 响应强度（0.4 = +40%） */
+  /** ⑤ 响应强度（0.4 = +40%）：回应动作的幅度 */
   gain: Range;
-  /** ⑤ 的「±」：响应方向也随机，可能伸也可能缩 */
-  gainSigned: boolean;
   /** ⑥ 自发运动间隔（秒） */
   spont: Range;
-  /** ⑥′ 人在时的自发运动间隔；null = 不变。热情人在时更密，回避人在时几乎不动（僵住） */
-  spontPresent: Range | null;
   /** ⑦ 声音基频（Hz） */
   voiceFreq: Range;
   /** ⑧ 声音占空比 */
   voiceDuty: Range;
   /** ⑨ 朝向变化间隔（秒） */
   orient: Range;
-  /** ⑨′ 人在时的朝向间隔（秒）；null = 同 ⑨。热情盯着人、回避一直提防：人在时隔两三秒就重新决定一次朝哪 */
-  orientPresent: Range | null;
   /** ⑩ 朝向偏向人的概率 */
   toward: number;
   /** ⑩′ 不朝人时：random 随便看 / away 背向人 */
@@ -65,15 +67,16 @@ export interface PersonaSpec {
   death: { kind: DeathKind; dur: number; zh: string };
   /**
    * ⑬ 对人的趋避（−1…+1，乘人有多近）：+ = 人来了张开、臂朝人那边抬、出声多；− = 收拢、臂往下背着人缩、
-   * 呼吸浅快、触须收起发抖、不出声、更容易受惊、转身快；0 = 不受影响。`stanceSigned` 时取 ±区间、每次重新决定朝向时重抽。
+   * 呼吸浅快、触须收起、几乎不出声；0 = 不受影响。乱序随机取 ±区间：每次决定朝不朝人时随之定正负（迎或躲）。
    */
   stance: Range;
-  stanceSigned: boolean;
-  /** ⑭ 人走后多久恢复（秒；趋避姿态回落的时间常数） */
-  settle: Range;
-  /** 区间值怎么抽：uniform 均匀；extremes 偏向两端（乱序随机：忽快忽慢、忽深忽浅，少有中间值） */
-  spread: 'uniform' | 'extremes';
 }
+
+/**
+ * 乱序随机两件事一起带：⑬ 趋避带符号（每次决定朝不朝人时按 ⑩ 抽：迎或躲）· 区间偏向两端抽（忽快忽慢、忽深忽浅，
+ * 少有中间值）。2026-10-19 交互整合以前还有「⑤ 强度一半抽到负 = 缩」，与「抽到躲」是同一件事，并掉
+ */
+export const isRandom = (p: PersonaSpec): boolean => p.temper === 'random';
 
 const one = (v: number): Range => [v, v];
 
@@ -83,104 +86,80 @@ export const PERSONAS: Readonly<Record<PersonaKey, PersonaSpec>> = {
     temper: 'warm',
     zh: '热情',
     en: 'Warm',
-    breathPeriod: one(2),
-    breathAmp: one(0.8),
+    breathPeriod: one(3.5),
+    breathAmp: one(0.7),
     speed: one(3),
     latency: one(0.2),
     gain: one(0.5),
-    gainSigned: false,
     spont: [3, 5],
-    spontPresent: [2, 4],
     voiceFreq: [800, 1200],
     voiceDuty: one(0.7),
     orient: [5, 8],
-    orientPresent: [2, 4],
     toward: 0.9,
     otherwise: 'random',
     startle: one(0.8),
     death: { kind: 'turn', dur: 90, zh: '精力渐尽，最后朝向人停下' },
     stance: one(1),
-    stanceSigned: false,
-    settle: one(3),
-    spread: 'uniform',
   },
   B: {
     key: 'B',
     temper: 'calm',
     zh: '沉静',
     en: 'Calm',
-    breathPeriod: one(7),
-    breathAmp: one(0.5),
+    breathPeriod: one(4.5),
+    breathAmp: one(0.6),
     speed: one(0.5),
     latency: one(2.5),
     gain: one(0.1),
-    gainSigned: false,
     spont: [20, 30],
-    spontPresent: null,
     voiceFreq: [150, 300],
     voiceDuty: one(0.25),
     orient: [30, 45],
-    orientPresent: null,
-    toward: 0.4,
+    toward: 0.25,
     otherwise: 'random',
     startle: one(0.95),
     death: { kind: 'quiet', dur: 120, zh: '安静慢慢停下' },
     stance: one(0),
-    stanceSigned: false,
-    settle: one(4),
-    spread: 'uniform',
   },
   C: {
     key: 'C',
     temper: 'avoidant',
     zh: '回避',
     en: 'Avoidant',
-    breathPeriod: one(3),
-    breathAmp: one(0.3),
+    breathPeriod: one(4),
+    breathAmp: one(0.5),
     speed: one(2),
     latency: one(0.3),
     gain: one(0.4),
-    gainSigned: false,
     spont: [10, 16],
-    spontPresent: [30, 45],
     voiceFreq: [1000, 1400],
     voiceDuty: one(0.1),
     orient: [8, 12],
-    orientPresent: [1.5, 3],
     toward: 0.05,
     otherwise: 'away',
     startle: one(0.25),
     death: { kind: 'withdraw', dur: 90, zh: '背过身慢慢停下' },
     stance: one(-1),
-    stanceSigned: false,
-    settle: one(15),
-    spread: 'uniform',
   },
   D: {
     key: 'D',
     temper: 'random',
     zh: '乱序随机',
     en: 'Random',
-    breathPeriod: [2, 8],
-    breathAmp: [0.2, 0.9],
+    breathPeriod: [3.2, 4.8],
+    breathAmp: [0.45, 0.75],
     speed: [0.5, 4],
     latency: [0.3, 3],
     gain: [0.1, 0.5],
-    gainSigned: true,
     spont: [2, 30],
-    spontPresent: null,
     voiceFreq: [200, 1200],
     voiceDuty: [0.1, 0.8],
-    orient: [3, 40],
-    orientPresent: null,
+    orient: [3, 15],
     toward: 0.5,
     otherwise: 'away',
     startle: [0.2, 0.9],
     death: { kind: 'arrhythmia', dur: 60, zh: '节律紊乱后渐弱' },
     stance: [0.4, 1],
-    stanceSigned: true,
-    settle: [2, 20],
-    spread: 'extremes',
   },
 };
 

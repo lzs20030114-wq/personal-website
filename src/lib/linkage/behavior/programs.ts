@@ -1,5 +1,5 @@
 /**
- * 动作程序（行为引擎「动作词汇 v2」，2026-10-08 研究原型；轮回机器_触手与转向研究.md §8）。
+ * 动作程序（行为引擎的动作，2026-10-08 研究原型立、2026-10-17 转为唯一的一套；轮回机器_触手与转向研究.md §8）。
  *
  * 一个动作 = 一张分段表：每段给时长、缓动、臂在段末的姿态（极坐标：弯曲量 + 弯向 + 肌腱轴深卷），
  * 可选一个低频摆动，以及这段里身体其它通道的提示（呼吸、触须、声、光、转身）。解释器每个定步
@@ -17,6 +17,7 @@ const clamp01 = (x: number): number => Math.min(1, Math.max(0, x));
 /** 缓动：hold 不动 · lin 匀速 · mj 最小急动（钟形速度，「刻意」的手）· out 先快后慢 · out4 更猛的先快 · in 先慢后快（「爬」） */
 export type Ease = 'hold' | 'lin' | 'mj' | 'out' | 'out4' | 'in';
 
+// 次方一律写成连乘，不用 `**`（理由见 vocab2.ts 的 powInt）
 export function ease(e: Ease, u: number): number {
   const x = clamp01(u);
   switch (e) {
@@ -26,10 +27,14 @@ export function ease(e: Ease, u: number): number {
       return x;
     case 'mj':
       return x * x * x * (10 + x * (-15 + 6 * x));
-    case 'out':
-      return 1 - (1 - x) ** 3;
-    case 'out4':
-      return 1 - (1 - x) ** 4;
+    case 'out': {
+      const y = 1 - x;
+      return 1 - y * y * y;
+    }
+    case 'out4': {
+      const y2 = (1 - x) * (1 - x);
+      return 1 - y2 * y2;
+    }
     case 'in':
       return x * x * x;
     default:
@@ -106,13 +111,27 @@ export interface Program {
 export const ARM_OSC_MAX_HZ = 0.6;
 
 /**
- * 弯曲量的上限：1 = 只用差动的满幅（0.34）；迎手链（2026-10-08）要把手那一点上的毫米换成差动，离轴最多到 0.48，
- * 超出 1 的部分由执行层的深缠行程给。1.47（engine 的 ARM_BEND_MAX，同一个数）对应差动 0.4998，只给带深卷的姿态；
- * 离轴姿态摆动叠上去钳在 POSE_FLAT_MAX（0.48 / 0.34）。此前的程序带摆动时弯曲都 ≤ 1，两道钳位对它们都不起作用
+ * 「差动」——行为引擎与执行层之间的公共单位（台架把它换成三腱收缩率，见 machine-behavior.ts 的 ARM_DRIVE，守门测试逐个核对）。
+ * 唯一出处在这里（2026-10-17 交互机制参数表 §12.2 第 6 条：此前在 engine.ts 里写成字面量 9 处）：
+ * - 弯曲 1 = 差动 D_SPAN（只用弯曲的满幅）；
+ * - 深缠 1 在它之上再加 D_WRAP_SPAN；差动封顶 D_MAX（再大两腱之间失稳，0.55 起）；
+ * - 肌腱轴深卷 1 = D_DEEP_SPAN（只有正对腱轴时执行层才放开）；
+ * - 离轴姿态最多用到 D_FLAT_MAX：超出 D_SPAN 的部分由执行层的深缠行程给。
+ */
+export const D_SPAN = 0.34;
+export const D_WRAP_SPAN = 0.16;
+export const D_MAX = D_SPAN + D_WRAP_SPAN;
+export const D_DEEP_SPAN = 0.3773;
+export const D_FLAT_MAX = 0.48;
+
+/**
+ * 弯曲量的上限：1 = 只用差动的满幅（D_SPAN）；迎手链要把手那一点上的毫米换成差动，离轴最多到 D_FLAT_MAX，
+ * 超出 1 的部分由执行层的深缠行程给。1.47（引擎钳手的读数也用它）对应差动 0.4998，只给带深卷的姿态；
+ * 离轴姿态摆动叠上去钳在 POSE_FLAT_MAX（D_FLAT_MAX / D_SPAN）
  */
 export const POSE_BEND_MAX = 1.47;
-/** 离轴（不带深卷）姿态的弯曲上限：差动 0.48（与 vocab2-hand 的 HC.flatMax 同值） */
-export const POSE_FLAT_MAX = 0.48 / 0.34;
+/** 离轴（不带深卷）姿态的弯曲上限 */
+export const POSE_FLAT_MAX = D_FLAT_MAX / D_SPAN;
 
 export function totalDur(p: { phases: readonly Phase[] }): number {
   return p.phases.reduce((s, ph) => s + ph.dur, 0);
@@ -134,11 +153,16 @@ export function lerpPoseLine(a: Pose, b: Pose, u: number): Pose {
   return { bend, dir: bend > 1e-6 ? Math.atan2(y, x) : u < 0.5 ? a.dir : b.dir, deep: a.deep + (b.deep - a.deep) * u };
 }
 
-/** 弧路径的弯向增量：最短弧；给了参考增量 ref 时取离 ref 最近的那一支（连续展开，不翻面） */
+/**
+ * 弧路径的弯向增量：最短弧；给了参考增量 ref 时取离 ref 最近的那一支（连续展开，不翻面）。
+ * 段末几乎是直的（弯曲 < 0.03，弯向没有意义）：段首就这样 = 不转；段中途才变成这样 = 沿用已经在走的弧——
+ * 段末是「静息」时静息弯曲会在 0.03 上下来回（⑬ 收拢、随呼吸鼓起），此前在这一帧把增量归零，
+ * 臂在弯曲还有 0.65 时弯向一帧折回 0.38 rad（2026-10-17 删现行动作后全场守门测试抓到）
+ */
 export function arcDelta(a: Pose, b: Pose, ref: number | null = null): number {
   const dirA = a.bend < 0.03 ? b.dir : a.dir;
-  const dirB = b.bend < 0.03 ? dirA : b.dir;
-  const raw = wrapPi(dirB - dirA);
+  if (b.bend < 0.03) return ref ?? 0;
+  const raw = wrapPi(b.dir - dirA);
   return ref === null ? raw : ref + wrapPi(raw - ref);
 }
 
@@ -151,6 +175,21 @@ export function lerpPose(a: Pose, b: Pose, u: number, d: number = arcDelta(a, b)
     deep: a.deep + (b.deep - a.deep) * u,
   };
 }
+
+/** 两个姿态在差动平面上按直线混合（w = 0 取 a、1 取 b）；深卷线性 */
+function mixPose(a: Pose, b: Pose, w: number): Pose {
+  const x = (1 - w) * a.bend * Math.cos(a.dir) + w * b.bend * Math.cos(b.dir);
+  const y = (1 - w) * a.bend * Math.sin(a.dir) + w * b.bend * Math.sin(b.dir);
+  const bend = Math.hypot(x, y);
+  return { bend, dir: bend > 1e-9 ? Math.atan2(y, x) : b.dir, deep: a.deep + (b.deep - a.deep) * w };
+}
+
+/**
+ * 段末是「静息」时，静息弯曲小到这个以下，弧路径按静息弯曲渐变成直线：静息会穿过中心（⑬ 把它往人那边 / 背着人拉、
+ * 随呼吸鼓起），过中心时它的弯向一下转半圈，弧跟着它甩——臂在弯曲 0.4 时一帧转 0.48 rad、或连续几帧每帧 0.13 rad
+ * （2026-10-17 删现行动作后全场守门测试抓到）。直线在差动平面上是连续的，静息过不过中心都不跳
+ */
+export const REST_ARC_MIN = 0.15;
 
 /**
  * 推进到时刻 t，给出此刻的臂姿态与生效的那一段。rest = 此刻的静息姿态（引擎实时算）。
@@ -174,10 +213,15 @@ export function stepProgram(p: Program, t: number, rest: Pose): { pose: Pose; ph
   const u = ph.dur > 0 ? tau / ph.dur : 1;
   const to = target(ph, p.start, rest);
   let pose: Pose;
-  if (ph.path === 'line') pose = lerpPoseLine(p.start, to, ease(ph.ease, u));
+  const e = ease(ph.ease, u);
+  if (ph.path === 'line') pose = lerpPoseLine(p.start, to, e);
   else {
     p.dRef = arcDelta(p.start, to, p.dRef);
-    pose = lerpPose(p.start, to, ease(ph.ease, u), p.dRef);
+    pose = lerpPose(p.start, to, e, p.dRef);
+    if (ph.arm === 'rest' && to.bend < REST_ARC_MIN) {
+      const w = to.bend / REST_ARC_MIN;
+      pose = mixPose(lerpPoseLine(p.start, to, e), pose, w * w * (3 - 2 * w));
+    }
   }
   if (ph.osc && ph.osc.amp !== 0) {
     const fade = Math.min(0.4, ph.dur / 2);

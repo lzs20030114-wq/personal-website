@@ -4,6 +4,10 @@ import type { SensorInput } from './events';
 import { LIFE } from './life';
 import { type LogRecord, toJsonl } from './log';
 import { PERSONAS, PERSONA_KEYS, type PersonaKey } from './persona';
+import { STARTLE_PRE } from './vocab2';
+
+/** 惊跳里走反射档的段（vocab2.ts buildStartle 的 tiers：反射前段 + 乱序随机的余震） */
+const REFLEX_PHASES: ReadonlySet<string> = new Set([...STARTLE_PRE, 'shock1', 'shock2']);
 
 /**
  * 行为引擎守门测试（spec §8）。三类事故各卡一道：
@@ -189,14 +193,47 @@ describe('人格在行为里读得出来', () => {
     }
   });
 
-  it('呼吸：D 每次重抽，周期铺满 2–8 s、均值约 5 s', () => {
+  it('呼吸：D 每次重抽，周期铺满表的区间、均值在中间（2026-10-20 起区间收到 3.2–4.8 s，呼吸不随性格大变）', () => {
     const all = [51, 52, 53].flatMap((seed) => growBreaths('D', seed).period);
-    expect(Math.min(...all)).toBeLessThan(2.6);
-    expect(Math.max(...all)).toBeGreaterThan(7.4);
-    expect(Math.abs(mean(all) / 5 - 1)).toBeLessThan(0.12);
+    const [lo, hi] = PERSONAS.D.breathPeriod;
+    expect(Math.min(...all)).toBeLessThan(lo + 0.1 * (hi - lo));
+    expect(Math.max(...all)).toBeGreaterThan(hi - 0.1 * (hi - lo));
+    expect(Math.abs(mean(all) / ((lo + hi) / 2) - 1)).toBeLessThan(0.08);
   });
 
-  it('自发动作间隔：无人时 A/B/C 均值落在表的区间中点 ±12%；热情型有人在时变密（2–4 s）、回避型有人在时几乎不动（30–45 s）', () => {
+  it('呼吸是生理信号（2026-10-20 作者）：四种人格平时的呼吸差得不多，被碰过之后才变急促——快、浅，热情最明显、沉静几乎不变', () => {
+    // 平时：四种人格每口气的周期都在 3–5 s 之间，最快与最慢差不到 1.5 倍
+    const rest = PERSONA_KEYS.map((k) => mean(growBreaths(k, 41).period));
+    expect(Math.min(...rest)).toBeGreaterThan(3);
+    expect(Math.max(...rest)).toBeLessThan(5);
+    expect(Math.max(...rest) / Math.min(...rest)).toBeLessThan(1.5);
+    // 被碰：戳 · 拍 · 戳，之后 8–23 s 一口气实际走多长（相位回绕之间）与没被碰的同一段相比
+    const breathLen = (k: PersonaKey, poked: boolean): number => {
+      const t0 = LIFE.birth + 20;
+      const inputs = poked
+        ? [
+            at(t0, { kind: 'SHELL_STROKE', half: 'L', touch: 'poke' }),
+            at(t0 + 3, { kind: 'SHELL_STROKE', half: 'L', touch: 'pat' }),
+            at(t0 + 6, { kind: 'SHELL_STROKE', half: 'L', touch: 'poke' }),
+          ]
+        : [];
+      const e = new BehaviorEngine({ seed: 43, order: first(k) });
+      const wraps: number[] = [];
+      let phi = e.state.phi;
+      drive(e, feeder(inputs), t0 + 23, (eng) => {
+        if (eng.state.phi < phi - 0.5 && eng.time >= t0 + 8) wraps.push(eng.time);
+        phi = eng.state.phi;
+      });
+      return (wraps[wraps.length - 1] - wraps[0]) / (wraps.length - 1);
+    };
+    const quicken = (k: PersonaKey) => breathLen(k, false) / breathLen(k, true);
+    expect(quicken('A')).toBeGreaterThan(1.3);
+    expect(quicken('C')).toBeGreaterThan(1.2);
+    expect(quicken('B')).toBeLessThan(1.15);
+    expect(quicken('A')).toBeGreaterThan(quicken('B'));
+  });
+
+  it('自发动作间隔：A/B/C 均值落在表的区间中点 ±12%（2026-10-19 删掉了「人在时另一套间隔」）', () => {
     const gaps = (k: PersonaKey, inputs: ScheduledInput[] = []): number[] => {
       const { log } = runSession({ seed: 61, order: first(k), inputs, until: LIFE.birth + LIFE.grow });
       const t = evs(log, 'SPONTANEOUS').map((r) => r.t).filter((x) => x >= LIFE.birth);
@@ -206,16 +243,13 @@ describe('人格在行为里读得出来', () => {
       const [lo, hi] = PERSONAS[k].spont;
       expect(Math.abs(mean(gaps(k)) / ((lo + hi) / 2) - 1)).toBeLessThan(0.12);
     }
-    const present = gaps('A', [at(1, { kind: 'PRESENCE', band: 'near' })]);
-    expect(Math.abs(mean(present) / 3 - 1)).toBeLessThan(0.15);
-    const frozen = gaps('C', [at(1, { kind: 'PRESENCE', band: 'near' })]);
-    expect(mean(frozen)).toBeGreaterThan(28);
   });
 
   it('非确定性：同一次轻抚连发 20 次，响应延迟与强度均值对得上表，但每次不同、动作组合也不同', () => {
+    // 隔 16 s 一次：沉静型的回应程序比 8 s 长，挨得太近后一下会落在「正忙」里
     for (const k of ['A', 'B', 'C'] as const) {
-      const strokes = Array.from({ length: 20 }, (_, i) => at(64 + i * 8, { kind: 'SHELL_STROKE', half: 'L', touch: 'stroke' }));
-      const { log } = runSession({ seed: 71, order: first(k), inputs: strokes, until: 300 });
+      const strokes = Array.from({ length: 20 }, (_, i) => at(64 + i * 16, { kind: 'SHELL_STROKE', half: 'L', touch: 'stroke' }));
+      const { log } = runSession({ seed: 71, order: first(k), inputs: strokes, until: 420 });
       const sensor = log.filter((r) => r.ev === 'SHELL_STROKE');
       expect(sensor.every((r) => r.out === 'respond')).toBe(true);
       const resp = evs(log, 'RESPONSE');
@@ -223,7 +257,9 @@ describe('人格在行为里读得出来', () => {
       const lat = resp.map((r) => r.p!.latency as number);
       const gain = resp.map((r) => r.p!.gain as number);
       const p = PERSONAS[k];
-      expect(Math.abs(mean(lat) / p.latency[0] - 1)).toBeLessThan(0.1);
+      // 记下的延迟 = 潜伏期里「注意到」那段程序的长度：至少等满抽到的 τ
+      expect(mean(lat) / p.latency[0]).toBeGreaterThan(0.95);
+      expect(mean(lat) / p.latency[0]).toBeLessThan(1.2);
       expect(Math.abs(mean(gain) / p.gain[0] - 1)).toBeLessThan(0.08);
       expect(new Set(gain).size).toBeGreaterThan(10);
       const combos = new Set(resp.map((r) => `${r.p!.arm}/${r.p!.feeler}/${r.p!.turn}`));
@@ -234,8 +270,9 @@ describe('人格在行为里读得出来', () => {
   it('惊吓阈值：I > 阈值必惊吓，I ≤ 阈值必不（热情、沉静难吓，回避一碰就缩）', () => {
     for (const k of ['A', 'B', 'C'] as const) {
       const th = PERSONAS[k].startle[0];
-      const knocks = Array.from({ length: 10 }, (_, i) => at(70 + i * 10, { kind: 'KNOCK', intensity: i % 2 ? th + 0.01 : th }));
-      const { log } = runSession({ seed: 81, order: first(k), inputs: knocks, until: 200 });
+      // 隔 14 s 一次：沉静型惊跳后慢慢放回要 10 s 出头，挨得太近后一下会落在「正忙」里
+      const knocks = Array.from({ length: 10 }, (_, i) => at(70 + i * 14, { kind: 'KNOCK', intensity: i % 2 ? th + 0.01 : th }));
+      const { log } = runSession({ seed: 81, order: first(k), inputs: knocks, until: 230 });
       const outs = log.filter((r) => r.ev === 'KNOCK').map((r) => r.out);
       expect(outs).toEqual(knocks.map((_, i) => (i % 2 ? 'startle' : 'respond')));
       expect(evs(log, 'STARTLE')).toHaveLength(5);
@@ -247,15 +284,17 @@ describe('人格在行为里读得出来', () => {
     for (const k of ['A', 'B'] as const) expect(runSession({ seed: 82, order: first(k), inputs: [at(70, lift)], until: 80 }).log.find((r) => r.ev === 'LIFT')?.out).toBe('respond');
   });
 
-  it('乱序随机：阈值每次重抽，同样的敲击有时惊吓有时只是回应；响应方向也会反（缩而不迎）', () => {
+  it('乱序随机：阈值每次重抽，同样的敲击有时惊吓有时只是回应；回应有时迎、有时躲', () => {
     const knocks = Array.from({ length: 26 }, (_, i) => at(64 + i * 8, { kind: 'KNOCK', intensity: 0.55 }));
     const { log } = runSession({ seed: 91, order: first('D'), inputs: knocks, until: 300 });
     const outs = log.filter((r) => r.ev === 'KNOCK').map((r) => r.out);
     expect(outs.filter((o) => o === 'startle').length).toBeGreaterThan(4);
     expect(outs.filter((o) => o === 'respond').length).toBeGreaterThan(4);
-    const gains = evs(log, 'RESPONSE').map((r) => r.p!.gain as number);
-    expect(gains.some((g) => g < 0)).toBe(true);
-    expect(gains.some((g) => g > 0)).toBe(true);
+    // 有方向的刺激（轻抚）：⑩ 一半一半，回应有时迎、有时躲（2026-10-19 以前还有「⑤ 抽到负 = 缩」，与躲是同一件事，并掉）
+    const strokes = Array.from({ length: 16 }, (_, i) => at(64 + i * 14, { kind: 'SHELL_STROKE', half: 'L', touch: 'stroke' }));
+    const motions = evs(runSession({ seed: 92, order: first('D'), inputs: strokes, until: 300 }).log, 'RESPONSE').map((r) => String(r.p!.motion));
+    expect(motions.some((m) => m.endsWith('.avoid'))).toBe(true);
+    expect(motions.some((m) => m.endsWith('.toward'))).toBe(true);
   });
 });
 
@@ -391,15 +430,42 @@ describe('抓握（真值表接进行为）', () => {
     expect(bend.object).toBeGreaterThan(0.55);
   });
 
+  it('抓空以后的找以缠开始的地方为中心（与迎手链的找同一段）：摆过去又回来，不跑到写死的绝对角度上', () => {
+    // 2026-10-19 第二轮审核第 2 条：此前旧路的找是一段自发动作，摆向写死在 −40° / 55° / −70°（绝对），与碰在哪无关
+    const inputs = [at(100, { kind: 'ARM_TOUCH', on: true }), at(100.5, { kind: 'ARM_TOUCH', on: false })];
+    const e = new BehaviorEngine({ seed: 141, order: first('A') });
+    let dir0: number | null = null;
+    let searchAt = -1;
+    let maxOff = 0;
+    const log = drive(e, feeder(inputs), 125, (eng) => {
+      const g = eng.state.grasp;
+      if (dir0 === null && g.phase === 'WRAP') dir0 = g.dir;
+      const prog = eng.state.m2.prog;
+      if (prog?.name !== 'search') return;
+      if (searchAt < 0) searchAt = eng.time;
+      // 只看探的那几段（最后垂回静息那一段的弯向是静息的）
+      if (!/^(cast|probe)/.test(prog.phases[prog.idx]?.name ?? '') || dir0 === null) return;
+      const a = eng.targets().arm;
+      maxOff = Math.max(maxOff, Math.abs(Math.atan2(Math.sin(a.dir - dir0), Math.cos(a.dir - dir0))));
+    });
+    expect(evs(log, 'GRASP_EMPTY')[0].p!.searches).toBeGreaterThan(0);
+    expect(searchAt).toBeGreaterThan(0);
+    expect(dir0).not.toBeNull();
+    // 每一头的摆幅 30° / −30° / 45°，加上臂跟过去的余量
+    expect(maxOff * (180 / Math.PI)).toBeGreaterThan(15);
+    expect(maxOff * (180 / Math.PI)).toBeLessThan(55);
+  });
+
   it('碰臂时正忙：手一直在，就等它空下来认一次（只认一次）；中途松手就作罢', () => {
-    // 热情型：先轻抚一下让它去回应（约 1.8 s），回应途中碰臂 → busy
+    // 热情型：先轻抚一下让它去回应，回应途中碰臂 → busy
     const stroke = at(100, { kind: 'SHELL_STROKE', half: 'L', touch: 'stroke' });
-    const held = runSession({
-      seed: 171,
-      order: first('A'),
-      inputs: [stroke, at(100.6, { kind: 'ARM_TOUCH', on: true })],
-      until: 130,
-    }).log;
+    const e = new BehaviorEngine({ seed: 171, order: first('A') });
+    // 回应那一笔记账（gesture）做完的时刻 = 「空下来」
+    let gestureEnd = -1;
+    const held = drive(e, feeder([stroke, at(100.6, { kind: 'ARM_TOUCH', on: true })]), 130, (eng) => {
+      const g = eng.state.gesture;
+      if (gestureEnd < 0 && g && g.kind === 'response') gestureEnd = g.t0 + g.dur;
+    });
     const touch = held.find((r) => r.ev === 'ARM_TOUCH')!;
     expect(touch.out).toBe('busy');
     const contacts = evs(held, 'CONTACT');
@@ -409,8 +475,7 @@ describe('抓握（真值表接进行为）', () => {
     expect(c.out).toBe('respond');
     const answer = held.find((r) => r.ev === 'RESPONSE' && r.p?.to === c.id)!;
     expect(answer.p!.grasp).toBe(true); // 迎上来就缠
-    const firstResponse = held.find((r) => r.ev === 'RESPONSE')!;
-    const gestureEnd = firstResponse.t + Math.min(12, Math.max(0.6, 2.5 / Math.sqrt(3 / 1.5)));
+    expect(gestureEnd).toBeGreaterThan(100);
     expect(c.t).toBeGreaterThanOrEqual(gestureEnd - 1 / HZ);
     expect(c.t).toBeLessThan(gestureEnd + 0.1);
     // 中途松手：不补认
@@ -438,7 +503,7 @@ describe('输出能直接喂执行器', () => {
       const e = new BehaviorEngine({ seed, order: first(PERSONA_KEYS[seed % 4]) });
       let prev = e.targets();
       // 逐步只累计极值（每步十几次 expect 会让这条跑 40 秒），跑完一次断言
-      const m = { sLo: 1, sHi: 0, toneLo: 1, toneHi: 0, bend: 0, yaw: 0, feeler: 0, dS: 0, dYaw: 0, dArm: 0, dFeeler: 0 };
+      const m = { sLo: 1, sHi: 0, toneLo: 1, toneHi: 0, bend: 0, yaw: 0, feeler: 0, dS: 0, dYaw: 0, dArm: 0, dReflex: 0, dFeeler: 0 };
       drive(e, feeder(busy(2300, 3.7)), Infinity, (eng) => {
         const tg = eng.targets();
         m.sLo = Math.min(m.sLo, tg.breath.s);
@@ -451,7 +516,10 @@ describe('输出能直接喂执行器', () => {
         m.dYaw = Math.max(m.dYaw, Math.abs(tg.yaw - prev.yaw));
         const dx = tg.arm.bend * Math.cos(tg.arm.dir) - prev.arm.bend * Math.cos(prev.arm.dir);
         const dy = tg.arm.bend * Math.sin(tg.arm.dir) - prev.arm.bend * Math.sin(prev.arm.dir);
-        m.dArm = Math.max(m.dArm, Math.hypot(dx, dy));
+        const mo = eng.motion();
+        const reflex = mo !== null && mo.name === 'startle' && REFLEX_PHASES.has(mo.phase);
+        if (reflex) m.dReflex = Math.max(m.dReflex, Math.hypot(dx, dy));
+        else m.dArm = Math.max(m.dArm, Math.hypot(dx, dy));
         for (const k of [0, 1] as const) {
           m.feeler = Math.max(m.feeler, Math.abs(tg.feelers[k].base));
           m.dFeeler = Math.max(m.dFeeler, Math.abs(tg.feelers[k].base - prev.feelers[k].base));
@@ -466,10 +534,12 @@ describe('输出能直接喂执行器', () => {
       expect(m.yaw).toBeLessThanOrEqual(Math.PI + 1e-9);
       expect(m.feeler).toBeLessThanOrEqual(FEELER_MAX + 1e-9);
       // 呼吸每步 ≤ 0.045（≈ 2.7 行程/秒）；偏航受限速，每步 ≤ 0.05 rad（≈ 3 rad/s，惊吓时）；
-      // 臂的弯曲向量每步 < 0.04；触须基角每步 < 0.15 rad（含 2 Hz 的抖动）
+      // 臂的弯曲向量：惊跳的反射段（0.15 s 猛缩、余震）本来就是一步到位、由执行层的肌肉磨圆，每步 < 0.75；
+      // 其余每步 < 0.075（= 最快的那一档 1.5 差动/秒）——超过就是跳；触须基角每步 < 0.15 rad（含 2 Hz 的抖动）
       expect(m.dS).toBeLessThan(0.045);
       expect(m.dYaw).toBeLessThan(0.05);
-      expect(m.dArm).toBeLessThan(0.04);
+      expect(m.dArm).toBeLessThan(0.075);
+      expect(m.dReflex).toBeLessThan(0.75);
       expect(m.dFeeler).toBeLessThan(0.15);
     }
   });
@@ -493,7 +563,7 @@ describe('生命钟（M2：台架「生命时钟」档）', () => {
     expect(busyFast.filter((m) => m.ev === 'LIFE_DEATH')).toEqual(fast.filter((m) => m.ev === 'LIFE_DEATH'));
   });
 
-  it('倍率只压生命、不压动作：×10 下热情型成长段的呼吸周期仍约 2 秒', () => {
+  it('倍率只压生命、不压动作：×10 下热情型成长段的呼吸周期仍是表里的值（不跟着快 10 倍）', () => {
     const e = new BehaviorEngine({ seed: 41, order: first('A'), lifeRate: 10 });
     const period: number[] = [];
     let phi = e.state.phi;
@@ -502,15 +572,16 @@ describe('生命钟（M2：台架「生命时钟」档）', () => {
       if (s.phase === 'GROW' && s.phi < phi && !s.sighNow) period.push(s.period);
       phi = s.phi;
     });
-    expect(period.length).toBeGreaterThan(8);
+    expect(period.length).toBeGreaterThan(5);
     expect(Math.abs(mean(period) / PERSONAS.A.breathPeriod[0] - 1)).toBeLessThan(0.06);
   });
 
   it('诞生的两道门按生命秒折算：×10 下真实 2 秒前的刺激记 muted、之后回应；4 秒起才有自发动作', () => {
+    // 跑到 12 s：2.5 s 那一下的回应程序要做好几秒，做完才轮到自发
     const { log } = runSession({
       seed: 3,
       lifeRate: 10,
-      until: 6,
+      until: 12,
       inputs: [
         at(1.5, { kind: 'SHELL_STROKE', half: 'L', touch: 'stroke' }),
         at(2.5, { kind: 'SHELL_STROKE', half: 'R', touch: 'stroke' }),
@@ -632,7 +703,9 @@ describe('⑬ 对人的趋避（2026-10-14 人格重分类）', () => {
     const sC = mean(c.rows.map((r) => r.s));
     const s0 = mean(none.map((f) => f.targets.breath.s));
     expect(sC - s0).toBeGreaterThan(0.15);
-    expect(Math.max(...c.rows.map((r) => r.s)) - Math.min(...c.rows.map((r) => r.s))).toBeLessThan(0.3 * 0.6);
+    // 变浅：起伏比同一段没有人时小三成以上（2026-10-20 四种人格平时的呼吸收拢后改成与自己比）
+    const swing = (xs: number[]) => Math.max(...xs) - Math.min(...xs);
+    expect(swing(c.rows.map((r) => r.s))).toBeLessThan(0.7 * swing(none.map((f) => f.targets.breath.s)));
     expect(mean(c.rows.map((r) => r.up))).toBeLessThan(-0.3);
     expect(mean(c.rows.map((r) => r.bend))).toBeGreaterThan(0.45);
     expect(mean(c.rows.map((r) => r.feeler))).toBeGreaterThan(0.5);
@@ -644,7 +717,7 @@ describe('⑬ 对人的趋避（2026-10-14 人格重分类）', () => {
     expect(Math.max(...a.rows.map((r) => r.social))).toBeGreaterThan(0.95);
   });
 
-  it('人走以后：回避一直提防（⑭ 15 s 才回落），热情 3 s 就回落', () => {
+  it('人走以后：姿态回落到 0（2026-10-19 删掉了 ⑭ 另一套回落时间，变强、回落同一个时间常数）', () => {
     const leave = LIFE.birth + 1 + 20;
     const tail = (k: PersonaKey) => {
       const { rows } = visit(k, 331, 0.4, 40, [at(leave, { kind: 'PRESENCE', band: 'gone' })]);
@@ -652,31 +725,8 @@ describe('⑬ 对人的趋避（2026-10-14 人格重分类）', () => {
       const at15 = rows.find((r) => r.t >= leave + 15)!;
       return at15.social / at0.social;
     };
-    expect(tail('C')).toBeGreaterThan(0.25);
-    expect(tail('C')).toBeLessThan(0.5);
-    expect(tail('A')).toBeLessThan(0.01);
-  });
-
-  it('越近越怕：同样 0.18 的敲击，没人时回避型只是回应，人站在近处就惊跳', () => {
-    const knock = { kind: 'KNOCK', intensity: 0.18 } as const;
-    const alone = runSession({ seed: 341, order: first('C'), inputs: [at(70, knock)], until: 80 }).log;
-    expect(alone.find((r) => r.ev === 'KNOCK')?.out).toBe('respond');
-    const { log } = visit('C', 341, 0.6, 12, [at(LIFE.birth + 1 + 10, knock)]);
-    expect(log.find((r) => r.ev === 'KNOCK')?.out).toBe('startle');
-  });
-
-  it('人在时回避、热情每两三秒就重新决定朝哪（⑨′）；沉静照旧 30–45 s', () => {
-    const gaps = (k: PersonaKey) => {
-      const { log } = visit(k, 351, 0.6, 40);
-      const t = evs(log, 'ORIENT').map((r) => r.t).filter((x) => x > LIFE.birth + 8);
-      return t.slice(1).map((x, i) => x - t[i]);
-    };
-    for (const k of ['A', 'C'] as const) {
-      const g = gaps(k);
-      expect(g.length, k).toBeGreaterThan(8);
-      expect(Math.max(...g), k).toBeLessThan(PERSONAS[k].orientPresent![1] + 1.1);
-    }
-    expect(gaps('B').length).toBeLessThanOrEqual(1);
+    expect(Math.abs(tail('C'))).toBeLessThan(0.01);
+    expect(Math.abs(tail('A'))).toBeLessThan(0.01);
   });
 
   it('乱序随机：每次重新决定朝向时姿态跟着翻——朝人的回合张开、背人的回合收拢，两种都会出现', () => {

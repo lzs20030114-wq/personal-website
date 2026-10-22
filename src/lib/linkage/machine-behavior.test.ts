@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { MACHINE_BASE_AXIS as YAW_AXIS } from './machine-base';
-import { D_DEEP_SPAN, D_SPAN } from './behavior/vocab2';
-import { ARM_BEND_MAX, HZ, runSession, type ScheduledInput } from './behavior/engine';
+import { D_DEEP_SPAN, D_FLAT_MAX, D_MAX, D_SPAN, D_WRAP_SPAN, POSE_BEND_MAX } from './behavior/programs';
+import { HZ, runSession, type ScheduledInput } from './behavior/engine';
+import { DIST, HC } from './behavior/vocab2-hand';
+import { PRESENCE_EDGES } from './behavior/events';
 import type { PersonaKey } from './behavior/persona';
 import { PERSONA_KEYS } from './behavior/persona';
 import {
@@ -219,23 +221,24 @@ describe('曲柄追随：限速与子步', () => {
   }
 
   /**
-   * 实测（2026-10-07，种子 7 / 11，成长段带轻拍与拍手）：活力型需求峰值 4.7 / 5.3 rad/s，
-   * 1.2% / 1.3% 的帧超过上限，p95 滞后为 0、最大 0.04 / 0.12 行程（兴奋时死点附近最快那几口）；
-   * 沉静 0.7、好奇 1.9、不稳定 2.7–3.3 rad/s，从不被限速。2026-10-14 重分类后：热情 = 原活力的呼吸；
-   * 乱序随机偏向两端抽、每口气的行程速度封在 0.9/s（engine.ts EXTREME_BREATH_RATE），照样不被限速。
+   * 实测（种子 7 / 11，成长段带轻拍与拍手）。2026-10-07 现行动作下活力型（= 现在的热情）需求峰值 4.7 / 5.3 rad/s、
+   * 1.2% 的帧被限速；2026-10-17 删掉现行动作后只剩动作程序那一套：呼吸提示的行程速度封在 π·a/T ≤ 1.2/s
+   *（vocab2.ts V2.breathRateCap），热情 2.8、沉静 0.7–0.8、回避 2.7–2.9 rad/s，从不被限速；乱序随机只有惊跳那一下
+   * 环身「猛收」（叠在输出上，快升 ω 10）快过曲柄：需求峰值 4.5–9.2 rad/s，只占 0.03% 的帧，最大滞后 0.008 行程
+   *（2026-10-19 整合后随机流变了，种子 7 的一次猛收正好从全开端起，最大滞后 0.052）。
    */
-  it('引擎轨迹跟得上：沉静 / 回避 / 乱序随机从不被限速；热情型只在兴奋时最快的几口气上拖一点', () => {
+  it('引擎轨迹跟得上：热情 / 沉静 / 回避从不被限速；乱序随机只在惊跳的猛收那一帧拖一点', () => {
     for (const seed of [7, 11]) {
-      for (const k of ['B', 'C', 'D'] as const) {
+      for (const k of ['A', 'B', 'C'] as const) {
         const r = track(k, seed);
         expect(r.need).toBeLessThan(CRANK.maxSpeed);
         expect(r.max).toBeLessThan(1e-9);
       }
-      const a = track('A', seed);
-      expect(a.need).toBeGreaterThan(CRANK.maxSpeed); // 如实：表里的节律在这里超过上限
-      expect(a.over).toBeLessThan(0.03);
-      expect(a.p95).toBeLessThan(0.01);
-      expect(a.max).toBeLessThan(0.2);
+      const d = track('D', seed);
+      expect(d.over).toBeLessThan(0.002);
+      expect(d.p95).toBeLessThan(1e-9);
+      // 猛收正赶上呼吸停在全开端（死点附近 dθ/ds 最大）时拖得最多：2026-10-19 交互整合后种子 7 正好撞上，0.052 行程、几帧
+      expect(d.max).toBeLessThan(0.06);
     }
   });
 
@@ -295,7 +298,7 @@ describe('臂与触须', () => {
     // 松垮的臂（tone = 0）弯起来：只有主腱收紧，拮抗腱不会被抬到绷直点
     const limp = tendonContractions({ tone: 0, bend: 0.5, dir: 0 });
     expect(Math.min(...limp)).toBeCloseTo(0, 12);
-    expect(ARM_DRIVE.dMax / ARM_DRIVE.span).toBeCloseTo(ARM_BEND_MAX, 2);
+    expect(ARM_DRIVE.dMax / ARM_DRIVE.span).toBeCloseTo(POSE_BEND_MAX, 2);
   });
 
   it('肌腱轴深卷（动作词汇 v2，默认关）：不给 deep 时开不开逐位相同；关着时 deep 只当普通差动、封顶 dMax；开着且正对腱轴（±12° 硬窗）主腱拉满、拮抗停在 floor；窗外照旧封顶', () => {
@@ -340,6 +343,18 @@ describe('臂与触须', () => {
     expect(D_SPAN).toBe(ARM_DRIVE.span);
     expect(D_DEEP_SPAN).toBeCloseTo(ARM_DRIVE.deepSpan, 4);
     expect(ARM_DRIVE.span + ARM_DRIVE.deepSpan).toBeCloseTo(ARM_DRIVE.dDeep, 12);
+    // 引擎里的差动单位唯一出处是 programs.ts（2026-10-17 审核：此前 engine.ts 里写成字面量 9 处）
+    expect(D_WRAP_SPAN).toBe(ARM_DRIVE.wrapSpan);
+    expect(D_MAX).toBe(ARM_DRIVE.dMax);
+    expect(D_FLAT_MAX).toBeLessThan(D_MAX);
+    // 臂长：唯一出处是迎手链的 HC.armL，台架按模型算的弦长要对得上（≤ 0.5 mm）
+    expect(Math.abs(HC.armL - ARM_GEOM.length)).toBeLessThan(0.5);
+    // 距离三档、手速三级里与台架共用的那几个数（2026-10-17 收成一套）
+    expect(DIST.near).toBe(PRESENCE_EDGES.near * 1000);
+    expect(DIST.far).toBe(PRESENCE_EDGES.far * 1000);
+    expect(DIST.body).toBeGreaterThan(R_HULL);
+    expect(HC.vStill).toBeLessThan(HC.vSlow);
+    expect(HC.vSlow).toBeLessThan(HC.vSwipe);
   });
 
   it('弯向补偿：三次迭代后「指令 + 偏差 ≈ 目标」（残差 < 1.2°）；朝上补得少、朝下补得多；差动为 0 不补', () => {
@@ -952,7 +967,7 @@ describe('碰臂判定（contactStep：台架 syncHand ③ 搬到纯函数）', 
     expect(bad).toBe(-1);
   });
 
-  it('牵引（opts.traction，台架现在不传）：缠 / 握着时慢慢牵着走锚点跟手、不松开；臂没跟上时锚点冻住，再拉出锚圈才松', () => {
+  it('牵引（opts.traction，台架传 true）：缠 / 握着时慢慢牵着走锚点跟手、不松开；臂没跟上时锚点冻住，再拉出锚圈才松', () => {
     const ppm = 0.6;
     const th = contactThresholds(ppm, false);
     const slow = 40 * ppm; // 40 mm/s（≤ 60）

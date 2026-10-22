@@ -88,12 +88,15 @@ describe('闭环：画面上不动的指针 → 机器怎么对它', () => {
     expect(Math.abs(wrap(aArm - aHand))).toBeLessThan((20 * Math.PI) / 180);
   });
 
-  it('躲（回避）：机身背过去，手出了视野以后提防一阵再忘掉', () => {
+  it('躲（回避）：侧过身去，手留在身侧后方（105°–160°，不整个背过去），一直看着、不丢手', () => {
     const p = pointerAt(0.2, 900);
     const { e, log } = loop('C', seedFor('C', 'away', p), p, 30);
     expect(log.some((r) => r.ev === 'HAND_SEEN' && r.p?.mode === 'away')).toBe(true);
-    expect(Math.abs(wrap(e.targets().yaw - (0.2 + Math.PI)))).toBeLessThan(Math.PI / 3);
-    expect(log.some((r) => r.ev === 'HAND_LOST' && r.p?.reason === 'unseen')).toBe(true);
+    const off = Math.abs(wrap(e.targets().yaw - 0.2));
+    expect(off).toBeGreaterThan((105 * Math.PI) / 180);
+    expect(off).toBeLessThan((160 * Math.PI) / 180);
+    expect(log.some((r) => r.ev === 'HAND_LOST')).toBe(false);
+    expect(e.state.hand?.seen).toBe(true);
   });
 
   it('迎：手就在臂梢旁边 → 机身不转身对准（臂够得着），臂弯过去（指令弯向 ≈ 读数弯向）', () => {
@@ -108,7 +111,9 @@ describe('闭环：画面上不动的指针 → 机器怎么对它', () => {
     expect(log.some((r) => r.ev === 'ORIENT' && r.t > seenAt)).toBe(false);
     const r = handReading(view, p, e.targets().yaw);
     const arm = e.targets().arm;
-    expect(arm.bend).toBeGreaterThan(0.3);
+    // 成长段开头那一下张望转开了一点，手落在臂长外一截（读数离基座 460 mm）：热情只跟到手旁，
+    // 不探身（2026-10-19 删掉了够不着时的探身撑）
+    expect(arm.bend).toBeGreaterThan(0.1);
     expect(Math.abs(wrap(arm.dir - r.aimDir))).toBeLessThan(0.35);
   });
 
