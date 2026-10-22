@@ -13,10 +13,14 @@ export function shouldZoomCamera(expanded: boolean, e: Pick<WheelEvent, 'ctrlKey
 /** Element-local bridge lets the layout operate a camera without remounting its bench. */
 export function attachLabCamera(canvas: HTMLCanvasElement, actions: { wheel: (delta: number) => void; home: () => void }) {
   canvas.dataset.labCamera = '';
+  // Outside /lab (case pages), a pointer merely passing over the bench must not steal page scroll:
+  // the wheel zooms only after the bench is pressed, and is released again when the pointer leaves.
+  let engaged = false;
+  const engage = () => { engaged = true; };
+  const release = () => { engaged = false; };
   const wheel = (e: WheelEvent) => {
     const panel = canvas.closest('[data-lab-panel]');
-    // Outside /lab, preserve the existing embedded-bench behavior.
-    if (panel ? !shouldZoomCamera(panel.hasAttribute('data-expanded'), e) : !e.cancelable) return;
+    if (!shouldZoomCamera(panel ? panel.hasAttribute('data-expanded') : engaged, e)) return;
     e.preventDefault();
     actions.wheel(panel ? cameraWheelDelta(e, canvas.clientHeight) : e.deltaY);
   };
@@ -25,10 +29,14 @@ export function attachLabCamera(canvas: HTMLCanvasElement, actions: { wheel: (de
     if (action === 'home') actions.home();
     else if (action === 'in' || action === 'out') actions.wheel(action === 'in' ? -150 : 150);
   };
+  canvas.addEventListener('pointerdown', engage);
+  canvas.addEventListener('pointerleave', release);
   canvas.addEventListener('wheel', wheel, { passive: false });
   canvas.addEventListener(CAMERA_COMMAND, command);
   return () => {
     delete canvas.dataset.labCamera;
+    canvas.removeEventListener('pointerdown', engage);
+    canvas.removeEventListener('pointerleave', release);
     canvas.removeEventListener('wheel', wheel);
     canvas.removeEventListener(CAMERA_COMMAND, command);
   };

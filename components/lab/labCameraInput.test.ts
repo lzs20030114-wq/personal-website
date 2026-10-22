@@ -37,4 +37,18 @@ describe('Lab camera input ownership', () => {
     cleanup(); canvas.dispatchEvent(wheelEvent()); canvas.dispatchEvent(new CustomEvent(CAMERA_COMMAND, { detail: 'home' }));
     expect(actions.wheel).toHaveBeenCalledTimes(2); expect(actions.home).toHaveBeenCalledOnce(); expect(canvas.dataset.labCamera).toBeUndefined();
   });
+  it('outside /lab, a passing pointer scrolls the page; zoom needs a press and ends on leave', () => {
+    const canvas = Object.assign(new EventTarget(), { dataset: {} as Record<string, string>, clientHeight: 520, closest: () => null });
+    const actions = { wheel: vi.fn(), home: vi.fn() };
+    attachLabCamera(canvas as unknown as HTMLCanvasElement, actions);
+    const wheelEvent = () => Object.assign(new Event('wheel', { cancelable: true }), { ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, deltaY: 40, deltaMode: 0 });
+    const pass = wheelEvent(); canvas.dispatchEvent(pass);
+    expect(pass.defaultPrevented).toBe(false); expect(actions.wheel).not.toHaveBeenCalled();
+    canvas.dispatchEvent(new Event('pointerdown'));
+    const zoom = wheelEvent(); canvas.dispatchEvent(zoom);
+    expect(zoom.defaultPrevented).toBe(true); expect(actions.wheel).toHaveBeenLastCalledWith(40);
+    canvas.dispatchEvent(new Event('pointerleave'));
+    const after = wheelEvent(); canvas.dispatchEvent(after);
+    expect(after.defaultPrevented).toBe(false); expect(actions.wheel).toHaveBeenCalledOnce();
+  });
 });
