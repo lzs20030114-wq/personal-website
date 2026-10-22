@@ -51,7 +51,7 @@ const UI = {
     n: (n: number) => `${n} 个种子`,
     table: '数表',
     note: (s: number, n: number) =>
-      `每场 ${s} 秒，${n} 个种子取均值；8×8，走 · 站 · 坐，只收挡路的带。条 = 均值，须 = ±1 标准差，点 = 单个种子。基准行末的星号 = 会动的单元对它的双侧置换检验（*** p<.001 · ** <.01 · * <.05）。数字只在这套规则下成立。`,
+      `每场 ${s} 秒，${n} 个种子取均值。8×8，走 · 站 · 坐，只收挡路的带。条 = 均值，须 = ±1 标准差，点 = 单个种子。基准行末的星号 = 会动的单元对它的双侧置换检验（*** p<.001 · ** <.01 · * <.05）。数字只在这套规则下成立。`,
     th: { metric: '读数', scene: '场景' },
   },
   en: {
@@ -72,7 +72,7 @@ const UI = {
     n: (n: number) => `${n} seeds`,
     table: 'Table',
     note: (s: number, n: number) =>
-      `${s} s per run, mean of ${n} seeds; 8×8, walk · stand · sit, only the strips in the way retract. Bar = mean, whisker = ±1 SD, dot = one seed. The stars at the end of a baseline row are the two-sided permutation test of live units against that baseline (*** p<.001 · ** <.01 · * <.05). The numbers hold only under this rule set.`,
+      `${s} s per run, mean of ${n} seeds. 8×8, walk · stand · sit, only the strips in the way retract. Bar = mean, whisker = ±1 SD, dot = one seed. The stars at the end of a baseline row are the two-sided permutation test of live units against that baseline (*** p<.001 · ** <.01 · * <.05). The numbers hold only under this rule set.`,
     th: { metric: 'Reading', scene: 'Scene' },
   },
 } as const;

@@ -4,7 +4,7 @@ slug: reincarnation-machine
 date: 2026-07
 selected: true
 order: 1
-summary: 'A desk-sized machine that lives, dies, and wakes with a different personality. Its body stays the same; its responses to you change.'
+summary: 'A desk-sized machine that lives, dies, and wakes with a different personality. Its body stays the same, and its responses to you change.'
 role:
   - Concept & research design
   - Mechanism design & fabrication
@@ -54,6 +54,8 @@ status: published
     改由 src/lib/site/case-reincarnation.ts 的数据驱动（人格表 / 预测表 / 参数表与原文逐字一致）；
     状态串（Study in progress · …）移进 frontmatter 的 progress，由首屏元数据条渲染。
     其余散文保持原文。未定的英文研究问题与其他待补项仍保留占位（<Todo>），不代填。
+    2026-10-22 再过一遍去 AI 味（作者要求）：分号拆句、一处「The material choice matters:」路标与一处 -ing 尾句改直说、
+    图注里「became a design principle」改回「kept in the design」、概念卡英文名去掉「not form」；事实与数字一字不动。
     插槽编号、顺序与 h2 数量必须和中文侧一致。 */}
 
 {/* N01 主图不在此处：它是首屏的主图框（渐变媒体块 + 活台架 + 图注），由页面模板渲染，
@@ -73,7 +75,7 @@ I was interested in how those two things could coexist.
 
 I wanted to give that experience a physical form: a machine you could touch, whose body stayed the same while its behaviour changed from one life to the next.
 
-<FigSlot id="N02" caption="Mourning posts from the February 2026 retirement" desc="The starting event · screenshots to come from the author; if the originals cannot be recovered this figure is dropped rather than reconstructed" status="待定" ratio="16/7" size="wide" />
+<FigSlot id="N02" caption="Mourning posts from the February 2026 retirement" desc="The starting event · screenshots to come from the author. If the originals cannot be recovered, the figure is dropped" status="待定" ratio="16/7" size="wide" />
 
 ## Research question
 
@@ -94,18 +96,18 @@ Death and rebirth let me repeat the experience of loss within a session. Each li
   <ConceptCard
     zh="死亡即安静"
     en="Death as quiet"
-    note="Its movements weaken until it stops and no longer responds to touch. I want this to read as death; the pilot still needs to check whether people distinguish it from a fault."
+    note="Its movements weaken until it stops and no longer responds to touch. I want this to read as death. The pilot still needs to check whether people distinguish it from a fault."
   />
   <ConceptCard
     zh="共情来自行为"
-    en="Empathy from behavior, not form"
+    en="Empathy from behavior"
     note="The machine has no face and copies no known animal. I want to reduce the influence of a familiar pet shape and focus on how people respond to its behaviour."
   />
 </ConceptGrid>
 
-<ProcessAside pend="To confirm: which references the author has read and will cite; bibliography to come.">
+<ProcessAside pend="To confirm: which references the author has read and will cite. Bibliography to come.">
 
-People's attachments to machines are the starting point for this project. The references cover different parts of the question: Heider & Simmel (1944) on attributing life to moving geometric shapes; Kate Darling's Pleo studies on reluctance to hurt an interactive toy robot; and AIBO funerals in Japan on mourning a robot. Tamagotchi includes death and reset on a screen. Sun Yuan & Peng Yu's _Can't Help Myself_ (2016) gives the machine a physical presence, while Ian Cheng's _BOB_ has an evolving personality on screen. I want to bring a physical body, changing personalities, death and rebirth into one device.
+People's attachments to machines are the starting point for this project. The references cover different parts of the question: Heider & Simmel (1944) on attributing life to moving geometric shapes, Kate Darling's Pleo studies on reluctance to hurt an interactive toy robot, and AIBO funerals in Japan on mourning a robot. Tamagotchi includes death and reset on a screen. Sun Yuan & Peng Yu's _Can't Help Myself_ (2016) gives the machine a physical presence, while Ian Cheng's _BOB_ has an evolving personality on screen. I want to bring a physical body, changing personalities, death and rebirth into one device.
 
 </ProcessAside>
 
@@ -121,9 +123,9 @@ I gave it no face and avoided copying an animal. A familiar pet shape could infl
 
 <PartGrid />
 
-On 1 June I changed the three tentacles to one gripping arm and two feelers. The arm maintains contact with a person; the feelers react through movement and rebound. This gave each part a more specific job. [→ log 2026-06-01](/archive#log-2026-06-01-1)
+On 1 June I changed the three tentacles to one gripping arm and two feelers. The arm maintains contact with a person. The feelers react through movement and rebound. This gave each part a more specific job. [→ log 2026-06-01](/archive#log-2026-06-01-1)
 
-<FigSlot id="N04" caption="Three views plus the body axis" desc="Five rings along the body under a fabric skin; no face, no animal" status="待定" ratio="3/1" size="wide" />
+<FigSlot id="N04" caption="Three views plus the body axis" desc="Five rings along the body under a fabric skin. No face, no animal" status="待定" ratio="3/1" size="wide" />
 
 ## Personality is twelve numbers
 
@@ -141,7 +143,7 @@ The names of the four personalities. This table keeps A Vital / B Withdrawn / C 
 
 </Todo>
 
-I designed the behaviour in five layers. I hope participants will start to interpret the changes as moods; the study has yet to test that. Eight minutes leaves little time for the relationship layer to develop.
+I designed the behaviour in five layers. I hope participants will start to interpret the changes as moods. The study has yet to test that. Eight minutes leaves little time for the relationship layer to develop.
 
 <LayersToggle />
 
@@ -161,9 +163,9 @@ Of the five deployable structures I considered, I chose the angulated scissor ar
 
 <ClosureCards id="N08–N09" />
 
-The bare arch has two degrees of freedom: breathing and lateral sway. A single central rod therefore leaves more than one possible shape; a vertical guide rail at the apex removes the sway and makes the motion determinate. I also found a bug in how the code located the apex. It chose the highest point, but on one ring that point moved to the shoulder as the arch flattened. Choosing "the node nearest the centreline" and re-running the optimisation gained 3–26% of travel per ring. [→ log 2026-06-15](/archive#log-2026-06-15-1)
+The bare arch has two degrees of freedom: breathing and lateral sway. A single central rod therefore leaves more than one possible shape. A vertical guide rail at the apex removes the sway and makes the motion determinate. I also found a bug in how the code located the apex. It chose the highest point, but on one ring that point moved to the shoulder as the arch flattened. Choosing "the node nearest the centreline" and re-running the optimisation gained 3–26% of travel per ring. [→ log 2026-06-15](/archive#log-2026-06-15-1)
 
-<FigSlot id="N07" caption="The five-ring parameter family (S1–S5, R*/L*)" desc="Each ring's pin radius and link length; the triangular parts fall into 11 congruence classes, reused within each ring" status="可现产" ratio="16/7" size="wide" />
+<FigSlot id="N07" caption="The five-ring parameter family (S1–S5, R*/L*)" desc="Each ring's pin radius and link length. The triangular parts fall into 11 congruence classes, reused within each ring" status="可现产" ratio="16/7" size="wide" />
 
 <InteractiveSlot id="LAB.1-4" caption="Five-ring parameter family, 2026-07 · each ring's own R/L, all driven from one shaft" status="可现产" lab="1-4" verb="drag to orbit">
   <RingsFigure />
@@ -179,7 +181,7 @@ The July design was shaft → crank → connecting rod → slider, reciprocating
 
 <Todo>
 
-The design record has a gap here. Why it changed and when; why the tooth counts differ per ring; the dates and photographs for the printed rack that fractured and the resin rod that buckled. None of this change has a work-log entry yet; two entries are needed before this section can be completed.
+The design record has a gap here. Why it changed and when, why the tooth counts differ per ring, and the dates and photographs for the printed rack that fractured and the resin rod that buckled. None of this change has a work-log entry yet, and two entries are needed before this section can be completed.
 
 </Todo>
 
@@ -188,7 +190,7 @@ The design record has a gap here. Why it changed and when; why the tooth counts 
   <FigSlot id="N11" caption="Sheared rack teeth and a buckled resin rod, side by side" desc="The damaged teeth and the rod's buckling location" status="待拍摄" ratio="16/10" />
 </FigPair>
 
-<InteractiveSlot id="FIG.12" caption="The solver for the July crank design; drag any joint. The August machine drives through racks instead, and the solver was not rebuilt" status="可现产" lab="1-1" paper verb="drag any joint">
+<InteractiveSlot id="FIG.12" caption="The solver for the July crank design. Drag any joint. The August machine drives through racks instead, and the solver was not rebuilt" status="可现产" lab="1-1" paper verb="drag any joint">
   <LinkageFigure />
 </InteractiveSlot>
 
@@ -210,7 +212,7 @@ The arm has four tapered phalanges (25 / 20 / 15 / 10 mm). Dumbbell-shaped pins 
 
 In the April simulation, friction made the joints close one after another. I kept that delay because the sequential movement looked more alive to me than simultaneous closure. I later used the same judgement when designing other movements. [→ log 2026-04-26](/archive#log-2026-04-26-1)
 
-Each feeler's springy core sets its bending stiffness and rebound. A single servo at the base aims it, and the core also works as a capacitive touch electrode, making the full length sensitive to contact. The material choice matters: superelastic nitinol springs back at room temperature, while shape-memory wire contracts when heated. The two look alike.
+Each feeler's springy core sets its bending stiffness and rebound. A single servo at the base aims it, and the core also works as a capacitive touch electrode, so the whole length is sensitive to contact. Superelastic nitinol springs back at room temperature, while shape-memory wire contracts when heated, and the two look alike.
 
 <Todo>
 
@@ -218,9 +220,9 @@ How many tendons the physical arm has. The simulation uses three, and the purcha
 
 </Todo>
 
-<FigSlot id="N13" caption="The arm closing" desc="Friction closes the joints one after another; that delay became a design principle" status="待定" ratio="16/6" size="wide" />
+<FigSlot id="N13" caption="The arm closing" desc="Friction closes the joints one after another, and that delay was kept in the design" status="待定" ratio="16/6" size="wide" />
 
-<InteractiveSlot id="LAB.1-3" caption="Three-tendon tentacle solver, 2026-05 · friction closes the joints in sequence; that delay became a design principle" status="可现产" lab="1-3" verb="drag to orbit">
+<InteractiveSlot id="LAB.1-3" caption="Three-tendon tentacle solver, 2026-05 · friction closes the joints in sequence, and that delay was kept in the design" status="可现产" lab="1-3" verb="drag to orbit">
   <TentacleFigure />
 </InteractiveSlot>
 
@@ -230,9 +232,9 @@ How many tendons the physical arm has. The simulation uses three, and the purcha
 
 The rail hand calculation was about 4.5× optimistic. It assumed the load reached a support, but the real back strip had no support directly under the load point. Adding an 8 × 3 mm rib on the back and a 4 × 2.5 mm lip on the front reduced deflection from 1.55 to 0.34 mm and raised ultimate capacity from 19 to 54 N, with little added weight. [→ log 2026-07-18](/archive#log-2026-07-18-1)
 
-The chassis truss had more strength than it needed: only 5% of capacity was used, and the X-braces added little. The limit was the 0.56 mm shaft-alignment budget between adjacent frames. Support from the plinth made the difference here. On four corners the truss sagged 4.8 mm; on two full-length rails, 0.02 mm. I reduced the members from 104 g to 44 g. [→ log 2026-07-31](/archive#log-2026-07-31-1)
+The chassis truss had more strength than it needed: only 5% of capacity was used, and the X-braces added little. The limit was the 0.56 mm shaft-alignment budget between adjacent frames. Support from the plinth made the difference here. On four corners the truss sagged 4.8 mm. On two full-length rails it sagged 0.02 mm. I reduced the members from 104 g to 44 g. [→ log 2026-07-31](/archive#log-2026-07-31-1)
 
-<FigSlot id="N14" caption="Chassis truss: the same frame on three kinds of support" desc="Four corners sag 4.8 mm; full-length rails leave 0.02 mm with full-length support" status="可现产" ratio="1600/620" size="wide" src="/log/2026-07-31-chassis-support-modes.webp" alt="Deflection curves and per-station misalignment of the same truss under three ways of supporting it" />
+<FigSlot id="N14" caption="Chassis truss: the same frame on three kinds of support" desc="Four corners sag 4.8 mm, full-length rails 0.02 mm" status="可现产" ratio="1600/620" size="wide" src="/log/2026-07-31-chassis-support-modes.webp" alt="Deflection curves and per-station misalignment of the same truss under three ways of supporting it" />
 
 <FigSlot id="N15" caption="Base tip-over FEA" desc="Tipping angle about 42°, 2.3× margin · figure and date to come" status="待定" ratio="4/3" />
 
@@ -244,7 +246,7 @@ I built the parts with one 3D printer, standard hardware and tools I could buy f
 
 SLS nylon joints printed with 0.4 mm clearance would not turn. The sintered surface and powder trapped in narrow gaps left too little room for movement. A metal axle in a printed sleeve brought the clearance requirement down to 0.2–0.4 mm. Axial binding was the bigger problem: the rotating hub had to be 0.2–0.5 mm shorter than the screw barrel. [→ log 2026-06-04](/archive#log-2026-06-04-1)
 
-I chose a Chicago screw for the pivot. Its ⌀4 unthreaded shoulder before the M3 thread provides the bearing surface and sets the gap between plates. [→ log 2026-06-03](/archive#log-2026-06-03-1) The material budget was about ¥300; I spent ¥216. [→ log 2026-07-09](/archive#log-2026-07-09-1)
+I chose a Chicago screw for the pivot. Its ⌀4 unthreaded shoulder before the M3 thread provides the bearing surface and sets the gap between plates. [→ log 2026-06-03](/archive#log-2026-06-03-1) The material budget was about ¥300, and I spent ¥216. [→ log 2026-07-09](/archive#log-2026-07-09-1)
 
 <FigSlot id="N16" caption="The printed parts, and the assembly bench" desc="One printer plus standard hardware" status="待拍摄" ratio="16/9" size="wide" />
 
@@ -266,7 +268,7 @@ Grasping has a separate state machine. A truth table combines the tension switch
 
 <Todo>
 
-The full list of the nine event classes. Only ARM_TOUCH, RESISTANCE and the four grasp states are recorded. The design specifies nine classes; the author needs to supply the remaining names.
+The full list of the nine event classes. Only ARM_TOUCH, RESISTANCE and the four grasp states are recorded. The design specifies nine classes, and the author needs to supply the remaining names.
 
 </Todo>
 
@@ -285,13 +287,13 @@ I wrote these predictions on 2026-04-03, before collecting any data. They stay h
 If the autonomous behaviour is not convincing by the pilot, the fallback is Wizard-of-Oz: the experimenter triggers behaviour from behind the scenes, and this is disclosed in the paper. That would let me study how participants interpret the movements, but would not establish that the autonomous behaviour engine works.
 
 <FigPair>
-  <FigSlot id="N19" caption="Method: event-locked SCR" desc="Four life cycles, about 37 minutes; event-locked skin conductance is the primary physiological measure" status="研究期后" ratio="4/3" />
+  <FigSlot id="N19" caption="Method: event-locked SCR" desc="Four life cycles, about 37 minutes. Event-locked skin conductance is the primary physiological measure" status="研究期后" ratio="4/3" />
   <FigSlot id="N20" caption="Key moments (participant and machine)" desc="Study footage" status="研究期后" ratio="4/3" />
 </FigPair>
 
 ## Reflection
 
-Two changes still need a fuller account. One concerns an experimental mechanism whose removal and reasons are unconfirmed; its details are withheld here. The other is the eye stalk, which originally controlled orientation. The whole-machine yaw platform now does that job.
+Two changes still need a fuller account. One concerns an experimental mechanism whose removal and reasons are unconfirmed, and its details are withheld here. The other is the eye stalk, which originally controlled orientation. The whole-machine yaw platform now does that job.
 
 <Todo>
 

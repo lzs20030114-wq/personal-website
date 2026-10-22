@@ -259,7 +259,7 @@ const SLOT_COPY: Record<string, { lab?: string; en: SlotCopy; zh: SlotCopy }> = 
     lab: '1-5',
     en: {
       video:
-        'One full life cycle — birth, interaction, ageing, stop, blank — eight minutes compressed to ninety seconds. Does not autoplay.',
+        'One full life cycle (birth, interaction, ageing, stop, blank), eight minutes compressed to ninety seconds. Does not autoplay.',
       heroLabel: 'machine hero photo · studio white sweep · B/W',
       heroDesc: 'The machine, full view',
       heroLive: '[stand-in] Lab 1-5 full assembly · live',
@@ -268,7 +268,7 @@ const SLOT_COPY: Record<string, { lab?: string; en: SlotCopy; zh: SlotCopy }> = 
       heroCap: '[stand-in] Lab 1-5 full assembly · hero photo to shoot',
     },
     zh: {
-      video: '一个完整生命周期：诞生、互动、衰老、停止、空白——约 8 分钟压缩到 90 秒。不自动播放。',
+      video: '一个完整生命周期（诞生、互动、衰老、停止、空白），约 8 分钟压缩到 90 秒。不自动播放。',
       heroLabel: '整机主照 · 影棚白弧扫 · 黑白',
       heroDesc: '整机全貌',
       heroLive: '[顶替] Lab 1-5 整机活件',

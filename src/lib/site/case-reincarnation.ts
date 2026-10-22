@@ -16,6 +16,8 @@
  * - 其余被稿改成构件的块（组成/五层/闭合/数字对比/系统逻辑/干扰/现状）= 稿内数据，
  *   它们是对线上段落的压缩重排，细节没丢；
  * - 中英各自成文，每个 Bi 两侧必须齐全（测试卡）。
+ * - 2026-10-22 按作者要求去 AI 味：组成/五层/闭合/现状/示意台说明里的分号拆成句号或逗号，
+ *   「已取消：」那个引出原因的冒号改逗号；人格参数表、预测表、技术参数是作者原文，一字不动。
  */
 
 export type Lang = 'zh' | 'en';
@@ -308,8 +310,8 @@ export const PARTS: readonly { n: string; name: Bi; x: Bi }[] = [
     n: '5',
     name: L('呼吸环', 'breathing rings'),
     x: L(
-      '五道会张合的环沿体轴排开，组成会呼吸的壳；呼吸的快慢、深浅和规律随人格与年龄变化。',
-      'Five expanding rings sit along the body and open and close together; breathing rate, depth and regularity change with personality and age.',
+      '五道会张合的环沿体轴排开，组成会呼吸的壳。呼吸的快慢、深浅和规律随人格与年龄变化。',
+      'Five expanding rings sit along the body and open and close together. Breathing rate, depth and regularity change with personality and age.',
     ),
   },
   {
@@ -324,8 +326,8 @@ export const PARTS: readonly { n: string; name: Bi; x: Bi }[] = [
     n: '2',
     name: L('触须', 'feelers'),
     x: L(
-      '弹性芯外套硅胶管，根部一只微型舵机；材料负责弯曲回弹，芯兼作触摸电极。',
-      'A springy core, a silicone sleeve and a micro servo at the base. The material bends and rebounds; the cores are also touch electrodes.',
+      '弹性芯外套硅胶管，根部一只微型舵机。材料负责弯曲回弹，芯兼作触摸电极。',
+      'A springy core, a silicone sleeve and a micro servo at the base. The material bends and rebounds, and the cores are also touch electrodes.',
     ),
   },
   {
@@ -344,7 +346,7 @@ export const LAYERS: readonly { name: Bi; x: Bi }[] = [
   },
   {
     name: L('内部状态', 'Internal state'),
-    x: L('回应随时间改变；四套人格的差异放在这里。', 'Responses change over time; the personalities differ here.'),
+    x: L('回应随时间改变，四套人格的差异放在这里。', 'Responses change over time, and the personalities differ here.'),
   },
   {
     name: L('关系塑造', 'Relationship'),
@@ -372,8 +374,8 @@ export const CLOSURE: readonly { id: string; k: Bi; f: string; x: Bi }[] = [
     k: L('自由度', 'Degrees of freedom'),
     f: 'M=2 → F=1',
     x: L(
-      '裸拱能呼吸也能横摆；中央一根杆加顶点竖直导轨，才剩下一个自由度。',
-      'The bare arch can breathe and sway; a central rod plus a vertical rail at the apex leaves a single degree of freedom.',
+      '裸拱能呼吸也能横摆。中央一根杆加顶点竖直导轨，才剩下一个自由度。',
+      'The bare arch can breathe and sway. A central rod plus a vertical rail at the apex leaves a single degree of freedom.',
     ),
   },
 ];
@@ -509,15 +511,15 @@ export const STATUS_ROWS: readonly {
     k: L('固件', 'Firmware'),
     tone: 'amber',
     tag: L('待补', 'To come'),
-    x: L('能否跑完一世；两套人格是否可切换。', 'Whether one full life runs; whether two personalities can be switched.'),
+    x: L('能否跑完一世，两套人格是否可切换。', 'Whether one full life runs, and whether two personalities can be switched.'),
   },
   {
     k: L('实验方案', 'Study design'),
     tone: 'green',
     tag: L('已定', 'Settled'),
     x: L(
-      '四世一场约 37 分钟；事件锁定的皮肤电反应（SCR）为主要生理指标，五个时间窗；行为编码用 ELAN；事后做线索回忆访谈。死亡前后心率变异性的比较已取消：所需时间窗远长于一次死亡事件，样本量也不够。',
-      'Four lives per session, about 37 minutes; event-locked skin conductance (SCR) across five time windows; behavioural coding in ELAN; a cued-recall interview afterwards. The HRV comparison across deaths was dropped: it needs a much longer window than a death lasts, and the sample is too small.',
+      '四世一场约 37 分钟。主要生理指标是事件锁定的皮肤电反应（SCR），分五个时间窗。行为编码用 ELAN，事后做线索回忆访谈。死亡前后心率变异性的比较已取消，所需时间窗远长于一次死亡事件，样本量也不够。',
+      'Four lives per session, about 37 minutes. The main physiological measure is event-locked skin conductance (SCR) across five time windows. Behaviour is coded in ELAN, and a cued-recall interview follows. The HRV comparison across deaths was dropped because it needs a much longer window than a death lasts and the sample is too small.',
     ),
     cite: { date: '2026-07-07', anchor: 'log-2026-07-07-2' },
   },
@@ -737,7 +739,7 @@ export const BLOCK_UI: Record<Lang, BlockUi> = {
     pzPick: '选择人格',
     touch: '轻触它',
     param: '参数',
-    pzNote: '呼吸周期与幅度取自参数表；延迟与强度按表中定性描述映射成示意值。实拍对比（N06 · 两套人格的呼吸）待拍摄。',
+    pzNote: '呼吸周期与幅度取自参数表，延迟与强度按表中定性描述映射成示意值。实拍对比（N06 · 两套人格的呼吸）待拍摄。',
     pzIdle: '等你碰它',
     pzRead: (p, d) => `呼吸周期 ${p} · 幅度 ${d}`,
     pzResp: (l, s) => `上次回应 · 延迟 ${l} s · 强度 ${s}`,
@@ -750,7 +752,7 @@ export const BLOCK_UI: Record<Lang, BlockUi> = {
     agKicker: '衰老曲线 · 趋势示意',
     agLeft: '衰老开始',
     agRight: '空白 → 下一世',
-    agNote: '向下滚动，它会衰老。数值待作者提供，页面只画趋势；切换人格可看四种死亡方式。',
+    agNote: '向下滚动，它会衰老。数值待作者提供，页面只画趋势。切换人格可看四种死亡方式。',
     sysTitle: '系统逻辑',
     sysSub: '传感 → 事件词表 → 人格参数 → 行为杠杆 → 执行器',
     prKicker: '预测 · 写于 2026-04-03 · 尚无数据',
@@ -768,14 +770,14 @@ export const BLOCK_UI: Record<Lang, BlockUi> = {
     lifeTitle: 'Life-cycle state diagram',
     lifeScale: 'one life ≈ 8 min · here 1 s ≈ 1 min',
     lifeNote:
-      'Four lives per session, about 37 minutes. The order of personalities is counterbalanced with a Latin square; shown here as A → B → C → D.',
+      'Four lives per session, about 37 minutes. The order of personalities is counterbalanced with a Latin square and shown here as A → B → C → D.',
     pzKicker: 'Illustrative bench · not measured',
     pzTitle: 'One touch, four answers',
     pzPick: 'Pick a personality',
     touch: 'Touch it',
     param: 'Parameter',
     pzNote:
-      'Breath period and depth come from the parameter table; latency and strength are mapped from its qualitative descriptions. The filmed comparison (N06) is still to shoot.',
+      'Breath period and depth come from the parameter table, and latency and strength are mapped from its qualitative descriptions. The filmed comparison (N06) is still to shoot.',
     pzIdle: 'waiting for your touch',
     pzRead: (p, d) => `breath ${p} · depth ${d}`,
     pzResp: (l, s) => `last answer · latency ${l} s · strength ${s}`,
@@ -789,7 +791,7 @@ export const BLOCK_UI: Record<Lang, BlockUi> = {
     agLeft: 'ageing begins',
     agRight: 'blank → next life',
     agNote:
-      'Scroll and it ages. Values are to come from the author; the page draws the trend only. Switch personality to see four ways of dying.',
+      'Scroll and it ages. Values are to come from the author, so the page draws the trend only. Switch personality to see four ways of dying.',
     sysTitle: 'System logic',
     sysSub: 'sensing → event vocabulary → personality → levers → actuators',
     prKicker: 'Predictions · written 2026-04-03 · no data yet',
