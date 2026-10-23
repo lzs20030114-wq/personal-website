@@ -34,7 +34,7 @@ export function SiteNav() {
       <Link href="/#work" {...current(onHome)}>
         {zh ? '作品' : 'Work'}
       </Link>
-      <Link href="/lab" {...current(pathname.startsWith('/lab'))}>
+      <Link href="/lab" prefetch={false} {...current(pathname.startsWith('/lab'))}>
         {zh ? '实验室' : 'Lab'}
       </Link>
       <Link href="/archive" {...current(onLog)}>

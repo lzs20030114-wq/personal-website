@@ -452,11 +452,11 @@ export const READINGS = [
 ] as const satisfies readonly { key: Reading; zh: string; en: string }[];
 
 export interface Catchment {
-  reading: Reading;
-  /** 每个单元读的格子下标 */
-  cellsOf: Int32Array[];
+  readonly reading: Reading;
+  /** 每个单元读的格子下标。只读接口允许同几何的场共用索引；底层仍是紧凑整数数组。 */
+  readonly cellsOf: readonly (ArrayLike<number> & Iterable<number>)[];
   /** 按格读法：每格归哪个单元（脚下读法下为 null） */
-  ownerOf: Int16Array | null;
+  readonly ownerOf: (ArrayLike<number> & Iterable<number>) | null;
 }
 
 export function buildCatchment(layout: PlanLayout, field: TraceField, reading: Reading): Catchment {

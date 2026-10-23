@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CROWD, CrowdSim, makeRng } from './crowd-plan';
-import { PLAN, dwellInput, keepOut, nearestCrossing, nearestUnit, planLayout } from './unit-activation';
+import { PLAN, dwellInput, keepOut, nearestCrossing, nearestUnit, planLayout, seededRng } from './unit-activation';
 
 /**
  * Lab.15 几个人在场——守门。机制全部引用 unit-activation（那边守门已卡），这里只卡新增的：
@@ -64,6 +64,17 @@ describe('crowd-plan · 拖', () => {
 });
 
 describe('crowd-plan · 自走', () => {
+  it('复用随机工厂仍逐位同序，各次创建的流互不推进', () => {
+    for (const seed of [0, 3, -1, 2 ** 32 - 1]) {
+      const first = makeRng(seed);
+      const independent = makeRng(seed);
+      const reference = seededRng(seed);
+      const expected = Array.from({ length: 1000 }, () => reference());
+      expect(Array.from({ length: 1000 }, () => first())).toEqual(expected);
+      expect(Array.from({ length: 1000 }, () => independent())).toEqual(expected);
+    }
+  });
+
   it('两分钟里一直在房间里、走过路、也站过；同种子逐位可复现', () => {
     const run = () => {
       const s = new CrowdSim({ seed: 7 });

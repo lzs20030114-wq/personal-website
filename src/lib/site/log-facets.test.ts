@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createLogEntryId } from './log-identity';
 import { getLogEntries } from './log';
 import {
   aspectFacets,
@@ -217,16 +218,15 @@ describe('条目锚点', () => {
 
   /**
    * 这条是锚点存在的理由：LogList 内部那个展开态 id 用的是全池下标，发一条更新的
-   * 日志就会把旧条目的下标推后一位、已发出去的链接指到别的条目上。锚点必须不受
-   * 「以后又发了几条日志」影响——同日新增按既定规矩追加在后，所以只要序号在全池上
-   * 现算，已有锚点就不动。
+   * 日志就会把旧条目的下标推后一位、已发出去的链接指到别的条目上。永久身份必须不受
+   * 新增位置影响；这里故意把同日新条目放到最前，不能再依赖追加顺序维持旧链接。
    */
   it('以后再发日志，已有锚点不变（这正是不用全池下标的原因）', () => {
     const before = new Map(rows.map((r) => [r.entry, r.anchor]));
     const grown = withAnchors([
-      { ...ENTRIES[0], date: '2026-12-01' },
+      { ...ENTRIES[0], date: '2026-12-01', id: createLogEntryId('2026-12-01') },
+      { ...ENTRIES[0], date: '2026-07-10', id: createLogEntryId('2026-07-10') },
       ...ENTRIES,
-      { ...ENTRIES[0], date: '2026-07-10' }, // 同日追加在后
     ]);
     for (const { entry, anchor } of grown) {
       const was = before.get(entry);

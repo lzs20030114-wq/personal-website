@@ -7,8 +7,9 @@ import {
   type LogEntry,
   type LogImageBlock,
 } from '../../src/lib/site/log-schema';
-import { LOG_IMAGE_URL, validateEntries } from '../../src/lib/studio/publish';
+import { imageFileName, LOG_IMAGE_URL, validateEntries } from '../../src/lib/studio/publish';
 import { aspectOptions, bucketOptions } from '../../src/lib/studio/vocab';
+import { createLogEntryId, ensureLogEntryIds, restoreLogEntryIds } from '../../src/lib/site/log-identity';
 import { logoutAction } from '../../app/studio/actions';
 import { EntryForm } from './EntryForm';
 import { prepareImage, type PreparedImage } from './image';
@@ -37,8 +38,9 @@ function today(): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
-function blankEntry(): LogEntry {
-  return { date: today(), lead: { en: '', zh: '' }, body: { en: '', zh: '' }, tags: [] };
+function blankEntry(usedIds: Iterable<string>): LogEntry {
+  const date = today();
+  return { id: createLogEntryId(date, usedIds), date, lead: { en: '', zh: '' }, body: { en: '', zh: '' }, tags: [] };
 }
 
 type Draft = {
@@ -61,10 +63,11 @@ export function StudioEditor({
   target: string;
   existingImages: string[];
 }) {
+  const initialPool = useMemo(() => ensureLogEntryIds(initialEntries), [initialEntries]);
   const [items, setItems] = useState<Item[]>(() =>
-    initialEntries.map((entry) => ({ id: nextId(), entry })),
+    initialPool.map((entry) => ({ id: nextId(), entry })),
   );
-  const [baseline, setBaseline] = useState(() => serializeEntries(initialEntries));
+  const [baseline, setBaseline] = useState(() => serializeEntries(initialPool));
   const [baseSha, setBaseSha] = useState(initialSha);
   const [selected, setSelected] = useState<string | null>(null);
   const [pending, setPending] = useState<Record<string, PreparedImage>>({});
@@ -74,6 +77,10 @@ export function StudioEditor({
   const [draft, setDraft] = useState<Draft | null>(null);
   const [draftTooBig, setDraftTooBig] = useState(false);
   const restored = useRef(false);
+  // 挂载时读草稿与自动保存属于同一轮 effect；ref 让后者立即知道尚待作者选择。
+  const draftDecisionPending = useRef(false);
+  // 文件名的占用跨渲染、同批异步上传和发布保留，不能只看那一帧的 pending。
+  const reservedImageNames = useRef(new Set(existingImages));
 
   const entries = useMemo(() => items.map((i) => i.entry), [items]);
   const dirty = serializeEntries(entries) !== baseline;
@@ -89,16 +96,19 @@ export function StudioEditor({
       const raw = localStorage.getItem(DRAFT_KEY);
       if (raw === null) return;
       const parsed = JSON.parse(raw) as Draft;
-      if (serializeEntries(parsed.entries) !== serializeEntries(initialEntries)) setDraft(parsed);
-      else localStorage.removeItem(DRAFT_KEY);
+      if (serializeEntries(parsed.entries) !== serializeEntries(initialPool)) {
+        draftDecisionPending.current = true;
+        setDraft(parsed);
+      } else localStorage.removeItem(DRAFT_KEY);
     } catch {
       /* 草稿读坏了不该让编辑器打不开 */
     }
-  }, [initialEntries]);
+  }, [initialPool]);
 
   /* 自动存草稿。图片是 base64，几张就能顶到 localStorage 的 5MB 配额上限——
      撞上了就退回「只存文字」，并在界面上说清楚图片没进草稿。 */
   useEffect(() => {
+    if (draftDecisionPending.current) return;
     if (!dirty && Object.keys(pending).length === 0) {
       try {
         localStorage.removeItem(DRAFT_KEY);
@@ -121,13 +131,9 @@ export function StudioEditor({
         /* 连文字都存不下（隐私模式等）——放弃草稿功能，不影响编辑 */
       }
     }
-  }, [entries, pending, dirty, baseSha]);
+  }, [entries, pending, dirty, baseSha, draft]);
 
   const current = items.find((i) => i.id === selected) ?? null;
-  const takenImageNames = useMemo(
-    () => [...existingImages, ...Object.keys(pending)],
-    [existingImages, pending],
-  );
 
   /** 尚未提交的图在 /log/ 下还取不到，预览换成本地 data URL。 */
   const resolve = (src: string) => pending[src.slice(LOG_IMAGE_URL.length)]?.dataUrl ?? src;
@@ -151,7 +157,7 @@ export function StudioEditor({
   }
 
   function addEntry() {
-    const item = { id: nextId(), entry: blankEntry() };
+    const item = { id: nextId(), entry: blankEntry(entries.flatMap((entry) => entry.id ? [entry.id] : [])) };
     // 日期倒序由 shown / sortEntries 负责；同日新条目排在末尾，避免挤动既有日志锚点。
     setItems((prev) => [...prev, item]);
     setSelected(item.id);
@@ -159,7 +165,14 @@ export function StudioEditor({
   }
 
   async function pickImage(file: File, date: string): Promise<LogImageBlock> {
-    const prepared = await prepareImage(file, date, takenImageNames);
+    const image = await prepareImage(file, date, [...reservedImageNames.current]);
+    // 解码/压缩期间其他图可能已完成。完成后同步分配并占用名字，不能沿用旧快照。
+    const ext = image.name.slice(image.name.lastIndexOf('.') + 1);
+    const prepared = {
+      ...image,
+      name: imageFileName(date, file.name, ext, reservedImageNames.current),
+    };
+    reservedImageNames.current.add(prepared.name);
     setPending((prev) => ({ ...prev, [prepared.name]: prepared }));
     return {
       kind: 'image',
@@ -185,6 +198,7 @@ export function StudioEditor({
       const images = Object.values(pending)
         .filter((img) => referenced.has(img.name))
         .map((img) => ({ name: img.name, dataBase64: img.base64 }));
+      const submittedNames = new Set(images.map((image) => image.name));
 
       const res = await fetch('/api/studio/publish', {
         method: 'POST',
@@ -204,12 +218,11 @@ export function StudioEditor({
       }
       setBaseline(serializeEntries(entries));
       setBaseSha(body.entriesSha ?? null);
-      setPending({});
-      try {
-        localStorage.removeItem(DRAFT_KEY);
-      } catch {
-        /* 无所谓 */
-      }
+      // 只清理实际提交且未被替换的图片，保留后来新增或本次尚未引用的图。
+      setPending((current) => Object.fromEntries(
+        Object.entries(current).filter(([name, image]) => !submittedNames.has(name) || pending[name] !== image),
+      ));
+      // 草稿由上面的 effect 按最新 entries/pending 清理或续存，不能在这里删除新改动。
       setResult({
         ok: true,
         message:
@@ -273,8 +286,18 @@ export function StudioEditor({
               type="button"
               className="studio-mini"
               onClick={() => {
-                setItems(draft.entries.map((entry) => ({ id: nextId(), entry })));
+                let recovered: LogEntry[];
+                try {
+                  recovered = restoreLogEntryIds(draft.entries, initialPool);
+                } catch (err) {
+                  setResult({ ok: false, message: err instanceof Error ? err.message : String(err) });
+                  return;
+                }
+                setItems(recovered.map((entry) => ({ id: nextId(), entry })));
                 setPending(Object.fromEntries(draft.images.map((img) => [img.name, img])));
+                setBaseSha(draft.baseSha);
+                for (const image of draft.images) reservedImageNames.current.add(image.name);
+                draftDecisionPending.current = false;
                 setSelected(null);
                 setDraft(null);
               }}
@@ -290,6 +313,7 @@ export function StudioEditor({
                 } catch {
                   /* 无所谓 */
                 }
+                draftDecisionPending.current = false;
                 setDraft(null);
               }}
             >

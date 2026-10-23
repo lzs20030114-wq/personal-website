@@ -56,7 +56,7 @@ export function DarkHeader({ active, readbar = false }: { active: 'work' | 'lab'
           <nav className="ld-nav" aria-label={zh ? '主导航' : 'Primary'}>
             <Link href="/#work" {...cur('work')}>{zh ? '作品' : 'Work'}</Link>
             <Link href="/about">{zh ? '关于' : 'About'}</Link>
-            <Link href="/lab" {...cur('lab')}>{zh ? '实验室' : 'Lab'}</Link>
+            <Link href="/lab" prefetch={false} {...cur('lab')}>{zh ? '实验室' : 'Lab'}</Link>
             <Link href="/archive">{zh ? '日志' : 'Log'}</Link>
           </nav>
           <div className="ld-lang" role="group" aria-label={zh ? '语言' : 'Language'}>
@@ -104,7 +104,7 @@ export function CaseFooter({ labelEn, labelZh }: { labelEn: string; labelZh: str
         <span>{zh ? labelZh : labelEn}</span>
         <span className="ld-footer__links">
           <Link href="/#work">{zh ? '作品 ↗' : 'Work ↗'}</Link>
-          <Link href="/lab">{zh ? '实验室 ↗' : 'Lab ↗'}</Link>
+          <Link href="/lab" prefetch={false}>{zh ? '实验室 ↗' : 'Lab ↗'}</Link>
           <Link href="/privacy">{zh ? '访客隐私' : 'Visitor privacy'}</Link>
           <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}>{zh ? '回到顶部 ↑' : 'Top ↑'}</button>
         </span>

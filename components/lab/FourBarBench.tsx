@@ -132,7 +132,12 @@ export function FourBarBench({ grid = true, spin = true, active = true, onLight 
       render();
       const B = solver.nodes[N.B];
       const deg = ((Math.atan2(B.y - CRANK.cy, B.x - CRANK.cx) * 180) / Math.PI + 360) % 360;
-      setHud({ theta: deg, omega: ctl.omegaNow, err: solver.maxError(), mode: ctl.mode });
+      const omega = ctl.omegaNow;
+      const err = solver.maxError();
+      const mode = ctl.mode;
+      setHud((h) => h.theta.toFixed(1) === deg.toFixed(1) && h.omega.toFixed(2) === omega.toFixed(2)
+        && h.err.toFixed(3) === err.toFixed(3) && h.mode === mode
+        ? h : { theta: deg, omega, err, mode });
     };
 
     render();

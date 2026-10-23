@@ -1,5 +1,6 @@
 [
   {
+    "id": "log-2026-10-08-1",
     "date": "2026-10-08",
     "lead": {
       "en": "Redesigned the big tentacle’s motion so a startle, a response and an idle gesture read as clearly different actions.",
@@ -15,6 +16,7 @@
     ]
   },
   {
+    "id": "log-2026-10-08-2",
     "date": "2026-10-08",
     "lead": {
       "en": "Added a reaching chain to the new motion: the tentacle keeps pace with the hand, closes in, wraps it and holds it in time with its breathing.",
@@ -30,6 +32,7 @@
     ]
   },
   {
+    "id": "log-2026-10-07-1",
     "date": "2026-10-07",
     "lead": {
       "en": "Built the behaviour engine that turns the personality table into a whole life cycle, and gave it its own bench, Lab 1-6.",
@@ -45,6 +48,7 @@
     ]
   },
   {
+    "id": "log-2026-10-07-2",
     "date": "2026-10-07",
     "lead": {
       "en": "Made the mouse pointer act as a visitor’s hand in Lab 1-6: the machine notices it, then reaches for it, turns away, or looks elsewhere.",
@@ -60,6 +64,7 @@
     ]
   },
   {
+    "id": "log-2026-10-07-3",
     "date": "2026-10-07",
     "lead": {
       "en": "Changed the space from ratifying traces to lowering units for a purpose, after the trace-following version lost to fixed shelves in the comparison.",
@@ -75,6 +80,7 @@
     ]
   },
   {
+    "id": "log-2026-10-06-1",
     "date": "2026-10-06",
     "lead": {
       "en": "Unlocked bond release and showed with a probe that the fabric itself keeps no memory, so the space's memory now lives in the trace layer.",
@@ -90,6 +96,7 @@
     ]
   },
   {
+    "id": "log-2026-09-30-1",
     "date": "2026-09-30",
     "lead": {
       "en": "Added adjustable connection depth without shrinking the upper and lower platforms.",
@@ -105,6 +112,7 @@
     ]
   },
   {
+    "id": "log-2026-09-30-2",
     "date": "2026-09-30",
     "lead": {
       "en": "Reused validated forming states between builds instead of solving them all again.",
@@ -120,6 +128,7 @@
     ]
   },
   {
+    "id": "log-2026-09-29-1",
     "date": "2026-09-29",
     "lead": {
       "en": "Assembled the multilayer form from distinct strips driven by real section simulations.",
@@ -135,6 +144,7 @@
     ]
   },
   {
+    "id": "log-2026-09-29-2",
     "date": "2026-09-29",
     "lead": {
       "en": "Reviewed recent sleep research to compare methods, tools and deployment questions.",
@@ -150,6 +160,7 @@
     ]
   },
   {
+    "id": "log-2026-09-29-3",
     "date": "2026-09-29",
     "lead": {
       "en": "Reworked the Lab layout so models and controls fit together on screen.",
@@ -223,6 +234,7 @@
     ]
   },
   {
+    "id": "log-2026-09-29-4",
     "date": "2026-09-29",
     "lead": {
       "en": "Adjusted the home-page turning response and connected the Lab catalog to direct entries.",
@@ -238,6 +250,7 @@
     ]
   },
   {
+    "id": "log-2026-09-28-1",
     "date": "2026-09-28",
     "lead": {
       "en": "Built a target model for independently tilted, incomplete platform layers.",
@@ -253,6 +266,7 @@
     ]
   },
   {
+    "id": "log-2026-09-28-2",
     "date": "2026-09-28",
     "lead": {
       "en": "Solved real two-level and thick-platform sections for the multilayer target.",
@@ -317,6 +331,7 @@
     ]
   },
   {
+    "id": "log-2026-09-28-3",
     "date": "2026-09-28",
     "lead": {
       "en": "Made skipping formation restore a saved terminal state while keeping the camera responsive.",
@@ -332,6 +347,7 @@
     ]
   },
   {
+    "id": "log-2026-09-27-1",
     "date": "2026-09-27",
     "lead": {
       "en": "Clarified that the emerging passages and platforms are intended for cats.",
@@ -347,6 +363,7 @@
     ]
   },
   {
+    "id": "log-2026-09-27-2",
     "date": "2026-09-27",
     "lead": {
       "en": "Made a ring with the same two-level platform section all the way around.",
@@ -362,6 +379,7 @@
     ]
   },
   {
+    "id": "log-2026-09-27-3",
     "date": "2026-09-27",
     "lead": {
       "en": "Reopened Project III around the broader future sleep environment.",
@@ -377,6 +395,7 @@
     ]
   },
   {
+    "id": "log-2026-09-27-4",
     "date": "2026-09-27",
     "lead": {
       "en": "Added a home-page Lab catalog with the same hierarchy as the Lab page.",
@@ -392,6 +411,7 @@
     ]
   },
   {
+    "id": "log-2026-09-21-1",
     "date": "2026-09-21",
     "lead": {
       "en": "Fixed the fabric bridges so they connect platforms without closing the cavity.",
@@ -407,6 +427,7 @@
     ]
   },
   {
+    "id": "log-2026-09-20-1",
     "date": "2026-09-20",
     "lead": {
       "en": "Defined unit combinations through adjoining platform heights rather than swapping whole shapes.",
@@ -422,6 +443,7 @@
     ]
   },
   {
+    "id": "log-2026-09-17-1",
     "date": "2026-09-17",
     "lead": {
       "en": "Outlined a rubber-sheet experiment to test whether preprocessing can encode the form.",
@@ -437,6 +459,7 @@
     ]
   },
   {
+    "id": "log-2026-09-13-1",
     "date": "2026-09-13",
     "lead": {
       "en": "Changed Lab numbering to show which project each bench belongs to.",
@@ -452,6 +475,7 @@
     ]
   },
   {
+    "id": "log-2026-09-13-2",
     "date": "2026-09-13",
     "lead": {
       "en": "Restructured the Machine case study around the author’s ten-part argument.",
@@ -467,6 +491,7 @@
     ]
   },
   {
+    "id": "log-2026-09-10-1",
     "date": "2026-09-10",
     "lead": {
       "en": "Clarified that loss and death serve the study rather than define its entire subject.",
@@ -482,6 +507,7 @@
     ]
   },
   {
+    "id": "log-2026-09-09-1",
     "date": "2026-09-09",
     "lead": {
       "en": "Revised the experiment around differences between successive lives.",
@@ -497,6 +523,7 @@
     ]
   },
   {
+    "id": "log-2026-09-05-1",
     "date": "2026-09-05",
     "lead": {
       "en": "Gave the person on the plan bench a facing, a body and a wandering gaze, so structure now forms in front of them, never on top of them.",
@@ -598,6 +625,7 @@
     ]
   },
   {
+    "id": "log-2026-09-04-1",
     "date": "2026-09-04",
     "lead": {
       "en": "Opened the first bench with a behaviour layer: one person walks through the room in plan, and the units whose floor has been occupied long enough form.",
@@ -671,6 +699,7 @@
     ]
   },
   {
+    "id": "log-2026-09-04-2",
     "date": "2026-09-04",
     "lead": {
       "en": "Made the plan bench something you can actually handle: place people, drag them around, watch several at once and see the units form live.",
@@ -730,6 +759,7 @@
     ]
   },
   {
+    "id": "log-2026-09-03-1",
     "date": "2026-09-03",
     "lead": {
       "en": "Named the ring platform a \"unit\" and opened a new bench to study how two, three, four or nine of them can relate in spacing and height.",
@@ -789,6 +819,7 @@
     ]
   },
   {
+    "id": "log-2026-09-03-2",
     "date": "2026-09-03",
     "lead": {
       "en": "Landed the five decisions on the unit-relations bench, adding staggered contraction and a fabric web across touching seams.",
@@ -848,6 +879,7 @@
     ]
   },
   {
+    "id": "log-2026-09-02-1",
     "date": "2026-09-02",
     "lead": {
       "en": "Reworked the square ring so its form changes once around the perimeter.",
@@ -863,6 +895,7 @@
     ]
   },
   {
+    "id": "log-2026-08-30-1",
     "date": "2026-08-30",
     "lead": {
       "en": "Wrapped the splitting series around a ring and corrected its height alignment.",
@@ -878,6 +911,7 @@
     ]
   },
   {
+    "id": "log-2026-08-29-1",
     "date": "2026-08-29",
     "lead": {
       "en": "Completed a forming series from a solid box to two separated platforms.",
@@ -893,6 +927,7 @@
     ]
   },
   {
+    "id": "log-2026-08-27-1",
     "date": "2026-08-27",
     "lead": {
       "en": "Reframed the next form as splitting one solid box into two platforms.",
@@ -908,6 +943,7 @@
     ]
   },
   {
+    "id": "log-2026-08-26-1",
     "date": "2026-08-26",
     "lead": {
       "en": "Combined two forming structures on one strip.",
@@ -923,6 +959,7 @@
     ]
   },
   {
+    "id": "log-2026-08-25-1",
     "date": "2026-08-25",
     "lead": {
       "en": "Rescaled the unit array to a room and kept the person outside the units.",
@@ -938,6 +975,7 @@
     ]
   },
   {
+    "id": "log-2026-08-25-2",
     "date": "2026-08-25",
     "lead": {
       "en": "Related the hotel cases to existing personas and drafted their travel journeys.",
@@ -953,6 +991,7 @@
     ]
   },
   {
+    "id": "log-2026-08-24-1",
     "date": "2026-08-24",
     "lead": {
       "en": "Recorded the travel of all five rings before sizing the rack drive.",
@@ -990,6 +1029,7 @@
     ]
   },
   {
+    "id": "log-2026-08-23-1",
     "date": "2026-08-23",
     "lead": {
       "en": "Returned to a rack drive after the central rod kept binding.",
@@ -1005,6 +1045,7 @@
     ]
   },
   {
+    "id": "log-2026-08-23-2",
     "date": "2026-08-23",
     "lead": {
       "en": "Arranged the forming strips around a cylindrical ring.",
@@ -1020,6 +1061,7 @@
     ]
   },
   {
+    "id": "log-2026-08-22-1",
     "date": "2026-08-22",
     "lead": {
       "en": "Aligned the form series by redistributing material rather than shifting the rendered image.",
@@ -1035,6 +1077,7 @@
     ]
   },
   {
+    "id": "log-2026-08-21-1",
     "date": "2026-08-21",
     "lead": {
       "en": "Pruned the hotel AI comparison when the claimed service could not be verified.",
@@ -1050,6 +1093,7 @@
     ]
   },
   {
+    "id": "log-2026-08-20-1",
     "date": "2026-08-20",
     "lead": {
       "en": "Rebuilt the form series after its first transition jumped between shapes.",
@@ -1065,6 +1109,7 @@
     ]
   },
   {
+    "id": "log-2026-08-20-2",
     "date": "2026-08-20",
     "lead": {
       "en": "Redirected the hotel review toward commercially deployed AI for sleep.",
@@ -1080,6 +1125,7 @@
     ]
   },
   {
+    "id": "log-2026-08-19-1",
     "date": "2026-08-19",
     "lead": {
       "en": "Corrected the square skin form and extended the sections into 3D strips.",
@@ -1095,6 +1141,7 @@
     ]
   },
   {
+    "id": "log-2026-08-18-1",
     "date": "2026-08-18",
     "lead": {
       "en": "Brought the skin simulation into the website and checked it against the Python version.",
@@ -1110,6 +1157,7 @@
     ]
   },
   {
+    "id": "log-2026-08-18-2",
     "date": "2026-08-18",
     "lead": {
       "en": "Reduced the travel interview guide to open questions about sleep.",
@@ -1125,6 +1173,7 @@
     ]
   },
   {
+    "id": "log-2026-08-18-3",
     "date": "2026-08-18",
     "lead": {
       "en": "Separated the Lab directory by project as the skin benches joined the site.",
@@ -1140,6 +1189,7 @@
     ]
   },
   {
+    "id": "log-2026-08-17-1",
     "date": "2026-08-17",
     "lead": {
       "en": "Moved from a hanging net to a preprocessed skin that forms when its core contracts.",
@@ -1155,6 +1205,7 @@
     ]
   },
   {
+    "id": "log-2026-08-17-2",
     "date": "2026-08-17",
     "lead": {
       "en": "Expanded the hotel competitor review and removed weakly related cases.",
@@ -1170,6 +1221,7 @@
     ]
   },
   {
+    "id": "log-2026-08-15-1",
     "date": "2026-08-15",
     "lead": {
       "en": "Considered waking up as a possible research moment and discussed the required depth.",
@@ -1185,6 +1237,7 @@
     ]
   },
   {
+    "id": "log-2026-08-14-1",
     "date": "2026-08-14",
     "lead": {
       "en": "Archived the updated five-ring CAD drawing without changing the live bench.",
@@ -1200,6 +1253,7 @@
     ]
   },
   {
+    "id": "log-2026-08-14-2",
     "date": "2026-08-14",
     "lead": {
       "en": "Opened a separate discussion on developing Project III from the sleep research.",
@@ -1215,6 +1269,7 @@
     ]
   },
   {
+    "id": "log-2026-08-14-3",
     "date": "2026-08-14",
     "lead": {
       "en": "Published the supplied Project II text in the case-study structure.",
@@ -1230,6 +1285,7 @@
     ]
   },
   {
+    "id": "log-2026-08-13-1",
     "date": "2026-08-13",
     "lead": {
       "en": "Modeled paired drive plates and compared reinforcement options.",
@@ -1275,6 +1331,7 @@
     ]
   },
   {
+    "id": "log-2026-08-13-2",
     "date": "2026-08-13",
     "lead": {
       "en": "Started a focused review of sleep during hotel stays and business travel.",
@@ -1290,6 +1347,7 @@
     ]
   },
   {
+    "id": "log-2026-08-10-1",
     "date": "2026-08-10",
     "lead": {
       "en": "Traced poor pushrod motion to its offset from the guide.",
@@ -1305,6 +1363,7 @@
     ]
   },
   {
+    "id": "log-2026-08-10-2",
     "date": "2026-08-10",
     "lead": {
       "en": "Explored suspended structures at different heights.",
@@ -1320,6 +1379,7 @@
     ]
   },
   {
+    "id": "log-2026-08-10-3",
     "date": "2026-08-10",
     "lead": {
       "en": "Organized the existing human–cat behaviors into a nine-cell matrix.",
@@ -1335,6 +1395,7 @@
     ]
   },
   {
+    "id": "log-2026-08-09-1",
     "date": "2026-08-09",
     "lead": {
       "en": "Rechecked the reinforced shaft with the motor and mounting loads included.",
@@ -1350,6 +1411,7 @@
     ]
   },
   {
+    "id": "log-2026-08-06-1",
     "date": "2026-08-06",
     "lead": {
       "en": "Reworked the base model and asked for analysis of the actual assembly.",
@@ -1365,6 +1427,7 @@
     ]
   },
   {
+    "id": "log-2026-08-06-2",
     "date": "2026-08-06",
     "lead": {
       "en": "Restricted the working simulation to interactions on a minute scale.",
@@ -1380,6 +1443,7 @@
     ]
   },
   {
+    "id": "log-2026-08-04-1",
     "date": "2026-08-04",
     "lead": {
       "en": "Reconsidered the narrative after finding the project difficult to explain briefly.",
@@ -1395,6 +1459,7 @@
     ]
   },
   {
+    "id": "log-2026-08-04-2",
     "date": "2026-08-04",
     "lead": {
       "en": "Explored a ceiling-mounted folding medium for the behavioral study.",
@@ -1410,6 +1475,7 @@
     ]
   },
   {
+    "id": "log-2026-08-02-1",
     "date": "2026-08-02",
     "lead": {
       "en": "Reconsidered the rotating base because the machine was too light for the bearing preload.",
@@ -1425,6 +1491,7 @@
     ]
   },
   {
+    "id": "log-2026-07-31-1",
     "date": "2026-07-31",
     "lead": {
       "en": "Ran a finite-element check on the chassis frames: over-built for strength, and the display stand matters far more than the thickness.",
@@ -1484,6 +1551,7 @@
     ]
   },
   {
+    "id": "log-2026-07-31-2",
     "date": "2026-07-31",
     "lead": {
       "en": "Saved the improved base model as a dated reference in the repository.",
@@ -1499,6 +1567,7 @@
     ]
   },
   {
+    "id": "log-2026-07-31-3",
     "date": "2026-07-31",
     "lead": {
       "en": "Rewrote the work logs as one-sentence leads and short bullet points.",
@@ -1514,6 +1583,7 @@
     ]
   },
   {
+    "id": "log-2026-07-30-1",
     "date": "2026-07-30",
     "lead": {
       "en": "Set the rule that historical log figures must come from the original work.",
@@ -1529,6 +1599,7 @@
     ]
   },
   {
+    "id": "log-2026-07-29-1",
     "date": "2026-07-29",
     "lead": {
       "en": "Added kittens as a separate agent type, which broke a rule I had already written for adult cats.",
@@ -1630,6 +1701,7 @@
     ]
   },
   {
+    "id": "log-2026-07-29-2",
     "date": "2026-07-29",
     "lead": {
       "en": "Tested the assumption that breed is what makes one dog or cat behave differently from another, and dropped it.",
@@ -1687,6 +1759,7 @@
     ]
   },
   {
+    "id": "log-2026-07-29-3",
     "date": "2026-07-29",
     "lead": {
       "en": "Investigated the ring getting stuck at its widest opening.",
@@ -1702,6 +1775,7 @@
     ]
   },
   {
+    "id": "log-2026-07-29-4",
     "date": "2026-07-29",
     "lead": {
       "en": "Added project labels and a separate artifact column to each log entry.",
@@ -1717,6 +1791,7 @@
     ]
   },
   {
+    "id": "log-2026-07-29-5",
     "date": "2026-07-29",
     "lead": {
       "en": "Preserved the live mechanism’s working state when entering its case study.",
@@ -1732,6 +1807,7 @@
     ]
   },
   {
+    "id": "log-2026-07-29-6",
     "date": "2026-07-29",
     "lead": {
       "en": "Gave every home-page project its own destination page.",
@@ -1747,6 +1823,7 @@
     ]
   },
   {
+    "id": "log-2026-07-28-1",
     "date": "2026-07-28",
     "lead": {
       "en": "Searched exhaustively for how close a person can get to a cat before it moves away, and confirmed nobody has measured it.",
@@ -1795,6 +1872,7 @@
     ]
   },
   {
+    "id": "log-2026-07-28-2",
     "date": "2026-07-28",
     "lead": {
       "en": "Filled the first case study and corrected its layout against the saved draft.",
@@ -1810,6 +1888,7 @@
     ]
   },
   {
+    "id": "log-2026-07-28-3",
     "date": "2026-07-28",
     "lead": {
       "en": "Added a language switch for the project case studies.",
@@ -1825,6 +1904,7 @@
     ]
   },
   {
+    "id": "log-2026-07-28-4",
     "date": "2026-07-28",
     "lead": {
       "en": "Added a self-service editor for creating and revising work logs.",
@@ -1840,6 +1920,7 @@
     ]
   },
   {
+    "id": "log-2026-07-27-1",
     "date": "2026-07-27",
     "lead": {
       "en": "Rewrote the human agents after realising I had modelled them as particles that only react to crowding.",
@@ -1908,6 +1989,7 @@
     ]
   },
   {
+    "id": "log-2026-07-27-2",
     "date": "2026-07-27",
     "lead": {
       "en": "Split the cost of occupying a space into two kinds, after writing a version where only humans ever paid.",
@@ -1995,6 +2077,7 @@
     ]
   },
   {
+    "id": "log-2026-07-27-3",
     "date": "2026-07-27",
     "lead": {
       "en": "Cut the simulation down to a single minute-scale clock, which cost the project its entire multi-day storyline.",
@@ -2064,6 +2147,7 @@
     ]
   },
   {
+    "id": "log-2026-07-27-4",
     "date": "2026-07-27",
     "lead": {
       "en": "Brought the existing live benches into the site and the home-page stage.",
@@ -2079,6 +2163,7 @@
     ]
   },
   {
+    "id": "log-2026-07-27-5",
     "date": "2026-07-27",
     "lead": {
       "en": "Made the work log bilingual and searchable by project, aspect and month.",
@@ -2094,6 +2179,7 @@
     ]
   },
   {
+    "id": "log-2026-07-26-1",
     "date": "2026-07-26",
     "lead": {
       "en": "Transferred the revised visual language and page transition from the supplied draft.",
@@ -2109,6 +2195,7 @@
     ]
   },
   {
+    "id": "log-2026-07-24-1",
     "date": "2026-07-24",
     "lead": {
       "en": "Settled the fifth direction — space shared between people and pets — and fixed how the 3D work connects to the simulation.",
@@ -2124,6 +2211,7 @@
     ]
   },
   {
+    "id": "log-2026-07-24-2",
     "date": "2026-07-24",
     "lead": {
       "en": "Built the three-screen home page from the approved interaction draft.",
@@ -2139,6 +2227,7 @@
     ]
   },
   {
+    "id": "log-2026-07-21-1",
     "date": "2026-07-21",
     "lead": {
       "en": "Built the earlier Modernist layout across the home, log and case-study pages.",
@@ -2154,6 +2243,7 @@
     ]
   },
   {
+    "id": "log-2026-07-21-2",
     "date": "2026-07-21",
     "lead": {
       "en": "Established the green and violet color system in the site’s shared tokens.",
@@ -2184,6 +2274,7 @@
     ]
   },
   {
+    "id": "log-2026-07-20-1",
     "date": "2026-07-20",
     "lead": {
       "en": "Set up the working environment and ran a thirty-line simulation that already contains the whole engine in miniature.",
@@ -2216,6 +2307,7 @@
     ]
   },
   {
+    "id": "log-2026-07-18-1",
     "date": "2026-07-18",
     "lead": {
       "en": "Ran a finite-element check on the rail and found the hand math was wrong.",
@@ -2362,6 +2454,7 @@
     ]
   },
   {
+    "id": "log-2026-07-17-1",
     "date": "2026-07-17",
     "lead": {
       "en": "Brought all five shell rings into the web simulation, and fixed one that kept collapsing.",
@@ -2377,6 +2470,7 @@
     ]
   },
   {
+    "id": "log-2026-07-17-2",
     "date": "2026-07-17",
     "lead": {
       "en": "The same page behaved differently on two computers — the model was missing its end stops.",
@@ -2392,6 +2486,7 @@
     ]
   },
   {
+    "id": "log-2026-07-17-3",
     "date": "2026-07-17",
     "lead": {
       "en": "Set up the files that carry project memory into the coding tool — and rewrote them after the first version had rules but no content.",
@@ -2407,6 +2502,7 @@
     ]
   },
   {
+    "id": "log-2026-07-17-4",
     "date": "2026-07-17",
     "lead": {
       "en": "Cleaned the athlete interview transcript and separated the speakers.",
@@ -2422,6 +2518,7 @@
     ]
   },
   {
+    "id": "log-2026-07-14-1",
     "date": "2026-07-14",
     "lead": {
       "en": "Wrote the v2 interview guide — 33 questions, 60 minutes — for a PE faculty member who competed as a national-games swimmer.",
@@ -2437,6 +2534,7 @@
     ]
   },
   {
+    "id": "log-2026-07-13-1",
     "date": "2026-07-13",
     "lead": {
       "en": "Put up the site frame and got the linkage running on the homepage.",
@@ -2449,6 +2547,7 @@
     "tags": [{ "label": { "en": "Site", "zh": "网站" }, "variant": "outline" }]
   },
   {
+    "id": "log-2026-07-13-2",
     "date": "2026-07-13",
     "lead": {
       "en": "Compressed everything so far into one handoff document, with ten rules written out of my own repeated mistakes.",
@@ -2464,6 +2563,7 @@
     ]
   },
   {
+    "id": "log-2026-07-12-1",
     "date": "2026-07-12",
     "lead": {
       "en": "Added the dimension the audit was missing — how fast the building acts — and rebuilt a rejected idea into a real contender.",
@@ -2479,6 +2579,7 @@
     ]
   },
   {
+    "id": "log-2026-07-10-1",
     "date": "2026-07-10",
     "lead": {
       "en": "Wrote a 3D solver and built a tentacle driven by three tendons.",
@@ -2494,6 +2595,7 @@
     ]
   },
   {
+    "id": "log-2026-07-10-2",
     "date": "2026-07-10",
     "lead": {
       "en": "Turned one ring of the real machine into a model you can drag on the page.",
@@ -2506,6 +2608,7 @@
     "tags": [{ "label": { "en": "Lab", "zh": "实验室" }, "variant": "outline" }]
   },
   {
+    "id": "log-2026-07-10-3",
     "date": "2026-07-10",
     "lead": {
       "en": "Finished the homepage linkage — bug fixes only from here on.",
@@ -2518,6 +2621,7 @@
     "tags": [{ "label": { "en": "Lab", "zh": "实验室" }, "variant": "outline" }]
   },
   {
+    "id": "log-2026-07-10-4",
     "date": "2026-07-10",
     "lead": {
       "en": "Settled the drive that turns all five rings from one shaft.",
@@ -2533,6 +2637,7 @@
     ]
   },
   {
+    "id": "log-2026-07-09-1",
     "date": "2026-07-09",
     "lead": {
       "en": "Put together the full parts list for the machine.",
@@ -2803,6 +2908,7 @@
     ]
   },
   {
+    "id": "log-2026-07-09-2",
     "date": "2026-07-09",
     "lead": {
       "en": "Audited every candidate scenario against seven tests, and corrected the vision — collapse is the villain, not the subject.",
@@ -2818,6 +2924,7 @@
     ]
   },
   {
+    "id": "log-2026-07-08-1",
     "date": "2026-07-08",
     "lead": {
       "en": "Read up on layout and settled the grid for the case-study pages.",
@@ -2830,6 +2937,7 @@
     "tags": [{ "label": { "en": "Site", "zh": "网站" }, "variant": "outline" }]
   },
   {
+    "id": "log-2026-07-07-1",
     "date": "2026-07-07",
     "lead": {
       "en": "Wrote the spec for the linkage solver.",
@@ -2845,6 +2953,7 @@
     ]
   },
   {
+    "id": "log-2026-07-07-2",
     "date": "2026-07-07",
     "lead": {
       "en": "Reviewed the whole study protocol, cut what the numbers could not support, and froze the sensor list.",
@@ -3311,6 +3420,7 @@
     ]
   },
   {
+    "id": "log-2026-07-07-3",
     "date": "2026-07-07",
     "lead": {
       "en": "Replaced a persona that did not hold up, dissolved solo-living youth as a standalone population, and produced five persona cards plus a screener question set.",
@@ -3326,6 +3436,7 @@
     ]
   },
   {
+    "id": "log-2026-07-06-1",
     "date": "2026-07-06",
     "lead": {
       "en": "Anchored the simulation on one small avoidance decision, and planned the first three versions of the code.",
@@ -3341,6 +3452,7 @@
     ]
   },
   {
+    "id": "log-2026-07-05-1",
     "date": "2026-07-05",
     "lead": {
       "en": "Set up a small photo studio at home for shooting parts.",
@@ -3356,6 +3468,7 @@
     ]
   },
   {
+    "id": "log-2026-07-05-2",
     "date": "2026-07-05",
     "lead": {
       "en": "Prepared the website brief and looked for design references before choosing a visual direction.",
@@ -3371,6 +3484,7 @@
     ]
   },
   {
+    "id": "log-2026-06-30-1",
     "date": "2026-06-30",
     "lead": {
       "en": "Finished evidence audits and persona manuscripts for two groups — shift workers and solo-living young adults — and threw out two inherited persona conventions along the way.",
@@ -3386,6 +3500,7 @@
     ]
   },
   {
+    "id": "log-2026-06-22-1",
     "date": "2026-06-22",
     "lead": {
       "en": "Restarted the project from a space I have actually lived in, after the theme stopped feeling like mine.",
@@ -3401,6 +3516,7 @@
     ]
   },
   {
+    "id": "log-2026-06-21-1",
     "date": "2026-06-21",
     "lead": {
       "en": "Settled three small things at once: the servo interface, screw sizes, and how touch electrodes are wired.",
@@ -3416,6 +3532,7 @@
     ]
   },
   {
+    "id": "log-2026-06-20-1",
     "date": "2026-06-20",
     "lead": {
       "en": "Wrote the whole project up in one document, and turned its traits into criteria for picking schools.",
@@ -3431,6 +3548,7 @@
     ]
   },
   {
+    "id": "log-2026-06-15-1",
     "date": "2026-06-15",
     "lead": {
       "en": "Changed the shell's drive from two side rods to one central rod, and re-optimized all five rings.",
@@ -3584,6 +3702,7 @@
     ]
   },
   {
+    "id": "log-2026-06-15-2",
     "date": "2026-06-15",
     "lead": {
       "en": "Found the social mechanism the project is actually about: everyone's reasonable decision to withdraw adds up to a situation nobody wanted.",
@@ -3599,6 +3718,7 @@
     ]
   },
   {
+    "id": "log-2026-06-15-3",
     "date": "2026-06-15",
     "lead": {
       "en": "Wrote a survey design specification for the whole team, and revised a teammate's draft of the functional-needs section.",
@@ -3614,6 +3734,7 @@
     ]
   },
   {
+    "id": "log-2026-06-12-1",
     "date": "2026-06-12",
     "lead": {
       "en": "Took stock of where the project stands and pointed it at a paper.",
@@ -3629,6 +3750,7 @@
     ]
   },
   {
+    "id": "log-2026-06-12-2",
     "date": "2026-06-12",
     "lead": {
       "en": "After the three-author chapter was merged, repaired broken cross-references and an inconsistent classification axis, and drew an evolution diagram for my own section.",
@@ -3644,6 +3766,7 @@
     ]
   },
   {
+    "id": "log-2026-06-08-1",
     "date": "2026-06-08",
     "lead": {
       "en": "Locked the drive parts for the three stepper motors.",
@@ -3659,6 +3782,7 @@
     ]
   },
   {
+    "id": "log-2026-06-07-1",
     "date": "2026-06-07",
     "lead": {
       "en": "Started the second project and fixed its architecture: two layers of agents, the people and the building itself.",
@@ -3674,6 +3798,7 @@
     ]
   },
   {
+    "id": "log-2026-06-06-1",
     "date": "2026-06-06",
     "lead": {
       "en": "Started planning a personal site for both portfolio presentation and learning to code.",
@@ -3689,6 +3814,7 @@
     ]
   },
   {
+    "id": "log-2026-06-05-1",
     "date": "2026-06-05",
     "lead": {
       "en": "Drafted the report section on future sleep populations in full over five days, built on a \"full inventory, then four kinds of evolution\" frame.",
@@ -3704,6 +3830,7 @@
     ]
   },
   {
+    "id": "log-2026-06-04-1",
     "date": "2026-06-04",
     "lead": {
       "en": "A printed joint seized up, so I worked out how much clearance moving parts really need.",
@@ -3719,6 +3846,7 @@
     ]
   },
   {
+    "id": "log-2026-06-04-2",
     "date": "2026-06-04",
     "lead": {
       "en": "Developed a quick interview-exercise bed concept into a system where a person's comfort settings travel with them, and produced a Chinese presentation board.",
@@ -3734,6 +3862,7 @@
     ]
   },
   {
+    "id": "log-2026-06-03-1",
     "date": "2026-06-03",
     "lead": {
       "en": "Chose the pivot hardware for the scissor joints.",
@@ -3749,6 +3878,7 @@
     ]
   },
   {
+    "id": "log-2026-06-03-2",
     "date": "2026-06-03",
     "lead": {
       "en": "Decided where machine learning is allowed in this project, and where it is not.",
@@ -3764,6 +3894,7 @@
     ]
   },
   {
+    "id": "log-2026-06-01-1",
     "date": "2026-06-01",
     "lead": {
       "en": "Cut the three tentacles down to one grasping arm plus two soft feelers.",
@@ -3779,6 +3910,7 @@
     ]
   },
   {
+    "id": "log-2026-06-01-2",
     "date": "2026-06-01",
     "lead": {
       "en": "Started exploring how spatial forms could adapt to bodily behavior.",
@@ -3794,6 +3926,7 @@
     ]
   },
   {
+    "id": "log-2026-05-29-1",
     "date": "2026-05-29",
     "lead": {
       "en": "Analyzed the music and vibration study across relaxation, sleep and waking conditions.",
@@ -3850,6 +3983,7 @@
     ]
   },
   {
+    "id": "log-2026-05-26-1",
     "date": "2026-05-26",
     "lead": {
       "en": "Built an evidence base of roughly 40 sources into a 14-page lab-meeting deck, with every key citation checked by hand.",
@@ -3865,6 +3999,7 @@
     ]
   },
   {
+    "id": "log-2026-05-22-1",
     "date": "2026-05-22",
     "lead": {
       "en": "Limited clearance adjustments to the mating faces of resin parts.",
@@ -3880,6 +4015,7 @@
     ]
   },
   {
+    "id": "log-2026-05-19-1",
     "date": "2026-05-19",
     "lead": {
       "en": "Finished the first round of research and competitive analysis for the smart bed project, landing on four market gaps as design entry points.",
@@ -3895,6 +4031,7 @@
     ]
   },
   {
+    "id": "log-2026-05-12-1",
     "date": "2026-05-12",
     "lead": {
       "en": "Examined how a small bearing could be retained in printed joints.",
@@ -3910,6 +4047,7 @@
     ]
   },
   {
+    "id": "log-2026-05-08-1",
     "date": "2026-05-08",
     "lead": {
       "en": "Chose the pins and tendons for the finger.",
@@ -3925,6 +4063,7 @@
     ]
   },
   {
+    "id": "log-2026-04-27-1",
     "date": "2026-04-27",
     "lead": {
       "en": "Compared five ways of building a structure that opens and closes, and picked one.",
@@ -3940,6 +4079,7 @@
     ]
   },
   {
+    "id": "log-2026-04-26-1",
     "date": "2026-04-26",
     "lead": {
       "en": "Got the underactuated finger simulation working — one tendon, several joints.",
@@ -3955,6 +4095,7 @@
     ]
   },
   {
+    "id": "log-2026-04-24-1",
     "date": "2026-04-24",
     "lead": {
       "en": "Checked tendon routing against the small modeled structure.",
@@ -3970,6 +4111,7 @@
     ]
   },
   {
+    "id": "log-2026-04-13-1",
     "date": "2026-04-13",
     "lead": {
       "en": "Explored three tendons for bending the appendage in multiple directions.",
@@ -3985,6 +4127,7 @@
     ]
   },
   {
+    "id": "log-2026-04-12-1",
     "date": "2026-04-12",
     "lead": {
       "en": "Compared ways to drive a half-ring expanding linkage.",
@@ -4000,6 +4143,7 @@
     ]
   },
   {
+    "id": "log-2026-04-06-1",
     "date": "2026-04-06",
     "lead": {
       "en": "Got the shell simulation running after correcting its constraints.",
@@ -4015,6 +4159,7 @@
     ]
   },
   {
+    "id": "log-2026-04-04-1",
     "date": "2026-04-04",
     "lead": {
       "en": "Started learning physics simulation in Grasshopper.",
@@ -4030,6 +4175,7 @@
     ]
   },
   {
+    "id": "log-2026-04-03-1",
     "date": "2026-04-03",
     "lead": {
       "en": "Fixed the machine's four parts and wrote the first version of the study.",
@@ -5055,6 +5201,7 @@
     ]
   },
   {
+    "id": "log-2026-03-22-1",
     "date": "2026-03-22",
     "lead": {
       "en": "Separated everyday coexistence from direct touch in the interaction plan.",
@@ -5086,6 +5233,7 @@
     ]
   },
   {
+    "id": "log-2026-03-20-1",
     "date": "2026-03-20",
     "lead": {
       "en": "Locked down the research question.",
@@ -5244,6 +5392,7 @@
     ]
   },
   {
+    "id": "log-2026-03-07-1",
     "date": "2026-03-07",
     "lead": {
       "en": "Started the project with three directions on the table.",

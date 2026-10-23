@@ -4,14 +4,14 @@ import { useBenchLang, useLabText } from './LabLanguage';
 
 import { LabControlLabel } from './LabControlLabel';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import { FlatRenderer, bakeIndexed } from '../../src/lib/linkage/gl3d';
 import { ringPlateVerts } from '../../src/lib/space/skin-solid';
 import { buildLayerGeometry, layerAngles, layerBaseline, layerColumns, layerCovers, layerExample,
   layerDepthFraction, layerFractionRadius, layerHeight, layerRadius, layerRadialStops, layerJoinSpans, layersJoin, layerStats, LAYERS, LAYER_EXAMPLES, LAYER_OUTLINES, LAYER_JOINS, LAYER_MORPHS,
   type LayerMaterial, type LayerShape, type LayerStudy } from '../../src/lib/space/skin-layers';
-import { useBenchLoop } from './useBenchLoop';
+import { LabActivity } from './LabActivity';
 import { attachLabCamera } from './labCameraInput';
 import { planFromHash } from './planHash';
 import { SkinLayersForming } from './SkinLayersForming';
@@ -102,12 +102,19 @@ function SkinLayersTarget({ active, controls, onLight, forming = false, loaded =
   const [cut, setCut] = useState(45);
   const [error, setError] = useState('');
   const api = useRef<{ draw: () => void; view: (v: View) => void; home: () => void } | null>(null);
+  const panelActive = useContext(LabActivity);
+  const enabled = active && !forming && panelActive;
+  const drawEnabled = useRef(enabled);
   const data = useMemo(() => {
     const g = buildLayerGeometry(study);
     return { lines: g.lines, meshes: (Object.keys(g.meshes) as LayerMaterial[]).map(key => ({ key, data: bakeIndexed(g.meshes[key].verts, g.meshes[key].idx) })) };
   }, [study]);
   const dataRef = useRef(data);
   useEffect(() => { dataRef.current = data; api.current?.draw(); }, [data]);
+  useEffect(() => {
+    drawEnabled.current = enabled;
+    if (enabled) api.current?.draw();
+  }, [enabled]);
   useEffect(() => {
     const p = planFromHash('2-6', LAYER_EXAMPLES.map(v => v.key));
     if (p) { setStudy(layerExample(p)); setExample(p); }
@@ -122,6 +129,7 @@ function SkinLayersTarget({ active, controls, onLight, forming = false, loaded =
     const cam = new OrbitCamera({ cx: 350, cy: 220, pivot: { x: 0, y: 0, z: 0 }, scale: 1.35, mode: 'turntable', autoYaw: 0, pitch0: -0.5, yaw0: -0.65 });
     const core = ringPlateVerts(LAYERS.inner - 1, LAYERS.inner, 0, 135, 72);
     const coreMesh = bakeIndexed(core.verts, core.idx);
+    let intersecting = true;
     const draw = () => {
       renderer.beginFrame(cam);
       renderer.drawDynamicMesh(coreMesh, [0.065, 0.08, 0.085], [0.23, 0.28, 0.29]);
@@ -129,25 +137,46 @@ function SkinLayersTarget({ active, controls, onLight, forming = false, loaded =
       renderer.drawLines(dataRef.current.lines, [0.7, 0.77, 0.73], 0.001);
     };
     api.current = { draw, view: k => { cam.setOrientation(orientation(k)); draw(); }, home: () => { cam.reset(); draw(); } };
-    const down = (e: PointerEvent) => { cam.pointerDown(e.pointerId, e.clientX, e.clientY, e.button === 2); canvas.setPointerCapture(e.pointerId); };
-    const move = (e: PointerEvent) => { cam.pointerMove(e.pointerId, e.clientX, e.clientY); draw(); };
-    const up = (e: PointerEvent) => cam.pointerUp(e.pointerId);
+    const pointers = new Set<number>();
+    const down = (e: PointerEvent) => { cam.pointerDown(e.pointerId, e.clientX, e.clientY, e.button === 2); pointers.add(e.pointerId); canvas.setPointerCapture(e.pointerId); };
+    const move = (e: PointerEvent) => { cam.pointerMove(e.pointerId, e.clientX, e.clientY); if (pointers.has(e.pointerId)) draw(); };
+    const up = (e: PointerEvent) => { cam.pointerUp(e.pointerId); pointers.delete(e.pointerId); };
     const detachCamera = attachLabCamera(canvas, { wheel: delta => { cam.wheel(delta); draw(); }, home: () => api.current?.home() });
     const context = (e: Event) => e.preventDefault();
     canvas.addEventListener('pointerdown', down); canvas.addEventListener('pointermove', move);
     canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
     canvas.addEventListener('lostpointercapture', up);
     canvas.addEventListener('contextmenu', context);
+    // No autoYaw or simulation in this target view. Inputs draw immediately; only
+    // visibility/size changes need a refresh instead of a permanent rAF loop.
+    // Keep the initial/API draw unconditional, as before: an inactive preview
+    // still needs a complete first frame and fresh data when its props change.
+    const refresh = () => { if (drawEnabled.current && intersecting && !document.hidden) draw(); };
+    const io = 'IntersectionObserver' in window ? new IntersectionObserver(entries => {
+      const entry = entries[entries.length - 1];
+      if (!entry) return;
+      intersecting = entry.isIntersecting;
+      if (intersecting) refresh();
+    }, { rootMargin: '120px' }) : null;
+    io?.observe(canvas);
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(refresh) : null;
+    ro?.observe(canvas);
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('resize', refresh);
+    window.addEventListener('pageshow', refresh);
     draw();
     return () => {
       api.current = null;
+      io?.disconnect(); ro?.disconnect();
+      document.removeEventListener('visibilitychange', refresh);
+      window.removeEventListener('resize', refresh);
+      window.removeEventListener('pageshow', refresh);
       canvas.removeEventListener('pointerdown', down); canvas.removeEventListener('pointermove', move);
       canvas.removeEventListener('pointerup', up); canvas.removeEventListener('pointercancel', up);
       canvas.removeEventListener('lostpointercapture', up);
       detachCamera(); canvas.removeEventListener('contextmenu', context);
     };
   }, []);
-  useBenchLoop(canvasRef, () => api.current?.draw(), [], active && !forming);
   const layer = study[selected];
   const edit = (v: Partial<LayerShape>) => { setExample('custom'); setStudy(s => ({ ...s, [selected]: { ...s[selected], ...v } })); };
   const join = (v: Partial<LayerStudy>) => { setExample('custom'); setStudy(s => ({ ...s, ...v })); };

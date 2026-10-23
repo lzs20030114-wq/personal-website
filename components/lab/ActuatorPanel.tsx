@@ -1,5 +1,7 @@
 'use client';
 
+import { memo } from 'react';
+
 import {
   READOUT_CHANNELS,
   READOUT_GROUPS,
@@ -134,7 +136,7 @@ function Spark({ c, data, cap, target }: { c: ReadoutChannel; data: number[]; ca
   );
 }
 
-export function ActuatorPanel({ snap, lang }: { snap: ActuatorSnapshot | null; lang: 'zh' | 'en' }) {
+export const ActuatorPanel = memo(function ActuatorPanel({ snap, lang }: { snap: ActuatorSnapshot | null; lang: 'zh' | 'en' }) {
   const L = COPY[lang];
   return (
     <aside className="mb-out" aria-label={L.aria}>
@@ -166,4 +168,4 @@ export function ActuatorPanel({ snap, lang }: { snap: ActuatorSnapshot | null; l
       </div>
     </aside>
   );
-}
+});

@@ -234,18 +234,21 @@ export function LabPanel({ no, title, description, lede, specs, accent, kind, ve
   useEffect(() => {
     const node = stage.current;
     if (!node) return;
+    let scan: Animation | undefined;
     const flash = (e: Event) => {
       if (!(e.target instanceof Element) || !e.target.closest('.lab-ctl, .lab-ctl__row')) return;
       clearTimeout(solveTimer.current);
       setSolving(true);
       solveTimer.current = setTimeout(() => setSolving(false), 900);
+      scan?.cancel();
+      scan = undefined;
       if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        solveBar.current?.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)', offset: 0.7 }, { transform: 'scaleX(1)', opacity: 0 }], { duration: 900, easing: 'cubic-bezier(.2,.7,.1,1)' });
+        scan = solveBar.current?.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)', offset: 0.7 }, { transform: 'scaleX(1)', opacity: 0 }], { duration: 900, easing: 'cubic-bezier(.2,.7,.1,1)' });
       }
     };
     node.addEventListener('click', flash);
     node.addEventListener('input', flash);
-    return () => { node.removeEventListener('click', flash); node.removeEventListener('input', flash); clearTimeout(solveTimer.current); };
+    return () => { node.removeEventListener('click', flash); node.removeEventListener('input', flash); clearTimeout(solveTimer.current); scan?.cancel(); };
   }, []);
   useEffect(() => {
     if (!expanded || !root.current) return;

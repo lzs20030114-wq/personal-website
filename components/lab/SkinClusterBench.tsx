@@ -11,6 +11,7 @@ import {
   CLUSTER_TIMING_OPTIONS,
 } from '../../src/lib/space/lab-variants';
 import { RING } from '../../src/lib/space/skin-ring';
+import { shareSkinSimulationInputs, skinSimulationInputsKey } from '../../src/lib/space/skin-simulation-input';
 import { RING_GRID_AXON, RING_GRID_PIVOT_Y, RIG_SCALE, RIG_Y } from '../../src/lib/space/skin-grid';
 import {
   CLUSTER_DEFAULT_FORM,
@@ -47,9 +48,8 @@ import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
  * 这里只接线。
  *
  * 引擎与摆放分开（Lab.09 起的做法）：同步下几级高度就解几条引擎、每格指向自己那一级；
- * 错相下每格一条（同一条引擎摆多处的单元不可能各有各的相位）。**换关系只重摆不重解**
- * （`cellsKey` → reflowCells）：同一次收缩，分离 / 相切 / 交叠三种看法之间切换不倒带；
- * 级数、形态或时序变了才走 `unitsKey` 重建。
+ * 错相下同谱、同延迟的格子共享一条，其余仍独立。只改变距离时 `cellsKey` 重摆不倒带；
+ * 改变实际高度谱、形态或时序时才走 `unitsKey` 更新。
  *
  * 交叠有物理门槛（高差要装下折叠体成形期的竖向跨度）：装不下的组合按钮变灰、留位不隐藏，
  * 当前若正停在交叠上则退到「相切·错层」——它是同一组高度，只是不盖过去。
@@ -93,9 +93,12 @@ export function SkinClusterBench({
   const relEff: ClusterRelationKey = rel === 'overlap' && !feasible ? 'touchStep' : rel;
   const def = FORMS[form];
   const build = useMemo(() => clusterBuild(plan, relEff, timing, def), [plan, relEff, timing, def]);
+  const inputsKey = useMemo(() => skinSimulationInputsKey(build.units), [build]);
+  const shared = useMemo(() => shareSkinSimulationInputs(build.units), [build]);
+  const plans = useMemo(() => build.plans.map(p => p.map(i => shared.slotToUnit[i])), [build, shared]);
   const units = useMemo<readonly SolidUnitDef[]>(
-    () => build.units.map(({ spec, opts, smooth, delay }) => ({ spec, opts, smooth, delay })),
-    [build],
+    () => shared.units.map(({ spec, opts, smooth, delay }) => ({ spec, opts, smooth, delay })),
+    [shared],
   );
   const cells = useMemo(
     () => (r: number) => clusterCells(plan, relEff, form, r, timing),
@@ -119,10 +122,9 @@ export function SkinClusterBench({
       onLight={onLight}
       controls={controls}
       units={units}
-      ringPlans={build.plans}
-      // 引擎只跟形态、时序与（同步下的）级数走：一对错层与方阵交叠都是两级 ⇒ 同一组引擎，换过去不重解；
-      // 错相下每格一条引擎，编制一变引擎数就变
-      unitsKey={`${def.key}:${timing}:${stagger ? plan : `L${build.units.length}`}`}
+      ringPlans={plans}
+      // 同一组真实输入继续运行；错相下关系变化也可能改 lead，不能只用格数/编制名判身份。
+      unitsKey={inputsKey}
       // 站位跟关系走：换关系只重摆（同一次收缩三种看法）
       cellsKey={`${plan}:${relEff}:${def.key}:${timing}`}
       ring
@@ -137,7 +139,7 @@ export function SkinClusterBench({
       skin={{ def: 0.35 }}
       ceiling="ring"
       rail="fixed"
-      rate={units.length > 1 ? 80 : 110}
+      rate={build.units.length > 1 ? 80 : 110}
       pivot={{ x: 0, y: RING_GRID_PIVOT_Y, z: 0 }}
       camScale={clusterCamScale(DEFAULT_PLAN, DEFAULT_REL, CLUSTER_DEFAULT_FORM, RING.RADIUS_DEF, 'axon')}
       axon={RING_GRID_AXON}
@@ -222,7 +224,7 @@ export function SkinClusterBench({
               kicker: 'Lab 2-9 / Project II',
               title: 'Between units',
               sub: relLine,
-              hint: 'Cluster / relation / timing / form switchable · relation re-places, no re-solve · radius drives the pitch · drag to orbit',
+              hint: 'Cluster / relation / timing / form switchable · spacing preserves progress · radius drives the pitch · drag to orbit',
               aria:
                 'Between units: two, three, four or nine contracting-skin cylinder rings hung in a room, placed apart, touching, stepped in height, or interleaved at two heights, contracting together or wave by wave; a 1.7 m figure stands on the floor for scale.',
             }
@@ -230,7 +232,7 @@ export function SkinClusterBench({
               kicker: 'Lab 2-9 / Project II',
               title: '单元关系 · 几个单元能是什么关系',
               sub: relLine,
-              hint: '编制 / 关系 / 时序 / 形态可切 · 换关系不重解 · 半径连间距一起变 · 拖拽旋转',
+              hint: '编制 / 关系 / 时序 / 形态可切 · 换间距不重解 · 半径连间距一起变 · 拖拽旋转',
               aria:
                 '单元关系：二、三、四或九个收缩张紧外皮圆筒环吊在一间房里，可分离、相切、错层或交叠摆放，可同步或错相收缩；地上站着一个 1.7 米高的人作比例参考；可切编制、关系、时序、形态与半径，可拖拽旋转',
             }

@@ -5,8 +5,30 @@ import { layerProfileAt, layerRadialOffset } from './skin-layers-surface';
 import { buildLayerProfiles } from './skin-layers-forming';
 import { createSkinTerminalLoader } from '../../../components/lab/skinTerminal';
 import { RING } from './skin-ring';
+import { bandTriIndex } from '../linkage/skin';
 
 describe('多层台 · 分开的窄带', () => {
+  it('相同节点数的带间膜借用同一份索引，姿态与节点变化不改写已有索引或顶点', async () => {
+    const { states } = await createSkinTerminalLoader()(buildLayerProfiles());
+    const shared = new Map<number, Uint32Array>();
+    const retained: { idx: Uint32Array; indices: Uint32Array; verts: Float32Array; vertices: Float32Array }[] = [];
+    for (const whole of [false, true]) for (const changed of [false, true]) {
+      const s = layerExample('study');
+      if (changed) { s.morph = 4; s.joinDepth = 50; s.upper.radius = 70; s.lower.radius = 130; }
+      const frames = changed ? states.map(f => ({ ...f, px: Float64Array.from(f.px, x => x * .8) })) : states;
+      const result = buildLayerBands(s, frames, changed, whole);
+      const strips = layerBandPlan(s).filter(b => b.kind).length * 2;
+      for (const m of result.membranes.slice(0, strips)) {
+        const n = m.verts.length / 6;
+        expect(m.idx).toEqual(Uint32Array.from(bandTriIndex(n)));
+        if (shared.has(n)) expect(m.idx).toBe(shared.get(n));
+        else shared.set(n, m.idx);
+        retained.push({ idx: m.idx, indices: m.idx.slice(), verts: m.verts, vertices: m.verts.slice() });
+      }
+    }
+    for (const m of retained) { expect(m.idx).toEqual(m.indices); expect(m.verts).toEqual(m.vertices); }
+  });
+
   it('暴露截面补膜与带间膜逐点相接，圆方与异径倾斜下均无遗漏的大侧面', async () => {
     const { states } = await createSkinTerminalLoader()(buildLayerProfiles());
     for (const morph of [0, 1, 2, 3, 4]) for (const depth of [20, 50, 100]) {

@@ -211,7 +211,7 @@ export function StageRotator() {
             ))}
           </span>
         </span>
-        <Link href={slide.href} className="rule-link" data-pt style={{ fontSize: 10 }}>
+        <Link href={slide.href} prefetch={false} className="rule-link" data-pt style={{ fontSize: 10 }}>
           Open the lab →
         </Link>
       </div>

@@ -22,36 +22,9 @@ import {
 } from '../../../../components/site/slots';
 import { Pick } from '../../../../components/site/CaseLang';
 import { CaseFooter } from '../../../../components/lab/LabShell';
-import {
-  Accent,
-  ClosureCards,
-  Interference,
-  Lead,
-  PartGrid,
-  ResearchQuestion,
-  StatusList,
-  SystemLogic,
-} from '../../../../components/site/case/CaseBlocks';
-import { AgeingCurve } from '../../../../components/site/case/AgeingCurve';
-import { CompareChart } from '../../../../components/site/case/CompareChart';
+import { Accent, Lead } from '../../../../components/site/case/CaseBlocks';
 import { CaseIndex } from '../../../../components/site/case/CaseIndex';
 import { CaseReveal } from '../../../../components/site/case/CaseReveal';
-import { LayersToggle } from '../../../../components/site/case/LayersToggle';
-import { LifeCycle } from '../../../../components/site/case/LifeCycle';
-import { PersonaBench } from '../../../../components/site/case/PersonaBench';
-import { Predictions } from '../../../../components/site/case/Predictions';
-import { SpecList } from '../../../../components/site/case/SpecList';
-import { StatCompare } from '../../../../components/site/case/StatCompare';
-import { LinkageFigure } from '../../../../components/linkage/LinkageFigure';
-import { CaseHeroLive } from '../../../../components/site/CaseHeroLive';
-import { CaseHeroSpace } from '../../../../components/site/CaseHeroSpace';
-import { SkinSolidBench } from '../../../../components/lab/SkinSolidBench';
-import { SkinBench } from '../../../../components/lab/SkinBench';
-import { ArchBench } from '../../../../components/lab/ArchBench';
-import { RingsBench } from '../../../../components/lab/RingsBench';
-import { TentacleBench } from '../../../../components/lab/TentacleBench';
-import { SkinSeriesBench } from '../../../../components/lab/SkinSeriesBench';
-import { SquareRingBench } from '../../../../components/lab/SquareRingBench';
 import { WorkInPreparation } from '../../../../components/site/WorkInPreparation';
 
 export function generateStaticParams() {
@@ -102,8 +75,7 @@ const mdxComponents = (lang: SlotLang) => ({
   ProcessAside: (p: ComponentProps<typeof ProcessAside>) => <ProcessAside {...p} lang={lang} />,
   /**
    * 正文里的链接（2026-09-13）：指回 /archive 某一条日志的引用另给一个类，
-   * 读作旁注不读作正文（.cs-cite）。锚点形状 = log-<日期>-<当日序号>，由 log-facets 的
-   * withAnchors 现算——不能用 LogList 内部那个带全池下标的 id，那个一发新日志就会指到别的条目上。
+   * 读作旁注不读作正文（.cs-cite）。锚点沿用 log-<日期>-<序号> 形状，由持久 id 固定到条目——不能用 LogList 内部那个带全池下标的 id，那个一发新日志就会指到别的条目上。
    */
   a: ({ href, children, ...rest }: ComponentProps<'a'>) => {
     const cite = typeof href === 'string' && href.startsWith('/archive#log-');
@@ -121,81 +93,7 @@ const mdxComponents = (lang: SlotLang) => ({
      数据在 src/lib/site/case-reincarnation.ts（人格表、预测表、参数表与线上原文逐字一致）。 */
   Lead,
   Accent,
-  ResearchQuestion: (p: ComponentProps<typeof ResearchQuestion>) => <ResearchQuestion {...p} lang={lang} />,
-  PartGrid: () => <PartGrid lang={lang} />,
-  ClosureCards: (p: ComponentProps<typeof ClosureCards>) => <ClosureCards {...p} lang={lang} />,
-  LifeCycle: (p: ComponentProps<typeof LifeCycle>) => <LifeCycle {...p} lang={lang} />,
-  PersonaBench: (p: ComponentProps<typeof PersonaBench>) => <PersonaBench {...p} lang={lang} />,
-  LayersToggle: () => <LayersToggle lang={lang} />,
-  StatCompare: () => <StatCompare lang={lang} />,
-  AgeingCurve: (p: ComponentProps<typeof AgeingCurve>) => <AgeingCurve {...p} lang={lang} />,
-  // 项目二「对照结果」那张图（FIG.05）：Lab 2-14 最终配置下三档空间的读数，数据由脚本真跑生成，图与数表同源。
-  CompareChart: (p: ComponentProps<typeof CompareChart>) => <CompareChart {...p} lang={lang} />,
-  SystemLogic: (p: ComponentProps<typeof SystemLogic>) => <SystemLogic {...p} lang={lang} />,
-  Interference: () => <Interference lang={lang} />,
-  StatusList: () => <StatusList lang={lang} />,
-  Predictions: () => <Predictions lang={lang} />,
-  SpecList: () => <SpecList lang={lang} />,
 
-  LinkageFigure,
-  // 项目 II 正文里的活件：四种形态的立体带（Lab 2-2）。正文「空间本体」那节说的
-  // 「缆长场决定网面形态、四种典型形态」，在引擎里就是每单元一个收缩自由度 ℓ；
-  // 控制条收掉（正文里的图不该带一排按钮），要调去 /lab。
-  SkinSolidFigure: () => (
-    <SkinSolidBench
-      controls={false}
-      // 正文里的台架是深色仪表，框是稿的深色活件框；onLight 让台架自带深底与深色 token，
-      // 不依赖外层是什么底（globals.css 记过 2026-07-27 的裸奔回归）
-      onLight
-      hud={
-        lang === 'en'
-          ? {
-              kicker: 'Lab 2-2 / Project II',
-              title: 'Four morphologies, one protocol',
-              sub: 'Four bands · fabric 5 px · the same contraction run',
-              hint: 'Each band locks its own bond map. Drive it in /lab',
-              aria:
-                'Four fabric bands contracting under one protocol; each bond map locks the surplus into a different morphology: pocket, bulb flange, straight ledge, stepped box.',
-            }
-          : {
-              kicker: 'Lab 2-2 / Project II',
-              title: '四种形态 · 同一收缩协议',
-              sub: '四条带 · 织物厚度 5px · 同一次收缩',
-              hint: '每条带按自己的键谱扣合，要动手调去 /lab',
-              aria:
-                '四条织物带在同一收缩协议下运行，各自的键谱把富余材料扣成不同形态：袋、蘑菇挑台、直挑台、阶梯方箱。',
-            }
-      }
-    />
-  ),
-  // 「方法」那节的滞后 2026-10-06 起搬到痕迹层（痕迹慢褪 + 猫占用钉住，松键已解禁）；
-  // 这台只演示成形那一程：同一收缩协议下四张键谱各自扣出一种形态。图注不替它承诺回程。
-  // Lab 2-1 是 2D 剖面、画的是 SVG，正文里最轻的一件。
-  SkinUnitFigure: () => <SkinBench controls={false} onLight lang={lang} />,
-  // 「行为条款与交互矩阵」那节要的是**形态的连续词汇**：十二条带的键谱逐级微变，
-  // 从一种形态走到另一种。注意这是两张既有键谱的形态学串联（演示编排）——
-  // 行为矩阵 → 键谱的翻译规则由作者手写，模型不代拟，图注也不许说成是它。
-  // 开场取**分列**而不是 /lab 的并拢：并拢的默认机位是侧视，十二条带叠在深度上、
-  // 前一条挡住后面的，读者又没有控制条可切——正文里必须一眼看见那条渐变。
-  SkinArrayFigure: () => (
-    <SkinSeriesBench controls={false} onLight lang={lang} plan="gradient" layout={1} />
-  ),
-  // 「技术实现」那节说的单元化 + 运动学可解：二十条同谱的带绕轴一圈，
-  // 只解一条摆二十处，每条带挑出多远就决定了俯视的轮廓。
-  SquareRingFigure: () => <SquareRingBench controls={false} onLight lang={lang} />,
-
-  /* ── 项目 01 正文里的求解器活件（2026-09-13 重构指令 §5）────────────────────
-     三台都是 7 月曲柄方案的求解器，实物 8 月改了驱动——**不重做台架**，按「当时的
-     产物」嵌入，图注统一带日期与说明。控制条一律收掉（正文里的图不该带一排按钮），
-     要动手去 /lab。
-     整机那台**有意不嵌**（用户拍板 2026-09-13）：本页主图位已经在跑 MachineBench，
-     正文再放一台就是同一台机器两个 WebGL 上下文，而且两者会抢同一个模块级 handoff
-     槽（键名 'machine'，宽限期内两个实例都会去恢复主图的位形）。§6.5 末改为一句话
-     指回页顶主图。 */
-  // ArchBench 不带控制条（它本来就没有控件），故无 controls 可收
-  ArchFigure: () => <ArchBench onLight lang={lang} />,
-  RingsFigure: () => <RingsBench controls={false} onLight lang={lang} />,
-  TentacleFigure: () => <TentacleBench controls={false} onLight lang={lang} />,
 });
 
 const mdxOptions = { mdxOptions: { remarkPlugins: [remarkGfm] } };
@@ -383,6 +281,15 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
   // 主项目里还没发稿的：同一条路由、同一套外壳，正文位换成「筹备中」框架字（不代写）
   if (entry.status !== 'published') return <WorkInPreparation entry={entry} />;
 
+  // 先判断筹备页，再载入本项目的构件；动态客户端边界位于各项目的 *-dynamic.tsx。
+  const project = slug === 'reincarnation-machine'
+    ? await import('../../../../components/site/case/machine-components')
+    : slug === 'project-ii'
+      ? await import('../../../../components/site/case/space-components')
+      : null;
+  const Hero = project?.CaseHero;
+  const componentsFor = (lang: SlotLang) => ({ ...mdxComponents(lang), ...project?.components(lang) });
+
   const caseNo = String(entry.order ?? 1).padStart(2, '0');
   // 主图暂用活台架顶替的项目（作者供图后删掉对应的一支即回占位块）：
   // 项目 01 = Lab 1-5 整机（与主页预览位同一件）· 项目 II = Lab 2-8 4×4 环阵列
@@ -467,7 +374,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
                     {/* 项目 01 临时主图 = Lab 1-5 整机活件（用户拍板 2026-07-27 先用活件顶上、07-29 从五环换成整机；
                         与主页预览位同一件）。作者供图后删掉本分支即回占位。
                         控制条不出：稿的主图框里没有控件、只有「去实验室操作」——点那里去 /lab 才有视角与部件开关。 */}
-                    {slug === 'project-ii' ? <CaseHeroSpace /> : <CaseHeroLive />}
+                    {Hero ? <Hero /> : null}
                   </div>
                 ) : (
                   <div className="cs-stage__ph">
@@ -498,7 +405,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
                     <span className="cs-stage__verb">
                       <Pick en={sc.en.heroVerb ?? ''} zh={sc.zh.heroVerb ?? ''} />
                     </span>
-                    <Link href={`/lab#lab${sc.lab}`} className="cs-open" data-pt="frame">
+                    <Link href={`/lab#lab${sc.lab}`} prefetch={false} className="cs-open" data-pt="frame">
                       <Pick en={COPY.en.openLab} zh={COPY.zh.openLab} />
                     </Link>
                   </div>
@@ -533,14 +440,14 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
                 en={
                   <MDXRemote
                     source={entry.body}
-                    components={mdxComponents('en')}
+                    components={componentsFor('en')}
                     options={mdxOptions}
                   />
                 }
                 zh={
                   <MDXRemote
                     source={entry.bodyZh ?? entry.body}
-                    components={mdxComponents('zh')}
+                    components={componentsFor('zh')}
                     options={mdxOptions}
                   />
                 }
