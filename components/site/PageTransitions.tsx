@@ -516,9 +516,10 @@ export function PageTransitions() {
       });
     };
 
-    // 普通 <a>（正文里的日志引用等）没有 next/link 的悬停预取；指针移上去时补一次，点下去就不用等网络
+    // 普通 <a> 与关闭视口预取的 /lab 链接：指针移入或键盘聚焦后再预热。
+    // 避免只因导航栏可见就把整套实验室（含空间终态数据）下载到每个案例页。
     const prefetched = new Set<string>();
-    const onPointerOver = (e: PointerEvent) => {
+    const onPrefetchIntent = (e: PointerEvent | FocusEvent) => {
       const a = (e.target as Element | null)?.closest?.('a[href]');
       if (!(a instanceof HTMLAnchorElement)) return;
       const url = new URL(a.href);
@@ -530,7 +531,8 @@ export function PageTransitions() {
 
     document.addEventListener('pointerdown', onPointerDown, true);
     document.addEventListener('click', onClick, true);
-    document.addEventListener('pointerover', onPointerOver, { capture: true, passive: true });
+    document.addEventListener('pointerover', onPrefetchIntent, { capture: true, passive: true });
+    document.addEventListener('focusin', onPrefetchIntent, true);
     window.addEventListener('popstate', onPopState, true);
     window.addEventListener('hashchange', onHashChange);
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -539,7 +541,8 @@ export function PageTransitions() {
       cancelAnimationFrame(scrollRaf);
       document.removeEventListener('pointerdown', onPointerDown, true);
       document.removeEventListener('click', onClick, true);
-      document.removeEventListener('pointerover', onPointerOver, true);
+      document.removeEventListener('pointerover', onPrefetchIntent, true);
+      document.removeEventListener('focusin', onPrefetchIntent, true);
       window.removeEventListener('popstate', onPopState, true);
       window.removeEventListener('hashchange', onHashChange);
     };

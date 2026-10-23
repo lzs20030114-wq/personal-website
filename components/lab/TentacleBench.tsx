@@ -6,7 +6,6 @@ import { LabControlLabel } from './LabControlLabel';
 
 import { useEffect, useRef, useState } from 'react';
 import {
-  GUIDE3,
   ROOTB3,
   SPINE3,
   TENTACLE3D,
@@ -16,7 +15,8 @@ import {
 } from '../../src/lib/linkage/tentacle3d-data';
 import { CHAINS, MESH_GROUPS, STATIONS } from '../../src/lib/linkage/tentacle3d-shape';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
-import { FlatRenderer, bakeIndexed, bakeSkinned, type CellFrame } from '../../src/lib/linkage/gl3d';
+import { FlatRenderer, type CellFrame } from '../../src/lib/linkage/gl3d';
+import { loadTentacleMeshes, tentacleCellFrame } from '../../src/lib/linkage/tentacle3d-render';
 import { CriticallyDamped } from '../../src/lib/linkage/motion';
 import { useBenchLoop } from './useBenchLoop';
 import { attachLabCamera } from './labCameraInput';
@@ -28,7 +28,6 @@ import { attachLabCamera } from './labCameraInput';
  * ★ 设计稿因无法导入 .bin 而用程序化方盒替代；本站用真实形态（用户拍板 2026-07-27）。
  * 内核（solver3d）与装备（gl3d/camera3d）零改——加新机构 = 新实例 + 台架，不改装备。
  */
-const MESH_URL = '/mesh/tentacle3d-mesh.bin';
 // 暗底线色：脊柱冷灰，三腱 绿 / 紫 / 中灰（与站内暗色语言同族）
 const SPINE_C: [number, number, number] = [0.44, 0.47, 0.5];
 const TENDON_C: [number, number, number][] = [
@@ -130,81 +129,22 @@ export function TentacleBench({
     if (active) {
       // 主页预览层据此等网格真正载入再交叉淡化（ZonePage PreviewLayer）
       canvas.dataset.benchLoading = 'mesh';
-      fetch(MESH_URL)
-        .then((r) => {
-          if (!r.ok) throw new Error(`3D mesh 请求失败（HTTP ${r.status}）`);
-          return r.arrayBuffer();
-        })
-        .then((buf) => {
+      loadTentacleMeshes()
+        .then((meshes) => {
           if (disposed) return;
-          const need = Math.max(
-            ...MESH_GROUPS.flatMap((g) => [
-              g.vOff + g.verts * 3 * Float32Array.BYTES_PER_ELEMENT,
-              g.iOff +
-                g.tris *
-                  3 *
-                  (g.idx32 ? Uint32Array.BYTES_PER_ELEMENT : Uint16Array.BYTES_PER_ELEMENT),
-            ]),
-          );
-          if (buf.byteLength < need) {
-            throw new Error(`3D mesh 数据不完整（${buf.byteLength}/${need} bytes）`);
-          }
-          for (const g of MESH_GROUPS) {
-            const verts = new Float32Array(buf, g.vOff, g.verts * 3);
-            const idx = g.idx32
-              ? new Uint32Array(buf, g.iOff, g.tris * 3)
-              : new Uint16Array(buf, g.iOff, g.tris * 3);
-            if (g.blend) active.addSkinnedMesh(g.name, bakeSkinned(verts, idx, g.blend[0], g.blend[1]));
-            else active.addMesh(g.name, bakeIndexed(verts, idx));
+          for (const mesh of meshes) {
+            if (mesh.skinned) active.addSkinnedMesh(mesh.name, mesh.data);
+            else active.addMesh(mesh.name, mesh.data);
           }
           delete canvas.dataset.benchLoading;
         })
         .catch((error: unknown) => {
           delete canvas.dataset.benchLoading;
+          if (disposed) return;
           renderError = error instanceof Error ? error.message : '3D mesh 载入失败';
           setHud((h) => ({ ...h, note: `mesh incomplete · ${renderError}` }));
         });
     }
-
-    // —— 站元胞刚架（与台架同一公式：前站→后站中央切线 + 导向点正交化，反手性叉积）
-    const cellFrame = (i: number): CellFrame => {
-      const nodes = sim.solver.nodes;
-      const si = Math.max(0, i);
-      const o = nodes[SPINE3(si)];
-      const nA = si === 0 ? nodes[ROOTB3()] : nodes[SPINE3(si - 1)];
-      const nB = nodes[SPINE3(Math.min(N, si + 1))];
-      let ux = nB.x - nA.x;
-      let uy = nB.y - nA.y;
-      let uz = nB.z - nA.z;
-      const ul = Math.hypot(ux, uy, uz) || 1;
-      ux /= ul;
-      uy /= ul;
-      uz /= ul;
-      const g = nodes[GUIDE3(0, si)];
-      let ex = g.x - o.x;
-      let ey = g.y - o.y;
-      let ez = g.z - o.z;
-      const dot = ex * ux + ey * uy + ez * uz;
-      ex -= dot * ux;
-      ey -= dot * uy;
-      ez -= dot * uz;
-      const el2 = Math.hypot(ex, ey, ez) || 1;
-      ex /= el2;
-      ey /= el2;
-      ez /= el2;
-      return {
-        o,
-        ux,
-        uy,
-        uz,
-        ex,
-        ey,
-        ez,
-        fx: ey * uz - ez * uy,
-        fy: ez * ux - ex * uz,
-        fz: ex * uy - ey * ux,
-      };
-    };
 
     // 基座 = 真正的不动锚（常量静息刚架，不随节 0 摆动）
     const MNT_FRAME: CellFrame = (() => {
@@ -236,13 +176,14 @@ export function TentacleBench({
       if (!renderer) return;
       const nodes = sim.solver.nodes;
       renderer.beginFrame(cam);
-      for (let ci = 0; ci <= N; ci++) renderer.drawMesh(`c${ci}`, cellFrame(ci));
+      const cells = Array.from({ length: N + 1 }, (_, i) => tentacleCellFrame(nodes, i));
+      for (let ci = 0; ci <= N; ci++) renderer.drawMesh(`c${ci}`, cells[ci]);
       renderer.drawMesh('mnt', MNT_FRAME);
       for (const j of joints) {
-        if (j.gap < 0) renderer.drawSkinned(j.name, ROOT_FRAME, cellFrame(0), ROOT_DY);
+        if (j.gap < 0) renderer.drawSkinned(j.name, ROOT_FRAME, cells[0], ROOT_DY);
         else {
           const dy = STATIONS[j.gap + 1][1] - STATIONS[j.gap][1];
-          renderer.drawSkinned(j.name, cellFrame(j.gap), cellFrame(j.gap + 1), dy);
+          renderer.drawSkinned(j.name, cells[j.gap], cells[j.gap + 1], dy);
         }
       }
       const spineSegs = [];
@@ -280,7 +221,10 @@ export function TentacleBench({
       });
       sim.solver.step(dt, TENTACLE3D.sweeps);
       render();
-      setHud((h) => ({ ...h, err: sim.solver.maxError(), zoom: cam.zoom }));
+      const err = sim.solver.maxError();
+      const zoom = cam.zoom;
+      setHud((h) => h.err.toFixed(2) === err.toFixed(2) && h.zoom.toFixed(2) === zoom.toFixed(2)
+        ? h : { ...h, err, zoom });
     };
 
     apiRef.current = {

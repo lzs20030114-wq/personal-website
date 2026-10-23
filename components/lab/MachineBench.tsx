@@ -8,6 +8,7 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import { MACHINE_BASE_FRAME, machineBaseGeometry, splitMachineFrame } from '../../src/lib/linkage/machine-base';
 import { FlatRenderer, bakeIndexed, bakeRuledPoints, bakeSkinned, type CellFrame } from '../../src/lib/linkage/gl3d';
+import { loadTentacleMeshes, tentacleCellFrame } from '../../src/lib/linkage/tentacle3d-render';
 import { CriticallyDamped } from '../../src/lib/linkage/motion';
 import { armFrame, armPoint, armPolyline, idleContraction } from '../../src/lib/linkage/machine-arm';
 import { type ActuatorTargets, BehaviorEngine, type EngineState, HAND, type HandMode } from '../../src/lib/linkage/behavior/engine';
@@ -60,7 +61,6 @@ import {
   CHAINS as ARM_CHAINS,
 } from '../../src/lib/linkage/tentacle3d-shape';
 import {
-  GUIDE3,
   ROOTB3,
   SPINE3,
   TENTACLE3D,
@@ -193,8 +193,6 @@ const bandShade = (ri: number): { dark: [number, number, number]; lite: [number,
   };
 };
 
-/** 大触手网格：与 Lab.03 同一份载荷（同一条触手，浏览器会命中缓存） */
-const ARM_MESH_URL = '/mesh/tentacle3d-mesh.bin';
 /** 三腱线色：与 Lab.03 同族（绿 / 紫 / 中灰） */
 const TENDON_C: [number, number, number][] = [
   [0.62, 0.82, 0.58],
@@ -814,21 +812,14 @@ export function MachineBench({
         canvas.setAttribute('aria-label', `3D preview incomplete: ${msg}`);
       });
 
-    fetch(ARM_MESH_URL)
-      .then((res) => {
-        if (!res.ok) throw new Error(`arm mesh 请求失败（HTTP ${res.status}）`);
-        return res.arrayBuffer();
-      })
-      .then((buf) => {
+    // 与 Lab.03 共用只读 CPU 网格；各 renderer 仍独立拥有 GPU 缓冲。
+    loadTentacleMeshes()
+      .then((meshes) => {
         if (disposed) return;
-        for (const g of ARM_MESH_GROUPS) {
-          const verts = new Float32Array(buf, g.vOff, g.verts * 3);
-          const idx = g.idx32
-            ? new Uint32Array(buf, g.iOff, g.tris * 3)
-            : new Uint16Array(buf, g.iOff, g.tris * 3);
-          // 组名加 a_ 前缀：整机组名里已经有 c/j/m 开头的可能，别撞车
-          if (g.blend) R.addSkinnedMesh(`a_${g.name}`, bakeSkinned(verts, idx, g.blend[0], g.blend[1]));
-          else R.addMesh(`a_${g.name}`, bakeIndexed(verts, idx));
+        for (const mesh of meshes) {
+          // 组名加 a_ 前缀：与整机自己的组名隔离。
+          if (mesh.skinned) R.addSkinnedMesh(`a_${mesh.name}`, mesh.data);
+          else R.addMesh(`a_${mesh.name}`, mesh.data);
         }
         armReady = true;
       })
@@ -1063,34 +1054,6 @@ export function MachineBench({
         resample(profileView(ri + 1), SKIN_U),
         SKIN_V,
       );
-    // 站元胞刚架：与 Lab.03 同一公式（前站→后站中央切线 + 导向点正交化）。
-    // 算完在 sim 系，交给 armFrame 一次性搬到整机世界。
-    const armCell = (i: number): CellFrame => {
-      const nodes = arm.solver.nodes;
-      const si = Math.max(0, i);
-      const o = nodes[SPINE3(si)];
-      const nA = si === 0 ? nodes[ROOTB3()] : nodes[SPINE3(si - 1)];
-      const nB = nodes[SPINE3(Math.min(N_ARM, si + 1))];
-      let ux = nB.x - nA.x;
-      let uy = nB.y - nA.y;
-      let uz = nB.z - nA.z;
-      const ul = Math.hypot(ux, uy, uz) || 1;
-      ux /= ul; uy /= ul; uz /= ul;
-      const g = nodes[GUIDE3(0, si)];
-      let ex = g.x - o.x;
-      let ey = g.y - o.y;
-      let ez = g.z - o.z;
-      const dt = ex * ux + ey * uy + ez * uz;
-      ex -= dt * ux; ey -= dt * uy; ez -= dt * uz;
-      const el = Math.hypot(ex, ey, ez) || 1;
-      ex /= el; ey /= el; ez /= el;
-      return armFrame({
-        o, ux, uy, uz, ex, ey, ez,
-        fx: ey * uz - ez * uy,
-        fy: ez * ux - ex * uz,
-        fz: ex * uy - ey * ux,
-      });
-    };
     /** 基座 = 不动锚（静息刚架，不随节 0 摆动），同 Lab.03 */
     const ARM_MNT: CellFrame = (() => {
       const g = ARM_CHAINS[0][0];
@@ -1114,15 +1077,18 @@ export function MachineBench({
 
     const drawArm = (): void => {
       if (!armReady) return;
+      // 同一帧的 7 个刚架供盒体与两侧连接件共用；物理步进后重新读取。
+      const cells = Array.from({ length: N_ARM + 1 }, (_, i) =>
+        yf(armFrame(tentacleCellFrame(arm.solver.nodes, i))));
       for (let ci = 0; ci <= N_ARM; ci++) {
-        R.drawMesh(`a_c${ci}`, yf(armCell(ci)), [...ARM_SHADE.dark], [...ARM_SHADE.lite]);
+        R.drawMesh(`a_c${ci}`, cells[ci], [...ARM_SHADE.dark], [...ARM_SHADE.lite]);
       }
       R.drawMesh('a_mnt', yf(ARM_MNT), [...ARM_SHADE.dark], [...ARM_SHADE.lite]);
       for (const j of armJoints) {
-        if (j.gap < 0) R.drawSkinned(`a_${j.name}`, yf(armRootFrame()), yf(armCell(0)), armRootDy);
+        if (j.gap < 0) R.drawSkinned(`a_${j.name}`, yf(armRootFrame()), cells[0], armRootDy);
         else {
           const dy = ARM_STATIONS[j.gap + 1][1] - ARM_STATIONS[j.gap][1];
-          R.drawSkinned(`a_${j.name}`, yf(armCell(j.gap)), yf(armCell(j.gap + 1)), dy);
+          R.drawSkinned(`a_${j.name}`, cells[j.gap], cells[j.gap + 1], dy);
         }
       }
       // 三根肌腱走线——不画的话「牵拉」看不见是谁在拉
@@ -1543,17 +1509,12 @@ export function MachineBench({
       if (behavior) drawHand();
       // 读数跟着「单环」走：隔离哪一环就报哪一环的拱顶，全部时报中间那环（S3）
       const ri = isolateNow ?? 2;
-      setHud((h) =>
-        h.note
-          ? h
-          : {
-              err: machineMaxError(machine),
-              apex: apexHeight(machine, ri),
-              ring: ri,
-              folding: isFolding(dir),
-              note: '',
-            },
-      );
+      const err = machineMaxError(machine);
+      const apex = apexHeight(machine, ri);
+      const folding = isFolding(dir);
+      setHud((h) => h.note || (h.err.toFixed(2) === err.toFixed(2)
+        && h.apex.toFixed(1) === apex.toFixed(1) && h.ring === ri && h.folding === folding)
+        ? h : { err, apex, ring: ri, folding, note: '' });
       if (running) setPhase(Number(phiDeg().toFixed(1)));
     };
 

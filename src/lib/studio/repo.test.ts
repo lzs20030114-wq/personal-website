@@ -73,8 +73,8 @@ describe('GitHub 发布', () => {
     expect(res.url).toContain('/commit/new-commit');
 
     const seq = calls.map((c) => `${c.method} ${c.url.split('/repos/o/r')[1]}`);
-    expect(seq[0]).toContain(`GET /contents/${LOG_JSON_PATH}`); // 并发检查
-    expect(seq).toContain('GET /git/ref/heads/main');
+    expect(seq[0]).toBe('GET /git/ref/heads/main');
+    expect(seq[1]).toBe(`GET /contents/${LOG_JSON_PATH}?ref=head-commit`); // 固定同一提交检查
     expect(seq).toContain('GET /git/commits/head-commit');
     expect(seq.filter((s) => s === 'POST /git/blobs')).toHaveLength(2);
     expect(seq[seq.length - 1]).toBe('PATCH /git/refs/heads/main');
@@ -109,16 +109,54 @@ describe('GitHub 发布', () => {
     expect(calls.some((c) => c.method !== 'GET')).toBe(false);
   });
 
-  it('没带 baseSha（本地模式载入的草稿）不做并发检查，照常提交', async () => {
-    stubGitHub({ entriesSha: 'whatever' });
-    const res = await publishFiles(FILES, 'log: test', null);
-    expect(res.mode).toBe('github');
+  it('GitHub 发布缺少草稿版本时拒绝，不把本地旧稿当作最新内容', async () => {
+    const calls = stubGitHub({ entriesSha: 'whatever' });
+    await expect(publishFiles(FILES, 'log: test', null)).rejects.toMatchObject({ conflict: true });
+    expect(calls).toHaveLength(0);
   });
 
   it('token 无效 → 报错说的是「权限不足」而不是原始 JSON', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{"message":"Bad credentials"}', { status: 401 })));
-    await expect(publishFiles(FILES, 'log: test', null)).rejects.toBeInstanceOf(StudioRepoError);
-    await expect(publishFiles(FILES, 'log: test', null)).rejects.toThrow(/STUDIO_GITHUB_TOKEN/);
+    await expect(publishFiles(FILES, 'log: test', 'sha-entries')).rejects.toBeInstanceOf(StudioRepoError);
+    await expect(publishFiles(FILES, 'log: test', 'sha-entries')).rejects.toThrow(/STUDIO_GITHUB_TOKEN/);
+  });
+
+  it('读取期间分支前进时，旧稿仍挂原 HEAD，非快进更新失败而不覆盖另一份发布', async () => {
+    let branch = 'head-original';
+    let parent: string | undefined;
+    let published = false;
+    const reads: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      const json = (value: unknown) => new Response(JSON.stringify(value));
+      if (url.includes('/git/ref/heads/')) {
+        const head = branch;
+        branch = 'head-other'; // 另一发布发生在两次读取之间
+        return json({ object: { sha: head } });
+      }
+      if (url.includes(`/contents/${LOG_JSON_PATH}`)) {
+        reads.push(url);
+        branch = 'head-other';
+        return json({ sha: 'sha-entries' });
+      }
+      if (/\/git\/commits\/head-/.test(url)) return json({ tree: { sha: 'base-tree' } });
+      if (url.endsWith('/git/blobs')) return json({ sha: 'draft-blob' });
+      if (url.endsWith('/git/trees')) return json({ sha: 'draft-tree' });
+      if (url.endsWith('/git/commits')) {
+        parent = JSON.parse(String(init?.body)).parents[0];
+        return json({ sha: 'draft-commit', html_url: 'https://example.test/commit' });
+      }
+      if (url.includes('/git/refs/heads/')) {
+        const body = JSON.parse(String(init?.body));
+        if (!body.force && parent !== branch) return new Response('Update is not a fast forward', { status: 422 });
+        published = true;
+        return json({});
+      }
+      throw new Error(`未覆盖的请求：${url}`);
+    }));
+    await expect(publishFiles(FILES, 'log: test', 'sha-entries')).rejects.toThrow(/422/);
+    expect(reads[0]).toContain('?ref=head-original');
+    expect(parent).toBe('head-original');
+    expect(published).toBe(false);
   });
 
   it('载入取的是目标分支上的当前版本，并带回 sha 与已有图片名单', async () => {

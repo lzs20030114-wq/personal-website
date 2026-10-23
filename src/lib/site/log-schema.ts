@@ -65,6 +65,10 @@ export const LogBlockSchema = z.discriminatedUnion('kind', [
 
 export const LogEntrySchema = z
   .object({
+    /** 永久公开锚点；旧池/旧草稿允许缺省，进入编辑或发布时由 log-identity 兼容迁移。 */
+    id: z.string().regex(/^log-\d{4}-\d{2}-\d{2}-[1-9]\d*$/)
+      .refine((id) => Number.isSafeInteger(Number(id.slice(id.lastIndexOf('-') + 1))), '日志身份序号超出安全整数范围')
+      .optional(),
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // Log 页显示 MM-DD，首页预览用整日期
     lead: BilingualSchema, // 加粗引句
     body: BilingualSchema, // 引句之后的正文（受限 Markdown，见 ./md）

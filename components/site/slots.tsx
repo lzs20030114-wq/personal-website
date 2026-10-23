@@ -202,7 +202,7 @@ export function InteractiveSlot({
         <div className="cs-lab__bot">
           <span>{verb ?? ''}</span>
           {lab ? (
-            <Link href={`/lab#lab${lab}`} data-pt="frame">
+            <Link href={`/lab#lab${lab}`} prefetch={false} data-pt="frame">
               {ui.toLab}
             </Link>
           ) : null}

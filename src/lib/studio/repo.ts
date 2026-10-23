@@ -158,25 +158,28 @@ export async function publishFiles(
 ): Promise<PublishResult> {
   const target = repoTarget();
   if (target === null) return writeLocal(files);
+  if (baseSha === null) {
+    throw new StudioRepoError('草稿缺少仓库版本，无法安全发布。请重新载入当前内容池后再合并改动。', true);
+  }
 
-  // 并发检查：编辑器载入时那份 entries.json 是否还是分支上的当前版本。
-  // 不做的话，两个标签页各改一半，后发布的那个会把先发布的悄悄覆盖掉。
+  // 固定同一个 HEAD 来检查内容与建立提交。不能先查浮动分支内容再取 HEAD：
+  // 两次读取之间别人发布时，会把旧稿接在新提交后面并静默覆盖它。
+  const ref = await gh<{ object: { sha: string } }>(
+    target,
+    `/repos/${target.repo}/git/ref/heads/${encodeURIComponent(target.branch)}`,
+  );
+  const head = ref.object.sha;
   const current = await gh<{ sha: string }>(
     target,
-    `/repos/${target.repo}/contents/${LOG_JSON_PATH}?ref=${encodeURIComponent(target.branch)}`,
+    `/repos/${target.repo}/contents/${LOG_JSON_PATH}?ref=${encodeURIComponent(head)}`,
   );
-  if (baseSha !== null && current.sha !== baseSha) {
+  if (current.sha !== baseSha) {
     throw new StudioRepoError(
       '内容池在别处已被改过（另一个标签页发布过，或直接改了仓库）。刷新页面重新载入后再发布。',
       true,
     );
   }
 
-  const ref = await gh<{ object: { sha: string } }>(
-    target,
-    `/repos/${target.repo}/git/ref/heads/${encodeURIComponent(target.branch)}`,
-  );
-  const head = ref.object.sha;
   const headCommit = await gh<{ tree: { sha: string } }>(
     target,
     `/repos/${target.repo}/git/commits/${head}`,

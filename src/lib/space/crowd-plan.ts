@@ -23,6 +23,7 @@ import {
   buildCatchment,
   keepOut,
   planLayout,
+  seededRng,
   unitInputs,
   type Catchment,
   type PlanLayout,
@@ -52,17 +53,8 @@ export const CROWD = {
   ] as readonly { x: number; y: number }[],
 } as const;
 
-/** mulberry32：一个种子一条可复现的序列 */
-export function makeRng(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+/** 同一个 mulberry32 工厂；每次调用仍创建独立随机流，保留既有导出名。 */
+export const makeRng = seededRng;
 
 export type PersonMode = 'auto' | 'held' | 'manual';
 

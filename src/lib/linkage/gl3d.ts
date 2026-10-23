@@ -201,6 +201,39 @@ function link(gl: WebGLRenderingContext, vs: string, fs: string): WebGLProgram {
   return p;
 }
 
+const CAMERA_UNIFORMS = ['uView', 'uPivot', 'uHalf', 'uScale', 'uDepthK', 'uPerspD', 'uPan'] as const;
+const MATERIAL_UNIFORMS = ['uLight', 'uDark', 'uLite', 'uAlpha'] as const;
+const MESH_UNIFORMS = [...CAMERA_UNIFORMS, ...MATERIAL_UNIFORMS, 'uModelR', 'uModelT'] as const;
+const SKIN_UNIFORMS = [...CAMERA_UNIFORMS, ...MATERIAL_UNIFORMS, 'uRA', 'uTA', 'uAxis', 'uCen', 'uTheta', 'uPitch'] as const;
+const LINE_UNIFORMS = [...CAMERA_UNIFORMS, 'uModelR', 'uModelT', 'uColor', 'uDepthBias'] as const;
+const POINT_UNIFORMS = [...CAMERA_UNIFORMS, 'uLight', 'uColA', 'uColB', 'uSize', 'uAlpha', 'uPxScale'] as const;
+const MESH_ATTRIBUTES = ['aPos', 'aNrm'] as const;
+const SKIN_ATTRIBUTES = ['aPos', 'aNrm', 'aW'] as const;
+const LINE_ATTRIBUTES = ['aPos'] as const;
+const POINT_ATTRIBUTES = ['aPos', 'aNrm', 'aT'] as const;
+
+interface ProgramBindings<U extends readonly string[], A extends readonly string[]> {
+  readonly program: WebGLProgram;
+  readonly uniforms: Readonly<Record<U[number], WebGLUniformLocation | null>>;
+  readonly attributes: Readonly<Record<A[number], number>>;
+}
+
+/** 链接后句柄不变；只缓存本 renderer/context 的四个程序，不跨上下文共享。 */
+function bindProgram<U extends readonly string[], A extends readonly string[]>(
+  gl: WebGLRenderingContext,
+  vs: string,
+  fs: string,
+  uniforms: U,
+  attributes: A,
+): ProgramBindings<U, A> {
+  const program = link(gl, vs, fs);
+  return {
+    program,
+    uniforms: Object.fromEntries(uniforms.map((name) => [name, gl.getUniformLocation(program, name)])) as Record<U[number], WebGLUniformLocation | null>,
+    attributes: Object.fromEntries(attributes.map((name) => [name, gl.getAttribLocation(program, name)])) as Record<A[number], number>,
+  };
+}
+
 /** 索引网格 → 平面着色顶点流（逐面复制顶点、烘焙面法向；局部系坐标）。 */
 export function bakeIndexed(verts: Float32Array, idx: Uint16Array | Uint32Array): Float32Array {
   const nTri = idx.length / 3;
@@ -403,10 +436,10 @@ export function bakeSkinned(
 
 export class FlatRenderer {
   private readonly gl: WebGLRenderingContext;
-  private readonly meshProg: WebGLProgram;
-  private readonly skinProg: WebGLProgram;
-  private readonly lineProg: WebGLProgram;
-  private readonly pointProg: WebGLProgram;
+  private readonly meshProg: ProgramBindings<typeof MESH_UNIFORMS, typeof MESH_ATTRIBUTES>;
+  private readonly skinProg: ProgramBindings<typeof SKIN_UNIFORMS, typeof SKIN_ATTRIBUTES>;
+  private readonly lineProg: ProgramBindings<typeof LINE_UNIFORMS, typeof LINE_ATTRIBUTES>;
+  private readonly pointProg: ProgramBindings<typeof POINT_UNIFORMS, typeof POINT_ATTRIBUTES>;
   private readonly meshes = new Map<string, { buf: WebGLBuffer; n: number }>();
   private readonly skins = new Map<string, { buf: WebGLBuffer; n: number }>();
   private readonly lineBuf: WebGLBuffer;
@@ -423,10 +456,10 @@ export class FlatRenderer {
     const gl = canvas.getContext('webgl', { antialias: true, alpha: true }) as WebGLRenderingContext;
     if (!gl) throw new Error('WebGL 不可用');
     this.gl = gl;
-    this.meshProg = link(gl, MESH_VS, MESH_FS);
-    this.skinProg = link(gl, SKIN_VS, MESH_FS);
-    this.lineProg = link(gl, LINE_VS, LINE_FS);
-    this.pointProg = link(gl, POINT_VS, POINT_FS);
+    this.meshProg = bindProgram(gl, MESH_VS, MESH_FS, MESH_UNIFORMS, MESH_ATTRIBUTES);
+    this.skinProg = bindProgram(gl, SKIN_VS, MESH_FS, SKIN_UNIFORMS, SKIN_ATTRIBUTES);
+    this.lineProg = bindProgram(gl, LINE_VS, LINE_FS, LINE_UNIFORMS, LINE_ATTRIBUTES);
+    this.pointProg = bindProgram(gl, POINT_VS, POINT_FS, POINT_UNIFORMS, POINT_ATTRIBUTES);
     this.lineBuf = gl.createBuffer() as WebGLBuffer;
     this.dynMeshBuf = gl.createBuffer() as WebGLBuffer;
     this.pointBuf = gl.createBuffer() as WebGLBuffer;
@@ -466,24 +499,24 @@ export class FlatRenderer {
   ): void {
     if (!data.length) return;
     const gl = this.gl;
-    gl.useProgram(this.meshProg);
+    gl.useProgram(this.meshProg.program);
     const blended = alpha !== undefined && alpha < 1;
     if (blended) {
-      gl.uniform1f(gl.getUniformLocation(this.meshProg, 'uAlpha'), alpha);
+      gl.uniform1f(this.meshProg.uniforms.uAlpha, alpha);
       gl.enable(gl.BLEND);
       gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.depthMask(false);
     }
-    if (dark) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uDark'), dark[0], dark[1], dark[2]);
-    if (lite) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uLite'), lite[0], lite[1], lite[2]);
-    const uR = gl.getUniformLocation(this.meshProg, 'uModelR');
-    const uT = gl.getUniformLocation(this.meshProg, 'uModelT');
+    if (dark) gl.uniform3f(this.meshProg.uniforms.uDark, dark[0], dark[1], dark[2]);
+    if (lite) gl.uniform3f(this.meshProg.uniforms.uLite, lite[0], lite[1], lite[2]);
+    const uR = this.meshProg.uniforms.uModelR;
+    const uT = this.meshProg.uniforms.uModelT;
     gl.uniformMatrix3fv(uR, false, IDENT3);
     gl.uniform3f(uT, 0, 0, 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.dynMeshBuf);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
-    const aPos = gl.getAttribLocation(this.meshProg, 'aPos');
-    const aNrm = gl.getAttribLocation(this.meshProg, 'aNrm');
+    const aPos = this.meshProg.attributes.aPos;
+    const aNrm = this.meshProg.attributes.aNrm;
     gl.enableVertexAttribArray(aPos);
     gl.enableVertexAttribArray(aNrm);
     gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 24, 0);
@@ -502,10 +535,10 @@ export class FlatRenderer {
       gl.drawArrays(gl.TRIANGLES, 0, nv);
     }
     // 还原默认明暗端色与状态，后续 drawMesh/drawSkinned 不受影响
-    if (dark) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uDark'), 0.29, 0.29, 0.27);
-    if (lite) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uLite'), 0.95, 0.95, 0.92);
+    if (dark) gl.uniform3f(this.meshProg.uniforms.uDark, 0.29, 0.29, 0.27);
+    if (lite) gl.uniform3f(this.meshProg.uniforms.uLite, 0.95, 0.95, 0.92);
     if (blended) {
-      gl.uniform1f(gl.getUniformLocation(this.meshProg, 'uAlpha'), 1);
+      gl.uniform1f(this.meshProg.uniforms.uAlpha, 1);
       gl.depthMask(true);
       gl.disable(gl.BLEND);
     }
@@ -532,18 +565,18 @@ export class FlatRenderer {
     if (!data.length) return;
     const gl = this.gl;
     const P = this.pointProg;
-    gl.useProgram(P);
-    gl.uniform3f(gl.getUniformLocation(P, 'uColA'), colA[0], colA[1], colA[2]);
-    gl.uniform3f(gl.getUniformLocation(P, 'uColB'), colB[0], colB[1], colB[2]);
-    gl.uniform1f(gl.getUniformLocation(P, 'uSize'), size);
-    gl.uniform1f(gl.getUniformLocation(P, 'uAlpha'), alpha);
+    gl.useProgram(P.program);
+    gl.uniform3f(P.uniforms.uColA, colA[0], colA[1], colA[2]);
+    gl.uniform3f(P.uniforms.uColB, colB[0], colB[1], colB[2]);
+    gl.uniform1f(P.uniforms.uSize, size);
+    gl.uniform1f(P.uniforms.uAlpha, alpha);
     // 逻辑单位 → 帧缓冲像素（canvas 背板通常是逻辑视口的整数倍）
-    gl.uniform1f(gl.getUniformLocation(P, 'uPxScale'), gl.drawingBufferWidth / (this.halfW * 2));
+    gl.uniform1f(P.uniforms.uPxScale, gl.drawingBufferWidth / (this.halfW * 2));
     gl.bindBuffer(gl.ARRAY_BUFFER, this.pointBuf);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
-    const aPos = gl.getAttribLocation(P, 'aPos');
-    const aNrm = gl.getAttribLocation(P, 'aNrm');
-    const aT = gl.getAttribLocation(P, 'aT');
+    const aPos = P.attributes.aPos;
+    const aNrm = P.attributes.aNrm;
+    const aT = P.attributes.aT;
     gl.enableVertexAttribArray(aPos);
     gl.enableVertexAttribArray(aNrm);
     gl.enableVertexAttribArray(aT);
@@ -579,26 +612,27 @@ export class FlatRenderer {
     const gl = this.gl;
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    const view = transpose3(cam.matrix);
     for (const prog of [this.meshProg, this.skinProg, this.lineProg, this.pointProg]) {
-      gl.useProgram(prog);
-      gl.uniformMatrix3fv(gl.getUniformLocation(prog, 'uView'), false, transpose3(cam.matrix));
+      gl.useProgram(prog.program);
+      gl.uniformMatrix3fv(prog.uniforms.uView, false, view);
       const pv = cam.pivotPoint;
-      gl.uniform3f(gl.getUniformLocation(prog, 'uPivot'), pv.x, pv.y, pv.z);
-      gl.uniform2f(gl.getUniformLocation(prog, 'uHalf'), this.halfW, this.halfH);
-      gl.uniform1f(gl.getUniformLocation(prog, 'uScale'), cam.viewScale);
-      gl.uniform1f(gl.getUniformLocation(prog, 'uDepthK'), this.depthK);
-      gl.uniform1f(gl.getUniformLocation(prog, 'uPerspD'), this.perspD);
-      gl.uniform2f(gl.getUniformLocation(prog, 'uPan'), cam.pan.x, cam.pan.y);
+      gl.uniform3f(prog.uniforms.uPivot, pv.x, pv.y, pv.z);
+      gl.uniform2f(prog.uniforms.uHalf, this.halfW, this.halfH);
+      gl.uniform1f(prog.uniforms.uScale, cam.viewScale);
+      gl.uniform1f(prog.uniforms.uDepthK, this.depthK);
+      gl.uniform1f(prog.uniforms.uPerspD, this.perspD);
+      gl.uniform2f(prog.uniforms.uPan, cam.pan.x, cam.pan.y);
     }
     for (const prog of [this.meshProg, this.skinProg, this.pointProg]) {
-      gl.useProgram(prog);
-      gl.uniform3f(gl.getUniformLocation(prog, 'uLight'), -0.42, -0.52, 0.74);
+      gl.useProgram(prog.program);
+      gl.uniform3f(prog.uniforms.uLight, -0.42, -0.52, 0.74);
     }
     for (const prog of [this.meshProg, this.skinProg]) {
-      gl.useProgram(prog);
-      gl.uniform3f(gl.getUniformLocation(prog, 'uDark'), 0.29, 0.29, 0.27);
-      gl.uniform3f(gl.getUniformLocation(prog, 'uLite'), 0.95, 0.95, 0.92);
-      gl.uniform1f(gl.getUniformLocation(prog, 'uAlpha'), 1);
+      gl.useProgram(prog.program);
+      gl.uniform3f(prog.uniforms.uDark, 0.29, 0.29, 0.27);
+      gl.uniform3f(prog.uniforms.uLite, 0.95, 0.95, 0.92);
+      gl.uniform1f(prog.uniforms.uAlpha, 1);
     }
   }
 
@@ -610,26 +644,26 @@ export class FlatRenderer {
     const gl = this.gl;
     const m = this.meshes.get(id);
     if (!m) return;
-    gl.useProgram(this.meshProg);
-    if (dark) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uDark'), dark[0], dark[1], dark[2]);
-    if (lite) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uLite'), lite[0], lite[1], lite[2]);
+    gl.useProgram(this.meshProg.program);
+    if (dark) gl.uniform3f(this.meshProg.uniforms.uDark, dark[0], dark[1], dark[2]);
+    if (lite) gl.uniform3f(this.meshProg.uniforms.uLite, lite[0], lite[1], lite[2]);
     // 列 = (û, ê1, ê2)：world = R·local + o（uniformMatrix3fv 按列主序）
-    gl.uniformMatrix3fv(gl.getUniformLocation(this.meshProg, 'uModelR'), false, [
+    gl.uniformMatrix3fv(this.meshProg.uniforms.uModelR, false, [
       fr.ux, fr.uy, fr.uz,
       fr.ex, fr.ey, fr.ez,
       fr.fx, fr.fy, fr.fz,
     ]);
-    gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uModelT'), fr.o.x, fr.o.y, fr.o.z);
+    gl.uniform3f(this.meshProg.uniforms.uModelT, fr.o.x, fr.o.y, fr.o.z);
     gl.bindBuffer(gl.ARRAY_BUFFER, m.buf);
-    const aPos = gl.getAttribLocation(this.meshProg, 'aPos');
-    const aNrm = gl.getAttribLocation(this.meshProg, 'aNrm');
+    const aPos = this.meshProg.attributes.aPos;
+    const aNrm = this.meshProg.attributes.aNrm;
     gl.enableVertexAttribArray(aPos);
     gl.enableVertexAttribArray(aNrm);
     gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 24, 0);
     gl.vertexAttribPointer(aNrm, 3, gl.FLOAT, false, 24, 12);
     gl.drawArrays(gl.TRIANGLES, 0, m.n);
-    if (dark) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uDark'), 0.29, 0.29, 0.27);
-    if (lite) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uLite'), 0.95, 0.95, 0.92);
+    if (dark) gl.uniform3f(this.meshProg.uniforms.uDark, 0.29, 0.29, 0.27);
+    if (lite) gl.uniform3f(this.meshProg.uniforms.uLite, 0.95, 0.95, 0.92);
   }
 
   /** 静态缓冲的网格摆到多处（2026-10-21 人猫同台立体台架加）：顶点上传一次（addMesh），
@@ -646,14 +680,14 @@ export class FlatRenderer {
     const gl = this.gl;
     const m = this.meshes.get(id);
     if (!m) return;
-    gl.useProgram(this.meshProg);
-    if (dark) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uDark'), dark[0], dark[1], dark[2]);
-    if (lite) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uLite'), lite[0], lite[1], lite[2]);
-    const uR = gl.getUniformLocation(this.meshProg, 'uModelR');
-    const uT = gl.getUniformLocation(this.meshProg, 'uModelT');
+    gl.useProgram(this.meshProg.program);
+    if (dark) gl.uniform3f(this.meshProg.uniforms.uDark, dark[0], dark[1], dark[2]);
+    if (lite) gl.uniform3f(this.meshProg.uniforms.uLite, lite[0], lite[1], lite[2]);
+    const uR = this.meshProg.uniforms.uModelR;
+    const uT = this.meshProg.uniforms.uModelT;
     gl.bindBuffer(gl.ARRAY_BUFFER, m.buf);
-    const aPos = gl.getAttribLocation(this.meshProg, 'aPos');
-    const aNrm = gl.getAttribLocation(this.meshProg, 'aNrm');
+    const aPos = this.meshProg.attributes.aPos;
+    const aNrm = this.meshProg.attributes.aNrm;
     gl.enableVertexAttribArray(aPos);
     gl.enableVertexAttribArray(aNrm);
     gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 24, 0);
@@ -665,8 +699,8 @@ export class FlatRenderer {
     }
     gl.uniformMatrix3fv(uR, false, IDENT3);
     gl.uniform3f(uT, 0, 0, 0);
-    if (dark) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uDark'), 0.29, 0.29, 0.27);
-    if (lite) gl.uniform3f(gl.getUniformLocation(this.meshProg, 'uLite'), 0.95, 0.95, 0.92);
+    if (dark) gl.uniform3f(this.meshProg.uniforms.uDark, 0.29, 0.29, 0.27);
+    if (lite) gl.uniform3f(this.meshProg.uniforms.uLite, 0.95, 0.95, 0.92);
   }
 
   /** 有没有这个 id 的静态网格（关键帧网格按需烘、烘过的不重传） */
@@ -681,22 +715,22 @@ export class FlatRenderer {
     const gl = this.gl;
     const m = this.skins.get(id);
     if (!m) return;
-    gl.useProgram(this.skinProg);
-    gl.uniformMatrix3fv(gl.getUniformLocation(this.skinProg, 'uRA'), false, [
+    gl.useProgram(this.skinProg.program);
+    gl.uniformMatrix3fv(this.skinProg.uniforms.uRA, false, [
       frA.ux, frA.uy, frA.uz,
       frA.ex, frA.ey, frA.ez,
       frA.fx, frA.fy, frA.fz,
     ]);
-    gl.uniform3f(gl.getUniformLocation(this.skinProg, 'uTA'), frA.o.x, frA.o.y, frA.o.z);
+    gl.uniform3f(this.skinProg.uniforms.uTA, frA.o.x, frA.o.y, frA.o.z);
     const s = jointScrew(frA, frB, dy);
-    gl.uniform3f(gl.getUniformLocation(this.skinProg, 'uAxis'), s.axis[0], s.axis[1], s.axis[2]);
-    gl.uniform3f(gl.getUniformLocation(this.skinProg, 'uCen'), s.cen[0], s.cen[1], s.cen[2]);
-    gl.uniform1f(gl.getUniformLocation(this.skinProg, 'uTheta'), s.theta);
-    gl.uniform1f(gl.getUniformLocation(this.skinProg, 'uPitch'), s.pitch);
+    gl.uniform3f(this.skinProg.uniforms.uAxis, s.axis[0], s.axis[1], s.axis[2]);
+    gl.uniform3f(this.skinProg.uniforms.uCen, s.cen[0], s.cen[1], s.cen[2]);
+    gl.uniform1f(this.skinProg.uniforms.uTheta, s.theta);
+    gl.uniform1f(this.skinProg.uniforms.uPitch, s.pitch);
     gl.bindBuffer(gl.ARRAY_BUFFER, m.buf);
-    const aPos = gl.getAttribLocation(this.skinProg, 'aPos');
-    const aNrm = gl.getAttribLocation(this.skinProg, 'aNrm');
-    const aW = gl.getAttribLocation(this.skinProg, 'aW');
+    const aPos = this.skinProg.attributes.aPos;
+    const aNrm = this.skinProg.attributes.aNrm;
+    const aW = this.skinProg.attributes.aW;
     gl.enableVertexAttribArray(aPos);
     gl.enableVertexAttribArray(aNrm);
     gl.enableVertexAttribArray(aW);
@@ -734,12 +768,12 @@ export class FlatRenderer {
       }
     }
     const gl = this.gl;
-    gl.useProgram(this.lineProg);
-    gl.uniform3f(gl.getUniformLocation(this.lineProg, 'uColor'), color[0], color[1], color[2]);
-    gl.uniform1f(gl.getUniformLocation(this.lineProg, 'uDepthBias'), bias);
+    gl.useProgram(this.lineProg.program);
+    gl.uniform3f(this.lineProg.uniforms.uColor, color[0], color[1], color[2]);
+    gl.uniform1f(this.lineProg.uniforms.uDepthBias, bias);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.lineBuf);
     gl.bufferData(gl.ARRAY_BUFFER, arr, gl.DYNAMIC_DRAW);
-    const aPos = gl.getAttribLocation(this.lineProg, 'aPos');
+    const aPos = this.lineProg.attributes.aPos;
     gl.enableVertexAttribArray(aPos);
     gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 12, 0);
     gl.drawArrays(gl.TRIANGLES, 0, pts.length * SEG * 3);
@@ -762,16 +796,16 @@ export class FlatRenderer {
       arr[k++] = s.a.x; arr[k++] = s.a.y; arr[k++] = s.a.z;
       arr[k++] = s.b.x; arr[k++] = s.b.y; arr[k++] = s.b.z;
     }
-    gl.useProgram(this.lineProg);
-    gl.uniform3f(gl.getUniformLocation(this.lineProg, 'uColor'), color[0], color[1], color[2]);
-    gl.uniform1f(gl.getUniformLocation(this.lineProg, 'uDepthBias'), bias);
-    const uR = gl.getUniformLocation(this.lineProg, 'uModelR');
-    const uT = gl.getUniformLocation(this.lineProg, 'uModelT');
+    gl.useProgram(this.lineProg.program);
+    gl.uniform3f(this.lineProg.uniforms.uColor, color[0], color[1], color[2]);
+    gl.uniform1f(this.lineProg.uniforms.uDepthBias, bias);
+    const uR = this.lineProg.uniforms.uModelR;
+    const uT = this.lineProg.uniforms.uModelT;
     gl.uniformMatrix3fv(uR, false, IDENT3);
     gl.uniform3f(uT, 0, 0, 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.lineBuf);
     gl.bufferData(gl.ARRAY_BUFFER, arr, gl.DYNAMIC_DRAW);
-    const aPos = gl.getAttribLocation(this.lineProg, 'aPos');
+    const aPos = this.lineProg.attributes.aPos;
     gl.enableVertexAttribArray(aPos);
     gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 12, 0);
     if (places && places.length) {

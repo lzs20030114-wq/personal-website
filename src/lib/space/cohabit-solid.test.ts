@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FRAMES, HOIST, STEADY, TrajectoryBaker, UNITS_PER_M, bakeBand, bakeRing, bandFrame, bandTopology, catSpot, furnitureBoxes, hoistProfile, postsMesh, rigFor, roomMesh, unitDrop, unitTopY } from './cohabit-solid';
+import { FRAMES, HOIST, STEADY, TrajectoryBaker, UNITS_PER_M, bakeBand, bakeRing, bandFrame, bandTopology, catSpot, furnitureBoxes, hoistProfile, platesMesh, postsMesh, rigFor, roomMesh, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
 import { planLayout } from './unit-activation';
 import { PEAK_REACH, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
 import { RING } from './skin-ring';
@@ -169,6 +169,15 @@ describe('摆放与尺度', () => {
     const stowedFoot = unitTopY(rig, 0) + rig.s * -traj.frames[STEADY.stowed][2 * n - 1] * 100;
     expect((ROOM.FLOOR_Y - stowedFoot) / UNITS_PER_M).toBeGreaterThan(3.3); // 房高 3.74 m，收起的布束只占顶上十几厘米
     expect(unitTopY(rig, 1) + rig.s * traj.footY).toBeCloseTo(RIG_ANCHOR_Y, 6);
+    // 钉住端（布束底 = 立杆下端）：到工位 = RIG_ANCHOR_Y，收起时与收起帧的脚只差顶端节点那零点几个单位，随升降单调
+    expect(unitFootY(rig, traj.footY, 1)).toBeCloseTo(RIG_ANCHOR_Y, 6);
+    expect(Math.abs(unitFootY(rig, traj.footY, 0) - stowedFoot)).toBeLessThan(0.5);
+    let prevFoot = -Infinity;
+    for (let d = 0; d <= 1; d += 0.1) {
+      const y = unitFootY(rig, traj.footY, d);
+      expect(y).toBeGreaterThan(prevFoot);
+      prevFoot = y;
+    }
   });
 
   it('64 个格子落在房间内净范围里，plan y → 世界 Z', () => {
@@ -182,12 +191,21 @@ describe('摆放与尺度', () => {
     expect(rig.cells[8].z - rig.cells[0].z).toBeCloseTo(layout8.pitchM * UNITS_PER_M, 6);
   });
 
-  it('立杆与圆环板、房间都是闭合网格', () => {
-    for (const m of [postsMesh(rig, layout8), roomMesh(layout8.roomM)]) {
+  it('立杆、圆环板、房间都是闭合网格；立杆下端按单元给（不传 = 全在工位，收起时只剩天花下一小截）', () => {
+    for (const m of [postsMesh(rig, layout8), platesMesh(rig), roomMesh(layout8.roomM)]) {
       expect(m.verts.length % 3).toBe(0);
       expect(m.idx.length % 3).toBe(0);
       for (const i of m.idx) expect(i).toBeLessThan(m.verts.length / 3);
     }
+    const lowest = (m: { verts: Float32Array }): number => {
+      let y = -Infinity;
+      for (let k = 1; k < m.verts.length; k += 3) y = Math.max(y, m.verts[k]);
+      return y;
+    };
+    expect(lowest(postsMesh(rig, layout8))).toBeCloseTo(RIG_ANCHOR_Y, 4);
+    const stowedFoot = unitFootY(rig, traj.footY, 0);
+    expect(lowest(postsMesh(rig, layout8, new Float32Array(64).fill(stowedFoot)))).toBeCloseTo(stowedFoot, 4);
+    expect(stowedFoot).toBeLessThan(RIG_ANCHOR_Y * 0.1);
   });
 
   it('家具：每件一块座面一块靠背，座面离地 0.45 m，靠背在人背后那条边上', () => {

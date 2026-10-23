@@ -195,6 +195,7 @@ function LabGroup({
                   key={b.no}
                   className={`hs-bench${cur?.no === b.no ? ' hs-is-on' : ''}`}
                   href={`/lab#lab${b.no}`}
+                  prefetch={false}
                   data-rv
                   data-bench={b.no}
                   data-pt="frame"
@@ -323,7 +324,7 @@ export function ZonePage({
               <span className="hs-live">Live</span>
               {benchCount} benches · three projects
             </span>
-            <Link className="hs-btn" href="/lab">
+            <Link className="hs-btn" href="/lab" prefetch={false}>
               Explore the lab ↗
             </Link>
           </div>
@@ -404,7 +405,10 @@ export function ZonePage({
                 className={`hs-cad__tip${tipEntry ? ' hs-is-on' : ''}`}
                 style={
                   tipEntry
-                    ? { left: `calc(168px + (100% - 168px) * ${tipEntry.f})`, top: `${tipEntry.lane * 28 - 2}px` }
+                    ? {
+                        left: `calc(var(--cad-label-w) + (100% - var(--cad-label-w)) * ${tipEntry.f})`,
+                        top: `calc(${tipEntry.lane} * var(--cad-lane-h) - 2px)`,
+                      }
                     : undefined
                 }
               >

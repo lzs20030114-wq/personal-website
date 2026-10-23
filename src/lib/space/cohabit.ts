@@ -782,8 +782,8 @@ export class CohabitSim {
   /** 猫的台面痕迹（脚下单元） */
   readonly catField: TraceField;
   readonly act: Activation;
-  catchment: Catchment;
-  catCatchment: Catchment;
+  readonly catchment: Catchment;
+  readonly catCatchment: Catchment;
   space: SpaceMode;
   people: Visitor[] = [];
   cats: Cat[] = [];
@@ -840,11 +840,19 @@ export class CohabitSim {
   private readonly catInputsBuf: Float64Array;
   private readonly pairs = new Map<string, PairState>();
   private readonly wallScratch: Uint8Array;
+  /** 全落带段只依赖本实例的布局；换网格 / 半径会新建实例。保持 JS double，不经 Float32 舍入。 */
+  private readonly fullBandSegments: readonly (readonly [number, number, number, number])[];
 
   constructor(opts: CohabitOpts = {}) {
     this.trigger = opts.trigger ?? 'trace';
     const posture = this.trigger === 'posture';
     this.layout = planLayout(opts.grid ?? (posture ? COHABIT.SEATS.GRID : COHABIT.GRID_DEF), opts.radius ?? RING.RADIUS_DEF);
+    this.fullBandSegments = this.layout.units.flatMap((u) => Array.from({ length: BANDS }, (_, j): readonly [number, number, number, number] => {
+      const a = bandAngle(j);
+      const cx = Math.cos(a);
+      const cy = Math.sin(a);
+      return [u.x + cx * this.layout.mastR, u.y + cy * this.layout.mastR, u.x + cx * this.layout.platR, u.y + cy * this.layout.platR];
+    }));
     this.furniture = posture ? standardFurniture(this.layout) : [];
     this.furn = posture ? furnishRoom(this.layout, this.furniture) : null;
     this.graph = aisleGraph(this.layout, this.furn ?? undefined);
@@ -862,7 +870,8 @@ export class CohabitSim {
     this.act = new Activation(this.layout.units.length, threshold, opts.mode ?? 'follow', opts.fill ?? PLAN.FILL.def);
     const reading = opts.reading ?? 'nearest';
     this.catchment = buildCatchment(this.layout, this.field, reading);
-    this.catCatchment = buildCatchment(this.layout, this.catField, reading);
+    // 两场的网格几何和读法完全相同；只共享只读索引表，痕迹数据、cap 和输入缓冲仍各自独立。
+    this.catCatchment = this.catchment;
     this.space = opts.space ?? 'live';
     this.reach = opts.reach ?? PLAN.ATTENTION.reach;
     this.decay = opts.decay ?? PLAN.DECAY;
@@ -924,6 +933,7 @@ export class CohabitSim {
 
   /** 换档：钉死 = 偶数行全落、永不更新；空房间 = 没有单元，猫下到地面 */
   setSpace(m: SpaceMode): void {
+    if (m === this.space) return;
     this.space = m;
     this.applySpace();
   }
@@ -952,20 +962,32 @@ export class CohabitSim {
         for (let u = 0; u < fixed.length; u++) if (fixed[u]) this.act.degree[u] = 1;
       }
     }
-    this.refreshWalls();
     for (const c of this.cats) {
-      if (this.space === 'empty') c.unit = null;
-      else if (!c.unit) c.unit = nearestUnit(this.layout, c.walker.x, c.walker.y);
+      // 换了空间，旧地面路线 / 跨台转移已不再有效。先确定新落点，再一起取消旧任务；
+      // 还在同一张合法台面上的猫留在原处，地面上或跨台途中的猫落到最近的合法单元。
+      let unit = this.space === 'empty' ? null : c.unit;
+      if (this.space !== 'empty' && (!unit || c.transfer || Math.hypot(c.walker.x - unit.x, c.walker.y - unit.y) > this.layout.platR))
+        unit = nearestUnit(this.layout, c.walker.x, c.walker.y);
+      if (unit && this.space === 'fixed' && this.act.degree[unit.i] < 1) {
+        const formed = this.layout.units.filter((u) => this.act.degree[u.i] >= 1);
+        unit = formed.length
+          ? formed.reduce((b, u) => (Math.hypot(u.x - c.walker.x, u.y - c.walker.y) < Math.hypot(b.x - c.walker.x, b.y - c.walker.y) ? u : b), formed[0])
+          : null;
+      }
+      const keepPosition = !unit || (unit === c.unit && !c.transfer && Math.hypot(c.walker.x - unit.x, c.walker.y - unit.y) <= this.layout.platR);
+      c.unit = unit;
+      c.walker.place(keepPosition ? c.walker.x : unit!.x, keepPosition ? c.walker.y : unit!.y);
       c.pending = null;
       c.transfer = null;
-      if (c.unit && this.space === 'fixed' && this.act.degree[c.unit.i] < 1) {
-        // 钉死档里猫只能住在落下的那几行：挪到最近的落下单元
-        const f = this.layout.units.filter((u) => this.act.degree[u.i] >= 1);
-        if (!f.length) continue;
-        c.unit = f.reduce((b, u) => (Math.hypot(u.x - c.walker.x, u.y - c.walker.y) < Math.hypot(b.x - c.walker.x, b.y - c.walker.y) ? u : b), f[0]);
-        c.walker.place(c.unit.x, c.unit.y);
-      }
+      c.climb = null;
+      c.homing = null;
+      c.approaching = null;
+      c.waited = 0;
+      c.phaseTime = 0;
+      c.state = c.mode === 'held' ? 'held' : 'sit';
+      this.keepSupport(c);
     }
+    this.refreshWalls();
   }
 
   private refreshWalls(): void {
@@ -1118,6 +1140,8 @@ export class CohabitSim {
     this.furn = furnishRoom(this.layout, specs);
     this.graph.furn = this.furn;
     this.seats = placeSeats(this.layout, this.graph);
+    const standing: Visitor[] = [];
+    // 先把所有旧座位号迁移完。standNode 会读取其他人的座位，不能在新旧下标混用时调用。
     for (const p of this.people) {
       if (p.seat === null) continue;
       const o = old[p.seat];
@@ -1125,11 +1149,7 @@ export class CohabitSim {
         // 坐在被搬动的那件上：起身站到最近能站的交叉点；正走去坐的：放弃这个座位
         if (p.seated) {
           p.seated = false;
-          const k = this.standNode(p);
-          p.walker.place(this.graph.nodes[k].x, this.graph.nodes[k].y);
-          p.lastX = p.walker.x;
-          p.lastY = p.walker.y;
-          p.pause = 0;
+          standing.push(p);
         }
         p.seat = null;
         continue;
@@ -1138,6 +1158,13 @@ export class CohabitSim {
       const n = this.seats.find((q) => q.furn === fi && q.slot === o.slot);
       p.seat = n ? n.i : null;
       if (!n) p.seated = false;
+    }
+    for (const p of standing) {
+      const k = this.standNode(p);
+      p.walker.place(this.graph.nodes[k].x, this.graph.nodes[k].y);
+      p.lastX = p.walker.x;
+      p.lastY = p.walker.y;
+      p.pause = 0;
     }
     // 站在新占位里的人挪到最近能站的交叉点
     for (const p of this.people) {
@@ -1465,11 +1492,12 @@ export class CohabitSim {
 
   /** 第 u 台第 j 条带的径向段（芯外缘 → 平台外缘）。`full` = 按全落的长度（问「它落下来挡不挡人」），
    *  否则按它此刻的收回程度（问「它现在挡没挡着」）——请求必须按全长判，按现长判会越收越够不着人、刚收又落回 */
-  private bandSeg(u: PlanUnit, j: number, full = false): [number, number, number, number] {
+  private bandSeg(u: PlanUnit, j: number, full = false): readonly [number, number, number, number] {
+    if (full) return this.fullBandSegments[u.i * BANDS + j];
     const a = bandAngle(j);
     const cx = Math.cos(a);
     const cy = Math.sin(a);
-    const r = full ? this.layout.platR : this.layout.mastR + (this.layout.platR - this.layout.mastR) * (1 - this.bandOpen[u.i * BANDS + j]);
+    const r = this.layout.mastR + (this.layout.platR - this.layout.mastR) * (1 - this.bandOpen[u.i * BANDS + j]);
     return [u.x + cx * this.layout.mastR, u.y + cy * this.layout.mastR, u.x + cx * r, u.y + cy * r];
   }
 
@@ -2439,7 +2467,7 @@ export class CohabitSim {
     const att = this.attendingOf(c);
     if (att && w.state !== 'walk') w.heading = Math.atan2(att.walker.y - w.y, att.walker.x - w.x);
 
-    if (this.space === 'empty' || (this.catFloor && !c.unit)) {
+    if (this.space === 'empty' || !c.unit) {
       c.floorTime += dt;
       this.stepFloorCat(c, dt, cost, att);
       return;

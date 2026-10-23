@@ -7,6 +7,7 @@ import {
   ARCH_DRIVER,
   ARCH_FEET,
   ARCH_FOOT_SLOTS,
+  ARCH_HANDLES,
   ARCH_PIN,
   ARCH_SPIN_SWEEPS,
   ARCH_STEP_DT,
@@ -15,8 +16,10 @@ import {
   archTriSigns,
   apexHeightMM,
   createArch,
+  nearestArchHandleWithin,
 } from './arch';
-import { ARCH_DEF, ARCH_TRI_SIGNS } from './arch-data';
+import { ARCH_BRACES, ARCH_DEF, ARCH_TRI_SIGNS } from './arch-data';
+import { LinkageController } from './controller';
 
 /** 曲柄位置驱动一步（controller.frame 的 spin 路径，SPEC §4.2）。 */
 function spinStep(s: ReturnType<typeof createArch>, theta: number, sweeps: number): void {
@@ -175,6 +178,36 @@ describe('脚槽止程（ARCH_FOOT_SLOTS + archStopPass + 定步积分，2026-07
 });
 
 describe('拖拽（软目标 + 按帧限步，SPEC §3.3）', () => {
+  it('共用命中过滤仅放行六个手柄，中段销和不可见支撑点不能进入拖拽', () => {
+    const s = createArch();
+    const ctl = new LinkageController(s, {
+      driver: ARCH_DRIVER,
+      theta0: ARCH_THETA0,
+      spinSweeps: ARCH_SPIN_SWEEPS,
+      dragSweeps: ARCH_DRAG_SWEEPS,
+    });
+    const down = (x: number, y: number): boolean =>
+      nearestArchHandleWithin(s, x, y) && ctl.pointerDown(1, x, y);
+
+    for (const i of [0, 1, 2, 3, ...ARCH_BRACES]) {
+      const p = s.nodes[i];
+      expect(down(p.x, p.y)).toBe(false);
+      expect(ctl.mode).not.toBe('drag');
+    }
+    expect(down(50, 50)).toBe(false);
+    for (const i of ARCH_HANDLES) {
+      const p = s.nodes[i];
+      expect(down(p.x, p.y)).toBe(true);
+      expect(ctl.mode).toBe('drag');
+      ctl.pointerUp(1);
+    }
+    // 手柄周围仍保留原来的 24px 热区，不要求点中 7px 的视觉圆。
+    const p = s.nodes[ARCH_APEX];
+    expect(down(p.x, p.y - 20)).toBe(true);
+    ctl.pointerUp(1);
+    expect(down(p.x, p.y - 30)).toBe(false);
+  });
+
   it('拖拽拱顶向下：跟随呼吸自由度、无 NaN；松手后恢复刚性 < 0.5px', () => {
     const s = createArch();
     const y0 = s.nodes[ARCH_APEX].y;

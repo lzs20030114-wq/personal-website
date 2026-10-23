@@ -79,7 +79,7 @@ export const LAB_INDEX: readonly LabGroup[] = [
         label: "One band",
         sub: "Lab 2-1 – 2-3 · what a unit is",
         benches: [
-          { no: "2-1", title: "Contractile skin units", kernel: "2d", description: 'Four bond patterns turn a contracting strip into four shapes.', meta: 'Python parity · SVG', kind: 'SVG · research-code port', verb: 'drag ℓ' },
+          { no: "2-1", title: "Contractile skin units", kernel: "2d", description: 'Four bond patterns turn a contracting strip into four shapes.', meta: 'Python parity · SVG', kind: 'SVG · research-code port', verb: 'watch it form' },
           { no: "2-2", title: "Skin units, solid", kernel: "3d", description: 'The four fabric bands in 3D, with visible sections and bonds.', meta: 'Shared 3D rig · WebGL', kind: 'WebGL', verb: 'drag to orbit' },
           { no: "2-3", title: "Two structures, one band", kernel: "3d", description: 'Two structures on one strip, with an adjustable gap.', meta: '5 dual bands · WebGL', kind: 'WebGL', verb: 'drag to orbit' },
         ],

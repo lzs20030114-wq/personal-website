@@ -7,6 +7,7 @@ import { LabControlLabel } from './LabControlLabel';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import { FlatRenderer, bakeIndexed, bakeRuledPoints } from '../../src/lib/linkage/gl3d';
+import { bandTriIndex, bandVerts, bandsFarToNear, resample } from '../../src/lib/linkage/skin';
 import type { Vec3 } from '../../src/lib/linkage/solver3d';
 import {
   SHELL_OMEGA,
@@ -177,42 +178,7 @@ function slerpQ(a: Quat, b: Quat, t: number): Quat {
 
 const wrapAngle = (a: number): number => ((a + Math.PI) % (2 * Math.PI)) - Math.PI;
 
-/** 直纹带的三角索引（A 侧 0..n-1、B 侧 n..2n-1，逐格两片） */
-const SKIN_IDX = (() => {
-  const idx: number[] = [];
-  for (let k = 0; k < SKIN_SAMPLES - 1; k++) {
-    const a = k;
-    const b = SKIN_SAMPLES + k;
-    idx.push(a, b, a + 1, b, b + 1, a + 1);
-  }
-  return new Uint16Array(idx);
-})();
-
-/** 折线按弧长等距重采样到 n 点（照搬 src/demo/shell3d.ts） */
-function resample(pts: Vec3[], n: number): Vec3[] {
-  const cum = [0];
-  for (let i = 1; i < pts.length; i++) {
-    cum.push(
-      cum[i - 1] +
-        Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y, pts[i].z - pts[i - 1].z),
-    );
-  }
-  const total = cum[cum.length - 1] || 1;
-  const out: Vec3[] = [];
-  let seg = 0;
-  for (let k = 0; k < n; k++) {
-    const t = (k / (n - 1)) * total;
-    while (seg < pts.length - 2 && cum[seg + 1] < t) seg++;
-    const span = cum[seg + 1] - cum[seg] || 1;
-    const u = Math.min(1, Math.max(0, (t - cum[seg]) / span));
-    out.push({
-      x: pts[seg].x + (pts[seg + 1].x - pts[seg].x) * u,
-      y: pts[seg].y + (pts[seg + 1].y - pts[seg].y) * u,
-      z: pts[seg].z + (pts[seg + 1].z - pts[seg].z) * u,
-    });
-  }
-  return out;
-}
+const SKIN_IDX = bandTriIndex(SKIN_SAMPLES);
 
 /**
  * 界面词表（用户拍板 2026-07-28：案例页主图的控制条要英文）。
@@ -357,27 +323,9 @@ export function RingsBench({
         const n = rings[ri].solver.nodes[j];
         return ringPoint(rings[ri].data, n.x, n.y);
       });
-    const skinPoints = (ri: number): Float32Array =>
-      bakeRuledPoints(
-        resample(profileWorld(ri), SKIN_U),
-        resample(profileWorld(ri + 1), SKIN_U),
-        SKIN_V,
-      );
-    const skinMesh = (ri: number): Float32Array => {
-      const A = resample(profileWorld(ri), SKIN_SAMPLES);
-      const B = resample(profileWorld(ri + 1), SKIN_SAMPLES);
-      const verts = new Float32Array(SKIN_SAMPLES * 2 * 3);
-      let k = 0;
-      for (const p of [...A, ...B]) {
-        verts[k++] = p.x;
-        verts[k++] = p.y;
-        verts[k++] = p.z;
-      }
-      return bakeIndexed(verts, SKIN_IDX);
-    };
     /** 带序按视深从远到近（半透明面之间没有 z 排序，得自己排）。
      *  深度取两环轮毂中点：q.z = 视矩阵第三行·(p−pivot)，越大越近。 */
-    const bandsFarToNear = (): number[] => {
+    const bandOrder = (): number[] => {
       const m = cam.matrix;
       const pv = cam.pivotPoint;
       const depth = (ri: number): number => {
@@ -388,7 +336,7 @@ export function RingsBench({
         const z = (a.z + b.z) / 2 - pv.z;
         return m[6] * x + m[7] * y + m[8] * z;
       };
-      return [...Array(rings.length - 1).keys()].sort((p, q) => depth(p) - depth(q));
+      return bandsFarToNear(rings.length - 1, depth);
     };
 
     let theta = SHELL_THETA0;
@@ -415,6 +363,13 @@ export function RingsBench({
 
     const render = (): void => {
       R.beginFrame(cam);
+      // 每次绘制重新采样；相邻两带共用边界环，不跨物理帧缓存。
+      const outlines = skinA > 0.005 ? rings.map((_, ri) => profileWorld(ri)) : [];
+      const faces = outlines.map((p) => resample(p, SKIN_SAMPLES));
+      const points = outlines.map((p) => resample(p, SKIN_U));
+      const skinMesh = (ri: number): Float32Array =>
+        bakeIndexed(bandVerts(faces[ri], faces[ri + 1]), SKIN_IDX);
+      const skinPoints = (ri: number): Float32Array => bakeRuledPoints(points[ri], points[ri + 1], SKIN_V);
       // 不透明档：遮罩面走实体路径——先画、写深度，遮挡由 z-buffer 精确给出
       if (skinA >= SKIN_OPAQUE_AT) {
         for (let ri = 0; ri < rings.length - 1; ri++) {
@@ -454,7 +409,7 @@ export function RingsBench({
       // 带序从远到近——半透明面之间没有 z 排序，只能靠下单顺序。
       const da = dotAlpha(skinA);
       if (skinA > 0.005) {
-        for (const ri of bandsFarToNear()) {
+        for (const ri of bandOrder()) {
           if (skinA < SKIN_OPAQUE_AT) {
             const s = bandShade(ri);
             R.drawDynamicMesh(skinMesh(ri), s.dark, s.lite, skinA);
@@ -481,7 +436,9 @@ export function RingsBench({
       }
       render();
       const apexS2 = rings[1].solver.nodes[rings[1].data.apex].y;
-      setHud({ apex: apexS2, err: shellMaxError(rings), note: '' });
+      const err = shellMaxError(rings);
+      setHud((h) => !h.note && h.apex.toFixed(1) === apexS2.toFixed(1) && h.err.toFixed(2) === err.toFixed(2)
+        ? h : { apex: apexS2, err, note: '' });
       if (breathing) setPhase(Number(phiDeg().toFixed(1)));
     };
 

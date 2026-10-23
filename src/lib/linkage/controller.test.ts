@@ -213,4 +213,30 @@ describe('reduced-motion（SPEC §4.2）', () => {
     ctl.pointerUp(1);
     expect(ctl.mode).toBe('idle');
   });
+
+  it.each([[500, 100], [700, 300], [100, 400]])('不可达拖拽到 (%i, %i) 松手后恢复刚性，随后保持静止', (x, y) => {
+    const { solver, ctl } = makeCtl({ reducedMotion: true });
+    const initial = coords(solver);
+    const p = solver.nodes[N.P];
+    expect(ctl.pointerDown(1, p.x, p.y)).toBe(true);
+    ctl.pointerMove(1, x, y);
+    for (let f = 0; f < 30; f++) ctl.frame(1 / 60);
+    // 回归原问题：软目标在不可达位置持续施力，松手前确有可见杆长残差。
+    expect(solver.maxError()).toBeGreaterThan(10);
+    ctl.pointerUp(1);
+    for (let f = 0; f < 24; f++) {
+      ctl.frame(1 / 60);
+      expect(ctl.mode).toBe('idle');
+      expect(ctl.omegaNow).toBe(0);
+    }
+    expect(solver.maxError()).toBeLessThan(0.5);
+    const settled = coords(solver);
+    expect(settled).not.toEqual(initial); // 就地恢复杆长，不重置到开场姿态。
+    for (let f = 0; f < 120; f++) ctl.frame(1 / 60);
+    expect(coords(solver)).toEqual(settled);
+    for (const i of [N.A, N.D]) {
+      expect(solver.nodes[i].x).toBe(initial[i * 2]);
+      expect(solver.nodes[i].y).toBe(initial[i * 2 + 1]);
+    }
+  });
 });

@@ -191,6 +191,21 @@ describe('提交文件清单', () => {
     if (out.ok) expect(out.files).toHaveLength(1);
   });
 
+  it('拒绝覆盖仓库里的同名图片，也拒绝一批图片内部重名', () => {
+    const entries = [entry({ blocks: [{
+      kind: 'image', src: '/log/a.png', alt: { en: 'a', zh: '甲' }, width: 8, height: 8,
+    }] })];
+    const image = { name: 'a.png', dataBase64: PNG };
+    for (const input of [
+      { entries, images: [image], existingImages: ['a.png'] },
+      { entries, images: [image, { ...image, dataBase64: 'BBBB' }] },
+    ]) {
+      const out = buildCommitFiles(input);
+      expect(out.ok).toBe(false);
+      if (!out.ok) expect(out.errors.join()).toContain('文件名已被占用');
+    }
+  });
+
   it('文件名或内容不合法的图被拦下', () => {
     const bad = buildCommitFiles({
       entries: [entry()],

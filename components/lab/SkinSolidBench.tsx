@@ -223,6 +223,13 @@ interface SolidInst {
   verts: Float32Array;
 }
 
+interface SolidBandGeometry {
+  a: Float32Array;
+  b: Float32Array;
+  rail: Float32Array;
+  bonds?: { a: Vec3; b: Vec3 }[];
+}
+
 /**
  * 环阵列的一格（Lab.10）：站位 + 用哪一份环编制。
  * 阵列下**几何只烘一份**——同一条引擎、同一半径，320 处的差别全在 (方位角, 平移) 里，
@@ -514,6 +521,7 @@ export function SkinSolidBench({
       o?: readonly number[],
       plans?: readonly (readonly number[])[],
     ) => void;
+    setInstances: (order?: readonly number[], plans?: readonly (readonly number[])[]) => void;
     viewTo: (k: ViewKey) => void;
     repivot: () => void;
     viewHome: () => void;
@@ -671,6 +679,20 @@ export function SkinSolidBench({
     let planList: readonly (readonly number[])[] = ringPlansRef.current ?? [plan];
     let sims: SolidSim[] = [];
     let insts: SolidInst[] = [];
+    let instsHaveCells = hasCells();
+    // cells 路径的同一引擎在各个方位拥有逐位相同的局部几何；单环保留原 CPU 落位。
+    // 缓存仅活到下一次几何变化，既不改变绘制顺序，也不以物理 step 代替 EMA 的版本。
+    const bandGeometry = new Map<SolidSim | SolidInst, SolidBandGeometry>();
+    const membraneGeometry = new Map<string, Float32Array>();
+    let bridgeGeometry: { x: number; z: number; data: Float32Array }[] | null = null;
+    let bridgePairs = bridgesRef.current;
+    let geometryRail = railRef.current;
+    const invalidateGeometry = (): void => {
+      bandGeometry.clear();
+      membraneGeometry.clear();
+      bridgeGeometry = null;
+      for (const s of sims) { s.sx = null; s.sy = null; }
+    };
     // 换键谱/重播/取消跳过会让在途读取失效，旧结果不能覆盖新选择。
     let terminalGeneration = 0;
     let terminalPendingGeneration: number | null = null;
@@ -693,6 +715,7 @@ export function SkinSolidBench({
       };
     });
     const makeInsts = (): SolidInst[] => {
+      instsHaveCells = hasCells();
       // 环阵列（Lab.10）：实例 = 每份环编制 × 环上每条带；格子偏移不进实例，
       // 由 placesOf 现算成摆放表——同一条带在十六格里是同一份顶点
       if (hasCells()) {
@@ -766,6 +789,7 @@ export function SkinSolidBench({
 
     /** 半径变了：格距跟着走（用户 2026-08-25 拍板），相机也得跟着退 */
     const reflow = (): void => {
+      invalidateGeometry();
       if (sceneRef.current && setR !== radiusRef.current) bakeScene();
       // 阵列 ⇄ 单环也走这里：切回单环要把格子**清空**（留着旧的会让膜按十六格去画）
       cellList = hasCells() ? cellsRef.current!(radiusRef.current) : [];
@@ -791,6 +815,7 @@ export function SkinSolidBench({
       sims = makeSims();
       insts = makeInsts();
       footAlign();
+      invalidateGeometry();
     };
     seed();
 
@@ -803,6 +828,7 @@ export function SkinSolidBench({
         v.offX = q.offX;
         v.offZ = q.offZ;
       });
+      invalidateGeometry();
       cam.retarget(pivotOf(), camScaleRef.current ? scaleOf() : L.camScale);
     };
 
@@ -873,6 +899,10 @@ export function SkinSolidBench({
       return baked;
     };
     const render = (): void => {
+      if (geometryRail !== railRef.current) {
+        geometryRail = railRef.current;
+        invalidateGeometry();
+      }
       R.beginFrame(cam);
       const result = surfaceRef.current?.(sims.map(s => ({ px: s.sim.px, py: s.sim.py, locked: s.sim.locked, step: s.sim.step })), layoutList[layoutIdx].key);
       if (result) {
@@ -904,6 +934,7 @@ export function SkinSolidBench({
         R.drawDynamicMesh(ceilRing(), RAIL_DARK, RAIL_LITE, undefined, cellPlaces());
       // 绘图平滑按引擎算一次，它的全部实例共用（圆筒 4 条引擎摆 20 处）
       for (const s of sims) {
+        if (s.sx && s.sy) continue;
         if (raw) { s.sx = s.sim.px; s.sy = s.sim.py; continue; }
         if (!s.emaX || !s.emaY) {
           s.emaX = Float64Array.from(s.sim.px);
@@ -924,51 +955,64 @@ export function SkinSolidBench({
         const localX = hasCells() ? radiusRef.current : inst.offX;
         const places = placesOf(inst);
         const placesW = placesWorldOf(inst);
-        fillSolidVerts(px, py, sim.n, localX, depth, thick, SOLID.SCALE, inst.verts, inst.offZ, v.offY, rp);
-        R.drawDynamicMesh(bakeIndexed(inst.verts, v.topo.idxA), DARK_A, LITE_A, undefined, places);
-        R.drawDynamicMesh(bakeIndexed(inst.verts, v.topo.idxB), DARK_B, LITE_B, undefined, places);
-        // 芯轨（逐帧小盒）。core = 跟着芯收缩（下端钉住、上端随收缩下降）；
-        // fixed = 天花到钉住点的固定立杆，收缩时是外皮沿着它往下聚（见 railSpan）
-        const rs = railSpan(
-          railRef.current,
-          { coreTop: sim.coreTop, coreLen: sim.coreLen, footY: sim.py[sim.n - 1] },
-          v.offY,
-          CEIL_RING.y,
-        );
+        const geometryKey = hasCells() && inst.offZ === 0 ? v : inst;
+        let geometry = bandGeometry.get(geometryKey);
         const rad0 = (rp ? rp.radius : 0) + localX;
-        // 芯轨按**世界尺寸**直接建（截面随装置缩，竖向不缩）：装置缩小后立杆仍从天花
-        // 落到钉住点，装置挂在它的下半截 —— 空出来的那段就是「挂得更低」本身。
-        // rig 缺省时 (scale 1, y 0) 这两行退化成原式子，Lab.07–09 逐位不变
-        const railTop = railRef.current === 'fixed' ? rs.top : rs.top * rigS + rigY;
-        const railBot = rs.bottom * rigS + rigY;
-        const railBox = boxVerts(
-          (rad0 - 3.4) * rigS,
-          (railTop + railBot) / 2,
-          inst.offZ * rigS,
-          2.4 * rigS,
-          (railBot - railTop) / 2,
-          Math.min(6, depth / 4) * rigS,
-        );
-        rotateVertsY(railBox.verts, rp); // 环上：轴对齐盒先按 (径向,切向) 建，再绕 Y 转到位
-        R.drawDynamicMesh(bakeIndexed(railBox.verts, railBox.idx), RAIL_DARK, RAIL_LITE, undefined, placesW);
+        if (!geometry) {
+          fillSolidVerts(px, py, sim.n, localX, depth, thick, SOLID.SCALE, inst.verts, inst.offZ, v.offY, rp);
+          // 芯轨（逐帧小盒）。core = 跟着芯收缩（下端钉住、上端随收缩下降）；
+          // fixed = 天花到钉住点的固定立杆，收缩时是外皮沿着它往下聚（见 railSpan）
+          const rs = railSpan(
+            railRef.current,
+            { coreTop: sim.coreTop, coreLen: sim.coreLen, footY: sim.py[sim.n - 1] },
+            v.offY,
+            CEIL_RING.y,
+          );
+          // 芯轨按**世界尺寸**直接建（截面随装置缩，竖向不缩）：装置缩小后立杆仍从天花
+          // 落到钉住点，装置挂在它的下半截 —— 空出来的那段就是「挂得更低」本身。
+          // rig 缺省时 (scale 1, y 0) 这两行退化成原式子，Lab.07–09 逐位不变
+          const railTop = railRef.current === 'fixed' ? rs.top : rs.top * rigS + rigY;
+          const railBot = rs.bottom * rigS + rigY;
+          const railBox = boxVerts(
+            (rad0 - 3.4) * rigS,
+            (railTop + railBot) / 2,
+            inst.offZ * rigS,
+            2.4 * rigS,
+            (railBot - railTop) / 2,
+            Math.min(6, depth / 4) * rigS,
+          );
+          rotateVertsY(railBox.verts, rp); // 环上：轴对齐盒先按 (径向,切向) 建，再绕 Y 转到位
+          geometry = {
+            a: bakeIndexed(inst.verts, v.topo.idxA),
+            b: bakeIndexed(inst.verts, v.topo.idxB),
+            rail: bakeIndexed(railBox.verts, railBox.idx),
+          };
+          bandGeometry.set(geometryKey, geometry);
+        }
+        R.drawDynamicMesh(geometry.a, DARK_A, LITE_A, undefined, places);
+        R.drawDynamicMesh(geometry.b, DARK_B, LITE_B, undefined, places);
+        R.drawDynamicMesh(geometry.rail, RAIL_DARK, RAIL_LITE, undefined, placesW);
         // 天花板条 = 房间的天花板，**固定不动**（用户 2026-08-22 纠偏）：收缩注册在
         // 底端后带子的顶端离开它往下沉，那条缝就是「往下收」本身
         if (ceiling === 'per-unit') R.drawMesh(inst.ceilKey, IDENT, RAIL_DARK, RAIL_LITE);
         if (bondsRef.current && sim.locked.length) {
-          const hz = depth / 2;
-          const segs: { a: Vec3; b: Vec3 }[] = [];
-          const seam = v.seam;
-          for (const [i, j] of sim.locked) {
-            // 捏分档：跨缝底的键（上下两片台之间那把梯挡 + 缝链）不画，只留各片台内部的
-            if (seam !== undefined && (i - seam) * (j - seam) < 0) continue;
-            for (const t of [inst.offZ + hz, inst.offZ - hz]) {
-              segs.push({
-                a: placePoint(rad0 + px[i] * SOLID.SCALE, v.offY - py[i] * SOLID.SCALE, t, rp),
-                b: placePoint(rad0 + px[j] * SOLID.SCALE, v.offY - py[j] * SOLID.SCALE, t, rp),
-              });
+          if (!geometry.bonds) {
+            const hz = depth / 2;
+            const segs: { a: Vec3; b: Vec3 }[] = [];
+            const seam = v.seam;
+            for (const [i, j] of sim.locked) {
+              // 捏分档：跨缝底的键（上下两片台之间那把梯挡 + 缝链）不画，只留各片台内部的
+              if (seam !== undefined && (i - seam) * (j - seam) < 0) continue;
+              for (const t of [inst.offZ + hz, inst.offZ - hz]) {
+                segs.push({
+                  a: placePoint(rad0 + px[i] * SOLID.SCALE, v.offY - py[i] * SOLID.SCALE, t, rp),
+                  b: placePoint(rad0 + px[j] * SOLID.SCALE, v.offY - py[j] * SOLID.SCALE, t, rp),
+                });
+              }
             }
+            geometry.bonds = segs;
           }
-          R.drawLines(segs, C_BOND, 0.004, places);
+          R.drawLines(geometry.bonds, C_BOND, 0.004, places);
         }
       }
 
@@ -998,6 +1042,9 @@ export function SkinSolidBench({
           // 一圈同谱时二十块板逐位相同 ⇒ 只烘一份，二十个方位角全走摆放表
           const same = ring0.every((i) => i.simIdx === ring0[0].simIdx);
           const panelOf = (u: number): Float32Array => {
+            const key = `${v}:${u}`;
+            const cached = membraneGeometry.get(key);
+            if (cached) return cached;
             const A = sims[ring0[u].simIdx];
             const B = sims[ring0[(u + 1) % cnt].simIdx];
             const g = membranePanel(
@@ -1009,7 +1056,9 @@ export function SkinSolidBench({
               SOLID.SCALE,
               dTheta,
             );
-            return bakeIndexed(g.verts, g.idx);
+            const data = bakeIndexed(g.verts, g.idx);
+            membraneGeometry.set(key, data);
+            return data;
           };
           if (same) {
             // (方位角 × 格子) 全部按视深排一遍，再一次画完
@@ -1080,19 +1129,24 @@ export function SkinSolidBench({
           }
           return { x: c.x, z: c.z, rho: rigS * (rad + mx * SOLID.SCALE), yTop, yBot };
         };
-        const webs: { z: number; data: Float32Array }[] = [];
-        for (const p of pairs) {
-          const br: SolidBridge = 'a' in p ? p : { a: p[0], b: p[1] };
-          const a = cellList[br.a];
-          const b = cellList[br.b];
-          if (!a || !b) continue;
-          const ra = rimOf(a, b, br.plateA);
-          const rb = rimOf(b, a, br.plateB);
-          if (!ra || !rb) continue;
-          const g = bridgeWeb(ra, rb, BRIDGE_W * rigS, BRIDGE_GAP * rigS);
-          if (!g) continue;
-          webs.push({ z: viewZ((a.x + b.x) / 2, (a.z + b.z) / 2), data: bakeIndexed(g.verts, g.idx) });
+        if (bridgePairs !== pairs) { bridgeGeometry = null; bridgePairs = pairs; }
+        if (!bridgeGeometry) {
+          bridgeGeometry = [];
+          for (const p of pairs) {
+            const br: SolidBridge = 'a' in p ? p : { a: p[0], b: p[1] };
+            const a = cellList[br.a];
+            const b = cellList[br.b];
+            if (!a || !b) continue;
+            const ra = rimOf(a, b, br.plateA);
+            const rb = rimOf(b, a, br.plateB);
+            if (!ra || !rb) continue;
+            const g = bridgeWeb(ra, rb, BRIDGE_W * rigS, BRIDGE_GAP * rigS);
+            if (!g) continue;
+            bridgeGeometry.push({ x: (a.x + b.x) / 2, z: (a.z + b.z) / 2, data: bakeIndexed(g.verts, g.idx) });
+          }
         }
+        // 只有几何缓存，视深每帧现算：相机转动仍沿原次序排序半透明网。
+        const webs = bridgeGeometry.map(w => ({ z: viewZ(w.x, w.z), data: w.data }));
         webs.sort((p, q) => p.z - q.z);
         for (const w of webs) R.drawDynamicMesh(w.data, MEM_DARK, MEM_LITE, alpha);
       }
@@ -1112,6 +1166,7 @@ export function SkinSolidBench({
         v.emaX = null;
         v.emaY = null;
       });
+      invalidateGeometry();
       acc = 0;
       holdT = 0;
       tick = 0;
@@ -1140,6 +1195,7 @@ export function SkinSolidBench({
         v.emaX = null;
         v.emaY = null;
       });
+      invalidateGeometry();
       tick = result.tick;
       acc = 0;
       holdT = 0;
@@ -1233,6 +1289,8 @@ export function SkinSolidBench({
           }
         }
       }
+      // 已完成的条带在其他条带仍推进时，EMA 仍会更新；不能仅以 sim.step 做缓存键。
+      if (n > 0) invalidateGeometry();
       render();
       // 报的是**场上**的锁定键数（实例数 × 各自引擎），不是引擎数。
       const locked = lockedOnStage();
@@ -1282,6 +1340,19 @@ export function SkinSolidBench({
       reflowCells: () => {
         setR = Number.NaN;
         reflow();
+        render();
+      },
+      // 同谱的台阶/拱会改变带→引擎映射，却不改变物理输入。只换实例，不倒带。
+      setInstances: (nextOrder, nextPlans) => {
+        const nextPlan = nextOrder ?? defs.map((_, u) => u);
+        const nextList = nextPlans ?? [nextPlan];
+        if (instsHaveCells === hasCells() && JSON.stringify([plan, planList]) === JSON.stringify([nextPlan, nextList])) return;
+        plan = nextPlan;
+        planList = nextList;
+        insts = makeInsts();
+        reflow();
+        bakeCeil();
+        applyLayout(layoutIdx);
         render();
       },
       // 换键谱 = 整场重建引擎（Lab.09 换形态）。不重挂组件：重挂会丢一个 WebGL
@@ -1380,6 +1451,11 @@ export function SkinSolidBench({
     if (units) apiRef.current?.setUnits(units, order, ringPlans);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unitsKey]);
+
+  // 物理身份、带实例编制、格子位置各自更新；setInstances 内按值排除相同编制。
+  useEffect(() => {
+    apiRef.current?.setInstances(order, ringPlans);
+  }, [order, ringPlans, !!cells]);
 
   // 站位表换了就只重摆（首次由主 effect 摆，这里跳过）
   const cellsKeyRef = useRef(cellsKey);

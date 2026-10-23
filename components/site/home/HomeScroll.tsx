@@ -58,6 +58,7 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
   const secRefs = [useRef<HTMLElement>(null), useRef<HTMLElement>(null), useRef<HTMLElement>(null), useRef<HTMLElement>(null)];
 
   const [page, setPage] = useState(0);
+  const [flowMode, setFlowMode] = useState(false);
   const [hk, setHkState] = useState(0);
   const [paused, setPaused] = useState(false);
   const [zone, setZone] = useState<'lab' | 'log'>('lab');
@@ -111,6 +112,9 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
     let keepZone = false;
     let rvT: ReturnType<typeof setTimeout> | undefined;
     let io: IntersectionObserver | null = null;
+    let revealsDisabled = flow() || arrivingZone;
+    let flowZoneTop = 0;
+    let flowRaf = 0;
     const pending = new Set<HTMLElement>();
 
     /* choreo / hkIn */
@@ -130,14 +134,16 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
     };
     const hkIn = () => {
       if (!motionOn() || flow()) return;
-      $$('[data-w]').forEach((w, k) =>
-        w.animate([{ transform: 'translateY(105%)' }, { transform: 'none' }], { duration: 760, delay: k * 28, easing: EO, fill: 'backwards' }),
-      );
-      $('[data-hk-hint]')?.animate(KF.fade, { duration: 600, delay: 320, easing: EO, fill: 'backwards' });
-      $(`[data-slide="${hkRef.current}"]`)?.animate(
+      $$('[data-w]').forEach((w, k) => {
+        w.animate([{ transform: 'translateY(105%)' }, { transform: 'none' }], { duration: 760, delay: k * 28, easing: EO, fill: 'backwards' }).id = 'ch';
+      });
+      const hint = $('[data-hk-hint]')?.animate(KF.fade, { duration: 600, delay: 320, easing: EO, fill: 'backwards' });
+      if (hint) hint.id = 'ch';
+      const slide = $(`[data-slide="${hkRef.current}"]`)?.animate(
         [{ clipPath: 'inset(0 0 0 100%)' }, { clipPath: 'inset(0 0 0 0)' }],
         { duration: 1100, easing: EIO },
       );
+      if (slide) slide.id = 'ch';
     };
     const $ = (s: string, el: ParentNode = root) => el.querySelector<HTMLElement>(s);
 
@@ -146,17 +152,18 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
       io?.unobserve(el);
       pending.delete(el);
       el.style.opacity = '';
+      if (!motionOn() || flow() || revealsDisabled) return;
       if (el.hasAttribute('data-cad')) {
-        $$('[data-tk] > span', el).forEach((t) =>
+        $$('[data-tk] > span', el).forEach((t) => {
           t.animate([{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], {
             duration: 520,
             delay: 200 + (+(t.parentElement!.dataset.f ?? 0) || 0) * 1100,
             easing: EO,
             fill: 'backwards',
-          }),
-        );
+          }).id = 'rv';
+        });
       }
-      el.animate(KF.up, { duration: 760, delay: k * 45, easing: EO, fill: 'backwards' });
+      el.animate(KF.up, { duration: 760, delay: k * 45, easing: EO, fill: 'backwards' }).id = 'rv';
     };
     // 观察器忽略视口底部 8%，滚到最末时落在那里的东西不会自己显现——补一遍。
     const revealTail = () => {
@@ -168,7 +175,7 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
       });
     };
     const startReveal = () => {
-      if (io || !motionOn() || flow() || arrivingZone) return;
+      if (io || !motionOn() || flow() || revealsDisabled) return;
       io = new IntersectionObserver(
         (ents) => {
           let k = 0;
@@ -282,6 +289,7 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
     api.current.toTop = () => go(0);
 
     const onZoneScroll = () => {
+      if (flow()) return;
       const top = zoneEl.scrollTop;
       const vh = zoneEl.clientHeight;
       if (top <= 0 && lastTop > 0) topSince = performance.now();
@@ -298,6 +306,39 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
       if (top + vh >= zoneEl.scrollHeight - 2) revealTail();
     };
     zoneEl.addEventListener('scroll', onZoneScroll, { passive: true });
+
+    // 文档流没有 go() 的翻页状态；读实际滚动位置更新导航、返回锚点与 Hook 计时。
+    // 台架是否运行仍由各自的 IO 判定，不能拿这条读线代替可见性。
+    const syncFlowPosition = () => {
+      if (!flow()) return;
+      const vh = window.innerHeight;
+      let current = 0;
+      sections.forEach((sec, i) => {
+        if (sec.getBoundingClientRect().top <= vh * 0.3) current = i;
+      });
+      if (current !== st.page) {
+        st.from = st.page;
+        st.page = current;
+        setPage(current);
+      }
+      flowZoneTop = Math.max(0, -zoneEl.getBoundingClientRect().top);
+      setZone(logRef.current && logRef.current.getBoundingClientRect().top < vh * 0.55 ? 'log' : 'lab');
+      setZScrolled(flowZoneTop > 24);
+      $$('[data-group]', zoneEl).forEach((g) => {
+        const p = Math.max(0, Math.min(1, (150 - g.getBoundingClientRect().top) / Math.max(1, g.offsetHeight - 150)));
+        const bar = g.querySelector<HTMLElement>('[data-gprog]');
+        if (bar) bar.style.transform = `scaleX(${p})`;
+      });
+    };
+    const onDocumentScroll = () => {
+      if (!flow() || flowRaf) return;
+      flowRaf = requestAnimationFrame(() => {
+        flowRaf = 0;
+        syncFlowPosition();
+      });
+    };
+    window.addEventListener('scroll', onDocumentScroll, { passive: true });
+    window.addEventListener('resize', onDocumentScroll);
 
     let lockAt = 0;
     let lastW = 0;
@@ -344,10 +385,11 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
     root.addEventListener('wheel', onWheel, { passive: false });
 
     const onKey = (e: KeyboardEvent) => {
-      if (flow()) return;
+      if (flow() || e.defaultPrevented) return;
       const k = e.key;
       const tgt = e.target as Element | null;
-      if (tgt?.closest?.('input, textarea, select, [contenteditable]')) return;
+      if (tgt?.closest?.('input, textarea, select, [contenteditable], [role="tab"], [role="slider"]')) return;
+      if (k === ' ' && tgt?.closest?.('a[href], button, summary, [role="button"]')) return;
       if (st.page === 3) {
         const vh = zoneEl.clientHeight;
         const map: Record<string, number> = { ArrowDown: 120, ArrowUp: -120, PageDown: vh * 0.85, PageUp: -vh * 0.85, ' ': vh * 0.85 };
@@ -458,10 +500,33 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
     cardsEl.addEventListener('focusout', onFocusOut);
 
     /* 窄屏 / 偏好切换时重排 */
-    const onFlowChange = () => applyPages();
+    const onFlowChange = () => {
+      setFlowMode(flow());
+      applyPages(true);
+      if (flow()) {
+        // 桌面尚未显现的条目在文档流必须立即可见；已经展示过的内容不再重播。
+        clearTimeout(rvT);
+        io?.disconnect();
+        io = null;
+        pending.clear();
+        revealsDisabled = true;
+        $$('[data-rv]', zoneEl).forEach((el) => (el.style.opacity = ''));
+        root.getAnimations({ subtree: true }).forEach((a) => {
+          if (a.id === 'ch' || a.id === 'rv') a.cancel();
+        });
+        const top = sections[st.page].getBoundingClientRect().top + window.scrollY + (st.page === 3 ? lastTop : 0);
+        window.scrollTo({ top, behavior: 'instant' });
+        syncFlowPosition();
+      } else {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        if (st.page === 3) zoneEl.scrollTop = flowZoneTop;
+        onZoneScroll();
+      }
+    };
     flowMq.addEventListener('change', onFlowChange);
 
     /* 启动 */
+    setFlowMode(flow());
     applyPages();
     setReady(true);
     const hash = window.location.hash;
@@ -470,6 +535,7 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
     else if (hash === '#lab') jump(3, 'lab');
     else if (hash === '#log') jump(3, 'log');
     else if (!arriving) choreo(0, 120);
+    syncFlowPosition();
     const bootT = setTimeout(() => !flow() && !arriving && (st.page === 0 ? hkIn() : undefined), 500);
     api.current.hkIn = hkIn;
 
@@ -477,10 +543,13 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
       clearTimeout(rvT);
       clearTimeout(bootT);
       cancelAnimationFrame(raf);
+      cancelAnimationFrame(flowRaf);
       io?.disconnect();
       zoneEl.removeEventListener('scroll', onZoneScroll);
       root.removeEventListener('wheel', onWheel);
       window.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', onDocumentScroll);
+      window.removeEventListener('resize', onDocumentScroll);
       root.removeEventListener('touchstart', onTouchStart);
       root.removeEventListener('touchend', onTouchEnd);
       root.removeEventListener('scroll', onRootScroll);
@@ -517,7 +586,7 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
     // data-hs-page / data-hs-zone：页面转场离开首页时据此把地址写成 /#work 等，按返回落回原处（MAPPING §48）
     <div className={`hs-root${ready ? ' hs-ready' : ''}`} ref={rootRef} data-hs-root data-hs-page={page} data-hs-zone={zone}>
       <section className="hs-page hs-page--hook" data-page="0" aria-label="01 Hook" ref={secRefs[0]}>
-        <HookPage slides={slides} hk={hk} held={held} active={page === 0} mounted={mounted} ctl={ctl} onTab={onTab} rotateS={ROTATE_S} />
+        <HookPage slides={slides} hk={hk} held={held} active={flowMode || page === 0} mounted={mounted} ctl={ctl} onTab={onTab} rotateS={ROTATE_S} />
       </section>
       <section
         className="hs-page hs-page--work"
@@ -549,7 +618,7 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
           groups={groups}
           log={log}
           logRef={logRef}
-          active={page === 3}
+          active={flowMode || page === 3}
           sel={sel}
           onPick={onPick}
           ck={ck}
@@ -560,7 +629,7 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
         />
       </section>
 
-      <div className={`hs-hud${page === 2 ? ' hs-on-dark' : ''}`}>
+      <div className={`hs-hud${!flowMode && page === 2 ? ' hs-on-dark' : ''}`}>
         <div className={`hs-hud__bg${page === 3 && zScrolled ? ' hs-is-on' : ''}`} />
         <div className="hs-hud__bar">
           <button type="button" className={`hs-hud__name${page !== 0 ? ' hs-is-on' : ''}`} onClick={() => api.current.toTop()}>

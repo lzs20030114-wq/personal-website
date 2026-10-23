@@ -5,6 +5,7 @@ import {
   ARCH_CENTER,
   ARCH_CRANK_RADIUS,
   ARCH_DEF,
+  ARCH_FEET,
   ARCH_PIN,
   ARCH_TRIS,
   ARCH_TRI_SIGNS,
@@ -18,6 +19,27 @@ export {
   ARCH_PIN,
   ARCH_TRIS,
 } from './arch-data';
+
+/** 可抓手柄：拱顶、四脚与曲柄销；中段销和不可见支撑点不可抓（拱环 spec「台架交互约定」）。 */
+export const ARCH_HANDLES: readonly number[] = [ARCH_APEX, ...ARCH_FEET, ARCH_PIN];
+
+/**
+ * 先按 controller 相同的规则找最近自由节点，再检查手柄身份，避免热区重叠时
+ * 放行了手柄、实际却抓住中段销。React 与 vanilla 台架共用原有的命中过滤。
+ */
+export function nearestArchHandleWithin(s: LinkageSolver, x: number, y: number, radius = 24): boolean {
+  let best = Infinity;
+  let bestIsHandle = false;
+  s.nodes.forEach((n, i) => {
+    if (n.fixed) return;
+    const d = Math.hypot(n.x - x, n.y - y);
+    if (d < best) {
+      best = d;
+      bestIsHandle = ARCH_HANDLES.includes(i);
+    }
+  });
+  return best <= radius && bestIsHandle;
+}
 
 /**
  * 轮回机器伏丘壳体 S4 环——真机机构的求解器实例（内核零修改，SPEC §1.2 范围锁死内）。

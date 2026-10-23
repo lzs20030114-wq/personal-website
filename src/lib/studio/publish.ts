@@ -151,6 +151,7 @@ export function buildCommitFiles({
 
   const errors: string[] = [];
   const byName = new Map<string, PendingImage>();
+  const usedNames = new Set(existingImages.map((name) => name.toLowerCase()));
   for (const img of images) {
     if (!IMAGE_NAME.test(img.name)) {
       errors.push(`图片文件名不合法：${img.name}`);
@@ -161,6 +162,11 @@ export function buildCommitFiles({
       errors.push(`图片内容不是合法的 base64：${img.name}`);
       continue;
     }
+    if (usedNames.has(img.name.toLowerCase())) {
+      errors.push(`图片文件名已被占用：${img.name}，请重新上传以生成新文件名`);
+      continue;
+    }
+    usedNames.add(img.name.toLowerCase());
     byName.set(img.name, img);
   }
 

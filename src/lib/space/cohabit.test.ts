@@ -13,7 +13,7 @@ import {
   shortestPath,
 } from './cohabit';
 import type { CatCfg } from './cohabit';
-import { PLAN, planLayout } from './unit-activation';
+import { PLAN, buildCatchment, planLayout, unitInputs } from './unit-activation';
 
 const B = COHABIT.FACES.BANDS;
 const openBands = (sim: CohabitSim, u: number) => {
@@ -74,6 +74,27 @@ describe('cohabit · 过道图与通行代价', () => {
 });
 
 describe('cohabit · 仿真', () => {
+  it('同几何的只读采样表可共用，人猫场的数据、读数和不同实例的布局仍独立', () => {
+    for (const grid of [4, 6, 8]) for (const reading of ['nearest', 'disk'] as const) {
+      const sim = new CohabitSim({ grid, reading, opening: false, auto: false });
+      expect(sim.catCatchment).toBe(sim.catchment);
+      expect(sim.catField.data).not.toBe(sim.field.data);
+      const unit = sim.layout.units[Math.floor(sim.layout.units.length / 2)];
+      sim.field.imprint(unit.x, unit.y, sim.layout.platR, 0.75);
+      expect(unitInputs(sim.field, sim.catchment)[unit.i]).toBeGreaterThan(0);
+      expect(unitInputs(sim.catField, sim.catCatchment).every((v) => v === 0)).toBe(true);
+      sim.catField.imprint(unit.x, unit.y, sim.layout.platR, 1.5);
+      const independentlyBuilt = buildCatchment(sim.layout, sim.catField, reading);
+      expect(unitInputs(sim.catField, sim.catCatchment)).toEqual(unitInputs(sim.catField, independentlyBuilt));
+      const peopleBefore = sim.field.data.slice();
+      sim.catField.clear();
+      expect(sim.field.data).toEqual(peopleBefore);
+      const other = new CohabitSim({ grid: grid === 8 ? 4 : 8, reading: reading === 'nearest' ? 'disk' : 'nearest', opening: false });
+      expect(other.catchment).not.toBe(sim.catchment);
+      expect(other.catchment.cellsOf).toHaveLength(other.layout.units.length);
+    }
+  });
+
   it('同一种子逐位复现；不同种子不同', () => {
     const a = runCohabit({ seed: 1, seconds: 90 });
     const b = runCohabit({ seed: 1, seconds: 90 });
@@ -179,6 +200,80 @@ describe('cohabit · 仿真', () => {
     for (let i = 0; i < 300; i++) empty.step(1 / 30);
     expect(empty.act.formed()).toHaveLength(0);
     expect(empty.cats[0].unit).toBeNull();
+  });
+
+  it('空房间里的猫走到一半切回会动单元：旧地面路线取消，脚下立即有支撑', () => {
+    const sim = new CohabitSim({
+      trigger: 'posture', grid: 8, space: 'empty', seed: 11,
+      faces: true, social: true, catFloor: true,
+      cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid },
+    });
+    let moving: (typeof sim.cats)[number] | undefined;
+    for (let k = 0; k < 1800 && !moving; k++) {
+      sim.step(1 / 30);
+      moving = sim.cats.find((c) => {
+        const route = c.walker.route;
+        const dest = route[route.length - 1];
+        return c.walker.state === 'walk' && dest && Math.hypot(c.walker.x - dest.x, c.walker.y - dest.y) > 1;
+      });
+    }
+    expect(moving).toBeDefined();
+    const cat = moving!;
+    sim.setSpace('live');
+    expect(cat.walker.route).toHaveLength(0);
+    expect(cat.walker.state).toBe('idle');
+    expect(cat.state).toBe('sit');
+    expect(cat.pending).toBeNull();
+    expect(cat.transfer).toBeNull();
+    expect(sim.act.degree[cat.unit!.i]).toBe(1);
+    expect(sim.wall[cat.unit!.i]).toBe(1);
+    const supportedAt = { x: cat.walker.x, y: cat.walker.y };
+    expect(Math.hypot(supportedAt.x - cat.unit!.x, supportedAt.y - cat.unit!.y)).toBeLessThanOrEqual(sim.layout.platR);
+    sim.setAuto(false);
+    for (let k = 0; k < 90; k++) sim.step(1 / 30);
+    expect({ x: cat.walker.x, y: cat.walker.y }).toEqual(supportedAt);
+  });
+
+  it('切到钉死档只在落下的平台落脚，切到空房间取消尚未完成的上台任务', () => {
+    const sim = new CohabitSim({ opening: false, auto: false, space: 'empty', catFloor: true });
+    const u = sim.layout.units[5]; // 奇数行：钉死档不会展开
+    const cat = sim.addCat(u)!;
+    cat.climb = { unit: u, need: 1, wait: 0.5 };
+    cat.state = 'wait';
+    cat.walker.pushTarget({ x: u.x, y: u.y });
+    sim.setSpace('fixed');
+    expect(cat.climb).toBeNull();
+    expect(cat.unit!.row % 2).toBe(0);
+    expect(sim.act.degree[cat.unit!.i]).toBe(1);
+    expect(cat.walker.route).toHaveLength(0);
+    expect({ x: cat.walker.x, y: cat.walker.y }).toEqual({ x: cat.unit!.x, y: cat.unit!.y });
+    const groundedAt = { x: cat.walker.x, y: cat.walker.y };
+    cat.homing = { person: 1, stop: 0.5, wait: 0 };
+    cat.approaching = 1;
+    sim.setSpace('empty');
+    expect(cat.unit).toBeNull();
+    expect(cat.homing).toBeNull();
+    expect(cat.approaching).toBeNull();
+    expect(cat.state).toBe('sit');
+    expect({ x: cat.walker.x, y: cat.walker.y }).toEqual(groundedAt);
+    sim.step(0.5);
+    expect(sim.supportOf(cat)).toEqual([]);
+    expect(sim.act.formed()).toHaveLength(0);
+  });
+
+  it('重复设置当前空间不重启正在运行的仿真', () => {
+    const a = new CohabitSim({ seed: 11, faces: true });
+    const b = new CohabitSim({ seed: 11, faces: true });
+    for (let k = 0; k < 600; k++) {
+      a.step(1 / 30);
+      b.step(1 / 30);
+      if (k === 300) b.setSpace('live');
+    }
+    expect(b.summary()).toEqual(a.summary());
+    expect(JSON.stringify(b.people)).toBe(JSON.stringify(a.people));
+    expect(JSON.stringify(b.cats)).toBe(JSON.stringify(a.cats));
+    expect(b.act.degree).toEqual(a.act.degree);
+    expect(b.bandOpen).toEqual(a.bandOpen);
   });
 
   it('离线一场：读数有限、占比在 [0,1]，四类事件至少记到一次', () => {
@@ -580,6 +675,25 @@ describe('cohabit · 家具可加减、拖动（独立一层，标准布置随�
     expect(b.seated).toBe(true);
     expect(sim.seats[b.seat!].furn).toBe(2);
     expect(Math.hypot(sim.seats[b.seat!].x - b.walker.x, sim.seats[b.seat!].y - b.walker.y)).toBeLessThan(1e-9);
+  });
+
+  it.each([false, true])('social 删除有人坐着的第一件家具：所有座位先迁移再起身（人物逆序 %s）', (reverse) => {
+    const sim = posture({ social: true, auto: false });
+    const first = sim.seats[0];
+    const last = sim.seats[9];
+    const seats = reverse ? [last, first] : [first, last];
+    const visitors = seats.map((s) => sim.addPerson(s.x, s.y)!);
+    const a = visitors[reverse ? 1 : 0];
+    const b = visitors[reverse ? 0 : 1];
+    expect(a.seated && b.seated).toBe(true);
+    expect(() => sim.removeFurniture(0)).not.toThrow();
+    expect(a.seat).toBeNull();
+    expect(a.seated).toBe(false);
+    expect(b.seated).toBe(true);
+    expect(sim.seats[b.seat!]).toMatchObject({ furn: last.furn - 1, slot: last.slot, x: last.x, y: last.y });
+    expect({ x: b.walker.x, y: b.walker.y }).toEqual({ x: last.x, y: last.y });
+    expect(() => sim.step(1 / 30)).not.toThrow();
+    expect(sim.furn!.nodeOff[sim.nodeOf(a)]).toBe(0);
   });
 
   it('加一件：找房间里第一个摆得下的位置；回到标准布置：六件、十个座位、所有人起身', () => {
