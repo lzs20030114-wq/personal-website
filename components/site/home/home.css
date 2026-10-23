@@ -296,6 +296,17 @@
 
 .hs-slide__img, .hs-pv__live { display: flex; align-items: center; justify-content: center; }
 .hs-pv__live { position: absolute; inset: 14px; pointer-events: none; }
+/* 预览层交叉淡化（ZonePage PreviewLayer）：新层出图后从 1.012 倍轻轻落定、淡入，旧层同步淡出。
+   两条曲线都是两端缓的 ease-in-out，交叠中点两张画面各留一半，不会先暗一下再亮。时长与 ZonePage FADE_MS 对齐。 */
+.hs-pv__layer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; transform: scale(1.012); transition: opacity 460ms cubic-bezier(.45,0,.25,1), transform 700ms cubic-bezier(.2,.7,.1,1); }
+.hs-pv__layer--on { opacity: 1; transform: none; }
+.hs-pv__layer--out { opacity: 0; transform: none; }
+.hs-pv__cap { animation: hs-cap-in 360ms cubic-bezier(.2,.7,.1,1) both; }
+@keyframes hs-cap-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .hs-pv__layer { transition: none; transform: none; }
+  .hs-pv__cap { animation: none; }
+}
 .hs-root .home-lab-preview-host { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
 .hs-root .home-lab-loading { color: var(--lime-hi); font: 400 11px var(--mono); }
 .hs-root .lab-wrap { width: auto; height: 100%; aspect-ratio: 700 / 520; max-width: 100%; display: flex; align-items: center; justify-content: center; }

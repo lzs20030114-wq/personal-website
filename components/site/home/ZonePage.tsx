@@ -1,14 +1,78 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState, type CSSProperties, type MutableRefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type MutableRefObject } from 'react';
 import type { HomeLabGroup, HomeLogData } from '../../../src/lib/site/home-model';
-import { HomeLabPreview } from '../HomeLabPreview';
+import { HomeLabPreview, preloadLabPreview } from '../HomeLabPreview';
 
-const EO = 'cubic-bezier(.2,.7,.1,1)';
 const HOVER_MS = 120; // 活台架切换要挂载 / 卸载 WebGL，指针划过目录时稍作停留再切（稿内是即时）
+const FADE_MS = 460; // 交叉淡化时长，与 home.css .hs-pv__layer 的 transition 对齐
+const READY_MAX_MS = 900; // 新台架迟迟不出图（首访拉网格）时，最多让旧画面再撑这么久
 
 /* ───────────────────────── 04 Lab ───────────────────────── */
+
+// 预览层：in = 已挂载、还没出首帧（透明，压在旧画面上不露面）；on = 显示中；out = 淡出中，淡完卸载。
+// 旧台架一直留到新台架真正画出来才开始交叉淡化——切换过程中预览框不会出现空板。
+type PvPhase = 'in' | 'on' | 'out';
+type PvLayer = { no: string; phase: PvPhase };
+
+function PreviewLayer({
+  no,
+  phase,
+  active,
+  onReady,
+}: {
+  no: string;
+  phase: PvPhase;
+  active: boolean;
+  onReady: (no: string) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const readyRef = useRef(onReady);
+  readyRef.current = onReady;
+
+  // 「出图」判据：dynamic 的 loading 占位换成了台架的 svg / canvas，再等三帧让 rAF 循环画上第一笔。
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let done = false;
+    let raf = 0;
+    const fire = () => {
+      if (done) return;
+      done = true;
+      readyRef.current(no);
+    };
+    const settle = () => {
+      let n = 3;
+      const step = () => {
+        if (--n > 0) raf = requestAnimationFrame(step);
+        else fire();
+      };
+      raf = requestAnimationFrame(step);
+    };
+    const drawn = () => el.querySelector('svg, canvas') != null;
+    const mo = new MutationObserver(() => {
+      if (!drawn()) return;
+      mo.disconnect();
+      settle();
+    });
+    if (drawn()) settle();
+    else mo.observe(el, { childList: true, subtree: true });
+    const t = setTimeout(fire, READY_MAX_MS);
+    return () => {
+      done = true;
+      mo.disconnect();
+      cancelAnimationFrame(raf);
+      clearTimeout(t);
+    };
+  }, [no]);
+
+  return (
+    <div className={`hs-pv__layer hs-pv__layer--${phase}`} ref={ref} aria-hidden={phase !== 'on' || undefined}>
+      <HomeLabPreview no={no} active={active} />
+    </div>
+  );
+}
 
 function LabGroup({
   g,
@@ -26,10 +90,9 @@ function LabGroup({
   const all = g.segs.flatMap((s) => s.benches);
   const cur = all.find((b) => b.no === selected) ?? all.find((b) => b.no === g.cover) ?? null;
   const rootRef = useRef<HTMLDivElement>(null);
-  const plateRef = useRef<HTMLDivElement>(null);
   const [near, setNear] = useState(false);
   const [everNear, setEverNear] = useState(false);
-  const first = useRef(true);
+  const [layers, setLayers] = useState<PvLayer[]>(() => (cur ? [{ no: cur.no, phase: 'in' }] : []));
   const ptr = useRef('mouse');
   const hoverT = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -53,21 +116,40 @@ function LabGroup({
   }, [active, near]);
   useEffect(() => () => clearTimeout(hoverT.current), []);
 
-  // 切换台架：稿内的 520ms 淡入 + 轻缩放
+  // 切换台架：新层先在底下静默挂载，出图后再与旧层交叉淡化（取代稿内整块 plate 0.3→1 的闪）
+  const curNo = cur?.no;
   useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    plateRef.current?.animate(
-      [
-        { opacity: 0.3, transform: 'scale(1.02)' },
-        { opacity: 1, transform: 'none' },
-      ],
-      { duration: 520, easing: EO },
-    );
-  }, [cur?.no]);
+    if (!curNo) return;
+    setLayers((ls) => {
+      const pending = ls.filter((l) => l.phase !== 'in'); // 还没露面的半路新层直接撤，不排队
+      const hit = pending.find((l) => l.no === curNo);
+      if (hit?.phase === 'on') return pending;
+      if (hit?.phase === 'out') {
+        // 指针折回刚离开的那台：从当前透明度原路淡回，不重建
+        return pending.map((l) =>
+          l.no === curNo ? { ...l, phase: 'on' } : l.phase === 'on' ? { ...l, phase: 'out' } : l,
+        );
+      }
+      return [...pending, { no: curNo, phase: 'in' }];
+    });
+  }, [curNo]);
+  const onReady = useCallback((no: string) => {
+    setLayers((ls) => {
+      if (ls.find((l) => l.no === no)?.phase !== 'in') return ls;
+      const next = ls.map((l): PvLayer =>
+        l.no === no ? { ...l, phase: 'on' } : l.phase === 'on' ? { ...l, phase: 'out' } : l,
+      );
+      // 连续快划时淡出层最多留两张（各占一份 WebGL context），更早的那张此时已近全透明
+      const outs = next.filter((l) => l.phase === 'out');
+      return outs.length > 2 ? next.filter((l) => !outs.slice(0, -2).includes(l)) : next;
+    });
+  }, []);
+  // 淡出层淡完即卸（同时释放其 WebGL context，见 HomeLabPreview）
+  useEffect(() => {
+    if (!layers.some((l) => l.phase === 'out')) return;
+    const t = setTimeout(() => setLayers((ls) => ls.filter((l) => l.phase !== 'out')), FADE_MS + 60);
+    return () => clearTimeout(t);
+  }, [layers]);
 
   return (
     // data-pt-scope / data-pt-frame：点目录里正在预览的那一台，预览框飞到实验室里它那一格（MAPPING §48）
@@ -106,6 +188,7 @@ function LabGroup({
                   // 鼠标 / 笔：悬停预览；触屏：第一下预览，第二下进入
                   onPointerEnter={(e) => {
                     if (e.pointerType === 'touch') return;
+                    preloadLabPreview(b.no);
                     clearTimeout(hoverT.current);
                     hoverT.current = setTimeout(() => onPick(gi, b.no, false), HOVER_MS);
                   }}
@@ -150,19 +233,22 @@ function LabGroup({
         <div className="hs-pv">
           <div
             className={`hs-pv__plate${g.cover ? '' : ' hs-pv__plate--empty'}`}
-            ref={plateRef}
             data-pt-frame={cur ? cur.no : undefined}
           >
             <span className="hs-pv__bar" />
             {cur ? (
               <div className="hs-pv__live" aria-label={`Live preview · Lab ${cur.no}`}>
-                {everNear ? <HomeLabPreview no={cur.no} active={active && near} /> : null}
+                {everNear
+                  ? layers.map((l) => (
+                      <PreviewLayer key={l.no} no={l.no} phase={l.phase} active={active && near} onReady={onReady} />
+                    ))
+                  : null}
               </div>
             ) : (
               <div className="hs-pv__ph">In progress</div>
             )}
           </div>
-          <div className="hs-pv__cap">
+          <div className="hs-pv__cap" key={cur?.no}>
             <span className="hs-pv__title">{cur ? `Lab ${cur.no} · ${cur.title}` : 'Project III'}</span>
             <span className="hs-pv__desc">{cur ? cur.meta : 'Benches to come'}</span>
           </div>
