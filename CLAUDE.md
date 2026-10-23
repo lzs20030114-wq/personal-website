@@ -38,6 +38,7 @@
 | "案例页换稿"、"10 Case 01"、"目录栏/人格示意台/衰老曲线/预测条" | design-ref/case-01-dark/ + MAPPING.md §45（外壳 · 构件 · 文案处置 · 与稿的有意差异） |
 | "配色"、"中间色面"、"雾/苔/主青/深潭"、"Live 紫标" | design-ref/palette-study/（配色研究稿）+ 三份 v2 稿 + MAPPING.md §46（色值 · 落地位置 · 稿之外跟改的三处） |
 | "转场"、"页面跳转"、"跳页动画"、"返回落回原处" | MAPPING.md §48（五种形式各用在哪 · 编排要点与坑 · 待真机拍板）；时长唯一出处 = src/lib/site/page-transition.ts 的 PT_DURATION |
+| "主页首屏"、"方块场"、"Field Hero" | design-ref/home-field-hero/ + MAPPING.md §55（28×14 方块场 · 悬停开卡 · 卡池数据来源 · 与稿的有意差异；取代 §42 的轮播舞台） |
 | "横屏排版"、"版式研究"、"排版原则" | LAYOUT_NOTES.md |
 | "网站 review"、"调研报告"、"获奖站案例"、"弱模型工单" | SITE_REVIEW_2026-07.md |
 | "拱环"、"S4 环"、"真机机构求解器"、"伸缩外壳演示" | 轮回机器_拱环求解器.md |

@@ -1601,3 +1601,13 @@ planDraw 的猫分支去掉注意力圈，增加支撑、落点外圈与单元�
 - **量法脚本**（scratchpad，不进仓库）：裸 CDP（Node 22 自带 WebSocket）驱动 `/opt/pw-browsers` 的 Chromium，点目录项后逐帧量 scrollY、视口内各块的 computed opacity 与 `getAnimations()` 的 delay。**坑**：`kill $(cat pid)` 只杀得掉 `npx` 外壳，`next-server` 子进程还占着端口，新服务起不来、复测量的是旧构建——要按 `ps -eo pid,args | grep '[n]ext-server'` 拿到的 pid 杀（`pkill -f` 会连自己的 shell 一起杀，已记过）。
 - **验证**：tsc 干净；`next build` 过；生产服务下项目一 / 二两页 200。逐步滚动阅读的回归与项目二（主图 Lab 2-15 烘轨迹期间主线程占用）的复测见本节补记。
 - **补记 · 回归与项目二（同日）**：① 逐步滚动阅读（每步 320 px、停到视口里没有未显现的块为止、最多等 4 s，76 步到底）：**旧版与新版给出逐位相同的 18 个「等满 4 s 仍未显现」的位置**（scrollY 完全一致），且等待期间帧间隔多数只有 30–60 ms——不是回调延迟，是脚本的「在视口里」比显现的触发线宽：显现用 `rootMargin: 0 0 -6%` 把触发线放在视口底缘上方 6%（1440×900 下 54 px），刚从下缘探进来不到这一截的块按设计就还不显现；两版一致、到底后无一块仍藏着（`stillHiddenAtEnd 0`），平时滚动的显现没有回归。② 项目二页在无头软件 GL 下跳章仍要约 10 s，量的是环境：主线程并不忙（`setTimeout(0)` 延迟中位 4 ms、p95 16 ms），帧间隔却中位 0.43 s、p95 5.2 s、最长 5.6 s（主图 Lab 2-15 四个 WebGL 画布在 swiftshader 上一帧要画几秒），而平滑滚动、IO 回调、`scrollend` 全靠帧推进。真机 GPU 下不会这样；若真机上项目二页仍觉得慢，看的应是主图的渲染负载，不是显现逻辑。A/B 是把 `HEAD~1` 的两个组件文件临时写回、重建、同脚本复测后再恢复当前提交重建，两次构建均过，工作树干净。
+
+## 55. 主页首屏换「17 Home · Field Hero」稿（2026-10-24，用户交来第三版交接包「按照这个的主页首屏来改」）
+
+设计源 = `design-ref/home-field-hero/`（`17 Home - Field Hero.dc.html` + `support.js`，交接包标注的主稿，已存档）。该稿与 07 v2 的差异**只在第一页**（逐行 diff 核对），故只换首屏，02 Work / 03 About / 04 Lab / 05 Log、翻页引擎、HUD、rail 一律不动。
+
+- **取代 §42 的 Hook**：标题 + 两张轮播的活台架舞台（Lab 1-5 整机 / Lab 2-11 人群）整块删掉，换成深色方块场：28×14 方块随机亮起又熄灭（目标 250 个、35% 带缩略图，多半长在已亮块旁边成簇），指针划过留一圈余光；悬停亮着的方块即长成 6×4 的卡（所在行列放大 1.5 倍、其余等比让位，clip-path 从那一格展开），点卡进那件作品；中央标题区底下不亮方块（ResizeObserver 现量）。手感常量照稿原样。**首屏因此不再有活台架**——§42「Hook 舞台是活台架」的拍板随稿一并取代；Lab 区预览的活台架不变。`HookPage.tsx` 删除，新组件 `FieldPage.tsx`。
+- **数据**：卡池 8 张 = 5 台台架（编号 / 标题 / 类型取 `lab-index`，项目名取主页卡片）+ 2 个项目（链 `/work/[slug]`）+ 1 条日志（按图找条目，链 `withAnchors` 锚点）。副题「Seventeen working benches」与底注「2 projects · 17 live benches · 60 log entries」改为现算（现 21 台 / 149 条）。纯派生 `buildHomeField`（`home-model.ts`），守门 +1（图都在 `public`、链接都指向真实去处、计数一致）。
+- **素材**：三张台架截图（`c-cylinder` / `c-formed` / `c-crowd`）从交接包进 `public/home/`；项目与日志卡用日志池里已有的同一张原图，不重复入库。
+- **与稿的有意差异**：① 卡是真链接（稿是 toast），走站内页面转场；② 稿无响应式——<1024px / reduced-motion 回落文档流时方块场隐藏、标题区居中一屏，底注只留计数；③ 站内全局 `a:hover` 会把卡标题染绿，在 `home.css` 末尾钉回奶白；④ 方块不加 `will-change`（784 个合成层没必要）。
+- **验证**：typecheck 干净；`home-model` 6 项绿；全套 1094 绿 / 1 红——红的是 `log.test` 逐字比对，本机 `core.autocrlf=true` 把 `entries.json` 检出成 CRLF 所致，与本次无关（Linux 构建机不受影响）；`next build` 过；生产构建 1280×800 实测：方块场亮起、悬停开卡与邻格让位、点卡落到 `/lab#lab2-5`、「The projects ↓」翻到 Work、Home 键回首屏后场继续跑、HUD 首屏是浅字；375 宽文档流无横向溢出、无 console 错误。**待用户真机拍板**：密度 / 缩略图比例 / 卡大小这几个稿内常量。

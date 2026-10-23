@@ -3,7 +3,9 @@ import { getAllWork } from './content';
 import { LAB_BENCHES } from './lab-index';
 import { getLogEntries } from './log';
 import { projectOf, withAnchors } from './log-facets';
-import { buildCards, buildHomeLog, buildLabGroups } from './home-model';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { buildCards, buildHomeField, buildHomeLog, buildLabGroups } from './home-model';
 
 const cards = () =>
   buildCards(
@@ -76,5 +78,23 @@ describe('主页数据派生（home-model）', () => {
     expect(research?.ticks.map((tick) => tick.href)).toEqual(expected);
     const other = log.lanes.find((lane) => lane.label === 'Smart Bed · site');
     expect(other?.ticks.some((tick) => expected.includes(tick.href))).toBe(false);
+  });
+
+  it('首屏方块场：卡片图都在 public 里、链接都指向真实去处、计数现算', () => {
+    const entries = getLogEntries();
+    const f = buildHomeField(cards(), entries);
+    expect(f.pool.length).toBe(8);
+    const slugs = getAllWork().map((w) => w.slug);
+    const anchors = new Set(withAnchors(entries).map((a) => a.anchor));
+    const nos = new Set(LAB_BENCHES.map((b) => b.no));
+    f.pool.forEach((p) => {
+      expect(existsSync(join(process.cwd(), 'public', p.img))).toBe(true);
+      if (p.href.startsWith('/lab#lab')) expect(nos.has(p.href.slice('/lab#lab'.length))).toBe(true);
+      else if (p.href.startsWith('/work/')) expect(slugs).toContain(p.href.slice('/work/'.length));
+      else expect(anchors.has(p.href.slice('/archive#'.length))).toBe(true);
+    });
+    expect(f.benches).toBe(LAB_BENCHES.length);
+    expect(f.entries).toBe(entries.length);
+    expect(f.projects).toBe(cards().filter((c) => !c.wip).length);
   });
 });

@@ -1,7 +1,7 @@
 import { HomeScroll } from '../components/site/home/HomeScroll';
 import { getAllWork } from '../src/lib/site/content';
 import { getLogEntries } from '../src/lib/site/log';
-import { buildCards, buildHomeLog, buildLabGroups } from '../src/lib/site/home-model';
+import { buildCards, buildHomeField, buildHomeLog, buildLabGroups } from '../src/lib/site/home-model';
 
 /**
  * 主页 = 「07 Home · Scroll Zone」（design-ref/home-scroll-zone，MAPPING §42）。
@@ -20,6 +20,8 @@ export default function Home() {
     })),
   );
   const groups = buildLabGroups(cards);
-  const log = buildHomeLog(getLogEntries());
-  return <HomeScroll cards={cards} groups={groups} log={log} />;
+  const entries = getLogEntries();
+  const log = buildHomeLog(entries);
+  const field = buildHomeField(cards, entries);
+  return <HomeScroll cards={cards} groups={groups} log={log} field={field} />;
 }

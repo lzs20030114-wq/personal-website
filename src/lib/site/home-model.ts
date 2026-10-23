@@ -1,7 +1,7 @@
 // 主页「07 Home · Scroll Zone」的数据派生（design-ref/home-scroll-zone，MAPPING §42）。
 // 纯函数、不碰 fs / DOM：app/page.tsx 在服务端读内容池后调用，结果作为可序列化 props 递给客户端组件
 // （客户端组件不能 import 内容池模块——node:fs 撞 Turbopack，与 log-facets 同一条纪律）。
-import { LAB_INDEX } from './lab-index';
+import { LAB_INDEX, labBench } from './lab-index';
 import { projectGroupOf, bucketOf, withAnchors } from './log-facets';
 import type { LogEntry } from './log-schema';
 
@@ -276,4 +276,94 @@ export function buildHomeLog(entries: LogEntry[]): HomeLogData {
   });
 
   return { total: entries.length, span: `${entries.length} entries · ${span}`, lanes, months, tips, latest };
+}
+
+/* ───────────────────────── 01 Field（稿 17 Home · Field Hero，MAPPING §55） ───────────────────────── */
+
+/** 场里一张卡：悬停某个亮着的方块时展开成它。 */
+export interface FieldItem {
+  no: string;
+  img: string;
+  title: string;
+  cap: string;
+  tone: Tone;
+  href: string;
+  cta: string;
+}
+export interface HomeField {
+  pool: FieldItem[];
+  /** 已发稿的主项目数 / 台架总数 / 日志条数（首屏底注与副题，全部现算） */
+  projects: number;
+  benches: number;
+  entries: number;
+}
+
+/** 台架截图（public/home/，稿自带的静态帧）；标题与说明取 lab-index。 */
+const FIELD_BENCHES: { no: string; img: string; group: string }[] = [
+  { no: '1-4', img: '/home/c-fivering.png', group: 'reincarnation-machine' },
+  { no: '2-5', img: '/home/c-cylinder.png', group: 'project-ii' },
+  { no: '2-10', img: '/home/c-formed.png', group: 'project-ii' },
+  { no: '2-11', img: '/home/c-crowd.png', group: 'project-ii' },
+  { no: '2-9', img: '/home/c-nine.png', group: 'project-ii' },
+];
+/** 项目卡用的图：日志池里已有的原图（与稿内 machine-0813a / cluster-nine 同一张）。 */
+const FIELD_PROJECTS: { slug: string; img: string; cap: string }[] = [
+  { slug: 'reincarnation-machine', img: '/log/machine-20260813-012e2490.webp', cap: 'Full assembly · Rhino' },
+  { slug: 'project-ii', img: '/log/2026-09-03-unit-cluster-nine-staggered.webp', cap: 'Nine rings, one person' },
+];
+/** 日志卡：按图找到那一条，链接走 withAnchors 锚点（§31）。 */
+const FIELD_LOG = { img: '/log/2026-09-05-attention-shape.webp', title: 'Attention shape' };
+const TONE_LOG: Tone = { ink: 'oklch(0.235 0.025 215)', hi: 'oklch(0.72 0.012 150)' };
+
+export function buildHomeField(cards: HomeCard[], entries: LogEntry[]): HomeField {
+  const card = (slug: string) => {
+    const c = cards.find((x) => x.slug === slug);
+    if (!c) throw new Error(`home-model: 主页卡片缺 ${slug}`);
+    return c;
+  };
+  const bench = (b: (typeof FIELD_BENCHES)[number]): FieldItem => {
+    const lb = labBench(b.no);
+    const c = card(b.group);
+    return {
+      no: `Lab ${b.no}`,
+      img: b.img,
+      title: lb.title,
+      cap: `${c.title} · ${lb.kind.split(' · ')[0]}`,
+      tone: c.tone,
+      href: `/lab#lab${b.no}`,
+      cta: 'Open bench ↗',
+    };
+  };
+  const project = (p: (typeof FIELD_PROJECTS)[number]): FieldItem => {
+    const c = card(p.slug);
+    return { no: c.kicker, img: p.img, title: c.title, cap: p.cap, tone: c.tone, href: `/work/${p.slug}`, cta: 'Case study ↗' };
+  };
+  const hit = withAnchors(entries).find(({ entry }) => entry.blocks?.some((b) => b.kind === 'image' && b.src === FIELD_LOG.img));
+  const B = (no: string) => bench(FIELD_BENCHES.find((b) => b.no === no)!);
+  const pool: FieldItem[] = [
+    B('1-4'),
+    project(FIELD_PROJECTS[0]),
+    B('2-5'),
+    project(FIELD_PROJECTS[1]),
+    B('2-10'),
+    B('2-11'),
+    B('2-9'),
+  ];
+  if (hit) {
+    pool.push({
+      no: `Log · ${fmtMd(hit.entry.date)}`,
+      img: FIELD_LOG.img,
+      title: FIELD_LOG.title,
+      cap: 'Work log',
+      tone: TONE_LOG,
+      href: `/archive#${hit.anchor}`,
+      cta: 'Read entry ↗',
+    });
+  }
+  return {
+    pool,
+    projects: cards.filter((c) => !c.wip).length,
+    benches: LAB_INDEX.reduce((n, g) => n + g.segments.reduce((m, s) => m + s.benches.length, 0), 0),
+    entries: entries.length,
+  };
 }

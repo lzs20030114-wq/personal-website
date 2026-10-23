@@ -27,6 +27,17 @@
         "start"
       ],
       "port": 3000
+    },
+    {
+      "name": "site-prod-3100",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "next",
+        "start",
+        "-p",
+        "3100"
+      ],
+      "port": 3100
     }
   ]
 }

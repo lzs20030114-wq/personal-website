@@ -1,21 +1,19 @@
 'use client';
 
 // 主页「07 Home · Scroll Zone」（design-ref/home-scroll-zone，MAPPING §42）。
-// 01 Hook → 02 Work → 03 About 按页翻（卡片叠放），03 向上收起露出 04 Lab + 05 Log 自由滚动。
+// 01 Field → 02 Work → 03 About 按页翻（卡片叠放），03 向上收起露出 04 Lab + 05 Log 自由滚动。
 // 结构：标记与状态在 React，页引擎（wheel / 键盘 / touch 分页、WAAPI 编排、IntersectionObserver 显现）
 // 照稿 js/home.js 原样移植为 effect 内的命令式层——引擎常量一个数没改。
 import '@fontsource/jetbrains-mono/latin-400.css';
 import '@fontsource/jetbrains-mono/latin-500.css';
 import './home.css';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { HomeCard, HomeLabGroup, HomeLogData } from '../../../src/lib/site/home-model';
-import { HookPage, buildSlides, type HookCtl } from './HookPage';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import type { HomeCard, HomeField, HomeLabGroup, HomeLogData } from '../../../src/lib/site/home-model';
+import { FieldPage } from './FieldPage';
 import { AboutPage, WorkPage } from './WorkAboutPages';
 import { ZonePage } from './ZonePage';
 import { HOME_ZONE_KEY, pageTransitionActive } from '../pageTransitionState';
 
-const ROTATE_S = 7;
-const HOLD_MS = 15000;
 const EO = 'cubic-bezier(.2,.7,.1,1)';
 const EIO = 'cubic-bezier(.76,0,.24,1)';
 const KF: Record<string, Keyframe[]> = {
@@ -26,7 +24,7 @@ const KF: Record<string, Keyframe[]> = {
   fade: [{ opacity: 0 }, { opacity: 1 }],
 };
 const DUR: Record<string, number> = { up: 820, rise: 1000, line: 1100, wipe: 1150, fade: 700 };
-const PAGES = ['Hook', 'Work', 'About', 'Lab', 'Log + Contact'];
+const PAGES = ['Field', 'Work', 'About', 'Lab', 'Log + Contact'];
 const NAV: [string, number][] = [['Work', 1], ['About', 2], ['Lab', 3], ['Log', 4]];
 /** 引擎只在桌面且允许动效时接管；窄屏 / reduced-motion 回落常规文档流（MAPPING §6，CSS 里同一条件） */
 const FLOW_QUERY = '(max-width: 1023px), (prefers-reduced-motion: reduce)';
@@ -49,44 +47,30 @@ export interface HomeScrollProps {
   cards: HomeCard[];
   groups: HomeLabGroup[];
   log: HomeLogData;
+  field: HomeField;
 }
 
-export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
-  const slides = useRef(buildSlides(cards)).current;
+export function HomeScroll({ cards, groups, log, field }: HomeScrollProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const logRef = useRef<HTMLDivElement | null>(null);
   const secRefs = [useRef<HTMLElement>(null), useRef<HTMLElement>(null), useRef<HTMLElement>(null), useRef<HTMLElement>(null)];
 
   const [page, setPage] = useState(0);
   const [flowMode, setFlowMode] = useState(false);
-  const [hk, setHkState] = useState(0);
-  const [paused, setPaused] = useState(false);
   const [zone, setZone] = useState<'lab' | 'log'>('lab');
   const [zScrolled, setZScrolled] = useState(false);
   const [ck, setCk] = useState<number | null>(null);
   const [lh, setLh] = useState<number | null>(null);
   const [sel, setSel] = useState<(string | null)[]>(() => groups.map(() => null));
-  const [mounted, setMounted] = useState<boolean[]>(() => slides.map((_, i) => i === 0));
   const [ready, setReady] = useState(false);
 
-  const ctl = useRef<HookCtl>({ hoverStage: false, lastInteract: -1e9, elapsed: 0 });
-  const api = useRef<{ goIdx: (i: number) => void; toTop: () => void; setHk: (i: number) => void; hkIn: () => void }>({
+  const api = useRef<{ goIdx: (i: number) => void; toTop: () => void }>({
     goIdx: () => {},
     toTop: () => {},
-    setHk: () => {},
-    hkIn: () => {},
   });
-  const hkRef = useRef(0);
-  hkRef.current = hk;
 
   const onPick = useCallback((gi: number, no: string) => {
     setSel((s) => (s[gi] === no ? s : s.map((v, i) => (i === gi ? no : v))));
-  }, []);
-
-  // 第二张轮播片（Lab 2-11 画布）稍后预挂载：切过去时已建好，不在淡入当口才加载
-  useEffect(() => {
-    const t = setTimeout(() => setMounted((m) => m.map(() => true)), 1200);
-    return () => clearTimeout(t);
   }, []);
 
   /* ───────── 命令式引擎（稿 js/home.js 的移植） ─────────
@@ -117,7 +101,7 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
     let flowRaf = 0;
     const pending = new Set<HTMLElement>();
 
-    /* choreo / hkIn */
+    /* choreo */
     const choreo = (i: number, base: number) => {
       if (!motionOn() || flow()) return;
       $$('[data-a]', sections[i]).forEach((el) => {
@@ -131,19 +115,6 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
         });
         a.id = 'ch';
       });
-    };
-    const hkIn = () => {
-      if (!motionOn() || flow()) return;
-      $$('[data-w]').forEach((w, k) => {
-        w.animate([{ transform: 'translateY(105%)' }, { transform: 'none' }], { duration: 760, delay: k * 28, easing: EO, fill: 'backwards' }).id = 'ch';
-      });
-      const hint = $('[data-hk-hint]')?.animate(KF.fade, { duration: 600, delay: 320, easing: EO, fill: 'backwards' });
-      if (hint) hint.id = 'ch';
-      const slide = $(`[data-slide="${hkRef.current}"]`)?.animate(
-        [{ clipPath: 'inset(0 0 0 100%)' }, { clipPath: 'inset(0 0 0 0)' }],
-        { duration: 1100, easing: EIO },
-      );
-      if (slide) slide.id = 'ch';
     };
     const $ = (s: string, el: ParentNode = root) => el.querySelector<HTMLElement>(s);
 
@@ -307,7 +278,7 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
     };
     zoneEl.addEventListener('scroll', onZoneScroll, { passive: true });
 
-    // 文档流没有 go() 的翻页状态；读实际滚动位置更新导航、返回锚点与 Hook 计时。
+    // 文档流没有 go() 的翻页状态；读实际滚动位置更新导航与返回锚点。
     // 台架是否运行仍由各自的 IO 判定，不能拿这条读线代替可见性。
     const syncFlowPosition = () => {
       if (!flow()) return;
@@ -440,41 +411,6 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
     };
     root.addEventListener('scroll', onRootScroll);
 
-    /* 01 Hook：轮播计时 */
-    const bars = $$('[data-bar]');
-    const kbs = $$('[data-kb]');
-    let last = performance.now();
-    let pausedNow = false;
-    let raf = 0;
-    const tick = (t: number) => {
-      const dt = Math.min(100, t - last);
-      last = t;
-      const c = ctl.current;
-      const dur = ROTATE_S * 1000;
-      const isPaused = st.page !== 0 || c.hoverStage || t - c.lastInteract < HOLD_MS;
-      if (!isPaused) c.elapsed += dt;
-      if (isPaused !== pausedNow) {
-        pausedNow = isPaused;
-        setPaused(isPaused && st.page === 0);
-      }
-      const p = Math.min(1, c.elapsed / dur);
-      bars.forEach((b, i) => (b.style.transform = `scaleX(${i === hkRef.current ? p : 0})`));
-      if (motionOn() && kbs[hkRef.current]) kbs[hkRef.current].style.transform = `scale(${1 + 0.045 * p})`;
-      if (c.elapsed >= dur) {
-        c.elapsed = 0;
-        api.current.setHk((hkRef.current + 1) % slides.length);
-      }
-      raf = requestAnimationFrame(tick);
-    };
-    api.current.setHk = (n: number) => {
-      if (n === hkRef.current) return;
-      const kb = $(`[data-kb="${n}"]`);
-      if (kb) kb.style.transform = 'scale(1)';
-      hkRef.current = n;
-      setHkState(n);
-    };
-    raf = requestAnimationFrame(tick);
-
     /* 02 Work：卡片悬停（标题上移到顶、正文自下浮起，其余卡退到 42%） */
     const cardsEl = $('[data-cards]')!;
     const cards$ = $$('[data-card]');
@@ -536,13 +472,9 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
     else if (hash === '#log') jump(3, 'log');
     else if (!arriving) choreo(0, 120);
     syncFlowPosition();
-    const bootT = setTimeout(() => !flow() && !arriving && (st.page === 0 ? hkIn() : undefined), 500);
-    api.current.hkIn = hkIn;
 
     return () => {
       clearTimeout(rvT);
-      clearTimeout(bootT);
-      cancelAnimationFrame(raf);
       cancelAnimationFrame(flowRaf);
       io?.disconnect();
       zoneEl.removeEventListener('scroll', onZoneScroll);
@@ -564,29 +496,13 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 轮播换片：词逐个升起 + 提示淡入 + 新片从右向左揭开（稿 hkIn）
-  const firstHk = useRef(true);
-  useEffect(() => {
-    if (firstHk.current) {
-      firstHk.current = false;
-      return;
-    }
-    api.current.hkIn();
-  }, [hk]);
-
   const act = page < 3 ? page : zone === 'log' ? 4 : 3;
-  const held = paused && page === 0;
-  const onTab = (i: number) => {
-    ctl.current.elapsed = 0;
-    ctl.current.lastInteract = performance.now();
-    api.current.setHk(i);
-  };
 
   return (
     // data-hs-page / data-hs-zone：页面转场离开首页时据此把地址写成 /#work 等，按返回落回原处（MAPPING §48）
     <div className={`hs-root${ready ? ' hs-ready' : ''}`} ref={rootRef} data-hs-root data-hs-page={page} data-hs-zone={zone}>
-      <section className="hs-page hs-page--hook" data-page="0" aria-label="01 Hook" ref={secRefs[0]}>
-        <HookPage slides={slides} hk={hk} held={held} active={flowMode || page === 0} mounted={mounted} ctl={ctl} onTab={onTab} rotateS={ROTATE_S} />
+      <section className="hs-page hs-page--hook" data-page="0" aria-label="01 Field" ref={secRefs[0]}>
+        <FieldPage field={field} active={!flowMode && page === 0} onWork={() => api.current.goIdx(1)} />
       </section>
       <section
         className="hs-page hs-page--work"
@@ -629,7 +545,7 @@ export function HomeScroll({ cards, groups, log }: HomeScrollProps) {
         />
       </section>
 
-      <div className={`hs-hud${!flowMode && page === 2 ? ' hs-on-dark' : ''}`}>
+      <div className={`hs-hud${!flowMode && (page === 2 || page === 0) ? ' hs-on-dark' : ''}`}>
         <div className={`hs-hud__bg${page === 3 && zScrolled ? ' hs-is-on' : ''}`} />
         <div className="hs-hud__bar">
           <button type="button" className={`hs-hud__name${page !== 0 ? ' hs-is-on' : ''}`} onClick={() => api.current.toTop()}>
