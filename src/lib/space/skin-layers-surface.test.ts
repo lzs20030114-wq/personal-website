@@ -58,5 +58,5 @@ describe('多层台完整成形表面', () => {
       const result = buildLayerSurface(layerExample(p.key), sims, true, whole);
       expect(result.meshes.every(m => Array.from(m.verts).every(Number.isFinite))).toBe(true);
     }
-  }, 30000);
+  }, 120_000); // Vercel 上 22.9 s，贴着原 30 s 预算
 });

@@ -120,5 +120,5 @@ describe('多层台圆方组合', () => {
     const changed = buildLayerBands(s, sims.map(sim => ({ ...sim, px: Float64Array.from(sim.px, x => x * .8) })), false, false);
     expect(changed.meshes[1].verts).not.toEqual(baseline.meshes[1].verts);
     expect(changed.membranes[0].verts).not.toEqual(baseline.membranes[0].verts);
-  }, 30000);
+  }, 120_000); // Vercel 2 核构建机实测 32.9 s，30 s 预算不够（2026-10-24）
 });

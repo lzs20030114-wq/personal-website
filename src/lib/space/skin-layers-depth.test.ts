@@ -125,5 +125,5 @@ describe('多层台 · 局部厚台连接深度', () => {
     const base = buildLayerBands(s, sims, false, false);
     const changed = buildLayerBands(s, sims.map(sim => ({ ...sim, px: Float64Array.from(sim.px, x => x * .8) })), false, false);
     expect(changed.membranes[4].verts).not.toEqual(base.membranes[4].verts);
-  }, 30000);
+  }, 120_000); // Vercel 2 核构建机实测 31.9 s，30 s 预算不够（2026-10-24）
 });
