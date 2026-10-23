@@ -7,32 +7,40 @@ import { labBench } from '../../src/lib/site/lab-index';
 type PreviewProps = { active?: boolean; controls?: boolean; onLight?: boolean; lang?: 'en' | 'zh' };
 const loading = () => <span className="home-lab-loading">Loading experiment…</span>;
 // 只加载当前台架。直接用 /lab 的实现与参数，不在主页另做一套模型。
-const PREVIEWS: Record<string, ComponentType<PreviewProps>> = {
-  '1-1': dynamic(() => import('../lab/FourBarBench').then(m => m.FourBarBench), { loading }),
-  '1-2': dynamic(() => import('../lab/ArchBench').then(m => m.ArchBench), { loading }),
-  '1-3': dynamic(() => import('../lab/TentacleBench').then(m => m.TentacleBench), { loading }),
-  '1-4': dynamic(() => import('../lab/RingsBench').then(m => m.RingsBench), { loading }),
-  '1-5': dynamic(() => import('../lab/MachineBench').then(m => m.MachineBench), { loading }),
+const LOADERS: Record<string, () => Promise<ComponentType<PreviewProps>>> = {
+  '1-1': () => import('../lab/FourBarBench').then(m => m.FourBarBench),
+  '1-2': () => import('../lab/ArchBench').then(m => m.ArchBench),
+  '1-3': () => import('../lab/TentacleBench').then(m => m.TentacleBench),
+  '1-4': () => import('../lab/RingsBench').then(m => m.RingsBench),
+  '1-5': () => import('../lab/MachineBench').then(m => m.MachineBench),
   // 同一台整机，驱动换成行为引擎（/lab 上 1-6 就是 <MachineBench behavior />）
-  '1-6': dynamic(() => import('../lab/MachineBench').then(m => function BehaviorPreview(p: PreviewProps) {
+  '1-6': () => import('../lab/MachineBench').then(m => function BehaviorPreview(p: PreviewProps) {
     return <m.MachineBench {...p} behavior />;
-  }), { loading }),
-  '2-1': dynamic(() => import('../lab/SkinBench').then(m => m.SkinBench), { loading }),
-  '2-2': dynamic(() => import('../lab/SkinSolidBench').then(m => m.SkinSolidBench), { loading }),
-  '2-3': dynamic(() => import('../lab/SkinDualBench').then(m => m.SkinDualBench), { loading }),
-  '2-4': dynamic(() => import('../lab/SkinSeriesBench').then(m => m.SkinSeriesBench), { loading }),
-  '2-5': dynamic(() => import('../lab/SkinRingBench').then(m => m.SkinRingBench), { loading }),
-  '2-6': dynamic(() => import('../lab/SkinLayersBench').then(m => m.SkinLayersBench), { loading }),
-  '2-7': dynamic(() => import('../lab/SquareRingBench').then(m => m.SquareRingBench), { loading }),
-  '2-8': dynamic(() => import('../lab/SkinGridBench').then(m => m.SkinGridBench), { loading }),
-  '2-9': dynamic(() => import('../lab/SkinClusterBench').then(m => m.SkinClusterBench), { loading }),
-  '2-10': dynamic(() => import('../lab/WalkPlanBench').then(m => m.WalkPlanBench), { loading }),
-  '2-11': dynamic(() => import('../lab/CrowdPlanBench').then(m => m.CrowdPlanBench), { loading }),
-  '2-12': dynamic(() => import('../lab/CatPlanBench').then(m => m.CatPlanBench), { loading }),
-  '2-13': dynamic(() => import('../lab/SkinComboBench').then(m => m.SkinComboBench), { loading }),
-  '2-14': dynamic(() => import('../lab/CohabitBench').then(m => m.CohabitBench), { loading }),
-  '2-15': dynamic(() => import('../lab/CohabitSpaceBench').then(m => m.CohabitSpaceBench), { loading }),
+  }),
+  '2-1': () => import('../lab/SkinBench').then(m => m.SkinBench),
+  '2-2': () => import('../lab/SkinSolidBench').then(m => m.SkinSolidBench),
+  '2-3': () => import('../lab/SkinDualBench').then(m => m.SkinDualBench),
+  '2-4': () => import('../lab/SkinSeriesBench').then(m => m.SkinSeriesBench),
+  '2-5': () => import('../lab/SkinRingBench').then(m => m.SkinRingBench),
+  '2-6': () => import('../lab/SkinLayersBench').then(m => m.SkinLayersBench),
+  '2-7': () => import('../lab/SquareRingBench').then(m => m.SquareRingBench),
+  '2-8': () => import('../lab/SkinGridBench').then(m => m.SkinGridBench),
+  '2-9': () => import('../lab/SkinClusterBench').then(m => m.SkinClusterBench),
+  '2-10': () => import('../lab/WalkPlanBench').then(m => m.WalkPlanBench),
+  '2-11': () => import('../lab/CrowdPlanBench').then(m => m.CrowdPlanBench),
+  '2-12': () => import('../lab/CatPlanBench').then(m => m.CatPlanBench),
+  '2-13': () => import('../lab/SkinComboBench').then(m => m.SkinComboBench),
+  '2-14': () => import('../lab/CohabitBench').then(m => m.CohabitBench),
+  '2-15': () => import('../lab/CohabitSpaceBench').then(m => m.CohabitSpaceBench),
 };
+const PREVIEWS: Record<string, ComponentType<PreviewProps>> = Object.fromEntries(
+  Object.entries(LOADERS).map(([no, load]) => [no, dynamic(load, { loading })]),
+);
+
+/** 指针刚碰到目录条目就先拉代码块：等悬停延时到点切换时，新台架多半已能直接出首帧。 */
+export function preloadLabPreview(no: string): void {
+  LOADERS[no]?.().catch(() => {});
+}
 
 export function HomeLabPreview({ no, active }: { no: string; active: boolean }) {
   const host = useRef<HTMLDivElement>(null);
