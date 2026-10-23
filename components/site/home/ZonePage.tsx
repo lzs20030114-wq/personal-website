@@ -7,7 +7,8 @@ import { HomeLabPreview, preloadLabPreview } from '../HomeLabPreview';
 
 const HOVER_MS = 120; // 活台架切换要挂载 / 卸载 WebGL，指针划过目录时稍作停留再切（稿内是即时）
 const FADE_MS = 460; // 交叉淡化时长，与 home.css .hs-pv__layer 的 transition 对齐
-const READY_MAX_MS = 900; // 新台架迟迟不出图（首访拉网格）时，最多让旧画面再撑这么久
+const READY_MAX_MS = 900; // 新台架迟迟不出图（首访拉代码块）时，最多让旧画面再撑这么久
+const MESH_MAX_MS = 2500; // 台架声明在载网格（data-bench-loading）时的兜底：首访拉 + 烘焙十万级三角
 
 /* ───────────────────────── 04 Lab ───────────────────────── */
 
@@ -32,33 +33,45 @@ function PreviewLayer({
   readyRef.current = onReady;
 
   // 「出图」判据：dynamic 的 loading 占位换成了台架的 svg / canvas，再等三帧让 rAF 循环画上第一笔。
+  // 异步载网格的台架（触手、整机）canvas 先在、模型后到：它们在 canvas 上挂 data-bench-loading，
+  // 载完摘掉——三帧后若还挂着就接着等，否则会淡入一块空 canvas、模型再「啪」地冒出来。
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     let done = false;
     let raf = 0;
+    let t: ReturnType<typeof setTimeout> | undefined;
     const fire = () => {
       if (done) return;
       done = true;
       readyRef.current(no);
     };
+    const arm = (ms: number) => {
+      clearTimeout(t);
+      t = setTimeout(fire, ms);
+    };
+    const drawn = () => el.querySelector('svg, canvas') != null;
+    const loading = () => el.querySelector('[data-bench-loading]') != null;
     const settle = () => {
+      if (raf || done) return; // 台架自己的 DOM 每帧都可能变，已在数帧就不重来
       let n = 3;
       const step = () => {
-        if (--n > 0) raf = requestAnimationFrame(step);
+        if (--n > 0) {
+          raf = requestAnimationFrame(step);
+          return;
+        }
+        raf = 0;
+        if (loading()) arm(MESH_MAX_MS); // 摘标记时 MutationObserver 再叫 settle
         else fire();
       };
       raf = requestAnimationFrame(step);
     };
-    const drawn = () => el.querySelector('svg, canvas') != null;
     const mo = new MutationObserver(() => {
-      if (!drawn()) return;
-      mo.disconnect();
-      settle();
+      if (drawn() && !loading()) settle();
     });
+    mo.observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-bench-loading'] });
     if (drawn()) settle();
-    else mo.observe(el, { childList: true, subtree: true });
-    const t = setTimeout(fire, READY_MAX_MS);
+    arm(READY_MAX_MS);
     return () => {
       done = true;
       mo.disconnect();

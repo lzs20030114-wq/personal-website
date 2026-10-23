@@ -128,6 +128,8 @@ export function TentacleBench({
     const active = renderer;
     let disposed = false;
     if (active) {
+      // 主页预览层据此等网格真正载入再交叉淡化（ZonePage PreviewLayer）
+      canvas.dataset.benchLoading = 'mesh';
       fetch(MESH_URL)
         .then((r) => {
           if (!r.ok) throw new Error(`3D mesh 请求失败（HTTP ${r.status}）`);
@@ -155,8 +157,10 @@ export function TentacleBench({
             if (g.blend) active.addSkinnedMesh(g.name, bakeSkinned(verts, idx, g.blend[0], g.blend[1]));
             else active.addMesh(g.name, bakeIndexed(verts, idx));
           }
+          delete canvas.dataset.benchLoading;
         })
         .catch((error: unknown) => {
+          delete canvas.dataset.benchLoading;
           renderError = error instanceof Error ? error.message : '3D mesh 载入失败';
           setHud((h) => ({ ...h, note: `mesh incomplete · ${renderError}` }));
         });

@@ -769,6 +769,8 @@ export function MachineBench({
     // 实体载荷异步载入；未到之前画面是空的，HUD 出「载入实体…」
     let ready = false;
     let disposed = false;
+    // 主页预览层据此等模型真正载入再交叉淡化（ZonePage PreviewLayer）
+    canvas.dataset.benchLoading = 'mesh';
     fetch(MACHINE_MESH_URL)
       .then((res) => {
         if (!res.ok) throw new Error(`mesh 请求失败（HTTP ${res.status}）`);
@@ -801,11 +803,13 @@ export function MachineBench({
           else R.addMesh(g.name, bakeIndexed(verts, idx));
         }
         ready = true;
+        delete canvas.dataset.benchLoading;
         setHud((h) => ({ ...h, note: '' }));
       })
       .catch((error: unknown) => {
         if (disposed) return;
         const msg = error instanceof Error ? error.message : 'mesh 载入失败';
+        delete canvas.dataset.benchLoading;
         setHud((h) => ({ ...h, note: msg }));
         canvas.setAttribute('aria-label', `3D preview incomplete: ${msg}`);
       });
