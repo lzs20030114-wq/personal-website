@@ -1579,3 +1579,13 @@ planDraw 的猫分支去掉注意力圈，增加支撑、落点外圈与单元�
 - **正文**：第一章顶距 64 → 8（`.cs-body` padding-top，与稿第 0 章 `pt: 8px` 对应）；段落 40em → 42em，开场大字 30em → 32em。列表仍是 40em，稿里只改了 `p`。
 - **v2 里已在 §46 落地、这次没动的**：夜色底、AI 披露浅紫面、主青页脚。`BAND` 章节色带在 12a 里仍是空集，不落地。
 - **验证**：typecheck 干净；测试 1040 / 1041 通过，唯一失败的 `log.test.ts`（逐字比对日志文件）是 Windows 检出后换行符变成 CRLF 引起的，与本次改动无关。开发服务器 1440 / 820 / 390 宽度下无横向溢出；项目 01 与项目 II 的元数据栅格、目录展开态（标题 / 遮罩 / 热区）都核对了计算值；控制台无错误。悬停动效的手感需要在真机上看（预览窗格在后台时不推进 CSS 过渡）。
+
+## 53. 项目一、二案例页正文改学术体（2026-10-23，作者「包括标题、小节名字、正文再进行语言的改进，不要那么多个人化表述，也不要在标题里就加那么多问句，更偏向学术文章一样的语言娓娓道来地展开叙述，使用去 AI 味 skill」）
+
+只改文字，不改页面机制：四份 MDX（`content/work/reincarnation-machine/index.mdx` / `index.zh.mdx`、`content/work/project-ii/index.mdx` / `index.zh.mdx`）+ 项目一 frontmatter 的两句 summary。构件数据（`case-reincarnation.ts`）、插槽组件、目录栏、`SLOT_COPY` 本轮零改。
+
+- **小节标题**（目录栏从 h2 现抽，所以目录随之变）：项目一 为什么是实体 → 实体形式的选择 · 为什么不像生物 → 不模仿生物的外形 · 脾气是十二个数 → 人格参数与生命周期 · 身体怎么造 → 身体的构造 · 怎样让人把停止理解为死亡 → 衰老与死亡的呈现 · 它怎么感知你 → 感知与事件系统 · 现在到哪 → 研究进展；h3 壳：五道会呼吸的环 → 壳体：五道呼吸环 · 驱动：从曲柄到齿条 → 驱动：曲柄方案与齿条方案 · 臂与须 → 臂与触须 · 算过的，和算错的 → 结构计算与修正 · 一个人做的 → 独立制作的约束。英文侧对应（The case for a physical body · A form that imitates no animal · Personality parameters and the life cycle · Construction of the body · Presenting ageing and death · Sensing and events · Current status；Shell: five breathing rings · Drive: crank and rack designs · Constraints of a one-person build）。项目二只改两节：六次转向 → 设计过程中的六次修正 / Six turns → Six revisions，尚未回答 → 未解决的问题（英文 Open questions 不变），Project info → Project information。研究问题、反思、技术参数、方法等本来就是名词短语的不动。
+- **正文**：第一人称与对读者的直接称呼全部去掉——「我担心 / 我想 / 我保留了」改成无主语或第三人称的陈述，必须指作者本人时写「作者 / the author」（独立制作那节）；「它感知你 / senses you / responses to you」改成「感知人 / its responses change」。项目二「六次修正」六条由自述（「越写越不像自己的」「没数据就不编」）改为客观记述，日期与锚点不动。两侧的分号拆句、提示性冒号改逗号、「不是…而是」改成正面陈述（研究问题里保留一处「而不只是 / not only」；入选标准里「以研究方法论而非艺术作品的形式发表」是作者的判据照留）；一串短句按意思连成一句。**顺手改掉一处说谎**：正文「页顶主图…可以拖动查看 / Drag it to see」——Lab 1-5 主图位没有拖拽（§45 有意差异②），改为陈述它在跑什么。
+- **不动的**：研究问题本身（它就是一个问句，放在 `ResearchQuestion` 构件里）、三张概念卡的名字（作者既有命名）、全部 `<Todo>` 待补框、日志锚点、插槽编号与顺序、两张表、参考文献、人格参数表 / 预测表 / 技术参数、项目二标题（仍未定名）。
+- **核对**：脚本逐文件对 `git HEAD` 比：日志锚点多重集、插槽 id 序列、h2 数（10 / 13）逐位相同；数字集合无一丢失，新增的只有注释里的日期与「百分之一到百分之五」改写成的 0.01 / 0.05。机械扫描：正文零「——」（只剩文件头注释里的）、零正文分号（中文）、Todo 之外零「我 / 你 / I / you」。
+- **验证**：`content.test` + `case-headings.test` 18 项绿；四份 MDX 用站内同一套 `@mdx-js/mdx` + remark-gfm 编译通过；全套 vitest 1005 项通过（直接调 vitest 会跳过 `pretest` 的终态生成、7 个依赖 `skin-terminal.generated.json` 的文件因此没跑，与本次改动无关，补跑结果与 `next build` 见本节末的补记）。
