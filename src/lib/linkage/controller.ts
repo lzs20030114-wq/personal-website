@@ -80,6 +80,8 @@ export class LinkageController {
   private omegaRel = 0;
   /** reduced-motion 下动力学初始冻结；用户直接交互后才允许时间推进。 */
   private dynamicMotionActive: boolean;
+  /** 静止档松手后只消除拖拽残差，有限帧收敛，不启动自转。 */
+  private settleFrames = 0;
 
   constructor(
     private readonly solver: LinkageSolver,
@@ -145,6 +147,7 @@ export class LinkageController {
       }
     });
     if (best < 0) return false;
+    this.settleFrames = 0;
     this.activePointer = pointerId;
     this.solver.beginDrag(best);
     this.solver.dragTo(x, y);
@@ -174,6 +177,9 @@ export class LinkageController {
     this._theta = this.crankAngle();
     if (this.reducedMotion) {
       this._mode = 'idle';
+      // 软目标会留下持续残差（SPEC §3.3）；静止不等于已收敛。
+      // 沿用拖拽投影预算，最多 24 帧（拱环松手恢复预算），不施加曲柄驱动。
+      this.settleFrames = this.solver.maxError() > 0.5 ? 24 : 0;
       return;
     }
     if (this.relTau <= 0) {
@@ -214,8 +220,13 @@ export class LinkageController {
       if (Math.abs(this.omegaRel - drv.omega) <= this.relSnapEps * Math.abs(drv.omega)) {
         this._mode = 'spin';
       }
+    } else if (this._mode === 'idle' && this.settleFrames > 0) {
+      this.solver.iterate(this.dragSweeps);
+      this.settleFrames--;
+      if (this.solver.maxError() < 0.5) this.settleFrames = 0;
+      if (drv) this._theta = this.crankAngle();
     }
-    // idle：不驱动、不迭代——静止构型本来就是收敛解
+    // 初始 idle 与松手收敛结束后均不再迭代，保持静止构型逐位不变。
   }
 
   /** 位置驱动一帧：θ 前进 dTheta，B 摆上曲柄圆并临时锚定，iterate，解锁（SPEC §4.2 spin）。 */

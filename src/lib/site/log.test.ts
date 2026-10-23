@@ -26,6 +26,12 @@ describe('log 内容池', () => {
     expect(entries.length).toBeGreaterThan(0);
   });
 
+  it('落盘日志都有永久身份；新增条目不能依赖展示顺序生成公开地址', () => {
+    const ids = (RAW as { id?: string }[]).map((e) => e.id);
+    expect(ids.every(Boolean)).toBe(true);
+    expect(new Set(ids).size).toBe(RAW.length);
+  });
+
   it('最新在前', () => {
     const dates = getLogEntries().map((e) => e.date);
     expect([...dates].sort().reverse()).toEqual(dates);

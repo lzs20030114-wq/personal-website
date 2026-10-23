@@ -214,8 +214,8 @@
 .hs-log__head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; padding-bottom: 18px; }
 .hs-head__aside--log { gap: 24px; }
 .hs-log__body { border-top: 2px solid var(--ink); padding-top: 22px; }
-.hs-cad { position: relative; }
-.hs-lane { display: grid; grid-template-columns: 168px minmax(0,1fr); align-items: center; height: 28px; border-bottom: 1px dashed oklch(0.235 0.025 215 / .16); }
+.hs-cad { position: relative; --cad-label-w: 168px; --cad-lane-h: 28px; --cad-axis-h: 26px; }
+.hs-lane { display: grid; grid-template-columns: var(--cad-label-w) minmax(0,1fr); align-items: center; height: var(--cad-lane-h); border-bottom: 1px dashed oklch(0.235 0.025 215 / .16); }
 .hs-lane__label { display: flex; align-items: center; gap: 8px; font: 400 11px var(--mono); color: var(--muted-2); }
 .hs-lane__sq { width: 7px; height: 7px; background: var(--c-ink); }
 .hs-lane__n { color: var(--muted-2); }
@@ -224,11 +224,11 @@
 .hs-tick > span { display: block; width: 2px; height: 12px; background: var(--c-ink); transition: height .3s var(--eo), opacity .3s; }
 .hs-cad.hs-has-hot .hs-tick > span { opacity: .3; }
 .hs-cad.hs-has-hot .hs-tick.hs-is-hot > span { height: 24px; opacity: 1; }
-.hs-cad__axis { display: grid; grid-template-columns: 168px minmax(0,1fr); height: 26px; }
+.hs-cad__axis { display: grid; grid-template-columns: var(--cad-label-w) minmax(0,1fr); height: var(--cad-axis-h); }
 .hs-cad__months { position: relative; }
 .hs-cad__month { position: absolute; top: 0; height: 100%; padding: 8px 0 0 5px; border-left: 1px solid oklch(0.235 0.025 215 / .18); font: 400 10px var(--mono); color: var(--muted); }
 .hs-cad__today { position: absolute; right: 0; top: 8px; font: 500 10px var(--mono); color: var(--teal); }
-.hs-cad__now { position: absolute; right: 0; top: 0; bottom: 26px; border-right: 1px dashed oklch(0.42 0.088 178 / .6); }
+.hs-cad__now { position: absolute; right: 0; top: 0; bottom: var(--cad-axis-h); border-right: 1px dashed oklch(0.42 0.088 178 / .6); }
 .hs-cad__tip { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); padding: 5px 9px; background: var(--ink); color: var(--paper); font: 400 11px var(--mono); white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .2s; }
 .hs-cad__tip.hs-is-on { opacity: 1; }
 .hs-latest { display: grid; grid-template-columns: minmax(0,1.3fr) minmax(0,1fr); gap: clamp(28px, 4vw, 64px); margin-top: 44px; align-items: start; }
@@ -343,11 +343,19 @@
   .hs-group__case { margin-left: 40px; }
   .hs-group__row { grid-template-columns: 40px minmax(0, 1fr) auto; }
   .hs-latest { grid-template-columns: 1fr; }
-  .hs-lane, .hs-cad__axis { grid-template-columns: 96px minmax(0, 1fr); }
+  .hs-cad { --cad-label-w: 96px; --cad-lane-h: 52px; }
+  .hs-lane__label { display: grid; grid-template-columns: 7px minmax(0, 1fr) auto; gap: 6px; line-height: 1.35; overflow-wrap: anywhere; }
   .hs-foot__in { padding: 28px 20px; }
   .hs-hud__bar { padding: 0 20px; }
   .hs-hud__nav { gap: 18px; }
   .hs-log { margin-top: 72px; padding: 72px 0; }
+}
+
+/* 手机轴末端另留一行给 today，月份、泳道与刻度仍用原来的文字、字号和比例。 */
+@media (max-width: 639px) {
+  .hs-cad { --cad-axis-h: 44px; }
+  .hs-cad__month { height: 26px; padding-left: 3px; }
+  .hs-cad__today { top: 26px; }
 }
 
 /* 站内全局 `a:hover { color: var(--accent) }` 不许漏进主页：稿里卡片 / 条目 / 刻度悬停不变色，

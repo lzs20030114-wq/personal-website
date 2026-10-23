@@ -228,7 +228,7 @@ export const LAB_PAGE_COPY: readonly (readonly [string, string])[] = [
   ["drag to orbit", "拖动旋转"],
   ["views by button", "按钮切换视角"],
   ["touch the machine", "触碰机器"],
-  ["drag ℓ", "拖动 ℓ"],
+  ["watch it form", "观察成形"],
   ["drag the person", "拖动人物"],
   ["click to add", "点击添加人物"],
   ["SVG · 2D kernel", "矢量 · 二维内核"],

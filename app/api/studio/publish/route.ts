@@ -9,9 +9,12 @@ import {
   buildCommitFiles,
   commitMessage,
   LOG_JSON_PATH,
+  validateEntries,
   type PendingImage,
 } from '../../../../src/lib/studio/publish';
 import { loadPool, publishFiles, StudioRepoError } from '../../../../src/lib/studio/repo';
+import { LogEntriesSchema } from '../../../../src/lib/site/log-schema';
+import { restoreLogEntryIds } from '../../../../src/lib/site/log-identity';
 
 /**
  * 发布接口：整池条目 + 待传图片 → 一个 commit。
@@ -41,6 +44,9 @@ export async function POST(req: Request) {
   } catch {
     return json({ ok: false, errors: ['请求体不是合法 JSON'] }, 400);
   }
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return json({ ok: false, errors: ['请求体必须包含日志条目'] }, 400);
+  }
 
   const images: PendingImage[] = Array.isArray(payload.images)
     ? payload.images.flatMap((raw) => {
@@ -53,9 +59,9 @@ export async function POST(req: Request) {
 
   // public/log/ 下已有哪些图，由服务端自己去看——客户端说「这张已经在仓库里了」不能算数，
   // 否则条目可以引用一个根本不存在的文件，站上就是个裂图而构建不会失败。
-  let existingImages: string[] = [];
+  let pool;
   try {
-    existingImages = (await loadPool()).images;
+    pool = await loadPool();
   } catch (err) {
     return json(
       { ok: false, errors: [`读不到仓库当前状态：${err instanceof Error ? err.message : err}`] },
@@ -63,7 +69,18 @@ export async function POST(req: Request) {
     );
   }
 
-  const prepared = buildCommitFiles({ entries: payload.entries, images, existingImages });
+  const checked = validateEntries(payload.entries);
+  if (!checked.ok) return json({ ok: false, errors: checked.errors }, 400);
+  const baseline = LogEntriesSchema.safeParse(pool.entries);
+  if (!baseline.success) return json({ ok: false, errors: ['仓库当前内容池格式不正确，无法核对日志身份'] }, 502);
+  let entries;
+  try {
+    // 旧编辑器/旧草稿缺少 id 时，按内容认回当前身份，不能按删改后的数组位置猜。
+    entries = restoreLogEntryIds(checked.entries, baseline.data);
+  } catch (err) {
+    return json({ ok: false, errors: [err instanceof Error ? err.message : String(err)] }, 400);
+  }
+  const prepared = buildCommitFiles({ entries, images, existingImages: pool.images });
   if (!prepared.ok) return json({ ok: false, errors: prepared.errors }, 400);
 
   const imageCount = prepared.files.filter((f) => f.path !== LOG_JSON_PATH).length;

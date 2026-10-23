@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { cache } from 'react';
 import { LogEntriesSchema, sortEntries, type LogEntry } from './log-schema';
+import { ensureLogEntryIds } from './log-identity';
 
 /**
  * Work log 内容池（MAPPING §4）——沿用现有池的 zod 构建期 fail-fast 纪律。
@@ -35,7 +36,7 @@ const loadLog = cache((): LogEntry[] => {
     throw new Error(`content/log/entries.json 校验失败：${parsed.error.message}`);
   }
   // 最新在前（Log 稿 "newest first"）；同日 ties 保持 JSON 内顺序（Array.sort 稳定）。
-  return sortEntries(parsed.data);
+  return sortEntries(ensureLogEntryIds(parsed.data));
 });
 
 export function getLogEntries(): LogEntry[] {

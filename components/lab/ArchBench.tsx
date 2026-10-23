@@ -9,7 +9,7 @@ import {
   ARCH_CRANK_RADIUS,
   ARCH_DRAG_SWEEPS,
   ARCH_DRIVER,
-  ARCH_FEET,
+  ARCH_HANDLES,
   ARCH_FOOT_SLOTS,
   ARCH_PIN,
   ARCH_SPIN_SWEEPS,
@@ -19,6 +19,7 @@ import {
   apexHeightMM,
   archStopPass,
   createArch,
+  nearestArchHandleWithin,
 } from '../../src/lib/linkage/arch';
 import { LinkageController } from '../../src/lib/linkage/controller';
 import type { Point } from '../../src/lib/linkage/types';
@@ -30,7 +31,6 @@ import { useBenchLoop } from './useBenchLoop';
  * 与投影交错（止程转正，2026-07-17）——跨设备同一轨迹。内核封盘零改。
  */
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const HANDLES = [ARCH_APEX, ...ARCH_FEET, ARCH_PIN];
 
 /**
  * HUD 双语（2026-09-13 加，案例页正文要嵌这台）：/lab 说中文（默认），
@@ -67,7 +67,7 @@ export function ArchBench({
   const tx = useLabText(lang);
   const t = COPY[lang];
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const stateRef = useRef<{ ctl: LinkageController; step: (dt: number) => void } | null>(null);
+  const stateRef = useRef<{ solver: ReturnType<typeof createArch>; ctl: LinkageController; step: (dt: number) => void } | null>(null);
   const [hud, setHud] = useState({ phi: 0, apex: 0, err: 0, mode: 'idle' });
 
   useEffect(() => {
@@ -126,7 +126,7 @@ export function ArchBench({
     });
     const centerDot = el('circle', 'joint-fixed');
     attrs(centerDot, { r: 6, cx: c.x, cy: c.y });
-    const handleEls = HANDLES.map((i) => {
+    const handleEls = ARCH_HANDLES.map((i) => {
       const h = el('circle', i === ARCH_APEX ? 'joint-tip' : 'joint-handle');
       h.setAttribute('r', '7');
       h.dataset.node = String(i);
@@ -165,11 +165,16 @@ export function ArchBench({
       render();
       const pin = solver.nodes[ARCH_PIN];
       const phi = ((Math.atan2(pin.y - c.y, pin.x - c.x) * 180) / Math.PI + 450) % 360;
-      setHud({ phi, apex: apexHeightMM(solver), err: solver.maxError(), mode: ctl.mode });
+      const apex = apexHeightMM(solver);
+      const err = solver.maxError();
+      const mode = ctl.mode;
+      setHud((h) => h.phi.toFixed(1) === phi.toFixed(1) && h.apex.toFixed(1) === apex.toFixed(1)
+        && h.err.toFixed(2) === err.toFixed(2) && h.mode === mode
+        ? h : { phi, apex, err, mode });
     };
 
     render();
-    stateRef.current = { ctl, step };
+    stateRef.current = { solver, ctl, step };
     return () => {
       stateRef.current = null;
     };
@@ -194,7 +199,8 @@ export function ArchBench({
         aria-label={t.aria}
         onPointerDown={(ev) => {
           const p = toVB(ev);
-          if (p && stateRef.current?.ctl.pointerDown(ev.pointerId, p.x, p.y)) {
+          const state = stateRef.current;
+          if (p && state && nearestArchHandleWithin(state.solver, p.x, p.y) && state.ctl.pointerDown(ev.pointerId, p.x, p.y)) {
             try {
               ev.currentTarget.setPointerCapture(ev.pointerId);
             } catch {

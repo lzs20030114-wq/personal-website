@@ -30,10 +30,16 @@ function isRealDate(date: string): boolean {
 export function checkLogEntries(entries: LogEntry[]): GuardIssue[] {
   const issues: GuardIssue[] = [];
   const seenEntry = new Set<string>();
+  const seenIds = new Set<string>();
   const tagDict = new Map<string, string>();
 
   entries.forEach((e, index) => {
     const at = (message: string) => issues.push({ index, message });
+
+    if (e.id) {
+      if (seenIds.has(e.id)) at(`日志身份 ${e.id} 重复，公开链接会指向多条记录`);
+      seenIds.add(e.id);
+    }
 
     if (!isRealDate(e.date)) at(`日期 ${e.date} 不是真实存在的日期`);
 

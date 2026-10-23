@@ -32,7 +32,9 @@ export function layerBandPlan(s: LayerStudy) {
   });
 }
 
-const topology = new Map<number, ReturnType<typeof buildSolidTopology>>();
+// Indices depend only on node count. All consumers borrow them read-only, like
+// the solid topology; changing vertices/pose must never rewrite these arrays.
+const topology = new Map<number, ReturnType<typeof buildSolidTopology> & { readonly membraneIdx: Uint32Array }>();
 export function buildLayerBands(s: LayerStudy, frames: readonly LayerFrame[], pose = true, whole = true) {
   const meshes: Mesh[] = [], bonds: LayerLine[] = [];
   const membranes: { verts: Float32Array; idx: Uint32Array; center: Vec3 }[] = [];
@@ -49,7 +51,7 @@ export function buildLayerBands(s: LayerStudy, frames: readonly LayerFrame[], po
     if (!band.kind) continue;
     const region = LAYER_PROFILE_KINDS.indexOf(band.kind), { frame: f, k } = profiles[region], def = PROFILES[k];
     const start = whole ? 0 : def.lead, end = whole ? f.px.length : def.lead + def.free, n = end - start;
-    if (!topology.has(n)) topology.set(n, buildSolidTopology(n, SKIN.STRIPE));
+    if (!topology.has(n)) topology.set(n, { ...buildSolidTopology(n, SKIN.STRIPE), membraneIdx: Uint32Array.from(bandTriIndex(n)) });
     const topo = topology.get(n)!;
     const verts = fillSolidVerts(f.px.subarray(start, end), f.py.subarray(start, end), n, 0, band.depth, RING.THICK, 100, undefined, 0, 0, ring);
     const c = Math.cos(ring.angle), sn = Math.sin(ring.angle);
@@ -86,7 +88,7 @@ export function buildLayerBands(s: LayerStudy, frames: readonly LayerFrame[], po
         boundary.push({ x: boundaryR * Math.cos(a), y: y + (pose ? layerPoseOffset(s, f, k, start + i, boundaryR, angle) : 0), z: boundaryR * Math.sin(a) });
       }
       const center = [...edge, ...boundary].reduce((sum, p) => ({ x: sum.x + p.x / (2 * n), y: sum.y + p.y / (2 * n), z: sum.z + p.z / (2 * n) }), { x: 0, y: 0, z: 0 });
-      membranes.push({ verts: bandVerts(edge, boundary), idx: Uint32Array.from(bandTriIndex(n)), center });
+      membranes.push({ verts: bandVerts(edge, boundary), idx: topo.membraneIdx, center });
       // 厚台/双层/单层的交界，以及缺口边缘，都有暴露的径向截面。
       // 从同一片带间膜的边界直接封口，避免另画目标壳体或跨过轮廓缺口。
       const neighbor = placements[(slot + side + placements.length) % placements.length];

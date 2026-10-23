@@ -4,7 +4,7 @@ import {
   ARCH_CRANK_RADIUS,
   ARCH_DRAG_SWEEPS,
   ARCH_DRIVER,
-  ARCH_FEET,
+  ARCH_HANDLES,
   ARCH_FOOT_SLOTS,
   ARCH_PIN,
   ARCH_SPIN_SWEEPS,
@@ -14,6 +14,7 @@ import {
   apexHeightMM,
   archStopPass,
   createArch,
+  nearestArchHandleWithin,
 } from '../lib/linkage/arch';
 import { LinkageController } from '../lib/linkage/controller';
 import { startStaticVisitTracking } from '../lib/visitors/client';
@@ -36,10 +37,6 @@ const controller = new LinkageController(solver, {
   spinSweeps: ARCH_SPIN_SWEEPS,
   dragSweeps: ARCH_DRAG_SWEEPS,
 });
-
-/** 可抓手柄：拱顶（呼吸）、四脚（滑槽）、曲柄销（手动盘轮）。中段销不设手柄——
- * 扁板对法向按压敏感（arch-data 头注），把拖拽入口留在机构自由度的方向上。 */
-const HANDLES = new Set<number>([ARCH_APEX, ...ARCH_FEET, ARCH_PIN]);
 
 function el<K extends keyof SVGElementTagNameMap>(tag: K, cls: string): SVGElementTagNameMap[K] {
   const e = document.createElementNS(SVG_NS, tag);
@@ -83,7 +80,7 @@ const centerDot = el('circle', 'joint-fixed');
 centerDot.setAttribute('r', '6');
 centerDot.setAttribute('cx', String(c.x));
 centerDot.setAttribute('cy', String(c.y));
-const handleEls = [...HANDLES].map((i) => {
+const handleEls = ARCH_HANDLES.map((i) => {
   const h = el('circle', 'joint-handle');
   h.setAttribute('r', '7');
   h.dataset.node = String(i);
@@ -131,25 +128,9 @@ function toViewBox(ev: PointerEvent): { x: number; y: number } {
   return { x: p.x, y: p.y };
 }
 
-/** controller 的命中测试取全体自由节点最近者；台架层先自查最近手柄，
- * 非手柄命中一律不进入拖拽（中段销不可抓，见 HANDLES 注释）。 */
-function nearestHandleWithin(x: number, y: number, r: number): boolean {
-  let best = Infinity;
-  let bestIsHandle = false;
-  solver.nodes.forEach((n, i) => {
-    if (n.fixed) return;
-    const d = Math.hypot(n.x - x, n.y - y);
-    if (d < best) {
-      best = d;
-      bestIsHandle = HANDLES.has(i);
-    }
-  });
-  return best <= r && bestIsHandle;
-}
-
 svg.addEventListener('pointerdown', (ev) => {
   const p = toViewBox(ev);
-  if (!nearestHandleWithin(p.x, p.y, 24)) return;
+  if (!nearestArchHandleWithin(solver, p.x, p.y)) return;
   if (controller.pointerDown(ev.pointerId, p.x, p.y)) {
     try {
       svg.setPointerCapture(ev.pointerId);
