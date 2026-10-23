@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useCaseLang } from '../CaseLang';
 import { chapterNo } from '../../../src/lib/site/case-headings';
+import { CASE_JUMP_EVENT } from './CaseReveal';
 
 const INK = 'oklch(0.95 0.032 120)';
 const MUTE = 'oklch(0.8 0.035 162)';
@@ -65,6 +66,8 @@ export function CaseIndex({ en, zh }: { en: readonly string[]; zh: readonly stri
     const el = i === 0 ? document.querySelector<HTMLElement>('.cs-body') : document.querySelectorAll<HTMLElement>('.cs-body > h2')[i - 1];
     if (!el) return;
     const top = el.getBoundingClientRect().top + window.scrollY - (i === 0 ? 90 : SECTION_LEAD + 40);
+    // 先告诉滚动显现这是一次跳章：沿途的块不逐个起动画，落地那一批短淡入（CaseReveal）
+    window.dispatchEvent(new CustomEvent(CASE_JUMP_EVENT, { detail: { top } }));
     window.scrollTo({ top, behavior: reduced ? 'auto' : 'smooth' });
   };
 
