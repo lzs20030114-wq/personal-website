@@ -29,10 +29,12 @@ import {
   cohabitCamScale,
   figureYaw,
   furnitureBoxes,
+  platesMesh,
   postsMesh,
   rigFor,
   roomMesh,
   unitDrop,
+  unitFootY,
   unitTopY,
   type BandTrajectory,
   type Rig,
@@ -49,7 +51,8 @@ import {
  *
  * **两段触发（2026-10-23 作者纠偏）**：非触发的单元收在天花下（整束布贴着圆环板缩成一团），触发才沿立杆
  * 落到工位、再压缩成形——程度 < `HOIST.dropAt` 是升降段（整束布的高度与长度一起插值），之上是成形段。
- * 挡路的带各自收回时也按同一条路往上收（顶端收放按带，正文「夹持位置随程序变」那条假设）。
+ * 挡路的带各自收回时也按同一条路往上收（顶端收放按带，正文「夹持位置随程序变」那条假设）。立杆也随单元伸缩：
+ * 下端跟着布束底走，收起时只剩天花下一小截（作者「中间这根棍子也得缩上去」）；圆环板仍是天花上的静件。
  *
  * 画法上两件为了帧率：静止态（收起 / 直带子 / 成形）的单元整环烘成一份静态网格、按单元摆（gl3d.drawMeshAt），
  * 只有正在升降、成形、收回、开门的带子才逐条摆；房间、立杆、圆环板、家具都是烘一次的静件。
@@ -250,9 +253,20 @@ export function CohabitSpaceBench({
       const idle = bakeRing(pre, 1, topo); // 预览的第 1 帧 = 收起态
       R.addMesh('ring-stowed-a', idle.a);
       R.addMesh('ring-stowed-b', idle.b);
-      const posts = postsMesh(rig, layout);
-      R.addMesh('posts', bakeIndexed(posts.verts, posts.idx));
+      const plates = platesMesh(rig);
+      R.addMesh('plates', bakeIndexed(plates.verts, plates.idx));
     }
+    // 立杆随单元伸缩（作者「中间这根棍子也得缩上去」）：下端跟着布束底走，哪一帧变了哪一帧重烘，静止时不重传
+    const postBottoms = new Float32Array(layout.units.length).fill(-1);
+    const postNext = new Float32Array(layout.units.length);
+    const syncPosts = (): void => {
+      let dirty = false;
+      for (let u = 0; u < postNext.length && !dirty; u++) if (Math.abs(postNext[u] - postBottoms[u]) > 1e-3) dirty = true;
+      if (!dirty) return;
+      postBottoms.set(postNext);
+      const posts = postsMesh(rig, layout, postBottoms);
+      R.addMesh('posts', bakeIndexed(posts.verts, posts.idx));
+    };
     const bandMeshDone = new Set<number>();
     const ensureBand = (frame: number): void => {
       if (!traj || bandMeshDone.has(frame)) return;
@@ -286,7 +300,7 @@ export function CohabitSpaceBench({
       R.drawMesh('room', IDENT, ROOM_DARK, ROOM_LITE);
       R.drawMesh('furniture', IDENT, FURN_DARK, FURN_LITE);
       if (sim.space !== 'empty') {
-        R.drawMesh('posts', IDENT, RAIL_DARK, RAIL_LITE);
+        R.drawMesh('plates', IDENT, RAIL_DARK, RAIL_LITE);
         const stowedPlaces: MeshPlace[] = [];
         const straightPlaces: MeshPlace[] = [];
         const formedPlaces: MeshPlace[] = [];
@@ -297,11 +311,14 @@ export function CohabitSpaceBench({
           // 轨迹还没烘完：仿真没开跑，全场都收在天花下
           if (!traj) {
             stowedPlaces.push(at(c, 0, rig.stowY));
+            postNext[u] = unitFootY(rig, pre.footY, 0);
             continue;
           }
           const deg = sim.act.degree[u];
-          // 整束布的高度跟单元的升降程度走；带子各自的长度跟自己的 f 走（开门的带往上收）
-          const top = unitTopY(rig, unitDrop(deg));
+          // 整束布的高度跟单元的升降程度走；带子各自的长度跟自己的 f 走（开门的带往上收）；立杆下端跟布束底
+          const drop = unitDrop(deg);
+          const top = unitTopY(rig, drop);
+          postNext[u] = unitFootY(rig, traj.footY, drop);
           let allStowed = true;
           let allStraight = true;
           let allFormed = true;
@@ -328,6 +345,8 @@ export function CohabitSpaceBench({
               list.push(at(c, bandAngle(j), top));
             }
         }
+        syncPosts();
+        R.drawMesh('posts', IDENT, RAIL_DARK, RAIL_LITE);
         R.drawMeshAt('ring-stowed-a', stowedPlaces, DARK_A, LITE_A);
         R.drawMeshAt('ring-stowed-b', stowedPlaces, DARK_B, LITE_B);
         R.drawMeshAt('ring-straight-a', straightPlaces, DARK_A, LITE_A);

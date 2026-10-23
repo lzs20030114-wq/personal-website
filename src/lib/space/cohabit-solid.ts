@@ -31,6 +31,8 @@
  * 平面模型的程度 0–1 在这里拆成两段（`HOIST.dropAt` 分界）：之下是升降段——整束布沿立杆从天花下滑到
  * 工位、边下边放长（`hoistProfile`，直带子按长度比例压向顶端）；之上是成形段——引擎的正向协议与回程照旧。
  * 分界取平面模型「对人成墙」那条线（`COHABIT.WALL_AT`）：落到位的直筒已经挡人，两边口径一致。
+ * 立杆也随单元伸缩（作者同日补「中间这根棍子也得缩上去」）：下端跟着布束底走（`unitFootY`），收起时只剩
+ * 天花下一小截；圆环板仍是天花上的静件。
  * 第二阶段「成什么」仍只有一种形（Lab 2-8 那只阶梯方箱），待作者定词汇表后再分。
  */
 import { RING, RING_DEFAULT_FORM, buildRingUnits, type RingUnitDef } from './skin-ring';
@@ -284,9 +286,17 @@ export function unitDrop(degree: number, dropAt: number = HOIST.dropAt): number 
   return Math.max(0, Math.min(1, degree / dropAt));
 }
 
-/** 单元此刻的装置原点世界高度：收起位与工位之间按升降程度插值（带子与它一起摆，圆环板与立杆不动） */
+/** 单元此刻的装置原点世界高度：收起位与工位之间按升降程度插值（带子与它一起摆，圆环板不动，立杆见 unitFootY） */
 export function unitTopY(rig: Pick<Rig, 'y' | 'stowY'>, drop: number): number {
   return rig.stowY + (rig.y - rig.stowY) * drop;
+}
+
+/**
+ * 单元此刻的钉住端世界高度 = 布束底 = 立杆下端：吊长按升降程度从 HOIST.stowed 倍放到全长，
+ * 到工位时 = RIG_ANCHOR_Y。与 hoistProfile 的脚只差顶端节点那零点几个单位（压缩是绕顶端节点做的）。
+ */
+export function unitFootY(rig: Pick<Rig, 'y' | 'stowY' | 's'>, footY: number, drop: number): number {
+  return unitTopY(rig, drop) + rig.s * footY * (HOIST.stowed + (1 - HOIST.stowed) * drop);
 }
 
 /** 一条带在装置自身坐标系里的顶点（沿本地 +X 放在芯半径处，再由摆放表转到各方位角） */
@@ -417,24 +427,34 @@ export function concatMeshes(parts: readonly { verts: Float32Array; idx: Uint32A
 export const PLATE = { inner: 12, outer: 11, y: -3, halfT: 3, segs: 40 } as const;
 
 /**
- * 立杆 + 天花圆环板：每格一根方杆从天花（y 0）落到钉住点（RIG_ANCHOR_Y），一块圆环板挂在天花上。
- * 立杆按**世界尺寸**建（平面模型的芯半径 mastR），板随装置缩。全部静件，烘成一份。
+ * 立杆：每格一根方杆从天花（y 0）落到这个单元此刻的钉住端（`bottoms[u]`；不传 = 全在工位 RIG_ANCHOR_Y）。
+ * 作者 2026-10-23「中间这根棍子也得缩上去」：杆是随单元伸缩的芯，收起时只剩天花下布束那一截，触发才伸下来——
+ * 下端跟着布束底走（`unitFootY`），台架在它变了的那一帧重烘。立杆按**世界尺寸**建（平面模型的芯半径 mastR）。
  */
-export function postsMesh(rig: Rig, layout: Pick<PlanLayout, 'mastR'>, unit: number = UNITS_PER_M): { verts: Float32Array; idx: Uint32Array } {
-  const parts: { verts: Float32Array; idx: Uint32Array }[] = [];
+export function postsMesh(rig: Pick<Rig, 'cells'>, layout: Pick<PlanLayout, 'mastR'>, bottoms?: ArrayLike<number>, unit: number = UNITS_PER_M): { verts: Float32Array; idx: Uint32Array } {
   // 立杆比芯细一截（0.55 × 芯半径）：闲着的带子贴着芯挂，杆与带同粗会把六十四根读成一片柱林，人就看不见了
   const hm = Math.max(1.2, layout.mastR * unit * 0.55);
+  return concatMeshes(
+    rig.cells.map((c, u) => {
+      const b = Math.max(1e-3, bottoms ? bottoms[u] : RIG_ANCHOR_Y);
+      return boxVerts(c.x, b / 2, c.z, hm, b / 2, hm);
+    }),
+  );
+}
+
+/** 天花圆环板：每格一块挂在天花上（y 0 平面），板随装置缩；静件，烘一份 */
+export function platesMesh(rig: Pick<Rig, 's' | 'cells'>): { verts: Float32Array; idx: Uint32Array } {
   const plate = ringPlateVerts(Math.max(2, (RING.RADIUS_DEF - PLATE.inner) * rig.s), (RING.RADIUS_DEF + PLATE.outer) * rig.s, PLATE.y, PLATE.halfT, PLATE.segs);
-  for (const c of rig.cells) {
-    parts.push(boxVerts(c.x, RIG_ANCHOR_Y / 2, c.z, hm, RIG_ANCHOR_Y / 2, hm));
-    const v = Float32Array.from(plate.verts);
-    for (let k = 0; k < v.length; k += 3) {
-      v[k] += c.x;
-      v[k + 2] += c.z;
-    }
-    parts.push({ verts: v, idx: plate.idx });
-  }
-  return concatMeshes(parts);
+  return concatMeshes(
+    rig.cells.map((c) => {
+      const v = Float32Array.from(plate.verts);
+      for (let k = 0; k < v.length; k += 3) {
+        v[k] += c.x;
+        v[k + 2] += c.z;
+      }
+      return { verts: v, idx: plate.idx };
+    }),
+  );
 }
 
 /** 房间（地板 + 两面墙，Lab 2-8 的画法）按平面模型的内净尺寸 */
