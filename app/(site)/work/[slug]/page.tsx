@@ -327,43 +327,45 @@ function HeroMeta({ entry, lang }: { entry: WorkEntry; lang: SlotLang }) {
           ))}
         </dd>
       </div>
-      <div>
-        <dt>{c.mTools}</dt>
-        <dd>
-          {(tools ?? ['—']).map((r) => (
-            <span key={r}>{r}</span>
-          ))}
-        </dd>
-      </div>
-      <div>
-        <dt>{c.mTime}</dt>
-        <dd>{period}</dd>
-      </div>
-      {entry.credits && entry.credits.length > 0 ? (
+      <div className="cs-meta__rest">
         <div>
-          <dt>{c.mCredits}</dt>
+          <dt>{c.mTools}</dt>
           <dd>
-            {entry.credits.map((x) => (
-              <span key={x.name}>
-                {x.name} — {x.role}
-              </span>
+            {(tools ?? ['—']).map((r) => (
+              <span key={r}>{r}</span>
             ))}
           </dd>
         </div>
-      ) : null}
-      {progress && progress.length > 0 ? (
         <div>
-          <dt>{c.mStatus}</dt>
-          <dd>
-            {progress.map((x, i) => (
-              <span className="cs-chip" key={x}>
-                <i style={{ background: dots[Math.min(i, dots.length - 1)] }} />
-                {x}
-              </span>
-            ))}
-          </dd>
+          <dt>{c.mTime}</dt>
+          <dd>{period}</dd>
         </div>
-      ) : null}
+        {entry.credits && entry.credits.length > 0 ? (
+          <div>
+            <dt>{c.mCredits}</dt>
+            <dd>
+              {entry.credits.map((x) => (
+                <span key={x.name}>
+                  {x.name} — {x.role}
+                </span>
+              ))}
+            </dd>
+          </div>
+        ) : null}
+        {progress && progress.length > 0 ? (
+          <div>
+            <dt>{c.mStatus}</dt>
+            <dd>
+              {progress.map((x, i) => (
+                <span className="cs-chip" key={x}>
+                  <i style={{ background: dots[Math.min(i, dots.length - 1)] }} />
+                  {x}
+                </span>
+              ))}
+            </dd>
+          </div>
+        ) : null}
+      </div>
     </dl>
   );
 }

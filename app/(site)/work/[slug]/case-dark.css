@@ -31,15 +31,21 @@
 .cs.pg-dark .ld-footer a:hover { color: var(--ld-cream); }
 :where(.cs) button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
 .cs-dots {
-  position: absolute; left: 0; right: 0; top: 0; height: 900px; pointer-events: none;
+  position: absolute; left: 0; right: 0; top: 0; height: 1700px; pointer-events: none;
   background-image: radial-gradient(oklch(0.71 0.098 145) 1px, transparent 1.2px); background-size: 6px 6px; opacity: 0.12;
-  -webkit-mask-image: linear-gradient(115deg, #000 0%, transparent 42%); mask-image: linear-gradient(115deg, #000 0%, transparent 42%);
+  /* 12a：斜向淡出之外再叠一道纵向淡出，颗粒拖得更长、往下自然收掉 */
+  -webkit-mask-image: linear-gradient(115deg, #000 0%, transparent 46%), linear-gradient(#000 45%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(115deg, #000 0%, transparent 46%), linear-gradient(#000 45%, transparent 100%);
+  mask-composite: intersect;
 }
+/* 12a 版心 1240（/lab 稿仍是 1440，共用的顶栏只在案例页收窄；页脚长在 .cs 里） */
+body:has(.cs) .ld-header__in, .cs .ld-footer__in { max-width: 1240px; }
 .cs-mono { font-family: var(--cs-mono); }
 
 /* ═══ 首屏 ═══════════════════════════════════════════════════════════════════ */
 .cs-hero {
-  position: relative; max-width: 1440px; margin: 0 auto; padding: 16px clamp(20px, 4vw, 48px) 0; box-sizing: border-box;
+  position: relative; max-width: 1240px; margin: 0 auto; padding: 16px clamp(20px, 4vw, 48px) 0; box-sizing: border-box;
   display: flex; flex-direction: column; gap: 20px;
 }
 .cs-hero__screen {
@@ -98,44 +104,58 @@
 /* 筹备页 / 无活件项目的占位主图 */
 .cs-stage__ph { position: absolute; inset: 0; z-index: 0; display: flex; align-items: center; justify-content: center; padding: 0 34px; text-align: center; font: 400 11.5px/1.6 var(--cs-mono); color: oklch(0.74 0.02 150); background: repeating-linear-gradient(45deg, oklch(0.95 0.032 120 / 0.045) 0 1px, transparent 1px 10px); }
 
-.cs-meta { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px 32px; }
-.cs-meta > div { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid oklch(0.95 0.032 120 / 0.2); }
-.cs-meta dt { font: 500 11px var(--cs-mono); color: var(--cs-g); letter-spacing: 0; text-transform: none; }
-.cs-meta dd { margin: 0; display: flex; flex-direction: column; gap: 4px; font: 400 14px / 1.45 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; }
-.cs-meta .cs-chip { display: flex; align-items: center; gap: 8px; }
-.cs-meta .cs-chip i { width: 6px; height: 6px; border-radius: 50%; display: block; }
+.cs-meta {
+  margin: 28px 0 0; padding: 36px 0 72px; border-top: 1px solid oklch(0.95 0.032 120 / 0.16);
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 3fr); gap: 28px 56px;
+}
+/* 角色占左 1 份；工具 / 时间 /（署名）/ 状态在右 3 份里三列排 */
+.cs-meta__rest { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 56px; }
+.cs-meta__rest > div, .cs-meta > div:not(.cs-meta__rest) { display: flex; flex-direction: column; gap: 14px; }
+.cs-meta dt { font: 500 11px / 1 var(--cs-mono); letter-spacing: 0.08em; color: var(--cs-dim); text-transform: none; }
+.cs-meta dd { margin: 0; display: flex; flex-direction: column; gap: 2px; font: 400 15px / 1.6 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: oklch(0.9 0.035 140); }
+.cs-meta .cs-chip { display: flex; align-items: center; gap: 10px; }
+.cs-meta .cs-chip i { width: 5px; height: 5px; border-radius: 50%; display: block; }
+/* 稿只有桌面态：窄了回落成自适应网格 */
+@media (max-width: 899px) {
+  .cs-meta, .cs-meta__rest { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 28px 40px; }
+  .cs-meta__rest { grid-column: 1 / -1; }
+}
 
 /* ═══ 目录 + 正文两栏 ════════════════════════════════════════════════════════ */
-.cs-layout { max-width: 1440px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 48px); box-sizing: border-box; position: relative; display: flex; gap: 56px; align-items: flex-start; }
-.cs-index {
-  flex: none; box-sizing: content-box; margin-left: calc(-12px - clamp(0px, 1.8vw, 24px));
-  transition: width 0.55s var(--cs-eio); position: sticky; top: 76px; max-height: calc(100vh - 92px);
-  overflow-y: auto; overflow-x: hidden; scrollbar-width: none; padding: 0 0 24px 12px;
+.cs-layout { max-width: 1240px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 48px); box-sizing: border-box; position: relative; display: flex; gap: 44px; align-items: flex-start; }
+/* 目录（12a TOC Rail）：28px 刻度竖条，悬停 / 聚焦展开（data-open），标题浮在正文之上 */
+.cs-index { flex: none; width: 28px; position: sticky; top: 76px; margin-top: 4px; z-index: 5; }
+.cs-index__hit { position: absolute; left: -40px; top: -20px; bottom: -24px; width: 0; pointer-events: none; }
+.cs-index[data-open] .cs-index__hit { width: 300px; pointer-events: auto; }
+.cs-index__veil {
+  position: absolute; left: -40px; top: -20px; bottom: -24px; width: 320px; pointer-events: none;
+  background: linear-gradient(90deg, var(--cs-paper) 0 62%, transparent); opacity: 0; transition: opacity 0.35s;
 }
-.cs-index::-webkit-scrollbar { display: none; }
-.cs-index__head { width: 212px; display: flex; align-items: center; justify-content: space-between; gap: 4px; margin: 0 0 16px; white-space: nowrap; }
-.cs-index__toggle { display: flex; align-items: center; gap: 8px; font: 400 10.5px var(--cs-mono); color: var(--cs-dim); transition: color 0.2s; }
-.cs-index__toggle:hover { color: var(--cs-ink); }
-.cs-index__toggle > b { flex: none; width: 28px; height: 28px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1px solid oklch(0.95 0.032 120 / 0.25); font: 500 13px var(--cs-mono); color: var(--cs-ink); }
-.cs-index__count { font: 400 10.5px var(--cs-mono); color: var(--cs-dim); }
-.cs-index__fade { transition: opacity 0.3s; }
-.cs-index__rail { flex-direction: column; width: 28px; }
-.cs-index__rail button { height: 14px; display: flex; align-items: center; justify-content: center; }
-.cs-index__rail span { display: block; height: 2px; transition: width 0.4s var(--cs-eo), background 0.3s; }
-.cs-index__list { width: 212px; flex-direction: column; border-top: 1px solid oklch(0.95 0.032 120 / 0.16); padding-top: 8px; }
-.cs-index__item { position: relative; display: grid; grid-template-columns: 32px minmax(0, 1fr); align-items: baseline; padding: 6px 0; transition: color 0.25s; }
+.cs-index__list { position: relative; display: flex; flex-direction: column; padding-top: 8px; }
+.cs-index__item { height: 24px; display: flex; align-items: center; gap: 16px; white-space: nowrap; transition: color 0.25s; }
 .cs-index__item:hover { color: var(--cs-ink) !important; }
-.cs-index__bar { position: absolute; left: -12px; top: 7px; bottom: 7px; width: 2px; background: var(--cs-g); transition: transform 0.4s var(--cs-eo); }
-.cs-index__n { font: 500 11px var(--cs-mono); }
-.cs-index__t { font-size: 13.5px; line-height: 1.35; transition: transform 0.4s var(--cs-eo); }
+.cs-index__tick { flex: none; width: 28px; display: flex; justify-content: center; }
+.cs-index__tick > span { display: block; height: 2px; background: currentColor; transition: width 0.4s var(--cs-eo), opacity 0.3s; }
+.cs-index__label {
+  display: flex; align-items: baseline; gap: 10px; opacity: 0; transform: translateX(-14px); pointer-events: none;
+  transition: opacity 0.3s, transform 0.5s var(--cs-eo);
+}
+.cs-index__n { font: 500 10.5px var(--cs-mono); }
+.cs-index__t { font-size: 13px; line-height: 1; }
+.cs-index__count {
+  position: relative; display: block; margin-top: 14px; padding-left: 44px; font: 400 10.5px var(--cs-mono);
+  letter-spacing: 0.08em; color: oklch(0.62 0.03 168); opacity: 0; transition: opacity 0.3s 0.2s;
+}
+.cs-index[data-open] .cs-index__veil, .cs-index[data-open] .cs-index__count { opacity: 1; }
+.cs-index[data-open] .cs-index__label { opacity: 1; transform: none; pointer-events: auto; }
 @media (max-width: 1039px) { .cs-index { display: none; } .cs-layout { display: block; } }
 
 .cs-main { flex: 1; min-width: 0; padding-bottom: 40px; }
 
 /* ═══ 正文排印（MDX 直出的块）═══════════════════════════════════════════════ */
-.cs-body { counter-reset: cs-sec; display: flex; flex-direction: column; gap: 30px; padding-top: 64px; }
+.cs-body { counter-reset: cs-sec; display: flex; flex-direction: column; gap: 30px; padding-top: 8px; }
 .cs-body > * { margin: 0; min-width: 0; }
-.cs-body p { max-width: 40em; font: 400 17px / 1.8 'Archivo Variable', Archivo, 'PingFang SC', 'Microsoft YaHei', sans-serif; color: var(--cs-body); text-wrap: pretty; }
+.cs-body p { max-width: 42em; font: 400 17px / 1.8 'Archivo Variable', Archivo, 'PingFang SC', 'Microsoft YaHei', sans-serif; color: var(--cs-body); text-wrap: pretty; }
 .cs-body strong { font-weight: 600; color: var(--cs-ink); }
 .cs-body em { font-style: italic; }
 .cs-body ul, .cs-body ol { max-width: 40em; margin: 0; padding-left: 22px; font-size: 16px; line-height: 1.75; color: var(--cs-body); }
@@ -168,7 +188,7 @@
 /* 开场三段：lead / accent */
 /* 宽度由里面的 p 按自己的字号（em）定——外层 div 是 15px 的 em，卡在这里会把大字压成窄栏 */
 .cs-lead, .cs-accent { max-width: none; }
-.cs-body .cs-lead p { max-width: 30em; font: 400 clamp(22px, 2.3vw, 32px) / 1.45 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; letter-spacing: -0.012em; color: var(--cs-ink); }
+.cs-body .cs-lead p { max-width: 32em; font: 400 clamp(22px, 2.3vw, 32px) / 1.45 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; letter-spacing: -0.012em; color: var(--cs-ink); }
 .cs-body .cs-accent p { max-width: 26em; font: 500 clamp(24px, 2.6vw, 38px) / 1.35 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; letter-spacing: -0.02em; color: var(--cs-gh); text-wrap: balance; }
 /* 研究问题 */
 .cs-rq { display: flex; flex-direction: column; gap: 14px; padding: 6px 0 4px; }
@@ -465,7 +485,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .cs-live i, .cs-sys__flow i { animation: none; }
-  .cs-index, .cs-index__t, .cs-index__bar { transition: none; }
+  .cs-index__veil, .cs-index__label, .cs-index__tick > span, .cs-index__count { transition: none; }
 }
 
 /* ── 对照图（项目二 FIG.05，components/site/case/CompareChart.tsx）── */
