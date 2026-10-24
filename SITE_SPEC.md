@@ -54,6 +54,7 @@ LINKAGE_SPEC.md 等文档       # 保留在根
 - `/` 首页：名字 + 一句定位 → **FIG. 01 连杆活物**（可交互 hero）→ selected 作品（恒 3 个，order 排序；2026-10-04 用户拍板由 4 改 3）→ 页脚（邮箱、GitHub、明文完整 URL）。
 - `/work/[slug]` case study 页（模板见 §9）。
 - `/archive` 全量索引：published 且非 selected 的条目，**只标 YYYY-MM**，无 last-updated。允许长期为空——**申请季前不为凑数填内容（防「第五个项目化」）**。
+  - **2026-10-24 修订（SITE_SPEC 修订）**：`/archive` 早已是工作日志，这一条的「非主项目作品索引」作废。主项目之外的作品改在首页 02 Work 上按组横向切换：第一组是三个主项目，其后按作者定的类别分组，内容池 `content/other/works.json`（zod 构建期校验）。它们不计 selected、不套案例页模板（MAPPING §58）。
 - `/about` 一页：背景、方法、**colophon 段**（「这个站怎么做的」——技术栈/自研求解器/性能与无障碍决策；2026-07-10 拍板新增，v1 只留席位，正文用户写）、AI 披露席位（§9）。
 - 另：404、sitemap、favicon、每页 OG 图。
 

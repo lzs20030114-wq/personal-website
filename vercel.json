@@ -2,6 +2,7 @@
   "framework": "nextjs",
   "git": {
     "deploymentEnabled": {
+      "claude/work-by-type-groups": false,
       "claude/work-progress-check-ccfmp8": false,
       "claude/solver-endpoint-bug-fscvhp": false,
       "claude/homepage-collapse-interactions-q7b6x7": false,
