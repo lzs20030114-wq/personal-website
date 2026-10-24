@@ -2,8 +2,8 @@
 
 // 01 Field（稿 design-ref/home-field-hero/17 Home - Field Hero.dc.html，MAPPING §55）。
 // 一张 28×14 的方块场：方块随机亮起又熄灭，指针划过留下一圈短暂的余光；
-// 悬停一个亮着的方块，它就长成一张 6×4 的卡（周围方块让位），点卡进那件作品。
-// 中央是标题区，场在它后面绕开。手感常量照稿原样，一个数没改。
+// 在亮着的方块上稍作停留，它就长成一张 6×4 的卡（周围方块让位），点卡进那件作品。
+// 中央是标题区，场在它后面绕开。触发停留时间见 MAPPING §57.1，其余沿用原稿。
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -22,6 +22,9 @@ const K = 1.5;
 const DENSITY = 250;
 const THUMBS = 0.35;
 const TICK_MS = 110;
+/** 快速掠过不触发：余光先响应，再确认开卡意图。 */
+const WAKE_DWELL_MS = 50;
+const OPEN_DWELL_MS = 160;
 const FLOW_QUERY = '(max-width: 1023px), (prefers-reduced-motion: reduce)';
 
 const NUM = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
@@ -101,12 +104,26 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     lit: new Map<number, number>(),
     zone: { r0: 4, r1: 9, c0: 7, c1: 20 } as Zone,
     lastCell: -1,
+    hoveredCell: -1,
     closing: false,
+    wakeT: undefined as ReturnType<typeof setTimeout> | undefined,
+    openT: undefined as ReturnType<typeof setTimeout> | undefined,
     closeT: undefined as ReturnType<typeof setTimeout> | undefined,
     txtT: undefined as ReturnType<typeof setTimeout> | undefined,
   });
 
   const motionOn = () => !window.matchMedia(FLOW_QUERY).matches;
+
+  const cancelOpen = useCallback(() => {
+    clearTimeout(m.current.openT);
+    m.current.hoveredCell = -1;
+  }, []);
+
+  const cancelHover = useCallback(() => {
+    cancelOpen();
+    clearTimeout(m.current.wakeT);
+    m.current.lastCell = -1;
+  }, [cancelOpen]);
 
   const isCenter = (i: number) => {
     const z = m.current.zone;
@@ -127,6 +144,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
   const openAt = useCallback((i: number, pick: number) => {
     const f = fieldRef.current;
     if (!f) return;
+    cancelHover();
     const r = Math.floor(i / COLS);
     const c = i % COLS;
     const c0 = Math.max(0, Math.min(COLS - CW, c - 3));
@@ -195,10 +213,13 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open?.n]);
 
-  // 翻离首屏时把卡收起
+  // 翻离首屏时取消等待，并把已经展开的卡收起。
   useEffect(() => {
-    if (!active && openRef.current) collapse();
-  }, [active, collapse]);
+    if (!active) {
+      cancelHover();
+      if (openRef.current) collapse();
+    }
+  }, [active, collapse, cancelHover]);
 
   // 场的心跳：亮起 / 熄灭（只在首屏是当前页、且不在窄屏 / reduced-motion 文档流时跑）
   useEffect(() => {
@@ -210,6 +231,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
 
     // 中央标题区底下不亮方块：量标题区盖住哪些行列
     const measure = () => {
+      cancelHover();
       const t = centerRef.current;
       if (!t) return;
       const fr = f.getBoundingClientRect();
@@ -240,6 +262,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
       const hv = openRef.current?.i;
       for (const [i, exp] of st.lit) {
         if (now > exp && i !== hv) {
+          if (st.hoveredCell === i) cancelOpen();
           const el = els[i];
           el.style.transitionDuration = '2.2s,.7s';
           el.style.opacity = '0';
@@ -283,6 +306,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
       ro.disconnect();
       clearTimeout(st.closeT);
       clearTimeout(st.txtT);
+      cancelHover();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -292,6 +316,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     const g = m.current.ghosts[i];
     if (!g) return;
     setTimeout(() => {
+      if (!activeRef.current || !motionOn()) return;
       g.style.transition = 'opacity .09s,transform .7s cubic-bezier(.2,.7,.1,1)';
       g.style.opacity = String(amp);
       setTimeout(() => {
@@ -311,31 +336,47 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     const ch = (fr.height - GAP * (ROWS - 1)) / ROWS;
     const c = Math.floor(px / (cw + GAP));
     const r = Math.floor(py / (ch + GAP));
-    if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return;
+    if (c < 0 || c >= COLS || r < 0 || r >= ROWS || px % (cw + GAP) >= cw || py % (ch + GAP) >= ch) {
+      clearTimeout(m.current.wakeT);
+      m.current.lastCell = -1;
+      return;
+    }
     const i = r * COLS + c;
     if (i === m.current.lastCell) return;
+    clearTimeout(m.current.wakeT);
     m.current.lastCell = i;
-    trigger(i, 1, 0);
-    const near = (dc: number, dr: number) => {
-      const cc = c + dc;
-      const rr = r + dr;
-      return cc >= 0 && cc < COLS && rr >= 0 && rr < ROWS ? rr * COLS + cc : -1;
-    };
-    [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dc, dr]) => {
-      const j = near(dc, dr);
-      if (j >= 0) trigger(j, 0.45, 70);
-    });
-    [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(([dc, dr]) => {
-      const j = near(dc, dr);
-      if (j >= 0 && Math.random() < 0.5) trigger(j, 0.2, 140);
-    });
+    m.current.wakeT = setTimeout(() => {
+      if (!activeRef.current || openRef.current || !motionOn() || m.current.lastCell !== i) return;
+      trigger(i, 1, 0);
+      const near = (dc: number, dr: number) => {
+        const cc = c + dc;
+        const rr = r + dr;
+        return cc >= 0 && cc < COLS && rr >= 0 && rr < ROWS ? rr * COLS + cc : -1;
+      };
+      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dc, dr]) => {
+        const j = near(dc, dr);
+        if (j >= 0) trigger(j, 0.45, 70);
+      });
+      [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(([dc, dr]) => {
+        const j = near(dc, dr);
+        if (j >= 0 && Math.random() < 0.5) trigger(j, 0.2, 140);
+      });
+    }, WAKE_DWELL_MS);
   };
 
   const onCellEnter = (e: React.MouseEvent<HTMLSpanElement>) => {
     const el = e.currentTarget;
     const i = Number(el.dataset.cell);
+    cancelOpen();
+    if (!activeRef.current || !motionOn()) return;
     if (openRef.current?.i === i && !m.current.closing) return;
-    if (el.dataset.item != null) openAt(i, Number(el.dataset.item));
+    const item = el.dataset.item;
+    if (item == null) return;
+    m.current.hoveredCell = i;
+    m.current.openT = setTimeout(() => {
+      if (!activeRef.current || !motionOn() || m.current.hoveredCell !== i || !m.current.lit.has(i) || el.dataset.item !== item || !el.matches(':hover')) return;
+      openAt(i, Number(item));
+    }, OPEN_DWELL_MS);
   };
 
   const card = open ? pool[open.pick] : null;
@@ -356,10 +397,12 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
         className="hs-field__grid"
         ref={fieldRef}
         onPointerMove={onMove}
-        onPointerLeave={() => (m.current.lastCell = -1)}
+        onPointerLeave={cancelHover}
       >
         {CELLS.map((i) => (
-          <span key={i} className="hs-field__cell" data-cell={i} onMouseEnter={onCellEnter} aria-hidden="true">
+          <span key={i} className="hs-field__cell" data-cell={i} onMouseEnter={onCellEnter} onMouseLeave={() => {
+            if (m.current.hoveredCell === i) cancelOpen();
+          }} aria-hidden="true">
             <span className="hs-field__cimg" />
           </span>
         ))}
