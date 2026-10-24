@@ -1,5 +1,357 @@
 [
   {
+    "id": "log-2026-10-24-688312168132846",
+    "date": "2026-10-24",
+    "lead": {
+      "en": "Replaced the homepage opening with an expandable field of project thumbnails.",
+      "zh": "把主页首屏改成可展开的方块场，让作品和实验入口从缩略图里出现。"
+    },
+    "body": {
+      "en": "- Tiles light up across the opening screen, expand into cards on hover, and link to the relevant project, experiment or log.\n- Card labels, destinations and counts come from site content. The work, about, lab and log sections remain in place.\n- Mobile and reduced-motion layouts keep the title and content access without the animated field.",
+      "zh": "- 按新设计让方块逐渐亮起，悬停时展开卡片，点击进入对应作品、实验或日志。\n- 卡片名称、链接和条目数量直接取站内内容，保留后面的作品、介绍、实验和日志区。\n- 手机和减少动态效果模式隐藏方块动画，保留标题与内容入口。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-24-1801706581233044",
+    "date": "2026-10-24",
+    "lead": {
+      "en": "Removed blank flashes when switching between lab previews.",
+      "zh": "修复实验预览切换时闪出空白的问题。"
+    },
+    "body": {
+      "en": "- Kept the previous scene visible while the next bench was being prepared, then crossfaded between them.\n- The first fix still switched too early when a model loaded asynchronously. The transition now waits for that model to be drawn, and inactive previews stop running.",
+      "zh": "- 下一台实验准备好之前保留上一幅画面，再让两幅画面交叉淡化。\n- 首次修复仍会在模型异步加载时过早切换，随后改成等模型真正画出来再淡入，非当前预览停止运行。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-23-4235513318147732",
+    "date": "2026-10-23",
+    "lead": {
+      "en": "Corrected the inactive units to stay near the ceiling, then descend before forming a platform.",
+      "zh": "修正未触发单元的位置，让它们先收在天花下，触发后再下降成形。"
+    },
+    "body": {
+      "en": "- The first three-dimensional view left every unit hanging at working height, making inactive units look activated. Split the motion into descent and forming.\n- Fabric and the central rod now retract together. A strip that opens a passage follows the same upward return path while the ceiling ring stays fixed.\n- Only show a cat on the platform once that platform has formed; a lowered straight cylinder does not provide a landing surface.\n- The stowed shape is a geometric preview made by compressing the straight strip. The actual folded bundle and hardware motion still need to be established.",
+      "zh": "- 首版立体视图把所有单元都垂到工作高度，未触发也像已经启动。把运动拆成先下降、后成形两段。\n- 布束与中间立杆一起收回；为人让路的布条沿同一路径向上收，天花上的固定环不动。\n- 平台真正成形后才把猫画到台面上，不能把落下的直筒误当作可站立的平台。\n- 当前收起形状由直布条几何压缩而来，实际折叠成团的样子和机构运动仍需确定。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "3D", "zh": "立体" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-23-1540928197040555",
+    "date": "2026-10-23",
+    "lead": {
+      "en": "Refined the case-study reading layout and removed delays after chapter jumps.",
+      "zh": "收窄案例页版心，并修正目录跳章后正文迟迟不出现的问题。"
+    },
+    "body": {
+      "en": "- The chapter index becomes a narrow rail that opens on hover or keyboard focus, alongside a consistent grid for project information.\n- Long jumps previously accumulated reveal delays across every passing section. Capping that delay and revealing the destination promptly removes the apparent loading stall.\n- The changes retain the existing text and experiment components.",
+      "zh": "- 目录收成侧边刻度，悬停或键盘聚焦时展开标题；角色、工具等信息按统一网格排布。\n- 跳到后面章节时，沿途内容原来不断累加淡入延迟，看起来像没有加载。现在限制累计等待，让落点附近的内容及时出现。\n- 正文内容与实验组件沿用原实现，调整集中在阅读导航和版式。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-23-1553877201978556",
+    "date": "2026-10-23",
+    "lead": {
+      "en": "Revised the first two case studies for more consistent, sustained reading.",
+      "zh": "统一项目一和项目二的案例文字，使标题和论述更适合连续阅读。"
+    },
+    "body": {
+      "en": "- Reduced first-person phrasing and question-based headings in both languages, and broke up long sentences to clarify questions, methods and findings.\n- Preserved measurements, references, log links and unfinished sections. Also corrected a claim that the live hero model could be dragged.",
+      "zh": "- 中英两侧减少第一人称和问句标题，拆开过长句子，让研究问题、方法和结果各自说清楚。\n- 保留已有数字、参考文献、日志链接和待补内容；同时改正主图可拖动的错误提示。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Writing", "zh": "写作" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-23-4121128012942813",
+    "date": "2026-10-23",
+    "lead": {
+      "en": "Protected editor drafts and images, and made log links stable through later edits.",
+      "zh": "修复日志后台的草稿与图片保护，并让旧日志链接保持稳定。"
+    },
+    "body": {
+      "en": "- Fixed draft backups disappearing before recovery, and stopped a successful publish response from clearing images added while that request was running.\n- Conflict checks use the same repository revision as the proposed commit, and existing image files cannot be overwritten.\n- Persistent entry IDs keep links stable when dates change or same-day records are added. Editor publication was tested with simulated requests, not reported as a live write.",
+      "zh": "- 修复恢复草稿前刷新会丢备份的问题，发布中继续添加的图片也不再被成功响应误清。\n- 发布前按同一个仓库版本检查冲突，已有图片拒绝覆盖，避免不同编辑窗口互相抹掉工作。\n- 每条日志保存永久身份，改日期或插入同日记录不再改变旧链接。后台发布流程用模拟请求验证，未把模拟结果当作真实线上写入。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-23-3902211171795164",
+    "date": "2026-10-23",
+    "lead": {
+      "en": "Fixed mobile previews and timeline overlap, and reduced unnecessary experiment loading.",
+      "zh": "修复手机布局中的预览和时间轴，并减少页面不需要的实验数据加载。"
+    },
+    "body": {
+      "en": "- Fixed blank lab previews on mobile, content staying hidden after a layout change, and overlapping timeline labels.\n- Separated experiment dependencies by project so an unfinished project page no longer downloads another project’s shape data.\n- The first split still triggered extra requests: navigation was preloading the whole lab. That path was corrected as well.",
+      "zh": "- 修复手机上实验预览空白、切换屏幕宽度后内容仍透明，以及时间轴标签挤在一起的问题。\n- 按项目拆开实验依赖，筹备页不再下载另一项目的整套形态数据。\n- 第一次拆分后仍有多余请求，查到导航提前加载了整个实验室，随后一并修正。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-23-2335935750342083",
+    "date": "2026-10-23",
+    "lead": {
+      "en": "Reused repeated geometry across the lab while preserving its motion and appearance.",
+      "zh": "复用实验台重复生成的几何，减少计算时保留原来的动作与画面。"
+    },
+    "body": {
+      "en": "- Cached unchanged geometry, shared solutions with identical inputs, and redrew stationary multilayer targets only when needed.\n- Compared state, drawing data and images through forming, dragging, switching and replay to check that reuse preserved the result.\n- Also fixed stale height inputs and stale placement after switching from steps to an arch. Model execution timings remain separate from browser frame-rate claims.",
+      "zh": "- 缓存不变的模型几何，让相同输入共用求解结果；静止的多层目标改成需要时才重画。\n- 逐帧比对状态、绘制数据和画面，检查成形、拖动、切换与重播没有因复用而变样。\n- 同时修正错层参数没有真正更新、从台阶切到拱形后摆放仍沿用旧状态的问题。性能记录区分模型计算与浏览器帧率。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-22-3728128746853881",
+    "date": "2026-10-22",
+    "lead": {
+      "en": "Made embedded 3D models take wheel input only after a click.",
+      "zh": "让案例页里的三维模型在点击后才接管滚轮缩放。"
+    },
+    "body": {
+      "en": "- Passing the pointer over an embedded model used to turn page scrolling into zooming and interrupt reading.\n- A click now activates wheel zoom, and leaving the model returns the wheel to the page. Direct controls in the lab remain available.",
+      "zh": "- 此前鼠标经过模型就会把页面滚动变成模型缩放，打断文章阅读。\n- 现在先点击模型再缩放，鼠标移出后把滚轮交还页面；实验室里的直接操作方式保留。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-21-2120875765098105",
+    "date": "2026-10-21",
+    "lead": {
+      "en": "Added the comparisons and six design turns to the case study so readers can follow how the project changed.",
+      "zh": "把对照结果与六次设计转向写进案例页，让项目如何变化有据可查。"
+    },
+    "body": {
+      "en": "- Kept the original position as a starting point, then explained the comparison that led from following traces to giving the space an explicit purpose.\n- Added a chart comparing three spaces at three crowd sizes, with two ways of guiding cats available to switch between.\n- Linked the design turns to their work-log records and clarified which behaviour rules came from literature and which spatial rules were designed for the project.\n- Stated the limits of the comparison, including the inconclusive low-crowd result and the need for observation in a real cat café.",
+      "zh": "- 把原来的设计立场保留为起点，再说明哪一次对照促使空间从跟随痕迹转向主动促成相遇。\n- 加入三种空间、三档客流的对照图，并提供两种引导方式供读者切换。\n- 把设计转向接到对应日志，说明哪些行为规则来自文献，哪些空间规则是本项目的设计。\n- 同时交代人少时结果分不开，以及仍需真实猫咖观察的边界。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Writing", "zh": "写作" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-21-105484136189853",
+    "date": "2026-10-21",
+    "lead": {
+      "en": "Connected the human–cat simulation to an eight-by-eight room of three-dimensional moving units.",
+      "zh": "把人猫仿真接进八乘八的立体单元房间，直接展示空间怎样随行为变化。"
+    },
+    "body": {
+      "en": "- Reused the plan simulation's visitors, cats and spatial rules, then placed their movements among 64 suspended units in the room model.\n- Each strip takes its shape from a precomputed forming or release sequence. Occupancy and passage determine when a strip opens or retracts.\n- Added moving-unit, fixed-unit and empty-room comparisons, and used the new view as the project hero and homepage preview.\n- The display reuses one solved strip sequence; it is not a coupled simulation of every strip. The smaller units have not been fabricated or separately solved at that scale, and the connecting membranes are omitted.",
+      "zh": "- 复用平面仿真中的访客、猫与空间规则，把活动放进六十四个悬挂单元组成的房间。\n- 布条形状取自预先求解的成形和松开过程，再由占用与通行状态决定展开或收回。\n- 保留会动、固定、空房间三档对照，并把立体演示接到案例页主图和主页预览。\n- 画面复用一条已求解布条的过程，并未同时求解每条布之间的作用；缩小后的单元尚未按该尺寸制作或单独求解，带间的膜也未绘制。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "3D", "zh": "立体" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-20-1882092295423488",
+    "date": "2026-10-20",
+    "lead": {
+      "en": "Reworked breathing to show the effect of interaction rather than exaggerate personality differences.",
+      "zh": "让呼吸主要反映互动带来的变化，缩小平时的性格差异。"
+    },
+    "body": {
+      "en": "- The four personalities previously breathed at very different resting rates, yet touching the machine produced little change. The enthusiastic type was already near the mechanism’s speed limit.\n- Brought resting rates closer together and made stimulation produce faster, shallower breathing before it gradually settles.\n- Tested eight seeds per personality during growth at normal life-clock speed. Resting rates were about 13–16 breaths per minute; over seconds 8–23 after three touches, the enthusiastic type averaged about 25.5 and the calm type 15.\n- Updated the case-page breathing table to read from the same parameters. A consequence is that breathing now provides less information for distinguishing the randomly changing personality; participant testing is still needed.",
+      "zh": "- 原来四种人格平时的呼吸差距很大，被碰后却变化不明显；热情型已经接近机构的速度上限，难以再加快。\n- 将平时的呼吸收拢到相近范围，让刺激带来更快、更浅的呼吸，随后逐渐恢复。\n- 每种人格用 8 个随机种子，在成长阶段按正常生命速度复测：平时每分钟约 13–16 次；三次触碰后第 8–23 秒内，热情型平均约 25.5 次，沉静型约 15 次。\n- 案例页的呼吸表同步改读同一组参数。代价是呼吸不再那么有助于区分乱序随机型，实际观众如何感受仍待实验。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-19-1795287237573693",
+    "date": "2026-10-19",
+    "lead": {
+      "en": "Changed the enthusiastic personality from intermittent glances to continuous hand following.",
+      "zh": "让热情型连续跟着手走，不再一跳一停。"
+    },
+    "body": {
+      "en": "- After noticing a hand, the enthusiastic type now follows its movement continuously and reaches in when it stops.\n- Used the hand’s direction of travel to anticipate its position, with a limit to prevent overshooting when it is close.\n- Checked the arm commands while the simulated hand moved from side to side: following remained continuous rather than repeatedly pausing. The other personalities kept their existing approach.",
+      "zh": "- 热情型看见手以后连续跟随，手停下来再靠近接触。\n- 根据手的运动方向适度提前追向下一位置，同时限制提前量，避免手在近处时臂甩过头。\n- 在手持续左右移动的仿真中检查臂指令，确认它能连续跟随，不再反复停住；其余人格保持原来的做法。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-19-712004976306508",
+    "date": "2026-10-19",
+    "lead": {
+      "en": "Simplified the interaction sequence, then restored the visible actions needed to distinguish personalities.",
+      "zh": "删去难以察觉的交互细节，再补回影响人格区分的动作。"
+    },
+    "body": {
+      "en": "- Removed many brief pauses and small gestures from reaching and holding, keeping a shorter sequence of approach, contact, hold and release.\n- Kept four distinct ways of recovering from a startle: looking back, slowly relaxing, peeking out and retreating, or irregular aftershocks.\n- Comparing simulation outputs exposed an overcorrection: removing the act of looking away made the calm type resemble the enthusiastic one. Restored that turn and made the randomly changing type reconsider its attitude more often.\n- The simpler avoidance motion remained easier for the scripted hand to catch than the earlier version. That tradeoff is recorded rather than presented as an improvement in every respect.",
+      "zh": "- 删去靠近和抓握过程中许多短暂停顿与小动作，保留靠近、接触、握住、松开这些主要过程。\n- 保留四种不同的受惊恢复方式：回头查看、慢慢放松、探出又缩回，以及不规则的余震。\n- 比较仿真输出后发现删得过头：撤掉「看别处」的转身动作，让沉静型更像热情型。补回这一下，并缩短乱序随机重新决定态度的间隔。\n- 简化后的躲避仍比旧版容易被脚本控制的手碰到；这项取舍如实保留，没有把所有变化都写成改善。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-19-3162266630046510",
+    "date": "2026-10-19",
+    "lead": {
+      "en": "Added live actuator readouts beside the machine simulation.",
+      "zh": "在整机模拟旁加入执行器实时读数。"
+    },
+    "body": {
+      "en": "- The panel shows tendon pull, small-arm servo angles, shaft and turntable movement, sound and light outputs.\n- Each row includes the last ten seconds of change; tendon and rotation rows also show the engine’s target.\n- These are values calculated from the simulation, allowing its commands and motion to be inspected together. They are not measurements collected from hardware.",
+      "zh": "- 面板显示肌腱收线长度、小触手舵机角度、传动轴与转台运动，以及声光输出。\n- 每行保留最近十秒的变化，肌腱和旋转读数旁同时标出引擎目标，方便对照指令与动作。\n- 这些数来自仿真换算，便于检查行为如何落实到执行器，不是真机传感器采集的数据。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-18-2884019636765396",
+    "date": "2026-10-18",
+    "lead": {
+      "en": "Added bilingual reference tables that explain how each interaction reaches the machine.",
+      "zh": "把互动规则整理成台架上的中英双语附件。"
+    },
+    "body": {
+      "en": "- Organised the tables around what a visitor does, what the bench senses, how the engine interprets it, and what the machine does next.\n- Read numerical values directly from the engine so the reference tables follow parameter changes.\n- Checked the written explanations against the code and corrected mismatches, including what counts as a startle or a response.\n- The first version had fourteen tables. They were reduced to five during the following day’s simplification.",
+      "zh": "- 按「人做了什么、台架收到什么、引擎怎样判断、机器接着怎样动」整理说明。\n- 表里的数直接从引擎读取，参数变化后不用再手工改一份。\n- 将文字说明逐项对照代码，修正了惊跳与回应等判定的描述偏差。\n- 首版有十四张表，次日随交互机制简化收成五张。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Writing", "zh": "写作" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-17-1575174326303370",
+    "date": "2026-10-17",
+    "lead": {
+      "en": "Made the revised motion system the only version and removed unused interaction rules.",
+      "zh": "把新动作改为唯一版本，清理没有发挥作用的交互规则。"
+    },
+    "body": {
+      "en": "- Removed the old motion system and its switch, so the bench now uses one set of actions.\n- Removed the extra deep-curl path from reaching: the simulation checks had never used it, despite its separate limits and cooldowns.\n- Combined overlapping avoidance actions and stopped the arm from tracking a hand outside its field of view.\n- A comparison caught a regression: combining the actions had also blocked a second escape while the arm paused. Narrowing that block restored the earlier result.",
+      "zh": "- 撤掉旧动作及其切换开关，台架只保留一套动作。\n- 迎手过程里的额外深卷在仿真检查中从未用上，却带着独立的限幅和冷却规则，因此删去。\n- 合并重复的躲避动作，并修正手已离开视野、臂却仍跟着它躲的情况。\n- 前后对比发现，合并时误把停住阶段也限制住了，手继续逼近时无法再次躲开；缩小限制范围后恢复了原来的表现。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-15-515695945063972",
+    "date": "2026-10-15",
+    "lead": {
+      "en": "Made the avoidant personality move away before a reaching hand touches it.",
+      "zh": "让回避型在手碰到之前就开始躲开。"
+    },
+    "body": {
+      "en": "- In a scripted reaching test, the hand often reached the arm before the machine reacted.\n- The first adjustment barely helped. Tracing individual runs showed that a rule intended to keep the body still during friendly contact also prevented it from turning away.\n- Allowed the body to turn aside, lowered the arm away from the hand, and stopped repeated decisions from restarting an escape already under way.\n- Across eight simulation seeds with three visits each, the mean per-visit touch rate fell from 85% to 61%. This was the result for that revision; later simplification changed the behaviour again.",
+      "zh": "- 在脚本控制的伸手测试里，手经常能碰到臂，机器往往是被碰到之后才受惊。\n- 第一轮调整几乎没改善。逐场检查发现，为友好接触设置的「手靠近机身时不转身」也挡住了躲避。\n- 改为允许机身侧开，臂背着手向下藏，并让正在进行的躲避继续下去，避免反复从头开始。\n- 在 8 个随机种子、每个 3 次来访的仿真里，每次来访的平均碰到比例从 85% 降到 61%。这是当时版本的结果，后续简化又改变了行为。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-14-238230853288184",
+    "date": "2026-10-14",
+    "lead": {
+      "en": "Reworked the four personalities to separate being calm from being afraid of people.",
+      "zh": "重新划分四种人格，把沉静和怕人分开。"
+    },
+    "body": {
+      "en": "- The old calm type combined slow movement with avoidance, yet often still faced a nearby visitor.\n- Replaced the set with enthusiastic, calm, avoidant and randomly changing behaviour, and adjusted their responses to the same visit.\n- A nearby person now changes the resting posture too: the enthusiastic type opens towards them, while the avoidant type contracts and lowers its arm.\n- Compared scripted visits and touches across several random seeds. These are proposed behaviours in the simulation, not evidence that participants can identify the personalities.",
+      "zh": "- 原来的沉静型同时承担动作慢和怕人两种特点，实际模拟中却经常仍朝着近处的访客。\n- 改为热情、沉静、回避和乱序随机四种，重新调整它们面对同一次来访的反应。\n- 人靠近时，平时的身体姿态也会改变：热情型朝人张开，回避型收拢并把臂藏低。\n- 用不同随机种子重复来访和触碰场景进行比较；这些仍是仿真中的行为方案，尚不代表参与者能够识别人格。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-12-3719770275277887",
+    "date": "2026-10-12",
+    "lead": {
+      "en": "Added a private dashboard for reviewing site visits.",
+      "zh": "增加仅站长可看的访客后台，用来查看网站的访问情况。"
+    },
+    "body": {
+      "en": "- Reused the existing editor login to review visit times, pages and approximate locations, with date filters.\n- Visit records are stored separately from portfolio content and retained for 30 days. A public notice describes collection, while admin pages and signed-in author visits are excluded.\n- Distinct IP addresses are treated as a limited signal rather than a count of individual visitors.",
+      "zh": "- 复用日志后台的登录方式，查看访问时间、页面和大致来源地区，并提供日期筛选。\n- 访问记录与作品内容分开存储，保留最近 30 天；公开说明记录范围，并排除后台和已登录作者的访问。\n- 独立 IP 只作为访问线索，不把它直接当作真实访客人数。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-10-1766694649087067",
+    "date": "2026-10-10",
+    "lead": {
+      "en": "Turned the topic review into a page-by-page reading document with traceable references.",
+      "zh": "把开题综述整理成逐页条目版，便于阅读和回查文献。"
+    },
+    "body": {
+      "en": "- Broke the long text into short items while retaining the topic comparisons, question cards, tables and appendices.\n- Kept source titles, figures, verification notes and limits attached to the claims they qualify. Repeated reference records point to the full appendix entries.\n- Checked the page mapping against the source and reviewed the exported layout. This was a revision of the research document, not a new experiment.",
+      "zh": "- 将长文拆成短条，保留选题比较、问题卡、表格和附录。\n- 保留文献题名、数字、核查状态与限制条件；重复文献通过页码指回附录的完整记录。\n- 对照原文检查内容覆盖，并检查导出排版。这次完成的是研究资料整理，没有新增实验结果。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep research", "zh": "睡眠研究" }, "variant": "outline" },
+      { "label": { "en": "Writing", "zh": "写作" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-09-4048778862141926",
+    "date": "2026-10-09",
+    "lead": {
+      "en": "Corrected the machine simulation so the body turns while its base stays on the ground.",
+      "zh": "修正整机模拟，让机身转动时底座留在原地。"
+    },
+    "body": {
+      "en": "- The earlier view rotated the whole model, including the supports that should remain fixed.\n- Separated the stationary base from the moving body and placed the rotation axis at the base cylinder.\n- Added a fixed platform and ground grid to make the movement easier to read. This corrects the simulation; the motion still needs checking on the physical machine.",
+      "zh": "- 之前的画面把整台模型一起转动，连应当固定在地面的支承也跟着走。\n- 将固定底座和上部机身分开，让机身绕底座圆柱的轴心转动。\n- 补上固定展台和地面网格，方便看清转向。这次修正的是网页模拟，动作仍待真机核对。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
     "id": "log-2026-10-08-1",
     "date": "2026-10-08",
     "lead": {
@@ -29,6 +381,38 @@
     "tags": [
       { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
       { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-08-2265216622170034",
+    "date": "2026-10-08",
+    "lead": {
+      "en": "Added body clearance and visitor groups, and let cats move between the floor and platforms.",
+      "zh": "给访客加上身体占位与结伴规则，并让猫能在地面和平台之间换层。"
+    },
+    "body": {
+      "en": "- Visitors can no longer overlap at a crossing. They wait or reroute when another body blocks the next position, and companions choose nearby seats or standing places.\n- Replaced immediate departure when a stranger approaches with a preference for separation when choosing a place. Expanded the standard furniture layout to ten seats.\n- Cats can leave a platform, approach someone on the floor and climb back up. The floor behaviour is shared with the empty-room comparison.\n- Literature supports the direction of several rules, but not their exact strength. In particular, how crowding changes a cat's preference for height remains a parameter to vary.",
+      "zh": "- 访客不能再重叠站在同一交叉点。前方被人占住时等待或绕行，同伴优先选择邻近的座位或站位。\n- 撤掉“陌生人靠近就立即离开”，改成选位置时优先保持间隔；标准家具布置补到十个座位。\n- 猫可以下地靠近人，也可以重新上台；地面行为与空房间对照使用同一套规则。\n- 文献能支持部分规则的方向，但不能给出所有幅度。人群多密会让猫更想待在高处，仍作为参数比较。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-08-4072082882482544",
+    "date": "2026-10-08",
+    "lead": {
+      "en": "Compared three crowd sizes and found that the moving space helped nearby human–cat stays most in the busier simulations.",
+      "zh": "比较三档客流，发现会动的空间主要在人多的仿真场景里增加人猫邻近停留。"
+    },
+    "body": {
+      "en": "- Compared moving units, fixed shelves and an empty room with 3 people and 1 cat, 6 and 2, and 12 and 3. Each condition used 32 random runs of five minutes.\n- Summed time for each human–cat pair: nearby means 0.5–1.5 metres apart, and the closest band is under 0.5 metres, not physical contact. Nearby time did not clearly separate the spaces with three visitors; moving units led at six, with the largest gap at twelve.\n- Varied how strongly crowds encouraged cats to use higher platforms. When guiding cats to the front of a seat, the twelve-person advantage in nearby time held across all three assumptions.\n- Results in the closest band were less consistent and did not reliably exceed the empty room. The 84 comparisons were not adjusted for the greater chance of finding differences when testing many times, so marginal findings remain exploratory.\n- These are conditional results of the stated behaviour rules, not observations from a working cat café.",
+      "zh": "- 比较会动的单元、固定层架和空房间，分别放入三人一猫、六人两猫、十二人三猫；每种条件做 32 次随机运行，每次五分钟。\n- 按人猫配对累计停留时间：邻近指相距 0.5–1.5 米，最近距离带为不足 0.5 米，距离不代表真实接触。三人时邻近停留分不出明确差别，六人时会动单元开始领先，十二人时差距最大。\n- 改变“人越多，猫越愿意上高处”的强弱；把猫引到座位前方时，十二人场景中的邻近停留优势在三组参数下都保留。\n- 最近距离带的结果更不稳定，没有可靠地超过空房间。这轮做了 84 次比较，未调整多次比较更容易偶然出现差异的影响，临界结果只作探索。\n- 这些结果只在当前行为规则下成立，尚不是实际猫咖中的观察结论。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Study", "zh": "实验设计" }, "variant": "neutral" }
     ]
   },
   {
@@ -80,6 +464,38 @@
     ]
   },
   {
+    "id": "log-2026-10-07-3966303388841958",
+    "date": "2026-10-07",
+    "lead": {
+      "en": "Let people pass by retracting only the strips in their path while keeping the cat's support in place.",
+      "zh": "让挡路的布条单独收回，使人能通过，同时保留猫脚下的支撑。"
+    },
+    "body": {
+      "en": "- With whole-unit clearance, the platforms nearest a person could not descend, conflicting with the aim of bringing a cat nearby. Changed clearance to operate strip by strip.\n- An early check released the bonds without taking up the spare fabric and wrongly suggested that a different shape was needed. Rechecked the full return motion, which draws the fabric back up the rod.\n- The plan simulation now opens strips ahead of a person's route and lowers them again after passage. Strips supporting a cat or its next landing stay in place.\n- This requires independent control of fabric take-up by strip or sector. That remains a structural assumption, rather than a tested hardware capability.",
+      "zh": "- 整台让位会把人身边的平台一起挡住，与把猫引到人附近的目的冲突。把让位改成逐条布处理。\n- 最初只松连接、没有收走多余布料，误判需要换一种形状。重新检查完整回程后，确认应让布沿杆向上收回。\n- 平面仿真会提前收起路线前方的布条，人走过后再放回；猫脚下和下一落点的支撑优先保留。\n- 这要求布条或扇区能够独立收放。目前仍是结构假设，尚未通过硬件验证。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-07-2768389821953039",
+    "date": "2026-10-07",
+    "lead": {
+      "en": "Rechecked the cat model against published proximity data before comparing ways to guide it toward a seated person.",
+      "zh": "先用文献中的人猫距离分布校准猫的规则，再比较把猫引到座位附近的方式。"
+    },
+    "body": {
+      "en": "- The demonstration cat avoided people much more than the reference study suggested. Added passive approaches and nearby stops without contact, then fitted the model to the study's aggregate readings.\n- The first comparison exposed an inconsistent rule: a cat on the floor walked toward a person, while one on a platform only moved to its own edge. Allowed it to continue across available platforms.\n- Compared a destination in front of the seat with one beside it, and a path offered step by step with one opened at once.\n- No option improved both near-person time and the closest-distance time against both fixed shelves and an empty room. The model fit is calibration, not independent evidence that real cats would follow these routes.",
+      "zh": "- 演示中的猫比参考研究更躲人。补上无人注视时的主动靠近，以及靠近后停在旁边、不必接触的情况，再对照研究中的汇总读数调整参数。\n- 首轮对照暴露出规则不一致：地面的猫会朝人走，台上的猫却只挪到自己台面的边缘。改成沿已经展开的平台继续靠近。\n- 比较把猫引到座位前方或旁边，以及逐步铺路或整条路一次展开。\n- 没有一种方案能在邻近停留与最近距离停留两项上，同时胜过固定层架和空房间。拟合文献读数属于标定，还不能说明真实的猫会按这些路线活动。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Study", "zh": "实验设计" }, "variant": "neutral" }
+    ]
+  },
+  {
     "id": "log-2026-10-06-1",
     "date": "2026-10-06",
     "lead": {
@@ -93,6 +509,150 @@
     "tags": [
       { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
       { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-06-1910704124419110",
+    "date": "2026-10-06",
+    "lead": {
+      "en": "Reviewed urban birds' flight distances to prepare a study of separation between people and wildlife.",
+      "zh": "整理城市鸟的惊飞距离资料，为人与野生动物的隔离实验准备参数依据。"
+    },
+    "body": {
+      "en": "- Separated the distance at which a bird becomes alert from the distance at which it leaves, and recorded how each study approached the bird.\n- Checked species, setting and sample size alongside the reported distances, including the three papers supplied for the project. Values from a direct approach cannot simply describe someone walking past.\n- Explored a screen that rises between a path and a bird to block sight, and recorded the geometric conditions it would require.\n- The output is a literature note and a screening sketch. The wildlife simulation and its comparison study were still to be built.",
+      "zh": "- 区分鸟开始警觉的距离与起身逃离的距离，同时记录研究中人怎样接近鸟。\n- 把物种、环境和样本数与距离一起核对，补入作者提供的三篇论文。人直线走向鸟得到的数，不能直接当作自然路过时的反应。\n- 探索在道路与鸟之间升起遮挡、隔断视线的方案，并列出成立所需的几何条件。\n- 本轮产出是文献笔记和遮挡线稿；野生动物仿真及其对照实验尚未完成。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Research", "zh": "调研" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-06-3716936255093825",
+    "date": "2026-10-06",
+    "lead": {
+      "en": "Narrowed the topic comparison to shared-room waking and visible monitoring in temporary accommodation.",
+      "zh": "将开题比较收窄到同住者的唤醒控制权与临时住宿中的监测可见性。"
+    },
+    "body": {
+      "en": "- One candidate asks how people sharing a room can postpone or refuse a wake-up intervention; the other asks how guests can tell whether room sensors are operating.\n- The review exposed a weak claim of novelty: failing to find a paper did not establish that no previous work existed. Added a targeted literature check before committing to a topic.\n- Limited any future dormitory findings to that setting rather than assuming they would also hold for couples or families.\n- Both directions remained proposals for discussion with the tutor. Neither had become a selected topic or a completed user study.",
+      "zh": "- 一条候选路线问同住者如何推迟或拒绝唤醒干预；另一条问住客怎样知道房间里的传感器是否正在工作。\n- 自审发现，没搜到相关论文不足以说明没有前人研究，因此把定向查重列为定题前的必要工作。\n- 将未来宿舍研究的结论限制在相应情境内，不直接推广到伴侣或家庭。\n- 两条路线仍待与老师讨论；这一步没有定题，也没有完成用户研究。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep research", "zh": "睡眠研究" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-05-157064927926468",
+    "date": "2026-10-05",
+    "lead": {
+      "en": "Built a sleep research overview to compare feasible directions for the third project.",
+      "zh": "把睡眠研究资料整理成开题总览，比较个人能够推进的研究方向。"
+    },
+    "body": {
+      "en": "- Brought the project background, literature searches and topic proposals into one document, with a reference table for checking sources.\n- Reconsidered the proposals against the available time, limited laboratory support and the scope of a solo project.\n- Marked whether each source had been checked through a paper, an abstract or only a search result, and kept research suggestions separate from published findings.",
+      "zh": "- 把项目背景、几轮文献检索和选题建议合成一份读本，附上可回查的文献总表。\n- 按一个人做、实验室帮助有限和时间窗口，重新比较各方向的工作量与可行性。\n- 标明来源核查到了全文、摘要还是检索结果，并将选题建议与文献结论分开。"
+    },
+    "tags": [
+      { "label": { "en": "Sleep research", "zh": "睡眠研究" }, "variant": "outline" },
+      { "label": { "en": "Research", "zh": "调研" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-05-1579252848181989",
+    "date": "2026-10-05",
+    "lead": {
+      "en": "Added page transitions that follow the relationship between destinations.",
+      "zh": "为作品、实验室和日志之间的跳转补上连贯的页面转场。"
+    },
+    "body": {
+      "en": "- Project cards open into their case studies, shared experiments move from preview to bench, and peer pages exchange their main content with a fade.\n- Forward and back navigation follow the same relationships.\n- Unsupported browsers and reduced-motion preferences retain ordinary link navigation.",
+      "zh": "- 作品卡展开进入详情，同一实验从预览移动到台架，平级内页则淡换正文。\n- 浏览器前进、后退也按页面关系衔接，避免返回时方向突然反过来。\n- 浏览器不支持转场或用户要求减少动态效果时，保留普通链接跳转。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-04-4294423562278521",
+    "date": "2026-10-04",
+    "lead": {
+      "en": "Built a demonstration of cats walking, resting and playing on platforms that open ahead of them.",
+      "zh": "建立猫在逐步展开的平台上行走、休息与玩耍的演示。"
+    },
+    "body": {
+      "en": "- The first version reused human clearance rules and kept platforms away from the cat. Corrected this so occupied platforms stay open and the next landing opens before a move begins.\n- Resting alternates between sitting and lying down. Play follows a visible toy through watching, stalking, chasing and capture.\n- Checked the action definitions against published cat behaviour descriptions and welfare guidance. Paths, timing and playback speed remain demonstration choices.\n- This is a plan-view study of support and activation; it does not establish whether a real cat could jump between or load the platforms.",
+      "zh": "- 首版套用了人的让位规则，反而让平台避开猫。改成猫脚下的平台保持展开，下一落点准备好后才移动。\n- 休息分坐姿与伏卧；玩耍围绕一个可见的玩具，依次呈现注视、低伏接近、追逐和捕捉。\n- 对照猫行为描述和环境需求指南核对动作定义。路线、持续时间和播放速度仍是演示编排。\n- 这台只研究平面上的支撑与激活关系，尚不能说明真实的猫能否跳过去，或平台能否承重。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-04-2088814339768521",
+    "date": "2026-10-04",
+    "lead": {
+      "en": "Reframed the project around how different species shape a space and respond to its changes.",
+      "zh": "重新梳理项目主线，明确研究不同物种怎样共同塑造空间、又怎样回应空间的变化。"
+    },
+    "body": {
+      "en": "- The review had narrowed the project to cats because most working demonstrations involved them. Returned to the original cross-species question and treated human–cat interaction as the first study.\n- Set out the full loop: activity leaves traces, traces prompt spatial changes, and those changes affect where bodies go and whether they meet or stay apart.\n- Distinguished the tools already built from the missing links. Human and cat behaviour still needed to run in the same scene and drive the three-dimensional units.\n- Updated the website's descriptive project name to Cross-species Space. Studies involving dogs and wild animals remained possible extensions.",
+      "zh": "- 盘点一度因为现成演示大多与猫有关，把整个项目读成了人猫项目。重新回到跨物种的问题，把人猫关系作为第一个实验。\n- 理清完整循环：行为留下痕迹，痕迹引起空间变化，变化后的空间影响各方去向，进而促成相遇或隔离。\n- 对照已经做出的工具列出缺口：人和猫还需要同场活动，行为还需要真正驱动立体单元。\n- 站上描述名改为“跨物种空间”；人狗及野生动物方向保留为后续可能，不写成已完成的实验。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-03-3371440135695861",
+    "date": "2026-10-03",
+    "lead": {
+      "en": "Used tonal surfaces to distinguish sections across the site.",
+      "zh": "用分层色面区分网页内容，让长页面的区块更容易辨认。"
+    },
+    "body": {
+      "en": "- Applied the palette study to the home, lab and case pages so text, demonstrations and supporting information sit on distinct surfaces.\n- Kept the content structure and interactions while updating the visual hierarchy.",
+      "zh": "- 按配色稿调整主页、实验室和案例页的背景层次，让正文、图示和补充信息各有位置。\n- 保留原有内容结构和操作，只调整颜色与表面层次。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-01-3268388959648893",
+    "date": "2026-10-01",
+    "lead": {
+      "en": "Rebuilt the home, lab and case-study layouts around clearer project navigation.",
+      "zh": "按新设计重排主页、实验室和案例页，让项目入口与阅读层级更清楚。"
+    },
+    "body": {
+      "en": "- The homepage now separates work, about, lab and log sections, with experiment links leading to the relevant benches.\n- The dark lab layout keeps the existing models, controls and adjustable workspace. Case studies gain clearer chapter navigation and figure placement.\n- Mobile screens and reduced-motion mode use a normal scrolling document.",
+      "zh": "- 主页按作品、介绍、实验和日志组织，实验目录直接链接到对应台架。\n- 实验室换成深色工作区，保留已有模型、控制方式和可调布局；案例页增加章节导航和图文层级。\n- 手机和减少动态效果模式采用普通滚动，避免整屏翻页妨碍阅读。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-01-1240202243035253",
+    "date": "2026-10-01",
+    "lead": {
+      "en": "Recovered project records and original figures from earlier conversations and files.",
+      "zh": "从历史对话和原始文件补回各项目的工作记录与图表。"
+    },
+    "body": {
+      "en": "- Checked dates, project ownership and sources before adding 83 bilingual records, while preserving existing links.\n- Added recovered original images and data tables. Unverified attachments remain listed as gaps rather than being replaced with newer images.\n- Separated the emerging third project from the Smart Bed internship, and kept proposals, simulations and completed work distinct.",
+      "zh": "- 逐条核对日期、项目归属和来源，补回 83 条中英日志，并保留原有记录的链接。\n- 找回的原图和数据表接入日志；无法确认的附件单独记缺口，没有用新图冒充旧过程。\n- 项目三的开题讨论单列，智能床实习仍归其他工作；计划、仿真和已完成成果分别表述。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Writing", "zh": "写作" }, "variant": "neutral" }
     ]
   },
   {
