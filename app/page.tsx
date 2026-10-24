@@ -1,5 +1,5 @@
 import { HomeScroll } from '../components/site/home/HomeScroll';
-import { getAllWork } from '../src/lib/site/content';
+import { getAllWork, getRoutableWork } from '../src/lib/site/content';
 import { getLogEntries } from '../src/lib/site/log';
 import { buildCards, buildHomeField, buildHomeLog, buildLabGroups } from '../src/lib/site/home-model';
 
@@ -22,6 +22,20 @@ export default function Home() {
   const groups = buildLabGroups(cards);
   const entries = getLogEntries();
   const log = buildHomeLog(entries);
-  const field = buildHomeField(cards, entries);
+  // 所有公开作品、台架与日志自动入池；无专属图标的新内容使用语义回退，不依赖截图目录。
+  const field = buildHomeField(
+    cards,
+    getRoutableWork().map((w) => ({
+      slug: w.slug,
+      title: w.title,
+      date: w.date,
+      summary: w.summary,
+      role: w.role,
+      published: w.status === 'published',
+      selected: w.selected,
+      cover: w.cover,
+    })),
+    entries,
+  );
   return <HomeScroll cards={cards} groups={groups} log={log} field={field} />;
 }

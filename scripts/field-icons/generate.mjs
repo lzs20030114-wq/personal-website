@@ -20,10 +20,10 @@ const server = await createServer({ root, configFile: false, server: { middlewar
 let field;
 try {
   const { buildCards, buildHomeField } = await server.ssrLoadModule('/src/lib/site/home-model.ts');
-  const { getAllWork } = await server.ssrLoadModule('/src/lib/site/content.ts');
+  const { getAllWork, getRoutableWork } = await server.ssrLoadModule('/src/lib/site/content.ts');
   const { getLogEntries } = await server.ssrLoadModule('/src/lib/site/log.ts');
   const cards = buildCards(getAllWork().map(w => ({ ...w, published: w.status === 'published' })));
-  field = buildHomeField(cards, getLogEntries());
+  field = buildHomeField(cards, getRoutableWork().map(w => ({ ...w, published: w.status === 'published' })), getLogEntries());
 } finally {
   await server.close();
 }

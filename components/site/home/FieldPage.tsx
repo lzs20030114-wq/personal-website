@@ -1,7 +1,7 @@
 'use client';
 
 // 01 Field（稿 design-ref/home-field-hero/17 Home - Field Hero.dc.html，MAPPING §55）。
-// 一张 28×14 的方块场：方块随机亮起又熄灭（一部分带作品缩略图），指针划过留下一圈短暂的余光；
+// 一张 28×14 的方块场：方块随机亮起又熄灭，指针划过留下一圈短暂的余光；
 // 悬停一个亮着的方块，它就长成一张 6×4 的卡（周围方块让位），点卡进那件作品。
 // 中央是标题区，场在它后面绕开。手感常量照稿原样，一个数没改。
 import Link from 'next/link';
@@ -18,7 +18,7 @@ const CH = 4;
 const GAP = 12;
 /** 卡所在行列放大倍数（其余行列等比收窄让位） */
 const K = 1.5;
-/** 场里同时亮着的方块目标数 / 其中带缩略图的比例（稿 props fieldDensity / fieldThumbs 默认值） */
+/** 场里同时亮着的方块目标数 / 其中明亮图标的比例；其余图标低对比保持原稿的疏密。 */
 const DENSITY = 250;
 const THUMBS = 0.35;
 const TICK_MS = 110;
@@ -264,24 +264,16 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
         el.style.transitionDuration = `${(1.2 + Math.random() * 1.2).toFixed(2)}s,.7s`;
         el.style.opacity = (0.45 + Math.random() * 0.55).toFixed(2);
         el.style.pointerEvents = 'auto';
-        if (Math.random() < THUMBS) {
-          const p = pickFieldIndex(field.draws);
-          const colors = fieldColors(pool[p].project, pool[p].kind);
-          el.dataset.img = String(p);
-          el.dataset.kind = pool[p].kind;
-          el.dataset.project = pool[p].project;
-          el.style.setProperty('--field-ink', colors.ink);
-          el.style.setProperty('--field-surface', colors.surface);
-          im.style.maskImage = `url(${pool[p].img})`;
-          im.style.opacity = '1';
-        } else {
-          delete el.dataset.img;
-          delete el.dataset.kind;
-          delete el.dataset.project;
-          el.style.removeProperty('--field-ink');
-          el.style.removeProperty('--field-surface');
-          im.style.opacity = '0';
-        }
+        // 每个亮格从出现起固定绑定真实内容；不在悬停时随机换成另一张卡（MAPPING §55.1）。
+        const p = pickFieldIndex(field.draws);
+        const colors = fieldColors(pool[p].project, pool[p].kind);
+        el.dataset.item = String(p);
+        el.dataset.kind = pool[p].kind;
+        el.dataset.project = pool[p].project;
+        el.style.setProperty('--field-ink', colors.ink);
+        el.style.setProperty('--field-surface', colors.surface);
+        im.style.maskImage = `url(${pool[p].img})`;
+        im.style.opacity = Math.random() < THUMBS ? '1' : '.18';
         st.lit.set(i, now + 2200 + Math.random() * 4000);
       }
     }, TICK_MS);
@@ -343,8 +335,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     const el = e.currentTarget;
     const i = Number(el.dataset.cell);
     if (openRef.current?.i === i && !m.current.closing) return;
-    const pick = el.dataset.img != null ? Number(el.dataset.img) : pickFieldIndex(field.draws);
-    openAt(i, pick);
+    if (el.dataset.item != null) openAt(i, Number(el.dataset.item));
   };
 
   const card = open ? pool[open.pick] : null;

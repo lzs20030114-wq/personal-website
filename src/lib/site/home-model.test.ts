@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { getAllWork, getRoutableWork } from './content';
-import { LAB_BENCHES } from './lab-index';
+import { LAB_BENCHES, LAB_INDEX } from './lab-index';
 import { getLogEntries } from './log';
 import { projectOf, withAnchors } from './log-facets';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildCards, buildHomeField, buildHomeLog, buildLabGroups } from './home-model';
+import { buildCards, buildHomeField, buildHomeLog, buildLabGroups, type FieldWorkInput } from './home-model';
 
 const cards = () =>
   buildCards(
@@ -18,6 +18,11 @@ const cards = () =>
       published: w.status === 'published',
     })),
   );
+
+const works = (): FieldWorkInput[] => getRoutableWork().map((work) => ({
+  ...work,
+  published: work.status === 'published',
+}));
 
 describe('主页数据派生（home-model）', () => {
   it('三个项目卡指向内容池里真实存在的路由名单', () => {
@@ -83,11 +88,11 @@ describe('主页数据派生（home-model）', () => {
   it('首屏方块场完整覆盖三个主项目、全部台架、全部日志和两个补充入口，不收非公开草稿', () => {
     const entries = getLogEntries();
     const cs = cards();
-    const f = buildHomeField(cs, entries);
-    expect(f.pool).toHaveLength(cs.length + LAB_BENCHES.length + entries.length + 2);
+    const f = buildHomeField(cs, works(), entries);
+    expect(f.pool).toHaveLength(works().length + LAB_BENCHES.length + entries.length + 2);
     expect(new Set(f.pool.map((item) => item.id)).size).toBe(f.pool.length);
     expect(f.pool.filter((item) => item.kind === 'project').map((item) => item.href))
-      .toEqual(cs.map((card) => `/work/${card.slug}`));
+      .toEqual(works().map((work) => `/work/${work.slug}`));
     expect(f.pool.filter((item) => item.kind === 'lab').map((item) => item.href))
       .toEqual(LAB_BENCHES.map((bench) => `/lab#lab${bench.no}`));
     expect(f.pool.filter((item) => item.kind === 'log').map((item) => item.href))
@@ -103,7 +108,7 @@ describe('主页数据派生（home-model）', () => {
 
   it('首屏图标都有独立 SVG 文件，所有链接都是实际公开入口', () => {
     const entries = getLogEntries();
-    const f = buildHomeField(cards(), entries);
+    const f = buildHomeField(cards(), works(), entries);
     const slugs = getRoutableWork().map((work) => work.slug);
     const anchors = new Set(withAnchors(entries).map((a) => a.anchor));
     const nos = new Set(LAB_BENCHES.map((b) => b.no));
@@ -119,7 +124,7 @@ describe('主页数据派生（home-model）', () => {
 
   it('项目三明确筹备状态，About 去已有正文的首页幕，智能床保持独立研究入口', () => {
     const entries = getLogEntries();
-    const f = buildHomeField(cards(), entries);
+    const f = buildHomeField(cards(), works(), entries);
     const preparation = f.pool.find((item) => item.href === '/work/project-iii')!;
     expect(preparation.kind).toBe('project');
     expect(preparation.project).toBe('project-iii');
@@ -136,15 +141,15 @@ describe('主页数据派生（home-model）', () => {
     const latestOther = withAnchors(entries).find(({ entry }) => projectOf(entry) === 'other-work')!;
     expect(smartBed.href).toBe(`/archive#${latestOther.anchor}`);
     // 输入顺序不应把专题入口改到最早的那条研究记录。
-    const reversed = buildHomeField(cards(), [...entries].reverse());
+    const reversed = buildHomeField(cards(), works(), [...entries].reverse());
     expect(reversed.pool.find((item) => item.kind === 'other')?.href).toBe(smartBed.href);
-    const noOther = buildHomeField(cards(), entries.filter((entry) => projectOf(entry) !== 'other-work'));
+    const noOther = buildHomeField(cards(), works(), entries.filter((entry) => projectOf(entry) !== 'other-work'));
     expect(noOther.pool.find((item) => item.kind === 'other')?.href).toBe('/archive');
   });
 
   it('每条日志用原 lead 与稳定锚点，换配图或排序不会丢条目、串链接', () => {
     const entries = getLogEntries();
-    const f = buildHomeField(cards(), entries);
+    const f = buildHomeField(cards(), works(), entries);
     const logs = f.pool.filter((item) => item.kind === 'log');
     withAnchors(entries).forEach(({ entry, anchor }, index) => {
       expect(logs[index].id).toBe(`log:${anchor}`);
@@ -153,7 +158,7 @@ describe('主页数据派生（home-model）', () => {
       expect(logs[index].href).toBe(`/archive#${anchor}`);
     });
     const noImages = entries.map((entry) => ({ ...entry, blocks: undefined })).reverse();
-    const changed = buildHomeField(cards(), noImages).pool.filter((item) => item.kind === 'log');
+    const changed = buildHomeField(cards(), works(), noImages).pool.filter((item) => item.kind === 'log');
     const byId = new Map(logs.map((item) => [item.id, item]));
     expect(changed).toHaveLength(logs.length);
     changed.forEach((item) => {
@@ -162,8 +167,65 @@ describe('主页数据派生（home-model）', () => {
     });
   });
 
+  it('新增公开作品和日志自动入池，无专属图标时仍有真实链接与 SVG', () => {
+    const entries = getLogEntries();
+    const baseline = buildHomeField(cards(), works(), entries);
+    const extra: FieldWorkInput = {
+      slug: 'new-work', title: 'New work', date: '2026-11', summary: 'A new piece.',
+      role: ['Design'], published: true, selected: false,
+    };
+    const fresh = {
+      ...entries[0], id: 'log-2099-01-01-1000000001', date: '2099-01-01',
+      lead: { en: 'A brand new entry.', zh: '一条新日志。' }, blocks: undefined,
+      tags: [
+        { variant: 'outline' as const, label: { en: 'Site', zh: '建站' } },
+        { variant: 'neutral' as const, label: { en: 'Research', zh: '调研' } },
+      ],
+    };
+    // 新作品没有主页卡，新日志没有逐条图标映射，均不需要补首屏登记。
+    const field = buildHomeField(cards(), [extra, ...works()], [fresh, ...entries]);
+    expect(field.pool).toHaveLength(baseline.pool.length + 2);
+    expect(field.pool.find((item) => item.href === '/work/new-work')).toMatchObject({
+      id: 'project:new-work', kind: 'project', project: 'other-work',
+      title: extra.title, cap: extra.summary, img: '/home/icons/archive.svg',
+    });
+    expect(field.pool.find((item) => item.href === `/archive#${fresh.id}`)).toMatchObject({
+      id: `log:${fresh.id}`, kind: 'log', project: 'this-site',
+      title: fresh.lead.en, img: '/home/icons/research.svg',
+    });
+    expect(field.projects).toBe(baseline.projects);
+    expect(field.entries).toBe(entries.length + 1);
+    const byId = new Map(field.pool.map((item) => [item.id, item]));
+    baseline.pool.forEach((item) => expect(byId.get(item.id)).toEqual(item));
+    const reachable = new Set(field.draws.flatMap((draw) => draw.groups.flat()));
+    field.pool.forEach((item, index) => {
+      expect(reachable.has(index)).toBe(true);
+      expect(existsSync(join(process.cwd(), 'public', item.img)), item.img).toBe(true);
+    });
+  });
+
+  it('新台架仅登记目录就入池，未画专属图标时回退实验符号', () => {
+    const segments = LAB_INDEX[1].segments;
+    const segment = segments[segments.length - 1];
+    const bench = { ...segment.benches[0], no: '2-99', title: 'New experiment' };
+    segment.benches.push(bench);
+    try {
+      const field = buildHomeField(cards(), works(), getLogEntries());
+      const item = field.pool.find((candidate) => candidate.id === 'lab:2-99');
+      expect(item).toMatchObject({
+        kind: 'lab', project: 'project-ii', title: bench.title,
+        href: '/lab#lab2-99', img: '/home/icons/experiment.svg',
+      });
+      expect(field.benches).toBe(LAB_BENCHES.length + 1);
+      expect(existsSync(join(process.cwd(), 'public', item!.img))).toBe(true);
+      expect(field.draws.flatMap((draw) => draw.groups.flat())).toContain(field.pool.indexOf(item!));
+    } finally {
+      segment.benches.pop();
+    }
+  });
+
   it('分层抽样覆盖完整候选池，每个索引都可到达', () => {
-    const f = buildHomeField(cards(), getLogEntries());
+    const f = buildHomeField(cards(), works(), getLogEntries());
     const reachable = new Set<number>();
     f.draws.forEach((draw) => {
       expect(draw.weight).toBeGreaterThan(0);

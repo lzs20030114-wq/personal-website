@@ -326,26 +326,35 @@ function fieldProject(key: string): FieldProject {
   return key as FieldProject;
 }
 
-export function buildHomeField(cards: HomeCard[], entries: LogEntry[]): HomeField {
+/** 全部可路由作品；首屏自动收录新作品，不依赖主页固定的三张主项目卡。 */
+export interface FieldWorkInput extends HomeWorkInput {
+  selected: boolean;
+  cover?: string;
+}
+
+export function buildHomeField(cards: HomeCard[], works: FieldWorkInput[], entries: LogEntry[]): HomeField {
   const card = (slug: string) => {
     const c = cards.find((x) => x.slug === slug);
     if (!c) throw new Error(`home-model: 主页卡片缺 ${slug}`);
     return c;
   };
-  const projects: FieldItem[] = cards.map((c) => {
-    const project = FIELD_PROJECT_BY_SLUG[c.slug];
-    if (!project) throw new Error(`home-model: 首屏作品 ${c.slug} 没有项目组`);
+  const ordered = [...works].sort((a, b) => Number(b.selected) - Number(a.selected));
+  const projects: FieldItem[] = ordered.map((work) => {
+    const c = cards.find((item) => item.slug === work.slug);
+    const knownProject = FIELD_PROJECT_BY_SLUG[work.slug];
+    const project = knownProject ?? 'other-work';
+    const wip = !work.published;
     return {
-      id: `project:${c.slug}`,
+      id: `project:${work.slug}`,
       kind: 'project',
       project,
-      no: c.kicker,
-      img: iconPath(PROJECT_ICONS[project]),
-      title: c.title,
-      cap: c.wip ? 'In preparation' : c.thesis,
-      tone: c.tone,
-      href: `/work/${c.slug}`,
-      cta: c.wip ? 'View progress ↗' : 'Case study ↗',
+      no: c?.kicker ?? (work.selected ? 'Project' : 'Work'),
+      img: iconPath(knownProject ? PROJECT_ICONS[knownProject] : 'archive'),
+      title: c?.title ?? work.title,
+      cap: wip ? 'In preparation' : c?.thesis ?? work.summary,
+      tone: c?.tone ?? FIELD_TONES[project],
+      href: `/work/${work.slug}`,
+      cta: wip ? 'View progress ↗' : 'Case study ↗',
     };
   });
   const benches: FieldItem[] = LAB_INDEX.flatMap((group) => {
@@ -356,7 +365,7 @@ export function buildHomeField(cards: HomeCard[], entries: LogEntry[]): HomeFiel
       kind: 'lab' as const,
       project,
       no: `Lab ${bench.no}`,
-      img: iconPath(LAB_ICONS[bench.no]),
+      img: iconPath(LAB_ICONS[bench.no] ?? 'experiment'),
       title: bench.title,
       cap: `${c.title} · ${bench.kind.split(' · ')[0]}`,
       tone: c.tone,
@@ -420,7 +429,7 @@ export function buildHomeField(cards: HomeCard[], entries: LogEntry[]): HomeFiel
   return {
     pool,
     draws: buildFieldDraws(pool),
-    projects: cards.filter((c) => !c.wip).length,
+    projects: works.filter((work) => work.selected && work.published).length,
     benches: LAB_INDEX.reduce((n, g) => n + g.segments.reduce((m, s) => m + s.benches.length, 0), 0),
     entries: entries.length,
   };
