@@ -1,0 +1,19 @@
+{
+  "baseline": 149,
+  "added": 35,
+  "total": 184,
+  "existingEntriesAndAnchorsPreserved": 149,
+  "counts": {
+    "this-site": 40,
+    "project-ii": 61,
+    "project-i": 59,
+    "project-iii": 7,
+    "other-work": 17
+  },
+  "additions": {
+    "project-i": 9,
+    "project-ii": 10,
+    "project-iii": 3,
+    "this-site": 13
+  }
+}

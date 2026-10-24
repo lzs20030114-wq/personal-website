@@ -1,0 +1,515 @@
+[
+  {
+    "id": "log-2026-10-09-4048778862141926",
+    "date": "2026-10-09",
+    "project": "project-i",
+    "lead": {
+      "en": "Corrected the machine simulation so the body turns while its base stays on the ground.",
+      "zh": "修正整机模拟，让机身转动时底座留在原地。"
+    },
+    "sources": [
+      "b81f0af6f5a1c9a83cd5649363a56834a530b314 (2026-10-10 +0800): components/lab/MachineBench.tsx, src/lib/linkage/machine-base.ts, src/lib/linkage/machine-behavior.ts",
+      "轮回机器_行为引擎spec.md §6.2–§6.3: 固定底座与转动机身；原文明确标注 2026-10-09，提交发生在次日凌晨，日志按工作记录日期"
+    ],
+    "rationale": "现有项目一日志截至 10-08；本条补充转向展示错误的修正，不将显示模型当作实物制造成果。"
+  },
+  {
+    "id": "log-2026-10-14-238230853288184",
+    "date": "2026-10-14",
+    "project": "project-i",
+    "lead": {
+      "en": "Reworked the four personalities to separate being calm from being afraid of people.",
+      "zh": "重新划分四种人格，把沉静和怕人分开。"
+    },
+    "sources": [
+      "42eccab (2026-10-14): 人格重分类与趋避层",
+      "轮回机器_行为引擎spec.md §4.1、§4.4、§12 v0.9",
+      "scripts/behavior/persona-probe.mjs: scripted visits and feature comparisons"
+    ],
+    "rationale": "补充 10-08 旧人格体系之后的分类更正；保留参数与可识别性尚未经过用户实验验证的边界。"
+  },
+  {
+    "id": "log-2026-10-15-515695945063972",
+    "date": "2026-10-15",
+    "project": "project-i",
+    "lead": {
+      "en": "Made the avoidant personality move away before a reaching hand touches it.",
+      "zh": "让回避型在手碰到之前就开始躲开。"
+    },
+    "sources": [
+      "4c8ec16, 2364666, 2dca2cb (2026-10-15): 两轮躲手修正与实测记录",
+      "轮回机器_行为引擎spec.md §4.4 末、§12 v0.10: 场景 M，85% → 81% → 61%",
+      "轮回机器_交互机制参数表.md §14.6: 后续简化后的被够到比例没有回到旧值"
+    ],
+    "rationale": "补充有明确失败原因与前后对比的一轮迭代；明确 61% 是历史版本的仿真值，不能当作当前效果或真人实验数据。"
+  },
+  {
+    "id": "log-2026-10-17-1575174326303370",
+    "date": "2026-10-17",
+    "project": "project-i",
+    "lead": {
+      "en": "Made the revised motion system the only version and removed unused interaction rules.",
+      "zh": "把新动作改为唯一版本，清理没有发挥作用的交互规则。"
+    },
+    "sources": [
+      "6b57196, 73f8eff, ef6f27d, 5c1e3de, 4967045 (2026-10-17)",
+      "轮回机器_行为引擎spec.md §0、§12 v0.11",
+      "轮回机器_交互机制参数表.md §12.7: 回避型被够到 62% → 76% → 62%"
+    ],
+    "rationale": "接续旧日志里『新动作仍为研究开关』的历史状态；本条记录正式替换和简化中发现的退步，不重复 10-08 新动作开发。"
+  },
+  {
+    "id": "log-2026-10-18-2884019636765396",
+    "date": "2026-10-18",
+    "project": "project-i",
+    "lead": {
+      "en": "Added bilingual reference tables that explain how each interaction reaches the machine.",
+      "zh": "把互动规则整理成台架上的中英双语附件。"
+    },
+    "sources": [
+      "afa450c, 6652ede (2026-10-18): 附件表与逐项文字核对",
+      "轮回机器_行为引擎spec.md §12 v0.12 ④、v0.15 ④",
+      "src/lib/site/lab-1-6-tables.ts; src/lib/site/lab-1-6-tables.test.ts",
+      "design-ref/MAPPING.md §49"
+    ],
+    "rationale": "这组表是项目交互机制的可审查产出，归项目一；显式交代十四张是历史数量，当前为五张。"
+  },
+  {
+    "id": "log-2026-10-19-1795287237573693",
+    "date": "2026-10-19",
+    "project": "project-i",
+    "lead": {
+      "en": "Changed the enthusiastic personality from intermittent glances to continuous hand following.",
+      "zh": "让热情型连续跟着手走，不再一跳一停。"
+    },
+    "sources": [
+      "321258a (2026-10-19): 热情型连续跟手",
+      "轮回机器_行为引擎spec.md §12 v0.14 ①–②: 引擎指令方向差中位数 74° → 14°"
+    ],
+    "rationale": "记录作者要求的主要人格差异；数字严格写成脚本测试里的指令方向差，不能误称实物臂的跟踪精度。"
+  },
+  {
+    "id": "log-2026-10-19-712004976306508",
+    "date": "2026-10-19",
+    "project": "project-i",
+    "lead": {
+      "en": "Simplified the interaction sequence, then restored the visible actions needed to distinguish personalities.",
+      "zh": "删去难以察觉的交互细节，再补回影响人格区分的动作。"
+    },
+    "sources": [
+      "d0043d0, 41abdb6 (2026-10-19): 交互机制整合与整合后反查",
+      "轮回机器_交互机制参数表.md §14.1–§14.6",
+      "轮回机器_行为引擎spec.md §12 v0.15–v0.16"
+    ],
+    "rationale": "把同日多轮整理合并成一条有完整弯路的实质迭代；不把脚本对仿真特征的分类比例写成人类识别准确率。"
+  },
+  {
+    "id": "log-2026-10-19-3162266630046510",
+    "date": "2026-10-19",
+    "project": "project-i",
+    "lead": {
+      "en": "Added live actuator readouts beside the machine simulation.",
+      "zh": "在整机模拟旁加入执行器实时读数。"
+    },
+    "sources": [
+      "41abdb6 (2026-10-19): ActuatorPanel 与 actuator-readout",
+      "轮回机器_行为引擎spec.md §12 v0.16 ⑤",
+      "components/lab/ActuatorPanel.tsx; src/lib/linkage/actuator-readout.ts",
+      "design-ref/MAPPING.md §50"
+    ],
+    "rationale": "面板是独立可见的项目验证工具，单列避免与表格或人格简化混成双主题标题；明确非实物读数。"
+  },
+  {
+    "id": "log-2026-10-20-1882092295423488",
+    "date": "2026-10-20",
+    "project": "project-i",
+    "lead": {
+      "en": "Reworked breathing to show the effect of interaction rather than exaggerate personality differences.",
+      "zh": "让呼吸主要反映互动带来的变化，缩小平时的性格差异。"
+    },
+    "sources": [
+      "7d699e6, 054daf7 (2026-10-20): 呼吸与案例页同源",
+      "轮回机器_交互机制参数表.md §15: 每种人格 8 种子、成长段、生命钟 ×1，呼吸对比表及代价",
+      "轮回机器_行为引擎spec.md §12 v0.17"
+    ],
+    "rationale": "记录作者对呼吸表达的方向纠偏，保留原方案为何无效、改变后的读数与人格区分上的代价。"
+  },
+  {
+    "id": "log-2026-10-04-4294423562278521",
+    "date": "2026-10-04",
+    "project": "project-ii",
+    "lead": {
+      "en": "Built a demonstration of cats walking, resting and playing on platforms that open ahead of them.",
+      "zh": "建立猫在逐步展开的平台上行走、休息与玩耍的演示。"
+    },
+    "sources": [
+      "项目二_猫行为lab.md：来源与取舍、演示约定、§4.1–4.4",
+      "c066347（2026-10-03 首版）、c2189cd、edb770f（2026-10-04 支撑纠偏与动作区分）"
+    ],
+    "rationale": "补 10-03 至 10-04 猫行为台架完整工作；现有 09-27 日志仅定义面向猫的空间，不含此实现。按修订完成日记账。"
+  },
+  {
+    "id": "log-2026-10-04-2088814339768521",
+    "date": "2026-10-04",
+    "project": "project-ii",
+    "lead": {
+      "en": "Reframed the project around how different species shape a space and respond to its changes.",
+      "zh": "重新梳理项目主线，明确研究不同物种怎样共同塑造空间、又怎样回应空间的变化。"
+    },
+    "sources": [
+      "项目二_展示逻辑总框架.md：§11.4、§12.1–12.6",
+      "0751f80、81261a4、b5c9911（10-03 盘点与自审）；a317ef2、72d4daf（10-04 框架更正与名称落地）"
+    ],
+    "rationale": "补项目范围与论证框架的更正；不重复已有 10-07 关于痕迹规则在对照中失利的条目。"
+  },
+  {
+    "id": "log-2026-10-06-1910704124419110",
+    "date": "2026-10-06",
+    "project": "project-ii",
+    "lead": {
+      "en": "Reviewed urban birds' flight distances to prepare a study of separation between people and wildlife.",
+      "zh": "整理城市鸟的惊飞距离资料，为人与野生动物的隔离实验准备参数依据。"
+    },
+    "sources": [
+      "项目二_城市鸟惊飞距离.md：来源状态、§1–6",
+      "项目二_空间规则草案.md：§9.8",
+      "948165f、90558be、74d5069、16ced57（2026-10-06）"
+    ],
+    "rationale": "补城市鸟文献与隔离方案研究；明确未实现野生动物实验，不把候选规则当定论。"
+  },
+  {
+    "id": "log-2026-10-07-3966303388841958",
+    "date": "2026-10-07",
+    "project": "project-ii",
+    "lead": {
+      "en": "Let people pass by retracting only the strips in their path while keeping the cat's support in place.",
+      "zh": "让挡路的布条单独收回，使人能通过，同时保留猫脚下的支撑。"
+    },
+    "sources": [
+      "项目二_人猫同台lab.md：§8–9",
+      "081dc8f、3907b99、f013f83、a08ab6c（2026-10-07）"
+    ],
+    "rationale": "补按带让路与撤回错误判断的弯路；现有 10-06 松键日志是单带形态可逆，不涵盖多人空间通行。"
+  },
+  {
+    "id": "log-2026-10-07-2768389821953039",
+    "date": "2026-10-07",
+    "project": "project-ii",
+    "lead": {
+      "en": "Rechecked the cat model against published proximity data before comparing ways to guide it toward a seated person.",
+      "zh": "先用文献中的人猫距离分布校准猫的规则，再比较把猫引到座位附近的方式。"
+    },
+    "sources": [
+      "项目二_人猫同台lab.md：§12.2–12.8",
+      "d2a00b7、20d91bf、2fc3637、50e73b4（2026-10-07）"
+    ],
+    "rationale": "补 10-07 后续校准与引导研究；避免将该轮结果误作 10-08 改了访客与上下层规则后的最终结果。"
+  },
+  {
+    "id": "log-2026-10-08-2265216622170034",
+    "date": "2026-10-08",
+    "project": "project-ii",
+    "lead": {
+      "en": "Added body clearance and visitor groups, and let cats move between the floor and platforms.",
+      "zh": "给访客加上身体占位与结伴规则，并让猫能在地面和平台之间换层。"
+    },
+    "sources": [
+      "项目二_人猫同台lab.md：§13.1–13.4",
+      "dacf0fc（2026-10-08）"
+    ],
+    "rationale": "补第三轮模型修正；明确证据只支持方向，结伴人数比例从商业街借用，未宣称已按猫咖现场标定。"
+  },
+  {
+    "id": "log-2026-10-08-4072082882482544",
+    "date": "2026-10-08",
+    "project": "project-ii",
+    "lead": {
+      "en": "Compared three crowd sizes and found that the moving space helped nearby human–cat stays most in the busier simulations.",
+      "zh": "比较三档客流，发现会动的空间主要在人多的仿真场景里增加人猫邻近停留。"
+    },
+    "sources": [
+      "项目二_人猫同台lab.md：§13.5–13.7",
+      "ef18059（2026-10-08）；src/lib/space/cohabit-compare.data.json（10-21 案例页复跑数据）"
+    ],
+    "rationale": "单独记录研究结果，不混同模型实现。保留场景、种子、时长和未校正检验口径，不把累积的人猫配对秒数当单只猫的时间。"
+  },
+  {
+    "id": "log-2026-10-21-2120875765098105",
+    "date": "2026-10-21",
+    "project": "project-ii",
+    "lead": {
+      "en": "Added the comparisons and six design turns to the case study so readers can follow how the project changed.",
+      "zh": "把对照结果与六次设计转向写进案例页，让项目如何变化有据可查。"
+    },
+    "sources": [
+      "项目二_展示逻辑总框架.md：§13（10-17 研究会诊）、§13.9（10-21 落地）",
+      "9751715（2026-10-21）；content/work/project-ii/index.mdx；components/site/case/CompareChart.tsx"
+    ],
+    "rationale": "补研究呈现与叙事的实质改写；与网站通用版式调整分开，日期按项目文档 10-21 落地记录。"
+  },
+  {
+    "id": "log-2026-10-21-105484136189853",
+    "date": "2026-10-21",
+    "project": "project-ii",
+    "lead": {
+      "en": "Connected the human–cat simulation to an eight-by-eight room of three-dimensional moving units.",
+      "zh": "把人猫仿真接进八乘八的立体单元房间，直接展示空间怎样随行为变化。"
+    },
+    "sources": [
+      "项目二_人猫同台lab.md：§14.1–14.5（文档标记 2026-10-21）",
+      "04ee276（提交时间 2026-10-21 UTC，+08 为 10-22）；src/lib/space/cohabit-solid.ts；components/lab/CohabitSpaceBench.tsx"
+    ],
+    "rationale": "补完整立体演示；采用项目文档工作日 10-21，不由提交时区机械重定日期。明确关键帧复用、尺度与膜的边界。"
+  },
+  {
+    "id": "log-2026-10-23-4235513318147732",
+    "date": "2026-10-23",
+    "project": "project-ii",
+    "lead": {
+      "en": "Corrected the inactive units to stay near the ceiling, then descend before forming a platform.",
+      "zh": "修正未触发单元的位置，让它们先收在天花下，触发后再下降成形。"
+    },
+    "sources": [
+      "项目二_人猫同台lab.md：§14.6",
+      "f1a5a8f、34da084（2026-10-23）"
+    ],
+    "rationale": "补用户观察后的核心纠偏，把未触发收起与先降后成形写清；不冒充已完成折叠机构验证。"
+  },
+  {
+    "id": "log-2026-10-05-157064927926468",
+    "date": "2026-10-05",
+    "project": "project-iii",
+    "lead": {
+      "en": "Built a sleep research overview to compare feasible directions for the third project.",
+      "zh": "把睡眠研究资料整理成开题总览，比较个人能够推进的研究方向。"
+    },
+    "sources": [
+      "项目三_智慧睡眠开题总览_总版_2026-10-05.docx：开头日期与修订说明、标注说明、第八章；本轮直接读取 DOCX XML，当前 SHA256 4e584d34b5b7a048c8ff14364ac4a6b154b8a82e1e69a6356ed4ecec6fc83656",
+      "项目三本地资料/tmp_review/literature_review_extracted.txt：P2、P4、P7；2026-10-10 读取时留下的原文提取，日期依据为文内 10-05，非文件修改时间",
+      "Codex chat 01a121b5-c855-70b3-b12b-4c350fb9749e（评阅文献综述），2026-10-10：作者提交此 DOCX 并说『这是我做的文献综述』"
+    ],
+    "rationale": "现有项目三日志最后为 09-29 的初轮索引；本条记录后续合并总览与可行性筛选，不重复旧索引，不复述未经本轮核实的医学或市场结论。"
+  },
+  {
+    "id": "log-2026-10-06-3716936255093825",
+    "date": "2026-10-06",
+    "project": "project-iii",
+    "lead": {
+      "en": "Narrowed the topic comparison to shared-room waking and visible monitoring in temporary accommodation.",
+      "zh": "将开题比较收窄到同住者的唤醒控制权与临时住宿中的监测可见性。"
+    },
+    "sources": [
+      "项目三_智慧睡眠开题总览_总版_2026-10-05.docx：文内『10-06 自审修正』、第八章两条候选路线及修正清单；本轮直接读取原 DOCX",
+      "项目三本地资料/tmp_review/literature_review_extracted.txt：P2、P9 与第八章；10-06 是源文档明确注明的修订日",
+      "Codex chat 01a121b5-c855-70b3-b12b-4c350fb9749e（评阅文献综述），作者确认源文档为本人综述；候选不是作者已经拍板的定题"
+    ],
+    "rationale": "保留当时从广泛选题到两路线比较的实质转向，以及文献空白和结论迁移被收紧的弯路；不把文档建议或与导师讨论计划写成已执行研究。"
+  },
+  {
+    "id": "log-2026-10-10-1766694649087067",
+    "date": "2026-10-10",
+    "project": "project-iii",
+    "lead": {
+      "en": "Turned the topic review into a page-by-page reading document with traceable references.",
+      "zh": "把开题综述整理成逐页条目版，便于阅读和回查文献。"
+    },
+    "sources": [
+      "Codex chat 01a121b5-c855-70b3-b12b-4c350fb9749e（评阅文献综述），2026-10-10 亚洲新加坡日期；作者要求逐页、分条、不得擅删、尽量原文缩句",
+      "项目三本地资料/output/pdf/项目三_智慧睡眠文献综述_逐页条目版.pdf：本轮 pdfinfo 确认当前为 79 页",
+      "项目三本地资料/tmp/pdfs/coverage_report.json：当前 79 页、source_ids=680、mapped_ids=680、missing_source_ids=[]，identical_repeated_records_referenced=80",
+      "项目三本地资料/tmp/pdfs/source_page_map.json 与 pdf_extracted.txt：内容页码映射及导出文本"
+    ],
+    "rationale": "可核实用户要求、已生成 PDF 与覆盖报告；不把报告 680 个来源片段当文献篇数，公开日志也不堆无关制作数字。日期来自聊天时间转换为 Asia/Singapore。"
+  },
+  {
+    "id": "log-2026-10-01-3268388959648893",
+    "date": "2026-10-01",
+    "project": "this-site",
+    "lead": {
+      "en": "Rebuilt the home, lab and case-study layouts around clearer project navigation.",
+      "zh": "按新设计重排主页、实验室和案例页，让项目入口与阅读层级更清楚。"
+    },
+    "sources": [
+      "design-ref/MAPPING.md §42、§43、§45",
+      "672e433",
+      "94b2ed7",
+      "78d4a61"
+    ],
+    "rationale": "现有本站日志截至 2026-09-30，本条对应其后的已合入工作。"
+  },
+  {
+    "id": "log-2026-10-01-1240202243035253",
+    "date": "2026-10-01",
+    "project": "this-site",
+    "lead": {
+      "en": "Recovered project records and original figures from earlier conversations and files.",
+      "zh": "从历史对话和原始文件补回各项目的工作记录与图表。"
+    },
+    "sources": [
+      "archive/work-log-2026-10-01/工作日志补齐总览.md",
+      "design-ref/MAPPING.md §44",
+      "4b38b35"
+    ],
+    "rationale": "现有本站日志截至 2026-09-30，本条对应其后的已合入工作。"
+  },
+  {
+    "id": "log-2026-10-03-3371440135695861",
+    "date": "2026-10-03",
+    "project": "this-site",
+    "lead": {
+      "en": "Used tonal surfaces to distinguish sections across the site.",
+      "zh": "用分层色面区分网页内容，让长页面的区块更容易辨认。"
+    },
+    "sources": [
+      "design-ref/MAPPING.md §46",
+      "ff23dbd"
+    ],
+    "rationale": "现有本站日志截至 2026-09-30，本条对应其后的已合入工作。"
+  },
+  {
+    "id": "log-2026-10-05-1579252848181989",
+    "date": "2026-10-05",
+    "project": "this-site",
+    "lead": {
+      "en": "Added page transitions that follow the relationship between destinations.",
+      "zh": "为作品、实验室和日志之间的跳转补上连贯的页面转场。"
+    },
+    "sources": [
+      "design-ref/MAPPING.md §48（设计记录 10-04，提交 10-05）",
+      "31d881a"
+    ],
+    "rationale": "现有本站日志截至 2026-09-30，本条对应其后的已合入工作。"
+  },
+  {
+    "id": "log-2026-10-12-3719770275277887",
+    "date": "2026-10-12",
+    "project": "this-site",
+    "lead": {
+      "en": "Added a private dashboard for reviewing site visits.",
+      "zh": "增加仅站长可看的访客后台，用来查看网站的访问情况。"
+    },
+    "sources": [
+      "SITE_SPEC.md §13",
+      "docs/visitor-analytics.md",
+      "81916ed",
+      "1642891"
+    ],
+    "rationale": "现有本站日志截至 2026-09-30，本条对应其后的已合入工作。"
+  },
+  {
+    "id": "log-2026-10-22-3728128746853881",
+    "date": "2026-10-22",
+    "project": "this-site",
+    "lead": {
+      "en": "Made embedded 3D models take wheel input only after a click.",
+      "zh": "让案例页里的三维模型在点击后才接管滚轮缩放。"
+    },
+    "sources": [
+      "components/lab/labCameraInput.ts",
+      "e2c786b"
+    ],
+    "rationale": "现有本站日志截至 2026-09-30，本条对应其后的已合入工作。"
+  },
+  {
+    "id": "log-2026-10-23-1540928197040555",
+    "date": "2026-10-23",
+    "project": "this-site",
+    "lead": {
+      "en": "Refined the case-study reading layout and removed delays after chapter jumps.",
+      "zh": "收窄案例页版心，并修正目录跳章后正文迟迟不出现的问题。"
+    },
+    "sources": [
+      "design-ref/MAPPING.md §52、§54",
+      "813b529",
+      "3273acf"
+    ],
+    "rationale": "现有本站日志截至 2026-09-30，本条对应其后的已合入工作。"
+  },
+  {
+    "id": "log-2026-10-23-1553877201978556",
+    "date": "2026-10-23",
+    "project": "this-site",
+    "lead": {
+      "en": "Revised the first two case studies for more consistent, sustained reading.",
+      "zh": "统一项目一和项目二的案例文字，使标题和论述更适合连续阅读。"
+    },
+    "sources": [
+      "design-ref/MAPPING.md §53",
+      "856a87e",
+      "4f07921"
+    ],
+    "rationale": "现有本站日志截至 2026-09-30，本条对应其后的已合入工作。"
+  },
+  {
+    "id": "log-2026-10-23-4121128012942813",
+    "date": "2026-10-23",
+    "project": "this-site",
+    "lead": {
+      "en": "Protected editor drafts and images, and made log links stable through later edits.",
+      "zh": "修复日志后台的草稿与图片保护，并让旧日志链接保持稳定。"
+    },
+    "sources": [
+      "CODE_REVIEW_2026-10-23.md 修复与自查结果 01/02/03/06/07/14",
+      "8eb87cf"
+    ],
+    "rationale": "现有本站日志截至 2026-09-30，本条对应其后的已合入工作。"
+  },
+  {
+    "id": "log-2026-10-23-3902211171795164",
+    "date": "2026-10-23",
+    "project": "this-site",
+    "lead": {
+      "en": "Fixed mobile previews and timeline overlap, and reduced unnecessary experiment loading.",
+      "zh": "修复手机布局中的预览和时间轴，并减少页面不需要的实验数据加载。"
+    },
+    "sources": [
+      "CODE_REVIEW_2026-10-23.md 修复与自查结果 09–11/15/16",
+      "8eb87cf"
+    ],
+    "rationale": "现有本站日志截至 2026-09-30，本条对应其后的已合入工作。"
+  },
+  {
+    "id": "log-2026-10-23-2335935750342083",
+    "date": "2026-10-23",
+    "project": "this-site",
+    "lead": {
+      "en": "Reused repeated geometry across the lab while preserving its motion and appearance.",
+      "zh": "复用实验台重复生成的几何，减少计算时保留原来的动作与画面。"
+    },
+    "sources": [
+      "LAB_OPTIMIZATION_RESULTS_2026-10-23.md",
+      "8eb87cf"
+    ],
+    "rationale": "现有本站日志截至 2026-09-30，本条对应其后的已合入工作。"
+  },
+  {
+    "id": "log-2026-10-24-688312168132846",
+    "date": "2026-10-24",
+    "project": "this-site",
+    "lead": {
+      "en": "Replaced the homepage opening with an expandable field of project thumbnails.",
+      "zh": "把主页首屏改成可展开的方块场，让作品和实验入口从缩略图里出现。"
+    },
+    "sources": [
+      "design-ref/MAPPING.md §55",
+      "50df088",
+      "6cd1f00"
+    ],
+    "rationale": "现有本站日志截至 2026-09-30，本条对应其后的已合入工作。"
+  },
+  {
+    "id": "log-2026-10-24-1801706581233044",
+    "date": "2026-10-24",
+    "project": "this-site",
+    "lead": {
+      "en": "Removed blank flashes when switching between lab previews.",
+      "zh": "修复实验预览切换时闪出空白的问题。"
+    },
+    "sources": [
+      "components/site/HomeLabPreview.tsx",
+      "93bdc3f（10-23 首轮修复）",
+      "6cd1f00（10-24 异步网格就绪修正）"
+    ],
+    "rationale": "与方块首屏分开记录实验预览的具体弯路；按最终修正日记。"
+  }
+]
