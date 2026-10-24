@@ -1,0 +1,2401 @@
+{
+  "version": 1,
+  "auditedOn": "2026-10-24",
+  "source": "content/log/entries.json",
+  "sourceSha256": "80449e5e5c52437cded49d7fc0da34c3468ce8680c05c1acf3053dea6ab026f1",
+  "entryCount": 184,
+  "iconCount": 25,
+  "identityRule": "Use each existing persistent entry.id, exactly as ensureLogEntryIds and withAnchors do; all 184 entries already have ids. Array positions and dates are not identities.",
+  "semanticRuleZh": "先按项目桶和方面标签判断，再用每条lead及必要正文纠偏。尤其Site/Docs和Space/Simulation不能直接映射为文档或齿轮；图标表示该记录的具体工作主题，不表示已经完成实物或验证结果。",
+  "visualRuleZh": "25个可复用语义图标。采用同一SVG视框、线宽、无填充或极少面色；项目差异交给既有项目色，不能用日期随机选择图案。每条有独立入口，但允许同主题复用图标。",
+  "reviewedSources": [
+    "src/lib/site/log-facets.ts",
+    "src/lib/site/log-identity.ts",
+    "content/log/entries.json"
+  ],
+  "icons": [
+    {
+      "key": "layout",
+      "labelZh": "版式与界面",
+      "glyphConceptZh": "三块有留白的矩形网格",
+      "scopeZh": "导航、网格、色面、跨尺寸版式"
+    },
+    {
+      "key": "interaction",
+      "labelZh": "交互与反馈",
+      "glyphConceptZh": "指尖靠近一个带响应弧的节点",
+      "scopeZh": "输入、触摸、转场、连续反馈"
+    },
+    {
+      "key": "writing",
+      "labelZh": "写作与翻译",
+      "glyphConceptZh": "笔尖与三条错落短线",
+      "scopeZh": "作者稿、双语、章节和论证"
+    },
+    {
+      "key": "archive",
+      "labelZh": "档案与编辑",
+      "glyphConceptZh": "两张分层卡片和一个固定锚点",
+      "scopeZh": "有来源的存档、恢复、草稿与稳定身份"
+    },
+    {
+      "key": "code",
+      "labelZh": "代码与求解实现",
+      "glyphConceptZh": "成对尖括号夹住一个节点",
+      "scopeZh": "程序移植、接口、缓存与组件实现"
+    },
+    {
+      "key": "analytics",
+      "labelZh": "数据分析",
+      "glyphConceptZh": "三根不同高度的柱与细横基线",
+      "scopeZh": "访客记录与重复测量评分分析"
+    },
+    {
+      "key": "lifecycle",
+      "labelZh": "生命与人格",
+      "glyphConceptZh": "一个开口循环分成四段且含衰减波",
+      "scopeZh": "四人格、出生衰老死亡及轮回"
+    },
+    {
+      "key": "research",
+      "labelZh": "资料与证据",
+      "glyphConceptZh": "放大镜覆盖两张对照索引卡",
+      "scopeZh": "文献、竞品、来源核实及证据整理"
+    },
+    {
+      "key": "sleep",
+      "labelZh": "睡眠情境",
+      "glyphConceptZh": "枕形矩形与小月弧",
+      "scopeZh": "睡眠、唤醒、酒店和舒适度数据"
+    },
+    {
+      "key": "agents",
+      "labelZh": "人与智能体",
+      "glyphConceptZh": "三个圆点人物连接到一条可转折路径",
+      "scopeZh": "人类、用户画像、群体关系与行为规则"
+    },
+    {
+      "key": "cat",
+      "labelZh": "猫与物种差异",
+      "glyphConceptZh": "猫耳侧影和一段高低平台",
+      "scopeZh": "猫的活动能力、行为和跨物种空间"
+    },
+    {
+      "key": "experiment",
+      "labelZh": "实验与比较",
+      "glyphConceptZh": "两个对照容器中各一枚不同位置的圆点",
+      "scopeZh": "条件比较、测试方案和实体实验提案"
+    },
+    {
+      "key": "fabric",
+      "labelZh": "收缩织物",
+      "glyphConceptZh": "三条平行带局部折成外凸台阶",
+      "scopeZh": "条带、收缩、接缝、形态渐变与收纳"
+    },
+    {
+      "key": "layers",
+      "labelZh": "多层平台",
+      "glyphConceptZh": "两条错层横台由短折带连接",
+      "scopeZh": "上下层、厚台、倾斜和连接深度"
+    },
+    {
+      "key": "cluster",
+      "labelZh": "单元关系",
+      "glyphConceptZh": "三个相邻圆环其中两环错位相切",
+      "scopeZh": "单元阵列、间距、高差及错相"
+    },
+    {
+      "key": "mechanism",
+      "labelZh": "机构与传动",
+      "glyphConceptZh": "四个关节以长短杆闭合相连",
+      "scopeZh": "机械结构、限位、肌腱及驱动"
+    },
+    {
+      "key": "measurement",
+      "labelZh": "测量与受力",
+      "glyphConceptZh": "卡尺括住构件并有短载荷箭头",
+      "scopeZh": "行程、载荷、有限元与实时读数"
+    },
+    {
+      "key": "model",
+      "labelZh": "模型与图纸",
+      "glyphConceptZh": "带隐藏虚线的轴测线框立方体",
+      "scopeZh": "CAD模型和几何参考存档"
+    },
+    {
+      "key": "interview",
+      "labelZh": "访谈",
+      "glyphConceptZh": "两个不对称对话框",
+      "scopeZh": "访谈提纲、转写与说话角色"
+    },
+    {
+      "key": "survey",
+      "labelZh": "问卷",
+      "glyphConceptZh": "三条短答题行配两个勾选框",
+      "scopeZh": "问卷规则、题目和筛选结构"
+    },
+    {
+      "key": "electronics",
+      "labelZh": "电子与传感",
+      "glyphConceptZh": "小芯片有四个引脚及单根线路",
+      "scopeZh": "电机驱动、接口、电极和走线"
+    },
+    {
+      "key": "sourcing",
+      "labelZh": "零件选型与采购",
+      "glyphConceptZh": "两个不同圆孔零件旁有一个勾",
+      "scopeZh": "零件清单、材料与供应选型"
+    },
+    {
+      "key": "photo",
+      "labelZh": "影像记录",
+      "glyphConceptZh": "相机框内一圆形镜头及侧光线",
+      "scopeZh": "零件摄影与采集环境"
+    },
+    {
+      "key": "strategy",
+      "labelZh": "方向与范围",
+      "glyphConceptZh": "分叉路径其中一支继续延伸",
+      "scopeZh": "立项、选题、优先级和范围取舍"
+    },
+    {
+      "key": "ethics",
+      "labelZh": "控制权与可见性",
+      "glyphConceptZh": "睁开的眼与小型开关并列",
+      "scopeZh": "拒绝干预、知情与监测可见性"
+    }
+  ],
+  "countsByIcon": {
+    "research": 10,
+    "archive": 6,
+    "electronics": 2,
+    "survey": 1,
+    "cluster": 4,
+    "code": 10,
+    "layers": 7,
+    "layout": 18,
+    "interview": 3,
+    "agents": 17,
+    "ethics": 1,
+    "analytics": 2,
+    "mechanism": 22,
+    "model": 2,
+    "lifecycle": 6,
+    "strategy": 9,
+    "interaction": 12,
+    "measurement": 6,
+    "photo": 1,
+    "cat": 5,
+    "writing": 13,
+    "fabric": 14,
+    "experiment": 6,
+    "sourcing": 3,
+    "sleep": 4
+  },
+  "entries": [
+    {
+      "id": "log-2026-10-24-688312168132846",
+      "href": "/archive#log-2026-10-24-688312168132846",
+      "projectKey": "this-site",
+      "iconKey": "layout",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "把主页首屏改成可展开的方块场，让作品和实验入口从缩略图里出现。",
+      "rationaleZh": "主页方块场和可展开作品入口"
+    },
+    {
+      "id": "log-2026-10-24-1801706581233044",
+      "href": "/archive#log-2026-10-24-1801706581233044",
+      "projectKey": "this-site",
+      "iconKey": "interaction",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "修复实验预览切换时闪出空白的问题。",
+      "rationaleZh": "预览切换时保留旧画面再交叉淡入"
+    },
+    {
+      "id": "log-2026-10-23-4235513318147732",
+      "href": "/archive#log-2026-10-23-4235513318147732",
+      "projectKey": "project-ii",
+      "iconKey": "fabric",
+      "tags": [
+        "Space",
+        "3D"
+      ],
+      "leadZh": "修正未触发单元的位置，让它们先收在天花下，触发后再下降成形。",
+      "rationaleZh": "悬吊布束先收纳、再下降和成形"
+    },
+    {
+      "id": "log-2026-10-23-1540928197040555",
+      "href": "/archive#log-2026-10-23-1540928197040555",
+      "projectKey": "this-site",
+      "iconKey": "layout",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "收窄案例页版心，并修正目录跳章后正文迟迟不出现的问题。",
+      "rationaleZh": "案例页版心与章节目录阅读导航"
+    },
+    {
+      "id": "log-2026-10-23-1553877201978556",
+      "href": "/archive#log-2026-10-23-1553877201978556",
+      "projectKey": "this-site",
+      "iconKey": "writing",
+      "tags": [
+        "Site",
+        "Writing"
+      ],
+      "leadZh": "统一项目一和项目二的案例文字，使标题和论述更适合连续阅读。",
+      "rationaleZh": "中英案例文字和标题的连续阅读修订"
+    },
+    {
+      "id": "log-2026-10-23-4121128012942813",
+      "href": "/archive#log-2026-10-23-4121128012942813",
+      "projectKey": "this-site",
+      "iconKey": "archive",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "修复日志后台的草稿与图片保护，并让旧日志链接保持稳定。",
+      "rationaleZh": "草稿与原图保护以及永久日志身份"
+    },
+    {
+      "id": "log-2026-10-23-3902211171795164",
+      "href": "/archive#log-2026-10-23-3902211171795164",
+      "projectKey": "this-site",
+      "iconKey": "layout",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "修复手机布局中的预览和时间轴，并减少页面不需要的实验数据加载。",
+      "rationaleZh": "手机预览、时间轴和屏宽切换修复"
+    },
+    {
+      "id": "log-2026-10-23-2335935750342083",
+      "href": "/archive#log-2026-10-23-2335935750342083",
+      "projectKey": "this-site",
+      "iconKey": "code",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "复用实验台重复生成的几何，减少计算时保留原来的动作与画面。",
+      "rationaleZh": "重复几何缓存和求解结果复用"
+    },
+    {
+      "id": "log-2026-10-22-3728128746853881",
+      "href": "/archive#log-2026-10-22-3728128746853881",
+      "projectKey": "this-site",
+      "iconKey": "interaction",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "让案例页里的三维模型在点击后才接管滚轮缩放。",
+      "rationaleZh": "点击后启用模型滚轮缩放"
+    },
+    {
+      "id": "log-2026-10-21-2120875765098105",
+      "href": "/archive#log-2026-10-21-2120875765098105",
+      "projectKey": "project-ii",
+      "iconKey": "writing",
+      "tags": [
+        "Space",
+        "Writing"
+      ],
+      "leadZh": "把对照结果与六次设计转向写进案例页，让项目如何变化有据可查。",
+      "rationaleZh": "将设计转向和对照结果写入案例"
+    },
+    {
+      "id": "log-2026-10-21-105484136189853",
+      "href": "/archive#log-2026-10-21-105484136189853",
+      "projectKey": "project-ii",
+      "iconKey": "cat",
+      "tags": [
+        "Space",
+        "3D"
+      ],
+      "leadZh": "把人猫仿真接进八乘八的立体单元房间，直接展示空间怎样随行为变化。",
+      "rationaleZh": "八乘八房间中的人猫共同活动"
+    },
+    {
+      "id": "log-2026-10-20-1882092295423488",
+      "href": "/archive#log-2026-10-20-1882092295423488",
+      "projectKey": "project-i",
+      "iconKey": "lifecycle",
+      "tags": [
+        "Machine",
+        "Simulation"
+      ],
+      "leadZh": "让呼吸主要反映互动带来的变化，缩小平时的性格差异。",
+      "rationaleZh": "人格与互动共同影响呼吸行为"
+    },
+    {
+      "id": "log-2026-10-19-1795287237573693",
+      "href": "/archive#log-2026-10-19-1795287237573693",
+      "projectKey": "project-i",
+      "iconKey": "interaction",
+      "tags": [
+        "Machine",
+        "Simulation"
+      ],
+      "leadZh": "让热情型连续跟着手走，不再一跳一停。",
+      "rationaleZh": "热情型持续跟随人的手"
+    },
+    {
+      "id": "log-2026-10-19-712004976306508",
+      "href": "/archive#log-2026-10-19-712004976306508",
+      "projectKey": "project-i",
+      "iconKey": "interaction",
+      "tags": [
+        "Machine",
+        "Simulation"
+      ],
+      "leadZh": "删去难以察觉的交互细节，再补回影响人格区分的动作。",
+      "rationaleZh": "筛选可感知的人格动作反馈"
+    },
+    {
+      "id": "log-2026-10-19-3162266630046510",
+      "href": "/archive#log-2026-10-19-3162266630046510",
+      "projectKey": "project-i",
+      "iconKey": "measurement",
+      "tags": [
+        "Machine",
+        "Simulation"
+      ],
+      "leadZh": "在整机模拟旁加入执行器实时读数。",
+      "rationaleZh": "执行器指令的实时数值读数"
+    },
+    {
+      "id": "log-2026-10-18-2884019636765396",
+      "href": "/archive#log-2026-10-18-2884019636765396",
+      "projectKey": "project-i",
+      "iconKey": "writing",
+      "tags": [
+        "Machine",
+        "Writing"
+      ],
+      "leadZh": "把互动规则整理成台架上的中英双语附件。",
+      "rationaleZh": "整理双语互动规则附件"
+    },
+    {
+      "id": "log-2026-10-17-1575174326303370",
+      "href": "/archive#log-2026-10-17-1575174326303370",
+      "projectKey": "project-i",
+      "iconKey": "lifecycle",
+      "tags": [
+        "Machine",
+        "Simulation"
+      ],
+      "leadZh": "把新动作改为唯一版本，清理没有发挥作用的交互规则。",
+      "rationaleZh": "人格动作版本与行为规则清理"
+    },
+    {
+      "id": "log-2026-10-15-515695945063972",
+      "href": "/archive#log-2026-10-15-515695945063972",
+      "projectKey": "project-i",
+      "iconKey": "interaction",
+      "tags": [
+        "Machine",
+        "Simulation"
+      ],
+      "leadZh": "让回避型在手碰到之前就开始躲开。",
+      "rationaleZh": "接触前的回避反应"
+    },
+    {
+      "id": "log-2026-10-14-238230853288184",
+      "href": "/archive#log-2026-10-14-238230853288184",
+      "projectKey": "project-i",
+      "iconKey": "lifecycle",
+      "tags": [
+        "Machine",
+        "Simulation"
+      ],
+      "leadZh": "重新划分四种人格，把沉静和怕人分开。",
+      "rationaleZh": "四种人格的区分及身体姿态"
+    },
+    {
+      "id": "log-2026-10-12-3719770275277887",
+      "href": "/archive#log-2026-10-12-3719770275277887",
+      "projectKey": "this-site",
+      "iconKey": "analytics",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "增加仅站长可看的访客后台，用来查看网站的访问情况。",
+      "rationaleZh": "私有访客访问统计"
+    },
+    {
+      "id": "log-2026-10-10-1766694649087067",
+      "href": "/archive#log-2026-10-10-1766694649087067",
+      "projectKey": "project-iii",
+      "iconKey": "writing",
+      "tags": [
+        "Sleep research",
+        "Writing"
+      ],
+      "leadZh": "把开题综述整理成逐页条目版，便于阅读和回查文献。",
+      "rationaleZh": "把睡眠综述改成逐页条目稿"
+    },
+    {
+      "id": "log-2026-10-09-4048778862141926",
+      "href": "/archive#log-2026-10-09-4048778862141926",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Machine",
+        "Simulation"
+      ],
+      "leadZh": "修正整机模拟，让机身转动时底座留在原地。",
+      "rationaleZh": "机身转动时固定底座"
+    },
+    {
+      "id": "log-2026-10-08-1",
+      "href": "/archive#log-2026-10-08-1",
+      "projectKey": "project-i",
+      "iconKey": "interaction",
+      "tags": [
+        "Machine",
+        "Simulation"
+      ],
+      "leadZh": "重做大触手的动作，让惊跳、回应和闲时小动作一眼分得开。",
+      "rationaleZh": "区分触手惊跳、回应和闲时动作"
+    },
+    {
+      "id": "log-2026-10-08-2",
+      "href": "/archive#log-2026-10-08-2",
+      "projectKey": "project-i",
+      "iconKey": "interaction",
+      "tags": [
+        "Machine",
+        "Simulation"
+      ],
+      "leadZh": "给新动作加上迎手链：触手陪着手、凑过去、缠住，并随呼吸一紧一松地握着。",
+      "rationaleZh": "迎手、陪手与随呼吸握持"
+    },
+    {
+      "id": "log-2026-10-08-2265216622170034",
+      "href": "/archive#log-2026-10-08-2265216622170034",
+      "projectKey": "project-ii",
+      "iconKey": "agents",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "给访客加上身体占位与结伴规则，并让猫能在地面和平台之间换层。",
+      "rationaleZh": "访客身体占位、结伴和猫换层规则"
+    },
+    {
+      "id": "log-2026-10-08-4072082882482544",
+      "href": "/archive#log-2026-10-08-4072082882482544",
+      "projectKey": "project-ii",
+      "iconKey": "experiment",
+      "tags": [
+        "Space",
+        "Study"
+      ],
+      "leadZh": "比较三档客流，发现会动的空间主要在人多的仿真场景里增加人猫邻近停留。",
+      "rationaleZh": "三档客流的仿真条件比较"
+    },
+    {
+      "id": "log-2026-10-07-1",
+      "href": "/archive#log-2026-10-07-1",
+      "projectKey": "project-i",
+      "iconKey": "lifecycle",
+      "tags": [
+        "Machine",
+        "Simulation"
+      ],
+      "leadZh": "写出把人格参数表变成一整个生命周期的行为引擎，并给它单开一台 Lab 1-6。",
+      "rationaleZh": "人格参数驱动完整出生到死亡周期"
+    },
+    {
+      "id": "log-2026-10-07-2",
+      "href": "/archive#log-2026-10-07-2",
+      "projectKey": "project-i",
+      "iconKey": "interaction",
+      "tags": [
+        "Machine",
+        "Simulation"
+      ],
+      "leadZh": "在 Lab 1-6 里把鼠标指针当成人的手：机器看见它，再按人格决定迎上去、躲开或看别处。",
+      "rationaleZh": "用指针模拟手并触发人格反应"
+    },
+    {
+      "id": "log-2026-10-07-3",
+      "href": "/archive#log-2026-10-07-3",
+      "projectKey": "project-ii",
+      "iconKey": "agents",
+      "tags": [
+        "Space",
+        "Concept"
+      ],
+      "leadZh": "把空间从只追认痕迹改成按目的落单元，因为追认痕迹的版本在对照里输给了固定层架。",
+      "rationaleZh": "从追认痕迹改为促进相遇的空间决策"
+    },
+    {
+      "id": "log-2026-10-07-3966303388841958",
+      "href": "/archive#log-2026-10-07-3966303388841958",
+      "projectKey": "project-ii",
+      "iconKey": "fabric",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "让挡路的布条单独收回，使人能通过，同时保留猫脚下的支撑。",
+      "rationaleZh": "局部布条收回让路并保留猫的支撑"
+    },
+    {
+      "id": "log-2026-10-07-2768389821953039",
+      "href": "/archive#log-2026-10-07-2768389821953039",
+      "projectKey": "project-ii",
+      "iconKey": "experiment",
+      "tags": [
+        "Space",
+        "Study"
+      ],
+      "leadZh": "先用文献中的人猫距离分布校准猫的规则，再比较把猫引到座位附近的方式。",
+      "rationaleZh": "文献标定后比较不同引猫路径"
+    },
+    {
+      "id": "log-2026-10-06-1",
+      "href": "/archive#log-2026-10-06-1",
+      "projectKey": "project-ii",
+      "iconKey": "fabric",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "解禁了键的松开，并用探针证明布本身没有记忆，空间的记忆改由痕迹层承担。",
+      "rationaleZh": "释放结构键并检查布本身是否有记忆"
+    },
+    {
+      "id": "log-2026-10-06-1910704124419110",
+      "href": "/archive#log-2026-10-06-1910704124419110",
+      "projectKey": "project-ii",
+      "iconKey": "research",
+      "tags": [
+        "Space",
+        "Research"
+      ],
+      "leadZh": "整理城市鸟的惊飞距离资料，为人与野生动物的隔离实验准备参数依据。",
+      "rationaleZh": "城市鸟惊飞距离文献整理"
+    },
+    {
+      "id": "log-2026-10-06-3716936255093825",
+      "href": "/archive#log-2026-10-06-3716936255093825",
+      "projectKey": "project-iii",
+      "iconKey": "ethics",
+      "tags": [
+        "Sleep research",
+        "Concept"
+      ],
+      "leadZh": "将开题比较收窄到同住者的唤醒控制权与临时住宿中的监测可见性。",
+      "rationaleZh": "唤醒控制权、拒绝干预与监测可见性"
+    },
+    {
+      "id": "log-2026-10-05-157064927926468",
+      "href": "/archive#log-2026-10-05-157064927926468",
+      "projectKey": "project-iii",
+      "iconKey": "research",
+      "tags": [
+        "Sleep research",
+        "Research"
+      ],
+      "leadZh": "把睡眠研究资料整理成开题总览，比较个人能够推进的研究方向。",
+      "rationaleZh": "睡眠研究资料总览和方向比较"
+    },
+    {
+      "id": "log-2026-10-05-1579252848181989",
+      "href": "/archive#log-2026-10-05-1579252848181989",
+      "projectKey": "this-site",
+      "iconKey": "interaction",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "为作品、实验室和日志之间的跳转补上连贯的页面转场。",
+      "rationaleZh": "作品、实验室和日志间连续转场"
+    },
+    {
+      "id": "log-2026-10-04-4294423562278521",
+      "href": "/archive#log-2026-10-04-4294423562278521",
+      "projectKey": "project-ii",
+      "iconKey": "cat",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "建立猫在逐步展开的平台上行走、休息与玩耍的演示。",
+      "rationaleZh": "猫在平台间行走、休息和玩耍"
+    },
+    {
+      "id": "log-2026-10-04-2088814339768521",
+      "href": "/archive#log-2026-10-04-2088814339768521",
+      "projectKey": "project-ii",
+      "iconKey": "agents",
+      "tags": [
+        "Space",
+        "Concept"
+      ],
+      "leadZh": "重新梳理项目主线，明确研究不同物种怎样共同塑造空间、又怎样回应空间的变化。",
+      "rationaleZh": "不同物种与空间相互回应的主线"
+    },
+    {
+      "id": "log-2026-10-03-3371440135695861",
+      "href": "/archive#log-2026-10-03-3371440135695861",
+      "projectKey": "this-site",
+      "iconKey": "layout",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "用分层色面区分网页内容，让长页面的区块更容易辨认。",
+      "rationaleZh": "通过分层色面区分内容区块"
+    },
+    {
+      "id": "log-2026-10-01-3268388959648893",
+      "href": "/archive#log-2026-10-01-3268388959648893",
+      "projectKey": "this-site",
+      "iconKey": "layout",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "按新设计重排主页、实验室和案例页，让项目入口与阅读层级更清楚。",
+      "rationaleZh": "主页、实验室和案例页阅读层级"
+    },
+    {
+      "id": "log-2026-10-01-1240202243035253",
+      "href": "/archive#log-2026-10-01-1240202243035253",
+      "projectKey": "this-site",
+      "iconKey": "archive",
+      "tags": [
+        "Site",
+        "Writing"
+      ],
+      "leadZh": "从历史对话和原始文件补回各项目的工作记录与图表。",
+      "rationaleZh": "依据原始文件恢复历史工作记录"
+    },
+    {
+      "id": "log-2026-09-30-1",
+      "href": "/archive#log-2026-09-30-1",
+      "projectKey": "project-ii",
+      "iconKey": "layers",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "让局部厚台的连接深度可调，同时保留上下平台大小。",
+      "rationaleZh": "上下平台和厚台连接深度"
+    },
+    {
+      "id": "log-2026-09-30-2",
+      "href": "/archive#log-2026-09-30-2",
+      "projectKey": "this-site",
+      "iconKey": "code",
+      "tags": [
+        "Site",
+        "Simulation"
+      ],
+      "leadZh": "让构建复用已校验的成形终态，避免整批重复求解。",
+      "rationaleZh": "构建复用经过校验的成形终态"
+    },
+    {
+      "id": "log-2026-09-29-1",
+      "href": "/archive#log-2026-09-29-1",
+      "projectKey": "project-ii",
+      "iconKey": "layers",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "用真实截面仿真驱动独立条带，装配多层形体。",
+      "rationaleZh": "真实截面装配多层形体"
+    },
+    {
+      "id": "log-2026-09-29-2",
+      "href": "/archive#log-2026-09-29-2",
+      "projectKey": "project-iii",
+      "iconKey": "research",
+      "tags": [
+        "Sleep research",
+        "Research"
+      ],
+      "leadZh": "检索近期睡眠研究，比较方法、工具和部署问题。",
+      "rationaleZh": "近期睡眠方法、工具和部署资料检索"
+    },
+    {
+      "id": "log-2026-09-29-3",
+      "href": "/archive#log-2026-09-29-3",
+      "projectKey": "this-site",
+      "iconKey": "layout",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "重排 Lab 版式，让模型和控制区在同屏可见。",
+      "rationaleZh": "模型与控制区同屏的实验室布局"
+    },
+    {
+      "id": "log-2026-09-29-4",
+      "href": "/archive#log-2026-09-29-4",
+      "projectKey": "this-site",
+      "iconKey": "interaction",
+      "tags": [
+        "Site",
+        "Simulation"
+      ],
+      "leadZh": "调整主页翻幕响应，并让实验目录可以直达台架。",
+      "rationaleZh": "翻幕手感和目录直达操作"
+    },
+    {
+      "id": "log-2026-09-28-1",
+      "href": "/archive#log-2026-09-28-1",
+      "projectKey": "project-ii",
+      "iconKey": "layers",
+      "tags": [
+        "Space",
+        "Concept"
+      ],
+      "leadZh": "建立上下层可分别倾斜和留缺口的目标模型。",
+      "rationaleZh": "上下层的独立倾斜及缺口"
+    },
+    {
+      "id": "log-2026-09-28-2",
+      "href": "/archive#log-2026-09-28-2",
+      "projectKey": "project-ii",
+      "iconKey": "layers",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "为多层目标求解真实的双层和厚台截面。",
+      "rationaleZh": "双层和厚台截面的真实求解"
+    },
+    {
+      "id": "log-2026-09-28-3",
+      "href": "/archive#log-2026-09-28-3",
+      "projectKey": "this-site",
+      "iconKey": "code",
+      "tags": [
+        "Site",
+        "Simulation"
+      ],
+      "leadZh": "让跳过成形直接恢复已存终态，同时保留相机操作。",
+      "rationaleZh": "恢复存储终态并保留相机状态"
+    },
+    {
+      "id": "log-2026-09-27-1",
+      "href": "/archive#log-2026-09-27-1",
+      "projectKey": "project-ii",
+      "iconKey": "cat",
+      "tags": [
+        "Space",
+        "Research"
+      ],
+      "leadZh": "明确当前组合中的通道、平台和停留空间面向猫。",
+      "rationaleZh": "通道和平台以猫的身体尺度为对象"
+    },
+    {
+      "id": "log-2026-09-27-2",
+      "href": "/archive#log-2026-09-27-2",
+      "projectKey": "project-ii",
+      "iconKey": "layers",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "建立整圈截面一致的双层平台环。",
+      "rationaleZh": "整圈一致的双层平台"
+    },
+    {
+      "id": "log-2026-09-27-3",
+      "href": "/archive#log-2026-09-27-3",
+      "projectKey": "project-iii",
+      "iconKey": "sleep",
+      "tags": [
+        "Sleep research",
+        "Research"
+      ],
+      "leadZh": "围绕未来睡眠环境重新打开项目三的选题范围。",
+      "rationaleZh": "未来睡眠环境的开题选题范围"
+    },
+    {
+      "id": "log-2026-09-27-4",
+      "href": "/archive#log-2026-09-27-4",
+      "projectKey": "this-site",
+      "iconKey": "layout",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "在主页加入与 Lab 页层级一致的实验目录。",
+      "rationaleZh": "主页与实验室一致的目录层级"
+    },
+    {
+      "id": "log-2026-09-21-1",
+      "href": "/archive#log-2026-09-21-1",
+      "projectKey": "project-ii",
+      "iconKey": "fabric",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "修正接缝织物，让平台相连而腔口保持敞开。",
+      "rationaleZh": "接缝织物连接平台而保留腔口"
+    },
+    {
+      "id": "log-2026-09-20-1",
+      "href": "/archive#log-2026-09-20-1",
+      "projectKey": "project-ii",
+      "iconKey": "cluster",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "通过相邻平台的高度配合定义单元组合，而不是只换整台形态。",
+      "rationaleZh": "相邻平台的高差和组合"
+    },
+    {
+      "id": "log-2026-09-17-1",
+      "href": "/archive#log-2026-09-17-1",
+      "projectKey": "project-ii",
+      "iconKey": "experiment",
+      "tags": [
+        "Space",
+        "Study"
+      ],
+      "leadZh": "提出用橡胶片实体实验检验预处理能否编码形态。",
+      "rationaleZh": "橡胶预处理编码形态的实体实验提案"
+    },
+    {
+      "id": "log-2026-09-13-1",
+      "href": "/archive#log-2026-09-13-1",
+      "projectKey": "this-site",
+      "iconKey": "layout",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "调整 Lab 编号，使每台的项目归属更清楚。",
+      "rationaleZh": "实验编号和项目归属导航"
+    },
+    {
+      "id": "log-2026-09-13-2",
+      "href": "/archive#log-2026-09-13-2",
+      "projectKey": "this-site",
+      "iconKey": "writing",
+      "tags": [
+        "Site",
+        "Writing"
+      ],
+      "leadZh": "按作者的十段论证重排轮回机器案例页。",
+      "rationaleZh": "按十段论证重排案例叙事"
+    },
+    {
+      "id": "log-2026-09-10-1",
+      "href": "/archive#log-2026-09-10-1",
+      "projectKey": "project-i",
+      "iconKey": "lifecycle",
+      "tags": [
+        "Machine",
+        "Writing"
+      ],
+      "leadZh": "明确失去和死亡是实验方法，不是项目的全部主题。",
+      "rationaleZh": "死亡与轮回作为研究方法的角色"
+    },
+    {
+      "id": "log-2026-09-09-1",
+      "href": "/archive#log-2026-09-09-1",
+      "projectKey": "project-i",
+      "iconKey": "experiment",
+      "tags": [
+        "Machine",
+        "Study"
+      ],
+      "leadZh": "把实验重点重新放在不同轮回带来的感受差异上。",
+      "rationaleZh": "四种性格和轮回感受的实验计划"
+    },
+    {
+      "id": "log-2026-09-05-1",
+      "href": "/archive#log-2026-09-05-1",
+      "projectKey": "project-ii",
+      "iconKey": "agents",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "给平面台架上的人加了朝向、身体和会转的视线，结构现在长在人面前、不会长到人头上。",
+      "rationaleZh": "人的朝向、身体让位和视线"
+    },
+    {
+      "id": "log-2026-09-04-1",
+      "href": "/archive#log-2026-09-04-1",
+      "projectKey": "project-ii",
+      "iconKey": "agents",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "开了第一台带行为层的台架：一个人在房间平面里走动，看哪一群单元被激活。",
+      "rationaleZh": "单人行走痕迹激活邻近单元"
+    },
+    {
+      "id": "log-2026-09-04-2",
+      "href": "/archive#log-2026-09-04-2",
+      "projectKey": "project-ii",
+      "iconKey": "agents",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "把平面台架做成可以现场摆弄的：点一下放个人、按住拖着走、几个人同时在场，单元当场成形。",
+      "rationaleZh": "多人摆放和拖动的行为层"
+    },
+    {
+      "id": "log-2026-09-03-1",
+      "href": "/archive#log-2026-09-03-1",
+      "projectKey": "project-ii",
+      "iconKey": "cluster",
+      "tags": [
+        "Space",
+        "Concept"
+      ],
+      "leadZh": "给环形平台命名为「单元」，开了一台新台架研究二、三、四、九个单元之间的距离与高度关系。",
+      "rationaleZh": "二、三、四、九单元的间距与高差"
+    },
+    {
+      "id": "log-2026-09-03-2",
+      "href": "/archive#log-2026-09-03-2",
+      "projectKey": "project-ii",
+      "iconKey": "cluster",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "把单元关系台架按五条拍板改到位，其中新加了错相收缩与相切处的织物网两项。",
+      "rationaleZh": "相邻单元错相收缩及相切关系"
+    },
+    {
+      "id": "log-2026-09-02-1",
+      "href": "/archive#log-2026-09-02-1",
+      "projectKey": "project-ii",
+      "iconKey": "fabric",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "重做方环编排，让形态沿周边只变化一轮。",
+      "rationaleZh": "方环周边形态编排"
+    },
+    {
+      "id": "log-2026-08-30-1",
+      "href": "/archive#log-2026-08-30-1",
+      "projectKey": "project-ii",
+      "iconKey": "fabric",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "把捏分系列编成环，并修正各条带的高度对齐。",
+      "rationaleZh": "成形条带闭合成环及高度对齐"
+    },
+    {
+      "id": "log-2026-08-29-1",
+      "href": "/archive#log-2026-08-29-1",
+      "projectKey": "project-ii",
+      "iconKey": "layers",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "完成从整块方箱到两层平台的成形系列。",
+      "rationaleZh": "实心方箱分成两层平台"
+    },
+    {
+      "id": "log-2026-08-27-1",
+      "href": "/archive#log-2026-08-27-1",
+      "projectKey": "project-ii",
+      "iconKey": "layers",
+      "tags": [
+        "Space",
+        "Concept"
+      ],
+      "leadZh": "把下一种形态明确为从实心方箱分出两层平台。",
+      "rationaleZh": "双层平台的目标形态定义"
+    },
+    {
+      "id": "log-2026-08-26-1",
+      "href": "/archive#log-2026-08-26-1",
+      "projectKey": "project-ii",
+      "iconKey": "fabric",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "在同一条带上组合两个成形结构。",
+      "rationaleZh": "一条带上组合两套成形结构"
+    },
+    {
+      "id": "log-2026-08-25-1",
+      "href": "/archive#log-2026-08-25-1",
+      "projectKey": "project-ii",
+      "iconKey": "cluster",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "按房间尺度重排单元阵列，让人位于单元之外。",
+      "rationaleZh": "房间尺度中的单元阵列与人的位置"
+    },
+    {
+      "id": "log-2026-08-25-2",
+      "href": "/archive#log-2026-08-25-2",
+      "projectKey": "other-work",
+      "iconKey": "agents",
+      "tags": [
+        "Sleep",
+        "Personas"
+      ],
+      "leadZh": "将酒店案例关联到已有画像，并尝试展开差旅旅程。",
+      "rationaleZh": "已有用户画像与差旅旅程的关联"
+    },
+    {
+      "id": "log-2026-08-24-1",
+      "href": "/archive#log-2026-08-24-1",
+      "projectKey": "project-i",
+      "iconKey": "measurement",
+      "tags": [
+        "Machine",
+        "Mechanical"
+      ],
+      "leadZh": "在设计齿条传动前，记录五环各自的行程。",
+      "rationaleZh": "五环各自的运动行程"
+    },
+    {
+      "id": "log-2026-08-23-1",
+      "href": "/archive#log-2026-08-23-1",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Machine",
+        "Mechanical"
+      ],
+      "leadZh": "中央单杆因摩擦卡滞难以实现，转回齿条驱动。",
+      "rationaleZh": "中央单杆卡滞后转回齿条传动"
+    },
+    {
+      "id": "log-2026-08-23-2",
+      "href": "/archive#log-2026-08-23-2",
+      "projectKey": "project-ii",
+      "iconKey": "fabric",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "把成形条带编排成圆筒环。",
+      "rationaleZh": "成形条带沿圆筒周向排列"
+    },
+    {
+      "id": "log-2026-08-22-1",
+      "href": "/archive#log-2026-08-22-1",
+      "projectKey": "project-ii",
+      "iconKey": "fabric",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "通过调整材料分布对齐形态系列，而不是平移画面。",
+      "rationaleZh": "材料分布决定形态对齐"
+    },
+    {
+      "id": "log-2026-08-21-1",
+      "href": "/archive#log-2026-08-21-1",
+      "projectKey": "other-work",
+      "iconKey": "research",
+      "tags": [
+        "Sleep",
+        "Research"
+      ],
+      "leadZh": "在无法确认具体服务时，删除酒店 AI 对比中的案例。",
+      "rationaleZh": "删除无法核实的酒店服务案例"
+    },
+    {
+      "id": "log-2026-08-20-1",
+      "href": "/archive#log-2026-08-20-1",
+      "projectKey": "project-ii",
+      "iconKey": "fabric",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "首版形态过渡发生突跳，因而重做渐变系列。",
+      "rationaleZh": "解决形态渐变中的突跳"
+    },
+    {
+      "id": "log-2026-08-20-2",
+      "href": "/archive#log-2026-08-20-2",
+      "projectKey": "other-work",
+      "iconKey": "research",
+      "tags": [
+        "Sleep",
+        "Research"
+      ],
+      "leadZh": "把酒店调研转向已经商用的睡眠 AI 能力。",
+      "rationaleZh": "酒店已商用睡眠AI能力调研"
+    },
+    {
+      "id": "log-2026-08-19-1",
+      "href": "/archive#log-2026-08-19-1",
+      "projectKey": "project-ii",
+      "iconKey": "fabric",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "修正表皮方形轮廓，并把截面扩成立体条带。",
+      "rationaleZh": "表皮方形轮廓与截面立体化"
+    },
+    {
+      "id": "log-2026-08-18-1",
+      "href": "/archive#log-2026-08-18-1",
+      "projectKey": "project-ii",
+      "iconKey": "code",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "把表皮仿真接入网站，并与 Python 原版对照。",
+      "rationaleZh": "移植表皮仿真并对照Python原版"
+    },
+    {
+      "id": "log-2026-08-18-2",
+      "href": "/archive#log-2026-08-18-2",
+      "projectKey": "other-work",
+      "iconKey": "interview",
+      "tags": [
+        "Sleep",
+        "Interviews"
+      ],
+      "leadZh": "把差旅访谈提纲收敛到围绕睡眠的开放问题。",
+      "rationaleZh": "差旅睡眠的开放访谈问题"
+    },
+    {
+      "id": "log-2026-08-18-3",
+      "href": "/archive#log-2026-08-18-3",
+      "projectKey": "this-site",
+      "iconKey": "layout",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "随着表皮台架进站，按项目整理 Lab 目录。",
+      "rationaleZh": "按项目整理实验台目录"
+    },
+    {
+      "id": "log-2026-08-17-1",
+      "href": "/archive#log-2026-08-17-1",
+      "projectKey": "project-ii",
+      "iconKey": "fabric",
+      "tags": [
+        "Space",
+        "Concept"
+      ],
+      "leadZh": "从悬吊网转向通过预处理、随芯收缩成形的表皮。",
+      "rationaleZh": "预处理表皮随芯收缩成形"
+    },
+    {
+      "id": "log-2026-08-17-2",
+      "href": "/archive#log-2026-08-17-2",
+      "projectKey": "other-work",
+      "iconKey": "research",
+      "tags": [
+        "Sleep",
+        "Research"
+      ],
+      "leadZh": "补充酒店竞品细节，并剔除关联较弱的案例。",
+      "rationaleZh": "酒店竞品核查和弱关联案例筛除"
+    },
+    {
+      "id": "log-2026-08-15-1",
+      "href": "/archive#log-2026-08-15-1",
+      "projectKey": "project-iii",
+      "iconKey": "sleep",
+      "tags": [
+        "Sleep research",
+        "Concept"
+      ],
+      "leadZh": "把起床时刻列为候选，并讨论项目要做到什么程度。",
+      "rationaleZh": "起床时刻的候选课题"
+    },
+    {
+      "id": "log-2026-08-14-1",
+      "href": "/archive#log-2026-08-14-1",
+      "projectKey": "project-i",
+      "iconKey": "model",
+      "tags": [
+        "Machine",
+        "Docs"
+      ],
+      "leadZh": "存档新版五环 CAD 图纸，保留原台架。",
+      "rationaleZh": "新版五环CAD图纸归档"
+    },
+    {
+      "id": "log-2026-08-14-2",
+      "href": "/archive#log-2026-08-14-2",
+      "projectKey": "project-iii",
+      "iconKey": "strategy",
+      "tags": [
+        "Sleep research",
+        "Strategy"
+      ],
+      "leadZh": "开始讨论如何从睡眠研究中发展独立的项目三。",
+      "rationaleZh": "从实习研究发展独立主项目"
+    },
+    {
+      "id": "log-2026-08-14-3",
+      "href": "/archive#log-2026-08-14-3",
+      "projectKey": "this-site",
+      "iconKey": "writing",
+      "tags": [
+        "Site",
+        "Writing"
+      ],
+      "leadZh": "把作者提供的项目二正文填入案例页结构。",
+      "rationaleZh": "把作者项目二正文放入案例页"
+    },
+    {
+      "id": "log-2026-08-13-1",
+      "href": "/archive#log-2026-08-13-1",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Machine",
+        "Mechanical"
+      ],
+      "leadZh": "建立前后双传动板模型，并比较加强办法。",
+      "rationaleZh": "双传动板模型及加强办法"
+    },
+    {
+      "id": "log-2026-08-13-2",
+      "href": "/archive#log-2026-08-13-2",
+      "projectKey": "other-work",
+      "iconKey": "sleep",
+      "tags": [
+        "Sleep",
+        "Research"
+      ],
+      "leadZh": "开始酒店住宿与差旅睡眠的场景调研。",
+      "rationaleZh": "酒店与差旅睡眠场景"
+    },
+    {
+      "id": "log-2026-08-10-1",
+      "href": "/archive#log-2026-08-10-1",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Machine",
+        "Mechanical"
+      ],
+      "leadZh": "检查推杆偏离导向线造成的变形和拉动困难。",
+      "rationaleZh": "推杆偏离导向线导致的卡滞变形"
+    },
+    {
+      "id": "log-2026-08-10-2",
+      "href": "/archive#log-2026-08-10-2",
+      "projectKey": "project-ii",
+      "iconKey": "fabric",
+      "tags": [
+        "Space",
+        "Concept"
+      ],
+      "leadZh": "讨论让悬吊结构在不同高度参与空间交互。",
+      "rationaleZh": "不同悬吊高度参与空间交互"
+    },
+    {
+      "id": "log-2026-08-10-3",
+      "href": "/archive#log-2026-08-10-3",
+      "projectKey": "project-ii",
+      "iconKey": "agents",
+      "tags": [
+        "Space",
+        "Research"
+      ],
+      "leadZh": "把已有的人猫行为整理成九格交互矩阵。",
+      "rationaleZh": "人猫行为与冲突规则矩阵"
+    },
+    {
+      "id": "log-2026-08-09-1",
+      "href": "/archive#log-2026-08-09-1",
+      "projectKey": "project-i",
+      "iconKey": "measurement",
+      "tags": [
+        "Machine",
+        "Mechanical"
+      ],
+      "leadZh": "把电机和安装载荷补进加强轴的复核。",
+      "rationaleZh": "加强轴的电机及安装载荷复核"
+    },
+    {
+      "id": "log-2026-08-06-1",
+      "href": "/archive#log-2026-08-06-1",
+      "projectKey": "project-i",
+      "iconKey": "measurement",
+      "tags": [
+        "Machine",
+        "Mechanical"
+      ],
+      "leadZh": "调整底座模型，要求按真实总成做受力分析。",
+      "rationaleZh": "真实底座总成的受力分析"
+    },
+    {
+      "id": "log-2026-08-06-2",
+      "href": "/archive#log-2026-08-06-2",
+      "projectKey": "project-ii",
+      "iconKey": "strategy",
+      "tags": [
+        "Space",
+        "Writing"
+      ],
+      "leadZh": "把当前仿真的工作范围收敛到分钟尺度的交互。",
+      "rationaleZh": "把仿真范围限制到分钟级交互"
+    },
+    {
+      "id": "log-2026-08-04-1",
+      "href": "/archive#log-2026-08-04-1",
+      "projectKey": "project-i",
+      "iconKey": "writing",
+      "tags": [
+        "Machine",
+        "Writing"
+      ],
+      "leadZh": "因难以用几句话解释项目，重新梳理叙事重心。",
+      "rationaleZh": "重新梳理项目叙事重心"
+    },
+    {
+      "id": "log-2026-08-04-2",
+      "href": "/archive#log-2026-08-04-2",
+      "projectKey": "project-ii",
+      "iconKey": "fabric",
+      "tags": [
+        "Space",
+        "Research"
+      ],
+      "leadZh": "探索用天花悬挂的折叠介质承载行为研究。",
+      "rationaleZh": "以天花悬挂折叠介质承载行为"
+    },
+    {
+      "id": "log-2026-08-02-1",
+      "href": "/archive#log-2026-08-02-1",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Machine",
+        "Mechanical"
+      ],
+      "leadZh": "因机器重量不足以提供预紧，重新选择旋转底座。",
+      "rationaleZh": "旋转底座与预紧条件"
+    },
+    {
+      "id": "log-2026-07-31-1",
+      "href": "/archive#log-2026-07-31-1",
+      "projectKey": "project-i",
+      "iconKey": "measurement",
+      "tags": [
+        "Machine",
+        "Mechanical"
+      ],
+      "leadZh": "给底盘那两副方形桁架做了有限元计算：强度余量确实过大，而真正决定能减多薄的是展台怎么托。",
+      "rationaleZh": "底盘桁架有限元和支承条件"
+    },
+    {
+      "id": "log-2026-07-31-2",
+      "href": "/archive#log-2026-07-31-2",
+      "projectKey": "project-i",
+      "iconKey": "model",
+      "tags": [
+        "Machine",
+        "Docs"
+      ],
+      "leadZh": "把改进后的底架模型保存为仓库参考。",
+      "rationaleZh": "底架三维模型作为参考存档"
+    },
+    {
+      "id": "log-2026-07-31-3",
+      "href": "/archive#log-2026-07-31-3",
+      "projectKey": "this-site",
+      "iconKey": "writing",
+      "tags": [
+        "Site",
+        "Writing"
+      ],
+      "leadZh": "把工作日志改成一句概括和简短分条正文。",
+      "rationaleZh": "一句概括与分条正文的写作结构"
+    },
+    {
+      "id": "log-2026-07-30-1",
+      "href": "/archive#log-2026-07-30-1",
+      "projectKey": "this-site",
+      "iconKey": "archive",
+      "tags": [
+        "Site",
+        "Record"
+      ],
+      "leadZh": "明确历史日志配图必须来自当时的原件。",
+      "rationaleZh": "历史日志配图必须对应当时原件"
+    },
+    {
+      "id": "log-2026-07-29-1",
+      "href": "/archive#log-2026-07-29-1",
+      "projectKey": "project-ii",
+      "iconKey": "cat",
+      "tags": [
+        "Space",
+        "Research"
+      ],
+      "leadZh": "把幼猫单独建成一类智能体，结果推翻了一条已经写好的成猫规则。",
+      "rationaleZh": "幼猫能力导致的不同空间行为"
+    },
+    {
+      "id": "log-2026-07-29-2",
+      "href": "/archive#log-2026-07-29-2",
+      "projectKey": "project-ii",
+      "iconKey": "cat",
+      "tags": [
+        "Space",
+        "Research"
+      ],
+      "leadZh": "验证了「品种决定猫狗个体差异」这个假设，然后把它否掉了。",
+      "rationaleZh": "猫狗个体行为属性与品种假设核查"
+    },
+    {
+      "id": "log-2026-07-29-3",
+      "href": "/archive#log-2026-07-29-3",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Machine",
+        "Mechanical"
+      ],
+      "leadZh": "排查环在最大展开位置卡住的问题。",
+      "rationaleZh": "拱环最大展开位置的卡死排查"
+    },
+    {
+      "id": "log-2026-07-29-4",
+      "href": "/archive#log-2026-07-29-4",
+      "projectKey": "this-site",
+      "iconKey": "layout",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "给每条日志标注项目，并将图表移到独立栏。",
+      "rationaleZh": "日志项目标记与独立图表栏"
+    },
+    {
+      "id": "log-2026-07-29-5",
+      "href": "/archive#log-2026-07-29-5",
+      "projectKey": "this-site",
+      "iconKey": "interaction",
+      "tags": [
+        "Site",
+        "Simulation"
+      ],
+      "leadZh": "进入案例页时保留动态机构的工作状态。",
+      "rationaleZh": "页面进入时延续机构动态状态"
+    },
+    {
+      "id": "log-2026-07-29-6",
+      "href": "/archive#log-2026-07-29-6",
+      "projectKey": "this-site",
+      "iconKey": "layout",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "让主页的每个项目都进入各自的详情页。",
+      "rationaleZh": "项目入口与详情页面路由"
+    },
+    {
+      "id": "log-2026-07-28-1",
+      "href": "/archive#log-2026-07-28-1",
+      "projectKey": "project-ii",
+      "iconKey": "research",
+      "tags": [
+        "Space",
+        "Research"
+      ],
+      "leadZh": "把「人能靠一只猫多近它才走开」这个数值翻遍了文献，确认没有人测过。",
+      "rationaleZh": "家猫回避距离文献证据及推断边界"
+    },
+    {
+      "id": "log-2026-07-28-2",
+      "href": "/archive#log-2026-07-28-2",
+      "projectKey": "this-site",
+      "iconKey": "writing",
+      "tags": [
+        "Site",
+        "Writing"
+      ],
+      "leadZh": "填入项目一正文，并对照存档设计稿修正版式。",
+      "rationaleZh": "项目正文入池并对稿"
+    },
+    {
+      "id": "log-2026-07-28-3",
+      "href": "/archive#log-2026-07-28-3",
+      "projectKey": "this-site",
+      "iconKey": "writing",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "给项目案例页加入中英文切换。",
+      "rationaleZh": "案例中英文内容切换"
+    },
+    {
+      "id": "log-2026-07-28-4",
+      "href": "/archive#log-2026-07-28-4",
+      "projectKey": "this-site",
+      "iconKey": "archive",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "加入可以新增及修改工作日志的自助编辑后台。",
+      "rationaleZh": "日志的自助新增和编辑后台"
+    },
+    {
+      "id": "log-2026-07-27-1",
+      "href": "/archive#log-2026-07-27-1",
+      "projectKey": "project-ii",
+      "iconKey": "agents",
+      "tags": [
+        "Space",
+        "Concept"
+      ],
+      "leadZh": "重写了人类智能体——此前把人写成了只会对拥挤做反应的粒子。",
+      "rationaleZh": "按关系距离重写人的智能体规则"
+    },
+    {
+      "id": "log-2026-07-27-2",
+      "href": "/archive#log-2026-07-27-2",
+      "projectKey": "project-ii",
+      "iconKey": "agents",
+      "tags": [
+        "Space",
+        "Concept"
+      ],
+      "leadZh": "把占用空间的代价拆成两种——起因是我写出了一个只有人需要付代价的版本。",
+      "rationaleZh": "通行代价与停留代价的对等建模"
+    },
+    {
+      "id": "log-2026-07-27-3",
+      "href": "/archive#log-2026-07-27-3",
+      "projectKey": "project-ii",
+      "iconKey": "strategy",
+      "tags": [
+        "Space",
+        "Strategy"
+      ],
+      "leadZh": "把模拟砍成单一的分钟级时钟，代价是丢掉了整条跨日的故事线。",
+      "rationaleZh": "保留分钟时钟并舍弃跨日叙事"
+    },
+    {
+      "id": "log-2026-07-27-4",
+      "href": "/archive#log-2026-07-27-4",
+      "projectKey": "this-site",
+      "iconKey": "code",
+      "tags": [
+        "Site",
+        "3D"
+      ],
+      "leadZh": "把已有动态台架接入网站和主页舞台。",
+      "rationaleZh": "复用动态台架接入网页"
+    },
+    {
+      "id": "log-2026-07-27-5",
+      "href": "/archive#log-2026-07-27-5",
+      "projectKey": "this-site",
+      "iconKey": "layout",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "让工作日志支持双语及项目、方面、月份筛选。",
+      "rationaleZh": "日志双语及多级筛选"
+    },
+    {
+      "id": "log-2026-07-26-1",
+      "href": "/archive#log-2026-07-26-1",
+      "projectKey": "this-site",
+      "iconKey": "layout",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "从新版设计稿移植视觉语言和页面转场。",
+      "rationaleZh": "移植设计稿的视觉语言"
+    },
+    {
+      "id": "log-2026-07-24-1",
+      "href": "/archive#log-2026-07-24-1",
+      "projectKey": "project-ii",
+      "iconKey": "agents",
+      "tags": [
+        "Space",
+        "Concept"
+      ],
+      "leadZh": "定下第五个方向——人宠共享空间——并定好三维与仿真怎么对接。",
+      "rationaleZh": "人宠共享空间及行为仿真对接"
+    },
+    {
+      "id": "log-2026-07-24-2",
+      "href": "/archive#log-2026-07-24-2",
+      "projectKey": "this-site",
+      "iconKey": "layout",
+      "tags": [
+        "Site",
+        "Simulation"
+      ],
+      "leadZh": "按确认的交互稿搭建三幕主页。",
+      "rationaleZh": "三幕主页的交互布局"
+    },
+    {
+      "id": "log-2026-07-21-1",
+      "href": "/archive#log-2026-07-21-1",
+      "projectKey": "this-site",
+      "iconKey": "layout",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "把早期 Modernist 版式接入主页、日志和案例页。",
+      "rationaleZh": "Modernist网格和页面版式"
+    },
+    {
+      "id": "log-2026-07-21-2",
+      "href": "/archive#log-2026-07-21-2",
+      "projectKey": "this-site",
+      "iconKey": "layout",
+      "tags": [
+        "Site",
+        "Docs"
+      ],
+      "leadZh": "在网站共用样式中确定绿紫配色。",
+      "rationaleZh": "共用绿紫配色系统"
+    },
+    {
+      "id": "log-2026-07-20-1",
+      "href": "/archive#log-2026-07-20-1",
+      "projectKey": "project-ii",
+      "iconKey": "code",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "搭好工作环境，跑通了三十行的模拟——这三十行已经是整个引擎的缩微版。",
+      "rationaleZh": "开发环境与最小仿真程序"
+    },
+    {
+      "id": "log-2026-07-18-1",
+      "href": "/archive#log-2026-07-18-1",
+      "projectKey": "project-i",
+      "iconKey": "measurement",
+      "tags": [
+        "Machine",
+        "Simulation"
+      ],
+      "leadZh": "用有限元把导轨算了一遍，发现手算靠不住。",
+      "rationaleZh": "导轨有限元与手算对比"
+    },
+    {
+      "id": "log-2026-07-17-1",
+      "href": "/archive#log-2026-07-17-1",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Lab",
+        "Shell"
+      ],
+      "leadZh": "把外壳的五个环全部搬进网页模拟，并修好了其中一个会坍塌的环。",
+      "rationaleZh": "五个剪式拱环及坍缩修正"
+    },
+    {
+      "id": "log-2026-07-17-2",
+      "href": "/archive#log-2026-07-17-2",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Lab",
+        "Arch"
+      ],
+      "leadZh": "同一个网页在两台电脑上跑出不同形状，查出来是模型少了限位。",
+      "rationaleZh": "拱环限位补齐以获得确定运动"
+    },
+    {
+      "id": "log-2026-07-17-3",
+      "href": "/archive#log-2026-07-17-3",
+      "projectKey": "project-ii",
+      "iconKey": "archive",
+      "tags": [
+        "Space",
+        "Docs"
+      ],
+      "leadZh": "搭好把项目记忆带进编程工具的那套文件——首版只有规矩没有内容，推倒重写。",
+      "rationaleZh": "承载项目记忆的交接文件"
+    },
+    {
+      "id": "log-2026-07-17-4",
+      "href": "/archive#log-2026-07-17-4",
+      "projectKey": "other-work",
+      "iconKey": "interview",
+      "tags": [
+        "Sleep",
+        "Interviews"
+      ],
+      "leadZh": "整理运动员访谈转写，并区分说话角色。",
+      "rationaleZh": "运动员访谈转写和说话角色"
+    },
+    {
+      "id": "log-2026-07-14-1",
+      "href": "/archive#log-2026-07-14-1",
+      "projectKey": "other-work",
+      "iconKey": "interview",
+      "tags": [
+        "Sleep",
+        "Interviews"
+      ],
+      "leadZh": "为体育部一位教师（前全国比赛游泳运动员）写出 v2 完整访谈提纲：33 题，60 分钟。",
+      "rationaleZh": "完整访谈提纲和时间预算"
+    },
+    {
+      "id": "log-2026-07-13-1",
+      "href": "/archive#log-2026-07-13-1",
+      "projectKey": "this-site",
+      "iconKey": "code",
+      "tags": [
+        "Site"
+      ],
+      "leadZh": "搭起网站框架，把连杆放上主页。",
+      "rationaleZh": "网页框架和连杆组件接入"
+    },
+    {
+      "id": "log-2026-07-13-2",
+      "href": "/archive#log-2026-07-13-2",
+      "projectKey": "project-ii",
+      "iconKey": "archive",
+      "tags": [
+        "Space",
+        "Record"
+      ],
+      "leadZh": "把目前的全部积累压成一份交接文档，并写下十条源自自己反复犯错的规矩。",
+      "rationaleZh": "资料交接及经验规则存档"
+    },
+    {
+      "id": "log-2026-07-12-1",
+      "href": "/archive#log-2026-07-12-1",
+      "projectKey": "project-ii",
+      "iconKey": "strategy",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "补上审计表漏掉的一维——建筑响应的快慢——并把一个被否掉的方案重建成正经候选。",
+      "rationaleZh": "建筑响应时间尺度和候选方案重排"
+    },
+    {
+      "id": "log-2026-07-10-1",
+      "href": "/archive#log-2026-07-10-1",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Lab",
+        "3D"
+      ],
+      "leadZh": "写了一套三维求解器，做出三根肌腱驱动的触手。",
+      "rationaleZh": "三肌腱驱动的立体触手"
+    },
+    {
+      "id": "log-2026-07-10-2",
+      "href": "/archive#log-2026-07-10-2",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Lab"
+      ],
+      "leadZh": "把真机上的一个环做成网页上能拖动的模型。",
+      "rationaleZh": "真实拱环的可拖动网页模型"
+    },
+    {
+      "id": "log-2026-07-10-3",
+      "href": "/archive#log-2026-07-10-3",
+      "projectKey": "project-i",
+      "iconKey": "code",
+      "tags": [
+        "Lab"
+      ],
+      "leadZh": "主页那个连杆做完了，之后只修 bug，不再加功能。",
+      "rationaleZh": "连杆组件里程碑关闭及维护边界"
+    },
+    {
+      "id": "log-2026-07-10-4",
+      "href": "/archive#log-2026-07-10-4",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Machine",
+        "Mechanical"
+      ],
+      "leadZh": "定下五个环共用一根主轴的传动方案。",
+      "rationaleZh": "一根主轴驱动五环"
+    },
+    {
+      "id": "log-2026-07-09-1",
+      "href": "/archive#log-2026-07-09-1",
+      "projectKey": "project-i",
+      "iconKey": "sourcing",
+      "tags": [
+        "Machine",
+        "Sourcing"
+      ],
+      "leadZh": "汇总了整机的采购清单。",
+      "rationaleZh": "整机零部件采购清单"
+    },
+    {
+      "id": "log-2026-07-09-2",
+      "href": "/archive#log-2026-07-09-2",
+      "projectKey": "project-ii",
+      "iconKey": "research",
+      "tags": [
+        "Space",
+        "Study"
+      ],
+      "leadZh": "用七项指标把所有候选场景审了一遍，并纠正了愿景——塌缩是反派，不是主题。",
+      "rationaleZh": "环境行为学观察规则与场景筛选"
+    },
+    {
+      "id": "log-2026-07-08-1",
+      "href": "/archive#log-2026-07-08-1",
+      "projectKey": "this-site",
+      "iconKey": "layout",
+      "tags": [
+        "Site"
+      ],
+      "leadZh": "查了版式资料，定下案例页的网格。",
+      "rationaleZh": "案例页网格与版式研究"
+    },
+    {
+      "id": "log-2026-07-07-1",
+      "href": "/archive#log-2026-07-07-1",
+      "projectKey": "project-i",
+      "iconKey": "code",
+      "tags": [
+        "Lab",
+        "Docs"
+      ],
+      "leadZh": "写了连杆求解器的技术规格文档。",
+      "rationaleZh": "求解器公式和API技术规格"
+    },
+    {
+      "id": "log-2026-07-07-2",
+      "href": "/archive#log-2026-07-07-2",
+      "projectKey": "project-i",
+      "iconKey": "experiment",
+      "tags": [
+        "Machine",
+        "Study"
+      ],
+      "leadZh": "通篇审了一遍实验方案，砍掉算不出结果的部分，并定死传感器清单。",
+      "rationaleZh": "实验指标、信号采集和传感输入方案"
+    },
+    {
+      "id": "log-2026-07-07-3",
+      "href": "/archive#log-2026-07-07-3",
+      "projectKey": "other-work",
+      "iconKey": "agents",
+      "tags": [
+        "Sleep",
+        "Personas"
+      ],
+      "leadZh": "换掉一个不成立的骑手画像，解散独居青年这个独立人群，产出五张画像卡和一套筛选题组。",
+      "rationaleZh": "五张人群画像与筛选题组"
+    },
+    {
+      "id": "log-2026-07-06-1",
+      "href": "/archive#log-2026-07-06-1",
+      "projectKey": "project-ii",
+      "iconKey": "agents",
+      "tags": [
+        "Space",
+        "Simulation"
+      ],
+      "leadZh": "把仿真锚定在一个很小的回避决定上，并排出代码前三版的路线。",
+      "rationaleZh": "回避决定累积成集体空间模式"
+    },
+    {
+      "id": "log-2026-07-05-1",
+      "href": "/archive#log-2026-07-05-1",
+      "projectKey": "project-i",
+      "iconKey": "photo",
+      "tags": [
+        "Machine",
+        "Record"
+      ],
+      "leadZh": "在家搭了个拍零件的小影棚。",
+      "rationaleZh": "家中搭建零件摄影环境"
+    },
+    {
+      "id": "log-2026-07-05-2",
+      "href": "/archive#log-2026-07-05-2",
+      "projectKey": "this-site",
+      "iconKey": "layout",
+      "tags": [
+        "Site",
+        "Concept"
+      ],
+      "leadZh": "在确定视觉方向之前，梳理建站交接需求并寻找设计参考。",
+      "rationaleZh": "视觉方向和网站设计参考"
+    },
+    {
+      "id": "log-2026-06-30-1",
+      "href": "/archive#log-2026-06-30-1",
+      "projectKey": "other-work",
+      "iconKey": "agents",
+      "tags": [
+        "Sleep",
+        "Personas"
+      ],
+      "leadZh": "完成倒班人群与独居青年两组的证据审计和画像手稿，期间推翻了两个一直沿用的画像范式。",
+      "rationaleZh": "倒班和独居人群画像证据审计"
+    },
+    {
+      "id": "log-2026-06-22-1",
+      "href": "/archive#log-2026-06-22-1",
+      "projectKey": "project-ii",
+      "iconKey": "strategy",
+      "tags": [
+        "Space",
+        "Strategy"
+      ],
+      "leadZh": "决定让项目从我真正待过的空间重新出发——原来的主题已经不像我自己的了。",
+      "rationaleZh": "从亲历空间重新选择问题"
+    },
+    {
+      "id": "log-2026-06-21-1",
+      "href": "/archive#log-2026-06-21-1",
+      "projectKey": "project-i",
+      "iconKey": "electronics",
+      "tags": [
+        "Machine",
+        "Electronics"
+      ],
+      "leadZh": "一次定了三件小事：舵机接口、螺丝规格、触摸电极怎么走线。",
+      "rationaleZh": "舵机接口和触摸电极走线"
+    },
+    {
+      "id": "log-2026-06-20-1",
+      "href": "/archive#log-2026-06-20-1",
+      "projectKey": "project-ii",
+      "iconKey": "writing",
+      "tags": [
+        "Space",
+        "Record"
+      ],
+      "leadZh": "把整个项目写成一份文档，并把它的特征翻译成选校的判断标准。",
+      "rationaleZh": "项目长文和申请判断标准"
+    },
+    {
+      "id": "log-2026-06-15-1",
+      "href": "/archive#log-2026-06-15-1",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Machine",
+        "Simulation"
+      ],
+      "leadZh": "外壳的驱动从两侧双杆改成中间一根杆，并重算了五个环的尺寸。",
+      "rationaleZh": "外壳驱动布局和五环几何重算"
+    },
+    {
+      "id": "log-2026-06-15-2",
+      "href": "/archive#log-2026-06-15-2",
+      "projectKey": "project-ii",
+      "iconKey": "agents",
+      "tags": [
+        "Space",
+        "Concept"
+      ],
+      "leadZh": "找到了项目真正要讲的社会机制：每个人合理的退出决定，累加成没人想要的局面。",
+      "rationaleZh": "个体退出决定累积为集体结果"
+    },
+    {
+      "id": "log-2026-06-15-3",
+      "href": "/archive#log-2026-06-15-3",
+      "projectKey": "other-work",
+      "iconKey": "survey",
+      "tags": [
+        "Sleep",
+        "Survey"
+      ],
+      "leadZh": "给全组写了一份问卷设计规范，并修订队友起草的功能需求一节。",
+      "rationaleZh": "问卷设计规范与功能需求题"
+    },
+    {
+      "id": "log-2026-06-12-1",
+      "href": "/archive#log-2026-06-12-1",
+      "projectKey": "project-i",
+      "iconKey": "strategy",
+      "tags": [
+        "Machine",
+        "Strategy"
+      ],
+      "leadZh": "评估了项目现状，把方向定在写一篇论文上。",
+      "rationaleZh": "论文目标与方法投入优先级"
+    },
+    {
+      "id": "log-2026-06-12-2",
+      "href": "/archive#log-2026-06-12-2",
+      "projectKey": "other-work",
+      "iconKey": "writing",
+      "tags": [
+        "Sleep",
+        "Writing"
+      ],
+      "leadZh": "三人合写的第三章合并之后，修掉跨节引用断裂和分类口径不一，并给自己那一节配了演化关系图。",
+      "rationaleZh": "多人合稿的章节引用和分类修订"
+    },
+    {
+      "id": "log-2026-06-08-1",
+      "href": "/archive#log-2026-06-08-1",
+      "projectKey": "project-i",
+      "iconKey": "electronics",
+      "tags": [
+        "Machine",
+        "Sourcing"
+      ],
+      "leadZh": "定下三台步进电机的驱动方案。",
+      "rationaleZh": "步进电机驱动方案"
+    },
+    {
+      "id": "log-2026-06-07-1",
+      "href": "/archive#log-2026-06-07-1",
+      "projectKey": "project-ii",
+      "iconKey": "agents",
+      "tags": [
+        "Space",
+        "Concept"
+      ],
+      "leadZh": "第二个项目立项，定下它的架构：两层智能体，一层是人，一层是建筑本身。",
+      "rationaleZh": "人和建筑组成双层智能体"
+    },
+    {
+      "id": "log-2026-06-06-1",
+      "href": "/archive#log-2026-06-06-1",
+      "projectKey": "this-site",
+      "iconKey": "strategy",
+      "tags": [
+        "Site",
+        "Concept"
+      ],
+      "leadZh": "开始规划兼顾作品展示与代码学习的个人网站。",
+      "rationaleZh": "作品展示与代码学习的建站目标"
+    },
+    {
+      "id": "log-2026-06-05-1",
+      "href": "/archive#log-2026-06-05-1",
+      "projectKey": "other-work",
+      "iconKey": "writing",
+      "tags": [
+        "Sleep",
+        "Writing"
+      ],
+      "leadZh": "用五天写完报告里「未来典型睡眠人群假设」一节的完整初稿，框架是「基础人群全集 → 四类演化」。",
+      "rationaleZh": "未来睡眠人群章节初稿和证据修订"
+    },
+    {
+      "id": "log-2026-06-04-1",
+      "href": "/archive#log-2026-06-04-1",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Machine",
+        "Mechanical"
+      ],
+      "leadZh": "打印出来的关节卡死，借此摸清了活动件该留多少间隙。",
+      "rationaleZh": "打印活动关节的配合间隙"
+    },
+    {
+      "id": "log-2026-06-04-2",
+      "href": "/archive#log-2026-06-04-2",
+      "projectKey": "other-work",
+      "iconKey": "sleep",
+      "tags": [
+        "Sleep",
+        "Concept"
+      ],
+      "leadZh": "把访谈练习里的智能床概念深化成「舒适度数据跟着人走」的系统方案，并做出中文展板。",
+      "rationaleZh": "舒适度数据跨场景跟随人的睡眠系统"
+    },
+    {
+      "id": "log-2026-06-03-1",
+      "href": "/archive#log-2026-06-03-1",
+      "projectKey": "project-i",
+      "iconKey": "sourcing",
+      "tags": [
+        "Machine",
+        "Mechanical"
+      ],
+      "leadZh": "定了剪刀式连杆转轴用什么零件。",
+      "rationaleZh": "剪式连杆转轴零件选型"
+    },
+    {
+      "id": "log-2026-06-03-2",
+      "href": "/archive#log-2026-06-03-2",
+      "projectKey": "project-ii",
+      "iconKey": "strategy",
+      "tags": [
+        "Space",
+        "Strategy"
+      ],
+      "leadZh": "裁定机器学习在这个项目里能用在哪、不能用在哪。",
+      "rationaleZh": "限定机器学习的适用层级和开发顺序"
+    },
+    {
+      "id": "log-2026-06-01-1",
+      "href": "/archive#log-2026-06-01-1",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Machine",
+        "Concept"
+      ],
+      "leadZh": "三条触手改成一条能抓的主臂加两条软触须。",
+      "rationaleZh": "主臂和软触须的结构配置"
+    },
+    {
+      "id": "log-2026-06-01-2",
+      "href": "/archive#log-2026-06-01-2",
+      "projectKey": "project-ii",
+      "iconKey": "agents",
+      "tags": [
+        "Space",
+        "Concept"
+      ],
+      "leadZh": "开始探索空间形态如何与身体行为相互适应。",
+      "rationaleZh": "空间形态和身体行为相互适应"
+    },
+    {
+      "id": "log-2026-05-29-1",
+      "href": "/archive#log-2026-05-29-1",
+      "projectKey": "other-work",
+      "iconKey": "analytics",
+      "tags": [
+        "Sleep",
+        "Study"
+      ],
+      "leadZh": "分析放松、助眠和唤醒三个场景下的音乐与振动数据。",
+      "rationaleZh": "音乐和振动重复评分的数据分析"
+    },
+    {
+      "id": "log-2026-05-26-1",
+      "href": "/archive#log-2026-05-26-1",
+      "projectKey": "other-work",
+      "iconKey": "research",
+      "tags": [
+        "Sleep",
+        "Research"
+      ],
+      "leadZh": "把约 40 条文献攒成证据库，做成 14 页组会汇报，关键引文逐条核对。",
+      "rationaleZh": "文献证据库和引文逐条核验"
+    },
+    {
+      "id": "log-2026-05-22-1",
+      "href": "/archive#log-2026-05-22-1",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Machine",
+        "Mechanical"
+      ],
+      "leadZh": "把树脂件的间隙调整限定在配合面。",
+      "rationaleZh": "树脂件配合面的间隙修正"
+    },
+    {
+      "id": "log-2026-05-19-1",
+      "href": "/archive#log-2026-05-19-1",
+      "projectKey": "other-work",
+      "iconKey": "research",
+      "tags": [
+        "Sleep",
+        "Research"
+      ],
+      "leadZh": "完成智能床项目首轮资料检索与竞品分析，定下四个市场空白作为设计切入点。",
+      "rationaleZh": "智能床资料检索与竞品分析"
+    },
+    {
+      "id": "log-2026-05-12-1",
+      "href": "/archive#log-2026-05-12-1",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Machine",
+        "Mechanical"
+      ],
+      "leadZh": "研究怎样把微型轴承固定在打印关节里。",
+      "rationaleZh": "打印关节中的微型轴承固定"
+    },
+    {
+      "id": "log-2026-05-08-1",
+      "href": "/archive#log-2026-05-08-1",
+      "projectKey": "project-i",
+      "iconKey": "sourcing",
+      "tags": [
+        "Machine",
+        "Mechanical"
+      ],
+      "leadZh": "定下手指的销钉和肌腱用什么。",
+      "rationaleZh": "手指销钉和肌腱材料选型"
+    },
+    {
+      "id": "log-2026-04-27-1",
+      "href": "/archive#log-2026-04-27-1",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Machine",
+        "Mechanical"
+      ],
+      "leadZh": "比较了五种能张开收拢的结构，选定其中一种。",
+      "rationaleZh": "开合结构的方案比较和选择"
+    },
+    {
+      "id": "log-2026-04-26-1",
+      "href": "/archive#log-2026-04-26-1",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Machine",
+        "Simulation"
+      ],
+      "leadZh": "跑通了欠驱动手指的模拟——一根肌腱带动多个关节。",
+      "rationaleZh": "单肌腱联动多关节手指"
+    },
+    {
+      "id": "log-2026-04-24-1",
+      "href": "/archive#log-2026-04-24-1",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Machine",
+        "Mechanical"
+      ],
+      "leadZh": "根据小尺寸模型检查肌腱的走线空间。",
+      "rationaleZh": "小尺寸模型的肌腱布线路径"
+    },
+    {
+      "id": "log-2026-04-13-1",
+      "href": "/archive#log-2026-04-13-1",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Machine",
+        "Mechanical"
+      ],
+      "leadZh": "探索用三条肌腱控制附肢向不同方向弯曲。",
+      "rationaleZh": "三条肌腱的方向控制"
+    },
+    {
+      "id": "log-2026-04-12-1",
+      "href": "/archive#log-2026-04-12-1",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Machine",
+        "Mechanical"
+      ],
+      "leadZh": "比较半环伸缩连杆的驱动方式。",
+      "rationaleZh": "半环伸缩连杆驱动方式"
+    },
+    {
+      "id": "log-2026-04-06-1",
+      "href": "/archive#log-2026-04-06-1",
+      "projectKey": "project-i",
+      "iconKey": "mechanism",
+      "tags": [
+        "Machine",
+        "Simulation"
+      ],
+      "leadZh": "修正约束后，让膨胀外壳的仿真基本运行起来。",
+      "rationaleZh": "膨胀外壳约束修正"
+    },
+    {
+      "id": "log-2026-04-04-1",
+      "href": "/archive#log-2026-04-04-1",
+      "projectKey": "project-i",
+      "iconKey": "code",
+      "tags": [
+        "Machine",
+        "Simulation"
+      ],
+      "leadZh": "开始学 Grasshopper 里的物理模拟。",
+      "rationaleZh": "Grasshopper物理模拟的学习实现"
+    },
+    {
+      "id": "log-2026-04-03-1",
+      "href": "/archive#log-2026-04-03-1",
+      "projectKey": "project-i",
+      "iconKey": "experiment",
+      "tags": [
+        "Machine",
+        "Study"
+      ],
+      "leadZh": "定下机器的四个部件，并写出第一版实验方案。",
+      "rationaleZh": "机器部件定义和首版被试实验方案"
+    },
+    {
+      "id": "log-2026-03-22-1",
+      "href": "/archive#log-2026-03-22-1",
+      "projectKey": "project-i",
+      "iconKey": "interaction",
+      "tags": [
+        "Machine",
+        "Concept"
+      ],
+      "leadZh": "把日常共处和直接触摸分成两种交互情境。",
+      "rationaleZh": "共处和直接触摸两种反馈情境"
+    },
+    {
+      "id": "log-2026-03-20-1",
+      "href": "/archive#log-2026-03-20-1",
+      "projectKey": "project-i",
+      "iconKey": "lifecycle",
+      "tags": [
+        "Machine",
+        "Concept"
+      ],
+      "leadZh": "把研究问题定下来。",
+      "rationaleZh": "依恋、人格覆写与衰老死亡机制"
+    },
+    {
+      "id": "log-2026-03-07-1",
+      "href": "/archive#log-2026-03-07-1",
+      "projectKey": "project-i",
+      "iconKey": "strategy",
+      "tags": [
+        "Machine",
+        "Concept"
+      ],
+      "leadZh": "项目立项，一次提了三个方向。",
+      "rationaleZh": "项目初始方向比较和表达框架"
+    }
+  ]
+}

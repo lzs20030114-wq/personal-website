@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getAllWork } from './content';
+import { getAllWork, getRoutableWork } from './content';
 import { LAB_BENCHES } from './lab-index';
 import { getLogEntries } from './log';
 import { projectOf, withAnchors } from './log-facets';
@@ -80,21 +80,104 @@ describe('主页数据派生（home-model）', () => {
     expect(other?.ticks.some((tick) => expected.includes(tick.href))).toBe(false);
   });
 
-  it('首屏方块场：卡片图都在 public 里、链接都指向真实去处、计数现算', () => {
+  it('首屏方块场完整覆盖三个主项目、全部台架、全部日志和两个补充入口，不收非公开草稿', () => {
     const entries = getLogEntries();
-    const f = buildHomeField(cards(), entries);
-    expect(f.pool.length).toBe(8);
-    const slugs = getAllWork().map((w) => w.slug);
-    const anchors = new Set(withAnchors(entries).map((a) => a.anchor));
-    const nos = new Set(LAB_BENCHES.map((b) => b.no));
-    f.pool.forEach((p) => {
-      expect(existsSync(join(process.cwd(), 'public', p.img))).toBe(true);
-      if (p.href.startsWith('/lab#lab')) expect(nos.has(p.href.slice('/lab#lab'.length))).toBe(true);
-      else if (p.href.startsWith('/work/')) expect(slugs).toContain(p.href.slice('/work/'.length));
-      else expect(anchors.has(p.href.slice('/archive#'.length))).toBe(true);
-    });
+    const cs = cards();
+    const f = buildHomeField(cs, entries);
+    expect(f.pool).toHaveLength(cs.length + LAB_BENCHES.length + entries.length + 2);
+    expect(new Set(f.pool.map((item) => item.id)).size).toBe(f.pool.length);
+    expect(f.pool.filter((item) => item.kind === 'project').map((item) => item.href))
+      .toEqual(cs.map((card) => `/work/${card.slug}`));
+    expect(f.pool.filter((item) => item.kind === 'lab').map((item) => item.href))
+      .toEqual(LAB_BENCHES.map((bench) => `/lab#lab${bench.no}`));
+    expect(f.pool.filter((item) => item.kind === 'log').map((item) => item.href))
+      .toEqual(withAnchors(entries).map(({ anchor }) => `/archive#${anchor}`));
+    expect(f.pool.filter((item) => item.kind === 'other')).toHaveLength(1);
+    expect(f.pool.filter((item) => item.kind === 'about')).toHaveLength(1);
+    expect(f.pool.some((item) => item.href === '/work/project-iv')).toBe(false);
     expect(f.benches).toBe(LAB_BENCHES.length);
     expect(f.entries).toBe(entries.length);
-    expect(f.projects).toBe(cards().filter((c) => !c.wip).length);
+    // 项目三可以进格子，但「已发稿项目数」不把筹备中的案例算作已发稿。
+    expect(f.projects).toBe(cs.filter((card) => !card.wip).length);
+  });
+
+  it('首屏图标都有独立 SVG 文件，所有链接都是实际公开入口', () => {
+    const entries = getLogEntries();
+    const f = buildHomeField(cards(), entries);
+    const slugs = getRoutableWork().map((work) => work.slug);
+    const anchors = new Set(withAnchors(entries).map((a) => a.anchor));
+    const nos = new Set(LAB_BENCHES.map((b) => b.no));
+    f.pool.forEach((item) => {
+      expect(item.img).toMatch(/^\/home\/icons\/[a-z0-9-]+\.svg$/);
+      expect(existsSync(join(process.cwd(), 'public', item.img)), item.img).toBe(true);
+      if (item.href.startsWith('/lab#lab')) expect(nos.has(item.href.slice('/lab#lab'.length))).toBe(true);
+      else if (item.href.startsWith('/work/')) expect(slugs).toContain(item.href.slice('/work/'.length));
+      else if (item.href.startsWith('/archive#')) expect(anchors.has(item.href.slice('/archive#'.length))).toBe(true);
+      else expect(['/archive', '/#about']).toContain(item.href);
+    });
+  });
+
+  it('项目三明确筹备状态，About 去已有正文的首页幕，智能床保持独立研究入口', () => {
+    const entries = getLogEntries();
+    const f = buildHomeField(cards(), entries);
+    const preparation = f.pool.find((item) => item.href === '/work/project-iii')!;
+    expect(preparation.kind).toBe('project');
+    expect(preparation.project).toBe('project-iii');
+    expect(preparation.title).toBe('Project III');
+    expect(preparation.cap).toBe('In preparation');
+    expect(preparation.cta).toBe('View progress ↗');
+    expect([preparation.title, preparation.cap, preparation.cta].join(' ')).not.toMatch(/待盘点|placeholder|thesis|author to write/);
+    const about = f.pool.find((item) => item.kind === 'about')!;
+    expect(about.title).toBe('About Zishuo Li');
+    expect(about.href).toBe('/#about');
+    const smartBed = f.pool.find((item) => item.kind === 'other')!;
+    expect(smartBed.project).toBe('other-work');
+    expect(smartBed.title).toBe('Smart Bed');
+    const latestOther = withAnchors(entries).find(({ entry }) => projectOf(entry) === 'other-work')!;
+    expect(smartBed.href).toBe(`/archive#${latestOther.anchor}`);
+    // 输入顺序不应把专题入口改到最早的那条研究记录。
+    const reversed = buildHomeField(cards(), [...entries].reverse());
+    expect(reversed.pool.find((item) => item.kind === 'other')?.href).toBe(smartBed.href);
+    const noOther = buildHomeField(cards(), entries.filter((entry) => projectOf(entry) !== 'other-work'));
+    expect(noOther.pool.find((item) => item.kind === 'other')?.href).toBe('/archive');
+  });
+
+  it('每条日志用原 lead 与稳定锚点，换配图或排序不会丢条目、串链接', () => {
+    const entries = getLogEntries();
+    const f = buildHomeField(cards(), entries);
+    const logs = f.pool.filter((item) => item.kind === 'log');
+    withAnchors(entries).forEach(({ entry, anchor }, index) => {
+      expect(logs[index].id).toBe(`log:${anchor}`);
+      expect(logs[index].title).toBe(entry.lead.en);
+      expect(logs[index].project).toBe(projectOf(entry));
+      expect(logs[index].href).toBe(`/archive#${anchor}`);
+    });
+    const noImages = entries.map((entry) => ({ ...entry, blocks: undefined })).reverse();
+    const changed = buildHomeField(cards(), noImages).pool.filter((item) => item.kind === 'log');
+    const byId = new Map(logs.map((item) => [item.id, item]));
+    expect(changed).toHaveLength(logs.length);
+    changed.forEach((item) => {
+      expect(item.href).toBe(byId.get(item.id)?.href);
+      expect(item.title).toBe(byId.get(item.id)?.title);
+    });
+  });
+
+  it('分层抽样覆盖完整候选池，每个索引都可到达', () => {
+    const f = buildHomeField(cards(), getLogEntries());
+    const reachable = new Set<number>();
+    f.draws.forEach((draw) => {
+      expect(draw.weight).toBeGreaterThan(0);
+      expect(draw.groups.length).toBeGreaterThan(0);
+      draw.groups.forEach((group) => {
+        expect(group.length).toBeGreaterThan(0);
+        group.forEach((index) => {
+          expect(Number.isInteger(index)).toBe(true);
+          expect(index).toBeGreaterThanOrEqual(0);
+          expect(index).toBeLessThan(f.pool.length);
+          reachable.add(index);
+        });
+      });
+    });
+    expect([...reachable].sort((a, b) => a - b)).toEqual(f.pool.map((_, index) => index));
   });
 });

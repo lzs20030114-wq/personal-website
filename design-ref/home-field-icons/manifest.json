@@ -1,0 +1,3152 @@
+[
+  {
+    "id": "project:reincarnation-machine",
+    "kind": "project",
+    "project": "project-i",
+    "no": "Project I",
+    "img": "/home/icons/machine.svg",
+    "title": "Reincarnation Machine",
+    "cap": "A desk-sized machine that lives, dies, and wakes with a different personality. Its body stays the same while its responses change.",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/work/reincarnation-machine",
+    "cta": "Case study ↗"
+  },
+  {
+    "id": "project:project-ii",
+    "kind": "project",
+    "project": "project-ii",
+    "no": "Project II",
+    "img": "/home/icons/space.svg",
+    "title": "Cross-species space",
+    "cap": "Spatial reconfiguration driven by behavioral divergence in multi-species shared space",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/work/project-ii",
+    "cta": "Case study ↗"
+  },
+  {
+    "id": "project:project-iii",
+    "kind": "project",
+    "project": "project-iii",
+    "no": "Project III",
+    "img": "/home/icons/sleep.svg",
+    "title": "Project III",
+    "cap": "In preparation",
+    "tone": {
+      "ink": "oklch(0.45 0.06 235)",
+      "hi": "oklch(0.74 0.06 235)"
+    },
+    "href": "/work/project-iii",
+    "cta": "View progress ↗"
+  },
+  {
+    "id": "lab:1-1",
+    "kind": "lab",
+    "project": "project-i",
+    "no": "Lab 1-1",
+    "img": "/home/icons/linkage.svg",
+    "title": "Four-bar linkage",
+    "cap": "Reincarnation Machine · SVG",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/lab#lab1-1",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "lab:1-2",
+    "kind": "lab",
+    "project": "project-i",
+    "no": "Lab 1-2",
+    "img": "/home/icons/arch.svg",
+    "title": "Arch ring solver",
+    "cap": "Reincarnation Machine · SVG",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/lab#lab1-2",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "lab:1-3",
+    "kind": "lab",
+    "project": "project-i",
+    "no": "Lab 1-3",
+    "img": "/home/icons/tendon.svg",
+    "title": "Tendon tentacle",
+    "cap": "Reincarnation Machine · WebGL",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/lab#lab1-3",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "lab:1-4",
+    "kind": "lab",
+    "project": "project-i",
+    "no": "Lab 1-4",
+    "img": "/home/icons/shell.svg",
+    "title": "Five-ring shell",
+    "cap": "Reincarnation Machine · WebGL",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/lab#lab1-4",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "lab:1-5",
+    "kind": "lab",
+    "project": "project-i",
+    "no": "Lab 1-5",
+    "img": "/home/icons/assembly.svg",
+    "title": "Full assembly",
+    "cap": "Reincarnation Machine · WebGL",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/lab#lab1-5",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "lab:1-6",
+    "kind": "lab",
+    "project": "project-i",
+    "no": "Lab 1-6",
+    "img": "/home/icons/behavior.svg",
+    "title": "Behaviour engine",
+    "cap": "Reincarnation Machine · WebGL",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/lab#lab1-6",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "lab:2-1",
+    "kind": "lab",
+    "project": "project-ii",
+    "no": "Lab 2-1",
+    "img": "/home/icons/strip.svg",
+    "title": "Contractile skin units",
+    "cap": "Cross-species space · SVG",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/lab#lab2-1",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "lab:2-2",
+    "kind": "lab",
+    "project": "project-ii",
+    "no": "Lab 2-2",
+    "img": "/home/icons/solid-strip.svg",
+    "title": "Skin units, solid",
+    "cap": "Cross-species space · WebGL",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/lab#lab2-2",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "lab:2-3",
+    "kind": "lab",
+    "project": "project-ii",
+    "no": "Lab 2-3",
+    "img": "/home/icons/dual-strip.svg",
+    "title": "Two structures, one band",
+    "cap": "Cross-species space · WebGL",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/lab#lab2-3",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "lab:2-4",
+    "kind": "lab",
+    "project": "project-ii",
+    "no": "Lab 2-4",
+    "img": "/home/icons/series.svg",
+    "title": "Series",
+    "cap": "Cross-species space · WebGL",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/lab#lab2-4",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "lab:2-5",
+    "kind": "lab",
+    "project": "project-ii",
+    "no": "Lab 2-5",
+    "img": "/home/icons/cylinder.svg",
+    "title": "Cylinder of units",
+    "cap": "Cross-species space · WebGL",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/lab#lab2-5",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "lab:2-6",
+    "kind": "lab",
+    "project": "project-ii",
+    "no": "Lab 2-6",
+    "img": "/home/icons/layers.svg",
+    "title": "Layers within one unit",
+    "cap": "Cross-species space · WebGL",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/lab#lab2-6",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "lab:2-7",
+    "kind": "lab",
+    "project": "project-ii",
+    "no": "Lab 2-7",
+    "img": "/home/icons/square-ring.svg",
+    "title": "A square ring",
+    "cap": "Cross-species space · WebGL",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/lab#lab2-7",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "lab:2-8",
+    "kind": "lab",
+    "project": "project-ii",
+    "no": "Lab 2-8",
+    "img": "/home/icons/array.svg",
+    "title": "Four by four",
+    "cap": "Cross-species space · WebGL",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/lab#lab2-8",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "lab:2-9",
+    "kind": "lab",
+    "project": "project-ii",
+    "no": "Lab 2-9",
+    "img": "/home/icons/between.svg",
+    "title": "Between units",
+    "cap": "Cross-species space · WebGL",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/lab#lab2-9",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "lab:2-10",
+    "kind": "lab",
+    "project": "project-ii",
+    "no": "Lab 2-10",
+    "img": "/home/icons/walk.svg",
+    "title": "A person walks through",
+    "cap": "Cross-species space · Canvas",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/lab#lab2-10",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "lab:2-11",
+    "kind": "lab",
+    "project": "project-ii",
+    "no": "Lab 2-11",
+    "img": "/home/icons/crowd.svg",
+    "title": "A few people",
+    "cap": "Cross-species space · Canvas",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/lab#lab2-11",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "lab:2-12",
+    "kind": "lab",
+    "project": "project-ii",
+    "no": "Lab 2-12",
+    "img": "/home/icons/cat.svg",
+    "title": "A cat in the room",
+    "cap": "Cross-species space · Canvas",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/lab#lab2-12",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "lab:2-13",
+    "kind": "lab",
+    "project": "project-ii",
+    "no": "Lab 2-13",
+    "img": "/home/icons/joined.svg",
+    "title": "Joined platforms",
+    "cap": "Cross-species space · WebGL",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/lab#lab2-13",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "lab:2-14",
+    "kind": "lab",
+    "project": "project-ii",
+    "no": "Lab 2-14",
+    "img": "/home/icons/together.svg",
+    "title": "People and cats together",
+    "cap": "Cross-species space · Canvas",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/lab#lab2-14",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "lab:2-15",
+    "kind": "lab",
+    "project": "project-ii",
+    "no": "Lab 2-15",
+    "img": "/home/icons/together-3d.svg",
+    "title": "People and cats together, in 3D",
+    "cap": "Cross-species space · WebGL",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/lab#lab2-15",
+    "cta": "Open bench ↗"
+  },
+  {
+    "id": "log:log-2026-10-24-688312168132846",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Oct 24",
+    "img": "/home/icons/layout.svg",
+    "title": "Replaced the homepage opening with an expandable field of project thumbnails.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-10-24-688312168132846",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-24-1801706581233044",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Oct 24",
+    "img": "/home/icons/interaction.svg",
+    "title": "Removed blank flashes when switching between lab previews.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-10-24-1801706581233044",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-23-4235513318147732",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Oct 23",
+    "img": "/home/icons/fabric.svg",
+    "title": "Corrected the inactive units to stay near the ceiling, then descend before forming a platform.",
+    "cap": "Project II · 3D",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-10-23-4235513318147732",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-23-1540928197040555",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Oct 23",
+    "img": "/home/icons/layout.svg",
+    "title": "Refined the case-study reading layout and removed delays after chapter jumps.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-10-23-1540928197040555",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-23-1553877201978556",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Oct 23",
+    "img": "/home/icons/writing.svg",
+    "title": "Revised the first two case studies for more consistent, sustained reading.",
+    "cap": "This site · Writing",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-10-23-1553877201978556",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-23-4121128012942813",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Oct 23",
+    "img": "/home/icons/archive.svg",
+    "title": "Protected editor drafts and images, and made log links stable through later edits.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-10-23-4121128012942813",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-23-3902211171795164",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Oct 23",
+    "img": "/home/icons/layout.svg",
+    "title": "Fixed mobile previews and timeline overlap, and reduced unnecessary experiment loading.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-10-23-3902211171795164",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-23-2335935750342083",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Oct 23",
+    "img": "/home/icons/code.svg",
+    "title": "Reused repeated geometry across the lab while preserving its motion and appearance.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-10-23-2335935750342083",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-22-3728128746853881",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Oct 22",
+    "img": "/home/icons/interaction.svg",
+    "title": "Made embedded 3D models take wheel input only after a click.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-10-22-3728128746853881",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-21-2120875765098105",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Oct 21",
+    "img": "/home/icons/writing.svg",
+    "title": "Added the comparisons and six design turns to the case study so readers can follow how the project changed.",
+    "cap": "Project II · Writing",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-10-21-2120875765098105",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-21-105484136189853",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Oct 21",
+    "img": "/home/icons/cat.svg",
+    "title": "Connected the human–cat simulation to an eight-by-eight room of three-dimensional moving units.",
+    "cap": "Project II · 3D",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-10-21-105484136189853",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-20-1882092295423488",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Oct 20",
+    "img": "/home/icons/lifecycle.svg",
+    "title": "Reworked breathing to show the effect of interaction rather than exaggerate personality differences.",
+    "cap": "Project I · Simulation",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-10-20-1882092295423488",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-19-1795287237573693",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Oct 19",
+    "img": "/home/icons/interaction.svg",
+    "title": "Changed the enthusiastic personality from intermittent glances to continuous hand following.",
+    "cap": "Project I · Simulation",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-10-19-1795287237573693",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-19-712004976306508",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Oct 19",
+    "img": "/home/icons/interaction.svg",
+    "title": "Simplified the interaction sequence, then restored the visible actions needed to distinguish personalities.",
+    "cap": "Project I · Simulation",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-10-19-712004976306508",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-19-3162266630046510",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Oct 19",
+    "img": "/home/icons/measurement.svg",
+    "title": "Added live actuator readouts beside the machine simulation.",
+    "cap": "Project I · Simulation",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-10-19-3162266630046510",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-18-2884019636765396",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Oct 18",
+    "img": "/home/icons/writing.svg",
+    "title": "Added bilingual reference tables that explain how each interaction reaches the machine.",
+    "cap": "Project I · Writing",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-10-18-2884019636765396",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-17-1575174326303370",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Oct 17",
+    "img": "/home/icons/lifecycle.svg",
+    "title": "Made the revised motion system the only version and removed unused interaction rules.",
+    "cap": "Project I · Simulation",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-10-17-1575174326303370",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-15-515695945063972",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Oct 15",
+    "img": "/home/icons/interaction.svg",
+    "title": "Made the avoidant personality move away before a reaching hand touches it.",
+    "cap": "Project I · Simulation",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-10-15-515695945063972",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-14-238230853288184",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Oct 14",
+    "img": "/home/icons/lifecycle.svg",
+    "title": "Reworked the four personalities to separate being calm from being afraid of people.",
+    "cap": "Project I · Simulation",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-10-14-238230853288184",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-12-3719770275277887",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Oct 12",
+    "img": "/home/icons/analytics.svg",
+    "title": "Added a private dashboard for reviewing site visits.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-10-12-3719770275277887",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-10-1766694649087067",
+    "kind": "log",
+    "project": "project-iii",
+    "no": "Log · Oct 10",
+    "img": "/home/icons/writing.svg",
+    "title": "Turned the topic review into a page-by-page reading document with traceable references.",
+    "cap": "Project III · Writing",
+    "tone": {
+      "ink": "oklch(0.45 0.06 235)",
+      "hi": "oklch(0.74 0.06 235)"
+    },
+    "href": "/archive#log-2026-10-10-1766694649087067",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-09-4048778862141926",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Oct 9",
+    "img": "/home/icons/mechanism.svg",
+    "title": "Corrected the machine simulation so the body turns while its base stays on the ground.",
+    "cap": "Project I · Simulation",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-10-09-4048778862141926",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-08-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Oct 8",
+    "img": "/home/icons/interaction.svg",
+    "title": "Redesigned the big tentacle’s motion so a startle, a response and an idle gesture read as clearly different actions.",
+    "cap": "Project I · Simulation",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-10-08-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-08-2",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Oct 8",
+    "img": "/home/icons/interaction.svg",
+    "title": "Added a reaching chain to the new motion: the tentacle keeps pace with the hand, closes in, wraps it and holds it in time with its breathing.",
+    "cap": "Project I · Simulation",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-10-08-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-08-2265216622170034",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Oct 8",
+    "img": "/home/icons/agents.svg",
+    "title": "Added body clearance and visitor groups, and let cats move between the floor and platforms.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-10-08-2265216622170034",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-08-4072082882482544",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Oct 8",
+    "img": "/home/icons/experiment.svg",
+    "title": "Compared three crowd sizes and found that the moving space helped nearby human–cat stays most in the busier simulations.",
+    "cap": "Project II · Study",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-10-08-4072082882482544",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-07-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Oct 7",
+    "img": "/home/icons/lifecycle.svg",
+    "title": "Built the behaviour engine that turns the personality table into a whole life cycle, and gave it its own bench, Lab 1-6.",
+    "cap": "Project I · Simulation",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-10-07-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-07-2",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Oct 7",
+    "img": "/home/icons/interaction.svg",
+    "title": "Made the mouse pointer act as a visitor’s hand in Lab 1-6: the machine notices it, then reaches for it, turns away, or looks elsewhere.",
+    "cap": "Project I · Simulation",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-10-07-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-07-3",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Oct 7",
+    "img": "/home/icons/agents.svg",
+    "title": "Changed the space from ratifying traces to lowering units for a purpose, after the trace-following version lost to fixed shelves in the comparison.",
+    "cap": "Project II · Concept",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-10-07-3",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-07-3966303388841958",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Oct 7",
+    "img": "/home/icons/fabric.svg",
+    "title": "Let people pass by retracting only the strips in their path while keeping the cat's support in place.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-10-07-3966303388841958",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-07-2768389821953039",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Oct 7",
+    "img": "/home/icons/experiment.svg",
+    "title": "Rechecked the cat model against published proximity data before comparing ways to guide it toward a seated person.",
+    "cap": "Project II · Study",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-10-07-2768389821953039",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-06-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Oct 6",
+    "img": "/home/icons/fabric.svg",
+    "title": "Unlocked bond release and showed with a probe that the fabric itself keeps no memory, so the space's memory now lives in the trace layer.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-10-06-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-06-1910704124419110",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Oct 6",
+    "img": "/home/icons/research.svg",
+    "title": "Reviewed urban birds' flight distances to prepare a study of separation between people and wildlife.",
+    "cap": "Project II · Research",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-10-06-1910704124419110",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-06-3716936255093825",
+    "kind": "log",
+    "project": "project-iii",
+    "no": "Log · Oct 6",
+    "img": "/home/icons/ethics.svg",
+    "title": "Narrowed the topic comparison to shared-room waking and visible monitoring in temporary accommodation.",
+    "cap": "Project III · Concept",
+    "tone": {
+      "ink": "oklch(0.45 0.06 235)",
+      "hi": "oklch(0.74 0.06 235)"
+    },
+    "href": "/archive#log-2026-10-06-3716936255093825",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-05-157064927926468",
+    "kind": "log",
+    "project": "project-iii",
+    "no": "Log · Oct 5",
+    "img": "/home/icons/research.svg",
+    "title": "Built a sleep research overview to compare feasible directions for the third project.",
+    "cap": "Project III · Research",
+    "tone": {
+      "ink": "oklch(0.45 0.06 235)",
+      "hi": "oklch(0.74 0.06 235)"
+    },
+    "href": "/archive#log-2026-10-05-157064927926468",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-05-1579252848181989",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Oct 5",
+    "img": "/home/icons/interaction.svg",
+    "title": "Added page transitions that follow the relationship between destinations.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-10-05-1579252848181989",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-04-4294423562278521",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Oct 4",
+    "img": "/home/icons/cat.svg",
+    "title": "Built a demonstration of cats walking, resting and playing on platforms that open ahead of them.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-10-04-4294423562278521",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-04-2088814339768521",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Oct 4",
+    "img": "/home/icons/agents.svg",
+    "title": "Reframed the project around how different species shape a space and respond to its changes.",
+    "cap": "Project II · Concept",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-10-04-2088814339768521",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-03-3371440135695861",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Oct 3",
+    "img": "/home/icons/layout.svg",
+    "title": "Used tonal surfaces to distinguish sections across the site.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-10-03-3371440135695861",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-01-3268388959648893",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Oct 1",
+    "img": "/home/icons/layout.svg",
+    "title": "Rebuilt the home, lab and case-study layouts around clearer project navigation.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-10-01-3268388959648893",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-10-01-1240202243035253",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Oct 1",
+    "img": "/home/icons/archive.svg",
+    "title": "Recovered project records and original figures from earlier conversations and files.",
+    "cap": "This site · Writing",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-10-01-1240202243035253",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-30-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Sep 30",
+    "img": "/home/icons/layers.svg",
+    "title": "Added adjustable connection depth without shrinking the upper and lower platforms.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-09-30-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-30-2",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Sep 30",
+    "img": "/home/icons/code.svg",
+    "title": "Reused validated forming states between builds instead of solving them all again.",
+    "cap": "This site · Simulation",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-09-30-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-29-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Sep 29",
+    "img": "/home/icons/layers.svg",
+    "title": "Assembled the multilayer form from distinct strips driven by real section simulations.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-09-29-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-29-2",
+    "kind": "log",
+    "project": "project-iii",
+    "no": "Log · Sep 29",
+    "img": "/home/icons/research.svg",
+    "title": "Reviewed recent sleep research to compare methods, tools and deployment questions.",
+    "cap": "Project III · Research",
+    "tone": {
+      "ink": "oklch(0.45 0.06 235)",
+      "hi": "oklch(0.74 0.06 235)"
+    },
+    "href": "/archive#log-2026-09-29-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-29-3",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Sep 29",
+    "img": "/home/icons/layout.svg",
+    "title": "Reworked the Lab layout so models and controls fit together on screen.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-09-29-3",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-29-4",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Sep 29",
+    "img": "/home/icons/interaction.svg",
+    "title": "Adjusted the home-page turning response and connected the Lab catalog to direct entries.",
+    "cap": "This site · Simulation",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-09-29-4",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-28-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Sep 28",
+    "img": "/home/icons/layers.svg",
+    "title": "Built a target model for independently tilted, incomplete platform layers.",
+    "cap": "Project II · Concept",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-09-28-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-28-2",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Sep 28",
+    "img": "/home/icons/layers.svg",
+    "title": "Solved real two-level and thick-platform sections for the multilayer target.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-09-28-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-28-3",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Sep 28",
+    "img": "/home/icons/code.svg",
+    "title": "Made skipping formation restore a saved terminal state while keeping the camera responsive.",
+    "cap": "This site · Simulation",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-09-28-3",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-27-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Sep 27",
+    "img": "/home/icons/cat.svg",
+    "title": "Clarified that the emerging passages and platforms are intended for cats.",
+    "cap": "Project II · Research",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-09-27-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-27-2",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Sep 27",
+    "img": "/home/icons/layers.svg",
+    "title": "Made a ring with the same two-level platform section all the way around.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-09-27-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-27-3",
+    "kind": "log",
+    "project": "project-iii",
+    "no": "Log · Sep 27",
+    "img": "/home/icons/sleep.svg",
+    "title": "Reopened Project III around the broader future sleep environment.",
+    "cap": "Project III · Research",
+    "tone": {
+      "ink": "oklch(0.45 0.06 235)",
+      "hi": "oklch(0.74 0.06 235)"
+    },
+    "href": "/archive#log-2026-09-27-3",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-27-4",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Sep 27",
+    "img": "/home/icons/layout.svg",
+    "title": "Added a home-page Lab catalog with the same hierarchy as the Lab page.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-09-27-4",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-21-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Sep 21",
+    "img": "/home/icons/fabric.svg",
+    "title": "Fixed the fabric bridges so they connect platforms without closing the cavity.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-09-21-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-20-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Sep 20",
+    "img": "/home/icons/cluster.svg",
+    "title": "Defined unit combinations through adjoining platform heights rather than swapping whole shapes.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-09-20-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-17-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Sep 17",
+    "img": "/home/icons/experiment.svg",
+    "title": "Outlined a rubber-sheet experiment to test whether preprocessing can encode the form.",
+    "cap": "Project II · Study",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-09-17-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-13-1",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Sep 13",
+    "img": "/home/icons/layout.svg",
+    "title": "Changed Lab numbering to show which project each bench belongs to.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-09-13-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-13-2",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Sep 13",
+    "img": "/home/icons/writing.svg",
+    "title": "Restructured the Machine case study around the author’s ten-part argument.",
+    "cap": "This site · Writing",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-09-13-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-10-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Sep 10",
+    "img": "/home/icons/lifecycle.svg",
+    "title": "Clarified that loss and death serve the study rather than define its entire subject.",
+    "cap": "Project I · Writing",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-09-10-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-09-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Sep 9",
+    "img": "/home/icons/experiment.svg",
+    "title": "Revised the experiment around differences between successive lives.",
+    "cap": "Project I · Study",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-09-09-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-05-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Sep 5",
+    "img": "/home/icons/agents.svg",
+    "title": "Gave the person on the plan bench a facing, a body and a wandering gaze, so structure now forms in front of them, never on top of them.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-09-05-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-04-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Sep 4",
+    "img": "/home/icons/agents.svg",
+    "title": "Opened the first bench with a behaviour layer: one person walks through the room in plan, and the units whose floor has been occupied long enough form.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-09-04-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-04-2",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Sep 4",
+    "img": "/home/icons/agents.svg",
+    "title": "Made the plan bench something you can actually handle: place people, drag them around, watch several at once and see the units form live.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-09-04-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-03-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Sep 3",
+    "img": "/home/icons/cluster.svg",
+    "title": "Named the ring platform a \"unit\" and opened a new bench to study how two, three, four or nine of them can relate in spacing and height.",
+    "cap": "Project II · Concept",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-09-03-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-03-2",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Sep 3",
+    "img": "/home/icons/cluster.svg",
+    "title": "Landed the five decisions on the unit-relations bench, adding staggered contraction and a fabric web across touching seams.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-09-03-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-09-02-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Sep 2",
+    "img": "/home/icons/fabric.svg",
+    "title": "Reworked the square ring so its form changes once around the perimeter.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-09-02-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-30-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Aug 30",
+    "img": "/home/icons/fabric.svg",
+    "title": "Wrapped the splitting series around a ring and corrected its height alignment.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-08-30-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-29-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Aug 29",
+    "img": "/home/icons/layers.svg",
+    "title": "Completed a forming series from a solid box to two separated platforms.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-08-29-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-27-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Aug 27",
+    "img": "/home/icons/layers.svg",
+    "title": "Reframed the next form as splitting one solid box into two platforms.",
+    "cap": "Project II · Concept",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-08-27-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-26-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Aug 26",
+    "img": "/home/icons/fabric.svg",
+    "title": "Combined two forming structures on one strip.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-08-26-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-25-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Aug 25",
+    "img": "/home/icons/cluster.svg",
+    "title": "Rescaled the unit array to a room and kept the person outside the units.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-08-25-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-25-2",
+    "kind": "log",
+    "project": "other-work",
+    "no": "Log · Aug 25",
+    "img": "/home/icons/agents.svg",
+    "title": "Related the hotel cases to existing personas and drafted their travel journeys.",
+    "cap": "Other work · Personas",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-08-25-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-24-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Aug 24",
+    "img": "/home/icons/measurement.svg",
+    "title": "Recorded the travel of all five rings before sizing the rack drive.",
+    "cap": "Project I · Mechanical",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-08-24-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-23-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Aug 23",
+    "img": "/home/icons/mechanism.svg",
+    "title": "Returned to a rack drive after the central rod kept binding.",
+    "cap": "Project I · Mechanical",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-08-23-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-23-2",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Aug 23",
+    "img": "/home/icons/fabric.svg",
+    "title": "Arranged the forming strips around a cylindrical ring.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-08-23-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-22-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Aug 22",
+    "img": "/home/icons/fabric.svg",
+    "title": "Aligned the form series by redistributing material rather than shifting the rendered image.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-08-22-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-21-1",
+    "kind": "log",
+    "project": "other-work",
+    "no": "Log · Aug 21",
+    "img": "/home/icons/research.svg",
+    "title": "Pruned the hotel AI comparison when the claimed service could not be verified.",
+    "cap": "Other work · Research",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-08-21-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-20-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Aug 20",
+    "img": "/home/icons/fabric.svg",
+    "title": "Rebuilt the form series after its first transition jumped between shapes.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-08-20-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-20-2",
+    "kind": "log",
+    "project": "other-work",
+    "no": "Log · Aug 20",
+    "img": "/home/icons/research.svg",
+    "title": "Redirected the hotel review toward commercially deployed AI for sleep.",
+    "cap": "Other work · Research",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-08-20-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-19-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Aug 19",
+    "img": "/home/icons/fabric.svg",
+    "title": "Corrected the square skin form and extended the sections into 3D strips.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-08-19-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-18-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Aug 18",
+    "img": "/home/icons/code.svg",
+    "title": "Brought the skin simulation into the website and checked it against the Python version.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-08-18-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-18-2",
+    "kind": "log",
+    "project": "other-work",
+    "no": "Log · Aug 18",
+    "img": "/home/icons/interview.svg",
+    "title": "Reduced the travel interview guide to open questions about sleep.",
+    "cap": "Other work · Interviews",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-08-18-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-18-3",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Aug 18",
+    "img": "/home/icons/layout.svg",
+    "title": "Separated the Lab directory by project as the skin benches joined the site.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-08-18-3",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-17-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Aug 17",
+    "img": "/home/icons/fabric.svg",
+    "title": "Moved from a hanging net to a preprocessed skin that forms when its core contracts.",
+    "cap": "Project II · Concept",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-08-17-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-17-2",
+    "kind": "log",
+    "project": "other-work",
+    "no": "Log · Aug 17",
+    "img": "/home/icons/research.svg",
+    "title": "Expanded the hotel competitor review and removed weakly related cases.",
+    "cap": "Other work · Research",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-08-17-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-15-1",
+    "kind": "log",
+    "project": "project-iii",
+    "no": "Log · Aug 15",
+    "img": "/home/icons/sleep.svg",
+    "title": "Considered waking up as a possible research moment and discussed the required depth.",
+    "cap": "Project III · Concept",
+    "tone": {
+      "ink": "oklch(0.45 0.06 235)",
+      "hi": "oklch(0.74 0.06 235)"
+    },
+    "href": "/archive#log-2026-08-15-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-14-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Aug 14",
+    "img": "/home/icons/model.svg",
+    "title": "Archived the updated five-ring CAD drawing without changing the live bench.",
+    "cap": "Project I · Docs",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-08-14-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-14-2",
+    "kind": "log",
+    "project": "project-iii",
+    "no": "Log · Aug 14",
+    "img": "/home/icons/strategy.svg",
+    "title": "Opened a separate discussion on developing Project III from the sleep research.",
+    "cap": "Project III · Strategy",
+    "tone": {
+      "ink": "oklch(0.45 0.06 235)",
+      "hi": "oklch(0.74 0.06 235)"
+    },
+    "href": "/archive#log-2026-08-14-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-14-3",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Aug 14",
+    "img": "/home/icons/writing.svg",
+    "title": "Published the supplied Project II text in the case-study structure.",
+    "cap": "This site · Writing",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-08-14-3",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-13-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Aug 13",
+    "img": "/home/icons/mechanism.svg",
+    "title": "Modeled paired drive plates and compared reinforcement options.",
+    "cap": "Project I · Mechanical",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-08-13-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-13-2",
+    "kind": "log",
+    "project": "other-work",
+    "no": "Log · Aug 13",
+    "img": "/home/icons/sleep.svg",
+    "title": "Started a focused review of sleep during hotel stays and business travel.",
+    "cap": "Other work · Research",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-08-13-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-10-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Aug 10",
+    "img": "/home/icons/mechanism.svg",
+    "title": "Traced poor pushrod motion to its offset from the guide.",
+    "cap": "Project I · Mechanical",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-08-10-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-10-2",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Aug 10",
+    "img": "/home/icons/fabric.svg",
+    "title": "Explored suspended structures at different heights.",
+    "cap": "Project II · Concept",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-08-10-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-10-3",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Aug 10",
+    "img": "/home/icons/agents.svg",
+    "title": "Organized the existing human–cat behaviors into a nine-cell matrix.",
+    "cap": "Project II · Research",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-08-10-3",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-09-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Aug 9",
+    "img": "/home/icons/measurement.svg",
+    "title": "Rechecked the reinforced shaft with the motor and mounting loads included.",
+    "cap": "Project I · Mechanical",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-08-09-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-06-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Aug 6",
+    "img": "/home/icons/measurement.svg",
+    "title": "Reworked the base model and asked for analysis of the actual assembly.",
+    "cap": "Project I · Mechanical",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-08-06-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-06-2",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Aug 6",
+    "img": "/home/icons/strategy.svg",
+    "title": "Restricted the working simulation to interactions on a minute scale.",
+    "cap": "Project II · Writing",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-08-06-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-04-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Aug 4",
+    "img": "/home/icons/writing.svg",
+    "title": "Reconsidered the narrative after finding the project difficult to explain briefly.",
+    "cap": "Project I · Writing",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-08-04-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-04-2",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Aug 4",
+    "img": "/home/icons/fabric.svg",
+    "title": "Explored a ceiling-mounted folding medium for the behavioral study.",
+    "cap": "Project II · Research",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-08-04-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-08-02-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Aug 2",
+    "img": "/home/icons/mechanism.svg",
+    "title": "Reconsidered the rotating base because the machine was too light for the bearing preload.",
+    "cap": "Project I · Mechanical",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-08-02-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-31-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jul 31",
+    "img": "/home/icons/measurement.svg",
+    "title": "Ran a finite-element check on the chassis frames: over-built for strength, and the display stand matters far more than the thickness.",
+    "cap": "Project I · Mechanical",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-07-31-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-31-2",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jul 31",
+    "img": "/home/icons/model.svg",
+    "title": "Saved the improved base model as a dated reference in the repository.",
+    "cap": "Project I · Docs",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-07-31-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-31-3",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Jul 31",
+    "img": "/home/icons/writing.svg",
+    "title": "Rewrote the work logs as one-sentence leads and short bullet points.",
+    "cap": "This site · Writing",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-07-31-3",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-30-1",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Jul 30",
+    "img": "/home/icons/archive.svg",
+    "title": "Set the rule that historical log figures must come from the original work.",
+    "cap": "This site · Record",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-07-30-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-29-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Jul 29",
+    "img": "/home/icons/cat.svg",
+    "title": "Added kittens as a separate agent type, which broke a rule I had already written for adult cats.",
+    "cap": "Project II · Research",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-07-29-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-29-2",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Jul 29",
+    "img": "/home/icons/cat.svg",
+    "title": "Tested the assumption that breed is what makes one dog or cat behave differently from another, and dropped it.",
+    "cap": "Project II · Research",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-07-29-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-29-3",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jul 29",
+    "img": "/home/icons/mechanism.svg",
+    "title": "Investigated the ring getting stuck at its widest opening.",
+    "cap": "Project I · Mechanical",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-07-29-3",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-29-4",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Jul 29",
+    "img": "/home/icons/layout.svg",
+    "title": "Added project labels and a separate artifact column to each log entry.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-07-29-4",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-29-5",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Jul 29",
+    "img": "/home/icons/interaction.svg",
+    "title": "Preserved the live mechanism’s working state when entering its case study.",
+    "cap": "This site · Simulation",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-07-29-5",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-29-6",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Jul 29",
+    "img": "/home/icons/layout.svg",
+    "title": "Gave every home-page project its own destination page.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-07-29-6",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-28-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Jul 28",
+    "img": "/home/icons/research.svg",
+    "title": "Searched exhaustively for how close a person can get to a cat before it moves away, and confirmed nobody has measured it.",
+    "cap": "Project II · Research",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-07-28-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-28-2",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Jul 28",
+    "img": "/home/icons/writing.svg",
+    "title": "Filled the first case study and corrected its layout against the saved draft.",
+    "cap": "This site · Writing",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-07-28-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-28-3",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Jul 28",
+    "img": "/home/icons/writing.svg",
+    "title": "Added a language switch for the project case studies.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-07-28-3",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-28-4",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Jul 28",
+    "img": "/home/icons/archive.svg",
+    "title": "Added a self-service editor for creating and revising work logs.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-07-28-4",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-27-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Jul 27",
+    "img": "/home/icons/agents.svg",
+    "title": "Rewrote the human agents after realising I had modelled them as particles that only react to crowding.",
+    "cap": "Project II · Concept",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-07-27-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-27-2",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Jul 27",
+    "img": "/home/icons/agents.svg",
+    "title": "Split the cost of occupying a space into two kinds, after writing a version where only humans ever paid.",
+    "cap": "Project II · Concept",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-07-27-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-27-3",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Jul 27",
+    "img": "/home/icons/strategy.svg",
+    "title": "Cut the simulation down to a single minute-scale clock, which cost the project its entire multi-day storyline.",
+    "cap": "Project II · Strategy",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-07-27-3",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-27-4",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Jul 27",
+    "img": "/home/icons/code.svg",
+    "title": "Brought the existing live benches into the site and the home-page stage.",
+    "cap": "This site · 3D",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-07-27-4",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-27-5",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Jul 27",
+    "img": "/home/icons/layout.svg",
+    "title": "Made the work log bilingual and searchable by project, aspect and month.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-07-27-5",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-26-1",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Jul 26",
+    "img": "/home/icons/layout.svg",
+    "title": "Transferred the revised visual language and page transition from the supplied draft.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-07-26-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-24-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Jul 24",
+    "img": "/home/icons/agents.svg",
+    "title": "Settled the fifth direction — space shared between people and pets — and fixed how the 3D work connects to the simulation.",
+    "cap": "Project II · Concept",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-07-24-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-24-2",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Jul 24",
+    "img": "/home/icons/layout.svg",
+    "title": "Built the three-screen home page from the approved interaction draft.",
+    "cap": "This site · Simulation",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-07-24-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-21-1",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Jul 21",
+    "img": "/home/icons/layout.svg",
+    "title": "Built the earlier Modernist layout across the home, log and case-study pages.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-07-21-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-21-2",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Jul 21",
+    "img": "/home/icons/layout.svg",
+    "title": "Established the green and violet color system in the site’s shared tokens.",
+    "cap": "This site · Docs",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-07-21-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-20-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Jul 20",
+    "img": "/home/icons/code.svg",
+    "title": "Set up the working environment and ran a thirty-line simulation that already contains the whole engine in miniature.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-07-20-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-18-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jul 18",
+    "img": "/home/icons/measurement.svg",
+    "title": "Ran a finite-element check on the rail and found the hand math was wrong.",
+    "cap": "Project I · Simulation",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-07-18-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-17-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jul 17",
+    "img": "/home/icons/mechanism.svg",
+    "title": "Brought all five shell rings into the web simulation, and fixed one that kept collapsing.",
+    "cap": "Project I · Shell",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-07-17-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-17-2",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jul 17",
+    "img": "/home/icons/mechanism.svg",
+    "title": "The same page behaved differently on two computers — the model was missing its end stops.",
+    "cap": "Project I · Arch",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-07-17-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-17-3",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Jul 17",
+    "img": "/home/icons/archive.svg",
+    "title": "Set up the files that carry project memory into the coding tool — and rewrote them after the first version had rules but no content.",
+    "cap": "Project II · Docs",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-07-17-3",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-17-4",
+    "kind": "log",
+    "project": "other-work",
+    "no": "Log · Jul 17",
+    "img": "/home/icons/interview.svg",
+    "title": "Cleaned the athlete interview transcript and separated the speakers.",
+    "cap": "Other work · Interviews",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-07-17-4",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-14-1",
+    "kind": "log",
+    "project": "other-work",
+    "no": "Log · Jul 14",
+    "img": "/home/icons/interview.svg",
+    "title": "Wrote the v2 interview guide — 33 questions, 60 minutes — for a PE faculty member who competed as a national-games swimmer.",
+    "cap": "Other work · Interviews",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-07-14-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-13-1",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Jul 13",
+    "img": "/home/icons/code.svg",
+    "title": "Put up the site frame and got the linkage running on the homepage.",
+    "cap": "This site · Other",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-07-13-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-13-2",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Jul 13",
+    "img": "/home/icons/archive.svg",
+    "title": "Compressed everything so far into one handoff document, with ten rules written out of my own repeated mistakes.",
+    "cap": "Project II · Record",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-07-13-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-12-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Jul 12",
+    "img": "/home/icons/strategy.svg",
+    "title": "Added the dimension the audit was missing — how fast the building acts — and rebuilt a rejected idea into a real contender.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-07-12-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-10-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jul 10",
+    "img": "/home/icons/mechanism.svg",
+    "title": "Wrote a 3D solver and built a tentacle driven by three tendons.",
+    "cap": "Project I · 3D",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-07-10-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-10-2",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jul 10",
+    "img": "/home/icons/mechanism.svg",
+    "title": "Turned one ring of the real machine into a model you can drag on the page.",
+    "cap": "Project I · Other",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-07-10-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-10-3",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jul 10",
+    "img": "/home/icons/code.svg",
+    "title": "Finished the homepage linkage — bug fixes only from here on.",
+    "cap": "Project I · Other",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-07-10-3",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-10-4",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jul 10",
+    "img": "/home/icons/mechanism.svg",
+    "title": "Settled the drive that turns all five rings from one shaft.",
+    "cap": "Project I · Mechanical",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-07-10-4",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-09-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jul 9",
+    "img": "/home/icons/sourcing.svg",
+    "title": "Put together the full parts list for the machine.",
+    "cap": "Project I · Sourcing",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-07-09-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-09-2",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Jul 9",
+    "img": "/home/icons/research.svg",
+    "title": "Audited every candidate scenario against seven tests, and corrected the vision — collapse is the villain, not the subject.",
+    "cap": "Project II · Study",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-07-09-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-08-1",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Jul 8",
+    "img": "/home/icons/layout.svg",
+    "title": "Read up on layout and settled the grid for the case-study pages.",
+    "cap": "This site · Other",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-07-08-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-07-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jul 7",
+    "img": "/home/icons/code.svg",
+    "title": "Wrote the spec for the linkage solver.",
+    "cap": "Project I · Docs",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-07-07-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-07-2",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jul 7",
+    "img": "/home/icons/experiment.svg",
+    "title": "Reviewed the whole study protocol, cut what the numbers could not support, and froze the sensor list.",
+    "cap": "Project I · Study",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-07-07-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-07-3",
+    "kind": "log",
+    "project": "other-work",
+    "no": "Log · Jul 7",
+    "img": "/home/icons/agents.svg",
+    "title": "Replaced a persona that did not hold up, dissolved solo-living youth as a standalone population, and produced five persona cards plus a screener question set.",
+    "cap": "Other work · Personas",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-07-07-3",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-06-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Jul 6",
+    "img": "/home/icons/agents.svg",
+    "title": "Anchored the simulation on one small avoidance decision, and planned the first three versions of the code.",
+    "cap": "Project II · Simulation",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-07-06-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-05-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jul 5",
+    "img": "/home/icons/photo.svg",
+    "title": "Set up a small photo studio at home for shooting parts.",
+    "cap": "Project I · Record",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-07-05-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-07-05-2",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Jul 5",
+    "img": "/home/icons/layout.svg",
+    "title": "Prepared the website brief and looked for design references before choosing a visual direction.",
+    "cap": "This site · Concept",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-07-05-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-06-30-1",
+    "kind": "log",
+    "project": "other-work",
+    "no": "Log · Jun 30",
+    "img": "/home/icons/agents.svg",
+    "title": "Finished evidence audits and persona manuscripts for two groups — shift workers and solo-living young adults — and threw out two inherited persona conventions along the way.",
+    "cap": "Other work · Personas",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-06-30-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-06-22-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Jun 22",
+    "img": "/home/icons/strategy.svg",
+    "title": "Restarted the project from a space I have actually lived in, after the theme stopped feeling like mine.",
+    "cap": "Project II · Strategy",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-06-22-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-06-21-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jun 21",
+    "img": "/home/icons/electronics.svg",
+    "title": "Settled three small things at once: the servo interface, screw sizes, and how touch electrodes are wired.",
+    "cap": "Project I · Electronics",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-06-21-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-06-20-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Jun 20",
+    "img": "/home/icons/writing.svg",
+    "title": "Wrote the whole project up in one document, and turned its traits into criteria for picking schools.",
+    "cap": "Project II · Record",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-06-20-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-06-15-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jun 15",
+    "img": "/home/icons/mechanism.svg",
+    "title": "Changed the shell's drive from two side rods to one central rod, and re-optimized all five rings.",
+    "cap": "Project I · Simulation",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-06-15-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-06-15-2",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Jun 15",
+    "img": "/home/icons/agents.svg",
+    "title": "Found the social mechanism the project is actually about: everyone's reasonable decision to withdraw adds up to a situation nobody wanted.",
+    "cap": "Project II · Concept",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-06-15-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-06-15-3",
+    "kind": "log",
+    "project": "other-work",
+    "no": "Log · Jun 15",
+    "img": "/home/icons/survey.svg",
+    "title": "Wrote a survey design specification for the whole team, and revised a teammate's draft of the functional-needs section.",
+    "cap": "Other work · Survey",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-06-15-3",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-06-12-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jun 12",
+    "img": "/home/icons/strategy.svg",
+    "title": "Took stock of where the project stands and pointed it at a paper.",
+    "cap": "Project I · Strategy",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-06-12-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-06-12-2",
+    "kind": "log",
+    "project": "other-work",
+    "no": "Log · Jun 12",
+    "img": "/home/icons/writing.svg",
+    "title": "After the three-author chapter was merged, repaired broken cross-references and an inconsistent classification axis, and drew an evolution diagram for my own section.",
+    "cap": "Other work · Writing",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-06-12-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-06-08-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jun 8",
+    "img": "/home/icons/electronics.svg",
+    "title": "Locked the drive parts for the three stepper motors.",
+    "cap": "Project I · Sourcing",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-06-08-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-06-07-1",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Jun 7",
+    "img": "/home/icons/agents.svg",
+    "title": "Started the second project and fixed its architecture: two layers of agents, the people and the building itself.",
+    "cap": "Project II · Concept",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-06-07-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-06-06-1",
+    "kind": "log",
+    "project": "this-site",
+    "no": "Log · Jun 6",
+    "img": "/home/icons/strategy.svg",
+    "title": "Started planning a personal site for both portfolio presentation and learning to code.",
+    "cap": "This site · Concept",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-06-06-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-06-05-1",
+    "kind": "log",
+    "project": "other-work",
+    "no": "Log · Jun 5",
+    "img": "/home/icons/writing.svg",
+    "title": "Drafted the report section on future sleep populations in full over five days, built on a \"full inventory, then four kinds of evolution\" frame.",
+    "cap": "Other work · Writing",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-06-05-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-06-04-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jun 4",
+    "img": "/home/icons/mechanism.svg",
+    "title": "A printed joint seized up, so I worked out how much clearance moving parts really need.",
+    "cap": "Project I · Mechanical",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-06-04-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-06-04-2",
+    "kind": "log",
+    "project": "other-work",
+    "no": "Log · Jun 4",
+    "img": "/home/icons/sleep.svg",
+    "title": "Developed a quick interview-exercise bed concept into a system where a person's comfort settings travel with them, and produced a Chinese presentation board.",
+    "cap": "Other work · Concept",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-06-04-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-06-03-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jun 3",
+    "img": "/home/icons/sourcing.svg",
+    "title": "Chose the pivot hardware for the scissor joints.",
+    "cap": "Project I · Mechanical",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-06-03-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-06-03-2",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Jun 3",
+    "img": "/home/icons/strategy.svg",
+    "title": "Decided where machine learning is allowed in this project, and where it is not.",
+    "cap": "Project II · Strategy",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-06-03-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-06-01-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Jun 1",
+    "img": "/home/icons/mechanism.svg",
+    "title": "Cut the three tentacles down to one grasping arm plus two soft feelers.",
+    "cap": "Project I · Concept",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-06-01-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-06-01-2",
+    "kind": "log",
+    "project": "project-ii",
+    "no": "Log · Jun 1",
+    "img": "/home/icons/agents.svg",
+    "title": "Started exploring how spatial forms could adapt to bodily behavior.",
+    "cap": "Project II · Concept",
+    "tone": {
+      "ink": "var(--p700)",
+      "hi": "var(--p400)"
+    },
+    "href": "/archive#log-2026-06-01-2",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-05-29-1",
+    "kind": "log",
+    "project": "other-work",
+    "no": "Log · May 29",
+    "img": "/home/icons/analytics.svg",
+    "title": "Analyzed the music and vibration study across relaxation, sleep and waking conditions.",
+    "cap": "Other work · Study",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-05-29-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-05-26-1",
+    "kind": "log",
+    "project": "other-work",
+    "no": "Log · May 26",
+    "img": "/home/icons/research.svg",
+    "title": "Built an evidence base of roughly 40 sources into a 14-page lab-meeting deck, with every key citation checked by hand.",
+    "cap": "Other work · Research",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-05-26-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-05-22-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · May 22",
+    "img": "/home/icons/mechanism.svg",
+    "title": "Limited clearance adjustments to the mating faces of resin parts.",
+    "cap": "Project I · Mechanical",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-05-22-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-05-19-1",
+    "kind": "log",
+    "project": "other-work",
+    "no": "Log · May 19",
+    "img": "/home/icons/research.svg",
+    "title": "Finished the first round of research and competitive analysis for the smart bed project, landing on four market gaps as design entry points.",
+    "cap": "Other work · Research",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-05-19-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-05-12-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · May 12",
+    "img": "/home/icons/mechanism.svg",
+    "title": "Examined how a small bearing could be retained in printed joints.",
+    "cap": "Project I · Mechanical",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-05-12-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-05-08-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · May 8",
+    "img": "/home/icons/sourcing.svg",
+    "title": "Chose the pins and tendons for the finger.",
+    "cap": "Project I · Mechanical",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-05-08-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-04-27-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Apr 27",
+    "img": "/home/icons/mechanism.svg",
+    "title": "Compared five ways of building a structure that opens and closes, and picked one.",
+    "cap": "Project I · Mechanical",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-04-27-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-04-26-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Apr 26",
+    "img": "/home/icons/mechanism.svg",
+    "title": "Got the underactuated finger simulation working — one tendon, several joints.",
+    "cap": "Project I · Simulation",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-04-26-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-04-24-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Apr 24",
+    "img": "/home/icons/mechanism.svg",
+    "title": "Checked tendon routing against the small modeled structure.",
+    "cap": "Project I · Mechanical",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-04-24-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-04-13-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Apr 13",
+    "img": "/home/icons/mechanism.svg",
+    "title": "Explored three tendons for bending the appendage in multiple directions.",
+    "cap": "Project I · Mechanical",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-04-13-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-04-12-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Apr 12",
+    "img": "/home/icons/mechanism.svg",
+    "title": "Compared ways to drive a half-ring expanding linkage.",
+    "cap": "Project I · Mechanical",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-04-12-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-04-06-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Apr 6",
+    "img": "/home/icons/mechanism.svg",
+    "title": "Got the shell simulation running after correcting its constraints.",
+    "cap": "Project I · Simulation",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-04-06-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-04-04-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Apr 4",
+    "img": "/home/icons/code.svg",
+    "title": "Started learning physics simulation in Grasshopper.",
+    "cap": "Project I · Simulation",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-04-04-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-04-03-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Apr 3",
+    "img": "/home/icons/experiment.svg",
+    "title": "Fixed the machine's four parts and wrote the first version of the study.",
+    "cap": "Project I · Study",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-04-03-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-03-22-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Mar 22",
+    "img": "/home/icons/interaction.svg",
+    "title": "Separated everyday coexistence from direct touch in the interaction plan.",
+    "cap": "Project I · Concept",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-03-22-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-03-20-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Mar 20",
+    "img": "/home/icons/lifecycle.svg",
+    "title": "Locked down the research question.",
+    "cap": "Project I · Concept",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-03-20-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "log:log-2026-03-07-1",
+    "kind": "log",
+    "project": "project-i",
+    "no": "Log · Mar 7",
+    "img": "/home/icons/strategy.svg",
+    "title": "Started the project with three directions on the table.",
+    "cap": "Project I · Concept",
+    "tone": {
+      "ink": "var(--g700)",
+      "hi": "var(--g400)"
+    },
+    "href": "/archive#log-2026-03-07-1",
+    "cta": "Read entry ↗"
+  },
+  {
+    "id": "other:smart-bed",
+    "kind": "other",
+    "project": "other-work",
+    "no": "Other work",
+    "img": "/home/icons/bed.svg",
+    "title": "Smart Bed",
+    "cap": "2030 Sleep Foresight Study · Tsinghua Future Lab × DeRucci · design research",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/archive#log-2026-08-25-2",
+    "cta": "Read the research ↗"
+  },
+  {
+    "id": "about:zishuo-li",
+    "kind": "about",
+    "project": "about",
+    "no": "About",
+    "img": "/home/icons/about.svg",
+    "title": "About Zishuo Li",
+    "cap": "Background · approach · contact",
+    "tone": {
+      "ink": "var(--n700)",
+      "hi": "var(--n200)"
+    },
+    "href": "/#about",
+    "cta": "Meet the designer ↓"
+  }
+]

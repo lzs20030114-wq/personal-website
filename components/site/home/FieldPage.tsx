@@ -8,6 +8,7 @@ import Link from 'next/link';
 import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { HomeField } from '../../../src/lib/site/home-model';
+import { FIELD_KINDS, fieldColors, pickFieldIndex } from '../../../src/lib/site/field-visuals';
 
 const COLS = 28;
 const ROWS = 14;
@@ -80,7 +81,7 @@ function cellInset(i: number, c0: number, r0: number) {
 
 const CELLS = Array.from({ length: COLS * ROWS }, (_, i) => i);
 
-export function FieldPage({ field, active, onWork }: { field: HomeField; active: boolean; onWork: () => void }) {
+export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField; active: boolean; onWork: () => void; onAbout: () => void }) {
   const { pool } = field;
   const fieldRef = useRef<HTMLDivElement>(null);
   const ghostRef = useRef<HTMLDivElement>(null);
@@ -264,12 +265,21 @@ export function FieldPage({ field, active, onWork }: { field: HomeField; active:
         el.style.opacity = (0.45 + Math.random() * 0.55).toFixed(2);
         el.style.pointerEvents = 'auto';
         if (Math.random() < THUMBS) {
-          const p = Math.floor(Math.random() * pool.length);
+          const p = pickFieldIndex(field.draws);
+          const colors = fieldColors(pool[p].project, pool[p].kind);
           el.dataset.img = String(p);
-          im.style.backgroundImage = `url(${pool[p].img})`;
-          im.style.opacity = '.85';
+          el.dataset.kind = pool[p].kind;
+          el.dataset.project = pool[p].project;
+          el.style.setProperty('--field-ink', colors.ink);
+          el.style.setProperty('--field-surface', colors.surface);
+          im.style.maskImage = `url(${pool[p].img})`;
+          im.style.opacity = '1';
         } else {
           delete el.dataset.img;
+          delete el.dataset.kind;
+          delete el.dataset.project;
+          el.style.removeProperty('--field-ink');
+          el.style.removeProperty('--field-surface');
           im.style.opacity = '0';
         }
         st.lit.set(i, now + 2200 + Math.random() * 4000);
@@ -333,13 +343,14 @@ export function FieldPage({ field, active, onWork }: { field: HomeField; active:
     const el = e.currentTarget;
     const i = Number(el.dataset.cell);
     if (openRef.current?.i === i && !m.current.closing) return;
-    const pick = el.dataset.img != null ? Number(el.dataset.img) : Math.floor(Math.random() * pool.length);
+    const pick = el.dataset.img != null ? Number(el.dataset.img) : pickFieldIndex(field.draws);
     openAt(i, pick);
   };
 
   const card = open ? pool[open.pick] : null;
-  const cardStyle: CSSProperties | undefined = open
-    ? { left: open.rect.x, top: open.rect.y, width: open.rect.w, height: open.rect.h }
+  const colors = card ? fieldColors(card.project, card.kind) : null;
+  const cardStyle: CSSProperties | undefined = open && colors
+    ? { left: open.rect.x, top: open.rect.y, width: open.rect.w, height: open.rect.h, '--field-ink': colors.ink, '--field-surface': colors.surface } as CSSProperties
     : undefined;
 
   return (
@@ -366,7 +377,15 @@ export function FieldPage({ field, active, onWork }: { field: HomeField; active:
             ref={cardRef}
             href={card.href}
             className="hs-field__card"
+            data-kind={card.kind}
+            data-project={card.project}
             style={cardStyle}
+            onClick={(e) => {
+              if (card.kind === 'about' && e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+                e.preventDefault();
+                onAbout();
+              }
+            }}
             onMouseEnter={() => clearTimeout(m.current.closeT)}
             onMouseLeave={() => {
               clearTimeout(m.current.closeT);
@@ -374,7 +393,8 @@ export function FieldPage({ field, active, onWork }: { field: HomeField; active:
             }}
             aria-label={`${card.title} — ${card.no} · ${card.cap}`}
           >
-            <span className="hs-field__card-img" role="img" aria-label={card.title} style={{ backgroundImage: `url(${card.img})` }} />
+            <span className="hs-field__card-kind">{FIELD_KINDS[card.kind].label}</span>
+            <span className="hs-field__card-img" role="img" aria-label={card.title} style={{ maskImage: `url(${card.img})` }} />
             <span className="hs-field__card-txt" data-card-txt>
               <span className="hs-field__card-meta">
                 <span className="hs-field__card-title">{card.title}</span>

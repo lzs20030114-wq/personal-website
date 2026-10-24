@@ -502,7 +502,7 @@ export function HomeScroll({ cards, groups, log, field }: HomeScrollProps) {
     // data-hs-page / data-hs-zone：页面转场离开首页时据此把地址写成 /#work 等，按返回落回原处（MAPPING §48）
     <div className={`hs-root${ready ? ' hs-ready' : ''}`} ref={rootRef} data-hs-root data-hs-page={page} data-hs-zone={zone}>
       <section className="hs-page hs-page--hook" data-page="0" aria-label="01 Field" ref={secRefs[0]}>
-        <FieldPage field={field} active={!flowMode && page === 0} onWork={() => api.current.goIdx(1)} />
+        <FieldPage field={field} active={!flowMode && page === 0} onWork={() => api.current.goIdx(1)} onAbout={() => api.current.goIdx(2)} />
       </section>
       <section
         className="hs-page hs-page--work"

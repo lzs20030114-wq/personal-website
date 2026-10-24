@@ -64,15 +64,22 @@
 .hs-field__grid--ghost { pointer-events: none; }
 .hs-field__ghost, .hs-field__cell { display: block; min-width: 0; min-height: 0; border-radius: 2px; opacity: 0; transition: opacity 1.6s ease, transform .7s var(--eo); }
 .hs-field__ghost { background: oklch(0.83 0.082 132 / .35); }
-.hs-field__cell { position: relative; background: oklch(0.95 0.032 120 / .07); pointer-events: none; cursor: pointer; }
-.hs-field__cimg { position: absolute; inset: 0; border-radius: 2px; background: center/cover no-repeat; opacity: 0; transition: opacity 1.6s ease; }
-.hs-field__card { position: absolute; z-index: 6; overflow: hidden; border-radius: 2px; background: var(--plate); box-shadow: 0 18px 50px oklch(0.08 0.02 235 / .55); text-align: left; cursor: pointer; color: var(--cream); }
-.hs-field__card-img { position: absolute; inset: 0; background: center/cover no-repeat; }
-.hs-field__card-txt { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 40px 12px 10px; background: linear-gradient(180deg, transparent, oklch(0.12 0.025 235 / .9)); opacity: 0; transform: translateY(8px); transition: opacity .35s, transform .5s var(--eo); white-space: nowrap; min-width: 0; }
+.hs-field__cell { position: relative; background: var(--field-surface, oklch(0.95 0.032 120 / .07)); pointer-events: none; cursor: pointer; }
+.hs-field__cimg { position: absolute; inset: 0; background: var(--field-ink); mask: center/contain no-repeat; opacity: 0; transition: opacity 1.6s ease; }
+/* 项目由色相区分，内容类型由明暗与右上角标记区分；小格和展开卡共享同一个符号。 */
+.hs-field__cell[data-kind="log"] { background: color-mix(in srgb, var(--field-surface) 60%, #08141c); }
+.hs-field__cell[data-kind="lab"] { background: color-mix(in srgb, var(--field-surface) 82%, #08141c); }
+.hs-field__cell[data-kind]::after { content: ''; position: absolute; right: 3px; top: 3px; width: 3px; height: 3px; background: var(--field-ink); opacity: .7; }
+.hs-field__cell[data-kind="lab"]::after { background: none; border: 1px solid var(--field-ink); }
+.hs-field__cell[data-kind="log"]::after { height: 1px; box-shadow: 0 2px 0 var(--field-ink); }
+.hs-field__card { position: absolute; z-index: 6; overflow: hidden; border-radius: 2px; background: var(--field-surface); border: 1px solid color-mix(in srgb, var(--field-ink) 25%, transparent); box-shadow: 0 18px 50px oklch(0.08 0.02 235 / .4); text-align: left; cursor: pointer; color: var(--cream); }
+.hs-field__card-kind { position: absolute; left: 14px; top: 12px; color: var(--field-ink); font: 400 10px var(--mono); }
+.hs-field__card-img { position: absolute; width: 29%; max-width: 104px; aspect-ratio: 1; left: 50%; top: 40%; transform: translate(-50%, -50%); background: var(--field-ink); mask: center/contain no-repeat; }
+.hs-field__card-txt { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 14px 12px; background: var(--field-surface); opacity: 0; transform: translateY(8px); transition: opacity .35s, transform .5s var(--eo); min-width: 0; }
 .hs-field__card-meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.hs-field__card-title { font: 500 clamp(13px, 1.2vw, 16px)/1.2 var(--sans); letter-spacing: -.012em; overflow: hidden; text-overflow: ellipsis; }
-.hs-field__card-cap { font: 400 10px var(--mono); color: oklch(0.72 0.012 150); overflow: hidden; text-overflow: ellipsis; }
-.hs-field__card-go { flex: none; font: 500 10px var(--mono); color: var(--lime); }
+.hs-field__card-title { font: 500 clamp(13px, 1.2vw, 16px)/1.25 var(--sans); letter-spacing: -.012em; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.hs-field__card-cap { font: 400 10px var(--mono); color: var(--field-ink); opacity: .75; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hs-field__card-go { flex: none; font: 500 10px var(--mono); color: var(--field-ink); }
 .hs-field__center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(680px, 52vw); z-index: 7; pointer-events: none; display: flex; flex-direction: column; align-items: center; text-align: center; gap: clamp(14px, 2.4vh, 24px); }
 .hs-field__name { margin: 0; display: flex; align-items: center; gap: 12px; font: 600 clamp(14px, 2vh, 17px)/1 var(--sans); letter-spacing: -.01em; }
 .hs-field__name-rule { width: 24px; height: 1px; background: oklch(0.95 0.032 120 / .4); }
