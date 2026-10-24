@@ -8,7 +8,7 @@ import '@fontsource/jetbrains-mono/latin-400.css';
 import '@fontsource/jetbrains-mono/latin-500.css';
 import './home.css';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import type { HomeCard, HomeField, HomeLabGroup, HomeLogData } from '../../../src/lib/site/home-model';
+import type { HomeField, HomeLabGroup, HomeLogData, HomeWorkGroup } from '../../../src/lib/site/home-model';
 import { FieldPage } from './FieldPage';
 import { AboutPage, WorkPage } from './WorkAboutPages';
 import { ZonePage } from './ZonePage';
@@ -44,13 +44,14 @@ function takeZoneMemory(): number | null {
 }
 
 export interface HomeScrollProps {
-  cards: HomeCard[];
+  /** 02 Work 的各组（第一组 = 三个主项目，MAPPING §58） */
+  work: HomeWorkGroup[];
   groups: HomeLabGroup[];
   log: HomeLogData;
   field: HomeField;
 }
 
-export function HomeScroll({ cards, groups, log, field }: HomeScrollProps) {
+export function HomeScroll({ work, groups, log, field }: HomeScrollProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const logRef = useRef<HTMLDivElement | null>(null);
   const secRefs = [useRef<HTMLElement>(null), useRef<HTMLElement>(null), useRef<HTMLElement>(null), useRef<HTMLElement>(null)];
@@ -116,7 +117,6 @@ export function HomeScroll({ cards, groups, log, field }: HomeScrollProps) {
         a.id = 'ch';
       });
     };
-    const $ = (s: string, el: ParentNode = root) => el.querySelector<HTMLElement>(s);
 
     /* 03 之后的自由滚区：条目随滚动显现 */
     const reveal = (el: HTMLElement, k: number) => {
@@ -199,7 +199,7 @@ export function HomeScroll({ cards, groups, log, field }: HomeScrollProps) {
     /* 导航 */
     const clearCards = () => {
       $$('[data-card]').forEach((c) => c.classList.remove('hs-is-on'));
-      $('[data-cards]')?.classList.remove('hs-has-on');
+      $$('[data-cards]').forEach((c) => c.classList.remove('hs-has-on'));
     };
     const go = (p: number) => {
       p = Math.max(0, Math.min(3, p));
@@ -387,15 +387,20 @@ export function HomeScroll({ cards, groups, log, field }: HomeScrollProps) {
     window.addEventListener('keydown', onKey);
 
     let ty: number | null = null;
+    let tx = 0;
     let tTop = 0;
     const onTouchStart = (e: TouchEvent) => {
       ty = e.touches[0].clientY;
+      tx = e.touches[0].clientX;
       tTop = zoneEl.scrollTop;
     };
     const onTouchEnd = (e: TouchEvent) => {
       if (ty == null || flow()) return;
       const dy = ty - e.changedTouches[0].clientY;
+      const dx = tx - e.changedTouches[0].clientX;
       ty = null;
+      // 左右划归 02 Work 的组切换（MAPPING §58），不翻页
+      if (Math.abs(dx) > Math.abs(dy)) return;
       if (st.page === 3) {
         if (dy < -50 && tTop <= 0) go(2);
         return;
@@ -411,29 +416,33 @@ export function HomeScroll({ cards, groups, log, field }: HomeScrollProps) {
     };
     root.addEventListener('scroll', onRootScroll);
 
-    /* 02 Work：卡片悬停（标题上移到顶、正文自下浮起，其余卡退到 42%） */
-    const cardsEl = $('[data-cards]')!;
+    /* 02 Work：卡片悬停（标题上移到顶、正文自下浮起，同一屏其余卡退到 42%）。
+       一屏一组卡（MAPPING §58 按组横向切换），每屏各管各的。 */
+    const cardsEls = $$('[data-cards]');
     const cards$ = $$('[data-card]');
     const enters = cards$.map((card) => {
+      const box = card.closest<HTMLElement>('[data-cards]')!;
       const enter = () => {
         const t = card.querySelector<HTMLElement>('[data-wt]')!;
         const op = t.offsetParent as HTMLElement;
         const top = t.offsetTop + op.offsetTop;
         card.style.setProperty('--ty', `${20 - top}px`);
         card.style.setProperty('--th-top', `${20 + t.offsetHeight + 14}px`);
-        cards$.forEach((c) => c.classList.toggle('hs-is-on', c === card));
-        cardsEl.classList.add('hs-has-on');
+        box.querySelectorAll('[data-card]').forEach((c) => c.classList.toggle('hs-is-on', c === card));
+        box.classList.add('hs-has-on');
       };
       card.addEventListener('mouseenter', enter);
       card.addEventListener('focus', enter);
       return enter;
     });
     const workOut = () => clearCards();
-    const onFocusOut = (e: FocusEvent) => {
-      if (!cardsEl.contains(e.relatedTarget as Node)) workOut();
-    };
-    cardsEl.addEventListener('mouseleave', workOut);
-    cardsEl.addEventListener('focusout', onFocusOut);
+    const focusOuts = cardsEls.map((box) => (e: FocusEvent) => {
+      if (!box.contains(e.relatedTarget as Node)) workOut();
+    });
+    cardsEls.forEach((box, i) => {
+      box.addEventListener('mouseleave', workOut);
+      box.addEventListener('focusout', focusOuts[i]);
+    });
 
     /* 窄屏 / 偏好切换时重排 */
     const onFlowChange = () => {
@@ -489,8 +498,10 @@ export function HomeScroll({ cards, groups, log, field }: HomeScrollProps) {
         c.removeEventListener('mouseenter', enters[i]);
         c.removeEventListener('focus', enters[i]);
       });
-      cardsEl.removeEventListener('mouseleave', workOut);
-      cardsEl.removeEventListener('focusout', onFocusOut);
+      cardsEls.forEach((box, i) => {
+        box.removeEventListener('mouseleave', workOut);
+        box.removeEventListener('focusout', focusOuts[i]);
+      });
       flowMq.removeEventListener('change', onFlowChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -511,7 +522,7 @@ export function HomeScroll({ cards, groups, log, field }: HomeScrollProps) {
         ref={secRefs[1]}
         style={{ transform: 'translateY(100%)' }}
       >
-        <WorkPage cards={cards} />
+        <WorkPage groups={work} active={!flowMode && page === 1} flow={flowMode} />
       </section>
       <section
         className="hs-page hs-page--about"

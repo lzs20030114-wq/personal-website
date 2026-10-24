@@ -5,6 +5,7 @@ import { LAB_INDEX, labAnchor } from './lab-index';
 import { projectGroupOf, bucketOf, withAnchors, aspectOf, OTHER_ASPECT } from './log-facets';
 import { LAB_ICONS, PROJECT_ICONS, iconPath, logIcon, buildFieldDraws, type FieldKind, type FieldProject, type FieldDraw } from './field-visuals';
 import type { LogEntry } from './log-schema';
+import type { OtherWorks } from './other-works-schema';
 
 /** 项目色：稿内 G / V / S 三组（ink = 浅底文字与刻度，hi = 深底高光）。G/V 取站内 token，S 稿内独有。 */
 export interface Tone {
@@ -70,15 +71,105 @@ export function buildCards(works: HomeWorkInput[]): HomeCard[] {
   });
 }
 
-/** 「Other works」行：智能床按作者拍板暂列 other work，没有自己的 /work 页，落到 /archive。 */
-export const OTHER_WORKS = [
-  {
-    title: 'Smart Bed',
-    line: '2030 Sleep Foresight Study · Tsinghua Future Lab × DeRucci · design research',
-    year: '2026',
-    href: '/archive',
-  },
-] as const;
+/* ───────────────────────── 02 Work：按组横向切换 ───────────────────────── */
+
+/** 其他作品的卡片不挂项目色：墨色刻度 + 深色幕上的青柠高光，与三个主项目分开 */
+export const TONE_N: Tone = { ink: 'var(--ink)', hi: 'var(--lime-hi)' };
+
+/** Work 页一张卡：主项目卡与其他作品卡共用这一个形状（标记与样式是同一套 hs-card） */
+export interface HomeWorkTile {
+  key: string;
+  kick: string;
+  status: string;
+  title: string;
+  role: string;
+  /** 悬停浮出的一句话；没有就只出 cta */
+  thesis: string | null;
+  cta: string;
+  href: string;
+  img: string | null;
+  imgPos: 'center' | 'top';
+  wip: boolean;
+  tone: Tone;
+  /** 主项目卡的 slug：点它走「卡片展开成案例页」的转场（MAPPING §48）；其他作品没有案例页 */
+  caseSlug: string | null;
+}
+
+export interface HomeWorkGroup {
+  key: string;
+  n: string;
+  title: string;
+  tiles: HomeWorkTile[];
+}
+
+/** 一屏放几张卡；一组超过这个数就分成几屏，横着接着切（MAPPING §58） */
+export const WORK_PER_PANEL = 3;
+
+/**
+ * 其他作品点进去去哪：登记了 `log`（日志项目组）且那一组有记录 → 那一组最新一条的锚点；否则用 href。
+ * Work 页卡片与首屏方块场共用这一条，两处不会指向不同地方。
+ */
+export function otherWorkHref(w: OtherWorks['works'][number], entries: LogEntry[]): string {
+  if (!w.log) return w.href;
+  const latest = withAnchors(entries)
+    .filter(({ entry }) => projectGroupOf(entry)?.key === w.log)
+    .reduce<{ entry: LogEntry; anchor: string } | undefined>(
+      (best, item) => (!best || item.entry.date > best.entry.date ? item : best),
+      undefined,
+    );
+  return latest ? `/archive#${latest.anchor}` : w.href;
+}
+
+/** 第一组 = 三个主项目（Selected work），后面按内容池登记的顺序一组一组排。 */
+export function buildWorkGroups(cards: HomeCard[], other: OtherWorks, entries: LogEntry[]): HomeWorkGroup[] {
+  const n2 = (i: number) => String(i).padStart(2, '0');
+  const selected: HomeWorkGroup = {
+    key: 'selected',
+    n: '01',
+    title: 'Selected work',
+    tiles: cards.map((c) => ({
+      key: c.slug,
+      kick: `${c.n} · ${c.kicker}`,
+      status: c.status,
+      title: c.title,
+      role: c.role,
+      thesis: c.thesis,
+      cta: c.img ? 'Read the case study ↗' : 'Preview ↗',
+      href: `/work/${c.slug}`,
+      img: c.img,
+      imgPos: 'center',
+      wip: c.wip,
+      tone: c.tone,
+      caseSlug: c.slug,
+    })),
+  };
+  const rest = other.groups.map((g, gi): HomeWorkGroup => {
+    const n = n2(gi + 2);
+    return {
+      key: g.key,
+      n,
+      title: g.title,
+      tiles: other.works
+        .filter((w) => w.group === g.key)
+        .map((w, i) => ({
+          key: `${g.key}-${i}`,
+          kick: `${n}.${i + 1} · ${w.context.split(' · ')[0]}`,
+          status: w.year,
+          title: w.title,
+          role: w.context,
+          thesis: w.line ?? null,
+          cta: 'Open ↗',
+          href: otherWorkHref(w, entries),
+          img: w.image?.src ?? null,
+          imgPos: w.image?.position ?? 'center',
+          wip: false,
+          tone: TONE_N,
+          caseSlug: null,
+        })),
+    };
+  });
+  return [selected, ...rest];
+}
 
 export interface HomeBench {
   no: string;
@@ -332,7 +423,7 @@ export interface FieldWorkInput extends HomeWorkInput {
   cover?: string;
 }
 
-export function buildHomeField(cards: HomeCard[], works: FieldWorkInput[], entries: LogEntry[]): HomeField {
+export function buildHomeField(cards: HomeCard[], works: FieldWorkInput[], entries: LogEntry[], other: OtherWorks): HomeField {
   const card = (slug: string) => {
     const c = cards.find((x) => x.slug === slug);
     if (!c) throw new Error(`home-model: 主页卡片缺 ${slug}`);
@@ -392,27 +483,24 @@ export function buildHomeField(cards: HomeCard[], works: FieldWorkInput[], entri
       cta: 'Read entry ↗',
     };
   });
-  const latestOther = anchored
-    .filter(({ entry }) => projectGroupOf(entry)?.key === 'other-work')
-    .reduce<(typeof anchored)[number] | undefined>((latest, item) =>
-      !latest || item.entry.date > latest.entry.date ? item : latest, undefined);
-  const other = OTHER_WORKS[0];
+  // 其他作品（content/other/works.json，MAPPING §58）逐件入池；链接与 Work 页卡片同一条规则
+  const others: FieldItem[] = other.works.map((w, i) => ({
+    id: `other:${w.group}:${i}`,
+    kind: 'other' as const,
+    project: 'other-work' as const,
+    no: 'Other work',
+    img: iconPath(PROJECT_ICONS['other-work']),
+    title: w.title,
+    cap: [w.line, w.context].filter(Boolean).join(' · '),
+    tone: FIELD_TONES['other-work'],
+    href: otherWorkHref(w, entries),
+    cta: 'Open ↗',
+  }));
   const pool: FieldItem[] = [
     ...projects,
     ...benches,
     ...logs,
-    {
-      id: 'other:smart-bed',
-      kind: 'other',
-      project: 'other-work',
-      no: 'Other work',
-      img: iconPath(PROJECT_ICONS['other-work']),
-      title: other.title,
-      cap: other.line,
-      tone: FIELD_TONES['other-work'],
-      href: latestOther ? `/archive#${latestOther.anchor}` : other.href,
-      cta: 'Read the research ↗',
-    },
+    ...others,
     {
       id: 'about:zishuo-li',
       kind: 'about',

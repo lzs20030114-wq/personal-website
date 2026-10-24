@@ -1,7 +1,8 @@
 import { HomeScroll } from '../components/site/home/HomeScroll';
 import { getAllWork, getRoutableWork } from '../src/lib/site/content';
 import { getLogEntries } from '../src/lib/site/log';
-import { buildCards, buildHomeField, buildHomeLog, buildLabGroups } from '../src/lib/site/home-model';
+import { getOtherWorks } from '../src/lib/site/other-works';
+import { buildCards, buildHomeField, buildHomeLog, buildLabGroups, buildWorkGroups } from '../src/lib/site/home-model';
 
 /**
  * 主页 = 「07 Home · Scroll Zone」（design-ref/home-scroll-zone，MAPPING §42）。
@@ -19,8 +20,10 @@ export default function Home() {
       published: w.status === 'published',
     })),
   );
-  const groups = buildLabGroups(cards);
   const entries = getLogEntries();
+  const other = getOtherWorks();
+  const work = buildWorkGroups(cards, other, entries);
+  const groups = buildLabGroups(cards);
   const log = buildHomeLog(entries);
   // 所有公开作品、台架与日志自动入池；无专属图标的新内容使用语义回退，不依赖截图目录。
   const field = buildHomeField(
@@ -36,6 +39,7 @@ export default function Home() {
       cover: w.cover,
     })),
     entries,
+    other,
   );
-  return <HomeScroll cards={cards} groups={groups} log={log} field={field} />;
+  return <HomeScroll work={work} groups={groups} log={log} field={field} />;
 }

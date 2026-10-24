@@ -5,7 +5,12 @@ import { getLogEntries } from './log';
 import { projectOf, withAnchors } from './log-facets';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildCards, buildHomeField, buildHomeLog, buildLabGroups, type FieldWorkInput } from './home-model';
+import { buildCards, buildHomeField as buildField, buildHomeLog, buildLabGroups, type FieldWorkInput, type HomeCard } from './home-model';
+import type { LogEntry } from './log-schema';
+import { getOtherWorks } from './other-works';
+
+/** 方块场的其他作品取自内容池（MAPPING §58） */
+const buildHomeField = (cs: HomeCard[], ws: FieldWorkInput[], es: LogEntry[]) => buildField(cs, ws, es, getOtherWorks());
 
 const cards = () =>
   buildCards(
