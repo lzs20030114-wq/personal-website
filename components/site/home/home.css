@@ -73,6 +73,18 @@
 .hs-field__card-title { font: 500 clamp(13px, 1.2vw, 16px)/1.2 var(--sans); letter-spacing: -.012em; overflow: hidden; text-overflow: ellipsis; }
 .hs-field__card-cap { font: 400 10px var(--mono); color: oklch(0.72 0.012 150); overflow: hidden; text-overflow: ellipsis; }
 .hs-field__card-go { flex: none; font: 500 10px var(--mono); color: var(--lime); }
+.hs-field__card-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; }
+/* 站方补充（MAPPING §55.1）：没图的方块 = 短码 + 所属项目的颜色；没图的卡 = 字就是内容 */
+.hs-field__code { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font: 500 8.5px/1 var(--mono); letter-spacing: -.02em; color: var(--tile, var(--cream)); white-space: nowrap; overflow: hidden; pointer-events: none; }
+.hs-field__cell--code { background: color-mix(in oklch, var(--tile, var(--cream)) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--tile, var(--cream)) 30%, transparent); }
+.hs-field--tight .hs-field__code { display: none; }
+.hs-field__card-top { position: absolute; left: 0; right: 0; top: 0; height: 2px; z-index: 2; }
+.hs-field__card-txt--plain { top: 0; flex-direction: column; justify-content: flex-start; align-items: stretch; gap: 10px; padding: 16px 16px 14px; background: none; white-space: normal; }
+.hs-field__card-head { display: flex; justify-content: space-between; gap: 12px; font: 500 10px var(--mono); color: oklch(0.72 0.012 150); }
+.hs-field__card-head > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+.hs-field__card-lead { font: 500 clamp(14px, 1.25vw, 17px)/1.3 var(--sans); letter-spacing: -.012em; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; }
+.hs-field__card-text { font: 400 12px/1.5 var(--sans); color: oklch(0.78 0.03 160); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.hs-field__card-cta { margin-top: auto; font: 500 10px var(--mono); color: var(--lime); }
 .hs-field__center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(680px, 52vw); z-index: 7; pointer-events: none; display: flex; flex-direction: column; align-items: center; text-align: center; gap: clamp(14px, 2.4vh, 24px); }
 .hs-field__name { margin: 0; display: flex; align-items: center; gap: 12px; font: 600 clamp(14px, 2vh, 17px)/1 var(--sans); letter-spacing: -.01em; }
 .hs-field__name-rule { width: 24px; height: 1px; background: oklch(0.95 0.032 120 / .4); }

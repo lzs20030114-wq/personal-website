@@ -4,6 +4,8 @@
 // 一张 28×14 的方块场：方块随机亮起又熄灭（一部分带作品缩略图），指针划过留下一圈短暂的余光；
 // 悬停一个亮着的方块，它就长成一张 6×4 的卡（周围方块让位），点卡进那件作品。
 // 中央是标题区，场在它后面绕开。手感常量照稿原样，一个数没改。
+// 站方改动（MAPPING §55.1）：每个亮起的方块都是站上真实的一件东西（项目 / 台架 / 日志），
+// 有图的显示缩略图，没图的显示短码并染上所属项目的颜色；不再有空白方块。
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -17,9 +19,14 @@ const CH = 4;
 const GAP = 12;
 /** 卡所在行列放大倍数（其余行列等比收窄让位） */
 const K = 1.5;
-/** 场里同时亮着的方块目标数 / 其中带缩略图的比例（稿 props fieldDensity / fieldThumbs 默认值） */
+/** 场里同时亮着的方块目标数（稿 props fieldDensity 默认值） */
 const DENSITY = 250;
-const THUMBS = 0.35;
+/** 亮起时从有图的那一堆里挑的比例（其余挑没图的、显示短码）。稿是 0.35 有图、其余空白 */
+const THUMBS = 0.6;
+/** 方块宽度低于它时短码放不下，只留颜色 */
+const CODE_MIN_W = 26;
+/** 走 Next 的图片优化：日志原图几百 KB，方块只要几十像素宽 */
+const thumb = (src: string, w: number) => `/_next/image?url=${encodeURIComponent(src)}&w=${w}&q=75`;
 const TICK_MS = 110;
 const FLOW_QUERY = '(max-width: 1023px), (prefers-reduced-motion: reduce)';
 
@@ -82,6 +89,8 @@ const CELLS = Array.from({ length: COLS * ROWS }, (_, i) => i);
 
 export function FieldPage({ field, active, onWork }: { field: HomeField; active: boolean; onWork: () => void }) {
   const { pool } = field;
+  const withImg = useRef(pool.flatMap((p, k) => (p.img ? [k] : []))).current;
+  const noImg = useRef(pool.flatMap((p, k) => (p.img ? [] : [k]))).current;
   const fieldRef = useRef<HTMLDivElement>(null);
   const ghostRef = useRef<HTMLDivElement>(null);
   const centerRef = useRef<HTMLDivElement>(null);
@@ -214,6 +223,7 @@ export function FieldPage({ field, active, onWork }: { field: HomeField; active:
       const fr = f.getBoundingClientRect();
       const tr = t.getBoundingClientRect();
       if (!fr.width || !fr.height) return;
+      f.classList.toggle('hs-field--tight', (fr.width - GAP * (COLS - 1)) / COLS < CODE_MIN_W);
       const pad = 10;
       st.zone = {
         c0: Math.max(0, Math.floor(((tr.left - pad - fr.left) / fr.width) * COLS)),
@@ -260,17 +270,25 @@ export function FieldPage({ field, active, onWork }: { field: HomeField; active:
         if (isCenter(i) || st.lit.has(i)) continue;
         const el = els[i];
         const im = el.firstElementChild as HTMLElement;
+        const code = el.lastElementChild as HTMLElement;
+        const from = (noImg.length && Math.random() >= THUMBS) || !withImg.length ? noImg : withImg;
+        const p = from[Math.floor(Math.random() * from.length)];
+        const it = pool[p];
+        el.dataset.item = String(p);
+        el.style.setProperty('--tile', it.tone.hi);
         el.style.transitionDuration = `${(1.2 + Math.random() * 1.2).toFixed(2)}s,.7s`;
-        el.style.opacity = (0.45 + Math.random() * 0.55).toFixed(2);
         el.style.pointerEvents = 'auto';
-        if (Math.random() < THUMBS) {
-          const p = Math.floor(Math.random() * pool.length);
-          el.dataset.img = String(p);
-          im.style.backgroundImage = `url(${pool[p].img})`;
+        if (it.img) {
+          el.classList.remove('hs-field__cell--code');
+          el.style.opacity = (0.45 + Math.random() * 0.55).toFixed(2);
+          im.style.backgroundImage = `url(${thumb(it.img, 128)})`;
           im.style.opacity = '.85';
+          code.textContent = '';
         } else {
-          delete el.dataset.img;
+          el.classList.add('hs-field__cell--code');
+          el.style.opacity = (0.7 + Math.random() * 0.3).toFixed(2);
           im.style.opacity = '0';
+          code.textContent = it.code;
         }
         st.lit.set(i, now + 2200 + Math.random() * 4000);
       }
@@ -333,7 +351,7 @@ export function FieldPage({ field, active, onWork }: { field: HomeField; active:
     const el = e.currentTarget;
     const i = Number(el.dataset.cell);
     if (openRef.current?.i === i && !m.current.closing) return;
-    const pick = el.dataset.img != null ? Number(el.dataset.img) : Math.floor(Math.random() * pool.length);
+    const pick = el.dataset.item != null ? Number(el.dataset.item) : Math.floor(Math.random() * pool.length);
     openAt(i, pick);
   };
 
@@ -359,6 +377,7 @@ export function FieldPage({ field, active, onWork }: { field: HomeField; active:
         {CELLS.map((i) => (
           <span key={i} className="hs-field__cell" data-cell={i} onMouseEnter={onCellEnter} aria-hidden="true">
             <span className="hs-field__cimg" />
+            <span className="hs-field__code" />
           </span>
         ))}
         {open && card ? (
@@ -374,16 +393,32 @@ export function FieldPage({ field, active, onWork }: { field: HomeField; active:
             }}
             aria-label={`${card.title} — ${card.no} · ${card.cap}`}
           >
-            <span className="hs-field__card-img" role="img" aria-label={card.title} style={{ backgroundImage: `url(${card.img})` }} />
-            <span className="hs-field__card-txt" data-card-txt>
-              <span className="hs-field__card-meta">
-                <span className="hs-field__card-title">{card.title}</span>
-                <span className="hs-field__card-cap">
-                  {card.no} · {card.cap}
+            <span className="hs-field__card-top" style={{ background: card.tone.hi }} />
+            {card.img ? (
+              <>
+                <span className="hs-field__card-img" style={{ backgroundImage: `url(${thumb(card.img, 640)})` }} />
+                <span className="hs-field__card-txt" data-card-txt>
+                  <span className="hs-field__card-meta">
+                    <span className="hs-field__card-title">{card.title}</span>
+                    <span className="hs-field__card-cap">
+                      {card.no} · {card.cap}
+                    </span>
+                  </span>
+                  <span className="hs-field__card-go">↗</span>
                 </span>
+              </>
+            ) : (
+              // 没图的卡：题头 + 一句话 + 简介，字就是内容本身
+              <span className="hs-field__card-txt hs-field__card-txt--plain" data-card-txt>
+                <span className="hs-field__card-head">
+                  <span style={{ color: card.tone.hi }}>{card.no}</span>
+                  <span>{card.cap}</span>
+                </span>
+                <span className="hs-field__card-lead">{card.title}</span>
+                {card.text ? <span className="hs-field__card-text">{card.text}</span> : null}
+                <span className="hs-field__card-cta">{card.cta}</span>
               </span>
-              <span className="hs-field__card-go">↗</span>
-            </span>
+            )}
           </Link>
         ) : null}
       </div>

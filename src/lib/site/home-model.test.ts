@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { getAllWork } from './content';
+import { getAllWork, getRoutableWork } from './content';
 import { LAB_BENCHES } from './lab-index';
 import { getLogEntries } from './log';
 import { projectOf, withAnchors } from './log-facets';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildCards, buildHomeField, buildHomeLog, buildLabGroups } from './home-model';
 
@@ -80,21 +80,52 @@ describe('主页数据派生（home-model）', () => {
     expect(other?.ticks.some((tick) => expected.includes(tick.href))).toBe(false);
   });
 
-  it('首屏方块场：卡片图都在 public 里、链接都指向真实去处、计数现算', () => {
+  const works = () =>
+    getRoutableWork().map((w) => ({
+      slug: w.slug,
+      title: w.title,
+      date: w.date,
+      summary: w.summary,
+      role: w.role,
+      published: w.status === 'published',
+      selected: w.selected,
+      cover: w.cover,
+    }));
+  const shots = () => new Set(readdirSync(join(process.cwd(), 'public', 'home', 'field')).map((f) => `/home/field/${f}`));
+
+  it('首屏方块场：每件都是站上真实的项目 / 台架 / 日志，图都在 public 里、链接都指向真实去处', () => {
     const entries = getLogEntries();
-    const f = buildHomeField(cards(), entries);
-    expect(f.pool.length).toBe(8);
+    const cs = cards();
+    const f = buildHomeField(cs, works(), entries, shots());
+    const by = (k: string) => f.pool.filter((p) => p.kind === k);
+    expect(by('project').map((p) => p.href)).toEqual(
+      expect.arrayContaining(getRoutableWork().map((w) => `/work/${w.slug}`)),
+    );
+    expect(by('bench').map((p) => p.code)).toEqual(LAB_BENCHES.map((b) => b.no));
+    expect(by('log').length).toBe(entries.length);
     const slugs = getAllWork().map((w) => w.slug);
     const anchors = new Set(withAnchors(entries).map((a) => a.anchor));
-    const nos = new Set(LAB_BENCHES.map((b) => b.no));
     f.pool.forEach((p) => {
-      expect(existsSync(join(process.cwd(), 'public', p.img))).toBe(true);
-      if (p.href.startsWith('/lab#lab')) expect(nos.has(p.href.slice('/lab#lab'.length))).toBe(true);
-      else if (p.href.startsWith('/work/')) expect(slugs).toContain(p.href.slice('/work/'.length));
-      else expect(anchors.has(p.href.slice('/archive#'.length))).toBe(true);
+      if (p.img) expect(existsSync(join(process.cwd(), 'public', p.img)), p.img).toBe(true);
+      if (p.href.startsWith('/work/')) expect(slugs).toContain(p.href.slice('/work/'.length));
+      else if (p.href.startsWith('/archive#')) expect(anchors.has(p.href.slice('/archive#'.length))).toBe(true);
+      else expect(p.href).toMatch(/^\/lab#lab\d-\d+$/);
+      // 不许把占位字当内容上首屏
+      expect(`${p.title} ${p.text} ${p.cap}`).not.toMatch(/author to write|to be written|待盘点|\[/);
     });
     expect(f.benches).toBe(LAB_BENCHES.length);
     expect(f.entries).toBe(entries.length);
-    expect(f.projects).toBe(cards().filter((c) => !c.wip).length);
+    expect(f.projects).toBe(cs.filter((c) => !c.wip).length);
+  });
+
+  it('首屏方块场是自动的：新作品、没截图的新台架、新日志都不用登记就出现', () => {
+    const entries = getLogEntries();
+    const extra = { slug: 'new-work', title: 'New work', date: '2026-11', summary: 'A new piece.', role: ['Design'], published: true, selected: false };
+    const fresh = { ...entries[0], date: '2099-01-01', lead: { en: 'A brand new entry.', zh: '一条新日志。' }, blocks: undefined };
+    // 一张截图都没有：台架照样全部在，只是退成编号方块，不报错
+    const f = buildHomeField(cards(), [...works(), extra], [fresh, ...entries], new Set());
+    expect(f.pool.find((p) => p.href === '/work/new-work')?.title).toBe('New work');
+    expect(f.pool.filter((p) => p.kind === 'bench').every((p) => p.img === null && p.code)).toBe(true);
+    expect(f.pool.find((p) => p.title === 'A brand new entry.')?.code).toBe('01·01');
   });
 });

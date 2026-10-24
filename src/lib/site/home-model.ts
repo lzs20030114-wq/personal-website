@@ -1,7 +1,7 @@
 // 主页「07 Home · Scroll Zone」的数据派生（design-ref/home-scroll-zone，MAPPING §42）。
 // 纯函数、不碰 fs / DOM：app/page.tsx 在服务端读内容池后调用，结果作为可序列化 props 递给客户端组件
 // （客户端组件不能 import 内容池模块——node:fs 撞 Turbopack，与 log-facets 同一条纪律）。
-import { LAB_INDEX, labBench } from './lab-index';
+import { LAB_INDEX } from './lab-index';
 import { projectGroupOf, bucketOf, withAnchors } from './log-facets';
 import type { LogEntry } from './log-schema';
 
@@ -280,12 +280,22 @@ export function buildHomeLog(entries: LogEntry[]): HomeLogData {
 
 /* ───────────────────────── 01 Field（稿 17 Home · Field Hero，MAPPING §55） ───────────────────────── */
 
-/** 场里一张卡：悬停某个亮着的方块时展开成它。 */
+/**
+ * 场里一块方块背后的那件东西：站上真实存在的一个项目、一台台架或一条日志（MAPPING §55.1）。
+ * 有图的方块直接显示缩略图；没图的显示一个短码（台架编号 / 日志日期 / 项目序号），悬停都展开成卡。
+ */
 export interface FieldItem {
+  kind: 'project' | 'bench' | 'log';
+  /** 方块上的短码：「2-7」「10·06」「II」 */
+  code: string;
+  /** 卡片题头：「Lab 2-7」「Log · Oct 6」「Project II」 */
   no: string;
-  img: string;
+  img: string | null;
   title: string;
+  /** 卡片副行：所属项目 · 类型 / 方面 */
   cap: string;
+  /** 卡片正文一段（台架简介 / 项目简介）；日志的标题就是它的一句话，不另给 */
+  text: string;
   tone: Tone;
   href: string;
   cta: string;
@@ -298,72 +308,111 @@ export interface HomeField {
   entries: number;
 }
 
-/** 台架截图（public/home/，稿自带的静态帧）；标题与说明取 lab-index。 */
-const FIELD_BENCHES: { no: string; img: string; group: string }[] = [
-  { no: '1-4', img: '/home/c-fivering.png', group: 'reincarnation-machine' },
-  { no: '2-5', img: '/home/c-cylinder.png', group: 'project-ii' },
-  { no: '2-10', img: '/home/c-formed.png', group: 'project-ii' },
-  { no: '2-11', img: '/home/c-crowd.png', group: 'project-ii' },
-  { no: '2-9', img: '/home/c-nine.png', group: 'project-ii' },
-];
-/** 项目卡用的图：日志池里已有的原图（与稿内 machine-0813a / cluster-nine 同一张）。 */
-const FIELD_PROJECTS: { slug: string; img: string; cap: string }[] = [
-  { slug: 'reincarnation-machine', img: '/log/machine-20260813-012e2490.webp', cap: 'Full assembly · Rhino' },
-  { slug: 'project-ii', img: '/log/2026-09-03-unit-cluster-nine-staggered.webp', cap: 'Nine rings, one person' },
-];
-/** 日志卡：按图找到那一条，链接走 withAnchors 锚点（§31）。 */
-const FIELD_LOG = { img: '/log/2026-09-05-attention-shape.webp', title: 'Attention shape' };
-const TONE_LOG: Tone = { ink: 'oklch(0.235 0.025 215)', hi: 'oklch(0.72 0.012 150)' };
+/**
+ * 台架截图：scripts/home-field/capture.mjs 从 /lab 逐台截出，按编号取。
+ * 新台架还没截图时不报错：方块照样出现，只是显示编号而不是图（page.tsx 在服务端看文件在不在）。
+ */
+export const fieldBenchImg = (no: string) => `/home/field/lab${no}.webp`;
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+const TONE_NEUTRAL: Tone = { ink: 'var(--n600)', hi: 'oklch(0.72 0.012 150)' };
+const GROUP_TONE: Record<string, Tone> = {
+  'project-i': TONE_G,
+  'project-ii': TONE_V,
+  'project-iii': TONE_S,
+  'other-work': TONE_S,
+  'this-site': TONE_NEUTRAL,
+};
+const clip = (t: string, n: number) => (t.length <= n ? t : `${t.slice(0, n - 1).trimEnd()}…`);
 
-export function buildHomeField(cards: HomeCard[], entries: LogEntry[]): HomeField {
-  const card = (slug: string) => {
-    const c = cards.find((x) => x.slug === slug);
-    if (!c) throw new Error(`home-model: 主页卡片缺 ${slug}`);
-    return c;
+/** 方块场要的作品字段：有自己页面的全部作品（getRoutableWork），不止主页那三张卡 */
+export interface FieldWorkInput extends HomeWorkInput {
+  selected: boolean;
+  /** frontmatter 的 cover（可选）；没有就取这个项目最新一条带图日志的图 */
+  cover?: string;
+}
+
+/**
+ * 卡池全部现算，往站上加东西不用回来改这里（MAPPING §55.2）：
+ *   新作品（content/work 下有自己页面的）→ 自动成一张项目卡；
+ *   新台架（登记进 lab-index）→ 自动成一张台架卡，有截图显示截图，没有显示编号；
+ *   新日志（entries.json，含 /studio 发的）→ 自动成一张日志卡，带图的显示图。
+ * `benchImgs` = public/home/field 下实际有的截图路径，由服务端读目录后传进来（本模块不碰 fs）。
+ */
+export function buildHomeField(
+  cards: HomeCard[],
+  works: FieldWorkInput[],
+  entries: LogEntry[],
+  benchImgs: ReadonlySet<string>,
+): HomeField {
+  const anchored = withAnchors(entries);
+  // 作品 slug ← 日志的项目组 key（project-i 的页面是 reincarnation-machine，其余同名）
+  const slugOfGroup = (key: string) => GROUP_SLUG[key] ?? key;
+  const latestImg = (slug: string) => {
+    for (const { entry } of anchored) {
+      if (slugOfGroup(projectGroupOf(entry)?.key ?? '') !== slug) continue;
+      const img = entry.blocks?.find((b) => b.kind === 'image');
+      if (img && img.kind === 'image') return img.src;
+    }
+    return null;
   };
-  const bench = (b: (typeof FIELD_BENCHES)[number]): FieldItem => {
-    const lb = labBench(b.no);
-    const c = card(b.group);
+  const ordered = [...works].sort((a, b) => Number(b.selected) - Number(a.selected));
+  const projects: FieldItem[] = ordered.map((w, i) => {
+    const card = cards.find((c) => c.slug === w.slug);
+    const wip = !w.published;
     return {
-      no: `Lab ${b.no}`,
-      img: b.img,
-      title: lb.title,
-      cap: `${c.title} · ${lb.kind.split(' · ')[0]}`,
-      tone: c.tone,
-      href: `/lab#lab${b.no}`,
-      cta: 'Open bench ↗',
+      kind: 'project',
+      code: ROMAN[i] ?? String(i + 1),
+      no: card?.kicker ?? (w.selected ? `Project ${ROMAN[i]}` : 'Work'),
+      img: w.cover ?? latestImg(w.slug),
+      title: card?.title ?? w.title,
+      cap: wip ? 'Case study in preparation' : `Case study · ${w.date.slice(0, 4)}`,
+      text: wip ? '' : clip(w.summary, 180),
+      tone: card?.tone ?? GROUP_TONE[w.slug] ?? TONE_NEUTRAL,
+      href: `/work/${w.slug}`,
+      cta: 'Case study ↗',
     };
-  };
-  const project = (p: (typeof FIELD_PROJECTS)[number]): FieldItem => {
-    const c = card(p.slug);
-    return { no: c.kicker, img: p.img, title: c.title, cap: p.cap, tone: c.tone, href: `/work/${p.slug}`, cta: 'Case study ↗' };
-  };
-  const hit = withAnchors(entries).find(({ entry }) => entry.blocks?.some((b) => b.kind === 'image' && b.src === FIELD_LOG.img));
-  const B = (no: string) => bench(FIELD_BENCHES.find((b) => b.no === no)!);
-  const pool: FieldItem[] = [
-    B('1-4'),
-    project(FIELD_PROJECTS[0]),
-    B('2-5'),
-    project(FIELD_PROJECTS[1]),
-    B('2-10'),
-    B('2-11'),
-    B('2-9'),
-  ];
-  if (hit) {
-    pool.push({
-      no: `Log · ${fmtMd(hit.entry.date)}`,
-      img: FIELD_LOG.img,
-      title: FIELD_LOG.title,
-      cap: 'Work log',
-      tone: TONE_LOG,
-      href: `/archive#${hit.anchor}`,
+  });
+
+  const benches: FieldItem[] = LAB_INDEX.flatMap((g) => {
+    const card = cards.find((c) => c.slug === GROUP_SLUG[g.key]);
+    return g.segments.flatMap((s) =>
+      s.benches.map<FieldItem>((b) => ({
+        kind: 'bench',
+        code: b.no,
+        no: `Lab ${b.no}`,
+        img: benchImgs.has(fieldBenchImg(b.no)) ? fieldBenchImg(b.no) : null,
+        title: b.title,
+        cap: `${card?.title ?? g.label} · ${b.kind.split(' · ')[0]}`,
+        text: b.description,
+        tone: card?.tone ?? TONE_NEUTRAL,
+        href: `/lab#lab${b.no}`,
+        cta: 'Open bench ↗',
+      })),
+    );
+  });
+
+  const logs: FieldItem[] = anchored.map(({ entry, anchor }) => {
+    const grp = projectGroupOf(entry);
+    const img = entry.blocks?.find((b) => b.kind === 'image');
+    const aspect = entry.tags.find((t) => t.variant === 'neutral')?.label.en;
+    return {
+      kind: 'log',
+      code: `${entry.date.slice(5, 7)}·${entry.date.slice(8, 10)}`,
+      no: `Log · ${fmtMd(entry.date)}`,
+      img: img && img.kind === 'image' ? img.src : null,
+      title: entry.lead.en,
+      cap: [grp?.short.en ?? 'Work log', aspect].filter(Boolean).join(' · '),
+      text: '',
+      tone: GROUP_TONE[grp?.key ?? ''] ?? TONE_NEUTRAL,
+      href: `/archive#${anchor}`,
       cta: 'Read entry ↗',
-    });
-  }
+    };
+  });
+
   return {
-    pool,
-    projects: cards.filter((c) => !c.wip).length,
-    benches: LAB_INDEX.reduce((n, g) => n + g.segments.reduce((m, s) => m + s.benches.length, 0), 0),
+    pool: [...projects, ...benches, ...logs],
+    projects: works.filter((w) => w.selected && w.published).length,
+    benches: benches.length,
     entries: entries.length,
   };
 }
