@@ -72,7 +72,7 @@
 .hs-field__cell[data-kind]::after { content: ''; position: absolute; right: 3px; top: 3px; width: 3px; height: 3px; background: var(--field-ink); opacity: .7; }
 .hs-field__cell[data-kind="lab"]::after { background: none; border: 1px solid var(--field-ink); }
 .hs-field__cell[data-kind="log"]::after { height: 1px; box-shadow: 0 2px 0 var(--field-ink); }
-.hs-field__card { position: absolute; z-index: 6; overflow: hidden; border-radius: 2px; background: var(--field-surface); border: 1px solid color-mix(in srgb, var(--field-ink) 25%, transparent); box-shadow: 0 18px 50px oklch(0.08 0.02 235 / .4); text-align: left; cursor: pointer; color: var(--cream); }
+.hs-field__card { position: absolute; z-index: 8; overflow: hidden; border-radius: 2px; background: var(--field-surface); border: 1px solid color-mix(in srgb, var(--field-ink) 25%, transparent); box-shadow: 0 18px 50px oklch(0.08 0.02 235 / .4); text-align: left; cursor: pointer; color: var(--cream); }
 .hs-field__card-kind { position: absolute; left: 14px; top: 12px; color: var(--field-ink); font: 400 10px var(--mono); }
 .hs-field__card-img { position: absolute; width: 29%; max-width: 104px; aspect-ratio: 1; left: 50%; top: 40%; transform: translate(-50%, -50%); background: var(--field-ink); mask: center/contain no-repeat; }
 .hs-field__card-txt { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 14px 12px; background: var(--field-surface); opacity: 0; transform: translateY(8px); transition: opacity .35s, transform .5s var(--eo); min-width: 0; }
