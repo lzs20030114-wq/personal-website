@@ -21,7 +21,7 @@ import {
   type Loc,
   type Rect,
 } from '../../src/lib/site/page-transition';
-import { HOME_ZONE_KEY, PT_DONE_EVENT } from './pageTransitionState';
+import { HOME_WORK_PANEL_KEY, HOME_ZONE_KEY, PT_DONE_EVENT } from './pageTransitionState';
 
 /**
  * 页面之间的转场（MAPPING §48）。挂在根布局里，全站只有一份。
@@ -229,6 +229,17 @@ function rememberHome() {
       sessionStorage.setItem(HOME_ZONE_KEY, JSON.stringify({ top: zone?.scrollTop ?? 0, at: Date.now() }));
     } catch {
       /* 无痕模式等：只是落不回原来的滚动位置 */
+    }
+  }
+  if (page === 1) {
+    // 02 Work 按组横向切换：停在第一屏以外时记下第几屏（MAPPING §56）
+    const panels = Array.from(root.querySelectorAll('.hs-wg__panel'));
+    const i = panels.findIndex((p) => p.classList.contains('hs-is-cur'));
+    try {
+      if (i > 0) sessionStorage.setItem(HOME_WORK_PANEL_KEY, JSON.stringify({ i, at: Date.now() }));
+      else sessionStorage.removeItem(HOME_WORK_PANEL_KEY);
+    } catch {
+      /* 同上 */
     }
   }
   if (window.location.hash !== hash) {

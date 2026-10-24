@@ -13,6 +13,12 @@ export const PT_DONE_EVENT = 'pt:done';
  */
 export const HOME_ZONE_KEY = 'pt-home-zone';
 
+/**
+ * 离开首页 02 Work 时停在第几屏（按组横向切换，MAPPING §56）：编排层写、WorkPage 落位时取用一次。
+ * 值 = { i, at }；只在第一屏以外才写。
+ */
+export const HOME_WORK_PANEL_KEY = 'pt-home-work-panel';
+
 /** 此刻是否正处在一次页面转场里（包括新页已挂载、动画还没演完的那一段）。 */
 export function pageTransitionActive(): boolean {
   return typeof document !== 'undefined' && document.documentElement.hasAttribute('data-pt');

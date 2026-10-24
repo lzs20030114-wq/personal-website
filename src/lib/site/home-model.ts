@@ -4,6 +4,7 @@
 import { LAB_INDEX } from './lab-index';
 import { projectGroupOf, bucketOf, withAnchors } from './log-facets';
 import type { LogEntry } from './log-schema';
+import type { OtherWorks } from './other-works-schema';
 
 /** 项目色：稿内 G / V / S 三组（ink = 浅底文字与刻度，hi = 深底高光）。G/V 取站内 token，S 稿内独有。 */
 export interface Tone {
@@ -69,15 +70,90 @@ export function buildCards(works: HomeWorkInput[]): HomeCard[] {
   });
 }
 
-/** 「Other works」行：智能床按作者拍板暂列 other work，没有自己的 /work 页，落到 /archive。 */
-export const OTHER_WORKS = [
-  {
-    title: 'Smart Bed',
-    line: '2030 Sleep Foresight Study · Tsinghua Future Lab × DeRucci · design research',
-    year: '2026',
-    href: '/archive',
-  },
-] as const;
+/* ───────────────────────── 02 Work：按组横向切换 ───────────────────────── */
+
+/** 其他作品的卡片不挂项目色：墨色刻度 + 深色幕上的青柠高光，与三个主项目分开 */
+export const TONE_N: Tone = { ink: 'var(--ink)', hi: 'var(--lime-hi)' };
+
+/** Work 页一张卡：主项目卡与其他作品卡共用这一个形状（标记与样式是同一套 hs-card） */
+export interface HomeWorkTile {
+  key: string;
+  kick: string;
+  status: string;
+  title: string;
+  role: string;
+  /** 悬停浮出的一句话；没有就只出 cta */
+  thesis: string | null;
+  cta: string;
+  href: string;
+  img: string | null;
+  imgPos: 'center' | 'top';
+  wip: boolean;
+  tone: Tone;
+  /** 主项目卡的 slug：点它走「卡片展开成案例页」的转场（MAPPING §48）；其他作品没有案例页 */
+  caseSlug: string | null;
+}
+
+export interface HomeWorkGroup {
+  key: string;
+  n: string;
+  title: string;
+  tiles: HomeWorkTile[];
+}
+
+/** 一屏放几张卡；一组超过这个数就分成几屏，横着接着切（MAPPING §56） */
+export const WORK_PER_PANEL = 3;
+
+/** 第一组 = 三个主项目（Selected work），后面按内容池登记的顺序一组一组排。 */
+export function buildWorkGroups(cards: HomeCard[], other: OtherWorks): HomeWorkGroup[] {
+  const n2 = (i: number) => String(i).padStart(2, '0');
+  const selected: HomeWorkGroup = {
+    key: 'selected',
+    n: '01',
+    title: 'Selected work',
+    tiles: cards.map((c) => ({
+      key: c.slug,
+      kick: `${c.n} · ${c.kicker}`,
+      status: c.status,
+      title: c.title,
+      role: c.role,
+      thesis: c.thesis,
+      cta: c.img ? 'Read the case study ↗' : 'Preview ↗',
+      href: `/work/${c.slug}`,
+      img: c.img,
+      imgPos: 'center',
+      wip: c.wip,
+      tone: c.tone,
+      caseSlug: c.slug,
+    })),
+  };
+  const rest = other.groups.map((g, gi): HomeWorkGroup => {
+    const n = n2(gi + 2);
+    return {
+      key: g.key,
+      n,
+      title: g.title,
+      tiles: other.works
+        .filter((w) => w.group === g.key)
+        .map((w, i) => ({
+          key: `${g.key}-${i}`,
+          kick: `${n}.${i + 1} · ${w.context.split(' · ')[0]}`,
+          status: w.year,
+          title: w.title,
+          role: w.context,
+          thesis: w.line ?? null,
+          cta: 'Open ↗',
+          href: w.href,
+          img: w.image?.src ?? null,
+          imgPos: w.image?.position ?? 'center',
+          wip: false,
+          tone: TONE_N,
+          caseSlug: null,
+        })),
+    };
+  });
+  return [selected, ...rest];
+}
 
 export interface HomeBench {
   no: string;

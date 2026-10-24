@@ -3,7 +3,8 @@ import { join } from 'node:path';
 import { HomeScroll } from '../components/site/home/HomeScroll';
 import { getAllWork, getRoutableWork } from '../src/lib/site/content';
 import { getLogEntries } from '../src/lib/site/log';
-import { buildCards, buildHomeField, buildHomeLog, buildLabGroups } from '../src/lib/site/home-model';
+import { getOtherWorks } from '../src/lib/site/other-works';
+import { buildCards, buildHomeField, buildHomeLog, buildLabGroups, buildWorkGroups } from '../src/lib/site/home-model';
 
 /**
  * 主页 = 「07 Home · Scroll Zone」（design-ref/home-scroll-zone，MAPPING §42）。
@@ -21,6 +22,7 @@ export default function Home() {
       published: w.status === 'published',
     })),
   );
+  const work = buildWorkGroups(cards, getOtherWorks());
   const groups = buildLabGroups(cards);
   const entries = getLogEntries();
   const log = buildHomeLog(entries);
@@ -41,5 +43,5 @@ export default function Home() {
     entries,
     shots,
   );
-  return <HomeScroll cards={cards} groups={groups} log={log} field={field} />;
+  return <HomeScroll work={work} groups={groups} log={log} field={field} />;
 }

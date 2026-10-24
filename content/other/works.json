@@ -1,0 +1,16 @@
+{
+  "groups": [
+    { "key": "design-research", "title": "Design research" }
+  ],
+  "works": [
+    {
+      "title": "Smart Bed",
+      "group": "design-research",
+      "year": "2026",
+      "context": "Internship · Tsinghua Future Lab × DeRucci",
+      "line": "2030 Sleep Foresight Study",
+      "image": { "src": "/log/sleep-20260529-original-report.png", "width": 1440, "height": 1600, "position": "top" },
+      "href": "/archive"
+    }
+  ]
+}
