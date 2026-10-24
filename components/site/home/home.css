@@ -97,27 +97,28 @@
 .hs-field__foot { position: absolute; left: 56px; right: 88px; bottom: 22px; display: flex; justify-content: space-between; gap: 24px; font: 400 11px var(--mono); color: oklch(0.72 0.012 150); pointer-events: none; }
 /* ---------- 02 work ---------- */
 .hs-work { position: relative; height: 100%; min-height: 640px; max-width: 1360px; margin: 0 auto; padding: 92px 88px 40px 56px; display: flex; flex-direction: column; gap: 20px; }
-.hs-cards { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 32px; padding-top: 18px; }
+.hs-cards { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 28px; padding-top: 18px; }
 .hs-card { display: flex; flex-direction: column; gap: 12px; min-width: 0; transition: opacity .45s; }
 .hs-cards.hs-has-on .hs-card:not(.hs-is-on) { opacity: .42; }
 .hs-card__kick { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; white-space: nowrap; font: 500 12px var(--mono); }
 .hs-card__kick-n { color: var(--c-ink); }
 .hs-card__status { color: var(--muted); }
 .hs-card__status--wip { color: var(--slate); }
-.hs-card__box { position: relative; flex: 1; display: flex; flex-direction: column; min-height: calc(min(31vh, 264px) + 150px); overflow: hidden; }
-.hs-card__plate { position: relative; flex: none; height: min(31vh, 264px); background: var(--plate); overflow: hidden; }
+.hs-card__box { position: relative; flex: 1; display: flex; flex-direction: column; min-height: calc(min(24vh, 204px) + 138px); overflow: hidden; }
+.hs-card__plate { position: relative; flex: none; height: min(24vh, 204px); background: var(--plate); overflow: hidden; }
 .hs-card__plate--wip { background: var(--paper); }
 .hs-card__img { position: absolute; inset: 0; background: center/cover no-repeat; transition: transform 1.2s var(--eo); }
 .hs-card.hs-is-on .hs-card__img { transform: scale(1.08); }
 .hs-card__stamp { position: absolute; left: 10px; bottom: 8px; font: 400 10px var(--mono); color: var(--lime); }
 .hs-card__wip { position: absolute; inset: 0; background: repeating-linear-gradient(45deg, oklch(0.45 0.06 235 / .12) 0 1px, transparent 1px 9px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+.hs-card__wip-in { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .hs-card__wip-badge { font: 500 12px var(--mono); padding: 5px 10px; border: 1px solid var(--slate); color: oklch(0.4 0.06 235); }
 .hs-card__wip-note { font: 400 11px var(--mono); color: var(--muted); }
 .hs-card__veil { position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, oklch(0.2 0.038 232 / .9) 0%, oklch(0.17 0.034 238 / .97) 100%); clip-path: inset(0 0 100% 0); transition: clip-path .75s var(--eio); }
 .hs-card.hs-is-on .hs-card__veil { clip-path: inset(0 0 0 0); }
 .hs-card__bar { position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--c-ink); z-index: 2; }
 .hs-card__head { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding-top: 14px; }
-.hs-card__title { position: relative; display: inline-block; max-width: calc(100% - 40px); font: 600 clamp(20px, 2vw, 26px)/1.1 var(--sans); letter-spacing: -.022em; padding-bottom: 4px; color: var(--ink); transition: transform .75s var(--eio), color .5s; }
+.hs-card__title { position: relative; display: inline-block; max-width: calc(100% - 40px); font: 600 clamp(18px, 1.7vw, 23px)/1.1 var(--sans); letter-spacing: -.022em; padding-bottom: 4px; color: var(--ink); transition: transform .75s var(--eio), color .5s; }
 .hs-card.hs-is-on .hs-card__title { color: oklch(0.96 0.03 120); transform: translate(20px, var(--ty, 0px)); }
 .hs-card__ul { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--c-hi); transform-origin: 0 50%; transform: scaleX(0); transition: transform .6s var(--eo) .3s; }
 .hs-card.hs-is-on .hs-card__ul { transform: scaleX(1); }
@@ -125,42 +126,88 @@
 .hs-card.hs-is-on .hs-card__role { opacity: 0; }
 .hs-card__thesis { position: absolute; left: 20px; right: 20px; top: var(--th-top, 70px); bottom: 18px; z-index: 2; display: flex; flex-direction: column; gap: 12px; opacity: 0; transform: translateY(14px); transition: opacity .45s ease 0s, transform .7s var(--eo) 0s; pointer-events: none; }
 .hs-card.hs-is-on .hs-card__thesis { opacity: 1; transform: translateY(0); transition-delay: .28s, .28s; }
-.hs-card__thesis-text { flex: 1; min-height: 0; overflow: hidden; -webkit-mask-image: linear-gradient(#000 calc(100% - 22px), transparent); mask-image: linear-gradient(#000 calc(100% - 22px), transparent); font: 400 clamp(15px, 1.25vw, 17px)/1.5 var(--sans); color: oklch(0.93 0.03 125); text-wrap: pretty; }
+.hs-card__thesis-text { flex: 1; min-height: 0; overflow: hidden; -webkit-mask-image: linear-gradient(#000 calc(100% - 22px), transparent); mask-image: linear-gradient(#000 calc(100% - 22px), transparent); font: 400 clamp(14px, 1.1vw, 16px)/1.5 var(--sans); color: oklch(0.93 0.03 125); text-wrap: pretty; }
 .hs-card__cta { flex: none; font: 500 12px var(--mono); color: var(--c-hi); }
-/* 02 Work 按组横向切换（MAPPING §58，站方增补，稿里没有）：一屏一组卡片，左右露出相邻两屏的一条边 */
+/* 02 Work 横向切换（稿「18 Home · Work Carousel」，MAPPING §59；分组见 §58）：
+   当前屏占舞台 85%，下一屏露出一截；屏的叠放与卡片位移只在桌面且允许动效时生效（下方 @media，与引擎 FLOW_QUERY 互补） */
 .hs-page--work { overflow-x: hidden; }
-.hs-wg { --wg-gap: 48px; }
 .hs-wg__lead { flex: 1; min-width: 0; }
 .hs-wg__titles { position: relative; }
 .hs-wg__sizer { visibility: hidden; white-space: nowrap; }
-.hs-wg__title { position: absolute; left: 0; top: 0; white-space: nowrap; transition: transform .8s var(--eio), opacity .5s; }
+.hs-wg__title { position: absolute; left: 0; top: 0; white-space: nowrap; transition: transform .8s var(--eio), opacity .4s ease; }
+.hs-wg__title.hs-is-here { transition: transform .9s var(--eio) .1s, opacity .5s ease .1s; }
 .hs-wg__title.hs-is-past { transform: translateY(-110%); opacity: 0; }
 .hs-wg__title.hs-is-next { transform: translateY(110%); opacity: 0; }
 .hs-wg__ctl { flex: none; display: flex; align-items: center; gap: 16px; }
 .hs-wg__range { font: 400 12px var(--mono); color: var(--muted); }
-.hs-wg__count { min-width: 52px; text-align: right; font: 500 12px var(--mono); color: var(--muted); }
-.hs-wg__count b { font-weight: 500; color: var(--ink); }
-.hs-wg__arr { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid oklch(0.235 0.025 215 / .3); font: 500 14px var(--mono); text-align: center; transition: background-color .2s, color .2s, border-color .2s, opacity .2s; }
+/* 刻度盘：每屏一格，指针跟着转；绕回第一屏时继续往前转，不倒回去 */
+.hs-wg__dial { position: relative; flex: none; width: 30px; height: 30px; border-radius: 50%; border: 1px solid oklch(0.235 0.025 215 / .22); }
+.hs-wg__dial-tick { position: absolute; left: 50%; top: 50%; width: 1px; height: 4px; margin: -2px 0 0 -.5px; background: oklch(0.235 0.025 215 / .28); transition: background .5s; }
+.hs-wg__dial-tick.hs-is-on { background: var(--ink); }
+.hs-wg__dial-hand { position: absolute; left: 50%; top: 50%; width: 1.5px; height: 9px; margin: -9px 0 0 -.75px; background: var(--ink); transform-origin: 50% 100%; transition: transform 1s var(--eio); }
+.hs-wg__dial-hub { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%; background: var(--ink); }
+/* 组号像里程表一样滚到当前组 */
+.hs-wg__count { display: flex; align-items: baseline; gap: 5px; font: 500 12px var(--mono); color: var(--muted); }
+.hs-wg__odo { display: inline-block; height: 12px; line-height: 12px; overflow: hidden; color: var(--ink); }
+.hs-wg__odo-col { display: flex; flex-direction: column; transition: transform .9s var(--eio); }
+.hs-wg__odo-col > span { display: block; height: 12px; line-height: 12px; }
+.hs-wg__sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.hs-wg__arrs { display: flex; gap: 8px; }
+.hs-wg__arr { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid oklch(0.235 0.025 215 / .3); font: 500 14px var(--mono); text-align: center; transition: background-color .25s, color .25s, border-color .25s, opacity .25s; }
+.hs-wg__arr.hs-is-lit { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .hs-wg__arr:disabled { opacity: .3; cursor: default; }
 @media (hover: hover) and (pointer: fine) {
   .hs-wg__arr:not(:disabled):hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 }
-/* 露边只露到右缘翻页刻度（.hs-rail，right 26px、宽约 42px）以内，不压在刻度底下 */
-.hs-wg__stage { --wg-l: max(56px, calc((100vw - 1360px) / 2 + 56px)); --wg-r: max(88px, calc((100vw - 1360px) / 2 + 88px)); clip-path: inset(-24px calc(80px - var(--wg-r)) -24px calc(-1 * var(--wg-l))); }
-.hs-wg__track { display: flex; gap: var(--wg-gap); transition: transform .9s var(--eio); }
-.hs-wg__panel { flex: none; width: 100%; min-width: 0; transition: opacity .6s; }
-.hs-wg__panel:not(.hs-is-cur) { opacity: .32; }
+.hs-wg__stage { position: relative; flex: none; }
+.hs-wg__rule { right: auto; width: var(--wp); z-index: 1; }
+/* 顶线续接：当前屏实线 → 下一屏虚线 + 组名，像图纸上的续图标记；暗示下一屏时虚线描实 */
+.hs-wg__cont { position: absolute; top: 0; left: calc(var(--wp) + 14px); right: 0; height: 2px; z-index: 1; pointer-events: none; transition: opacity .4s ease; }
+.hs-wg__cont-dash { position: absolute; left: 0; right: 0; top: .5px; height: 1px; background-image: repeating-linear-gradient(90deg, oklch(0.235 0.025 215 / .45) 0 4px, transparent 4px 8px); }
+.hs-wg__cont-fill { position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--ink); transform-origin: 0 50%; transition: transform .7s var(--eo); }
+.hs-wg__cont-lbl { position: absolute; top: -7px; right: 0; z-index: 2; pointer-events: none; }
+.hs-wg__cont-in { display: flex; align-items: center; gap: 8px; padding: 0 0 0 10px; background: var(--mist); box-shadow: 8px 0 0 var(--mist); white-space: nowrap; font: 400 10.5px/14px var(--mono); color: var(--muted-2); transition: opacity .4s ease, transform .7s var(--eo), color .3s; }
+.hs-wg__cont-in.hs-is-warm { color: var(--ink); }
+.hs-wg__cont-arr { display: inline-block; transition: transform .45s var(--eo); }
 .hs-wg__ghead { display: none; }
+/* 左右留白区：左边从舞台左缘一直到页面左缘，右边从露边那截一直到页面右缘（翻页刻度在 HUD 层，照样点得到） */
+.hs-wg__zone { position: absolute; top: 0; bottom: 0; z-index: 5; }
+.hs-wg__zone--l { right: 100%; }
+/* 跟着光标的标签：右侧留白区标在光标左边，左侧标在右边 */
+.hs-wg__badge { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 40; pointer-events: none; }
+.hs-wg__tag { position: absolute; top: 16px; display: flex; align-items: baseline; gap: 9px; padding: 6px 10px 7px; background: var(--ink); color: var(--paper); white-space: nowrap; font: 400 11px var(--mono); opacity: 0; transition: opacity .22s ease, transform .4s var(--eo), background-color .2s; }
+.hs-wg__tag--r { right: 14px; transform-origin: 100% 0; }
+.hs-wg__tag--l { left: 14px; transform-origin: 0 0; }
+.hs-wg__tag.hs-is-press { background: var(--teal); }
+.hs-wg__tag-a { display: inline-block; color: var(--lime); }
+.hs-wg__tag-k1 { color: oklch(0.78 0.03 160); }
+.hs-wg__tag-k2 { font: 500 12px var(--sans); letter-spacing: -.005em; }
 .hs-wg__tabs { position: relative; margin-top: auto; display: flex; flex-wrap: wrap; justify-content: space-between; column-gap: 28px; border-top: 1px solid oklch(0.235 0.025 215 / .3); }
-.hs-wg__tab { display: flex; align-items: baseline; gap: 8px; padding: 14px 0 2px; white-space: nowrap; color: var(--muted-2); transition: color .3s; }
-.hs-wg__tab.hs-is-on { color: var(--ink); }
-@media (hover: hover) and (pointer: fine) {
-  .hs-wg__tab:hover { color: var(--ink); }
-}
+.hs-wg__tab { position: relative; display: flex; align-items: baseline; gap: 8px; padding: 14px 0 2px; white-space: nowrap; color: var(--muted-2); transition: color .3s; }
+.hs-wg__tab.hs-is-on, .hs-wg__tab.hs-is-prev { color: var(--ink); }
+.hs-wg__tab-ghost { position: absolute; left: 0; right: 0; top: -1px; height: 1px; background: var(--ink); opacity: .55; transform: scaleX(0); transition: transform .55s var(--eo); }
+.hs-wg__tab.hs-is-prev .hs-wg__tab-ghost { transform: scaleX(1); }
 .hs-wg__tab-n, .hs-wg__tab-c { font: 400 11px var(--mono); color: var(--muted); }
 .hs-wg__tab-t { font: 500 14.5px var(--sans); letter-spacing: -.005em; }
+.hs-wg__pips { display: flex; gap: 3px; align-self: center; }
+.hs-wg__pips > span { width: 8px; height: 2px; background: oklch(0.235 0.025 215 / .22); transition: background .5s; }
+.hs-wg__pips > span.hs-is-on { background: var(--ink); }
 .hs-wg__ind { position: absolute; left: 0; top: -1px; height: 2px; background: var(--ink); pointer-events: none; transition: transform .9s var(--eio), width .9s var(--eio); }
-.hs-wg--instant .hs-wg__track, .hs-wg--instant .hs-wg__panel, .hs-wg--instant .hs-wg__title, .hs-wg--instant .hs-wg__ind { transition: none; }
+.hs-wg__ind--still, .hs-wg--instant, .hs-wg--instant * { transition: none !important; }
+@media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+  /* 各屏叠在同一格里，每张卡按「第几屏 × (屏宽 + 空隙) + 暗示偏移」各自平移，切换时按顺序依次出发 */
+  .hs-wg__grid { display: grid; grid-template-columns: minmax(0, 1fr); clip-path: inset(-40px 0 -40px calc(-1 * var(--wg-l))); }
+  .hs-wg__panel { grid-area: 1 / 1; width: var(--wp); min-width: 0; pointer-events: none; }
+  .hs-wg__prule { display: none; }
+  .hs-wg__panel .hs-card { transform: translateX(var(--x, 0px)); opacity: var(--op, 1); transition: var(--tr); will-change: transform, opacity; pointer-events: none; }
+  .hs-wg__panel.hs-is-cur .hs-card { pointer-events: auto; }
+  /* 非当前屏只留图版；下一屏第一张保留编号与色条，读得出是接着的 */
+  .hs-wg__panel .hs-card__kick, .hs-wg__panel .hs-card__bar { opacity: var(--txt-op, 1); transition: opacity .45s ease var(--txt-d, 0ms); }
+  .hs-wg__panel .hs-card__status, .hs-wg__panel .hs-card__stamp, .hs-wg__panel .hs-card__wip-in, .hs-wg__panel .hs-card__head { opacity: var(--head-op, 1); transition: opacity .45s ease var(--txt-d, 0ms); }
+  /* 图比图版左右各宽 10%，屏与屏之间带一点视差 */
+  .hs-wg__panel .hs-card__img { left: -10%; right: -10%; transform: translateX(var(--par, 0%)); transition: var(--img-tr); }
+  .hs-wg__panel .hs-card.hs-is-on .hs-card__img { transform: translateX(var(--par, 0%)) scale(1.08); }
+}
 /* ---------- 03 about ---------- */
 .hs-about-dots { position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(var(--lime) 1px, transparent 1.2px); background-size: 6px 6px; opacity: .16; -webkit-mask-image: linear-gradient(115deg, #000 0%, transparent 40%); mask-image: linear-gradient(115deg, #000 0%, transparent 40%); }
 .hs-about { position: relative; height: 100%; min-height: 620px; max-width: 1360px; margin: 0 auto; padding: 92px 88px 44px 56px; display: grid; grid-template-columns: minmax(0,210px) minmax(0,1fr) minmax(0,.62fr); column-gap: clamp(28px, 3.4vw, 56px); align-items: start; }
@@ -331,10 +378,7 @@
   .hs-page { position: relative; inset: auto; overflow: visible; transform: none !important; visibility: visible !important; transition: none !important; will-change: auto; }
   .hs-shade { display: none; }
   .hs-work, .hs-about { height: auto; min-height: 0; }
-  .hs-wg__mask, .hs-wg__ctl, .hs-wg__tabs { display: none; }
-  .hs-wg__stage { clip-path: none; }
-  .hs-wg__track { display: block; transform: none !important; }
-  .hs-wg__panel { width: auto; opacity: 1 !important; }
+  .hs-wg__mask, .hs-wg__ctl, .hs-wg__tabs, .hs-wg__rule, .hs-wg__cont, .hs-wg__cont-lbl, .hs-wg__zone, .hs-wg__badge { display: none; }
   .hs-wg__panel + .hs-wg__panel { margin-top: 64px; }
   .hs-wg__panel--cont { margin-top: 28px !important; }
   .hs-wg__ghead { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding-bottom: 18px; }
@@ -363,6 +407,10 @@
   .hs-card__cta { color: var(--c-ink); }
   .hs-card__box { min-height: 0; }
   .hs-card__head { padding-top: 12px; }
+  /* 窄屏一列一张：图版与字号沿用改版前（稿 18 的尺寸是按桌面 85% 屏宽三列定的） */
+  .hs-card__plate { height: min(31vh, 264px); }
+  .hs-card__title { font-size: 20px; }
+  .hs-card__thesis-text { font-size: 15px; }
   .hs-about { grid-template-columns: 1fr; row-gap: 28px; }
   .hs-facts, .hs-portrait { padding-top: 0; }
   .hs-portrait__plate { max-height: 60vw; }
