@@ -4,9 +4,55 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } f
 import { createPortal } from 'react-dom';
 import styles from './LabControlLabel.module.css';
 import { useBenchLang, useLabText } from './LabLanguage';
+import { helpName, useLabHelp, type LabHelpApi } from './LabHelp';
 
-/** Shared control help. Portals keep the note clear of clipped canvases and control panels. */
-export function LabControlLabel({ children, help, lang: explicitLang }: {
+/**
+ * Shared control label. Inside a lab panel the help text goes to the details column
+ * (LabHelp): the label stays plain text and nothing is drawn over the controls.
+ * Outside a panel it falls back to the portal tooltip.
+ */
+export function LabControlLabel(props: {
+  children: ReactNode;
+  help: string | readonly [string, string];
+  lang?: 'zh' | 'en';
+}) {
+  const panel = useLabHelp();
+  return panel ? <PanelLabel {...props} panel={panel} /> : <TooltipLabel {...props} />;
+}
+
+function PanelLabel({ children, help, lang: explicitLang, panel }: {
+  children: ReactNode;
+  help: string | readonly [string, string];
+  lang?: 'zh' | 'en';
+  panel: LabHelpApi;
+}) {
+  const lang = useBenchLang(explicitLang);
+  const tx = useLabText(lang);
+  const id = useId();
+  const anchor = useRef<HTMLSpanElement>(null);
+  const text = typeof help === 'string' ? tx(help) : help[lang === 'zh' ? 0 : 1];
+  const last = useRef('');
+  // The label text can carry a live reading; re-register only when name or text actually changes.
+  useLayoutEffect(() => {
+    const el = anchor.current;
+    if (!el) return;
+    const name = helpName(el.textContent ?? '');
+    const key = name + '\u0000' + text;
+    if (key === last.current) return;
+    last.current = key;
+    panel.set(id, { name, text, el });
+  });
+  useEffect(() => () => { last.current = ''; panel.set(id, null); }, [panel, id]);
+  return <span ref={anchor} className="k lab-term" tabIndex={0} aria-describedby={panel.entryId(id)}
+    onPointerEnter={() => panel.focus(id)} onPointerLeave={() => panel.focus(null)}
+    onFocus={() => panel.focus(id)} onBlur={() => panel.focus(null)}
+    onClick={() => panel.focus(id, 'open')}
+    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); panel.focus(id, 'open'); } }}>
+    {children}
+  </span>;
+}
+
+function TooltipLabel({ children, help, lang: explicitLang }: {
   children: ReactNode;
   help: string | readonly [string, string];
   lang?: 'zh' | 'en';
