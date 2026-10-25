@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 // 只取类型：本模块是 'use client'，而 src/lib/site/log 会 import node:fs（服务端读内容池）。
 import type { LogEntry, LogLang } from '../../src/lib/site/log';
-import { readStoredLang, storeLang } from '../../src/lib/site/lang';
+import { useCaseLangControl } from './CaseLang';
 import {
   aspectFacets,
   aspectOf,
@@ -40,7 +40,6 @@ type Copy = {
   title: string;
   kicker: string;
   foot: string;
-  switchLabel: string;
   filterLabel: string;
   levels: { project: string; aspect: string; month: string };
   all: string;
@@ -57,7 +56,6 @@ const COPY: Record<LogLang, Copy> = {
     title: 'Work log',
     kicker: 'Continuous record · newest first',
     foot: 'The log grows over time. Entries link into case studies and lab benches as they land.',
-    switchLabel: 'Language',
     filterLabel: 'Filter entries',
     levels: { project: 'Project', aspect: 'Aspect', month: 'Month' },
     all: 'All',
@@ -72,7 +70,6 @@ const COPY: Record<LogLang, Copy> = {
     title: '工作日志',
     kicker: '持续记录 · 最新在前',
     foot: '日志持续增补。条目落地后会链入对应的案例页与实验台架。',
-    switchLabel: '语言',
     filterLabel: '筛选条目',
     levels: { project: '项目', aspect: '方面', month: '时间' },
     all: '全部',
@@ -100,8 +97,9 @@ function groupByMonth(rows: Row[]): Group[] {
   return groups;
 }
 
-/* 语言偏好与案例页共用一个键（src/lib/site/lang.ts）——对读者来说「我要看中文」
-   是一个偏好而不是两个：在这里切了中文，点进案例页不该又变回英文。 */
+/* 语言：2026-10-25 起读全站的语言上下文（布局层 CaseLangRoot，开关在暗色顶栏），
+   与 Lab / 案例页同一个状态、同一个存储键——对读者来说「我要看中文」是一个偏好而不是两个。
+   此前本页自带一个 EN / 中文 滑块、自己存一份状态；顶栏有了开关后它就是重复的，已撤掉。 */
 
 /**
  * 一行筛选：左侧级别名 + 「全部」+ 各选项（点已选中的 = 取消回该级全部）。
@@ -224,8 +222,8 @@ function Marks({ blocks, lang }: { blocks?: LogEntry['blocks']; lang: LogLang })
 }
 
 export function LogList({ entries }: { entries: LogEntry[] }) {
-  // SSR 首帧恒为 EN（静态预渲染，服务端读不到偏好）；挂载后再按上次选择切。
-  const [lang, setLang] = useState<LogLang>('en');
+  // SSR 首帧恒为 EN（静态预渲染，服务端读不到偏好）；挂载后由 CaseLangRoot 按上次选择切。
+  const { lang } = useCaseLangControl();
   // 三级筛选，null = 该级不限。都不记 localStorage——刷新即回总览，免得下次进来
   // 只看到一小撮条目还以为丢了（语言不同，那是长期偏好）。
   const [project, setProject] = useState<string | null>(null);
@@ -290,11 +288,6 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
     [entries, match, project, aspect],
   );
 
-  useEffect(() => {
-    const stored = readStoredLang();
-    if (stored) setLang(stored);
-  }, []);
-
   // 展开的条目 id 集合；默认全收起——收起态一屏扫得完，要细节再点开。
   // id 取自全池下标，切筛选不重置（回到「全部」时刚才展开的那条仍是展开的）。
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
@@ -305,11 +298,6 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
       if (!next.delete(id)) next.add(id);
       return next;
     });
-  }
-
-  function pick(next: LogLang) {
-    setLang(next);
-    storeLang(next);
   }
 
   /* 热力图跳转：点某天 → 滚到那天的第一条并闪一下。
@@ -417,25 +405,6 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
           >
             {copy.kicker}
           </span>
-          <div className="lang-switch" role="group" aria-label={copy.switchLabel}>
-            <span className="lang-switch__thumb" data-at={lang} aria-hidden />
-            <button
-              type="button"
-              className="lang-switch__opt"
-              aria-pressed={lang === 'en'}
-              onClick={() => pick('en')}
-            >
-              EN
-            </button>
-            <button
-              type="button"
-              className="lang-switch__opt"
-              aria-pressed={lang === 'zh'}
-              onClick={() => pick('zh')}
-            >
-              中文
-            </button>
-          </div>
         </div>
       </header>
 

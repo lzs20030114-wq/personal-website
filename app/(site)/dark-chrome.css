@@ -41,6 +41,9 @@
 /* 阅读进度（案例页，稿 data-readbar）：顶栏下缘 1.5px 绿线 */
 .ld-readbar { position: absolute; left: 0; bottom: -1px; height: 1.5px; width: 0; background: var(--ld-g); }
 
+/* 日志页正文版心是 .shell 的 1320：顶栏与页脚跟着收窄，左右缘与正文对齐（案例页收 1240 是同一做法，见 case-dark.css） */
+.log-language-root :is(.ld-header__in, .ld-footer__in) { max-width: 1320px; }
+
 /* ── 页脚：配色 v2 起是主青色面（原为发丝线），链接改青柠亮档 ── */
 .ld-footer { margin-top: 96px; background: var(--ld-face); color: var(--ld-face-ink); }
 .ld-footer__in { max-width: 1440px; margin: 0 auto; padding: 28px clamp(20px, 4vw, 48px) 44px; box-sizing: border-box; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px 32px; font: 400 12px var(--ld-mono); }
