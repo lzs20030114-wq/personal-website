@@ -127,6 +127,8 @@ export interface HardwareRow {
 }
 
 export interface HardwareSnapshot {
+  /** 手动调试与行为输出分开；manual 的 timeS 为进入手动后的时间。 */
+  controlMode?: 'behavior' | 'manual';
   schema: 'reincarnation-machine.hardware-map.v1';
   source: 'simulation';
   timeS: number;

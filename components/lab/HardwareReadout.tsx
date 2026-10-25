@@ -72,7 +72,7 @@ export function HardwareReadout({ snapshot, lang }: { snapshot: HardwareSnapshot
             {row?.extra?.frequencyHz !== undefined && (
               <p className="mb-out__note">
                 {L.voice} {row.extra.on ? L.on : L.off} · {row.extra.frequencyHz.toFixed(0)} Hz<br />
-                {L.voiceFraction} {((row.extra.cycleVoiceFraction ?? 0) * 100).toFixed(1)}%
+                {snapshot?.controlMode !== 'manual' && <>{L.voiceFraction} {((row.extra.cycleVoiceFraction ?? 0) * 100).toFixed(1)}%</>}
               </p>
             )}
             <details className="mb-hardware__details">

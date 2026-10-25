@@ -22,6 +22,7 @@ import {
   BENCH_INPUT,
   FACING,
   HAND_UI,
+  YAW_AXIS,
   PERSP_FOCAL,
   type ViewParams,
   armTouchEvent,
@@ -108,8 +109,10 @@ import { stashBench, takeBench } from './handoff';
 import { setStash } from './snapshot';
 import { useBenchLoop } from './useBenchLoop';
 import { ActuatorPanel, type ActuatorSnapshot } from './ActuatorPanel';
-import { ActuatorReadout, READOUT_CHANNELS, type ReadoutKey } from '../../src/lib/linkage/actuator-readout';
-import { createHardwareSnapshot } from '../../src/lib/linkage/actuator-hardware';
+import { ActuatorReadout, READOUT_CHANNELS, TENDON_TAKEUP_MM, type ReadoutKey } from '../../src/lib/linkage/actuator-readout';
+import { createHardwareSnapshot, type HardwareId } from '../../src/lib/linkage/actuator-hardware';
+import { ActuatorLab } from './ActuatorLab';
+import { clampActuatorCommand, commandFromSnapshot, DEBUG_CHANNELS, type ActuatorCommand, type ActuatorMode } from '../../src/lib/linkage/actuator-debug';
 
 /**
  * Lab.05 整机台架（spec = 轮回机器_整机spec.md，用户 2026-07-29 拍板「整机传动 + 真实实体」）。
@@ -604,6 +607,7 @@ export function MachineBench({
   onLight = false,
   sideControls = false,
   behavior = false,
+  actuatorLab = false,
   lang: explicitLang,
 }: {
   spin?: boolean;
@@ -613,11 +617,15 @@ export function MachineBench({
   sideControls?: boolean;
   /** 由行为引擎驱动（Lab 1-6）。不传 = 编排驱动（Lab 1-5、主页 Hook 舞台、案例页主图），与 M2 之前逐位相同 */
   behavior?: boolean;
+  /** Lab 1-6A 与本实例共用执行层，不创建第二套引擎或 WebGL。 */
+  actuatorLab?: boolean;
   lang?: 'zh' | 'en';
 }) {
   const lang = useBenchLang(explicitLang);
   const tx = useLabText(lang);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const linkedRef = useRef<HTMLDivElement | null>(null);
+  const markersRef = useRef<HTMLDivElement | null>(null);
   const apiRef = useRef<{
     step: (dt: number) => void;
     setPhase: (deg: number) => void;
@@ -641,6 +649,8 @@ export function MachineBench({
     setLeaveObject: (on: boolean) => void;
     setHandFollow: (on: boolean) => void;
     exportLog: () => { text: string; seed: number } | null;
+    setDebugMode: (mode: ActuatorMode) => void;
+    setDebugCommand: (command: ActuatorCommand) => void;
   } | null>(null);
   /** 指针 = 手的标记圈（逐帧直接改样式，不走 React 状态） */
   const handRef = useRef<HTMLDivElement | null>(null);
@@ -674,6 +684,11 @@ export function MachineBench({
   // 实时输出面板（2026-10-19）：与「指针 = 手」同一个条件——只在 /lab 的完整面板里出
   const outPanel = behavior && controls && !sideControls;
   const [outSnap, setOutSnap] = useState<ActuatorSnapshot | null>(null);
+  const debugEnabled = actuatorLab && outPanel;
+  const [debugMode, setDebugMode] = useState<ActuatorMode>('behavior');
+  const [debugCommand, setDebugCommand] = useState<ActuatorCommand | null>(null);
+  const [selectedAxis, setSelectedAxis] = useState<HardwareId | null>(null);
+  const selectedRef = useRef<HardwareId | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -831,6 +846,7 @@ export function MachineBench({
       });
 
     let running = spin && !reduced;
+    if (debugEnabled) setRun(running);
     let dir: 1 | -1 = MACHINE_DIR;
     let omegaNow = MACHINE_OMEGA;
     let showNow: Record<MachinePartKind, boolean> = {
@@ -876,6 +892,13 @@ export function MachineBench({
     // 实时输出面板的数据源：运转时每帧记一次，约每 1/12 秒交给面板重画一次
     const readout = handCapable ? new ActuatorReadout() : null;
     let readoutClock = 0;
+    let manualCommand: ActuatorCommand | null = null;
+    let resumeState: MachineHandoff | null = null;
+    let resumeReadout: ActuatorSnapshot | null = null;
+    let latestReadout: ActuatorSnapshot | null = null;
+    let manualTime = 0;
+    let manualShellHeld: 'L' | 'R' | null = null;
+    const manualYaw = new CriticallyDamped(5);
     // 存视口坐标（clientX/Y），每帧按此刻的画布位置换算——页面滚动时指针不动、画布在动
     let pointer: { cx: number; cy: number; touch: boolean; id: number } | null = null;
     /** 相机刚变过（换视角 / 透视）：等指针再动一下才重新判接触（不让臂在不动的指针下扫过去就算碰到） */
@@ -931,7 +954,9 @@ export function MachineBench({
     const startEngine = (): void => {
       readout?.reset();
       readoutClock = 0;
+      latestReadout = null;
       setOutSnap(null);
+      if (debugEnabled) setDebugCommand(null);
       const seed = (Math.random() * 0x100000000) >>> 0;
       // 台架开着肌腱轴深卷（tendonContractions 的 deep），引擎要知道这一点
       const eng = new BehaviorEngine({ seed, order: rotateOrder(firstNow), loop: true, lifeRate: rateNow, deepOk: true });
@@ -1103,7 +1128,11 @@ export function MachineBench({
         const pts = armPolyline(tendonVisual3(arm.solver, k)).map(yp);
         const segs = [];
         for (let i = 1; i < pts.length; i++) segs.push({ a: pts[i - 1], b: pts[i] });
-        R.drawLines(segs, TENDON_C[k], 0.004);
+        const color = debugEnabled ? DEBUG_CHANNELS[k].color : null;
+        const rgb: [number, number, number] = color
+          ? [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16) / 255) as [number, number, number]
+          : TENDON_C[k];
+        R.drawLines(segs, rgb, 0.004);
       }
     };
 
@@ -1182,7 +1211,7 @@ export function MachineBench({
       };
     };
 
-    const restore = (s: MachineHandoff): boolean => {
+    const restore = (s: MachineHandoff, restoreBehavior = true): boolean => {
       // 形状不符（改了图纸 / 换了触手）一律整份作废：宁可从头开始，也不要摆出个残缺位形
       if (
         s.ringPts.length !== machine.rings.length ||
@@ -1246,7 +1275,7 @@ export function MachineBench({
       setTendons([s.tendons[0], s.tendons[1], s.tendons[2]]);
       setPhase(Number(phaseDeg(machine.theta).toFixed(1)));
       // 行为档的交接：引擎整块状态接着跑（只有行为档台架才接；键已按驱动源分开，这里再守一道）
-      if (s.behavior && behavior && adoptEngine(s.behavior.engine)) {
+      if (s.behavior && behavior && (!restoreBehavior || adoptEngine(s.behavior.engine))) {
         firstNow = s.behavior.first;
         yawNow = s.behavior.yaw;
         setFirstK(s.behavior.first);
@@ -1432,7 +1461,22 @@ export function MachineBench({
           );
         }
       }
-      const tg = behavior ? stepEngine(dt) : null;
+      // 三种驱动互斥：手动绕过整条行为链，既不推进引擎，也不注入传感事件。
+      const manual = manualCommand;
+      let tg: ActuatorTargets | null = null;
+      if (manual && engine) {
+        manualTime += dt;
+        followBreath(machine, manual.breathStroke, dt);
+        manual.tendonsMm.forEach((v, k) => { muscles[k].target = v / TENDON_TAKEUP_MM; });
+        manualYaw.target = manual.yawDeg * Math.PI / 180;
+        manualYaw.update(dt);
+        yawNow = manualYaw.value;
+        tg = {
+          ...engine.targets(), breath: { s: manual.breathStroke }, yaw: yawNow,
+          sound: { on: manual.soundOn, f: manual.soundHz, level: manual.soundLevel, duty: 0 },
+          light: { level: manual.lightLevel },
+        };
+      } else if (behavior) tg = stepEngine(dt);
       if (!tg) {
         acc = Math.min(acc + dt, SHELL_STEP_DT * 8);
         while (acc >= SHELL_STEP_DT) {
@@ -1461,10 +1505,10 @@ export function MachineBench({
       if (tg) {
         // 行为档：触须 = 引擎给的基角 + 反射（波形仍是 startleSwing）。死了就没有反射
         smallArms.forEach((sa, k) => {
-          driveSmallArm(sa, feelerAngle(tg.feelers[k]));
+          driveSmallArm(sa, manual ? manual.feelersDeg[k] * Math.PI / 180 : feelerAngle(tg.feelers[k]));
           stepSmallArm(sa, dt);
         });
-        if (readout && running && engine) {
+        if (readout && (running || manual || (debugEnabled && !latestReadout)) && engine) {
           readout.update(
             {
               tendons: [muscles[0].value, muscles[1].value, muscles[2].value],
@@ -1472,8 +1516,8 @@ export function MachineBench({
               servos: [smallArms[0].theta, smallArms[1].theta],
               crankDeg: phiDeg(),
               crankTargetDeg: phaseDeg(strokeToTheta(tg.breath.s)),
-              yaw: tg.yaw,
-              yawTarget: engine.state.yawTarget,
+              yaw: yawNow,
+              yawTarget: manual ? manual.yawDeg * Math.PI / 180 : engine.state.yawTarget,
               sound: tg.sound,
               light: tg.light.level,
             },
@@ -1485,17 +1529,17 @@ export function MachineBench({
             const series = {} as Record<ReadoutKey, number[]>;
             for (const c of READOUT_CHANNELS) series[c.key] = readout.series(c.key);
             const hardwareStatus = engine.status();
-            setOutSnap({
+            const snapshot: ActuatorSnapshot = {
               hardware: createHardwareSnapshot({
                 values: readout.values,
                 targets: readout.targets,
                 breathTarget: tg.breath.s,
                 soundDuty: tg.sound.duty,
                 voicing: tg.sound.on,
-                timeS: hardwareStatus.t,
+                timeS: manual ? manualTime : hardwareStatus.t,
                 seed: engine.state.seed,
-                persona: hardwareStatus.persona,
-                phase: hardwareStatus.phase,
+                persona: manual ? 'manual' : hardwareStatus.persona,
+                phase: manual ? 'MANUAL' : hardwareStatus.phase,
                 lifeRate: hardwareStatus.lifeRate,
               }),
               values: { ...readout.values },
@@ -1503,7 +1547,20 @@ export function MachineBench({
               series,
               capacity: readout.capacity,
               voicing: tg.sound.on,
-            });
+            };
+            if (snapshot.hardware) snapshot.hardware.controlMode = manual ? 'manual' : 'behavior';
+            if (debugEnabled) {
+              for (const el of markersRef.current?.querySelectorAll<HTMLElement>('[data-axis]') ?? []) {
+                const id = el.dataset.axis as HardwareId;
+                const prev = latestReadout?.hardware?.rows.find(r => r.id === id)?.simulated;
+                const cur = snapshot.hardware?.rows.find(r => r.id === id)?.simulated;
+                const threshold = cur?.unit === 'fraction' ? 0.0005 : 0.03;
+                el.dataset.moving = prev && cur && Math.abs(cur.value - prev.value) > threshold ? '1' : '0';
+              }
+            }
+            latestReadout = snapshot;
+            setOutSnap(snapshot);
+            if (debugEnabled && !manual && snapshot.hardware) setDebugCommand(commandFromSnapshot(snapshot.hardware));
           }
         }
       } else {
@@ -1526,6 +1583,7 @@ export function MachineBench({
         });
       }
       render();
+      if (debugEnabled) drawActuatorMarkers();
       if (behavior) drawHand();
       // 读数跟着「单环」走：隔离哪一环就报哪一环的拱顶，全部时报中间那环（S3）
       const ri = isolateNow ?? 2;
@@ -1535,7 +1593,54 @@ export function MachineBench({
       setHud((h) => h.note || (h.err.toFixed(2) === err.toFixed(2)
         && h.apex.toFixed(1) === apex.toFixed(1) && h.ring === ri && h.folding === folding)
         ? h : { err, apex, ring: ri, folding, note: '' });
-      if (running) setPhase(Number(phiDeg().toFixed(1)));
+      if (running || manual) setPhase(Number(phiDeg().toFixed(1)));
+    };
+
+    /** 模式交接是一次新的静态采样，直接读取机构，不能复用已暂停的 12 Hz 屏幕快照。
+     *  单点历史与零差分速度也明确重新开始，避免把模式切换当成真实运动尖峰。 */
+    const captureDebugReadout = (command: ActuatorCommand | null = null): ActuatorSnapshot | null => {
+      const eng = engine;
+      if (!eng) return null;
+      const tg = eng.targets();
+      const sound = command
+        ? { on: command.soundOn, f: command.soundHz, level: command.soundLevel, duty: 0 }
+        : tg.sound;
+      const sample = new ActuatorReadout();
+      sample.update({
+        tendons: [muscles[0].value, muscles[1].value, muscles[2].value],
+        tendonTargets: command
+          ? [command.tendonsMm[0] / TENDON_TAKEUP_MM, command.tendonsMm[1] / TENDON_TAKEUP_MM, command.tendonsMm[2] / TENDON_TAKEUP_MM]
+          : [muscles[0].target, muscles[1].target, muscles[2].target],
+        servos: [smallArms[0].theta, smallArms[1].theta],
+        crankDeg: phiDeg(),
+        crankTargetDeg: phaseDeg(strokeToTheta(command?.breathStroke ?? tg.breath.s)),
+        yaw: yawNow,
+        yawTarget: command ? command.yawDeg * Math.PI / 180 : eng.state.yawTarget,
+        sound,
+        light: command?.lightLevel ?? tg.light.level,
+      }, 0);
+      const values = sample.values;
+      if (!values) return null;
+      const series = {} as Record<ReadoutKey, number[]>;
+      for (const c of READOUT_CHANNELS) series[c.key] = sample.series(c.key);
+      const status = eng.status();
+      return {
+        hardware: {
+          ...createHardwareSnapshot({
+            values, targets: sample.targets,
+            breathTarget: command?.breathStroke ?? tg.breath.s,
+            soundDuty: sound.duty, voicing: sound.on,
+            timeS: command ? manualTime : status.t,
+            seed: eng.state.seed,
+            persona: command ? 'manual' : status.persona,
+            phase: command ? 'MANUAL' : status.phase,
+            lifeRate: status.lifeRate,
+          }),
+          controlMode: command ? 'manual' : 'behavior',
+        },
+        values: { ...values }, targets: { ...sample.targets }, series,
+        capacity: sample.capacity, voicing: sound.on,
+      };
     };
 
     apiRef.current = {
@@ -1545,6 +1650,7 @@ export function MachineBench({
         targetTheta = thetaAtStroke(deg / PHASE_MAX);
       },
       setRun: (on) => {
+        if (manualCommand) return;
         running = on;
       },
       setOmega: (w) => {
@@ -1597,31 +1703,37 @@ export function MachineBench({
       },
       // —— 行为档（Lab 1-6）
       setLifeRate: (r) => {
+        if (manualCommand) return;
         rateNow = r;
         engine?.setLifeRate(r);
       },
       restart: (first) => {
+        if (manualCommand) return;
         firstNow = first;
         if (engine) startEngine();
       },
-      skip: () => engine?.skip(),
+      skip: () => { if (!manualCommand) engine?.skip(); },
       presence: (b, bearing) => {
+        if (manualCommand) return;
         presenceNow = { band: b, bearing };
         // 指针正当着手：生效档 = 面板档与手档里近的那个（与 syncHand 同一条规矩）
         const eff = handBand !== null ? nearerBand(handBand, b) : b;
         engine?.push(eff === 'gone' ? { kind: 'PRESENCE', band: eff } : { kind: 'PRESENCE', band: eff, bearing });
       },
       touch: (t) => {
+        if (manualCommand) return;
         const eng = engine;
         if (!eng) return;
         eng.push({ kind: 'SHELL_STROKE', half: halfTowardPerson(eng.state.bearing, eng.state.yaw.x), touch: t });
       },
       inject: (e) => {
+        if (manualCommand) return;
         if (e.kind === 'LIFT') liftedNow = e.lifted;
         if (e.kind === 'SHELL_HOLD') holdNow = e.on;
         engine?.push(e);
       },
       setLeaveObject: (on) => {
+        if (manualCommand) return;
         leaveObjNow = on;
         if (!on && tensionOn && !electrodeSent) {
           tensionOn = false;
@@ -1629,6 +1741,7 @@ export function MachineBench({
         }
       },
       setHandFollow: (on) => {
+        if (manualCommand) return;
         handFollowNow = on && handCapable;
         if (!handFollowNow) {
           pointer = null;
@@ -1636,6 +1749,50 @@ export function MachineBench({
         }
       },
       exportLog: () => (engine && logHeader ? { text: toJsonl(logBuf, logHeader), seed: logHeader.seed } : null),
+      setDebugMode: (mode) => {
+        if (!debugEnabled || !engine || (mode === 'manual') === !!manualCommand) return;
+        if (mode === 'manual') {
+          const current = captureDebugReadout();
+          if (!current?.hardware) return;
+          resumeState = capture();
+          resumeReadout = current;
+          manualCommand = commandFromSnapshot(current.hardware);
+          manualYaw.jumpTo(yawNow);
+          manualTime = 0;
+          latestReadout = captureDebugReadout(manualCommand);
+          setOutSnap(latestReadout);
+          // 丢弃指针位置和本地手势，不向冻结的引擎发送释放事件。
+          if (pointer && canvas.hasPointerCapture?.(pointer.id)) canvas.releasePointerCapture(pointer.id);
+          if (shellGesture && canvas.hasPointerCapture?.(shellGesture.id)) canvas.releasePointerCapture(shellGesture.id);
+          manualShellHeld = shellGesture?.held ? shellGesture.half : null;
+          pointer = null;
+          shellGesture = null;
+          contact.held = false;
+          contact.touching = false;
+          canvas.style.cursor = '';
+          setDebugCommand(manualCommand);
+        } else {
+          manualCommand = null;
+          // 引擎从未被手动改动；只恢复机构位形，保留原事件日志和引擎对象。
+          if (resumeState) restore(resumeState, false);
+          if (manualShellHeld && !holdNow) engine.push({ kind: 'SHELL_HOLD', half: manualShellHeld, on: false });
+          manualShellHeld = null;
+          latestReadout = resumeReadout;
+          setOutSnap(resumeReadout);
+          if (resumeReadout?.hardware) setDebugCommand(commandFromSnapshot(resumeReadout.hardware));
+          resumeState = null;
+          resumeReadout = null;
+          hudDirty = true;
+        }
+        readout?.reset();
+        readoutClock = 0;
+        setDebugMode(mode);
+      },
+      setDebugCommand: (command) => {
+        if (!manualCommand) return;
+        manualCommand = clampActuatorCommand(command);
+        setDebugCommand(manualCommand);
+      },
     };
 
     // 机位**只由下面的固定视角按钮控制**（用户拍板 2026-07-29：取消拖拽视角移动）。
@@ -1660,6 +1817,32 @@ export function MachineBench({
     const cssPoint = (w: Vec3): { x: number; y: number } => {
       const r = rectNow();
       return logicalToCss(projectLogical(viewParams(), w), r.width, r.height);
+    };
+
+    /** 标号锚在真实几何上，与下方参数卡同色；声光安装位未定，不造实体定位。 */
+    const drawActuatorMarkers = (): void => {
+      const root = markersRef.current;
+      if (!root) return;
+      for (const el of root.querySelectorAll<HTMLElement>('[data-axis]')) {
+        const id = el.dataset.axis as HardwareId;
+        let p: Vec3;
+        if (id.startsWith('tendon')) {
+          const k = Number(id.slice(-1));
+          const pts = armPolyline(tendonVisual3(arm.solver, k));
+          p = yp(pts[Math.floor((pts.length - 1) * (0.28 + k * 0.22))]);
+        } else if (id.startsWith('servo')) {
+          p = yp(smallArmPose(smallArms[Number(id.slice(-1))], Number(id.slice(-1))).seg1.o);
+        } else if (id === 'breath') {
+          const points = profileWorld(2);
+          p = yp(points.reduce((a, b) => a.z > b.z ? a : b));
+        } else p = { ...YAW_AXIS, z: -110 };
+        const point = cssPoint(p);
+        el.style.left = `${point.x + canvas.offsetLeft}px`;
+        el.style.top = `${point.y + canvas.offsetTop}px`;
+        el.dataset.selected = selectedRef.current === id ? '1' : '0';
+        if (!running && !manualCommand) el.dataset.moving = '0';
+        el.hidden = (id.startsWith('tendon') || id.startsWith('servo')) ? !showNow.tentacle : id === 'breath' ? !showNow.rings : false;
+      }
     };
 
     /** 命中哪条小触手（阈值 CSS px）；没中返回 null */
@@ -1803,7 +1986,7 @@ export function MachineBench({
       const el = handRef.current;
       if (!el) return;
       const p = pointer;
-      if (!p || !handFollowNow) {
+      if (manualCommand || !p || !handFollowNow) {
         if (el.dataset.on) delete el.dataset.on;
         return;
       }
@@ -1868,6 +2051,7 @@ export function MachineBench({
     };
 
     const onPointerDown = (e: PointerEvent): void => {
+      if (manualCommand) return;
       if (e.button !== 0) return;
       rectCache = null;
       const r = rectNow();
@@ -1894,6 +2078,7 @@ export function MachineBench({
       st.t = 0;
     };
     const onPointerMove = (e: PointerEvent): void => {
+      if (manualCommand) return;
       rectCache = null;
       const r = rectNow();
       const px = e.clientX - r.left;
@@ -1921,12 +2106,14 @@ export function MachineBench({
       canvas.style.cursor = hitSmallArm(px, py, BENCH_INPUT.smallArmHitPx) !== null ? 'pointer' : '';
     };
     const onPointerUp = (e: PointerEvent): void => {
+      if (manualCommand) return;
       if (!behavior) return;
       releaseGestures(e.pointerId);
       // 抬起手指 = 手离开；鼠标抬起后若已出了画布（按着拖出去的），手也离开
       if (pointer && pointer.id === e.pointerId && (pointer.touch || !inside(e))) pointer = null;
     };
     const onPointerCancel = (e: PointerEvent): void => {
+      if (manualCommand) return;
       if (!behavior) return;
       releaseGestures(e.pointerId, true);
       if (pointer && pointer.id === e.pointerId) pointer = null;
@@ -1937,6 +2124,7 @@ export function MachineBench({
       return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
     };
     const onPointerLeave = (e: PointerEvent): void => {
+      if (manualCommand) return;
       // 按着（指针被捕获）时离开画布不算手离开，抬起时再判
       if (!behavior || contact.held || shellGesture) return;
       if (pointer && pointer.id === e.pointerId && !pointer.touch) pointer = null;
@@ -1961,7 +2149,7 @@ export function MachineBench({
     // 状态交接（见 snapshot.ts / handoff.ts）：页面转场把这个画框飞到另一页之前调一次，
     // 跑在点击那一刻——与浏览器截下的旧画面是同一个瞬间；若改在卸载时留，中间还隔着
     // 一段转场，落地的活件会比飞过来的画面超前一截，交叉淡出就成了「跳一下」。
-    setStash(canvas, () => stashBench(handoffKey, capture()));
+    setStash(canvas, () => stashBench(handoffKey, resumeState ?? capture()));
 
     render();
     return () => {
@@ -1977,9 +2165,9 @@ export function MachineBench({
       canvas.style.cursor = '';
       setStash(canvas, null);
     };
-  }, [spin, behavior]);
+  }, [spin, behavior, debugEnabled]);
 
-  useBenchLoop(canvasRef, (dt) => apiRef.current?.step(dt), [spin], active);
+  useBenchLoop(debugEnabled ? linkedRef : canvasRef, (dt) => apiRef.current?.step(dt), [spin, debugEnabled], active);
 
   const goView = useCallback((k: ViewKey) => {
     setView(k);
@@ -2020,6 +2208,7 @@ export function MachineBench({
           <input
             type="checkbox"
             checked={run}
+            disabled={debugMode === 'manual'}
             onChange={(e) => {
               setRun(e.target.checked);
               apiRef.current?.setRun(e.target.checked);
@@ -2419,15 +2608,24 @@ export function MachineBench({
 
   return (
     <div
+      ref={linkedRef}
+      data-actuator-mode={debugEnabled ? debugMode : undefined}
       className={`lab-wrap${onLight ? ' on-light' : ''}${
         sideControls && controls ? ' lab-wrap--side' : ''
       }${outPanel ? ' lab-wrap--out' : ''}`}
     >
+      {debugEnabled ? <div className="actuator-linkbar">
+        <span>{lang === 'zh' ? '同色标号对应下方执行器 · 亮起表示该轴在变化' : 'Matching labels identify axes below · bright labels indicate motion'}</span>
+        <a href="#lab1-6a">{lang === 'zh' ? '1-6A 执行器调试 ↓' : '1-6A Actuator lab ↓'}</a>
+      </div> : null}
       {/* 实时输出面板挂在画面右侧（窄时落到画面下方）：画面与面板同在 .mb-split 里，控制条仍在下面。
           不出面板的三处（Lab 1-5、主页舞台、案例页主图）DOM 与此前逐个相同，不包这一层 */}
       <SplitIf on={outPanel} panel={<ActuatorPanel snap={outSnap} lang={lang} />}>
       <div className="lab-fig">
         <canvas ref={canvasRef} width={1400} height={1040} aria-label={engineOn ? B.aria : L.aria} />
+        {debugEnabled ? <div ref={markersRef} className="actuator-markers" aria-hidden="true">
+          {DEBUG_CHANNELS.filter(c => !['sound', 'light'].includes(c.id)).map(c => <span key={c.id} data-axis={c.id} style={{ color: c.color }}>{c.short}</span>)}
+        </div> : null}
         {behaviorUi ? <div ref={handRef} className="lab-hand" aria-hidden="true" /> : null}
         <div className="lab-hud tl">
           {/* 只写台架编号：这台同时是项目 01 案例页的主图，而该页图号 2026-09-13 起是 N01–N20，
@@ -2435,7 +2633,9 @@ export function MachineBench({
           <div style={{ color: 'var(--p300)' }}>{tx(behavior ? 'Lab 1-6' : 'Lab 1-5')}</div>
           <div>{engineOn ? B.title : tx(L.title)}</div>
           {engineOn ? (
-            bhud ? (
+            debugMode === 'manual' ? (
+              <div className="dim">{lang === 'zh' ? '逐轴手动 · 行为引擎暂停' : 'Manual axes · behaviour paused'}</div>
+            ) : bhud ? (
               <>
                 <div className="dim">
                   {B.lifeN(bhud.life)} · {personaName(bhud.persona, lang)} {bhud.persona} · {phaseName(bhud.phase, lang)}
@@ -2463,7 +2663,7 @@ export function MachineBench({
             <div className="dim">{L.sub}</div>
           )}
         </div>
-        {engineOn && bhud ? (
+        {engineOn && bhud && debugMode !== 'manual' ? (
           // 俯视罗盘，按此刻视角转好（屏幕右 = 画面右、下 = 朝相机），左右与画面一致；箭头 = 机身朝向（偏航，占位）；
           // 扇形 = 视野；圆点 = 人（近 / 中 / 远三圈）；有手时只画手（实心 = 看见，空心 = 还没看见）
           (() => {
@@ -2535,13 +2735,15 @@ export function MachineBench({
             <>
               {hud.note ? (
                 <div className="dim">{tx('3D preview unavailable')}</div>
+              ) : debugMode === 'manual' && debugCommand ? (
+                <div className="dim">{B.sound} {debugCommand.soundOn ? `● ${Math.round(debugCommand.soundHz)} Hz` : '○'} · {B.light} {Math.round(debugCommand.lightLevel * 100)}%</div>
               ) : bhud ? (
                 <div className="dim">
                   {B.arousal} {bhud.arousal.toFixed(2)} · {B.sound} {bhud.soundOn ? `● ${Math.round(bhud.soundF)} Hz` : '○'} · {B.light}{' '}
                   {lightBar(bhud.light)}
                 </div>
               ) : null}
-              {bhud?.motion ? (
+              {debugMode !== 'manual' && bhud?.motion ? (
                 <div className="dim">
                   {B.motion} {bhud.motion}
                 </div>
@@ -2558,7 +2760,7 @@ export function MachineBench({
             </div>
           )}
         </div>
-        {sideControls && controls ? null : engineOn ? (
+        {(sideControls && controls) || debugMode === 'manual' ? null : engineOn ? (
           <div className="lab-hud bl dim">
             {bhud && bhud.recent.length
               ? bhud.recent.map((r) => (
@@ -2576,13 +2778,22 @@ export function MachineBench({
       {controls ? (
         behaviorUi ? (
           <div className="lab-ctl lab-ctl--tiered">
-            <div className="lab-ctl__row lab-ctl__solve">{behaviorGroups}</div>
+            {debugEnabled
+              ? <fieldset disabled={debugMode === 'manual'} className="lab-ctl__row lab-ctl__solve actuator-behavior-controls">{behaviorGroups}</fieldset>
+              : <div className="lab-ctl__row lab-ctl__solve">{behaviorGroups}</div>}
             <div className="lab-ctl__row">{groups}</div>
           </div>
         ) : (
           <div className="lab-ctl">{groups}</div>
         )
       ) : null}
+      {debugEnabled ? <ActuatorLab
+        snapshot={outSnap?.hardware ?? null} command={debugCommand} mode={debugMode}
+        selected={selectedAxis} onSelect={(id) => { selectedRef.current = id; setSelectedAxis(id); }}
+        onMode={(mode) => apiRef.current?.setDebugMode(mode)}
+        onChange={(command) => apiRef.current?.setDebugCommand(command)}
+        lang={lang} motion={bhud?.motion} running={run}
+      /> : null}
     </div>
   );
 }

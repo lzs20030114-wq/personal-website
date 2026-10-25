@@ -68,6 +68,7 @@ function Bench({
   children,
   notes,
   attachments,
+  defaultDetails,
 }: {
   no: string;
   lede: string;
@@ -75,9 +76,10 @@ function Bench({
   children: ReactNode;
   notes?: ReactNode;
   attachments?: LabAttachments;
+  defaultDetails?: boolean;
 }) {
   const { title, kernel, description, kind, verb } = labBench(no);
-  return <LabPanel no={no} title={title} description={description} accent={labAccent(kernel)} kind={kind} verb={verb} lede={lede} specs={specs} notes={notes} attachments={attachments}>{children}</LabPanel>;
+  return <LabPanel no={no} title={title} description={description} accent={labAccent(kernel)} kind={kind} verb={verb} lede={lede} specs={specs} notes={notes} attachments={attachments} defaultDetails={defaultDetails}>{children}</LabPanel>;
 }
 
 export default function LabPage() {
@@ -162,6 +164,7 @@ export default function LabPage() {
             planHash.normalizedLabHash 转到这里。 */}
         <Bench
           no="1-6"
+          defaultDetails={false}
           lede="The machine lives four lives, one persona each. Your pointer is a person’s hand: the machine has to see it first, then, by persona, reaches toward it, turns side-on to keep away from it, or looks elsewhere; bring it to the large arm and the arm may wrap it. Click a small arm or the shell, or use the controls to simulate a person nearby, sounds or being lifted."
           specs={[
             ['Personas', 'Warm · Calm · Avoidant · Random · one per life'],
@@ -176,7 +179,7 @@ export default function LabPage() {
           ]}
           attachments={LAB_1_6_TABLES}
         >
-          <MachineBench behavior />
+          <MachineBench behavior actuatorLab />
         </Bench>
 
         {/* 项目二尚未定名：与 log 页 PROJECT_GROUPS 同一措辞（描述而非标题），定名后一并改 */}
