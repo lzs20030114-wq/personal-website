@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CASE_SCENES,
+  CASE_SEED,
   COHABIT,
   CohabitSim,
   aisleGraph,
@@ -9,11 +11,13 @@ import {
   everyoneHasExit,
   nearestNode,
   partySizes,
+  populateCohabit,
   runCohabit,
   shortestPath,
 } from './cohabit';
 import type { CatCfg } from './cohabit';
 import { PLAN, buildCatchment, planLayout, unitInputs } from './unit-activation';
+import compareData from './cohabit-compare.data.json';
 
 const B = COHABIT.FACES.BANDS;
 const openBands = (sim: CohabitSim, u: number) => {
@@ -1031,5 +1035,33 @@ describe('cohabit · 猫能下地：会动 / 钉死两档的猫也能下地（ca
     const first = sim.layout.units[g.path[0]];
     expect(Math.hypot(first.x - cat.walker.x, first.y - cat.walker.y)).toBeLessThan(sim.layout.pitchM);
     expect(sim.act.degree[g.path[0]]).toBeCloseTo(1);
+  });
+});
+
+describe('案例页对照场景（Lab 2-14「正文对照」，2026-10-25）', () => {
+  it('现行规则三档的人数与猫数 = 对照图数据（cohabit-compare.data.json）的场景；起点那档是 4×4 痕迹 3 人 1 猫', () => {
+    const crowd = CASE_SCENES.filter((c) => c.trigger === 'posture');
+    expect(crowd.map((c) => ({ people: c.people, cats: c.cats }))).toEqual(compareData.scenes.map((s) => ({ people: s.people, cats: s.cats })));
+    for (const c of crowd) expect(c.grid).toBe(COHABIT.SEATS.GRID);
+    const start = CASE_SCENES.find((c) => c.key === 'trace')!;
+    expect([start.trigger, start.grid, start.people, start.cats]).toEqual(['trace', 4, 3, 1]);
+    // 对照种子是 100 + s（s = 1…32），台架取第一个
+    expect(CASE_SEED).toBe(101);
+  });
+
+  it('台架的做法（不开场 + populateCohabit + 固定 1/30 s 步长）与 runCohabit 同一个种子逐位相同', () => {
+    const seconds = 20;
+    for (const c of [CASE_SCENES[0], CASE_SCENES[2]]) {
+      const posture = c.trigger === 'posture';
+      const opts = { trigger: c.trigger, grid: c.grid, faces: true, seed: CASE_SEED, cat: posture ? { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid } : undefined, social: posture, catFloor: posture };
+      const off = runCohabit({ ...opts, people: c.people, cats: c.cats, seconds });
+      // 台架额外显式传的开关（CohabitBench 建仿真那一行）：默认值必须与离线对照的模块默认相同
+      const bench = { mode: 'follow' as const, goal: true, look: PLAN.ATTENTION.look, threshold: PLAN.DEMO.threshold, fade: PLAN.DEMO.fade, auto: true, clearance: PLAN.ATTENTION.clearance, lane: true, guide: { target: COHABIT.GUIDE.target } };
+      const sim = new CohabitSim({ ...opts, ...bench, opening: false });
+      sim.setSpeed(COHABIT.VISITOR.speed);
+      populateCohabit(sim, c.people, c.cats);
+      for (let t = 0; t < seconds; t += 1 / 30) sim.step(1 / 30);
+      expect(sim.summary()).toEqual(off);
+    }
   });
 });

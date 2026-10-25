@@ -131,7 +131,7 @@ export const LAB_INDEX: readonly LabGroup[] = [
       {
         n: "Ⅷ",
         label: "Together",
-        sub: "Lab 2-14 – 2-15 · people and cats in one room, with the loop closed",
+        sub: "Lab 2-14 – 2-15 · people and cats in one room, with the loop closed · 2-14 reruns the case study comparison",
         benches: [
           { no: "2-14", title: "People and cats together", kernel: "2d", description: 'Visitors walk, stand or sit; resident cats live on the units. Sitting down leads a cat over, and the four encounter events are counted.', meta: '2 rules · 3 spaces · 4 events · canvas', kind: 'Canvas · two species', verb: 'drag a body' },
           // 2026-10-21：同一套仿真放进 Lab 2-8 那间房，立体看——作者「老师也说我们缺一个直接演示立体空间里单元改变空间和其中的动物的直观演示」

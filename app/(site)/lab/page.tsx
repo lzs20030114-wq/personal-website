@@ -350,6 +350,7 @@ export default function LabPage() {
             ['Clearance', 'Platform radius + body 0.22 m + margin 0.15 m; walking lane twice this width'],
             ['Prototype', '15 s threshold · 2%/s decay, uncapped; differs from this demo'],
             ['Limit', 'Activation only; no behaviour-to-shape rule'],
+            ['In the project', 'The project’s starting rule: units follow the floor trace. Run with resident cats against fixed shelves (Lab 2-14, trace rule, 4×4), it gave the fewest stops beside a cat, so the current rule in Lab 2-14 forms units for a purpose'],
           ]}
         >
           <WalkPlanBench workspace />
@@ -366,6 +367,7 @@ export default function LabPage() {
             ['Overlap', 'Two simultaneous views add trace at twice the rate'],
             ['Grid', '4×4 / 6×6 / 8×8 · Lab 2-8 room'],
             ['Limit', 'Random wandering for demonstration; not a model of human behaviour'],
+            ['In the project', 'The project’s starting rule: units follow the floor trace. Run with resident cats against fixed shelves (Lab 2-14, trace rule, 4×4), it gave the fewest stops beside a cat, so the current rule in Lab 2-14 forms units for a purpose'],
           ]}
         >
           <CrowdPlanBench workspace />
@@ -425,6 +427,7 @@ export default function LabPage() {
             ['Comparison', 'Live units · fixed (even rows formed; in the walk / stand / sit rule the units that would box someone in are left out) · empty room · all three with the same seats; in the walk / stand / sit rule cats can use the floor in all three, so the empty room is the floor alone'],
             ['Sources', '1.35 m and 0.92 m stranger and acquaintance distances (Sorokowska et al. 2017, 42 countries) · 1.0–1.2 m between waiting strangers (Küpper & Seyfried 2023) · parties (Moussaïd et al. 2010) · 1 m cat band and 78% reference (Mertens & Turner 1988) · cats on high levels (Hirsch et al. 2025) · jump cost (Sicuto de Oliveira et al. 2015)'],
             ['Limit', 'Timings, sitting times and the 1/3 approach chance are demonstration values; how much more a cat prefers platforms when it is crowded is not measured (three settings are run); no invitation gesture, so the empty event is not counted'],
+            ['Case study runs', 'Rerun the case study scenes: the starting rule (trace, 4×4, 3 people, 1 cat) and the current rule with 3 / 6 / 12 visitors and 1 / 2 / 3 cats · seed 101 of the comparison’s 32, fixed 1/30 s step, so a run here equals that seed offline · the case study reports the mean of all 32 · links #lab2-14-trace, -crowd3, -crowd6, -crowd12'],
           ]}
         >
           <CohabitBench workspace />
@@ -432,16 +435,16 @@ export default function LabPage() {
 
         <Bench
           no="2-15"
-          lede="The Lab 2-14 simulation drawn in the Lab 2-8 room: sixty-four small units hang over the floor, six visitors walk, stand and sit, two cats live on the platforms. Units come down where the rules say, bands in a person's way retract on their own, and the four encounter events are counted at the bottom right. The band shapes are keyframes from one engine run; the units at this size are the Lab 2-8 ring scaled to the 8×8 pitch."
+          lede="The Lab 2-14 simulation drawn in the Lab 2-8 room: sixty-four small units are stowed under the ceiling, six visitors walk, stand and sit, two cats live on the platforms. A unit the rules call for first comes down to working height and then forms, bands in a person's way retract on their own, and the four encounter events are counted at the bottom right. The band shapes are keyframes from one engine run; the units at this size are the Lab 2-8 ring scaled to the 8×8 pitch."
           specs={[
-            ['Room', 'Lab 2-8 room (3.74 m high) · 8×8 units at 0.60 m pitch · platform ⌀0.51 m · lower edge 1.08 m above the floor'],
+            ['Room', 'Lab 2-8 room (3.74 m high) · 8×8 units at 0.60 m pitch · platform ⌀0.51 m · stowed under the ceiling ring until triggered, lower edge 1.08 m above the floor once down'],
             ['Driver', 'CohabitSim with the case study configuration: walk / stand / sit rule · only the bands in the way retract · visitors with bodies and parties · cats can use the floor · cat costs calibrated to Mertens & Turner 1988 · lead to the unit in front of the seat'],
             ['Band shapes', 'One engine run baked to 32 forming and 24 retraction keyframes; each band picks its frame from its unit’s degree and how far it has retracted. Switching between the two runs can show a small jump'],
             ['Scale', 'The Lab 2-8 ring scaled by the pitch ratio (0.49). A unit this small has not been built or solved at this size'],
             ['Figures', 'Block figures: 1.70 m people in standing and seated poses, cats in four poses; no membrane between bands'],
             ['Spaces', 'Live · fixed (even rows formed) · empty room, same seats and bodies'],
             ['Events', 'Lines at chest height while an event lasts: green co-gaze · purple co-warmth · rose contact · grey crossing'],
-            ['Limit', 'The bands are not 1,280 separate solves; frames are taken from one trajectory. The platform shown is the terminal shape, smaller than the peak envelope the plan uses for walls and spacing'],
+            ['Limit', 'The bands are not 1,280 separate solves; frames are taken from one trajectory. The platform shown is the terminal shape, smaller than the peak envelope the plan uses for walls and spacing. The stowed bundle (0.15 of the band length) is a placeholder shape'],
           ]}
         >
           <CohabitSpaceBench workspace />

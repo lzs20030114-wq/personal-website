@@ -96,6 +96,22 @@ export const TRIGGER_MODES = [
   { key: 'trace', zh: '痕迹（旧）', en: 'Trace (earlier)' },
 ] as const satisfies readonly { key: TriggerMode; zh: string; en: string }[];
 
+/**
+ * 案例页「设计立场」「对照结果」两节里那几组数的场景（2026-10-25）。Lab 2-14 一键按它重开一场，
+ * 起始布置走 populateCohabit、种子取对照 32 个种子里的第一个（101）：台架上一场 = 对照里的一个种子，不是均值。
+ *   trace：起点（单元跟随痕迹）在 4×4 下的对照，scripts/cohabit/compare.mjs 300 32 3 1 4 1 - trace
+ *   crowd3 / 6 / 12：现行规则的三档客流，与 scripts/cohabit/case-compare.mjs 的 SCENES 同（守门对 cohabit-compare.data.json）
+ * 格数 8 = COHABIT.SEATS.GRID（「走 · 站 · 坐」规则只有 8×8）。
+ */
+export const CASE_SEED = 101;
+export const CASE_SCENES = [
+  { key: 'trace', trigger: 'trace', grid: 4, people: 3, cats: 1, zh: '起点 · 痕迹 4×4 · 3 人 1 猫', en: 'Starting rule · trace 4×4 · 3 people, 1 cat', btnZh: '起点 · 痕迹', btnEn: 'Starting rule' },
+  { key: 'crowd3', trigger: 'posture', grid: 8, people: 3, cats: 1, zh: '3 人 1 猫', en: '3 people, 1 cat', btnZh: '3 人 1 猫', btnEn: '3 people, 1 cat' },
+  { key: 'crowd6', trigger: 'posture', grid: 8, people: 6, cats: 2, zh: '6 人 2 猫', en: '6 people, 2 cats', btnZh: '6 人 2 猫', btnEn: '6 people, 2 cats' },
+  { key: 'crowd12', trigger: 'posture', grid: 8, people: 12, cats: 3, zh: '12 人 3 猫', en: '12 people, 3 cats', btnZh: '12 人 3 猫', btnEn: '12 people, 3 cats' },
+] as const satisfies readonly { key: string; trigger: TriggerMode; grid: number; people: number; cats: number; zh: string; en: string; btnZh: string; btnEn: string }[];
+export type CaseScene = (typeof CASE_SCENES)[number];
+
 export type EventKind = 'gaze' | 'warmth' | 'touch' | 'pass';
 export const EVENT_KINDS = [
   { key: 'gaze', zh: '共视', en: 'Co-gaze' },
@@ -3266,9 +3282,19 @@ export function partySizes(n: number, share: number = COHABIT.SOCIAL.GROUP_SHARE
 /** 离线跑一场（线稿 / 对照 / 守门用）：固定步长、带种子逐位可复现 */
 export function runCohabit(opts: RunOpts = {}): CohabitSummary {
   const sim = new CohabitSim({ ...opts, opening: false });
+  populateCohabit(sim, opts.people ?? 2, opts.cats ?? 1);
+  const dt = opts.dt ?? 1 / 30;
+  const T = opts.seconds ?? 300;
+  for (let t = 0; t < T; t += dt) sim.step(dt);
+  return sim.summary();
+}
+
+/**
+ * 离线对照的起始布置：nP 位访客、nC 只猫放进一台没开场（opening: false）的仿真。
+ * runCohabit 与 Lab 2-14 的「正文对照」场景共用这一份（2026-10-25），台架上一场 = 对照里的一个种子。
+ */
+export function populateCohabit(sim: CohabitSim, nP: number, nC: number): void {
   const half = sim.layout.fieldM / 2;
-  const nP = opts.people ?? 2;
-  const nC = opts.cats ?? 1;
   if (sim.social) {
     // social：按组放，组与组散开（领头的起点沿一圈均分）
     const sizes = partySizes(nP);
@@ -3285,8 +3311,4 @@ export function runCohabit(opts: RunOpts = {}): CohabitSummary {
     else sim.addPerson(x, y);
   }
   for (let i = 0; i < nC; i++) sim.addCat(sim.layout.units[(i * 5) % sim.layout.units.length]);
-  const dt = opts.dt ?? 1 / 30;
-  const T = opts.seconds ?? 300;
-  for (let t = 0; t < T; t += dt) sim.step(dt);
-  return sim.summary();
 }
