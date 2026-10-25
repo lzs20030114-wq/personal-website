@@ -42,6 +42,7 @@ import { bakeIndexed } from '../linkage/gl3d';
 import { MM_PER_UNIT, RIG_ANCHOR_Y, RIG_SCALE, RING_GRID_FIT, RING_GRID_PIVOT_Y, ROOM, roomBoxesBySpan, viewFitBySpan, type RingGridView } from './skin-grid';
 import type { PlanLayout } from './unit-activation';
 import { COHABIT, bandAngle, type FurnRect } from './cohabit';
+import type { CatPose, CatTail, SeatSpec } from './figure';
 
 /** 一米 = 多少世界单位（由「人 = 1.70 m = 215 单位」定） */
 export const UNITS_PER_M = 1000 / MM_PER_UNIT;
@@ -369,25 +370,96 @@ export function figureYaw(heading: number): number {
 }
 
 /**
- * 猫站在哪：台上的猫落在它脚下那台的平台面上。平面模型把坐着的猫放在单元中心（芯心），立体里
- * 芯是根杆子，猫得坐在环形平台上——离芯心不到芯半径时沿它的朝向挪到平台中带；走到台边的
- * （靠近访客时）按它实际的位置画，但不出平台外缘。
+ * 座面（米，相对座位点沿坐着的人的朝向量）：给 figure 的坐姿用——小人按它解出腿怎么放，保证小腿让开座面前缘、
+ * 臀贴座面、背不进靠背。座位点 = 平面模型的 seat.x/y（坐下时人就摆在这里）。
  */
-export function catSpot(
-  c: { x: number; y: number; heading: number },
-  unit: { x: number; y: number } | null,
-  layout: Pick<PlanLayout, 'mastR' | 'platR'>,
-): { x: number; y: number; onPlatform: boolean } {
-  if (!unit) return { x: c.x, y: c.y, onPlatform: false };
-  const dx = c.x - unit.x;
-  const dy = c.y - unit.y;
-  const d = Math.hypot(dx, dy);
-  const bodyR = 0.14;
-  const rMid = (layout.mastR + layout.platR) / 2;
-  if (d > layout.platR + bodyR) return { x: c.x, y: c.y, onPlatform: false };
-  if (d < layout.mastR + 0.02) return { x: unit.x + Math.cos(c.heading) * rMid, y: unit.y + Math.sin(c.heading) * rMid, onPlatform: true };
-  const rr = Math.min(d, layout.platR - bodyR * 0.5);
-  return { x: unit.x + (dx / d) * rr, y: unit.y + (dy / d) * rr, onPlatform: true };
+export function seatSpecOf(r: Pick<FurnRect, 'cx' | 'cy' | 'x0' | 'x1' | 'y0' | 'y1' | 'face'>, seat: { x: number; y: number }): SeatSpec {
+  const [fx, fy] = r.face;
+  const depth = Math.abs(fy) > Math.abs(fx) ? r.y1 - r.y0 : r.x1 - r.x0;
+  const along = (seat.x - r.cx) * fx + (seat.y - r.cy) * fy; // 座位点在家具中心前方多少
+  return {
+    top: FURN.seatH,
+    front: depth / 2 - along,
+    back: along - (-depth / 2 + FURN.backT),
+    thick: FURN.seatT,
+    backTop: FURN.backH,
+  };
+}
+
+/** 环形平台的可用宽度（米）：内 = 芯（带子贴着芯外缘挂，再加半个织物厚）、外 = 成形后的平台外缘；R = 猫身中线放在哪 */
+export function ringBand(rig: Pick<Rig, 's'>, layout: Pick<PlanLayout, 'mastR'>, traj: Pick<BandTrajectory, 'reach'>): { rIn: number; rOut: number; R: number } {
+  const half = ((SOLID.THICK / 2) * rig.s) / UNITS_PER_M;
+  const rIn = layout.mastR + half;
+  const rOut = (traj.reach * rig.s) / UNITS_PER_M + half;
+  return { rIn, rOut, R: (rIn + rOut) / 2 };
+}
+
+/** 猫在立体里怎么摆：位置（平面坐标，米）、身子朝向、头转多少、姿态、尾巴、弯多少、在不在台上、离台面抬多高（跨台时跳过去） */
+export interface CatPlace {
+  x: number;
+  y: number;
+  heading: number;
+  headTurn: number;
+  pose: CatPose;
+  tail: CatTail;
+  /** 身子弯的半径（米，0 = 直的）：在台上绕着立杆 */
+  bend: number;
+  onPlatform: boolean;
+  lift: number;
+}
+
+/** 台上的猫坐在环上什么方位：离「它要看的方向」绕回 55°，身子顺着环、头再转过去看（不必扭满 90°） */
+const RING_SIDE = (55 * Math.PI) / 180;
+
+/**
+ * 猫站在哪、怎么摆（2026-10-25 人与猫重做时取代 catSpot）。平面模型把猫当一个点：坐着时在单元中心（芯心），
+ * 靠近访客时挪到台边。立体里芯是根杆子、平台只是一圈 16 cm 宽的环（Lab 2-15 的 8×8），0.47 m 长的猫
+ * 怎么摆都会穿杆——所以台上的猫**顺着环坐 / 蜷 / 走**：身子绕着立杆弯过去（figure.ts 的 bend），中线在环宽正中；
+ * 跨台（transfer）时贴着两根芯连线的一侧跳过去，两根芯都不碰。
+ *   - 台上、在芯心：身子朝向 = 平面模型的朝向（往回绕 55° 摆在环上，头转回来看那个方向）；
+ *   - 台上、在台边（靠近访客）：摆在朝访客那一侧再往回绕 55° 的地方，头转过去看访客；
+ *   - 卧 → 蜷（绕着杆一圈），走 / 退 → 沿环走，其余 → 坐；
+ *   - 地面：照平面模型的位置与朝向，直的。
+ */
+export function catPlacement(
+  c: { x: number; y: number; heading: number; state: string },
+  support: readonly { x: number; y: number }[],
+  formed: boolean,
+  moving: boolean,
+  layout: Pick<PlanLayout, 'mastR'>,
+  ring: { R: number },
+): CatPlace {
+  const R = ring.R;
+  const floorPose = (): CatPose => {
+    if (c.state === 'lie') return 'lie';
+    if (c.state === 'sit' || c.state === 'wait' || c.state === 'held') return 'sit';
+    if (moving) return 'walk';
+    return c.state === 'approach' ? 'sit' : 'stand';
+  };
+  const tail: CatTail = c.state === 'approach' || (moving && c.state === 'walk') ? 'up' : 'relaxed';
+  if (formed && support.length >= 2) {
+    // 跨台：沿 A→B 走，贴在连线一侧 R 处（芯在猫身的 −x 侧，与台上坐着时同一侧），中途离台面略抬起（跳过台间的缝）
+    const [A, B] = support;
+    const dx = B.x - A.x, dy = B.y - A.y;
+    const L2 = dx * dx + dy * dy || 1;
+    const p = Math.max(0, Math.min(1, ((c.x - A.x) * dx + (c.y - A.y) * dy) / L2));
+    const h = Math.atan2(dy, dx);
+    const px = Math.sin(h), py = -Math.cos(h);
+    return { x: A.x + p * dx + px * R, y: A.y + p * dy + py * R, heading: h, headTurn: 0, pose: 'walk', tail: 'up', bend: 0, onPlatform: true, lift: 0.06 * Math.sin(Math.PI * p) };
+  }
+  if (formed && support.length === 1) {
+    const u = support[0];
+    const dx = c.x - u.x, dy = c.y - u.y;
+    const atCore = Math.hypot(dx, dy) < layout.mastR + 0.02;
+    const look = c.heading;
+    const anchor = atCore ? look : Math.atan2(dy, dx);
+    const th = anchor - RING_SIDE;
+    const facing = th + Math.PI / 2;
+    const pose: CatPose = c.state === 'lie' ? 'curl' : moving && (c.state === 'walk' || c.state === 'retreat') ? 'walk' : 'sit';
+    const turn = Math.atan2(Math.sin(look - facing), Math.cos(look - facing));
+    return { x: u.x + Math.cos(th) * R, y: u.y + Math.sin(th) * R, heading: facing, headTurn: pose === 'curl' ? 0 : turn, pose, tail, bend: R, onPlatform: true, lift: 0 };
+  }
+  return { x: c.x, y: c.y, heading: c.heading, headTurn: 0, pose: floorPose(), tail, bend: 0, onPlatform: false, lift: 0 };
 }
 
 /** 取景：框住整间房（与 Lab 2-8 同一套解析式），枢轴与它同 */

@@ -279,7 +279,8 @@ describe('unit-cluster 单元关系', () => {
         for (const c of cells) expect(Math.hypot(spot.x - c.x, spot.z - c.z) - rimW).toBeGreaterThan(20);
         // 布景 = 地板 + 两面墙 + 小人
         const scene = clusterScene(plan, rel, fi, R);
-        expect(scene.map((m) => m.kind)).toEqual(['room', 'room', 'room', 'figure']);
+        expect(scene.slice(0, 3).map((m) => m.kind)).toEqual(['room', 'room', 'room']);
+        expect(scene.slice(3).every((m) => m.kind === 'figure' && m.tone !== undefined)).toBe(true);
         // 取景 ≤ 允许值（同一份余量）
         for (const v of ['axon', 'front', 'side', 'top'] as const) {
           const fit = viewFitBySpan(span + 2 * ROOM.MARGIN, v);

@@ -438,7 +438,7 @@ export default function LabPage() {
             ['Driver', 'CohabitSim with the case study configuration: walk / stand / sit rule · only the bands in the way retract · visitors with bodies and parties · cats can use the floor · cat costs calibrated to Mertens & Turner 1988 · lead to the unit in front of the seat'],
             ['Band shapes', 'One engine run baked to 32 forming and 24 retraction keyframes; each band picks its frame from its unit’s degree and how far it has retracted. Switching between the two runs can show a small jump'],
             ['Scale', 'The Lab 2-8 ring scaled by the pitch ratio (0.49). A unit this small has not been built or solved at this size'],
-            ['Figures', 'Block figures: 1.70 m people in standing and seated poses, cats in four poses; no membrane between bands'],
+            ['Figures', 'Blocky 1.70 m people (joint proportions from Drillis & Contini) who walk, stand, sit and turn their heads, each in a different shirt; blocky cats in five poses that wrap around the post on a platform; no membrane between bands'],
             ['Spaces', 'Live · fixed (even rows formed) · empty room, same seats and bodies'],
             ['Events', 'Lines at chest height while an event lasts: green co-gaze · purple co-warmth · rose contact · grey crossing'],
             ['Limit', 'The bands are not 1,280 separate solves; frames are taken from one trajectory. The platform shown is the terminal shape, smaller than the peak envelope the plan uses for walls and spacing'],

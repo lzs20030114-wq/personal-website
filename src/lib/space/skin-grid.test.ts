@@ -237,11 +237,12 @@ describe('skin-grid 4×4 环阵列', () => {
     }
   });
 
-  it('布景件：房间三件 + 人一件，随半径重建', () => {
+  it('布景件：房间三件 + 一个人（方块人按颜色分成几组，每组都带颜色类别），随半径重建', () => {
     const a = ringGridScene(RING.RADIUS_DEF);
-    expect(a.length).toBe(4);
-    expect(a.filter((m) => m.kind === 'room').length).toBe(3);
-    expect(a.filter((m) => m.kind === 'figure').length).toBe(1);
+    expect(a.slice(0, 3).map((m) => m.kind)).toEqual(['room', 'room', 'room']);
+    const fig = a.slice(3);
+    expect(fig.length).toBeGreaterThan(1);
+    for (const m of fig) expect(m.kind === 'figure' && m.tone !== undefined).toBe(true);
     for (const m of a) {
       expect(m.verts.length % 3).toBe(0);
       expect(m.idx.length % 3).toBe(0);
