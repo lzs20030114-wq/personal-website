@@ -327,7 +327,6 @@ export default function LabPage() {
             ['Height', 'Up to 0.35 m; shape stays unchanged'],
             ['Interleave', 'Step must clear the forming body by 6 px'],
             ['Timing', 'Together or staggered by 150 steps'],
-            ['Seams', 'Level touching edges joined by a 16 cm fabric web'],
             ['Scale', 'Lab 2-8 room · 1.70 m figure'],
           ]}
         >

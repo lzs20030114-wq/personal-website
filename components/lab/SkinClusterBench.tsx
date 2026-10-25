@@ -16,7 +16,6 @@ import { RING_GRID_AXON, RING_GRID_PIVOT_Y, RIG_SCALE, RIG_Y } from '../../src/l
 import {
   CLUSTER_DEFAULT_FORM,
   STAGGER_STEPS,
-  clusterBridges,
   clusterBuild,
   clusterCamScale,
   clusterCells,
@@ -40,8 +39,8 @@ import { SkinSolidBench, type SolidUnitDef } from './SkinSolidBench';
  *
  * 一个单元 = Lab.10 那种圆筒环（构造与 Lab.12 同一份 `buildRingUnits`，一个数不改）。
  * 这台把 2 / 3 / 4 / 9 个单元摆进 Lab.12 那间房，关系五档（距离 × 高度里物理上成立的组合）：
- *   分离·齐平（= Lab.12 那种独立）· 相切·齐平（平台边贴边，读成一整片；相邻两圈之间长一块
- *   织物网把缝糊上）· 分离·错层 · 相切·错层（高度用起伏编制验过的 lead 量程等分）·
+ *   分离·齐平（= Lab.12 那种独立）· 相切·齐平（平台边贴边；单元之间不搭蒙皮——2026-10-25 拍板删掉
+ *   了原先那块跨单元的织物网）· 分离·错层 · 相切·错层（高度用起伏编制验过的 lead 量程等分）·
  *   交叠·错层（平台在平面上盖过去，一个从另一个底下穿过——只有不同高时成立）。
  * 时序两档：同步（全场一个时钟）/ 错相（每个单元晚一波起步，收缩像一道波在簇里传过去）。
  * 间距 / 高差 / 可行性 / 波序全在 src/lib/space/unit-cluster.ts 推出来（线稿脚本与这里共用一份），
@@ -105,7 +104,6 @@ export function SkinClusterBench({
     [plan, relEff, form, timing],
   );
   const scene = useMemo(() => (r: number) => clusterScene(plan, relEff, form, r), [plan, relEff, form]);
-  const bridges = useMemo(() => clusterBridges(plan, relEff), [plan, relEff]);
   const met = clusterMetrics(plan, relEff, form, RING.RADIUS_DEF);
   const P = clusterPlan(plan);
   const Rl = clusterRelation(relEff);
@@ -113,8 +111,8 @@ export function SkinClusterBench({
   const stagger = timing === 'stagger';
 
   const relLine = en
-    ? `${P.n} rings · ${Rl.en}${stagger ? ` · staggered, ${STAGGER_STEPS} steps per wave` : ''} · pitch ${met.pitchM.toFixed(2)} m · platform ⌀${met.platformM.toFixed(2)} m${met.levels > 1 ? ` · ${met.levels} levels, ≥ ${met.stepM.toFixed(2)} m apart` : ''}${met.overlapM > 1e-6 ? ` · platforms overlap ${met.overlapM.toFixed(2)} m` : met.overlapM < -1e-6 ? ` · clear ${(-met.overlapM).toFixed(2)} m` : bridges.length ? ' · edge to edge, seams webbed' : ' · edge to edge'}`
-    : `${P.n} 个单元 · ${Rl.label}${stagger ? ` · 错相，每波晚 ${STAGGER_STEPS} 步起步` : ''} · 芯心距 ${met.pitchM.toFixed(2)} m · 平台 ⌀${met.platformM.toFixed(2)} m${met.levels > 1 ? ` · ${met.levels} 级，每级高差 ≥ ${met.stepM.toFixed(2)} m` : ''}${met.overlapM > 1e-6 ? ` · 平台盖过去 ${met.overlapM.toFixed(2)} m` : met.overlapM < -1e-6 ? ` · 空地 ${(-met.overlapM).toFixed(2)} m` : bridges.length ? ' · 边贴边，缝用织物网糊上' : ' · 边贴边'}`;
+    ? `${P.n} rings · ${Rl.en}${stagger ? ` · staggered, ${STAGGER_STEPS} steps per wave` : ''} · pitch ${met.pitchM.toFixed(2)} m · platform ⌀${met.platformM.toFixed(2)} m${met.levels > 1 ? ` · ${met.levels} levels, ≥ ${met.stepM.toFixed(2)} m apart` : ''}${met.overlapM > 1e-6 ? ` · platforms overlap ${met.overlapM.toFixed(2)} m` : met.overlapM < -1e-6 ? ` · clear ${(-met.overlapM).toFixed(2)} m` : ' · edge to edge'}`
+    : `${P.n} 个单元 · ${Rl.label}${stagger ? ` · 错相，每波晚 ${STAGGER_STEPS} 步起步` : ''} · 芯心距 ${met.pitchM.toFixed(2)} m · 平台 ⌀${met.platformM.toFixed(2)} m${met.levels > 1 ? ` · ${met.levels} 级，每级高差 ≥ ${met.stepM.toFixed(2)} m` : ''}${met.overlapM > 1e-6 ? ` · 平台盖过去 ${met.overlapM.toFixed(2)} m` : met.overlapM < -1e-6 ? ` · 空地 ${(-met.overlapM).toFixed(2)} m` : ' · 边贴边'}`;
 
   return (
     <SkinSolidBench lang={lang}
@@ -129,7 +127,6 @@ export function SkinClusterBench({
       cellsKey={`${plan}:${relEff}:${def.key}:${timing}`}
       ring
       cells={cells}
-      bridges={bridges}
       rig={{ scale: RIG_SCALE, y: RIG_Y }}
       scene={scene}
       camScaleFor={(r, v) => clusterCamScale(plan, relEff, form, r, v)}
