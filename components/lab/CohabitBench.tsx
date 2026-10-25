@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useBenchLang, useLabText } from './LabLanguage';
 import { LabControlLabel } from './LabControlLabel';
+import { LabFold } from './LabCtl';
 import { CASE_SCENES, CASE_SEED, COHABIT, CohabitSim, FACE_MODES, GUIDE_TARGETS, SPACE_MODES, TRIGGER_MODES, nearestNode, populateCohabit, type CaseScene, type GuideTarget, type Cat, type FaceMode, type SpaceMode, type TriggerMode, type Visitor } from '../../src/lib/space/cohabit';
 import { PLAN, RESPONSES, type ResponseMode } from '../../src/lib/space/unit-activation';
 import type { CatPose } from '../../src/lib/space/cat-rules';
@@ -712,18 +713,6 @@ export function CohabitBench({
               </span>
             </div>
             <div className="grp">
-              <LabControlLabel help={['只收挡路的带：一个单元二十条带，挡在人身边或人路上的那几条各自收回到杆上，其余照落、猫身下的不收，门在人走到之前开好；整个单元：平台会打到人的单元整个不落（2-11 的让位闸）。', 'Only the bands in the way: a unit has twenty bands; the few beside a person or on their route retract to the post while the rest come down, bands under a cat never retract, the door opens before the person arrives. Whole unit: a unit whose platform would hit someone holds back entirely (the Lab 2-11 clearance gate).']} lang={lang}>
-                {t.faces}
-              </LabControlLabel>
-              <span className="seg">
-                {FACE_MODES.map((m) => (
-                  <button key={m.key} type="button" className={m.key === faceMode ? 'active' : undefined} onClick={() => setFaceMode(m.key)}>
-                    {lang === 'zh' ? m.zh : m.en}
-                  </button>
-                ))}
-              </span>
-            </div>
-            <div className="grp">
               <LabControlLabel help={['坐着的人把猫引到哪一台。座位前方：面前 1.0–1.5 m 那台，猫在台面中心不付停留代价、又在共温带里；座位旁边：平台不盖头顶的最近一台，猫走到台边离人最近（共触只能发生在这儿）；先前方再旁边：先到前方那台，坐着的人看满 10 秒再递一步到旁边那台。只在「走 · 站 · 坐」规则下起作用。', 'Which unit a seated person leads the cat to. In front of the seat: the unit 1.0–1.5 m in front, where the cat pays no staying cost and is inside the co-warmth band. Beside the seat: the nearest unit that does not hang over the head; at its edge the cat is closest (contact can only happen here). Front, then beside: the unit in front first, then after 10 s of being watched one more step to the unit beside. Walk / stand / sit rule only.']} lang={lang}>
                 {t.guide}
               </LabControlLabel>
@@ -736,7 +725,20 @@ export function CohabitBench({
               </span>
             </div>
             {workspace && bodyControls}
-            {workspace && furnitureControls}
+            {workspace && <LabFold label={lang === 'zh' ? '布置' : 'Layout'}>{furnitureControls}</LabFold>}
+            <LabFold label={lang === 'zh' ? '模型参数' : 'Model settings'}>
+            <div className="grp">
+              <LabControlLabel help={['只收挡路的带：一个单元二十条带，挡在人身边或人路上的那几条各自收回到杆上，其余照落、猫身下的不收，门在人走到之前开好；整个单元：平台会打到人的单元整个不落（2-11 的让位闸）。', 'Only the bands in the way: a unit has twenty bands; the few beside a person or on their route retract to the post while the rest come down, bands under a cat never retract, the door opens before the person arrives. Whole unit: a unit whose platform would hit someone holds back entirely (the Lab 2-11 clearance gate).']} lang={lang}>
+                {t.faces}
+              </LabControlLabel>
+              <span className="seg">
+                {FACE_MODES.map((m) => (
+                  <button key={m.key} type="button" className={m.key === faceMode ? 'active' : undefined} onClick={() => setFaceMode(m.key)}>
+                    {lang === 'zh' ? m.zh : m.en}
+                  </button>
+                ))}
+              </span>
+            </div>
             <div className="grp">
               <LabControlLabel help={['4×4 是 Lab 2-8 那间房的真实单元尺寸；6×6、8×8 是等比缩小的单元。「走 · 站 · 坐」规则只有 8×8：4×4 的一台平台直径 1.04 m，一张沙发会吃掉一个象限。', '4×4 is the real unit size of the Lab 2-8 room; 6×6 and 8×8 are scaled-down units. The walk / stand / sit rule is 8×8 only: a 4×4 platform is 1.04 m across, so one sofa would take a whole quadrant.']} lang={lang}>
                 {t.grid}
@@ -808,9 +810,16 @@ export function CohabitBench({
               </LabControlLabel>
               <input type="range" min={2} max={60} step={1} value={fade} disabled={seatsMode} aria-label={t.fade} style={{ width: 84 }} onChange={(e) => setFade(Number(e.target.value))} />
             </div>
+            <div className="grp">
+              <LabControlLabel help={['访客在房间内行走的速度。', 'How fast visitors walk through the room.']} lang={lang}>
+                {t.speed} {speed.toFixed(1)} {tx('m/s')}
+              </LabControlLabel>
+              <input type="range" min={PLAN.SPEED.min} max={PLAN.SPEED.max} step={0.1} value={speed} aria-label={t.speed} style={{ width: 84 }} onChange={(e) => setSpeed(Number(e.target.value))} />
+            </div>
+            </LabFold>
           </div>
           <div className="lab-ctl__row walk-playback">
-            <div className="grp">
+            <div className="grp lab-play">
               <label>
                 <input
                   type="checkbox"
@@ -842,12 +851,6 @@ export function CohabitBench({
             </div>
             {!workspace && bodyControls}
             {!workspace && furnitureControls}
-            <div className="grp">
-              <LabControlLabel help={['访客在房间内行走的速度。', 'How fast visitors walk through the room.']} lang={lang}>
-                {t.speed} {speed.toFixed(1)} {tx('m/s')}
-              </LabControlLabel>
-              <input type="range" min={PLAN.SPEED.min} max={PLAN.SPEED.max} step={0.1} value={speed} aria-label={t.speed} style={{ width: 84 }} onChange={(e) => setSpeed(Number(e.target.value))} />
-            </div>
             <div className="grp">
               <LabControlLabel help={['仿真播放倍速。', 'Simulation playback rate.']} lang={lang}>
                 {t.time}

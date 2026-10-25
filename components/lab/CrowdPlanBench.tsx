@@ -3,6 +3,7 @@
 import { useBenchLang, useLabText } from './LabLanguage';
 
 import { LabControlLabel } from './LabControlLabel';
+import { LabFold } from './LabCtl';
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { CROWD, CrowdSim } from '../../src/lib/space/crowd-plan';
@@ -390,6 +391,7 @@ export function CrowdPlanBench({
                 ))}
               </span>
             </div>
+            <LabFold label={lang === 'zh' ? '模型参数' : 'Model settings'}>
             <div className="grp">
               <LabControlLabel help={["按格：读取单元所在分区；脚下：只读取平台覆盖的地面。", "By cell reads the assigned floor region; footprint reads only the platform area."]} lang={lang}>{t.reading}</LabControlLabel>
               <span className="seg">
@@ -514,9 +516,16 @@ export function CrowdPlanBench({
               </LabControlLabel>
               <input type="range" min={FADE.min} max={FADE.max} step={1} value={fade} aria-label={t.half_} style={{ width: 84 }} onChange={(e) => setFade(Number(e.target.value))} />
             </div>
+            <div className="grp">
+              <LabControlLabel help={["人物在房间内行走的速度。", "How fast people walk through the room."]} lang={lang}>
+                {t.speed} {speed.toFixed(1)} {tx("m/s")}
+              </LabControlLabel>
+              <input type="range" min={PLAN.SPEED.min} max={PLAN.SPEED.max} step={0.1} value={speed} aria-label={t.speed} style={{ width: 84 }} onChange={(e) => setSpeed(Number(e.target.value))} />
+            </div>
+            </LabFold>
           </div>
           <div className="lab-ctl__row walk-playback">
-            <div className="grp">
+            <div className="grp lab-play">
               <label>
                 <input
                   type="checkbox"
@@ -546,12 +555,6 @@ export function CrowdPlanBench({
               </label>
             </div>
             {!workspace && peopleControls}
-            <div className="grp">
-              <LabControlLabel help={["人物在房间内行走的速度。", "How fast people walk through the room."]} lang={lang}>
-                {t.speed} {speed.toFixed(1)} {tx("m/s")}
-              </LabControlLabel>
-              <input type="range" min={PLAN.SPEED.min} max={PLAN.SPEED.max} step={0.1} value={speed} aria-label={t.speed} style={{ width: 84 }} onChange={(e) => setSpeed(Number(e.target.value))} />
-            </div>
             <div className="grp">
               <LabControlLabel help={["仿真播放倍速；×3 表示一秒播放三秒的过程。", "Simulation playback rate; ×3 runs three simulated seconds per second."]} lang={lang}>{t.time}</LabControlLabel>
               <span className="seg">

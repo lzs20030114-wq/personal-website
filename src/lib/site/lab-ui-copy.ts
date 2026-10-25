@@ -146,6 +146,7 @@ export const LAB_UI_COPY: readonly (readonly [string, string])[] = [
   ["肌腱", "Tendons"],
   ["联动", "Link"],
   ["放松", "Relax"],
+  ["重来", "Restart"],
   ["视角归位", "Reset camera"],
   ["无", "None"],
   ["排列", "Arrangement"],

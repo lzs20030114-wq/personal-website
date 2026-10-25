@@ -335,11 +335,10 @@ export function TentacleBench({
             >
               {tx("放松")}
             </button>
+            {/* 「重来」= 重建触手（原写「归位」，与底栏的相机「归位」同名、英文还被译成 Reset view）；
+                相机归位只在底栏一处（2026-10-25，LabCtl） */}
             <button type="button" onClick={() => apiRef.current?.home()}>
-              {tx("归位")}
-            </button>
-            <button type="button" onClick={() => apiRef.current?.viewHome()}>
-              {tx("视角归位")}
+              {tx("重来")}
             </button>
           </div>
         </div>

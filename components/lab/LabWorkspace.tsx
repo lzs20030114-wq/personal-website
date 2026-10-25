@@ -5,6 +5,7 @@ import { useBenchLang, useLabText } from './LabLanguage';
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { LabActivity } from './LabActivity';
 import { LabHelp, type LabHelpApi, type LabHelpEntry } from './LabHelp';
+import { LabViewDockSlot } from './LabCtl';
 import { CAMERA_COMMAND, type CameraCommand } from './labCameraInput';
 import { LAB_BENCHES, LAB_INDEX, labAccent } from '../../src/lib/site/lab-index';
 import { BlockRail, BlockView } from '../site/LogBody';
@@ -165,6 +166,8 @@ export function LabPanel({ no, title, description, lede, specs, accent, kind, ve
   const [helps, setHelps] = useState<ReadonlyMap<string, LabHelpEntry>>(() => new Map());
   const [helpOn, setHelpOn] = useState<{ id: string; open: boolean } | null>(null);
   const detailsScroll = useRef<HTMLDivElement>(null);
+  // 底栏的视角位：台架用 LabViewDock 把视角预设搬到这里（LabCtl）
+  const [viewDock, setViewDock] = useState<HTMLDivElement | null>(null);
   const helpApi = useMemo<LabHelpApi>(() => ({
     set(id, entry) {
       setHelps(prev => {
@@ -348,6 +351,7 @@ export function LabPanel({ no, title, description, lede, specs, accent, kind, ve
   return <div ref={anchor} className="lab-panel-anchor" id={`lab${no}`} style={expanded ? { height: placeholder } : undefined}>
     <LabActivity.Provider value={!workspace.expanded || expanded}>
     <LabHelp.Provider value={helpApi}>
+    <LabViewDockSlot.Provider value={viewDock}>
       <section ref={root} className="lab-panel" data-lab-panel={no} data-expanded={expanded || undefined} data-details={details || undefined}
         role={expanded ? 'dialog' : undefined} aria-modal={expanded || undefined} aria-labelledby={`lab-title-${no}`}
         style={{ '--lab-tone': accent, '--lab-detail-width': `${appliedDetailWidth}px`, ...(figureHeight === null ? {} : { '--lab-figure-height': `${figureHeight}px` }) } as CSSProperties}
@@ -375,6 +379,7 @@ export function LabPanel({ no, title, description, lede, specs, accent, kind, ve
               onPointerLeave={() => workspace.cursor.hide()}>{children}</div>
             <div className="lab-view-tools">
               <p><span className="lab-hint-dot" aria-hidden />{expanded ? (hasCamera ? tx('Wheel zooms the model · drag to orbit · Esc restores') : cap(tx(verb), lang) + tx(' · Esc restores')) : no === '1-5' ? tx('Fixed view · switch it with the buttons') : cap(tx(verb), lang) + tx(' · wheel scrolls the page')}</p>
+              <div ref={setViewDock} className="lab-view-dock" />
               <span className="lab-status" data-solving={solving || undefined}><i aria-hidden />{solving ? tx('solving…') : tx('live')}</span>
               {hasCamera && <div className="lab-zoom-controls" role="group" aria-label={`${tx('Lab')} ${no} ${tx('相机控制')}`}>
                 <button type="button" aria-label={tx("缩小模型")} onClick={() => cameraCommand('out')}>−</button>
@@ -410,6 +415,7 @@ export function LabPanel({ no, title, description, lede, specs, accent, kind, ve
           <BlockView id={`lab-attach-${no}`} viewRef={attachView} blocks={attachments.blocks} lang={lang} openAt={attachAt} onClose={() => setAttachAt(null)} />
         </div>}
       </section>
+    </LabViewDockSlot.Provider>
     </LabHelp.Provider>
     </LabActivity.Provider>
   </div>;
