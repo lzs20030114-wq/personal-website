@@ -108,6 +108,11 @@ describe('执行器调试的物理量合同', () => {
     expect(preview).toContain('step_target = null');
     expect(preview).toContain('pulse_us = null');
     expect(preview).toContain('rack_position_mm = null');
+    expect(preview).toContain('M1: NEMA17 + TMC2209');
+    expect(preview).toContain('M7: HDB60XZ45B');
+    expect(preview).toContain('M6 shared_shaft_deg = 218.4; motor_shaft_deg = 655.2;');
+    expect(preview).toContain('M7 recorded 45:1: motor_shaft_deg = -4050; NOT accumulated turns.');
+    expect(preview).toContain('M1–M3 motor angles unknown');
     expect(preview).not.toMatch(/pinMode|analogWrite|writeMicroseconds/);
     expect(arduinoPreview({ ...command(), soundOn: false }, 'behavior')).toContain('.sound_on = false');
   });

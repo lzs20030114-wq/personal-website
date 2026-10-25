@@ -27,6 +27,17 @@
 .actuator-lab__select > span:nth-child(2) { min-width: 0; flex: 1; }
 .actuator-lab__code { color: var(--axis, var(--ld-v)); flex-shrink: 0; }
 .actuator-lab__marker { color: var(--ld-v); }
+.actuator-lab__provenance { border-left: 2px solid var(--ld-v); padding-left: 9px; }
+.actuator-lab__motor { margin-top: 7px; font-size: 10px; color: var(--ld-soft); }
+.actuator-lab__motor strong { display: block; color: var(--ld-cream); font-weight: 400; }
+.actuator-lab__motor > span { color: var(--ld-mute); font-size: 9px; }
+.actuator-lab__motor p { margin: 4px 0 0; color: var(--axis); font: inherit; }
+.actuator-lab__shaft { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; margin-top: 7px; padding-top: 7px; border-top: 1px solid var(--lab-line); font-size: 9px; color: var(--ld-soft); }
+.actuator-lab__shaft strong { color: var(--ld-cream); font-size: 13px; font-weight: 400; }
+.actuator-lab__shaft small, .actuator-lab__shaft p { grid-column: 1 / -1; margin: 0; font: inherit; color: var(--ld-mute); }
+.actuator-lab__motor-details { margin-top: 8px; font-size: 9px; color: var(--ld-soft); overflow-wrap: anywhere; }
+.actuator-lab__motor-details summary { color: var(--ld-v); cursor: pointer; }
+.actuator-lab__motor-details p { margin: 6px 0 0; font: inherit; }
 .actuator-lab__reading { display: flex; align-items: center; gap: 8px; margin: 6px 0 4px; }
 .actuator-lab .actuator-lab__graphic { display: block; flex: 0 0 68px; width: 68px; height: 40px; overflow: visible; pointer-events: none; }
 .actuator-lab__guide { fill: none; stroke: var(--ld-mute); stroke-width: 0.7; opacity: 0.35; }

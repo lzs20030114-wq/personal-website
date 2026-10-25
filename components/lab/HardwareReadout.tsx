@@ -4,13 +4,14 @@ import {
   HARDWARE_CHANNELS,
   type HardwareSnapshot,
 } from '../../src/lib/linkage/actuator-hardware';
+import { motorEstimate } from '../../src/lib/linkage/actuator-motors';
 
 const COPY = {
   zh: {
     simulated: '仿真', target: '目标', feedback: '真机回读', electrical: '电气输出',
     pending: '待标定', details: '硬件与换算', missing: '还缺',
     download: '导出显示样本 JSON', sample: '采样动作时间',
-    note: '9 个逻辑输出：7 个运动轴、声音与灯。真实电机数量仍需核对。',
+    note: 'M1–M7 对应七个电机位；声音与灯另列。编号用于本次映射，装机与标定仍需核对。',
     exportNote: '暂停时保留最近采样。导出的是仿真需求，未生成可下发的硬件指令。',
     voice: '发声', on: '开', off: '关', voiceFraction: '基础呼吸发声窗口',
     rate: '仿真角速度', crank: '曲柄',
@@ -21,7 +22,7 @@ const COPY = {
     simulated: 'Simulated', target: 'Target', feedback: 'Hardware feedback', electrical: 'Electrical output',
     pending: 'Uncalibrated', details: 'Hardware & conversion', missing: 'Still needed',
     download: 'Export displayed sample · JSON', sample: 'Sample action time',
-    note: '9 logical outputs: 7 motion axes, sound and light. Physical motor count remains unconfirmed.',
+    note: 'M1–M7 identify seven motor assignments; sound and light are separate. Installation and calibration remain unverified.',
     exportNote: 'Pausing retains the latest sample. Simulation requirements only; no executable hardware commands.',
     voice: 'Voice', on: 'on', off: 'off', voiceFraction: 'Base breath voice window',
     rate: 'Simulated angular speed', crank: 'Crank',
@@ -40,7 +41,11 @@ export function HardwareReadout({ snapshot, lang }: { snapshot: HardwareSnapshot
   const L = COPY[lang];
   const download = () => {
     if (!snapshot) return;
-    const blob = new Blob([JSON.stringify({ ...snapshot, mapping: HARDWARE_CHANNELS }, null, 2)], { type: 'application/json' });
+    const motorEstimates = snapshot.rows.filter(row => row.motorId).map(row => ({
+      motorId: row.motorId, channelId: row.id, source: 'conditional-model-calculation',
+      ...motorEstimate(row.id, row.simulated.value),
+    }));
+    const blob = new Blob([JSON.stringify({ ...snapshot, mapping: HARDWARE_CHANNELS, motorEstimates }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -57,7 +62,8 @@ export function HardwareReadout({ snapshot, lang }: { snapshot: HardwareSnapshot
         const row = snapshot?.rows.find((item) => item.id === channel.id);
         return (
           <section className="mb-hardware__channel" key={channel.id} aria-label={channel.label[lang]}>
-            <h4>{channel.label[lang]} <code>{channel.id}</code></h4>
+            <h4>{channel.motor && `${channel.motor.id} · `}{channel.label[lang]} <code>{channel.id}</code></h4>
+            {channel.motor && <p className="mb-out__note">{channel.motor.model}</p>}
             <dl className="mb-hardware__values">
               <div><dt>{L.simulated}</dt><dd>{valueText(row?.simulated)}</dd></div>
               <div><dt>{L.target}</dt><dd>{valueText(row?.target)}</dd></div>
@@ -79,6 +85,7 @@ export function HardwareReadout({ snapshot, lang }: { snapshot: HardwareSnapshot
               <summary>{L.details}</summary>
               <p className="mb-hardware__basis">{L.basis[channel.basis]}</p>
               <p>{channel.hardware[lang]}</p>
+              {channel.motor && <><p>{channel.motor.transmission[lang]}</p><p>{channel.motor.evidence[lang]}</p></>}
               <p>{channel.formula[lang]}</p>
               <p><strong>{L.missing}: </strong>{channel.calibration[lang]}</p>
             </details>

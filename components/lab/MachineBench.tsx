@@ -110,7 +110,7 @@ import { setStash } from './snapshot';
 import { useBenchLoop } from './useBenchLoop';
 import { ActuatorPanel, type ActuatorSnapshot } from './ActuatorPanel';
 import { ActuatorReadout, READOUT_CHANNELS, TENDON_TAKEUP_MM, type ReadoutKey } from '../../src/lib/linkage/actuator-readout';
-import { createHardwareSnapshot, type HardwareId } from '../../src/lib/linkage/actuator-hardware';
+import { createHardwareSnapshot, HARDWARE_CHANNELS, type HardwareId } from '../../src/lib/linkage/actuator-hardware';
 import { ActuatorLab } from './ActuatorLab';
 import { clampActuatorCommand, commandFromSnapshot, DEBUG_CHANNELS, type ActuatorCommand, type ActuatorMode } from '../../src/lib/linkage/actuator-debug';
 
@@ -2615,7 +2615,7 @@ export function MachineBench({
       }${outPanel ? ' lab-wrap--out' : ''}`}
     >
       {debugEnabled ? <div className="actuator-linkbar">
-        <span>{lang === 'zh' ? '同色标号对应下方执行器 · 亮起表示该轴在变化' : 'Matching labels identify axes below · bright labels indicate motion'}</span>
+        <span>{lang === 'zh' ? 'M1–M7 标记被驱动部件，对应下方电机卡 · 亮起表示变化' : 'M1–M7 mark driven parts, matching the cards below · bright labels indicate motion'}</span>
         <a href="#lab1-6a">{lang === 'zh' ? '1-6A 执行器调试 ↓' : '1-6A Actuator lab ↓'}</a>
       </div> : null}
       {/* 实时输出面板挂在画面右侧（窄时落到画面下方）：画面与面板同在 .mb-split 里，控制条仍在下面。
@@ -2624,7 +2624,7 @@ export function MachineBench({
       <div className="lab-fig">
         <canvas ref={canvasRef} width={1400} height={1040} aria-label={engineOn ? B.aria : L.aria} />
         {debugEnabled ? <div ref={markersRef} className="actuator-markers" aria-hidden="true">
-          {DEBUG_CHANNELS.filter(c => !['sound', 'light'].includes(c.id)).map(c => <span key={c.id} data-axis={c.id} style={{ color: c.color }}>{c.short}</span>)}
+          {DEBUG_CHANNELS.filter(c => !['sound', 'light'].includes(c.id)).map(c => <span key={c.id} data-axis={c.id} style={{ color: c.color }}>{HARDWARE_CHANNELS.find(h => h.id === c.id)?.motor?.id ?? c.short}</span>)}
         </div> : null}
         {behaviorUi ? <div ref={handRef} className="lab-hand" aria-hidden="true" /> : null}
         <div className="lab-hud tl">

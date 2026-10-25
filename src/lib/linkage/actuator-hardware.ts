@@ -1,6 +1,7 @@
 import { type ReadoutKey, TENDON_TAKEUP_MM } from './actuator-readout';
 import { thetaAtStroke } from './machine';
 import { thetaToStroke } from './machine-behavior';
+import { MOTOR_ASSIGNMENTS, type MotorAssignment, type MotorId } from './actuator-motors';
 
 /** Lab 1-6 的输出对应记录；不生成固件指令，不把仿真跟随量冒充硬件反馈。 */
 export type HardwareId = 'tendon0' | 'tendon1' | 'tendon2' | 'servo0' | 'servo1' | 'breath' | 'yaw' | 'sound' | 'light';
@@ -15,13 +16,14 @@ export interface HardwareChannel {
   formula: Bilingual;
   /** 历史方案也不表示型号、数量或接线已经在本台真机验证。 */
   basis: 'model-only' | 'historical-plan' | 'unselected';
+  motor?: MotorAssignment;
 }
 
 function tendon(id: 'tendon0' | 'tendon1' | 'tendon2', n: number): HardwareChannel {
   return {
-    id, readoutKeys: [id], basis: 'model-only',
+    id, readoutKeys: [id], basis: 'model-only', motor: MOTOR_ASSIGNMENTS[id],
     label: { zh: `大触手 · 腱 ${n}`, en: `Large arm · tendon ${n}` },
-    hardware: { zh: '独立拉线轴；电机与传动待确认', en: 'Independent cable axis; motor and drive unconfirmed' },
+    hardware: { zh: '拟分配 NEMA17 + TMC2209 独立拉线轴；实装对应待核对', en: 'Proposed independent NEMA17 + TMC2209 cable axis; installed assignment unverified' },
     calibration: {
       zh: `0–${TENDON_TAKEUP_MM} mm 是模型行程。待测卷线有效半径、减速比、零位、收线方向、行程与负载；没有拉力读数。`,
       en: `0–${TENDON_TAKEUP_MM} mm is model travel. Effective spool radius, gearing, zero, direction, travel and load need calibration; no force reading.`,
@@ -35,7 +37,7 @@ function tendon(id: 'tendon0' | 'tendon1' | 'tendon2', n: number): HardwareChann
 
 function servo(id: 'servo0' | 'servo1', side: Bilingual): HardwareChannel {
   return {
-    id, readoutKeys: [id], basis: 'historical-plan',
+    id, readoutKeys: [id], basis: 'historical-plan', motor: MOTOR_ASSIGNMENTS[id],
     label: { zh: `小触须 · ${side.zh}`, en: `Small feeler · ${side.en}` },
     hardware: { zh: 'SG90；历史结构记录', en: 'SG90; historical mechanism record' },
     calibration: {
@@ -54,9 +56,9 @@ export const HARDWARE_CHANNELS: readonly HardwareChannel[] = [
   tendon('tendon0', 1), tendon('tendon1', 2), tendon('tendon2', 3),
   servo('servo0', { zh: '左', en: 'left' }), servo('servo1', { zh: '右', en: 'right' }),
   {
-    id: 'breath', readoutKeys: ['crank', 'crankRate'], basis: 'historical-plan',
+    id: 'breath', readoutKeys: ['crank', 'crankRate'], basis: 'historical-plan', motor: MOTOR_ASSIGNMENTS.breath,
     label: { zh: '壳体 · 呼吸主驱动', en: 'Shell · breathing drive' },
-    hardware: { zh: '历史：NEMA17 + TMC2209，GT2 3:1；当前实物齿条另标定', en: 'Historical: NEMA17 + TMC2209, GT2 3:1; current rack needs separate calibration' },
+    hardware: { zh: '档案：NEMA17 + TMC2209 → GT2 → 共轴齿轮与钢齿条；未完成装机标定', en: 'Recorded: NEMA17 + TMC2209 → GT2 → shared-shaft gears and steel racks; installation uncalibrated' },
     calibration: {
       zh: '网页曲柄角不是实物齿条位置。待确认当前传动、开合端点、每步位移、回零、速度与加速度。',
       en: 'Web crank angle is not rack position. Confirm current transmission, open/closed endpoints, distance per step, homing, speed and acceleration.',
@@ -67,12 +69,12 @@ export const HARDWARE_CHANNELS: readonly HardwareChannel[] = [
     },
   },
   {
-    id: 'yaw', readoutKeys: ['yaw', 'yawRate'], basis: 'unselected',
+    id: 'yaw', readoutKeys: ['yaw', 'yawRate'], basis: 'historical-plan', motor: MOTOR_ASSIGNMENTS.yaw,
     label: { zh: '机身 · 转台', en: 'Body · turntable' },
-    hardware: { zh: '转轴几何已建；电机与驱动未定', en: 'Pivot geometry exists; motor and driver unselected' },
+    hardware: { zh: '档案：HDB60XZ45B 平台内置 42 步进 + TMC2209，45:1；具体电机 SKU 待核', en: 'Recorded: HDB60XZ45B platform with built-in size-42 stepper + TMC2209, 45:1; exact motor SKU unverified' },
     calibration: {
-      zh: '±180° 是引擎范围。待定机械行程、线缆边界、减速比、零位与限位；显示回绕不能替代机械限位。',
-      en: '±180° is the engine range. Establish travel, cable limits, gearing, zero and end stops; display angle wrapping is not a mechanical limit.',
+      zh: '±180° 是引擎范围。复核档案 45:1、机械行程、线缆边界、零位与限位；显示回绕不能替代机械限位。',
+      en: '±180° is the engine range. Verify the recorded 45:1 ratio, travel, cable limits, zero and end stops; display angle wrapping is not a mechanical limit.',
     },
     formula: {
       zh: '电机角 = 零位 + 方向 × 减速比 × 机身角；仅在已标定的机械行程内成立。',
@@ -110,6 +112,8 @@ export const HARDWARE_CHANNELS: readonly HardwareChannel[] = [
 export interface HardwareQuantity { value: number; unit: 'mm' | '°' | '%' | 'fraction' }
 export interface HardwareRow {
   id: HardwareId;
+  /** 本次对照的电机位编号，不表示硬件已连接。声光没有此字段。 */
+  motorId?: MotorId;
   simulated: HardwareQuantity;
   /** 单独的引擎目标，或没有独立跟随层的当前驱动命令。 */
   target: HardwareQuantity;
@@ -163,6 +167,7 @@ export function createHardwareSnapshot(input: HardwareSnapshotInput): HardwareSn
   const quantity = (value: number, unit: HardwareQuantity['unit']): HardwareQuantity => ({ value, unit });
   const row = (id: HardwareId, value: number, target: number, unit: HardwareQuantity['unit'], extra?: HardwareRow['extra']): HardwareRow => ({
     id, simulated: quantity(value, unit), target: quantity(target, unit), electrical: null, feedback: null,
+    ...(MOTOR_ASSIGNMENTS[id] ? { motorId: MOTOR_ASSIGNMENTS[id]!.id } : {}),
     ...(extra ? { extra } : {}),
   });
   return {

@@ -1,6 +1,7 @@
 import { type HardwareId, type HardwareSnapshot } from './actuator-hardware';
 import { TENDON_TAKEUP_MM } from './actuator-readout';
 import { SMALLARM_STARTLE } from './machine-smallarm';
+import { MOTOR_ASSIGNMENTS, MOTOR_TRANSMISSION, motorEstimate } from './actuator-motors';
 
 /** 台架执行层的物理量需求；不是硬件回读或可直接发送的电气指令。 */
 export interface ActuatorCommand {
@@ -91,21 +92,31 @@ export function commandValue(command: ActuatorCommand, id: HardwareId): number {
 export function arduinoPreview(command: ActuatorCommand, mode: ActuatorMode): string {
   const c = clampActuatorCommand(command);
   const n = (value: number): string => Number(value.toFixed(4)).toString();
+  const breath = motorEstimate('breath', c.breathStroke);
+  const yaw = motorEstimate('yaw', c.yawDeg);
   return [
     '// Arduino / ESP32 · 物理量需求预览 / physical-demand preview',
     '// 伪代码：不可编译、不可直接下发。不是实测反馈。',
     '// Pseudocode: not compilable, not for direct transmission; not measured feedback.',
     `// Source mode: ${mode === 'manual' ? 'manual' : 'behavior'}`,
+    ...Object.values(MOTOR_ASSIGNMENTS).map(motor => `// ${motor.id}: ${motor.model} → ${motor.name.zh} / ${motor.name.en}`),
     'ActuatorDemand demand = {',
-    `  .tendon_takeup_mm = { ${c.tendonsMm.map(n).join(', ')} }, // T1, T2, T3; model cable take-up`,
-    `  .feeler_angle_deg = { ${c.feelersDeg.map(n).join(', ')} }, // F1, F2; model-centred angles`,
-    `  .breath_stroke_01 = ${n(c.breathStroke)}, // B: 0 open, 1 folded; rack position requires calibrated f(s)`,
-    `  .body_yaw_deg = ${n(c.yawDeg)}, // Y: zero, direction and mechanical limits need calibration`,
+    `  .tendon_takeup_mm = { ${c.tendonsMm.map(n).join(', ')} }, // M1/T1, M2/T2, M3/T3; proposed cable axes`,
+    `  .feeler_angle_deg = { ${c.feelersDeg.map(n).join(', ')} }, // M4/F1, M5/F2; model-centred SG90 angles`,
+    `  .breath_stroke_01 = ${n(c.breathStroke)}, // M6/B: 0 open, 1 folded; rack position requires calibrated f(s)`,
+    `  .body_yaw_deg = ${n(c.yawDeg)}, // M7/Y: body orientation, not motor shaft angle`,
     `  .sound_on = ${c.soundOn}, // A: final on/off gate`,
     `  .sound_frequency_hz = ${n(c.soundHz)},`,
     `  .sound_level_01 = ${n(c.soundLevel)}, // normalized level; not dB or electrical PWM duty`,
     `  .light_level_01 = ${n(c.lightLevel)} // L: requires colour/brightness mapping to WS2812B data`,
     '};',
+    '',
+    '// 条件演算 / conditional calculations; relative to assumed zero, NOT hardware commands:',
+    `// M6 assumes GT2 ${MOTOR_TRANSMISSION.breath.beltRatio}:1 and linear s → ${MOTOR_TRANSMISSION.breath.shaftSweepDeg}° shared-shaft sweep.`,
+    `// M6 shared_shaft_deg = ${n(breath.outputDeg!)}; motor_shaft_deg = ${n(breath.shaftDeg!)};`,
+    `// M6 theoretical_rack_mm_S1_to_S5 = { ${breath.rackMm!.map(n).join(', ')} }; // per-rack magnitude in each pair`,
+    `// M7 recorded ${MOTOR_TRANSMISSION.yaw.ratio}:1: motor_shaft_deg = ${n(yaw.shaftDeg!)}; NOT accumulated turns.`,
+    '// M1–M3 motor angles unknown: measure effective drum radius and winding/drive ratio.',
     '',
     '// 待标定 / uncalibrated: no GPIO, pulse endpoints or step counts assumed.',
     'step_target = null; // motor step angle, microsteps, gearing, travel and zero are unconfirmed',

@@ -464,7 +464,7 @@ function limitsTable(): LogTableBlock {
       [t('Deep curl', '深卷'), t(`startle only, to ${num(D_SPAN + D_DEEP_SPAN, 3)} (main tendon fully pulled)`, `只有惊跳用，到 ${num(D_SPAN + D_DEEP_SPAN, 3)}（主腱拉满）`), t('“use it, but not too much”', '「用，但不要用太多」')],
       [t('Strike at the hand', '扑手'), `≤ ${num(HC.strikeMax)}`, t('never as large as the same persona’s startle', '到不了同人格惊跳的一半')],
       [t('Swing', '摆动'), t('≤ 0.6 Hz; a hop-and-pause cycle ≥ 1.4 s', '≤ 0.6 Hz；一跳一停的周期 ≥ 1.4 s'), t('the arm’s passband is about 0.7 Hz', '臂的通带约 0.7 Hz')],
-      [t('Body turn', '偏航'), t(`± 180°; ${num(MOTION.yawRate)} rad/s × k (startle × ${MOTION.yawRateStartle})`, `± 180°；${num(MOTION.yawRate)} rad/s × k（惊跳 × ${MOTION.yawRateStartle}）`), t('placeholder until the new turntable motor is modelled', '新转台电机定型前的占位')],
+      [t('Body turn', '偏航'), t(`± 180°; ${num(MOTION.yawRate)} rad/s × k (startle × ${MOTION.yawRateStartle})`, `± 180°；${num(MOTION.yawRate)} rad/s × k（惊跳 × ${MOTION.yawRateStartle}）`), t('simulation limits; the recorded HDB60XZ45B platform still needs loaded calibration', '仿真限制；档案中的 HDB60XZ45B 平台仍需带载标定')],
     ],
     caption: t(
       'Timing of one life, arousal, grasp and simulation/solver limits. Physical hardware capability needs separate calibration. Other behaviour settings remain proposals awaiting the author’s decision.',
@@ -481,11 +481,11 @@ export const LAB_1_6_TABLES: { title: Bilingual; blocks: LogTableBlock[] } = {
   title: t('Interaction & hardware tables', '交互与硬件对应表'),
   blocks: [interactionMap(), personaTable(), stimulusTable(), handTable(), limitsTable(), {
     kind: 'table',
-    head: [t('Output ID', '输出 ID'), t('Part', '部件'), t('Recorded hardware', '硬件依据'), t('Conversion', '换算'), t('Calibration still needed', '待标定')],
-    rows: HARDWARE_CHANNELS.map((c) => [c.id, c.label, c.hardware, c.formula, c.calibration]),
+    head: [t('Motor / output ID', '电机位 / 输出 ID'), t('Part', '部件'), t('Recorded hardware', '硬件依据'), t('Conversion', '换算'), t('Calibration still needed', '待标定')],
+    rows: HARDWARE_CHANNELS.map((c) => [`${c.motor?.id ?? '—'} / ${c.id}`, c.label, c.hardware, c.formula, c.calibration]),
     caption: t(
-      'Output mapping. Nine logical outputs cover twelve readouts; the seven motion axes are requirements, not a verified motor inventory. All live values are simulated. Electrical commands and physical feedback remain null until calibration and telemetry exist.',
-      '输出对应。9 个逻辑输出覆盖 12 个读数；7 个运动轴是控制需求，不是已核验的电机数量。实时值均来自仿真；电气指令与真实反馈在标定和遥测接入前保持空值。',
+      'M1–M7 map seven motion axes to proposed or recorded motors; sound and light have no motor ID. Nine outputs cover twelve readouts. Live values are simulated; electrical commands and physical feedback remain null until calibration and telemetry exist.',
+      'M1–M7 把七个运动轴对应到拟分配或档案记录的电机；声光没有电机编号。9 个输出覆盖 12 个读数。实时值来自仿真；电气指令与真实反馈在标定和遥测接入前保持空值。',
     ),
   }, ...HARDWARE_REFERENCE_TABLES],
 };

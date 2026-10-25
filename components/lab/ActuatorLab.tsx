@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { HARDWARE_CHANNELS, type HardwareId, type HardwareSnapshot } from '../../src/lib/linkage/actuator-hardware';
 import { TENDON_TAKEUP_MM } from '../../src/lib/linkage/actuator-readout';
 import { SMALLARM_STARTLE } from '../../src/lib/linkage/machine-smallarm';
+import { motorEstimate, motorMotion } from '../../src/lib/linkage/actuator-motors';
 import {
   DEBUG_CHANNELS, arduinoPreview, clampActuatorCommand, commandValue,
   type ActuatorCommand, type ActuatorMode,
@@ -26,7 +27,7 @@ export interface ActuatorLabProps {
 const COPY = {
   zh: {
     title: '执行器调试', behavior: '行为联动', manual: '逐轴手动', model: '↑ 查看整机',
-    intro: '同一台模型，拆开看九路输出。七路机构标号与整机对应；声光在下方作示意。',
+    intro: 'M1–M7 对应七根主动轴，沿用 T1–T3、F1–F2、B、Y 的通道。声音和灯另列，不计作电机。',
     autoNote: '数值随行为引擎变化。切到手动后，可独立调节每一路。',
     manualNote: '行为时钟已冻结；手动调节共用模型。返回行为联动，恢复进入手动前的状态。',
     simulated: '仿真', target: '目标', delta: '相邻采样 Δ', following: '跟随中', reached: '已到目标',
@@ -39,7 +40,7 @@ const COPY = {
   },
   en: {
     title: 'Actuator workbench', behavior: 'Follow behaviour', manual: 'Manual axes', model: '↑ View machine',
-    intro: 'One model, nine outputs. Seven mechanism labels match the machine; sound and light are illustrated below.',
+    intro: 'M1–M7 identify seven driven axes, retaining channels T1–T3, F1–F2, B and Y. Sound and light are separate outputs.',
     autoNote: 'Values follow the behaviour engine. Switch to manual to adjust each channel independently.',
     manualNote: 'Behaviour time is frozen. Manual controls use the same model; returning restores its state from before manual control.',
     simulated: 'Simulated', target: 'Target', delta: 'Sample-to-sample Δ', following: 'Following', reached: 'At target',
@@ -134,7 +135,10 @@ export function ActuatorLab({ snapshot, command, mode, selected, onMode, onChang
     if (snapshot && prior && prior.mode === mode && prior.snapshot.seed === snapshot.seed && snapshot.timeS > prior.snapshot.timeS) {
       for (const row of snapshot.rows) {
         const old = prior.snapshot.rows.find((item) => item.id === row.id);
-        if (old) diff[row.id] = displayValue(row.simulated) - displayValue(old.simulated);
+        if (old) {
+          const change = displayValue(row.simulated) - displayValue(old.simulated);
+          diff[row.id] = row.id === 'yaw' ? ((change + 540) % 360) - 180 : change;
+        }
       }
     }
     previous.current = snapshot ? { snapshot, mode } : null;
@@ -152,6 +156,9 @@ export function ActuatorLab({ snapshot, command, mode, selected, onMode, onChang
       <a className="actuator-lab__back" href="#lab1-6">{L.model}</a>
     </div>
     <p className="actuator-lab__intro">{L.intro}</p>
+    <p className="actuator-lab__note actuator-lab__provenance">{lang === 'zh'
+      ? '型号以项目档案为主；三腱的电机分配是本次提案。电机轴角按注明条件演算，不是实测或已下发指令。'
+      : 'Motor types follow the project archive; the three tendon assignments are proposed here. Shaft angles are conditional calculations, not measurements or transmitted commands.'}</p>
     <div className="actuator-lab__toolbar">
       <div className="actuator-lab__modes" role="group" aria-label={L.title}>
         <button type="button" aria-pressed={mode === 'behavior'} onClick={() => onMode('behavior')}>{L.behavior}</button>
@@ -175,15 +182,33 @@ export function ActuatorLab({ snapshot, command, mode, selected, onMode, onChang
         const on = mode === 'manual' && command ? command.soundOn : row?.extra?.on ?? false;
         const hz = mode === 'manual' && command ? command.soundHz : row?.extra?.frequencyHz ?? 0;
         const selectedHere = selected === id;
+        const motor = channel.motor;
+        const estimate = motor && row ? motorEstimate(id, row.simulated.value) : null;
+        const estimateTarget = motor && target !== null ? motorEstimate(id, id === 'breath' ? target / 100 : target) : null;
+        const motorStatus = motor ? (lang === 'zh'
+          ? { proposed: '分配提案', 'historical-role': '档案角色', 'recorded-plan': '后期档案方案' }
+          : { proposed: 'Proposed assignment', 'historical-role': 'Recorded role', 'recorded-plan': 'Later recorded plan' })[motor.status] : '';
         return <article className="actuator-lab__card" key={id} data-channel={id} data-selected={selectedHere || undefined} style={{ '--axis': debug.color } as CSSProperties}>
           <button className="actuator-lab__select" type="button" aria-pressed={selectedHere} onClick={() => onSelect(selectedHere ? null : id)} title={`${selectedHere ? L.clear : L.select}: ${channel.label[lang]}`}>
-            <span className="actuator-lab__code">{short}</span><span>{channel.label[lang]}</span><span className="actuator-lab__marker" aria-hidden="true">{selectedHere ? '●' : '○'}</span>
+            <span className="actuator-lab__code">{motor ? `${motor.id} / ${short}` : short}</span><span>{channel.label[lang]}</span><span className="actuator-lab__marker" aria-hidden="true">{selectedHere ? '●' : '○'}</span>
           </button>
+          {motor ? <div className="actuator-lab__motor">
+            <strong>{motor.model}</strong><span>{motorStatus}</span>
+            <p>{motor.id} · {motorMotion(id, value ?? NaN, delta !== undefined && Math.abs(delta) < 0.05 ? 0 : delta, !outputRunning, lang)}</p>
+          </div> : <p className="actuator-lab__hint">{channel.hardware[lang]}</p>}
           <div className="actuator-lab__reading">
             <AxisGraphic id={id} value={value ?? 0} target={target ?? 0} voiceOn={on} />
             <div className="actuator-lab__numbers"><span>{L.simulated}</span><strong>{value === null ? '—' : fixed(value)}<small>{l.unit}</small></strong><span>{L.target} {target === null ? '—' : `${fixed(target)}${l.unit}`}</span></div>
           </div>
           <div className="actuator-lab__delta"><span>{L.delta} {delta === undefined ? '—' : `${signed(delta)}${l.unit}`}</span><span>{!snapshot ? L.waiting : !outputRunning ? L.paused : settled ? L.reached : L.following}</span></div>
+          {motor && <div className="actuator-lab__shaft">
+            <span>{lang === 'zh' ? motor.type === 'servo' ? '舵机模型角' : '电机轴角 · 条件演算' : motor.type === 'servo' ? 'Model servo angle' : 'Motor shaft · conditional'}</span>
+            <strong>{estimate?.shaftDeg === null || !estimate ? '—' : `${fixed(estimate.shaftDeg)}°`}</strong>
+            {estimateTarget?.shaftDeg !== null && estimateTarget && <small>{L.target} {fixed(estimateTarget.shaftDeg)}°</small>}
+            <p>{lang === 'zh'
+              ? id.startsWith('tendon') ? '有效卷径待测；当前只确定模型收线量。' : id === 'breath' ? '假设 GT2 3:1 · s 线性对应中轴 336°。' : id === 'yaw' ? '档案减速比 45:1 · 相对零位，非累计圈数。' : '相对模型中位；实物中位、方向与脉宽待测。'
+              : id.startsWith('tendon') ? 'Drum radius unknown; model take-up only.' : id === 'breath' ? 'Assumes GT2 3:1 and linear s → 336° shaft sweep.' : id === 'yaw' ? 'Recorded 45:1 · relative to zero, not accumulated turns.' : 'Relative to model centre; calibrate physical centre, sign and pulses.'}</p>
+          </div>}
           <div className="actuator-lab__control">
             <input type="range" min={l.min} max={l.max} step={l.step} value={bounded(control, l.min, l.max)} disabled={!enabled} aria-label={`${channel.label[lang]} ${L.target}`} onChange={(event) => update(id, Number(event.target.value))} />
             <input type="number" min={l.min} max={l.max} step={l.step} value={Number(fixed(control))} disabled={!enabled} aria-label={`${channel.label[lang]} ${L.target} ${l.unit}`} onChange={(event) => { if (event.target.value !== '') update(id, Number(event.target.value)); }} />
@@ -196,6 +221,13 @@ export function ActuatorLab({ snapshot, command, mode, selected, onMode, onChang
           {id === 'breath' && <p className="actuator-lab__hint">{L.breath}</p>}
           {id === 'light' && <p className="actuator-lab__hint">{L.light}</p>}
           {(id === 'light' || id === 'sound') && <p className="actuator-lab__hint">{lang === 'zh' ? '声光仅作面板示意，实体安装位未定。' : 'Panel illustration only; physical mounting is unspecified.'}</p>}
+          {motor && <details className="actuator-lab__motor-details">
+            <summary>{lang === 'zh' ? '传动与依据' : 'Transmission & evidence'}</summary>
+            <p>{motor.transmission[lang]}</p><p>{motor.evidence[lang]}</p><p>{motor.shaftNote[lang]}</p>
+            {id === 'breath' && estimate?.outputDeg !== undefined && <p>{lang === 'zh' ? '共轴演算角' : 'Calculated shared-shaft angle'} {fixed(estimate.outputDeg)}°</p>}
+            {estimate?.rackMm && <p>{lang === 'zh' ? 'S1–S5 每对齿条的单根位移幅值（演算）' : 'S1–S5 calculated travel magnitude per rack in each pair'}: {estimate.rackMm.map(v => fixed(v)).join(' / ')} mm</p>}
+            <p>{channel.formula[lang]}</p><p>{L.needed}：{channel.calibration[lang]}</p>
+          </details>}
         </article>;
       })}
     </div>
