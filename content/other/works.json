@@ -1,20 +1,109 @@
 {
   "groups": [
-    { "key": "design-research", "title": "Design research", "zh": "设计研究" },
+    { "key": "interaction-research", "title": "Interaction & design research", "zh": "交互与设计研究" },
     { "key": "landscape-urban", "title": "Landscape & urban design", "zh": "景观与城市" },
-    { "key": "architecture-interiors", "title": "Architecture & interiors", "zh": "建筑与室内" },
-    { "key": "installations-models", "title": "Installations & models", "zh": "装置与模型" }
+    { "key": "interiors", "title": "Interiors", "zh": "室内" },
+    { "key": "architecture-construction", "title": "Architecture & construction", "zh": "建筑与构造" },
+    { "key": "installations", "title": "Installations", "zh": "装置" }
   ],
   "works": [
     {
       "title": "Smart Bed",
-      "group": "design-research",
+      "group": "interaction-research",
       "year": "2026",
       "context": "Internship · Tsinghua Future Lab × DeRucci",
       "line": "2030 Sleep Foresight Study",
       "image": { "src": "/log/sleep-20260529-original-report.png", "width": 1440, "height": 1600, "position": "top" },
       "href": "/archive",
       "log": "other-work"
+    },
+    {
+      "title": "Co-Evolving Kitchen",
+      "group": "interaction-research",
+      "year": "2025",
+      "context": "Workshop · DigitalFUTURES 2025",
+      "slug": "co-evolving-kitchen",
+      "zh": { "title": "Co-Evolving Kitchen", "context": "DigitalFUTURES 2025 工作营" },
+      "image": {
+        "src": "/other/co-evolving-kitchen/01-cover.webp",
+        "width": 2000,
+        "height": 984,
+        "caption": {
+          "en": "Mixed-reality composite of the round kitchen, a visitor and the space responding; it is not a photograph of a built kitchen",
+          "zh": "混合现实合成图：圆形厨房、体验者与空间反馈，不是建成厨房的照片"
+        }
+      },
+      "page": {
+        "credits": [
+          {
+            "role": { "en": "Instructors", "zh": "导师" },
+            "names": [
+              { "en": "Yan Chao", "zh": "闫超" },
+              { "en": "Li Te", "zh": "李特" }
+            ]
+          },
+          {
+            "role": { "en": "Teaching assistants", "zh": "助教" },
+            "names": [
+              { "en": "Yanzi Jin", "zh": "金衍孜" },
+              { "en": "Jiaxin Yao", "zh": "姚佳欣" }
+            ]
+          },
+          {
+            "role": { "en": "Participants", "zh": "学员" },
+            "names": [
+              { "en": "Qizhi Dong", "zh": "董奇志" },
+              { "en": "Xi Chen", "zh": "陈曦" },
+              { "en": "Junyi Lu", "zh": "陆钧毅" },
+              { "en": "Ruiying Jia", "zh": "贾睿莹" },
+              { "en": "Zishuo Li", "zh": "李梓硕" },
+              { "en": "Yiwen Fang", "zh": "方亦文" },
+              { "en": "Yuyao Jing", "zh": "井雨瑶" },
+              { "en": "Xiaohan Hu", "zh": "胡晓晗" },
+              { "en": "Xingyi Chen", "zh": "陈星怡" }
+            ]
+          }
+        ],
+        "statement": {
+          "original": "zh",
+          "zh": [
+            "设计目的：通过实时记录人体行为，构建一个可以根据人动作实时变化以配合人体行为的厨房设施。",
+            "方法：首先使用ZED深度相机采集人体行为，提取骨点并在grasshopper里转化为mesh；定义动作，将厨房工作的动作提取出13个典型动作，逐一记录并对比得出每一个动作特征，研究骨点变化的相关性；之后链接LSTM预测模型，学习动作并设定预测结果和发出的交互指令。",
+            "呈现效果：一个可以预测使用者动作并随之做出反应的可以转动的工作台，工作台上有：空桌面、灶台、洗碗池、操作台这四个分区，可根据使用者动作自动旋转对应。上方储物柜可预测使用者取物需求自动下降，进入到伸手可触及的区域内。",
+            "最终展示中，体验者戴上Meta quest设备可以看到这个可动厨房设施。但此设计并非意图让使用者戴着Meta quest设备做饭，而是使用混合现实技术展示一个demo，期望可以实现一个真正的实体可动厨房。"
+          ],
+          "en": [
+            "Aim: record body movement in real time and build a kitchen fitting that changes in real time to suit what the body is doing.",
+            "Method: a ZED depth camera captures body movement, and the skeleton points are extracted and turned into a mesh in Grasshopper. Kitchen work was broken down into 13 typical actions, each recorded and compared to find its features and to study how the skeleton points change together. An LSTM prediction model was then connected to learn the actions, and its predictions were set to send interaction commands.",
+            "Result: a rotating worktop that predicts the user’s actions and responds. It has four zones (an empty surface, a hob, a sink and a prep counter) and turns to the matching zone as the user moves. The cabinet above predicts when the user wants to take something out and lowers itself within reach.",
+            "In the final presentation, visitors wearing a Meta Quest headset could see this moving kitchen. The design does not intend people to cook in a Meta Quest; mixed reality was used to show a demo, in the hope of building a real, physical moving kitchen."
+          ],
+          "source": { "en": "Project statement (Word document)", "zh": "作品说明（Word 文档）" }
+        },
+        "figures": [
+          {
+            "src": "/other/co-evolving-kitchen/02-workflow.webp",
+            "width": 5000,
+            "height": 876,
+            "caption": {
+              "en": "Workflow, functional zoning and dimensions, from the workshop board",
+              "zh": "工作流程、功能分区与尺寸，取自工作营图版"
+            }
+          },
+          {
+            "src": "/other/co-evolving-kitchen/04-system-map.webp",
+            "width": 2415,
+            "height": 2507,
+            "caption": { "en": "System diagram", "zh": "系统流程图" }
+          },
+          {
+            "src": "/other/co-evolving-kitchen/03-board.webp",
+            "width": 1975,
+            "height": 3292,
+            "caption": { "en": "Workshop board, full sheet", "zh": "工作营图版，整张" }
+          }
+        ]
+      }
     },
     {
       "title": "Floating Terrain, Framed Axis",
@@ -222,8 +311,92 @@
       }
     },
     {
+      "title": "Under-Cane",
+      "group": "landscape-urban",
+      "year": "2024",
+      "context": "Studio course · Professional Design 6: Off-Grid Farm",
+      "slug": "under-cane",
+      "zh": { "title": "Under-Cane", "context": "专业设计6 · 离网农场" },
+      "image": {
+        "src": "/other/under-cane/01-cover.webp",
+        "width": 2000,
+        "height": 1345,
+        "caption": { "en": "The main house, terraces and cane fields from above", "zh": "俯看主屋、露台与甘蔗林" }
+      },
+      "page": {
+        "credits": [
+          {
+            "role": { "en": "Team", "zh": "成员" },
+            "names": [
+              { "en": "Zihao Ni", "zh": "倪子皓" },
+              { "en": "Zishuo Li", "zh": "李梓硕" }
+            ]
+          },
+          {
+            "role": { "en": "Instructors", "zh": "指导教师" },
+            "names": [
+              { "en": "Yan Huang", "zh": "黄艳" },
+              { "en": "Donglei Liu", "zh": "刘东雷" }
+            ]
+          }
+        ],
+        "statement": {
+          "original": "zh",
+          "zh": [
+            "此方案针对竞赛方提出的“自给自足”的离网农场和可持续发展的设计期望，试图从能源的角度切入，首先解决能源问题并带动经济发展。考虑到旅游业是当地支柱产业之一，本方案认为应当建造一处提供短期旅游的度假酒店，采用新能源获取方式，以展示和耳濡目染中宣传并试验甘蔗种植的生物质发电方式。",
+            "从甘蔗开始，场地中应该同时完成种植——收割——生物质发电，因此我们选择将场地改造为梯田，并种植甘蔗林，甘蔗成熟后收割加工，剩余残渣进入生物质发电、储藏室。",
+            "具体形态从甘蔗林开始，我们围绕甘蔗林的“林之上”和“林之下”开始，将客房建筑和主屋置于林海之上成为“小岛”，在林海之下是大量的自由探索的行走空间和活动空间。为尊重自然，建筑材料选择以镜面为主，反射四周森林景观以隐于其中。建筑的排布近似于岛链形态，三条岛链盘山而建，远观也具有独特的秩序感。"
+          ],
+          "en": [
+            "The competition brief asked for a “self-sufficient” off-grid farm and for sustainable development. This scheme approaches it through energy: solve the energy problem first and let that drive the economy. Since tourism is one of the local pillar industries, the scheme proposes a resort hotel for short stays that uses new ways of obtaining energy, so that it can demonstrate biomass power from sugarcane cultivation, promote it through everyday exposure, and test it.",
+            "Everything starts from the sugarcane, with planting, harvesting and biomass generation all happening on the site. We therefore turned the site into terraces planted with cane; when it ripens it is harvested and processed, and the leftover residue goes to the biomass generator and the storage rooms.",
+            "The form also starts from the cane, working with what lies “above the forest” and “below the forest”. The guest rooms and the main house sit above the sea of cane as “islands”; below it is a large area of paths and activity space to explore freely. Out of respect for nature the buildings are mainly clad in mirror, which reflects the surrounding forest so that they disappear into it. The buildings are laid out like island chains: three chains wind around the hill and give it a distinct order when seen from a distance."
+          ],
+          "source": { "en": "Design statement (Word document)", "zh": "设计说明（Word 文档）" }
+        },
+        "figures": [
+          {
+            "src": "/other/under-cane/02-path.webp",
+            "width": 2000,
+            "height": 1345,
+            "caption": { "en": "The walkway below the cane", "zh": "林下步道" }
+          },
+          {
+            "src": "/other/under-cane/03-bridge.webp",
+            "width": 2000,
+            "height": 1345,
+            "caption": { "en": "Along the walkway toward the guest rooms on the hillside", "zh": "沿步道望向山坡客房" }
+          },
+          {
+            "src": "/other/under-cane/04-dusk.webp",
+            "width": 2000,
+            "height": 1344,
+            "caption": { "en": "On the bridge at dusk", "zh": "傍晚桥上视角" }
+          },
+          {
+            "src": "/other/under-cane/05-board-1.webp",
+            "width": 2143,
+            "height": 3034,
+            "caption": {
+              "en": "Board 1: overall scheme, layers, energy and the sugarcane concept",
+              "zh": "图版 1：总体方案、分层分析与能源、甘蔗概念"
+            }
+          },
+          {
+            "src": "/other/under-cane/06-board-2.webp",
+            "width": 2143,
+            "height": 3034,
+            "caption": {
+              "en": "Board 2: site form, construction sections and the order of levels",
+              "zh": "图版 2：场地形态、构造剖切与层级组织"
+            }
+          }
+        ]
+      }
+    },
+    {
       "title": "The Patrick",
-      "group": "architecture-interiors",
+      "group": "interiors",
       "year": "2024",
       "context": "Studio course · Professional Design 5",
       "line": "Brief: Uncanny home",
@@ -311,84 +484,49 @@
       }
     },
     {
-      "title": "Under-Cane",
-      "group": "architecture-interiors",
+      "title": "Design for our future",
+      "group": "interiors",
       "year": "2024",
-      "context": "Studio course · Professional Design 6: Off-Grid Farm",
-      "slug": "under-cane",
-      "zh": { "title": "Under-Cane", "context": "专业设计6 · 离网农场" },
+      "context": "Studio course · Comprehensive Design",
+      "slug": "design-for-our-future",
+      "zh": { "title": "Design for our future", "context": "综合设计" },
       "image": {
-        "src": "/other/under-cane/01-cover.webp",
-        "width": 2000,
-        "height": 1345,
-        "caption": { "en": "The main house, terraces and cane fields from above", "zh": "俯看主屋、露台与甘蔗林" }
+        "src": "/other/design-for-our-future/02-model.webp",
+        "width": 1707,
+        "height": 1280,
+        "caption": { "en": "Physical model, front", "zh": "实体模型正面" }
       },
       "page": {
         "credits": [
           {
-            "role": { "en": "Team", "zh": "成员" },
-            "names": [
-              { "en": "Zihao Ni", "zh": "倪子皓" },
-              { "en": "Zishuo Li", "zh": "李梓硕" }
-            ]
-          },
-          {
             "role": { "en": "Instructors", "zh": "指导教师" },
             "names": [
-              { "en": "Yan Huang", "zh": "黄艳" },
-              { "en": "Donglei Liu", "zh": "刘东雷" }
+              { "en": "Dongjiang Yang", "zh": "Dongjiang Yang" },
+              { "en": "Yunjia Guan", "zh": "Yunjia Guan" }
             ]
           }
         ],
         "statement": {
-          "original": "zh",
-          "zh": [
-            "此方案针对竞赛方提出的“自给自足”的离网农场和可持续发展的设计期望，试图从能源的角度切入，首先解决能源问题并带动经济发展。考虑到旅游业是当地支柱产业之一，本方案认为应当建造一处提供短期旅游的度假酒店，采用新能源获取方式，以展示和耳濡目染中宣传并试验甘蔗种植的生物质发电方式。",
-            "从甘蔗开始，场地中应该同时完成种植——收割——生物质发电，因此我们选择将场地改造为梯田，并种植甘蔗林，甘蔗成熟后收割加工，剩余残渣进入生物质发电、储藏室。",
-            "具体形态从甘蔗林开始，我们围绕甘蔗林的“林之上”和“林之下”开始，将客房建筑和主屋置于林海之上成为“小岛”，在林海之下是大量的自由探索的行走空间和活动空间。为尊重自然，建筑材料选择以镜面为主，反射四周森林景观以隐于其中。建筑的排布近似于岛链形态，三条岛链盘山而建，远观也具有独特的秩序感。"
-          ],
+          "label": { "en": "Notes on the board", "zh": "图版上的手写说明" },
+          "original": "en",
           "en": [
-            "The competition brief asked for a “self-sufficient” off-grid farm and for sustainable development. This scheme approaches it through energy: solve the energy problem first and let that drive the economy. Since tourism is one of the local pillar industries, the scheme proposes a resort hotel for short stays that uses new ways of obtaining energy, so that it can demonstrate biomass power from sugarcane cultivation, promote it through everyday exposure, and test it.",
-            "Everything starts from the sugarcane, with planting, harvesting and biomass generation all happening on the site. We therefore turned the site into terraces planted with cane; when it ripens it is harvested and processed, and the leftover residue goes to the biomass generator and the storage rooms.",
-            "The form also starts from the cane, working with what lies “above the forest” and “below the forest”. The guest rooms and the main house sit above the sea of cane as “islands”; below it is a large area of paths and activity space to explore freely. Out of respect for nature the buildings are mainly clad in mirror, which reflects the surrounding forest so that they disappear into it. The buildings are laid out like island chains: three chains wind around the hill and give it a distinct order when seen from a distance."
+            "2024: Student · Living alone · Changes: Sport ↓ working ↑",
+            "2039: Maybe a designer · work at home · High demand for social life · Still alone"
           ],
-          "source": { "en": "Design statement (Word document)", "zh": "设计说明（Word 文档）" }
+          "zh": [
+            "2024：学生 · 独居 · 变化：运动减少，工作增加",
+            "2039：也许是设计师 · 在家工作 · 社交需求高 · 仍然独居"
+          ],
+          "source": { "en": "Final board, 28 November 2024", "zh": "图版，2024 年 11 月 28 日" }
         },
         "figures": [
           {
-            "src": "/other/under-cane/02-path.webp",
-            "width": 2000,
-            "height": 1345,
-            "caption": { "en": "The walkway below the cane", "zh": "林下步道" }
-          },
-          {
-            "src": "/other/under-cane/03-bridge.webp",
-            "width": 2000,
-            "height": 1345,
-            "caption": { "en": "Along the walkway toward the guest rooms on the hillside", "zh": "沿步道望向山坡客房" }
-          },
-          {
-            "src": "/other/under-cane/04-dusk.webp",
-            "width": 2000,
-            "height": 1344,
-            "caption": { "en": "On the bridge at dusk", "zh": "傍晚桥上视角" }
-          },
-          {
-            "src": "/other/under-cane/05-board-1.webp",
-            "width": 2143,
-            "height": 3034,
+            "src": "/other/design-for-our-future/01-board.webp",
+            "width": 1406,
+            "height": 4622,
             "caption": {
-              "en": "Board 1: overall scheme, layers, energy and the sugarcane concept",
-              "zh": "图版 1：总体方案、分层分析与能源、甘蔗概念"
-            }
-          },
-          {
-            "src": "/other/under-cane/06-board-2.webp",
-            "width": 2143,
-            "height": 3034,
-            "caption": {
-              "en": "Board 2: site form, construction sections and the order of levels",
-              "zh": "图版 2：场地形态、构造剖切与层级组织"
+              "en": "Final board: the 2024 and 2039 scenarios, plans, sections, exploded construction, materials, furniture and interior views",
+              "zh": "完整图版：2024 与 2039 生活设想、平剖面、构造爆炸图、材质、家具与室内效果"
             }
           }
         ]
@@ -396,7 +534,7 @@
     },
     {
       "title": "New Wave Film Club",
-      "group": "architecture-interiors",
+      "group": "interiors",
       "year": "2023",
       "context": "Studio course",
       "slug": "new-wave-film-club",
@@ -449,57 +587,8 @@
       }
     },
     {
-      "title": "Design for our future",
-      "group": "architecture-interiors",
-      "year": "2024",
-      "context": "Studio course · Comprehensive Design",
-      "slug": "design-for-our-future",
-      "zh": { "title": "Design for our future", "context": "综合设计" },
-      "image": {
-        "src": "/other/design-for-our-future/02-model.webp",
-        "width": 1707,
-        "height": 1280,
-        "caption": { "en": "Physical model, front", "zh": "实体模型正面" }
-      },
-      "page": {
-        "credits": [
-          {
-            "role": { "en": "Instructors", "zh": "指导教师" },
-            "names": [
-              { "en": "Dongjiang Yang", "zh": "Dongjiang Yang" },
-              { "en": "Yunjia Guan", "zh": "Yunjia Guan" }
-            ]
-          }
-        ],
-        "statement": {
-          "label": { "en": "Notes on the board", "zh": "图版上的手写说明" },
-          "original": "en",
-          "en": [
-            "2024: Student · Living alone · Changes: Sport ↓ working ↑",
-            "2039: Maybe a designer · work at home · High demand for social life · Still alone"
-          ],
-          "zh": [
-            "2024：学生 · 独居 · 变化：运动减少，工作增加",
-            "2039：也许是设计师 · 在家工作 · 社交需求高 · 仍然独居"
-          ],
-          "source": { "en": "Final board, 28 November 2024", "zh": "图版，2024 年 11 月 28 日" }
-        },
-        "figures": [
-          {
-            "src": "/other/design-for-our-future/01-board.webp",
-            "width": 1406,
-            "height": 4622,
-            "caption": {
-              "en": "Final board: the 2024 and 2039 scenarios, plans, sections, exploded construction, materials, furniture and interior views",
-              "zh": "完整图版：2024 与 2039 生活设想、平剖面、构造爆炸图、材质、家具与室内效果"
-            }
-          }
-        ]
-      }
-    },
-    {
       "title": "B365 Office Renovation: Construction Drawings",
-      "group": "architecture-interiors",
+      "group": "architecture-construction",
       "year": "2024",
       "context": "Drawing course · Design Expression 2",
       "slug": "b365-office",
@@ -565,7 +654,7 @@
     },
     {
       "title": "House for a Family of Five",
-      "group": "architecture-interiors",
+      "group": "architecture-construction",
       "year": "2023",
       "context": "Course · Architectural Fundamentals and Construction",
       "slug": "family-house",
@@ -631,96 +720,8 @@
       }
     },
     {
-      "title": "Co-Evolving Kitchen",
-      "group": "architecture-interiors",
-      "year": "2025",
-      "context": "Workshop · DigitalFUTURES 2025",
-      "slug": "co-evolving-kitchen",
-      "zh": { "title": "Co-Evolving Kitchen", "context": "DigitalFUTURES 2025 工作营" },
-      "image": {
-        "src": "/other/co-evolving-kitchen/01-cover.webp",
-        "width": 2000,
-        "height": 984,
-        "caption": {
-          "en": "Mixed-reality composite of the round kitchen, a visitor and the space responding; it is not a photograph of a built kitchen",
-          "zh": "混合现实合成图：圆形厨房、体验者与空间反馈，不是建成厨房的照片"
-        }
-      },
-      "page": {
-        "credits": [
-          {
-            "role": { "en": "Instructors", "zh": "导师" },
-            "names": [
-              { "en": "Yan Chao", "zh": "闫超" },
-              { "en": "Li Te", "zh": "李特" }
-            ]
-          },
-          {
-            "role": { "en": "Teaching assistants", "zh": "助教" },
-            "names": [
-              { "en": "Yanzi Jin", "zh": "金衍孜" },
-              { "en": "Jiaxin Yao", "zh": "姚佳欣" }
-            ]
-          },
-          {
-            "role": { "en": "Participants", "zh": "学员" },
-            "names": [
-              { "en": "Qizhi Dong", "zh": "董奇志" },
-              { "en": "Xi Chen", "zh": "陈曦" },
-              { "en": "Junyi Lu", "zh": "陆钧毅" },
-              { "en": "Ruiying Jia", "zh": "贾睿莹" },
-              { "en": "Zishuo Li", "zh": "李梓硕" },
-              { "en": "Yiwen Fang", "zh": "方亦文" },
-              { "en": "Yuyao Jing", "zh": "井雨瑶" },
-              { "en": "Xiaohan Hu", "zh": "胡晓晗" },
-              { "en": "Xingyi Chen", "zh": "陈星怡" }
-            ]
-          }
-        ],
-        "statement": {
-          "original": "zh",
-          "zh": [
-            "设计目的：通过实时记录人体行为，构建一个可以根据人动作实时变化以配合人体行为的厨房设施。",
-            "方法：首先使用ZED深度相机采集人体行为，提取骨点并在grasshopper里转化为mesh；定义动作，将厨房工作的动作提取出13个典型动作，逐一记录并对比得出每一个动作特征，研究骨点变化的相关性；之后链接LSTM预测模型，学习动作并设定预测结果和发出的交互指令。",
-            "呈现效果：一个可以预测使用者动作并随之做出反应的可以转动的工作台，工作台上有：空桌面、灶台、洗碗池、操作台这四个分区，可根据使用者动作自动旋转对应。上方储物柜可预测使用者取物需求自动下降，进入到伸手可触及的区域内。",
-            "最终展示中，体验者戴上Meta quest设备可以看到这个可动厨房设施。但此设计并非意图让使用者戴着Meta quest设备做饭，而是使用混合现实技术展示一个demo，期望可以实现一个真正的实体可动厨房。"
-          ],
-          "en": [
-            "Aim: record body movement in real time and build a kitchen fitting that changes in real time to suit what the body is doing.",
-            "Method: a ZED depth camera captures body movement, and the skeleton points are extracted and turned into a mesh in Grasshopper. Kitchen work was broken down into 13 typical actions, each recorded and compared to find its features and to study how the skeleton points change together. An LSTM prediction model was then connected to learn the actions, and its predictions were set to send interaction commands.",
-            "Result: a rotating worktop that predicts the user’s actions and responds. It has four zones (an empty surface, a hob, a sink and a prep counter) and turns to the matching zone as the user moves. The cabinet above predicts when the user wants to take something out and lowers itself within reach.",
-            "In the final presentation, visitors wearing a Meta Quest headset could see this moving kitchen. The design does not intend people to cook in a Meta Quest; mixed reality was used to show a demo, in the hope of building a real, physical moving kitchen."
-          ],
-          "source": { "en": "Project statement (Word document)", "zh": "作品说明（Word 文档）" }
-        },
-        "figures": [
-          {
-            "src": "/other/co-evolving-kitchen/02-workflow.webp",
-            "width": 5000,
-            "height": 876,
-            "caption": {
-              "en": "Workflow, functional zoning and dimensions, from the workshop board",
-              "zh": "工作流程、功能分区与尺寸，取自工作营图版"
-            }
-          },
-          {
-            "src": "/other/co-evolving-kitchen/04-system-map.webp",
-            "width": 2415,
-            "height": 2507,
-            "caption": { "en": "System diagram", "zh": "系统流程图" }
-          },
-          {
-            "src": "/other/co-evolving-kitchen/03-board.webp",
-            "width": 1975,
-            "height": 3292,
-            "caption": { "en": "Workshop board, full sheet", "zh": "工作营图版，整张" }
-          }
-        ]
-      }
-    },
-    {
       "title": "Woven Bamboo Land Art, Wuxi",
-      "group": "installations-models",
+      "group": "installations",
       "year": "2024",
       "context": "Design camp · Creative Future: Decorative Materials",
       "slug": "bamboo-installation",
@@ -756,7 +757,7 @@
     },
     {
       "title": "The Shape of Sound",
-      "group": "installations-models",
+      "group": "installations",
       "year": "2023–24",
       "context": "Team project",
       "slug": "shape-of-sound",
