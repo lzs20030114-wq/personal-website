@@ -91,8 +91,10 @@ export interface HomeWorkTile {
   imgPos: 'center' | 'top';
   wip: boolean;
   tone: Tone;
-  /** 主项目卡的 slug：点它走「卡片展开成案例页」的转场（MAPPING §48）；其他作品没有案例页 */
+  /** 主项目卡的 slug（案例页）；其他作品为 null */
   caseSlug: string | null;
+  /** 点它走「卡片展开成详情页」转场的 slug（MAPPING §48）：主项目 = caseSlug；其他作品有详情页时 = 它的 slug */
+  ptSlug: string | null;
 }
 
 export interface HomeWorkGroup {
@@ -106,18 +108,21 @@ export interface HomeWorkGroup {
 export const WORK_PER_PANEL = 3;
 
 /**
- * 其他作品点进去去哪：登记了 `log`（日志项目组）且那一组有记录 → 那一组最新一条的锚点；否则用 href。
- * Work 页卡片与首屏方块场共用这一条，两处不会指向不同地方。
+ * 其他作品点进去去哪：有详情页 → /work/<slug>（MAPPING §59）；否则登记了 `log`（日志项目组）且那一组有记录
+ * → 那一组最新一条的锚点；再否则用 href。Work 页卡片与首屏方块场共用这一条，两处不会指向不同地方。
  */
 export function otherWorkHref(w: OtherWorks['works'][number], entries: LogEntry[]): string {
-  if (!w.log) return w.href;
+  if (w.page && w.slug) return `/work/${w.slug}`;
+  // schema 保证：没有详情页就一定有 href
+  const fallback = w.href ?? '/archive';
+  if (!w.log) return fallback;
   const latest = withAnchors(entries)
     .filter(({ entry }) => projectGroupOf(entry)?.key === w.log)
     .reduce<{ entry: LogEntry; anchor: string } | undefined>(
       (best, item) => (!best || item.entry.date > best.entry.date ? item : best),
       undefined,
     );
-  return latest ? `/archive#${latest.anchor}` : w.href;
+  return latest ? `/archive#${latest.anchor}` : fallback;
 }
 
 /** 第一组 = 三个主项目（Selected work），后面按内容池登记的顺序一组一组排。 */
@@ -141,6 +146,7 @@ export function buildWorkGroups(cards: HomeCard[], other: OtherWorks, entries: L
       wip: c.wip,
       tone: c.tone,
       caseSlug: c.slug,
+      ptSlug: c.slug,
     })),
   };
   const rest = other.groups.map((g, gi): HomeWorkGroup => {
@@ -165,6 +171,7 @@ export function buildWorkGroups(cards: HomeCard[], other: OtherWorks, entries: L
           wip: false,
           tone: TONE_N,
           caseSlug: null,
+          ptSlug: w.page && w.slug ? w.slug : null,
         })),
     };
   });

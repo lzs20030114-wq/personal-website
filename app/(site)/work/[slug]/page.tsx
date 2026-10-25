@@ -26,13 +26,19 @@ import { Accent, Lead } from '../../../../components/site/case/CaseBlocks';
 import { CaseIndex } from '../../../../components/site/case/CaseIndex';
 import { CaseReveal } from '../../../../components/site/case/CaseReveal';
 import { WorkInPreparation } from '../../../../components/site/WorkInPreparation';
+import { OtherWorkPage } from '../../../../components/site/OtherWorkPage';
+import { getOtherWorkPage, getOtherWorkPages } from '../../../../src/lib/site/other-works';
 
 export function generateStaticParams() {
-  return getRoutableWork().map((w) => ({ slug: w.slug }));
+  return [
+    ...getRoutableWork().map((w) => ({ slug: w.slug })),
+    // 其他作品的详情页（content/other/works.json 里带 page 的，MAPPING §59）
+    ...getOtherWorkPages().map((p) => ({ slug: p.work.slug })),
+  ];
 }
 
 /**
- * 作品路由只允许构建期列出的 slug（published + 主项目）；其余 draft/未知 slug
+ * 作品路由只允许构建期列出的 slug（published + 主项目 + 有详情页的其他作品）；其余 draft/未知 slug
  * 不做按需渲染。主项目里未发稿的渲「筹备中」页（用户拍板 2026-07-29；主项目 2026-10-04 起为三个）。
  */
 export const dynamicParams = false;
@@ -45,7 +51,11 @@ function cleanSummary(s: string): string {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const entry = getRoutableWorkBySlug(slug);
-  if (!entry) notFound();
+  if (!entry) {
+    const other = getOtherWorkPage(slug);
+    if (!other) notFound();
+    return { title: other.work.title, description: other.work.line ?? other.work.context };
+  }
   // 筹备中的页面没有正文，summary 还是「待盘点」占位——别把占位字当描述发出去，也别让它进索引
   if (entry.status !== 'published') {
     return {
@@ -277,7 +287,12 @@ function HeroMeta({ entry, lang }: { entry: WorkEntry; lang: SlotLang }) {
 export default async function WorkPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const entry = getRoutableWorkBySlug(slug);
-  if (!entry) notFound();
+  if (!entry) {
+    // 不是主项目：其他作品的详情页（同一套外壳，不套案例页模板）
+    const other = getOtherWorkPage(slug);
+    if (!other) notFound();
+    return <OtherWorkPage entry={other} />;
+  }
   // 主项目里还没发稿的：同一条路由、同一套外壳，正文位换成「筹备中」框架字（不代写）
   if (entry.status !== 'published') return <WorkInPreparation entry={entry} />;
 

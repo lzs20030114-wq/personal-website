@@ -76,9 +76,10 @@ function WorkCard({ t }: { t: HomeWorkTile }) {
       className="hs-card"
       href={t.href}
       data-card
-      // 页面转场（MAPPING §48）：主项目卡 = 这张卡展开成它的案例页；从案例页回作品区 = 收回到这张卡
-      data-pt={t.caseSlug ? 'card' : undefined}
-      data-pt-card={t.caseSlug ?? undefined}
+      // 页面转场（MAPPING §48）：这张卡展开成它的详情页（主项目的案例页 / 其他作品的详情页，§59）；
+      // 从详情页回作品区 = 收回到这张卡
+      data-pt={t.ptSlug ? 'card' : undefined}
+      data-pt-card={t.ptSlug ?? undefined}
       style={tileVars(t)}
     >
       {body}

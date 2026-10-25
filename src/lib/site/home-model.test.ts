@@ -7,7 +7,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildCards, buildHomeField as buildField, buildHomeLog, buildLabGroups, type FieldWorkInput, type HomeCard } from './home-model';
 import type { LogEntry } from './log-schema';
-import { getOtherWorks } from './other-works';
+import { getOtherWorkPages, getOtherWorks } from './other-works';
 
 /** 方块场的其他作品取自内容池（MAPPING §58） */
 const buildHomeField = (cs: HomeCard[], ws: FieldWorkInput[], es: LogEntry[]) => buildField(cs, ws, es, getOtherWorks());
@@ -90,11 +90,12 @@ describe('主页数据派生（home-model）', () => {
     expect(other?.ticks.some((tick) => expected.includes(tick.href))).toBe(false);
   });
 
-  it('首屏方块场完整覆盖三个主项目、全部台架、全部日志和两个补充入口，不收非公开草稿', () => {
+  it('首屏方块场完整覆盖三个主项目、全部台架、全部日志、全部其他作品和 About，不收非公开草稿', () => {
     const entries = getLogEntries();
     const cs = cards();
     const f = buildHomeField(cs, works(), entries);
-    expect(f.pool).toHaveLength(works().length + LAB_BENCHES.length + entries.length + 2);
+    const others = getOtherWorks().works.length;
+    expect(f.pool).toHaveLength(works().length + LAB_BENCHES.length + entries.length + others + 1);
     expect(new Set(f.pool.map((item) => item.id)).size).toBe(f.pool.length);
     expect(f.pool.filter((item) => item.kind === 'project').map((item) => item.href))
       .toEqual(works().map((work) => `/work/${work.slug}`));
@@ -102,7 +103,7 @@ describe('主页数据派生（home-model）', () => {
       .toEqual(LAB_BENCHES.map((bench) => `/lab#lab${bench.no}`));
     expect(f.pool.filter((item) => item.kind === 'log').map((item) => item.href))
       .toEqual(withAnchors(entries).map(({ anchor }) => `/archive#${anchor}`));
-    expect(f.pool.filter((item) => item.kind === 'other')).toHaveLength(1);
+    expect(f.pool.filter((item) => item.kind === 'other')).toHaveLength(others);
     expect(f.pool.filter((item) => item.kind === 'about')).toHaveLength(1);
     expect(f.pool.some((item) => item.href === '/work/project-iv')).toBe(false);
     expect(f.benches).toBe(LAB_BENCHES.length);
@@ -114,7 +115,7 @@ describe('主页数据派生（home-model）', () => {
   it('首屏图标都有独立 SVG 文件，所有链接都是实际公开入口', () => {
     const entries = getLogEntries();
     const f = buildHomeField(cards(), works(), entries);
-    const slugs = getRoutableWork().map((work) => work.slug);
+    const slugs = [...getRoutableWork().map((work) => work.slug), ...getOtherWorkPages().map((p) => p.work.slug)];
     const anchors = new Set(withAnchors(entries).map((a) => a.anchor));
     const nos = new Set(LAB_BENCHES.map((b) => b.no));
     f.pool.forEach((item) => {

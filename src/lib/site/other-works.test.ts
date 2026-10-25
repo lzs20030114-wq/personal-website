@@ -2,10 +2,11 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { getAllWork, getRoutableWork } from './content';
-import { buildCards, buildWorkGroups } from './home-model';
+import sharp from 'sharp';
+import { buildCards, buildWorkGroups, otherWorkHref } from './home-model';
 import { getLogEntries } from './log';
 import { PROJECT_GROUPS } from './log-facets';
-import { getOtherWorks } from './other-works';
+import { getOtherWorkPages, getOtherWorks } from './other-works';
 import { OtherWorksSchema } from './other-works-schema';
 
 const cards = () =>
@@ -26,7 +27,7 @@ const reachable = (href: string) => {
   const p = href.split('#')[0].split('?')[0];
   if (['/', '/archive', '/lab', '/about'].includes(p)) return true;
   const m = /^\/work\/([a-z0-9-]+)$/.exec(p);
-  return !!m && getRoutableWork().some((w) => w.slug === m[1]);
+  return !!m && [...getRoutableWork().map((w) => w.slug), ...getOtherWorkPages().map((x) => x.work.slug)].includes(m[1]);
 };
 
 const ok = {
@@ -39,9 +40,46 @@ describe('其他作品内容池（content/other/works.json）', () => {
     const data = getOtherWorks();
     data.works.forEach((w) => {
       if (w.image) expect(existsSync(join(process.cwd(), 'public', w.image.src)), w.image.src).toBe(true);
-      expect(reachable(w.href), `${w.title} → ${w.href}`).toBe(true);
+      w.page?.figures.forEach((f) => expect(existsSync(join(process.cwd(), 'public', f.src)), f.src).toBe(true));
+      if (w.href) expect(reachable(w.href), `${w.title} → ${w.href}`).toBe(true);
+      expect(reachable(otherWorkHref(w, getLogEntries())), w.title).toBe(true);
       if (w.log) expect(PROJECT_GROUPS.map((g) => g.key), `${w.title} 的 log`).toContain(w.log);
     });
+  });
+
+  it('标在内容池里的宽高与图片文件实际像素一致（详情页按它排比例框）', async () => {
+    const imgs = getOtherWorks().works.flatMap((w) => [
+      ...(w.image && w.image.src.startsWith('/other/') ? [w.image] : []),
+      ...(w.page?.figures ?? []),
+    ]);
+    expect(imgs.length).toBeGreaterThan(0);
+    for (const img of imgs) {
+      const meta = await sharp(join(process.cwd(), 'public', img.src)).metadata();
+      expect([meta.width, meta.height], img.src).toEqual([img.width, img.height]);
+    }
+  });
+
+  it('详情页：地址不和主项目撞，中英说明段数一致，组都有中文名', () => {
+    const pages = getOtherWorkPages();
+    expect(pages.length).toBeGreaterThan(0);
+    const mainSlugs = getAllWork().map((w) => w.slug);
+    pages.forEach(({ work, group }) => {
+      expect(mainSlugs, `${work.slug} 与主项目撞了`).not.toContain(work.slug);
+      expect(group.zh, `${group.key} 缺中文组名`).toBeTruthy();
+      const st = work.page.statement;
+      if (st) expect(st.en.length, `${work.slug} 说明的中英段数`).toBe(st.zh.length);
+    });
+  });
+
+  it('没有详情页又没有 href、有详情页却没有 slug 或封面，都构建失败', () => {
+    const page = { figures: [{ src: '/other/a.webp', width: 1, height: 1, caption: { en: 'a', zh: 'a' } }] };
+    const img = { src: '/other/a.webp', width: 1, height: 1 };
+    const { href: _drop, ...noHref } = ok.works[0];
+    const bad = (w: object) => OtherWorksSchema.safeParse({ ...ok, works: [w] }).success;
+    expect(bad(noHref)).toBe(false);
+    expect(bad({ ...noHref, slug: 'x', image: img, page })).toBe(true);
+    expect(bad({ ...noHref, image: img, page })).toBe(false);
+    expect(bad({ ...noHref, slug: 'x', page })).toBe(false);
   });
 
   it('组 key 重复、作品挂在没登记的组、空组，三种都构建失败', () => {
@@ -81,7 +119,18 @@ describe('Work 页分组（buildWorkGroups）', () => {
     expect(buildWorkGroups(cards(), getOtherWorks(), []).flatMap((g) => g.tiles).find((t) => t.title === w.title)!.href).toBe(w.href);
   });
 
-  it('其他作品卡没有案例页转场，题头编号跟着组号走', () => {
+  it('有详情页的其他作品链到 /work/<slug>，卡片走展开转场', () => {
+    const groups = buildWorkGroups(cards(), getOtherWorks(), getLogEntries());
+    getOtherWorkPages().forEach(({ work }) => {
+      const tile = groups.flatMap((g) => g.tiles).find((t) => t.title === work.title)!;
+      expect(tile.href).toBe(`/work/${work.slug}`);
+      expect(tile.ptSlug).toBe(work.slug);
+      expect(tile.caseSlug).toBeNull();
+    });
+    expect(groups[0].tiles.map((t) => t.ptSlug)).toEqual(groups[0].tiles.map((t) => t.caseSlug));
+  });
+
+  it('没有详情页的其他作品卡不走转场，题头编号跟着组号走', () => {
     const groups = buildWorkGroups(cards(), {
       groups: [{ key: 'env', title: 'Environment design' }],
       works: [
@@ -93,6 +142,7 @@ describe('Work 页分组（buildWorkGroups）', () => {
     expect(env.tiles.map((t) => t.kick)).toEqual(['02.1 · Thesis', '02.2 · Course']);
     env.tiles.forEach((t) => {
       expect(t.caseSlug).toBeNull();
+      expect(t.ptSlug).toBeNull();
       expect(t.thesis).toBeNull();
     });
   });
