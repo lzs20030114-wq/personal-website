@@ -190,7 +190,7 @@
 .lab-panel[data-expanded] .lab-hint-dot { background: var(--lab-tone); }
 .lab-status { display: flex; align-items: center; gap: 7px; font: 400 11px var(--ld-mono); color: var(--ld-mute); white-space: nowrap; }
 .lab-status i { width: 6px; height: 6px; border-radius: 50%; background: var(--ld-g-hi); transition: background 0.3s; }
-.lab-status[data-solving] i { background: oklch(0.83 0.12 85); }
+.lab-status[data-solving] i { background: var(--ld-amber); }
 .lab-workspace .lab-zoom-controls { gap: 0; }
 .lab-workspace .lab-zoom-controls button { min-width: 28px; min-height: 28px; margin-left: -1px; padding: 0 10px; border: 1px solid var(--ld-control); font: 500 13px var(--ld-mono); color: var(--ld-cream); }
 .lab-workspace .lab-zoom-controls button:last-child { font-size: 11px; }

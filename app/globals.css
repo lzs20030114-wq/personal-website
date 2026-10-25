@@ -49,6 +49,33 @@
   --trace-blue: var(--accent); /* 兼容别名：机构描线随主强调色，组件零改动 */
 }
 
+/* 暗色页与色面共用的 token（全站唯一来源，2026-10-25 合并）。原在 (site)/dark-chrome.css，只有内页拿得到；
+   首页（home.css）、转场（page-transitions.css）、案例页（case-dark.css）各抄了一份同值副本，现在都引用这里。
+   与色阶同值的直接指向色阶（奶白 = G100、青柠亮档 = G200）。 */
+:root {
+  --ld-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ld-cream: var(--g100); /* 奶白 = G100 */
+  --ld-mute: oklch(0.7 0.03 168);
+  --ld-soft: oklch(0.8 0.035 162);
+  --ld-paper: oklch(0.19 0.032 228);
+  --ld-g: oklch(0.74 0.1 150);
+  --ld-g-hi: oklch(0.86 0.08 130);
+  --ld-v: oklch(0.72 0.095 291);
+  --ld-slate: oklch(0.74 0.06 235);
+  --ld-amber: oklch(0.83 0.12 85); /* 待补 / 求解中：只表示「还没好」 */
+  /* 配色 v2「中间色面」（design-ref/palette-study，MAPPING §46）：黑白之间补带色的背景层，字仍只用墨 / 纸 */
+  --ld-deep: oklch(0.3 0.032 205); /* S5 深潭：Lab 开头区整段色带 */
+  --ld-face: oklch(0.41 0.042 192); /* 主青（降纯度）：页脚色面 */
+  --ld-face-ink: oklch(0.86 0.04 160); /* 主青面上的次级字 */
+  --ld-panel: oklch(0.25 0.022 212); /* 夜色上浮起一档：说明栏面板 */
+  --ld-lime-hi: var(--g200); /* 青柠亮档 = G200：色面上的链接 */
+  /* 控件边框（按钮 / 分段钮 / 切换）：0.4 对夜色 3.5:1，过 WCAG 非文本 3:1；原 0.2–0.25 只有 1.6–1.9:1。悬停 0.7 */
+  --ld-control: oklch(0.95 0.032 120 / 0.4);
+  --ld-control-hi: oklch(0.95 0.032 120 / 0.7);
+  --ld-eo: cubic-bezier(0.2, 0.7, 0.1, 1);
+  --ld-eio: cubic-bezier(0.76, 0, 0.24, 1);
+}
+
 body {
   background: var(--paper);
   color: var(--ink);
@@ -251,52 +278,6 @@ a:hover {
   color: var(--g200);
 }
 
-/* — 按钮（MAPPING §1：primary = G600 填充 hover G700 active G800；secondary = 墨描边）
-     flush-left：宽按钮文字左对齐（design-system never centered） — */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 6px;
-  cursor: pointer;
-  text-decoration: none;
-  font-weight: 800;
-  font-size: 14px;
-  line-height: 1.2;
-  color: var(--ink);
-  background: transparent;
-  border: 2px solid transparent;
-  padding: 12px 16px;
-  border-radius: 0;
-}
-.btn-primary {
-  background: var(--g600);
-  color: var(--paper);
-  border-color: var(--g600);
-}
-.btn-secondary {
-  border-color: var(--ink);
-}
-@media (hover: hover) and (pointer: fine) {
-  .btn {
-    transition: background 160ms ease, border-color 160ms ease;
-  }
-  .btn-primary:hover {
-    background: var(--g700);
-    border-color: var(--g700);
-  }
-  .btn-secondary:hover {
-    background: var(--n200);
-  }
-}
-.btn-primary:active {
-  background: var(--g800);
-  border-color: var(--g800);
-}
-.btn-secondary:active {
-  background: var(--n300);
-}
-
 /* — 标签（MAPPING §1：outline = accent 边框+文字；neutral = N200 底 / N800 文字） — */
 .tag {
   display: inline-flex;
@@ -314,63 +295,6 @@ a:hover {
 .tag-neutral {
   background: var(--n200);
   color: var(--n800);
-}
-
-/* — 卡片（surface 底，零圆角；kicker = accent） — */
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  border-radius: 0;
-  background: var(--surface);
-  text-decoration: none;
-  color: inherit;
-}
-.card-kicker {
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-.card-title {
-  font-weight: 800;
-  font-size: 17px;
-  line-height: 1.2;
-}
-.card-body {
-  margin: 0;
-  font-size: 13px;
-  color: var(--n700);
-  flex: 1;
-}
-.card-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--n600);
-}
-@media (hover: hover) and (pointer: fine) {
-  a.card {
-    transition: background 160ms ease;
-  }
-  a.card:hover {
-    background: var(--n200);
-  }
-  a.card:hover .card-title {
-    color: var(--accent);
-  }
-}
-
-/* — Selected work 索引行 hover（SITE_SPEC §1 克制条款：hover 反馈，门控） — */
-@media (hover: hover) and (pointer: fine) {
-  .work-row {
-    transition: background 160ms ease;
-  }
-  .work-row:hover {
-    background: var(--surface);
-  }
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -405,113 +329,6 @@ a:hover {
   [data-dash],
   [data-pulse] {
     animation: none;
-  }
-}
-
-/* 纹理叠加层（点阵 / 颗粒）：透明度与遮罩逐处内联（各区数值不同） */
-.om-dots {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: radial-gradient(var(--g400) 1px, transparent 1.2px);
-  background-size: 6px 6px;
-}
-.om-grain {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: var(--grain);
-  background-size: 170px 170px;
-}
-/* 舞台媒体块：深色渐变底（转场 goPT 的克隆源，data-ptm） */
-.om-media {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(
-    150deg,
-    oklch(0.3 0.062 196) 0%,
-    oklch(0.26 0.058 232) 55%,
-    oklch(0.28 0.062 285) 100%
-  );
-}
-
-/* S0 枢纽幕布局：<1024 单列、卡片单列、舞台隐藏（引擎同时停用，见组件 applyMode） */
-.hub-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
-  gap: 52px;
-}
-.hub-cards {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 6px;
-}
-.hub-stage {
-  display: flex;
-}
-@media (max-width: 1023px) {
-  .hub-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .hub-cards {
-    grid-template-columns: 1fr;
-  }
-  .hub-stage {
-    display: none;
-  }
-}
-
-/* 项目卡（2026-07-26 迭代稿：边框盒改发丝线列表项，hover 只变色；浮起/按压已随稿删除）
-   2026-07-28：由 <button> 改为 <a>（卡片是导航，见组件注释）——补 text-decoration，
-   其余声明本就是元素无关的，视觉逐像素不变。 */
-.hub-card {
-  font: inherit;
-  text-align: left;
-  text-decoration: none;
-  color: inherit;
-  position: relative;
-  border: 0;
-  border-top: var(--hair);
-  border-radius: 0;
-  padding: 12px 2px 2px 0;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  background: transparent;
-}
-@media (hover: hover) and (pointer: fine) {
-  .hub-card {
-    transition: color var(--dur-micro) var(--ease-site),
-      background var(--dur-micro) var(--ease-site);
-  }
-  .hub-card:hover {
-    color: var(--accent);
-  }
-}
-
-/* 舞台题栏"00 · Stage"解除驻留小签（迭代稿：描边盒改下划线小链） */
-.figchip {
-  font: inherit;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 0 0 2px;
-  border: 0;
-  border-bottom: 1px solid var(--g500);
-  border-radius: 0;
-  background: transparent;
-  color: var(--accent);
-  cursor: pointer;
-}
-@media (hover: hover) and (pointer: fine) {
-  .figchip {
-    transition: color var(--dur-micro) var(--ease-site);
-  }
-  .figchip:hover {
-    color: var(--accent-2);
   }
 }
 
@@ -1375,32 +1192,6 @@ button.log-heat__cell {
   }
 }
 
-/* 右缘 rail 跳幕按钮 */
-.rail-btn {
-  font: inherit;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  padding: 4px 2px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-}
-
-/* S2 幕内页脚 email 大字（hover = P300，设计稿 style-hover 照搬） */
-.hub-footer-email {
-  color: var(--g100);
-  text-decoration: none;
-}
-@media (hover: hover) and (pointer: fine) {
-  .hub-footer-email {
-    transition: color var(--dur-micro) var(--ease-site);
-  }
-  .hub-footer-email:hover {
-    color: var(--p300);
-  }
-}
 
 /* ════════════════════════════════════════════════════════════════════════════
    深色内页（case / log）——迭代稿 pgCase/pgLog 的深色语言（MAPPING §6.1）
@@ -1410,13 +1201,13 @@ button.log-heat__cell {
 .pg-dark {
   --paper: oklch(0.25 0.05 225); /* 深蓝底 */
   --surface: oklch(0.95 0.032 120 / 0.05);
-  --ink: oklch(0.95 0.032 120); /* 浅绿白：正文/分隔线 */
+  --ink: var(--g100); /* 浅绿白：正文/分隔线 */
   --graphite: oklch(0.72 0.05 165);
   --hairline: oklch(0.95 0.032 120 / 0.25);
   --hair: 1px solid oklch(0.95 0.032 120 / 0.25);
-  --accent: oklch(0.71 0.098 145); /* 深底亮绿 */
-  --accent-2: oklch(0.83 0.075 294); /* 深底亮紫 */
-  --slate: oklch(0.74 0.06 235); /* 深底石板蓝 */
+  --accent: var(--g400); /* 深底亮绿 */
+  --accent-2: var(--p300); /* 深底亮紫 */
+  --slate: var(--ld-slate); /* 深底石板蓝 */
   --n300: oklch(0.45 0.03 190);
   --n400: oklch(0.58 0.04 175);
   --n500: oklch(0.66 0.045 170);
@@ -1550,9 +1341,9 @@ button.log-heat__cell {
 .lab-wrap.on-light {
   --paper: oklch(0.22 0.042 235);
   --surface: oklch(0.95 0.032 120 / 0.05);
-  --ink: oklch(0.95 0.032 120);
-  --accent: oklch(0.71 0.098 145);
-  --accent-2: oklch(0.83 0.075 294);
+  --ink: var(--g100);
+  --accent: var(--g400);
+  --accent-2: var(--p300);
   --n300: oklch(0.45 0.03 190);
   --n400: oklch(0.58 0.04 175);
   --n500: oklch(0.66 0.045 170);

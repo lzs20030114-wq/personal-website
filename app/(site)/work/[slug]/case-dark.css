@@ -4,19 +4,20 @@
    类名前缀 cs-（case screen）。根节点同时带 .pg-dark——内嵌的旧台架与 2D 连杆还吃它重定义的语义 token。 */
 
 .cs {
-  --cs-ink: oklch(0.95 0.032 120);
-  --cs-paper: oklch(0.19 0.032 228);
-  --cs-mute: oklch(0.8 0.035 162);
-  --cs-dim: oklch(0.7 0.03 168);
-  --cs-g: oklch(0.74 0.1 150);
-  --cs-gh: oklch(0.86 0.08 130);
-  --cs-v: oklch(0.72 0.095 291);
-  --cs-am: oklch(0.83 0.12 85);
-  --cs-bl: oklch(0.74 0.06 235);
+  /* 与暗色外壳同一套（globals.css :root 的 --ld-*），只留案例页独有的正文色与带中文回退的 mono 栈 */
+  --cs-ink: var(--ld-cream);
+  --cs-paper: var(--ld-paper);
+  --cs-mute: var(--ld-soft);
+  --cs-dim: var(--ld-mute);
+  --cs-g: var(--ld-g);
+  --cs-gh: var(--ld-g-hi);
+  --cs-v: var(--ld-v);
+  --cs-am: var(--ld-amber);
+  --cs-bl: var(--ld-slate);
   --cs-body: oklch(0.88 0.03 150);
   --cs-mono: 'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', ui-monospace, SFMono-Regular, Menlo, monospace;
-  --cs-eo: cubic-bezier(0.2, 0.7, 0.1, 1);
-  --cs-eio: cubic-bezier(0.76, 0, 0.24, 1);
+  --cs-eo: var(--ld-eo);
+  --cs-eio: var(--ld-eio);
   position: relative;
   min-height: 100vh;
   color: var(--cs-ink);

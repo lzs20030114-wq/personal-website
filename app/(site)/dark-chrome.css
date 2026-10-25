@@ -3,28 +3,7 @@
    「10 Case 01」稿时发现两张稿的顶栏/页脚是同一套——抽到这里给 /lab 与 /work/* 共用，
    规则本身一字未改。由 (site)/layout.tsx 引入，所以两个路由都能拿到。 */
 
-:root {
-  --ld-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  --ld-cream: oklch(0.95 0.032 120);
-  --ld-mute: oklch(0.7 0.03 168);
-  --ld-soft: oklch(0.8 0.035 162);
-  --ld-paper: oklch(0.19 0.032 228);
-  --ld-g: oklch(0.74 0.1 150);
-  --ld-g-hi: oklch(0.86 0.08 130);
-  --ld-v: oklch(0.72 0.095 291);
-  --ld-slate: oklch(0.74 0.06 235);
-  /* 配色 v2「中间色面」（design-ref/palette-study，MAPPING §46）：黑白之间补带色的背景层，字仍只用墨 / 纸 */
-  --ld-deep: oklch(0.3 0.032 205); /* S5 深潭：Lab 开头区整段色带 */
-  --ld-face: oklch(0.41 0.042 192); /* 主青（降纯度）：页脚色面 */
-  --ld-face-ink: oklch(0.86 0.04 160); /* 主青面上的次级字 */
-  --ld-panel: oklch(0.25 0.022 212); /* 夜色上浮起一档：说明栏面板 */
-  --ld-lime-hi: oklch(0.9 0.058 124); /* 青柠亮档：色面上的链接 */
-  /* 控件边框（按钮 / 分段钮 / 切换）：0.4 对夜色 3.5:1，过 WCAG 非文本 3:1；原 0.2–0.25 只有 1.6–1.9:1。悬停 0.7 */
-  --ld-control: oklch(0.95 0.032 120 / 0.4);
-  --ld-control-hi: oklch(0.95 0.032 120 / 0.7);
-  --ld-eo: cubic-bezier(0.2, 0.7, 0.1, 1);
-  --ld-eio: cubic-bezier(0.76, 0, 0.24, 1);
-}
+/* 设计 token（--ld-*）已挪到 app/globals.css 的 :root（2026-10-25 合并：首页 / 转场 / 案例页原各存一份同值副本，现在都引用那一份）。 */
 
 /* ── 页底与点阵：配色 v2 起为夜色平涂（原 160° 三色渐变撤掉）+ 顶部 760px 的点阵 ── */
 .ld-ground { background: var(--ld-paper); }
