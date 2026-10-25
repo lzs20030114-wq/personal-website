@@ -42,6 +42,7 @@
 | "第二屏"、"Work 轮播"、"Work Carousel"、"露边 / 续接标注 / 刻度盘 / 留白区" | design-ref/home-work-carousel/ + MAPPING.md §59（85% 屏宽露边 · 依次出发 · 首尾相接 · 三种暗示 · 手感常量 = `src/lib/site/work-carousel.ts` 的 `WC`） |
 | "旧作清单"、"其他作品素材"、"作品图在哪"、"Hidden Stone / The Slice 找到没" | 作品集旧作_整合清单_2026-10-25.md（作者交来的 14 项清单，原样存档：引文 · 署名 · 年份证据 · 存疑点）+ 其他作品_素材整理.md（站上去向：115 张 webp 在 `public/other/` · 逐张来源、裁切与用在哪一节 · 各页正文出处 · 没转的原因 · 补搜结果 · 还没定的事；脚本 `scripts/other-works/build_assets.py`）+ MAPPING §60（详情页 `/work/<slug>` 的做法、英文命名、署名规则；§60.1 = 第二版分节叙事） |
 | "主页首屏"、"方块场"、"Field Hero" | design-ref/home-field-hero/ + MAPPING.md §55（28×14 方块场 · 悬停开卡 · 卡池全自动：作品 / 台架 / 日志现取，§55.2；新台架截图 `npm run field:shots`；取代 §42 的轮播舞台） |
+| "设计系统"、"design system"、"token 在哪一份"、"颜色只表示项目"、"控件边框 / 焦点环" | MAPPING §61（四步优化：焦点环与控件边框 · 项目色唯一登记处 `PROJECT_GROUPS[].accent` · `--ld-*` 收进 `globals.css :root` · 日志页暗色外壳）+ claude.ai 设计系统 artifact「Portfolio」 |
 | "横屏排版"、"版式研究"、"排版原则" | LAYOUT_NOTES.md |
 | "网站 review"、"调研报告"、"获奖站案例"、"弱模型工单" | SITE_REVIEW_2026-07.md |
 | "拱环"、"S4 环"、"真机机构求解器"、"伸缩外壳演示" | 轮回机器_拱环求解器.md |
@@ -265,6 +266,8 @@
 - **首页 02 Work 按组横向切换（2026-10-24，用户拍板）**：其他作品不再统称 other works，按作者定的类别分组；Work 页一屏一组，第一组仍是三个主项目，组名目录、箭头、← → 键、触控板与触屏左右划切换，竖向照旧翻页，窄屏上下排开。新内容池 `content/other/works.json`（现只有 Smart Bed 一件，类别与作品清单等作者给），LAYOUT_NOTES 第 6 条加例外。映射 = MAPPING §58。
 
 - **首页 02 Work 换「18 Home · Work Carousel」稿（2026-10-24，用户交来第四版交接包「改第二屏」）**：稿是拿站上那版 Work 页去磨的，数据与分组规则照 §58，换的是版式与交互：当前屏占 85%、下一屏露出一截，卡片按顺序依次滑动，最后一屏接回第一屏；顶线后接「Next · 02 …」续接标注，右上刻度盘 + 滚动组号；左右留白区悬停出跟着光标的标签、点一下就切，闲置时整排探一下、靠近边缘时微微让开。卡片悬停从翻页引擎挪进 `WorkPage` 自己的状态；纯逻辑与手感常量在 `src/lib/site/work-carousel.ts`（守门 6 项）。窄屏与 reduced-motion 仍上下排开。映射与有意差异 = MAPPING §59。
+
+- **设计系统提取 + 四步优化（2026-10-25，用户「提取设计系统」→「按顺序优化」）**：从代码提取的设计系统存在 claude.ai 的 Design System artifact「Portfolio」（https://claude.ai/artifact/1vSoTFWC3EQZfYYbrqzd4J ：79 个颜色 token 两套主题、19 个字级、48 个图标、设计手册、13 个静态组件；组件是照站上 CSS 手写的，站上不读它）。随后四步：① 首页夜色 / 主青 / 深潭面焦点环改青柠亮档，暗色页控件边框统一 `--ld-control`（0.4，过 3:1）；② **颜色只表示项目**（用户拍板）：Lab 目录 / 刻度 / 台架顶线与日志项目标记按项目上色，内核类型只写字，唯一登记处 `PROJECT_GROUPS[].accent` + `projectAccent`；③ `--ld-*` 收进 `globals.css :root` 成为唯一来源、同值副本改引用、删 19 个退役类，前后两次生产构建 8 页约 1.4 万元素计算样式逐项一致；④ `/archive` 换暗色顶栏与主青页脚（用户拍板只换这一页），语言改由顶栏切、页内滑块撤掉。未做：日志页正文仍是旧 Modernist 字体、`/about` `/privacy` 外壳、设计系统与站上 CSS 的自动同步。映射=MAPPING §61。
 
 ## Lab 编号对照（2026-09-03 收纳 · 2026-09-13 改按项目编号）
 
