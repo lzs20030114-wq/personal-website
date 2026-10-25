@@ -1,9 +1,11 @@
 import '../../app/(site)/work/[slug]/case-dark.css';
 import Link from 'next/link';
-import type { CSSProperties } from 'react';
+import { Fragment, type CSSProperties } from 'react';
+import { OPENING_TITLE } from '../../src/lib/site/case-headings';
 import { getOtherWorkPages, type OtherWorkPage as Entry } from '../../src/lib/site/other-works';
 import { CaseFooter } from '../lab/LabShell';
 import { Pick } from './CaseLang';
+import { CaseIndex } from './case/CaseIndex';
 import { CaseReveal } from './case/CaseReveal';
 
 /**
@@ -11,10 +13,11 @@ import { CaseReveal } from './case/CaseReveal';
  *
  * 挂在 /work/<slug>，与主项目同一条路由、同一套深色外壳（「筹备中」页的做法：全部复用 .cs-* 类），
  * 所以首页卡片「展开成详情页 / 收回到卡片」的转场、顶栏的 EN / 中切换都不用另写。
- * 不套案例页模板（SITE_SPEC §4）：没有目录栏、视频席位、AI 披露席位，也不算进「案例 0N / 03」。
+ * 不套案例页模板（SITE_SPEC §4）：没有视频席位、AI 披露席位，也不算进「案例 0N / 03」。
  *
- * 页面上的字只有三种：源文件上的署名、源文件里的说明原文（另一种语言是站方译文，页尾标明）、
- * 站方写的图注。数据全在 content/other/works.json。
+ * 正文按节叙事（2026-10-25 第二版）：每节 = 站方小标题 + 源文件原文（每段注明原文语言与出处）+ 一组图，
+ * 左侧目录复用案例页的 CaseIndex（第 0 项是开场，其余逐个对上正文里的 h2）。
+ * 数据全在 content/other/works.json。
  */
 
 const COPY = {
@@ -24,9 +27,8 @@ const COPY = {
     year: 'Year',
     context: 'Context',
     recognition: 'Recognition',
-    statement: 'Statement',
-    images: 'Drawings and images',
     original: 'Original text',
+    both: 'Original text, written by the author in both languages',
     translated: 'Translated from the Chinese original',
     source: 'Source: ',
     open: 'Open full size ↗',
@@ -40,9 +42,8 @@ const COPY = {
     year: '时间',
     context: '背景',
     recognition: '记录',
-    statement: '设计说明',
-    images: '图纸与图像',
     original: '原文',
+    both: '原文，中英两版均为作者所写',
     translated: '站方译自英文原文',
     source: '出处：',
     open: '查看原图 ↗',
@@ -53,10 +54,13 @@ const COPY = {
 } as const;
 
 type Lang = keyof typeof COPY;
+type Fig = NonNullable<Entry['work']['page']['sections'][number]['figures']>[number];
 
 /** 竖长的图不撑满整列：高度封在一屏以内，宽度随之按比例收（框比例 = 图比例，不留边） */
 const figStyle = (w: number, h: number): CSSProperties => ({
   width: `min(100%, calc(84svh * ${(w / h).toFixed(4)}))`,
+  // 小图不放大到糊：最多按原始像素宽
+  maxWidth: w,
 });
 
 function Meta({ entry, lang }: { entry: Entry; lang: Lang }) {
@@ -107,54 +111,71 @@ function Meta({ entry, lang }: { entry: Entry; lang: Lang }) {
 }
 
 function Body({ entry, lang }: { entry: Entry; lang: Lang }) {
-  const { work } = entry;
   const c = COPY[lang];
-  const st = work.page.statement;
+  // 图号跨节连续：封面是 01，正文从 02 起
+  let n = 1;
+  const figure = (f: Fig, pair: boolean) => {
+    n += 1;
+    return (
+      <figure
+        key={`${f.src}-${n}`}
+        className="cs-figure os-figure"
+        style={pair ? undefined : figStyle(f.width, f.height)}
+      >
+        <a
+          className="cs-figure__frame cs-figure__frame--shot os-zoom"
+          style={{ aspectRatio: `${f.width} / ${f.height}` }}
+          href={f.src}
+          target="_blank"
+          rel="noopener"
+          aria-label={`${f.caption[lang]} · ${c.open}`}
+        >
+          <img
+            className="cs-figure__img"
+            src={f.src}
+            alt={f.caption[lang]}
+            width={f.width}
+            height={f.height}
+            loading="lazy"
+            decoding="async"
+          />
+        </a>
+        <figcaption>
+          <span className="cs-cap__id">{c.fig(n)}</span>
+          <span className="cs-cap__t">
+            <span className="cs-cap__cap">{f.caption[lang]}</span>
+          </span>
+        </figcaption>
+      </figure>
+    );
+  };
   return (
     <>
-      {st ? (
-        <>
-          <h2>{st.label?.[lang] ?? c.statement}</h2>
-          {st[lang].map((p, i) => (
-            <p key={i}>{p}</p>
-          ))}
-          <p className="os-note">
-            {st.original === lang ? c.original : c.translated}
-            {' · '}
-            {c.source}
-            {st.source[lang]}
-          </p>
-        </>
-      ) : null}
-      <h2>{c.images}</h2>
-      {work.page.figures.map((f, i) => (
-        <figure key={`${f.src}-${i}`} className="cs-figure os-figure" style={figStyle(f.width, f.height)}>
-          <a
-            className="cs-figure__frame cs-figure__frame--shot os-zoom"
-            style={{ aspectRatio: `${f.width} / ${f.height}` }}
-            href={f.src}
-            target="_blank"
-            rel="noopener"
-            aria-label={`${f.caption[lang]} · ${c.open}`}
-          >
-            <img
-              className="cs-figure__img"
-              src={f.src}
-              alt={f.caption[lang]}
-              width={f.width}
-              height={f.height}
-              loading="lazy"
-              decoding="async"
-            />
-          </a>
-          <figcaption>
-            <span className="cs-cap__id">{c.fig(i + 2)}</span>
-            <span className="cs-cap__t">
-              <span className="cs-cap__cap">{f.caption[lang]}</span>
-            </span>
-          </figcaption>
-        </figure>
-      ))}
+      {entry.work.page.sections.map((sec, si) => {
+        const pair = sec.layout === 'pair';
+        const list = sec.figures ?? [];
+        // 并排时单数张的最后一张占满一行（CSS），这一张照常按 84svh 封高
+        const figs = list.map((f, i) => figure(f, pair && !(list.length % 2 === 1 && i === list.length - 1)));
+        return (
+          <Fragment key={si}>
+            <h2>{sec.heading[lang]}</h2>
+            {(sec.texts ?? []).map((t, ti) => (
+              <Fragment key={ti}>
+                {t[lang].map((para, pi) => (
+                  <p key={pi}>{para}</p>
+                ))}
+                <p className="os-note">
+                  {t.original === 'both' ? c.both : t.original === lang ? c.original : c.translated}
+                  {' · '}
+                  {c.source}
+                  {t.source[lang]}
+                </p>
+              </Fragment>
+            ))}
+            {figs.length === 0 ? null : pair ? <div className="cs-figs cs-figs--wide cs-figs--pair os-pair">{figs}</div> : figs}
+          </Fragment>
+        );
+      })}
     </>
   );
 }
@@ -256,6 +277,10 @@ export function OtherWorkPage({ entry }: { entry: Entry }) {
         </section>
 
         <div className="cs-layout">
+          <CaseIndex
+            en={[OPENING_TITLE.en, ...work.page.sections.map((x) => x.heading.en)]}
+            zh={[OPENING_TITLE.zh, ...work.page.sections.map((x) => x.heading.zh)]}
+          />
           <div className="cs-main">
             <div className="cs-body os-body">
               <Pick en={<Body entry={entry} lang="en" />} zh={<Body entry={entry} lang="zh" />} />

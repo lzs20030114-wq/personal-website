@@ -522,3 +522,9 @@ body:has(.cs) .ld-header__in, .cs .ld-footer__in { max-width: 1240px; }
 .os-zoom { display: block; cursor: zoom-in; }
 .os-zoom:focus-visible { outline: 1px solid var(--cs-g); outline-offset: 3px; }
 .cs-body p.os-note { font: 400 12px / 1.6 var(--cs-mono); color: var(--cs-dim); letter-spacing: 0; text-transform: none; }
+/* 按节叙事（第二版）：照片、效果图两两并排 */
+/* 并排：固定两列；单数张时最后一张占满一行，不留半行空位。窄屏回一列 */
+.os-body > .os-pair { margin: 8px 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.os-pair .os-figure { width: 100%; }
+.os-pair > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+@media (max-width: 720px) { .os-body > .os-pair { grid-template-columns: minmax(0, 1fr); } }

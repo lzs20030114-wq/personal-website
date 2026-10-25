@@ -1,10 +1,30 @@
 {
   "groups": [
-    { "key": "interaction-research", "title": "Interaction & design research", "zh": "交互与设计研究" },
-    { "key": "landscape-urban", "title": "Landscape & urban design", "zh": "景观与城市" },
-    { "key": "interiors", "title": "Interiors", "zh": "室内" },
-    { "key": "architecture-construction", "title": "Architecture & construction", "zh": "建筑与构造" },
-    { "key": "installations", "title": "Installations", "zh": "装置" }
+    {
+      "key": "interaction-research",
+      "title": "Interaction & design research",
+      "zh": "交互与设计研究"
+    },
+    {
+      "key": "landscape-urban",
+      "title": "Landscape & urban design",
+      "zh": "景观与城市"
+    },
+    {
+      "key": "interiors",
+      "title": "Interiors",
+      "zh": "室内"
+    },
+    {
+      "key": "architecture-construction",
+      "title": "Architecture & construction",
+      "zh": "建筑与构造"
+    },
+    {
+      "key": "installations",
+      "title": "Installations",
+      "zh": "装置"
+    }
   ],
   "works": [
     {
@@ -13,7 +33,12 @@
       "year": "2026",
       "context": "Internship · Tsinghua Future Lab × DeRucci",
       "line": "2030 Sleep Foresight Study",
-      "image": { "src": "/log/sleep-20260529-original-report.png", "width": 1440, "height": 1600, "position": "top" },
+      "image": {
+        "src": "/log/sleep-20260529-original-report.png",
+        "width": 1440,
+        "height": 1600,
+        "position": "top"
+      },
       "href": "/archive",
       "log": "other-work"
     },
@@ -23,7 +48,10 @@
       "year": "2025",
       "context": "Workshop · DigitalFUTURES 2025",
       "slug": "co-evolving-kitchen",
-      "zh": { "title": "Co-Evolving Kitchen", "context": "DigitalFUTURES 2025 工作营" },
+      "zh": {
+        "title": "Co-Evolving Kitchen",
+        "context": "DigitalFUTURES 2025 工作营"
+      },
       "image": {
         "src": "/other/co-evolving-kitchen/01-cover.webp",
         "width": 2000,
@@ -36,71 +64,370 @@
       "page": {
         "credits": [
           {
-            "role": { "en": "Instructors", "zh": "导师" },
+            "role": {
+              "en": "Instructors",
+              "zh": "导师"
+            },
             "names": [
-              { "en": "Yan Chao", "zh": "闫超" },
-              { "en": "Li Te", "zh": "李特" }
+              {
+                "en": "Yan Chao",
+                "zh": "闫超"
+              },
+              {
+                "en": "Li Te",
+                "zh": "李特"
+              }
             ]
           },
           {
-            "role": { "en": "Teaching assistants", "zh": "助教" },
+            "role": {
+              "en": "Teaching assistants",
+              "zh": "助教"
+            },
             "names": [
-              { "en": "Yanzi Jin", "zh": "金衍孜" },
-              { "en": "Jiaxin Yao", "zh": "姚佳欣" }
+              {
+                "en": "Yanzi Jin",
+                "zh": "金衍孜"
+              },
+              {
+                "en": "Jiaxin Yao",
+                "zh": "姚佳欣"
+              }
             ]
           },
           {
-            "role": { "en": "Participants", "zh": "学员" },
+            "role": {
+              "en": "Participants",
+              "zh": "学员"
+            },
             "names": [
-              { "en": "Qizhi Dong", "zh": "董奇志" },
-              { "en": "Xi Chen", "zh": "陈曦" },
-              { "en": "Junyi Lu", "zh": "陆钧毅" },
-              { "en": "Ruiying Jia", "zh": "贾睿莹" },
-              { "en": "Zishuo Li", "zh": "李梓硕" },
-              { "en": "Yiwen Fang", "zh": "方亦文" },
-              { "en": "Yuyao Jing", "zh": "井雨瑶" },
-              { "en": "Xiaohan Hu", "zh": "胡晓晗" },
-              { "en": "Xingyi Chen", "zh": "陈星怡" }
+              {
+                "en": "Qizhi Dong",
+                "zh": "董奇志"
+              },
+              {
+                "en": "Xi Chen",
+                "zh": "陈曦"
+              },
+              {
+                "en": "Junyi Lu",
+                "zh": "陆钧毅"
+              },
+              {
+                "en": "Ruiying Jia",
+                "zh": "贾睿莹"
+              },
+              {
+                "en": "Zishuo Li",
+                "zh": "李梓硕"
+              },
+              {
+                "en": "Yiwen Fang",
+                "zh": "方亦文"
+              },
+              {
+                "en": "Yuyao Jing",
+                "zh": "井雨瑶"
+              },
+              {
+                "en": "Xiaohan Hu",
+                "zh": "胡晓晗"
+              },
+              {
+                "en": "Xingyi Chen",
+                "zh": "陈星怡"
+              }
             ]
           }
         ],
-        "statement": {
-          "original": "zh",
-          "zh": [
-            "设计目的：通过实时记录人体行为，构建一个可以根据人动作实时变化以配合人体行为的厨房设施。",
-            "方法：首先使用ZED深度相机采集人体行为，提取骨点并在grasshopper里转化为mesh；定义动作，将厨房工作的动作提取出13个典型动作，逐一记录并对比得出每一个动作特征，研究骨点变化的相关性；之后链接LSTM预测模型，学习动作并设定预测结果和发出的交互指令。",
-            "呈现效果：一个可以预测使用者动作并随之做出反应的可以转动的工作台，工作台上有：空桌面、灶台、洗碗池、操作台这四个分区，可根据使用者动作自动旋转对应。上方储物柜可预测使用者取物需求自动下降，进入到伸手可触及的区域内。",
-            "最终展示中，体验者戴上Meta quest设备可以看到这个可动厨房设施。但此设计并非意图让使用者戴着Meta quest设备做饭，而是使用混合现实技术展示一个demo，期望可以实现一个真正的实体可动厨房。"
-          ],
-          "en": [
-            "Aim: record body movement in real time and build a kitchen fitting that changes in real time to suit what the body is doing.",
-            "Method: a ZED depth camera captures body movement, and the skeleton points are extracted and turned into a mesh in Grasshopper. Kitchen work was broken down into 13 typical actions, each recorded and compared to find its features and to study how the skeleton points change together. An LSTM prediction model was then connected to learn the actions, and its predictions were set to send interaction commands.",
-            "Result: a rotating worktop that predicts the user’s actions and responds. It has four zones (an empty surface, a hob, a sink and a prep counter) and turns to the matching zone as the user moves. The cabinet above predicts when the user wants to take something out and lowers itself within reach.",
-            "In the final presentation, visitors wearing a Meta Quest headset could see this moving kitchen. The design does not intend people to cook in a Meta Quest; mixed reality was used to show a demo, in the hope of building a real, physical moving kitchen."
-          ],
-          "source": { "en": "Project statement (Word document)", "zh": "作品说明（Word 文档）" }
-        },
-        "figures": [
+        "sections": [
           {
-            "src": "/other/co-evolving-kitchen/02-workflow.webp",
-            "width": 5000,
-            "height": 876,
-            "caption": {
-              "en": "Workflow, functional zoning and dimensions, from the workshop board",
-              "zh": "工作流程、功能分区与尺寸，取自工作营图版"
-            }
+            "heading": {
+              "en": "From responding to anticipating",
+              "zh": "从被动响应到主动预测"
+            },
+            "texts": [
+              {
+                "original": "en",
+                "en": [
+                  "The core research question of this study is: in the context of increasing integration between digital intelligence and the built environment, how can an intelligent system that continuously senses, learns, and predicts user behavior be integrated with physical space to enable real-time human–environment feedback and behavioral responses? More specifically, how can AI-driven smart spaces, through contextual recognition and prediction of user behavior patterns, influence and support individuals’ everyday activity decisions, thereby fostering mutual adaptation and co-evolution between spatial environments and user behavior?",
+                  "To explore this question, we designed and implemented a smart countertop prototype called the \"Co-Evolving Kitchen.\" By capturing and learning users' cooking actions, it actively rotates the countertop to anticipate the user's next action, aiming to provide a seamless cooking experience for older adults and individuals with lower limb disabilities."
+                ],
+                "zh": [
+                  "本研究的核心问题是：在数字智能与建成环境日益融合的背景下，一个持续感知、学习并预测用户行为的智能系统，如何与物理空间结合，实现人与环境之间的实时反馈和行为响应？更具体地说，AI 驱动的智能空间如何通过对用户行为模式的情境识别与预测，影响并支持个人的日常活动决策，从而促成空间环境与用户行为之间的相互适应与共同演化？",
+                  "为探讨这个问题，我们设计并实现了一个名为“Co-Evolving Kitchen”的智能台面原型。它采集并学习用户的烹饪动作，主动转动台面以预先迎合用户的下一个动作，目标是为老年人和下肢行动不便的人提供连贯顺畅的烹饪体验。"
+                ],
+                "source": {
+                  "en": "Jia, Chen, Dong, Lu, Jing, Li, Hu, Chen, Fang, Yan and Xu, “Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment”, conference paper manuscript (2025)",
+                  "zh": "Jia、Chen、Dong、Lu、Jing、Li、Hu、Chen、Fang、Yan、Xu，《Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment》，会议论文稿（2025）"
+                }
+              },
+              {
+                "original": "zh",
+                "en": [
+                  "Aim: record body movement in real time and build a kitchen fitting that changes in real time to suit what the body is doing."
+                ],
+                "zh": [
+                  "设计目的：通过实时记录人体行为，构建一个可以根据人动作实时变化以配合人体行为的厨房设施。"
+                ],
+                "source": {
+                  "en": "Project statement for the DigitalFUTURES 2025 workshop (Word document)",
+                  "zh": "DigitalFUTURES 2025 工作营作品说明（Word 文档）"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/co-evolving-kitchen/04-system-map.webp",
-            "width": 2415,
-            "height": 2507,
-            "caption": { "en": "System diagram", "zh": "系统流程图" }
+            "heading": {
+              "en": "Four modules",
+              "zh": "四个模块"
+            },
+            "texts": [
+              {
+                "original": "en",
+                "en": [
+                  "Perception: This module begins the \"translation\" process by capturing the user's real-time upper-body kinematic data via a ZED 3D depth camera. This data serves as the raw, embodied input for the cybernetic loop.",
+                  "Prediction: Serving as the system's cognitive core, this module employs K-Means (for feature extraction) and an LSTM network (for time series prediction). Its purpose is to decode the continuous stream of perceived data into a discrete, predictive \"next intention.\"",
+                  "Execution: This module enacts the system's dynamic spatial response, converting the AI's prediction into a physical, adaptive intervention. It receives signals via GhPython to drive the platform's rotation, reconfiguring the physical space to achieve the accessibility goal of \"operating in place.\"",
+                  "Feedback: This module is designed to address potential \"human-machine trust\" and \"loss of agency\" issues inherent in predictive systems. It employs Augmented Reality (AR) as a key intervention: before physical rotation, the system uses AR to provide \"anticipatory feedback.\" This \"visual negotiation\" transforms \"black box\" AI predictions into a transparent human-computer dialogue, ultimately closing the cybernetic loop."
+                ],
+                "zh": [
+                  "感知：这一模块开启“翻译”过程，通过 ZED 3D 深度相机采集用户上半身的实时运动数据。这些数据是控制回路最初的、具身的输入。",
+                  "预测：作为系统的认知核心，这一模块用 K-Means 提取特征、用 LSTM 网络做时间序列预测，把连续的感知数据流解读为一个离散的、可预测的“下一个意图”。",
+                  "执行：这一模块实现系统的动态空间响应，把 AI 的预测转为物理上的适应性介入。它通过 GhPython 接收信号，驱动台面转动，重新配置物理空间，实现“原地操作”这一无障碍目标。",
+                  "反馈：这一模块用来应对预测系统本身可能带来的“人机信任”和“失去主动权”问题。它以增强现实（AR）作为关键介入，在台面真正转动之前，系统先用 AR 给出“预期反馈”。这种“视觉协商”把“黑箱”式的 AI 预测变成透明的人机对话，最终闭合控制回路。"
+                ],
+                "source": {
+                  "en": "Jia, Chen, Dong, Lu, Jing, Li, Hu, Chen, Fang, Yan and Xu, “Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment”, conference paper manuscript (2025)",
+                  "zh": "Jia、Chen、Dong、Lu、Jing、Li、Hu、Chen、Fang、Yan、Xu，《Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment》，会议论文稿（2025）"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/co-evolving-kitchen/02-workflow.webp",
+                "width": 5000,
+                "height": 876,
+                "caption": {
+                  "en": "Workflow, functional zoning and dimensions, from the workshop board",
+                  "zh": "工作流程、功能分区与尺寸，取自工作营图版"
+                }
+              },
+              {
+                "src": "/other/co-evolving-kitchen/03-system-map.webp",
+                "width": 2415,
+                "height": 2507,
+                "caption": {
+                  "en": "System diagram",
+                  "zh": "系统流程图"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/co-evolving-kitchen/03-board.webp",
-            "width": 1975,
-            "height": 3292,
-            "caption": { "en": "Workshop board, full sheet", "zh": "工作营图版，整张" }
+            "heading": {
+              "en": "Translating movement into data",
+              "zh": "把动作翻译成数据"
+            },
+            "texts": [
+              {
+                "original": "en",
+                "en": [
+                  "First, we defined 12 core cooking actions based on four principles: process coverage, posture distinguishability, detectability, and criticality. We then employed hierarchical coding (e.g., 1.0 for \"washing vegetables,\" 1.1 for \"finishing washing vegetables\") to capture key action states.",
+                  "Second, we collected skeletal motion data from subjects performing the aforementioned 12 actions in a simulated kitchen environment. We then \"translated\" the 3D keypoint coordinates captured by the ZED camera into 20 more robust \"mapping features\".",
+                  "Third, to objectively transform \"tacit knowledge\" into \"explicit logic,\" we performed an offline K-Means clustering analysis on the dataset. This analysis utilized a \"core feature + auxiliary feature\" matching logic, thereby allowing designers to retain a degree of \"interpretability\" and \"interventionability\" in the system."
+                ],
+                "zh": [
+                  "首先，我们按四条原则定义了 12 个核心烹饪动作：覆盖完整流程、姿态可区分、可被检测、关键。再用分级编码（如 1.0 表示“洗菜”，1.1 表示“洗菜结束”）记录关键的动作状态。",
+                  "其次，我们在模拟厨房中采集受试者完成这 12 个动作时的骨骼运动数据，再把 ZED 相机采到的 3D 关键点坐标“翻译”成 20 个更稳健的“映射特征”。",
+                  "第三，为了把“隐性知识”客观地转成“显性逻辑”，我们对数据集做了离线 K-Means 聚类分析。分析采用“核心特征 + 辅助特征”的匹配逻辑，让设计者在系统里保留一定的“可解释性”和“可介入性”。"
+                ],
+                "source": {
+                  "en": "Jia, Chen, Dong, Lu, Jing, Li, Hu, Chen, Fang, Yan and Xu, “Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment”, conference paper manuscript (2025), “Use of Visual Materials” (excerpts)",
+                  "zh": "Jia、Chen、Dong、Lu、Jing、Li、Hu、Chen、Fang、Yan、Xu，《Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment》，会议论文稿（2025），“Use of Visual Materials”一节（节选）"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/co-evolving-kitchen/04-actions.webp",
+                "width": 2378,
+                "height": 752,
+                "caption": {
+                  "en": "The 12 core cooking actions",
+                  "zh": "12 个核心烹饪动作"
+                }
+              },
+              {
+                "src": "/other/co-evolving-kitchen/05-keypoints.webp",
+                "width": 1024,
+                "height": 683,
+                "caption": {
+                  "en": "3D keypoints the camera can capture",
+                  "zh": "相机可采集的 3D 关键点"
+                }
+              },
+              {
+                "src": "/other/co-evolving-kitchen/06-postures.webp",
+                "width": 2057,
+                "height": 715,
+                "caption": {
+                  "en": "Postures of some core actions",
+                  "zh": "部分核心动作的姿态"
+                }
+              },
+              {
+                "src": "/other/co-evolving-kitchen/07-clustering.webp",
+                "width": 1769,
+                "height": 946,
+                "caption": {
+                  "en": "K-means clustering of some core features",
+                  "zh": "部分核心特征的 K-means 聚类结果"
+                }
+              }
+            ]
+          },
+          {
+            "heading": {
+              "en": "Predicting the next step",
+              "zh": "预测下一步"
+            },
+            "texts": [
+              {
+                "original": "en",
+                "en": [
+                  "Building a co-evolving cybernetic system requires modeling its temporal dimension. Cooking, as a sequential activity, is not a series of isolated events but a flow of intentions contingent on history and context.",
+                  "To train the LSTM, we first addressed the challenge of data scarcity common in prototype-driven research. We constructed a focused dataset of 12 action categories derived from 10 typical Chinese recipes. To maximize the utility of this data, we employed a sliding window method, which yielded 356 input-target sequence pairs. This approach implements a \"four-step-history\" strategy—predicting the fifth action based on the previous four—a method chosen specifically to enable the model to learn robust behavioral patterns from a necessarily constrained dataset."
+                ],
+                "zh": [
+                  "构建一个共同演化的控制系统，需要为它的时间维度建模。烹饪是一种有先后顺序的活动，它由一连串意图构成，每一步都依赖先前的步骤和情境。",
+                  "训练 LSTM 时，我们先要应对原型研究里常见的数据稀缺。我们从 10 道典型的中国菜谱中整理出 12 类动作，构成一个聚焦的数据集。为了尽量用好这些数据，我们采用滑动窗口方法，得到 356 组输入序列与目标的配对。这一做法实现了“四步历史”策略，即根据前四个动作预测第五个，专门用来让模型从必然有限的数据集中学到稳健的行为模式。"
+                ],
+                "source": {
+                  "en": "Jia, Chen, Dong, Lu, Jing, Li, Hu, Chen, Fang, Yan and Xu, “Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment”, conference paper manuscript (2025)",
+                  "zh": "Jia、Chen、Dong、Lu、Jing、Li、Hu、Chen、Fang、Yan、Xu，《Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment》，会议论文稿（2025）"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/co-evolving-kitchen/08-lstm.webp",
+                "width": 2304,
+                "height": 473,
+                "caption": {
+                  "en": "Data processing, LSTM prediction and cyclical training",
+                  "zh": "数据处理、LSTM 预测与循环训练"
+                }
+              }
+            ]
+          },
+          {
+            "heading": {
+              "en": "A countertop that turns",
+              "zh": "会转的台面"
+            },
+            "texts": [
+              {
+                "original": "en",
+                "en": [
+                  "The prototype model in the Rhino environment features a rotatable circular countertop comprising four functional zones: a storage area, a washing area, a chopping area, and a cooking area. This is supplemented by a height-adjustable hanging storage cabinet. When the LSTM model predicts the next action (e.g., \"chopping vegetables\" or \"cooking\"), the countertop automatically rotates to present the corresponding functional zone directly to the user. This is designed to reduce body displacement and optimize workflow. Similarly, the hanging storage cabinet automatically adjusts its height based on the user's \"retrieve-put back\" action recognition, improving ease of use and accessibility.",
+                  "At the real-time control level, when the LSTM model predicts an impending change in user intention (e.g., that action \"cutting vegetables (2.0)\" will follow \"finished washing vegetables (1.1)\"), the system logic immediately outputs a Boolean trigger signal. This signal activates the \"change-driven module\" in Grasshopper, which executes the countertop rotation or storage cabinet adjustment. Grasshopper then synchronizes the updated Mesh data back to the Meta Quest 3 headset. This achieves a consistent augmented reality (AR) presentation, allowing users to instantly perceive the spatial feedback that corresponds to their predicted intention."
+                ],
+                "zh": [
+                  "Rhino 中的原型是一个可转动的圆形台面，分四个功能区：储物区、清洗区、切配区和烹饪区，上方另有一个可调节高度的吊柜。当 LSTM 模型预测出下一个动作（如“切菜”或“烹饪”）时，台面自动转动，把对应的功能区直接转到用户面前，以减少身体移动、理顺操作流程。吊柜同样根据识别到的“取物”和“放回”动作自动调节高度，让使用更方便、更无障碍。",
+                  "在实时控制层面，当 LSTM 模型预测到用户意图即将改变（例如“洗菜结束（1.1）”之后将是“切菜（2.0）”），系统逻辑立即输出一个布尔触发信号，激活 Grasshopper 中的“变化驱动模块”，执行台面转动或吊柜调节。Grasshopper 再把更新后的网格数据同步回 Meta Quest 3 头显，形成一致的增强现实（AR）呈现，让用户即时看到与自己被预测的意图相对应的空间反馈。"
+                ],
+                "source": {
+                  "en": "Jia, Chen, Dong, Lu, Jing, Li, Hu, Chen, Fang, Yan and Xu, “Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment”, conference paper manuscript (2025)",
+                  "zh": "Jia、Chen、Dong、Lu、Jing、Li、Hu、Chen、Fang、Yan、Xu，《Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment》，会议论文稿（2025）"
+                }
+              },
+              {
+                "original": "zh",
+                "en": [
+                  "In the final presentation, visitors wearing a Meta Quest headset could see this moving kitchen. The design does not intend people to cook in a Meta Quest. Mixed reality was used to show a demo, in the hope of building a real, physical moving kitchen."
+                ],
+                "zh": [
+                  "最终展示中，体验者戴上Meta quest设备可以看到这个可动厨房设施。但此设计并非意图让使用者戴着Meta quest设备做饭，而是使用混合现实技术展示一个demo，期望可以实现一个真正的实体可动厨房。"
+                ],
+                "source": {
+                  "en": "Project statement for the DigitalFUTURES 2025 workshop (Word document)",
+                  "zh": "DigitalFUTURES 2025 工作营作品说明（Word 文档）"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/co-evolving-kitchen/09-prototype.webp",
+                "width": 2712,
+                "height": 2397,
+                "caption": {
+                  "en": "The prototype: a rotating countertop with four zones and a hanging cabinet",
+                  "zh": "原型：四个功能区的转台与吊柜"
+                }
+              },
+              {
+                "src": "/other/co-evolving-kitchen/10-rotation-1.webp",
+                "width": 2000,
+                "height": 1119,
+                "caption": {
+                  "en": "In AR, the countertop turns to the predicted zone (1/3)",
+                  "zh": "AR 中台面转向被预测的功能区（1/3）"
+                }
+              },
+              {
+                "src": "/other/co-evolving-kitchen/11-rotation-2.webp",
+                "width": 2000,
+                "height": 1120,
+                "caption": {
+                  "en": "In AR, the countertop turns to the predicted zone (2/3)",
+                  "zh": "AR 中台面转向被预测的功能区（2/3）"
+                }
+              },
+              {
+                "src": "/other/co-evolving-kitchen/12-rotation-3.webp",
+                "width": 2000,
+                "height": 1127,
+                "caption": {
+                  "en": "In AR, the countertop turns to the predicted zone (3/3)",
+                  "zh": "AR 中台面转向被预测的功能区（3/3）"
+                }
+              }
+            ]
+          },
+          {
+            "heading": {
+              "en": "What the test showed, and its limits",
+              "zh": "试验结果与局限"
+            },
+            "texts": [
+              {
+                "original": "en",
+                "en": [
+                  "The prototype's validation in a simulated cooking task provides a clear, empirical illustration of the \"behavior-space\" co-evolution we propose. The experimental results trace a complete cybernetic loop: (1) The subject's completion of \"washing vegetables (1.1)\" was perceived as the initial input. (2) The system translated this into a predictive \"next intention\" (AR: \"Prediction: Chopping Vegetables\"). (3) This prediction triggered a real-time, adaptive spatial response, with the countertop rotating the chopping area (Area C) to the subject. (4) The subject, in turn, seamlessly transitioned to \"chopping vegetables (2.0).\"",
+                  "Despite validating the feasibility of the proposed behavior-responsive framework, several limitations underscore the need for more rigorous empirical grounding. First, the study lacks quantitative evaluation, such as model accuracy, task performance comparison, and behavioral efficiency metrics. This limitation makes it difficult to substantiate the system’s advantages over non-predictive environments. Second, the training dataset was limited both in size and in behavioral diversity, as it was derived from a small number of repeated demonstrations. Such a narrow behavioral spectrum may reduce the model’s ability to generalize and increases the risk of overfitting. Third, the absence of data from older adults or other user groups restricts the framework’s applicability to population-level variability. Finally, the controlled laboratory setting and the sensing constraints of the ZED camera limit ecological validity."
+                ],
+                "zh": [
+                  "原型在模拟烹饪任务中的验证，清楚地展示了我们提出的行为与空间的共同演化。试验结果走完了一个完整的控制回路：（1）受试者完成“洗菜（1.1）”，作为初始输入被感知，（2）系统把它转成一个预测出的“下一个意图”（AR 显示“预测：切菜”），（3）这一预测触发实时的适应性空间响应，台面把切配区（C 区）转到受试者面前，（4）受试者随即顺畅地转入“切菜（2.0）”。",
+                  "虽然验证了这一行为响应框架的可行性，研究仍有几处局限，需要更严格的实证支撑。第一，研究缺少定量评估，如模型准确率、任务表现对比和行为效率指标，因此难以证明系统相对非预测环境的优势。第二，训练数据集规模和行为多样性都有限，来自少数几次重复示范，行为范围窄，可能削弱模型的泛化能力并增加过拟合风险。第三，没有来自老年人或其他用户群体的数据，限制了框架在人群差异上的适用性。最后，受控的实验室环境和 ZED 相机的感知限制，影响了生态效度。"
+                ],
+                "source": {
+                  "en": "Jia, Chen, Dong, Lu, Jing, Li, Hu, Chen, Fang, Yan and Xu, “Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment”, conference paper manuscript (2025)",
+                  "zh": "Jia、Chen、Dong、Lu、Jing、Li、Hu、Chen、Fang、Yan、Xu，《Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment》，会议论文稿（2025）"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/co-evolving-kitchen/13-board.webp",
+                "width": 1975,
+                "height": 3292,
+                "caption": {
+                  "en": "Workshop board, full sheet",
+                  "zh": "工作营图版，整张"
+                }
+              }
+            ]
           }
         ]
       }
@@ -128,95 +455,387 @@
       },
       "page": {
         "credits": [
-          { "role": { "en": "Instructor", "zh": "指导教师" }, "names": [{ "en": "Dongjiang Yang", "zh": "杨冬江" }] }
-        ],
-        "statement": {
-          "original": "zh",
-          "zh": [
-            "本设计实践以既有的历史文脉为出发点，综合运用了前文提出的历史形态解读、山形意象转译与公众参与导向等方法论，旨在通过空间形态的有机生成，实现永定门公园改造方案的历史连续性与功能复合。首先从历史场域入手，厘清永定门及其城墙曾经“城墙如山”的意象，以及与当代城市肌理的断裂，从而确定设计的起点与方向；接着从山形意象出发，探索新形态的生成逻辑；然后结合HOPSCA（城市综合体）理论，组织公园的功能分区；并通过路径与建筑的布局在场地内重新缝合中轴线延伸的肌理；最后强调场地的公共性，营造市民参与的空间氛围。",
-            "除了设计形式之外，设计应当以实用主义和实际情况从另一角度考量场地条件。在本场地中，永定门公园存在大量绿地面积且都有植物种植，作为重要的自然景观和人文环境，永定门的绿地应当被保护并利用起来。因此整个设计不应当占用和破坏过多绿地和植物。从这个角度出发，本设计选择采用架空步道和建筑的形式尽量保留原有绿地，同时原有的广场硬地也不会被占用。"
-          ],
-          "en": [
-            "This design practice starts from the site’s existing historical context. It applies the methods set out earlier in the thesis, namely reading historical form, translating the image of the mountain, and orienting the design toward public participation, and aims to give the renovation of Yongdingmen Park historical continuity and a mix of functions through an organic generation of spatial form. It begins with the historical site, clarifying the old image of Yongdingmen and its city wall as “a wall like a mountain” and its break from today’s urban fabric, which sets the starting point and direction of the design. It then works out how a new form can be generated from the mountain image, organises the park’s functional zones with HOPSCA (urban complex) theory, uses the layout of paths and buildings to stitch the fabric of the extended central axis back together on the site, and finally stresses the public character of the site, creating space in which citizens can take part.",
-            "Beyond questions of form, the design also weighs the site conditions pragmatically. Yongdingmen Park has a large amount of green space, all of it planted. As an important natural landscape and cultural setting, this green space should be protected and put to use, so the design should not take over or damage much of it. For this reason it uses elevated walkways and raised buildings to keep as much of the existing green space as possible, and the existing paved plazas are not built over either."
-          ],
-          "source": {
-            "en": "Undergraduate thesis (June 2025), sections 4.3 and 4.3.1",
-            "zh": "毕业论文（2025 年 6 月）4.3 节与 4.3.1 节"
+          {
+            "role": {
+              "en": "Instructor",
+              "zh": "指导教师"
+            },
+            "names": [
+              {
+                "en": "Dongjiang Yang",
+                "zh": "杨冬江"
+              }
+            ]
           }
-        },
-        "figures": [
+        ],
+        "sections": [
           {
-            "src": "/other/floating-terrain/02-final-board.webp",
-            "width": 2944,
-            "height": 2208,
-            "caption": {
-              "en": "Final board: name, form development, site plan, plans, sections and renderings",
-              "zh": "最终图版：项目名、形态演变、总图、平剖面与效果图"
-            }
+            "heading": {
+              "en": "The thesis",
+              "zh": "论文"
+            },
+            "texts": [
+              {
+                "original": "both",
+                "en": [
+                  "This study focuses on the evolution of Beijing's urban texture, exploring its impact on citizens' lives and how citizens' lives in turn shape the urban texture. By combing Beijing's transformation from traditional square layout to modern organic structure, the evolution of urban planning concepts and changes in citizens' lifestyles are analyzed. The study uses methods such as literature review, case analysis and field investigation to deeply explore the protection and reuse of historical textures in the process of urban renewal, as well as the participation and influence of citizens in urban space. The study found that changes in urban texture not only affect citizens' daily lives and social interactions, but also their needs and behaviors are constantly reshaping urban space. This study emphasizes that in urban planning and renewal, it is necessary to fully consider citizens' cultural identity and actual needs to achieve the coordinated development of urban texture and citizens' lives.",
+                  "And through the above-derived methodology, Yongdingmen Park was selected for urban park design, trying to reconnect and open up the broken urban texture at the southern end of the central axis, and propose a route for future urban renewal in Beijing."
+                ],
+                "zh": [
+                  "本研究聚焦于北京城市肌理的演变，探讨其对市民生活的影响，以及市民生活如何反过来塑造城市肌理。通过梳理北京从传统方正布局向现代有机化结构的转变，分析了城市规划理念的演进和市民生活方式的变化。研究采用文献综述、案例分析和实地调查等方法，深入探讨了城市更新过程中历史肌理的保护与再利用，以及市民在城市空间中的参与和影响。研究发现，城市肌理的变化不仅影响了市民的日常生活和社会互动，市民的需求和行为也在不断重塑城市空间。本研究强调了在城市规划和更新中，需充分考虑市民的文化认同和实际需求，实现城市肌理与市民生活的协同发展。",
+                  "并通过以上得出的方法论选定永定门公园，进行城市公园设计，试将中轴线南端破碎的城市肌理重新联系打通，并提出北京市未来城市更新的一种路线。"
+                ],
+                "source": {
+                  "en": "Undergraduate thesis (June 2025), abstract",
+                  "zh": "毕业论文（2025 年 6 月）摘要"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/floating-terrain/03-form-generation.webp",
-            "width": 2082,
-            "height": 3122,
-            "caption": {
-              "en": "Form generation in five layers, from programme blocks to a continuous roof and walkway",
-              "zh": "五层形态生成：从功能体块到连续屋顶与步道"
-            }
+            "heading": {
+              "en": "A broken axis",
+              "zh": "一条断开的轴线"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "Yongdingmen was the southern gate of Beijing's city wall. Its gate tower and walls once stood over the central axis and carried the symbolic image of a mountain. After the gate tower was demolished in the 1950s, the axis broke clearly at this point. The present park keeps only traces of the old road and has lost its historical marker. The first logic of the design is to face this break. Drawing on studies that consider the rebuilding of the gate tower important for the continuity of Beijing's central axis, we traced the ‘city like a mountain’ form of the Yongdingmen wall and treated it as an image of mountains, the source of the design's imagination. The park runs about 1,000 metres north to south, and the imperial way through its middle once continued Yongdingmen Inner Street, with the gate tower marking the start of the green space at the southern end of the axis. Recombining the lost gate tower with the road axis is therefore the core of restoring the site's historical context. Starting from the relation between historical form and contemporary rupture, the design uses the mountain image as a link that rebuilds the connection between cultural memory and urban fabric."
+                ],
+                "zh": [
+                  "永定门原为北京城墙南城门，城楼与城墙曾雄踞中轴线上，具有象征性的“山形”意象。然而自20世纪50年代永定门城楼被拆除后，中央轴线在此处出现明显断裂。当前的公园只留下原有道路遗迹，但失去了历史标志。设计的首要逻辑是正视这一断裂：借鉴相关研究认为，永定门城楼的重建对于恢复北京中轴线连续性具有重要意义。在此基础上，我们梳理永定门城墙的“城如山”形态，将其视作一种山峦意象，作为设计想象的源头。实际上，永定门公园本身沿南北方向约1000米延伸，其中贯穿中轴的御道曾是永定门内大街的延续，城楼即为中轴线南端绿地的标志性起点。由此可见，将失落的城楼与道路轴线重新组合，是恢复场地历史语境的核心。设计从“历史形态—当代断裂”的关系出发，提出在新方案中以山形意象为纽带，重新构建文化记忆与城市肌理的联系。"
+                ],
+                "source": {
+                  "en": "Undergraduate thesis (June 2025), section 4.3.1",
+                  "zh": "毕业论文（2025 年 6 月）4.3.1 节"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/floating-terrain/04-axonometric.webp",
-            "width": 3122,
-            "height": 2082,
-            "caption": { "en": "Axonometric of the whole linear park", "zh": "长条形公园整体轴测" }
+            "heading": {
+              "en": "The site today",
+              "zh": "场地现在的样子"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "Traffic problems with several causes have left the Yongdingmen site an ‘island’ for pedestrians. It has plaza walkways, but it is ringed by roads and poorly connected to the city's everyday routes.",
+                  "For a long time the site lacked services, shade and places to rest, and felt empty and monotonous, a place people walked past rather than stopped in. Arcades and seating added in recent years have improved it, but in the daytime the park still offers little to draw different groups of people. At night it looks different. Nearby residents come on their own to dance, roller-skate and play instruments. This night life brings some activity to the site, but the range is narrow, mostly exercise and leisure for middle-aged and older people.",
+                  "The Yongdingmen site is still some way from being part of its community. The space arrived physically, but the community did not fully follow. Residents mostly use a space that was ‘given’ to them, rather than taking part in making it and giving it meaning in daily life."
+                ],
+                "zh": [
+                  "种种原因共同引起的交通问题导致永定门场地虽有广场步道，却被车道围城行人的“孤岛”，与城市日常通行体系衔接不良。",
+                  "过去由于缺少服务配套和遮荫休憩设施，场地一度显得空旷单调，令人“走过便走过”，难以驻足。虽然近年增设了廊架和座椅改善了环境品质，但日间的永定门公园仍缺乏吸引多样人群的功能。另一方面，夜间的永定门广场呈现出另一番景象：夜晚，附近居民自发来此跳广场舞、轮滑练习、乐器演奏，这种广场夜生活为场地注入了一定活力，但活动类型较为单一，主要以中老年健身娱乐为主。",
+                  "可见，永定门场地在社区融合上仍有距离——空间物理上来了，社区社会上却未充分跟上，居民更多是被动地使用了一个“给予的”空间，而非主动参与营造和赋予其日常生活意义。"
+                ],
+                "source": {
+                  "en": "Undergraduate thesis (June 2025), section 4.1.2 (excerpts)",
+                  "zh": "毕业论文（2025 年 6 月）4.1.2 节（节选）"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/floating-terrain/02-site-axis.webp",
+                "width": 935,
+                "height": 701,
+                "caption": {
+                  "en": "The imperial way at the north plaza (photo by the author)",
+                  "zh": "永定门北广场御道（作者自摄）"
+                }
+              },
+              {
+                "src": "/other/floating-terrain/03-site-traffic.webp",
+                "width": 882,
+                "height": 662,
+                "caption": {
+                  "en": "Traffic around Yongdingmen (photo by the author)",
+                  "zh": "永定门周边交通（作者自摄）"
+                }
+              },
+              {
+                "src": "/other/floating-terrain/04-site-underpass.webp",
+                "width": 876,
+                "height": 657,
+                "caption": {
+                  "en": "The pedestrian underpass (photo by the author)",
+                  "zh": "永定门地下通道（作者自摄）"
+                }
+              },
+              {
+                "src": "/other/floating-terrain/05-site-people.webp",
+                "width": 880,
+                "height": 660,
+                "caption": {
+                  "en": "People lingering around Yongdingmen (photo by the author)",
+                  "zh": "永定门周边停留的人群（作者自摄）"
+                }
+              }
+            ],
+            "layout": "pair"
           },
           {
-            "src": "/other/floating-terrain/05-scene-aerial.webp",
-            "width": 2000,
-            "height": 1331,
-            "caption": {
-              "en": "From above: elevated walkway, planted roofs and courtyard",
-              "zh": "局部俯视：架空步道、绿化屋顶与中庭"
-            }
+            "heading": {
+              "en": "The wall as a mountain",
+              "zh": "城墙如山"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "In ancient Chinese cities and buildings, the mountain was not only a geographical element. It was often seen as a sheltering screen for the spaces of daily life. One can imagine the relation between the gate tower, the barbican and the living spaces around the original Yongdingmen. Tall, heavy walls and towers enclosed the living spaces, and the people who lived there made places of free everyday life in the shadow of the solemn walled city.",
+                  "In the renovation of Yongdingmen Park, the starting point taken from the site's history is the wall's past role as a defensive work and the image of the mountain. The first question is how to make, from the mountain form, a structure that people can walk on or through, as the physical base for all kinds of free everyday activity."
+                ],
+                "zh": [
+                  "总之，在中国古代城市和建筑中，“山”不仅是地理要素，更常被看作是生活空间的庇护屏障。因此可以想象在原永定门空间中，城楼、瓮城与周边生活空间的关系：高大厚重的城墙和城楼环绕生活空间，居民生活其中，在庄严方城空间阴影下营造出了自由生活的场所。",
+                  "在永定门公园的改造设计中，对于原场地历史的挖掘中，以城墙在历史中作为防御工事的性质和“山形”的意象作为切入点。首先考虑如何从“山形”出发营造出一个可以承载使用者行走或穿行其中的构造，作为使用者发生各种自由的生活行为的物理基础。"
+                ],
+                "source": {
+                  "en": "Undergraduate thesis (June 2025), sections 4.2.1 and 4.2.2",
+                  "zh": "毕业论文（2025 年 6 月）4.2.1 节与 4.2.2 节"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/floating-terrain/06-mountain-to-structure.webp",
+                "width": 561,
+                "height": 582,
+                "caption": {
+                  "en": "From the line of a mountain range to elevated walkways and roofs",
+                  "zh": "从山脉起伏的形态到架空的步道与屋顶"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/floating-terrain/06-scene-ground.webp",
-            "width": 2000,
-            "height": 1331,
-            "caption": { "en": "At walking level", "zh": "步行层视角" }
+            "heading": {
+              "en": "Raised, so the green can stay",
+              "zh": "架空，把绿地留下"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "Beyond questions of form, the design also weighs the site conditions pragmatically. Yongdingmen Park has a large amount of green space, all of it planted. As an important natural landscape and cultural setting, this green space should be protected and put to use, so the design should not take over or damage much of it. For this reason it uses elevated walkways and raised buildings to keep as much of the existing green space as possible, and the existing paved plazas are not built over either.",
+                  "In practice, undulating ramps link the existing green space with the building roofs, and earth-covered construction lets visitors walk on top of the buildings. Some buildings open their interiors to the outside, giving the experience of being inside a mountain."
+                ],
+                "zh": [
+                  "除了设计形式之外，设计应当以实用主义和实际情况从另一角度考量场地条件。在本场地中，永定门公园存在大量绿地面积且都有植物种植，作为重要的自然景观和人文环境，永定门的绿地应当被保护并利用起来。因此整个设计不应当占用和破坏过多绿地和植物。从这个角度出发，本设计选择采用架空步道和建筑的形式尽量保留原有绿地，同时原有的广场硬地也不会被占用。",
+                  "具体做法包括：在场地中构建起伏坡道链接自然绿地和建筑屋顶，使用覆土建筑工艺允许游人行走在其上；部分建筑打通室内外空间，营造出置身于山中的独特空间体验。"
+                ],
+                "source": {
+                  "en": "Undergraduate thesis (June 2025), sections 4.3.1 and 4.3.2",
+                  "zh": "毕业论文（2025 年 6 月）4.3.1 节与 4.3.2 节"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/floating-terrain/07-elevated.webp",
+                "width": 1103,
+                "height": 210,
+                "caption": {
+                  "en": "The raised layer (drawn by the author)",
+                  "zh": "架空示意（作者自绘）"
+                }
+              },
+              {
+                "src": "/other/floating-terrain/08-form-generation.webp",
+                "width": 2082,
+                "height": 3122,
+                "caption": {
+                  "en": "Form generation in five layers, from programme blocks to a continuous roof and walkway",
+                  "zh": "五层形态生成：从功能体块到连续屋顶与步道"
+                }
+              },
+              {
+                "src": "/other/floating-terrain/09-axonometric.webp",
+                "width": 3122,
+                "height": 2082,
+                "caption": {
+                  "en": "Axonometric of the whole linear park",
+                  "zh": "长条形公园整体轴测"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/floating-terrain/07-model-overall.webp",
-            "width": 2000,
-            "height": 1333,
-            "caption": {
-              "en": "Physical model along its full length, with the imperial way and the city gate at the far end",
-              "zh": "实体模型纵向全景：御道、两侧空间与远端城门"
-            }
+            "heading": {
+              "en": "Four zones",
+              "zh": "四个功能区"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "Following the HOPSCA framework for urban complexes, the site is divided into four zones: a landscape walkway, a commercial zone, a conference centre, and a skate park and sports area. An urban complex depends on mixed functions and connected spaces, so here the zones sit close together and overlap, forming one civic activity centre.",
+                  "The four zones form a staggered but continuous structure. The central walkway runs through the whole site like a spine, the commercial blocks, green space and walkways on either side interlock, and the skate park on the edge connects to the conference centre. By mixing functions and letting the zones overlap, the design aims at the varied community structure of an urban complex, in which each zone has its own role and supports the others, the ‘functional penetration’ that HOPSCA stresses."
+                ],
+                "zh": [
+                  "基于HOPSCA城市综合体的理论框架，场地被划分为四大功能区：景观步道区、商业活动区、会议中心区和滑板公园和运动区。城市综合体强调多功能复合与空间关联，因此在本项目中，各功能区将紧密布局、相互渗透，共同构建一个综合性的市民活动中心。",
+                  "以上四大区呈现错落而连贯的空间结构：中央的步道区如脊梁贯通全场，两侧商业区绿地步道部分交互布局，滑板公园在外围与会议中心相连。通过功能混合和分区渗透，力图营造类似城市综合体的多元社区结构，使每个功能区既各司其职又互为依托，如同HOPSCA所强调的“功能渗透”。"
+                ],
+                "source": {
+                  "en": "Undergraduate thesis (June 2025), section 4.3.3 (excerpts)",
+                  "zh": "毕业论文（2025 年 6 月）4.3.3 节（节选）"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/floating-terrain/10-zoning.webp",
+                "width": 1160,
+                "height": 589,
+                "caption": {
+                  "en": "Functional zones (drawn by the author)",
+                  "zh": "功能分区（作者自绘）"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/floating-terrain/08-model-roof.webp",
-            "width": 2000,
-            "height": 1123,
-            "caption": {
-              "en": "Physical model from above: roof openings and changes in level",
-              "zh": "实体模型局部俯拍：屋顶开孔与平台高差"
-            }
+            "heading": {
+              "en": "For everyday life",
+              "zh": "留给日常生活"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "The final aim of the scheme is an urban space that is public and open to participation. Every zone is laid out to encourage people to use it actively. Along the walkway are landscape platforms and exhibition spaces for festivals and open-air shows. The commercial street has generous pedestrian space and outdoor café seating, so that people meet each other in everyday leisure. The multi-purpose halls at and around the conference centre are open to the public for cultural forums and lectures. The skate park gives teenagers a place to practise and perform, and its seating and promenades draw passers-by to stop and watch, making the space livelier."
+                ],
+                "zh": [
+                  "方案的最终目标是为市民提供一个富有参与性和公共性的城市生活空间。各类功能区的布局都倾向于鼓励市民主动使用：步道沿线设有若干景观平台和展览空间，可举办节庆活动和露天展览；商业街区内设计宽敞的行人空间和室外咖啡座，使人们在日常休闲中实现社交互动；会议中心及周边附设的多功能厅面向公众开放，举办文化论坛、教育讲座等活动，吸引市民知识交流。滑板公园则为青少年群体提供了运动与表演的场所，现场观众席和散步道促使路人参与观看，形成更具活力的公共场域。"
+                ],
+                "source": {
+                  "en": "Undergraduate thesis (June 2025), section 4.3.4",
+                  "zh": "毕业论文（2025 年 6 月）4.3.4 节"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/floating-terrain/11-scene-aerial.webp",
+                "width": 2000,
+                "height": 1331,
+                "caption": {
+                  "en": "From above: elevated walkway, planted roofs and courtyard",
+                  "zh": "局部俯视：架空步道、绿化屋顶与中庭"
+                }
+              },
+              {
+                "src": "/other/floating-terrain/12-scene-ground.webp",
+                "width": 2000,
+                "height": 1331,
+                "caption": {
+                  "en": "At walking level",
+                  "zh": "步行层视角"
+                }
+              },
+              {
+                "src": "/other/floating-terrain/13-scene-3.webp",
+                "width": 2000,
+                "height": 1331,
+                "caption": {
+                  "en": "A planted roof on columns",
+                  "zh": "立在柱子上的绿化屋顶"
+                }
+              },
+              {
+                "src": "/other/floating-terrain/14-scene-6.webp",
+                "width": 2000,
+                "height": 1331,
+                "caption": {
+                  "en": "A curved roof among ginkgo trees in autumn",
+                  "zh": "秋天的银杏与曲面屋顶"
+                }
+              }
+            ],
+            "layout": "pair"
           },
           {
-            "src": "/other/floating-terrain/09-zoning.webp",
-            "width": 3452,
-            "height": 1883,
-            "caption": {
-              "en": "Functional zones and their HOPSCA counterparts, from the thesis defence",
-              "zh": "功能分区与 HOPSCA 的对应，取自答辩"
-            }
+            "heading": {
+              "en": "The model",
+              "zh": "实体模型"
+            },
+            "figures": [
+              {
+                "src": "/other/floating-terrain/15-model-gate.webp",
+                "width": 2000,
+                "height": 1333,
+                "caption": {
+                  "en": "The gate on the axis",
+                  "zh": "中轴上的城门"
+                }
+              },
+              {
+                "src": "/other/floating-terrain/16-model-overall.webp",
+                "width": 2000,
+                "height": 1333,
+                "caption": {
+                  "en": "The whole length, with the imperial way and the gate at the far end",
+                  "zh": "纵向全景：御道与远端的城门"
+                }
+              },
+              {
+                "src": "/other/floating-terrain/17-model-walkway.webp",
+                "width": 2000,
+                "height": 1333,
+                "caption": {
+                  "en": "Elevated walkways from a low angle",
+                  "zh": "低角度看架空步道"
+                }
+              },
+              {
+                "src": "/other/floating-terrain/18-model-roof.webp",
+                "width": 2000,
+                "height": 1123,
+                "caption": {
+                  "en": "Roof openings and changes in level",
+                  "zh": "屋顶开孔与平台高差"
+                }
+              },
+              {
+                "src": "/other/floating-terrain/19-model-gate-roof.webp",
+                "width": 2000,
+                "height": 1123,
+                "caption": {
+                  "en": "The gate and the undulating roofs",
+                  "zh": "城门与起伏的屋顶"
+                }
+              }
+            ],
+            "layout": "pair"
           },
           {
-            "src": "/other/floating-terrain/10-section.webp",
-            "width": 3031,
-            "height": 2144,
-            "caption": { "en": "Long section", "zh": "整体纵剖面" }
+            "heading": {
+              "en": "Drawings",
+              "zh": "图纸"
+            },
+            "figures": [
+              {
+                "src": "/other/floating-terrain/20-section.webp",
+                "width": 3031,
+                "height": 2144,
+                "caption": {
+                  "en": "Long section",
+                  "zh": "整体纵剖面"
+                }
+              },
+              {
+                "src": "/other/floating-terrain/21-final-board.webp",
+                "width": 2944,
+                "height": 2208,
+                "caption": {
+                  "en": "Final board",
+                  "zh": "最终图版"
+                }
+              }
+            ]
           }
         ]
       }
@@ -227,7 +846,10 @@
       "year": "2025",
       "context": "Competition entry · UIA-HYP Cup",
       "slug": "hongkong-facade",
-      "zh": { "title": "Hongkong Facade", "context": "竞赛方案 · 霍普杯" },
+      "zh": {
+        "title": "Hongkong Facade",
+        "context": "竞赛方案 · 霍普杯"
+      },
       "image": {
         "src": "/other/hongkong-facade/01-cover.webp",
         "width": 2000,
@@ -238,74 +860,253 @@
         }
       },
       "page": {
-        "statement": {
-          "original": "en",
-          "en": [
-            "Responding to the Hop Cup competition’s emphasis on innovative interventions within marginalized urban conditions, this project proposes a parasitic architectural system that activates the vertical boundaries of Hong Kong’s aging residential neighborhoods. Situated in dense, historic districts such as Sham Shui Po and To Kwa Wan, the design transforms neglected building facades into a continuous network of social and ecological infrastructure.",
-            "The system operates as an elevated extension of the street—a multi-level “corridor-tower” that merges circulation and community space. Its lightweight steel frame attaches selectively to existing structures, supporting modular units housing vertical gardens, collective terraces, and programmable “box” spaces for leisure, small commerce, or urban farming. Critical to the concept are the aerial bridges that span narrow streets, connecting opposing buildings and creating an elevated layer of pedestrian movement. These bridges also serve as viewing platforms, green gateways, and social condensers—effectively turning the air above streets into a new kind of public territory.",
-            "Designed with a modular, prefabricated approach, the system minimizes on-site disruption while offering flexibility to adapt to varied building widths, heights, and community needs. Wind-permeable structural detailing and integrated photovoltaic canopies enhance environmental performance, aligning with Hong Kong’s subtropical climate. Beyond physical upgrade, the project empowers residents to re-appropriate their urban environment, fostering connectivity and resilience in some of the world’s most challenging urban conditions. It offers a replicable model for high-density cities worldwide—where the edge becomes not a limit, but a resource."
-          ],
-          "zh": [
-            "霍普杯竞赛关注在边缘化的城市条件中做创新的介入。本方案对此提出一套寄生式建筑系统，激活香港老旧住宅街区的竖向边界。方案位于深水埗、土瓜湾等高密度的历史街区，把被忽视的建筑立面改造成一张连续的社会与生态基础设施网络。",
-            "这套系统是街道的架空延伸，一座把交通与社区空间合在一起的多层“走廊塔”。轻钢框架有选择地附着在既有建筑上，承托模块化单元，单元里是垂直花园、公共露台，以及用途可以编排的“盒子”空间，用于休闲、小商业或城市农业。概念的关键是跨过窄街的空中连桥，它们连接街道两侧的建筑，形成一层架空的步行层。连桥同时是观景平台、绿色门廊和社会冷凝器，把街道上方的空气变成一种新的公共领地。",
-            "系统采用模块化、预制的做法，减少对现场的干扰，同时能适应不同的建筑宽度、高度和社区需求。透风的结构细部和集成的光伏顶棚提升环境性能，适应香港的亚热带气候。在物质更新之外，方案让居民重新占用自己的城市环境，在世界上最严苛的一些城市条件中增强连接与韧性。它为全世界的高密度城市提供一个可复制的模式，在这里，边缘不是限制，而是资源。"
-          ],
-          "source": { "en": "Competition board, sheet 1", "zh": "竞赛图版第 1 张" }
-        },
-        "figures": [
+        "sections": [
           {
-            "src": "/other/hongkong-facade/02-board-strategy.webp",
-            "width": 3034,
-            "height": 2143,
-            "caption": {
-              "en": "Board, sheet 2: site plan, the triangular module, spatial combinations and an urban axonometric",
-              "zh": "图版第 2 张：总图、三角模块生成、空间组合与城市轴测"
-            }
+            "heading": {
+              "en": "The vertical edges of old districts",
+              "zh": "老城区的竖向边界"
+            },
+            "texts": [
+              {
+                "original": "en",
+                "en": [
+                  "Responding to the Hop Cup competition’s emphasis on innovative interventions within marginalized urban conditions, this project proposes a parasitic architectural system that activates the vertical boundaries of Hong Kong’s aging residential neighborhoods. Situated in dense, historic districts such as Sham Shui Po and To Kwa Wan, the design transforms neglected building facades into a continuous network of social and ecological infrastructure."
+                ],
+                "zh": [
+                  "霍普杯竞赛关注在边缘化的城市条件中做创新的介入。本方案对此提出一套寄生式建筑系统，激活香港老旧住宅街区的竖向边界。方案位于深水埗、土瓜湾等高密度的历史街区，把被忽视的建筑立面改造成一张连续的社会与生态基础设施网络。"
+                ],
+                "source": {
+                  "en": "Competition board, sheet 1",
+                  "zh": "竞赛图版第 1 张"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/hongkong-facade/02-aerial.webp",
+                "width": 2000,
+                "height": 2000,
+                "caption": {
+                  "en": "The walkway system running between the blocks, from above",
+                  "zh": "鸟瞰：步行系统在街区之间连续"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/hongkong-facade/03-board-structure.webp",
-            "width": 3034,
-            "height": 2143,
-            "caption": {
-              "en": "Board, sheet 3: fitting different sites, extension, structural section and a day view",
-              "zh": "图版第 3 张：适配场景、范围扩展、结构剖切与日景"
-            }
+            "heading": {
+              "en": "Reading the city",
+              "zh": "读城市"
+            },
+            "texts": [
+              {
+                "original": "en",
+                "en": [
+                  "The design process began with an intensive study of Hong Kong’s urban morphology, focusing on older districts where narrow plots, aging structures, and limited public space converge. Through spatial mapping and structural analysis, we identified buildings suitable for lightweight attachment—prioritizing those with sound cores but outdated envelopes."
+                ],
+                "zh": [
+                  "设计从对香港城市形态的深入研究开始，关注地块狭窄、建筑老化、公共空间有限的旧城区。通过空间测绘和结构分析，我们找出适合轻型附着的建筑，优先选择结构核心完好、外围护已经老旧的楼。"
+                ],
+                "source": {
+                  "en": "Competition board, sheet 2 (excerpt)",
+                  "zh": "竞赛图版第 2 张（节选）"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/hongkong-facade/03-site-plan.webp",
+                "width": 3848,
+                "height": 1689,
+                "caption": {
+                  "en": "Figure–ground of the district, with the system marked in orange",
+                  "zh": "街区图底关系，橙色为系统所在"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/hongkong-facade/04-aerial.webp",
-            "width": 2000,
-            "height": 2000,
-            "caption": {
-              "en": "The walkway system running between the blocks, from above",
-              "zh": "鸟瞰：橙色步行系统在街区之间连续"
-            }
+            "heading": {
+              "en": "A corridor-tower",
+              "zh": "走廊塔"
+            },
+            "texts": [
+              {
+                "original": "en",
+                "en": [
+                  "The system operates as an elevated extension of the street—a multi-level “corridor-tower” that merges circulation and community space. Its lightweight steel frame attaches selectively to existing structures, supporting modular units housing vertical gardens, collective terraces, and programmable “box” spaces for leisure, small commerce, or urban farming. Critical to the concept are the aerial bridges that span narrow streets, connecting opposing buildings and creating an elevated layer of pedestrian movement. These bridges also serve as viewing platforms, green gateways, and social condensers—effectively turning the air above streets into a new kind of public territory."
+                ],
+                "zh": [
+                  "这套系统是街道的架空延伸，一座把交通与社区空间合在一起的多层“走廊塔”。轻钢框架有选择地附着在既有建筑上，承托模块化单元，单元里是垂直花园、公共露台，以及用途可以编排的“盒子”空间，用于休闲、小商业或城市农业。概念的关键是跨过窄街的空中连桥，它们连接街道两侧的建筑，形成一层架空的步行层。连桥同时是观景平台、绿色门廊和社会冷凝器，把街道上方的空气变成一种新的公共领地。"
+                ],
+                "source": {
+                  "en": "Competition board, sheet 1",
+                  "zh": "竞赛图版第 1 张"
+                }
+              },
+              {
+                "original": "en",
+                "en": [
+                  "Leveraging the existing floor heights of the residential buildings on site, the horizontal walkways were constructed with a half-level staggered layout. An equilateral triangular grid was then applied as the fundamental modular framework for these walkways. Functional platforms of varying sizes were designed to accommodate different needs, strategically positioned in an adaptable, staggered arrangement.",
+                  "In addition to the functional spaces, we also designed diagonally staggered staircases that break through the horizontal walkways. At the landing turns of these staircases, platforms extend outward, forming bridges that lead to spaces on the other side."
+                ],
+                "zh": [
+                  "利用场地内住宅楼既有的层高，水平步道按错开半层的方式搭建，再以等边三角形网格作为步道的基本模数框架。不同尺寸的功能平台对应不同需求，以可调整的错落方式布置。",
+                  "功能空间之外，我们还设计了斜向错落、穿过水平步道的楼梯。楼梯转折处的平台向外伸出，形成通往对面空间的连桥。"
+                ],
+                "source": {
+                  "en": "Competition board, sheet 2 (excerpt)",
+                  "zh": "竞赛图版第 2 张（节选）"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/hongkong-facade/04-elevation.webp",
+                "width": 3399,
+                "height": 1912,
+                "caption": {
+                  "en": "Continuous elevation: platforms, stairs and several buildings",
+                  "zh": "连续立面：平台、楼梯与多栋建筑"
+                }
+              },
+              {
+                "src": "/other/hongkong-facade/05-section.webp",
+                "width": 3124,
+                "height": 2080,
+                "caption": {
+                  "en": "Section through the structure and vertical circulation",
+                  "zh": "结构与竖向交通剖切"
+                }
+              },
+              {
+                "src": "/other/hongkong-facade/10-scene-bridges.webp",
+                "width": 2000,
+                "height": 1268,
+                "caption": {
+                  "en": "Bridges and stairs over the street",
+                  "zh": "街道上方的连桥与楼梯"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/hongkong-facade/05-section.webp",
-            "width": 3124,
-            "height": 2080,
-            "caption": {
-              "en": "Section through the structure and vertical circulation",
-              "zh": "结构与竖向交通剖切"
-            }
+            "heading": {
+              "en": "Modules on a light frame",
+              "zh": "轻钢框架上的模块"
+            },
+            "texts": [
+              {
+                "original": "en",
+                "en": [
+                  "A key innovation lies in the system’s structural logic: a secondary steel frame connects only at key structural points of host buildings, avoiding excessive intrusion while ensuring stability. Modular units—designed for prefabrication—incorporate integrated planting, seating, and photovoltaic layers, forming multi-functional “parasitic” additions. These are linked by a network of suspended walkways, creating aerial routes that reduce dependency on crowded streets."
+                ],
+                "zh": [
+                  "系统的关键在于结构逻辑。二级钢框架只在宿主建筑的关键结构点相接，避免过度介入，同时保证稳定。模块单元按预制设计，集成种植、座椅和光伏层，形成多功能的“寄生”附加体。它们由悬挂步道网络连接，形成架空路线，减少对拥挤街道的依赖。"
+                ],
+                "source": {
+                  "en": "Competition board, sheet 2 (excerpt)",
+                  "zh": "竞赛图版第 2 张（节选）"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/hongkong-facade/06-module.webp",
+                "width": 2560,
+                "height": 2055,
+                "caption": {
+                  "en": "A ‘box’ module",
+                  "zh": "一个“盒子”模块"
+                }
+              },
+              {
+                "src": "/other/hongkong-facade/09-scene-box.webp",
+                "width": 2000,
+                "height": 1268,
+                "caption": {
+                  "en": "Inside a box",
+                  "zh": "盒子内部"
+                }
+              },
+              {
+                "src": "/other/hongkong-facade/08-scene-planting.webp",
+                "width": 2000,
+                "height": 1268,
+                "caption": {
+                  "en": "Planting and public platforms on the facade, by day",
+                  "zh": "日景：立面上的种植与公共平台"
+                }
+              },
+              {
+                "src": "/other/hongkong-facade/07-scene-up.webp",
+                "width": 2000,
+                "height": 1270,
+                "caption": {
+                  "en": "Looking up between the facades",
+                  "zh": "在两侧立面之间仰视"
+                }
+              }
+            ],
+            "layout": "pair"
           },
           {
-            "src": "/other/hongkong-facade/06-elevation.webp",
-            "width": 3399,
-            "height": 1912,
-            "caption": {
-              "en": "Continuous elevation: platforms, stairs and several buildings",
-              "zh": "连续立面：平台、楼梯与多栋建筑"
-            }
+            "heading": {
+              "en": "A model for dense cities",
+              "zh": "给高密度城市的一种做法"
+            },
+            "texts": [
+              {
+                "original": "en",
+                "en": [
+                  "Designed with a modular, prefabricated approach, the system minimizes on-site disruption while offering flexibility to adapt to varied building widths, heights, and community needs. Wind-permeable structural detailing and integrated photovoltaic canopies enhance environmental performance, aligning with Hong Kong’s subtropical climate. Beyond physical upgrade, the project empowers residents to re-appropriate their urban environment, fostering connectivity and resilience in some of the world’s most challenging urban conditions. It offers a replicable model for high-density cities worldwide—where the edge becomes not a limit, but a resource."
+                ],
+                "zh": [
+                  "系统采用模块化、预制的做法，减少对现场的干扰，同时能适应不同的建筑宽度、高度和社区需求。透风的结构细部和集成的光伏顶棚提升环境性能，适应香港的亚热带气候。在物质更新之外，方案让居民重新占用自己的城市环境，在世界上最严苛的一些城市条件中增强连接与韧性。它为全世界的高密度城市提供一个可复制的模式，在这里，边缘成了可以利用的资源。"
+                ],
+                "source": {
+                  "en": "Competition board, sheet 1",
+                  "zh": "竞赛图版第 1 张"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/hongkong-facade/11-scene-tall.webp",
+                "width": 1125,
+                "height": 2000,
+                "caption": {
+                  "en": "The system climbing a building",
+                  "zh": "沿楼体向上的系统"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/hongkong-facade/07-scene-day.webp",
-            "width": 2000,
-            "height": 1268,
-            "caption": {
-              "en": "Planting and public platforms on the facade, by day",
-              "zh": "日景：立面上的种植与公共平台"
-            }
+            "heading": {
+              "en": "Boards",
+              "zh": "图版"
+            },
+            "figures": [
+              {
+                "src": "/other/hongkong-facade/12-board-strategy.webp",
+                "width": 3034,
+                "height": 2143,
+                "caption": {
+                  "en": "Board, sheet 2: site plan, the triangular module, spatial combinations and an urban axonometric",
+                  "zh": "图版第 2 张：总图、三角模块生成、空间组合与城市轴测"
+                }
+              },
+              {
+                "src": "/other/hongkong-facade/13-board-structure.webp",
+                "width": 3034,
+                "height": 2143,
+                "caption": {
+                  "en": "Board, sheet 3: fitting different sites, extension, structural section and a day view",
+                  "zh": "图版第 3 张：适配场景、范围扩展、结构剖切与日景"
+                }
+              }
+            ]
           }
         ]
       }
@@ -316,80 +1117,306 @@
       "year": "2024",
       "context": "Studio course · Professional Design 6: Off-Grid Farm",
       "slug": "under-cane",
-      "zh": { "title": "Under-Cane", "context": "专业设计6 · 离网农场" },
+      "zh": {
+        "title": "Under-Cane",
+        "context": "专业设计6 · 离网农场"
+      },
       "image": {
         "src": "/other/under-cane/01-cover.webp",
         "width": 2000,
         "height": 1345,
-        "caption": { "en": "The main house, terraces and cane fields from above", "zh": "俯看主屋、露台与甘蔗林" }
+        "caption": {
+          "en": "The main house, terraces and cane fields from above",
+          "zh": "俯看主屋、露台与甘蔗林"
+        }
       },
       "page": {
         "credits": [
           {
-            "role": { "en": "Team", "zh": "成员" },
+            "role": {
+              "en": "Team",
+              "zh": "成员"
+            },
             "names": [
-              { "en": "Zihao Ni", "zh": "倪子皓" },
-              { "en": "Zishuo Li", "zh": "李梓硕" }
+              {
+                "en": "Zihao Ni",
+                "zh": "倪子皓"
+              },
+              {
+                "en": "Zishuo Li",
+                "zh": "李梓硕"
+              }
             ]
           },
           {
-            "role": { "en": "Instructors", "zh": "指导教师" },
+            "role": {
+              "en": "Instructors",
+              "zh": "指导教师"
+            },
             "names": [
-              { "en": "Yan Huang", "zh": "黄艳" },
-              { "en": "Donglei Liu", "zh": "刘东雷" }
+              {
+                "en": "Yan Huang",
+                "zh": "黄艳"
+              },
+              {
+                "en": "Donglei Liu",
+                "zh": "刘东雷"
+              }
             ]
           }
         ],
-        "statement": {
-          "original": "zh",
-          "zh": [
-            "此方案针对竞赛方提出的“自给自足”的离网农场和可持续发展的设计期望，试图从能源的角度切入，首先解决能源问题并带动经济发展。考虑到旅游业是当地支柱产业之一，本方案认为应当建造一处提供短期旅游的度假酒店，采用新能源获取方式，以展示和耳濡目染中宣传并试验甘蔗种植的生物质发电方式。",
-            "从甘蔗开始，场地中应该同时完成种植——收割——生物质发电，因此我们选择将场地改造为梯田，并种植甘蔗林，甘蔗成熟后收割加工，剩余残渣进入生物质发电、储藏室。",
-            "具体形态从甘蔗林开始，我们围绕甘蔗林的“林之上”和“林之下”开始，将客房建筑和主屋置于林海之上成为“小岛”，在林海之下是大量的自由探索的行走空间和活动空间。为尊重自然，建筑材料选择以镜面为主，反射四周森林景观以隐于其中。建筑的排布近似于岛链形态，三条岛链盘山而建，远观也具有独特的秩序感。"
-          ],
-          "en": [
-            "The competition brief asked for a “self-sufficient” off-grid farm and for sustainable development. This scheme approaches it through energy: solve the energy problem first and let that drive the economy. Since tourism is one of the local pillar industries, the scheme proposes a resort hotel for short stays that uses new ways of obtaining energy, so that it can demonstrate biomass power from sugarcane cultivation, promote it through everyday exposure, and test it.",
-            "Everything starts from the sugarcane, with planting, harvesting and biomass generation all happening on the site. We therefore turned the site into terraces planted with cane; when it ripens it is harvested and processed, and the leftover residue goes to the biomass generator and the storage rooms.",
-            "The form also starts from the cane, working with what lies “above the forest” and “below the forest”. The guest rooms and the main house sit above the sea of cane as “islands”; below it is a large area of paths and activity space to explore freely. Out of respect for nature the buildings are mainly clad in mirror, which reflects the surrounding forest so that they disappear into it. The buildings are laid out like island chains: three chains wind around the hill and give it a distinct order when seen from a distance."
-          ],
-          "source": { "en": "Design statement (Word document)", "zh": "设计说明（Word 文档）" }
-        },
-        "figures": [
+        "sections": [
           {
-            "src": "/other/under-cane/02-path.webp",
-            "width": 2000,
-            "height": 1345,
-            "caption": { "en": "The walkway below the cane", "zh": "林下步道" }
+            "heading": {
+              "en": "The Dominican Republic",
+              "zh": "多米尼加"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "Agriculture still plays an important part in the economy of the Dominican Republic, 6% of GDP in 2020. Half of the population works in farming, mainly sugarcane, with coffee, cocoa, rice, bananas and livestock as well. The country has large areas of tropical forest and farmland suited to agriculture and animal husbandry. The highest mountain rises to more than 3,000 metres, suited to fruit and other forest products. There is no frost, and rain is plentiful, with 400 to 4,000 mm a year and 1,500 mm on average.",
+                  "The heat and rain make the Dominican Republic rich in sugarcane, and the rum made from it is well known."
+                ],
+                "zh": [
+                  "农业在多米尼加经济中仍占很重要的地位，2020年占GDP比重6%。全国半数人口从事农业，以种甘蔗为主，还产咖啡、可可、稻米、香蕉和牲畜等。多米尼加有大片热带森林和耕地，适合发展农业和畜牧业。山区最高峰海拔3000余米，适合于发展水果和其它林产品。没有冰冻，雨量充沛。年降雨量400-4000毫米，年平均降雨量达1500毫米。",
+                  "充足的雨热条件使得多米尼加盛产甘蔗，当地由甘蔗加工出来的兰姆酒也非常有名。"
+                ],
+                "source": {
+                  "en": "Board 2, “Local conditions”",
+                  "zh": "图版 2「当地条件」"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/under-cane/02-map.webp",
+                "width": 3038,
+                "height": 2139,
+                "caption": {
+                  "en": "Location",
+                  "zh": "区位"
+                }
+              },
+              {
+                "src": "/other/under-cane/03-site-model.webp",
+                "width": 2000,
+                "height": 1345,
+                "caption": {
+                  "en": "The site",
+                  "zh": "场地"
+                }
+              }
+            ],
+            "layout": "pair"
           },
           {
-            "src": "/other/under-cane/03-bridge.webp",
-            "width": 2000,
-            "height": 1345,
-            "caption": { "en": "Along the walkway toward the guest rooms on the hillside", "zh": "沿步道望向山坡客房" }
+            "heading": {
+              "en": "Energy first",
+              "zh": "先解决能源"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "The competition brief asked for a “self-sufficient” off-grid farm and for sustainable development. This scheme approaches it through energy, solving the energy problem first and letting that drive the economy. Since tourism is one of the local pillar industries, the scheme proposes a resort hotel for short stays that uses new ways of obtaining energy, so that it can demonstrate biomass power from sugarcane cultivation, promote it through everyday exposure, and test it."
+                ],
+                "zh": [
+                  "此方案针对竞赛方提出的“自给自足”的离网农场和可持续发展的设计期望，试图从能源的角度切入，首先解决能源问题并带动经济发展。考虑到旅游业是当地支柱产业之一，本方案认为应当建造一处提供短期旅游的度假酒店，采用新能源获取方式，以展示和耳濡目染中宣传并试验甘蔗种植的生物质发电方式。"
+                ],
+                "source": {
+                  "en": "Design statement (Word document)",
+                  "zh": "设计说明（Word 文档）"
+                }
+              },
+              {
+                "original": "zh",
+                "en": [
+                  "Use sugarcane power and the production of by-products to solve the electricity problem, and extend the industrial chain to drive the economy.",
+                  "A place for short stays of one or two nights that shows the whole process of sugarcane power generation, offers visitors an ‘off-grid’ way of living powered by sugarcane, and shows what the by-products can become."
+                ],
+                "zh": [
+                  "借甘蔗发电以及副产品的生产，解决电力问题，延伸产业链带动经济。",
+                  "一个提供一晚到两晚的短期休憩活动场所，展现甘蔗发电全流程，为游客带来以甘蔗发电的“离网”生活理念，同时展示副产品的可能性。"
+                ],
+                "source": {
+                  "en": "Board 1, “An exploratory sugarcane hotel: a maze in the cane”",
+                  "zh": "图版 1「探索型甘蔗主题酒店——甘蔗林中的“maze”」"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/under-cane/05-hillside.webp",
+                "width": 2000,
+                "height": 1345,
+                "caption": {
+                  "en": "Guest rooms on the hillside above the cane",
+                  "zh": "山坡甘蔗林之上的客房"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/under-cane/04-dusk.webp",
-            "width": 2000,
-            "height": 1344,
-            "caption": { "en": "On the bridge at dusk", "zh": "傍晚桥上视角" }
+            "heading": {
+              "en": "Plant, harvest, generate",
+              "zh": "种植、收割、发电"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "Everything starts from the sugarcane, with planting, harvesting and biomass generation all happening on the site. We therefore turned the site into terraces planted with cane. When it ripens it is harvested and processed, and the leftover residue goes to the biomass generator and the storage rooms."
+                ],
+                "zh": [
+                  "从甘蔗开始，场地中应该同时完成种植——收割——生物质发电，因此我们选择将场地改造为梯田，并种植甘蔗林，甘蔗成熟后收割加工，剩余残渣进入生物质发电、储藏室。"
+                ],
+                "source": {
+                  "en": "Design statement (Word document)",
+                  "zh": "设计说明（Word 文档）"
+                }
+              },
+              {
+                "original": "zh",
+                "en": [
+                  "Because the local climate suits sugarcane and the island has its own traditional cane products, we made growing sugarcane the core of the scheme.",
+                  "Cane can be grown on the site, harvested and made into farm by-products, and the remaining residue is finally used for biomass power, solving the energy problem and making the site self-sufficient in electricity."
+                ],
+                "zh": [
+                  "由于当地气候条件适合种植甘蔗同时又拥有特色甘蔗传统制品，我们选择将种植甘蔗作为设计方案的核心。",
+                  "甘蔗种植可在场地中进行，收割后可制作农副产品，最后将剩余残渣用于生物质发电，解决能源问题完成场地内电力的自给自足。"
+                ],
+                "source": {
+                  "en": "Board 2, “Biomass power” (excerpt)",
+                  "zh": "图版 2「生物质发电」（节选）"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/under-cane/04-terraces.webp",
+                "width": 3079,
+                "height": 2111,
+                "caption": {
+                  "en": "The hillside reshaped into terraces (Rhino linework)",
+                  "zh": "改造成梯田的山坡（Rhino 线稿）"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/under-cane/05-board-1.webp",
-            "width": 2143,
-            "height": 3034,
-            "caption": {
-              "en": "Board 1: overall scheme, layers, energy and the sugarcane concept",
-              "zh": "图版 1：总体方案、分层分析与能源、甘蔗概念"
-            }
+            "heading": {
+              "en": "Above and below the cane",
+              "zh": "林之上，林之下"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "The form also starts from the cane, working with what lies “above the forest” and “below the forest”. The guest rooms and the main house sit above the sea of cane as “islands”. Below it is a large area of paths and activity space to explore freely. Out of respect for nature the buildings are mainly clad in mirror, which reflects the surrounding forest so that they disappear into it. The buildings are laid out like island chains. Three chains wind around the hill and give it a distinct order when seen from a distance."
+                ],
+                "zh": [
+                  "具体形态从甘蔗林开始，我们围绕甘蔗林的“林之上”和“林之下”开始，将客房建筑和主屋置于林海之上成为“小岛”，在林海之下是大量的自由探索的行走空间和活动空间。为尊重自然，建筑材料选择以镜面为主，反射四周森林景观以隐于其中。建筑的排布近似于岛链形态，三条岛链盘山而建，远观也具有独特的秩序感。"
+                ],
+                "source": {
+                  "en": "Design statement (Word document)",
+                  "zh": "设计说明（Word 文档）"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/under-cane/06-path.webp",
+                "width": 2000,
+                "height": 1345,
+                "caption": {
+                  "en": "The path below the cane",
+                  "zh": "林下步道"
+                }
+              },
+              {
+                "src": "/other/under-cane/07-frames.webp",
+                "width": 2000,
+                "height": 1345,
+                "caption": {
+                  "en": "A walkway through a row of frames",
+                  "zh": "穿过一排框架的步道"
+                }
+              },
+              {
+                "src": "/other/under-cane/08-entrance.webp",
+                "width": 2000,
+                "height": 1333,
+                "caption": {
+                  "en": "The entrance steps",
+                  "zh": "入口台阶"
+                }
+              },
+              {
+                "src": "/other/under-cane/09-bridge.webp",
+                "width": 2000,
+                "height": 1345,
+                "caption": {
+                  "en": "Along the walkway toward the guest rooms",
+                  "zh": "沿步道望向客房"
+                }
+              },
+              {
+                "src": "/other/under-cane/10-pool.webp",
+                "width": 2000,
+                "height": 1345,
+                "caption": {
+                  "en": "A mirror pool and the hillside",
+                  "zh": "镜面水池与山坡"
+                }
+              },
+              {
+                "src": "/other/under-cane/11-dusk.webp",
+                "width": 2000,
+                "height": 1344,
+                "caption": {
+                  "en": "On the bridge at dusk",
+                  "zh": "傍晚桥上"
+                }
+              },
+              {
+                "src": "/other/under-cane/12-dusk-rooms.webp",
+                "width": 2000,
+                "height": 1345,
+                "caption": {
+                  "en": "Guest rooms at dusk",
+                  "zh": "黄昏时的客房"
+                }
+              }
+            ],
+            "layout": "pair"
           },
           {
-            "src": "/other/under-cane/06-board-2.webp",
-            "width": 2143,
-            "height": 3034,
-            "caption": {
-              "en": "Board 2: site form, construction sections and the order of levels",
-              "zh": "图版 2：场地形态、构造剖切与层级组织"
-            }
+            "heading": {
+              "en": "Boards",
+              "zh": "图版"
+            },
+            "figures": [
+              {
+                "src": "/other/under-cane/13-board-1.webp",
+                "width": 2143,
+                "height": 3034,
+                "caption": {
+                  "en": "Board 1: overall scheme, layers, energy and the sugarcane concept",
+                  "zh": "图版 1：总体方案、分层分析与能源、甘蔗概念"
+                }
+              },
+              {
+                "src": "/other/under-cane/14-board-2.webp",
+                "width": 2143,
+                "height": 3034,
+                "caption": {
+                  "en": "Board 2: site form, construction sections and the order of levels",
+                  "zh": "图版 2：场地形态、构造剖切与层级组织"
+                }
+              }
+            ],
+            "layout": "pair"
           }
         ]
       }
@@ -401,30 +1428,52 @@
       "context": "Studio course · Professional Design 5",
       "line": "Brief: Uncanny home",
       "slug": "the-patrick",
-      "zh": { "title": "The Patrick", "context": "专业设计（五）", "line": "课程选题：Uncanny home" },
+      "zh": {
+        "title": "The Patrick",
+        "context": "专业设计（五）",
+        "line": "课程选题：Uncanny home"
+      },
       "image": {
         "src": "/other/the-patrick/01-cover.webp",
-        "width": 3605,
-        "height": 1803,
+        "width": 1970,
+        "height": 2000,
         "caption": {
-          "en": "Looking out through the bathroom window: the contrast of colour and material, and how the spaces relate",
+          "en": "Looking out through the bathroom window, with the contrast of colour and material and the relation between the spaces",
           "zh": "浴室中透过窗往外看的场景，可见颜色和材质的对比以及空间的关系。"
         }
       },
       "page": {
         "credits": [
           {
-            "role": { "en": "Team", "zh": "成员" },
+            "role": {
+              "en": "Team",
+              "zh": "成员"
+            },
             "names": [
-              { "en": "Zishuo Li", "zh": "李梓硕" },
-              { "en": "Yiwen Yang", "zh": "杨逸雯" }
+              {
+                "en": "Zishuo Li",
+                "zh": "李梓硕"
+              },
+              {
+                "en": "Yiwen Yang",
+                "zh": "杨逸雯"
+              }
             ]
           },
           {
-            "role": { "en": "Instructors", "zh": "指导教师" },
+            "role": {
+              "en": "Instructors",
+              "zh": "指导教师"
+            },
             "names": [
-              { "en": "Wen Liang", "zh": "梁雯" },
-              { "en": "Yunjia Guan", "zh": "管沄嘉" }
+              {
+                "en": "Wen Liang",
+                "zh": "梁雯"
+              },
+              {
+                "en": "Yunjia Guan",
+                "zh": "管沄嘉"
+              }
             ]
           }
         ],
@@ -434,51 +1483,188 @@
             "zh": "入选 2024 年清华美院优秀学生作业展"
           }
         ],
-        "statement": {
-          "original": "zh",
-          "zh": [
-            "本课程作业选题为：Uncanny home，直译为“怪异的家”，要求关注特定室内空间的不寻常感，以此为根据进行室内设计。",
-            "本设计根据电影《美国精神病人》中主角Patrick的家，分析室内空间的“内向空间”和“外向空间”的不同，总结其在功能和设计语言的规律，并将其反转。构建一个外向功能空间表现内向特点，内向功能空间表现外向特点的“怪异”室内空间。"
-          ],
-          "en": [
-            "The brief for this course was “Uncanny home”: look at what feels unusual about a particular interior and base the interior design on it.",
-            "This design takes the home of Patrick, the protagonist of the film American Psycho, analyses how its introverted and extroverted spaces differ, sums up the patterns in their functions and design language, and reverses them. The result is an “uncanny” interior in which the extroverted functional spaces take on introverted qualities and the introverted functional spaces take on extroverted ones."
-          ],
-          "source": { "en": "Undergraduate coursework compilation, p. 5", "zh": "《本科期间学生作业》第 5 页" }
-        },
-        "figures": [
+        "sections": [
           {
-            "src": "/other/the-patrick/02-concept.webp",
-            "width": 3606,
-            "height": 1803,
-            "caption": {
-              "en": "Concept analysis: city and nature, inner and outer space",
-              "zh": "概念分析：城市与自然、内外空间"
-            }
+            "heading": {
+              "en": "Uncanny home",
+              "zh": "怪异的家"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "The brief for this course was “Uncanny home”, which asked students to look at what feels unusual about a particular interior and base the interior design on it."
+                ],
+                "zh": [
+                  "本课程作业选题为：Uncanny home，直译为“怪异的家”，要求关注特定室内空间的不寻常感，以此为根据进行室内设计。"
+                ],
+                "source": {
+                  "en": "Undergraduate coursework compilation, p. 5",
+                  "zh": "《本科期间学生作业》第 5 页"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/the-patrick/03-plans-sections.webp",
-            "width": 3606,
-            "height": 1803,
-            "caption": { "en": "Plan and sections", "zh": "平面与剖面" }
+            "heading": {
+              "en": "Patrick’s home, turned inside out",
+              "zh": "把帕特里克的家翻过来"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "Uncanny: taken from Patrick’s situation in American Psycho, where he plays the role of a social elite and loses his sense of identity. In him, the uncanny shows itself as a kind of difference.",
+                  "Projected onto design, a home can also be split into ‘inside and outside’. The spaces that stand for the outside are placed in the centre, closed and artificial, and serve to perform a social identity. The spaces of the real self are placed around the edge, open to the outside, trying to get close to nature.",
+                  "The design swaps the two conventional spatial relations, placing them in spaces and positions with different degrees of openness. Most importantly, the spaces for playing a social role are artificial, closed and internal, while the spaces where the real self enjoys life are outside, close to nature, exposed around the edge of the room. This is how the swapped spatial relation works here."
+                ],
+                "zh": [
+                  "UNCANNY：来自于《美国精神病人》中帕特里克的处境，他扮演社会精英角色又感到身份的迷失。uncanny在他身上体现为一种差异性。",
+                  "投影到设计中，住宅也可被二分为“内部和外部”。象征外部的空间被安排在中心区域，封闭、人工化，承担着扮演社会身份的作用；而内部的体现真实自我的空间则在周边区域，空间反而对外开放，试图亲近自然。",
+                  "在设计中，将两种传统的空间关系布局调换，让其出现在不同开放程度的空间和位置上。最重要的一点：扮演社会角色的空间是人工的、封闭的、内部的，反而真实自我享受生活的空间在外部、亲近自然、展露在房间周边。这样调换错位的空间关系在此成立。"
+                ],
+                "source": {
+                  "en": "Board, concept page",
+                  "zh": "图版「概念解析」页"
+                }
+              },
+              {
+                "original": "zh",
+                "en": [
+                  "This design takes the home of Patrick, the protagonist of the film American Psycho, analyses how its introverted and extroverted spaces differ, sums up the patterns in their functions and design language, and reverses them. The result is an “uncanny” interior in which the extroverted functional spaces take on introverted qualities and the introverted functional spaces take on extroverted ones."
+                ],
+                "zh": [
+                  "本设计根据电影《美国精神病人》中主角Patrick的家，分析室内空间的“内向空间”和“外向空间”的不同，总结其在功能和设计语言的规律，并将其反转。构建一个外向功能空间表现内向特点，内向功能空间表现外向特点的“怪异”室内空间。"
+                ],
+                "source": {
+                  "en": "Undergraduate coursework compilation, p. 5",
+                  "zh": "《本科期间学生作业》第 5 页"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/the-patrick/02-concept.webp",
+                "width": 3606,
+                "height": 1803,
+                "caption": {
+                  "en": "Concept page: city life and nature",
+                  "zh": "概念解析页：城市生活与自然"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/the-patrick/04-materials.webp",
-            "width": 3606,
-            "height": 1803,
-            "caption": { "en": "Plan and sections in colour and material", "zh": "平面及剖面材质色彩图" }
+            "heading": {
+              "en": "Plan, ceiling, material",
+              "zh": "平面、顶面与材料"
+            },
+            "figures": [
+              {
+                "src": "/other/the-patrick/03-plans-sections.webp",
+                "width": 3606,
+                "height": 1803,
+                "caption": {
+                  "en": "Plan and sections",
+                  "zh": "平面与剖面"
+                }
+              },
+              {
+                "src": "/other/the-patrick/04-ceiling.webp",
+                "width": 3606,
+                "height": 1803,
+                "caption": {
+                  "en": "Ceiling plan",
+                  "zh": "顶面图"
+                }
+              },
+              {
+                "src": "/other/the-patrick/05-materials.webp",
+                "width": 3606,
+                "height": 1803,
+                "caption": {
+                  "en": "Plan and sections in colour and material",
+                  "zh": "平面及剖面材质色彩图"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/the-patrick/05-view-sofa.webp",
-            "width": 3606,
-            "height": 1803,
-            "caption": { "en": "Toward the sofa and the bathroom", "zh": "沙发与浴室一侧" }
+            "heading": {
+              "en": "Furniture",
+              "zh": "家具"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "Each piece of furniture in the room is a product from a brand’s website. The furniture in the areas that stand for social life comes from European luxury brands, mostly the latest 2023 designs. The furniture in the private spaces is chosen with less care, mainly for comfort. The lounge chair even comes from IKEA, an ordinary, moderately priced product."
+                ],
+                "zh": [
+                  "房间中的各个家具来自于不同品牌官网中的产品。其中象征着参与社会生活的区域家具来自于欧洲奢侈品牌，基本为2023年最新的流行款式。然而其中象征着个人私密空间中的家具则没有这样讲究，纷纷以舒适为主，其中躺椅甚至来自于宜家，仅仅是普通水准价格的商品。"
+                ],
+                "source": {
+                  "en": "Board, furniture and materials page",
+                  "zh": "图版「家具与材质」页"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/the-patrick/06-furniture.webp",
+                "width": 3605,
+                "height": 1803,
+                "caption": {
+                  "en": "Furniture and materials",
+                  "zh": "家具与材质"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/the-patrick/06-view-window.webp",
-            "width": 3606,
-            "height": 1803,
-            "caption": { "en": "The table by the window", "zh": "临窗桌椅" }
+            "heading": {
+              "en": "Views",
+              "zh": "视角"
+            },
+            "figures": [
+              {
+                "src": "/other/the-patrick/07-view-lounge.webp",
+                "width": 1970,
+                "height": 2000,
+                "caption": {
+                  "en": "A view from the reception room, facing the bathroom as it is in daily use",
+                  "zh": "会客厅中的视角之一，面前是卫生间日常的状态。"
+                }
+              },
+              {
+                "src": "/other/the-patrick/08-view-desk.webp",
+                "width": 1970,
+                "height": 2000,
+                "caption": {
+                  "en": "From the desk in the private space, at the bamboo-slat door between bed and desk; the full-height window in front of the desk looks straight out. Although private, it is closer to the outdoors and nature",
+                  "zh": "视角位于属于私人空间的书桌前，在床与桌中间竹条门处，桌前的落地窗可直接与户外景色相望。尽管处于私人空间中，反而与自然的户外更加亲密。"
+                }
+              },
+              {
+                "src": "/other/the-patrick/09-view-dining.webp",
+                "width": 1970,
+                "height": 2000,
+                "caption": {
+                  "en": "Another view from the reception room, facing the dining table and chairs",
+                  "zh": "在会客厅中的视角之一，面前是餐厅和用餐的桌椅。"
+                }
+              },
+              {
+                "src": "/other/the-patrick/10-view-lounger.webp",
+                "width": 1969,
+                "height": 2000,
+                "caption": {
+                  "en": "In the private space where the owner collects and enjoys music, facing a leather lounge chair. This is the most private corner, and the closest to nature",
+                  "zh": "在私人空间中房主人收集并享受音乐的空间中，正对一张皮质躺椅。这是最私人，却又最亲近于自然的一角。"
+                }
+              }
+            ],
+            "layout": "pair"
           }
         ]
       }
@@ -489,45 +1675,205 @@
       "year": "2024",
       "context": "Studio course · Comprehensive Design",
       "slug": "design-for-our-future",
-      "zh": { "title": "Design for our future", "context": "综合设计" },
+      "zh": {
+        "title": "Design for our future",
+        "context": "综合设计"
+      },
       "image": {
-        "src": "/other/design-for-our-future/02-model.webp",
-        "width": 1707,
-        "height": 1280,
-        "caption": { "en": "Physical model, front", "zh": "实体模型正面" }
+        "src": "/other/design-for-our-future/01-cover.webp",
+        "width": 1470,
+        "height": 992,
+        "caption": {
+          "en": "The courtyard",
+          "zh": "中庭"
+        }
       },
       "page": {
         "credits": [
           {
-            "role": { "en": "Instructors", "zh": "指导教师" },
+            "role": {
+              "en": "Instructors",
+              "zh": "指导教师"
+            },
             "names": [
-              { "en": "Dongjiang Yang", "zh": "Dongjiang Yang" },
-              { "en": "Yunjia Guan", "zh": "Yunjia Guan" }
+              {
+                "en": "Dongjiang Yang",
+                "zh": "Dongjiang Yang"
+              },
+              {
+                "en": "Yunjia Guan",
+                "zh": "Yunjia Guan"
+              }
             ]
           }
         ],
-        "statement": {
-          "label": { "en": "Notes on the board", "zh": "图版上的手写说明" },
-          "original": "en",
-          "en": [
-            "2024: Student · Living alone · Changes: Sport ↓ working ↑",
-            "2039: Maybe a designer · work at home · High demand for social life · Still alone"
-          ],
-          "zh": [
-            "2024：学生 · 独居 · 变化：运动减少，工作增加",
-            "2039：也许是设计师 · 在家工作 · 社交需求高 · 仍然独居"
-          ],
-          "source": { "en": "Final board, 28 November 2024", "zh": "图版，2024 年 11 月 28 日" }
-        },
-        "figures": [
+        "sections": [
           {
-            "src": "/other/design-for-our-future/01-board.webp",
-            "width": 1406,
-            "height": 4622,
-            "caption": {
-              "en": "Final board: the 2024 and 2039 scenarios, plans, sections, exploded construction, materials, furniture and interior views",
-              "zh": "完整图版：2024 与 2039 生活设想、平剖面、构造爆炸图、材质、家具与室内效果"
-            }
+            "heading": {
+              "en": "2024 and 2039",
+              "zh": "2024 与 2039"
+            },
+            "texts": [
+              {
+                "original": "en",
+                "en": [
+                  "2024: Student · Living alone · Changes: Sport ↓ working ↑",
+                  "2039: Maybe a designer · work at home · High demand for social life · Still alone"
+                ],
+                "zh": [
+                  "2024：学生 · 独居 · 变化：运动减少，工作增加",
+                  "2039：也许是设计师 · 在家工作 · 社交需求高 · 仍然独居"
+                ],
+                "source": {
+                  "en": "Handwritten notes on the board, 28 November 2024",
+                  "zh": "图版上的手写说明，2024 年 11 月 28 日"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/design-for-our-future/02-scenario.webp",
+                "width": 992,
+                "height": 1154,
+                "caption": {
+                  "en": "The two scenarios, sketched on the board",
+                  "zh": "图版上的两种生活情景"
+                }
+              },
+              {
+                "src": "/other/design-for-our-future/03-plans.webp",
+                "width": 1158,
+                "height": 1529,
+                "caption": {
+                  "en": "The plan from 2024 to 2039",
+                  "zh": "平面从 2024 到 2039"
+                }
+              }
+            ]
+          },
+          {
+            "heading": {
+              "en": "Construction and materials",
+              "zh": "构造与材料"
+            },
+            "figures": [
+              {
+                "src": "/other/design-for-our-future/04-exploded.webp",
+                "width": 868,
+                "height": 2261,
+                "caption": {
+                  "en": "Exploded view, from the ground floor to the roof",
+                  "zh": "爆炸图：从一层地面到屋顶"
+                }
+              },
+              {
+                "src": "/other/design-for-our-future/05-materials.webp",
+                "width": 1116,
+                "height": 1222,
+                "caption": {
+                  "en": "Materials",
+                  "zh": "材质"
+                }
+              },
+              {
+                "src": "/other/design-for-our-future/06-furniture.webp",
+                "width": 2067,
+                "height": 577,
+                "caption": {
+                  "en": "Furniture",
+                  "zh": "家具"
+                }
+              }
+            ]
+          },
+          {
+            "heading": {
+              "en": "Interiors",
+              "zh": "室内"
+            },
+            "figures": [
+              {
+                "src": "/other/design-for-our-future/07-render-kitchen.webp",
+                "width": 992,
+                "height": 536,
+                "caption": {
+                  "en": "Kitchen and bar",
+                  "zh": "厨房与吧台"
+                }
+              },
+              {
+                "src": "/other/design-for-our-future/08-render-dining.webp",
+                "width": 1013,
+                "height": 536,
+                "caption": {
+                  "en": "Dining room toward the courtyard",
+                  "zh": "面向中庭的餐厅"
+                }
+              },
+              {
+                "src": "/other/design-for-our-future/09-render-study.webp",
+                "width": 641,
+                "height": 448,
+                "caption": {
+                  "en": "Working at home",
+                  "zh": "在家工作"
+                }
+              }
+            ],
+            "layout": "pair"
+          },
+          {
+            "heading": {
+              "en": "Model",
+              "zh": "模型"
+            },
+            "figures": [
+              {
+                "src": "/other/design-for-our-future/10-model-front.webp",
+                "width": 1707,
+                "height": 1280,
+                "caption": {
+                  "en": "Physical model, front",
+                  "zh": "实体模型正面"
+                }
+              },
+              {
+                "src": "/other/design-for-our-future/11-model-top.webp",
+                "width": 1137,
+                "height": 853,
+                "caption": {
+                  "en": "From above",
+                  "zh": "俯视"
+                }
+              },
+              {
+                "src": "/other/design-for-our-future/12-model-side.webp",
+                "width": 1707,
+                "height": 1280,
+                "caption": {
+                  "en": "From the side",
+                  "zh": "侧面"
+                }
+              }
+            ],
+            "layout": "pair"
+          },
+          {
+            "heading": {
+              "en": "Board",
+              "zh": "图版"
+            },
+            "figures": [
+              {
+                "src": "/other/design-for-our-future/13-board.webp",
+                "width": 1406,
+                "height": 4622,
+                "caption": {
+                  "en": "Final board",
+                  "zh": "完整图版"
+                }
+              }
+            ]
           }
         ]
       }
@@ -538,50 +1884,241 @@
       "year": "2023",
       "context": "Studio course",
       "slug": "new-wave-film-club",
-      "zh": { "title": "新浪潮观影俱乐部综合空间", "context": "课程设计" },
+      "zh": {
+        "title": "新浪潮观影俱乐部综合空间",
+        "context": "课程设计"
+      },
       "image": {
-        "src": "/other/new-wave-film-club/01-board.webp",
-        "width": 1803,
-        "height": 3606,
-        "position": "top",
-        "caption": { "en": "Top of the final board", "zh": "图版上部" }
+        "src": "/other/new-wave-film-club/01-cover.webp",
+        "width": 2000,
+        "height": 624,
+        "caption": {
+          "en": "Broken, irregular screens; the images on them are stills from Godard’s films",
+          "zh": "打破的异形屏幕，屏幕上的画面取自戈达尔的电影"
+        }
       },
       "page": {
         "credits": [
           {
-            "role": { "en": "Team", "zh": "成员" },
+            "role": {
+              "en": "Team",
+              "zh": "成员"
+            },
             "names": [
-              { "en": "Zishuo Li", "zh": "李梓硕" },
-              { "en": "Lin Yu", "zh": "余淋" }
+              {
+                "en": "Zishuo Li",
+                "zh": "李梓硕"
+              },
+              {
+                "en": "Lin Yu",
+                "zh": "余淋"
+              }
             ]
           },
-          { "role": { "en": "Instructor", "zh": "指导教师" }, "names": [{ "en": "Yunjia Guan", "zh": "管沄嘉" }] }
-        ],
-        "statement": {
-          "original": "zh",
-          "zh": [
-            "本空间的功能：作为一个新浪潮电影主题的电影爱好者的观影社交俱乐部。",
-            "设计思路：由于主题“新浪潮电影”内容庞杂不能以电影直接生成设计形式，此方案以以下方式转化概念。",
-            "……",
-            "因此整个设计最后以打破的异形屏幕影响空间，和交错的开放社交空间为主。以实际功能为辅助生成了设计形式。"
-          ],
-          "en": [
-            "What the space is for: a social viewing club for film lovers, themed on the New Wave.",
-            "Approach: the theme, New Wave cinema, is too large and varied to generate a design form directly from the films, so the scheme translates the concept in the following ways.",
-            "…",
-            "In the end the design is led by broken, irregular screens that shape the space and by interlocking open social spaces, with the actual functions helping to generate the form."
-          ],
-          "source": { "en": "Final board, design concept section (excerpt)", "zh": "图版「设计理念」部分（节选）" }
-        },
-        "figures": [
           {
-            "src": "/other/new-wave-film-club/01-board.webp",
-            "width": 1803,
-            "height": 3606,
-            "caption": {
-              "en": "Final board: exploded axonometric, three floor plans, four sections and several views",
-              "zh": "完整图版：爆炸轴测、三层平面、四张剖面与多视角效果"
-            }
+            "role": {
+              "en": "Instructor",
+              "zh": "指导教师"
+            },
+            "names": [
+              {
+                "en": "Yunjia Guan",
+                "zh": "管沄嘉"
+              }
+            ]
+          }
+        ],
+        "sections": [
+          {
+            "heading": {
+              "en": "A club for the New Wave",
+              "zh": "新浪潮观影俱乐部"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "What the space is for: a social viewing club for film lovers, themed on the New Wave.",
+                  "Approach: the theme, New Wave cinema, is too large and varied to generate a design form directly from the films, so the scheme translates the concept in the following way.",
+                  "Film → (abstraction) → idea → (concretisation) → design"
+                ],
+                "zh": [
+                  "本空间的功能：作为一个新浪潮电影主题的电影爱好者的观影社交俱乐部。",
+                  "设计思路：由于主题“新浪潮电影”内容庞杂不能以电影直接生成设计形式，此方案以以下方式转化概念。",
+                  "电影 →（抽象）→ 理念 →（具象）→ 设计"
+                ],
+                "source": {
+                  "en": "Board, “Design concept”",
+                  "zh": "图版「设计理念」"
+                }
+              }
+            ]
+          },
+          {
+            "heading": {
+              "en": "Abstraction: theme, technique, control",
+              "zh": "抽象：主题、拍摄手法、导演的强控制"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "Theme: compared with Hollywood films of the same period, New Wave films chose very different subjects. Instead of Hollywood’s grand narratives, they turned to the ‘side issues’ of society, such as private matters or ambiguous ones that are hard to take apart.",
+                  "Technique: New Wave films rarely tell a story in a straight line. They lean towards a fragmented, disordered structure, like ‘subjective memory’. Directors also tend to shoot in real places rather than on carefully designed sets, with tilted, shaking, subjective camera work. These shots look undesigned, and that is exactly how they were designed.",
+                  "The director’s strong control: New Wave directors took seriously the transition shots and settings that used to be ignored, adding hidden threads in places ‘off the main plot’, so that viewers who watch more than once discover the undertones the director meant."
+                ],
+                "zh": [
+                  "主题：新浪潮电影对比同期好莱坞电影，主题选材上有很大不同，相比于好莱坞电影的宏大叙事，新浪潮电影关注于社会的“侧面问题”，一些私人、或是难以解构的暧昧问题。",
+                  "拍摄手法：新浪潮电影在叙事方式上并不常用线性叙事方法，而是更偏向“主观的回忆”一样的分段、错乱叙事结构。同时导演往往对于精心设计的布景会更偏向采用真实场景拍摄，加上倾斜、抖动、主观化的镜头。然而这种看似没有设计过的镜头恰恰是设计过的非设计。",
+                  "导演的强控制：新浪潮电影中导演将过去不被重视的过场镜头和布景等重视起来，力求在这些“无关主线”的地方加入暗线元素，使观众在多次观看后能够发现这些导演意图表达的弦外音。"
+                ],
+                "source": {
+                  "en": "Board, “Design concept”",
+                  "zh": "图版「设计理念」"
+                }
+              }
+            ]
+          },
+          {
+            "heading": {
+              "en": "Concretisation: subjective screens, interlocking space",
+              "zh": "具象：主观化的电影屏幕、强控制的交错空间"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "Subjective: the everyday, personal subjects of the New Wave pull film close to each of us, and the camera work brings the viewpoint closer still, strengthening the sense of personal presence. Under strong control, every element of the film world is coordinated so that the viewer is drawn further in. From subject to shooting, New Wave films try to make film ‘subjective’.",
+                  "Interlocking space under strong control: films made under strong control run hidden threads through the whole, and viewers who are immersed in them, recalling the plot, find connections everywhere. In this design, the film’s own sound and light, which physically pass through space, are used to link the spaces. Social activity, as a behavioural echo of this, becomes the main function of the space.",
+                  "So the design is finally led by broken, irregular screens that shape the space and by interlocking open social spaces, with the actual functions helping to generate the form."
+                ],
+                "zh": [
+                  "主观化：新浪潮电影平民化、个人化的主题把电影拉拽到我们每个人身边，拍摄手法将视角拉近，进一步提升了个人的存在感。而强控制下的电影世界将一切元素统筹起来，让观众进一步沉浸于电影。新浪潮电影从主题到具体拍摄都在试图完成“主观化”的目标。",
+                  "强控制的交错空间：强控制手段下的电影以暗线贯穿电影，观众于其中沉浸、回忆情节可发现处处有联系。而在本设计中选用“电影”自身的声光，利用其穿透空间的物理性质，串联空间。同时社交活动亦作为一个行为上的映射成为空间的主要功能。",
+                  "因此整个设计最后以打破的异形屏幕影响空间，和交错的开放社交空间为主。以实际功能为辅助生成了设计形式。"
+                ],
+                "source": {
+                  "en": "Board, “Design concept”",
+                  "zh": "图版「设计理念」"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/new-wave-film-club/06-axonometric.webp",
+                "width": 3595,
+                "height": 1243,
+                "caption": {
+                  "en": "Cutaway, distribution of spaces, floors and stairs",
+                  "zh": "整体剖图、空间分布、楼板与楼梯"
+                }
+              },
+              {
+                "src": "/other/new-wave-film-club/02-render-stairs.webp",
+                "width": 2000,
+                "height": 1924,
+                "caption": {
+                  "en": "Stairs and platforms interlocking around the screens",
+                  "zh": "楼梯与平台围绕屏幕交错"
+                }
+              }
+            ]
+          },
+          {
+            "heading": {
+              "en": "Three floors",
+              "zh": "三层"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "The space is divided into three floors: a café and dining space, a viewing and social space, and an open social space, each more complex than the last.",
+                  "As the drawing shows, the stairs and platforms form a space complex and interlocking enough, connected up and down and still at human scale. Together with the irregular screens it makes an interlocking space in which viewers can watch a whole screen or part of one from any angle."
+                ],
+                "zh": [
+                  "整个空间被分成三层，分别构成了：餐饮咖啡空间、观影和社交空间、开放社交空间，其复杂度也逐级提升。",
+                  "在图中可见，楼梯和平台构成了一个足够复杂交错的空间，其中上下通达，且符合人体尺度。与异形的电影屏幕配合构成了一个交错空间，观者可在其中以任何角度自由地观看完整或部分电影屏幕。"
+                ],
+                "source": {
+                  "en": "Board, second version",
+                  "zh": "图版第二版"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/new-wave-film-club/07-plans.webp",
+                "width": 2362,
+                "height": 784,
+                "caption": {
+                  "en": "Plans of the three floors",
+                  "zh": "三层平面"
+                }
+              },
+              {
+                "src": "/other/new-wave-film-club/08-sections.webp",
+                "width": 4724,
+                "height": 1209,
+                "caption": {
+                  "en": "Four sections",
+                  "zh": "四张剖面"
+                }
+              }
+            ]
+          },
+          {
+            "heading": {
+              "en": "Views",
+              "zh": "效果图"
+            },
+            "figures": [
+              {
+                "src": "/other/new-wave-film-club/03-render-corner.webp",
+                "width": 813,
+                "height": 1030,
+                "caption": {
+                  "en": "A corner of the stair, lit from the side",
+                  "zh": "侧光下的楼梯一角"
+                }
+              },
+              {
+                "src": "/other/new-wave-film-club/05-render-floor.webp",
+                "width": 2000,
+                "height": 690,
+                "caption": {
+                  "en": "The viewing floor",
+                  "zh": "观影层"
+                }
+              },
+              {
+                "src": "/other/new-wave-film-club/04-render-tables.webp",
+                "width": 2000,
+                "height": 593,
+                "caption": {
+                  "en": "The café floor",
+                  "zh": "餐饮咖啡层"
+                }
+              }
+            ],
+            "layout": "pair"
+          },
+          {
+            "heading": {
+              "en": "Board",
+              "zh": "图版"
+            },
+            "figures": [
+              {
+                "src": "/other/new-wave-film-club/09-board.webp",
+                "width": 1803,
+                "height": 3606,
+                "caption": {
+                  "en": "Final board",
+                  "zh": "完整图版"
+                }
+              }
+            ]
           }
         ]
       }
@@ -592,7 +2129,10 @@
       "year": "2024",
       "context": "Drawing course · Design Expression 2",
       "slug": "b365-office",
-      "zh": { "title": "B365 办公室改造施工图", "context": "设计表达（2） · 图纸表达课程" },
+      "zh": {
+        "title": "B365 办公室改造施工图",
+        "context": "设计表达（2） · 图纸表达课程"
+      },
       "image": {
         "src": "/other/b365-office/01-section-materials.webp",
         "width": 3032,
@@ -605,49 +2145,74 @@
       "page": {
         "credits": [
           {
-            "role": { "en": "Instructors", "zh": "指导教师" },
+            "role": {
+              "en": "Instructors",
+              "zh": "指导教师"
+            },
             "names": [
-              { "en": "Chaoyang Li", "zh": "李朝阳" },
-              { "en": "Donglei Liu", "zh": "刘东雷" }
+              {
+                "en": "Chaoyang Li",
+                "zh": "李朝阳"
+              },
+              {
+                "en": "Donglei Liu",
+                "zh": "刘东雷"
+              }
             ]
           }
         ],
-        "figures": [
+        "sections": [
           {
-            "src": "/other/b365-office/01-section-materials.webp",
-            "width": 3032,
-            "height": 2144,
-            "caption": {
-              "en": "Section and elevation, layout and materials, full sheet",
-              "zh": "剖立面布置与材质，整张图纸"
-            }
+            "heading": {
+              "en": "Plans",
+              "zh": "平面"
+            },
+            "figures": [
+              {
+                "src": "/other/b365-office/02-plan-1f.webp",
+                "width": 3032,
+                "height": 2144,
+                "caption": {
+                  "en": "Ground floor plan: studio, work and meeting areas",
+                  "zh": "一层平面布置：创作、工作与会客"
+                }
+              },
+              {
+                "src": "/other/b365-office/03-plan-2f.webp",
+                "width": 3032,
+                "height": 2144,
+                "caption": {
+                  "en": "Upper floor plan",
+                  "zh": "二层平面"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/b365-office/02-plan-1f.webp",
-            "width": 3032,
-            "height": 2144,
-            "caption": {
-              "en": "Ground floor plan: studio, work and meeting areas",
-              "zh": "一层平面布置：创作、工作与会客"
-            }
-          },
-          {
-            "src": "/other/b365-office/03-plan-2f.webp",
-            "width": 3032,
-            "height": 2144,
-            "caption": { "en": "Upper floor plan", "zh": "二层平面" }
-          },
-          {
-            "src": "/other/b365-office/04-stair-details.webp",
-            "width": 3032,
-            "height": 2144,
-            "caption": { "en": "Stair details, section and joints", "zh": "楼梯大样、剖面与节点" }
-          },
-          {
-            "src": "/other/b365-office/05-wall-details.webp",
-            "width": 3032,
-            "height": 2144,
-            "caption": { "en": "Wall and window sill details", "zh": "墙体及窗台详图" }
+            "heading": {
+              "en": "Details",
+              "zh": "节点"
+            },
+            "figures": [
+              {
+                "src": "/other/b365-office/04-stair-details.webp",
+                "width": 3032,
+                "height": 2144,
+                "caption": {
+                  "en": "Stair details, section and joints",
+                  "zh": "楼梯大样、剖面与节点"
+                }
+              },
+              {
+                "src": "/other/b365-office/05-wall-details.webp",
+                "width": 3032,
+                "height": 2144,
+                "caption": {
+                  "en": "Wall and window sill details",
+                  "zh": "墙体及窗台详图"
+                }
+              }
+            ]
           }
         ]
       }
@@ -658,63 +2223,155 @@
       "year": "2023",
       "context": "Course · Architectural Fundamentals and Construction",
       "slug": "family-house",
-      "zh": { "title": "五人家庭住宅", "context": "建筑基础与构造营建" },
+      "zh": {
+        "title": "五人家庭住宅",
+        "context": "建筑基础与构造营建"
+      },
       "image": {
         "src": "/other/family-house/01-plan.webp",
         "width": 3031,
         "height": 2144,
-        "caption": { "en": "Furnished floor plan", "zh": "平面布置图" }
+        "caption": {
+          "en": "Furnished floor plan",
+          "zh": "平面布置图"
+        }
       },
       "page": {
         "credits": [
-          { "role": { "en": "Instructor", "zh": "指导教师" }, "names": [{ "en": "Haoming Zhou", "zh": "周浩明" }] }
+          {
+            "role": {
+              "en": "Instructor",
+              "zh": "指导教师"
+            },
+            "names": [
+              {
+                "en": "Haoming Zhou",
+                "zh": "周浩明"
+              }
+            ]
+          }
         ],
-        "statement": {
-          "label": { "en": "Brief", "zh": "任务设定" },
-          "original": "zh",
-          "zh": [
-            "家庭成员设定：共五人。男主人：建筑行业从业者，需在家中有工作空间。女主人：经商。老人：男女主人双方某一方父母两人。有时会来暂住，需要朝南的卧室。小孩：正在上初中的青少年，需要房间内有书桌做家庭作业。",
-            "其他需求：因男女主人工作较忙，有时需要雇佣他人照顾家人，因此需要独立客房供其休息。",
-            "房间需求及数目：卧室四间，一间主卧，一间供小孩居住，一间供老人居住，一间客房；会客室（连接玄关），餐厅，厨房，书房，储藏间各一间；两间卫生间。",
-            "阳光需求：向阳的是卧室，会客室，餐厅，门厅玄关；背阴的是厨房，书房，卫生间。",
-            "制约条件：16x16的面积限制，不可东西方向拉长户型以增加阳光利用，因此会牺牲部分房间的阳光。"
-          ],
-          "en": [
-            "Household: five people. The husband works in architecture and needs a workspace at home. The wife runs a business. The grandparents, two parents of one of the couple, sometimes come to stay and need a south-facing bedroom. The child is a teenager in middle school and needs a desk in the room for homework.",
-            "Other needs: both parents are busy at work and sometimes hire someone to look after the family, so a separate guest room is needed for that person to rest.",
-            "Rooms: four bedrooms (a master bedroom, one for the child, one for the grandparents and a guest room); a reception room connected to the entrance, a dining room, a kitchen, a study and a storeroom; two bathrooms.",
-            "Sunlight: the bedrooms, reception room, dining room and entrance hall face the sun; the kitchen, study and bathrooms face away from it.",
-            "Constraint: the plan is limited to 16 × 16, and the house cannot be stretched east–west to catch more sun, so some rooms give up sunlight."
-          ],
-          "source": { "en": "Presentation slides 2–4", "zh": "汇报 PPT 第 2–4 页" }
-        },
-        "figures": [
+        "sections": [
           {
-            "src": "/other/family-house/02-sketch-relations.webp",
-            "width": 1655,
-            "height": 1015,
-            "caption": {
-              "en": "Hand sketch of how public and private rooms relate",
-              "zh": "手绘功能关系图：公共与私密空间"
-            }
+            "heading": {
+              "en": "A family of five",
+              "zh": "五口之家"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "Household: five people. The husband works in architecture and needs a workspace at home. The wife runs a business. The grandparents, two parents of one of the couple, sometimes come to stay and need a south-facing bedroom. The child is a teenager in middle school and needs a desk in the room for homework.",
+                  "Other needs: both parents are busy at work and sometimes hire someone to look after the family, so a separate guest room is needed for that person to rest."
+                ],
+                "zh": [
+                  "家庭成员设定：共五人。男主人：建筑行业从业者，需在家中有工作空间。女主人：经商。老人：男女主人双方某一方父母两人。有时会来暂住，需要朝南的卧室。小孩：正在上初中的青少年，需要房间内有书桌做家庭作业。",
+                  "其他需求：因男女主人工作较忙，有时需要雇佣他人照顾家人，因此需要独立客房供其休息。"
+                ],
+                "source": {
+                  "en": "Presentation slides 2–4",
+                  "zh": "汇报 PPT 第 2–4 页"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/family-house/01-plan.webp",
-            "width": 3031,
-            "height": 2144,
-            "caption": { "en": "Furnished floor plan, full sheet", "zh": "平面布置图，整张图纸" }
+            "heading": {
+              "en": "Rooms and light",
+              "zh": "房间与阳光"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "Rooms: four bedrooms (a master bedroom, one for the child, one for the grandparents and a guest room), a reception room connected to the entrance, a dining room, a kitchen, a study, a storeroom and two bathrooms.",
+                  "Sunlight: the bedrooms, reception room, dining room and entrance hall face the sun, and the kitchen, study and bathrooms face away from it.",
+                  "Constraint: the plan is limited to 16 × 16, and the house cannot be stretched east–west to catch more sun, so some rooms give up sunlight."
+                ],
+                "zh": [
+                  "房间需求及数目：卧室四间，一间主卧，一间供小孩居住，一间供老人居住，一间客房；会客室（连接玄关），餐厅，厨房，书房，储藏间各一间；两间卫生间。",
+                  "阳光需求：向阳的是卧室，会客室，餐厅，门厅玄关；背阴的是厨房，书房，卫生间。",
+                  "制约条件：16x16的面积限制，不可东西方向拉长户型以增加阳光利用，因此会牺牲部分房间的阳光。"
+                ],
+                "source": {
+                  "en": "Presentation slides 2–4",
+                  "zh": "汇报 PPT 第 2–4 页"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/family-house/02-sketch-relations.webp",
+                "width": 1655,
+                "height": 1015,
+                "caption": {
+                  "en": "Hand sketch: how public and private rooms relate",
+                  "zh": "手绘功能关系图：公共与私密空间"
+                }
+              },
+              {
+                "src": "/other/family-house/03-sketch-layout.webp",
+                "width": 1330,
+                "height": 1129,
+                "caption": {
+                  "en": "Hand sketch of the layout, with the sun",
+                  "zh": "手绘布局草图与日照"
+                }
+              }
+            ],
+            "layout": "pair"
           },
           {
-            "src": "/other/family-house/03-details.webp",
-            "width": 3030,
-            "height": 2145,
-            "caption": { "en": "Details: apron, window sill and parapet", "zh": "节点：散水、窗台、女儿墙" }
+            "heading": {
+              "en": "Drawings",
+              "zh": "图纸"
+            },
+            "figures": [
+              {
+                "src": "/other/family-house/04-elevations.webp",
+                "width": 3030,
+                "height": 2145,
+                "caption": {
+                  "en": "Elevations",
+                  "zh": "立面图"
+                }
+              },
+              {
+                "src": "/other/family-house/05-sections.webp",
+                "width": 3030,
+                "height": 2145,
+                "caption": {
+                  "en": "Sections",
+                  "zh": "剖面图"
+                }
+              },
+              {
+                "src": "/other/family-house/07-axonometric.webp",
+                "width": 3030,
+                "height": 2145,
+                "caption": {
+                  "en": "Axonometric",
+                  "zh": "轴测图"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/family-house/04-axonometric.webp",
-            "width": 3030,
-            "height": 2145,
-            "caption": { "en": "Axonometric", "zh": "轴测图" }
+            "heading": {
+              "en": "Construction details",
+              "zh": "构造节点"
+            },
+            "figures": [
+              {
+                "src": "/other/family-house/06-details.webp",
+                "width": 3030,
+                "height": 2145,
+                "caption": {
+                  "en": "Details: apron, window sill and parapet",
+                  "zh": "节点：散水、窗台、女儿墙"
+                }
+              }
+            ]
           }
         ]
       }
@@ -725,32 +2382,64 @@
       "year": "2024",
       "context": "Design camp · Creative Future: Decorative Materials",
       "slug": "bamboo-installation",
-      "zh": { "title": "无锡鹅湖镇竹编大地艺术装置", "context": "「创意未来 · 装饰材料创作营」" },
+      "zh": {
+        "title": "无锡鹅湖镇竹编大地艺术装置",
+        "context": "「创意未来 · 装饰材料创作营」"
+      },
       "image": {
         "src": "/other/bamboo-installation/01-cover.webp",
         "width": 2000,
         "height": 1123,
-        "caption": { "en": "Lit at night", "zh": "夜间点亮" }
+        "caption": {
+          "en": "Lit at night",
+          "zh": "夜间点亮"
+        }
       },
       "page": {
-        "figures": [
+        "sections": [
           {
-            "src": "/other/bamboo-installation/02-weave.webp",
-            "width": 2000,
-            "height": 1333,
-            "caption": {
-              "en": "By day, close up: woven bamboo strips, ties and curved supports",
-              "zh": "白天近景：竹篾编织、绑扎与曲杆支撑"
-            }
+            "heading": {
+              "en": "By day",
+              "zh": "白天"
+            },
+            "figures": [
+              {
+                "src": "/other/bamboo-installation/03-site.webp",
+                "width": 2000,
+                "height": 1333,
+                "caption": {
+                  "en": "The installation with the lakeshore, the grass and the paths around it",
+                  "zh": "装置与湖岸、草地、步行空间的关系"
+                }
+              },
+              {
+                "src": "/other/bamboo-installation/02-weave.webp",
+                "width": 2000,
+                "height": 1333,
+                "caption": {
+                  "en": "Close up: woven bamboo strips, ties and curved supports",
+                  "zh": "近景：竹篾编织、绑扎与曲杆支撑"
+                }
+              }
+            ],
+            "layout": "pair"
           },
           {
-            "src": "/other/bamboo-installation/03-site.webp",
-            "width": 2000,
-            "height": 1333,
-            "caption": {
-              "en": "The installation with the lakeshore, the grass and the paths around it",
-              "zh": "装置与湖岸、草地、步行空间的关系"
-            }
+            "heading": {
+              "en": "At dusk",
+              "zh": "黄昏"
+            },
+            "figures": [
+              {
+                "src": "/other/bamboo-installation/04-dusk.webp",
+                "width": 2000,
+                "height": 1333,
+                "caption": {
+                  "en": "In silhouette against the sunset over the lake",
+                  "zh": "湖面落日下的剪影"
+                }
+              }
+            ]
           }
         ]
       }
@@ -761,66 +2450,168 @@
       "year": "2023–24",
       "context": "Team project",
       "slug": "shape-of-sound",
-      "zh": { "title": "聲型", "context": "团队设计" },
+      "zh": {
+        "title": "聲型",
+        "context": "团队设计"
+      },
       "image": {
         "src": "/other/shape-of-sound/01-cover.webp",
-        "width": 2079,
-        "height": 2953,
-        "position": "top",
-        "caption": { "en": "Renderings of the woven installation in a corridor", "zh": "效果图：走廊中的编织状装置" }
+        "width": 884,
+        "height": 989,
+        "caption": {
+          "en": "Rendering: the woven installation in a corridor",
+          "zh": "效果图：走廊中的编织状装置"
+        }
       },
       "page": {
         "credits": [
           {
-            "role": { "en": "Team", "zh": "成员" },
+            "role": {
+              "en": "Team",
+              "zh": "成员"
+            },
             "names": [
-              { "en": "Ruiwei Long", "zh": "龙睿威" },
-              { "en": "Yiwen Yang", "zh": "杨逸雯" },
-              { "en": "Jialu Sun", "zh": "孙嘉璐" },
-              { "en": "Tongyu Guo", "zh": "郭桐宇" },
-              { "en": "Zishuo Li", "zh": "李梓硕" },
-              { "en": "Jinge Yang", "zh": "杨谨歌" }
+              {
+                "en": "Ruiwei Long",
+                "zh": "龙睿威"
+              },
+              {
+                "en": "Yiwen Yang",
+                "zh": "杨逸雯"
+              },
+              {
+                "en": "Jialu Sun",
+                "zh": "孙嘉璐"
+              },
+              {
+                "en": "Tongyu Guo",
+                "zh": "郭桐宇"
+              },
+              {
+                "en": "Zishuo Li",
+                "zh": "李梓硕"
+              },
+              {
+                "en": "Jinge Yang",
+                "zh": "杨谨歌"
+              }
             ]
           },
-          { "role": { "en": "Instructor", "zh": "指导教师" }, "names": [{ "en": "Xudong Huo", "zh": "霍旭东" }] }
+          {
+            "role": {
+              "en": "Instructor",
+              "zh": "指导教师"
+            },
+            "names": [
+              {
+                "en": "Xudong Huo",
+                "zh": "霍旭东"
+              }
+            ]
+          }
         ],
-        "statement": {
-          "original": "zh",
-          "zh": [
-            "声音本身是虚无的、流动的、不可触摸的，而在物理学中声音又可以通过粒子的振动或波的形态变现出来。我们通过将一段循环音频提取和频段成像的方式将不同方式的震动成像在空间中的交点成型，在围合以凸显循环之意。后我们使用参数化的方式将结构与波频结合，使物体通过编织的逻辑编辑成型完成模型构建。"
-          ],
-          "en": [
-            "Sound itself is empty, fluid and intangible, yet in physics it can be shown as the vibration of particles or in the form of waves. We took a looping audio clip and imaged its frequency bands, so that different kinds of vibration were imaged as points of intersection in space and given form, then enclosed to bring out the idea of the loop. We then combined structure and wave frequency parametrically, so that the object was shaped through a weaving logic to complete the model."
-          ],
-          "source": { "en": "Board, sheet 2", "zh": "图版第 2 张" }
-        },
-        "figures": [
+        "sections": [
           {
-            "src": "/other/shape-of-sound/01-cover.webp",
-            "width": 2079,
-            "height": 2953,
-            "caption": {
-              "en": "Board, sheet 4: renderings of the installation in a corridor, several views",
-              "zh": "图版第 4 张：走廊中的装置效果图，多视角"
-            }
+            "heading": {
+              "en": "Giving sound a shape",
+              "zh": "让声音成形"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "Sound itself is empty, fluid and intangible, yet in physics it can be shown as the vibration of particles or in the form of waves. We took a looping audio clip and imaged its frequency bands, so that different kinds of vibration were imaged as points of intersection in space and given form, then enclosed to bring out the idea of the loop. We then combined structure and wave frequency parametrically, so that the object was shaped through a weaving logic to complete the model."
+                ],
+                "zh": [
+                  "声音本身是虚无的、流动的、不可触摸的，而在物理学中声音又可以通过粒子的振动或波的形态变现出来。我们通过将一段循环音频提取和频段成像的方式将不同方式的震动成像在空间中的交点成型，在围合以凸显循环之意。后我们使用参数化的方式将结构与波频结合，使物体通过编织的逻辑编辑成型完成模型构建。"
+                ],
+                "source": {
+                  "en": "Board, sheet 2",
+                  "zh": "图版第 2 张"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/shape-of-sound/06-concept.webp",
+                "width": 2079,
+                "height": 2953,
+                "caption": {
+                  "en": "Board, sheet 2: concept and structural breakdown",
+                  "zh": "图版第 2 张：概念说明与结构拆分"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/shape-of-sound/02-form.webp",
-            "width": 2079,
-            "height": 2953,
-            "caption": {
-              "en": "Board, sheet 3: profile, top view and cross-sections of the curves",
-              "zh": "图版第 3 张：轮廓立视、俯视与曲线横截面"
-            }
+            "heading": {
+              "en": "From waves to form",
+              "zh": "从声波到形体"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "Deduction route: Rhino, acrylic cutting, TouchDesigner, sound-wave curves, crossing horizontally and vertically.",
+                  "Structural breakdown: the linear vibration of a sound wave → its circular vibration → the two overlapped horizontally and vertically → enclosed according to the audio loop → the overlapped data fed into a parametric model to form a body → the woven surface treated as the load-bearing logic."
+                ],
+                "zh": [
+                  "推演路线：Rhino、亚克力切割、TouchDesigner、声波曲线、横纵交错。",
+                  "结构拆分：声波的直线振动形态 → 声波的圆周振动形态 → 两种形态横纵交叠 → 根据音频循环围合 → 用交叠数据输入参数化模型形成体 → 用编织曲面承重逻辑处理。"
+                ],
+                "source": {
+                  "en": "Board, sheets 1 and 2",
+                  "zh": "图版第 1、2 张"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/shape-of-sound/05-form.webp",
+                "width": 2079,
+                "height": 2953,
+                "caption": {
+                  "en": "Board, sheet 3: profile, top view and cross-sections of the curves",
+                  "zh": "图版第 3 张：轮廓立视、俯视与曲线横截面"
+                }
+              }
+            ]
           },
           {
-            "src": "/other/shape-of-sound/03-concept.webp",
-            "width": 2079,
-            "height": 2953,
-            "caption": {
-              "en": "Board, sheet 2: concept and structural breakdown",
-              "zh": "图版第 2 张：概念说明与结构拆分"
-            }
+            "heading": {
+              "en": "In a corridor",
+              "zh": "走廊里的装置"
+            },
+            "figures": [
+              {
+                "src": "/other/shape-of-sound/02-render-corridor.webp",
+                "width": 1195,
+                "height": 1019,
+                "caption": {
+                  "en": "Rendering, along the corridor",
+                  "zh": "效果图，沿走廊"
+                }
+              },
+              {
+                "src": "/other/shape-of-sound/03-render-close.webp",
+                "width": 1289,
+                "height": 1447,
+                "caption": {
+                  "en": "Rendering, close to the woven surface",
+                  "zh": "效果图，靠近编织表面"
+                }
+              },
+              {
+                "src": "/other/shape-of-sound/04-render-wall.webp",
+                "width": 790,
+                "height": 1063,
+                "caption": {
+                  "en": "Rendering, against a wall",
+                  "zh": "效果图，靠墙"
+                }
+              }
+            ],
+            "layout": "pair"
           }
         ]
       }

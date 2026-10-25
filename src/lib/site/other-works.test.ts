@@ -30,6 +30,10 @@ const reachable = (href: string) => {
   return !!m && [...getRoutableWork().map((w) => w.slug), ...getOtherWorkPages().map((x) => x.work.slug)].includes(m[1]);
 };
 
+/** 一件作品详情页里的全部图（按小节摊平） */
+const figs = (w: ReturnType<typeof getOtherWorks>['works'][number]) =>
+  (w.page?.sections ?? []).flatMap((s) => s.figures ?? []);
+
 const ok = {
   groups: [{ key: 'a', title: 'A' }],
   works: [{ title: 'X', group: 'a', year: '2024', context: 'Course', href: '/archive' }],
@@ -40,7 +44,7 @@ describe('其他作品内容池（content/other/works.json）', () => {
     const data = getOtherWorks();
     data.works.forEach((w) => {
       if (w.image) expect(existsSync(join(process.cwd(), 'public', w.image.src)), w.image.src).toBe(true);
-      w.page?.figures.forEach((f) => expect(existsSync(join(process.cwd(), 'public', f.src)), f.src).toBe(true));
+      figs(w).forEach((f) => expect(existsSync(join(process.cwd(), 'public', f.src)), f.src).toBe(true));
       if (w.href) expect(reachable(w.href), `${w.title} → ${w.href}`).toBe(true);
       expect(reachable(otherWorkHref(w, getLogEntries())), w.title).toBe(true);
       if (w.log) expect(PROJECT_GROUPS.map((g) => g.key), `${w.title} 的 log`).toContain(w.log);
@@ -50,7 +54,7 @@ describe('其他作品内容池（content/other/works.json）', () => {
   it('标在内容池里的宽高与图片文件实际像素一致（详情页按它排比例框）', async () => {
     const imgs = getOtherWorks().works.flatMap((w) => [
       ...(w.image && w.image.src.startsWith('/other/') ? [w.image] : []),
-      ...(w.page?.figures ?? []),
+      ...figs(w),
     ]);
     expect(imgs.length).toBeGreaterThan(0);
     for (const img of imgs) {
@@ -59,20 +63,41 @@ describe('其他作品内容池（content/other/works.json）', () => {
     }
   });
 
-  it('详情页：地址不和主项目撞，中英说明段数一致，组都有中文名', () => {
+  it('详情页：地址不和主项目撞，组都有中文名，封面不在正文重复，小节标题不重复，正文都注明出处', () => {
     const pages = getOtherWorkPages();
     expect(pages.length).toBeGreaterThan(0);
     const mainSlugs = getAllWork().map((w) => w.slug);
     pages.forEach(({ work, group }) => {
       expect(mainSlugs, `${work.slug} 与主项目撞了`).not.toContain(work.slug);
       expect(group.zh, `${group.key} 缺中文组名`).toBeTruthy();
-      const st = work.page.statement;
-      if (st) expect(st.en.length, `${work.slug} 说明的中英段数`).toBe(st.zh.length);
+      expect(figs(work).map((f) => f.src), `${work.slug} 封面在正文里又出现一次`).not.toContain(work.image!.src);
+      const heads = work.page.sections.map((s) => s.heading.en);
+      expect(new Set(heads).size, `${work.slug} 小节标题重复`).toBe(heads.length);
+      work.page.sections.flatMap((s) => s.texts ?? []).forEach((t) => {
+        expect(t.en.length, `${work.slug} 中英段数`).toBe(t.zh.length);
+        expect(t.source.en && t.source.zh, `${work.slug} 缺出处`).toBeTruthy();
+      });
     });
   });
 
+  it('正文段的中英段数不一致、小节既没字又没图，都构建失败', () => {
+    const text = { original: 'zh', en: ['a'], zh: ['甲'], source: { en: 's', zh: '源' } };
+    const sec = (s: object) => ({ heading: { en: 'H', zh: '题' }, ...s });
+    const page = (sections: object[]) => ({
+      ...ok,
+      works: [{ ...ok.works[0], slug: 'x', image: { src: '/other/a.webp', width: 1, height: 1 }, page: { sections } }],
+    });
+    const parse = (sections: object[]) => OtherWorksSchema.safeParse(page(sections)).success;
+    expect(parse([sec({ texts: [text] })])).toBe(true);
+    expect(parse([sec({ texts: [{ ...text, zh: ['甲', '乙'] }] })])).toBe(false);
+    expect(parse([sec({})])).toBe(false);
+    expect(parse([])).toBe(false);
+  });
+
   it('没有详情页又没有 href、有详情页却没有 slug 或封面，都构建失败', () => {
-    const page = { figures: [{ src: '/other/a.webp', width: 1, height: 1, caption: { en: 'a', zh: 'a' } }] };
+    const page = {
+      sections: [{ heading: { en: 'H', zh: '题' }, figures: [{ src: '/other/a.webp', width: 1, height: 1, caption: { en: 'a', zh: 'a' } }] }],
+    };
     const img = { src: '/other/a.webp', width: 1, height: 1 };
     const { href: _drop, ...noHref } = ok.works[0];
     const bad = (w: object) => OtherWorksSchema.safeParse({ ...ok, works: [w] }).success;

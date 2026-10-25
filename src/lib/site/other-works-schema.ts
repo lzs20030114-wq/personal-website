@@ -35,9 +35,10 @@ const GroupSchema = z
   .strict();
 
 /**
- * 详情页（/work/<slug>，用户拍板 2026-10-25「先做详情页」）。文字只有三种来源：
- * 源文件上的署名（没写就不写）、源文件里的说明原文（另一种语言是站方译文，页面上标明）、
- * 站方写的图注。正文不代写。逐张图的来源见根目录 其他作品_素材整理.md。
+ * 详情页（/work/<slug>，MAPPING §60）。2026-10-25 第二版改成按节叙事（用户「去研究真正的正文，
+ * 为我设计每一个的叙事」）：每节一个站方小标题、若干段源文件原文、一组图。文字只有三种来源：
+ * 源文件上的署名（没写就不写）、源文件里的原文（另一种语言是站方译文，页面上标明）、站方写的小标题与图注。
+ * 正文不代写。逐张图的来源见根目录 其他作品_素材整理.md。
  */
 const FigureSchema = z
   .object({
@@ -55,27 +56,35 @@ const CreditSchema = z
   })
   .strict();
 
-const StatementSchema = z
+/** 一段（或几段）原文。both = 中英两版都是作者自己写的（如论文摘要） */
+const TextSchema = z
   .object({
-    /** 默认「Statement / 设计说明」；任务书一类的另给 */
-    label: Bi.optional(),
-    /** 原文是哪种语言；另一种是站方译文 */
-    original: z.enum(['en', 'zh']),
+    original: z.enum(['en', 'zh', 'both']),
     en: z.array(z.string().min(1)).min(1),
     zh: z.array(z.string().min(1)).min(1),
     /** 原文出自哪份文件的哪一处 */
     source: Bi,
   })
-  .strict();
+  .strict()
+  .refine((t) => t.en.length === t.zh.length, { message: '中英段数要一致' });
+
+const SectionSchema = z
+  .object({
+    heading: Bi,
+    texts: z.array(TextSchema).optional(),
+    figures: z.array(FigureSchema).optional(),
+    /** pair = 图两两并排（照片、效果图）；默认一张一行 */
+    layout: z.enum(['stack', 'pair']).optional(),
+  })
+  .strict()
+  .refine((s) => (s.texts?.length ?? 0) + (s.figures?.length ?? 0) > 0, { message: '一节至少要有一段字或一张图' });
 
 const PageSchema = z
   .object({
     credits: z.array(CreditSchema).optional(),
     /** 展览、入选一类的记录：只写作者确认过的 */
     recognition: z.array(Bi).optional(),
-    statement: StatementSchema.optional(),
-    /** 封面之外的图，按页面上的顺序 */
-    figures: z.array(FigureSchema).min(1),
+    sections: z.array(SectionSchema).min(1),
   })
   .strict();
 
