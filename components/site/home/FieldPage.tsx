@@ -1,9 +1,9 @@
 'use client';
 
 // 01 Field（稿 design-ref/home-field-hero/17 Home - Field Hero.dc.html，MAPPING §55）。
-// 一张 28×14 的方块场：方块随机亮起又熄灭，指针划过留下一圈短暂的余光；
+// 一张 28×14 的方块场：方块随机亮起又熄灭，指针划过或停留时留下一圈余光；
 // 在亮着的方块上稍作停留，它就长成一张 6×4 的卡（周围方块让位），点卡进那件作品。
-// 中央是标题区，场在它后面绕开。触发停留时间见 MAPPING §57.1，其余沿用原稿。
+// 中央是标题区，场在它后面绕开。停留与余光规则见 MAPPING §57.1 / §57.3。
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -25,6 +25,7 @@ const TICK_MS = 110;
 const FADE_OUT_MS = 2200;
 /** 快速掠过不触发：余光先响应，再确认开卡意图。 */
 const WAKE_DWELL_MS = 50;
+const WAKE_TRACK_MS = 110;
 const OPEN_DWELL_MS = 160;
 const FLOW_QUERY = '(max-width: 1023px), (prefers-reduced-motion: reduce)';
 
@@ -106,6 +107,9 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     fading: new Map<number, number>(),
     zone: { r0: 4, r1: 9, c0: 7, c1: 20 } as Zone,
     lastCell: -1,
+    pointer: null as { x: number; y: number } | null,
+    ghostTimers: new Map<number, ReturnType<typeof setTimeout>>(),
+    heldGhosts: new Map<number, number>(),
     hoveredCell: -1,
     closing: false,
     wakeT: undefined as ReturnType<typeof setTimeout> | undefined,
@@ -121,10 +125,22 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     m.current.hoveredCell = -1;
   }, []);
 
+  const fadeGhost = (i: number, amp: number) => {
+    const g = m.current.ghosts[i];
+    clearTimeout(m.current.ghostTimers.get(i));
+    m.current.ghostTimers.delete(i);
+    g.style.transition = `opacity ${(1.1 + amp).toFixed(2)}s ease,transform .7s cubic-bezier(.2,.7,.1,1)`;
+    g.style.opacity = '0';
+  };
+
   const cancelHover = useCallback(() => {
     cancelOpen();
     clearTimeout(m.current.wakeT);
     m.current.lastCell = -1;
+    m.current.pointer = null;
+    for (const [i, amp] of m.current.heldGhosts) fadeGhost(i, amp);
+    m.current.heldGhosts.clear();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cancelOpen]);
 
   const isCenter = (i: number) => {
@@ -159,7 +175,8 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     const nextOpen = { i, pick, c0, r0, rect, n: (openRef.current?.n ?? 0) + 1 };
     // 同步把悬停占位交给展开卡，避免 React 提交前被心跳回收。
     openRef.current = nextOpen;
-    cancelHover();
+    // 开卡只接管内容悬停；指针余光在展开、收回和静止时继续响应。
+    cancelOpen();
     applyShift({ sx: X.shift, sy: Y.shift });
     setOpened((n) => n + 1);
     setOpen(nextOpen);
@@ -332,43 +349,58 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /** 指针划过：所在格闪一下、四邻淡一点、对角随机更淡（余光，不开卡） */
+  /** 所在格与邻格保持余光；离开邻域后沿原曲线淡出，不参与内容开卡。 */
   const trigger = (i: number, amp: number, delay: number) => {
-    const g = m.current.ghosts[i];
+    const st = m.current;
+    const g = st.ghosts[i];
     if (!g) return;
-    setTimeout(() => {
+    clearTimeout(st.ghostTimers.get(i));
+    st.heldGhosts.set(i, amp);
+    st.ghostTimers.set(i, setTimeout(() => {
+      st.ghostTimers.delete(i);
       if (!activeRef.current || !motionOn()) return;
       g.style.transition = 'opacity .09s,transform .7s cubic-bezier(.2,.7,.1,1)';
       g.style.opacity = String(amp);
-      setTimeout(() => {
-        g.style.transition = `opacity ${(1.1 + amp).toFixed(2)}s ease,transform .7s cubic-bezier(.2,.7,.1,1)`;
-        g.style.opacity = '0';
-      }, 130);
-    }, delay);
+    }, delay));
   };
-  const onMove = (e: React.PointerEvent) => {
-    if (!active || openRef.current || !motionOn()) return;
+
+  /** 行列让位动画中也按当前视觉中心找邻格；格缝同样响应周围余光。 */
+  const pointerCell = () => {
     const f = fieldRef.current;
-    if (!f) return;
+    const { pointer, ghosts } = m.current;
+    if (!f || !pointer || !ghosts.length) return -1;
     const fr = f.getBoundingClientRect();
-    const px = e.clientX - fr.left;
-    const py = e.clientY - fr.top;
-    const cw = (fr.width - GAP * (COLS - 1)) / COLS;
-    const ch = (fr.height - GAP * (ROWS - 1)) / ROWS;
-    const c = Math.floor(px / (cw + GAP));
-    const r = Math.floor(py / (ch + GAP));
-    if (c < 0 || c >= COLS || r < 0 || r >= ROWS || px % (cw + GAP) >= cw || py % (ch + GAP) >= ch) {
-      clearTimeout(m.current.wakeT);
-      m.current.lastCell = -1;
+    if (pointer.x < fr.left || pointer.x >= fr.right || pointer.y < fr.top || pointer.y >= fr.bottom) return -1;
+    // 同列 x / 同行 y 一致，只读 28 + 14 个框，不扫描整个场。
+    let c = 0;
+    let r = 0;
+    let dx = Infinity;
+    let dy = Infinity;
+    for (let col = 0; col < COLS; col++) {
+      const rect = ghosts[col].getBoundingClientRect();
+      const d = Math.abs(pointer.x - rect.left - rect.width / 2);
+      if (d < dx) { dx = d; c = col; }
+    }
+    for (let row = 0; row < ROWS; row++) {
+      const rect = ghosts[row * COLS].getBoundingClientRect();
+      const d = Math.abs(pointer.y - rect.top - rect.height / 2);
+      if (d < dy) { dy = d; r = row; }
+    }
+    return r * COLS + c;
+  };
+
+  const wake = () => {
+    if (!activeRef.current || !motionOn() || !m.current.pointer) {
+      cancelHover();
       return;
     }
-    const i = r * COLS + c;
-    if (i === m.current.lastCell) return;
-    clearTimeout(m.current.wakeT);
-    m.current.lastCell = i;
-    m.current.wakeT = setTimeout(() => {
-      if (!activeRef.current || openRef.current || !motionOn() || m.current.lastCell !== i) return;
-      trigger(i, 1, 0);
+    const i = pointerCell();
+    // 指针不动时也追踪让位/复位；同一个视觉邻域不重复抽签或重启渐亮。
+    if (i >= 0 && m.current.heldGhosts.get(i) !== 1) {
+      const next = new Map<number, { amp: number; delay: number }>();
+      const c = i % COLS;
+      const r = Math.floor(i / COLS);
+      next.set(i, { amp: 1, delay: 0 });
       const near = (dc: number, dr: number) => {
         const cc = c + dc;
         const rr = r + dr;
@@ -376,13 +408,34 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
       };
       [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dc, dr]) => {
         const j = near(dc, dr);
-        if (j >= 0) trigger(j, 0.45, 70);
+        if (j >= 0) next.set(j, { amp: 0.45, delay: 70 });
       });
       [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(([dc, dr]) => {
         const j = near(dc, dr);
-        if (j >= 0 && Math.random() < 0.5) trigger(j, 0.2, 140);
+        if (j >= 0 && Math.random() < 0.5) next.set(j, { amp: 0.2, delay: 140 });
       });
-    }, WAKE_DWELL_MS);
+      for (const [j, amp] of m.current.heldGhosts) {
+        if (!next.has(j)) {
+          fadeGhost(j, amp);
+          m.current.heldGhosts.delete(j);
+        }
+      }
+      for (const [j, { amp, delay }] of next) trigger(j, amp, delay);
+    }
+    m.current.lastCell = i;
+    m.current.wakeT = setTimeout(wake, WAKE_TRACK_MS);
+  };
+
+  const onMove = (e: React.PointerEvent) => {
+    if (!activeRef.current || !motionOn() || e.pointerType === 'touch') return;
+    m.current.pointer = { x: e.clientX, y: e.clientY };
+    const i = pointerCell();
+    if (i === m.current.lastCell) return;
+    clearTimeout(m.current.wakeT);
+    for (const [j, amp] of m.current.heldGhosts) fadeGhost(j, amp);
+    m.current.heldGhosts.clear();
+    m.current.lastCell = i;
+    if (i >= 0) m.current.wakeT = setTimeout(wake, WAKE_DWELL_MS);
   };
 
   const onCellEnter = (e: React.MouseEvent<HTMLSpanElement>) => {
@@ -419,6 +472,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
       <div
         className="hs-field__grid"
         ref={fieldRef}
+        onPointerEnter={onMove}
         onPointerMove={onMove}
         onPointerLeave={cancelHover}
       >
