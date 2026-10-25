@@ -565,7 +565,7 @@ export function CohabitBench({
             type="button"
             onClick={() => {
               const sim = simRef.current;
-            leaveScene();
+              leaveScene();
               if (!sim) return;
               const half = sim.layout.fieldM / 2;
               sim.addParty((Math.random() * 2 - 1) * half, (Math.random() * 2 - 1) * half, 2);

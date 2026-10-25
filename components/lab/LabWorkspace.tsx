@@ -185,6 +185,8 @@ export function LabPanel({ no, title, description, lede, specs, accent, kind, ve
     },
     entryId: id => `lab-help-${no}-${id.replace(/[^a-zA-Z0-9_-]/g, '')}`,
   }), [no]);
+  // 说明栏收起时，点开钉住的那一条也一起放下（再打开说明栏不该还停在上一次点的那一条）
+  useEffect(() => { if (!details) setHelpOn(null); }, [details]);
   const helpList = useMemo(() => [...helps].sort(([, a], [, b]) => (a.el.compareDocumentPosition(b.el) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1)), [helps]);
   // 点亮的那一条若不在说明栏视野里，只滚说明栏自己（不动页面）；点开时说明栏可能在下方（窄屏），才滚页面
   useEffect(() => {

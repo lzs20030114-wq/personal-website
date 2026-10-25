@@ -26,8 +26,11 @@ export function LabFold({ children, label, className }: { children: ReactNode; l
   );
 }
 
-/** 台架面板底栏里给视角预设留的位置（LabPanel 提供）；面板外为 null */
-export const LabViewDockSlot = createContext<HTMLElement | null>(null);
+/**
+ * 台架面板底栏里给视角预设留的位置（LabPanel 提供）。
+ * undefined = 不在面板里（原地照画）；null = 在面板里、底栏还没挂上（先不画，免得首帧在面板里画一份再跳到底栏）。
+ */
+export const LabViewDockSlot = createContext<HTMLElement | null | undefined>(undefined);
 
 /**
  * 视角预设：在 /lab 面板里搬到底栏，面板外（没有底栏）原地照画。
@@ -35,6 +38,6 @@ export const LabViewDockSlot = createContext<HTMLElement | null>(null);
  */
 export function LabViewDock({ children, off = false }: { children: ReactNode; off?: boolean }) {
   const slot = useContext(LabViewDockSlot);
-  if (off) return null;
+  if (off || slot === null) return null;
   return slot ? createPortal(children, slot) : <div className="grp">{children}</div>;
 }

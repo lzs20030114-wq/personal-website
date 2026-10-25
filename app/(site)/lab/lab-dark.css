@@ -165,8 +165,8 @@
 .lab-workspace .lab-stage .lab-ctl--tiered .lab-ctl__row { padding: 0; border: 0; }
 .lab-workspace .lab-stage .lab-ctl--tiered .lab-ctl__row::before { flex: none; font: 400 11px var(--ld-mono); color: var(--ld-mute); }
 :is([data-lab-panel='2-6'], [data-lab-panel='2-10'], [data-lab-panel='2-11'], [data-lab-panel='2-12'], [data-lab-panel='2-13'], [data-lab-panel='2-15']) .lab-ctl--tiered .lab-ctl__row::before { align-self: flex-start; }
-.lab-workspace .lab-stage .lab-ctl__solve::before { content: 'solve'; }
-.lab-workspace .lab-stage .lab-ctl__row:not(.lab-ctl__solve)::before { content: 'view'; }
+.lab-workspace .lab-stage .lab-ctl__solve::before { content: 'Solve'; }
+.lab-workspace .lab-stage .lab-ctl__row:not(.lab-ctl__solve)::before { content: 'View'; }
 .lab-language-root[data-lang='zh'] .lab-ctl__solve::before { content: '解什么'; }
 .lab-language-root[data-lang='zh'] .lab-ctl__row:not(.lab-ctl__solve)::before { content: '怎么看'; }
 .lab-workspace .lab-stage .lab-ctl .grp { padding: 0; gap: 10px 14px; border-left: 0; }
@@ -200,6 +200,8 @@
 /* 英文控件名统一句首大写（此前一半「Pattern」一半「rule」） */
 .lab-language-root[data-lang='en'] .lab-workspace .lab-stage .lab-ctl .k { display: inline-block; }
 .lab-language-root[data-lang='en'] .lab-workspace .lab-stage .lab-ctl .k::first-letter { text-transform: uppercase; }
+/* 形态名（pocket / bulb flange…）在句子里要小写，做按钮时首字母大写，与其余按钮一致 */
+.lab-language-root[data-lang='en'] .lab-workspace .lab-stage .lab-ctl .seg button::first-letter { text-transform: uppercase; }
 /* 「解什么 / 怎么看」两层：层名占左侧一栏，折行的控件组对齐到同一条竖线，不再折回层名底下；两层之间一道发丝线。
    侧栏式台架（控件竖排在图旁）有自己的版式，不吃这一条。 */
 .lab-workspace .lab-panel:not(:is([data-lab-panel='2-6'], [data-lab-panel='2-10'], [data-lab-panel='2-11'], [data-lab-panel='2-12'], [data-lab-panel='2-13'], [data-lab-panel='2-14'], [data-lab-panel='2-15'])) .lab-stage .lab-ctl--tiered .lab-ctl__row {
