@@ -20,3 +20,7 @@ scripts/model-extract/.venv/
 
 # 交接图册出图：光栅化核心由 render.py 首次运行时现编译
 scripts/handover/raster.so
+
+# Python 字节码缓存（运行出图脚本时生成）
+__pycache__/
+*.pyc
