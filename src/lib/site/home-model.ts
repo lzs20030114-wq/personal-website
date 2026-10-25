@@ -261,14 +261,6 @@ const LANES = [
   { keys: ['Sleep', 'Site'], label: 'Smart Bed · site', ink: 'oklch(0.5 0.02 200)' }, // 配色 v2：苔色带上加深一档
 ] as const;
 
-/** 项目组 → 日志条目上的项目色（与 Work 区同一套编码）。 */
-const PROJECT_INK: Record<string, string> = {
-  'project-i': TONE_G.ink,
-  'project-ii': TONE_V.ink,
-  'project-iii': TONE_S.ink,
-  'other-work': TONE_S.ink,
-  'this-site': 'var(--n600)',
-};
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -364,7 +356,8 @@ export function buildHomeLog(entries: LogEntry[]): HomeLogData {
       i,
       date: entry.date,
       tag: grp?.short.en ?? '',
-      ink: PROJECT_INK[grp?.key ?? ''] ?? 'var(--n600)',
+      // 项目色取自项目注册表（log-facets PROJECT_GROUPS.accent），首页浅底上解析为 700 级，与 Work 区同值
+      ink: grp?.accent ?? 'var(--graphite)',
       text: entry.lead.en,
       href: `/archive#${anchor}`,
       img:

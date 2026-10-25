@@ -76,8 +76,8 @@ function Bench({
   notes?: ReactNode;
   attachments?: LabAttachments;
 }) {
-  const { title, kernel, description, kind, verb } = labBench(no);
-  return <LabPanel no={no} title={title} description={description} accent={labAccent(kernel)} kind={kind} verb={verb} lede={lede} specs={specs} notes={notes} attachments={attachments}>{children}</LabPanel>;
+  const { title, description, kind, verb } = labBench(no);
+  return <LabPanel no={no} title={title} description={description} accent={labAccent(no)} kind={kind} verb={verb} lede={lede} specs={specs} notes={notes} attachments={attachments}>{children}</LabPanel>;
 }
 
 export default function LabPage() {

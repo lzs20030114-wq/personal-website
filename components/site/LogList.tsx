@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 // 只取类型：本模块是 'use client'，而 src/lib/site/log 会 import node:fs（服务端读内容池）。
 import type { LogEntry, LogLang } from '../../src/lib/site/log';
 import { readStoredLang, storeLang } from '../../src/lib/site/lang';
@@ -569,6 +569,7 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
                         className="log-entry__project"
                         aria-pressed={project === group.key}
                         title={group.label[lang]}
+                        style={{ '--proj': group.accent } as CSSProperties}
                         onClick={() => setProject(project === group.key ? null : group.key)}
                       >
                         {group.short[lang]}

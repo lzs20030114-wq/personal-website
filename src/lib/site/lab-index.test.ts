@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { LAB_BENCHES, LAB_INDEX, labAnchor, labBench } from "./lab-index";
+import { LAB_BENCHES, LAB_INDEX, labAccent, labAnchor, labBench, projectAccent } from "./lab-index";
 
 /**
  * /lab 目录守门：目录是页面的唯一台架清单，页面里每台的 `no=` 都必须登记在此，
@@ -18,6 +18,18 @@ describe("lab-index", () => {
     }
     for (const list of Object.values(byProject)) {
       expect(list).toEqual(list.map((_, k) => k + 1));
+    }
+  });
+
+  it("颜色只表示项目：同一项目的台架同色、与项目头同色，与 2D / 3D 内核无关（2026-10-25 拍板）", () => {
+    LAB_INDEX.forEach((g, i) => {
+      for (const s of g.segments) for (const b of s.benches) expect(labAccent(b.no)).toBe(projectAccent(i));
+    });
+    expect(projectAccent(0)).not.toBe(projectAccent(1));
+    // 两个项目里都同时有 2D 与 3D 台架——若颜色还跟内核走，这条会把同项目拆成两色
+    for (const g of LAB_INDEX) {
+      const kernels = new Set(g.segments.flatMap((s) => s.benches.map((b) => b.kernel)));
+      expect(kernels.size).toBe(2);
     }
   });
 

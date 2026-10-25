@@ -118,7 +118,7 @@ export function LabWorkspace({ index, children }: { index: ReactNode; children: 
               {LAB_INDEX.flatMap((g, gi) => g.segments.flatMap(sg => sg.benches.map((b, bi) => ({ b, gi, first: bi === 0 })))).map(({ b }, i, all) => {
                 const on = b.no === active;
                 const newProject = i > 0 && LAB_INDEX.findIndex(g => g.segments.some(sg => sg.benches.includes(b))) !== LAB_INDEX.findIndex(g => g.segments.some(sg => sg.benches.includes(all[i - 1].b)));
-                return <a key={b.no} href={`#lab${b.no}`} className="lab-rail__tick" data-new-project={newProject || undefined} data-on={on || undefined} aria-current={on ? 'true' : undefined} title={`${tx('Lab')} ${b.no} · ${tx(b.title)}`} aria-label={`${tx('Lab')} ${b.no} · ${tx(b.title)}`} style={{ '--tick': labAccent(b.kernel) } as CSSProperties}><span aria-hidden /></a>;
+                return <a key={b.no} href={`#lab${b.no}`} className="lab-rail__tick" data-new-project={newProject || undefined} data-on={on || undefined} aria-current={on ? 'true' : undefined} title={`${tx('Lab')} ${b.no} · ${tx(b.title)}`} aria-label={`${tx('Lab')} ${b.no} · ${tx(b.title)}`} style={{ '--tick': labAccent(b.no) } as CSSProperties}><span aria-hidden /></a>;
               })}
             </nav>}
           </div>

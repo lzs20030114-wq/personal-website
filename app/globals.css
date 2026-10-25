@@ -45,6 +45,7 @@
   --accent: var(--g700); /* 浅底彩色文字一律 700 级，对纸 7.2:1 */
   --accent-2: var(--p700); /* 次强调，稀用，对纸 7.9:1 */
   --rose: oklch(0.72 0.12 356); /* 莲粉高光，全站一两处 */
+  --slate: oklch(0.45 0.06 235); /* 石板蓝：项目三 /「筹备中」（浅底 6.7:1；.pg-dark 换亮档） */
   --trace-blue: var(--accent); /* 兼容别名：机构描线随主强调色，组件零改动 */
 }
 
@@ -907,7 +908,8 @@ button.log-heat__cell {
   gap: 6px;
 }
 /* 项目标记：左栏第一行。刻意不做成 .tag 盒——盒子已经被「标签」占着，
-   项目是另一个维度（哪个项目 vs 哪一类工作），用紫色短刻度 + 微型大写区分。 */
+   项目是另一个维度（哪个项目 vs 哪一类工作），用短刻度 + 微型大写区分。
+   刻度色 = 项目色（--proj，取自 log-facets PROJECT_GROUPS.accent；2026-10-25 起，此前一律紫色）。 */
 .log-entry__project {
   display: inline-flex;
   align-items: center;
@@ -929,17 +931,17 @@ button.log-heat__cell {
   flex: none;
   width: 14px;
   height: 3px;
-  background: var(--accent-2);
+  background: var(--proj, var(--accent-2));
 }
 .log-entry__project[aria-pressed='true'] {
-  color: var(--accent-2);
+  color: var(--proj, var(--accent-2));
 }
 @media (hover: hover) and (pointer: fine) {
   .log-entry__project {
     transition: color var(--dur-micro) var(--ease-site);
   }
   .log-entry__project:hover {
-    color: var(--accent-2);
+    color: var(--proj, var(--accent-2));
   }
 }
 /* 中文项目名不该被拉成大写 / 加拉丁字距 */
@@ -1414,6 +1416,7 @@ button.log-heat__cell {
   --hair: 1px solid oklch(0.95 0.032 120 / 0.25);
   --accent: oklch(0.71 0.098 145); /* 深底亮绿 */
   --accent-2: oklch(0.83 0.075 294); /* 深底亮紫 */
+  --slate: oklch(0.74 0.06 235); /* 深底石板蓝 */
   --n300: oklch(0.45 0.03 190);
   --n400: oklch(0.58 0.04 175);
   --n500: oklch(0.66 0.045 170);

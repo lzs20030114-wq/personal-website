@@ -40,6 +40,9 @@ export type ProjectGroup = {
   /** 条目上的短标记（左栏窄，只写编号不写项目名） */
   short: Bilingual;
   buckets: readonly string[];
+  /** 项目色（2026-10-25 拍板「颜色只表示项目」）：语义 token，随底色自动换档——
+   *  浅底取 700 级（首页），深色页（.pg-dark）取亮一档（日志页 / Lab）。全站按项目上色都从这里取。 */
+  accent: string;
 };
 export const PROJECT_GROUPS: readonly ProjectGroup[] = [
   {
@@ -47,6 +50,7 @@ export const PROJECT_GROUPS: readonly ProjectGroup[] = [
     label: { en: 'Project I · Reincarnation Machine', zh: '项目一 · 轮回机器' },
     short: { en: 'Project I', zh: '项目一' },
     buckets: ['Machine', 'Lab'],
+    accent: 'var(--accent)',
   },
   {
     key: 'project-ii',
@@ -54,6 +58,7 @@ export const PROJECT_GROUPS: readonly ProjectGroup[] = [
     label: { en: 'Project II · Cross-species Space', zh: '项目二 · 跨物种空间' },
     short: { en: 'Project II', zh: '项目二' },
     buckets: ['Space'],
+    accent: 'var(--accent-2)',
   },
   {
     key: 'project-iii',
@@ -61,6 +66,7 @@ export const PROJECT_GROUPS: readonly ProjectGroup[] = [
     label: { en: 'Project III · Sleep Research (in development)', zh: '项目三 · 睡眠研究（开题中）' },
     short: { en: 'Project III', zh: '项目三' },
     buckets: ['Sleep research'],
+    accent: 'var(--slate)',
   },
   {
     key: 'other-work',
@@ -68,6 +74,7 @@ export const PROJECT_GROUPS: readonly ProjectGroup[] = [
     label: { en: 'Other work · Smart Bed', zh: '其他工作 · 智能床' },
     short: { en: 'Other work', zh: '其他工作' },
     buckets: ['Sleep'],
+    accent: 'var(--slate)',
   },
   {
     key: 'this-site',
@@ -75,6 +82,7 @@ export const PROJECT_GROUPS: readonly ProjectGroup[] = [
     label: { en: 'This site', zh: '本站' },
     short: { en: 'This site', zh: '本站' },
     buckets: ['Site'],
+    accent: 'var(--graphite)',
   },
 ];
 

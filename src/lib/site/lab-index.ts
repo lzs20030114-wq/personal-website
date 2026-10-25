@@ -9,8 +9,10 @@
  * 项目一没有段（六台直接挂项目下，segment 只有一条、不出段头）；项目二按尺度六段
  * （2026-09-03 收纳 + 09-03/09-04 追加的 Ⅴ Ⅵ + 09-17/09-20 的 Ⅶ 单元组合）。编号按项目（2026-09-13 拍板）。
  *
- * kernel：'2d' = 2D 内核（绿）· '3d' = 3D 内核（紫），与图框顶线同一套编码
- * （稿内：2D 绿 / 3D 紫）；Lab 2-10 / 2-11 是 2D canvas 平面，按 2D 记。
+ * kernel：'2d' = 2D 内核 · '3d' = 3D 内核；Lab 2-10 / 2-11 是 2D canvas 平面，按 2D 记。
+ * 颜色不再跟内核走（2026-10-25 用户拍板「颜色只表示项目」）：稿内原是 2D 绿 / 3D 紫，
+ * 与项目色（项目一绿、项目二紫）撞在同一屏——项目一的 1-3–1-6 成了紫的。现在图框顶线、
+ * 目录圆点与刻度一律按项目上色（labAccent），内核类型只由题头的 kind 文字标出。
  */
 export type LabKernel = "2d" | "3d";
 
@@ -155,9 +157,14 @@ export function labBench(no: string): LabBench {
   return b;
 }
 
-/** 台架的图框顶线 / 目录圆点颜色 token（稿内编码：2D 绿、3D 紫） */
-export function labAccent(kernel: LabKernel): string {
-  return kernel === "2d" ? "var(--accent)" : "var(--accent-2)";
+/** 项目色 token（项目序号从 0 起）：项目一绿、项目二紫、其后石板蓝（「筹备中」同色）。 */
+export function projectAccent(i: number): string {
+  return i === 0 ? "var(--accent)" : i === 1 ? "var(--accent-2)" : "var(--slate)";
+}
+
+/** 台架的图框顶线 / 目录圆点 / 刻度颜色 = 所属项目的颜色（编号「项目-序号」取项目位）。 */
+export function labAccent(no: string): string {
+  return projectAccent(Number(no.split("-")[0]) - 1);
 }
 
 /** 锚点 id（与 planHash / LegacyLabHash 同一套：`lab1-1`） */
