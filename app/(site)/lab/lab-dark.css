@@ -62,7 +62,7 @@
 .lab-directory-head .lab-directory-toggle { min-width: 0; }
 .lab-workspace .lab-directory-toggle { width: auto; min-height: 0; padding: 0; border: 0; background: none; justify-content: flex-start; gap: 10px; font: 400 11px var(--ld-mono); color: var(--ld-mute); transition: color 0.2s; }
 .lab-workspace .lab-directory-toggle:hover { color: var(--ld-cream); }
-.lab-directory-icon { flex: none; width: 28px; height: 28px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1px solid oklch(0.95 0.032 120 / 0.25); font: 500 13px var(--ld-mono); color: var(--ld-cream); }
+.lab-directory-icon { flex: none; width: 28px; height: 28px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1px solid var(--ld-control); font: 500 13px var(--ld-mono); color: var(--ld-cream); }
 .lab-workspace .lab-directory-label { display: block; font: 400 11px var(--ld-mono); line-height: 1.35; letter-spacing: 0; text-transform: none; white-space: normal; text-align: left; }
 .lab-directory-count { font: 400 11px var(--ld-mono); color: var(--ld-mute); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .lab-workspace:not([data-nav-open]) .lab-directory-label, .lab-workspace:not([data-nav-open]) .lab-directory-count { display: none; }
@@ -107,7 +107,7 @@
 .lab-workspace .lab-panel-title h2 { margin: 0; font-size: clamp(22px, 2vw, 28px); font-weight: 600; line-height: 1.1; letter-spacing: -0.024em; text-transform: none; }
 .lab-workspace .lab-panel-title p { margin: 8px 0 0; max-width: 62ch; font-size: 15px; line-height: 1.5; color: var(--ld-soft); text-wrap: pretty; }
 .lab-workspace .lab-panel-actions { align-items: center; }
-.lab-workspace .lab-panel-actions button { min-height: 0; padding: 8px 12px; border: 1px solid oklch(0.95 0.032 120 / 0.2); background: transparent; color: var(--ld-cream); font: 500 12px var(--ld-mono); letter-spacing: 0; gap: 8px; transition: background 0.2s; }
+.lab-workspace .lab-panel-actions button { min-height: 0; padding: 8px 12px; border: 1px solid var(--ld-control); background: transparent; color: var(--ld-cream); font: 500 12px var(--ld-mono); letter-spacing: 0; gap: 8px; transition: background 0.2s; }
 .lab-workspace .lab-panel-actions button:hover { background: oklch(0.95 0.032 120 / 0.05); }
 .lab-check { width: 9px; height: 9px; box-sizing: border-box; border: 1.5px solid var(--ld-cream); }
 .lab-check[data-on] { background: var(--ld-cream); }
@@ -164,11 +164,11 @@
 .lab-workspace .lab-stage .lab-ctl .k { opacity: 1; font-weight: 500; font-size: 12.5px; color: var(--ld-soft); }
 .lab-workspace .lab-stage .lab-ctl label { color: var(--ld-soft); }
 .lab-workspace .lab-stage .lab-ctl button {
-  min-height: 0; padding: 6px 11px; border: 1px solid oklch(0.95 0.032 120 / 0.25); background: transparent; color: var(--ld-cream);
+  min-height: 0; padding: 6px 11px; border: 1px solid var(--ld-control); background: transparent; color: var(--ld-cream);
   font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
-.lab-workspace .lab-stage .lab-ctl button:hover { border-color: oklch(0.95 0.032 120 / 0.5); background: oklch(0.95 0.032 120 / 0.06); color: var(--ld-cream); }
-.lab-workspace .lab-stage .lab-ctl .seg button { padding: 6px 10px; margin-left: -1px; border: 1px solid oklch(0.95 0.032 120 / 0.2); }
+.lab-workspace .lab-stage .lab-ctl button:hover { border-color: var(--ld-control-hi); background: oklch(0.95 0.032 120 / 0.06); color: var(--ld-cream); }
+.lab-workspace .lab-stage .lab-ctl .seg button { padding: 6px 10px; margin-left: -1px; border: 1px solid var(--ld-control); }
 .lab-workspace .lab-stage .lab-ctl .seg button:first-child { margin-left: 0; }
 .lab-workspace .lab-stage .lab-ctl button.active, .lab-workspace .lab-stage .lab-ctl .seg button.active { background: var(--ld-cream); color: var(--ld-paper); border-color: var(--ld-cream); }
 .lab-workspace .lab-stage .lab-ctl input[type='range'] { width: 112px; height: 22px; }
@@ -192,7 +192,7 @@
 .lab-status i { width: 6px; height: 6px; border-radius: 50%; background: var(--ld-g-hi); transition: background 0.3s; }
 .lab-status[data-solving] i { background: oklch(0.83 0.12 85); }
 .lab-workspace .lab-zoom-controls { gap: 0; }
-.lab-workspace .lab-zoom-controls button { min-width: 28px; min-height: 28px; margin-left: -1px; padding: 0 10px; border: 1px solid oklch(0.95 0.032 120 / 0.2); font: 500 13px var(--ld-mono); color: var(--ld-cream); }
+.lab-workspace .lab-zoom-controls button { min-width: 28px; min-height: 28px; margin-left: -1px; padding: 0 10px; border: 1px solid var(--ld-control); font: 500 13px var(--ld-mono); color: var(--ld-cream); }
 .lab-workspace .lab-zoom-controls button:last-child { font-size: 11px; }
 .lab-workspace .lab-zoom-controls button:hover { background: oklch(0.95 0.032 120 / 0.06); }
 

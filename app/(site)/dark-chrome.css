@@ -19,6 +19,9 @@
   --ld-face-ink: oklch(0.86 0.04 160); /* 主青面上的次级字 */
   --ld-panel: oklch(0.25 0.022 212); /* 夜色上浮起一档：说明栏面板 */
   --ld-lime-hi: oklch(0.9 0.058 124); /* 青柠亮档：色面上的链接 */
+  /* 控件边框（按钮 / 分段钮 / 切换）：0.4 对夜色 3.5:1，过 WCAG 非文本 3:1；原 0.2–0.25 只有 1.6–1.9:1。悬停 0.7 */
+  --ld-control: oklch(0.95 0.032 120 / 0.4);
+  --ld-control-hi: oklch(0.95 0.032 120 / 0.7);
   --ld-eo: cubic-bezier(0.2, 0.7, 0.1, 1);
   --ld-eio: cubic-bezier(0.76, 0, 0.24, 1);
 }
@@ -50,10 +53,10 @@
 .ld-nav a[aria-current='page']::after { transform: scaleX(1); }
 .ld-lang { display: flex; align-items: center; padding-left: 20px; border-left: 1px solid oklch(0.95 0.032 120 / 0.2); }
 .ld-lang button {
-  margin-left: -1px; padding: 4px 9px; border: 1px solid oklch(0.95 0.032 120 / 0.25); background: transparent; cursor: pointer;
+  margin-left: -1px; padding: 4px 9px; border: 1px solid var(--ld-control); background: transparent; cursor: pointer;
   font: 500 12px var(--ld-mono), 'PingFang SC', monospace; letter-spacing: 0; transition: background 0.25s, color 0.25s, border-color 0.25s;
 }
-.ld-lang button:hover { border-color: oklch(0.95 0.032 120 / 0.6); }
+.ld-lang button:hover { border-color: var(--ld-control-hi); }
 .ld-lang button[aria-pressed='true'] { background: var(--ld-cream); color: var(--ld-paper); }
 
 /* 阅读进度（案例页，稿 data-readbar）：顶栏下缘 1.5px 绿线 */
@@ -65,6 +68,8 @@
 .ld-footer__links { display: flex; gap: 24px; }
 .ld-footer a, .ld-footer button { color: var(--ld-lime-hi); font: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 .ld-footer a:hover, .ld-footer button:hover { color: var(--ld-cream); }
+/* 焦点环在主青面上改青柠亮档：全站 accent（深底亮绿）对主青只有 3.5:1，青柠 6.5:1 */
+.ld-footer :focus-visible { outline-color: var(--ld-lime-hi); }
 
 /* 「Live」标：紫只表示「实验 / 进行中」（配色 v2 规则 03）。深底版；首页浅底版在 home.css */
 .ld-live { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; background: oklch(0.33 0.045 288); color: oklch(0.88 0.05 295); font: 500 11px var(--ld-mono); letter-spacing: 0; text-transform: none; }

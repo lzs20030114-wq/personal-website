@@ -443,3 +443,9 @@
 .hs-card:hover, .hs-bench:hover, .hs-feat:hover, .hs-entry:hover, .hs-tick:hover { color: inherit; }
 .hs-btn:hover { color: var(--paper); }
 .hs-mail:hover, .hs-field__card:hover { color: var(--cream); }
+
+/* 焦点环（MAPPING §1：2px、偏移 2px）：站内全局用 --accent，首页根上它是浅底青绿，
+   放在夜色首屏 / 主青 About / 深潭页脚上只有 2.5 / 1.1 / 1.7:1，键盘焦点几乎看不见。
+   这三块面与压在它们上面的 HUD 改用青柠亮档（对三者 ≥6.5:1）；雾 / 纸 / 苔面上照旧青绿（≥6:1）。 */
+.hs-root :focus-visible { outline: 2px solid var(--hs-focus, var(--teal)); outline-offset: 2px; }
+.hs-page--hook, .hs-page--about, .hs-foot, .hs-hud.hs-on-dark { --hs-focus: var(--lime-hi); }
