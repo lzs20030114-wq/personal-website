@@ -34,31 +34,39 @@ E = html.escape
 # 每张图：[(锚点名或 [x, y] 像素, 说明), ...]；编号按列表顺序 1..n
 CALLOUTS = {
     'cover': [
-        ('ring_S2', '呼吸环 S1–S5（五个 Hoberman 角化拱）'),
-        ('rail_top', '滑轨架 ×5（脚槽 + 竖直导槽 + 中轴孔）'),
+        ('ring_S2', '呼吸环 S1–S5'),
+        ('rail_top', '滑轨架 ×5'),
         ('shaft', '中间轴 ⌀6 D 形钢轴'),
-        ('pulley', '轴上同步带轮（GT2）'),
-        ('motor', '主电机支架（NEMA17，腰形槽调皮带）'),
-        ('chassis', '机身底盘：左右两副梯形支架'),
-        ('cage', '笼架（立柱 + 上下框）'),
-        ('turntable', '偏航转台 HDB60XZ45B（模型为 ⌀60 圆柱占位）'),
-        ('base_foot', 'X 形底座与四个圆脚'),
-        ('small_L', '小触手（左），SG90 驱动'),
-        ('armmount', '大触手安装笼（三台肌腱电机）'),
-        ('arm', '大触手：7 节椎节 + 3 根肌腱'),
+        ('pulley', '中间轴上的 60T 带轮'),
+        ('motor', '主电机 NEMA17'),
+        ('bracket', '主电机支架'),
+        ('chassis', '机身底盘（左右两副梯形支架）'),
+        ('cage', '笼架'),
+        ('turntable', '偏航转台 HDB60XZ45B'),
+        ('hdb_motor', '转台自带的 42 步进电机'),
+        ('base_foot', 'X 形底座'),
+        ('small_L', '小触手 ×2（SG90）'),
+        ('m_R', '肌腱电机（右）'),
+        ('m_D', '肌腱电机（下）'),
+        ('armmount', '大触手安装笼'),
+        ('arm', '大触手'),
     ],
     'explode': [
         ('ring', '五个呼吸环'),
         ('rail', '滑轨架 ×5'),
-        ('shaft', '中间轴（齿轮与齿条见 RM-HO-09）'),
+        ('shaft', '中间轴（齿轮与齿条另见图纸 09）'),
+        ('pulley', '60T 带轮'),
         ('chassis', '机身底盘'),
-        ('motor', '主电机支架'),
+        ('bracket', '主电机支架'),
+        ('motor', '主电机 + 20T 带轮 + 皮带'),
         ('armmount', '大触手安装笼'),
+        ('armmotor', '肌腱电机 ×3 + 绕线盘'),
         ('arm', '大触手'),
         ('small', '小触手（右）'),
         ('small2', '小触手（左）'),
         ('cage', '笼架'),
         ('turntable', '偏航转台'),
+        ('hdb_motor', '转台电机'),
         ('base', 'X 形底座'),
     ],
     'det_ring': [
@@ -67,48 +75,54 @@ CALLOUTS = {
         ('guide', '竖直导槽'),
         ('strut', '斜撑'),
         ('foot_out_r', '外侧脚（自由滑动）'),
-        ('foot_in_r', '内侧脚（齿条推拉的那一只）'),
+        ('foot_in_r', '内侧脚（齿条推拉这一只）'),
         ('slot', '水平脚槽（槽宽 3.4–3.6）'),
         ('hub', '中轴孔 ⌀6.15（D 形轴直接穿过）'),
         ('tab', '安装耳（螺栓固定到底盘梳齿上）'),
     ],
     'det_drive': [
-        ('shaft', '中间轴 ⌀6 D 形，长 370'),
-        ('pulley', '轴上带轮（模型画成 ⌀16，按定案应为 60T）'),
-        ('motor', '主电机支架：NEMA17 装在框内'),
-        ('slot_bracket', '腰形槽：移动电机调皮带张力'),
-        ('railhub', '滑轨架的中轴孔（兼作滑动轴承）'),
-        ('shaftblock', 'S1 端两块挡块（模型为方块，作用待确认）'),
+        ('shaft', '中间轴'),
+        ('pulley60', '60T 带轮，顶丝压在 D 面上'),
+        ('belt', 'GT2 闭口带，宽 6'),
+        ('pulley20', '20T 带轮（电机轴上）'),
+        ('motor', 'NEMA17 机身，装在支架框内'),
+        ('slot', '腰形槽 ×4（孔距 31）：电机左右移动调皮带'),
+        ('bracket', '电机支架：顶板挂到左梯形支架下面'),
     ],
     'det_base': [
-        ('turntable', '偏航转台位置（⌀60 × 45 占位）'),
-        ('cage_floor', '笼架底板（螺栓锁到转台输出盘）'),
+        ('turntable', '转台箱体，落在底座中心座的托盘里'),
+        ('disk', '输出盘 ⌀60（5-M6）'),
+        ('hdb_motor', '转台电机，从托盘敞开的一侧伸出'),
+        ('seat', '底座中心座（托盘 + 两颗定位销）'),
+        ('cage_floor', '笼架底板，锁在输出盘上'),
         ('cage_post', '笼架立柱 ×4'),
-        ('cage_top', '立柱顶托架（托住机身底盘的横梁）'),
-        ('center_plate', '底座中心座'),
+        ('cage_top', '立柱顶托架'),
         ('foot', '圆脚 ×4'),
     ],
-    'det_chassis': [
-        ('frame_r', '右梯形支架 362.5 × 123.7'),
-        ('frame_l', '左梯形支架'),
-        ('cross1', '后横梁（落在笼架立柱上）'),
-        ('cross2', '前横梁'),
-        ('tie_r', '侧拉杆 ×2'),
-        ('tooth', '梳齿：滑轨架的安装耳落在这里'),
-    ],
     'det_arm': [
-        ('mount', '安装笼（挂在右梯形支架下）'),
-        ('v0', '第 1 节椎节（最粗）'),
-        ('v6', '第 7 节椎节'),
-        ('tip', '梢端：三根肌腱各绑在自己的绑线柱上'),
+        ('mount', '安装笼'),
+        ('m_L', '肌腱电机（左）'),
+        ('m_D', '肌腱电机（下）'),
+        ('v0', '第 1 节（最粗）'),
+        ('v6', '第 6 节'),
+        ('tip', '梢端节：三根肌腱各绑一根柱'),
     ],
-    'det_armbase': [
-        ('frame_l', '电机框 A（约 50 × 50，内口约 44，装 NEMA17）'),
-        ('frame_r', '电机框 B'),
-        ('frame_b', '电机框 C（在下方）'),
-        ('disc', '根部连接件：肌腱从这里进入触手'),
-        ('v0', '第 1 节椎节'),
-        ('top_plate', '顶板：螺栓固定到机身底盘下面'),
+    'det_armbase2': [
+        ('m_L', '肌腱电机（左）'),
+        ('m_R', '肌腱电机（右）'),
+        ('m_D', '肌腱电机（下）'),
+        ('s_L', '绕线盘：电机轴上装 GT2 20T 带轮'),
+        ('eyelet', '根部腱孔 ×3（离轴 13.9）'),
+        ('tC', '笼内这一段肌腱：示意'),
+        ('v0', '第 1 节'),
+        ('top_plate', '顶板：固定到右梯形支架下面'),
+    ],
+    'det_arm_cut': [
+        ('win0', '端板窗口（本腱一侧）'),
+        ('groove0', '中央导块对面一侧的槽口'),
+        ('block', '中央导块'),
+        ('gap', '节与节之间：沿本腱一侧直走'),
+        ('spine', '节间柔性脊柱杆'),
     ],
     'det_small': [
         ([300, 150], '安装板（螺栓固定到底盘下面）'),
@@ -120,20 +134,21 @@ CALLOUTS = {
     ],
 }
 EXTRA_ANCHOR = {}
+DIMV = META.get('_dims', {})
 
 # 尺寸线：(锚点1, 锚点2, 'h'|'v', 尺寸线所在的 y（h）或 x（v）, 文字)
 DIMS = {
-    'view_front': [('ymax_pt', 'ymin_pt', 'h', 672, '387'),
-                   ('zmax_pt', 'zmin_pt', 'v', 698, '382'),
-                   ('axis', 'zmin_pt', 'v', 26, '156 轴线高')],
+    'view_front': [('ymax_pt', 'ymin_pt', 'h', 672, f"{DIMV.get('W', 405)}"),
+                   ('zmax_pt', 'zmin_pt', 'v', 738, f"{DIMV.get('H', 382)}"),
+                   ('axis', 'zmin_pt', 'v', 22, '156 轴线高')],
     'view_side': [('body_l', 'body_r', 'h', 686, '387 机身'),
-                  ('xmin_pt', 'xmax_pt', 'h', 734, '780 含大触手'),
-                  ('zmax_pt', 'zmin_pt', 'v', 1284, '382'),
+                  ('xmin_pt', 'xmax_pt', 'h', 734, f"{DIMV.get('L', 780)} 含大触手"),
+                  ('zmax_pt', 'zmin_pt', 'v', 1284, f"{DIMV.get('H', 382)}"),
                   ('st1', 'st2', 'h', 28, '85'), ('st2', 'st3', 'h', 28, '85'),
                   ('st3', 'st4', 'h', 28, '85'), ('st4', 'st5', 'h', 28, '85')],
-    'view_top': [('xmin_pt', 'xmax_pt', 'h', 704, '780'),
+    'view_top': [('xmin_pt', 'xmax_pt', 'h', 746, f"{DIMV.get('L', 780)}"),
                  ('body_l', 'body_r', 'h', 30, '387'),
-                 ('ymax_pt', 'ymin_pt', 'v', 1284, '387')],
+                 ('ymax_pt', 'ymin_pt', 'v', 1284, f"{DIMV.get('W', 405)}")],
 }
 
 
@@ -294,7 +309,7 @@ def rings_svg():
         ft = foot_travel(ri)
         body.append(f'<text class="vlab s" x="{cx:.0f}" y="370" text-anchor="middle">内侧脚行程 {ft["inner_tr"]:.1f}</text>')
     body.append('<text class="vlab s" x="8" y="198">全开（中轴 0°）· 数字 = 拱顶离中轴高度</text>')
-    body.append('<text class="vlab s" x="8" y="400">折叠（815 模型曲柄方案的另一端死点）</text>')
+    body.append('<text class="vlab s" x="8" y="400">折叠</text>')
     return (f'<svg class="vec rings" viewBox="0 0 {W} {H}" role="img" aria-label="五个呼吸环全开与折叠对照">'
             + '\n'.join(body) + '</svg>')
 
@@ -414,12 +429,128 @@ def ring_table():
             f'<tr><td>{SHORT[ri]}</td><td>{base} × {sc}</td><td class="n">{(-170 + 85 * ri):+d}</td>'
             f'<td class="n">{len(top["tris"])}</td><td class="n">{hinges}</td><td class="n">4</td>'
             f'<td class="n">{span_o:.0f} / {span_f:.0f}</td><td class="n">{ap_o:.1f} / {ap_f:.1f}</td>'
-            f'<td class="n">{ft["inner_tr"]:.1f}</td><td class="n">{ft["outer_tr"]:.1f}</td>'
-            f'<td class="n">{top["crankR"]:.1f}</td></tr>')
+            f'<td class="n">{ft["inner_tr"]:.1f}</td><td class="n">{ft["outer_tr"]:.1f}</td></tr>')
     return ('<div class="tw"><table class="data"><thead><tr><th>环</th><th>基型 × 比例</th><th>站位 x</th>'
             '<th>角化件</th><th>铰点</th><th>脚</th><th>全宽 开/合</th><th>拱顶高 开/合</th>'
-            '<th>内侧脚行程</th><th>外侧脚行程</th><th>旧曲柄 r</th></tr></thead><tbody>'
+            '<th>内侧脚行程</th><th>外侧脚行程</th></tr></thead><tbody>'
             + ''.join(rows) + '</tbody></table></div>')
+
+
+# ---------------------------------------------------------------- 大触手肌腱走线（数据：make_figures 存的 815 实测）
+ARM = META.get('_arm', {})
+
+
+def _poly(pts):
+    return ' '.join(f'{x:.1f},{y:.1f}' for x, y in pts)
+
+
+def tendon_end_svg():
+    """端视（第 1 节，从梢端往根部看）：端板窗口在 90 / 210 / 330°，中央导块槽口在对面的 270 / 30 / 150°。"""
+    S, cx, cy = 8.6, 215, 225
+    def P(r, deg):
+        a = math.radians(deg); return (cx + S * r * math.cos(a), cy - S * r * math.sin(a))
+    def hexagon(apo):   # 边法向在 angs 上的多边形
+        angs = sorted(apo)
+        out = []
+        for i, t1 in enumerate(angs):
+            t2 = angs[(i + 1) % len(angs)]
+            n1 = np.array([math.cos(math.radians(t1)), math.sin(math.radians(t1))])
+            n2 = np.array([math.cos(math.radians(t2)), math.sin(math.radians(t2))])
+            p = np.linalg.solve(np.array([n1, n2]), np.array([apo[t1], apo[t2]]))
+            out.append((cx + S * p[0], cy - S * p[1]))
+        return out
+    rw = ARM['plates'][0][1] if ARM else 11.5
+    rg = ARM['grooves'][0][1] if ARM else 10.3
+    plate = hexagon({90: 16.0, 210: 16.0, 330: 16.0, 30: 18.7, 150: 18.7, 270: 18.7})
+    block = hexagon({t: rg for t in (30, 90, 150, 210, 270, 330)})
+    g = [f'<polygon points="{_poly(plate)}" fill="#F4F6F8" stroke="#2A2E33" stroke-width="1.4"/>']
+    for t in (30, 150, 270):          # 立柱成对，夹着槽口方向
+        for dt in (-21, 21):
+            x, y = P(12.0, t + dt); g.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{S * 2.1:.1f}" fill="#E3E8EE" stroke="#7B848D" stroke-width="1"/>')
+    g.append(f'<polygon points="{_poly(block)}" fill="#DDE6EF" stroke="#2A2E33" stroke-width="1.2"/>')
+    cols = {'A': ('#B02C20', 90), 'B': ('#1F5C96', 210), 'C': ('#28784E', 330)}
+    for k, (c, t) in cols.items():
+        # 端板窗口：V 形，尖朝轴心
+        tip, base = P(rw, t), [P(rw + 3.4, t - 13), P(rw + 3.4, t + 13)]
+        g.append(f'<polygon points="{_poly([tip] + base)}" fill="#fff" stroke="{c}" stroke-width="1.4"/>')
+        # 对面的槽口
+        x, y = P(rg, t + 180)
+        g.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="5.2" fill="#fff" stroke="{c}" stroke-width="1.6"/>')
+        a, b = P(rw, t), P(rg, t + 180)
+        g.append(f'<line x1="{a[0]:.1f}" y1="{a[1]:.1f}" x2="{b[0]:.1f}" y2="{b[1]:.1f}" stroke="{c}" '
+                 f'stroke-width="{3 if k == "A" else 1.6}" stroke-linecap="round"/>')
+    g.append(f'<circle cx="{cx}" cy="{cy}" r="3" fill="#2A2E33"/>')
+    # 标注（只标腱 A），文字统一排在右侧
+    wa, gb = P(rw + 1.8, 90), P(rg, 270)
+    lab = [
+        (wa, 70, '腱 A 进出端板的窗口：90°'),
+        ((cx, cy), 175, '轴线：三根腱在节内都从这里越过'),
+        (P(rg * 0.6, 330), 245, '中央导块（六边形，三条边上开槽）'),
+        (gb, 315, '腱 A 压进的槽口：270°，在轴线另一侧'),
+        (P(12, 291), 385, '立柱 ×6，两根一组'),
+    ]
+    LX = 430
+    for (x0, y0), ty, t in lab:
+        g.append(f'<polyline points="{x0:.1f},{y0:.1f} {LX - 14:.1f},{ty:.1f} {LX - 4:.1f},{ty:.1f}" fill="none" stroke="#1D5A8E" stroke-width="1"/>'
+                 f'<circle cx="{x0:.1f}" cy="{y0:.1f}" r="2.6" fill="#1D5A8E"/>'
+                 f'<text class="vlab" x="{LX:.1f}" y="{ty + 5:.1f}">{E(t)}</text>')
+    leg = ''.join(f'<line x1="{20 + i * 120}" y1="430" x2="{48 + i * 120}" y2="430" stroke="{c}" stroke-width="3"/>'
+                  f'<text class="vlab s" x="{54 + i * 120}" y="435">腱 {k}</text>' for i, (k, (c, _)) in enumerate(cols.items()))
+    return (f'<svg class="vec" viewBox="0 0 720 450" role="img" aria-label="第 1 节端视：窗口与槽口的方位">'
+            + ''.join(g) + leg + '<text class="vlab s" x="20" y="24">第 1 节端视，从梢端往根部看（按 815 实测尺寸）</text></svg>')
+
+
+def tendon_side_svg():
+    """腱 A 所在的纵剖面，整条触手。竖向放大 2 倍。"""
+    seq = ARM['seq']; plates = ARM['plates']; grooves = ARM['grooves']
+    x0, x1 = -14, 420
+    W, H = 1080, 250
+    sx = (W - 60) / (x1 - x0); sy = sx * 2
+    cy = 130
+    X = lambda x: 30 + (x - x0) * sx
+    Y = lambda r: cy - r * sy
+    g = [f'<line x1="{X(x0):.1f}" y1="{cy}" x2="{X(x1):.1f}" y2="{cy}" stroke="#9AA3AB" stroke-width="1" stroke-dasharray="10 4 2 4"/>']
+    nbox = len(grooves)
+    for i in range(nbox + 1):
+        if i < nbox:
+            (xa, ra), (xb, rb) = plates[2 * i], plates[2 * i + 1]
+        else:
+            (xa, ra), (xb, rb) = plates[2 * nbox], plates[2 * nbox + 1]
+        k = ra / plates[0][1]
+        top, bot, win = 16.0 * k, -18.7 * k, 3.4 * k
+        for xp, rp in ((xa, ra), (xb, rb)):
+            w = 6 * k
+            # 端板：窗口处断开（窗口以下一段 + 窗口以上一段）
+            g.append(f'<rect x="{X(xp) - w * sx / 2:.1f}" y="{Y(rp):.1f}" width="{w * sx:.1f}" height="{(rp - bot) * sy:.1f}" fill="#F4F6F8" stroke="#2A2E33" stroke-width="1"/>')
+            g.append(f'<rect x="{X(xp) - w * sx / 2:.1f}" y="{Y(top):.1f}" width="{w * sx:.1f}" height="{max(0.8, (top - rp - win)) * sy:.1f}" fill="#F4F6F8" stroke="#2A2E33" stroke-width="1"/>')
+        # 盒体轮廓（立柱所在的外包，淡）
+        g.append(f'<rect x="{X(xa):.1f}" y="{Y(12 * k):.1f}" width="{(xb - xa) * sx:.1f}" height="{24 * k * sy:.1f}" fill="none" stroke="#C3CAD1" stroke-width="1" stroke-dasharray="3 3"/>')
+        if i < nbox:
+            xg, rg = grooves[i]
+            bw = 15.1 * k
+            g.append(f'<rect x="{X(xg) - bw * sx / 2:.1f}" y="{Y(rg):.1f}" width="{bw * sx:.1f}" height="{2 * rg * sy:.1f}" fill="#DDE6EF" stroke="#2A2E33" stroke-width="1"/>')
+        if i < nbox:
+            xn = plates[2 * i + 2][0]
+            g.append(f'<line x1="{X(xb):.1f}" y1="{cy}" x2="{X(xn):.1f}" y2="{cy}" stroke="#7B848D" stroke-width="{3.5 * k:.1f}" stroke-linecap="round"/>')
+    # 根部：腱孔件 + 脊柱杆
+    g.append(f'<line x1="{X(-3):.1f}" y1="{cy}" x2="{X(plates[0][0]):.1f}" y2="{cy}" stroke="#7B848D" stroke-width="3.5"/>')
+    g.append(f'<circle cx="{X(-3):.1f}" cy="{Y(13.9):.1f}" r="{4.9 * sy / 2:.1f}" fill="#fff" stroke="#2A2E33" stroke-width="1.2"/>')
+    # 梢端绑柱
+    g.append(f'<rect x="{X(401.7) - 3.75 * sx:.1f}" y="{Y(8.15):.1f}" width="{7.5 * sx:.1f}" height="{3.9 * sy:.1f}" fill="#F4F6F8" stroke="#2A2E33" stroke-width="1"/>')
+    pts = [(X(x), Y(r)) for x, r in seq]
+    pts = [(X(-14), Y(13.9))] + pts
+    g.append(f'<polyline points="{_poly(pts)}" fill="none" stroke="#B02C20" stroke-width="2.4" stroke-linejoin="round"/>')
+    lab = [
+        ((X(-3), Y(13.9)), (X(-3) + 10, 34), '根部腱孔，往后接绕线盘', 'start'),
+        ((pts[3][0], pts[3][1]), (pts[3][0] + 30, 236), '每一节：越过轴线，压进中央导块对面的槽口', 'start'),
+        ((X(401.7), Y(6.2)), (X(401.7) - 10, 34), '梢端：绑在本腱的绑线柱上', 'end'),
+    ]
+    for (ax, ay), (tx, ty), t, an in lab:
+        g.append(f'<line x1="{ax:.1f}" y1="{ay:.1f}" x2="{tx:.1f}" y2="{ty - (5 if ty > ay else -4):.1f}" stroke="#1D5A8E" stroke-width="1"/>'
+                 f'<circle cx="{ax:.1f}" cy="{ay:.1f}" r="2.6" fill="#1D5A8E"/>'
+                 f'<text class="vlab" x="{tx:.1f}" y="{ty + (8 if ty > ay else 0):.1f}" text-anchor="{an}">{E(t)}</text>')
+    return (f'<svg class="vec" viewBox="0 0 {W} {H + 10}" role="img" aria-label="腱 A 的纵剖面，整条触手">' + ''.join(g)
+            + f'<text class="vlab s" x="{W - 10}" y="{H + 4}" text-anchor="end">只画腱 A；B、C 同样走法，转 120°。竖向放大 2 倍，左为根部。</text></svg>')
 
 
 # ---------------------------------------------------------------- 拼装
@@ -438,5 +569,7 @@ src = src.replace('<!--RINGS-->', rings_svg())
 src = src.replace('<!--RACK-->', rack_svg())
 src = src.replace('<!--GEARTABLE-->', gear_table())
 src = src.replace('<!--RINGTABLE-->', ring_table())
+src = src.replace('<!--TENDON_END-->', tendon_end_svg())
+src = src.replace('<!--TENDON_SIDE-->', tendon_side_svg())
 (OUT / 'index.html').write_text(src, encoding='utf-8')
 print('figures', fig_counter[0], '→', OUT / 'index.html')

@@ -10,7 +10,9 @@ node   scripts/handover/ring-phases.mjs /tmp/ho/fig/ring-phases.json            
 python scripts/handover/build_doc.py scripts/handover/handover.src.html /tmp/ho/fig 轮回机器_交接图册
 ```
 
+- `proxies.py`：模型里没有、交接时必须画出来的件（主电机 + 带轮 + 皮带、三台肌腱电机 + 绕线盘、偏航转台实物外形、三根肌腱）。位置取模型留好的框、托盘；肌腱路径取 `extract_815.py` 从大触手块测出的端板窗口与中央导块槽口。图注里一律标「示意」。
 - `render.py` + `raster.c`：正交投影、z-buffer、线稿（轮廓 / 折痕 / 深度跳变）+ 淡色平涂。首次运行自动编译 `raster.so`（需要 `cc`）。
 - `handover.src.html`：图册正文模板。`<!--FIG name 图注-->` 换成渲染图 + 编号气泡；`<!--RINGS-->`、`<!--RACK-->`、`<!--GEARTABLE-->`、`<!--RINGTABLE-->` 换成由数据计算的矢量图和表。
 - 图里**不画** 815 模型中的曲柄轮与驱动杆：日志 2026-08-23 记录实物已改为齿条驱动，齿条没有建模，图册里用示意图另画（RM-HO-09）。
+- 图册只讲实体（用户 2026-10-25 拍板）：电子接线、行为、固件不写。
 - PDF：用 Playwright 打开生成的页面，`emulateMedia('print')` 后 `page.pdf()`（A4 横版，`preferCSSPageSize`）。

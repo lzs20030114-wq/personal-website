@@ -85,9 +85,62 @@ for p in parts:
     if p["cat"] == "rail":
         p["ring"] = ring_of_x((p["lo"][0] + p["hi"][0]) / 2)
 
+# ---- 大触手：块局部坐标 → 世界的变换 + 肌腱路径实测（端板窗口、中央导块槽口、根部腱孔、梢端绑柱）
+def arm_route():
+    ref = A["arm"][0].Geometry
+    idef = model.InstanceDefinitions.FindId(ref.ParentIdefId)
+    loc, curves = [], []
+    for oid in idef.GetObjectIds():
+        o = model.Objects.FindId(oid); g = o.Geometry
+        if g.ObjectType == r3d.ObjectType.Curve:
+            dom = g.Domain
+            curves.append(np.array([[p.X, p.Y, p.Z] for p in (g.PointAt(dom.T0 + (dom.T1 - dom.T0) * k / 40) for k in range(41))]))
+            continue
+        m = gm.raw_mesh(g)
+        if m is not None:
+            loc.append((np.asarray(m[0], float), np.asarray(m[1], int)))
+    acc = []
+    gm.expand_instance(model, ref, acc)
+    L = np.vstack([v for v, _ in loc]); W = to_world(np.vstack([np.asarray(v, float) for v, _ in acc]))
+    assert len(L) == len(W), "块局部与世界网格顶点数不一致"
+    X = np.c_[L, np.ones(len(L))]
+    M = np.linalg.lstsq(X, W, rcond=None)[0]
+    assert np.abs(X @ M - W).max() < 1e-6
+    # 轴线：节间脊柱杆的中心（块局部 y, z）
+    ax_y, ax_z = 0.1, 6.9
+    def zcross(v, t, x0, y0):
+        T = v[t]; s = T[:, :, 0] - x0; out = []
+        for tri, ss in zip(T, s):
+            pos = ss > 0
+            if pos.all() or (~pos).all(): continue
+            pts = []
+            for a, b in ((0, 1), (1, 2), (2, 0)):
+                if (ss[a] > 0) != (ss[b] > 0):
+                    u = ss[a] / (ss[a] - ss[b]); pts.append(tri[a] + (tri[b] - tri[a]) * u)
+            if len(pts) == 2:
+                p, q = pts
+                if (p[1] - y0) * (q[1] - y0) < 0:
+                    u = (y0 - p[1]) / (q[1] - p[1]); out.append(p[2] + u * (q[2] - p[2]))
+        return sorted(out)
+    plates = []
+    for v, t in loc:
+        lo, hi = v.min(0), v.max(0); s = hi - lo
+        if s[0] < 9 and s[1] > 12 and s[2] > 12 and lo[0] > 0:
+            zs = zcross(v, t, (lo[0] + hi[0]) / 2, ax_y)
+            plates.append(((lo[0] + hi[0]) / 2, round(zs[1] - ax_z, 2)))   # 窗口底（V 尖）离轴
+    plates.sort()
+    grooves = []   # 中央导块的三道槽口：每站三段短弧，取 270°（正下方）那段的离轴距离
+    for c in curves:
+        if len(c) and np.ptp(c[:, 0]) < 0.5 and abs(c[:, 1].mean() - ax_y) < 0.5 and c[:, 2].mean() < ax_z - 3 and c[0, 0] > 30:
+            grooves.append((c[:, 0].mean(), round(ax_z - c[:, 2].mean(), 2)))
+    grooves.sort()
+    return dict(l2w=M.tolist(), axis=(ax_y, ax_z), plates=plates, grooves=grooves)
+ARM = arm_route()
+print("大触手端板", len(ARM["plates"]), "槽口", len(ARM["grooves"]))
+
 from collections import Counter
 print(Counter(p["cat"] for p in parts))
 print("三角形总数", sum(len(p["t"]) for p in parts))
 allv = np.vstack([p["v"] for p in parts])
 print("整机包围盒", allv.min(0).round(1), allv.max(0).round(1), "尺寸", (allv.max(0)-allv.min(0)).round(1))
-pickle.dump(dict(parts=parts, shell=shell, delta=D), open(out, "wb"))
+pickle.dump(dict(parts=parts, shell=shell, delta=D, arm=ARM), open(out, "wb"))
