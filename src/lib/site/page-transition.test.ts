@@ -7,6 +7,7 @@ import {
   keepsHeader,
   parseLoc,
   plateVars,
+  repairedHref,
   PT_DURATION,
   settleForm,
   type Loc,
@@ -176,5 +177,22 @@ describe('durations', () => {
       else expect(ms).toBeGreaterThanOrEqual(760);
       expect(ms).toBeLessThanOrEqual(1100);
     }
+  });
+});
+
+describe('repairedHref（Next 冷加载带 hash 后的已知路由坑）', () => {
+  it('双 hash 改回点下去的那个地址', () => {
+    expect(repairedHref('/#work', '/#work#work')).toBe('/#work');
+    expect(repairedHref('/lab#lab2-3', '/lab#lab1-5#lab2-3')).toBe('/lab#lab2-3');
+  });
+  it('目标没有 hash、Next 带上了旧 hash：去掉', () => {
+    expect(repairedHref('/', '/#work')).toBe('/');
+    expect(repairedHref('/archive', '/archive#log-2026-06-15-1')).toBe('/archive');
+  });
+  it('地址本来就对、或者路径 / 查询不一样（重定向）：不碰', () => {
+    expect(repairedHref('/#work', '/#work')).toBeNull();
+    expect(repairedHref('/work/a', '/work/a')).toBeNull();
+    expect(repairedHref('/old#x', '/new#x#x')).toBeNull();
+    expect(repairedHref('/lab?x=1#lab1-1', '/lab#lab1-1#lab1-1')).toBeNull();
   });
 });

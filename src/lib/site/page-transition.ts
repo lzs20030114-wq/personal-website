@@ -193,3 +193,23 @@ export function homeHashFor(page: number, zone: 'lab' | 'log' | undefined): stri
   if (page === 3) return zone === 'log' ? '#log' : '#lab';
   return '';
 }
+
+/**
+ * Next 16（16.2 与 16.4 实测）的已知路由表有个坑：页面冷加载时，它把带 hash 的地址
+ * （`location.href`）当成这条路径的 canonicalUrl 记下来，之后再导航到同一路径时拼成
+ * `route.canonicalUrl + url.hash`——从 `/#work` 冷加载进站，再点「← 全部作品」就成了
+ * `/#work#work`；点去 `/` 的链接则会带上那个旧的 `#work`。普通 Link 也走这条路，不只是转场层。
+ *
+ * 修法：按读者点下去的那个链接把地址改回来（MAPPING §48）。只改 hash：路径或查询对不上
+ * （重定向、改写）一律不碰。返回 null = 不用改。
+ */
+export function repairedHref(intended: string, actual: string): string | null {
+  const split = (s: string): [string, string] => {
+    const i = s.indexOf('#');
+    return i < 0 ? [s, ''] : [s.slice(0, i), s.slice(i)];
+  };
+  const [wantPath, wantHash] = split(intended);
+  const [gotPath, gotHash] = split(actual);
+  if (wantPath !== gotPath || wantHash === gotHash) return null;
+  return intended;
+}

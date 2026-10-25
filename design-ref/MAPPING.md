@@ -1534,7 +1534,7 @@ planDraw 的猫分支去掉注意力圈，增加支撑、落点外圈与单元�
 - 手感常量（各形式时长、两条曲线、open 里底板铺满 40% / 溶开 40–80% 的分段）待真机看。软件渲染下「点下去到开始动」要 0.2–2s（新页渲染 + 截图都慢），真机应短得多；性能面板里有 `pt:start → pt:commit → pt:ready` 三个标记可量。
 - 原位飞行里两台画面的机位不同（主图是宽幅取景、实验室是 4:3），交叉换手那一下会短暂叠出两个大小不同的机构；已把换手压到飞行中段最快的那 30%。
 - 日志页与 about 仍是旧 SiteNav 顶栏，与深色顶栏之间换页时顶栏不钉、随页面淡换。要统一需先给日志页换「09/10」稿的顶栏（另一件事）。
-- Next 自身的一个怪癖（与本次无关，未改）：若首页是以 `/#lab` 之类的地址**首次打开**的，之后点品牌回首页 Next 会把那个 hash 带回来。
+- **Next 的已知路由坑（2026-10-25 修掉）**：某一页若是以带 hash 的地址**首次打开**的（`/#work`、`/lab#lab1-5`、`/archive#log-…`），Next 16 把带 hash 的 `location.href` 当成这条路径的 canonicalUrl 记进已知路由表（`create-initial-router-state.js` → `discoverKnownRoute`），之后再导航到同一路径时拼成 `route.canonicalUrl + url.hash`（16.2 在 `segment-cache/navigation.js`，16.4 在 `app-router-state.js`）：点「← 全部作品」得到 `/#work#work`，首页读不出 hash，收回退成落下、落在首屏、也落不回原来那一屏；点品牌回 `/` 则带上旧的 `#work`，被翻到 Work 页。普通 Link 也走这条路，与转场层无关，16.4.2（线上版本）依旧，升级解决不了。**修法在转场层**：捕获阶段的点击处理不论演不演转场，都记下读者点的站内地址；新页提交时（`committed` 里，本组件在根布局里排在页面前面，layout effect 先于页面组件读 hash），若地址的 hash 与点的不一样就按点的改回来（纯函数 `repairedHref`，只改 hash，路径或查询对不上一律不碰；带着 Next 的 history.state 原样 replace）。前进后退落到的是改对了的历史条目，不再改；同页只换 hash 时清掉记录。守门 `page-transition.test.ts` +3。程序里直接 `router.push` 的导航不经过点击，不在修复范围（站里目前没有走到这条路的）。
 
 ## 49. Lab 1-6 的附件：交互机制表（2026-10-18，用户「把这些表格整理成表格成果推上去，附在 lab6 里面作为附件」）
 

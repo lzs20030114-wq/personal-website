@@ -12,6 +12,7 @@ import {
   keepsHeader,
   parseLoc,
   plateVars,
+  repairedHref,
   PT_CAPTURE_TIMEOUT,
   PT_COMMIT_TIMEOUT,
   PT_DURATION,
@@ -93,6 +94,26 @@ const scrollMemo = new Map<string, number>();
 let entryKey: string | null = null;
 /** 被接管的前进 / 后退：新页提交后要滚到的位置。动画演不演都要兑现（跳过动画时也一样）。 */
 let pendingRestore: { path: string; y: () => number } | null = null;
+/**
+ * 读者刚点下去的站内链接（不论演不演转场都记）：新页提交时按它把 Next 拼坏的 hash 改回来
+ * （`repairedHref`，Next 冷加载带 hash 的已知路由坑，MAPPING §48）。
+ */
+let pendingHref: { path: string; href: string; at: number } | null = null;
+/** 点了却迟迟没提交的那次（没换页、被取消）不能留给以后别的换页用 */
+const PENDING_HREF_MS = 10_000;
+
+/**
+ * 新页提交时、页面组件读 hash 之前（本组件在根布局里排在页面前面，layout effect 先跑）：
+ * 地址的 hash 与读者点的不一样就改回来。带着 Next 的 history.state 原样 replace，它不当成路由变更。
+ */
+function repairHash(pathname: string) {
+  const want = pendingHref;
+  pendingHref = null;
+  if (!want || want.path !== pathname || Date.now() - want.at > PENDING_HREF_MS) return;
+  const { pathname: p, search, hash } = window.location;
+  const fixed = repairedHref(want.href, `${p}${search}${hash}`);
+  if (fixed) window.history.replaceState(window.history.state, '', fixed);
+}
 
 function tagEntry() {
   const st = window.history.state as Record<string, unknown> | null;
@@ -197,6 +218,7 @@ function waitForCommit(path: string, ms: number): Promise<boolean> {
 
 /** 新页提交（根布局的 layout effect 里调）：记下现在在哪一页，并放行正在等它的转场。 */
 function committed(pathname: string) {
+  repairHash(pathname);
   here = locOfUrl(new URL(window.location.href));
   tagEntry();
   // 前进 / 后退的滚动位置：等这次 commit 里其余组件的 layout effect（Lab 画框首量等）都落地再滚——
@@ -453,11 +475,16 @@ export function PageTransitions() {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       const a = (e.target as Element | null)?.closest?.('a[href]');
       if (!(a instanceof HTMLAnchorElement)) return;
-      if ((a.target && a.target !== '_self') || a.hasAttribute('download') || a.dataset.pt === 'none') return;
+      if ((a.target && a.target !== '_self') || a.hasAttribute('download')) return;
+      const url = new URL(a.href);
+      // 换页走不走转场都记下点的是哪个地址（下面几种放行的情形里 Next 照样会拼坏 hash）
+      if (url.origin === window.location.origin) {
+        pendingHref = { path: url.pathname, href: `${url.pathname}${url.search}${url.hash}`, at: Date.now() };
+      }
+      if (a.dataset.pt === 'none') return;
       if (!supported() || reduced()) return;
       // 主页实验目录：触屏第一下是「预览这一台」（ZonePage 自己处理），第二下才进实验室
       if (lastPointer === 'touch' && a.matches('.hs-bench:not(.hs-is-on)')) return;
-      const url = new URL(a.href);
       const to = locOfUrl(url);
       const from = here;
       if (!to || !from) return;
@@ -474,6 +501,8 @@ export function PageTransitions() {
 
     const onPopState = (e: PopStateEvent) => {
       if (replaying) return;
+      // 前进 / 后退落到的是历史里现成的地址（换页时已经改对），不再按刚才点的链接改
+      pendingHref = null;
       const from = here;
       const to = locOfUrl(new URL(window.location.href));
       if (!from || !to || from.path === to.path) return;
@@ -513,6 +542,8 @@ export function PageTransitions() {
     };
 
     const onHashChange = () => {
+      // 同一页内只换 hash：路径没变、不会有新页提交，记下的那次点击用不上了
+      if (pendingHref?.path === window.location.pathname) pendingHref = null;
       here = locOfUrl(new URL(window.location.href));
       tagEntry();
     };
