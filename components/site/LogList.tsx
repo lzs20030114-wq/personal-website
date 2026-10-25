@@ -38,7 +38,7 @@ import { afterPageTransition } from './pageTransitionState';
 
 type Copy = {
   title: string;
-  kicker: string;
+  kicker: (n: number) => string;
   foot: string;
   filterLabel: string;
   levels: { project: string; aspect: string; month: string };
@@ -54,7 +54,7 @@ type Copy = {
 const COPY: Record<LogLang, Copy> = {
   en: {
     title: 'Work log',
-    kicker: 'Continuous record · newest first',
+    kicker: (n) => `Continuous record · ${n} entries · newest first`,
     foot: 'The log grows over time. Entries link into case studies and lab benches as they land.',
     filterLabel: 'Filter entries',
     levels: { project: 'Project', aspect: 'Aspect', month: 'Month' },
@@ -68,7 +68,7 @@ const COPY: Record<LogLang, Copy> = {
   },
   zh: {
     title: '工作日志',
-    kicker: '持续记录 · 最新在前',
+    kicker: (n) => `持续记录 · ${n} 条 · 最新在前`,
     foot: '日志持续增补。条目落地后会链入对应的案例页与实验台架。',
     filterLabel: '筛选条目',
     levels: { project: '项目', aspect: '方面', month: '时间' },
@@ -377,35 +377,15 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
 
   return (
     <>
-      <header
-        className="flex flex-wrap items-baseline justify-between gap-3"
-        style={{ padding: '64px 0 40px', borderBottom: 'var(--hair)' }}
-      >
-        <h1
-          style={{
-            fontSize: 'clamp(40px, 8vw, 72px)',
-            fontWeight: 800,
-            lineHeight: 0.98,
-            letterSpacing: lang === 'zh' ? '0.01em' : '-0.02em',
-            margin: 0,
-            textTransform: lang === 'zh' ? 'none' : 'uppercase',
-          }}
-        >
+      {/* 标头与 /lab 开头区同一套三件（dark-chrome.css 的 .ld-meta / .ld-h1 / .ld-lede，2026-10-25）：
+          原 Modernist 的 800 字重 + 全大写退役。导语就是原先压在列表末尾的那句说明，挪上来、一字未改。 */}
+      <header className="log-intro">
+        <p className="ld-meta">{copy.kicker(entries.length)}</p>
+        <h1 className="ld-h1">
           {copy.title}
+          {lang === 'zh' ? null : <span className="ld-h1__dot">.</span>}
         </h1>
-        <div className="flex flex-wrap items-center gap-4">
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              color: 'var(--n600)',
-            }}
-          >
-            {copy.kicker}
-          </span>
-        </div>
+        <p className="ld-lede">{copy.foot}</p>
       </header>
 
       {/* 筛选带：左三行下钻（项目 → 方面 → 月份），右热力图。<1100px 热力图落到下面。 */}
@@ -592,7 +572,6 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
             })}
           </div>
         ))}
-        <p style={{ margin: '40px 0 64px', fontSize: 13, color: 'var(--n600)' }}>{copy.foot}</p>
       </section>
     </>
   );

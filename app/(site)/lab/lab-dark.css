@@ -14,10 +14,7 @@
 .ld-intro { position: relative; padding-top: 72px; padding-bottom: 44px; background: var(--ld-deep); border-image: conic-gradient(var(--ld-deep) 0 0) fill 0 // 0 100vmax; }
 .ld-intro__top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 40px 64px; }
 .ld-intro__lead { flex: 1 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
-.ld-meta { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font: 400 12px var(--ld-mono); letter-spacing: 0; text-transform: none; color: var(--ld-mute); }
-.ld-h1 { margin: 0; font-weight: 500; font-size: clamp(48px, 6.4vw, 92px); line-height: 0.96; letter-spacing: -0.045em; text-transform: none; }
-.ld-h1__dot { color: var(--ld-g); }
-.ld-lede { margin: 0; max-width: 52ch; font-size: clamp(17px, 1.5vw, 20px); font-weight: 400; line-height: 1.5; color: oklch(0.86 0.04 160); text-wrap: pretty; }
+/* .ld-meta / .ld-h1 / .ld-lede 在 dark-chrome.css（日志页标头也用，2026-10-25） */
 .ld-howto { flex: 0 1 380px; margin: 0; display: flex; flex-direction: column; border-top: 1px solid oklch(0.95 0.032 120 / 0.2); }
 .ld-howto > div { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 16px; align-items: baseline; padding: 11px 0; border-bottom: 1px solid oklch(0.95 0.032 120 / 0.1); }
 .ld-howto dt { margin: 0; font: 500 11px var(--ld-mono); letter-spacing: 0; text-transform: none; color: var(--ld-g); }
@@ -216,8 +213,8 @@
 .lab-attachments, .lab-attach-view { --accent: var(--lab-tone); }
 .lab-attachments { margin-top: 18px; padding-top: 14px; border-top: 1px solid oklch(0.95 0.032 120 / 0.12); }
 .lab-attachments .log-rail { padding-top: 0; }
-.lab-attachments :is(.log-rail__title, .log-card__label, .log-card__meta), .lab-attach-view :is(.log-view__label, .log-view__meta, .log-view__close) { font-family: var(--ld-mono); letter-spacing: 0; }
-.lab-attachments .log-rail__title { font-size: 11px; color: var(--ld-mute); }
+/* 等宽 + 不加字距 + 不大写已是日志那一套的默认（globals.css，2026-10-25），这里只剩配色与间距 */
+.lab-attachments .log-rail__title { color: var(--ld-mute); }
 .lab-attachments .log-card { padding: 9px 6px 9px 0; }
 .lab-attachments .log-card__cap { color: var(--ld-soft); }
 .lab-attach-view .log-view[data-open='true'] { margin-top: 20px; padding: 16px 18px 18px; border-top: 0; background: var(--ld-panel); }
@@ -227,11 +224,10 @@
 .lab-attach-view .log-table table { font-size: 12.5px; }
 /* 窄屏不把五六列挤成一字一行：表保底 720 px 宽，在自己的滚动框里横着滚（.log-table__scroll） */
 .lab-attach-view .log-table table { min-width: 720px; }
-.lab-attach-view .log-table th { white-space: normal; font-family: var(--ld-mono); letter-spacing: 0; text-transform: none; color: var(--ld-mute); }
+.lab-attach-view .log-table th { white-space: normal; color: var(--ld-mute); }
 .lab-attach-view .log-table td { color: oklch(0.9 0.035 140); }
 .lab-attach-view .log-table figcaption { max-width: 96ch; font-size: 12.5px; color: var(--ld-soft); }
 .lab-workspace .lab-panel-actions .lab-attach-toggle .lab-attach-n { color: var(--lab-tone); font-variant-numeric: tabular-nums; }
-.lab-language-root[data-lang='zh'] :is(.log-rail__title, .log-card__label, .log-view__label, .log-view__close) { text-transform: none; }
 
 /* ── 放大：稿的整屏 fixed + 深底；吸顶顶栏在放大时让位（面板在 .pg-dark 的层叠上下文里，z-index 压不过顶栏） ── */
 body:has(.lab-panel[data-expanded]) .ld-header { visibility: hidden; }

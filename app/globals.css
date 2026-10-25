@@ -282,8 +282,10 @@ a:hover {
 .tag {
   display: inline-flex;
   align-items: center;
+  font-family: var(--ld-mono);
   font-size: 11px;
-  letter-spacing: 0.02em;
+  font-weight: 400;
+  letter-spacing: 0;
   padding: 3px 10px;
   border-radius: 0;
   white-space: nowrap;
@@ -393,6 +395,15 @@ a:hover {
 
 /* 筛选带：左 = 三级下钻（项目 → 方面 → 月份），右 = 日历热力图。
    <1100px 热力图落到筛选下面（网格塌成单列）。 */
+/* 日志页标头：与 /lab 开头区同一套三件（.ld-meta / .ld-h1 / .ld-lede 在 dark-chrome.css），
+   间距照 .ld-intro（72 / 44 / gap 20），只是不铺深潭色带。2026-10-25 取代 800 字重 + 全大写的旧标头。 */
+.log-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 72px 0 44px;
+  border-bottom: var(--hair);
+}
 .log-band {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -426,10 +437,10 @@ a:hover {
   }
 }
 .log-facet__level {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--ld-mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--n500);
   padding-top: 8px;
 }
@@ -477,10 +488,10 @@ a:hover {
   min-height: 1.4em;
   margin-top: 6px;
   padding-left: 88px;
+  font-family: var(--ld-mono);
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--n500);
 }
 @media (max-width: 640px) {
@@ -499,17 +510,16 @@ a:hover {
 }
 
 /* 筛选项：选中 = accent 文字 + 底边实线，与条目左栏的 tag-outline 同色系——
-   点的是哪个项目/方面，一眼对得上。 */
+   点的是哪个项目/方面，一眼对得上。字 = 等宽、原样大小写（2026-10-25 起，与 /lab 控件同一套）。 */
 .log-filter__opt {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
   padding: 6px 0;
-  font: inherit;
+  font-family: var(--ld-mono);
   font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--n600);
   background: transparent;
   border: 0;
@@ -534,8 +544,7 @@ a:hover {
 }
 .log-filter__n {
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
   color: var(--n500);
 }
@@ -546,14 +555,6 @@ a:hover {
 .log-filter__opt:disabled {
   opacity: 0.35;
   cursor: default;
-}
-/* 中文不做大写变形（CJK 无大小写，uppercase 只白白扰动字宽计算） */
-[lang='zh-Hans'] .log-filter__opt,
-[lang='zh-Hans'] .log-facet__level,
-[lang='zh-Hans'] .log-band__readout,
-[lang='zh-Hans'] .log-heat__title,
-[lang='zh-Hans'] .log-heat__legend {
-  text-transform: none;
 }
 @media (hover: hover) and (pointer: fine) {
   .log-filter__opt {
@@ -583,10 +584,10 @@ a:hover {
   --heat-gap: 3px;
 }
 .log-heat__title {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--ld-mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--n500);
 }
 /* 窄屏横向滚动：格子宁可滑出去，也不缩到点不中 */
@@ -604,10 +605,10 @@ a:hover {
 }
 .log-heat__months {
   margin-bottom: 4px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-family: var(--ld-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--n500);
   white-space: nowrap;
 }
@@ -650,10 +651,10 @@ button.log-heat__cell {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-family: var(--ld-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--n500);
 }
 @media (hover: hover) and (pointer: fine) {
@@ -684,10 +685,10 @@ button.log-heat__cell {
   gap: 14px;
   margin: 0;
   padding: 44px 0 6px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-family: var(--ld-mono);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--n600);
 }
 .log-month::after {
@@ -713,10 +714,11 @@ button.log-heat__cell {
   gap: 10px;
 }
 .log-entry__date {
-  font-size: 20px;
-  font-weight: 800;
+  font-family: var(--ld-mono);
+  font-size: 16px;
+  font-weight: 500;
   line-height: 1;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   font-variant-numeric: tabular-nums;
 }
 .log-entry__tags {
@@ -725,18 +727,17 @@ button.log-heat__cell {
   gap: 6px;
 }
 /* 项目标记：左栏第一行。刻意不做成 .tag 盒——盒子已经被「标签」占着，
-   项目是另一个维度（哪个项目 vs 哪一类工作），用短刻度 + 微型大写区分。
+   项目是另一个维度（哪个项目 vs 哪一类工作），用短刻度区分（2026-10-25 前另加微型大写，已退役）。
    刻度色 = 项目色（--proj，取自 log-facets PROJECT_GROUPS.accent；2026-10-25 起，此前一律紫色）。 */
 .log-entry__project {
   display: inline-flex;
   align-items: center;
   gap: 7px;
   padding: 0;
-  font: inherit;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--ld-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--n600);
   background: transparent;
   border: 0;
@@ -761,12 +762,6 @@ button.log-heat__cell {
     color: var(--proj, var(--accent-2));
   }
 }
-/* 中文项目名不该被拉成大写 / 加拉丁字距 */
-[lang='zh-Hans'] .log-entry__project {
-  text-transform: none;
-  letter-spacing: 0.06em;
-  font-size: 11px;
-}
 /* 概括行 = 按钮：整行可点。引句限宽 70ch（行长），附件角标与箭头贴右缘——
    右缘那一列就是「这条的图表在哪」：收起态是角标，展开后正下方就是右栏（.log-rail）。 */
 .log-entry__toggle {
@@ -788,7 +783,7 @@ button.log-heat__cell {
   max-width: 70ch;
   margin: 0;
   font-size: 16px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.45;
   color: var(--ink);
 }
@@ -800,9 +795,10 @@ button.log-heat__cell {
   gap: 12px;
   margin-left: auto;
   padding-top: 2px;
+  font-family: var(--ld-mono);
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0;
   font-variant-numeric: tabular-nums;
   color: var(--n500);
 }
@@ -901,15 +897,12 @@ button.log-heat__cell {
 .log-entry__body h3,
 .log-entry__body h4 {
   margin: 1.4em 0 0.5em;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--n800);
 }
 .log-entry__body h4 {
-  text-transform: none;
-  letter-spacing: 0.02em;
+  font-size: 13px;
   color: var(--n700);
 }
 .log-entry__body ul,
@@ -987,10 +980,10 @@ button.log-heat__cell {
   border-bottom: var(--hair);
 }
 .log-table th {
+  font-family: var(--ld-mono);
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--n600);
   white-space: nowrap;
 }
@@ -1032,15 +1025,11 @@ button.log-heat__cell {
   gap: 8px;
   margin: 0 0 2px;
   padding-bottom: 6px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--n500);
-}
-[lang='zh-Hans'] .log-rail__title {
-  letter-spacing: 0.06em;
+  font-family: var(--ld-mono);
   font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--n500);
 }
 .log-rail__n {
   font-variant-numeric: tabular-nums;
@@ -1090,17 +1079,18 @@ button.log-heat__cell {
   display: flex;
   align-items: baseline;
   gap: 8px;
+  font-family: var(--ld-mono);
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--n700);
   font-variant-numeric: tabular-nums;
 }
 .log-card__meta {
+  font-family: var(--ld-mono);
   font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--n500);
 }
 .log-card__cap {
@@ -1143,37 +1133,32 @@ button.log-heat__cell {
   gap: 12px;
 }
 .log-view__label {
+  font-family: var(--ld-mono);
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--accent);
   font-variant-numeric: tabular-nums;
 }
 .log-view__meta {
+  font-family: var(--ld-mono);
   font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--n500);
 }
 .log-view__close {
   margin-left: auto;
   padding: 0;
-  font: inherit;
+  font-family: var(--ld-mono);
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--n600);
   background: transparent;
   border: 0;
   border-bottom: 1px solid currentColor;
   cursor: pointer;
-}
-[lang='zh-Hans'] .log-view__close,
-[lang='zh-Hans'] .log-view__label {
-  text-transform: none;
-  letter-spacing: 0.06em;
 }
 .log-view .log-fig,
 .log-view .log-table {
