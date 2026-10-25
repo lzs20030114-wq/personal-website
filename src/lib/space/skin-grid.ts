@@ -31,7 +31,7 @@
  *
  * 注意**芯轨不参与**环间净距：它在半径内侧（R − 5.8），被环身自己包着。
  */
-import { figureVerts, type FigureSpec } from './figure';
+import { figureParts, type FigureSpec, type Tone } from './figure';
 import { boxVerts } from './skin-solid';
 import { RING, ringGap } from './skin-ring';
 
@@ -350,6 +350,8 @@ export interface SceneMesh {
   verts: Float32Array;
   idx: Uint32Array;
   kind: 'room' | 'figure';
+  /** 人的零件按颜色分组（方块人：肤 / 发 / 衣 / 裤 / 鞋 / 眼睛 / 高光），颜色由台架按它给；房间不给 */
+  tone?: Tone;
 }
 
 /**
@@ -369,7 +371,6 @@ export function sceneBySpan(fieldSpan: number, roomInner: number = fieldSpan + 2
     const g = boxVerts(b.cx, b.cy, b.cz, b.hx, b.hy, b.hz);
     return { verts: g.verts, idx: g.idx, kind: 'room' as const };
   });
-  const f = figureVerts(figureSpotBySpan(fieldSpan));
-  out.push({ verts: f.verts, idx: f.idx, kind: 'figure' });
+  for (const f of figureParts(figureSpotBySpan(fieldSpan))) out.push({ verts: f.mesh.verts, idx: f.mesh.idx, kind: 'figure', tone: f.tone });
   return out;
 }

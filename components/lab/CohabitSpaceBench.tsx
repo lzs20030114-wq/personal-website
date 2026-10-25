@@ -6,13 +6,14 @@ import { LabControlLabel } from './LabControlLabel';
 import { attachLabCamera } from './labCameraInput';
 import { planFromHash } from './planHash';
 import { useBenchLoop } from './useBenchLoop';
-import { DARK_A, DARK_B, FIG_DARK, FIG_LITE, LITE_A, LITE_B, RAIL_DARK, RAIL_LITE, ROOM_DARK, ROOM_LITE } from './SkinSolidBench';
+import { DARK_A, DARK_B, LITE_A, LITE_B, RAIL_DARK, RAIL_LITE, ROOM_DARK, ROOM_LITE } from './SkinSolidBench';
+import { toneColor } from './figurePalette';
 import { FlatRenderer, bakeIndexed, type MeshPlace } from '../../src/lib/linkage/gl3d';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import type { Vec3 } from '../../src/lib/linkage/solver3d';
 import { COHABIT, CohabitSim, SPACE_MODES, bandAngle, partySizes, type EventKind, type SpaceMode } from '../../src/lib/space/cohabit';
 import { FIGURE, RING_GRID_AXON, ROOM, ringGridViewMatrix, type RingGridView } from '../../src/lib/space/skin-grid';
-import { catVerts, figureVerts, type CatPose } from '../../src/lib/space/figure';
+import { CAT, CAT_HEAD_YAW_MAX, clampHeadYaw, catRig, humanRig, strideOf, type Rig as BodyRig } from '../../src/lib/space/figure';
 import {
   COHABIT_PIVOT,
   FRAMES,
@@ -25,14 +26,16 @@ import {
   bandFrame,
   bandTopology,
   boxesMesh,
-  catSpot,
+  catPlacement,
   cohabitCamScale,
   figureYaw,
   furnitureBoxes,
   platesMesh,
   postsMesh,
+  ringBand,
   rigFor,
   roomMesh,
+  seatSpecOf,
   unitDrop,
   unitFootY,
   unitTopY,
@@ -47,7 +50,7 @@ import {
  * 「走 · 站 · 坐」规则 · 8×8 · 只收挡路的带 · 访客有身体结伴 · 猫能下地 · 猫按 Mertens & Turner 1988 标定），
  * 画的是 Lab 2-8 那间房里的 64 个单元：每个单元 = Lab 2-8 那只圆筒环按格距等比缩小；带子的形状取自
  * 一条引擎预烘的关键帧（正向协议 + 松键回程），每条带按「所在单元的成形程度 × 这条带收回了几成」取帧
- * （src/lib/space/cohabit-solid.ts 头注有这笔账）。人与猫是体块比例参考（figure.ts），站 / 坐 / 走 / 卧四档姿态。
+ * （src/lib/space/cohabit-solid.ts 头注有这笔账）。人与猫是方块风的比例参考（figure.ts，配色 figurePalette.ts）：人有走 / 站 / 坐（按座面解出来、看猫时前倾）与转头、每人一件不同颜色的上衣，猫在台上顺着环绕着立杆待。
  *
  * **两段触发（2026-10-23 作者纠偏）**：非触发的单元收在天花下（整束布贴着圆环板缩成一团），触发才沿立杆
  * 落到工位、再压缩成形——程度 < `HOIST.dropAt` 是升降段（整束布的高度与长度一起插值），之上是成形段。
@@ -70,8 +73,6 @@ type ViewKey = (typeof VIEWS)[number]['key'];
 
 const FURN_DARK: [number, number, number] = [0.16, 0.15, 0.13];
 const FURN_LITE: [number, number, number] = [0.52, 0.48, 0.42];
-const CAT_DARK: [number, number, number] = [0.2, 0.17, 0.14];
-const CAT_LITE: [number, number, number] = [0.86, 0.78, 0.62];
 /** 事件连线（与平面台架同一套配色：绿 共视 / 紫 共温 / 莲粉 共触 / 墨 交接） */
 const LINK_COLOR: Record<EventKind, [number, number, number]> = {
   gaze: [0.42, 0.76, 0.58],
@@ -143,11 +144,12 @@ function makeSim(space: SpaceMode, seed: number): CohabitSim {
   return sim;
 }
 
-function catPoseOf(state: string): CatPose {
-  if (state === 'lie') return 'lie';
-  if (state === 'sit' || state === 'wait' || state === 'held') return 'sit';
-  return 'walk';
-}
+/** 步态相位分几格（每格一份静态网格，画面上看不出跳格） */
+const WALK_FRAMES = { person: 24, cat: 16 } as const;
+/** 速度过这条线算在走（m/s，按仿真时间平滑；低于它画站 / 坐） */
+const MOVING = { person: 0.15, cat: 0.06 } as const;
+/** 速度平滑的时间常数（s）：等让路时一停一走，不让小人在走 / 站之间闪 */
+const SPEED_TAU = 0.25;
 
 interface Api {
   step: (dt: number) => void;
@@ -290,6 +292,62 @@ export function CohabitSpaceBench({
       R.addMesh('ring-formed-b', formed.b);
     };
 
+    // ── 人与猫：按「姿态 + 步态相位格」各烘一份静态网格（每种颜色一件，身子与头分开），摆放走 drawMeshAt，每帧不重烘 ──
+    const rigs = new Map<string, BodyRig>();
+    const rigOf = (key: string, make: () => BodyRig): BodyRig => {
+      let r = rigs.get(key);
+      if (!r) {
+        r = make();
+        rigs.set(key, r);
+        // 方块零件按面着色（每个面一个明暗）
+        for (const part of r.parts) R.addMesh(`${key}:${part.on}:${part.tone}`, bakeIndexed(part.mesh.verts, part.mesh.idx));
+      }
+      return r;
+    };
+    // 每个人 / 猫走过的路程与平滑后的速度（按仿真时间）：路程推步态相位，速度定走还是站
+    const motion = new WeakMap<object, { x: number; y: number; t: number; dist: number; speed: number }>();
+    const track = (who: object, x: number, y: number): { dist: number; speed: number } => {
+      const m = motion.get(who);
+      if (!m || sim.t < m.t) {
+        const fresh = { x, y, t: sim.t, dist: 0, speed: 0 };
+        motion.set(who, fresh);
+        return fresh;
+      }
+      const dt = sim.t - m.t;
+      if (dt > 0) {
+        const d = Math.hypot(x - m.x, y - m.y);
+        if (d < 1) {
+          m.dist += d;
+          const k = 1 - Math.exp(-dt / SPEED_TAU);
+          m.speed += (d / dt - m.speed) * k;
+        }
+        m.x = x;
+        m.y = y;
+        m.t = sim.t;
+      }
+      return m;
+    };
+    const STRIDE_M = strideOf(FIGURE.HEIGHT) / UNITS_PER_M;
+    const frac = (v: number): number => v - Math.floor(v);
+    /** 同一份网格、同一套配色的一批摆放（人的上衣 / 头发按 variant = 访客编号换色） */
+    type Batch = { r: BodyRig; key: string; variant: number; body: MeshPlace[]; head: MeshPlace[] };
+    /** 一副 Rig 摆一处：身子 yaw + 平移，头绕枢轴再转 headTurn（世界坐标） */
+    const placeBoth = (batches: Map<string, Batch>, r: BodyRig, key: string, variant: number, x: number, y: number, z: number, yaw: number, headTurn: number): void => {
+      const c = Math.cos(yaw), s = Math.sin(yaw);
+      const id = `${key}#${variant}`;
+      let b = batches.get(id);
+      if (!b) batches.set(id, (b = { r, key, variant, body: [], head: [] }));
+      b.body.push({ yaw, x, y, z });
+      b.head.push({ yaw: yaw + r.headYaw + headTurn, x: r.pivot[0] * c - r.pivot[2] * s + x, y: r.pivot[1] + y, z: r.pivot[0] * s + r.pivot[2] * c + z });
+    };
+    const drawBatches = (batches: Map<string, Batch>): void => {
+      for (const b of batches.values())
+        for (const part of b.r.parts) {
+          const [dark, lite] = toneColor(part.tone, b.variant);
+          R.drawMeshAt(`${b.key}:${part.on}:${part.tone}`, part.on === 'body' ? b.body : b.head, dark, lite);
+        }
+    };
+
     // 每条带的上一帧「成形 × (1 − 收回)」与方向（涨查正向轨迹、退查回程）
     const fPrev = new Float32Array(layout.units.length * BANDS);
     const rising = new Uint8Array(layout.units.length * BANDS).fill(1);
@@ -359,38 +417,56 @@ export function CohabitSpaceBench({
           R.drawMeshAt(`band-${k}-b`, places, DARK_B, LITE_B);
         }
       }
-      // 人：走 / 站 = 站姿（迈步的那副），坐 = 坐姿、朝座位的朝向
+      // 人：走（步态按走过的路程推相位）/ 站 / 坐（按这张家具的座面解出来；看着猫时前倾）；头随视线转，夹在 ±75°
+      const people = new Map<string, Batch>();
       for (const p of sim.people) {
+        const mo = track(p, p.walker.x, p.walker.y);
         const seat = p.seated && p.seat !== null ? sim.seats[p.seat] : null;
-        const heading = seat ? Math.atan2(seat.face[1], seat.face[0]) : p.walker.heading;
-        const fig = figureVerts({
-          x: p.walker.x * UNITS_PER_M,
-          z: p.walker.y * UNITS_PER_M,
-          footY: ROOM.FLOOR_Y,
-          height: FIGURE.HEIGHT,
-          yaw: figureYaw(heading),
-          pose: seat ? 'sit' : 'stand',
-        });
-        R.drawDynamicMesh(bakeIndexed(fig.verts, fig.idx), FIG_DARK, FIG_LITE);
+        const rect = seat && sim.furn ? sim.furn.rects[seat.furn] : null;
+        let key = 'p-stand';
+        let r: BodyRig;
+        let heading = p.walker.heading;
+        let x = p.walker.x;
+        let y = p.walker.y;
+        if (seat && rect) {
+          const s = seatSpecOf(rect, seat);
+          const lean = p.watching !== null && !p.ignores;
+          key = `p-sit-${s.front.toFixed(3)}-${s.back.toFixed(3)}-${lean ? 1 : 0}`;
+          r = rigOf(key, () =>
+            humanRig({
+              height: FIGURE.HEIGHT,
+              pose: 'sit',
+              lean,
+              seat: { top: s.top * UNITS_PER_M, front: s.front * UNITS_PER_M, back: s.back * UNITS_PER_M, thick: s.thick * UNITS_PER_M, backTop: s.backTop * UNITS_PER_M },
+            }),
+          );
+          heading = Math.atan2(seat.face[1], seat.face[0]);
+          x = seat.x;
+          y = seat.y;
+        } else if (mo.speed > MOVING.person) {
+          const k = Math.floor(frac(mo.dist / STRIDE_M) * WALK_FRAMES.person) % WALK_FRAMES.person;
+          key = `p-walk-${k}`;
+          r = rigOf(key, () => humanRig({ height: FIGURE.HEIGHT, pose: 'walk', phase: k / WALK_FRAMES.person }));
+        } else r = rigOf(key, () => humanRig({ height: FIGURE.HEIGHT, pose: 'stand' }));
+        placeBoth(people, r, key, p.id, x * UNITS_PER_M, ROOM.FLOOR_Y, y * UNITS_PER_M, figureYaw(heading), clampHeadYaw(p.walker.gaze - heading));
       }
-      // 猫：在台上的落在平台面上（离芯心太近的挪到平台中带），下地的在地面
+      drawBatches(people);
+      // 猫：台上的顺着环形平台坐 / 蜷 / 走（身子绕着立杆弯过去，不穿杆）、跨台时贴着芯的一侧跳过去；地面上的照平面位置。
+      // 成形段才有台面（落到位的直筒还没有平台）：脚下的台程度到顶才把猫画在平台面上
+      const band = traj ? ringBand(rig, layout, traj) : null;
+      const cats = new Map<string, Batch>();
       for (const c of sim.cats) {
-        const support = sim.supportOf(c);
-        let unit = support[0] ?? null;
-        if (support.length > 1) unit = support.reduce((b, u) => (Math.hypot(u.x - c.walker.x, u.y - c.walker.y) < Math.hypot(b.x - c.walker.x, b.y - c.walker.y) ? u : b), support[0]);
-        const spot = catSpot(c.walker, sim.space === 'empty' ? null : unit, layout);
-        // 成形段才有台面（落到位的直筒还没有平台）：程度到顶才把猫画在平台面上
-        const onPlatform = !!unit && spot.onPlatform && traj !== null && sim.act.degree[unit.i] >= 1 - 1e-3;
-        const cat = catVerts({
-          x: spot.x * UNITS_PER_M,
-          z: spot.y * UNITS_PER_M,
-          footY: onPlatform ? rig.platformY : ROOM.FLOOR_Y,
-          unit: UNITS_PER_M,
-          yaw: figureYaw(c.walker.heading),
-          pose: catPoseOf(c.state),
-        });
-        R.drawDynamicMesh(bakeIndexed(cat.verts, cat.idx), CAT_DARK, CAT_LITE);
+        const mo = track(c, c.walker.x, c.walker.y);
+        const support = sim.space === 'empty' ? [] : sim.supportOf(c);
+        const formed = band !== null && support.length > 0 && support.every((u) => sim.act.degree[u.i] >= 1 - 1e-3);
+        const pl = catPlacement({ x: c.walker.x, y: c.walker.y, heading: c.walker.heading, state: c.state }, support, formed, mo.speed > MOVING.cat, layout, band ?? { R: 0 });
+        const k = pl.pose === 'walk' ? Math.floor(frac(mo.dist / CAT.STRIDE) * WALK_FRAMES.cat) % WALK_FRAMES.cat : 0;
+        const key = `c-${pl.pose}-${pl.tail}-${pl.bend.toFixed(3)}-${k}`;
+        const r = rigOf(key, () => catRig({ unit: UNITS_PER_M, pose: pl.pose, tail: pl.tail, bend: pl.bend, phase: k / WALK_FRAMES.cat }));
+        const footY = pl.onPlatform ? rig.platformY - pl.lift * UNITS_PER_M : ROOM.FLOOR_Y;
+        placeBoth(cats, r, key, 0, pl.x * UNITS_PER_M, footY, pl.y * UNITS_PER_M, figureYaw(pl.heading), clampHeadYaw(pl.headTurn, CAT_HEAD_YAW_MAX));
       }
+      drawBatches(cats);
       // 四类事件的连线（胸口高度），颜色照平面台架
       if (sim.links.length) {
         const byKind = new Map<EventKind, { a: Vec3; b: Vec3 }[]>();

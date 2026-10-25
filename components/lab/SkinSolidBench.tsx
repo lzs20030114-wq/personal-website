@@ -7,6 +7,8 @@ import { LabControlLabel } from './LabControlLabel';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import { FlatRenderer, bakeIndexed, type MeshPlace } from '../../src/lib/linkage/gl3d';
+import { toneColor } from './figurePalette';
+import type { Tone } from '../../src/lib/space/figure';
 import type { Vec3 } from '../../src/lib/linkage/solver3d';
 import { SKIN_UNITS, skinSiteOpts } from '../../src/lib/space/skin-data';
 import { bandsFarToNear } from '../../src/lib/linkage/skin';
@@ -433,7 +435,7 @@ export function SkinSolidBench({
    * 随半径重建（格距变了房间也得变），台架按半径缓存、不逐帧重算。
    * 省略 = 不画布景（Lab.07–09 的绘制路径逐位不变）。
    */
-  scene?: (radius: number) => readonly { verts: Float32Array; idx: Uint32Array; kind: 'room' | 'figure' }[];
+  scene?: (radius: number) => readonly { verts: Float32Array; idx: Uint32Array; kind: 'room' | 'figure'; tone?: Tone }[];
   /**
    * 取景：给半径与当前视角算 camScale。两件事都要它——阵列随半径变大时相机得跟着退，
    * 而**四个视角所需的取景差得很远**（轴测被宽度卡、顶视被整片地面的高度卡）。
@@ -776,13 +778,14 @@ export function SkinSolidBench({
       hasCells() ? cellList.map((c) => ({ yaw: 0, x: c.x, y: 0, z: c.z })) : undefined;
     /** 布景（房间 + 比例小人）：静件，按半径缓存重烘 */
     let setR = Number.NaN;
-    let setMeshes: { data: Float32Array; kind: 'room' | 'figure' }[] = [];
+    let setMeshes: { data: Float32Array; kind: 'room' | 'figure'; tone?: Tone }[] = [];
     const bakeScene = (): void => {
       const f = sceneRef.current;
       if (!f) return;
       setMeshes = f(radiusRef.current).map((m) => ({
         data: bakeIndexed(m.verts, m.idx),
         kind: m.kind,
+        tone: m.tone,
       }));
       setR = radiusRef.current;
     };
@@ -922,12 +925,11 @@ export function SkinSolidBench({
         return;
       }
       // 布景先画：不透明、写深度，装置的遮挡关系交给 z-buffer
-      for (const m of setMeshes)
-        R.drawDynamicMesh(
-          m.data,
-          m.kind === 'figure' ? FIG_DARK : ROOM_DARK,
-          m.kind === 'figure' ? FIG_LITE : ROOM_LITE,
-        );
+      for (const m of setMeshes) {
+        // 方块人按零件颜色上色（与 Lab 2-15 同一套配色）；没给颜色的人仍用旧的灰
+        const [dark, lite] = m.tone ? toneColor(m.tone) : m.kind === 'figure' ? [FIG_DARK, FIG_LITE] : [ROOM_DARK, ROOM_LITE];
+        R.drawDynamicMesh(m.data, dark, lite);
+      }
       if (ceiling === 'span') R.drawMesh(`ceil-span-${layoutIdx}`, IDENT, RAIL_DARK, RAIL_LITE);
       // 环列 = 一块圆环板；环阵列 = 同一块板摆到每一格（板与编制无关）
       else if (ceiling === 'ring')
