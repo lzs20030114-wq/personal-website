@@ -7,6 +7,7 @@ import { CaseFooter } from '../lab/LabShell';
 import { Pick } from './CaseLang';
 import { CaseIndex } from './case/CaseIndex';
 import { CaseReveal } from './case/CaseReveal';
+import { ImageViewer } from './ImageViewer';
 
 /**
  * 其他作品详情页（用户拍板 2026-10-25「先做详情页」；MAPPING §60）。
@@ -18,6 +19,9 @@ import { CaseReveal } from './case/CaseReveal';
  * 正文按节叙事（2026-10-25 第二版）：每节 = 站方小标题 + 源文件原文（每段注明原文语言与出处）+ 一组图，
  * 左侧目录复用案例页的 CaseIndex（第 0 项是开场，其余逐个对上正文里的 h2）。
  * 数据全在 content/other/works.json。
+ *
+ * 点图在页内看（ImageViewer）：图仍是指向原图的链接，带 data-viewer 与尺寸、图号、中英图注，
+ * 没有脚本时照旧新窗口打开。
  */
 
 const COPY = {
@@ -31,7 +35,7 @@ const COPY = {
     both: 'Original text, written by the author in both languages',
     translated: 'Translated from the Chinese original',
     source: 'Source: ',
-    open: 'Open full size ↗',
+    open: 'View larger',
     fig: (n: number) => `Fig. ${String(n).padStart(2, '0')}`,
     next: (g: string) => `Next · ${g}`,
     footer: (t: string, y: string) => `Other work · ${t} · ${y}`,
@@ -46,7 +50,7 @@ const COPY = {
     both: '原文，中英两版均为作者所写',
     translated: '站方译自英文原文',
     source: '出处：',
-    open: '查看原图 ↗',
+    open: '放大查看',
     fig: (n: number) => `图 ${String(n).padStart(2, '0')}`,
     next: (g: string) => `下一件 · ${g}`,
     footer: (t: string, y: string) => `其他作品 · ${t} · ${y}`,
@@ -54,6 +58,16 @@ const COPY = {
 } as const;
 
 type Lang = keyof typeof COPY;
+
+/** 给 ImageViewer 读的数据：原图尺寸、图号、中英图注 */
+const viewerData = (src: string, w: number, h: number, n: number, cap?: { en: string; zh: string }) => ({
+  'data-viewer': src,
+  'data-w': w,
+  'data-h': h,
+  'data-n': String(n).padStart(2, '0'),
+  'data-cap-en': cap?.en ?? '',
+  'data-cap-zh': cap?.zh ?? '',
+});
 type Fig = NonNullable<Entry['work']['page']['sections'][number]['figures']>[number];
 
 /** 竖长的图不撑满整列：高度封在一屏以内，宽度随之按比例收（框比例 = 图比例，不留边） */
@@ -129,6 +143,7 @@ function Body({ entry, lang }: { entry: Entry; lang: Lang }) {
           target="_blank"
           rel="noopener"
           aria-label={`${f.caption[lang]} · ${c.open}`}
+          {...viewerData(f.src, f.width, f.height, n, f.caption)}
         >
           <img
             className="cs-figure__img"
@@ -195,6 +210,7 @@ export function OtherWorkPage({ entry }: { entry: Entry }) {
       <div className="ground-plane ld-ground" aria-hidden />
       <CaseReveal />
       <div className="cs pg-dark">
+        <ImageViewer />
         <div className="cs-dots" aria-hidden style={{ top: -64 }} />
 
         <section className="cs-hero">
@@ -249,13 +265,21 @@ export function OtherWorkPage({ entry }: { entry: Entry }) {
                   decoding="async"
                 />
                 <div className="cs-stage__vignette" />
+                {/* 点主图任何地方 = 点「放大查看」（只是鼠标 / 触屏的大目标，键盘走那颗按钮） */}
+                <div className="os-stage__hit" data-viewer-proxy aria-hidden />
                 <span className="cs-corner cs-corner--tl" />
                 <span className="cs-corner cs-corner--tr" />
                 <span className="cs-corner cs-corner--bl" />
                 <span className="cs-corner cs-corner--br" />
                 <div className="cs-stage__bot">
                   <span />
-                  <a className="cs-open" href={cover.src} target="_blank" rel="noopener">
+                  <a
+                    className="cs-open"
+                    href={cover.src}
+                    target="_blank"
+                    rel="noopener"
+                    {...viewerData(cover.src, cover.width, cover.height, 1, cover.caption)}
+                  >
                     <Pick en={COPY.en.open} zh={COPY.zh.open} />
                   </a>
                 </div>

@@ -528,3 +528,61 @@ body:has(.cs) .ld-header__in, .cs .ld-footer__in { max-width: 1240px; }
 .os-pair .os-figure { width: 100%; }
 .os-pair > :last-child:nth-child(odd) { grid-column: 1 / -1; }
 @media (max-width: 720px) { .os-body > .os-pair { grid-template-columns: minmax(0, 1fr); } }
+
+/* ── 页内看图器（components/site/ImageViewer.tsx，2026-10-25）──
+   原生 <dialog> 全屏：上栏（序号 · 缩放 · 关闭）/ 舞台 / 下栏（图号 · 图注 · 操作提示），发丝线分隔。
+   dialog 挂在 .cs 里，变量照常继承（顶层渲染不影响继承）。 */
+.os-stage__hit { position: absolute; inset: 0; z-index: 2; cursor: zoom-in; }
+.iv {
+  position: fixed; inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none;
+  margin: 0; padding: 0; border: 0; overflow: hidden;
+  background: oklch(0.14 0.025 228); color: var(--cs-ink);
+}
+.iv[open] { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; animation: iv-in 0.22s var(--cs-eo); }
+.iv::backdrop { background: transparent; }
+@keyframes iv-in { from { opacity: 0; } to { opacity: 1; } }
+.iv__bar { display: flex; align-items: center; gap: 16px; padding: 10px 20px; font: 400 12px / 1.5 var(--cs-mono); color: var(--cs-mute); }
+.iv__bar--top { justify-content: space-between; border-bottom: 1px solid oklch(0.95 0.032 120 / 0.12); }
+.iv__bar--bottom { min-height: 52px; border-top: 1px solid oklch(0.95 0.032 120 / 0.12); }
+.iv__count { color: var(--cs-ink); letter-spacing: 0.04em; }
+.iv__tools { display: flex; align-items: center; gap: 6px; }
+.iv__btn {
+  min-width: 34px; height: 34px; padding: 0 10px; border: 1px solid oklch(0.95 0.032 120 / 0.22);
+  background: transparent; color: var(--cs-ink); font: 500 15px / 1 var(--cs-mono); cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+.iv__btn--text { font-size: 12px; }
+.iv__btn--close { margin-left: 10px; font-size: 18px; }
+.iv__btn:hover:not(:disabled) { background: var(--cs-ink); border-color: var(--cs-ink); color: var(--cs-paper); }
+.iv__btn:disabled { opacity: 0.35; cursor: default; }
+.iv__btn:focus-visible, .iv__nav:focus-visible { outline: 1px solid var(--cs-g); outline-offset: 2px; }
+.iv__pct { min-width: 52px; text-align: center; color: var(--cs-ink); font-variant-numeric: tabular-nums; }
+.iv__stage { position: relative; overflow: hidden; touch-action: none; user-select: none; }
+.iv__img {
+  position: absolute; left: 50%; top: 50%; max-width: none; transform-origin: 50% 50%;
+  user-select: none; -webkit-user-drag: none; cursor: zoom-in; will-change: transform;
+}
+.iv__stage[data-zoomed] .iv__img { cursor: grab; }
+.iv__stage[data-dragging] .iv__img { cursor: grabbing; }
+.iv__nav {
+  position: absolute; top: 50%; z-index: 1; width: 44px; height: 64px; transform: translateY(-50%);
+  border: 1px solid oklch(0.95 0.032 120 / 0.18); background: oklch(0.19 0.032 228 / 0.72);
+  color: var(--cs-ink); font: 400 18px / 1 var(--cs-mono); cursor: pointer; transition: background 0.2s, color 0.2s;
+}
+.iv__nav:hover { background: var(--cs-ink); color: var(--cs-paper); }
+.iv__nav--prev { left: 16px; }
+.iv__nav--next { right: 16px; }
+.iv__label { flex: none; color: var(--cs-g); }
+.iv__cap { flex: 1 1 auto; min-width: 0; color: var(--cs-body); font-size: 13px; }
+.iv__hint { flex: none; color: var(--cs-dim); font-size: 11px; }
+@media (max-width: 720px) {
+  .iv__bar { gap: 12px; padding: 8px 12px; }
+  .iv__hint, .iv__btn--text { display: none; }
+  .iv__nav { width: 34px; height: 50px; }
+  .iv__nav--prev { left: 6px; }
+  .iv__nav--next { right: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .iv[open] { animation: none; }
+  .iv__img { transition: none !important; }
+}
