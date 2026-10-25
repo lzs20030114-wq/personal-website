@@ -131,6 +131,23 @@
 /* 02 Work 横向切换（稿「18 Home · Work Carousel」，MAPPING §59；分组见 §58）：
    当前屏占舞台 85%，下一屏露出一截；屏的叠放与卡片位移只在桌面且允许动效时生效（下方 @media，与引擎 FLOW_QUERY 互补） */
 .hs-page--work { overflow-x: hidden; }
+.hs-wg { z-index: 1; }
+/* 单一平面符号的方点背景：共用轮播状态与 MOVE_MS，独立于卡片的错峰和留白区暗示。 */
+.hs-work-backdrop { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.hs-work-backdrop__panel { position: absolute; inset: 0; transition: none; }
+.hs-work-backdrop__panel.hs-is-moving { transition: transform var(--work-move-ms) var(--eio); }
+.hs-work-backdrop--instant .hs-work-backdrop__panel { transition: none; }
+.hs-work-mosaic { --mosaic-paper: var(--mist); --mosaic-ink: var(--teal); position: relative; width: 100%; height: 100%; overflow: hidden; pointer-events: none; background: var(--mosaic-paper); }
+.hs-work-mosaic[data-work-theme="interaction-research"] { --mosaic-ink: var(--slate); }
+.hs-work-mosaic__scene { position: absolute; inset: 0; background: var(--mosaic-ink); opacity: .24; mask-size: cover; mask-position: center; mask-repeat: no-repeat; }
+.hs-work-mosaic__wash { position: absolute; inset: 0; background: linear-gradient(180deg, color-mix(in oklch, var(--mosaic-paper) 90%, transparent) 0%, transparent 30%, transparent 68%, color-mix(in oklch, var(--mosaic-paper) 55%, transparent) 100%), linear-gradient(90deg, color-mix(in oklch, var(--mosaic-paper) 60%, transparent), transparent 72%); }
+.hs-wg__flow-mosaic { display: none; }
+@media (max-width: 1023px) {
+  .hs-wg__flow-mosaic .hs-work-mosaic__scene { mask-size: max(580px, 100%) auto; mask-position: calc(50% - 85px) center; }
+}
+@media (min-width: 1024px) and (prefers-reduced-motion: reduce) {
+  .hs-wg__flow-mosaic .hs-work-mosaic__scene { mask-size: contain; }
+}
 .hs-wg__lead { flex: 1; min-width: 0; }
 .hs-wg__titles { position: relative; }
 .hs-wg__sizer { visibility: hidden; white-space: nowrap; }
@@ -379,6 +396,9 @@
   .hs-shade { display: none; }
   .hs-work, .hs-about { height: auto; min-height: 0; }
   .hs-wg__mask, .hs-wg__ctl, .hs-wg__tabs, .hs-wg__rule, .hs-wg__cont, .hs-wg__cont-lbl, .hs-wg__zone, .hs-wg__badge { display: none; }
+  .hs-work-backdrop { display: none; }
+  .hs-wg__panel { position: relative; isolation: isolate; }
+  .hs-wg__flow-mosaic { display: block; position: absolute; z-index: -1; inset: -20px; width: auto; height: auto; opacity: .7; }
   .hs-wg__panel + .hs-wg__panel { margin-top: 64px; }
   .hs-wg__panel--cont { margin-top: 28px !important; }
   .hs-wg__ghead { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding-bottom: 18px; }

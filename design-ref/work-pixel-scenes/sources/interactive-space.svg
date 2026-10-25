@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600">
+  <rect width="960" height="600" fill="white"/>
+  <!-- 单一响应单元：空间边界连续回转到内部，圆端表示触发核心。 -->
+  <path d="M536 112H852V488H536V342C536 212 744 212 744 342C744 418 628 418 628 342"
+    fill="none" stroke="#303030" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
