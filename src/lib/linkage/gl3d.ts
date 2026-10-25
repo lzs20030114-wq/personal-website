@@ -675,12 +675,21 @@ export class FlatRenderer {
     places: readonly MeshPlace[],
     dark?: [number, number, number],
     lite?: [number, number, number],
+    alpha?: number,
   ): void {
     if (!places.length) return;
     const gl = this.gl;
     const m = this.meshes.get(id);
     if (!m) return;
     gl.useProgram(this.meshProg.program);
+    // 半透明（可选，与 drawDynamicMesh 同一套：深度只测不写，调用点在实体之后、从远到近下单）；不传 = 原来的不透明绘制
+    const blended = alpha !== undefined && alpha < 1;
+    if (blended) {
+      gl.uniform1f(this.meshProg.uniforms.uAlpha, alpha);
+      gl.enable(gl.BLEND);
+      gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      gl.depthMask(false);
+    }
     if (dark) gl.uniform3f(this.meshProg.uniforms.uDark, dark[0], dark[1], dark[2]);
     if (lite) gl.uniform3f(this.meshProg.uniforms.uLite, lite[0], lite[1], lite[2]);
     const uR = this.meshProg.uniforms.uModelR;
@@ -701,6 +710,11 @@ export class FlatRenderer {
     gl.uniform3f(uT, 0, 0, 0);
     if (dark) gl.uniform3f(this.meshProg.uniforms.uDark, 0.29, 0.29, 0.27);
     if (lite) gl.uniform3f(this.meshProg.uniforms.uLite, 0.95, 0.95, 0.92);
+    if (blended) {
+      gl.uniform1f(this.meshProg.uniforms.uAlpha, 1);
+      gl.depthMask(true);
+      gl.disable(gl.BLEND);
+    }
   }
 
   /** 有没有这个 id 的静态网格（关键帧网格按需烘、烘过的不重传） */

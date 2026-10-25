@@ -432,16 +432,16 @@ export default function LabPage() {
 
         <Bench
           no="2-15"
-          lede="The Lab 2-14 simulation drawn in the Lab 2-8 room: sixty-four small units hang over the floor, six visitors walk, stand and sit, two cats live on the platforms. Units come down where the rules say, bands in a person's way retract on their own, and the four encounter events are counted at the bottom right. The band shapes are keyframes from one engine run; the units at this size are the Lab 2-8 ring scaled to the 8×8 pitch."
+          lede="The Lab 2-14 simulation drawn in the Lab 2-8 room: sixty-four small square units hang over the floor, six visitors walk, stand and sit, two cats live on the platforms. Units come down where the rules say, bands in a person's way retract on their own, and the four encounter events are counted at the bottom right. Each unit is the Lab 2-7 square ring at its flat setting, scaled to the 8×8 pitch. The round rings stay in the earlier labs, where they show how the form is made."
           specs={[
-            ['Room', 'Lab 2-8 room (3.74 m high) · 8×8 units at 0.60 m pitch · platform ⌀0.51 m · lower edge 1.08 m above the floor'],
-            ['Driver', 'CohabitSim with the case study configuration: walk / stand / sit rule · only the bands in the way retract · visitors with bodies and parties · cats can use the floor · cat costs calibrated to Mertens & Turner 1988 · lead to the unit in front of the seat'],
-            ['Band shapes', 'One engine run baked to 32 forming and 24 retraction keyframes; each band picks its frame from its unit’s degree and how far it has retracted. Switching between the two runs can show a small jump'],
-            ['Scale', 'The Lab 2-8 ring scaled by the pitch ratio (0.49). A unit this small has not been built or solved at this size'],
-            ['Figures', 'Blocky 1.70 m people (joint proportions from Drillis & Contini) who walk, stand, sit and turn their heads, each in a different shirt; blocky cats in five poses that wrap around the post on a platform; no membrane between bands'],
-            ['Spaces', 'Live · fixed (even rows formed) · empty room, same seats and bodies'],
+            ['Room', 'Lab 2-8 room (3.74 m high) · 8×8 units at 0.60 m pitch · square platform 0.50 m · lower edge 1.08 m above the floor'],
+            ['Driver', 'CohabitSim with the case study configuration and square units (the case study chart was run with round units): walk / stand / sit rule · only the bands in the way retract · visitors with bodies and parties · cats can use the floor · cat costs calibrated to Mertens & Turner 1988 · lead to the unit in front of the seat'],
+            ['Band shapes', 'Three engine runs (face, edge and corner depth), each baked to 32 forming and 24 retraction keyframes; each band picks its frame from its unit’s degree and how far it has retracted. Switching from forming to retraction frames can show a small jump. A semi-transparent membrane spans each pair of neighbouring bands'],
+            ['Scale', 'The Lab 2-7 square ring at its flat setting, scaled by the pitch ratio (0.49) and then by 1.54, so the plan’s platform circle is the square’s incircle. A unit this small has not been built or solved at this size'],
+            ['Figures', 'Blocky 1.70 m people (joint proportions from Drillis & Contini) who walk, stand, sit and turn their heads, each in a different shirt; blocky cats in five poses that wrap around the post inside the square'],
+            ['Spaces', 'Live · fixed (even rows formed, leaving out any square whose corners would cut a crossing off from the doors) · empty room, same seats and bodies'],
             ['Events', 'Lines at chest height while an event lasts: green co-gaze · purple co-warmth · rose contact · grey crossing'],
-            ['Limit', 'The bands are not 1,280 separate solves; frames are taken from one trajectory. The platform shown is the terminal shape, smaller than the peak envelope the plan uses for walls and spacing'],
+            ['Limit', 'The bands are not 1,280 separate solves; frames are taken from three trajectories. A square’s corners point at the aisle crossings, so a crossing next to a platform that cannot retract (a cat on it, or the fixed space) cannot be stood on: visitors step aside, and a cat waits before moving onto a platform whose corner would press into someone'],
           ]}
         >
           <CohabitSpaceBench workspace />

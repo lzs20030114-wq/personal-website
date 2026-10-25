@@ -225,6 +225,14 @@ export interface PlanLayout {
   mastR: number;
   /** 平台外缘半径（m） */
   platR: number;
+  /**
+   * 每条带全落时外缘离芯心多远（m，按带序 j，与 cohabit 的 `bandAngle(j)` 同序）。**可选**：只有人猫同台的方形单元给
+   * （cohabit `squarePlanLayout`，2026-10-25）。不给 = 圆台，每条带都到 platR（旧口径逐位不变）；给了时 platR 是方形的
+   * 内切圆，四个角比它远。
+   */
+  bandReach?: readonly number[];
+  /** bandReach 里最远的那条（预筛用；不给 = platR） */
+  reachMax?: number;
   units: PlanUnit[];
   doors: PlanDoor[];
 }

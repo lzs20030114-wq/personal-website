@@ -1566,6 +1566,7 @@ planDraw 的猫分支去掉注意力圈，增加支撑、落点外圈与单元�
 - **主图换 Lab 2-15**（`CaseHeroSpace.tsx`）：此前是 Lab 2-8（十六环的房 + 一个人）。同一台也挂 /lab 第八段与主页实验目录预览（`HomeLabPreview` 加 2-14 / 2-15 两条）。主图位不出控制条，拖拽旋转照常；`SLOT_COPY['project-ii']` 的 lab / heroLive / heroVerb / heroCap 改口。
 - **/lab 版式**：2-15 走 2-13 那套 3D 工作台布局（`workspace.css` 里 2-13 的全部选择器扩成 `:is(2-13, 2-15)`，`lab-dark.css` 的分层控制条同）。**坑**：只扩 `.solid-map` / `.solid-workbench` 不扩 `.lab-fig` 那条网格规则，画布 CSS 盒会是 0×0——GL 在画、像素都在，屏幕上什么都没有（CDP 读 `getBoundingClientRect` 才发现）。
 - **去 AI 味顺带改的台架 HUD 英文**：SkinSeriesBench / SquareRingBench 两处题头与 page.tsx 的 hint / video 题注里的破折号句。
+- **2026-10-25 主图那台的单元改成方形**（作者「方形才是拿来具体使用的」）：Lab 2-15 的 64 台改成 Lab 2-7 方形环平档，补了带间半透明膜，天花板改方板。案例页版式与 `SLOT_COPY` 题注不动（题注只写「人猫同台立体活件」，没提形状）；/lab 2-15 的说明与规格表改了口径。FIG.05 对照图仍是圆台跑的数，方台下钉死那一档的结果变了，见 项目二_人猫同台lab.md §14.8。
 
 
 ## 52. 案例页外壳按「12a Case 01 - TOC Rail」改（2026-10-23，用户交来第二版交接包「项目详情页的 ui 照着这个改」）

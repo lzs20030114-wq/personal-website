@@ -4,14 +4,23 @@
  *
  * 这一台不解新的物理：驱动它的是 Lab 2-14 那套仿真（`CohabitSim`，「走 · 站 · 坐」规则 · 只收挡路的带 ·
  * 访客有身体 · 猫能下地 · 猫按 Mertens & Turner 1988 标定），画的是 Lab 2-8 那间房（`skin-grid`）里的 8×8
- * 个单元，单元用 Lab 2-8 那只圆筒环（`buildRingUnits()[RING_DEFAULT_FORM]`，二十条带绕芯一圈）。
+ * 个单元。
+ *
+ * ## 单元是方形的（2026-10-25 作者纠正）
+ *
+ * 「我们采用的单元形态是方形的……圆形只做过程推演，拿来给观众演示造型过程；方形才是拿来具体使用的东西。」
+ * 此前这台默认用了 Lab 2-8 那只圆筒环。现在每台 = Lab 2-7 方形环平档那三张键谱（`buildSquareUnits`：面 / 边 / 角
+ * 三档挑出，二十条带按方位分档 `buildSquareOrder`），俯视是方的；芯仍是圆的，没成形时（收起、直筒）还是一圈带子。
+ * 尺寸取「方形峰值时的半边长 = 圆台的峰值半径」（cohabit `SQUARE_SCALE`）：平面模型的平台圆（platR）是方形的内切圆，
+ * 猫卧着的那一圈台面与圆台时一样宽，多出来的是四个角；平面模型凡是问「平台会不会碰到人」的地方都改按方形每条带
+ * 的长度算（`unit: 'square'` → `squarePlanLayout`）。
  *
  * ## 带子的形状从哪来
  *
  * 64 个单元 × 20 条带 = 1280 条带，各自都在落下、收回、开门。真跑 1280 条引擎做不到（一条带 1500 步
  * 的协议在浏览器里要 0.7 s），而 Lab 2-14 的平面模型也只给每条带两个数：所在单元的成形程度
- * （`act.degree`，跟随档，0–1）和这条带收回了几成（`bandOpen`）。于是**只跑一条引擎、把轨迹烘成关键帧**：
- * 正向协议（直带子 → 成形）取 `FRAMES.form` 帧，引擎的回程（`retractStep`，成形 → 松键回直）取
+ * （`act.degree`，跟随档，0–1）和这条带收回了几成（`bandOpen`）。于是**每档只跑一条引擎、把轨迹烘成关键帧**
+ * （三档共三条）：正向协议（直带子 → 成形）取 `FRAMES.form` 帧，引擎的回程（`retractStep`，成形 → 松键回直）取
  * `FRAMES.retract` 帧；每条带按自己的两个数取帧（`bandFrame`）——程度在涨就查正向那条，在退就查回程那条。
  * 这是**必要的承认**：带子的形状逐帧是引擎算出来的，但「这一条带此刻该是哪一帧」是平面模型的两个标量定的，
  * 不是 1280 条布各自解出来的；两条轨迹之间切换的那一帧会有一点跳（回程不是正向的逐位倒放）。
@@ -19,29 +28,30 @@
  * ## 尺度
  *
  * 房间与人取 Lab 2-8 的世界尺度（`MM_PER_UNIT`：1.70 m 的人 = 215 单位）；8×8 的单元按格距等比缩小
- * （`planLayout` 的 pitchM / pitch4，与 Lab 2-10 以来的平面台架同一条规则），装置的下缘仍钉在离地 1.08 m
- * （`RIG_ANCHOR_Y`）——平面模型里「平台底比坐着的头顶低」那条账就是按它算的。
+ * （`planLayout` 的 pitchM / pitch4，与 Lab 2-10 以来的平面台架同一条规则）再乘 `SQUARE_SCALE`，装置的下缘仍钉在
+ * 离地 1.08 m（`RIG_ANCHOR_Y`）——平面模型里「平台底比坐着的头顶低」那条账就是按它算的。
  *
  * ## 两段触发（2026-10-23 作者纠偏）
  *
  * 首版把「闲着」画成直带子挂在工位上——整间房六十四个单元全垂着，等于全都触发了。作者纠偏：非触发的单元
  * 是**收在上端**的（蒙皮、可折叠的布、台子缩成一团贴着天花），只有被确认触发才垂下来、外皮再压缩成形；
  * 触发分两个阶段——先是上下（存在上面还是挪到了下边），再是挪下来之后变成什么性质的台子（通道 / 平台 /
- * 可停留的空间，待定）。这台此刻只分两种触发态：**收起**（整束布贴着天花圆环板）与**落下成形**。
+ * 可停留的空间，待定）。这台此刻只分两种触发态：**收起**（整束布贴着天花板）与**落下成形**。
  * 平面模型的程度 0–1 在这里拆成两段（`HOIST.dropAt` 分界）：之下是升降段——整束布沿立杆从天花下滑到
  * 工位、边下边放长（`hoistProfile`，直带子按长度比例压向顶端）；之上是成形段——引擎的正向协议与回程照旧。
  * 分界取平面模型「对人成墙」那条线（`COHABIT.WALL_AT`）：落到位的直筒已经挡人，两边口径一致。
  * 立杆也随单元伸缩（作者同日补「中间这根棍子也得缩上去」）：下端跟着布束底走（`unitFootY`），收起时只剩
- * 天花下一小截；圆环板仍是天花上的静件。
- * 第二阶段「成什么」仍只有一种形（Lab 2-8 那只阶梯方箱），待作者定词汇表后再分。
+ * 天花下一小截；天花上的方板仍是静件。
+ * 第二阶段「成什么」仍只有一种形（方形环平档那只方箱），待作者定词汇表后再分。
  */
-import { RING, RING_DEFAULT_FORM, buildRingUnits, type RingUnitDef } from './skin-ring';
+import type { RingUnitDef } from './skin-ring';
+import { SQUARE, buildSquareOrder, buildSquareUnits, squareHalfSide, SQUARE_REACH } from './skin-square';
 import { SKIN, createSkinUnit, renderSmooth } from './skin-unit';
-import { SOLID, boxVerts, buildSolidTopology, fillSolidVerts, ringPlateVerts, rotateVertsY, type SolidTopology } from './skin-solid';
+import { SOLID, boxVerts, buildSolidTopology, fillSolidVerts, membranePanel, rotateVertsY, type SolidTopology } from './skin-solid';
 import { bakeIndexed } from '../linkage/gl3d';
 import { MM_PER_UNIT, RIG_ANCHOR_Y, RIG_SCALE, RING_GRID_FIT, RING_GRID_PIVOT_Y, ROOM, roomBoxesBySpan, viewFitBySpan, type RingGridView } from './skin-grid';
 import type { PlanLayout } from './unit-activation';
-import { COHABIT, bandAngle, type FurnRect } from './cohabit';
+import { COHABIT, SQUARE_SCALE, bandAngle, type FurnRect } from './cohabit';
 import type { CatPose, CatTail, SeatSpec } from './figure';
 
 /** 一米 = 多少世界单位（由「人 = 1.70 m = 215 单位」定） */
@@ -53,7 +63,7 @@ export const FRAMES = { form: 32, retract: 24, hoist: 16 } as const;
 /**
  * 升降段（两段触发，见头注）。`dropAt` 之下程度全给升降：0 = 收在天花下，dropAt = 落到工位的直筒；
  * 之上才是成形。`stowed` = 收起时布束保留的长度比例（折叠的布与台子缩成一团，演示值，待作者真机看）；
- * `ceilGap` = 收起时带子顶端离圆环板下表面的净距（世界单位）。
+ * `ceilGap` = 收起时带子顶端离天花方板下表面的净距（世界单位）。
  */
 export const HOIST = {
   dropAt: COHABIT.WALL_AT,
@@ -99,7 +109,7 @@ export class TrajectoryBaker {
   private phase: 'form' | 'retract' | 'done' = 'form';
   private result: BandTrajectory | null = null;
 
-  constructor(def: RingUnitDef = buildRingUnits()[RING_DEFAULT_FORM], frames = FRAMES) {
+  constructor(def: RingUnitDef, frames = FRAMES) {
     this.unit = createSkinUnit(def.spec, def.opts);
     this.n = this.unit.n;
     [this.smoothW, this.smoothP] = def.smooth;
@@ -156,14 +166,14 @@ export class TrajectoryBaker {
 
   /**
    * 烘完之前先给一份「预览」：正向第 0 帧（引擎的初始摆位）加它的收起态。钉住端的高度它已经给得出
-   * （注册在底端，全程不变），台架据此先把立杆、圆环板和收着的单元画出来，不用等轨迹烘完才有画面；
+   * （注册在底端，全程不变），台架据此先把立杆、天花方板和收着的单元画出来，不用等轨迹烘完才有画面；
    * 平台顶面与回程段烘完才有（此时仿真还没开始跑，没有单元会去用它们）。
    */
   preview(): BandTrajectory {
     const n = this.n;
     const f0 = this.frames[0];
     // frames[1] = 收起态（初始摆位压向顶端）：烘完之前满场都是收着的单元，台架拿它烘整环
-    return { n, frames: [f0, hoistProfile(f0, n, HOIST.stowed)], footY: -f0[2 * n - 1] * SOLID.SCALE, platformTopY: -f0[2 * n - 1] * SOLID.SCALE, reach: RING.RADIUS_DEF, retractActive: 0 };
+    return { n, frames: [f0, hoistProfile(f0, n, HOIST.stowed)], footY: -f0[2 * n - 1] * SOLID.SCALE, platformTopY: -f0[2 * n - 1] * SOLID.SCALE, reach: SQUARE.RADIUS, retractActive: 0 };
   }
 
   /** 一口气烘完（守门与线稿用） */
@@ -201,9 +211,76 @@ export class TrajectoryBaker {
       frames: this.frames,
       footY: -this.frames[0][2 * n - 1] * SOLID.SCALE,
       platformTopY: top,
-      reach: RING.RADIUS_DEF + reach * SOLID.SCALE,
+      reach: SQUARE.RADIUS + reach * SOLID.SCALE,
       retractActive: active,
     };
+  }
+}
+
+/**
+ * 方形单元那条带的节数：Lab 2-7 方形环立项时的 202 节（lead 22），与原来圆台的带一样长。方形环现行的 305 节是
+ * 2026-09-02 为捏分编制加长的，多出来的全在上半截贴芯的素管里（形状逐点相同），立在方台上方会是一根一米来高的布筒。
+ */
+export const UNIT_BAND = 202;
+/** 方形单元的三档引擎定义（面 / 边 / 角，Lab 2-7 方形环平档的键谱）与二十条带的档位编制（下标 = 带序 j） */
+export const UNIT_TIERS: readonly RingUnitDef[] = buildSquareUnits(undefined, UNIT_BAND);
+export const UNIT_ORDER: readonly number[] = buildSquareOrder();
+
+/** 已经烘好的三档轨迹（同一页面里换路由、重挂台架时直接拿，不重烘） */
+const BAKED = new Map<string, BandTrajectory[]>();
+
+/**
+ * 三档轨迹一起烘：三条引擎依次推进（分片，`work` 按时间预算），全部烘完才算完。三档的节点数相同（同一条
+ * 202 节的带），钉住端高度相同（注册在底端）、平台面高度相同（方形环的对位构造），台架拿第 0 档定摆放。
+ */
+export class UnitBaker {
+  readonly n: number;
+  private readonly key: string;
+  private readonly bakers: TrajectoryBaker[];
+  private result: BandTrajectory[] | null;
+
+  constructor(defs: readonly RingUnitDef[] = UNIT_TIERS, frames = FRAMES) {
+    this.key = `${defs.map((d) => d.key).join('|')}#${frames.form}/${frames.retract}/${frames.hoist}`;
+    this.bakers = defs.map((d) => new TrajectoryBaker(d, frames));
+    this.n = this.bakers[0].n;
+    if (this.bakers.some((b) => b.n !== this.n)) throw new Error('三档的带子节点数不同，整台网格拼不起来');
+    this.result = BAKED.get(this.key) ?? null;
+  }
+
+  get done(): boolean {
+    return this.result !== null;
+  }
+  get trajectories(): BandTrajectory[] | null {
+    return this.result;
+  }
+  /** 0–1 的进度（HUD 用） */
+  get progress(): number {
+    if (this.result) return 1;
+    return this.bakers.reduce((s, b) => s + b.progress, 0) / this.bakers.length;
+  }
+
+  /** 在 budgetMs 内尽量推进；返回是否三档都烘完 */
+  work(budgetMs: number, now: () => number = () => performance.now()): boolean {
+    if (this.result) return true;
+    const t0 = now();
+    for (const b of this.bakers) {
+      if (b.done) continue;
+      if (!b.work(Math.max(0, budgetMs - (now() - t0)), now)) return false;
+    }
+    this.result = this.bakers.map((b) => b.trajectory as BandTrajectory);
+    BAKED.set(this.key, this.result);
+    return true;
+  }
+
+  /** 烘完之前的预览：第 0 档的初始摆位与它的收起态（三档初始摆位相同，都是贴着芯的直带子） */
+  preview(): BandTrajectory {
+    return this.bakers[0].preview();
+  }
+
+  /** 一口气烘完（守门与线稿用） */
+  runAll(): BandTrajectory[] {
+    while (!this.work(Infinity, () => 0)) { /* 直到烘完 */ }
+    return this.result as BandTrajectory[];
   }
 }
 
@@ -258,11 +335,11 @@ export const STEADY = {
 
 /** 装置的摆放：缩放、整体下移、格子的世界坐标 */
 export interface Rig {
-  /** 装置自身坐标系 → 世界的均匀缩放（4×4 = RIG_SCALE，8×8 再按格距等比缩） */
+  /** 装置自身坐标系 → 世界的均匀缩放（4×4 = RIG_SCALE，8×8 再按格距等比缩，方形单元再乘 SQUARE_SCALE） */
   s: number;
   /** 工位：装置原点的世界高度（整体下移，使钉住端停在 RIG_ANCHOR_Y） */
   y: number;
-  /** 收起位：装置原点贴着天花圆环板时的世界高度（升降段在它与 y 之间插值） */
+  /** 收起位：装置原点贴着天花方板时的世界高度（升降段在它与 y 之间插值） */
   stowY: number;
   /** 每个单元芯心的世界坐标（plan x → X、plan y → Z） */
   cells: { x: number; z: number }[];
@@ -270,8 +347,8 @@ export interface Rig {
   platformY: number;
 }
 
-export function rigFor(layout: PlanLayout, traj: Pick<BandTrajectory, 'footY' | 'platformTopY'>): Rig {
-  const s = (RIG_SCALE * layout.pitchM) / layout.pitch4;
+export function rigFor(layout: PlanLayout, traj: Pick<BandTrajectory, 'footY' | 'platformTopY'>, scale: number = SQUARE_SCALE): Rig {
+  const s = ((RIG_SCALE * layout.pitchM) / layout.pitch4) * scale;
   const y = RIG_ANCHOR_Y - s * traj.footY;
   return {
     s,
@@ -287,7 +364,7 @@ export function unitDrop(degree: number, dropAt: number = HOIST.dropAt): number 
   return Math.max(0, Math.min(1, degree / dropAt));
 }
 
-/** 单元此刻的装置原点世界高度：收起位与工位之间按升降程度插值（带子与它一起摆，圆环板不动，立杆见 unitFootY） */
+/** 单元此刻的装置原点世界高度：收起位与工位之间按升降程度插值（带子与它一起摆，天花方板不动，立杆见 unitFootY） */
 export function unitTopY(rig: Pick<Rig, 'y' | 'stowY'>, drop: number): number {
   return rig.stowY + (rig.y - rig.stowY) * drop;
 }
@@ -304,7 +381,7 @@ export function unitFootY(rig: Pick<Rig, 'y' | 'stowY' | 's'>, footY: number, dr
 export function bandVertsAt(traj: BandTrajectory, frame: number, topo: SolidTopology, out?: Float32Array): Float32Array {
   const f = traj.frames[frame];
   const n = traj.n;
-  return fillSolidVerts(f.subarray(0, n), f.subarray(n, 2 * n), n, RING.RADIUS_DEF, RING.DEPTH, RING.THICK, SOLID.SCALE, out && out.length === topo.vertCount * 3 ? out : undefined, 0, 0, null);
+  return fillSolidVerts(f.subarray(0, n), f.subarray(n, 2 * n), n, SQUARE.RADIUS, SQUARE.DEPTH, SQUARE.THICK, SOLID.SCALE, out && out.length === topo.vertCount * 3 ? out : undefined, 0, 0, null);
 }
 
 /** 一条带的两组条纹网格（gl3d 静态缓冲用） */
@@ -314,22 +391,85 @@ export function bakeBand(traj: BandTrajectory, frame: number, topo: SolidTopolog
 }
 
 /**
- * 整环（二十条带同一帧）的两组条纹网格：二十份带子顶点各转到自己的方位角后拼成一份——
- * 静止态的单元整环只用一次摆放，不必二十条带各摆一遍（64 个单元 × 20 = 1280 次绘制，桌面上也吃力）。
+ * 整台（二十条带同一帧）的两组条纹网格：每条带取它所在档的轨迹（`order[j]`），转到自己的方位角后拼成一份——
+ * 静止态的单元整台只用一次摆放，不必二十条带各摆一遍（64 个单元 × 20 = 1280 次绘制，桌面上也吃力）。
  */
-export function bakeRing(traj: BandTrajectory, frame: number, topo: SolidTopology, count = RING.COUNT): { a: Float32Array; b: Float32Array } {
-  const one = bandVertsAt(traj, frame, topo);
+export function bakeUnit(trajs: readonly BandTrajectory[], frame: number, topo: SolidTopology, order: readonly number[] = UNIT_ORDER): { a: Float32Array; b: Float32Array } {
+  const ones = trajs.map((t) => bandVertsAt(t, frame, topo));
   const per = topo.vertCount;
-  const verts = new Float32Array(one.length * count);
+  const count = order.length;
+  const len = ones[0].length;
+  const verts = new Float32Array(len * count);
   const idxA = new Uint32Array(topo.idxA.length * count);
   const idxB = new Uint32Array(topo.idxB.length * count);
   for (let j = 0; j < count; j++) {
-    const v = rotateVertsY(Float32Array.from(one), { radius: 0, angle: bandAngle(j) });
-    verts.set(v, j * one.length);
+    const v = rotateVertsY(Float32Array.from(ones[order[j]]), { radius: 0, angle: bandAngle(j) });
+    verts.set(v, j * len);
     for (let k = 0; k < topo.idxA.length; k++) idxA[j * topo.idxA.length + k] = topo.idxA[k] + j * per;
     for (let k = 0; k < topo.idxB.length; k++) idxB[j * topo.idxB.length + k] = topo.idxB[k] + j * per;
   }
   return { a: bakeIndexed(verts, idxA), b: bakeIndexed(verts, idxB) };
+}
+
+/**
+ * 抽稀的轨迹：每隔 stride 个节点取一个（首尾必取）。收在天花下的那一小团（吊长只剩 15%）看不出细节，
+ * 64 台全按 305 节画要三百多万个三角形；静止的收起态用抽稀的那份，过渡与成形照旧满分辨率。
+ */
+export function decimateTrajectory(traj: BandTrajectory, stride: number): BandTrajectory {
+  const n = traj.n;
+  const keep: number[] = [];
+  for (let i = 0; i < n; i += stride) keep.push(i);
+  if (keep[keep.length - 1] !== n - 1) keep.push(n - 1);
+  const m = keep.length;
+  const frames = traj.frames.map((f) => {
+    const out = new Float64Array(2 * m);
+    keep.forEach((i, k) => {
+      out[k] = f[i];
+      out[m + k] = f[n + i];
+    });
+    return out;
+  });
+  return { ...traj, n: m, frames };
+}
+
+/** 收起态整台网格的抽稀步长 */
+export const STOWED_STRIDE = 8;
+
+/**
+ * 带与带之间的膜（2026-10-25 随方形单元补上：没有它，方台俯视是一把放射状的窄带，读不出是一张方的台面；
+ * 作者 10-23 讲收起态时也说的是「蒙皮、可折叠的布」）。几何 = Lab 2-5 / 2-7 那块织物膜（skin-solid `membranePanel`）：
+ * A 边取带 j 的后剖口（它那一档、它那一帧），B 边取带 j+1 的前剖口；烘在方位角 0，摆放时转到 bandAngle(j)。
+ * 半透明，台架在实体之后画（gl3d 半透明的三条硬约束）。
+ */
+export function membraneVerts(a: BandTrajectory, fa: number, b: BandTrajectory, fb: number, count: number = SQUARE.COUNT): { verts: Float32Array; idx: Uint16Array } {
+  const n = a.n;
+  const A = a.frames[fa];
+  const B = b.frames[fb];
+  return membranePanel(
+    { px: A.subarray(0, n), py: A.subarray(n, 2 * n), offY: 0 },
+    { px: B.subarray(0, n), py: B.subarray(n, 2 * n), offY: 0 },
+    n,
+    SQUARE.RADIUS,
+    SQUARE.DEPTH,
+    SOLID.SCALE,
+    (2 * Math.PI) / count,
+  );
+}
+
+/** 整台的膜（二十块，同一帧，各取两侧带子所在的档）：静止态用，烘成一份 */
+export function bakeUnitSkin(trajs: readonly BandTrajectory[], frame: number, order: readonly number[] = UNIT_ORDER): Float32Array {
+  const parts = order.map((t, j) => {
+    const m = membraneVerts(trajs[t], frame, trajs[order[(j + 1) % order.length]], frame, order.length);
+    return { verts: rotateVertsY(m.verts, { radius: 0, angle: bandAngle(j) }), idx: Uint32Array.from(m.idx) };
+  });
+  const all = concatMeshes(parts);
+  return bakeIndexed(all.verts, all.idx);
+}
+
+/** 一块膜烘好（逐块摆的那些：相邻两条带帧不同的单元） */
+export function bakeMembrane(a: BandTrajectory, fa: number, b: BandTrajectory, fb: number): Float32Array {
+  const m = membraneVerts(a, fa, b, fb);
+  return bakeIndexed(m.verts, m.idx);
 }
 
 export function bandTopology(n: number): SolidTopology {
@@ -386,12 +526,27 @@ export function seatSpecOf(r: Pick<FurnRect, 'cx' | 'cy' | 'x0' | 'x1' | 'y0' | 
   };
 }
 
-/** 环形平台的可用宽度（米）：内 = 芯（带子贴着芯外缘挂，再加半个织物厚）、外 = 成形后的平台外缘；R = 猫身中线放在哪 */
-export function ringBand(rig: Pick<Rig, 's'>, layout: Pick<PlanLayout, 'mastR'>, traj: Pick<BandTrajectory, 'reach'>): { rIn: number; rOut: number; R: number } {
-  const half = ((SOLID.THICK / 2) * rig.s) / UNITS_PER_M;
-  const rIn = layout.mastR + half;
-  const rOut = (traj.reach * rig.s) / UNITS_PER_M + half;
+/**
+ * 猫能待的那一圈台面（米）：内 = 芯外缘（带子贴着芯挂，再加半个织物厚）；外 = 二十个平台外缘点连成的多边形的内切圆
+ * ——方形的四个角不算，猫只在内切圆里待（方形尺寸就是按「内切圆 = 圆台」取的，这一圈与圆台时一样宽）；R = 猫身中线放在哪。
+ */
+export function platformBand(rig: Pick<Rig, 's'>, trajs: readonly Pick<BandTrajectory, 'reach'>[], order: readonly number[] = UNIT_ORDER): { rIn: number; rOut: number; R: number } {
+  const half = ((SQUARE.THICK / 2) * rig.s) / UNITS_PER_M;
+  const rIn = (SQUARE.RADIUS * rig.s) / UNITS_PER_M + half;
+  let inR = Infinity;
+  for (let j = 0; j < order.length; j++) {
+    const a = bandAngle(j), b = bandAngle((j + 1) % order.length);
+    const ra = trajs[order[j]].reach, rb = trajs[order[(j + 1) % order.length]].reach;
+    const ax = Math.cos(a) * ra, ay = Math.sin(a) * ra, bx = Math.cos(b) * rb, by = Math.sin(b) * rb;
+    inR = Math.min(inR, Math.abs(ax * by - ay * bx) / Math.hypot(bx - ax, by - ay));
+  }
+  const rOut = (inR * rig.s) / UNITS_PER_M + half;
   return { rIn, rOut, R: (rIn + rOut) / 2 };
+}
+
+/** 成形后方台的边长（米，名义值：方形环的终态半边长 × 2） */
+export function platformSide(rig: Pick<Rig, 's'>): number {
+  return (2 * squareHalfSide(SQUARE_REACH) * rig.s) / UNITS_PER_M;
 }
 
 /** 猫在立体里怎么摆：位置（平面坐标，米）、身子朝向、头转多少、姿态、尾巴、弯多少、在不在台上、离台面抬多高（跨台时跳过去） */
@@ -413,8 +568,8 @@ const RING_SIDE = (55 * Math.PI) / 180;
 
 /**
  * 猫站在哪、怎么摆（2026-10-25 人与猫重做时取代 catSpot）。平面模型把猫当一个点：坐着时在单元中心（芯心），
- * 靠近访客时挪到台边。立体里芯是根杆子、平台只是一圈 16 cm 宽的环（Lab 2-15 的 8×8），0.47 m 长的猫
- * 怎么摆都会穿杆——所以台上的猫**顺着环坐 / 蜷 / 走**：身子绕着立杆弯过去（figure.ts 的 bend），中线在环宽正中；
+ * 靠近访客时挪到台边。立体里芯是根杆子、方台的内切圆里只有一圈 16 cm 宽的台面（Lab 2-15 的 8×8，`platformBand`），
+ * 0.47 m 长的猫怎么摆都会穿杆——所以台上的猫**顺着这一圈坐 / 蜷 / 走**：身子绕着立杆弯过去（figure.ts 的 bend），中线在圈宽正中；
  * 跨台（transfer）时贴着两根芯连线的一侧跳过去，两根芯都不碰。
  *   - 台上、在芯心：身子朝向 = 平面模型的朝向（往回绕 55° 摆在环上，头转回来看那个方向）；
  *   - 台上、在台边（靠近访客）：摆在朝访客那一侧再往回绕 55° 的地方，头转过去看访客；
@@ -495,8 +650,8 @@ export function concatMeshes(parts: readonly { verts: Float32Array; idx: Uint32A
   return { verts, idx };
 }
 
-/** 天花圆环板的尺寸（装置自身坐标系；与 Lab 2-8 同一副数） */
-export const PLATE = { inner: 12, outer: 11, y: -3, halfT: 3, segs: 40 } as const;
+/** 天花方板：半边长 = (芯半径 + outer) × 装置缩放（与 Lab 2-8 的圆环板外缘同一副数）；y 与 halfT 是世界单位（板贴着天花，不随装置缩） */
+export const PLATE = { outer: 11, y: -3, halfT: 3 } as const;
 
 /**
  * 立杆：每格一根方杆从天花（y 0）落到这个单元此刻的钉住端（`bottoms[u]`；不传 = 全在工位 RIG_ANCHOR_Y）。
@@ -514,19 +669,10 @@ export function postsMesh(rig: Pick<Rig, 'cells'>, layout: Pick<PlanLayout, 'mas
   );
 }
 
-/** 天花圆环板：每格一块挂在天花上（y 0 平面），板随装置缩；静件，烘一份 */
+/** 天花方板：每格一块挂在天花上（y 0 平面），边与房间轴对齐（与方台同向），板随装置缩；静件，烘一份 */
 export function platesMesh(rig: Pick<Rig, 's' | 'cells'>): { verts: Float32Array; idx: Uint32Array } {
-  const plate = ringPlateVerts(Math.max(2, (RING.RADIUS_DEF - PLATE.inner) * rig.s), (RING.RADIUS_DEF + PLATE.outer) * rig.s, PLATE.y, PLATE.halfT, PLATE.segs);
-  return concatMeshes(
-    rig.cells.map((c) => {
-      const v = Float32Array.from(plate.verts);
-      for (let k = 0; k < v.length; k += 3) {
-        v[k] += c.x;
-        v[k + 2] += c.z;
-      }
-      return { verts: v, idx: plate.idx };
-    }),
-  );
+  const h = (SQUARE.RADIUS + PLATE.outer) * rig.s;
+  return concatMeshes(rig.cells.map((c) => boxVerts(c.x, PLATE.y, c.z, h, PLATE.halfT, h)));
 }
 
 /** 房间（地板 + 两面墙，Lab 2-8 的画法）按平面模型的内净尺寸 */

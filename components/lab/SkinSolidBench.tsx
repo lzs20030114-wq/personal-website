@@ -78,11 +78,11 @@ export const RAIL_LITE: [number, number, number] = [0.4, 0.43, 0.46];
 export const C_BOND: [number, number, number] = [0.88, 0.42, 0.24];
 // 环间织物膜（用户 2026-08-25「加一个半透明蒙皮」）：比带子本身淡、偏纱灰，
 // 让它读作「带与带之间的那块布」而不是又一层结构
-const MEM_DARK: [number, number, number] = [0.1, 0.16, 0.14];
+export const MEM_DARK: [number, number, number] = [0.1, 0.16, 0.14];
 // 单元之间的织物网（Lab.13 连接）：外缘弦宽 / 起网门槛，2D px（× rig 缩放进世界）——值同 unit-cluster.BRIDGE
 const BRIDGE_W = 40;
 const BRIDGE_GAP = 14;
-const MEM_LITE: [number, number, number] = [0.5, 0.68, 0.58];
+export const MEM_LITE: [number, number, number] = [0.5, 0.68, 0.58];
 // 布景（Lab.10 房间 + 比例小人，2026-08-25）：房间压得比芯轨还暗——它是背景不是展品；
 // 小人略亮且偏暖，在灰调的房间里一眼认得出是人
 export const ROOM_DARK: [number, number, number] = [0.05, 0.06, 0.065];

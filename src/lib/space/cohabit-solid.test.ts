@@ -1,16 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { FRAMES, HOIST, STEADY, TrajectoryBaker, UNITS_PER_M, bakeBand, bakeRing, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, postsMesh, rigFor, ringBand, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
+import { FRAMES, HOIST, STEADY, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_ORDER, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
 import { planLayout } from './unit-activation';
-import { FIGURE, PEAK_REACH, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
+import { FIGURE, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
 import { RING } from './skin-ring';
+import { SQUARE, SQUARE_PEAK, SQUARE_REACH, buildSquareUnits, squareHalfSide, squareRadiusAt } from './skin-square';
 import { catMesh, figureMesh } from './figure';
 import { partBox } from './mesh-shell';
-import { COHABIT, CohabitSim, type FurnRect } from './cohabit';
+import { COHABIT, CohabitSim, SQUARE_SCALE, bandAngle, squarePlanLayout, type FurnRect } from './cohabit';
 
 /**
- * 守门：Lab 2-15 立体演示的几何胶水。它不解新物理，错法是尺度错、帧取错——都不报错，只看着「差不多」。
+ * 守门：Lab 2-15 立体演示的几何胶水。它不解新物理，错法是尺度错、帧取错、外形错——都不报错，只看着「差不多」。
+ * 2026-10-25 起单元是方形的（Lab 2-7 方形环平档的面 / 边 / 角三档），trajs[0] = 面档，帧结构的守门拿它做。
  */
-const traj = new TrajectoryBaker().runAll();
+const trajs = new UnitBaker().runAll();
+const traj = trajs[0];
 const layout8 = planLayout(8);
 
 describe('带子轨迹关键帧', () => {
@@ -19,14 +22,89 @@ describe('带子轨迹关键帧', () => {
     for (const f of traj.frames) expect(f.length).toBe(2 * traj.n);
   });
 
-  it('钉住端在正向与回程里全程不动（注册在底端），平台顶面在钉住端之上、挑出在环族的量级', () => {
+  it('钉住端在正向与回程里全程不动（注册在底端），平台顶面在钉住端之上', () => {
     const n = traj.n;
     for (const f of traj.frames.slice(0, FRAMES.form + FRAMES.retract)) expect(-f[2 * n - 1] * 100).toBeCloseTo(traj.footY, 3);
     expect(traj.platformTopY).toBeLessThan(traj.footY);
     expect(traj.platformTopY).toBeGreaterThan(0);
-    // 成形后挑出 ≈ 芯半径 + 环族峰值挑出（PEAK_REACH 是全程峰值，终态略小）
-    expect(traj.reach).toBeGreaterThan(RING.RADIUS_DEF + PEAK_REACH * 0.8);
-    expect(traj.reach).toBeLessThan(RING.RADIUS_DEF + PEAK_REACH + 2);
+  });
+
+  it('三档（面 / 边 / 角）：同一条带长、钉住端一样高、平台面一样高，挑出与 Lab 2-7 方形环的深度表一致', () => {
+    expect(trajs).toHaveLength(3);
+    expect(UNIT_TIERS.map((d) => d.en)).toEqual(['face', 'edge', 'corner']);
+    for (const [t, tr] of trajs.entries()) {
+      expect(tr.n).toBe(traj.n);
+      expect(tr.footY).toBeCloseTo(traj.footY, 6); // 注册在底端，三档初始摆位相同（角档的段落分法不同，末位舍入差 1e-13）
+      expect(Math.abs(tr.platformTopY - traj.platformTopY)).toBeLessThan(1); // 方形环的对位构造：平台面一样高（px）
+      expect(Math.abs(tr.reach - (SQUARE.RADIUS + SQUARE_REACH[t]))).toBeLessThan(0.3);
+    }
+    // 二十条带：面 8 / 边 8 / 角 4，角档正对 45°
+    expect(UNIT_ORDER.filter((t) => t === 0)).toHaveLength(8);
+    expect(UNIT_ORDER.filter((t) => t === 1)).toHaveLength(8);
+    expect(UNIT_ORDER.filter((t) => t === 2)).toHaveLength(4);
+    for (let j = 0; j < UNIT_ORDER.length; j++) if (UNIT_ORDER[j] === 2) expect(Math.abs(Math.sin(2 * bandAngle(j)))).toBeCloseTo(1, 9);
+  });
+
+  it('用的是方形环立项时那条 202 节的带：形状与现行 305 节那条逐点相同（尾端对齐），只少上半截贴芯的素管', () => {
+    expect(traj.n).toBe(UNIT_BAND);
+    const long = new TrajectoryBaker(buildSquareUnits()[0]).runAll();
+    expect(long.n).toBe(SQUARE.BAND);
+    const a = traj.frames[STEADY.formed];
+    const b = long.frames[STEADY.formed];
+    const na = traj.n;
+    const nb = long.n;
+    let dx = 0;
+    let dy = 0;
+    for (let i = 0; i < na; i++) {
+      dx = Math.max(dx, Math.abs(a[na - 1 - i] - b[nb - 1 - i]));
+      dy = Math.max(dy, Math.abs(a[2 * na - 1 - i] - a[2 * na - 1] - (b[2 * nb - 1 - i] - b[2 * nb - 1])));
+    }
+    expect(dx * 100).toBeLessThan(0.01); // px
+    expect(dy * 100).toBeLessThan(1);
+    expect(Math.abs(long.reach - traj.reach)).toBeLessThan(0.01);
+  }, 30_000);
+
+  it('俯视是方的：二十个平台外缘点都落在同一个正方形的边上（偏差 < 1 px）', () => {
+    const a = squareHalfSide(SQUARE_REACH);
+    for (let j = 0; j < UNIT_ORDER.length; j++) {
+      const th = bandAngle(j);
+      expect(Math.abs(trajs[UNIT_ORDER[j]].reach - squareRadiusAt(th, a))).toBeLessThan(1);
+    }
+    // 整台网格的包围盒 X、Z 一样大（方形，不是长方）
+    const topo = bandTopology(traj.n);
+    const v = bakeUnit(trajs, STEADY.formed, topo).a;
+    let mx = 0, mz = 0;
+    for (let k = 0; k < v.length; k += 6) {
+      mx = Math.max(mx, Math.abs(v[k]));
+      mz = Math.max(mz, Math.abs(v[k + 2]));
+    }
+    expect(Math.abs(mx - mz) / mx).toBeLessThan(0.02);
+  });
+
+  it('带与带之间的膜：整台二十块，每块的两条边正好贴着带 j 的后剖口与带 j+1 的前剖口（方台俯视读得出是一张台面）', () => {
+    const n = traj.n;
+    const skin = bakeUnitSkin(trajs, STEADY.formed);
+    expect(skin.length).toBe(SQUARE.COUNT * (n - 1) * 2 * 3 * 6);
+    expect(bakeMembrane(trajs[0], STEADY.formed, trajs[1], STEADY.formed).length).toBe((n - 1) * 2 * 3 * 6);
+    // 俯视：膜的顶点离芯最远的那一圈与带子外缘一样远（角上到 √2 倍的内切圆），中间的弦把缝糊上
+    const verts: { x: number; z: number }[] = [];
+    for (let k = 0; k < skin.length; k += 6) verts.push({ x: skin[k], z: skin[k + 2] });
+    const maxR = Math.max(...verts.map((v) => Math.hypot(v.x, v.z)));
+    expect(Math.abs(maxR - trajs[2].reach)).toBeLessThan(SQUARE.DEPTH);
+    let mx = 0, mz = 0;
+    for (const v of verts) {
+      mx = Math.max(mx, Math.abs(v.x));
+      mz = Math.max(mz, Math.abs(v.z));
+    }
+    expect(Math.abs(mx - squareHalfSide(SQUARE_REACH))).toBeLessThan(SQUARE.DEPTH);
+    expect(Math.abs(mz - squareHalfSide(SQUARE_REACH))).toBeLessThan(SQUARE.DEPTH);
+  });
+
+  it('三档轨迹烘一次就留着：同一页面里再 new 一台直接拿到（换路由 / 重挂不重烘）', () => {
+    const again = new UnitBaker();
+    expect(again.done).toBe(true);
+    expect(again.trajectories).toBe(trajs);
+    expect(again.progress).toBe(1);
   });
 
   it('回程第 0 帧 = 正向末帧（同一刻），回程末帧回到直带子附近', () => {
@@ -117,7 +195,7 @@ describe('带子轨迹关键帧', () => {
   });
 
   it('预览（烘完之前）给的钉住端高度与烘完的一致，两帧：初始摆位与它的收起态', () => {
-    const b = new TrajectoryBaker();
+    const b = new UnitBaker();
     const pre = b.preview();
     expect(pre.frames).toHaveLength(2);
     expect(pre.footY).toBeCloseTo(traj.footY, 6);
@@ -127,38 +205,51 @@ describe('带子轨迹关键帧', () => {
     for (let i = 0; i < 2 * n; i++) expect(pre.frames[1][i]).toBe(stowed[i]);
   });
 
-  it('整环网格 = 二十条带的网格拼起来', () => {
+  it('整台网格 = 二十条带（各取自己那一档）的网格拼起来', () => {
     const topo = bandTopology(traj.n);
     const one = bakeBand(traj, STEADY.formed, topo);
-    const ring = bakeRing(traj, STEADY.formed, topo);
-    expect(ring.a.length).toBe(one.a.length * RING.COUNT);
-    expect(ring.b.length).toBe(one.b.length * RING.COUNT);
+    const unit = bakeUnit(trajs, STEADY.formed, topo);
+    expect(unit.a.length).toBe(one.a.length * SQUARE.COUNT);
+    expect(unit.b.length).toBe(one.b.length * SQUARE.COUNT);
   });
 });
 
 describe('摆放与尺度', () => {
   const rig = rigFor(layout8, traj);
 
-  it('8×8 的装置按格距等比缩：平面模型的平台半径 = 全程峰值包络（ringOuter）按同一比例缩', () => {
-    // 平面模型拿峰值包络定格距与墙（成形过程中鼓到最大的那一刻），终态的平台比它小一圈（≈ 0.86）
-    const peakD = (2 * ringOuter(RING.RADIUS_DEF) * rig.s) / UNITS_PER_M;
-    expect(peakD / (2 * layout8.platR)).toBeGreaterThan(0.98);
-    expect(peakD / (2 * layout8.platR)).toBeLessThan(1.02);
-    const d3 = (2 * traj.reach * rig.s) / UNITS_PER_M;
-    expect(d3 / (2 * layout8.platR)).toBeGreaterThan(0.8);
-    expect(d3 / (2 * layout8.platR)).toBeLessThan(1);
+  it('方台的尺寸：峰值半边长 = 平面模型的平台半径（圆台的峰值包络成了方形的内切圆），终态边长约 0.5 m，邻台不相碰', () => {
+    expect(SQUARE_SCALE).toBeCloseTo(ringOuter(RING.RADIUS_DEF) / squareHalfSide(SQUARE_PEAK), 12);
+    const aPeak = (squareHalfSide(SQUARE_PEAK) * rig.s) / UNITS_PER_M;
+    expect(aPeak).toBeCloseTo(layout8.platR, 9);
+    const side = platformSide(rig);
+    expect(side).toBeGreaterThan(0.45);
+    expect(side).toBeLessThan(0.55);
+    // 峰值时：面对面（格距方向）与角对角（对角方向）都还留着缝
+    const facePeak = ((SQUARE.RADIUS + SQUARE_PEAK[0]) * Math.cos(Math.PI / 20) * rig.s) / UNITS_PER_M;
+    const cornerPeak = ((SQUARE.RADIUS + SQUARE_PEAK[2]) * rig.s) / UNITS_PER_M;
+    expect(2 * facePeak).toBeLessThan(layout8.pitchM);
+    expect(2 * cornerPeak).toBeLessThan(layout8.pitchM * Math.SQRT2);
   });
 
-  it('钉住端停在离地 1.08 m（RIG_ANCHOR_Y），平台面在它之上不到 0.3 m', () => {
+  it('平面模型的方台（squarePlanLayout）与立体画的是同一个方形：每条带全落的长度 = 立体那条带的峰值挑出', () => {
+    const sq = squarePlanLayout(layout8);
+    expect(sq.platR).toBe(layout8.platR); // 内切圆 = 原来的平台圆，猫的落脚与台边照旧
+    expect(sq.bandReach).toHaveLength(COHABIT.FACES.BANDS);
+    for (let j = 0; j < UNIT_ORDER.length; j++) expect(sq.bandReach![j]).toBeCloseTo(((SQUARE.RADIUS + SQUARE_PEAK[UNIT_ORDER[j]]) * rig.s) / UNITS_PER_M, 9);
+    expect(sq.reachMax).toBeCloseTo(Math.max(...sq.bandReach!), 12);
+    expect(sq.reachMax! / layout8.platR).toBeCloseTo(Math.SQRT2, 2); // 角比内切圆远 √2 倍
+  });
+
+  it('钉住端停在离地 1.08 m（RIG_ANCHOR_Y），平台面在它之上不到 0.4 m', () => {
     expect(rig.y + rig.s * traj.footY).toBeCloseTo(RIG_ANCHOR_Y, 6);
     expect(rig.platformY).toBeLessThan(RIG_ANCHOR_Y);
     const aboveM = (RIG_ANCHOR_Y - rig.platformY) / UNITS_PER_M;
     expect(aboveM).toBeGreaterThan(0.05);
-    expect(aboveM).toBeLessThan(0.3);
+    expect(aboveM).toBeLessThan(0.4);
     expect((ROOM.FLOOR_Y - RIG_ANCHOR_Y) / UNITS_PER_M).toBeCloseTo(1.08, 1);
   });
 
-  it('收起位：装置原点贴着圆环板下面，升降程度 0 → 1 从收起位插值到工位；收起的布束底在人头顶以上一大截', () => {
+  it('收起位：装置原点贴着天花方板下面，升降程度 0 → 1 从收起位插值到工位；收起的布束底在人头顶以上一大截', () => {
     expect(rig.stowY).toBe(HOIST.ceilGap);
     expect(unitTopY(rig, 0)).toBe(rig.stowY);
     expect(unitTopY(rig, 1)).toBeCloseTo(rig.y, 12);
@@ -192,7 +283,7 @@ describe('摆放与尺度', () => {
     expect(rig.cells[8].z - rig.cells[0].z).toBeCloseTo(layout8.pitchM * UNITS_PER_M, 6);
   });
 
-  it('立杆、圆环板、房间都是闭合网格；立杆下端按单元给（不传 = 全在工位，收起时只剩天花下一小截）', () => {
+  it('立杆、天花方板、房间都是闭合网格；立杆下端按单元给（不传 = 全在工位，收起时只剩天花下一小截）', () => {
     for (const m of [postsMesh(rig, layout8), platesMesh(rig), roomMesh(layout8.roomM)]) {
       expect(m.verts.length % 3).toBe(0);
       expect(m.idx.length % 3).toBe(0);
@@ -206,7 +297,7 @@ describe('摆放与尺度', () => {
     expect(lowest(postsMesh(rig, layout8))).toBeCloseTo(RIG_ANCHOR_Y, 4);
     const stowedFoot = unitFootY(rig, traj.footY, 0);
     expect(lowest(postsMesh(rig, layout8, new Float32Array(64).fill(stowedFoot)))).toBeCloseTo(stowedFoot, 4);
-    expect(stowedFoot).toBeLessThan(RIG_ANCHOR_Y * 0.1);
+    expect(stowedFoot / UNITS_PER_M).toBeLessThan(0.3); // 收起时布束只在天花下不到 30 cm
   });
 
   it('家具：每件一块座面一块靠背，座面离地 0.45 m，靠背在人背后那条边上', () => {
@@ -220,13 +311,15 @@ describe('摆放与尺度', () => {
     expect((ROOM.FLOOR_Y - (back.cy - back.hy)) / UNITS_PER_M).toBeCloseTo(0.85, 6);
   });
 
-  const band = ringBand(rig, layout8, traj);
+  const band = platformBand(rig, trajs);
   const wrap = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
 
-  it('环形平台的可用宽度：内 = 芯外缘、外 = 成形平台外缘，猫身中线放在正中', () => {
-    expect(band.rIn).toBeGreaterThan(layout8.mastR);
-    expect(band.rIn).toBeLessThan(layout8.mastR + 0.01);
-    expect(band.rOut - band.rIn).toBeGreaterThan(0.14); // 8×8 下环只有 16 cm 宽——猫只能顺着环待
+  it('猫能待的那一圈：内 = 芯外缘、外 = 二十个外缘点围成的多边形的内切圆（方形的四个角不算），猫身中线放在正中', () => {
+    const core = (SQUARE.RADIUS * rig.s) / UNITS_PER_M;
+    expect(band.rIn).toBeGreaterThan(core);
+    expect(band.rIn).toBeLessThan(core + 0.01);
+    expect(band.rOut).toBeLessThan(platformSide(rig) / 2 + 0.01); // 不出方形的边
+    expect(band.rOut - band.rIn).toBeGreaterThan(0.14); // 与圆台时一样宽（16 cm 左右）——猫只能顺着这一圈待
     expect(band.rOut - band.rIn).toBeLessThan(0.18);
     expect(band.R).toBeCloseTo((band.rIn + band.rOut) / 2, 12);
   });
@@ -258,7 +351,7 @@ describe('摆放与尺度', () => {
     expect(catPlacement({ x: 0.3, y: 0.2, heading: 1, state: 'walk' }, [], false, true, layout8, band).pose).toBe('walk');
   });
 
-  it('台上的猫不穿杆、不悬空（Lab 2-15 的实际环宽）：各种状态 × 八个朝向 × 芯心 / 台边，猫离芯轴都在芯外缘以外，贴台面的部分都在平台环内', () => {
+  it('台上的猫不穿杆、不悬空（Lab 2-15 方台的实际宽度）：各种状态 × 八个朝向 × 芯心 / 台边，猫离芯轴都在芯外缘以外，贴台面的部分都在内切圆以内', () => {
     const u = { x: 0, y: 0 };
     const clear = band.rIn + 0.005;
     const check = (pl: ReturnType<typeof catPlacement>, cores: { x: number; y: number }[], label: string): void => {

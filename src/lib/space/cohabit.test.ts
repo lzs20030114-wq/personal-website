@@ -4,6 +4,7 @@ import {
   CohabitSim,
   aisleGraph,
   bandAngle,
+  cornerNodes,
   doorReach,
   edgeOpen,
   everyoneHasExit,
@@ -11,6 +12,8 @@ import {
   partySizes,
   runCohabit,
   shortestPath,
+  squarePlanLayout,
+  unitReaches,
 } from './cohabit';
 import type { CatCfg } from './cohabit';
 import { PLAN, buildCatchment, planLayout, unitInputs } from './unit-activation';
@@ -1032,4 +1035,113 @@ describe('cohabit · 猫能下地：会动 / 钉死两档的猫也能下地（ca
     expect(Math.hypot(first.x - cat.walker.x, first.y - cat.walker.y)).toBeLessThan(sim.layout.pitchM);
     expect(sim.act.degree[g.path[0]]).toBeCloseTo(1);
   });
+});
+
+describe('cohabit · 方形单元（unit: square，Lab 2-15，作者 2026-10-25「我们采用的单元形态是方形的」）', () => {
+  const segDist = (px: number, py: number, ax: number, ay: number, bx: number, by: number): number => {
+    const vx = bx - ax, vy = by - ay, L2 = vx * vx + vy * vy;
+    const t = L2 > 1e-12 ? Math.max(0, Math.min(1, ((px - ax) * vx + (py - ay) * vy) / L2)) : 0;
+    return Math.hypot(px - (ax + vx * t), py - (ay + vy * t));
+  };
+  /** 2-15 那一套配置（案例页对照图的配置 + 方形单元），六人两猫 */
+  const scene = (space: 'live' | 'fixed', seed = 11): CohabitSim => {
+    const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', space, seed, opening: false, auto: true, faces: true, social: true, catFloor: true, cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid }, guide: COHABIT.GUIDE });
+    const half = sim.layout.fieldM / 2;
+    const sizes = partySizes(6);
+    sizes.forEach((sz, i) => {
+      const a = (i / sizes.length) * 2 * Math.PI + 0.3;
+      sim.addParty(Math.cos(a) * half * 0.6, Math.sin(a) * half * 0.6, sz);
+    });
+    for (let i = 0; i < 2; i++) sim.addCat(sim.layout.units[(i * 5) % sim.layout.units.length]);
+    return sim;
+  };
+  /** 站着的人身体里伸进去的、对人是墙的带（成形 × (1 − 收回) ≥ WALL_AT）最深伸进多少（m） */
+  const intrusion = (sim: CohabitSim): number => {
+    const L = sim.layout;
+    let worst = 0;
+    for (const p of sim.people) {
+      if (p.seated) continue;
+      const { x, y } = p.walker;
+      for (const u of L.units) {
+        const deg = sim.act.degree[u.i];
+        if (deg <= 1e-3 || Math.hypot(u.x - x, u.y - y) > L.reachMax! + PLAN.BODY_R) continue;
+        for (let j = 0; j < B; j++) {
+          const open = sim.bandOpen[u.i * B + j];
+          if (deg * (1 - open) < COHABIT.WALL_AT) continue;
+          const r = L.mastR + (L.bandReach![j] - L.mastR) * (1 - open);
+          const a = bandAngle(j);
+          worst = Math.max(worst, PLAN.BODY_R - segDist(x, y, u.x + Math.cos(a) * L.mastR, u.y + Math.sin(a) * L.mastR, u.x + Math.cos(a) * r, u.y + Math.sin(a) * r));
+        }
+      }
+    }
+    return worst;
+  };
+
+  it('不给 unit 就是圆台：没有 bandReach，unitReaches 与旧口径（芯距 < platR + rad）逐位相同', () => {
+    const sim = new CohabitSim({ trigger: 'posture', grid: 8 });
+    expect(sim.layout.bandReach).toBeUndefined();
+    const l = planLayout(8);
+    for (const u of l.units.slice(0, 16))
+      for (const [x, y] of [[0.1, 0.2], [u.x + 0.3, u.y], [u.x + 0.41, u.y + 0.41], [-1, 1]])
+        expect(unitReaches(l, u, x, y, PLAN.BODY_R)).toBe(Math.hypot(u.x - x, u.y - y) < l.platR + PLAN.BODY_R);
+  });
+
+  it('方台的四个角正对过道交叉点：一台落着，四个角的交叉点都站不了（cornerNodes），四条边的中点照旧算墙', () => {
+    const l = squarePlanLayout(planLayout(8));
+    const g = aisleGraph(l);
+    const n = l.n;
+    const u = l.units[3 * n + 3];
+    const formed = new Uint8Array(l.units.length);
+    formed[u.i] = 1;
+    const blocked = cornerNodes(l, g, formed);
+    const corners = [[3, 3], [3, 4], [4, 3], [4, 4]].map(([r, c]) => r * (n + 1) + c);
+    for (const k of corners) expect(blocked[k]).toBe(1);
+    expect(blocked.reduce((a, b) => a + b, 0)).toBe(4);
+    // 圆台同一台：不堵交叉点（台缘离交叉点 0.17 m，只擦边，旧口径不算）
+    expect(cornerNodes(planLayout(8), g, formed).reduce((a, b) => a + b, 0)).toBe(0);
+    // 方台盖到坐着的人头顶的判定比圆台宽：对角方向 platR + BODY_R 之外的那台，方台的角还够得着
+    const d = (l.platR + PLAN.BODY_R + 0.05) / Math.SQRT2;
+    expect(unitReaches(planLayout(8), u, u.x + d, u.y + d, PLAN.BODY_R)).toBe(false);
+    expect(unitReaches(l, u, u.x + d, u.y + d, PLAN.BODY_R)).toBe(true);
+  });
+
+  it('会动档：猫占着的方台收不回去的角不顶站着的人（猫要过去的那台会顶到人就先等，被顶着的人挪开）', () => {
+    for (const seed of [11, 12]) {
+      const sim = scene('live', seed);
+      let frames = 0;
+      let deep = 0;
+      const dt = 1 / 30;
+      for (let t = 0; t < 120; t += dt) {
+        sim.step(dt);
+        const w = intrusion(sim);
+        if (w > 0.01) frames++;
+        deep = Math.max(deep, w);
+      }
+      // 圆台同一配置是 1–2% 的时间、最深 4.6 cm；方台的角正对交叉点，不管的话是 15 cm
+      expect(frames, `seed ${seed}`).toBeLessThan(60);
+    }
+  }, 60_000);
+
+  it('钉死档：固定方台按方形的角挑——每个交叉点都挤得到门口，每个还能站的点不路过被堵的点也走得到门口；站着的人不被台角顶着', () => {
+    const sim = scene('fixed');
+    const l = sim.layout;
+    const g = sim.graph;
+    const fixed = Uint8Array.from(sim.act.degree, (d) => (d >= 1 ? 1 : 0));
+    expect(fixed.reduce((a, b) => a + b, 0)).toBeGreaterThan(6);
+    const blocked = cornerNodes(l, g, fixed);
+    const all = doorReach(l, g, fixed);
+    const clean = doorReach(l, g, fixed, null, blocked);
+    for (let i = 0; i < g.door[0]; i++) {
+      if (g.furn!.nodeOff[i]) continue;
+      expect(all[i], `交叉点 ${i} 是死角`).toBe(1);
+      if (!blocked[i]) expect(clean[i], `交叉点 ${i} 要路过被堵的点`).toBe(1);
+    }
+    const dt = 1 / 30;
+    let frames = 0;
+    for (let t = 0; t < 120; t += dt) {
+      sim.step(dt);
+      if (t > 5 && intrusion(sim) > 0.01) frames++; // 开场摆进去的人要先挤出来
+    }
+    expect(frames).toBeLessThan(30);
+  }, 60_000);
 });
