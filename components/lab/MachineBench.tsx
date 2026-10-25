@@ -109,6 +109,7 @@ import { setStash } from './snapshot';
 import { useBenchLoop } from './useBenchLoop';
 import { ActuatorPanel, type ActuatorSnapshot } from './ActuatorPanel';
 import { ActuatorReadout, READOUT_CHANNELS, type ReadoutKey } from '../../src/lib/linkage/actuator-readout';
+import { createHardwareSnapshot } from '../../src/lib/linkage/actuator-hardware';
 
 /**
  * Lab.05 整机台架（spec = 轮回机器_整机spec.md，用户 2026-07-29 拍板「整机传动 + 真实实体」）。
@@ -928,6 +929,9 @@ export function MachineBench({
 
     /** 新开一场：种子每场随机（非确定是论点的一部分），会话头里记着，导出的日志照样可复现 */
     const startEngine = (): void => {
+      readout?.reset();
+      readoutClock = 0;
+      setOutSnap(null);
       const seed = (Math.random() * 0x100000000) >>> 0;
       // 台架开着肌腱轴深卷（tendonContractions 的 deep），引擎要知道这一点
       const eng = new BehaviorEngine({ seed, order: rotateOrder(firstNow), loop: true, lifeRate: rateNow, deepOk: true });
@@ -955,6 +959,9 @@ export function MachineBench({
     const adoptEngine = (state: EngineState): boolean => {
       try {
         const eng = BehaviorEngine.restore(state);
+        readout?.reset();
+        readoutClock = 0;
+        setOutSnap(null);
         engine = eng;
         logHeader = eng.header();
         logBuf.length = 0;
@@ -1477,7 +1484,20 @@ export function MachineBench({
             readoutClock = 0;
             const series = {} as Record<ReadoutKey, number[]>;
             for (const c of READOUT_CHANNELS) series[c.key] = readout.series(c.key);
+            const hardwareStatus = engine.status();
             setOutSnap({
+              hardware: createHardwareSnapshot({
+                values: readout.values,
+                targets: readout.targets,
+                breathTarget: tg.breath.s,
+                soundDuty: tg.sound.duty,
+                voicing: tg.sound.on,
+                timeS: hardwareStatus.t,
+                seed: engine.state.seed,
+                persona: hardwareStatus.persona,
+                phase: hardwareStatus.phase,
+                lifeRate: hardwareStatus.lifeRate,
+              }),
               values: { ...readout.values },
               targets: { ...readout.targets },
               series,

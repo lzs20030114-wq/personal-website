@@ -22,8 +22,8 @@ describe('Lab 1-6 交互机制表', () => {
   const { blocks, title } = LAB_1_6_TABLES;
 
   it('每张表都合日志表格块的 schema，每行与表头同宽', () => {
-    // 2026-10-19 交互机制整合：14 张收成 5 张
-    expect(blocks.length).toBe(5);
+    // 原有 5 张交互表 + 输出对应 / 输入对应 / 参考依据。
+    expect(blocks.length).toBe(8);
     for (const [i, b] of blocks.entries()) {
       const parsed = LogTableBlockSchema.safeParse(b);
       expect(parsed.success, `表 ${i + 1}：${parsed.success ? '' : parsed.error.message}`).toBe(true);
