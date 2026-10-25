@@ -142,14 +142,14 @@ function visibleCamera(root: HTMLElement | null) {
  */
 export type LabAttachments = { title: Bilingual; blocks: LogBlock[] };
 
-export function LabPanel({ no, title, description, lede, specs, accent, kind, verb, children, notes, attachments }: {
-  no: string; title: string; description: string; lede: string; specs: [string, string][]; accent: string; kind: string; verb: string; children: ReactNode; notes?: ReactNode; attachments?: LabAttachments;
+export function LabPanel({ no, title, description, lede, specs, accent, kind, verb, children, notes, attachments, defaultDetails = true }: {
+  no: string; title: string; description: string; lede: string; specs: [string, string][]; accent: string; kind: string; verb: string; children: ReactNode; notes?: ReactNode; attachments?: LabAttachments; defaultDetails?: boolean;
 }) {
   const lang = useBenchLang();
   const tx = useLabText(lang);
   const workspace = useContext(Workspace);
   const expanded = workspace.expanded === no;
-  const [details, setDetails] = useState(true);
+  const [details, setDetails] = useState(defaultDetails);
   const [hasCamera, setHasCamera] = useState(false);
   const [panelWidth, setPanelWidth] = useState(1124);
   const [figureHeight, setFigureHeight] = useState<number | null>(null);
@@ -216,7 +216,8 @@ export function LabPanel({ no, title, description, lede, specs, accent, kind, ve
         setFigureHeight(Math.max(380, Math.floor(window.innerHeight - heading.getBoundingClientRect().height - toolsHeight - (expanded ? 32 : no === '2-12' ? 128 : 48))));
         return;
       }
-      const controlsHeight = node.getBoundingClientRect().height - figure.getBoundingClientRect().height;
+      const supplementHeight = node.querySelector('[data-lab-supplement]')?.getBoundingClientRect().height ?? 0;
+      const controlsHeight = node.getBoundingClientRect().height - figure.getBoundingClientRect().height - supplementHeight;
       // Reserve visible controls first. Complex multi-view benches can still scroll inside the expanded panel.
       setFigureHeight(clamp(Math.floor(window.innerHeight - heading.getBoundingClientRect().height - controlsHeight - toolsHeight - (expanded ? 32 : 100)), 240, 720));
     };
