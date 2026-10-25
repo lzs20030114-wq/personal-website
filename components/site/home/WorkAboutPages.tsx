@@ -25,7 +25,7 @@ import {
   type Side,
 } from '../../../src/lib/site/work-carousel';
 import { HOME_WORK_PANEL_KEY } from '../pageTransitionState';
-import { WorkMosaic } from './WorkMosaic';
+import { WorkMark } from './WorkMark';
 
 const n2 = (i: number) => String(i).padStart(2, '0');
 /** 其他作品的图走 Next 图片优化（作者给的原图可能很大）；主项目卡沿用稿内两张小图原样 */
@@ -211,7 +211,6 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
   const firstOf = useMemo(() => groups.map((_, gi) => panels.findIndex((p) => p.gi === gi)), [groups, panels]);
 
   const [s, setS] = useState<WState>(INIT);
-  const [backdrop, setBackdrop] = useState({ cur: 0, from: 0, moving: false });
   const sRef = useRef(s);
   sRef.current = s;
   const set = (p: Partial<WState>) => setS((o) => ({ ...o, ...p }));
@@ -324,16 +323,7 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
     return () => cancelAnimationFrame(r);
   }, [s.instant]);
 
-  // 背景一次只滑一屏；连切时等本次完成，再直接追到最新 s.cur，不排队经过中间组。
-  // 文档流 / 返回原屏直接落位，避免隐藏后收不到 transitionend 而留下等待状态。
-  useLayoutEffect(() => {
-    setBackdrop((o) => {
-      if (s.instant || flow) return { cur: s.cur, from: s.cur, moving: false };
-      return o.moving || o.cur === s.cur ? o : { cur: s.cur, from: o.cur, moving: true };
-    });
-  }, [s.cur, s.instant, flow]);
-
-  // 舞台宽与左右留白：露边宽度、留白区宽度、裁切都按它算
+  // 舞台宽与左右留白：露边宽度、留白区宽度、渐隐窗口都按它算
   useLayoutEffect(() => {
     const stage = stageRef.current;
     const sec = rootRef.current?.parentElement;
@@ -524,6 +514,22 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
       ...(st.wh === key ? { '--ty': `${st.wm.ty}px`, '--th-top': `${st.wm.top}px` } : null),
     } as CSSProperties;
   };
+  // 印记跟这一屏走同一条轨道：位移、暗示偏移与卡片相同，出发顺序跟它头顶那一列（最右一列）。
+  // 只有当前屏的印记看得见——别的屏的印记落在露边里只是一截散点；切换时旧的边走边淡出，新的进场后淡入。
+  const markVars = (p: number): CSSProperties => {
+    const rel = p - st.cur;
+    const delay = st.moving ? cascadeOrder(p, PER - 1, st.from, st.cur, PER) * WC.STAGGER_MS : 0;
+    const fade = rel === 0 ? `opacity 700ms ease ${delay + 250}ms` : `opacity 800ms ease ${delay}ms`;
+    return {
+      '--x': `${rel * (Wp + WC.GAP) + hint.x}px`,
+      '--op': rel === 0 ? 1 : 0,
+      '--tr': st.instant
+        ? 'none'
+        : st.moving
+          ? `transform ${WC.MOVE_MS}ms ${EIO} ${delay}ms, ${fade}`
+          : `transform 700ms ${EO}, opacity 450ms ease`,
+    } as CSSProperties;
+  };
   const enterCard = (key: string, isCur: boolean) => (e: SyntheticEvent<HTMLElement>) => {
     if (!isCur && !flow) return;
     const el = e.currentTarget.querySelector<HTMLElement>('[data-wt]');
@@ -590,38 +596,10 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
 
   return (
     <>
-      {/* 与卡片共用切组状态；背景只移动一屏，跳组 / 首尾环回不扫过中间图案。 */}
-      <div
-        className={`hs-work-backdrop${st.instant ? ' hs-work-backdrop--instant' : ''}`}
-        style={{ '--work-move-ms': `${WC.MOVE_MS}ms` } as CSSProperties}
-        aria-hidden="true"
-      >
-        {panels.map((pn, i) => (
-          <div
-            key={`${groups[pn.gi].key}-${pn.pi}`}
-            className={`hs-work-backdrop__panel${backdrop.moving && (i === backdrop.cur || i === backdrop.from) ? ' hs-is-moving' : ''}`}
-            style={{
-              transform: `translateX(${Math.sign(i - backdrop.cur) * 100}%)`,
-              visibility: i === backdrop.cur || (backdrop.moving && i === backdrop.from) ? 'visible' : 'hidden',
-            }}
-            onTransitionEnd={(e) => {
-              if (e.target !== e.currentTarget || e.propertyName !== 'transform') return;
-              setBackdrop((o) => {
-                if (!o.moving || i !== o.cur) return o;
-                const target = sRef.current.cur;
-                if (flow || sRef.current.instant || target === o.cur) return { cur: target, from: target, moving: false };
-                return { cur: target, from: o.cur, moving: true };
-              });
-            }}
-          >
-            <WorkMosaic group={groups[pn.gi].key} />
-          </div>
-        ))}
-      </div>
       <div
         className={`hs-work hs-wg${st.instant ? ' hs-wg--instant' : ''}`}
         ref={rootRef}
-        style={{ '--wp': `${Wp}px`, '--wg-l': `${st.L}px` } as CSSProperties}
+        style={{ '--wp': `${Wp}px`, '--wg-l': `${st.L}px`, '--wg-r': `${st.Rg}px`, '--wg-gap': `${WC.GAP}px` } as CSSProperties}
       >
         <div className="hs-head">
           <div className="hs-wg__lead">
@@ -700,10 +678,14 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
           </span>
           <div
             className="hs-wg__grid"
+            // 整排往左探（指向下一屏的暗示）时，左侧渐隐窗口跟着往外让，当前屏第一张卡不被渐隐吃掉
+            style={{ '--wg-lean': `${Math.max(0, -hint.x)}px` } as CSSProperties}
             onMouseLeave={() => set({ wh: null, prox: NO_PROX })}
             onMouseMove={(e) => {
               if (flow) return;
-              const r = e.currentTarget.getBoundingClientRect();
+              // 网格为了两侧渐隐铺满了整页宽，横坐标仍按舞台左缘量
+              const r = stageRef.current?.getBoundingClientRect();
+              if (!r) return;
               const v = proximity(e.clientX - r.left, Wp);
               const o = sRef.current.prox;
               if (o.side !== v.side || o.t !== v.t) set({ prox: v });
@@ -719,12 +701,12 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
                 <div
                   key={`${gr.key}-${pn.pi}`}
                   className={`hs-wg__panel${i === st.cur ? ' hs-is-cur' : ''}${pn.pi > 0 ? ' hs-wg__panel--cont' : ''}`}
+                  data-last={pn.pi === pn.pages - 1 || undefined}
                   role="group"
                   aria-label={pn.pages > 1 ? `${gr.title}, ${pn.pi + 1} of ${pn.pages}` : gr.title}
                   aria-hidden={off || undefined}
                   inert={off}
                 >
-                  <WorkMosaic group={gr.key} className="hs-wg__flow-mosaic" flow />
                   {pn.pi === 0 ? (
                     <div className="hs-wg__ghead">
                       <h3 className="hs-wg__gtitle">{gr.title}</h3>
@@ -748,6 +730,7 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
                       />
                     ))}
                   </div>
+                  <WorkMark group={gr.key} style={markVars(i)} />
                 </div>
               );
             })}
