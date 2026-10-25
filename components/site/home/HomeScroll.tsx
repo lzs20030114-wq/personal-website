@@ -196,11 +196,7 @@ export function HomeScroll({ work, groups, log, field }: HomeScrollProps) {
       });
     };
 
-    /* 导航 */
-    const clearCards = () => {
-      $$('[data-card]').forEach((c) => c.classList.remove('hs-is-on'));
-      $$('[data-cards]').forEach((c) => c.classList.remove('hs-has-on'));
-    };
+    /* 导航（翻走时 02 Work 的悬停态由 WorkPage 按 active 自己收起，MAPPING §59） */
     const go = (p: number) => {
       p = Math.max(0, Math.min(3, p));
       if (flow()) {
@@ -215,7 +211,6 @@ export function HomeScroll({ work, groups, log, field }: HomeScrollProps) {
       keepZone = false;
       st.from = st.page;
       st.page = p;
-      clearCards();
       applyPages();
       setPage(p);
       choreo(p, 480);
@@ -416,34 +411,6 @@ export function HomeScroll({ work, groups, log, field }: HomeScrollProps) {
     };
     root.addEventListener('scroll', onRootScroll);
 
-    /* 02 Work：卡片悬停（标题上移到顶、正文自下浮起，同一屏其余卡退到 42%）。
-       一屏一组卡（MAPPING §58 按组横向切换），每屏各管各的。 */
-    const cardsEls = $$('[data-cards]');
-    const cards$ = $$('[data-card]');
-    const enters = cards$.map((card) => {
-      const box = card.closest<HTMLElement>('[data-cards]')!;
-      const enter = () => {
-        const t = card.querySelector<HTMLElement>('[data-wt]')!;
-        const op = t.offsetParent as HTMLElement;
-        const top = t.offsetTop + op.offsetTop;
-        card.style.setProperty('--ty', `${20 - top}px`);
-        card.style.setProperty('--th-top', `${20 + t.offsetHeight + 14}px`);
-        box.querySelectorAll('[data-card]').forEach((c) => c.classList.toggle('hs-is-on', c === card));
-        box.classList.add('hs-has-on');
-      };
-      card.addEventListener('mouseenter', enter);
-      card.addEventListener('focus', enter);
-      return enter;
-    });
-    const workOut = () => clearCards();
-    const focusOuts = cardsEls.map((box) => (e: FocusEvent) => {
-      if (!box.contains(e.relatedTarget as Node)) workOut();
-    });
-    cardsEls.forEach((box, i) => {
-      box.addEventListener('mouseleave', workOut);
-      box.addEventListener('focusout', focusOuts[i]);
-    });
-
     /* 窄屏 / 偏好切换时重排 */
     const onFlowChange = () => {
       setFlowMode(flow());
@@ -494,14 +461,6 @@ export function HomeScroll({ work, groups, log, field }: HomeScrollProps) {
       root.removeEventListener('touchstart', onTouchStart);
       root.removeEventListener('touchend', onTouchEnd);
       root.removeEventListener('scroll', onRootScroll);
-      cards$.forEach((c, i) => {
-        c.removeEventListener('mouseenter', enters[i]);
-        c.removeEventListener('focus', enters[i]);
-      });
-      cardsEls.forEach((box, i) => {
-        box.removeEventListener('mouseleave', workOut);
-        box.removeEventListener('focusout', focusOuts[i]);
-      });
       flowMq.removeEventListener('change', onFlowChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

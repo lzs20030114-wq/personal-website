@@ -511,7 +511,7 @@ body:has(.cs) .ld-header__in, .cs .ld-footer__in { max-width: 1240px; }
 .cs-cmp__table th:first-child, .cs-cmp__table td:first-child, .cs-cmp__table th:nth-child(2), .cs-cmp__table td:nth-child(2) { text-align: left; }
 .cs-cmp__table th { font-weight: 500; color: var(--cs-dim); }
 
-/* ── 其他作品详情页（components/site/OtherWorkPage.tsx，MAPPING §59）── */
+/* ── 其他作品详情页（components/site/OtherWorkPage.tsx，MAPPING §60）── */
 /* 标题比案例页小一档：其他作品的名字更长（最长 45 个字符），120px 会折成四五行、把主图框挤没 */
 .os-title { font-size: clamp(38px, min(5.6vw, 9vh), 88px); line-height: 0.98; }
 /* 主图框里的封面：铺满裁切；竖长图版从顶上裁（works.json 的 position） */

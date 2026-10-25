@@ -22,6 +22,7 @@ const K = 1.5;
 const DENSITY = 250;
 const THUMBS = 0.35;
 const TICK_MS = 110;
+const FADE_OUT_MS = 2200;
 /** 快速掠过不触发：余光先响应，再确认开卡意图。 */
 const WAKE_DWELL_MS = 50;
 const OPEN_DWELL_MS = 160;
@@ -102,6 +103,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     cells: [] as HTMLElement[],
     ghosts: [] as HTMLElement[],
     lit: new Map<number, number>(),
+    fading: new Map<number, number>(),
     zone: { r0: 4, r1: 9, c0: 7, c1: 20 } as Zone,
     lastCell: -1,
     hoveredCell: -1,
@@ -144,7 +146,6 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
   const openAt = useCallback((i: number, pick: number) => {
     const f = fieldRef.current;
     if (!f) return;
-    cancelHover();
     const r = Math.floor(i / COLS);
     const c = i % COLS;
     const c0 = Math.max(0, Math.min(COLS - CW, c - 3));
@@ -154,10 +155,14 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     const fr = f.getBoundingClientRect();
     const X = axis(COLS, CW, c0, fr.width);
     const Y = axis(ROWS, CH, r0, fr.height);
-    applyShift({ sx: X.shift, sy: Y.shift });
     const rect = { x: X.lefts[c0], y: Y.lefts[r0], w: CW * X.u * K + (CW - 1) * GAP, h: CH * Y.u * K + (CH - 1) * GAP };
+    const nextOpen = { i, pick, c0, r0, rect, n: (openRef.current?.n ?? 0) + 1 };
+    // 同步把悬停占位交给展开卡，避免 React 提交前被心跳回收。
+    openRef.current = nextOpen;
+    cancelHover();
+    applyShift({ sx: X.shift, sy: Y.shift });
     setOpened((n) => n + 1);
-    setOpen((o) => ({ i, pick, c0, r0, rect, n: (o?.n ?? 0) + 1 }));
+    setOpen(nextOpen);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -171,7 +176,9 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     clearTimeout(m.current.txtT);
     applyShift(null);
     const done = () => {
+      if (openRef.current !== o) return;
       m.current.closing = false;
+      openRef.current = null;
       setOpen(null);
     };
     if (!motionOn()) return done();
@@ -229,6 +236,17 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     st.ghosts = Array.from(ghostRef.current!.querySelectorAll<HTMLElement>('[data-ghost]'));
     const els = st.cells;
 
+    const startFade = (i: number, now: number) => {
+      if (!st.lit.has(i)) return;
+      st.lit.delete(i);
+      st.fading.set(i, now + FADE_OUT_MS);
+      const el = els[i];
+      el.dataset.phase = 'fading';
+      el.style.transitionDuration = `${FADE_OUT_MS}ms,.7s`;
+      el.style.opacity = '0';
+      // 淡出仍属于这一轮：保留 item / 图标 / 配色和悬停响应。
+    };
+
     // 中央标题区底下不亮方块：量标题区盖住哪些行列
     const measure = () => {
       cancelHover();
@@ -244,12 +262,11 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
         r0: Math.max(0, Math.floor(((tr.top - pad - fr.top) / fr.height) * ROWS)),
         r1: Math.min(ROWS - 1, Math.ceil(((tr.bottom + pad - fr.top) / fr.height) * ROWS) - 1),
       };
-      for (const [i] of st.lit) {
-        if (isCenter(i)) {
-          els[i].style.opacity = '0';
-          els[i].style.pointerEvents = 'none';
-          st.lit.delete(i);
-        }
+      const now = performance.now();
+      for (const i of new Set([...st.lit.keys(), ...st.fading.keys()])) {
+        const covered = isCenter(i);
+        if (covered) startFade(i, now);
+        els[i].style.pointerEvents = covered ? 'none' : 'auto';
       }
     };
     measure();
@@ -260,15 +277,17 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
       if (!activeRef.current || !motionOn()) return;
       const now = performance.now();
       const hv = openRef.current?.i;
+      const retired = new Set<number>();
+      for (const [i, end] of st.fading) {
+        // 后台/暂停时墙钟可能先到，必须等画面真的淡完；悬停等待和展开卡继续占位。
+        if (now < end || i === hv || i === st.hoveredCell || Number(getComputedStyle(els[i]).opacity) !== 0) continue;
+        els[i].style.pointerEvents = 'none';
+        els[i].dataset.phase = 'off';
+        st.fading.delete(i);
+        retired.add(i);
+      }
       for (const [i, exp] of st.lit) {
-        if (now > exp && i !== hv) {
-          if (st.hoveredCell === i) cancelOpen();
-          const el = els[i];
-          el.style.transitionDuration = '2.2s,.7s';
-          el.style.opacity = '0';
-          el.style.pointerEvents = 'none';
-          st.lit.delete(i);
-        }
+        if (now > exp && i !== hv && i !== st.hoveredCell) startFade(i, now);
       }
       const n = st.lit.size < DENSITY * 0.5 ? 8 : st.lit.size < DENSITY ? 4 : Math.random() < 0.6 ? 1 : 0;
       const litArr = Array.from(st.lit.keys());
@@ -281,12 +300,14 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
           i = b + d;
           if (i < 0 || i >= els.length || Math.abs((i % COLS) - (b % COLS)) > 1) continue;
         } else i = Math.floor(Math.random() * els.length);
-        if (isCenter(i) || st.lit.has(i)) continue;
+        // 淡出尚未结束的位置不能换内容；刚回收的格至少留一拍全黑再重亮。
+        if (isCenter(i) || st.lit.has(i) || st.fading.has(i) || retired.has(i)) continue;
         const el = els[i];
         const im = el.firstElementChild as HTMLElement;
         el.style.transitionDuration = `${(1.2 + Math.random() * 1.2).toFixed(2)}s,.7s`;
         el.style.opacity = (0.45 + Math.random() * 0.55).toFixed(2);
         el.style.pointerEvents = 'auto';
+        el.dataset.phase = 'lit';
         // 每个亮格从出现起固定绑定真实内容；不在悬停时随机换成另一张卡（MAPPING §55.1）。
         const p = pickFieldIndex(field.draws);
         const colors = fieldColors(pool[p].project, pool[p].kind);
@@ -371,10 +392,12 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     if (!activeRef.current || !motionOn()) return;
     if (openRef.current?.i === i && !m.current.closing) return;
     const item = el.dataset.item;
-    if (item == null) return;
+    if (item == null || isCenter(i) || (!m.current.lit.has(i) && !m.current.fading.has(i))) return;
+    // 已经完全透明、尚未轮到心跳回收的格子不接受新的悬停。
+    if (m.current.fading.has(i) && Number(getComputedStyle(el).opacity) === 0) return;
     m.current.hoveredCell = i;
     m.current.openT = setTimeout(() => {
-      if (!activeRef.current || !motionOn() || m.current.hoveredCell !== i || !m.current.lit.has(i) || el.dataset.item !== item || !el.matches(':hover')) return;
+      if (!activeRef.current || !motionOn() || m.current.hoveredCell !== i || (!m.current.lit.has(i) && !m.current.fading.has(i)) || el.dataset.item !== item || !el.matches(':hover')) return;
       openAt(i, Number(item));
     }, OPEN_DWELL_MS);
   };
@@ -411,6 +434,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
             ref={cardRef}
             href={card.href}
             className="hs-field__card"
+            data-item={open.pick}
             data-kind={card.kind}
             data-project={card.project}
             style={cardStyle}

@@ -23,7 +23,7 @@ export interface OtherWorkPage {
 
 /**
  * 有详情页的其他作品，按首页 Work 页的顺序（组的登记顺序，组内按作品顺序）。
- * 详情页挂在 /work/<slug>，与主项目同一条路由（MAPPING §59）。
+ * 详情页挂在 /work/<slug>，与主项目同一条路由（MAPPING §60）。
  */
 export const getOtherWorkPages = cache((): OtherWorkPage[] => {
   const { groups, works } = getOtherWorks();

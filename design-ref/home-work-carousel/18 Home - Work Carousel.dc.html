@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:oklch(0.947 0.011 150)}
+body{color:oklch(0.235 0.025 215);font-family:Archivo,'PingFang SC',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:oklch(0.42 0.088 178);text-decoration:none}a:hover{color:oklch(0.235 0.025 215)}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+</style>
+</helmet>
+<div ref="{{ rootRef }}" style="position:fixed;inset:0;overflow:hidden;background:oklch(0.947 0.011 150)">
+
+  <section ref="{{ secRef }}" data-screen-label="02 Work" style="position:absolute;inset:0;overflow-x:hidden;overflow-y:auto;scrollbar-width:none">
+    <div style="position:relative;height:100%;min-height:640px;max-width:1360px;margin:0 auto;padding:92px 88px 40px 56px;box-sizing:border-box;display:flex;flex-direction:column;gap:20px">
+
+      <!-- head -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px">
+        <div style="flex:1;min-width:0">
+          <p data-a="up" data-d="0" style="margin:0 0 10px;font:400 12px 'JetBrains Mono',monospace;color:oklch(0.51 0.014 180)">02 — Work</p>
+          <div style="overflow:hidden;padding-bottom:.06em">
+            <div data-a="rise" data-d="60" style="position:relative">
+              <h2 style="margin:0;font-weight:500;font-size:clamp(32px,min(3.8vw,6.4vh),52px);line-height:1;letter-spacing:-.038em;white-space:nowrap;color:transparent">{{ curTitle }}</h2>
+              <sc-for list="{{ titles }}" as="tt" hint-placeholder-count="2">
+                <span aria-hidden="true" style="position:absolute;left:0;top:0;white-space:nowrap;font-weight:500;font-size:clamp(32px,min(3.8vw,6.4vh),52px);line-height:1;letter-spacing:-.038em;transform:translateY({{ tt.y }});opacity:{{ tt.op }};transition:{{ tt.tr }}">{{ tt.title }}</span>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <div data-a="fade" data-d="200" style="flex:none;display:flex;align-items:center;gap:16px">
+          <sc-if value="{{ hasRange }}" hint-placeholder-val="{{ false }}"><span style="font:400 12px 'JetBrains Mono',monospace;color:oklch(0.51 0.014 180)">{{ rangeText }}</span></sc-if>
+          <span aria-hidden="true" style="position:relative;flex:none;width:30px;height:30px;border-radius:50%;border:1px solid oklch(0.235 0.025 215 / .22);box-sizing:border-box">
+            <sc-for list="{{ dialTicks }}" as="dt" hint-placeholder-count="2"><span style="position:absolute;left:50%;top:50%;width:1px;height:4px;margin:-2px 0 0 -.5px;background:{{ dt.c }};transform:rotate({{ dt.a }}) translateY(-10px);transition:background .5s"></span></sc-for>
+            <span style="position:absolute;left:50%;top:50%;width:1.5px;height:9px;margin:-9px 0 0 -.75px;background:oklch(0.235 0.025 215);transform-origin:50% 100%;transform:rotate({{ dialA }});transition:{{ dialTr }}"></span>
+            <span style="position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px 0 0 -2px;border-radius:50%;background:oklch(0.235 0.025 215)"></span>
+          </span>
+          <span aria-live="polite" style="display:flex;align-items:baseline;gap:5px;font:500 12px 'JetBrains Mono',monospace;color:oklch(0.51 0.014 180)">
+            <span style="display:inline-block;height:12px;line-height:12px;overflow:hidden;color:oklch(0.235 0.025 215)"><span style="display:flex;flex-direction:column;transform:translateY({{ odoY }});transition:{{ odoTr }}"><sc-for list="{{ odo }}" as="o" hint-placeholder-count="2"><span style="display:block;height:12px;line-height:12px">{{ o.n }}</span></sc-for></span></span>
+            <span>/</span><span>{{ total }}</span>
+          </span>
+          <div style="display:flex;gap:8px">
+            <button aria-label="Previous group" onClick="{{ prev }}" disabled="{{ prevDisabled }}" style="width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;border:1px solid {{ aL.bd }};background:{{ aL.bg }};color:{{ aL.c }};opacity:{{ aL.op }};font:500 14px 'JetBrains Mono',monospace;transition:background-color .25s,color .25s,border-color .25s,opacity .25s" style-hover="background:oklch(0.235 0.025 215);color:oklch(0.965 0.01 115);border-color:oklch(0.235 0.025 215)">{{ aL.t }}</button>
+            <button aria-label="Next group" onClick="{{ next }}" disabled="{{ nextDisabled }}" style="width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;border:1px solid {{ aR.bd }};background:{{ aR.bg }};color:{{ aR.c }};opacity:{{ aR.op }};font:500 14px 'JetBrains Mono',monospace;transition:background-color .25s,color .25s,border-color .25s,opacity .25s" style-hover="background:oklch(0.235 0.025 215);color:oklch(0.965 0.01 115);border-color:oklch(0.235 0.025 215)">{{ aR.t }}</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- stage -->
+      <div ref="{{ stageRef }}" style="position:relative;flex:none">
+        <span data-a="line" data-d="120" style="position:absolute;left:0;top:0;width:{{ ruleW }};height:2px;background:oklch(0.235 0.025 215);transform-origin:0 50%;z-index:1"></span>
+        <span aria-hidden="true" data-a="fade" data-d="700" style="position:absolute;top:0;left:{{ cr.left }};right:0;height:2px;z-index:1;pointer-events:none;opacity:{{ cr.op }};transition:opacity .4s ease">
+          <span style="position:absolute;left:0;right:0;top:.5px;height:1px;background-image:repeating-linear-gradient(90deg,oklch(0.235 0.025 215 / .45) 0 4px,transparent 4px 8px)"></span>
+          <span style="position:absolute;left:0;right:0;top:0;height:2px;background:oklch(0.235 0.025 215);transform-origin:0 50%;transform:scaleX({{ cr.fill }});transition:transform .7s cubic-bezier(.2,.7,.1,1)"></span>
+        </span>
+        <span aria-hidden="true" data-a="fade" data-d="760" style="position:absolute;top:-7px;right:0;z-index:2;pointer-events:none">
+          <span style="display:flex;align-items:center;gap:8px;padding:0 0 0 10px;background:oklch(0.947 0.011 150);box-shadow:8px 0 0 oklch(0.947 0.011 150);white-space:nowrap;font:400 10.5px/14px 'JetBrains Mono',monospace;color:{{ cr.c }};opacity:{{ cr.lblOp }};transform:translateX({{ cr.mx }});transition:opacity .4s ease,transform .7s cubic-bezier(.2,.7,.1,1),color .3s"><span>{{ cr.text }}</span><span style="display:inline-block;transform:translateX({{ cr.ax }});transition:transform .45s cubic-bezier(.2,.7,.1,1)">{{ cr.arrow }}</span></span>
+        </span>
+        <div onMouseLeave="{{ workOut }}" onMouseMove="{{ stageMove }}" style="display:grid;grid-template-columns:minmax(0,1fr);clip-path:{{ clip }}">
+          <sc-for list="{{ panels }}" as="pn" hint-placeholder-count="2">
+            <div role="group" aria-label="{{ pn.label }}" aria-hidden="{{ pn.hidden }}" style="grid-area:1/1;width:{{ pnW }};display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;padding-top:18px;min-width:0;pointer-events:none">
+              <sc-for list="{{ pn.cards }}" as="c" hint-placeholder-count="3">
+                <button onClick="{{ c.open }}" onMouseEnter="{{ c.enter }}" onFocus="{{ c.enter }}" tabIndex="{{ c.tab }}" style="display:flex;flex-direction:column;gap:12px;min-width:0;text-align:left;transform:translateX({{ c.x }});opacity:{{ c.op }};transition:{{ c.tr }};pointer-events:{{ c.pe }};will-change:transform,opacity">
+                  <span data-a="{{ c.aUp }}" data-d="{{ c.d0 }}" style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;white-space:nowrap;font:500 12px 'JetBrains Mono',monospace;opacity:{{ c.txtOp }};transition:opacity .45s ease {{ c.txtDelay }}"><span style="color:{{ c.ink }}">{{ c.kick }}</span><span style="color:{{ c.stColor }};opacity:{{ c.headOp }};transition:opacity .45s ease {{ c.txtDelay }}">{{ c.status }}</span></span>
+                  <span data-a="{{ c.aWipe }}" data-d="{{ c.d1 }}" style="position:relative;flex:1;display:flex;flex-direction:column;min-height:calc(min(24vh,204px) + 138px);overflow:hidden">
+                    <span data-plate style="position:relative;flex:none;height:min(24vh,204px);background:{{ c.plateBg }};overflow:hidden">
+                      <sc-if value="{{ c.hasImg }}" hint-placeholder-val="{{ true }}">
+                        <span role="img" aria-label="{{ c.title }}" style="position:absolute;top:0;bottom:0;left:-10%;right:-10%;background-image:url({{ c.img }});background-size:cover;background-repeat:no-repeat;background-position:{{ c.bgPos }};transform:translateX({{ c.par }}) scale({{ c.imgScale }});transition:{{ c.imgTr }}"></span>
+                        <sc-if value="{{ c.stamp }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;left:10px;bottom:8px;font:400 10px 'JetBrains Mono',monospace;color:oklch(0.83 0.082 132);opacity:{{ c.headOp }};transition:opacity .45s ease {{ c.txtDelay }}">stand-in · bench still</span></sc-if>
+                      </sc-if>
+                      <sc-if value="{{ c.noImg }}" hint-placeholder-val="{{ false }}">
+                        <span style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,oklch(0.45 0.06 235 / .12) 0 1px,transparent 1px 9px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+                          <span style="display:flex;flex-direction:column;align-items:center;gap:8px;opacity:{{ c.headOp }};transition:opacity .45s ease {{ c.txtDelay }}">
+                          <span style="font:500 12px 'JetBrains Mono',monospace;padding:5px 10px;border:1px solid oklch(0.45 0.06 235);color:oklch(0.4 0.06 235)">{{ c.wipBadge }}</span>
+                          <sc-if value="{{ c.hasNote }}" hint-placeholder-val="{{ false }}"><span style="font:400 11px 'JetBrains Mono',monospace;color:oklch(0.51 0.014 180)">{{ c.wipNote }}</span></sc-if>
+                          </span>
+                        </span>
+                      </sc-if>
+                    </span>
+                    <span style="position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,oklch(0.2 0.038 232 / .9) 0%,oklch(0.17 0.034 238 / .97) 100%);clip-path:{{ c.clip }};transition:clip-path .75s cubic-bezier(.76,0,.24,1)"></span>
+                    <span data-bar="{{ c.key }}" style="position:absolute;left:0;right:0;top:0;height:2px;background:{{ c.ink }};z-index:2;opacity:{{ c.txtOp }};transition:opacity .45s ease {{ c.txtDelay }}"></span>
+                    <span style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding-top:14px;opacity:{{ c.headOp }};transition:opacity .45s ease {{ c.txtDelay }}">
+                      <span data-wt style="position:relative;display:inline-block;max-width:calc(100% - 40px);font:600 clamp(18px,1.7vw,23px)/1.1 Archivo;letter-spacing:-.022em;padding-bottom:4px;color:{{ c.titleC }};transform:translate({{ c.tx }},{{ c.ty }});transition:transform .75s cubic-bezier(.76,0,.24,1),color .5s">{{ c.title }}<span style="position:absolute;left:0;right:0;bottom:0;height:2px;background:{{ c.hi }};transform-origin:0 50%;transform:scaleX({{ c.ul }});transition:transform .6s cubic-bezier(.2,.7,.1,1) .3s"></span></span>
+                      <span style="font:400 11.5px/1.6 'JetBrains Mono',monospace;color:oklch(0.51 0.014 180);opacity:{{ c.roleOp }};transition:opacity .3s">{{ c.role }}</span>
+                    </span>
+                    <span style="position:absolute;left:20px;right:20px;top:{{ c.thTop }};bottom:18px;z-index:2;display:flex;flex-direction:column;gap:12px;opacity:{{ c.thOp }};transform:translateY({{ c.thY }});transition:opacity .45s ease {{ c.thDelay }},transform .7s cubic-bezier(.2,.7,.1,1) {{ c.thDelay }};pointer-events:none">
+                      <span style="flex:1;min-height:0;overflow:hidden;-webkit-mask-image:linear-gradient(#000 calc(100% - 22px),transparent);mask-image:linear-gradient(#000 calc(100% - 22px),transparent);font:400 clamp(14px,1.1vw,16px)/1.5 Archivo;color:oklch(0.93 0.03 125);text-wrap:pretty">{{ c.thesis }}</span>
+                      <span style="flex:none;font:500 12px 'JetBrains Mono',monospace;color:{{ c.hi }}">{{ c.cta }}</span>
+                    </span>
+                  </span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <!-- edge zones -->
+        <div aria-hidden="true" onMouseEnter="{{ zl.enter }}" onMouseMove="{{ zoneMove }}" onMouseLeave="{{ zoneLeave }}" onMouseDown="{{ zoneDown }}" onMouseUp="{{ zoneUp }}" onClick="{{ zl.click }}" style="position:absolute;top:0;bottom:0;right:100%;width:{{ zl.w }};z-index:5;cursor:{{ zl.cursor }}"></div>
+        <div aria-hidden="true" onMouseEnter="{{ zr.enter }}" onMouseMove="{{ zoneMove }}" onMouseLeave="{{ zoneLeave }}" onMouseDown="{{ zoneDown }}" onMouseUp="{{ zoneUp }}" onClick="{{ zr.click }}" style="position:absolute;top:0;bottom:0;left:{{ zr.left }};width:{{ zr.w }};z-index:5;cursor:{{ zr.cursor }}"></div>
+      </div>
+
+      <!-- group directory -->
+      <div ref="{{ tabsRef }}" role="tablist" aria-label="Work, by type" data-a="up" data-d="520" style="position:relative;margin-top:auto;display:flex;flex-wrap:wrap;justify-content:space-between;column-gap:28px;border-top:1px solid oklch(0.235 0.025 215 / .3)">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="2">
+          <button role="tab" aria-selected="{{ t.on }}" data-tab="{{ t.i }}" onClick="{{ t.go }}" onMouseEnter="{{ t.enter }}" onMouseLeave="{{ t.leave }}" style="position:relative;display:flex;align-items:baseline;gap:8px;padding:14px 0 2px;white-space:nowrap;color:{{ t.color }};transition:color .3s">
+            <span style="position:absolute;left:0;right:0;top:-1px;height:1px;background:oklch(0.235 0.025 215);transform-origin:{{ t.org }};transform:scaleX({{ t.ghost }});opacity:.55;transition:transform .55s cubic-bezier(.2,.7,.1,1)"></span>
+            <span style="font:400 11px 'JetBrains Mono',monospace;color:oklch(0.51 0.014 180)">{{ t.n }}</span>
+            <span style="font:500 14.5px Archivo;letter-spacing:-.005em">{{ t.title }}</span>
+            <span style="font:400 11px 'JetBrains Mono',monospace;color:oklch(0.51 0.014 180)">{{ t.count }}</span>
+            <sc-if value="{{ t.multi }}" hint-placeholder-val="{{ false }}"><span style="display:flex;gap:3px;align-self:center"><sc-for list="{{ t.pips }}" as="pp" hint-placeholder-count="2"><span style="width:8px;height:2px;background:{{ pp.c }};transition:background .5s"></span></sc-for></span></sc-if>
+          </button>
+        </sc-for>
+        <span aria-hidden="true" style="position:absolute;left:0;top:-1px;height:2px;width:{{ ind.w }};background:oklch(0.235 0.025 215);pointer-events:none;transform:translate({{ ind.x }},{{ ind.y }});transition:{{ ind.tr }}"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- HUD (context) -->
+  <div style="position:absolute;inset:0;pointer-events:none;z-index:20">
+    <div style="position:absolute;top:30px;left:0;right:0;max-width:1360px;margin:0 auto;padding:0 88px 0 56px;box-sizing:border-box;display:flex;justify-content:space-between;align-items:baseline;color:oklch(0.235 0.025 215)">
+      <span style="font:600 15px Archivo">Zishuo Li</span>
+      <nav style="display:flex;gap:28px;font:500 13px Archivo">
+        <span style="position:relative;padding-bottom:5px">Work<span style="position:absolute;left:0;right:0;bottom:0;height:1.5px;background:currentColor"></span></span>
+        <span style="padding-bottom:5px;opacity:.5">About</span>
+        <span style="padding-bottom:5px;opacity:.5">Lab</span>
+        <span style="padding-bottom:5px;opacity:.5">Log</span>
+      </nav>
+    </div>
+    <div style="position:absolute;right:26px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:12px;color:oklch(0.235 0.025 215)">
+      <span style="display:flex;align-items:center;justify-content:flex-end;gap:7px;opacity:.35"><span style="font:500 10px 'JetBrains Mono',monospace">01</span><span style="display:block;width:22px;height:2px;background:currentColor;transform-origin:100% 50%;transform:scaleX(.45)"></span></span>
+      <span style="display:flex;align-items:center;justify-content:flex-end;gap:7px"><span style="font:500 10px 'JetBrains Mono',monospace">02</span><span style="display:block;width:22px;height:2px;background:currentColor"></span></span>
+      <span style="display:flex;align-items:center;justify-content:flex-end;gap:7px;opacity:.35"><span style="font:500 10px 'JetBrains Mono',monospace">03</span><span style="display:block;width:22px;height:2px;background:currentColor;transform-origin:100% 50%;transform:scaleX(.45)"></span></span>
+      <span style="display:flex;align-items:center;justify-content:flex-end;gap:7px;opacity:.35"><span style="font:500 10px 'JetBrains Mono',monospace">04</span><span style="display:block;width:22px;height:2px;background:currentColor;transform-origin:100% 50%;transform:scaleX(.45)"></span></span>
+      <span style="display:flex;align-items:center;justify-content:flex-end;gap:7px;opacity:.35"><span style="font:500 10px 'JetBrains Mono',monospace">05</span><span style="display:block;width:22px;height:2px;background:currentColor;transform-origin:100% 50%;transform:scaleX(.45)"></span></span>
+    </div>
+  </div>
+
+  <!-- cursor tag -->
+  <div ref="{{ badgeRef }}" aria-hidden="true" style="position:absolute;left:0;top:0;width:0;height:0;z-index:40;pointer-events:none">
+    <span style="position:absolute;top:16px;left:{{ b.tagL }};right:{{ b.tagR }};display:flex;align-items:baseline;gap:9px;padding:6px 10px 7px;background:{{ b.bg }};color:oklch(0.965 0.01 115);white-space:nowrap;font:400 11px 'JetBrains Mono',monospace;opacity:{{ b.op }};transform:translateY({{ b.y }}) scale({{ b.cs }});transform-origin:{{ b.org }};transition:opacity .22s ease,transform .4s cubic-bezier(.2,.7,.1,1),background-color .2s">
+      <span ref="{{ arrowRef }}" style="display:inline-block;color:oklch(0.83 0.082 132)">{{ b.arrow }}</span>
+      <span style="color:oklch(0.78 0.03 160)">{{ b.k1 }}</span>
+      <span style="font:500 12px Archivo;letter-spacing:-.005em">{{ b.k2 }}</span>
+    </span>
+  </div>
+
+  <div style="position:absolute;left:50%;bottom:28px;z-index:45;padding:7px 12px;background:oklch(0.235 0.025 215);color:oklch(0.965 0.01 115);font:400 12px 'JetBrains Mono',monospace;pointer-events:none;opacity:{{ toastOp }};transform:translate(-50%,{{ toastY }});transition:opacity .3s,transform .45s cubic-bezier(.2,.7,.1,1)">{{ toast }}</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;guide&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;strong&quot;,&quot;subtle&quot;],&quot;default&quot;:&quot;strong&quot;,&quot;tsType&quot;:&quot;'strong' | 'subtle'&quot;,&quot;section&quot;:&quot;Motion&quot;},&quot;peek&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:0.08,&quot;max&quot;:0.26,&quot;step&quot;:0.01,&quot;default&quot;:0.15,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;motion&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;cascade&quot;,&quot;uniform&quot;],&quot;default&quot;:&quot;cascade&quot;,&quot;tsType&quot;:&quot;'cascade' | 'uniform'&quot;,&quot;section&quot;:&quot;Motion&quot;},&quot;lean&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:0,&quot;max&quot;:96,&quot;step&quot;:4,&quot;unit&quot;:&quot;px&quot;,&quot;default&quot;:44,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Motion&quot;},&quot;loop&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Behavior&quot;},&quot;content&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;live&quot;,&quot;stress test&quot;],&quot;default&quot;:&quot;live&quot;,&quot;tsType&quot;:&quot;'live' | 'stress test'&quot;,&quot;section&quot;:&quot;Content&quot;}}">
+const EO = 'cubic-bezier(.2,.7,.1,1)', EIO = 'cubic-bezier(.76,0,.24,1)';
+const INK = 'oklch(0.235 0.025 215)', MUTED = 'oklch(0.51 0.014 180)', MUTED2 = 'oklch(0.43 0.013 192)', PAPER = 'oklch(0.965 0.01 115)';
+const G7 = 'oklch(0.42 0.088 178)', G4 = 'oklch(0.71 0.098 145)', P7 = 'oklch(0.42 0.09 282)', P4 = 'oklch(0.71 0.095 291)';
+const S7 = 'oklch(0.45 0.06 235)', S4 = 'oklch(0.74 0.06 235)', LIMEHI = 'oklch(0.9 0.058 124)';
+const DARK = 'linear-gradient(135deg,rgb(21,48,57),rgb(32,44,63))';
+const PER = 3, GAP = 28;
+const n2 = i => String(i).padStart(2, '0');
+
+// 线上真实内容（buildWorkGroups 派生结果，2026-10-24）
+const LIVE = [
+  { key: 'selected', title: 'Selected work', tiles: [
+    { key: 'rm', kick: '01 · Project I', status: '2026', title: 'Reincarnation Machine', role: 'Concept & research design · Mechanism design & fabrication · Electronics & firmware · HRI study design · Independent project', thesis: 'A desk-sized machine that lives, dies, and wakes with a different personality. Its body stays the same while its responses change.', cta: 'Read the case study ↗', img: 'img/c-fivering.png', stamp: true, ink: G7, hi: G4, href: '/work/reincarnation-machine' },
+    { key: 'p2', kick: '02 · Project II', status: '2026', title: 'Cross-species space', role: 'Concept · System design · Behavioral algorithms · Implementation', thesis: 'Spatial reconfiguration driven by behavioral divergence in multi-species shared space', cta: 'Read the case study ↗', img: 'img/c-nine.png', stamp: true, ink: P7, hi: P4, href: '/work/project-ii' },
+    { key: 'p3', kick: '03 · Project III', status: 'In progress', wip: true, title: 'Project III', role: 'Role · to be written', thesis: '[Project III thesis · author to write]', cta: 'Preview ↗', img: null, wipBadge: 'In progress', wipNote: 'case study to come', ink: S7, hi: S4, href: '/work/project-iii' },
+  ] },
+  { key: 'design-research', title: 'Design research', tiles: [
+    { key: 'bed', kick: '02.1 · Internship', status: '2026', title: 'Smart Bed', role: 'Internship · Tsinghua Future Lab × DeRucci', thesis: '2030 Sleep Foresight Study', cta: 'Open ↗', img: 'img/sleep-report.png', imgTop: true, ink: INK, hi: LIMEHI, href: '/archive (Other work · latest entry)' },
+  ] },
+];
+const PH = (gi, title, count) => ({ key: 'ph' + gi, title, tiles: Array.from({ length: count }, (_, i) => ({
+  key: `ph${gi}-${i}`, kick: `${n2(gi)}.${i + 1} · Context`, status: '20XX', title: 'Work title', role: 'Context · placeholder', thesis: null, cta: 'Open ↗', img: null, wipBadge: 'Image to come', wipNote: '', ink: INK, hi: LIMEHI, href: '#placeholder' })) });
+const STRESS = [PH(3, 'Placeholder category A', 5), PH(4, 'Placeholder category B', 2)];
+
+const KF = {
+  up: [{ opacity: 0, transform: 'translateY(26px)' }, { opacity: 1, transform: 'none' }],
+  rise: [{ transform: 'translateY(108%)' }, { transform: 'none' }],
+  line: [{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }],
+  wipe: [{ clipPath: 'inset(100% 0 0 0)' }, { clipPath: 'inset(0 0 0 0)' }],
+  fade: [{ opacity: 0 }, { opacity: 1 }],
+};
+const DUR = { up: 820, rise: 1000, line: 1100, wipe: 1150, fade: 700 };
+
+class Component extends DCLogic {
+  state = { cur: 0, from: 0, moving: false, zone: null, press: false, wh: null, wm: { ty: 0, top: 70 }, W: 1216, L: 96, Rg: 128, turn: 0, tabHover: null, toast: '', toastOn: false, nudge: null, prox: { side: null, t: 0 }, ind: { x: 0, y: 0, w: 0 }, indReady: false };
+  rootRef = React.createRef(); secRef = React.createRef(); stageRef = React.createRef(); tabsRef = React.createRef(); badgeRef = React.createRef(); arrowRef = React.createRef();
+  bx = 0; by = 0; tx = 0; ty = 0; raf = 0; nudges = 0; acc = 0; lock = 0; lastH = 0; lastBadge = null;
+
+  rm() { return typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches; }
+  cascade() { return (this.props.motion ?? 'cascade') !== 'uniform'; }
+  loop() { return this.props.loop ?? true; }
+  lean() { return this.props.lean ?? 44; }
+  strong() { return (this.props.guide ?? 'strong') === 'strong'; }
+  peek() { return Math.max(0.06, Math.min(0.3, this.props.peek ?? 0.15)); }
+  groups() { return (this.props.content ?? 'live') === 'stress test' ? [...LIVE, ...STRESS] : LIVE; }
+  panels() {
+    const ck = this.props.content ?? 'live';
+    if (this._pk === ck) return this._p;
+    this._pk = ck;
+    this._p = this.groups().flatMap((g, gi) => {
+      const pages = Math.max(1, Math.ceil(g.tiles.length / PER));
+      return Array.from({ length: pages }, (_, pi) => ({ gi, pi, pages, tiles: g.tiles.slice(pi * PER, (pi + 1) * PER) }));
+    });
+    return this._p;
+  }
+  nav(d, cur = this.state.cur) {
+    const P = this.panels().length;
+    if (P < 2) return null;
+    let t = cur + d, wrap = false;
+    if (t < 0 || t >= P) { if (!this.loop()) return null; t = (t + P) % P; wrap = true; }
+    return { t, wrap, d };
+  }
+  rangeOf(pn) {
+    const g = this.groups()[pn.gi];
+    return `${pn.pi * PER + 1}–${pn.pi * PER + pn.tiles.length} of ${g.tiles.length}`;
+  }
+
+  go(t, td) {
+    const st = this.state;
+    if (t === st.cur) return;
+    clearTimeout(this.mvT);
+    clearTimeout(this.nudgeT2);
+    this.setState({ from: st.cur, cur: t, moving: true, wh: null, nudge: null, turn: st.turn + (td ?? (t - st.cur)) });
+    this.mvT = setTimeout(() => this.setState({ moving: false }), this.rm() ? 0 : 1450);
+    this.armIdle(8000);
+  }
+  step(d) {
+    const n = this.nav(d);
+    if (!n) return;
+    this.go(n.t, d);
+    const a = this.arrowRef.current;
+    if (a && !this.rm() && this.state.zone) {
+      a.animate(n.wrap ? [{ transform: 'rotate(0)' }, { transform: `rotate(${d > 0 ? -360 : 360}deg)` }]
+        : [{ transform: 'none' }, { transform: `translateX(${d * 9}px)` }, { transform: 'none' }], { duration: n.wrap ? 900 : 520, easing: n.wrap ? EIO : EO });
+    }
+  }
+  say(msg) {
+    clearTimeout(this.toT);
+    this.setState({ toast: msg, toastOn: true });
+    this.toT = setTimeout(() => this.setState({ toastOn: false }), 1800);
+  }
+
+  measure() {
+    const r = this.rootRef.current, s = this.stageRef.current;
+    if (!r || !s) return;
+    const rr = r.getBoundingClientRect(), sr = s.getBoundingClientRect();
+    const W = Math.round(sr.width), L = Math.round(sr.left - rr.left), Rg = Math.round(rr.right - sr.right);
+    const st = this.state;
+    if (W !== st.W || L !== st.L || Rg !== st.Rg) this.setState({ W, L, Rg });
+  }
+  placeInd() {
+    const tabs = this.tabsRef.current;
+    if (!tabs) return;
+    const pn = this.panels()[this.state.cur];
+    const el = pn && tabs.querySelector(`[data-tab="${pn.gi}"]`);
+    if (!el) return;
+    const v = { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth }, o = this.state.ind;
+    if (o.x !== v.x || o.y !== v.y || o.w !== v.w) this.setState({ ind: v });
+    if (!this.state.indReady) requestAnimationFrame(() => this.setState({ indReady: true }));
+  }
+  entrance() {
+    const root = this.rootRef.current;
+    if (!root || this.rm()) return;
+    root.querySelectorAll('[data-a]').forEach(el => {
+      const k = el.getAttribute('data-a'), kf = KF[k];
+      if (!kf) return;
+      const d = +el.getAttribute('data-d') || 0;
+      el.animate(kf, { duration: DUR[k], delay: d + 120, easing: k === 'fade' ? 'ease' : (k === 'wipe' || k === 'line') ? EIO : EO, fill: 'backwards' });
+    });
+  }
+  land() {
+    const root = this.rootRef.current, st = this.state;
+    if (!root || this.rm()) return;
+    const pn = this.panels()[st.cur];
+    const sgn = st.cur > st.from ? 1 : -1;
+    pn.tiles.forEach((t, c) => {
+      const el = root.querySelector(`[data-bar="${t.key}"]`);
+      if (!el) return;
+      const ord = sgn > 0 ? (st.cur - st.from) * PER + c : (st.from - st.cur) * PER + (PER - 1 - c);
+      const delay = this.cascade() ? Math.max(0, Math.min(6, ord)) * 55 : 0;
+      el.style.transformOrigin = sgn > 0 ? '0 50%' : '100% 50%';
+      el.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: 820, delay: delay + 460, easing: EO, fill: 'backwards' });
+    });
+  }
+
+  tick = () => {
+    this.bx += (this.tx - this.bx) * 0.5;
+    this.by += (this.ty - this.by) * 0.5;
+    const b = this.badgeRef.current;
+    if (b) b.style.transform = `translate(${this.bx.toFixed(1)}px, ${this.by.toFixed(1)}px)`;
+    if (Math.abs(this.tx - this.bx) > 0.3 || Math.abs(this.ty - this.by) > 0.3) this.raf = requestAnimationFrame(this.tick);
+    else this.raf = 0;
+  };
+  aim(e, snap) {
+    const r = this.rootRef.current;
+    if (!r) return;
+    const rr = r.getBoundingClientRect();
+    this.tx = e.clientX - rr.left; this.ty = e.clientY - rr.top;
+    if (snap || this.rm()) { this.bx = this.tx; this.by = this.ty; }
+    if (!this.raf) this.raf = requestAnimationFrame(this.tick);
+  }
+
+  onWheel = e => {
+    const now = performance.now();
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) { if (now - this.lastH < 250) e.preventDefault(); return; }
+    e.preventDefault();
+    this.lastH = now;
+    if (now - this.lock < 900) return;
+    this.acc += e.deltaX;
+    if (Math.abs(this.acc) > 36) { this.step(this.acc > 0 ? 1 : -1); this.acc = 0; this.lock = now; }
+  };
+  onKey = e => {
+    if (e.defaultPrevented || e.altKey || e.metaKey || e.ctrlKey) return;
+    if (e.key === 'ArrowRight') { e.preventDefault(); this.step(1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); this.step(-1); }
+  };
+  onTouchStart = e => { this.tx0 = e.touches[0].clientX; this.ty0 = e.touches[0].clientY; };
+  onTouchEnd = e => {
+    if (this.tx0 == null) return;
+    const dx = e.changedTouches[0].clientX - this.tx0, dy = e.changedTouches[0].clientY - this.ty0;
+    this.tx0 = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) this.step(dx < 0 ? 1 : -1);
+  };
+
+  componentDidMount() {
+    this._lastCur = this.state.cur;
+    this._lastContent = this.props.content ?? 'live';
+    this.measure();
+    this.placeInd();
+    this.ro = new ResizeObserver(() => { this.measure(); this.placeInd(); });
+    this.rootRef.current && this.ro.observe(this.rootRef.current);
+    this.tabsRef.current && this.ro.observe(this.tabsRef.current);
+    const s = this.secRef.current;
+    if (s) {
+      s.addEventListener('wheel', this.onWheel, { passive: false });
+      s.addEventListener('touchstart', this.onTouchStart, { passive: true });
+      s.addEventListener('touchend', this.onTouchEnd, { passive: true });
+    }
+    window.addEventListener('keydown', this.onKey);
+    requestAnimationFrame(() => this.entrance());
+    this.armIdle(2100);
+  }
+  // 闲置时整排往有内容的一侧探一下；强引导最多 4 次，弱引导只在进场时 1 次
+  armIdle(ms) {
+    clearTimeout(this.nudgeT);
+    if (this.nudges >= (this.strong() ? 4 : 1)) return;
+    this.nudgeT = setTimeout(() => this.fireNudge(), ms);
+  }
+  fireNudge() {
+    const st = this.state;
+    if (this.rm()) return;
+    if (st.zone || st.moving || st.prox.side || st.wh) return this.armIdle(4000);
+    const r = this.nav(1), l = this.nav(-1);
+    const side = r && !r.wrap ? 'r' : l && !l.wrap ? 'l' : null;
+    if (!side) return;
+    this.nudges++;
+    this.setState({ nudge: side });
+    this.nudgeT2 = setTimeout(() => { this.setState({ nudge: null }); this.armIdle(6500); }, 760);
+  }
+  componentWillUnmount() {
+    this.ro && this.ro.disconnect();
+    const s = this.secRef.current;
+    if (s) {
+      s.removeEventListener('wheel', this.onWheel);
+      s.removeEventListener('touchstart', this.onTouchStart);
+      s.removeEventListener('touchend', this.onTouchEnd);
+    }
+    window.removeEventListener('keydown', this.onKey);
+    cancelAnimationFrame(this.raf);
+    [this.mvT, this.toT, this.nudgeT, this.nudgeT2].forEach(clearTimeout);
+  }
+  componentDidUpdate() {
+    const ck = this.props.content ?? 'live';
+    if (this._lastContent !== undefined && ck !== this._lastContent) {
+      this._lastContent = ck; this._lastCur = 0;
+      this.setState({ cur: 0, from: 0, turn: 0, wh: null });
+      return;
+    }
+    this._lastContent = ck;
+    if (this._lastCur !== undefined && this._lastCur !== this.state.cur) this.land();
+    this._lastCur = this.state.cur;
+    this.placeInd();
+  }
+
+  renderVals() {
+    const st = this.state, groups = this.groups(), panels = this.panels(), P = panels.length;
+    const rm = this.rm(), cascade = this.cascade(), lean = this.lean();
+    const cp = panels[Math.min(st.cur, P - 1)], cg = groups[cp.gi];
+    const strong = this.strong();
+    const zn = st.zone ? this.nav(st.zone === 'r' ? 1 : -1) : null;
+    const prox = strong && !st.zone && !st.moving && !st.nudge ? st.prox : { side: null, t: 0 };
+    // 暗示来源优先级：悬停留白区 > 闲置探一下 > 靠近边缘
+    const effZone = st.zone || st.nudge || prox.side;
+    const en = effZone ? this.nav(effZone === 'r' ? 1 : -1) : null;
+    const sg = effZone === 'r' ? -1 : 1;
+    let hintX = 0, hintOp = 0;
+    if (!st.moving && en) {
+      if (st.zone) { hintX = sg * (en.wrap ? Math.round(lean * 0.35) : lean); hintOp = 0.9; }
+      else if (st.nudge) { hintX = en.wrap ? 0 : sg * 26; hintOp = 0.72; }
+      else if (!en.wrap) { hintX = sg * Math.round(16 * prox.t); hintOp = 0.42 + 0.4 * prox.t; }
+    }
+    const restOp = strong ? 0.42 : 0.3;
+    const Wp = Math.round(st.W * (1 - this.peek()));
+    const tgtGi = zn ? panels[zn.t].gi : null;
+    const dur = cascade ? 1000 : 900;
+    const sgn = st.cur > st.from ? 1 : -1;
+
+    const panelsV = panels.map((pn, p) => {
+      const rel = p - st.cur;
+      return {
+        label: pn.pages > 1 ? `${groups[pn.gi].title}, ${pn.pi + 1} of ${pn.pages}` : groups[pn.gi].title,
+        hidden: rel !== 0,
+        cards: pn.tiles.map((t, c) => {
+          const isCur = rel === 0, on = isCur && st.wh === t.key;
+          let delay = 0;
+          if (st.moving && cascade) {
+            const ord = sgn > 0 ? (p - st.from) * PER + c : (st.from - p) * PER + (PER - 1 - c);
+            delay = Math.max(0, Math.min(6, ord)) * 55;
+          }
+          const hinted = !st.moving && en && !en.wrap && p === en.t && (effZone === 'r' ? c === 0 : c === pn.tiles.length - 1);
+          const moveTr = `transform ${dur}ms ${EIO} ${delay}ms`;
+          return {
+            key: t.key, kick: t.kick, status: t.status, title: t.title, role: t.role, thesis: t.thesis || '', cta: t.cta,
+            ink: t.ink, hi: t.hi, stColor: t.wip ? S7 : MUTED,
+            hasImg: !!t.img, noImg: !t.img, img: t.img || '', stamp: !!t.stamp, bgPos: t.imgTop ? 'center top' : 'center',
+            wipBadge: t.wipBadge || '', wipNote: t.wipNote || '', hasNote: !!t.wipNote,
+            plateBg: t.img ? DARK : PAPER,
+            x: `${rel * (Wp + GAP) + hintX}px`,
+            op: isCur ? (st.wh && st.wh !== t.key ? 0.42 : 1) : hinted ? Math.max(restOp, hintOp) : restOp,
+            tr: rm ? 'none' : st.moving ? `${moveTr}, opacity 700ms ease ${delay}ms` : `transform 700ms ${EO}, opacity 450ms ease`,
+            par: `${Math.max(-1, Math.min(1, rel)) * -7}%`,
+            imgScale: on ? 1.08 : 1,
+            imgTr: rm ? 'none' : st.moving ? moveTr : `transform 1.2s ${EO}`,
+            pe: isCur ? 'auto' : 'none', tab: isCur ? 0 : -1,
+            txtOp: isCur || (rel === 1 && c === 0) ? 1 : 0, headOp: isCur ? 1 : 0, txtDelay: isCur && st.moving ? `${delay + 250}ms` : '0ms',
+            aUp: isCur ? 'up' : 'none', aWipe: isCur ? 'wipe' : 'none', d0: String(160 + c * 90), d1: String(200 + c * 90),
+            clip: on ? 'inset(0 0 0 0)' : 'inset(0 0 100% 0)', tx: on ? '20px' : '0px', ty: on ? `${st.wm.ty}px` : '0px', ul: on ? 1 : 0,
+            roleOp: on ? 0 : 1, titleC: on ? 'oklch(0.96 0.03 120)' : INK, thOp: on ? 1 : 0, thY: on ? '0px' : '14px', thDelay: on ? '.28s' : '0s', thTop: `${st.wm.top}px`,
+            enter: e => {
+              if (!isCur) return;
+              const el = e.currentTarget.querySelector('[data-wt]');
+              const top = el ? el.offsetTop + el.offsetParent.offsetTop : 0;
+              this.setState({ wh: t.key, wm: { ty: 20 - top, top: 20 + (el ? el.offsetHeight : 30) + 14 } });
+            },
+            open: () => this.say(`→ ${t.href}`),
+          };
+        }),
+      };
+    });
+
+    const titles = groups.map((g, gi) => {
+      const past = gi < cp.gi, next = gi > cp.gi, here = gi === cp.gi;
+      return { title: g.title, y: past ? '-110%' : next ? '110%' : '0%', op: here ? 1 : 0,
+        tr: rm ? 'none' : here ? `transform .9s ${EIO} .1s, opacity .5s ease .1s` : `transform .8s ${EIO}, opacity .4s ease` };
+    });
+
+    const lastBadge = zn ? (() => {
+      const tp = panels[zn.t], tg = groups[tp.gi], d = zn.d;
+      return {
+        arrow: zn.wrap ? '↺' : d > 0 ? '→' : '←',
+        k1: `${zn.wrap ? (d > 0 ? 'Back to start' : 'Last group') : d > 0 ? 'Next' : 'Prev'} ${n2(tp.gi + 1)}/${n2(groups.length)}`,
+        k2: tg.title + (tp.pages > 1 ? ` · ${this.rangeOf(tp)}` : ''),
+        tagL: st.zone === 'l' ? '14px' : 'auto', tagR: st.zone === 'r' ? '14px' : 'auto', org: st.zone === 'r' ? '100% 0' : '0 0',
+      };
+    })() : null;
+    if (lastBadge) this.lastBadge = lastBadge;
+    const lb = this.lastBadge || { arrow: '→', k1: '', k2: '', tagL: 'auto', tagR: '14px', org: '100% 0' };
+    const b = { ...lb, op: zn && !st.moving ? 1 : 0, y: zn && !st.moving ? '0px' : '6px', cs: st.press ? 0.96 : 1, bg: st.press ? G7 : INK };
+
+    const pv = this.nav(-1), nx = this.nav(1);
+    const arrow = (n, side, base) => {
+      const lit = st.zone === side && !!zn;
+      return { t: n && n.wrap ? '↺' : base, bg: lit ? INK : 'transparent', c: lit ? PAPER : INK, bd: lit ? INK : 'oklch(0.235 0.025 215 / .3)', op: n ? 1 : 0.3 };
+    };
+
+    const zone = side => {
+      const n = this.nav(side === 'r' ? 1 : -1);
+      const tp = n ? panels[n.t] : null;
+      const t = prox.side === side ? prox.t : 0, nud = st.nudge === side, warm = t > 0.45 || nud;
+      return {
+        w: `${side === 'r' ? st.W - Wp - GAP / 2 + st.Rg : st.L}px`, cursor: n ? 'crosshair' : 'default',
+        enter: e => { this.aim(e, true); clearTimeout(this.nudgeT); this.setState({ zone: side, nudge: null }); },
+        click: () => this.step(side === 'r' ? 1 : -1),
+        left: side === 'r' ? `${Wp + GAP / 2}px` : 'auto',
+        // 顶线上的续接标注：当前组实线 → 下一组虚线 + 组名，像图纸上的续图标记
+        show: !!n && !st.moving, warm: warm || st.zone === side,
+        arrow: n && n.wrap ? '↺' : side === 'r' ? '→' : '←',
+        ax: nud || st.zone === side ? `${side === 'r' ? 5 : -5}px` : '0px',
+        text: n ? (side === 'r' ? (n.wrap ? `Back to start · 01 ${groups[0].title}` : `Next · ${n2(tp.gi + 1)} ${groups[tp.gi].title}`) : n.wrap ? '' : n2(tp.gi + 1)) : '',
+        mx: `${effZone === side ? hintX : 0}px`,
+      };
+    };
+    const zR = zone('r'), zL = zone('l');
+    const cr = { left: `${Wp + GAP / 2}px`, op: zR.show ? 1 : 0, fill: zR.warm ? 1 : 0, lblX: `${Wp + GAP}px`, lblOp: zR.show ? 1 : 0, c: zR.warm ? INK : MUTED2, text: zR.text, arrow: zR.arrow, ax: zR.ax, mx: zR.mx };
+
+    const ang = st.turn * 360 / Math.max(1, P);
+    return {
+      rootRef: this.rootRef, secRef: this.secRef, stageRef: this.stageRef, tabsRef: this.tabsRef, badgeRef: this.badgeRef, arrowRef: this.arrowRef,
+      curTitle: cg.title, titles,
+      hasRange: cp.pages > 1, rangeText: this.rangeOf(cp),
+      dialTicks: panels.map((_, i) => ({ a: `${i * 360 / P}deg`, c: i === st.cur ? INK : 'oklch(0.235 0.025 215 / .28)' })),
+      dialA: `${ang}deg`, dialTr: rm ? 'none' : `transform 1s ${EIO}`,
+      odo: groups.map((_, i) => ({ n: n2(i + 1) })), odoY: `${-cp.gi * 12}px`, odoTr: rm ? 'none' : `transform .9s ${EIO}`,
+      total: n2(groups.length),
+      prev: () => this.step(-1), next: () => this.step(1), prevDisabled: !pv, nextDisabled: !nx,
+      aL: arrow(pv, 'l', '←'), aR: arrow(nx, 'r', '→'),
+      clip: `inset(-40px 0px -40px ${-st.L}px)`,
+      panels: panelsV,
+      workOut: () => this.setState({ wh: null, prox: { side: null, t: 0 } }),
+      stageMove: e => {
+        if (!strong) return;
+        const s = this.stageRef.current;
+        if (!s) return;
+        const r = s.getBoundingClientRect(), x = e.clientX - r.left, Wp = r.width * (1 - this.peek()), PX = Math.min(180, Wp * 0.18);
+        let side = null, t = 0;
+        if (x > Wp - PX) { side = 'r'; t = (x - (Wp - PX)) / PX; }
+        else if (x < PX) { side = 'l'; t = (PX - x) / PX; }
+        t = Math.round(Math.max(0, Math.min(1, t)) * 10) / 10;
+        if (!t) side = null;
+        const o = this.state.prox;
+        if (o.side !== side || o.t !== t) this.setState({ prox: { side, t } });
+      },
+      zl: zL, zr: zR, cr, pnW: `${Wp}px`, ruleW: `${Wp}px`,
+      zoneMove: e => this.aim(e),
+      zoneLeave: () => { this.setState({ zone: null, press: false }); this.armIdle(6500); },
+      zoneDown: () => this.setState({ press: true }),
+      zoneUp: () => this.setState({ press: false }),
+      b,
+      tabs: groups.map((g, gi) => {
+        const on = gi === cp.gi, prevw = !on && (tgtGi === gi || st.tabHover === gi);
+        const gp = panels.filter(p => p.gi === gi);
+        return {
+          i: String(gi), n: n2(gi + 1), title: g.title, count: String(g.tiles.length), on,
+          color: on || prevw ? INK : MUTED2, ghost: prevw ? 1 : 0, org: gi > cp.gi ? '0 50%' : '100% 50%',
+          multi: gp.length > 1, pips: gp.map(p => ({ c: on && p === cp ? INK : 'oklch(0.235 0.025 215 / .22)' })),
+          go: () => { const t = panels.findIndex(p => p.gi === gi); this.go(t); },
+          enter: () => this.setState({ tabHover: gi }), leave: () => this.setState({ tabHover: null }),
+        };
+      }),
+      ind: { x: `${st.ind.x}px`, y: `${st.ind.y}px`, w: `${st.ind.w}px`, tr: rm || !st.indReady ? 'none' : `transform .9s ${EIO}, width .9s ${EIO}` },
+      toast: st.toast, toastOp: st.toastOn ? 1 : 0, toastY: st.toastOn ? '0px' : '8px',
+    };
+  }
+}
+</script>
+</body>
+</html>

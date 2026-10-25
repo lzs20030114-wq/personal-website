@@ -32,7 +32,7 @@ import { getOtherWorkPage, getOtherWorkPages } from '../../../../src/lib/site/ot
 export function generateStaticParams() {
   return [
     ...getRoutableWork().map((w) => ({ slug: w.slug })),
-    // 其他作品的详情页（content/other/works.json 里带 page 的，MAPPING §59）
+    // 其他作品的详情页（content/other/works.json 里带 page 的，MAPPING §60）
     ...getOtherWorkPages().map((p) => ({ slug: p.work.slug })),
   ];
 }

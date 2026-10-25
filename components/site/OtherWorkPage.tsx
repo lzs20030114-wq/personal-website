@@ -7,7 +7,7 @@ import { Pick } from './CaseLang';
 import { CaseReveal } from './case/CaseReveal';
 
 /**
- * 其他作品详情页（用户拍板 2026-10-25「先做详情页」；MAPPING §59）。
+ * 其他作品详情页（用户拍板 2026-10-25「先做详情页」；MAPPING §60）。
  *
  * 挂在 /work/<slug>，与主项目同一条路由、同一套深色外壳（「筹备中」页的做法：全部复用 .cs-* 类），
  * 所以首页卡片「展开成详情页 / 收回到卡片」的转场、顶栏的 EN / 中切换都不用另写。

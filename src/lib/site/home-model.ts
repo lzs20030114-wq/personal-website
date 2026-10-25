@@ -108,7 +108,7 @@ export interface HomeWorkGroup {
 export const WORK_PER_PANEL = 3;
 
 /**
- * 其他作品点进去去哪：有详情页 → /work/<slug>（MAPPING §59）；否则登记了 `log`（日志项目组）且那一组有记录
+ * 其他作品点进去去哪：有详情页 → /work/<slug>（MAPPING §60）；否则登记了 `log`（日志项目组）且那一组有记录
  * → 那一组最新一条的锚点；再否则用 href。Work 页卡片与首屏方块场共用这一条，两处不会指向不同地方。
  */
 export function otherWorkHref(w: OtherWorks['works'][number], entries: LogEntry[]): string {
