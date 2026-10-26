@@ -96,7 +96,7 @@ export function TentacleBench({
     if (!canvas) return;
     const N = TENTACLE3D.segments;
     let sim = createTentacle3();
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // 慢转默认开（2026-10-26 用户拍板：Lab 默认勾选运转，不随「减弱动态效果」关掉，MAPPING §68）
 
     const cam = new OrbitCamera({
       cx: 380,
@@ -106,7 +106,7 @@ export function TentacleBench({
       yaw0: 0,
       pitch0: 0,
       roll0: -Math.PI / 2, // 正侧视：基座在左、臂指右（用户拍板 2026-07-10）
-      autoYaw: reduced || !spin ? 0 : 0.15,
+      autoYaw: spin ? 0.15 : 0,
     });
 
     let renderError: string | null = null;

@@ -48,12 +48,12 @@ export function FourBarBench({ grid = true, spin = true, active = true, onLight 
       for (const [k, v] of Object.entries(map)) e.setAttribute(k, String(v));
     };
 
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // 默认在转（2026-10-26 用户拍板：Lab 默认勾选运转，不随「减弱动态效果」关掉，MAPPING §68）
     const solver = createCrankRocker();
     const ctl = new LinkageController(solver, {
       driver: { anchor: N.A, tip: N.B, radius: CRANK.r, omega: 0.9 },
       theta0: THETA0,
-      reducedMotion: reduced || !spin,
+      reducedMotion: !spin,
     });
 
     // ① 点阵衬底（pattern 静态）

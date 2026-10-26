@@ -578,11 +578,8 @@ export function SkinSolidBench({
     const axonPitch = axon?.pitch ?? AXON_PITCH;
     const axonYaw = axon?.yaw ?? AXON_YAW;
     const presets = makePresets(axonPitch, axonYaw);
+    // 默认运转（2026-10-26 用户拍板：Lab 默认勾选运转，不随「减弱动态效果」关掉，MAPPING §68）；减弱动态效果只让切视角瞬切
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduced) {
-      runningRef.current = false;
-      setRunning(false);
-    }
 
     // 单排布 = 一条「默认排布」——多排布与否走同一条路径
     const layoutList: readonly SolidLayout[] =

@@ -82,7 +82,9 @@
 .lab-details { grid-column: 3; min-width: 0; position: relative; display: flex; flex-direction: column; max-height: calc(var(--lab-figure-height) + 220px); }
 .lab-details[hidden], .lab-detail-divider[hidden], .lab-nav-divider[hidden] { display: none; }
 .lab-details-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 3px 0 12px; border-bottom: 1px solid var(--lab-line); font-size: 10px; font-weight: 600; letter-spacing: .1em; color: var(--n600); }
-.lab-details-scroll { padding: 16px 8px 4px 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--n400) transparent; overscroll-behavior-y: contain; }
+/* position: relative 让里面绝对定位的读屏标题（.lab-sr-only）被这个滚动框裁住：原先它的定位框在框外，
+   会停在被裁掉的规格表深处、把整页撑长，页脚下多出约 780px 空白（2026-10-26，MAPPING §68） */
+.lab-details-scroll { position: relative; padding: 16px 8px 4px 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--n400) transparent; overscroll-behavior-y: contain; }
 .lab-description { margin: 0; max-width: 62ch; color: var(--n700); font-size: 14px; line-height: 1.6; }
 .lab-details h3 { margin: 32px 0 12px; font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--n600); }
 .lab-details dl { margin: 0; }

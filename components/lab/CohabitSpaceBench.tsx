@@ -210,11 +210,7 @@ export function CohabitSpaceBench({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduced) {
-      runningRef.current = false;
-      setRunning(false);
-    }
+    // 默认运转（2026-10-26 用户拍板：Lab 默认勾选运转，不随「减弱动态效果」关掉，MAPPING §68）
     const preset = planFromHash('2-15', SPACE_MODES.map((m) => m.key)) as SpaceMode | null;
     let spaceKey: SpaceMode = preset ?? 'live';
     if (preset) setSpace(preset);

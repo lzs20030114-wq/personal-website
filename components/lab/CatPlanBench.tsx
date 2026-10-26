@@ -95,7 +95,7 @@ export function CatPlanBench({ active = true, onLight = false, controls = true, 
     c.width = W * dpr; c.height = H * dpr;
     c.getContext('2d')?.scale(dpr, dpr);
     palette.current = readPalette(wrap.current);
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) setRunning(false);
+    // 默认运转（2026-10-26 用户拍板：Lab 默认勾选运转，不随「减弱动态效果」关掉，MAPPING §68）
     const preset = planFromHash('2-12', CAT_BEHAVIOURS.map(b => b.key));
     if (preset) { sim.current?.replay(preset); setBehaviour(preset); }
     paint();

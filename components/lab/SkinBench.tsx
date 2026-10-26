@@ -134,11 +134,7 @@ export function SkinBench({
     if (!svg) return;
     while (svg.firstChild) svg.removeChild(svg.firstChild);
 
-    // reduced-motion：不自动播（点「运转」是显式意愿，仍可看）
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      runningRef.current = false;
-      setRunning(false);
-    }
+    // 默认运转（2026-10-26 用户拍板：Lab 默认勾选运转，不随「减弱动态效果」关掉，MAPPING §68）
 
     const el = <K extends keyof SVGElementTagNameMap>(
       tag: K,

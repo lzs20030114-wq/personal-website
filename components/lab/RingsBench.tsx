@@ -342,7 +342,8 @@ export function RingsBench({
 
     let theta = SHELL_THETA0;
     let targetTheta = theta;
-    let breathing = spin && !reduced;
+    // 默认呼吸（2026-10-26 用户拍板：Lab 默认勾选运转，不随「减弱动态效果」关掉，MAPPING §68）
+    let breathing = spin;
     let skinA = SKIN_DEFAULT;
     let viewAnim: { q0: Quat; q1: Quat; t: number } | null = null;
     const phiDeg = (): number => (((theta - SHELL_THETA0) * 180) / Math.PI + 360000) % 360;

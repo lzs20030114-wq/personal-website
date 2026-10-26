@@ -399,10 +399,7 @@ export function CohabitBench({
     const canvas = canvasRef.current;
     const wrap = wrapRef.current;
     if (!canvas || !wrap) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      runningRef.current = false;
-      setRunning(false);
-    }
+    // 默认运转（2026-10-26 用户拍板：Lab 默认勾选运转，不随「减弱动态效果」关掉，MAPPING §68）
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);

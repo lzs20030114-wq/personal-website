@@ -846,7 +846,8 @@ export function MachineBench({
         setHud((h) => (h.note ? h : { ...h, note: msg }));
       });
 
-    let running = spin && !reduced;
+    // 默认运转（2026-10-26 用户拍板：Lab 默认勾选运转，不随「减弱动态效果」关掉，MAPPING §68）
+    let running = spin;
     if (debugEnabled) setRun(running);
     let dir: 1 | -1 = MACHINE_DIR;
     let omegaNow = MACHINE_OMEGA;
