@@ -25,6 +25,7 @@ import {
   type Side,
 } from '../../../src/lib/site/work-carousel';
 import { HOME_WORK_PANEL_KEY } from '../pageTransitionState';
+import { prefersReducedMotion } from '../../../src/lib/site/home-mode';
 import { WorkMark } from './WorkMark';
 
 const n2 = (i: number) => String(i).padStart(2, '0');
@@ -191,7 +192,8 @@ interface Badge {
  * 第一组是三个主项目，后面每组一种类别，一屏三张，一组超过三张就分几屏接着切，最后一屏接回第一屏。
  * 当前屏占舞台 85%，旁边那一屏露出一截；左右留白区悬停有跟着光标的标签，点一下就切。
  * 竖向滚动照旧归翻页引擎；左右只认组内切换——底部组名、右上箭头、← → 键、触控板左右划、触屏左右划、留白区。
- * 窄屏 / reduced-motion 回落文档流：各组上下依次排开，不做横向切换（CSS 同一条件）。
+ * 窄屏回落文档流：各组上下依次排开，不做横向切换（CSS 认 <html data-hs>，MAPPING §67）。
+ * 减弱动态效果：照样横向切换，只是瞬切、不探、不长色条。
  */
 export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; active: boolean; flow: boolean }) {
   const panels = useMemo(
@@ -248,7 +250,7 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
     go(n.t, d);
     // 光标标签里那枚箭头：往前推一下；绕回时转一圈
     const a = arrowRef.current;
-    if (a && sRef.current.zone) {
+    if (a && sRef.current.zone && !prefersReducedMotion()) {
       a.animate(
         n.wrap
           ? [{ transform: 'rotate(0)' }, { transform: `rotate(${d > 0 ? -360 : 360}deg)` }]
@@ -261,7 +263,7 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
   const armIdle = (ms: number) => {
     const T = timers.current;
     clearTimeout(T.nudge);
-    if (!live.current || nudges.current >= WC.NUDGE_MAX) return;
+    if (!live.current || nudges.current >= WC.NUDGE_MAX || prefersReducedMotion()) return;
     T.nudge = setTimeout(() => api.current.fireNudge(), ms);
   };
   const fireNudge = () => {
@@ -370,7 +372,7 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
     if (prevCur.current === s.cur) return;
     prevCur.current = s.cur;
     const stage = stageRef.current;
-    if (s.instant || flow || !stage) return;
+    if (s.instant || flow || !stage || prefersReducedMotion()) return;
     const fwd = s.cur > s.from;
     panels[s.cur].tiles.forEach((t, c) => {
       const el = stage.querySelector<HTMLElement>(`[data-bar="${t.key}"]`);

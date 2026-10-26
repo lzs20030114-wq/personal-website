@@ -18,7 +18,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     ? Boolean(process.env.STUDIO_PASSWORD && process.env.VISITOR_SUPABASE_URL && process.env.VISITOR_SUPABASE_SERVICE_ROLE_KEY)
     : !process.env.VERCEL && process.env.VISITOR_LOCAL_ENABLED === '1';
   return (
-    <html lang="en">
+    // 首页启动脚本在水合前往 <html> 上写 data-hs（MAPPING §67），不算水合不一致
+    <html lang="en" suppressHydrationWarning>
       <body>
         <PageTransitions />
         <VisitTracker enabled={visitorTrackingEnabled} />

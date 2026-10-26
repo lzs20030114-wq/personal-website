@@ -203,39 +203,38 @@
 .hs-wg__pips > span.hs-is-on { background: var(--ink); }
 .hs-wg__ind { position: absolute; left: 0; top: -1px; height: 2px; background: var(--ink); pointer-events: none; transition: transform .9s var(--eio), width .9s var(--eio); }
 .hs-wg__ind--still, .hs-wg--instant, .hs-wg--instant * { transition: none !important; }
-@media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
-  /* 舞台撑到组名目录线，卡片下方留出放印记的带 */
-  .hs-wg__stage { flex: 1 0 auto; display: flex; flex-direction: column; }
-  /* 露边以内容栏为轴左右对称（MAPPING §64）：两侧同一窗口宽 E = 空隙 + P，外缘渐隐不硬切。
-     P = 右留白先让开翻页刻度（距右缘 68px）再留 36px 后剩下的，封顶 120：≤1448 宽 → 0（上一屏不露，下一屏只露舞台里那 15%）·
-     1512 → 32 · 1600 → 76 · ≥1688 → 120。网格向两边铺满整页（负外边距 + 等量内边距把各屏推回舞台），
-     mask 因此按页面量：切换时卡片穿过渐隐区淡出，不再一边贴着页边、一边在内容栏边上硬切。
-     整排往左探（§59 的三种暗示）时左缘跟着让出 --wg-lean，当前屏第一张卡不进渐隐区；不支持 @property 的浏览器只是不带过渡。 */
-  .hs-wg__grid {
-    transition: --wg-lean 700ms var(--eo);
-    --wg-p: clamp(0px, calc(var(--wg-r) - var(--wg-gap) - 104px), 120px);
-    --wg-e: calc(var(--wg-gap) + var(--wg-p));
-    --wg-f: max(24px, calc(var(--wg-p) * .6));
-    flex: 1 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr);
-    margin: -40px calc(-1 * var(--wg-r)) -40px calc(-1 * var(--wg-l));
-    padding: 40px var(--wg-r) 40px var(--wg-l);
-    -webkit-mask-image: linear-gradient(90deg, transparent calc(var(--wg-l) - var(--wg-e) - var(--wg-lean)), #000 calc(var(--wg-l) - var(--wg-e) - var(--wg-lean) + var(--wg-f)), #000 calc(100% - var(--wg-r) + var(--wg-e) - var(--wg-f)), transparent calc(100% - var(--wg-r) + var(--wg-e)));
-    mask-image: linear-gradient(90deg, transparent calc(var(--wg-l) - var(--wg-e) - var(--wg-lean)), #000 calc(var(--wg-l) - var(--wg-e) - var(--wg-lean) + var(--wg-f)), #000 calc(100% - var(--wg-r) + var(--wg-e) - var(--wg-f)), transparent calc(100% - var(--wg-r) + var(--wg-e)));
-  }
-  /* 各屏叠在同一格里，每张卡按「第几屏 × (屏宽 + 空隙) + 暗示偏移」各自平移，切换时按顺序依次出发 */
-  .hs-wg__panel { grid-area: 1 / 1; width: var(--wp); min-width: 0; display: flex; flex-direction: column; pointer-events: none; }
-  .hs-wg__panel > .hs-cards { flex: none; }
-  .hs-wg__mark { transform: translateX(var(--x, 0px)); opacity: var(--op, 1); transition: var(--tr); will-change: transform, opacity; }
-  .hs-wg__prule { display: none; }
-  .hs-wg__panel .hs-card { transform: translateX(var(--x, 0px)); opacity: var(--op, 1); transition: var(--tr); will-change: transform, opacity; pointer-events: none; }
-  .hs-wg__panel.hs-is-cur .hs-card { pointer-events: auto; }
-  /* 非当前屏只留图版；下一屏第一张保留编号与色条，读得出是接着的 */
-  .hs-wg__panel .hs-card__kick, .hs-wg__panel .hs-card__bar { opacity: var(--txt-op, 1); transition: opacity .45s ease var(--txt-d, 0ms); }
-  .hs-wg__panel .hs-card__status, .hs-wg__panel .hs-card__stamp, .hs-wg__panel .hs-card__wip-in, .hs-wg__panel .hs-card__head { opacity: var(--head-op, 1); transition: opacity .45s ease var(--txt-d, 0ms); }
-  /* 图比图版左右各宽 10%，屏与屏之间带一点视差 */
-  .hs-wg__panel .hs-card__img { left: -10%; right: -10%; transform: translateX(var(--par, 0%)); transition: var(--img-tr); }
-  .hs-wg__panel .hs-card.hs-is-on .hs-card__img { transform: translateX(var(--par, 0%)) scale(1.08); }
+/* 翻页版式才有的横向轮播（MAPPING §59 / §64）。2026-10-26 起按 <html data-hs> 生效，不再看「减弱动态效果」（MAPPING §67） */
+/* 舞台撑到组名目录线，卡片下方留出放印记的带 */
+:where(:root[data-hs="paged"]) .hs-wg__stage { flex: 1 0 auto; display: flex; flex-direction: column; }
+/* 露边以内容栏为轴左右对称（MAPPING §64）：两侧同一窗口宽 E = 空隙 + P，外缘渐隐不硬切。
+   P = 右留白先让开翻页刻度（距右缘 68px）再留 36px 后剩下的，封顶 120：≤1448 宽 → 0（上一屏不露，下一屏只露舞台里那 15%）·
+   1512 → 32 · 1600 → 76 · ≥1688 → 120。网格向两边铺满整页（负外边距 + 等量内边距把各屏推回舞台），
+   mask 因此按页面量：切换时卡片穿过渐隐区淡出，不再一边贴着页边、一边在内容栏边上硬切。
+   整排往左探（§59 的三种暗示）时左缘跟着让出 --wg-lean，当前屏第一张卡不进渐隐区；不支持 @property 的浏览器只是不带过渡。 */
+:where(:root[data-hs="paged"]) .hs-wg__grid {
+  transition: --wg-lean 700ms var(--eo);
+  --wg-p: clamp(0px, calc(var(--wg-r) - var(--wg-gap) - 104px), 120px);
+  --wg-e: calc(var(--wg-gap) + var(--wg-p));
+  --wg-f: max(24px, calc(var(--wg-p) * .6));
+  flex: 1 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr);
+  margin: -40px calc(-1 * var(--wg-r)) -40px calc(-1 * var(--wg-l));
+  padding: 40px var(--wg-r) 40px var(--wg-l);
+  -webkit-mask-image: linear-gradient(90deg, transparent calc(var(--wg-l) - var(--wg-e) - var(--wg-lean)), #000 calc(var(--wg-l) - var(--wg-e) - var(--wg-lean) + var(--wg-f)), #000 calc(100% - var(--wg-r) + var(--wg-e) - var(--wg-f)), transparent calc(100% - var(--wg-r) + var(--wg-e)));
+  mask-image: linear-gradient(90deg, transparent calc(var(--wg-l) - var(--wg-e) - var(--wg-lean)), #000 calc(var(--wg-l) - var(--wg-e) - var(--wg-lean) + var(--wg-f)), #000 calc(100% - var(--wg-r) + var(--wg-e) - var(--wg-f)), transparent calc(100% - var(--wg-r) + var(--wg-e)));
 }
+/* 各屏叠在同一格里，每张卡按「第几屏 × (屏宽 + 空隙) + 暗示偏移」各自平移，切换时按顺序依次出发 */
+:where(:root[data-hs="paged"]) .hs-wg__panel { grid-area: 1 / 1; width: var(--wp); min-width: 0; display: flex; flex-direction: column; pointer-events: none; }
+:where(:root[data-hs="paged"]) .hs-wg__panel > .hs-cards { flex: none; }
+:where(:root[data-hs="paged"]) .hs-wg__mark { transform: translateX(var(--x, 0px)); opacity: var(--op, 1); transition: var(--tr); will-change: transform, opacity; }
+:where(:root[data-hs="paged"]) .hs-wg__prule { display: none; }
+:where(:root[data-hs="paged"]) .hs-wg__panel .hs-card { transform: translateX(var(--x, 0px)); opacity: var(--op, 1); transition: var(--tr); will-change: transform, opacity; pointer-events: none; }
+:where(:root[data-hs="paged"]) .hs-wg__panel.hs-is-cur .hs-card { pointer-events: auto; }
+/* 非当前屏只留图版；下一屏第一张保留编号与色条，读得出是接着的 */
+:where(:root[data-hs="paged"]) .hs-wg__panel .hs-card__kick, :where(:root[data-hs="paged"]) .hs-wg__panel .hs-card__bar { opacity: var(--txt-op, 1); transition: opacity .45s ease var(--txt-d, 0ms); }
+:where(:root[data-hs="paged"]) .hs-wg__panel .hs-card__status, :where(:root[data-hs="paged"]) .hs-wg__panel .hs-card__stamp, :where(:root[data-hs="paged"]) .hs-wg__panel .hs-card__wip-in, :where(:root[data-hs="paged"]) .hs-wg__panel .hs-card__head { opacity: var(--head-op, 1); transition: opacity .45s ease var(--txt-d, 0ms); }
+/* 图比图版左右各宽 10%，屏与屏之间带一点视差 */
+:where(:root[data-hs="paged"]) .hs-wg__panel .hs-card__img { left: -10%; right: -10%; transform: translateX(var(--par, 0%)); transition: var(--img-tr); }
+:where(:root[data-hs="paged"]) .hs-wg__panel .hs-card.hs-is-on .hs-card__img { transform: translateX(var(--par, 0%)) scale(1.08); }
 /* ---------- 03 about ---------- */
 .hs-about-dots { position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(var(--lime) 1px, transparent 1.2px); background-size: 6px 6px; opacity: .16; -webkit-mask-image: linear-gradient(115deg, #000 0%, transparent 40%); mask-image: linear-gradient(115deg, #000 0%, transparent 40%); }
 .hs-about { position: relative; height: 100%; min-height: 620px; max-width: 1360px; margin: 0 auto; padding: 92px 88px 44px 56px; display: grid; grid-template-columns: minmax(0,210px) minmax(0,1fr) minmax(0,.62fr); column-gap: clamp(28px, 3.4vw, 56px); align-items: start; }
@@ -378,8 +377,8 @@
    ① 活台架嵌入：舞台 / Lab 预览位里放的是 /lab 同一批台架组件（HomeLabPreview），
       控制条与 HUD 收起，画面等比放进盒子（700×520 的渲染面不裁不拉伸，同旧主页 HomeLab 做法）。
    ② 首帧：JS 接管前不显示编排元素（避免 SSR 终态一闪再从头播）。
-   ③ 窄屏 / reduced-motion 回落常规文档流（MAPPING §6；稿本身只有桌面）。 */
-.hs-root:not(.hs-ready) [data-a] { visibility: hidden; }
+   ③ 窄屏（或脚本没跑起来）回落常规文档流；减弱动态效果只去动画、版式不变（MAPPING §6 / §67；稿本身只有桌面）。 */
+:where(:root[data-hs="paged"]) .hs-root:not(.hs-ready) [data-a] { visibility: hidden; }
 
 .hs-pv__live { display: flex; align-items: center; justify-content: center; }
 .hs-pv__live { position: absolute; inset: 14px; pointer-events: none; }
@@ -401,33 +400,33 @@
 .hs-root .lab-hud, .hs-root .lab-ctl, .hs-root .lab-ctl__hint { display: none; }
 .hs-root .lab-fig svg, .hs-root .lab-fig canvas { max-height: 100%; object-fit: contain; }
 
-@media (max-width: 1023px), (prefers-reduced-motion: reduce) {
-  .hs-root { position: static; overflow: visible; background: var(--paper); }
-  .hs-page { position: relative; inset: auto; overflow: visible; transform: none !important; visibility: visible !important; transition: none !important; will-change: auto; }
-  .hs-shade { display: none; }
-  .hs-work, .hs-about { height: auto; min-height: 0; }
-  .hs-wg__mask, .hs-wg__ctl, .hs-wg__tabs, .hs-wg__rule, .hs-wg__cont, .hs-wg__cont-lbl, .hs-wg__zone, .hs-wg__badge { display: none; }
-  /* 印记接在每组卡片后面（一组分几屏时只接在最后一屏后面） */
-  .hs-wg__mark { flex: none; height: clamp(96px, 26vw, 160px); margin-top: 24px; }
-  .hs-wg__panel:not([data-last]) .hs-wg__mark { display: none; }
-  .hs-wg__panel + .hs-wg__panel { margin-top: 64px; }
-  .hs-wg__panel--cont { margin-top: 28px !important; }
-  .hs-wg__ghead { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding-bottom: 18px; }
-  .hs-wg__gtitle { margin: 0; font-weight: 500; font-size: clamp(28px, 6vw, 40px); line-height: 1.05; letter-spacing: -.03em; }
-  .hs-rail { display: none; }
-  .hs-hud { position: fixed; }
-  .hs-hud__bg { opacity: 1; }
-  .hs-hud__name { opacity: 1; pointer-events: auto; transform: none; }
-  .hs-page--about ~ .hs-hud .hs-hud__bg, .hs-hud, .hs-hud.hs-on-dark { --hud-ink: var(--ink); }
-  .hs-group__head { top: 56px; }
-  /* 文档流里场不动、也不接悬停：留一屏深色标题区 */
-  .hs-page--hook { min-height: 100svh; display: flex; align-items: center; justify-content: center; padding: 120px 20px 72px; }
-  .hs-field__grid, .hs-field__glow { display: none; }
-  .hs-field__center { position: static; transform: none; width: min(680px, 100%); }
-  .hs-field__hint { display: none; }
-  .hs-field__foot { left: 20px; right: 20px; }
-  .hs-field__foot > span:last-child { display: none; }
-}
+/* 文档流（MAPPING §6 / §42 / §67）：<html data-hs> 不是 paged 时生效——窄屏，或者脚本根本没跑起来（旧 Safari）。
+   默认就是这一套：没有脚本也能看到全部内容。「减弱动态效果」不再落到这里。 */
+:where(:root:not([data-hs="paged"])) .hs-root { position: static; overflow: visible; background: var(--paper); }
+:where(:root:not([data-hs="paged"])) .hs-page { position: relative; inset: auto; overflow: visible; transform: none !important; visibility: visible !important; transition: none !important; will-change: auto; }
+:where(:root:not([data-hs="paged"])) .hs-shade { display: none; }
+:where(:root:not([data-hs="paged"])) .hs-work, :where(:root:not([data-hs="paged"])) .hs-about { height: auto; min-height: 0; }
+:where(:root:not([data-hs="paged"])) .hs-wg__mask, :where(:root:not([data-hs="paged"])) .hs-wg__ctl, :where(:root:not([data-hs="paged"])) .hs-wg__tabs, :where(:root:not([data-hs="paged"])) .hs-wg__rule, :where(:root:not([data-hs="paged"])) .hs-wg__cont, :where(:root:not([data-hs="paged"])) .hs-wg__cont-lbl, :where(:root:not([data-hs="paged"])) .hs-wg__zone, :where(:root:not([data-hs="paged"])) .hs-wg__badge { display: none; }
+/* 印记接在每组卡片后面（一组分几屏时只接在最后一屏后面） */
+:where(:root:not([data-hs="paged"])) .hs-wg__mark { flex: none; height: clamp(96px, 26vw, 160px); margin-top: 24px; }
+:where(:root:not([data-hs="paged"])) .hs-wg__panel:not([data-last]) .hs-wg__mark { display: none; }
+:where(:root:not([data-hs="paged"])) .hs-wg__panel + .hs-wg__panel { margin-top: 64px; }
+:where(:root:not([data-hs="paged"])) .hs-wg__panel--cont { margin-top: 28px !important; }
+:where(:root:not([data-hs="paged"])) .hs-wg__ghead { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding-bottom: 18px; }
+:where(:root:not([data-hs="paged"])) .hs-wg__gtitle { margin: 0; font-weight: 500; font-size: clamp(28px, 6vw, 40px); line-height: 1.05; letter-spacing: -.03em; }
+:where(:root:not([data-hs="paged"])) .hs-rail { display: none; }
+:where(:root:not([data-hs="paged"])) .hs-hud { position: fixed; }
+:where(:root:not([data-hs="paged"])) .hs-hud__bg { opacity: 1; }
+:where(:root:not([data-hs="paged"])) .hs-hud__name { opacity: 1; pointer-events: auto; transform: none; }
+:where(:root:not([data-hs="paged"])) .hs-page--about ~ .hs-hud .hs-hud__bg, :where(:root:not([data-hs="paged"])) .hs-hud, :where(:root:not([data-hs="paged"])) .hs-hud.hs-on-dark { --hud-ink: var(--ink); }
+:where(:root:not([data-hs="paged"])) .hs-group__head { top: 56px; }
+/* 文档流里场不动、也不接悬停：留一屏深色标题区 */
+:where(:root:not([data-hs="paged"])) .hs-page--hook { min-height: 100svh; display: flex; align-items: center; justify-content: center; padding: 120px 20px 72px; }
+:where(:root:not([data-hs="paged"])) .hs-field__grid, :where(:root:not([data-hs="paged"])) .hs-field__glow { display: none; }
+:where(:root:not([data-hs="paged"])) .hs-field__center { position: static; transform: none; width: min(680px, 100%); }
+:where(:root:not([data-hs="paged"])) .hs-field__hint { display: none; }
+:where(:root:not([data-hs="paged"])) .hs-field__foot { left: 20px; right: 20px; }
+:where(:root:not([data-hs="paged"])) .hs-field__foot > span:last-child { display: none; }
 @media (max-width: 1023px) {
   .hs-work, .hs-about, .hs-zone { padding: 88px 20px 40px; }
   .hs-zone { padding-bottom: 0; }
@@ -460,6 +459,12 @@
   .hs-hud__bar { padding: 0 20px; }
   .hs-hud__nav { gap: 18px; }
   .hs-log { margin-top: 72px; padding: 72px 0; }
+}
+
+/* 减弱动态效果：版式照旧（整屏翻页 / 横向切组 / 方块场），过渡一律瞬切（MAPPING §67）。
+   WAAPI 编排、翻页与轮播的探一下由脚本按同一偏好关掉；这里只管 CSS 过渡。 */
+@media (prefers-reduced-motion: reduce) {
+  .hs-root *, .hs-root *::before, .hs-root *::after { transition-duration: 0s !important; transition-delay: 0s !important; }
 }
 
 /* 手机轴末端另留一行给 today，月份、泳道与刻度仍用原来的文字、字号和比例。 */

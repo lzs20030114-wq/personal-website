@@ -42,6 +42,7 @@
 | "其他作品"、"other works"、"Work 页分组"、"按组横向切换" | design-ref/MAPPING.md §58（一屏一组 · 第一组三个主项目 · 其后按类别 · 内容池 `content/other/works.json` · 切换方式与引擎改动 · 待定项） |
 | "第二屏"、"Work 轮播"、"Work Carousel"、"露边 / 续接标注 / 刻度盘 / 留白区"、"组印记 / 像素符号" | design-ref/home-work-carousel/ + MAPPING.md §59（85% 屏宽露边 · 依次出发 · 首尾相接 · 三种暗示 · 手感常量 = `src/lib/site/work-carousel.ts` 的 `WC`）+ §63/§64（一组一个方点符号 → 卡片下方印记 · 露边以内容栏为轴对称渐隐；原稿与生成器在 design-ref/work-pixel-scenes/） |
 | "旧作清单"、"其他作品素材"、"作品图在哪"、"Hidden Stone / The Slice 找到没" | 作品集旧作_整合清单_2026-10-25.md（作者交来的 14 项清单，原样存档：引文 · 署名 · 年份证据 · 存疑点）+ 其他作品_素材整理.md（站上去向：115 张 webp 在 `public/other/` · 逐张来源、裁切与用在哪一节 · 各页正文出处 · 没转的原因 · 补搜结果 · 还没定的事；脚本 `scripts/other-works/build_assets.py`）+ MAPPING §60（详情页 `/work/<slug>` 的做法、英文命名、署名规则；§60.1 = 第二版分节叙事） |
+| "Mac 适配"、"Safari 看不到"、"减弱动态效果"、"首页一片黑" | MAPPING §67（首页版式只按窗口宽度定，写在 `<html data-hs>`；减弱动态效果只去动画不换版式；旧 Safari 脚本跑不起来时退回内容可见的文档流；判定与启动脚本 = `src/lib/site/home-mode.ts`） |
 | "主页首屏"、"方块场"、"Field Hero" | design-ref/home-field-hero/ + MAPPING.md §55（28×14 方块场 · 悬停开卡 · 卡池全自动：作品 / 台架 / 日志现取，§55.2；新台架截图 `npm run field:shots`；取代 §42 的轮播舞台） |
 | "设计系统"、"design system"、"token 在哪一份"、"颜色只表示项目"、"控件边框 / 焦点环"、"重新生成 token" | MAPPING §61（四步优化：焦点环与控件边框 · 项目色唯一登记处 `PROJECT_GROUPS[].accent` · `--ld-*` 收进 `globals.css :root` · 日志页暗色外壳）+ §62（日志页正文换字 · token 生成器 `scripts/design-system/tokens.mjs`）+ claude.ai 设计系统 artifact「Portfolio」 |
 | "横屏排版"、"版式研究"、"排版原则" | LAYOUT_NOTES.md |

@@ -9,6 +9,7 @@ import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { HomeField } from '../../../src/lib/site/home-model';
 import { FIELD_KINDS, fieldColors, pickFieldIndex } from '../../../src/lib/site/field-visuals';
+import { HOME_FLOW_QUERY, prefersReducedMotion } from '../../../src/lib/site/home-mode';
 
 const COLS = 28;
 const ROWS = 14;
@@ -27,7 +28,6 @@ const FADE_OUT_MS = 2200;
 const WAKE_DWELL_MS = 50;
 const WAKE_TRACK_MS = 110;
 const OPEN_DWELL_MS = 160;
-const FLOW_QUERY = '(max-width: 1023px), (prefers-reduced-motion: reduce)';
 
 const NUM = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
 const TENS = ['', '', 'twenty', 'thirty', 'forty'];
@@ -118,7 +118,10 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     txtT: undefined as ReturnType<typeof setTimeout> | undefined,
   });
 
-  const motionOn = () => !window.matchMedia(FLOW_QUERY).matches;
+  /** 场在不在：窄屏文档流里整块隐藏（CSS 认 <html data-hs>，MAPPING §67） */
+  const fieldOn = () => !window.matchMedia(HOME_FLOW_QUERY).matches;
+  /** 「减弱动态效果」下场照样在、照样能悬停开卡，只是方块不再轮换、卡不做生长动画 */
+  const motionOn = () => fieldOn() && !prefersReducedMotion();
 
   const cancelOpen = useCallback(() => {
     clearTimeout(m.current.openT);
@@ -245,7 +248,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     }
   }, [active, collapse, cancelHover]);
 
-  // 场的心跳：亮起 / 熄灭（只在首屏是当前页、且不在窄屏 / reduced-motion 文档流时跑）
+  // 场的心跳：亮起 / 熄灭（只在首屏是当前页、且不在窄屏文档流时跑；减弱动态效果下铺满即停）
   useEffect(() => {
     const f = fieldRef.current!;
     const st = m.current;
@@ -291,8 +294,10 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     ro.observe(f);
 
     const timer = setInterval(() => {
-      if (!activeRef.current || !motionOn()) return;
+      if (!activeRef.current || !fieldOn()) return;
       const now = performance.now();
+      // 减弱动态效果：一次铺满到目标密度就停住，不再亮了又灭
+      const still = prefersReducedMotion();
       const hv = openRef.current?.i;
       const retired = new Set<number>();
       for (const [i, end] of st.fading) {
@@ -303,10 +308,14 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
         st.fading.delete(i);
         retired.add(i);
       }
-      for (const [i, exp] of st.lit) {
-        if (now > exp && i !== hv && i !== st.hoveredCell) startFade(i, now);
+      if (!still) {
+        for (const [i, exp] of st.lit) {
+          if (now > exp && i !== hv && i !== st.hoveredCell) startFade(i, now);
+        }
       }
-      const n = st.lit.size < DENSITY * 0.5 ? 8 : st.lit.size < DENSITY ? 4 : Math.random() < 0.6 ? 1 : 0;
+      const n = still
+        ? (st.lit.size < DENSITY ? 40 : 0)
+        : st.lit.size < DENSITY * 0.5 ? 8 : st.lit.size < DENSITY ? 4 : Math.random() < 0.6 ? 1 : 0;
       const litArr = Array.from(st.lit.keys());
       for (let k = 0; k < n; k++) {
         let i: number;
@@ -358,7 +367,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     st.heldGhosts.set(i, amp);
     st.ghostTimers.set(i, setTimeout(() => {
       st.ghostTimers.delete(i);
-      if (!activeRef.current || !motionOn()) return;
+      if (!activeRef.current || !fieldOn()) return;
       g.style.transition = 'opacity .09s,transform .7s cubic-bezier(.2,.7,.1,1)';
       g.style.opacity = String(amp);
     }, delay));
@@ -390,7 +399,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
   };
 
   const wake = () => {
-    if (!activeRef.current || !motionOn() || !m.current.pointer) {
+    if (!activeRef.current || !fieldOn() || !m.current.pointer) {
       cancelHover();
       return;
     }
@@ -427,7 +436,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
   };
 
   const onMove = (e: React.PointerEvent) => {
-    if (!activeRef.current || !motionOn() || e.pointerType === 'touch') return;
+    if (!activeRef.current || !fieldOn() || e.pointerType === 'touch') return;
     m.current.pointer = { x: e.clientX, y: e.clientY };
     const i = pointerCell();
     if (i === m.current.lastCell) return;
@@ -442,7 +451,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     const el = e.currentTarget;
     const i = Number(el.dataset.cell);
     cancelOpen();
-    if (!activeRef.current || !motionOn()) return;
+    if (!activeRef.current || !fieldOn()) return;
     if (openRef.current?.i === i && !m.current.closing) return;
     const item = el.dataset.item;
     if (item == null || isCenter(i) || (!m.current.lit.has(i) && !m.current.fading.has(i))) return;
@@ -450,7 +459,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     if (m.current.fading.has(i) && Number(getComputedStyle(el).opacity) === 0) return;
     m.current.hoveredCell = i;
     m.current.openT = setTimeout(() => {
-      if (!activeRef.current || !motionOn() || m.current.hoveredCell !== i || (!m.current.lit.has(i) && !m.current.fading.has(i)) || el.dataset.item !== item || !el.matches(':hover')) return;
+      if (!activeRef.current || !fieldOn() || m.current.hoveredCell !== i || (!m.current.lit.has(i) && !m.current.fading.has(i)) || el.dataset.item !== item || !el.matches(':hover')) return;
       openAt(i, Number(item));
     }, OPEN_DWELL_MS);
   };

@@ -13,6 +13,7 @@ import { FieldPage } from './FieldPage';
 import { AboutPage, WorkPage } from './WorkAboutPages';
 import { ZonePage } from './ZonePage';
 import { HOME_ZONE_KEY, pageTransitionActive } from '../pageTransitionState';
+import { HOME_FLOW_QUERY, HOME_REDUCE_QUERY, setHomeMode } from '../../../src/lib/site/home-mode';
 
 const EO = 'cubic-bezier(.2,.7,.1,1)';
 const EIO = 'cubic-bezier(.76,0,.24,1)';
@@ -26,8 +27,6 @@ const KF: Record<string, Keyframe[]> = {
 const DUR: Record<string, number> = { up: 820, rise: 1000, line: 1100, wipe: 1150, fade: 700 };
 const PAGES = ['Field', 'Work', 'About', 'Lab', 'Log + Contact'];
 const NAV: [string, number][] = [['Work', 1], ['About', 2], ['Lab', 3], ['Log', 4]];
-/** 引擎只在桌面且允许动效时接管；窄屏 / reduced-motion 回落常规文档流（MAPPING §6，CSS 里同一条件） */
-const FLOW_QUERY = '(max-width: 1023px), (prefers-reduced-motion: reduce)';
 /** 离开 Lab / Log 区时记下的滚动位置多久内还算数（只为「按返回落回原处」） */
 const ZONE_MEMORY_MS = 30 * 60 * 1000;
 
@@ -82,8 +81,9 @@ export function HomeScroll({ work, groups, log, field }: HomeScrollProps) {
     const root = rootRef.current!;
     const sections = secRefs.map((r) => r.current!);
     const zoneEl = sections[3];
-    const flowMq = window.matchMedia(FLOW_QUERY);
-    const reducedMq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    // 窄屏回落常规文档流；「减弱动态效果」照样整屏翻页，只是不放动画（MAPPING §67，CSS 认 <html data-hs>）
+    const flowMq = window.matchMedia(HOME_FLOW_QUERY);
+    const reducedMq = window.matchMedia(HOME_REDUCE_QUERY);
     const motionOn = () => !reducedMq.matches;
     const $$ = <T extends Element = HTMLElement>(s: string, el: ParentNode = root) => Array.from(el.querySelectorAll<T>(s));
     const flow = () => flowMq.matches;
@@ -189,7 +189,7 @@ export function HomeScroll({ work, groups, log, field }: HomeScrollProps) {
           t = pg === 3 ? 'translateY(0)' : 'translateY(7%)';
           v = pg >= 2 ? 'visible' : 'hidden';
         }
-        sec.style.transition = !instant && (i === pg || i === st.from) ? `transform 1.1s ${EIO}, visibility 1.1s` : 'none';
+        sec.style.transition = !instant && motionOn() && (i === pg || i === st.from) ? `transform 1.1s ${EIO}, visibility 1.1s` : 'none';
         sec.style.transform = t;
         sec.style.visibility = v;
         sec.inert = i !== pg;
@@ -413,6 +413,7 @@ export function HomeScroll({ work, groups, log, field }: HomeScrollProps) {
 
     /* 窄屏 / 偏好切换时重排 */
     const onFlowChange = () => {
+      setHomeMode(flow() ? 'flow' : 'paged');
       setFlowMode(flow());
       applyPages(true);
       if (flow()) {
@@ -437,7 +438,8 @@ export function HomeScroll({ work, groups, log, field }: HomeScrollProps) {
     };
     flowMq.addEventListener('change', onFlowChange);
 
-    /* 启动 */
+    /* 启动：版式写到 <html data-hs>（首页 HTML 里的启动脚本已先写过一次；客户端跳转回首页时由这里写） */
+    setHomeMode(flow() ? 'flow' : 'paged');
     setFlowMode(flow());
     applyPages();
     setReady(true);
