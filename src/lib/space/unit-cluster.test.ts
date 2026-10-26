@@ -9,7 +9,6 @@ import {
   OVERLAP_CLEAR,
   STAGGER_STEPS,
   UNIT_FORMS,
-  clusterBridges,
   clusterBuild,
   clusterCamScale,
   clusterCells,
@@ -342,20 +341,6 @@ describe('unit-cluster 单元关系', () => {
         );
         expect(clusterCells(plan, rel, CLUSTER_DEFAULT_FORM, R).map((c) => c.plan)).toEqual(lv);
       }
-  });
-
-  it('连接：只在相切·齐平下，相邻（归一距 1）的每一对之间搭一块网', () => {
-    expect(clusterBridges('pair', 'touch').length).toBe(1);
-    expect(clusterBridges('triad', 'touch').length).toBe(3);
-    expect(clusterBridges('quad', 'touch').length).toBe(4);
-    expect(clusterBridges('nine', 'touch').length).toBe(12);
-    for (const plan of PLANS) {
-      for (const rel of ['apart', 'apartStep', 'touchStep', 'overlap'] as const)
-        expect(clusterBridges(plan, rel)).toEqual([]);
-      const pos = clusterPositions(plan);
-      for (const [i, j] of clusterBridges(plan, 'touch'))
-        expect(Math.hypot(pos[i].x - pos[j].x, pos[i].z - pos[j].z)).toBeCloseTo(1, 9);
-    }
   });
 
   it('房间固定用 Lab.12 那一间：同半径下地板与两面墙逐位相同，簇再小房间不缩', () => {

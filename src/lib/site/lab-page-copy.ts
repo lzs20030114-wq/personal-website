@@ -159,7 +159,6 @@ export const LAB_PAGE_COPY: readonly (readonly [string, string])[] = [
   ["Up to 0.35 m; shape stays unchanged", "最高 0.35 米，形态不变"],
   ["Step must clear the forming body by 6 px", "高差需超出成形中的结构厚度 6 像素"],
   ["Together or staggered by 150 steps", "同步或每隔 150 步启动一波"],
-  ["Level touching edges joined by a 16 cm fabric web", "等高相切边用 16 厘米织物网连接"],
   ["Lab 2-8 room · 1.70 m figure", "实验 2-8 房间 · 1.70 米人物"],
   ["Move one person through the room and watch nearby units form. The floor records time spent within view. Follow mode withdraws the structure as that trace fades; lock mode keeps it formed.", "移动一个人，观察附近单元成形。地面记录视野范围内的停留时间。跟随模式随痕迹消退而收回结构；锁定模式保留成形。"],
   ["4×4 / 6×6 / 8×8 · Lab 2-8 room", "4×4／6×6／8×8 · 实验 2-8 房间"],

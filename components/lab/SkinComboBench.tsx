@@ -11,7 +11,6 @@ import { RING_GRID_AXON, RING_GRID_PIVOT_Y, RIG_SCALE, RIG_Y } from '../../src/l
 import {
   COMBO_DEFAULT_FORM,
   COMBO_FAMILIES,
-  comboBridges,
   comboBuild,
   comboCamScale,
   comboCells,
@@ -85,7 +84,6 @@ export function SkinComboBench({
   );
   const cells = useMemo(() => (r: number) => comboCells(P, fam, form, r, spacing), [P, fam, form, spacing]);
   const scene = useMemo(() => (r: number) => comboScene(P, fam, form, r, spacing), [P, fam, form, spacing]);
-  const bridges = useMemo(() => comboBridges(P, fam, spacing), [P, fam, spacing]);
   const met = comboMetrics(P, fam, form, rig.radius.def, spacing);
   const en = lang === 'en';
   const famDef = COMBO_FAMILIES.find((f) => f.key === fam)!;
@@ -112,7 +110,6 @@ export function SkinComboBench({
       ring
       angleOffset={rig.angleOffset}
       cells={cells}
-      bridges={bridges}
       rig={{ scale: RIG_SCALE, y: RIG_Y }}
       scene={scene}
       camScaleFor={(r, v) => comboCamScale(P, fam, form, r, spacing, v)}
