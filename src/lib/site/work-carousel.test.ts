@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { WC, carouselNav, cascadeOrder, hintOf, nudgeSide, proximity, rangeLabel } from './work-carousel';
 
@@ -51,5 +52,18 @@ describe('02 Work 横向切换（MAPPING §59）', () => {
   it('分屏计数', () => {
     expect(rangeLabel(0, 3, 5, 3)).toBe('1–3 of 5');
     expect(rangeLabel(1, 2, 5, 3)).toBe('4–5 of 5');
+  });
+});
+
+describe('首页各页不透到别的屏（MAPPING §64）', () => {
+  // 翻页引擎（HomeScroll）翻走一页时给整页设 visibility: hidden；页里的子元素只要内联写一句 visible
+  // 就会盖过父级、透到后面几屏上（§63 的整幕背景就是这样压在 Lab / Log 屏上的）。
+  // 页内要藏东西用 opacity / display，visibility 只归翻页引擎管。
+  it('除翻页引擎外，首页组件不内联设 visibility', () => {
+    const dir = new URL('../../../components/site/home/', import.meta.url);
+    const files = readdirSync(dir).filter((f) => f.endsWith('.tsx') && f !== 'HomeScroll.tsx');
+    expect(files.length).toBeGreaterThan(0);
+    const hits = files.filter((f) => /\bvisibility\s*:/.test(readFileSync(new URL(f, dir), 'utf8')));
+    expect(hits).toEqual([]);
   });
 });
