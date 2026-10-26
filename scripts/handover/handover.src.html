@@ -1,0 +1,733 @@
+<title>轮回机器交接图册</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&display=swap">
+<style>
+/* 版式：一叠图纸。每页以国标式标题栏（图签）开头，页内图、表、说明按「先图后文」排列；
+   单一浅色纸面（图纸本身是白底线稿，故不做深色主题，所有颜色显式给出）。 */
+:root {
+  --paper: #EEF0EE;
+  --sheet: #FFFFFF;
+  --ink: #1B1E22;
+  --ink2: #4A535C;
+  --ink3: #7B848D;
+  --rule: #CDD3D9;
+  --hair: #E6E9EC;
+  --blue: #1D5A8E;
+  --blue-bg: #EAF1F8;
+  --amber: #8F5600;
+  --amber-bg: #FBF0DC;
+  --red: #A23628;
+  --red-bg: #FBEAE6;
+  --green: #2C6649;
+  --green-bg: #E5F1EA;
+  --slate: #4A5866;
+  --slate-bg: #ECEFF3;
+  --f-body: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Zen Hei", system-ui, sans-serif;
+  --f-head: "Noto Serif SC", "Songti SC", "SimSun", "Noto Sans SC", serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); }
+body { background: var(--paper); color: var(--ink); font: 15px/1.75 var(--f-body); -webkit-font-smoothing: antialiased; }
+.doc { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 48px; }
+.sheet { background: var(--sheet); max-width: 1120px; margin: 0 auto 28px; border: 1px solid var(--rule); box-shadow: 0 1px 0 var(--hair); }
+.sb { padding: 26px 40px 34px; display: grid; gap: 22px; min-width: 0; }
+@media (max-width: 720px) { .sb { padding: 18px 16px 24px; } }
+
+/* 标题栏（图签） */
+.tb { display: grid; grid-template-columns: 1fr auto auto; border-bottom: 1.5px solid var(--ink); }
+.tb > div { padding: 9px 14px; border-right: 1px solid var(--rule); min-width: 0; }
+.tb > div:last-child { border-right: 0; }
+.tb .k { display: block; font: 500 10.5px/1.3 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
+.tb .v { font: 500 13px/1.5 var(--f-body); color: var(--ink2); }
+.tb .no { font: 600 15px/1.4 var(--f-mono); color: var(--ink); letter-spacing: .02em; }
+.tb h2 { grid-column: 1 / -1; margin: 0; padding: 14px 14px 12px; border-top: 1px solid var(--rule); font: 700 26px/1.3 var(--f-head); letter-spacing: .02em; text-wrap: balance; }
+.tb h2 small { display: block; font: 400 13px/1.5 var(--f-body); color: var(--ink3); letter-spacing: 0; margin-top: 3px; }
+@media (max-width: 720px) { .tb { grid-template-columns: 1fr 1fr; } .tb > div:first-child { grid-column: 1 / -1; border-right: 0; border-bottom: 1px solid var(--rule); } .tb h2 { font-size: 21px; } }
+
+h3 { margin: 6px 0 0; font: 700 18px/1.45 var(--f-head); letter-spacing: .01em; text-wrap: balance; display: flex; gap: 10px; align-items: baseline; }
+h3 .hn { font: 600 12px/1 var(--f-mono); color: var(--blue); letter-spacing: .04em; }
+h4 { margin: 2px 0 0; font: 700 15px/1.5 var(--f-body); }
+p { margin: 0; max-width: 72ch; }
+.sb > p, .col > p { text-wrap: pretty; }
+ul, ol { margin: 0; padding-left: 1.3em; }
+li { margin: 2px 0; max-width: 72ch; }
+.lead { font-size: 16.5px; line-height: 1.8; color: var(--ink); max-width: 66ch; }
+.mut { color: var(--ink2); }
+.small { font-size: 13px; color: var(--ink2); }
+code, .m { font-family: var(--f-mono); font-size: .92em; }
+b, strong { font-weight: 700; }
+a { color: var(--blue); text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 32px; align-items: start; }
+.cols.w60 { grid-template-columns: 1.5fr 1fr; }
+.col { display: grid; gap: 12px; min-width: 0; }
+@media (max-width: 860px) { .cols, .cols.w60 { grid-template-columns: 1fr; } }
+
+/* 状态标签 */
+.tag { display: inline-block; font: 600 11.5px/1 var(--f-body); padding: 4px 6px 3px; border-radius: 3px; vertical-align: 1px; white-space: nowrap; margin-right: 2px; }
+.t-meas { color: var(--green); background: var(--green-bg); }
+.t-rec { color: var(--slate); background: var(--slate-bg); }
+.t-int { color: var(--blue); background: var(--blue-bg); }
+.t-sug { color: var(--ink2); background: #fff; box-shadow: inset 0 0 0 1px var(--rule); }
+.t-chk { color: var(--amber); background: var(--amber-bg); }
+
+/* 注释框：图纸上的「注」 */
+.box { border: 1px solid var(--rule); padding: 12px 16px 13px; display: grid; gap: 6px; }
+.box > .bh { font: 600 11px/1.2 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink3); }
+.box.warn { border-color: #E3B4AC; background: var(--red-bg); }
+.box.warn > .bh { color: var(--red); }
+.box.chk { border-color: #E6C995; background: var(--amber-bg); }
+.box.chk > .bh { color: var(--amber); }
+.box.info { border-color: #BFD2E5; background: var(--blue-bg); }
+.box.info > .bh { color: var(--blue); }
+
+/* 表 */
+.tw { overflow-x: auto; max-width: 100%; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; line-height: 1.55; }
+th, td { border-bottom: 1px solid var(--hair); padding: 7px 10px 6px; text-align: left; vertical-align: top; }
+thead th { font: 600 12px/1.4 var(--f-body); color: var(--ink2); background: #F6F7F8; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+td.n, th.n { font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+td.c { text-align: center; }
+td.k { font-weight: 600; white-space: nowrap; }
+tr.sub td { background: #F9FAFA; font-weight: 600; color: var(--ink2); font-size: 12.5px; letter-spacing: .02em; }
+.ck { display: inline-block; width: 13px; height: 13px; border: 1.2px solid var(--ink3); border-radius: 2px; vertical-align: -1px; }
+
+/* 图 */
+figure { margin: 0; display: grid; gap: 8px; min-width: 0; }
+.frame { position: relative; width: 100%; max-width: 100%; }
+.frame img { display: block; width: 100%; height: auto; }
+.ann { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.ann .ld { stroke: var(--blue); stroke-width: 1.1; vector-effect: non-scaling-stroke; }
+.ann .ldot { fill: var(--blue); }
+.ann .bal { fill: #fff; stroke: var(--blue); stroke-width: 1.3; vector-effect: non-scaling-stroke; }
+.ann .baln { fill: var(--blue); font-family: var(--f-mono); font-weight: 600; text-anchor: middle; dominant-baseline: central; }
+.ann .ext { stroke: var(--ink3); stroke-width: 0.8; vector-effect: non-scaling-stroke; }
+.ann .dim { stroke: var(--blue); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.ann .dimt, .vec .dimt { fill: var(--blue); font: 600 17px var(--f-mono); }
+.ann .ahd, .vec .ahd { fill: var(--blue); }
+figcaption { font-size: 13px; color: var(--ink2); line-height: 1.6; }
+.fno { font: 600 12px/1 var(--f-mono); color: var(--ink); margin-right: 8px; letter-spacing: .03em; }
+.legend { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 4px 20px; font-size: 13px; line-height: 1.5; }
+.legend li { display: flex; gap: 8px; margin: 0; }
+.lno { flex: none; width: 21px; height: 21px; border: 1.3px solid var(--blue); border-radius: 50%; color: var(--blue); font: 600 11px/18px var(--f-mono); text-align: center; }
+.steps { display: grid; grid-template-columns: 1fr 1fr; gap: 26px 30px; }
+@media (max-width: 860px) { .steps { grid-template-columns: 1fr; } }
+.step { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.step h4 { display: flex; gap: 10px; align-items: baseline; }
+.step h4 .sn { font: 600 13px/1 var(--f-mono); color: #fff; background: var(--ink); padding: 4px 7px 3px; border-radius: 2px; }
+.step ol, .step ul { font-size: 14px; }
+
+/* 矢量图 */
+.vec { width: 100%; height: auto; display: block; background: #fff; }
+.vec text { font-family: var(--f-body); fill: var(--ink); }
+.vec .rlab { font: 600 15px var(--f-mono); text-anchor: middle; fill: var(--ink); }
+.vec .gl { stroke: #9AA3AB; stroke-width: 1; stroke-dasharray: 6 4; }
+.vec .pl-open { fill: #EEE9DF; stroke: #2A2E33; stroke-width: .9; stroke-linejoin: round; }
+.vec .pl-fold { fill: #E2EBF4; stroke: var(--blue); stroke-width: .9; stroke-linejoin: round; }
+.vec .pl-open-l { stroke: #2A2E33; stroke-width: 2; }
+.vec .pl-fold-l { stroke: var(--blue); stroke-width: 2; stroke-dasharray: 5 3; }
+.vec .pin-open { fill: #fff; stroke: #2A2E33; stroke-width: .8; }
+.vec .pin-fold { fill: #fff; stroke: var(--blue); stroke-width: .8; }
+.vec .axis { fill: #C77B5B; }
+.vec .dimt.fold { fill: var(--blue); }
+.vec .rleg text { font-size: 13px; fill: var(--ink2); }
+.vec .pl-ghost { fill: #F3F1EC; stroke: #B8BDC2; stroke-width: .8; }
+.vec .slot { fill: #DCE8E1; stroke: #6E8F7E; stroke-width: .8; }
+.vec .gear { fill: #E9D0C5; stroke: #8A4B33; stroke-width: 1.2; }
+.vec .gearp { fill: none; stroke: #8A4B33; stroke-width: .8; stroke-dasharray: 3 3; }
+.vec .rack { fill: #D9DEE4; stroke: #3C4650; stroke-width: 1; }
+.vec .teeth { fill: none; stroke: #3C4650; stroke-width: 1; }
+.vec .uclip { stroke: #6A4FA3; stroke-width: 2.4; fill: none; }
+.vec .foot { fill: #fff; stroke: #1B1E22; stroke-width: 1.6; }
+.vec .arrow { stroke: var(--blue); stroke-width: 1.8; fill: none; }
+.vec .vlab { font-size: 15px; fill: var(--ink); }
+.vec .vlab.b { fill: var(--blue); }
+.vec .vlab.s { font-size: 13px; fill: var(--ink2); }
+.vec .bx { fill: #fff; stroke: #2A2E33; stroke-width: 1.2; }
+.vec .bx.hl { fill: var(--blue-bg); stroke: var(--blue); }
+.vec .bx.pw { fill: #FBF3E6; stroke: #8F5600; }
+.vec .bx.dim2 { fill: #F6F7F8; stroke: #9AA3AB; stroke-dasharray: 4 3; }
+.vec .bt { font-size: 15px; font-weight: 700; text-anchor: middle; }
+.vec .bs { font-size: 12.5px; fill: var(--ink2); text-anchor: middle; }
+.vec .wl { stroke: #2A2E33; stroke-width: 1.4; fill: none; }
+.vec .wl.p12 { stroke: #B2541E; stroke-width: 2.4; }
+.vec .wl.p5 { stroke: #C08A00; stroke-width: 2; }
+.vec .wl.p33 { stroke: #2C6649; stroke-width: 1.6; }
+.vec .wl.sig { stroke: var(--blue); }
+.vec .wl.dash { stroke-dasharray: 5 4; }
+.vec .pinl { font: 500 12px var(--f-mono); fill: var(--blue); }
+.vec .seg { stroke: #fff; stroke-width: 2; }
+.vec .tendon { stroke: #A23628; stroke-width: 1.8; fill: none; }
+.vec .tendon.b { stroke: #1D5A8E; }
+.vec .tendon.c { stroke: #2C6649; }
+
+/* 目录 */
+.toc { columns: 2 320px; column-gap: 32px; font-size: 14px; }
+.toc a { display: flex; gap: 12px; padding: 4px 0; border-bottom: 1px dashed var(--hair); text-decoration: none; color: var(--ink); break-inside: avoid; }
+.toc a:hover { color: var(--blue); }
+.toc .tn { font: 600 12px/1.9 var(--f-mono); color: var(--ink3); flex: none; width: 74px; }
+.cover-title { display: grid; gap: 8px; }
+.cover-title h1 { margin: 0; font: 700 44px/1.15 var(--f-head); letter-spacing: .04em; text-wrap: balance; }
+.cover-title .en { font: 500 14px/1.4 var(--f-mono); letter-spacing: .06em; color: var(--ink3); text-transform: uppercase; }
+@media (max-width: 720px) { .cover-title h1 { font-size: 32px; } }
+.meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); border-top: 1px solid var(--ink); border-left: 1px solid var(--rule); }
+.meta > div { border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 8px 12px; }
+.meta .k { display: block; font: 500 10.5px/1.3 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
+.meta .v { font-size: 13.5px; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; font-size: 14px; }
+.kv dt { font-weight: 600; color: var(--ink2); }
+.kv dd { margin: 0; }
+
+@media print {
+  @page { size: A4 landscape; margin: 9mm 10mm 12mm; }
+  html, body { background: #fff; }
+  body { font-size: 13px; }
+  .doc { padding: 0; }
+  .sheet { border: 0; box-shadow: none; margin: 0; max-width: none; break-before: page; }
+  .sheet:first-child { break-before: auto; }
+  .sb { padding: 14px 6px 0; gap: 14px; }
+  /* 打印时按 A4 横版的版心排两栏（导出 PDF 时的布局宽度不一定触发桌面断点，这里显式写死） */
+  .cols { grid-template-columns: 1fr 1fr; }
+  .cols.w60 { grid-template-columns: 1.5fr 1fr; }
+  .steps { grid-template-columns: 1fr 1fr; }
+  .tb { grid-template-columns: 1fr auto auto; }
+  .tb > div:first-child { grid-column: auto; border-right: 1px solid var(--rule); border-bottom: 0; }
+  .tb h2 { font-size: 22px; }
+  .cover-title h1 { font-size: 36px; }
+  .toc { columns: 3; }
+  .frame { max-width: min(100%, calc(104mm * var(--ar, 1.5))); margin-inline: auto; break-inside: avoid; }
+  #fig-hero .frame { max-width: min(100%, calc(50mm * var(--ar, 1.5))); }
+  #fig-cover .frame { max-width: min(100%, calc(68mm * var(--ar, 1.5))); }
+  .tw:has(> table.data) { break-inside: avoid; }
+  #fig-explode .frame { max-width: min(100%, calc(90mm * var(--ar, 1.5))); }
+  #s09 .vec { max-height: 80mm; }
+  .step .frame { max-width: min(100%, calc(64mm * var(--ar, 1.5))); }
+  .box, tr, .vec, .legend, figcaption { break-inside: avoid; }
+  .step { break-inside: avoid; }
+  .step h4 { break-after: avoid; }
+  h3, h4 { break-after: avoid; }
+  thead { display: table-header-group; }
+  a { color: inherit; text-decoration: none; }
+  .lead { font-size: 14.5px; }
+  table { font-size: 12px; }
+  .tb h2 { font-size: 22px; padding-block: 8px 7px; }
+  .vec { max-height: 150mm; width: auto; max-width: 100%; margin-inline: auto; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="doc">
+
+<!-- ======================================================== 00 -->
+<section class="sheet" id="s00">
+  <header class="tb">
+    <div><span class="k">项目</span><span class="v">轮回机器 Reincarnation Machine · 项目一</span></div>
+    <div><span class="k">图号</span><span class="no">RM-HO-00</span></div>
+    <div><span class="k">编制</span><span class="v m">2026-10-25</span></div>
+  </header>
+  <div class="sb">
+    <div class="cover-title">
+      <span class="en">Hardware handover · assembly drawings</span>
+      <h1>轮回机器 实体交接图册</h1>
+    </div>
+    <p class="lead">这份图册只讲实体：机器由哪些零件组成，电机装在哪里，按什么顺序拼起来。电子接线和程序不在本图册里。</p>
+    <!--FIG hero 整机（从右后方看）。图中的电机、绕线盘、皮带和转台外形是按模型里留好的位置补画的。-->
+    <div class="meta">
+      <div><span class="k">模型依据</span><span class="v">815.3dm（2026-08-13）与作者之后的实物改动记录</span></div>
+      <div><span class="k">单位</span><span class="v">长度 mm，角度 °</span></div>
+      <div><span class="k">实物状态</span><span class="v">作者 9/10 记录：新传动未装完，蒙皮未做</span></div>
+    </div>
+    <div class="cols">
+      <div class="col">
+        <h4>方向约定</h4>
+        <ul>
+          <li><b>前</b>：大触手伸出的方向（S1 环那一端）。<b>后</b>：S5 环那一端。</li>
+          <li>站在机器后面朝前看：左手边装主电机，右手边装大触手。</li>
+          <li>五个环从前到后编号 S1–S5，相邻两环中心距 85。</li>
+          <li>高度从桌面算起，中间轴轴线离桌面 156。</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h4>标签</h4>
+        <ul class="small">
+          <li><span class="tag t-meas">模型实测</span>从 815.3dm 量出。</li>
+          <li><span class="tag t-rec">作者记录</span>作者在日志或设计文档里写下的实物情况。</li>
+          <li><span class="tag t-int">示意</span>模型里没有，按模型留好的框、孔、托盘补画；尺寸取标准件常规值。</li>
+          <li><span class="tag t-chk">待确认</span>记录不全，以手上的实物为准。</li>
+        </ul>
+      </div>
+    </div>
+    <nav class="toc" aria-label="图纸目录">
+      <a href="#s01"><span class="tn">RM-HO-01</span>模型与实物的差别</a>
+      <a href="#s02"><span class="tn">RM-HO-02</span>整机与电机位置</a>
+      <a href="#s03"><span class="tn">RM-HO-03</span>三视图与外形尺寸</a>
+      <a href="#s04"><span class="tn">RM-HO-04</span>爆炸图</a>
+      <a href="#s05"><span class="tn">RM-HO-05</span>零件清单</a>
+      <a href="#s06"><span class="tn">RM-HO-06</span>装配（一）底座到滑轨架</a>
+      <a href="#s07"><span class="tn">RM-HO-07</span>装配（二）传动、五环与触手</a>
+      <a href="#s08"><span class="tn">RM-HO-08</span>五个呼吸环</a>
+      <a href="#s09"><span class="tn">RM-HO-09</span>呼吸传动</a>
+      <a href="#s10"><span class="tn">RM-HO-10</span>大触手：电机、绕线盘与肌腱走线</a>
+      <a href="#s11"><span class="tn">RM-HO-11</span>小触手、偏航转台与底座</a>
+    </nav>
+  </div>
+</section>
+
+<!-- ======================================================== 01 -->
+<section class="sheet" id="s01">
+  <header class="tb">
+    <div><span class="k">依据</span><span class="v">815.3dm · 日志 2026-08-23 · 案例页技术参数 · 作者说明</span></div>
+    <div><span class="k">图号</span><span class="no">RM-HO-01</span></div>
+    <div><span class="k">页</span><span class="v m">01 / 11</span></div>
+    <h2>模型与实物的差别<small>815.3dm 之后作者改过实物，模型没有跟着改。遇到对不上的地方以实物为准</small></h2>
+  </header>
+  <div class="sb">
+    <div class="tw">
+      <table>
+        <thead><tr><th>部位</th><th>815 模型里</th><th>实物</th><th>本图册</th></tr></thead>
+        <tbody>
+          <tr><td class="k">呼吸传动</td><td>每环一对曲柄轮 + 两根驱动杆，推拱顶销</td><td><span class="tag t-rec">作者记录</span>改为齿条推拉脚部。钢齿轮 m=1，齿数 32 / 33 / 32 / 29 / 25（S1–S5）；商用钢齿条截断 + 打印 U 形卡接件；中间轴摆角约 336°</td><td>不画曲柄和驱动杆。齿条的布置按齿数推断，画成示意（图纸 09）</td></tr>
+          <tr><td class="k">电机</td><td>只有两条小触手的 SG90</td><td>主电机、三台肌腱电机、转台电机都有实物</td><td>按模型留好的框和托盘补画，标「示意」</td></tr>
+          <tr><td class="k">偏航转台</td><td>⌀60 × 45 的圆柱占位</td><td><span class="tag t-rec">作者记录</span>汉德保 HDB60XZ45B 蜗轮转台：方形箱体 + 顶部输出盘 + 侧面挂一台 42 步进</td><td>按实物外形补画（图纸 11）</td></tr>
+          <tr><td class="k">中间轴带轮</td><td>⌀16 小带轮</td><td><span class="tag t-rec">作者记录</span>电机 20T、中间轴 60T，3 : 1</td><td>按 60T 画</td></tr>
+          <tr><td class="k">肌腱走线</td><td>模型里没有线</td><td><span class="tag t-rec">作者说明</span>每一节里，线越过轴线，压在中央导块对面一侧的槽口里</td><td>按此画（图纸 10）</td></tr>
+          <tr><td class="k">眼柄</td><td>没有</td><td>已取消</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="small">开箱后先整体拍照，再对照图纸 05 清点，对照图纸 06、07 确认已经装到哪一步。</p>
+  </div>
+</section>
+
+<!-- ======================================================== 02 -->
+<section class="sheet" id="s02">
+  <header class="tb">
+    <div><span class="k">依据</span><span class="v">815.3dm · 采购清单 · 作者记录</span></div>
+    <div><span class="k">图号</span><span class="no">RM-HO-02</span></div>
+    <div><span class="k">页</span><span class="v m">02 / 11</span></div>
+    <h2>整机与电机位置<small>一共 7 个执行器：4 台 NEMA17、转台自带的 1 台 42 步进、2 只 SG90</small></h2>
+  </header>
+  <div class="sb">
+    <!--FIG cover 整机轴测（从左前方看）。深灰色块是电机，红色是带轮和绕线盘。-->
+    <div class="tw">
+      <table>
+        <thead><tr><th>执行器</th><th>型号</th><th>装在哪</th><th>怎么装</th><th>带动什么</th></tr></thead>
+        <tbody>
+          <tr><td class="k">主电机</td><td>NEMA17，0.51 N·m</td><td>机身左侧，S4 与 S5 之间，挂在左梯形支架下的电机支架里</td><td>机身放进支架框内，出轴朝前穿过支架前板；4 颗 M3 螺丝穿过前板的腰形槽固定</td><td>20T 带轮 → GT2 皮带 → 中间轴 60T</td></tr>
+          <tr><td class="k">肌腱电机 ×3</td><td>NEMA17</td><td>大触手安装笼的三个电机框：右侧、左侧、底部（S1 到 S2 的下方）</td><td>机身从框外插进框里，出轴朝笼内；轴上装 GT2 20T 带轮当绕线盘 <span class="tag t-int">示意</span></td><td>各收放一根肌腱</td></tr>
+          <tr><td class="k">转台电机</td><td>转台自带的 42 步进</td><td>转台箱体后侧</td><td>转台整体落在底座中心座的托盘里，电机从托盘敞开的一侧（朝后）伸出 <span class="tag t-int">示意</span></td><td>蜗杆 → 蜗轮（45 : 1），输出盘带动笼架以上整机转动</td></tr>
+          <tr><td class="k">舵机 ×2</td><td>SG90</td><td>左：S2 与 S3 之间；右：S3 与 S4 之间，梯形支架下的安装板</td><td>模型里已有</td><td>小触手的大节前后甩</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <dl class="kv">
+      <dt>外形</dt><dd><span class="tag t-meas">模型实测</span>780 长 × 405 宽 × 382 高（含大触手和右侧肌腱电机）。不含大触手的机身 387 × 387。</dd>
+      <dt>重量</dt><dd><span class="tag t-rec">作者记录</span>压在机身底盘上的部分约 1.53 kg，其中主电机 0.35 kg、大触手约 0.27 kg（7 月称量，之后加了转台和新底座）。</dd>
+    </dl>
+  </div>
+</section>
+
+<!-- ======================================================== 03 -->
+<section class="sheet" id="s03">
+  <header class="tb">
+    <div><span class="k">依据</span><span class="v">815.3dm，全开姿态，三视图同一比例</span></div>
+    <div><span class="k">图号</span><span class="no">RM-HO-03</span></div>
+    <div><span class="k">页</span><span class="v m">03 / 11</span></div>
+    <h2>三视图与外形尺寸</h2>
+  </header>
+  <div class="sb">
+    <!--FIG view_side 侧视（从左侧看，前方在图左）。顶部标出五环站位。-->
+    <!--FIG view_top 俯视（前方在图左，机器左侧在图下方）。-->
+    <div class="cols">
+      <!--FIG view_front 前视（从前方看，图左是机器的右侧）。-->
+      <div class="col">
+        <ul class="small">
+          <li>高度 382 由 S2 滑轨架竖直导槽的顶端决定。呼吸时总高不变，变的是拱的高和宽。</li>
+          <li>中间轴轴线离桌面 156，也就是脚槽所在的高度。</li>
+          <li>五环站位从 S1 起每隔 85 一个；每副滑轨架比自己的环面靠后 11。</li>
+          <li>宽度 405 里，右侧那台肌腱电机的机身伸出机身外包约 18。</li>
+          <li>大触手梢端离机身前缘约 390。整机转动时梢端扫过的圆半径约 600，摆放时周围要留空。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================== 04 -->
+<section class="sheet" id="s04">
+  <header class="tb">
+    <div><span class="k">依据</span><span class="v">815.3dm</span></div>
+    <div><span class="k">图号</span><span class="no">RM-HO-04</span></div>
+    <div><span class="k">页</span><span class="v m">04 / 11</span></div>
+    <h2>爆炸图<small>从下往上：底座 → 转台 → 笼架 → 机身底盘 → 滑轨架与中间轴 → 五个环</small></h2>
+  </header>
+  <div class="sb">
+    <!--FIG explode 爆炸图。固定不动的只有 X 形底座和转台箱体（含转台电机）；转台输出盘以上的部分全部随转台绕竖轴转。-->
+  </div>
+</section>
+
+<!-- ======================================================== 05 -->
+<section class="sheet" id="s05">
+  <header class="tb">
+    <div><span class="k">依据</span><span class="v">815.3dm 分件统计 · 采购清单 T-0709-1/2 · 案例页技术参数</span></div>
+    <div><span class="k">图号</span><span class="no">RM-HO-05</span></div>
+    <div><span class="k">页</span><span class="v m">05 / 11</span></div>
+    <h2>零件清单<small>打印件数量来自模型，标准件来自作者的采购记录；电子件不列</small></h2>
+  </header>
+  <div class="sb">
+    <div class="tw"><table>
+      <thead><tr><th></th><th>名称</th><th class="n">数量</th><th>规格 / 尺寸</th><th>来源</th></tr></thead>
+      <tbody>
+        <tr class="sub"><td colspan="5">A　底座与转台</td></tr>
+        <tr><td><span class="ck"></span></td><td>X 形底座：中心座（托盘）、方框、四条斜臂</td><td class="n">1 套</td><td>四个圆脚中心约 351 × 351</td><td>打印</td></tr>
+        <tr><td><span class="ck"></span></td><td>圆脚</td><td class="n">4</td><td>⌀36 × 10</td><td>打印</td></tr>
+        <tr><td><span class="ck"></span></td><td>偏航转台 HDB60XZ45B（含 42 步进电机、联轴器）</td><td class="n">1</td><td>45 : 1 蜗轮；输出盘 ⌀60，5-M6；底部 2-⌀7 孔距 50；箱高 45</td><td>采购</td></tr>
+        <tr><td><span class="ck"></span></td><td>笼架：底板、立柱 ×4、上下两层框、两侧侧板、顶托架 ×4</td><td class="n">1 套</td><td>底板 76 × 93.7 × 4；立柱 9 × 6 × 80</td><td>打印</td></tr>
+        <tr class="sub"><td colspan="5">B　机身底盘与滑轨架</td></tr>
+        <tr><td><span class="ck"></span></td><td>梯形支架（左、右）</td><td class="n">2</td><td>362.5 × 123.7；薄腹板 3.9，凸台处厚 12</td><td>打印</td></tr>
+        <tr><td><span class="ck"></span></td><td>横梁 / 侧拉杆 / 小卡件</td><td class="n">2 / 2 / 4</td><td>横梁 27.7 × 117.7 × 3.9；侧拉杆 345.2 × 6 × 7.2</td><td>打印</td></tr>
+        <tr><td><span class="ck"></span></td><td>滑轨架 S1–S5</td><td class="n">5</td><td>厚 22.5；中轴孔 ⌀6.15</td><td>打印</td></tr>
+        <tr class="sub"><td colspan="5">C　呼吸传动</td></tr>
+        <tr><td><span class="ck"></span></td><td>中间轴</td><td class="n">1</td><td>⌀6 钢 D 轴，对边 5.5，长 370</td><td>采购</td></tr>
+        <tr><td><span class="ck"></span></td><td>主电机 NEMA17</td><td class="n">1</td><td>0.51 N·m，机身 42.3 × 42.3 × 48</td><td>库存</td></tr>
+        <tr><td><span class="ck"></span></td><td>主电机支架（前板带 4 条腰形槽）</td><td class="n">1</td><td>63 × 92 × 61</td><td>打印</td></tr>
+        <tr><td><span class="ck"></span></td><td>GT2 带轮 20T（电机）/ 60T（中间轴）</td><td class="n">1 + 1</td><td>节圆 ⌀12.73 / ⌀38.20；60T 用 ⌀6 孔 + 顶丝压在 D 面上</td><td>采购</td></tr>
+        <tr><td><span class="ck"></span></td><td>GT2 闭口带，宽 6</td><td class="n">1</td><td>长度按支架中心距选：815 支架中心距 73–80，对应 228–241；中位选 236（118 齿）</td><td>采购 <span class="tag t-chk">待确认</span></td></tr>
+        <tr><td><span class="ck"></span></td><td>钢齿轮 m=1</td><td class="n">5</td><td>齿数 32 / 33 / 32 / 29 / 25（S1–S5）</td><td>采购</td></tr>
+        <tr><td><span class="ck"></span></td><td>钢齿条 m=1（截断）+ 打印 U 形卡接件</td><td class="n">按实物</td><td>按示意每环 2 根，每根不短于约 160</td><td>采购 + 打印 <span class="tag t-chk">待确认</span></td></tr>
+        <tr class="sub"><td colspan="5">D　五个呼吸环</td></tr>
+        <tr><td><span class="ck"></span></td><td>角化件（V 形三点板）</td><td class="n">66</td><td>S1 14、S2 14、S3 10、S4 14、S5 14；共 11 个全等类（图纸 08）</td><td>打印（光敏树脂）</td></tr>
+        <tr><td><span class="ck"></span></td><td>铰点对锁螺丝（芝加哥螺丝）</td><td class="n">89</td><td>S1/S2/S4/S5 各 19，S3 13；多备 10%</td><td>采购</td></tr>
+        <tr><td><span class="ck"></span></td><td>脚滑块：M2 对锁螺母的光筒 + 尼龙垫 3.2 × 7 × 0.5</td><td class="n">20</td><td>光筒 ⌀3.0（用卡尺确认）</td><td>采购</td></tr>
+        <tr class="sub"><td colspan="5">E　大触手</td></tr>
+        <tr><td><span class="ck"></span></td><td>方盒椎节（两片端板 + 6 根立柱 + 中央导块）</td><td class="n">6</td><td>节长 47.7 → 30.8，向梢端逐节变小</td><td>打印</td></tr>
+        <tr><td><span class="ck"></span></td><td>梢端节（带三根绑线柱）</td><td class="n">1</td><td>长约 25</td><td>打印</td></tr>
+        <tr><td><span class="ck"></span></td><td>节间脊柱杆</td><td class="n">7</td><td>⌀7 左右，穿过端板中心；根部一段 ⌀5 × 33</td><td>TPU</td></tr>
+        <tr><td><span class="ck"></span></td><td>安装笼（含三个电机框、根部腱孔件）</td><td class="n">1</td><td>电机框外 49.9 × 49.8 × 10，内口约 43.8</td><td>打印</td></tr>
+        <tr><td><span class="ck"></span></td><td>肌腱电机 NEMA17</td><td class="n">3</td><td>同主电机</td><td>库存 <span class="tag t-chk">待确认</span></td></tr>
+        <tr><td><span class="ck"></span></td><td>绕线盘：GT2 20T 铝带轮（⌀5 D 孔 + M3 顶丝）</td><td class="n">3</td><td>一圈收线约 40</td><td>库存</td></tr>
+        <tr><td><span class="ck"></span></td><td>肌腱：PE 编织线</td><td class="n">3 根</td><td>⌀0.4–0.5</td><td>采购</td></tr>
+        <tr class="sub"><td colspan="5">F　小触手</td></tr>
+        <tr><td><span class="ck"></span></td><td>SG90 舵机</td><td class="n">2</td><td>21 齿花键，保留原厂尼龙舵盘</td><td>库存</td></tr>
+        <tr><td><span class="ck"></span></td><td>安装板、圆盘转轴、大节、软杆、小块</td><td class="n">2 套</td><td>左右镜像；软杆 3.9 × 3.9 × 26</td><td>打印</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ======================================================== 06 -->
+<section class="sheet" id="s06">
+  <header class="tb">
+    <div><span class="k">依据</span><span class="v">815.3dm 装配关系 · 作者 8 月底座与笼架有限元</span></div>
+    <div><span class="k">图号</span><span class="no">RM-HO-06</span></div>
+    <div><span class="k">页</span><span class="v m">06 / 11</span></div>
+    <h2>装配（一）底座到滑轨架<small>每步图中，新装的件上色，已装好的件为浅灰</small></h2>
+  </header>
+  <div class="sb">
+    <div class="steps">
+      <div class="step">
+        <h4><span class="sn">步骤 1</span>X 形底座与偏航转台</h4>
+        <!--FIG step1 底座与转台。-->
+        <ol>
+          <li>四条斜臂、方框和中心座拼成 X 形底座，装上四个圆脚。</li>
+          <li>转台箱体放进中心座的托盘：两颗定位销对准箱底的 2-⌀7 孔，电机朝托盘敞开的一侧（朝后）。从托盘底部中心孔拧一颗 M6 螺丝到箱底中心的螺孔（深 7）。</li>
+          <li>让四个圆脚独占触地，光滑桌面加橡胶垫。</li>
+        </ol>
+      </div>
+      <div class="step">
+        <h4><span class="sn">步骤 2</span>笼架</h4>
+        <!--FIG step2 笼架装在转台输出盘上。-->
+        <ol>
+          <li>笼架底板用 M6 螺丝锁到转台输出盘（⌀25 圆周上 4 个 + 中心 1 个）。底板过孔 ⌀6.4。</li>
+          <li>装四根立柱、上下两层框、两侧侧板，最后装立柱顶部的四个托架。</li>
+          <li>立柱上下共 8 个交角各加一块 10 × 10 三角肋 <span class="tag t-rec">作者记录</span>。</li>
+        </ol>
+      </div>
+      <div class="step">
+        <h4><span class="sn">步骤 3</span>机身底盘</h4>
+        <!--FIG step3 两根横梁落在立柱顶托架上，左右梯形支架搭在横梁上。-->
+        <ol>
+          <li>两根横梁落到立柱顶托架上。</li>
+          <li>左右两副梯形支架搭在横梁上；交接处装四个小卡件；沿两副支架各装一根侧拉杆。</li>
+          <li>梯形支架的 3.9 薄腹板不要攻丝，一律用通孔螺栓 + 螺母 + ⌀10 垫圈。</li>
+        </ol>
+      </div>
+      <div class="step">
+        <h4><span class="sn">步骤 4</span>五副滑轨架</h4>
+        <!--FIG step4 五副滑轨架立在梯形支架的梳齿上。-->
+        <ol>
+          <li>S1（最前）到 S5（最后），把滑轨架的安装耳落在梳齿上，站距 85。</li>
+          <li>先不拧紧。拿中间轴一起穿过五个中轴孔（⌀6.15），用手转得顺滑后再逐个拧紧。</li>
+          <li>S1 和 S5 两端的安装螺栓要全部装上。</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================== 07 -->
+<section class="sheet" id="s07">
+  <header class="tb">
+    <div><span class="k">依据</span><span class="v">815.3dm · 案例页技术参数 · 作者关节与公差记录</span></div>
+    <div><span class="k">图号</span><span class="no">RM-HO-07</span></div>
+    <div><span class="k">页</span><span class="v m">07 / 11</span></div>
+    <h2>装配（二）传动、五环与触手<small>齿轮和齿条没有建模，步骤 5 的图只画到中间轴、带轮和主电机</small></h2>
+  </header>
+  <div class="sb">
+    <div class="steps">
+      <div class="step">
+        <h4><span class="sn">步骤 5</span>中间轴、齿轮、主电机</h4>
+        <!--FIG step5 中间轴、60T 带轮、主电机支架、主电机与皮带。-->
+        <ol>
+          <li>中间轴从后（S5 端）穿入五个中轴孔，途中依次套上五个钢齿轮（每环一个）和 60T 带轮（S4 与 S5 之间）。顶丝正对 D 面中央，涂螺纹胶。</li>
+          <li>主电机机身放进支架框内，出轴朝前穿过前板，4 颗 M3 螺丝穿腰形槽，先不拧紧。装 20T 带轮，与 60T 对齐在同一平面。</li>
+          <li>支架顶板固定到左梯形支架下面。套上皮带，左右移动电机把皮带张紧（宁松勿紧），再拧紧 M3。</li>
+        </ol>
+      </div>
+      <div class="step">
+        <h4><span class="sn">步骤 6</span>五个呼吸环</h4>
+        <!--FIG step6 五个环装在各自的滑轨架上。-->
+        <ol>
+          <li>每个环先平放拼好（图纸 08）。铰点用对锁螺丝作轴，打印件套在外面转，抹硅脂。转动层的轮毂比螺丝套筒短 0.2–0.5。</li>
+          <li>四只脚的光筒放进水平脚槽，拱顶销放进竖直导槽。</li>
+          <li>五个环都推到全开，再让齿条入齿、用 U 形卡接件接到两只内侧脚上（图纸 09），这样五环同步。</li>
+          <li>用手慢慢转中间轴，五个环应同步开合，全程没有卡点。</li>
+        </ol>
+      </div>
+      <div class="step">
+        <h4><span class="sn">步骤 7</span>两条小触手</h4>
+        <!--FIG step7 小触手挂在梯形支架下，左右镜像。-->
+        <ol>
+          <li>安装板固定到梯形支架下面：右侧那条在 S3 与 S4 之间，左侧那条在 S2 与 S3 之间。</li>
+          <li>装舵盘前先把 SG90 转到中位（90°），让大节自然竖直下垂。</li>
+        </ol>
+      </div>
+      <div class="step">
+        <h4><span class="sn">步骤 8</span>大触手与肌腱电机</h4>
+        <!--FIG step8 大触手安装笼挂在右梯形支架下；三台肌腱电机装在笼的右、左、下三个电机框里。-->
+        <ol>
+          <li>三台 NEMA17 从安装笼外侧插进三个电机框（右、左、下），出轴朝笼内。轴上各装一个 GT2 20T 带轮当绕线盘，顶丝锁在 D 面上。</li>
+          <li>安装笼顶板用螺栓固定到右梯形支架下面（S1 到 S2 下方）。</li>
+          <li>穿肌腱，见图纸 10。</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================== 08 -->
+<section class="sheet" id="s08">
+  <header class="tb">
+    <div><span class="k">依据</span><span class="v">815.3dm 摊开骨架 · 环的运动学解算 · 作者公差记录</span></div>
+    <div><span class="k">图号</span><span class="no">RM-HO-08</span></div>
+    <div><span class="k">页</span><span class="v m">08 / 11</span></div>
+    <h2>五个呼吸环<small>Hoberman 角化剪式拱：内侧脚往里收，整个拱等比缩小</small></h2>
+  </header>
+  <div class="sb">
+    <div class="cols w60">
+      <!--FIG det_ring S3 环与它的滑轨架，从正前方看，全开位置。图左是机器的右侧。-->
+      <div class="col">
+        <p>每个环由一串 V 形三点板铰接而成，相邻两块共用铰点。环底有四只脚，都在同一条水平脚槽里。两只内侧脚被推向中间时，拱的高和宽一起缩小；推回去就张开。五个环由同一根中间轴带动，同时开合。</p>
+        <p class="small">收缩的极限是零件相碰，不要硬推。</p>
+      </div>
+    </div>
+    <h3><span class="hn">8.1</span>五环全开与折叠</h3>
+    <!--RINGS-->
+    <p class="small"><span class="tag t-meas">模型实测</span>五环同一比例。小圆是铰点，橙点是中间轴轴心，虚线是脚槽所在的地线。折叠时三点板转向内侧，像一圈尖齿，这是正常的样子。齿条方案大约走内侧脚全行程的 91–94%，实际折得比图上略浅。</p>
+    <!--RINGTABLE-->
+    <div class="cols">
+      <div class="col">
+        <h3><span class="hn">8.2</span>角化件的 11 个全等类</h3>
+        <div class="tw"><table class="data">
+          <thead><tr><th>类</th><th>环</th><th class="n">臂长</th><th class="n">两端距</th><th class="n">夹角</th><th class="n">件数</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>S3</td><td class="n">49.4</td><td class="n">95.5</td><td class="n">150°</td><td class="n">4</td></tr>
+            <tr><td>2</td><td>S3</td><td class="n">49.4</td><td class="n">92.9</td><td class="n">140°</td><td class="n">6</td></tr>
+            <tr><td>3</td><td>S2</td><td class="n">43.8</td><td class="n">86.2</td><td class="n">160°</td><td class="n">8</td></tr>
+            <tr><td>4</td><td>S2</td><td class="n">43.8</td><td class="n">84.5</td><td class="n">150°</td><td class="n">4</td></tr>
+            <tr><td>5</td><td>S2</td><td class="n">43.8</td><td class="n">82.3</td><td class="n">140°</td><td class="n">2</td></tr>
+            <tr><td>6</td><td>S1</td><td class="n">33.0</td><td class="n">65.0</td><td class="n">160°</td><td class="n">10</td></tr>
+            <tr><td>7</td><td>S1</td><td class="n">33.0</td><td class="n">62.0</td><td class="n">140°</td><td class="n">4</td></tr>
+            <tr><td>8</td><td>S4</td><td class="n">31.2</td><td class="n">61.4</td><td class="n">160°</td><td class="n">10</td></tr>
+            <tr><td>9</td><td>S4</td><td class="n">31.2</td><td class="n">58.6</td><td class="n">140°</td><td class="n">4</td></tr>
+            <tr><td>10</td><td>S5</td><td class="n">27.1</td><td class="n">53.5</td><td class="n">160°</td><td class="n">10</td></tr>
+            <tr><td>11</td><td>S5</td><td class="n">27.1</td><td class="n">51.0</td><td class="n">140°</td><td class="n">4</td></tr>
+          </tbody>
+        </table></div>
+        <p class="small">同一类的件在环内靠旋转、翻面复用，不能跨环通用。</p>
+      </div>
+      <div class="col">
+        <h3><span class="hn">8.3</span>铰点和脚</h3>
+        <ul>
+          <li><b>铰点</b>：两片 ⌀10 × 4 圆盘凸台面对面，一颗对锁螺丝当轴，打印件套在螺丝套筒外面转。径向间隙 0.2–0.4。</li>
+          <li><b>防夹死</b>：转动层的轮毂比套筒短 0.2–0.5。要一点阻尼可以加波形垫圈，不用平垫。</li>
+          <li><b>脚</b>：M2 对锁螺母的光筒在槽里滑。只在金属头直接压到槽板的那一侧垫一片尼龙垫，两侧都垫会夹死。</li>
+          <li><b>槽宽</b>：FDM 按 3.6 画（实际约 3.3），SLS 按 3.4 画。</li>
+          <li><b>树脂件</b>不要直接攻丝。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================== 09 -->
+<section class="sheet" id="s09">
+  <header class="tb">
+    <div><span class="k">依据</span><span class="v">日志 2026-08-23、08-24 · 案例页技术参数 · 815.3dm</span></div>
+    <div><span class="k">图号</span><span class="no">RM-HO-09</span></div>
+    <div><span class="k">页</span><span class="v m">09 / 11</span></div>
+    <h2>呼吸传动<small>一台电机 → 皮带 3 : 1 → 中间轴 → 五个齿轮 → 齿条 → 内侧脚</small></h2>
+  </header>
+  <div class="sb">
+    <svg class="vec" viewBox="0 0 1080 150" role="img" aria-label="呼吸传动链">
+      <defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ahd"/></marker></defs>
+      <g>
+        <rect class="bx pw" x="8" y="34" width="132" height="70" rx="3"/><text class="bt" x="74" y="64">NEMA17</text><text class="bs" x="74" y="86">主电机</text>
+        <rect class="bx" x="170" y="34" width="122" height="70" rx="3"/><text class="bt" x="231" y="64">GT2 20T</text><text class="bs" x="231" y="86">电机轴上</text>
+        <rect class="bx" x="322" y="34" width="122" height="70" rx="3"/><text class="bt" x="383" y="64">GT2 60T</text><text class="bs" x="383" y="86">中间轴上</text>
+        <rect class="bx hl" x="474" y="34" width="132" height="70" rx="3"/><text class="bt" x="540" y="64">中间轴</text><text class="bs" x="540" y="86">⌀6 D 形钢轴</text>
+        <rect class="bx" x="636" y="34" width="132" height="70" rx="3"/><text class="bt" x="702" y="64">钢齿轮 ×5</text><text class="bs" x="702" y="86">m=1，每环一个</text>
+        <rect class="bx" x="798" y="34" width="124" height="70" rx="3"/><text class="bt" x="860" y="64">钢齿条</text><text class="bs" x="860" y="86">+ U 形卡接件</text>
+        <rect class="bx hl" x="952" y="34" width="120" height="70" rx="3"/><text class="bt" x="1012" y="64">内侧脚</text><text class="bs" x="1012" y="86">→ 整环开合</text>
+        <line class="arrow" x1="140" y1="69" x2="168" y2="69" marker-end="url(#ah2)"/>
+        <line class="arrow" x1="292" y1="69" x2="320" y2="69" marker-end="url(#ah2)"/>
+        <line class="arrow" x1="444" y1="69" x2="472" y2="69" marker-end="url(#ah2)"/>
+        <line class="arrow" x1="606" y1="69" x2="634" y2="69" marker-end="url(#ah2)"/>
+        <line class="arrow" x1="768" y1="69" x2="796" y2="69" marker-end="url(#ah2)"/>
+        <line class="arrow" x1="922" y1="69" x2="950" y2="69" marker-end="url(#ah2)"/>
+        <text class="vlab b" x="307" y="24" text-anchor="middle">GT2 闭口带，3 : 1</text>
+        <text class="vlab s" x="540" y="136" text-anchor="middle">中间轴来回摆约 336°，各环齿条走 73–97，五环从全开到折叠再回来</text>
+      </g>
+    </svg>
+    <h3><span class="hn">9.1</span>主电机与皮带</h3>
+    <div class="cols w60">
+      <!--FIG det_drive 主电机、带轮与皮带（从左前下方看；电机、带轮、皮带为示意件，支架为模型实测）。-->
+      <div class="col">
+        <dl class="kv">
+          <dt>电机</dt><dd>NEMA17，0.51 N·m。机身在支架框内，出轴朝前</dd>
+          <dt>前板</dt><dd><span class="tag t-meas">模型实测</span>4 条腰形槽，孔距 31，可左右移动约 ±4.8</dd>
+          <dt>减速</dt><dd>20T / 60T = 3 : 1；节圆 ⌀12.73 / ⌀38.20</dd>
+          <dt>中心距</dt><dd><span class="tag t-meas">模型实测</span>按 815 支架为 73–80（槽中位约 76）</dd>
+          <dt>皮带</dt><dd>GT2 闭口带，宽 6，长 228–241；中位选 2GT-236（118 齿）。按手上支架实测中心距核对 <span class="tag t-chk">待确认</span></dd>
+          <dt>20T 孔径</dt><dd>按电机轴实测（库存电机为 ⌀5 D 轴）</dd>
+          <dt>轴承</dt><dd>五副滑轨架的 ⌀6.15 孔直接当滑动轴承</dd>
+        </dl>
+      </div>
+    </div>
+    <h3><span class="hn">9.2</span>齿条怎么推动环 <span class="tag t-int">示意</span><span class="tag t-chk">待确认</span></h3>
+    <!--RACK-->
+    <div class="cols">
+      <div class="col">
+        <p>齿条推的是内侧脚。依据：日志 8/24 记的五环行程 78.8–104.2，与内侧脚全行程 79.9–104.8 对得上；按齿数验算，m=1 齿轮转 336° 时齿条走 π × z × 336 / 360，五个环都是内侧脚全行程的 91–94%（下表）。</p>
+        <p>上图画的是一种对称布置：上下两根齿条夹着齿轮反向移动，各带一只内侧脚。实物也可能是每环一根齿条，以实物为准。</p>
+      </div>
+      <div class="col">
+        <p class="small">齿条传动没有死点：中间轴多转一点，齿条就会把脚顶到槽底，可能压坏环。第一次手动转中间轴时记下两端位置。</p>
+      </div>
+    </div>
+    <!--GEARTABLE-->
+  </div>
+</section>
+
+<!-- ======================================================== 10 -->
+<section class="sheet" id="s10">
+  <header class="tb">
+    <div><span class="k">依据</span><span class="v">815.3dm 大触手块（逐件测量）· 作者说明</span></div>
+    <div><span class="k">图号</span><span class="no">RM-HO-10</span></div>
+    <div><span class="k">页</span><span class="v m">10 / 11</span></div>
+    <h2>大触手：电机、绕线盘与肌腱走线<small>三根线各锚在梢端，从根部往回收，触手就朝那根线的一侧弯</small></h2>
+  </header>
+  <div class="sb">
+    <!--FIG det_arm 大触手侧视（从左侧看）：安装笼与三台肌腱电机在右，6 节方盒椎节向左逐节变小，最左是梢端节。-->
+    <div class="cols w60">
+      <!--FIG det_armbase2 安装笼与三台肌腱电机（从左前下方看）。电机、绕线盘和笼内那段肌腱为示意。-->
+      <div class="col">
+        <h4>结构</h4>
+        <ul>
+          <li><b>安装笼</b>：顶板挂在右梯形支架下。右、左、底三面各有一个电机框（外 49.9 × 49.8 × 10，内口约 43.8）。</li>
+          <li><b>肌腱电机</b>：机身从框外插进去，出轴朝笼内。框内侧有横杆挡着，机身只能在框外 <span class="tag t-meas">模型实测</span>。</li>
+          <li><b>绕线盘</b>：每台电机轴上一个 GT2 20T 带轮，夹在笼内两根横杆之间。</li>
+          <li><b>根部腱孔件</b>：笼前端的三瓣件，三个腱孔离轴 13.9，方位 90° / 210° / 330°。</li>
+          <li><b>椎节</b>：6 节方盒 + 1 个梢端节。每节是两片端板、6 根立柱（两根一组）、中间一块六边形导块；节与节之间只靠中心的柔性脊柱杆连接。</li>
+        </ul>
+        <p class="small">哪根肌腱接哪台电机、线在笼内怎么转向，模型里没有，图里按就近画 <span class="tag t-chk">待确认</span>。</p>
+      </div>
+    </div>
+    <h3><span class="hn">10.1</span>肌腱怎么走</h3>
+    <!--FIG det_arm_cut 沿腱 A 所在的竖直面剖开第 1、2 节（只留远侧一半）。红线是腱 A：进端板窗口后越过轴线，压进中央导块对面的槽口，再回到下一片端板的窗口。-->
+    <div class="cols">
+      <!--TENDON_END-->
+      <div class="col">
+        <p>每一节里，肌腱从端板上本腱一侧的窗口进来，<b>越过轴线</b>，压进中央导块<b>对面一侧</b>的槽口，再回到另一片端板本腱一侧的窗口。节与节之间，线沿本腱一侧直走。端板窗口在 90° / 210° / 330°，导块槽口在 270° / 30° / 150°，每根线的窗口和槽口正好相差 180°。</p>
+        <p class="small"><span class="tag t-rec">作者说明</span>线要穿到中心的另一侧，拉紧时每一节才受到足够的横向推力。网站模拟里的画法是为了计算方便做的简化，以这里为准。</p>
+      </div>
+    </div>
+    <!--TENDON_SIDE-->
+    <div class="cols">
+      <div class="col">
+        <h4>穿线顺序</h4>
+        <ol>
+          <li>线头绑在梢端节本腱的绑线柱上（三根柱的方位与端板窗口相同）。</li>
+          <li>往根部穿：过梢端节端板的缺口，进第 6 节远端板的窗口，越过轴线压进导块对面的槽口，再越过轴线从近端板的窗口出来。</li>
+          <li>沿本腱一侧走到下一节，重复上一步，直到第 1 节。</li>
+          <li>穿过根部腱孔件上本腱的腱孔，进安装笼，接到对应电机的绕线盘上，绕 2–3 圈后固定。</li>
+          <li>三根都穿好后，每根留约 12 的松弛再固定，静息时触手是直的。</li>
+        </ol>
+        <p class="small">三根线在每一节里都会在轴线附近交叉，穿的时候别让它们互相缠住。</p>
+      </div>
+      <div class="col">
+        <h4>行程</h4>
+        <ul>
+          <li>每根最多收 44：前 12 只是收直松弛，之后 32 让触手卷曲 <span class="tag t-rec">作者记录</span>。</li>
+          <li>松弛不能省：一根拉紧时，另外两根的路径会变长。</li>
+          <li>20T 绕线盘一圈约 40，44 约 1.1 圈。</li>
+          <li>三根一起收同样多，触手只会绷紧不弯；弯向由三根的差决定。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================== 11 -->
+<section class="sheet" id="s11">
+  <header class="tb">
+    <div><span class="k">依据</span><span class="v">815.3dm · 小触手机构说明（2026-07-30）· 转台选型记录</span></div>
+    <div><span class="k">图号</span><span class="no">RM-HO-11</span></div>
+    <div><span class="k">页</span><span class="v m">11 / 11</span></div>
+    <h2>小触手、偏航转台与底座</h2>
+  </header>
+  <div class="sb">
+    <div class="cols">
+      <!--FIG det_small 小触手（右侧那条；左侧镜像）。-->
+      <div class="col">
+        <h3><span class="hn">11.1</span>小触手</h3>
+        <p>SG90 带动圆盘转轴，大节绕转轴前后甩。大节下面经一段软杆连着一个小块，小块不受驱动，跟着甩。两条小触手左右镜像安装。</p>
+        <ul>
+          <li>保留 SG90 原厂尼龙舵盘作接口，打印件用 M2 螺丝锁到舵盘上。</li>
+          <li>装舵盘前先把舵机转到中位（90°），让大节竖直下垂。</li>
+          <li>软杆 3.9 × 3.9 × 26，靠自身弯曲；断了按原尺寸重打。</li>
+        </ul>
+      </div>
+    </div>
+    <div class="cols w60">
+      <!--FIG det_base 底座、偏航转台与笼架。转台为示意件：模型里只有 ⌀60 × 45 的圆柱占位。-->
+      <div class="col">
+        <h3><span class="hn">11.2</span>偏航转台 HDB60XZ45B</h3>
+        <dl class="kv">
+          <dt>型号</dt><dd>汉德保 HDB60XZ45B，蜗轮蜗杆 45 : 1，自带 42 步进与联轴器 <span class="tag t-rec">作者记录</span></dd>
+          <dt>尺寸</dt><dd>输出盘 ⌀60，5-M6（⌀25 圆上 4 个 + 中心 1 个）；箱底 2-⌀7 通孔，孔距 50；箱底中心 M6 深 7；箱高 45，宽 67.5，含电机总长约 147</dd>
+          <dt>托盘</dt><dd><span class="tag t-meas">模型实测</span>底座中心座是一个托盘：内宽 69，前侧和两侧有墙，后侧敞开；两颗定位销孔距 50；底部中心一个过孔</dd>
+          <dt>安装</dt><dd>箱体落进托盘，销对孔，电机从敞开的后侧伸出；托盘底部中心拧 M6。笼架底板锁在输出盘上</dd>
+        </dl>
+        <p class="small">托盘内宽 69、销距 50，与转台箱宽 67.5、底孔孔距 50 对得上，托盘是按实物转台做的。转台在托盘里前后的位置和电机的高度为示意。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
