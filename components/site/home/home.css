@@ -132,22 +132,14 @@
    当前屏占舞台 85%，下一屏露出一截；屏的叠放与卡片位移只在桌面且允许动效时生效（下方 @media，与引擎 FLOW_QUERY 互补） */
 .hs-page--work { overflow-x: hidden; }
 .hs-wg { z-index: 1; }
-/* 单一平面符号的方点背景：共用轮播状态与 MOVE_MS，独立于卡片的错峰和留白区暗示。 */
-.hs-work-backdrop { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
-.hs-work-backdrop__panel { position: absolute; inset: 0; transition: none; }
-.hs-work-backdrop__panel.hs-is-moving { transition: transform var(--work-move-ms) var(--eio); }
-.hs-work-backdrop--instant .hs-work-backdrop__panel { transition: none; }
-.hs-work-mosaic { --mosaic-paper: var(--mist); --mosaic-ink: var(--teal); position: relative; width: 100%; height: 100%; overflow: hidden; pointer-events: none; background: var(--mosaic-paper); }
-.hs-work-mosaic[data-work-theme="interaction-research"] { --mosaic-ink: var(--slate); }
-.hs-work-mosaic__scene { position: absolute; inset: 0; background: var(--mosaic-ink); opacity: .24; mask-size: cover; mask-position: center; mask-repeat: no-repeat; }
-.hs-work-mosaic__wash { position: absolute; inset: 0; background: linear-gradient(180deg, color-mix(in oklch, var(--mosaic-paper) 90%, transparent) 0%, transparent 30%, transparent 68%, color-mix(in oklch, var(--mosaic-paper) 55%, transparent) 100%), linear-gradient(90deg, color-mix(in oklch, var(--mosaic-paper) 60%, transparent), transparent 72%); }
-.hs-wg__flow-mosaic { display: none; }
-@media (max-width: 1023px) {
-  .hs-wg__flow-mosaic .hs-work-mosaic__scene { mask-size: max(580px, 100%) auto; mask-position: calc(50% - 85px) center; }
-}
-@media (min-width: 1024px) and (prefers-reduced-motion: reduce) {
-  .hs-wg__flow-mosaic .hs-work-mosaic__scene { mask-size: contain; }
-}
+@property --wg-lean { syntax: '<length>'; inherits: false; initial-value: 0px; }
+/* 组印记（MAPPING §64）：一组一个方点符号，坐在这一屏卡片下方的留白带里——右齐当前屏（不压到露出来的下一屏），
+   底边离组名目录线 20px（.hs-work 的 gap）。等重已烘进生成的 SVG（统一 264 高画框、符号贴右下），这里只按留白带高度等比缩；
+   带高 ≥264 时 1:1（格距正好 6px），矮于 84px 不出，不去挤卡片。墨色：主项目一组主青，其他作品各组都用「其他工作」的石板蓝（§61 颜色只表示项目）。 */
+.hs-wg__mark { --mark-ink: var(--slate); flex: 1 1 0; min-height: 0; margin-top: 32px; container-type: size; display: flex; align-items: flex-end; justify-content: flex-end; pointer-events: none; }
+.hs-wg__mark[data-work-theme="selected"] { --mark-ink: var(--teal); }
+.hs-wg__mark-img { width: 100%; height: min(100cqh, 264px); background: var(--mark-ink); opacity: .56; -webkit-mask-position: right bottom; mask-position: right bottom; -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
+@container (max-height: 83.98px) { .hs-wg__mark-img { display: none; } }
 .hs-wg__lead { flex: 1; min-width: 0; }
 .hs-wg__titles { position: relative; }
 .hs-wg__sizer { visibility: hidden; white-space: nowrap; }
@@ -212,9 +204,28 @@
 .hs-wg__ind { position: absolute; left: 0; top: -1px; height: 2px; background: var(--ink); pointer-events: none; transition: transform .9s var(--eio), width .9s var(--eio); }
 .hs-wg__ind--still, .hs-wg--instant, .hs-wg--instant * { transition: none !important; }
 @media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+  /* 舞台撑到组名目录线，卡片下方留出放印记的带 */
+  .hs-wg__stage { flex: 1 0 auto; display: flex; flex-direction: column; }
+  /* 露边以内容栏为轴左右对称（MAPPING §64）：两侧同一窗口宽 E = 空隙 + P，外缘渐隐不硬切。
+     P = 右留白先让开翻页刻度（距右缘 68px）再留 36px 后剩下的，封顶 120：≤1448 宽 → 0（上一屏不露，下一屏只露舞台里那 15%）·
+     1512 → 32 · 1600 → 76 · ≥1688 → 120。网格向两边铺满整页（负外边距 + 等量内边距把各屏推回舞台），
+     mask 因此按页面量：切换时卡片穿过渐隐区淡出，不再一边贴着页边、一边在内容栏边上硬切。
+     整排往左探（§59 的三种暗示）时左缘跟着让出 --wg-lean，当前屏第一张卡不进渐隐区；不支持 @property 的浏览器只是不带过渡。 */
+  .hs-wg__grid {
+    transition: --wg-lean 700ms var(--eo);
+    --wg-p: clamp(0px, calc(var(--wg-r) - var(--wg-gap) - 104px), 120px);
+    --wg-e: calc(var(--wg-gap) + var(--wg-p));
+    --wg-f: max(24px, calc(var(--wg-p) * .6));
+    flex: 1 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr);
+    margin: -40px calc(-1 * var(--wg-r)) -40px calc(-1 * var(--wg-l));
+    padding: 40px var(--wg-r) 40px var(--wg-l);
+    -webkit-mask-image: linear-gradient(90deg, transparent calc(var(--wg-l) - var(--wg-e) - var(--wg-lean)), #000 calc(var(--wg-l) - var(--wg-e) - var(--wg-lean) + var(--wg-f)), #000 calc(100% - var(--wg-r) + var(--wg-e) - var(--wg-f)), transparent calc(100% - var(--wg-r) + var(--wg-e)));
+    mask-image: linear-gradient(90deg, transparent calc(var(--wg-l) - var(--wg-e) - var(--wg-lean)), #000 calc(var(--wg-l) - var(--wg-e) - var(--wg-lean) + var(--wg-f)), #000 calc(100% - var(--wg-r) + var(--wg-e) - var(--wg-f)), transparent calc(100% - var(--wg-r) + var(--wg-e)));
+  }
   /* 各屏叠在同一格里，每张卡按「第几屏 × (屏宽 + 空隙) + 暗示偏移」各自平移，切换时按顺序依次出发 */
-  .hs-wg__grid { display: grid; grid-template-columns: minmax(0, 1fr); clip-path: inset(-40px 0 -40px calc(-1 * var(--wg-l))); }
-  .hs-wg__panel { grid-area: 1 / 1; width: var(--wp); min-width: 0; pointer-events: none; }
+  .hs-wg__panel { grid-area: 1 / 1; width: var(--wp); min-width: 0; display: flex; flex-direction: column; pointer-events: none; }
+  .hs-wg__panel > .hs-cards { flex: none; }
+  .hs-wg__mark { transform: translateX(var(--x, 0px)); opacity: var(--op, 1); transition: var(--tr); will-change: transform, opacity; }
   .hs-wg__prule { display: none; }
   .hs-wg__panel .hs-card { transform: translateX(var(--x, 0px)); opacity: var(--op, 1); transition: var(--tr); will-change: transform, opacity; pointer-events: none; }
   .hs-wg__panel.hs-is-cur .hs-card { pointer-events: auto; }
@@ -396,9 +407,9 @@
   .hs-shade { display: none; }
   .hs-work, .hs-about { height: auto; min-height: 0; }
   .hs-wg__mask, .hs-wg__ctl, .hs-wg__tabs, .hs-wg__rule, .hs-wg__cont, .hs-wg__cont-lbl, .hs-wg__zone, .hs-wg__badge { display: none; }
-  .hs-work-backdrop { display: none; }
-  .hs-wg__panel { position: relative; isolation: isolate; }
-  .hs-wg__flow-mosaic { display: block; position: absolute; z-index: -1; inset: -20px; width: auto; height: auto; opacity: .7; }
+  /* 印记接在每组卡片后面（一组分几屏时只接在最后一屏后面） */
+  .hs-wg__mark { flex: none; height: clamp(96px, 26vw, 160px); margin-top: 24px; }
+  .hs-wg__panel:not([data-last]) .hs-wg__mark { display: none; }
   .hs-wg__panel + .hs-wg__panel { margin-top: 64px; }
   .hs-wg__panel--cont { margin-top: 28px !important; }
   .hs-wg__ghead { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding-bottom: 18px; }

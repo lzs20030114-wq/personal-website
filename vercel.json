@@ -3,6 +3,7 @@
   "git": {
     "deploymentEnabled": {
       "claude/upbeat-keller-l8ah6i": false,
+      "claude/sharp-galileo-65zydp": false,
       "claude/design-system-extraction-pme1av": false,
       "claude/sweet-cori-3jhzes": false,
       "claude/work-by-type-groups": false,
