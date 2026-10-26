@@ -3,6 +3,7 @@
 import { useBenchLang, useLabText } from './LabLanguage';
 
 import { LabControlLabel } from './LabControlLabel';
+import { LabFold, LabViewDock } from './LabCtl';
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
@@ -1435,9 +1436,11 @@ export function SkinSolidBench({
       </div>
     ) : null;
   const tiered = !!extraControls || !!layoutGroup;
+  // 面板精简（2026-10-25，LabCtl 头注）：第二层只留播放；键线 / 透视 / 速度 / 蒙皮 / 半径收进「更多」；
+  // 视角搬到底栏（底栏的「归位」与面板里原来那颗是同一个 viewHome，重复的删掉）。
   const viewGroups = (
     <>
-      <div className="grp">
+      <div className="grp lab-play">
         <label>
           <input
             type="checkbox"
@@ -1461,6 +1464,17 @@ export function SkinSolidBench({
           />
           {tx("跳过成形")}
         </label>
+        <button type="button" onClick={() => {
+          apiRef.current?.replay();
+          runningRef.current = true;
+          setRunning(true);
+          // 跳过开着时重播复用终态，取消跳过再看完整过程。
+        }}>
+          {tx("重播")}
+        </button>
+      </div>
+      <LabFold>
+        <div className="grp">
         <label>
           <input
             type="checkbox"
@@ -1483,17 +1497,7 @@ export function SkinSolidBench({
           />
           {tx("透视")}
         </label>
-      </div>
-      <div className="grp">
-        <button type="button" onClick={() => {
-          apiRef.current?.replay();
-          runningRef.current = true;
-          setRunning(true);
-          // 跳过开着时重播复用终态，取消跳过再看完整过程。
-        }}>
-          {tx("重播")}
-        </button>
-      </div>
+        </div>
       <div className="grp">
         <LabControlLabel help={["调整演示速度，不改变结构参数。", "Change playback speed without changing the structure."]}>{tx("速度")}</LabControlLabel>
         <input
@@ -1553,7 +1557,8 @@ export function SkinSolidBench({
           <b style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>{radiusV}</b>
         </div>
       ) : null}
-      <div className="grp">
+      </LabFold>
+      <LabViewDock off={!active}>
         <LabControlLabel help={["切换轴测、正面、侧面或顶视图，不改变模型。", "Switch camera views without changing the model."]}>{tx("视角")}</LabControlLabel>
         <span className="seg">
           {VIEWS.map((v) => (
@@ -1567,10 +1572,7 @@ export function SkinSolidBench({
             </button>
           ))}
         </span>
-        <button type="button" onClick={() => apiRef.current?.viewHome()}>
-          {tx("归位")}
-        </button>
-      </div>
+      </LabViewDock>
     </>
   );
 

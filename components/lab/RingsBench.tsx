@@ -21,6 +21,7 @@ import {
 } from '../../src/lib/linkage/shell3d';
 import { useBenchLoop } from './useBenchLoop';
 import { attachLabCamera } from './labCameraInput';
+import { LabFold, LabViewDock } from './LabCtl';
 
 /**
  * Lab.04 五环立体台架（Lab-Modernist 稿暗色版，逐项对稿）。
@@ -541,6 +542,7 @@ export function RingsBench({
         {sideControls && controls ? null : <div className="lab-hud bl dim">{L.hint}</div>}
       </div>
       {controls ? (
+        sideControls ? (
         <div className="lab-ctl">
           <div className="grp">
             {sideControls ? <LabControlLabel help={["开启自动开合，或切换透视显示。", "Toggle automatic motion or perspective."]} lang={lang}>{L.display}</LabControlLabel> : null}
@@ -636,8 +638,98 @@ export function RingsBench({
               </button>
             )}
           </div>
-          {sideControls ? <p className="lab-ctl__hint">{L.hint}</p> : null}
+          <p className="lab-ctl__hint">{L.hint}</p>
         </div>
+        ) : (
+        // 面板精简（2026-10-25，LabCtl）：开合与相位一组常显；透视 / 遮罩收进「更多」；视角到底栏（「归位」在底栏）
+        <div className="lab-ctl">
+          <div className="grp lab-play">
+            <label>
+              <input
+                type="checkbox"
+                checked={breathe}
+                onChange={(e) => {
+                  setBreathe(e.target.checked);
+                  apiRef.current?.setBreathe(e.target.checked);
+                }}
+              />
+              {L.breathe}
+            </label>
+            <LabControlLabel help={["暂停自动运转，手动查看运动周期中的位置。", "Pause automatic motion and choose a position in the cycle."]} lang={lang}>
+              {tx(L.phase)}
+              {sideControls ? <b className="v">{phase.toFixed(1)}°</b> : null}
+            </LabControlLabel>
+            <input
+              type="range"
+              min={0}
+              max={360}
+              step={0.5}
+              value={phase}
+              // 侧栏里滑杆占满一列（横排时是稿里的定值 132）
+              style={sideControls ? { width: '100%' } : { width: 132 }}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setBreathe(false);
+                setPhase(v);
+                apiRef.current?.setPhase(v);
+              }}
+            />
+          </div>
+          <LabFold>
+            <div className="grp">
+            <label>
+              <input
+                type="checkbox"
+                checked={persp}
+                onChange={(e) => {
+                  setPersp(e.target.checked);
+                  apiRef.current?.setPersp(e.target.checked);
+                }}
+              />
+              {L.persp}
+            </label>
+            </div>
+          {/* 遮罩滑块（2026-07-29 用户拍板）：0 全透明 → 半透明 → 1 不透明。
+              取代原来的「蒙皮」复选框——开关的两端就是这条滑轨的两端，
+              两者并存会出现「蒙皮开着但透明度 0」这种自相矛盾的状态。 */}
+          <div className="grp">
+            <LabControlLabel help={["调整蒙皮的不透明度；调低可看清内部结构。", "Adjust skin opacity to inspect the structure inside."]} lang={lang}>
+              {L.skin}
+              {sideControls ? <b className="v">{Math.round(skin * 100)}%</b> : null}
+            </LabControlLabel>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={skin}
+              aria-label={L.skinAria}
+              style={sideControls ? { width: '100%' } : { width: 96 }}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setSkin(v);
+                apiRef.current?.setSkin(v);
+              }}
+            />
+          </div>
+          </LabFold>
+          <LabViewDock>
+            <LabControlLabel help={["切换轴测、正面、侧面或顶视图，不改变模型。", "Switch camera views without changing the model."]} lang={lang}>{L.view}</LabControlLabel>
+            <span className="seg">
+              {VIEWS.map((v) => (
+                <button
+                  key={v.key}
+                  type="button"
+                  className={v.key === view ? 'active' : undefined}
+                  onClick={() => goView(v.key)}
+                >
+                  {L.views[v.key]}
+                </button>
+              ))}
+            </span>
+          </LabViewDock>
+        </div>
+        )
       ) : null}
     </div>
   );

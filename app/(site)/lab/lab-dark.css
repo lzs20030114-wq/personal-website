@@ -150,11 +150,20 @@
 }
 .lab-workspace .lab-stage .lab-ctl { border-bottom: 1px solid oklch(0.95 0.032 120 / 0.12); }
 .lab-workspace .lab-stage .lab-ctl--tiered { padding: 14px 0; gap: 12px; }
+/* 上一条的 align-items: center 会压过分层容器与侧栏控件列原本的「拉伸」：行一短（精简后）就被挤到中间、
+   侧栏里窄的组缩进去（2-14「人物」组）。两处都要拉伸。 */
+.lab-workspace .lab-stage .lab-ctl--tiered { align-items: stretch; }
+@media (min-width: 1100px) {
+  .lab-workspace :is([data-lab-panel='2-10'], [data-lab-panel='2-11'], [data-lab-panel='2-12'], [data-lab-panel='2-13'], [data-lab-panel='2-14']) .lab-stage .lab-ctl__solve { align-items: stretch; }
+  .lab-workspace [data-lab-panel='2-6'] .lab-stage .layer-settings .lab-ctl__row { align-items: stretch; }
+  /* 2-6 编辑栏三段都是「解什么」，层名只在第一段（示例）写一次 */
+  .lab-workspace [data-lab-panel='2-6'] .lab-stage :is(.layer-edit, .layer-join)::before { content: none; }
+}
 .lab-workspace .lab-stage .lab-ctl--tiered .lab-ctl__row { padding: 0; border: 0; }
 .lab-workspace .lab-stage .lab-ctl--tiered .lab-ctl__row::before { flex: none; font: 400 11px var(--ld-mono); color: var(--ld-mute); }
 :is([data-lab-panel='2-6'], [data-lab-panel='2-10'], [data-lab-panel='2-11'], [data-lab-panel='2-12'], [data-lab-panel='2-13'], [data-lab-panel='2-15']) .lab-ctl--tiered .lab-ctl__row::before { align-self: flex-start; }
-.lab-workspace .lab-stage .lab-ctl__solve::before { content: 'solve'; }
-.lab-workspace .lab-stage .lab-ctl__row:not(.lab-ctl__solve)::before { content: 'view'; }
+.lab-workspace .lab-stage .lab-ctl__solve::before { content: 'Solve'; }
+.lab-workspace .lab-stage .lab-ctl__row:not(.lab-ctl__solve)::before { content: 'View'; }
 .lab-language-root[data-lang='zh'] .lab-ctl__solve::before { content: '解什么'; }
 .lab-language-root[data-lang='zh'] .lab-ctl__row:not(.lab-ctl__solve)::before { content: '怎么看'; }
 .lab-workspace .lab-stage .lab-ctl .grp { padding: 0; gap: 10px 14px; border-left: 0; }
@@ -179,6 +188,78 @@
 .lab-workspace .lab-stage .lab-clock { --lab-clock-thumb: 10px; }
 .lab-workspace .lab-stage .lab-clock__ticks span { font: 400 10px/12px var(--ld-mono); color: var(--ld-mute); }
 .lab-workspace .lab-stage .lab-clock__ticks span[data-on] { color: var(--ld-cream); }
+
+/* 控件名（2026-10-25）：只是名字，不再带虚线下划线、不弹浮框；说明收进说明栏「控件」一节。
+   悬停 / 聚焦时字提亮一档，告诉人说明栏里那一条亮了。 */
+.lab-workspace .lab-stage .lab-ctl .lab-term { cursor: default; transition: color 0.15s; }
+.lab-workspace .lab-stage .lab-ctl .lab-term:hover, .lab-workspace .lab-stage .lab-ctl .lab-term:focus-visible { color: var(--ld-cream); }
+.lab-workspace .lab-stage .lab-ctl .lab-term:focus-visible { outline: 1px solid var(--lab-tone); outline-offset: 3px; }
+/* 英文控件名统一句首大写（此前一半「Pattern」一半「rule」） */
+.lab-language-root[data-lang='en'] .lab-workspace .lab-stage .lab-ctl .k { display: inline-block; }
+.lab-language-root[data-lang='en'] .lab-workspace .lab-stage .lab-ctl .k::first-letter { text-transform: uppercase; }
+/* 形态名（pocket / bulb flange…）在句子里要小写，做按钮时首字母大写，与其余按钮一致 */
+.lab-language-root[data-lang='en'] .lab-workspace .lab-stage .lab-ctl .seg button::first-letter { text-transform: uppercase; }
+/* 「解什么 / 怎么看」两层：层名占左侧一栏，折行的控件组对齐到同一条竖线，不再折回层名底下；两层之间一道发丝线。
+   侧栏式台架（控件竖排在图旁）有自己的版式，不吃这一条。 */
+.lab-workspace .lab-panel:not(:is([data-lab-panel='2-6'], [data-lab-panel='2-10'], [data-lab-panel='2-11'], [data-lab-panel='2-12'], [data-lab-panel='2-13'], [data-lab-panel='2-14'], [data-lab-panel='2-15'])) .lab-stage .lab-ctl--tiered .lab-ctl__row {
+  position: relative; padding-left: 64px; column-gap: 28px;
+}
+.lab-workspace .lab-panel:not(:is([data-lab-panel='2-6'], [data-lab-panel='2-10'], [data-lab-panel='2-11'], [data-lab-panel='2-12'], [data-lab-panel='2-13'], [data-lab-panel='2-14'], [data-lab-panel='2-15'])) .lab-stage .lab-ctl--tiered .lab-ctl__row::before {
+  position: absolute; left: 0; top: 7px; width: 56px;
+}
+.lab-workspace .lab-panel:not(:is([data-lab-panel='2-6'], [data-lab-panel='2-10'], [data-lab-panel='2-11'], [data-lab-panel='2-12'], [data-lab-panel='2-13'], [data-lab-panel='2-14'], [data-lab-panel='2-15'])) .lab-stage .lab-ctl--tiered .lab-ctl__row + .lab-ctl__row {
+  padding-top: 12px; border-top: 1px solid oklch(0.95 0.032 120 / 0.08);
+}
+.lab-workspace .lab-panel:not(:is([data-lab-panel='2-6'], [data-lab-panel='2-10'], [data-lab-panel='2-11'], [data-lab-panel='2-12'], [data-lab-panel='2-13'], [data-lab-panel='2-14'], [data-lab-panel='2-15'])) .lab-stage .lab-ctl--tiered .lab-ctl__row + .lab-ctl__row::before { top: 19px; }
+
+/* 说明栏「控件」一节：与规格同一种列表；被指着的那一条左侧一道色条、字提亮 */
+.lab-controls-help { margin-top: 22px; }
+.lab-controls-help h3 { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0; font: 400 11px var(--ld-mono); color: var(--ld-mute); }
+.lab-controls-help h3 span { font-size: 10px; opacity: 0.75; text-align: right; }
+.lab-workspace .lab-details .lab-controls-help dl { margin-top: 8px; }
+.lab-workspace .lab-details .lab-controls-help dl > div { position: relative; transition: background 0.2s; }
+.lab-workspace .lab-details .lab-controls-help dd { font-size: 12.5px; line-height: 1.5; color: oklch(0.82 0.03 150); transition: color 0.2s; }
+.lab-workspace .lab-details .lab-controls-help dl > div::before { content: ''; position: absolute; left: -8px; top: 8px; bottom: 8px; width: 2px; background: var(--lab-tone); opacity: 0; transition: opacity 0.2s; }
+.lab-workspace .lab-details .lab-controls-help dl > div[data-active] { background: oklch(0.95 0.032 120 / 0.04); }
+.lab-workspace .lab-details .lab-controls-help dl > div[data-active]::before { opacity: 1; }
+.lab-workspace .lab-details .lab-controls-help dl > div[data-active] :is(dt, dd) { color: var(--ld-cream); }
+
+/* 面板精简（2026-10-25，LabCtl）：「更多」折叠 —— 收起时只是一行小字，打开后占满整行、内容照常换行 */
+.lab-workspace .lab-stage .lab-ctl .lab-fold { display: block; }
+.lab-workspace .lab-stage .lab-ctl .lab-fold > summary {
+  display: inline-flex; align-items: center; gap: 7px; padding: 6px 0; list-style: none; cursor: pointer;
+  font: 400 11px var(--ld-mono); color: var(--ld-mute); transition: color 0.15s;
+}
+.lab-workspace .lab-stage .lab-ctl .lab-fold > summary::-webkit-details-marker { display: none; }
+.lab-workspace .lab-stage .lab-ctl .lab-fold > summary::after {
+  content: ''; width: 5px; height: 5px; margin-top: -3px; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor;
+  transform: rotate(45deg); transition: transform 0.2s, margin 0.2s;
+}
+.lab-workspace .lab-stage .lab-ctl .lab-fold[open] > summary::after { transform: rotate(-135deg); margin-top: 3px; }
+.lab-workspace .lab-stage .lab-ctl .lab-fold > summary:hover, .lab-workspace .lab-stage .lab-ctl .lab-fold[open] > summary { color: var(--ld-cream); }
+.lab-workspace .lab-stage .lab-ctl .lab-fold > summary:focus-visible { outline: 1px solid var(--lab-tone); outline-offset: 3px; }
+.lab-workspace .lab-stage .lab-ctl .lab-fold[open] { flex: none; width: 100%; } /* 不用 flex-basis：侧栏是竖排，100% 会变成占满整列高度 */
+.lab-workspace .lab-stage .lab-ctl .lab-fold__body {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; margin-top: 6px; padding: 12px 0 2px;
+  border-top: 1px dashed oklch(0.95 0.032 120 / 0.12);
+}
+.lab-workspace .lab-stage .lab-ctl .lab-fold__body > .grp { padding: 0; }
+/* 播放组：运转 / 跳过成形 / 重播 挨在一起 */
+.lab-workspace .lab-stage .lab-ctl .lab-play { gap: 10px 16px; }
+
+/* 底栏视角位：视角预设与「− + 归位」在同一处 */
+.lab-view-dock { display: flex; align-items: center; gap: 8px; }
+.lab-view-dock:empty { display: none; }
+.lab-view-dock > .k, .lab-view-dock .lab-term { font: 400 11px var(--ld-mono); color: var(--ld-mute); cursor: default; }
+.lab-view-dock .lab-term:hover { color: var(--ld-cream); }
+.lab-view-dock .seg { display: flex; }
+.lab-view-dock button {
+  min-width: 28px; min-height: 28px; margin-left: -1px; padding: 0 9px; border: 1px solid oklch(0.95 0.032 120 / 0.2);
+  background: transparent; color: var(--ld-cream); font: 500 11px var(--ld-mono); letter-spacing: 0; text-transform: none; cursor: pointer;
+}
+.lab-view-dock .seg button:first-child { margin-left: 0; }
+.lab-view-dock button:hover { background: oklch(0.95 0.032 120 / 0.06); }
+.lab-view-dock button.active { background: var(--ld-cream); color: var(--ld-paper); border-color: var(--ld-cream); }
 
 /* 提示行 + 状态 + 相机钮 */
 .lab-workspace .lab-view-tools { border-top: 0; padding: 10px 0 0; min-height: 28px; gap: 16px; }

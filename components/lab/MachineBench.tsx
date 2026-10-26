@@ -3,6 +3,7 @@
 import { useBenchLang, useLabText } from './LabLanguage';
 
 import { LabControlLabel } from './LabControlLabel';
+import { LabFold, LabViewDock } from './LabCtl';
 
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
@@ -2198,12 +2199,10 @@ export function MachineBench({
     return '▮'.repeat(n) + '▯'.repeat(5 - n);
   };
 
-  const groups = (
+  // 面板精简（2026-10-25，LabCtl）：控件拆成片段，横排面板与案例页侧栏各按各的排法组合。
+  // 侧栏（sideControls）的 DOM 与此前逐个相同；横排面板 = 播放一组常显 + 「更多」折叠 + 视角到底栏。
+  const runCtl = (
     <>
-      {/* 驱动 —— 运转 / 转速 / 透视。转速滑块是这台专有的：
-          转速本就是待拍板的手感常量，与其我替你定一个数，不如给你滑块自己找。
-          行为档里「运转」= 暂停 / 继续引擎；转速、相位、肌腱、小触手交给引擎，不出。 */}
-      <div className="grp grp--half">
         <label>
           <input
             type="checkbox"
@@ -2216,6 +2215,10 @@ export function MachineBench({
           />
           {L.run}
         </label>
+    </>
+  );
+  const perspCtl = (
+    <>
         <label>
           <input
             type="checkbox"
@@ -2227,7 +2230,10 @@ export function MachineBench({
           />
           {L.persp}
         </label>
-      </div>
+    </>
+  );
+  const speedGrp = (
+    <>
       {engineOn ? null : (
         <div className="grp grp--half">
           <LabControlLabel help={["调整演示速度，不改变结构参数。", "Change playback speed without changing the structure."]} lang={lang}>
@@ -2250,6 +2256,10 @@ export function MachineBench({
           />
         </div>
       )}
+    </>
+  );
+  const phaseGrp = (
+    <>
       {engineOn ? null : (
         <div className="grp grp--half">
           <LabControlLabel help={["暂停自动运转，手动查看运动周期中的位置。", "Pause automatic motion and choose a position in the cycle."]} lang={lang}>
@@ -2272,6 +2282,10 @@ export function MachineBench({
           />
         </div>
       )}
+    </>
+  );
+  const skinGrp = (
+    <>
       {/* 蒙皮遮罩 —— 与 Lab.04 同一套直纹带，默认 0.67（用户 2026-07-29 拍板）：
           这台同时是项目 01 主图，主图先要读出形态。滑到 0 = 看穿到传动链，滑到 1 = 实体壳。
           环身关掉时蒙皮一并不画（皮附在环上，环没了皮也就无所附） */}
@@ -2297,6 +2311,10 @@ export function MachineBench({
       </div>
       {/* 部件显隐 —— 整机独有：这台是一堆零件的装配，「看哪些」本身就是操作。
           关掉机架能看清传动链怎么走，关掉环身能单看一轴五曲柄。 */}
+    </>
+  );
+  const partsGrp = (
+    <>
       <div className="grp grp--parts">
         <LabControlLabel help={["显示或隐藏部件，查看传动链和装配关系。", "Show or hide parts to inspect the transmission and assembly."]} lang={lang}>{L.parts}</LabControlLabel>
         {PARTS.map((p) => (
@@ -2314,6 +2332,10 @@ export function MachineBench({
           </label>
         ))}
       </div>
+    </>
+  );
+  const tendonsGrp = (
+    <>
       {/* 大触手三肌腱 —— 与 Lab.03 同一条触手、同一套解算，只是摆到了机器上。
           滑块 = 各腱收缩率；限速用临界阻尼（真机肌肉不会瞬间到位）。
           待机时（运转中且没碰滑块）三腱按 120° 相位轮流轻收，合成一个缓慢
@@ -2353,6 +2375,10 @@ export function MachineBench({
           </button>
         </div>
       )}
+    </>
+  );
+  const sarmGrp = (
+    <>
       {/* 小触手 —— 摆幅/频率（用户 2026-07-30 机构说明后活化；波形是展示编排，
           幅频是待拍板的手感常量，给滑块自己找）。**只在横排面板出**：
           案例页侧栏的高度预算在 §13.2 已经顶满，加一组就会重新被裁；
@@ -2392,6 +2418,10 @@ export function MachineBench({
           />
         </div>
       )}
+    </>
+  );
+  const ringGrp = (
+    <>
       {/* 单环隔离 —— 五个环同相但行程各异，单独看一个才比得出半径差。
           只筛环件：机架/轴/触手仍按各自开关，否则「只看 S3」会连驱动它的轴一起切掉。 */}
       <div className="grp grp--seg">
@@ -2412,7 +2442,10 @@ export function MachineBench({
           ))}
         </span>
       </div>
-      <div className="grp grp--seg">
+    </>
+  );
+  const viewInner = (
+    <>
         <LabControlLabel help={["切换轴测、正面、侧面或顶视图，不改变模型。", "Switch camera views without changing the model."]} lang={lang}>{L.view}</LabControlLabel>
         <span className="seg">
           {VIEWS.map((v) => (
@@ -2426,14 +2459,72 @@ export function MachineBench({
             </button>
           ))}
         </span>
+    </>
+  );
+  const groups = sideControls ? (
+    <>
+      {/* 驱动 —— 运转 / 转速 / 透视。转速滑块是这台专有的：
+          转速本就是待拍板的手感常量，与其我替你定一个数，不如给你滑块自己找。
+          行为档里「运转」= 暂停 / 继续引擎；转速、相位、肌腱、小触手交给引擎，不出。 */}
+      <div className="grp grp--half">
+        {runCtl}
+        {perspCtl}
       </div>
-      {sideControls ? <p className="lab-ctl__hint">{L.hint}</p> : null}
+      {speedGrp}
+      {phaseGrp}
+      {skinGrp}
+      {partsGrp}
+      {tendonsGrp}
+      {sarmGrp}
+      {ringGrp}
+      <div className="grp grp--seg">{viewInner}</div>
+      <p className="lab-ctl__hint">{L.hint}</p>
+    </>
+  ) : (
+    <>
+      <div className="grp lab-play">{runCtl}</div>
+      {speedGrp}
+      {phaseGrp}
+      <LabFold>
+        <div className="grp">{perspCtl}</div>
+        {skinGrp}
+        {partsGrp}
+        {ringGrp}
+        {tendonsGrp}
+        {sarmGrp}
+      </LabFold>
+      <LabViewDock>{viewInner}</LabViewDock>
     </>
   );
 
   // 行为档的第一层（「解什么」）：生命时钟 / 人格 / 刺激注入 / 日志
   const behaviorGroups = behaviorUi ? (
     <>
+      <div className="grp grp--seg">
+        <LabControlLabel help={B.firstHelp} lang={lang}>{B.first}</LabControlLabel>
+        <span className="seg">
+          {PERSONA_KEYS.map((k) => (
+            <button
+              key={k}
+              type="button"
+              title={personaName(k, lang)}
+              className={k === firstK ? 'active' : undefined}
+              onClick={() => {
+                setFirstK(k);
+                apiRef.current?.restart(k);
+              }}
+            >
+              {k} {personaName(k, lang)}
+            </button>
+          ))}
+        </span>
+        <button type="button" onClick={() => apiRef.current?.restart(firstK)}>
+          {B.restart}
+        </button>
+        <button type="button" onClick={() => apiRef.current?.skip()}>
+          {B.skip}
+        </button>
+      </div>
       {/* 生命时钟 —— 四档滑条（10-07 第六批），档位刻度写在滑条下面，当前档点亮 */}
       <div className="grp grp--clock">
         <LabControlLabel help={B.clockHelp} lang={lang}>{B.clock}</LabControlLabel>
@@ -2464,31 +2555,6 @@ export function MachineBench({
             ))}
           </span>
         </span>
-      </div>
-      <div className="grp grp--seg">
-        <LabControlLabel help={B.firstHelp} lang={lang}>{B.first}</LabControlLabel>
-        <span className="seg">
-          {PERSONA_KEYS.map((k) => (
-            <button
-              key={k}
-              type="button"
-              title={personaName(k, lang)}
-              className={k === firstK ? 'active' : undefined}
-              onClick={() => {
-                setFirstK(k);
-                apiRef.current?.restart(k);
-              }}
-            >
-              {k} {personaName(k, lang)}
-            </button>
-          ))}
-        </span>
-        <button type="button" onClick={() => apiRef.current?.restart(firstK)}>
-          {B.restart}
-        </button>
-        <button type="button" onClick={() => apiRef.current?.skip()}>
-          {B.skip}
-        </button>
       </div>
       <div className="grp grp--seg">
         <LabControlLabel help={B.presenceHelp} lang={lang}>{B.presence}</LabControlLabel>
@@ -2583,6 +2649,8 @@ export function MachineBench({
           {B.handFollow}
         </label>
       </div>
+      {/* 抓握「留物件」与日志「导出」是研究用的少用项，收起来（2026-10-25，LabCtl）；第二层已有一个「更多」，这里直接写内容 */}
+      <LabFold label={lang === 'zh' ? '抓握 · 日志' : 'Grasp · log'}>
       <div className="grp">
         <LabControlLabel help={B.graspHelp} lang={lang}>{B.grasp}</LabControlLabel>
         <label>
@@ -2603,6 +2671,7 @@ export function MachineBench({
           {B.export}
         </button>
       </div>
+      </LabFold>
     </>
   ) : null;
 

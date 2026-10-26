@@ -6,6 +6,7 @@ import { CAT_RULES, CAT_SEQUENCES, CAT_SOURCES, type CatEpisode, type CatPhase }
 import { PLAN, RESPONSES, type ResponseMode } from '../../src/lib/space/unit-activation';
 import { useBenchLang } from './LabLanguage';
 import { LabControlLabel } from './LabControlLabel';
+import { LabFold } from './LabCtl';
 import { canvasToRoom, drawCat, drawPlan, H, W, readPalette, type Palette } from './planDraw';
 import { planFromHash } from './planHash';
 import { useBenchLoop } from './useBenchLoop';
@@ -162,13 +163,15 @@ export function CatPlanBench({ active = true, onLight = false, controls = true, 
       <div className="lab-ctl__row lab-ctl__solve">
         <div className="grp walk-behaviour"><LabControlLabel lang={lang} help={['选择在单元上发生的行为；自由自动交替。切换会清空历史并保留起点支撑。', 'Choose a sequence on the units; Free alternates. Switching resets history and supplies the starting platform.']}>{label('行为', 'Behaviour')}</LabControlLabel><span className="seg">{CAT_BEHAVIOURS.map(b => <button key={b.key} type="button" className={behaviour === b.key ? 'active' : undefined} aria-pressed={behaviour === b.key} onClick={() => replay(b.key)}>{b[lang]}</button>)}</span></div>
         <div className="grp"><LabControlLabel lang={lang} help={['同一房间内改变单元密度，会重新开始演示。', 'Change unit density in the same room; restarts the study.']}>{label('格数', 'Grid')}</LabControlLabel><span className="seg">{PLAN.GRIDS.map(n => <button type="button" key={n} className={grid === n ? 'active' : undefined} onClick={() => setGrid(n)}>{n}×{n}</button>)}</span></div>
+        <LabFold label={label('模型参数', 'Model settings')}>
         <div className="grp"><LabControlLabel lang={lang} help={['跟随在猫离开后收回；锁定保留已激活的单元。脚下支撑始终保留。', 'Follow withdraws after departure; Lock retains activation. Occupied units stay open.']}>{label('响应', 'Response')}</LabControlLabel><span className="seg">{RESPONSES.map(r => <button type="button" key={r.key} className={mode === r.key ? 'active' : undefined} onClick={() => { setMode(r.key); sim.current?.setMode(r.key); }}>{r[lang]}</button>)}</span></div>
         {slider('落点预备', 'Prepare', threshold, 0.5, 4, 0.25, ' s', v => { setThreshold(v); sim.current?.setThreshold(v); }, ['下一落点逐渐展开，完全展开后猫才出发。', 'The next landing opens gradually; the cat waits until it is fully formed.'])}
         {slider('步速', 'Pace', pace, 0.5, 2, 0.1, '×', v => { setPace(v); if (sim.current) sim.current.pace = v; }, ['调整猫在相邻单元之间移动的速度。', 'Scale movement speed between adjacent units.'])}
         {slider('散掉', 'Fade', fade, 2, 30, 1, ' s', v => { setFade(v); sim.current?.setFade(v); }, ['猫离开单元后，使用痕迹退去的时间。', 'Time for a full use trace to fade after the cat leaves a unit.'])}
+        </LabFold>
       </div>
       <div className="lab-ctl__row walk-playback">
-        <div className="grp"><label><input type="checkbox" checked={running} onChange={e => setRunning(e.target.checked)} />{label('运转', 'Run')}</label><label><input type="checkbox" checked={auto} onChange={e => { setAuto(e.target.checked); sim.current?.setAuto(e.target.checked); paint(); }} />{label('自走', 'Wander')}</label><label><input type="checkbox" checked={trace} onChange={e => { settings.current.trace = e.target.checked; setTrace(e.target.checked); paint(); }} />{label('痕迹', 'Trace')}</label></div>
+        <div className="grp lab-play"><label><input type="checkbox" checked={running} onChange={e => setRunning(e.target.checked)} />{label('运转', 'Run')}</label><label><input type="checkbox" checked={auto} onChange={e => { setAuto(e.target.checked); sim.current?.setAuto(e.target.checked); paint(); }} />{label('自走', 'Wander')}</label><label><input type="checkbox" checked={trace} onChange={e => { settings.current.trace = e.target.checked; setTrace(e.target.checked); paint(); }} />{label('痕迹', 'Trace')}</label></div>
         <div className="grp"><button type="button" onClick={() => replay(behaviour)}>{label('重播', 'Replay')}</button><button type="button" onClick={() => { sim.current?.clearTraces(); paint(); }}>{label('清空痕迹', 'Clear traces')}</button></div>
         <div className="grp"><span>{label('时间', 'Time')}</span><span className="seg">{[1, 3, 8].map(v => <button type="button" key={v} className={time === v ? 'active' : undefined} onClick={() => setTime(v)}>×{v}</button>)}</span></div>
       </div>

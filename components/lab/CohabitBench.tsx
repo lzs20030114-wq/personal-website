@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useBenchLang, useLabText } from './LabLanguage';
 import { LabControlLabel } from './LabControlLabel';
-import { COHABIT, CohabitSim, FACE_MODES, GUIDE_TARGETS, SPACE_MODES, TRIGGER_MODES, nearestNode, type GuideTarget, type Cat, type FaceMode, type SpaceMode, type TriggerMode, type Visitor } from '../../src/lib/space/cohabit';
+import { LabFold } from './LabCtl';
+import { CASE_SCENES, CASE_SEED, COHABIT, CohabitSim, FACE_MODES, GUIDE_TARGETS, SPACE_MODES, TRIGGER_MODES, nearestNode, populateCohabit, type CaseScene, type GuideTarget, type Cat, type FaceMode, type SpaceMode, type TriggerMode, type Visitor } from '../../src/lib/space/cohabit';
 import { PLAN, RESPONSES, type ResponseMode } from '../../src/lib/space/unit-activation';
 import type { CatPose } from '../../src/lib/space/cat-rules';
 import { H, W, canvasToRoom, drawPlan, readPalette, type Palette, type PlanPerson } from './planDraw';
@@ -22,6 +23,9 @@ import { useBenchLoop } from './useBenchLoop';
 const TIME_SCALES = [1, 3, 8] as const;
 const TIME_DEF = 1;
 const MAX_SIM_DT = 0.05 * 8 * 1.01;
+/** 「正文对照」场景按离线对照的固定步长推进（runCohabit 的 dt = 1/30），同一个种子逐步相同；一帧最多补这么多步，慢设备上只是走得慢 */
+const CASE_DT = 1 / 30;
+const CASE_MAX_STEPS = 24;
 
 const COPY = {
   zh: {
@@ -42,6 +46,8 @@ const COPY = {
     rules: '通行代价：落下的单元对人是墙、对猫不是。停留代价：访客被别人贴到 1.35 m 以内就走；猫被访客贴到 1 m 以内撑过几秒就退到更远的格，之后一阵不再靠人；有人站着盯着它，它有三分之一几率靠到台边。空间只写单元：猫脚下钉住，猫四邻里人的痕迹最高的一格补满，落下会困住人的不落。让路只收挡路的带：一个单元二十条带，挡在人身边或人路上的那几条各自收回到杆上（布回到顶上），其余照落；猫身下的带不收；人走到门口门正好开，走过去再落回。',
     space: '空间',
     rule: '规则',
+    scene: '正文对照',
+    sceneOn: (label: string, seed: number) => `正文对照 · ${label} · 种子 ${seed}`,
     guide: '引导',
     grid: '格数',
     response: '响应',
@@ -88,6 +94,8 @@ const COPY = {
     rules: 'Passage cost: a formed unit is a wall for people, not for cats. Staying cost: a visitor leaves when another comes within 1.35 m; a cat tolerates a visitor within 1 m for a few seconds, then retreats to a farther unit and keeps away for a while; when someone stands watching it, it approaches the platform edge one time in three. The space only writes units: the cat’s own unit stays formed, the neighbour with the strongest people trace is filled, and a unit that would trap someone is held back. Giving way with only the bands in the way: a unit has twenty bands; the few beside a person or on their route retract to the post (the cloth goes back up) while the rest come down; bands under a cat never retract; the door is open by the time the person reaches it and closes behind them.',
     space: 'space',
     rule: 'rule',
+    scene: 'case study runs',
+    sceneOn: (label: string, seed: number) => `Case study run · ${label} · seed ${seed}`,
     guide: 'lead to',
     grid: 'grid',
     response: 'response',
@@ -270,6 +278,11 @@ export function CohabitBench({
   const [fade, setFade] = useState<number>(PLAN.DEMO.fade);
   const [speed, setSpeed] = useState<number>(COHABIT.VISITOR.speed);
   const [cursor, setCursor] = useState<'default' | 'grab' | 'grabbing'>('default');
+  /** 「正文对照」：当前场景（null = 自由摆放）；sceneRun 每按一次加一，触发按同一个种子重开 */
+  const sceneRef = useRef<CaseScene | null>(null);
+  const [sceneKey, setSceneKey] = useState<CaseScene['key'] | null>(null);
+  const [sceneRun, setSceneRun] = useState(0);
+  const caseAcc = useRef(0);
   const [hud, setHud] = useState(() => ({
     formed: 0,
     total: COHABIT.SEATS.GRID * COHABIT.SEATS.GRID,
@@ -294,12 +307,41 @@ export function CohabitBench({
     if (ctx) drawPlan(ctx, sceneOf(sim, traceRef.current, selRef.current), pal);
   };
 
+  /** 按案例页对照的场景重开一场：规则、格数、人数、猫数、种子照对照，影响结果的开关回到默认（引导取座位前方那台 = 正文报的那组数） */
+  const applyScene = (sc: CaseScene) => {
+    sceneRef.current = sc;
+    setSceneKey(sc.key);
+    setTrigger(sc.trigger);
+    setGrid(sc.grid);
+    setFaceMode('bands');
+    setMode('follow');
+    setGoal(true);
+    setLook(PLAN.ATTENTION.look);
+    setClearOn(true);
+    setClearance(PLAN.ATTENTION.clearance);
+    setThreshold(PLAN.DEMO.threshold);
+    setFade(PLAN.DEMO.fade);
+    setSpeed(COHABIT.VISITOR.speed);
+    setAuto(true);
+    setGuideTarget(COHABIT.GUIDE.target);
+    setSceneRun((n) => n + 1);
+  };
+  /** 手动改了人、猫、规则或格数：这一场不再是对照里的那一场 */
+  const leaveScene = () => {
+    sceneRef.current = null;
+    setSceneKey(null);
+  };
+
   // 建仿真（换格数或规则才重建——「走 · 站 · 坐」规则的家具改了过道图；换「空间」档走 setSpace，人与猫留在原地）
   useEffect(() => {
     // 「走 · 站 · 坐」规则用按 Mertens & Turner 1988 标定的猫（COHABIT.CAT_MT）；痕迹（旧）保留演示值
     // 「走 · 站 · 坐」规则另开两组规则（作者 2026-10-08）：访客有身体、结伴、离陌生人远一点（social）；猫能下地再跳回台上，会动 / 钉死档都一样（catFloor）
     const posture = trigger === 'posture';
-    const sim = new CohabitSim({ trigger, grid, space, mode, goal, look, threshold, fade, auto, clearance: clearanceOpt, lane: clearanceOpt !== null, faces: faceMode === 'bands', guide: { target: guideTarget }, cat: posture ? { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid } : undefined, social: posture, catFloor: posture });
+    // 「正文对照」场景：同一个种子、不开场，按对照的人数与猫数布置（与 runCohabit 同一份 populateCohabit）
+    const sc = sceneRef.current && sceneRef.current.trigger === trigger && sceneRef.current.grid === grid ? sceneRef.current : null;
+    const sim = new CohabitSim({ trigger, grid, space, mode, goal, look, threshold, fade, auto, clearance: clearanceOpt, lane: clearanceOpt !== null, faces: faceMode === 'bands', guide: { target: guideTarget }, cat: posture ? { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid } : undefined, social: posture, catFloor: posture, ...(sc ? { seed: CASE_SEED, opening: false } : {}) });
+    if (sc) populateCohabit(sim, sc.people, sc.cats);
+    caseAcc.current = 0;
     sim.setSpeed(speed);
     simRef.current = sim;
     heldRef.current = null;
@@ -307,7 +349,14 @@ export function CohabitBench({
     select(-1);
     paint();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [grid, trigger]);
+  }, [grid, trigger, sceneRun]);
+  // 对照场景下改了影响结果的开关：这一场不再是对照里的那一场
+  useEffect(() => {
+    if (!sceneRef.current) return;
+    const asCase = faceMode === 'bands' && mode === 'follow' && goal && look === PLAN.ATTENTION.look && clearOn && clearance === PLAN.ATTENTION.clearance && threshold === PLAN.DEMO.threshold && fade === PLAN.DEMO.fade && speed === COHABIT.VISITOR.speed && auto && guideTarget === COHABIT.GUIDE.target;
+    if (!asCase) leaveScene();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [faceMode, mode, goal, look, clearOn, clearance, threshold, fade, speed, auto, guideTarget]);
   useEffect(() => {
     simRef.current?.setSpace(space);
     paint();
@@ -361,8 +410,10 @@ export function CohabitBench({
     if (!ctx) return;
     ctx.scale(dpr, dpr);
     palRef.current = readPalette(wrap);
-    const preset = planFromHash('2-14', SPACE_MODES.map((m) => m.key));
-    if (preset) setSpace(preset);
+    const preset = planFromHash('2-14', [...SPACE_MODES.map((m) => m.key), ...CASE_SCENES.map((c) => c.key)]);
+    const presetScene = CASE_SCENES.find((c) => c.key === preset);
+    if (presetScene) applyScene(presetScene);
+    else if (preset) setSpace(preset as SpaceMode);
     paint();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -373,7 +424,15 @@ export function CohabitBench({
     (dt) => {
       const sim = simRef.current;
       if (!sim || !palRef.current) return;
-      if (runningRef.current) sim.step(Math.min(MAX_SIM_DT, dt * timeRef.current));
+      if (runningRef.current) {
+        if (sceneRef.current) {
+          caseAcc.current = Math.min(caseAcc.current + dt * timeRef.current, CASE_DT * CASE_MAX_STEPS);
+          while (caseAcc.current >= CASE_DT) {
+            sim.step(CASE_DT);
+            caseAcc.current -= CASE_DT;
+          }
+        } else sim.step(Math.min(MAX_SIM_DT, dt * timeRef.current));
+      }
       paint();
       const s = sim.summary();
       const key = `${Math.floor(s.t)}|${s.formed}|${s.people}|${s.cats}|${s.ledger.counts.gaze}|${s.ledger.counts.warmth}|${s.ledger.counts.touch}|${s.ledger.counts.pass}|${s.heldR5}|${sim.faces ? s.bandsOpen : '-'}|${s.seated}|${s.guides}|${s.catArrivals}`;
@@ -408,6 +467,7 @@ export function CohabitBench({
     const hit = sim.bodyAt(x, y);
     const fi = hit ? -1 : sim.furnitureAt(x, y);
     if (hit) {
+      leaveScene();
       heldRef.current = hit;
       sim.hold(hit.kind, hit.id, x, y);
       canvas.setPointerCapture(e.pointerId);
@@ -438,7 +498,10 @@ export function CohabitBench({
     }
     const fh = furnRef.current;
     if (fh) {
-      if (!fh.moved && Math.hypot(e.clientX - fh.sx, e.clientY - fh.sy) > 4) fh.moved = true;
+      if (!fh.moved && Math.hypot(e.clientX - fh.sx, e.clientY - fh.sy) > 4) {
+        fh.moved = true;
+        leaveScene();
+      }
       if (fh.moved) {
         // 按 5 cm 吸附；摆不下的位置不挪（停在上一个摆得下的地方）
         const snap = (v: number) => Math.round(v / 0.05) * 0.05;
@@ -483,6 +546,7 @@ export function CohabitBench({
           type="button"
           onClick={() => {
             const sim = simRef.current;
+            leaveScene();
             if (!sim) return;
             const half = sim.layout.fieldM / 2;
             const x = (Math.random() * 2 - 1) * half;
@@ -501,6 +565,7 @@ export function CohabitBench({
             type="button"
             onClick={() => {
               const sim = simRef.current;
+              leaveScene();
               if (!sim) return;
               const half = sim.layout.fieldM / 2;
               sim.addParty((Math.random() * 2 - 1) * half, (Math.random() * 2 - 1) * half, 2);
@@ -510,11 +575,12 @@ export function CohabitBench({
             {t.addParty}
           </button>
         )}
-        <button type="button" onClick={() => { simRef.current?.removeLastPerson(); paint(); }}>{t.removeP}</button>
+        <button type="button" onClick={() => { leaveScene(); simRef.current?.removeLastPerson(); paint(); }}>{t.removeP}</button>
         <button
           type="button"
           onClick={() => {
             const sim = simRef.current;
+            leaveScene();
             if (!sim) return;
             const u = sim.layout.units[Math.floor(Math.random() * sim.layout.units.length)];
             sim.addCat(u);
@@ -523,9 +589,9 @@ export function CohabitBench({
         >
           {t.addC}
         </button>
-        <button type="button" onClick={() => { simRef.current?.removeLastCat(); paint(); }}>{t.removeC}</button>
-        <button type="button" onClick={() => { simRef.current?.clearTraces(); paint(); }}>{t.clear}</button>
-        <button type="button" onClick={() => { simRef.current?.resetLedger(); paint(); }}>{t.reset}</button>
+        <button type="button" onClick={() => { leaveScene(); simRef.current?.removeLastCat(); paint(); }}>{t.removeC}</button>
+        <button type="button" onClick={() => { leaveScene(); simRef.current?.clearTraces(); paint(); }}>{t.clear}</button>
+        <button type="button" onClick={() => { leaveScene(); simRef.current?.resetLedger(); paint(); }}>{t.reset}</button>
       </span>
     </div>
   );
@@ -536,14 +602,15 @@ export function CohabitBench({
         {t.furniture}
       </LabControlLabel>
       <span className="seg">
-        <button type="button" disabled={!seatsMode} onClick={() => { const sim = simRef.current; if (!sim) return; select(sim.addFurniture('sofa')); paint(); }}>{t.addSofa}</button>
-        <button type="button" disabled={!seatsMode} onClick={() => { const sim = simRef.current; if (!sim) return; select(sim.addFurniture('chair')); paint(); }}>{t.addChair}</button>
+        <button type="button" disabled={!seatsMode} onClick={() => { leaveScene(); const sim = simRef.current; if (!sim) return; select(sim.addFurniture('sofa')); paint(); }}>{t.addSofa}</button>
+        <button type="button" disabled={!seatsMode} onClick={() => { leaveScene(); const sim = simRef.current; if (!sim) return; select(sim.addFurniture('chair')); paint(); }}>{t.addChair}</button>
         <button
           type="button"
           disabled={!seatsMode || selFurn < 0}
           onClick={() => {
             const sim = simRef.current;
             if (!sim || selRef.current < 0) return;
+            leaveScene();
             sim.removeFurniture(selRef.current);
             select(-1);
             paint();
@@ -551,7 +618,7 @@ export function CohabitBench({
         >
           {t.removeFurn}
         </button>
-        <button type="button" disabled={!seatsMode} onClick={() => { simRef.current?.resetFurniture(); select(-1); paint(); }}>{t.standard}</button>
+        <button type="button" disabled={!seatsMode} onClick={() => { leaveScene(); simRef.current?.resetFurniture(); select(-1); paint(); }}>{t.standard}</button>
       </span>
     </div>
   );
@@ -575,6 +642,7 @@ export function CohabitBench({
           <div style={{ color: 'var(--accent)' }}>{tx('Lab 2-14 / Project II')}</div>
           <div>{tx(t.title)}</div>
           <div className="dim">{t.sub}</div>
+          {sceneKey && <div className="dim" data-cohabit-scene>{t.sceneOn(CASE_SCENES.find((c) => c.key === sceneKey)![lang], CASE_SEED)}</div>}
         </div>
         <div className="lab-hud br">
           <div className="num">{t.formed(hud.formed, hud.total)}</div>
@@ -590,6 +658,18 @@ export function CohabitBench({
       {controls ? (
         <div className="lab-ctl lab-ctl--tiered">
           <div className="lab-ctl__row lab-ctl__solve">
+            <div className="grp walk-behaviour cohabit-scenes">
+              <LabControlLabel help={['按案例页「设计立场」「对照结果」里的场景重开一场：规则、格数、人数与猫数照对照，种子取对照 32 个种子里的第一个（101），按对照的固定步长推进，其余开关回到默认。正文的数是 32 个种子的均值，这里跑的只是其中一个种子。换「空间」三档会用同一个种子从头再跑；改人、猫、家具或开关后就不再是对照里的那一场。', 'Restart with a scene from the case study (Design position and Comparison sections): rule, grid, visitors and cats as in the comparison, the first of its 32 seeds (101), stepped at the comparison’s fixed time step, other controls back to their defaults. The case study reports the mean of 32 seeds; this is one of them. Switching between the three spaces reruns the same seed from the start; changing people, cats, furniture or controls ends the case study run.']} lang={lang}>
+                {t.scene}
+              </LabControlLabel>
+              <span className="seg">
+                {CASE_SCENES.map((c) => (
+                  <button key={c.key} type="button" className={c.key === sceneKey ? 'active' : undefined} onClick={() => applyScene(c)}>
+                    {lang === 'zh' ? c.btnZh : c.btnEn}
+                  </button>
+                ))}
+              </span>
+            </div>
             <div className="grp walk-behaviour">
               <LabControlLabel help={['「走 · 站 · 坐」：房间中间摆四张沙发、两把椅子，人走着不触发，站定看猫满 3 秒给猫铺一步，坐下就一步一步把猫引到座位前方那台（只在 8×8 下）。痕迹（旧）：上一版，人的视野在地面留痕迹、单元跟痕迹落下，留作对照。', 'Walk, stand, sit: four sofas and two chairs in the middle of the room; walking triggers nothing, standing 3 s while watching a cat lays one step for it, sitting down leads a cat step by step to the unit in front of the seat (8×8 only). Trace (earlier): the previous version, where people’s gaze leaves a floor trace that the units follow, kept for comparison.']} lang={lang}>
                 {t.rule}
@@ -601,6 +681,7 @@ export function CohabitBench({
                     type="button"
                     className={m.key === trigger ? 'active' : undefined}
                     onClick={() => {
+                      leaveScene();
                       setTrigger(m.key);
                       if (m.key === 'posture') setGrid(COHABIT.SEATS.GRID);
                     }}
@@ -616,19 +697,16 @@ export function CohabitBench({
               </LabControlLabel>
               <span className="seg">
                 {SPACE_MODES.map((m) => (
-                  <button key={m.key} type="button" className={m.key === space ? 'active' : undefined} onClick={() => setSpace(m.key)}>
-                    {lang === 'zh' ? m.zh : m.en}
-                  </button>
-                ))}
-              </span>
-            </div>
-            <div className="grp">
-              <LabControlLabel help={['只收挡路的带：一个单元二十条带，挡在人身边或人路上的那几条各自收回到杆上，其余照落、猫身下的不收，门在人走到之前开好；整个单元：平台会打到人的单元整个不落（2-11 的让位闸）。', 'Only the bands in the way: a unit has twenty bands; the few beside a person or on their route retract to the post while the rest come down, bands under a cat never retract, the door opens before the person arrives. Whole unit: a unit whose platform would hit someone holds back entirely (the Lab 2-11 clearance gate).']} lang={lang}>
-                {t.faces}
-              </LabControlLabel>
-              <span className="seg">
-                {FACE_MODES.map((m) => (
-                  <button key={m.key} type="button" className={m.key === faceMode ? 'active' : undefined} onClick={() => setFaceMode(m.key)}>
+                  <button
+                    key={m.key}
+                    type="button"
+                    className={m.key === space ? 'active' : undefined}
+                    onClick={() => {
+                      setSpace(m.key);
+                      // 对照场景下换空间 = 同一个种子在另一档空间里从头再跑（对照就是这么跑的）
+                      if (sceneRef.current) setSceneRun((n) => n + 1);
+                    }}
+                  >
                     {lang === 'zh' ? m.zh : m.en}
                   </button>
                 ))}
@@ -647,14 +725,27 @@ export function CohabitBench({
               </span>
             </div>
             {workspace && bodyControls}
-            {workspace && furnitureControls}
+            {workspace && <LabFold label={lang === 'zh' ? '布置' : 'Layout'}>{furnitureControls}</LabFold>}
+            <LabFold label={lang === 'zh' ? '模型参数' : 'Model settings'}>
+            <div className="grp">
+              <LabControlLabel help={['只收挡路的带：一个单元二十条带，挡在人身边或人路上的那几条各自收回到杆上，其余照落、猫身下的不收，门在人走到之前开好；整个单元：平台会打到人的单元整个不落（2-11 的让位闸）。', 'Only the bands in the way: a unit has twenty bands; the few beside a person or on their route retract to the post while the rest come down, bands under a cat never retract, the door opens before the person arrives. Whole unit: a unit whose platform would hit someone holds back entirely (the Lab 2-11 clearance gate).']} lang={lang}>
+                {t.faces}
+              </LabControlLabel>
+              <span className="seg">
+                {FACE_MODES.map((m) => (
+                  <button key={m.key} type="button" className={m.key === faceMode ? 'active' : undefined} onClick={() => setFaceMode(m.key)}>
+                    {lang === 'zh' ? m.zh : m.en}
+                  </button>
+                ))}
+              </span>
+            </div>
             <div className="grp">
               <LabControlLabel help={['4×4 是 Lab 2-8 那间房的真实单元尺寸；6×6、8×8 是等比缩小的单元。「走 · 站 · 坐」规则只有 8×8：4×4 的一台平台直径 1.04 m，一张沙发会吃掉一个象限。', '4×4 is the real unit size of the Lab 2-8 room; 6×6 and 8×8 are scaled-down units. The walk / stand / sit rule is 8×8 only: a 4×4 platform is 1.04 m across, so one sofa would take a whole quadrant.']} lang={lang}>
                 {t.grid}
               </LabControlLabel>
               <span className="seg">
                 {PLAN.GRIDS.map((n) => (
-                  <button key={n} type="button" className={n === grid ? 'active' : undefined} disabled={seatsMode && n !== COHABIT.SEATS.GRID} onClick={() => setGrid(n)}>
+                  <button key={n} type="button" className={n === grid ? 'active' : undefined} disabled={seatsMode && n !== COHABIT.SEATS.GRID} onClick={() => { leaveScene(); setGrid(n); }}>
                     {n}×{n}
                   </button>
                 ))}
@@ -719,9 +810,16 @@ export function CohabitBench({
               </LabControlLabel>
               <input type="range" min={2} max={60} step={1} value={fade} disabled={seatsMode} aria-label={t.fade} style={{ width: 84 }} onChange={(e) => setFade(Number(e.target.value))} />
             </div>
+            <div className="grp">
+              <LabControlLabel help={['访客在房间内行走的速度。', 'How fast visitors walk through the room.']} lang={lang}>
+                {t.speed} {speed.toFixed(1)} {tx('m/s')}
+              </LabControlLabel>
+              <input type="range" min={PLAN.SPEED.min} max={PLAN.SPEED.max} step={0.1} value={speed} aria-label={t.speed} style={{ width: 84 }} onChange={(e) => setSpeed(Number(e.target.value))} />
+            </div>
+            </LabFold>
           </div>
           <div className="lab-ctl__row walk-playback">
-            <div className="grp">
+            <div className="grp lab-play">
               <label>
                 <input
                   type="checkbox"
@@ -753,12 +851,6 @@ export function CohabitBench({
             </div>
             {!workspace && bodyControls}
             {!workspace && furnitureControls}
-            <div className="grp">
-              <LabControlLabel help={['访客在房间内行走的速度。', 'How fast visitors walk through the room.']} lang={lang}>
-                {t.speed} {speed.toFixed(1)} {tx('m/s')}
-              </LabControlLabel>
-              <input type="range" min={PLAN.SPEED.min} max={PLAN.SPEED.max} step={0.1} value={speed} aria-label={t.speed} style={{ width: 84 }} onChange={(e) => setSpeed(Number(e.target.value))} />
-            </div>
             <div className="grp">
               <LabControlLabel help={['仿真播放倍速。', 'Simulation playback rate.']} lang={lang}>
                 {t.time}

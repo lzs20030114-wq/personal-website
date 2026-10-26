@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useBenchLang, useLabText } from './LabLanguage';
 import { LabControlLabel } from './LabControlLabel';
 import { attachLabCamera } from './labCameraInput';
+import { LabViewDock } from './LabCtl';
 import { planFromHash } from './planHash';
 import { useBenchLoop } from './useBenchLoop';
 import { DARK_A, DARK_B, LITE_A, LITE_B, MEM_DARK, MEM_LITE, RAIL_DARK, RAIL_LITE, ROOM_DARK, ROOM_LITE } from './SkinSolidBench';
@@ -113,7 +114,6 @@ const COPY = {
     run: '运转',
     reset: '重来',
     view: '视角',
-    home: '归位',
   },
   en: {
     title: 'People and cats together, in 3D',
@@ -128,7 +128,6 @@ const COPY = {
     run: 'run',
     reset: 'restart',
     view: 'view',
-    home: 'home',
   },
 } as const;
 
@@ -623,7 +622,7 @@ export function CohabitSpaceBench({
     };
     const onMove = (ev: PointerEvent): void => cam.pointerMove(ev.pointerId, ev.clientX, ev.clientY);
     const onUp = (ev: PointerEvent): void => cam.pointerUp(ev.pointerId);
-    const detachCamera = attachLabCamera(canvas, { wheel: (delta) => cam.wheel(delta), home: () => apiRef.current?.viewHome() });
+    const detachCamera = attachLabCamera(canvas, { wheel: (delta) => cam.wheel(delta), home: () => { setView('axon'); apiRef.current?.viewHome(); } });
     canvas.addEventListener('contextmenu', onCtx);
     canvas.addEventListener('pointerdown', onDown);
     canvas.addEventListener('pointermove', onMove);
@@ -711,7 +710,8 @@ export function CohabitSpaceBench({
                 {t.reset}
               </button>
             </div>
-            <div className="grp">
+            {/* 视角搬到底栏（LabCtl）；底栏「归位」= 这里原来那颗 */}
+            <LabViewDock>
               <LabControlLabel help={['切换轴测、正面、侧面或顶视图，不改变模型。', 'Switch camera views without changing the model.']}>{t.view}</LabControlLabel>
               <span className="seg">
                 {VIEWS.map((v) => (
@@ -720,10 +720,7 @@ export function CohabitSpaceBench({
                   </button>
                 ))}
               </span>
-              <button type="button" onClick={() => { setView('axon'); apiRef.current?.viewHome(); }}>
-                {t.home}
-              </button>
-            </div>
+            </LabViewDock>
           </div>
         </div>
       ) : null}
