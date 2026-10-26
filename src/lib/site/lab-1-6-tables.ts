@@ -10,6 +10,8 @@
 //
 // 纯数据、零 DOM；守门 = lab-1-6-tables.test.ts（形状按日志的 schema 校、与引擎的判定一致）。
 import type { Bilingual, LogCell, LogTableBlock } from './log-schema';
+import { HARDWARE_CHANNELS } from '../linkage/actuator-hardware';
+import { HARDWARE_REFERENCE_TABLES } from './lab-hardware-tables';
 import { PERSONAS, PERSONA_KEYS, type PersonaKey, type PersonaSpec, type Range, isRandom } from '../linkage/behavior/persona';
 import { ENGINE, HAND, MOTION, SOCIAL } from '../linkage/behavior/engine';
 import { RECOVER, V2, respD, spontE, tierSpeed, type BuildCtx, type Tier } from '../linkage/behavior/vocab2';
@@ -462,11 +464,11 @@ function limitsTable(): LogTableBlock {
       [t('Deep curl', '深卷'), t(`startle only, to ${num(D_SPAN + D_DEEP_SPAN, 3)} (main tendon fully pulled)`, `只有惊跳用，到 ${num(D_SPAN + D_DEEP_SPAN, 3)}（主腱拉满）`), t('“use it, but not too much”', '「用，但不要用太多」')],
       [t('Strike at the hand', '扑手'), `≤ ${num(HC.strikeMax)}`, t('never as large as the same persona’s startle', '到不了同人格惊跳的一半')],
       [t('Swing', '摆动'), t('≤ 0.6 Hz; a hop-and-pause cycle ≥ 1.4 s', '≤ 0.6 Hz；一跳一停的周期 ≥ 1.4 s'), t('the arm’s passband is about 0.7 Hz', '臂的通带约 0.7 Hz')],
-      [t('Body turn', '偏航'), t(`± 180°; ${num(MOTION.yawRate)} rad/s × k (startle × ${MOTION.yawRateStartle})`, `± 180°；${num(MOTION.yawRate)} rad/s × k（惊跳 × ${MOTION.yawRateStartle}）`), t('placeholder until the new turntable motor is modelled', '新转台电机定型前的占位')],
+      [t('Body turn', '偏航'), t(`± 180°; ${num(MOTION.yawRate)} rad/s × k (startle × ${MOTION.yawRateStartle})`, `± 180°；${num(MOTION.yawRate)} rad/s × k（惊跳 × ${MOTION.yawRateStartle}）`), t('simulation limits; the recorded HDB60XZ45B platform still needs loaded calibration', '仿真限制；档案中的 HDB60XZ45B 平台仍需带载标定')],
     ],
     caption: t(
-      'Timing of one life, arousal, the grasp, and the hard limits set by the hardware and the solver. All other numbers in these tables are proposals awaiting the author’s decision.',
-      '一世的时间、唤醒度、抓握，以及硬件与求解器给的硬上限。这些表里其余的数都是提案，待作者拍板。',
+      'Timing of one life, arousal, grasp and simulation/solver limits. Physical hardware capability needs separate calibration. Other behaviour settings remain proposals awaiting the author’s decision.',
+      '一世的时间、唤醒度、抓握与仿真/求解器边界；硬件能力须另行标定。其余行为设置仍是提案，待作者拍板。',
     ),
   };
 }
@@ -476,6 +478,14 @@ function limitsTable(): LogTableBlock {
  * 惊跳与回应（03）、手（04）、一世与上限（05）。
  */
 export const LAB_1_6_TABLES: { title: Bilingual; blocks: LogTableBlock[] } = {
-  title: t('Interaction tables', '交互机制表'),
-  blocks: [interactionMap(), personaTable(), stimulusTable(), handTable(), limitsTable()],
+  title: t('Interaction & hardware tables', '交互与硬件对应表'),
+  blocks: [interactionMap(), personaTable(), stimulusTable(), handTable(), limitsTable(), {
+    kind: 'table',
+    head: [t('Motor / output ID', '电机位 / 输出 ID'), t('Part', '部件'), t('Recorded hardware', '硬件依据'), t('Conversion', '换算'), t('Calibration still needed', '待标定')],
+    rows: HARDWARE_CHANNELS.map((c) => [`${c.motor?.id ?? '—'} / ${c.id}`, c.label, c.hardware, c.formula, c.calibration]),
+    caption: t(
+      'M1–M7 map seven motion axes to proposed or recorded motors; sound and light have no motor ID. Nine outputs cover twelve readouts. Live values are simulated; electrical commands and physical feedback remain null until calibration and telemetry exist.',
+      'M1–M7 把七个运动轴对应到拟分配或档案记录的电机；声光没有电机编号。9 个输出覆盖 12 个读数。实时值来自仿真；电气指令与真实反馈在标定和遥测接入前保持空值。',
+    ),
+  }, ...HARDWARE_REFERENCE_TABLES],
 };

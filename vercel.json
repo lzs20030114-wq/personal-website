@@ -2,6 +2,7 @@
   "framework": "nextjs",
   "git": {
     "deploymentEnabled": {
+      "claude/design-system-extraction-pme1av": false,
       "claude/sweet-cori-3jhzes": false,
       "claude/work-by-type-groups": false,
       "claude/work-progress-check-ccfmp8": false,

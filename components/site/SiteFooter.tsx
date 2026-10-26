@@ -2,25 +2,24 @@
 
 import { usePathname } from 'next/navigation';
 import { useOptionalCaseLang } from './CaseLang';
-import { LabFooter } from '../lab/LabShell';
+import { CaseFooter, LabFooter } from '../lab/LabShell';
 
 /**
- * 共享页脚（Modernist 稿）——左侧联系邮箱、右侧链接说明。
- * 深色路由（case / log / lab）走稿里的 104° 渐变 + 点阵 + 颗粒版（.site-footer--deep）；
- * 浅色页（/about）仍是 G900 整版铺底（MAPPING §1）。判定与 SiteNav 同源。
+ * 共享页脚。深色路由（/lab、/work/*、/archive）用暗色外壳的主青色面页脚（LabShell）；
+ * 剩下的浅色页（/about、/privacy）仍是 Modernist 稿的 G900 整版铺底 + 联系邮箱（MAPPING §1）。
+ * 判定与 SiteNav 同源。
  */
 export function SiteFooter() {
   const pathname = usePathname() ?? '/';
   const zh = useOptionalCaseLang() === 'zh';
-  const deep =
-    pathname.startsWith('/work') || pathname.startsWith('/archive') || pathname.startsWith('/lab');
-
   if (pathname.startsWith('/lab')) return <LabFooter />;
   // /work/* 的页脚由页面自己渲染（要带案例序号与标题，布局层拿不到）
   if (pathname.startsWith('/work')) return null;
+  // 日志页与 Lab / 案例页同一个主青色面页脚（2026-10-25）
+  if (pathname.startsWith('/archive')) return <CaseFooter labelEn="Work log · all projects" labelZh="工作日志 · 全部项目" />;
 
   return (
-    <footer className={deep ? 'site-footer site-footer--deep' : 'site-footer'}>
+    <footer className="site-footer">
       <div className="shell flex flex-wrap items-baseline justify-between" style={{ paddingBlock: 40, gap: 24 }}>
         <a className="footer-email" href="mailto:lzs20030114@gmail.com" style={{ textTransform: 'none', overflowWrap: 'anywhere', fontSize: 'clamp(18px, 2.2vw, 28px)' }}>lzs20030114@gmail.com</a>
         <span className="footer-note">{zh ? 'GitHub · 无需密码 · 直接访问' : 'GitHub · no password · plain URLs'}</span>

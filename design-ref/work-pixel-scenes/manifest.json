@@ -1,0 +1,44 @@
+[
+  {
+    "theme": "architecture-construction",
+    "source": "sources/architecture-construction.svg",
+    "output": "/home/work-scenes/architecture-construction.svg",
+    "pixels": 2465,
+    "bytes": 76625
+  },
+  {
+    "theme": "installations",
+    "source": "sources/installations.svg",
+    "output": "/home/work-scenes/installations.svg",
+    "pixels": 2324,
+    "bytes": 72254
+  },
+  {
+    "theme": "interaction-research",
+    "source": "sources/interaction-research.svg",
+    "output": "/home/work-scenes/interaction-research.svg",
+    "pixels": 2331,
+    "bytes": 72471
+  },
+  {
+    "theme": "interactive-space",
+    "source": "sources/interactive-space.svg",
+    "output": "/home/work-scenes/interactive-space.svg",
+    "pixels": 3228,
+    "bytes": 100034
+  },
+  {
+    "theme": "interiors",
+    "source": "sources/interiors.svg",
+    "output": "/home/work-scenes/interiors.svg",
+    "pixels": 2555,
+    "bytes": 79415
+  },
+  {
+    "theme": "landscape-urban",
+    "source": "sources/landscape-urban.svg",
+    "output": "/home/work-scenes/landscape-urban.svg",
+    "pixels": 2544,
+    "bytes": 79074
+  }
+]

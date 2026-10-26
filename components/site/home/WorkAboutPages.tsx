@@ -25,6 +25,7 @@ import {
   type Side,
 } from '../../../src/lib/site/work-carousel';
 import { HOME_WORK_PANEL_KEY } from '../pageTransitionState';
+import { WorkMosaic } from './WorkMosaic';
 
 const n2 = (i: number) => String(i).padStart(2, '0');
 /** 其他作品的图走 Next 图片优化（作者给的原图可能很大）；主项目卡沿用稿内两张小图原样 */
@@ -210,6 +211,7 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
   const firstOf = useMemo(() => groups.map((_, gi) => panels.findIndex((p) => p.gi === gi)), [groups, panels]);
 
   const [s, setS] = useState<WState>(INIT);
+  const [backdrop, setBackdrop] = useState({ cur: 0, from: 0, moving: false });
   const sRef = useRef(s);
   sRef.current = s;
   const set = (p: Partial<WState>) => setS((o) => ({ ...o, ...p }));
@@ -321,6 +323,15 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
     const r = requestAnimationFrame(() => requestAnimationFrame(() => set({ instant: false })));
     return () => cancelAnimationFrame(r);
   }, [s.instant]);
+
+  // 背景一次只滑一屏；连切时等本次完成，再直接追到最新 s.cur，不排队经过中间组。
+  // 文档流 / 返回原屏直接落位，避免隐藏后收不到 transitionend 而留下等待状态。
+  useLayoutEffect(() => {
+    setBackdrop((o) => {
+      if (s.instant || flow) return { cur: s.cur, from: s.cur, moving: false };
+      return o.moving || o.cur === s.cur ? o : { cur: s.cur, from: o.cur, moving: true };
+    });
+  }, [s.cur, s.instant, flow]);
 
   // 舞台宽与左右留白：露边宽度、留白区宽度、裁切都按它算
   useLayoutEffect(() => {
@@ -579,6 +590,34 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
 
   return (
     <>
+      {/* 与卡片共用切组状态；背景只移动一屏，跳组 / 首尾环回不扫过中间图案。 */}
+      <div
+        className={`hs-work-backdrop${st.instant ? ' hs-work-backdrop--instant' : ''}`}
+        style={{ '--work-move-ms': `${WC.MOVE_MS}ms` } as CSSProperties}
+        aria-hidden="true"
+      >
+        {panels.map((pn, i) => (
+          <div
+            key={`${groups[pn.gi].key}-${pn.pi}`}
+            className={`hs-work-backdrop__panel${backdrop.moving && (i === backdrop.cur || i === backdrop.from) ? ' hs-is-moving' : ''}`}
+            style={{
+              transform: `translateX(${Math.sign(i - backdrop.cur) * 100}%)`,
+              visibility: i === backdrop.cur || (backdrop.moving && i === backdrop.from) ? 'visible' : 'hidden',
+            }}
+            onTransitionEnd={(e) => {
+              if (e.target !== e.currentTarget || e.propertyName !== 'transform') return;
+              setBackdrop((o) => {
+                if (!o.moving || i !== o.cur) return o;
+                const target = sRef.current.cur;
+                if (flow || sRef.current.instant || target === o.cur) return { cur: target, from: target, moving: false };
+                return { cur: target, from: o.cur, moving: true };
+              });
+            }}
+          >
+            <WorkMosaic group={groups[pn.gi].key} />
+          </div>
+        ))}
+      </div>
       <div
         className={`hs-work hs-wg${st.instant ? ' hs-wg--instant' : ''}`}
         ref={rootRef}
@@ -685,6 +724,7 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
                   aria-hidden={off || undefined}
                   inert={off}
                 >
+                  <WorkMosaic group={gr.key} className="hs-wg__flow-mosaic" flow />
                   {pn.pi === 0 ? (
                     <div className="hs-wg__ghead">
                       <h3 className="hs-wg__gtitle">{gr.title}</h3>

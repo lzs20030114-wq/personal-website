@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 // 只取类型：本模块是 'use client'，而 src/lib/site/log 会 import node:fs（服务端读内容池）。
 import type { LogEntry, LogLang } from '../../src/lib/site/log';
-import { readStoredLang, storeLang } from '../../src/lib/site/lang';
+import { useCaseLangControl } from './CaseLang';
 import {
   aspectFacets,
   aspectOf,
@@ -38,9 +38,8 @@ import { afterPageTransition } from './pageTransitionState';
 
 type Copy = {
   title: string;
-  kicker: string;
+  kicker: (n: number) => string;
   foot: string;
-  switchLabel: string;
   filterLabel: string;
   levels: { project: string; aspect: string; month: string };
   all: string;
@@ -55,9 +54,8 @@ type Copy = {
 const COPY: Record<LogLang, Copy> = {
   en: {
     title: 'Work log',
-    kicker: 'Continuous record · newest first',
+    kicker: (n) => `Continuous record · ${n} entries · newest first`,
     foot: 'The log grows over time. Entries link into case studies and lab benches as they land.',
-    switchLabel: 'Language',
     filterLabel: 'Filter entries',
     levels: { project: 'Project', aspect: 'Aspect', month: 'Month' },
     all: 'All',
@@ -70,9 +68,8 @@ const COPY: Record<LogLang, Copy> = {
   },
   zh: {
     title: '工作日志',
-    kicker: '持续记录 · 最新在前',
+    kicker: (n) => `持续记录 · ${n} 条 · 最新在前`,
     foot: '日志持续增补。条目落地后会链入对应的案例页与实验台架。',
-    switchLabel: '语言',
     filterLabel: '筛选条目',
     levels: { project: '项目', aspect: '方面', month: '时间' },
     all: '全部',
@@ -100,8 +97,9 @@ function groupByMonth(rows: Row[]): Group[] {
   return groups;
 }
 
-/* 语言偏好与案例页共用一个键（src/lib/site/lang.ts）——对读者来说「我要看中文」
-   是一个偏好而不是两个：在这里切了中文，点进案例页不该又变回英文。 */
+/* 语言：2026-10-25 起读全站的语言上下文（布局层 CaseLangRoot，开关在暗色顶栏），
+   与 Lab / 案例页同一个状态、同一个存储键——对读者来说「我要看中文」是一个偏好而不是两个。
+   此前本页自带一个 EN / 中文 滑块、自己存一份状态；顶栏有了开关后它就是重复的，已撤掉。 */
 
 /**
  * 一行筛选：左侧级别名 + 「全部」+ 各选项（点已选中的 = 取消回该级全部）。
@@ -224,8 +222,8 @@ function Marks({ blocks, lang }: { blocks?: LogEntry['blocks']; lang: LogLang })
 }
 
 export function LogList({ entries }: { entries: LogEntry[] }) {
-  // SSR 首帧恒为 EN（静态预渲染，服务端读不到偏好）；挂载后再按上次选择切。
-  const [lang, setLang] = useState<LogLang>('en');
+  // SSR 首帧恒为 EN（静态预渲染，服务端读不到偏好）；挂载后由 CaseLangRoot 按上次选择切。
+  const { lang } = useCaseLangControl();
   // 三级筛选，null = 该级不限。都不记 localStorage——刷新即回总览，免得下次进来
   // 只看到一小撮条目还以为丢了（语言不同，那是长期偏好）。
   const [project, setProject] = useState<string | null>(null);
@@ -290,11 +288,6 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
     [entries, match, project, aspect],
   );
 
-  useEffect(() => {
-    const stored = readStoredLang();
-    if (stored) setLang(stored);
-  }, []);
-
   // 展开的条目 id 集合；默认全收起——收起态一屏扫得完，要细节再点开。
   // id 取自全池下标，切筛选不重置（回到「全部」时刚才展开的那条仍是展开的）。
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
@@ -305,11 +298,6 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
       if (!next.delete(id)) next.add(id);
       return next;
     });
-  }
-
-  function pick(next: LogLang) {
-    setLang(next);
-    storeLang(next);
   }
 
   /* 热力图跳转：点某天 → 滚到那天的第一条并闪一下。
@@ -389,54 +377,15 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
 
   return (
     <>
-      <header
-        className="flex flex-wrap items-baseline justify-between gap-3"
-        style={{ padding: '64px 0 40px', borderBottom: 'var(--hair)' }}
-      >
-        <h1
-          style={{
-            fontSize: 'clamp(40px, 8vw, 72px)',
-            fontWeight: 800,
-            lineHeight: 0.98,
-            letterSpacing: lang === 'zh' ? '0.01em' : '-0.02em',
-            margin: 0,
-            textTransform: lang === 'zh' ? 'none' : 'uppercase',
-          }}
-        >
+      {/* 标头与 /lab 开头区同一套三件（dark-chrome.css 的 .ld-meta / .ld-h1 / .ld-lede，2026-10-25）：
+          原 Modernist 的 800 字重 + 全大写退役。导语就是原先压在列表末尾的那句说明，挪上来、一字未改。 */}
+      <header className="log-intro">
+        <p className="ld-meta">{copy.kicker(entries.length)}</p>
+        <h1 className="ld-h1">
           {copy.title}
+          {lang === 'zh' ? null : <span className="ld-h1__dot">.</span>}
         </h1>
-        <div className="flex flex-wrap items-center gap-4">
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              color: 'var(--n600)',
-            }}
-          >
-            {copy.kicker}
-          </span>
-          <div className="lang-switch" role="group" aria-label={copy.switchLabel}>
-            <span className="lang-switch__thumb" data-at={lang} aria-hidden />
-            <button
-              type="button"
-              className="lang-switch__opt"
-              aria-pressed={lang === 'en'}
-              onClick={() => pick('en')}
-            >
-              EN
-            </button>
-            <button
-              type="button"
-              className="lang-switch__opt"
-              aria-pressed={lang === 'zh'}
-              onClick={() => pick('zh')}
-            >
-              中文
-            </button>
-          </div>
-        </div>
+        <p className="ld-lede">{copy.foot}</p>
       </header>
 
       {/* 筛选带：左三行下钻（项目 → 方面 → 月份），右热力图。<1100px 热力图落到下面。 */}
@@ -569,6 +518,7 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
                         className="log-entry__project"
                         aria-pressed={project === group.key}
                         title={group.label[lang]}
+                        style={{ '--proj': group.accent } as CSSProperties}
                         onClick={() => setProject(project === group.key ? null : group.key)}
                       >
                         {group.short[lang]}
@@ -622,7 +572,6 @@ export function LogList({ entries }: { entries: LogEntry[] }) {
             })}
           </div>
         ))}
-        <p style={{ margin: '40px 0 64px', fontSize: 13, color: 'var(--n600)' }}>{copy.foot}</p>
       </section>
     </>
   );

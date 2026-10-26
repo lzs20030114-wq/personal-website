@@ -45,7 +45,35 @@
   --accent: var(--g700); /* 浅底彩色文字一律 700 级，对纸 7.2:1 */
   --accent-2: var(--p700); /* 次强调，稀用，对纸 7.9:1 */
   --rose: oklch(0.72 0.12 356); /* 莲粉高光，全站一两处 */
+  --slate: oklch(0.45 0.06 235); /* 石板蓝：项目三 /「筹备中」（浅底 6.7:1；.pg-dark 换亮档） */
   --trace-blue: var(--accent); /* 兼容别名：机构描线随主强调色，组件零改动 */
+}
+
+/* 暗色页与色面共用的 token（全站唯一来源，2026-10-25 合并）。原在 (site)/dark-chrome.css，只有内页拿得到；
+   首页（home.css）、转场（page-transitions.css）、案例页（case-dark.css）各抄了一份同值副本，现在都引用这里。
+   与色阶同值的直接指向色阶（奶白 = G100、青柠亮档 = G200）。 */
+:root {
+  --ld-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ld-cream: var(--g100); /* 奶白 = G100 */
+  --ld-mute: oklch(0.7 0.03 168);
+  --ld-soft: oklch(0.8 0.035 162);
+  --ld-paper: oklch(0.19 0.032 228);
+  --ld-g: oklch(0.74 0.1 150);
+  --ld-g-hi: oklch(0.86 0.08 130);
+  --ld-v: oklch(0.72 0.095 291);
+  --ld-slate: oklch(0.74 0.06 235);
+  --ld-amber: oklch(0.83 0.12 85); /* 待补 / 求解中：只表示「还没好」 */
+  /* 配色 v2「中间色面」（design-ref/palette-study，MAPPING §46）：黑白之间补带色的背景层，字仍只用墨 / 纸 */
+  --ld-deep: oklch(0.3 0.032 205); /* S5 深潭：Lab 开头区整段色带 */
+  --ld-face: oklch(0.41 0.042 192); /* 主青（降纯度）：页脚色面 */
+  --ld-face-ink: oklch(0.86 0.04 160); /* 主青面上的次级字 */
+  --ld-panel: oklch(0.25 0.022 212); /* 夜色上浮起一档：说明栏面板 */
+  --ld-lime-hi: var(--g200); /* 青柠亮档 = G200：色面上的链接 */
+  /* 控件边框（按钮 / 分段钮 / 切换）：0.4 对夜色 3.5:1，过 WCAG 非文本 3:1；原 0.2–0.25 只有 1.6–1.9:1。悬停 0.7 */
+  --ld-control: oklch(0.95 0.032 120 / 0.4);
+  --ld-control-hi: oklch(0.95 0.032 120 / 0.7);
+  --ld-eo: cubic-bezier(0.2, 0.7, 0.1, 1);
+  --ld-eio: cubic-bezier(0.76, 0, 0.24, 1);
 }
 
 body {
@@ -250,58 +278,14 @@ a:hover {
   color: var(--g200);
 }
 
-/* — 按钮（MAPPING §1：primary = G600 填充 hover G700 active G800；secondary = 墨描边）
-     flush-left：宽按钮文字左对齐（design-system never centered） — */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 6px;
-  cursor: pointer;
-  text-decoration: none;
-  font-weight: 800;
-  font-size: 14px;
-  line-height: 1.2;
-  color: var(--ink);
-  background: transparent;
-  border: 2px solid transparent;
-  padding: 12px 16px;
-  border-radius: 0;
-}
-.btn-primary {
-  background: var(--g600);
-  color: var(--paper);
-  border-color: var(--g600);
-}
-.btn-secondary {
-  border-color: var(--ink);
-}
-@media (hover: hover) and (pointer: fine) {
-  .btn {
-    transition: background 160ms ease, border-color 160ms ease;
-  }
-  .btn-primary:hover {
-    background: var(--g700);
-    border-color: var(--g700);
-  }
-  .btn-secondary:hover {
-    background: var(--n200);
-  }
-}
-.btn-primary:active {
-  background: var(--g800);
-  border-color: var(--g800);
-}
-.btn-secondary:active {
-  background: var(--n300);
-}
-
 /* — 标签（MAPPING §1：outline = accent 边框+文字；neutral = N200 底 / N800 文字） — */
 .tag {
   display: inline-flex;
   align-items: center;
+  font-family: var(--ld-mono);
   font-size: 11px;
-  letter-spacing: 0.02em;
+  font-weight: 400;
+  letter-spacing: 0;
   padding: 3px 10px;
   border-radius: 0;
   white-space: nowrap;
@@ -313,63 +297,6 @@ a:hover {
 .tag-neutral {
   background: var(--n200);
   color: var(--n800);
-}
-
-/* — 卡片（surface 底，零圆角；kicker = accent） — */
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  border-radius: 0;
-  background: var(--surface);
-  text-decoration: none;
-  color: inherit;
-}
-.card-kicker {
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-.card-title {
-  font-weight: 800;
-  font-size: 17px;
-  line-height: 1.2;
-}
-.card-body {
-  margin: 0;
-  font-size: 13px;
-  color: var(--n700);
-  flex: 1;
-}
-.card-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--n600);
-}
-@media (hover: hover) and (pointer: fine) {
-  a.card {
-    transition: background 160ms ease;
-  }
-  a.card:hover {
-    background: var(--n200);
-  }
-  a.card:hover .card-title {
-    color: var(--accent);
-  }
-}
-
-/* — Selected work 索引行 hover（SITE_SPEC §1 克制条款：hover 反馈，门控） — */
-@media (hover: hover) and (pointer: fine) {
-  .work-row {
-    transition: background 160ms ease;
-  }
-  .work-row:hover {
-    background: var(--surface);
-  }
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -404,113 +331,6 @@ a:hover {
   [data-dash],
   [data-pulse] {
     animation: none;
-  }
-}
-
-/* 纹理叠加层（点阵 / 颗粒）：透明度与遮罩逐处内联（各区数值不同） */
-.om-dots {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: radial-gradient(var(--g400) 1px, transparent 1.2px);
-  background-size: 6px 6px;
-}
-.om-grain {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: var(--grain);
-  background-size: 170px 170px;
-}
-/* 舞台媒体块：深色渐变底（转场 goPT 的克隆源，data-ptm） */
-.om-media {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(
-    150deg,
-    oklch(0.3 0.062 196) 0%,
-    oklch(0.26 0.058 232) 55%,
-    oklch(0.28 0.062 285) 100%
-  );
-}
-
-/* S0 枢纽幕布局：<1024 单列、卡片单列、舞台隐藏（引擎同时停用，见组件 applyMode） */
-.hub-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
-  gap: 52px;
-}
-.hub-cards {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 6px;
-}
-.hub-stage {
-  display: flex;
-}
-@media (max-width: 1023px) {
-  .hub-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .hub-cards {
-    grid-template-columns: 1fr;
-  }
-  .hub-stage {
-    display: none;
-  }
-}
-
-/* 项目卡（2026-07-26 迭代稿：边框盒改发丝线列表项，hover 只变色；浮起/按压已随稿删除）
-   2026-07-28：由 <button> 改为 <a>（卡片是导航，见组件注释）——补 text-decoration，
-   其余声明本就是元素无关的，视觉逐像素不变。 */
-.hub-card {
-  font: inherit;
-  text-align: left;
-  text-decoration: none;
-  color: inherit;
-  position: relative;
-  border: 0;
-  border-top: var(--hair);
-  border-radius: 0;
-  padding: 12px 2px 2px 0;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  background: transparent;
-}
-@media (hover: hover) and (pointer: fine) {
-  .hub-card {
-    transition: color var(--dur-micro) var(--ease-site),
-      background var(--dur-micro) var(--ease-site);
-  }
-  .hub-card:hover {
-    color: var(--accent);
-  }
-}
-
-/* 舞台题栏"00 · Stage"解除驻留小签（迭代稿：描边盒改下划线小链） */
-.figchip {
-  font: inherit;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 0 0 2px;
-  border: 0;
-  border-bottom: 1px solid var(--g500);
-  border-radius: 0;
-  background: transparent;
-  color: var(--accent);
-  cursor: pointer;
-}
-@media (hover: hover) and (pointer: fine) {
-  .figchip {
-    transition: color var(--dur-micro) var(--ease-site);
-  }
-  .figchip:hover {
-    color: var(--accent-2);
   }
 }
 
@@ -575,6 +395,15 @@ a:hover {
 
 /* 筛选带：左 = 三级下钻（项目 → 方面 → 月份），右 = 日历热力图。
    <1100px 热力图落到筛选下面（网格塌成单列）。 */
+/* 日志页标头：与 /lab 开头区同一套三件（.ld-meta / .ld-h1 / .ld-lede 在 dark-chrome.css），
+   间距照 .ld-intro（72 / 44 / gap 20），只是不铺深潭色带。2026-10-25 取代 800 字重 + 全大写的旧标头。 */
+.log-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 72px 0 44px;
+  border-bottom: var(--hair);
+}
 .log-band {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -608,10 +437,10 @@ a:hover {
   }
 }
 .log-facet__level {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--ld-mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--n500);
   padding-top: 8px;
 }
@@ -659,10 +488,10 @@ a:hover {
   min-height: 1.4em;
   margin-top: 6px;
   padding-left: 88px;
+  font-family: var(--ld-mono);
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--n500);
 }
 @media (max-width: 640px) {
@@ -681,17 +510,16 @@ a:hover {
 }
 
 /* 筛选项：选中 = accent 文字 + 底边实线，与条目左栏的 tag-outline 同色系——
-   点的是哪个项目/方面，一眼对得上。 */
+   点的是哪个项目/方面，一眼对得上。字 = 等宽、原样大小写（2026-10-25 起，与 /lab 控件同一套）。 */
 .log-filter__opt {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
   padding: 6px 0;
-  font: inherit;
+  font-family: var(--ld-mono);
   font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--n600);
   background: transparent;
   border: 0;
@@ -716,8 +544,7 @@ a:hover {
 }
 .log-filter__n {
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
   color: var(--n500);
 }
@@ -728,14 +555,6 @@ a:hover {
 .log-filter__opt:disabled {
   opacity: 0.35;
   cursor: default;
-}
-/* 中文不做大写变形（CJK 无大小写，uppercase 只白白扰动字宽计算） */
-[lang='zh-Hans'] .log-filter__opt,
-[lang='zh-Hans'] .log-facet__level,
-[lang='zh-Hans'] .log-band__readout,
-[lang='zh-Hans'] .log-heat__title,
-[lang='zh-Hans'] .log-heat__legend {
-  text-transform: none;
 }
 @media (hover: hover) and (pointer: fine) {
   .log-filter__opt {
@@ -765,10 +584,10 @@ a:hover {
   --heat-gap: 3px;
 }
 .log-heat__title {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--ld-mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--n500);
 }
 /* 窄屏横向滚动：格子宁可滑出去，也不缩到点不中 */
@@ -786,10 +605,10 @@ a:hover {
 }
 .log-heat__months {
   margin-bottom: 4px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-family: var(--ld-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--n500);
   white-space: nowrap;
 }
@@ -832,10 +651,10 @@ button.log-heat__cell {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-family: var(--ld-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--n500);
 }
 @media (hover: hover) and (pointer: fine) {
@@ -866,10 +685,10 @@ button.log-heat__cell {
   gap: 14px;
   margin: 0;
   padding: 44px 0 6px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-family: var(--ld-mono);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--n600);
 }
 .log-month::after {
@@ -895,10 +714,11 @@ button.log-heat__cell {
   gap: 10px;
 }
 .log-entry__date {
-  font-size: 20px;
-  font-weight: 800;
+  font-family: var(--ld-mono);
+  font-size: 16px;
+  font-weight: 500;
   line-height: 1;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   font-variant-numeric: tabular-nums;
 }
 .log-entry__tags {
@@ -907,17 +727,17 @@ button.log-heat__cell {
   gap: 6px;
 }
 /* 项目标记：左栏第一行。刻意不做成 .tag 盒——盒子已经被「标签」占着，
-   项目是另一个维度（哪个项目 vs 哪一类工作），用紫色短刻度 + 微型大写区分。 */
+   项目是另一个维度（哪个项目 vs 哪一类工作），用短刻度区分（2026-10-25 前另加微型大写，已退役）。
+   刻度色 = 项目色（--proj，取自 log-facets PROJECT_GROUPS.accent；2026-10-25 起，此前一律紫色）。 */
 .log-entry__project {
   display: inline-flex;
   align-items: center;
   gap: 7px;
   padding: 0;
-  font: inherit;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--ld-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--n600);
   background: transparent;
   border: 0;
@@ -929,24 +749,18 @@ button.log-heat__cell {
   flex: none;
   width: 14px;
   height: 3px;
-  background: var(--accent-2);
+  background: var(--proj, var(--accent-2));
 }
 .log-entry__project[aria-pressed='true'] {
-  color: var(--accent-2);
+  color: var(--proj, var(--accent-2));
 }
 @media (hover: hover) and (pointer: fine) {
   .log-entry__project {
     transition: color var(--dur-micro) var(--ease-site);
   }
   .log-entry__project:hover {
-    color: var(--accent-2);
+    color: var(--proj, var(--accent-2));
   }
-}
-/* 中文项目名不该被拉成大写 / 加拉丁字距 */
-[lang='zh-Hans'] .log-entry__project {
-  text-transform: none;
-  letter-spacing: 0.06em;
-  font-size: 11px;
 }
 /* 概括行 = 按钮：整行可点。引句限宽 70ch（行长），附件角标与箭头贴右缘——
    右缘那一列就是「这条的图表在哪」：收起态是角标，展开后正下方就是右栏（.log-rail）。 */
@@ -969,7 +783,7 @@ button.log-heat__cell {
   max-width: 70ch;
   margin: 0;
   font-size: 16px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.45;
   color: var(--ink);
 }
@@ -981,9 +795,10 @@ button.log-heat__cell {
   gap: 12px;
   margin-left: auto;
   padding-top: 2px;
+  font-family: var(--ld-mono);
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0;
   font-variant-numeric: tabular-nums;
   color: var(--n500);
 }
@@ -1082,15 +897,12 @@ button.log-heat__cell {
 .log-entry__body h3,
 .log-entry__body h4 {
   margin: 1.4em 0 0.5em;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--n800);
 }
 .log-entry__body h4 {
-  text-transform: none;
-  letter-spacing: 0.02em;
+  font-size: 13px;
   color: var(--n700);
 }
 .log-entry__body ul,
@@ -1168,10 +980,10 @@ button.log-heat__cell {
   border-bottom: var(--hair);
 }
 .log-table th {
+  font-family: var(--ld-mono);
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--n600);
   white-space: nowrap;
 }
@@ -1213,15 +1025,11 @@ button.log-heat__cell {
   gap: 8px;
   margin: 0 0 2px;
   padding-bottom: 6px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--n500);
-}
-[lang='zh-Hans'] .log-rail__title {
-  letter-spacing: 0.06em;
+  font-family: var(--ld-mono);
   font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--n500);
 }
 .log-rail__n {
   font-variant-numeric: tabular-nums;
@@ -1271,17 +1079,18 @@ button.log-heat__cell {
   display: flex;
   align-items: baseline;
   gap: 8px;
+  font-family: var(--ld-mono);
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--n700);
   font-variant-numeric: tabular-nums;
 }
 .log-card__meta {
+  font-family: var(--ld-mono);
   font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--n500);
 }
 .log-card__cap {
@@ -1324,37 +1133,32 @@ button.log-heat__cell {
   gap: 12px;
 }
 .log-view__label {
+  font-family: var(--ld-mono);
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--accent);
   font-variant-numeric: tabular-nums;
 }
 .log-view__meta {
+  font-family: var(--ld-mono);
   font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--n500);
 }
 .log-view__close {
   margin-left: auto;
   padding: 0;
-  font: inherit;
+  font-family: var(--ld-mono);
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--n600);
   background: transparent;
   border: 0;
   border-bottom: 1px solid currentColor;
   cursor: pointer;
-}
-[lang='zh-Hans'] .log-view__close,
-[lang='zh-Hans'] .log-view__label {
-  text-transform: none;
-  letter-spacing: 0.06em;
 }
 .log-view .log-fig,
 .log-view .log-table {
@@ -1373,32 +1177,6 @@ button.log-heat__cell {
   }
 }
 
-/* 右缘 rail 跳幕按钮 */
-.rail-btn {
-  font: inherit;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  padding: 4px 2px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-}
-
-/* S2 幕内页脚 email 大字（hover = P300，设计稿 style-hover 照搬） */
-.hub-footer-email {
-  color: var(--g100);
-  text-decoration: none;
-}
-@media (hover: hover) and (pointer: fine) {
-  .hub-footer-email {
-    transition: color var(--dur-micro) var(--ease-site);
-  }
-  .hub-footer-email:hover {
-    color: var(--p300);
-  }
-}
 
 /* ════════════════════════════════════════════════════════════════════════════
    深色内页（case / log）——迭代稿 pgCase/pgLog 的深色语言（MAPPING §6.1）
@@ -1408,12 +1186,13 @@ button.log-heat__cell {
 .pg-dark {
   --paper: oklch(0.25 0.05 225); /* 深蓝底 */
   --surface: oklch(0.95 0.032 120 / 0.05);
-  --ink: oklch(0.95 0.032 120); /* 浅绿白：正文/分隔线 */
+  --ink: var(--g100); /* 浅绿白：正文/分隔线 */
   --graphite: oklch(0.72 0.05 165);
   --hairline: oklch(0.95 0.032 120 / 0.25);
   --hair: 1px solid oklch(0.95 0.032 120 / 0.25);
-  --accent: oklch(0.71 0.098 145); /* 深底亮绿 */
-  --accent-2: oklch(0.83 0.075 294); /* 深底亮紫 */
+  --accent: var(--g400); /* 深底亮绿 */
+  --accent-2: var(--p300); /* 深底亮紫 */
+  --slate: var(--ld-slate); /* 深底石板蓝 */
   --n300: oklch(0.45 0.03 190);
   --n400: oklch(0.58 0.04 175);
   --n500: oklch(0.66 0.045 170);
@@ -1472,63 +1251,6 @@ button.log-heat__cell {
   --lab-ctl-w: 272px;
 }
 
-/* 深色 nav 变体（SiteNav 在深色路由加 .nav-dark；透明底 + 浅绿文字 + 发丝线） */
-.nav-dark {
-  background: transparent;
-  color: oklch(0.95 0.032 120);
-  /* 稿：深色页 nav 下缘是 1px 发丝线，不是浅色页那条 2px 墨线 */
-  border-bottom: 1px solid oklch(0.95 0.032 120 / 0.25);
-}
-.nav-dark .nav-brand,
-.nav-dark a {
-  color: oklch(0.95 0.032 120);
-}
-.nav-dark a:hover,
-.nav-dark a[aria-current='page'] {
-  color: oklch(0.71 0.098 145);
-}
-
-/* 深色页页脚（稿 footer）：104° 渐变 + 点阵（92° 遮罩）+ 颗粒；不是 G900 平铺色块。
-   浅色页（/about）仍走 .site-footer 原样。 */
-.site-footer--deep {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(
-    104deg,
-    oklch(0.3 0.062 196) 0%,
-    oklch(0.26 0.058 232) 55%,
-    oklch(0.28 0.062 285) 100%
-  );
-  color: oklch(0.95 0.032 120);
-}
-.site-footer--deep::before,
-.site-footer--deep::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-.site-footer--deep::before {
-  background-image: radial-gradient(oklch(0.71 0.098 145) 1px, transparent 1.2px);
-  background-size: 6px 6px;
-  opacity: 0.26;
-  -webkit-mask-image: linear-gradient(92deg, #000 0%, transparent 55%);
-  mask-image: linear-gradient(92deg, #000 0%, transparent 55%);
-}
-.site-footer--deep::after {
-  background-image: var(--grain);
-  background-size: 170px 170px;
-  opacity: 0.1;
-  mix-blend-mode: overlay;
-}
-.site-footer--deep > * {
-  position: relative;
-  z-index: 1;
-}
-.site-footer--deep .footer-note {
-  color: oklch(0.95 0.032 120);
-}
-
 /* ════════════════════════════════════════════════════════════════════════════
    站内求解器台架（Lab-Modernist 稿 → MAPPING §7）
    ★ 本节是设计稿 lab-solvers.js 内 CSS 的**忠实移植**（题栏/控制条/图框逐项对稿），
@@ -1547,9 +1269,9 @@ button.log-heat__cell {
 .lab-wrap.on-light {
   --paper: oklch(0.22 0.042 235);
   --surface: oklch(0.95 0.032 120 / 0.05);
-  --ink: oklch(0.95 0.032 120);
-  --accent: oklch(0.71 0.098 145);
-  --accent-2: oklch(0.83 0.075 294);
+  --ink: var(--g100);
+  --accent: var(--g400);
+  --accent-2: var(--p300);
   --n300: oklch(0.45 0.03 190);
   --n400: oklch(0.58 0.04 175);
   --n500: oklch(0.66 0.045 170);

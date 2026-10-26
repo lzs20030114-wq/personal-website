@@ -3,25 +3,7 @@
    「10 Case 01」稿时发现两张稿的顶栏/页脚是同一套——抽到这里给 /lab 与 /work/* 共用，
    规则本身一字未改。由 (site)/layout.tsx 引入，所以两个路由都能拿到。 */
 
-:root {
-  --ld-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  --ld-cream: oklch(0.95 0.032 120);
-  --ld-mute: oklch(0.7 0.03 168);
-  --ld-soft: oklch(0.8 0.035 162);
-  --ld-paper: oklch(0.19 0.032 228);
-  --ld-g: oklch(0.74 0.1 150);
-  --ld-g-hi: oklch(0.86 0.08 130);
-  --ld-v: oklch(0.72 0.095 291);
-  --ld-slate: oklch(0.74 0.06 235);
-  /* 配色 v2「中间色面」（design-ref/palette-study，MAPPING §46）：黑白之间补带色的背景层，字仍只用墨 / 纸 */
-  --ld-deep: oklch(0.3 0.032 205); /* S5 深潭：Lab 开头区整段色带 */
-  --ld-face: oklch(0.41 0.042 192); /* 主青（降纯度）：页脚色面 */
-  --ld-face-ink: oklch(0.86 0.04 160); /* 主青面上的次级字 */
-  --ld-panel: oklch(0.25 0.022 212); /* 夜色上浮起一档：说明栏面板 */
-  --ld-lime-hi: oklch(0.9 0.058 124); /* 青柠亮档：色面上的链接 */
-  --ld-eo: cubic-bezier(0.2, 0.7, 0.1, 1);
-  --ld-eio: cubic-bezier(0.76, 0, 0.24, 1);
-}
+/* 设计 token（--ld-*）已挪到 app/globals.css 的 :root（2026-10-25 合并：首页 / 转场 / 案例页原各存一份同值副本，现在都引用那一份）。 */
 
 /* ── 页底与点阵：配色 v2 起为夜色平涂（原 160° 三色渐变撤掉）+ 顶部 760px 的点阵 ── */
 .ld-ground { background: var(--ld-paper); }
@@ -50,14 +32,23 @@
 .ld-nav a[aria-current='page']::after { transform: scaleX(1); }
 .ld-lang { display: flex; align-items: center; padding-left: 20px; border-left: 1px solid oklch(0.95 0.032 120 / 0.2); }
 .ld-lang button {
-  margin-left: -1px; padding: 4px 9px; border: 1px solid oklch(0.95 0.032 120 / 0.25); background: transparent; cursor: pointer;
+  margin-left: -1px; padding: 4px 9px; border: 1px solid var(--ld-control); background: transparent; cursor: pointer;
   font: 500 12px var(--ld-mono), 'PingFang SC', monospace; letter-spacing: 0; transition: background 0.25s, color 0.25s, border-color 0.25s;
 }
-.ld-lang button:hover { border-color: oklch(0.95 0.032 120 / 0.6); }
+.ld-lang button:hover { border-color: var(--ld-control-hi); }
 .ld-lang button[aria-pressed='true'] { background: var(--ld-cream); color: var(--ld-paper); }
+
+/* ── 页头三件：meta 行 / 大标题 / 导语（原在 lab-dark.css 的开头区；2026-10-25 日志页标头也用，挪到这里共用，规则一字未改） ── */
+.ld-meta { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font: 400 12px var(--ld-mono); letter-spacing: 0; text-transform: none; color: var(--ld-mute); }
+.ld-h1 { margin: 0; font-weight: 500; font-size: clamp(48px, 6.4vw, 92px); line-height: 0.96; letter-spacing: -0.045em; text-transform: none; }
+.ld-h1__dot { color: var(--ld-g); }
+.ld-lede { margin: 0; max-width: 52ch; font-size: clamp(17px, 1.5vw, 20px); font-weight: 400; line-height: 1.5; color: oklch(0.86 0.04 160); text-wrap: pretty; }
 
 /* 阅读进度（案例页，稿 data-readbar）：顶栏下缘 1.5px 绿线 */
 .ld-readbar { position: absolute; left: 0; bottom: -1px; height: 1.5px; width: 0; background: var(--ld-g); }
+
+/* 日志页正文版心是 .shell 的 1320：顶栏与页脚跟着收窄，左右缘与正文对齐（案例页收 1240 是同一做法，见 case-dark.css） */
+.log-language-root :is(.ld-header__in, .ld-footer__in) { max-width: 1320px; }
 
 /* ── 页脚：配色 v2 起是主青色面（原为发丝线），链接改青柠亮档 ── */
 .ld-footer { margin-top: 96px; background: var(--ld-face); color: var(--ld-face-ink); }
@@ -65,6 +56,8 @@
 .ld-footer__links { display: flex; gap: 24px; }
 .ld-footer a, .ld-footer button { color: var(--ld-lime-hi); font: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 .ld-footer a:hover, .ld-footer button:hover { color: var(--ld-cream); }
+/* 焦点环在主青面上改青柠亮档：全站 accent（深底亮绿）对主青只有 3.5:1，青柠 6.5:1 */
+.ld-footer :focus-visible { outline-color: var(--ld-lime-hi); }
 
 /* 「Live」标：紫只表示「实验 / 进行中」（配色 v2 规则 03）。深底版；首页浅底版在 home.css */
 .ld-live { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; background: oklch(0.33 0.045 288); color: oklch(0.88 0.05 295); font: 500 11px var(--ld-mono); letter-spacing: 0; text-transform: none; }

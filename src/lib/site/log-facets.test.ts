@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createLogEntryId } from './log-identity';
 import { getLogEntries } from './log';
+import { projectAccent } from './lab-index';
 import {
   aspectFacets,
   aspectOf,
@@ -66,6 +67,16 @@ describe('三级筛选', () => {
       expect(g, `${e.date} 取不到项目组`).not.toBeNull();
       expect(g!.key).toBe(projectOf(e));
     }
+  });
+
+  it('项目色只有一份：日志页与 Lab 页同一个项目同色，主项目之间互不相同（2026-10-25「颜色只表示项目」）', () => {
+    const byKey = new Map(PROJECT_GROUPS.map((g) => [g.key, g.accent]));
+    expect(byKey.get('project-i')).toBe(projectAccent(0));
+    expect(byKey.get('project-ii')).toBe(projectAccent(1));
+    expect(byKey.get('project-iii')).toBe(projectAccent(2));
+    const mains = ['project-i', 'project-ii', 'project-iii'].map((k) => byKey.get(k));
+    expect(new Set(mains).size).toBe(3);
+    for (const g of PROJECT_GROUPS) expect(g.accent).toMatch(/^var\(--[a-z0-9-]+\)$/);
   });
 
   it('方面：覆盖全池（没打主题标签的条目落 Other，不掉出下钻路径）', () => {

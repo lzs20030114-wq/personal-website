@@ -48,7 +48,7 @@ export function LabIndex() {
           s.benches.map((b) => ({
             no: b.no,
             title: b.title,
-            color: labAccent(b.kernel),
+            color: labAccent(b.no),
           })),
         ),
       ),
@@ -199,7 +199,7 @@ export function LabIndex() {
                       style={
                         {
                           "--i": i++,
-                          "--dot": labAccent(b.kernel),
+                          "--dot": labAccent(b.no),
                         } as CSSProperties
                       }
                       ref={(el) => {

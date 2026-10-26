@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600">
+  <rect width="960" height="600" fill="white"/>
+  <!-- 单一构造标记：梁与两端支承、斜向撑杆形成完整受力单元。 -->
+  <path d="M536 464V160H852V464M536 160L852 464"
+    fill="none" stroke="#303030" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

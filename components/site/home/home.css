@@ -1,16 +1,16 @@
-.hs-root { --ink: oklch(0.235 0.025 215);
-  --paper: oklch(0.965 0.01 115);
+.hs-root {
+  /* 2026-10-25 合并：与全站同值的不再抄一份——墨 / 纸直接继承 :root，其余指向色阶或 globals.css 的 --ld-*；
+     只留首页独有的几个面（夜色首屏、翻页暗幕、雾、苔、苔面次级字）与项目卡底板；石板蓝用全站的 --slate */
   --night: oklch(0.15 0.03 235);
   --shade: oklch(0.12 0.025 235);
-  --teal: oklch(0.42 0.088 178);
-  --mint: oklch(0.71 0.098 145);
-  --violet: oklch(0.42 0.09 282);
-  --slate: oklch(0.45 0.06 235);
-  --muted: oklch(0.51 0.014 180);
-  --muted-2: oklch(0.43 0.013 192);
-  --cream: oklch(0.95 0.032 120);
-  --lime: oklch(0.83 0.082 132);
-  --lime-hi: oklch(0.9 0.058 124);
+  --teal: var(--g700);
+  --mint: var(--g400);
+  --violet: var(--p700);
+  --muted: var(--n600);
+  --muted-2: var(--n700);
+  --cream: var(--ld-cream);
+  --lime: var(--g300);
+  --lime-hi: var(--ld-lime-hi);
   --plate: linear-gradient(135deg, rgb(21,48,57), rgb(32,44,63));
   --plate-light: oklch(0.95 0.012 230);
   /* 配色 v2「中间色面」（稿 07 v2 / design-ref/palette-study，MAPPING §46）：纸 → 雾 → 苔 → 主青 → 深潭，
@@ -18,12 +18,12 @@
   --mist: oklch(0.947 0.011 150); /* Work 页底 */
   --sage: oklch(0.905 0.02 160); /* Log 整段色带 */
   --sage-ink: oklch(0.35 0.018 200); /* 苔面上的次级字（原 muted 在苔面上对比不够） */
-  --face: oklch(0.41 0.042 192); /* About 主青面（降纯度） */
-  --deep: oklch(0.3 0.032 205); /* 页脚深潭 */
-  --eo: cubic-bezier(.2,.7,.1,1);
-  --eio: cubic-bezier(.76,0,.24,1);
+  --face: var(--ld-face); /* About 主青面（降纯度） */
+  --deep: var(--ld-deep); /* 页脚深潭 */
+  --eo: var(--ld-eo);
+  --eio: var(--ld-eio);
   --sans: 'Archivo Variable', Archivo, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+  --mono: var(--ld-mono); }
 :where(.hs-root) *, :where(.hs-root) *::before, :where(.hs-root) *::after { box-sizing: border-box; }
 .hs-root { color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
 :where(.hs-root) a { color: inherit; text-decoration: none; }
@@ -131,6 +131,23 @@
 /* 02 Work 横向切换（稿「18 Home · Work Carousel」，MAPPING §59；分组见 §58）：
    当前屏占舞台 85%，下一屏露出一截；屏的叠放与卡片位移只在桌面且允许动效时生效（下方 @media，与引擎 FLOW_QUERY 互补） */
 .hs-page--work { overflow-x: hidden; }
+.hs-wg { z-index: 1; }
+/* 单一平面符号的方点背景：共用轮播状态与 MOVE_MS，独立于卡片的错峰和留白区暗示。 */
+.hs-work-backdrop { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.hs-work-backdrop__panel { position: absolute; inset: 0; transition: none; }
+.hs-work-backdrop__panel.hs-is-moving { transition: transform var(--work-move-ms) var(--eio); }
+.hs-work-backdrop--instant .hs-work-backdrop__panel { transition: none; }
+.hs-work-mosaic { --mosaic-paper: var(--mist); --mosaic-ink: var(--teal); position: relative; width: 100%; height: 100%; overflow: hidden; pointer-events: none; background: var(--mosaic-paper); }
+.hs-work-mosaic[data-work-theme="interaction-research"] { --mosaic-ink: var(--slate); }
+.hs-work-mosaic__scene { position: absolute; inset: 0; background: var(--mosaic-ink); opacity: .24; mask-size: cover; mask-position: center; mask-repeat: no-repeat; }
+.hs-work-mosaic__wash { position: absolute; inset: 0; background: linear-gradient(180deg, color-mix(in oklch, var(--mosaic-paper) 90%, transparent) 0%, transparent 30%, transparent 68%, color-mix(in oklch, var(--mosaic-paper) 55%, transparent) 100%), linear-gradient(90deg, color-mix(in oklch, var(--mosaic-paper) 60%, transparent), transparent 72%); }
+.hs-wg__flow-mosaic { display: none; }
+@media (max-width: 1023px) {
+  .hs-wg__flow-mosaic .hs-work-mosaic__scene { mask-size: max(580px, 100%) auto; mask-position: calc(50% - 85px) center; }
+}
+@media (min-width: 1024px) and (prefers-reduced-motion: reduce) {
+  .hs-wg__flow-mosaic .hs-work-mosaic__scene { mask-size: contain; }
+}
 .hs-wg__lead { flex: 1; min-width: 0; }
 .hs-wg__titles { position: relative; }
 .hs-wg__sizer { visibility: hidden; white-space: nowrap; }
@@ -379,6 +396,9 @@
   .hs-shade { display: none; }
   .hs-work, .hs-about { height: auto; min-height: 0; }
   .hs-wg__mask, .hs-wg__ctl, .hs-wg__tabs, .hs-wg__rule, .hs-wg__cont, .hs-wg__cont-lbl, .hs-wg__zone, .hs-wg__badge { display: none; }
+  .hs-work-backdrop { display: none; }
+  .hs-wg__panel { position: relative; isolation: isolate; }
+  .hs-wg__flow-mosaic { display: block; position: absolute; z-index: -1; inset: -20px; width: auto; height: auto; opacity: .7; }
   .hs-wg__panel + .hs-wg__panel { margin-top: 64px; }
   .hs-wg__panel--cont { margin-top: 28px !important; }
   .hs-wg__ghead { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding-bottom: 18px; }
@@ -443,3 +463,9 @@
 .hs-card:hover, .hs-bench:hover, .hs-feat:hover, .hs-entry:hover, .hs-tick:hover { color: inherit; }
 .hs-btn:hover { color: var(--paper); }
 .hs-mail:hover, .hs-field__card:hover { color: var(--cream); }
+
+/* 焦点环（MAPPING §1：2px、偏移 2px）：站内全局用 --accent，首页根上它是浅底青绿，
+   放在夜色首屏 / 主青 About / 深潭页脚上只有 2.5 / 1.1 / 1.7:1，键盘焦点几乎看不见。
+   这三块面与压在它们上面的 HUD 改用青柠亮档（对三者 ≥6.5:1）；雾 / 纸 / 苔面上照旧青绿（≥6:1）。 */
+.hs-root :focus-visible { outline: 2px solid var(--hs-focus, var(--teal)); outline-offset: 2px; }
+.hs-page--hook, .hs-page--about, .hs-foot, .hs-hud.hs-on-dark { --hs-focus: var(--lime-hi); }

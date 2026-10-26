@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600">
+  <rect width="960" height="600" fill="white"/>
+  <!-- 单一地形标记：阶梯轮廓连续回转成内部水岸。 -->
+  <path d="M510 462V350H598V258H686V166H858V462H758C654 462 654 350 758 350H858"
+    fill="none" stroke="#303030" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

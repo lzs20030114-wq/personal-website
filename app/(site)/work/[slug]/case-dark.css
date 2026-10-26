@@ -4,19 +4,20 @@
    类名前缀 cs-（case screen）。根节点同时带 .pg-dark——内嵌的旧台架与 2D 连杆还吃它重定义的语义 token。 */
 
 .cs {
-  --cs-ink: oklch(0.95 0.032 120);
-  --cs-paper: oklch(0.19 0.032 228);
-  --cs-mute: oklch(0.8 0.035 162);
-  --cs-dim: oklch(0.7 0.03 168);
-  --cs-g: oklch(0.74 0.1 150);
-  --cs-gh: oklch(0.86 0.08 130);
-  --cs-v: oklch(0.72 0.095 291);
-  --cs-am: oklch(0.83 0.12 85);
-  --cs-bl: oklch(0.74 0.06 235);
+  /* 与暗色外壳同一套（globals.css :root 的 --ld-*），只留案例页独有的正文色与带中文回退的 mono 栈 */
+  --cs-ink: var(--ld-cream);
+  --cs-paper: var(--ld-paper);
+  --cs-mute: var(--ld-soft);
+  --cs-dim: var(--ld-mute);
+  --cs-g: var(--ld-g);
+  --cs-gh: var(--ld-g-hi);
+  --cs-v: var(--ld-v);
+  --cs-am: var(--ld-amber);
+  --cs-bl: var(--ld-slate);
   --cs-body: oklch(0.88 0.03 150);
   --cs-mono: 'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', ui-monospace, SFMono-Regular, Menlo, monospace;
-  --cs-eo: cubic-bezier(0.2, 0.7, 0.1, 1);
-  --cs-eio: cubic-bezier(0.76, 0, 0.24, 1);
+  --cs-eo: var(--ld-eo);
+  --cs-eio: var(--ld-eio);
   position: relative;
   min-height: 100vh;
   color: var(--cs-ink);
@@ -261,7 +262,7 @@ body:has(.cs) .ld-header__in, .cs .ld-footer__in { max-width: 1240px; }
 .cs-lab__top { top: 16px; font: 500 11px var(--cs-mono); }
 .cs-lab__top .cs-id { color: var(--cs-gh); }
 .cs-lab__bot { bottom: 12px; font: 400 11px var(--cs-mono); color: oklch(0.78 0.015 150); }
-.cs-lab__bot a { padding: 6px 11px; border: 1px solid oklch(0.95 0.032 120 / 0.3); background: oklch(0.15 0.03 235 / 0.6); font: 500 11px var(--cs-mono); }
+.cs-lab__bot a { padding: 6px 11px; border: 1px solid var(--ld-control); background: oklch(0.15 0.03 235 / 0.6); font: 500 11px var(--cs-mono); }
 .cs.pg-dark .cs-lab__bot a { color: var(--cs-ink); }
 .cs.pg-dark .cs-lab__bot a:hover { background: oklch(0.95 0.032 120 / 0.12); }
 .cs-lab__stage { position: relative; z-index: 1; }
@@ -298,8 +299,8 @@ body:has(.cs) .ld-header__in, .cs .ld-footer__in { max-width: 1240px; }
 /* flex-wrap：窄屏上四个人格钮一行放不下（390 宽实测超出 3px）——宁可折行也不撑宽页面：
    手机浏览器遇到横向溢出会把布局视口放宽，整页缩小一点，且页面转场会因视口变了被浏览器放弃（MAPPING §48） */
 .cs-seg { display: flex; flex-wrap: wrap; max-width: 100%; }
-.cs-seg button { margin-left: -1px; display: flex; align-items: center; gap: 8px; padding: 8px 13px; border: 1px solid oklch(0.95 0.032 120 / 0.22); font: 500 12.5px 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; white-space: nowrap; transition: background 0.25s, color 0.25s; }
-.cs-seg button:hover { border-color: oklch(0.95 0.032 120 / 0.55); }
+.cs-seg button { margin-left: -1px; display: flex; align-items: center; gap: 8px; padding: 8px 13px; border: 1px solid var(--ld-control); font: 500 12.5px 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; white-space: nowrap; transition: background 0.25s, color 0.25s; }
+.cs-seg button:hover { border-color: var(--ld-control-hi); }
 .cs-seg button[aria-pressed='true'], .cs-seg button[aria-selected='true'] { background: var(--cs-ink); color: var(--cs-paper); }
 .cs-seg button span { font: 500 11px var(--cs-mono); }
 .cs-seg--mono button { padding: 7px 12px; font: 500 12px var(--cs-mono); }
@@ -335,7 +336,7 @@ body:has(.cs) .ld-header__in, .cs .ld-footer__in { max-width: 1240px; }
 .cs-layer__name { font: 600 15.5px / 1.25 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; }
 .cs-layer__x { font: 400 13.5px / 1.55 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: oklch(0.78 0.035 162); }
 .cs-layers__act { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
-.cs-ghostbtn { padding: 7px 12px; border: 1px solid oklch(0.95 0.032 120 / 0.25); font: 500 12px var(--cs-mono); }
+.cs-ghostbtn { padding: 7px 12px; border: 1px solid var(--ld-control); font: 500 12px var(--cs-mono); }
 .cs-ghostbtn:hover { background: oklch(0.95 0.032 120 / 0.06); }
 
 /* 闭合 / 数字对比 */
@@ -520,7 +521,7 @@ body:has(.cs) .ld-header__in, .cs .ld-footer__in { max-width: 1240px; }
 .os-body > .os-figure { max-width: 100%; margin: 8px 0; }
 .os-figure figcaption { grid-template-columns: 56px minmax(0, 1fr); }
 .os-zoom { display: block; cursor: zoom-in; }
-.os-zoom:focus-visible { outline: 1px solid var(--cs-g); outline-offset: 3px; }
+.os-zoom:focus-visible { outline: 2px solid var(--cs-g); outline-offset: 3px; }
 .cs-body p.os-note { font: 400 12px / 1.6 var(--cs-mono); color: var(--cs-dim); letter-spacing: 0; text-transform: none; }
 /* 按节叙事（第二版）：照片、效果图两两并排 */
 /* 并排：固定两列；单数张时最后一张占满一行，不留半行空位。窄屏回一列 */
@@ -547,7 +548,7 @@ body:has(.cs) .ld-header__in, .cs .ld-footer__in { max-width: 1240px; }
 .iv__count { color: var(--cs-ink); letter-spacing: 0.04em; }
 .iv__tools { display: flex; align-items: center; gap: 6px; }
 .iv__btn {
-  min-width: 34px; height: 34px; padding: 0 10px; border: 1px solid oklch(0.95 0.032 120 / 0.22);
+  min-width: 34px; height: 34px; padding: 0 10px; border: 1px solid var(--ld-control);
   background: transparent; color: var(--cs-ink); font: 500 15px / 1 var(--cs-mono); cursor: pointer;
   transition: background 0.2s, border-color 0.2s, color 0.2s;
 }
@@ -555,7 +556,7 @@ body:has(.cs) .ld-header__in, .cs .ld-footer__in { max-width: 1240px; }
 .iv__btn--close { margin-left: 10px; font-size: 18px; }
 .iv__btn:hover:not(:disabled) { background: var(--cs-ink); border-color: var(--cs-ink); color: var(--cs-paper); }
 .iv__btn:disabled { opacity: 0.35; cursor: default; }
-.iv__btn:focus-visible, .iv__nav:focus-visible { outline: 1px solid var(--cs-g); outline-offset: 2px; }
+.iv__btn:focus-visible, .iv__nav:focus-visible { outline: 2px solid var(--cs-g); outline-offset: 2px; }
 .iv__pct { min-width: 52px; text-align: center; color: var(--cs-ink); font-variant-numeric: tabular-nums; }
 .iv__stage { position: relative; overflow: hidden; touch-action: none; user-select: none; }
 .iv__img {
@@ -566,7 +567,7 @@ body:has(.cs) .ld-header__in, .cs .ld-footer__in { max-width: 1240px; }
 .iv__stage[data-dragging] .iv__img { cursor: grabbing; }
 .iv__nav {
   position: absolute; top: 50%; z-index: 1; width: 44px; height: 64px; transform: translateY(-50%);
-  border: 1px solid oklch(0.95 0.032 120 / 0.18); background: oklch(0.19 0.032 228 / 0.72);
+  border: 1px solid var(--ld-control); background: oklch(0.19 0.032 228 / 0.72);
   color: var(--cs-ink); font: 400 18px / 1 var(--cs-mono); cursor: pointer; transition: background 0.2s, color 0.2s;
 }
 .iv__nav:hover { background: var(--cs-ink); color: var(--cs-paper); }

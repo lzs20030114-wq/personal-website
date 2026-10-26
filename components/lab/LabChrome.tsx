@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
 import { useCaseLangControl } from '../site/CaseLang';
-import { LAB_BENCHES, LAB_INDEX, labAccent } from '../../src/lib/site/lab-index';
+import { LAB_BENCHES, LAB_INDEX, projectAccent } from '../../src/lib/site/lab-index';
 import { useLabText } from './LabLanguage';
 
 /**
@@ -32,9 +32,9 @@ export function LabIntro() {
   const chips = [
     ...LAB_INDEX.map((g, i) => ({
       n: String(i + 1).padStart(2, '0'), kicker: g.label.split(' — ')[0], title: PROJECT_TITLE[i],
-      ink: labAccent(i === 0 ? '2d' : '3d'), count: countOf(benchCount(g), zh), href: `#${projectAnchor(i)}`, dim: false,
+      ink: projectAccent(i), count: countOf(benchCount(g), zh), href: `#${projectAnchor(i)}`, dim: false,
     })),
-    { n: '03', kicker: 'Project III', title: 'Benches to come', ink: 'oklch(0.74 0.06 235)', count: tx('in progress'), href: `#${projectAnchor(LAB_INDEX.length)}`, dim: true },
+    { n: '03', kicker: 'Project III', title: 'Benches to come', ink: projectAccent(LAB_INDEX.length), count: tx('in progress'), href: `#${projectAnchor(LAB_INDEX.length)}`, dim: true },
   ];
   return (
     <section className="ld-intro" aria-label={tx('The lab')}>
@@ -69,7 +69,7 @@ export function LabProjectRule({ i }: { i: 0 | 1 }) {
   const g = LAB_INDEX[i];
   const sub = g.sub.split(' · ').slice(1).join(' · ');
   return (
-    <div className="ld-proj" id={projectAnchor(i)} style={{ '--proj': labAccent(i === 0 ? '2d' : '3d') } as CSSProperties}>
+    <div className="ld-proj" id={projectAnchor(i)} style={{ '--proj': projectAccent(i) } as CSSProperties}>
       <div className="ld-proj__head">
         <span className="ld-proj__id">
           <span className="ld-proj__n">{String(i + 1).padStart(2, '0')}</span>

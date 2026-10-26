@@ -15,7 +15,8 @@
     "pretypecheck": "npm run skin:terminals",
     "predev": "node scripts/copy-assets.mjs && npm run skin:terminals",
     "prebuild": "node scripts/copy-assets.mjs",
-    "field:shots": "node scripts/home-field/capture.mjs"
+    "field:shots": "node scripts/home-field/capture.mjs",
+    "design:tokens": "node scripts/design-system/tokens.mjs --check"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.2",
