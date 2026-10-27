@@ -50,7 +50,7 @@ import { SKIN, createSkinUnit, renderSmooth } from './skin-unit';
 import { SOLID, boxVerts, buildSolidTopology, fillSolidVerts, membranePanel, rotateVertsY, type SolidTopology } from './skin-solid';
 import { bakeIndexed } from '../linkage/gl3d';
 import { MM_PER_UNIT, RIG_ANCHOR_Y, RIG_SCALE, RING_GRID_FIT, RING_GRID_PIVOT_Y, ROOM, roomBoxesBySpan, viewFitBySpan, type RingGridView } from './skin-grid';
-import type { PlanLayout } from './unit-activation';
+import { planLayout, type PlanLayout } from './unit-activation';
 import { COHABIT, SQUARE_SCALE, bandAngle, type FurnRect } from './cohabit';
 import type { CatPose, CatTail, SeatSpec } from './figure';
 
@@ -347,9 +347,19 @@ export interface Rig {
   platformY: number;
 }
 
+/**
+ * 单元铺满整间房（cover: 'room'，2026-10-27）时台子跟着格距放大约 1.37 倍；照旧把钉住端钉在 RIG_ANCHOR_Y 的话台面会从
+ * 离地 1.43 m 升到 1.57 m（单元要兼作桌子，再高就更不像桌子了）。所以铺满时改钉台面：台面高度取场地布局下的那个值，
+ * 钉住端随之往下挪。桌面到底定多高（站着用约 1.0–1.1 m）待作者定，这里只做到「放大但不变高」。
+ */
 export function rigFor(layout: PlanLayout, traj: Pick<BandTrajectory, 'footY' | 'platformTopY'>, scale: number = SQUARE_SCALE): Rig {
   const s = ((RIG_SCALE * layout.pitchM) / layout.pitch4) * scale;
-  const y = RIG_ANCHOR_Y - s * traj.footY;
+  let y = RIG_ANCHOR_Y - s * traj.footY;
+  if (layout.cover === 'room') {
+    const sField = ((RIG_SCALE * planLayout(layout.n, layout.radius).pitchM) / layout.pitch4) * scale;
+    const topField = RIG_ANCHOR_Y - sField * traj.footY + sField * traj.platformTopY;
+    y = topField - s * traj.platformTopY;
+  }
   return {
     s,
     y,

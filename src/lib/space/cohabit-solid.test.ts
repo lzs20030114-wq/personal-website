@@ -375,6 +375,58 @@ describe('摆放与尺度', () => {
   });
 });
 
+describe('单元铺满整间房（cover: room，2026-10-27 作者「单元兼作桌子要再大、8×8 扩到全覆盖、数量不变」）', () => {
+  const room = squarePlanLayout(planLayout(8, undefined, 'room'));
+  const field = squarePlanLayout(layout8);
+  const rig = rigFor(room, traj);
+  const rigField = rigFor(field, traj);
+
+  it('台子随格距放大约 1.37 倍（终态边长 0.62–0.75 m），台面高度不变（仍是场地布局那个高度），钉住端随之下挪', () => {
+    expect(rig.s / rigField.s).toBeCloseTo(room.pitchM / field.pitchM, 12);
+    const side = platformSide(rig);
+    expect(side / platformSide(rigField)).toBeCloseTo(room.pitchM / field.pitchM, 9);
+    expect(side).toBeGreaterThan(0.62);
+    expect(side).toBeLessThan(0.75);
+    expect(rig.platformY).toBeCloseTo(rigField.platformY, 6);
+    expect(rig.y + rig.s * traj.footY).toBeGreaterThan(RIG_ANCHOR_Y); // 世界 Y 向下：钉住端比 1.08 m 低
+    expect((ROOM.FLOOR_Y - (rig.y + rig.s * traj.footY)) / UNITS_PER_M).toBeGreaterThan(0.85);
+  });
+
+  it('64 台铺满四边：最外一圈的台面离墙不到半个格距，峰值时邻台面对面、角对角都还留缝，台子不出房间', () => {
+    expect(rig.cells).toHaveLength(64);
+    const half = (room.roomM / 2) * UNITS_PER_M;
+    const facePeak = (SQUARE.RADIUS + SQUARE_PEAK[0]) * Math.cos(Math.PI / 20) * rig.s;
+    const cornerPeak = (SQUARE.RADIUS + SQUARE_PEAK[2]) * rig.s;
+    const maxX = Math.max(...rig.cells.map((c) => c.x));
+    expect(half - (maxX + facePeak)).toBeGreaterThan(0);
+    expect(half - (maxX + facePeak)).toBeLessThan((room.pitchM / 2) * UNITS_PER_M);
+    expect(2 * facePeak).toBeLessThan(room.pitchM * UNITS_PER_M);
+    expect(2 * cornerPeak).toBeLessThan(room.pitchM * Math.SQRT2 * UNITS_PER_M);
+    // 场地布局四周各空着约 0.95 m，铺满后只剩台缝
+    const maxXField = Math.max(...rigField.cells.map((c) => c.x));
+    expect(half - (maxXField + facePeak * (rigField.s / rig.s))).toBeGreaterThan(0.9 * UNITS_PER_M);
+  });
+
+  it('收起的布束仍只在天花下一小截', () => {
+    const stowedFoot = unitFootY(rig, traj.footY, 0);
+    expect(stowedFoot / UNITS_PER_M).toBeLessThan(0.4);
+    expect(rig.y).toBeGreaterThan(rig.stowY);
+  });
+
+  it('铺满时的标准布置：每个座位坐直与前倾都不插进家具，座位点在前缘后', () => {
+    const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', space: 'live', seed: 1 });
+    const furn = sim.furn!;
+    const boxes = furnitureBoxes(furn.rects);
+    expect(sim.seats).toHaveLength(10);
+    for (const seat of sim.seats) {
+      const sp = seatSpecOf(furn.rects[seat.furn], seat);
+      expect(sp.front).toBeGreaterThan(0.45);
+      expect(sp.back).toBeGreaterThan(0.1);
+      for (const b of boxes) expect(b.cy - b.hy).toBeGreaterThan(0);
+    }
+  });
+});
+
 describe('坐着的人与家具', () => {
   it('标准布置的每个座位、坐直与前倾：小人不插进任何一块座面板或靠背，臀贴座面，脚踩地', () => {
     const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, space: 'live', seed: 1 });

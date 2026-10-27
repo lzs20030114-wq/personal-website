@@ -1048,8 +1048,8 @@ describe('cohabit · 方形单元（unit: square，Lab 2-15，作者 2026-10-25�
     return Math.hypot(px - (ax + vx * t), py - (ay + vy * t));
   };
   /** 2-15 那一套配置（案例页对照图的配置 + 方形单元），六人两猫 */
-  const scene = (space: 'live' | 'fixed', seed = 11): CohabitSim => {
-    const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', space, seed, opening: false, auto: true, faces: true, social: true, catFloor: true, cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid }, guide: COHABIT.GUIDE });
+  const scene = (space: 'live' | 'fixed', seed = 11, cover: 'field' | 'room' = 'field'): CohabitSim => {
+    const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover, space, seed, opening: false, auto: true, faces: true, social: true, catFloor: true, cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid }, guide: COHABIT.GUIDE });
     const half = sim.layout.fieldM / 2;
     const sizes = partySizes(6);
     sizes.forEach((sz, i) => {
@@ -1148,6 +1148,79 @@ describe('cohabit · 方形单元（unit: square，Lab 2-15，作者 2026-10-25�
     }
     expect(frames).toBeLessThan(30);
   }, 60_000);
+
+  describe('单元铺满整间房（cover: room，2026-10-27 作者「8×8 不覆盖房间四边，扩到全覆盖，数量不变」）', () => {
+    it('还是 64 台；房间切成 8×8 格、每台在格心，平台与芯按同一比例随格距放大；不给 cover 的场地布局逐位不变', () => {
+      const f = planLayout(8);
+      const r = planLayout(8, undefined, 'room');
+      expect(r.units).toHaveLength(64);
+      expect(r.pitchM).toBeCloseTo(r.roomM / 8, 12);
+      expect(r.fieldM).toBe(r.roomM);
+      expect(r.cover).toBe('room');
+      expect(f.cover).toBeUndefined();
+      expect(r.platR / r.pitchM).toBeCloseTo(f.platR / f.pitchM, 12);
+      expect(r.mastR / r.pitchM).toBeCloseTo(f.mastR / f.pitchM, 12);
+      // 最外一圈格心离墙半个格距：四边都覆盖到
+      const xs = r.units.map((u) => u.x);
+      expect(Math.max(...xs)).toBeCloseTo(r.roomM / 2 - r.pitchM / 2, 12);
+      expect(Math.min(...xs)).toBeCloseTo(-r.roomM / 2 + r.pitchM / 2, 12);
+      // 方台放大约 1.37 倍；全落时四条边不碰墙，四个角也不出房间
+      const s = squarePlanLayout(r);
+      const sf = squarePlanLayout(f);
+      expect(s.reachMax! / sf.reachMax!).toBeCloseTo(r.pitchM / f.pitchM, 12);
+      expect(r.pitchM / f.pitchM).toBeGreaterThan(1.3);
+      for (let j = 0; j < B; j++) {
+        const a = bandAngle(j);
+        const far = Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a))) * s.bandReach![j];
+        expect(far, `带 ${j}`).toBeLessThan(r.pitchM / 2);
+      }
+    });
+
+    it('外侧一圈交叉点在墙上：站不了人；门道接到里面一圈、夹在最外一列两台之间；能站的交叉点全通门，每个座位有自己的入口', () => {
+      const sim = scene('live', 11, 'room');
+      const l = sim.layout;
+      const g = sim.graph;
+      const n = l.n;
+      for (let r = 0; r <= n; r++)
+        for (let c = 0; c <= n; c++) if (r === 0 || c === 0 || r === n || c === n) expect(g.furn!.nodeOff[r * (n + 1) + c]).toBe(1);
+      const rMid = n / 2;
+      const doorEdges = g.edges.filter((e) => e.a >= g.door[0]);
+      expect(doorEdges.map((e) => e.b)).toEqual([rMid * (n + 1) + 1, rMid * (n + 1) + n - 1]);
+      expect(doorEdges.every((e) => e.sideA >= 0 && e.sideB >= 0)).toBe(true);
+      expect(sim.furnitureFits(sim.furniture)).toBe(true);
+      const reach = doorReach(l, g, null);
+      for (let i = 0; i < g.door[0]; i++) if (!g.furn!.nodeOff[i]) expect(reach[i], `交叉点 ${i}`).toBe(1);
+      expect(sim.seats).toHaveLength(10);
+      expect(new Set(sim.seats.map((q) => q.node)).size).toBe(10);
+    });
+
+    it('跑起来：没人站到墙上，坐着的时间与旧布局同一量级，台角不顶人（会动 / 钉死两档与旧布局同一条线）', () => {
+      for (const space of ['live', 'fixed'] as const) {
+        const sim = scene(space, 12, 'room');
+        const lim = sim.layout.roomM / 2 - PLAN.BODY_R + 0.02;
+        const dt = 1 / 30;
+        let frames = 0;
+        let seated = 0;
+        let present = 0;
+        for (let t = 0; t < 120; t += dt) {
+          sim.step(dt);
+          for (const p of sim.people) {
+            if (!p.walker.present) continue;
+            present++;
+            if (p.seated) seated++;
+            expect(Math.max(Math.abs(p.walker.x), Math.abs(p.walker.y)), `${space} 人站到墙里`).toBeLessThan(lim);
+          }
+          if (t > 5 && intrusion(sim) > 0.01) frames++;
+        }
+        expect(frames, space).toBeLessThan(60);
+        expect(seated / present, space).toBeGreaterThan(0.3);
+      }
+    }, 90_000);
+
+    it('只配「走 · 站 · 坐」规则', () => {
+      expect(() => new CohabitSim({ trigger: 'trace', cover: 'room' })).toThrow();
+    });
+  });
 });
 
 describe('案例页对照场景（Lab 2-14「正文对照」，2026-10-25）', () => {

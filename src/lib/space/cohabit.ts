@@ -250,6 +250,20 @@ export const COHABIT = {
       { kind: 'chair', at: [0, -3.5], face: [0, 1] },
       { kind: 'chair', at: [0, 3.5], face: [0, -1] },
     ],
+    /**
+     * 单元铺满整间房时的标准布置（cover: 'room'，2026-10-27）：at = 新格距（房间 / 8 = 0.83 m）的倍数。
+     * 旧布置按旧格距排，搬到新格子上沙发前缘离交叉点 0.04 m（站不了人），上下两排座位只好共用 y = 0 那排入口、两两占位。
+     * 照旧布置的同一条规则重排：前缘离前一排交叉点约 0.27 m、每个座位有自己的入口。沙发两两夹一把椅子靠上下两面墙
+     * （背后离墙 0.6 m），仍是四张沙发 + 两把椅子 = 10 座、点对称、两门之间的横向过道留空；中间那片全是单元。
+     */
+    FURNITURE_ROOM: [
+      { kind: 'sofa', at: [-1.5, -2.8], face: [0, 1] },
+      { kind: 'sofa', at: [1.5, -2.8], face: [0, 1] },
+      { kind: 'sofa', at: [1.5, 2.8], face: [0, -1] },
+      { kind: 'sofa', at: [-1.5, 2.8], face: [0, -1] },
+      { kind: 'chair', at: [0, -2.8], face: [0, 1] },
+      { kind: 'chair', at: [0, 2.8], face: [0, -1] },
+    ],
     /** 尺寸（m）：w 沿宽、d 进深；seats = 座位离中线的偏移；座位点 = 坐着的人躯干中心 = 家具中心往前 SEAT_IN
      *  （负 = 往靠背那边：人靠着靠背坐，躯干在靠背前约 0.25 m；首版取 +0.1 等于坐在沙发前沿，2026-10-07 改正） */
     KINDS: {
@@ -480,8 +494,15 @@ export function furnRect(f: FurnSpec): FurnRect {
   return { kind: f.kind, cx: f.x, cy: f.y, x0: f.x - hw, x1: f.x + hw, y0: f.y - hd, y1: f.y + hd, face: f.face };
 }
 
-/** 标准布置（COHABIT.SEATS.FURNITURE，位置按 8×8 格距的米数——换格数家具不跟着缩） */
+/**
+ * 标准布置（COHABIT.SEATS.FURNITURE，位置按 8×8 格距的米数——换格数家具不跟着缩）。
+ * 单元铺满整间房（cover: 'room'）时用 FURNITURE_ROOM，按新格距排。
+ */
 export function standardFurniture(l: PlanLayout): FurnSpec[] {
+  if (l.cover === 'room') {
+    const p = l.roomM / COHABIT.SEATS.GRID;
+    return COHABIT.SEATS.FURNITURE_ROOM.map((f) => ({ kind: f.kind, x: f.at[0] * p, y: f.at[1] * p, face: f.face }));
+  }
   const p8 = l.fieldM / (COHABIT.SEATS.GRID - 1 + (2 * l.platR) / l.pitchM);
   return COHABIT.SEATS.FURNITURE.map((f) => ({ kind: f.kind, x: f.at[0] * p8, y: f.at[1] * p8, face: f.face }));
 }
@@ -493,6 +514,9 @@ export function furnishRoom(l: PlanLayout, specs: readonly FurnSpec[] = standard
   const nodeOff = new Uint8Array((n + 1) * (n + 1));
   for (let r = 0; r <= n; r++)
     for (let c = 0; c <= n; c++) nodeOff[r * (n + 1) + c] = near((c - n / 2) * l.pitchM, (r - n / 2) * l.pitchM) < PLAN.BODY_R ? 1 : 0;
+  // 单元铺满整间房：外侧一圈交叉点就在墙上，站不了人、也不从那儿走（门另有门道接到里面一圈）
+  if (l.cover === 'room')
+    for (let r = 0; r <= n; r++) for (let c = 0; c <= n; c++) if (r === 0 || c === 0 || r === n || c === n) nodeOff[r * (n + 1) + c] = 1;
   return { rects, nodeOff };
 }
 
@@ -520,13 +544,19 @@ export function aisleGraph(l: PlanLayout, furn?: Furnishing): AisleGraph {
     for (let c = 0; c < n; c++) edges.push({ a: id(c, r), b: id(c + 1, r), sideA: unit(c, r - 1), sideB: unit(c, r) });
   for (let r = 0; r < n; r++)
     for (let c = 0; c <= n; c++) edges.push({ a: id(c, r), b: id(c, r + 1), sideA: unit(c - 1, r), sideB: unit(c, r) });
-  // 门：左右墙正中，接到最靠近 y=0 的外侧交叉点；门道在外侧线之外，没有单元夹它
+  // 门：左右墙正中，接到最靠近 y=0 的外侧交叉点；门道在外侧线之外，没有单元夹它。
+  // 单元铺满整间房时外侧交叉点就在门口（墙上），门道改接里面一圈，夹在最外一列的两台单元之间
   const rMid = Math.round(n / 2);
   const left = nodes.length;
   nodes.push({ x: -l.roomM / 2, y: 0 });
   nodes.push({ x: l.roomM / 2, y: 0 });
-  edges.push({ a: left, b: id(0, rMid), sideA: -1, sideB: -1 });
-  edges.push({ a: left + 1, b: id(n, rMid), sideA: -1, sideB: -1 });
+  if (l.cover === 'room') {
+    edges.push({ a: left, b: id(1, rMid), sideA: unit(0, rMid - 1), sideB: unit(0, rMid) });
+    edges.push({ a: left + 1, b: id(n - 1, rMid), sideA: unit(n - 1, rMid - 1), sideB: unit(n - 1, rMid) });
+  } else {
+    edges.push({ a: left, b: id(0, rMid), sideA: -1, sideB: -1 });
+    edges.push({ a: left + 1, b: id(n, rMid), sideA: -1, sideB: -1 });
+  }
   const adj: number[][] = nodes.map(() => []);
   edges.forEach((e, k) => {
     adj[e.a].push(k);
@@ -857,6 +887,11 @@ export interface CohabitOpts {
   catFloor?: boolean;
   /** 单元外形：省略 = round 圆台（旧口径逐位不变）；square = 方形单元（squarePlanLayout，Lab 2-15 用） */
   unit?: 'round' | 'square';
+  /**
+   * 单元铺到哪：省略 = field（Lab.12 那块场地居中，旧口径逐位不变）；room = 铺满整间房、台数不变（planLayout 的 cover，
+   * 2026-10-27 Lab 2-15 用）。只配「走 · 站 · 坐」规则：落在墙上的那圈交叉点要靠家具层的 nodeOff 关掉。
+   */
+  cover?: 'field' | 'room';
 }
 
 export class CohabitSim {
@@ -933,7 +968,8 @@ export class CohabitSim {
   constructor(opts: CohabitOpts = {}) {
     this.trigger = opts.trigger ?? 'trace';
     const posture = this.trigger === 'posture';
-    const base = planLayout(opts.grid ?? (posture ? COHABIT.SEATS.GRID : COHABIT.GRID_DEF), opts.radius ?? RING.RADIUS_DEF);
+    if (opts.cover === 'room' && !posture) throw new Error("cover: 'room' 只配「走 · 站 · 坐」规则（trigger: 'posture'）");
+    const base = planLayout(opts.grid ?? (posture ? COHABIT.SEATS.GRID : COHABIT.GRID_DEF), opts.radius ?? RING.RADIUS_DEF, opts.cover ?? 'field');
     this.layout = opts.unit === 'square' ? squarePlanLayout(base) : base;
     this.fullBandSegments = this.layout.units.flatMap((u) => Array.from({ length: BANDS }, (_, j): readonly [number, number, number, number] => {
       const a = bandAngle(j);
@@ -2896,9 +2932,14 @@ export class CohabitSim {
     c.phaseTime = 0;
   }
 
+  /** 猫在地面上随便挑点的范围（半宽）：场地；单元铺满整间房时场地就是房间，离墙留 0.3 m（旧口径场地本就离墙近一米，逐位不变） */
+  private floorHalf(): number {
+    return Math.min(this.layout.fieldM / 2, this.layout.roomM / 2 - 0.3);
+  }
+
   /** 地面上换个地方（与空房间档的换格同一条：潜伏期里不去离人 1 m 以内的点）；挑不到就坐下 */
   private floorRoam(c: Cat): void {
-    const half = this.layout.fieldM / 2;
+    const half = this.floorHalf();
     for (let k = 0; k < 8; k++) {
       const x = (this.rng() * 2 - 1) * half;
       const y = (this.rng() * 2 - 1) * half;
@@ -2983,7 +3024,7 @@ export class CohabitSim {
     c.phaseTime += dt;
     if (c.state === 'sit' || c.state === 'lie') c.settledTime += dt;
     if (c.mode !== 'auto') return;
-    const half = this.layout.fieldM / 2;
+    const half = this.floorHalf();
     let tol = att ? this.cat.tolerateAttended : this.cat.tolerate;
     if (this.cat.crowdTolMul !== 1) {
       // 人群中的开阔处：1.5 m 内第二位访客起，每多一位能忍的秒数乘一次 crowdTolMul

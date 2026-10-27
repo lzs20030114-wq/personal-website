@@ -131,12 +131,16 @@ const COPY = {
   },
 } as const;
 
-/** 与案例页对照图同一份配置（scripts/cohabit/case-compare.mjs），只多一条：单元是方形的（`unit: 'square'`）；放人放猫照 runCohabit 的摆法 */
+/**
+ * 与案例页对照图同一份配置（scripts/cohabit/case-compare.mjs），多两条：单元是方形的（`unit: 'square'`）；
+ * 64 台铺满整间房（`cover: 'room'`，2026-10-27，格距 0.60 → 0.83 m、台子随之放大，家具按新格子重排）。放人放猫照 runCohabit 的摆法
+ */
 function makeSim(space: SpaceMode, seed: number): CohabitSim {
   const sim = new CohabitSim({
     trigger: 'posture',
     grid: COHABIT.SEATS.GRID,
     unit: 'square',
+    cover: 'room',
     space,
     seed,
     opening: false,
