@@ -20,7 +20,7 @@ import {
   SCENE,
   STEADY,
   STOWED_STRIDE,
-  TABLE_REACH,
+  TABLE_MOVE,
   TABLE_TOP,
   UNITS_PER_M,
   UNIT_ORDER,
@@ -49,7 +49,6 @@ import {
   roomMesh,
   seatSpecOf,
   stepBandCursor,
-  tableClearOf,
   tableTopFor,
   unitDrop,
   unitFootY,
@@ -169,9 +168,6 @@ function makeSim(space: SpaceMode, seed: number): CohabitSim {
   for (let i = 0; i < SCENE.cats; i++) sim.addCat(sim.layout.units[(i * 5) % sim.layout.units.length]);
   return sim;
 }
-
-/** 台面换高度的速度（m/s）：一台从站立高度落到茶几高度约 1.1 s */
-const TABLE_MOVE = 0.5;
 
 /** 步态相位分几格（每格一份静态网格，画面上看不出跳格） */
 const WALK_FRAMES = { person: 24, cat: 16 } as const;
@@ -293,7 +289,6 @@ export function CohabitSpaceBench({
     // 每台此刻的台面高度（米，离地）：朝它要去的高度匀速走（TABLE_MOVE m/s）；收在天花下时直接换成目标，落下来就是对的高度
     const tableTop = new Float32Array(layout.units.length).fill(TABLE_TOP.stand);
     const tableWant = new Float32Array(layout.units.length);
-    const tableNear = new Float32Array(layout.units.length);
     let tableT = 0;
     const syncPosts = (): void => {
       let dirty = false;
@@ -426,23 +421,9 @@ export function CohabitSpaceBench({
         skinPerKey.clear();
         skinLoose.length = 0;
         const at = (c: { x: number; z: number }, yaw: number, y: number): MeshPlace => ({ yaw, x: c.x, y, z: c.z, s: rig.s });
-        // 这一帧每台该落到哪个高度：离坐着的人座位 TABLE_REACH 以内、台面不压家具的，按他坐的家具当桌子；其余落到站着用的高度
-        // 一台同时挨着两个座位（沙发与餐椅之间）时按离得近的那个座位
+        // 这一帧每台该落到哪个高度：平面模型此刻把它当谁的桌子（COHABIT.TABLE、sim.tableBy）就落到那件家具的桌子高度，其余落到站着用的高度
         tableWant.fill(TABLE_TOP.stand);
-        tableNear.fill(Infinity);
-        if (sim.furn)
-          for (const p of sim.people) {
-            if (!p.seated || p.seat === null) continue;
-            const seat = sim.seats[p.seat];
-            const rect = sim.furn.rects[seat.furn];
-            for (const pu of layout.units) {
-              const d = Math.hypot(pu.x - seat.x, pu.y - seat.y);
-              if (d <= TABLE_REACH && d < tableNear[pu.i] && tableClearOf(layout, pu, sim.furn.rects)) {
-                tableNear[pu.i] = d;
-                tableWant[pu.i] = tableTopFor(rect, pu);
-              }
-            }
-          }
+        if (sim.furn) for (let u = 0; u < layout.units.length; u++) if (sim.tableBy[u] >= 0) tableWant[u] = tableTopFor(sim.furn.rects[sim.tableBy[u]]);
         const dtT = Math.max(0, Math.min(0.1, sim.t - tableT));
         tableT = sim.t;
         for (let u = 0; u < layout.units.length; u++) {

@@ -10,8 +10,10 @@ import {
   doorReach,
   edgeOpen,
   everyoneHasExit,
+  furnKind,
   nearestNode,
   partySizes,
+  platformClear,
   populateCohabit,
   runCohabit,
   shortestPath,
@@ -1219,6 +1221,98 @@ describe('cohabit · 方形单元（unit: square，Lab 2-15，作者 2026-10-25�
 
     it('只配「走 · 站 · 坐」规则', () => {
       expect(() => new CohabitSim({ trigger: 'trace', cover: 'room' })).toThrow();
+    });
+  });
+
+  describe('人坐下，面前那台落下来当桌子（COHABIT.TABLE，2026-10-27 作者「不是随便落下来的，应该有相应规则」）', () => {
+    const T = COHABIT.TABLE;
+    const quiet = () => new CohabitSim({ trigger: 'posture', unit: 'square', cover: 'room', space: 'live', seed: 3, opening: false, auto: false, faces: true, social: true });
+
+    it('标准布置：十个座位各有一台；沙发两座共用正前方那台（茶几距离 0.30–0.46 m），餐椅那台台边落在膝盖前、伸手够得着', () => {
+      const sim = quiet();
+      const l = sim.layout;
+      const rects = sim.furn!.rects;
+      expect(sim.seats).toHaveLength(10);
+      const owner = new Map<number, number>();
+      for (const s of sim.seats) {
+        expect(s.table, `座位 ${s.i}`).toBeGreaterThanOrEqual(0);
+        const u = l.units[s.table];
+        const r = rects[s.furn];
+        const k = furnKind(r);
+        const along = (u.x - s.x) * s.face[0] + (u.y - s.y) * s.face[1];
+        const lat = Math.abs(-(u.x - s.x) * s.face[1] + (u.y - s.y) * s.face[0]);
+        const edge = along - l.platR;
+        // 在人面前、台面横向盖住座位中线
+        expect(along).toBeGreaterThan(0);
+        expect(lat).toBeLessThan(l.platR);
+        if (r.kind === 'sofa') {
+          const gap = edge - (k.d / 2 - k.seatIn);
+          expect(gap).toBeGreaterThanOrEqual(T.SOFA_GAP[0]);
+          expect(gap).toBeLessThanOrEqual(T.SOFA_GAP[1]);
+        } else {
+          expect(edge + k.back!).toBeGreaterThanOrEqual(T.CHAIR_EDGE[0]);
+          expect(edge + k.back!).toBeLessThanOrEqual(T.CHAIR_EDGE[1]);
+          expect(lat).toBeLessThan(0.05); // 正对，不是坐在桌角
+        }
+        // 不压家具、不盖任何座位上的人的头顶
+        expect(platformClear(l, u, rects)).toBe(true);
+        for (const q of sim.seats) expect(unitReaches(l, u, q.x, q.y, PLAN.BODY_R), `台 ${s.table} 盖到座位 ${q.i}`).toBe(false);
+        // 同一台只给一件家具
+        if (owner.has(s.table)) expect(owner.get(s.table)).toBe(s.furn);
+        owner.set(s.table, s.furn);
+      }
+      for (const fi of new Set(sim.seats.map((s) => s.furn))) expect(new Set(sim.seats.filter((s) => s.furn === fi).map((s) => s.table)).size).toBe(1);
+      // 2-14 那套家具（不是人体工学那套）没有桌子
+      const old = new CohabitSim({ trigger: 'posture', seed: 3, opening: false });
+      expect(old.tables).toBe(false);
+      expect(old.seats.every((s) => s.table === -1)).toBe(true);
+    });
+
+    it('一坐下就落、一起身就收；同一张沙发上还有人坐着时不收', () => {
+      const sim = quiet();
+      const sofa = sim.seats.filter((s) => s.furn === sim.seats[0].furn);
+      const u = sofa[0].table;
+      const run = (sec: number) => {
+        for (let t = 0; t < sec; t += 1 / 30) sim.step(1 / 30);
+      };
+      run(1);
+      expect(sim.tableBy[u]).toBe(-1);
+      // 放到空座上 = 坐下（台架的拖放约定）
+      // 两人同组（陌生人在旧口径下不肯挨着坐）
+      const sit = (q: (typeof sofa)[number], party?: number) => {
+        const g = sim.graph.nodes[q.node];
+        const v = sim.addPerson(g.x, g.y, party)!;
+        sim.hold('person', v.id, q.x, q.y);
+        sim.release('person', v.id);
+        return v;
+      };
+      const a = sit(sofa[0]);
+      const b = sit(sofa[1], a.party);
+      expect(a.seated && b.seated).toBe(true);
+      run(1);
+      expect(sim.tableBy[u]).toBe(sofa[0].furn);
+      expect(sim.act.degree[u]).toBeGreaterThanOrEqual(COHABIT.WALL_AT);
+      // 别的台没有因为有人坐下而落（只有他的那一台）
+      for (let k = 0; k < sim.tableBy.length; k++) if (k !== u) expect(sim.tableBy[k]).toBe(-1);
+      sim.hold('person', a.id, a.walker.x, a.walker.y + 1);
+      run(3);
+      expect(sim.tableBy[u]).toBe(sofa[0].furn);
+      expect(sim.act.degree[u]).toBeGreaterThanOrEqual(COHABIT.WALL_AT);
+      sim.hold('person', b.id, b.walker.x, b.walker.y + 1);
+      run(0.2);
+      expect(sim.tableBy[u]).toBe(-1);
+      run(8);
+      expect(sim.act.degree[u]).toBeLessThan(COHABIT.WALL_AT);
+    });
+
+    it('家具挪了桌子跟着重算：把餐椅拖离任何一台的合格位置，它就没有桌子', () => {
+      const sim = quiet();
+      const ci = sim.furniture.findIndex((f) => f.kind === 'chair');
+      expect(sim.seats.find((s) => s.furn === ci)!.table).toBeGreaterThanOrEqual(0);
+      // 挪半个格距：正对的那台变成斜对、台边离膝盖不在窗口里
+      const f = sim.furniture[ci];
+      expect(sim.moveFurniture(ci, f.x, f.y + sim.layout.pitchM / 2)).toBe(true);
+      expect(sim.seats.find((s) => s.furn === ci)!.table).toBe(-1);
     });
   });
 });

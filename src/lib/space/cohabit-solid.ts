@@ -529,46 +529,30 @@ export interface Rig {
 
 /**
  * 单元兼作桌子时的台面高度（米，离地；2026-10-27 作者「桌面高度参考人体工学数据」）。一个高度当不了所有桌子，按服务谁落：
- * - stand 1.05：站着用——站姿肘高附近（BIFMA G1 站立桌可调到 1.18；吧台桌通行 1.0–1.1）。没人坐着要用的单元都落到这里；
- * - chair 0.74：配餐椅（座面 0.45）——桌面比座面高 0.27–0.30 是通行的桌椅高差；
- * - sofaFront 0.49：沙发正前方当茶几——资料要与座面齐或略低（0.40–0.45），但台面到吊带最下端有 0.48 m，再低吊带就戳到地上，0.49 是下限；
- * - sofaSide 0.60：沙发扶手旁当边几——取扶手高（0.62）附近。
+ * - stand 1.05：站着用——站姿肘高附近（BIFMA G1 站立桌可调到 1.18；吧台桌通行 1.0–1.1）。不当桌子的单元都落到这里；
+ * - chair 0.74：配餐椅（座面 0.45）——桌面比座面高 0.27–0.30 是通行的桌椅高差；台面 0.15 厚、台底 0.59，腿进不去，
+ *   所以餐椅那台的台边按 COHABIT.TABLE 落在膝盖前面；
+ * - sofaFront 0.49：沙发正前方当茶几——资料要与座面齐或略低（0.40–0.45），但台面到吊带最下端有 0.48 m，再低吊带就戳到地上，0.49 是下限。
+ * 哪一台当谁的桌子、什么时候落由平面模型定（COHABIT.TABLE、CohabitSim.tableBy），这里只管高度。
  * 原来铺满时钉在 1.43 m（场地布局那个高度，接近站姿肩高），哪种桌子都不是。
  */
-export const TABLE_TOP = { stand: 1.05, chair: 0.74, sofaFront: 0.49, sofaSide: 0.6 } as const;
+export const TABLE_TOP = { stand: 1.05, chair: 0.74, sofaFront: 0.49 } as const;
+
+/**
+ * 台面换高度的速度（m/s）：取市面上电动升降桌的快档 80 mm/s（常见 30–50 mm/s，见厂商参数；Lee 等 2019 用的 IKEA Bekant 是
+ * 30 mm/s，受试者嫌它在坐站之间切换时太慢）。一台从站立高度落到茶几高度约 7 s、到餐桌高度约 4 s。收在天花下的单元直接
+ * 落到目标高度（那一段走的是升降轨迹，不吃这个速度）。
+ */
+export const TABLE_MOVE = 0.08;
 
 /** 台面落在 topM（米，离地）时装置原点的世界高度 */
 export function rigYForTop(rig: Pick<Rig, 's'>, traj: Pick<BandTrajectory, 'platformTopY'>, topM: number): number {
   return ROOM.FLOOR_Y - topM * UNITS_PER_M - rig.s * traj.platformTopY;
 }
 
-/**
- * 这台单元给坐在 r 上的人当哪种桌子：餐椅 → chair；沙发 → 单元中心在前缘之前、横向不出沙发两端外 0.2 m 算正前方（茶几），
- * 否则算扶手旁（边几）。
- */
-export function tableTopFor(r: Pick<FurnRect, 'kind' | 'cx' | 'cy' | 'x0' | 'x1' | 'y0' | 'y1' | 'face'>, u: { x: number; y: number }): number {
-  if (r.kind === 'chair') return TABLE_TOP.chair;
-  const [fx, fy] = r.face;
-  const facesY = Math.abs(fy) > Math.abs(fx);
-  const halfW = (facesY ? r.x1 - r.x0 : r.y1 - r.y0) / 2;
-  const halfD = (facesY ? r.y1 - r.y0 : r.x1 - r.x0) / 2;
-  const along = (u.x - r.cx) * fx + (u.y - r.cy) * fy;
-  const side = Math.abs((u.x - r.cx) * -fy + (u.y - r.cy) * fx);
-  return along > halfD && side <= halfW + 0.2 ? TABLE_TOP.sofaFront : TABLE_TOP.sofaSide;
-}
-
-/** 当桌子用的那台离座位点最远多少（m，芯到座位点）：0.69 m 的方台伸手够得着的范围 */
-export const TABLE_REACH = 1.3;
-/** 桌子高度的台面离家具至少留多远（m） */
-export const TABLE_GAP = 0.03;
-
-/**
- * 这台的台面（峰值方形，半边 platR）落到桌子高度会不会压到家具：方台边与房间轴对齐，按轴对齐矩形判，留 TABLE_GAP。
- * 站立高度 1.05 时台底 0.90 高过所有家具（最高的椅背 0.85），不用判。
- */
-export function tableClearOf(l: Pick<PlanLayout, 'platR'>, u: { x: number; y: number }, rects: readonly Pick<FurnRect, 'x0' | 'x1' | 'y0' | 'y1'>[]): boolean {
-  const h = l.platR + TABLE_GAP;
-  return rects.every((r) => u.x + h <= r.x0 || u.x - h >= r.x1 || u.y + h <= r.y0 || u.y - h >= r.y1);
+/** 给坐在 r 上的人当桌子时落到多高：餐椅 → 餐桌高度，沙发 → 茶几高度 */
+export function tableTopFor(r: Pick<FurnRect, 'kind'>): number {
+  return r.kind === 'chair' ? TABLE_TOP.chair : TABLE_TOP.sofaFront;
 }
 
 /**

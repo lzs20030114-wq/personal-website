@@ -3,6 +3,7 @@ import { BRIDGE_BASE, FRAMES, FURN_ERGO, HOIST, STEADY, TABLE_TOP, rigYForTop, t
 import { planLayout } from './unit-activation';
 import { FIGURE, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
 import { RING } from './skin-ring';
+import { SOLID } from './skin-solid';
 import { SQUARE, SQUARE_PEAK, SQUARE_REACH, buildSquareUnits, squareHalfSide, squareRadiusAt } from './skin-square';
 import { catMesh, figureMesh } from './figure';
 import { partBox } from './mesh-shell';
@@ -480,20 +481,18 @@ describe('单元铺满整间房（cover: room，2026-10-27 作者「单元兼作
     expect(TABLE_TOP.sofaFront - hang).toBeLessThan(0.02); // 已经是能落到的最低
     expect(TABLE_TOP.chair - FURN_ERGO.chair.seatH).toBeGreaterThanOrEqual(0.27);
     expect(TABLE_TOP.chair - FURN_ERGO.chair.seatH).toBeLessThanOrEqual(0.3);
-    expect(Math.abs(TABLE_TOP.sofaSide - FURN_ERGO.sofa.armH)).toBeLessThan(0.05);
   });
 
-  it('座位前方 / 旁边那台按家具分：餐椅 → 餐桌；沙发正前方 → 茶几，扶手旁 → 边几', () => {
+  it('当谁的桌子落多高：餐椅 → 餐桌，沙发 → 茶几；餐桌台底比座面高不到 0.18（腿进不去，所以台边按规则落在膝盖前）', () => {
     const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', space: 'live', seed: 1 });
     const rects = sim.furn!.rects;
-    const sofa = rects.find((r) => r.kind === 'sofa')!;
-    const chair = rects.find((r) => r.kind === 'chair')!;
-    const [fx, fy] = sofa.face;
-    expect(tableTopFor(chair, { x: chair.cx + chair.face[0], y: chair.cy + chair.face[1] })).toBe(TABLE_TOP.chair);
-    expect(tableTopFor(sofa, { x: sofa.cx + fx * 0.8, y: sofa.cy + fy * 0.8 })).toBe(TABLE_TOP.sofaFront);
-    expect(tableTopFor(sofa, { x: sofa.cx + fy * 1.0, y: sofa.cy - fx * 1.0 })).toBe(TABLE_TOP.sofaSide);
-    // 实际座位：每个座位的前方 / 旁边那台都给得出高度
-    for (const seat of sim.seats) for (const u of [seat.meet, seat.side]) expect(Object.values(TABLE_TOP)).toContain(tableTopFor(rects[seat.furn], sim.layout.units[u]));
+    expect(tableTopFor(rects.find((r) => r.kind === 'chair')!)).toBe(TABLE_TOP.chair);
+    expect(tableTopFor(rects.find((r) => r.kind === 'sofa')!)).toBe(TABLE_TOP.sofaFront);
+    // 台面厚 = 方台成形的箱高（Lab 2-7 方形环平档 SQUARE.H，剖面 px；剖面坐标 = px / 100）按装置比例换成米
+    const thick = (rig.s * (SQUARE.H / 100) * SOLID.SCALE) / UNITS_PER_M;
+    expect(thick).toBeGreaterThan(0.13);
+    expect(thick).toBeLessThan(0.17);
+    expect(TABLE_TOP.chair - thick - FURN_ERGO.chair.seatH).toBeLessThan(0.18);
   });
 
   it('64 台铺满四边：最外一圈的台面离墙不到半个格距，峰值时邻台面对面、角对角都还留缝，台子不出房间', () => {

@@ -261,9 +261,12 @@ export const COHABIT = {
       { kind: 'sofa', at: [1.5, -2.8], face: [0, 1] },
       { kind: 'sofa', at: [1.5, 2.8], face: [0, -1] },
       { kind: 'sofa', at: [-1.5, 2.8], face: [0, -1] },
-      // 餐椅进深 0.52：中心放在 2.64 格，前缘离前一排交叉点仍约 0.27 m
-      { kind: 'chair', at: [0, -2.64], face: [0, 1] },
-      { kind: 'chair', at: [0, 2.64], face: [0, -1] },
+      // 餐椅（2026-10-27 第二版，作者「人坐下面前那台落下当桌子，要有相应规则」）：原来摆在两张沙发之间（0, ±2.64 格）、
+      // 面朝两台之间的缝，按 COHABIT.TABLE 一台都用不上（最近的两台斜在前方，台边离靠背面 0.82 m、座位中线在台面外 7 cm）。
+      // 挪到中间那片、侧过来朝 ±x：正对一台的中线（横向偏 2 cm），台边离靠背面 0.685 m，落在 0.615–0.712 的窗口中间；
+      // 椅子本身压在另一台下面（人坐着时那台不落），前缘离交叉点 0.14 m 以外，入口仍是自己的。仍点对称
+      { kind: 'chair', at: [-0.48, -1.48], face: [1, 0] },
+      { kind: 'chair', at: [0.48, 1.48], face: [-1, 0] },
     ],
     /** 尺寸（m）：w 沿宽、d 进深；seats = 座位离中线的偏移；座位点 = 坐着的人躯干中心 = 家具中心往前 SEAT_IN
      *  （负 = 往靠背那边：人靠着靠背坐，躯干在靠背前约 0.25 m；首版取 +0.1 等于坐在沙发前沿，2026-10-07 改正） */
@@ -281,8 +284,8 @@ export const COHABIT = {
      *   膝窝不顶座面前缘）；靠背 0.04 ⇒ 座位点在中心后 0.10。
      */
     KINDS_ERGO: {
-      sofa: { w: 1.4, d: 0.8, seats: [-0.29, 0.29], seatIn: -0.08 },
-      chair: { w: 0.5, d: 0.52, seats: [0], seatIn: -0.1 },
+      sofa: { w: 1.4, d: 0.8, seats: [-0.29, 0.29], seatIn: -0.08, back: 0.12 },
+      chair: { w: 0.5, d: 0.52, seats: [0], seatIn: -0.1, back: 0.12 },
     },
     /** 家具离墙、彼此之间至少留多远（m） */
     GAP: 0.05,
@@ -292,6 +295,34 @@ export const COHABIT = {
     SIT_P: 0.5,
     /** 坐多久（s；演示值） */
     SIT: { min: 90, max: 240 },
+  },
+  /**
+   * 人坐下，面前那台落下来当桌子（作者 2026-10-27「不是随便落下来的，应该有相应规则」）。只给人体工学那套家具
+   * （FurnSpec.ergo，单元铺满整间房的 Lab 2-15）；2-14 与案例页对照图没有这条。规则按「谁 · 哪一台 · 什么时候」三件定：
+   *
+   * 哪一台（placeSeats 时按几何定死，家具一挪就重算；量的都是方台全落时的方形，半边 platR）：
+   *   - 台面横向盖住座位中线（座位点在台面宽度之内），在人面前；不盖任何座位上的人的头顶；落到桌子高度时不压家具
+   *     （台面离家具留 FURN_GAP）。
+   *   - 沙发 = 茶几：台面近边离沙发前缘 SOFA_GAP（0.30–0.46 m）。家居设计通行的茶几间距是 14–18 英寸（0.36–0.46 m，
+   *     Homestyler、Wayfair、Ideal Home 等，理由是「伸手够得着杯子、又留得下腿和起身」；没找到一手人体工学出处，下限取 12 英寸
+   *     给小客厅留余地）。坐在沙发上够茶几要往前探身——上肢前伸长女性第 5 百分位 0.712 m（GB/T 13547-1992，从背靠面量到中指尖），
+   *     而台边离靠背面 0.93 m——这是茶几本来的用法，不是本条规则多出来的代价。
+   *   - 餐椅 = 餐桌，但台面有 0.15 m 厚：落到 0.74 m 时台底 0.59，比座面只高 0.14，放不下大腿（座面到桌底要 0.18–0.20，
+   *     即 7–8 英寸，见家具购买指南；GB/T 10000 坐姿大腿厚男性第 95 百分位约 0.15）。所以腿不进桌下，台边要落在膝盖前面：
+   *     离靠背面 ≥ 臀膝距男性第 95 百分位 0.595 + 0.02，≤ 上肢前伸长女性第 5 百分位 0.712（不探身也够得着台边）——CHAIR_EDGE。
+   *   - 同一台只给一件家具：一张沙发两个座位共用正前方那一台（它正好在两座中间）；两件家具都合格时先到先得（placeSeats 按件号）。
+   *
+   * 谁：只有坐着的人（「走 · 站 · 坐」里坐 = 全力）。站着、走着不触发。
+   *
+   * 什么时候：人一坐下就落、最后一个用这张桌子的人一站起来就收。依据 Lee、Wu、Reyes、Saakes 2019（CHI，自动升降桌、12 人
+   *   Wizard-of-Oz）：在人换事的那个间隙里动（人走近桌子时就开始动、开始干活前到位）挫败感最低、被偏好；开始干活 10 秒后再动，
+   *   多数人第一下被吓到、停手，挫败感显著更高。坐下与起身正是那个间隙，所以不加延迟。动得多快见 cohabit-solid 的 TABLE_MOVE。
+   *   桌子有人用着时不再变高度（同一研究：人会把手、身体压在桌上，桌子这时一动就不舒服）。
+   */
+  TABLE: {
+    SOFA_GAP: [0.3, 0.46],
+    CHAIR_EDGE: [0.615, 0.712],
+    FURN_GAP: 0.03,
   },
   /**
    * 猫的停留代价按 Mertens & Turner 1988 标定（2026-10-07，`scripts/cohabit/calibrate-mt.mjs`）：仓库里唯一的
@@ -455,7 +486,7 @@ export interface FurnSpec {
 }
 
 /** 这件家具用哪套尺寸 */
-export function furnKind(f: { kind: FurnKind; ergo?: true }): { w: number; d: number; seats: readonly number[]; seatIn: number } {
+export function furnKind(f: { kind: FurnKind; ergo?: true }): { w: number; d: number; seats: readonly number[]; seatIn: number; back?: number } {
   return f.ergo ? COHABIT.SEATS.KINDS_ERGO[f.kind] : { ...COHABIT.SEATS.KINDS[f.kind], seatIn: COHABIT.SEATS.SEAT_IN };
 }
 
@@ -492,6 +523,8 @@ export interface Seat {
   meet: number;
   /** 座位旁边那台：平台不盖坐着的人头顶（中心离座位 > 平台半径 + 身体）的最近一台；与入口四角不重合时优先 */
   side: number;
+  /** 坐下时落下来当桌子的那台（COHABIT.TABLE；−1 = 没有合格的，或不是人体工学那套家具） */
+  table: number;
 }
 
 /** 点到轴对齐矩形的距离 */
@@ -753,10 +786,64 @@ export function placeSeats(l: PlanLayout, g: AisleGraph): Seat[] {
       // 方台：四个角比 platR 远，按每条带的长度问「盖不盖到头顶」；圆台照旧比芯距
       const clear = (q: { u: PlanUnit; d: number }) => (l.bandReach ? !unitReaches(l, q.u, x, y, PLAN.BODY_R) : q.d > headR);
       const side = cand.find((q) => clear(q) && !corner(q.u)) ?? cand.find((q) => clear(q)) ?? cand[cand.length - 1];
-      seats.push({ i: seats.length, furn: fi, slot, x, y, face: r.face, node, meet: pick.u.i, side: side.u.i });
+      seats.push({ i: seats.length, furn: fi, slot, x, y, face: r.face, node, meet: pick.u.i, side: side.u.i, table: -1 });
     });
   });
+  // 桌子要等所有座位点都定了才能挑（不许盖到任何一个座位上的人的头顶）；同一台只给一件家具，按件号先到先得
+  const owner = new Map<number, number>();
+  for (const s of seats) {
+    const u = tableFor(l, f.rects, seats, s, owner);
+    if (u < 0) continue;
+    s.table = u;
+    owner.set(u, s.furn);
+  }
   return seats;
+}
+
+/** 方台落到桌子高度时会不会压到家具：台面（全落的方形，半边 platR）与家具占位按轴对齐矩形判，留 gap */
+export function platformClear(l: Pick<PlanLayout, 'platR'>, u: { x: number; y: number }, rects: readonly Pick<FurnRect, 'x0' | 'x1' | 'y0' | 'y1'>[], gap: number = COHABIT.TABLE.FURN_GAP): boolean {
+  const h = l.platR + gap;
+  return rects.every((r) => u.x + h <= r.x0 || u.x - h >= r.x1 || u.y + h <= r.y0 || u.y - h >= r.y1);
+}
+
+/**
+ * 坐在 s 上的人用哪一台当桌子（COHABIT.TABLE 的「哪一台」）。owner = 已经分给别的家具的台（台下标 → 件号）。
+ * 候选里取横向偏得最少的，再取台边离得近的；一台都不合格返回 −1。不是人体工学那套家具（没有 back）一律 −1。
+ */
+export function tableFor(l: PlanLayout, rects: readonly FurnRect[], seats: readonly Pick<Seat, 'x' | 'y'>[], s: Pick<Seat, 'x' | 'y' | 'face' | 'furn'>, owner: ReadonlyMap<number, number> = new Map()): number {
+  const r = rects[s.furn];
+  const kd = furnKind(r);
+  if (kd.back === undefined) return -1;
+  const T = COHABIT.TABLE;
+  const [fx, fy] = s.face;
+  // 座位点到家具前缘、到靠背面的距离（沿朝向）
+  const front = kd.d / 2 - kd.seatIn;
+  let best = -1;
+  let bl = Infinity;
+  let be = Infinity;
+  for (const u of l.units) {
+    const o = owner.get(u.i);
+    if (o !== undefined && o !== s.furn) continue;
+    const along = (u.x - s.x) * fx + (u.y - s.y) * fy;
+    const lat = Math.abs(-(u.x - s.x) * fy + (u.y - s.y) * fx);
+    if (along <= 0 || lat >= l.platR) continue;
+    const edge = along - l.platR; // 座位点到台面近边
+    if (r.kind === 'sofa') {
+      const gap = edge - front;
+      if (gap < T.SOFA_GAP[0] || gap > T.SOFA_GAP[1]) continue;
+    } else {
+      const fromBack = edge + kd.back;
+      if (fromBack < T.CHAIR_EDGE[0] || fromBack > T.CHAIR_EDGE[1]) continue;
+    }
+    if (!platformClear(l, u, rects)) continue;
+    if (seats.some((q) => unitReaches(l, u, q.x, q.y, PLAN.BODY_R))) continue;
+    if (lat < bl - 1e-9 || (Math.abs(lat - bl) <= 1e-9 && edge < be)) {
+      best = u.i;
+      bl = lat;
+      be = edge;
+    }
+  }
+  return best;
 }
 
 // ── 身体 ─────────────────────────────────────────────────────────────────────
@@ -912,6 +999,8 @@ export interface CohabitOpts {
    * 2026-10-27 Lab 2-15 用）。只配「走 · 站 · 坐」规则：落在墙上的那圈交叉点要靠家具层的 nodeOff 关掉。
    */
   cover?: 'field' | 'room';
+  /** 人坐下、面前那台落下来当桌子（COHABIT.TABLE）；省略 = 单元铺满整间房时开（只有那套家具有桌子可落），否则关 */
+  tables?: boolean;
 }
 
 export class CohabitSim {
@@ -955,6 +1044,12 @@ export class CohabitSim {
   readonly bandHold: Uint8Array;
   readonly bandWall: Uint8Array;
   readonly bandHard: Uint8Array;
+  /** 桌子（COHABIT.TABLE）开关；tableBy = 此刻每台被哪件家具当桌子要着（件号，−1 = 没有）；
+   *  tableSeat / tableReady = 坐在有桌子可落的座位上的人·秒、其中桌子已经落到位（对人是墙）的人·秒 */
+  readonly tables: boolean;
+  readonly tableBy: Int16Array;
+  tableSeat = 0;
+  tableReady = 0;
   /** 触发档；「走 · 站 · 坐」下的家具、座位，空间此刻铺的路，累计「猫到了坐着的人座位前方那台」次数 */
   readonly trigger: TriggerMode;
   /** 家具清单（可加减、拖动；「走 · 站 · 坐」默认 = 标准布置）与由它算出的占位 / 座位 */
@@ -1035,6 +1130,8 @@ export class CohabitSim {
     this.blocked = new Uint8Array(n);
     this.wall = new Uint8Array(n);
     this.heldR5 = new Uint8Array(n);
+    this.tables = opts.tables ?? opts.cover === 'room';
+    this.tableBy = new Int16Array(n).fill(-1);
     this.wallScratch = new Uint8Array(n);
     this.faces = opts.faces ?? false;
     this.bandOpen = new Float32Array(n * BANDS);
@@ -3220,6 +3317,7 @@ export class CohabitSim {
       }
     }
     this.lastDt = dt;
+    if (this.tables) this.tableStep(inputs, thr, dt);
     if (this.goal && this.trigger === 'posture') this.guideStep(inputs, thr);
     const before = Float64Array.from(this.act.degree);
     const gate = (this.clearance !== null && !this.faces) || pressBlocked || this.people.some((p) => p.seated) ? this.blocked : null;
@@ -3250,6 +3348,33 @@ export class CohabitSim {
     // 猫的脚下不可能被收回（占用钉住），但跟随档下若读数被让位压过——这里再钉一次
     for (const c of this.cats) this.keepSupport(c);
     this.refreshWalls();
+  }
+
+  /**
+   * 桌子（COHABIT.TABLE）：坐着的人要他座位那台（placeSeats 时定好的 seat.table），一坐下就要、最后一个人起身就放。
+   * 一台同时被两件家具的人要着时归先要的那件（上一步已经归谁就还归谁）。被闸住的不要（坐着的人头顶、整个单元让路时
+   * 会打到人的——它落不下来）；落不落仍过 R5、仍可被路过的人收带让路（与别的单元同一套空间规则）。
+   */
+  private tableStep(inputs: Float64Array, thr: number, dt: number): void {
+    const prev = Int16Array.from(this.tableBy);
+    this.tableBy.fill(-1);
+    const users: { u: number; furn: number }[] = [];
+    for (const p of this.people) {
+      if (!p.seated || p.seat === null) continue;
+      const s = this.seats[p.seat];
+      if (s.table < 0) continue;
+      users.push({ u: s.table, furn: s.furn });
+      this.tableSeat += dt;
+      if (this.act.degree[s.table] >= COHABIT.WALL_AT && prev[s.table] === s.furn) this.tableReady += dt;
+    }
+    // 先给上一步就要着它的那件家具，再按先后给别的
+    users.sort((a, b) => Number(prev[b.u] === b.furn) - Number(prev[a.u] === a.furn));
+    for (const { u, furn } of users) {
+      if (this.blocked[u]) continue;
+      if (this.tableBy[u] >= 0 && this.tableBy[u] !== furn) continue;
+      this.tableBy[u] = furn;
+      inputs[u] = Math.max(inputs[u], thr);
+    }
   }
 
   /**
@@ -3449,6 +3574,8 @@ export class CohabitSim {
       parties: new Set(this.people.map((p) => p.party)).size,
       walkTime: this.walkTime,
       minGap: this.minGap,
+      tableSeat: this.tableSeat,
+      tableReady: this.tableReady,
     };
   }
 }
@@ -3482,6 +3609,9 @@ export interface CohabitSummary {
   parties: number;
   walkTime: number;
   minGap: number;
+  /** 桌子（COHABIT.TABLE）：坐在有桌子可落的座位上的人·秒 · 其中桌子已经落到位的人·秒（tables 关着时恒 0） */
+  tableSeat: number;
+  tableReady: number;
 }
 
 export interface RunOpts extends CohabitOpts {
