@@ -194,7 +194,8 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     const ch = (fr.height - GAP * (ROWS - 1)) / ROWS;
     for (let i = 0; i < st.cells.length; i++) {
       let next = '';
-      if (!off) {
+      // 标题底下那块地里的方块只亮不转：大字压在上面，转动的方块会把字底搅乱
+      if (!off && !isCenter(i)) {
         const cx = fr.left + (i % COLS) * (cw + GAP) + cw / 2;
         const cy = fr.top + Math.floor(i / COLS) * (ch + GAP) + ch / 2;
         next = tiltCss(tiltAt(cx - p!.x, cy - p!.y));
@@ -602,14 +603,16 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
       </div>
       <div className="hs-field__center" ref={centerRef}>
         <div className="hs-mask">
+          {/* 2026-10-27 第二轮（MAPPING §64.1）：四行定死的断行，像海报一样压在下半屏左边；两个宽词各落一行的行尾 / 行首 */}
           <h1 className="hs-field__title" data-a="rise" data-d="80">
-            I explore how people relate to{' '}
-            <span className="hs-accent--lime">
-              <span className="hs-nb">
-                <span className="hs-w">objects</span> and <span className="hs-w">spaces</span>
-              </span>{' '}
-              that respond to them.
-            </span>
+            <span className="hs-ln">I explore how people</span>{' '}
+            <span className="hs-ln">
+              relate to <span className="hs-accent--lime hs-w">objects</span>
+            </span>{' '}
+            <span className="hs-ln hs-accent--lime">
+              and <span className="hs-w">spaces</span> that
+            </span>{' '}
+            <span className="hs-ln hs-accent--lime">respond to them.</span>
           </h1>
         </div>
         <p className="hs-field__lede" data-a="up" data-d="260">

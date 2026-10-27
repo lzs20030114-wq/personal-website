@@ -57,9 +57,13 @@ interface CardProps {
 function WorkCard({ t, c, cur, on, focusable, vars, onEnter }: CardProps) {
   const body = (
     <>
-      <span className="hs-card__kick" data-a={cur ? 'up' : undefined} data-d={160 + c * 90}>
+      <span
+        className={`hs-card__kick${t.caseSlug ? ' hs-card__kick--big' : ''}`}
+        data-a={cur ? 'up' : undefined}
+        data-d={160 + c * 90}
+      >
         {t.caseSlug ? (
-          // 主项目：编号放大成宽体粗字；还没发稿的（项目三）用空心编号，已发稿的实心（MAPPING §64）
+          // 主项目：编号放大成宽体粗字、下半截压进图版；还没发稿的（项目三）用空心编号，已发稿的实心（MAPPING §64 / §64.1）
           <span className="hs-card__kick-n hs-card__kick-n--big">
             <span className={`hs-card__num${t.wip ? ' hs-card__num--wip' : ''}`}>{t.kickN}</span>
             <span className="hs-card__kick-l">{t.kickLabel}</span>
@@ -500,6 +504,8 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
   const hint =
     !st.moving && en && effZone ? hintOf(st.zone ? 'zone' : st.nudge ? 'nudge' : 'prox', effZone, en.wrap, prox.t) : { x: 0, op: 0 };
   const Wp = Math.round(st.W * (1 - WC.PEEK));
+  // 组名放大后按最长那个定字号，切到哪组都不顶到右边的刻度盘（MAPPING §64.1）
+  const tlen = groups.reduce((m, gr) => Math.max(m, gr.title.length), 0);
   const tgtGi = zn ? panels[zn.t].gi : null;
   const onPanel = st.wh ? panels.findIndex((pn) => pn.tiles.some((t) => t.key === st.wh)) : -1;
 
@@ -525,7 +531,11 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
     if (!isCur && !flow) return;
     const el = e.currentTarget.querySelector<HTMLElement>('[data-wt]');
     const top = el ? el.offsetTop + (el.offsetParent as HTMLElement).offsetTop : 0;
-    setS((o) => ({ ...o, wh: key, wm: { ty: 20 - top, top: 20 + (el ? el.offsetHeight : 30) + 14 } }));
+    // 主项目卡的大编号压在图版上沿：展开时标题落在编号下面，不和它叠（MAPPING §64.1）
+    const kick = e.currentTarget.querySelector<HTMLElement>('.hs-card__kick--big');
+    const box = e.currentTarget.querySelector<HTMLElement>('.hs-card__box');
+    const pad = 20 + (kick && box ? Math.max(0, kick.getBoundingClientRect().bottom - box.getBoundingClientRect().top) : 0);
+    setS((o) => ({ ...o, wh: key, wm: { ty: pad - top, top: pad + (el ? el.offsetHeight : 30) + 14 } }));
   };
 
   // 光标标签：离开留白区时内容留着，只淡出
@@ -590,7 +600,7 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
       <div
         className={`hs-work hs-wg${st.instant ? ' hs-wg--instant' : ''}`}
         ref={rootRef}
-        style={{ '--wp': `${Wp}px`, '--wg-l': `${st.L}px` } as CSSProperties}
+        style={{ '--wp': `${Wp}px`, '--wg-l': `${st.L}px`, '--wg-tlen': tlen } as CSSProperties}
       >
         <div className="hs-head">
           <div className="hs-wg__lead">
@@ -856,7 +866,7 @@ export function AboutPage() {
               <span>portrait · to be supplied</span>
             </div>
             <span className="hs-portrait__edge" data-a="fade" data-d="520">
-              Zishuo Li · Environmental design · Tsinghua University
+              Zishuo Li · Tsinghua University
             </span>
           </div>
         </figure>

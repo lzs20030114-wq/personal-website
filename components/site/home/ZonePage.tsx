@@ -429,7 +429,7 @@ export function ZonePage({
               04 — Lab
             </p>
             <div className="hs-mask hs-mask--sm">
-              <h2 className="hs-h2" data-a="rise" data-d="60">
+              <h2 className="hs-h2 hs-h2--big" data-a="rise" data-d="60">
                 The lab<span className="hs-accent">.</span>
               </h2>
             </div>
@@ -457,7 +457,7 @@ export function ZonePage({
               <p className="hs-eyebrow" data-rv>
                 05 — Log
               </p>
-              <h2 className="hs-h2" data-rv>
+              <h2 className="hs-h2 hs-h2--big" data-rv>
                 Work log<span className="hs-accent">.</span>
               </h2>
             </div>
