@@ -80,6 +80,9 @@ export const TONE_N: Tone = { ink: 'var(--ink)', hi: 'var(--lime-hi)' };
 export interface HomeWorkTile {
   key: string;
   kick: string;
+  /** kick 拆开的两半：编号（01 / 02.1）与名称（Project I / 实习类别）；主项目卡把编号放大（MAPPING §64） */
+  kickN: string;
+  kickLabel: string;
   status: string;
   title: string;
   role: string;
@@ -135,6 +138,8 @@ export function buildWorkGroups(cards: HomeCard[], other: OtherWorks, entries: L
     tiles: cards.map((c) => ({
       key: c.slug,
       kick: `${c.n} · ${c.kicker}`,
+      kickN: c.n,
+      kickLabel: c.kicker,
       status: c.status,
       title: c.title,
       role: c.role,
@@ -160,6 +165,8 @@ export function buildWorkGroups(cards: HomeCard[], other: OtherWorks, entries: L
         .map((w, i) => ({
           key: `${g.key}-${i}`,
           kick: `${n}.${i + 1} · ${w.context.split(' · ')[0]}`,
+          kickN: `${n}.${i + 1}`,
+          kickLabel: w.context.split(' · ')[0],
           status: w.year,
           title: w.title,
           role: w.context,

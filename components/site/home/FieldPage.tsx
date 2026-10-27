@@ -4,11 +4,14 @@
 // 一张 28×14 的方块场：方块随机亮起又熄灭，指针划过或停留时留下一圈余光；
 // 在亮着的方块上稍作停留，它就长成一张 6×4 的卡（周围方块让位），点卡进那件作品。
 // 中央是标题区，场在它后面绕开。停留与余光规则见 MAPPING §57.1 / §57.3。
+// 2026-10-27（MAPPING §64）：余光照旧，光标附近的方块另外按距离转角、拉斜（开卡时停）；
+// 场里不亮方块的那块空地画四个角标，边界与「方块不亮」的格线对齐。
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { HomeField } from '../../../src/lib/site/home-model';
 import { FIELD_KINDS, fieldColors, pickFieldIndex } from '../../../src/lib/site/field-visuals';
+import { tiltAt, tiltCss } from '../../../src/lib/site/home-fx';
 
 const COLS = 28;
 const ROWS = 14;
@@ -91,6 +94,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
   const fieldRef = useRef<HTMLDivElement>(null);
   const ghostRef = useRef<HTMLDivElement>(null);
   const centerRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLAnchorElement>(null);
   const activeRef = useRef(active);
   activeRef.current = active;
@@ -108,6 +112,12 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     zone: { r0: 4, r1: 9, c0: 7, c1: 20 } as Zone,
     lastCell: -1,
     pointer: null as { x: number; y: number } | null,
+    /** 开卡时各行列的让位位移；倾斜与它合成同一个 transform */
+    shift: null as { sx: number[]; sy: number[] } | null,
+    /** 每格当前的倾斜（空串 = 不倾斜）与倾斜跟的指针 */
+    tilts: [] as string[],
+    tiltPtr: null as { x: number; y: number } | null,
+    tiltRaf: 0,
     ghostTimers: new Map<number, ReturnType<typeof setTimeout>>(),
     heldGhosts: new Map<number, number>(),
     hoveredCell: -1,
@@ -138,6 +148,8 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     clearTimeout(m.current.wakeT);
     m.current.lastCell = -1;
     m.current.pointer = null;
+    m.current.tiltPtr = null;
+    scheduleTilt();
     for (const [i, amp] of m.current.heldGhosts) fadeGhost(i, amp);
     m.current.heldGhosts.clear();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -150,13 +162,56 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     return r >= z.r0 && r <= z.r1 && c >= z.c0 && c <= z.c1;
   };
 
+  /** 一格的 transform = 开卡让位（translate）+ 光标倾斜，两者各管各的、在这里合成 */
+  const composeAt = (i: number) => {
+    const { shift, tilts } = m.current;
+    const s = shift ? `translate(${shift.sx[i % COLS].toFixed(1)}px,${shift.sy[Math.floor(i / COLS)].toFixed(1)}px)` : '';
+    const t = tilts[i] ?? '';
+    return s && t ? `${s} ${t}` : s || t;
+  };
+
   const applyShift = (g: { sx: number[]; sy: number[] } | null) => {
     const { cells, ghosts } = m.current;
+    m.current.shift = g;
+    // 开卡时指针在卡上，周围方块回正，免得卡边一圈乱动
+    if (g) m.current.tilts = [];
     for (let i = 0; i < cells.length; i++) {
-      const t = g ? `translate(${g.sx[i % COLS].toFixed(1)}px,${g.sy[Math.floor(i / COLS)].toFixed(1)}px)` : '';
+      const t = composeAt(i);
       cells[i].style.transform = t;
       if (ghosts[i]) ghosts[i].style.transform = t;
     }
+  };
+
+  /** 光标附近的方块按距离转角、拉斜；方块中心按网格几何算，不逐格量框。开卡中、翻离首屏、文档流里一律回正。 */
+  const applyTilt = () => {
+    const st = m.current;
+    const f = fieldRef.current;
+    if (!f || !st.cells.length) return;
+    const p = st.tiltPtr;
+    const off = !p || !!openRef.current || !activeRef.current || !motionOn();
+    const fr = f.getBoundingClientRect();
+    const cw = (fr.width - GAP * (COLS - 1)) / COLS;
+    const ch = (fr.height - GAP * (ROWS - 1)) / ROWS;
+    for (let i = 0; i < st.cells.length; i++) {
+      let next = '';
+      if (!off) {
+        const cx = fr.left + (i % COLS) * (cw + GAP) + cw / 2;
+        const cy = fr.top + Math.floor(i / COLS) * (ch + GAP) + ch / 2;
+        next = tiltCss(tiltAt(cx - p!.x, cy - p!.y));
+      }
+      if (next === (st.tilts[i] ?? '')) continue;
+      st.tilts[i] = next;
+      const t = composeAt(i);
+      st.cells[i].style.transform = t;
+      if (st.ghosts[i]) st.ghosts[i].style.transform = t;
+    }
+  };
+  const scheduleTilt = () => {
+    if (m.current.tiltRaf) return;
+    m.current.tiltRaf = requestAnimationFrame(() => {
+      m.current.tiltRaf = 0;
+      applyTilt();
+    });
   };
 
   const openAt = useCallback((i: number, pick: number) => {
@@ -279,6 +334,20 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
         r0: Math.max(0, Math.floor(((tr.top - pad - fr.top) / fr.height) * ROWS)),
         r1: Math.min(ROWS - 1, Math.ceil(((tr.bottom + pad - fr.top) / fr.height) * ROWS) - 1),
       };
+      // 角标框落在「方块不亮」那几行几列的外缘格缝上
+      const fx = frameRef.current;
+      const pg = fx?.offsetParent as HTMLElement | null;
+      if (fx && pg) {
+        const pr = pg.getBoundingClientRect();
+        const cw = (fr.width - GAP * (COLS - 1)) / COLS;
+        const ch = (fr.height - GAP * (ROWS - 1)) / ROWS;
+        const z = st.zone;
+        const x0 = fr.left - pr.left + z.c0 * (cw + GAP) - GAP / 2;
+        const x1 = fr.left - pr.left + (z.c1 + 1) * (cw + GAP) - GAP / 2;
+        const y0 = fr.top - pr.top + z.r0 * (ch + GAP) - GAP / 2;
+        const y1 = fr.top - pr.top + (z.r1 + 1) * (ch + GAP) - GAP / 2;
+        Object.assign(fx.style, { left: `${x0}px`, top: `${y0}px`, width: `${x1 - x0}px`, height: `${y1 - y0}px` });
+      }
       const now = performance.now();
       for (const i of new Set([...st.lit.keys(), ...st.fading.keys()])) {
         const covered = isCenter(i);
@@ -289,6 +358,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(f);
+    if (centerRef.current) ro.observe(centerRef.current);
 
     const timer = setInterval(() => {
       if (!activeRef.current || !motionOn()) return;
@@ -342,6 +412,8 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     return () => {
       clearInterval(timer);
       ro.disconnect();
+      cancelAnimationFrame(st.tiltRaf);
+      st.tiltRaf = 0;
       clearTimeout(st.closeT);
       clearTimeout(st.txtT);
       cancelHover();
@@ -429,6 +501,8 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
   const onMove = (e: React.PointerEvent) => {
     if (!activeRef.current || !motionOn() || e.pointerType === 'touch') return;
     m.current.pointer = { x: e.clientX, y: e.clientY };
+    m.current.tiltPtr = m.current.pointer;
+    scheduleTilt();
     const i = pointerCell();
     if (i === m.current.lastCell) return;
     clearTimeout(m.current.wakeT);
@@ -519,15 +593,23 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
           </Link>
         ) : null}
       </div>
+      <div className="hs-field__frame" ref={frameRef} aria-hidden="true" data-a="fade" data-d="700">
+        <i />
+        <i />
+        <i />
+        <i />
+        <b>01 — Field</b>
+      </div>
       <div className="hs-field__center" ref={centerRef}>
-        <p className="hs-field__name" data-a="up" data-d="0">
-          Zishuo Li
-          <span className="hs-field__name-rule" />
-          <span className="hs-field__name-tag">portfolio · 2026</span>
-        </p>
         <div className="hs-mask">
           <h1 className="hs-field__title" data-a="rise" data-d="80">
-            I explore how people relate to <span className="hs-accent--lime">objects and spaces that respond to them.</span>
+            I explore how people relate to{' '}
+            <span className="hs-accent--lime">
+              <span className="hs-nb">
+                <span className="hs-w">objects</span> and <span className="hs-w">spaces</span>
+              </span>{' '}
+              that respond to them.
+            </span>
           </h1>
         </div>
         <p className="hs-field__lede" data-a="up" data-d="260">

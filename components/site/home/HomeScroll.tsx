@@ -518,9 +518,15 @@ export function HomeScroll({ work, groups, log, field }: HomeScrollProps) {
       <div className={`hs-hud${!flowMode && (page === 2 || page === 0) ? ' hs-on-dark' : ''}`}>
         <div className={`hs-hud__bg${page === 3 && zScrolled ? ' hs-is-on' : ''}`} />
         <div className="hs-hud__bar">
-          <button type="button" className={`hs-hud__name${page !== 0 ? ' hs-is-on' : ''}`} onClick={() => api.current.toTop()}>
-            Zishuo Li
-          </button>
+          {/* 2026-10-27（MAPPING §64）：署名五屏都在左上角；首屏另带一行小字（原先在首屏中央标题上方） */}
+          <span className="hs-hud__id">
+            <button type="button" className="hs-hud__name" onClick={() => api.current.toTop()}>
+              Zishuo Li
+            </button>
+            <span className={`hs-hud__tag${page === 0 ? ' hs-is-on' : ''}`} aria-hidden={page !== 0}>
+              portfolio · 2026
+            </span>
+          </span>
           <nav className="hs-hud__nav" aria-label="Sections">
             {NAV.map(([label, i]) => (
               <button

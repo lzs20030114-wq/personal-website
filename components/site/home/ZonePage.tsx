@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type MutableRefObject } from 'react';
 import type { HomeLabGroup, HomeLogData } from '../../../src/lib/site/home-model';
 import { HomeLabPreview, preloadLabPreview } from '../HomeLabPreview';
+import { FX, approach, splitDate, wedgeTarget } from '../../../src/lib/site/home-fx';
 
 const HOVER_MS = 120; // 活台架切换要挂载 / 卸载 WebGL，指针划过目录时稍作停留再切（稿内是即时）
 const FADE_MS = 460; // 交叉淡化时长，与 home.css .hs-pv__layer 的 transition 对齐
@@ -157,6 +158,92 @@ function LabGroup({
       return outs.length > 2 ? next.filter((l) => !outs.slice(0, -2).includes(l)) : next;
     });
   }, []);
+  // 选中行到预览框的楔形（MAPPING §64）：行的上下两条边收到预览框左边上的一点。
+  // 行的位置用本组坐标记（滚动时不变），只有吸顶的预览框会动，所以缓动只给「换了一行」，
+  // 滚动时落点直接跟着框走、不拖尾；静止后不再逐帧算。
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const plateRef = useRef<HTMLDivElement>(null);
+  const wedgeRef = useRef<SVGSVGElement>(null);
+  const eased = useRef({ top: Number.NaN, bottom: Number.NaN });
+  useEffect(() => {
+    const body = bodyRef.current;
+    const plate = plateRef.current;
+    const svg = wedgeRef.current;
+    if (!body || !plate || !svg) return;
+    const hide = () => svg.classList.remove('hs-is-on');
+    if (!curNo || !active || !near) {
+      hide();
+      eased.current = { top: Number.NaN, bottom: Number.NaN };
+      return;
+    }
+    const [fill, edge, dot] = Array.from(svg.children) as SVGElement[];
+    const row = body.querySelector<HTMLElement>(`[data-bench="${curNo}"]`);
+    const narrow = window.matchMedia('(max-width: 1023px)');
+    const calm = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let raf = 0;
+    let last = 0;
+    const frame = (now: number) => {
+      raf = 0;
+      if (narrow.matches || !row) {
+        hide();
+        last = 0;
+        return;
+      }
+      // 行还没随滚动显现（或显现动画还在等错峰）时不画；显现那段上浮期间逐帧跟着行走
+      const rising = row.getAnimations().some((a) => a.playState === 'running');
+      if (Number(getComputedStyle(row).opacity) < 0.4) {
+        hide();
+        last = 0;
+        if (rising) raf = requestAnimationFrame(frame);
+        return;
+      }
+      const B = body.getBoundingClientRect();
+      const R = row.getBoundingClientRect();
+      const P = plate.getBoundingClientRect();
+      const dt = last ? Math.min(64, now - last) : 16;
+      const tau = calm.matches ? 0 : FX.WEDGE_TAU_MS;
+      const e = eased.current;
+      const tTop = R.top - B.top;
+      const tBottom = R.bottom - B.top;
+      e.top = approach(e.top, tTop, dt, tau);
+      e.bottom = approach(e.bottom, tBottom, dt, tau);
+      const w = wedgeTarget(e, { top: P.top - B.top, bottom: P.bottom - B.top });
+      const x0 = R.right - B.left + 2;
+      const x1 = P.left - B.left;
+      fill.setAttribute('d', `M${x0} ${w.top}L${x1} ${w.tip}L${x0} ${w.bottom}Z`);
+      edge.setAttribute('d', `M${x0} ${w.top}L${x1} ${w.tip}M${x0} ${w.bottom}L${x1} ${w.tip}`);
+      dot.setAttribute('x', String(x1 - 4));
+      dot.setAttribute('y', String(w.tip - 4));
+      svg.classList.toggle('hs-is-on', w.visible);
+      if (rising || Math.abs(e.top - tTop) > 0.3 || Math.abs(e.bottom - tBottom) > 0.3) {
+        last = now;
+        raf = requestAnimationFrame(frame);
+      } else {
+        e.top = tTop;
+        e.bottom = tBottom;
+        last = 0;
+      }
+    };
+    const kick = () => {
+      if (!raf) raf = requestAnimationFrame(frame);
+    };
+    kick();
+    window.addEventListener('scroll', kick, { capture: true, passive: true });
+    window.addEventListener('resize', kick);
+    const ro = new ResizeObserver(kick);
+    ro.observe(body);
+    // 行随滚动显现时，引擎改的是它的内联 opacity
+    const mo = new MutationObserver(kick);
+    if (row) mo.observe(row, { attributes: true, attributeFilter: ['style'] });
+    return () => {
+      cancelAnimationFrame(raf);
+      mo.disconnect();
+      window.removeEventListener('scroll', kick, { capture: true });
+      window.removeEventListener('resize', kick);
+      ro.disconnect();
+    };
+  }, [curNo, active, near]);
+
   // 淡出层淡完即卸（同时释放其 WebGL context，见 HomeLabPreview）
   useEffect(() => {
     if (!layers.some((l) => l.phase === 'out')) return;
@@ -181,7 +268,12 @@ function LabGroup({
         <span className="hs-group__hair" />
         <span className="hs-group__prog" data-gprog />
       </div>
-      <div className="hs-group__body">
+      <div className="hs-group__body" ref={bodyRef}>
+        <svg className="hs-wedge" ref={wedgeRef} aria-hidden="true">
+          <path className="hs-wedge__fill" />
+          <path className="hs-wedge__edge" />
+          <rect className="hs-wedge__dot" width="8" height="8" />
+        </svg>
         <div className="hs-group__list">
           {g.segs.map((s) => (
             <div className="hs-seg" key={s.n || 'solo'}>
@@ -245,22 +337,35 @@ function LabGroup({
           </Link>
         </div>
         <div className="hs-pv">
-          <div
-            className={`hs-pv__plate${g.cover ? '' : ' hs-pv__plate--empty'}`}
-            data-pt-frame={cur ? cur.no : undefined}
-          >
-            <span className="hs-pv__bar" />
-            {cur ? (
-              <div className="hs-pv__live" aria-label={`Live preview · Lab ${cur.no}`}>
-                {everNear
-                  ? layers.map((l) => (
-                      <PreviewLayer key={l.no} no={l.no} phase={l.phase} active={active && near} onReady={onReady} />
-                    ))
-                  : null}
-              </div>
-            ) : (
-              <div className="hs-pv__ph">In progress</div>
-            )}
+          <div className="hs-pv__frame">
+            <div
+              className={`hs-pv__plate${g.cover ? '' : ' hs-pv__plate--empty'}`}
+              data-pt-frame={cur ? cur.no : undefined}
+              ref={plateRef}
+            >
+              <span className="hs-pv__bar" />
+              {cur ? (
+                <span className="hs-pv__chip" key={cur.no}>
+                  {cur.no}
+                </span>
+              ) : null}
+              {cur ? (
+                <div className="hs-pv__live" aria-label={`Live preview · Lab ${cur.no}`}>
+                  {everNear
+                    ? layers.map((l) => (
+                        <PreviewLayer key={l.no} no={l.no} phase={l.phase} active={active && near} onReady={onReady} />
+                      ))
+                    : null}
+                </div>
+              ) : (
+                <div className="hs-pv__ph">In progress</div>
+              )}
+            </div>
+            {/* 预览框四角的延长线（参考：纷扰的世界的作图线） */}
+            <i className="hs-pv__mark hs-pv__mark--tl" aria-hidden="true" />
+            <i className="hs-pv__mark hs-pv__mark--tr" aria-hidden="true" />
+            <i className="hs-pv__mark hs-pv__mark--bl" aria-hidden="true" />
+            <i className="hs-pv__mark hs-pv__mark--br" aria-hidden="true" />
           </div>
           <div className="hs-pv__cap" key={cur?.no}>
             <span className="hs-pv__title">{cur ? `Lab ${cur.no} · ${cur.title}` : 'Project III'}</span>
@@ -275,6 +380,16 @@ function LabGroup({
 /* ───────────────────────── 05 Log ───────────────────────── */
 
 const inkVar = (ink: string) => ({ '--c-ink': ink }) as CSSProperties;
+
+/** 最新几条的日期：大字「月·日」，年份另放小字（参考：在边缘流动的巨大日期 + 小字信息栏，MAPPING §64）；读屏仍读完整日期 */
+function EntryDate({ iso, lead = false }: { iso: string; lead?: boolean }) {
+  return (
+    <time className={`hs-entry__date${lead ? ' hs-entry__date--lead' : ''}`} dateTime={iso}>
+      <span className="hs-sr">{iso}</span>
+      <span aria-hidden="true">{splitDate(iso).md}</span>
+    </time>
+  );
+}
 
 export function ZonePage({
   groups,
@@ -426,8 +541,11 @@ export function ZonePage({
                   onMouseLeave={() => setLh(null)}
                 >
                   <span className="hs-entry__meta">
+                    <EntryDate iso={feat.date} lead />
                     <span className="hs-entry__badge">Latest</span>
-                    <span>{feat.date}</span>
+                    <span className="hs-entry__yr" aria-hidden="true">
+                      {splitDate(feat.date).year}
+                    </span>
                     <span className="hs-entry__tag">{feat.tag}</span>
                   </span>
                   <span className="hs-feat__text">{feat.text}</span>
@@ -459,7 +577,10 @@ export function ZonePage({
                     onMouseLeave={() => setLh(null)}
                   >
                     <span className="hs-entry__meta">
-                      <span>{l.date}</span>
+                      <EntryDate iso={l.date} />
+                      <span className="hs-entry__yr" aria-hidden="true">
+                        {splitDate(l.date).year}
+                      </span>
                       <span className="hs-entry__tag">{l.tag}</span>
                     </span>
                     <span className="hs-entry__row">

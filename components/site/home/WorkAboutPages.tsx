@@ -58,7 +58,15 @@ function WorkCard({ t, c, cur, on, focusable, vars, onEnter }: CardProps) {
   const body = (
     <>
       <span className="hs-card__kick" data-a={cur ? 'up' : undefined} data-d={160 + c * 90}>
-        <span className="hs-card__kick-n">{t.kick}</span>
+        {t.caseSlug ? (
+          // 主项目：编号放大成宽体粗字；还没发稿的（项目三）用空心编号，已发稿的实心（MAPPING §64）
+          <span className="hs-card__kick-n hs-card__kick-n--big">
+            <span className={`hs-card__num${t.wip ? ' hs-card__num--wip' : ''}`}>{t.kickN}</span>
+            <span className="hs-card__kick-l">{t.kickLabel}</span>
+          </span>
+        ) : (
+          <span className="hs-card__kick-n">{t.kick}</span>
+        )}
         <span className={`hs-card__status${t.wip ? ' hs-card__status--wip' : ''}`}>{t.status}</span>
       </span>
       <span className="hs-card__box" data-a={cur ? 'wipe' : undefined} data-d={200 + c * 90}>
@@ -794,7 +802,8 @@ export function AboutPage() {
     <>
       <div className="hs-about-dots" aria-hidden="true" />
       <div className="hs-about">
-        <dl className="hs-facts">
+        {/* 2026-10-27（MAPPING §64）：四组信息装进细线格子——竖边随整组淡入，横线照旧逐条画出（第一条就是格子的上边） */}
+        <dl className="hs-facts" data-a="fade" data-d="100">
           {FACTS.map((f, i) => (
             <div className="hs-fact" key={f.k}>
               <span className="hs-fact__rule" data-a="line" data-d={140 + i * 90} />
@@ -812,8 +821,11 @@ export function AboutPage() {
             03 — About
           </p>
           <div className="hs-mask">
-            <h2 className="hs-h2" data-a="rise" data-d="60">
-              From spaces <span className="hs-accent--lime">to interactions.</span>
+            <h2 className="hs-h2 hs-h2--say" data-a="rise" data-d="60">
+              From <span className="hs-w">spaces</span>{' '}
+              <span className="hs-accent--lime">
+                to <span className="hs-w">interactions.</span>
+              </span>
             </h2>
           </div>
           <div className="hs-about__text">
@@ -835,8 +847,17 @@ export function AboutPage() {
           </Link>
         </div>
         <figure className="hs-portrait">
-          <div className="hs-portrait__plate" data-a="wipe" data-d="160">
-            <span>portrait · to be supplied</span>
+          {/* 肖像框的边上走字（参考 海花岛艺术：字沿着色面的边排）：上沿比例、右沿竖排一行身份，框里仍是占位 */}
+          <div className="hs-portrait__wrap">
+            <span className="hs-portrait__cap" data-a="fade" data-d="420">
+              Portrait · 3 : 4
+            </span>
+            <div className="hs-portrait__plate" data-a="wipe" data-d="160">
+              <span>portrait · to be supplied</span>
+            </div>
+            <span className="hs-portrait__edge" data-a="fade" data-d="520">
+              Zishuo Li · Environmental design · Tsinghua University
+            </span>
           </div>
         </figure>
       </div>

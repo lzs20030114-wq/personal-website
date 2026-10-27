@@ -47,6 +47,8 @@
 .hs-eyebrow { margin: 0 0 10px; font: 400 12px var(--mono); color: var(--muted); }
 .hs-eyebrow--lime { margin: 0; color: var(--lime-hi); }
 .hs-h2 { margin: 0; font-weight: 500; font-size: clamp(32px, min(3.8vw, 6.4vh), 52px); line-height: 1; letter-spacing: -.038em; }
+/* 2026-10-27（MAPPING §64）：About 那句宣言改成细窄字形，两个名词换成宽粗——与首屏标题同一种宽窄对比 */
+.hs-h2--say { font-weight: 300; font-stretch: 76%; font-size: clamp(40px, min(4.6vw, 7.6vh), 68px); line-height: .98; letter-spacing: -.02em; }
 .hs-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
 .hs-head__aside { display: flex; gap: 28px; align-items: baseline; }
 .hs-head__aside .hs-lbl { display: flex; gap: 12px; align-items: center; }
@@ -80,11 +82,21 @@
 .hs-field__card-title { font: 500 clamp(13px, 1.2vw, 16px)/1.25 var(--sans); letter-spacing: -.012em; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .hs-field__card-cap { font: 400 10px var(--mono); color: var(--field-ink); opacity: .75; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hs-field__card-go { flex: none; font: 500 10px var(--mono); color: var(--field-ink); }
-.hs-field__center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(680px, 52vw); z-index: 7; pointer-events: none; display: flex; flex-direction: column; align-items: center; text-align: center; gap: clamp(14px, 2.4vh, 24px); }
-.hs-field__name { margin: 0; display: flex; align-items: center; gap: 12px; font: 600 clamp(14px, 2vh, 17px)/1 var(--sans); letter-spacing: -.01em; }
-.hs-field__name-rule { width: 24px; height: 1px; background: oklch(0.95 0.032 120 / .4); }
-.hs-field__name-tag { white-space: nowrap; font: 400 11px var(--mono); color: oklch(0.72 0.012 150); }
-.hs-field__title { margin: 0; font-weight: 500; font-size: clamp(30px, min(3.6vw, 6.4vh), 58px); line-height: 1.04; letter-spacing: -.038em; text-wrap: balance; }
+.hs-field__center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(940px, 66vw); z-index: 7; pointer-events: none; display: flex; flex-direction: column; align-items: center; text-align: center; gap: clamp(14px, 2.4vh, 24px); }
+/* 2026-10-27（MAPPING §64）：标题宽窄对比——整句压窄、细；objects / spaces 两个词拉宽、加粗（字宽轴 62–125%）。
+   两个宽词连同中间的 and 不拆行。遮罩底边多留一点，宽体粗字的 j / p 下伸不被切。 */
+.hs-field__center > .hs-mask { padding-bottom: .14em; }
+.hs-field__title { margin: 0; font-weight: 300; font-stretch: 74%; font-size: clamp(36px, min(5vw, 8.6vh), 80px); line-height: .98; letter-spacing: -.018em; text-wrap: balance; }
+.hs-w { font-stretch: 125%; font-weight: 640; letter-spacing: -.035em; }
+.hs-nb { white-space: nowrap; }
+/* 方块不亮的那块空地：四个角标落在外缘格缝上（位置由 FieldPage measure 写入） */
+.hs-field__frame { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 6; pointer-events: none; }
+.hs-field__frame i { position: absolute; width: 14px; height: 14px; border: 0 solid oklch(0.95 0.032 120 / .42); }
+.hs-field__frame i:nth-child(1) { left: 0; top: 0; border-left-width: 1px; border-top-width: 1px; }
+.hs-field__frame i:nth-child(2) { right: 0; top: 0; border-right-width: 1px; border-top-width: 1px; }
+.hs-field__frame i:nth-child(3) { left: 0; bottom: 0; border-left-width: 1px; border-bottom-width: 1px; }
+.hs-field__frame i:nth-child(4) { right: 0; bottom: 0; border-right-width: 1px; border-bottom-width: 1px; }
+.hs-field__frame b { position: absolute; left: 22px; top: 6px; font: 400 11px var(--mono); color: oklch(0.72 0.012 150); white-space: nowrap; }
 .hs-field__title .hs-accent--lime { color: var(--lime); }
 .hs-field__lede { margin: 0; max-width: 46ch; font: 400 clamp(13px, 1.9vh, 15px)/1.55 var(--sans); color: oklch(0.78 0.03 160); text-wrap: pretty; }
 .hs-field__ctas { display: flex; gap: 12px; align-items: center; pointer-events: auto; }
@@ -96,16 +108,24 @@
 .hs-field__hint { margin: 0; font: 400 11px var(--mono); color: oklch(0.72 0.012 150); }
 .hs-field__foot { position: absolute; left: 56px; right: 88px; bottom: 22px; display: flex; justify-content: space-between; gap: 24px; font: 400 11px var(--mono); color: oklch(0.72 0.012 150); pointer-events: none; }
 /* ---------- 02 work ---------- */
+/* 2026-10-27（MAPPING §64）：卡片图版随视口高度长，把卡片下面那一大片空白吃掉；
+   --plate-h 的减数 = 这一页除图版外的竖向占用（实测，见 MAPPING §64），保证任何高度下都不出页内滚动 */
+.hs-work { --plate-h: clamp(180px, calc(100vh - 520px), 342px); }
 .hs-work { position: relative; height: 100%; min-height: 640px; max-width: 1360px; margin: 0 auto; padding: 92px 88px 40px 56px; display: flex; flex-direction: column; gap: 20px; }
 .hs-cards { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 28px; padding-top: 18px; }
 .hs-card { display: flex; flex-direction: column; gap: 12px; min-width: 0; transition: opacity .45s; }
 .hs-cards.hs-has-on .hs-card:not(.hs-is-on) { opacity: .42; }
 .hs-card__kick { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; white-space: nowrap; font: 500 12px var(--mono); }
 .hs-card__kick-n { color: var(--c-ink); }
+/* 2026-10-27（MAPPING §64）：主项目卡的编号放大成宽体粗字；项目三还没发稿 = 空心（参考 One Moment 空心 / 实心表示状态） */
+.hs-card__kick-n--big { display: inline-flex; align-items: baseline; gap: 10px; }
+.hs-card__num { font: 700 44px/.8 var(--sans); font-stretch: 125%; letter-spacing: -.04em; color: var(--c-ink); }
+.hs-card__num--wip { color: transparent; -webkit-text-stroke: 1.2px var(--c-ink); }
+.hs-card__kick-l { font: 500 12px var(--mono); }
 .hs-card__status { color: var(--muted); }
 .hs-card__status--wip { color: var(--slate); }
-.hs-card__box { position: relative; flex: 1; display: flex; flex-direction: column; min-height: calc(min(24vh, 204px) + 138px); overflow: hidden; }
-.hs-card__plate { position: relative; flex: none; height: min(24vh, 204px); background: var(--plate); overflow: hidden; }
+.hs-card__box { position: relative; flex: 1; display: flex; flex-direction: column; min-height: calc(var(--plate-h) + 138px); overflow: hidden; }
+.hs-card__plate { position: relative; flex: none; height: var(--plate-h); background: var(--plate); overflow: hidden; }
 .hs-card__plate--wip { background: var(--paper); }
 .hs-card__img { position: absolute; inset: 0; background: center/cover no-repeat; transition: transform 1.2s var(--eo); }
 .hs-card.hs-is-on .hs-card__img { transform: scale(1.08); }
@@ -211,17 +231,23 @@
 /* ---------- 03 about ---------- */
 .hs-about-dots { position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(var(--lime) 1px, transparent 1.2px); background-size: 6px 6px; opacity: .16; -webkit-mask-image: linear-gradient(115deg, #000 0%, transparent 40%); mask-image: linear-gradient(115deg, #000 0%, transparent 40%); }
 .hs-about { position: relative; height: 100%; min-height: 620px; max-width: 1360px; margin: 0 auto; padding: 92px 88px 44px 56px; display: grid; grid-template-columns: minmax(0,210px) minmax(0,1fr) minmax(0,.62fr); column-gap: clamp(28px, 3.4vw, 56px); align-items: start; }
-.hs-facts { margin: 0; padding-top: clamp(84px, 14vh, 120px); display: flex; flex-direction: column; gap: 18px; }
-.hs-fact { position: relative; padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
-.hs-fact__rule { position: absolute; left: 0; right: 0; top: 0; height: 1px; background: oklch(0.95 0.032 120 / .25); transform-origin: 0 50%; }
+/* 2026-10-27（MAPPING §64）：信息格——左右下三条边是格子的框，每格顶上那条横线（第一格即框的上边）照旧逐条画出（参考 融艺：一种墨色 + 带格线的信息格） */
+.hs-facts { margin: clamp(84px, 14vh, 120px) 0 0; padding: 0; display: flex; flex-direction: column; border: 1px solid oklch(0.95 0.032 120 / .3); border-top: 0; }
+.hs-fact { position: relative; padding: 11px 12px 12px; display: flex; flex-direction: column; gap: 5px; }
+.hs-fact__rule { position: absolute; left: -1px; right: -1px; top: 0; height: 1px; background: oklch(0.95 0.032 120 / .3); transform-origin: 0 50%; }
 .hs-fact dt { font: 500 11px var(--mono); color: var(--lime-hi); }
 .hs-fact dd { margin: 0; font: 400 14px/1.5 var(--sans); color: var(--cream); }
 .hs-about__body { display: flex; flex-direction: column; gap: clamp(16px, 2.6vh, 24px); }
+.hs-about__body .hs-mask { padding-bottom: .14em; }
 .hs-about__text { max-width: 60ch; display: flex; flex-direction: column; gap: 14px; font: 400 clamp(15px, 2.2vh, 17px)/1.62 var(--sans); color: oklch(0.86 0.04 160); }
 .hs-about__text p { margin: 0; }
 .hs-about__more { align-self: flex-start; font: 500 12px var(--mono); color: var(--lime-hi); }
 .hs-about__more:hover { color: var(--cream); }
 .hs-portrait { margin: 0; padding-top: clamp(84px, 14vh, 120px); display: flex; flex-direction: column; gap: 8px; }
+.hs-portrait__wrap { position: relative; }
+.hs-portrait__cap { position: absolute; left: 0; bottom: 100%; padding-bottom: 8px; font: 400 11px var(--mono); color: var(--lime-hi); white-space: nowrap; }
+/* 竖排字放在框的左侧、从下往上读（书脊方向）：放右侧在 1400px 以下会压到页码导轨 */
+.hs-portrait__edge { position: absolute; right: 100%; bottom: 0; margin-right: 10px; writing-mode: vertical-rl; transform: rotate(180deg); font: 400 11px var(--mono); color: var(--lime-hi); white-space: nowrap; }
 .hs-portrait__plate { aspect-ratio: 3/4; max-height: 58vh; background: repeating-linear-gradient(45deg, oklch(0.95 0.032 120 / .08) 0 1px, transparent 1px 9px), oklch(0.36 0.038 192); border: 1px solid oklch(0.95 0.032 120 / .16); display: flex; align-items: flex-end; padding: 12px; }
 .hs-portrait__plate span { font: 400 11px var(--mono); color: var(--lime); }
 /* ---------- 04 lab ---------- */
@@ -238,7 +264,14 @@
 .hs-group__count--wip { color: var(--slate); }
 .hs-group__hair { position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: oklch(0.235 0.025 215 / .22); }
 .hs-group__prog { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--c-ink); transform-origin: 0 50%; transform: scaleX(0); }
-.hs-group__body { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,.74fr); column-gap: clamp(32px, 4vw, 64px); padding-top: 12px; }
+.hs-group__body { position: relative; display: grid; grid-template-columns: minmax(0,1fr) minmax(0,.74fr); column-gap: clamp(32px, 4vw, 64px); padding-top: 12px; }
+/* 2026-10-27（MAPPING §64）：选中行到预览框的楔形——行的上下两边收到框左边上的一点，换行时约 200ms 追上（FX.WEDGE_TAU_MS）。
+   压在吸顶的组标题之下（标题 z-index 3），行滚到标题底下时楔形跟着被盖住。颜色只用本组的项目色。 */
+.hs-wedge { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 1; overflow: visible; pointer-events: none; opacity: 0; transition: opacity .2s; }
+.hs-wedge.hs-is-on { opacity: 1; }
+.hs-wedge__fill { fill: var(--c-ink); opacity: .1; }
+.hs-wedge__edge { fill: none; stroke: var(--c-ink); stroke-width: 1; stroke-dasharray: 3 3; }
+.hs-wedge__dot { fill: var(--c-ink); }
 .hs-group__list { min-width: 0; }
 .hs-seg { display: flex; flex-direction: column; }
 .hs-seg__label { margin: 22px 0 0; padding: 0 0 8px 56px; border-bottom: 1px solid oklch(0.235 0.025 215 / .1); font: 500 11px var(--mono); color: var(--violet); }
@@ -257,7 +290,15 @@
 .hs-group__empty { margin: 0; padding: 14px 0 0 56px; max-width: 46ch; font: 400 15px/1.55 var(--sans); color: var(--muted-2); }
 .hs-group__case { display: inline-block; margin: 20px 0 0 56px; font: 500 12px var(--mono); color: var(--c-ink); }
 .hs-group__case:hover { color: var(--ink); }
-.hs-pv { position: sticky; top: 146px; align-self: start; display: flex; flex-direction: column; gap: 12px; padding-top: 12px; }
+.hs-pv { position: sticky; top: 146px; align-self: start; display: flex; flex-direction: column; gap: 22px; padding-top: 12px; }
+/* 预览框四角的延长线（参考：纷扰的世界的作图线）；图注与框之间让出下边延长线的长度。左上角的编号牌是楔形落点那一头的编号 */
+.hs-pv__frame { position: relative; }
+.hs-pv__mark { position: absolute; width: 14px; height: 14px; border: 0 solid oklch(0.235 0.025 215 / .42); pointer-events: none; }
+.hs-pv__mark--tl { right: 100%; bottom: 100%; border-right-width: 1px; border-bottom-width: 1px; }
+.hs-pv__mark--tr { left: 100%; bottom: 100%; border-left-width: 1px; border-bottom-width: 1px; }
+.hs-pv__mark--bl { right: 100%; top: 100%; border-right-width: 1px; border-top-width: 1px; }
+.hs-pv__mark--br { left: 100%; top: 100%; border-left-width: 1px; border-top-width: 1px; }
+.hs-pv__chip { position: absolute; left: 10px; top: 12px; z-index: 2; padding: 2px 5px 3px; background: var(--c-ink); font: 500 11px/1.2 var(--mono); color: var(--paper); }
 .hs-pv__plate { position: relative; height: min(46vh, 400px); background: var(--plate); overflow: hidden; }
 .hs-pv__plate--empty { height: 180px; background: var(--plate-light); }
 .hs-pv__bar { position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--c-ink); z-index: 2; }
@@ -291,7 +332,12 @@
 .hs-cad__tip { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); padding: 5px 9px; background: var(--ink); color: var(--paper); font: 400 11px var(--mono); white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .2s; }
 .hs-cad__tip.hs-is-on { opacity: 1; }
 .hs-latest { display: grid; grid-template-columns: minmax(0,1.3fr) minmax(0,1fr); gap: clamp(28px, 4vw, 64px); margin-top: 44px; align-items: start; }
-.hs-entry__meta { display: flex; gap: 14px; align-items: center; font: 400 12px var(--mono); }
+.hs-entry__meta { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; font: 400 12px var(--mono); }
+/* 2026-10-27（MAPPING §64）：大日期、小信息——月·日用宽字形放大，年份与标签退成小字，底边对齐 */
+.hs-entry__date { font: 560 40px/.8 var(--sans); font-stretch: 118%; letter-spacing: -.04em; color: var(--ink); margin-right: 2px; }
+.hs-entry__date--lead { font-size: 72px; }
+.hs-entry__yr { color: var(--muted); }
+.hs-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .hs-entry__badge { padding: 3px 7px; background: var(--ink); color: var(--paper); }
 .hs-entry__tag { display: flex; gap: 7px; align-items: center; color: var(--c-ink); }
 .hs-entry__tag::before { content: ''; width: 6px; height: 6px; background: var(--c-ink); }
@@ -321,6 +367,12 @@
 .hs-foot__name { font: 600 18px var(--sans); }
 .hs-foot__line { max-width: 44ch; font: 400 15px/1.45 var(--sans); color: oklch(0.84 0.045 160); }
 .hs-mail { position: relative; display: inline-block; font: 500 clamp(34px, min(5.6vw, 9vh), 84px)/1.02 var(--sans); letter-spacing: -.045em; color: var(--cream); }
+/* 邮箱撑满页脚一行（参考：Fresh Sharing 的满版字）：按容器宽度定字号，字宽放到 112%；
+   除数 = 这串字在 1px 字号下的宽度倒数，浏览器里量出来的（MAPPING §64）。不支持容器单位时退回上面那条 */
+.hs-foot__in { container-type: inline-size; }
+@supports (font-size: 1cqw) {
+  .hs-mail { font-size: min(calc(100cqw / var(--mail-k, 12.3)), 22vh); font-weight: 520; font-stretch: 112%; letter-spacing: -.04em; white-space: nowrap; }
+}
 .hs-mail__ul { position: absolute; left: 0; right: 0; bottom: -2px; height: 3px; background: var(--lime); transform-origin: 100% 50%; transform: scaleX(0); transition: transform .6s var(--eio); }
 .hs-mail:hover .hs-mail__ul, .hs-mail:focus-visible .hs-mail__ul { transform-origin: 0 50%; transform: scaleX(1); }
 .hs-foot__base { display: flex; justify-content: space-between; gap: 24px; border-top: 1px solid oklch(0.95 0.032 120 / .2); padding-top: 12px; font: 400 12px var(--mono); color: var(--lime); }
@@ -332,8 +384,12 @@
 .hs-hud__bg { position: absolute; left: 0; right: 0; top: 0; height: 64px; background: oklch(0.965 0.01 115 / .9); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid oklch(0.235 0.025 215 / .1); opacity: 0; transition: opacity .35s; }
 .hs-hud__bg.hs-is-on { opacity: 1; }
 .hs-hud__bar { position: absolute; top: 30px; left: 0; right: 0; max-width: 1360px; margin: 0 auto; padding: 0 88px 0 56px; display: flex; justify-content: space-between; align-items: baseline; color: var(--hud-ink); transition: color .6s; }
+.hs-hud__id { display: inline-flex; align-items: baseline; gap: 14px; }
 .hs-hud__name { pointer-events: none; font: 600 15px var(--sans); opacity: 0; transform: translateY(-8px); transition: opacity .6s, transform .6s var(--eo); }
-.hs-hud__name.hs-is-on { pointer-events: auto; opacity: 1; transform: translateY(0); }
+/* 2026-10-27（MAPPING §64）：署名五屏都在左上角，JS 接管后与首屏一起出现 */
+.hs-root.hs-ready .hs-hud__name { pointer-events: auto; opacity: 1; transform: none; }
+.hs-hud__tag { font: 400 11px var(--mono); color: oklch(0.72 0.012 150); white-space: nowrap; opacity: 0; transition: opacity .5s; }
+.hs-hud__tag.hs-is-on { opacity: 1; }
 .hs-hud__nav { display: flex; gap: 28px; pointer-events: auto; font: 500 13px var(--sans); }
 .hs-nav-btn { position: relative; padding-bottom: 5px; opacity: .5; transition: opacity .3s; }
 .hs-nav-btn:hover, .hs-nav-btn.hs-is-on { opacity: 1; }
@@ -360,11 +416,11 @@
 .hs-pv__layer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; transform: scale(1.012); transition: opacity 460ms cubic-bezier(.45,0,.25,1), transform 700ms cubic-bezier(.2,.7,.1,1); }
 .hs-pv__layer--on { opacity: 1; transform: none; }
 .hs-pv__layer--out { opacity: 0; transform: none; }
-.hs-pv__cap { animation: hs-cap-in 360ms cubic-bezier(.2,.7,.1,1) both; }
+.hs-pv__cap, .hs-pv__chip { animation: hs-cap-in 360ms cubic-bezier(.2,.7,.1,1) both; }
 @keyframes hs-cap-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) {
   .hs-pv__layer { transition: none; transform: none; }
-  .hs-pv__cap { animation: none; }
+  .hs-pv__cap, .hs-pv__chip { animation: none; }
 }
 .hs-root .home-lab-preview-host { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
 .hs-root .home-lab-loading { color: var(--lime-hi); font: 400 11px var(--mono); }
@@ -387,6 +443,9 @@
   .hs-hud { position: fixed; }
   .hs-hud__bg { opacity: 1; }
   .hs-hud__name { opacity: 1; pointer-events: auto; transform: none; }
+  .hs-hud__tag, .hs-field__frame { display: none; }
+  .hs-field__title { font-size: clamp(32px, 8.4vw, 52px); }
+  .hs-nb { white-space: normal; }
   .hs-page--about ~ .hs-hud .hs-hud__bg, .hs-hud, .hs-hud.hs-on-dark { --hud-ink: var(--ink); }
   .hs-group__head { top: 56px; }
   /* 文档流里场不动、也不接悬停：留一屏深色标题区 */
@@ -414,8 +473,11 @@
   .hs-about { grid-template-columns: 1fr; row-gap: 28px; }
   .hs-facts, .hs-portrait { padding-top: 0; }
   .hs-portrait__plate { max-height: 60vw; }
+  .hs-portrait__edge { display: none; }
+  .hs-h2--say { font-size: clamp(32px, 8vw, 52px); }
   .hs-group__body { grid-template-columns: 1fr; row-gap: 20px; }
-  .hs-pv { position: static; }
+  .hs-pv { position: static; gap: 12px; }
+  .hs-wedge, .hs-pv__mark { display: none; }
   .hs-pv__plate { height: min(62vw, 360px); }
   .hs-bench { grid-template-columns: 40px minmax(0, 1fr); }
   .hs-bench__meta { grid-column: 2; align-items: flex-start; text-align: left; flex-direction: row; gap: 12px; }
@@ -423,6 +485,8 @@
   .hs-group__case { margin-left: 40px; }
   .hs-group__row { grid-template-columns: 40px minmax(0, 1fr) auto; }
   .hs-latest { grid-template-columns: 1fr; }
+  .hs-entry__date { font-size: 34px; }
+  .hs-entry__date--lead { font-size: 56px; }
   .hs-cad { --cad-label-w: 96px; --cad-lane-h: 52px; }
   .hs-lane__label { display: grid; grid-template-columns: 7px minmax(0, 1fr) auto; gap: 6px; line-height: 1.35; overflow-wrap: anywhere; }
   .hs-foot__in { padding: 28px 20px; }

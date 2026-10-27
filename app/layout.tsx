@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 // MAPPING §2：自托管 Archivo（可变字重 100–900）——不引 Google Fonts @import。
-import '@fontsource-variable/archivo';
+// 2026-10-27（MAPPING §64）：换成带宽度轴的那份（字宽 62–125%，字重照旧 100–900），首页标题与编号用到宽窄对比；
+// 不设 font-stretch 的地方仍是 100% 宽，字形与原先那份相同。
+import '@fontsource-variable/archivo/wdth.css';
 import './globals.css';
 import './page-transitions.css';
 import { PageTransitions } from '../components/site/PageTransitions';
