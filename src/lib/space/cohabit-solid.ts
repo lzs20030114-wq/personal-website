@@ -50,7 +50,7 @@ import { SKIN, createSkinUnit, renderSmooth } from './skin-unit';
 import { SOLID, boxVerts, buildSolidTopology, fillSolidVerts, membranePanel, rotateVertsY, type SolidTopology } from './skin-solid';
 import { bakeIndexed } from '../linkage/gl3d';
 import { MM_PER_UNIT, RIG_ANCHOR_Y, RIG_SCALE, RING_GRID_FIT, RING_GRID_PIVOT_Y, ROOM, roomBoxesBySpan, viewFitBySpan, type RingGridView } from './skin-grid';
-import { planLayout, type PlanLayout } from './unit-activation';
+import type { PlanLayout } from './unit-activation';
 import { COHABIT, SQUARE_SCALE, bandAngle, type FurnRect } from './cohabit';
 import type { CatPose, CatTail, SeatSpec } from './figure';
 
@@ -528,18 +528,57 @@ export interface Rig {
 }
 
 /**
- * 单元铺满整间房（cover: 'room'，2026-10-27）时台子跟着格距放大约 1.37 倍；照旧把钉住端钉在 RIG_ANCHOR_Y 的话台面会从
- * 离地 1.43 m 升到 1.57 m（单元要兼作桌子，再高就更不像桌子了）。所以铺满时改钉台面：台面高度取场地布局下的那个值，
- * 钉住端随之往下挪。桌面到底定多高（站着用约 1.0–1.1 m）待作者定，这里只做到「放大但不变高」。
+ * 单元兼作桌子时的台面高度（米，离地；2026-10-27 作者「桌面高度参考人体工学数据」）。一个高度当不了所有桌子，按服务谁落：
+ * - stand 1.05：站着用——站姿肘高附近（BIFMA G1 站立桌可调到 1.18；吧台桌通行 1.0–1.1）。没人坐着要用的单元都落到这里；
+ * - chair 0.74：配餐椅（座面 0.45）——桌面比座面高 0.27–0.30 是通行的桌椅高差；
+ * - sofaFront 0.49：沙发正前方当茶几——资料要与座面齐或略低（0.40–0.45），但台面到吊带最下端有 0.48 m，再低吊带就戳到地上，0.49 是下限；
+ * - sofaSide 0.60：沙发扶手旁当边几——取扶手高（0.62）附近。
+ * 原来铺满时钉在 1.43 m（场地布局那个高度，接近站姿肩高），哪种桌子都不是。
+ */
+export const TABLE_TOP = { stand: 1.05, chair: 0.74, sofaFront: 0.49, sofaSide: 0.6 } as const;
+
+/** 台面落在 topM（米，离地）时装置原点的世界高度 */
+export function rigYForTop(rig: Pick<Rig, 's'>, traj: Pick<BandTrajectory, 'platformTopY'>, topM: number): number {
+  return ROOM.FLOOR_Y - topM * UNITS_PER_M - rig.s * traj.platformTopY;
+}
+
+/**
+ * 这台单元给坐在 r 上的人当哪种桌子：餐椅 → chair；沙发 → 单元中心在前缘之前、横向不出沙发两端外 0.2 m 算正前方（茶几），
+ * 否则算扶手旁（边几）。
+ */
+export function tableTopFor(r: Pick<FurnRect, 'kind' | 'cx' | 'cy' | 'x0' | 'x1' | 'y0' | 'y1' | 'face'>, u: { x: number; y: number }): number {
+  if (r.kind === 'chair') return TABLE_TOP.chair;
+  const [fx, fy] = r.face;
+  const facesY = Math.abs(fy) > Math.abs(fx);
+  const halfW = (facesY ? r.x1 - r.x0 : r.y1 - r.y0) / 2;
+  const halfD = (facesY ? r.y1 - r.y0 : r.x1 - r.x0) / 2;
+  const along = (u.x - r.cx) * fx + (u.y - r.cy) * fy;
+  const side = Math.abs((u.x - r.cx) * -fy + (u.y - r.cy) * fx);
+  return along > halfD && side <= halfW + 0.2 ? TABLE_TOP.sofaFront : TABLE_TOP.sofaSide;
+}
+
+/** 当桌子用的那台离座位点最远多少（m，芯到座位点）：0.69 m 的方台伸手够得着的范围 */
+export const TABLE_REACH = 1.3;
+/** 桌子高度的台面离家具至少留多远（m） */
+export const TABLE_GAP = 0.03;
+
+/**
+ * 这台的台面（峰值方形，半边 platR）落到桌子高度会不会压到家具：方台边与房间轴对齐，按轴对齐矩形判，留 TABLE_GAP。
+ * 站立高度 1.05 时台底 0.90 高过所有家具（最高的椅背 0.85），不用判。
+ */
+export function tableClearOf(l: Pick<PlanLayout, 'platR'>, u: { x: number; y: number }, rects: readonly Pick<FurnRect, 'x0' | 'x1' | 'y0' | 'y1'>[]): boolean {
+  const h = l.platR + TABLE_GAP;
+  return rects.every((r) => u.x + h <= r.x0 || u.x - h >= r.x1 || u.y + h <= r.y0 || u.y - h >= r.y1);
+}
+
+/**
+ * 单元铺满整间房（cover: 'room'，2026-10-27）时台子跟着格距放大约 1.37 倍；工位改按台面钉：默认台面在 TABLE_TOP.stand，
+ * 给坐着的人用的那几台由台架另按 tableTopFor 落（rigYForTop）。场地布局照旧把钉住端钉在 RIG_ANCHOR_Y。
  */
 export function rigFor(layout: PlanLayout, traj: Pick<BandTrajectory, 'footY' | 'platformTopY'>, scale: number = SQUARE_SCALE): Rig {
   const s = ((RIG_SCALE * layout.pitchM) / layout.pitch4) * scale;
   let y = RIG_ANCHOR_Y - s * traj.footY;
-  if (layout.cover === 'room') {
-    const sField = ((RIG_SCALE * planLayout(layout.n, layout.radius).pitchM) / layout.pitch4) * scale;
-    const topField = RIG_ANCHOR_Y - sField * traj.footY + sField * traj.platformTopY;
-    y = topField - s * traj.platformTopY;
-  }
+  if (layout.cover === 'room') y = rigYForTop({ s }, traj, TABLE_TOP.stand);
   return {
     s,
     y,
@@ -555,16 +594,16 @@ export function unitDrop(degree: number, dropAt: number = HOIST.dropAt): number 
 }
 
 /** 单元此刻的装置原点世界高度：收起位与工位之间按升降程度插值（带子与它一起摆，天花方板不动，立杆见 unitFootY） */
-export function unitTopY(rig: Pick<Rig, 'y' | 'stowY'>, drop: number): number {
-  return rig.stowY + (rig.y - rig.stowY) * drop;
+export function unitTopY(rig: Pick<Rig, 'y' | 'stowY'>, drop: number, workY: number = rig.y): number {
+  return rig.stowY + (workY - rig.stowY) * drop;
 }
 
 /**
  * 单元此刻的钉住端世界高度 = 布束底 = 立杆下端：吊长按升降程度从 HOIST.stowed 倍放到全长，
  * 到工位时 = RIG_ANCHOR_Y。与 hoistProfile 的脚只差顶端节点那零点几个单位（压缩是绕顶端节点做的）。
  */
-export function unitFootY(rig: Pick<Rig, 'y' | 'stowY' | 's'>, footY: number, drop: number): number {
-  return unitTopY(rig, drop) + rig.s * footY * (HOIST.stowed + (1 - HOIST.stowed) * drop);
+export function unitFootY(rig: Pick<Rig, 'y' | 'stowY' | 's'>, footY: number, drop: number, workY: number = rig.y): number {
+  return unitTopY(rig, drop, workY) + rig.s * footY * (HOIST.stowed + (1 - HOIST.stowed) * drop);
 }
 
 /** 一条带在装置自身坐标系里的顶点（沿本地 +X 放在芯半径处，再由摆放表转到各方位角） */
@@ -675,9 +714,71 @@ export interface Box {
 /** 家具（米 → 世界）：座面一块（离地 0.45 m、厚 0.08）+ 靠背一块（在人背后那条边上，高 0.85 m、厚 0.1） */
 export const FURN = { seatH: 0.45, seatT: 0.08, backH: 0.85, backT: 0.1 } as const;
 
+/**
+ * 人体工学那套家具的立体尺寸（米，2026-10-27；平面占位与座位点见 cohabit COHABIT.SEATS.KINDS_ERGO）：
+ * 沙发 = 实心底座（前脸比坐垫退进 5 cm，留脚跟位）+ 坐垫 + 靠背 + 两侧扶手——座面离地 0.43（QB/T 1952.1 座前高 0.37–0.48；国人小腿加足高女 P50 0.38、男 P50 0.41，
+ *   加鞋约 2.5 cm）、坐垫 0.13 厚、靠背 0.20 厚顶高 0.80、扶手 0.12 宽顶高 0.62（座面上 0.19）。
+ * 餐椅 = 四条腿 + 座板 + 薄靠背——座面离地 0.45（配 0.72–0.75 的桌面，高差 0.27–0.30）、座板 0.05、腿 0.04 见方、靠背 0.04 厚顶高 0.85。
+ * 各块按「不重叠」切开摆（只在彼此看不见的内侧共面），免得共面闪烁。
+ */
+export const FURN_ERGO = {
+  sofa: { seatH: 0.43, cushionT: 0.13, backT: 0.2, backH: 0.8, armW: 0.12, armH: 0.62, kick: 0.05 },
+  chair: { seatH: 0.45, seatT: 0.05, backT: 0.04, backH: 0.85, legW: 0.04, legIn: 0.02 },
+} as const;
+
+/** 家具的一块：局部坐标（u 沿宽、v 沿进深从靠背边量起、z 离地高，米）→ 世界盒 */
+function furnBlock(r: FurnRect, u0: number, u1: number, v0: number, v1: number, z0: number, z1: number, unit: number): Box {
+  const [fx, fy] = r.face;
+  const facesY = Math.abs(fy) > Math.abs(fx);
+  const w = facesY ? r.x1 - r.x0 : r.y1 - r.y0;
+  const d = facesY ? r.y1 - r.y0 : r.x1 - r.x0;
+  // 宽向的单位向量（与朝向垂直）；进深向：从靠背边（-face 那侧）往前
+  const tx = -fy;
+  const ty = fx;
+  const uc = (u0 + u1) / 2 - w / 2;
+  const vc = (v0 + v1) / 2 - d / 2;
+  const cx = r.cx + tx * uc + fx * vc;
+  const cy = r.cy + ty * uc + fy * vc;
+  const hu = (u1 - u0) / 2;
+  const hv = (v1 - v0) / 2;
+  return { cx: cx * unit, cy: ROOM.FLOOR_Y - ((z0 + z1) / 2) * unit, cz: cy * unit, hx: (facesY ? hu : hv) * unit, hy: ((z1 - z0) / 2) * unit, hz: (facesY ? hv : hu) * unit };
+}
+
+function ergoBoxes(r: FurnRect, unit: number): Box[] {
+  const [fx, fy] = r.face;
+  const facesY = Math.abs(fy) > Math.abs(fx);
+  const w = facesY ? r.x1 - r.x0 : r.y1 - r.y0;
+  const d = facesY ? r.y1 - r.y0 : r.x1 - r.x0;
+  if (r.kind === 'sofa') {
+    const S = FURN_ERGO.sofa;
+    const base = S.seatH - S.cushionT;
+    return [
+      furnBlock(r, 0, w, 0, S.backT, 0, S.backH, unit), // 靠背（整宽）
+      furnBlock(r, 0, S.armW, S.backT, d, 0, S.armH, unit), // 扶手
+      furnBlock(r, w - S.armW, w, S.backT, d, 0, S.armH, unit),
+      furnBlock(r, S.armW, w - S.armW, S.backT, d - S.kick, 0, base, unit), // 底座（前脸退进 kick，留脚跟位，坐垫伸到前缘）
+      furnBlock(r, S.armW, w - S.armW, S.backT, d, base, S.seatH, unit), // 坐垫
+    ];
+  }
+  const C = FURN_ERGO.chair;
+  const under = C.seatH - C.seatT;
+  const legs: Box[] = [];
+  for (const u of [C.legIn, w - C.legIn - C.legW])
+    for (const v of [C.legIn, d - C.legIn - C.legW]) legs.push(furnBlock(r, u, u + C.legW, v, v + C.legW, 0, under, unit));
+  return [
+    ...legs,
+    furnBlock(r, 0, w, 0, d, under, C.seatH, unit), // 座板
+    furnBlock(r, 0, w, 0, C.backT, C.seatH, C.backH, unit), // 靠背
+  ];
+}
+
 export function furnitureBoxes(rects: readonly FurnRect[], unit: number = UNITS_PER_M): Box[] {
   const out: Box[] = [];
   for (const r of rects) {
+    if (r.ergo) {
+      out.push(...ergoBoxes(r, unit));
+      continue;
+    }
     const w = r.x1 - r.x0;
     const d = r.y1 - r.y0;
     const seatTop = ROOM.FLOOR_Y - FURN.seatH * unit;
@@ -703,10 +804,20 @@ export function figureYaw(heading: number): number {
  * 座面（米，相对座位点沿坐着的人的朝向量）：给 figure 的坐姿用——小人按它解出腿怎么放，保证小腿让开座面前缘、
  * 臀贴座面、背不进靠背。座位点 = 平面模型的 seat.x/y（坐下时人就摆在这里）。
  */
-export function seatSpecOf(r: Pick<FurnRect, 'cx' | 'cy' | 'x0' | 'x1' | 'y0' | 'y1' | 'face'>, seat: { x: number; y: number }): SeatSpec {
+export function seatSpecOf(r: Pick<FurnRect, 'kind' | 'ergo' | 'cx' | 'cy' | 'x0' | 'x1' | 'y0' | 'y1' | 'face'>, seat: { x: number; y: number }): SeatSpec {
   const [fx, fy] = r.face;
   const depth = Math.abs(fy) > Math.abs(fx) ? r.y1 - r.y0 : r.x1 - r.x0;
   const along = (seat.x - r.cx) * fx + (seat.y - r.cy) * fy; // 座位点在家具中心前方多少
+  if (r.ergo) {
+    const e = r.kind === 'sofa' ? FURN_ERGO.sofa : FURN_ERGO.chair;
+    return {
+      top: e.seatH,
+      front: depth / 2 - along,
+      back: along - (-depth / 2 + e.backT),
+      thick: r.kind === 'sofa' ? FURN_ERGO.sofa.cushionT : FURN_ERGO.chair.seatT,
+      backTop: e.backH,
+    };
+  }
   return {
     top: FURN.seatH,
     front: depth / 2 - along,

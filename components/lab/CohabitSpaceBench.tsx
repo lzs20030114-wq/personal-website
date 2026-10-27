@@ -20,6 +20,8 @@ import {
   SCENE,
   STEADY,
   STOWED_STRIDE,
+  TABLE_REACH,
+  TABLE_TOP,
   UNITS_PER_M,
   UNIT_ORDER,
   UnitBaker,
@@ -43,9 +45,12 @@ import {
   postsMesh,
   resetBandCursors,
   rigFor,
+  rigYForTop,
   roomMesh,
   seatSpecOf,
   stepBandCursor,
+  tableClearOf,
+  tableTopFor,
   unitDrop,
   unitFootY,
   unitTopY,
@@ -165,6 +170,9 @@ function makeSim(space: SpaceMode, seed: number): CohabitSim {
   return sim;
 }
 
+/** 台面换高度的速度（m/s）：一台从站立高度落到茶几高度约 1.1 s */
+const TABLE_MOVE = 0.5;
+
 /** 步态相位分几格（每格一份静态网格，画面上看不出跳格） */
 const WALK_FRAMES = { person: 24, cat: 16 } as const;
 /** 速度过这条线算在走（m/s，按仿真时间平滑；低于它画站 / 坐） */
@@ -282,6 +290,11 @@ export function CohabitSpaceBench({
     // 立杆随单元伸缩（作者「中间这根棍子也得缩上去」）：下端跟着布束底走，哪一帧变了哪一帧重烘，静止时不重传
     const postBottoms = new Float32Array(layout.units.length).fill(-1);
     const postNext = new Float32Array(layout.units.length);
+    // 每台此刻的台面高度（米，离地）：朝它要去的高度匀速走（TABLE_MOVE m/s）；收在天花下时直接换成目标，落下来就是对的高度
+    const tableTop = new Float32Array(layout.units.length).fill(TABLE_TOP.stand);
+    const tableWant = new Float32Array(layout.units.length);
+    const tableNear = new Float32Array(layout.units.length);
+    let tableT = 0;
     const syncPosts = (): void => {
       let dirty = false;
       for (let u = 0; u < postNext.length && !dirty; u++) if (Math.abs(postNext[u] - postBottoms[u]) > 1e-3) dirty = true;
@@ -413,6 +426,25 @@ export function CohabitSpaceBench({
         skinPerKey.clear();
         skinLoose.length = 0;
         const at = (c: { x: number; z: number }, yaw: number, y: number): MeshPlace => ({ yaw, x: c.x, y, z: c.z, s: rig.s });
+        // 这一帧每台该落到哪个高度：离坐着的人座位 TABLE_REACH 以内、台面不压家具的，按他坐的家具当桌子；其余落到站着用的高度
+        // 一台同时挨着两个座位（沙发与餐椅之间）时按离得近的那个座位
+        tableWant.fill(TABLE_TOP.stand);
+        tableNear.fill(Infinity);
+        if (sim.furn)
+          for (const p of sim.people) {
+            if (!p.seated || p.seat === null) continue;
+            const seat = sim.seats[p.seat];
+            const rect = sim.furn.rects[seat.furn];
+            for (const pu of layout.units) {
+              const d = Math.hypot(pu.x - seat.x, pu.y - seat.y);
+              if (d <= TABLE_REACH && d < tableNear[pu.i] && tableClearOf(layout, pu, sim.furn.rects)) {
+                tableNear[pu.i] = d;
+                tableWant[pu.i] = tableTopFor(rect, pu);
+              }
+            }
+          }
+        const dtT = Math.max(0, Math.min(0.1, sim.t - tableT));
+        tableT = sim.t;
         for (let u = 0; u < layout.units.length; u++) {
           const c = rig.cells[u];
           // 轨迹还没烘完：仿真没开跑，全场都收在天花下
@@ -424,8 +456,14 @@ export function CohabitSpaceBench({
           const deg = sim.act.degree[u];
           // 整束布的高度跟单元的升降程度走；带子各自的长度跟自己的 f 走（开门的带往上收）；立杆下端跟布束底
           const drop = unitDrop(deg);
-          const top = unitTopY(rig, drop);
-          postNext[u] = unitFootY(rig, trajs[0].footY, drop);
+          if (drop <= 1e-3) tableTop[u] = tableWant[u];
+          else {
+            const d = tableWant[u] - tableTop[u];
+            tableTop[u] += Math.sign(d) * Math.min(Math.abs(d), TABLE_MOVE * dtT);
+          }
+          const workY = rigYForTop(rig, trajs[0], tableTop[u]);
+          const top = unitTopY(rig, drop, workY);
+          postNext[u] = unitFootY(rig, trajs[0].footY, drop, workY);
           let allStowed = true;
           let allStraight = true;
           let allFormed = true;
@@ -524,7 +562,9 @@ export function CohabitSpaceBench({
         const k = pl.pose === 'walk' ? Math.floor(frac(mo.dist / CAT.STRIDE) * WALK_FRAMES.cat) % WALK_FRAMES.cat : 0;
         const key = `c-${pl.pose}-${pl.tail}-${pl.bend.toFixed(3)}-${k}`;
         const r = rigOf(key, () => catRig({ unit: UNITS_PER_M, pose: pl.pose, tail: pl.tail, bend: pl.bend, phase: k / WALK_FRAMES.cat }));
-        const footY = pl.onPlatform ? rig.platformY - pl.lift * UNITS_PER_M : ROOM.FLOOR_Y;
+        // 台上的猫站在自己那台的台面上（各台高度不同）；跨台时取两台里高的那台
+        const under = support.length ? Math.max(...support.map((u) => tableTop[u.i])) : TABLE_TOP.stand;
+        const footY = pl.onPlatform ? ROOM.FLOOR_Y - under * UNITS_PER_M - pl.lift * UNITS_PER_M : ROOM.FLOOR_Y;
         placeBoth(cats, r, key, 0, pl.x * UNITS_PER_M, footY, pl.y * UNITS_PER_M, figureYaw(pl.heading), clampHeadYaw(pl.headTurn, CAT_HEAD_YAW_MAX));
       }
       drawBatches(cats);
@@ -584,6 +624,7 @@ export function CohabitSpaceBench({
       sim = makeSim(spaceKey, seed);
       bakeFurniture();
       resetBandCursors(cursors);
+      tableTop.fill(TABLE_TOP.stand);
       lastHud = '';
       render();
       pushHud();

@@ -261,8 +261,9 @@ export const COHABIT = {
       { kind: 'sofa', at: [1.5, -2.8], face: [0, 1] },
       { kind: 'sofa', at: [1.5, 2.8], face: [0, -1] },
       { kind: 'sofa', at: [-1.5, 2.8], face: [0, -1] },
-      { kind: 'chair', at: [0, -2.8], face: [0, 1] },
-      { kind: 'chair', at: [0, 2.8], face: [0, -1] },
+      // 餐椅进深 0.52：中心放在 2.64 格，前缘离前一排交叉点仍约 0.27 m
+      { kind: 'chair', at: [0, -2.64], face: [0, 1] },
+      { kind: 'chair', at: [0, 2.64], face: [0, -1] },
     ],
     /** 尺寸（m）：w 沿宽、d 进深；seats = 座位离中线的偏移；座位点 = 坐着的人躯干中心 = 家具中心往前 SEAT_IN
      *  （负 = 往靠背那边：人靠着靠背坐，躯干在靠背前约 0.25 m；首版取 +0.1 等于坐在沙发前沿，2026-10-07 改正） */
@@ -271,6 +272,18 @@ export const COHABIT = {
       chair: { w: 0.75, d: 0.75, seats: [0] },
     },
     SEAT_IN: -0.15,
+    /**
+     * 按人体工学重定的尺寸（2026-10-27，作者「沙发和椅子的大小参考人体工学数据」）。只给单元铺满整间房的那套（Lab 2-15，
+     * FurnSpec.ergo）——2-14 与案例页对照图仍按上面那套跑，改它们会让正文引用的读数跟着变。
+     * 沙发（QB/T 1952.1 分级表：双人座前宽 ≥ 0.96 m、座深 0.48–0.60、座前高 0.37–0.48）：外形不变 1.40 × 0.80；
+     *   扶手各 0.12 ⇒ 扶手之间 1.16，两座中心 ±0.29；靠背 0.20 厚 ⇒ 座深 0.60；躯干中心在靠背前 0.12 ⇒ 座位点在中心后 0.08。
+     * 椅子：原来 0.75 见方是单人扶手椅的尺寸、配不上桌子，改成餐椅 0.50 × 0.52（座深 0.42 小于国人坐深第 5 百分位附近，
+     *   膝窝不顶座面前缘）；靠背 0.04 ⇒ 座位点在中心后 0.10。
+     */
+    KINDS_ERGO: {
+      sofa: { w: 1.4, d: 0.8, seats: [-0.29, 0.29], seatIn: -0.08 },
+      chair: { w: 0.5, d: 0.52, seats: [0], seatIn: -0.1 },
+    },
     /** 家具离墙、彼此之间至少留多远（m） */
     GAP: 0.05,
     /** 站定的部分触发：停住满这么久（s）、且看着一只猫（≤ GAZE_D、视线 ±GAZE_HALF.person）⇒ 空间朝这个人给猫铺一步 */
@@ -432,16 +445,23 @@ const MAX_SUB_DT = 0.05;
 
 export type FurnKind = keyof typeof COHABIT.SEATS.KINDS;
 
-/** 一件家具：种类、中心（m，房间坐标）、坐着的人朝哪 */
+/** 一件家具：种类、中心（m，房间坐标）、坐着的人朝哪；ergo = 用人体工学那套尺寸（COHABIT.SEATS.KINDS_ERGO，单元铺满整间房时） */
 export interface FurnSpec {
   kind: FurnKind;
   x: number;
   y: number;
   face: readonly [number, number];
+  ergo?: true;
+}
+
+/** 这件家具用哪套尺寸 */
+export function furnKind(f: { kind: FurnKind; ergo?: true }): { w: number; d: number; seats: readonly number[]; seatIn: number } {
+  return f.ergo ? COHABIT.SEATS.KINDS_ERGO[f.kind] : { ...COHABIT.SEATS.KINDS[f.kind], seatIn: COHABIT.SEATS.SEAT_IN };
 }
 
 export interface FurnRect {
   kind: FurnKind;
+  ergo?: true;
   cx: number;
   cy: number;
   x0: number;
@@ -487,11 +507,11 @@ function segRectDist(r: FurnRect, ax: number, ay: number, bx: number, by: number
 
 /** 一件家具在地面上的占位 */
 export function furnRect(f: FurnSpec): FurnRect {
-  const k = COHABIT.SEATS.KINDS[f.kind];
+  const k = furnKind(f);
   const alongX = f.face[0] === 0; // 面朝 ±y ⇒ 宽沿 x
   const hw = (alongX ? k.w : k.d) / 2;
   const hd = (alongX ? k.d : k.w) / 2;
-  return { kind: f.kind, cx: f.x, cy: f.y, x0: f.x - hw, x1: f.x + hw, y0: f.y - hd, y1: f.y + hd, face: f.face };
+  return { kind: f.kind, ...(f.ergo ? { ergo: true as const } : {}), cx: f.x, cy: f.y, x0: f.x - hw, x1: f.x + hw, y0: f.y - hd, y1: f.y + hd, face: f.face };
 }
 
 /**
@@ -501,7 +521,7 @@ export function furnRect(f: FurnSpec): FurnRect {
 export function standardFurniture(l: PlanLayout): FurnSpec[] {
   if (l.cover === 'room') {
     const p = l.roomM / COHABIT.SEATS.GRID;
-    return COHABIT.SEATS.FURNITURE_ROOM.map((f) => ({ kind: f.kind, x: f.at[0] * p, y: f.at[1] * p, face: f.face }));
+    return COHABIT.SEATS.FURNITURE_ROOM.map((f) => ({ kind: f.kind, x: f.at[0] * p, y: f.at[1] * p, face: f.face, ergo: true as const }));
   }
   const p8 = l.fieldM / (COHABIT.SEATS.GRID - 1 + (2 * l.platR) / l.pitchM);
   return COHABIT.SEATS.FURNITURE.map((f) => ({ kind: f.kind, x: f.at[0] * p8, y: f.at[1] * p8, face: f.face }));
@@ -700,14 +720,14 @@ export function placeSeats(l: PlanLayout, g: AisleGraph): Seat[] {
   const f = g.furn;
   if (!f) return [];
   const reach = doorReach(l, g, null);
-  const S = COHABIT.SEATS;
   const seats: Seat[] = [];
   f.rects.forEach((r, fi) => {
     const tx = -r.face[1];
     const ty = r.face[0];
-    S.KINDS[r.kind].seats.forEach((o, slot) => {
-      const x = r.cx + tx * o + r.face[0] * S.SEAT_IN;
-      const y = r.cy + ty * o + r.face[1] * S.SEAT_IN;
+    const kd = furnKind(r);
+    kd.seats.forEach((o, slot) => {
+      const x = r.cx + tx * o + r.face[0] * kd.seatIn;
+      const y = r.cy + ty * o + r.face[1] * kd.seatIn;
       const gx = x + r.face[0] * 0.6;
       const gy = y + r.face[1] * 0.6;
       let node = -1;
@@ -1328,7 +1348,7 @@ export class CohabitSim {
     for (let x = -half; x <= half; x += 0.3) for (let y = -half; y <= half; y += 0.3) spots.push({ x, y });
     spots.sort((a, b) => Math.hypot(a.x, a.y) - Math.hypot(b.x, b.y));
     for (const sp of spots) {
-      const next = [...this.furniture, { kind, x: sp.x, y: sp.y, face: (sp.y < 0 ? [0, 1] : [0, -1]) as [number, number] }];
+      const next: FurnSpec[] = [...this.furniture, { kind, x: sp.x, y: sp.y, face: (sp.y < 0 ? [0, 1] : [0, -1]) as [number, number], ...(this.layout.cover === 'room' ? { ergo: true as const } : {}) }];
       if (!this.furnitureFits(next)) continue;
       this.refurnish(next, this.furniture.length);
       return this.furniture.length - 1;

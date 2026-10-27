@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BRIDGE_BASE, FRAMES, HOIST, STEADY, bandCursors, bandPaths, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_ORDER, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
+import { BRIDGE_BASE, FRAMES, FURN_ERGO, HOIST, STEADY, TABLE_TOP, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_ORDER, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
 import { planLayout } from './unit-activation';
 import { FIGURE, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
 import { RING } from './skin-ring';
@@ -459,15 +459,41 @@ describe('单元铺满整间房（cover: room，2026-10-27 作者「单元兼作
   const rig = rigFor(room, traj);
   const rigField = rigFor(field, traj);
 
-  it('台子随格距放大约 1.37 倍（终态边长 0.62–0.75 m），台面高度不变（仍是场地布局那个高度），钉住端随之下挪', () => {
+  it('台子随格距放大约 1.37 倍（终态边长 0.62–0.75 m）；默认台面落在站着用的高度 1.05 m', () => {
     expect(rig.s / rigField.s).toBeCloseTo(room.pitchM / field.pitchM, 12);
     const side = platformSide(rig);
     expect(side / platformSide(rigField)).toBeCloseTo(room.pitchM / field.pitchM, 9);
     expect(side).toBeGreaterThan(0.62);
     expect(side).toBeLessThan(0.75);
-    expect(rig.platformY).toBeCloseTo(rigField.platformY, 6);
-    expect(rig.y + rig.s * traj.footY).toBeGreaterThan(RIG_ANCHOR_Y); // 世界 Y 向下：钉住端比 1.08 m 低
-    expect((ROOM.FLOOR_Y - (rig.y + rig.s * traj.footY)) / UNITS_PER_M).toBeGreaterThan(0.85);
+    expect((ROOM.FLOOR_Y - rig.platformY) / UNITS_PER_M).toBeCloseTo(TABLE_TOP.stand, 9);
+    expect(rig.y).toBeCloseTo(rigYForTop(rig, traj, TABLE_TOP.stand), 9);
+  });
+
+  it('当桌子的几个高度：最低那档（沙发前茶几）吊带下端不戳地，餐桌比餐椅座面高 0.27–0.30', () => {
+    const hang = (rig.s * (traj.footY - traj.platformTopY)) / UNITS_PER_M; // 台面到吊带最下端
+    for (const top of Object.values(TABLE_TOP)) {
+      const foot = top - hang;
+      expect(foot, `台面 ${top}`).toBeGreaterThan(0);
+      const y = rigYForTop(rig, traj, top);
+      expect(unitFootY(rig, traj.footY, 1, y)).toBeLessThan(ROOM.FLOOR_Y);
+    }
+    expect(TABLE_TOP.sofaFront - hang).toBeLessThan(0.02); // 已经是能落到的最低
+    expect(TABLE_TOP.chair - FURN_ERGO.chair.seatH).toBeGreaterThanOrEqual(0.27);
+    expect(TABLE_TOP.chair - FURN_ERGO.chair.seatH).toBeLessThanOrEqual(0.3);
+    expect(Math.abs(TABLE_TOP.sofaSide - FURN_ERGO.sofa.armH)).toBeLessThan(0.05);
+  });
+
+  it('座位前方 / 旁边那台按家具分：餐椅 → 餐桌；沙发正前方 → 茶几，扶手旁 → 边几', () => {
+    const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', space: 'live', seed: 1 });
+    const rects = sim.furn!.rects;
+    const sofa = rects.find((r) => r.kind === 'sofa')!;
+    const chair = rects.find((r) => r.kind === 'chair')!;
+    const [fx, fy] = sofa.face;
+    expect(tableTopFor(chair, { x: chair.cx + chair.face[0], y: chair.cy + chair.face[1] })).toBe(TABLE_TOP.chair);
+    expect(tableTopFor(sofa, { x: sofa.cx + fx * 0.8, y: sofa.cy + fy * 0.8 })).toBe(TABLE_TOP.sofaFront);
+    expect(tableTopFor(sofa, { x: sofa.cx + fy * 1.0, y: sofa.cy - fx * 1.0 })).toBe(TABLE_TOP.sofaSide);
+    // 实际座位：每个座位的前方 / 旁边那台都给得出高度
+    for (const seat of sim.seats) for (const u of [seat.meet, seat.side]) expect(Object.values(TABLE_TOP)).toContain(tableTopFor(rects[seat.furn], sim.layout.units[u]));
   });
 
   it('64 台铺满四边：最外一圈的台面离墙不到半个格距，峰值时邻台面对面、角对角都还留缝，台子不出房间', () => {
@@ -498,16 +524,52 @@ describe('单元铺满整间房（cover: room，2026-10-27 作者「单元兼作
     expect(sim.seats).toHaveLength(10);
     for (const seat of sim.seats) {
       const sp = seatSpecOf(furn.rects[seat.furn], seat);
-      expect(sp.front).toBeGreaterThan(0.45);
+      expect(sp.front).toBeGreaterThan(0.34);
       expect(sp.back).toBeGreaterThan(0.1);
       for (const b of boxes) expect(b.cy - b.hy).toBeGreaterThan(0);
     }
   });
 });
 
+describe('人体工学那套家具（2026-10-27）', () => {
+  const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', space: 'live', seed: 1 });
+  const rects = sim.furn!.rects;
+  it('座面高 / 座深 / 扶手之间 / 靠背高落在资料给的范围里', () => {
+    const sofa = rects.find((r) => r.kind === 'sofa')!;
+    const chair = rects.find((r) => r.kind === 'chair')!;
+    expect(sofa.ergo && chair.ergo).toBe(true);
+    const E = FURN_ERGO;
+    expect(E.sofa.seatH).toBeGreaterThanOrEqual(0.37); // QB/T 1952.1 座前高 0.37–0.48
+    expect(E.sofa.seatH).toBeLessThanOrEqual(0.48);
+    const sofaD = sofa.y1 - sofa.y0;
+    expect(sofaD - E.sofa.backT).toBeGreaterThanOrEqual(0.48); // 座深 0.48–0.60
+    expect(sofaD - E.sofa.backT).toBeLessThanOrEqual(0.6);
+    expect(sofa.x1 - sofa.x0 - 2 * E.sofa.armW).toBeGreaterThanOrEqual(0.96); // 双人座前宽 ≥ 0.96
+    expect(E.chair.seatH).toBeGreaterThanOrEqual(0.43); // 餐椅 0.43–0.46
+    expect(E.chair.seatH).toBeLessThanOrEqual(0.46);
+    expect(chair.y1 - chair.y0 - E.chair.backT).toBeLessThan(0.5);
+  });
+  it('沙发五块、椅子六块（四腿 + 座板 + 靠背），都在家具占位里、离地不穿地', () => {
+    for (const r of rects) {
+      const bs = furnitureBoxes([r]);
+      expect(bs).toHaveLength(r.kind === 'sofa' ? 5 : 6);
+      for (const b of bs) {
+        expect((b.cx - b.hx) / UNITS_PER_M).toBeGreaterThanOrEqual(r.x0 - 1e-9);
+        expect((b.cx + b.hx) / UNITS_PER_M).toBeLessThanOrEqual(r.x1 + 1e-9);
+        expect((b.cz - b.hz) / UNITS_PER_M).toBeGreaterThanOrEqual(r.y0 - 1e-9);
+        expect((b.cz + b.hz) / UNITS_PER_M).toBeLessThanOrEqual(r.y1 + 1e-9);
+        expect(b.cy + b.hy).toBeLessThanOrEqual(ROOM.FLOOR_Y + 1e-9);
+      }
+    }
+  });
+});
+
 describe('坐着的人与家具', () => {
-  it('标准布置的每个座位、坐直与前倾：小人不插进任何一块座面板或靠背，臀贴座面，脚踩地', () => {
-    const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, space: 'live', seed: 1 });
+  it.each([
+    ['场地布局（旧尺寸，2-14）', 'field'],
+    ['铺满整间房（人体工学尺寸，2-15）', 'room'],
+  ] as const)('%s：标准布置的每个座位、坐直与前倾：小人不插进任何一块家具，臀贴座面，脚踩地', (_, cover) => {
+    const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, space: 'live', seed: 1, cover, ...(cover === 'room' ? { unit: 'square' as const } : {}) });
     const furn = sim.furn;
     expect(furn).not.toBeNull();
     if (!furn) return;
@@ -516,7 +578,7 @@ describe('坐着的人与家具', () => {
     expect(sim.seats.length).toBeGreaterThanOrEqual(10);
     for (const seat of sim.seats) {
       const s = seatSpecOf(furn.rects[seat.furn], seat);
-      expect(s.front).toBeGreaterThan(0.45); // 座位点在前缘后 0.5 m 上下
+      expect(s.front).toBeGreaterThan(cover === 'room' ? 0.34 : 0.45); // 座位点在前缘后 0.35–0.5 m（餐椅座深 0.42）
       expect(s.back).toBeGreaterThan(0.1);
       for (const lean of [false, true]) {
         const m = figureMesh({
