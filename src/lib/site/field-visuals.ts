@@ -14,12 +14,12 @@ export const FIELD_PROJECTS: Record<FieldProject, { label: string; ink: string; 
   about: { label: 'About', ink: '#e3e6ce', surface: '#2d342c', muted: '#b7bea7' },
 };
 
-export const FIELD_KINDS: Record<FieldKind, { label: string; weight: number }> = {
-  project: { label: 'Project', weight: 3 },
-  lab: { label: 'Experiment', weight: 3 },
-  log: { label: 'Work log', weight: 4 },
-  other: { label: 'Other work', weight: 1 },
-  about: { label: 'About', weight: 1 },
+export const FIELD_KINDS: Record<FieldKind, { label: string }> = {
+  project: { label: 'Project' },
+  lab: { label: 'Experiment' },
+  log: { label: 'Work log' },
+  other: { label: 'Other work' },
+  about: { label: 'About' },
 };
 
 export const PROJECT_ICONS: Record<FieldProject, string> = {
@@ -48,28 +48,19 @@ export function logIcon(entry: LogEntry): string {
 
 export const iconPath = (key: string) => `/home/icons/${key}.svg`;
 
-export interface FieldDraw { weight: number; groups: number[][] }
-/** First select a content kind, then a project, then an item: 184 logs cannot bury the projects. */
-export function buildFieldDraws(pool: readonly { kind: FieldKind; project: FieldProject }[]): FieldDraw[] {
-  return (Object.keys(FIELD_KINDS) as FieldKind[]).flatMap(kind => {
-    const groups = new Map<FieldProject, number[]>();
-    pool.forEach((item, i) => {
-      if (item.kind !== kind) return;
-      const group = groups.get(item.project) ?? [];
-      group.push(i);
-      groups.set(item.project, group);
-    });
-    return groups.size ? [{ weight: FIELD_KINDS[kind].weight, groups: [...groups.values()] }] : [];
-  });
-}
-
-export function pickFieldIndex(draws: readonly FieldDraw[], random: () => number = Math.random): number {
-  if (!draws.length) throw new Error('Field has no content');
-  let cursor = random() * draws.reduce((n, d) => n + d.weight, 0);
-  const bucket = draws.find(d => (cursor -= d.weight) < 0) ?? draws[draws.length - 1];
-  const group = bucket.groups[Math.min(bucket.groups.length - 1, Math.floor(random() * bucket.groups.length))];
-  return group[Math.min(group.length - 1, Math.floor(random() * group.length))];
-}
+/**
+ * 浅色首屏（2026-10-27，画布 H6，MAPPING §65）：项目色只给格子底色与图标。
+ * 亮格比纸深一档、暗格只比纸深一点；其他作品、本站与「关于」共用中性灰。
+ */
+const LIGHT_NEUTRAL = { ink: 'oklch(0.43 0.013 192)', lit: 'oklch(0.89 0.012 160)', dim: 'oklch(0.93 0.0066 160)' };
+export const FIELD_LIGHT: Record<FieldProject, { ink: string; lit: string; dim: string }> = {
+  'project-i': { ink: 'oklch(0.42 0.088 178)', lit: 'oklch(0.86 0.07 150)', dim: 'oklch(0.925 0.0385 150)' },
+  'project-ii': { ink: 'oklch(0.42 0.09 282)', lit: 'oklch(0.86 0.06 292)', dim: 'oklch(0.925 0.033 292)' },
+  'project-iii': { ink: 'oklch(0.45 0.06 235)', lit: 'oklch(0.87 0.04 235)', dim: 'oklch(0.925 0.022 235)' },
+  'other-work': LIGHT_NEUTRAL,
+  'this-site': LIGHT_NEUTRAL,
+  about: LIGHT_NEUTRAL,
+};
 
 /** Project hue stays stable; logs use quieter strokes, project covers use brighter strokes. */
 export function fieldColors(project: FieldProject, kind: FieldKind) {

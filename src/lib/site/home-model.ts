@@ -3,7 +3,7 @@
 // （客户端组件不能 import 内容池模块——node:fs 撞 Turbopack，与 log-facets 同一条纪律）。
 import { LAB_INDEX, labAnchor } from './lab-index';
 import { projectGroupOf, bucketOf, withAnchors, aspectOf, OTHER_ASPECT } from './log-facets';
-import { LAB_ICONS, PROJECT_ICONS, iconPath, logIcon, buildFieldDraws, type FieldKind, type FieldProject, type FieldDraw } from './field-visuals';
+import { LAB_ICONS, PROJECT_ICONS, iconPath, logIcon, type FieldKind, type FieldProject } from './field-visuals';
 import type { LogEntry } from './log-schema';
 import type { OtherWorks } from './other-works-schema';
 
@@ -377,7 +377,7 @@ export function buildHomeLog(entries: LogEntry[]): HomeLogData {
   return { total: entries.length, span: `${entries.length} entries · ${span}`, lanes, months, tips, latest };
 }
 
-/* ───────────────────────── 01 Field（稿 17 Home · Field Hero，MAPPING §55） ───────────────────────── */
+/* ───────────────────────── 01 Field（池子 = 稿 17 Field Hero §55；版面 = 画布 H6b §65） ───────────────────────── */
 
 /** 场里一张卡：悬停某个亮着的方块时展开成它。 */
 export interface FieldItem {
@@ -395,8 +395,6 @@ export interface FieldItem {
 }
 export interface HomeField {
   pool: FieldItem[];
-  /** 按内容类型与项目分层抽样：全池可达，日志数量不会挤掉项目与台架。 */
-  draws: FieldDraw[];
   /** 已发稿的主项目数 / 台架总数 / 日志条数（首屏底注与副题，全部现算） */
   projects: number;
   benches: number;
@@ -523,7 +521,6 @@ export function buildHomeField(cards: HomeCard[], works: FieldWorkInput[], entri
   ];
   return {
     pool,
-    draws: buildFieldDraws(pool),
     projects: works.filter((work) => work.selected && work.published).length,
     benches: LAB_INDEX.reduce((n, g) => n + g.segments.reduce((m, s) => m + s.benches.length, 0), 0),
     entries: entries.length,

@@ -62,57 +62,83 @@
 .hs-btn { font: 500 13px var(--sans); padding: 9px 15px; background: var(--ink); color: var(--paper); transition: background .25s; }
 .hs-btn:hover { background: var(--teal); }
 /* ---------- 01 field（稿 17 Home · Field Hero，MAPPING §55）---------- */
-.hs-page--hook { background: var(--night); color: var(--cream); overflow: hidden; }
-.hs-field__glow { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(70% 60% at 30% 80%, oklch(0.19 0.035 228) 0%, transparent 70%); }
-.hs-field__grid { position: absolute; left: 40px; right: 76px; top: 78px; bottom: 56px; display: grid; grid-template-columns: repeat(28, minmax(0, 1fr)); grid-template-rows: repeat(14, minmax(0, 1fr)); gap: 12px; }
-.hs-field__grid--ghost { pointer-events: none; }
-.hs-field__ghost, .hs-field__cell { display: block; min-width: 0; min-height: 0; border-radius: 2px; opacity: 0; transition: opacity 1.6s ease, transform .7s var(--eo); }
-.hs-field__ghost { background: oklch(0.83 0.082 132 / .35); }
-.hs-field__cell { position: relative; background: var(--field-surface, oklch(0.95 0.032 120 / .07)); pointer-events: none; cursor: pointer; }
-.hs-field__cimg { position: absolute; inset: 0; background: var(--field-ink); mask: center/contain no-repeat; opacity: 0; transition: opacity 1.6s ease; }
-/* 项目由色相区分，内容类型由明暗与右上角标记区分；小格和展开卡共享同一个符号。 */
-.hs-field__cell[data-kind="log"] { background: color-mix(in srgb, var(--field-surface) 60%, #08141c); }
-.hs-field__cell[data-kind="lab"] { background: color-mix(in srgb, var(--field-surface) 82%, #08141c); }
-.hs-field__cell[data-kind]::after { content: ''; position: absolute; right: 3px; top: 3px; width: 3px; height: 3px; background: var(--field-ink); opacity: .7; }
-.hs-field__cell[data-kind="lab"]::after { background: none; border: 1px solid var(--field-ink); }
-.hs-field__cell[data-kind="log"]::after { height: 1px; box-shadow: 0 2px 0 var(--field-ink); }
-.hs-field__card { position: absolute; z-index: 8; overflow: hidden; border-radius: 2px; background: var(--field-surface); border: 1px solid color-mix(in srgb, var(--field-ink) 25%, transparent); box-shadow: 0 18px 50px oklch(0.08 0.02 235 / .4); text-align: left; cursor: pointer; color: var(--cream); }
-.hs-field__card-kind { position: absolute; left: 14px; top: 12px; color: var(--field-ink); font: 400 10px var(--mono); }
-.hs-field__card-img { position: absolute; width: 29%; max-width: 104px; aspect-ratio: 1; left: 50%; top: 40%; transform: translate(-50%, -50%); background: var(--field-ink); mask: center/contain no-repeat; }
-.hs-field__card-txt { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 14px 12px; background: var(--field-surface); opacity: 0; transform: translateY(8px); transition: opacity .35s, transform .5s var(--eo); min-width: 0; }
-.hs-field__card-meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.hs-field__card-title { font: 500 clamp(13px, 1.2vw, 16px)/1.25 var(--sans); letter-spacing: -.012em; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-.hs-field__card-cap { font: 400 10px var(--mono); color: var(--field-ink); opacity: .75; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hs-field__card-go { flex: none; font: 500 10px var(--mono); color: var(--field-ink); }
-/* 2026-10-27 第二轮（MAPPING §64.1）：标题区从居中改成压在下半屏的海报——大字左对齐占左侧，导语与按钮收进右侧一栏、底边对齐；
-   方块场退到上半屏与右侧（不亮的那块地仍由 FieldPage 按这个框量出来）。字号受两件事限制：左栏宽装得下最宽那行（约 7.6 个字高），屏高不让大字吃掉一半以上的场 */
-.hs-field__center { position: absolute; left: 56px; right: 88px; bottom: 60px; z-index: 7; pointer-events: none; display: grid; grid-template-columns: minmax(0, 1fr) 290px; grid-template-rows: 1fr auto auto auto; column-gap: 40px; row-gap: 16px; align-items: end; text-align: left; }
-.hs-field__center > .hs-mask { grid-column: 1; grid-row: 1 / span 4; }
-.hs-field__center > .hs-field__lede, .hs-field__center > .hs-field__ctas, .hs-field__center > .hs-field__hint { grid-column: 2; }
-/* 2026-10-27（MAPPING §64）：标题宽窄对比——整句压窄、细；objects / spaces 两个词拉宽、加粗（字宽轴 62–125%）。
-   断行写死在标记里（每行一个 .hs-ln）。遮罩底边多留一点，宽体粗字的 j / p 下伸不被切。 */
-.hs-field__center > .hs-mask { padding-bottom: .14em; }
-.hs-field__title { margin: 0; font-weight: 300; font-stretch: 74%; font-size: clamp(48px, min(calc((100vw - 474px) / 7.1), 13.6vh), 132px); line-height: .86; letter-spacing: -.028em; }
-.hs-ln { display: block; }
-.hs-w { font-stretch: 125%; font-weight: 640; letter-spacing: -.035em; }
-/* 方块不亮的那块空地：四个角标落在外缘格缝上（位置由 FieldPage measure 写入） */
-.hs-field__frame { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 6; pointer-events: none; }
-.hs-field__frame i { position: absolute; width: 14px; height: 14px; border: 0 solid oklch(0.95 0.032 120 / .42); }
-.hs-field__frame i:nth-child(1) { left: 0; top: 0; border-left-width: 1px; border-top-width: 1px; }
-.hs-field__frame i:nth-child(2) { right: 0; top: 0; border-right-width: 1px; border-top-width: 1px; }
-.hs-field__frame i:nth-child(3) { left: 0; bottom: 0; border-left-width: 1px; border-bottom-width: 1px; }
-.hs-field__frame i:nth-child(4) { right: 0; bottom: 0; border-right-width: 1px; border-bottom-width: 1px; }
-.hs-field__frame b { position: absolute; left: 22px; top: 6px; font: 400 11px var(--mono); color: oklch(0.72 0.012 150); white-space: nowrap; }
-.hs-field__title .hs-accent--lime { color: var(--lime); }
-.hs-field__lede { margin: 0; max-width: 46ch; font: 400 clamp(13px, 1.9vh, 15px)/1.55 var(--sans); color: oklch(0.78 0.03 160); text-wrap: pretty; }
-.hs-field__ctas { display: flex; gap: 12px; align-items: center; pointer-events: auto; }
-.hs-field__btn { flex: none; white-space: nowrap; font: 500 13px var(--sans); padding: 10px 16px; transition: background .25s, border-color .25s; }
-.hs-field__btn--solid { background: var(--cream); color: var(--night); }
-.hs-field__btn--solid:hover { background: var(--lime); }
-.hs-field__btn--line { border: 1px solid oklch(0.95 0.032 120 / .4); color: var(--cream); }
-.hs-field__btn--line:hover { border-color: var(--cream); color: var(--cream); }
-.hs-field__hint { margin: 0; font: 400 11px var(--mono); color: oklch(0.72 0.012 150); }
-.hs-field__foot { position: absolute; left: 56px; right: 88px; bottom: 22px; display: flex; justify-content: space-between; gap: 24px; font: 400 11px var(--mono); color: oklch(0.72 0.012 150); pointer-events: none; }
+/* ---------- 01 field（2026-10-27 换成画布方案 H6b，MAPPING §65；此前为稿 17 Home · Field Hero，§55）---------- */
+.hs-page--hook { background: var(--paper); color: var(--ink); overflow: hidden; }
+/* 28×15 细线格：格线是一条条元素（开卡让位时跟着移），格子里的东西（作品格、字、框、按钮）都按 grid 行列落位；字号按格子大小（容器查询单位）走 */
+.hs-fx { --fx-line: oklch(0.235 0.025 215 / .14); position: absolute; left: 76px; right: 76px; top: 56px; bottom: 54px; display: grid; grid-template-columns: repeat(28, minmax(0, 1fr)); grid-template-rows: repeat(15, minmax(0, 1fr)); container-type: size;
+  /* 一格多大（按高，宽太窄时按宽）：图标、框里的字、作品格内边距跟着它走，外接大屏上不会缩成一小点；下限 = 1440 宽时的设计值 */
+  --fx-c: min(calc(100cqh / 15), calc(100cqw / 28 * 1.15)); }
+.hs-fx__vl, .hs-fx__hl { position: absolute; background: var(--fx-line); pointer-events: none; transition: transform .7s var(--eo); }
+.hs-fx__vl { top: 0; bottom: 0; width: 1px; }
+.hs-fx__hl { left: 0; right: 0; height: 1px; }
+.hs-fx > * { min-width: 0; min-height: 0; }
+/* 指针余光（§57.3）：所在格与邻格淡淡地压一层墨 */
+.hs-fx__ghost { display: block; opacity: 0; background: oklch(0.235 0.025 215 / .07); pointer-events: none; transition: opacity 1.6s ease, transform .7s var(--eo); }
+/* 作品格：暗格只比纸深一点，亮格深一档（成簇地亮起又暗回去）；项目色只给底色与图标 */
+.hs-fx__slot { position: relative; display: block; cursor: pointer; transition: transform .7s var(--eo); }
+.hs-fx__tile { position: absolute; inset: clamp(4px, calc(var(--fx-c) * .11), 8px); border-radius: 2px; background: var(--fi-dim); transition: background-color var(--fi-t, 1.6s) ease; }
+.hs-fx__slot[data-lit="1"] .hs-fx__tile { background: var(--fi-lit); }
+.hs-fx__ico { position: absolute; left: 50%; top: 50%; width: min(clamp(20px, calc(var(--fx-c) * .46), 34px), 56%); aspect-ratio: 1; transform: translate(-50%, -50%); background: var(--fi-ink); -webkit-mask: center / contain no-repeat; mask: center / contain no-repeat; opacity: .38; transition: opacity var(--fi-t, 1.6s) ease; }
+.hs-fx__slot[data-lit="1"] .hs-fx__ico { opacity: 1; }
+/* 右上角类型记号：项目 = 实心方块，台架 = 空心方块，日志 = 两条短线，其他作品 / 关于 = 圆点 */
+.hs-fx__tile::after { content: ''; position: absolute; right: 3px; top: 3px; width: 4px; height: 4px; border-radius: 50%; background: var(--fi-ink); opacity: .75; }
+.hs-fx__slot[data-kind="project"] .hs-fx__tile::after { width: 5px; height: 5px; border-radius: 0; }
+.hs-fx__slot[data-kind="lab"] .hs-fx__tile::after { box-sizing: border-box; width: 5px; height: 5px; border-radius: 0; background: none; border: 1px solid var(--fi-ink); }
+.hs-fx__slot[data-kind="log"] .hs-fx__tile::after { box-sizing: border-box; width: 6px; height: 3px; border-radius: 0; background: none; border-top: 1px solid var(--fi-ink); border-bottom: 1px solid var(--fi-ink); }
+/* 字格：一字一格，细窄（字宽轴 64、字重 230，与后几屏的大标题同一端）；鼠标附近的字变宽变粗由 FieldPage 写 font-variation-settings（FX.SWELL_*） */
+.hs-fx__ch { display: flex; align-items: center; justify-content: center; font-size: min(calc(100cqh / 15 * .84), calc(100cqw / 28 * .96)); line-height: 1; font-variation-settings: 'wdth' 64, 'wght' 230; transition: font-variation-settings 1.4s cubic-bezier(.2,.7,.1,1), transform .7s var(--eo); pointer-events: none; user-select: none; }
+/* objects / spaces：每个字母 2×2，宽粗（与后几屏的强调词同一端）；底色 = 项目一 / 项目二的颜色 */
+.hs-fx__key { position: relative; pointer-events: none; user-select: none; transition: transform .7s var(--eo), width .7s var(--eo), height .7s var(--eo); }
+.hs-fx__key i { position: absolute; inset: 4px; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-style: normal; color: var(--paper); font-size: min(calc(100cqh / 15 * 1.29), calc(100cqw / 28 * 1.5)); line-height: 1; font-variation-settings: 'wdth' 125, 'wght' 760; letter-spacing: -.02em; }
+.hs-fx__key--objects i { background: var(--teal); }
+.hs-fx__key--spaces i { background: var(--violet); }
+/* 名字与导航：第一行的墨色细框。框、按钮、提示都是定位元素：画在格线之上，读作合并的单元格 */
+.hs-fx__box { position: relative; display: flex; align-items: center; gap: 12px; padding: 0 14px; border: 1px solid var(--ink); background: var(--paper); color: var(--ink); font: 500 clamp(13px, calc(var(--fx-c) * .287), 17px) var(--sans); white-space: nowrap; overflow: hidden; transition: transform .7s var(--eo), width .7s var(--eo), height .7s var(--eo), background-color .2s, color .2s; }
+.hs-fx__name b { font: 600 clamp(15px, calc(var(--fx-c) * .33), 20px) var(--sans); }
+.hs-fx__name span { font: 400 clamp(11px, calc(var(--fx-c) * .243), 14px) var(--mono); color: var(--muted); }
+.hs-fx__nav { cursor: pointer; }
+/* 窄桌面（1024–1279）两格只有 60px 出头：导航收窄内边距，名字的副题让位 */
+@media (max-width: 1279px) { .hs-fx__nav { padding: 0 8px; } .hs-fx__name { gap: 8px; padding: 0 10px; } }
+.hs-fx__btn { position: relative; display: flex; align-items: center; justify-content: center; font: 500 clamp(14px, calc(var(--fx-c) * .31), 18px) var(--sans); white-space: nowrap; transition: transform .7s var(--eo), width .7s var(--eo), height .7s var(--eo), background-color .2s, color .2s; }
+.hs-fx__btn--solid { background: var(--ink); color: var(--paper); }
+.hs-fx__btn--line { border: 1px solid var(--ink); background: var(--paper); color: var(--ink); }
+@media (hover: hover) and (pointer: fine) {
+  .hs-fx__nav:hover, .hs-fx__btn--line:hover { background: var(--ink); color: var(--paper); }
+  .hs-fx__btn--solid:hover { background: var(--teal); }
+}
+.hs-fx__hint { position: relative; background: linear-gradient(var(--paper), var(--paper)) 1px 1px / calc(100% - 1px) calc(100% - 1px) no-repeat; display: flex; align-items: center; justify-content: center; font: 400 clamp(11px, calc(var(--fx-c) * .243), 14px) var(--mono); color: var(--muted); white-space: nowrap; pointer-events: none; transition: transform .7s var(--eo), width .7s var(--eo), height .7s var(--eo); }
+/* 展开卡（§55）：浅底，顶上一条项目色线；从被悬停那一格长出来 */
+.hs-fx__card { position: absolute; z-index: 8; overflow: hidden; border-radius: 2px; background: color-mix(in oklch, var(--fi-lit) 55%, var(--paper)); border: 1px solid oklch(0.235 0.025 215 / .22); box-shadow: 0 18px 44px oklch(0.235 0.025 215 / .18); text-align: left; cursor: pointer; color: var(--ink); }
+.hs-fx__card::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--fi-ink); }
+.hs-fx__card-kind { position: absolute; left: 14px; top: 12px; color: var(--fi-ink); font: 400 10px var(--mono); }
+.hs-fx__card-img { position: absolute; height: 42%; aspect-ratio: 1; left: 50%; top: 40%; transform: translate(-50%, -50%); background: var(--fi-ink); -webkit-mask: center / contain no-repeat; mask: center / contain no-repeat; }
+.hs-fx__card-txt { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 14px 12px; background: var(--paper); opacity: 0; transform: translateY(8px); transition: opacity .35s, transform .5s var(--eo); min-width: 0; }
+.hs-fx__card-meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.hs-fx__card-title { font: 500 clamp(13px, 1.2vw, 16px)/1.25 var(--sans); letter-spacing: -.012em; color: var(--ink); overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.hs-fx__card-cap { font: 400 10px var(--mono); color: var(--fi-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hs-fx__card-go { flex: none; font: 500 10px var(--mono); color: var(--fi-ink); }
+/* 底部图例：类型记号 + 项目色 */
+.hs-fx__foot { position: absolute; left: 76px; right: 76px; bottom: 17px; display: flex; justify-content: center; align-items: center; gap: 18px; font: 400 11px var(--mono); color: var(--muted); white-space: nowrap; pointer-events: none; }
+.hs-fx__foot-lead { color: var(--ink); }
+.hs-fx__mk::before, .hs-fx__sw::before { content: ''; display: inline-block; box-sizing: border-box; width: 8px; height: 8px; margin-right: 6px; vertical-align: -1px; background: var(--muted-2); }
+.hs-fx__mk--lab::before { background: none; border: 1px solid var(--muted-2); }
+.hs-fx__mk--log::before { height: 3px; vertical-align: 1px; background: none; border-top: 1px solid var(--muted-2); border-bottom: 1px solid var(--muted-2); }
+.hs-fx__mk--other::before { width: 4px; height: 4px; border-radius: 50%; vertical-align: 1px; }
+.hs-fx__sw::before { background: var(--sw); }
+@media (max-width: 1279px) { .hs-fx__sw { display: none; } }
+/* 首屏：HUD 的名字与导航让给格子里的那一行（页码导轨照旧） */
+.hs-hud__bar { transition: color .6s, opacity .5s; }
+.hs-hud--field .hs-hud__bar { opacity: 0; }
+.hs-root .hs-hud--field .hs-hud__name, .hs-root .hs-hud--field .hs-hud__nav { pointer-events: none; }
+/* 窄屏 / 减少动态效果时的回落：格子收起，标语按同一套宽窄对比排成普通文字 */
+.hs-fx-flow { display: none; }
+.hs-fx-flow__title { margin: 0; font-weight: 280; font-stretch: 72%; font-size: clamp(40px, 11vw, 72px); line-height: .9; letter-spacing: -.03em; }
+/* 关键词与格子版同一端：宽粗（字宽 125%） */
+.hs-fx-flow__k1, .hs-fx-flow__k2 { font-weight: 720; font-stretch: 125%; letter-spacing: -.02em; }
+.hs-fx-flow__k1 { color: var(--teal); }
+.hs-fx-flow__k2 { color: var(--violet); }
+.hs-fx-flow__ctas { display: flex; flex-wrap: wrap; gap: 12px; }
+.hs-fx-flow .hs-fx__btn { padding: 11px 18px; font: 500 14px var(--sans); }
 /* ---------- 02 work ---------- */
 /* 2026-10-27（MAPPING §64）：卡片图版随视口高度长，把卡片下面那一大片空白吃掉；
    --plate-h 的减数 = 这一页除图版外的竖向占用（实测，见 MAPPING §64），保证任何高度下都不出页内滚动 */
@@ -476,17 +502,13 @@
   .hs-hud { position: fixed; }
   .hs-hud__bg { opacity: 1; }
   .hs-hud__name { opacity: 1; pointer-events: auto; transform: none; }
-  .hs-hud__tag, .hs-field__frame { display: none; }
-  .hs-field__title { font-size: clamp(40px, 11vw, 72px); }
+  .hs-hud__tag { display: none; }
   .hs-page--about ~ .hs-hud .hs-hud__bg, .hs-hud, .hs-hud.hs-on-dark { --hud-ink: var(--ink); }
   .hs-group__head { top: 56px; }
   /* 文档流里场不动、也不接悬停：留一屏深色标题区 */
   .hs-page--hook { min-height: 100svh; display: flex; align-items: center; justify-content: center; padding: 120px 20px 72px; }
-  .hs-field__grid, .hs-field__glow { display: none; }
-  .hs-field__center { position: static; width: min(680px, 100%); display: flex; flex-direction: column; align-items: flex-start; gap: 18px; }
-  .hs-field__hint { display: none; }
-  .hs-field__foot { left: 20px; right: 20px; }
-  .hs-field__foot > span:last-child { display: none; }
+  .hs-fx, .hs-fx__foot { display: none; }
+  .hs-fx-flow { display: flex; flex-direction: column; align-items: flex-start; gap: 24px; width: min(680px, 100%); }
 }
 @media (max-width: 1023px) {
   .hs-work, .hs-about, .hs-zone { padding: 88px 20px 40px; }
@@ -543,10 +565,11 @@
    有明确悬停色的链接（link / about__more / group__case）稿内自带，其余在此钉回自身色。 */
 .hs-card:hover, .hs-bench:hover, .hs-feat:hover, .hs-entry:hover, .hs-tick:hover { color: inherit; }
 .hs-btn:hover { color: var(--paper); }
-.hs-mail:hover, .hs-field__card:hover { color: var(--cream); }
+.hs-mail:hover { color: var(--cream); }
+.hs-fx__card:hover { color: var(--ink); }
 
 /* 焦点环（MAPPING §1：2px、偏移 2px）：站内全局用 --accent，首页根上它是浅底青绿，
    放在夜色首屏 / 主青 About / 深潭页脚上只有 2.5 / 1.1 / 1.7:1，键盘焦点几乎看不见。
    这三块面与压在它们上面的 HUD 改用青柠亮档（对三者 ≥6.5:1）；雾 / 纸 / 苔面上照旧青绿（≥6:1）。 */
 .hs-root :focus-visible { outline: 2px solid var(--hs-focus, var(--teal)); outline-offset: 2px; }
-.hs-page--hook, .hs-page--about, .hs-foot, .hs-hud.hs-on-dark { --hs-focus: var(--lime-hi); }
+.hs-page--about, .hs-foot, .hs-hud.hs-on-dark { --hs-focus: var(--lime-hi); }

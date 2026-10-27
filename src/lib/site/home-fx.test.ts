@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FX, approach, splitDate, tiltAt, tiltCss, wedgeTarget } from './home-fx';
+import { FX, approach, splitDate, swellAt, swellAxes, tiltAt, tiltCss, wedgeTarget } from './home-fx';
 
 describe('方块场倾斜', () => {
   it('正对指针最大，越远越小，远到一定距离就不写样式', () => {
@@ -45,5 +45,20 @@ describe('日志日期', () => {
   it('拆成「月·日」与年份，格式不对就原样返回', () => {
     expect(splitDate('2026-10-24')).toEqual({ md: '10·24', year: '2026' });
     expect(splitDate('soon')).toEqual({ md: 'soon', year: '' });
+  });
+});
+
+describe('首屏字格鼓起', () => {
+  it('指针正上方最鼓，横向比纵向传得远，远处为 0', () => {
+    expect(swellAt(0, 0)).toBe(1);
+    expect(swellAt(1, 0)).toBeGreaterThan(swellAt(0, 1));
+    expect(swellAt(10, 0)).toBe(0);
+    expect(swellAt(0, 4)).toBe(0);
+  });
+  it('平时是细窄那一端，最鼓是宽粗那一端；同一程度给出同一组整数', () => {
+    expect(swellAxes(0)).toEqual({ wdth: FX.SWELL_WDTH[0], wght: FX.SWELL_WGHT[0] });
+    expect(swellAxes(1)).toEqual({ wdth: FX.SWELL_WDTH[1], wght: FX.SWELL_WGHT[1] });
+    const a = swellAxes(0.5);
+    expect(Number.isInteger(a.wdth) && Number.isInteger(a.wght)).toBe(true);
   });
 });

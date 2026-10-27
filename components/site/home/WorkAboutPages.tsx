@@ -449,6 +449,8 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
     let lock = 0;
     let lastH = 0;
     const onWheel = (e: WheelEvent) => {
+      // 双指捏合（ctrlKey）交给浏览器缩放
+      if (e.ctrlKey) return;
       const now = performance.now();
       if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) {
         if (now - lastH < H_TAIL_MS) {
