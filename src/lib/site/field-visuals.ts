@@ -49,7 +49,7 @@ export function logIcon(entry: LogEntry): string {
 export const iconPath = (key: string) => `/home/icons/${key}.svg`;
 
 /**
- * 浅色首屏（2026-10-27，画布 H6，MAPPING §65）：项目色只给格子底色与图标。
+ * 浅色首屏（2026-10-27，画布 H6，MAPPING §71）：项目色只给格子底色与图标。
  * 亮格比纸深一档、暗格只比纸深一点；其他作品、本站与「关于」共用中性灰。
  */
 const LIGHT_NEUTRAL = { ink: 'oklch(0.43 0.013 192)', lit: 'oklch(0.89 0.012 160)', dim: 'oklch(0.93 0.0066 160)' };

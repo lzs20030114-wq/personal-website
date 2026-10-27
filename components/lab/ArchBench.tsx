@@ -90,11 +90,10 @@ export function ArchBench({
     };
 
     const solver = createArch();
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // 默认在转（2026-10-26 用户拍板：Lab 默认勾选运转，不随「减弱动态效果」关掉，MAPPING §68）
     const ctl = new LinkageController(solver, {
       driver: ARCH_DRIVER,
       theta0: ARCH_THETA0,
-      reducedMotion: reduced,
       spinSweeps: ARCH_SPIN_SWEEPS,
       dragSweeps: ARCH_DRAG_SWEEPS,
     });

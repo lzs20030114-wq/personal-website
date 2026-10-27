@@ -225,6 +225,20 @@ export interface PlanLayout {
   mastR: number;
   /** 平台外缘半径（m） */
   platR: number;
+  /**
+   * 每条带全落时外缘离芯心多远（m，按带序 j，与 cohabit 的 `bandAngle(j)` 同序）。**可选**：只有人猫同台的方形单元给
+   * （cohabit `squarePlanLayout`，2026-10-25）。不给 = 圆台，每条带都到 platR（旧口径逐位不变）；给了时 platR 是方形的
+   * 内切圆，四个角比它远。
+   */
+  bandReach?: readonly number[];
+  /** bandReach 里最远的那条（预筛用；不给 = platR） */
+  reachMax?: number;
+  /**
+   * 单元铺到哪：不给 = 'field'（Lab.12 那块场地居中、四周离墙各留 ROOM.MARGIN，旧口径逐位不变）；
+   * 'room' = 铺满整间房（2026-10-27，作者「8×8 不覆盖房间四边，扩到全覆盖、数量不变」）：房间切成 n×n 格、
+   * 每台在格心，格距 = roomM / n，平台与芯按同一比例随格距放大。外侧一圈交叉点落在墙上，站不了人（cohabit 的过道图会关掉它们）。
+   */
+  cover?: 'field' | 'room';
   units: PlanUnit[];
   doors: PlanDoor[];
 }
@@ -235,14 +249,17 @@ function ratios(radius: number): { plat: number; mast: number } {
   return { plat: (2 * ringOuter(radius)) / p, mast: (2 * radius) / p };
 }
 
-export function planLayout(n: number = PLAN.GRID_DEF, radius: number = RING.RADIUS_DEF): PlanLayout {
+export function planLayout(n: number = PLAN.GRID_DEF, radius: number = RING.RADIUS_DEF, cover: 'field' | 'room' = 'field'): PlanLayout {
   if (!Number.isInteger(n) || n < 2) throw new Error(`grid must be an integer ≥ 2, got ${n}`);
-  const fieldM = w2m(ringGridSpan(radius, RING_GRID.COLS));
   const roomM = w2m(roomSpan(radius, RING_GRID.COLS));
+  const span12 = w2m(ringGridSpan(radius, RING_GRID.COLS));
+  // 'room'：单元铺满整间房，格子就是房间等分（每台在格心，最外一圈格心离墙半个格距）
+  const fieldM = cover === 'room' ? roomM : span12;
   const { plat, mast } = ratios(radius);
-  // fieldM = (n − 1)·pitch + plat·pitch（两端各露半个平台）
-  const pitchM = fieldM / (n - 1 + plat);
-  const pitch4 = fieldM / (RING_GRID.COLS - 1 + plat);
+  // fieldM = (n − 1)·pitch + plat·pitch（两端各露半个平台）；铺满整间房时 = n·pitch
+  const pitchM = cover === 'room' ? roomM / n : fieldM / (n - 1 + plat);
+  // pitch4 是物理尺子（Lab.12 那块场地 4×4 的格距），铺不铺满都不变
+  const pitch4 = span12 / (RING_GRID.COLS - 1 + plat);
   const units: PlanUnit[] = [];
   for (let r = 0; r < n; r++)
     for (let c = 0; c < n; c++)
@@ -256,6 +273,7 @@ export function planLayout(n: number = PLAN.GRID_DEF, radius: number = RING.RADI
     pitch4,
     mastR: (mast * pitchM) / 2,
     platR: (plat * pitchM) / 2,
+    ...(cover === 'room' ? { cover } : {}),
     units,
     doors: [
       { x: -roomM / 2, y: 0, side: 'left' },

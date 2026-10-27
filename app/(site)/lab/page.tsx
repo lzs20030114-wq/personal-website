@@ -68,6 +68,7 @@ function Bench({
   children,
   notes,
   attachments,
+  defaultDetails,
 }: {
   no: string;
   lede: string;
@@ -75,9 +76,10 @@ function Bench({
   children: ReactNode;
   notes?: ReactNode;
   attachments?: LabAttachments;
+  defaultDetails?: boolean;
 }) {
   const { title, description, kind, verb } = labBench(no);
-  return <LabPanel no={no} title={title} description={description} accent={labAccent(no)} kind={kind} verb={verb} lede={lede} specs={specs} notes={notes} attachments={attachments}>{children}</LabPanel>;
+  return <LabPanel no={no} title={title} description={description} accent={labAccent(no)} kind={kind} verb={verb} lede={lede} specs={specs} notes={notes} attachments={attachments} defaultDetails={defaultDetails}>{children}</LabPanel>;
 }
 
 export default function LabPage() {
@@ -162,6 +164,7 @@ export default function LabPage() {
             planHash.normalizedLabHash 转到这里。 */}
         <Bench
           no="1-6"
+          defaultDetails={false}
           lede="The machine lives four lives, one persona each. Your pointer is a person’s hand: the machine has to see it first, then, by persona, reaches toward it, turns side-on to keep away from it, or looks elsewhere; bring it to the large arm and the arm may wrap it. Click a small arm or the shell, or use the controls to simulate a person nearby, sounds or being lifted."
           specs={[
             ['Personas', 'Warm · Calm · Avoidant · Random · one per life'],
@@ -176,7 +179,7 @@ export default function LabPage() {
           ]}
           attachments={LAB_1_6_TABLES}
         >
-          <MachineBench behavior />
+          <MachineBench behavior actuatorLab />
         </Bench>
 
         {/* 项目二尚未定名：与 log 页 PROJECT_GROUPS 同一措辞（描述而非标题），定名后一并改 */}
@@ -327,7 +330,6 @@ export default function LabPage() {
             ['Height', 'Up to 0.35 m; shape stays unchanged'],
             ['Interleave', 'Step must clear the forming body by 6 px'],
             ['Timing', 'Together or staggered by 150 steps'],
-            ['Seams', 'Level touching edges joined by a 16 cm fabric web'],
             ['Scale', 'Lab 2-8 room · 1.70 m figure'],
           ]}
         >
@@ -350,6 +352,7 @@ export default function LabPage() {
             ['Clearance', 'Platform radius + body 0.22 m + margin 0.15 m; walking lane twice this width'],
             ['Prototype', '15 s threshold · 2%/s decay, uncapped; differs from this demo'],
             ['Limit', 'Activation only; no behaviour-to-shape rule'],
+            ['In the project', 'The project’s starting rule: units follow the floor trace. Run with resident cats against fixed shelves (Lab 2-14, trace rule, 4×4), it gave the fewest stops beside a cat, so the current rule in Lab 2-14 forms units for a purpose'],
           ]}
         >
           <WalkPlanBench workspace />
@@ -366,6 +369,7 @@ export default function LabPage() {
             ['Overlap', 'Two simultaneous views add trace at twice the rate'],
             ['Grid', '4×4 / 6×6 / 8×8 · Lab 2-8 room'],
             ['Limit', 'Random wandering for demonstration; not a model of human behaviour'],
+            ['In the project', 'The project’s starting rule: units follow the floor trace. Run with resident cats against fixed shelves (Lab 2-14, trace rule, 4×4), it gave the fewest stops beside a cat, so the current rule in Lab 2-14 forms units for a purpose'],
           ]}
         >
           <CrowdPlanBench workspace />
@@ -425,6 +429,7 @@ export default function LabPage() {
             ['Comparison', 'Live units · fixed (even rows formed; in the walk / stand / sit rule the units that would box someone in are left out) · empty room · all three with the same seats; in the walk / stand / sit rule cats can use the floor in all three, so the empty room is the floor alone'],
             ['Sources', '1.35 m and 0.92 m stranger and acquaintance distances (Sorokowska et al. 2017, 42 countries) · 1.0–1.2 m between waiting strangers (Küpper & Seyfried 2023) · parties (Moussaïd et al. 2010) · 1 m cat band and 78% reference (Mertens & Turner 1988) · cats on high levels (Hirsch et al. 2025) · jump cost (Sicuto de Oliveira et al. 2015)'],
             ['Limit', 'Timings, sitting times and the 1/3 approach chance are demonstration values; how much more a cat prefers platforms when it is crowded is not measured (three settings are run); no invitation gesture, so the empty event is not counted'],
+            ['Case study runs', 'Rerun the case study scenes: the starting rule (trace, 4×4, 3 people, 1 cat) and the current rule with 3 / 6 / 12 visitors and 1 / 2 / 3 cats · seed 101 of the comparison’s 32, fixed 1/30 s step, so a run here equals that seed offline · the case study reports the mean of all 32 · links #lab2-14-trace, -crowd3, -crowd6, -crowd12'],
           ]}
         >
           <CohabitBench workspace />
@@ -432,16 +437,18 @@ export default function LabPage() {
 
         <Bench
           no="2-15"
-          lede="The Lab 2-14 simulation drawn in the Lab 2-8 room: sixty-four small units hang over the floor, six visitors walk, stand and sit, two cats live on the platforms. Units come down where the rules say, bands in a person's way retract on their own, and the four encounter events are counted at the bottom right. The band shapes are keyframes from one engine run; the units at this size are the Lab 2-8 ring scaled to the 8×8 pitch."
+          lede="The Lab 2-14 simulation drawn in the Lab 2-8 room: sixty-four square units, filling the whole room, are stowed under the ceiling, six visitors walk, stand and sit, two cats live on the platforms. A unit the rules call for first comes down to working height and then forms, bands in a person's way retract on their own, and the four encounter events are counted at the bottom right. Each unit is the Lab 2-7 square ring at its flat setting, scaled to the 8×8 pitch; the platforms double as tables. The round rings stay in the earlier labs, where they show how the form is made."
           specs={[
-            ['Room', 'Lab 2-8 room (3.74 m high) · 8×8 units at 0.60 m pitch · platform ⌀0.51 m · lower edge 1.08 m above the floor'],
-            ['Driver', 'CohabitSim with the case study configuration: walk / stand / sit rule · only the bands in the way retract · visitors with bodies and parties · cats can use the floor · cat costs calibrated to Mertens & Turner 1988 · lead to the unit in front of the seat'],
-            ['Band shapes', 'One engine run baked to 32 forming and 24 retraction keyframes; each band picks its frame from its unit’s degree and how far it has retracted. Switching between the two runs can show a small jump'],
-            ['Scale', 'The Lab 2-8 ring scaled by the pitch ratio (0.49). A unit this small has not been built or solved at this size'],
-            ['Figures', 'Blocky 1.70 m people (joint proportions from Drillis & Contini) who walk, stand, sit and turn their heads, each in a different shirt; blocky cats in five poses that wrap around the post on a platform; no membrane between bands'],
-            ['Spaces', 'Live · fixed (even rows formed) · empty room, same seats and bodies'],
+            ['Room', 'Lab 2-8 room (6.64 m square, 3.74 m high) · 8×8 units filling the room at 0.83 m pitch · square platform 0.69 m · stowed under the ceiling plate until triggered'],
+            ['Tables', 'When someone sits down, one unit in front of the seat comes down as their table; it goes back up when the last person on that piece of furniture stands. Which unit is set by geometry: in front of the seat and covering its centre line, over no seated head, clear of the furniture. Sofa: near edge 0.30–0.46 m from the sofa front (the usual coffee-table gap), one unit shared by both seats, top at 0.49 m (the lowest it can go, since the band hangs 0.48 m below the top). Dining chair: the top is 0.15 m thick and its underside only 0.14 m above the seat, so legs cannot go under; the edge sits just past the knees and within reach of the arm (0.615–0.712 m from the backrest), top at 0.74 m. It moves at the moment of sitting down or standing up, not later (Lee et al. 2019: an automatic desk that moved during the change of task disturbed people least), at 80 mm/s like a fast electric desk. Units nobody sits at stay at 1.05 m, near standing elbow height'],
+            ['Furniture', 'Sizes from ergonomic references: two-seat sofa 1.40 × 0.80 m, seat 0.43 m high and 0.60 m deep, arms 0.12 m wide and 0.62 m high, back 0.80 m; dining chair 0.50 × 0.52 m, seat 0.45 m high and 0.42 m deep, back 0.85 m; the two dining chairs sit sideways in the middle of the room, each facing a unit square on'],
+            ['Driver', 'CohabitSim with the case study configuration and square units (the case study chart was run with round units): walk / stand / sit rule · only the bands in the way retract · visitors with bodies and parties · cats can use the floor · cat costs calibrated to Mertens & Turner 1988 · lead to the unit in front of the seat'],
+            ['Band shapes', 'Three engine runs (face, edge and corner depth), each baked to 32 forming and 24 retraction keyframes; each band picks its frame from its unit’s degree and how far it has retracted. Switching from forming to retraction frames can show a small jump. A semi-transparent membrane spans each pair of neighbouring bands'],
+            ['Scale', 'The Lab 2-7 square ring at its flat setting, scaled by the pitch ratio (0.67) and then by 1.54, so the plan’s platform circle is the square’s incircle. A unit of this size has not been built or solved'],
+            ['Figures', 'Blocky 1.70 m people (joint proportions from Drillis & Contini) who walk, stand, sit and turn their heads, each in a different shirt; blocky cats in five poses that wrap around the post inside the square'],
+            ['Spaces', 'Live · fixed (even rows formed, leaving out any square whose corners would cut a crossing off from the doors) · empty room, same seats and bodies'],
             ['Events', 'Lines at chest height while an event lasts: green co-gaze · purple co-warmth · rose contact · grey crossing'],
-            ['Limit', 'The bands are not 1,280 separate solves; frames are taken from one trajectory. The platform shown is the terminal shape, smaller than the peak envelope the plan uses for walls and spacing'],
+            ['Limit', 'The bands are not 1,280 separate solves; frames are taken from three trajectories. The platform shown is the terminal shape, slightly smaller than the peak envelope the plan uses for walls and spacing. The stowed bundle (0.15 of the band length) is a placeholder shape. A square’s corners point at the aisle crossings, so a crossing next to a platform that cannot retract (a cat on it, or the fixed space) cannot be stood on: visitors step aside, and a cat waits before moving onto a platform whose corner would press into someone'],
           ]}
         >
           <CohabitSpaceBench workspace />

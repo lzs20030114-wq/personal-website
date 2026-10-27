@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600">
+  <rect width="960" height="600" fill="white"/>
+  <!-- 感知与研究：一枚完整的观察符号，覆盖睡眠与交互研究。 -->
+  <path d="M448 300Q660 52 872 300Q660 548 448 300Z" fill="none" stroke="#303030" stroke-width="64" stroke-linejoin="round"/>
+  <circle cx="660" cy="300" r="66" fill="#303030"/>
+</svg>

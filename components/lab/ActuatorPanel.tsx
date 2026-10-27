@@ -1,6 +1,8 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, useState } from 'react';
+import { HardwareReadout } from './HardwareReadout';
+import type { HardwareSnapshot } from '../../src/lib/linkage/actuator-hardware';
 
 import {
   READOUT_CHANNELS,
@@ -16,11 +18,13 @@ import {
  * 数据与换算在 src/lib/linkage/actuator-readout.ts；这里只画。只在 /lab 的 Lab 1-6（完整面板）出现，
  * 主页预览与案例页主图不出。
  *
- * 画法：一行一个通道 = 名字 · 走势（各自的量程，跨零的画零线）· 此刻的值。实线 = 执行器实际走到哪；
+ * 画法：一行一个通道 = 名字 · 走势（各自的量程，跨零的画零线）· 此刻的值。实线 = 仿真跟随值；
  * 走势右端外侧的短横 = 引擎此刻要的目标（只有肌腱、曲柄、转台有：它们是限速追的，看得出追没追上）。
  */
 
 export interface ActuatorSnapshot {
+  /** 同一仿真帧的硬件映射；没有真实遥测。 */
+  hardware?: HardwareSnapshot;
   values: Record<ReadoutKey, number>;
   targets: Partial<Record<ReadoutKey, number>>;
   series: Record<ReadoutKey, number[]>;
@@ -56,12 +60,14 @@ const COPY = {
       pitch: '音高',
       light: '灯光',
     } as Record<ReadoutKey, string>,
-    note: '右端短横 = 引擎要的目标',
+    note: '实线 = 仿真跟随值；短横 = 引擎目标',
+    source: '仿真数据 · 真机未连接',
+    waveform: '走势', hardware: '硬件对应',
     tips: {
-      arm: `绞盘收进的线长，0–${TENDON_TAKEUP_MM} mm；前 12 mm 只是把静息时松着的线收直`,
-      servo: '两个 SG90 的驱动角，±75° 封顶；0 = 中位',
+      arm: `模型收线需求，0–${TENDON_TAKEUP_MM} mm；模型预留 12 mm 松弛，尚非真机标定`,
+      servo: '两个 SG90 的仿真驱动角，模型以 ±75° 封顶；0 = 模型中位',
       crank: '曲柄角 0 = 伸展死点、180 = 折叠死点；呼吸节律非真机',
-      yaw: '机身朝向，0 = 初始朝向、左为正；新电机模型未到，行程按 ±180°',
+      yaw: '机身朝向，0 = 初始朝向、左为正；±180° 是仿真范围，档案传动比 45:1，实装与限位待标定',
       sound: '音量 = 此刻发不发声 × 精力，音高不发声时变暗；灯的亮度随呼吸张开变亮',
     } as Record<ReadoutGroup, string>,
   },
@@ -90,12 +96,14 @@ const COPY = {
       pitch: 'Pitch',
       light: 'Light',
     } as Record<ReadoutKey, string>,
-    note: 'Tick at right = engine target',
+    note: 'Line = simulated follow; tick = engine target',
+    source: 'Simulation · hardware disconnected',
+    waveform: 'Traces', hardware: 'Hardware map',
     tips: {
-      arm: `Cable taken in by the winch, 0–${TENDON_TAKEUP_MM} mm; the first 12 mm only takes up the resting slack`,
-      servo: 'Drive angle of the two SG90s, capped at ±75°; 0 = centre',
+      arm: `Model cable take-up, 0–${TENDON_TAKEUP_MM} mm; 12 mm model slack, not hardware-calibrated`,
+      servo: 'Simulated SG90 drive angles, capped at ±75° in the model; 0 = model centre',
       crank: 'Crank angle 0 = open dead centre, 180 = folded dead centre; rhythms not hardware-verified',
-      yaw: 'Body facing, 0 = initial facing, left positive; travel taken as ±180° until the new motor model arrives',
+      yaw: 'Body facing, 0 = initial facing, left positive; ±180° is the simulation range, with a recorded 45:1 ratio; calibrate installation and limits',
       sound: 'Level = voicing or not × energy, pitch dims when silent; the light brightens as the breath opens',
     } as Record<ReadoutGroup, string>,
   },
@@ -138,14 +146,20 @@ function Spark({ c, data, cap, target }: { c: ReadoutChannel; data: number[]; ca
 
 export const ActuatorPanel = memo(function ActuatorPanel({ snap, lang }: { snap: ActuatorSnapshot | null; lang: 'zh' | 'en' }) {
   const L = COPY[lang];
+  const [mode, setMode] = useState<'traces' | 'hardware'>('traces');
   return (
     <aside className="mb-out" aria-label={L.aria}>
       <div className="mb-out__in">
         <div className="mb-out__head">
           <span>{L.title}</span>
-          <span className="mb-out__window">{L.window}</span>
+          <span className="mb-out__window">{mode === 'traces' ? L.window : (lang === 'zh' ? '最新采样' : 'latest sample')}</span>
         </div>
-        {READOUT_GROUPS.map((g) => (
+        <p className="mb-out__source">{L.source}</p>
+        <div className="mb-out__modes" role="group" aria-label={lang === 'zh' ? '输出视图' : 'Output view'}>
+          <button type="button" aria-pressed={mode === 'traces'} onClick={() => setMode('traces')}>{L.waveform}</button>
+          <button type="button" aria-pressed={mode === 'hardware'} onClick={() => setMode('hardware')}>{L.hardware}</button>
+        </div>
+        {mode === 'hardware' ? <HardwareReadout snapshot={snap?.hardware ?? null} lang={lang} /> : <>{READOUT_GROUPS.map((g) => (
           <div key={g} className="mb-out__group" role="group" aria-label={L.groups[g]} title={L.tips[g]}>
             <div className="mb-out__gname">{L.groups[g]}</div>
             {READOUT_CHANNELS.filter((c) => c.group === g).map((c) => {
@@ -164,7 +178,7 @@ export const ActuatorPanel = memo(function ActuatorPanel({ snap, lang }: { snap:
             })}
           </div>
         ))}
-        <p className="mb-out__note">{L.note}</p>
+        <p className="mb-out__note">{L.note}</p></>}
       </div>
     </aside>
   );

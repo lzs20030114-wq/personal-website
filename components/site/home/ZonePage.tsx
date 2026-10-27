@@ -158,7 +158,7 @@ function LabGroup({
       return outs.length > 2 ? next.filter((l) => !outs.slice(0, -2).includes(l)) : next;
     });
   }, []);
-  // 选中行到预览框的楔形（MAPPING §64）：行的上下两条边收到预览框左边上的一点。
+  // 选中行到预览框的楔形（MAPPING §70）：行的上下两条边收到预览框左边上的一点。
   // 行的位置用本组坐标记（滚动时不变），只有吸顶的预览框会动，所以缓动只给「换了一行」，
   // 滚动时落点直接跟着框走、不拖尾；静止后不再逐帧算。
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -381,7 +381,7 @@ function LabGroup({
 
 const inkVar = (ink: string) => ({ '--c-ink': ink }) as CSSProperties;
 
-/** 最新几条的日期：大字「月·日」，年份另放小字（参考：在边缘流动的巨大日期 + 小字信息栏，MAPPING §64）；读屏仍读完整日期 */
+/** 最新几条的日期：大字「月·日」，年份另放小字（参考：在边缘流动的巨大日期 + 小字信息栏，MAPPING §70）；读屏仍读完整日期 */
 function EntryDate({ iso, lead = false }: { iso: string; lead?: boolean }) {
   return (
     <time className={`hs-entry__date${lead ? ' hs-entry__date--lead' : ''}`} dateTime={iso}>

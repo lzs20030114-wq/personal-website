@@ -13,6 +13,7 @@ import { buildLayerGeometry, layerAngles, layerBaseline, layerColumns, layerCove
   type LayerMaterial, type LayerShape, type LayerStudy } from '../../src/lib/space/skin-layers';
 import { LabActivity } from './LabActivity';
 import { attachLabCamera } from './labCameraInput';
+import { LabViewDock } from './LabCtl';
 import { planFromHash } from './planHash';
 import { SkinLayersForming } from './SkinLayersForming';
 import { LAYER_COLORS as COLORS } from '../../src/lib/space/skin-layers-surface';
@@ -141,7 +142,7 @@ function SkinLayersTarget({ active, controls, onLight, forming = false, loaded =
     const down = (e: PointerEvent) => { cam.pointerDown(e.pointerId, e.clientX, e.clientY, e.button === 2); pointers.add(e.pointerId); canvas.setPointerCapture(e.pointerId); };
     const move = (e: PointerEvent) => { cam.pointerMove(e.pointerId, e.clientX, e.clientY); if (pointers.has(e.pointerId)) draw(); };
     const up = (e: PointerEvent) => { cam.pointerUp(e.pointerId); pointers.delete(e.pointerId); };
-    const detachCamera = attachLabCamera(canvas, { wheel: delta => { cam.wheel(delta); draw(); }, home: () => api.current?.home() });
+    const detachCamera = attachLabCamera(canvas, { wheel: delta => { cam.wheel(delta); draw(); }, home: () => { api.current?.home(); setView('axon'); } });
     const context = (e: Event) => e.preventDefault();
     canvas.addEventListener('pointerdown', down); canvas.addEventListener('pointermove', move);
     canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
@@ -224,7 +225,8 @@ function SkinLayersTarget({ active, controls, onLight, forming = false, loaded =
           <span className="layer-note" role="status">{study.joinMode === 'opposed' && <>{tx("起点")} {layerJoinSpans(study).map(span => `${span.start}°`).join(' / ')} · </>}{study.joinDepth === 0 ? (lang === 'zh' ? '深度为 0%，上下层分开。' : '0% depth: layers remain separate.') : study.joinSweep > 0 && stats.joined === 0 ? tx('所选扇区没有上下重叠，未形成连接。') : (lang === 'zh' ? `实际连接合计 ${Math.round(stats.joined)}°` : `${Math.round(stats.joined)}° joined`)}</span>
         </div>
         </div>
-        {!forming && <div className="lab-ctl__row layer-view"><div className="grp"><LabControlLabel help={["切换轴测、正面、侧面或顶视图，不改变模型。", "Switch camera views without changing the model."]}>{tx("视角")}</LabControlLabel><span className="seg">{VIEWS.map(v => <button type="button" key={v.key} className={view === v.key ? 'active' : undefined} onClick={() => { setView(v.key); api.current?.view(v.key); }}>{tx(v.label)}</button>)}</span><button type="button" onClick={() => { api.current?.home(); setView('axon'); }}>{tx("归位")}</button></div></div>}
+        {/* 视角搬到底栏（LabCtl）；底栏「归位」= 这里原来那颗 */}
+        {!forming && <LabViewDock><LabControlLabel help={["切换轴测、正面、侧面或顶视图，不改变模型。", "Switch camera views without changing the model."]}>{tx("视角")}</LabControlLabel><span className="seg">{VIEWS.map(v => <button type="button" key={v.key} className={view === v.key ? 'active' : undefined} onClick={() => { setView(v.key); api.current?.view(v.key); }}>{tx(v.label)}</button>)}</span></LabViewDock>}
       </div>
       <p className="layer-footnote">{tx("上方图纸为目标轮廓与目标剖面；两种查看方式共用这组参数。")}</p>
       </div>

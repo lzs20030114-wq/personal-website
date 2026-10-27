@@ -82,7 +82,9 @@
 .lab-details { grid-column: 3; min-width: 0; position: relative; display: flex; flex-direction: column; max-height: calc(var(--lab-figure-height) + 220px); }
 .lab-details[hidden], .lab-detail-divider[hidden], .lab-nav-divider[hidden] { display: none; }
 .lab-details-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 3px 0 12px; border-bottom: 1px solid var(--lab-line); font-size: 10px; font-weight: 600; letter-spacing: .1em; color: var(--n600); }
-.lab-details-scroll { padding: 16px 8px 4px 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--n400) transparent; overscroll-behavior-y: contain; }
+/* position: relative 让里面绝对定位的读屏标题（.lab-sr-only）被这个滚动框裁住：原先它的定位框在框外，
+   会停在被裁掉的规格表深处、把整页撑长，页脚下多出约 780px 空白（2026-10-26，MAPPING §68） */
+.lab-details-scroll { position: relative; padding: 16px 8px 4px 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--n400) transparent; overscroll-behavior-y: contain; }
 .lab-description { margin: 0; max-width: 62ch; color: var(--n700); font-size: 14px; line-height: 1.6; }
 .lab-details h3 { margin: 32px 0 12px; font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--n600); }
 .lab-details dl { margin: 0; }
@@ -161,7 +163,17 @@
   :is([data-lab-panel="2-6"], [data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-13"], [data-lab-panel="2-14"], [data-lab-panel="2-15"]) .lab-detail-divider:not([hidden]) { display: block; }
   :is([data-lab-panel="2-6"], [data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-13"], [data-lab-panel="2-14"], [data-lab-panel="2-15"]) .lab-details { grid-column: 3; max-height: calc(var(--lab-figure-height) + 32px); }
   :is([data-lab-panel="2-6"], [data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-13"], [data-lab-panel="2-14"], [data-lab-panel="2-15"]) .lab-detail-size { display: flex; }
-  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .walk-workbench { display: grid; grid-template-columns: minmax(0, 1fr) 216px; grid-template-rows: minmax(0, 1fr) auto; height: var(--lab-figure-height); }
+  /* 行高「至少画面那么高，控件列更长就跟着长」（2026-10-25）：此前固定成画面高，2-14 的控件列多出 220–420px，
+     直接压到下面的播放条上。画面容器是 size 容器、不贡献内容高，行高只由这个下限与控件列决定。 */
+  :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .walk-workbench { display: grid; grid-template-columns: minmax(0, 1fr) 216px; grid-template-rows: minmax(var(--lab-figure-height), auto) auto; min-height: var(--lab-figure-height); }
+  /* 2-14 的控件列：组名一律在控件上方（「让路」「引导」的分段钮比列宽，组名原先被挤到 0 宽），分段钮均分列宽、字可折行 */
+  [data-lab-panel="2-14"] .walk-workbench .lab-ctl__solve .grp { grid-template-columns: minmax(0, 1fr); }
+  [data-lab-panel="2-14"] .walk-workbench .lab-ctl__solve .grp:not(.walk-behaviour) .seg { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+  [data-lab-panel="2-14"] .walk-workbench .lab-ctl__solve .seg button { white-space: normal; line-height: 1.25; }
+  [data-lab-panel="2-14"] .walk-workbench .lab-ctl__solve .seg { width: 100%; }
+  /* 侧栏台架里的「更多 / 模型参数 / 布置」折叠：打开后一组一行竖排，与控件列其余各组同一种行 */
+  .lab-workspace :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .walk-workbench .lab-ctl .lab-fold__body { flex-direction: column; align-items: stretch; gap: 0; padding-top: 0; }
+  .lab-workspace :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .walk-workbench .lab-ctl .lab-fold__body > .grp:last-child { border-bottom: 0; }
   :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .walk-workbench > .lab-ctl { display: contents; }
   :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .lab-fig { grid-column: 1; grid-row: 1; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; min-width: 0; min-height: 0; padding: 14px 14px 10px; }
   :is([data-lab-panel="2-10"], [data-lab-panel="2-11"], [data-lab-panel="2-12"], [data-lab-panel="2-14"]) .walk-map { display: block; grid-row: 2; position: relative; min-width: 0; min-height: 0; overflow: hidden; container-type: size; }
@@ -230,6 +242,11 @@
 [data-lab-panel="2-12"] .walk-behaviour .seg button { white-space: normal; line-height: 1.3; min-height: 30px; }
 [data-lab-panel="2-12"] .walk-behaviour .seg button:nth-child(even) { border-right-width: 1px; }
 [data-lab-panel="2-12"] .walk-behaviour .seg button:nth-child(n + 3) { border-top-width: 0; }
+/* Lab 2-14「正文对照」四个场景：两两一行，长标签可以折行（与 2-12 的行为钮同一种做法） */
+[data-lab-panel="2-14"] .cohabit-scenes .seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+[data-lab-panel="2-14"] .cohabit-scenes .seg button { white-space: normal; line-height: 1.3; min-height: 30px; }
+[data-lab-panel="2-14"] .cohabit-scenes .seg button:nth-child(even) { border-right-width: 1px; }
+[data-lab-panel="2-14"] .cohabit-scenes .seg button:nth-child(n + 3) { border-top-width: 0; }
 @media (max-width: 1099px) {
   [data-lab-panel="2-12"] .lab-fig { display: flex; flex-direction: column; padding: 12px; }
   [data-lab-panel="2-12"] .walk-map { display: block; order: 2; }
@@ -355,7 +372,9 @@
   [data-lab-panel="2-6"] .layer-settings .lab-ctl__row { flex-direction: column; align-items: stretch; padding: 8px 0; gap: 8px; }
   [data-lab-panel="2-6"] .layer-settings .grp { padding: 0; border: 0; justify-content: space-between; gap: 6px; flex-wrap: nowrap; }
   [data-lab-panel="2-6"] .layer-settings button { padding: 4px 6px; min-height: 26px; font-size: 10px; text-transform: none; }
-  [data-lab-panel="2-6"] .layer-join .seg { flex-wrap: nowrap; }
+  /* 「局部厚台」两颗钮比列宽多出 39px（2026-10-25 量出）：与同台「轮廓」组同一种排法，组名在上、两钮均分 */
+  [data-lab-panel="2-6"] .layer-settings .layer-join .grp { flex-direction: column; align-items: stretch; }
+  [data-lab-panel="2-6"] .layer-join .seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   [data-lab-panel="2-6"] .layer-settings .layer-join button { padding-inline: 4px; }
   [data-lab-panel="2-6"] .layer-settings .layer-outline { flex-direction: column; align-items: stretch; }
   [data-lab-panel="2-6"] .layer-outline .seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }

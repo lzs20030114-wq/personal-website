@@ -25,6 +25,8 @@ import {
   type Side,
 } from '../../../src/lib/site/work-carousel';
 import { HOME_WORK_PANEL_KEY } from '../pageTransitionState';
+import { prefersReducedMotion } from '../../../src/lib/site/home-mode';
+import { WorkMark } from './WorkMark';
 
 const n2 = (i: number) => String(i).padStart(2, '0');
 /** 其他作品的图走 Next 图片优化（作者给的原图可能很大）；主项目卡沿用稿内两张小图原样 */
@@ -63,7 +65,7 @@ function WorkCard({ t, c, cur, on, focusable, vars, onEnter }: CardProps) {
         data-d={160 + c * 90}
       >
         {t.caseSlug ? (
-          // 主项目：编号放大成宽体粗字、下半截压进图版；还没发稿的（项目三）用空心编号，已发稿的实心（MAPPING §64 / §64.1）
+          // 主项目：编号放大成宽体粗字、下半截压进图版；还没发稿的（项目三）用空心编号，已发稿的实心（MAPPING §70 / §70.1）
           <span className="hs-card__kick-n hs-card__kick-n--big">
             <span className={`hs-card__num${t.wip ? ' hs-card__num--wip' : ''}`}>{t.kickN}</span>
             <span className="hs-card__kick-l">{t.kickLabel}</span>
@@ -202,7 +204,8 @@ interface Badge {
  * 第一组是三个主项目，后面每组一种类别，一屏三张，一组超过三张就分几屏接着切，最后一屏接回第一屏。
  * 当前屏占舞台 85%，旁边那一屏露出一截；左右留白区悬停有跟着光标的标签，点一下就切。
  * 竖向滚动照旧归翻页引擎；左右只认组内切换——底部组名、右上箭头、← → 键、触控板左右划、触屏左右划、留白区。
- * 窄屏 / reduced-motion 回落文档流：各组上下依次排开，不做横向切换（CSS 同一条件）。
+ * 窄屏回落文档流：各组上下依次排开，不做横向切换（CSS 认 <html data-hs>，MAPPING §67）。
+ * 减弱动态效果：照样横向切换，只是瞬切、不探、不长色条。
  */
 export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; active: boolean; flow: boolean }) {
   const panels = useMemo(
@@ -259,7 +262,7 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
     go(n.t, d);
     // 光标标签里那枚箭头：往前推一下；绕回时转一圈
     const a = arrowRef.current;
-    if (a && sRef.current.zone) {
+    if (a && sRef.current.zone && !prefersReducedMotion()) {
       a.animate(
         n.wrap
           ? [{ transform: 'rotate(0)' }, { transform: `rotate(${d > 0 ? -360 : 360}deg)` }]
@@ -272,7 +275,7 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
   const armIdle = (ms: number) => {
     const T = timers.current;
     clearTimeout(T.nudge);
-    if (!live.current || nudges.current >= WC.NUDGE_MAX) return;
+    if (!live.current || nudges.current >= WC.NUDGE_MAX || prefersReducedMotion()) return;
     T.nudge = setTimeout(() => api.current.fireNudge(), ms);
   };
   const fireNudge = () => {
@@ -334,7 +337,7 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
     return () => cancelAnimationFrame(r);
   }, [s.instant]);
 
-  // 舞台宽与左右留白：露边宽度、留白区宽度、裁切都按它算
+  // 舞台宽与左右留白：露边宽度、留白区宽度、渐隐窗口都按它算
   useLayoutEffect(() => {
     const stage = stageRef.current;
     const sec = rootRef.current?.parentElement;
@@ -381,7 +384,7 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
     if (prevCur.current === s.cur) return;
     prevCur.current = s.cur;
     const stage = stageRef.current;
-    if (s.instant || flow || !stage) return;
+    if (s.instant || flow || !stage || prefersReducedMotion()) return;
     const fwd = s.cur > s.from;
     panels[s.cur].tiles.forEach((t, c) => {
       const el = stage.querySelector<HTMLElement>(`[data-bar="${t.key}"]`);
@@ -506,7 +509,7 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
   const hint =
     !st.moving && en && effZone ? hintOf(st.zone ? 'zone' : st.nudge ? 'nudge' : 'prox', effZone, en.wrap, prox.t) : { x: 0, op: 0 };
   const Wp = Math.round(st.W * (1 - WC.PEEK));
-  // 组名放大后按最长那个定字号，切到哪组都不顶到右边的刻度盘（MAPPING §64.1）
+  // 组名放大后按最长那个定字号，切到哪组都不顶到右边的刻度盘（MAPPING §70.1）
   const tlen = groups.reduce((m, gr) => Math.max(m, gr.title.length), 0);
   const tgtGi = zn ? panels[zn.t].gi : null;
   const onPanel = st.wh ? panels.findIndex((pn) => pn.tiles.some((t) => t.key === st.wh)) : -1;
@@ -529,11 +532,27 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
       ...(st.wh === key ? { '--ty': `${st.wm.ty}px`, '--th-top': `${st.wm.top}px` } : null),
     } as CSSProperties;
   };
+  // 印记跟这一屏走同一条轨道：位移、暗示偏移与卡片相同，出发顺序跟它头顶那一列（最右一列）。
+  // 只有当前屏的印记看得见——别的屏的印记落在露边里只是一截散点；切换时旧的边走边淡出，新的进场后淡入。
+  const markVars = (p: number): CSSProperties => {
+    const rel = p - st.cur;
+    const delay = st.moving ? cascadeOrder(p, PER - 1, st.from, st.cur, PER) * WC.STAGGER_MS : 0;
+    const fade = rel === 0 ? `opacity 700ms ease ${delay + 250}ms` : `opacity 800ms ease ${delay}ms`;
+    return {
+      '--x': `${rel * (Wp + WC.GAP) + hint.x}px`,
+      '--op': rel === 0 ? 1 : 0,
+      '--tr': st.instant
+        ? 'none'
+        : st.moving
+          ? `transform ${WC.MOVE_MS}ms ${EIO} ${delay}ms, ${fade}`
+          : `transform 700ms ${EO}, opacity 450ms ease`,
+    } as CSSProperties;
+  };
   const enterCard = (key: string, isCur: boolean) => (e: SyntheticEvent<HTMLElement>) => {
     if (!isCur && !flow) return;
     const el = e.currentTarget.querySelector<HTMLElement>('[data-wt]');
     const top = el ? el.offsetTop + (el.offsetParent as HTMLElement).offsetTop : 0;
-    // 主项目卡的大编号压在图版上沿：展开时标题落在编号下面，不和它叠（MAPPING §64.1）
+    // 主项目卡的大编号压在图版上沿：展开时标题落在编号下面，不和它叠（MAPPING §70.1）
     const kick = e.currentTarget.querySelector<HTMLElement>('.hs-card__kick--big');
     const box = e.currentTarget.querySelector<HTMLElement>('.hs-card__box');
     const pad = 20 + (kick && box ? Math.max(0, kick.getBoundingClientRect().bottom - box.getBoundingClientRect().top) : 0);
@@ -602,7 +621,7 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
       <div
         className={`hs-work hs-wg${st.instant ? ' hs-wg--instant' : ''}`}
         ref={rootRef}
-        style={{ '--wp': `${Wp}px`, '--wg-l': `${st.L}px`, '--wg-tlen': tlen } as CSSProperties}
+        style={{ '--wp': `${Wp}px`, '--wg-l': `${st.L}px`, '--wg-r': `${st.Rg}px`, '--wg-gap': `${WC.GAP}px`, '--wg-tlen': tlen } as CSSProperties}
       >
         <div className="hs-head">
           <div className="hs-wg__lead">
@@ -681,10 +700,14 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
           </span>
           <div
             className="hs-wg__grid"
+            // 整排往左探（指向下一屏的暗示）时，左侧渐隐窗口跟着往外让，当前屏第一张卡不被渐隐吃掉
+            style={{ '--wg-lean': `${Math.max(0, -hint.x)}px` } as CSSProperties}
             onMouseLeave={() => set({ wh: null, prox: NO_PROX })}
             onMouseMove={(e) => {
               if (flow) return;
-              const r = e.currentTarget.getBoundingClientRect();
+              // 网格为了两侧渐隐铺满了整页宽，横坐标仍按舞台左缘量
+              const r = stageRef.current?.getBoundingClientRect();
+              if (!r) return;
               const v = proximity(e.clientX - r.left, Wp);
               const o = sRef.current.prox;
               if (o.side !== v.side || o.t !== v.t) set({ prox: v });
@@ -700,6 +723,7 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
                 <div
                   key={`${gr.key}-${pn.pi}`}
                   className={`hs-wg__panel${i === st.cur ? ' hs-is-cur' : ''}${pn.pi > 0 ? ' hs-wg__panel--cont' : ''}`}
+                  data-last={pn.pi === pn.pages - 1 || undefined}
                   role="group"
                   aria-label={pn.pages > 1 ? `${gr.title}, ${pn.pi + 1} of ${pn.pages}` : gr.title}
                   aria-hidden={off || undefined}
@@ -728,6 +752,7 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
                       />
                     ))}
                   </div>
+                  <WorkMark group={gr.key} style={markVars(i)} />
                 </div>
               );
             })}
@@ -814,7 +839,7 @@ export function AboutPage() {
     <>
       <div className="hs-about-dots" aria-hidden="true" />
       <div className="hs-about">
-        {/* 2026-10-27（MAPPING §64）：四组信息装进细线格子——竖边随整组淡入，横线照旧逐条画出（第一条就是格子的上边） */}
+        {/* 2026-10-27（MAPPING §70）：四组信息装进细线格子——竖边随整组淡入，横线照旧逐条画出（第一条就是格子的上边） */}
         <dl className="hs-facts" data-a="fade" data-d="100">
           {FACTS.map((f, i) => (
             <div className="hs-fact" key={f.k}>

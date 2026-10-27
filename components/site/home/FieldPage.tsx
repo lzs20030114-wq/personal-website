@@ -1,6 +1,6 @@
 'use client';
 
-// 01 Field（2026-10-27 换成画布方案 H6b，MAPPING §65；此前为稿 17 Home · Field Hero，§55）。
+// 01 Field（2026-10-27 换成画布方案 H6b，MAPPING §71；此前为稿 17 Home · Field Hero，§55）。
 // 一张 28×15 的细线格：标语一字一格（细窄），objects / spaces 每个字母占 2×2（宽粗），
 // 名字、导航、按钮、提示都占整数个格子；其余格子各放一件站上的真实内容，贴着字留一圈有机的空白。
 // 动效沿用 §55–§57：作品格成簇地亮起又暗回去，指针划过留一圈余光，光标附近的作品格转角拉斜，
@@ -12,6 +12,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { HomeField } from '../../../src/lib/site/home-model';
 import { FIELD_KINDS, FIELD_LIGHT } from '../../../src/lib/site/field-visuals';
 import { FX, swellAt, swellAxes, tiltAt, tiltCss } from '../../../src/lib/site/home-fx';
+import { HOME_FLOW_QUERY, prefersReducedMotion } from '../../../src/lib/site/home-mode';
 import {
   CARD_H as CH,
   CARD_W as CW,
@@ -33,7 +34,6 @@ const DIM_MS = 2200;
 const WAKE_DWELL_MS = 50;
 const WAKE_TRACK_MS = 110;
 const OPEN_DWELL_MS = 160;
-const FLOW_QUERY = '(max-width: 1023px), (prefers-reduced-motion: reduce)';
 const BASE_AXES = swellAxes(0);
 
 interface Rect {
@@ -154,7 +154,10 @@ export function FieldPage({
     txtT: undefined as ReturnType<typeof setTimeout> | undefined,
   });
 
-  const motionOn = () => !window.matchMedia(FLOW_QUERY).matches;
+  /** 格子在不在：窄屏文档流里整块隐藏（CSS 认 <html data-hs>，MAPPING §67） */
+  const fieldOn = () => !window.matchMedia(HOME_FLOW_QUERY).matches;
+  /** 「减弱动态效果」下格子照样在、照样能悬停开卡，只是作品格不再轮换、不倾斜、字不鼓起、卡不做生长动画 */
+  const motionOn = () => fieldOn() && !prefersReducedMotion();
 
   /** 当前视觉上的格子大小与各行列中心（开卡让位时按位移后的位置算） */
   const geom = () => {
@@ -445,10 +448,12 @@ export function FieldPage({
     };
 
     const timer = setInterval(() => {
-      if (!activeRef.current || !motionOn()) return;
+      if (!activeRef.current || !fieldOn()) return;
       const now = performance.now();
+      // 减弱动态效果：一次亮到目标数就停住，不再亮了又暗、不轮换
+      const still = prefersReducedMotion();
       const busy = (k: number) => k === openRef.current?.slot || k === st.hoveredSlot;
-      for (const [k, exp] of st.lit) if (now > exp && !busy(k)) dim(k, now);
+      if (!still) for (const [k, exp] of st.lit) if (now > exp && !busy(k)) dim(k, now);
       for (const [k, at] of st.swapAt) {
         if (now < at || busy(k) || st.lit.has(k)) continue;
         st.swapAt.delete(k);
@@ -458,9 +463,10 @@ export function FieldPage({
         showItem(k, next);
       }
       const target = Math.round(slots.length * LIT_SHARE);
-      const n = st.lit.size < target * 0.5 ? 6 : st.lit.size < target ? 3 : Math.random() < 0.5 ? 1 : 0;
+      const n = still ? (st.lit.size < target ? target : 0) : st.lit.size < target * 0.5 ? 6 : st.lit.size < target ? 3 : Math.random() < 0.5 ? 1 : 0;
       const litArr = Array.from(st.lit.keys());
       for (let t = 0; t < n; t++) {
+        if (still && st.lit.size >= target) break;
         let k: number | undefined;
         if (litArr.length && Math.random() < 0.65) {
           // 多半长在已亮格子旁边：亮格成簇，不是均匀的雪花
@@ -505,7 +511,7 @@ export function FieldPage({
       i,
       setTimeout(() => {
         st.ghostTimers.delete(i);
-        if (!activeRef.current || !motionOn()) return;
+        if (!activeRef.current || !fieldOn()) return;
         g.style.transition = 'opacity .09s,transform .7s cubic-bezier(.2,.7,.1,1)';
         g.style.opacity = String(amp);
       }, delay),
@@ -541,7 +547,7 @@ export function FieldPage({
   };
 
   const wake = () => {
-    if (!activeRef.current || !motionOn() || !m.current.pointer) {
+    if (!activeRef.current || !fieldOn() || !m.current.pointer) {
       cancelHover();
       return;
     }
@@ -577,7 +583,7 @@ export function FieldPage({
   };
 
   const onMove = (e: React.PointerEvent) => {
-    if (!activeRef.current || !motionOn() || e.pointerType === 'touch') return;
+    if (!activeRef.current || !fieldOn() || e.pointerType === 'touch') return;
     m.current.pointer = { x: e.clientX, y: e.clientY };
     schedulePointerFx();
     const i = pointerCell();
@@ -593,13 +599,13 @@ export function FieldPage({
     const el = e.currentTarget;
     const k = Number(el.dataset.slot);
     cancelOpen();
-    if (!activeRef.current || !motionOn()) return;
+    if (!activeRef.current || !fieldOn()) return;
     if (openRef.current?.slot === k && !m.current.closing) return;
     const item = m.current.slotItem[k];
     if (item == null) return;
     m.current.hoveredSlot = k;
     m.current.openT = setTimeout(() => {
-      if (!activeRef.current || !motionOn() || m.current.hoveredSlot !== k || m.current.slotItem[k] !== item || !el.matches(':hover')) return;
+      if (!activeRef.current || !fieldOn() || m.current.hoveredSlot !== k || m.current.slotItem[k] !== item || !el.matches(':hover')) return;
       openAt(k, item);
     }, OPEN_DWELL_MS);
   };
@@ -803,7 +809,7 @@ export function FieldPage({
           </Link>
         ) : null}
       </div>
-      {/* 窄屏 / 减少动态效果：格子收起，标语按同一套宽窄对比排成普通文字（MAPPING §65） */}
+      {/* 窄屏（文档流）：格子收起，标语按同一套宽窄对比排成普通文字（MAPPING §71） */}
       <div className="hs-fx-flow">
         <p className="hs-fx-flow__title" aria-hidden="true">
           I explore how people relate to <span className="hs-fx-flow__k1">objects</span> and <span className="hs-fx-flow__k2">spaces</span> that respond to them.

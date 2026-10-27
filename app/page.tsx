@@ -3,6 +3,7 @@ import { getAllWork, getRoutableWork } from '../src/lib/site/content';
 import { getLogEntries } from '../src/lib/site/log';
 import { getOtherWorks } from '../src/lib/site/other-works';
 import { buildCards, buildHomeField, buildHomeLog, buildLabGroups, buildWorkGroups } from '../src/lib/site/home-model';
+import { HOME_BOOT_SCRIPT } from '../src/lib/site/home-mode';
 
 /**
  * 主页 = 「07 Home · Scroll Zone」（design-ref/home-scroll-zone，MAPPING §42）。
@@ -41,5 +42,11 @@ export default function Home() {
     entries,
     other,
   );
-  return <HomeScroll work={work} groups={groups} log={log} field={field} />;
+  return (
+    <>
+      {/* 画第一帧前定版式（翻页 / 文档流），旧 Safari 跑不动打包脚本时退回文档流（MAPPING §67） */}
+      <script dangerouslySetInnerHTML={{ __html: HOME_BOOT_SCRIPT }} />
+      <HomeScroll work={work} groups={groups} log={log} field={field} />
+    </>
+  );
 }

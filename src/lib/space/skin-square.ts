@@ -256,9 +256,9 @@ export const SQUARE_TIERS: readonly SquareTier[] = [
 /** 三档实测挑出（px，真引擎终态）——**查深度表**，不再另抄一份数 */
 export const SQUARE_REACH: readonly number[] = SQUARE_TIERS.map((t) => squareReachOf(t.k));
 
-/** 平档的贴合段（三档全员同值 ⇒ 对齐的常数项相同） */
-export function squareLead(fTotal: number = squareFreeTotal()): number {
-  return SQUARE.BAND - 2 * SQUARE.ISO - fTotal - SQUARE.TAIL;
+/** 平档的贴合段（三档全员同值 ⇒ 对齐的常数项相同）。`band` 省略 = 这一族现行的带长（逐位不变） */
+export function squareLead(fTotal: number = squareFreeTotal(), band: number = SQUARE.BAND): number {
+  return band - 2 * SQUARE.ISO - fTotal - SQUARE.TAIL;
 }
 
 /**
@@ -272,6 +272,7 @@ export function squareSpec(
   fTotal: number = squareFreeTotal(),
   leadAt: number = squareLead(fTotal),
   h: number = SQUARE.H,
+  band: number = SQUARE.BAND,
 ): SkinSpec {
   const b = squareBuffer(kMax, h);
   const fs = squareFree(kMax, b);
@@ -279,7 +280,7 @@ export function squareSpec(
   const pw = squarePw(h);
   const bonds: SkinBond[] = squareLadder(kMax, pw).map((k) => [c - k, c + k, h / 100]);
   const seg: SkinSeg = ['f', fs, bonds, [[c - pw, c + pw]]];
-  return squareWrap(seg, fTotal, leadAt, `k=${kMax}`).spec;
+  return squareWrap(seg, fTotal, leadAt, `k=${kMax}`, band).spec;
 }
 
 /**
@@ -293,11 +294,12 @@ export function squareWrap(
   fTotal: number = squareFreeTotal(),
   leadAt: number = squareLead(fTotal),
   who = '',
+  band: number = SQUARE.BAND,
 ): { spec: SkinSpec; base: number } {
   const fs = seg[1];
   const p = (fTotal - fs) / 2;
   const lead = leadAt;
-  const tail = SQUARE.BAND - 2 * SQUARE.ISO - fTotal - lead;
+  const tail = band - 2 * SQUARE.ISO - fTotal - lead;
   if (p < 0 || lead < SQUARE.LEAD_MIN || tail < SQUARE.TAIL_MIN)
     throw new Error(`方形环档位越界：${who} 垫=${p} lead=${lead} tail=${tail}`);
   if (p % 1 !== 0) throw new Error(`配平垫 ${p} 非整数（自由段应为奇数）：${who}`);
@@ -309,15 +311,19 @@ export function squareWrap(
     : { spec: [['g', lead + SQUARE.ISO], seg, ['g', SQUARE.ISO + tail]], base: lead + SQUARE.ISO };
 }
 
-/** 三档的引擎定义（同一张方箱的整形选项，只换键谱） */
-export function buildSquareUnits(tiers: readonly SquareTier[] = SQUARE_TIERS): RingUnitDef[] {
+/**
+ * 三档的引擎定义（同一张方箱的整形选项，只换键谱）。`band` 省略 = 这一族现行的带长（逐位不变）；
+ * 人猫同台的立体台（Lab 2-15）传 202：这一族立项时那条带（lead 22），形状与长带逐点相同（尾端对齐），
+ * 只少上半截贴芯的素管——那一截是 2026-09-02 为捏分编制加长的。
+ */
+export function buildSquareUnits(tiers: readonly SquareTier[] = SQUARE_TIERS, band: number = SQUARE.BAND): RingUnitDef[] {
   const fTotal = squareFreeTotal();
   const opts: SkinUnitOpts = skinSiteOpts(STEPPED);
   return tiers.map((t) => ({
-    key: `sq-${t.en}`,
+    key: band === SQUARE.BAND ? `sq-${t.en}` : `sq-${t.en}-b${band}`,
     zh: `${t.name}档`,
     en: t.en,
-    spec: squareSpec(t.k, fTotal),
+    spec: squareSpec(t.k, fTotal, squareLead(fTotal, band), SQUARE.H, band),
     opts,
     smooth: [3, 1] as const,
   }));

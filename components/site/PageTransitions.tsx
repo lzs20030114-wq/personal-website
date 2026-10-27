@@ -23,6 +23,7 @@ import {
   type Rect,
 } from '../../src/lib/site/page-transition';
 import { HOME_WORK_PANEL_KEY, HOME_ZONE_KEY, PT_DONE_EVENT } from './pageTransitionState';
+import { homeMode } from '../../src/lib/site/home-mode';
 
 /**
  * 页面之间的转场（MAPPING §48）。挂在根布局里，全站只有一份。
@@ -49,9 +50,6 @@ const BACKDROP = {
 } as const;
 
 const VARS = ['--pt-d', '--pt-bg', '--pt-x', '--pt-y', '--pt-sx', '--pt-sy'];
-
-/** 首页在窄屏 / 减少动态效果下回落成普通文档流——那时没有「第几页」可记（与 HomeScroll 同一条件）。 */
-const HOME_FLOW = '(max-width: 1023px), (prefers-reduced-motion: reduce)';
 
 interface Plan {
   form: Form;
@@ -242,7 +240,8 @@ function committed(pathname: string) {
  */
 function rememberHome() {
   const root = document.querySelector<HTMLElement>('[data-hs-root]');
-  if (!root || window.matchMedia(HOME_FLOW).matches) return;
+  // 只有整屏翻页时首页才不改地址；文档流本来就是一页长滚动（版式判定见 MAPPING §67）
+  if (!root || homeMode() !== 'paged') return;
   const page = Number(root.dataset.hsPage ?? 0);
   const hash = homeHashFor(page, root.dataset.hsZone === 'log' ? 'log' : 'lab');
   if (page === 3) {

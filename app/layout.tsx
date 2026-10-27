@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 // MAPPING §2：自托管 Archivo（可变字重 100–900）——不引 Google Fonts @import。
-// 2026-10-27（MAPPING §64）：换成带宽度轴的那份（字宽 62–125%，字重照旧 100–900），首页标题与编号用到宽窄对比；
+// 2026-10-27（MAPPING §70）：换成带宽度轴的那份（字宽 62–125%，字重照旧 100–900），首页标题与编号用到宽窄对比；
 // 不设 font-stretch 的地方仍是 100% 宽，字形与原先那份相同。
 import '@fontsource-variable/archivo/wdth.css';
 import './globals.css';
@@ -20,7 +20,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     ? Boolean(process.env.STUDIO_PASSWORD && process.env.VISITOR_SUPABASE_URL && process.env.VISITOR_SUPABASE_SERVICE_ROLE_KEY)
     : !process.env.VERCEL && process.env.VISITOR_LOCAL_ENABLED === '1';
   return (
-    <html lang="en">
+    // 首页启动脚本在水合前往 <html> 上写 data-hs（MAPPING §67），不算水合不一致
+    <html lang="en" suppressHydrationWarning>
       <body>
         <PageTransitions />
         <VisitTracker enabled={visitorTrackingEnabled} />

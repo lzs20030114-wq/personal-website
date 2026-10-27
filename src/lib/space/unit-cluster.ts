@@ -315,30 +315,6 @@ export function clusterBuild(
   return { units, plans: clusterPlans(units.length), cellPlan: lv.map((_, i) => i) };
 }
 
-// ── 连接：相切·齐平下两圈平台之间的缝（用户 2026-09-03 拍板「再做连接」）──────────────
-
-/**
- * 要糊缝的单元对：**只在相切·齐平下**——两圈平台边贴边、同一高度，相邻（归一距 1）的每一对
- * 之间长一块织物网（几何见 skin-solid.bridgeWeb）。错层的相切不糊：那道缝是两级之间的落差，
- * 糊上就是一道斜坡，不是这一轮要的东西；分离与交叠本来就没有「缝」可糊。
- */
-export function clusterBridges(
-  plan: ClusterPlanKey,
-  relation: ClusterRelationKey,
-): (readonly [number, number])[] {
-  const rel = clusterRelation(relation);
-  if (rel.spacing !== 'touch' || rel.levels !== 'flat') return [];
-  const pos = clusterPositions(plan);
-  const out: (readonly [number, number])[] = [];
-  for (let i = 0; i < pos.length; i++)
-    for (let j = i + 1; j < pos.length; j++)
-      if (Math.abs(Math.hypot(pos[i].x - pos[j].x, pos[i].z - pos[j].z) - 1) < 1e-9) out.push([i, j]);
-  return out;
-}
-
-/** 织物网的两个手感常量（2D px）：外缘弦宽（网伸到缝多宽为止）· 起网门槛（两圈平台外缘差多远就开始搭） */
-export const BRIDGE = { WIDTH: 40, GAP_MAX: 14 } as const;
-
 // ── 间距：由关系推出来 ───────────────────────────────────────────────────────────
 
 /** 两个单元在这一关系下**必须**隔开多远（2D px，芯心距） */

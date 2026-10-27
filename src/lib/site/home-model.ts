@@ -80,7 +80,7 @@ export const TONE_N: Tone = { ink: 'var(--ink)', hi: 'var(--lime-hi)' };
 export interface HomeWorkTile {
   key: string;
   kick: string;
-  /** kick 拆开的两半：编号（01 / 02.1）与名称（Project I / 实习类别）；主项目卡把编号放大（MAPPING §64） */
+  /** kick 拆开的两半：编号（01 / 02.1）与名称（Project I / 实习类别）；主项目卡把编号放大（MAPPING §70） */
   kickN: string;
   kickLabel: string;
   status: string;
@@ -377,7 +377,7 @@ export function buildHomeLog(entries: LogEntry[]): HomeLogData {
   return { total: entries.length, span: `${entries.length} entries · ${span}`, lanes, months, tips, latest };
 }
 
-/* ───────────────────────── 01 Field（池子 = 稿 17 Field Hero §55；版面 = 画布 H6b §65） ───────────────────────── */
+/* ───────────────────────── 01 Field（池子 = 稿 17 Field Hero §55；版面 = 画布 H6b §71） ───────────────────────── */
 
 /** 场里一张卡：悬停某个亮着的方块时展开成它。 */
 export interface FieldItem {

@@ -3,6 +3,7 @@
 import { useBenchLang, useLabText } from './LabLanguage';
 
 import { LabControlLabel } from './LabControlLabel';
+import { LabFold, LabViewDock } from './LabCtl';
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
@@ -15,7 +16,6 @@ import { bandsFarToNear } from '../../src/lib/linkage/skin';
 import {
   SOLID,
   boxVerts,
-  bridgeWeb,
   membranePanel,
   buildSolidTopology,
   fillSolidVerts,
@@ -78,11 +78,8 @@ export const RAIL_LITE: [number, number, number] = [0.4, 0.43, 0.46];
 export const C_BOND: [number, number, number] = [0.88, 0.42, 0.24];
 // 环间织物膜（用户 2026-08-25「加一个半透明蒙皮」）：比带子本身淡、偏纱灰，
 // 让它读作「带与带之间的那块布」而不是又一层结构
-const MEM_DARK: [number, number, number] = [0.1, 0.16, 0.14];
-// 单元之间的织物网（Lab.13 连接）：外缘弦宽 / 起网门槛，2D px（× rig 缩放进世界）——值同 unit-cluster.BRIDGE
-const BRIDGE_W = 40;
-const BRIDGE_GAP = 14;
-const MEM_LITE: [number, number, number] = [0.5, 0.68, 0.58];
+export const MEM_DARK: [number, number, number] = [0.1, 0.16, 0.14];
+export const MEM_LITE: [number, number, number] = [0.5, 0.68, 0.58];
 // 布景（Lab.10 房间 + 比例小人，2026-08-25）：房间压得比芯轨还暗——它是背景不是展品；
 // 小人略亮且偏暖，在灰调的房间里一眼认得出是人
 export const ROOM_DARK: [number, number, number] = [0.05, 0.06, 0.065];
@@ -278,18 +275,6 @@ export type SolidSurface = (frames: readonly SolidSurfaceFrame[], layout: string
 } | null;
 
 /**
- * 织物网一条（`bridges` 的对象写法；元组 [a, b] = 两格整条带对整条带）。`plateA`/`plateB` 只对
- * 带缝底标记（`seam`）的捏分档有意义：外缘只读缝底那一侧的节点——上板 = 缝底之前、下板 = 缝底
- * 之后——网就只在那片台上起脚，腔口不再被当成一片台面（Lab 2-11 ②③）。没有 seam 的带照整条读。
- */
-export interface SolidBridge {
-  a: number;
-  b: number;
-  plateA?: 'upper' | 'lower';
-  plateB?: 'upper' | 'lower';
-}
-
-/**
  * 排布（layouts prop 用）：单元沿 X 分列（gapX）或沿 Z 密排并拢（gapZ）+
  * 该排布下的机位。传 ≥2 个即出「排列」切换；**切换只改渲染偏移与机位，
  * 不重建引擎**（收缩进行到哪就在哪继续——并拢/分列看的是同一次收缩）。
@@ -366,7 +351,6 @@ export function SkinSolidBench({
   pivotY,
   pivotFor,
   cellsKey,
-  bridges,
   extraControls,
   raw = false,
   surface,
@@ -487,12 +471,6 @@ export function SkinSolidBench({
    * 引擎要变（形态 / 级数）走 `unitsKey`，那条会重建；两把钥匙同时变时先重建再重摆，无害。
    */
   cellsKey?: string;
-  /**
-   * 要糊缝的格子对（Lab.13 连接，默认 undefined ⇒ 不画）：两圈相切的平台之间长一块织物网
-   * （skin-solid.bridgeWeb），随蒙皮滑块走同一个透明度；两圈外缘差 ≤ 起网门槛时才搭。
-   * 每帧从两格各自的引擎现读外缘半径与顶底高度，几何按世界坐标直接烘（每对不同，不走摆放表）。
-   */
-  bridges?: readonly (readonly [number, number] | SolidBridge)[];
   /** 台架自己的控件（塞进控制条第一层）——Lab.09 的形态选择 */
   extraControls?: ReactNode;
   /** 原始成形审查：关闭节点平滑和时间 EMA；挂载时固定，旧台架默认保持原画法。 */
@@ -552,7 +530,6 @@ export function SkinSolidBench({
   // 立杆读法也走 ref：序列台两种编制读法不同（渐变 = 轨即芯，08-22 拍板留的旧读法；
   // 捏分 = 固定立杆），换编制要能切；帧循环每帧现读，不传即挂载值 ⇒ 既有台架逐位不变
   const railRef = useRef(rail);
-  const bridgesRef = useRef(bridges);
   useEffect(() => {
     cellsRef.current = cells;
     ringPlansRef.current = ringPlans;
@@ -560,7 +537,6 @@ export function SkinSolidBench({
     pivotForRef.current = pivotFor;
     railRef.current = rail;
     sceneRef.current = scene;
-    bridgesRef.current = bridges;
   });
   // 推进速率随编制变（渐变要解十一条引擎，得放慢）——主 effect 只建一次，故走 ref
   const rateRef = useRef(rate);
@@ -602,11 +578,8 @@ export function SkinSolidBench({
     const axonPitch = axon?.pitch ?? AXON_PITCH;
     const axonYaw = axon?.yaw ?? AXON_YAW;
     const presets = makePresets(axonPitch, axonYaw);
+    // 默认运转（2026-10-26 用户拍板：Lab 默认勾选运转，不随「减弱动态效果」关掉，MAPPING §68）；减弱动态效果只让切视角瞬切
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduced) {
-      runningRef.current = false;
-      setRunning(false);
-    }
 
     // 单排布 = 一条「默认排布」——多排布与否走同一条路径
     const layoutList: readonly SolidLayout[] =
@@ -686,13 +659,10 @@ export function SkinSolidBench({
     // 缓存仅活到下一次几何变化，既不改变绘制顺序，也不以物理 step 代替 EMA 的版本。
     const bandGeometry = new Map<SolidSim | SolidInst, SolidBandGeometry>();
     const membraneGeometry = new Map<string, Float32Array>();
-    let bridgeGeometry: { x: number; z: number; data: Float32Array }[] | null = null;
-    let bridgePairs = bridgesRef.current;
     let geometryRail = railRef.current;
     const invalidateGeometry = (): void => {
       bandGeometry.clear();
       membraneGeometry.clear();
-      bridgeGeometry = null;
       for (const s of sims) { s.sx = null; s.sy = null; }
     };
     // 换键谱/重播/取消跳过会让在途读取失效，旧结果不能覆盖新选择。
@@ -1087,71 +1057,6 @@ export function SkinSolidBench({
           }
         });
       }
-
-      // ── 单元之间的织物网（Lab.13 连接）：相切的两圈平台之间那道缝 ─────────────────
-      // 也是半透明面 ⇒ 在实体与环内膜之后画，按每对的中点视深从远到近
-      const pairs = bridgesRef.current;
-      if (skin && hasCells() && pairs && pairs.length && skinRef.current > 0.004 && cellList.length) {
-        const alpha = skinRef.current;
-        const rad = radiusRef.current;
-        const M = cam.matrix;
-        const viewZ = (x: number, z: number): number => M[6] * x + M[8] * z;
-        /** 某格此刻的外缘：外缘半径 = 站位半径 + 最大挑出；顶/底 = 离轴 ≥ 85% 最大挑出那些节点的 y 范围。
-         *  读**朝向对方的那条带**的引擎（Lab 2-11 起伏环每条带高度不同，接缝在哪条带上网就该跟哪条；
-         *  一圈同谱时任一条都是同一条引擎 ⇒ Lab 2-8 逐位不变） */
-        const rimOf = (c: SolidCell, toward: SolidCell, plate?: 'upper' | 'lower') => {
-          const dir = Math.atan2(toward.z - c.z, toward.x - c.x);
-          let inst: SolidInst | undefined;
-          let best = Infinity;
-          for (const t of insts) {
-            if (t.plan !== c.plan) continue;
-            const d = Math.abs(Math.atan2(Math.sin(t.angle - dir), Math.cos(t.angle - dir)));
-            if (d < best) {
-              best = d;
-              inst = t;
-            }
-          }
-          if (!inst) return null;
-          const v = sims[inst.simIdx];
-          if (!v.sx || !v.sy) return null;
-          // 捏分档按片台读：只看缝底那一侧的节点（上板 = 下标小于缝底、下板 = 大于）
-          const seam = v.seam;
-          const lo = plate && seam !== undefined ? (plate === 'upper' ? 0 : seam + 1) : 0;
-          const hi = plate && seam !== undefined ? (plate === 'upper' ? seam : v.sim.n) : v.sim.n;
-          let mx = 0;
-          for (let i = lo; i < hi; i++) mx = Math.max(mx, v.sx[i]);
-          if (mx * SOLID.SCALE < 8) return null; // 还没挑出来，没有「外缘」可言
-          let yTop = Infinity;
-          let yBot = -Infinity;
-          for (let i = lo; i < hi; i++) {
-            if (v.sx[i] < 0.85 * mx) continue;
-            const y = rigY + rigS * (v.offY - v.sy[i] * SOLID.SCALE);
-            yTop = Math.min(yTop, y);
-            yBot = Math.max(yBot, y);
-          }
-          return { x: c.x, z: c.z, rho: rigS * (rad + mx * SOLID.SCALE), yTop, yBot };
-        };
-        if (bridgePairs !== pairs) { bridgeGeometry = null; bridgePairs = pairs; }
-        if (!bridgeGeometry) {
-          bridgeGeometry = [];
-          for (const p of pairs) {
-            const br: SolidBridge = 'a' in p ? p : { a: p[0], b: p[1] };
-            const a = cellList[br.a];
-            const b = cellList[br.b];
-            if (!a || !b) continue;
-            const ra = rimOf(a, b, br.plateA);
-            const rb = rimOf(b, a, br.plateB);
-            if (!ra || !rb) continue;
-            const g = bridgeWeb(ra, rb, BRIDGE_W * rigS, BRIDGE_GAP * rigS);
-            if (!g) continue;
-            bridgeGeometry.push({ x: (a.x + b.x) / 2, z: (a.z + b.z) / 2, data: bakeIndexed(g.verts, g.idx) });
-          }
-        }
-        // 只有几何缓存，视深每帧现算：相机转动仍沿原次序排序半透明网。
-        const webs = bridgeGeometry.map(w => ({ z: viewZ(w.x, w.z), data: w.data }));
-        webs.sort((p, q) => p.z - q.z);
-        for (const w of webs) R.drawDynamicMesh(w.data, MEM_DARK, MEM_LITE, alpha);
-      }
     };
 
     let acc = 0;
@@ -1528,9 +1433,11 @@ export function SkinSolidBench({
       </div>
     ) : null;
   const tiered = !!extraControls || !!layoutGroup;
+  // 面板精简（2026-10-25，LabCtl 头注）：第二层只留播放；键线 / 透视 / 速度 / 蒙皮 / 半径收进「更多」；
+  // 视角搬到底栏（底栏的「归位」与面板里原来那颗是同一个 viewHome，重复的删掉）。
   const viewGroups = (
     <>
-      <div className="grp">
+      <div className="grp lab-play">
         <label>
           <input
             type="checkbox"
@@ -1554,6 +1461,17 @@ export function SkinSolidBench({
           />
           {tx("跳过成形")}
         </label>
+        <button type="button" onClick={() => {
+          apiRef.current?.replay();
+          runningRef.current = true;
+          setRunning(true);
+          // 跳过开着时重播复用终态，取消跳过再看完整过程。
+        }}>
+          {tx("重播")}
+        </button>
+      </div>
+      <LabFold>
+        <div className="grp">
         <label>
           <input
             type="checkbox"
@@ -1576,17 +1494,7 @@ export function SkinSolidBench({
           />
           {tx("透视")}
         </label>
-      </div>
-      <div className="grp">
-        <button type="button" onClick={() => {
-          apiRef.current?.replay();
-          runningRef.current = true;
-          setRunning(true);
-          // 跳过开着时重播复用终态，取消跳过再看完整过程。
-        }}>
-          {tx("重播")}
-        </button>
-      </div>
+        </div>
       <div className="grp">
         <LabControlLabel help={["调整演示速度，不改变结构参数。", "Change playback speed without changing the structure."]}>{tx("速度")}</LabControlLabel>
         <input
@@ -1646,7 +1554,8 @@ export function SkinSolidBench({
           <b style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>{radiusV}</b>
         </div>
       ) : null}
-      <div className="grp">
+      </LabFold>
+      <LabViewDock off={!active}>
         <LabControlLabel help={["切换轴测、正面、侧面或顶视图，不改变模型。", "Switch camera views without changing the model."]}>{tx("视角")}</LabControlLabel>
         <span className="seg">
           {VIEWS.map((v) => (
@@ -1660,10 +1569,7 @@ export function SkinSolidBench({
             </button>
           ))}
         </span>
-        <button type="button" onClick={() => apiRef.current?.viewHome()}>
-          {tx("归位")}
-        </button>
-      </div>
+      </LabViewDock>
     </>
   );
 

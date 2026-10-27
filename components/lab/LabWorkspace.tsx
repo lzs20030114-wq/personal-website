@@ -2,8 +2,10 @@
 
 import { useBenchLang, useLabText } from './LabLanguage';
 
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { LabActivity } from './LabActivity';
+import { LabHelp, type LabHelpApi, type LabHelpEntry } from './LabHelp';
+import { LabViewDockSlot } from './LabCtl';
 import { CAMERA_COMMAND, type CameraCommand } from './labCameraInput';
 import { LAB_BENCHES, LAB_INDEX, labAccent } from '../../src/lib/site/lab-index';
 import { BlockRail, BlockView } from '../site/LogBody';
@@ -142,14 +144,14 @@ function visibleCamera(root: HTMLElement | null) {
  */
 export type LabAttachments = { title: Bilingual; blocks: LogBlock[] };
 
-export function LabPanel({ no, title, description, lede, specs, accent, kind, verb, children, notes, attachments }: {
-  no: string; title: string; description: string; lede: string; specs: [string, string][]; accent: string; kind: string; verb: string; children: ReactNode; notes?: ReactNode; attachments?: LabAttachments;
+export function LabPanel({ no, title, description, lede, specs, accent, kind, verb, children, notes, attachments, defaultDetails = true }: {
+  no: string; title: string; description: string; lede: string; specs: [string, string][]; accent: string; kind: string; verb: string; children: ReactNode; notes?: ReactNode; attachments?: LabAttachments; defaultDetails?: boolean;
 }) {
   const lang = useBenchLang();
   const tx = useLabText(lang);
   const workspace = useContext(Workspace);
   const expanded = workspace.expanded === no;
-  const [details, setDetails] = useState(true);
+  const [details, setDetails] = useState(defaultDetails);
   const [hasCamera, setHasCamera] = useState(false);
   const [panelWidth, setPanelWidth] = useState(1124);
   const [figureHeight, setFigureHeight] = useState<number | null>(null);
@@ -160,6 +162,47 @@ export function LabPanel({ no, title, description, lede, specs, accent, kind, ve
   const [placeholder, setPlaceholder] = useState(0);
   const [allSpecs, setAllSpecs] = useState(false);
   const [attachAt, setAttachAt] = useState<number | null>(null);
+  // 控件说明（LabHelp）：面板里的控件名登记到这里，说明栏「控件」一节按它们在页面上的先后列出
+  const [helps, setHelps] = useState<ReadonlyMap<string, LabHelpEntry>>(() => new Map());
+  const [helpOn, setHelpOn] = useState<{ id: string; open: boolean } | null>(null);
+  const detailsScroll = useRef<HTMLDivElement>(null);
+  // 底栏的视角位：台架用 LabViewDock 把视角预设搬到这里（LabCtl）
+  const [viewDock, setViewDock] = useState<HTMLDivElement | null>(null);
+  const helpApi = useMemo<LabHelpApi>(() => ({
+    set(id, entry) {
+      setHelps(prev => {
+        if (!entry && !prev.has(id)) return prev;
+        const next = new Map(prev);
+        if (entry) next.set(id, entry); else next.delete(id);
+        return next;
+      });
+    },
+    // 点开的那一条钉住：点开会展开说明栏、版面一动指针就「离开」了控件名，不能因此把高亮清掉；指向另一个控件名才换
+    focus(id, how = 'point') {
+      if (!id) { setHelpOn(prev => (prev?.open ? prev : null)); return; }
+      if (how === 'open') { setHelpOn({ id, open: true }); setDetails(true); return; }
+      setHelpOn(prev => (prev?.open && prev.id === id ? prev : { id, open: false }));
+    },
+    entryId: id => `lab-help-${no}-${id.replace(/[^a-zA-Z0-9_-]/g, '')}`,
+  }), [no]);
+  // 说明栏收起时，点开钉住的那一条也一起放下（再打开说明栏不该还停在上一次点的那一条）
+  useEffect(() => { if (!details) setHelpOn(null); }, [details]);
+  const helpList = useMemo(() => [...helps].sort(([, a], [, b]) => (a.el.compareDocumentPosition(b.el) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1)), [helps]);
+  // 点亮的那一条若不在说明栏视野里，只滚说明栏自己（不动页面）；点开时说明栏可能在下方（窄屏），才滚页面
+  useEffect(() => {
+    if (!helpOn || !details) return;
+    const row = document.getElementById(helpApi.entryId(helpOn.id));
+    const box = detailsScroll.current;
+    if (!row || !box) return;
+    const smooth = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+    const r = row.getBoundingClientRect(), b = box.getBoundingClientRect();
+    if (r.top < b.top) box.scrollBy({ top: r.top - b.top - 8, behavior: smooth });
+    else if (r.bottom > b.bottom) box.scrollBy({ top: r.bottom - b.bottom + 8, behavior: smooth });
+    if (helpOn.open) {
+      const v = row.getBoundingClientRect();
+      if (v.top < 0 || v.bottom > window.innerHeight) row.scrollIntoView({ block: 'center', behavior: smooth });
+    }
+  }, [helpOn, details, helpApi]);
   const attachRail = useRef<HTMLDivElement>(null);
   const attachView = useRef<HTMLDivElement>(null);
   const [solving, setSolving] = useState(false);
@@ -212,11 +255,12 @@ export function LabPanel({ no, title, description, lede, specs, accent, kind, ve
       const toolsHeight = root.current?.querySelector('.lab-view-tools')?.getBoundingClientRect().height ?? 42;
       // Side-control benches: controls sit beside the drawing. Budget the whole workbench,
       // not the drawing after subtracting a stack of controls; other benches keep their sizing.
-      if (['2-6', '2-10', '2-11', '2-12', '2-13'].includes(no) && window.innerWidth >= 1100) {
+      if (['2-6', '2-10', '2-11', '2-12', '2-13', '2-14'].includes(no) && window.innerWidth >= 1100) {
         setFigureHeight(Math.max(380, Math.floor(window.innerHeight - heading.getBoundingClientRect().height - toolsHeight - (expanded ? 32 : no === '2-12' ? 128 : 48))));
         return;
       }
-      const controlsHeight = node.getBoundingClientRect().height - figure.getBoundingClientRect().height;
+      const supplementHeight = node.querySelector('[data-lab-supplement]')?.getBoundingClientRect().height ?? 0;
+      const controlsHeight = node.getBoundingClientRect().height - figure.getBoundingClientRect().height - supplementHeight;
       // Reserve visible controls first. Complex multi-view benches can still scroll inside the expanded panel.
       setFigureHeight(clamp(Math.floor(window.innerHeight - heading.getBoundingClientRect().height - controlsHeight - toolsHeight - (expanded ? 32 : 100)), 240, 720));
     };
@@ -309,6 +353,8 @@ export function LabPanel({ no, title, description, lede, specs, accent, kind, ve
   const cameraCommand = (command: CameraCommand) => visibleCamera(stage.current)?.dispatchEvent(new CustomEvent(CAMERA_COMMAND, { detail: command }));
   return <div ref={anchor} className="lab-panel-anchor" id={`lab${no}`} style={expanded ? { height: placeholder } : undefined}>
     <LabActivity.Provider value={!workspace.expanded || expanded}>
+    <LabHelp.Provider value={helpApi}>
+    <LabViewDockSlot.Provider value={viewDock}>
       <section ref={root} className="lab-panel" data-lab-panel={no} data-expanded={expanded || undefined} data-details={details || undefined}
         role={expanded ? 'dialog' : undefined} aria-modal={expanded || undefined} aria-labelledby={`lab-title-${no}`}
         style={{ '--lab-tone': accent, '--lab-detail-width': `${appliedDetailWidth}px`, ...(figureHeight === null ? {} : { '--lab-figure-height': `${figureHeight}px` }) } as CSSProperties}
@@ -336,6 +382,7 @@ export function LabPanel({ no, title, description, lede, specs, accent, kind, ve
               onPointerLeave={() => workspace.cursor.hide()}>{children}</div>
             <div className="lab-view-tools">
               <p><span className="lab-hint-dot" aria-hidden />{expanded ? (hasCamera ? tx('Wheel zooms the model · drag to orbit · Esc restores') : cap(tx(verb), lang) + tx(' · Esc restores')) : no === '1-5' ? tx('Fixed view · switch it with the buttons') : cap(tx(verb), lang) + tx(' · wheel scrolls the page')}</p>
+              <div ref={setViewDock} className="lab-view-dock" />
               <span className="lab-status" data-solving={solving || undefined}><i aria-hidden />{solving ? tx('solving…') : tx('live')}</span>
               {hasCamera && <div className="lab-zoom-controls" role="group" aria-label={`${tx('Lab')} ${no} ${tx('相机控制')}`}>
                 <button type="button" aria-label={tx("缩小模型")} onClick={() => cameraCommand('out')}>−</button>
@@ -347,12 +394,16 @@ export function LabPanel({ no, title, description, lede, specs, accent, kind, ve
           <div className="lab-detail-divider" hidden={!details}><Splitter label={`${tx('Lab')} ${no} ${tx('说明宽度')}`} value={appliedDetailWidth} min={260} max={maxDetails} change={workspace.resizeDetails} reverse controls={`lab-details-${no}`} /></div>
           <aside className="lab-details" id={`lab-details-${no}`} hidden={!details} aria-label={`${tx('Lab')} ${no} ${tx('说明与规格')}`}>
             <div className="lab-details-head"><span>{tx("About this study")}</span></div>
-            <div className="lab-details-scroll" tabIndex={0}>
+            <div ref={detailsScroll} className="lab-details-scroll" tabIndex={0}>
               {notes && <div>{notes}</div>}
               <p className="lab-description">{tx(lede)}</p>
               <h3 className="lab-sr-only">{tx("Specifications")}</h3>
               <dl>{(allSpecs ? specs : specs.slice(0, SPEC_ROWS)).map(([key, value]) => <div key={key}><dt>{tx(key)}</dt><dd>{tx(value)}</dd></div>)}</dl>
               {specs.length > SPEC_ROWS && <button type="button" className="lab-specs-more" aria-expanded={allSpecs} onClick={() => setAllSpecs(!allSpecs)}>{allSpecs ? tx('Fewer specs ↑') : (lang === 'zh' ? `全部 ${specs.length} 项规格 ↓` : `All ${specs.length} specs ↓`)}</button>}
+              {helpList.length > 0 && <section className="lab-controls-help">
+                <h3>{lang === 'zh' ? '控件' : 'Controls'}<span>{lang === 'zh' ? '指向控件名，对应的一条会点亮' : 'Point at a control name to highlight it here'}</span></h3>
+                <dl>{helpList.map(([id, e]) => <div key={id} id={helpApi.entryId(id)} data-active={helpOn?.id === id || undefined}><dt>{cap(e.name, lang)}</dt><dd>{e.text}</dd></div>)}</dl>
+              </section>}
               {attachments && <div ref={attachRail} className="lab-attachments">
                 <BlockRail blocks={attachments.blocks} lang={lang} title={attachments.title[lang]} openAt={attachAt} viewId={`lab-attach-${no}`}
                   onToggle={i => {
@@ -367,6 +418,8 @@ export function LabPanel({ no, title, description, lede, specs, accent, kind, ve
           <BlockView id={`lab-attach-${no}`} viewRef={attachView} blocks={attachments.blocks} lang={lang} openAt={attachAt} onClose={() => setAttachAt(null)} />
         </div>}
       </section>
+    </LabViewDockSlot.Provider>
+    </LabHelp.Provider>
     </LabActivity.Provider>
   </div>;
 }

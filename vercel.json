@@ -2,7 +2,12 @@
   "framework": "nextjs",
   "git": {
     "deploymentEnabled": {
+      "claude/bold-shannon-nbaubo": false,
+      "claude/upbeat-keller-l8ah6i": false,
+      "claude/sharp-galileo-65zydp": false,
+      "claude/quirky-goodall-29e0jo": false,
       "claude/design-system-extraction-pme1av": false,
+      "claude/busy-franklin-2omhqy": false,
       "claude/sweet-cori-3jhzes": false,
       "claude/work-by-type-groups": false,
       "claude/work-progress-check-ccfmp8": false,
@@ -45,7 +50,8 @@
       "claude/project-two-human-cat-stage-ny8wjr": false,
       "claude/sleepy-shannon-l5s0gt": false,
       "claude/fervent-euler-qu2im7": false,
-      "claude/cool-ride-uf5vg9": false
+      "claude/cool-ride-uf5vg9": false,
+      "claude/stoic-hawking-eaxfi9": false
     }
   }
 }

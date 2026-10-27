@@ -3,6 +3,7 @@
 import { useBenchLang, useLabText } from './LabLanguage';
 
 import { LabControlLabel } from './LabControlLabel';
+import { LabFold } from './LabCtl';
 
 import { useEffect, useRef, useState } from 'react';
 import { SKIN_UNITS, skinSiteOpts } from '../../src/lib/space/skin-data';
@@ -133,11 +134,7 @@ export function SkinBench({
     if (!svg) return;
     while (svg.firstChild) svg.removeChild(svg.firstChild);
 
-    // reduced-motion：不自动播（点「运转」是显式意愿，仍可看）
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      runningRef.current = false;
-      setRunning(false);
-    }
+    // 默认运转（2026-10-26 用户拍板：Lab 默认勾选运转，不随「减弱动态效果」关掉，MAPPING §68）
 
     const el = <K extends keyof SVGElementTagNameMap>(
       tag: K,
@@ -427,7 +424,7 @@ export function SkinBench({
       </div>
       {controls ? (
         <div className="lab-ctl">
-          <div className="grp">
+          <div className="grp lab-play">
             <label>
               <input
                 type="checkbox"
@@ -451,6 +448,19 @@ export function SkinBench({
               />
               {tx("跳过成形")}
             </label>
+            <button
+              type="button"
+              onClick={() => {
+                stateRef.current?.replay();
+                runningRef.current = true;
+                setRunning(true);
+              }}
+            >
+              {tx("重播")}
+            </button>
+          </div>
+          <LabFold>
+          <div className="grp">
             <label>
               <input
                 type="checkbox"
@@ -463,18 +473,6 @@ export function SkinBench({
               />
               {tx("键线")}
             </label>
-          </div>
-          <div className="grp">
-            <button
-              type="button"
-              onClick={() => {
-                stateRef.current?.replay();
-                runningRef.current = true;
-                setRunning(true);
-              }}
-            >
-              {tx("重播")}
-            </button>
           </div>
           <div className="grp">
             <LabControlLabel help={["调整演示速度，不改变结构参数。", "Change playback speed without changing the structure."]}>{tx("速度")}</LabControlLabel>
@@ -493,6 +491,7 @@ export function SkinBench({
               }}
             />
           </div>
+          </LabFold>
         </div>
       ) : null}
     </div>
