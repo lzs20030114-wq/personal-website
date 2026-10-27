@@ -57,8 +57,12 @@ import type { CatPose, CatTail, SeatSpec } from './figure';
 /** 一米 = 多少世界单位（由「人 = 1.70 m = 215 单位」定） */
 export const UNITS_PER_M = 1000 / MM_PER_UNIT;
 
-/** 关键帧数：正向 0.67 s（跟随档 1.5/s）、回程 2 s（0.5/s）——按 60 fps 下不重帧的量级取；升降 16 帧（直带子按长度比例压向顶端，纯几何） */
-export const FRAMES = { form: 32, retract: 24, hoist: 16 } as const;
+/**
+ * 关键帧数（2026-10-27 加密：32 / 24 / 16 时相邻两帧差 4–9 cm，台架上读得出一格一格跳）：正向 48、回程 36、升降 32（直带子按长度
+ * 比例压向顶端，纯几何）、过渡 8（直垂 → 正向第一帧的插值，纯几何：引擎初始摆位比自然松弛还直，两者差 7–11 cm，不补就是一下跳）。
+ */
+export const FRAMES = { form: 48, retract: 36, hoist: 32, bridge: 8 } as const;
+export type FrameCounts = { form: number; retract: number; hoist: number; bridge?: number };
 
 /**
  * 升降段（两段触发，见头注）。`dropAt` 之下程度全给升降：0 = 收在天花下，dropAt = 落到工位的直筒；
@@ -90,6 +94,8 @@ export interface BandTrajectory {
    * 静置段的帧逐位相同，取帧时退的那段只映射到会动的部分，免得门开到一半就不再动了。
    */
   retractActive: number;
+  /** 正向里形状还在变的最后一帧（成形在协议约六成处就到位，后面几十帧逐位相同；取帧只映射到会动的那段，免得先猛动再干等） */
+  formActive: number;
 }
 
 /**
@@ -104,12 +110,13 @@ export class TrajectoryBaker {
   private readonly formAt: number[];
   private readonly retractAt: number[];
   private readonly hoistN: number;
+  private readonly bridgeN: number;
   private readonly frames: Float64Array[] = [];
   private step = 0;
   private phase: 'form' | 'retract' | 'done' = 'form';
   private result: BandTrajectory | null = null;
 
-  constructor(def: RingUnitDef, frames = FRAMES) {
+  constructor(def: RingUnitDef, frames: FrameCounts = FRAMES) {
     this.unit = createSkinUnit(def.spec, def.opts);
     this.n = this.unit.n;
     [this.smoothW, this.smoothP] = def.smooth;
@@ -117,6 +124,7 @@ export class TrajectoryBaker {
     this.formAt = spread(frames.form, SKIN.STEPS);
     this.retractAt = spread(frames.retract, SKIN.STEPS);
     this.hoistN = frames.hoist;
+    this.bridgeN = frames.bridge ?? 0;
     this.capture(); // 正向第 0 帧 = 直带子
   }
 
@@ -173,7 +181,7 @@ export class TrajectoryBaker {
     const n = this.n;
     const f0 = this.frames[0];
     // frames[1] = 收起态（初始摆位压向顶端）：烘完之前满场都是收着的单元，台架拿它烘整环
-    return { n, frames: [f0, hoistProfile(f0, n, HOIST.stowed)], footY: -f0[2 * n - 1] * SOLID.SCALE, platformTopY: -f0[2 * n - 1] * SOLID.SCALE, reach: SQUARE.RADIUS, retractActive: 0 };
+    return { n, frames: [f0, hoistProfile(f0, n, HOIST.stowed)], footY: -f0[2 * n - 1] * SOLID.SCALE, platformTopY: -f0[2 * n - 1] * SOLID.SCALE, reach: SQUARE.RADIUS, retractActive: 0, formActive: 0 };
   }
 
   /** 一口气烘完（守门与线稿用） */
@@ -203,9 +211,28 @@ export class TrajectoryBaker {
         break;
       }
     }
+    let formActive = 1;
+    for (let k = F - 1; k > 1; k--) {
+      const a = this.frames[k];
+      const b = this.frames[k - 1];
+      let d = 0;
+      for (let i = 0; i < 2 * n; i++) d = Math.max(d, Math.abs(a[i] - b[i]));
+      if (d > 1e-6) {
+        formActive = k;
+        break;
+      }
+    }
     // 升降帧：由回程末帧（闲着的直带子）压向顶端，第 0 帧 = 收起态、末帧 = 直带子逐位相同
     const straight = this.frames[F + this.retractAt.length - 1];
     for (let j = 0; j < this.hoistN; j++) this.frames.push(hoistProfile(straight, n, HOIST.stowed + (1 - HOIST.stowed) * (j / (this.hoistN - 1))));
+    // 过渡帧：直垂 → 正向第 1 帧逐点线性插值（第 0 帧是引擎的初始摆位，比自然松弛还直，跳过）
+    const entry = this.frames[1];
+    for (let j = 0; j < this.bridgeN; j++) {
+      const t = (j + 1) / (this.bridgeN + 1);
+      const f = new Float64Array(2 * n);
+      for (let i = 0; i < 2 * n; i++) f[i] = straight[i] + (entry[i] - straight[i]) * t;
+      this.frames.push(f);
+    }
     this.result = {
       n,
       frames: this.frames,
@@ -213,6 +240,7 @@ export class TrajectoryBaker {
       platformTopY: top,
       reach: SQUARE.RADIUS + reach * SOLID.SCALE,
       retractActive: active,
+      formActive,
     };
   }
 }
@@ -239,8 +267,8 @@ export class UnitBaker {
   private readonly bakers: TrajectoryBaker[];
   private result: BandTrajectory[] | null;
 
-  constructor(defs: readonly RingUnitDef[] = UNIT_TIERS, frames = FRAMES) {
-    this.key = `${defs.map((d) => d.key).join('|')}#${frames.form}/${frames.retract}/${frames.hoist}`;
+  constructor(defs: readonly RingUnitDef[] = UNIT_TIERS, frames: FrameCounts = FRAMES) {
+    this.key = `${defs.map((d) => d.key).join('|')}#${frames.form}/${frames.retract}/${frames.hoist}/${frames.bridge ?? 0}`;
     this.bakers = defs.map((d) => new TrajectoryBaker(d, frames));
     this.n = this.bakers[0].n;
     if (this.bakers.some((b) => b.n !== this.n)) throw new Error('三档的带子节点数不同，整台网格拼不起来');
@@ -309,7 +337,7 @@ export function hoistProfile(src: Float64Array, n: number, k: number): Float64Ar
 export function bandFrame(
   f: number,
   rising: boolean,
-  frames: { form: number; retract: number; hoist: number } = FRAMES,
+  frames: FrameCounts = FRAMES,
   retractActive: number = frames.retract - 1,
   dropAt: number = HOIST.dropAt,
 ): number {
@@ -332,6 +360,158 @@ export const STEADY = {
   formed: FRAMES.form - 1,
   stowed: FRAMES.form + FRAMES.retract,
 } as const;
+
+/** 过渡帧的起始下标（排在升降帧后面） */
+export const BRIDGE_BASE = FRAMES.form + FRAMES.retract + FRAMES.hoist;
+
+/**
+ * 一档带子成形段的两条路（2026-10-27，修台架上「运动不对劲、单元破裂」）。按程度直接换算帧号（`bandFrame`）有三处跳：
+ * ① 进成形段的第一帧从直垂跳到正向第 1 帧（差 7–11 cm）；② 正向后四成的帧逐位相同，程度涨到六成形就到位、之后干等；
+ * ③ 程度一反向就从正向第 i 帧跳到回程第 (1−g) 帧，两条轨迹在中途形状不同（最多差 35 cm）。
+ * 这里把成形段拆成两条路——正向 = 直垂 → 过渡帧 → 正向第 1…formActive 帧；回程 = 回程第 0…retractActive 帧 → 直垂——
+ * 并给每帧在另一条路上找形状最接近的那一格（`toRet` / `toFwd`），反向时跳到那里接着走（`stepBandCursor`）。
+ */
+export interface BandPaths {
+  fwd: number[];
+  ret: number[];
+  /** 正向路第 i 格在回程路上形状最近的那一格；toFwd 反之 */
+  toRet: Int16Array;
+  toFwd: Int16Array;
+}
+
+export function bandPaths(traj: BandTrajectory, frames: FrameCounts = FRAMES): BandPaths {
+  const straight = frames.form + frames.retract - 1;
+  const base = frames.form + frames.retract + frames.hoist;
+  const bridge = frames.bridge ?? 0;
+  const fwd = [straight];
+  for (let j = 0; j < bridge; j++) fwd.push(base + j);
+  for (let k = 1; k <= Math.max(1, traj.formActive); k++) fwd.push(k);
+  const ret: number[] = [];
+  for (let r = 0; r <= traj.retractActive; r++) ret.push(frames.form + r);
+  ret.push(straight);
+  const n = traj.n;
+  const dist = (a: number, b: number): number => {
+    const A = traj.frames[a];
+    const B = traj.frames[b];
+    let d = 0;
+    for (let i = 0; i < 2 * n; i++) d = Math.max(d, Math.abs(A[i] - B[i]));
+    return d;
+  };
+  const nearest = (from: number[], to: number[]): Int16Array =>
+    Int16Array.from(from, (a) => {
+      let best = 0;
+      let bd = Infinity;
+      to.forEach((b, i) => {
+        const d = dist(a, b);
+        if (d < bd) {
+          bd = d;
+          best = i;
+        }
+      });
+      return best;
+    });
+  return { fwd, ret, toRet: nearest(fwd, ret), toFwd: nearest(ret, fwd) };
+}
+
+/** 反向的迟滞（成形段程度 g 的单位）：程度掉回最高点以下这么多才算真的在退，免得每帧一翻 */
+export const CURSOR_HYST = 0.03;
+
+/** 每条带的游标：mode 1 = 走正向路、0 = 走回程路；ext = 这一程程度的极值；ga / pa = 这一程起点的程度与路上的格 */
+export interface BandCursors {
+  mode: Uint8Array;
+  ext: Float32Array;
+  ga: Float32Array;
+  pa: Float32Array;
+  /** 此刻在路上的格（反向时按它找另一条路上最近的格） */
+  pos: Float32Array;
+}
+
+export function bandCursors(count: number): BandCursors {
+  const c = { mode: new Uint8Array(count), ext: new Float32Array(count), ga: new Float32Array(count), pa: new Float32Array(count), pos: new Float32Array(count) };
+  resetBandCursors(c);
+  return c;
+}
+
+export function resetBandCursors(c: BandCursors): void {
+  c.mode.fill(1);
+  c.ext.fill(0);
+  c.ga.fill(0);
+  c.pa.fill(0);
+  c.pos.fill(0);
+}
+
+/**
+ * 推进第 i 条带的游标，返回这一帧用哪一帧（帧号含义同 `bandFrame`）。升降段与三个静止态与 `bandFrame` 逐位相同，
+ * 只有成形段改走路径：程度 g 从这一程起点 ga 线性映射到路尽头，反向（越过迟滞）时跳到另一条路上形状最近的格。
+ */
+export function stepBandCursor(
+  c: BandCursors,
+  i: number,
+  f: number,
+  paths: BandPaths,
+  frames: FrameCounts = FRAMES,
+  dropAt: number = HOIST.dropAt,
+  hyst: number = CURSOR_HYST,
+): number {
+  const g = f >= 1 - 1e-4 ? 1 : f < dropAt ? 0 : (f - dropAt) / (1 - dropAt);
+  if (f < dropAt || g <= 1e-4) {
+    // 升降段 / 直垂：下一次进成形段从直垂沿正向路走
+    c.mode[i] = 1;
+    c.ext[i] = 0;
+    c.ga[i] = 0;
+    c.pa[i] = 0;
+    c.pos[i] = 0;
+    return bandFrame(f, true, frames, 0, dropAt);
+  }
+  if (g >= 1) {
+    // 成形态：一退就从回程第 0 格（= 成形态）走
+    c.mode[i] = 0;
+    c.ext[i] = 1;
+    c.ga[i] = 1;
+    c.pa[i] = 0;
+    c.pos[i] = 0;
+    return frames.form - 1;
+  }
+  if (c.mode[i] === 1) {
+    if (g < c.ext[i] - hyst) {
+      const p = paths.toRet[Math.round(c.pos[i])];
+      c.mode[i] = 0;
+      c.ga[i] = g;
+      c.pa[i] = p;
+      c.ext[i] = g;
+    } else c.ext[i] = Math.max(c.ext[i], g);
+  } else if (g > c.ext[i] + hyst) {
+    const p = paths.toFwd[Math.round(c.pos[i])];
+    c.mode[i] = 1;
+    c.ga[i] = g;
+    c.pa[i] = p;
+    c.ext[i] = g;
+  } else c.ext[i] = Math.min(c.ext[i], g);
+  const ga = c.ga[i];
+  const pa = c.pa[i];
+  let pos: number;
+  let path: number[];
+  if (c.mode[i] === 1) {
+    path = paths.fwd;
+    const end = path.length - 1;
+    pos = g <= ga ? pa : pa + ((g - ga) / Math.max(1e-6, 1 - ga)) * (end - pa);
+  } else {
+    path = paths.ret;
+    const end = path.length - 1;
+    pos = g >= ga ? pa : pa + ((ga - g) / Math.max(1e-6, ga)) * (end - pa);
+  }
+  pos = Math.max(0, Math.min(path.length - 1, pos));
+  c.pos[i] = pos;
+  return path[Math.round(pos)];
+}
+
+/** 两条带的帧能不能用一块膜连：都在升降段、或都在成形段（开门的带收成一小截时，与旁边成形的带之间不拉膜——那里正是门） */
+export function membraneJoins(ka: number, kb: number, frames: FrameCounts = FRAMES): boolean {
+  const s = frames.form + frames.retract;
+  const hoistA = ka >= s && ka < s + frames.hoist;
+  const hoistB = kb >= s && kb < s + frames.hoist;
+  return hoistA === hoistB;
+}
 
 /** 装置的摆放：缩放、整体下移、格子的世界坐标 */
 export interface Rig {

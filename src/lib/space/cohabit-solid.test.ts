@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FRAMES, HOIST, STEADY, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_ORDER, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
+import { BRIDGE_BASE, FRAMES, HOIST, STEADY, bandCursors, bandPaths, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_ORDER, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
 import { planLayout } from './unit-activation';
 import { FIGURE, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
 import { RING } from './skin-ring';
@@ -18,7 +18,7 @@ const layout8 = planLayout(8);
 
 describe('带子轨迹关键帧', () => {
   it('正向 + 回程 + 升降帧数齐全，每帧 2n 个数', () => {
-    expect(traj.frames).toHaveLength(FRAMES.form + FRAMES.retract + FRAMES.hoist);
+    expect(traj.frames).toHaveLength(FRAMES.form + FRAMES.retract + FRAMES.hoist + FRAMES.bridge);
     for (const f of traj.frames) expect(f.length).toBe(2 * traj.n);
   });
 
@@ -112,7 +112,7 @@ describe('带子轨迹关键帧', () => {
     const formed = traj.frames[FRAMES.form - 1];
     const retract0 = traj.frames[FRAMES.form];
     for (let i = 0; i < 2 * n; i++) expect(retract0[i]).toBe(formed[i]);
-    const last = traj.frames[traj.frames.length - 1];
+    const last = traj.frames[STEADY.straight];
     let maxX = 0;
     for (let i = 0; i < n; i++) maxX = Math.max(maxX, last[i]);
     expect(maxX * 100).toBeLessThan(40); // 松键回直后只剩 r = R0 的自然松弛（实测 ≈ 30 px）
@@ -155,7 +155,7 @@ describe('带子轨迹关键帧', () => {
     const D = HOIST.dropAt;
     expect(bandFrame(0, true)).toBe(STEADY.stowed);
     expect(bandFrame(0, false)).toBe(STEADY.stowed);
-    expect(STEADY.stowed).toBe(traj.frames.length - FRAMES.hoist);
+    expect(STEADY.stowed).toBe(traj.frames.length - FRAMES.hoist - FRAMES.bridge);
     expect(bandFrame(D, true)).toBe(STEADY.straight);
     expect(bandFrame(D, false)).toBe(STEADY.straight);
     expect(bandFrame(1, true)).toBe(STEADY.formed);
@@ -192,6 +192,84 @@ describe('带子轨迹关键帧', () => {
     const a = traj.frames[kEnd];
     const b = traj.frames[STEADY.straight];
     for (let i = 0; i < 2 * traj.n; i++) expect(a[i]).toBeCloseTo(b[i], 5);
+  });
+
+  // 2026-10-27 台架上「运动不对劲、单元破裂」：按程度直接换算帧号有三处跳（进成形段、反向、正向后段干等），改走两条路 + 游标
+  it('正向后段逐位相同（formActive 之后不再动）；过渡帧是直垂到正向第 1 帧的逐点插值', () => {
+    const n = traj.n;
+    expect(traj.formActive).toBeGreaterThan(FRAMES.form * 0.3);
+    expect(traj.formActive).toBeLessThan(FRAMES.form - 1);
+    const after = traj.frames[traj.formActive + 1];
+    const formed = traj.frames[STEADY.formed];
+    for (let i = 0; i < 2 * n; i++) expect(after[i]).toBeCloseTo(formed[i], 5);
+    const straight = traj.frames[STEADY.straight];
+    const entry = traj.frames[1];
+    for (let j = 0; j < FRAMES.bridge; j++) {
+      const f = traj.frames[BRIDGE_BASE + j];
+      const t = (j + 1) / (FRAMES.bridge + 1);
+      for (let i = 0; i < 2 * n; i += 17) expect(f[i]).toBeCloseTo(straight[i] + (entry[i] - straight[i]) * t, 9);
+    }
+  });
+
+  it('游标取帧：静止态与升降段与 bandFrame 逐位相同；一路涨上去每步都小，中途退回不跳轨，程度小幅来回不翻向', () => {
+    const paths = bandPaths(traj);
+    const D = HOIST.dropAt;
+    const n = traj.n;
+    const step = (a: number, b: number): number => {
+      let d = 0;
+      for (let i = 0; i < 2 * n; i++) d = Math.max(d, Math.abs(traj.frames[a][i] - traj.frames[b][i]));
+      return d * 100; // 引擎 px
+    };
+    const c = bandCursors(1);
+    for (const f of [0, 0.1, D * 0.7, D, 1]) expect(stepBandCursor(c, 0, f, paths)).toBe(bandFrame(f, true, FRAMES, traj.retractActive));
+    // 从直垂一路涨到成形：帧在正向路上单调前进，相邻两次之间形状差小于旧取帧进成形段那一下（直垂 → 正向第 1 帧）
+    resetBandCursors(c);
+    const jumpOld = step(STEADY.straight, 1);
+    let prev = stepBandCursor(c, 0, D, paths);
+    let maxStep = 0;
+    for (let f = D; f <= 1.0001; f += 0.002) {
+      const k = stepBandCursor(c, 0, Math.min(1, f), paths);
+      maxStep = Math.max(maxStep, step(prev, k));
+      prev = k;
+    }
+    expect(prev).toBe(STEADY.formed);
+    expect(maxStep).toBeLessThan(jumpOld * 0.6);
+    // 涨到一半退回来：反向那一下的跳变不超过另一条路上最近那格的差，远小于旧取帧「正向第 i 帧 → 回程第 (1−g) 帧」
+    resetBandCursors(c);
+    stepBandCursor(c, 0, D, paths);
+    let k = 0;
+    for (let f = D; f <= D + (1 - D) * 0.45; f += 0.002) k = stepBandCursor(c, 0, f, paths);
+    const gTurn = 0.45;
+    const fTurn = D + (1 - D) * gTurn;
+    let worst = 0;
+    let kPrev = k;
+    for (let f = fTurn; f >= D; f -= 0.002) {
+      const kk = stepBandCursor(c, 0, f, paths);
+      worst = Math.max(worst, step(kPrev, kk));
+      kPrev = kk;
+    }
+    const oldSwitch = step(bandFrame(fTurn, true, FRAMES, traj.retractActive), bandFrame(fTurn - 0.002, false, FRAMES, traj.retractActive));
+    expect(worst).toBeLessThan(Math.max(oldSwitch * 0.6, jumpOld * 0.6));
+    expect(kPrev).toBe(STEADY.straight);
+    // 小幅来回（±0.004，小于迟滞）：不翻向，帧不退
+    resetBandCursors(c);
+    stepBandCursor(c, 0, D, paths);
+    let kk = 0;
+    for (let f = D; f <= D + 0.3; f += 0.004) kk = stepBandCursor(c, 0, f, paths);
+    for (let r = 0; r < 20; r++) {
+      const k2 = stepBandCursor(c, 0, D + 0.3 - (r % 2) * 0.004, paths);
+      expect(c.mode[0]).toBe(1);
+      expect(step(k2, kk)).toBeLessThan(1e-9 + step(kk, kk + 1));
+    }
+  });
+
+  it('膜：两条带都在升降段或都在成形段才连；开门的带收成一小截、旁边还成形着，那里不拉膜', () => {
+    expect(membraneJoins(STEADY.formed, STEADY.formed)).toBe(true);
+    expect(membraneJoins(STEADY.formed, STEADY.straight)).toBe(true);
+    expect(membraneJoins(STEADY.stowed, STEADY.stowed + 3)).toBe(true);
+    expect(membraneJoins(STEADY.stowed, STEADY.formed)).toBe(false);
+    expect(membraneJoins(STEADY.stowed + 5, BRIDGE_BASE + 2)).toBe(false);
+    expect(membraneJoins(BRIDGE_BASE, STEADY.formed)).toBe(true);
   });
 
   it('预览（烘完之前）给的钉住端高度与烘完的一致，两帧：初始摆位与它的收起态', () => {

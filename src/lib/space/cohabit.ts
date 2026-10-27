@@ -1715,7 +1715,9 @@ export class CohabitSim {
     for (let i = 0; i < this.bandOpen.length; i++) {
       const target = this.bandWant[i] && !this.bandHold[i] ? 1 : 0;
       const o = this.bandOpen[i];
-      this.bandOpen[i] = target > o ? Math.min(1, o + up) : Math.max(0, o - down);
+      // 到位就停：目标 = 当前时不动（2026-10-27 修：原式把「收满 1.0 且仍要收」落进了「落回」那一支，
+      // 收满的带每 4 帧 1.0 → 0.975 → 回升，立体里开门的带在升降帧之间一直抖）
+      this.bandOpen[i] = target > o ? Math.min(1, o + up) : target < o ? Math.max(0, o - down) : o;
       const u = (i / BANDS) | 0;
       const wall = this.act.degree[u] * (1 - this.bandOpen[i]) >= COHABIT.WALL_AT ? 1 : 0;
       this.bandWall[i] = wall;

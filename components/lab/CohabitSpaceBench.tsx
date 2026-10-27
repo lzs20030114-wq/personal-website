@@ -17,7 +17,6 @@ import { FIGURE, RING_GRID_AXON, ROOM, ringGridViewMatrix, type RingGridView } f
 import { CAT, CAT_HEAD_YAW_MAX, clampHeadYaw, catRig, humanRig, strideOf, type Rig as BodyRig } from '../../src/lib/space/figure';
 import {
   COHABIT_PIVOT,
-  FRAMES,
   SCENE,
   STEADY,
   STOWED_STRIDE,
@@ -28,7 +27,8 @@ import {
   bakeMembrane,
   bakeUnit,
   bakeUnitSkin,
-  bandFrame,
+  bandCursors,
+  bandPaths,
   bandTopology,
   boxesMesh,
   catPlacement,
@@ -36,16 +36,20 @@ import {
   decimateTrajectory,
   figureYaw,
   furnitureBoxes,
+  membraneJoins,
   platesMesh,
   platformBand,
   platformSide,
   postsMesh,
+  resetBandCursors,
   rigFor,
   roomMesh,
   seatSpecOf,
+  stepBandCursor,
   unitDrop,
   unitFootY,
   unitTopY,
+  type BandPaths,
   type BandTrajectory,
   type Rig,
 } from '../../src/lib/space/cohabit-solid';
@@ -261,6 +265,7 @@ export function CohabitSpaceBench({
     const baker = new UnitBaker();
     const topo = bandTopology(baker.n);
     let trajs: BandTrajectory[] | null = null;
+    let paths: BandPaths[] | null = null;
     const pre = baker.preview();
     let rig: Rig = rigFor(layout, pre);
     setHud((h) => ({ ...h, side: platformSide(rig), total: layout.units.length }));
@@ -307,6 +312,7 @@ export function CohabitSpaceBench({
     };
     const onBaked = (): void => {
       trajs = baker.trajectories as BandTrajectory[];
+      paths = trajs.map((t) => bandPaths(t));
       rig = rigFor(layout, trajs[0]);
       // 三个静止态各烘一份整台：收起（换成 r = R0 自然松弛形压成的，与预览差十几 px，肉眼几乎看不出；抽稀）/ 直带子 / 成形
       const low = trajs.map((t) => decimateTrajectory(t, STOWED_STRIDE));
@@ -381,9 +387,8 @@ export function CohabitSpaceBench({
         }
     };
 
-    // 每条带的上一帧「成形 × (1 − 收回)」与方向（涨查正向轨迹、退查回程）
-    const fPrev = new Float32Array(layout.units.length * BANDS);
-    const rising = new Uint8Array(layout.units.length * BANDS).fill(1);
+    // 每条带在成形段两条路上走到哪一格（stepBandCursor：涨走正向路、退走回程路，反向时跳到另一条路上形状最近的格）
+    const cursors = bandCursors(layout.units.length * BANDS);
     const frameOf = new Int32Array(layout.units.length * BANDS);
 
     // 膜的摆放（本帧收集、实体画完后再画）
@@ -427,10 +432,7 @@ export function CohabitSpaceBench({
           for (let j = 0; j < BANDS; j++) {
             const i = u * BANDS + j;
             const f = Math.max(0, Math.min(1, deg * (1 - sim.bandOpen[i])));
-            if (f > fPrev[i] + 1e-6) rising[i] = 1;
-            else if (f < fPrev[i] - 1e-6) rising[i] = 0;
-            fPrev[i] = f;
-            const k = bandFrame(f, rising[i] === 1, FRAMES, trajs[UNIT_ORDER[j]].retractActive);
+            const k = stepBandCursor(cursors, i, f, (paths as BandPaths[])[UNIT_ORDER[j]]);
             frameOf[i] = k;
             if (k !== STEADY.stowed) allStowed = false;
             if (k !== STEADY.straight) allStraight = false;
@@ -449,6 +451,8 @@ export function CohabitSpaceBench({
               const j2 = (j + 1) % BANDS;
               const ka = frameOf[u * BANDS + j];
               const kb = frameOf[u * BANDS + j2];
+              // 开门的带收成一小截、旁边的带还成形着：那里是门，不拉膜（拉了就是一片从短桩斜扯到台缘的布）
+              if (!membraneJoins(ka, kb)) continue;
               if (ka === kb) {
                 const id = ensureSkin(UNIT_ORDER[j], UNIT_ORDER[j2], ka);
                 let sl = skinPerKey.get(id);
@@ -579,8 +583,7 @@ export function CohabitSpaceBench({
     const rebuild = (): void => {
       sim = makeSim(spaceKey, seed);
       bakeFurniture();
-      fPrev.fill(0);
-      rising.fill(1);
+      resetBandCursors(cursors);
       lastHud = '';
       render();
       pushHud();
