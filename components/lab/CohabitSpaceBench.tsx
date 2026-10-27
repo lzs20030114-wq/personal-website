@@ -8,13 +8,13 @@ import { LabViewDock } from './LabCtl';
 import { planFromHash } from './planHash';
 import { useBenchLoop } from './useBenchLoop';
 import { DARK_A, DARK_B, LITE_A, LITE_B, MEM_DARK, MEM_LITE, RAIL_DARK, RAIL_LITE, ROOM_DARK, ROOM_LITE } from './SkinSolidBench';
-import { toneColor } from './figurePalette';
+import { catColor, coatOf, outfitOf, personColor } from './figurePalette';
 import { FlatRenderer, bakeIndexed, type MeshPlace } from '../../src/lib/linkage/gl3d';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import type { Vec3 } from '../../src/lib/linkage/solver3d';
 import { COHABIT, CohabitSim, SPACE_MODES, bandAngle, partySizes, type EventKind, type SpaceMode } from '../../src/lib/space/cohabit';
 import { FIGURE, RING_GRID_AXON, ROOM, ringGridViewMatrix, type RingGridView } from '../../src/lib/space/skin-grid';
-import { CAT, CAT_HEAD_YAW_MAX, clampHeadYaw, catRig, humanRig, strideOf, type Rig as BodyRig } from '../../src/lib/space/figure';
+import { CAT, CAT_HEAD_YAW_MAX, clampHeadYaw, catRig, humanRig, strideOf, styleKey, type Rig as BodyRig, type Tone } from '../../src/lib/space/figure';
 import {
   COHABIT_PIVOT,
   SCENE,
@@ -113,7 +113,7 @@ const COPY = {
     title: '人猫同台 · 立体',
     sub: (side: number, roomH: number) => `8×8 · 方台边长 ${side.toFixed(2)} m · 房高 ${roomH.toFixed(2)} m · ${SCENE.people} 位访客 · ${SCENE.cats} 只猫`,
     hint: '拖拽旋转 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回、给人让路 · 控制在实验室',
-    hintCtl: '拖拽旋转 · 空间三档对照 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回，挡路的带各自收回 · 带子形状取自三条引擎（每档一条）的关键帧',
+    hintCtl: '拖拽旋转 · 空间三档对照 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回，挡路的带各自收回 · 带子形状取自三条引擎（每档一条）的关键帧 · 每点一次重来换一批访客的穿着与猫的花色',
     baking: (p: number) => `算带子轨迹 ${Math.round(p * 100)}%`,
     line: (t: number, formed: number, total: number, c: Record<EventKind, number>) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · 成形 ${formed} / ${total} · 共视 ${c.gaze} · 共温 ${c.warmth} · 共触 ${c.touch} · 交接 ${c.pass}`,
@@ -127,7 +127,7 @@ const COPY = {
     title: 'People and cats together, in 3D',
     sub: (side: number, roomH: number) => `8×8 · square platform ${side.toFixed(2)} m · room ${roomH.toFixed(2)} m high · ${SCENE.people} visitors · ${SCENE.cats} cats`,
     hint: 'Drag to orbit · units rest stowed at the ceiling, then descend, form, retract and give way under the Lab 2-14 rules · controls in the lab',
-    hintCtl: 'Drag to orbit · three spaces to compare · units rest stowed at the ceiling, then descend and form under the Lab 2-14 rules, bands in the way retract on their own · band shapes come from three engine runs, one per depth',
+    hintCtl: 'Drag to orbit · three spaces to compare · units rest stowed at the ceiling, then descend and form under the Lab 2-14 rules, bands in the way retract on their own · band shapes come from three engine runs, one per depth · each restart dresses the visitors anew and gives the cats new coats',
     baking: (p: number) => `baking band trajectory ${Math.round(p * 100)}%`,
     line: (t: number, formed: number, total: number, c: Record<EventKind, number>) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · formed ${formed} / ${total} · co-gaze ${c.gaze} · co-warmth ${c.warmth} · contact ${c.touch} · crossing ${c.pass}`,
@@ -376,21 +376,22 @@ export function CohabitSpaceBench({
     };
     const STRIDE_M = strideOf(FIGURE.HEIGHT) / UNITS_PER_M;
     const frac = (v: number): number => v - Math.floor(v);
-    /** 同一份网格、同一套配色的一批摆放（人的上衣 / 头发按 variant = 访客编号换色） */
-    type Batch = { r: BodyRig; key: string; variant: number; body: MeshPlace[]; head: MeshPlace[] };
+    /** 同一份网格、同一套配色的一批摆放（人按穿着、猫按花色上色；paintKey 区分配色） */
+    type Paint = (tone: Tone) => [[number, number, number], [number, number, number]];
+    type Batch = { r: BodyRig; key: string; paint: Paint; body: MeshPlace[]; head: MeshPlace[] };
     /** 一副 Rig 摆一处：身子 yaw + 平移，头绕枢轴再转 headTurn（世界坐标） */
-    const placeBoth = (batches: Map<string, Batch>, r: BodyRig, key: string, variant: number, x: number, y: number, z: number, yaw: number, headTurn: number): void => {
+    const placeBoth = (batches: Map<string, Batch>, r: BodyRig, key: string, paintKey: string, paint: Paint, x: number, y: number, z: number, yaw: number, headTurn: number): void => {
       const c = Math.cos(yaw), s = Math.sin(yaw);
-      const id = `${key}#${variant}`;
+      const id = `${key}#${paintKey}`;
       let b = batches.get(id);
-      if (!b) batches.set(id, (b = { r, key, variant, body: [], head: [] }));
+      if (!b) batches.set(id, (b = { r, key, paint, body: [], head: [] }));
       b.body.push({ yaw, x, y, z });
       b.head.push({ yaw: yaw + r.headYaw + headTurn, x: r.pivot[0] * c - r.pivot[2] * s + x, y: r.pivot[1] + y, z: r.pivot[0] * s + r.pivot[2] * c + z });
     };
     const drawBatches = (batches: Map<string, Batch>): void => {
       for (const b of batches.values())
         for (const part of b.r.parts) {
-          const [dark, lite] = toneColor(part.tone, b.variant);
+          const [dark, lite] = b.paint(part.tone);
           R.drawMeshAt(`${b.key}:${part.on}:${part.tone}`, part.on === 'body' ? b.body : b.head, dark, lite);
         }
     };
@@ -499,11 +500,16 @@ export function CohabitSpaceBench({
       }
       // 人：走（步态按走过的路程推相位）/ 站 / 坐（按这张家具的座面解出来；看着猫时前倾）；头随视线转，夹在 ±75°
       const people = new Map<string, Batch>();
+      // 穿着与花色按出场顺序取，每点一次「重来」往后轮一轮（六位访客一轮六套、两只猫一轮两种），几轮下来全都见得到
+      const round = seed - SCENE.seed;
       for (const p of sim.people) {
+        const variant = p.id - 1 + round * SCENE.people;
+        const style = outfitOf(variant).style;
+        const sk = styleKey(style);
         const mo = track(p, p.walker.x, p.walker.y);
         const seat = p.seated && p.seat !== null ? sim.seats[p.seat] : null;
         const rect = seat && sim.furn ? sim.furn.rects[seat.furn] : null;
-        let key = 'p-stand';
+        let key = `p-stand|${sk}`;
         let r: BodyRig;
         let heading = p.walker.heading;
         let x = p.walker.x;
@@ -511,12 +517,13 @@ export function CohabitSpaceBench({
         if (seat && rect) {
           const s = seatSpecOf(rect, seat);
           const lean = p.watching !== null && !p.ignores;
-          key = `p-sit-${s.front.toFixed(3)}-${s.back.toFixed(3)}-${lean ? 1 : 0}`;
+          key = `p-sit-${s.front.toFixed(3)}-${s.back.toFixed(3)}-${lean ? 1 : 0}|${sk}`;
           r = rigOf(key, () =>
             humanRig({
               height: FIGURE.HEIGHT,
               pose: 'sit',
               lean,
+              style,
               seat: { top: s.top * UNITS_PER_M, front: s.front * UNITS_PER_M, back: s.back * UNITS_PER_M, thick: s.thick * UNITS_PER_M, backTop: s.backTop * UNITS_PER_M },
             }),
           );
@@ -525,29 +532,30 @@ export function CohabitSpaceBench({
           y = seat.y;
         } else if (mo.speed > MOVING.person) {
           const k = Math.floor(frac(mo.dist / STRIDE_M) * WALK_FRAMES.person) % WALK_FRAMES.person;
-          key = `p-walk-${k}`;
-          r = rigOf(key, () => humanRig({ height: FIGURE.HEIGHT, pose: 'walk', phase: k / WALK_FRAMES.person }));
-        } else r = rigOf(key, () => humanRig({ height: FIGURE.HEIGHT, pose: 'stand' }));
-        placeBoth(people, r, key, p.id, x * UNITS_PER_M, ROOM.FLOOR_Y, y * UNITS_PER_M, figureYaw(heading), clampHeadYaw(p.walker.gaze - heading));
+          key = `p-walk-${k}|${sk}`;
+          r = rigOf(key, () => humanRig({ height: FIGURE.HEIGHT, pose: 'walk', phase: k / WALK_FRAMES.person, style }));
+        } else r = rigOf(key, () => humanRig({ height: FIGURE.HEIGHT, pose: 'stand', style }));
+        placeBoth(people, r, key, `v${variant}`, (tone) => personColor(tone, variant), x * UNITS_PER_M, ROOM.FLOOR_Y, y * UNITS_PER_M, figureYaw(heading), clampHeadYaw(p.walker.gaze - heading));
       }
       drawBatches(people);
       // 猫：台上的顺着方台内切圆那一圈坐 / 蜷 / 走（身子绕着立杆弯过去，不穿杆）、跨台时贴着芯的一侧跳过去；地面上的照平面位置。
       // 成形段才有台面（落到位的直筒还没有平台）：脚下的台程度到顶才把猫画在平台面上
       const band = trajs ? platformBand(rig, trajs) : null;
       const cats = new Map<string, Batch>();
-      for (const c of sim.cats) {
+      sim.cats.forEach((c, i) => {
+        const look = coatOf(i + round * SCENE.cats);
         const mo = track(c, c.walker.x, c.walker.y);
         const support = sim.space === 'empty' ? [] : sim.supportOf(c);
         const formed = band !== null && support.length > 0 && support.every((u) => sim.act.degree[u.i] >= 1 - 1e-3);
         const pl = catPlacement({ x: c.walker.x, y: c.walker.y, heading: c.walker.heading, state: c.state }, support, formed, mo.speed > MOVING.cat, layout, band ?? { R: 0 });
         const k = pl.pose === 'walk' ? Math.floor(frac(mo.dist / CAT.STRIDE) * WALK_FRAMES.cat) % WALK_FRAMES.cat : 0;
-        const key = `c-${pl.pose}-${pl.tail}-${pl.bend.toFixed(3)}-${k}`;
-        const r = rigOf(key, () => catRig({ unit: UNITS_PER_M, pose: pl.pose, tail: pl.tail, bend: pl.bend, phase: k / WALK_FRAMES.cat }));
+        const key = `c-${pl.pose}-${pl.tail}-${pl.bend.toFixed(3)}-${k}|${look.coat}`;
+        const r = rigOf(key, () => catRig({ unit: UNITS_PER_M, pose: pl.pose, tail: pl.tail, bend: pl.bend, phase: k / WALK_FRAMES.cat, coat: look.coat }));
         // 台上的猫站在自己那台的台面上（各台高度不同）；跨台时取两台里高的那台
         const under = support.length ? Math.max(...support.map((u) => tableTop[u.i])) : TABLE_TOP.stand;
         const footY = pl.onPlatform ? ROOM.FLOOR_Y - under * UNITS_PER_M - pl.lift * UNITS_PER_M : ROOM.FLOOR_Y;
-        placeBoth(cats, r, key, 0, pl.x * UNITS_PER_M, footY, pl.y * UNITS_PER_M, figureYaw(pl.heading), clampHeadYaw(pl.headTurn, CAT_HEAD_YAW_MAX));
-      }
+        placeBoth(cats, r, key, look.coat, (tone) => catColor(tone, look), pl.x * UNITS_PER_M, footY, pl.y * UNITS_PER_M, figureYaw(pl.heading), clampHeadYaw(pl.headTurn, CAT_HEAD_YAW_MAX));
+      });
       drawBatches(cats);
       // 膜：半透明，实体（带子、立杆、人、猫、家具）都画完之后再画；整台的按视深从远到近
       if (sim.space !== 'empty' && trajs) {

@@ -81,8 +81,17 @@ function periodic(keys: readonly (readonly [number, number])[]): (t: number) => 
 
 // ── 分色：每种颜色一个壳组，台架按组上色 ────────────────────────────────────────
 
-/** 零件的颜色类别（颜色本身由台架给：几何不管颜色，同一类可以每个人一个颜色） */
-export type Tone = 'skin' | 'hair' | 'shirt' | 'pants' | 'shoe' | 'fur' | 'muzzle' | 'eye' | 'shine' | 'nose' | 'stripe';
+/**
+ * 零件的颜色类别（颜色本身由台架给：几何不管颜色，同一类可以每个人一个颜色）。
+ *   人：肤、发、衣（上衣 / 外套 / 连衣裙）、内搭（外套里那件 / 卫衣口袋与抽绳 / 条纹衫的条纹）、下装（裤 / 短裤 / 裙）、
+ *       袜、鞋、帽（含发绳）、包、镜框；
+ *   猫：毛（底色）、斑（第二色）、斑 2（第三色，三花）、虎斑、口鼻、鼻头与耳内、虹膜（两只眼不同色时右眼用 iris2）；
+ *   共用：眼睛（人的眼睛、猫的瞳孔）、高光。
+ */
+export type Tone =
+  | 'skin' | 'hair' | 'shirt' | 'inner' | 'pants' | 'sock' | 'shoe' | 'hat' | 'bag' | 'frame'
+  | 'fur' | 'patch' | 'patch2' | 'stripe' | 'muzzle' | 'nose' | 'iris' | 'iris2'
+  | 'eye' | 'shine';
 
 /** 一组同色零件：挂在身子上还是头上（头单独绕枢轴转） */
 export interface RigPart {
@@ -94,10 +103,40 @@ export interface RigPart {
 /** 一件东西（身子或头）的分色壳组：同一套变换作用在所有颜色上 */
 class Toned {
   private readonly groups = new Map<Tone, ShellBuilder>();
+  /** 贴在别的零件上的件（花纹、爪子）弯的时候跟着谁转：壳名 → 那块零件中心的 z */
+  private readonly anchors = new Map<string, number>();
   b(tone: Tone): ShellBuilder {
     let g = this.groups.get(tone);
     if (!g) this.groups.set(tone, (g = new ShellBuilder()));
     return g;
+  }
+  /** 摆一块零件；anchor = 它贴在哪块零件上（弯的时候整块跟那块一起转） */
+  put(tone: Tone, name: string, x: Box3, anchor?: Box3): void {
+    putBox(this.b(tone), name, x);
+    if (anchor) this.anchors.set(name, anchor.c[2]);
+  }
+  /**
+   * 绕竖直轴弯：轴在模型系 x = −R 处（猫的右侧；在环形平台上就是立杆）。方块不能弯成弧，故**每个零件整块地转**——
+   * 按它的中心沿 z 的距离算出转角，绕轴转过去（零件形状一个数不变），身子、腿、尾巴各节就顺着环排开。
+   * 贴在别的零件上的花纹与爪子按所贴零件的中心算，跟着它一起转，不会错开。
+   */
+  bend(R: number): void {
+    for (const b of this.builders)
+      for (const s of b.shells) {
+        let cz = this.anchors.get(s.name);
+        if (cz === undefined) {
+          cz = 0;
+          for (let v = s.v0; v < s.v1; v++) cz += b.pos[v * 3 + 2];
+          cz /= s.v1 - s.v0;
+        }
+        const a = cz / R;
+        const c = Math.cos(a), sn = Math.sin(a);
+        for (let v = s.v0; v < s.v1; v++) {
+          const x = b.pos[v * 3] + R, z = b.pos[v * 3 + 2] - cz;
+          b.pos[v * 3] = x * c - z * sn - R;
+          b.pos[v * 3 + 2] = x * sn + z * c;
+        }
+      }
   }
   get builders(): ShellBuilder[] {
     return [...this.groups.values()];
@@ -123,6 +162,37 @@ class Toned {
 type Box3 = { c: V3; axes: [V3, V3, V3] };
 const putBox = (b: ShellBuilder, name: string, x: Box3): void => void b.box(name, x.c, ...x.axes);
 const axisBox = (c: V3, h: V3): Box3 => ({ c, axes: [[h[0], 0, 0], [0, h[1], 0], [0, 0, h[2]]] });
+/** 轴对齐的一块：每轴 [lo, hi] */
+const spanBox = (lo: V3, hi: V3): Box3 => axisBox(lerp3(lo, hi, 0.5), scale(sub(hi, lo), 0.5));
+
+/**
+ * 在父件自己的系里取一块：每轴 [lo, hi]（相对父件中心、沿父件的三条轴，单位同父件）。衣片、包、发饰这类贴着身子的件用它——
+ * 父件怎么摆（转、倾），它就跟着怎么摆，尺寸一个数不变。
+ */
+function inFrame(p: Box3, lo: V3, hi: V3): Box3 {
+  let c = p.c;
+  const axes: V3[] = [];
+  for (let k = 0; k < 3; k++) {
+    const u = norm(p.axes[k]);
+    c = add(c, scale(u, (lo[k] + hi[k]) / 2));
+    axes.push(scale(u, (hi[k] - lo[k]) / 2));
+  }
+  return { c, axes: axes as [V3, V3, V3] };
+}
+
+/**
+ * 贴在父件表面的花纹 / 衣片：每轴取 lo…hi（按父件半边长归一：−1…1，±1 = 父件表面）；落在表面上（|值| ≥ 1）的那一端
+ * 再往外凸 out，不在表面上的那一端埋在父件里看不见。各层的凸出量错开，不与父件、别的层共面（不闪）。
+ */
+function mark(p: Box3, lo: V3, hi: V3, out: number): Box3 {
+  const a: number[] = [], b: number[] = [];
+  for (let k = 0; k < 3; k++) {
+    const L = len(p.axes[k]);
+    a.push(lo[k] * L - (lo[k] <= -1 ? out : 0));
+    b.push(hi[k] * L + (hi[k] >= 1 ? out : 0));
+  }
+  return inFrame(p, a as unknown as V3, b as unknown as V3);
+}
 
 /**
  * 两个关节之间的一节方块：沿 a → c，两端各多伸出 extA / extC 插进相邻那节（关节处不露缝）；
@@ -389,27 +459,122 @@ function sitJ(seat: SeatSpec, lean: boolean): HumanJ {
   return { ...base, legs, arms, headPitch: lean ? 0.12 : 0.05 };
 }
 
-/** 身子：胯（裤）、胸（衣）、颈（肤）、两臂（袖 + 手）、两腿（裤 + 鞋） */
-function buildHumanBody(t: Toned, j: HumanJ): void {
+// ── 穿着（2026-10-27 作者「人的建模多丰富一点，看得出他们穿不同的衣服」）────────────────────────────────────
+//
+// 穿着 = 哪些零件换成哪一类颜色 + 几块贴在身子 / 头上的衣片（都在所贴零件自己的系里摆，换姿态跟着转、尺寸不变）。
+// 颜色在台架的配色表里（components/lab/figurePalette.ts）。默认一套 = 2026-10-25 那个人（长袖、长裤、短发），逐位不变。
+
+export interface HumanStyle {
+  /** 上衣：长袖 / 短袖（前臂露肤）/ 敞开的外套（中间露出内搭）/ 连帽卫衣（帽子搭在后背、胸前大口袋、两根抽绳） */
+  top?: 'long' | 'tee' | 'jacket' | 'hoodie';
+  /** 横条纹（胸前五道、两只袖子各两道，颜色 = 内搭） */
+  stripes?: boolean;
+  /** 下装：长裤 / 及膝短裤（小腿露肤）/ 裙子（站着、走着是两层的 A 字裙，坐着平铺在大腿上；腿露肤） */
+  bottom?: 'pants' | 'shorts' | 'skirt';
+  /** 露出小腿时穿袜子（鞋口往上 7 cm） */
+  socks?: boolean;
+  /** 发型：短发 / 长发（两侧盖住耳朵、后面垂到背上）/ 头顶丸子 / 马尾（发绳 = 帽的颜色） */
+  hair?: 'short' | 'long' | 'bun' | 'ponytail';
+  hat?: 'none' | 'beanie' | 'cap';
+  glasses?: boolean;
+  /** 双肩包（坐下时放下：坐着不画） */
+  backpack?: boolean;
+}
+export const HUMAN_STYLE_DEFAULT: Readonly<Required<HumanStyle>> = {
+  top: 'long',
+  stripes: false,
+  bottom: 'pants',
+  socks: false,
+  hair: 'short',
+  hat: 'none',
+  glasses: false,
+  backpack: false,
+};
+const fullStyle = (s: HumanStyle | undefined): Required<HumanStyle> => ({ ...HUMAN_STYLE_DEFAULT, ...s });
+/** 穿着的几何指纹（台架按它缓存网格：同一套几何不同颜色共用一份） */
+export const styleKey = (s: HumanStyle | undefined): string => {
+  const f = fullStyle(s);
+  return `${f.top}${f.stripes ? '+s' : ''}.${f.bottom}${f.socks ? '+k' : ''}.${f.hair}.${f.hat}${f.glasses ? '.g' : ''}${f.backpack ? '.b' : ''}`;
+};
+
+/**
+ * 身子：胯（裤）、胸（衣；穿外套时是内搭）、颈（肤）、两臂（袖 + 手；短袖前臂露肤）、两腿（裤 + 鞋；短裤、裙子小腿露肤），
+ * 再加穿着带来的衣片：外套、卫衣的帽子 / 口袋 / 抽绳、条纹、裙子、袜子、双肩包、长发搭在背上那一片。
+ */
+function buildHumanBody(t: Toned, j: HumanJ, st: Required<HumanStyle>, sitting: boolean): void {
   const B = HUMAN_BOX;
   const sp0 = spineAt(j, 0.0475);
-  putBox(t.b('pants'), 'pelvis', { c: sp0.c, axes: [[B.PELVIS[0], 0, 0], scale(sp0.up, B.PELVIS[1]), scale(sp0.fwd, B.PELVIS[2])] });
+  const pelvis: Box3 = { c: sp0.c, axes: [[B.PELVIS[0], 0, 0], scale(sp0.up, B.PELVIS[1]), scale(sp0.fwd, B.PELVIS[2])] };
+  t.put('pants', 'pelvis', pelvis);
   const sp1 = spineAt(j, 0.1975);
-  putBox(t.b('shirt'), 'chest', { c: add(sp1.c, scale(sp1.fwd, 0.002)), axes: [[B.CHEST[0], 0, 0], scale(sp1.up, B.CHEST[1]), scale(sp1.fwd, B.CHEST[2])] });
+  // 胸块的系：[左右, 沿脊柱朝上, 朝前]；外套、帽子、包都在这个系里按米数摆
+  const chest: Box3 = { c: add(sp1.c, scale(sp1.fwd, 0.002)), axes: [[B.CHEST[0], 0, 0], scale(sp1.up, B.CHEST[1]), scale(sp1.fwd, B.CHEST[2])] };
+  t.put(st.top === 'jacket' ? 'inner' : 'shirt', 'chest', chest);
   const nk = neckOf(j);
   putBox(t.b('skin'), 'neck', segBox(nk.base, nk.pivot, B.NECK[0], B.NECK[1], 0.02, 0.012));
+  const [cw, ch, cd] = B.CHEST;
+  /** 躯干最外一层的前、后、顶（穿外套时是外套的） */
+  const jacket = st.top === 'jacket';
+  const front = jacket ? 0.0625 : cd;
+  const back = jacket ? -0.062 : -cd;
+  const top = jacket ? 0.1135 : ch;
+  if (jacket) {
+    // 外套：后片 + 两侧（前面只到胸块里，看不见）+ 左右两片前襟，中间露出内搭；下摆比胸块低 3.5 cm（盖住胯的上半）。
+    // 前襟比后片高、低、宽各 2 mm，面不共面
+    t.put('shirt', 'jacket-body', inFrame(chest, [-0.106, -0.1425, -0.062], [0.106, 0.1115, 0.03]));
+    t.put('shirt', 'jacket-l', inFrame(chest, [0.024, -0.1445, 0.02], [0.108, 0.1135, 0.0625]));
+    t.put('shirt', 'jacket-r', inFrame(chest, [-0.108, -0.1445, 0.02], [-0.024, 0.1135, 0.0625]));
+  }
+  if (st.top === 'hoodie') {
+    // 帽子搭在后背上（顶比胸块高 2 cm，离头底还有 6 mm）、胸前大口袋、两根抽绳——三样都用内搭色（深一档）：
+    // 帽子与衣服同色时朝后那一面与后背明暗一样，从背后看不出来
+    t.put('inner', 'hood', inFrame(chest, [-0.062, 0.06, -0.093], [0.062, 0.13, -0.052]));
+    t.put('inner', 'pocket', inFrame(chest, [-0.055, -0.0955, 0.04], [0.055, -0.03, 0.059]));
+    for (const s of [1, -1]) t.put('inner', `string-${s > 0 ? 'l' : 'r'}`, inFrame(chest, [s > 0 ? 0.014 : -0.021, 0, 0.05], [s > 0 ? 0.021 : -0.014, 0.1, 0.0605]));
+  }
+  if (st.stripes && !jacket) [-0.085, -0.045, -0.005, 0.035, 0.075].forEach((y, i) => t.put('inner', `stripe-${i}`, inFrame(chest, [-cw - 0.0015, y - 0.01, -cd - 0.0015], [cw + 0.0015, y + 0.01, cd + 0.0015])));
+  if (st.hair === 'long') t.put('hair', 'hair-drape', inFrame(chest, [-0.055, 0.03, back - 0.004], [0.055, 0.115, back + 0.012]));
+  if (st.backpack && !sitting) {
+    // 双肩包：贴在后背上（压进 4 mm），上沿比帽子低；前面两条肩带从肩顶垂到胸口
+    t.put('bag', 'pack', inFrame(chest, [-0.075, -0.097, back - 0.045], [0.075, 0.05, back + 0.004]));
+    t.put('bag', 'pack-pocket', inFrame(chest, [-0.05, -0.085, back - 0.0495], [0.05, -0.02, back - 0.04]));
+    for (const s of [1, -1]) {
+      const k = s > 0 ? 'l' : 'r';
+      const x0 = s > 0 ? 0.045 : -0.069, x1 = s > 0 ? 0.069 : -0.045;
+      t.put('bag', `strap-${k}`, inFrame(chest, [x0, -0.04, front - 0.004], [x1, top + 0.003, front + 0.0035]));
+      t.put('bag', `strap-top-${k}`, inFrame(chest, [x0 + s * 0.0005, top - 0.004, back - 0.002], [x1 - s * 0.0005, top + 0.0045, front + 0.0025]));
+    }
+  }
+  if (st.bottom === 'skirt') {
+    // 裙腰包住胯的下半（胯的上半露在外面，同色 = 腰头）
+    t.put('pants', 'skirt-top', inFrame(pelvis, [-0.098, -0.0725, -0.057], [0.098, 0.03, 0.057]));
+    if (!sitting) t.put('pants', 'skirt-hem', inFrame(pelvis, [-0.112, -0.185, -0.088], [0.112, -0.065, 0.088]));
+    else {
+      // 坐着：裙摆平铺在两条大腿上，底面比座面高 1.5 mm（不插进座面），盖到大腿六成
+      const yHip = j.legs[0].hip[1];
+      const zHip = (j.legs[0].hip[2] + j.legs[1].hip[2]) / 2;
+      t.put('pants', 'skirt-lap', spanBox([-0.112, yHip - B.THIGH[1] + 0.0015, zHip - 0.055], [0.112, yHip + B.THIGH[1] + 0.0035, zHip + 0.62 * HUMAN.THIGH]));
+    }
+  }
   for (let i = 0; i < 2; i++) {
     const s = i === 0 ? 1 : -1;
     const tag = i === 0 ? 'l' : 'r';
     const L = j.legs[i];
     const A = j.arms[i];
-    putBox(t.b('pants'), `thigh-${tag}`, segBox(L.hip, L.knee, B.THIGH[0], B.THIGH[1], 0.052, 0.015));
-    putBox(t.b('pants'), `shin-${tag}`, segBox(L.knee, L.ankle, B.SHIN[0], B.SHIN[1], 0.015, 0.008));
+    t.put(st.bottom === 'skirt' ? 'skin' : 'pants', `thigh-${tag}`, segBox(L.hip, L.knee, B.THIGH[0], B.THIGH[1], 0.052, 0.015));
+    const shin = segBox(L.knee, L.ankle, B.SHIN[0], B.SHIN[1], 0.015, 0.008);
+    t.put(st.bottom === 'pants' ? 'pants' : 'skin', `shin-${tag}`, shin);
+    if (st.socks && st.bottom !== 'pants') {
+      // 袜子：从鞋里（踝下 4 mm）到踝上 6 cm（小腿的系：沿节从膝朝踝，踝在 +0.1265）
+      t.put('sock', `sock-${tag}`, inFrame(shin, [-B.SHIN[0] - 0.0015, 0.0665, -B.SHIN[1] - 0.0015], [B.SHIN[0] + 0.0015, 0.1305, B.SHIN[1] + 0.0015]));
+    }
     // 鞋：在脚的局部系里摆好，再按俯仰、外撇转到踝上
     const R = (v: V3): V3 => rotY(rotX(v, -L.pitch), -s * L.out);
     putBox(t.b('shoe'), `shoe-${tag}`, { c: add(L.ankle, R(B.SHOE_C)), axes: [R([B.SHOE[0], 0, 0]), R([0, B.SHOE[1], 0]), R([0, 0, B.SHOE[2]])] });
-    putBox(t.b('shirt'), `upperarm-${tag}`, segBox(A.shoulder, A.elbow, B.UPPER_ARM[0], B.UPPER_ARM[1], 0.024, 0.012));
-    putBox(t.b('shirt'), `forearm-${tag}`, segBox(A.elbow, A.wrist, B.FOREARM[0], B.FOREARM[1], 0.012, 0.006));
+    const ua = segBox(A.shoulder, A.elbow, B.UPPER_ARM[0], B.UPPER_ARM[1], 0.024, 0.012);
+    t.put('shirt', `upperarm-${tag}`, ua);
+    if (st.stripes && !jacket) [[-0.1, 0.08], [0.35, 0.53]].forEach(([a, b], k) => t.put('inner', `sleeve-stripe-${tag}${k}`, mark(ua, [-1, a, -1], [1, b, 1], 0.0012)));
+    t.put(st.top === 'tee' ? 'skin' : 'shirt', `forearm-${tag}`, segBox(A.elbow, A.wrist, B.FOREARM[0], B.FOREARM[1], 0.012, 0.006));
     const [hl, hw, ht] = B.HAND;
     const across = norm(cross(A.hand, A.palm));
     putBox(t.b('skin'), `hand-${tag}`, { c: add(A.wrist, scale(A.hand, hl - 0.006)), axes: [scale(across, hw), scale(A.hand, hl), scale(A.palm, ht)] });
@@ -418,19 +583,56 @@ function buildHumanBody(t: Toned, j: HumanJ): void {
 
 /**
  * 头（局部系：原点 = 枢轴，y 向上，z 朝前）：头块（肤）、发帽与后脑头发（发；刘海比额头凸出 2.5 mm）、
- * 两只眼睛（深色，位置偏低）与高光（白）。点缀件都比所贴的面凸出一两毫米，不共面。
+ * 两只眼睛（深色，位置偏低）与高光（白）；再加发型、帽子、眼镜。点缀件都比所贴的面凸出一两毫米，不共面。
  */
-function buildHumanHead(t: Toned, pitch: number): void {
+function buildHumanHead(t: Toned, pitch: number, st: Required<HumanStyle>): void {
   const B = HUMAN_BOX;
   putBox(t.b('skin'), 'head', axisBox(B.HEAD_C, B.HEAD));
   putBox(t.b('hair'), 'hair-cap', axisBox([0, 0.1125, 0.0065], [0.0595, 0.019, 0.062]));
-  putBox(t.b('hair'), 'hair-back', axisBox([0, 0.07, -0.0555], [0.0588, 0.03, 0.006]));
+  if (st.hair === 'long') {
+    // 长发：后面垂到头底以下（接上背上那一片），两侧盖住耳朵、到脸颊后面
+    t.put('hair', 'hair-back-long', spanBox([-0.0605, -0.03, -0.065], [0.0605, 0.105, -0.05]));
+    for (const s of [1, -1]) t.put('hair', `hair-side-${s > 0 ? 'l' : 'r'}`, spanBox([s > 0 ? 0.0555 : -0.0635, 0, -0.052], [s > 0 ? 0.0635 : -0.0555, 0.1, 0.012]));
+  } else putBox(t.b('hair'), 'hair-back', axisBox([0, 0.07, -0.0555], [0.0588, 0.03, 0.006]));
+  if (st.hair === 'bun') t.put('hair', 'hair-bun', spanBox([-0.024, 0.126, -0.05], [0.024, 0.158, -0.008]));
+  if (st.hair === 'ponytail') {
+    t.put('hat', 'hair-tie', spanBox([-0.016, 0.068, -0.071], [0.016, 0.098, -0.0595]));
+    t.put('hair', 'hair-tail', spanBox([-0.017, -0.02, -0.083], [0.017, 0.085, -0.065]));
+  }
+  if (st.hat === 'beanie') {
+    // 毛线帽：帽身 + 翻边（比帽身大一圈）+ 顶上一颗绒球
+    t.put('hat', 'hat-crown', spanBox([-0.0625, 0.093, -0.0605], [0.0625, 0.143, 0.0705]));
+    t.put('hat', 'hat-cuff', spanBox([-0.0645, 0.088, -0.0625], [0.0645, 0.106, 0.0725]));
+    t.put('hat', 'hat-pom', spanBox([-0.0125, 0.14, -0.0125], [0.0125, 0.158, 0.0125]));
+  }
+  if (st.hat === 'cap') {
+    // 棒球帽：帽身 + 往前伸 5 cm 的帽檐 + 顶上的扣
+    t.put('hat', 'hat-crown', spanBox([-0.0615, 0.095, -0.0585], [0.0615, 0.138, 0.0695]));
+    t.put('hat', 'hat-visor', spanBox([-0.05, 0.093, 0.03], [0.05, 0.1, 0.118]));
+    t.put('hat', 'hat-button', spanBox([-0.008, 0.136, -0.008], [0.008, 0.143, 0.008]));
+  }
   for (const s of [1, -1]) {
     const tag = s > 0 ? 'l' : 'r';
     // 眼睛大、位置偏低（可爱的办法，与猫同一套）；高光在外上角
     putBox(t.b('eye'), `eye-${tag}`, axisBox([s * 0.025, 0.054, 0.0675], [0.0105, 0.0125, 0.002]));
     putBox(t.b('shine'), `shine-${tag}`, axisBox([s * 0.0295, 0.0605, 0.07], [0.0038, 0.0038, 0.0012]));
+    if (st.glasses) {
+      // 眼镜：每只眼睛一圈细框（上下两条横、内外两条竖，竖的比横的薄 0.5 mm）、外侧一节接到镜腿、镜腿贴着头侧往后
+      const x = (a: number, b: number): [number, number] => (s > 0 ? [a, b] : [-b, -a]);
+      const [t0, t1] = x(0.0085, 0.0415);
+      t.put('frame', `glass-top-${tag}`, spanBox([t0, 0.0675, 0.067], [t1, 0.0705, 0.0725]));
+      t.put('frame', `glass-bot-${tag}`, spanBox([t0, 0.0375, 0.067], [t1, 0.0405, 0.0725]));
+      const [i0, i1] = x(0.0085, 0.0115);
+      t.put('frame', `glass-in-${tag}`, spanBox([i0, 0.0405, 0.067], [i1, 0.0675, 0.072]));
+      const [o0, o1] = x(0.0385, 0.0415);
+      t.put('frame', `glass-out-${tag}`, spanBox([o0, 0.0405, 0.067], [o1, 0.0675, 0.072]));
+      const [h0, h1] = x(0.0405, 0.0585);
+      t.put('frame', `glass-hinge-${tag}`, spanBox([h0, 0.0635, 0.0655], [h1, 0.0665, 0.0685]));
+      const [m0, m1] = x(0.0565, 0.0595);
+      t.put('frame', `glass-temple-${tag}`, spanBox([m0, 0.064, -0.03], [m1, 0.067, 0.067]));
+    }
   }
+  if (st.glasses) t.put('frame', 'glass-bridge', spanBox([-0.0085, 0.0575, 0.0675], [0.0085, 0.0605, 0.0715]));
   if (pitch) t.map((p) => rotX(p, -pitch));
 }
 
@@ -441,9 +643,9 @@ function humanJoints(pose: HumanPose, phase: number, seat: SeatSpec, lean: boole
 }
 
 /** 身子建好、着地：返回分色壳组与着地抬了多少（占 H；站 / 坐 = 0，走 = 支撑脚着地） */
-function groundedBody(j: HumanJ): { t: Toned; lift: number } {
+function groundedBody(j: HumanJ, st: Required<HumanStyle> = HUMAN_STYLE_DEFAULT, sitting = false): { t: Toned; lift: number } {
   const t = new Toned();
-  buildHumanBody(t, j);
+  buildHumanBody(t, j, st, sitting);
   return { t, lift: -t.minY() };
 }
 
@@ -501,6 +703,8 @@ export interface HumanRigSpec {
   seat?: SeatSpec;
   /** 坐着前倾（看猫） */
   lean?: boolean;
+  /** 穿着（省略 = 默认那一套：长袖、长裤、短发） */
+  style?: HumanStyle;
 }
 
 /** 头能转多远（相对身子；人颈部主动旋转约 70–80°） */
@@ -516,11 +720,13 @@ export function humanRig(spec: HumanRigSpec): Rig {
   const H = spec.height;
   const seatW = spec.seat ?? defaultSeat(H);
   const seat: SeatSpec = { top: seatW.top / H, front: seatW.front / H, back: seatW.back / H, thick: seatW.thick / H, backTop: seatW.backTop / H };
-  const j = humanJoints(spec.pose ?? 'stand', spec.phase ?? 0, seat, spec.lean ?? false);
-  const { t, lift } = groundedBody(j);
+  const pose = spec.pose ?? 'stand';
+  const st = fullStyle(spec.style);
+  const j = humanJoints(pose, spec.phase ?? 0, seat, spec.lean ?? false);
+  const { t, lift } = groundedBody(j, st, pose === 'sit');
   const pivot0 = neckOf(j).pivot;
   const head = new Toned();
-  buildHumanHead(head, j.headPitch);
+  buildHumanHead(head, j.headPitch, st);
   return rigOf([...t.toWorld(H, lift, 'body'), ...head.toWorld(H, 0, 'head')], [pivot0[0] * H, -(pivot0[1] + lift) * H, pivot0[2] * H], 0);
 }
 
@@ -539,6 +745,7 @@ export interface FigureSpec {
   lean?: boolean;
   /** 头相对身子转多少（会被夹在 ±HEAD_YAW_MAX） */
   headYaw?: number;
+  style?: HumanStyle;
 }
 
 /** 把一副 Rig 摆到世界、按颜色分组：身子 yaw + 平移，头绕枢轴再转 headYaw */
@@ -598,8 +805,14 @@ const PX = 0.02;
 /** 方块猫的零件尺寸（米，半边长）；所有姿态共用，只换摆法 */
 export const CAT = {
   VOXEL: PX,
-  /** 腿：2 × 5.5 × 2 格（上端半格插进身子） */
+  /** 腿：2 × 5.5 × 2 格（上端半格插进身子；下端 1.25 格是爪子，见 PAW） */
   LEG: [0.02, 0.055, 0.02] as V3,
+  /**
+   * 爪子（2026-10-27 花色）：腿的末端一块，比腿每边宽 1 mm，爪底就是原来的腿底。白爪子（燕尾服猫）靠它换色；
+   * 腿本身往上缩 PAW_TUCK，末端埋进爪子里（两块的底面不共面）。
+   */
+  PAW: [0.021, 0.0125, 0.021] as V3,
+  PAW_TUCK: 0.002,
   /** 后段（胯）比前段（胸）每边大一点点：并排时侧面、顶面不共面 */
   REAR: [0.065, 0.062, 0.07] as V3,
   FRONT: [0.06, 0.06, 0.07] as V3,
@@ -614,28 +827,143 @@ export const CAT = {
 export type CatPose = 'stand' | 'walk' | 'sit' | 'lie' | 'curl';
 export type CatTail = 'relaxed' | 'up';
 
+// ── 花色（2026-10-27 作者「给猫多设计几种花色：奶牛猫、狸花猫、白猫、黑猫之类」）───────────────────────────
+//
+// 花色 = 哪些零件换成哪一类颜色 + 贴在零件表面的花纹块（mark：贴在父件上、凸出一两毫米，父件怎么摆它怎么摆，各姿态尺寸不变）。
+// 颜色本身在台架的配色表里（components/lab/figurePalette.ts），这里只管几何与颜色类别。
+
+/** 七种花色：橘猫、狸花、奶牛（白底黑斑）、燕尾服（黑底白胸白爪）、黑猫、白猫、三花 */
+export type CatCoat = 'ginger' | 'tabby' | 'cow' | 'tuxedo' | 'black' | 'white' | 'calico';
+export const CAT_COATS: readonly CatCoat[] = ['ginger', 'tabby', 'cow', 'tuxedo', 'black', 'white', 'calico'];
+
+/** 一块花纹：贴在哪个零件上（壳名）、在它系里的范围（mark 的归一坐标）、凸出量、颜色类别 */
+interface CoatMark {
+  on: string;
+  lo: V3;
+  hi: V3;
+  out: number;
+  tone: Tone;
+}
+interface CoatSpec {
+  /** 虎斑：额头三道、背上四道、每条腿一圈、尾巴三圈 + 深色尾尖 */
+  stripes: boolean;
+  /** 眼睛：dot = 深色大眼 + 高光（浅色脸）；iris = 有色虹膜 + 竖瞳 + 高光（深色脸上深色眼睛看不见）；odd = 鸳鸯眼（两只虹膜不同色） */
+  eyes: 'dot' | 'iris' | 'odd';
+  /** 左、右耳 */
+  ears: [Tone, Tone];
+  /** 尾巴三节（根 → 尖） */
+  tail: [Tone, Tone, Tone];
+  paws: Tone;
+  marks: CoatMark[];
+}
+
+/**
+ * 凸出量分层（米）：花斑 1.5 mm、第二层花斑 1.8 mm、虎斑与白鼻梁 2.5 mm。身子两段每边差 5 mm、顶面差 2 mm，
+ * 这几个数都避开了「凸出后正好与另一段的面齐平」。
+ */
+const OUT = { patch: 0.0015, patch2: 0.0018, stripe: 0.0025 } as const;
+
+/** 虎斑：背上四道（各宽 1 格，横跨背与两侧到肋下）、每条腿一圈、尾巴三圈 + 深色尾尖 */
+function stripeMarks(): CoatMark[] {
+  const band = (on: string, z0: number, z1: number): CoatMark => ({ on, lo: [-1, -0.25, z0], hi: [1, 1, z1], out: OUT.stripe, tone: 'stripe' });
+  const ring = (on: string, a: number, b: number): CoatMark => ({ on, lo: [-1, -1, a], hi: [1, 1, b], out: OUT.patch, tone: 'stripe' });
+  // 腿上那圈不包第三轴的负侧：折起来平放时那一面贴地（包上去就成了最低点、整只猫被花纹顶起来）
+  const legRing = (on: string): CoatMark => ({ on, lo: [-1, 0.05, -0.9], hi: [1, 0.4, 1], out: OUT.patch, tone: 'stripe' });
+  return [
+    band('rear', -0.571, -0.286),
+    band('rear', 0.357, 0.643),
+    band('front', -0.714, -0.429),
+    band('front', 0.214, 0.5),
+    ...['fl', 'fr', 'hl', 'hr'].map((k) => legRing(`leg-${k}`)),
+    ring('tail-0', 0.1, 0.4),
+    ring('tail-1', -0.45, -0.15),
+    ring('tail-1', 0.3, 0.6),
+    ring('tail-2', 0.6, 1),
+  ];
+}
+
+const COATS: Record<CatCoat, CoatSpec> = {
+  ginger: { stripes: true, eyes: 'dot', ears: ['fur', 'fur'], tail: ['fur', 'fur', 'fur'], paws: 'fur', marks: [] },
+  tabby: { stripes: true, eyes: 'dot', ears: ['fur', 'fur'], tail: ['fur', 'fur', 'fur'], paws: 'fur', marks: [] },
+  // 奶牛：白底；头顶黑帽（压在眼睛上方）左边一直盖到脸颊后面、两只耳朵黑；背上两块错开的黑斑（一块往右侧淌、一块往左侧淌）；
+  // 右后腿上半截一圈黑；尾巴黑、尾尖白
+  cow: {
+    stripes: false,
+    eyes: 'dot',
+    ears: ['patch', 'patch'],
+    tail: ['patch', 'patch', 'fur'],
+    paws: 'fur',
+    marks: [
+      { on: 'head', lo: [-1, 0.45, -1], hi: [1, 1, 1], out: OUT.patch, tone: 'patch' },
+      { on: 'head', lo: [0.6, -0.4, -1], hi: [1, 0.45, 0.4], out: OUT.patch2, tone: 'patch' },
+      { on: 'rear', lo: [-1, -0.1, -0.6], hi: [0.4, 1, 0.5], out: OUT.patch, tone: 'patch' },
+      { on: 'front', lo: [-0.3, 0, -0.2], hi: [1, 1, 0.8], out: OUT.patch, tone: 'patch' },
+      { on: 'leg-hr', lo: [-1, 0, -0.9], hi: [1, 1, 1], out: OUT.patch, tone: 'patch' },
+    ],
+  },
+  // 燕尾服：黑底；白胸（胸段腹面前六成 + 前面下三成：站着是胸口、坐着是朝前的那一面）、白下巴、两眼之间一道白鼻梁、四只白爪、白口鼻
+  tuxedo: {
+    stripes: false,
+    eyes: 'iris',
+    ears: ['fur', 'fur'],
+    tail: ['fur', 'fur', 'fur'],
+    paws: 'patch',
+    marks: [
+      { on: 'front', lo: [-0.6, -1, -0.2], hi: [0.6, -0.4, 1], out: OUT.patch, tone: 'patch' },
+      { on: 'head', lo: [-0.55, -1, 0.4], hi: [0.55, -0.35, 1], out: OUT.patch, tone: 'patch' },
+      { on: 'head', lo: [-0.17, -0.35, 0.9], hi: [0.17, 0.75, 1], out: OUT.stripe, tone: 'patch' },
+    ],
+  },
+  black: { stripes: false, eyes: 'iris', ears: ['fur', 'fur'], tail: ['fur', 'fur', 'fur'], paws: 'fur', marks: [] },
+  white: { stripes: false, eyes: 'odd', ears: ['fur', 'fur'], tail: ['fur', 'fur', 'fur'], paws: 'fur', marks: [] },
+  // 三花：白底；头顶左半橘、右半黑，耳朵跟着；胯上一块橘（往右侧与后端淌）一块黑，胸上一块黑（往右侧淌）一块橘；尾巴橘—黑—橘
+  calico: {
+    stripes: false,
+    eyes: 'dot',
+    ears: ['patch2', 'patch'],
+    tail: ['patch2', 'patch', 'patch2'],
+    paws: 'fur',
+    marks: [
+      { on: 'head', lo: [-0.05, 0.45, -1], hi: [1, 1, 1], out: OUT.patch, tone: 'patch2' },
+      { on: 'head', lo: [-1, 0.45, -1], hi: [-0.05, 1, 1], out: OUT.patch2, tone: 'patch' },
+      { on: 'rear', lo: [-1, -0.2, -1], hi: [0.2, 1, 0.1], out: OUT.patch, tone: 'patch2' },
+      { on: 'rear', lo: [0.4, 0.1, -0.2], hi: [1, 1, 0.7], out: OUT.stripe, tone: 'patch' },
+      { on: 'front', lo: [-1, 0, -0.3], hi: [-0.1, 1, 0.6], out: OUT.patch, tone: 'patch' },
+      { on: 'front', lo: [0.3, 0.3, 0.1], hi: [1, 1, 0.9], out: OUT.stripe, tone: 'patch2' },
+    ],
+  },
+};
+
+/** 头块（头的局部系：原点 = 颈端枢轴） */
+const CAT_HEAD_BOX: Box3 = { c: [0, 0.045, 0.06], axes: [[CAT.HEAD[0], 0, 0], [0, CAT.HEAD[1], 0], [0, 0, CAT.HEAD[2]]] };
+
 /**
  * 头（局部系：原点 = 颈端枢轴，y 向上，z 朝前），按颜色分组：毛色（头块、两只耳朵——耳根 + 耳尖两级台阶）、
- * 眼睛（深色，2×2 格、位置偏低）、高光（白，外上角一颗）、口鼻（奶油色，只凸出一格——扁脸）、鼻头与耳内（粉）、
- * 额头三道虎斑（深姜黄）。点缀件都比所贴的面凸出一两毫米，不共面。
+ * 眼睛（2×2 格、位置偏低；浅色脸是深色大眼，深色脸是有色虹膜 + 竖瞳）、高光（白，外上角一颗）、
+ * 口鼻（只凸出一格——扁脸）、鼻头与耳内（粉）、虎斑猫额头三道。点缀件都比所贴的面凸出一两毫米，不共面。
  */
-function buildCatHead(t: Toned): void {
-  const [hx, hy, hz] = CAT.HEAD;
-  const fur = t.b('fur');
-  fur.box('head', [0, 0.045, 0.06], [hx, 0, 0], [0, hy, 0], [0, 0, hz]);
+function buildCatHead(t: Toned, coat: CoatSpec): void {
+  t.put('fur', 'head', CAT_HEAD_BOX);
   for (const s of [1, -1]) {
     const k = s > 0 ? 'l' : 'r';
+    const ear = coat.ears[s > 0 ? 0 : 1];
     // 耳根插进头顶半格；耳尖往外偏，外侧比耳根外侧多出 1.5 mm，不共面
-    fur.box(`ear-${k}`, [s * 0.042, 0.118, 0.035], [0.02, 0, 0], [0, 0.018, 0], [0, 0, 0.012]);
-    fur.box(`eartip-${k}`, [s * 0.0515, 0.146, 0.035], [0.0115, 0, 0], [0, 0.012, 0], [0, 0, 0.009]);
-    t.b('eye').box(`eye-${k}`, [s * 0.034, 0.052, 0.1215], [0.016, 0, 0], [0, 0.018, 0], [0, 0, 0.0035]);
-    t.b('shine').box(`shine-${k}`, [s * 0.041, 0.062, 0.1262], [0.006, 0, 0], [0, 0.006, 0], [0, 0, 0.0018]);
-    t.b('nose').box(`inear-${k}`, [s * 0.042, 0.123, 0.0485], [0.01, 0, 0], [0, 0.011, 0], [0, 0, 0.0018]);
+    t.put(ear, `ear-${k}`, axisBox([s * 0.042, 0.118, 0.035], [0.02, 0.018, 0.012]));
+    t.put(ear, `eartip-${k}`, axisBox([s * 0.0515, 0.146, 0.035], [0.0115, 0.012, 0.009]));
+    const iris: Tone = coat.eyes === 'dot' ? 'eye' : coat.eyes === 'odd' && s < 0 ? 'iris2' : 'iris';
+    t.put(iris, `eye-${k}`, axisBox([s * 0.034, 0.052, 0.1215], [0.016, 0.018, 0.0035]));
+    // 竖瞳：比虹膜前面凸出 1.5 mm，高光再往前（压在瞳孔外上角）
+    if (coat.eyes !== 'dot') t.put('eye', `pupil-${k}`, axisBox([s * 0.034, 0.052, 0.125], [0.0045, 0.013, 0.0015]));
+    t.put('shine', `shine-${k}`, axisBox([s * 0.041, 0.062, 0.1262], [0.006, 0.006, 0.0018]));
+    t.put('nose', `inear-${k}`, axisBox([s * 0.042, 0.123, 0.0485], [0.01, 0.011, 0.0018]));
   }
-  t.b('muzzle').box('muzzle', [0, 0.01, 0.13], [0.032, 0, 0], [0, 0.02, 0], [0, 0, 0.012]);
-  t.b('nose').box('nose', [0, 0.024, 0.1445], [0.011, 0, 0], [0, 0.007, 0], [0, 0, 0.0045]);
-  for (const x of [-0.016, 0, 0.016])
-    t.b('stripe').box(`stripe-${x < 0 ? 'r' : x > 0 ? 'l' : 'c'}`, [x, 0.088, 0.1213], [0.005, 0, 0], [0, x === 0 ? 0.015 : 0.011, 0], [0, 0, 0.0016]);
+  t.put('muzzle', 'muzzle', axisBox([0, 0.01, 0.13], [0.032, 0.02, 0.012]));
+  t.put('nose', 'nose', axisBox([0, 0.024, 0.1445], [0.011, 0.007, 0.0045]));
+  if (coat.stripes)
+    for (const x of [-0.016, 0, 0.016]) t.put('stripe', `stripe-${x < 0 ? 'r' : x > 0 ? 'l' : 'c'}`, axisBox([x, 0.088, 0.1213], [0.005, x === 0 ? 0.015 : 0.011, 0.0016]));
+  coat.marks.forEach((m, i) => {
+    if (m.on === 'head') t.put(m.tone, `mark-head-${i}`, mark(CAT_HEAD_BOX, m.lo, m.hi, m.out));
+  });
 }
 
 interface CatJ {
@@ -648,19 +976,36 @@ interface CatJ {
   pivot: V3;
 }
 
+/**
+ * 身子两段的局部系一律是 [左右, 背（朝上）, 朝前]——花纹按「背上」「胸口」写，换姿态跟着转：
+ * 坐着时胸段竖起来，背朝后、原来朝前的那一面朝上，原来的腹面（胸口）朝前。
+ */
 const axes3 = (h: V3): [V3, V3, V3] => [[h[0], 0, 0], [0, h[1], 0], [0, 0, h[2]]];
 
-/** 竖着的腿：腿根是转轴（在身子里），腿从根往下，上端多出半格插进身子；up = 从脚到根的方向 */
+/** 竖着的腿：腿根是转轴（在身子里），腿从根往下，上端多出半格插进身子；up = 从脚到根的方向。局部系 [左右, 朝根, 朝前] */
 function hangLeg(name: string, pivot: V3, up: V3): Box3 & { name: string } {
   const [hx, hy, hz] = CAT.LEG;
   const u = norm(up);
   const d = norm(cross(X, u)); // 与 u 垂直、在矢状面里
   return { name, c: sub(pivot, scale(u, hy - 0.005)), axes: [[hx, 0, 0], scale(u, hy), scale(d, hz)] };
 }
-/** 折起来平放的腿：长轴沿 z（爪朝前） */
+/** 折起来平放的腿：长轴沿 z（爪朝前 ⇒ 朝根是 −z） */
 function foldLeg(name: string, c: V3): Box3 & { name: string } {
   const [hx, hy, hz] = CAT.LEG;
-  return { name, c, axes: [[hx, 0, 0], [0, hz, 0], [0, 0, hy]] };
+  return { name, c, axes: [[hx, 0, 0], [0, 0, -hy], [0, hz, 0]] };
+}
+
+/** 一条腿拆成腿 + 爪：爪底 = 原来的腿底，腿缩回 PAW_TUCK、末端埋在爪子里 */
+function pawOf(L: Box3): { leg: Box3; paw: Box3 } {
+  const u = norm(L.axes[1]);
+  const hy = len(L.axes[1]);
+  const distal = sub(L.c, scale(u, hy));
+  const [px, ph, pz] = CAT.PAW;
+  const tuck = CAT.PAW_TUCK / 2;
+  return {
+    leg: { c: add(L.c, scale(u, tuck)), axes: [L.axes[0], scale(u, hy - tuck), L.axes[2]] },
+    paw: { c: add(distal, scale(u, ph)), axes: [scale(norm(L.axes[0]), px), scale(u, ph), scale(norm(L.axes[2]), pz)] },
+  };
 }
 
 /** 尾巴：起点 + 三节的方向，每节 0.09 m（共 0.27 m）——各姿态节长不变，只改方向 */
@@ -702,8 +1047,8 @@ function catWalkJ(phase: number, tail: CatTail): CatJ {
 function catSitJ(): CatJ {
   return {
     rear: { c: [0, 0.062, -0.045], axes: axes3(CAT.REAR) },
-    // 胸段竖起来：长轴（0.07）朝上
-    front: { c: [0, 0.174, 0], axes: [[CAT.FRONT[0], 0, 0], [0, 0, CAT.FRONT[1]], [0, CAT.FRONT[2], 0]] },
+    // 胸段竖起来（绕 x 往上仰 90°）：背朝后、朝前的那一面朝上，长轴（0.07）朝上
+    front: { c: [0, 0.174, 0], axes: [[CAT.FRONT[0], 0, 0], [0, 0, -CAT.FRONT[1]], [0, CAT.FRONT[2], 0]] },
     legs: [hangLeg('fl', [0.03, 0.105, 0.045], Y), hangLeg('fr', [-0.03, 0.105, 0.045], Y), foldLeg('hl', [0.05, 0.021, -0.035]), foldLeg('hr', [-0.05, 0.021, -0.035])],
     tail: tailChain([0, 0.02, -0.1], [[0, -0.03, -1], [0, 0.76, -0.65], [0, 0.97, 0.24]]),
     pivot: [0, 0.22, 0.045],
@@ -714,7 +1059,8 @@ function catSitJ(): CatJ {
 function catLieJ(curl: boolean): CatJ {
   return {
     rear: { c: [0, 0.062, -0.07], axes: axes3(CAT.REAR) },
-    front: { c: [0, 0.06, 0.07], axes: axes3(CAT.FRONT) },
+    // 胸段搁在揣起来的前爪上，底面离地 2 mm（白胸的燕尾服猫趴下时胸口那块花纹不会成为最低点）
+    front: { c: [0, 0.062, 0.07], axes: axes3(CAT.FRONT) },
     legs: [foldLeg('fl', [0.028, 0.021, 0.12]), foldLeg('fr', [-0.028, 0.021, 0.12]), foldLeg('hl', [0.048, 0.021, -0.08]), foldLeg('hr', [-0.048, 0.021, -0.08])],
     tail: curl
       ? tailChain([0, 0.018, -0.13], [[0, 0, -1], [0, 0, -1], [0, 0, -1]])
@@ -738,45 +1084,42 @@ function catJoints(pose: CatPose, phase: number, tail: CatTail): CatJ {
   }
 }
 
-function buildCatBody(b: ShellBuilder, j: CatJ): void {
-  b.box('rear', j.rear.c, ...j.rear.axes);
-  b.box('front', j.front.c, ...j.front.axes);
-  for (const L of j.legs) b.box(`leg-${L.name}`, L.c, ...L.axes);
-  // 尾巴：每节一个长方体，两端各多出 8 mm 插进相邻那节（关节处不露缝）
-  for (let i = 0; i + 1 < j.tail.length; i++) {
-    const a = j.tail[i], c = j.tail[i + 1];
-    const dir = norm(sub(c, a));
-    // 横轴必须与这一节垂直：竖着的节用 X 去掉沿节的分量（走路时尾巴左右摇，节就不再在矢状面里）
-    const side = Math.abs(dir[1]) > 0.95 ? ortho(X, dir) : norm(cross(Y, dir));
-    const up = norm(cross(dir, side));
-    const h = CAT.TAIL_HALF[i];
-    b.box(`tail-${i}`, lerp3(a, c, 0.5), scale(side, h), scale(up, h), scale(dir, len(sub(c, a)) / 2 + 0.008));
+/** 尾巴一节的长方体：局部系 [左右, 上, 沿尾巴朝尖]；两端各多出 8 mm 插进相邻那节（关节处不露缝） */
+function tailBox(a: V3, c: V3, h: number): Box3 {
+  const dir = norm(sub(c, a));
+  // 横轴必须与这一节垂直：竖着的节用 X 去掉沿节的分量（走路时尾巴左右摇，节就不再在矢状面里）
+  const side = Math.abs(dir[1]) > 0.95 ? ortho(X, dir) : norm(cross(Y, dir));
+  const up = norm(cross(dir, side));
+  return { c: lerp3(a, c, 0.5), axes: [scale(side, h), scale(up, h), scale(dir, len(sub(c, a)) / 2 + 0.008)] };
+}
+
+function buildCatBody(t: Toned, j: CatJ, coat: CoatSpec): void {
+  const parts = new Map<string, Box3>();
+  t.put('fur', 'rear', j.rear);
+  t.put('fur', 'front', j.front);
+  parts.set('rear', j.rear).set('front', j.front);
+  for (const L of j.legs) {
+    const { leg, paw } = pawOf(L);
+    t.put('fur', `leg-${L.name}`, leg);
+    t.put(coat.paws, `paw-${L.name}`, paw, leg);
+    parts.set(`leg-${L.name}`, leg);
   }
+  for (let i = 0; i + 1 < j.tail.length; i++) {
+    const b = tailBox(j.tail[i], j.tail[i + 1], CAT.TAIL_HALF[i]);
+    t.put(coat.tail[i], `tail-${i}`, b);
+    parts.set(`tail-${i}`, b);
+  }
+  const marks = [...coat.marks, ...(coat.stripes ? stripeMarks() : [])];
+  marks.forEach((m, i) => {
+    const p = parts.get(m.on);
+    if (p) t.put(m.tone, `mark-${m.on}-${i}`, mark(p, m.lo, m.hi, m.out), p);
+  });
 }
 
 /** 骨架（米，模型系、着地前、弯之前）：守门用——尾巴折点、颈端枢轴 */
 export function catSkeleton(pose: CatPose, opts: { phase?: number; tail?: CatTail } = {}): { tail: V3[]; pivot: V3 } {
   const j = catJoints(pose, opts.phase ?? 0, opts.tail ?? 'relaxed');
   return { tail: j.tail, pivot: j.pivot };
-}
-
-/**
- * 绕竖直轴弯：轴在模型系 x = −R 处（猫的右侧；在环形平台上就是立杆）。方块不能弯成弧，故**每个零件整块地转**——
- * 按它的中心沿 z 的距离算出转角，绕轴转过去（零件形状一个数不变），身子、腿、尾巴各节就顺着环排开。
- */
-function bendRigid(b: ShellBuilder, R: number): void {
-  for (const s of b.shells) {
-    let cz = 0;
-    for (let v = s.v0; v < s.v1; v++) cz += b.pos[v * 3 + 2];
-    cz /= s.v1 - s.v0;
-    const a = cz / R;
-    const c = Math.cos(a), sn = Math.sin(a);
-    for (let v = s.v0; v < s.v1; v++) {
-      const x = b.pos[v * 3] + R, z = b.pos[v * 3 + 2] - cz;
-      b.pos[v * 3] = x * c - z * sn - R;
-      b.pos[v * 3 + 2] = x * sn + z * c;
-    }
-  }
 }
 
 export interface CatRigSpec {
@@ -787,6 +1130,8 @@ export interface CatRigSpec {
   tail?: CatTail;
   /** 弯的半径（米；0 / 省略 = 直的）：猫身中线绕着身体右侧 R 处的竖直轴 */
   bend?: number;
+  /** 花色（省略 = 橘猫） */
+  coat?: CatCoat;
 }
 
 /** 猫头能转多远（相对身子） */
@@ -794,20 +1139,21 @@ export const CAT_HEAD_YAW_MAX = deg(90);
 
 export function catRig(spec: CatRigSpec): Rig {
   const U = spec.unit;
+  const coat = COATS[spec.coat ?? 'ginger'];
   const j = catJoints(spec.pose ?? 'stand', spec.phase ?? 0, spec.tail ?? 'relaxed');
   const body = new Toned();
-  buildCatBody(body.b('fur'), j);
+  buildCatBody(body, j, coat);
   const R = spec.bend ?? 0;
   let pivot = j.pivot;
   let headYaw = 0;
   if (R > 0) {
-    for (const b of body.builders) bendRigid(b, R);
+    body.bend(R);
     const a = j.pivot[2] / R;
     pivot = [-R + (j.pivot[0] + R) * Math.cos(a), j.pivot[1], (j.pivot[0] + R) * Math.sin(a)];
     headYaw = a;
   }
   const head = new Toned();
-  buildCatHead(head);
+  buildCatHead(head, coat);
   // 着地：身子与头（头只绕竖轴转，最低点不随它变）一起，最低点恰好贴在脚下那个面上
   const lift = -Math.min(body.minY(), head.minY() + pivot[1]);
   return rigOf([...body.toWorld(U, lift, 'body'), ...head.toWorld(U, 0, 'head')], [pivot[0] * U, -(pivot[1] + lift) * U, pivot[2] * U], headYaw);
@@ -826,6 +1172,7 @@ export interface CatSpec {
   phase?: number;
   tail?: CatTail;
   bend?: number;
+  coat?: CatCoat;
   /** 头相对身子转多少（夹在 ±CAT_HEAD_YAW_MAX） */
   headYaw?: number;
 }
@@ -833,6 +1180,11 @@ export interface CatSpec {
 export function catMesh(spec: CatSpec): PartMesh {
   const r = catRig(spec);
   return placeRig(r, spec.x, spec.footY, spec.z, spec.yaw ?? 0, clampHeadYaw(spec.headYaw ?? 0, CAT_HEAD_YAW_MAX));
+}
+
+/** 按颜色分组的猫（守门用：每种花色用到哪些颜色类别） */
+export function catParts(spec: CatSpec): { tone: Tone; mesh: PartMesh }[] {
+  return placeRigParts(catRig(spec), spec.x, spec.footY, spec.z, spec.yaw ?? 0, clampHeadYaw(spec.headYaw ?? 0, CAT_HEAD_YAW_MAX));
 }
 
 /** 旧接口：只要位置与索引 */
