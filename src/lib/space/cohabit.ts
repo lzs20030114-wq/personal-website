@@ -1001,7 +1001,42 @@ export interface CohabitOpts {
   cover?: 'field' | 'room';
   /** 人坐下、面前那台落下来当桌子（COHABIT.TABLE）；省略 = 单元铺满整间房时开（只有那套家具有桌子可落），否则关 */
   tables?: boolean;
+  /** 访客的节奏（站多久、看猫多久、去不去坐、坐多久）：省略 = COHABIT.VISITOR / SEATS 那几个演示值（研究与案例页对照图用的）；部分覆盖逐项替换 */
+  pace?: Partial<VisitorPace>;
 }
+
+/** 访客的节奏：站着停多久 · 看猫站多久 · 下一站去看猫的几率 · 下一站去坐的几率 · 坐多久（秒） */
+export interface VisitorPace {
+  pause: { min: number; max: number };
+  watch: { min: number; max: number };
+  toCatP: number;
+  sitP: number;
+  sit: { min: number; max: number };
+}
+
+/** 研究与案例页对照图用的那一套（COHABIT.VISITOR / SEATS 原值，模块默认） */
+export const PACE_STUDY: VisitorPace = {
+  pause: COHABIT.VISITOR.pause,
+  watch: COHABIT.VISITOR.watch,
+  toCatP: COHABIT.VISITOR.toCatP,
+  sitP: COHABIT.SEATS.SIT_P,
+  sit: COHABIT.SEATS.SIT,
+};
+
+/**
+ * 台架自由演示用的节奏（2026-10-27，作者看 2-14 / 2-15「人是不是有一点不太爱动」）。PACE_STUDY 下实测（2-15 配置 ·
+ * 6 人 2 猫 · 4 种子 × 600 s）：坐着 64% · 原地站着 28% · 真在走 5.6%，平均 75 s 才挪一次——站着停 8–45 s、一半几率去坐、
+ * 一坐 90–240 s，三个都是演示值，资料里没有猫咖访客多久挪一次、一次坐多久的实测数。这一套：站着停 3–12 s、去坐的几率 0.35、
+ * 一坐 40–120 s，看猫的时长不动（那是有目的的停留，「站」的规则靠它）。同一配置实测：坐着 56% · 站着 27% · 走 14%，约 37 s
+ * 挪一次；共温不变（1118 → 1133 s）、坐下时桌子仍全部到位，共触少了约三成（305 → 215 s：坐着的人少了，猫凑到人身边的机会也少）。
+ * 只给台架的自由演示；研究、案例页对照图与 2-14 的「正文对照」四钮仍用 PACE_STUDY（否则正文引用的读数会跟着变）。
+ */
+export const PACE_DEMO: VisitorPace = {
+  ...PACE_STUDY,
+  pause: { min: 3, max: 12 },
+  sitP: 0.35,
+  sit: { min: 40, max: 120 },
+};
 
 export class CohabitSim {
   readonly layout: PlanLayout;
@@ -1061,6 +1096,8 @@ export class CohabitSim {
   guide: GuideCfg;
   /** 猫的常量（构造时从 COHABIT.CAT + opts.cat 拷一份） */
   readonly cat: CatCfg;
+  /** 访客的节奏（构造时从 PACE_STUDY + opts.pace 拷一份） */
+  readonly pace: VisitorPace;
   /** social 开关；occ = 每个交叉点此刻被谁的身体占着（访客 id，0 = 空；每个子步按位置重建、走动时即时占） */
   readonly social: boolean;
   readonly occ: Int32Array;
@@ -1099,6 +1136,7 @@ export class CohabitSim {
     this.seats = placeSeats(this.layout, this.graph);
     this.guide = { ...COHABIT.GUIDE, ...opts.guide };
     this.cat = { ...COHABIT.CAT, ...opts.cat };
+    this.pace = { ...PACE_STUDY, ...opts.pace };
     this.social = opts.social ?? false;
     this.catFloor = opts.catFloor ?? false;
     this.occ = new Int32Array(this.graph.nodes.length);
@@ -1269,7 +1307,7 @@ export class CohabitSim {
       lastX: px,
       lastY: py,
       moving: false,
-      pause: this.pick(COHABIT.VISITOR.pause),
+      pause: this.pick(this.pace.pause),
       watching: null,
       legFrom: null,
       legPath: 0,
@@ -1337,7 +1375,7 @@ export class CohabitSim {
     p.offer = null;
     p.offered = false;
     p.legFrom = null;
-    p.pause = this.pick(COHABIT.SEATS.SIT);
+    p.pause = this.pick(this.pace.sit);
   }
 
   /** 起身：放开座位，返回入口交叉点（下一程从这儿出发） */
@@ -1661,7 +1699,7 @@ export class CohabitSim {
       p.walker.place(p.walker.x, p.walker.y);
       p.lastX = p.walker.x;
       p.lastY = p.walker.y;
-      p.pause = this.pick(COHABIT.VISITOR.pause);
+      p.pause = this.pick(this.pace.pause);
       p.goalNode = -1;
       // 「走 · 站 · 坐」：放到空座上 = 坐下
       const s = this.seatAt(p.walker.x, p.walker.y);
@@ -2154,7 +2192,7 @@ export class CohabitSim {
     if (crowded) goal = this.farthestNode(from, p);
     else {
       // 「走 · 站 · 坐」：有空座时按几率去坐（起身的这一程不再坐回去）
-      if (this.seats.length && !rising && this.rng() < COHABIT.SEATS.SIT_P) {
+      if (this.seats.length && !rising && this.rng() < this.pace.sitP) {
         const free = this.seats.filter((q) => this.seatFree(q.i, p));
         if (free.length) {
           const q = free[Math.floor(this.rng() * free.length)];
@@ -2162,7 +2200,7 @@ export class CohabitSim {
           goal = q.node;
         }
       }
-      if (goal < 0 && this.cats.length && this.rng() < COHABIT.VISITOR.toCatP) {
+      if (goal < 0 && this.cats.length && this.rng() < this.pace.toCatP) {
         const c = this.cats[Math.floor(this.rng() * this.cats.length)];
         goal = this.spotNear(c, w.x, w.y, from);
         watch = c.id;
@@ -2295,7 +2333,7 @@ export class CohabitSim {
       p.pause = 0;
       return;
     }
-    p.pause = watch === null ? this.pick(COHABIT.VISITOR.pause) : this.pick(COHABIT.VISITOR.watch);
+    p.pause = watch === null ? this.pick(this.pace.pause) : this.pick(this.pace.watch);
   }
 
   /** 场地内的交叉点（不含外侧线与门；有家具时不含站不了人的）里随机挑一个 */
@@ -2671,11 +2709,11 @@ export class CohabitSim {
     let goal = -1;
     let watch: number | null = null;
     let seats: number[] | null = null;
-    if (this.seats.length && !rising && this.rng() < COHABIT.SEATS.SIT_P) {
+    if (this.seats.length && !rising && this.rng() < this.pace.sitP) {
       seats = this.seatsForParty(p, party.length);
       if (seats) goal = this.seats[seats[0]].node;
     }
-    if (goal < 0 && this.cats.length && this.rng() < COHABIT.VISITOR.toCatP) {
+    if (goal < 0 && this.cats.length && this.rng() < this.pace.toCatP) {
       const c = this.cats[Math.floor(this.rng() * this.cats.length)];
       // 看猫的站位：猫 1.5 m 以内能站的点；同档里离猫近、再稍偏离自己近的
       const cands = this.standCands(p, -1, c.walker.x, c.walker.y, COHABIT.BAND.far);

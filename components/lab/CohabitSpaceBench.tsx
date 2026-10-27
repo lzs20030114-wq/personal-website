@@ -12,7 +12,7 @@ import { toneColor } from './figurePalette';
 import { FlatRenderer, bakeIndexed, type MeshPlace } from '../../src/lib/linkage/gl3d';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import type { Vec3 } from '../../src/lib/linkage/solver3d';
-import { COHABIT, CohabitSim, SPACE_MODES, bandAngle, partySizes, type EventKind, type SpaceMode } from '../../src/lib/space/cohabit';
+import { COHABIT, CohabitSim, PACE_DEMO, SPACE_MODES, bandAngle, partySizes, type EventKind, type SpaceMode } from '../../src/lib/space/cohabit';
 import { FIGURE, RING_GRID_AXON, ROOM, ringGridViewMatrix, type RingGridView } from '../../src/lib/space/skin-grid';
 import { CAT, CAT_HEAD_YAW_MAX, clampHeadYaw, catRig, humanRig, strideOf, type Rig as BodyRig } from '../../src/lib/space/figure';
 import {
@@ -102,6 +102,10 @@ const LINK_COLOR: Record<EventKind, [number, number, number]> = {
 };
 /** 仿真单帧封顶（与 Lab 2-14 台架同）：切后台回来不炸 */
 const MAX_SIM_DT = 0.05;
+/** 时间倍速（2026-10-27 作者「立体模拟也加上时间倍数，比如 8 倍、10 倍、20 倍」）：每帧的仿真时长 = 实际帧长（封顶 MAX_SIM_DT）× 倍速，
+ *  按 MAX_SIM_DT 一段一段推（×1 时就是原来那一次调用，逐位不变）。仿真每秒约 8 ms，×20 时每秒真实时间约 0.16 s 的 CPU */
+const TIME_SCALES = [1, 8, 10, 20] as const;
+const TIME_DEF = 1;
 /** 烘轨迹时每帧给的主线程预算（ms） */
 const BAKE_BUDGET_MS = 12;
 /** 带与带之间那层膜的不透明度（Lab 2-5 / 2-8 的蒙皮滑块默认 0.35；方台要读得出是一张台面，取高一点，待作者真机看） */
@@ -120,6 +124,7 @@ const COPY = {
     aria: '一间房里 8×8 个方形的收缩张紧外皮单元平时收在天花下，六位访客在地上走、站、坐，两只猫在方台上；单元按人猫同台的规则落下成形、收回，挡路的带各自收回',
     space: '空间',
     run: '运转',
+    time: '时间',
     reset: '重来',
     view: '视角',
   },
@@ -134,6 +139,7 @@ const COPY = {
     aria: 'A room with an 8×8 field of square contracting-skin units stowed at the ceiling; six visitors walk, stand and sit on the floor, two cats live on the square platforms; units descend, form and retract under the cohabitation rules and bands in the way retract on their own',
     space: 'space',
     run: 'run',
+    time: 'time',
     reset: 'restart',
     view: 'view',
   },
@@ -158,6 +164,7 @@ function makeSim(space: SpaceMode, seed: number): CohabitSim {
     catFloor: true,
     cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid },
     guide: COHABIT.GUIDE,
+    pace: PACE_DEMO,
   });
   const half = sim.layout.fieldM / 2;
   const sizes = partySizes(SCENE.people);
@@ -206,6 +213,8 @@ export function CohabitSpaceBench({
   const apiRef = useRef<Api | null>(null);
   const runningRef = useRef(true);
   const [running, setRunning] = useState(true);
+  const timeRef = useRef<number>(TIME_DEF);
+  const [timeScale, setTimeScale] = useState<number>(TIME_DEF);
   const [space, setSpace] = useState<SpaceMode>('live');
   const [view, setView] = useState<ViewKey>('axon');
   const [hud, setHud] = useState<{ t: number; formed: number; total: number; counts: Record<EventKind, number>; bake: number; note: string; side: number; roomH: number }>({
@@ -424,7 +433,7 @@ export function CohabitSpaceBench({
         // 这一帧每台该落到哪个高度：平面模型此刻把它当谁的桌子（COHABIT.TABLE、sim.tableBy）就落到那件家具的桌子高度，其余落到站着用的高度
         tableWant.fill(TABLE_TOP.stand);
         if (sim.furn) for (let u = 0; u < layout.units.length; u++) if (sim.tableBy[u] >= 0) tableWant[u] = tableTopFor(sim.furn.rects[sim.tableBy[u]]);
-        const dtT = Math.max(0, Math.min(0.1, sim.t - tableT));
+        const dtT = Math.max(0, Math.min(0.1 * timeRef.current, sim.t - tableT));
         tableT = sim.t;
         for (let u = 0; u < layout.units.length; u++) {
           const c = rig.cells[u];
@@ -595,7 +604,14 @@ export function CohabitSpaceBench({
     bakeTimer = setTimeout(bakeTick, 0);
 
     const step = (dt: number): void => {
-      if (trajs && runningRef.current) sim.step(Math.min(MAX_SIM_DT, dt));
+      if (trajs && runningRef.current) {
+        let left = Math.min(MAX_SIM_DT, dt) * timeRef.current;
+        while (left > 1e-9) {
+          const h = Math.min(MAX_SIM_DT, left);
+          sim.step(h);
+          left -= h;
+        }
+      }
       cam.tick(dt);
       render();
       pushHud();
@@ -734,6 +750,24 @@ export function CohabitSpaceBench({
               <button type="button" onClick={() => { apiRef.current?.restart(); runningRef.current = true; setRunning(true); }}>
                 {t.reset}
               </button>
+            </div>
+            <div className="grp">
+              <LabControlLabel help={['仿真播放倍速。', 'Simulation playback rate.']}>{t.time}</LabControlLabel>
+              <span className="seg">
+                {TIME_SCALES.map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    className={k === timeScale ? 'active' : undefined}
+                    onClick={() => {
+                      timeRef.current = k;
+                      setTimeScale(k);
+                    }}
+                  >
+                    ×{k}
+                  </button>
+                ))}
+              </span>
             </div>
             {/* 视角搬到底栏（LabCtl）；底栏「归位」= 这里原来那颗 */}
             <LabViewDock>

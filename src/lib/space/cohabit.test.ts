@@ -12,6 +12,8 @@ import {
   everyoneHasExit,
   furnKind,
   nearestNode,
+  PACE_DEMO,
+  PACE_STUDY,
   partySizes,
   platformClear,
   populateCohabit,
@@ -1222,6 +1224,40 @@ describe('cohabit · 方形单元（unit: square，Lab 2-15，作者 2026-10-25�
     it('只配「走 · 站 · 坐」规则', () => {
       expect(() => new CohabitSim({ trigger: 'trace', cover: 'room' })).toThrow();
     });
+  });
+
+  describe('访客的节奏（2026-10-27 作者「人是不是有一点不太爱动」）', () => {
+    const run = (pace?: typeof PACE_DEMO) => {
+      const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', space: 'live', seed: 11, opening: false, auto: true, faces: true, social: true, catFloor: true, cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid }, guide: COHABIT.GUIDE, pace });
+      const half = sim.layout.fieldM / 2;
+      partySizes(6).forEach((sz, i, a) => {
+        const t = (i / a.length) * 2 * Math.PI + 0.3;
+        sim.addParty(Math.cos(t) * half * 0.6, Math.sin(t) * half * 0.6, sz);
+      });
+      for (let i = 0; i < 2; i++) sim.addCat(sim.layout.units[(i * 5) % sim.layout.units.length]);
+      let walk = 0;
+      let seated = 0;
+      let all = 0;
+      for (let t = 0; t < 300; t += 1 / 30) {
+        sim.step(1 / 30);
+        for (const p of sim.people) {
+          if (!p.walker.present) continue;
+          all++;
+          if (p.seated) seated++;
+          else if (p.walker.state === 'walk' && p.moving) walk++;
+        }
+      }
+      return { walk: walk / all, seated: seated / all, summary: sim.summary() };
+    };
+
+    it('省略 = 研究那一套（逐位不变），台架那一套走得更多、坐得更少', () => {
+      const def = run();
+      const study = run(PACE_STUDY);
+      expect(study.summary).toEqual(def.summary);
+      const demo = run(PACE_DEMO);
+      expect(demo.walk).toBeGreaterThan(def.walk * 1.8);
+      expect(demo.seated).toBeLessThan(def.seated);
+    }, 60_000);
   });
 
   describe('人坐下，面前那台落下来当桌子（COHABIT.TABLE，2026-10-27 作者「不是随便落下来的，应该有相应规则」）', () => {
