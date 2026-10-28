@@ -33,7 +33,7 @@
       "year": "2026",
       "context": "Internship · Tsinghua Future Lab × DeRucci",
       "line": "2030 Sleep Foresight Study",
-      "intro": "Research for the 2030 Sleep Foresight Study with Tsinghua Future Lab and DeRucci. The work includes the report chapter on future sleep populations, a survey design for the team, five persona cards and an interview guide.",
+      "intro": "Research for the 2030 Sleep Foresight Study with Tsinghua Future Lab and DeRucci. The work covers the study's chapter on future sleep populations, a survey design for the team, five persona cards and an interview guide.",
       "image": {
         "src": "/log/sleep-20260529-original-report.png",
         "width": 1440,
@@ -53,7 +53,7 @@
       "group": "interaction-research",
       "year": "2025",
       "context": "Workshop · DigitalFUTURES 2025",
-      "intro": "A round kitchen counter for older adults and people with lower-limb disabilities. A depth camera and an LSTM predict the next cooking step, and the counter turns that zone to the cook. It was shown in mixed reality.",
+      "intro": "A round kitchen counter for older adults and people with lower-limb disabilities. A depth camera and an LSTM predict the next cooking step, and the counter turns the matching zone toward the cook. It was shown in mixed reality.",
       "slug": "co-evolving-kitchen",
       "zh": {
         "title": "Co-Evolving Kitchen",
@@ -445,7 +445,7 @@
       "year": "2025",
       "context": "Undergraduate thesis · Yongdingmen Park, Beijing",
       "line": "The Redevelopment Design of Yongdingmen Park Based on Urban Texture and Changes in Civic Life",
-      "intro": "A redesign of Yongdingmen Park, where Beijing's central axis lost its gate tower. Earth-covered ramps and raised buildings turn the old wall into a hill to walk on and keep the park green.",
+      "intro": "A redesign of Yongdingmen Park, where Beijing's central axis lost its gate tower in the 1950s. Buildings with walkable, earth-covered roofs take the mountain-like form of the old city wall.",
       "slug": "floating-terrain",
       "zh": {
         "title": "浮山界中",
@@ -853,7 +853,7 @@
       "group": "landscape-urban",
       "year": "2025",
       "context": "Competition entry · UIA-HYP Cup",
-      "intro": "A light steel frame attached to the facades of ageing housing in Hong Kong's older districts. It carries gardens, terraces and small rooms, and bridges over narrow streets add a walkway above the pavement.",
+      "intro": "A light steel frame attached to the facades of old housing blocks in Hong Kong. It holds gardens, terraces and small rooms for shops or farming, and bridges across narrow streets carry a walkway above the pavement.",
       "slug": "hongkong-facade",
       "zh": {
         "title": "Hongkong Facade",
@@ -1125,7 +1125,7 @@
       "group": "landscape-urban",
       "year": "2024",
       "context": "Studio course · Professional Design 6: Off-Grid Farm",
-      "intro": "An off-grid resort on a sugarcane farm in the Dominican Republic. Cane is grown on the site and its residue fuels a biomass generator. Mirror-clad guest rooms sit above the cane, with paths and activity space below.",
+      "intro": "An off-grid resort on a sugarcane farm in the Dominican Republic. Cane is grown on the site and its residue fuels a biomass generator. Mirror-clad guest rooms sit above the cane fields, with paths and activity space below.",
       "slug": "under-cane",
       "zh": {
         "title": "Under-Cane",
@@ -1437,7 +1437,7 @@
       "year": "2024",
       "context": "Studio course · Professional Design 5",
       "line": "Brief: Uncanny home",
-      "intro": "A home for Patrick from American Psycho, for the brief Uncanny home. The rooms for his social role are closed and placed in the centre, and the rooms for his private life open to the outside at the edge, the opposite of the usual layout.",
+      "intro": "Patrick's home from American Psycho, turned inside out for the brief Uncanny home. The rooms where he plays a social role are closed off in the centre, and the rooms for his private life open to the outside at the edge.",
       "slug": "the-patrick",
       "zh": {
         "title": "The Patrick",
@@ -1685,7 +1685,7 @@
       "group": "interiors",
       "year": "2024",
       "context": "Studio course · Comprehensive Design",
-      "intro": "A home planned for two points in one life: a student living alone in 2024, and in 2039 perhaps a designer who works from home, still lives alone and wants more social life. The plans show how the rooms change between the two.",
+      "intro": "A home for one person at two dates: a student living alone in 2024, and in 2039 perhaps a designer working from home who wants more social life. The plans show the rooms changing between the two.",
       "slug": "design-for-our-future",
       "zh": {
         "title": "Design for our future",
@@ -1895,7 +1895,7 @@
       "group": "interiors",
       "year": "2023",
       "context": "Studio course",
-      "intro": "A social viewing club themed on New Wave cinema, on three floors: a café, a viewing room and an open social space. Stairs and platforms interlock between broken, irregular screens seen from many angles.",
+      "intro": "A social viewing club themed on New Wave cinema, on three floors: a café, a viewing room and an open social space. Stairs and platforms interlock around broken, irregular screens, so a film can be watched from many angles.",
       "slug": "new-wave-film-club",
       "zh": {
         "title": "新浪潮观影俱乐部综合空间",
@@ -2141,7 +2141,7 @@
       "group": "architecture-construction",
       "year": "2024",
       "context": "Drawing course · Design Expression 2",
-      "intro": "Nineteen construction drawings for office B365 at Tsinghua's Academy of Arts & Design: plans, sections and elevations as layout and as materials, and stair and wall details.",
+      "intro": "Nineteen construction drawings for office B365 at Tsinghua's Academy of Arts & Design, covering floor plans, stair and wall details, and a section drawn for layout and for materials.",
       "slug": "b365-office",
       "zh": {
         "title": "B365 办公室改造施工图",
@@ -2241,7 +2241,7 @@
       "group": "architecture-construction",
       "year": "2023",
       "context": "Course · Architectural Fundamentals and Construction",
-      "intro": "A house on a 16 × 16 m plan for a family of five, with a workspace for the father, a south-facing room for visiting grandparents and a guest room for a helper. The set includes elevations, sections and construction details.",
+      "intro": "A house on a 16 × 16 m plan for a family of five, with a workspace for the father, a south-facing room for the grandparents and a guest room for a helper. The plan cannot stretch east–west, so some rooms lose sunlight.",
       "slug": "family-house",
       "zh": {
         "title": "五人家庭住宅",

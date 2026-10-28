@@ -32,7 +32,7 @@ const HOME_PROJECTS = [
     img: '/home/cover-reincarnation-machine.webp',
     title: null,
     intro:
-      'A desk-sized machine that is born, ages and dies in about eight minutes, then wakes with a different personality in the same body: five breathing rings and an arm that grips a hand. People have to learn it again each life.',
+      'A desk-sized machine that is born, ages and dies in about eight minutes, then wakes in the same body with a different personality. Whoever got to know it in one life has to learn its responses again in the next.',
   },
   // 项目二尚未定名（pool title 仍是 "Project II"），卡片题用描述名；2026-10-04 作者拍板由稿内的 "Spatial simulation"
   // 改为能体现物种的 "Cross-species space"（与 lab-index / log-facets 同步）。定名后删 title 覆写即回内容池。
@@ -44,7 +44,7 @@ const HOME_PROJECTS = [
     img: '/home/cover-project-ii.webp',
     title: 'Cross-species space',
     intro:
-      'Fabric units hang from the ceiling of a simulated cat café and drop down as platforms. When a visitor sits down, the units lead the nearest cat over. With six or more visitors, people stay longer beside cats than with fixed shelves.',
+      'Ceiling-hung fabric units in a simulated cat café drop down as platforms. When a visitor sits down, units lower into a path for the nearest cat. With six or more visitors, people spent more time beside cats than with fixed shelving.',
   },
   {
     slug: 'project-iii',
