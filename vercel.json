@@ -2,6 +2,8 @@
   "framework": "nextjs",
   "git": {
     "deploymentEnabled": {
+      "claude/youthful-euler-p0zb02": false,
+      "claude/tender-franklin-s4wh8a": false,
       "claude/bold-shannon-nbaubo": false,
       "claude/upbeat-keller-l8ah6i": false,
       "claude/sharp-galileo-65zydp": false,
@@ -51,7 +53,8 @@
       "claude/sleepy-shannon-l5s0gt": false,
       "claude/fervent-euler-qu2im7": false,
       "claude/cool-ride-uf5vg9": false,
-      "claude/stoic-hawking-eaxfi9": false
+      "claude/stoic-hawking-eaxfi9": false,
+      "claude/sharp-bohr-t4cr3b": false
     }
   }
 }

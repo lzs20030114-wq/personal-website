@@ -146,7 +146,8 @@ function sweepEnvelope(
   };
 }
 
-function measureSlots(d: ShellRingData): FootSlot[] {
+/** 槽端实测（守门测试用它核对下面的预存表；运行时只在表里没有这一环时才现量） */
+export function measureShellSlots(d: ShellRingData): FootSlot[] {
   for (const margin of MARGIN_LADDER) {
     const r = sweepEnvelope(d, margin);
     if (r.folded && r.peakErr < SWEEP_ERR_LIMIT) return r.slots;
@@ -154,14 +155,28 @@ function measureSlots(d: ShellRingData): FootSlot[] {
   throw new Error(`${d.name} 槽端标定失败：余量阶梯 ${MARGIN_LADDER} 内无健康折叠——检查提取数据`);
 }
 
-const slotCache = new Map<string, FootSlot[]>();
+/**
+ * 槽端实测的预存结果（2026-10-28 性能排查）：现量五环要在浏览器里扫 4 × 360 × 48 遍，约半秒，
+ * 首页 Lab 区、案例页主图、/lab 第一次挂五环时都会卡这一下。这里存一份（Node 22 现量）。
+ * 现量本身随浏览器在 1e-12 mm 上浮动（sin / cos 的末位各家实现不同，Chrome 153 与 Node 22 实测就不同），
+ * 用表反而让各设备拿到同一组槽端。shell3d.test.ts 每次现量一遍核对（差 < 1e-6 mm）——环的数据一改，守门就红，照着重填即可。
+ */
+export const MEASURED_SLOTS: Readonly<Record<string, ReadonlyArray<FootSlot>>> = {
+  'S1_M3x1.057': [{ node: 13, lo: -167.621, hi: -113.902611898329 }, { node: 10, lo: -157.1, hi: -57.5233713705487 }, { node: 5, lo: 57.72130441170625, hi: 157.1 }, { node: 8, lo: 114.06198252243891, hi: 167.621 }],
+  'S2_M1x1.184': [{ node: 13, lo: -172.618, hi: -129.77761015265028 }, { node: 18, lo: -161.6, hi: -56.84771465907195 }, { node: 22, lo: 56.82041114565459, hi: 161.6 }, { node: 21, lo: 129.75689565135542, hi: 172.618 }],
+  'S3_M5x1.584': [{ node: 0, lo: -163.915, hi: -127.6177574651049 }, { node: 3, lo: -147.87955952689782, hi: -45.230146030058286 }, { node: 16, lo: 45.23827094436317, hi: 147.84064700366264 }, { node: 14, lo: 127.62518460464365, hi: 163.915 }],
+  'S4_M3x1.000': [{ node: 16, lo: -158.622, hi: -107.94599101902976 }, { node: 18, lo: -147.9, hi: -54.663914976234416 }, { node: 21, lo: 54.631731598890816, hi: 147.9 }, { node: 19, lo: 107.92013075827755, hi: 158.622 }],
+  'S5_M3x0.870': [{ node: 13, lo: -138.052, hi: -93.91357386402103 }, { node: 10, lo: -127.5, hi: -47.571118658688775 }, { node: 5, lo: 47.71922502825044, hi: 127.5 }, { node: 8, lo: 94.03338183881766, hi: 138.052 }],
+};
 
-/** 五环装配（槽端实测结果按环名缓存——每进程一次）。 */
+const slotCache = new Map<string, ReadonlyArray<FootSlot>>();
+
+/** 五环装配（槽端按环名取预存表；表里没有的环现量一次、每进程缓存）。 */
 export function createShell(): ShellRing[] {
   return SHELL_RINGS.map((d) => {
-    let slots = slotCache.get(d.name);
+    let slots = slotCache.get(d.name) ?? MEASURED_SLOTS[d.name];
     if (!slots) {
-      slots = measureSlots(d);
+      slots = measureShellSlots(d);
       slotCache.set(d.name, slots);
     }
     return { data: d, solver: makeSolver(d), slots, theta: SHELL_THETA0 };

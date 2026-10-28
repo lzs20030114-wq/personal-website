@@ -26,6 +26,7 @@ import {
 } from '../../../src/lib/site/work-carousel';
 import { HOME_WORK_PANEL_KEY } from '../pageTransitionState';
 import { prefersReducedMotion } from '../../../src/lib/site/home-mode';
+import { AboutSay } from './AboutSay';
 import { WorkMark } from './WorkMark';
 
 const n2 = (i: number) => String(i).padStart(2, '0');
@@ -59,8 +60,13 @@ interface CardProps {
 function WorkCard({ t, c, cur, on, focusable, vars, onEnter }: CardProps) {
   const body = (
     <>
-      <span className="hs-card__kick" data-a={cur ? 'up' : undefined} data-d={160 + c * 90}>
-        <span className="hs-card__kick-n">{t.kick}</span>
+      <span className="hs-card__kick hs-card__kick--big" data-a={cur ? 'up' : undefined} data-d={160 + c * 90}>
+        {/* 编号细窄、立在图版上方，名称与年份两行靠右（主项目 MAPPING §72；其他各组同一种排法，图版与第一组齐平，§74）。
+            还没发稿的主项目（项目三）用空心编号 */}
+        <span className="hs-card__kick-n hs-card__kick-n--big">
+          <span className={`hs-card__num${t.wip ? ' hs-card__num--wip' : ''}`}>{t.kickN}</span>
+          <span className="hs-card__kick-l">{t.kickLabel}</span>
+        </span>
         <span className={`hs-card__status${t.wip ? ' hs-card__status--wip' : ''}`}>{t.status}</span>
       </span>
       <span className="hs-card__box" data-a={cur ? 'wipe' : undefined} data-d={200 + c * 90}>
@@ -440,6 +446,8 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
     let lock = 0;
     let lastH = 0;
     const onWheel = (e: WheelEvent) => {
+      // 双指捏合（ctrlKey）交给浏览器缩放
+      if (e.ctrlKey) return;
       const now = performance.now();
       if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) {
         if (now - lastH < H_TAIL_MS) {
@@ -495,6 +503,8 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
   const hint =
     !st.moving && en && effZone ? hintOf(st.zone ? 'zone' : st.nudge ? 'nudge' : 'prox', effZone, en.wrap, prox.t) : { x: 0, op: 0 };
   const Wp = Math.round(st.W * (1 - WC.PEEK));
+  // 组名放大后按最长那个定字号，切到哪组都不顶到右边的刻度盘（MAPPING §70.1）
+  const tlen = groups.reduce((m, gr) => Math.max(m, gr.title.length), 0);
   const tgtGi = zn ? panels[zn.t].gi : null;
   const onPanel = st.wh ? panels.findIndex((pn) => pn.tiles.some((t) => t.key === st.wh)) : -1;
 
@@ -536,7 +546,11 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
     if (!isCur && !flow) return;
     const el = e.currentTarget.querySelector<HTMLElement>('[data-wt]');
     const top = el ? el.offsetTop + (el.offsetParent as HTMLElement).offsetTop : 0;
-    setS((o) => ({ ...o, wh: key, wm: { ty: 20 - top, top: 20 + (el ? el.offsetHeight : 30) + 14 } }));
+    // 编号若压进图版，展开时标题要落在编号下面（MAPPING §70.1）；§72 起编号在图版上方，这一项算出来是 0
+    const kick = e.currentTarget.querySelector<HTMLElement>('.hs-card__kick--big');
+    const box = e.currentTarget.querySelector<HTMLElement>('.hs-card__box');
+    const pad = 20 + (kick && box ? Math.max(0, kick.getBoundingClientRect().bottom - box.getBoundingClientRect().top) : 0);
+    setS((o) => ({ ...o, wh: key, wm: { ty: pad - top, top: pad + (el ? el.offsetHeight : 30) + 14 } }));
   };
 
   // 光标标签：离开留白区时内容留着，只淡出
@@ -601,7 +615,7 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
       <div
         className={`hs-work hs-wg${st.instant ? ' hs-wg--instant' : ''}`}
         ref={rootRef}
-        style={{ '--wp': `${Wp}px`, '--wg-l': `${st.L}px`, '--wg-r': `${st.Rg}px`, '--wg-gap': `${WC.GAP}px` } as CSSProperties}
+        style={{ '--wp': `${Wp}px`, '--wg-l': `${st.L}px`, '--wg-r': `${st.Rg}px`, '--wg-gap': `${WC.GAP}px`, '--wg-tlen': tlen } as CSSProperties}
       >
         <div className="hs-head">
           <div className="hs-wg__lead">
@@ -819,7 +833,8 @@ export function AboutPage() {
     <>
       <div className="hs-about-dots" aria-hidden="true" />
       <div className="hs-about">
-        <dl className="hs-facts">
+        {/* 2026-10-27（MAPPING §70）：四组信息装进细线格子——竖边随整组淡入，横线照旧逐条画出（第一条就是格子的上边） */}
+        <dl className="hs-facts" data-a="fade" data-d="100">
           {FACTS.map((f, i) => (
             <div className="hs-fact" key={f.k}>
               <span className="hs-fact__rule" data-a="line" data-d={140 + i * 90} />
@@ -837,9 +852,8 @@ export function AboutPage() {
             03 — About
           </p>
           <div className="hs-mask">
-            <h2 className="hs-h2" data-a="rise" data-d="60">
-              From spaces <span className="hs-accent--lime">to interactions.</span>
-            </h2>
+            {/* 鼠标停在宣言上，附近的字变宽变粗（与首屏字格同一种，MAPPING §74） */}
+            <AboutSay />
           </div>
           <div className="hs-about__text">
             <p data-a="up" data-d="200">
@@ -860,8 +874,17 @@ export function AboutPage() {
           </Link>
         </div>
         <figure className="hs-portrait">
-          <div className="hs-portrait__plate" data-a="wipe" data-d="160">
-            <span>portrait · to be supplied</span>
+          {/* 肖像框的边上走字（参考 海花岛艺术：字沿着色面的边排）：上沿比例、右沿竖排一行身份，框里仍是占位 */}
+          <div className="hs-portrait__wrap">
+            <span className="hs-portrait__cap" data-a="fade" data-d="420">
+              Portrait · 3 : 4
+            </span>
+            <div className="hs-portrait__plate" data-a="wipe" data-d="160">
+              <span>portrait · to be supplied</span>
+            </div>
+            <span className="hs-portrait__edge" data-a="fade" data-d="520">
+              Zishuo Li · Tsinghua University
+            </span>
           </div>
         </figure>
       </div>

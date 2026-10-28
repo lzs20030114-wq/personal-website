@@ -7,6 +7,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildCards, buildHomeField as buildField, buildHomeLog, buildLabGroups, type FieldWorkInput, type HomeCard } from './home-model';
 import type { LogEntry } from './log-schema';
+import { fieldSlots, initialPlacement } from './field-layout';
 import { getOtherWorkPages, getOtherWorks } from './other-works';
 
 /** 方块场的其他作品取自内容池（MAPPING §58） */
@@ -28,6 +29,12 @@ const works = (): FieldWorkInput[] => getRoutableWork().map((work) => ({
   ...work,
   published: work.status === 'published',
 }));
+
+/** 首屏能到达的条目 = 初次上场 + 轮换队列（FieldPage 暗下去的格子从队列里换下一件） */
+function reachableOnField(kinds: string[]) {
+  const { shown, queue } = initialPlacement(kinds, fieldSlots(kinds.length).slots.length);
+  return new Set([...shown, ...queue]);
+}
 
 describe('主页数据派生（home-model）', () => {
   it('三个项目卡指向内容池里真实存在的路由名单', () => {
@@ -203,7 +210,7 @@ describe('主页数据派生（home-model）', () => {
     expect(field.entries).toBe(entries.length + 1);
     const byId = new Map(field.pool.map((item) => [item.id, item]));
     baseline.pool.forEach((item) => expect(byId.get(item.id)).toEqual(item));
-    const reachable = new Set(field.draws.flatMap((draw) => draw.groups.flat()));
+    const reachable = reachableOnField(field.pool.map((item) => item.kind));
     field.pool.forEach((item, index) => {
       expect(reachable.has(index)).toBe(true);
       expect(existsSync(join(process.cwd(), 'public', item.img)), item.img).toBe(true);
@@ -224,28 +231,20 @@ describe('主页数据派生（home-model）', () => {
       });
       expect(field.benches).toBe(LAB_BENCHES.length + 1);
       expect(existsSync(join(process.cwd(), 'public', item!.img))).toBe(true);
-      expect(field.draws.flatMap((draw) => draw.groups.flat())).toContain(field.pool.indexOf(item!));
+      expect(reachableOnField(field.pool.map((x) => x.kind)).has(field.pool.indexOf(item!))).toBe(true);
     } finally {
       segment.benches.pop();
     }
   });
 
-  it('分层抽样覆盖完整候选池，每个索引都可到达', () => {
+  it('首屏格子装不下时其余进轮换队列：初次上场 + 队列 = 完整候选池，项目与台架先上', () => {
     const f = buildHomeField(cards(), works(), getLogEntries());
-    const reachable = new Set<number>();
-    f.draws.forEach((draw) => {
-      expect(draw.weight).toBeGreaterThan(0);
-      expect(draw.groups.length).toBeGreaterThan(0);
-      draw.groups.forEach((group) => {
-        expect(group.length).toBeGreaterThan(0);
-        group.forEach((index) => {
-          expect(Number.isInteger(index)).toBe(true);
-          expect(index).toBeGreaterThanOrEqual(0);
-          expect(index).toBeLessThan(f.pool.length);
-          reachable.add(index);
-        });
-      });
-    });
-    expect([...reachable].sort((a, b) => a - b)).toEqual(f.pool.map((_, index) => index));
+    const kinds = f.pool.map((item) => item.kind);
+    const { slots } = fieldSlots(f.pool.length);
+    const { shown, queue } = initialPlacement(kinds, slots.length);
+    expect(shown).toHaveLength(Math.min(slots.length, f.pool.length));
+    expect([...shown, ...queue].sort((a, b) => a - b)).toEqual(f.pool.map((_, index) => index));
+    // 非日志的条目一件不落地在首屏初次上场
+    kinds.forEach((kind, index) => kind !== 'log' && expect(shown).toContain(index));
   });
 });

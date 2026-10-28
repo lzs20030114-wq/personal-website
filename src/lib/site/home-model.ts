@@ -3,7 +3,7 @@
 // （客户端组件不能 import 内容池模块——node:fs 撞 Turbopack，与 log-facets 同一条纪律）。
 import { LAB_INDEX, labAnchor } from './lab-index';
 import { projectGroupOf, bucketOf, withAnchors, aspectOf, OTHER_ASPECT } from './log-facets';
-import { LAB_ICONS, PROJECT_ICONS, iconPath, logIcon, buildFieldDraws, type FieldKind, type FieldProject, type FieldDraw } from './field-visuals';
+import { LAB_ICONS, PROJECT_ICONS, iconPath, logIcon, type FieldKind, type FieldProject } from './field-visuals';
 import type { LogEntry } from './log-schema';
 import type { OtherWorks } from './other-works-schema';
 
@@ -18,13 +18,44 @@ export const TONE_S: Tone = { ink: 'oklch(0.45 0.06 235)', hi: 'oklch(0.74 0.06 
 
 /* ───────────────────────── 项目卡片 + Lab 分组 ───────────────────────── */
 
-/** 主页展示的三个项目（稿内三卡；project-iv 不上首页——用户拍板 2026-10-01）。 */
+/**
+ * 主页展示的三个项目（稿内三卡；project-iv 不上首页——用户拍板 2026-10-01）。
+ * img = Work 卡片封面：两台活台架的定帧（MAPPING §76；作者实拍后换回照片）。
+ * intro = Work 卡片悬停时浮出的介绍，只在首页用；案例页与首屏方块场仍用内容池的 summary。
+ */
 const HOME_PROJECTS = [
-  { slug: 'reincarnation-machine', kicker: 'Project I', tone: TONE_G, img: '/home/c-fivering.png', title: null },
+  {
+    slug: 'reincarnation-machine',
+    kicker: 'Project I',
+    tone: TONE_G,
+    // Lab 1-5 整机：五环停在接近全开的位置，大触手卷起
+    img: '/home/cover-reincarnation-machine.webp',
+    title: null,
+    intro:
+      'A desk-sized machine that is born, ages and dies in about eight minutes, then wakes in the same body with a different personality. Whoever got to know it in one life has to learn its responses again in the next.',
+  },
   // 项目二尚未定名（pool title 仍是 "Project II"），卡片题用描述名；2026-10-04 作者拍板由稿内的 "Spatial simulation"
   // 改为能体现物种的 "Cross-species space"（与 lab-index / log-facets 同步）。定名后删 title 覆写即回内容池。
-  { slug: 'project-ii', kicker: 'Project II', tone: TONE_V, img: '/home/c-nine.png', title: 'Cross-species space' },
-  { slug: 'project-iii', kicker: 'Project III', tone: TONE_S, img: null, title: null },
+  {
+    slug: 'project-ii',
+    kicker: 'Project II',
+    tone: TONE_V,
+    // Lab 2-15 人猫同台，仿真约 160 s：有人坐下、面前的单元落成桌子、猫在台上
+    img: '/home/cover-project-ii.webp',
+    title: 'Cross-species space',
+    intro:
+      'Ceiling-hung fabric units in a simulated cat café drop down as platforms. When a visitor sits down, units lower into a path for the nearest cat. With six or more visitors, people spent more time beside cats than with fixed shelving.',
+  },
+  {
+    slug: 'project-iii',
+    kicker: 'Project III',
+    tone: TONE_S,
+    img: null,
+    title: null,
+    // 未发稿：只写站方框架字与日志里已公开的来历，不代写题目
+    intro:
+      'The third main project grows out of the sleep research from the smart-bed internship. Its topic is still being narrowed, and the case study will be published here.',
+  },
 ] as const;
 
 export interface HomeWorkInput {
@@ -46,7 +77,10 @@ export interface HomeCard {
   wip: boolean;
   slug: string;
   img: string | null;
+  /** 一句话（首屏方块场卡片的说明）：发了稿的取内容池 summary */
   thesis: string;
+  /** Work 卡片悬停时的介绍（两三句） */
+  intro: string;
   role: string;
 }
 
@@ -66,6 +100,7 @@ export function buildCards(works: HomeWorkInput[]): HomeCard[] {
       img: wip ? null : p.img,
       // 未发稿项目的 summary 是「待盘点」占位，不上主页；稿内占位串原样（作者来写）
       thesis: wip ? `[${p.kicker} thesis · author to write]` : w.summary,
+      intro: p.intro,
       role: wip ? 'Role · to be written' : w.role.join(' · '),
     };
   });
@@ -80,6 +115,9 @@ export const TONE_N: Tone = { ink: 'var(--ink)', hi: 'var(--lime-hi)' };
 export interface HomeWorkTile {
   key: string;
   kick: string;
+  /** kick 拆开的两半：编号（01 / 02.1）与名称（Project I / 实习类别）；主项目卡把编号放大（MAPPING §70） */
+  kickN: string;
+  kickLabel: string;
   status: string;
   title: string;
   role: string;
@@ -135,10 +173,12 @@ export function buildWorkGroups(cards: HomeCard[], other: OtherWorks, entries: L
     tiles: cards.map((c) => ({
       key: c.slug,
       kick: `${c.n} · ${c.kicker}`,
+      kickN: c.n,
+      kickLabel: c.kicker,
       status: c.status,
       title: c.title,
       role: c.role,
-      thesis: c.thesis,
+      thesis: c.intro,
       cta: c.img ? 'Read the case study ↗' : 'Preview ↗',
       href: `/work/${c.slug}`,
       img: c.img,
@@ -160,14 +200,16 @@ export function buildWorkGroups(cards: HomeCard[], other: OtherWorks, entries: L
         .map((w, i) => ({
           key: `${g.key}-${i}`,
           kick: `${n}.${i + 1} · ${w.context.split(' · ')[0]}`,
+          kickN: `${n}.${i + 1}`,
+          kickLabel: w.context.split(' · ')[0],
           status: w.year,
           title: w.title,
           role: w.context,
-          thesis: w.line ?? null,
+          thesis: w.intro ?? w.line ?? null,
           cta: 'Open ↗',
           href: otherWorkHref(w, entries),
-          img: w.image?.src ?? null,
-          imgPos: w.image?.position ?? 'center',
+          img: w.card?.src ?? w.image?.src ?? null,
+          imgPos: w.card ? 'center' : (w.image?.position ?? 'center'),
           wip: false,
           tone: TONE_N,
           caseSlug: null,
@@ -370,7 +412,7 @@ export function buildHomeLog(entries: LogEntry[]): HomeLogData {
   return { total: entries.length, span: `${entries.length} entries · ${span}`, lanes, months, tips, latest };
 }
 
-/* ───────────────────────── 01 Field（稿 17 Home · Field Hero，MAPPING §55） ───────────────────────── */
+/* ───────────────────────── 01 Field（池子 = 稿 17 Field Hero §55；版面 = 画布 H6b §71） ───────────────────────── */
 
 /** 场里一张卡：悬停某个亮着的方块时展开成它。 */
 export interface FieldItem {
@@ -388,8 +430,6 @@ export interface FieldItem {
 }
 export interface HomeField {
   pool: FieldItem[];
-  /** 按内容类型与项目分层抽样：全池可达，日志数量不会挤掉项目与台架。 */
-  draws: FieldDraw[];
   /** 已发稿的主项目数 / 台架总数 / 日志条数（首屏底注与副题，全部现算） */
   projects: number;
   benches: number;
@@ -516,7 +556,6 @@ export function buildHomeField(cards: HomeCard[], works: FieldWorkInput[], entri
   ];
   return {
     pool,
-    draws: buildFieldDraws(pool),
     projects: works.filter((work) => work.selected && work.published).length,
     benches: LAB_INDEX.reduce((n, g) => n + g.segments.reduce((m, s) => m + s.benches.length, 0), 0),
     entries: entries.length,

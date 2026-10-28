@@ -5,7 +5,8 @@ import { FIGURE, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
 import { RING } from './skin-ring';
 import { SOLID } from './skin-solid';
 import { SQUARE, SQUARE_PEAK, SQUARE_REACH, buildSquareUnits, squareHalfSide, squareRadiusAt } from './skin-square';
-import { catMesh, figureMesh } from './figure';
+import { CAT_COATS, catMesh, figureMesh, styleKey as styleKeyOf, type HumanStyle } from './figure';
+import { OUTFITS } from '../../../components/lab/figurePalette';
 import { partBox } from './mesh-shell';
 import { COHABIT, CohabitSim, SQUARE_SCALE, bandAngle, squarePlanLayout, type FurnRect } from './cohabit';
 
@@ -430,11 +431,11 @@ describe('摆放与尺度', () => {
     expect(catPlacement({ x: 0.3, y: 0.2, heading: 1, state: 'walk' }, [], false, true, layout8, band).pose).toBe('walk');
   });
 
-  it('台上的猫不穿杆、不悬空（Lab 2-15 方台的实际宽度）：各种状态 × 八个朝向 × 芯心 / 台边，猫离芯轴都在芯外缘以外，贴台面的部分都在内切圆以内', () => {
+  it.each(CAT_COATS)('台上的猫不穿杆、不悬空（Lab 2-15 方台的实际宽度；%s）：各种状态 × 八个朝向 × 芯心 / 台边，猫（含花纹、爪子）离芯轴都在芯外缘以外，贴台面的部分都在内切圆以内', (coat) => {
     const u = { x: 0, y: 0 };
     const clear = band.rIn + 0.005;
     const check = (pl: ReturnType<typeof catPlacement>, cores: { x: number; y: number }[], label: string): void => {
-      const m = catMesh({ x: pl.x * UNITS_PER_M, z: pl.y * UNITS_PER_M, footY: 0, unit: UNITS_PER_M, yaw: figureYaw(pl.heading), pose: pl.pose, tail: pl.tail, bend: pl.bend, headYaw: pl.headTurn });
+      const m = catMesh({ x: pl.x * UNITS_PER_M, z: pl.y * UNITS_PER_M, footY: 0, unit: UNITS_PER_M, yaw: figureYaw(pl.heading), pose: pl.pose, tail: pl.tail, bend: pl.bend, headYaw: pl.headTurn, coat });
       for (let k = 0; k < m.verts.length; k += 3) {
         const x = m.verts[k] / UNITS_PER_M, z = m.verts[k + 2] / UNITS_PER_M, y = -m.verts[k + 1] / UNITS_PER_M;
         for (const c of cores) expect(Math.hypot(x - c.x, z - c.y), `${label} 穿杆`).toBeGreaterThan(clear);
@@ -567,7 +568,7 @@ describe('坐着的人与家具', () => {
   it.each([
     ['场地布局（旧尺寸，2-14）', 'field'],
     ['铺满整间房（人体工学尺寸，2-15）', 'room'],
-  ] as const)('%s：标准布置的每个座位、坐直与前倾：小人不插进任何一块家具，臀贴座面，脚踩地', (_, cover) => {
+  ] as const)('%s：标准布置的每个座位、坐直与前倾、台架那十二套穿着：小人（含裙摆、外套下摆、卫衣帽子、长发、帽子）不插进任何一块家具，臀贴座面，脚踩地', (_, cover) => {
     const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, space: 'live', seed: 1, cover, ...(cover === 'room' ? { unit: 'square' as const } : {}) });
     const furn = sim.furn;
     expect(furn).not.toBeNull();
@@ -579,29 +580,31 @@ describe('坐着的人与家具', () => {
       const s = seatSpecOf(furn.rects[seat.furn], seat);
       expect(s.front).toBeGreaterThan(cover === 'room' ? 0.34 : 0.45); // 座位点在前缘后 0.35–0.5 m（餐椅座深 0.42）
       expect(s.back).toBeGreaterThan(0.1);
-      for (const lean of [false, true]) {
-        const m = figureMesh({
-          x: seat.x * UNITS_PER_M,
-          z: seat.y * UNITS_PER_M,
-          footY: ROOM.FLOOR_Y,
-          height: FIGURE.HEIGHT,
-          yaw: figureYaw(Math.atan2(seat.face[1], seat.face[0])),
-          pose: 'sit',
-          lean,
-          seat: { top: s.top * UNITS_PER_M, front: s.front * UNITS_PER_M, back: s.back * UNITS_PER_M, thick: s.thick * UNITS_PER_M, backTop: s.backTop * UNITS_PER_M },
-        });
-        for (let k = 0; k < m.verts.length; k += 3) {
-          const [x, y, z] = [m.verts[k], m.verts[k + 1], m.verts[k + 2]];
-          for (const b of boxes) {
-            const inside = Math.abs(x - b.cx) < b.hx - tol && Math.abs(y - b.cy) < b.hy - tol && Math.abs(z - b.cz) < b.hz - tol;
-            expect(inside, `座位 ${seat.i}${lean ? ' 前倾' : ''} 插进家具`).toBe(false);
+      for (const lean of [false, true])
+        for (const style of OUTFITS.map((o): HumanStyle => o.style)) {
+          const m = figureMesh({
+            style,
+            x: seat.x * UNITS_PER_M,
+            z: seat.y * UNITS_PER_M,
+            footY: ROOM.FLOOR_Y,
+            height: FIGURE.HEIGHT,
+            yaw: figureYaw(Math.atan2(seat.face[1], seat.face[0])),
+            pose: 'sit',
+            lean,
+            seat: { top: s.top * UNITS_PER_M, front: s.front * UNITS_PER_M, back: s.back * UNITS_PER_M, thick: s.thick * UNITS_PER_M, backTop: s.backTop * UNITS_PER_M },
+          });
+          for (let k = 0; k < m.verts.length; k += 3) {
+            const [x, y, z] = [m.verts[k], m.verts[k + 1], m.verts[k + 2]];
+            for (const b of boxes) {
+              const inside = Math.abs(x - b.cx) < b.hx - tol && Math.abs(y - b.cy) < b.hy - tol && Math.abs(z - b.cz) < b.hz - tol;
+              if (inside) expect.fail(`座位 ${seat.i}${lean ? ' 前倾' : ''} 插进家具（${styleKeyOf(style)}）`);
+            }
           }
+          const b = partBox(m);
+          expect(b.y1).toBeCloseTo(ROOM.FLOOR_Y, 4); // 脚在地上
+          expect((ROOM.FLOOR_Y - b.y0) / UNITS_PER_M).toBeGreaterThan(1.2); // 坐着的头顶 1.2–1.4 m
+          expect((ROOM.FLOOR_Y - b.y0) / UNITS_PER_M).toBeLessThan(1.4);
         }
-        const b = partBox(m);
-        expect(b.y1).toBeCloseTo(ROOM.FLOOR_Y, 4); // 脚在地上
-        expect((ROOM.FLOOR_Y - b.y0) / UNITS_PER_M).toBeGreaterThan(1.2); // 坐着的头顶 1.2–1.4 m
-        expect((ROOM.FLOOR_Y - b.y0) / UNITS_PER_M).toBeLessThan(1.4);
-      }
     }
   });
 });
