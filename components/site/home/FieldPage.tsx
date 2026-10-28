@@ -4,7 +4,8 @@
 // 一张 28×15 的细线格：标语一字一格（细窄），objects / spaces 每个字母占 2×2（宽粗），
 // 名字、导航、按钮、提示都占整数个格子；其余格子各放一件站上的真实内容，贴着字留一圈有机的空白。
 // 动效沿用 §55–§57：作品格成簇地亮起又暗回去，指针划过留一圈余光，光标附近的作品格转角拉斜，
-// 在作品格上停 160ms 长成一张 6×4 的卡（所在行列放大、其余让位——字格也一起让位），点卡进那件作品。
+// 点一下作品格长成一张 6×4 的卡（所在行列放大、其余让位——字格也一起让位），再点卡进那件作品；
+// 2026-10-28（MAPPING §74）起开卡改成点击，原来是悬停 160ms 自己展开。
 // 新增：鼠标扫过字格时，附近的字变宽变粗，移开后慢慢收回。
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
@@ -30,10 +31,9 @@ const K = 1.5;
 const LIT_SHARE = 0.3;
 const TICK_MS = 110;
 const DIM_MS = 2200;
-/** 快速掠过不触发：余光先响应，再确认开卡意图（§57.1 已确认的 50 / 160ms） */
+/** 快速掠过不触发余光（§57.1 已确认的 50ms）；开卡不再看悬停多久，要点一下（§74） */
 const WAKE_DWELL_MS = 50;
 const WAKE_TRACK_MS = 110;
-const OPEN_DWELL_MS = 160;
 const BASE_AXES = swellAxes(0);
 
 interface Rect {
@@ -149,14 +149,13 @@ export function FieldPage({
     hoveredSlot: -1,
     closing: false,
     wakeT: undefined as ReturnType<typeof setTimeout> | undefined,
-    openT: undefined as ReturnType<typeof setTimeout> | undefined,
     closeT: undefined as ReturnType<typeof setTimeout> | undefined,
     txtT: undefined as ReturnType<typeof setTimeout> | undefined,
   });
 
   /** 格子在不在：窄屏文档流里整块隐藏（CSS 认 <html data-hs>，MAPPING §67） */
   const fieldOn = () => !window.matchMedia(HOME_FLOW_QUERY).matches;
-  /** 「减弱动态效果」下格子照样在、照样能悬停开卡，只是作品格不再轮换、不倾斜、字不鼓起、卡不做生长动画 */
+  /** 「减弱动态效果」下格子照样在、照样能点开卡，只是作品格不再轮换、不倾斜、字不鼓起、卡不做生长动画 */
   const motionOn = () => fieldOn() && !prefersReducedMotion();
 
   /** 当前视觉上的格子大小与各行列中心（开卡让位时按位移后的位置算） */
@@ -176,7 +175,6 @@ export function FieldPage({
   };
 
   const cancelOpen = useCallback(() => {
-    clearTimeout(m.current.openT);
     m.current.hoveredSlot = -1;
   }, []);
 
@@ -338,7 +336,7 @@ export function FieldPage({
     const Y = axis(ROWS, CH, r0, fr.height);
     const rect = { x: X.lefts[c0], y: Y.lefts[r0], w: CW * X.u * K, h: CH * Y.u * K };
     const nextOpen = { cell, slot, pick, c0, r0, rect, n: (openRef.current?.n ?? 0) + 1 };
-    // 同步把悬停占位交给展开卡，避免 React 提交前被心跳暗回去
+    // 同步把占位交给展开卡，避免 React 提交前被心跳暗回去
     openRef.current = nextOpen;
     cancelOpen();
     setLit(slot, true, 300);
@@ -595,19 +593,20 @@ export function FieldPage({
     if (i >= 0) m.current.wakeT = setTimeout(wake, WAKE_DWELL_MS);
   };
 
+  /** 指针停在哪个作品格上：心跳不把它暗回去、不在它底下换作品（点下去时还是看见的那件） */
   const onSlotEnter = (e: React.MouseEvent<HTMLElement>) => {
-    const el = e.currentTarget;
-    const k = Number(el.dataset.slot);
-    cancelOpen();
+    const k = Number(e.currentTarget.dataset.slot);
+    m.current.hoveredSlot = activeRef.current && fieldOn() ? k : -1;
+  };
+
+  /** 点一下作品格 = 长成卡（MAPPING §74）；点的就是已经展开的那张时不重开 */
+  const onSlotClick = (e: React.MouseEvent<HTMLElement>) => {
+    const k = Number(e.currentTarget.dataset.slot);
     if (!activeRef.current || !fieldOn()) return;
     if (openRef.current?.slot === k && !m.current.closing) return;
     const item = m.current.slotItem[k];
     if (item == null) return;
-    m.current.hoveredSlot = k;
-    m.current.openT = setTimeout(() => {
-      if (!activeRef.current || !fieldOn() || m.current.hoveredSlot !== k || m.current.slotItem[k] !== item || !el.matches(':hover')) return;
-      openAt(k, item);
-    }, OPEN_DWELL_MS);
+    openAt(k, item);
   };
 
   const T = FIELD_TEXT;
@@ -661,6 +660,7 @@ export function FieldPage({
               data-d={Math.round(((cell * 37) % 23) * 30)}
               style={{ ...area(cell % COLS, Math.floor(cell / COLS)), '--fi-ink': c.ink, '--fi-lit': c.lit, '--fi-dim': c.dim } as CSSProperties}
               onMouseEnter={onSlotEnter}
+              onClick={onSlotClick}
               onMouseLeave={() => {
                 if (m.current.hoveredSlot === k) cancelOpen();
               }}
@@ -772,7 +772,7 @@ export function FieldPage({
           data-d="1000"
           style={area(T.hint.c0, T.hint.r, T.hint.c1 - T.hint.c0 + 1)}
         >
-          {opened ? 'Each square is a piece of the work · move across the field' : 'Hover any square to open a piece of the work'}
+          {opened ? 'Each square is a piece of the work · move across the field' : 'Click any square to open a piece of the work'}
         </span>
         {open && card ? (
           <Link

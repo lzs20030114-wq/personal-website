@@ -26,6 +26,7 @@ import {
 } from '../../../src/lib/site/work-carousel';
 import { HOME_WORK_PANEL_KEY } from '../pageTransitionState';
 import { prefersReducedMotion } from '../../../src/lib/site/home-mode';
+import { AboutSay } from './AboutSay';
 import { WorkMark } from './WorkMark';
 
 const n2 = (i: number) => String(i).padStart(2, '0');
@@ -59,20 +60,13 @@ interface CardProps {
 function WorkCard({ t, c, cur, on, focusable, vars, onEnter }: CardProps) {
   const body = (
     <>
-      <span
-        className={`hs-card__kick${t.caseSlug ? ' hs-card__kick--big' : ''}`}
-        data-a={cur ? 'up' : undefined}
-        data-d={160 + c * 90}
-      >
-        {t.caseSlug ? (
-          // 主项目：编号细窄、立在图版上方；还没发稿的（项目三）用空心编号，已发稿的实心（MAPPING §72）
-          <span className="hs-card__kick-n hs-card__kick-n--big">
-            <span className={`hs-card__num${t.wip ? ' hs-card__num--wip' : ''}`}>{t.kickN}</span>
-            <span className="hs-card__kick-l">{t.kickLabel}</span>
-          </span>
-        ) : (
-          <span className="hs-card__kick-n">{t.kick}</span>
-        )}
+      <span className="hs-card__kick hs-card__kick--big" data-a={cur ? 'up' : undefined} data-d={160 + c * 90}>
+        {/* 编号细窄、立在图版上方，名称与年份两行靠右（主项目 MAPPING §72；其他各组同一种排法，图版与第一组齐平，§74）。
+            还没发稿的主项目（项目三）用空心编号 */}
+        <span className="hs-card__kick-n hs-card__kick-n--big">
+          <span className={`hs-card__num${t.wip ? ' hs-card__num--wip' : ''}`}>{t.kickN}</span>
+          <span className="hs-card__kick-l">{t.kickLabel}</span>
+        </span>
         <span className={`hs-card__status${t.wip ? ' hs-card__status--wip' : ''}`}>{t.status}</span>
       </span>
       <span className="hs-card__box" data-a={cur ? 'wipe' : undefined} data-d={200 + c * 90}>
@@ -858,12 +852,8 @@ export function AboutPage() {
             03 — About
           </p>
           <div className="hs-mask">
-            <h2 className="hs-h2 hs-h2--say" data-a="rise" data-d="60">
-              From <span className="hs-w">spaces</span>{' '}
-              <span className="hs-accent--lime">
-                to <span className="hs-w">interactions.</span>
-              </span>
-            </h2>
+            {/* 鼠标停在宣言上，附近的字变宽变粗（与首屏字格同一种，MAPPING §74） */}
+            <AboutSay />
           </div>
           <div className="hs-about__text">
             <p data-a="up" data-d="200">

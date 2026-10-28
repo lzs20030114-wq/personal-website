@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FX, approach, splitDate, swellAt, swellAxes, tiltAt, tiltCss, wedgeTarget } from './home-fx';
+import { FX, approach, splitDate, swellAt, swellAxes, swellFrom, tiltAt, tiltCss, wedgeTarget } from './home-fx';
 
 describe('方块场倾斜', () => {
   it('正对指针最大，越远越小，远到一定距离就不写样式', () => {
@@ -60,5 +60,14 @@ describe('首屏字格鼓起', () => {
     expect(swellAxes(1)).toEqual({ wdth: FX.SWELL_WDTH[1], wght: FX.SWELL_WGHT[1] });
     const a = swellAxes(0.5);
     expect(Number.isInteger(a.wdth) && Number.isInteger(a.wght)).toBe(true);
+  });
+  it('About 宣言：细窄的字与宽粗的名词各从自己平时的样子起跳，鼓到同一个最宽最粗；名词只变粗不再变宽', () => {
+    const peak = { wdth: FX.SWELL_WDTH[1], wght: FX.SWELL_WGHT[1] };
+    expect(swellFrom(FX.SAY_PLAIN, 0)).toEqual(FX.SAY_PLAIN);
+    expect(swellFrom(FX.SAY_WIDE, 0)).toEqual(FX.SAY_WIDE);
+    expect(swellFrom(FX.SAY_PLAIN, 1)).toEqual(peak);
+    expect(swellFrom(FX.SAY_WIDE, 1)).toEqual(peak);
+    expect(swellFrom(FX.SAY_WIDE, 0.5).wdth).toBe(FX.SAY_WIDE.wdth);
+    expect(swellFrom(FX.SAY_PLAIN, 0.5).wdth).toBeGreaterThan(FX.SAY_PLAIN.wdth);
   });
 });

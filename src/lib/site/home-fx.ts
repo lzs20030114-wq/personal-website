@@ -24,6 +24,12 @@ export const FX = {
   /** 变宽快、收回慢：鼠标扫过后留一点拖尾 */
   SWELL_IN_MS: 240,
   SWELL_OUT_MS: 1400,
+  /** 03 About 宣言（2026-10-28，MAPPING §74）：同一种鼓起，起点是宣言自己的两档——细窄的字与宽粗的名词（与 .hs-h2--say / .hs-w 同值） */
+  SAY_PLAIN: { wdth: 76, wght: 300 },
+  SAY_WIDE: { wdth: 125, wght: 640 },
+  /** 宣言的「一格」按字号折算：横向半个字号约一个字宽，纵向一个行高（.hs-h2--say 的 line-height） */
+  SAY_CELL_W: 0.5,
+  SAY_CELL_H: 0.88,
   /** 04 Lab：楔形两条边追上新选中行的时间常数（ms），约 3τ ≈ 200ms 到位，与 hover 反馈同档 */
   WEDGE_TAU_MS: 70,
   /** 楔形落在预览框左边上的那一点，离框的上下边至少留多少（px） */
@@ -60,11 +66,22 @@ export function swellAt(dxCells: number, dyCells: number): number {
   return f < FX.SWELL_MIN ? 0 : f;
 }
 
-/** 鼓起程度 → 字宽轴 / 字重（整数，指针微动时同一个字的值不变就不必重写样式） */
-export function swellAxes(f: number): { wdth: number; wght: number } {
-  const [w0, w1] = FX.SWELL_WDTH;
-  const [g0, g1] = FX.SWELL_WGHT;
-  return { wdth: Math.round(w0 + (w1 - w0) * f), wght: Math.round(g0 + (g1 - g0) * f) };
+export interface Axes {
+  wdth: number;
+  wght: number;
+}
+
+/** 从某个起点（平时的字宽字重）鼓向最宽最粗：f = 0 是起点、1 是 SWELL_WDTH / SWELL_WGHT 的上端（整数，同一个字的值不变就不必重写样式） */
+export function swellFrom(base: Axes, f: number): Axes {
+  return {
+    wdth: Math.round(base.wdth + (FX.SWELL_WDTH[1] - base.wdth) * f),
+    wght: Math.round(base.wght + (FX.SWELL_WGHT[1] - base.wght) * f),
+  };
+}
+
+/** 01 字格：起点是平时的细窄（SWELL_WDTH / SWELL_WGHT 的下端） */
+export function swellAxes(f: number): Axes {
+  return swellFrom({ wdth: FX.SWELL_WDTH[0], wght: FX.SWELL_WGHT[0] }, f);
 }
 
 export interface Span {

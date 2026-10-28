@@ -53,6 +53,8 @@
 .hs-h2--say { font-weight: 300; font-stretch: 76%; font-size: clamp(44px, min(10vw, 15vh), 152px); line-height: .88; letter-spacing: -.03em; }
 /* 宣言里的两个名词换成宽粗（字宽 125%、字重 640）。原放在旧首屏那段样式里，2026-10-27 换首屏时误删、10-28 补回（MAPPING §72） */
 .hs-w { font-stretch: 125%; font-weight: 640; letter-spacing: -.035em; }
+/* 03 About 宣言拆成逐字（MAPPING §74）：一个词里的字不许在中间折行 */
+.hs-say__w { white-space: nowrap; }
 .hs-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
 .hs-head__aside { display: flex; gap: 28px; align-items: baseline; }
 .hs-head__aside .hs-lbl { display: flex; gap: 12px; align-items: center; }
@@ -153,19 +155,19 @@
 .hs-cards.hs-has-on .hs-card:not(.hs-is-on) { opacity: .42; }
 .hs-card__kick { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; white-space: nowrap; font: 500 12px var(--mono); }
 .hs-card__kick-n { color: var(--c-ink); }
-/* 2026-10-27（MAPPING §70）：主项目卡的编号放大成宽体粗字；项目三还没发稿 = 空心（参考 One Moment 空心 / 实心表示状态） */
-.hs-card__kick-n--big { display: inline-flex; align-items: flex-start; gap: 12px; }
+/* 2026-10-27（MAPPING §70）：主项目卡的编号放大；项目三还没发稿 = 空心（参考 One Moment 空心 / 实心表示状态）。现行排法见下方 §72 / §74 */
 .hs-card__num { font: 700 44px/.8 var(--sans); font-stretch: 125%; letter-spacing: -.04em; color: var(--c-ink); }
 .hs-card__num--wip { color: transparent; -webkit-text-stroke: 1.2px var(--c-ink); }
 .hs-card__kick-l { font: 500 12px var(--mono); }
 /* 2026-10-28（MAPPING §72，按画布「02 Work」画板）：编号改细窄（字宽 72%、字重 300），1440 宽时 64px，
    整行立在图版上方、不再压进图里；名称与年份两行靠右、底边与编号对齐。项目三仍是空心。
-   §73：矮于 900 的屏编号跟着屏高缩（7.12vh，900 高时正好 64），给组印记腾地方 */
+   §73：矮于 900 的屏编号跟着屏高缩（7.12vh，900 高时正好 64），给组印记腾地方。
+   §74：其他各组的卡也用这一种排法（编号 02.1 …、类别、年份），图版与第一组齐平；类别太长时截断，不折行（折行会把这一排图版顶下去） */
 .hs-card__kick--big { --nb: clamp(52px, min(4.45vw, 7.12vh), 72px); display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto auto; column-gap: 12px; align-items: end; }
 .hs-card__kick--big .hs-card__kick-n--big { display: contents; }
 .hs-card__kick--big .hs-card__num { grid-column: 1; grid-row: 1 / span 3; font-weight: 300; font-stretch: 72%; font-size: var(--nb); line-height: .9; letter-spacing: -.03em; }
 .hs-card__kick--big .hs-card__num--wip { -webkit-text-stroke-width: 1.5px; }
-.hs-card__kick--big .hs-card__kick-l, .hs-card__kick--big .hs-card__status { grid-column: 2; justify-self: end; text-align: right; line-height: 15px; }
+.hs-card__kick--big .hs-card__kick-l, .hs-card__kick--big .hs-card__status { grid-column: 2; justify-self: end; max-width: 100%; overflow: hidden; text-overflow: ellipsis; text-align: right; line-height: 15px; }
 .hs-card__kick--big .hs-card__kick-l { grid-row: 2; }
 .hs-card__kick--big .hs-card__status { grid-row: 3; }
 .hs-card__status { color: var(--muted); }
