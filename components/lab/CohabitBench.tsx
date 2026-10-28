@@ -20,8 +20,9 @@ import { useBenchLoop } from './useBenchLoop';
  * 规则两档（2026-10-07 作者「座位做据点，人分走 / 站 / 坐三种状态」+「先以 8×8 设计，座位摆在空间中间」）：
  * 「走 · 站 · 坐」（默认，8×8，标准布置）= 走着不触发、站定看猫给一步、坐着一步步把猫引到座位前方那台；痕迹（旧）= 上一版口径，留作对照。
  */
-const TIME_SCALES = [1, 3, 8] as const;
+const TIME_SCALES = [1, 3, 8, 10, 20] as const;
 const TIME_DEF = 1;
+/** 一次 sim.step 最多推这么多（×8 一帧一次）；×10 / ×20 拆成几段推，空间层每段都走一次 */
 const MAX_SIM_DT = 0.05 * 8 * 1.01;
 /** 「正文对照」场景按离线对照的固定步长推进（runCohabit 的 dt = 1/30），同一个种子逐步相同；一帧最多补这么多步，慢设备上只是走得慢 */
 const CASE_DT = 1 / 30;
@@ -428,7 +429,14 @@ export function CohabitBench({
             sim.step(CASE_DT);
             caseAcc.current -= CASE_DT;
           }
-        } else sim.step(Math.min(MAX_SIM_DT, dt * timeRef.current));
+        } else {
+          let left = Math.min(0.05 * 1.01, dt) * timeRef.current;
+          while (left > 1e-9) {
+            const h = Math.min(MAX_SIM_DT, left);
+            sim.step(h);
+            left -= h;
+          }
+        }
       }
       paint();
       const s = sim.summary();
