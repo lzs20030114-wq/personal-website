@@ -461,6 +461,7 @@ const COPY = {
     sarmFreqAria: '小触手摆动频率（Hz）',
     armAria: ['肌腱 1 收缩', '肌腱 2 收缩', '肌腱 3 收缩'],
     armHome: '交还待机',
+    reset: '重置',
     ring: '单环',
     ringAll: '全部',
     view: '视角',
@@ -534,6 +535,7 @@ const COPY = {
     sarmFreqAria: 'Small-arm swing frequency (Hz)',
     armAria: ['Tendon 1 contraction', 'Tendon 2 contraction', 'Tendon 3 contraction'],
     armHome: 'Idle',
+    reset: 'Reset',
     ring: 'Ring',
     ringAll: 'All',
     view: 'View',
@@ -638,6 +640,7 @@ export function MachineBench({
     setIsolate: (ri: number | null) => void;
     setTendon: (k: number, v: number) => void;
     armHome: () => void;
+    reset: () => void;
     setSaSwing: (ampDeg: number, freqHz: number) => void;
     viewTo: (k: ViewKey) => void;
     // —— 行为档（Lab 1-6）
@@ -1684,6 +1687,42 @@ export function MachineBench({
         saAmpNow = (ampDeg * Math.PI) / 180;
         saFreqNow = freqHz;
       },
+      // 整台重置（只给编排档 Lab 1-5；1-6 有自己的「重来」）：五环 / 大触手 / 小触手都换新实例
+      // 回到首帧位形，转速 / 部件 / 单环 / 遮罩 / 透视 / 机位回开场值。就地换内容、不重挂
+      // effect——重挂会在同一个画布上再建一套 GL 程序与网格缓冲，旧的没人释放。
+      // 五环止程表有模块级缓存，createMachine 第二次调用不再重标
+      reset: () => {
+        const fresh = createMachine();
+        machine.rings.splice(0, machine.rings.length, ...fresh.rings);
+        machine.theta = fresh.theta;
+        targetTheta = machine.theta;
+        acc = 0;
+        running = spin;
+        dir = MACHINE_DIR;
+        omegaNow = MACHINE_OMEGA;
+        armManual = false;
+        armClock = 0;
+        arm = createTentacle3();
+        muscles.forEach((m) => m.jumpTo(0));
+        smallArms.splice(0, smallArms.length, ...SMALLARM_PLACEMENTS.map(() => createSmallArm()));
+        saStartle.forEach((st) => {
+          st.t = Infinity;
+          st.dir = 1;
+        });
+        saBase.fill(0);
+        saClock = 0;
+        saAmpNow = SMALLARM_IDLE.amp;
+        saFreqNow = SMALLARM_IDLE.freq;
+        showNow = { rings: true, drive: true, frame: true, tentacle: true };
+        isolateNow = null;
+        skinA = SKIN_DEFAULT;
+        perspNow = false;
+        R.setPerspective(0);
+        viewAnim = null;
+        cam.reset();
+        camMoved = true;
+        render();
+      },
       setPersp: (on) => {
         perspNow = on;
         camMoved = true;
@@ -2176,6 +2215,22 @@ export function MachineBench({
     apiRef.current?.viewTo(k);
   }, []);
 
+  /** 整台重置：内部状态由 api.reset 换新，这里把面板读数一起拨回开场值 */
+  const resetAll = useCallback(() => {
+    apiRef.current?.reset();
+    setRun(spin);
+    setPersp(false);
+    setSkin(SKIN_DEFAULT);
+    setOmega(MACHINE_OMEGA);
+    setView('axon');
+    setPhase(0);
+    setShow({ rings: true, drive: true, frame: true, tentacle: true });
+    setIsolate(null);
+    setTendons([0, 0, 0]);
+    setSaAmp(Math.round((SMALLARM_IDLE.amp * 180) / Math.PI));
+    setSaFreq(SMALLARM_IDLE.freq);
+  }, [spin]);
+
   const downloadLog = useCallback(() => {
     const out = apiRef.current?.exportLog();
     if (!out) return;
@@ -2202,6 +2257,12 @@ export function MachineBench({
 
   // 面板精简（2026-10-25，LabCtl）：控件拆成片段，横排面板与案例页侧栏各按各的排法组合。
   // 侧栏（sideControls）的 DOM 与此前逐个相同；横排面板 = 播放一组常显 + 「更多」折叠 + 视角到底栏。
+  // 整台重置：播放那一层（与运转并排）。只给编排档 Lab 1-5；1-6 有自己的「重来」
+  const resetBtn = engineOn ? null : (
+    <button type="button" onClick={resetAll}>
+      {L.reset}
+    </button>
+  );
   const runCtl = (
     <>
         <label>
@@ -2479,11 +2540,15 @@ export function MachineBench({
       {sarmGrp}
       {ringGrp}
       <div className="grp grp--seg">{viewInner}</div>
+      {resetBtn ? <div className="grp">{resetBtn}</div> : null}
       <p className="lab-ctl__hint">{L.hint}</p>
     </>
   ) : (
     <>
-      <div className="grp lab-play">{runCtl}</div>
+      <div className="grp lab-play">
+        {runCtl}
+        {resetBtn}
+      </div>
       {speedGrp}
       {phaseGrp}
       <LabFold>

@@ -31,8 +31,7 @@ export const components = (lang: SlotLang) => ({
      正文再放一台就是同一台机器两个 WebGL 上下文，而且两者会抢同一个模块级 handoff
      槽（键名 'machine'，宽限期内两个实例都会去恢复主图的位形）。§6.5 末改为一句话
      指回页顶主图。 */
-  // ArchBench 不带控制条（它本来就没有控件），故无 controls 可收
-  ArchFigure: () => <ArchBench onLight lang={lang} />,
+  ArchFigure: () => <ArchBench controls={false} onLight lang={lang} />,
   RingsFigure: () => <RingsBench controls={false} onLight lang={lang} />,
   TentacleFigure: () => <TentacleBench controls={false} onLight lang={lang} />,
 });

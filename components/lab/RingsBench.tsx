@@ -196,6 +196,7 @@ const COPY = {
     phase: '相位',
     view: '视角',
     reset: '归位',
+    resetAll: '重置',
     views: { axon: '轴测', front: '正', left: '左', right: '右', top: '顶' },
     title: 'S1–S5 伏丘壳体',
     sub: '85 mm 等距 · 同相呼吸 · 槽端逐环标定 [0/2/4/8]',
@@ -211,7 +212,9 @@ const COPY = {
     skinAria: 'Skin opacity: 0 clear, 1 solid',
     phase: 'Phase',
     view: 'View',
-    reset: 'Reset',
+    // 视角那颗是「归位」= 只动机位（全站同一口径：Reset view）；「Reset」留给整台重置
+    reset: 'Reset view',
+    resetAll: 'Reset',
     views: { axon: 'Axon', front: 'Front', left: 'Left', right: 'Right', top: 'Top' },
     title: 'S1–S5 shell family',
     sub: '85 mm pitch · in-phase breathing · slot ladder [0/2/4/8]',
@@ -255,6 +258,7 @@ export function RingsBench({
     setPersp: (on: boolean) => void;
     viewTo: (k: ViewKey) => void;
     viewHome: () => void;
+    reset: () => void;
   } | null>(null);
   const [breathe, setBreathe] = useState(spin);
   const [skin, setSkin] = useState(SKIN_DEFAULT);
@@ -470,6 +474,20 @@ export function RingsBench({
         viewAnim = null;
         cam.reset();
       },
+      // 整台重置：五环换新实例（θ₀ 位形，止程表有缓存故不重标），相位 / 呼吸 / 遮罩 /
+      // 透视 / 机位全回开场值。就地换内容，不重挂 effect——重挂会在同一个画布上再建一套
+      // GL 程序与缓冲，旧的没人释放
+      reset: () => {
+        rings.splice(0, rings.length, ...createShell());
+        theta = SHELL_THETA0;
+        targetTheta = theta;
+        acc = 0;
+        breathing = spin;
+        skinA = SKIN_DEFAULT;
+        R.setPerspective(0);
+        viewAnim = null;
+        cam.reset();
+      },
     };
 
     const onCtx = (ev: Event): void => ev.preventDefault();
@@ -511,6 +529,15 @@ export function RingsBench({
   }, []);
 
   const L = COPY[lang];
+
+  const resetAll = (): void => {
+    apiRef.current?.reset();
+    setBreathe(spin);
+    setSkin(SKIN_DEFAULT);
+    setPersp(false);
+    setView('axon');
+    setPhase(0);
+  };
 
   return (
     <div
@@ -639,6 +666,11 @@ export function RingsBench({
               </button>
             )}
           </div>
+          <div className="grp">
+            <button type="button" onClick={resetAll}>
+              {L.resetAll}
+            </button>
+          </div>
           <p className="lab-ctl__hint">{L.hint}</p>
         </div>
         ) : (
@@ -675,6 +707,9 @@ export function RingsBench({
                 apiRef.current?.setPhase(v);
               }}
             />
+            <button type="button" onClick={resetAll}>
+              {L.resetAll}
+            </button>
           </div>
           <LabFold>
             <div className="grp">

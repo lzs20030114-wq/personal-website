@@ -148,6 +148,7 @@ export const LAB_UI_COPY: readonly (readonly [string, string])[] = [
   ["放松", "Relax"],
   ["重来", "Restart"],
   ["视角归位", "Reset camera"],
+  ["重置", "Reset"],
   ["无", "None"],
   ["排列", "Arrangement"],
   ["轴测", "Axon"],

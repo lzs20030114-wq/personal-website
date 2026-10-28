@@ -54,11 +54,14 @@ const COPY = {
 export function ArchBench({
   grid = true,
   active = true,
+  controls = true,
   onLight = false,
   lang: explicitLang,
 }: {
   grid?: boolean;
   active?: boolean;
+  /** false = 纯展示（主页预览 / 案例页正文）：不出控制条 */
+  controls?: boolean;
   onLight?: boolean;
   /** 界面语言：'zh' = /lab；'en' = 英文案例页正文 */
   lang?: 'en' | 'zh';
@@ -69,6 +72,8 @@ export function ArchBench({
   const svgRef = useRef<SVGSVGElement | null>(null);
   const stateRef = useRef<{ solver: ReturnType<typeof createArch>; ctl: LinkageController; step: (dt: number) => void } | null>(null);
   const [hud, setHud] = useState({ phi: 0, apex: 0, err: 0, mode: 'idle' });
+  // 重置 = 整台重建（solver / controller / 定步累加器回到首帧）。SVG 台架没有 GL 资源，重建即可
+  const [resetKey, setResetKey] = useState(0);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -177,9 +182,9 @@ export function ArchBench({
     return () => {
       stateRef.current = null;
     };
-  }, [grid]);
+  }, [grid, resetKey]);
 
-  useBenchLoop(svgRef, (dt) => stateRef.current?.step(dt), [grid], active);
+  useBenchLoop(svgRef, (dt) => stateRef.current?.step(dt), [grid, resetKey], active);
 
   const toVB = (ev: React.PointerEvent<SVGSVGElement>): Point | null => {
     const m = svgRef.current?.getScreenCTM();
@@ -227,6 +232,15 @@ export function ArchBench({
       </div>
       <div className="lab-hud bl dim">{t.foot}</div>
       </div>
+      {controls ? (
+        <div className="lab-ctl">
+          <div className="grp lab-play">
+            <button type="button" onClick={() => setResetKey((k) => k + 1)}>
+              {tx("重置")}
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

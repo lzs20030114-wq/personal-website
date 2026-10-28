@@ -230,10 +230,13 @@ export function TentacleBench({
     apiRef.current = {
       step,
       setTarget,
+      // 重置：硬复位——重建实例（笔直、零速度）、肌肉清零、视角回开场机位。
+      // 联动档在按钮那边一起清（它是 React 状态，不在这个闭包里）
       home: () => {
         sim = createTentacle3();
         muscles.forEach((m) => m.jumpTo(0));
         setTendons([0, 0, 0]);
+        cam.reset();
       },
       viewHome: () => cam.reset(),
       cam,
@@ -335,10 +338,18 @@ export function TentacleBench({
             >
               {tx("放松")}
             </button>
-            {/* 「重来」= 重建触手（原写「归位」，与底栏的相机「归位」同名、英文还被译成 Reset view）；
-                相机归位只在底栏一处（2026-10-25，LabCtl） */}
-            <button type="button" onClick={() => apiRef.current?.home()}>
-              {tx("重来")}
+            {/* 「重置」= 整台复位：重建触手（笔直、零速度）、肌腱与联动清零、机位回开场。
+                原写「归位」（与底栏相机「归位」同名、英文还被译成 Reset view），10-25 改「重来」，
+                10-28 与其余连杆台架统一叫「重置」；相机归位只在底栏一处 */}
+            <button
+              type="button"
+              onClick={() => {
+                setLink(0);
+                linkRef.current = 0;
+                apiRef.current?.home();
+              }}
+            >
+              {tx("重置")}
             </button>
           </div>
         </div>

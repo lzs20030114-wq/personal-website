@@ -17,7 +17,20 @@ import { useBenchLoop } from './useBenchLoop';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const LABELS = ['A', 'B', 'C', 'D', 'P'] as const;
 
-export function FourBarBench({ grid = true, spin = true, active = true, onLight = false }: { grid?: boolean; spin?: boolean; active?: boolean; onLight?: boolean }) {
+export function FourBarBench({
+  grid = true,
+  spin = true,
+  active = true,
+  controls = true,
+  onLight = false,
+}: {
+  grid?: boolean;
+  spin?: boolean;
+  active?: boolean;
+  /** false = 纯展示（主页预览 / 案例页正文）：不出控制条 */
+  controls?: boolean;
+  onLight?: boolean;
+}) {
   const lang = useBenchLang();
   const tx = useLabText(lang);
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -28,6 +41,8 @@ export function FourBarBench({ grid = true, spin = true, active = true, onLight 
     step: (dt: number) => void;
   } | null>(null);
   const [hud, setHud] = useState({ theta: 0, omega: 0, err: 0, mode: 'idle' });
+  // 重置 = 整台重建（solver / controller / 轨迹一起回到首帧）。SVG 台架没有 GL 资源，重建即可
+  const [resetKey, setResetKey] = useState(0);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -145,9 +160,9 @@ export function FourBarBench({ grid = true, spin = true, active = true, onLight 
     return () => {
       stateRef.current = null;
     };
-  }, [grid, spin]);
+  }, [grid, spin, resetKey]);
 
-  useBenchLoop(svgRef, (dt) => stateRef.current?.step(dt), [grid, spin], active);
+  useBenchLoop(svgRef, (dt) => stateRef.current?.step(dt), [grid, spin, resetKey], active);
 
   const toVB = (ev: React.PointerEvent<SVGSVGElement>): Point | null => {
     const m = svgRef.current?.getScreenCTM();
@@ -194,6 +209,15 @@ export function FourBarBench({ grid = true, spin = true, active = true, onLight 
       </div>
       <div className="lab-hud bl dim">{tx("拖任意自由节点 · 松手继承角速度")}</div>
       </div>
+      {controls ? (
+        <div className="lab-ctl">
+          <div className="grp lab-play">
+            <button type="button" onClick={() => setResetKey((k) => k + 1)}>
+              {tx("重置")}
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

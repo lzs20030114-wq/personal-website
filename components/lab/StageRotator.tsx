@@ -160,8 +160,8 @@ export function StageRotator() {
                   ...slideStyle(i),
                 }}
               >
-                {s.key === 'fourbar' && <FourBarBench active={on} onLight />}
-                {s.key === 'arch' && <ArchBench active={on} onLight />}
+                {s.key === 'fourbar' && <FourBarBench active={on} controls={false} onLight />}
+                {s.key === 'arch' && <ArchBench active={on} controls={false} onLight />}
                 {s.key === 'tentacle' && <TentacleBench active={on} controls={false} onLight />}
                 {s.key === 'rings' && <RingsBench active={on} controls={false} onLight />}
               </div>
