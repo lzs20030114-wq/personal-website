@@ -388,6 +388,8 @@ export const COHABIT = {
     PARTY_SEAT: 1.6,
     /** 让行：等满这么久（s）绕开另选路（演示值） */
     YIELD_S: 1.5,
+    /** 错身时画面上让开的最快速度（m/s，只影响画面；约侧身挪一步的快慢，演示值） */
+    SIDESTEP: 1.5,
   },
 } as const;
 
@@ -1001,6 +1003,13 @@ export interface CohabitOpts {
   cover?: 'field' | 'room';
   /** 人坐下、面前那台落下来当桌子（COHABIT.TABLE）；省略 = 单元铺满整间房时开（只有那套家具有桌子可落），否则关 */
   tables?: boolean;
+  /**
+   * 错身（2026-10-28，作者确认「两侧单元都收在天花板上时，人可以侧身错过」）：social 开着时，一个交叉点四周的单元都没落成墙、
+   * 也不在家具里，这个点就是一片空地——走着的人可以从站在那儿的人身边过去（只路过、不停下），规划路线也不再把它当成堵死。
+   * 空地上两个人错得开身（铺满整间房时过道芯到芯 0.83 m，两个身体 0.88 m，单元收着时地面是空的）；四周有单元落着就照旧一点一个人。
+   * 画面上让走着的那个往旁边让开（`drawPos`），模型里的距离照旧按格线上的位置算。省略 = 单元铺满整间房时开，否则关（研究与案例页对照图逐位不变）
+   */
+  squeeze?: boolean;
   /** 访客的节奏（站多久、看猫多久、去不去坐、坐多久）：省略 = COHABIT.VISITOR / SEATS 那几个演示值（研究与案例页对照图用的）；部分覆盖逐项替换 */
   pace?: Partial<VisitorPace>;
 }
@@ -1029,13 +1038,16 @@ export const PACE_STUDY: VisitorPace = {
  * 一坐 90–240 s，三个都是演示值，资料里没有猫咖访客多久挪一次、一次坐多久的实测数。这一套：站着停 3–12 s、去坐的几率 0.35、
  * 一坐 40–120 s，看猫的时长不动（那是有目的的停留，「站」的规则靠它）。同一配置实测：坐着 56% · 站着 27% · 走 14%，约 37 s
  * 挪一次；共温不变（1118 → 1133 s）、坐下时桌子仍全部到位，共触少了约三成（305 → 215 s：坐着的人少了，猫凑到人身边的机会也少）。
+ * 2026-10-28 作者「可以坐久一点」：一坐 40–120 → 60–180 s，同时单元铺满整间房时开了错身（CohabitOpts.squeeze）。
+ * 实测（6 人 2 猫 · 4 种子 × 600 s，会动 / 钉死 / 空房间）：坐着 62% / 59% / 62%，走 11% / 14% / 12%；
+ * 错身关着时同一节奏是 54% / 25% / 44%——钉死与空房间里人大半时间被站着的人堵在原地。
  * 只给台架的自由演示；研究、案例页对照图与 2-14 的「正文对照」四钮仍用 PACE_STUDY（否则正文引用的读数会跟着变）。
  */
 export const PACE_DEMO: VisitorPace = {
   ...PACE_STUDY,
   pause: { min: 3, max: 12 },
   sitP: 0.35,
-  sit: { min: 40, max: 120 },
+  sit: { min: 60, max: 180 },
 };
 
 export class CohabitSim {
@@ -1082,6 +1094,8 @@ export class CohabitSim {
   /** 桌子（COHABIT.TABLE）开关；tableBy = 此刻每台被哪件家具当桌子要着（件号，−1 = 没有）；
    *  tableSeat / tableReady = 坐在有桌子可落的座位上的人·秒、其中桌子已经落到位（对人是墙）的人·秒 */
   readonly tables: boolean;
+  /** 错身（CohabitOpts.squeeze） */
+  readonly squeeze: boolean;
   readonly tableBy: Int16Array;
   tableSeat = 0;
   tableReady = 0;
@@ -1169,6 +1183,7 @@ export class CohabitSim {
     this.wall = new Uint8Array(n);
     this.heldR5 = new Uint8Array(n);
     this.tables = opts.tables ?? opts.cover === 'room';
+    this.squeeze = opts.squeeze ?? opts.cover === 'room';
     this.tableBy = new Int16Array(n).fill(-1);
     this.wallScratch = new Uint8Array(n);
     this.faces = opts.faces ?? false;
@@ -2610,10 +2625,120 @@ export class CohabitSim {
     for (const q of this.people) {
       if (q === me || q.walker.state === 'walk') continue;
       this.bodyNodes(q, this.bodyScratch);
-      for (const k of this.bodyScratch) avoid[k] = 1;
+      for (const k of this.bodyScratch) if (!this.passable(k)) avoid[k] = 1;
     }
     return avoid;
   }
+
+  /** 错身：交叉点 k 四周的单元都没落成墙、也不在家具里 ⇒ 是一片空地，可以从站在那儿的人身边过去（CohabitOpts.squeeze） */
+  private passable(k: number): boolean {
+    if (!this.squeeze) return false;
+    const g = this.graph;
+    if (k >= g.door[0]) return false;
+    if (g.furn && g.furn.nodeOff[k]) return false;
+    const n = this.layout.n;
+    const c = k % (n + 1);
+    const r = (k - c) / (n + 1);
+    for (const [uc, ur] of [[c - 1, r - 1], [c, r - 1], [c - 1, r], [c, r]])
+      if (uc >= 0 && uc < n && ur >= 0 && ur < n && this.wall[ur * n + uc]) return false;
+    return true;
+  }
+
+  /**
+   * 画面上的位置（只给台架画人用）：错身时让开，免得两个身体在同一个交叉点上叠在一起。所有没坐着的人一起解：
+   * 从格线上的位置出发，每一对按下面的规则让开、当场生效，迭代几轮（几个人挤在一处时，单独按对算会被第三个人推回去）。
+   * 模型里的距离、事件、代价一律照旧按格线上的位置算。按仿真时间缓存，同一步里多次取只算一次。
+   */
+  drawPos(p: Visitor): { x: number; y: number } {
+    const w = p.walker;
+    if (!this.squeeze || p.seated) return { x: w.x, y: w.y };
+    if (this.drawAt !== this.t || this.drawCount !== this.people.length) this.solveDrawPos();
+    return this.drawPosCache.get(p.id) ?? { x: w.x, y: w.y };
+  }
+
+  private drawAt = -1;
+  private drawCount = -1;
+  private readonly drawPosCache = new Map<number, { x: number; y: number }>();
+  /** 上一次画面上的让开量（相对格线位置）：让开按速率追目标、侧向距离很小时沿用上次分开的那一边，不会一帧跳到另一侧 */
+  private readonly drawOff = new Map<number, { x: number; y: number }>();
+
+  private solveDrawPos(): void {
+    const dt = this.drawAt < 0 ? 0 : Math.max(0, this.t - this.drawAt);
+    this.drawAt = this.t;
+    this.drawCount = this.people.length;
+    const R2 = 2 * PLAN.BODY_R;
+    const ps = this.people.filter((q) => !q.seated && q.walker.present);
+    const pos = ps.map((q) => ({ x: q.walker.x, y: q.walker.y }));
+    const prev = ps.map((q) => this.drawOff.get(q.id) ?? { x: 0, y: 0 });
+    const v = ps.map((q) => (q.moving ? [Math.cos(q.walker.heading), Math.sin(q.walker.heading)] : [0, 0]));
+    for (let it = 0; it < 6; it++) {
+      let moved = false;
+      for (let i = 0; i < ps.length; i++)
+        for (let j = i + 1; j < ps.length; j++) {
+          const dx = pos[i].x - pos[j].x;
+          const dy = pos[i].y - pos[j].y;
+          if (dx * dx + dy * dy >= R2 * R2 - 1e-9) continue;
+          // 两人的相对运动方向（同一步速）：一走一站 = 走的那个人的朝向；迎面 = 沿路；垂直交叉 = 斜向
+          const rx = v[i][0] - v[j][0];
+          const ry = v[i][1] - v[j][1];
+          const rl = Math.hypot(rx, ry);
+          if (rl < 0.3) {
+            // 都站着、或同向一起走：沿两人连线各退一半（恰好重合时沿 x 分开）
+            const d = Math.hypot(dx, dy);
+            const ux = d > 1e-3 ? dx / d : 1;
+            const uy = d > 1e-3 ? dy / d : 0;
+            const h = (R2 - d) * 0.5;
+            pos[i].x += ux * h;
+            pos[i].y += uy * h;
+            pos[j].x -= ux * h;
+            pos[j].y -= uy * h;
+            moved = true;
+            continue;
+          }
+          // 在相对运动的坐标系里：沿运动方向还差 along 时，侧向要让到 √(R2² − along²)，两人中心距才不小于两个身宽；
+          // 这个量随 along 连续变化，走近渐出、走过渐收。只有走着的人让：一走一站全由走的让，两人都走各让一半、方向相反
+          const ax = rx / rl;
+          const ay = ry / rl;
+          const along = dx * ax + dy * ay;
+          const side = -dx * ay + dy * ax;
+          const need = Math.sqrt(Math.max(0, R2 * R2 - along * along)) - Math.abs(side);
+          if (need <= 1e-6) continue;
+          // 侧向距离很小（快要正对上）：沿用上次两人已经分开的那一边；一直没分开过才按 +1
+          const pside = -(prev[i].x - prev[j].x) * ay + (prev[i].y - prev[j].y) * ax;
+          const sg = Math.abs(side) > 0.05 ? Math.sign(side) : Math.abs(pside) > 1e-4 ? Math.sign(pside) : Math.abs(side) > 1e-6 ? Math.sign(side) : 1;
+          const mi = ps[i].moving ? 1 : 0;
+          const mj = ps[j].moving ? 1 : 0;
+          const si = mi / (mi + mj);
+          const sj = mj / (mi + mj);
+          pos[i].x += -ay * sg * need * si;
+          pos[i].y += ax * sg * need * si;
+          pos[j].x -= -ay * sg * need * sj;
+          pos[j].y -= ax * sg * need * sj;
+          moved = true;
+        }
+      if (!moved) break;
+    }
+    // 让开量按速率追目标（侧身挪一步的快慢），不一帧到位
+    const lim = COHABIT.SOCIAL.SIDESTEP * dt;
+    this.drawPosCache.clear();
+    const keep = new Set<number>();
+    ps.forEach((q, i) => {
+      const tx = pos[i].x - q.walker.x;
+      const ty = pos[i].y - q.walker.y;
+      const ex = tx - prev[i].x;
+      const ey = ty - prev[i].y;
+      const e = Math.hypot(ex, ey);
+      const k = e > lim ? lim / e : 1;
+      const off = { x: prev[i].x + ex * k, y: prev[i].y + ey * k };
+      this.drawOff.set(q.id, off);
+      keep.add(q.id);
+      this.drawPosCache.set(q.id, { x: q.walker.x + off.x, y: q.walker.y + off.y });
+    });
+    for (const id of [...this.drawOff.keys()]) if (!keep.has(id)) this.drawOff.delete(id);
+  }
+
+
+
 
   /** 让这个人走到 goal（坐座位就再走进座位）；不通 = false */
   private sendSocial(p: Visitor, from: number, goal: number, watch: number | null, seat: number | null): boolean {
@@ -2644,6 +2769,19 @@ export class CohabitSim {
     }
     const o = this.occ[k];
     if (o && o !== p.id) {
+      // 错身：四周是空地、不是这一程的终点、过了它下一个点也走得进去 ⇒ 从站着的人身边过去，不占这个点
+      //（下一个点要是被堵，就在这个点前面等，不站到别人身上去等）
+      const after = route[i + 1];
+      const ka = after ? this.nodeExact(after.x, after.y) : -1;
+      let afterOk = false;
+      if (after) {
+        const free = ka < 0 || !(this.occ[ka] && this.occ[ka] !== p.id);
+        afterOk = ka === p.goalNode ? free : free || this.passable(ka);
+      }
+      if (k !== p.goalNode && this.passable(k) && afterOk) {
+        p.yieldFor = 0;
+        return Math.hypot(next.x - w.x, next.y - w.y);
+      }
       p.yieldFor += dt;
       if (p.yieldFor > COHABIT.SOCIAL.YIELD_S) this.reroute(p);
       return -1;
@@ -2665,7 +2803,7 @@ export class CohabitSim {
     if (goal >= 0 && goal !== from && !(this.occ[goal] && this.occ[goal] !== p.id)) {
       const planWall = this.faces && this.space === 'live' ? this.bandHard : null;
       const avoid = this.bodyAvoid(p);
-      for (let k = 0; k < this.occ.length; k++) if (this.occ[k] && this.occ[k] !== p.id) avoid[k] = 1;
+      for (let k = 0; k < this.occ.length; k++) if (this.occ[k] && this.occ[k] !== p.id && !this.passable(k)) avoid[k] = 1;
       avoid[from] = 0;
       const path = shortestPath(this.layout, this.graph, from, new Set([goal]), this.wall, planWall, avoid);
       if (path && path.length >= 2) {

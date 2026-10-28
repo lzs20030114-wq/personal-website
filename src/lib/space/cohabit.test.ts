@@ -1250,13 +1250,102 @@ describe('cohabit · 方形单元（unit: square，Lab 2-15，作者 2026-10-25�
       return { walk: walk / all, seated: seated / all, summary: sim.summary() };
     };
 
-    it('省略 = 研究那一套（逐位不变），台架那一套走得更多、坐得更少', () => {
+    // 2026-10-28 坐的时长 40–120 → 60–180 s（作者「可以坐久一点」），铺满整间房时又能错身走到座位：台架那套坐着的比例回到与研究那套相近
+    it('省略 = 研究那一套（逐位不变），台架那一套走得更多、坐着的比例与研究那套相近', () => {
       const def = run();
       const study = run(PACE_STUDY);
       expect(study.summary).toEqual(def.summary);
       const demo = run(PACE_DEMO);
-      expect(demo.walk).toBeGreaterThan(def.walk * 1.8);
-      expect(demo.seated).toBeLessThan(def.seated);
+      expect(demo.walk).toBeGreaterThan(def.walk * 1.3);
+      expect(Math.abs(demo.seated - def.seated)).toBeLessThan(0.1);
+    }, 60_000);
+  });
+
+  describe('错身（squeeze，2026-10-28 作者确认「两侧单元都收在天花板上时，人可以侧身错过」）', () => {
+    const make = (space: 'live' | 'fixed' | 'empty', squeeze?: boolean, seed = 5) => {
+      const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', ...(squeeze === undefined ? {} : { squeeze }), space, seed, auto: true, faces: true, social: true, catFloor: true, cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid }, guide: COHABIT.GUIDE, pace: PACE_DEMO });
+      const half = sim.layout.fieldM / 2;
+      partySizes(6).forEach((sz, i, a) => {
+        const t = (i / a.length) * 2 * Math.PI + 0.3;
+        sim.addParty(Math.cos(t) * half * 0.6, Math.sin(t) * half * 0.6, sz);
+      });
+      for (let i = 0; i < 2; i++) sim.addCat(sim.layout.units[(i * 5) % sim.layout.units.length]);
+      return sim;
+    };
+
+    it('省略 = 只在单元铺满整间房时开；布在中部（研究、对照图）照旧关', () => {
+      expect(make('live').squeeze).toBe(true);
+      expect(new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID }).squeeze).toBe(false);
+      const off = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID });
+      off.addPerson(0, 0);
+      const p = off.people[0];
+      expect(off.drawPos(p)).toEqual({ x: p.walker.x, y: p.walker.y });
+    });
+
+    it('铺满整间房时人不再被站着的人堵住：钉死与空房间里坐着的时间明显变多，也不会停在别人身上', () => {
+      for (const space of ['fixed', 'empty'] as const) {
+        const share = (squeeze: boolean) => {
+          const sim = make(space, squeeze);
+          let seated = 0;
+          let all = 0;
+          let onTop = 0;
+          for (let k = 0; k < 240 * 30; k++) {
+            sim.step(1 / 30);
+            const still = sim.people.filter((q) => q.walker.present && !q.seated && !q.moving);
+            for (let i = 0; i < still.length; i++)
+              for (let j = 0; j < i; j++) if (Math.hypot(still[i].walker.x - still[j].walker.x, still[i].walker.y - still[j].walker.y) < 0.05) onTop++;
+            for (const q of sim.people) {
+              if (!q.walker.present) continue;
+              all++;
+              if (q.seated) seated++;
+            }
+          }
+          return { seated: seated / all, onTop };
+        };
+        const before = share(false);
+        const after = share(true);
+        expect(after.seated, space).toBeGreaterThan(before.seated + 0.08);
+        expect(after.onTop, space).toBe(0);
+      }
+    }, 120_000);
+
+    it('画面上的位置：每一帧让开量的变化不超过侧身挪步的速度，两人很少叠在一起；落成墙的单元旁边的交叉点不能错身', () => {
+      const sim = make('fixed');
+      const prev = new Map<number, [number, number]>();
+      let maxStep = 0;
+      let frames = 0;
+      let close = 0;
+      for (let k = 0; k < 240 * 30; k++) {
+        sim.step(1 / 30);
+        const ps = sim.people.filter((q) => q.walker.present && !q.seated);
+        const pos = ps.map((q) => sim.drawPos(q));
+        ps.forEach((q, i) => {
+          const off: [number, number] = [pos[i].x - q.walker.x, pos[i].y - q.walker.y];
+          const pr = prev.get(q.id);
+          if (pr) maxStep = Math.max(maxStep, Math.hypot(off[0] - pr[0], off[1] - pr[1]));
+          prev.set(q.id, off);
+        });
+        let fmin = Infinity;
+        for (let i = 0; i < pos.length; i++) for (let j = 0; j < i; j++) fmin = Math.min(fmin, Math.hypot(pos[i].x - pos[j].x, pos[i].y - pos[j].y));
+        frames++;
+        if (fmin < 0.3) close++;
+      }
+      expect(maxStep).toBeLessThanOrEqual(COHABIT.SOCIAL.SIDESTEP / 30 + 1e-9);
+      expect(close / frames).toBeLessThan(0.01);
+      // 钉死档：落着的单元四角的交叉点一个都不能错身
+      const n = sim.layout.n;
+      const s = sim as unknown as { passable(k: number): boolean };
+      let checked = 0;
+      for (let u = 0; u < n * n; u++) {
+        if (!sim.wall[u]) continue;
+        const c = u % n;
+        const r = (u - c) / n;
+        for (const [nc, nr] of [[c, r], [c + 1, r], [c, r + 1], [c + 1, r + 1]]) {
+          expect(s.passable(nr * (n + 1) + nc)).toBe(false);
+          checked++;
+        }
+      }
+      expect(checked).toBeGreaterThan(0);
     }, 60_000);
   });
 

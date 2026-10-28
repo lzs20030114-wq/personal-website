@@ -144,8 +144,7 @@ function postureOf(p: Visitor): 'walk' | 'stand' | 'sit' {
 function sceneOf(sim: CohabitSim, showTrace: boolean, selected = -1) {
   const seats = sim.trigger === 'posture';
   const people: PlanPerson[] = sim.people.map((p) => ({
-    x: p.walker.x,
-    y: p.walker.y,
+    ...sim.drawPos(p),
     heading: p.walker.heading,
     gaze: p.walker.gaze,
     // 「走 · 站 · 坐」规则下地面不留痕迹：不画视野扇面（坐着的人连让位圈也不画——四周本就没有单元）

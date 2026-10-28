@@ -530,8 +530,7 @@ export function CohabitSpaceBench({
         let key = `p-stand|${sk}`;
         let r: BodyRig;
         let heading = p.walker.heading;
-        let x = p.walker.x;
-        let y = p.walker.y;
+        let { x, y } = sim.drawPos(p);
         if (seat && rect) {
           const s = seatSpecOf(rect, seat);
           const lean = p.watching !== null && !p.ignores;
