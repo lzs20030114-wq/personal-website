@@ -65,7 +65,7 @@ function WorkCard({ t, c, cur, on, focusable, vars, onEnter }: CardProps) {
         data-d={160 + c * 90}
       >
         {t.caseSlug ? (
-          // 主项目：编号放大成宽体粗字、下半截压进图版；还没发稿的（项目三）用空心编号，已发稿的实心（MAPPING §70 / §70.1）
+          // 主项目：编号细窄、立在图版上方；还没发稿的（项目三）用空心编号，已发稿的实心（MAPPING §72）
           <span className="hs-card__kick-n hs-card__kick-n--big">
             <span className={`hs-card__num${t.wip ? ' hs-card__num--wip' : ''}`}>{t.kickN}</span>
             <span className="hs-card__kick-l">{t.kickLabel}</span>
@@ -552,7 +552,7 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
     if (!isCur && !flow) return;
     const el = e.currentTarget.querySelector<HTMLElement>('[data-wt]');
     const top = el ? el.offsetTop + (el.offsetParent as HTMLElement).offsetTop : 0;
-    // 主项目卡的大编号压在图版上沿：展开时标题落在编号下面，不和它叠（MAPPING §70.1）
+    // 编号若压进图版，展开时标题要落在编号下面（MAPPING §70.1）；§72 起编号在图版上方，这一项算出来是 0
     const kick = e.currentTarget.querySelector<HTMLElement>('.hs-card__kick--big');
     const box = e.currentTarget.querySelector<HTMLElement>('.hs-card__box');
     const pad = 20 + (kick && box ? Math.max(0, kick.getBoundingClientRect().bottom - box.getBoundingClientRect().top) : 0);

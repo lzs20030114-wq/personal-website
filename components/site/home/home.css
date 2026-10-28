@@ -140,11 +140,9 @@
 .hs-fx-flow__ctas { display: flex; flex-wrap: wrap; gap: 12px; }
 .hs-fx-flow .hs-fx__btn { padding: 11px 18px; font: 500 14px var(--sans); }
 /* ---------- 02 work ---------- */
-/* 2026-10-27（MAPPING §70）：卡片图版随视口高度长；减数 570 = 这一页除图版外的竖向占用（实测），保证任何高度下都不出页内滚动。
-   合并 §64 的组印记后（MAPPING §71.1）：卡片下方那条空白要留给印记（印记矮于 84px 就不出）。
-   高的窗口图版让出约 110px 给印记（前一项）；矮的窗口反正放不下印记，图版照旧吃满、但不超过 214（后一项）。
-   结果：≥ 约 860 高（MacBook 14″ / 16″、1080p）印记出现；更矮（MacBook Air）印记不出、图版与改前一样大。 */
-.hs-work { --plate-h: max(clamp(180px, calc(100vh - 680px), 342px), min(calc(100vh - 570px), 214px)); }
+/* 2026-10-27（MAPPING §70）：卡片图版随视口高度长；减数 = 这一页除图版外的竖向占用（实测），保证任何高度下都不出页内滚动。
+   2026-10-28（MAPPING §72）：按画布「02 Work」画板，1440 × 900 时图版 330px；组印记（§64）只在卡片下面还空得出 84px 的高窗口里出现 */
+.hs-work { --plate-h: clamp(180px, calc(100vh - 570px), 342px); }
 .hs-work { position: relative; height: 100%; min-height: 640px; max-width: 1360px; margin: 0 auto; padding: 92px 88px 40px 56px; display: flex; flex-direction: column; gap: 20px; }
 .hs-cards { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 28px; padding-top: 18px; }
 .hs-card { display: flex; flex-direction: column; gap: 12px; min-width: 0; transition: opacity .45s; }
@@ -156,20 +154,15 @@
 .hs-card__num { font: 700 44px/.8 var(--sans); font-stretch: 125%; letter-spacing: -.04em; color: var(--c-ink); }
 .hs-card__num--wip { color: transparent; -webkit-text-stroke: 1.2px var(--c-ink); }
 .hs-card__kick-l { font: 500 12px var(--mono); }
-/* 2026-10-27 第二轮（MAPPING §70.1）：编号再放大、下半截压进图版（行用负下边距让图版顶上来）；
-   编号描一圈雾色底，压在图上的那段像从图里挖出来（参考 央美小组毕业创作展：两层叠印、交叠处用底色描边隔开）。
-   --nb × (.74 − .42) 是图版上沿离行顶的距离 */
-.hs-card__kick--big { --nb: clamp(84px, 8.4vw, 124px); position: relative; z-index: 3; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); column-gap: 12px; align-items: start; margin-bottom: calc(var(--nb) * -.42); }
+/* 2026-10-28（MAPPING §72，按画布「02 Work」画板）：编号改细窄（字宽 72%、字重 300），1440 宽时 64px，
+   整行立在图版上方、不再压进图里；名称与年份两行靠右、底边与编号对齐。项目三仍是空心 */
+.hs-card__kick--big { --nb: clamp(52px, 4.45vw, 72px); display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto auto; column-gap: 12px; align-items: end; }
 .hs-card__kick--big .hs-card__kick-n--big { display: contents; }
-.hs-card__kick--big .hs-card__num { grid-column: 1; grid-row: 1 / span 3; font-size: var(--nb); line-height: .74; letter-spacing: -.05em; }
-@supports (paint-order: stroke fill) {
-  .hs-card__kick--big .hs-card__num:not(.hs-card__num--wip) { paint-order: stroke fill; -webkit-text-stroke: 8px var(--mist); }
-}
+.hs-card__kick--big .hs-card__num { grid-column: 1; grid-row: 1 / span 3; font-weight: 300; font-stretch: 72%; font-size: var(--nb); line-height: .9; letter-spacing: -.03em; }
 .hs-card__kick--big .hs-card__num--wip { -webkit-text-stroke-width: 1.5px; }
-/* 名称与年份叠成两行，钉在卡的右上角、图版上沿之上：编号多宽都不挤出卡外 */
 .hs-card__kick--big .hs-card__kick-l, .hs-card__kick--big .hs-card__status { grid-column: 2; justify-self: end; text-align: right; line-height: 15px; }
-.hs-card__kick--big .hs-card__kick-l { grid-row: 1; margin-top: max(0px, calc(var(--nb) * .32 - 36px)); }
-.hs-card__kick--big .hs-card__status { grid-row: 2; }
+.hs-card__kick--big .hs-card__kick-l { grid-row: 2; }
+.hs-card__kick--big .hs-card__status { grid-row: 3; }
 .hs-card__status { color: var(--muted); }
 .hs-card__status--wip { color: var(--slate); }
 .hs-card__box { position: relative; flex: 1; display: flex; flex-direction: column; min-height: calc(var(--plate-h) + 138px); overflow: hidden; }
@@ -314,22 +307,24 @@
    .hs-about__body 用 display: contents，让眉题、宣言、正文、链接直接落进这张网格 */
 .hs-about { position: relative; height: 100%; min-height: 620px; max-width: 1360px; margin: 0 auto; padding: 84px 88px 40px 56px; display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,.78fr); grid-template-rows: auto auto 1fr auto auto; grid-template-areas: "eye eye eye" "say say say" "txt txt pic" "more more pic" "facts facts facts"; column-gap: clamp(28px, 3.4vw, 56px); align-items: start; }
 .hs-about__body { display: contents; }
-.hs-about__body > .hs-eyebrow { grid-area: eye; margin-bottom: 14px; }
+.hs-about__body > .hs-eyebrow { grid-area: eye; margin-bottom: 18px; letter-spacing: .04em; }
 .hs-about__body > .hs-mask { grid-area: say; padding-bottom: .14em; }
-.hs-about__text { grid-area: txt; padding-top: clamp(18px, 3.2vh, 30px); columns: 2; column-gap: clamp(24px, 2.8vw, 40px); font: 400 clamp(15px, 2.3vh, 19px)/1.6 var(--sans); color: oklch(0.86 0.04 160); }
-.hs-about__text p { margin: 0 0 .7em; }
-.hs-about__more { grid-area: more; justify-self: start; padding-top: 10px; font: 500 12px var(--mono); color: var(--lime-hi); }
+/* 2026-10-28（MAPPING §72，按画布「03 About」画板）：首段跨两栏放大成导语，后两段各占一栏、顶上一条细线 */
+.hs-about__text { grid-area: txt; padding-top: clamp(20px, 3.8vh, 34px); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: clamp(24px, 2.8vw, 40px); row-gap: clamp(16px, 2.9vh, 26px); align-content: start; color: oklch(0.86 0.04 160); }
+.hs-about__text p { margin: 0; padding-top: 14px; border-top: 1px solid oklch(0.95 0.032 120 / .3); font: 400 clamp(14px, 1.67vh, 15px)/1.65 var(--sans); }
+.hs-about__text p:first-child { grid-column: 1 / -1; max-width: 760px; padding-top: 0; border-top: 0; font-size: clamp(20px, 2.9vh, 26px); line-height: 1.3; letter-spacing: -.012em; color: var(--cream); }
+.hs-about__more { grid-area: more; justify-self: start; padding-top: 18px; font: 500 13px var(--mono); color: var(--lime-hi); }
 .hs-about__more:hover { color: var(--cream); }
 /* 信息栏：四格并排，每格顶上那条横线照旧逐条画出，连起来是栏的上沿；格与格之间一条竖线（参考 融艺：一种墨色 + 带格线的信息格） */
-.hs-facts { grid-area: facts; margin: clamp(20px, 3.4vh, 32px) 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid oklch(0.95 0.032 120 / .3); }
+.hs-facts { grid-area: facts; margin: clamp(16px, 2.4vh, 22px) 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid oklch(0.95 0.032 120 / .3); }
 .hs-fact { position: relative; padding: 11px 14px 13px; display: flex; flex-direction: column; gap: 5px; border-left: 1px solid oklch(0.95 0.032 120 / .3); }
 .hs-fact:first-child { border-left: 0; padding-left: 0; }
 .hs-fact__rule { position: absolute; left: 0; right: 0; top: 0; height: 1px; background: oklch(0.95 0.032 120 / .3); transform-origin: 0 50%; }
 .hs-fact dt { font: 500 11px var(--mono); color: var(--lime-hi); }
 .hs-fact dd { margin: 0; font: 400 14px/1.5 var(--sans); color: var(--cream); }
 /* 肖像占右栏：按容器的宽高取 3:4 能放下的最大框，靠右；左边让出竖排署名的位置 */
-.hs-portrait { grid-area: pic; align-self: stretch; margin: 0; padding-top: clamp(40px, 6vh, 56px); container-type: size; display: flex; align-items: flex-start; justify-content: flex-end; }
-.hs-portrait__wrap { position: relative; width: min(calc(100cqw - 26px), 75cqh); }
+.hs-portrait { grid-area: pic; align-self: stretch; margin: 0; padding-top: clamp(20px, 3.1vh, 28px); container-type: size; display: flex; align-items: flex-start; justify-content: flex-end; }
+.hs-portrait__wrap { position: relative; width: min(calc(100cqw - 26px), 75cqh, clamp(200px, 17.4vw, 300px)); }
 .hs-portrait__cap { position: absolute; left: 0; bottom: 100%; padding-bottom: 8px; font: 400 11px var(--mono); color: var(--lime-hi); white-space: nowrap; }
 /* 竖排字放在框的左侧、从下往上读（书脊方向）：放右侧在 1400px 以下会压到页码导轨 */
 .hs-portrait__edge { position: absolute; right: 100%; bottom: 0; margin-right: 10px; writing-mode: vertical-rl; transform: rotate(180deg); font: 400 11px var(--mono); color: var(--lime-hi); white-space: nowrap; display: none; }
@@ -557,7 +552,9 @@
   .hs-card__title { font-size: 20px; }
   .hs-card__thesis-text { font-size: 15px; }
   .hs-about { grid-template-columns: 1fr; grid-template-rows: none; grid-template-areas: "eye" "say" "txt" "more" "facts" "pic"; row-gap: 0; }
-  .hs-about__text { columns: 1; font-size: 16px; }
+  .hs-about__text { grid-template-columns: 1fr; }
+  .hs-about__text p { font-size: 16px; }
+  .hs-about__text p:first-child { font-size: 22px; }
   .hs-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 28px; }
   .hs-fact:nth-child(3) { border-left: 0; padding-left: 0; }
   .hs-portrait { container-type: normal; padding-top: 48px; justify-content: flex-start; }
