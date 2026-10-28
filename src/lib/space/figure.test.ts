@@ -23,7 +23,7 @@ import {
   type HumanStyle,
   type SeatSpec,
 } from './figure';
-import { COATS, OUTFITS } from '../../../components/lab/figurePalette';
+import { COATS, OUTFITS, dealLooks } from '../../../components/lab/figurePalette';
 import { partBox, signedVolume, type PartMesh, type V3 } from './mesh-shell';
 
 /**
@@ -445,6 +445,38 @@ describe('人 · 穿着（2026-10-27 作者「看得出他们穿不同的衣服�
     for (const t of ['hat', 'bag', 'frame', 'inner', 'sock']) expect(plain.has(t), t).toBe(false);
     expect(new Set(tonesOf({ hat: 'cap', backpack: true, glasses: true }).values())).toEqual(new Set([...plain, 'hat', 'bag', 'frame']));
     expect(tonesOf({ backpack: true }, 'sit').has('pack')).toBe(false);
+  });
+});
+
+describe('台架随机发穿着与花色（2026-10-28 作者「随机，不要重复就行」）', () => {
+  /** 带种子的随机数（mulberry32），守门可复现 */
+  const seeded = (seed: number) => (): number => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  it('一副牌里前 n 张互不相同、正好是 0…n−1；发完再洗一副，第二副也不重样', () => {
+    for (const n of [OUTFITS.length, COATS.length])
+      for (let s = 1; s <= 20; s++) {
+        const deal = dealLooks(n, seeded(s));
+        for (let deck = 0; deck < 2; deck++) {
+          const got = Array.from({ length: n }, () => deal());
+          expect([...got].sort((a, b) => a - b)).toEqual(Array.from({ length: n }, (_, i) => i));
+        }
+      }
+  });
+  it('是随机的：不同的随机源发出的顺序不同，每种花色都有机会第一个出场', () => {
+    const firsts = new Set<number>();
+    const orders = new Set<string>();
+    for (let s = 1; s <= 200; s++) {
+      const deal = dealLooks(COATS.length, seeded(s));
+      const two = [deal(), deal()];
+      firsts.add(two[0]);
+      orders.add(two.join(','));
+    }
+    expect(firsts.size).toBe(COATS.length);
+    expect(orders.size).toBeGreaterThan(20);
   });
 });
 

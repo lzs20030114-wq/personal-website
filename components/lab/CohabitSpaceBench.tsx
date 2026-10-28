@@ -8,7 +8,7 @@ import { LabViewDock } from './LabCtl';
 import { planFromHash } from './planHash';
 import { useBenchLoop } from './useBenchLoop';
 import { DARK_A, DARK_B, LITE_A, LITE_B, MEM_DARK, MEM_LITE, RAIL_DARK, RAIL_LITE, ROOM_DARK, ROOM_LITE } from './SkinSolidBench';
-import { catColor, coatOf, outfitOf, personColor } from './figurePalette';
+import { COATS, OUTFITS, catColor, coatOf, dealLooks, outfitOf, personColor } from './figurePalette';
 import { FlatRenderer, bakeIndexed, type MeshPlace } from '../../src/lib/linkage/gl3d';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import type { Vec3 } from '../../src/lib/linkage/solver3d';
@@ -113,7 +113,7 @@ const COPY = {
     title: '人猫同台 · 立体',
     sub: (side: number, roomH: number) => `8×8 · 方台边长 ${side.toFixed(2)} m · 房高 ${roomH.toFixed(2)} m · ${SCENE.people} 位访客 · ${SCENE.cats} 只猫`,
     hint: '拖拽旋转 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回、给人让路 · 控制在实验室',
-    hintCtl: '拖拽旋转 · 空间三档对照 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回，挡路的带各自收回 · 带子形状取自三条引擎（每档一条）的关键帧 · 每点一次重来换一批访客的穿着与猫的花色',
+    hintCtl: '拖拽旋转 · 空间三档对照 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回，挡路的带各自收回 · 带子形状取自三条引擎（每档一条）的关键帧 · 访客的穿着与猫的花色每一场随机、不重样',
     baking: (p: number) => `算带子轨迹 ${Math.round(p * 100)}%`,
     line: (t: number, formed: number, total: number, c: Record<EventKind, number>) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · 成形 ${formed} / ${total} · 共视 ${c.gaze} · 共温 ${c.warmth} · 共触 ${c.touch} · 交接 ${c.pass}`,
@@ -127,7 +127,7 @@ const COPY = {
     title: 'People and cats together, in 3D',
     sub: (side: number, roomH: number) => `8×8 · square platform ${side.toFixed(2)} m · room ${roomH.toFixed(2)} m high · ${SCENE.people} visitors · ${SCENE.cats} cats`,
     hint: 'Drag to orbit · units rest stowed at the ceiling, then descend, form, retract and give way under the Lab 2-14 rules · controls in the lab',
-    hintCtl: 'Drag to orbit · three spaces to compare · units rest stowed at the ceiling, then descend and form under the Lab 2-14 rules, bands in the way retract on their own · band shapes come from three engine runs, one per depth · each restart dresses the visitors anew and gives the cats new coats',
+    hintCtl: 'Drag to orbit · three spaces to compare · units rest stowed at the ceiling, then descend and form under the Lab 2-14 rules, bands in the way retract on their own · band shapes come from three engine runs, one per depth · outfits and coats are dealt at random each run, no two alike',
     baking: (p: number) => `baking band trajectory ${Math.round(p * 100)}%`,
     line: (t: number, formed: number, total: number, c: Record<EventKind, number>) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · formed ${formed} / ${total} · co-gaze ${c.gaze} · co-warmth ${c.warmth} · contact ${c.touch} · crossing ${c.pass}`,
@@ -340,6 +340,17 @@ export function CohabitSpaceBench({
     };
 
     // ── 人与猫：按「姿态 + 步态相位格」各烘一份静态网格（每种颜色一件，身子与头分开），摆放走 drawMeshAt，每帧不重烘 ──
+    // 穿着与花色：每一场（开场与每次「重来」）洗一副牌、按出场顺序发，同一场里人不撞衫、猫不重样（2026-10-28 作者「随机，不要重复就行」）
+    const newLooks = (): { people: { deal: () => number; got: WeakMap<object, number> }; cats: { deal: () => number; got: WeakMap<object, number> } } => ({
+      people: { deal: dealLooks(OUTFITS.length), got: new WeakMap() },
+      cats: { deal: dealLooks(COATS.length), got: new WeakMap() },
+    });
+    let looks = newLooks();
+    const lookOf = (who: object, pool: { deal: () => number; got: WeakMap<object, number> }): number => {
+      let i = pool.got.get(who);
+      if (i === undefined) pool.got.set(who, (i = pool.deal()));
+      return i;
+    };
     const rigs = new Map<string, BodyRig>();
     const rigOf = (key: string, make: () => BodyRig): BodyRig => {
       let r = rigs.get(key);
@@ -500,10 +511,8 @@ export function CohabitSpaceBench({
       }
       // 人：走（步态按走过的路程推相位）/ 站 / 坐（按这张家具的座面解出来；看着猫时前倾）；头随视线转，夹在 ±75°
       const people = new Map<string, Batch>();
-      // 穿着与花色按出场顺序取，每点一次「重来」往后轮一轮（六位访客一轮六套、两只猫一轮两种），几轮下来全都见得到
-      const round = seed - SCENE.seed;
       for (const p of sim.people) {
-        const variant = p.id - 1 + round * SCENE.people;
+        const variant = lookOf(p, looks.people);
         const style = outfitOf(variant).style;
         const sk = styleKey(style);
         const mo = track(p, p.walker.x, p.walker.y);
@@ -542,8 +551,8 @@ export function CohabitSpaceBench({
       // 成形段才有台面（落到位的直筒还没有平台）：脚下的台程度到顶才把猫画在平台面上
       const band = trajs ? platformBand(rig, trajs) : null;
       const cats = new Map<string, Batch>();
-      sim.cats.forEach((c, i) => {
-        const look = coatOf(i + round * SCENE.cats);
+      sim.cats.forEach((c) => {
+        const look = coatOf(lookOf(c, looks.cats));
         const mo = track(c, c.walker.x, c.walker.y);
         const support = sim.space === 'empty' ? [] : sim.supportOf(c);
         const formed = band !== null && support.length > 0 && support.every((u) => sim.act.degree[u.i] >= 1 - 1e-3);
@@ -611,6 +620,7 @@ export function CohabitSpaceBench({
 
     const rebuild = (): void => {
       sim = makeSim(spaceKey, seed);
+      looks = newLooks();
       bakeFurniture();
       resetBandCursors(cursors);
       tableTop.fill(TABLE_TOP.stand);

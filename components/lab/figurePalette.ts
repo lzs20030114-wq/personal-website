@@ -6,7 +6,8 @@ import type { CatCoat, HumanStyle, Tone } from '../../src/lib/space/figure';
  *
  * 2026-10-27 作者「猫多几种花色，人看得出穿不同的衣服」：
  *   - 人：十二套穿着（OUTFITS），每套 = 几何（HumanStyle：上衣 / 下装 / 发型 / 帽子 / 眼镜 / 包）+ 这一套的颜色；
- *     按访客编号轮换。第 0 套就是此前那一个人（灰绿长袖、灰蓝长裤、深棕短发），布景里的小人用它，画面不变。
+ *     台架每一场随机发（dealLooks：洗一遍再按出场顺序发，同一场不重样）。第 0 套就是此前那一个人（灰绿长袖、灰蓝长裤、
+ *     深棕短发），布景里的小人用它，画面不变。
  *     色相仍取站内那几种灰调的绿、蓝、土黄、豆沙、米白，加深浅几档的黑灰，不跳出画面；肤色三档。
  *   - 猫：七种花色（COATS），几何在 figure.ts 的 CatCoat，这里是每种的颜色。黑猫比地面（迎光 0.24–0.29）暗一档，读成剪影。
  */
@@ -99,10 +100,7 @@ const coatLook = (name: string, coat: CatCoat, colors: Partial<Record<CatTone, [
   colors: { fur: pair([0.98, 0.7, 0.4]), patch: pair(BLACK_FUR), patch2: pair([0.95, 0.62, 0.32]), stripe: pair([0.8, 0.44, 0.17], 0.28), muzzle: pair([1, 0.94, 0.82], 0.36), nose: PINK, iris: pair([0.95, 0.72, 0.25], 0.4), iris2: pair([0.95, 0.72, 0.25], 0.4), ...colors },
 });
 
-/**
- * 七种花色。台架上第几只猫按出场顺序取第几种，每点一次「重来」往后轮两种：开场是作者点名的奶牛猫与狸花猫，
- * 再往后白猫与黑猫、三花与燕尾服、最后是此前那只橘猫。
- */
+/** 七种花色（台架每一场随机发，同一场不重样，见 dealLooks） */
 export const COATS: readonly CoatLook[] = [
   coatLook('奶牛猫（白底黑斑）', 'cow', { fur: pair(WHITE_FUR), patch: pair(BLACK_FUR, 0.5), muzzle: pair([1, 0.97, 0.94], 0.36) }),
   coatLook('狸花猫', 'tabby', { fur: pair([0.6, 0.54, 0.45]), stripe: pair([0.22, 0.18, 0.14], 0.4), muzzle: pair([0.96, 0.93, 0.86], 0.36), nose: pair([0.8, 0.48, 0.46], 0.42) }),
@@ -113,6 +111,25 @@ export const COATS: readonly CoatLook[] = [
   coatLook('橘猫（虎斑，此前那一只）', 'ginger', {}),
 ];
 export const coatOf = (i: number): CoatLook => COATS[((i % COATS.length) + COATS.length) % COATS.length];
+
+/**
+ * 随机发牌（2026-10-28 作者「猫和人物的花色随机，不要重复就行」）：把 0…n−1 洗一遍，按出场顺序一张张发出去，
+ * 同一场里前 n 个一定互不相同；发完了再洗一副接着发（台架上人最多 6 个、猫最多 3 只，碰不到第二副）。
+ * rand 省略 = Math.random；守门传带种子的随机数。
+ */
+export function dealLooks(n: number, rand: () => number = Math.random): () => number {
+  let deck: number[] = [];
+  return () => {
+    if (!deck.length) {
+      deck = Array.from({ length: n }, (_, i) => i);
+      for (let i = n - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+    }
+    return deck.pop() as number;
+  };
+}
 const GINGER = COATS.find((c) => c.coat === 'ginger') as CoatLook;
 
 /** 某位访客某类零件的颜色 [背光, 迎光] */
