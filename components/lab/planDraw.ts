@@ -103,6 +103,8 @@ export interface PlanScene {
     selected?: number;
   } | null;
   guides?: readonly { kind: 'sit' | 'stand'; pts: readonly { x: number; y: number }[] }[];
+  /** 此刻被当桌子用的单元（Lab 2-14 / 2-15 桌子规则，加法式；省略 = 不画）：台缘一圈墨实线 + 下方标落到的台面高度（cm） */
+  tables?: readonly { unit: number; top: number }[];
 }
 
 /** 逐条带按半径围一圈：第 j 条带占 [j, j+1]·2π/count 的扇区（与 cohabit.bandAngle 同向），arc 之间自动连径向线 */
@@ -111,6 +113,30 @@ function ringPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, radii: 
   ctx.beginPath();
   for (let j = 0; j < n; j++) ctx.arc(cx, cy, Math.max(0, radii[j]), (j * 2 * Math.PI) / n, ((j + 1) * 2 * Math.PI) / n);
   ctx.closePath();
+}
+
+/** 方台（layout.bandReach，2026-10-28 起 Lab 2-14 也用）：过每条带梢端连成的多边形——立体侧带与带之间的膜是直的，
+ *  俯视就是这条折线；radius(j) = 第 j 条带此刻的长度（像素）。圆台不走这里（旧画法逐位不变） */
+function tipPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, n: number, radius: (j: number) => number): void {
+  ctx.beginPath();
+  for (let j = 0; j < n; j++) {
+    const a = ((j + 0.5) * 2 * Math.PI) / n;
+    const r = Math.max(0, radius(j));
+    if (j === 0) ctx.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    else ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+  }
+  ctx.closePath();
+}
+
+/** 单元外缘再外扩 pad 像素：圆台 = 圆，方台 = 带梢多边形 */
+function rimPath(ctx: CanvasRenderingContext2D, L: PlanLayout, sc: number, cx: number, cy: number, pad: number): void {
+  if (L.bandReach) {
+    const reach = L.bandReach;
+    tipPath(ctx, cx, cy, reach.length, (j) => reach[j] * sc + pad);
+  } else {
+    ctx.beginPath();
+    ctx.arc(cx, cy, L.platR * sc + pad, 0, Math.PI * 2);
+  }
 }
 
 /** 注意力区域用的离屏画布（缺口要用 destination-out 抠，不能直接在主画布上擦——会把地板一起擦掉） */
@@ -261,7 +287,7 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
   // 按格读法的边界（格线）；脚下读法画平台圈本身就是边界
   if (s.catchment.reading === 'nearest') {
     const a = aisleLines(L);
-    const fh = (L.fieldM / 2 + 0.12) * sc;
+    const fh = L.cover === 'room' ? h : (L.fieldM / 2 + 0.12) * sc;
     ctx.strokeStyle = pal.ink;
     ctx.globalAlpha = 0.14;
     ctx.lineWidth = 0.75;
@@ -363,6 +389,12 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
   const platPx = L.platR * sc;
   const mastPx = Math.max(1.6, L.mastR * sc);
   const span = platPx - mastPx;
+  const reach = L.bandReach ?? null;
+  const nReach = reach ? reach.length : 0;
+  /** 方台第 j 条带全落时芯到梢的像素长 */
+  const spanJ = (j: number) => (reach ? reach[j] * sc - mastPx : span);
+  /** 标签与外圈的下沿：方台取最长的那条带 */
+  const rimPx = reach ? (L.reachMax ?? L.platR) * sc : platPx;
   const scale = traceScale(s);
   const nb = s.bands?.count ?? 0;
   const radii: number[] = new Array(nb).fill(0);
@@ -375,6 +407,10 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
     // 逐条带：第 j 条带此刻的伸展比例（1 = 全落、0 = 收直到芯上）
     const bandF = (j: number) => 1 - (s.bands ? s.bands.open[u.i * nb + j] : 0);
     const ring = (r: (j: number) => number) => {
+      if (reach) {
+        tipPath(ctx, cx, cy, nReach, r);
+        return true;
+      }
       if (!s.bands) return false;
       for (let j = 0; j < nb; j++) radii[j] = r(j);
       ringPath(ctx, cx, cy, radii);
@@ -385,15 +421,14 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
     ctx.globalAlpha = gated ? 0.85 : 0.2;
     ctx.lineWidth = gated ? 1 : 0.8;
     if (gated) ctx.setLineDash([2, 3]);
-    ctx.beginPath();
-    ctx.arc(cx, cy, platPx, 0, Math.PI * 2);
+    rimPath(ctx, L, sc, cx, cy, 0);
     ctx.stroke();
     ctx.setLineDash([]);
     // 已成形：淡紫底（收回的带是缺口）
     if (d >= 1 - 1e-9) {
       ctx.fillStyle = pal.accent2;
       ctx.globalAlpha = 0.3;
-      if (!ring((j) => mastPx + span * bandF(j))) {
+      if (!ring((j) => mastPx + spanJ(j) * bandF(j))) {
         ctx.beginPath();
         ctx.arc(cx, cy, platPx, 0, Math.PI * 2);
       }
@@ -403,8 +438,11 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
     if (frac > 0.01) {
       ctx.fillStyle = pal.accent;
       ctx.globalAlpha = 0.5;
-      ctx.beginPath();
-      ctx.arc(cx, cy, mastPx + frac * span, 0, Math.PI * 2);
+      if (reach) tipPath(ctx, cx, cy, nReach, (j) => mastPx + frac * spanJ(j));
+      else {
+        ctx.beginPath();
+        ctx.arc(cx, cy, mastPx + frac * span, 0, Math.PI * 2);
+      }
       ctx.fill();
     }
     // 成形进度：紫环（不回退；收回的带退到芯上）
@@ -412,7 +450,7 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
       ctx.strokeStyle = pal.accent2;
       ctx.globalAlpha = d >= 1 - 1e-9 ? 1 : 0.85;
       ctx.lineWidth = d >= 1 - 1e-9 ? 3 : 1.6;
-      if (!ring((j) => mastPx + d * span * bandF(j))) {
+      if (!ring((j) => mastPx + d * spanJ(j) * bandF(j))) {
         ctx.beginPath();
         ctx.arc(cx, cy, mastPx + d * span, 0, Math.PI * 2);
       }
@@ -424,7 +462,25 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
       ctx.globalAlpha = 0.75;
       ctx.lineWidth = 1.6;
       ctx.beginPath();
-      if (s.bands) {
+      if (reach) {
+        // 方台：是墙的带在带梢多边形上画它那一段（与两侧邻带梢端的中点之间）
+        const tip = (j: number, f: number) => {
+          const k = (j + nReach) % nReach;
+          const a = ((k + 0.5) * 2 * Math.PI) / nReach;
+          const r = mastPx + spanJ(k) * f + 1.5;
+          return [cx + Math.cos(a) * r, cy + Math.sin(a) * r] as const;
+        };
+        for (let j = 0; j < nReach; j++) {
+          const fj = s.bands ? bandF(j) : 1;
+          if (d * fj < 0.5) continue;
+          const p0 = tip(j - 1, s.bands ? bandF((j - 1 + nReach) % nReach) : 1);
+          const p1 = tip(j, fj);
+          const p2 = tip(j + 1, s.bands ? bandF((j + 1) % nReach) : 1);
+          ctx.moveTo((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2);
+          ctx.lineTo(p1[0], p1[1]);
+          ctx.lineTo((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2);
+        }
+      } else if (s.bands) {
         for (let j = 0; j < nb; j++) {
           if (d * bandF(j) < 0.5) continue;
           ctx.moveTo(cx + Math.cos((j * 2 * Math.PI) / nb) * (platPx + 1.5), cy + Math.sin((j * 2 * Math.PI) / nb) * (platPx + 1.5));
@@ -475,11 +531,11 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
       ctx.globalAlpha = occupied ? 0.95 : 0.8;
       ctx.lineWidth = occupied ? 1.5 : 1;
       ctx.setLineDash(occupied ? [] : [3, 3]);
-      ctx.beginPath(); ctx.arc(X(u.x), Y(u.y), platPx + 4, 0, Math.PI * 2); ctx.stroke();
+      rimPath(ctx, L, sc, X(u.x), Y(u.y), 4); ctx.stroke();
       ctx.setLineDash([]);
       ctx.font = '600 9px ui-sans-serif, system-ui, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(String(id + 1).padStart(2, '0'), X(u.x), Y(u.y) + platPx + 15);
+      ctx.fillText(String(id + 1).padStart(2, '0'), X(u.x), Y(u.y) + rimPx + 15);
     }
     ctx.globalAlpha = 1;
   }
@@ -492,11 +548,27 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
       const u = L.units[q.meet];
       ctx.globalAlpha = q.taken ? 0.95 : 0.4;
       ctx.lineWidth = q.taken ? 1.6 : 0.9;
-      ctx.beginPath();
-      ctx.arc(X(u.x), Y(u.y), platPx + 7, 0, Math.PI * 2);
+      rimPath(ctx, L, sc, X(u.x), Y(u.y), 7);
       ctx.stroke();
     }
     ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+  }
+  // 当桌子用的单元：台缘一圈墨实线，台下标出落到的台面高度
+  if (s.tables && !s.hideUnits) {
+    ctx.strokeStyle = pal.ink;
+    ctx.fillStyle = pal.ink;
+    ctx.lineWidth = 1.6;
+    ctx.font = '600 9px ui-sans-serif, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    for (const tb of s.tables) {
+      const u = L.units[tb.unit];
+      ctx.globalAlpha = 0.9;
+      rimPath(ctx, L, sc, X(u.x), Y(u.y), 2.5);
+      ctx.stroke();
+      ctx.globalAlpha = 0.8;
+      ctx.fillText(`${Math.round(tb.top * 100)} cm`, X(u.x), Y(u.y) - rimPx - 6);
+    }
     ctx.globalAlpha = 1;
   }
   // 空间此刻铺的路：绿虚线串起单元中心，箭头指向下一步
