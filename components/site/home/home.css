@@ -82,8 +82,13 @@
 .hs-fx__vl { top: 0; bottom: 0; width: 1px; }
 .hs-fx__hl { left: 0; right: 0; height: 1px; }
 .hs-fx > * { min-width: 0; min-height: 0; }
+/* 余光、字各占一层：与 .hs-fx 同一张格子，contain: strict 让一层里的变化不牵动整张格子重排（2026-10-28 性能排查）。
+   绝对定位的层按文档顺序画在格线之前，先后与原来一样：余光 → 字 → 格线 → 作品格与框 */
+.hs-fx__layer { position: absolute; inset: 0; display: grid; grid-template-columns: inherit; grid-template-rows: inherit; contain: strict; pointer-events: none; }
+.hs-fx__layer > * { min-width: 0; min-height: 0; }
 /* 指针余光（§57.3）：所在格与邻格淡淡地压一层墨 */
-.hs-fx__ghost { display: block; opacity: 0; background: oklch(0.235 0.025 215 / .07); pointer-events: none; transition: opacity 1.6s ease, transform .7s var(--eo); }
+/* 只过渡不透明度：开卡让位时余光直接落到新位置（被卡片盖着，看不出），不给 420 格各起一段合成动画 */
+.hs-fx__ghost { display: block; opacity: 0; background: oklch(0.235 0.025 215 / .07); pointer-events: none; transition: opacity 1.6s ease; }
 /* 作品格：暗格只比纸深一点，亮格深一档（成簇地亮起又暗回去）；项目色只给底色与图标 */
 .hs-fx__slot { position: relative; display: block; cursor: pointer; transition: transform .7s var(--eo); }
 .hs-fx__tile { position: absolute; inset: clamp(4px, calc(var(--fx-c) * .11), 8px); border-radius: 2px; background: var(--fi-dim); transition: background-color var(--fi-t, 1.6s) ease; }
@@ -95,8 +100,8 @@
 .hs-fx__slot[data-kind="project"] .hs-fx__tile::after { width: 5px; height: 5px; border-radius: 0; }
 .hs-fx__slot[data-kind="lab"] .hs-fx__tile::after { box-sizing: border-box; width: 5px; height: 5px; border-radius: 0; background: none; border: 1px solid var(--fi-ink); }
 .hs-fx__slot[data-kind="log"] .hs-fx__tile::after { box-sizing: border-box; width: 6px; height: 3px; border-radius: 0; background: none; border-top: 1px solid var(--fi-ink); border-bottom: 1px solid var(--fi-ink); }
-/* 字格：一字一格，细窄（字宽轴 64、字重 230，与后几屏的大标题同一端）；鼠标附近的字变宽变粗由 FieldPage 写 font-variation-settings（FX.SWELL_*） */
-.hs-fx__ch { display: flex; align-items: center; justify-content: center; font-size: min(calc(100cqh / 15 * .84), calc(100cqw / 28 * .96)); line-height: 1; font-variation-settings: 'wdth' 64, 'wght' 230; transition: font-variation-settings 1.4s cubic-bezier(.2,.7,.1,1), transform .7s var(--eo); pointer-events: none; user-select: none; }
+/* 字格：一字一格，细窄（字宽轴 64、字重 230，与后几屏的大标题同一端）；鼠标附近的字变宽变粗由 FieldPage 按帧写 font-variation-settings（FX.SWELL_*）——不用 CSS 过渡：那样每帧都插出新的字宽字重、重排整张格子 */
+.hs-fx__ch { display: flex; align-items: center; justify-content: center; font-size: min(calc(100cqh / 15 * .84), calc(100cqw / 28 * .96)); line-height: 1; font-variation-settings: 'wdth' 64, 'wght' 230; transition: transform .7s var(--eo); pointer-events: none; user-select: none; }
 /* objects / spaces：每个字母 2×2，宽粗（与后几屏的强调词同一端）；底色 = 项目一 / 项目二的颜色 */
 .hs-fx__key { position: relative; pointer-events: none; user-select: none; transition: transform .7s var(--eo), width .7s var(--eo), height .7s var(--eo); }
 .hs-fx__key i { position: absolute; inset: 4px; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-style: normal; color: var(--paper); font-size: min(calc(100cqh / 15 * 1.29), calc(100cqw / 28 * 1.5)); line-height: 1; font-variation-settings: 'wdth' 125, 'wght' 760; letter-spacing: -.02em; }

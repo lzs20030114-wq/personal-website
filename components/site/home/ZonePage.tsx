@@ -11,6 +11,26 @@ const FADE_MS = 460; // 交叉淡化时长，与 home.css .hs-pv__layer 的 tran
 const READY_MAX_MS = 900; // 新台架迟迟不出图（首访拉代码块）时，最多让旧画面再撑这么久
 const MESH_MAX_MS = 2500; // 台架声明在载网格（data-bench-loading）时的兜底：首访拉 + 烘焙十万级三角
 
+/**
+ * 指针上一次真的在哪（2026-10-28 性能排查）：滚动时浏览器会用原坐标补发指针事件来更新悬停，
+ * 鼠标停在目录上滚，行从静止的指针底下一行行滑过，原先每一行都算「指向了它」、预览跟着换台架
+ * ——每换一台要建一份 WebGL、载模型、起引擎，滚动就是这么卡的。只认坐标真的变过的那一下。
+ * 在 window 的冒泡阶段记：行自己的处理函数先跑，看到的还是上一次的坐标。
+ */
+const lastPtr = { x: Number.NaN, y: Number.NaN, on: false };
+function trackPointer(): void {
+  if (lastPtr.on || typeof window === 'undefined') return;
+  lastPtr.on = true;
+  window.addEventListener(
+    'pointermove',
+    (e) => {
+      lastPtr.x = e.clientX;
+      lastPtr.y = e.clientY;
+    },
+    { passive: true },
+  );
+}
+
 /* ───────────────────────── 04 Lab ───────────────────────── */
 
 // 预览层：in = 已挂载、还没出首帧（透明，压在旧画面上不露面）；on = 显示中；out = 淡出中，淡完卸载。
@@ -109,6 +129,18 @@ function LabGroup({
   const [layers, setLayers] = useState<PvLayer[]>(() => (cur ? [{ no: cur.no, phase: 'in' }] : []));
   const ptr = useRef('mouse');
   const hoverT = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  /** 指针正指着、等着切过去的那一行 */
+  const hoverNo = useRef<string | null>(null);
+  useEffect(trackPointer, []);
+  // 鼠标 / 笔：指向一行停一下就预览；行从静止的指针底下滑过（滚动）不算，在行里动一下才算
+  const aim = (e: React.PointerEvent, no: string) => {
+    if (e.pointerType === 'touch' || hoverNo.current === no) return;
+    if (e.clientX === lastPtr.x && e.clientY === lastPtr.y) return;
+    hoverNo.current = no;
+    preloadLabPreview(no);
+    clearTimeout(hoverT.current);
+    hoverT.current = setTimeout(() => onPick(gi, no, false), HOVER_MS);
+  };
 
   // 预览只在本组进入视口后才建（避免三组同时占 WebGL 上下文），离开视口停跑。
   useEffect(() => {
@@ -291,14 +323,13 @@ function LabGroup({
                   data-rv
                   data-bench={b.no}
                   data-pt="frame"
-                  // 鼠标 / 笔：悬停预览；触屏：第一下预览，第二下进入
-                  onPointerEnter={(e) => {
-                    if (e.pointerType === 'touch') return;
-                    preloadLabPreview(b.no);
+                  // 鼠标 / 笔：悬停预览（见 aim）；触屏：第一下预览，第二下进入
+                  onPointerEnter={(e) => aim(e, b.no)}
+                  onPointerMove={(e) => aim(e, b.no)}
+                  onPointerLeave={() => {
                     clearTimeout(hoverT.current);
-                    hoverT.current = setTimeout(() => onPick(gi, b.no, false), HOVER_MS);
+                    hoverNo.current = null;
                   }}
-                  onPointerLeave={() => clearTimeout(hoverT.current)}
                   onFocus={(e) => {
                     if (e.currentTarget.matches(':focus-visible')) onPick(gi, b.no, true);
                   }}

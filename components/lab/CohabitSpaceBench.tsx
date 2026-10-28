@@ -609,7 +609,45 @@ export function CohabitSpaceBench({
         pushHud();
       } else bakeTimer = setTimeout(bakeTick, 0);
     };
-    bakeTimer = setTimeout(bakeTick, 0);
+    // 离屏只用空闲时间烘（2026-10-28 性能排查）：/lab 上这台排在倒数第二，原先进页面就满速开烘，
+    // 主线程白忙好几秒、拖慢最上面正在看的几台。离屏时只拿帧与帧之间剩下的空闲（requestIdleCallback；
+    // Safari 没有它，退成每 50ms 烘 4ms），离视口一屏以内才换回满速。已烘过（同一标签页里别处烘的，结果按配置缓存）直接用。
+    const ric = typeof window.requestIdleCallback === 'function' ? window.requestIdleCallback.bind(window) : null;
+    let idleId: number | null = null;
+    let near = false;
+    const idleTick = (deadline?: IdleDeadline): void => {
+      idleId = null;
+      bakeTimer = null;
+      if (near || trajs) return;
+      // 页面一直不空闲时 timeout 也会叫一次，此时剩余为 0——至少推 2ms，保证慢慢有进展
+      if (baker.work(deadline ? Math.max(2, Math.min(BAKE_BUDGET_MS, deadline.timeRemaining())) : 4)) {
+        onBaked();
+        render();
+        pushHud();
+        return;
+      }
+      scheduleIdle();
+    };
+    const scheduleIdle = (): void => {
+      if (ric) idleId = ric(idleTick, { timeout: 1000 });
+      else bakeTimer = setTimeout(idleTick, 50);
+    };
+    let bakeIo: IntersectionObserver | null = null;
+    const startBake = (): void => {
+      near = true;
+      bakeIo?.disconnect();
+      bakeIo = null;
+      if (idleId !== null) window.cancelIdleCallback(idleId);
+      idleId = null;
+      if (bakeTimer !== null) clearTimeout(bakeTimer);
+      bakeTimer = trajs ? null : setTimeout(bakeTick, 0);
+    };
+    if (baker.done || typeof IntersectionObserver === 'undefined') startBake();
+    else {
+      bakeIo = new IntersectionObserver((ents) => ents[ents.length - 1].isIntersecting && startBake(), { rootMargin: '100% 0px' });
+      bakeIo.observe(canvas);
+      scheduleIdle();
+    }
 
     const step = (dt: number): void => {
       if (trajs && runningRef.current) sim.step(Math.min(MAX_SIM_DT, dt));
@@ -676,6 +714,8 @@ export function CohabitSpaceBench({
     pushHud();
     return () => {
       apiRef.current = null;
+      bakeIo?.disconnect();
+      if (idleId !== null) window.cancelIdleCallback(idleId);
       if (bakeTimer !== null) clearTimeout(bakeTimer);
       canvas.removeEventListener('contextmenu', onCtx);
       canvas.removeEventListener('pointerdown', onDown);

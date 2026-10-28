@@ -15,6 +15,9 @@ export const FX = {
   TILT_SHRINK: 0.35,
   /** 系数低于这个值就当作不倾斜（远处的方块不写样式） */
   TILT_MIN: 0.06,
+  /** 倾斜系数分多少档（2026-10-28 性能排查）：指针每动一帧，半径 320px 内约 70 个方块都要改 transform、各自重开一段 .7s 过渡；
+   * 取档以后远处变化慢的方块多数帧落在同一档、不用重写。转角一档 1.25°，有 .7s 过渡抹平，看不出台阶 */
+  TILT_LEVELS: 24,
   /** 01 字格（2026-10-27，画布 H6b，MAPPING §71）：鼠标附近的字变宽变粗；横向影响几格宽、纵向几格高——沿着这一行鼓起来 */
   SWELL_REACH_X: 2.4,
   SWELL_REACH_Y: 0.9,
@@ -53,8 +56,9 @@ export interface Tilt {
  * 转向按方块在指针左侧还是右侧取反，读起来像被指针往两边推开（参考：正定私募基金那张随位置变形的格子）。
  */
 export function tiltAt(dx: number, dy: number, r: number = FX.TILT_R): Tilt | null {
-  const f = Math.exp(-(dx * dx + dy * dy) / (r * r));
-  if (f < FX.TILT_MIN) return null;
+  const raw = Math.exp(-(dx * dx + dy * dy) / (r * r));
+  if (raw < FX.TILT_MIN) return null;
+  const f = Math.round(raw * FX.TILT_LEVELS) / FX.TILT_LEVELS;
   const side = dx < 0 ? -1 : 1;
   return { rot: side * f * FX.TILT_ROT, skew: -f * FX.TILT_SKEW, scale: 1 - f * FX.TILT_SHRINK };
 }
@@ -88,6 +92,99 @@ export function swellFrom(base: Axes, f: number, peak: Axes = SWELL_PEAK): Axes 
 /** 01 字格：起点是平时的细窄（SWELL_WDTH / SWELL_WGHT 的下端） */
 export function swellAxes(f: number): Axes {
   return swellFrom({ wdth: FX.SWELL_WDTH[0], wght: FX.SWELL_WGHT[0] }, f);
+}
+
+/*
+ * 鼓起的过渡由脚本按帧推进，不交给 CSS transition（2026-10-28 性能排查）：
+ * font-variation-settings 的 CSS 过渡每一帧都插出一组新的字宽字重，浏览器每帧为每个在动的字新建一份字体实例、
+ * 重排整张格子——首屏扫一下鼠标主线程就占满。这里用同一条缓动、同样的时长推进鼓起程度 f，
+ * 走的途中只取 SWELL_LEVELS 档（同一档的字体实例浏览器缓存着，档没变就不写样式）；
+ * 停下来时落在确切的目标上，静止的样子与原先 CSS 过渡走完时逐位相同。
+ */
+
+/** 鼓起程度分多少档（0–1 之间）；字宽 64→125 一档约 1.3，肉眼看不出台阶 */
+export const SWELL_LEVELS = 48;
+
+/** 程度取到最近的一档 */
+export function swellLevel(f: number): number {
+  return Math.round(Math.min(1, Math.max(0, f)) * SWELL_LEVELS) / SWELL_LEVELS;
+}
+
+/** CSS cubic-bezier(x1, y1, x2, y2) 的缓动函数（与浏览器同一种求法：先按 x 反解参数 t，再取 y） */
+export function cubicBezier(x1: number, y1: number, x2: number, y2: number): (x: number) => number {
+  const cx = 3 * x1;
+  const bx = 3 * (x2 - x1) - cx;
+  const ax = 1 - cx - bx;
+  const cy = 3 * y1;
+  const by = 3 * (y2 - y1) - cy;
+  const ay = 1 - cy - by;
+  const sx = (t: number) => ((ax * t + bx) * t + cx) * t;
+  const sy = (t: number) => ((ay * t + by) * t + cy) * t;
+  const dx = (t: number) => (3 * ax * t + 2 * bx) * t + cx;
+  return (x: number) => {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    let t = x;
+    for (let i = 0; i < 8; i++) {
+      const e = sx(t) - x;
+      if (Math.abs(e) < 1e-6) return sy(t);
+      const d = dx(t);
+      if (Math.abs(d) < 1e-6) break;
+      t -= e / d;
+    }
+    // 牛顿法不收敛时二分
+    let lo = 0;
+    let hi = 1;
+    t = x;
+    while (hi - lo > 1e-6) {
+      if (sx(t) < x) lo = t;
+      else hi = t;
+      t = (lo + hi) / 2;
+    }
+    return sy(t);
+  };
+}
+
+/** 鼓起与收回用的缓动（原 CSS 过渡的 cubic-bezier(.2,.7,.1,1)） */
+export const swellEase = cubicBezier(0.2, 0.7, 0.1, 1);
+
+/** 一个字的鼓起过渡：从 from 走到 to，t0 起、走 dur 毫秒 */
+export interface SwellTween {
+  from: number;
+  to: number;
+  t0: number;
+  dur: number;
+}
+
+export const swellRest = (): SwellTween => ({ from: 0, to: 0, t0: 0, dur: 0 });
+
+/** 此刻该写的鼓起程度：走完了就是确切的目标，途中取档 */
+export function swellSample(tw: SwellTween, now: number): number {
+  return swellTweenDone(tw, now) ? tw.to : swellLevel(swellTweenAt(tw, now));
+}
+
+/** 此刻的鼓起程度（未取档） */
+export function swellTweenAt(tw: SwellTween, now: number): number {
+  if (tw.dur <= 0 || now >= tw.t0 + tw.dur) return tw.to;
+  if (now <= tw.t0) return tw.from;
+  return tw.from + (tw.to - tw.from) * swellEase((now - tw.t0) / tw.dur);
+}
+
+/** 过渡走完没有 */
+export const swellTweenDone = (tw: SwellTween, now: number): boolean => tw.dur <= 0 || now >= tw.t0 + tw.dur;
+
+/**
+ * 换目标：与 CSS 过渡改值时一样，从此刻的程度起跳、走满一段时长——变宽用 SWELL_IN_MS、收回用 SWELL_OUT_MS。
+ * 新目标与旧目标落在同一档时不重开（指针微动不把过渡反复归零），只把终点挪到确切的新目标；
+ * instant（减弱动态效果）直接到位。
+ */
+export function swellRetarget(tw: SwellTween, target: number, now: number, instant = false): SwellTween {
+  const to = Math.min(1, Math.max(0, target));
+  if (to === tw.to) return tw;
+  if (instant) return { from: to, to, t0: now, dur: 0 };
+  if (swellLevel(to) === swellLevel(tw.to)) return { ...tw, to };
+  const from = swellTweenAt(tw, now);
+  return { from, to, t0: now, dur: to > from ? FX.SWELL_IN_MS : FX.SWELL_OUT_MS };
 }
 
 export interface Span {

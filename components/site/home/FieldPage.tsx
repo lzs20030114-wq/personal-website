@@ -12,7 +12,17 @@ import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { HomeField } from '../../../src/lib/site/home-model';
 import { FIELD_KINDS, FIELD_LIGHT } from '../../../src/lib/site/field-visuals';
-import { FX, swellAt, swellAxes, tiltAt, tiltCss } from '../../../src/lib/site/home-fx';
+import {
+  swellAt,
+  swellAxes,
+  swellRest,
+  swellRetarget,
+  swellSample,
+  swellTweenDone,
+  tiltAt,
+  tiltCss,
+  type SwellTween,
+} from '../../../src/lib/site/home-fx';
 import { HOME_FLOW_QUERY, prefersReducedMotion } from '../../../src/lib/site/home-mode';
 import {
   CARD_H as CH,
@@ -125,13 +135,14 @@ export function FieldPage({
 
   const m = useRef({
     /** 所有占格子的东西（作品格、余光、字、框）及其位置，开卡让位时一起平移；跨多格的框还要改宽高 */
-    placed: [] as { el: HTMLElement; c: number; r: number; w: number; h: number; slot: number }[],
+    placed: [] as { el: HTMLElement; c: number; r: number; w: number; h: number; slot: number; ghost: number }[],
     /** 格线：竖线 k 在第 k 列左缘，横线 k 在第 k 行上缘（k = 列数 / 行数 时是最右 / 最下一条） */
     vlines: [] as HTMLElement[],
     hlines: [] as HTMLElement[],
     slotEls: [] as HTMLElement[],
     ghosts: [] as HTMLElement[],
-    letters: [] as { el: HTMLElement; c: number; r: number; key: string }[],
+    ghostPlaced: [] as { el: HTMLElement; c: number; r: number; w: number; h: number; slot: number; ghost: number }[],
+    letters: [] as { el: HTMLElement; c: number; r: number; key: string; tw: SwellTween }[],
     slotOfCell: new Map<number, number>(),
     slotItem: [] as number[],
     queue: [] as number[],
@@ -144,8 +155,14 @@ export function FieldPage({
     tilts: [] as string[],
     tiltRaf: 0,
     swellRaf: 0,
+    /** 指针动过：下一帧重新算每个字该鼓多少 */
+    swellAim: false,
     ghostTimers: new Map<number, ReturnType<typeof setTimeout>>(),
     heldGhosts: new Map<number, number>(),
+    /** 余光淡出到哪一刻（之前仍看得见） */
+    ghostFadeUntil: new Map<number, number>(),
+    /** 当前带着开卡让位位移的余光格 */
+    ghostShifted: new Set<number>(),
     hoveredSlot: -1,
     closing: false,
     wakeT: undefined as ReturnType<typeof setTimeout> | undefined,
@@ -183,8 +200,24 @@ export function FieldPage({
     if (!g) return;
     clearTimeout(m.current.ghostTimers.get(i));
     m.current.ghostTimers.delete(i);
-    g.style.transition = `opacity ${(1.1 + amp).toFixed(2)}s ease,transform .7s cubic-bezier(.2,.7,.1,1)`;
+    g.style.transition = `opacity ${(1.1 + amp).toFixed(2)}s ease`;
     g.style.opacity = '0';
+    m.current.ghostFadeUntil.set(i, performance.now() + (1.1 + amp) * 1000);
+  };
+
+  /** 余光格此刻看不看得见：亮着、正淡出、或正等着亮起 */
+  const ghostSeen = (i: number) => {
+    const st = m.current;
+    return st.heldGhosts.has(i) || st.ghostTimers.has(i) || performance.now() < (st.ghostFadeUntil.get(i) ?? 0);
+  };
+
+  /** 余光格对上开卡让位的当前位移（看得见的格在让位时就跟着移；看不见的等到亮起前再补） */
+  const placeGhost = (p: { el: HTMLElement; c: number; r: number; w: number; h: number; slot: number; ghost: number }) => {
+    const st = m.current;
+    if (!st.shift && !st.ghostShifted.has(p.ghost)) return;
+    p.el.style.transform = composeAt(p);
+    if (st.shift) st.ghostShifted.add(p.ghost);
+    else st.ghostShifted.delete(p.ghost);
   };
 
   /** 一个东西的 transform = 开卡让位 + 光标倾斜（只有作品格）。单格的东西按中心平移；跨多格的框按左上角那条格线平移（宽高另改） */
@@ -210,9 +243,11 @@ export function FieldPage({
     // 跨多格的框（名字、导航、按钮、关键词）：宽高要从具体像素起跳才有过渡，先钉住当前尺寸
     const spans = st.placed.filter((p) => p.w > 1 || p.h > 1);
     const pinned = spans.filter((p) => !p.el.style.width);
-    pinned.forEach((p) => {
-      p.el.style.width = `${p.el.offsetWidth}px`;
-      p.el.style.height = `${p.el.offsetHeight}px`;
+    // 先全部量、再全部写：边量边写会让每次读尺寸都重排一遍格子
+    const sizes = pinned.map((p) => [p.el.offsetWidth, p.el.offsetHeight]);
+    pinned.forEach((p, k) => {
+      p.el.style.width = `${sizes[k][0]}px`;
+      p.el.style.height = `${sizes[k][1]}px`;
     });
     if (pinned.length) void fieldRef.current?.offsetWidth;
     const f = fieldRef.current;
@@ -222,7 +257,12 @@ export function FieldPage({
       p.el.style.width = `${(g ? g.ex[p.c + p.w] - g.ex[p.c] : p.w * cw).toFixed(1)}px`;
       p.el.style.height = `${(g ? g.ey[p.r + p.h] - g.ey[p.r] : p.h * ch).toFixed(1)}px`;
     }
-    for (const p of st.placed) p.el.style.transform = composeAt(p);
+    // 余光 420 格几乎都是透明的：只移看得见的那几格，其余等亮起前再补（每格各写一次样式，开卡时就是四百多次样式计算）
+    for (const p of st.placed) {
+      if (p.ghost >= 0) {
+        if (ghostSeen(p.ghost)) placeGhost(p);
+      } else p.el.style.transform = composeAt(p);
+    }
     st.vlines.forEach((el, k) => (el.style.transform = g ? `translateX(${(g.ex[k] - k * g.cw).toFixed(1)}px)` : ''));
     st.hlines.forEach((el, k) => (el.style.transform = g ? `translateY(${(g.ey[k] - k * g.ch).toFixed(1)}px)` : ''));
     // 收回后把宽高交还给 grid（窗口再缩放时自己跟着走）
@@ -252,24 +292,35 @@ export function FieldPage({
     }
   };
 
-  /** 鼠标附近的字变宽变粗；变宽快、收回慢（FX.SWELL_*） */
-  const applySwell = () => {
+  /** 鼠标附近的字变宽变粗；变宽快、收回慢（FX.SWELL_*）。
+   * 过渡由这里按帧推进、只取有限几档（home-fx 的 swellRetarget），不交给 CSS：
+   * font-variation-settings 的 CSS 过渡每帧插出新的字宽字重，浏览器每帧为每个在动的字新建字体实例、重排整张格子。 */
+  const tickSwell = (now: number) => {
     const st = m.current;
+    st.swellRaf = 0;
     if (!fieldRef.current || !st.letters.length) return;
-    const ptr = st.pointer;
-    const off = !ptr || !activeRef.current || !motionOn();
-    const { cx, cy, cw, ch } = geom();
-    for (const L of st.letters) {
-      const f = off ? 0 : swellAt((cx(L.c) - ptr!.x) / cw, (cy(L.r) - ptr!.y) / ch);
-      const a = swellAxes(f);
-      const key = `${a.wdth}/${a.wght}`;
-      if (key === L.key) continue;
-      const rising = a.wdth > Number(L.key.split('/')[0] || BASE_AXES.wdth);
-      L.key = key;
-      // 只改字宽字重这一项的时长；transform 的 .7s 留给开卡让位
-      L.el.style.transition = `font-variation-settings ${rising ? FX.SWELL_IN_MS : FX.SWELL_OUT_MS}ms cubic-bezier(.2,.7,.1,1), transform .7s cubic-bezier(.2,.7,.1,1)`;
-      L.el.style.fontVariationSettings = axesCss(a);
+    if (st.swellAim) {
+      st.swellAim = false;
+      const ptr = st.pointer;
+      const still = !motionOn();
+      const off = !ptr || !activeRef.current || still;
+      const { cx, cy, cw, ch } = geom();
+      for (const L of st.letters) {
+        const f = off ? 0 : swellAt((cx(L.c) - ptr!.x) / cw, (cy(L.r) - ptr!.y) / ch);
+        L.tw = swellRetarget(L.tw, f, now, still);
+      }
     }
+    let moving = false;
+    for (const L of st.letters) {
+      const a = swellAxes(swellSample(L.tw, now));
+      const key = `${a.wdth}/${a.wght}`;
+      if (key !== L.key) {
+        L.key = key;
+        L.el.style.fontVariationSettings = axesCss(a);
+      }
+      if (!swellTweenDone(L.tw, now)) moving = true;
+    }
+    if (moving) st.swellRaf = requestAnimationFrame(tickSwell);
   };
 
   const schedulePointerFx = () => {
@@ -279,11 +330,8 @@ export function FieldPage({
         st.tiltRaf = 0;
         applyTilt();
       });
-    if (!st.swellRaf)
-      st.swellRaf = requestAnimationFrame(() => {
-        st.swellRaf = 0;
-        applySwell();
-      });
+    st.swellAim = true;
+    if (!st.swellRaf) st.swellRaf = requestAnimationFrame(tickSwell);
   };
 
   const cancelHover = useCallback(() => {
@@ -419,6 +467,7 @@ export function FieldPage({
       w: Number(el.dataset.w ?? 1),
       h: Number(el.dataset.h ?? 1),
       slot: el.dataset.slot != null ? Number(el.dataset.slot) : -1,
+      ghost: el.dataset.ghost != null ? Number(el.dataset.ghost) : -1,
     }));
     st.slotEls = [];
     st.placed.forEach((p) => p.slot >= 0 && (st.slotEls[p.slot] = p.el));
@@ -427,12 +476,18 @@ export function FieldPage({
     f.querySelectorAll<HTMLElement>('[data-vl]').forEach((el) => (st.vlines[Number(el.dataset.vl)] = el));
     f.querySelectorAll<HTMLElement>('[data-hl]').forEach((el) => (st.hlines[Number(el.dataset.hl)] = el));
     st.ghosts = [];
-    f.querySelectorAll<HTMLElement>('[data-ghost]').forEach((el) => (st.ghosts[Number(el.dataset.ghost)] = el));
+    st.ghostPlaced = [];
+    st.placed.forEach((p) => {
+      if (p.ghost < 0) return;
+      st.ghosts[p.ghost] = p.el;
+      st.ghostPlaced[p.ghost] = p;
+    });
     st.letters = Array.from(f.querySelectorAll<HTMLElement>('[data-letter]')).map((el) => ({
       el,
       c: Number(el.dataset.c),
       r: Number(el.dataset.r),
       key: `${BASE_AXES.wdth}/${BASE_AXES.wght}`,
+      tw: swellRest(),
     }));
     st.slotOfCell = new Map(slots.map((cell, k) => [cell, k]));
     st.slotItem = [...placement.shown];
@@ -510,7 +565,9 @@ export function FieldPage({
       setTimeout(() => {
         st.ghostTimers.delete(i);
         if (!activeRef.current || !fieldOn()) return;
-        g.style.transition = 'opacity .09s,transform .7s cubic-bezier(.2,.7,.1,1)';
+        const p = st.ghostPlaced[i];
+        if (p) placeGhost(p);
+        g.style.transition = 'opacity .09s';
         g.style.opacity = String(amp);
       }, delay),
     );
@@ -622,24 +679,47 @@ export function FieldPage({
     <>
       <h1 className="hs-sr">I explore how people relate to objects and spaces that respond to them.</h1>
       <div className="hs-fx" ref={fieldRef} onPointerEnter={onMove} onPointerMove={onMove} onPointerLeave={cancelHover}>
+        {/* 余光与字各占一层（同一张 28×15 格子，叠在格线之下；2026-10-28 性能排查）：
+            它们原是这张格子的直接格子项，字每变一次宽、开卡时框每变一次宽高，浏览器都要把 753 个格子项重排一遍；
+            分层后各层 contain: strict，互不牵连。画的先后不变：余光 → 字 → 格线 → 作品格与框。 */}
+        <div className="hs-fx__layer" aria-hidden="true">
+          {CELLS.map((i) => (
+            <span
+              key={`g${i}`}
+              className="hs-fx__ghost"
+              data-ghost={i}
+              data-g
+              data-c={i % COLS}
+              data-r={Math.floor(i / COLS)}
+              style={area(i % COLS, Math.floor(i / COLS))}
+              aria-hidden="true"
+            />
+          ))}
+        </div>
+        <div className="hs-fx__layer" aria-hidden="true">
+          {T.letters.map((L) => (
+            <span
+              key={`l${L.n}`}
+              className="hs-fx__ch"
+              data-letter
+              aria-hidden="true"
+              data-g
+              data-c={L.c}
+              data-r={L.r}
+              data-a="up"
+              data-d={60 + L.n * 12}
+              style={{ ...area(L.c, L.r), fontVariationSettings: baseAxes }}
+            >
+              {L.ch}
+            </span>
+          ))}
+        </div>
         {/* 格线是元素不是背景：开卡让位时跟着行列一起移 */}
         {VLINES.map((k) => (
           <i key={`v${k}`} className="hs-fx__vl" data-vl={k} style={{ left: lineAt(k, COLS) }} aria-hidden="true" />
         ))}
         {HLINES.map((k) => (
           <i key={`h${k}`} className="hs-fx__hl" data-hl={k} style={{ top: lineAt(k, ROWS) }} aria-hidden="true" />
-        ))}
-        {CELLS.map((i) => (
-          <span
-            key={`g${i}`}
-            className="hs-fx__ghost"
-            data-ghost={i}
-            data-g
-            data-c={i % COLS}
-            data-r={Math.floor(i / COLS)}
-            style={area(i % COLS, Math.floor(i / COLS))}
-            aria-hidden="true"
-          />
         ))}
         {slots.map((cell, k) => {
           const p = placement.shown[k];
@@ -672,22 +752,6 @@ export function FieldPage({
             </span>
           );
         })}
-        {T.letters.map((L) => (
-            <span
-              key={`l${L.n}`}
-              className="hs-fx__ch"
-              data-letter
-              aria-hidden="true"
-              data-g
-              data-c={L.c}
-              data-r={L.r}
-              data-a="up"
-              data-d={60 + L.n * 12}
-              style={{ ...area(L.c, L.r), fontVariationSettings: baseAxes }}
-            >
-              {L.ch}
-            </span>
-          ))}
         {T.keys.map((K2) => (
             <span
               key={`k${K2.n}`}

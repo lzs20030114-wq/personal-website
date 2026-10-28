@@ -105,9 +105,11 @@ export function HomeScroll({ work, groups, log, field }: HomeScrollProps) {
     /* choreo */
     const choreo = (i: number, base: number) => {
       if (!motionOn() || flow()) return;
+      // 上一轮编排的动画整页取一次再撤（2026-10-28 性能排查）：原先逐个元素 getAnimations()，
+      // 每次都要先把样式算到最新，夹在三百来个 animate() 之间就是三百来次强制样式计算（首屏载入与每次翻页各一遍）
+      sections[i].getAnimations({ subtree: true }).forEach((a) => a.id === 'ch' && a.cancel());
       $$('[data-a]', sections[i]).forEach((el) => {
         const t = el.dataset.a!;
-        el.getAnimations().forEach((a) => a.id === 'ch' && a.cancel());
         const a = el.animate(KF[t], {
           duration: DUR[t],
           delay: base + (+(el.dataset.d ?? 0) || 0),

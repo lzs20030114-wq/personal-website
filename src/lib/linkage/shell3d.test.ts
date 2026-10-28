@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  MEASURED_SLOTS,
   SHELL_OMEGA,
   SHELL_RINGS,
   SHELL_STEP_DT,
   SHELL_THETA0,
   createShell,
+  measureShellSlots,
   ringOuterProfile,
   ringPoint,
   shellMaxError,
@@ -12,6 +14,28 @@ import {
 } from './shell3d';
 
 // 单位注意：本模块坐标 = 环局部 mm（非 2D 台架的 viewBox px；1px = 1/1.9mm）。
+
+describe('槽端预存表（2026-10-28 性能排查）', () => {
+  // 只卡到 1e-6 mm、不卡逐位：现量要用 sin / cos，新版 V8（Chrome 153 实测）个别输入末位与 Node 22 不同，
+  // 现量结果本来就随浏览器在 1e-12 mm 上浮动；逐位守门会在构建机换 Node 版本时无故变红（10-19 的事故同类）
+  it('预存表与现量结果一致（差 < 1e-6 mm）：环的数据一改这里就红，照现量结果重填 MEASURED_SLOTS', () => {
+    for (const d of SHELL_RINGS) {
+      const measured = measureShellSlots(d);
+      const stored = MEASURED_SLOTS[d.name];
+      expect(stored).toBeDefined();
+      expect(stored.length).toBe(measured.length);
+      measured.forEach((m, i) => {
+        expect(stored[i].node).toBe(m.node);
+        expect(Math.abs(stored[i].lo - m.lo)).toBeLessThan(1e-6);
+        expect(Math.abs(stored[i].hi - m.hi)).toBeLessThan(1e-6);
+      });
+    }
+  });
+  it('装配直接用预存表，不在启动时现量', () => {
+    const rings = createShell();
+    for (const r of rings) expect(r.slots).toBe(MEASURED_SLOTS[r.data.name]);
+  });
+});
 
 describe('五环装配（图纸姿态）', () => {
   it('S1–S5 全部初始化收敛（残差 < 0.3mm）且板解支正确（makeSolver 内断言不抛）', () => {

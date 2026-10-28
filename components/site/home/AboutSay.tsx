@@ -7,15 +7,27 @@
 // 指针在整个 About 页上都算（与首屏一样按距离衰减），不必正好落在标题框里（§75）。
 // 只在翻页版式里、允许动效、用鼠标时生效；窄屏文档流里标题会折行，鼓起会改折行，不做。
 import { useEffect, useRef } from 'react';
-import { FX, swellAt, swellFrom, type Axes } from '../../../src/lib/site/home-fx';
+import {
+  FX,
+  swellAt,
+  swellFrom,
+  swellRest,
+  swellRetarget,
+  swellSample,
+  swellTweenDone,
+  type Axes,
+  type SwellTween,
+} from '../../../src/lib/site/home-fx';
 import { HOME_FLOW_QUERY, prefersReducedMotion } from '../../../src/lib/site/home-mode';
 
 const css = (a: Axes) => `'wdth' ${a.wdth}, 'wght' ${a.wght}`;
-const EASE = 'cubic-bezier(.2,.7,.1,1)';
 
 interface Letter {
   el: HTMLElement;
   base: Axes;
+  /** 鼓起程度的过渡（按帧推进、只取有限几档，见 home-fx swellRetarget；不交给 CSS 过渡——那样每帧重排整页） */
+  tw: SwellTween;
+  /** 上一次写进样式的字宽字重 */
   cur: Axes;
   /** 平时的字心，相对标题左上角（px） */
   x: number;
@@ -40,40 +52,47 @@ export function AboutSay() {
   const st = useRef({
     letters: [] as Letter[],
     measured: false,
-    /** 最后一个字收回平时样子的时刻；之前量位置会把鼓起量进去 */
-    calmAt: 0,
     ptr: null as { x: number; y: number } | null,
+    /** 指针动过：下一帧重新算每个字该鼓多少 */
+    aim: false,
     raf: 0,
   });
 
-  const apply = () => {
+  /** 所有字都回到平时样子了没有：之前量位置会把鼓起量进去 */
+  const calm = (now: number) => st.current.letters.every((L) => L.tw.to === 0 && swellTweenDone(L.tw, now));
+
+  const tick = (now: number) => {
     const h = ref.current;
     const s = st.current;
+    s.raf = 0;
     if (!h) return;
-    const hr = h.getBoundingClientRect();
-    const fs = parseFloat(getComputedStyle(h).fontSize) || 1;
-    const cw = fs * FX.SAY_CELL_W;
-    const ch = fs * FX.SAY_CELL_H;
-    const now = performance.now();
-    for (const L of s.letters) {
-      const f = s.ptr ? swellAt((s.ptr.x - hr.left - L.x) / cw, (s.ptr.y - hr.top - L.y) / ch) : 0;
-      const a = swellFrom(L.base, f, FX.SAY_PEAK);
-      if (a.wdth === L.cur.wdth && a.wght === L.cur.wght) continue;
-      const ms = a.wght > L.cur.wght ? FX.SWELL_IN_MS : FX.SWELL_OUT_MS;
-      L.cur = a;
-      L.el.style.transition = `font-variation-settings ${ms}ms ${EASE}`;
-      L.el.style.fontVariationSettings = css(a);
-      s.calmAt = Math.max(s.calmAt, now + ms);
+    if (s.aim) {
+      s.aim = false;
+      const hr = h.getBoundingClientRect();
+      const fs = parseFloat(getComputedStyle(h).fontSize) || 1;
+      const cw = fs * FX.SAY_CELL_W;
+      const ch = fs * FX.SAY_CELL_H;
+      for (const L of s.letters) {
+        const f = s.ptr ? swellAt((s.ptr.x - hr.left - L.x) / cw, (s.ptr.y - hr.top - L.y) / ch) : 0;
+        L.tw = swellRetarget(L.tw, f, now);
+      }
     }
+    let moving = false;
+    for (const L of s.letters) {
+      const a = swellFrom(L.base, swellSample(L.tw, now), FX.SAY_PEAK);
+      if (a.wdth !== L.cur.wdth || a.wght !== L.cur.wght) {
+        L.cur = a;
+        L.el.style.fontVariationSettings = css(a);
+      }
+      if (!swellTweenDone(L.tw, now)) moving = true;
+    }
+    if (moving) s.raf = requestAnimationFrame(tick);
   };
 
   const schedule = () => {
     const s = st.current;
-    if (!s.raf)
-      s.raf = requestAnimationFrame(() => {
-        s.raf = 0;
-        apply();
-      });
+    s.aim = true;
+    if (!s.raf) s.raf = requestAnimationFrame(tick);
   };
 
   useEffect(() => {
@@ -81,16 +100,15 @@ export function AboutSay() {
     const s = st.current;
     s.letters = Array.from(h.querySelectorAll<HTMLElement>('[data-say]')).map((el) => {
       const base = el.dataset.say === 'w' ? FX.SAY_WIDE : FX.SAY_PLAIN;
-      return { el, base, cur: base, x: 0, y: 0 };
+      return { el, base, tw: swellRest(), cur: base, x: 0, y: 0 };
     });
     // 尺寸变了字心就不对了：立刻回到平时样子，下次指针进来时重新量
     const ro = new ResizeObserver(() => {
       s.ptr = null;
       s.measured = false;
-      s.calmAt = 0;
       for (const L of s.letters) {
+        L.tw = swellRest();
         L.cur = L.base;
-        L.el.style.transition = 'none';
         L.el.style.fontVariationSettings = css(L.base);
       }
     });
@@ -101,7 +119,7 @@ export function AboutSay() {
     const onMove = (e: PointerEvent) => {
       if (e.pointerType === 'touch' || window.matchMedia(HOME_FLOW_QUERY).matches || prefersReducedMotion()) return;
       if (!s.measured) {
-        if (performance.now() < s.calmAt) return;
+        if (!calm(performance.now())) return;
         const hr = h.getBoundingClientRect();
         for (const L of s.letters) {
           const r = L.el.getBoundingClientRect();
