@@ -51,6 +51,8 @@
 /* 2026-10-27 第二轮（MAPPING §70.1）：Lab / Log 的节标题放大成细窄大字，每屏一个大字，与 Work 的组名同一种写法 */
 .hs-h2--big { font-weight: 280; font-stretch: 72%; font-size: clamp(64px, min(11vw, 19vh), 168px); line-height: .84; letter-spacing: -.035em; padding-bottom: .06em; }
 .hs-h2--say { font-weight: 300; font-stretch: 76%; font-size: clamp(44px, min(10vw, 15vh), 152px); line-height: .88; letter-spacing: -.03em; }
+/* 宣言里的两个名词换成宽粗（字宽 125%、字重 640）。原放在旧首屏那段样式里，2026-10-27 换首屏时误删、10-28 补回（MAPPING §72） */
+.hs-w { font-stretch: 125%; font-weight: 640; letter-spacing: -.035em; }
 .hs-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
 .hs-head__aside { display: flex; gap: 28px; align-items: baseline; }
 .hs-head__aside .hs-lbl { display: flex; gap: 12px; align-items: center; }
