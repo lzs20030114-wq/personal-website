@@ -1,13 +1,14 @@
 import type { ComponentProps } from 'react';
 import type { SlotLang } from '../slots';
-import { CompareChart, SkinSolidBench, SkinBench, SkinSeriesBench, SquareRingBench } from './space-dynamic';
+import { CompareChart, SkinSolidBench } from './space-dynamic';
+import { FrameStrip } from './FrameStrip';
 
 export { CaseHero } from './space-dynamic';
 
 /** 项目二 MDX 注册；保留现有 HUD、编制、布局和语言参数。 */
 export const components = (lang: SlotLang) => ({
   CompareChart: (p: ComponentProps<typeof CompareChart>) => <CompareChart {...p} lang={lang} />,
-  // 项目 II 正文里的活件：四种形态的立体带（Lab 2-2）。正文「空间本体」那节说的
+  // 项目 II 正文里的活件：四种形态的立体带（Lab 2-2）。正文「单元的构成与运动」那节说的
   // 「缆长场决定网面形态、四种典型形态」，在引擎里就是每单元一个收缩自由度 ℓ；
   // 控制条收掉（正文里的图不该带一排按钮），要调去 /lab。
   SkinSolidFigure: () => (
@@ -37,20 +38,8 @@ export const components = (lang: SlotLang) => ({
       }
     />
   ),
-  // 「方法」那节的滞后 2026-10-06 起搬到痕迹层（痕迹慢褪 + 猫占用钉住，松键已解禁）；
-  // 这台只演示成形那一程：同一收缩协议下四张键谱各自扣出一种形态。图注不替它承诺回程。
-  // Lab 2-1 是 2D 剖面、画的是 SVG，正文里最轻的一件。
-  SkinUnitFigure: () => <SkinBench controls={false} onLight lang={lang} />,
-  // 「行为条款与交互矩阵」那节要的是**形态的连续词汇**：十二条带的键谱逐级微变，
-  // 从一种形态走到另一种。注意这是两张既有键谱的形态学串联（演示编排）——
-  // 行为矩阵 → 键谱的翻译规则由作者手写，模型不代拟，图注也不许说成是它。
-  // 开场取**分列**而不是 /lab 的并拢：并拢的默认机位是侧视，十二条带叠在深度上、
-  // 前一条挡住后面的，读者又没有控制条可切——正文里必须一眼看见那条渐变。
-  SkinArrayFigure: () => (
-    <SkinSeriesBench controls={false} onLight lang={lang} plan="gradient" layout={1} />
-  ),
-  // 「技术实现」那节说的单元化 + 运动学可解：二十条同谱的带绕轴一圈，
-  // 只解一条摆二十处，每条带挑出多远就决定了俯视的轮廓。
-  SquareRingFigure: () => <SquareRingBench controls={false} onLight lang={lang} />,
+  // 分镜条（2026-10-28）：从 /lab 台架截下来的帧排成一行，看大图走页内看图器。
+  // 原先正文里的 Lab 2-1 / 2-4 / 2-7 三台活件改成分镜（成形过程一帧一帧看得更清楚，页面也少三个台架）。
+  FrameStrip: (p: ComponentProps<typeof FrameStrip>) => <FrameStrip {...p} lang={lang} />,
 
 });

@@ -6,6 +6,3 @@ import dynamic from 'next/dynamic';
 export const CaseHero = dynamic(() => import('../CaseHeroSpace').then((m) => m.CaseHeroSpace));
 export const CompareChart = dynamic(() => import('./CompareChart').then((m) => m.CompareChart));
 export const SkinSolidBench = dynamic(() => import('../../lab/SkinSolidBench').then((m) => m.SkinSolidBench));
-export const SkinBench = dynamic(() => import('../../lab/SkinBench').then((m) => m.SkinBench));
-export const SkinSeriesBench = dynamic(() => import('../../lab/SkinSeriesBench').then((m) => m.SkinSeriesBench));
-export const SquareRingBench = dynamic(() => import('../../lab/SquareRingBench').then((m) => m.SquareRingBench));

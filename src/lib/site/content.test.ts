@@ -11,13 +11,13 @@ import { MAIN_PROJECTS, getAllWork, getRoutableWork } from './content';
 
 /**
  * 抓正文里所有带编号的插槽（图 / 交互件 / 视频 / 「10 Case 01」稿的编号构件），按出现顺序。
- * 构件（LifeCycle N05、PersonaBench N06、ClosureCards N08–N09、AgeingCurve N17、SystemLogic N18；项目二的 CompareChart FIG.05）
+ * 构件（LifeCycle N05、PersonaBench N06、ClosureCards N08–N09、AgeingCurve N17、SystemLogic N18；项目二的 CompareChart FIG.11 与分镜 FrameStrip）
  * 在稿里就是图目录里的那几号，换成了活的——所以同样要两侧一致。
  */
 function slotIds(body: string): string[] {
   return [
     ...body.matchAll(
-      /<(?:FigSlot|InteractiveSlot|VideoSlot|LifeCycle|PersonaBench|ClosureCards|AgeingCurve|SystemLogic|CompareChart)\b[^>]*?\bid="([^"]+)"/g,
+      /<(?:FigSlot|InteractiveSlot|VideoSlot|LifeCycle|PersonaBench|ClosureCards|AgeingCurve|SystemLogic|CompareChart|FrameStrip)\b[^>]*?\bid="([^"]+)"/g,
     ),
   ].map((m) => m[1]);
 }

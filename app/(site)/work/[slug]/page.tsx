@@ -27,6 +27,7 @@ import { CaseIndex } from '../../../../components/site/case/CaseIndex';
 import { CaseReveal } from '../../../../components/site/case/CaseReveal';
 import { WorkInPreparation } from '../../../../components/site/WorkInPreparation';
 import { OtherWorkPage } from '../../../../components/site/OtherWorkPage';
+import { ImageViewer } from '../../../../components/site/ImageViewer';
 import { getOtherWorkPage, getOtherWorkPages } from '../../../../src/lib/site/other-works';
 
 export function generateStaticParams() {
@@ -192,7 +193,7 @@ const SLOT_COPY: Record<string, { lab?: string; en: SlotCopy; zh: SlotCopy }> = 
       heroLabel: 'hero image · to be supplied',
       heroDesc: 'Hero image',
       heroLive: '[stand-in] Lab 2-15 people and cats in the room · live',
-      heroVerb: 'an 8×8 field of units over six visitors and two cats · controls in the lab',
+      heroVerb: '64 units stowed under the ceiling come down by the rules · six visitors, two cats · controls in the lab',
       heroCap: '[stand-in] Lab 2-15 people and cats together, in 3D · hero image to be supplied',
     },
     zh: {
@@ -200,7 +201,7 @@ const SLOT_COPY: Record<string, { lab?: string; en: SlotCopy; zh: SlotCopy }> = 
       heroLabel: '主图 · 待供图',
       heroDesc: '主图',
       heroLive: '[顶替] Lab 2-15 人猫同台立体活件',
-      heroVerb: '8×8 个单元落在六位访客与两只猫头顶 · 控制在实验室',
+      heroVerb: '64 台单元收在天花板下，按规则落下 · 六位访客、两只猫 · 控制在实验室',
       heroCap: '[顶替] Lab 2-15 人猫同台立体活件 · 主图待供图',
     },
   },
@@ -328,6 +329,8 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
           页面转场在根布局（MAPPING §48）：data-case-order 供「下一个案例」判断左右 */}
       <div className="ground-plane ld-ground" aria-hidden />
       <CaseReveal />
+      {/* 页内看图器（MAPPING §60.2）：正文里的分镜（FrameStrip）点开在这里看大图，没有分镜的页面它什么也不做 */}
+      <ImageViewer />
       <div className="cs pg-dark" data-case-order={entry.order ?? undefined}>
         <div className="cs-dots" aria-hidden style={{ top: -64 }} />
 
