@@ -5,12 +5,14 @@
  */
 
 export const FX = {
-  /** 01 方块场：光标附近的方块转角、拉斜、略放大；按距离高斯衰减的半径（px） */
+  /** 01 方块场：光标附近的方块转角、拉斜、同时缩小；按距离高斯衰减的半径（px） */
   TILT_R: 190,
-  /** 正对指针时的最大转角 / 拉斜（度）与放大量 */
+  /** 正对指针时的最大转角 / 拉斜（度）与缩小量。
+   * 2026-10-28（MAPPING §75）放大 0.28 改成缩小 0.35：放大时转过去的方块互相压在一起；
+   * 缩小后方块转 30°、拉斜 16° 仍落在自己那一格里（方块边长约格子的 0.78，转斜后外框 ×1.65，再 ×0.65 ≈ 0.84 格） */
   TILT_ROT: 30,
   TILT_SKEW: 16,
-  TILT_SCALE: 0.28,
+  TILT_SHRINK: 0.35,
   /** 系数低于这个值就当作不倾斜（远处的方块不写样式） */
   TILT_MIN: 0.06,
   /** 01 字格（2026-10-27，画布 H6b，MAPPING §71）：鼠标附近的字变宽变粗；横向影响几格宽、纵向几格高——沿着这一行鼓起来 */
@@ -27,6 +29,8 @@ export const FX = {
   /** 03 About 宣言（2026-10-28，MAPPING §74）：同一种鼓起，起点是宣言自己的两档——细窄的字与宽粗的名词（与 .hs-h2--say / .hs-w 同值） */
   SAY_PLAIN: { wdth: 76, wght: 300 },
   SAY_WIDE: { wdth: 125, wght: 640 },
+  /** 宣言鼓到的最宽最粗（§75）：字重到字体上限 900——两个名词本来就最宽，只能靠变粗回应，鼓到 760 几乎看不出来 */
+  SAY_PEAK: { wdth: 125, wght: 900 },
   /** 宣言的「一格」按字号折算：横向半个字号约一个字宽，纵向一个行高（.hs-h2--say 的 line-height） */
   SAY_CELL_W: 0.5,
   SAY_CELL_H: 0.88,
@@ -52,7 +56,7 @@ export function tiltAt(dx: number, dy: number, r: number = FX.TILT_R): Tilt | nu
   const f = Math.exp(-(dx * dx + dy * dy) / (r * r));
   if (f < FX.TILT_MIN) return null;
   const side = dx < 0 ? -1 : 1;
-  return { rot: side * f * FX.TILT_ROT, skew: -f * FX.TILT_SKEW, scale: 1 + f * FX.TILT_SCALE };
+  return { rot: side * f * FX.TILT_ROT, skew: -f * FX.TILT_SKEW, scale: 1 - f * FX.TILT_SHRINK };
 }
 
 /** 倾斜量写成 transform（null = 空串，即不倾斜）；保留一位小数，指针微动时同一格的字符串不变就不必重写样式 */
@@ -71,11 +75,13 @@ export interface Axes {
   wght: number;
 }
 
-/** 从某个起点（平时的字宽字重）鼓向最宽最粗：f = 0 是起点、1 是 SWELL_WDTH / SWELL_WGHT 的上端（整数，同一个字的值不变就不必重写样式） */
-export function swellFrom(base: Axes, f: number): Axes {
+const SWELL_PEAK: Axes = { wdth: FX.SWELL_WDTH[1], wght: FX.SWELL_WGHT[1] };
+
+/** 从某个起点（平时的字宽字重）鼓向 peak：f = 0 是起点、1 是 peak（默认 SWELL_WDTH / SWELL_WGHT 的上端；整数，同一个字的值不变就不必重写样式） */
+export function swellFrom(base: Axes, f: number, peak: Axes = SWELL_PEAK): Axes {
   return {
-    wdth: Math.round(base.wdth + (FX.SWELL_WDTH[1] - base.wdth) * f),
-    wght: Math.round(base.wght + (FX.SWELL_WGHT[1] - base.wght) * f),
+    wdth: Math.round(base.wdth + (peak.wdth - base.wdth) * f),
+    wght: Math.round(base.wght + (peak.wght - base.wght) * f),
   };
 }
 

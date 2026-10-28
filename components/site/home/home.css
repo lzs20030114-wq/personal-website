@@ -55,6 +55,12 @@
 .hs-w { font-stretch: 125%; font-weight: 640; letter-spacing: -.035em; }
 /* 03 About 宣言拆成逐字（MAPPING §74）：一个词里的字不许在中间折行 */
 .hs-say__w { white-space: nowrap; }
+/* §75：翻页版式里宣言固定两行（「From spaces to」/「interactions.」），鼓起时只会变宽、不会改折行；文档流照常自然折行 */
+:where(:root[data-hs="paged"]) .hs-h2--say { white-space: nowrap; }
+/* 外框只为标题升入的动画裁掉下方；横向不裁，鼓起时第一行偶尔宽出容器几 px（1920 宽悬停在 From 上时 4px）不被切掉。
+   不支持 overflow: clip 的旧浏览器留在上一行的 hidden */
+.hs-about__body > .hs-mask { overflow: hidden; overflow: visible clip; }
+:where(:root:not([data-hs="paged"])) .hs-say__br { display: none; }
 .hs-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
 .hs-head__aside { display: flex; gap: 28px; align-items: baseline; }
 .hs-head__aside .hs-lbl { display: flex; gap: 12px; align-items: center; }
@@ -222,7 +228,9 @@
 .hs-wg__title.hs-is-here { transition: transform .9s var(--eio) .1s, opacity .5s ease .1s; }
 .hs-wg__title.hs-is-past { transform: translateY(-110%); opacity: 0; }
 .hs-wg__title.hs-is-next { transform: translateY(110%); opacity: 0; }
-.hs-wg__ctl { flex: none; display: flex; align-items: center; gap: 16px; }
+/* 2026-10-28（MAPPING §75）：卡片网格上下各多伸 40px 给悬停动效留地方（见下方 .hs-wg__grid），上沿伸进了这一行，
+   盖住左右按钮的下半截——点下半截没反应。控件这一行压到网格上面 */
+.hs-wg__ctl { position: relative; z-index: 2; flex: none; display: flex; align-items: center; gap: 16px; }
 .hs-wg__range { font: 400 12px var(--mono); color: var(--muted); }
 /* 刻度盘：每屏一格，指针跟着转；绕回第一屏时继续往前转，不倒回去 */
 .hs-wg__dial { position: relative; flex: none; width: 30px; height: 30px; border-radius: 50%; border: 1px solid oklch(0.235 0.025 215 / .22); }

@@ -2,8 +2,9 @@
 
 // 03 About 的宣言「From spaces to interactions.」（2026-10-28，MAPPING §74）：
 // 鼠标停在标题上，附近的字变宽变粗，移开后慢慢收回——与首屏字格同一套曲线与时长（home-fx 的 swellAt / FX.SWELL_*）。
-// 细窄的字从 76 / 300 起跳，本来就宽粗的两个名词从 125 / 640 起跳，鼓到同一个最宽最粗。
+// 细窄的字从 76 / 300 起跳，本来就宽粗的两个名词从 125 / 640 起跳，鼓到同一个最宽最粗（125 / 900，§75）。
 // 字心按平时（没鼓起时）的位置量一次存下来，按它算距离：鼓起的字会把后面的字往右推，按实时位置算会自己追着自己抖。
+// 指针在整个 About 页上都算（与首屏一样按距离衰减），不必正好落在标题框里（§75）。
 // 只在翻页版式里、允许动效、用鼠标时生效；窄屏文档流里标题会折行，鼓起会改折行，不做。
 import { useEffect, useRef } from 'react';
 import { FX, swellAt, swellFrom, type Axes } from '../../../src/lib/site/home-fx';
@@ -56,7 +57,7 @@ export function AboutSay() {
     const now = performance.now();
     for (const L of s.letters) {
       const f = s.ptr ? swellAt((s.ptr.x - hr.left - L.x) / cw, (s.ptr.y - hr.top - L.y) / ch) : 0;
-      const a = swellFrom(L.base, f);
+      const a = swellFrom(L.base, f, FX.SAY_PEAK);
       if (a.wdth === L.cur.wdth && a.wght === L.cur.wght) continue;
       const ms = a.wght > L.cur.wght ? FX.SWELL_IN_MS : FX.SWELL_OUT_MS;
       L.cur = a;
@@ -94,42 +95,49 @@ export function AboutSay() {
       }
     });
     ro.observe(h);
+
+    // 指针在整个 About 页上都算：离标题远的字按距离衰减到 0，不必正好落在标题框里
+    const host: HTMLElement = h.closest<HTMLElement>('.hs-about') ?? h;
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType === 'touch' || window.matchMedia(HOME_FLOW_QUERY).matches || prefersReducedMotion()) return;
+      if (!s.measured) {
+        if (performance.now() < s.calmAt) return;
+        const hr = h.getBoundingClientRect();
+        for (const L of s.letters) {
+          const r = L.el.getBoundingClientRect();
+          L.x = r.left + r.width / 2 - hr.left;
+          L.y = r.top + r.height / 2 - hr.top;
+        }
+        s.measured = true;
+      }
+      s.ptr = { x: e.clientX, y: e.clientY };
+      schedule();
+    };
+    const onLeave = () => {
+      s.ptr = null;
+      schedule();
+    };
+    host.addEventListener('pointermove', onMove);
+    host.addEventListener('pointerleave', onLeave);
     return () => {
       ro.disconnect();
+      host.removeEventListener('pointermove', onMove);
+      host.removeEventListener('pointerleave', onLeave);
       cancelAnimationFrame(s.raf);
       s.raf = 0;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const onMove = (e: React.PointerEvent<HTMLHeadingElement>) => {
-    if (e.pointerType === 'touch' || window.matchMedia(HOME_FLOW_QUERY).matches || prefersReducedMotion()) return;
-    const s = st.current;
-    if (!s.measured) {
-      if (performance.now() < s.calmAt) return;
-      const hr = e.currentTarget.getBoundingClientRect();
-      for (const L of s.letters) {
-        const r = L.el.getBoundingClientRect();
-        L.x = r.left + r.width / 2 - hr.left;
-        L.y = r.top + r.height / 2 - hr.top;
-      }
-      s.measured = true;
-    }
-    s.ptr = { x: e.clientX, y: e.clientY };
-    schedule();
-  };
-
-  const onLeave = () => {
-    st.current.ptr = null;
-    schedule();
-  };
-
   return (
-    <h2 ref={ref} className="hs-h2 hs-h2--say" data-a="rise" data-d="60" onPointerMove={onMove} onPointerLeave={onLeave}>
+    <h2 ref={ref} className="hs-h2 hs-h2--say" data-a="rise" data-d="60">
       <span className="hs-sr">From spaces to interactions.</span>
       <span aria-hidden="true">
         <Word text="From" /> <Word text="spaces" wide />{' '}
         <span className="hs-accent--lime">
-          <Word text="to" /> <Word text="interactions." wide />
+          <Word text="to" />
+          {/* 翻页版式里整句不折行、在这里断开（与原来自然折行的位置相同）：字鼓起变宽时不会把「to」挤到第二行（§75） */}
+          <br className="hs-say__br" /> <Word text="interactions." wide />
         </span>
       </span>
     </h2>

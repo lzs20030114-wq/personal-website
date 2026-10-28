@@ -10,12 +10,24 @@ describe('方块场倾斜', () => {
     expect(tiltAt(FX.TILT_R * 2.5, 0)).toBeNull();
     expect(tiltCss(null)).toBe('');
   });
-  it('指针左右两侧的方块往相反方向转，拉斜与放大不分左右', () => {
+  it('指针左右两侧的方块往相反方向转，拉斜与缩小不分左右', () => {
     const l = tiltAt(-60, 10)!;
     const r = tiltAt(60, 10)!;
     expect(l.rot).toBeCloseTo(-r.rot);
     expect(l.skew).toBeCloseTo(r.skew);
     expect(l.scale).toBeCloseTo(r.scale);
+  });
+  it('转斜的方块同时缩小，越近越小；转过去以后仍落在自己那一格里，不压到邻格（§75）', () => {
+    const near = tiltAt(0, 0)!;
+    const mid = tiltAt(FX.TILT_R * 0.6, 0)!;
+    expect(near.scale).toBeLessThan(mid.scale);
+    expect(mid.scale).toBeLessThan(1);
+    // 方块边长约 0.78 格（.hs-fx__tile 的内缩），转 rot、拉斜 skew 后的外框宽 = 边长 ×(cos + sin + tan)
+    for (const t of [near, mid, tiltAt(48, 0)!, tiltAt(48, 48)!]) {
+      const r = (Math.abs(t.rot) * Math.PI) / 180;
+      const k = (Math.abs(t.skew) * Math.PI) / 180;
+      expect(0.78 * (Math.cos(r) + Math.sin(r) + Math.tan(k)) * t.scale).toBeLessThan(1);
+    }
   });
   it('指针微动时同一格的样式字符串不变（不必重写）', () => {
     expect(tiltCss(tiltAt(150, 40))).toBe(tiltCss(tiltAt(150.2, 40.1)));
@@ -62,12 +74,17 @@ describe('首屏字格鼓起', () => {
     expect(Number.isInteger(a.wdth) && Number.isInteger(a.wght)).toBe(true);
   });
   it('About 宣言：细窄的字与宽粗的名词各从自己平时的样子起跳，鼓到同一个最宽最粗；名词只变粗不再变宽', () => {
-    const peak = { wdth: FX.SWELL_WDTH[1], wght: FX.SWELL_WGHT[1] };
-    expect(swellFrom(FX.SAY_PLAIN, 0)).toEqual(FX.SAY_PLAIN);
-    expect(swellFrom(FX.SAY_WIDE, 0)).toEqual(FX.SAY_WIDE);
-    expect(swellFrom(FX.SAY_PLAIN, 1)).toEqual(peak);
-    expect(swellFrom(FX.SAY_WIDE, 1)).toEqual(peak);
-    expect(swellFrom(FX.SAY_WIDE, 0.5).wdth).toBe(FX.SAY_WIDE.wdth);
-    expect(swellFrom(FX.SAY_PLAIN, 0.5).wdth).toBeGreaterThan(FX.SAY_PLAIN.wdth);
+    const P = FX.SAY_PEAK;
+    expect(swellFrom(FX.SAY_PLAIN, 0, P)).toEqual(FX.SAY_PLAIN);
+    expect(swellFrom(FX.SAY_WIDE, 0, P)).toEqual(FX.SAY_WIDE);
+    expect(swellFrom(FX.SAY_PLAIN, 1, P)).toEqual(P);
+    expect(swellFrom(FX.SAY_WIDE, 1, P)).toEqual(P);
+    expect(swellFrom(FX.SAY_WIDE, 0.5, P).wdth).toBe(FX.SAY_WIDE.wdth);
+    expect(swellFrom(FX.SAY_PLAIN, 0.5, P).wdth).toBeGreaterThan(FX.SAY_PLAIN.wdth);
+    // 名词鼓起来要看得出：字重至少加 200（§75：原来只到 760，加 120，几乎看不出）
+    expect(P.wght - FX.SAY_WIDE.wght).toBeGreaterThanOrEqual(200);
+  });
+  it('不传 peak 时与首屏字格同一个终点（首屏逐位不变）', () => {
+    expect(swellFrom({ wdth: FX.SWELL_WDTH[0], wght: FX.SWELL_WGHT[0] }, 1)).toEqual({ wdth: FX.SWELL_WDTH[1], wght: FX.SWELL_WGHT[1] });
   });
 });
