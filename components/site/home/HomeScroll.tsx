@@ -310,7 +310,8 @@ export function HomeScroll({ work, groups, log, field }: HomeScrollProps) {
     let lastW = 0;
     let acc = 0;
     const onWheel = (e: WheelEvent) => {
-      if (flow()) return;
+      // Mac 触控板双指捏合在 Chrome / Firefox 里是带 ctrlKey 的滚轮事件：交给浏览器缩放，不当成翻页
+      if (flow() || e.ctrlKey) return;
       const now = performance.now();
       const gap = now - lastW;
       lastW = now;
@@ -474,7 +475,13 @@ export function HomeScroll({ work, groups, log, field }: HomeScrollProps) {
     // data-hs-page / data-hs-zone：页面转场离开首页时据此把地址写成 /#work 等，按返回落回原处（MAPPING §48）
     <div className={`hs-root${ready ? ' hs-ready' : ''}`} ref={rootRef} data-hs-root data-hs-page={page} data-hs-zone={zone}>
       <section className="hs-page hs-page--hook" data-page="0" aria-label="01 Field" ref={secRefs[0]}>
-        <FieldPage field={field} active={!flowMode && page === 0} onWork={() => api.current.goIdx(1)} onAbout={() => api.current.goIdx(2)} />
+        <FieldPage
+          field={field}
+          active={!flowMode && page === 0}
+          onWork={() => api.current.goIdx(1)}
+          onAbout={() => api.current.goIdx(2)}
+          onGo={(i) => api.current.goIdx(i)}
+        />
       </section>
       <section
         className="hs-page hs-page--work"
@@ -517,12 +524,19 @@ export function HomeScroll({ work, groups, log, field }: HomeScrollProps) {
         />
       </section>
 
-      <div className={`hs-hud${!flowMode && (page === 2 || page === 0) ? ' hs-on-dark' : ''}`}>
+      {/* 2026-10-27（MAPPING §71）：首屏改浅色，名字与导航收进首屏的格子里，HUD 的顶栏在首屏让开；页码导轨照旧 */}
+      <div className={`hs-hud${!flowMode && page === 2 ? ' hs-on-dark' : ''}${!flowMode && page === 0 ? ' hs-hud--field' : ''}`}>
         <div className={`hs-hud__bg${page === 3 && zScrolled ? ' hs-is-on' : ''}`} />
         <div className="hs-hud__bar">
-          <button type="button" className={`hs-hud__name${page !== 0 ? ' hs-is-on' : ''}`} onClick={() => api.current.toTop()}>
-            Zishuo Li
-          </button>
+          {/* 2026-10-27（MAPPING §70）：署名五屏都在左上角；首屏另带一行小字（原先在首屏中央标题上方） */}
+          <span className="hs-hud__id">
+            <button type="button" className="hs-hud__name" onClick={() => api.current.toTop()}>
+              Zishuo Li
+            </button>
+            <span className={`hs-hud__tag${page === 0 ? ' hs-is-on' : ''}`} aria-hidden={page !== 0}>
+              portfolio · 2026
+            </span>
+          </span>
           <nav className="hs-hud__nav" aria-label="Sections">
             {NAV.map(([label, i]) => (
               <button

@@ -1,49 +1,41 @@
 'use client';
 
-// 01 Field（稿 design-ref/home-field-hero/17 Home - Field Hero.dc.html，MAPPING §55）。
-// 一张 28×14 的方块场：方块随机亮起又熄灭，指针划过或停留时留下一圈余光；
-// 在亮着的方块上稍作停留，它就长成一张 6×4 的卡（周围方块让位），点卡进那件作品。
-// 中央是标题区，场在它后面绕开。停留与余光规则见 MAPPING §57.1 / §57.3。
+// 01 Field（2026-10-27 换成画布方案 H6b，MAPPING §71；此前为稿 17 Home · Field Hero，§55）。
+// 一张 28×15 的细线格：标语一字一格（细窄），objects / spaces 每个字母占 2×2（宽粗），
+// 名字、导航、按钮、提示都占整数个格子；其余格子各放一件站上的真实内容，贴着字留一圈有机的空白。
+// 动效沿用 §55–§57：作品格成簇地亮起又暗回去，指针划过留一圈余光，光标附近的作品格转角拉斜，
+// 在作品格上停 160ms 长成一张 6×4 的卡（所在行列放大、其余让位——字格也一起让位），点卡进那件作品。
+// 新增：鼠标扫过字格时，附近的字变宽变粗，移开后慢慢收回。
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { HomeField } from '../../../src/lib/site/home-model';
-import { FIELD_KINDS, fieldColors, pickFieldIndex } from '../../../src/lib/site/field-visuals';
+import { FIELD_KINDS, FIELD_LIGHT } from '../../../src/lib/site/field-visuals';
+import { FX, swellAt, swellAxes, tiltAt, tiltCss } from '../../../src/lib/site/home-fx';
 import { HOME_FLOW_QUERY, prefersReducedMotion } from '../../../src/lib/site/home-mode';
+import {
+  CARD_H as CH,
+  CARD_W as CW,
+  FIELD_COLS as COLS,
+  FIELD_ROWS as ROWS,
+  FIELD_TEXT,
+  cardOrigin,
+  fieldSlots,
+  initialPlacement,
+} from '../../../src/lib/site/field-layout';
 
-const COLS = 28;
-const ROWS = 14;
-/** 卡占几格 */
-const CW = 6;
-const CH = 4;
-const GAP = 12;
 /** 卡所在行列放大倍数（其余行列等比收窄让位） */
 const K = 1.5;
-/** 场里同时亮着的方块目标数 / 其中明亮图标的比例；其余图标低对比保持原稿的疏密。 */
-const DENSITY = 250;
-const THUMBS = 0.35;
+/** 同时亮着的作品格占比；亮格持续多久、暗回去用多久 */
+const LIT_SHARE = 0.3;
 const TICK_MS = 110;
-const FADE_OUT_MS = 2200;
-/** 快速掠过不触发：余光先响应，再确认开卡意图。 */
+const DIM_MS = 2200;
+/** 快速掠过不触发：余光先响应，再确认开卡意图（§57.1 已确认的 50 / 160ms） */
 const WAKE_DWELL_MS = 50;
 const WAKE_TRACK_MS = 110;
 const OPEN_DWELL_MS = 160;
+const BASE_AXES = swellAxes(0);
 
-const NUM = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
-const TENS = ['', '', 'twenty', 'thirty', 'forty'];
-function numWord(n: number): string {
-  if (n <= 20) return NUM[n];
-  if (n < 50) return TENS[Math.floor(n / 10)] + (n % 10 ? `-${NUM[n % 10]}` : '');
-  return String(n);
-}
-const cap1 = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-
-interface Zone {
-  r0: number;
-  r1: number;
-  c0: number;
-  c1: number;
-}
 interface Rect {
   x: number;
   y: number;
@@ -51,7 +43,8 @@ interface Rect {
   h: number;
 }
 interface Open {
-  i: number;
+  cell: number;
+  slot: number;
   pick: number;
   c0: number;
   r0: number;
@@ -59,9 +52,9 @@ interface Open {
   n: number;
 }
 
-/** 卡所在行列放大 K 倍、其余等比收窄后，各行列的左缘与中心位移（稿 geom 原式）。 */
+/** 卡所在行列放大 K 倍、其余等比收窄后，各行列的左缘（含最右一条边，共 n+1 条）与中心位移（格子之间无缝） */
 function axis(n: number, span: number, start: number, total: number) {
-  const cell = (total - GAP * (n - 1)) / n;
+  const cell = total / n;
   const u = (n * cell) / (n - span + span * K);
   const lefts: number[] = [];
   const shift: number[] = [];
@@ -69,28 +62,58 @@ function axis(n: number, span: number, start: number, total: number) {
   for (let k = 0; k < n; k++) {
     const w = k >= start && k < start + span ? u * K : u;
     lefts.push(x);
-    shift.push(x + w / 2 - (k * (cell + GAP) + cell / 2));
-    x += w + GAP;
+    shift.push(x + w / 2 - (k * cell + cell / 2));
+    x += w;
   }
-  return { lefts, shift, u };
+  return { lefts, edges: [...lefts, total], shift, u, cell };
+}
+
+/** 开卡让位：中心位移（单格的东西平移）+ 每条格线的新位置（格线、跨多格的框跟着移、改宽高） */
+interface Shift {
+  sx: number[];
+  sy: number[];
+  ex: number[];
+  ey: number[];
+  cw: number;
+  ch: number;
 }
 
 /** 卡从被悬停的那一格展开：clip-path 的起点框（百分比 inset） */
-function cellInset(i: number, c0: number, r0: number) {
-  const r = Math.floor(i / COLS);
-  const c = i % COLS;
+function cellInset(cell: number, c0: number, r0: number) {
+  const r = Math.floor(cell / COLS);
+  const c = cell % COLS;
   const L = ((c - c0) / CW) * 100;
   const T = ((r - r0) / CH) * 100;
   return `inset(${T}% ${100 - L - 100 / CW}% ${100 - T - 100 / CH}% ${L}%)`;
 }
 
+const area = (c: number, r: number, w = 1, h = 1): CSSProperties => ({ gridColumn: `${c + 1} / span ${w}`, gridRow: `${r + 1} / span ${h}` });
 const CELLS = Array.from({ length: COLS * ROWS }, (_, i) => i);
+const VLINES = Array.from({ length: COLS + 1 }, (_, k) => k);
+const HLINES = Array.from({ length: ROWS + 1 }, (_, k) => k);
+/** 第 k 条格线的位置；最右 / 最下那条往里收 1px，免得画到格子外 */
+const lineAt = (k: number, n: number) => (k === n ? 'calc(100% - 1px)' : `${(k * 100) / n}%`);
+const axesCss = (a: { wdth: number; wght: number }) => `'wdth' ${a.wdth}, 'wght' ${a.wght}`;
 
-export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField; active: boolean; onWork: () => void; onAbout: () => void }) {
+export function FieldPage({
+  field,
+  active,
+  onWork,
+  onAbout,
+  onGo,
+}: {
+  field: HomeField;
+  active: boolean;
+  onWork: () => void;
+  onAbout: () => void;
+  onGo: (page: number) => void;
+}) {
   const { pool } = field;
+  // 版面与初次落位都是确定的：服务端和浏览器得到同一张图
+  const { slots } = useMemo(() => fieldSlots(pool.length), [pool.length]);
+  const placement = useMemo(() => initialPlacement(pool.map((p) => p.kind), slots.length), [pool, slots.length]);
+
   const fieldRef = useRef<HTMLDivElement>(null);
-  const ghostRef = useRef<HTMLDivElement>(null);
-  const centerRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLAnchorElement>(null);
   const activeRef = useRef(active);
   activeRef.current = active;
@@ -101,16 +124,29 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
   openRef.current = open;
 
   const m = useRef({
-    cells: [] as HTMLElement[],
+    /** 所有占格子的东西（作品格、余光、字、框）及其位置，开卡让位时一起平移；跨多格的框还要改宽高 */
+    placed: [] as { el: HTMLElement; c: number; r: number; w: number; h: number; slot: number }[],
+    /** 格线：竖线 k 在第 k 列左缘，横线 k 在第 k 行上缘（k = 列数 / 行数 时是最右 / 最下一条） */
+    vlines: [] as HTMLElement[],
+    hlines: [] as HTMLElement[],
+    slotEls: [] as HTMLElement[],
     ghosts: [] as HTMLElement[],
+    letters: [] as { el: HTMLElement; c: number; r: number; key: string }[],
+    slotOfCell: new Map<number, number>(),
+    slotItem: [] as number[],
+    queue: [] as number[],
     lit: new Map<number, number>(),
-    fading: new Map<number, number>(),
-    zone: { r0: 4, r1: 9, c0: 7, c1: 20 } as Zone,
-    lastCell: -1,
+    swapAt: new Map<number, number>(),
     pointer: null as { x: number; y: number } | null,
+    lastCell: -1,
+    shift: null as Shift | null,
+    sizeT: undefined as ReturnType<typeof setTimeout> | undefined,
+    tilts: [] as string[],
+    tiltRaf: 0,
+    swellRaf: 0,
     ghostTimers: new Map<number, ReturnType<typeof setTimeout>>(),
     heldGhosts: new Map<number, number>(),
-    hoveredCell: -1,
+    hoveredSlot: -1,
     closing: false,
     wakeT: undefined as ReturnType<typeof setTimeout> | undefined,
     openT: undefined as ReturnType<typeof setTimeout> | undefined,
@@ -118,22 +154,138 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     txtT: undefined as ReturnType<typeof setTimeout> | undefined,
   });
 
-  /** 场在不在：窄屏文档流里整块隐藏（CSS 认 <html data-hs>，MAPPING §67） */
+  /** 格子在不在：窄屏文档流里整块隐藏（CSS 认 <html data-hs>，MAPPING §67） */
   const fieldOn = () => !window.matchMedia(HOME_FLOW_QUERY).matches;
-  /** 「减弱动态效果」下场照样在、照样能悬停开卡，只是方块不再轮换、卡不做生长动画 */
+  /** 「减弱动态效果」下格子照样在、照样能悬停开卡，只是作品格不再轮换、不倾斜、字不鼓起、卡不做生长动画 */
   const motionOn = () => fieldOn() && !prefersReducedMotion();
+
+  /** 当前视觉上的格子大小与各行列中心（开卡让位时按位移后的位置算） */
+  const geom = () => {
+    const f = fieldRef.current!;
+    const fr = f.getBoundingClientRect();
+    const cw = fr.width / COLS;
+    const ch = fr.height / ROWS;
+    const sh = m.current.shift;
+    return {
+      fr,
+      cw,
+      ch,
+      cx: (c: number) => fr.left + (c + 0.5) * cw + (sh ? sh.sx[c] : 0),
+      cy: (r: number) => fr.top + (r + 0.5) * ch + (sh ? sh.sy[r] : 0),
+    };
+  };
 
   const cancelOpen = useCallback(() => {
     clearTimeout(m.current.openT);
-    m.current.hoveredCell = -1;
+    m.current.hoveredSlot = -1;
   }, []);
 
   const fadeGhost = (i: number, amp: number) => {
     const g = m.current.ghosts[i];
+    if (!g) return;
     clearTimeout(m.current.ghostTimers.get(i));
     m.current.ghostTimers.delete(i);
     g.style.transition = `opacity ${(1.1 + amp).toFixed(2)}s ease,transform .7s cubic-bezier(.2,.7,.1,1)`;
     g.style.opacity = '0';
+  };
+
+  /** 一个东西的 transform = 开卡让位 + 光标倾斜（只有作品格）。单格的东西按中心平移；跨多格的框按左上角那条格线平移（宽高另改） */
+  const composeAt = (p: { c: number; r: number; w: number; h: number; slot: number }) => {
+    const { shift, tilts } = m.current;
+    let s = '';
+    if (shift) {
+      const span = p.w > 1 || p.h > 1;
+      const dx = span ? shift.ex[p.c] - p.c * shift.cw : shift.sx[p.c];
+      const dy = span ? shift.ey[p.r] - p.r * shift.ch : shift.sy[p.r];
+      s = `translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px)`;
+    }
+    const t = p.slot >= 0 ? (tilts[p.slot] ?? '') : '';
+    return s && t ? `${s} ${t}` : s || t;
+  };
+
+  const applyShift = (g: Shift | null) => {
+    const st = m.current;
+    st.shift = g;
+    // 开卡时指针在卡上，周围方块回正，免得卡边一圈乱动
+    if (g) st.tilts = [];
+    clearTimeout(st.sizeT);
+    // 跨多格的框（名字、导航、按钮、关键词）：宽高要从具体像素起跳才有过渡，先钉住当前尺寸
+    const spans = st.placed.filter((p) => p.w > 1 || p.h > 1);
+    const pinned = spans.filter((p) => !p.el.style.width);
+    pinned.forEach((p) => {
+      p.el.style.width = `${p.el.offsetWidth}px`;
+      p.el.style.height = `${p.el.offsetHeight}px`;
+    });
+    if (pinned.length) void fieldRef.current?.offsetWidth;
+    const f = fieldRef.current;
+    const cw = g ? g.cw : (f?.clientWidth ?? 0) / COLS;
+    const ch = g ? g.ch : (f?.clientHeight ?? 0) / ROWS;
+    for (const p of spans) {
+      p.el.style.width = `${(g ? g.ex[p.c + p.w] - g.ex[p.c] : p.w * cw).toFixed(1)}px`;
+      p.el.style.height = `${(g ? g.ey[p.r + p.h] - g.ey[p.r] : p.h * ch).toFixed(1)}px`;
+    }
+    for (const p of st.placed) p.el.style.transform = composeAt(p);
+    st.vlines.forEach((el, k) => (el.style.transform = g ? `translateX(${(g.ex[k] - k * g.cw).toFixed(1)}px)` : ''));
+    st.hlines.forEach((el, k) => (el.style.transform = g ? `translateY(${(g.ey[k] - k * g.ch).toFixed(1)}px)` : ''));
+    // 收回后把宽高交还给 grid（窗口再缩放时自己跟着走）
+    if (!g)
+      st.sizeT = setTimeout(() => {
+        if (st.shift) return;
+        spans.forEach((p) => {
+          p.el.style.width = '';
+          p.el.style.height = '';
+        });
+      }, 760);
+  };
+
+  /** 光标附近的作品格按距离转角、拉斜（字格不转：字靠宽窄变化回应） */
+  const applyTilt = () => {
+    const st = m.current;
+    if (!fieldRef.current || !st.slotEls.length) return;
+    const ptr = st.pointer;
+    const off = !ptr || !!openRef.current || !activeRef.current || !motionOn();
+    const { cx, cy } = geom();
+    for (const p of st.placed) {
+      if (p.slot < 0) continue;
+      const next = off ? '' : tiltCss(tiltAt(cx(p.c) - ptr!.x, cy(p.r) - ptr!.y));
+      if (next === (st.tilts[p.slot] ?? '')) continue;
+      st.tilts[p.slot] = next;
+      p.el.style.transform = composeAt(p);
+    }
+  };
+
+  /** 鼠标附近的字变宽变粗；变宽快、收回慢（FX.SWELL_*） */
+  const applySwell = () => {
+    const st = m.current;
+    if (!fieldRef.current || !st.letters.length) return;
+    const ptr = st.pointer;
+    const off = !ptr || !activeRef.current || !motionOn();
+    const { cx, cy, cw, ch } = geom();
+    for (const L of st.letters) {
+      const f = off ? 0 : swellAt((cx(L.c) - ptr!.x) / cw, (cy(L.r) - ptr!.y) / ch);
+      const a = swellAxes(f);
+      const key = `${a.wdth}/${a.wght}`;
+      if (key === L.key) continue;
+      const rising = a.wdth > Number(L.key.split('/')[0] || BASE_AXES.wdth);
+      L.key = key;
+      // 只改字宽字重这一项的时长；transform 的 .7s 留给开卡让位
+      L.el.style.transition = `font-variation-settings ${rising ? FX.SWELL_IN_MS : FX.SWELL_OUT_MS}ms cubic-bezier(.2,.7,.1,1), transform .7s cubic-bezier(.2,.7,.1,1)`;
+      L.el.style.fontVariationSettings = axesCss(a);
+    }
+  };
+
+  const schedulePointerFx = () => {
+    const st = m.current;
+    if (!st.tiltRaf)
+      st.tiltRaf = requestAnimationFrame(() => {
+        st.tiltRaf = 0;
+        applyTilt();
+      });
+    if (!st.swellRaf)
+      st.swellRaf = requestAnimationFrame(() => {
+        st.swellRaf = 0;
+        applySwell();
+      });
   };
 
   const cancelHover = useCallback(() => {
@@ -141,50 +293,60 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     clearTimeout(m.current.wakeT);
     m.current.lastCell = -1;
     m.current.pointer = null;
+    schedulePointerFx();
     for (const [i, amp] of m.current.heldGhosts) fadeGhost(i, amp);
     m.current.heldGhosts.clear();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cancelOpen]);
 
-  const isCenter = (i: number) => {
-    const z = m.current.zone;
-    const r = Math.floor(i / COLS);
-    const c = i % COLS;
-    return r >= z.r0 && r <= z.r1 && c >= z.c0 && c <= z.c1;
+  /** 一个作品格亮起 / 暗回去 */
+  const setLit = (k: number, on: boolean, ms: number) => {
+    const el = m.current.slotEls[k];
+    if (!el) return;
+    el.style.setProperty('--fi-t', `${ms}ms`);
+    el.dataset.lit = on ? '1' : '0';
   };
 
-  const applyShift = (g: { sx: number[]; sy: number[] } | null) => {
-    const { cells, ghosts } = m.current;
-    for (let i = 0; i < cells.length; i++) {
-      const t = g ? `translate(${g.sx[i % COLS].toFixed(1)}px,${g.sy[Math.floor(i / COLS)].toFixed(1)}px)` : '';
-      cells[i].style.transform = t;
-      if (ghosts[i]) ghosts[i].style.transform = t;
+  /** 作品格换成另一件（作品比格子多时轮换上场，§55.2「全池可达」） */
+  const showItem = (k: number, p: number) => {
+    const el = m.current.slotEls[k];
+    const item = pool[p];
+    if (!el || !item) return;
+    const c = FIELD_LIGHT[item.project];
+    m.current.slotItem[k] = p;
+    el.dataset.item = String(p);
+    el.dataset.kind = item.kind;
+    el.style.setProperty('--fi-ink', c.ink);
+    el.style.setProperty('--fi-lit', c.lit);
+    el.style.setProperty('--fi-dim', c.dim);
+    const ico = el.querySelector<HTMLElement>('[data-ico]');
+    if (ico) {
+      ico.style.maskImage = `url(${item.img})`;
+      ico.style.setProperty('-webkit-mask-image', `url(${item.img})`);
     }
   };
 
-  const openAt = useCallback((i: number, pick: number) => {
+  const openAt = useCallback((slot: number, pick: number) => {
     const f = fieldRef.current;
     if (!f) return;
-    const r = Math.floor(i / COLS);
-    const c = i % COLS;
-    const c0 = Math.max(0, Math.min(COLS - CW, c - 3));
-    const r0 = Math.max(0, Math.min(ROWS - CH, r - 2));
+    const cell = slots[slot];
+    const { c0, r0 } = cardOrigin(cell);
     clearTimeout(m.current.closeT);
     m.current.closing = false;
     const fr = f.getBoundingClientRect();
     const X = axis(COLS, CW, c0, fr.width);
     const Y = axis(ROWS, CH, r0, fr.height);
-    const rect = { x: X.lefts[c0], y: Y.lefts[r0], w: CW * X.u * K + (CW - 1) * GAP, h: CH * Y.u * K + (CH - 1) * GAP };
-    const nextOpen = { i, pick, c0, r0, rect, n: (openRef.current?.n ?? 0) + 1 };
-    // 同步把悬停占位交给展开卡，避免 React 提交前被心跳回收。
+    const rect = { x: X.lefts[c0], y: Y.lefts[r0], w: CW * X.u * K, h: CH * Y.u * K };
+    const nextOpen = { cell, slot, pick, c0, r0, rect, n: (openRef.current?.n ?? 0) + 1 };
+    // 同步把悬停占位交给展开卡，避免 React 提交前被心跳暗回去
     openRef.current = nextOpen;
-    // 开卡只接管内容悬停；指针余光在展开、收回和静止时继续响应。
     cancelOpen();
-    applyShift({ sx: X.shift, sy: Y.shift });
+    setLit(slot, true, 300);
+    applyShift({ sx: X.shift, sy: Y.shift, ex: X.edges, ey: Y.edges, cw: X.cell, ch: Y.cell });
     setOpened((n) => n + 1);
     setOpen(nextOpen);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [slots]);
 
   const collapse = useCallback(() => {
     const cd = cardRef.current;
@@ -205,7 +367,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     const a = cd.animate(
       [
         { clipPath: 'inset(0 0 0 0)', opacity: 1 },
-        { clipPath: cellInset(o.i, o.c0, o.r0), opacity: 0 },
+        { clipPath: cellInset(o.cell, o.c0, o.r0), opacity: 0 },
       ],
       { duration: 420, easing: 'cubic-bezier(.7,0,.3,1)', fill: 'forwards' },
     );
@@ -222,7 +384,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     if (motionOn()) {
       cd.animate(
         [
-          { clipPath: cellInset(open.i, open.c0, open.r0), opacity: 0.6 },
+          { clipPath: cellInset(open.cell, open.c0, open.r0), opacity: 0.6 },
           { clipPath: 'inset(0 0 0 0)', opacity: 1 },
         ],
         { duration: 650, easing: 'cubic-bezier(.22,.8,.2,1)' },
@@ -240,7 +402,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open?.n]);
 
-  // 翻离首屏时取消等待，并把已经展开的卡收起。
+  // 翻离首屏时取消等待，把展开的卡收起，字回到平时的宽度
   useEffect(() => {
     if (!active) {
       cancelHover();
@@ -248,152 +410,138 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     }
   }, [active, collapse, cancelHover]);
 
-  // 场的心跳：亮起 / 熄灭（只在首屏是当前页、且不在窄屏文档流时跑；减弱动态效果下铺满即停）
+  // 登记格子里的东西 + 场的心跳：作品格成簇地亮起，2–6 秒后暗回去（只在首屏是当前页、且不在文档流时跑）
   useEffect(() => {
     const f = fieldRef.current!;
     const st = m.current;
-    st.cells = Array.from(f.querySelectorAll<HTMLElement>('[data-cell]'));
-    st.ghosts = Array.from(ghostRef.current!.querySelectorAll<HTMLElement>('[data-ghost]'));
-    const els = st.cells;
+    st.placed = Array.from(f.querySelectorAll<HTMLElement>('[data-g]')).map((el) => ({
+      el,
+      c: Number(el.dataset.c),
+      r: Number(el.dataset.r),
+      w: Number(el.dataset.w ?? 1),
+      h: Number(el.dataset.h ?? 1),
+      slot: el.dataset.slot != null ? Number(el.dataset.slot) : -1,
+    }));
+    st.slotEls = [];
+    st.placed.forEach((p) => p.slot >= 0 && (st.slotEls[p.slot] = p.el));
+    st.vlines = [];
+    st.hlines = [];
+    f.querySelectorAll<HTMLElement>('[data-vl]').forEach((el) => (st.vlines[Number(el.dataset.vl)] = el));
+    f.querySelectorAll<HTMLElement>('[data-hl]').forEach((el) => (st.hlines[Number(el.dataset.hl)] = el));
+    st.ghosts = [];
+    f.querySelectorAll<HTMLElement>('[data-ghost]').forEach((el) => (st.ghosts[Number(el.dataset.ghost)] = el));
+    st.letters = Array.from(f.querySelectorAll<HTMLElement>('[data-letter]')).map((el) => ({
+      el,
+      c: Number(el.dataset.c),
+      r: Number(el.dataset.r),
+      key: `${BASE_AXES.wdth}/${BASE_AXES.wght}`,
+    }));
+    st.slotOfCell = new Map(slots.map((cell, k) => [cell, k]));
+    st.slotItem = [...placement.shown];
+    st.queue = [...placement.queue];
 
-    const startFade = (i: number, now: number) => {
-      if (!st.lit.has(i)) return;
-      st.lit.delete(i);
-      st.fading.set(i, now + FADE_OUT_MS);
-      const el = els[i];
-      el.dataset.phase = 'fading';
-      el.style.transitionDuration = `${FADE_OUT_MS}ms,.7s`;
-      el.style.opacity = '0';
-      // 淡出仍属于这一轮：保留 item / 图标 / 配色和悬停响应。
+    const dim = (k: number, now: number) => {
+      st.lit.delete(k);
+      setLit(k, false, DIM_MS);
+      // 作品比格子多时，暗下去以后换上一件还没露面的
+      if (st.queue.length) st.swapAt.set(k, now + DIM_MS);
     };
-
-    // 中央标题区底下不亮方块：量标题区盖住哪些行列
-    const measure = () => {
-      cancelHover();
-      const t = centerRef.current;
-      if (!t) return;
-      const fr = f.getBoundingClientRect();
-      const tr = t.getBoundingClientRect();
-      if (!fr.width || !fr.height) return;
-      const pad = 10;
-      st.zone = {
-        c0: Math.max(0, Math.floor(((tr.left - pad - fr.left) / fr.width) * COLS)),
-        c1: Math.min(COLS - 1, Math.ceil(((tr.right + pad - fr.left) / fr.width) * COLS) - 1),
-        r0: Math.max(0, Math.floor(((tr.top - pad - fr.top) / fr.height) * ROWS)),
-        r1: Math.min(ROWS - 1, Math.ceil(((tr.bottom + pad - fr.top) / fr.height) * ROWS) - 1),
-      };
-      const now = performance.now();
-      for (const i of new Set([...st.lit.keys(), ...st.fading.keys()])) {
-        const covered = isCenter(i);
-        if (covered) startFade(i, now);
-        els[i].style.pointerEvents = covered ? 'none' : 'auto';
-      }
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(f);
 
     const timer = setInterval(() => {
       if (!activeRef.current || !fieldOn()) return;
       const now = performance.now();
-      // 减弱动态效果：一次铺满到目标密度就停住，不再亮了又灭
+      // 减弱动态效果：一次亮到目标数就停住，不再亮了又暗、不轮换
       const still = prefersReducedMotion();
-      const hv = openRef.current?.i;
-      const retired = new Set<number>();
-      for (const [i, end] of st.fading) {
-        // 后台/暂停时墙钟可能先到，必须等画面真的淡完；悬停等待和展开卡继续占位。
-        if (now < end || i === hv || i === st.hoveredCell || Number(getComputedStyle(els[i]).opacity) !== 0) continue;
-        els[i].style.pointerEvents = 'none';
-        els[i].dataset.phase = 'off';
-        st.fading.delete(i);
-        retired.add(i);
+      const busy = (k: number) => k === openRef.current?.slot || k === st.hoveredSlot;
+      if (!still) for (const [k, exp] of st.lit) if (now > exp && !busy(k)) dim(k, now);
+      for (const [k, at] of st.swapAt) {
+        if (now < at || busy(k) || st.lit.has(k)) continue;
+        st.swapAt.delete(k);
+        const next = st.queue.shift();
+        if (next == null) continue;
+        st.queue.push(st.slotItem[k]);
+        showItem(k, next);
       }
-      if (!still) {
-        for (const [i, exp] of st.lit) {
-          if (now > exp && i !== hv && i !== st.hoveredCell) startFade(i, now);
-        }
-      }
-      const n = still
-        ? (st.lit.size < DENSITY ? 40 : 0)
-        : st.lit.size < DENSITY * 0.5 ? 8 : st.lit.size < DENSITY ? 4 : Math.random() < 0.6 ? 1 : 0;
+      const target = Math.round(slots.length * LIT_SHARE);
+      const n = still ? (st.lit.size < target ? target : 0) : st.lit.size < target * 0.5 ? 6 : st.lit.size < target ? 3 : Math.random() < 0.5 ? 1 : 0;
       const litArr = Array.from(st.lit.keys());
-      for (let k = 0; k < n; k++) {
-        let i: number;
+      for (let t = 0; t < n; t++) {
+        if (still && st.lit.size >= target) break;
+        let k: number | undefined;
         if (litArr.length && Math.random() < 0.65) {
-          // 多半长在已亮方块旁边：亮块成簇，不是均匀的雪花
-          const b = litArr[Math.floor(Math.random() * litArr.length)];
+          // 多半长在已亮格子旁边：亮格成簇，不是均匀的雪花
+          const cell = slots[litArr[Math.floor(Math.random() * litArr.length)]];
           const d = [1, -1, COLS, -COLS, COLS + 1, COLS - 1, -COLS + 1, -COLS - 1][Math.floor(Math.random() * 8)];
-          i = b + d;
-          if (i < 0 || i >= els.length || Math.abs((i % COLS) - (b % COLS)) > 1) continue;
-        } else i = Math.floor(Math.random() * els.length);
-        // 淡出尚未结束的位置不能换内容；刚回收的格至少留一拍全黑再重亮。
-        if (isCenter(i) || st.lit.has(i) || st.fading.has(i) || retired.has(i)) continue;
-        const el = els[i];
-        const im = el.firstElementChild as HTMLElement;
-        el.style.transitionDuration = `${(1.2 + Math.random() * 1.2).toFixed(2)}s,.7s`;
-        el.style.opacity = (0.45 + Math.random() * 0.55).toFixed(2);
-        el.style.pointerEvents = 'auto';
-        el.dataset.phase = 'lit';
-        // 每个亮格从出现起固定绑定真实内容；不在悬停时随机换成另一张卡（MAPPING §55.1）。
-        const p = pickFieldIndex(field.draws);
-        const colors = fieldColors(pool[p].project, pool[p].kind);
-        el.dataset.item = String(p);
-        el.dataset.kind = pool[p].kind;
-        el.dataset.project = pool[p].project;
-        el.style.setProperty('--field-ink', colors.ink);
-        el.style.setProperty('--field-surface', colors.surface);
-        im.style.maskImage = `url(${pool[p].img})`;
-        im.style.opacity = Math.random() < THUMBS ? '1' : '.18';
-        st.lit.set(i, now + 2200 + Math.random() * 4000);
+          const j = cell + d;
+          if (j < 0 || j >= COLS * ROWS || Math.abs((j % COLS) - (cell % COLS)) > 1) continue;
+          k = st.slotOfCell.get(j);
+        } else k = Math.floor(Math.random() * slots.length);
+        if (k == null || st.lit.has(k) || st.swapAt.has(k)) continue;
+        setLit(k, true, Math.round(1200 + Math.random() * 1200));
+        st.lit.set(k, now + 2200 + Math.random() * 4000);
       }
     }, TICK_MS);
+
+    const ro = new ResizeObserver(() => cancelHover());
+    ro.observe(f);
 
     return () => {
       clearInterval(timer);
       ro.disconnect();
+      cancelAnimationFrame(st.tiltRaf);
+      cancelAnimationFrame(st.swellRaf);
+      st.tiltRaf = 0;
+      st.swellRaf = 0;
       clearTimeout(st.closeT);
       clearTimeout(st.txtT);
+      clearTimeout(st.sizeT);
       cancelHover();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [slots, placement]);
 
-  /** 所在格与邻格保持余光；离开邻域后沿原曲线淡出，不参与内容开卡。 */
+  /** 所在格与邻格保持余光；离开邻域后沿原曲线淡出，不参与内容开卡（§57.3） */
   const trigger = (i: number, amp: number, delay: number) => {
     const st = m.current;
     const g = st.ghosts[i];
     if (!g) return;
     clearTimeout(st.ghostTimers.get(i));
     st.heldGhosts.set(i, amp);
-    st.ghostTimers.set(i, setTimeout(() => {
-      st.ghostTimers.delete(i);
-      if (!activeRef.current || !fieldOn()) return;
-      g.style.transition = 'opacity .09s,transform .7s cubic-bezier(.2,.7,.1,1)';
-      g.style.opacity = String(amp);
-    }, delay));
+    st.ghostTimers.set(
+      i,
+      setTimeout(() => {
+        st.ghostTimers.delete(i);
+        if (!activeRef.current || !fieldOn()) return;
+        g.style.transition = 'opacity .09s,transform .7s cubic-bezier(.2,.7,.1,1)';
+        g.style.opacity = String(amp);
+      }, delay),
+    );
   };
 
-  /** 行列让位动画中也按当前视觉中心找邻格；格缝同样响应周围余光。 */
+  /** 指针落在哪一格：按让位后的视觉中心找最近的行列 */
   const pointerCell = () => {
     const f = fieldRef.current;
-    const { pointer, ghosts } = m.current;
-    if (!f || !pointer || !ghosts.length) return -1;
-    const fr = f.getBoundingClientRect();
+    const { pointer } = m.current;
+    if (!f || !pointer) return -1;
+    const { fr, cx, cy } = geom();
     if (pointer.x < fr.left || pointer.x >= fr.right || pointer.y < fr.top || pointer.y >= fr.bottom) return -1;
-    // 同列 x / 同行 y 一致，只读 28 + 14 个框，不扫描整个场。
     let c = 0;
     let r = 0;
     let dx = Infinity;
     let dy = Infinity;
     for (let col = 0; col < COLS; col++) {
-      const rect = ghosts[col].getBoundingClientRect();
-      const d = Math.abs(pointer.x - rect.left - rect.width / 2);
-      if (d < dx) { dx = d; c = col; }
+      const d = Math.abs(pointer.x - cx(col));
+      if (d < dx) {
+        dx = d;
+        c = col;
+      }
     }
     for (let row = 0; row < ROWS; row++) {
-      const rect = ghosts[row * COLS].getBoundingClientRect();
-      const d = Math.abs(pointer.y - rect.top - rect.height / 2);
-      if (d < dy) { dy = d; r = row; }
+      const d = Math.abs(pointer.y - cy(row));
+      if (d < dy) {
+        dy = d;
+        r = row;
+      }
     }
     return r * COLS + c;
   };
@@ -404,7 +552,6 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
       return;
     }
     const i = pointerCell();
-    // 指针不动时也追踪让位/复位；同一个视觉邻域不重复抽签或重启渐亮。
     if (i >= 0 && m.current.heldGhosts.get(i) !== 1) {
       const next = new Map<number, { amp: number; delay: number }>();
       const c = i % COLS;
@@ -438,6 +585,7 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
   const onMove = (e: React.PointerEvent) => {
     if (!activeRef.current || !fieldOn() || e.pointerType === 'touch') return;
     m.current.pointer = { x: e.clientX, y: e.clientY };
+    schedulePointerFx();
     const i = pointerCell();
     if (i === m.current.lastCell) return;
     clearTimeout(m.current.wakeT);
@@ -447,59 +595,192 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
     if (i >= 0) m.current.wakeT = setTimeout(wake, WAKE_DWELL_MS);
   };
 
-  const onCellEnter = (e: React.MouseEvent<HTMLSpanElement>) => {
+  const onSlotEnter = (e: React.MouseEvent<HTMLElement>) => {
     const el = e.currentTarget;
-    const i = Number(el.dataset.cell);
+    const k = Number(el.dataset.slot);
     cancelOpen();
     if (!activeRef.current || !fieldOn()) return;
-    if (openRef.current?.i === i && !m.current.closing) return;
-    const item = el.dataset.item;
-    if (item == null || isCenter(i) || (!m.current.lit.has(i) && !m.current.fading.has(i))) return;
-    // 已经完全透明、尚未轮到心跳回收的格子不接受新的悬停。
-    if (m.current.fading.has(i) && Number(getComputedStyle(el).opacity) === 0) return;
-    m.current.hoveredCell = i;
+    if (openRef.current?.slot === k && !m.current.closing) return;
+    const item = m.current.slotItem[k];
+    if (item == null) return;
+    m.current.hoveredSlot = k;
     m.current.openT = setTimeout(() => {
-      if (!activeRef.current || !fieldOn() || m.current.hoveredCell !== i || (!m.current.lit.has(i) && !m.current.fading.has(i)) || el.dataset.item !== item || !el.matches(':hover')) return;
-      openAt(i, Number(item));
+      if (!activeRef.current || !fieldOn() || m.current.hoveredSlot !== k || m.current.slotItem[k] !== item || !el.matches(':hover')) return;
+      openAt(k, item);
     }, OPEN_DWELL_MS);
   };
 
+  const T = FIELD_TEXT;
   const card = open ? pool[open.pick] : null;
-  const colors = card ? fieldColors(card.project, card.kind) : null;
-  const cardStyle: CSSProperties | undefined = open && colors
-    ? { left: open.rect.x, top: open.rect.y, width: open.rect.w, height: open.rect.h, '--field-ink': colors.ink, '--field-surface': colors.surface } as CSSProperties
-    : undefined;
+  const cardColors = card ? FIELD_LIGHT[card.project] : null;
+  const cardStyle: CSSProperties | undefined =
+    open && cardColors
+      ? ({ left: open.rect.x, top: open.rect.y, width: open.rect.w, height: open.rect.h, '--fi-ink': cardColors.ink, '--fi-lit': cardColors.lit } as CSSProperties)
+      : undefined;
+  const baseAxes = axesCss(BASE_AXES);
 
   return (
     <>
-      <div className="hs-field__glow" aria-hidden="true" />
-      <div className="hs-field__grid hs-field__grid--ghost" ref={ghostRef} aria-hidden="true">
-        {CELLS.map((i) => (
-          <span key={i} className="hs-field__ghost" data-ghost />
+      <h1 className="hs-sr">I explore how people relate to objects and spaces that respond to them.</h1>
+      <div className="hs-fx" ref={fieldRef} onPointerEnter={onMove} onPointerMove={onMove} onPointerLeave={cancelHover}>
+        {/* 格线是元素不是背景：开卡让位时跟着行列一起移 */}
+        {VLINES.map((k) => (
+          <i key={`v${k}`} className="hs-fx__vl" data-vl={k} style={{ left: lineAt(k, COLS) }} aria-hidden="true" />
         ))}
-      </div>
-      <div
-        className="hs-field__grid"
-        ref={fieldRef}
-        onPointerEnter={onMove}
-        onPointerMove={onMove}
-        onPointerLeave={cancelHover}
-      >
-        {CELLS.map((i) => (
-          <span key={i} className="hs-field__cell" data-cell={i} onMouseEnter={onCellEnter} onMouseLeave={() => {
-            if (m.current.hoveredCell === i) cancelOpen();
-          }} aria-hidden="true">
-            <span className="hs-field__cimg" />
-          </span>
+        {HLINES.map((k) => (
+          <i key={`h${k}`} className="hs-fx__hl" data-hl={k} style={{ top: lineAt(k, ROWS) }} aria-hidden="true" />
         ))}
+        {CELLS.map((i) => (
+          <span
+            key={`g${i}`}
+            className="hs-fx__ghost"
+            data-ghost={i}
+            data-g
+            data-c={i % COLS}
+            data-r={Math.floor(i / COLS)}
+            style={area(i % COLS, Math.floor(i / COLS))}
+            aria-hidden="true"
+          />
+        ))}
+        {slots.map((cell, k) => {
+          const p = placement.shown[k];
+          const item = pool[p];
+          const c = FIELD_LIGHT[item.project];
+          return (
+            <span
+              key={`s${cell}`}
+              className="hs-fx__slot"
+              data-g
+              data-slot={k}
+              data-c={cell % COLS}
+              data-r={Math.floor(cell / COLS)}
+              data-item={p}
+              data-kind={item.kind}
+              data-lit="0"
+              data-a="fade"
+              data-d={Math.round(((cell * 37) % 23) * 30)}
+              style={{ ...area(cell % COLS, Math.floor(cell / COLS)), '--fi-ink': c.ink, '--fi-lit': c.lit, '--fi-dim': c.dim } as CSSProperties}
+              onMouseEnter={onSlotEnter}
+              onMouseLeave={() => {
+                if (m.current.hoveredSlot === k) cancelOpen();
+              }}
+              aria-hidden="true"
+            >
+              <i className="hs-fx__tile">
+                <i className="hs-fx__ico" data-ico style={{ maskImage: `url(${item.img})`, WebkitMaskImage: `url(${item.img})` }} />
+              </i>
+            </span>
+          );
+        })}
+        {T.letters.map((L) => (
+            <span
+              key={`l${L.n}`}
+              className="hs-fx__ch"
+              data-letter
+              aria-hidden="true"
+              data-g
+              data-c={L.c}
+              data-r={L.r}
+              data-a="up"
+              data-d={60 + L.n * 12}
+              style={{ ...area(L.c, L.r), fontVariationSettings: baseAxes }}
+            >
+              {L.ch}
+            </span>
+          ))}
+        {T.keys.map((K2) => (
+            <span
+              key={`k${K2.n}`}
+              className={`hs-fx__key hs-fx__key--${K2.word}`}
+              aria-hidden="true"
+              data-g
+              data-c={K2.c}
+              data-r={K2.r}
+              data-w="2"
+              data-h="2"
+              data-a="wipe"
+              data-d={120 + K2.n * 18}
+              style={area(K2.c, K2.r, 2, 2)}
+            >
+              <i>{K2.ch}</i>
+            </span>
+          ))}
+        <span
+          className="hs-fx__box hs-fx__name"
+          data-g
+          data-c={T.name.c0}
+          data-r={T.name.r}
+          data-w={T.name.c1 - T.name.c0 + 1}
+          data-a="fade"
+          data-d="200"
+          style={area(T.name.c0, T.name.r, T.name.c1 - T.name.c0 + 1)}
+        >
+          <b>Zishuo Li</b>
+          <span>portfolio · 2026</span>
+        </span>
+        {T.nav.map((n) => (
+          <button
+            key={n.label}
+            type="button"
+            className="hs-fx__box hs-fx__nav"
+            data-g
+            data-c={n.c0}
+            data-r={n.r}
+            data-w={n.c1 - n.c0 + 1}
+            data-a="fade"
+            data-d={260 + n.page * 40}
+            style={area(n.c0, n.r, n.c1 - n.c0 + 1)}
+            onClick={() => onGo(n.page)}
+          >
+            {n.label}
+          </button>
+        ))}
+        <button
+          type="button"
+          className="hs-fx__btn hs-fx__btn--solid"
+          data-g
+          data-c={T.work.c0}
+          data-r={T.work.r}
+          data-w={T.work.c1 - T.work.c0 + 1}
+          data-a="up"
+          data-d="720"
+          style={area(T.work.c0, T.work.r, T.work.c1 - T.work.c0 + 1)}
+          onClick={onWork}
+        >
+          The projects ↓
+        </button>
+        <Link
+          href="/lab"
+          className="hs-fx__btn hs-fx__btn--line"
+          data-g
+          data-c={T.lab.c0}
+          data-r={T.lab.r}
+          data-w={T.lab.c1 - T.lab.c0 + 1}
+          data-a="up"
+          data-d="780"
+          style={area(T.lab.c0, T.lab.r, T.lab.c1 - T.lab.c0 + 1)}
+        >
+          Open the lab ↗
+        </Link>
+        <span
+          className="hs-fx__hint"
+          data-g
+          data-c={T.hint.c0}
+          data-r={T.hint.r}
+          data-w={T.hint.c1 - T.hint.c0 + 1}
+          data-a="fade"
+          data-d="1000"
+          style={area(T.hint.c0, T.hint.r, T.hint.c1 - T.hint.c0 + 1)}
+        >
+          {opened ? 'Each square is a piece of the work · move across the field' : 'Hover any square to open a piece of the work'}
+        </span>
         {open && card ? (
           <Link
             ref={cardRef}
             href={card.href}
-            className="hs-field__card"
+            className="hs-fx__card"
             data-item={open.pick}
             data-kind={card.kind}
-            data-project={card.project}
             style={cardStyle}
             onClick={(e) => {
               if (card.kind === 'about' && e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
@@ -514,52 +795,44 @@ export function FieldPage({ field, active, onWork, onAbout }: { field: HomeField
             }}
             aria-label={`${card.title} — ${card.no} · ${card.cap}`}
           >
-            <span className="hs-field__card-kind">{FIELD_KINDS[card.kind].label}</span>
-            <span className="hs-field__card-img" role="img" aria-label={card.title} style={{ maskImage: `url(${card.img})` }} />
-            <span className="hs-field__card-txt" data-card-txt>
-              <span className="hs-field__card-meta">
-                <span className="hs-field__card-title">{card.title}</span>
-                <span className="hs-field__card-cap">
+            <span className="hs-fx__card-kind">{FIELD_KINDS[card.kind].label}</span>
+            <span className="hs-fx__card-img" role="img" aria-label={card.title} style={{ maskImage: `url(${card.img})`, WebkitMaskImage: `url(${card.img})` }} />
+            <span className="hs-fx__card-txt" data-card-txt>
+              <span className="hs-fx__card-meta">
+                <span className="hs-fx__card-title">{card.title}</span>
+                <span className="hs-fx__card-cap">
                   {card.no} · {card.cap}
                 </span>
               </span>
-              <span className="hs-field__card-go">↗</span>
+              <span className="hs-fx__card-go">↗</span>
             </span>
           </Link>
         ) : null}
       </div>
-      <div className="hs-field__center" ref={centerRef}>
-        <p className="hs-field__name" data-a="up" data-d="0">
-          Zishuo Li
-          <span className="hs-field__name-rule" />
-          <span className="hs-field__name-tag">portfolio · 2026</span>
+      {/* 窄屏（文档流）：格子收起，标语按同一套宽窄对比排成普通文字（MAPPING §71） */}
+      <div className="hs-fx-flow">
+        <p className="hs-fx-flow__title" aria-hidden="true">
+          I explore how people relate to <span className="hs-fx-flow__k1">objects</span> and <span className="hs-fx-flow__k2">spaces</span> that respond to them.
         </p>
-        <div className="hs-mask">
-          <h1 className="hs-field__title" data-a="rise" data-d="80">
-            I explore how people relate to <span className="hs-accent--lime">objects and spaces that respond to them.</span>
-          </h1>
-        </div>
-        <p className="hs-field__lede" data-a="up" data-d="260">
-          A machine that wakes with a new character. A room that reshapes itself around whoever is in it.{' '}
-          {cap1(numWord(field.benches))} working benches behind them.
-        </p>
-        <div className="hs-field__ctas" data-a="up" data-d="380">
-          <button type="button" className="hs-field__btn hs-field__btn--solid" onClick={onWork}>
+        <div className="hs-fx-flow__ctas">
+          <button type="button" className="hs-fx__btn hs-fx__btn--solid" onClick={onWork}>
             The projects ↓
           </button>
-          <Link href="/lab" className="hs-field__btn hs-field__btn--line">
+          <Link href="/lab" className="hs-fx__btn hs-fx__btn--line">
             Open the lab ↗
           </Link>
         </div>
-        <p className="hs-field__hint" data-a="fade" data-d="900">
-          {opened ? 'Each square is a piece of the work · move across the field' : 'Hover any square to open a piece of the work'}
-        </p>
       </div>
-      <div className="hs-field__foot" data-a="fade" data-d="1200">
-        <span>
-          {field.projects} projects · {field.benches} live benches · {field.entries} log entries
-        </span>
-        <span>Scroll ↓</span>
+      <div className="hs-fx__foot" data-a="fade" data-d="1200" aria-hidden="true">
+        <span className="hs-fx__foot-lead">Each square is one piece</span>
+        <span className="hs-fx__mk hs-fx__mk--project">project</span>
+        <span className="hs-fx__mk hs-fx__mk--lab">lab bench</span>
+        <span className="hs-fx__mk hs-fx__mk--log">log entry</span>
+        <span className="hs-fx__mk hs-fx__mk--other">other work</span>
+        <span className="hs-fx__sw" style={{ '--sw': FIELD_LIGHT['project-i'].lit } as CSSProperties}>Project I</span>
+        <span className="hs-fx__sw" style={{ '--sw': FIELD_LIGHT['project-ii'].lit } as CSSProperties}>Project II</span>
+        <span className="hs-fx__sw" style={{ '--sw': FIELD_LIGHT['project-iii'].lit } as CSSProperties}>Project III</span>
+        <span className="hs-fx__sw" style={{ '--sw': FIELD_LIGHT['other-work'].lit } as CSSProperties}>other · this site</span>
       </div>
       <div className="hs-shade" />
     </>
