@@ -2,6 +2,7 @@
   "framework": "nextjs",
   "git": {
     "deploymentEnabled": {
+      "claude/tender-franklin-s4wh8a": false,
       "claude/bold-shannon-nbaubo": false,
       "claude/upbeat-keller-l8ah6i": false,
       "claude/sharp-galileo-65zydp": false,
