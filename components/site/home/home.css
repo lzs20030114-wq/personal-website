@@ -143,8 +143,10 @@
 .hs-fx-flow .hs-fx__btn { padding: 11px 18px; font: 500 14px var(--sans); }
 /* ---------- 02 work ---------- */
 /* 2026-10-27（MAPPING §70）：卡片图版随视口高度长；减数 = 这一页除图版外的竖向占用（实测），保证任何高度下都不出页内滚动。
-   2026-10-28（MAPPING §72）：按画布「02 Work」画板，1440 × 900 时图版 330px；组印记（§64）只在卡片下面还空得出 84px 的高窗口里出现 */
-.hs-work { --plate-h: clamp(180px, calc(100vh - 570px), 342px); }
+   2026-10-28（MAPPING §72）：按画布「02 Work」画板，1440 × 900 时图版 330px。
+   2026-10-28（MAPPING §73）：组印记（§64）在 MacBook 高度（约 789 起）也要出现——卡片下面给印记留约 96px，图版让出这一截：
+   900 高以下每少 1px 屏高图版只少 .757px（另一部分由组名、编号跟着屏高缩小承担），900 以上图版吃满到 342 封顶后余量全给印记 */
+.hs-work { --plate-h: clamp(160px, max(75.7vh - 427px, 100vh - 646px), 342px); }
 .hs-work { position: relative; height: 100%; min-height: 640px; max-width: 1360px; margin: 0 auto; padding: 92px 88px 40px 56px; display: flex; flex-direction: column; gap: 20px; }
 .hs-cards { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 28px; padding-top: 18px; }
 .hs-card { display: flex; flex-direction: column; gap: 12px; min-width: 0; transition: opacity .45s; }
@@ -157,8 +159,9 @@
 .hs-card__num--wip { color: transparent; -webkit-text-stroke: 1.2px var(--c-ink); }
 .hs-card__kick-l { font: 500 12px var(--mono); }
 /* 2026-10-28（MAPPING §72，按画布「02 Work」画板）：编号改细窄（字宽 72%、字重 300），1440 宽时 64px，
-   整行立在图版上方、不再压进图里；名称与年份两行靠右、底边与编号对齐。项目三仍是空心 */
-.hs-card__kick--big { --nb: clamp(52px, 4.45vw, 72px); display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto auto; column-gap: 12px; align-items: end; }
+   整行立在图版上方、不再压进图里；名称与年份两行靠右、底边与编号对齐。项目三仍是空心。
+   §73：矮于 900 的屏编号跟着屏高缩（7.12vh，900 高时正好 64），给组印记腾地方 */
+.hs-card__kick--big { --nb: clamp(52px, min(4.45vw, 7.12vh), 72px); display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto auto; column-gap: 12px; align-items: end; }
 .hs-card__kick--big .hs-card__kick-n--big { display: contents; }
 .hs-card__kick--big .hs-card__num { grid-column: 1; grid-row: 1 / span 3; font-weight: 300; font-stretch: 72%; font-size: var(--nb); line-height: .9; letter-spacing: -.03em; }
 .hs-card__kick--big .hs-card__num--wip { -webkit-text-stroke-width: 1.5px; }
@@ -167,7 +170,8 @@
 .hs-card__kick--big .hs-card__status { grid-row: 3; }
 .hs-card__status { color: var(--muted); }
 .hs-card__status--wip { color: var(--slate); }
-.hs-card__box { position: relative; flex: 1; display: flex; flex-direction: column; min-height: calc(var(--plate-h) + 138px); overflow: hidden; }
+/* 卡片下半截的最低高度：各组卡片一样高，印记带才一样高；120 = 1440 宽时最高的一张卡的标题 + 角色说明（117，§73 实测） */
+.hs-card__box { position: relative; flex: 1; display: flex; flex-direction: column; min-height: calc(var(--plate-h) + 120px); overflow: hidden; }
 .hs-card__plate { position: relative; flex: none; height: var(--plate-h); background: var(--plate); overflow: hidden; }
 .hs-card__plate--wip { background: var(--paper); }
 .hs-card__img { position: absolute; inset: 0; background: center/cover no-repeat; transition: transform 1.2s var(--eo); }
@@ -192,8 +196,9 @@
 .hs-card__thesis-text { flex: 1; min-height: 0; overflow: hidden; -webkit-mask-image: linear-gradient(#000 calc(100% - 22px), transparent); mask-image: linear-gradient(#000 calc(100% - 22px), transparent); font: 400 clamp(14px, 1.1vw, 16px)/1.5 var(--sans); color: oklch(0.93 0.03 125); text-wrap: pretty; }
 .hs-card__cta { flex: none; font: 500 12px var(--mono); color: var(--c-hi); }
 /* 2026-10-27 第二轮（MAPPING §70.1）：组名放大成细窄大字（字宽 72%、字重 280）；字号按最长的组名定（--wg-tlen 由 WorkPage 写入），
-   切到哪一组都不顶到右侧刻度盘；同时受屏高限制，矮屏不挤掉卡片 */
-.hs-work .hs-wg__sizer, .hs-work .hs-wg__title { font-weight: 280; font-stretch: 72%; font-size: clamp(48px, min(calc((min(100vw, 1360px) - 380px) / (var(--wg-tlen, 29) * .32)), 11.6vh), 108px); line-height: .9; letter-spacing: -.03em; }
+   切到哪一组都不顶到右侧刻度盘；同时受屏高限制，矮屏不挤掉卡片。
+   §73：900 高以下再按 23.3vh − 105px 缩得快一些（900 高时与 11.6vh 相等，画板尺寸不变），给组印记腾地方 */
+.hs-work .hs-wg__sizer, .hs-work .hs-wg__title { font-weight: 280; font-stretch: 72%; font-size: clamp(48px, min(calc((min(100vw, 1360px) - 380px) / (var(--wg-tlen, 29) * .32)), 11.6vh, calc(23.3vh - 105px)), 108px); line-height: .9; letter-spacing: -.03em; }
 .hs-work .hs-wg__mask { padding-bottom: .1em; }
 /* 02 Work 横向切换（稿「18 Home · Work Carousel」，MAPPING §59；分组见 §58）：
    当前屏占舞台 85%，下一屏露出一截；屏的叠放与卡片位移只在桌面且允许动效时生效（下方 @media，与引擎 FLOW_QUERY 互补） */
@@ -202,8 +207,9 @@
 @property --wg-lean { syntax: '<length>'; inherits: false; initial-value: 0px; }
 /* 组印记（MAPPING §64）：一组一个方点符号，坐在这一屏卡片下方的留白带里——右齐当前屏（不压到露出来的下一屏），
    底边离组名目录线 20px（.hs-work 的 gap）。等重已烘进生成的 SVG（统一 264 高画框、符号贴右下），这里只按留白带高度等比缩；
-   带高 ≥264 时 1:1（格距正好 6px），矮于 84px 不出，不去挤卡片。墨色：主项目一组主青，其他作品各组都用「其他工作」的石板蓝（§61 颜色只表示项目）。 */
-.hs-wg__mark { --mark-ink: var(--slate); flex: 1 1 0; min-height: 0; margin-top: 32px; container-type: size; display: flex; align-items: flex-end; justify-content: flex-end; pointer-events: none; }
+   带高 ≥264 时 1:1（格距正好 6px），矮于 84px 不出，不去挤卡片。墨色：主项目一组主青，其他作品各组都用「其他工作」的石板蓝（§61 颜色只表示项目）。
+   §73：上距 32 → 16；图版公式保证 MacBook 高度下主项目一组的印记带约 96px（其他组没有大编号，再多约 40px） */
+.hs-wg__mark { --mark-ink: var(--slate); flex: 1 1 0; min-height: 0; margin-top: 16px; container-type: size; display: flex; align-items: flex-end; justify-content: flex-end; pointer-events: none; }
 .hs-wg__mark[data-work-theme="selected"] { --mark-ink: var(--teal); }
 .hs-wg__mark-img { width: 100%; height: min(100cqh, 264px); background: var(--mark-ink); opacity: .56; -webkit-mask-position: right bottom; mask-position: right bottom; -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
 @container (max-height: 83.98px) { .hs-wg__mark-img { display: none; } }
