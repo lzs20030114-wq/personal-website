@@ -3,7 +3,8 @@ import { z } from 'zod';
 // 其他作品内容池（content/other/works.json）的形状。不碰 fs——home-model 与测试都能 import。
 // 主页 02 Work 按组横向切换（MAPPING §58）：第一组是三个主项目，后面每一组是作者定的一种类别。
 // 类别、作品、年份、背景都由作者给（2026-10-25 清单）；英文组名与英文标题按作者当日授权由站方翻译，
-// 其余不代拟（CLAUDE.md「不自己造词」「模型不代写」）。
+// 其余不代拟（CLAUDE.md「不自己造词」「模型不代写」）。例外：首页卡片的悬停介绍（intro）按用户 2026-10-28
+// 「鼠标悬停弹出的介绍你也都好好写一下」由站方写，只概括各件详情页原文与日志里已有的事实（MAPPING §76）。
 
 const Key = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'key 只许小写字母、数字和单个连字符');
 
@@ -24,6 +25,21 @@ const ImageSchema = z
     caption: Bi.optional(),
   })
   .strict();
+
+/** 首页 Work 卡片用的图：只要路径与像素；卡片按 cover 居中裁 */
+const CardImageSchema = z
+  .object({
+    src: ImageSrc,
+    width: z.number().int().positive(),
+    height: z.number().int().positive(),
+  })
+  .strict();
+
+/**
+ * 首页 Work 卡片悬停介绍的字数上限：介绍浮在卡片里、超出部分被渐隐遮掉。
+ * 按 1440 × 789（MacBook Air 高度，卡片最矮的常见窗口）实测能完整放下的长度定（MAPPING §76）。
+ */
+export const WORK_INTRO_MAX = 240;
 
 const GroupSchema = z
   .object({
@@ -96,9 +112,13 @@ const WorkSchema = z
     year: z.string().regex(/^\d{4}(–(\d{2}|\d{4}))?$/, '年份写成 2024 或 2019–23'),
     /** 卡片标题下那一行：背景 · 媒介，按「 · 」分段，第一段进卡片题头 */
     context: z.string().min(1).max(80),
-    /** 悬停时浮出的一句话；没有就只出「Open ↗」 */
+    /** 副标题：详情页标题下那一行，首屏方块场卡片的说明也用它 */
     line: z.string().min(1).max(160).optional(),
+    /** 首页 Work 卡片悬停时浮出的介绍（两三句，英文；首页只有英文）。没有就退回 line，再没有就只出「Open ↗」 */
+    intro: z.string().min(1).max(WORK_INTRO_MAX).optional(),
     image: ImageSchema.optional(),
+    /** 首页 Work 卡片专用的裁切（图纸大片留白、长报告截图时用）；没有就用 image。详情页主图仍是 image */
+    card: CardImageSchema.optional(),
     /** 中文侧的标题与背景（详情页用）；没有就沿用英文 */
     zh: z
       .object({ title: z.string().min(1).max(60), context: z.string().min(1).max(80), line: z.string().min(1).max(160).optional() })

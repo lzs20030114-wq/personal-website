@@ -7,7 +7,7 @@ import { buildCards, buildWorkGroups, otherWorkHref } from './home-model';
 import { getLogEntries } from './log';
 import { PROJECT_GROUPS } from './log-facets';
 import { getOtherWorkPages, getOtherWorks } from './other-works';
-import { OtherWorksSchema } from './other-works-schema';
+import { OtherWorksSchema, WORK_INTRO_MAX } from './other-works-schema';
 
 const cards = () =>
   buildCards(
@@ -44,6 +44,7 @@ describe('其他作品内容池（content/other/works.json）', () => {
     const data = getOtherWorks();
     data.works.forEach((w) => {
       if (w.image) expect(existsSync(join(process.cwd(), 'public', w.image.src)), w.image.src).toBe(true);
+      if (w.card) expect(existsSync(join(process.cwd(), 'public', w.card.src)), w.card.src).toBe(true);
       figs(w).forEach((f) => expect(existsSync(join(process.cwd(), 'public', f.src)), f.src).toBe(true));
       if (w.href) expect(reachable(w.href), `${w.title} → ${w.href}`).toBe(true);
       expect(reachable(otherWorkHref(w, getLogEntries())), w.title).toBe(true);
@@ -54,6 +55,7 @@ describe('其他作品内容池（content/other/works.json）', () => {
   it('标在内容池里的宽高与图片文件实际像素一致（详情页按它排比例框）', async () => {
     const imgs = getOtherWorks().works.flatMap((w) => [
       ...(w.image && w.image.src.startsWith('/other/') ? [w.image] : []),
+      ...(w.card ? [w.card] : []),
       ...figs(w),
     ]);
     expect(imgs.length).toBeGreaterThan(0);
@@ -134,6 +136,19 @@ describe('Work 页分组（buildWorkGroups）', () => {
     expect(groups.slice(1).map((g) => g.key)).toEqual(other.groups.map((g) => g.key));
     expect(groups.slice(1).reduce((s, g) => s + g.tiles.length, 0)).toBe(other.works.length);
     expect(groups.map((g) => g.n)).toEqual(groups.map((_, i) => String(i + 1).padStart(2, '0')));
+  });
+
+  it('每张卡都有悬停介绍、都有封面（项目三除外），封面文件都在 public 里（MAPPING §76）', () => {
+    const tiles = buildWorkGroups(cards(), getOtherWorks(), getLogEntries()).flatMap((g) => g.tiles);
+    tiles.forEach((t) => {
+      expect(t.thesis, t.title).toBeTruthy();
+      expect(t.thesis!.length, t.title).toBeLessThanOrEqual(WORK_INTRO_MAX);
+      // 介绍不拿占位串、不和标题下那一行重复
+      expect(t.thesis, t.title).not.toMatch(/author to write|待盘点|placeholder/i);
+      expect(t.thesis, t.title).not.toBe(t.role);
+      if (t.caseSlug === 'project-iii') expect(t.img).toBeNull();
+      else expect(existsSync(join(process.cwd(), 'public', t.img!)), `${t.title} → ${t.img}`).toBe(true);
+    });
   });
 
   it('登记了日志组的作品链到那一组最新一条，没有记录时退回 href', () => {

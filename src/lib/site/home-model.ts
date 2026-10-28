@@ -18,13 +18,44 @@ export const TONE_S: Tone = { ink: 'oklch(0.45 0.06 235)', hi: 'oklch(0.74 0.06 
 
 /* ───────────────────────── 项目卡片 + Lab 分组 ───────────────────────── */
 
-/** 主页展示的三个项目（稿内三卡；project-iv 不上首页——用户拍板 2026-10-01）。 */
+/**
+ * 主页展示的三个项目（稿内三卡；project-iv 不上首页——用户拍板 2026-10-01）。
+ * img = Work 卡片封面：两台活台架的定帧（MAPPING §76；作者实拍后换回照片）。
+ * intro = Work 卡片悬停时浮出的介绍，只在首页用；案例页与首屏方块场仍用内容池的 summary。
+ */
 const HOME_PROJECTS = [
-  { slug: 'reincarnation-machine', kicker: 'Project I', tone: TONE_G, img: '/home/c-fivering.png', title: null },
+  {
+    slug: 'reincarnation-machine',
+    kicker: 'Project I',
+    tone: TONE_G,
+    // Lab 1-5 整机：五环停在接近全开的位置，大触手卷起
+    img: '/home/cover-reincarnation-machine.webp',
+    title: null,
+    intro:
+      'A desk-sized machine that is born, ages and dies in about eight minutes, then wakes with a different personality in the same body: five breathing rings and an arm that grips a hand. People have to learn it again each life.',
+  },
   // 项目二尚未定名（pool title 仍是 "Project II"），卡片题用描述名；2026-10-04 作者拍板由稿内的 "Spatial simulation"
   // 改为能体现物种的 "Cross-species space"（与 lab-index / log-facets 同步）。定名后删 title 覆写即回内容池。
-  { slug: 'project-ii', kicker: 'Project II', tone: TONE_V, img: '/home/c-nine.png', title: 'Cross-species space' },
-  { slug: 'project-iii', kicker: 'Project III', tone: TONE_S, img: null, title: null },
+  {
+    slug: 'project-ii',
+    kicker: 'Project II',
+    tone: TONE_V,
+    // Lab 2-15 人猫同台，仿真约 160 s：有人坐下、面前的单元落成桌子、猫在台上
+    img: '/home/cover-project-ii.webp',
+    title: 'Cross-species space',
+    intro:
+      'Fabric units hang from the ceiling of a simulated cat café and drop down as platforms. When a visitor sits down, the units lead the nearest cat over. With six or more visitors, people stay longer beside cats than with fixed shelves.',
+  },
+  {
+    slug: 'project-iii',
+    kicker: 'Project III',
+    tone: TONE_S,
+    img: null,
+    title: null,
+    // 未发稿：只写站方框架字与日志里已公开的来历，不代写题目
+    intro:
+      'The third main project grows out of the sleep research from the smart-bed internship. Its topic is still being narrowed, and the case study will be published here.',
+  },
 ] as const;
 
 export interface HomeWorkInput {
@@ -46,7 +77,10 @@ export interface HomeCard {
   wip: boolean;
   slug: string;
   img: string | null;
+  /** 一句话（首屏方块场卡片的说明）：发了稿的取内容池 summary */
   thesis: string;
+  /** Work 卡片悬停时的介绍（两三句） */
+  intro: string;
   role: string;
 }
 
@@ -66,6 +100,7 @@ export function buildCards(works: HomeWorkInput[]): HomeCard[] {
       img: wip ? null : p.img,
       // 未发稿项目的 summary 是「待盘点」占位，不上主页；稿内占位串原样（作者来写）
       thesis: wip ? `[${p.kicker} thesis · author to write]` : w.summary,
+      intro: p.intro,
       role: wip ? 'Role · to be written' : w.role.join(' · '),
     };
   });
@@ -143,7 +178,7 @@ export function buildWorkGroups(cards: HomeCard[], other: OtherWorks, entries: L
       status: c.status,
       title: c.title,
       role: c.role,
-      thesis: c.thesis,
+      thesis: c.intro,
       cta: c.img ? 'Read the case study ↗' : 'Preview ↗',
       href: `/work/${c.slug}`,
       img: c.img,
@@ -170,11 +205,11 @@ export function buildWorkGroups(cards: HomeCard[], other: OtherWorks, entries: L
           status: w.year,
           title: w.title,
           role: w.context,
-          thesis: w.line ?? null,
+          thesis: w.intro ?? w.line ?? null,
           cta: 'Open ↗',
           href: otherWorkHref(w, entries),
-          img: w.image?.src ?? null,
-          imgPos: w.image?.position ?? 'center',
+          img: w.card?.src ?? w.image?.src ?? null,
+          imgPos: w.card ? 'center' : (w.image?.position ?? 'center'),
           wip: false,
           tone: TONE_N,
           caseSlug: null,
