@@ -217,6 +217,7 @@ figcaption { font-size: 13px; color: var(--ink2); line-height: 1.6; }
   table { font-size: 12px; }
   .tb h2 { font-size: 22px; padding-block: 8px 7px; }
   .vec { max-height: 150mm; width: auto; max-width: 100%; margin-inline: auto; }
+  .vec.plates { max-height: 176mm; }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
 </style>
@@ -319,14 +320,14 @@ figcaption { font-size: 13px; color: var(--ink2); line-height: 1.6; }
         <thead><tr><th>执行器</th><th>型号</th><th>装在哪</th><th>怎么装</th><th>带动什么</th></tr></thead>
         <tbody>
           <tr><td class="k">主电机</td><td>NEMA17，0.51 N·m</td><td>机身左侧，S4 与 S5 之间，挂在左梯形支架下的电机支架里</td><td>机身放进支架框内，出轴朝前穿过支架前板；4 颗 M3 螺丝穿过前板的腰形槽固定</td><td>20T 带轮 → GT2 皮带 → 中间轴 60T</td></tr>
-          <tr><td class="k">肌腱电机 ×3</td><td>NEMA17</td><td>大触手安装笼的三个电机框：右侧、左侧、底部（S1 到 S2 的下方）</td><td>机身从框外插进框里，出轴朝笼内；轴上装 GT2 20T 带轮当绕线盘 <span class="tag t-int">示意</span></td><td>各收放一根肌腱</td></tr>
+          <tr><td class="k">肌腱电机 ×3</td><td>NEMA17</td><td>大触手安装笼的三个电机框：右侧、左侧、底部（S1 到 S2 的下方）</td><td>从框口插入，沿笼内的电机槽推到底，端面顶住止位柱；出轴朝笼内，轴上装 GT2 20T 带轮当绕线盘</td><td>各收放一根肌腱</td></tr>
           <tr><td class="k">转台电机</td><td>转台自带的 42 步进</td><td>转台箱体后侧</td><td>转台整体落在底座中心座的托盘里，电机从托盘敞开的一侧（朝后）伸出 <span class="tag t-int">示意</span></td><td>蜗杆 → 蜗轮（45 : 1），输出盘带动笼架以上整机转动</td></tr>
           <tr><td class="k">舵机 ×2</td><td>SG90</td><td>左：S2 与 S3 之间；右：S3 与 S4 之间，梯形支架下的安装板</td><td>模型里已有</td><td>小触手的大节前后甩</td></tr>
         </tbody>
       </table>
     </div>
     <dl class="kv">
-      <dt>外形</dt><dd><span class="tag t-meas">模型实测</span>780 长 × 405 宽 × 382 高（含大触手和右侧肌腱电机）。不含大触手的机身 387 × 387。</dd>
+      <dt>外形</dt><dd><span class="tag t-meas">模型实测</span>780 长 × 387 宽 × 382 高（含大触手）。不含大触手的机身 387 × 387。</dd>
       <dt>重量</dt><dd><span class="tag t-rec">作者记录</span>压在机身底盘上的部分约 1.53 kg，其中主电机 0.35 kg、大触手约 0.27 kg（7 月称量，之后加了转台和新底座）。</dd>
     </dl>
   </div>
@@ -350,7 +351,6 @@ figcaption { font-size: 13px; color: var(--ink2); line-height: 1.6; }
           <li>高度 382 由 S2 滑轨架竖直导槽的顶端决定。呼吸时总高不变，变的是拱的高和宽。</li>
           <li>中间轴轴线离桌面 156，也就是脚槽所在的高度。</li>
           <li>五环站位从 S1 起每隔 85 一个；每副滑轨架比自己的环面靠后 11。</li>
-          <li>宽度 405 里，右侧那台肌腱电机的机身伸出机身外包约 18。</li>
           <li>大触手梢端离机身前缘约 390。整机转动时梢端扫过的圆半径约 600，摆放时周围要留空。</li>
         </ul>
       </div>
@@ -387,10 +387,10 @@ figcaption { font-size: 13px; color: var(--ink2); line-height: 1.6; }
         <tr><td><span class="ck"></span></td><td>X 形底座：中心座（托盘）、方框、四条斜臂</td><td class="n">1 套</td><td>四个圆脚中心约 351 × 351</td><td>打印</td></tr>
         <tr><td><span class="ck"></span></td><td>圆脚</td><td class="n">4</td><td>⌀36 × 10</td><td>打印</td></tr>
         <tr><td><span class="ck"></span></td><td>偏航转台 HDB60XZ45B（含 42 步进电机、联轴器）</td><td class="n">1</td><td>45 : 1 蜗轮；输出盘 ⌀60，5-M6；底部 2-⌀7 孔距 50；箱高 45</td><td>采购</td></tr>
-        <tr><td><span class="ck"></span></td><td>笼架：底板、立柱 ×4、上下两层框、两侧侧板、顶托架 ×4</td><td class="n">1 套</td><td>底板 76 × 93.7 × 4；立柱 9 × 6 × 80</td><td>打印</td></tr>
+        <tr><td><span class="ck"></span></td><td>笼架：底板、立柱 ×4、上下两层框、两侧侧板、顶托架 ×4、顶部横梁 ×2（横梁与笼架连成一体）</td><td class="n">1 套</td><td>底板 76 × 93.7 × 4；立柱 9 × 6 × 80；横梁 27.7 × 96.1 / 117.7 × 3.9</td><td>打印</td></tr>
         <tr class="sub"><td colspan="5">B　机身底盘与滑轨架</td></tr>
         <tr><td><span class="ck"></span></td><td>梯形支架（左、右）</td><td class="n">2</td><td>362.5 × 123.7；薄腹板 3.9，凸台处厚 12</td><td>打印</td></tr>
-        <tr><td><span class="ck"></span></td><td>横梁 / 侧拉杆 / 小卡件</td><td class="n">2 / 2 / 4</td><td>横梁 27.7 × 117.7 × 3.9；侧拉杆 345.2 × 6 × 7.2</td><td>打印</td></tr>
+        <tr><td><span class="ck"></span></td><td>侧拉杆 / 小卡件</td><td class="n">2 / 4</td><td>侧拉杆 345.2 × 6 × 7.2</td><td>打印</td></tr>
         <tr><td><span class="ck"></span></td><td>滑轨架 S1–S5</td><td class="n">5</td><td>厚 22.5；中轴孔 ⌀6.15</td><td>打印</td></tr>
         <tr class="sub"><td colspan="5">C　呼吸传动</td></tr>
         <tr><td><span class="ck"></span></td><td>中间轴</td><td class="n">1</td><td>⌀6 钢 D 轴，对边 5.5，长 370</td><td>采购</td></tr>
@@ -401,14 +401,14 @@ figcaption { font-size: 13px; color: var(--ink2); line-height: 1.6; }
         <tr><td><span class="ck"></span></td><td>钢齿轮 m=1</td><td class="n">5</td><td>齿数 32 / 33 / 32 / 29 / 25（S1–S5）</td><td>采购</td></tr>
         <tr><td><span class="ck"></span></td><td>钢齿条 m=1（截断）+ 打印 U 形卡接件</td><td class="n">按实物</td><td>按示意每环 2 根，每根不短于约 160</td><td>采购 + 打印 <span class="tag t-chk">待确认</span></td></tr>
         <tr class="sub"><td colspan="5">D　五个呼吸环</td></tr>
-        <tr><td><span class="ck"></span></td><td>角化件（V 形三点板）</td><td class="n">66</td><td>S1 14、S2 14、S3 10、S4 14、S5 14；共 11 个全等类（图纸 08）</td><td>打印（光敏树脂）</td></tr>
+        <tr><td><span class="ck"></span></td><td>角化件（V 形三点板）</td><td class="n">66</td><td>S1 14、S2 14、S3 10、S4 14、S5 14；共 11 组图块，每环用哪几组见图纸 08</td><td>打印（光敏树脂）</td></tr>
         <tr><td><span class="ck"></span></td><td>铰点对锁螺丝（芝加哥螺丝）</td><td class="n">89</td><td>S1/S2/S4/S5 各 19，S3 13；多备 10%</td><td>采购</td></tr>
         <tr><td><span class="ck"></span></td><td>脚滑块：M2 对锁螺母的光筒 + 尼龙垫 3.2 × 7 × 0.5</td><td class="n">20</td><td>光筒 ⌀3.0（用卡尺确认）</td><td>采购</td></tr>
         <tr class="sub"><td colspan="5">E　大触手</td></tr>
         <tr><td><span class="ck"></span></td><td>方盒椎节（两片端板 + 6 根立柱 + 中央导块）</td><td class="n">6</td><td>节长 47.7 → 30.8，向梢端逐节变小</td><td>打印</td></tr>
         <tr><td><span class="ck"></span></td><td>梢端节（带三根绑线柱）</td><td class="n">1</td><td>长约 25</td><td>打印</td></tr>
         <tr><td><span class="ck"></span></td><td>节间脊柱杆</td><td class="n">7</td><td>⌀7 左右，穿过端板中心；根部一段 ⌀5 × 33</td><td>TPU</td></tr>
-        <tr><td><span class="ck"></span></td><td>安装笼（含三个电机框、根部腱孔件）</td><td class="n">1</td><td>电机框外 49.9 × 49.8 × 10，内口约 43.8</td><td>打印</td></tr>
+        <tr><td><span class="ck"></span></td><td>安装笼（含三个电机框与电机槽、根部腱孔件）</td><td class="n">1</td><td>电机框外 49.9 × 49.8 × 10，内口约 43.8；框口到止位柱约 34</td><td>打印</td></tr>
         <tr><td><span class="ck"></span></td><td>肌腱电机 NEMA17</td><td class="n">3</td><td>同主电机</td><td>库存 <span class="tag t-chk">待确认</span></td></tr>
         <tr><td><span class="ck"></span></td><td>绕线盘：GT2 20T 铝带轮（⌀5 D 孔 + M3 顶丝）</td><td class="n">3</td><td>一圈收线约 40</td><td>库存</td></tr>
         <tr><td><span class="ck"></span></td><td>肌腱：PE 编织线</td><td class="n">3 根</td><td>⌀0.4–0.5</td><td>采购</td></tr>
@@ -441,19 +441,18 @@ figcaption { font-size: 13px; color: var(--ink2); line-height: 1.6; }
       </div>
       <div class="step">
         <h4><span class="sn">步骤 2</span>笼架</h4>
-        <!--FIG step2 笼架装在转台输出盘上。-->
+        <!--FIG step2 笼架装在转台输出盘上。顶部两根横梁与笼架连成一体。-->
         <ol>
           <li>笼架底板用 M6 螺丝锁到转台输出盘（⌀25 圆周上 4 个 + 中心 1 个）。底板过孔 ⌀6.4。</li>
-          <li>装四根立柱、上下两层框、两侧侧板，最后装立柱顶部的四个托架。</li>
+          <li>装四根立柱、上下两层框、两侧侧板、立柱顶部的四个托架，以及托架上的两根横梁。横梁与笼架连成一体，算笼架的一部分。</li>
           <li>立柱上下共 8 个交角各加一块 10 × 10 三角肋 <span class="tag t-rec">作者记录</span>。</li>
         </ol>
       </div>
       <div class="step">
         <h4><span class="sn">步骤 3</span>机身底盘</h4>
-        <!--FIG step3 两根横梁落在立柱顶托架上，左右梯形支架搭在横梁上。-->
+        <!--FIG step3 左右两副梯形支架搭在笼架顶部的横梁上。-->
         <ol>
-          <li>两根横梁落到立柱顶托架上。</li>
-          <li>左右两副梯形支架搭在横梁上；交接处装四个小卡件；沿两副支架各装一根侧拉杆。</li>
+          <li>左右两副梯形支架搭在笼架顶部的两根横梁上；交接处装四个小卡件；沿两副支架各装一根侧拉杆。</li>
           <li>梯形支架的 3.9 薄腹板不要攻丝，一律用通孔螺栓 + 螺母 + ⌀10 垫圈。</li>
         </ol>
       </div>
@@ -511,7 +510,7 @@ figcaption { font-size: 13px; color: var(--ink2); line-height: 1.6; }
         <h4><span class="sn">步骤 8</span>大触手与肌腱电机</h4>
         <!--FIG step8 大触手安装笼挂在右梯形支架下；三台肌腱电机装在笼的右、左、下三个电机框里。-->
         <ol>
-          <li>三台 NEMA17 从安装笼外侧插进三个电机框（右、左、下），出轴朝笼内。轴上各装一个 GT2 20T 带轮当绕线盘，顶丝锁在 D 面上。</li>
+          <li>三台 NEMA17 从三个电机框（右、左、下）的框口插入，出轴朝里，沿电机槽推到底，端面顶住止位柱。轴上各装一个 GT2 20T 带轮当绕线盘，顶丝锁在 D 面上。</li>
           <li>安装笼顶板用螺栓固定到右梯形支架下面（S1 到 S2 下方）。</li>
           <li>穿肌腱，见图纸 10。</li>
         </ol>
@@ -540,11 +539,14 @@ figcaption { font-size: 13px; color: var(--ink2); line-height: 1.6; }
     <!--RINGS-->
     <p class="small"><span class="tag t-meas">模型实测</span>五环同一比例。小圆是铰点，橙点是中间轴轴心，虚线是脚槽所在的地线。折叠时三点板转向内侧，像一圈尖齿，这是正常的样子。齿条方案大约走内侧脚全行程的 91–94%，实际折得比图上略浅。</p>
     <!--RINGTABLE-->
+    <h3><span class="hn">8.2</span>角化件分组：11 组图块，每个环用哪几组</h3>
+    <!--PLATEGROUPS-->
+    <p class="small"><span class="tag t-rec">作者记录</span>图块号沿用作者 6 月的打印图块清单（工作日志表格 T-0615-2）。每块板按所在环和夹角对应到唯一的图块号，上图里每块板的号码由 815 模型逐块核对。同一组的板在环内靠旋转、翻面复用，不能跨环通用：五个环的臂长各不相同。</p>
     <div class="cols">
       <div class="col">
-        <h3><span class="hn">8.2</span>角化件的 11 个全等类</h3>
+        <h4>图块清单</h4>
         <div class="tw"><table class="data">
-          <thead><tr><th>类</th><th>环</th><th class="n">臂长</th><th class="n">两端距</th><th class="n">夹角</th><th class="n">件数</th></tr></thead>
+          <thead><tr><th>图块</th><th>环</th><th class="n">臂长</th><th class="n">两端距</th><th class="n">夹角</th><th class="n">件数</th></tr></thead>
           <tbody>
             <tr><td>1</td><td>S3</td><td class="n">49.4</td><td class="n">95.5</td><td class="n">150°</td><td class="n">4</td></tr>
             <tr><td>2</td><td>S3</td><td class="n">49.4</td><td class="n">92.9</td><td class="n">140°</td><td class="n">6</td></tr>
@@ -559,7 +561,6 @@ figcaption { font-size: 13px; color: var(--ink2); line-height: 1.6; }
             <tr><td>11</td><td>S5</td><td class="n">27.1</td><td class="n">51.0</td><td class="n">140°</td><td class="n">4</td></tr>
           </tbody>
         </table></div>
-        <p class="small">同一类的件在环内靠旋转、翻面复用，不能跨环通用。</p>
       </div>
       <div class="col">
         <h3><span class="hn">8.3</span>铰点和脚</h3>
@@ -645,17 +646,18 @@ figcaption { font-size: 13px; color: var(--ink2); line-height: 1.6; }
   <div class="sb">
     <!--FIG det_arm 大触手侧视（从左侧看）：安装笼与三台肌腱电机在右，6 节方盒椎节向左逐节变小，最左是梢端节。-->
     <div class="cols w60">
-      <!--FIG det_armbase2 安装笼与三台肌腱电机（从左前下方看）。电机、绕线盘和笼内那段肌腱为示意。-->
+      <!--FIG det_armbase2 安装笼与三台肌腱电机（从左前下方看）。电机和绕线盘是补画的示意件，位置按笼内的电机槽和止位柱定。-->
       <div class="col">
         <h4>结构</h4>
         <ul>
           <li><b>安装笼</b>：顶板挂在右梯形支架下。右、左、底三面各有一个电机框（外 49.9 × 49.8 × 10，内口约 43.8）。</li>
-          <li><b>肌腱电机</b>：机身从框外插进去，出轴朝笼内。框内侧有横杆挡着，机身只能在框外 <span class="tag t-meas">模型实测</span>。</li>
-          <li><b>绕线盘</b>：每台电机轴上一个 GT2 20T 带轮，夹在笼内两根横杆之间。</li>
+          <li><b>电机槽</b>：每个电机框后面是一条槽，底轨和两侧导轨正好夹住 42.3 的机身，槽底有两根止位柱（底部那台是两条横轨）<span class="tag t-meas">模型实测</span>。</li>
+          <li><b>肌腱电机</b>：从框口插入，推到端面顶住止位柱，框口到止位柱约 34。左右两台出轴相对，底部一台出轴朝上。</li>
+          <li><b>绕线盘</b>：每台电机轴上一个 GT2 20T 带轮，在止位柱内侧。</li>
           <li><b>根部腱孔件</b>：笼前端的三瓣件，三个腱孔离轴 13.9，方位 90° / 210° / 330°。</li>
           <li><b>椎节</b>：6 节方盒 + 1 个梢端节。每节是两片端板、6 根立柱（两根一组）、中间一块六边形导块；节与节之间只靠中心的柔性脊柱杆连接。</li>
         </ul>
-        <p class="small">哪根肌腱接哪台电机、线在笼内怎么转向，模型里没有，图里按就近画 <span class="tag t-chk">待确认</span>。</p>
+        <p class="small">绕线盘与腱孔同侧同高，线从盘上切出后直接拉到腱孔：上方腱孔接底部电机（盘轴竖直，线水平走），左下、右下两个腱孔各接同侧的电机。</p>
       </div>
     </div>
     <h3><span class="hn">10.1</span>肌腱怎么走</h3>
@@ -675,7 +677,7 @@ figcaption { font-size: 13px; color: var(--ink2); line-height: 1.6; }
           <li>线头绑在梢端节本腱的绑线柱上（三根柱的方位与端板窗口相同）。</li>
           <li>往根部穿：过梢端节端板的缺口，进第 6 节远端板的窗口，越过轴线压进导块对面的槽口，再越过轴线从近端板的窗口出来。</li>
           <li>沿本腱一侧走到下一节，重复上一步，直到第 1 节。</li>
-          <li>穿过根部腱孔件上本腱的腱孔，进安装笼，接到对应电机的绕线盘上，绕 2–3 圈后固定。</li>
+          <li>穿过根部腱孔件上本腱的腱孔，进安装笼，接到同侧同高的那个绕线盘上，绕 2–3 圈后固定。</li>
           <li>三根都穿好后，每根留约 12 的松弛再固定，静息时触手是直的。</li>
         </ol>
         <p class="small">三根线在每一节里都会在轴线附近交叉，穿的时候别让它们互相缠住。</p>

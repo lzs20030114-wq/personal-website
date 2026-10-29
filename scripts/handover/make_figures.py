@@ -41,6 +41,8 @@ def group_of(p):
     if c == 'axpart': return 'pulley' if s[0] > 9 and s[1] > 14 else 'shaftblock'
     if c == 'motor': return 'bracket'
     if c == 'chassis':
+        # 笼架顶部两根横梁（27.7 宽、z −20…−16.1）与笼架连成一体（用户 2026-10-29），归笼架
+        if abs(hi[2] + 16.1) < 0.3 and abs(lo[2] + 20.0) < 0.3 and s[0] < 30: return 'cage'
         if hi[2] > -16.5: return 'chassis'
         if abs(s[0] - 59.8) < 1 and abs(s[2] - 45) < 1: return 'turntable'
         if lo[2] >= -100.5: return 'cage'
@@ -81,19 +83,17 @@ add_px('pulley', MD['pulley60'])
 add_px('motor', MD['body']); add_px('motor', MD['shaft'], fill=(150, 150, 150))
 add_px('motor', MD['pulley20'], fill=PX.SPOOL); add_px('motor', MD['belt'], fill=PX.BELT, ink=(40, 40, 40))
 # 大触手三台肌腱电机 + 绕线盘
-AM = PX.arm_motors()
+AM = PX.arm_motors(_PK['arm'])
 for k, m in AM.items():
     add_px('armmotor', m['body'], frame=k); add_px('armmotor', m['shaft'], fill=(150, 150, 150), frame=k)
     add_px('armmotor', m['spool'], fill=PX.SPOOL, frame=k)
 # 肌腱：根部腱孔 → 每节（窗口 → 对面槽口 → 窗口）→ 梢端绑柱；笼内一段从绕线盘到根部腱孔
 TP, TSEQ = PX.tendon_paths(_PK['arm'])
-TMAP = {'A': 'D', 'B': 'R', 'C': 'L'}     # 就近对应：上方腱孔 ↔ 底部电机，右下 ↔ 右侧，左下 ↔ 左侧（示意）
+TMAP = {'A': 'D', 'B': 'R', 'C': 'L'}     # 线盘与腱孔同高同侧：上方腱孔 ↔ 底部电机（盘轴竖直），右下 ↔ 右侧，左下 ↔ 左侧
 TEND_FULL = {}
 for k, path in TP.items():
     m = AM[TMAP[k]]
-    e = path[0]; c = m['spool_c']; ax = m['axis']
-    vv = e - c; vv = vv - ax * (vv @ ax); vv /= np.linalg.norm(vv)
-    full = np.vstack([c + vv * 6.4, path])
+    full = np.vstack([PX.spool_tangent(m['spool_c'], m['axis'], path[0]), path])
     TEND_FULL[k] = full
     add_px('tendon', PX.tube(full, r=0.75), fill=PX.TENDON[k], ink=PX.TENDON[k], tendon=k)
 
@@ -289,7 +289,7 @@ det('det_drive', ['shaft', 'pulley', 'bracket', 'motor'], -140, -14, 1300, 900, 
 # 底座 + 转台 + 笼架
 det('det_base', ['base', 'turntable', 'cage'], -128, 24, 1300, 900, anchors={
     'turntable': [-10, -30, -125], 'disk': [7, -30, -100], 'hdb_motor': [102, 3.5, -102],
-    'cage_post': [-35.5, -48.9, -60], 'cage_floor': [7, 40, -96], 'cage_top': [49.5, 20, -25],
+    'cage_post': [-35.5, -48.9, -60], 'cage_floor': [7, 40, -96], 'cage_top': [49.5, 20, -25], 'beam': [-35.5, 30, -16.5],
     'foot': list(bbox('base')[0] + np.array([18, 18, 5])), 'seat': [-25, -32, -147]})
 # 转台单独：俯视 + 轴测，看托盘与电机方向
 det('det_chassis', ['chassis', 'rail'], -90, 89.999, 1300, 760, pale=('rail',), anchors={

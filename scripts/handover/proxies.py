@@ -159,22 +159,43 @@ def main_drive():
     return dict(body=body, shaft=sh, pulley20=merge(py, pyf), pulley60=p60, belt=bt, center_dist=d)
 
 # 大触手的三台肌腱电机：安装笼两侧和底部各一个电机框（外 49.9 × 49.8 × 10，内口约 43.8）。
-# 框内侧有横杆挡着，机身只能在框外，出轴朝里，绕线盘在笼内（夹在两根横杆之间）。
-ARM_FRAMES = {   # 名称: (端面中心 = 框内侧面中心, 机身朝外方向)
-    'R': ((-122.47, 167.6, -53.78), (0, 1, 0)),     # 右侧（外侧）框
-    'L': ((-122.47, 50.5, -53.78), (0, -1, 0)),     # 左侧（靠机身中线）框
-    'D': ((-74.77, 108.99, -75.48), (0, 0, -1)),    # 底部框
+# 框后面是一条电机槽：底轨 + 两侧导轨把 42.3 的机身夹在中间，槽底有两根止位柱（底部那台是两条横轨）。
+# 电机从框口插入、推到端面顶住止位柱为止（用户 2026-10-29 指出），出轴朝笼内，绕线盘在止位柱内侧。
+# 坐标是大触手块局部系（815 实测：止位柱内侧面 y = −24.47 / +24.65，底部止位横轨 z = 12.22），由 l2w 换到世界。
+ARM_FRAMES_LOCAL = {   # 名称: (电机端面中心, 机身朝外方向)
+    'R': ((-39.78, -24.47, -0.14), (0, -1, 0)),     # 块局部 −y 侧 = 机器右侧（外侧）
+    'L': ((-39.78, 24.65, -0.14), (0, 1, 0)),       # 块局部 +y 侧 = 靠机身中线
+    'D': ((-87.55, 0.09, 12.22), (0, 0, -1)),       # 底部框，出轴朝上
 }
-SPOOL_AT = 9.0    # 绕线盘中心离电机端面
+SPOOL_AT = 11.0    # 绕线盘中心离电机端面（端面凸台 2 + 半个带轮宽）
+SPOOL_W = 11.0
+SPOOL_R = 6.4      # 线绕在芯上的半径（20T 节圆）
 
-def arm_motors():
+def arm_motors(arm):
+    M = np.asarray(arm['l2w'], float)
     out = {}
-    for k, (face, d) in ARM_FRAMES.items():
-        body, sh = nema17(face, d, body=48.0, shaft=22.0)
-        dd = np.asarray(d, float)
-        sp = spool(np.asarray(face) - dd * SPOOL_AT, dd)
-        out[k] = dict(body=body, shaft=sh, spool=sp, spool_c=np.asarray(face) - dd * SPOOL_AT, axis=dd)
+    for k, (p, d) in ARM_FRAMES_LOCAL.items():
+        face = np.r_[p, 1.0] @ M
+        dd = np.asarray(d, float) @ M[:3]
+        dd /= np.linalg.norm(dd)
+        body, sh = nema17(face, dd, body=48.0, shaft=22.0)
+        c = face - dd * SPOOL_AT
+        out[k] = dict(body=body, shaft=sh, spool=spool(c, dd, width=SPOOL_W), spool_c=c, axis=dd, face=face)
     return out
+
+def spool_tangent(c, axis, e, r=SPOOL_R, width=SPOOL_W, upper=True):
+    """线从绕线盘切出、直奔外点 e 的那个切点（在垂直于轴的平面里求切线，轴向位置取 e 的投影并夹在盘宽内）。"""
+    c, a, e = np.asarray(c, float), np.asarray(axis, float), np.asarray(e, float)
+    p = e - c
+    h = float(np.clip(p @ a, -width / 2 + 1.5, width / 2 - 1.5))
+    q = p - a * (p @ a)
+    d = np.linalg.norm(q)
+    u = q / d
+    w = np.cross(a, u)
+    if (w[2] < 0) == upper:
+        w = -w
+    al = math.acos(min(1.0, r / d))
+    return c + a * h + r * (math.cos(al) * u + math.sin(al) * w)
 
 # 偏航转台 HDB60XZ45B：底座中心座是一个托盘（内宽 69，−x 侧有墙、+x 侧敞开，两颗定位销孔距 50），
 # 转轴在 (x 7, y 0)。按记录：箱高 45、宽 67.5、含电机总长约 147、输出盘 ⌀60。电机从托盘敞开的 +x 侧伸出。

@@ -41,7 +41,7 @@ CALLOUTS = {
         ('motor', '主电机 NEMA17'),
         ('bracket', '主电机支架'),
         ('chassis', '机身底盘（左右两副梯形支架）'),
-        ('cage', '笼架'),
+        ('cage', '笼架（顶部两根横梁与它连成一体）'),
         ('turntable', '偏航转台 HDB60XZ45B'),
         ('hdb_motor', '转台自带的 42 步进电机'),
         ('base_foot', 'X 形底座'),
@@ -56,7 +56,7 @@ CALLOUTS = {
         ('rail', '滑轨架 ×5'),
         ('shaft', '中间轴（齿轮与齿条另见图纸 09）'),
         ('pulley', '60T 带轮'),
-        ('chassis', '机身底盘'),
+        ('chassis', '机身底盘（左右梯形支架）'),
         ('bracket', '主电机支架'),
         ('motor', '主电机 + 20T 带轮 + 皮带'),
         ('armmount', '大触手安装笼'),
@@ -64,7 +64,7 @@ CALLOUTS = {
         ('arm', '大触手'),
         ('small', '小触手（右）'),
         ('small2', '小触手（左）'),
-        ('cage', '笼架'),
+        ('cage', '笼架（含顶部两根横梁）'),
         ('turntable', '偏航转台'),
         ('hdb_motor', '转台电机'),
         ('base', 'X 形底座'),
@@ -97,6 +97,7 @@ CALLOUTS = {
         ('cage_floor', '笼架底板，锁在输出盘上'),
         ('cage_post', '笼架立柱 ×4'),
         ('cage_top', '立柱顶托架'),
+        ('beam', '顶部横梁 ×2：与笼架连成一体，梯形支架搭在上面'),
         ('foot', '圆脚 ×4'),
     ],
     'det_arm': [
@@ -108,12 +109,12 @@ CALLOUTS = {
         ('tip', '梢端节：三根肌腱各绑一根柱'),
     ],
     'det_armbase2': [
-        ('m_L', '肌腱电机（左）'),
+        ('m_L', '肌腱电机（左），推到底顶住止位柱'),
         ('m_R', '肌腱电机（右）'),
-        ('m_D', '肌腱电机（下）'),
+        ('m_D', '肌腱电机（下），出轴朝上'),
         ('s_L', '绕线盘：电机轴上装 GT2 20T 带轮'),
         ('eyelet', '根部腱孔 ×3（离轴 13.9）'),
-        ('tC', '笼内这一段肌腱：示意'),
+        ('tC', '线从绕线盘直接拉到同高的腱孔'),
         ('v0', '第 1 节'),
         ('top_plate', '顶板：固定到右梯形支架下面'),
     ],
@@ -311,6 +312,110 @@ def rings_svg():
     body.append('<text class="vlab s" x="8" y="198">全开（中轴 0°）· 数字 = 拱顶离中轴高度</text>')
     body.append('<text class="vlab s" x="8" y="400">折叠</text>')
     return (f'<svg class="vec rings" viewBox="0 0 {W} {H}" role="img" aria-label="五个呼吸环全开与折叠对照">'
+            + '\n'.join(body) + '</svg>')
+
+
+# 角化件分组：图块号沿用作者的打印图块清单（工作日志表格 T-0615-2）。每块板按「所在环 + 夹角」唯一对应一个图块
+BLOCK_NO = {(2, 150): 1, (2, 140): 2, (1, 160): 3, (1, 150): 4, (1, 140): 5,
+            (0, 160): 6, (0, 140): 7, (3, 160): 8, (3, 140): 9, (4, 160): 10, (4, 140): 11}
+ANG_STYLE = {140: ('#F6E7CC', '#8F5600'), 150: ('#DCE7F2', '#1D5A8E'), 160: ('#DCEBE2', '#2C6649')}
+
+
+def plate_geom(p):
+    """三点板：最长边是两端，对面那个销是中间销。返回 (中间销下标, 臂长, 夹角, 两端距)。"""
+    L = [math.dist(p[(i + 1) % 3], p[(i + 2) % 3]) for i in range(3)]
+    m = int(np.argmax(L))
+    a = np.subtract(p[(m + 1) % 3], p[m]); b = np.subtract(p[(m + 2) % 3], p[m])
+    ang = math.degrees(math.acos(float(np.dot(a, b) / np.linalg.norm(a) / np.linalg.norm(b))))
+    return m, float(np.linalg.norm(a)), round(ang), L[m]
+
+
+def ring_blocks(ri):
+    name = RINGS[ri]
+    nodes = next(r for r in PH if r['name'] == name)['phases']['0']
+    out = []
+    for t in TOPO[name]['tris']:
+        p = [nodes[i] for i in t]
+        m, arm, ang, chord = plate_geom(p)
+        out.append(dict(tri=t, pts=p, mid=m, arm=arm, ang=ang, chord=chord, no=BLOCK_NO[(ri, ang)]))
+    return out
+
+
+def plate_groups_svg():
+    """每个环一格：上为全开位，每块板标图块号（颜色 = 夹角）；下为该环用到的图块，按实尺寸同一比例画出。"""
+    W, PW, PH_ = 1080, 360, 470
+    s, sc = 0.95, 2.3
+    body = []
+    for ri in range(5):
+        col, row = (ri % 3, ri // 3)
+        x0, y0 = col * PW, row * PH_
+        cx, ytop = x0 + PW / 2, y0 + 258
+        body.append(f'<text class="rlab" x="{cx:.0f}" y="{y0 + 24:.0f}">{SHORT[ri]}</text>')
+        bl = ring_blocks(ri)
+        to = lambda p: (cx + p[0] * s, ytop - p[1] * s)
+        body.append(f'<line class="gl" x1="{cx - 178 * s:.1f}" y1="{ytop}" x2="{cx + 178 * s:.1f}" y2="{ytop}"/>')
+        for b in bl:
+            fill, ink = ANG_STYLE[b['ang']]
+            pts = ' '.join('%.1f,%.1f' % to(q) for q in b['pts'])
+            body.append(f'<polygon points="{pts}" fill="{fill}" stroke="{ink}" stroke-width="1" stroke-linejoin="round" fill-opacity="0.85"/>')
+        labs = []
+        for b in bl:   # 号码放在「离中轴较远的那条臂」中段外侧，交叉成对的两块板各在一边
+            mid = np.array(b['pts'][b['mid']], float)
+            ends = [np.array(b['pts'][(b['mid'] + k) % 3], float) for k in (1, 2)]
+            far = max(ends, key=lambda e: np.linalg.norm(e))
+            p = mid + 0.55 * (far - mid)
+            out = p / (np.linalg.norm(p) or 1)
+            p = p + out * 9.0
+            x, y = to(p)
+            labs.append((x, y, b))
+        # 挤得太近的号码互相推开（两块板的号码落在几乎同一处时）
+        P = np.array([[x, y] for x, y, _ in labs], float)
+        for _ in range(60):
+            moved = False
+            for i in range(len(P)):
+                for j in range(i + 1, len(P)):
+                    d = P[j] - P[i]; L = np.linalg.norm(d)
+                    if L < 17:
+                        u = d / L if L > 1e-6 else np.array([1.0, 0.0])
+                        P[i] -= u * (17 - L) / 2; P[j] += u * (17 - L) / 2; moved = True
+            if not moved: break
+        labs = [(P[i][0], P[i][1], b) for i, (_, _, b) in enumerate(labs)]
+        for x, y, b in labs:
+            ink = ANG_STYLE[b['ang']][1]
+            body.append(f'<text x="{x:.1f}" y="{y + 4.5:.1f}" text-anchor="middle" font-size="13" font-weight="700" fill="{ink}">{b["no"]}</text>')
+        x, y = to((0, 0))
+        body.append(f'<circle class="axis" cx="{x:.1f}" cy="{y:.1f}" r="3"/>')
+        kinds = {}
+        for b in bl:
+            kinds.setdefault(b['no'], dict(b, n=0))['n'] += 1
+        yy = ytop + 26
+        for no in sorted(kinds, key=lambda n: -kinds[n]['ang']):
+            k = kinds[no]
+            fill, ink = ANG_STYLE[k['ang']]
+            half = math.radians(k['ang'] / 2)
+            dx, dy = k['arm'] * math.sin(half) * sc, k['arm'] * math.cos(half) * sc
+            mx, my = cx + 18, yy + 8
+            pl = f'{mx - dx:.1f},{my + dy:.1f} {mx:.1f},{my:.1f} {mx + dx:.1f},{my + dy:.1f}'
+            body.append(f'<polyline points="{pl}" fill="none" stroke="{fill}" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>')
+            body.append(f'<polyline points="{pl}" fill="none" stroke="{ink}" stroke-width="1.3" stroke-linejoin="round"/>')
+            for px, py in ((mx - dx, my + dy), (mx, my), (mx + dx, my + dy)):
+                body.append(f'<circle cx="{px:.1f}" cy="{py:.1f}" r="3.6" fill="#fff" stroke="{ink}" stroke-width="1.3"/>')
+            body.append(f'<text x="{x0 + 14:.1f}" y="{my + dy / 2 + 7:.1f}" font-size="22" font-weight="700" fill="{ink}">{no}</text>')
+            body.append(f'<text class="vlab s" x="{mx:.0f}" y="{my + dy + 22:.1f}" text-anchor="middle">'
+                        f'臂 {k["arm"]:.1f} · 夹角 {k["ang"]}° · 两端 {k["chord"]:.1f} · ×{k["n"]}</text>')
+            yy = my + dy + 34
+    # 右下空格：图例
+    lx, ly = 2 * PW + 24, PH_ + 60
+    body.append(f'<text class="vlab" x="{lx}" y="{ly}" font-weight="700">怎么读</text>')
+    for i, ang in enumerate((140, 150, 160)):
+        fill, ink = ANG_STYLE[ang]
+        body.append(f'<rect x="{lx}" y="{ly + 20 + i * 28}" width="26" height="15" fill="{fill}" stroke="{ink}"/>'
+                    f'<text class="vlab s" x="{lx + 36}" y="{ly + 32 + i * 28}">夹角 {ang}°</text>')
+    for i, t in enumerate(('上：全开位，板上数字 = 图块号', '下：本环用到的图块，同一比例（2.3 px/mm）',
+                           '大号数字 = 图块号，与 T-0615-2 清单同号', '×n = 本环用量；臂长都是中间销到端销')):
+        body.append(f'<text class="vlab s" x="{lx}" y="{ly + 128 + i * 24}">{t}</text>')
+    H = 2 * PH_
+    return (f'<svg class="vec plates" viewBox="0 0 {W} {H}" role="img" aria-label="角化件分组：五个环各用哪几号图块">'
             + '\n'.join(body) + '</svg>')
 
 
@@ -569,6 +674,7 @@ src = src.replace('<!--RINGS-->', rings_svg())
 src = src.replace('<!--RACK-->', rack_svg())
 src = src.replace('<!--GEARTABLE-->', gear_table())
 src = src.replace('<!--RINGTABLE-->', ring_table())
+src = src.replace('<!--PLATEGROUPS-->', plate_groups_svg())
 src = src.replace('<!--TENDON_END-->', tendon_end_svg())
 src = src.replace('<!--TENDON_SIDE-->', tendon_side_svg())
 (OUT / 'index.html').write_text(src, encoding='utf-8')
