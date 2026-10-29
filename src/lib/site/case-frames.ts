@@ -59,7 +59,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
     },
     frames: [
       { file: 't000', t: { zh: '0:00', en: '0:00' }, note: { zh: '访客在走，猫在左上角的台上', en: 'the visitor walks, the cat is on a unit in the top-left corner' } },
-      { file: 't016', t: { zh: '0:16', en: '0:16' }, note: { zh: '坐下，面前那台落成茶几（49 cm），猫脚下铺出第一步', en: 'sits down, the unit in front becomes a coffee table (49 cm) and the first step is laid from the cat' } },
+      { file: 't016', t: { zh: '0:16', en: '0:16' }, note: { zh: '坐下，面前那台落成茶几（42 cm），猫脚下铺出第一步', en: 'sits down, the unit in front becomes a coffee table (42 cm) and the first step is laid from the cat' } },
       { file: 't060', t: { zh: '1:00', en: '1:00' }, note: { zh: '猫沿着递过来的台一步一步走', en: 'the cat walks along the units offered, one at a time' } },
       { file: 't160', t: { zh: '2:40', en: '2:40' }, note: { zh: '路在右上角拐下来', en: 'the route turns down at the top right' } },
       { file: 't200', t: { zh: '3:20', en: '3:20' }, note: { zh: '猫往座位这边下来', en: 'the cat comes down towards the seat' } },
@@ -188,8 +188,8 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
     h: 536,
     tw: 1008,
     caption: {
-      zh: '侧视剖面（实验 2-15，第 100 秒）。沙发前落成茶几的单元台面离地 0.49 m，猫待的那台停在 1.05 m，其余单元收在天花板下',
-      en: 'Side section (Lab 2-15, at 100 s). A unit that came down as a coffee table in front of a sofa sits 0.49 m above the floor, the unit a cat is on stays at 1.05 m, and the rest are stowed under the ceiling',
+      zh: '侧视剖面（实验 2-15，第 100 秒）。沙发前落成茶几的单元台面离地 0.42 m，猫待的那台停在 1.05 m，其余单元收在天花板下',
+      en: 'Side section (Lab 2-15, at 100 s). A unit that came down as a coffee table in front of a sofa sits 0.42 m above the floor, the unit a cat is on stays at 1.05 m, and the rest are stowed under the ceiling',
     },
     frames: [{ file: 't100-side', t: { zh: '1:40 · 侧视', en: '1:40 · side view' } }],
   },

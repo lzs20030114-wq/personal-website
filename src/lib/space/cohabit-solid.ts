@@ -9,8 +9,9 @@
  * ## 单元是方形的（2026-10-25 作者纠正）
  *
  * 「我们采用的单元形态是方形的……圆形只做过程推演，拿来给观众演示造型过程；方形才是拿来具体使用的东西。」
- * 此前这台默认用了 Lab 2-8 那只圆筒环。现在每台 = Lab 2-7 方形环平档那三张键谱（`buildSquareUnits`：面 / 边 / 角
+ * 此前这台默认用了 Lab 2-8 那只圆筒环。现在每台 = Lab 2-7 方形环平档的做法（`buildSquareUnits`：面 / 边 / 角
  * 三档挑出，二十条带按方位分档 `buildSquareOrder`），俯视是方的；芯仍是圆的，没成形时（收起、直筒）还是一圈带子。
+ * 2026-10-29 起台面 6.5 cm 厚、布 176 节（`UNIT_SHAPE`，此前是方形环原样的 0.15 m 与 202 节）。
  * 尺寸取「方形峰值时的半边长 = 圆台的峰值半径」（cohabit `SQUARE_SCALE`）：平面模型的平台圆（platR）是方形的内切圆，
  * 猫卧着的那一圈台面与圆台时一样宽，多出来的是四个角；平面模型凡是问「平台会不会碰到人」的地方都改按方形每条带
  * 的长度算（`unit: 'square'` → `squarePlanLayout`）。
@@ -45,7 +46,7 @@
  * 第二阶段「成什么」仍只有一种形（方形环平档那只方箱），待作者定词汇表后再分。
  */
 import type { RingUnitDef } from './skin-ring';
-import { SQUARE, buildSquareOrder, buildSquareUnits, squareHalfSide, SQUARE_REACH } from './skin-square';
+import { SQUARE, SQUARE_TIERS, buildSquareOrder, buildSquareUnits, squareFreeTotal, squareHalfSide, SQUARE_REACH } from './skin-square';
 import { SKIN, createSkinUnit, renderSmooth } from './skin-unit';
 import { SOLID, boxVerts, buildSolidTopology, fillSolidVerts, membranePanel, rotateVertsY, type SolidTopology } from './skin-solid';
 import { bakeIndexed } from '../linkage/gl3d';
@@ -100,7 +101,7 @@ export interface BandTrajectory {
 
 /**
  * 轨迹烘焙：分片跑（`work` 按时间预算推进），好让台架在挂载后的头几帧里把它算完而不卡住主线程。
- * 一条 202 节的带全程 3000 步在桌面上约 1.5 s。
+ * 一条带全程 3000 步（正向 1500 + 回程 1500）。
  */
 export class TrajectoryBaker {
   readonly n: number;
@@ -246,12 +247,21 @@ export class TrajectoryBaker {
 }
 
 /**
- * 方形单元那条带的节数：Lab 2-7 方形环立项时的 202 节（lead 22），与原来圆台的带一样长。方形环现行的 305 节是
- * 2026-09-02 为捏分编制加长的，多出来的全在上半截贴芯的素管里（形状逐点相同），立在方台上方会是一根一米来高的布筒。
+ * 平台的台厚与布（2026-10-29 作者「单元作为桌面的话，那它其实也没必要那么厚」，形态方案第二轮第一步）：
+ * - 箱高 h = 16 px（8×8 铺满时台厚 6.5 cm，此前 36 px = 0.15 m）。同样的键，台越薄挑得越远，所以三档键按方形重新标定成
+ *   面 29 / 边 34 / 角 46：外缘点离理想正方形 面 0.2 · 边 0.9 · 角 0.0 px（原来的方台边档也差 0.9）。键全锁、成形途中
+ *   最大自交环 4 节、全程不鼓出终态，峰值都小于 SQUARE_PEAK，平面模型按原峰值算碰人照旧够用，不改；
+ * - 布取这三档用得到的最短：lead 8、尾段 5（方形族的两个下限）、自由段 131（角档那一段）= 176 节。
+ *   台面离钉住端 0.36 m，茶几落到 0.42 m 时钉住端仍离地 6 cm；台面以上贴芯的那截布 0.32 m（原来 0.40 m）。
+ * 「布按最长预裁」（作者 10-06）：2-15 现在只有平台一种形，最长的就是这一条；以后加双层要 338 节，到时整批换布。
+ * 原来的 202 节、箱高 36（Lab 2-7 方形环立项时那条带）只留在出图脚本里作对照。
  */
-export const UNIT_BAND = 202;
-/** 方形单元的三档引擎定义（面 / 边 / 角，Lab 2-7 方形环平档的键谱）与二十条带的档位编制（下标 = 带序 j） */
-export const UNIT_TIERS: readonly RingUnitDef[] = buildSquareUnits(undefined, UNIT_BAND);
+export const UNIT_SHAPE = { h: 16, tail: 5, lead: 8, k: [29, 34, 46] } as const;
+const UNIT_SQUARE_TIERS = SQUARE_TIERS.map((t, i) => ({ ...t, k: UNIT_SHAPE.k[i] }));
+/** 方形单元那条带的节数：lead + 两段隔离 + 自由段（三档里最长的那个）+ 尾段 */
+export const UNIT_BAND = UNIT_SHAPE.lead + 2 * SQUARE.ISO + squareFreeTotal(UNIT_SQUARE_TIERS, UNIT_SHAPE.h) + UNIT_SHAPE.tail;
+/** 方形单元的三档引擎定义（面 / 边 / 角，Lab 2-7 方形环平档的做法，台厚与键按 UNIT_SHAPE）与二十条带的档位编制（下标 = 带序 j） */
+export const UNIT_TIERS: readonly RingUnitDef[] = buildSquareUnits(UNIT_SQUARE_TIERS, UNIT_BAND, { h: UNIT_SHAPE.h, tail: UNIT_SHAPE.tail });
 export const UNIT_ORDER: readonly number[] = buildSquareOrder();
 
 /** 已经烘好的三档轨迹（同一页面里换路由、重挂台架时直接拿，不重烘） */
@@ -259,7 +269,7 @@ const BAKED = new Map<string, BandTrajectory[]>();
 
 /**
  * 三档轨迹一起烘：三条引擎依次推进（分片，`work` 按时间预算），全部烘完才算完。三档的节点数相同（同一条
- * 202 节的带），钉住端高度相同（注册在底端）、平台面高度相同（方形环的对位构造），台架拿第 0 档定摆放。
+ * 176 节的带），钉住端高度相同（注册在底端）、平台面高度相同（方形环的对位构造），台架拿第 0 档定摆放。
  */
 export class UnitBaker {
   readonly n: number;
@@ -530,13 +540,15 @@ export interface Rig {
 /**
  * 单元兼作桌子时的台面高度（米，离地；2026-10-27 作者「桌面高度参考人体工学数据」）。一个高度当不了所有桌子，按服务谁落：
  * - stand 1.05：站着用——站姿肘高附近（BIFMA G1 站立桌可调到 1.18；吧台桌通行 1.0–1.1）。不当桌子的单元都落到这里；
- * - chair 0.74：配餐椅（座面 0.45）——桌面比座面高 0.27–0.30 是通行的桌椅高差；台面 0.15 厚、台底 0.59，腿进不去，
- *   所以餐椅那台的台边按 COHABIT.TABLE 落在膝盖前面；
- * - sofaFront 0.49：沙发正前方当茶几——资料要与座面齐或略低（0.40–0.45），但台面到吊带最下端有 0.48 m，再低吊带就戳到地上，0.49 是下限。
+ * - chair 0.74：配餐椅（座面 0.45）——桌面比座面高 0.27–0.30 是通行的桌椅高差。台面 6.5 cm 厚、台底 0.67，比座面高 0.22，
+ *   腿伸得进去；餐椅那台的台边仍按 COHABIT.TABLE 落在膝盖前面（那条是台面 0.15 厚、腿进不去时定的，改不改成盖住大腿由作者定，
+ *   见形态方案 §9）；
+ * - sofaFront 0.42：沙发正前方当茶几——资料要与座面齐或略低（0.40–0.45），座面 0.43。台面 0.15 厚、布 202 节时
+ *   台面下吊着 0.48 m 的布，只能落到 0.49；换成 6.5 cm 的台面与 176 节的布（UNIT_SHAPE）以后落得下来，钉住端还离地 6 cm。
  * 哪一台当谁的桌子、什么时候落由平面模型定（COHABIT.TABLE、CohabitSim.tableBy），这里只管高度。
  * 原来铺满时钉在 1.43 m（场地布局那个高度，接近站姿肩高），哪种桌子都不是。
  */
-export const TABLE_TOP = { stand: 1.05, chair: 0.74, sofaFront: 0.49 } as const;
+export const TABLE_TOP = { stand: 1.05, chair: 0.74, sofaFront: 0.42 } as const;
 
 /**
  * 台面换高度的速度（m/s）：取市面上电动升降桌的快档 80 mm/s（常见 30–50 mm/s，见厂商参数；Lee 等 2019 用的 IKEA Bekant 是

@@ -175,9 +175,9 @@ export function squareFree(kMax: number, b: number = squareBuffer(kMax)): number
   return 2 * (kMax + b) + 1;
 }
 
-/** 配平基准 = 三档里最长的那个自由段（角档）——垫把其余两档补到同一总量 */
-export function squareFreeTotal(tiers: readonly SquareTier[] = SQUARE_TIERS): number {
-  return Math.max(...tiers.map((t) => squareFree(t.k)));
+/** 配平基准 = 三档里最长的那个自由段（角档）——垫把其余两档补到同一总量。`h` 省略 = 这一族的箱高（逐位不变） */
+export function squareFreeTotal(tiers: readonly SquareTier[] = SQUARE_TIERS, h: number = SQUARE.H): number {
+  return Math.max(...tiers.map((t) => squareFree(t.k, squareBuffer(t.k, h))));
 }
 
 export interface SquareTier {
@@ -313,17 +313,25 @@ export function squareWrap(
 
 /**
  * 三档的引擎定义（同一张方箱的整形选项，只换键谱）。`band` 省略 = 这一族现行的带长（逐位不变）；
- * 人猫同台的立体台（Lab 2-15）传 202：这一族立项时那条带（lead 22），形状与长带逐点相同（尾端对齐），
- * 只少上半截贴芯的素管——那一截是 2026-09-02 为捏分编制加长的。
+ * 传别的带长：形状与长带逐点相同（尾端对齐），只多 / 少上半截贴芯的素管——那一截是 2026-09-02 为捏分编制加长的。
+ * `shape` 省略 = 这一族的箱高与尾段、自由段总量按方形档算（逐位不变）。传了就按传入的档自己算：
+ * 箱高 `h`（台厚）、尾段 `tail`（钉住端那一截，下限 SQUARE.TAIL_MIN）；自由段总量取这几档里最长的那个。
+ * 人猫同台的立体台（Lab 2-15）用它做 6.5 cm 厚的平台（cohabit-solid 的 UNIT_SHAPE）。
  */
-export function buildSquareUnits(tiers: readonly SquareTier[] = SQUARE_TIERS, band: number = SQUARE.BAND): RingUnitDef[] {
-  const fTotal = squareFreeTotal();
+export function buildSquareUnits(
+  tiers: readonly SquareTier[] = SQUARE_TIERS,
+  band: number = SQUARE.BAND,
+  shape?: { h: number; tail: number },
+): RingUnitDef[] {
+  const h = shape?.h ?? SQUARE.H;
+  const fTotal = shape ? squareFreeTotal(tiers, h) : squareFreeTotal();
+  const lead = shape ? band - 2 * SQUARE.ISO - fTotal - shape.tail : squareLead(fTotal, band);
   const opts: SkinUnitOpts = skinSiteOpts(STEPPED);
   return tiers.map((t) => ({
-    key: band === SQUARE.BAND ? `sq-${t.en}` : `sq-${t.en}-b${band}`,
+    key: shape ? `sq-${t.en}-k${t.k}-h${h}-b${band}` : band === SQUARE.BAND ? `sq-${t.en}` : `sq-${t.en}-b${band}`,
     zh: `${t.name}档`,
     en: t.en,
-    spec: squareSpec(t.k, fTotal, squareLead(fTotal, band), SQUARE.H, band),
+    spec: squareSpec(t.k, fTotal, lead, h, band),
     opts,
     smooth: [3, 1] as const,
   }));

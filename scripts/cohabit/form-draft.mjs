@@ -2,7 +2,7 @@
  * Lab 2-15 形态方案（第二轮）的线稿与量数：项目二_2-15单元形态方案.md 的图与数从这里出。
  *
  * 量的是：同一条 338 节的布（捏分那副七段谱，F_TOT 293，收缩到 r1 = 0.30）上，按 2-15 方台的大小
- * （面 / 边 / 角三档挑出 = 现行平台）能成哪些截面，每种截面在带上能挪多远（配平偏移 ⇒ 台面高度），
+ * （面 / 边 / 角三档挑出 = Lab 2-7 平档那只方台）能成哪些截面，每种截面在带上能挪多远（配平偏移 ⇒ 台面高度），
  * 挪的时候形状变不变。截面全是真引擎终态，按 2-15 的缩放（与 cohabit-solid 的 rigFor 同式）换成米。
  *   node scripts/cohabit/form-draft.mjs <outDir>
  * 输出：outDir/form-sections.svg、outDir/form-room.svg（有 playwright 时另出同名 PNG）+ 控制台量数表。
@@ -48,8 +48,8 @@ try {
   const mpp = s / cs.UNITS_PER_M; // 米 / 引擎 px（px = 引擎坐标 × 100）
   const coreR = sq.SQUARE.RADIUS * mpp; // 挂带线离立杆中心
   const F = sqs.SQSPLIT.F_TOT;
-  const flatOpts = sq.buildSquareUnits(undefined, cs.UNIT_BAND)[0].opts;
-  const target = sq.SQUARE_REACH; // 现行平台三档挑出（px）
+  const flatOpts = sq.buildSquareUnits(undefined, 202)[0].opts;
+  const target = sq.SQUARE_REACH; // 方台三档挑出（Lab 2-7 平档，px）
   const mm = (px) => px * mpp;
   const f3 = (v) => v.toFixed(3);
 
@@ -100,20 +100,20 @@ try {
   }
 
   console.log(`2-15 缩放 s = ${s.toFixed(4)} · 1 引擎 px = ${(mpp * 1000).toFixed(2)} mm · 格距 ${f3(layout.pitchM)} m · 挂带线离立杆中心 ${f3(coreR)} m`);
-  console.log(`方台目标挑出（现行平台三档）面 / 边 / 角 = ${target.map((t) => f3(mm(t))).join(' / ')} m，外缘半边 ${f3(coreR + mm(target[0]))} m，台缝 ${f3(layout.pitchM - 2 * (coreR + mm(target[0])))} m`);
+  console.log(`方台目标挑出（Lab 2-7 平档三档）面 / 边 / 角 = ${target.map((t) => f3(mm(t))).join(' / ')} m，外缘半边 ${f3(coreR + mm(target[0]))} m，台缝 ${f3(layout.pitchM - 2 * (coreR + mm(target[0])))} m`);
 
-  // ── 现行平台（202 节，台厚 0.15）
-  const cur = sq.buildSquareUnits(undefined, cs.UNIT_BAND).map((d) => {
+  // ── 原来的平台（202 节，台厚 0.15；2-15 在 2026-10-29 换成 6.5 cm 以前用的）
+  const cur = sq.buildSquareUnits(undefined, 202).map((d) => {
     const fseg = d.spec.findIndex((g) => g[0] === 'f' && g[2] && g[2].length);
     const base = d.spec.slice(0, fseg).reduce((a, g) => a + g[1], 0);
     const r = run(d.spec, d.opts, base, base + d.spec[fseg][1]);
     let top = 0, bot = 1e9; for (const [x, y] of r.pts) if (x > r.reach * 0.35 && x < r.reach * 0.9) { top = Math.max(top, y); bot = Math.min(bot, y); }
     return { ...r, top, bot };
   });
-  console.log(`\n① 现行平台（202 节，箱高 36）：台厚 ${f3(cur[0].top - cur[0].bot)} · 台面离钉住端 ${f3(cur[0].top)} · 挑出 ${cur.map((r) => f3(r.reach)).join(' / ')}`);
+  console.log(`\n① 原来的平台（202 节，箱高 36）：台厚 ${f3(cur[0].top - cur[0].bot)} · 台面离钉住端 ${f3(cur[0].top)} · 挑出 ${cur.map((r) => f3(r.reach)).join(' / ')}`);
 
   // ── 同一条 338 节布上的平台：台厚 0.15（H36）与 6.5 cm（H16）
-  const THIN = { h: 16, k: [29, 33, 46] }; // k 按方台大小标定（探针扫出来的，跑完核对挑出）
+  const THIN = { h: 16, k: cs.UNIT_SHAPE.k }; // 与 2-15 现行平台同一组键（按方形标定，cohabit-solid UNIT_SHAPE）
   const thin = THIN.k.map((k) => box338(k, THIN.h, 0));
   const tp = Math.min(...thin.map((r) => r.pmax));
   const thinLo = box338(THIN.k[0], THIN.h, tp), thinHi = box338(THIN.k[0], THIN.h, -tp);
@@ -275,14 +275,14 @@ function unitPlan(g, cx, cy, k, kinds, opt = {}) {
 function sheetSections() {
   const g = canvas(1600, 1022);
   g.txt(36, 42, '同一条布能成的截面，以及一个单元里怎么逐带组合（第二轮线稿 · 2026-10-29）', 20, INK, 'start', 600);
-  g.txt(36, 66, '截面是真引擎终态：同一条 338 节的布（捏分那副七段谱，收缩到 r1 = 0.30），三档挑出都调到现行方台的大小（边长 0.70 m），按 2-15 的缩放换成米（1 引擎 px = 4.08 mm）。', 12, MUTE);
-  g.txt(36, 84, '橙线 = 锁定键（上下两片板之间的键不画，与台架同口径）。竖虚线 = 立杆，竖实线 = 带子贴芯那一截。黑 = 2-15 现在有的；蓝 = 第二轮建议加入的。', 12, MUTE);
+  g.txt(36, 66, '截面是真引擎终态：同一条 338 节的布（捏分那副七段谱，收缩到 r1 = 0.30），三档挑出都调到方台的大小（边长 0.70 m），按 2-15 的缩放换成米（1 引擎 px = 4.08 mm）。', 12, MUTE);
+  g.txt(36, 84, '橙线 = 锁定键（上下两片板之间的键不画，与台架同口径）。竖虚线 = 立杆，竖实线 = 带子贴芯那一截。黑 = 2-15 原来就有的；蓝 = 第二轮建议加入的（其中 6.5 cm 的平台 10-29 已接进 2-15）。', 12, MUTE);
 
   // ── A 行：截面（面档，从立杆往外）
   g.txt(36, 120, 'A　截面（面档剖面，从立杆往外看半边；高度从钉住端量起）', 14, INK, 'start', 600);
   const kA = 330, H0 = 0.22, H1 = 0.92, yA = 180 + H1 * kA;
   const panels = [
-    { t: ['A1　平台 · 台厚 0.15', '（现行，202 节）'], prof: M.cur[0], top: M.cur[0].top, c: INK, foot: true },
+    { t: ['A1　平台 · 台厚 0.15', '（原来，202 节）'], prof: M.cur[0], top: M.cur[0].top, c: INK, foot: true },
     { t: ['A2　平台 · 台厚 6.5 cm', '（338 节）'], prof: M.thin[0], c: NEW, ghost: M.thinRange },
     { t: ['A3　双层 · 缝 0.12', '（338 节）'], prof: M.dbl[30].row[0], c: NEW },
     { t: ['A4　双层 · 缝 0.24', '（338 节）'], prof: M.dbl[60].row[0], c: NEW },
@@ -317,7 +317,7 @@ function sheetSections() {
     }
     notes[i].forEach((s, j) => g.txt(x0, v.Y(H0) + 22 + j * 15, s, 11, j ? MUTE : (p.c === INK ? INK : NEW)));
   });
-  g.txt(40, yA - H0 * kA + 82, '挑出：A1–A4 三档都等于现行方台（面 0.23 · 边 0.26 · 角 0.36 m，加上挂带线离立杆 0.12 m）。键全锁；成形途中最大自交环 ≤ 5 节；两头的配平垫全程贴芯（离芯 0 m）。', 11, MUTE);
+  g.txt(40, yA - H0 * kA + 82, '挑出：A1–A4 三档都等于方台（面 0.23 · 边 0.26 · 角 0.36 m，加上挂带线离立杆 0.12 m）。键全锁；成形途中最大自交环 ≤ 5 节；两头的配平垫全程贴芯（离芯 0 m）。', 11, MUTE);
   g.txt(40, yA - H0 * kA + 98, '配平偏移只在上下两段垫之间挪布：成形途中第 300、700、1100、1499 步比过，截面形状差 ≤ 0.02 px，只有整体高低不同。所以同一条轨迹可以画在不同高度。', 11, MUTE);
 
   // ── B 行：一个单元里逐带组合（俯视）
@@ -375,7 +375,7 @@ function sheetRoom() {
   console.log(`\n房间里的示意排法：逐带偏移半幅 ${AMP.toFixed(3)} m（正对邻台那条带 ×cos9° = ${(AMP * SEAM).toFixed(3)}）`);
   console.log(`  续坡那台：两侧接缝 ${ramp.hi} / ${ramp.lo.toFixed(2)}，用了半幅 ${ramp.A.toFixed(3)}，钉住端离地 ${ramp.foot.toFixed(2)}`);
   console.log(`  有顶的那台（缝 0.24）：下板 ${stay.lowerBot.toFixed(3)}–${stay.lowerTop.toFixed(2)}，上板 ${stay.roofBot.toFixed(3)}–${stay.roofTop.toFixed(3)}，钉住端离地 ${stay.foot.toFixed(2)}；扶手 0.62`);
-  console.log(`  餐桌 6.5 cm 台面 0.74：台底 ${(0.74 - (M.thin[0].top - M.thin[0].bot)).toFixed(3)}，比餐椅座面 0.45 高 ${(0.74 - (M.thin[0].top - M.thin[0].bot) - 0.45).toFixed(3)}（现行 0.15 厚：${(0.74 - (M.cur[0].top - M.cur[0].bot) - 0.45).toFixed(3)}）`);
+  console.log(`  餐桌 6.5 cm 台面 0.74：台底 ${(0.74 - (M.thin[0].top - M.thin[0].bot)).toFixed(3)}，比餐椅座面 0.45 高 ${(0.74 - (M.thin[0].top - M.thin[0].bot) - 0.45).toFixed(3)}（原来 0.15 厚：${(0.74 - (M.cur[0].top - M.cur[0].bot) - 0.45).toFixed(3)}）`);
 
   // ── C1 平面
   const kP = 160, x0 = 60, y0 = 120; // 看 x∈[-3.32,0.95] y∈[-3.32,0.25]
@@ -462,7 +462,7 @@ function sheetRoom() {
       tag(g, v, (kind === 'shelf' ? -1 : 1) * (half + 0.02), dining.top, '0.74', kind ? NEW : INK, kind === 'shelf' ? -1 : 1, 0.04);
       return v;
     };
-    draw(860 + 1.12 * k, ['C3　餐桌 · 现行（台厚 0.15）', '台底比座面 0.45 只高 0.14，腿伸不进'], null);
+    draw(860 + 1.12 * k, ['C3　餐桌 · 原来（台厚 0.15）', '台底比座面 0.45 只高 0.14，腿伸不进'], null);
     draw(860 + 1.12 * k + 1.6 * k + 18, ['C4　餐桌 · 6.5 cm 台面', '台底比座面高 0.22，椅子能往桌下挪'], 'thin');
     draw(860 + 1.12 * k + 3.2 * k + 36, ['C5　餐桌下给猫一层', '远离座位的半圈成双层（缝 0.18）'], 'shelf');
   }
@@ -491,7 +491,7 @@ function sheetRoom() {
   const combos = [
     { t: '续坡（两台）', units: [[0.30 + AMP * SEAM, AMP, 0], [0.30 + 3 * AMP * SEAM, AMP, 0]], seams: true },
     { t: '三段坡', units: [[0.525, 0.106, 0], [0.735, 0.106, 0], [0.945, 0.106, 0]], seams: true },
-    { t: '台阶（现行高度）', units: [[0.49, 0, 0], [0.74, 0, 0], [1.05, 0, 0]], seams: true },
+    { t: '台阶（2-15 现在的三个高度）', units: [[0.42, 0, 0], [0.74, 0, 0], [1.05, 0, 0]], seams: true },
     { t: '升台', units: [[0.43, 0, 0, 'dbl'], [0.43 + AMP * SEAM, AMP, 0], [0.43 + 2 * AMP * SEAM, 0, 0]], seams: true },
     { t: '合腔', units: [[0.43, 0, 0, 'dbl'], [0.43, 0, 0, 'dbl']], seams: false },
     { t: '凹', units: [[0.70, AMP, Math.PI], [0.70, AMP, 0]], seams: true },
