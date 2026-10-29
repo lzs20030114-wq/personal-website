@@ -3,6 +3,7 @@
   "git": {
     "deploymentEnabled": {
       "claude/gracious-babbage-tzimfe": false,
+      "claude/relaxed-knuth-7thlnh": false,
       "claude/youthful-euler-p0zb02": false,
       "claude/tender-franklin-s4wh8a": false,
       "claude/bold-shannon-nbaubo": false,
