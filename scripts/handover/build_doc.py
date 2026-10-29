@@ -10,7 +10,7 @@ figDir 里要有 make_figures.py 的 PNG 与 figures.json，以及 ring-phases.j
   <!--FIG name-->      渲染图 + 编号气泡 + 图例（气泡位置按图像轮廓自动外推）
   <!--RINGS-->         五环全开 / 折叠对照（矢量，数据来自站上同一份环解算）
   <!--RACK-->          齿条推拉内侧脚示意（S3）
-  <!--GEARTABLE-->     齿数 → 齿条行程 → 与内侧脚全行程之比
+  <!--GEARTABLE-->     齿数 → 齿条行程
   <!--RINGTABLE-->     五环参数表
 """
 import html, json, math, re, sys
@@ -41,7 +41,7 @@ CALLOUTS = {
         ('motor', '主电机 NEMA17'),
         ('bracket', '主电机支架'),
         ('chassis', '机身底盘（左右两副梯形支架）'),
-        ('cage', '笼架（顶部两根横梁与它连成一体）'),
+        ('cage', '笼架（含顶部两根横梁）'),
         ('turntable', '偏航转台 HDB60XZ45B'),
         ('hdb_motor', '转台自带的 42 步进电机'),
         ('base_foot', 'X 形底座'),
@@ -54,7 +54,7 @@ CALLOUTS = {
     'explode': [
         ('ring', '五个呼吸环'),
         ('rail', '滑轨架 ×5'),
-        ('shaft', '中间轴（齿轮与齿条另见图纸 09）'),
+        ('shaft', '中间轴'),
         ('pulley', '60T 带轮'),
         ('chassis', '机身底盘（左右梯形支架）'),
         ('bracket', '主电机支架'),
@@ -70,34 +70,34 @@ CALLOUTS = {
         ('base', 'X 形底座'),
     ],
     'det_ring': [
-        ('plate', '角化件（V 形三点板），本环 10 件'),
-        ('apex', '拱顶销，在竖直导槽里上下滑'),
+        ('plate', '角化件'),
+        ('apex', '拱顶销'),
         ('guide', '竖直导槽'),
         ('strut', '斜撑'),
-        ('foot_out_r', '外侧脚（自由滑动）'),
-        ('foot_in_r', '内侧脚（齿条推拉这一只）'),
-        ('slot', '水平脚槽（槽宽 3.4–3.6）'),
-        ('hub', '中轴孔 ⌀6.15（D 形轴直接穿过）'),
-        ('tab', '安装耳（螺栓固定到底盘梳齿上）'),
+        ('foot_out_r', '外侧脚'),
+        ('foot_in_r', '内侧脚（接齿条）'),
+        ('slot', '水平脚槽'),
+        ('hub', '中轴孔'),
+        ('tab', '安装耳'),
     ],
     'det_drive': [
         ('shaft', '中间轴'),
-        ('pulley60', '60T 带轮，顶丝压在 D 面上'),
-        ('belt', 'GT2 闭口带，宽 6'),
-        ('pulley20', '20T 带轮（电机轴上）'),
-        ('motor', 'NEMA17 机身，装在支架框内'),
-        ('slot', '腰形槽 ×4（孔距 31）：电机左右移动调皮带'),
-        ('bracket', '电机支架：顶板挂到左梯形支架下面'),
+        ('pulley60', '60T 带轮'),
+        ('belt', '皮带'),
+        ('pulley20', '20T 带轮'),
+        ('motor', '主电机'),
+        ('slot', '腰形槽 ×4（调皮带松紧）'),
+        ('bracket', '电机支架'),
     ],
     'det_base': [
-        ('turntable', '转台箱体，落在底座中心座的托盘里'),
+        ('turntable', '转台箱体'),
         ('disk', '输出盘 ⌀60（5-M6）'),
-        ('hdb_motor', '转台电机，从托盘敞开的一侧伸出'),
-        ('seat', '底座中心座（托盘 + 两颗定位销）'),
-        ('cage_floor', '笼架底板，锁在输出盘上'),
+        ('hdb_motor', '转台电机'),
+        ('seat', '底座中心座（托盘）'),
+        ('cage_floor', '笼架底板'),
         ('cage_post', '笼架立柱 ×4'),
-        ('cage_top', '立柱顶托架'),
-        ('beam', '顶部横梁 ×2：与笼架连成一体，梯形支架搭在上面'),
+        ('cage_top', '顶托架'),
+        ('beam', '顶部横梁 ×2'),
         ('foot', '圆脚 ×4'),
     ],
     'det_arm': [
@@ -106,32 +106,32 @@ CALLOUTS = {
         ('m_D', '肌腱电机（下）'),
         ('v0', '第 1 节（最粗）'),
         ('v6', '第 6 节'),
-        ('tip', '梢端节：三根肌腱各绑一根柱'),
+        ('tip', '梢端节（绑线柱）'),
     ],
     'det_armbase2': [
-        ('m_L', '肌腱电机（左），推到底顶住止位柱'),
+        ('m_L', '肌腱电机（左）'),
         ('m_R', '肌腱电机（右）'),
-        ('m_D', '肌腱电机（下），出轴朝上'),
-        ('s_L', '绕线盘：电机轴上装 GT2 20T 带轮'),
-        ('eyelet', '根部腱孔 ×3（离轴 13.9）'),
-        ('tC', '线从绕线盘直接拉到同高的腱孔'),
+        ('m_D', '肌腱电机（下）'),
+        ('s_L', '绕线盘'),
+        ('eyelet', '根部腱孔 ×3'),
+        ('tC', '肌腱'),
         ('v0', '第 1 节'),
-        ('top_plate', '顶板：固定到右梯形支架下面'),
+        ('top_plate', '安装笼顶板'),
     ],
     'det_arm_cut': [
-        ('win0', '端板窗口（本腱一侧）'),
-        ('groove0', '中央导块对面一侧的槽口'),
+        ('win0', '端板窗口'),
+        ('groove0', '导块对面的槽口'),
         ('block', '中央导块'),
-        ('gap', '节与节之间：沿本腱一侧直走'),
+        ('gap', '节间沿本侧直走'),
         ('spine', '节间柔性脊柱杆'),
     ],
     'det_small': [
-        ([300, 150], '安装板（螺栓固定到底盘下面）'),
+        ([300, 150], '安装板'),
         ([460, 330], 'SG90 舵机'),
-        ([648, 250], '圆盘转轴：大节绕它前后甩'),
-        ([712, 420], '大节（叉形，约 49 长）'),
-        ([616, 480], '软杆 3.9 × 3.9 × 26（被动弯曲）'),
-        ([610, 770], '小块（被动，跟着甩）'),
+        ([648, 250], '圆盘转轴'),
+        ([712, 420], '大节'),
+        ([616, 480], '软杆'),
+        ([610, 770], '小块'),
     ],
 }
 EXTRA_ANCHOR = {}
@@ -304,12 +304,12 @@ def rings_svg():
     body = []
     for ri in range(5):
         cx = colw * (ri + 0.5)
-        body.append(f'<text class="rlab" x="{cx:.0f}" y="22">{SHORT[ri]} · {RINGS[ri][3:].replace("x", " × ")}</text>')
+        body.append(f'<text class="rlab" x="{cx:.0f}" y="22">{SHORT[ri]}</text>')
         body.append(ring_draw(ri, '0', cx, 175, s, 'open'))
         body.append(ring_draw(ri, '180', cx, 345, s, 'fold'))
         ft = foot_travel(ri)
         body.append(f'<text class="vlab s" x="{cx:.0f}" y="370" text-anchor="middle">内侧脚行程 {ft["inner_tr"]:.1f}</text>')
-    body.append('<text class="vlab s" x="8" y="198">全开（中轴 0°）· 数字 = 拱顶离中轴高度</text>')
+    body.append('<text class="vlab s" x="8" y="198">全开 · 数字 = 拱顶离中轴高度</text>')
     body.append('<text class="vlab s" x="8" y="400">折叠</text>')
     return (f'<svg class="vec rings" viewBox="0 0 {W} {H}" role="img" aria-label="五个呼吸环全开与折叠对照">'
             + '\n'.join(body) + '</svg>')
@@ -406,13 +406,12 @@ def plate_groups_svg():
             yy = my + dy + 34
     # 右下空格：图例
     lx, ly = 2 * PW + 24, PH_ + 60
-    body.append(f'<text class="vlab" x="{lx}" y="{ly}" font-weight="700">怎么读</text>')
+    body.append(f'<text class="vlab" x="{lx}" y="{ly}" font-weight="700">图例</text>')
     for i, ang in enumerate((140, 150, 160)):
         fill, ink = ANG_STYLE[ang]
         body.append(f'<rect x="{lx}" y="{ly + 20 + i * 28}" width="26" height="15" fill="{fill}" stroke="{ink}"/>'
                     f'<text class="vlab s" x="{lx + 36}" y="{ly + 32 + i * 28}">夹角 {ang}°</text>')
-    for i, t in enumerate(('上：全开位，板上数字 = 图块号', '下：本环用到的图块，同一比例（2.3 px/mm）',
-                           '大号数字 = 图块号，与 T-0615-2 清单同号', '×n = 本环用量；臂长都是中间销到端销')):
+    for i, t in enumerate(('板上数字 = 图块号', '×n = 本环件数')):
         body.append(f'<text class="vlab s" x="{lx}" y="{ly + 128 + i * 24}">{t}</text>')
     H = 2 * PH_
     return (f'<svg class="vec plates" viewBox="0 0 {W} {H}" role="img" aria-label="角化件分组：五个环各用哪几号图块">'
@@ -493,7 +492,6 @@ def rack_svg():
         (to((-xi - 4, -14)), '左内侧脚', 'end'),
         (to((60, r + 22)), '上齿条 → 接右内侧脚', 'start'),
         (to((-70, -r - 12)), '下齿条 → 接左内侧脚', 'end'),
-        ((W / 2, 26), f'中轴转 {SWING:.0f}° ⇒ 每根齿条走 {tr:.1f} mm；这个环内侧脚的全行程是 {ft["inner_tr"]:.1f} mm', 'middle'),
     ]
     for (x, y), t, anc in labels:
         out.append(f'<text class="vlab" x="{x:.1f}" y="{y:.1f}" text-anchor="{anc}">{E(t)}</text>')
@@ -506,14 +504,10 @@ def rack_svg():
 def gear_table():
     rows = []
     for ri in range(5):
-        ft = foot_travel(ri)
         tr = math.pi * TEETH[ri] * SWING / 360
-        rows.append(f'<tr><td>{SHORT[ri]}</td><td class="n">{TEETH[ri]}</td><td class="n">{TEETH[ri]}</td>'
-                    f'<td class="n">{tr:.1f}</td><td class="n">{ft["inner_tr"]:.1f}</td>'
-                    f'<td class="n">{tr / ft["inner_tr"] * 100:.0f}%</td><td class="n">{ft["outer_tr"]:.1f}</td></tr>')
-    return ('<div class="tw"><table class="data"><thead><tr><th>环</th><th>齿数 z</th><th>节圆 ⌀（m=1）</th>'
-            '<th>齿条行程（中轴转 336°）</th><th>内侧脚全行程</th><th>齿条 / 内侧脚</th><th>外侧脚行程（自由滑）</th>'
-            '</tr></thead><tbody>' + ''.join(rows) + '</tbody></table></div>')
+        rows.append(f'<tr><td>{SHORT[ri]}</td><td class="n">{TEETH[ri]}</td><td class="n">{tr:.1f}</td></tr>')
+    return ('<div class="tw"><table class="data"><thead><tr><th>环</th><th class="n">齿数 z（m=1）</th>'
+            '<th class="n">齿条行程</th></tr></thead><tbody>' + ''.join(rows) + '</tbody></table></div>')
 
 
 def ring_table():
@@ -524,20 +518,14 @@ def ring_table():
         top = TOPO[name]
         o, f = ph['phases']['0'], ph['phases']['180']
         used = sorted({i for t in top['tris'] for i in t})
-        ft = foot_travel(ri)
-        hinges = sum(1 for i in used if sum(i in t for t in top['tris']) == 2)
         span_o = max(o[i][0] for i in used) * 2
         span_f = max(f[i][0] for i in used) * 2
         ap_o, ap_f = o[top['apex']][1], f[top['apex']][1]
-        base, sc = name[3:].split('x')
         rows.append(
-            f'<tr><td>{SHORT[ri]}</td><td>{base} × {sc}</td><td class="n">{(-170 + 85 * ri):+d}</td>'
-            f'<td class="n">{len(top["tris"])}</td><td class="n">{hinges}</td><td class="n">4</td>'
-            f'<td class="n">{span_o:.0f} / {span_f:.0f}</td><td class="n">{ap_o:.1f} / {ap_f:.1f}</td>'
-            f'<td class="n">{ft["inner_tr"]:.1f}</td><td class="n">{ft["outer_tr"]:.1f}</td></tr>')
-    return ('<div class="tw"><table class="data"><thead><tr><th>环</th><th>基型 × 比例</th><th>站位 x</th>'
-            '<th>角化件</th><th>铰点</th><th>脚</th><th>全宽 开/合</th><th>拱顶高 开/合</th>'
-            '<th>内侧脚行程</th><th>外侧脚行程</th></tr></thead><tbody>'
+            f'<tr><td>{SHORT[ri]}</td><td class="n">{len(top["tris"])}</td>'
+            f'<td class="n">{span_o:.0f} / {span_f:.0f}</td><td class="n">{ap_o:.0f} / {ap_f:.0f}</td></tr>')
+    return ('<div class="tw"><table class="data"><thead><tr><th>环</th><th class="n">角化件</th>'
+            '<th class="n">全宽 开 / 合</th><th class="n">拱顶高 开 / 合</th></tr></thead><tbody>'
             + ''.join(rows) + '</tbody></table></div>')
 
 
@@ -588,10 +576,10 @@ def tendon_end_svg():
     # 标注（只标腱 A），文字统一排在右侧
     wa, gb = P(rw + 1.8, 90), P(rg, 270)
     lab = [
-        (wa, 70, '腱 A 进出端板的窗口：90°'),
-        ((cx, cy), 175, '轴线：三根腱在节内都从这里越过'),
-        (P(rg * 0.6, 330), 245, '中央导块（六边形，三条边上开槽）'),
-        (gb, 315, '腱 A 压进的槽口：270°，在轴线另一侧'),
+        (wa, 70, '腱 A 的端板窗口：90°'),
+        ((cx, cy), 175, '轴线'),
+        (P(rg * 0.6, 330), 245, '中央导块'),
+        (gb, 315, '腱 A 压进的槽口：270°'),
         (P(12, 291), 385, '立柱 ×6，两根一组'),
     ]
     LX = 430
@@ -602,7 +590,7 @@ def tendon_end_svg():
     leg = ''.join(f'<line x1="{20 + i * 120}" y1="430" x2="{48 + i * 120}" y2="430" stroke="{c}" stroke-width="3"/>'
                   f'<text class="vlab s" x="{54 + i * 120}" y="435">腱 {k}</text>' for i, (k, (c, _)) in enumerate(cols.items()))
     return (f'<svg class="vec" viewBox="0 0 720 450" role="img" aria-label="第 1 节端视：窗口与槽口的方位">'
-            + ''.join(g) + leg + '<text class="vlab s" x="20" y="24">第 1 节端视，从梢端往根部看（按 815 实测尺寸）</text></svg>')
+            + ''.join(g) + leg + '<text class="vlab s" x="20" y="24">第 1 节端视（从梢端往根部看）</text></svg>')
 
 
 def tendon_side_svg():
@@ -646,16 +634,16 @@ def tendon_side_svg():
     pts = [(X(-14), Y(13.9))] + pts
     g.append(f'<polyline points="{_poly(pts)}" fill="none" stroke="#B02C20" stroke-width="2.4" stroke-linejoin="round"/>')
     lab = [
-        ((X(-3), Y(13.9)), (X(-3) + 10, 34), '根部腱孔，往后接绕线盘', 'start'),
-        ((pts[3][0], pts[3][1]), (pts[3][0] + 30, 236), '每一节：越过轴线，压进中央导块对面的槽口', 'start'),
-        ((X(401.7), Y(6.2)), (X(401.7) - 10, 34), '梢端：绑在本腱的绑线柱上', 'end'),
+        ((X(-3), Y(13.9)), (X(-3) + 10, 34), '根部腱孔 → 绕线盘', 'start'),
+        ((pts[3][0], pts[3][1]), (pts[3][0] + 30, 236), '每节越过轴线，压进导块对面的槽口', 'start'),
+        ((X(401.7), Y(6.2)), (X(401.7) - 10, 34), '梢端绑线柱', 'end'),
     ]
     for (ax, ay), (tx, ty), t, an in lab:
         g.append(f'<line x1="{ax:.1f}" y1="{ay:.1f}" x2="{tx:.1f}" y2="{ty - (5 if ty > ay else -4):.1f}" stroke="#1D5A8E" stroke-width="1"/>'
                  f'<circle cx="{ax:.1f}" cy="{ay:.1f}" r="2.6" fill="#1D5A8E"/>'
                  f'<text class="vlab" x="{tx:.1f}" y="{ty + (8 if ty > ay else 0):.1f}" text-anchor="{an}">{E(t)}</text>')
     return (f'<svg class="vec" viewBox="0 0 {W} {H + 10}" role="img" aria-label="腱 A 的纵剖面，整条触手">' + ''.join(g)
-            + f'<text class="vlab s" x="{W - 10}" y="{H + 4}" text-anchor="end">只画腱 A；B、C 同样走法，转 120°。竖向放大 2 倍，左为根部。</text></svg>')
+            + f'<text class="vlab s" x="{W - 10}" y="{H + 4}" text-anchor="end">腱 A 纵剖面，B、C 同样走法。竖向放大 2 倍，左为根部。</text></svg>')
 
 
 # ---------------------------------------------------------------- 拼装
