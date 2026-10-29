@@ -2,6 +2,7 @@
   "framework": "nextjs",
   "git": {
     "deploymentEnabled": {
+      "claude/lab2-15-unit-morphology-oehn57": false,
       "claude/gracious-babbage-tzimfe": false,
       "claude/youthful-euler-p0zb02": false,
       "claude/tender-franklin-s4wh8a": false,
