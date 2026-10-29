@@ -12,6 +12,7 @@ import {
   ConceptGrid,
   FigPair,
   FigSlot,
+  Fold,
   IntentNote,
   InteractiveSlot,
   ProcessAside,
@@ -84,6 +85,7 @@ const mdxComponents = (lang: SlotLang) => ({
   Todo: (p: ComponentProps<typeof Todo>) => <Todo {...p} lang={lang} />,
   IntentNote: (p: ComponentProps<typeof IntentNote>) => <IntentNote {...p} lang={lang} />,
   ProcessAside: (p: ComponentProps<typeof ProcessAside>) => <ProcessAside {...p} lang={lang} />,
+  Fold: (p: ComponentProps<typeof Fold>) => <Fold {...p} lang={lang} />,
   /**
    * 正文里的链接（2026-09-13）：指回 /archive 某一条日志的引用另给一个类，
    * 读作旁注不读作正文（.cs-cite）。锚点沿用 log-<日期>-<序号> 形状，由持久 id 固定到条目——不能用 LogList 内部那个带全池下标的 id，那个一发新日志就会指到别的条目上。

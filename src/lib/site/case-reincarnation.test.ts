@@ -90,7 +90,10 @@ describe('案例页构件数据：双语齐全', () => {
     expect(row('Response latency').cells.en).toEqual(['0.2 s', '2.5 s', '0.3 s', '0.3–3 s']);
     expect(row('Turns toward a person').cells.zh).toEqual((['A', 'B', 'C', 'D'] as const).map((k) => `${Math.round(ENGINE_PERSONAS[k].toward * 100)}%`));
     expect(row('Startle threshold').cells.en).toEqual(['0.8', '0.95', '0.25', '0.2–0.9']);
-    expect(row('How it dies').cells.zh[1]).toBe(`${ENGINE_PERSONAS.B.death.zh}（${ENGINE_PERSONAS.B.death.dur} 秒）`);
+    // 死法的时长跟引擎走；中文说法是案例页另写的、只描述动作（2026-10-29 第二轮），不带「精力」这类拟人的词
+    expect(row('How it dies').cells.zh[1]).toBe(`逐渐减慢直到停止（${ENGINE_PERSONAS.B.death.dur} 秒）`);
+    expect(row('How it dies').cells.zh[3]).toBe(`${ENGINE_PERSONAS.D.death.zh}（${ENGINE_PERSONAS.D.death.dur} 秒）`);
+    for (const c of row('How it dies').cells.zh) expect(c).not.toMatch(/精力|醒/);
     // 示意台的延迟 / 强度也取自引擎 ④ ⑤
     expect(PERSONAS.slice(0, 3).map((p) => p.lat)).toEqual((['A', 'B', 'C'] as const).map((k) => ENGINE_PERSONAS[k].latency[0]));
   });
@@ -120,9 +123,9 @@ describe('案例页构件数据：双语齐全', () => {
     expect(SYS_COLS[3].items).toHaveLength(6);
   });
 
-  it('怎么死：取引擎的死亡方式（不带时长）', () => {
+  it('怎么死：按引擎的死亡方式取案例页那份只描述动作的说法（不带时长）', () => {
     expect(deathLabel(0).en).toBe('winds down, stops facing the person');
-    expect(deathLabel(2).zh).toBe('背过身慢慢停下');
+    expect(deathLabel(2).zh).toBe('转向背离人的方向后逐渐停止');
     expect(deathLabel(3).zh).toBe('节律紊乱后渐弱');
   });
 

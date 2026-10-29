@@ -95,6 +95,16 @@ const rowOf = (zhK: string, enK: string, cell: (k: PersonaKey) => Bi): PersonaRo
 };
 const unit = (zhU: string, enU: string, r: (k: PersonaKey) => readonly [number, number], f?: (v: number) => string) => (k: PersonaKey) =>
   L(`${span(r(k), f)}${zhU}`, `${span(r(k), f)}${enU}`);
+/**
+ * 死法的说法（2026-10-29 第二轮，作者「不要写特别人格化的东西」）：中文不直接用引擎的 death.zh
+ * （「精力渐尽」之类），案例页另写一份只描述动作的；引擎与 Lab 1-6 不动。
+ */
+const DEATH_ZH: Record<string, string> = {
+  turn: '动作逐渐减弱，最后朝向人停下',
+  quiet: '逐渐减慢直到停止',
+  withdraw: '转向背离人的方向后逐渐停止',
+  arrhythmia: '节律紊乱后渐弱',
+};
 const DEATH_EN: Record<string, string> = {
   turn: 'winds down, stops facing the person',
   quiet: 'slows quietly to a stop',
@@ -118,7 +128,7 @@ export const PERSONA_ROWS: readonly PersonaRow[] = [
   ),
   rowOf('惊吓阈值', 'Startle threshold', (k) => L(span(BR(k).startle), span(BR(k).startle))),
   rowOf('死亡方式', 'How it dies', (k) =>
-    L(`${BR(k).death.zh}（${BR(k).death.dur} 秒）`, `${DEATH_EN[BR(k).death.kind]} (${BR(k).death.dur} s)`),
+    L(`${DEATH_ZH[BR(k).death.kind]}（${BR(k).death.dur} 秒）`, `${DEATH_EN[BR(k).death.kind]} (${BR(k).death.dur} s)`),
   ),
   rowOf('对人的趋避', 'Toward or away from people', (k) => {
     const st = BR(k).stance;
@@ -131,7 +141,7 @@ export const PERSONA_ROWS: readonly PersonaRow[] = [
 export const DEATH_ROW = PERSONA_ROWS.findIndex((r) => r.k.en === 'How it dies');
 
 /** 衰老曲线上方那一行「怎么死」：取第 i 套人格那一列的死亡方式（不带时长）。 */
-export const deathLabel = (i: number): Bi => L(BR(KEYS[i]).death.zh, DEATH_EN[BR(KEYS[i]).death.kind]);
+export const deathLabel = (i: number): Bi => L(DEATH_ZH[BR(KEYS[i]).death.kind], DEATH_EN[BR(KEYS[i]).death.kind]);
 
 /* ── 生命周期状态图（N05）────────────────────────────────────────────────── */
 export interface LifeSeg {
@@ -368,7 +378,7 @@ export const LAYERS: readonly { name: Bi; x: Bi; absent?: boolean }[] = [
   {
     name: L('内部状态', 'Internal state'),
     x: L(
-      '刺激让唤醒升高，呼吸随之变快变浅，十几秒后回落。四套人格的差异放在这一层。',
+      '刺激让唤醒升高，呼吸随之变快变浅，十几秒后回落。四种性格的差异放在这一层。',
       'Stimuli raise its arousal, so breathing speeds up and grows shallow, then settles within about fifteen seconds. The personalities differ here.',
     ),
   },
@@ -489,7 +499,7 @@ export const SYS_COLS: readonly { h: Bi; n: string; items: readonly SysItem[] }[
     ],
   },
   {
-    h: L('人格参数', 'Personality'),
+    h: L('性格参数', 'Personality'),
     n: '13',
     items: [
       { x: L('呼吸周期 · 幅度', 'Breath period · depth') },
@@ -551,7 +561,7 @@ export const STATUS_ROWS: readonly {
     tone: 'green',
     tag: L('网页版完成', 'Web version done'),
     x: L(
-      '事件、人格、生命周期和执行器指令写成可测试的纯逻辑，在实验 1-6 里跑整机。人格的数值仍是提案。',
+      '事件、性格、生命周期和执行器指令写成可测试的纯逻辑，在实验 1-6 里跑整机。性格参数的数值仍是提案。',
       'Events, personalities, the life cycle and actuator commands are written as testable logic and drive the full machine in Lab 1-6. The personality values are still proposals.',
     ),
     cite: { date: '2026-10-07', anchor: 'log-2026-10-07-1' },
@@ -570,8 +580,8 @@ export const STATUS_ROWS: readonly {
     tone: 'green',
     tag: L('已定', 'Settled'),
     x: L(
-      '四世一场，33–37 分钟。主要生理指标是事件锁定的皮肤电反应（SCR），分五个时间窗。行为编码用 ELAN，事后做线索回忆访谈。死亡前后心率变异性的比较已取消，所需时间窗远长于一次死亡事件，样本量也不够。',
-      'Four lives per session, 33–37 minutes. The main physiological measure is event-locked skin conductance (SCR) across five time windows. Behaviour is coded in ELAN, and a cued-recall interview follows. The HRV comparison across deaths was dropped because it needs a much longer window than a death lasts and the sample is too small.',
+      '四世一场，33–37 分钟。测量项目按 5–8 人的样本裁定，皮肤电反应分五个时间窗分析。',
+      'Four lives per session, 33–37 minutes. The measures are cut to fit a sample of five to eight, and skin conductance is analysed in five time windows.',
     ),
     cite: { date: '2026-07-07', anchor: 'log-2026-07-07-2' },
   },
@@ -754,6 +764,8 @@ export const SPECS_VISIBLE = 8;
 export interface BlockUi {
   todo: string;
   process: string;
+  foldOpen: string;
+  foldClose: string;
   live: string;
   toLab: string;
   lifeTitle: string;
@@ -791,17 +803,19 @@ export const BLOCK_UI: Record<Lang, BlockUi> = {
   zh: {
     todo: '待补',
     process: '过程 · 参照',
+    foldOpen: '展开 ↓',
+    foldClose: '收起 ↑',
     live: '活件',
     toLab: '去实验室操作 ↗',
     lifeTitle: '生命周期状态图',
     lifeScale: '一世约 8–9 分钟 · 此处 1 秒 ≈ 1 分钟',
-    lifeNote: '四世一场，33–37 分钟。死亡一段按人格持续 1–2 分钟，衰老段长短前后浮动半分钟。人格顺序在被试间用拉丁方平衡，此处按 A → B → C → D 示意。',
+    lifeNote: '四世一场，33–37 分钟。死亡一段按性格持续 1–2 分钟，衰老段长短前后浮动半分钟。性格顺序在被试间用拉丁方平衡，此处按 A → B → C → D 示意。',
     pzKicker: '示意台 · 非实测',
     pzTitle: '同一次触摸，四种回应',
-    pzPick: '选择人格',
+    pzPick: '选择性格',
     touch: '轻触它',
     param: '参数',
-    pzNote: '呼吸、延迟与回应幅度都取自参数表（与实验 1-6 的行为引擎同一份）。这里只画呼吸曲线，不含唤醒、惊跳与转身。实拍对比（N06 · 两套人格的呼吸）待拍摄。',
+    pzNote: '呼吸、延迟与回应幅度都取自参数表（与实验 1-6 的行为引擎同一份）。这里只画呼吸曲线，不含唤醒、惊跳与转身。实拍对比（N06 · 两种性格的呼吸）待拍摄。',
     pzIdle: '等你碰它',
     pzRead: (p, d) => `呼吸周期 ${p} · 幅度 ${d}`,
     pzResp: (l, s) => `上次回应 · 延迟 ${l} s · 强度 ${s}`,
@@ -809,14 +823,14 @@ export const BLOCK_UI: Record<Lang, BlockUi> = {
     randomDepth: `${pct(D_DEPTH[0])}–${pct(D_DEPTH[1])}% 随机`,
     secUnit: ' 秒',
     layersNote: '设计中的死亡会让这五层行为同时停止。',
-    layersOff: '让它死去',
-    layersOn: '重新醒来',
+    layersOff: '五层同时停止',
+    layersOn: '恢复',
     agKicker: '衰老曲线 · 趋势示意',
     agLeft: '衰老开始',
     agRight: '空白 → 下一世',
-    agNote: '向下滚动，它会衰老。数值待作者提供，页面只画趋势。切换人格可看四种死亡方式。',
+    agNote: '向下滚动，它会衰老。数值待作者提供，页面只画趋势。切换性格可看四种死亡方式。',
     sysTitle: '系统逻辑',
-    sysSub: '传感 → 事件 → 人格参数 → 输出',
+    sysSub: '传感 → 事件 → 性格参数 → 输出',
     prKicker: '预测 · 写于 2026-04-03 · 尚无数据',
     prTitle: '四次死亡，困扰程度的预测',
     prAxis: '困扰 / 100',
@@ -827,6 +841,8 @@ export const BLOCK_UI: Record<Lang, BlockUi> = {
   en: {
     todo: 'To come',
     process: 'Process · references',
+    foldOpen: 'Show ↓',
+    foldClose: 'Hide ↑',
     live: 'live',
     toLab: 'Open in the lab ↗',
     lifeTitle: 'Life-cycle state diagram',
@@ -847,8 +863,8 @@ export const BLOCK_UI: Record<Lang, BlockUi> = {
     randomDepth: `random ${pct(D_DEPTH[0])}–${pct(D_DEPTH[1])}%`,
     secUnit: ' s',
     layersNote: 'At death, all five layers stop together.',
-    layersOff: 'Let it die',
-    layersOn: 'Wake it again',
+    layersOff: 'Stop all five',
+    layersOn: 'Restore',
     agKicker: 'Ageing curve · trend only',
     agLeft: 'ageing begins',
     agRight: 'blank → next life',

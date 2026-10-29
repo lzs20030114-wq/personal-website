@@ -204,6 +204,20 @@ body:has(.cs) .ld-header__in, .cs .ld-footer__in { max-width: 1240px; }
 .cs-aside__k { font: 500 11px var(--cs-mono); color: var(--cs-v); letter-spacing: 0; text-transform: none; }
 .cs-body .cs-aside p { max-width: none; margin: 0; font: 400 15px / 1.7 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: oklch(0.86 0.03 150); }
 .cs-body .cs-aside p.cs-aside__pend { font: 400 12.5px / 1.55 var(--cs-mono); color: oklch(0.83 0.12 85 / 0.9); }
+/* 折叠的制作记录（Fold）：一条发丝线 + 一行标签，展开后里面照正文的块排；里面的直接子块沿用正文的宽度规则 */
+.cs-fold { border-top: 1px solid oklch(0.95 0.032 120 / 0.16); border-bottom: 1px solid oklch(0.95 0.032 120 / 0.16); }
+.cs-fold__sum { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; padding: 16px 0; }
+.cs-fold__sum::-webkit-details-marker { display: none; }
+.cs-fold__k { font: 500 12.5px / 1.6 var(--cs-mono); color: var(--cs-body); letter-spacing: 0; text-transform: none; }
+.cs-fold__hint { font: 500 12px var(--cs-mono); color: var(--cs-g); }
+.cs-fold__sum:hover .cs-fold__hint { color: var(--cs-ink); }
+.cs-fold__sum:focus-visible { outline: 2px solid var(--cs-g); outline-offset: 4px; }
+.cs-fold__hint--close, .cs-fold[open] .cs-fold__hint--open { display: none; }
+.cs-fold[open] .cs-fold__hint--close { display: inline; }
+.cs-fold__body { display: flex; flex-direction: column; gap: 30px; padding: 8px 0 36px; }
+.cs-fold__body > * { margin: 0; min-width: 0; }
+.cs-fold__body > .cs-figure { width: 100%; max-width: 640px; margin: 8px 0; }
+.cs-fold__body > .cs-figure--wide { max-width: 100%; }
 
 /* 概念卡 */
 .cs-concepts { counter-reset: cs-card; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 1px; background: oklch(0.95 0.032 120 / 0.12); box-shadow: 0 0 0 1px oklch(0.95 0.032 120 / 0.12); }

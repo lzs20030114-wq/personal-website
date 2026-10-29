@@ -253,6 +253,26 @@ export function ProcessAside({
 }
 
 /**
+ * 折叠的制作记录（2026-10-29 第二轮，项目一案例页按「主旨在前、机构收短」重排）：
+ * 正文里不必一条条读完的过程细节（方案修改、结构计算、独立制作的约束……）收进这里，默认收起。
+ * 用原生 details / summary，没有脚本也能开合；展开 / 收起两句提示都在 DOM 里，CSS 按 [open] 换。
+ * 目录栏只认 `## ` 行，这里面不写 `##` / `###`。
+ */
+export function Fold({ summary, children, lang = 'en' }: { summary: string; children: ReactNode; lang?: SlotLang }) {
+  const ui = BLOCK_UI[lang];
+  return (
+    <details className="cs-fold">
+      <summary className="cs-fold__sum">
+        <span className="cs-fold__k">{summary}</span>
+        <span className="cs-fold__hint cs-fold__hint--open">{ui.foldOpen}</span>
+        <span className="cs-fold__hint cs-fold__hint--close">{ui.foldClose}</span>
+      </summary>
+      <div className="cs-fold__body">{children}</div>
+    </details>
+  );
+}
+
+/**
  * 概念卡（稿 concepts）：编号（CSS counter）｜大标题 = 当前语言那一侧的名字，副题 = 另一侧的名字（mono）｜正文。
  * 中英两个 MDX 各自写自己的 note，所以这里只管标题/副名的取用顺序。
  */

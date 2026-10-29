@@ -28,8 +28,8 @@ describe('extractChapterTitles', () => {
     });
   }
 
-  it('项目 01：十一章（01–11；2026-10-29 重构加了「行为引擎」一节），目录 00–11 十二项', () => {
+  it('项目 01：八章（2026-10-29 第二轮按主旨在前重排：研究问题 · 实体与外形 · 一场实验的经过 · 四种性格 · 研究方法与进展 · 身体的构造 · 反思 · 技术参数），目录 00–08 九项', () => {
     const w = getAllWork().find((e) => e.slug === 'reincarnation-machine')!;
-    expect(extractChapterTitles(w.body)).toHaveLength(11);
+    expect(extractChapterTitles(w.body)).toHaveLength(8);
   });
 });

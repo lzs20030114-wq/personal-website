@@ -4,7 +4,7 @@ slug: reincarnation-machine
 date: 2026-07
 selected: true
 order: 1
-summary: 'A desk-sized machine that lives, dies, and wakes with a different personality. Its body stays the same while its responses change.'
+summary: 'A desk-sized machine that is born, ages and dies, then begins a new life with a different personality. Its body never changes.'
 role:
   - Concept & research design
   - Mechanism design & fabrication
@@ -29,7 +29,7 @@ progress:
 # 中文侧元数据（案例页有中英切换，published 条目必填）；中文正文见同目录 index.zh.mdx
 zh:
   title: 轮回机器
-  summary: 一台会经历出生、衰老和死亡的桌面机器。再次醒来时身体没有变，性格和回应换了一套。
+  summary: 一台会经历出生、衰老和死亡的桌面机器。进入下一世时身体没有变，性格和回应换了一套。
   role:
     - 概念与研究设计
     - 机构设计与制造
@@ -55,9 +55,10 @@ status: published
 
 {/* 中英正文各自成文。2026-09-13 起的章节与 N01–N20 图目录；2026-10-01 换「10 Case 01」稿（MAPPING §45）；
     2026-10-23 改学术体（MAPPING §53）。
-    2026-10-29 按作者要求重构（MAPPING §79）：正文跟上 8–10 月的工作，新增「The behaviour engine」一节，
-    人格表与示意台改读引擎现行的四种人格，研究问题的英文这次写出（此前是待补框），
+    2026-10-29 按作者要求重构（MAPPING §79）：正文跟上 8–10 月的工作，研究问题的英文这次写出（此前是待补框），
     结构活件只留 1-2、1-1、1-3 三台，其余改成分镜（FrameStrip）与 N07 五环参数族线稿（RingFamily）。
+    2026-10-29 第二轮（MAPPING §79.1）：主旨与核心在前、构造一节收短，过程细节收进节末默认收起的「Build notes」（<Fold>）；
+    temperament 一律改 personality，不写拟人化的说法（wakes, fear, energy, sees），删去「死亡时刻开场抽定」那句。
     作者授权站方改写，按去 AI 味规则写；事实与数字出自日志、行为引擎 spec 与交接图册。
     插槽编号、顺序与 h2 数量必须和中文侧一致。 */}
 
@@ -76,7 +77,7 @@ Knowing it is a program and missing it can coexist.
 
 </Accent>
 
-This project gives that experience a physical form. The machine can be touched, its body stays the same, and its behaviour changes from one life to the next.
+This project gives that experience a physical form. The machine can be touched, its form, materials and mechanism stay the same throughout, and only its personality parameters change from one life to the next.
 
 <FigSlot id="N02" caption="Mourning posts from the February 2026 retirement" desc="The starting event · screenshots to come from the author. If the originals cannot be recovered, the figure is dropped" status="待定" ratio="16/7" size="wide" />
 
@@ -84,17 +85,17 @@ This project gives that experience a physical form. The machine can be touched, 
 
 <ResearchQuestion>
 
-When the body, form and mechanism stay exactly the same and only the temperament of the behaviour changes, do people treat each life as a different individual, and does each loss feel different? [→ log 2026-03-20](/archive#log-2026-03-20-1)
+When the body, form and mechanism stay exactly the same and only the personality changes, do people treat each life as a different individual, and does each loss feel different? [→ log 2026-03-20](/archive#log-2026-03-20-1)
 
 </ResearchQuestion>
 
-Death and rebirth are the method here. When a life ends, the same body wakes with a different temperament and the participant has to get to know it again, so loss happens four times in one session and the feelings that different temperaments produce can be compared within the same person. The four personalities are made deliberately unlike each other. The project follows Research through Design (Zimmerman et al. 2007): the question is first built as an interactive machine, then tested in a study. [→ log 2026-09-10](/archive#log-2026-09-10-1)
+Death and rebirth are the method here. When a life ends, the same body begins the next one with a different personality, so loss happens four times in one session and the feelings that different personalities produce can be compared within the same person. Form, materials and mechanism stay the same across the four lives as the constants of the study, and the personality parameters are the only thing that changes, so differences in how a participant responds to each life can be traced to behaviour. The four personalities are made deliberately unlike each other. The project follows Research through Design (Zimmerman et al. 2007). The question is first built as an interactive machine, then tested in a study. [→ log 2026-09-10](/archive#log-2026-09-10-1)
 
 <ConceptGrid>
   <ConceptCard
     zh="同体异魂"
     en="Same body, different souls"
-    note="The shell and mechanism stay the same in every life. A different personality changes how the machine responds, so the participant has to get to know a familiar body again."
+    note="The shell and mechanism stay the same in every life, and a different personality changes how the machine responds. The participant faces the same body but has to learn its responses again."
   />
   <ConceptCard
     zh="死亡即安静"
@@ -110,19 +111,17 @@ Death and rebirth are the method here. When a life ends, the same body wakes wit
 
 <ProcessAside pend="To confirm: which references the author has read and will cite. Bibliography to come.">
 
-People's attachments to machines are the starting point for this project. The references cover different parts of the question: Heider & Simmel (1944) on attributing life to moving geometric shapes, Kate Darling's Pleo studies on reluctance to hurt an interactive toy robot, and AIBO funerals in Japan on mourning a robot. Tamagotchi includes death and reset on a screen. Sun Yuan & Peng Yu's _Can't Help Myself_ (2016) gives the machine a physical presence, while Ian Cheng's _BOB_ has an evolving personality on screen. This project brings a physical body, changing personalities, death and rebirth into one device.
+People's attachments to machines are the starting point for this project. The references each cover a different part of the question, Heider & Simmel (1944) on attributing life to moving geometric shapes, Kate Darling's Pleo studies on reluctance to hurt an interactive toy robot, and AIBO funerals in Japan on mourning a robot. Tamagotchi includes death and reset on a screen. Sun Yuan & Peng Yu's _Can't Help Myself_ (2016) gives the machine a physical presence, while Ian Cheng's _BOB_ has an evolving personality on screen. This project brings a physical body, changing personalities, death and rebirth into one device.
 
 </ProcessAside>
 
-## The case for a physical body
+## Body and form
 
-A physical body lets participants confirm with their hands that the same body has woken, even though its responses have changed. Holding it is also sensed by the machine and becomes one of the inputs it responds to. The size stays at desk scale, and printing and assembly can be done at home. In the August assembly model the body measures 387 × 387 mm without the arm, about 780 mm long with it, and 382 mm high. [→ log 2026-04-03](/archive#log-2026-04-03-1)
+A physical body lets participants confirm with their hands that the body in front of them is the same one, even though its responses have changed. Holding it is also sensed by the machine and becomes one of the inputs it responds to. The size stays at desk scale, and printing and assembly can be done at home. In the August assembly model the body measures 387 × 387 mm without the arm, about 780 mm long with it, and 382 mm high. [→ log 2026-04-03](/archive#log-2026-04-03-1)
 
 <FigSlot id="N03" caption="Held in two hands" desc="Holding it is also one of its sensing channels" status="待拍摄" ratio="4/3" />
 
-## A form that imitates no animal
-
-The form is a low bell: five rings set along the body axis under a fabric skin, with no face and no animal model behind it. Participants are meant to know it through its breathing and its responses to touch, with as little help as possible from familiar animal shapes. On 9 September the planned eye features were dropped as well, so nothing on the body reads as an eye and whom it faces is shown only by the whole machine turning. [→ log 2026-09-09](/archive#log-2026-09-09-1)
+The form is a low bell of five rings set along the body axis under a fabric skin, with no face and no animal model behind it. A participant's attention then falls on the breathing and the responses to touch, with as little help as possible from familiar animal shapes, and a form that stays the same across four lives does not set up any particular animal-like expectation. On 9 September the planned eye features were dropped as well, so nothing on the body reads as an eye and orientation is shown only by the whole machine turning. [→ log 2026-09-09](/archive#log-2026-09-09-1)
 
 <PartGrid />
 
@@ -130,45 +129,82 @@ On 1 June the three tentacles became one gripping arm and two feelers. The arm m
 
 <FrameStrip id="N04" set="form-views" lang="en" />
 
-## Personality parameters and the life cycle
+## The course of a session
 
-One life lasts eight to nine minutes: birth 1 min, growth 4 min, ageing about 1.5 min (half a minute either way), death lasting 1 to 2 min depending on the personality, then 45 seconds of stillness before it wakes again. A session runs four lives, 33 to 37 minutes. Each awakening brings a new set of parameters for how fast and deep it breathes, how quickly and strongly it responds, how often it moves on its own, and whether it turns towards a person. The same stroke gets a different response in a different life.
+A session runs four lives, 33 to 37 minutes, during which the participant can touch it, hold it and talk to it. One life lasts eight to nine minutes. Birth takes 1 minute, growth 4 minutes, ageing about 1.5 minutes (half a minute either way), and dying 1 to 2 minutes depending on the personality, followed by 45 seconds of stillness before the next life begins. The four personalities are fixed in advance, and a Latin square balances the order in which participants meet them.
 
 <LifeCycle id="N05" />
 
-The four personalities are fixed in advance, and a Latin square balances the order in which participants meet them. The first parameter table, written on 3 April, had four types: vital, withdrawn, curious and unstable. [→ log 2026-04-03](/archive#log-2026-04-03-1) Once the behaviour engine ran in October, measurement showed that the old withdrawn type carried two traits at once, slowness and fear of people, and with someone standing close it still half-faced them on average, so the fear did not show. The types were redivided into warm, calm, avoidant and random. The calm one is only slow and steady, fear of people moves to the avoidant one, and the random one redraws each range with a bias towards both ends, so it reads as fast one moment and slow the next. A response the participant learned in one life may be gone in the next. [→ log 2026-10-14](/archive#log-2026-10-14-238230853288184)
+If participants read the stop as "it broke", their response would say little about losing a machine they had grown attached to. To make the lead-up gradual, ageing changes several parameters together. Breathing becomes shallower, responses slow and the rhythm grows irregular. The way it dies differs by personality. The warm type's movements weaken until it stops facing the direction where it last detected a person, the calm type slows until it stops, the avoidant type turns away from the person and then gradually stops, and the random type's rhythm falls apart and fades. After that there is no farewell gesture and no response, only 45 seconds of stillness.
+
+<AgeingCurve id="N17" />
+
+How each parameter changes during ageing is still a placeholder linear ramp in the engine, so the curve shows the trend only, and the values will be set when the ageing curve is discussed. The fourth personality originally died by twitching and then stopping. It was changed to a rhythm that becomes irregular and fades, because twitching could suggest a mechanical fault. The pilot has to check how participants interpret the change. [→ log 2026-03-20](/archive#log-2026-03-20-1) [→ log 2026-07-07](/archive#log-2026-07-07-2)
+
+<Todo>
+
+When the next life begins, can the participant see it happen? The record only says 45 seconds of blank.
+
+</Todo>
+
+## Four personalities
+
+Each life brings a new set of personality parameters for how fast and deep it breathes, how quickly and strongly it responds, how often it moves on its own, and whether it turns towards a person. The same stroke gets a different response in a different life. The current four are warm, calm, avoidant and random. The warm type moves fast and faces people most of the time. The calm type moves slowly and steadily, whether or not anyone is beside it. The avoidant type responds quickly, faces away from people most of the time, and closes up more the nearer a person comes. The random type redraws each parameter range with a bias towards both ends, so it is fast one moment and slow the next, and a response the participant learned in one life may be gone in the next.
 
 <PersonaBench id="N06" />
 
-The four personalities breathe much alike at rest, a change made on 20 October. Breathing is treated as a physiological signal that stays between 13 and 16 breaths a minute at rest and changes with interaction: a touch raises arousal, breathing becomes faster and shallower, and it settles again within some fifteen seconds. After the same three touches the warm type rises to about 25 breaths a minute and the calm type to about 15. [→ log 2026-10-20](/archive#log-2026-10-20-1882092295423488)
+This division dates from 14 October. The first version of 3 April had four types, vital, withdrawn, curious and unstable. Once the behaviour engine ran, measurement showed that the old withdrawn type carried two tendencies at once, slowness and avoiding people, and with someone standing close it still half-faced them on average, so the avoidance did not show. Avoidance was therefore made a type of its own. [→ log 2026-04-03](/archive#log-2026-04-03-1) [→ log 2026-10-14](/archive#log-2026-10-14-238230853288184)
+
+Breathing differs little between the four personalities. It is treated as a physiological signal that stays between 13 and 16 breaths a minute at rest. A touch raises arousal, breathing becomes faster and shallower, and it settles again within some fifteen seconds. After the same three touches the warm type rises to about 25 breaths a minute and the calm type to about 15. [→ log 2026-10-20](/archive#log-2026-10-20-1882092295423488)
 
 The behaviour is designed in five layers. The intended reading is that participants interpret the changes as moods, which the study has yet to test. The relationship layer is not built into the engine, because a life of eight or nine minutes is too short for familiarity to form.
 
 <LayersToggle />
 
-<Todo>
+The behaviour engine turns the personality parameters into movements, and the arm shows the differences most clearly. A startle is a reflex. 0.1 s after a strong stimulus the arm flexes quickly away from it and then holds still, identically in all four personalities, and the recovery that follows differs by type. Other responses first pause, then make one movement suited to the kind of stimulus. Movements made when nobody touches it are small and slow. [→ log 2026-10-08](/archive#log-2026-10-08-1)
 
-At the moment of rebirth, can the participant see it happen? The record only says 45 seconds of blank.
+<FrameStrip id="N24" set="startle" lang="en" />
 
-</Todo>
+On the web bench the mouse pointer stands for a person's hand, and the four personalities treat it differently. Once the hand is within 120° either side of where the body faces and one reaction time has passed, the machine reaches towards it, keeps away from it or turns elsewhere, according to its personality. The warm type turns to bring the arm in line with the hand, and the arm follows it. When the hand stops, the arm reaches out, wraps it on contact and holds it. The avoidant type turns about 115° so that the hand is to one side of the body, holds the arm low and bent away from the hand, and swings the arm clear when the hand moves towards it. [→ log 2026-10-07](/archive#log-2026-10-07-2) [→ log 2026-10-15](/archive#log-2026-10-15-515695945063972)
+
+<FrameStrip id="N25" set="hand" lang="en" />
+
+Whether these differences can be seen was first tested in simulation. On 19 October many hard-to-notice pauses and small movements during approach and grasp were removed, keeping the main stages of approaching, touching, holding and letting go. Telling the four personalities apart in the simulated pointer scenes from visible measures such as facing and arm position gives a recognition rate of 94%. After the resting breath of all four personalities was brought closer together on 20 October, the random type became harder to pick out by its breathing and the figure fell to 83%. These numbers come from a scripted hand and simulated readings, and whether participants can tell the four personalities apart is for the study to answer. [→ log 2026-10-19](/archive#log-2026-10-19-712004976306508)
+
+## Method and progress
+
+The study compares four losses within the same person. The main physiological measure is event-locked skin conductance, the participant's behaviour is coded in ELAN, and a cued-recall interview follows each session. The sample is five to eight people and the measures were cut to fit it, which is also why the comparison of heart-rate variability around each death was dropped. It needs a much longer window than a death lasts. [→ log 2026-07-07](/archive#log-2026-07-07-2)
+
+<StatusList />
+
+These predictions were written on 3 April 2026, before any data were collected and while the personalities were still the first four types. They stay on the page so that the results can be compared with them item by item, including where the data disagree. [→ log 2026-04-03](/archive#log-2026-04-03-1)
+
+<Predictions />
+
+If the autonomous behaviour is not convincing by the pilot, the fallback is Wizard-of-Oz. The experimenter triggers behaviour from behind the scenes, and the paper discloses it. That would still show how participants interpret the movements, but would not establish that the autonomous behaviour engine works.
+
+<FigPair>
+  <FigSlot id="N19" caption="Method: event-locked SCR" desc="Four life cycles, 33–37 minutes. Event-locked skin conductance is the primary physiological measure" status="研究期后" ratio="4/3" />
+  <FigSlot id="N20" caption="Key moments (participant and machine)" desc="Study footage" status="研究期后" ratio="4/3" />
+</FigPair>
 
 ## Construction of the body
 
-The body has to survive dozens of sessions, produce the full range of movement across four temperaments, and be built and repaired by one person at home. Every choice of mechanism and material was checked against three conditions: whether the smallest breathing movement can be made, whether a violent movement will break it, and whether a broken part can be replaced at home. The exploded view below is rendered from the assembly model of 13 August (815.3dm), and the dimensions in this section come from the same model.
+The body has to survive dozens of sessions, produce the full range of movement across four personalities, and be built and repaired by one person at home. The exploded view below is rendered from the assembly model of 13 August (815.3dm), and the dimensions in this section come from the same model.
 
 <FrameStrip id="N21" set="explode" lang="en" />
 
-### Shell: five breathing rings
+### Shell and drive
 
-Of five deployable structures considered, the angulated scissor arch used in a Hoberman sphere was chosen. It stays parametric from modelling through physics simulation, so changing a dimension does not mean rebuilding the model. [→ log 2026-04-27](/archive#log-2026-04-27-1)
+The shell is made of five angulated scissor arches, the mechanism used in a Hoberman sphere, kept parametric from modelling through physics simulation. [→ log 2026-04-27](/archive#log-2026-04-27-1) The bare arch has two degrees of freedom, breathing and lateral sway, and a vertical guide rail at the apex removes the sway and makes the motion determinate. [→ log 2026-06-15](/archive#log-2026-06-15-1)
 
 <ClosureCards id="N08–N09" />
 
-The bare arch has two degrees of freedom, breathing and lateral sway, so a single central rod leaves more than one possible shape. A vertical guide rail at the apex removes the sway and makes the motion determinate. The same round exposed a bug in how the code located the apex. It chose the highest point, but on one ring that point moved to the shoulder as the arch flattened. Choosing the node nearest the centreline and re-running the optimisation gained 3–26% of travel per ring. [→ log 2026-06-15](/archive#log-2026-06-15-1)
+The five rings differ in shape. Open, they are 276 to 345 mm wide, and their 66 triangular parts fall into 11 congruence classes. Pushing the two inner feet towards the middle shrinks the arch in height and width together, so the folded apex sits at 53 to 56% of its open height and the whole ring scales down evenly.
 
 <RingFamily id="N07" />
 
-The five rings differ in shape. Open, they are 276 to 345 mm wide with the apex 103 to 221 mm above the shaft, and their 66 triangular parts fall into 11 congruence classes reused within each ring. Pushing the two inner feet towards the middle shrinks the arch in height and width together, so the folded apex sits at 53 to 56% of its open height and the whole ring scales down evenly.
+One shaft drives all five rings together through five steel gears and steel racks that push and pull each ring's inner feet, with the shaft swinging about 336°. The July crank design jammed from friction when the physical machine was assembled in August and was replaced by the racks, as recorded in the build notes at the end of this section. [→ log 2026-08-23](/archive#log-2026-08-23-1) The page's main image and the strip below come from the full-machine bench (Lab 1-5), which runs the July crank design. The rings open and close the same way under both drives, and the physical machine folds slightly less deeply than the bench.
 
 <FrameStrip id="N22" set="breath" lang="en" />
 
@@ -176,9 +212,37 @@ The five rings differ in shape. Open, they are 276 to 345 mm wide with the apex 
   <ArchFigure />
 </InteractiveSlot>
 
-### Drive: from crank to rack
+### The arm and the feelers
 
-The July design ran from the shaft through a crank and connecting rod to a slider. The shaft reciprocated through 180°, one pass covering exactly one opening or closing, and the two ends were the slider-crank's dead centres, so the motion slowed naturally at each reversal. [→ log 2026-07-10](/archive#log-2026-07-10-4) When the physical machine was assembled in August, friction jammed the single central rod and the motion fell short, so the drive went back to racks while keeping one shaft to move all five rings together. [→ log 2026-08-23](/archive#log-2026-08-23-1) The current train runs from the shaft through five steel gears (module 1, 32 / 33 / 32 / 29 / 25 teeth) to steel racks that push and pull each ring's inner feet, with the shaft swinging about 336°. Before the racks were designed, each ring's travel was recorded, between 78.8 and 104.2 mm. [→ log 2026-08-24](/archive#log-2026-08-24-1) Working from the tooth counts, a 336° swing moves each rack through 91 to 94% of that ring's full inner-foot travel.
+The arm has six box vertebrae and a tip segment, joined only by a TPU spine rod through their centres. Three tendons are anchored at the tip, each with its own NEMA17. Reeling one in from the base bends the arm towards it, and the difference between the three sets the direction of the bend. Inside each vertebra the tendon crosses the axis into the slot on the opposite side of the central guide and returns to the window on its own side of the next end plate, which gives every vertebra enough lateral push when the tendon tightens.
+
+<FrameStrip id="N23" set="tendon-route" lang="en" />
+
+The two feelers are mirrored on either side under the body. An SG90 servo swings the upper segment back and forth, and below it a flexible rod carries a small block that is not driven and swings along as the rod bends. The three-tendon solver on the web does not compute friction between tendon and channel, and its curl starts at the tip, so whether the physical arm bends from the base first has to be checked once it is assembled.
+
+<Todo>
+
+Whether all three tendon motors are fitted in the physical machine, and which tendon goes to which motor · how the feeler capacitive electrodes are wired in this structure.
+
+</Todo>
+
+<FigSlot id="N13" caption="The physical arm closing" desc="The real arm closing from base to tip" status="待拍摄" ratio="16/6" size="wide" />
+
+<InteractiveSlot id="LAB.1-3" caption="Three-tendon tentacle solver, 2026-07 · orbit the view to see which way the arm bends as each tendon tightens. The solver does not model tendon friction" status="可现产" lab="1-3" verb="drag to orbit">
+  <TentacleFigure />
+</InteractiveSlot>
+
+### Sensing and the behaviour engine
+
+The machine uses six inputs, namely feeler capacitance, shell half-ring electrodes, an ultrasonic rangefinder, vibration, sound amplitude and the internal clock. The program converts these into nine event classes, each corresponding to one kind of stimulus that can be detected from a single input, and uses the same events both to control behaviour and to record the session for the study. [→ log 2026-07-07](/archive#log-2026-07-07-2) [→ log 2026-10-07](/archive#log-2026-10-07-1) Grasping has a separate state machine, in which a truth table combines the tension switch and arm electrode to distinguish holding a human, holding an object, closing on nothing and losing grip.
+
+<SystemLogic id="N18" />
+
+The behaviour engine was written on 7 October. It decides how to respond from the current personality, life stage and arousal, and sends out commands for breathing, the arm, the feelers, turning, sound and light. It does not depend on the web page, its random numbers are seeded, and its event log doubles as the study record. The full-machine bench on the web (Lab 1-6) runs this code, and the firmware will be ported from it. [→ log 2026-10-07](/archive#log-2026-10-07-1)
+
+<Fold summary="Build notes · changing the drive · the yaw platform · tendons and the finger · calculations · a one-person build · self-interference inside the shell">
+
+**Changing the drive.** The July design ran from the shaft through a crank and connecting rod to a slider. The shaft reciprocated through 180°, one pass covering exactly one opening or closing, and the two ends were the slider-crank's dead centres, so the motion slowed naturally at each reversal. [→ log 2026-07-10](/archive#log-2026-07-10-4) When the physical machine was assembled in August, friction jammed the single central rod and the motion fell short, so the drive went back to racks while keeping one shaft to move all five rings together. [→ log 2026-08-23](/archive#log-2026-08-23-1) The gears are module 1 with 32 / 33 / 32 / 29 / 25 teeth. Before the racks were designed, each ring's travel was recorded, between 78.8 and 104.2 mm. [→ log 2026-08-24](/archive#log-2026-08-24-1) Working from the tooth counts, a 336° swing moves each rack through 91 to 94% of that ring's full inner-foot travel.
 
 <Todo>
 
@@ -195,41 +259,17 @@ The date and photographs of the printed rack that lost teeth and its steel repla
   <LinkageFigure />
 </InteractiveSlot>
 
-The bench behind the page's main image and the strips above (Lab 1-5) runs the July crank design and was not rebuilt after the change to racks. The rings open and close the same way under both drives, but the racks cover only a little over nine tenths of the inner-foot travel, so the physical machine folds slightly less deeply than the bench.
+**Correcting the apex search.** The June round that added the guide rail also exposed a bug in how the code located the apex. It chose the highest point, but on one ring that point moved to the shoulder as the arch flattened. Choosing the node nearest the centreline and re-running the optimisation gained 3–26% of travel per ring. [→ log 2026-06-15](/archive#log-2026-06-15-1)
 
-### The yaw platform
-
-Orientation of the whole machine is carried by a second-hand Handebao HDB60XZ45B worm-gear hollow rotary platform (45:1), driven by a TMC2209. The earlier plan used a turntable bearing that needs load to preload it, and this machine is too light, so on 2 August the choice moved to a motorised rotary stage. [→ log 2026-08-02](/archive#log-2026-08-02-1) The X-shaped base and the platform housing stay on the table, and everything above the platform's output plate turns about the vertical axis.
+**The yaw platform.** Orientation of the whole machine is carried by a second-hand Handebao HDB60XZ45B worm-gear hollow rotary platform (45:1), driven by a TMC2209. The earlier plan used a turntable bearing that needs load to preload it, and this machine is too light, so on 2 August the choice moved to a motorised rotary stage. [→ log 2026-08-02](/archive#log-2026-08-02-1) The X-shaped base and the platform housing stay on the table, and everything above the platform's output plate turns about the vertical axis.
 
 <FigSlot id="N12" caption="Yaw platform and base" desc="Worm-gear hollow rotary platform, 45:1" status="待拍摄" ratio="4/3" />
 
-### The arm and the feelers
+**Tendons and the finger.** The tendon is 0.4–0.5 mm braided PE line, chosen in May for a four-phalanx underactuated finger whose dumbbell-shaped pins slide in from the side, with the slot perpendicular to the tendon pull, so they stay put under tension and can be taken out for repair. [→ log 2026-05-08](/archive#log-2026-05-08-1) In the finger simulation of 26 April, friction made the joints close one after another. Sequential closure looks more alive than simultaneous closure, and that judgement carried over to the movements designed later. [→ log 2026-04-26](/archive#log-2026-04-26-1) Each tendon's spool is a GT2 20T pulley that can take up to 44 mm. The first 12 mm is slack left at rest, because pulling one tendon lengthens the paths of the other two.
 
-In the model the arm has six box vertebrae and a tip segment, shrinking from 47.7 to 30.8 mm, joined only by a TPU spine rod through their centres. Three tendons are anchored at the tip. Reeling one in from the base bends the arm towards it, the difference between the three sets the direction of the bend, and pulling all three equally only stiffens the arm. Each tendon has its own NEMA17 with a GT2 20T pulley as its spool and can take up to 44 mm. The first 12 mm is slack left at rest, because pulling one tendon lengthens the paths of the other two. Inside each vertebra the tendon crosses the axis into the slot on the opposite side of the central guide and returns to the window on its own side of the next end plate, which gives every vertebra enough lateral push when the tendon tightens.
-
-<FrameStrip id="N23" set="tendon-route" lang="en" />
-
-The tendon is 0.4–0.5 mm braided PE line, chosen in May for a four-phalanx underactuated finger whose dumbbell-shaped pins slide in from the side, with the slot perpendicular to the tendon pull, so they stay put under tension and can be taken out for repair. [→ log 2026-05-08](/archive#log-2026-05-08-1) In the finger simulation of 26 April, friction made the joints close one after another. Sequential closure looks more alive than simultaneous closure, and that judgement carried over to the movements designed later. [→ log 2026-04-26](/archive#log-2026-04-26-1) The three-tendon solver on the web does not compute friction between tendon and channel, and its curl starts at the tip, so whether the physical arm bends from the base first has to be checked once it is assembled.
-
-The two feelers are mirrored on either side under the body. An SG90 servo turns a disc pivot that swings the upper segment back and forth. Below it a 3.9 × 3.9 × 26 mm flexible rod carries a small block that is not driven and swings along as the rod bends.
-
-<Todo>
-
-Whether all three tendon motors are fitted in the physical machine, and which tendon goes to which motor · how the feeler capacitive electrodes are wired in this structure.
-
-</Todo>
-
-<FigSlot id="N13" caption="The physical arm closing" desc="The real arm closing from base to tip" status="待拍摄" ratio="16/6" size="wide" />
-
-<InteractiveSlot id="LAB.1-3" caption="Three-tendon tentacle solver, 2026-07 · orbit the view to see which way the arm bends as each tendon tightens. The solver does not model tendon friction" status="可现产" lab="1-3" verb="drag to orbit">
-  <TentacleFigure />
-</InteractiveSlot>
-
-### Calculations and corrections
+**Calculations.** The rail hand calculation was about 4.5× optimistic. It assumed the load reached a support, but the real back strip had no support directly under the load point. Adding an 8 × 3 mm rib on the back and a 4 × 2.5 mm lip on the front reduced deflection from 1.55 to 0.34 mm and raised ultimate capacity from 19 to 54 N, with little added weight. [→ log 2026-07-18](/archive#log-2026-07-18-1)
 
 <StatCompare />
-
-The rail hand calculation was about 4.5× optimistic. It assumed the load reached a support, but the real back strip had no support directly under the load point. Adding an 8 × 3 mm rib on the back and a 4 × 2.5 mm lip on the front reduced deflection from 1.55 to 0.34 mm and raised ultimate capacity from 19 to 54 N, with little added weight. [→ log 2026-07-18](/archive#log-2026-07-18-1)
 
 The chassis truss had more strength than it needed. Only 5% of capacity was used, and the X-braces added little. The limit was the 0.56 mm shaft-alignment budget between adjacent frames, and the support from the plinth decided it. On four corners the truss sagged 4.8 mm, on two full-length rails 0.02 mm. The members were reduced from 104 g to 44 g. [→ log 2026-07-31](/archive#log-2026-07-31-1)
 
@@ -237,68 +277,15 @@ The chassis truss had more strength than it needed. Only 5% of capacity was used
 
 <FigSlot id="N15" caption="Base tip-over FEA" desc="Tipping angle about 42°, 2.3× margin · figure and date to come" status="待定" ratio="4/3" />
 
-### Constraints of a one-person build
-
-All parts were made by the author at home with one 3D printer, standard hardware and tools available to an individual. That ruled out several options early, among them a sea-anemone sculpture driven by 120 industrial linear actuators, injection-moulded silicone skins, and parts that needed a lathe or a five-axis machine.
-
-SLS nylon joints printed with 0.4 mm clearance would not turn. The sintered surface and powder trapped in narrow gaps left too little room for movement. A metal axle in a printed sleeve brought the clearance requirement down to 0.2–0.4 mm. Axial binding was the bigger problem, and the rotating hub had to be 0.2–0.5 mm shorter than the screw barrel. [→ log 2026-06-04](/archive#log-2026-06-04-1)
-
-The pivot is a Chicago screw. Its ⌀4 unthreaded shoulder before the M3 thread provides the bearing surface and sets the gap between plates. [→ log 2026-06-03](/archive#log-2026-06-03-1) The material budget was about ¥300, and the purchases came to ¥216. [→ log 2026-07-09](/archive#log-2026-07-09-1)
+**A one-person build.** All parts were made by the author at home with one 3D printer, standard hardware and tools available to an individual. That ruled out several options early, among them a sea-anemone sculpture driven by 120 industrial linear actuators, injection-moulded silicone skins, and parts that needed a lathe or a five-axis machine. SLS nylon joints printed with 0.4 mm clearance would not turn, because the sintered surface and powder trapped in narrow gaps left too little room for movement. A metal axle in a printed sleeve brought the clearance requirement down to 0.2–0.4 mm. Axial binding was the bigger problem, and the rotating hub had to be 0.2–0.5 mm shorter than the screw barrel. [→ log 2026-06-04](/archive#log-2026-06-04-1) The pivot is a Chicago screw. Its ⌀4 unthreaded shoulder before the M3 thread provides the bearing surface and sets the gap between plates. [→ log 2026-06-03](/archive#log-2026-06-03-1) The material budget was about ¥300, and the purchases came to ¥216. [→ log 2026-07-09](/archive#log-2026-07-09-1)
 
 <FigSlot id="N16" caption="The printed parts, and the assembly bench" desc="One printer plus standard hardware" status="待拍摄" ratio="16/9" size="wide" />
 
-## Sensing and events
-
-The machine uses six inputs: feeler capacitance, shell half-ring electrodes, an ultrasonic rangefinder, vibration, sound amplitude, and the internal clock. The program converts these into nine event classes. It uses the same events to control behaviour and to record the interaction for the study. [→ log 2026-07-07](/archive#log-2026-07-07-2) The nine classes were fixed on 7 October. Each corresponds to one kind of stimulus that matters to the behaviour on its own and can be detected from a single input. [→ log 2026-10-07](/archive#log-2026-10-07-1)
-
-<SystemLogic id="N18" />
-
-Grasping has a separate state machine. A truth table combines the tension switch and arm electrode to distinguish holding a human, holding an object, closing on nothing and losing grip. After losing grip the warm type follows once, the calm and avoidant types let go, and the random type does either with even odds. Grip strength weakens as the machine ages within each life.
-
-Four sources of self-interference need attention once the sensors are inside the enclosure. Testing sensors separately on the bench does not catch all of these problems.
+**Self-interference inside the shell.** Once the sensors are inside the enclosure, four sources of self-interference need attention. Testing sensors separately on the bench does not catch all of these problems.
 
 <Interference />
 
-## The behaviour engine
-
-A parameter table does not move by itself. The behaviour engine written on 7 October turns it into a whole session of behaviour. Events from the nine classes come in, the engine decides how to respond from the current personality, life stage and arousal, and it sends out commands for breathing, the arm, the feelers, turning, sound and light. It is pure logic with no dependence on the web page, its random numbers are seeded, and the same seed produces the same event log word for word, which makes the log the study record as well. The full-machine bench on the web (Lab 1-6) runs this code, and the firmware will be ported from it. [→ log 2026-10-07](/archive#log-2026-10-07-1)
-
-Life time can be sped up, by as much as 20× on the bench, so a life plays out in under half a minute while breathing and movement keep their real speed. The times of the four deaths are drawn when a session starts and interaction cannot shift them, so the experimenter knows in advance when each death will happen, which event-locked skin-conductance analysis requires.
-
-The large arm moves in three tempos. A startle is a reflex: 0.1 s after the stimulus the arm flexes hard away from it and freezes, identically in all four personalities, and then each recovers in its own way. A response first pauses to show the stimulus has been noticed and then makes one movement suited to the kind of stimulus. Movements made when nobody touches it are small and slow. At first every movement went through one follower scaled by personality, and a startle took 0.65 to 0.85 s to become visible, hardly faster than a response. Written as segmented movement tables sent straight to the tendons, a startle starts within 0.22 to 0.27 s. [→ log 2026-10-08](/archive#log-2026-10-08-1)
-
-<FrameStrip id="N24" set="startle" lang="en" />
-
-On the bench the mouse pointer stands for a person's hand. The machine counts the hand as seen once it is within 120° either side of where the body faces and one reaction time has passed, and then, by personality, reaches towards it, keeps away from it, or looks elsewhere. The warm type turns to the hand and its arm follows. When the hand settles, the arm closes in, wraps it on contact and holds it. The avoidant type turns side-on, keeping the hand about 115° to one side where it can still see it without turning its back, holds the arm low and away from the hand, and swings the arm clear when the hand comes towards it. [→ log 2026-10-07](/archive#log-2026-10-07-2) [→ log 2026-10-15](/archive#log-2026-10-15-515695945063972)
-
-<FrameStrip id="N25" set="hand" lang="en" />
-
-On 19 October the hand behaviour was cut down to what an observer can see. Many short pauses and small movements during approach and grasp were removed, keeping the main stages of approaching, touching, holding and letting go. Comparing afterwards showed that without one turn of looking elsewhere the calm type behaved much like the warm one, so that turn was put back. Telling the four personalities apart in the simulated pointer scenes from visible measures such as facing and arm position, the recognition rate went from 78% after the cut back up to 94%. After breathing was evened out on 20 October the random type became harder to pick out by its breathing, and that figure fell to 83%. These numbers come from a scripted hand and simulated readings, and whether participants can tell the four temperaments apart is for the study to answer. [→ log 2026-10-19](/archive#log-2026-10-19-712004976306508)
-
-## Presenting ageing and death
-
-If participants read the stop as "it broke", their response would say little about losing a machine they had grown attached to. To make the lead-up gradual, ageing changes several parameters together. Breathing becomes shallower, responses slow and the rhythm grows irregular. Dying then lasts 1 to 2 minutes depending on the personality. The warm type runs out of energy and stops facing the last place it saw a person, the calm type slows quietly to a stop, the avoidant type turns its back and slowly stops, and the random type's rhythm falls apart and fades. After that there is no farewell gesture and no response, only 45 seconds of stillness.
-
-<AgeingCurve id="N17" />
-
-How each parameter changes during ageing is still a placeholder linear ramp in the engine, so the curve shows the trend only, and the values will be set when the ageing curve is discussed.
-
-Personality D originally died by twitching and then stopping. It was changed to a rhythm that becomes irregular and fades, because twitching could suggest a mechanical fault. The pilot has to check how participants interpret the change. [→ log 2026-03-20](/archive#log-2026-03-20-1) [→ log 2026-07-07](/archive#log-2026-07-07-2)
-
-## Current status
-
-<StatusList />
-
-These predictions were written on 3 April 2026, before any data were collected and while the personalities were still the first four types. They stay on the page so that the results can be compared with them item by item, including where the data disagree. [→ log 2026-04-03](/archive#log-2026-04-03-1)
-
-<Predictions />
-
-If the autonomous behaviour is not convincing by the pilot, the fallback is Wizard-of-Oz. The experimenter triggers behaviour from behind the scenes, and the paper discloses it. That would still show how participants interpret the movements, but would not establish that the autonomous behaviour engine works.
-
-<FigPair>
-  <FigSlot id="N19" caption="Method: event-locked SCR" desc="Four life cycles, 33–37 minutes. Event-locked skin conductance is the primary physiological measure" status="研究期后" ratio="4/3" />
-  <FigSlot id="N20" caption="Key moments (participant and machine)" desc="Study footage" status="研究期后" ratio="4/3" />
-</FigPair>
+</Fold>
 
 ## Reflection
 
@@ -310,7 +297,7 @@ The reasons for both changes, in a sentence or two.
 
 </Todo>
 
-Building the machine exposed specific problems. The printed rack teeth failed under cyclic load, friction jammed the central rod, and the rail hand calculation differed from FEA by 4.5×. In the behaviour, the differences between personalities have to come down to a few actions an observer can see, such as whom it turns to, where the arm is held and how fast it breathes, and both the cuts and the reclassification were made by that standard. Two risks remain untested: whether a rhythm that falls apart and fades can be told from a fault, and whether eight or nine minutes is long enough for someone to feel "it knows me". Compressing a life makes repeated loss possible within a session, but leaves less time for a relationship to develop.
+Building the machine exposed specific problems. The printed rack teeth failed under cyclic load, friction jammed the central rod, and the rail hand calculation differed from FEA by 4.5×. In the behaviour, the differences between personalities have to come down to a few actions an observer can see, such as whom it turns to, where the arm is held and how fast it breathes, and both the cuts and the reclassification were made by that standard. Two risks remain untested, whether a rhythm that falls apart and fades can be told from a fault, and whether eight or nine minutes is long enough for someone to feel "it knows me". Compressing a life makes repeated loss possible within a session, but leaves less time for a relationship to develop.
 
 <Todo>
 
