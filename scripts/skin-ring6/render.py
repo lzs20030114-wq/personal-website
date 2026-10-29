@@ -16,6 +16,7 @@ COL = {
     "skinB": (0.72, 0.83, 0.77),
     "hoop": (0.24, 0.42, 0.48),
     "tie": (0.12, 0.17, 0.21),
+    "bond": (0.88, 0.47, 0.20),
 }
 LINE = np.array([0.11, 0.17, 0.21])
 
@@ -107,11 +108,21 @@ def unit_frame(k):
     t = np.array([-math.sin(a), math.cos(a), 0.0])
 
     def f(r, s, w):
-        return r * n + w * t + np.array([0, 0, G.RIB_H - s])
+        return r * n + w * t + np.array([0, 0, G.UNIT_H - s])
     return f
 
 
-def build_ring(units=range(G.N_UNITS), core=True, hoops=True, ties=True, core_units=None):
+def _bar(m, f, p, q, w, half, col):
+    """剖面里 p→q 的一根细线（截面 half×2 见方），放在切向 w 处。"""
+    (r0, s0), (r1, s1) = p, q
+    L = math.hypot(r1 - r0, s1 - s0)
+    ur, us = (r1 - r0) / L, (s1 - s0) / L
+    nr, ns = -us * half, ur * half
+    poly = [(r0 + nr, s0 + ns), (r1 + nr, s1 + ns), (r1 - nr, s1 - ns), (r0 - nr, s0 - ns)]
+    m.prism(poly, f, w - half, w + half, col)
+
+
+def build_ring(units=range(G.N_UNITS), core=True, hoops=True, ties=True, bd=False):
     m = Mesh()
     hw = G.W / 2
     for k in units:
@@ -123,28 +134,38 @@ def build_ring(units=range(G.N_UNITS), core=True, hoops=True, ties=True, core_un
             for r0, r1, s0, s1 in rects:
                 m.prism([(r0, s0), (r1, s0), (r1, s1), (r0, s1)], f, -hw, hw, col)
         if ties:
-            for t in G.TIES:
-                _, r, s = G.fold_map(t["flat_x"])
-                if t["board"] == "C3":
-                    rr = G.OUTER_FRONT
-                    m.prism([(rr, s - 0.6), (rr + 0.5, s - 0.6), (rr + 0.5, s + 0.6), (rr, s + 0.6)],
-                            f, -G.TIE_DY, G.TIE_DY, COL["tie"])
-                else:
-                    ss = G.PLATFORM_TOP_S if t["board"] == "C2" else G.PLATFORM_BOT_S
-                    sg = -1 if t["board"] == "C2" else 1
-                    m.prism([(r - 0.6, ss), (r + 0.6, ss), (r + 0.6, ss + 0.5 * sg), (r - 0.6, ss + 0.5 * sg)],
-                            f, -G.TIE_DY, G.TIE_DY, COL["tie"])
-    for k in (units if core_units is None else core_units):
-        if core:
-            m.prism(G.rib_outline_rs(), unit_frame(k), -G.SLOT / 2, G.SLOT / 2, COL["core"])
+            # 键：箱子里的斜线
+            for y in G.BOND_Y:
+                w = y - hw
+                _bar(m, f, *G.BOND_AC, w, 0.45, COL["bond"])
+                if bd:
+                    _bar(m, f, *G.BOND_BD, w, 0.45, COL["bond"])
+            # 露在外面的针脚：端板上一竖针、台面与底面上一横针
+            for sc in G.STITCH_S:
+                rr = G.OUTER_WALL
+                m.prism([(rr, sc - G.STITCH_DS), (rr + 0.5, sc - G.STITCH_DS),
+                         (rr + 0.5, sc + G.STITCH_DS), (rr, sc + G.STITCH_DS)], f, -0.6, 0.6, COL["tie"])
+            (ra, _), (rc, _) = G.BOND_AC
+            for y in G.BOND_Y:
+                w = y - hw
+                ss = G.PLATFORM_TOP_S
+                m.prism([(ra - 0.6, ss - 0.5), (ra + 0.6, ss - 0.5), (ra + 0.6, ss), (ra - 0.6, ss)],
+                        f, w - G.BOND_DY, w + G.BOND_DY, COL["tie"])
+                ss = G.PLATFORM_BOT_S
+                m.prism([(rc - 0.6, ss), (rc + 0.6, ss), (rc + 0.6, ss + 0.5), (rc - 0.6, ss + 0.5)],
+                        f, w - G.BOND_DY, w + G.BOND_DY, COL["tie"])
     if core:
+        ident = lambda u, v, w: np.array([u, v, w])
         for sp in G.PLATE_S:
-            z0 = G.RIB_H - sp - G.T_BOARD / 2
-            m.prism(G.plate_outline(0.0), lambda u, v, w: np.array([u, v, w]), z0, z0 + G.T_BOARD, COL["core"])
+            z0 = G.UNIT_H - sp - G.T_BOARD / 2
+            m.prism(G.plate_outline(0.0), ident, z0, z0 + G.T_BOARD, COL["core"])
+        rd = G.DOWEL_D / 2
+        circ = [(rd * math.cos(2 * math.pi * i / 20), rd * math.sin(2 * math.pi * i / 20)) for i in range(20)]
+        m.prism(circ, ident, 0.0, G.UNIT_H, COL["core"])
     if hoops:
         pts = G.HOOP["pts"]
-        for sp in G.PLATE_S:
-            zc = G.RIB_H - sp
+        for sp in G.HOOP_S:
+            zc = G.UNIT_H - sp
             n = len(pts)
             for i in range(n):
                 p, q = np.array(pts[i]), np.array(pts[(i + 1) % n])
