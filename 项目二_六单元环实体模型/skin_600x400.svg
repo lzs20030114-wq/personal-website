@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="600mm" height="400mm" viewBox="0 0 600 400">
-<g fill="none" stroke="#ff0000" stroke-width="0.1">
+<svg xmlns="http://www.w3.org/2000/svg" width="600mm" height="400mm" viewBox="0 0 600 400" style="background-color:#000000">
+<g id="cut" fill="none" stroke="#FFFFFF" stroke-width="0.1">
 <path d="M 4.000,4.000 L 126.000,4.000 L 126.000,56.000 L 4.000,56.000 Z"/>
 <path d="M 131.000,4.000 L 253.000,4.000 L 253.000,56.000 L 131.000,56.000 Z"/>
 <path d="M 258.000,4.000 L 380.000,4.000 L 380.000,56.000 L 258.000,56.000 Z"/>
