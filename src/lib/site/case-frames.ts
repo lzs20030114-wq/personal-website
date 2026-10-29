@@ -1,7 +1,8 @@
 /**
- * 案例页分镜（FrameStrip）的帧数据（2026-10-28）。
+ * 案例页分镜（FrameStrip）的帧数据（2026-10-28 项目二起用，2026-10-29 项目一跟上）。
  *
  * 每组 = 同一台 /lab 台架在若干时刻的截图，按时间排成一行（漫画式的小格），点开看大图。
+ * 也收少量不是台架截图的单张（项目一的模型渲染，来自交接图册），单张一组、不带「去实验室」。
  * 截图由 scripts/case-frames/capture.mjs 从生产构建截出（假时钟 + 带种子的随机数，同一份脚本
  * 每次截到同一组画面），存成两份 webp：`<file>.webp` 原图（看图器用）、`<file>-s.webp` 缩略图（格子里用）。
  * 读数（t）是截图那一刻台架 HUD 上的数：结构台是协议步数，2-14 / 2-15 是仿真时间。
@@ -13,8 +14,10 @@
 
 export type Bi = { en: string; zh: string };
 
+export type FrameProject = 'project-ii' | 'reincarnation-machine';
+
 export interface Frame {
-  /** 文件名（不带扩展名），在 public/work/project-ii/frames/<set>/ 下 */
+  /** 文件名（不带扩展名），在 public/work/<project>/frames/<set>/ 下 */
   file: string;
   /** 读数：步数或时刻 */
   t: Bi;
@@ -23,8 +26,10 @@ export interface Frame {
 }
 
 export interface FrameSet {
-  /** 对应的 /lab 台架编号（图注里「去实验室」链接） */
-  lab: string;
+  /** 哪个项目的案例页用这一组（决定图放在哪个目录、由哪份正文引用） */
+  project: FrameProject;
+  /** 对应的 /lab 台架编号（图注里「去实验室」链接）；不是台架截图的组不写 */
+  lab?: string;
   /** 深链（含编制，如 `2-5-level`）；缺省 = lab */
   hash?: string;
   /** 原图像素宽高（同组每帧相同） */
@@ -39,15 +44,15 @@ export interface FrameSet {
   frames: Frame[];
 }
 
-export const FRAMES_DIR = '/work/project-ii/frames';
-
 export function frameSrc(set: string, file: string, thumb = false): string {
-  return `${FRAMES_DIR}/${set}/${file}${thumb ? '-s' : ''}.webp`;
+  const project = CASE_FRAMES[set]?.project ?? 'project-ii';
+  return `/work/${project}/frames/${set}/${file}${thumb ? '-s' : ''}.webp`;
 }
 
 export const CASE_FRAMES: Record<string, FrameSet> = {
   // FIG.02 · 方法：一位访客坐下，猫被一步一步引到座位前方那台（Lab 2-14 默认场景，平面）
   'plan-sit': {
+    project: 'project-ii',
     lab: '2-14',
     w: 900,
     h: 894,
@@ -70,6 +75,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
   },
   // FIG.03 · 一条带：四张键谱同一次收缩（Lab 2-1）
   'strip-forming': {
+    project: 'project-ii',
     lab: '2-1',
     w: 1552,
     h: 783,
@@ -90,6 +96,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
   },
   // FIG.05 · 形态的连续：十二条带目录渐变（Lab 2-4，正视，终态）
   'series-gradient': {
+    project: 'project-ii',
     lab: '2-4',
     hash: '2-4-gradient',
     w: 1552,
@@ -103,6 +110,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
   },
   // FIG.06 · 裂成两片台：十条带（Lab 2-4 捏分，正视）
   'series-split': {
+    project: 'project-ii',
     lab: '2-4',
     hash: '2-4-split',
     w: 1552,
@@ -124,6 +132,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
   },
   // FIG.07 · 绕成一圈（Lab 2-5 整环同形 · 阶梯方箱，轴测）
   'ring-forming': {
+    project: 'project-ii',
     lab: '2-5',
     hash: '2-5-single',
     w: 621,
@@ -144,6 +153,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
   },
   // FIG.08 · 由圆到方（Lab 2-7 整环平，五种轮廓，高角度俯视，终态）
   'round-to-square': {
+    project: 'project-ii',
     lab: '2-7',
     hash: '2-7-flat',
     w: 683,
@@ -163,6 +173,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
   },
   // FIG.09 · 在房间里（Lab 2-15，前排沙发，放大）：落下、成形、收回
   'room-cycle': {
+    project: 'project-ii',
     lab: '2-15',
     w: 1016,
     h: 754,
@@ -183,6 +194,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
   },
   // FIG.10 · 两种用法（Lab 2-15 侧视）
   'two-uses': {
+    project: 'project-ii',
     lab: '2-15',
     w: 1008,
     h: 536,
@@ -192,5 +204,116 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
       en: 'Side section (Lab 2-15, at 100 s). A unit that came down as a coffee table in front of a sofa sits 0.49 m above the floor, the unit a cat is on stays at 1.05 m, and the rest are stowed under the ceiling',
     },
     frames: [{ file: 't100-side', t: { zh: '1:40 · 侧视', en: '1:40 · side view' } }],
+  },
+
+  // ─── 项目一（轮回机器）─────────────────────────────────────────────────────
+  // N04 · 外形：整机台架停在全开，四个固定视角（Lab 1-5）。按内容自动取景，四张同尺寸
+  'form-views': {
+    project: 'reincarnation-machine',
+    lab: '1-5',
+    w: 1200,
+    h: 900,
+    tw: 480,
+    caption: {
+      zh: '整机台架停在全开（实验 1-5，中间轴 0°），四个固定视角。外覆的布皮是半透明的示意，实物蒙皮还没做',
+      en: 'The full-machine bench held fully open (Lab 1-5, shaft at 0°) from its four fixed views. The fabric skin is a translucent stand-in, as the physical skin has not been made',
+    },
+    frames: [
+      { file: 'axon', t: { zh: '轴测', en: 'axonometric' } },
+      { file: 'left', t: { zh: '沿体轴看', en: 'along the body axis' }, note: { zh: '最前面是 S1 环', en: 'ring S1 nearest' } },
+      { file: 'front', t: { zh: '侧视', en: 'side' }, note: { zh: '臂伸向左边', en: 'the arm extends to the left' } },
+      { file: 'top', t: { zh: '俯视', en: 'top' } },
+    ],
+  },
+  // N21 · 整机分解（交接图册 RM-HO-04，815.3dm 渲染）
+  explode: {
+    project: 'reincarnation-machine',
+    w: 1400,
+    h: 1167,
+    tw: 900,
+    caption: {
+      zh: '整机分解，由 8 月 13 日的整机模型（815.3dm）渲染。从下往上是 X 形底座、转台、笼架、机身底盘、滑轨架与中间轴、五个环，臂在左侧，两条触须在机身下方。电机、皮带和转台外形模型里没有画，图中按模型留好的框位补画',
+      en: 'Exploded view rendered from the assembly model of 13 August (815.3dm). From the bottom: X-shaped base, turntable, cage, chassis, slide frames and shaft, and the five rings, with the arm on the left and the two feelers under the body. The model has no motors, belt or turntable housing, so these are drawn into the frames it leaves for them',
+    },
+    frames: [{ file: 'explode', t: { zh: '分解图', en: 'exploded view' } }],
+  },
+  // N22 · 一次张合：沿体轴看，中间轴 0° → 180°（Lab 1-5 停转、相位滑块一度一度推）
+  breath: {
+    project: 'reincarnation-machine',
+    lab: '1-5',
+    w: 745,
+    h: 714,
+    tw: 420,
+    caption: {
+      zh: '一次张合（实验 1-5，沿体轴看，最前面是 S1 环）。中间轴从 0° 转到 180°，五个环同时收拢，台架用的是 7 月的曲柄方案',
+      en: 'One opening and closing (Lab 1-5, looking along the body axis with ring S1 nearest). As the shaft turns from 0° to 180° all five rings close together. The bench uses the July crank design',
+    },
+    frames: [
+      { file: 'p000', t: { zh: '0°', en: '0°' }, note: { zh: '全开', en: 'fully open' } },
+      { file: 'p045', t: { zh: '45°', en: '45°' } },
+      { file: 'p090', t: { zh: '90°', en: '90°' }, note: { zh: '走到一半', en: 'halfway' } },
+      { file: 'p135', t: { zh: '135°', en: '135°' } },
+      { file: 'p180', t: { zh: '180°', en: '180°' }, note: { zh: '折叠', en: 'folded' } },
+    ],
+  },
+  // N23 · 肌腱走线（交接图册 RM-HO-10 图 19，815.3dm 剖面）
+  'tendon-route': {
+    project: 'reincarnation-machine',
+    w: 1500,
+    h: 560,
+    tw: 1100,
+    caption: {
+      zh: '一根肌腱在第 1、2 节里的走法（815 模型，沿这根肌腱所在的竖直面剖开，只留远侧一半）。红线进端板窗口后越过轴线，压进中央导块对面的槽口，再回到下一片端板本侧的窗口',
+      en: 'How one tendon runs through vertebrae 1 and 2 (815 model, cut along the vertical plane of that tendon, far half only). The red line enters the end-plate window, crosses the axis into the slot on the far side of the central guide, and returns to the window on its own side of the next end plate',
+    },
+    frames: [{ file: 'arm-cut', t: { zh: '剖面 · 第 1、2 节', en: 'section · vertebrae 1–2' } }],
+  },
+  // N24 · 惊跳：回避型被敲一下（Lab 1-6，侧视，指针不当手），按全部帧的并集取景
+  startle: {
+    project: 'reincarnation-machine',
+    lab: '1-6',
+    w: 1225,
+    h: 690,
+    tw: 400,
+    cols: 6,
+    caption: {
+      zh: '回避型被敲了一下（实验 1-6，侧视）。0.1 秒后发出反射，臂背离刺激往下缩，再按回避型的方式慢慢恢复。臂有自己的惯性，动作在画面上晚零点几秒才看得出来。时间从敲的那一刻算起',
+      en: 'The avoidant type is knocked (Lab 1-6, side view). After 0.1 s the reflex is issued, the arm flexes down away from the stimulus, and it then recovers in the avoidant way. The arm has its own inertia, so the movement shows a few tenths of a second later. Times are counted from the knock',
+    },
+    frames: [
+      { file: 't000', t: { zh: '敲之前', en: 'before the knock' } },
+      { file: 't010', t: { zh: '0.1 s', en: '0.1 s' }, note: { zh: '反射发出', en: 'the reflex is issued' } },
+      { file: 't025', t: { zh: '0.25 s', en: '0.25 s' }, note: { zh: '触须先甩开', en: 'the feelers swing out first' } },
+      { file: 't060', t: { zh: '0.6 s', en: '0.6 s' }, note: { zh: '臂背离刺激往下缩', en: 'the arm flexes down, away from the knock' } },
+      { file: 't150', t: { zh: '1.5 s', en: '1.5 s' }, note: { zh: '缩到最低', en: 'at its lowest' } },
+      { file: 't400', t: { zh: '4 s', en: '4 s' }, note: { zh: '慢慢抬回', en: 'slowly lifting back' } },
+    ],
+  },
+  // N25 · 手：同一只手放在同一处，热情型与回避型（Lab 1-6，俯视，指针 = 手），时间从手出现算起
+  hand: {
+    project: 'reincarnation-machine',
+    lab: '1-6',
+    w: 1084,
+    h: 1002,
+    tw: 300,
+    cols: 6,
+    caption: {
+      zh: '同一只手放在同一处（实验 1-6，俯视，鼠标指针当作手）。上一行是热情型，下一行是回避型，时间从手出现算起。绿圈是迎着的手，粉圈是躲着的手，圈变实心是碰到了',
+      en: 'The same hand in the same place (Lab 1-6, top view, the mouse pointer as a hand). The top row is the warm type and the bottom row the avoidant type, with times counted from when the hand appears. A green ring is a hand being reached for, a pink ring one being avoided, and a filled ring means contact',
+    },
+    frames: [
+      { file: 'warm-pre', t: { zh: '热情 · 手出现前', en: 'warm · no hand yet' } },
+      { file: 'warm-t005', t: { zh: '0.5 s', en: '0.5 s' }, note: { zh: '看见手，决定迎上去', en: 'sees the hand and decides to reach for it' } },
+      { file: 'warm-t020', t: { zh: '2.0 s', en: '2.0 s' }, note: { zh: '转向手', en: 'turns towards the hand' } },
+      { file: 'warm-t045', t: { zh: '4.5 s', en: '4.5 s' }, note: { zh: '手停稳了，臂凑过去', en: 'the hand is still and the arm closes in' } },
+      { file: 'warm-t055', t: { zh: '5.5 s', en: '5.5 s' }, note: { zh: '碰到手，开始缠', en: 'touches the hand and starts to wrap' } },
+      { file: 'warm-t070', t: { zh: '7.0 s', en: '7.0 s' }, note: { zh: '握住手', en: 'holds the hand' } },
+      { file: 'avoid-pre', t: { zh: '回避 · 手出现前', en: 'avoidant · no hand yet' } },
+      { file: 'avoid-t005', t: { zh: '0.5 s', en: '0.5 s' }, note: { zh: '看见手，侧过身', en: 'sees the hand and turns side-on' } },
+      { file: 'avoid-t030', t: { zh: '3.0 s', en: '3.0 s' }, note: { zh: '臂背着手', en: 'the arm is held away from the hand' } },
+      { file: 'avoid-t060', t: { zh: '6.0 s', en: '6.0 s' }, note: { zh: '手开始朝机身移动', en: 'the hand starts towards the body' } },
+      { file: 'avoid-t070', t: { zh: '7.0 s', en: '7.0 s' }, note: { zh: '臂甩开', en: 'the arm swings clear' } },
+      { file: 'avoid-t110', t: { zh: '11.0 s', en: '11.0 s' }, note: { zh: '手到了机身边上，臂仍背着手', en: 'the hand is beside the body, the arm still away from it' } },
+    ],
   },
 };

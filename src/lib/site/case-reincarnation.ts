@@ -11,8 +11,10 @@
  * 两遍再指望它们对得上稳。散文仍在 MDX（content/work/reincarnation-machine/*.mdx），
  * 构件只在 MDX 里占位。
  *
- * 文案来源与处置（见 MAPPING §45）：
- * - 人格参数表、预测表、技术参数 = 线上 MDX 原文逐字（稿里同表一致或被压缩，取线上）；
+ * 文案来源与处置（见 MAPPING §45；2026-10-29 重构见 §79）：
+ * - 人格参数表 2026-10-29 起整张由行为引擎的人格表现算（此前是 4 月那张定性底表的原文）；
+ * - 技术参数 2026-10-29 按 815.3dm（交接图册实测）改了外形、环间距、零件数、臂、触须、执行器几行，其余仍是作者原文；
+ * - 预测表 = 线上 MDX 原文逐字（2026-04-03 写下，保留原样以便与数据对照）；
  * - 其余被稿改成构件的块（组成/五层/闭合/数字对比/系统逻辑/干扰/现状）= 稿内数据，
  *   它们是对线上段落的压缩重排，细节没丢；
  * - 中英各自成文，每个 Bi 两侧必须齐全（测试卡）。
@@ -54,94 +56,82 @@ export interface Persona {
   s: number | null;
 }
 /**
- * 呼吸周期 / 幅度直接取行为引擎的人格表（按槽位字母 A–D）。2026-10-20 作者：呼吸是生理信号，不随性格大变，
- * 会变的是互动引起的唤醒——引擎把四种人格平时的呼吸收到 3.5–4.5 s、50–70%，这张表与示意台跟着走（作者「表也相应的改了吧」）。
- * 人格的名字仍是这一页原来的（A 活力 / B 沉静 / C 亲密 / D 不稳定），引擎那边 2026-10-14 起叫热情 / 沉静 / 回避 / 乱序随机，
- * 定名见正文里作者自己的待确认。
+ * 人格表整张取自行为引擎（src/lib/linkage/behavior/persona.ts，按槽位字母 A–D），这一页不另存一份数。
+ * 2026-10-29 项目一案例页重构：名字跟着引擎改成 2026-10-14 用户重分的四种（热情 / 沉静 / 回避 / 乱序随机），
+ * 表也从 4 月那张定性底表（活力 / 沉静 / 好奇 / 不稳定，史料见 轮回机器_行为引擎spec.md §4.1）换成引擎现行的数。
+ * 2026-10-20 起四种人格平时的呼吸收拢在 3.5–4.5 s、50–70%（呼吸是生理信号，会变的是互动引起的唤醒）。
  */
 const BR = (k: PersonaKey) => ENGINE_PERSONAS[k];
 /** D 型每口气重抽的区间（示意台用） */
 export const D_PERIOD = BR('D').breathPeriod;
 export const D_DEPTH = BR('D').breathAmp;
+/** 回应幅度 ⑤ 换成示意台的 0–1：+50% 记满 */
+const gainTo01 = (g: number) => Math.min(1, g / 0.5);
+const NAME = (k: PersonaKey): Bi => L(BR(k).zh, BR(k).en);
 export const PERSONAS: readonly Persona[] = [
-  { k: 'A', name: L('活力', 'Vital'), ink: 'oklch(0.84 0.12 135)', period: BR('A').breathPeriod[0], depth: BR('A').breathAmp[0], lat: 0.12, s: 1 },
-  { k: 'B', name: L('沉静', 'Withdrawn'), ink: 'oklch(0.76 0.08 225)', period: BR('B').breathPeriod[0], depth: BR('B').breathAmp[0], lat: 1.4, s: 0.35 },
-  { k: 'C', name: L('亲密', 'Affectionate'), ink: 'oklch(0.78 0.1 335)', period: BR('C').breathPeriod[0], depth: BR('C').breathAmp[0], lat: 0.35, s: 0.75 },
-  { k: 'D', name: L('不稳定', 'Unstable'), ink: 'oklch(0.83 0.12 85)', period: (D_PERIOD[0] + D_PERIOD[1]) / 2, depth: (D_DEPTH[0] + D_DEPTH[1]) / 2, lat: null, s: null },
+  { k: 'A', name: NAME('A'), ink: 'oklch(0.84 0.12 135)', period: BR('A').breathPeriod[0], depth: BR('A').breathAmp[0], lat: BR('A').latency[0], s: gainTo01(BR('A').gain[0]) },
+  { k: 'B', name: NAME('B'), ink: 'oklch(0.76 0.08 225)', period: BR('B').breathPeriod[0], depth: BR('B').breathAmp[0], lat: BR('B').latency[0], s: gainTo01(BR('B').gain[0]) },
+  { k: 'C', name: NAME('C'), ink: 'oklch(0.78 0.1 335)', period: BR('C').breathPeriod[0], depth: BR('C').breathAmp[0], lat: BR('C').latency[0], s: gainTo01(BR('C').gain[0]) },
+  { k: 'D', name: NAME('D'), ink: 'oklch(0.83 0.12 85)', period: (D_PERIOD[0] + D_PERIOD[1]) / 2, depth: (D_DEPTH[0] + D_DEPTH[1]) / 2, lat: null, s: null },
 ];
+/** 乱序随机每次回应重抽的延迟 / 强度区间（示意台用，取自引擎 ④ ⑤） */
+export const D_LATENCY = BR('D').latency;
+export const D_STRENGTH: readonly [number, number] = [gainTo01(BR('D').gain[0]), gainTo01(BR('D').gain[1])];
 const pct = (v: number): string => `${Math.round(v * 100)}`;
 
-/** 参数表：十二行 × 四列（A/B/C/D）。与线上 MDX 的表逐字一致。 */
+/** 参数表：十四行 × 四列（A/B/C/D），全部由引擎人格表现算。 */
 export interface PersonaRow {
   k: Bi;
   cells: { zh: readonly [string, string, string, string]; en: readonly [string, string, string, string] };
 }
-const row = (
-  zhK: string,
-  enK: string,
-  zh: [string, string, string, string],
-  en: [string, string, string, string],
-): PersonaRow => ({ k: L(zhK, enK), cells: { zh, en } });
+type Four<T> = [T, T, T, T];
+const KEYS: Four<PersonaKey> = ['A', 'B', 'C', 'D'];
+const num = (v: number) => String(Math.round(v * 100) / 100);
+/** 单值 / 区间按同一种写法：「3.5 秒」「3–5 秒」；unit 两种语言各一个 */
+const span = (r: readonly [number, number], f: (v: number) => string = num) => (r[0] === r[1] ? f(r[0]) : `${f(r[0])}–${f(r[1])}`);
+const rowOf = (zhK: string, enK: string, cell: (k: PersonaKey) => Bi): PersonaRow => {
+  const c = KEYS.map(cell);
+  return { k: L(zhK, enK), cells: { zh: c.map((x) => x.zh) as Four<string>, en: c.map((x) => x.en) as Four<string> } };
+};
+const unit = (zhU: string, enU: string, r: (k: PersonaKey) => readonly [number, number], f?: (v: number) => string) => (k: PersonaKey) =>
+  L(`${span(r(k), f)}${zhU}`, `${span(r(k), f)}${enU}`);
+const DEATH_EN: Record<string, string> = {
+  turn: 'winds down, stops facing the person',
+  quiet: 'slows quietly to a stop',
+  withdraw: 'turns away, then slowly stops',
+  arrhythmia: 'rhythm falls apart, then fades',
+};
 
 export const PERSONA_ROWS: readonly PersonaRow[] = [
-  row(
-    '呼吸周期（平时）',
-    'Breath period (at rest)',
-    [`${PERSONAS[0].period} 秒`, `${PERSONAS[1].period} 秒`, `${PERSONAS[2].period} 秒`, `${D_PERIOD[0]}–${D_PERIOD[1]} 秒随机`],
-    [`${PERSONAS[0].period} s`, `${PERSONAS[1].period} s`, `${PERSONAS[2].period} s`, `random ${D_PERIOD[0]}–${D_PERIOD[1]} s`],
+  rowOf('呼吸周期（平时）', 'Breath period (at rest)', unit(' 秒', ' s', (k) => BR(k).breathPeriod)),
+  rowOf('呼吸幅度（平时）', 'Breath depth (at rest)', unit('%', '%', (k) => BR(k).breathAmp, pct)),
+  rowOf('运动速度', 'Motion speed', unit(' cm/s', ' cm/s', (k) => BR(k).speed)),
+  rowOf('响应延迟', 'Response latency', unit(' 秒', ' s', (k) => BR(k).latency)),
+  rowOf('回应幅度', 'Response size', (k) => L(`+${span(BR(k).gain, pct)}%`, `+${span(BR(k).gain, pct)}%`)),
+  rowOf('自发动作间隔', 'Idle-motion interval', unit(' 秒', ' s', (k) => BR(k).spont)),
+  rowOf('声音基频', 'Voice pitch', unit(' Hz', ' Hz', (k) => BR(k).voiceFreq)),
+  rowOf('发声占比', 'Voice duty', unit('%', '%', (k) => BR(k).voiceDuty, pct)),
+  rowOf('朝向变化间隔', 'Reorientation interval', unit(' 秒', ' s', (k) => BR(k).orient)),
+  rowOf('朝向人的概率', 'Turns toward a person', (k) => L(`${pct(BR(k).toward)}%`, `${pct(BR(k).toward)}%`)),
+  rowOf('不朝人时', 'Otherwise', (k) =>
+    BR(k).otherwise === 'random' ? L('随便看；对手是看别处', 'looks around; looks elsewhere from a hand') : L('背向人；对手是躲开', 'turns away; keeps away from a hand'),
   ),
-  row(
-    '呼吸幅度（平时）',
-    'Breath depth (at rest)',
-    [`${pct(PERSONAS[0].depth)}%`, `${pct(PERSONAS[1].depth)}%`, `${pct(PERSONAS[2].depth)}%`, `${pct(D_DEPTH[0])}–${pct(D_DEPTH[1])}% 随机`],
-    [`${pct(PERSONAS[0].depth)}%`, `${pct(PERSONAS[1].depth)}%`, `${pct(PERSONAS[2].depth)}%`, `random ${pct(D_DEPTH[0])}–${pct(D_DEPTH[1])}%`],
+  rowOf('惊吓阈值', 'Startle threshold', (k) => L(span(BR(k).startle), span(BR(k).startle))),
+  rowOf('死亡方式', 'How it dies', (k) =>
+    L(`${BR(k).death.zh}（${BR(k).death.dur} 秒）`, `${DEATH_EN[BR(k).death.kind]} (${BR(k).death.dur} s)`),
   ),
-  row('运动速度', 'Motion speed', ['快', '慢', '中偏快', '忽快忽慢'], ['fast', 'slow', 'medium-fast', 'swings']),
-  row('响应延迟', 'Response latency', ['极短', '长', '短', '不一致'], ['very short', 'long', 'short', 'inconsistent']),
-  row('响应强度', 'Response strength', ['大', '小', '中偏大', '不一致'], ['large', 'small', 'medium-large', 'inconsistent']),
-  row(
-    '自发运动频率',
-    'Idle motion rate',
-    ['高', '低', '中，有人在时升高', '随机'],
-    ['high', 'low', 'medium, rises when you\'re there', 'random'],
-  ),
-  row(
-    '声音音调',
-    'Sound pitch',
-    ['高频明快', '低频温暖', '中频多变', '不稳定'],
-    ['bright, high', 'warm, low', 'mid, variable', 'unsteady'],
-  ),
-  row(
-    '声音节奏',
-    'Sound rhythm',
-    ['连续密集', '稀疏断续', '有节奏但有变化', '无规律'],
-    ['dense, continuous', 'sparse, broken', 'rhythmic with variation', 'no pattern'],
-  ),
-  row('朝向变化频率', 'Reorientation rate', ['高', '低', '中', '随机'], ['high', 'low', 'medium', 'random']),
-  row(
-    '朝向偏好',
-    'Orientation bias',
-    ['四处看', '偏离人', '强烈偏向人', '忽而朝人忽而背离'],
-    ['looks everywhere', 'away from you', 'strongly toward you', 'toward, then away'],
-  ),
-  row(
-    '惊吓阈值',
-    'Startle threshold',
-    ['高，不容易吓到', '低，轻碰就缩', '中', '不一致'],
-    ['high, hard to spook', 'low, flinches at a touch', 'medium', 'inconsistent'],
-  ),
-  row(
-    '死亡方式',
-    'How it dies',
-    ['精力耗尽，动作渐小渐停', '安静地慢慢停下', '最后朝向用户，缓慢停止', '节律紊乱后渐弱'],
-    ['winds down, movements shrinking', 'quietly slows to a stop', 'turns toward you, then stops', 'rhythm falls apart, then fades'],
-  ),
+  rowOf('对人的趋避', 'Toward or away from people', (k) => {
+    const st = BR(k).stance;
+    if (st[0] !== st[1]) return L(`±${span(st)}，每回合随机迎或躲`, `±${span(st)}, toward or away each time`);
+    if (st[0] > 0) return L('+1，朝人张开', '+1, opens toward people');
+    if (st[0] < 0) return L('−1，收拢、背着人', '−1, closes up, turns away');
+    return L('0，不受影响', '0, unaffected');
+  }),
 ];
-export const DEATH_ROW = PERSONA_ROWS.length - 1;
+export const DEATH_ROW = PERSONA_ROWS.findIndex((r) => r.k.en === 'How it dies');
 
-/** 衰老曲线上方那一行「怎么死」：取第 i 套人格那一列的最后一行。 */
-export const deathLabel = (i: number): Bi =>
-  L(PERSONA_ROWS[DEATH_ROW].cells.zh[i], PERSONA_ROWS[DEATH_ROW].cells.en[i]);
+/** 衰老曲线上方那一行「怎么死」：取第 i 套人格那一列的死亡方式（不带时长）。 */
+export const deathLabel = (i: number): Bi => L(BR(KEYS[i]).death.zh, DEATH_EN[BR(KEYS[i]).death.kind]);
 
 /* ── 生命周期状态图（N05）────────────────────────────────────────────────── */
 export interface LifeSeg {
@@ -156,7 +146,8 @@ export const LIFE: readonly LifeSeg[] = [
   { n: L('诞生', 'Birth'), dur: '1′', g: 1, bg: 'oklch(0.86 0.08 130 / .32)' },
   { n: L('成长与互动', 'Growth & interaction'), dur: '4′', g: 4, bg: 'oklch(0.74 0.1 150 / .22)' },
   { n: L('衰老', 'Ageing'), dur: '1.5′', g: 1.5, bg: 'oklch(0.72 0.095 291 / .3)' },
-  { n: L('死亡', 'Death'), dur: '·', g: 0.55, bg: 'oklch(0.95 0.032 120 / .85)', fg: PAPER },
+  // 死亡段 = 按人格的死法，60–120 s（行为引擎 spec §5.1、§5.4）；此前这一格画成一瞬
+  { n: L('死亡', 'Death'), dur: "1–2′", g: 1.5, bg: 'oklch(0.95 0.032 120 / .85)', fg: PAPER },
   {
     n: L('空白', 'Blank'),
     dur: '45″',
@@ -166,8 +157,8 @@ export const LIFE: readonly LifeSeg[] = [
 ];
 export const LTOT = LIFE.reduce((a, s) => a + s.g, 0);
 export const LIVES: readonly Bi[] = [L('第一世', 'Life 1'), L('第二世', 'Life 2'), L('第三世', 'Life 3'), L('第四世', 'Life 4')];
-/** 示意节奏：一世 8 秒（≈8 分钟压缩，1 秒 ≈ 1 分钟），四世一轮 32 秒。 */
-export const LIFE_SECONDS = 8;
+/** 示意节奏：一世 9 秒（≈ 8–9 分钟压缩，1 秒 ≈ 1 分钟），四世一轮 36 秒。 */
+export const LIFE_SECONDS = 9;
 export const LIFE_LOOP = LIFE_SECONDS * LIVES.length;
 
 /** 播放头状态：elapsed 秒 → 第几世、这一世走到哪（0–1）、在哪一段。 */
@@ -212,8 +203,8 @@ export function rng(seed: number): () => number {
 
 /**
  * 第 k 套人格的衰老趋势（900 点，0–1）。只画趋势：数值待作者提供（页面注里写明）。
- * 四种死法对应表里「死亡方式」一行：A 精力耗尽渐小渐停 / B 安静慢下 / C 渐小（最后朝向用户，
- * 动作由示意台之外表现）/ D 节律紊乱后渐弱（周期与幅度逐周期抖动，越老越乱）。
+ * 四种死法对应表里「死亡方式」一行（行为引擎 §5.4）：A 精力渐尽、最后朝向人停下 / B 安静慢慢停下 /
+ * C 背过身慢慢停下（幅度形状同 A，转身在示意之外）/ D 节律紊乱后渐弱（周期与幅度逐周期抖动，越老越乱）。
  */
 export function ageTrace(k: number): Float32Array {
   const N = 900;
@@ -314,8 +305,8 @@ export class PersonaSim {
 
   /** 碰一下：返回这一次实际的延迟与强度（D 型是随机的），供读数显示。 */
   touch(p: Persona): { lat: number; str: number } {
-    const lat = p.lat ?? 0.1 + this.rnd() * 1.7;
-    const str = p.s ?? 0.2 + this.rnd() * 0.8;
+    const lat = p.lat ?? D_LATENCY[0] + this.rnd() * (D_LATENCY[1] - D_LATENCY[0]);
+    const str = p.s ?? D_STRENGTH[0] + this.rnd() * (D_STRENGTH[1] - D_STRENGTH[0]);
     this.pulses.push({ touch: this.t, at: this.t + lat, s: str });
     return { lat, str };
   }
@@ -333,51 +324,65 @@ export const PARTS: readonly { n: string; name: Bi; x: Bi }[] = [
     n: '5',
     name: L('呼吸环', 'breathing rings'),
     x: L(
-      '五道会张合的环沿体轴排开，组成会呼吸的壳。呼吸的快慢、深浅和规律随人格与年龄变化。',
-      'Five expanding rings sit along the body and open and close together. Breathing rate, depth and regularity change with personality and age.',
+      '五道会张合的环沿体轴排开，组成会呼吸的壳。一根中间轴带动五个环同时开合。',
+      'Five expanding rings sit along the body and open and close together, all driven from one shaft.',
     ),
   },
   {
     n: '1',
-    name: L('会握的臂', 'gripping arm'),
+    name: L('臂', 'arm'),
     x: L(
-      '由编织线牵动的分节手指，伸向人、握住人，并改变回应的力度。',
-      'A segmented finger pulled by braided line. It reaches toward people and varies the strength of its response.',
+      '六节方盒椎节加一个梢端节，三根肌腱各接一台电机。收哪一根，臂就朝那一侧弯，弯够了能缠住手。',
+      'Six box vertebrae and a tip segment, with three tendons on three motors. Pulling one tendon bends the arm towards it, and enough bend wraps a hand.',
     ),
   },
   {
     n: '2',
     name: L('触须', 'feelers'),
     x: L(
-      '弹性芯外套硅胶管，根部一只微型舵机。材料负责弯曲回弹，芯兼作触摸电极。',
-      'A springy core, a silicone sleeve and a micro servo at the base. The material bends and rebounds, and the cores are also touch electrodes.',
+      '舵机带着大节前后甩，一段软杆下面连着不受驱动的小块，跟着甩。',
+      'A servo swings the upper segment. A short flexible rod carries an undriven block below it, which swings along.',
     ),
   },
   {
     n: '1',
-    name: L('底座', 'base'),
-    x: L('电机、主控和电源放在底座里，压低重心。', 'The base holds the motors, controller and power supply, keeping the mass low.'),
+    name: L('底座与转台', 'base and turntable'),
+    x: L(
+      'X 形底座上装一台蜗轮转台，转台以上的整机绕竖轴转动，机器的朝向由它决定。',
+      'A worm-gear turntable on an X-shaped base turns everything above it, which sets where the machine faces.',
+    ),
   },
 ];
 
 /* ── 04 · 行为的五层 ─────────────────────────────────────────────────────── */
-export const LAYERS: readonly { name: Bi; x: Bi }[] = [
-  { name: L('自主运动', 'Self-motion'), x: L('没人触碰时，它也会动。', 'It keeps moving when nobody touches it.') },
+/** absent = 设计里有、行为引擎里没有做（构件把这一层的线留空，不和做了的四层画成一样） */
+export const LAYERS: readonly { name: Bi; x: Bi; absent?: boolean }[] = [
+  {
+    name: L('自主运动', 'Self-motion'),
+    x: L('没人碰它时，它也在呼吸、转向、做小动作。', 'With nobody touching it, it still breathes, turns and makes small movements.'),
+  },
   {
     name: L('非确定性响应', 'Non-deterministic response'),
-    x: L('同一次触摸，不总得到相同动作。', 'The same touch does not always get the same reaction.'),
+    x: L('同一次触摸，延迟和幅度每次略有不同。', 'The same touch gets a slightly different delay and size each time.'),
   },
   {
     name: L('内部状态', 'Internal state'),
-    x: L('回应随时间改变，四套人格的差异放在这里。', 'Responses change over time, and the personalities differ here.'),
+    x: L(
+      '刺激让唤醒升高，呼吸随之变快变浅，十几秒后回落。四套人格的差异放在这一层。',
+      'Stimuli raise its arousal, so breathing speeds up and grows shallow, then settles within about fifteen seconds. The personalities differ here.',
+    ),
   },
   {
     name: L('关系塑造', 'Relationship'),
-    x: L('相处久了，逐渐适应人的触摸习惯。', 'It gradually adapts to a person\'s familiar touch.'),
+    absent: true,
+    x: L('引擎里没有做。一世八九分钟，积累不起熟悉。', 'Not built into the engine. One life of eight or nine minutes is too short for familiarity.'),
   },
   {
     name: L('主动性', 'Initiative'),
-    x: L('人离开一段时间后，行为朝向人变化。', 'Its behaviour shifts toward someone after they have been away.'),
+    x: L(
+      '只做了一点：记住这一世里人在哪，人走后热情型仍朝那边看，回避型一直背着那边。',
+      'Only a little: it remembers where the person was in this life, so after they leave the warm one keeps looking there and the avoidant one keeps its back to it.',
+    ),
   },
 ];
 
@@ -468,36 +473,44 @@ export const SYS_COLS: readonly { h: Bi; n: string; items: readonly SysItem[] }[
     ],
   },
   {
-    h: L('事件词表', 'Event vocabulary'),
+    // 九类事件 2026-10-07 定（行为引擎 spec §3.2）：一类 = 一种对行为有独立意义、能从某一路输入单独判出来的刺激
+    h: L('事件', 'Events'),
     n: '9',
     items: [
-      { x: L('ARM_TOUCH', 'ARM_TOUCH') },
-      { x: L('RESISTANCE', 'RESISTANCE') },
-      { x: L('抓握四态：握住人 / 握住物体 / 空抓 / 脱手', 'Grasp ×4: human / object / nothing / lost grip') },
-      { x: L('其余类别待补', 'Remaining classes to come'), pend: true },
+      { x: L('PRESENCE · 有人在、远近', 'PRESENCE · someone near or far') },
+      { x: L('FEELER_TOUCH · 碰触须', 'FEELER_TOUCH · a feeler touched') },
+      { x: L('SHELL_STROKE · 摸、拍、戳壳', 'SHELL_STROKE · shell stroked, patted, poked') },
+      { x: L('SHELL_HOLD · 按住壳', 'SHELL_HOLD · shell held') },
+      { x: L('LIFT · 被拿起', 'LIFT · lifted') },
+      { x: L('KNOCK · 敲', 'KNOCK · knocked') },
+      { x: L('SOUND · 声音', 'SOUND · sound') },
+      { x: L('ARM_TOUCH · 碰臂', 'ARM_TOUCH · arm touched') },
+      { x: L('RESISTANCE · 臂上有张力', 'RESISTANCE · tension on the arm') },
     ],
   },
   {
     h: L('人格参数', 'Personality'),
-    n: '12',
+    n: '13',
     items: [
       { x: L('呼吸周期 · 幅度', 'Breath period · depth') },
       { x: L('运动速度', 'Motion speed') },
-      { x: L('响应延迟 · 强度', 'Response latency · strength') },
-      { x: L('自发运动频率', 'Idle motion rate') },
-      { x: L('声音音调 · 节奏', 'Sound pitch · rhythm') },
-      { x: L('朝向频率 · 偏好', 'Reorientation · bias') },
+      { x: L('响应延迟 · 幅度', 'Response latency · size') },
+      { x: L('自发动作间隔', 'Idle-motion interval') },
+      { x: L('声音基频 · 发声占比', 'Voice pitch · duty') },
+      { x: L('朝向间隔 · 朝人概率', 'Reorientation · bias') },
       { x: L('惊吓阈值 · 死亡方式', 'Startle · how it dies') },
+      { x: L('对人的趋避', 'Toward or away from people') },
     ],
   },
   {
-    h: L('行为杠杆 → 执行器', 'Levers → actuators'),
-    n: '6',
+    // 九路输出 = 七个运动轴 + 声 + 光（行为引擎 spec §6.6）
+    h: L('输出', 'Outputs'),
+    n: '9',
     items: [
-      { x: L('呼吸 · 五环', 'Breath · five rings') },
-      { x: L('臂', 'Arm') },
-      { x: L('触须', 'Feelers') },
-      { x: L('偏航', 'Yaw') },
+      { x: L('呼吸 · 五环（1 台步进）', 'Breath · five rings (1 stepper)') },
+      { x: L('臂 · 三根肌腱（3 台步进）', 'Arm · three tendons (3 steppers)') },
+      { x: L('触须（2 只舵机）', 'Feelers (2 servos)') },
+      { x: L('偏航 · 转台（1 台步进）', 'Yaw · turntable (1 stepper)') },
       { x: L('WS2812B 灯', 'WS2812B light') },
       { x: L('PAM8403 + 喇叭', 'PAM8403 + speaker') },
     ],
@@ -527,22 +540,38 @@ export const STATUS_ROWS: readonly {
   {
     k: L('机构', 'Mechanism'),
     tone: 'amber',
-    tag: L('待补', 'To come'),
-    x: L('齿条驱动、偏航平台、蒙皮各自装到哪。', 'How far the rack drive, the yaw platform and the skin are each assembled.'),
+    tag: L('未装完', 'Not finished'),
+    x: L(
+      '9 月 10 日的记录：齿条传动没有装完，蒙皮还没做。',
+      'As recorded on 10 September, the rack drive is not fully assembled and the skin has not been made.',
+    ),
+  },
+  {
+    k: L('行为引擎', 'Behaviour engine'),
+    tone: 'green',
+    tag: L('网页版完成', 'Web version done'),
+    x: L(
+      '事件、人格、生命周期和执行器指令写成可测试的纯逻辑，在实验 1-6 里跑整机。人格的数值仍是提案。',
+      'Events, personalities, the life cycle and actuator commands are written as testable logic and drive the full machine in Lab 1-6. The personality values are still proposals.',
+    ),
+    cite: { date: '2026-10-07', anchor: 'log-2026-10-07-1' },
   },
   {
     k: L('固件', 'Firmware'),
     tone: 'amber',
-    tag: L('待补', 'To come'),
-    x: L('能否跑完一世，两套人格是否可切换。', 'Whether one full life runs, and whether two personalities can be switched.'),
+    tag: L('待移植', 'To port'),
+    x: L(
+      '引擎的输出整理成九路（七个运动轴、声、光）并对应到电机，其中几处分配仍是提案。ESP32 固件还没写，驱动没有标定。',
+      'The engine outputs are grouped into nine channels (seven motion axes, sound and light) and mapped to motors, some of them still as proposals. The ESP32 firmware is not written and the drives are not calibrated.',
+    ),
   },
   {
     k: L('实验方案', 'Study design'),
     tone: 'green',
     tag: L('已定', 'Settled'),
     x: L(
-      '四世一场约 37 分钟。主要生理指标是事件锁定的皮肤电反应（SCR），分五个时间窗。行为编码用 ELAN，事后做线索回忆访谈。死亡前后心率变异性的比较已取消，所需时间窗远长于一次死亡事件，样本量也不够。',
-      'Four lives per session, about 37 minutes. The main physiological measure is event-locked skin conductance (SCR) across five time windows. Behaviour is coded in ELAN, and a cued-recall interview follows. The HRV comparison across deaths was dropped because it needs a much longer window than a death lasts and the sample is too small.',
+      '四世一场，33–37 分钟。主要生理指标是事件锁定的皮肤电反应（SCR），分五个时间窗。行为编码用 ELAN，事后做线索回忆访谈。死亡前后心率变异性的比较已取消，所需时间窗远长于一次死亡事件，样本量也不够。',
+      'Four lives per session, 33–37 minutes. The main physiological measure is event-locked skin conductance (SCR) across five time windows. Behaviour is coded in ELAN, and a cued-recall interview follows. The HRV comparison across deaths was dropped because it needs a much longer window than a death lasts and the sample is too small.',
     ),
     cite: { date: '2026-07-07', anchor: 'log-2026-07-07-2' },
   },
@@ -635,20 +664,22 @@ export interface Spec {
   /** 数值本身尚待确认：整行值用琥珀色 */
   pending?: boolean;
 }
-/** 与线上 MDX 的参数表逐行逐字一致（方括号去掉，改由 pending 表达）。 */
+/**
+ * 技术参数。2026-10-29 重构：外形、环间距、零件数、臂、触须、执行器按 815.3dm（2026-08-13 作者最新模型，
+ * 交接图册 RM-HO-02 / 03 / 05 实测）改写；其余行仍是作者原文。待确认的行用 pending（整行琥珀色）。
+ */
 export const SPECS: readonly Spec[] = [
-  { k: L('整机包络（全开）', 'Envelope, fully expanded'), v: L('330 × 343 × 220 mm', '330 × 343 × 220 mm') },
-  { k: L('收缩状态', 'Contracted'), v: L('330 × 271 × 155 mm', '330 × 271 × 155 mm') },
+  {
+    k: L('整机外形', 'Overall size'),
+    v: L('780 × 405 × 382 mm（含臂，815 模型实测）；不含臂的机身 387 × 387 mm', '780 × 405 × 382 mm including the arm (815 model); body without the arm 387 × 387 mm'),
+  },
   { k: L('呼吸环', 'Breathing rings'), v: L('5 个异形 Hoberman 角化拱', '5 irregular angulated Hoberman arches') },
   {
-    k: L('环间距', 'Ring pitch'),
-    v: L(
-      '待确认 82.5 / 85 mm；整机测绘逐对量得 85.000，而 330 mm 的包络长度正是按 82.5 算出来的，两个数要一起定',
-      'to confirm, 82.5 / 85 mm; the assembly survey measured 85.000 pair by pair, while the 330 mm envelope length is exactly what 82.5 produces; the two numbers have to be settled together',
-    ),
-    pending: true,
+    k: L('五环尺寸', 'Ring sizes'),
+    v: L('全开宽 276–345 mm、拱顶高 103–221 mm；折叠后拱顶高为全开的 53–56%', 'open width 276–345 mm, apex 103–221 mm; folded, the apex drops to 53–56% of its open height'),
   },
-  { k: L('三角形零件', 'Triangle parts'), v: L('11 组全等类，环内复用', '11 congruence classes, reused within each ring') },
+  { k: L('环间距', 'Ring pitch'), v: L('85 mm（815 模型逐对实测）', '85 mm (measured pair by pair in the 815 model)') },
+  { k: L('三角形零件', 'Triangle parts'), v: L('66 件，11 组全等类，环内复用', '66 parts in 11 congruence classes, reused within each ring') },
   {
     k: L('主驱动', 'Main drive'),
     v: L(
@@ -659,8 +690,8 @@ export const SPECS: readonly Spec[] = [
   {
     k: L('呼吸传动', 'Breathing transmission'),
     v: L(
-      '钢齿轮 m=1，齿数 32 / 33 / 32 / 29 / 25（S1–S5）；商用钢齿条截断 + 打印 U 形卡接件',
-      'Steel gears, module 1, 32 / 33 / 32 / 29 / 25 teeth (S1–S5); cut commercial steel rack with printed U-clips',
+      '钢齿轮 m=1，齿数 32 / 33 / 32 / 29 / 25（S1–S5）；商用钢齿条截断 + 打印 U 形卡接件，推拉每环的内侧脚',
+      'Steel gears, module 1, 32 / 33 / 32 / 29 / 25 teeth (S1–S5); cut commercial steel rack with printed U-clips, pushing each ring\'s inner feet',
     ),
   },
   {
@@ -675,23 +706,31 @@ export const SPECS: readonly Spec[] = [
     k: L('峰值设计扭矩', 'Peak design torque'),
     v: L('0.3 – 0.5 N·m（重力与摩擦主导，惯性可忽略）', '0.3 – 0.5 N·m (gravity and friction dominant; inertia negligible)'),
   },
-  { k: L('手指', 'Finger'), v: L('4 段渐变指节 25 / 20 / 15 / 10 mm', '4 tapered phalanges, 25 / 20 / 15 / 10 mm') },
   {
-    k: L('肌腱', 'Tendon'),
+    k: L('臂', 'Arm'),
+    v: L('6 节方盒椎节（节长 47.7 → 30.8 mm）+ 梢端节，节间 TPU 脊柱杆', '6 box vertebrae (47.7 → 30.8 mm) + tip segment, joined by a TPU spine rod'),
+  },
+  {
+    k: L('肌腱', 'Tendons'),
     v: L(
-      '0.4–0.5 mm 编织 PE 线（30–40 lb），PLA 内通道 1.0–1.2 mm；待确认根数',
-      '0.4–0.5 mm braided PE (30–40 lb), 1.0–1.2 mm channels in PLA; count to confirm',
+      '3 根 0.4–0.5 mm 编织 PE 线，各接一台 NEMA17（GT2 20T 带轮作绕线盘）；每根最多收 44 mm，前 12 mm 收直松弛；实物三台电机是否装齐待确认',
+      '3 × 0.4–0.5 mm braided PE, each on its own NEMA17 (GT2 20T pulley as spool); up to 44 mm each, the first 12 mm taking up slack; whether all three motors are fitted is to confirm',
     ),
     pending: true,
   },
   {
     k: L('触须', 'Feelers'),
-    v: L(
-      '长 7–10 cm，超弹性镍钛或玻纤芯 + 硅胶 / TPU 套',
-      '70–100 mm, superelastic nitinol or fibreglass core + silicone / TPU sleeve',
-    ),
+    v: L('SG90 舵机 + 大节（约 49 mm）+ 软杆 3.9 × 3.9 × 26 mm + 不受驱动的小块，左右镜像', 'SG90 servo + upper segment (about 49 mm) + 3.9 × 3.9 × 26 mm flexible rod + undriven block, mirrored left and right'),
   },
-  { k: L('底座', 'Base'), v: L('倾覆角约 42°（2.3 倍裕度）', 'Tipping angle about 42° (2.3× margin)') },
+  {
+    k: L('执行器', 'Actuators'),
+    v: L('7 个：4 台 NEMA17（呼吸 1、肌腱 3）、转台自带 42 步进、2 只 SG90', '7: four NEMA17 (one for breathing, three for tendons), the turntable\'s own stepper, two SG90'),
+  },
+  {
+    k: L('底座', 'Base'),
+    v: L('X 形底座，四脚中心约 351 × 351 mm；倾覆角约 42°（2.3 倍裕度），对应哪一版底座待确认', 'X-shaped base, feet about 351 × 351 mm apart; tipping angle about 42° (2.3× margin), base version to confirm'),
+    pending: true,
+  },
   { k: L('主控', 'Controller'), v: L('ESP32 WROOM-32，双核', 'ESP32 WROOM-32, dual core') },
   {
     k: L('传感', 'Sensing'),
@@ -704,7 +743,7 @@ export const SPECS: readonly Spec[] = [
   { k: L('电源', 'Power'), v: L('12 V 5 A + XL4015 降压至 5 V 轨', '12 V 5 A, XL4015 buck to the 5 V rail') },
   {
     k: L('制造', 'Fabrication'),
-    v: L('FDM（主）+ SLS 尼龙（活动件），M2 / M3 标准件', 'FDM (primary) + SLS nylon (moving parts), M2 / M3 hardware'),
+    v: L('FDM（主）+ SLS 尼龙 / 光敏树脂（活动件），M2 / M3 标准件', 'FDM (primary) + SLS nylon / resin (moving parts), M2 / M3 hardware'),
   },
   { k: L('材料预算', 'Material budget'), v: L('约 ¥300（不含已有库存）', 'about ¥300, excluding stock on hand') },
 ];
@@ -755,19 +794,19 @@ export const BLOCK_UI: Record<Lang, BlockUi> = {
     live: '活件',
     toLab: '去实验室操作 ↗',
     lifeTitle: '生命周期状态图',
-    lifeScale: '一世 ≈ 8 分钟 · 此处 1 秒 ≈ 1 分钟',
-    lifeNote: '四世一场，约 37 分钟。人格顺序在被试间用拉丁方平衡，此处按 A → B → C → D 示意。',
+    lifeScale: '一世约 8–9 分钟 · 此处 1 秒 ≈ 1 分钟',
+    lifeNote: '四世一场，33–37 分钟。死亡一段按人格持续 1–2 分钟，衰老段长短前后浮动半分钟。人格顺序在被试间用拉丁方平衡，此处按 A → B → C → D 示意。',
     pzKicker: '示意台 · 非实测',
     pzTitle: '同一次触摸，四种回应',
     pzPick: '选择人格',
     touch: '轻触它',
     param: '参数',
-    pzNote: '呼吸周期与幅度取自参数表，延迟与强度按表中定性描述映射成示意值。实拍对比（N06 · 两套人格的呼吸）待拍摄。',
+    pzNote: '呼吸、延迟与回应幅度都取自参数表（与实验 1-6 的行为引擎同一份）。这里只画呼吸曲线，不含唤醒、惊跳与转身。实拍对比（N06 · 两套人格的呼吸）待拍摄。',
     pzIdle: '等你碰它',
     pzRead: (p, d) => `呼吸周期 ${p} · 幅度 ${d}`,
     pzResp: (l, s) => `上次回应 · 延迟 ${l} s · 强度 ${s}`,
-    randomPeriod: '2–8 秒随机',
-    randomDepth: '20–90% 随机',
+    randomPeriod: `${D_PERIOD[0]}–${D_PERIOD[1]} 秒随机`,
+    randomDepth: `${pct(D_DEPTH[0])}–${pct(D_DEPTH[1])}% 随机`,
     secUnit: ' 秒',
     layersNote: '设计中的死亡会让这五层行为同时停止。',
     layersOff: '让它死去',
@@ -777,7 +816,7 @@ export const BLOCK_UI: Record<Lang, BlockUi> = {
     agRight: '空白 → 下一世',
     agNote: '向下滚动，它会衰老。数值待作者提供，页面只画趋势。切换人格可看四种死亡方式。',
     sysTitle: '系统逻辑',
-    sysSub: '传感 → 事件词表 → 人格参数 → 行为杠杆 → 执行器',
+    sysSub: '传感 → 事件 → 人格参数 → 输出',
     prKicker: '预测 · 写于 2026-04-03 · 尚无数据',
     prTitle: '四次死亡，困扰程度的预测',
     prAxis: '困扰 / 100',
@@ -791,21 +830,21 @@ export const BLOCK_UI: Record<Lang, BlockUi> = {
     live: 'live',
     toLab: 'Open in the lab ↗',
     lifeTitle: 'Life-cycle state diagram',
-    lifeScale: 'one life ≈ 8 min · here 1 s ≈ 1 min',
+    lifeScale: 'one life ≈ 8–9 min · here 1 s ≈ 1 min',
     lifeNote:
-      'Four lives per session, about 37 minutes. The order of personalities is counterbalanced with a Latin square and shown here as A → B → C → D.',
+      'Four lives per session, 33–37 minutes. Dying lasts 1–2 minutes depending on the personality, and ageing varies by half a minute either way. The order of personalities is counterbalanced with a Latin square and shown here as A → B → C → D.',
     pzKicker: 'Illustrative bench · not measured',
     pzTitle: 'One touch, four answers',
     pzPick: 'Pick a personality',
     touch: 'Touch it',
     param: 'Parameter',
     pzNote:
-      'Breath period and depth come from the parameter table, and latency and strength are mapped from its qualitative descriptions. The filmed comparison (N06) is still to shoot.',
+      'Breathing, latency and response size all come from the parameter table, the same one the behaviour engine in Lab 1-6 uses. Only the breathing curve is drawn here, without arousal, startle or turning. The filmed comparison (N06) is still to shoot.',
     pzIdle: 'waiting for your touch',
     pzRead: (p, d) => `breath ${p} · depth ${d}`,
     pzResp: (l, s) => `last answer · latency ${l} s · strength ${s}`,
-    randomPeriod: 'random 2–8 s',
-    randomDepth: 'random 20–90%',
+    randomPeriod: `random ${D_PERIOD[0]}–${D_PERIOD[1]} s`,
+    randomDepth: `random ${pct(D_DEPTH[0])}–${pct(D_DEPTH[1])}%`,
     secUnit: ' s',
     layersNote: 'At death, all five layers stop together.',
     layersOff: 'Let it die',
@@ -816,7 +855,7 @@ export const BLOCK_UI: Record<Lang, BlockUi> = {
     agNote:
       'Scroll and it ages. Values are to come from the author, so the page draws the trend only. Switch personality to see four ways of dying.',
     sysTitle: 'System logic',
-    sysSub: 'sensing → event vocabulary → personality → levers → actuators',
+    sysSub: 'sensing → events → personality → outputs',
     prKicker: 'Predictions · written 2026-04-03 · no data yet',
     prTitle: 'Four deaths, predicted distress',
     prAxis: 'distress / 100',

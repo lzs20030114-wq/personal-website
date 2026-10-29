@@ -17,7 +17,7 @@ import { MAIN_PROJECTS, getAllWork, getRoutableWork } from './content';
 function slotIds(body: string): string[] {
   return [
     ...body.matchAll(
-      /<(?:FigSlot|InteractiveSlot|VideoSlot|LifeCycle|PersonaBench|ClosureCards|AgeingCurve|SystemLogic|CompareChart|FrameStrip)\b[^>]*?\bid="([^"]+)"/g,
+      /<(?:FigSlot|InteractiveSlot|VideoSlot|LifeCycle|PersonaBench|ClosureCards|AgeingCurve|SystemLogic|CompareChart|FrameStrip|RingFamily)\b[^>]*?\bid="([^"]+)"/g,
     ),
   ].map((m) => m[1]);
 }

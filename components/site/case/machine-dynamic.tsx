@@ -16,5 +16,4 @@ export const SpecList = dynamic(() => import('./SpecList').then((m) => m.SpecLis
 export const StatCompare = dynamic(() => import('./StatCompare').then((m) => m.StatCompare));
 export const LinkageFigure = dynamic(() => import('../../linkage/LinkageFigure').then((m) => m.LinkageFigure));
 export const ArchBench = dynamic(() => import('../../lab/ArchBench').then((m) => m.ArchBench));
-export const RingsBench = dynamic(() => import('../../lab/RingsBench').then((m) => m.RingsBench));
 export const TentacleBench = dynamic(() => import('../../lab/TentacleBench').then((m) => m.TentacleBench));

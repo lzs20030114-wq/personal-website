@@ -609,3 +609,16 @@ body:has(.cs) .ld-header__in, .cs .ld-footer__in { max-width: 1240px; }
   .iv[open] { animation: none; }
   .iv__img { transition: none !important; }
 }
+
+/* ═══ N07 五环参数族（RingFamily，2026-10-29）═══ 五个环各一张小 SVG，窄屏折行，字跟着每张图缩放 */
+.cs-rings { margin: 8px 0; display: flex; flex-direction: column; gap: 14px; }
+.cs-rings__grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: oklch(0.95 0.032 120 / 0.1); box-shadow: 0 0 0 1px oklch(0.95 0.032 120 / 0.1); }
+.cs-rings__svg { display: block; width: 100%; height: auto; background: oklch(0.165 0.03 222 / 0.7); }
+.cs-rings__ground { stroke: oklch(0.95 0.032 120 / 0.28); stroke-width: 1; stroke-dasharray: 3 3; }
+.cs-rings__open { fill: none; stroke: var(--cs-ink); stroke-opacity: 0.78; stroke-width: 0.9; stroke-linejoin: round; }
+.cs-rings__fold { fill: var(--cs-g); fill-opacity: 0.32; stroke: var(--cs-g); stroke-opacity: 0.9; stroke-width: 0.6; stroke-linejoin: round; }
+.cs-rings__axis { fill: var(--cs-am); }
+.cs-rings__name { font: 500 12px var(--cs-mono); fill: var(--cs-gh); }
+.cs-rings__num { font: 400 10.5px var(--cs-mono); fill: var(--cs-dim); }
+@media (max-width: 900px) { .cs-rings__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .cs-rings__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

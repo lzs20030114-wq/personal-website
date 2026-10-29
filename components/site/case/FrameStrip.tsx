@@ -10,7 +10,7 @@ import type { SlotLang } from '../slots';
  * 没有脚本时链接照旧打开原图。帧数据在 src/lib/site/case-frames.ts，截图脚本 scripts/case-frames/。
  *
  * 版式语言照案例页的图框（.cs-* token、发丝线、mono 读数），图注两列与 FigSlot 相同；
- * 「去实验室」链接直达对应台架，那里能动手跑同一台。
+ * 「去实验室」链接直达对应台架，那里能动手跑同一台；不是台架截图的组（模型渲染）不出这条链接。
  */
 export function FrameStrip({ id, set, lang = 'en' }: { id: string; set: string; lang?: SlotLang }) {
   const s = CASE_FRAMES[set];
@@ -68,12 +68,16 @@ export function FrameStrip({ id, set, lang = 'en' }: { id: string; set: string; 
         <span className="cs-cap__id">{id}</span>
         <span className="cs-cap__t">
           <span className="cs-cap__cap">{s.caption[lang]}</span>
-          <span className="cs-cap__sub">
-            {s.sub ? `${s.sub[lang]} ` : ''}
-            <Link href={`/lab#lab${s.hash ?? s.lab}`} prefetch={false} className="cs-strip__lab">
-              {lang === 'zh' ? `实验 ${s.lab} ↗` : `Lab ${s.lab} ↗`}
-            </Link>
-          </span>
+          {s.sub || s.lab ? (
+            <span className="cs-cap__sub">
+              {s.sub ? `${s.sub[lang]} ` : ''}
+              {s.lab ? (
+                <Link href={`/lab#lab${s.hash ?? s.lab}`} prefetch={false} className="cs-strip__lab">
+                  {lang === 'zh' ? `实验 ${s.lab} ↗` : `Lab ${s.lab} ↗`}
+                </Link>
+              ) : null}
+            </span>
+          ) : null}
         </span>
       </figcaption>
     </figure>

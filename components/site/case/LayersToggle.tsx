@@ -6,6 +6,7 @@ import { BLOCK_UI, LAYERS, tx, type Lang } from '../../../src/lib/site/case-rein
 /**
  * 行为的五层（稿 layers）：每层一条上线 + 编号 + 名 + 一句话。
  * 「让它死去」把五条线同时收掉、整体压暗——设计里死亡就是五层同时停止；「重新醒来」再展开。
+ * 引擎里没做的那一层（absent，关系塑造）线一直留空、字压暗（2026-10-29）。
  */
 export function LayersToggle({ lang = 'en' }: { lang?: Lang }) {
   const ui = BLOCK_UI[lang];
@@ -14,9 +15,9 @@ export function LayersToggle({ lang = 'en' }: { lang?: Lang }) {
     <div className="cs-layers">
       <div className="cs-layers__grid">
         {LAYERS.map((l, i) => (
-          <div className="cs-layer" key={i} style={{ opacity: off ? 0.4 : 1 }}>
+          <div className="cs-layer" key={i} style={{ opacity: off ? 0.4 : l.absent ? 0.55 : 1 }}>
             <span className="cs-layer__line">
-              <i style={{ transform: `scaleX(${off ? 0 : 1})` }} />
+              <i style={{ transform: `scaleX(${off || l.absent ? 0 : 1})` }} />
             </span>
             <span className="cs-layer__n">{String(i + 1).padStart(2, '0')}</span>
             <span className="cs-layer__name">{tx(l.name, lang)}</span>

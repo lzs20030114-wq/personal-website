@@ -70,8 +70,8 @@ describe('案例页构件数据：双语齐全', () => {
     expect(Object.keys(BLOCK_UI.zh).sort()).toEqual(Object.keys(BLOCK_UI.en).sort());
   });
 
-  it('人格参数表 12 行 × 4 列，两种语言同形', () => {
-    expect(PERSONA_ROWS).toHaveLength(12);
+  it('人格参数表 14 行 × 4 列（引擎 ①–⑬ 加 ⑩′），两种语言同形', () => {
+    expect(PERSONA_ROWS).toHaveLength(14);
     for (const r of PERSONA_ROWS) {
       expect(r.cells.zh).toHaveLength(4);
       expect(r.cells.en).toHaveLength(4);
@@ -80,11 +80,24 @@ describe('案例页构件数据：双语齐全', () => {
     // 示意台读的周期 / 幅度必须与表里前两行一致（同一份数据读两处，不能各写各的）
     expect(PERSONA_ROWS[0].cells.zh.slice(0, 3)).toEqual(PERSONAS.slice(0, 3).map((p) => `${p.period} 秒`));
     expect(PERSONA_ROWS[1].cells.zh.slice(0, 3)).toEqual(PERSONAS.slice(0, 3).map((p) => `${Math.round(p.depth * 100)}%`));
+    // 名字跟引擎走（2026-10-14 重分类）：A 热情 · B 沉静 · C 回避 · D 乱序随机
+    expect(PERSONAS.map((p) => p.name.zh)).toEqual((['A', 'B', 'C', 'D'] as const).map((k) => ENGINE_PERSONAS[k].zh));
+    expect(PERSONAS.map((p) => p.name.en)).toEqual(['Warm', 'Calm', 'Avoidant', 'Random']);
   });
 
-  it('参数表 20 项，待确认的两项带 pending', () => {
-    expect(SPECS).toHaveLength(20);
-    expect(SPECS.filter((s) => s.pending).map((s) => s.k.en)).toEqual(['Ring pitch', 'Tendon']);
+  it('人格表每一格都由引擎现算：改了引擎的数，这张表跟着变', () => {
+    const row = (en: string) => PERSONA_ROWS.find((r) => r.k.en === en)!;
+    expect(row('Response latency').cells.en).toEqual(['0.2 s', '2.5 s', '0.3 s', '0.3–3 s']);
+    expect(row('Turns toward a person').cells.zh).toEqual((['A', 'B', 'C', 'D'] as const).map((k) => `${Math.round(ENGINE_PERSONAS[k].toward * 100)}%`));
+    expect(row('Startle threshold').cells.en).toEqual(['0.8', '0.95', '0.25', '0.2–0.9']);
+    expect(row('How it dies').cells.zh[1]).toBe(`${ENGINE_PERSONAS.B.death.zh}（${ENGINE_PERSONAS.B.death.dur} 秒）`);
+    // 示意台的延迟 / 强度也取自引擎 ④ ⑤
+    expect(PERSONAS.slice(0, 3).map((p) => p.lat)).toEqual((['A', 'B', 'C'] as const).map((k) => ENGINE_PERSONAS[k].latency[0]));
+  });
+
+  it('参数表 21 项，待确认的两项带 pending', () => {
+    expect(SPECS).toHaveLength(21);
+    expect(SPECS.filter((s) => s.pending).map((s) => s.k.en)).toEqual(['Tendons', 'Base']);
   });
 
   it('预测四世，条形区间落在 0–100 轴内', () => {
@@ -96,14 +109,20 @@ describe('案例页构件数据：双语齐全', () => {
     }
   });
 
-  it('系统逻辑四列的计数与稿一致（传感 6 · 事件 9 · 人格 12 · 杠杆 6）', () => {
-    expect(SYS_COLS.map((c) => c.n)).toEqual(['6', '9', '12', '6']);
+  it('系统逻辑四列（传感 6 · 事件 9 · 人格 13 · 输出 9），九类事件逐条列出、不再有待补项', () => {
+    expect(SYS_COLS.map((c) => c.n)).toEqual(['6', '9', '13', '9']);
     expect(SYS_COLS[0].items).toHaveLength(6);
+    expect(SYS_COLS[1].items).toHaveLength(9);
+    expect(SYS_COLS[1].items.map((i) => i.x.en.split(' · ')[0])).toEqual([
+      'PRESENCE', 'FEELER_TOUCH', 'SHELL_STROKE', 'SHELL_HOLD', 'LIFT', 'KNOCK', 'SOUND', 'ARM_TOUCH', 'RESISTANCE',
+    ]);
+    expect(SYS_COLS.flatMap((c) => c.items).some((i) => i.pend)).toBe(false);
     expect(SYS_COLS[3].items).toHaveLength(6);
   });
 
-  it('怎么死：每套人格取表里最后一行的那一列', () => {
-    expect(deathLabel(0).en).toBe('winds down, movements shrinking');
+  it('怎么死：取引擎的死亡方式（不带时长）', () => {
+    expect(deathLabel(0).en).toBe('winds down, stops facing the person');
+    expect(deathLabel(2).zh).toBe('背过身慢慢停下');
     expect(deathLabel(3).zh).toBe('节律紊乱后渐弱');
   });
 
@@ -115,18 +134,18 @@ describe('案例页构件数据：双语齐全', () => {
 });
 
 describe('生命周期播放头', () => {
-  it('一世 8 秒、四世一轮 32 秒，到点换世并循环', () => {
-    expect(LIFE_LOOP).toBe(32);
+  it('一世 9 秒、四世一轮 36 秒，到点换世并循环', () => {
+    expect(LIFE_LOOP).toBe(36);
     expect(lifeState(0)).toMatchObject({ life: 0, stage: 0 });
-    expect(lifeState(7.99).life).toBe(0);
-    expect(lifeState(8).life).toBe(1);
-    expect(lifeState(31.9).life).toBe(3);
-    expect(lifeState(32)).toMatchObject({ life: 0, stage: 0 });
+    expect(lifeState(8.99).life).toBe(0);
+    expect(lifeState(9).life).toBe(1);
+    expect(lifeState(35.9).life).toBe(3);
+    expect(lifeState(36)).toMatchObject({ life: 0, stage: 0 });
   });
 
   it('一世里依次经过 诞生 → 成长 → 衰老 → 死亡 → 空白，各段只增不减', () => {
     let prev = -1;
-    for (let t = 0; t < 8; t += 0.05) {
+    for (let t = 0; t < 9; t += 0.05) {
       const s = lifeState(t).stage;
       expect(s).toBeGreaterThanOrEqual(prev);
       prev = s;
@@ -208,16 +227,16 @@ describe('人格示意台的呼吸模拟', () => {
     run(sim, PERSONAS[1], 12);
     const base = sim.y;
     const r = sim.touch(PERSONAS[1]);
-    expect(r).toEqual({ lat: 1.4, str: 0.35 });
-    // 延迟内（1.4 s）脉冲不叠加：只比较脉冲项——此刻 y 与不碰的对照组一致
+    expect(r).toEqual({ lat: ENGINE_PERSONAS.B.latency[0], str: ENGINE_PERSONAS.B.gain[0] / 0.5 });
+    // 延迟内（沉静型 2.5 s）脉冲不叠加：只比较脉冲项——此刻 y 与不碰的对照组一致
     const ctrl = new PersonaSim(rng(3));
     run(ctrl, PERSONAS[1], 12);
     sim.step(0.5, PERSONAS[1]);
     ctrl.step(0.5, PERSONAS[1]);
     expect(sim.y).toBeCloseTo(ctrl.y, 9);
     expect(typeof base).toBe('number');
-    // 延迟过后叠加了一个正脉冲
-    for (let i = 0; i < 60; i++) {
+    // 延迟过后叠加了一个正脉冲（推到触碰后 2.5 s，再看一秒）
+    for (let i = 0; i < 120; i++) {
       sim.step(1 / 60, PERSONAS[1]);
       ctrl.step(1 / 60, PERSONAS[1]);
     }
@@ -234,8 +253,8 @@ describe('人格示意台的呼吸模拟', () => {
     const sim = new PersonaSim(rng(4));
     for (let i = 0; i < 40; i++) {
       const r = sim.touch(PERSONAS[3]);
-      expect(r.lat).toBeGreaterThanOrEqual(0.1);
-      expect(r.lat).toBeLessThanOrEqual(1.8);
+      expect(r.lat).toBeGreaterThanOrEqual(ENGINE_PERSONAS.D.latency[0]);
+      expect(r.lat).toBeLessThanOrEqual(ENGINE_PERSONAS.D.latency[1]);
       expect(r.str).toBeGreaterThanOrEqual(0.2);
       expect(r.str).toBeLessThanOrEqual(1);
     }
@@ -260,8 +279,8 @@ describe('人格示意台的呼吸模拟', () => {
 
   it('呼吸两行取自行为引擎的人格表（按槽位字母），D 写成区间', () => {
     expect(PERSONAS.map((p) => p.period).slice(0, 3)).toEqual((['A', 'B', 'C'] as const).map((k) => ENGINE_PERSONAS[k].breathPeriod[0]));
-    expect(PERSONA_ROWS[0].cells.zh[3]).toBe(`${ENGINE_PERSONAS.D.breathPeriod[0]}–${ENGINE_PERSONAS.D.breathPeriod[1]} 秒随机`);
-    expect(PERSONA_ROWS[1].cells.en[3]).toBe('random 45–75%');
+    expect(PERSONA_ROWS[0].cells.zh[3]).toBe(`${ENGINE_PERSONAS.D.breathPeriod[0]}–${ENGINE_PERSONAS.D.breathPeriod[1]} 秒`);
+    expect(PERSONA_ROWS[1].cells.en[3]).toBe('45–75%');
   });
 
   it('dt = 0（reduced-motion）时不推进时间也不写历史', () => {

@@ -28,8 +28,8 @@ describe('extractChapterTitles', () => {
     });
   }
 
-  it('项目 01：十章（01–10），与稿的目录 00–10 十一项对得上', () => {
+  it('项目 01：十一章（01–11；2026-10-29 重构加了「行为引擎」一节），目录 00–11 十二项', () => {
     const w = getAllWork().find((e) => e.slug === 'reincarnation-machine')!;
-    expect(extractChapterTitles(w.body)).toHaveLength(10);
+    expect(extractChapterTitles(w.body)).toHaveLength(11);
   });
 });

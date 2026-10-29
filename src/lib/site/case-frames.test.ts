@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
-import { CASE_FRAMES, frameSrc } from './case-frames';
+import { CASE_FRAMES, frameSrc, type FrameProject } from './case-frames';
 
 /**
  * 案例页分镜（FrameStrip）的守门。最可能出的事故：重截之后换了尺寸没改数据、删了一张图没删引用、
@@ -17,17 +17,24 @@ function setsIn(file: string): string[] {
   const body = readFileSync(join(process.cwd(), file), 'utf8');
   return [...body.matchAll(/<FrameStrip\b[^>]*?\bset="([^"]+)"/g)].map((m) => m[1]);
 }
-const EN = setsIn('content/work/project-ii/index.mdx');
-const ZH = setsIn('content/work/project-ii/index.zh.mdx');
+const PROJECTS: FrameProject[] = ['project-ii', 'reincarnation-machine'];
 
 describe('案例页分镜', () => {
-  it('中英两侧引用同样几组、顺序相同，每组都存在，没有没人引用的组', () => {
-    expect(ZH).toEqual(EN);
-    expect(EN.length).toBeGreaterThan(0);
-    for (const s of EN) expect(CASE_FRAMES[s], s).toBeDefined();
-    expect(new Set(EN).size).toBe(EN.length);
-    expect(Object.keys(CASE_FRAMES).sort()).toEqual([...EN].sort());
-  });
+  for (const project of PROJECTS) {
+    it(`${project}：中英两侧引用同样几组、顺序相同，每组都存在且属于这个项目，没有没人引用的组`, () => {
+      const EN = setsIn(`content/work/${project}/index.mdx`);
+      const ZH = setsIn(`content/work/${project}/index.zh.mdx`);
+      expect(ZH).toEqual(EN);
+      expect(EN.length).toBeGreaterThan(0);
+      for (const s of EN) {
+        expect(CASE_FRAMES[s], s).toBeDefined();
+        expect(CASE_FRAMES[s].project, s).toBe(project);
+      }
+      expect(new Set(EN).size).toBe(EN.length);
+      const mine = Object.entries(CASE_FRAMES).filter(([, s]) => s.project === project).map(([k]) => k);
+      expect(mine.sort()).toEqual([...EN].sort());
+    });
+  }
 
   it('文字中英两份齐全，英文里不混中文', () => {
     for (const [name, s] of Object.entries(CASE_FRAMES)) {
