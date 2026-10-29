@@ -1013,7 +1013,7 @@ def scene_B(mats):
         build_unit(u, top, mats)
         plaques += plaque(labels, mats, u['label'], (u['place'][0], -0.75, 0.0))
     figs = new_coll('B·比例参考', top)
-    build_figure(figs, D['figures']['human'], '人', (2.9, 0.55, 0.0))
+    build_figure(figs, D['figures']['human'], '人', (3.35, 0.95, 0.0))
     lights = new_coll('B·灯光与相机', top)
     area_light(lights, '主光', (3.0, -4.2, 3.4), look_rot((3.0, -4.2, 3.4), (0, 0, 1.4)), 3.0, 900, (1.0, 0.97, 0.92))
     area_light(lights, '轮廓光', (-3.0, 3.0, 2.6), look_rot((-3.0, 3.0, 2.6), (0, 0, 1.4)), 2.0, 450, (0.75, 0.88, 1.0))
