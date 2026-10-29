@@ -15,8 +15,6 @@ COL = {
     "skinA": (0.66, 0.76, 0.81),
     "skinB": (0.72, 0.83, 0.77),
     "hoop": (0.24, 0.42, 0.48),
-    "tie": (0.12, 0.17, 0.21),
-    "bond": (0.88, 0.47, 0.20),
 }
 LINE = np.array([0.11, 0.17, 0.21])
 
@@ -108,64 +106,33 @@ def unit_frame(k):
     t = np.array([-math.sin(a), math.cos(a), 0.0])
 
     def f(r, s, w):
-        return r * n + w * t + np.array([0, 0, G.UNIT_H - s])
+        return r * n + w * t + np.array([0, 0, G.RIB_H - s])
     return f
 
 
-def _bar(m, f, p, q, w, half, col):
-    """剖面里 p→q 的一根细线（截面 half×2 见方），放在切向 w 处。"""
-    (r0, s0), (r1, s1) = p, q
-    L = math.hypot(r1 - r0, s1 - s0)
-    ur, us = (r1 - r0) / L, (s1 - s0) / L
-    nr, ns = -us * half, ur * half
-    poly = [(r0 + nr, s0 + ns), (r1 + nr, s1 + ns), (r1 - nr, s1 - ns), (r0 - nr, s0 - ns)]
-    m.prism(poly, f, w - half, w + half, col)
-
-
-def build_ring(units=range(G.N_UNITS), core=True, hoops=True, ties=True, bd=False):
+def build_ring(units=range(G.N_UNITS), skins=True, core=True, hoops=True):
     m = Mesh()
     hw = G.W / 2
     for k in units:
         f = unit_frame(k)
         for name, (r0, r1, s0, s1) in G.BOARDS_FOLDED.items():
             m.prism([(r0, s0), (r1, s0), (r1, s1), (r0, s1)], f, -hw, hw, COL["wood"])
-        for name, rects in G.SKIN_FOLDED.items():
-            col = COL["skinA"] if name.startswith("A") else COL["skinB"]
-            for r0, r1, s0, s1 in rects:
-                m.prism([(r0, s0), (r1, s0), (r1, s1), (r0, s1)], f, -hw, hw, col)
-        if ties:
-            # 键：箱子里的斜线
-            for y in G.BOND_Y:
-                w = y - hw
-                _bar(m, f, *G.BOND_AC, w, 0.45, COL["bond"])
-                if bd:
-                    _bar(m, f, *G.BOND_BD, w, 0.45, COL["bond"])
-            # 露在外面的针脚：端板上一竖针、台面与底面上一横针
-            for sc in G.STITCH_S:
-                rr = G.OUTER_WALL
-                m.prism([(rr, sc - G.STITCH_DS), (rr + 0.5, sc - G.STITCH_DS),
-                         (rr + 0.5, sc + G.STITCH_DS), (rr, sc + G.STITCH_DS)], f, -0.6, 0.6, COL["tie"])
-            (ra, _), (rc, _) = G.BOND_AC
-            for y in G.BOND_Y:
-                w = y - hw
-                ss = G.PLATFORM_TOP_S
-                m.prism([(ra - 0.6, ss - 0.5), (ra + 0.6, ss - 0.5), (ra + 0.6, ss), (ra - 0.6, ss)],
-                        f, w - G.BOND_DY, w + G.BOND_DY, COL["tie"])
-                ss = G.PLATFORM_BOT_S
-                m.prism([(rc - 0.6, ss), (rc + 0.6, ss), (rc + 0.6, ss + 0.5), (rc - 0.6, ss + 0.5)],
-                        f, w - G.BOND_DY, w + G.BOND_DY, COL["tie"])
+        if skins:
+            for name, rects in G.SKIN_FOLDED.items():
+                col = COL["skinA"] if name.startswith("A") else COL["skinB"]
+                for r0, r1, s0, s1 in rects:
+                    m.prism([(r0, s0), (r1, s0), (r1, s1), (r0, s1)], f, -hw, hw, col)
     if core:
+        for k in range(G.N_UNITS):
+            m.prism(G.rib_outline_rs(), unit_frame(k), -G.SLOT / 2, G.SLOT / 2, COL["core"])
         ident = lambda u, v, w: np.array([u, v, w])
         for sp in G.PLATE_S:
-            z0 = G.UNIT_H - sp - G.T_BOARD / 2
+            z0 = G.RIB_H - sp - G.T_BOARD / 2
             m.prism(G.plate_outline(0.0), ident, z0, z0 + G.T_BOARD, COL["core"])
-        rd = G.DOWEL_D / 2
-        circ = [(rd * math.cos(2 * math.pi * i / 20), rd * math.sin(2 * math.pi * i / 20)) for i in range(20)]
-        m.prism(circ, ident, 0.0, G.UNIT_H, COL["core"])
     if hoops:
         pts = G.HOOP["pts"]
         for sp in G.HOOP_S:
-            zc = G.UNIT_H - sp
+            zc = G.RIB_H - sp
             n = len(pts)
             for i in range(n):
                 p, q = np.array(pts[i]), np.array(pts[(i + 1) % n])
