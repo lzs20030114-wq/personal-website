@@ -222,7 +222,12 @@ def render(mesh, az=-28.0, el=24.0, px_per_mm=5.0, ss=2, pad=12, light=(-0.45, -
     img[ed] = LINE
     im = Image.fromarray((img * 255).astype(np.uint8))
     im = im.resize((W // ss, H // ss), Image.LANCZOS)
-    return im, {"mm_per_px": 1 / px_per_mm, "size": (W // ss, H // ss)}
+    def project(p):
+        """世界点 → 输出图上的像素坐标。"""
+        p = np.asarray(p, float)
+        return ((p @ right - x0) * px_per_mm, (y1 - p @ up) * px_per_mm)
+    return im, {"mm_per_px": 1 / px_per_mm, "size": (W // ss, H // ss), "project": project,
+                "view": -fwd}
 
 
 if __name__ == "__main__":
