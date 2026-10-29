@@ -568,7 +568,7 @@ describe('单元铺满整间房（cover: room，2026-10-27 作者「单元兼作
 
   it('收起的布束仍只在天花下一小截', () => {
     const stowedFoot = unitFootY(rig, traj.footY, 0, rig.y, traj.storeY);
-    expect(stowedFoot / UNITS_PER_M).toBeLessThan(0.45); // 整条 338 节的布压成 HOIST.stowed 倍：约 0.41 m，比站着的人头顶高 1.6 m 以上
+    expect(stowedFoot / UNITS_PER_M).toBeLessThan(0.45); // 整条 338 节的布压成 HOIST.stowed 倍：约 0.40 m，底边离地 3.33 m，比站着的人头顶高 1.6 m 以上
     expect(rig.y).toBeGreaterThan(rig.stowY);
   });
 
