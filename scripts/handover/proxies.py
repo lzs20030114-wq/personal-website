@@ -235,3 +235,29 @@ def tendon_paths(arm):
         P = np.array([(x, ay + r * math.cos(a), az + r * math.sin(a)) for x, r in seq])
         out[name] = (np.c_[P, np.ones(len(P))] @ M)
     return out, seq
+
+
+# ---------------------------------------------------------------- 环的铰点：对锁螺丝 + 石墨垫片
+WASHER = dict(d=8.0, t=0.5)                         # 石墨垫片 ⌀8 × 0.5（作者 2026-10-29）
+CHICAGO = dict(head_d=7.0, head_t=1.2, barrel_d=3.0)  # 对锁螺丝：光筒 ⌀3 配 ⌀3.2 孔；头部尺寸只用于出图
+BOSS = dict(d=10.0, t=3.45)                         # 三角件角上的圆筒（815 实测），外侧脚的打印垫块同尺寸
+
+def washer_layout(solids):
+    """一处铰点沿螺丝轴依次穿过的件 → 垫片位置：每两件之间一片，两头螺丝头下各一片。返回 (垫片起点列表, 螺丝两头内侧 x)。"""
+    solids = sorted(solids)
+    t = WASHER['t']
+    xs = [solids[0][0] - t]
+    xs += [(a[1] + b[0]) / 2 - t / 2 for a, b in zip(solids, solids[1:])]
+    xs.append(solids[-1][1])
+    return xs, (solids[0][0] - t, solids[-1][1] + t)
+
+def chicago_joint(y, z, solids):
+    """沿 x 轴的一处铰点：螺丝两头 + 光筒 + 垫片。"""
+    ax = (1.0, 0.0, 0.0)
+    xs, (x_lo, x_hi) = washer_layout(solids)
+    h = CHICAGO
+    ws = merge(*[cyl((x, y, z), ax, WASHER['d'] / 2, WASHER['t']) for x in xs])
+    screw = merge(cyl((x_lo - h['head_t'], y, z), ax, h['head_d'] / 2, h['head_t']),
+                  cyl((x_lo, y, z), ax, h['barrel_d'] / 2, x_hi - x_lo),
+                  cyl((x_hi, y, z), ax, h['head_d'] / 2, h['head_t']))
+    return dict(screw=screw, washers=ws, n_washer=len(xs))

@@ -4,8 +4,7 @@
   python extract_815.py ../../模型求解器参考/815.3dm parts.pkl
   python make_figures.py parts.pkl <outDir>
 
-- **不画** 815 模型中的曲柄轮与驱动杆：日志 2026-08-23 记录实物已改为齿条驱动，曲柄—连杆方案作废；
-  齿条在模型里没有，交接图册用示意图另画。
+- 曲柄轮与传动杆按 815 画（实物就是这套，用户 2026-10-29 更正）；齿条推内侧脚是预想方案，没有建模，图册里用示意图另画。
 - 模型里没有的电机本体、绕线盘、皮带、转台实物外形、肌腱，由 proxies.py 按留好的框 / 托盘补画（示意件）。
 """
 import json, math, pickle, sys
@@ -27,9 +26,10 @@ ARM_SPLIT = -182.0   # 大触手：x 大于此 = 机架上的安装笼（含三�
 FILL = dict(
     base=(200, 204, 209), turntable=(143, 163, 184), cage=(178, 188, 200), chassis=(216, 207, 190),
     rail=(196, 220, 207), ring=(238, 233, 223), shaft=(199, 123, 91), pulley=PX.SPOOL,
-    shaftblock=(214, 92, 70), bracket=(160, 182, 214), motor=PX.STEPPER, crank=(240, 201, 135),
+    shaftblock=(214, 92, 70), bracket=(160, 182, 214), motor=PX.STEPPER, crank=(240, 201, 135), crankrod=(228, 176, 110),
     armmount=(178, 200, 224), arm=(207, 224, 239), armmotor=PX.STEPPER, small=(235, 207, 217),
     tendon=PX.TENDON['A'],
+    joint=(120, 124, 130), washer=(58, 60, 64), spacer=(232, 214, 186),
 )
 PALE = (243, 244, 245)
 PALE_INK = (150, 156, 162)
@@ -37,7 +37,8 @@ PALE_INK = (150, 156, 162)
 def group_of(p):
     c = p['cat']; lo, hi = p['lo'], p['hi']; s = hi - lo
     if c == 'plate': return 'ring'
-    if c in ('wheel', 'rod'): return 'crank'
+    if c == 'wheel': return 'crank'
+    if c == 'rod': return 'crankrod'
     if c == 'axpart': return 'pulley' if s[0] > 9 and s[1] > 14 else 'shaftblock'
     if c == 'motor': return 'bracket'
     if c == 'chassis':
@@ -97,6 +98,58 @@ for k, path in TP.items():
     TEND_FULL[k] = full
     add_px('tendon', PX.tube(full, r=0.75), fill=PX.TENDON[k], ink=PX.TENDON[k], tendon=k)
 
+# 环 S3 的铰点（细部图用）：每个销按实际穿过的件排对锁螺丝与石墨垫片；外侧脚与导槽之间垫一块与角上圆筒同尺寸的打印件
+def _ray_x(p, y0, z0):
+    T = p['v'][p['t']].astype(float)
+    a, b, c = T[:, 0], T[:, 1], T[:, 2]
+    v0, v1 = b[:, 1:] - a[:, 1:], c[:, 1:] - a[:, 1:]
+    v2 = np.array([y0, z0]) - a[:, 1:]
+    den = v0[:, 0] * v1[:, 1] - v1[:, 0] * v0[:, 1]
+    ok = np.abs(den) > 1e-12
+    den = np.where(ok, den, 1.0)
+    u = (v2[:, 0] * v1[:, 1] - v1[:, 0] * v2[:, 1]) / den
+    w = (v0[:, 0] * v2[:, 1] - v2[:, 0] * v0[:, 1]) / den
+    m = ok & (u >= 0) & (w >= 0) & (u + w <= 1)
+    xs = np.sort(a[m, 0] + u[m] * (b[m, 0] - a[m, 0]) + w[m] * (c[m, 0] - a[m, 0]))
+    xs = xs[np.r_[True, np.diff(xs) > 1e-4]] if len(xs) else xs
+    return [(float(xs[i]), float(xs[i + 1])) for i in range(0, len(xs) - 1, 2)]
+
+JR = 2
+_shk = [k for k in _PK['shell'] if k.startswith('S3')][0]
+_sh = _PK['shell'][_shk]
+_nodes = np.array(_sh['nodes'], float)
+_used = sorted({i for t in _sh['tris'] for i in t})
+_RJ = {c: [p for p in P if p['cat'] == c and p['ring'] == JR] for c in ('plate', 'rail', 'rod')}
+JOINTS = []     # 每个销：kind、(y, z)、依次穿过的件 [(x0, x1, 件名)]
+for i in _used:
+    y, z = _nodes[i]
+    kind = 'apex' if i == _sh['apex'] else ('foot' if abs(z) < 1e-6 else 'hinge')
+    st = []
+    for p in _RJ['plate']:
+        st += [(a, b, 'plate') for a, b in _ray_x(p, y, z + 3.3)]
+    if kind == 'foot':
+        st += [(a, b, 'rail') for p in _RJ['rail'] for a, b in _ray_x(p, y, z + 3.3)]
+    if kind == 'apex':
+        st += [(a, b, 'guide') for p in _RJ['rail'] for a, b in _ray_x(p, y + 3.3, z)]
+        st += [(a, b, 'rod') for p in _RJ['rod'] for a, b in _ray_x(p, y, z + 3.3) if b - a > 3]
+    st.sort()
+    if kind == 'foot' and len(st) == 2 and st[1][0] - st[0][1] > 3:      # 外侧脚：圆筒离导槽一层厚
+        x0 = st[0][1] + PX.WASHER['t']
+        st.insert(1, (x0, x0 + PX.BOSS['t'], 'spacer'))
+        kind = 'foot_out'
+    elif kind == 'foot':
+        kind = 'foot_in'
+    JOINTS.append(dict(kind=kind, y=float(y), z=float(z), stack=[(round(a, 3), round(b, 3), n) for a, b, n in st]))
+for j in JOINTS:
+    J = PX.chicago_joint(j['y'], j['z'], [(a, b) for a, b, _ in j['stack']])
+    add_px('joint', J['screw']); add_px('washer', J['washers'])
+    for a, b, n in j['stack']:
+        if n == 'spacer':
+            add_px('spacer', PX.cyl((a, j['y'], j['z']), (1.0, 0.0, 0.0), PX.BOSS['d'] / 2, b - a))
+print('S3 铰点', {k: sum(j['kind'] == k for j in JOINTS) for k in ('hinge', 'foot_in', 'foot_out', 'apex')})
+for k in ('hinge', 'foot_in', 'foot_out', 'apex'):
+    print(' ', k, next(j['stack'] for j in JOINTS if j['kind'] == k))
+
 def gpts(*gs, ring=None):
     out = [q['v'][np.unique(q['t'])] for q in pieces if q['g'] in gs and (ring is None or q['ring'] == ring)]
     return np.vstack(out)
@@ -104,13 +157,13 @@ def gpts(*gs, ring=None):
 def bbox(*gs, ring=None):
     v = gpts(*gs, ring=ring); return v.min(0), v.max(0)
 
-CURRENT = [g for g in FILL if g != 'crank']
+CURRENT = [g for g in FILL if g not in ('joint', 'washer', 'spacer')]
 
 def items_for(groups, hi=None, offs=None, pale_groups=(), ring=None, only=None):
     it = []
     for q in pieces:
         if q['g'] not in groups: continue
-        if ring is not None and q['ring'] not in ring and q['g'] in ('ring', 'rail', 'crank'): continue
+        if ring is not None and q['ring'] not in ring and q['g'] in ('ring', 'rail', 'crank', 'crankrod'): continue
         if only is not None and not only(q): continue
         v = q['v']
         if offs and q['g'] in offs: v = v + (np.array(q['off'], float) if 'off' in q else np.array(offs[q['g']], float))
@@ -146,6 +199,17 @@ meta['_dims'] = dict(L=round(float(AHI[0] - ALO[0])), W=round(float(AHI[1] - ALO
                      ymin=round(float(ALO[1]), 1), ymax=round(float(AHI[1]), 1), belt_c=round(MD['center_dist'], 1))
 print('外包', meta['_dims'])
 
+def piece_pt(g, ring, z, front=True):
+    """某环某组件（前侧那片）上高度最接近 z 的一圈顶点的中心，作标注锚点。"""
+    qs = [q for q in pieces if q['g'] == g and q['ring'] == ring and len(q['t']) > 100]
+    q = min(qs, key=lambda q: q['v'][:, 0].min()) if front else max(qs, key=lambda q: q['v'][:, 0].max())
+    v = q['v'][np.unique(q['t'])]
+    near = v[np.abs(v[:, 2] - z) < 2.5]
+    if not len(near): near = v[np.argsort(np.abs(v[:, 2] - z))[:20]]
+    c = near.mean(0)
+    c[0] = near[:, 0].min() if front else near[:, 0].max()
+    return [float(x) for x in c]
+
 def mctr(frame, part='body'):
     v = AM[frame][part][0]; return list((v.min(0) + v.max(0)) / 2)
 
@@ -175,6 +239,8 @@ def common_anchors():
     A['m_D'] = mctr('D')
     A['arm'] = [-400, 109, -52]
     A['arm_tip'] = [-575, 109, -52]
+    A['crank_w'] = piece_pt('crank', 0, z=-4)
+    A['crank_r'] = piece_pt('crankrod', 0, z=95)
     return A
 
 # ---------- 封面轴测
@@ -216,7 +282,7 @@ ortho('view_top', -90, 89.999, 1300, 780, top=56, extra={
 
 # ---------- 爆炸图
 OFFS = dict(base=(0, 0, -230), turntable=(0, 0, -165), cage=(0, 0, -95), chassis=(0, 0, 0),
-            rail=(0, 0, 70), shaft=(0, 0, 70), pulley=(0, 0, 70), shaftblock=(0, 0, 70),
+            rail=(0, 0, 70), shaft=(0, 0, 70), pulley=(0, 0, 70), shaftblock=(0, 0, 70), crank=(0, 0, 70), crankrod=(0, 0, 70),
             bracket=(0, -80, -50), motor=(0, -80, -50), ring=(0, 0, 200), small=(0, 0, -20),
             armmount=(-50, 0, 0), armmotor=(-50, 0, 0), arm=(-120, 0, 0))
 # 小触手按左右各自往外推，不和笼架叠在一起
@@ -235,6 +301,8 @@ for g in EXPL:
 EA['ring'] = [-74, -95, 175 + 200]
 EA['rail'] = [96, -150, 2 + 70]
 EA['shaft'] = [60, 0, 70]
+EA['crank'] = list(np.array(piece_pt('crank', 0, z=-4)) + np.array([0, 0, 70]))
+EA['crankrod'] = list(np.array(piece_pt('crankrod', 0, z=95)) + np.array([0, 0, 70]))
 EA['pulley'] = [121, 0, 19 + 70]
 EA['motor'] = [150, -53.8 - 80, -75 - 50]
 EA['bracket'] = [175, -100 - 80, -40 - 50]
@@ -253,8 +321,8 @@ STEPS = [
     ('step2', ['cage']),
     ('step3', ['chassis']),
     ('step4', ['rail']),
-    ('step5', ['shaft', 'pulley', 'shaftblock', 'bracket', 'motor']),
-    ('step6', ['ring']),
+    ('step5', ['shaft', 'pulley', 'shaftblock', 'crank', 'bracket', 'motor']),
+    ('step6', ['ring', 'crankrod']),
     ('step7', ['small']),
     ('step8', ['armmount', 'arm', 'armmotor', 'tendon']),
 ]
@@ -276,11 +344,48 @@ def det(name, groups, az, el, W, H, ring=None, anchors=None, margin=0.06, pale=(
     save(name, its, cam, anchors)
     return cam
 
-det('det_ring', ['ring', 'rail', 'shaft'], 180, 0, 1300, 760, ring=[2], anchors={
+det('det_ring', ['ring', 'rail', 'shaft', 'crank', 'crankrod'], 180, 0, 1300, 760, ring=[2], anchors={
+    'wheel': piece_pt('crank', 2, z=-5), 'rod': piece_pt('crankrod', 2, z=95),
     'apex': [-0, 0, 157.3], 'foot_out_l': [0, -161.9, 0], 'foot_in_l': [0, -147.6, 0],
     'foot_out_r': [0, 161.9, 0], 'foot_in_r': [0, 147.6, 0], 'slot': [0, 100, -2], 'guide': [0, 0, 120],
     'hub': [0, 0, 0], 'strut': [0, 40, 45], 'tab': [0, -120, -10], 'plate': [0, -120, 95],
 })
+# 曲柄与传动杆（S3）：环与导槽淡画；中间轴只留环附近一段
+_crank_its = items_for(['ring', 'rail', 'crank', 'crankrod'], ring=[2], pale_groups=('ring', 'rail'))
+_sv_, _st_ = PX.cyl((-45.0, 0.0, 0.0), (1.0, 0.0, 0.0), 3.0, 90.0)
+_crank_its.append((_sv_.astype(float), _st_, FILL['shaft'], 8800, None))
+_cv = np.vstack([it[0][np.unique(it[1])] for it in _crank_its])
+cam = fit_cam(_cv, -145, 14, 1300, 1000, margin=0.04)
+save('det_crank', _crank_its, cam, {
+    'wheel_f': piece_pt('crank', 2, z=-5), 'wheel_b': piece_pt('crank', 2, z=30, front=False),
+    'rod_f': piece_pt('crankrod', 2, z=95), 'rod_b': piece_pt('crankrod', 2, z=95, front=False),
+    'cpin': piece_pt('crank', 2, z=34.7), 'apex': [-2.5, 0, 157.3], 'shaft': [-35, 0, 0], 'guide': [10, 0, 115]})
+# 铰点特写：整件照画，只把镜头对准局部
+import itertools
+def closeup(name, lo, hi, az, el, W, H, anchors):
+    its = items_for(['ring', 'rail', 'crankrod', 'joint', 'washer', 'spacer'], ring=[2])
+    box = np.array(list(itertools.product(*zip(lo, hi))), float)
+    save(name, its, fit_cam(box, az, el, W, H, margin=0.03), anchors)
+_fo = next(j for j in JOINTS if j['kind'] == 'foot_out' and j['y'] > 0)
+_fi = next(j for j in JOINTS if j['kind'] == 'foot_in' and j['y'] > 0)
+_ap = next(j for j in JOINTS if j['kind'] == 'apex')
+def _mid(j, n, k=0):
+    xs = [(a + b) / 2 for a, b, m in j['stack'] if m == n]
+    return xs[k]
+closeup('det_joint_foot', (-4, 140, -9), (13, 170, 9), 118, 22, 1100, 760, {
+    'head': [_fo['stack'][0][0] - 1.1, _fo['y'], _fo['z'] + 2.5],
+    'plate_o': [_mid(_fo, 'plate'), _fo['y'], _fo['z'] + 4.6],
+    'spacer': [_mid(_fo, 'spacer'), _fo['y'], _fo['z'] + 4.9],
+    'rail': [9.4, 152, 6.5],
+    'plate_i': [_mid(_fi, 'plate'), _fi['y'], _fi['z'] + 4.6],
+    'washer': [_fi['stack'][0][0] - 0.25, _fi['y'], _fi['z'] - 3.9]})
+closeup('det_joint_apex', (-8, -12, 146), (20, 12, 166), -120, 10, 1100, 760, {
+    'head': [_ap['stack'][0][0] - 1.1, _ap['y'], _ap['z'] + 2.5],
+    'rod_f': [_mid(_ap, 'rod', 0), _ap['y'] - 4.5, _ap['z'] + 2],
+    'plate': [_mid(_ap, 'plate', 0), _ap['y'] - 4.6, _ap['z'] + 1],
+    'guide': [_mid(_ap, 'guide'), -4.5, 150],
+    'rod_b': [_mid(_ap, 'rod', 1), _ap['y'] - 4.5, _ap['z'] + 2]})
+meta['_joints'] = {k: next(j['stack'] for j in JOINTS if j['kind'] == k) for k in ('hinge', 'foot_in', 'foot_out', 'apex')}
 # 主电机与皮带：从左前上方看（电机支架挂在左梯形支架下、S4 与 S5 之间）。不画滑轨架，梯形支架只留左边那副（浅灰）
 _dv = np.vstack([gpts('bracket', 'motor', 'pulley'), np.array([[105, -20, 22], [180, -20, 22]])])
 det('det_drive', ['shaft', 'pulley', 'bracket', 'motor'], -140, -14, 1300, 900, fitv=_dv, margin=0.08, anchors={

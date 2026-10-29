@@ -377,21 +377,21 @@ figcaption { font-size: 13px; color: var(--ink2); line-height: 1.6; }
   <div class="sb">
     <div class="steps">
       <div class="step">
-        <h4><span class="sn">步骤 5</span>中间轴、齿轮、主电机</h4>
-        <!--FIG step5 中间轴、60T 带轮、主电机与皮带。-->
+        <h4><span class="sn">步骤 5</span>中间轴、曲柄轮、主电机</h4>
+        <!--FIG step5 中间轴、曲柄轮、60T 带轮、主电机与皮带。-->
         <ol>
-          <li>中间轴从 S5 端穿入五个中轴孔，依次套上五个齿轮（每环一个）和 60T 带轮（S4–S5 之间），顶丝压在 D 面上。</li>
+          <li>中间轴从 S5 端穿入五个中轴孔，途中依次套上十片曲柄轮（每个环前后各一片）和 60T 带轮（S4–S5 之间），顶丝压在 D 面上。五个环的曲柄朝同一个方向。</li>
           <li>主电机装进支架，出轴朝前穿过前板，M3 螺丝穿腰形槽，装上 20T 带轮，与 60T 对齐。</li>
           <li>支架固定到左梯形支架下面，套上皮带，左右移动电机张紧后拧紧。</li>
         </ol>
       </div>
       <div class="step">
-        <h4><span class="sn">步骤 6</span>五个呼吸环</h4>
-        <!--FIG step6 五个环装在各自的滑轨架上。-->
+        <h4><span class="sn">步骤 6</span>五个呼吸环与传动杆</h4>
+        <!--FIG step6 五个环与传动杆。-->
         <ol>
           <li>拼好每个环（图纸 06）。</li>
           <li>四只脚放进水平脚槽，拱顶销放进竖直导槽。</li>
-          <li>五个环都推到全开，再接上齿条（图纸 07）。</li>
+          <li>装传动杆：每个环两根，下端接曲柄销，上端接拱顶销（图纸 07）。</li>
           <li>手转中间轴，五个环应同步开合。</li>
         </ol>
       </div>
@@ -454,6 +454,18 @@ figcaption { font-size: 13px; color: var(--ink2); line-height: 1.6; }
         <tr><td>11</td><td>S5</td><td class="n">27.1</td><td class="n">51.0</td><td class="n">140°</td><td class="n">4</td></tr>
       </tbody>
     </table></div>
+    <h3><span class="hn">6.3</span>铰点的连接</h3>
+    <ul>
+      <li>每个铰点用一套对锁螺丝（螺丝 + 螺母）穿过圆筒。</li>
+      <li>石墨垫片 ⌀8 × 0.5：每两个相对转动或滑动的件之间放一片，螺丝和螺母的头下面也各放一片。</li>
+      <li>外侧脚和导槽板之间垫一个打印圆筒，与三角件角上的圆筒相同（⌀10 × 3.45）。这样内侧脚和外侧脚都贴着导槽，不留缝。</li>
+    </ul>
+    <div class="cols">
+      <!--FIG det_joint_foot S3 右侧的两只脚（从右侧略偏前看）。-->
+      <!--FIG det_joint_apex S3 的拱顶（从左侧略偏前看）。-->
+    </div>
+    <!--JOINTS-->
+    <p class="small">四种铰点的层叠顺序。上为前（S1 一侧），下为后（导槽一侧）。各件拆开画，厚度按实际比例。</p>
   </div>
 </section>
 
@@ -463,7 +475,7 @@ figcaption { font-size: 13px; color: var(--ink2); line-height: 1.6; }
     <div><span class="k">项目</span><span class="v">轮回机器 实体交接图册</span></div>
     <div><span class="k">图号</span><span class="no">RM-HO-07</span></div>
     <div><span class="k">页</span><span class="v m">07 / 09</span></div>
-    <h2>呼吸传动<small>主电机 → 皮带 3 : 1 → 中间轴 → 五个齿轮 → 齿条 → 内侧脚</small></h2>
+    <h2>呼吸传动<small>主电机 → 皮带 3 : 1 → 中间轴 → 曲柄轮 → 传动杆 → 拱顶销</small></h2>
   </header>
   <div class="sb">
     <svg class="vec" viewBox="0 0 1080 150" role="img" aria-label="呼吸传动链">
@@ -473,9 +485,9 @@ figcaption { font-size: 13px; color: var(--ink2); line-height: 1.6; }
         <rect class="bx" x="170" y="34" width="122" height="70" rx="3"/><text class="bt" x="231" y="64">GT2 20T</text><text class="bs" x="231" y="86">电机轴上</text>
         <rect class="bx" x="322" y="34" width="122" height="70" rx="3"/><text class="bt" x="383" y="64">GT2 60T</text><text class="bs" x="383" y="86">中间轴上</text>
         <rect class="bx hl" x="474" y="34" width="132" height="70" rx="3"/><text class="bt" x="540" y="64">中间轴</text><text class="bs" x="540" y="86">⌀6 D 形钢轴</text>
-        <rect class="bx" x="636" y="34" width="132" height="70" rx="3"/><text class="bt" x="702" y="64">钢齿轮 ×5</text><text class="bs" x="702" y="86">m=1，每环一个</text>
-        <rect class="bx" x="798" y="34" width="124" height="70" rx="3"/><text class="bt" x="860" y="64">钢齿条</text><text class="bs" x="860" y="86">+ U 形卡接件</text>
-        <rect class="bx hl" x="952" y="34" width="120" height="70" rx="3"/><text class="bt" x="1012" y="64">内侧脚</text><text class="bs" x="1012" y="86">→ 整环开合</text>
+        <rect class="bx" x="636" y="34" width="132" height="70" rx="3"/><text class="bt" x="702" y="64">曲柄轮 ×10</text><text class="bs" x="702" y="86">每环前后各一片</text>
+        <rect class="bx" x="798" y="34" width="124" height="70" rx="3"/><text class="bt" x="860" y="64">传动杆 ×10</text><text class="bs" x="860" y="86">每环两根</text>
+        <rect class="bx hl" x="952" y="34" width="120" height="70" rx="3"/><text class="bt" x="1012" y="64">拱顶销</text><text class="bs" x="1012" y="86">→ 整环开合</text>
         <line class="arrow" x1="140" y1="69" x2="168" y2="69" marker-end="url(#ah2)"/>
         <line class="arrow" x1="292" y1="69" x2="320" y2="69" marker-end="url(#ah2)"/>
         <line class="arrow" x1="444" y1="69" x2="472" y2="69" marker-end="url(#ah2)"/>
@@ -483,7 +495,7 @@ figcaption { font-size: 13px; color: var(--ink2); line-height: 1.6; }
         <line class="arrow" x1="768" y1="69" x2="796" y2="69" marker-end="url(#ah2)"/>
         <line class="arrow" x1="922" y1="69" x2="950" y2="69" marker-end="url(#ah2)"/>
         <text class="vlab b" x="307" y="24" text-anchor="middle">GT2 闭口带，3 : 1</text>
-        <text class="vlab s" x="540" y="136" text-anchor="middle">中间轴来回摆约 336°</text>
+        <text class="vlab s" x="540" y="136" text-anchor="middle">中间轴来回摆 180°：0° 全开，180° 折叠</text>
       </g>
     </svg>
     <h3><span class="hn">7.1</span>主电机与皮带</h3>
@@ -495,10 +507,19 @@ figcaption { font-size: 13px; color: var(--ink2); line-height: 1.6; }
           <dt>减速</dt><dd>20T / 60T = 3 : 1</dd>
           <dt>皮带</dt><dd>GT2 闭口带，宽 6</dd>
           <dt>张紧</dt><dd>前板 4 条腰形槽，电机可左右移动约 ±4.8</dd>
+          <dt>带轮</dt><dd>两个都已买，其中一个尺寸买错，需要重买一个。电机轴上是 GT2 20T（孔 ⌀5），中间轴上是 GT2 60T（孔 ⌀6），都配 6 宽的皮带</dd>
         </dl>
       </div>
     </div>
-    <h3><span class="hn">7.2</span>齿条与内侧脚（示意）</h3>
+    <h3><span class="hn">7.2</span>曲柄与传动杆</h3>
+    <div class="cols w60">
+      <!--FIG det_crank S3 的曲柄与传动杆（从左前方看，环与导槽淡画）。-->
+      <div class="col">
+        <p>每个环前后各一片曲柄轮，用顶丝固定在中间轴上。两根传动杆的下端接曲柄销，上端接拱顶销。中间轴摆到 0° 时环全开，摆到 180° 时环折叠。五个环的曲柄朝同一个方向。</p>
+        <p><b>传动问题</b>：寄出的实物每个环用两根传动杆。作者模拟时发现，即使用两根传动杆，传动也可能不顺。7.3 的齿条方案是为此想的替代做法。</p>
+      </div>
+    </div>
+    <h3><span class="hn">7.3</span>齿条推内侧脚（预想方案，未制作）</h3>
     <!--RACK-->
     <p>每环一个齿轮，上下两根齿条夹着齿轮反向移动，各接一只内侧脚。</p>
     <!--GEARTABLE-->

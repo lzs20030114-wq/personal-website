@@ -37,6 +37,8 @@ CALLOUTS = {
         ('ring_S2', '呼吸环 S1–S5'),
         ('rail_top', '滑轨架 ×5'),
         ('shaft', '中间轴 ⌀6 D 形钢轴'),
+        ('crank_w', '曲柄轮（每环两片）'),
+        ('crank_r', '传动杆（每环两根）'),
         ('pulley', '中间轴上的 60T 带轮'),
         ('motor', '主电机 NEMA17'),
         ('bracket', '主电机支架'),
@@ -55,6 +57,8 @@ CALLOUTS = {
         ('ring', '五个呼吸环'),
         ('rail', '滑轨架 ×5'),
         ('shaft', '中间轴'),
+        ('crank', '曲柄轮 ×10'),
+        ('crankrod', '传动杆 ×10'),
         ('pulley', '60T 带轮'),
         ('chassis', '机身底盘（左右梯形支架）'),
         ('bracket', '主电机支架'),
@@ -79,6 +83,33 @@ CALLOUTS = {
         ('slot', '水平脚槽'),
         ('hub', '中轴孔'),
         ('tab', '安装耳'),
+        ('wheel', '曲柄轮'),
+        ('rod', '传动杆'),
+    ],
+    'det_crank': [
+        ('shaft', '中间轴'),
+        ('wheel_f', '曲柄轮（前）'),
+        ('cpin', '曲柄销'),
+        ('rod_f', '传动杆（前）'),
+        ('rod_b', '传动杆（后）'),
+        ('wheel_b', '曲柄轮（后）'),
+        ('apex', '拱顶销'),
+        ('guide', '竖直导槽'),
+    ],
+    'det_joint_foot': [
+        ('head', '对锁螺丝'),
+        ('plate_o', '外侧脚：三角件前层的圆筒'),
+        ('spacer', '打印圆筒 ⌀10 × 3.45'),
+        ([933, 200], '导槽板（水平脚槽）'),
+        ('plate_i', '内侧脚：三角件后层的圆筒'),
+        ([698, 342], '石墨垫片 ⌀8 × 0.5'),
+    ],
+    'det_joint_apex': [
+        ('head', '对锁螺丝'),
+        ('rod_f', '传动杆（前）'),
+        ('plate', '三角件两层'),
+        ([583, 667], '导槽板（竖直导槽）'),
+        ('rod_b', '传动杆（后）'),
     ],
     'det_drive': [
         ('shaft', '中间轴'),
@@ -646,6 +677,90 @@ def tendon_side_svg():
             + f'<text class="vlab s" x="{W - 10}" y="{H + 4}" text-anchor="end">腱 A 纵剖面，B、C 同样走法。竖向放大 2 倍，左为根部。</text></svg>')
 
 
+# ---------------------------------------------------------------- 铰点层叠（数据：make_figures 从 815 的 S3 量出的穿过顺序）
+JNAME = {'hinge': '普通铰点', 'foot_in': '内侧脚', 'foot_out': '外侧脚', 'apex': '拱顶'}
+JPART = dict(plate=('三角件圆筒 ⌀10', '#EEE9DF', '#2A2E33'), rail=('导槽板（水平脚槽）', '#DCE8E1', '#4E6E5E'),
+             guide=('导槽板（竖直导槽）', '#DCE8E1', '#4E6E5E'), spacer=('打印圆筒 ⌀10 × 3.45', '#F1E4CC', '#8A6A2E'),
+             rod=('传动杆', '#F0D3A8', '#8A5A22'))
+
+
+def joints_svg():
+    J = META['_joints']
+    K = 11.0                    # px/mm
+    GAP = 8                     # 拆开画的间隙 px
+    PW = 540
+    kinds = ('hinge', 'foot_in', 'foot_out', 'apex')
+
+    def seq_of(kind):
+        sq = [('head', 1.2, 7.0)]
+        for a, b, nm in J[kind]:
+            sq += [('washer', 0.5, 8.0), (nm, b - a, 10.0)]
+        return sq + [('washer', 0.5, 8.0), ('nut', 1.2, 7.0)]
+
+    def height(sq):
+        return sum(max(t * K, 4) for _, t, _ in sq) + GAP * (len(sq) - 1)
+
+    rows = [max(height(seq_of(kinds[0])), height(seq_of(kinds[1]))), max(height(seq_of(kinds[2])), height(seq_of(kinds[3])))]
+    RH = [h + 96 for h in rows]
+    body = []
+    for n, kind in enumerate(kinds):
+        x0, y0 = (n % 2) * PW, sum(RH[:n // 2])
+        ax = x0 + 140
+        st = J[kind]
+        sq = seq_of(kind)
+        y = y0 + 48 + (rows[n // 2] - height(sq)) / 2
+        body.append(f'<text class="vlab" x="{x0 + 16}" y="{y0 + 26}" font-weight="700" style="font-size:16px">{JNAME[kind]}</text>')
+        top = y
+        idx = len(body)
+        labels = []
+        nlayer = {}
+        first_washer = True
+        for nm, t, d in sq:
+            h = max(t * K, 4)
+            if nm == 'washer':
+                body.append(f'<rect x="{ax - d * K / 2:.1f}" y="{y:.1f}" width="{d * K:.1f}" height="{h:.1f}" fill="#3A3C40"/>')
+                if first_washer:
+                    labels.append((y + h / 2, ax + d * K / 2, '石墨垫片 ⌀8 × 0.5'))
+                    first_washer = False
+            elif nm in ('head', 'nut'):
+                body.append(f'<rect x="{ax - d * K / 2:.1f}" y="{y:.1f}" width="{d * K:.1f}" height="{h:.1f}" rx="2" fill="#9AA0A6" stroke="#4A535C"/>')
+                labels.append((y + h / 2, ax + d * K / 2, '对锁螺丝' if nm == 'head' else '对锁螺母'))
+            elif nm in ('rail', 'guide'):
+                w, slot = 170, 1.8 * K
+                body.append(f'<rect x="{ax - w / 2:.1f}" y="{y:.1f}" width="{w / 2 - slot:.1f}" height="{h:.1f}" fill="#DCE8E1" stroke="#4E6E5E"/>'
+                            f'<rect x="{ax + slot:.1f}" y="{y:.1f}" width="{w / 2 - slot:.1f}" height="{h:.1f}" fill="#DCE8E1" stroke="#4E6E5E"/>')
+                labels.append((y + h / 2, ax + w / 2, JPART[nm][0]))
+            else:
+                lab, fill, ink = JPART[nm]
+                k = nlayer.get(nm, 0); nlayer[nm] = k + 1
+                if nm == 'plate':
+                    lab = '三角件圆筒（前层）' if a_layer(st, nm, k) == 0 else '三角件圆筒（后层）'
+                if nm == 'rod':
+                    lab = '传动杆（前）' if k == 0 else '传动杆（后）'
+                body.append(f'<rect x="{ax - d * K / 2:.1f}" y="{y:.1f}" width="{d * K:.1f}" height="{h:.1f}" fill="{fill}" stroke="{ink}"/>')
+                labels.append((y + h / 2, ax + d * K / 2, lab))
+            y += h + GAP
+        body.insert(idx, f'<rect x="{ax - 1.5 * K:.1f}" y="{top + 4:.1f}" width="{3 * K:.1f}" height="{y - GAP - top - 8:.1f}" fill="#D5D9DD" stroke="#9AA0A6"/>')
+        body.append(f'<line x1="{ax}" y1="{top - 10:.1f}" x2="{ax}" y2="{y + 2:.1f}" stroke="#7B848D" stroke-width="1" stroke-dasharray="6 3 2 3"/>')
+        body.append(f'<text class="vlab s" x="{ax}" y="{y + 22:.1f}" text-anchor="middle">垫片 {len(st) + 1} 片</text>')
+        LX = x0 + 290
+        ys = [lb[0] for lb in labels]
+        for i in range(1, len(ys)):
+            if ys[i] - ys[i - 1] < 20: ys[i] = ys[i - 1] + 20
+        for (yy, xx, t), ty in zip(labels, ys):
+            body.append(f'<polyline points="{xx + 3:.1f},{yy:.1f} {LX - 12:.1f},{ty:.1f} {LX - 4:.1f},{ty:.1f}" fill="none" stroke="#1D5A8E" stroke-width="1"/>'
+                        f'<text class="vlab s" x="{LX}" y="{ty + 4.5:.1f}">{E(t)}</text>')
+    H = sum(RH)
+    return (f'<svg class="vec joints" viewBox="0 0 {2 * PW} {H:.0f}" role="img" aria-label="铰点层叠：螺丝、垫片与各件的顺序">'
+            + '\n'.join(body) + '</svg>')
+
+
+def a_layer(st, nm, k):
+    """第 k 个三角件圆筒是前层（x 从 0 起）还是后层（x 从 4 起）。"""
+    xs = [a for a, b, m in st if m == nm]
+    return 0 if xs[k] < 2 else 1
+
+
 # ---------------------------------------------------------------- 拼装
 src = SRC.read_text(encoding='utf-8')
 fig_counter = [0]
@@ -665,5 +780,6 @@ src = src.replace('<!--RINGTABLE-->', ring_table())
 src = src.replace('<!--PLATEGROUPS-->', plate_groups_svg())
 src = src.replace('<!--TENDON_END-->', tendon_end_svg())
 src = src.replace('<!--TENDON_SIDE-->', tendon_side_svg())
+src = src.replace('<!--JOINTS-->', joints_svg())
 (OUT / 'index.html').write_text(src, encoding='utf-8')
 print('figures', fig_counter[0], '→', OUT / 'index.html')
