@@ -11,7 +11,8 @@
  * 「我们采用的单元形态是方形的……圆形只做过程推演，拿来给观众演示造型过程；方形才是拿来具体使用的东西。」
  * 此前这台默认用了 Lab 2-8 那只圆筒环。现在每台 = Lab 2-7 方形环平档的做法（`buildSquareUnits`：面 / 边 / 角
  * 三档挑出，二十条带按方位分档 `buildSquareOrder`），俯视是方的；芯仍是圆的，没成形时（收起、直筒）还是一圈带子。
- * 2026-10-29 起台面 6.5 cm 厚、布 176 节（`UNIT_SHAPE`，此前是方形环原样的 0.15 m 与 202 节）。
+ * 2026-10-29 起台面 6.5 cm 厚（`UNIT_SHAPE`，此前是方形环原样的 0.15 m）；布按最长的预裁 338 节，平台铺出去 176 节，
+ * 余下的收在单元顶端（`UNIT_CUT` / `UNIT_STORED`、`withStore`）。
  * 尺寸取「方形峰值时的半边长 = 圆台的峰值半径」（cohabit `SQUARE_SCALE`）：平面模型的平台圆（platR）是方形的内切圆，
  * 猫卧着的那一圈台面与圆台时一样宽，多出来的是四个角；平面模型凡是问「平台会不会碰到人」的地方都改按方形每条带
  * 的长度算（`unit: 'square'` → `squarePlanLayout`）。
@@ -76,6 +77,14 @@ export const HOIST = {
   ceilGap: 2,
 } as const;
 
+/**
+ * 收着的布（2026-10-29 作者「多出来的布可以继续往上延伸……用不到很长的话，就把那些布存起来」）：布按最长的预裁，
+ * 铺出去的只有这一形要用的那段，余下的接在顶端、往上收成一团，画成一圈褶（`pleats` 道，每道外鼓 `amp`，引擎单位；
+ * 高度 = 那段布拉直的长度 × HOIST.stowed，与收起时整束布同一个比例）。它不铺出去、不参与成形，引擎只解铺出去的那段。
+ * 褶数与外鼓是演示值。
+ */
+export const STORE = { pleats: 6, amp: 0.04 } as const;
+
 /** 演示的场面：六位访客两只猫 = 对照研究的中档（案例页对照图的三档之一） */
 export const SCENE = { people: 6, cats: 2, seed: 11 } as const;
 
@@ -97,6 +106,8 @@ export interface BandTrajectory {
   retractActive: number;
   /** 正向里形状还在变的最后一帧（成形在协议约六成处就到位，后面几十帧逐位相同；取帧只映射到会动的那段，免得先猛动再干等） */
   formActive: number;
+  /** 收在顶端的那团布的高度（与 footY 同一坐标；没有收着的布 = 0 或省略）：升降时它不跟着伸缩，见 unitFootY */
+  storeY?: number;
 }
 
 /**
@@ -104,7 +115,12 @@ export interface BandTrajectory {
  * 一条带全程 3000 步（正向 1500 + 回程 1500）。
  */
 export class TrajectoryBaker {
+  /** 画出来的节点数 = 引擎解的节点数 + 收着的那团布的节点（2 × STORE.pleats，没有收着的布时为 0） */
   readonly n: number;
+  /** 引擎解的节点数（铺出去的那段布） */
+  private readonly m: number;
+  /** 收着的那团布的高度（引擎单位，0 = 没有） */
+  private readonly storeH: number;
   private readonly unit;
   private readonly smoothW: number;
   private readonly smoothP: number;
@@ -117,9 +133,14 @@ export class TrajectoryBaker {
   private phase: 'form' | 'retract' | 'done' = 'form';
   private result: BandTrajectory | null = null;
 
-  constructor(def: RingUnitDef, frames: FrameCounts = FRAMES) {
+  /** store = 收在顶端、不铺出去的节数（0 = 整条布都铺出去，与 2026-10-29 之前逐位相同） */
+  constructor(def: RingUnitDef, frames: FrameCounts = FRAMES, store = 0) {
     this.unit = createSkinUnit(def.spec, def.opts);
-    this.n = this.unit.n;
+    this.m = this.unit.n;
+    this.n = this.m + (store > 0 ? 2 * STORE.pleats : 0);
+    // 直带子的节距（初始摆位贴着芯）× 节数 × 收起时的压缩比 = 那团布的高度；与收起态整束布同一个比例
+    const py = this.unit.py;
+    this.storeH = store > 0 ? HOIST.stowed * store * ((py[0] - py[this.m - 1]) / (this.m - 1)) : 0;
     [this.smoothW, this.smoothP] = def.smooth;
     const spread = (k: number, total: number): number[] => Array.from({ length: k }, (_, i) => Math.round((i / (k - 1)) * total));
     this.formAt = spread(frames.form, SKIN.STEPS);
@@ -180,9 +201,15 @@ export class TrajectoryBaker {
    */
   preview(): BandTrajectory {
     const n = this.n;
-    const f0 = this.frames[0];
+    const raw = this.frames[0];
     // frames[1] = 收起态（初始摆位压向顶端）：烘完之前满场都是收着的单元，台架拿它烘整环
-    return { n, frames: [f0, hoistProfile(f0, n, HOIST.stowed)], footY: -f0[2 * n - 1] * SOLID.SCALE, platformTopY: -f0[2 * n - 1] * SOLID.SCALE, reach: SQUARE.RADIUS, retractActive: 0, formActive: 0 };
+    const frames = [raw, hoistProfile(raw, this.m, HOIST.stowed)].map((f) => this.stored(f));
+    const footY = -frames[0][2 * n - 1] * SOLID.SCALE;
+    return { n, frames, footY, platformTopY: footY, reach: SQUARE.RADIUS, retractActive: 0, formActive: 0, storeY: this.storeH * SOLID.SCALE };
+  }
+
+  private stored(f: Float64Array): Float64Array {
+    return this.storeH > 0 ? withStore(f, this.m, this.storeH) : f;
   }
 
   /** 一口气烘完（守门与线稿用） */
@@ -193,14 +220,28 @@ export class TrajectoryBaker {
 
   private finish(): void {
     this.phase = 'done';
+    const F = this.formAt.length;
+    const m = this.m;
+    // 升降帧：由回程末帧（闲着的直带子）压向顶端，第 0 帧 = 收起态、末帧 = 直带子逐位相同
+    const straight = this.frames[F + this.retractAt.length - 1];
+    for (let j = 0; j < this.hoistN; j++) this.frames.push(hoistProfile(straight, m, HOIST.stowed + (1 - HOIST.stowed) * (j / (this.hoistN - 1))));
+    // 过渡帧：直垂 → 正向第 1 帧逐点线性插值（第 0 帧是引擎的初始摆位，比自然松弛还直，跳过）
+    const entry = this.frames[1];
+    for (let j = 0; j < this.bridgeN; j++) {
+      const t = (j + 1) / (this.bridgeN + 1);
+      const f = new Float64Array(2 * m);
+      for (let i = 0; i < 2 * m; i++) f[i] = straight[i] + (entry[i] - straight[i]) * t;
+      this.frames.push(f);
+    }
+    // 收着的布最后才接上：它跟着铺出去那段的顶端走，升降时不跟着伸缩
+    for (let k = 0; k < this.frames.length; k++) this.frames[k] = this.stored(this.frames[k]);
     const n = this.n;
-    const formed = this.frames[this.formAt.length - 1];
+    const formed = this.frames[F - 1];
     let reach = 0;
     for (let i = 0; i < n; i++) reach = Math.max(reach, formed[i]);
     // 平台顶面：折叠体里离芯超过一半挑出的节点中最高的那个（世界 Y 向下为正 ⇒ 取最小）
     let top = Infinity;
     for (let i = 0; i < n; i++) if (formed[i] > reach * 0.5) top = Math.min(top, -formed[n + i] * SOLID.SCALE);
-    const F = this.formAt.length;
     let active = this.retractAt.length - 1;
     for (let k = this.retractAt.length - 1; k > 0; k--) {
       const a = this.frames[F + k];
@@ -223,17 +264,6 @@ export class TrajectoryBaker {
         break;
       }
     }
-    // 升降帧：由回程末帧（闲着的直带子）压向顶端，第 0 帧 = 收起态、末帧 = 直带子逐位相同
-    const straight = this.frames[F + this.retractAt.length - 1];
-    for (let j = 0; j < this.hoistN; j++) this.frames.push(hoistProfile(straight, n, HOIST.stowed + (1 - HOIST.stowed) * (j / (this.hoistN - 1))));
-    // 过渡帧：直垂 → 正向第 1 帧逐点线性插值（第 0 帧是引擎的初始摆位，比自然松弛还直，跳过）
-    const entry = this.frames[1];
-    for (let j = 0; j < this.bridgeN; j++) {
-      const t = (j + 1) / (this.bridgeN + 1);
-      const f = new Float64Array(2 * n);
-      for (let i = 0; i < 2 * n; i++) f[i] = straight[i] + (entry[i] - straight[i]) * t;
-      this.frames.push(f);
-    }
     this.result = {
       n,
       frames: this.frames,
@@ -242,6 +272,7 @@ export class TrajectoryBaker {
       reach: SQUARE.RADIUS + reach * SOLID.SCALE,
       retractActive: active,
       formActive,
+      storeY: this.storeH * SOLID.SCALE,
     };
   }
 }
@@ -251,17 +282,23 @@ export class TrajectoryBaker {
  * - 箱高 h = 16 px（8×8 铺满时台厚 6.5 cm，此前 36 px = 0.15 m）。同样的键，台越薄挑得越远，所以三档键按方形重新标定成
  *   面 29 / 边 34 / 角 46：外缘点离理想正方形 面 0.2 · 边 0.9 · 角 0.0 px（原来的方台边档也差 0.9）。键全锁、成形途中
  *   最大自交环 4 节、全程不鼓出终态，峰值都小于 SQUARE_PEAK，平面模型按原峰值算碰人照旧够用，不改；
- * - 布取这三档用得到的最短：lead 8、尾段 5（方形族的两个下限）、自由段 131（角档那一段）= 176 节。
- *   台面离钉住端 0.36 m，茶几落到 0.42 m 时钉住端仍离地 6 cm；台面以上贴芯的那截布 0.32 m（原来 0.40 m）。
- * 「布按最长预裁」（作者 10-06）：2-15 现在只有平台一种形，最长的就是这一条；以后加双层要 338 节，到时整批换布。
+ * - 布按最长的预裁 338 节（作者 10-06），平台只铺出去这三档用得到的那段：lead 8、尾段 5（方形族的两个下限）、
+ *   自由段 131（角档那一段）= 176 节，余下 162 节收在顶端（作者 10-29「用不到很长的话，就把那些布存起来」，STORE）。
+ *   台面离钉住端 0.36 m，茶几落到 0.42 m 时钉住端仍离地 6 cm；台面以上贴芯的那截布 0.32 m（原来 0.40 m），再往上是收着的那团。
+ *   不让 338 节整条铺出去：那样要落到茶几高度，多出来的布全贴着芯堆在台面上方，成一根 0.72 m 的布筒。
+ *   引擎只解铺出去的那段：收着的布不贴芯、不跟着芯收缩，不参与成形（同一组键在长 26 节的带上解，形状逐点相同，守门核对）。
  * 原来的 202 节、箱高 36（Lab 2-7 方形环立项时那条带）只留在出图脚本里作对照。
  */
 export const UNIT_SHAPE = { h: 16, tail: 5, lead: 8, k: [29, 34, 46] } as const;
 const UNIT_SQUARE_TIERS = SQUARE_TIERS.map((t, i) => ({ ...t, k: UNIT_SHAPE.k[i] }));
-/** 方形单元那条带的节数：lead + 两段隔离 + 自由段（三档里最长的那个）+ 尾段 */
+/** 一条布预裁多长：词汇表里最长的那张（捏分，338 节；作者 10-06「布按最长的预裁」，与 skin-cycle 的 CYCLE_BAND 同一个数，守门核对） */
+export const UNIT_CUT = 338;
+/** 平台铺出去的节数（引擎解的就是这一段）：lead + 两段隔离 + 自由段（三档里最长的那个）+ 尾段 */
 export const UNIT_BAND = UNIT_SHAPE.lead + 2 * SQUARE.ISO + squareFreeTotal(UNIT_SQUARE_TIERS, UNIT_SHAPE.h) + UNIT_SHAPE.tail;
 /** 方形单元的三档引擎定义（面 / 边 / 角，Lab 2-7 方形环平档的做法，台厚与键按 UNIT_SHAPE）与二十条带的档位编制（下标 = 带序 j） */
 export const UNIT_TIERS: readonly RingUnitDef[] = buildSquareUnits(UNIT_SQUARE_TIERS, UNIT_BAND, { h: UNIT_SHAPE.h, tail: UNIT_SHAPE.tail });
+/** 平台用不到、收在顶端的节数（STORE、withStore） */
+export const UNIT_STORED = UNIT_CUT - UNIT_BAND;
 export const UNIT_ORDER: readonly number[] = buildSquareOrder();
 
 /** 已经烘好的三档轨迹（同一页面里换路由、重挂台架时直接拿，不重烘） */
@@ -269,7 +306,7 @@ const BAKED = new Map<string, BandTrajectory[]>();
 
 /**
  * 三档轨迹一起烘：三条引擎依次推进（分片，`work` 按时间预算），全部烘完才算完。三档的节点数相同（同一条
- * 176 节的带），钉住端高度相同（注册在底端）、平台面高度相同（方形环的对位构造），台架拿第 0 档定摆放。
+ * 338 节的布，铺出去 176 节），钉住端高度相同（注册在底端）、平台面高度相同（方形环的对位构造），台架拿第 0 档定摆放。
  */
 export class UnitBaker {
   readonly n: number;
@@ -277,9 +314,10 @@ export class UnitBaker {
   private readonly bakers: TrajectoryBaker[];
   private result: BandTrajectory[] | null;
 
-  constructor(defs: readonly RingUnitDef[] = UNIT_TIERS, frames: FrameCounts = FRAMES) {
-    this.key = `${defs.map((d) => d.key).join('|')}#${frames.form}/${frames.retract}/${frames.hoist}/${frames.bridge ?? 0}`;
-    this.bakers = defs.map((d) => new TrajectoryBaker(d, frames));
+  /** store = 每条带收在顶端的节数（默认 = 平台用不到的那段，UNIT_STORED） */
+  constructor(defs: readonly RingUnitDef[] = UNIT_TIERS, frames: FrameCounts = FRAMES, store: number = UNIT_STORED) {
+    this.key = `${defs.map((d) => d.key).join('|')}#${frames.form}/${frames.retract}/${frames.hoist}/${frames.bridge ?? 0}#s${store}`;
+    this.bakers = defs.map((d) => new TrajectoryBaker(d, frames, store));
     this.n = this.bakers[0].n;
     if (this.bakers.some((b) => b.n !== this.n)) throw new Error('三档的带子节点数不同，整台网格拼不起来');
     this.result = BAKED.get(this.key) ?? null;
@@ -331,6 +369,28 @@ export function hoistProfile(src: Float64Array, n: number, k: number): Float64Ar
   for (let i = 0; i < n; i++) top = Math.max(top, src[n + i]);
   const out = Float64Array.from(src);
   for (let i = 0; i < n; i++) out[n + i] = top + (src[n + i] - top) * k;
+  return out;
+}
+
+/**
+ * 在一帧上接上收着的那团布：铺出去的那段（m 个节点）整体往下让出 height，空出来的地方从它的顶端往上画一圈褶
+ * （2 × pleats 个节点，奇数格外鼓 amp）。收着的布顶 = 原来带子顶端的位置，所以收起态的整束布仍从同一处挂下来。
+ */
+export function withStore(src: Float64Array, m: number, height: number, pleats: number = STORE.pleats, amp: number = STORE.amp): Float64Array {
+  const g = 2 * pleats;
+  const n = m + g;
+  const out = new Float64Array(2 * n);
+  for (let i = 0; i < m; i++) {
+    out[g + i] = src[i];
+    out[n + g + i] = src[m + i] - height;
+  }
+  const x0 = src[0];
+  const y0 = src[m] - height;
+  for (let k = 0; k < g; k++) {
+    const q = g - k; // 离铺出去那段顶端隔几格（顶上那个节点 q = g）
+    out[k] = x0 + (q % 2 ? amp : 0);
+    out[n + k] = y0 + (height * q) / g;
+  }
   return out;
 }
 
@@ -595,11 +655,11 @@ export function unitTopY(rig: Pick<Rig, 'y' | 'stowY'>, drop: number, workY: num
 }
 
 /**
- * 单元此刻的钉住端世界高度 = 布束底 = 立杆下端：吊长按升降程度从 HOIST.stowed 倍放到全长，
- * 到工位时 = RIG_ANCHOR_Y。与 hoistProfile 的脚只差顶端节点那零点几个单位（压缩是绕顶端节点做的）。
+ * 单元此刻的钉住端世界高度 = 布束底 = 立杆下端：铺出去那段的吊长按升降程度从 HOIST.stowed 倍放到全长（收在顶端的那团
+ * `storeY` 不跟着伸缩），到工位时 = RIG_ANCHOR_Y。与 hoistProfile 的脚只差顶端节点那零点几个单位（压缩是绕顶端节点做的）。
  */
-export function unitFootY(rig: Pick<Rig, 'y' | 'stowY' | 's'>, footY: number, drop: number, workY: number = rig.y): number {
-  return unitTopY(rig, drop, workY) + rig.s * footY * (HOIST.stowed + (1 - HOIST.stowed) * drop);
+export function unitFootY(rig: Pick<Rig, 'y' | 'stowY' | 's'>, footY: number, drop: number, workY: number = rig.y, storeY: number = 0): number {
+  return unitTopY(rig, drop, workY) + rig.s * (storeY + (footY - storeY) * (HOIST.stowed + (1 - HOIST.stowed) * drop));
 }
 
 /** 一条带在装置自身坐标系里的顶点（沿本地 +X 放在芯半径处，再由摆放表转到各方位角） */

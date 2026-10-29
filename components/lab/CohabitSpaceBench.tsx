@@ -452,7 +452,7 @@ export function CohabitSpaceBench({
           // 轨迹还没烘完：仿真没开跑，全场都收在天花下
           if (!trajs) {
             stowedPlaces.push(at(c, 0, rig.stowY));
-            postNext[u] = unitFootY(rig, pre.footY, 0);
+            postNext[u] = unitFootY(rig, pre.footY, 0, rig.y, pre.storeY);
             continue;
           }
           const deg = sim.act.degree[u];
@@ -465,7 +465,7 @@ export function CohabitSpaceBench({
           }
           const workY = rigYForTop(rig, trajs[0], tableTop[u]);
           const top = unitTopY(rig, drop, workY);
-          postNext[u] = unitFootY(rig, trajs[0].footY, drop, workY);
+          postNext[u] = unitFootY(rig, trajs[0].footY, drop, workY, trajs[0].storeY);
           let allStowed = true;
           let allStraight = true;
           let allFormed = true;
