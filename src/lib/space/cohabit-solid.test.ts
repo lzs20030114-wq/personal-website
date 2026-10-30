@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BRIDGE_BASE, DOOR_BASE, DOOR_EPS, FRAMES, FURN_ERGO, HOIST, STEADY, TABLE_TOP, bandTop, clipToReel, doorFrame, isDoorFrame, pickUnitBands, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_ORDER, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
+import { BRIDGE_BASE, DOOR_BASE, DOOR_EPS, FRAMES, bakeBandKeys, bakeHanger, bakeUnitKeys, bakeUnitMech, FURN_ERGO, HOIST, STEADY, TABLE_TOP, bandTop, clipToReel, doorFrame, isDoorFrame, pickUnitBands, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_ORDER, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
 import { planLayout } from './unit-activation';
 import { FIGURE, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
 import { RING } from './skin-ring';
@@ -315,6 +315,64 @@ describe('带子轨迹关键帧', () => {
     // 2026-10-30：让路的带两侧都不拉膜（那里是门）
     expect(membraneJoins(STEADY.formed, STEADY.formed, FRAMES, true, false)).toBe(false);
     expect(membraneJoins(DOOR_BASE + 3, STEADY.formed)).toBe(false);
+  });
+
+  describe('机构件与键（2026-10-30 网页模型细化：Blender 里的夹环、伸缩吊杆与芯、键座与撑杆搬进 Lab 2-15）', () => {
+    it('每一帧记下哪几颗键扣着：成形态全扣、直带子全松、收起态（压成一团）不画键、让路收到底全松；键座都朝对面', () => {
+      for (const t of trajs) {
+        expect(t.locks).toHaveLength(t.frames.length);
+        const nb = t.bonds.length / 2;
+        expect(nb).toBe(10); // 方箱十档梯挡
+        expect(t.sides).toHaveLength(t.bonds.length);
+        expect([...(t.locks[STEADY.formed] as Uint8Array)].every((v) => v === 1)).toBe(true);
+        expect([...(t.locks[STEADY.straight] as Uint8Array)].every((v) => v === 0)).toBe(true);
+        expect(t.locks[STEADY.stowed]).toBeNull();
+        expect([...(t.locks[doorFrame(t, 1)] as Uint8Array)].every((v) => v === 0)).toBe(true);
+        // 键座朝对面：成形态里每颗键两端的键座朝着彼此（法向 × 侧 · 指向对方 > 0）
+        const f = t.frames[STEADY.formed];
+        for (let b = 0; b < t.bonds.length; b += 2) {
+          const i = t.bonds[b], j = t.bonds[b + 1];
+          const dx = f[j] - f[i], dy = -(f[t.n + j] - f[t.n + i]);
+          const ti = [f[Math.min(t.n - 1, i + 1)] - f[i - 1], -(f[t.n + Math.min(t.n - 1, i + 1)] - f[t.n + i - 1])];
+          expect(t.sides[b] * (-ti[1] * dx + ti[0] * dy)).toBeGreaterThan(0);
+        }
+      }
+    });
+
+    it('整台的键：成形态有扣着的内杆，直带子只有键座与外套，收起态与升降帧没有键', () => {
+      const formed = bakeUnitKeys(trajs, STEADY.formed);
+      const straight = bakeUnitKeys(trajs, STEADY.straight);
+      expect(formed.rod.length).toBeGreaterThan(0);
+      expect(formed.pad.length).toBeGreaterThan(0);
+      expect(straight.rod.length).toBe(0);
+      expect(straight.pad.length).toBeGreaterThan(formed.pad.length); // 没扣的多一截外套
+      const stowed = bakeBandKeys(traj, STEADY.stowed);
+      expect(stowed.pad.length + stowed.rod.length).toBe(0);
+    });
+
+    it('夹环跟着带子：上夹环的压圈在带顶上方、下夹环的端盖在钉住端下方，芯在两者之间；吊杆竖向归一化', () => {
+      const n = traj.n;
+      for (const k of [STEADY.formed, STEADY.straight, STEADY.stowed, doorFrame(traj, 1)]) {
+        const m = bakeUnitMech(traj, k);
+        let ya = Infinity, yb = -Infinity;
+        for (let q = 1; q < m.dark.length; q += 6) {
+          ya = Math.min(ya, m.dark[q]);
+          yb = Math.max(yb, m.dark[q]);
+        }
+        const f = traj.frames[k];
+        expect(ya).toBeLessThan(-f[n] * 100); // 带顶（y 向下 = −py × 100）之上
+        expect(yb).toBeGreaterThan(-f[2 * n - 1] * 100); // 钉住端之下
+        expect(m.alu.length).toBeGreaterThan(0);
+      }
+      const h = bakeHanger();
+      let ya = Infinity, yb = -Infinity;
+      for (let q = 1; q < h.length; q += 6) {
+        ya = Math.min(ya, h[q]);
+        yb = Math.max(yb, h[q]);
+      }
+      expect(ya).toBe(0);
+      expect(yb).toBeCloseTo(1, 6);
+    });
   });
 
   describe('让路的带（2026-10-30 修「收起来的条碎在上面、和下面成形的接不上」）', () => {

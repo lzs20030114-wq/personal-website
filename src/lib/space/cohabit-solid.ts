@@ -47,7 +47,8 @@
  */
 import type { RingUnitDef } from './skin-ring';
 import { SQUARE, buildSquareOrder, buildSquareUnits, squareHalfSide, squareStructureAt, SQUARE_REACH } from './skin-square';
-import { SKIN, createSkinUnit, renderSmooth, type SkinUnit } from './skin-unit';
+import { SKIN, buildUnit, createSkinUnit, renderSmooth, type SkinUnit } from './skin-unit';
+import { MECH, bandKeyMesh, bondSides, concatParts, hangerMesh, unitMechMesh, type MeshPart } from './unit-mechanism';
 import { SOLID, boxVerts, buildSolidTopology, fillSolidVerts, membranePanel, rotateVertsY, type SolidTopology } from './skin-solid';
 import { bakeIndexed } from '../linkage/gl3d';
 import { MM_PER_UNIT, RIG_ANCHOR_Y, RIG_SCALE, RING_GRID_FIT, RING_GRID_PIVOT_Y, ROOM, roomBoxesBySpan, viewFitBySpan, type RingGridView } from './skin-grid';
@@ -104,6 +105,13 @@ export interface BandTrajectory {
   /** 让路回程里形状还在变的最后一帧（相对让路段起点；0 = 没有让路段） */
   doorActive: number;
   /**
+   * 键（2026-10-30 网页模型细化，画键座与撑杆用）：bonds = 这张谱所有的键 [i0, j0, i1, j1, …]；sides = 各键两端的键座朝布的哪一面；
+   * locks[帧] = 这一帧每颗键扣没扣（1 / 0），升降帧（布压成一团）为 null = 不画键。
+   */
+  bonds: Int32Array;
+  sides: Int8Array;
+  locks: (Uint8Array | null)[];
+  /**
    * 结构段（带键的那段）中心的节点序号与半长（节）。带间的膜按它对位（`membraneVerts`）：结构贴底的排法
    * （2026-10-30）里三档的结构中心序号不同，按同一序号配对会把面档的台尖接到角档台面以下的布上。
    */
@@ -129,6 +137,10 @@ export class TrajectoryBaker {
   /** 让路回程：成形那一刻 fork 出来的另一份引擎，与它的关键帧（烘完时排在过渡帧后面） */
   private doorUnit: SkinUnit | null = null;
   private readonly doorFrames: Float64Array[] = [];
+  private readonly bonds: Int32Array;
+  private readonly bondOf = new Map<number, number>();
+  private readonly locks: (Uint8Array | null)[] = [];
+  private readonly doorLocks: (Uint8Array | null)[] = [];
   private step = 0;
   private phase: 'form' | 'retract' | 'door' | 'done' = 'form';
   private result: BandTrajectory | null = null;
@@ -149,6 +161,14 @@ export class TrajectoryBaker {
     this.hoistN = frames.hoist;
     this.bridgeN = frames.bridge ?? 0;
     this.doorAt = (frames.door ?? 0) > 1 ? spread(frames.door as number, DOOR_STEPS) : [];
+    const bonds: number[] = [];
+    for (const ch of buildUnit(def.spec).chains)
+      for (const [i, j] of ch)
+        if (!this.bondOf.has(i * 1024 + j)) {
+          this.bondOf.set(i * 1024 + j, bonds.length / 2);
+          bonds.push(i, j);
+        }
+    this.bonds = Int32Array.from(bonds);
     this.capture(); // 正向第 0 帧 = 直带子
   }
 
@@ -165,12 +185,18 @@ export class TrajectoryBaker {
     return this.phase === 'done' ? 1 : done / total;
   }
 
-  private capture(u: SkinUnit = this.unit, into: Float64Array[] = this.frames): void {
+  private capture(u: SkinUnit = this.unit, into: Float64Array[] = this.frames, locks: (Uint8Array | null)[] = this.locks): void {
     const p = renderSmooth(u.px, u.py, this.smoothW, this.smoothP);
     const f = new Float64Array(2 * u.n);
     f.set(p.x, 0);
     f.set(p.y, u.n);
     into.push(f);
+    const l = new Uint8Array(this.bonds.length / 2);
+    for (const [i, j] of u.locked) {
+      const b = this.bondOf.get(i * 1024 + j);
+      if (b !== undefined) l[b] = 1;
+    }
+    locks.push(l);
   }
 
   /** 在 budgetMs 内尽量推进；返回是否已经烘完 */
@@ -186,7 +212,7 @@ export class TrajectoryBaker {
           this.step = 0;
           if (this.doorAt.length) {
             this.doorUnit = this.unit.fork();
-            this.capture(this.doorUnit, this.doorFrames); // 让路第 0 帧 = 成形态
+            this.capture(this.doorUnit, this.doorFrames, this.doorLocks); // 让路第 0 帧 = 成形态
           }
           this.capture(); // 回程第 0 帧 = 成形态（与正向末帧同一刻）
         }
@@ -203,7 +229,7 @@ export class TrajectoryBaker {
         const d = this.doorUnit as SkinUnit;
         d.retractStep(1.0);
         this.step++;
-        if (this.doorAt.includes(this.step)) this.capture(d, this.doorFrames);
+        if (this.doorAt.includes(this.step)) this.capture(d, this.doorFrames, this.doorLocks);
         if (this.step >= DOOR_STEPS) this.finish();
       }
       if (now() - t0 > budgetMs) break;
@@ -220,7 +246,7 @@ export class TrajectoryBaker {
     const n = this.n;
     const f0 = this.frames[0];
     // frames[1] = 收起态（初始摆位压向顶端）：烘完之前满场都是收着的单元，台架拿它烘整环
-    return { n, frames: [f0, hoistProfile(f0, n, HOIST.stowed)], footY: -f0[2 * n - 1] * SOLID.SCALE, platformTopY: -f0[2 * n - 1] * SOLID.SCALE, reach: SQUARE.RADIUS, retractActive: 0, formActive: 0, doorActive: 0, mid: this.mid, midHalf: this.midHalf };
+    return { n, frames: [f0, hoistProfile(f0, n, HOIST.stowed)], footY: -f0[2 * n - 1] * SOLID.SCALE, platformTopY: -f0[2 * n - 1] * SOLID.SCALE, reach: SQUARE.RADIUS, retractActive: 0, formActive: 0, doorActive: 0, mid: this.mid, midHalf: this.midHalf, bonds: new Int32Array(0), sides: new Int8Array(0), locks: [null, null] };
   }
 
   /** 一口气烘完（守门与线稿用） */
@@ -263,7 +289,10 @@ export class TrajectoryBaker {
     }
     // 升降帧：由回程末帧（闲着的直带子）压向顶端，第 0 帧 = 收起态、末帧 = 直带子逐位相同
     const straight = this.frames[F + this.retractAt.length - 1];
-    for (let j = 0; j < this.hoistN; j++) this.frames.push(hoistProfile(straight, n, HOIST.stowed + (1 - HOIST.stowed) * (j / (this.hoistN - 1))));
+    for (let j = 0; j < this.hoistN; j++) {
+      this.frames.push(hoistProfile(straight, n, HOIST.stowed + (1 - HOIST.stowed) * (j / (this.hoistN - 1))));
+      this.locks.push(null); // 升降帧：布压成一团，不画键
+    }
     // 过渡帧：直垂 → 正向第 1 帧逐点线性插值（第 0 帧是引擎的初始摆位，比自然松弛还直，跳过）
     const entry = this.frames[1];
     for (let j = 0; j < this.bridgeN; j++) {
@@ -271,6 +300,7 @@ export class TrajectoryBaker {
       const f = new Float64Array(2 * n);
       for (let i = 0; i < 2 * n; i++) f[i] = straight[i] + (entry[i] - straight[i]) * t;
       this.frames.push(f);
+      this.locks.push(new Uint8Array(this.bonds.length / 2)); // 过渡帧：键都没扣，键座与外套照画
     }
     // 让路帧：排在最后（前面各段的下标逐位不变）
     let doorActive = 0;
@@ -285,7 +315,10 @@ export class TrajectoryBaker {
       }
     }
     for (const f of this.doorFrames) this.frames.push(f);
+    for (const l of this.doorLocks) this.locks.push(l);
     this.doorUnit = null;
+    // 键座朝哪一面：取成形态（所有键都扣着）
+    const sides = bondSides(formed.subarray(0, n), formed.subarray(n, 2 * n), n, this.bonds, SQUARE.RADIUS);
     this.result = {
       n,
       frames: this.frames,
@@ -297,6 +330,9 @@ export class TrajectoryBaker {
       doorActive,
       mid: this.mid,
       midHalf: this.midHalf,
+      bonds: this.bonds,
+      sides,
+      locks: this.locks,
     };
   }
 }
@@ -755,6 +791,57 @@ export function bakeBand(traj: BandTrajectory, frame: number, topo: SolidTopolog
   return { a: bakeIndexed(v, topo.idxA), b: bakeIndexed(v, topo.idxB), };
 }
 
+/** 一条带的键（键座与撑杆外套 = pad、扣上的内杆 = rod），装置自身系、带沿 +x；升降帧（locks 为 null）没有键；reelPy 同 bandVertsAt */
+export function bandKeyParts(traj: BandTrajectory, frame: number, reelPy?: number): { pad: MeshPart; rod: MeshPart } | null {
+  const locks = traj.locks[frame];
+  if (!locks || !traj.bonds.length) return null;
+  const n = traj.n;
+  const f = reelPy === undefined ? traj.frames[frame] : clipToReel(traj.frames[frame], n, reelPy);
+  return bandKeyMesh(f.subarray(0, n), f.subarray(n, 2 * n), n, traj.bonds, traj.sides, locks, SQUARE.RADIUS, SQUARE.THICK);
+}
+
+const EMPTY = new Float32Array(0);
+const bakePart = (m: MeshPart | undefined): Float32Array => (m && m.idx.length ? bakeIndexed(m.verts, m.idx) : EMPTY);
+
+/** 一条带的键，烘好（空的给长度 0 的数组，台架据此不画） */
+export function bakeBandKeys(traj: BandTrajectory, frame: number, reelPy?: number): { pad: Float32Array; rod: Float32Array } {
+  const k = bandKeyParts(traj, frame, reelPy);
+  return { pad: bakePart(k?.pad), rod: bakePart(k?.rod) };
+}
+
+/** 整台（二十条带同一帧）的键，每条带转到自己的方位角后拼成一份（与 bakeUnit 同） */
+export function bakeUnitKeys(trajs: readonly BandTrajectory[], frame: number, order: readonly number[] = UNIT_ORDER): { pad: Float32Array; rod: Float32Array } {
+  const pads: MeshPart[] = [];
+  const rods: MeshPart[] = [];
+  const ones = trajs.map((t) => bandKeyParts(t, frame));
+  for (let j = 0; j < order.length; j++) {
+    const k = ones[order[j]];
+    if (!k) continue;
+    const ring = { radius: 0, angle: bandAngle(j) };
+    pads.push({ verts: rotateVertsY(Float32Array.from(k.pad.verts), ring), idx: k.pad.idx });
+    rods.push({ verts: rotateVertsY(Float32Array.from(k.rod.verts), ring), idx: k.rod.idx });
+  }
+  return { pad: bakePart(concatParts(pads)), rod: bakePart(concatParts(rods)) };
+}
+
+/**
+ * 一台单元的上夹环、下夹环与芯（装置自身系）：上夹环在第 frame 帧的带顶（`pickUnitBands` 给的上夹环那一帧），下夹环在
+ * 那一帧的钉住端。同一帧号各档的顶与钉住端相同，用第 0 档的轨迹即可。alu = 夹圈（浅），dark = 辐条、中心套、芯（深）。
+ */
+export function bakeUnitMech(traj: BandTrajectory, frame: number, frames: FrameCounts = FRAMES): { alu: Float32Array; dark: Float32Array } {
+  const f = traj.frames[frame];
+  const n = traj.n;
+  // 升降帧（收在天花下、落下的路上）的夹环用低分段：收着时只在天花方板下露一圈
+  const hoist = frame >= frames.form + frames.retract && frame < frames.form + frames.retract + frames.hoist;
+  const m = unitMechMesh(SQUARE.RADIUS, SQUARE.THICK, -f[n] * SOLID.SCALE, -f[2 * n - 1] * SOLID.SCALE, hoist ? MECH.SEGS_LOW : MECH.SEGS);
+  return { alu: bakePart(m.alu), dark: bakePart(m.dark) };
+}
+
+/** 吊杆（竖向归一化，摆放时按长度拉伸），烘好 */
+export function bakeHanger(): Float32Array {
+  return bakePart(hangerMesh());
+}
+
 /**
  * 整台（二十条带同一帧）的两组条纹网格：每条带取它所在档的轨迹（`order[j]`），转到自己的方位角后拼成一份——
  * 静止态的单元整台只用一次摆放，不必二十条带各摆一遍（64 个单元 × 20 = 1280 次绘制，桌面上也吃力）。
@@ -794,7 +881,7 @@ export function decimateTrajectory(traj: BandTrajectory, stride: number): BandTr
     });
     return out;
   });
-  return { ...traj, n: m, frames, mid: traj.mid / stride, midHalf: traj.midHalf / stride };
+  return { ...traj, n: m, frames, mid: traj.mid / stride, midHalf: traj.midHalf / stride, bonds: new Int32Array(0), sides: new Int8Array(0), locks: frames.map(() => null) };
 }
 
 /** 收起态整台网格的抽稀步长 */
