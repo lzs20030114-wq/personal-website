@@ -154,10 +154,17 @@ async function waitBake(b, sel) {
   // 等的时候每帧只给 1 ms：轨迹烘完那一帧仿真就开跑，不让它先吃掉一个 16 ms 的步
   for (let i = 0; i < 120; i++) {
     await b.frames(1, 0.001);
-    if ((await readTime(b, sel)) >= 0) return;
+    if ((await readTime(b, sel)) >= 0) break;
     await b.sleep(500);
   }
-  throw new Error('2-15 轨迹没烘完');
+  if ((await readTime(b, sel)) < 0) throw new Error('2-15 轨迹没烘完');
+  // 两个结构那组（有顶的一台用，2026-10-30）在后台线程里烘、不靠帧推进：等它好了再走仿真钟，不然有顶的台出不出现看机器快慢。
+  // 等的时候不推帧，仿真不走
+  for (let i = 0; i < 360; i++) {
+    if (await b.ev(`${sel}.querySelector('canvas')?.dataset.roof === 'ready'`)) return;
+    await b.sleep(500);
+  }
+  throw new Error('2-15 两个结构的轨迹没烘完');
 }
 
 /** 推到读数 ≥ target。快进时一律不画 WebGL（同页邻近的 3D 台架也在跑，软件 GL 下画一帧要几百毫秒）；

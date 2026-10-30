@@ -166,17 +166,12 @@ try {
   // ── 一条带两个结构（2-3 的做法）：338 节布全部铺出去，上下各一块 6.5 cm 方台（键与 2-15 现行平台同一组）
   //   [贴合 lead | 垫 p | ISO | 上台 | 贴合 mid−ISO | 垫 2p | ISO | 下台 | ISO | 垫 p | 尾]，每块台在自己的 131 节里居中，
   //   三档同高；中间贴合 mid ≥ 29 时上下逐位解耦（皮肤单元lab §15.5），所以每条带可以只成上台、只成下台或两块都成
-  const SLOT = cs.UNIT_BAND - cs.UNIT_SHAPE.lead - cs.UNIT_SHAPE.tail - 2 * sq.SQUARE.ISO; // 131
-  const DUAL_MID = 31;
+  // 谱与 2-15 台架同一份（cohabit-solid 的 dualUnitSpec），这里只量
+  const DUAL_MID = cs.DUAL.mid;
   function dual338(k, a, b, mid = DUAL_MID) {
-    const ISO = sq.SQUARE.ISO, H = THIN.h;
-    const mk = (on) => { const { seg, n, nKeys } = boxSeg(k, H); return on ? { seg, n, nKeys } : { seg: ['f', n, []], n, nKeys: 0 }; };
-    const A = mk(a), B = mk(b), p = (SLOT - A.n) / 2;
-    const lead = cs.UNIT_CUT - 2 * SLOT - mid - 2 * ISO - cs.UNIT_SHAPE.tail;
-    const raw = [['g', lead], ['f', p, []], ['g', ISO], A.seg, ['g', mid - ISO], ['f', 2 * p, []], ['g', ISO], B.seg, ['g', ISO], ['f', p, []], ['g', cs.UNIT_SHAPE.tail]];
-    const spec = []; let at = 0, a0 = 0, b0 = 0;
-    for (const g of raw) { if (g[1] === 0) continue; if (g === A.seg) a0 = at; if (g === B.seg) b0 = at; spec.push(g); at += g[1]; }
-    if (at !== cs.UNIT_CUT) throw new Error(`双结构带长 ${at}`);
+    const { spec, a0, b0, fs } = cs.dualUnitSpec(k, a, b, mid);
+    const nk = sq.squareLadder(k, sq.squarePw(THIN.h)).length;
+    const A = { n: fs, nKeys: a ? nk : 0 }, B = { n: fs, nKeys: b ? nk : 0 };
     const r = run(spec, flatOpts, a0, a0 + A.n);
     const knotB = maxLoop(r.u.px, r.u.py, b0, b0 + B.n);
     const plate = (s0, n) => {

@@ -44,16 +44,17 @@
  * 分界取平面模型「对人成墙」那条线（`COHABIT.WALL_AT`）：落到位的直筒已经挡人，两边口径一致。
  * 立杆也随单元伸缩（作者同日补「中间这根棍子也得缩上去」）：下端跟着布束底走（`unitFootY`），收起时只剩
  * 天花下一小截；天花上的方板仍是静件。
- * 第二阶段「成什么」仍只有一种形（方形环平档那只方箱），待作者定词汇表后再分。
+ * 第二阶段「成什么」现在有两种（2026-10-30 按用途定形，形态方案 §11）：平台（方形环平档那只方箱，桌子与引猫的台都是它），
+ * 与坐着的人身边那台的上下两层（DUAL / SHELTER / shelterToward：上台只盖背向那个人的半圈，下台给猫）。
  */
 import type { RingUnitDef } from './skin-ring';
-import { SQUARE, SQUARE_TIERS, buildSquareOrder, buildSquareUnits, squareFreeTotal, squareHalfSide, SQUARE_REACH } from './skin-square';
-import { SKIN, createSkinUnit, renderSmooth } from './skin-unit';
+import { SQUARE, SQUARE_TIERS, buildSquareOrder, buildSquareUnits, squareBuffer, squareFree, squareFreeTotal, squareHalfSide, squareLadder, squarePw, SQUARE_REACH } from './skin-square';
+import { SKIN, createSkinUnit, renderSmooth, type SkinSeg, type SkinSpec } from './skin-unit';
 import { SOLID, boxVerts, buildSolidTopology, fillSolidVerts, membranePanel, rotateVertsY, type SolidTopology } from './skin-solid';
 import { bakeIndexed } from '../linkage/gl3d';
 import { MM_PER_UNIT, RIG_ANCHOR_Y, RIG_SCALE, RING_GRID_FIT, RING_GRID_PIVOT_Y, ROOM, roomBoxesBySpan, viewFitBySpan, type RingGridView } from './skin-grid';
 import type { PlanLayout } from './unit-activation';
-import { COHABIT, SQUARE_SCALE, bandAngle, type FurnRect } from './cohabit';
+import { COHABIT, SQUARE_SCALE, bandAngle, platformClear, type FurnRect } from './cohabit';
 import type { CatPose, CatTail, SeatSpec } from './figure';
 
 /** 一米 = 多少世界单位（由「人 = 1.70 m = 215 单位」定） */
@@ -133,11 +134,15 @@ export class TrajectoryBaker {
   private phase: 'form' | 'retract' | 'done' = 'form';
   private result: BandTrajectory | null = null;
 
-  /** store = 收在顶端、不铺出去的节数（0 = 整条布都铺出去，与 2026-10-29 之前逐位相同） */
-  constructor(def: RingUnitDef, frames: FrameCounts = FRAMES, store = 0) {
+  /** 台面高度按哪一段量（引擎节点下标 [i0, i1)；省略 = 整条带上离芯超过一半挑出的节点）：两层台按下面那块量 */
+  private readonly ref: readonly [number, number] | undefined;
+
+  /** store = 收在顶端、不铺出去的节数（0 = 整条布都铺出去，与 2026-10-29 之前逐位相同）；ref 见同名字段 */
+  constructor(def: RingUnitDef, frames: FrameCounts = FRAMES, store = 0, ref?: readonly [number, number]) {
     this.unit = createSkinUnit(def.spec, def.opts);
     this.m = this.unit.n;
     this.n = this.m + (store > 0 ? 2 * STORE.pleats : 0);
+    this.ref = ref;
     // 直带子的节距（初始摆位贴着芯）× 节数 × 收起时的压缩比 = 那团布的高度；与收起态整束布同一个比例
     const py = this.unit.py;
     this.storeH = store > 0 ? HOIST.stowed * store * ((py[0] - py[this.m - 1]) / (this.m - 1)) : 0;
@@ -239,9 +244,13 @@ export class TrajectoryBaker {
     const formed = this.frames[F - 1];
     let reach = 0;
     for (let i = 0; i < n; i++) reach = Math.max(reach, formed[i]);
-    // 平台顶面：折叠体里离芯超过一半挑出的节点中最高的那个（世界 Y 向下为正 ⇒ 取最小）
+    // 平台顶面：折叠体里离芯超过一半挑出的节点中最高的那个（世界 Y 向下为正 ⇒ 取最小）；给了 ref 就只在那一段里找
+    const g = n - m; // 收着的那团布排在前面，引擎节点 i 在画出来的帧里是 g + i
+    const [r0, r1] = this.ref ? [g + this.ref[0], g + this.ref[1]] : [0, n];
+    let refReach = 0;
+    for (let i = r0; i < r1; i++) refReach = Math.max(refReach, formed[i]);
     let top = Infinity;
-    for (let i = 0; i < n; i++) if (formed[i] > reach * 0.5) top = Math.min(top, -formed[n + i] * SOLID.SCALE);
+    for (let i = r0; i < r1; i++) if (formed[i] > refReach * 0.5) top = Math.min(top, -formed[n + i] * SOLID.SCALE);
     let active = this.retractAt.length - 1;
     for (let k = this.retractAt.length - 1; k > 0; k--) {
       const a = this.frames[F + k];
@@ -301,8 +310,134 @@ export const UNIT_TIERS: readonly RingUnitDef[] = buildSquareUnits(UNIT_SQUARE_T
 export const UNIT_STORED = UNIT_CUT - UNIT_BAND;
 export const UNIT_ORDER: readonly number[] = buildSquareOrder();
 
+/**
+ * 一条带两个结构（2026-10-30 按用途定形，形态方案 §11.2.1）：2-3 双结构带的做法放进 2-15 的布和方台。338 节全部铺出去：
+ * `[贴合 lead | 垫 p | ISO | 上台 | 贴合 mid−ISO | 垫 2p | ISO | 下台 | ISO | 垫 p | 尾]`，两块 6.5 cm 方台各在自己的 131 节里居中
+ * （面、边档用垫补到角档那么长，三档同高），键与平台同一组（UNIT_SHAPE.k）。上下两块之间贴合 mid = 31 节，超过 2-3 量出的
+ * 逐位解耦下限 29（皮肤单元lab §15.5）：一块不扣键时另一块的形状与两块都成时逐点相同，所以一台里逐带可选「两块都成」或「只成
+ * 下台」（下台那段键全留、上台那段不扣键，贴着芯）。下台离钉住端的高度与平台（UNIT_TIERS）相同；两块之间空 0.51 m。
+ */
+export const DUAL = { mid: 31 } as const;
+
+/**
+ * 一档两个结构的谱：upper / lower = 上 / 下那块扣不扣键；a0 / b0 = 上 / 下结构段的起点（引擎节点下标），fs = 结构段节数。
+ * mid = 两块之间贴合多少节（省略 = DUAL.mid；少给的节数挪到顶端，线稿脚本拿它量两块之间能缩到多少）
+ */
+export function dualUnitSpec(k: number, upper: boolean, lower: boolean, mid: number = DUAL.mid): { spec: SkinSpec; a0: number; b0: number; fs: number } {
+  const H = UNIT_SHAPE.h;
+  const ISO = SQUARE.ISO;
+  const slot = UNIT_BAND - UNIT_SHAPE.lead - UNIT_SHAPE.tail - 2 * ISO;
+  const b = squareBuffer(k, H);
+  const fs = squareFree(k, b);
+  const c = (fs - 1) / 2;
+  const pw = squarePw(H);
+  // 两块各建一份（下面按对象认段落起点，同一个对象出现两次会认错）
+  const seg = (on: boolean): SkinSeg => (on ? ['f', fs, squareLadder(k, pw).map((q) => [c - q, c + q, H / 100] as const), [[c - pw, c + pw]]] : ['f', fs, []]);
+  const p = (slot - fs) / 2;
+  const lead = UNIT_CUT - 2 * slot - mid - 2 * ISO - UNIT_SHAPE.tail;
+  const A = seg(upper);
+  const B = seg(lower);
+  const raw: SkinSeg[] = [['g', lead], ['f', p, []], ['g', ISO], A, ['g', mid - ISO], ['f', 2 * p, []], ['g', ISO], B, ['g', ISO], ['f', p, []], ['g', UNIT_SHAPE.tail]];
+  const spec: SkinSeg[] = [];
+  let at = 0;
+  let a0 = 0;
+  let b0 = 0;
+  for (const s of raw) {
+    if (s[1] === 0) continue;
+    if (s === A) a0 = at;
+    if (s === B) b0 = at;
+    spec.push(s);
+    at += s[1];
+  }
+  if (at !== UNIT_CUT) throw new Error(`两个结构的带长 ${at} ≠ ${UNIT_CUT}`);
+  return { spec, a0, b0, fs };
+}
+
+/** 两个结构的三档引擎定义（同一张方箱整形选项）与「台面高度按下面那块量」的节点段 */
+function dualTiers(upper: boolean, tag: string): { defs: RingUnitDef[]; refs: [number, number][] } {
+  const defs: RingUnitDef[] = [];
+  const refs: [number, number][] = [];
+  UNIT_TIERS.forEach((t, i) => {
+    const d = dualUnitSpec(UNIT_SHAPE.k[i], upper, true);
+    defs.push({ ...t, key: `${t.key}-${tag}`, spec: d.spec });
+    refs.push([d.b0, d.b0 + d.fs]);
+  });
+  return { defs, refs };
+}
+/** 两块都成（下台 + 上台）与只成下台：三档各一条，按这个顺序排（UNIT_DUAL_DEFS[0..2] = 两块，[3..5] = 只成下台） */
+const DUAL_BOTH = dualTiers(true, 'dual');
+const DUAL_LOWER = dualTiers(false, 'lower');
+export const UNIT_DUAL_DEFS: readonly RingUnitDef[] = [...DUAL_BOTH.defs, ...DUAL_LOWER.defs];
+export const UNIT_DUAL_REFS: readonly (readonly [number, number])[] = [...DUAL_BOTH.refs, ...DUAL_LOWER.refs];
+
+/**
+ * 有顶的一台（形态方案 §11.3；作者 10-30 让模型按建议定：两个结构、上台盖背向座位的那半圈）。落在哪见 shelterToward。
+ * - lowerTop：下台台面离地 0.90 m = 站上比例模型坐在 0.43 m 的沙发上眼睛的高度（约 1.17 m）减去猫坐着时眼睛离台面的高度
+ *   （约 0.27 m，figure.ts 的方块猫）：猫坐在下台上，眼睛与坐着的人齐平。上台顶 1.47 m，比站着的人的眼睛（约 1.57 m）低，
+ *   路过的人从上面看下来，猫被上台挡住；
+ * - under：下台底面离地（台面 6.5 cm 厚）；比它高的家具上方不落成有顶的（shelterToward）；
+ * - catIn：猫坐在有顶那半边、离分界多深（弧度）：坐在敞开那半边的旁边，头转过去看座位，不隔着立杆。
+ */
+export const SHELTER = { lowerTop: 0.9, under: 0.9 - 0.065, catIn: (25 * Math.PI) / 180 } as const;
+
+/** 有顶的一台二十条带各成什么：朝 toward（平面方位角，台心 → 座位）那半圈只成下台（0），背后那半圈两块都成（1） */
+export function shelterBands(toward: number, count: number = SQUARE.COUNT): Uint8Array {
+  return Uint8Array.from({ length: count }, (_, j) => (Math.cos(bandAngle(j) - toward) < 0 ? 1 : 0));
+}
+
+/**
+ * 这一台落下时要不要落成有顶的一台（2026-10-30）：返回台心朝座位的平面方位角，不要就返回 null。
+ * 「走 · 站 · 坐」规则下，不当桌子的单元只为猫落（引路的那几步、站定的人给的一步、猫脚下那台），所以落在一个**正坐着的人**
+ * 的共温带里（台心离座位 ≤ COHABIT.BAND.far = 1.5 m）的那台，就是猫陪着那个人待的地方：上台盖背向他的那半圈。
+ * 朝离得最近的那个坐着的人；压在比下台底面还高的家具上方的不要（下台底 0.83 m 会碰到椅背 0.85 m；沙发靠背 0.80 m 让得开）。
+ * 只读平面模型已有的东西，规则一条不加。
+ * 首版只认「引路的终点」，按 2-15 的配置跑 600 s 一次都没碰上（引猫的路线很少走到终点），改成现在这样，四个种子各 11–24 次。
+ */
+export function shelterToward(
+  l: Pick<PlanLayout, 'platR'>,
+  u: { x: number; y: number },
+  seated: readonly { x: number; y: number }[],
+  rects: readonly Pick<FurnRect, 'x0' | 'x1' | 'y0' | 'y1' | 'kind' | 'ergo'>[],
+  far: number = COHABIT.BAND.far,
+): number | null {
+  let best: { x: number; y: number } | null = null;
+  let bd = far + 1e-9;
+  for (const s of seated) {
+    const d = Math.hypot(s.x - u.x, s.y - u.y);
+    if (d <= bd) {
+      bd = d;
+      best = s;
+    }
+  }
+  if (!best) return null;
+  const tall = rects.filter((r) => furnitureTop(r) > SHELTER.under - 0.02);
+  if (!platformClear(l, u, tall)) return null;
+  return Math.atan2(best.y - u.y, best.x - u.x);
+}
+
 /** 已经烘好的三档轨迹（同一页面里换路由、重挂台架时直接拿，不重烘） */
 const BAKED = new Map<string, BandTrajectory[]>();
+
+/** 交给后台线程烘的一份活（cohabit-bake.worker.ts）与它的回话 */
+export interface BakeJob {
+  defs: RingUnitDef[];
+  frames: FrameCounts;
+  store: number;
+  refs: (readonly [number, number] | undefined)[];
+}
+export type BakeReply = { kind: 'track'; i: number; traj: BandTrajectory } | { kind: 'done' } | { kind: 'error'; message: string };
+
+/** 一组轨迹的缓存键（键名 + 帧数 + 收着的节数；refs 由键名决定，不另记） */
+export function bakedKey(defs: readonly RingUnitDef[], frames: FrameCounts = FRAMES, store = 0): string {
+  return `${defs.map((d) => d.key).join('|')}#${frames.form}/${frames.retract}/${frames.hoist}/${frames.bridge ?? 0}#s${store}`;
+}
+/** 取缓存（别处烘好的，比如后台线程烘的那组） */
+export function bakedGet(key: string): BandTrajectory[] | null {
+  return BAKED.get(key) ?? null;
+}
+export function bakedPut(key: string, trajs: BandTrajectory[]): void {
+  BAKED.set(key, trajs);
+}
 
 /**
  * 三档轨迹一起烘：三条引擎依次推进（分片，`work` 按时间预算），全部烘完才算完。三档的节点数相同（同一条
@@ -314,10 +449,10 @@ export class UnitBaker {
   private readonly bakers: TrajectoryBaker[];
   private result: BandTrajectory[] | null;
 
-  /** store = 每条带收在顶端的节数（默认 = 平台用不到的那段，UNIT_STORED） */
-  constructor(defs: readonly RingUnitDef[] = UNIT_TIERS, frames: FrameCounts = FRAMES, store: number = UNIT_STORED) {
-    this.key = `${defs.map((d) => d.key).join('|')}#${frames.form}/${frames.retract}/${frames.hoist}/${frames.bridge ?? 0}#s${store}`;
-    this.bakers = defs.map((d) => new TrajectoryBaker(d, frames, store));
+  /** store = 每条带收在顶端的节数（默认 = 平台用不到的那段，UNIT_STORED）；refs = 每条按哪一段量台面（TrajectoryBaker 的 ref） */
+  constructor(defs: readonly RingUnitDef[] = UNIT_TIERS, frames: FrameCounts = FRAMES, store: number = UNIT_STORED, refs?: readonly (readonly [number, number] | undefined)[]) {
+    this.key = bakedKey(defs, frames, store);
+    this.bakers = defs.map((d, i) => new TrajectoryBaker(d, frames, store, refs?.[i]));
     this.n = this.bakers[0].n;
     if (this.bakers.some((b) => b.n !== this.n)) throw new Error('三档的带子节点数不同，整台网格拼不起来');
     this.result = BAKED.get(this.key) ?? null;
@@ -782,6 +917,12 @@ export const FURN_ERGO = {
   chair: { seatH: 0.45, seatT: 0.05, backT: 0.04, backH: 0.85, legW: 0.04, legIn: 0.02 },
 } as const;
 
+/** 家具最高处离地（米）：人体工学那套按 FURN_ERGO 的靠背高，旧那套按 FURN.backH */
+export function furnitureTop(r: Pick<FurnRect, 'kind' | 'ergo'>): number {
+  if (!r.ergo) return FURN.backH;
+  return r.kind === 'sofa' ? FURN_ERGO.sofa.backH : FURN_ERGO.chair.backH;
+}
+
 /** 家具的一块：局部坐标（u 沿宽、v 沿进深从靠背边量起、z 离地高，米）→ 世界盒 */
 function furnBlock(r: FurnRect, u0: number, u1: number, v0: number, v1: number, z0: number, z1: number, unit: number): Box {
   const [fx, fy] = r.face;
@@ -918,6 +1059,8 @@ export interface CatPlace {
   bend: number;
   onPlatform: boolean;
   lift: number;
+  /** 跨台时走到两台之间的几成（0 = 起跳那台、1 = 落下那台）；不在跨台时省略 */
+  t?: number;
 }
 
 /** 台上的猫坐在环上什么方位：离「它要看的方向」绕回 55°，身子顺着环、头再转过去看（不必扭满 90°） */
@@ -930,6 +1073,8 @@ const RING_SIDE = (55 * Math.PI) / 180;
  * 跨台（transfer）时贴着两根芯连线的一侧跳过去，两根芯都不碰。
  *   - 台上、在芯心：身子朝向 = 平面模型的朝向（往回绕 55° 摆在环上，头转回来看那个方向）；
  *   - 台上、在台边（靠近访客）：摆在朝访客那一侧再往回绕 55° 的地方，头转过去看访客；
+ *   - 台上、这台是有顶的一台（`roofToward` = 台心朝座位的方位角，2026-10-30）：坐在有顶那半边、离分界 SHELTER.catIn 的地方，
+ *     头转过去看座位（不隔着立杆）；
  *   - 卧 → 蜷（绕着杆一圈），走 / 退 → 沿环走，其余 → 坐；
  *   - 地面：照平面模型的位置与朝向，直的。
  */
@@ -940,6 +1085,7 @@ export function catPlacement(
   moving: boolean,
   layout: Pick<PlanLayout, 'mastR'>,
   ring: { R: number },
+  roofToward?: number,
 ): CatPlace {
   const R = ring.R;
   const floorPose = (): CatPose => {
@@ -957,15 +1103,16 @@ export function catPlacement(
     const p = Math.max(0, Math.min(1, ((c.x - A.x) * dx + (c.y - A.y) * dy) / L2));
     const h = Math.atan2(dy, dx);
     const px = Math.sin(h), py = -Math.cos(h);
-    return { x: A.x + p * dx + px * R, y: A.y + p * dy + py * R, heading: h, headTurn: 0, pose: 'walk', tail: 'up', bend: 0, onPlatform: true, lift: 0.06 * Math.sin(Math.PI * p) };
+    return { x: A.x + p * dx + px * R, y: A.y + p * dy + py * R, heading: h, headTurn: 0, pose: 'walk', tail: 'up', bend: 0, onPlatform: true, lift: 0.06 * Math.sin(Math.PI * p), t: p };
   }
   if (formed && support.length === 1) {
     const u = support[0];
     const dx = c.x - u.x, dy = c.y - u.y;
     const atCore = Math.hypot(dx, dy) < layout.mastR + 0.02;
-    const look = c.heading;
+    const look = roofToward ?? c.heading;
     const anchor = atCore ? look : Math.atan2(dy, dx);
-    const th = anchor - RING_SIDE;
+    // 有顶的一台：绕过敞开那半圈的分界再往里 catIn（离座位方向 90° + catIn）
+    const th = roofToward !== undefined ? roofToward - Math.PI / 2 - SHELTER.catIn : anchor - RING_SIDE;
     const facing = th + Math.PI / 2;
     const pose: CatPose = c.state === 'lie' ? 'curl' : moving && (c.state === 'walk' || c.state === 'retreat') ? 'walk' : 'sit';
     const turn = Math.atan2(Math.sin(look - facing), Math.cos(look - facing));
