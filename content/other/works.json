@@ -24,6 +24,11 @@
       "key": "installations",
       "title": "Installations",
       "zh": "装置"
+    },
+    {
+      "key": "drawing-painting",
+      "title": "Drawing & painting",
+      "zh": "绘画"
     }
   ],
   "works": [
@@ -2639,6 +2644,289 @@
               }
             ],
             "layout": "pair"
+          }
+        ]
+      }
+    },
+    {
+      "title": "Drawing and Painting",
+      "group": "drawing-painting",
+      "context": "Studies and sketches · Pencil, charcoal, ink, watercolour, oil pastel, digital",
+      "line": "Twenty-three drawings and paintings, and one model",
+      "intro": "A plaster cast and portraits in pencil and charcoal, landscapes in watercolour and oil pastel, line drawings of streets and a shop counter, digital drawing in Procreate, and one model.",
+      "slug": "drawing-and-painting",
+      "zh": {
+        "title": "绘画",
+        "context": "习作与速写 · 铅笔、炭笔、墨、水彩、油画棒、数字绘画",
+        "line": "二十三幅画，另有一件模型"
+      },
+      "image": {
+        "src": "/other/drawings/01-cover.webp",
+        "width": 1884,
+        "height": 1280,
+        "caption": {
+          "en": "A village below the mountains, with yaks lying on the slope (watercolour)",
+          "zh": "山下的村子，坡上卧着牦牛（水彩）"
+        }
+      },
+      "page": {
+        "sections": [
+          {
+            "heading": {
+              "en": "Pencil and charcoal",
+              "zh": "素描"
+            },
+            "layout": "pair",
+            "figures": [
+              {
+                "src": "/other/drawings/02-plaster-cast.webp",
+                "width": 1536,
+                "height": 2000,
+                "caption": {
+                  "en": "Plaster head on a block, signed at lower left",
+                  "zh": "石膏头像与方块，左下角有签名"
+                }
+              },
+              {
+                "src": "/other/drawings/03-portrait.webp",
+                "width": 1500,
+                "height": 2000,
+                "caption": {
+                  "en": "Head-and-shoulders portrait in a collared shirt",
+                  "zh": "穿翻领衬衫的半身肖像"
+                }
+              },
+              {
+                "src": "/other/drawings/04-robe.webp",
+                "width": 1310,
+                "height": 1890,
+                "caption": {
+                  "en": "A smiling figure in a long robe and head wrap, with 10.15 written to the right",
+                  "zh": "穿长袍、裹头巾、笑着的人，右边写着 10.15"
+                }
+              },
+              {
+                "src": "/other/drawings/05-seated.webp",
+                "width": 1080,
+                "height": 1581,
+                "caption": {
+                  "en": "A figure leaning back in a chair, face turned up",
+                  "zh": "仰靠在椅子上、抬着头的人"
+                }
+              },
+              {
+                "src": "/other/drawings/06-child.webp",
+                "width": 2000,
+                "height": 1373,
+                "caption": {
+                  "en": "A small child with two pigtails in a doorway",
+                  "zh": "扎两个小辫、站在门口的小孩"
+                }
+              },
+              {
+                "src": "/other/drawings/07-cat-asleep.webp",
+                "width": 2000,
+                "height": 1460,
+                "caption": {
+                  "en": "A cat asleep beside carved wooden furniture",
+                  "zh": "睡在雕花木家具旁的猫"
+                }
+              },
+              {
+                "src": "/other/drawings/08-cap.webp",
+                "width": 1548,
+                "height": 2000,
+                "caption": {
+                  "en": "A figure in a knit cap holding a cup, seen from above",
+                  "zh": "戴毛线帽、手里拿着杯子的人，从上往下看"
+                }
+              }
+            ]
+          },
+          {
+            "heading": {
+              "en": "Colour",
+              "zh": "色彩"
+            },
+            "figures": [
+              {
+                "src": "/other/drawings/09-roofs.webp",
+                "width": 1310,
+                "height": 1300,
+                "caption": {
+                  "en": "Flat roofs stepping back to white stupas and green mountains",
+                  "zh": "一层层平屋顶，后面是白塔和青山"
+                }
+              },
+              {
+                "src": "/other/drawings/10-hillside.webp",
+                "width": 2000,
+                "height": 1427,
+                "caption": {
+                  "en": "A hillside covered in flowers (watercolour)",
+                  "zh": "开满花的山坡（水彩）"
+                }
+              },
+              {
+                "src": "/other/drawings/11-woods.webp",
+                "width": 1393,
+                "height": 2000,
+                "caption": {
+                  "en": "Trees, a low fence and grass, with a yellow trunk in front (watercolour)",
+                  "zh": "树、矮栏杆和草地，前面一棵黄色的树干（水彩）"
+                }
+              },
+              {
+                "src": "/other/drawings/12-bicycles.webp",
+                "width": 1853,
+                "height": 1293,
+                "caption": {
+                  "en": "A stairwell, with bicycles parked inside and beyond the door (oil pastel)",
+                  "zh": "楼梯间，门里门外停着自行车（油画棒）"
+                }
+              },
+              {
+                "src": "/other/drawings/13-wall.webp",
+                "width": 1785,
+                "height": 1334,
+                "caption": {
+                  "en": "A corner of white wall with a vine hanging over it (oil pastel)",
+                  "zh": "白墙转角，墙头垂下一枝藤（油画棒）"
+                }
+              }
+            ]
+          },
+          {
+            "heading": {
+              "en": "The same tree",
+              "zh": "同一棵树"
+            },
+            "layout": "pair",
+            "figures": [
+              {
+                "src": "/other/drawings/14-tree-colour.webp",
+                "width": 1380,
+                "height": 2000,
+                "caption": {
+                  "en": "In watercolour",
+                  "zh": "水彩"
+                }
+              },
+              {
+                "src": "/other/drawings/15-tree-ink.webp",
+                "width": 1436,
+                "height": 2000,
+                "caption": {
+                  "en": "In black and white",
+                  "zh": "黑白"
+                }
+              }
+            ]
+          },
+          {
+            "heading": {
+              "en": "Line drawing",
+              "zh": "线描"
+            },
+            "figures": [
+              {
+                "src": "/other/drawings/16-counter.webp",
+                "width": 1880,
+                "height": 1320,
+                "caption": {
+                  "en": "Two people in aprons at a shop counter, seen from behind",
+                  "zh": "店里吧台前坐着两个系围裙的人，背影"
+                }
+              },
+              {
+                "src": "/other/drawings/17-planters.webp",
+                "width": 1982,
+                "height": 1425,
+                "caption": {
+                  "en": "Planters, signs marked 危险 (danger) and a seated figure outside a building",
+                  "zh": "楼前的花坛、写着「危险」的警示牌和坐着的人"
+                }
+              },
+              {
+                "src": "/other/drawings/18-passage.webp",
+                "width": 2000,
+                "height": 1465,
+                "caption": {
+                  "en": "Motorbikes parked in a covered passage between buildings",
+                  "zh": "楼与楼之间的过道里停满摩托车"
+                }
+              },
+              {
+                "src": "/other/drawings/19-cat-crocodile.webp",
+                "width": 1512,
+                "height": 1972,
+                "caption": {
+                  "en": "A cat and a crocodile, brush and ink on toned paper",
+                  "zh": "猫和鳄鱼，毛笔和墨，有色纸"
+                }
+              }
+            ]
+          },
+          {
+            "heading": {
+              "en": "Digital drawing",
+              "zh": "数字绘画"
+            },
+            "figures": [
+              {
+                "src": "/other/drawings/20-two-people.webp",
+                "width": 2000,
+                "height": 1434,
+                "caption": {
+                  "en": "Two people, one on a phone and one at a laptop (Procreate)",
+                  "zh": "两个人，一个看手机，一个对着笔记本电脑（Procreate）"
+                }
+              },
+              {
+                "src": "/other/drawings/21-laughing.webp",
+                "width": 1080,
+                "height": 1199,
+                "caption": {
+                  "en": "An older person laughing, with a bead necklace",
+                  "zh": "戴珠子项链、大笑的老人"
+                }
+              },
+              {
+                "src": "/other/drawings/22-armour.webp",
+                "width": 1867,
+                "height": 2000,
+                "caption": {
+                  "en": "A character with rabbit ears and an eye patch, in armour",
+                  "zh": "长着兔耳、戴眼罩、穿铠甲的角色"
+                }
+              },
+              {
+                "src": "/other/drawings/23-violet-eyes.webp",
+                "width": 1994,
+                "height": 1068,
+                "caption": {
+                  "en": "Close-up of a face with violet eyes, half hidden by dark hair",
+                  "zh": "紫色眼睛的脸部特写，一半藏在黑发后面"
+                }
+              }
+            ]
+          },
+          {
+            "heading": {
+              "en": "Model",
+              "zh": "模型"
+            },
+            "figures": [
+              {
+                "src": "/other/drawings/24-model.webp",
+                "width": 2000,
+                "height": 1500,
+                "caption": {
+                  "en": "A model of white foam, dark cut panels and wire on a timber board",
+                  "zh": "白色发泡材料、深色切片和金属丝做的模型，放在木板上"
+                }
+              }
+            ]
           }
         ]
       }

@@ -38,7 +38,7 @@ const COPY = {
     open: 'View larger',
     fig: (n: number) => `Fig. ${String(n).padStart(2, '0')}`,
     next: (g: string) => `Next · ${g}`,
-    footer: (t: string, y: string) => `Other work · ${t} · ${y}`,
+    footer: (t: string, y?: string) => ['Other work', t, y].filter(Boolean).join(' · '),
   },
   zh: {
     back: '← 全部作品',
@@ -53,7 +53,7 @@ const COPY = {
     open: '放大查看',
     fig: (n: number) => `图 ${String(n).padStart(2, '0')}`,
     next: (g: string) => `下一件 · ${g}`,
-    footer: (t: string, y: string) => `其他作品 · ${t} · ${y}`,
+    footer: (t: string, y?: string) => ['其他作品', t, y].filter(Boolean).join(' · '),
   },
 } as const;
 
@@ -95,10 +95,12 @@ function Meta({ entry, lang }: { entry: Entry; lang: Lang }) {
         </dd>
       </div>
       <div className="cs-meta__rest">
-        <div>
-          <dt>{c.year}</dt>
-          <dd>{work.year}</dd>
-        </div>
+        {work.year ? (
+          <div>
+            <dt>{c.year}</dt>
+            <dd>{work.year}</dd>
+          </div>
+        ) : null}
         {credits.map((cr) => (
           <div key={cr.role.en}>
             <dt>{cr.role[lang]}</dt>
@@ -223,7 +225,7 @@ export function OtherWorkPage({ entry }: { entry: Entry }) {
                 <span>
                   <Pick en={COPY.en.kicker(group.title)} zh={COPY.zh.kicker(groupZh)} />
                 </span>
-                <span>{work.year}</span>
+                {work.year ? <span>{work.year}</span> : null}
               </span>
             </div>
             <div className="cs-hero__row2">

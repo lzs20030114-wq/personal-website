@@ -202,7 +202,7 @@ export function buildWorkGroups(cards: HomeCard[], other: OtherWorks, entries: L
           kick: `${n}.${i + 1} · ${w.context.split(' · ')[0]}`,
           kickN: `${n}.${i + 1}`,
           kickLabel: w.context.split(' · ')[0],
-          status: w.year,
+          status: w.year ?? '',
           title: w.title,
           role: w.context,
           thesis: w.intro ?? w.line ?? null,

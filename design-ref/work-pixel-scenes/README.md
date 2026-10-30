@@ -12,6 +12,7 @@
 | Interiors | 围合与开口 | The Patrick、Design for our future、New Wave Film Club |
 | Architecture & construction | 承重与连接 | B365 Office Renovation、House for a Family of Five |
 | Installations | 交织结构 | 竹编装置与 The Shape of Sound |
+| Drawing & painting | 一支斜放的笔拖出一道线 | 绘画页（2026-10-30 新增组，MAPPING §80） |
 
 所有原稿统一单色平涂、等粗轮廓与圆端点。主题是单一符号，点只是组成轮廓的材料；不平铺图标，不使用人物、家具、透视或阴影。以后新增真实分组，再按其实际作品设计并登记符号；未登记的组只留空带。
 

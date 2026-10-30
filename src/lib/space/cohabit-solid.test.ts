@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { BRIDGE_BASE, DOOR_BASE, DOOR_EPS, FRAMES, SHELL, bakeUnitShell, shellCoverVerts, shellGoreVerts, shellJoins, bandVertsAt, bakeBandKeys, bakeHanger, bakeUnitKeys, bakeUnitMech, FURN_ERGO, HOIST, STEADY, TABLE_TOP, bandTop, clipToReel, doorFrame, isDoorFrame, pickUnitBands, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_ORDER, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
+import { BRIDGE_BASE, DOOR_BASE, DOOR_EPS, FRAMES, SHELL, bakeUnitShell, shellCoverVerts, shellGoreVerts, shellJoins, bandVertsAt, bakeBandKeys, bakeHanger, bakeUnitKeys, bakeUnitMech, FURN_ERGO, HOIST, STEADY, TABLE_TOP, bandTop, clipToReel, doorFrame, isDoorFrame, pickUnitBands, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_CUT, UNIT_ORDER, UNIT_SHAPE, UNIT_STORED, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
 import { planLayout } from './unit-activation';
 import { FIGURE, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
 import { RING } from './skin-ring';
 import { SOLID, offsetProfile } from './skin-solid';
 import { CLAMP_SPAN, MECH, clampRadii } from './unit-mechanism';
-import { SQUARE, SQUARE_PEAK, SQUARE_REACH, buildSquareUnits, squareHalfSide, squareRadiusAt, squareStructureAt } from './skin-square';
+import { SQUARE, SQUARE_PEAK, SQUARE_REACH, SQUARE_TIERS, buildSquareUnits, squareHalfSide, squareRadiusAt, squareStructureAt } from './skin-square';
+import { CYCLE_BAND } from './skin-cycle';
 import { CAT_COATS, catMesh, figureMesh, styleKey as styleKeyOf, type HumanStyle } from './figure';
 import { OUTFITS } from '../../../components/lab/figurePalette';
 import { partBox } from './mesh-shell';
@@ -32,14 +33,16 @@ describe('带子轨迹关键帧', () => {
     expect(traj.platformTopY).toBeGreaterThan(0);
   });
 
-  it('三档（面 / 边 / 角）：同一条带长、钉住端一样高、平台面一样高，挑出与 Lab 2-7 方形环的深度表一致', () => {
+  it('三档（面 / 边 / 角）：同一条带长、钉住端一样高、平台面一样高，挑出与 Lab 2-7 方形环的方台一样大', () => {
     expect(trajs).toHaveLength(3);
     expect(UNIT_TIERS.map((d) => d.en)).toEqual(['face', 'edge', 'corner']);
     for (const [t, tr] of trajs.entries()) {
       expect(tr.n).toBe(traj.n);
       expect(tr.footY).toBeCloseTo(traj.footY, 6); // 注册在底端，三档初始摆位相同（角档的段落分法不同，末位舍入差 1e-13）
-      expect(Math.abs(tr.platformTopY - traj.platformTopY)).toBeLessThan(1); // 方形环的对位构造：平台面一样高（px）
-      expect(Math.abs(tr.reach - (SQUARE.RADIUS + SQUARE_REACH[t]))).toBeLessThan(0.3);
+      // 平台面一样高（px）。结构贴底时靠尾段配平：尾段按整节给（一节 2 px），面档要补 7.5 节只能给 8，差半节 ≈ 1 px
+      expect(Math.abs(tr.platformTopY - traj.platformTopY)).toBeLessThan(1.5);
+      // 6.5 cm 的台面按方形重新标定了三档键（UNIT_SHAPE.k）：外缘点离理想正方形不到 1 px（原方台的边档也差 0.9）
+      expect(Math.abs(tr.reach - squareRadiusAt(((9 + 18 * t) * Math.PI) / 180, squareHalfSide(SQUARE_REACH)))).toBeLessThan(1);
     }
     // 二十条带：面 8 / 边 8 / 角 4，角档正对 45°
     expect(UNIT_ORDER.filter((t) => t === 0)).toHaveLength(8);
@@ -48,18 +51,23 @@ describe('带子轨迹关键帧', () => {
     for (let j = 0; j < UNIT_ORDER.length; j++) if (UNIT_ORDER[j] === 2) expect(Math.abs(Math.sin(2 * bandAngle(j)))).toBeCloseTo(1, 9);
   });
 
-  it('结构贴底、带缩到 169 节（2026-10-30）：成形的形状与 Lab 2-7 那条（305 节、七段谱）逐点相同，台底下那截布短一大截', () => {
+  it('台面 6.5 cm · 结构贴底 · 布按最长的预裁 338 节：平台只铺出去用得到的那段；成形的形状与同一组键排成七段谱时逐点相同，台底下那截布短一大截', () => {
+    expect(UNIT_CUT).toBe(CYCLE_BAND);
     expect(traj.n).toBe(UNIT_BAND);
+    expect(UNIT_BAND).toBe(168);
+    expect(UNIT_STORED).toBe(UNIT_CUT - UNIT_BAND);
     // 最上面那段贴合只留到下限：最短的那档（面档）lead = LEAD_MIN
     expect(Math.min(...UNIT_TIERS.map((d) => d.spec[0][1]))).toBe(SQUARE.LEAD_MIN);
-    const long = new TrajectoryBaker(buildSquareUnits()[0]).runAll();
-    expect(long.n).toBe(SQUARE.BAND);
+    const tiers = SQUARE_TIERS.map((t, i) => ({ ...t, k: UNIT_SHAPE.k[i] }));
+    const longDef = buildSquareUnits(tiers, 202, { h: UNIT_SHAPE.h, tail: UNIT_SHAPE.tail })[0]; // 同一组键，七段谱（垫上下各一半）
+    const long = new TrajectoryBaker(longDef).runAll();
+    expect(long.n).toBe(202);
     const a = traj.frames[STEADY.formed];
     const b = long.frames[STEADY.formed];
     const na = traj.n;
     const nb = long.n;
     const sa = squareStructureAt(UNIT_TIERS[0].spec)!;
-    const sb = squareStructureAt(buildSquareUnits()[0].spec)!;
+    const sb = squareStructureAt(longDef.spec)!;
     expect(sa.fs).toBe(sb.fs);
     const c = (sa.fs - 1) / 2;
     let dx = 0;
@@ -71,22 +79,26 @@ describe('带子轨迹关键帧', () => {
     expect(dx * 100).toBeLessThan(0.3); // px：结构段一节没动，形状与锁定照旧
     expect(dy * 100).toBeLessThan(0.3);
     expect(Math.abs(long.reach - traj.reach)).toBeLessThan(0.05);
-    // 台底离钉住端（px）：七段谱 ≈ 82（隔离贴合 16 + 垫 + 尾 15 都挂在结构底下），结构贴底 ≈ 29（只剩结构自己的下侧缓冲 + 短尾）
+    // 台底离钉住端（px）：七段谱 ≈ 71（隔离贴合 16 + 垫 + 尾都挂在结构底下），结构贴底 ≈ 40（只剩结构自己的下侧缓冲 + 短尾）
     const bottomAbove = (f: Float64Array, n: number, reach: number): number => {
       let bot = Infinity;
       for (let i = 0; i < n; i++) if (f[i] > reach * 0.5) bot = Math.min(bot, f[n + i]);
       return (bot - f[2 * n - 1]) * 100;
     };
-    const reachA = Math.max(...a.subarray(0, na));
-    const reachB = Math.max(...b.subarray(0, nb));
-    expect(bottomAbove(b, nb, reachB)).toBeGreaterThan(75);
-    expect(bottomAbove(a, na, reachA)).toBeLessThan(32);
-    // 三档台面在收缩终点一样高，台底离钉住端都在 32 px 以内
+    expect(bottomAbove(b, nb, Math.max(...b.subarray(0, nb)))).toBeGreaterThan(65);
     for (const tr of trajs) {
       const f = tr.frames[STEADY.formed];
-      expect(bottomAbove(f, tr.n, Math.max(...f.subarray(0, tr.n)))).toBeLessThan(32);
+      expect(bottomAbove(f, tr.n, Math.max(...f.subarray(0, tr.n)))).toBeLessThan(42);
     }
   }, 30_000);
+
+  it('6.5 cm 的台面成形途中不鼓出原方台的峰值：平面模型按 SQUARE_PEAK 算碰人，照旧够用', () => {
+    for (const [t, tr] of trajs.entries()) {
+      let peak = 0;
+      for (const f of tr.frames.slice(0, FRAMES.form)) for (let i = 0; i < tr.n; i++) peak = Math.max(peak, f[i] * 100);
+      expect(peak, `档 ${t}`).toBeLessThanOrEqual(SQUARE_PEAK[t]);
+    }
+  });
 
   it('膜按结构中心对位：三档结构中心序号不同（结构贴底），台面附近膜的两边一样高；中心相同时就是按序号配对', () => {
     expect(new Set(trajs.map((t) => t.mid)).size).toBe(3);
@@ -99,11 +111,12 @@ describe('带子轨迹关键帧', () => {
       expect(membraneIndex(0, n, A.mid, B.mid, w)).toBeCloseTo(0, 9);
       expect(membraneIndex(n - 1, n, A.mid, B.mid, w)).toBeCloseTo(n - 1, 9);
       for (let i = 1; i < n; i++) expect(membraneIndex(i, n, A.mid, B.mid, w)).toBeGreaterThan(membraneIndex(i - 1, n, A.mid, B.mid, w));
-      // 成形后：两档结构中心两侧 30 节内（台面那一段）膜两边的高度差 < 2 px；按同一序号配对会差到半个箱高
+      // 成形后：两档结构中心两侧 30 节内（台面那一段）膜两边的高度差 < 3 px；按同一序号配对会差到半个箱高以上
       const fa = A.frames[STEADY.formed], fb = B.frames[STEADY.formed];
       let d = 0;
       for (let k = -30; k <= 30; k++) d = Math.max(d, Math.abs(fa[n + A.mid + k] - fb[n + B.mid + k]) * 100);
-      expect(d).toBeLessThan(2);
+      // 6.5 cm 台面实测 2.6 px，其中 1.2 px 是三档台面本身的高差（尾段只能按整节给）；箱高 36 时 < 2
+      expect(d).toBeLessThan(3);
     }
   });
 
@@ -533,7 +546,8 @@ describe('蒙皮（2026-10-30 作者「设计一个真正的蒙皮作为单元�
               minD = Math.min(minD, Math.hypot(px - ax - u * vx, py - ay - u * vy));
             }
           }
-        expect(minD).toBeGreaterThan(0.08);
+        // 6.5 cm 台面折得更紧，实测最小 0.04 装置单位（房间尺度约 0.2 mm）；箱高 36 时 > 0.08
+        expect(minD).toBeGreaterThan(0.03);
       }
   });
 
@@ -783,29 +797,34 @@ describe('单元铺满整间房（cover: room，2026-10-27 作者「单元兼作
     expect(rig.y).toBeCloseTo(rigYForTop(rig, traj, TABLE_TOP.stand), 9);
   });
 
-  it('当桌子的几个高度：最低那档（沙发前茶几）吊带下端不戳地，餐桌比餐椅座面高 0.27–0.30', () => {
+  it('当桌子的几个高度：茶几在资料的 0.40–0.45 之内、吊带下端离地还有一截，餐桌比餐椅座面高 0.27–0.30', () => {
     const hang = (rig.s * (traj.footY - traj.platformTopY)) / UNITS_PER_M; // 台面到吊带最下端
     for (const top of Object.values(TABLE_TOP)) {
       const foot = top - hang;
-      expect(foot, `台面 ${top}`).toBeGreaterThan(0);
+      expect(foot, `台面 ${top}`).toBeGreaterThan(0.1);
       const y = rigYForTop(rig, traj, top);
       expect(unitFootY(rig, traj.footY, 1, y)).toBeLessThan(ROOM.FLOOR_Y);
     }
-    expect(hang).toBeLessThan(0.3); // 2026-10-30 结构贴底后台面到吊带最下端约 0.27 m（七段谱时 0.48 m，茶几 0.49 是那时的下限）
+    // 台面到吊带最下端：台厚 0.15 m · 七段谱时 0.48 m（茶几只能落到 0.49）；6.5 cm 台面 · 结构贴底后约 0.23 m
+    expect(hang).toBeLessThan(0.25);
+    expect(TABLE_TOP.sofaFront).toBeGreaterThanOrEqual(0.4);
+    expect(TABLE_TOP.sofaFront).toBeLessThanOrEqual(0.45);
+    expect(TABLE_TOP.sofaFront).toBeLessThanOrEqual(FURN_ERGO.sofa.seatH); // 与座面齐或略低
     expect(TABLE_TOP.chair - FURN_ERGO.chair.seatH).toBeGreaterThanOrEqual(0.27);
     expect(TABLE_TOP.chair - FURN_ERGO.chair.seatH).toBeLessThanOrEqual(0.3);
   });
 
-  it('当谁的桌子落多高：餐椅 → 餐桌，沙发 → 茶几；餐桌台底比座面高不到 0.18（腿进不去，所以台边按规则落在膝盖前）', () => {
+  it('当谁的桌子落多高：餐椅 → 餐桌，沙发 → 茶几；台面 6.5 cm 厚，餐桌台底比座面高 0.22（腿伸得进）', () => {
     const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', space: 'live', seed: 1 });
     const rects = sim.furn!.rects;
     expect(tableTopFor(rects.find((r) => r.kind === 'chair')!)).toBe(TABLE_TOP.chair);
     expect(tableTopFor(rects.find((r) => r.kind === 'sofa')!)).toBe(TABLE_TOP.sofaFront);
-    // 台面厚 = 方台成形的箱高（Lab 2-7 方形环平档 SQUARE.H，剖面 px；剖面坐标 = px / 100）按装置比例换成米
-    const thick = (rig.s * (SQUARE.H / 100) * SOLID.SCALE) / UNITS_PER_M;
-    expect(thick).toBeGreaterThan(0.13);
-    expect(thick).toBeLessThan(0.17);
-    expect(TABLE_TOP.chair - thick - FURN_ERGO.chair.seatH).toBeLessThan(0.18);
+    // 台面厚 = 方台成形的箱高（UNIT_SHAPE.h，剖面 px；剖面坐标 = px / 100）按装置比例换成米
+    const thick = (rig.s * (UNIT_SHAPE.h / 100) * SOLID.SCALE) / UNITS_PER_M;
+    expect(thick).toBeGreaterThan(0.06);
+    expect(thick).toBeLessThan(0.075);
+    // 座面到桌底要 0.18–0.20（家具购买指南），坐姿大腿厚男性 P95 约 0.15（GB/T 10000）
+    expect(TABLE_TOP.chair - thick - FURN_ERGO.chair.seatH).toBeGreaterThan(0.2);
   });
 
   it('64 台铺满四边：最外一圈的台面离墙不到半个格距，峰值时邻台面对面、角对角都还留缝，台子不出房间', () => {

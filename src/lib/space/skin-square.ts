@@ -175,9 +175,9 @@ export function squareFree(kMax: number, b: number = squareBuffer(kMax)): number
   return 2 * (kMax + b) + 1;
 }
 
-/** 配平基准 = 三档里最长的那个自由段（角档）——垫把其余两档补到同一总量 */
-export function squareFreeTotal(tiers: readonly SquareTier[] = SQUARE_TIERS): number {
-  return Math.max(...tiers.map((t) => squareFree(t.k)));
+/** 配平基准 = 三档里最长的那个自由段（角档）——垫把其余两档补到同一总量。`h` 省略 = 这一族的箱高（逐位不变） */
+export function squareFreeTotal(tiers: readonly SquareTier[] = SQUARE_TIERS, h: number = SQUARE.H): number {
+  return Math.max(...tiers.map((t) => squareFree(t.k, squareBuffer(t.k, h))));
 }
 
 export interface SquareTier {
@@ -322,12 +322,13 @@ export function squareWrap(
  * 七段谱把配平垫上下各放一半，嘴心与档位全程无关，代价是结构底下挂着「隔离贴合 16 + 垫 + 尾 15」：成形后台底离
  * 钉住端约 82 px（房间尺度约 0.33 m），就是台子下面那截贴着芯的布筒。这里把垫整个挪到结构上方：
  *   面 / 边档 `[贴合 lead | 垫 (fTotal − fs) | 隔离 ISO | 结构 | 尾 T]`，角档（没有垫）`[贴合 lead | 结构 | 尾 T]`。
- * 结构底下只剩它自己的下侧缓冲和一段短尾。角档尾取 TAIL_MIN；面 / 边档比角档短的那截自由段收缩到终点时
- * 短 `(fTotal − fs)·R1` 节长，它们的尾多给这一半（取整），三档台面在收缩终点一样高（实测差 < 1 px）。
+ * 结构底下只剩它自己的下侧缓冲和一段短尾。角档尾取 `tailMin`（默认 TAIL_MIN）；面 / 边档比角档短的那截自由段收缩到终点时
+ * 短 `(fTotal − fs)·R1` 节长，它们的尾多给这一半（取整），三档台面在收缩终点一样高（尾段只能按整节给，误差 ≤ 半节 ≈ 1 px；
+ * 箱高 36 时实测 < 1 px，Lab 2-15 的 6.5 cm 台面面档要补 7.5 节、给 8，差 1.2 px）。
  *
  * - 结构段一节没动，结构上方仍隔着 ISO ⇒ 成形的形状、锁定集合与七段谱逐点相同（实测 ≤ 0.14 px）；
  * - 贴合总量与自由总量与七段谱相同 ⇒ 带长、带顶的走法不变，只是台子在带上的位置往下挪了；
- * - 台底离钉住端 82 → 29 px（实测，三档差 < 1 px）；结构底下贴着芯的结构下侧缓冲，角档最长，是剩下的大头；
+ * - 台底离钉住端 82 → 29 px（箱高 36 实测；6.5 cm 台面 71 → 40 px）；结构底下贴着芯的结构下侧缓冲，角档最长，是剩下的大头；
  * - 代价：只在收缩终点对齐。收缩途中角档的自由段长、结构偏高，三档台面中线差到十几 px（第 300 步 21 px），
  *   全部扣上（约第 675 步）后 ≤ 7 px，第 900 步起 < 1 px；
  * - 结构的中心序号随档位变（202 节带上：面 105+42、边 95+48、角 64+66）⇒ 按节点序号配对的东西（带与带之间的膜）
@@ -338,10 +339,11 @@ export function squareWrapLow(
   fTotal: number = squareFreeTotal(),
   who = '',
   band: number = SQUARE.BAND,
+  tailMin: number = SQUARE.TAIL_MIN,
 ): { spec: SkinSpec; base: number } {
   const fs = seg[1];
   const pad = fTotal - fs;
-  const tail = SQUARE.TAIL_MIN + Math.round((pad * SKIN.R1) / 2);
+  const tail = tailMin + Math.round((pad * SKIN.R1) / 2);
   const lead = band - fTotal - tail - (pad > 0 ? SQUARE.ISO : 0);
   if (pad < 0 || lead < SQUARE.LEAD_MIN) throw new Error(`方形环档位越界（结构贴底）：${who} 垫=${pad} lead=${lead} tail=${tail}`);
   return pad > 0
@@ -361,25 +363,26 @@ export function squareStructureAt(spec: SkinSpec): { start: number; fs: number }
 
 /**
  * 三档的引擎定义（同一张方箱的整形选项，只换键谱）。`band` 省略 = 这一族现行的带长（逐位不变）；
- * 人猫同台的立体台（Lab 2-15）传 202：这一族立项时那条带（lead 22），形状与长带逐点相同（尾端对齐），
- * 只少上半截贴芯的素管——那一截是 2026-09-02 为捏分编制加长的。
- * `place` 省略 = 七段谱（Lab 2-7 等全部现行调用逐位不变）；`'bottom'` = 结构贴底（`squareWrapLow`，只给 Lab 2-15）。
+ * 传别的带长：形状与长带逐点相同（尾端对齐），只多 / 少上半截贴芯的素管——那一截是 2026-09-02 为捏分编制加长的。
+ * `shape` 省略 = 这一族的箱高与尾段、自由段总量按方形档算，排成七段谱（Lab 2-7 等全部现行调用逐位不变）。传了就按传入的档
+ * 自己算：箱高 `h`（台厚）、尾段 `tail`（钉住端那一截，下限 SQUARE.TAIL_MIN）；自由段总量取这几档里最长的那个。
+ * `place: 'bottom'` = 结构贴底（`squareWrapLow`）。人猫同台的立体台（Lab 2-15）用它做 6.5 cm 厚、贴底的平台（cohabit-solid 的 UNIT_SHAPE）。
  */
 export function buildSquareUnits(
   tiers: readonly SquareTier[] = SQUARE_TIERS,
   band: number = SQUARE.BAND,
-  place: 'center' | 'bottom' = 'center',
+  shape?: { h: number; tail: number; place?: 'center' | 'bottom' },
 ): RingUnitDef[] {
-  const fTotal = squareFreeTotal();
+  const h = shape?.h ?? SQUARE.H;
+  const fTotal = shape ? squareFreeTotal(tiers, h) : squareFreeTotal();
+  const low = shape?.place === 'bottom';
+  const lead = shape ? band - 2 * SQUARE.ISO - fTotal - shape.tail : squareLead(fTotal, band);
   const opts: SkinUnitOpts = skinSiteOpts(STEPPED);
   return tiers.map((t) => ({
-    key: (band === SQUARE.BAND ? `sq-${t.en}` : `sq-${t.en}-b${band}`) + (place === 'bottom' ? '-low' : ''),
+    key: shape ? `sq-${t.en}-k${t.k}-h${h}-b${band}${low ? '-low' : ''}` : band === SQUARE.BAND ? `sq-${t.en}` : `sq-${t.en}-b${band}`,
     zh: `${t.name}档`,
     en: t.en,
-    spec:
-      place === 'bottom'
-        ? squareWrapLow(squareSeg(t.k), fTotal, `k=${t.k}`, band).spec
-        : squareSpec(t.k, fTotal, squareLead(fTotal, band), SQUARE.H, band),
+    spec: low ? squareWrapLow(squareSeg(t.k, h), fTotal, `k=${t.k}`, band, shape!.tail).spec : squareSpec(t.k, fTotal, lead, h, band),
     opts,
     smooth: [3, 1] as const,
   }));

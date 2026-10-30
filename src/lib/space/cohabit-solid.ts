@@ -11,6 +11,8 @@
  * 「我们采用的单元形态是方形的……圆形只做过程推演，拿来给观众演示造型过程；方形才是拿来具体使用的东西。」
  * 此前这台默认用了 Lab 2-8 那只圆筒环。现在每台 = Lab 2-7 方形环平档那三张键谱（`buildSquareUnits`：面 / 边 / 角
  * 三档挑出，二十条带按方位分档 `buildSquareOrder`），俯视是方的；芯仍是圆的，没成形时（收起、直筒）还是一圈带子。
+ * 2026-10-29 起台面 6.5 cm 厚、三档键按薄台重标（`UNIT_SHAPE`，此前是方形环原样的 0.15 m）；布按最长的预裁 338 节
+ * （`UNIT_CUT`），平台只铺出去用得到的那段，余下的卷在上夹环的收布卷轴里（`UNIT_STORED`，见 UNIT_TIERS 注）。
  * 尺寸取「方形峰值时的半边长 = 圆台的峰值半径」（cohabit `SQUARE_SCALE`）：平面模型的平台圆（platR）是方形的内切圆，
  * 猫卧着的那一圈台面与圆台时一样宽，多出来的是四个角；平面模型凡是问「平台会不会碰到人」的地方都改按方形每条带
  * 的长度算（`unit: 'square'` → `squarePlanLayout`）。
@@ -46,7 +48,7 @@
  * 第二阶段「成什么」仍只有一种形（方形环平档那只方箱），待作者定词汇表后再分。
  */
 import type { RingUnitDef } from './skin-ring';
-import { SQUARE, buildSquareOrder, buildSquareUnits, squareHalfSide, squareStructureAt, SQUARE_REACH } from './skin-square';
+import { SQUARE, SQUARE_TIERS, buildSquareOrder, buildSquareUnits, squareHalfSide, squareStructureAt, SQUARE_REACH } from './skin-square';
 import { SKIN, buildUnit, createSkinUnit, renderSmooth, type SkinUnit } from './skin-unit';
 import { MECH, bandKeyMesh, bondSides, concatParts, hangerMesh, unitMechMesh, type MeshPart } from './unit-mechanism';
 import { SOLID, boxVerts, buildSolidTopology, fillSolidVerts, membranePanel, offsetProfile, rotateVertsY, type SolidTopology } from './skin-solid';
@@ -123,7 +125,7 @@ export interface BandTrajectory {
 
 /**
  * 轨迹烘焙：分片跑（`work` 按时间预算推进），好让台架在挂载后的头几帧里把它算完而不卡住主线程。
- * 一条 202 节的带全程 3000 步在桌面上约 1.5 s（方台现用 169 节）。
+ * 一条带全程 3000 步（正向 1500 + 回程 1500），另加让路回程 DOOR_STEPS 步。
  */
 export class TrajectoryBaker {
   readonly n: number;
@@ -340,20 +342,39 @@ export class TrajectoryBaker {
 }
 
 /**
- * 方形单元那条带的节数。2026-10-25 起用 Lab 2-7 方形环立项时的 202 节（lead 22）：方形环现行的 305 节是 2026-09-02
- * 为捏分编制加长的，多出来的全在上半截贴芯的素管里（形状逐点相同），立在方台上方会是一根一米来高的布筒。
- * 2026-10-30 结构改贴底（见 UNIT_TIERS）后再缩到 169 节：最上面那段贴合只留到下限（面档 lead = SQUARE.LEAD_MIN = 8，
- * 边 10、角 31），三档的垫与结构一节没动，成形的形状与锁定逐点相同（实测偏差 0）。成形后台面以上的带 97 → 83 px、
- * 台面以下 118 → 65 px（台面到钉住端），整台短了约三成。
+ * 平台的台厚与布。三件事叠在一起：
+ * - **台厚 6.5 cm**（2026-10-29 作者「单元作为桌面的话，那它其实也没必要那么厚」，项目二_2-15单元形态方案.md §2.1、§10）：
+ *   箱高 36 → 16 px（8×8 铺满时 0.15 m → 6.5 cm）。同样的键，台越薄挑得越远，所以三档键按方形重新标定成面 29 / 边 34 / 角 46：
+ *   外缘点离理想正方形 面 0.2 · 边 0.9 · 角 0.0 px。键全锁、成形途中最大自交环 4 节、全程不鼓出终态，峰值都小于
+ *   SQUARE_PEAK，平面模型按原峰值算碰人照旧够用，不改。
+ * - **结构贴底**（2026-10-30 作者「每一次机构成型之后它的底面下面直接接这个单元的最底端，而不是还要再支出来一段圆柱形的东西」）：
+ *   skin-square `squareWrapLow`，配平垫整个挪到结构上方，结构底下只接一段短尾；成形的形状与锁定与七段谱逐点相同。
+ * - **布按最长的预裁 338 节**（作者 10-06；10-29「多出来的布可以继续往上延伸……用不到很长的话，就把那些布存起来」）：
+ *   平台只铺出去这三档用得到的那段 = 最上面那段贴合留到下限（面档 lead = SQUARE.LEAD_MIN）时的最短带长，余下的不铺出去、
+ *   不参与成形，引擎只解铺出去的那段。余下的布卷在上夹环的收布卷轴里——与让路的带多出来的布同一处（2026-10-30 机构件，
+ *   `clipToReel`）。10-29 另一版把它画成接在带子顶上的一圈褶，与上夹环的夹持段、蒙皮的收口冲突，10-30 合并时改成卷进夹环
+ *   （建模假设，待作者确认）。
  */
-export const UNIT_BAND = 169;
-/**
- * 方形单元的三档引擎定义（面 / 边 / 角，Lab 2-7 方形环平档的键谱）与二十条带的档位编制（下标 = 带序 j）。
- * 2026-10-30 改为结构贴底的排法（skin-square `squareWrapLow`，作者「每一次机构成型之后它的底面下面直接接这个单元的
- * 最底端，而不是还要再支出来一段圆柱形的东西」）：键谱一颗没改，配平垫从结构上下各一半挪到结构上方，结构底下只接一段
- * 短尾。成形的形状与锁定逐点相同；台底到钉住端 0.33 → 0.12 m（房间尺度）。
- */
-export const UNIT_TIERS: readonly RingUnitDef[] = buildSquareUnits(undefined, UNIT_BAND, 'bottom');
+export const UNIT_SHAPE = { h: 16, tail: SQUARE.TAIL_MIN, k: [29, 34, 46] } as const;
+const UNIT_SQUARE_TIERS = SQUARE_TIERS.map((t, i) => ({ ...t, k: UNIT_SHAPE.k[i] }));
+/** 一条布预裁多长：词汇表里最长的那张（捏分，338 节；与 skin-cycle 的 CYCLE_BAND 同一个数，守门核对） */
+export const UNIT_CUT = 338;
+/** 平台铺出去的节数（引擎解的就是这一段）：结构贴底时三档里要得最多的那档（面档，最上面贴合 = LEAD_MIN） */
+export const UNIT_BAND = unitBandLow();
+/** 方形单元的三档引擎定义（面 / 边 / 角，台厚与键按 UNIT_SHAPE，结构贴底）与二十条带的档位编制（下标 = 带序 j） */
+export const UNIT_TIERS: readonly RingUnitDef[] = buildSquareUnits(UNIT_SQUARE_TIERS, UNIT_BAND, { h: UNIT_SHAPE.h, tail: UNIT_SHAPE.tail, place: 'bottom' });
+/** 平台用不到、卷在上夹环里的节数 */
+export const UNIT_STORED = UNIT_CUT - UNIT_BAND;
+
+/** 结构贴底时最短的带长：每档 = LEAD_MIN + 最上面那段贴合以下的全部（垫 + 隔离 + 结构 + 尾段，由 squareWrapLow 排），取最大 */
+function unitBandLow(): number {
+  let band = 0;
+  for (const t of buildSquareUnits(UNIT_SQUARE_TIERS, 10_000, { h: UNIT_SHAPE.h, tail: UNIT_SHAPE.tail, place: 'bottom' })) {
+    const rest = t.spec.slice(1).reduce((a, seg) => a + seg[1], 0); // 第一段 = 最上面那段贴合
+    band = Math.max(band, SQUARE.LEAD_MIN + rest);
+  }
+  return band;
+}
 export const UNIT_ORDER: readonly number[] = buildSquareOrder();
 
 /** 已经烘好的三档轨迹（同一页面里换路由、重挂台架时直接拿，不重烘） */
@@ -361,7 +382,7 @@ const BAKED = new Map<string, BandTrajectory[]>();
 
 /**
  * 三档轨迹一起烘：三条引擎依次推进（分片，`work` 按时间预算），全部烘完才算完。三档的节点数相同（同一条
- * 169 节的带），钉住端高度相同（注册在底端）、平台面高度相同（方形环的对位构造），台架拿第 0 档定摆放。
+ * 铺出去的那段布），钉住端高度相同（注册在底端）、平台面高度相同（方形环的对位构造），台架拿第 0 档定摆放。
  */
 export class UnitBaker {
   readonly n: number;
@@ -734,14 +755,15 @@ export interface Rig {
 /**
  * 单元兼作桌子时的台面高度（米，离地；2026-10-27 作者「桌面高度参考人体工学数据」）。一个高度当不了所有桌子，按服务谁落：
  * - stand 1.05：站着用——站姿肘高附近（BIFMA G1 站立桌可调到 1.18；吧台桌通行 1.0–1.1）。不当桌子的单元都落到这里；
- * - chair 0.74：配餐椅（座面 0.45）——桌面比座面高 0.27–0.30 是通行的桌椅高差；台面 0.15 厚、台底 0.59，腿进不去，
- *   所以餐椅那台的台边按 COHABIT.TABLE 落在膝盖前面；
- * - sofaFront 0.49：沙发正前方当茶几——资料要与座面齐或略低（0.40–0.45）。定这个数时台面到吊带最下端有 0.48 m、0.49 是下限；
- *   2026-10-30 结构改贴底（UNIT_TIERS）后只剩约 0.27 m，已能落进资料范围，改不改待作者定。
+ * - chair 0.74：配餐椅（座面 0.45）——桌面比座面高 0.27–0.30 是通行的桌椅高差。台面 6.5 cm 厚（UNIT_SHAPE）、台底 0.67，
+ *   比座面高 0.22，腿伸得进去；餐椅那台的台边仍按 COHABIT.TABLE 落在膝盖前面（那条是台面 0.15 厚、腿进不去时定的，
+ *   改不改成盖住大腿由作者定，见形态方案 §10.2）；
+ * - sofaFront 0.42：沙发正前方当茶几——资料要与座面齐或略低（0.40–0.45），座面 0.43。台面 0.15 厚、台面下吊着 0.48 m
+ *   的布时只能落到 0.49；薄台（2026-10-29）与结构贴底（10-30）以后台面下只剩一小截，落得下来。
  * 哪一台当谁的桌子、什么时候落由平面模型定（COHABIT.TABLE、CohabitSim.tableBy），这里只管高度。
  * 原来铺满时钉在 1.43 m（场地布局那个高度，接近站姿肩高），哪种桌子都不是。
  */
-export const TABLE_TOP = { stand: 1.05, chair: 0.74, sofaFront: 0.49 } as const;
+export const TABLE_TOP = { stand: 1.05, chair: 0.74, sofaFront: 0.42 } as const;
 
 /**
  * 台面换高度的速度（m/s）：取市面上电动升降桌的快档 80 mm/s（常见 30–50 mm/s，见厂商参数；Lee 等 2019 用的 IKEA Bekant 是

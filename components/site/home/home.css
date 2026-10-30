@@ -286,6 +286,11 @@
 .hs-wg__tab.hs-is-prev .hs-wg__tab-ghost { transform: scaleX(1); }
 .hs-wg__tab-n, .hs-wg__tab-c { font: 400 11px var(--mono); color: var(--muted); }
 .hs-wg__tab-t { font: 500 14.5px var(--sans); letter-spacing: -.005em; }
+/* 七组起（2026-10-30 加了「绘画」组，MAPPING §80）组名目录按原尺寸放不进一行（1216 宽要 1301）：折成两行会把卡片下方的留白带
+   压到 84px 以下，1440 × 900 起所有组的印记都不出。字号、间距收一档，1280 宽也放得下一行 */
+.hs-wg__tabs:has(> .hs-wg__tab:nth-of-type(7)) { column-gap: 16px; }
+.hs-wg__tabs:has(> .hs-wg__tab:nth-of-type(7)) .hs-wg__tab { gap: 6px; }
+.hs-wg__tabs:has(> .hs-wg__tab:nth-of-type(7)) .hs-wg__tab-t { font-size: 13px; }
 .hs-wg__pips { display: flex; gap: 3px; align-self: center; }
 .hs-wg__pips > span { width: 8px; height: 2px; background: oklch(0.235 0.025 215 / .22); transition: background .5s; }
 .hs-wg__pips > span.hs-is-on { background: var(--ink); }
