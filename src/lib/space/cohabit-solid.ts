@@ -21,7 +21,8 @@
  * 的协议在浏览器里要 0.7 s），而 Lab 2-14 的平面模型也只给每条带两个数：所在单元的成形程度
  * （`act.degree`，跟随档，0–1）和这条带收回了几成（`bandOpen`）。于是**每档只跑一条引擎、把轨迹烘成关键帧**
  * （三档共三条）：正向协议（直带子 → 成形）取 `FRAMES.form` 帧，引擎的回程（`retractStep`，成形 → 松键回直）取
- * `FRAMES.retract` 帧；每条带按自己的两个数取帧（`bandFrame`）——程度在涨就查正向那条，在退就查回程那条。
+ * `FRAMES.retract` 帧；每条带按自己的两个数取帧（`pickUnitBands`）——程度在涨就查正向那条，在退就查回程那条；
+ * 给人让路的带另走一段（2026-10-30）：成形态 fork 出来的收直回程 `retractStep(1.0)`，取 `FRAMES.door` 帧，多出来的布卷进上夹环。
  * 这是**必要的承认**：带子的形状逐帧是引擎算出来的，但「这一条带此刻该是哪一帧」是平面模型的两个标量定的，
  * 不是 1280 条布各自解出来的；两条轨迹之间切换的那一帧会有一点跳（回程不是正向的逐位倒放）。
  *
@@ -46,7 +47,7 @@
  */
 import type { RingUnitDef } from './skin-ring';
 import { SQUARE, buildSquareOrder, buildSquareUnits, squareHalfSide, squareStructureAt, SQUARE_REACH } from './skin-square';
-import { SKIN, createSkinUnit, renderSmooth } from './skin-unit';
+import { SKIN, createSkinUnit, renderSmooth, type SkinUnit } from './skin-unit';
 import { SOLID, boxVerts, buildSolidTopology, fillSolidVerts, membranePanel, rotateVertsY, type SolidTopology } from './skin-solid';
 import { bakeIndexed } from '../linkage/gl3d';
 import { MM_PER_UNIT, RIG_ANCHOR_Y, RIG_SCALE, RING_GRID_FIT, RING_GRID_PIVOT_Y, ROOM, roomBoxesBySpan, viewFitBySpan, type RingGridView } from './skin-grid';
@@ -59,10 +60,14 @@ export const UNITS_PER_M = 1000 / MM_PER_UNIT;
 
 /**
  * 关键帧数（2026-10-27 加密：32 / 24 / 16 时相邻两帧差 4–9 cm，台架上读得出一格一格跳）：正向 48、回程 36、升降 32（直带子按长度
- * 比例压向顶端，纯几何）、过渡 8（直垂 → 正向第一帧的插值，纯几何：引擎初始摆位比自然松弛还直，两者差 7–11 cm，不补就是一下跳）。
+ * 比例压向顶端，纯几何）、过渡 8（直垂 → 正向第一帧的插值，纯几何：引擎初始摆位比自然松弛还直，两者差 7–11 cm，不补就是一下跳）、
+ * 让路 24（2026-10-30：成形态 fork 出来走引擎的收直回程 `retractStep(1.0)`，见 `pickUnitBands`）。
  */
-export const FRAMES = { form: 48, retract: 36, hoist: 32, bridge: 8 } as const;
-export type FrameCounts = { form: number; retract: number; hoist: number; bridge?: number };
+export const FRAMES = { form: 48, retract: 36, hoist: 32, bridge: 8, door: 24 } as const;
+export type FrameCounts = { form: number; retract: number; hoist: number; bridge?: number; door?: number };
+
+/** 让路回程跑多少步：900 步 r 从 0.30 线性走到 1.0（`retractStep` 的节奏），再静置 100 步把最后一点松弛拉平（实测第 1000 步挑出 0.0 px） */
+export const DOOR_STEPS = 1000;
 
 /**
  * 升降段（两段触发，见头注）。`dropAt` 之下程度全给升降：0 = 收在天花下，dropAt = 落到工位的直筒；
@@ -96,6 +101,8 @@ export interface BandTrajectory {
   retractActive: number;
   /** 正向里形状还在变的最后一帧（成形在协议约六成处就到位，后面几十帧逐位相同；取帧只映射到会动的那段，免得先猛动再干等） */
   formActive: number;
+  /** 让路回程里形状还在变的最后一帧（相对让路段起点；0 = 没有让路段） */
+  doorActive: number;
   /**
    * 结构段（带键的那段）中心的节点序号与半长（节）。带间的膜按它对位（`membraneVerts`）：结构贴底的排法
    * （2026-10-30）里三档的结构中心序号不同，按同一序号配对会把面档的台尖接到角档台面以下的布上。
@@ -117,9 +124,13 @@ export class TrajectoryBaker {
   private readonly retractAt: number[];
   private readonly hoistN: number;
   private readonly bridgeN: number;
+  private readonly doorAt: number[];
   private readonly frames: Float64Array[] = [];
+  /** 让路回程：成形那一刻 fork 出来的另一份引擎，与它的关键帧（烘完时排在过渡帧后面） */
+  private doorUnit: SkinUnit | null = null;
+  private readonly doorFrames: Float64Array[] = [];
   private step = 0;
-  private phase: 'form' | 'retract' | 'done' = 'form';
+  private phase: 'form' | 'retract' | 'door' | 'done' = 'form';
   private result: BandTrajectory | null = null;
 
   private readonly mid: number;
@@ -137,6 +148,7 @@ export class TrajectoryBaker {
     this.retractAt = spread(frames.retract, SKIN.STEPS);
     this.hoistN = frames.hoist;
     this.bridgeN = frames.bridge ?? 0;
+    this.doorAt = (frames.door ?? 0) > 1 ? spread(frames.door as number, DOOR_STEPS) : [];
     this.capture(); // 正向第 0 帧 = 直带子
   }
 
@@ -148,16 +160,17 @@ export class TrajectoryBaker {
   }
   /** 0–1 的进度（HUD 用） */
   get progress(): number {
-    return this.phase === 'done' ? 1 : (this.phase === 'form' ? this.step : SKIN.STEPS + this.step) / (2 * SKIN.STEPS);
+    const total = 2 * SKIN.STEPS + (this.doorAt.length ? DOOR_STEPS : 0);
+    const done = this.phase === 'form' ? this.step : this.phase === 'retract' ? SKIN.STEPS + this.step : 2 * SKIN.STEPS + this.step;
+    return this.phase === 'done' ? 1 : done / total;
   }
 
-  private capture(): void {
-    const u = this.unit;
+  private capture(u: SkinUnit = this.unit, into: Float64Array[] = this.frames): void {
     const p = renderSmooth(u.px, u.py, this.smoothW, this.smoothP);
     const f = new Float64Array(2 * u.n);
     f.set(p.x, 0);
     f.set(p.y, u.n);
-    this.frames.push(f);
+    into.push(f);
   }
 
   /** 在 budgetMs 内尽量推进；返回是否已经烘完 */
@@ -171,13 +184,27 @@ export class TrajectoryBaker {
         if (this.step >= SKIN.STEPS) {
           this.phase = 'retract';
           this.step = 0;
+          if (this.doorAt.length) {
+            this.doorUnit = this.unit.fork();
+            this.capture(this.doorUnit, this.doorFrames); // 让路第 0 帧 = 成形态
+          }
           this.capture(); // 回程第 0 帧 = 成形态（与正向末帧同一刻）
         }
-      } else {
+      } else if (this.phase === 'retract') {
         this.unit.retractStep();
         this.step++;
         if (this.retractAt.includes(this.step)) this.capture();
-        if (this.step >= SKIN.STEPS) this.finish();
+        if (this.step >= SKIN.STEPS) {
+          this.step = 0;
+          if (this.doorUnit) this.phase = 'door';
+          else this.finish();
+        }
+      } else {
+        const d = this.doorUnit as SkinUnit;
+        d.retractStep(1.0);
+        this.step++;
+        if (this.doorAt.includes(this.step)) this.capture(d, this.doorFrames);
+        if (this.step >= DOOR_STEPS) this.finish();
       }
       if (now() - t0 > budgetMs) break;
     }
@@ -193,7 +220,7 @@ export class TrajectoryBaker {
     const n = this.n;
     const f0 = this.frames[0];
     // frames[1] = 收起态（初始摆位压向顶端）：烘完之前满场都是收着的单元，台架拿它烘整环
-    return { n, frames: [f0, hoistProfile(f0, n, HOIST.stowed)], footY: -f0[2 * n - 1] * SOLID.SCALE, platformTopY: -f0[2 * n - 1] * SOLID.SCALE, reach: SQUARE.RADIUS, retractActive: 0, formActive: 0, mid: this.mid, midHalf: this.midHalf };
+    return { n, frames: [f0, hoistProfile(f0, n, HOIST.stowed)], footY: -f0[2 * n - 1] * SOLID.SCALE, platformTopY: -f0[2 * n - 1] * SOLID.SCALE, reach: SQUARE.RADIUS, retractActive: 0, formActive: 0, doorActive: 0, mid: this.mid, midHalf: this.midHalf };
   }
 
   /** 一口气烘完（守门与线稿用） */
@@ -245,6 +272,20 @@ export class TrajectoryBaker {
       for (let i = 0; i < 2 * n; i++) f[i] = straight[i] + (entry[i] - straight[i]) * t;
       this.frames.push(f);
     }
+    // 让路帧：排在最后（前面各段的下标逐位不变）
+    let doorActive = 0;
+    for (let k = this.doorFrames.length - 1; k > 0; k--) {
+      const a = this.doorFrames[k];
+      const b = this.doorFrames[k - 1];
+      let d = 0;
+      for (let i = 0; i < 2 * n; i++) d = Math.max(d, Math.abs(a[i] - b[i]));
+      if (d > 1e-6) {
+        doorActive = k;
+        break;
+      }
+    }
+    for (const f of this.doorFrames) this.frames.push(f);
+    this.doorUnit = null;
     this.result = {
       n,
       frames: this.frames,
@@ -253,6 +294,7 @@ export class TrajectoryBaker {
       reach: SQUARE.RADIUS + reach * SOLID.SCALE,
       retractActive: active,
       formActive,
+      doorActive,
       mid: this.mid,
       midHalf: this.midHalf,
     };
@@ -347,7 +389,7 @@ export function hoistProfile(src: Float64Array, n: number, k: number): Float64Ar
 }
 
 /**
- * 一条带该用哪一帧。f = 成形程度 × (1 − 收回几成)，rising = f 在涨。两段：
+ * 一条带该用哪一帧（f = 这条带的程度，0–1；台架经 `pickUnitBands` 调，让路的带另有一段），rising = f 在涨。两段：
  * - f < dropAt 升降段：升降第 round(f/dropAt·(hoist−1)) 帧（第 0 帧 = 收起态；末帧就是直带子，直接给 STEADY.straight）；
  * - f ≥ dropAt 成形段，g = (f − dropAt)/(1 − dropAt)：
  *   涨：正向第 round(g·(form−1)) 帧（第 0 帧是引擎的初始摆位，比自然松弛还直，跳过它）；
@@ -527,8 +569,95 @@ export function stepBandCursor(
   return path[Math.round(pos)];
 }
 
-/** 两条带的帧能不能用一块膜连：都在升降段、或都在成形段（开门的带收成一小截时，与旁边成形的带之间不拉膜——那里正是门） */
-export function membraneJoins(ka: number, kb: number, frames: FrameCounts = FRAMES): boolean {
+/** 让路段的第一帧（排在升降与过渡帧后面）与「这条带算在让路」的门槛（收回几成） */
+export const DOOR_BASE = FRAMES.form + FRAMES.retract + FRAMES.hoist + FRAMES.bridge;
+export const DOOR_EPS = 0.01;
+
+export function isDoorFrame(k: number, frames: FrameCounts = FRAMES): boolean {
+  return (frames.door ?? 0) > 0 && k >= frames.form + frames.retract + frames.hoist + (frames.bridge ?? 0);
+}
+
+/** 成形到底的单元里，一条带收回了 open（0–1）就取让路段的这一帧（可逆：收回、落回走同一段，落回 = 倒放） */
+export function doorFrame(traj: Pick<BandTrajectory, 'doorActive'>, open: number, frames: FrameCounts = FRAMES): number {
+  const base = frames.form + frames.retract + frames.hoist + (frames.bridge ?? 0);
+  return base + Math.round(Math.max(0, Math.min(1, open)) * traj.doorActive);
+}
+
+/** 第 k 帧带子顶端（节点 0，贴在芯上）的高度（引擎 py，向上为正）。同一帧号各档相同：三档的贴合与自由节数总量一样，芯一样长 */
+export function bandTop(traj: Pick<BandTrajectory, 'frames' | 'n'>, k: number): number {
+  return traj.frames[k][traj.n];
+}
+
+/**
+ * 一台单元此刻每条带用哪一帧（2026-10-30 修「让路的带碎在上面」）。写进 frameOf[u·B + j]，返回这台的上夹环落在哪一帧的顶端（帧号）。
+ *
+ * 原来每条带按 f = 程度 × (1 − 收回) 取帧：一条带收回到底 f 就落到 0，取的是「整台收在天花下」的升降帧——整条带往它自己的
+ * 顶端压成一小团，下端离开钉住端，漂在半空；收回途中走的回程那条路顶端又往上走，比旁边成形的带高出 0.7 m。一台单元碎成上下两截。
+ * 平面模型（cohabit `FACES`）定的本来是「挡路的带各自走引擎的收直回程 `retractStep(1.0)`，布沿杆收直、挑出回到芯半径」
+ * （作者 2026-10-07），立体一直没照做。现在：
+ * - 单元在升降段（程度 < dropAt）：整台一起走，收回不起作用（直筒本来就不挑出）；
+ * - 单元成形到底：收回的带走让路段——成形态 fork 出来的引擎收直回程（`TrajectoryBaker` 的 door 段），收回几成取第几帧，可逆；
+ * - 单元成形到一半：收回的带沿原来成形段的两条路退，但只退到直带子为止，不进升降段。
+ * 顶端：所有带共用一个上夹环，夹环在这台最低的那个带顶（= 没收回的带的顶）。收回的带顶端本来要往上走，
+ * 读成**多出来的布从上夹环卷进去**（`clipToReel`）——作者 10-07「松键之后多余的布可以往上去」，往上去的是布、不是夹持点。
+ * 于是一台单元的二十条带始终上接同一个夹环、下接同一个钉住端，让路的带平贴在芯上，旁边成形的照旧。
+ */
+export function pickUnitBands(
+  u: number,
+  deg: number,
+  open: ArrayLike<number>,
+  trajs: readonly BandTrajectory[],
+  paths: readonly BandPaths[],
+  cursors: BandCursors,
+  frameOf: Int32Array,
+  order: readonly number[] = UNIT_ORDER,
+  frames: FrameCounts = FRAMES,
+  dropAt: number = HOIST.dropAt,
+): number {
+  const B = order.length;
+  const formed = deg >= 1 - 1e-4;
+  let reel = -1;
+  let reelTop = Infinity;
+  for (let j = 0; j < B; j++) {
+    const i = u * B + j;
+    const t = order[j];
+    const o = open[i];
+    let k: number;
+    if (deg < dropAt) k = stepBandCursor(cursors, i, deg, paths[t], frames, dropAt);
+    else if (formed && o > DOOR_EPS && trajs[t].doorActive > 0) {
+      stepBandCursor(cursors, i, 1, paths[t], frames, dropAt); // 游标停在成形态：门一关就从成形态接着走
+      k = doorFrame(trajs[t], o, frames);
+    } else k = stepBandCursor(cursors, i, dropAt + (deg - dropAt) * (1 - o), paths[t], frames, dropAt);
+    frameOf[i] = k;
+    const top = bandTop(trajs[t], k);
+    if (top < reelTop) {
+      reelTop = top;
+      reel = k;
+    }
+  }
+  return reel;
+}
+
+/** 收进上夹环的那截按这个比例压在夹环上方（保留节点顺序与非零切向，画出来是零点几厘米、藏在夹环里） */
+export const REEL_SQUASH = 0.01;
+
+/** 比 reelPy 高的节点收进上夹环：高出的部分压到 1%、离芯的部分也压到 1%；不高过夹环的带逐位不变 */
+export function clipToReel(src: Float64Array, n: number, reelPy: number): Float64Array {
+  const out = Float64Array.from(src);
+  for (let i = 0; i < n; i++)
+    if (src[n + i] > reelPy) {
+      out[n + i] = reelPy + (src[n + i] - reelPy) * REEL_SQUASH;
+      out[i] = src[i] * REEL_SQUASH;
+    }
+  return out;
+}
+
+/**
+ * 两条带的帧能不能用一块膜连：都在升降段、或都在成形段（开门的带收成一小截时，与旁边成形的带之间不拉膜——那里正是门）。
+ * 2026-10-30 起让路的带不再收进升降段，改按「这条带是不是在让路」判：任一侧在让路（doorA / doorB，或取的是让路段的帧）就不拉膜。
+ */
+export function membraneJoins(ka: number, kb: number, frames: FrameCounts = FRAMES, doorA = false, doorB = false): boolean {
+  if (doorA || doorB || isDoorFrame(ka, frames) || isDoorFrame(kb, frames)) return false;
   const s = frames.form + frames.retract;
   const hoistA = ka >= s && ka < s + frames.hoist;
   const hoistB = kb >= s && kb < s + frames.hoist;
@@ -613,16 +742,16 @@ export function unitFootY(rig: Pick<Rig, 'y' | 'stowY' | 's'>, footY: number, dr
   return unitTopY(rig, drop, workY) + rig.s * footY * (HOIST.stowed + (1 - HOIST.stowed) * drop);
 }
 
-/** 一条带在装置自身坐标系里的顶点（沿本地 +X 放在芯半径处，再由摆放表转到各方位角） */
-export function bandVertsAt(traj: BandTrajectory, frame: number, topo: SolidTopology, out?: Float32Array): Float32Array {
-  const f = traj.frames[frame];
+/** 一条带在装置自身坐标系里的顶点（沿本地 +X 放在芯半径处，再由摆放表转到各方位角）；reelPy = 上夹环在哪（让路的带按它截） */
+export function bandVertsAt(traj: BandTrajectory, frame: number, topo: SolidTopology, out?: Float32Array, reelPy?: number): Float32Array {
+  const f = reelPy === undefined ? traj.frames[frame] : clipToReel(traj.frames[frame], traj.n, reelPy);
   const n = traj.n;
   return fillSolidVerts(f.subarray(0, n), f.subarray(n, 2 * n), n, SQUARE.RADIUS, SQUARE.DEPTH, SQUARE.THICK, SOLID.SCALE, out && out.length === topo.vertCount * 3 ? out : undefined, 0, 0, null);
 }
 
 /** 一条带的两组条纹网格（gl3d 静态缓冲用） */
-export function bakeBand(traj: BandTrajectory, frame: number, topo: SolidTopology): { a: Float32Array; b: Float32Array } {
-  const v = bandVertsAt(traj, frame, topo);
+export function bakeBand(traj: BandTrajectory, frame: number, topo: SolidTopology, reelPy?: number): { a: Float32Array; b: Float32Array } {
+  const v = bandVertsAt(traj, frame, topo, undefined, reelPy);
   return { a: bakeIndexed(v, topo.idxA), b: bakeIndexed(v, topo.idxB), };
 }
 

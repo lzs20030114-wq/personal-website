@@ -1130,4 +1130,5 @@ def copy_render(src, dst):
     dst.unit_settings.system = 'METRIC'
 
 
-main()
+if __name__ == "__main__":
+    main()

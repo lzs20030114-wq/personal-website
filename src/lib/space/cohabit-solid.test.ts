@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BRIDGE_BASE, FRAMES, FURN_ERGO, HOIST, STEADY, TABLE_TOP, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_ORDER, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
+import { BRIDGE_BASE, DOOR_BASE, DOOR_EPS, FRAMES, FURN_ERGO, HOIST, STEADY, TABLE_TOP, bandTop, clipToReel, doorFrame, isDoorFrame, pickUnitBands, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_ORDER, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
 import { planLayout } from './unit-activation';
 import { FIGURE, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
 import { RING } from './skin-ring';
@@ -20,7 +20,7 @@ const layout8 = planLayout(8);
 
 describe('带子轨迹关键帧', () => {
   it('正向 + 回程 + 升降帧数齐全，每帧 2n 个数', () => {
-    expect(traj.frames).toHaveLength(FRAMES.form + FRAMES.retract + FRAMES.hoist + FRAMES.bridge);
+    expect(traj.frames).toHaveLength(FRAMES.form + FRAMES.retract + FRAMES.hoist + FRAMES.bridge + FRAMES.door);
     for (const f of traj.frames) expect(f.length).toBe(2 * traj.n);
   });
 
@@ -197,7 +197,7 @@ describe('带子轨迹关键帧', () => {
     const D = HOIST.dropAt;
     expect(bandFrame(0, true)).toBe(STEADY.stowed);
     expect(bandFrame(0, false)).toBe(STEADY.stowed);
-    expect(STEADY.stowed).toBe(traj.frames.length - FRAMES.hoist - FRAMES.bridge);
+    expect(STEADY.stowed).toBe(traj.frames.length - FRAMES.hoist - FRAMES.bridge - FRAMES.door);
     expect(bandFrame(D, true)).toBe(STEADY.straight);
     expect(bandFrame(D, false)).toBe(STEADY.straight);
     expect(bandFrame(1, true)).toBe(STEADY.formed);
@@ -312,6 +312,102 @@ describe('带子轨迹关键帧', () => {
     expect(membraneJoins(STEADY.stowed, STEADY.formed)).toBe(false);
     expect(membraneJoins(STEADY.stowed + 5, BRIDGE_BASE + 2)).toBe(false);
     expect(membraneJoins(BRIDGE_BASE, STEADY.formed)).toBe(true);
+    // 2026-10-30：让路的带两侧都不拉膜（那里是门）
+    expect(membraneJoins(STEADY.formed, STEADY.formed, FRAMES, true, false)).toBe(false);
+    expect(membraneJoins(DOOR_BASE + 3, STEADY.formed)).toBe(false);
+  });
+
+  describe('让路的带（2026-10-30 修「收起来的条碎在上面、和下面成形的接不上」）', () => {
+    const paths = trajs.map((t) => bandPaths(t));
+    const n = traj.n;
+    const B = UNIT_ORDER.length;
+    const foot = (f: Float64Array): number => f[2 * n - 1];
+    /** 一台单元走 steps 帧：每帧程度 deg、收回量 open(j)；返回最后一帧每条带（按上夹环截过）的剖面 */
+    const run = (deg: (t: number) => number, open: (t: number, j: number) => number, steps: number) => {
+      const cursors = bandCursors(B);
+      const frameOf = new Int32Array(B);
+      const o = new Float32Array(B);
+      let reel = -1;
+      for (let t = 0; t < steps; t++) {
+        for (let j = 0; j < B; j++) o[j] = open(t, j);
+        reel = pickUnitBands(0, deg(t), o, trajs, paths, cursors, frameOf);
+      }
+      const reelPy = bandTop(trajs[0], reel);
+      const shapes = Array.from(frameOf, (k, j) => clipToReel(trajs[UNIT_ORDER[j]].frames[k], n, reelPy));
+      return { frameOf, reel, reelPy, shapes, o };
+    };
+
+    it('让路段：从成形态 fork 出来的收直回程——第 0 帧 = 成形态，收到底平贴芯（三档挑出 < 0.5 px），钉住端不动，顶端只往上走', () => {
+      for (const t of trajs) {
+        expect(t.doorActive).toBeGreaterThan(FRAMES.door / 2);
+        const f0 = t.frames[DOOR_BASE];
+        const formed = t.frames[STEADY.formed];
+        for (let i = 0; i < 2 * n; i++) expect(f0[i]).toBe(formed[i]);
+        const end = t.frames[doorFrame(t, 1)];
+        expect(Math.max(...end.subarray(0, n)) * 100).toBeLessThan(0.5);
+        let prevTop = -Infinity;
+        for (let k = 0; k <= t.doorActive; k++) {
+          const f = t.frames[DOOR_BASE + k];
+          expect(Math.abs(foot(f) - foot(formed))).toBeLessThan(1e-9);
+          expect(bandTop(t, DOOR_BASE + k)).toBeGreaterThanOrEqual(prevTop - 1e-9);
+          prevTop = bandTop(t, DOOR_BASE + k);
+        }
+        expect(isDoorFrame(DOOR_BASE)).toBe(true);
+        expect(isDoorFrame(DOOR_BASE - 1)).toBe(false);
+      }
+      // 同一帧号三档顶端一样高（三档的贴合与自由节数总量相同）：上夹环只有一个高度
+      for (let k = 0; k < traj.frames.length; k++) for (const t of trajs) expect(Math.abs(bandTop(t, k) - bandTop(traj, k))).toBeLessThan(1e-9);
+    });
+
+    it('成形到底的单元里，收回到底的带上接上夹环、下接钉住端，平贴在芯上；没收的带一帧不动', () => {
+      const door = new Set([3, 4, 13, 14]); // 相对的两个面
+      const { frameOf, reel, reelPy, shapes } = run(() => 1, (_t, j) => (door.has(j) ? 1 : 0), 4);
+      expect(reel).toBe(STEADY.formed);
+      const formed = traj.frames[STEADY.formed];
+      for (let j = 0; j < B; j++) {
+        const f = shapes[j];
+        expect(Math.abs(foot(f) - foot(formed))).toBeLessThan(1e-9); // 下端还在钉住端
+        expect(Math.abs(f[n] - reelPy)).toBeLessThan(0.02); // 上端在上夹环（收进去的那截压在夹环上方不到 2 px）
+        let top = -Infinity;
+        for (let i = 0; i < n; i++) top = Math.max(top, f[n + i]);
+        expect(top).toBeLessThan(reelPy + 0.02);
+        if (door.has(j)) {
+          expect(isDoorFrame(frameOf[j])).toBe(true);
+          expect(Math.max(...f.subarray(0, n)) * 100).toBeLessThan(1); // 平贴芯
+        } else expect(frameOf[j]).toBe(STEADY.formed);
+      }
+    });
+
+    it('任何时刻、任何收回量：一台单元的每条带都上接同一个上夹环、下接同一个钉住端（不再有漂在半空的一截）', () => {
+      // 收回量随时间涨落（开门、关门、半开），程度也在升降段与成形段之间来回
+      const deg = (t: number): number => Math.min(1, Math.max(0, t < 60 ? t / 40 : t < 140 ? 1 : 1 - (t - 140) / 60));
+      const open = (t: number, j: number): number => (j % 5 === 2 ? Math.max(0, Math.sin((t + j) / 9)) : 0);
+      for (const steps of [25, 50, 70, 90, 110, 130, 150, 170, 190]) {
+        const { shapes, reelPy } = run(deg, open, steps);
+        const f0 = foot(shapes[0]);
+        for (let j = 0; j < B; j++) {
+          const f = shapes[j];
+          expect(Math.abs(foot(f) - f0), `第 ${steps} 帧带 ${j} 的下端`).toBeLessThan(1e-9);
+          let top = -Infinity;
+          for (let i = 0; i < n; i++) top = Math.max(top, f[n + i]);
+          expect(top, `第 ${steps} 帧带 ${j} 的上端`).toBeLessThan(reelPy + 0.02);
+          expect(top).toBeGreaterThan(reelPy - 1e-9);
+        }
+      }
+    });
+
+    it('升降段（程度 < dropAt）收回不起作用：整台一起走；成形到一半时收回的带只退到直带子，不进升降帧', () => {
+      const D = HOIST.dropAt;
+      const a = run(() => D * 0.6, (_t, j) => (j < 5 ? 1 : 0), 3);
+      expect(new Set(a.frameOf).size).toBe(1);
+      const b = run((t) => Math.min(0.8, D + t * 0.02), (_t, j) => (j < 5 ? 1 : 0), 40);
+      for (let j = 0; j < 5; j++) {
+        const k = b.frameOf[j];
+        expect(k < STEADY.stowed || k >= BRIDGE_BASE).toBe(true); // 不是升降帧
+        expect(isDoorFrame(k)).toBe(false);
+      }
+      expect(DOOR_EPS).toBeGreaterThan(0);
+    });
   });
 
   it('预览（烘完之前）给的钉住端高度与烘完的一致，两帧：初始摆位与它的收起态', () => {

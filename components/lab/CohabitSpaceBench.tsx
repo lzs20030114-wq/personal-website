@@ -39,6 +39,9 @@ import {
   figureYaw,
   furnitureBoxes,
   membraneJoins,
+  pickUnitBands,
+  bandTop,
+  DOOR_EPS,
   platesMesh,
   platformBand,
   platformSide,
@@ -48,7 +51,6 @@ import {
   rigYForTop,
   roomMesh,
   seatSpecOf,
-  stepBandCursor,
   tableTopFor,
   unitDrop,
   unitFootY,
@@ -66,13 +68,14 @@ import {
  * 画的是 Lab 2-8 那间房里的 64 个单元。**单元是方形的**（作者 2026-10-25：「圆形只做过程推演，方形才是拿来具体使用的」）：
  * 每台 = Lab 2-7 方形环平档的面 / 边 / 角三档，按格距等比缩小，再放大到「方形的内切圆 = 原来的圆台」；平面模型按方形
  * 每条带的长度判墙与开门（`unit: 'square'`）。带子的形状取自三条引擎预烘的关键帧（每档一条：正向协议 + 松键回程），
- * 每条带按「所在单元的成形程度 × 这条带收回了几成」取它那一档的帧（src/lib/space/cohabit-solid.ts 头注有这笔账）。
+ * 每条带按所在单元的成形程度与这条带收回了几成取它那一档的帧（`pickUnitBands`，src/lib/space/cohabit-solid.ts 头注有这笔账）。
  * 人与猫是方块风的比例参考（figure.ts，配色 figurePalette.ts）：人有走 / 站 / 坐（按座面解出来、看猫时前倾）与转头、
  * 每人一件不同颜色的上衣，猫在台上顺着内切圆那一圈绕着立杆待。
  *
  * **两段触发（2026-10-23 作者纠偏）**：非触发的单元收在天花下（整束布贴着天花方板缩成一团），触发才沿立杆
  * 落到工位、再压缩成形——程度 < `HOIST.dropAt` 是升降段（整束布的高度与长度一起插值），之上是成形段。
- * 挡路的带各自收回时也按同一条路往上收（顶端收放按带，正文「夹持位置随程序变」那条假设）。立杆也随单元伸缩：
+ * 挡路的带各自收回（2026-10-30 起）：走引擎的收直回程、平贴在芯上，多出来的布卷进上夹环——一台单元的二十条带始终上接
+ * 同一个夹环、下接同一个钉住端（此前借了整台升降的帧，收回的带压成一小团漂在半空）。立杆也随单元伸缩：
  * 下端跟着布束底走，收起时只剩天花下一小截（作者「中间这根棍子也得缩上去」）；天花方板仍是静件。
  *
  * 画法上两件为了帧率：静止态（收起 / 直带子 / 成形）的单元整台烘成一份静态网格、按单元摆（gl3d.drawMeshAt），
@@ -307,12 +310,15 @@ export function CohabitSpaceBench({
       const posts = postsMesh(rig, layout, postBottoms);
       R.addMesh('posts', bakeIndexed(posts.verts, posts.idx));
     };
-    // 逐条摆的带子网格按（档, 帧）烘一次、留在显存里
+    // 逐条摆的带子网格按（档, 帧）烘一次、留在显存里；让路的带按（档, 帧, 上夹环所在帧）烘——多出来的布卷进夹环那一截截掉
     const FRAME_KEY = 256;
     const bandMeshDone = new Set<number>();
     const ensureBand = (key: number): void => {
       if (!trajs || bandMeshDone.has(key)) return;
-      const m = bakeBand(trajs[Math.floor(key / FRAME_KEY)], key % FRAME_KEY, topo);
+      const tier = Math.floor(key / FRAME_KEY) % FRAME_KEY;
+      const frame = key % FRAME_KEY;
+      const reel = Math.floor(key / (FRAME_KEY * FRAME_KEY)) - 1;
+      const m = bakeBand(trajs[tier], frame, topo, reel >= 0 ? bandTop(trajs[0], reel) : undefined);
       R.addMesh(`band-${key}-a`, m.a);
       R.addMesh(`band-${key}-b`, m.b);
       bandMeshDone.add(key);
@@ -456,7 +462,7 @@ export function CohabitSpaceBench({
             continue;
           }
           const deg = sim.act.degree[u];
-          // 整束布的高度跟单元的升降程度走；带子各自的长度跟自己的 f 走（开门的带往上收）；立杆下端跟布束底
+          // 整束布的高度跟单元的升降程度走；让路的带走收直回程、按上夹环截（pickUnitBands）；立杆下端跟布束底
           const drop = unitDrop(deg);
           if (drop <= 1e-3) tableTop[u] = tableWant[u];
           else {
@@ -469,11 +475,11 @@ export function CohabitSpaceBench({
           let allStowed = true;
           let allStraight = true;
           let allFormed = true;
+          // 每条带取哪一帧、上夹环在哪（让路的带走引擎的收直回程，多出来的布卷进夹环；见 pickUnitBands）
+          const reel = pickUnitBands(u, deg, sim.bandOpen, trajs, paths as BandPaths[], cursors, frameOf);
+          const reelTop = bandTop(trajs[0], reel);
           for (let j = 0; j < BANDS; j++) {
-            const i = u * BANDS + j;
-            const f = Math.max(0, Math.min(1, deg * (1 - sim.bandOpen[i])));
-            const k = stepBandCursor(cursors, i, f, (paths as BandPaths[])[UNIT_ORDER[j]]);
-            frameOf[i] = k;
+            const k = frameOf[u * BANDS + j];
             if (k !== STEADY.stowed) allStowed = false;
             if (k !== STEADY.straight) allStraight = false;
             if (k !== STEADY.formed) allFormed = false;
@@ -483,7 +489,9 @@ export function CohabitSpaceBench({
           else if (allFormed) formedPlaces.push(at(c, 0, top));
           else
             for (let j = 0; j < BANDS; j++) {
-              const k = UNIT_ORDER[j] * FRAME_KEY + frameOf[u * BANDS + j];
+              const fk = frameOf[u * BANDS + j];
+              const clip = bandTop(trajs[UNIT_ORDER[j]], fk) > reelTop + 1e-9 ? reel + 1 : 0;
+              const k = (clip * FRAME_KEY + UNIT_ORDER[j]) * FRAME_KEY + fk;
               let list = perFrame.get(k);
               if (!list) perFrame.set(k, (list = []));
               list.push(at(c, bandAngle(j), top));
@@ -491,8 +499,8 @@ export function CohabitSpaceBench({
               const j2 = (j + 1) % BANDS;
               const ka = frameOf[u * BANDS + j];
               const kb = frameOf[u * BANDS + j2];
-              // 开门的带收成一小截、旁边的带还成形着：那里是门，不拉膜（拉了就是一片从短桩斜扯到台缘的布）
-              if (!membraneJoins(ka, kb)) continue;
+              // 让路的带两侧不拉膜：那里是门（拉了就是一片从平贴的带斜扯到台缘的布）
+              if (!membraneJoins(ka, kb, undefined, sim.bandOpen[u * BANDS + j] > DOOR_EPS, sim.bandOpen[u * BANDS + j2] > DOOR_EPS)) continue;
               if (ka === kb) {
                 const id = ensureSkin(UNIT_ORDER[j], UNIT_ORDER[j2], ka);
                 let sl = skinPerKey.get(id);

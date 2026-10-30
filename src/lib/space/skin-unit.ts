@@ -643,6 +643,30 @@ export class SkinUnit {
     this.retractK = k + 1;
   }
 
+  /**
+   * 原样复制一份（2026-10-30，Lab 2-15 让路的带）：位置、上一步位置、芯、键与各自锁上时的 r、回程进度全部照抄，
+   * 之后两份各走各的、互不影响。与 `applyTerminalState` 不同，它保留锁定顺序——从成形态 fork 出来再
+   * `retractStep(1.0)`，松键顺序与原来那份逐位相同。构造期定下的东西（谱、链、选项、根部缓冲段）共用。
+   */
+  fork(): SkinUnit {
+    const c = Object.create(SkinUnit.prototype) as SkinUnit;
+    Object.assign(c, this);
+    c.px = Float64Array.from(this.px);
+    c.py = Float64Array.from(this.py);
+    c.ppx = Float64Array.from(this.ppx);
+    c.ppy = Float64Array.from(this.ppy);
+    c.ys = Float64Array.from(this.ys);
+    c.cx = Float64Array.from(this.cx);
+    c.cy = Float64Array.from(this.cy);
+    c.locked = this.locked.map(([i, j, rb]) => [i, j, rb]);
+    c.lockR = this.lockR.slice();
+    c.lockedSet = new Set(this.lockedSet);
+    c.chainLocked = this.chainLocked.map((a) => a.slice());
+    c.chainLastLock = this.chainLastLock.slice();
+    (c as { released: [number, number, number][] }).released = this.released.map(([i, j, rb]) => [i, j, rb]);
+    return c;
+  }
+
   /** 是否在回程里（第一次 retractStep 后为真，装回终态 / 新建实例后为假） */
   get retracting(): boolean {
     return this.retractFrom !== null;
