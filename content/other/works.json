@@ -2664,6 +2664,7 @@
         "src": "/other/drawings/01-cover.webp",
         "width": 1884,
         "height": 1280,
+        "fit": "contain",
         "caption": {
           "en": "A village below the mountains, with yaks lying on the slope (watercolour)",
           "zh": "山下的村子，坡上卧着牦牛（水彩）"
@@ -2676,7 +2677,7 @@
               "en": "Pencil and charcoal",
               "zh": "素描"
             },
-            "layout": "pair",
+            "layout": "rows",
             "figures": [
               {
                 "src": "/other/drawings/02-plaster-cast.webp",
@@ -2748,6 +2749,7 @@
               "en": "Colour",
               "zh": "色彩"
             },
+            "layout": "rows",
             "figures": [
               {
                 "src": "/other/drawings/09-roofs.webp",
@@ -2801,7 +2803,7 @@
               "en": "The same tree",
               "zh": "同一棵树"
             },
-            "layout": "pair",
+            "layout": "rows",
             "figures": [
               {
                 "src": "/other/drawings/14-tree-colour.webp",
@@ -2828,6 +2830,7 @@
               "en": "Line drawing",
               "zh": "线描"
             },
+            "layout": "rows",
             "figures": [
               {
                 "src": "/other/drawings/16-counter.webp",
@@ -2872,6 +2875,7 @@
               "en": "Digital drawing",
               "zh": "数字绘画"
             },
+            "layout": "rows",
             "figures": [
               {
                 "src": "/other/drawings/20-two-people.webp",
@@ -2916,6 +2920,7 @@
               "en": "Model",
               "zh": "模型"
             },
+            "layout": "rows",
             "figures": [
               {
                 "src": "/other/drawings/24-model.webp",

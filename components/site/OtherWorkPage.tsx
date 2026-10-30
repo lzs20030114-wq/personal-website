@@ -22,6 +22,9 @@ import { ImageViewer } from './ImageViewer';
  *
  * 点图在页内看（ImageViewer）：图仍是指向原图的链接，带 data-viewer 与尺寸、图号、中英图注，
  * 没有脚本时照旧新窗口打开。
+ *
+ * 画作（2026-10-30 绘画页，MAPPING §80.1）：节可以设 layout: 'rows'——一行里的图同高、按比例排满、不裁；
+ * 封面可以设 fit: 'contain'——整张放进主图框、不压暗角。两项都不设时与此前逐字相同。
  */
 
 const COPY = {
@@ -166,11 +169,41 @@ function Body({ entry, lang }: { entry: Entry; lang: Lang }) {
       </figure>
     );
   };
+  // 等高成行（画作）：一行里的图同一高度、宽度按各自比例分满这一行，不裁图；图号与图注在图下面
+  const cell = (f: Fig) => {
+    n += 1;
+    return (
+      <figure key={`${f.src}-${n}`} className="os-cell" style={{ '--ar': (f.width / f.height).toFixed(4) } as CSSProperties}>
+        <a
+          className="os-cell__img"
+          href={f.src}
+          target="_blank"
+          rel="noopener"
+          aria-label={`${f.caption[lang]} · ${c.open}`}
+          {...viewerData(f.src, f.width, f.height, n, f.caption)}
+        >
+          <img src={f.src} alt={f.caption[lang]} width={f.width} height={f.height} loading="lazy" decoding="async" />
+        </a>
+        <figcaption>
+          <span className="os-cell__n">{String(n).padStart(2, '0')}</span>
+          <span className="os-cell__t">{f.caption[lang]}</span>
+        </figcaption>
+      </figure>
+    );
+  };
   return (
     <>
       {entry.work.page.sections.map((sec, si) => {
         const pair = sec.layout === 'pair';
         const list = sec.figures ?? [];
+        if (sec.layout === 'rows') {
+          return (
+            <Fragment key={si}>
+              <h2>{sec.heading[lang]}</h2>
+              {list.length > 0 ? <div className="os-rows">{list.map(cell)}</div> : null}
+            </Fragment>
+          );
+        }
         // 并排时单数张的最后一张占满一行（CSS），这一张照常按 84svh 封高
         const figs = list.map((f, i) => figure(f, pair && !(list.length % 2 === 1 && i === list.length - 1)));
         return (
@@ -204,6 +237,7 @@ export function OtherWorkPage({ entry }: { entry: Entry }) {
   const zhTitle = work.zh?.title ?? work.title;
   const groupZh = group.zh ?? group.title;
   const cover = work.image!;
+  const contain = cover.fit === 'contain';
   const lineEn = work.line;
   const lineZh = work.zh?.line ?? work.line;
 
@@ -257,7 +291,7 @@ export function OtherWorkPage({ entry }: { entry: Entry }) {
             </div>
 
             <figure className="cs-fig" data-rv>
-              <div className="cs-stage">
+              <div className={`cs-stage${contain ? ' os-stage--contain' : ''}`}>
                 <img
                   className="os-stage__img"
                   src={cover.src}
@@ -266,7 +300,8 @@ export function OtherWorkPage({ entry }: { entry: Entry }) {
                   fetchPriority="high"
                   decoding="async"
                 />
-                <div className="cs-stage__vignette" />
+                {/* 整张放进框里的封面（画作）不压暗角：作品本身不能被遮 */}
+                {contain ? null : <div className="cs-stage__vignette" />}
                 {/* 点主图任何地方 = 点「放大查看」（只是鼠标 / 触屏的大目标，键盘走那颗按钮） */}
                 <div className="os-stage__hit" data-viewer-proxy aria-hidden />
                 <span className="cs-corner cs-corner--tl" />

@@ -21,6 +21,8 @@ const ImageSchema = z
     height: z.number().int().positive(),
     /** 竖长的图（报告、手机截图）从顶上裁，默认居中裁 */
     position: z.enum(['center', 'top']).optional(),
+    /** 详情页主图框里怎么放：默认 cover 铺满裁切；contain = 整张放进框里不裁（画作不能裁，2026-10-30 绘画页） */
+    fit: z.enum(['cover', 'contain']).optional(),
     /** 详情页主图框下的图注 */
     caption: Bi.optional(),
   })
@@ -89,8 +91,8 @@ const SectionSchema = z
     heading: Bi,
     texts: z.array(TextSchema).optional(),
     figures: z.array(FigureSchema).optional(),
-    /** pair = 图两两并排（照片、效果图）；默认一张一行 */
-    layout: z.enum(['stack', 'pair']).optional(),
+    /** pair = 图两两并排（照片、效果图）；rows = 等高成行、按比例排满一行、不裁图（画作，2026-10-30 绘画页）；默认一张一行 */
+    layout: z.enum(['stack', 'pair', 'rows']).optional(),
   })
   .strict()
   .refine((s) => (s.texts?.length ?? 0) + (s.figures?.length ?? 0) > 0, { message: '一节至少要有一段字或一张图' });
