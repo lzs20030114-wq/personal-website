@@ -44,14 +44,18 @@ HEM_T = 0.0036         # 包边处的半厚
 PAD = dict(L=0.024, W=0.026, H=0.008)      # 键的底座（沿带 × 横向 × 高）
 SLEEVE = dict(L=0.032, W=0.012, T=0.008)   # 伸缩撑杆的外套（没扣时就是键座上的一截短桩）
 ROD = dict(W=0.006, T=0.0045)              # 伸缩撑杆的内杆（扣上时伸到对面键座，橙色）
-SLEEVE_CAP = 22                             # 上夹环套住的贴合段节数上限（再长的贴合段露在外面贴着芯）
-RING_TOP = 0.035       # 上夹环顶高出带子第 0 节
+CLAMP_N = 5            # 上下夹环各夹住带子端头几节（约 4 cm；2026-10-30 作者嫌两头笨重，由夹 22 / 15 节改成 5 节）
+RING_TOP = 0.012       # 上夹环顶（辐条与中心套）高出带子第 0 节
+RING_GAP = 0.004       # 夹环内外圈与布面之间的缝
+RING_W = 0.004         # 夹环内外圈的壁厚
+HUB = dict(r=0.034, h=0.03, flange=0.042, fh=0.008)   # 中心套：接吊杆 / 芯的那一节（上下夹环同一副）
+SPOKES = 6             # 中心套到夹环的辐条数
 PLATE_T = 0.02         # 天花方板厚
 PLATE_HALF = 0.167     # 天花方板半边长（= (芯半径 + 11) × s，与台架同一副数）
 HANGER = dict(n=6, d0=0.092, dd=0.008, L=0.62)   # 吊杆：节数、最粗一节直径、逐节收、每节长
 CORE = dict(d0=0.040, dd=0.004, L=0.30)          # 芯：最粗一节直径、逐节收、每节长（节数按最长行程现算）
-SHELL_R = ST_R + 0.012  # 夹环外壳内半径（布从壳与内毂之间穿过）
-HUB_R = ST_R - 0.006    # 夹环内毂半径
+RI_IN = ST_R - RING_GAP - RING_W   # 夹环内圈：内半径
+RO_OUT = ST_R + RING_GAP + RING_W  # 夹环外圈：外半径
 
 C_BOND = (0.88, 0.42, 0.24)
 
@@ -390,12 +394,27 @@ class BandBuilder:
         return V
 
 
-def membrane_verts(stA, stB):
-    """相邻两条带之间的膜：A 边 = 本条带 +Y 那条包边，B 边 = 下一条带 −Y 那条包边（转过一个角节距）"""
+def membrane_map(n, ma, mb, w):
+    """膜的 B 边在 A 边第 i 节对面取 B 的哪个（小数）序号：两档结构中心对齐、中心两侧各 w 节逐节对位，其余分段线性
+    摊到带顶 / 带底（与站上 cohabit-solid 的 membraneIndex 同一读法）。中心相同时恒等。"""
+    i = np.arange(n, dtype=float)
+    if ma == mb:
+        return i
+    return np.interp(i, [0, ma - w, ma + w, n - 1], [0, mb - w, mb + w, n - 1])
+
+
+def membrane_verts(stA, stB, pair=None):
+    """相邻两条带之间的膜：A 边 = 本条带 +Y 那条包边，B 边 = 下一条带 −Y 那条包边（转过一个角节距）。
+    pair = (A 档结构中心, B 档结构中心, 半长)：两档结构中心序号不同时（方台结构贴底的排法），B 边按中心对位插值取点。"""
     xa = np.asarray(stA['x']) + ST_R
     za = np.asarray(stA['z'])
     xb = np.asarray(stB['x']) + ST_R
     zb = np.asarray(stB['z'])
+    if pair is not None and pair[0] != pair[1]:
+        t = membrane_map(len(xa), *pair)
+        k = np.arange(len(xb), dtype=float)
+        xb = np.interp(t, k, xb)
+        zb = np.interp(t, k, zb)
     c, s = math.cos(DANG), math.sin(DANG)
     yb = -BW / 2
     A = np.stack([xa, np.full_like(xa, BW / 2), za], axis=1)
@@ -422,78 +441,83 @@ def shape_keyed(name, coll, builder_verts, faces, samples_idx, mats, mat_idx=Non
 
 
 # ------------------------------------------------------------------ 机构件
+def _clamp_ring(bm_parts, z0, h):
+    """一圈夹带子的环：内圈 + 外圈（布从两圈之间穿过），z0 = 环底、高 h"""
+    bm_tube(bm_parts, ST_R - RING_GAP, RI_IN, h, z0, segs=72)
+    bm_tube(bm_parts, RO_OUT, ST_R + RING_GAP, h, z0, segs=72)
+
+
+def _spokes(bm, z, t=0.006, w=0.012):
+    """中心套到夹环内圈的辐条（扁条，竖放）：z = 辐条中心高"""
+    r0, r1 = HUB['r'] - 0.002, RI_IN + 0.002
+    for k in range(SPOKES):
+        a = (k + 0.5) * 2 * math.pi / SPOKES
+        rm = (r0 + r1) / 2
+        bm_box(bm, rm * math.cos(a), rm * math.sin(a), z, (r1 - r0) / 2, t / 2, w / 2, rot=a)
+
+
+def _band_screws(bm, z):
+    """每条带一颗夹紧螺钉（外圈上，正对带子中线）"""
+    for k in range(NB):
+        a = k * DANG
+        res = bmesh.ops.create_cone(bm, cap_ends=True, segments=8, radius1=0.0026, radius2=0.0026, depth=0.003)
+        bmesh.ops.rotate(bm, verts=res['verts'], cent=(0, 0, 0), matrix=mathutils.Matrix.Rotation(math.pi / 2, 3, 'Y'))
+        bmesh.ops.rotate(bm, verts=res['verts'], cent=(0, 0, 0), matrix=mathutils.Matrix.Rotation(a, 3, 'Z'))
+        r = RO_OUT + 0.0015
+        bmesh.ops.translate(bm, verts=res['verts'], vec=(r * math.cos(a), r * math.sin(a), z))
+
+
 def build_carriage(coll, mats, lead):
-    """上夹环：外壳 + 内毂 + 顶盖（接吊杆的法兰）+ 二十个夹块（每条带一个，两颗螺栓）"""
-    h = min(lead, SLEEVE_CAP) * SEG + RING_TOP
+    """上夹环（2026-10-30 改轻）：一圈窄的内外圈夹住带子前 CLAMP_N 节，六根扁辐条接到中心套，中心套上接吊杆、下挂芯。
+    原来是 0.29 m 粗、0.2 m 高的整只鼓（外壳 + 实心内毂，夹 22 节），作者嫌笨重。"""
+    n = min(lead, CLAMP_N)
+    z0 = -(n - 1) * SEG - 0.006
+    h = RING_TOP - z0
     bm = bmesh.new()
-    bm_tube(bm, SHELL_R + 0.006, SHELL_R, h - 0.012, -h + RING_TOP, segs=64)
-    shell = bm_obj('上夹环·外壳', bm, coll, mats['alu'], bevel=0.0015)
+    _clamp_ring(bm, z0, h)
+    ring = bm_obj('上夹环·夹圈', bm, coll, mats['alu'], bevel=0.0008)
     bm = bmesh.new()
-    for zr in (-h + RING_TOP + 0.075, RING_TOP - 0.05):
-        bm_tube(bm, SHELL_R + 0.0085, SHELL_R + 0.004, 0.006, zr, segs=64)   # 两道环筋
-    ribs = bm_obj('上夹环·环筋', bm, coll, mats['dark'], bevel=0.0008)
+    _spokes(bm, RING_TOP - 0.004)
+    bm_tube(bm, RO_OUT, RI_IN, 0.003, RING_TOP - 0.003, segs=72)            # 顶上一道压圈，把内外圈连成一体
+    spokes = bm_obj('上夹环·辐条', bm, coll, mats['dark'], smooth=False, bevel=0.0008)
     bm = bmesh.new()
-    bm_cyl(bm, HUB_R, h - 0.012, -h + RING_TOP, segs=48)
-    hub = bm_obj('上夹环·内毂', bm, coll, mats['dark'], bevel=0.0015)
+    bm_cyl(bm, HUB['r'], HUB['h'], RING_TOP - HUB['h'], segs=40)             # 中心套
+    bm_cyl(bm, HUB['flange'], HUB['fh'], RING_TOP, segs=40)                  # 接吊杆的法兰
+    hub = bm_obj('上夹环·中心套', bm, coll, mats['dark'], bevel=0.0012)
     bm = bmesh.new()
-    bm_cyl(bm, SHELL_R + 0.009, 0.012, RING_TOP - 0.012, segs=64)          # 顶盖
-    bm_cyl(bm, 0.062, 0.018, RING_TOP, segs=32)                             # 接吊杆的法兰
-    cap = bm_obj('上夹环·顶盖', bm, coll, mats['dark'], bevel=0.0015)
+    bm_bolt_ring(bm, HUB['flange'] - 0.008, RING_TOP + HUB['fh'], 6, rad=0.003)
+    _band_screws(bm, z0 + h / 2)
+    bolts = bm_obj('上夹环·螺钉', bm, coll, mats['steel'], smooth=False)
     bm = bmesh.new()
-    bm_bolt_ring(bm, 0.052, RING_TOP + 0.018, 6, rad=0.004)
-    bm_bolt_ring(bm, SHELL_R - 0.004, RING_TOP, 10, rad=0.0035, phase=0.1)
-    bolts = bm_obj('上夹环·螺栓', bm, coll, mats['steel'], smooth=False)
-    bm = bmesh.new()
-    clamp_z = -h + RING_TOP + 0.03
-    for k in range(NB):
-        a = k * DANG
-        r = SHELL_R + 0.006 + 0.006
-        bm_box(bm, r * math.cos(a), r * math.sin(a), clamp_z, 0.006, BW / 2 + 0.002, 0.016, rot=a)
-    blocks = bm_obj('上夹环·夹块', bm, coll, mats['dark'], smooth=False, bevel=0.0012)
-    bm = bmesh.new()
-    for k in range(NB):
-        a = k * DANG
-        r = SHELL_R + 0.018
-        for dz in (-0.008, 0.008):
-            res = bmesh.ops.create_cone(bm, cap_ends=True, segments=6, radius1=0.0032, radius2=0.0032, depth=0.004)
-            bmesh.ops.rotate(bm, verts=res['verts'], cent=(0, 0, 0), matrix=mathutils.Matrix.Rotation(math.pi / 2, 3, 'Y'))
-            bmesh.ops.rotate(bm, verts=res['verts'], cent=(0, 0, 0), matrix=mathutils.Matrix.Rotation(a, 3, 'Z'))
-            bmesh.ops.translate(bm, verts=res['verts'], vec=(r * math.cos(a), r * math.sin(a), clamp_z + dz))
-    cbolts = bm_obj('上夹环·夹块螺栓', bm, coll, mats['steel'], smooth=False)
-    # 指示灯：一圈细光带，告诉人这台在动
-    bm = bmesh.new()
-    bm_tube(bm, SHELL_R + 0.0068, SHELL_R + 0.0055, 0.004, -h + RING_TOP + 0.006, segs=64)
+    bm_tube(bm, RO_OUT + 0.0006, RO_OUT - 0.0004, 0.003, z0 + 0.002, segs=72)   # 指示灯：外圈下沿一圈细光带
     led = bm_obj('上夹环·指示灯', bm, coll, mats['led'])
-    return [shell, ribs, hub, cap, bolts, blocks, cbolts, led]
+    return [ring, spokes, hub, bolts, led]
 
 
 def build_foot(coll, mats, tail):
-    """下夹环：外壳 + 内毂 + 底盖（防撞的橡胶圈）+ 夹块"""
-    h = tail * SEG + 0.02
+    """下夹环（2026-10-30 改轻）：同上夹环的夹圈，夹住带子末 CLAMP_N 节，辐条在下面接中心套（芯插在中心套里），
+    夹圈下一道薄橡胶圈防撞。原来是夹 15 节的整只鼓 + 底盖，作者嫌笨重。"""
+    n = min(tail, CLAMP_N)
+    z0 = -0.008
+    h = (n - 1) * SEG + 0.006 - z0
     bm = bmesh.new()
-    bm_tube(bm, SHELL_R + 0.006, SHELL_R, h, -0.02, segs=64)
-    shell = bm_obj('下夹环·外壳', bm, coll, mats['alu'], bevel=0.0015)
+    _clamp_ring(bm, z0, h)
+    ring = bm_obj('下夹环·夹圈', bm, coll, mats['alu'], bevel=0.0008)
     bm = bmesh.new()
-    bm_cyl(bm, HUB_R, h, -0.02, segs=48)
-    bm_cyl(bm, 0.03, 0.02, h - 0.02, segs=24)      # 接芯的座
-    hub = bm_obj('下夹环·内毂', bm, coll, mats['dark'], bevel=0.0015)
+    _spokes(bm, z0 + 0.004)
+    bm_tube(bm, RO_OUT, RI_IN, 0.003, z0, segs=72)                          # 底下一道压圈
+    spokes = bm_obj('下夹环·辐条', bm, coll, mats['dark'], smooth=False, bevel=0.0008)
     bm = bmesh.new()
-    bm_cyl(bm, SHELL_R + 0.009, 0.014, -0.034, segs=64)
-    bm_cyl(bm, SHELL_R - 0.01, 0.022, -0.056, segs=64, r2=SHELL_R + 0.004)
-    cap = bm_obj('下夹环·底盖', bm, coll, mats['dark'], bevel=0.002)
+    bm_cyl(bm, HUB['r'], HUB['h'], z0, segs=40)                              # 中心套（芯插在里面）
+    bm_cyl(bm, HUB['r'] - 0.006, 0.006, z0 - 0.006, segs=40)                 # 中心套底的端盖
+    hub = bm_obj('下夹环·中心套', bm, coll, mats['dark'], bevel=0.0012)
     bm = bmesh.new()
-    bm_tube(bm, SHELL_R + 0.012, SHELL_R + 0.002, 0.008, -0.044, segs=64)
+    bm_tube(bm, RO_OUT + 0.001, RI_IN - 0.001, 0.004, z0 - 0.004, segs=72)
     bump = bm_obj('下夹环·防撞圈', bm, coll, mats['rubber'])
     bm = bmesh.new()
-    for k in range(NB):
-        a = k * DANG
-        r = SHELL_R + 0.012
-        bm_box(bm, r * math.cos(a), r * math.sin(a), h - 0.02 - 0.03, 0.006, BW / 2 + 0.002, 0.016, rot=a)
-    blocks = bm_obj('下夹环·夹块', bm, coll, mats['dark'], smooth=False, bevel=0.0012)
-    bm = bmesh.new()
-    bm_bolt_ring(bm, SHELL_R - 0.004, -0.034, 10, rad=0.0035, up=False, phase=0.1)
-    bolts = bm_obj('下夹环·螺栓', bm, coll, mats['steel'], smooth=False)
-    return [shell, hub, cap, bump, blocks, bolts]
+    _band_screws(bm, z0 + h / 2)
+    bolts = bm_obj('下夹环·螺钉', bm, coll, mats['steel'], smooth=False)
+    return [ring, spokes, hub, bump, bolts]
 
 
 def build_stage(coll, mats, name, d, L, mat, collar=True):
@@ -643,8 +667,7 @@ def sample_frames(samples):
 
 
 def core_stage_count(unit):
-    lead, tail = unit['lead'], unit['tail']
-    longest = max(s['tiers'][0]['z'][0] for s in unit['samples']) - (min(lead, SLEEVE_CAP) + tail) * SEG
+    longest = max(s['tiers'][0]['z'][0] for s in unit['samples']) + RING_TOP - 2 * HUB['h']
     usable = CORE['L'] - 0.05
     return max(3, int(math.ceil(longest / usable)) + 1)
 
@@ -697,7 +720,9 @@ def build_unit(unit, parent_coll, mats, detail=True, housing=False):
             sa = [s['tiers'][a] for s in samples]
             sb = [s['tiers'][b] for s in samples]
             idx = list(range(len(samples)))
-            ob = shape_keyed(f'{name}·膜·{a}{b}', memc, lambda k: membrane_verts(sa[k], sb[k]), faces, idx,
+            ta, tb = unit['tiers'][a], unit['tiers'][b]
+            pair = (ta['mid'], tb['mid'], min(ta['midHalf'], tb['midHalf']))
+            ob = shape_keyed(f'{name}·膜·{a}{b}', memc, lambda k: membrane_verts(sa[k], sb[k], pair), faces, idx,
                              [mats['membrane']], smooth=[True] * len(faces), frames=frames)
             pair_mesh[(a, b)] = ob.data
             memc.objects.unlink(ob)
@@ -725,7 +750,7 @@ def build_unit(unit, parent_coll, mats, detail=True, housing=False):
         ob.rotation_euler = (0, 0, unit['angle0'])
     # 吊杆：天花方板下沿到上夹环顶，节数固定，逐节等分伸出量
     plate_bot = CEIL - PLATE_T
-    E = plate_bot - (foot_z + top_rel + RING_TOP + 0.018)
+    E = plate_bot - (foot_z + top_rel + RING_TOP + HUB['fh'])
     nh = HANGER['n']
     for k in range(nh):
         d = HANGER['d0'] - k * HANGER['dd']
@@ -735,9 +760,9 @@ def build_unit(unit, parent_coll, mats, detail=True, housing=False):
         if k == nh - 1:
             bottom = plate_bot - E
         anim_fcurve(st, 'location', frames, bottom, index=2)
-    # 芯：上夹环内毂底面到下夹环内毂顶面，最粗一节挂在上夹环下、往上缩进吊杆里
-    carr_bot = foot_z + top_rel - min(unit['lead'], SLEEVE_CAP) * SEG
-    foot_top = foot_z + unit['tail'] * SEG
+    # 芯：上夹环中心套底面到下夹环中心套顶面，最粗一节挂在上夹环下、往上缩进吊杆里
+    carr_bot = foot_z + top_rel + RING_TOP - HUB['h']
+    foot_top = foot_z - 0.008 + HUB['h']
     Lc = carr_bot - foot_top
     nc = core_stage_count(unit)
     for k in range(nc):
@@ -983,7 +1008,8 @@ def scene_A(mats):
                   (440, (0, 0, 1.1)), (560, (0, 0, 1.6)), (end, (0, 0, 2.9))])
     render_settings(sc, end)
     still_cam(lights, 'A·特写·键', (0.62, -0.78, 0.78), (0.18, -0.12, 0.99), lens=45)
-    still_cam(lights, 'A·特写·上夹环', (0.55, -0.6, 1.62), (0.0, 0.0, 1.47), lens=50)
+    still_cam(lights, 'A·特写·上夹环', (0.5, -0.55, 1.52), (0.0, 0.0, 1.39), lens=50)
+    still_cam(lights, 'A·特写·下夹环', (0.62, -0.7, 0.62), (0.0, 0.0, 0.84), lens=45)
     still_cam(lights, 'A·剖切·天花机箱', (0.75, -0.95, 3.35), (0.0, 0.0, 4.05), lens=28)
     still_cam(lights, 'A·收起', (1.3, -1.5, 2.4), (0.0, 0.0, 3.4), lens=40)
     return sc

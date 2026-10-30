@@ -18,7 +18,7 @@ import { writeFileSync } from 'node:fs';
 import { SKIN, createSkinUnit, renderSmooth, buildUnit } from '../../src/lib/space/skin-unit.ts';
 import { UNIT_TIERS, UNIT_ORDER, UNITS_PER_M, rigFor, TrajectoryBaker, FRAMES, TABLE_TOP } from '../../src/lib/space/cohabit-solid.ts';
 import { planLayout } from '../../src/lib/space/unit-activation.ts';
-import { SQUARE } from '../../src/lib/space/skin-square.ts';
+import { SQUARE, squareStructureAt } from '../../src/lib/space/skin-square.ts';
 import { buildRingUnits, RING } from '../../src/lib/space/skin-ring.ts';
 import { cycleShapes } from '../../src/lib/space/skin-cycle.ts';
 import { ROOM } from '../../src/lib/space/skin-grid.ts';
@@ -41,6 +41,7 @@ const M = (u) => u / UNITS_PER_M; // 世界单位 → 米
 const PX = (px) => M(px * 100 * S); // 引擎单位 → 米
 const ST_R = M(SQUARE.RADIUS * S); // 带子站位半径（剖面 x = 0 处）
 const SEG_M = PX(SKIN.SEG); // 贴合段一节的长度
+const CLAMP_N = 5; // 上下夹环各夹住带子端头几节（与 build_scene.py 的 CLAMP_N 同一个数；升降段的手风琴褶只在两段夹住的部分之间展开）
 const CEIL = M(ROOM.FLOOR_Y); // 天花离地（3.74 m）
 const meta = {
   fps: FPS,
@@ -188,7 +189,7 @@ function buildUnit_(spec) {
   let foot = footWork;
   let state = { kind: 'stowed', program: 0 }; // 当前每档的「最后一个形」用来接下一段
   const ceilGap = 0.03; // 收起时上夹环顶离天花板底的净距
-  const ringTop = 0.035; // 上夹环顶高出带子第 0 节的量（Blender 里同一个数）
+  const ringTop = 0.02; // 上夹环顶（法兰顶）高出带子第 0 节的量（Blender 里 RING_TOP + HUB.fh）
   const profNow = (ti) => state.prof[ti];
   // 起始：收起态
   const stowProf = (ti, target) => hoistFrame(n, leadC, tailC, target, 0);
@@ -263,7 +264,10 @@ function buildUnit_(spec) {
     tail: tailC,
     order,
     footWork: R(footWork),
-    tiers: tiers.map((tt, ti) => ({ name: tt.name, bonds: bonds[ti], programs: tt.programs.map((d) => d.key) })),
+    tiers: tiers.map((tt, ti) => {
+      const st = squareStructureAt(tt.programs[0].spec);
+      return { name: tt.name, bonds: bonds[ti], programs: tt.programs.map((d) => d.key), mid: st.start + (st.fs - 1) / 2, midHalf: (st.fs - 1) / 2 };
+    }),
     samples,
   };
 }
@@ -312,8 +316,8 @@ const unitA = buildUnit_({
   angle0: Math.PI / SQUARE.COUNT, // 半格相位：四条带正对四个角
   footWork: sqFoot,
   place: [0, 0],
-  lead: 22,
-  tail: 15,
+  lead: CLAMP_N,
+  tail: CLAMP_N,
   timeline: STD(0),
 });
 
@@ -329,8 +333,8 @@ const unitsB = ringDefs.map((d, k) =>
     angle0: 0,
     footWork: ringFoot,
     place: [(k - 1.5) * 1.45, 0],
-    lead: 58,
-    tail: 15,
+    lead: CLAMP_N,
+    tail: CLAMP_N,
     timeline: [
       { kind: 'hold', dur: 0.5 },
       { kind: 'hoist', dur: 3.5, program: 0 },
@@ -360,8 +364,8 @@ const unitC = buildUnit_({
   angle0: 0,
   footWork: cFoot,
   place: [0, 0],
-  lead: 8,
-  tail: 5,
+  lead: CLAMP_N,
+  tail: CLAMP_N,
   timeline: [
     { kind: 'hold', dur: 0.8 },
     { kind: 'hoist', dur: 4.5, program: 0 },
