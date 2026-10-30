@@ -45,7 +45,6 @@ import {
   decimateTrajectory,
   figureYaw,
   furnitureBoxes,
-  shelterToward,
   membraneJoins,
   platesMesh,
   platformBand,
@@ -56,10 +55,10 @@ import {
   rigYForTop,
   roomMesh,
   seatSpecOf,
-  shelterBands,
   stepBandCursor,
   tableTopFor,
   unitDrop,
+  unitFormPlan,
   unitFootY,
   unitTopY,
   type BakeReply,
@@ -86,9 +85,10 @@ import type { SolidTopology } from '../../src/lib/space/skin-solid';
  * 挡路的带各自收回时也按同一条路往上收（顶端收放按带，正文「夹持位置随程序变」那条假设）。立杆也随单元伸缩：
  * 下端跟着布束底走，收起时只剩天花下一小截（作者「中间这根棍子也得缩上去」）；天花方板仍是静件。
  *
- * **按用途定形（2026-10-30）**：落在坐着的人身边 1.5 m 内、不当桌子的那台落成上下两层（cohabit-solid `shelterToward` / `SHELTER`）：
- * 338 节布全部铺出去成两块方台，上台只盖背向那个人的半圈，下台 0.90 m 给猫，猫坐进有顶那半边看那个人。两层那组轨迹（六条）
- * 在后台线程里烘（cohabit-bake.worker.ts），烘完之前那几台照平台落。平面模型只读谁坐在哪，规则一条没加。
+ * **按用途定形（2026-10-30）**：当桌子的那台按家具定高，给猫落的那台在三种形里随机抽一种（cohabit-solid `unitFormPlan` /
+ * `UNIT_FORM_ODDS`）：平台、有顶的一台（338 节布全部铺出去成上下两块方台，上台只盖半圈）、整圈两层；下台 0.90 m 给猫。
+ * 落在坐着的人身边 1.5 m 内的那台多半落成有顶的、敞开那半圈朝那个人，猫坐进有顶那半边看他。两层那组轨迹（六条）
+ * 在后台线程里烘（cohabit-bake.worker.ts），烘完之前全照平台落。抽签用仿真的种子，不动仿真的随机数，平面模型逐位不变。
  *
  * 画法上两件为了帧率：静止态（收起 / 直带子 / 成形）的单元整台烘成一份静态网格、按单元摆（gl3d.drawMeshAt），
  * 只有正在升降、成形、收回、开门的带子才逐条摆；房间、立杆、天花方板、家具都是烘一次的静件。收在天花下的那一团
@@ -132,7 +132,7 @@ const COPY = {
     title: '人猫同台 · 立体',
     sub: (side: number, roomH: number) => `8×8 · 方台边长 ${side.toFixed(2)} m · 房高 ${roomH.toFixed(2)} m · ${SCENE.people} 位访客 · ${SCENE.cats} 只猫`,
     hint: '拖拽旋转 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回、给人让路 · 控制在实验室',
-    hintCtl: '拖拽旋转 · 空间三档对照 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回，挡路的带各自收回 · 坐着的人身边落下的台落成有顶的两层，朝那个人的半圈敞开 · 带子形状取自引擎烘好的关键帧 · 访客的穿着与猫的花色每一场随机、不重样',
+    hintCtl: '拖拽旋转 · 空间三档对照 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回，挡路的带各自收回 · 给猫落的台随机成平台、半圈有顶的两层或整圈两层，坐着的人身边那台多半是有顶的、朝那个人敞开 · 当桌子的台照家具定高 · 带子形状取自引擎烘好的关键帧 · 访客的穿着与猫的花色每一场随机、不重样',
     baking: (p: number) => `算带子轨迹 ${Math.round(p * 100)}%`,
     line: (t: number, formed: number, total: number, c: Record<EventKind, number>, roofed: number) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · 成形 ${formed} / ${total}${roofed ? ` · 有顶的台 ${roofed}` : ''} · 共视 ${c.gaze} · 共温 ${c.warmth} · 共触 ${c.touch} · 交接 ${c.pass}`,
@@ -147,7 +147,7 @@ const COPY = {
     title: 'People and cats together, in 3D',
     sub: (side: number, roomH: number) => `8×8 · square platform ${side.toFixed(2)} m · room ${roomH.toFixed(2)} m high · ${SCENE.people} visitors · ${SCENE.cats} cats`,
     hint: 'Drag to orbit · units rest stowed at the ceiling, then descend, form, retract and give way under the Lab 2-14 rules · controls in the lab',
-    hintCtl: 'Drag to orbit · three spaces to compare · units rest stowed at the ceiling, then descend and form under the Lab 2-14 rules, bands in the way retract on their own · units that come down beside a seated visitor form two levels, roofed at the back and open toward that visitor · band shapes come from baked engine keyframes · outfits and coats are dealt at random each run, no two alike',
+    hintCtl: 'Drag to orbit · three spaces to compare · units rest stowed at the ceiling, then descend and form under the Lab 2-14 rules, bands in the way retract on their own · a unit lowered for a cat takes one of three forms at random (flat, two levels roofed over half, or two levels all round), and beside a seated visitor it is usually roofed at the back and open toward that visitor · units used as tables keep the height set by the furniture · band shapes come from baked engine keyframes · outfits and coats are dealt at random each run, no two alike',
     baking: (p: number) => `baking band trajectory ${Math.round(p * 100)}%`,
     line: (t: number, formed: number, total: number, c: Record<EventKind, number>, roofed: number) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · formed ${formed} / ${total}${roofed ? ` · roofed ${roofed}` : ''} · co-gaze ${c.gaze} · co-warmth ${c.warmth} · contact ${c.touch} · crossing ${c.pass}`,
@@ -515,10 +515,12 @@ export function CohabitSpaceBench({
     const cursors = bandCursors(layout.units.length * BANDS);
     const frameOf = new Int32Array(layout.units.length * BANDS);
     const trackOf = new Uint8Array(layout.units.length * BANDS);
-    // 每台落下时按用途定的排法（2026-10-30）：落在正坐着的人身边 1.5 m 以内、不当桌子的那台落成有顶的一台（两个结构，
-    // 上台盖背向那个人的半圈，shelterToward），否则照平台。排法在开始落下那一刻定、收回天花之前不换（作者 10-06「换形先收回再落」）
+    // 每台落下时抽的形（unitFormPlan）：当桌子的那台照平台；给猫落的在 平台 / 有顶的一台 / 整圈两层 里抽一种。
+    // 排法在开始落下那一刻定、收回天花之前不换（作者 10-06「换形先收回再落」）。roofOn = 两层（有顶的或整圈的）；
+    // roofToward = 有顶的那台敞开那半圈朝哪（整圈两层是 NaN）；dropSerial = 这台第几次落下（抽签用）
     const roofOn = new Uint8Array(layout.units.length);
     const planSet = new Uint8Array(layout.units.length);
+    const dropSerial = new Int32Array(layout.units.length);
     const roofToward = new Float32Array(layout.units.length);
     const roofBands = new Uint8Array(layout.units.length * BANDS);
     let roofed = 0;
@@ -551,7 +553,7 @@ export function CohabitSpaceBench({
         const dtT = Math.max(0, Math.min(0.1 * timeRef.current, sim.t - tableT));
         tableT = sim.t;
         // 正坐着的人的座位（有顶的一台朝离它最近的那个人敞开）
-        const seated = dualReady ? sim.people.filter((p) => p.seated && p.seat !== null).map((p) => sim.seats[p.seat as number]) : null;
+        const seated = sim.people.filter((p) => p.seated && p.seat !== null).map((p) => sim.seats[p.seat as number]);
         roofed = 0;
         for (let u = 0; u < layout.units.length; u++) {
           const c = rig.cells[u];
@@ -567,11 +569,26 @@ export function CohabitSpaceBench({
             roofOn[u] = 0;
           } else if (!planSet[u]) {
             planSet[u] = 1;
-            const toward = seated && sim.furn && sim.tableBy[u] < 0 ? shelterToward(layout, layout.units[u], seated, sim.furn.rects) : null;
-            if (toward !== null) {
+            // 第几次落下照数（与两层那组烘没烘完无关），抽签只看种子、第几台、第几次
+            const serial = dropSerial[u]++;
+            const plan =
+              dualReady && sim.furn
+                ? unitFormPlan({
+                    seed,
+                    unit: u,
+                    serial,
+                    layout,
+                    at: layout.units[u],
+                    seated,
+                    rects: sim.furn.rects,
+                    tableUnit: sim.tableBy[u] >= 0 || sim.seats.some((st) => st.table === u),
+                    count: BANDS,
+                  })
+                : null;
+            if (plan && plan.bands) {
               roofOn[u] = 1;
-              roofToward[u] = toward;
-              roofBands.set(shelterBands(toward, BANDS), u * BANDS);
+              roofToward[u] = plan.toward ?? NaN;
+              roofBands.set(plan.bands, u * BANDS);
             }
           }
           const roof = roofOn[u] === 1;
@@ -605,7 +622,7 @@ export function CohabitSpaceBench({
             if (k !== STEADY.straight) allStraight = false;
             if (k !== STEADY.formed) allFormed = false;
           }
-          // 整台一份网格只有平台有（有顶的一台逐条摆：它一次最多一两台）
+          // 整台一份网格只有平台有（两层的逐条摆：同时最多四五台，同一条轨迹同一帧的带子仍合成一次画）
           if (allStowed && !roof) stowedPlaces.push(at(c, 0, top));
           else if (allStraight && !roof) straightPlaces.push(at(c, 0, top));
           else if (allFormed && !roof) formedPlaces.push(at(c, 0, top));
@@ -694,8 +711,8 @@ export function CohabitSpaceBench({
         const mo = track(c, c.walker.x, c.walker.y);
         const support = sim.space === 'empty' ? [] : sim.supportOf(c);
         const formed = band !== null && support.length > 0 && support.every((u) => sim.act.degree[u.i] >= 1 - 1e-3);
-        // 有顶的一台：猫坐进有顶那半边，头转过去看座位
-        const roof = formed && support.length === 1 && roofOn[support[0].i] ? roofToward[support[0].i] : undefined;
+        // 有顶的一台：猫坐进有顶那半边，头转过去看敞开那一侧（整圈两层没有朝向，照平台的摆法）
+        const roof = formed && support.length === 1 && roofOn[support[0].i] && !Number.isNaN(roofToward[support[0].i]) ? roofToward[support[0].i] : undefined;
         const pl = catPlacement({ x: c.walker.x, y: c.walker.y, heading: c.walker.heading, state: c.state }, support, formed, mo.speed > MOVING.cat, layout, band ?? { R: 0 }, roof);
         const k = pl.pose === 'walk' ? Math.floor(frac(mo.dist / CAT.STRIDE) * WALK_FRAMES.cat) % WALK_FRAMES.cat : 0;
         const key = `c-${pl.pose}-${pl.tail}-${pl.bend.toFixed(3)}-${k}|${look.coat}`;
@@ -816,6 +833,7 @@ export function CohabitSpaceBench({
       tableTop.fill(TABLE_TOP.stand);
       roofOn.fill(0);
       planSet.fill(0);
+      dropSerial.fill(0);
       lastHud = '';
       render();
       pushHud();

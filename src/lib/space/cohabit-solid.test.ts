@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DUAL, SHELTER, UNIT_DUAL_DEFS, UNIT_DUAL_REFS, dualUnitSpec, shelterBands, shelterToward, BRIDGE_BASE, FRAMES, FURN_ERGO, HOIST, STEADY, TABLE_TOP, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_CUT, UNIT_ORDER, UNIT_SHAPE, UNIT_STORED, UNIT_TIERS, STORE, withStore, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
+import { DUAL, SHELTER, UNIT_DUAL_DEFS, UNIT_DUAL_REFS, dualUnitSpec, shelterBands, shelterClear, shelterToward, unitFormPlan, UNIT_FORM_ODDS, BRIDGE_BASE, FRAMES, FURN_ERGO, HOIST, STEADY, TABLE_TOP, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_CUT, UNIT_ORDER, UNIT_SHAPE, UNIT_STORED, UNIT_TIERS, STORE, withStore, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
 import { planLayout } from './unit-activation';
 import { FIGURE, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
 import { RING } from './skin-ring';
@@ -771,5 +771,85 @@ describe('按用途定形：有顶的一台（2026-10-30，形态方案 §11）'
     }
     const B = { x: layout8.pitchM, y: 0 };
     expect(catPlacement({ x: B.x * 0.25, y: 0, heading: 0, state: 'walk' }, [u, B], true, true, layout8, band).t).toBeCloseTo(0.25, 9);
+  });
+});
+
+describe('给猫落的台随机成形（2026-10-30 第二轮）', () => {
+  const l = { platR: 0.35 };
+  const u = { x: 0, y: 0 };
+  const chair = { x0: 0.2, x1: 0.8, y0: -0.3, y1: 0.3, kind: 'chair' as const, ergo: true as const };
+  const base = { seed: 11, unit: 7, serial: 0, layout: l, at: u, seated: [] as { x: number; y: number }[], rects: [], tableUnit: false };
+
+  it('当桌子的那台、压在椅背上方的那台永远是平台', () => {
+    for (let s = 0; s < 200; s++) {
+      expect(unitFormPlan({ ...base, serial: s, tableUnit: true }).form).toBe('flat');
+      expect(unitFormPlan({ ...base, serial: s, rects: [chair] }).form).toBe('flat');
+      expect(unitFormPlan({ ...base, serial: s, seated: [{ x: 0, y: 1.2 }], rects: [chair] }).form).toBe('flat');
+    }
+    expect(shelterClear(l, u, [chair])).toBe(false);
+    expect(shelterClear(l, u, [{ ...chair, kind: 'sofa' as const }])).toBe(true);
+  });
+
+  it('同样的种子、第几台、第几次落下抽出同一种；不碰 Math.random（仿真的随机数流不动）', () => {
+    const real = Math.random;
+    Math.random = () => {
+      throw new Error('不该用 Math.random');
+    };
+    try {
+      for (let s = 0; s < 50; s++) {
+        const a = unitFormPlan({ ...base, serial: s });
+        const b = unitFormPlan({ ...base, serial: s });
+        expect(a.form).toBe(b.form);
+        expect(a.toward).toBe(b.toward);
+      }
+    } finally {
+      Math.random = real;
+    }
+    const forms = new Set(Array.from({ length: 40 }, (_, s) => unitFormPlan({ ...base, serial: s }).form));
+    expect(forms.size).toBe(3);
+  });
+
+  it('抽到各形的频率与 UNIT_FORM_ODDS 相符（共温带里 / 别处两套）', () => {
+    for (const [near, odds] of [
+      [true, UNIT_FORM_ODDS.near],
+      [false, UNIT_FORM_ODDS.other],
+    ] as const) {
+      const n = 4000;
+      const c = { flat: 0, half: 0, full: 0 };
+      for (let i = 0; i < n; i++) c[unitFormPlan({ ...base, seed: 3 + (i % 7), unit: i % 64, serial: Math.floor(i / 64), seated: near ? [{ x: 0, y: 1.2 }] : [] }).form]++;
+      expect(c.half / n).toBeCloseTo(odds.half, 1);
+      expect(c.full / n).toBeCloseTo(odds.full, 1);
+      expect(c.flat / n).toBeCloseTo(1 - odds.half - odds.full, 1);
+    }
+  });
+
+  it('有顶的一台：共温带里朝那个人敞开；别处朝四条边之一、正好十条带对十条带；整圈两层二十条全是两块', () => {
+    const dirs = new Set<number>();
+    for (let s = 0; s < 400; s++) {
+      const near = unitFormPlan({ ...base, serial: s, seated: [{ x: 0, y: 1.2 }] });
+      if (near.form === 'half') expect(near.toward).toBeCloseTo(Math.PI / 2, 12);
+      const p = unitFormPlan({ ...base, serial: s });
+      if (p.form === 'half') {
+        const k = (p.toward as number) / (Math.PI / 2);
+        expect(Math.abs(k - Math.round(k))).toBeLessThan(1e-12);
+        dirs.add(Math.round(k));
+        expect([...(p.bands as Uint8Array)].reduce((a, b) => a + b, 0)).toBe(10);
+        for (let j = 0; j < SQUARE.COUNT; j++) expect(p.bands![j]).toBe(Math.cos(bandAngle(j) - (p.toward as number)) < 0 ? 1 : 0);
+      } else if (p.form === 'full') {
+        expect(p.toward).toBeNull();
+        expect([...(p.bands as Uint8Array)].every((b) => b === 1)).toBe(true);
+      } else expect(p.bands).toBeNull();
+    }
+    expect(dirs).toEqual(new Set([0, 1, 2, 3]));
+  });
+
+  it('2-15 标准布置：座位的桌子那台全被排除，其余给猫的台里两层放得下的不少于四十台', () => {
+    const sim = new CohabitSim({ grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', trigger: 'posture', seed: 1 });
+    const tables = new Set(sim.seats.map((s) => s.table).filter((t) => t >= 0));
+    expect(tables.size).toBeGreaterThan(0);
+    for (const t of tables)
+      for (let s = 0; s < 30; s++) expect(unitFormPlan({ ...base, unit: t, serial: s, layout: sim.layout, at: sim.layout.units[t], rects: sim.furn!.rects, tableUnit: true }).form).toBe('flat');
+    const ok = sim.layout.units.filter((q) => !tables.has(q.i) && shelterClear(sim.layout, q, sim.furn!.rects));
+    expect(ok.length).toBeGreaterThanOrEqual(40);
   });
 });
