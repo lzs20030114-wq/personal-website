@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { BRIDGE_BASE, FRAMES, FURN_ERGO, HOIST, STEADY, TABLE_TOP, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_ORDER, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
+import { BRIDGE_BASE, FRAMES, FURN_ERGO, HOIST, STEADY, TABLE_TOP, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_CUT, UNIT_ORDER, UNIT_SHAPE, UNIT_STORED, UNIT_TIERS, STORE, withStore, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
 import { planLayout } from './unit-activation';
 import { FIGURE, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
 import { RING } from './skin-ring';
 import { SOLID } from './skin-solid';
-import { SQUARE, SQUARE_PEAK, SQUARE_REACH, buildSquareUnits, squareHalfSide, squareRadiusAt } from './skin-square';
+import { SQUARE, SQUARE_PEAK, SQUARE_REACH, SQUARE_TIERS, buildSquareUnits, squareHalfSide, squareRadiusAt } from './skin-square';
+import { CYCLE_BAND } from './skin-cycle';
 import { CAT_COATS, catMesh, figureMesh, styleKey as styleKeyOf, type HumanStyle } from './figure';
 import { OUTFITS } from '../../../components/lab/figurePalette';
 import { partBox } from './mesh-shell';
@@ -31,14 +32,15 @@ describe('带子轨迹关键帧', () => {
     expect(traj.platformTopY).toBeGreaterThan(0);
   });
 
-  it('三档（面 / 边 / 角）：同一条带长、钉住端一样高、平台面一样高，挑出与 Lab 2-7 方形环的深度表一致', () => {
+  it('三档（面 / 边 / 角）：同一条带长、钉住端一样高、平台面一样高，挑出与 Lab 2-7 方形环的方台一样大', () => {
     expect(trajs).toHaveLength(3);
     expect(UNIT_TIERS.map((d) => d.en)).toEqual(['face', 'edge', 'corner']);
     for (const [t, tr] of trajs.entries()) {
       expect(tr.n).toBe(traj.n);
       expect(tr.footY).toBeCloseTo(traj.footY, 6); // 注册在底端，三档初始摆位相同（角档的段落分法不同，末位舍入差 1e-13）
       expect(Math.abs(tr.platformTopY - traj.platformTopY)).toBeLessThan(1); // 方形环的对位构造：平台面一样高（px）
-      expect(Math.abs(tr.reach - (SQUARE.RADIUS + SQUARE_REACH[t]))).toBeLessThan(0.3);
+      // 6.5 cm 的台面按方形重新标定了三档键（UNIT_SHAPE.k）：外缘点离理想正方形不到 1 px（原方台的边档也差 0.9）
+      expect(Math.abs(tr.reach - squareRadiusAt(((9 + 18 * t) * Math.PI) / 180, squareHalfSide(SQUARE_REACH)))).toBeLessThan(1);
     }
     // 二十条带：面 8 / 边 8 / 角 4，角档正对 45°
     expect(UNIT_ORDER.filter((t) => t === 0)).toHaveLength(8);
@@ -47,17 +49,21 @@ describe('带子轨迹关键帧', () => {
     for (let j = 0; j < UNIT_ORDER.length; j++) if (UNIT_ORDER[j] === 2) expect(Math.abs(Math.sin(2 * bandAngle(j)))).toBeCloseTo(1, 9);
   });
 
-  it('用的是方形环立项时那条 202 节的带：形状与现行 305 节那条逐点相同（尾端对齐），只少上半截贴芯的素管', () => {
-    expect(traj.n).toBe(UNIT_BAND);
-    const long = new TrajectoryBaker(buildSquareUnits()[0]).runAll();
-    expect(long.n).toBe(SQUARE.BAND);
+  it('布按最长的预裁 338 节，平台只铺出去 176 节（lead 8 · 尾段 5，方形族的两个下限）；引擎只解铺出去的那段：同一组键在长 26 节的带上，形状逐点相同（尾端对齐）', () => {
+    expect(UNIT_CUT).toBe(CYCLE_BAND);
+    expect(UNIT_BAND).toBe(176);
+    expect(UNIT_STORED).toBe(162);
+    expect(traj.n).toBe(UNIT_BAND + 2 * STORE.pleats);
+    const tiers = SQUARE_TIERS.map((t, i) => ({ ...t, k: UNIT_SHAPE.k[i] }));
+    const long = new TrajectoryBaker(buildSquareUnits(tiers, UNIT_BAND + 26, { h: UNIT_SHAPE.h, tail: UNIT_SHAPE.tail })[0]).runAll();
+    expect(long.n).toBe(UNIT_BAND + 26);
     const a = traj.frames[STEADY.formed];
     const b = long.frames[STEADY.formed];
     const na = traj.n;
     const nb = long.n;
     let dx = 0;
     let dy = 0;
-    for (let i = 0; i < na; i++) {
+    for (let i = 0; i < UNIT_BAND; i++) {
       dx = Math.max(dx, Math.abs(a[na - 1 - i] - b[nb - 1 - i]));
       dy = Math.max(dy, Math.abs(a[2 * na - 1 - i] - a[2 * na - 1] - (b[2 * nb - 1 - i] - b[2 * nb - 1])));
     }
@@ -65,6 +71,42 @@ describe('带子轨迹关键帧', () => {
     expect(dy * 100).toBeLessThan(1);
     expect(Math.abs(long.reach - traj.reach)).toBeLessThan(0.01);
   }, 30_000);
+
+  it('收着的那团布：接在铺出去那段的顶端，高度 = 那段布拉直 × HOIST.stowed，升降、成形、回程里都不伸缩', () => {
+    const n = traj.n;
+    const g = 2 * STORE.pleats;
+    const f0 = traj.frames[0];
+    const pitch = (f0[n + g] - f0[2 * n - 1]) / (UNIT_BAND - 1); // 铺出去那段的直带子节距
+    const h = f0[n] - f0[n + g];
+    expect(Math.abs(h / (HOIST.stowed * UNIT_STORED * pitch) - 1)).toBeLessThan(0.01);
+    expect(traj.storeY).toBeCloseTo(h * SOLID.SCALE, 9);
+    for (const f of traj.frames) {
+      // 最上面那个节点离铺出去那段的顶端恰好 h，褶的外鼓不超过 STORE.amp，全在那段的顶端之上
+      expect(f[n] - f[n + g]).toBeCloseTo(h, 9);
+      for (let k = 0; k < g; k++) {
+        expect(f[n + k]).toBeGreaterThan(f[n + g]);
+        expect(Math.abs(f[k] - f[g])).toBeLessThanOrEqual(STORE.amp + 1e-12);
+      }
+    }
+    // 不收的时候与原来逐位相同；withStore 只是把铺出去那段整体往下让、顶上接一圈褶
+    const plain = new TrajectoryBaker(UNIT_TIERS[0], FRAMES, 0).runAll();
+    expect(plain.n).toBe(UNIT_BAND);
+    expect(plain.storeY).toBe(0);
+    const w = withStore(plain.frames[STEADY.formed], UNIT_BAND, h);
+    expect(Array.from(w)).toEqual(Array.from(traj.frames[STEADY.formed]));
+    // 收起时整束布（收着的 + 铺出去压成 HOIST.stowed 倍的）与整条 338 节布一起压成 HOIST.stowed 倍差不多长
+    const s = traj.frames[STEADY.stowed];
+    const bundle = s[n] - s[2 * n - 1];
+    expect(Math.abs(bundle - HOIST.stowed * (UNIT_CUT - 1) * pitch) / bundle).toBeLessThan(0.02);
+  }, 30_000);
+
+  it('6.5 cm 的台面成形途中不鼓出原方台的峰值：平面模型按 SQUARE_PEAK 算碰人，照旧够用', () => {
+    for (const [t, tr] of trajs.entries()) {
+      let peak = 0;
+      for (const f of tr.frames.slice(0, FRAMES.form)) for (let i = 0; i < tr.n; i++) peak = Math.max(peak, f[i] * 100);
+      expect(peak, `档 ${t}`).toBeLessThanOrEqual(SQUARE_PEAK[t]);
+    }
+  });
 
   it('俯视是方的：二十个平台外缘点都落在同一个正方形的边上（偏差 < 1 px）', () => {
     const a = squareHalfSide(SQUARE_REACH);
@@ -128,13 +170,16 @@ describe('带子轨迹关键帧', () => {
 
   it('升降帧：由直带子压向顶端——顶端不动、挑出不变、钉住端从收起位单调降到工位，末帧 = 直带子', () => {
     const n = traj.n;
+    const g = 2 * STORE.pleats;
     const straight = traj.frames[STEADY.straight];
     const stowed = traj.frames[STEADY.stowed];
     expect(STEADY.stowed).toBe(FRAMES.form + FRAMES.retract);
     const topOf = (f: Float64Array): number => Math.max(...Array.from(f.subarray(n, 2 * n)));
     const top = topOf(straight);
-    // 收起态：吊长只剩 HOIST.stowed 倍，顶端节点不动，横向逐位相同
-    expect(top - stowed[2 * n - 1]).toBeCloseTo((top - straight[2 * n - 1]) * HOIST.stowed, 9);
+    // 收起态：铺出去那段的吊长只剩 HOIST.stowed 倍（绕它的顶端压），收在顶上的那团不动，横向逐位相同
+    const usedTop = straight[n + g];
+    expect(stowed[n + g]).toBeCloseTo(usedTop, 12);
+    expect(usedTop - stowed[2 * n - 1]).toBeCloseTo((usedTop - straight[2 * n - 1]) * HOIST.stowed, 9);
     expect(topOf(stowed)).toBeCloseTo(top, 12);
     for (let i = 0; i < n; i++) expect(stowed[i]).toBe(straight[i]);
     let prevFoot = -Infinity;
@@ -281,8 +326,15 @@ describe('带子轨迹关键帧', () => {
     expect(pre.footY).toBeCloseTo(traj.footY, 6);
     expect(rigFor(layout8, pre).y).toBeCloseTo(rigFor(layout8, traj).y, 6);
     const n = pre.n;
-    const stowed = hoistProfile(pre.frames[0], n, HOIST.stowed);
-    for (let i = 0; i < 2 * n; i++) expect(pre.frames[1][i]).toBe(stowed[i]);
+    const g = 2 * STORE.pleats;
+    // 收起态 = 铺出去那段压向它的顶端、再在顶上接收着的那团（与烘完的轨迹同一套）
+    const h = (pre.storeY as number) / SOLID.SCALE;
+    const raw = new Float64Array(2 * UNIT_BAND); // 铺出去那段的原帧（withStore 让下去的 h 加回来）
+    raw.set(pre.frames[0].subarray(g, n), 0);
+    for (let i = 0; i < UNIT_BAND; i++) raw[UNIT_BAND + i] = pre.frames[0][n + g + i] + h;
+    expect(Array.from(withStore(raw, UNIT_BAND, h))).toEqual(Array.from(pre.frames[0]).map((v, i) => (i < n ? v : expect.closeTo(v, 12))));
+    const expected = withStore(hoistProfile(raw, UNIT_BAND, HOIST.stowed), UNIT_BAND, h);
+    for (let i = 0; i < 2 * n; i++) expect(pre.frames[1][i]).toBeCloseTo(expected[i], 12);
   });
 
   it('整台网格 = 二十条带（各取自己那一档）的网格拼起来', () => {
@@ -342,11 +394,11 @@ describe('摆放与尺度', () => {
     expect((ROOM.FLOOR_Y - stowedFoot) / UNITS_PER_M).toBeGreaterThan(3.3); // 房高 3.74 m，收起的布束只占顶上十几厘米
     expect(unitTopY(rig, 1) + rig.s * traj.footY).toBeCloseTo(RIG_ANCHOR_Y, 6);
     // 钉住端（布束底 = 立杆下端）：到工位 = RIG_ANCHOR_Y，收起时与收起帧的脚只差顶端节点那零点几个单位，随升降单调
-    expect(unitFootY(rig, traj.footY, 1)).toBeCloseTo(RIG_ANCHOR_Y, 6);
-    expect(Math.abs(unitFootY(rig, traj.footY, 0) - stowedFoot)).toBeLessThan(0.5);
+    expect(unitFootY(rig, traj.footY, 1, rig.y, traj.storeY)).toBeCloseTo(RIG_ANCHOR_Y, 6);
+    expect(Math.abs(unitFootY(rig, traj.footY, 0, rig.y, traj.storeY) - stowedFoot)).toBeLessThan(0.5);
     let prevFoot = -Infinity;
     for (let d = 0; d <= 1; d += 0.1) {
-      const y = unitFootY(rig, traj.footY, d);
+      const y = unitFootY(rig, traj.footY, d, rig.y, traj.storeY);
       expect(y).toBeGreaterThan(prevFoot);
       prevFoot = y;
     }
@@ -375,9 +427,9 @@ describe('摆放与尺度', () => {
       return y;
     };
     expect(lowest(postsMesh(rig, layout8))).toBeCloseTo(RIG_ANCHOR_Y, 4);
-    const stowedFoot = unitFootY(rig, traj.footY, 0);
+    const stowedFoot = unitFootY(rig, traj.footY, 0, rig.y, traj.storeY);
     expect(lowest(postsMesh(rig, layout8, new Float32Array(64).fill(stowedFoot)))).toBeCloseTo(stowedFoot, 4);
-    expect(stowedFoot / UNITS_PER_M).toBeLessThan(0.3); // 收起时布束只在天花下不到 30 cm
+    expect(stowedFoot / UNITS_PER_M).toBeLessThan(0.35); // 收起时整条 338 节的布束只在天花下三十来厘米
   });
 
   it('家具：每件一块座面一块靠背，座面离地 0.45 m，靠背在人背后那条边上', () => {
@@ -471,29 +523,32 @@ describe('单元铺满整间房（cover: room，2026-10-27 作者「单元兼作
     expect(rig.y).toBeCloseTo(rigYForTop(rig, traj, TABLE_TOP.stand), 9);
   });
 
-  it('当桌子的几个高度：最低那档（沙发前茶几）吊带下端不戳地，餐桌比餐椅座面高 0.27–0.30', () => {
+  it('当桌子的几个高度：茶几在资料的 0.40–0.45 之内、吊带下端离地还有几厘米，餐桌比餐椅座面高 0.27–0.30', () => {
     const hang = (rig.s * (traj.footY - traj.platformTopY)) / UNITS_PER_M; // 台面到吊带最下端
     for (const top of Object.values(TABLE_TOP)) {
       const foot = top - hang;
-      expect(foot, `台面 ${top}`).toBeGreaterThan(0);
+      expect(foot, `台面 ${top}`).toBeGreaterThan(0.03);
       const y = rigYForTop(rig, traj, top);
-      expect(unitFootY(rig, traj.footY, 1, y)).toBeLessThan(ROOM.FLOOR_Y);
+      expect(unitFootY(rig, traj.footY, 1, y, traj.storeY)).toBeLessThan(ROOM.FLOOR_Y);
     }
-    expect(TABLE_TOP.sofaFront - hang).toBeLessThan(0.02); // 已经是能落到的最低
+    expect(TABLE_TOP.sofaFront).toBeGreaterThanOrEqual(0.4);
+    expect(TABLE_TOP.sofaFront).toBeLessThanOrEqual(0.45);
+    expect(TABLE_TOP.sofaFront).toBeLessThanOrEqual(FURN_ERGO.sofa.seatH); // 与座面齐或略低
     expect(TABLE_TOP.chair - FURN_ERGO.chair.seatH).toBeGreaterThanOrEqual(0.27);
     expect(TABLE_TOP.chair - FURN_ERGO.chair.seatH).toBeLessThanOrEqual(0.3);
   });
 
-  it('当谁的桌子落多高：餐椅 → 餐桌，沙发 → 茶几；餐桌台底比座面高不到 0.18（腿进不去，所以台边按规则落在膝盖前）', () => {
+  it('当谁的桌子落多高：餐椅 → 餐桌，沙发 → 茶几；台面 6.5 cm 厚，餐桌台底比座面高 0.22（腿伸得进）', () => {
     const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', space: 'live', seed: 1 });
     const rects = sim.furn!.rects;
     expect(tableTopFor(rects.find((r) => r.kind === 'chair')!)).toBe(TABLE_TOP.chair);
     expect(tableTopFor(rects.find((r) => r.kind === 'sofa')!)).toBe(TABLE_TOP.sofaFront);
-    // 台面厚 = 方台成形的箱高（Lab 2-7 方形环平档 SQUARE.H，剖面 px；剖面坐标 = px / 100）按装置比例换成米
-    const thick = (rig.s * (SQUARE.H / 100) * SOLID.SCALE) / UNITS_PER_M;
-    expect(thick).toBeGreaterThan(0.13);
-    expect(thick).toBeLessThan(0.17);
-    expect(TABLE_TOP.chair - thick - FURN_ERGO.chair.seatH).toBeLessThan(0.18);
+    // 台面厚 = 方台成形的箱高（UNIT_SHAPE.h，剖面 px；剖面坐标 = px / 100）按装置比例换成米
+    const thick = (rig.s * (UNIT_SHAPE.h / 100) * SOLID.SCALE) / UNITS_PER_M;
+    expect(thick).toBeGreaterThan(0.06);
+    expect(thick).toBeLessThan(0.075);
+    // 座面到桌底要 0.18–0.20（家具购买指南），坐姿大腿厚男性 P95 约 0.15（GB/T 10000）
+    expect(TABLE_TOP.chair - thick - FURN_ERGO.chair.seatH).toBeGreaterThan(0.2);
   });
 
   it('64 台铺满四边：最外一圈的台面离墙不到半个格距，峰值时邻台面对面、角对角都还留缝，台子不出房间', () => {
@@ -512,8 +567,8 @@ describe('单元铺满整间房（cover: room，2026-10-27 作者「单元兼作
   });
 
   it('收起的布束仍只在天花下一小截', () => {
-    const stowedFoot = unitFootY(rig, traj.footY, 0);
-    expect(stowedFoot / UNITS_PER_M).toBeLessThan(0.4);
+    const stowedFoot = unitFootY(rig, traj.footY, 0, rig.y, traj.storeY);
+    expect(stowedFoot / UNITS_PER_M).toBeLessThan(0.45); // 整条 338 节的布压成 HOIST.stowed 倍：约 0.40 m，底边离地 3.33 m，比站着的人头顶高 1.6 m 以上
     expect(rig.y).toBeGreaterThan(rig.stowY);
   });
 
