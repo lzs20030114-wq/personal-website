@@ -123,14 +123,16 @@ const PAD_LITE: [number, number, number] = [0.2, 0.21, 0.23];
 const ROD_DARK: [number, number, number] = [0.4, 0.16, 0.07];
 const ROD_LITE: [number, number, number] = [0.95, 0.5, 0.28];
 /**
- * 蒙皮的颜色（作者「要有高科技感，也不要特别抢眼」）：低饱和、略偏冷的钛灰（哑光金属）。试过四档（2026-10-30 截图对比）：
- * 石墨（暗）与房间混成一片、单元读不出形；珍珠白最抢眼；带青的深潭色把「颜色只表示项目」的界线弄混。取钛灰——比夹环的拉丝铝
- * 暗一档（夹环与吊杆读得出来），比房间亮得多（单元从暗背景里读得出形）。接缝片比盖片暗约一成，一圈二十道细缝读成分片的外壳，不另画线
+ * 蒙皮的颜色（作者「要有高科技感，也不要特别抢眼」→ 看过钛灰后「暖色吧还是」）：低饱和的暖灰（偏香槟的哑光金属）。
+ * 冷色先试过四档（石墨与房间混成一片、珍珠白最抢眼、带青的深潭色与「颜色只表示项目」混，取了钛灰），暖色再试四档：
+ * 香槟、暖灰、古铜、砂岩——古铜与香槟饱和度一高就读成木头或纸板，砂岩最亮最抢眼；取暖灰往香槟挪一点。
+ * 比夹环的拉丝铝暖、亮度相近（夹环靠冷暖分开），比房间亮得多（单元从暗背景里读得出形），比家具浅一档。
+ * 接缝片比盖片暗约一成，一圈二十道细缝读成分片的外壳，不另画线
  */
-export const SHELL_DARK: [number, number, number] = [0.16, 0.175, 0.19];
-export const SHELL_LITE: [number, number, number] = [0.66, 0.7, 0.73];
-export const SEAM_DARK: [number, number, number] = [0.145, 0.158, 0.172];
-export const SEAM_LITE: [number, number, number] = [0.6, 0.637, 0.665];
+export const SHELL_DARK: [number, number, number] = [0.185, 0.17, 0.15];
+export const SHELL_LITE: [number, number, number] = [0.74, 0.695, 0.625];
+export const SEAM_DARK: [number, number, number] = [0.167, 0.153, 0.135];
+export const SEAM_LITE: [number, number, number] = [0.666, 0.626, 0.563];
 const FURN_DARK: [number, number, number] = [0.16, 0.15, 0.13];
 const FURN_LITE: [number, number, number] = [0.52, 0.48, 0.42];
 /** 事件连线（与平面台架同一套配色：绿 共视 / 紫 共温 / 莲粉 共触 / 墨 交接） */
