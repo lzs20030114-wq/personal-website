@@ -125,6 +125,14 @@ describe('其他作品内容池（content/other/works.json）', () => {
     expect([yr('2024'), yr('2019–23'), yr('2019–2023')]).toEqual([true, true, true]);
     expect([yr('24'), yr('2019-23'), yr('about 2020')]).toEqual([false, false, false]);
   });
+
+  it('年份可以不填（绘画页，作者 2026-10-30「先不写年份」）：卡片那一行留空，不出 undefined', () => {
+    const { year: _drop, ...noYear } = ok.works[0];
+    const parsed = OtherWorksSchema.safeParse({ ...ok, works: [noYear] });
+    expect(parsed.success).toBe(true);
+    const groups = buildWorkGroups(cards(), parsed.data!, []);
+    expect(groups[1].tiles[0].status).toBe('');
+  });
 });
 
 describe('Work 页分组（buildWorkGroups）', () => {

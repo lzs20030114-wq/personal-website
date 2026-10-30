@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600">
+  <rect width="960" height="600" fill="white"/>
+  <!-- 绘画：一支斜放的笔，笔尖拖出一道起伏的线。2026-10-30 随「绘画」组新增。 -->
+  <path d="M352 470C404 380 466 524 540 446" fill="none" stroke="#303030" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M560 430L691 405L910 186L804 80L585 299Z" fill="none" stroke="#303030" stroke-width="56" stroke-linejoin="round"/>
+  <path d="M585 299L691 405" fill="none" stroke="#303030" stroke-width="56" stroke-linecap="round"/>
+</svg>
