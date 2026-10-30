@@ -45,7 +45,7 @@
  * 第二阶段「成什么」仍只有一种形（方形环平档那只方箱），待作者定词汇表后再分。
  */
 import type { RingUnitDef } from './skin-ring';
-import { SQUARE, buildSquareOrder, buildSquareUnits, squareHalfSide, SQUARE_REACH } from './skin-square';
+import { SQUARE, buildSquareOrder, buildSquareUnits, squareHalfSide, squareStructureAt, SQUARE_REACH } from './skin-square';
 import { SKIN, createSkinUnit, renderSmooth } from './skin-unit';
 import { SOLID, boxVerts, buildSolidTopology, fillSolidVerts, membranePanel, rotateVertsY, type SolidTopology } from './skin-solid';
 import { bakeIndexed } from '../linkage/gl3d';
@@ -96,11 +96,17 @@ export interface BandTrajectory {
   retractActive: number;
   /** 正向里形状还在变的最后一帧（成形在协议约六成处就到位，后面几十帧逐位相同；取帧只映射到会动的那段，免得先猛动再干等） */
   formActive: number;
+  /**
+   * 结构段（带键的那段）中心的节点序号与半长（节）。带间的膜按它对位（`membraneVerts`）：结构贴底的排法
+   * （2026-10-30）里三档的结构中心序号不同，按同一序号配对会把面档的台尖接到角档台面以下的布上。
+   */
+  mid: number;
+  midHalf: number;
 }
 
 /**
  * 轨迹烘焙：分片跑（`work` 按时间预算推进），好让台架在挂载后的头几帧里把它算完而不卡住主线程。
- * 一条 202 节的带全程 3000 步在桌面上约 1.5 s。
+ * 一条 202 节的带全程 3000 步在桌面上约 1.5 s（方台现用 169 节）。
  */
 export class TrajectoryBaker {
   readonly n: number;
@@ -116,9 +122,15 @@ export class TrajectoryBaker {
   private phase: 'form' | 'retract' | 'done' = 'form';
   private result: BandTrajectory | null = null;
 
+  private readonly mid: number;
+  private readonly midHalf: number;
+
   constructor(def: RingUnitDef, frames: FrameCounts = FRAMES) {
     this.unit = createSkinUnit(def.spec, def.opts);
     this.n = this.unit.n;
+    const st = squareStructureAt(def.spec);
+    this.mid = st ? st.start + (st.fs - 1) / 2 : (this.n - 1) / 2;
+    this.midHalf = st ? (st.fs - 1) / 2 : (this.n - 1) / 2;
     [this.smoothW, this.smoothP] = def.smooth;
     const spread = (k: number, total: number): number[] => Array.from({ length: k }, (_, i) => Math.round((i / (k - 1)) * total));
     this.formAt = spread(frames.form, SKIN.STEPS);
@@ -181,7 +193,7 @@ export class TrajectoryBaker {
     const n = this.n;
     const f0 = this.frames[0];
     // frames[1] = 收起态（初始摆位压向顶端）：烘完之前满场都是收着的单元，台架拿它烘整环
-    return { n, frames: [f0, hoistProfile(f0, n, HOIST.stowed)], footY: -f0[2 * n - 1] * SOLID.SCALE, platformTopY: -f0[2 * n - 1] * SOLID.SCALE, reach: SQUARE.RADIUS, retractActive: 0, formActive: 0 };
+    return { n, frames: [f0, hoistProfile(f0, n, HOIST.stowed)], footY: -f0[2 * n - 1] * SOLID.SCALE, platformTopY: -f0[2 * n - 1] * SOLID.SCALE, reach: SQUARE.RADIUS, retractActive: 0, formActive: 0, mid: this.mid, midHalf: this.midHalf };
   }
 
   /** 一口气烘完（守门与线稿用） */
@@ -241,17 +253,27 @@ export class TrajectoryBaker {
       reach: SQUARE.RADIUS + reach * SOLID.SCALE,
       retractActive: active,
       formActive,
+      mid: this.mid,
+      midHalf: this.midHalf,
     };
   }
 }
 
 /**
- * 方形单元那条带的节数：Lab 2-7 方形环立项时的 202 节（lead 22），与原来圆台的带一样长。方形环现行的 305 节是
- * 2026-09-02 为捏分编制加长的，多出来的全在上半截贴芯的素管里（形状逐点相同），立在方台上方会是一根一米来高的布筒。
+ * 方形单元那条带的节数。2026-10-25 起用 Lab 2-7 方形环立项时的 202 节（lead 22）：方形环现行的 305 节是 2026-09-02
+ * 为捏分编制加长的，多出来的全在上半截贴芯的素管里（形状逐点相同），立在方台上方会是一根一米来高的布筒。
+ * 2026-10-30 结构改贴底（见 UNIT_TIERS）后再缩到 169 节：最上面那段贴合只留到下限（面档 lead = SQUARE.LEAD_MIN = 8，
+ * 边 10、角 31），三档的垫与结构一节没动，成形的形状与锁定逐点相同（实测偏差 0）。成形后台面以上的带 97 → 83 px、
+ * 台面以下 118 → 65 px（台面到钉住端），整台短了约三成。
  */
-export const UNIT_BAND = 202;
-/** 方形单元的三档引擎定义（面 / 边 / 角，Lab 2-7 方形环平档的键谱）与二十条带的档位编制（下标 = 带序 j） */
-export const UNIT_TIERS: readonly RingUnitDef[] = buildSquareUnits(undefined, UNIT_BAND);
+export const UNIT_BAND = 169;
+/**
+ * 方形单元的三档引擎定义（面 / 边 / 角，Lab 2-7 方形环平档的键谱）与二十条带的档位编制（下标 = 带序 j）。
+ * 2026-10-30 改为结构贴底的排法（skin-square `squareWrapLow`，作者「每一次机构成型之后它的底面下面直接接这个单元的
+ * 最底端，而不是还要再支出来一段圆柱形的东西」）：键谱一颗没改，配平垫从结构上下各一半挪到结构上方，结构底下只接一段
+ * 短尾。成形的形状与锁定逐点相同；台底到钉住端 0.33 → 0.12 m（房间尺度）。
+ */
+export const UNIT_TIERS: readonly RingUnitDef[] = buildSquareUnits(undefined, UNIT_BAND, 'bottom');
 export const UNIT_ORDER: readonly number[] = buildSquareOrder();
 
 /** 已经烘好的三档轨迹（同一页面里换路由、重挂台架时直接拿，不重烘） */
@@ -259,7 +281,7 @@ const BAKED = new Map<string, BandTrajectory[]>();
 
 /**
  * 三档轨迹一起烘：三条引擎依次推进（分片，`work` 按时间预算），全部烘完才算完。三档的节点数相同（同一条
- * 202 节的带），钉住端高度相同（注册在底端）、平台面高度相同（方形环的对位构造），台架拿第 0 档定摆放。
+ * 169 节的带），钉住端高度相同（注册在底端）、平台面高度相同（方形环的对位构造），台架拿第 0 档定摆放。
  */
 export class UnitBaker {
   readonly n: number;
@@ -532,7 +554,8 @@ export interface Rig {
  * - stand 1.05：站着用——站姿肘高附近（BIFMA G1 站立桌可调到 1.18；吧台桌通行 1.0–1.1）。不当桌子的单元都落到这里；
  * - chair 0.74：配餐椅（座面 0.45）——桌面比座面高 0.27–0.30 是通行的桌椅高差；台面 0.15 厚、台底 0.59，腿进不去，
  *   所以餐椅那台的台边按 COHABIT.TABLE 落在膝盖前面；
- * - sofaFront 0.49：沙发正前方当茶几——资料要与座面齐或略低（0.40–0.45），但台面到吊带最下端有 0.48 m，再低吊带就戳到地上，0.49 是下限。
+ * - sofaFront 0.49：沙发正前方当茶几——资料要与座面齐或略低（0.40–0.45）。定这个数时台面到吊带最下端有 0.48 m、0.49 是下限；
+ *   2026-10-30 结构改贴底（UNIT_TIERS）后只剩约 0.27 m，已能落进资料范围，改不改待作者定。
  * 哪一台当谁的桌子、什么时候落由平面模型定（COHABIT.TABLE、CohabitSim.tableBy），这里只管高度。
  * 原来铺满时钉在 1.43 m（场地布局那个高度，接近站姿肩高），哪种桌子都不是。
  */
@@ -642,22 +665,48 @@ export function decimateTrajectory(traj: BandTrajectory, stride: number): BandTr
     });
     return out;
   });
-  return { ...traj, n: m, frames };
+  return { ...traj, n: m, frames, mid: traj.mid / stride, midHalf: traj.midHalf / stride };
 }
 
 /** 收起态整台网格的抽稀步长 */
 export const STOWED_STRIDE = 8;
 
 /**
+ * 膜的 B 边在 A 边第 i 个节点对面取哪个（小数）序号：两档结构中心对齐，中心两侧各 w 节（两档结构半长取小）
+ * 逐节对位（与七段谱时代按同一序号配对的读法相同：台面对台面），其余分段线性摊到带顶 / 带底。中心相同时恒等。
+ */
+export function membraneIndex(i: number, n: number, ma: number, mb: number, w: number): number {
+  if (ma === mb) return i;
+  const lo = ma - w;
+  const hi = ma + w;
+  if (i <= lo) return lo <= 0 ? mb - w : (i / lo) * (mb - w);
+  if (i >= hi) return hi >= n - 1 ? mb + w : mb + w + ((i - hi) / (n - 1 - hi)) * (n - 1 - mb - w);
+  return i - ma + mb;
+}
+
+/**
  * 带与带之间的膜（2026-10-25 随方形单元补上：没有它，方台俯视是一把放射状的窄带，读不出是一张方的台面；
  * 作者 10-23 讲收起态时也说的是「蒙皮、可折叠的布」）。几何 = Lab 2-5 / 2-7 那块织物膜（skin-solid `membranePanel`）：
  * A 边取带 j 的后剖口（它那一档、它那一帧），B 边取带 j+1 的前剖口；烘在方位角 0，摆放时转到 bandAngle(j)。
+ * 两档结构中心序号不同时（结构贴底的排法），B 边按 `membraneIndex` 在节点之间插值取点。
  * 半透明，台架在实体之后画（gl3d 半透明的三条硬约束）。
  */
 export function membraneVerts(a: BandTrajectory, fa: number, b: BandTrajectory, fb: number, count: number = SQUARE.COUNT): { verts: Float32Array; idx: Uint16Array } {
   const n = a.n;
   const A = a.frames[fa];
-  const B = b.frames[fb];
+  let B = b.frames[fb];
+  if (a.mid !== b.mid) {
+    const w = Math.min(a.midHalf, b.midHalf);
+    const R = new Float64Array(2 * n);
+    for (let i = 0; i < n; i++) {
+      const t = Math.max(0, Math.min(n - 1, membraneIndex(i, n, a.mid, b.mid, w)));
+      const k = Math.min(n - 2, Math.floor(t));
+      const u = t - k;
+      R[i] = B[k] + (B[k + 1] - B[k]) * u;
+      R[n + i] = B[n + k] + (B[n + k + 1] - B[n + k]) * u;
+    }
+    B = R;
+  }
   return membranePanel(
     { px: A.subarray(0, n), py: A.subarray(n, 2 * n), offY: 0 },
     { px: B.subarray(0, n), py: B.subarray(n, 2 * n), offY: 0 },

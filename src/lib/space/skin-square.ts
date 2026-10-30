@@ -274,13 +274,17 @@ export function squareSpec(
   h: number = SQUARE.H,
   band: number = SQUARE.BAND,
 ): SkinSpec {
+  return squareWrap(squareSeg(kMax, h), fTotal, leadAt, `k=${kMax}`, band).spec;
+}
+
+/** 一档的结构段（带梯挡的那段自由段：两端缓冲 + 方箱梯挡 + 端面板）——七段谱与结构贴底的排法共用 */
+export function squareSeg(kMax: number, h: number = SQUARE.H): SkinSeg {
   const b = squareBuffer(kMax, h);
   const fs = squareFree(kMax, b);
   const c = (fs - 1) / 2;
   const pw = squarePw(h);
   const bonds: SkinBond[] = squareLadder(kMax, pw).map((k) => [c - k, c + k, h / 100]);
-  const seg: SkinSeg = ['f', fs, bonds, [[c - pw, c + pw]]];
-  return squareWrap(seg, fTotal, leadAt, `k=${kMax}`, band).spec;
+  return ['f', fs, bonds, [[c - pw, c + pw]]];
 }
 
 /**
@@ -312,18 +316,70 @@ export function squareWrap(
 }
 
 /**
+ * 结构贴底的排法（2026-10-30，人猫同台的立体台 Lab 2-15；作者看单元成形后的样子：「每一次机构成型之后它的底面
+ * 下面直接接这个单元的最底端，而不是还要再支出来一段圆柱形的东西」）。
+ *
+ * 七段谱把配平垫上下各放一半，嘴心与档位全程无关，代价是结构底下挂着「隔离贴合 16 + 垫 + 尾 15」：成形后台底离
+ * 钉住端约 82 px（房间尺度约 0.33 m），就是台子下面那截贴着芯的布筒。这里把垫整个挪到结构上方：
+ *   面 / 边档 `[贴合 lead | 垫 (fTotal − fs) | 隔离 ISO | 结构 | 尾 T]`，角档（没有垫）`[贴合 lead | 结构 | 尾 T]`。
+ * 结构底下只剩它自己的下侧缓冲和一段短尾。角档尾取 TAIL_MIN；面 / 边档比角档短的那截自由段收缩到终点时
+ * 短 `(fTotal − fs)·R1` 节长，它们的尾多给这一半（取整），三档台面在收缩终点一样高（实测差 < 1 px）。
+ *
+ * - 结构段一节没动，结构上方仍隔着 ISO ⇒ 成形的形状、锁定集合与七段谱逐点相同（实测 ≤ 0.14 px）；
+ * - 贴合总量与自由总量与七段谱相同 ⇒ 带长、带顶的走法不变，只是台子在带上的位置往下挪了；
+ * - 台底离钉住端 82 → 29 px（实测，三档差 < 1 px）；结构底下贴着芯的结构下侧缓冲，角档最长，是剩下的大头；
+ * - 代价：只在收缩终点对齐。收缩途中角档的自由段长、结构偏高，三档台面中线差到十几 px（第 300 步 21 px），
+ *   全部扣上（约第 675 步）后 ≤ 7 px，第 900 步起 < 1 px；
+ * - 结构的中心序号随档位变（202 节带上：面 105+42、边 95+48、角 64+66）⇒ 按节点序号配对的东西（带与带之间的膜）
+ *   要按结构中心对位，见 cohabit-solid 的 `membraneVerts`。
+ */
+export function squareWrapLow(
+  seg: SkinSeg,
+  fTotal: number = squareFreeTotal(),
+  who = '',
+  band: number = SQUARE.BAND,
+): { spec: SkinSpec; base: number } {
+  const fs = seg[1];
+  const pad = fTotal - fs;
+  const tail = SQUARE.TAIL_MIN + Math.round((pad * SKIN.R1) / 2);
+  const lead = band - fTotal - tail - (pad > 0 ? SQUARE.ISO : 0);
+  if (pad < 0 || lead < SQUARE.LEAD_MIN) throw new Error(`方形环档位越界（结构贴底）：${who} 垫=${pad} lead=${lead} tail=${tail}`);
+  return pad > 0
+    ? { spec: [['g', lead], ['f', pad, []], ['g', SQUARE.ISO], seg, ['g', tail]], base: lead + pad + SQUARE.ISO }
+    : { spec: [['g', lead], seg, ['g', tail]], base: lead };
+}
+
+/** 谱里结构段（带键的那段自由段）的起点与节数；没有键的谱返回 null */
+export function squareStructureAt(spec: SkinSpec): { start: number; fs: number } | null {
+  let at = 0;
+  for (const s of spec) {
+    if (s[0] === 'f' && s[2].length > 0) return { start: at, fs: s[1] };
+    at += s[1];
+  }
+  return null;
+}
+
+/**
  * 三档的引擎定义（同一张方箱的整形选项，只换键谱）。`band` 省略 = 这一族现行的带长（逐位不变）；
  * 人猫同台的立体台（Lab 2-15）传 202：这一族立项时那条带（lead 22），形状与长带逐点相同（尾端对齐），
  * 只少上半截贴芯的素管——那一截是 2026-09-02 为捏分编制加长的。
+ * `place` 省略 = 七段谱（Lab 2-7 等全部现行调用逐位不变）；`'bottom'` = 结构贴底（`squareWrapLow`，只给 Lab 2-15）。
  */
-export function buildSquareUnits(tiers: readonly SquareTier[] = SQUARE_TIERS, band: number = SQUARE.BAND): RingUnitDef[] {
+export function buildSquareUnits(
+  tiers: readonly SquareTier[] = SQUARE_TIERS,
+  band: number = SQUARE.BAND,
+  place: 'center' | 'bottom' = 'center',
+): RingUnitDef[] {
   const fTotal = squareFreeTotal();
   const opts: SkinUnitOpts = skinSiteOpts(STEPPED);
   return tiers.map((t) => ({
-    key: band === SQUARE.BAND ? `sq-${t.en}` : `sq-${t.en}-b${band}`,
+    key: (band === SQUARE.BAND ? `sq-${t.en}` : `sq-${t.en}-b${band}`) + (place === 'bottom' ? '-low' : ''),
     zh: `${t.name}档`,
     en: t.en,
-    spec: squareSpec(t.k, fTotal, squareLead(fTotal, band), SQUARE.H, band),
+    spec:
+      place === 'bottom'
+        ? squareWrapLow(squareSeg(t.k), fTotal, `k=${t.k}`, band).spec
+        : squareSpec(t.k, fTotal, squareLead(fTotal, band), SQUARE.H, band),
     opts,
     smooth: [3, 1] as const,
   }));

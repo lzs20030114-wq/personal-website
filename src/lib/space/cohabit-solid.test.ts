@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { BRIDGE_BASE, FRAMES, FURN_ERGO, HOIST, STEADY, TABLE_TOP, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_ORDER, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
+import { BRIDGE_BASE, FRAMES, FURN_ERGO, HOIST, STEADY, TABLE_TOP, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_ORDER, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
 import { planLayout } from './unit-activation';
 import { FIGURE, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
 import { RING } from './skin-ring';
 import { SOLID } from './skin-solid';
-import { SQUARE, SQUARE_PEAK, SQUARE_REACH, buildSquareUnits, squareHalfSide, squareRadiusAt } from './skin-square';
+import { SQUARE, SQUARE_PEAK, SQUARE_REACH, buildSquareUnits, squareHalfSide, squareRadiusAt, squareStructureAt } from './skin-square';
 import { CAT_COATS, catMesh, figureMesh, styleKey as styleKeyOf, type HumanStyle } from './figure';
 import { OUTFITS } from '../../../components/lab/figurePalette';
 import { partBox } from './mesh-shell';
@@ -47,24 +47,64 @@ describe('带子轨迹关键帧', () => {
     for (let j = 0; j < UNIT_ORDER.length; j++) if (UNIT_ORDER[j] === 2) expect(Math.abs(Math.sin(2 * bandAngle(j)))).toBeCloseTo(1, 9);
   });
 
-  it('用的是方形环立项时那条 202 节的带：形状与现行 305 节那条逐点相同（尾端对齐），只少上半截贴芯的素管', () => {
+  it('结构贴底、带缩到 169 节（2026-10-30）：成形的形状与 Lab 2-7 那条（305 节、七段谱）逐点相同，台底下那截布短一大截', () => {
     expect(traj.n).toBe(UNIT_BAND);
+    // 最上面那段贴合只留到下限：最短的那档（面档）lead = LEAD_MIN
+    expect(Math.min(...UNIT_TIERS.map((d) => d.spec[0][1]))).toBe(SQUARE.LEAD_MIN);
     const long = new TrajectoryBaker(buildSquareUnits()[0]).runAll();
     expect(long.n).toBe(SQUARE.BAND);
     const a = traj.frames[STEADY.formed];
     const b = long.frames[STEADY.formed];
     const na = traj.n;
     const nb = long.n;
+    const sa = squareStructureAt(UNIT_TIERS[0].spec)!;
+    const sb = squareStructureAt(buildSquareUnits()[0].spec)!;
+    expect(sa.fs).toBe(sb.fs);
+    const c = (sa.fs - 1) / 2;
     let dx = 0;
     let dy = 0;
-    for (let i = 0; i < na; i++) {
-      dx = Math.max(dx, Math.abs(a[na - 1 - i] - b[nb - 1 - i]));
-      dy = Math.max(dy, Math.abs(a[2 * na - 1 - i] - a[2 * na - 1] - (b[2 * nb - 1 - i] - b[2 * nb - 1])));
+    for (let i = 0; i < sa.fs; i++) {
+      dx = Math.max(dx, Math.abs(a[sa.start + i] - b[sb.start + i]));
+      dy = Math.max(dy, Math.abs(a[na + sa.start + i] - a[na + sa.start + c] - (b[nb + sb.start + i] - b[nb + sb.start + c])));
     }
-    expect(dx * 100).toBeLessThan(0.01); // px
-    expect(dy * 100).toBeLessThan(1);
-    expect(Math.abs(long.reach - traj.reach)).toBeLessThan(0.01);
+    expect(dx * 100).toBeLessThan(0.3); // px：结构段一节没动，形状与锁定照旧
+    expect(dy * 100).toBeLessThan(0.3);
+    expect(Math.abs(long.reach - traj.reach)).toBeLessThan(0.05);
+    // 台底离钉住端（px）：七段谱 ≈ 82（隔离贴合 16 + 垫 + 尾 15 都挂在结构底下），结构贴底 ≈ 29（只剩结构自己的下侧缓冲 + 短尾）
+    const bottomAbove = (f: Float64Array, n: number, reach: number): number => {
+      let bot = Infinity;
+      for (let i = 0; i < n; i++) if (f[i] > reach * 0.5) bot = Math.min(bot, f[n + i]);
+      return (bot - f[2 * n - 1]) * 100;
+    };
+    const reachA = Math.max(...a.subarray(0, na));
+    const reachB = Math.max(...b.subarray(0, nb));
+    expect(bottomAbove(b, nb, reachB)).toBeGreaterThan(75);
+    expect(bottomAbove(a, na, reachA)).toBeLessThan(32);
+    // 三档台面在收缩终点一样高，台底离钉住端都在 32 px 以内
+    for (const tr of trajs) {
+      const f = tr.frames[STEADY.formed];
+      expect(bottomAbove(f, tr.n, Math.max(...f.subarray(0, tr.n)))).toBeLessThan(32);
+    }
   }, 30_000);
+
+  it('膜按结构中心对位：三档结构中心序号不同（结构贴底），台面附近膜的两边一样高；中心相同时就是按序号配对', () => {
+    expect(new Set(trajs.map((t) => t.mid)).size).toBe(3);
+    const n = traj.n;
+    for (let i = 0; i < n; i += 7) expect(membraneIndex(i, n, 100, 100, 40)).toBe(i);
+    for (const [ta, tb] of [[0, 2], [2, 0], [0, 1], [1, 2]] as const) {
+      const A = trajs[ta], B = trajs[tb];
+      const w = Math.min(A.midHalf, B.midHalf);
+      // 端点钉住、单调
+      expect(membraneIndex(0, n, A.mid, B.mid, w)).toBeCloseTo(0, 9);
+      expect(membraneIndex(n - 1, n, A.mid, B.mid, w)).toBeCloseTo(n - 1, 9);
+      for (let i = 1; i < n; i++) expect(membraneIndex(i, n, A.mid, B.mid, w)).toBeGreaterThan(membraneIndex(i - 1, n, A.mid, B.mid, w));
+      // 成形后：两档结构中心两侧 30 节内（台面那一段）膜两边的高度差 < 2 px；按同一序号配对会差到半个箱高
+      const fa = A.frames[STEADY.formed], fb = B.frames[STEADY.formed];
+      let d = 0;
+      for (let k = -30; k <= 30; k++) d = Math.max(d, Math.abs(fa[n + A.mid + k] - fb[n + B.mid + k]) * 100);
+      expect(d).toBeLessThan(2);
+    }
+  });
 
   it('俯视是方的：二十个平台外缘点都落在同一个正方形的边上（偏差 < 1 px）', () => {
     const a = squareHalfSide(SQUARE_REACH);
@@ -479,7 +519,7 @@ describe('单元铺满整间房（cover: room，2026-10-27 作者「单元兼作
       const y = rigYForTop(rig, traj, top);
       expect(unitFootY(rig, traj.footY, 1, y)).toBeLessThan(ROOM.FLOOR_Y);
     }
-    expect(TABLE_TOP.sofaFront - hang).toBeLessThan(0.02); // 已经是能落到的最低
+    expect(hang).toBeLessThan(0.3); // 2026-10-30 结构贴底后台面到吊带最下端约 0.27 m（七段谱时 0.48 m，茶几 0.49 是那时的下限）
     expect(TABLE_TOP.chair - FURN_ERGO.chair.seatH).toBeGreaterThanOrEqual(0.27);
     expect(TABLE_TOP.chair - FURN_ERGO.chair.seatH).toBeLessThanOrEqual(0.3);
   });
