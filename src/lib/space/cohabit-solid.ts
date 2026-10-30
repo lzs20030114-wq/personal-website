@@ -49,8 +49,10 @@ import type { RingUnitDef } from './skin-ring';
 import { SQUARE, buildSquareOrder, buildSquareUnits, squareHalfSide, squareStructureAt, SQUARE_REACH } from './skin-square';
 import { SKIN, buildUnit, createSkinUnit, renderSmooth, type SkinUnit } from './skin-unit';
 import { MECH, bandKeyMesh, bondSides, concatParts, hangerMesh, unitMechMesh, type MeshPart } from './unit-mechanism';
-import { SOLID, boxVerts, buildSolidTopology, fillSolidVerts, membranePanel, rotateVertsY, type SolidTopology } from './skin-solid';
+import { SOLID, boxVerts, buildSolidTopology, fillSolidVerts, membranePanel, offsetProfile, rotateVertsY, type SolidTopology } from './skin-solid';
 import { bakeIndexed } from '../linkage/gl3d';
+import { bandTriIndex, bandVerts } from '../linkage/skin';
+import type { Vec3 } from '../linkage/solver3d';
 import { MM_PER_UNIT, RIG_ANCHOR_Y, RIG_SCALE, RING_GRID_FIT, RING_GRID_PIVOT_Y, ROOM, roomBoxesBySpan, viewFitBySpan, type RingGridView } from './skin-grid';
 import type { PlanLayout } from './unit-activation';
 import { COHABIT, SQUARE_SCALE, bandAngle, type FurnRect } from './cohabit';
@@ -700,6 +702,21 @@ export function membraneJoins(ka: number, kb: number, frames: FrameCounts = FRAM
   return hoistA === hoistB;
 }
 
+/**
+ * 蒙皮的接缝片连不连（2026-10-30）：只在门的边上张开——一侧在让路、另一侧没在让路（拉了就是一片从台缘斜扯到平贴的带上的皮）。
+ * 两侧都在让路时照连（两条都平贴在芯上，中间就是一道普通的带缝）；与膜一样，升降段与成形段之间不连。
+ * 膜（membraneJoins）在门的两侧一律不拉，外皮若照搬，几条带一起让路时平贴的那一截会露出一道道竖缝。
+ */
+export function shellJoins(ka: number, kb: number, frames: FrameCounts = FRAMES, doorA = false, doorB = false): boolean {
+  const da = doorA || isDoorFrame(ka, frames);
+  const db = doorB || isDoorFrame(kb, frames);
+  if (da !== db) return false;
+  const s = frames.form + frames.retract;
+  const hoistA = ka >= s && ka < s + frames.hoist;
+  const hoistB = kb >= s && kb < s + frames.hoist;
+  return hoistA === hoistB;
+}
+
 /** 装置的摆放：缩放、整体下移、格子的世界坐标 */
 export interface Rig {
   /** 装置自身坐标系 → 世界的均匀缩放（4×4 = RIG_SCALE，8×8 再按格距等比缩，方形单元再乘 SQUARE_SCALE） */
@@ -947,6 +964,121 @@ export function bakeUnitSkin(trajs: readonly BandTrajectory[], frame: number, or
 /** 一块膜烘好（逐块摆的那些：相邻两条带帧不同的单元） */
 export function bakeMembrane(a: BandTrajectory, fa: number, b: BandTrajectory, fb: number): Float32Array {
   const m = membraneVerts(a, fa, b, fb);
+  return bakeIndexed(m.verts, m.idx);
+}
+
+/**
+ * 单元的外皮（2026-10-30，作者「蒙皮和这个绿色的布只是设计阶段的临时状态，现在设计一个真正的蒙皮在上面作为单元的外表面，
+ * 也是可以开可以关的」）。带子与带间的膜是结构与设计过程；外皮是做出来的东西给人看、给人摸的那一层。
+ *
+ * 一层连续、不透明的皮把整台包住，分两种片：每条带外侧一片**盖片**（跟着这条带走），相邻两条带之间一片**接缝片**
+ * （跨过带缝，与膜同一种直纹面）——绕一圈正好闭合。几何 = 带子剖面沿外法向偏出 THICK/2 + GAP（skin-solid `offsetProfile`），
+ * 两端各让出 END 节：外皮离芯心 RADIUS + 2.1，夹圈内壁在 RADIUS + 2.5，故外皮两头正好塞进上下夹环的外圈里面。
+ * 让路时接缝片张开、盖片跟着它那条带平贴到芯上（与膜同一条规则 `membraneJoins`）：皮按带分片，能开门的是片与片之间那道缝。
+ * 这是建模假设（外皮怎么分片、接缝怎么张开），与 项目二_单元建模.md §2 的机构读法同一性质，待作者确认。
+ */
+export const SHELL = {
+  /** 外皮离带子外表面的间隙（装置单位，房间尺度 ≈ 2.4 mm）：比夹圈内壁的 GAP（1 单位）小，外皮两头才塞得进夹圈 */
+  GAP: 0.6,
+  /** 两端各让出的节数（藏进夹环；夹环夹住带子端头 MECH.CLAMP_N 节） */
+  END: 2,
+} as const;
+
+/** 收起态那份抽稀轨迹上让出的节数（抽稀步长 8，一节就盖过夹环） */
+export const SHELL_END_LOW = 1;
+
+/** 外皮剖面：引擎帧（可按上夹环截）→ 装置系偏移线 [r…, y…] */
+function shellProfile(traj: BandTrajectory, frame: number, reelPy?: number): Float64Array {
+  const n = traj.n;
+  const f = reelPy === undefined ? traj.frames[frame] : clipToReel(traj.frames[frame], n, reelPy);
+  return offsetProfile(f.subarray(0, n), f.subarray(n, 2 * n), n, SQUARE.RADIUS, SOLID.SCALE, SQUARE.THICK / 2 + SHELL.GAP);
+}
+
+/** 盖片：一条带外侧那片（前剖口 +DEPTH/2 → 后剖口 −DEPTH/2），装置系、方位角 0；reelPy 同 bandVertsAt */
+export function shellCoverVerts(traj: BandTrajectory, frame: number, reelPy?: number, end: number = SHELL.END): { verts: Float32Array; idx: Uint16Array } {
+  const n = traj.n;
+  const o = shellProfile(traj, frame, reelPy);
+  const A: Vec3[] = [];
+  const B: Vec3[] = [];
+  for (let i = end; i < n - end; i++) {
+    A.push({ x: o[i], y: o[n + i], z: SQUARE.DEPTH / 2 });
+    B.push({ x: o[i], y: o[n + i], z: -SQUARE.DEPTH / 2 });
+  }
+  return { verts: bandVerts(A, B), idx: bandTriIndex(A.length) };
+}
+
+/**
+ * 接缝片：带 a 的前剖口（+DEPTH/2，方位角朝带 b 那侧）→ 带 b 的后剖口（−DEPTH/2，转过一个角节距）——正好跨过两条带之间那道缝，
+ * 与盖片首尾相接、不重叠。节点对位与膜（membraneVerts）相同：两档结构中心不同时，B 边按 membraneIndex 在节点之间插值；
+ * 两边都按同一个上夹环截（clipToReel 对没高过夹环的带逐位不变）。
+ * 注：膜的 A/B 取的是带 a 的后剖口与带 b 的前剖口，跨过的是两条带本身加中间的缝（半透明，看不出来）；外皮不透明，必须只跨缝。
+ */
+export function shellGoreVerts(
+  a: BandTrajectory,
+  fa: number,
+  b: BandTrajectory,
+  fb: number,
+  count: number = SQUARE.COUNT,
+  reelPy?: number,
+  end: number = SHELL.END,
+): { verts: Float32Array; idx: Uint16Array } {
+  const n = a.n;
+  const oa = shellProfile(a, fa, reelPy);
+  let ob = shellProfile(b, fb, reelPy);
+  if (a.mid !== b.mid) {
+    const w = Math.min(a.midHalf, b.midHalf);
+    const R = new Float64Array(2 * n);
+    for (let i = 0; i < n; i++) {
+      const t = Math.max(0, Math.min(n - 1, membraneIndex(i, n, a.mid, b.mid, w)));
+      const k = Math.min(n - 2, Math.floor(t));
+      const u = t - k;
+      R[i] = ob[k] + (ob[k + 1] - ob[k]) * u;
+      R[n + i] = ob[n + k] + (ob[n + k + 1] - ob[n + k]) * u;
+    }
+    ob = R;
+  }
+  const dTheta = (2 * Math.PI) / count;
+  const c = Math.cos(dTheta);
+  const sn = Math.sin(dTheta);
+  const t = SQUARE.DEPTH / 2;
+  const A: Vec3[] = [];
+  const B: Vec3[] = [];
+  for (let i = end; i < n - end; i++) {
+    A.push({ x: oa[i], y: oa[n + i], z: t });
+    const r = ob[i];
+    B.push({ x: r * c + t * sn, y: ob[n + i], z: r * sn - t * c });
+  }
+  return { verts: bandVerts(A, B), idx: bandTriIndex(A.length) };
+}
+
+const asParts = (m: { verts: Float32Array; idx: Uint16Array }, angle: number): { verts: Float32Array; idx: Uint32Array } => ({
+  verts: rotateVertsY(Float32Array.from(m.verts), { radius: 0, angle }),
+  idx: Uint32Array.from(m.idx),
+});
+
+/** 整台的外皮（二十片盖片 + 二十片接缝片，同一帧）：静止态用，盖片与接缝片各烘一份（台架分两个色调画） */
+export function bakeUnitShell(
+  trajs: readonly BandTrajectory[],
+  frame: number,
+  order: readonly number[] = UNIT_ORDER,
+  end: number = SHELL.END,
+): { cover: Float32Array; gore: Float32Array } {
+  const covers = order.map((t, j) => asParts(shellCoverVerts(trajs[t], frame, undefined, end), bandAngle(j)));
+  const gores = order.map((t, j) => asParts(shellGoreVerts(trajs[t], frame, trajs[order[(j + 1) % order.length]], frame, order.length, undefined, end), bandAngle(j)));
+  const c = concatMeshes(covers);
+  const g = concatMeshes(gores);
+  return { cover: bakeIndexed(c.verts, c.idx), gore: bakeIndexed(g.verts, g.idx) };
+}
+
+/** 一片盖片烘好（逐条摆的带子用；键与带子网格同一个 key） */
+export function bakeShellCover(traj: BandTrajectory, frame: number, reelPy?: number): Float32Array {
+  const m = shellCoverVerts(traj, frame, reelPy);
+  return bakeIndexed(m.verts, m.idx);
+}
+
+/** 一片接缝片烘好 */
+export function bakeShellGore(a: BandTrajectory, fa: number, b: BandTrajectory, fb: number, reelPy?: number): Float32Array {
+  const m = shellGoreVerts(a, fa, b, fb, SQUARE.COUNT, reelPy);
   return bakeIndexed(m.verts, m.idx);
 }
 

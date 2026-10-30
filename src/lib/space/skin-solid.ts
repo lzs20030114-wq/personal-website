@@ -316,3 +316,43 @@ export function membranePanel(
   return { verts: bandVerts(A, B), idx: bandTriIndex(n) };
 }
 
+
+/**
+ * 剖面朝外偏出一层（单元外皮用，2026-10-30 作者「设计一个真正的蒙皮在上面作为单元的外表面」）。
+ *
+ * 输入引擎剖面（px 离轴、py 引擎纵坐标），输出装置系的一条偏移线 [r…, y…]：
+ * r = radius + px·scale 沿外法向偏 d，y = offY − py·scale 沿外法向偏 d（世界 Y 向下为正）。
+ * 「外」= 折叠体外侧：剖面从带顶走到带底，贴芯那段的外侧是离轴方向（+r），台面的外侧朝上、
+ * 端面朝外、底面朝下——即 fillSolidVerts 那条法向的反方向（那条在贴芯段指向芯）。
+ * 切线用 ±span 个节点的差分（比 fillSolidVerts 的 ±1 宽）：台子凹角处的半径只有一两节，
+ * 偏 d 时按 ±1 取法向会把外皮在凹角里折出一个小环，放宽窗口就把它倒成一个圆角。
+ */
+export function offsetProfile(
+  px: ArrayLike<number>,
+  py: ArrayLike<number>,
+  n: number,
+  radius: number,
+  scale: number,
+  d: number,
+  offY = 0,
+  span = 2,
+): Float64Array {
+  const out = new Float64Array(2 * n);
+  for (let i = 0; i < n; i++) {
+    const i0 = Math.max(0, i - span);
+    const i1 = Math.min(n - 1, i + span);
+    let tx = ((px[i1] as number) - (px[i0] as number)) * scale;
+    let ty = -((py[i1] as number) - (py[i0] as number)) * scale;
+    const L = Math.sqrt(tx * tx + ty * ty);
+    if (L > 1e-12) {
+      tx /= L;
+      ty /= L;
+    } else {
+      tx = 0;
+      ty = 1;
+    }
+    out[i] = radius + (px[i] as number) * scale + ty * d;
+    out[n + i] = offY - (py[i] as number) * scale - tx * d;
+  }
+  return out;
+}

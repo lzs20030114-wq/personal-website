@@ -41,13 +41,18 @@ import {
   figureYaw,
   furnitureBoxes,
   membraneJoins,
+  shellJoins,
   pickUnitBands,
   bandTop,
   DOOR_EPS,
   bakeBandKeys,
   bakeHanger,
+  bakeShellCover,
+  bakeShellGore,
   bakeUnitKeys,
   bakeUnitMech,
+  bakeUnitShell,
+  SHELL_END_LOW,
   platesMesh,
   platformBand,
   platformSide,
@@ -90,6 +95,11 @@ import {
  * 带与带之间的膜（2026-10-25 随方形单元补上，没有它方台俯视是一把放射状的窄带）：静止态整台烘一份；过渡中的单元逐对摆，
  * 两侧帧相同的取缓存、不同的现烘。半透明，在实体之后从远到近画。
  *
+ * **蒙皮（2026-10-30，作者「蒙皮和这个绿色的布只是设计阶段的临时状态……设计一个真正的蒙皮在上面作为单元的外表面，可以开可以关」）**：
+ * 一层连续、不透明的外皮把整台包住（cohabit-solid `SHELL`：每条带一片盖片 + 相邻两条带之间一片接缝片，两头塞进上下夹环），
+ * 默认开。开着时：静止态的单元只画外皮（带子、键、带间的膜都在皮里面，不画）；有带子在让路的单元，门那里接缝片张开，
+ * 带子与键照画，从门口看得见里面。关掉 = 回到结构视图（带子 + 键 + 半透明的膜）。
+ *
  * 案例页主图与主页预览用同一台（`controls={false}`）：没有控制条，拖拽旋转照常。
  */
 const VIEWS = [
@@ -112,6 +122,15 @@ const PAD_DARK: [number, number, number] = [0.04, 0.045, 0.05];
 const PAD_LITE: [number, number, number] = [0.2, 0.21, 0.23];
 const ROD_DARK: [number, number, number] = [0.4, 0.16, 0.07];
 const ROD_LITE: [number, number, number] = [0.95, 0.5, 0.28];
+/**
+ * 蒙皮的颜色（作者「要有高科技感，也不要特别抢眼」）：低饱和、略偏冷的钛灰（哑光金属）。试过四档（2026-10-30 截图对比）：
+ * 石墨（暗）与房间混成一片、单元读不出形；珍珠白最抢眼；带青的深潭色把「颜色只表示项目」的界线弄混。取钛灰——比夹环的拉丝铝
+ * 暗一档（夹环与吊杆读得出来），比房间亮得多（单元从暗背景里读得出形）。接缝片比盖片暗约一成，一圈二十道细缝读成分片的外壳，不另画线
+ */
+export const SHELL_DARK: [number, number, number] = [0.16, 0.175, 0.19];
+export const SHELL_LITE: [number, number, number] = [0.66, 0.7, 0.73];
+export const SEAM_DARK: [number, number, number] = [0.145, 0.158, 0.172];
+export const SEAM_LITE: [number, number, number] = [0.6, 0.637, 0.665];
 const FURN_DARK: [number, number, number] = [0.16, 0.15, 0.13];
 const FURN_LITE: [number, number, number] = [0.52, 0.48, 0.42];
 /** 事件连线（与平面台架同一套配色：绿 共视 / 紫 共温 / 莲粉 共触 / 墨 交接） */
@@ -138,12 +157,13 @@ const COPY = {
     title: '人猫同台 · 立体',
     sub: (side: number, roomH: number) => `8×8 · 方台边长 ${side.toFixed(2)} m · 房高 ${roomH.toFixed(2)} m · ${SCENE.people} 位访客 · ${SCENE.cats} 只猫`,
     hint: '拖拽旋转 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回、给人让路 · 控制在实验室',
-    hintCtl: '拖拽旋转 · 空间三档对照 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回，挡路的带各自收回 · 带子形状取自三条引擎（每档一条）的关键帧 · 访客的穿着与猫的花色每一场随机、不重样',
+    hintCtl: '拖拽旋转 · 空间三档对照 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回，挡路的带各自收回 · 蒙皮可关掉看里面的带子与键 · 带子形状取自三条引擎（每档一条）的关键帧 · 访客的穿着与猫的花色每一场随机、不重样',
     baking: (p: number) => `算带子轨迹 ${Math.round(p * 100)}%`,
     line: (t: number, formed: number, total: number, c: Record<EventKind, number>) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · 成形 ${formed} / ${total} · 共视 ${c.gaze} · 共温 ${c.warmth} · 共触 ${c.touch} · 交接 ${c.pass}`,
     aria: '一间房里 8×8 个方形的收缩张紧外皮单元平时收在天花下，六位访客在地上走、站、坐，两只猫在方台上；单元按人猫同台的规则落下成形、收回，挡路的带各自收回',
     space: '空间',
+    shell: '蒙皮',
     run: '运转',
     time: '时间',
     reset: '重来',
@@ -153,12 +173,13 @@ const COPY = {
     title: 'People and cats together, in 3D',
     sub: (side: number, roomH: number) => `8×8 · square platform ${side.toFixed(2)} m · room ${roomH.toFixed(2)} m high · ${SCENE.people} visitors · ${SCENE.cats} cats`,
     hint: 'Drag to orbit · units rest stowed at the ceiling, then descend, form, retract and give way under the Lab 2-14 rules · controls in the lab',
-    hintCtl: 'Drag to orbit · three spaces to compare · units rest stowed at the ceiling, then descend and form under the Lab 2-14 rules, bands in the way retract on their own · band shapes come from three engine runs, one per depth · outfits and coats are dealt at random each run, no two alike',
+    hintCtl: 'Drag to orbit · three spaces to compare · units rest stowed at the ceiling, then descend and form under the Lab 2-14 rules, bands in the way retract on their own · turn the skin off to see the bands and keys inside · band shapes come from three engine runs, one per depth · outfits and coats are dealt at random each run, no two alike',
     baking: (p: number) => `baking band trajectory ${Math.round(p * 100)}%`,
     line: (t: number, formed: number, total: number, c: Record<EventKind, number>) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · formed ${formed} / ${total} · co-gaze ${c.gaze} · co-warmth ${c.warmth} · contact ${c.touch} · crossing ${c.pass}`,
     aria: 'A room with an 8×8 field of square contracting-skin units stowed at the ceiling; six visitors walk, stand and sit on the floor, two cats live on the square platforms; units descend, form and retract under the cohabitation rules and bands in the way retract on their own',
     space: 'space',
+    shell: 'skin',
     run: 'run',
     time: 'time',
     reset: 'restart',
@@ -237,6 +258,8 @@ export function CohabitSpaceBench({
   const timeRef = useRef<number>(TIME_DEF);
   const [timeScale, setTimeScale] = useState<number>(TIME_DEF);
   const [space, setSpace] = useState<SpaceMode>('live');
+  const shellRef = useRef(true);
+  const [shell, setShell] = useState(true);
   const [view, setView] = useState<ViewKey>('axon');
   const [hud, setHud] = useState<{ t: number; formed: number; total: number; counts: Record<EventKind, number>; bake: number; note: string; side: number; roomH: number }>({
     t: 0,
@@ -310,6 +333,9 @@ export function CohabitSpaceBench({
       R.addMesh('ring-stowed-a', idle.a);
       R.addMesh('ring-stowed-b', idle.b);
       R.addMesh('skin-stowed', bakeUnitSkin([preLow], 1, flat));
+      const preShell = bakeUnitShell([preLow], 1, flat, SHELL_END_LOW);
+      R.addMesh('shell-stowed-c', preShell.cover);
+      R.addMesh('shell-stowed-g', preShell.gore);
       const plates = platesMesh(rig);
       R.addMesh('plates', bakeIndexed(plates.verts, plates.idx));
     }
@@ -343,6 +369,7 @@ export function CohabitSpaceBench({
       const k = bakeBandKeys(trajs[tier], frame, reelPy);
       R.addMesh(`band-${key}-k`, k.pad);
       R.addMesh(`band-${key}-r`, k.rod);
+      R.addMesh(`band-${key}-s`, bakeShellCover(trajs[tier], frame, reelPy));
       bandMeshDone.add(key);
     };
     // 每台的上下夹环与芯只随「上夹环在哪一帧」变（pickUnitBands 给的那一帧），按帧烘一次留着
@@ -361,6 +388,16 @@ export function CohabitSpaceBench({
       if (trajs && !skinDone.has(id)) {
         R.addMesh(id, bakeMembrane(trajs[ta], k, trajs[tb], k));
         skinDone.add(id);
+      }
+      return id;
+    };
+    // 逐片摆的接缝片：两侧帧相同、都没被上夹环截时按（档 A, 档 B, 帧）烘一次留着，其余逐帧现算（与膜同一套）
+    const goreDone = new Set<string>();
+    const ensureGore = (ta: number, tb: number, k: number): string => {
+      const id = `gore-${ta}-${tb}-${k}`;
+      if (trajs && !goreDone.has(id)) {
+        R.addMesh(id, bakeShellGore(trajs[ta], k, trajs[tb], k));
+        goreDone.add(id);
       }
       return id;
     };
@@ -390,6 +427,16 @@ export function CohabitSpaceBench({
       R.addMesh('skin-stowed', bakeUnitSkin(low, STEADY.stowed));
       R.addMesh('skin-straight', bakeUnitSkin(trajs, STEADY.straight));
       R.addMesh('skin-formed', bakeUnitSkin(trajs, STEADY.formed));
+      // 三个静止态的蒙皮（盖片 / 接缝片）各烘一份整台；收起态用抽稀的那份
+      for (const [id, src, frame, end] of [
+        ['stowed', low, STEADY.stowed, SHELL_END_LOW],
+        ['straight', trajs, STEADY.straight, undefined],
+        ['formed', trajs, STEADY.formed, undefined],
+      ] as const) {
+        const sh = bakeUnitShell(src, frame, UNIT_ORDER, end);
+        R.addMesh(`shell-${id}-c`, sh.cover);
+        R.addMesh(`shell-${id}-g`, sh.gore);
+      }
     };
 
     // ── 人与猫：按「姿态 + 步态相位格」各烘一份静态网格（每种颜色一件，身子与头分开），摆放走 drawMeshAt，每帧不重烘 ──
@@ -470,7 +517,12 @@ export function CohabitSpaceBench({
     let skinFormed: MeshPlace[] = [];
     const skinPerKey = new Map<string, MeshPlace[]>();
     const skinLoose: { data: Float32Array; place: MeshPlace }[] = [];
+    // 蒙皮的摆放（不透明，实体那一轮里画）
+    const coverPerKey = new Map<number, MeshPlace[]>();
+    const gorePerKey = new Map<string, MeshPlace[]>();
+    const goreLoose: { data: Float32Array; place: MeshPlace }[] = [];
     const render = (): void => {
+      const shellOn = shellRef.current;
       R.beginFrame(cam);
       skinStowed = [];
       skinStraight = [];
@@ -487,6 +539,9 @@ export function CohabitSpaceBench({
         const hangerPlaces: MeshPlace[] = [];
         skinPerKey.clear();
         skinLoose.length = 0;
+        coverPerKey.clear();
+        gorePerKey.clear();
+        goreLoose.length = 0;
         const at = (c: { x: number; z: number }, yaw: number, y: number): MeshPlace => ({ yaw, x: c.x, y, z: c.z, s: rig.s });
         // 这一帧每台该落到哪个高度：平面模型此刻把它当谁的桌子（COHABIT.TABLE、sim.tableBy）就落到那件家具的桌子高度，其余落到站着用的高度
         tableWant.fill(TABLE_TOP.stand);
@@ -532,20 +587,45 @@ export function CohabitSpaceBench({
           if (allStowed) stowedPlaces.push(at(c, 0, top));
           else if (allStraight) straightPlaces.push(at(c, 0, top));
           else if (allFormed) formedPlaces.push(at(c, 0, top));
-          else
+          else {
+            // 蒙皮开着时，带子与键只在有门的单元里画（从门口看得见里面）；其余全包在皮里
+            let door = false;
+            for (let j = 0; j < BANDS && !door; j++) if (sim.bandOpen[u * BANDS + j] > DOOR_EPS) door = true;
+            const bandsShow = !shellOn || door;
             for (let j = 0; j < BANDS; j++) {
               const fk = frameOf[u * BANDS + j];
               const clip = bandTop(trajs[UNIT_ORDER[j]], fk) > reelTop + 1e-9 ? reel + 1 : 0;
               const k = (clip * FRAME_KEY + UNIT_ORDER[j]) * FRAME_KEY + fk;
-              let list = perFrame.get(k);
-              if (!list) perFrame.set(k, (list = []));
-              list.push(at(c, bandAngle(j), top));
-              // 带 j 与带 j+1 之间的膜
+              if (bandsShow) {
+                let list = perFrame.get(k);
+                if (!list) perFrame.set(k, (list = []));
+                list.push(at(c, bandAngle(j), top));
+              }
+              if (shellOn) {
+                let list = coverPerKey.get(k);
+                if (!list) coverPerKey.set(k, (list = []));
+                list.push(at(c, bandAngle(j), top));
+              }
+              // 带 j 与带 j+1 之间：蒙皮开着画接缝片，关着画膜
               const j2 = (j + 1) % BANDS;
               const ka = frameOf[u * BANDS + j];
               const kb = frameOf[u * BANDS + j2];
+              const doorA = sim.bandOpen[u * BANDS + j] > DOOR_EPS;
+              const doorB = sim.bandOpen[u * BANDS + j2] > DOOR_EPS;
+              if (shellOn) {
+                // 接缝片只在门的边上张开（一侧让路、一侧没让）；两侧都在让路照连
+                if (!shellJoins(ka, kb, undefined, doorA, doorB)) continue;
+                const clipB = bandTop(trajs[UNIT_ORDER[j2]], kb) > reelTop + 1e-9;
+                if (ka === kb && !clip && !clipB) {
+                  const id = ensureGore(UNIT_ORDER[j], UNIT_ORDER[j2], ka);
+                  let gl = gorePerKey.get(id);
+                  if (!gl) gorePerKey.set(id, (gl = []));
+                  gl.push(at(c, bandAngle(j), top));
+                } else goreLoose.push({ data: bakeShellGore(trajs[UNIT_ORDER[j]], ka, trajs[UNIT_ORDER[j2]], kb, reelTop), place: at(c, bandAngle(j), top) });
+                continue;
+              }
               // 让路的带两侧不拉膜：那里是门（拉了就是一片从平贴的带斜扯到台缘的布）
-              if (!membraneJoins(ka, kb, undefined, sim.bandOpen[u * BANDS + j] > DOOR_EPS, sim.bandOpen[u * BANDS + j2] > DOOR_EPS)) continue;
+              if (!membraneJoins(ka, kb, undefined, doorA, doorB)) continue;
               if (ka === kb) {
                 const id = ensureSkin(UNIT_ORDER[j], UNIT_ORDER[j2], ka);
                 let sl = skinPerKey.get(id);
@@ -553,6 +633,7 @@ export function CohabitSpaceBench({
                 sl.push(at(c, bandAngle(j), top));
               } else skinLoose.push({ data: bakeMembrane(trajs[UNIT_ORDER[j]], ka, trajs[UNIT_ORDER[j2]], kb), place: at(c, bandAngle(j), top) });
             }
+          }
         }
         if (trajs) {
           R.drawMeshAt('hanger', hangerPlaces, ALU_DARK, ALU_LITE);
@@ -566,18 +647,26 @@ export function CohabitSpaceBench({
           syncPosts();
           R.drawMesh('posts', IDENT, RAIL_DARK, RAIL_LITE);
         }
-        R.drawMeshAt('ring-stowed-a', stowedPlaces, DARK_A, LITE_A);
-        R.drawMeshAt('ring-stowed-b', stowedPlaces, DARK_B, LITE_B);
-        R.drawMeshAt('ring-straight-a', straightPlaces, DARK_A, LITE_A);
-        R.drawMeshAt('ring-straight-b', straightPlaces, DARK_B, LITE_B);
-        R.drawMeshAt('ring-formed-a', formedPlaces, DARK_A, LITE_A);
-        R.drawMeshAt('ring-formed-b', formedPlaces, DARK_B, LITE_B);
-        R.drawMeshAt('ring-straight-k', straightPlaces, PAD_DARK, PAD_LITE);
-        R.drawMeshAt('ring-formed-k', formedPlaces, PAD_DARK, PAD_LITE);
-        R.drawMeshAt('ring-formed-r', formedPlaces, ROD_DARK, ROD_LITE);
-        skinStowed = stowedPlaces;
-        skinStraight = straightPlaces;
-        skinFormed = formedPlaces;
+        if (shellOn) {
+          // 静止态整台只画蒙皮（带子、键、膜都包在里面）
+          for (const [id, places] of [['stowed', stowedPlaces], ['straight', straightPlaces], ['formed', formedPlaces]] as const) {
+            R.drawMeshAt(`shell-${id}-c`, places, SHELL_DARK, SHELL_LITE);
+            R.drawMeshAt(`shell-${id}-g`, places, SEAM_DARK, SEAM_LITE);
+          }
+        } else {
+          R.drawMeshAt('ring-stowed-a', stowedPlaces, DARK_A, LITE_A);
+          R.drawMeshAt('ring-stowed-b', stowedPlaces, DARK_B, LITE_B);
+          R.drawMeshAt('ring-straight-a', straightPlaces, DARK_A, LITE_A);
+          R.drawMeshAt('ring-straight-b', straightPlaces, DARK_B, LITE_B);
+          R.drawMeshAt('ring-formed-a', formedPlaces, DARK_A, LITE_A);
+          R.drawMeshAt('ring-formed-b', formedPlaces, DARK_B, LITE_B);
+          R.drawMeshAt('ring-straight-k', straightPlaces, PAD_DARK, PAD_LITE);
+          R.drawMeshAt('ring-formed-k', formedPlaces, PAD_DARK, PAD_LITE);
+          R.drawMeshAt('ring-formed-r', formedPlaces, ROD_DARK, ROD_LITE);
+          skinStowed = stowedPlaces;
+          skinStraight = straightPlaces;
+          skinFormed = formedPlaces;
+        }
         for (const [k, places] of perFrame) {
           ensureBand(k);
           R.drawMeshAt(`band-${k}-a`, places, DARK_A, LITE_A);
@@ -585,6 +674,12 @@ export function CohabitSpaceBench({
           R.drawMeshAt(`band-${k}-k`, places, PAD_DARK, PAD_LITE);
           R.drawMeshAt(`band-${k}-r`, places, ROD_DARK, ROD_LITE);
         }
+        for (const [k, places] of coverPerKey) {
+          ensureBand(k);
+          R.drawMeshAt(`band-${k}-s`, places, SHELL_DARK, SHELL_LITE);
+        }
+        for (const [id, places] of gorePerKey) R.drawMeshAt(id, places, SEAM_DARK, SEAM_LITE);
+        for (const l of goreLoose) R.drawDynamicMesh(l.data, SEAM_DARK, SEAM_LITE, undefined, [l.place]);
       }
       // 人：走（步态按走过的路程推相位）/ 站 / 坐（按这张家具的座面解出来；看着猫时前倾）；头随视线转，夹在 ±75°
       const people = new Map<string, Batch>();
@@ -651,7 +746,7 @@ export function CohabitSpaceBench({
         R.drawMeshAt('skin-formed', skinFormed.sort(far), MEM_DARK, MEM_LITE, SKIN_ALPHA);
         for (const [id, places] of skinPerKey) R.drawMeshAt(id, places, MEM_DARK, MEM_LITE, SKIN_ALPHA);
         for (const l of skinLoose) R.drawDynamicMesh(l.data, MEM_DARK, MEM_LITE, SKIN_ALPHA, [l.place]);
-      } else if (sim.space !== 'empty') R.drawMeshAt('skin-stowed', skinStowed, MEM_DARK, MEM_LITE, SKIN_ALPHA);
+      } else if (sim.space !== 'empty' && !shellOn) R.drawMeshAt('skin-stowed', skinStowed, MEM_DARK, MEM_LITE, SKIN_ALPHA);
       // 四类事件的连线（胸口高度），颜色照平面台架
       if (sim.links.length) {
         const byKind = new Map<EventKind, { a: Vec3; b: Vec3 }[]>();
@@ -875,6 +970,20 @@ export function CohabitSpaceBench({
               <button type="button" onClick={() => { apiRef.current?.restart(); runningRef.current = true; setRunning(true); }}>
                 {t.reset}
               </button>
+            </div>
+            <div className="grp">
+              <label title={lang === 'zh' ? '单元的外表面；关掉可看里面的带子、键与带间的膜' : 'The units’ outer surface; turn it off to see the bands, keys and membranes inside'}>
+                <input
+                  type="checkbox"
+                  checked={shell}
+                  onChange={(e) => {
+                    shellRef.current = e.target.checked;
+                    setShell(e.target.checked);
+                    apiRef.current?.redraw();
+                  }}
+                />
+                {t.shell}
+              </label>
             </div>
             <div className="grp">
               <LabControlLabel help={['仿真播放倍速。', 'Simulation playback rate.']}>{t.time}</LabControlLabel>

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { BRIDGE_BASE, DOOR_BASE, DOOR_EPS, FRAMES, bakeBandKeys, bakeHanger, bakeUnitKeys, bakeUnitMech, FURN_ERGO, HOIST, STEADY, TABLE_TOP, bandTop, clipToReel, doorFrame, isDoorFrame, pickUnitBands, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_ORDER, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
+import { BRIDGE_BASE, DOOR_BASE, DOOR_EPS, FRAMES, SHELL, bakeUnitShell, shellCoverVerts, shellGoreVerts, shellJoins, bandVertsAt, bakeBandKeys, bakeHanger, bakeUnitKeys, bakeUnitMech, FURN_ERGO, HOIST, STEADY, TABLE_TOP, bandTop, clipToReel, doorFrame, isDoorFrame, pickUnitBands, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_ORDER, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
 import { planLayout } from './unit-activation';
 import { FIGURE, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
 import { RING } from './skin-ring';
-import { SOLID } from './skin-solid';
+import { SOLID, offsetProfile } from './skin-solid';
+import { CLAMP_SPAN, MECH, clampRadii } from './unit-mechanism';
 import { SQUARE, SQUARE_PEAK, SQUARE_REACH, buildSquareUnits, squareHalfSide, squareRadiusAt, squareStructureAt } from './skin-square';
 import { CAT_COATS, catMesh, figureMesh, styleKey as styleKeyOf, type HumanStyle } from './figure';
 import { OUTFITS } from '../../../components/lab/figurePalette';
@@ -485,6 +486,123 @@ describe('带子轨迹关键帧', () => {
     const unit = bakeUnit(trajs, STEADY.formed, topo);
     expect(unit.a.length).toBe(one.a.length * SQUARE.COUNT);
     expect(unit.b.length).toBe(one.b.length * SQUARE.COUNT);
+  });
+});
+
+describe('蒙皮（2026-10-30 作者「设计一个真正的蒙皮作为单元的外表面，可以开可以关」）', () => {
+  const n = traj.n;
+  const D = SQUARE.DEPTH;
+  const off = SQUARE.THICK / 2 + SHELL.GAP;
+
+  it('剖面朝外偏：贴芯的竖直段往离轴方向偏，台面往上偏（世界 Y 向下为正）', () => {
+    const m = 9;
+    const px = new Float64Array(m);
+    const py = new Float64Array(m);
+    for (let i = 0; i < m; i++) py[i] = -i * 0.02; // 一条贴芯往下走的带
+    const o = offsetProfile(px, py, m, 30, 100, 2);
+    for (let i = 0; i < m; i++) {
+      expect(o[i]).toBeCloseTo(32, 9);
+      expect(o[m + i]).toBeCloseTo(i * 2, 9);
+    }
+    const hx = new Float64Array(m);
+    const hy = new Float64Array(m);
+    for (let i = 0; i < m; i++) hx[i] = i * 0.02; // 一段往外走的台面
+    const h = offsetProfile(hx, hy, m, 30, 100, 2);
+    for (let i = 0; i < m; i++) {
+      expect(h[i]).toBeCloseTo(30 + i * 2, 9);
+      expect(h[m + i]).toBeCloseTo(-2, 9);
+    }
+  });
+
+  it('皮包住带子、不穿进带子：三档、成形 / 直带子 / 收起三个静止态，带子两面的每个顶点离盖片都还隔着一段', () => {
+    const topo = bandTopology(n);
+    for (const t of trajs)
+      for (const k of [STEADY.formed, STEADY.straight, STEADY.stowed]) {
+        const c = shellCoverVerts(t, k);
+        const m = c.verts.length / 6;
+        const v = bandVertsAt(t, k, topo);
+        let minD = Infinity;
+        for (const side of [0, 2])
+          for (let i = SHELL.END; i < n - SHELL.END; i++) {
+            const px = v[(side * n + i) * 3];
+            const py = v[(side * n + i) * 3 + 1];
+            for (let q = 0; q < m - 1; q++) {
+              const ax = c.verts[q * 3], ay = c.verts[q * 3 + 1];
+              const vx = c.verts[(q + 1) * 3] - ax, vy = c.verts[(q + 1) * 3 + 1] - ay;
+              const u = Math.max(0, Math.min(1, ((px - ax) * vx + (py - ay) * vy) / (vx * vx + vy * vy || 1)));
+              minD = Math.min(minD, Math.hypot(px - ax - u * vx, py - ay - u * vy));
+            }
+          }
+        expect(minD).toBeGreaterThan(0.08);
+      }
+  });
+
+  it('两头塞进夹环：贴芯处外皮在带面之外、夹圈内壁之内，端点落在上下夹圈的竖向范围里', () => {
+    const r = clampRadii(SQUARE.RADIUS, SQUARE.THICK);
+    for (const t of trajs) {
+      const f = t.frames[STEADY.straight];
+      const c = shellCoverVerts(t, STEADY.straight);
+      const m = c.verts.length / 6;
+      const y0 = -f[n] * SOLID.SCALE; // 带顶
+      const y1 = -f[2 * n - 1] * SOLID.SCALE; // 钉住端
+      for (const q of [0, m - 1]) {
+        const x = c.verts[q * 3];
+        expect(x).toBeGreaterThan(SQUARE.RADIUS + SQUARE.THICK / 2);
+        expect(x).toBeLessThan(r.outerIn);
+        expect(x).toBeCloseTo(SQUARE.RADIUS + off, 1);
+      }
+      expect(c.verts[1]).toBeGreaterThan(y0 - MECH.TOP);
+      expect(c.verts[1]).toBeLessThan(y0 + CLAMP_SPAN + MECH.LIP);
+      expect(c.verts[(m - 1) * 3 + 1]).toBeLessThan(y1 + MECH.TOP);
+      expect(c.verts[(m - 1) * 3 + 1]).toBeGreaterThan(y1 - CLAMP_SPAN - MECH.LIP);
+    }
+  });
+
+  it('接缝片只跨缝：A 边 = 本条带盖片的前剖口、B 边 = 下一条带盖片的后剖口（转过一个角节距），首尾相接一圈闭合', () => {
+    const dT = (2 * Math.PI) / SQUARE.COUNT;
+    for (const k of [STEADY.formed, STEADY.straight]) {
+      const a = trajs[UNIT_ORDER[0]];
+      const b = trajs[UNIT_ORDER[1]];
+      const ca = shellCoverVerts(a, k);
+      const cb = shellCoverVerts(b, k);
+      const g = shellGoreVerts(a, k, b, k);
+      const m = g.verts.length / 6;
+      expect(ca.verts.length / 6).toBe(m);
+      const c = Math.cos(dT), s = Math.sin(dT);
+      for (let i = 0; i < m; i++) {
+        // A 边 = 盖片 A 的前剖口（z = +D/2）
+        expect(g.verts[i * 3 + 2]).toBeCloseTo(D / 2, 4);
+        expect(g.verts[i * 3]).toBeCloseTo(ca.verts[i * 3], 4);
+        expect(g.verts[i * 3 + 1]).toBeCloseTo(ca.verts[i * 3 + 1], 4);
+        // 带 a、b 同一档时 B 边 = 盖片 b 的后剖口转过 dT
+        if (UNIT_ORDER[0] === UNIT_ORDER[1]) {
+          const bx = cb.verts[(m + i) * 3], bz = cb.verts[(m + i) * 3 + 2];
+          expect(g.verts[(m + i) * 3]).toBeCloseTo(bx * c - bz * s, 3);
+          expect(g.verts[(m + i) * 3 + 2]).toBeCloseTo(bx * s + bz * c, 3);
+        }
+        const angA = Math.atan2(g.verts[i * 3 + 2], g.verts[i * 3]);
+        const angB = Math.atan2(g.verts[(m + i) * 3 + 2], g.verts[(m + i) * 3]);
+        expect(angA).toBeGreaterThan(0);
+        expect(angB).toBeLessThan(dT);
+        expect(angB).toBeGreaterThan(angA);
+      }
+    }
+    // 整台：二十片盖片 + 二十片接缝片，每片 (节数 − 2·END − 1) 个四边形
+    const u = bakeUnitShell(trajs, STEADY.formed);
+    const quads = n - 2 * SHELL.END - 1;
+    expect(u.cover.length / 18).toBe(SQUARE.COUNT * quads * 2);
+    expect(u.gore.length / 18).toBe(SQUARE.COUNT * quads * 2);
+  });
+
+  it('接缝片只在门的边上张开：一侧让路一侧没让 = 开；两侧都在让路或都没让 = 连；升降段与成形段之间不连', () => {
+    const d = doorFrame(traj, 0.5);
+    expect(shellJoins(STEADY.formed, STEADY.formed)).toBe(true);
+    expect(shellJoins(STEADY.formed, d)).toBe(false);
+    expect(shellJoins(STEADY.formed, STEADY.formed, FRAMES, true, false)).toBe(false);
+    expect(shellJoins(d, d, FRAMES, true, true)).toBe(true);
+    expect(shellJoins(STEADY.formed, STEADY.formed, FRAMES, true, true)).toBe(true);
+    expect(shellJoins(STEADY.stowed, STEADY.formed)).toBe(false);
+    expect(shellJoins(STEADY.stowed, STEADY.stowed)).toBe(true);
   });
 });
 
