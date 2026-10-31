@@ -133,6 +133,21 @@ describe('其他作品内容池（content/other/works.json）', () => {
     const groups = buildWorkGroups(cards(), parsed.data!, []);
     expect(groups[1].tiles[0].status).toBe('');
   });
+
+  it('画作的两项排法（绘画页 2026-10-30）：节可以等高成行，封面可以整张放进框里；别的写法不收', () => {
+    const fig = { src: '/other/a.webp', width: 10, height: 10, caption: { en: 'a', zh: 'a' } };
+    const page = (layout: string, fit: string) => ({
+      ...ok,
+      works: [{ ...ok.works[0], slug: 'x', image: { src: '/other/a.webp', width: 10, height: 10, fit }, page: { sections: [{ heading: { en: 'h', zh: 'h' }, layout, figures: [fig] }] } }],
+    });
+    expect(OtherWorksSchema.safeParse(page('rows', 'contain')).success).toBe(true);
+    expect(OtherWorksSchema.safeParse(page('grid', 'contain')).success).toBe(false);
+    expect(OtherWorksSchema.safeParse(page('rows', 'fill')).success).toBe(false);
+    // 绘画页本身：六节全是等高成行、封面不裁
+    const drawing = getOtherWorkPages().find((p) => p.work.slug === 'drawing-and-painting')!;
+    expect(drawing.work.image?.fit).toBe('contain');
+    expect(drawing.work.page.sections.every((s) => s.layout === 'rows')).toBe(true);
+  });
 });
 
 describe('Work 页分组（buildWorkGroups）', () => {
