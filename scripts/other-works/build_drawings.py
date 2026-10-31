@@ -44,6 +44,8 @@ ITEMS = [
   ('21-laughing', '0e524323-image.jpg', None),
   ('22-armour', '955dba92-image.jpg', None),
   ('23-violet-eyes', 'e69b5133-image.jpg', None),
+  ('25-pipes', '2.jpg', None),        # 2026-10-31 第四批：作者在对话里传的第 2、3 张（第 1 张是首页 About 肖像，不在本页）
+  ('26-your-turn', '3.jpg', None),
   # 模型
   ('24-model', '5abaa187-image.jpg', None),
 ]

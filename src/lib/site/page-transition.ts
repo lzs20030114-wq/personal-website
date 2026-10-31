@@ -125,12 +125,11 @@ export function settleForm(form: Form, from: Loc, ctx: SettleContext): Form {
 }
 
 /**
- * 两页用的是哪一条顶栏：案例页与 Lab 是「09 / 10」稿的同一条深色顶栏（DarkHeader），
- * 日志页与 about 还是旧的 SiteNav 那条，首页没有顶栏（自带 HUD）。
+ * 两页用的是哪一条顶栏：案例页、Lab、日志页（2026-10-25 起）与 about（2026-10-31 起）都是同一条深色顶栏（DarkHeader），
+ * 首页没有顶栏（自带 HUD）。
  */
-function headerOf(kind: RouteKind): 'dark' | 'legacy' | null {
-  if (kind === 'case' || kind === 'lab') return 'dark';
-  if (kind === 'log' || kind === 'about') return 'legacy';
+function headerOf(kind: RouteKind): 'dark' | null {
+  if (kind === 'case' || kind === 'lab' || kind === 'log' || kind === 'about') return 'dark';
   return null;
 }
 
@@ -147,7 +146,7 @@ export function keepsHeader(form: Form, from: Loc, to: Loc): boolean {
 
 /** 转场期间垫在最底下的颜色：深色页之间是夜色，去浅色页是纸色，带「退后变暗」的是暗影。 */
 export function backdropFor(form: Form, to: Loc): 'night' | 'paper' | 'shade' {
-  if (form === 'swap' || form === 'morph') return to.kind === 'home' || to.kind === 'about' ? 'paper' : 'night';
+  if (form === 'swap' || form === 'morph') return to.kind === 'home' ? 'paper' : 'night';
   return 'shade';
 }
 

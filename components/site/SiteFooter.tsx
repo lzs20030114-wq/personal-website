@@ -5,8 +5,8 @@ import { useOptionalCaseLang } from './CaseLang';
 import { CaseFooter, LabFooter } from '../lab/LabShell';
 
 /**
- * 共享页脚。深色路由（/lab、/work/*、/archive）用暗色外壳的主青色面页脚（LabShell）；
- * 剩下的浅色页（/about、/privacy）仍是 Modernist 稿的 G900 整版铺底 + 联系邮箱（MAPPING §1）。
+ * 共享页脚。深色路由（/lab、/work/*、/archive、/about）用暗色外壳的主青色面页脚（LabShell）；
+ * 剩下的浅色页（/privacy）仍是 Modernist 稿的 G900 整版铺底 + 联系邮箱（MAPPING §1）。
  * 判定与 SiteNav 同源。
  */
 export function SiteFooter() {
@@ -17,6 +17,7 @@ export function SiteFooter() {
   if (pathname.startsWith('/work')) return null;
   // 日志页与 Lab / 案例页同一个主青色面页脚（2026-10-25）
   if (pathname.startsWith('/archive')) return <CaseFooter labelEn="Work log · all projects" labelZh="工作日志 · 全部项目" />;
+  if (pathname.startsWith('/about')) return <CaseFooter labelEn="About · Zishuo Li" labelZh="关于 · 李梓硕" />;
 
   return (
     <footer className="site-footer">

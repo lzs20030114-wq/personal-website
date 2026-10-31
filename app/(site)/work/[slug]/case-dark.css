@@ -488,10 +488,6 @@ body:has(.cs) .ld-header__in, .cs .ld-footer__in { max-width: 1240px; }
 .cs-video__tag span:first-child { color: var(--cs-gh); }
 .cs-video figcaption { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; font: 400 13.5px / 1.5 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: var(--cs-mute); margin: 0; }
 .cs-video figcaption span:first-child { font: 500 11px var(--cs-mono); color: var(--cs-g); }
-/* 配色 v2：AI 披露席位是浅紫色面 + 墨字（原为虚线框）——紫色面只给「实验 / 进行中」，这里是待作者填写的席位 */
-.cs-ai { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: baseline; padding: 18px 20px; background: oklch(0.925 0.022 290); color: oklch(0.235 0.025 215); }
-.cs-ai span:first-child { font: 500 11px var(--cs-mono); color: oklch(0.42 0.09 282); }
-.cs-ai span:last-child { font: 400 14px / 1.6 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: oklch(0.3 0.03 240); }
 .cs-next { position: relative; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px 32px; padding: 22px 0 8px; margin-top: 24px; }
 .cs-next::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--cs-v); }
 .cs-next > span:first-child { display: flex; flex-direction: column; gap: 10px; }

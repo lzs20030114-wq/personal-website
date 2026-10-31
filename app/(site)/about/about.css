@@ -1,0 +1,20 @@
+/* About（MAPPING §82）：只有名字和联系方式。页头复用 .ld-meta / .ld-h1；颜色只用 --ld-* 与 .pg-dark 的语义 token。 */
+
+/* 内容只有几行：整页（顶栏 + 正文 + 页脚）撑满一屏，页脚贴底，不多出一截可滚动 */
+.about-language-root { display: flex; flex-direction: column; min-height: 100vh; min-height: 100svh; }
+.about-language-root > main { flex: 1 0 auto; }
+.about-language-root .ld-footer { margin-top: 0; }
+
+.ab { padding-bottom: 96px; }
+
+.ab-head { display: flex; flex-direction: column; gap: 20px; padding: 72px 0 44px; border-bottom: var(--hair); }
+
+.ab-contact { display: grid; gap: 14px; margin: 0; padding-top: 36px; }
+.ab-contact div { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 28px; align-items: baseline; }
+.ab-contact dt { font: 400 12px var(--ld-mono), 'PingFang SC', monospace; color: var(--ld-mute); }
+.ab-contact dd { margin: 0; font-size: clamp(18px, 2vw, 24px); color: var(--ld-cream); overflow-wrap: anywhere; }
+
+@media (max-width: 639px) {
+  .ab-head { padding-top: 48px; }
+  .ab-contact div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+}

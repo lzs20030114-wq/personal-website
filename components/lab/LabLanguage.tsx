@@ -21,6 +21,7 @@ export function LabLanguageRoot({ children }: { children: ReactNode }) {
   if (pathname.startsWith('/work')) return <CaseLangRoot className="case-language-root">{children}</CaseLangRoot>;
   // 日志页 2026-10-25 换上暗色顶栏：语言开关在顶栏，状态与 Lab / 案例页同一个上下文（同一个存储键）
   if (pathname.startsWith('/archive')) return <CaseLangRoot className="log-language-root">{children}</CaseLangRoot>;
+  if (pathname.startsWith('/about')) return <CaseLangRoot className="about-language-root">{children}</CaseLangRoot>;
   return <>{children}</>;
 }
 

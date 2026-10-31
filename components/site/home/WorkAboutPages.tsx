@@ -882,8 +882,15 @@ export function AboutPage() {
             <span className="hs-portrait__cap" data-a="fade" data-d="420">
               Portrait · 3 : 4
             </span>
-            <div className="hs-portrait__plate" data-a="wipe" data-d="160">
-              <span>portrait · to be supplied</span>
+            {/* 2026-10-31 作者交来的画（MAPPING §81.1）：原图上下等量裁成 3:4，750 × 1000 webp */}
+            <div className="hs-portrait__plate hs-portrait__plate--img" data-a="wipe" data-d="160">
+              <img
+                src="/home/portrait.webp"
+                width={750}
+                height={1000}
+                alt="Drawing of a figure in a red cap and a blue face mask, with a 纠察 armband"
+                decoding="async"
+              />
             </div>
             <span className="hs-portrait__edge" data-a="fade" data-d="520">
               Zishuo Li · Tsinghua University

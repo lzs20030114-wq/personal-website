@@ -6,8 +6,8 @@ import { useOptionalCaseLang } from './CaseLang';
 import { DarkHeader, LabHeader } from '../lab/LabShell';
 
 /**
- * 共享导航。深色路由（/lab、/work/*、/archive）用暗色外壳的吸顶顶栏（LabShell 的 DarkHeader）；
- * 剩下的浅色页（/about、/privacy）仍是 Modernist 稿：brand + Work/Lab/Log/About，
+ * 共享导航。深色路由（/lab、/work/*、/archive、/about）用暗色外壳的吸顶顶栏（LabShell 的 DarkHeader）；
+ * 剩下的浅色页（/privacy）仍是 Modernist 稿：brand + Work/Lab/Log/About，
  * 当前页 aria-current='page' → accent 高亮（.nav 规则处理配色）。
  * IA 映射见 MAPPING §3：Work=/#work · Lab=/#lab · Log=/archive · About=/about。
  */
@@ -24,6 +24,8 @@ export function SiteNav() {
   if (pathname.startsWith('/work')) return <DarkHeader active="work" readbar />;
   // 日志页本来就是深色页，2026-10-25 起与 Lab / 案例页同一个顶栏（此前是旧 Modernist 导航的深色变体）
   if (pathname.startsWith('/archive')) return <DarkHeader active="log" />;
+  // about 2026-10-31 按作者要求重做时换上同一套深色外壳（MAPPING §82）
+  if (pathname.startsWith('/about')) return <DarkHeader active="about" />;
 
   return (
     <nav className="nav">

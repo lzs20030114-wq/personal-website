@@ -122,8 +122,8 @@ describe('header and backdrop', () => {
     expect(keepsHeader('swap', c1, lab)).toBe(true);
     expect(keepsHeader('morph', c1, lab)).toBe(true);
     expect(keepsHeader('next', c1, loc('/work/project-ii'))).toBe(true);
-    // 日志页 / about 还是旧顶栏：与深色顶栏之间不钉，免得叠出两排字
-    expect(keepsHeader('swap', lab, loc('/archive'))).toBe(false);
+    // 日志页与 about 也是深色顶栏（2026-10-25 / 2026-10-31 起），平级换页同样钉住
+    expect(keepsHeader('swap', lab, loc('/archive'))).toBe(true);
     expect(keepsHeader('swap', loc('/archive'), about)).toBe(true);
     expect(keepsHeader('morph', home, lab)).toBe(false);
     expect(keepsHeader('rise', home, lab)).toBe(false);
@@ -132,7 +132,7 @@ describe('header and backdrop', () => {
 
   it('puts the destination colour under a cross-fade', () => {
     expect(backdropFor('swap', lab)).toBe('night');
-    expect(backdropFor('swap', about)).toBe('paper');
+    expect(backdropFor('swap', about)).toBe('night');
     expect(backdropFor('rise', lab)).toBe('shade');
   });
 });

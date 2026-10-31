@@ -124,8 +124,6 @@ const COPY = {
     mTime: 'Date',
     mStatus: 'Status',
     mCredits: 'Credits',
-    aiK: 'AI disclosure · slot',
-    aiX: 'The disclosure statement is written by the author following AI_DISCLOSURE.md; this is its fixed slot.',
     nextK: (n: string) => `Next case study · ${n} / ${TOTAL}`,
     footer: (n: string, t: string, y: string) => `Case study ${n} · ${t} · ${y}`,
     openLab: 'Open in the lab ↗',
@@ -138,8 +136,6 @@ const COPY = {
     mTime: '时间',
     mStatus: '状态',
     mCredits: '协作',
-    aiK: 'AI 披露 · 席位',
-    aiX: '披露声明由作者按 AI_DISCLOSURE.md 流程撰写，此处为固定席位。',
     nextK: (n: string) => `下一个案例 · ${n} / ${TOTAL}`,
     footer: (n: string, t: string, y: string) => `案例 ${n} · ${t} · ${y}`,
     openLab: '在实验室中打开 ↗',
@@ -284,7 +280,8 @@ function HeroMeta({ entry, lang }: { entry: WorkEntry; lang: SlotLang }) {
 /**
  * case study（「10 Case 01 - Reincarnation Machine」稿，design-ref/case-01-dark，MAPPING §45）：
  * 整屏首屏（返回/案例号/状态 → 标题 + 双线尺 + 一句话 → 主图框）→ 元数据四列 →
- * 左目录栏（可收）+ 右正文 → V.60 视频席位 → AI 披露席位 → 下一个案例。
+ * 左目录栏（可收）+ 右正文 → V.60 视频席位 → 下一个案例。
+ * AI 披露席位 2026-10-31 按作者拍板删掉（不写披露声明，SITE_SPEC §9 修订）。
  * 仍由 frontmatter / 内容池 / MDX 驱动，只换渲染模板；顶栏（含中英切换与阅读进度）在布局层，页脚在本页。
  */
 export default async function WorkPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -496,15 +493,6 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
                   />
                 }
               />
-              {/* AI 披露席位（SITE_SPEC §9：v1 留插槽，文字由作者按 AI_DISCLOSURE.md 流程撰写） */}
-              <div className="cs-ai">
-                <span>
-                  <Pick en={COPY.en.aiK} zh={COPY.zh.aiK} />
-                </span>
-                <span>
-                  <Pick en={COPY.en.aiX} zh={COPY.zh.aiX} />
-                </span>
-              </div>
               {next ? (
                 <Link href={`/work/${next.slug}`} className="cs-next" data-pt="next">
                   <span>

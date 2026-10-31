@@ -2652,13 +2652,13 @@
       "title": "Drawing and Painting",
       "group": "drawing-painting",
       "context": "Studies and sketches · Pencil, charcoal, ink, watercolour, oil pastel, digital",
-      "line": "Twenty-three drawings and paintings, and one model",
+      "line": "Twenty-five drawings and paintings, and one model",
       "intro": "A plaster cast and portraits in pencil and charcoal, landscapes in watercolour and oil pastel, line drawings of streets and a shop counter, digital drawing in Procreate, and one model.",
       "slug": "drawing-and-painting",
       "zh": {
         "title": "绘画",
         "context": "习作与速写 · 铅笔、炭笔、墨、水彩、油画棒、数字绘画",
-        "line": "二十三幅画，另有一件模型"
+        "line": "二十五幅画，另有一件模型"
       },
       "image": {
         "src": "/other/drawings/01-cover.webp",
@@ -2911,6 +2911,24 @@
                 "caption": {
                   "en": "Close-up of a face with violet eyes, half hidden by dark hair",
                   "zh": "紫色眼睛的脸部特写，一半藏在黑发后面"
+                }
+              },
+              {
+                "src": "/other/drawings/25-pipes.webp",
+                "width": 1440,
+                "height": 1079,
+                "caption": {
+                  "en": "Rooftop pipes drawn as a giant robot, with a handwritten note in vertical lines about going back to a former home",
+                  "zh": "屋顶上的管道画成一个巨大的机器人，旁边竖排手写一段回到旧居的话"
+                }
+              },
+              {
+                "src": "/other/drawings/26-your-turn.webp",
+                "width": 1079,
+                "height": 1527,
+                "caption": {
+                  "en": "A robed figure in the style of an old Chinese painting, scratching his head beside a pair of inline skates, with 轮到你了 (“your turn”) written down the left",
+                  "zh": "仿古画风格、穿白袍的人挠着头，脚边一双轮滑鞋，左边写着「轮到你了」"
                 }
               }
             ]

@@ -360,6 +360,9 @@
 @container (min-height: 216px) { .hs-portrait__edge { display: block; } }
 .hs-portrait__plate { width: 100%; aspect-ratio: 3/4; background: repeating-linear-gradient(45deg, oklch(0.95 0.032 120 / .08) 0 1px, transparent 1px 9px), oklch(0.36 0.038 192); border: 1px solid oklch(0.95 0.032 120 / .16); display: flex; align-items: flex-end; padding: 12px; }
 .hs-portrait__plate span { font: 400 11px var(--mono); color: var(--lime); }
+/* 放了真图：去掉占位斜纹与内边距，图铺满框（图本身已裁成 3:4） */
+.hs-portrait__plate--img { padding: 0; background: #fff; overflow: hidden; }
+.hs-portrait__plate--img img { display: block; width: 100%; height: 100%; object-fit: cover; }
 /* ---------- 04 lab ---------- */
 .hs-zone { max-width: 1360px; margin: 0 auto; padding: 92px 88px 0 56px; }
 .hs-head--lab { padding-bottom: 24px; }
