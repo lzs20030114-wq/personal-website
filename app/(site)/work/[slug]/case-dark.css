@@ -569,13 +569,14 @@ body:has(.cs) .ld-header__in, .cs .ld-footer__in { max-width: 1240px; }
    一行里的图因此同高、宽度按比例分满这一行，不裁图。
    基准行高按这一栏自己的宽算（容器查询），不按视口：目录栏收起、窄屏换版时栏宽不跟视口成比例。
    每张最多长到基准的 1.35 倍 ⇒ 排满的行照常排满（实测排满的行在 1.0–1.34 倍之间），排不满的最后一行
-   （含只有一两张的节）也长到差不多高，不会缩成一小截；余量交给末尾的空伪元素。窄屏一行只放得下一两张，放宽到 1.8 倍 */
-.os-body > .os-rows { container-type: inline-size; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 26px 14px; margin: 8px 0; }
+   （含只有一两张的节）也长到差不多高，不会缩成一小截；余量交给末尾的空伪元素。窄屏一行只放得下一两张，放宽到 1.8 倍。
+   图下面不写字（10-31，§80.2），行距与列距同为 14px */
+.os-body > .os-rows { container-type: inline-size; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 14px; margin: 8px 0; }
 .os-rows::after { content: ''; flex: 0.001 1 0; }
 .os-cell {
   --rh: clamp(150px, 31cqi, 280px);
   flex: var(--ar) 1 calc(var(--ar) * var(--rh)); max-width: calc(var(--ar) * var(--rh) * 1.35);
-  min-width: 0; margin: 0; display: flex; flex-direction: column; gap: 9px;
+  min-width: 0; margin: 0;
 }
 @container (max-width: 640px) { .os-cell { max-width: calc(var(--ar) * var(--rh) * 1.8); } }
 .os-cell__img { position: relative; display: block; overflow: hidden; background: oklch(0.2 0.025 225); cursor: zoom-in; }
@@ -584,8 +585,6 @@ body:has(.cs) .ld-header__in, .cs .ld-footer__in { max-width: 1240px; }
 .os-cell__img:hover::after { box-shadow: inset 0 0 0 1px oklch(0.9 0.058 124 / 0.7); }
 .os-cell__img:hover img { transform: scale(1.02); }
 .os-cell__img:focus-visible { outline: 2px solid var(--cs-g); outline-offset: 3px; }
-.os-cell figcaption { display: flex; gap: 10px; align-items: baseline; margin: 0; font: 400 12.5px / 1.45 'Archivo Variable', Archivo, 'PingFang SC', sans-serif; color: var(--cs-dim); letter-spacing: 0; text-transform: none; }
-.os-cell__n { flex: none; font: 500 11px var(--cs-mono); color: var(--cs-g); }
 @media (prefers-reduced-motion: reduce) { .os-cell__img img { transition: none; } .os-cell__img:hover img { transform: none; } }
 /* 封面整张放进框里（画作）：不裁，四边留出一圈深色底，像挂在墙上 */
 .os-stage--contain { background: oklch(0.19 0.022 228); }

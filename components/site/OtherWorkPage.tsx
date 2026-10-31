@@ -25,6 +25,7 @@ import { ImageViewer } from './ImageViewer';
  *
  * 画作（2026-10-30 绘画页，MAPPING §80.1）：节可以设 layout: 'rows'——一行里的图同高、按比例排满、不裁；
  * 封面可以设 fit: 'contain'——整张放进主图框、不压暗角。两项都不设时与此前逐字相同。
+ * 这两种写法下图下面都不写字（10-31，MAPPING §80.2）：图注仍在 alt 与放大查看里。
  */
 
 const COPY = {
@@ -169,7 +170,8 @@ function Body({ entry, lang }: { entry: Entry; lang: Lang }) {
       </figure>
     );
   };
-  // 等高成行（画作）：一行里的图同一高度、宽度按各自比例分满这一行，不裁图；图号与图注在图下面
+  // 等高成行（画作）：一行里的图同一高度、宽度按各自比例分满这一行，不裁图。
+  // 图下面不写字（2026-10-31 作者：画下面的简介画蛇添足）；图注只留在 alt 与放大查看里
   const cell = (f: Fig) => {
     n += 1;
     return (
@@ -184,10 +186,6 @@ function Body({ entry, lang }: { entry: Entry; lang: Lang }) {
         >
           <img src={f.src} alt={f.caption[lang]} width={f.width} height={f.height} loading="lazy" decoding="async" />
         </a>
-        <figcaption>
-          <span className="os-cell__n">{String(n).padStart(2, '0')}</span>
-          <span className="os-cell__t">{f.caption[lang]}</span>
-        </figcaption>
       </figure>
     );
   };
@@ -321,16 +319,19 @@ export function OtherWorkPage({ entry }: { entry: Entry }) {
                   </a>
                 </div>
               </div>
-              <figcaption className="cs-figcap">
-                <span>
-                  <Pick en={COPY.en.fig(1)} zh={COPY.zh.fig(1)} />
-                </span>
-                {cover.caption ? (
+              {/* 整张放进框里的封面（画作）下面不写图号图注，与各节的画一致；图注只在放大查看里 */}
+              {contain ? null : (
+                <figcaption className="cs-figcap">
                   <span>
-                    <Pick en={cover.caption.en} zh={cover.caption.zh} />
+                    <Pick en={COPY.en.fig(1)} zh={COPY.zh.fig(1)} />
                   </span>
-                ) : null}
-              </figcaption>
+                  {cover.caption ? (
+                    <span>
+                      <Pick en={cover.caption.en} zh={cover.caption.zh} />
+                    </span>
+                  ) : null}
+                </figcaption>
+              )}
             </figure>
           </div>
 
