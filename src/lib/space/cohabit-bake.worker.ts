@@ -1,10 +1,10 @@
 /**
- * Lab 2-15 的轨迹在后台线程里烘（2026-10-30 按用途定形）：两个结构的六条轨迹（三档 × 两块都成 / 只成下台）一条 338 节、
- * 全程 3000 步另加让路回程，合起来二三十秒的计算，放在主线程上会把整页拖慢（性能排查见 MAPPING §77），所以挪到这里。
- * 收到一份活（引擎定义 + 帧数 + 每条的烘焙选项）就一条一条烘，每烘完一条回传一条，最后回 done。
+ * Lab 2-15 的轨迹在后台线程里烘（2026-10-30 起两层那组；2026-10-31 轻量化起平台三档也在这里）：一条带全程三四千步引擎，
+ * 九条合起来三十来秒的计算，放在主线程上会把整页拖慢（性能排查见 MAPPING §77），所以挪到这里。
+ * 收到一份活（引擎定义 + 帧数 + 每条的烘焙选项）就整组烘完，途中隔一会儿报一次进度，最后整组回传。
  * 主线程那头起不来这个线程时退回空闲时间里烘（CohabitSpaceBench）。
  */
-import { TrajectoryBaker, type BakeJob, type BakeReply } from './cohabit-solid';
+import { UnitBaker, type BakeJob, type BakeReply, type BandTrajectory } from './cohabit-solid';
 
 interface WorkerScope {
   onmessage: ((ev: MessageEvent<BakeJob>) => void) | null;
@@ -12,15 +12,20 @@ interface WorkerScope {
 }
 const scope = self as unknown as WorkerScope;
 
+/** 两次进度之间推进多久（ms） */
+const SLICE_MS = 200;
+
 scope.onmessage = (ev) => {
-  const job = ev.data;
+  const { id, defs, frames, opts } = ev.data;
   try {
-    job.defs.forEach((def, i) => {
-      const traj = new TrajectoryBaker(def, job.frames, job.opts[i]).runAll();
-      scope.postMessage({ kind: 'track', i, traj }, traj.frames.map((f) => f.buffer as ArrayBuffer));
-    });
-    scope.postMessage({ kind: 'done' });
+    const baker = new UnitBaker(defs, frames, opts);
+    while (!baker.work(SLICE_MS)) scope.postMessage({ id, kind: 'progress', p: baker.progress });
+    const trajs = baker.trajectories as BandTrajectory[];
+    // 停稳之后的关键帧共用同一个数组（TrajectoryBaker），转交时每块内存只能列一次
+    const buffers = new Set<ArrayBuffer>();
+    for (const t of trajs) for (const f of t.frames) buffers.add(f.buffer as ArrayBuffer);
+    scope.postMessage({ id, kind: 'done', trajs }, [...buffers]);
   } catch (error) {
-    scope.postMessage({ kind: 'error', message: error instanceof Error ? error.message : String(error) });
+    scope.postMessage({ id, kind: 'error', message: error instanceof Error ? error.message : String(error) });
   }
 };

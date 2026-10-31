@@ -12,6 +12,7 @@ import { COATS, OUTFITS, catColor, coatOf, dealLooks, outfitOf, personColor } fr
 import { FlatRenderer, bakeIndexed, type MeshPlace } from '../../src/lib/linkage/gl3d';
 import { SOLID, type SolidTopology } from '../../src/lib/space/skin-solid';
 import { MECH } from '../../src/lib/space/unit-mechanism';
+import type { RingUnitDef } from '../../src/lib/space/skin-ring';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import type { Vec3 } from '../../src/lib/linkage/solver3d';
 import { COHABIT, CohabitSim, PACE_DEMO, SPACE_MODES, bandAngle, partySizes, type EventKind, type SpaceMode } from '../../src/lib/space/cohabit';
@@ -27,6 +28,8 @@ import {
   bakedKey,
   bakedPut,
   unitFormPlan,
+  type BakeJob,
+  type BakeOpts,
   type BakeReply,
   SCENE,
   STEADY,
@@ -35,6 +38,8 @@ import {
   TABLE_TOP,
   UNITS_PER_M,
   UNIT_ORDER,
+  UNIT_TIERS,
+  TrajectoryBaker,
   UnitBaker,
   bakeBand,
   bakeMembrane,
@@ -111,8 +116,8 @@ import {
  *
  * **按用途定形（2026-10-30）**：当桌子的那台按家具定高，给猫落的那台在三种形里随机抽一种（cohabit-solid `unitFormPlan` /
  * `UNIT_FORM_ODDS`）：平台、有顶的一台（338 节布全部铺出去成上下两块方台，上台只盖半圈）、整圈两层；下台 0.90 m 给猫。
- * 落在坐着的人身边 1.5 m 内的那台多半落成有顶的、敞开那半圈朝那个人，猫坐进有顶那半边看他。两层那组轨迹（六条，结构贴底、
- * 带让路回程与键）在后台线程里烘（cohabit-bake.worker.ts），烘完之前全照平台落。抽签用仿真的种子，不动仿真的随机数，
+ * 落在坐着的人身边 1.5 m 内的那台多半落成有顶的、敞开那半圈朝那个人，猫坐进有顶那半边看他。两组轨迹（平台三档、两层六条，
+ * 都带让路回程与键）在后台线程里烘（cohabit-bake.worker.ts），两层那组烘完之前全照平台落。抽签用仿真的种子，不动仿真的随机数，
  * 平面模型逐位不变。两层的单元逐条摆（不进整台网格），上夹环、芯、吊杆、键、外皮都按它自己那组轨迹（`orders[u]`）取。
  *
  * 案例页主图与主页预览用同一台（`controls={false}`）：没有控制条，拖拽旋转照常。
@@ -335,23 +340,22 @@ export function CohabitSpaceBench({
     };
     bakeFurniture();
 
-    // ── 带子轨迹：三档（面 / 边 / 角）分片烘，烘完才开始跑仿真（否则头一秒里成形的单元没有形可画）────
+    // ── 带子轨迹：平台三档（面 / 边 / 角）在后台线程里烘，烘完才开始跑仿真（否则头一秒里成形的单元没有形可画）────
     // 烘完之前用预览（引擎初始摆位压成的收起态，三档相同）先把立杆、天花方板、收着的单元画出来，画面不空等
-    const baker = new UnitBaker();
-    const topo = bandTopology(baker.n);
-    const topos = new Map<number, SolidTopology>([[baker.n, topo]]);
+    const pre = new TrajectoryBaker(UNIT_TIERS[0]).preview();
+    const topo = bandTopology(pre.n);
+    const topos = new Map<number, SolidTopology>([[pre.n, topo]]);
     const topoOf = (n: number): SolidTopology => {
       let t = topos.get(n);
       if (!t) topos.set(n, (t = bandTopology(n)));
       return t;
     };
     let trajs: BandTrajectory[] | null = null;
-    // 轨道（带子按哪条轨迹取帧）：0–2 = 平台三档；3–5 = 两块都成、6–8 = 只成下台（三档，两个结构那组烘完才有，见 startDual）
+    // 轨道（带子按哪条轨迹取帧）：0–2 = 平台三档；3–5 = 两块都成、6–8 = 只成下台（三档，两个结构那组烘完才有，见 takeDual）
     let tracks: BandTrajectory[] = [];
     let paths: BandPaths[] | null = null;
     const DUAL_BOTH = 3;
     const DUAL_LOWER = 6;
-    const pre = baker.preview();
     let rig: Rig = rigFor(layout, pre);
     setHud((h) => ({ ...h, side: platformSide(rig), total: layout.units.length }));
     {
@@ -432,8 +436,8 @@ export function CohabitSpaceBench({
       }
       return id;
     };
-    const onBaked = (): void => {
-      trajs = baker.trajectories as BandTrajectory[];
+    const onBaked = (list: BandTrajectory[]): void => {
+      trajs = list;
       tracks = [...trajs];
       paths = tracks.map((t) => bandPaths(t));
       rig = rigFor(layout, trajs[0]);
@@ -469,74 +473,72 @@ export function CohabitSpaceBench({
         R.addMesh(`shell-${id}-c`, sh.cover);
         R.addMesh(`shell-${id}-g`, sh.gore);
       }
-      startDual();
+      bakeGroup(UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, () => {}, takeDual);
     };
 
-    // ── 两个结构那组轨迹（两层的台用；2026-10-30 按用途定形）：六条 338 节，加上让路回程合起来二三十秒的计算，放到后台线程里烘，
-    // 平台那组一烘完仿真就开跑，这一组烘完之前给猫落的台全照平台落。起不来后台线程就退回空闲时间里慢慢烘。
-    const dualKey = bakedKey(UNIT_DUAL_DEFS, FRAMES);
-    let dualReady = false;
-    let worker: Worker | null = null;
-    let dualBaker: UnitBaker | null = null;
-    let dualIdle: number | null = null;
-    let dualTimer: ReturnType<typeof setTimeout> | null = null;
+    // ── 两组轨迹都在后台线程里烘（cohabit-bake.worker.ts，2026-10-31 轻量化：平台三档原先在主线程上分片烘）：
+    // 平台三档先烘，烘完仿真就开跑；两个结构那组（两层的台用，六条 338 节）接着烘，烘完之前给猫落的台全照平台落。
+    // 同一标签页里烘过的按配置缓存直接用；起不来后台线程就退回主线程的空闲时间里慢慢烘。
     let disposed = false;
-    const takeDual = (list: readonly BandTrajectory[]): void => {
+    let dualReady = false;
+    let bakeP = 0;
+    let worker: Worker | null = null;
+    let jobId = 0;
+    let idleId: number | null = null;
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    const bakeOnIdle = (b: UnitBaker, done: (list: BandTrajectory[]) => void, progress: (p: number) => void): void => {
+      const tick = (deadline?: IdleDeadline): void => {
+        idleId = null;
+        idleTimer = null;
+        if (disposed) return;
+        // 页面一直不空闲时 timeout 也会叫一次，此时剩余为 0——至少推 2ms，保证慢慢有进展
+        if (b.work(deadline ? Math.max(2, Math.min(BAKE_BUDGET_MS, deadline.timeRemaining())) : 4)) return done(b.trajectories as BandTrajectory[]);
+        progress(b.progress);
+        if (typeof window.requestIdleCallback === 'function') idleId = window.requestIdleCallback(tick, { timeout: 1000 });
+        else idleTimer = setTimeout(tick, 50);
+      };
+      tick();
+    };
+    function bakeGroup(defs: readonly RingUnitDef[], opts: readonly BakeOpts[] | undefined, progress: (p: number) => void, done: (list: BandTrajectory[]) => void): void {
+      const key = bakedKey(defs, FRAMES);
+      const cached = bakedGet(key);
+      if (cached) return done(cached);
+      const finish = (list: BandTrajectory[]): void => {
+        if (disposed) return;
+        bakedPut(key, list);
+        done(list);
+      };
+      const fallback = (): void => {
+        worker?.terminate();
+        worker = null;
+        if (!disposed) bakeOnIdle(new UnitBaker(defs, FRAMES, opts), finish, progress);
+      };
+      if (typeof Worker === 'undefined') return fallback();
+      try {
+        worker ??= new Worker(new URL('../../src/lib/space/cohabit-bake.worker.ts', import.meta.url), { type: 'module' });
+        const id = ++jobId;
+        worker.onmessage = (ev: MessageEvent<BakeReply>) => {
+          const m = ev.data;
+          if (m.id !== id) return;
+          if (m.kind === 'progress') progress(m.p);
+          else if (m.kind === 'done') finish(m.trajs);
+          else fallback();
+        };
+        worker.onerror = () => fallback();
+        worker.postMessage({ id, defs: [...defs], frames: FRAMES, opts: opts && [...opts] } satisfies BakeJob);
+      } catch {
+        fallback();
+      }
+    }
+    const takeDual = (list: BandTrajectory[]): void => {
+      worker?.terminate(); // 两组都烘完了，线程不再留着
+      worker = null;
       if (disposed || !trajs) return;
       tracks = [...trajs, ...list];
       paths = tracks.map((t) => bandPaths(t));
       dualReady = true;
       canvas.dataset.roof = 'ready'; // 截图脚本等它（scripts/case-frames/capture.mjs）：烘完之前两层的台还照平台落
     };
-    const dualIdleTick = (deadline?: IdleDeadline): void => {
-      dualIdle = null;
-      dualTimer = null;
-      if (disposed || !dualBaker) return;
-      if (dualBaker.work(deadline ? Math.max(2, Math.min(BAKE_BUDGET_MS, deadline.timeRemaining())) : 4)) {
-        takeDual(dualBaker.trajectories as BandTrajectory[]);
-        return;
-      }
-      if (typeof window.requestIdleCallback === 'function') dualIdle = window.requestIdleCallback(dualIdleTick, { timeout: 1000 });
-      else dualTimer = setTimeout(dualIdleTick, 50);
-    };
-    const dualFallback = (): void => {
-      worker?.terminate();
-      worker = null;
-      if (disposed || dualBaker) return;
-      dualBaker = new UnitBaker(UNIT_DUAL_DEFS, FRAMES, UNIT_DUAL_OPTS);
-      dualIdleTick();
-    };
-    function startDual(): void {
-      if (dualReady || worker || dualBaker) return;
-      const cached = bakedGet(dualKey);
-      if (cached) {
-        takeDual(cached);
-        return;
-      }
-      if (typeof Worker === 'undefined') {
-        dualFallback();
-        return;
-      }
-      try {
-        const w = new Worker(new URL('../../src/lib/space/cohabit-bake.worker.ts', import.meta.url), { type: 'module' });
-        worker = w;
-        const got: BandTrajectory[] = [];
-        w.onmessage = (ev: MessageEvent<BakeReply>) => {
-          const m = ev.data;
-          if (m.kind === 'track') got[m.i] = m.traj;
-          else if (m.kind === 'done') {
-            bakedPut(dualKey, got);
-            takeDual(got);
-            w.terminate();
-            worker = null;
-          } else dualFallback();
-        };
-        w.onerror = () => dualFallback();
-        w.postMessage({ defs: [...UNIT_DUAL_DEFS], frames: FRAMES, opts: [...UNIT_DUAL_OPTS] });
-      } catch {
-        dualFallback();
-      }
-    }
 
     // ── 人与猫：按「姿态 + 步态相位格」各烘一份静态网格（每种颜色一件，身子与头分开），摆放走 drawMeshAt，每帧不重烘 ──
     // 穿着与花色：每一场（开场与每次「重来」）洗一副牌、按出场顺序发，同一场里人不撞衫、猫不重样（2026-10-28 作者「随机，不要重复就行」）
@@ -920,62 +922,24 @@ export function CohabitSpaceBench({
     let lastHud = '';
     const pushHud = (): void => {
       const s = sim.summary();
-      const key = `${Math.floor(s.t)}|${s.formed}|${roofed}|${s.ledger.counts.gaze}|${s.ledger.counts.warmth}|${s.ledger.counts.touch}|${s.ledger.counts.pass}|${trajs ? 1 : Math.round(baker.progress * 20)}`;
+      const key = `${Math.floor(s.t)}|${s.formed}|${roofed}|${s.ledger.counts.gaze}|${s.ledger.counts.warmth}|${s.ledger.counts.touch}|${s.ledger.counts.pass}|${trajs ? 1 : Math.round(bakeP * 20)}`;
       if (key === lastHud) return;
       lastHud = key;
-      setHud((h) => ({ ...h, t: s.t, formed: s.formed, roofed, counts: { ...s.ledger.counts }, bake: trajs ? 1 : baker.progress }));
+      setHud((h) => ({ ...h, t: s.t, formed: s.formed, roofed, counts: { ...s.ledger.counts }, bake: trajs ? 1 : bakeP }));
     };
 
-    // 烘轨迹走自己的时间片（宏任务链），不挂在渲染循环上：慢设备或一页多台时帧来得稀，
-    // 按帧给预算会把一秒半的活拖成半分钟（无头软件 GL 实测 40 s 才 13%）
-    let bakeTimer: ReturnType<typeof setTimeout> | null = null;
-    const bakeTick = (): void => {
-      bakeTimer = null;
-      if (baker.work(BAKE_BUDGET_MS)) {
-        onBaked();
+    bakeGroup(
+      UNIT_TIERS,
+      undefined,
+      (p) => {
+        bakeP = p;
+      },
+      (list) => {
+        onBaked(list);
         render();
         pushHud();
-      } else bakeTimer = setTimeout(bakeTick, 0);
-    };
-    // 离屏只用空闲时间烘（2026-10-28 性能排查）：/lab 上这台排在倒数第二，原先进页面就满速开烘，
-    // 主线程白忙好几秒、拖慢最上面正在看的几台。离屏时只拿帧与帧之间剩下的空闲（requestIdleCallback；
-    // Safari 没有它，退成每 50ms 烘 4ms），离视口一屏以内才换回满速。已烘过（同一标签页里别处烘的，结果按配置缓存）直接用。
-    const ric = typeof window.requestIdleCallback === 'function' ? window.requestIdleCallback.bind(window) : null;
-    let idleId: number | null = null;
-    let near = false;
-    const idleTick = (deadline?: IdleDeadline): void => {
-      idleId = null;
-      bakeTimer = null;
-      if (near || trajs) return;
-      // 页面一直不空闲时 timeout 也会叫一次，此时剩余为 0——至少推 2ms，保证慢慢有进展
-      if (baker.work(deadline ? Math.max(2, Math.min(BAKE_BUDGET_MS, deadline.timeRemaining())) : 4)) {
-        onBaked();
-        render();
-        pushHud();
-        return;
-      }
-      scheduleIdle();
-    };
-    const scheduleIdle = (): void => {
-      if (ric) idleId = ric(idleTick, { timeout: 1000 });
-      else bakeTimer = setTimeout(idleTick, 50);
-    };
-    let bakeIo: IntersectionObserver | null = null;
-    const startBake = (): void => {
-      near = true;
-      bakeIo?.disconnect();
-      bakeIo = null;
-      if (idleId !== null) window.cancelIdleCallback(idleId);
-      idleId = null;
-      if (bakeTimer !== null) clearTimeout(bakeTimer);
-      bakeTimer = trajs ? null : setTimeout(bakeTick, 0);
-    };
-    if (baker.done || typeof IntersectionObserver === 'undefined') startBake();
-    else {
-      bakeIo = new IntersectionObserver((ents) => ents[ents.length - 1].isIntersecting && startBake(), { rootMargin: '100% 0px' });
-      bakeIo.observe(canvas);
-      scheduleIdle();
-    }
+      },
+    );
 
     const step = (dt: number): void => {
       if (trajs && runningRef.current) {
@@ -1055,11 +1019,8 @@ export function CohabitSpaceBench({
       apiRef.current = null;
       disposed = true;
       worker?.terminate();
-      if (dualIdle !== null) window.cancelIdleCallback(dualIdle);
-      if (dualTimer !== null) clearTimeout(dualTimer);
-      bakeIo?.disconnect();
       if (idleId !== null) window.cancelIdleCallback(idleId);
-      if (bakeTimer !== null) clearTimeout(bakeTimer);
+      if (idleTimer !== null) clearTimeout(idleTimer);
       canvas.removeEventListener('contextmenu', onCtx);
       canvas.removeEventListener('pointerdown', onDown);
       canvas.removeEventListener('pointermove', onMove);

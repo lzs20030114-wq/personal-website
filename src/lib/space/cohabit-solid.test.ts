@@ -8,6 +8,7 @@ import { SOLID, offsetProfile } from './skin-solid';
 import { CLAMP_SPAN, MECH, clampRadii } from './unit-mechanism';
 import { SQUARE, SQUARE_PEAK, SQUARE_REACH, SQUARE_TIERS, buildSquareUnits, squareHalfSide, squareRadiusAt, squareStructureAt } from './skin-square';
 import { CYCLE_BAND } from './skin-cycle';
+import { SKIN, createSkinUnit, renderSmooth } from './skin-unit';
 import { CAT_COATS, catMesh, figureMesh, styleKey as styleKeyOf, type HumanStyle } from './figure';
 import { OUTFITS } from '../../../components/lab/figurePalette';
 import { partBox } from './mesh-shell';
@@ -266,6 +267,21 @@ describe('带子轨迹关键帧', () => {
       const t = (j + 1) / (FRAMES.bridge + 1);
       for (let i = 0; i < 2 * n; i += 17) expect(f[i]).toBeCloseTo(straight[i] + (entry[i] - straight[i]) * t, 9);
     }
+  });
+
+  // 2026-10-31 轻量化：受力结束、连续两步不动就不再算，这一段剩下的帧共用停稳那一帧
+  it('停稳就不再算：成形态与跑满 1500 步的引擎差 < 1e-10，正向与回程静止的尾段共用同一个数组', () => {
+    const def = UNIT_TIERS[0];
+    const u = createSkinUnit(def.spec, def.opts);
+    for (let s = 0; s < SKIN.STEPS; s++) u.advance();
+    const p = renderSmooth(u.px, u.py, def.smooth[0], def.smooth[1]);
+    const formed = traj.frames[STEADY.formed];
+    let d = 0;
+    for (let i = 0; i < traj.n; i++) d = Math.max(d, Math.abs(p.x[i] - formed[i]), Math.abs(p.y[i] - formed[traj.n + i]));
+    expect(d).toBeLessThan(1e-10);
+    expect(traj.frames[FRAMES.form - 1]).toBe(traj.frames[FRAMES.form - 2]);
+    expect(traj.frames[FRAMES.form + FRAMES.retract - 1]).toBe(traj.frames[FRAMES.form + FRAMES.retract - 2]);
+    expect(new Set(traj.frames).size).toBeLessThan(traj.frames.length);
   });
 
   it('游标取帧：静止态与升降段与 bandFrame 逐位相同；一路涨上去每步都小，中途退回不跳轨，程度小幅来回不翻向', () => {

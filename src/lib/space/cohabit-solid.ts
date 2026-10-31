@@ -76,6 +76,28 @@ export type FrameCounts = { form: number; retract: number; hoist: number; bridge
 export const DOOR_STEPS = 1000;
 
 /**
+ * 停稳就不再算（2026-10-31 轻量化）：受力结束之后（正向 = 芯在第 900 步收到底、外压到第 1100 步降到 0；回程与让路 =
+ * r 在第 900 步走到终点、键全部解开），连续两步每个节点的位移都小于 SETTLE，这一段剩下的关键帧就用停稳那一刻的帧
+ * （同一个数组，不另存）。实测正向在第 1104–1106 步停稳、回程在第 1070–1266 步，与跑满 1500 步的位置差 < 2e-11 引擎单位；
+ * 九条轨迹的计算少约两成，静止的尾段不再各存一份。
+ */
+const FORCE_END = { form: 1100, retract: 900, door: 900 } as const;
+const SETTLE = 1e-12;
+/** 相邻两帧逐点差都不超过它，算「没在动」（取帧只映射到还在动的那段） */
+const STILL = 1e-6;
+
+/** frames[from + lo − 1 .. from + count) 里形状还在变的最后一帧（相对 from）；从 count − 1 往回找到 lo，都没在变就给 fallback */
+function lastMoving(frames: readonly Float64Array[], from: number, count: number, lo: number, fallback: number): number {
+  for (let k = count - 1; k >= lo; k--) {
+    const a = frames[from + k];
+    const b = frames[from + k - 1];
+    if (a === b) continue;
+    for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > STILL) return k;
+  }
+  return fallback;
+}
+
+/**
  * 升降段（两段触发，见头注）。`dropAt` 之下程度全给升降：0 = 收在天花下，dropAt = 落到工位的直筒；
  * 之上才是成形。`stowed` = 收起时布束保留的长度比例（折叠的布与台子缩成一团，演示值，待作者真机看）；
  * `ceilGap` = 收起时带子顶端离天花方板下表面的净距（世界单位）。
@@ -160,6 +182,12 @@ export class TrajectoryBaker {
   private readonly locks: (Uint8Array | null)[] = [];
   private readonly doorLocks: (Uint8Array | null)[] = [];
   private step = 0;
+  /** 这一段下一个要取的关键帧（各段第 0 帧在换段时就取了） */
+  private cap = 1;
+  /** 停稳判定：上一步的位置与连着几步没动 */
+  private readonly lastX: Float64Array;
+  private readonly lastY: Float64Array;
+  private calm = 0;
   private phase: 'form' | 'retract' | 'door' | 'done' = 'form';
   private result: BandTrajectory | null = null;
 
@@ -194,6 +222,8 @@ export class TrajectoryBaker {
           bonds.push(i, j);
         }
     this.bonds = Int32Array.from(bonds);
+    this.lastX = new Float64Array(this.n);
+    this.lastY = new Float64Array(this.n);
     this.capture(); // 正向第 0 帧 = 直带子
   }
 
@@ -228,17 +258,50 @@ export class TrajectoryBaker {
     locks.push(l);
   }
 
+  /** 受力已结束，且连续两步每个节点的位移都小于 SETTLE（见 FORCE_END） */
+  private settled(u: SkinUnit, forceEnd: number): boolean {
+    if (this.step < forceEnd) return false;
+    let move = 0;
+    for (let i = 0; i < u.n; i++) move = Math.max(move, Math.abs(u.px[i] - this.lastX[i]), Math.abs(u.py[i] - this.lastY[i]));
+    this.lastX.set(u.px);
+    this.lastY.set(u.py);
+    this.calm = move < SETTLE ? this.calm + 1 : 0;
+    return this.calm >= 2;
+  }
+
+  /** 推进这一段一步：到点取帧；停稳了就把这一段剩下的帧都填成此刻这一帧。返回这一段是否取完 */
+  private stepPhase(u: SkinUnit, at: readonly number[], forceEnd: number, into: Float64Array[], locks: (Uint8Array | null)[]): boolean {
+    this.step++;
+    if (this.step === at[this.cap]) {
+      this.capture(u, into, locks);
+      this.cap++;
+    }
+    if (this.cap < at.length && this.settled(u, forceEnd)) {
+      this.capture(u, into, locks);
+      for (this.cap++; this.cap < at.length; this.cap++) {
+        into.push(into[into.length - 1]);
+        locks.push(locks[locks.length - 1]);
+      }
+    }
+    return this.cap >= at.length;
+  }
+
+  /** 换到下一段：步数、取帧位置、停稳判定都从头来（各段第 0 帧由调用方先取） */
+  private enter(phase: 'retract' | 'door'): void {
+    this.phase = phase;
+    this.step = 0;
+    this.cap = 1;
+    this.calm = 0;
+  }
+
   /** 在 budgetMs 内尽量推进；返回是否已经烘完 */
   work(budgetMs: number, now: () => number = () => performance.now()): boolean {
     const t0 = now();
     while (this.phase !== 'done') {
       if (this.phase === 'form') {
         this.unit.advance();
-        this.step++;
-        if (this.formAt.includes(this.step)) this.capture();
-        if (this.step >= SKIN.STEPS) {
-          this.phase = 'retract';
-          this.step = 0;
+        if (this.stepPhase(this.unit, this.formAt, FORCE_END.form, this.frames, this.locks)) {
+          this.enter('retract');
           if (this.doorAt.length) {
             this.doorUnit = this.unit.fork();
             this.capture(this.doorUnit, this.doorFrames, this.doorLocks); // 让路第 0 帧 = 成形态
@@ -247,19 +310,14 @@ export class TrajectoryBaker {
         }
       } else if (this.phase === 'retract') {
         this.unit.retractStep();
-        this.step++;
-        if (this.retractAt.includes(this.step)) this.capture();
-        if (this.step >= SKIN.STEPS) {
-          this.step = 0;
-          if (this.doorUnit) this.phase = 'door';
+        if (this.stepPhase(this.unit, this.retractAt, FORCE_END.retract, this.frames, this.locks)) {
+          if (this.doorUnit) this.enter('door');
           else this.finish();
         }
       } else {
         const d = this.doorUnit as SkinUnit;
         d.retractStep(1.0);
-        this.step++;
-        if (this.doorAt.includes(this.step)) this.capture(d, this.doorFrames, this.doorLocks);
-        if (this.step >= DOOR_STEPS) this.finish();
+        if (this.stepPhase(d, this.doorAt, FORCE_END.door, this.doorFrames, this.doorLocks)) this.finish();
       }
       if (now() - t0 > budgetMs) break;
     }
@@ -297,30 +355,11 @@ export class TrajectoryBaker {
     let top = Infinity;
     for (let i = r0; i < r1; i++) if (formed[i] > refReach * 0.5) top = Math.min(top, -formed[n + i] * SOLID.SCALE);
     const F = this.formAt.length;
-    let active = this.retractAt.length - 1;
-    for (let k = this.retractAt.length - 1; k > 0; k--) {
-      const a = this.frames[F + k];
-      const b = this.frames[F + k - 1];
-      let d = 0;
-      for (let i = 0; i < 2 * n; i++) d = Math.max(d, Math.abs(a[i] - b[i]));
-      if (d > 1e-6) {
-        active = k;
-        break;
-      }
-    }
-    let formActive = 1;
-    for (let k = F - 1; k > 1; k--) {
-      const a = this.frames[k];
-      const b = this.frames[k - 1];
-      let d = 0;
-      for (let i = 0; i < 2 * n; i++) d = Math.max(d, Math.abs(a[i] - b[i]));
-      if (d > 1e-6) {
-        formActive = k;
-        break;
-      }
-    }
+    const R = this.retractAt.length;
+    const active = lastMoving(this.frames, F, R, 1, R - 1);
+    const formActive = lastMoving(this.frames, 0, F, 2, 1);
     // 升降帧：由回程末帧（闲着的直带子）压向顶端，第 0 帧 = 收起态、末帧 = 直带子逐位相同
-    const straight = this.frames[F + this.retractAt.length - 1];
+    const straight = this.frames[F + R - 1];
     for (let j = 0; j < this.hoistN; j++) {
       this.frames.push(hoistProfile(straight, n, this.stowed + (1 - this.stowed) * (j / (this.hoistN - 1))));
       this.locks.push(null); // 升降帧：布压成一团，不画键
@@ -335,17 +374,7 @@ export class TrajectoryBaker {
       this.locks.push(new Uint8Array(this.bonds.length / 2)); // 过渡帧：键都没扣，键座与外套照画
     }
     // 让路帧：排在最后（前面各段的下标逐位不变）
-    let doorActive = 0;
-    for (let k = this.doorFrames.length - 1; k > 0; k--) {
-      const a = this.doorFrames[k];
-      const b = this.doorFrames[k - 1];
-      let d = 0;
-      for (let i = 0; i < 2 * n; i++) d = Math.max(d, Math.abs(a[i] - b[i]));
-      if (d > 1e-6) {
-        doorActive = k;
-        break;
-      }
-    }
+    const doorActive = lastMoving(this.doorFrames, 0, this.doorFrames.length, 1, 0);
     for (const f of this.doorFrames) this.frames.push(f);
     for (const l of this.doorLocks) this.locks.push(l);
     this.doorUnit = null;
@@ -586,13 +615,14 @@ export function unitFormPlan(o: {
 /** 已经烘好的三档轨迹（同一页面里换路由、重挂台架时直接拿，不重烘） */
 const BAKED = new Map<string, BandTrajectory[]>();
 
-/** 交给后台线程烘的一份活（cohabit-bake.worker.ts）与它的回话 */
+/** 交给后台线程烘的一份活（cohabit-bake.worker.ts）与它的回话；id 区分先后两份（平台三档、两层六条） */
 export interface BakeJob {
+  id: number;
   defs: RingUnitDef[];
   frames: FrameCounts;
-  opts: BakeOpts[];
+  opts?: BakeOpts[];
 }
-export type BakeReply = { kind: 'track'; i: number; traj: BandTrajectory } | { kind: 'done' } | { kind: 'error'; message: string };
+export type BakeReply = { id: number } & ({ kind: 'progress'; p: number } | { kind: 'done'; trajs: BandTrajectory[] } | { kind: 'error'; message: string });
 
 /** 一组轨迹的缓存键（键名 + 帧数；烘焙选项由键名决定，不另记） */
 export function bakedKey(defs: readonly RingUnitDef[], frames: FrameCounts = FRAMES): string {
