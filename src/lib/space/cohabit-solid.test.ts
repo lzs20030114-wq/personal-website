@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BRIDGE_BASE, DOOR_BASE, DOOR_EPS, FRAMES, SHELL, bakeUnitShell, shellCoverVerts, shellGoreVerts, shellJoins, bandVertsAt, bakeBandKeys, bakeHanger, bakeUnitKeys, bakeUnitMech, FURN_ERGO, HOIST, STEADY, TABLE_TOP, bandTop, clipToReel, doorFrame, isDoorFrame, pickUnitBands, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_CUT, UNIT_ORDER, UNIT_SHAPE, UNIT_STORED, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
+import { DUAL, DUAL_STOWED, SHELTER, UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, dualUnitSpec, membraneIndexAt, shelterBands, shelterClear, shelterToward, unitFormPlan, UNIT_FORM_ODDS, BRIDGE_BASE, DOOR_BASE, DOOR_EPS, FRAMES, SHELL, bakeUnitShell, shellCoverVerts, shellGoreVerts, shellJoins, bandVertsAt, bakeBandKeys, bakeHanger, bakeUnitKeys, bakeUnitMech, FURN_ERGO, HOIST, STEADY, TABLE_TOP, bandTop, clipToReel, doorFrame, isDoorFrame, pickUnitBands, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_CUT, UNIT_ORDER, UNIT_SHAPE, UNIT_STORED, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
+import type { BandTrajectory } from './cohabit-solid';
 import { planLayout } from './unit-activation';
 import { FIGURE, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
 import { RING } from './skin-ring';
@@ -7,6 +8,7 @@ import { SOLID, offsetProfile } from './skin-solid';
 import { CLAMP_SPAN, MECH, clampRadii } from './unit-mechanism';
 import { SQUARE, SQUARE_PEAK, SQUARE_REACH, SQUARE_TIERS, buildSquareUnits, squareHalfSide, squareRadiusAt, squareStructureAt } from './skin-square';
 import { CYCLE_BAND } from './skin-cycle';
+import { SKIN, createSkinUnit, renderSmooth } from './skin-unit';
 import { CAT_COATS, catMesh, figureMesh, styleKey as styleKeyOf, type HumanStyle } from './figure';
 import { OUTFITS } from '../../../components/lab/figurePalette';
 import { partBox } from './mesh-shell';
@@ -265,6 +267,21 @@ describe('带子轨迹关键帧', () => {
       const t = (j + 1) / (FRAMES.bridge + 1);
       for (let i = 0; i < 2 * n; i += 17) expect(f[i]).toBeCloseTo(straight[i] + (entry[i] - straight[i]) * t, 9);
     }
+  });
+
+  // 2026-10-31 轻量化：受力结束、连续两步不动就不再算，这一段剩下的帧共用停稳那一帧
+  it('停稳就不再算：成形态与跑满 1500 步的引擎差 < 1e-10，正向与回程静止的尾段共用同一个数组', () => {
+    const def = UNIT_TIERS[0];
+    const u = createSkinUnit(def.spec, def.opts);
+    for (let s = 0; s < SKIN.STEPS; s++) u.advance();
+    const p = renderSmooth(u.px, u.py, def.smooth[0], def.smooth[1]);
+    const formed = traj.frames[STEADY.formed];
+    let d = 0;
+    for (let i = 0; i < traj.n; i++) d = Math.max(d, Math.abs(p.x[i] - formed[i]), Math.abs(p.y[i] - formed[traj.n + i]));
+    expect(d).toBeLessThan(1e-10);
+    expect(traj.frames[FRAMES.form - 1]).toBe(traj.frames[FRAMES.form - 2]);
+    expect(traj.frames[FRAMES.form + FRAMES.retract - 1]).toBe(traj.frames[FRAMES.form + FRAMES.retract - 2]);
+    expect(new Set(traj.frames).size).toBeLessThan(traj.frames.length);
   });
 
   it('游标取帧：静止态与升降段与 bandFrame 逐位相同；一路涨上去每步都小，中途退回不跳轨，程度小幅来回不翻向', () => {
@@ -937,5 +954,278 @@ describe('坐着的人与家具', () => {
           expect((ROOM.FLOOR_Y - b.y0) / UNITS_PER_M).toBeLessThan(1.4);
         }
     }
+  });
+});
+
+describe('按用途定形：有顶的一台（2026-10-30，形态方案 §11）', () => {
+  it('两个结构的谱：338 节全部铺出去、下台贴底（尾与平台同一个），两块之间贴合 ≥ 29、离两块结构各 ≥ 16；三档自由与贴合总量相同', () => {
+    expect(DUAL.mid).toBeGreaterThanOrEqual(29);
+    const totals = new Set<string>();
+    UNIT_SHAPE.k.forEach((k, t) => {
+      for (const [up, lo] of [[true, true], [false, true]] as const) {
+        const d = dualUnitSpec(k, up, lo);
+        expect(d.spec.reduce((a, s) => a + s[1], 0)).toBe(UNIT_CUT);
+        expect(d.a0).toBeLessThan(d.b0);
+        expect(d.spec[0][0]).toBe('g');
+        expect(d.spec[0][1]).toBeGreaterThanOrEqual(SQUARE.LEAD_MIN);
+        const keyed = d.spec.filter((s) => s[0] === 'f' && s[2] && s[2].length);
+        expect(keyed).toHaveLength(up ? 2 : 1);
+        // 下台贴底：下台之后只剩尾，尾与平台那一档同长
+        const last = d.spec[d.spec.length - 1];
+        expect(d.b0 + d.fs + last[1]).toBe(UNIT_CUT);
+        expect(last).toEqual(UNIT_TIERS[t].spec[UNIT_TIERS[t].spec.length - 1]);
+        // 两块之间：贴合总量 ≥ 29，离上台结尾、下台开头各至少一段 ISO 贴合
+        let at = 0;
+        let glued = 0;
+        const between: [string, number][] = [];
+        for (const s of d.spec) {
+          if (at >= d.a0 + d.fs && at < d.b0) {
+            between.push([s[0], s[1]]);
+            if (s[0] === 'g') glued += s[1];
+          }
+          at += s[1];
+        }
+        expect(glued).toBeGreaterThanOrEqual(29);
+        expect(between[0][0]).toBe('g');
+        expect(between[0][1]).toBeGreaterThanOrEqual(SQUARE.ISO);
+        expect(between[between.length - 1][0]).toBe('g');
+        expect(between[between.length - 1][1]).toBeGreaterThanOrEqual(SQUARE.ISO);
+        const free = d.spec.filter((s) => s[0] === 'f').reduce((a, s) => a + s[1], 0);
+        totals.add(`${free}`);
+      }
+    });
+    expect(totals.size).toBe(1); // 芯一样长 ⇒ 一台二十条带带顶同高，共用一个上夹环
+    expect(UNIT_DUAL_DEFS).toHaveLength(6);
+    expect(new Set(UNIT_DUAL_DEFS.map((d) => d.key)).size).toBe(6);
+    expect(UNIT_DUAL_OPTS).toHaveLength(6);
+  });
+
+  it(
+    '烘出来：下台离钉住端与平台一样高，上台三档同高、两块之间约 0.52 m；只成下台时下台形状逐点相同、上台那段贴着芯；收起那团与平台一样长；带顶同高',
+    () => {
+      // 面档与角档（差得最多的两档）各烘「两块都成」与「只成下台」
+      const pick = [0, 2, 3, 5];
+      const [face, corner, faceLo, cornerLo] = new UnitBaker(
+        pick.map((i) => UNIT_DUAL_DEFS[i]),
+        FRAMES,
+        pick.map((i) => UNIT_DUAL_OPTS[i]),
+      ).runAll();
+      const flat = trajs;
+      const rig = rigFor(squarePlanLayout(planLayout(COHABIT.SEATS.GRID, RING.RADIUS_DEF, 'room')), flat[0]);
+      const m = (px: number): number => (px * SOLID.SCALE * rig.s) / UNITS_PER_M;
+      const F = FRAMES.form - 1;
+      const n = UNIT_CUT;
+      for (const tr of [face, corner, faceLo, cornerLo]) expect(tr.n).toBe(n);
+      // 下台台面离钉住端：与平台同一档逐档相同（±0.3 装置单位）
+      expect(Math.abs(face.footY - face.platformTopY - (flat[0].footY - flat[0].platformTopY))).toBeLessThan(0.3);
+      expect(Math.abs(corner.footY - corner.platformTopY - (flat[2].footY - flat[2].platformTopY))).toBeLessThan(0.3);
+      // 上台：离芯超过一半挑出那几节的最高点（引擎 y 向上为正）
+      const plateTop = (tr: BandTrajectory, k: number, up: boolean): number => {
+        const d = dualUnitSpec(UNIT_SHAPE.k[k], true, true);
+        const i0 = up ? d.a0 : d.b0;
+        const f = tr.frames[F];
+        let rx = 0;
+        for (let i = i0; i < i0 + d.fs; i++) rx = Math.max(rx, f[i]);
+        let top = -Infinity;
+        let bot = Infinity;
+        for (let i = i0; i < i0 + d.fs; i++)
+          if (f[i] > 0.5 * rx) {
+            top = Math.max(top, f[n + i]);
+            bot = Math.min(bot, f[n + i]);
+          }
+        return up ? bot : top;
+      };
+      const upFace = plateTop(face, 0, true) - face.frames[F][2 * n - 1];
+      const upCorner = plateTop(corner, 2, true) - corner.frames[F][2 * n - 1];
+      expect(Math.abs(m(upFace - upCorner))).toBeLessThan(0.012); // 上台三档同高（面 / 角差最多的两档）
+      const gap = m(plateTop(face, 0, true) - plateTop(face, 0, false));
+      expect(gap).toBeGreaterThan(0.48);
+      expect(gap).toBeLessThan(0.56);
+      // 只成下台：下台那段与两块都成时逐点相同（两块之间隔着 ≥ 16 节贴合 + 垫 + ≥ 16 节贴合），上台那段贴着芯
+      for (const [both, lo, k] of [[face, faceLo, 0], [corner, cornerLo, 2]] as const) {
+        const d = dualUnitSpec(UNIT_SHAPE.k[k], true, true);
+        const fb = both.frames[F];
+        const fl = lo.frames[F];
+        let dev = 0;
+        let bare = 0;
+        let full = 0;
+        for (let i = d.b0; i < d.b0 + d.fs; i++) dev = Math.max(dev, Math.abs(fb[i] - fl[i]), Math.abs(fb[n + i] - fl[n + i]));
+        for (let i = d.a0; i < d.a0 + d.fs; i++) {
+          bare = Math.max(bare, fl[i]);
+          full = Math.max(full, fb[i]);
+        }
+        expect(dev).toBeLessThan(1e-6);
+        expect(bare).toBeLessThan(0.1 * full);
+        // 键：两块都成全锁，只成下台锁下台那半
+        expect(both.locks[F]!.every((v) => v === 1)).toBe(true);
+        expect(lo.locks[F]!.every((v) => v === 1)).toBe(true);
+        expect(lo.bonds.length * 2).toBe(both.bonds.length);
+      }
+      // 收起那团与平台一样长（按节数比例压紧，±3%）：落下那一刻不突然变长
+      const len = (tr: BandTrajectory, k: number): number => {
+        const f = tr.frames[k];
+        let hi = -Infinity;
+        let lo = Infinity;
+        for (let i = 0; i < tr.n; i++) {
+          hi = Math.max(hi, f[tr.n + i]);
+          lo = Math.min(lo, f[tr.n + i]);
+        }
+        return hi - lo;
+      };
+      expect(DUAL_STOWED).toBeLessThan(HOIST.stowed);
+      expect(Math.abs(len(face, STEADY.stowed) / len(flat[0], STEADY.stowed) - 1)).toBeLessThan(0.03);
+      // 带顶：四条每一帧都同高（共用一个上夹环）
+      let dTop = 0;
+      for (let k = 0; k < face.frames.length; k++) for (const tr of [corner, faceLo, cornerLo]) dTop = Math.max(dTop, Math.abs(bandTop(tr, k) - bandTop(face, k)));
+      expect(dTop).toBeLessThan(1e-9);
+      // 膜按上下两块对位：两个结构的带记着上台中心
+      expect(face.upperMid).toBeCloseTo(dualUnitSpec(UNIT_SHAPE.k[0], true, true).a0 + (dualUnitSpec(UNIT_SHAPE.k[0], true, true).fs - 1) / 2, 9);
+      expect(face.mid).toBeCloseTo(dualUnitSpec(UNIT_SHAPE.k[0], true, true).b0 + (dualUnitSpec(UNIT_SHAPE.k[0], true, true).fs - 1) / 2, 9);
+    },
+    180_000,
+  );
+
+  it('膜的分段对位：一对中心时与 membraneIndex 相同；两对时上下两块各自逐节对齐、两头接到带顶带底', () => {
+    const n = 338;
+    for (const i of [0, 40, 100, 160, 200, 300, 337]) expect(membraneIndexAt(i, n, [[150, 170, 30]])).toBeCloseTo(membraneIndex(i, n, 150, 170, 30), 9);
+    const pairs: [number, number, number][] = [
+      [120, 104, 40],
+      [284, 267, 40],
+    ];
+    for (const [ma, mb, w] of pairs) for (const d of [-w, -10, 0, 10, w]) expect(membraneIndexAt(ma + d, n, pairs)).toBeCloseTo(mb + d, 9);
+    expect(membraneIndexAt(0, n, pairs)).toBe(0);
+    expect(membraneIndexAt(n - 1, n, pairs)).toBe(n - 1);
+    let prev = -1;
+    for (let i = 0; i < n; i++) {
+      const v = membraneIndexAt(i, n, pairs);
+      expect(v).toBeGreaterThanOrEqual(prev);
+      prev = v;
+    }
+  });
+
+  it('有顶的那半圈：二十条带里背向座位的十条两块都成，朝座位的十条只成下台', () => {
+    for (const toward of [0, 0.7, Math.PI / 2, -2.4]) {
+      const b = shelterBands(toward);
+      expect(b.reduce((a, v) => a + v, 0)).toBe(10);
+      for (let j = 0; j < b.length; j++) expect(b[j] === 1).toBe(Math.cos(bandAngle(j) - toward) < 0);
+    }
+  });
+
+  it('下台的高度：猫坐着眼睛与坐着的人齐平（站上比例模型），上台顶比站着的人的眼睛低', () => {
+    expect(SHELTER.lowerTop).toBeCloseTo(1.17 - 0.27, 2);
+    expect(SHELTER.lowerTop + 0.583).toBeLessThan(1.57);
+  });
+
+  it('落在哪：正坐着的人共温带（1.5 m）以内的那台，朝离得最近的那个人；远了、压在家具上方的不要', () => {
+    const l = { platR: 0.35 };
+    const u = { x: 0, y: 0 };
+    expect(shelterToward(l, u, [], [])).toBeNull();
+    expect(shelterToward(l, u, [{ x: 0, y: 1.6 }], [])).toBeNull(); // 共温带以外
+    expect(shelterToward(l, u, [{ x: 0, y: 1.2 }], [])).toBeCloseTo(Math.PI / 2, 12);
+    expect(shelterToward(l, u, [{ x: 0, y: 1.2 }, { x: -0.9, y: 0 }], [])).toBeCloseTo(Math.PI, 12); // 取近的
+    const chair = { x0: 0.2, x1: 0.8, y0: -0.3, y1: 0.3, kind: 'chair' as const, ergo: true as const };
+    expect(shelterToward(l, u, [{ x: 0, y: 1.2 }], [chair])).toBeNull(); // 压在椅子上方（椅背 0.85 m 高过下台底面）
+    expect(shelterToward(l, u, [{ x: 0, y: 1.2 }], [{ ...chair, kind: 'sofa' as const }])).toBeCloseTo(Math.PI / 2, 12); // 沙发靠背 0.80 m 让得开
+    // 2-15 的标准布置：座位旁边那几台里有能落成有顶的（不全被家具挡掉）
+    const sim = new CohabitSim({ grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', trigger: 'posture', seed: 1 });
+    const seats = sim.seats.map((s) => ({ x: s.x, y: s.y }));
+    const ok = sim.layout.units.filter((q) => sim.seats.every((s) => s.table !== q.i) && shelterToward(sim.layout, q, seats, sim.furn!.rects) !== null);
+    expect(ok.length).toBeGreaterThan(8);
+  });
+
+  it('猫在有顶的一台上：坐进有顶那半边（离分界 25°），头转过去看座位；跨台给出走到几成', () => {
+    const u = { x: 0, y: 0 };
+    const band = { R: 0.2 };
+    for (const toward of [0, 1.1, -2.5]) {
+      const a = catPlacement({ x: 0, y: 0, heading: 0.3, state: 'sit' }, [u], true, false, layout8, band, toward);
+      const at = Math.atan2(a.y, a.x);
+      expect(Math.cos(at - toward)).toBeLessThan(0); // 在有顶那半边
+      expect(Math.cos(at - toward)).toBeCloseTo(Math.cos(Math.PI / 2 + SHELTER.catIn), 9);
+      const look = a.heading + a.headTurn;
+      expect(Math.cos(look - toward)).toBeCloseTo(1, 9); // 头朝座位
+      expect(Math.abs(a.headTurn)).toBeLessThan(Math.PI / 2);
+    }
+    const B = { x: layout8.pitchM, y: 0 };
+    expect(catPlacement({ x: B.x * 0.25, y: 0, heading: 0, state: 'walk' }, [u, B], true, true, layout8, band).t).toBeCloseTo(0.25, 9);
+  });
+});
+
+describe('给猫落的台随机成形（2026-10-30 第二轮）', () => {
+  const l = { platR: 0.35 };
+  const u = { x: 0, y: 0 };
+  const chair = { x0: 0.2, x1: 0.8, y0: -0.3, y1: 0.3, kind: 'chair' as const, ergo: true as const };
+  const base = { seed: 11, unit: 7, serial: 0, layout: l, at: u, seated: [] as { x: number; y: number }[], rects: [], tableUnit: false };
+
+  it('当桌子的那台、压在椅背上方的那台永远是平台', () => {
+    for (let s = 0; s < 200; s++) {
+      expect(unitFormPlan({ ...base, serial: s, tableUnit: true }).form).toBe('flat');
+      expect(unitFormPlan({ ...base, serial: s, rects: [chair] }).form).toBe('flat');
+      expect(unitFormPlan({ ...base, serial: s, seated: [{ x: 0, y: 1.2 }], rects: [chair] }).form).toBe('flat');
+    }
+    expect(shelterClear(l, u, [chair])).toBe(false);
+    expect(shelterClear(l, u, [{ ...chair, kind: 'sofa' as const }])).toBe(true);
+  });
+
+  it('同样的种子、第几台、第几次落下抽出同一种；不碰 Math.random（仿真的随机数流不动）', () => {
+    const real = Math.random;
+    Math.random = () => {
+      throw new Error('不该用 Math.random');
+    };
+    try {
+      for (let s = 0; s < 50; s++) {
+        const a = unitFormPlan({ ...base, serial: s });
+        const b = unitFormPlan({ ...base, serial: s });
+        expect(a.form).toBe(b.form);
+        expect(a.toward).toBe(b.toward);
+      }
+    } finally {
+      Math.random = real;
+    }
+    const forms = new Set(Array.from({ length: 40 }, (_, s) => unitFormPlan({ ...base, serial: s }).form));
+    expect(forms.size).toBe(3);
+  });
+
+  it('抽到各形的频率与 UNIT_FORM_ODDS 相符（共温带里 / 别处两套）', () => {
+    for (const [near, odds] of [
+      [true, UNIT_FORM_ODDS.near],
+      [false, UNIT_FORM_ODDS.other],
+    ] as const) {
+      const n = 4000;
+      const c = { flat: 0, half: 0, full: 0 };
+      for (let i = 0; i < n; i++) c[unitFormPlan({ ...base, seed: 3 + (i % 7), unit: i % 64, serial: Math.floor(i / 64), seated: near ? [{ x: 0, y: 1.2 }] : [] }).form]++;
+      expect(c.half / n).toBeCloseTo(odds.half, 1);
+      expect(c.full / n).toBeCloseTo(odds.full, 1);
+      expect(c.flat / n).toBeCloseTo(1 - odds.half - odds.full, 1);
+    }
+  });
+
+  it('有顶的一台：共温带里朝那个人敞开；别处朝四条边之一、正好十条带对十条带；整圈两层二十条全是两块', () => {
+    const dirs = new Set<number>();
+    for (let s = 0; s < 400; s++) {
+      const near = unitFormPlan({ ...base, serial: s, seated: [{ x: 0, y: 1.2 }] });
+      if (near.form === 'half') expect(near.toward).toBeCloseTo(Math.PI / 2, 12);
+      const p = unitFormPlan({ ...base, serial: s });
+      if (p.form === 'half') {
+        const k = (p.toward as number) / (Math.PI / 2);
+        expect(Math.abs(k - Math.round(k))).toBeLessThan(1e-12);
+        dirs.add(Math.round(k));
+        expect([...(p.bands as Uint8Array)].reduce((a, b) => a + b, 0)).toBe(10);
+        for (let j = 0; j < SQUARE.COUNT; j++) expect(p.bands![j]).toBe(Math.cos(bandAngle(j) - (p.toward as number)) < 0 ? 1 : 0);
+      } else if (p.form === 'full') {
+        expect(p.toward).toBeNull();
+        expect([...(p.bands as Uint8Array)].every((b) => b === 1)).toBe(true);
+      } else expect(p.bands).toBeNull();
+    }
+    expect(dirs).toEqual(new Set([0, 1, 2, 3]));
+  });
+
+  it('2-15 标准布置：座位的桌子那台全被排除，其余给猫的台里两层放得下的不少于四十台', () => {
+    const sim = new CohabitSim({ grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', trigger: 'posture', seed: 1 });
+    const tables = new Set(sim.seats.map((s) => s.table).filter((t) => t >= 0));
+    expect(tables.size).toBeGreaterThan(0);
+    for (const t of tables)
+      for (let s = 0; s < 30; s++) expect(unitFormPlan({ ...base, unit: t, serial: s, layout: sim.layout, at: sim.layout.units[t], rects: sim.furn!.rects, tableUnit: true }).form).toBe('flat');
+    const ok = sim.layout.units.filter((q) => !tables.has(q.i) && shelterClear(sim.layout, q, sim.furn!.rects));
+    expect(ok.length).toBeGreaterThanOrEqual(40);
   });
 });

@@ -10,8 +10,9 @@ import { useBenchLoop } from './useBenchLoop';
 import { DARK_A, DARK_B, LITE_A, LITE_B, MEM_DARK, MEM_LITE, RAIL_DARK, RAIL_LITE, ROOM_DARK, ROOM_LITE } from './SkinSolidBench';
 import { COATS, OUTFITS, catColor, coatOf, dealLooks, outfitOf, personColor } from './figurePalette';
 import { FlatRenderer, bakeIndexed, type MeshPlace } from '../../src/lib/linkage/gl3d';
-import { SOLID } from '../../src/lib/space/skin-solid';
+import { SOLID, type SolidTopology } from '../../src/lib/space/skin-solid';
 import { MECH } from '../../src/lib/space/unit-mechanism';
+import type { RingUnitDef } from '../../src/lib/space/skin-ring';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import type { Vec3 } from '../../src/lib/linkage/solver3d';
 import { COHABIT, CohabitSim, PACE_DEMO, SPACE_MODES, bandAngle, partySizes, type EventKind, type SpaceMode } from '../../src/lib/space/cohabit';
@@ -19,6 +20,17 @@ import { FIGURE, RING_GRID_AXON, ROOM, ringGridViewMatrix, type RingGridView } f
 import { CAT, CAT_HEAD_YAW_MAX, clampHeadYaw, catRig, humanRig, strideOf, styleKey, type Rig as BodyRig, type Tone } from '../../src/lib/space/figure';
 import {
   COHABIT_PIVOT,
+  FRAMES,
+  SHELTER,
+  UNIT_DUAL_DEFS,
+  UNIT_DUAL_OPTS,
+  bakedGet,
+  bakedKey,
+  bakedPut,
+  unitFormPlan,
+  type BakeJob,
+  type BakeOpts,
+  type BakeReply,
   SCENE,
   STEADY,
   STOWED_STRIDE,
@@ -26,6 +38,8 @@ import {
   TABLE_TOP,
   UNITS_PER_M,
   UNIT_ORDER,
+  UNIT_TIERS,
+  TrajectoryBaker,
   UnitBaker,
   bakeBand,
   bakeMembrane,
@@ -100,6 +114,12 @@ import {
  * 默认开。开着时：静止态的单元只画外皮（带子、键、带间的膜都在皮里面，不画）；有带子在让路的单元，门那里接缝片张开，
  * 带子与键照画，从门口看得见里面。关掉 = 回到结构视图（带子 + 键 + 半透明的膜）。
  *
+ * **按用途定形（2026-10-30）**：当桌子的那台按家具定高，给猫落的那台在三种形里随机抽一种（cohabit-solid `unitFormPlan` /
+ * `UNIT_FORM_ODDS`）：平台、有顶的一台（338 节布全部铺出去成上下两块方台，上台只盖半圈）、整圈两层；下台 0.90 m 给猫。
+ * 落在坐着的人身边 1.5 m 内的那台多半落成有顶的、敞开那半圈朝那个人，猫坐进有顶那半边看他。两组轨迹（平台三档、两层六条，
+ * 都带让路回程与键）在后台线程里烘（cohabit-bake.worker.ts），两层那组烘完之前全照平台落。抽签用仿真的种子，不动仿真的随机数，
+ * 平面模型逐位不变。两层的单元逐条摆（不进整台网格），上夹环、芯、吊杆、键、外皮都按它自己那组轨迹（`orders[u]`）取。
+ *
  * 案例页主图与主页预览用同一台（`controls={false}`）：没有控制条，拖拽旋转照常。
  */
 const VIEWS = [
@@ -159,10 +179,10 @@ const COPY = {
     title: '人猫同台 · 立体',
     sub: (side: number, roomH: number) => `8×8 · 方台边长 ${side.toFixed(2)} m · 房高 ${roomH.toFixed(2)} m · ${SCENE.people} 位访客 · ${SCENE.cats} 只猫`,
     hint: '拖拽旋转 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回、给人让路 · 控制在实验室',
-    hintCtl: '拖拽旋转 · 空间三档对照 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回，挡路的带各自收回 · 蒙皮可关掉看里面的带子与键 · 带子形状取自三条引擎（每档一条）的关键帧 · 访客的穿着与猫的花色每一场随机、不重样',
+    hintCtl: '拖拽旋转 · 空间三档对照 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回，挡路的带各自收回 · 给猫落的台随机成平台、半圈有顶的两层或整圈两层，坐着的人身边那台多半是有顶的、朝那个人敞开 · 当桌子的台照家具定高 · 蒙皮可关掉看里面的带子与键 · 带子形状取自引擎烘好的关键帧 · 访客的穿着与猫的花色每一场随机、不重样',
     baking: (p: number) => `算带子轨迹 ${Math.round(p * 100)}%`,
-    line: (t: number, formed: number, total: number, c: Record<EventKind, number>) =>
-      `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · 成形 ${formed} / ${total} · 共视 ${c.gaze} · 共温 ${c.warmth} · 共触 ${c.touch} · 交接 ${c.pass}`,
+    line: (t: number, formed: number, total: number, c: Record<EventKind, number>, roofed: number) =>
+      `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · 成形 ${formed} / ${total}${roofed ? ` · 有顶的台 ${roofed}` : ''} · 共视 ${c.gaze} · 共温 ${c.warmth} · 共触 ${c.touch} · 交接 ${c.pass}`,
     aria: '一间房里 8×8 个方形的收缩张紧外皮单元平时收在天花下，六位访客在地上走、站、坐，两只猫在方台上；单元按人猫同台的规则落下成形、收回，挡路的带各自收回',
     space: '空间',
     shell: '蒙皮',
@@ -175,10 +195,10 @@ const COPY = {
     title: 'People and cats together, in 3D',
     sub: (side: number, roomH: number) => `8×8 · square platform ${side.toFixed(2)} m · room ${roomH.toFixed(2)} m high · ${SCENE.people} visitors · ${SCENE.cats} cats`,
     hint: 'Drag to orbit · units rest stowed at the ceiling, then descend, form, retract and give way under the Lab 2-14 rules · controls in the lab',
-    hintCtl: 'Drag to orbit · three spaces to compare · units rest stowed at the ceiling, then descend and form under the Lab 2-14 rules, bands in the way retract on their own · turn the skin off to see the bands and keys inside · band shapes come from three engine runs, one per depth · outfits and coats are dealt at random each run, no two alike',
+    hintCtl: 'Drag to orbit · three spaces to compare · units rest stowed at the ceiling, then descend and form under the Lab 2-14 rules, bands in the way retract on their own · a unit lowered for a cat takes one of three forms at random (flat, two levels roofed over half, or two levels all round), and beside a seated visitor it is usually roofed at the back and open toward that visitor · units used as tables keep the height set by the furniture · turn the skin off to see the bands and keys inside · band shapes come from baked engine keyframes · outfits and coats are dealt at random each run, no two alike',
     baking: (p: number) => `baking band trajectory ${Math.round(p * 100)}%`,
-    line: (t: number, formed: number, total: number, c: Record<EventKind, number>) =>
-      `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · formed ${formed} / ${total} · co-gaze ${c.gaze} · co-warmth ${c.warmth} · contact ${c.touch} · crossing ${c.pass}`,
+    line: (t: number, formed: number, total: number, c: Record<EventKind, number>, roofed: number) =>
+      `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · formed ${formed} / ${total}${roofed ? ` · roofed ${roofed}` : ''} · co-gaze ${c.gaze} · co-warmth ${c.warmth} · contact ${c.touch} · crossing ${c.pass}`,
     aria: 'A room with an 8×8 field of square contracting-skin units stowed at the ceiling; six visitors walk, stand and sit on the floor, two cats live on the square platforms; units descend, form and retract under the cohabitation rules and bands in the way retract on their own',
     space: 'space',
     shell: 'skin',
@@ -263,7 +283,8 @@ export function CohabitSpaceBench({
   const shellRef = useRef(true);
   const [shell, setShell] = useState(true);
   const [view, setView] = useState<ViewKey>('axon');
-  const [hud, setHud] = useState<{ t: number; formed: number; total: number; counts: Record<EventKind, number>; bake: number; note: string; side: number; roomH: number }>({
+  const [hud, setHud] = useState<{ t: number; formed: number; total: number; counts: Record<EventKind, number>; bake: number; note: string; side: number; roomH: number; roofed: number }>({
+    roofed: 0,
     t: 0,
     formed: 0,
     total: COHABIT.SEATS.GRID * COHABIT.SEATS.GRID,
@@ -319,13 +340,22 @@ export function CohabitSpaceBench({
     };
     bakeFurniture();
 
-    // ── 带子轨迹：三档（面 / 边 / 角）分片烘，烘完才开始跑仿真（否则头一秒里成形的单元没有形可画）────
+    // ── 带子轨迹：平台三档（面 / 边 / 角）在后台线程里烘，烘完才开始跑仿真（否则头一秒里成形的单元没有形可画）────
     // 烘完之前用预览（引擎初始摆位压成的收起态，三档相同）先把立杆、天花方板、收着的单元画出来，画面不空等
-    const baker = new UnitBaker();
-    const topo = bandTopology(baker.n);
+    const pre = new TrajectoryBaker(UNIT_TIERS[0]).preview();
+    const topo = bandTopology(pre.n);
+    const topos = new Map<number, SolidTopology>([[pre.n, topo]]);
+    const topoOf = (n: number): SolidTopology => {
+      let t = topos.get(n);
+      if (!t) topos.set(n, (t = bandTopology(n)));
+      return t;
+    };
     let trajs: BandTrajectory[] | null = null;
+    // 轨道（带子按哪条轨迹取帧）：0–2 = 平台三档；3–5 = 两块都成、6–8 = 只成下台（三档，两个结构那组烘完才有，见 takeDual）
+    let tracks: BandTrajectory[] = [];
     let paths: BandPaths[] | null = null;
-    const pre = baker.preview();
+    const DUAL_BOTH = 3;
+    const DUAL_LOWER = 6;
     let rig: Rig = rigFor(layout, pre);
     setHud((h) => ({ ...h, side: platformSide(rig), total: layout.units.length }));
     {
@@ -364,31 +394,34 @@ export function CohabitSpaceBench({
       const tier = Math.floor(key / FRAME_KEY) % FRAME_KEY;
       const frame = key % FRAME_KEY;
       const reel = Math.floor(key / (FRAME_KEY * FRAME_KEY)) - 1;
-      const reelPy = reel >= 0 ? bandTop(trajs[0], reel) : undefined;
-      const m = bakeBand(trajs[tier], frame, topo, reelPy);
+      const tr = tracks[tier];
+      // 同一组轨迹（平台三档 / 两层六条）带顶同高，按这条自己那组量上夹环
+      const reelPy = reel >= 0 ? bandTop(tr, reel) : undefined;
+      const m = bakeBand(tr, frame, topoOf(tr.n), reelPy);
       R.addMesh(`band-${key}-a`, m.a);
       R.addMesh(`band-${key}-b`, m.b);
-      const k = bakeBandKeys(trajs[tier], frame, reelPy);
+      const k = bakeBandKeys(tr, frame, reelPy);
       R.addMesh(`band-${key}-k`, k.pad);
       R.addMesh(`band-${key}-r`, k.rod);
-      R.addMesh(`band-${key}-s`, bakeShellCover(trajs[tier], frame, reelPy));
+      R.addMesh(`band-${key}-s`, bakeShellCover(tr, frame, reelPy));
       bandMeshDone.add(key);
     };
     // 每台的上下夹环与芯只随「上夹环在哪一帧」变（pickUnitBands 给的那一帧），按帧烘一次留着
+    // key = 那组轨迹的第一条（平台 0 / 两层 3）× FRAME_KEY + 帧：两层的带更长，夹环与芯按它自己那组量
     const mechDone = new Set<number>();
-    const ensureMech = (frame: number): void => {
-      if (!trajs || mechDone.has(frame)) return;
-      const m = bakeUnitMech(trajs[0], frame);
-      R.addMesh(`mech-${frame}-alu`, m.alu);
-      R.addMesh(`mech-${frame}-dark`, m.dark);
-      mechDone.add(frame);
+    const ensureMech = (key: number): void => {
+      if (!trajs || mechDone.has(key)) return;
+      const m = bakeUnitMech(tracks[Math.floor(key / FRAME_KEY)], key % FRAME_KEY);
+      R.addMesh(`mech-${key}-alu`, m.alu);
+      R.addMesh(`mech-${key}-dark`, m.dark);
+      mechDone.add(key);
     };
     // 逐块摆的膜：两侧带子帧相同就按（档 A, 档 B, 帧）烘一次留着，帧不同的逐帧现算
     const skinDone = new Set<string>();
     const ensureSkin = (ta: number, tb: number, k: number): string => {
       const id = `skin-${ta}-${tb}-${k}`;
       if (trajs && !skinDone.has(id)) {
-        R.addMesh(id, bakeMembrane(trajs[ta], k, trajs[tb], k));
+        R.addMesh(id, bakeMembrane(tracks[ta], k, tracks[tb], k));
         skinDone.add(id);
       }
       return id;
@@ -398,14 +431,15 @@ export function CohabitSpaceBench({
     const ensureGore = (ta: number, tb: number, k: number): string => {
       const id = `gore-${ta}-${tb}-${k}`;
       if (trajs && !goreDone.has(id)) {
-        R.addMesh(id, bakeShellGore(trajs[ta], k, trajs[tb], k));
+        R.addMesh(id, bakeShellGore(tracks[ta], k, tracks[tb], k));
         goreDone.add(id);
       }
       return id;
     };
-    const onBaked = (): void => {
-      trajs = baker.trajectories as BandTrajectory[];
-      paths = trajs.map((t) => bandPaths(t));
+    const onBaked = (list: BandTrajectory[]): void => {
+      trajs = list;
+      tracks = [...trajs];
+      paths = tracks.map((t) => bandPaths(t));
       rig = rigFor(layout, trajs[0]);
       // 三个静止态各烘一份整台：收起（换成 r = R0 自然松弛形压成的，与预览差十几 px，肉眼几乎看不出；抽稀）/ 直带子 / 成形
       const low = trajs.map((t) => decimateTrajectory(t, STOWED_STRIDE));
@@ -439,6 +473,71 @@ export function CohabitSpaceBench({
         R.addMesh(`shell-${id}-c`, sh.cover);
         R.addMesh(`shell-${id}-g`, sh.gore);
       }
+      bakeGroup(UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, () => {}, takeDual);
+    };
+
+    // ── 两组轨迹都在后台线程里烘（cohabit-bake.worker.ts，2026-10-31 轻量化：平台三档原先在主线程上分片烘）：
+    // 平台三档先烘，烘完仿真就开跑；两个结构那组（两层的台用，六条 338 节）接着烘，烘完之前给猫落的台全照平台落。
+    // 同一标签页里烘过的按配置缓存直接用；起不来后台线程就退回主线程的空闲时间里慢慢烘。
+    let disposed = false;
+    let dualReady = false;
+    let bakeP = 0;
+    let worker: Worker | null = null;
+    let jobId = 0;
+    let idleId: number | null = null;
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    const bakeOnIdle = (b: UnitBaker, done: (list: BandTrajectory[]) => void, progress: (p: number) => void): void => {
+      const tick = (deadline?: IdleDeadline): void => {
+        idleId = null;
+        idleTimer = null;
+        if (disposed) return;
+        // 页面一直不空闲时 timeout 也会叫一次，此时剩余为 0——至少推 2ms，保证慢慢有进展
+        if (b.work(deadline ? Math.max(2, Math.min(BAKE_BUDGET_MS, deadline.timeRemaining())) : 4)) return done(b.trajectories as BandTrajectory[]);
+        progress(b.progress);
+        if (typeof window.requestIdleCallback === 'function') idleId = window.requestIdleCallback(tick, { timeout: 1000 });
+        else idleTimer = setTimeout(tick, 50);
+      };
+      tick();
+    };
+    function bakeGroup(defs: readonly RingUnitDef[], opts: readonly BakeOpts[] | undefined, progress: (p: number) => void, done: (list: BandTrajectory[]) => void): void {
+      const key = bakedKey(defs, FRAMES);
+      const cached = bakedGet(key);
+      if (cached) return done(cached);
+      const finish = (list: BandTrajectory[]): void => {
+        if (disposed) return;
+        bakedPut(key, list);
+        done(list);
+      };
+      const fallback = (): void => {
+        worker?.terminate();
+        worker = null;
+        if (!disposed) bakeOnIdle(new UnitBaker(defs, FRAMES, opts), finish, progress);
+      };
+      if (typeof Worker === 'undefined') return fallback();
+      try {
+        worker ??= new Worker(new URL('../../src/lib/space/cohabit-bake.worker.ts', import.meta.url), { type: 'module' });
+        const id = ++jobId;
+        worker.onmessage = (ev: MessageEvent<BakeReply>) => {
+          const m = ev.data;
+          if (m.id !== id) return;
+          if (m.kind === 'progress') progress(m.p);
+          else if (m.kind === 'done') finish(m.trajs);
+          else fallback();
+        };
+        worker.onerror = () => fallback();
+        worker.postMessage({ id, defs: [...defs], frames: FRAMES, opts: opts && [...opts] } satisfies BakeJob);
+      } catch {
+        fallback();
+      }
+    }
+    const takeDual = (list: BandTrajectory[]): void => {
+      worker?.terminate(); // 两组都烘完了，线程不再留着
+      worker = null;
+      if (disposed || !trajs) return;
+      tracks = [...trajs, ...list];
+      paths = tracks.map((t) => bandPaths(t));
+      dualReady = true;
+      canvas.dataset.roof = 'ready'; // 截图脚本等它（scripts/case-frames/capture.mjs）：烘完之前两层的台还照平台落
     };
 
     // ── 人与猫：按「姿态 + 步态相位格」各烘一份静态网格（每种颜色一件，身子与头分开），摆放走 drawMeshAt，每帧不重烘 ──
@@ -512,6 +611,16 @@ export function CohabitSpaceBench({
     // 每条带在成形段两条路上走到哪一格（stepBandCursor：涨走正向路、退走回程路，反向时跳到另一条路上形状最近的格）
     const cursors = bandCursors(layout.units.length * BANDS);
     const frameOf = new Int32Array(layout.units.length * BANDS);
+    // 每台落下时抽的形（unitFormPlan）：当桌子的那台照平台；给猫落的在 平台 / 有顶的一台 / 整圈两层 里抽一种。
+    // 排法在开始落下那一刻定、收回天花之前不换（作者 10-06「换形先收回再落」）。roofOn = 两层（有顶的或整圈的）；
+    // roofToward = 有顶的那台敞开那半圈朝哪（整圈两层是 NaN）；dropSerial = 这台第几次落下（抽签用）；
+    // orders[u][j] = 这台第 j 条带取哪条轨迹（平台 = UNIT_ORDER；两层 = 两块都成 / 只成下台那三档）
+    const roofOn = new Uint8Array(layout.units.length);
+    const planSet = new Uint8Array(layout.units.length);
+    const dropSerial = new Int32Array(layout.units.length);
+    const roofToward = new Float32Array(layout.units.length);
+    const orders: (readonly number[])[] = layout.units.map(() => UNIT_ORDER);
+    let roofed = 0;
 
     // 膜的摆放（本帧收集、实体画完后再画）
     let skinStowed: MeshPlace[] = [];
@@ -550,6 +659,9 @@ export function CohabitSpaceBench({
         if (sim.furn) for (let u = 0; u < layout.units.length; u++) if (sim.tableBy[u] >= 0) tableWant[u] = tableTopFor(sim.furn.rects[sim.tableBy[u]]);
         const dtT = Math.max(0, Math.min(0.1 * timeRef.current, sim.t - tableT));
         tableT = sim.t;
+        // 正坐着的人的座位（有顶的一台朝离它最近的那个人敞开）
+        const seated = sim.people.filter((p) => p.seated && p.seat !== null).map((p) => sim.seats[p.seat as number]);
+        roofed = 0;
         for (let u = 0; u < layout.units.length; u++) {
           const c = rig.cells[u];
           // 轨迹还没烘完：仿真没开跑，全场都收在天花下
@@ -559,6 +671,41 @@ export function CohabitSpaceBench({
             continue;
           }
           const deg = sim.act.degree[u];
+          if (deg <= 1e-4) {
+            planSet[u] = 0;
+            roofOn[u] = 0;
+            orders[u] = UNIT_ORDER;
+          } else if (!planSet[u]) {
+            planSet[u] = 1;
+            // 第几次落下照数（与两层那组烘没烘完无关），抽签只看种子、第几台、第几次
+            const serial = dropSerial[u]++;
+            const plan =
+              dualReady && sim.furn
+                ? unitFormPlan({
+                    seed,
+                    unit: u,
+                    serial,
+                    layout,
+                    at: layout.units[u],
+                    seated,
+                    rects: sim.furn.rects,
+                    tableUnit: sim.tableBy[u] >= 0 || sim.seats.some((st) => st.table === u),
+                    count: BANDS,
+                  })
+                : null;
+            if (plan && plan.bands) {
+              const bands = plan.bands;
+              roofOn[u] = 1;
+              roofToward[u] = plan.toward ?? NaN;
+              orders[u] = UNIT_ORDER.map((t, j) => (bands[j] ? DUAL_BOTH : DUAL_LOWER) + t);
+            }
+          }
+          const roof = roofOn[u] === 1;
+          if (roof) {
+            tableWant[u] = SHELTER.lowerTop;
+            roofed++;
+          }
+          const order = orders[u];
           // 整束布的高度跟单元的升降程度走；让路的带走收直回程、按上夹环截（pickUnitBands）；立杆下端跟布束底
           const drop = unitDrop(deg);
           if (drop <= 1e-3) tableTop[u] = tableWant[u];
@@ -566,17 +713,19 @@ export function CohabitSpaceBench({
             const d = tableWant[u] - tableTop[u];
             tableTop[u] += Math.sign(d) * Math.min(Math.abs(d), TABLE_MOVE * dtT);
           }
-          const workY = rigYForTop(rig, trajs[0], tableTop[u]);
+          // 台面高度按哪条轨迹量：平台按平台；两层的按下台（两组轨迹的钉住端不在同一处，各按各的）
+          const workY = rigYForTop(rig, tracks[order[0]], tableTop[u]);
           const top = unitTopY(rig, drop, workY);
           let allStowed = true;
           let allStraight = true;
           let allFormed = true;
           // 每条带取哪一帧、上夹环在哪（让路的带走引擎的收直回程，多出来的布卷进夹环；见 pickUnitBands）
-          const reel = pickUnitBands(u, deg, sim.bandOpen, trajs, paths as BandPaths[], cursors, frameOf);
-          const reelTop = bandTop(trajs[0], reel);
+          const reel = pickUnitBands(u, deg, sim.bandOpen, tracks, paths as BandPaths[], cursors, frameOf, order);
+          const reelTop = bandTop(tracks[order[0]], reel);
           // 机构：上夹环在带顶（reel 那一帧）、下夹环在钉住端、芯在两者之间（按帧缓存的一份）；吊杆从天花方板下沿（y 0）拉到上夹环法兰顶
-          let mp = mechPlaces.get(reel);
-          if (!mp) mechPlaces.set(reel, (mp = []));
+          const mk = (roof ? DUAL_BOTH : 0) * FRAME_KEY + reel;
+          let mp = mechPlaces.get(mk);
+          if (!mp) mechPlaces.set(mk, (mp = []));
           mp.push(at(c, 0, top));
           const flangeTop = top + rig.s * (-reelTop * SOLID.SCALE - MECH.TOP - MECH.FLANGE_H);
           if (flangeTop > 1e-3) hangerPlaces.push({ yaw: 0, x: c.x, y: 0, z: c.z, s: rig.s, sy: flangeTop / rig.s });
@@ -586,9 +735,10 @@ export function CohabitSpaceBench({
             if (k !== STEADY.straight) allStraight = false;
             if (k !== STEADY.formed) allFormed = false;
           }
-          if (allStowed) stowedPlaces.push(at(c, 0, top));
-          else if (allStraight) straightPlaces.push(at(c, 0, top));
-          else if (allFormed) formedPlaces.push(at(c, 0, top));
+          // 整台一份网格只有平台有（两层的逐条摆：同时最多四五台，同一条轨迹同一帧的带子仍合成一次画）
+          if (allStowed && !roof) stowedPlaces.push(at(c, 0, top));
+          else if (allStraight && !roof) straightPlaces.push(at(c, 0, top));
+          else if (allFormed && !roof) formedPlaces.push(at(c, 0, top));
           else {
             // 蒙皮开着时，带子与键只在有门的单元里画（从门口看得见里面）；其余全包在皮里
             let door = false;
@@ -596,8 +746,8 @@ export function CohabitSpaceBench({
             const bandsShow = !shellOn || door;
             for (let j = 0; j < BANDS; j++) {
               const fk = frameOf[u * BANDS + j];
-              const clip = bandTop(trajs[UNIT_ORDER[j]], fk) > reelTop + 1e-9 ? reel + 1 : 0;
-              const k = (clip * FRAME_KEY + UNIT_ORDER[j]) * FRAME_KEY + fk;
+              const clip = bandTop(tracks[order[j]], fk) > reelTop + 1e-9 ? reel + 1 : 0;
+              const k = (clip * FRAME_KEY + order[j]) * FRAME_KEY + fk;
               if (bandsShow) {
                 let list = perFrame.get(k);
                 if (!list) perFrame.set(k, (list = []));
@@ -617,32 +767,32 @@ export function CohabitSpaceBench({
               if (shellOn) {
                 // 接缝片只在门的边上张开（一侧让路、一侧没让）；两侧都在让路照连
                 if (!shellJoins(ka, kb, undefined, doorA, doorB)) continue;
-                const clipB = bandTop(trajs[UNIT_ORDER[j2]], kb) > reelTop + 1e-9;
+                const clipB = bandTop(tracks[order[j2]], kb) > reelTop + 1e-9;
                 if (ka === kb && !clip && !clipB) {
-                  const id = ensureGore(UNIT_ORDER[j], UNIT_ORDER[j2], ka);
+                  const id = ensureGore(order[j], order[j2], ka);
                   let gl = gorePerKey.get(id);
                   if (!gl) gorePerKey.set(id, (gl = []));
                   gl.push(at(c, bandAngle(j), top));
-                } else goreLoose.push({ data: bakeShellGore(trajs[UNIT_ORDER[j]], ka, trajs[UNIT_ORDER[j2]], kb, reelTop), place: at(c, bandAngle(j), top) });
+                } else goreLoose.push({ data: bakeShellGore(tracks[order[j]], ka, tracks[order[j2]], kb, reelTop), place: at(c, bandAngle(j), top) });
                 continue;
               }
               // 让路的带两侧不拉膜：那里是门（拉了就是一片从平贴的带斜扯到台缘的布）
               if (!membraneJoins(ka, kb, undefined, doorA, doorB)) continue;
               if (ka === kb) {
-                const id = ensureSkin(UNIT_ORDER[j], UNIT_ORDER[j2], ka);
+                const id = ensureSkin(order[j], order[j2], ka);
                 let sl = skinPerKey.get(id);
                 if (!sl) skinPerKey.set(id, (sl = []));
                 sl.push(at(c, bandAngle(j), top));
-              } else skinLoose.push({ data: bakeMembrane(trajs[UNIT_ORDER[j]], ka, trajs[UNIT_ORDER[j2]], kb), place: at(c, bandAngle(j), top) });
+              } else skinLoose.push({ data: bakeMembrane(tracks[order[j]], ka, tracks[order[j2]], kb), place: at(c, bandAngle(j), top) });
             }
           }
         }
         if (trajs) {
           R.drawMeshAt('hanger', hangerPlaces, ALU_DARK, ALU_LITE);
-          for (const [frame, places] of mechPlaces) {
-            ensureMech(frame);
-            R.drawMeshAt(`mech-${frame}-alu`, places, ALU_DARK, ALU_LITE);
-            R.drawMeshAt(`mech-${frame}-dark`, places, MECH_DARK, MECH_LITE);
+          for (const [mk, places] of mechPlaces) {
+            ensureMech(mk);
+            R.drawMeshAt(`mech-${mk}-alu`, places, ALU_DARK, ALU_LITE);
+            R.drawMeshAt(`mech-${mk}-dark`, places, MECH_DARK, MECH_LITE);
           }
         } else {
           // 轨迹烘完之前（仿真没开跑）：沿用一根方杆的预览
@@ -729,12 +879,19 @@ export function CohabitSpaceBench({
         const mo = track(c, c.walker.x, c.walker.y);
         const support = sim.space === 'empty' ? [] : sim.supportOf(c);
         const formed = band !== null && support.length > 0 && support.every((u) => sim.act.degree[u.i] >= 1 - 1e-3);
-        const pl = catPlacement({ x: c.walker.x, y: c.walker.y, heading: c.walker.heading, state: c.state }, support, formed, mo.speed > MOVING.cat, layout, band ?? { R: 0 });
+        // 有顶的一台：猫坐进有顶那半边，头转过去看敞开那一侧（整圈两层没有朝向，照平台的摆法）
+        const roof = formed && support.length === 1 && roofOn[support[0].i] && !Number.isNaN(roofToward[support[0].i]) ? roofToward[support[0].i] : undefined;
+        const pl = catPlacement({ x: c.walker.x, y: c.walker.y, heading: c.walker.heading, state: c.state }, support, formed, mo.speed > MOVING.cat, layout, band ?? { R: 0 }, roof);
         const k = pl.pose === 'walk' ? Math.floor(frac(mo.dist / CAT.STRIDE) * WALK_FRAMES.cat) % WALK_FRAMES.cat : 0;
         const key = `c-${pl.pose}-${pl.tail}-${pl.bend.toFixed(3)}-${k}|${look.coat}`;
         const r = rigOf(key, () => catRig({ unit: UNITS_PER_M, pose: pl.pose, tail: pl.tail, bend: pl.bend, phase: k / WALK_FRAMES.cat, coat: look.coat }));
-        // 台上的猫站在自己那台的台面上（各台高度不同）；跨台时取两台里高的那台
-        const under = support.length ? Math.max(...support.map((u) => tableTop[u.i])) : TABLE_TOP.stand;
+        // 台上的猫站在自己那台的台面上（各台高度不同；两层的是下台）；跨台时按走到几成在两台之间插值
+        const under =
+          support.length === 2 && pl.t !== undefined
+            ? tableTop[support[0].i] + (tableTop[support[1].i] - tableTop[support[0].i]) * pl.t
+            : support.length
+              ? Math.max(...support.map((u) => tableTop[u.i]))
+              : TABLE_TOP.stand;
         const footY = pl.onPlatform ? ROOM.FLOOR_Y - under * UNITS_PER_M - pl.lift * UNITS_PER_M : ROOM.FLOOR_Y;
         placeBoth(cats, r, key, look.coat, (tone) => catColor(tone, look), pl.x * UNITS_PER_M, footY, pl.y * UNITS_PER_M, figureYaw(pl.heading), clampHeadYaw(pl.headTurn, CAT_HEAD_YAW_MAX));
       });
@@ -765,62 +922,24 @@ export function CohabitSpaceBench({
     let lastHud = '';
     const pushHud = (): void => {
       const s = sim.summary();
-      const key = `${Math.floor(s.t)}|${s.formed}|${s.ledger.counts.gaze}|${s.ledger.counts.warmth}|${s.ledger.counts.touch}|${s.ledger.counts.pass}|${trajs ? 1 : Math.round(baker.progress * 20)}`;
+      const key = `${Math.floor(s.t)}|${s.formed}|${roofed}|${s.ledger.counts.gaze}|${s.ledger.counts.warmth}|${s.ledger.counts.touch}|${s.ledger.counts.pass}|${trajs ? 1 : Math.round(bakeP * 20)}`;
       if (key === lastHud) return;
       lastHud = key;
-      setHud((h) => ({ ...h, t: s.t, formed: s.formed, counts: { ...s.ledger.counts }, bake: trajs ? 1 : baker.progress }));
+      setHud((h) => ({ ...h, t: s.t, formed: s.formed, roofed, counts: { ...s.ledger.counts }, bake: trajs ? 1 : bakeP }));
     };
 
-    // 烘轨迹走自己的时间片（宏任务链），不挂在渲染循环上：慢设备或一页多台时帧来得稀，
-    // 按帧给预算会把一秒半的活拖成半分钟（无头软件 GL 实测 40 s 才 13%）
-    let bakeTimer: ReturnType<typeof setTimeout> | null = null;
-    const bakeTick = (): void => {
-      bakeTimer = null;
-      if (baker.work(BAKE_BUDGET_MS)) {
-        onBaked();
+    bakeGroup(
+      UNIT_TIERS,
+      undefined,
+      (p) => {
+        bakeP = p;
+      },
+      (list) => {
+        onBaked(list);
         render();
         pushHud();
-      } else bakeTimer = setTimeout(bakeTick, 0);
-    };
-    // 离屏只用空闲时间烘（2026-10-28 性能排查）：/lab 上这台排在倒数第二，原先进页面就满速开烘，
-    // 主线程白忙好几秒、拖慢最上面正在看的几台。离屏时只拿帧与帧之间剩下的空闲（requestIdleCallback；
-    // Safari 没有它，退成每 50ms 烘 4ms），离视口一屏以内才换回满速。已烘过（同一标签页里别处烘的，结果按配置缓存）直接用。
-    const ric = typeof window.requestIdleCallback === 'function' ? window.requestIdleCallback.bind(window) : null;
-    let idleId: number | null = null;
-    let near = false;
-    const idleTick = (deadline?: IdleDeadline): void => {
-      idleId = null;
-      bakeTimer = null;
-      if (near || trajs) return;
-      // 页面一直不空闲时 timeout 也会叫一次，此时剩余为 0——至少推 2ms，保证慢慢有进展
-      if (baker.work(deadline ? Math.max(2, Math.min(BAKE_BUDGET_MS, deadline.timeRemaining())) : 4)) {
-        onBaked();
-        render();
-        pushHud();
-        return;
-      }
-      scheduleIdle();
-    };
-    const scheduleIdle = (): void => {
-      if (ric) idleId = ric(idleTick, { timeout: 1000 });
-      else bakeTimer = setTimeout(idleTick, 50);
-    };
-    let bakeIo: IntersectionObserver | null = null;
-    const startBake = (): void => {
-      near = true;
-      bakeIo?.disconnect();
-      bakeIo = null;
-      if (idleId !== null) window.cancelIdleCallback(idleId);
-      idleId = null;
-      if (bakeTimer !== null) clearTimeout(bakeTimer);
-      bakeTimer = trajs ? null : setTimeout(bakeTick, 0);
-    };
-    if (baker.done || typeof IntersectionObserver === 'undefined') startBake();
-    else {
-      bakeIo = new IntersectionObserver((ents) => ents[ents.length - 1].isIntersecting && startBake(), { rootMargin: '100% 0px' });
-      bakeIo.observe(canvas);
-      scheduleIdle();
-    }
+      },
+    );
 
     const step = (dt: number): void => {
       if (trajs && runningRef.current) {
@@ -842,6 +961,10 @@ export function CohabitSpaceBench({
       bakeFurniture();
       resetBandCursors(cursors);
       tableTop.fill(TABLE_TOP.stand);
+      roofOn.fill(0);
+      planSet.fill(0);
+      dropSerial.fill(0);
+      orders.fill(UNIT_ORDER);
       lastHud = '';
       render();
       pushHud();
@@ -894,9 +1017,10 @@ export function CohabitSpaceBench({
     pushHud();
     return () => {
       apiRef.current = null;
-      bakeIo?.disconnect();
+      disposed = true;
+      worker?.terminate();
       if (idleId !== null) window.cancelIdleCallback(idleId);
-      if (bakeTimer !== null) clearTimeout(bakeTimer);
+      if (idleTimer !== null) clearTimeout(idleTimer);
       canvas.removeEventListener('contextmenu', onCtx);
       canvas.removeEventListener('pointerdown', onDown);
       canvas.removeEventListener('pointermove', onMove);
@@ -938,7 +1062,7 @@ export function CohabitSpaceBench({
           <div className="dim">{t.sub(hud.side, hud.roomH)}</div>
         </div>
         <div className="lab-hud br">
-          <div className="dim">{hud.bake < 1 ? t.baking(hud.bake) : t.line(hud.t, hud.formed, hud.total, hud.counts)}</div>
+          <div className="dim">{hud.bake < 1 ? t.baking(hud.bake) : t.line(hud.t, hud.formed, hud.total, hud.counts, hud.roofed)}</div>
         </div>
         <div className="lab-hud bl dim">{hud.note ? tx('3D preview unavailable') : controls ? t.hintCtl : t.hint}</div>
       </div>

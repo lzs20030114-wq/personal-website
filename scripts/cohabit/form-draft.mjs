@@ -5,7 +5,7 @@
  * （面 / 边 / 角三档挑出 = Lab 2-7 平档那只方台）能成哪些截面，每种截面在带上能挪多远（配平偏移 ⇒ 台面高度），
  * 挪的时候形状变不变。截面全是真引擎终态，按 2-15 的缩放（与 cohabit-solid 的 rigFor 同式）换成米。
  *   node scripts/cohabit/form-draft.mjs <outDir>
- * 输出：outDir/form-sections.svg、outDir/form-room.svg（有 playwright 时另出同名 PNG）+ 控制台量数表。
+ * 输出：outDir/form-sections.svg、outDir/form-room.svg、outDir/form-uses.svg（第三轮：一条带两个结构 + 按用途定形；有 playwright 时另出同名 PNG）+ 控制台量数表。
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -42,6 +42,8 @@ try {
   const co = await server.ssrLoadModule('/src/lib/space/cohabit.ts');
   const cs = await server.ssrLoadModule('/src/lib/space/cohabit-solid.ts');
   const grid = await server.ssrLoadModule('/src/lib/space/skin-grid.ts');
+  const sdata = await server.ssrLoadModule('/src/lib/space/skin-data.ts');
+  const sarr = await server.ssrLoadModule('/src/lib/space/skin-array.ts');
 
   const layout = co.squarePlanLayout(ua.planLayout(co.COHABIT.SEATS.GRID, ring.RING.RADIUS_DEF, 'room'));
   const s = ((grid.RIG_SCALE * layout.pitchM) / layout.pitch4) * co.SQUARE_SCALE; // 与 rigFor 同式
@@ -161,6 +163,73 @@ try {
   SOLID.forEach(([h, k, cls], i) => console.log(`  箱高 ${f3(mm(h))}（${h}）${['面', '边', '角'][cls]}档 k${k}：挑出 ${f3(solid[i].reach)}（目标 ${f3(mm(target[cls]))}）· 键 ${solid[i].locked}/${solid[i].nKeys} · 结 ${solid[i].knot} · 台 ${f3(solid[i].bot)}–${f3(solid[i].top)} · 可挪 ±${solid[i].pmax} 节`));
   console.log('  （箱高 60 起面档最小挑出 0.245 m、比方台大 1.6 cm；76 起只有角档放得下；92 连角档也放不下。E_MAX：箱越高，最浅的键越深）');
 
+  // ── 一条带两个结构（2-3 的做法）：338 节布全部铺出去，上下各一块 6.5 cm 方台（键与 2-15 现行平台同一组）
+  //   2026-10-31 起结构贴底：[贴合 lead | 垫 | ISO | 上台 | ISO | 垫 | 贴合 mid−ISO | 下台 | 尾]（角档没有垫），下台与平台一样贴底，
+  //   多出的自由段一半在上台上方、一半在两块之间，三档上下台各自同高；中间贴合 ≥ 29 时上下逐位解耦（皮肤单元lab §15.5）。
+  //   （10-30 那版是每块台在自己的 131 节里居中，下台底下挂着一截布筒；三张线稿 png 是那一版出的，没重出）
+  // 谱与 2-15 台架同一份（cohabit-solid 的 dualUnitSpec），这里只量
+  const DUAL_MID = cs.DUAL.mid;
+  function dual338(k, a, b, mid = DUAL_MID) {
+    const { spec, a0, b0, fs } = cs.dualUnitSpec(k, a, b, mid);
+    const nk = sq.squareLadder(k, sq.squarePw(THIN.h)).length;
+    const A = { n: fs, nKeys: a ? nk : 0 }, B = { n: fs, nKeys: b ? nk : 0 };
+    const r = run(spec, flatOpts, a0, a0 + A.n);
+    const knotB = maxLoop(r.u.px, r.u.py, b0, b0 + B.n);
+    const plate = (s0, n) => {
+      const pts = []; let reach = 0;
+      for (let i = s0; i < s0 + n; i++) { pts.push([mm(r.u.px[i] * 100), r.h(i)]); reach = Math.max(reach, mm(r.u.px[i] * 100)); }
+      let top = 0, bot = 1e9;
+      for (const [x, y] of pts) if (x > reach * 0.35 && x < reach * 0.9) { top = Math.max(top, y); bot = Math.min(bot, y); }
+      const keys = r.u.locked.filter(([i, j]) => i >= s0 && j < s0 + n).map(([i, j]) => [i - s0, j - s0]);
+      return { pts, keys, top, bot, reach };
+    };
+    return { r, upper: plate(a0, A.n), lower: plate(b0, B.n), a0, b0, n: A.n, ok: r.locked === A.nKeys + B.nKeys, locked: r.locked, nKeys: A.nKeys + B.nKeys, knot: Math.max(r.knot, knotB), bandTop: r.h(0) };
+  }
+  // 2-15 现行平台（176 节铺出去、余下收在顶端）的台面离钉住端，拿来和下台比
+  const now215 = (() => {
+    const d = cs.UNIT_TIERS[0], fseg = d.spec.findIndex((q) => q[0] === 'f' && q[2] && q[2].length);
+    const base = d.spec.slice(0, fseg).reduce((a, q) => a + q[1], 0);
+    const r = run(d.spec, d.opts, base, base + d.spec[fseg][1]);
+    let top = 0; for (const [x, y] of r.pts) if (x > r.reach * 0.35 && x < r.reach * 0.9) top = Math.max(top, y);
+    return top;
+  })();
+  const dualBoth = THIN.k.map((k) => dual338(k, true, true));
+  const dualUp = dual338(THIN.k[0], true, false), dualLo = dual338(THIN.k[0], false, true);
+  const nodeDev = (x, y, s0, n) => { let d = 0; const fx = x.r.u.py[x.r.u.n - 1], fy = y.r.u.py[y.r.u.n - 1]; for (let i = s0; i < s0 + n; i++) d = Math.max(d, Math.hypot(x.r.u.px[i] - y.r.u.px[i], (x.r.u.py[i] - fx) - (y.r.u.py[i] - fy)) * 100); return d; };
+  const d0 = dualBoth[0];
+  console.log(`\n⑤ 一条带两个结构（338 节全部铺出去，中间贴合 ${DUAL_MID} 节）：三档挑出 · 键 · 结 · 下台 / 上台（离钉住端）· 两台之间`);
+  console.log(`  挑出 ${dualBoth.map((r) => `${f3(r.upper.reach)}/${f3(r.lower.reach)}`).join(' · ')}（上/下；方台 ${target.map((t) => f3(mm(t))).join(' / ')}）· 键 ${dualBoth.map((r) => `${r.locked}/${r.nKeys}`).join(' ')} · 结 ≤${Math.max(...dualBoth.map((r) => r.knot))}`);
+  console.log(`  下台 ${f3(d0.lower.bot)}–${f3(d0.lower.top)} · 上台 ${f3(d0.upper.bot)}–${f3(d0.upper.top)} · 两台之间空 ${f3(d0.upper.bot - d0.lower.top)} · 带顶离钉住端 ${f3(d0.bandTop)}`);
+  console.log(`  只成上台：上台形状与两台都成相差 ${nodeDev(d0, dualUp, d0.a0, d0.n).toFixed(4)} px；只成下台：下台相差 ${nodeDev(d0, dualLo, d0.b0, d0.n).toFixed(4)} px（下台顶 ${f3(d0.lower.top)}，2-15 现行平台 ${f3(now215)}）`);
+  for (const mid of [24, 16]) { const r = dual338(THIN.k[0], true, true, mid); console.log(`  中间贴合 ${mid} 节（多出的让给顶端）：两台之间 ${f3(r.upper.bot - r.lower.top)} · 上台厚 ${f3(r.upper.top - r.upper.bot)} · 键 ${r.locked}/${r.nKeys}`); }
+
+  // ── 圆 ↔ 方（2-7）在 6.5 cm 台上：挑出随 k 的表，五档轮廓按 2-7 的取法（内切半边长不变，角按极径线性推）反查
+  const DK = []; for (let k = 24; k <= THIN.k[2]; k++) { const r = box338(k, THIN.h, 0); DK.push({ k, reach: r.reachPx, ok: r.ok }); }
+  const kOf = (want) => DK.reduce((b, d) => (Math.abs(d.reach - want) < Math.abs(b.reach - want) ? d : b)).k;
+  const aHalf = (sq.SQUARE.RADIUS + DK[DK.length - 1].reach) / Math.SQRT2;
+  const CLS_ANG = [9, 27, 45].map((d) => (d * Math.PI) / 180);
+  const morph = [0, 1, 2, 3, 4].map((st) => CLS_ANG.map((th) => kOf(sq.squareMorphRadiusAt(th, st, aHalf) - sq.SQUARE.RADIUS)));
+  console.log(`\n⑥ 6.5 cm 台的挑出（k ${DK[0].k}–${DK[DK.length - 1].k}）：${DK.map((d) => `${d.k}:${f3(mm(d.reach))}${d.ok ? '' : '✗'}`).join(' ')}`);
+  console.log(`  圆 ↔ 方五档（面 / 边 / 角的 k）：${morph.map((t, i) => `${sq.SQUARE_MORPH.LABELS[i]} ${t.join('/')}`).join(' · ')}`);
+  const reachK = (k) => mm(DK.find((d) => d.k === k).reach);
+  const nodeGap = (cls) => layout.pitchM / Math.SQRT2 - (coreR + reachK(morph[cls][2]));
+  console.log(`  台角到相邻过道交叉点（站人的地方）：方 ${f3(nodeGap(4))} m · 圆 ${f3(nodeGap(0))} m（人的身体半径 ${ua.PLAN.BODY_R}）`);
+
+  // ── 目录里另外三形（2-1）：按放大倍数放到 2-15 的布（176 节，自由段 129）与收缩深度 0.30 上，挑出 / 台面平不平 / 键
+  console.log(`\n⑦ 目录三形放到 2-15 的布上（收缩到 0.30；格距一半 ${f3(layout.pitchM / 2)}，挑出超过 ${f3(layout.pitchM / 2 - coreR)} 就碰邻台）：`);
+  for (const key of ['bulb', 'ledge', 'pocket']) {
+    const d = sdata.SKIN_UNITS.find((q) => q.key === key), FREE = 129, LEAD0 = cs.UNIT_BAND - FREE - cs.UNIT_SHAPE.tail;
+    const row = [1, 1.3, 1.6, 2.1].map((gr) => {
+      const seg = sarr.placeOnBand(ring.growSeg(d.spec[1], gr), FREE, (FREE - 1) / 2);
+      const r = run([['g', LEAD0], seg, ['g', cs.UNIT_SHAPE.tail]], { ...sdata.skinSiteOpts(d), r1: U.SKIN.R1 }, LEAD0, LEAD0 + FREE);
+      const bins = new Map();
+      for (const [x, y] of r.pts) if (x > r.reach * 0.35 && x < r.reach * 0.9) { const b = Math.round(x / 0.008); bins.set(b, Math.max(bins.get(b) ?? 0, y)); }
+      const tops = [...bins.values()];
+      return `×${gr} 挑出 ${f3(r.reach)} · 台面起伏 ${((Math.max(...tops) - Math.min(...tops)) * 100).toFixed(1)} cm · 键 ${r.locked}/${seg[2].length}`;
+    });
+    console.log(`  ${d.zh}：${row.join(' ｜ ')}`);
+  }
+
   M = {
     mpp, coreR, pitch: layout.pitchM, roomM: layout.roomM, units: layout.units.map((u) => [u.x, u.y]),
     target: target.map(mm),
@@ -169,6 +238,9 @@ try {
     h36: { pts: h36.pts, keys: h36.keys, top: h36.top, bot: h36.bot, range: [h36Lo.top, h36Hi.top] },
     dbl: Object.fromEntries(GAPS.map((w) => [w, { p: dbl[w].p, row: dbl[w].row.map((r) => ({ pts: r.pts, keys: r.keys, upper: r.upper, lower: r.lower, reach: r.reach })) }])),
     solid: solid.map((r) => ({ pts: r.pts, keys: r.keys, top: r.top, bot: r.bot, reach: r.reach })),
+    dual: { upper: d0.upper, lower: d0.lower, bandTop: d0.bandTop, mid: DUAL_MID }, now215,
+    morph: morph.map((t) => t.map(reachK)), morphK: morph, aHalf: mm(aHalf), bodyR: ua.PLAN.BODY_R,
+    pinchHalf: mm(sqs.SQSPLIT_HALF_SIDE),
   };
   const sim = new co.CohabitSim({ grid: co.COHABIT.SEATS.GRID, unit: 'square', cover: 'room', trigger: 'posture', seed: 1 });
   M.rects = sim.furn.rects; M.seats = sim.seats.map((st) => ({ x: st.x, y: st.y, furn: st.furn }));
@@ -524,7 +596,161 @@ function sheetRoom() {
   return g.svg.join('\n');
 }
 
-const sheets = [['form-sections', sheetSections()], ['form-room', sheetRoom()]];
+// ════════════════ 第三张：按用途定形（第三轮） ════════════════
+function sheetUses() {
+  const g = canvas(1600, 1180);
+  const D = M.dual, C = M.coreR, half = halfSide();
+  g.txt(36, 42, '按用途定形：前面做过的形在 2-15 里各管什么（第三轮线稿 · 2026-10-30）', 20, INK, 'start', 600);
+  g.txt(36, 66, '截面是真引擎终态，按 2-15 的缩放换成米（1 引擎 px = 4.08 mm）。E 行是这一轮新量的：2-3 的「一条带两个结构」放进 2-15 的布和方台。F 行是几种用途的侧视与俯视，人、猫、家具只作比例参考。', 12, MUTE);
+  g.txt(36, 84, '每台的高度由钉住端（整台升降，2-15 已有）定；同一条带上两块台的高差是布上定死的。蓝 = 这一轮建议加入的，黑 = 2-15 现有的。橙线 = 锁定键。', 12, MUTE);
+
+  // ── E 行：一条带两个结构
+  g.txt(36, 122, `E　一条带两个结构（2-3 的做法放进 2-15）· 338 节布全部铺出去，上下两块台各占 131 节，中间贴合 ${D.mid} 节`, 14, INK, 'start', 600);
+  const kE = 300, H0 = 0.2, H1 = 1.05, oyE = 170 + H1 * kE;
+  const gapM = D.upper.bot - D.lower.top;
+  const eP = [
+    { t: ['E1　两块都成', '（面档剖面）'], up: true, lo: true, n: [`下台 ${m2(D.lower.bot)}–${m2(D.lower.top)} · 上台 ${m2(D.upper.bot)}–${m2(D.upper.top)}`, `两块台之间空 ${m2(gapM)} m`, '离钉住端量；三档俯视都是那只方台'] },
+    { t: ['E2　只成上台', '（下台那段不扣键，贴着立杆）'], up: true, lo: false, n: [`上台 ${m2(D.upper.bot)}–${m2(D.upper.top)}，与 E1 逐点相同`, '中间贴合 ≥ 29 节时上下互不影响', '（皮肤单元lab §15.5，实测相差 0 px）'] },
+    { t: ['E3　只成下台', '（上台那段贴着立杆）'], up: false, lo: true, n: [`下台 ${m2(D.lower.bot)}–${m2(D.lower.top)}，与 E1 逐点相同`, `也和 2-15 现行平台同高（${m2(M.now215)}）`, '一台里每条带可以各选 E1 / E2 / E3 / 不落'] },
+  ];
+  eP.forEach((p, i) => {
+    const x0 = 40 + i * 330, v = view(x0 + 44, oyE, kE);
+    g.txt(x0, 148, p.t[0], 13, NEW, 'start', 600); g.txt(x0 + 120, 148, p.t[1], 11, MUTE);
+    if (i === 0) ruler(g, v, -0.03, H0, H1, 0.1);
+    g.line(v.X(0), v.Y(H0), v.X(0), v.Y(H1), MUTE, 1, '5 3');
+    g.line(v.X(C), v.Y(H0), v.X(C), v.Y(H1), INK, 1.2);
+    if (p.lo) section(g, v, D.lower, 0, 0, 1, NEW);
+    if (p.up) section(g, v, D.upper, 0, 0, 1, NEW);
+    if (i === 0) { const xg = v.X(C + D.lower.reach + 0.03); g.line(xg, v.Y(D.lower.top), xg, v.Y(D.upper.bot), NEW, 0.8); g.txt(xg + 5, v.Y((D.lower.top + D.upper.bot) / 2) + 4, m2(gapM), 11, NEW); }
+    if (!p.lo) g.txt(v.X(C + 0.02), v.Y((D.lower.top + D.lower.bot) / 2) + 4, '这段布贴着立杆', 10, MUTE);
+    if (!p.up) g.txt(v.X(C + 0.02), v.Y((D.upper.top + D.upper.bot) / 2) + 4, '这段布贴着立杆', 10, MUTE);
+    p.n.forEach((s, j) => g.txt(x0, v.Y(H0) + 22 + j * 15, s, 11, j ? MUTE : NEW));
+  });
+  // E4：腔高对比（以下台顶面为 0）
+  {
+    const x0 = 1030, kC = 250, base = 400;
+    const items0 = 40; // 左边留给腔高读数
+    g.txt(x0, 148, 'E4　有顶的地方，三种做法的腔高', 13, NEW, 'start', 600);
+    const items = [
+      { w: half, gap: M.dbl[60].row[0].upper[0] - M.dbl[60].row[0].lower[1], t: ['双层 · 缝 0.245', '方台大小 · 猫趴得下'], pose: 'lie', c: MUTE },
+      { w: M.pinchHalf, gap: 0.41, t: ['大捏分 · 腔 0.41', `外缘半边 ${m2(M.pinchHalf)}，比方台大`], pose: 'sit', c: MUTE },
+      { w: half, gap: gapM, t: [`两个结构 · ${m2(gapM)}`, '方台大小 · 猫坐得起来'], pose: 'sit', c: NEW },
+    ];
+    let ux = x0 + items0;
+    for (const it of items) {
+      const v = view(ux, base, kC), th = 0.065;
+      g.line(v.X(0), v.Y(-0.12), v.X(0), v.Y(0.62), MUTE, 1, '5 3');
+      g.rect(v.X(0.03), v.Y(0), (it.w - 0.03) * kC, th * kC, it.c === NEW ? '#dfeaec' : FILL.flat, it.c === NEW ? NEW : MUTE, 0.9);
+      g.rect(v.X(0.03), v.Y(it.gap + th), (it.w - 0.03) * kC, th * kC, it.c === NEW ? '#dfeaec' : FILL.flat, it.c === NEW ? NEW : MUTE, 0.9);
+      cat(g, v, it.pose === 'lie' ? 0.27 : 0.17, 0, it.pose, 1);
+      g.line(v.X(-0.03), v.Y(0), v.X(-0.03), v.Y(it.gap), it.c, 0.8);
+      g.txt(v.X(-0.045), v.Y(it.gap / 2) + 4, m2(it.gap), 10, it.c, 'end');
+      it.t.forEach((s, j) => g.txt(v.X(0), base + th * kC + 18 + j * 14, s, 11, j ? MUTE : it.c, 'start', j ? 400 : 600));
+      ux += (it.w + 0.26) * kC;
+    }
+    g.txt(x0, base + 80, '腔的两侧都是敞着的（带与带之间只有膜），上台挡的是头顶。大捏分的 0.41 量在腔口中线处，往里变矮。', 11, MUTE);
+    g.txt(x0, base + 95, '猫的比例取站上的方块猫（背高约 0.22、坐着耳尖约 0.29）。', 11, MUTE);
+    g.txt(x0, base + 110, '台面进深只有 0.23–0.36 m，趴着的猫实际是沿一圈横着趴。', 11, MUTE);
+  }
+
+  // ── F 行：用途
+  const yF = 540;
+  g.txt(36, yF, 'F　几种用途（侧视为过立杆的剖面，俯视小图里蓝 = 两块都成、「下」= 只成下台）', 14, INK, 'start', 600);
+  const kF = 190, floorY = 870;
+  const eyeSit = 1.16; // 站上比例模型（figure.ts）坐在 0.43 的沙发上，头枢轴 1.074 m，眼睛约高 0.09
+  /** 一台两个结构：near = 朝沙发那半圈只成下台，far = 两块都成 */
+  const dualUnit = (v, cx, foot) => {
+    const top = Math.min(1.45, foot + D.bandTop);
+    g.line(v.X(cx), v.Y(foot), v.X(cx), v.Y(1.45), MUTE, 1, '5 3');
+    for (const s of [-1, 1]) g.line(v.X(cx + s * C), v.Y(foot), v.X(cx + s * C), v.Y(top), INK, 1.2);
+    section(g, v, D.lower, cx, foot, -1, NEW); section(g, v, D.lower, cx, foot, 1, NEW); section(g, v, D.upper, cx, foot, 1, NEW);
+  };
+  const inset = (ox, oy, k, kinds, cats, seat) => {
+    unitPlan(g, ox, oy, k, kinds);
+    if (seat) g.rect(ox + seat[0] * k - 0.13 * k, oy - 0.11 * k, 0.26 * k, 0.22 * k, PERSON, 'none', 0);
+    for (const [r, a] of cats) { const x = ox + r * k * Math.cos(a), y = oy + r * k * Math.sin(a); g.rect(x - 0.06 * k, y - 0.06 * k, 0.12 * k, 0.12 * k, CAT, 'none', 0); if (seat) g.line(ox + seat[0] * k, oy, x, y, PERSON, 0.9, '4 3'); }
+  };
+  const nearKinds = BAND_ANG.map((a) => (Math.cos(a) < -0.55 ? 'lower' : 'dbl'));
+
+  // F1 茶几 + 猫的高台
+  {
+    const x0 = 40, v = view(x0 + 0.85 * kF, floorY, kF);
+    g.txt(x0, yF + 30, 'F1　茶几 + 猫的高台（一台两用）', 13, NEW, 'start', 600);
+    floor(g, v, -0.85, 1.25); ruler(g, v, -0.87, 0, 1.4, 0.2);
+    sofa(g, v, 0, 1);
+    const cx = 0.38 + half, foot = 0.42 - D.lower.top, upTop = foot + D.upper.top;
+    dualUnit(v, cx, foot);
+    g.rect(v.X(cx - C - 0.17), v.Y(0.42 + 0.09), 0.07 * kF, 0.09 * kF, 'none', INK, 1);
+    const catX = cx + C + 0.1; cat(g, v, catX, upTop, 'sit', -1);
+    g.txt(v.X(cx - C - 0.11), v.Y(0.42) + 30, '茶几 0.42', 11, NEW, 'middle');
+    tag(g, v, cx + half + 0.02, upTop, `猫的台 ${m2(upTop)}`, NEW, 1, 0.04);
+    g.line(v.X(-0.4), v.Y(eyeSit), v.X(catX - 0.08), v.Y(upTop + 0.21), PERSON, 1, '4 3');
+    console.log(`\n用途线稿 F1：钉住端 ${m2(foot)}，上台顶 ${m2(upTop)}，猫眼约 ${m2(upTop + 0.21)}，坐着的人眼约 ${eyeSit}，两者水平相距 ${m2(catX - 0.08 + 0.4)} m`);
+    inset(260, yF + 70, 60, nearKinds, [[C + 0.15, -1.0], [C + 0.15, 1.0]], [-(cx + 0.3), 0]);
+    g.txt(300, yF + 50, '俯视', 10, MUTE);
+    const L = ['靠沙发的六条带只成下台，当茶几。其余两块都成，上台给猫。', `猫坐在上台，眼睛约 ${m2(upTop + 0.21)} m，与坐着的人眼睛（约 ${eyeSit}）同高，`, '隔着茶几相距约 1.3 m。茶几那几条带头顶没有台，杯子照放。', '剖面上猫画在立杆后面只为看高度，实际坐在两侧（俯视小图）。'];
+    L.forEach((s, j) => g.txt(x0, floorY + 24 + j * 15, s, 11, j ? MUTE : INK));
+  }
+  // F2 有顶的一台
+  {
+    const x0 = 540, v = view(x0 + 0.85 * kF, floorY, kF);
+    g.txt(x0, yF + 30, 'F2　有顶的一台（引路的终点：猫陪坐着的人）', 13, NEW, 'start', 600);
+    floor(g, v, -0.85, 1.5);
+    sofa(g, v, 0, 1, 0.55);
+    const cx = 0.85, lowTop = 0.72, foot = lowTop - D.lower.top, upTop = foot + D.upper.top;
+    dualUnit(v, cx, foot);
+    cat(g, v, cx + C + 0.1, lowTop, 'sit', -1);
+    tag(g, v, cx - half - 0.02, lowTop, m2(lowTop), NEW, -1, 0.04); tag(g, v, cx + half + 0.02, upTop, m2(upTop), NEW, 1, 0.04);
+    inset(740, yF + 70, 60, nearKinds, [[C + 0.13, 0.9]], [-(cx + 0.3), 0]);
+    g.txt(780, yF + 50, '俯视', 10, MUTE);
+    const L = ['朝座位那半圈只成下台（敞开），背后那半圈两块都成（有顶）。', '猫从背后进有顶的那半，出来就朝着坐着的人，入口不止一个。', `上台顶 ${m2(upTop)} 也能趴（Ellis 等 2013：箱顶再放一层可趴的台）。`, `高度是示意：钉住端整台升降，下台可取 ${m2(D.lower.top)} 以上，上台总在它上面 ${m2(D.upper.top - D.lower.top)}。`];
+    L.forEach((s, j) => g.txt(x0, floorY + 24 + j * 15, s, 11, j ? MUTE : INK));
+  }
+  // F3 靠过道的台角变圆（俯视）
+  {
+    const x0 = 1060, k = 150, cy = yF + 180;
+    g.txt(x0, yF + 30, 'F3　人常站的过道交叉点旁边，台角变圆（俯视）', 13, NEW, 'start', 600);
+    const P = M.pitch / 2;
+    const draw = (ox, reach, label, color) => {
+      g.txt(ox - (P + half) * k, yF + 60, label, 12, color, 'start', 600);
+      for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+        const ux = ox + sx * P * k, uy = cy + sy * P * k;
+        const tips = BAND_ANG.map((a, i) => { const r = (C + reach[CLASS[i]]) * k; return [ux + r * Math.cos(a), uy + r * Math.sin(a)]; });
+        g.poly(tips, MUTE, 0.9, color === NEW ? '#dfeaec' : FILL.flat, true);
+        for (let i = 0; i < 20; i++) g.line(ux + C * k * Math.cos(BAND_ANG[i]), uy + C * k * Math.sin(BAND_ANG[i]), tips[i][0], tips[i][1], MUTE, 0.5);
+        g.svg.push(`<circle cx="${f1(ux)}" cy="${f1(uy)}" r="${f1(C * k)}" fill="${PAPER}" stroke="${MUTE}" stroke-width="0.8"/>`);
+      }
+      g.svg.push(`<circle cx="${f1(ox)}" cy="${f1(cy)}" r="${f1(M.bodyR * k)}" fill="${PERSON}" fill-opacity="0.35" stroke="${PERSON}" stroke-width="1"/>`);
+      const gap = M.pitch / Math.SQRT2 - (C + reach[2]);
+      g.txt(ox, cy + P * k + 0.42 * k, `台角到交叉点 ${m2(gap)} m`, 11, color, 'middle');
+      return gap;
+    };
+    const gs = draw(x0 + 125, M.morph[4], '方（现行）', INK);
+    const gr = draw(x0 + 125 + 2 * (P + half) * k + 20, M.morph[0], '圆（2-7 圆↔方的一端）', NEW);
+    const L = [`圆圈 = 站着的人（身体半径 ${M.bodyR} m）。方台四个角正对交叉点，`, `角离交叉点 ${m2(gs)} m，人一站就顶到，2-15 现在是把那条带收回去。`, `四个角改小（角档 k ${M.morphK[4][2]} → ${M.morphK[0][2]}）就是 ${m2(gr)} m，站得下。`, '代价：这几台俯视不再是方的（作者 10-25 定房间里用方台）。', '中间三档（微方 / 半方 / 近方）也都能做，6.5 cm 台 k 24–46 全部成形。'];
+    L.forEach((s, j) => g.txt(x0, floorY + 24 + j * 15, s, 11, j ? MUTE : INK));
+  }
+
+  // ── G：去向表
+  const yG = 990;
+  g.txt(36, yG, 'G　前面每一台研究在 2-15 里的去向（详见方案稿 §11）', 14, INK, 'start', 600);
+  const G = [
+    ['2-1 / 2-2 目录四形', '阶梯方箱 = 现在的平台。袋要另一个收缩深度（0.66，一台只有一个），不进。蘑菇挑台、直挑台在 2-15 尺寸能成，但顶面是弧的或斜的，桌子和猫的台方台都做得更好，留在案例页讲成形。'],
+    ['2-3 一条带两个结构', 'E 行：两层台。猫的高台（F1）、有顶的一台（F2）、上下各给一只猫。'],
+    ['2-4 / 2-5 渐变与捏分', '十级捏分 = 双层的层间距（0.12–0.24，第二轮）。渐变本身留在案例页讲成形过程。'],
+    ['2-5 / 2-7 一圈起伏', '逐带配平偏移：一台之内台面沿一圈升降 0.40 m，用于续坡、台面有高有低（第二轮）。'],
+    ['2-6 多层台', '双层、厚台、半台、三分之一、仅上层 / 仅下层、层间距（第二轮已在 2-15 尺寸量过，仅上 / 仅下现在可以用 E2 / E3 做得严丝合缝）。'],
+    ['2-7 方形环', '方台 = 现在的平台。圆 ↔ 方 = F3。一次循环的大捏分 = 腔 0.41 的那种有顶（E4）。'],
+    ['2-8 / 2-9', '2-8 是 2-15 房间与尺度的来处。2-9 的错层 = 台阶，错相 = 引路一次落一步（已在规则里），相切、交叠在固定格子里做不出（台缝 0.13 m）。'],
+    ['2-10 / 2-11 / 2-12 / 2-14', '判断「为什么落」的那一层，已在用。'],
+    ['2-13 单元组合', '续坡、三段坡、台阶、升台、合腔、凹、拱（第二轮 D 行）。'],
+  ];
+  G.forEach(([a, b], j) => { g.txt(40, yG + 24 + j * 18, a, 11, INK, 'start', 600); g.txt(220, yG + 24 + j * 18, b, 11, MUTE); });
+  g.svg.push('</svg>');
+  return g.svg.join('\n');
+}
+
+const sheets = [['form-sections', sheetSections()], ['form-room', sheetRoom()], ['form-uses', sheetUses()]];
 for (const [name, text] of sheets) writeFileSync(join(OUT, `${name}.svg`), text);
 try {
   const { chromium } = await import('playwright');
