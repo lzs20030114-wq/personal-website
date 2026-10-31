@@ -67,7 +67,8 @@ function WorkCard({ t, c, cur, on, focusable, vars, onEnter }: CardProps) {
           <span className={`hs-card__num${t.wip ? ' hs-card__num--wip' : ''}`}>{t.kickN}</span>
           <span className="hs-card__kick-l">{t.kickLabel}</span>
         </span>
-        <span className={`hs-card__status${t.wip ? ' hs-card__status--wip' : ''}`}>{t.status}</span>
+        {/* 没有年份的作品（绘画页）留一个不换行空格占住这一行，图版顶边仍与各组齐平 */}
+        <span className={`hs-card__status${t.wip ? ' hs-card__status--wip' : ''}`}>{t.status || '\u00a0'}</span>
       </span>
       <span className="hs-card__box" data-a={cur ? 'wipe' : undefined} data-d={200 + c * 90}>
         <span className={`hs-card__plate${t.img ? '' : ' hs-card__plate--wip'}`}>

@@ -104,4 +104,18 @@ describe('回程松键（retractStep）', () => {
     expect(s.retracting).toBe(false);
     expect(s.released).toHaveLength(0);
   });
+
+  it('fork（2026-10-30）：从成形态复制一份，两份各自回程逐位相同、松键顺序相同，互不影响', () => {
+    const s = contract(B);
+    const f = s.fork();
+    expect(maxDiff(s, f)).toBe(0);
+    for (let k = 0; k < 1000; k++) f.retractStep(1.0);
+    // 原来那份没被动过：还是成形态
+    expect(maxDiff(s, contract(B))).toBe(0);
+    expect(s.retracting).toBe(false);
+    for (let k = 0; k < 1000; k++) s.retractStep(1.0);
+    expect(maxDiff(s, f)).toBe(0);
+    expect(f.released.map(([i, j]) => `${i}-${j}`)).toEqual(s.released.map(([i, j]) => `${i}-${j}`));
+    expect(f.released.length).toBeGreaterThan(0);
+  });
 });

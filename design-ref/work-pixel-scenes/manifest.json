@@ -11,6 +11,17 @@
     "bytes": 21306
   },
   {
+    "theme": "drawing-painting",
+    "source": "sources/drawing-painting.svg",
+    "output": "/home/work-scenes/drawing-painting.svg",
+    "cols": 43,
+    "rows": 31,
+    "width": 258,
+    "height": 264,
+    "pixels": 382,
+    "bytes": 10698
+  },
+  {
     "theme": "installations",
     "source": "sources/installations.svg",
     "output": "/home/work-scenes/installations.svg",

@@ -2,6 +2,7 @@
   "framework": "nextjs",
   "git": {
     "deploymentEnabled": {
+      "claude/drawing-project-page-12ykhq": false,
       "claude/lab2-15-unit-morphology-oehn57": false,
       "claude/gracious-babbage-tzimfe": false,
       "claude/youthful-euler-p0zb02": false,
@@ -56,7 +57,8 @@
       "claude/fervent-euler-qu2im7": false,
       "claude/cool-ride-uf5vg9": false,
       "claude/stoic-hawking-eaxfi9": false,
-      "claude/sharp-bohr-t4cr3b": false
+      "claude/sharp-bohr-t4cr3b": false,
+      "claude/wonderful-clarke-yf1alt": false
     }
   }
 }

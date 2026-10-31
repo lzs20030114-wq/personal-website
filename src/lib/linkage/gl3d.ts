@@ -29,13 +29,18 @@ export interface MeshPlace {
   z: number;
   /** 均匀缩放（默认 1）。法向在着色器里 normalize，故均匀缩放不影响明暗。 */
   s?: number;
+  /**
+   * 再沿世界 Y 拉伸多少倍（默认 1；2026-10-30 人猫同台立体台的伸缩吊杆加）。法向也按同一矩阵变换再 normalize，
+   * 只对**竖直的柱体 / 管**是对的：侧面法向水平、端面法向竖直，竖向拉伸不改它们的方向；斜面别用。
+   */
+  sy?: number;
 }
 
-/** 绕世界 Y 的 yaw + 均匀缩放 → WebGL 列主序 3×3（与 placePoint 同取向） */
-function yawColMajor(yaw: number, s = 1): number[] {
+/** 绕世界 Y 的 yaw + 均匀缩放（+ 可选的竖向拉伸）→ WebGL 列主序 3×3（与 placePoint 同取向）；sy 省略 = 原样 */
+function yawColMajor(yaw: number, s = 1, sy = 1): number[] {
   const c = Math.cos(yaw) * s;
   const sn = Math.sin(yaw) * s;
-  return [c, 0, sn, 0, s, 0, -sn, 0, c];
+  return [c, 0, sn, 0, s * sy, 0, -sn, 0, c];
 }
 const IDENT3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
@@ -525,7 +530,7 @@ export class FlatRenderer {
     // 顶点已上传：多处摆放只换两个 uniform 各画一遍（不传 places = 原来那一次恒等绘制）
     if (places && places.length) {
       for (const q of places) {
-        gl.uniformMatrix3fv(uR, false, yawColMajor(q.yaw, q.s));
+        gl.uniformMatrix3fv(uR, false, yawColMajor(q.yaw, q.s, q.sy));
         gl.uniform3f(uT, q.x, q.y, q.z);
         gl.drawArrays(gl.TRIANGLES, 0, nv);
       }
@@ -680,7 +685,7 @@ export class FlatRenderer {
     if (!places.length) return;
     const gl = this.gl;
     const m = this.meshes.get(id);
-    if (!m) return;
+    if (!m || !m.n) return; // 空网格（如直带子上没有扣着的内杆）不发绘制调用
     gl.useProgram(this.meshProg.program);
     // 半透明（可选，与 drawDynamicMesh 同一套：深度只测不写，调用点在实体之后、从远到近下单）；不传 = 原来的不透明绘制
     const blended = alpha !== undefined && alpha < 1;
@@ -702,7 +707,7 @@ export class FlatRenderer {
     gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 24, 0);
     gl.vertexAttribPointer(aNrm, 3, gl.FLOAT, false, 24, 12);
     for (const q of places) {
-      gl.uniformMatrix3fv(uR, false, yawColMajor(q.yaw, q.s));
+      gl.uniformMatrix3fv(uR, false, yawColMajor(q.yaw, q.s, q.sy));
       gl.uniform3f(uT, q.x, q.y, q.z);
       gl.drawArrays(gl.TRIANGLES, 0, m.n);
     }
@@ -824,7 +829,7 @@ export class FlatRenderer {
     gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 12, 0);
     if (places && places.length) {
       for (const q of places) {
-        gl.uniformMatrix3fv(uR, false, yawColMajor(q.yaw, q.s));
+        gl.uniformMatrix3fv(uR, false, yawColMajor(q.yaw, q.s, q.sy));
         gl.uniform3f(uT, q.x, q.y, q.z);
         gl.drawArrays(gl.LINES, 0, segs.length * 2);
       }

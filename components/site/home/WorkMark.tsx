@@ -12,6 +12,7 @@ const GROUP_SCENE: Record<string, string> = {
   interiors: 'interiors',
   'architecture-construction': 'architecture-construction',
   installations: 'installations',
+  'drawing-painting': 'drawing-painting',
 };
 
 export function WorkMark({ group, style }: { group: string; style?: CSSProperties }) {
