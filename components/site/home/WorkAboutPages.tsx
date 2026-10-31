@@ -821,12 +821,12 @@ export function WorkPage({ groups, active, flow }: { groups: HomeWorkGroup[]; ac
 
 /* ───────────────────────── 03 About ───────────────────────── */
 
-// 作者 2026-09-29 授权的首页自我介绍（MAPPING §6.1.1），与稿内三段同文；邮箱 / Currently 等事实栏同源。
+// 首页自我介绍：2026-09-29 作者授权初稿（MAPPING §6.1.1），2026-10-31 按作者简历重写三段与事实栏（MAPPING §81）。
 const FACTS = [
   { k: 'Contact', v: 'lzs20030114@gmail.com' },
-  { k: 'Currently', v: 'Computational design & human–computer interaction' },
-  { k: 'Approach', v: 'Research through design · parametric modeling · physical prototyping' },
-  { k: 'Tools', v: 'Rhino / Grasshopper · Python · 3D printing' },
+  { k: 'Currently', v: 'AI applications · HCI · user research' },
+  { k: 'Skills', v: 'Multi-agent workflows · prompt tuning · AI evaluation' },
+  { k: 'Tools', v: 'Claude Code · Codex · Figma · Rhino / Grasshopper' },
 ];
 
 export function AboutPage() {
@@ -858,16 +858,18 @@ export function AboutPage() {
           </div>
           <div className="hs-about__text">
             <p data-a="up" data-d="200">
-              I’m Zishuo Li, an environmental design graduate of Tsinghua University’s Academy of Arts &amp; Design.
+              I’m Zishuo Li. I graduated from Tsinghua University’s Academy of Arts &amp; Design in 2026 with a degree
+              in environmental art design.
             </p>
             <p data-a="up" data-d="280">
-              My projects include Reincarnation Machine, a mechanical installation exploring how behavior gives a
-              machine its character, and spatial simulations of environments that change through use. I work between
-              parametric models and physical prototypes to develop these ideas.
+              As a student I designed parks, farms, interiors and houses, drew construction sets, built installations
+              on site and made a lot of models by hand. Now I do user research for a smart-sleep project at
+              Tsinghua’s Future Lab, and run an AI-powered TOEFL practice platform that I built on my own.
             </p>
             <p data-a="up" data-d="360">
-              During my design research internship at Tsinghua’s Future Lab, I contributed literature and competitor
-              research, survey design, and interview planning to the 2030 Sleep Foresight Study with DeRucci.
+              I am preparing graduate applications in computational design and human–computer interaction. My
+              portfolio centers on Projects I and II on this site: the Reincarnation Machine, and a study of how
+              people and cats share a space that changes around them.
             </p>
           </div>
           <Link className="hs-about__more" href="/about" data-a="fade" data-d="520">
