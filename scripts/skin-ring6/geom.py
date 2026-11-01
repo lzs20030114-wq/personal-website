@@ -169,6 +169,7 @@ GLYPHS = {
     "2": [_arc(0.3, 0.72, 0.28, 0.28, 160, -30, 8) + [(0.0, 0.0), (0.6, 0.0)]],
     "3": [_arc(0.3, 0.76, 0.26, 0.24, 150, -90, 8), _arc(0.3, 0.27, 0.3, 0.27, 90, -150, 9)],
     "4": [[(0.46, 0.0), (0.46, 1.0), (0.0, 0.32), (0.6, 0.32)]],
+    "5": [[(0.56, 1.0), (0.1, 1.0), (0.06, 0.58)] + _arc(0.3, 0.32, 0.28, 0.32, 122, -150, 10)],
     ".": [_arc(0.12, 0.07, 0.07, 0.07, 0, 360, 6)],
 }
 GLYPH_ADV = {".": 0.24}      # 字宽（倍字高），没列的都是 0.6
@@ -202,11 +203,10 @@ def rect(w, h):
 
 
 def part_board(name: str) -> dict:
-    """C1 / C2 / C3 刻自己的编号（C5 与 C1、C4 与 C2 是同一个零件，刻的也一样）。
-    编号在板中间，装好以后被两层表皮盖住，只为分拣。"""
+    """C1–C5 各刻自己的位置号。C1 与 C5、C2 与 C4 尺寸相同，切出来可以互换，
+    刻号只为分拣：五种各 6 块，一个单元各取一块。编号在板中间，装好以后被两层表皮盖住。"""
     i = int(name[1]) - 1
-    code = {"C4": "C2", "C5": "C1"}.get(name, name)
-    eng = stroke_text(code, LENS[i] / 2, W / 2 + ENGRAVE_H / 2, ENGRAVE_H)
+    eng = stroke_text(name, LENS[i] / 2, W / 2 + ENGRAVE_H / 2, ENGRAVE_H)
     return {"outline": rect(LENS[i], W), "holes": [], "w": LENS[i], "h": W, "engrave": eng}
 
 
@@ -306,9 +306,11 @@ def part_hoop() -> dict:
 # ---- 零件清单 -------------------------------------------------------------------
 def parts_catalog() -> dict:
     return {
-        "C1": dict(part_board("C1"), qty=12, mat="wood", label="C1 / C5", note="墙段端板"),
-        "C2": dict(part_board("C2"), qty=12, mat="wood", label="C2 / C4", note="台面 / 底面"),
+        "C1": dict(part_board("C1"), qty=6, mat="wood", label="C1", note="上端板"),
+        "C2": dict(part_board("C2"), qty=6, mat="wood", label="C2", note="台面"),
         "C3": dict(part_board("C3"), qty=6, mat="wood", label="C3", note="箱子正面"),
+        "C4": dict(part_board("C4"), qty=6, mat="wood", label="C4", note="底面，与 C2 同尺寸"),
+        "C5": dict(part_board("C5"), qty=6, mat="wood", label="C5", note="下端板，与 C1 同尺寸"),
         "RIB": dict(part_rib(), qty=6, mat="wood", label="R 托", note="沿墙内侧，托住台面和底面"),
         "PLATE": dict(part_plate(), qty=2, mat="wood", label="P 六边形板", note="上下各一"),
         "COMB": dict(part_comb(), qty=1, mat="wood", label="T 槽宽试件", note="先切，定槽宽"),
@@ -359,9 +361,11 @@ def _nest_wood() -> list[list[tuple]]:
     out.append(("PLATE", m, yb, 0, False))
     out.append(("PLATE", m + pl["w"] + g, yb, 0, False))
     # 托右边：七排板，行高 = 板宽
-    widths = {"C1": LENS[0], "C2": LENS[1], "C3": LENS[2], "COMB": part_comb()["w"]}
+    widths = {f"C{i + 1}": L for i, L in enumerate(LENS)}
+    widths["COMB"] = part_comb()["w"]
     xr = m + ribs_w + g
-    rows = [["C1"] * 3 + ["C3"]] * 4 + [["C2"] * 5] * 2 + [["C2"] * 2 + ["C3"] * 2 + ["COMB"]]
+    rows = [["C1"] * 3 + ["C3"]] * 2 + [["C5"] * 3 + ["C3"]] * 2 \
+        + [["C2"] * 5, ["C4"] * 5, ["C2", "C4", "C3", "C3", "COMB"]]
     for r, keys in enumerate(rows):
         _row(out, keys, xr, m + r * (W + g), widths, g)
     return [out]
