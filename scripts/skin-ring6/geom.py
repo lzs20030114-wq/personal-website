@@ -1,5 +1,5 @@
-"""六单元环静态演示模型的全部几何（单位 mm）。图纸 v4.1：缩到 0.7 倍，配合处留余量，
-木板按 880 × 450 排版，白线切穿、红线雕刻。
+"""六单元环静态演示模型的全部几何（单位 mm）。图纸 v4.2：缩到 0.7 倍，配合处留余量，
+木板按 880 × 450 排版，白线切穿、红线雕刻，插槽画 3.1，余料排满备件。
 
 单元 = P2-SKIN-01 v3 下凹槽版按 0.7 倍缩小：板长 70 / 47 / 30 / 47 / 70、板宽 52
 （原 101 / 67.5 / 43 / 67.5 / 101 × 75）。木板厚 3、表皮厚 1、接缝 5 不缩：前两个
@@ -14,14 +14,16 @@
   下面一个小台阶贴住底面 C4。墙定住以后台面一锁，整个箱子就定了；底面那一块是
   保险，免得表皮铰链软、底面自己往下耷拉。两小块都只占靠墙的里角。
 
-改过的版本（都在 2026-10-29）
+改过的版本
 - v1 每个单元背后一片定型肋，肋舌就是箱子内腔的形状，等于一个模子。
 - v2 拿掉肋，改用立杆 + 四块板 + 箱子里的两根斜线。用户指出拉线不现实。
 - v3 把 v1 的肋缩成托：箱子里只剩靠墙的一个小三角和一个小台阶。
 - v4 整体缩到 0.7 倍省料（木板两张 → 一张），插槽、托、单元之间按激光割缝和
   折叠误差留余量。
-- v4.1 木板按店里的 880 × 450 重排；切割文件改成白线切穿、红线雕刻，木板零件
-  刻上编号（托上加一个指向单元顶端的箭头，试件上刻槽宽）。
+- v4.1 木板按店里的 880 × 450 重排，切割文件改成白线切穿、红线雕刻，木板零件
+  刻上编号（C1–C5 各刻各的，托上加一个指向单元顶端的箭头）。
+- v4.2（2026-11-01）插槽改画 3.1，不再切槽宽试件，右边余料和空当排满备件。
+  前四版都在 2026-10-29。
 
 坐标约定
 - 平铺：x 沿带长（C1 一端为 0），y 沿板宽（0..W）。
@@ -117,9 +119,8 @@ BOX_IN_FRONT = R_C3_B - T_SKIN                   # 箱内：C3 的 B 表皮内�
 
 # ---- 加工余量 -----------------------------------------------------------------
 # 激光割缝约 0.1–0.2：文件按图上尺寸画、不做割缝补偿，切出来的零件每边小约 0.1，
-# 槽每边大约 0.1，正好往松的方向走。3 mm 层板实际常在 2.8–3.1 之间。
-SLOT = 3.2                    # 插槽宽（板厚 3）：松 0.2–0.5，靠胶定住；先切试件 T 再定
-COMB_WIDTHS = [3.0, 3.1, 3.2, 3.3, 3.4]
+# 槽每边大约 0.05–0.1，正好往松的方向走。3 mm 层板实际常在 2.8–3.1 之间。
+SLOT = 3.1                    # 插槽宽（板厚 3），用户 2026-11-01 定：切出来约 3.2–3.3，每边松 0.1 左右，靠胶定住
 FOOT_CLR = 2.0                # 小台阶与底面之间：吃掉折叠误差，单元才推得进去；装好后垫一片表皮边角料
 RIB_EXTRA = 2.0               # 托比单元长：托当脚，单元长短差一点也不顶桌
 WALL_GAP_MIN = 5.0            # 单元之间的缝在内表面处不小于它：单元左右装偏一点不碰邻居
@@ -153,7 +154,7 @@ HEX_SIDE = 2 * APO * math.tan(math.pi / 6)
 assert HEX_SIDE - W >= WALL_GAP_MIN
 
 
-# ---- 雕刻：单线字（零件编号、托的朝上箭头、试件槽宽） ------------------------------
+# ---- 雕刻：单线字（零件编号、托的朝上箭头） ----------------------------------------
 def _arc(cx, cy, rx, ry, a0, a1, k):
     return [(cx + rx * math.cos(math.radians(a0 + (a1 - a0) * i / k)),
              cy + ry * math.sin(math.radians(a0 + (a1 - a0) * i / k))) for i in range(k + 1)]
@@ -164,15 +165,13 @@ GLYPHS = {
     "C": [_arc(0.32, 0.5, 0.3, 0.5, 45, 315, 14)],
     "R": [[(0.0, 0.0), (0.0, 1.0), (0.36, 1.0)] + _arc(0.36, 0.75, 0.22, 0.25, 90, -90, 8) + [(0.0, 0.5)],
           [(0.3, 0.5), (0.6, 0.0)]],
-    "0": [_arc(0.3, 0.5, 0.3, 0.5, 0, 360, 20)],
     "1": [[(0.12, 0.8), (0.34, 1.0), (0.34, 0.0)]],
     "2": [_arc(0.3, 0.72, 0.28, 0.28, 160, -30, 8) + [(0.0, 0.0), (0.6, 0.0)]],
     "3": [_arc(0.3, 0.76, 0.26, 0.24, 150, -90, 8), _arc(0.3, 0.27, 0.3, 0.27, 90, -150, 9)],
     "4": [[(0.46, 0.0), (0.46, 1.0), (0.0, 0.32), (0.6, 0.32)]],
     "5": [[(0.56, 1.0), (0.1, 1.0), (0.06, 0.58)] + _arc(0.3, 0.32, 0.28, 0.32, 122, -150, 10)],
-    ".": [_arc(0.12, 0.07, 0.07, 0.07, 0, 360, 6)],
 }
-GLYPH_ADV = {".": 0.24}      # 字宽（倍字高），没列的都是 0.6
+GLYPH_W = 0.6                # 字宽（倍字高）
 GLYPH_GAP = 0.22             # 字距（倍字高）
 ENGRAVE_H = 5.0              # 板上编号的字高
 ENGRAVE_MIN = 1.0            # 刻线离切割线不小于它
@@ -180,7 +179,7 @@ ENGRAVE_MIN = 1.0            # 刻线离切割线不小于它
 
 def stroke_text(s: str, x: float, y: float, h: float, anchor: str = "c") -> list:
     """单线字的折线，零件局部坐标（y 向下）。(x, y) 在基线上，anchor 取 l / c / r。"""
-    adv = [GLYPH_ADV.get(ch, 0.6) * h for ch in s]
+    adv = [GLYPH_W * h for _ in s]
     width = sum(adv) + GLYPH_GAP * h * (len(s) - 1)
     x0 = x - {"l": 0.0, "c": width / 2, "r": width}[anchor]
     lines = []
@@ -262,22 +261,6 @@ def part_plate() -> dict:
     return {"outline": pts, "holes": [], "w": 2 * rv, "h": 2 * APO}
 
 
-COMB_PITCH = 12.5
-
-
-def part_comb() -> dict:
-    """槽宽试件：五条槽，从左到右按 COMB_WIDTHS。"""
-    w, h, depth = 70.0, 20.0, 10.0
-    pts = [(0.0, 0.0)]
-    for i, sw in enumerate(COMB_WIDTHS):
-        cx = 10.0 + i * COMB_PITCH
-        pts += [(cx - sw / 2, 0.0), (cx - sw / 2, depth), (cx + sw / 2, depth), (cx + sw / 2, 0.0)]
-    pts += [(w, 0.0), (w, h), (0.0, h)]
-    eng = [ln for i, sw in enumerate(COMB_WIDTHS)
-           for ln in stroke_text(f"{sw:.1f}", 10.0 + i * COMB_PITCH, 17.0, 3.0)]
-    return {"outline": pts, "holes": [], "w": w, "h": h, "engrave": eng}
-
-
 def hoop_geometry() -> dict:
     """箍带走的十二边形：贴着每个单元外表面，跨过单元之间的缝走直线。"""
     pts = []
@@ -313,7 +296,6 @@ def parts_catalog() -> dict:
         "C5": dict(part_board("C5"), qty=6, mat="wood", label="C5", note="下端板，与 C1 同尺寸"),
         "RIB": dict(part_rib(), qty=6, mat="wood", label="R 托", note="沿墙内侧，托住台面和底面"),
         "PLATE": dict(part_plate(), qty=2, mat="wood", label="P 六边形板", note="上下各一"),
-        "COMB": dict(part_comb(), qty=1, mat="wood", label="T 槽宽试件", note="先切，定槽宽"),
         "A1": dict(part_skin("A1"), qty=12, mat="skin", label="A1 / A3", note="外表面，跨 H1 / H4"),
         "A2": dict(part_skin("A2"), qty=6, mat="skin", label="A2", note="箱子正面外"),
         "B1": dict(part_skin("B1"), qty=12, mat="skin", label="B1 / B3", note="墙段内表面"),
@@ -339,7 +321,9 @@ def _row(out, keys, x, y, widths, gap):
 
 
 def _nest_wood() -> list[list[tuple]]:
-    """一张 880 × 450：左上三对托，托下面两块 P 板，中间七排板，右边留一整块余料。"""
+    """一张 880 × 450：左上三对托，托下面两块 P 板，中间七排板。余下的地方排备件
+    （用户 2026-11-01「能排多少排多少」）：右边余料一对托、两块 P 板、三排板，
+    P 板旁边和下面、最后一排板的右边各补几块板。"""
     m, g = M_WOOD, G_WOOD
     rib = part_rib()
     rw = rib["w"]
@@ -362,12 +346,26 @@ def _nest_wood() -> list[list[tuple]]:
     out.append(("PLATE", m + pl["w"] + g, yb, 0, False))
     # 托右边：七排板，行高 = 板宽
     widths = {f"C{i + 1}": L for i, L in enumerate(LENS)}
-    widths["COMB"] = part_comb()["w"]
     xr = m + ribs_w + g
     rows = [["C1"] * 3 + ["C3"]] * 2 + [["C5"] * 3 + ["C3"]] * 2 \
-        + [["C2"] * 5, ["C4"] * 5, ["C2", "C4", "C3", "C3", "COMB"]]
-    for r, keys in enumerate(rows):
-        _row(out, keys, xr, m + r * (W + g), widths, g)
+        + [["C2"] * 5, ["C4"] * 5, ["C2", "C4", "C3", "C3"]]
+    ends = [_row(out, keys, xr, m + r * (W + g), widths, g) for r, keys in enumerate(rows)]
+    # 备件 · 最后一排板的右边
+    _row(out, ["C1"], ends[-1], m + (len(rows) - 1) * (W + g), widths, g)
+    # 备件 · P 板旁边两排、下面一排
+    xb = m + 2 * (pl["w"] + g)
+    _row(out, ["C2", "C3"], xb, yb, widths, g)
+    _row(out, ["C4", "C3"], xb, yb + W + g, widths, g)
+    _row(out, ["C1", "C5", "C2", "C4", "C3", "C3"], m, yb + 2 * (W + g), widths, g)
+    # 备件 · 右边余料：一对托、两块 P 板，下面三排板
+    xs = max(ends)                                  # _row 返回的位置已带一个间距
+    out.append(("RIB", xs, m, 0, False))
+    out.append(("RIB", xs + dx, m + dy, 180, False))
+    xp = xs + pair_w + g
+    out.append(("PLATE", xp, m, 0, False))
+    out.append(("PLATE", xp, m + pl["h"] + g, 0, False))
+    for r, keys in enumerate([["C1"] * 3 + ["C3"], ["C5"] * 3 + ["C3"], ["C2", "C2", "C4", "C4", "C3"]]):
+        _row(out, keys, xs, yb + r * (W + g), widths, g)
     return [out]
 
 
@@ -390,6 +388,15 @@ def _nest_skin() -> list[tuple]:
 
 
 NEST_WOOD = _nest_wood()
+
+
+def wood_spares() -> dict:
+    """木板上比模型多切的件数（备件）。"""
+    from collections import Counter
+    cnt = Counter(k for sh in NEST_WOOD for k, *_ in sh)
+    cat = parts_catalog()
+    return {k: cnt[k] - cat[k]["qty"] for k in ("RIB", "PLATE", "C1", "C2", "C3", "C4", "C5")
+            if cnt[k] > cat[k]["qty"]}
 NEST_SKIN = _nest_skin()
 
 

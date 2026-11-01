@@ -1,4 +1,4 @@
-"""六单元环静态演示模型 图纸 v4.1：出 PDF 图纸 + DXF / SVG 切割文件（白线切穿、红线雕刻）。
+"""六单元环静态演示模型 图纸 v4.2：出 PDF 图纸 + DXF / SVG 切割文件（白线切穿、红线雕刻）。
 
 python3 scripts/skin-ring6/build.py <输出目录>
 """
@@ -161,7 +161,7 @@ class P:
 def frame(pp: P, n: int, title: str, sub: str):
     pp.text(22, 403, "项目二 / 六单元环 · 静态演示模型", 5.0)
     pp.text(PAGE_W - 22, 403, f"{n:02d} / {N_PAGES:02d}", 3.6, TEAL, "r")
-    pp.text(22, 396, f"{CODE}  |  6 × P2-SKIN-01 v3  |  图纸 v4.1  |  {DATE}", 2.2, GRAY)
+    pp.text(22, 396, f"{CODE}  |  6 × P2-SKIN-01 v3  |  图纸 v4.2  |  {DATE}", 2.2, GRAY)
     pp.text(PAGE_W - 22, 396, "A2 594 × 420 mm / 单位 mm", 2.2, GRAY, "r")
     pp.line(22, 391, PAGE_W - 22, 391, LIGHT, 0.3)
     pp.text(22, 381, title, 3.4)
@@ -193,6 +193,7 @@ def n(x, d=1):
 
 
 SM = G.summary()
+SPARES = G.wood_spares()
 
 
 # ---- 剖面绘制（r, s）→ 页面 -------------------------------------------------------
@@ -297,8 +298,8 @@ FOOT = SM["foot"]
 def page_overview(c, fig_dir):
     pp = P(c)
     frame(pp, 1, "01 | 总览：六个单元竖着围成一圈，凹槽朝外翻成挑台",
-          f"图纸 v4.1：v3 的做法不变，整体缩到 {n(G.SCALE)} 倍，配合处按激光割缝和折叠误差留了余量（第 02 页）。"
-          f"木板按 {n(G.SHEET_WOOD[0])} × {n(G.SHEET_WOOD[1])} 排成一张，白线切穿、红线雕刻（第 06 页）。")
+          f"图纸 v4.2：v3 的做法不变，整体缩到 {n(G.SCALE)} 倍，配合处按激光割缝和折叠误差留了余量（第 02 页）。"
+          f"木板按 {n(G.SHEET_WOOD[0])} × {n(G.SHEET_WOOD[1])} 排成一张，余下的地方排满备件，白线切穿、红线雕刻（第 06 页）。")
     h = image(c, os.path.join(fig_dir, "iso.png"), 26, 362, 238.0)
     pp.text(26, 362 - h - 5, "轴测示意：深色窄带是两道箍带。中间一段的墙折成了箱子，所以箱子后面能看到芯（托与六边形板）。", 2.0, GRAY)
 
@@ -353,7 +354,6 @@ def page_overview(c, fig_dir):
            ("R", "托", f"{n(G.RIB_H)} × {n(G.GUS_R - G.R_IN)}", "6", "木板 3",
             "沿墙内侧立着，伸进箱子一个小三角、一个小台阶"),
            ("P", "六边形板", f"边心距 {n(G.APO)}", "2", "木板 3", f"每条边中点一条 {n(G.SLOT)} 宽的槽，接托"),
-           ("T", "槽宽试件", "70 × 20", "1", "木板 3", "先切，定槽宽"),
            ("A1 / A3", "外表皮", sk("A1"), "12", "表皮 1", "无孔"),
            ("A2", "外表皮", sk("A2"), "6", "表皮 1", "无孔"),
            ("B1 / B3", "内表皮", sk("B1"), "12", "表皮 1", "无孔"),
@@ -361,7 +361,8 @@ def page_overview(c, fig_dir):
            ("S", "箍带", f"{n(G.HOOP_W)} × {G.HOOP_L}", "2", "表皮 1", f"搭接 {n(G.HOOP_LAP)}，长度现场收"),
            ("—", "胶", "", "", "", "跟着表皮选，见第 07 页"),
            ("—", "纸胶带", "", "", "", "装单元时临时贴住墙，上了箍带就撕掉")]
-    pp.text(305, 186, f"零件清单（木板 39 件，一张 {n(G.SHEET_WOOD[0])} × {n(G.SHEET_WOOD[1])}，表皮 38 件，一张 600 × 400）", 2.6)
+    pp.text(305, 186, f"零件清单（木板 38 件，另排 {sum(SPARES.values())} 件备件，一张 {n(G.SHEET_WOOD[0])} × {n(G.SHEET_WOOD[1])}，"
+            "表皮 38 件，一张 600 × 400）", 2.6)
     pp.table(305, 182, [20, 22, 28, 14, 16, 167], bom, rh=5.6, size=2.05)
 
     panel(pp, 26, 40, 238, 56)
@@ -420,8 +421,8 @@ def page_section(c, fig_dir):
     # 配合与余量
     pp.text(22, 135, "配合与余量（图上尺寸 → 切出来、装起来会怎样）", 2.6)
     fits = [("地方", "图上", "会怎样", "留了多少"),
-            ("托与 P 板的插槽", f"槽宽 {n(G.SLOT)}，板厚 3", "割缝让槽再宽约 0.15，板实际 2.8–3.1",
-             "松 0.2–0.5，靠胶定住，先切 T 再定"),
+            ("托与 P 板的插槽", f"槽宽 {n(G.SLOT)}，板厚 3", "割缝让槽再宽约 0.1–0.2，切出来约 3.2–3.3",
+             "每边松 0.1 左右，靠胶定住"),
             ("两条槽的深度", f"都开到离环轴 {n(G.SLOT_MID)}", "割缝让槽底各多出约 0.1", "托的直边和板边齐平"),
             ("小三角上沿", "与台面内表皮平齐", "单元靠自重坐在上面", "台面高度由它定，点胶"),
             ("小台阶下沿", f"离底面内表皮 {n(G.FOOT_CLR)}", "折出来的箱子比图上差 1–2",
@@ -500,7 +501,7 @@ def page_wood(c, fig_dir):
     cat = G.parts_catalog()
     frame(pp, 3, f"03 | 木板零件 1:1：3 mm 木板，共 39 件，排在一张 {n(G.SHEET_WOOD[0])} × {n(G.SHEET_WOOD[1])} 上",
           f"建议 3 mm 椴木层板激光切。C1–C5 是 v3 单元图纸的 {n(G.SCALE)} 倍、不打孔。"
-          "托 R 与六边形板 P 十字插接，槽宽按 T 试件定。红线是雕刻。")
+          f"托 R 与六边形板 P 十字插接，槽画 {n(G.SLOT)}。红线是雕刻。")
     rib = cat["RIB"]
     rx, ry = 36.0, 352.0
     draw_part(pp, rib, rx, ry, fill=CORE)
@@ -551,16 +552,14 @@ def page_wood(c, fig_dir):
     pp.text(px0 + pl["w"] / 2, py0 - pl["h"] - 7,
             f"每条边中点一条槽：宽 {n(G.SLOT)}、深 {n(G.APO - G.SLOT_MID)}", 2.0, TEAL, "c")
 
-    cb = cat["COMB"]
     tx, ty = 150.0, 262.0
-    draw_part(pp, cb, tx, ty)
-    pp.text(tx, ty + 6, "T 槽宽试件 × 1（先切）", 2.8)
-    pp.para(tx, ty - cb["h"] - 6, [
-        "从左到右 " + " / ".join(f"{w:.1f}" for w in G.COMB_WIDTHS) + "，槽深 10，槽宽刻在每条槽下面。",
-        "拿要用的那张木板的边角料往槽里插：",
-        "能用手推进去、松手不掉、晃起来有一点点旷的那条最好。",
-        f"图纸默认 {n(G.SLOT)}，选了别的，改 geom.py 的 SLOT 重出木板文件，",
-        "托和 P 板上的槽一起变。",
+    pp.text(tx, ty + 6, "备件（排在木板余下的地方）", 2.8)
+    names = {"RIB": "R 托", "PLATE": "P 六边形板", "C1": "C1", "C2": "C2", "C3": "C3", "C4": "C4", "C5": "C5"}
+    rows = [("零件", "模型用", "备件")] + [(names[k], str(cat[k]["qty"]), str(v)) for k, v in SPARES.items()]
+    yb_ = pp.table(tx, ty, [34, 16, 16], rows, rh=5.4, size=2.05)
+    pp.para(tx, yb_ - 6, [
+        "托和 P 板最容易坏：插槽、小三角、小台阶都细。",
+        "备件和正件一模一样，刻的号也一样，混着用。",
     ], size=1.95, lead=4.0)
 
     hc = image(c, os.path.join(fig_dir, "core.png"), 300, 262, 74.0)
@@ -568,12 +567,12 @@ def page_wood(c, fig_dir):
 
     panel(pp, 150, 36, 422, 48)
     pp.para(155, 77, [
-        "全部零件在同一张 3 mm 板上切。先切 T 槽宽试件，定了槽宽再切整张。",
+        f"全部零件在同一张 3 mm 板上切，余下的地方排满备件。插槽画 {n(G.SLOT)}，切出来约 3.2–3.3，插不进就用砂纸把槽磨一下。",
         f"托 R 与 P 板十字插接：托上的槽从内缘开到离环轴 {n(G.SLOT_MID)}，板上的槽从板边开到同一处，两条槽各占一半，交叉咬住。",
         f"托的直边、P 板的六条边都在离环轴 {n(G.APO)} 处，单元的墙（B 表皮面）贴在这里。托的下端比单元长 {n(G.RIB_EXTRA)}，托当脚，单元悬空。",
         "C2 与 C4 尺寸相同，C1 与 C5 也是，只是刻的号不同，都不打孔。托刷深色更不显（第 02 页），要刷在插接之前。",
         "切出来的零件每边会小约 0.1（割缝），图纸没有补偿，外形尺寸照用即可。",
-        "红线是雕刻：C 板上的位置号 C1–C5（各 6 块，一个单元各取一块，装好以后被表皮盖住）、托上的 R 和指向单元顶端的箭头、T 试件上的槽宽。",
+        "红线是雕刻：C 板上的位置号 C1–C5（各 6 块，一个单元各取一块，装好以后被表皮盖住）、托上的 R 和指向单元顶端的箭头。",
         "小三角在上、小台阶在下，两样离托的两头差不多远，装反了不容易看出来，按箭头装。托要刷深色的话，刷之前先认好哪头朝上。",
     ], size=2.15, lead=4.6)
 
@@ -681,15 +680,18 @@ def page_laminate(c):
 
 
 # ---- 页 6：排版 ----------------------------------------------------------------------
-LAB = {"C1": "C1", "C2": "C2", "C3": "C3", "C4": "C4", "C5": "C5", "PLATE": "P", "RIB": "R", "COMB": "T",
+LAB = {"C1": "C1", "C2": "C2", "C3": "C3", "C4": "C4", "C5": "C5", "PLATE": "P", "RIB": "R",
        "A1": "A1", "A2": "A2", "B1": "B1", "B2": "B2", "HOOP": "S"}
 
 
-def sheet_title(prefix, nest):
+def sheet_title(prefix, nest, spares=None):
+    """「R × 6 + 2」= 模型用 6 件、备件 2 件。"""
     from collections import Counter
     cnt = Counter(k for k, *_ in nest)
-    order = ["RIB", "PLATE", "C1", "C2", "C3", "C4", "C5", "COMB", "A1", "A2", "B1", "B2", "HOOP"]
-    return prefix + "，".join(f"{LAB[k]} × {cnt[k]}" for k in order if cnt[k])
+    spares = spares or {}
+    order = ["RIB", "PLATE", "C1", "C2", "C3", "C4", "C5", "A1", "A2", "B1", "B2", "HOOP"]
+    return prefix + "，".join(f"{LAB[k]} × {cnt[k] - spares.get(k, 0)}"
+                              + (f" + {spares[k]}" if spares.get(k) else "") for k in order if cnt[k])
 
 
 def page_nest(c):
@@ -721,11 +723,8 @@ def page_nest(c):
                 pp.text(ox + lx * sc, oytop - (ly + 3) * sc, LAB[key], 1.9, label_c, "c")
         return oytop - h * sc
 
-    wy = sheet(G.NEST_WOOD[0], G.SHEET_WOOD, 26, 352, sheet_title("木板：", G.NEST_WOOD[0]), "wood_880x450.dxf / .svg")
-    ext = G.nest_extent(G.NEST_WOOD[0], cat)
-    off_w = ww - ext[2]
-    pp.text(26 + (ext[2] + ww) / 2 * sc, 352 - wh / 2 * sc, f"余料约 {off_w // 5 * 5:.0f} × {n(wh)}",
-            2.0, label_c, "c")
+    wy = sheet(G.NEST_WOOD[0], G.SHEET_WOOD, 26, 352, sheet_title("木板：", G.NEST_WOOD[0], SPARES),
+               "wood_880x450.dxf / .svg")
     sheet(G.NEST_SKIN, G.SHEET_SKIN, 346, 352, sheet_title("表皮：", G.NEST_SKIN), "skin_600x400.dxf / .svg")
     # 图例
     ly = wy - 7
@@ -735,23 +734,24 @@ def page_nest(c):
     pp.rect(60, ly - 1.4, 9, 4, stroke=None, fill=SHEET_BG)
     pp.line(61.2, ly + 0.6, 67.8, ly + 0.6, HexColor("#ff3b2f"), 0.3)
     pp.text(71, ly, "红线：雕刻（浅刻，不切穿）", 2.1)
-    pp.text(126, ly, "灰字只在本页标零件，文件里没有。表皮文件只有白线。", 2.1, GRAY)
+    pp.text(126, ly, "灰字只在本页标零件，文件里没有。表皮文件只有白线。木板标题里「+ 2」是备件。", 2.1, GRAY)
 
     items = [
-        f"1. 文件单位 mm，导入比例 1:1，先量一下 C1 长 {n(G.L1)}、宽 {n(G.W)}，T 试件宽 70，对上再切。",
-        "2. 白色线全部切穿，红色线雕刻。红线是零件编号、托上指向单元顶端的箭头、T 试件上的槽宽，"
+        f"1. 文件单位 mm，导入比例 1:1，先量一下 C1 长 {n(G.L1)}、宽 {n(G.W)}，对上再切。",
+        "2. 白色线全部切穿，红色线雕刻。红线是零件编号和托上指向单元顶端的箭头，"
         "功率调低刻出看得见的浅线就行，不要刻穿。",
         "3. DXF 里白线在图层 CUT（颜色 7），红线在图层 ENGRAVE（颜色 1）。有的软件在白底上把颜色 7 显示成黑色，"
         "按图层分就不会错。SVG 里是 #FFFFFF 和 #FF0000，画布背景设成黑色只为看得见白线。",
         "4. 表皮文件只有白线，全部切穿。含氯材料（氯丁橡胶、PVC）不能激光切，提供片材成分让店里确认。",
-        f"5. 先单独切 T 试件试槽宽，定了以后改 geom.py 的 SLOT（默认 {n(G.SLOT)}），重出木板文件，"
-        "托与 P 板上的槽都跟着变。",
+        f"5. 托与 P 板的插槽画 {n(G.SLOT)}（板厚 3），切出来约 3.2–3.3，每边松 0.1 左右。"
+        "板偏厚插不进的话，用砂纸把槽磨一下。",
         "6. 文件没有做割缝补偿：跟店里说按线切、不要补偿。补偿了槽会变紧。",
-        f"7. 木板零件都排在左边，右边约 {off_w // 5 * 5:.0f} × {n(wh)} 可以留作余料。托 R 三对两两倒插，排在左上角。",
+        f"7. 余下的地方排满备件：{'、'.join(f'{LAB[k]} × {v}' for k, v in SPARES.items())}，"
+        "和正件一样切。托 R 两两倒插。",
     ]
     right = [
         "用量",
-        f"木板：3 mm 椴木层板 {n(ww)} × {n(wh)} 一张。",
+        f"木板：3 mm 椴木层板 {n(ww)} × {n(wh)} 一张（含备件）。",
         f"表皮：1 mm 片材 600 × 400 一张，手裁的话是 {n(G.W)} 宽长条约 {n(SKIN_STRIP_M)} m，",
         f"加两条 {n(G.HOOP_W)} × {G.HOOP_L} 的箍带。",
         "胶一支（跟着表皮选），纸胶带一卷，牙签几根。",
@@ -762,8 +762,8 @@ def page_nest(c):
         f"木板 600 × 400 两张 → {n(ww)} × {n(wh)} 一张，表皮 1000 × 500 → 600 × 400。",
         "",
         "和图纸 v4 比",
-        f"只改了木板排版（{n(ww)} × {n(wh)}）和线的颜色，加了雕刻。",
-        "零件形状、尺寸、数量都没变。",
+        f"木板改排 {n(ww)} × {n(wh)}，白线切、红线刻，加了编号和备件。",
+        f"插槽 3.2 → {n(G.SLOT)}，去掉了槽宽试件 T。其余零件形状、尺寸、数量不变。",
     ]
     fs, lead = 2.2, 4.8
     wrapped = [wrap(it, 262, fs) for it in items]
@@ -789,7 +789,7 @@ def page_assembly(c, fig_dir):
     h2 = image(c, os.path.join(fig_dir, "unit.png"), 92, 362, 70.0)
     pp.text(92, 362 - h2 - 4, "推上一个单元", 2.0, GRAY)
     steps = [
-        ("1", f"切 T 槽宽试件，拿要用的木板去插，定槽宽（默认 {n(G.SLOT)}），改 SLOT 重出木板文件。按第 06 页切一张木板、一张表皮。"),
+        ("1", "按第 06 页切一张木板、一张表皮。木板上多出来的托、P 板和 C 板是备件，另放一边。"),
         ("2", "胶合六个单元（第 05 页）：A 面三片、B 面三片，缝里 9 mm 不涂胶。表皮多出来的沿板边修齐。要刷深色的话，这时把托和 P 板刷好。"),
         ("3", "插芯：两块 P 板平放，六条托槽口朝里，顺着径向推进板上的槽里，两条槽交叉咬住。托的直边与板边齐平，上端对齐。插好在交叉处点胶。"),
         ("4", "装单元：把单元折成箱子，墙对着一条托，顺着径向推进去。台面 C2 从小三角上面滑过，底面 C4 从小台阶下面滑过，墙贴到托的直边和两块板的边上。"
@@ -916,15 +916,16 @@ def main(out_dir):
     from collections import Counter
     cnt = Counter(k for sh in G.NEST_WOOD for k, *_ in sh) + Counter(k for k, *_ in G.NEST_SKIN)
     for k, v in cat.items():
-        assert cnt[k] == v["qty"], (k, cnt[k], v["qty"])
-    assert sum(v["qty"] for v in cat.values() if v["mat"] == "wood") == 39
+        assert cnt[k] == v["qty"] + SPARES.get(k, 0), (k, cnt[k], v["qty"])
+    assert {"RIB", "PLATE"} <= set(SPARES), SPARES
+    assert sum(v["qty"] for v in cat.values() if v["mat"] == "wood") == 38
     assert sum(v["qty"] for v in cat.values() if v["mat"] == "skin") == 38
 
-    pdf = os.path.join(out_dir, "P2-SKIN-RING6-01_六单元环_v4.1.pdf")
+    pdf = os.path.join(out_dir, "P2-SKIN-RING6-01_六单元环_v4.2.pdf")
     c = canvas.Canvas(pdf, pagesize=(PAGE_W * MM, PAGE_H * MM))
-    c.setTitle("项目二 六单元环静态演示模型 | P2-SKIN-RING6-01 v4.1")
+    c.setTitle("项目二 六单元环静态演示模型 | P2-SKIN-RING6-01 v4.2")
     c.setSubject("6 × P2-SKIN-01 v3 units at 0.7 scale on a slotted core; a small bracket per unit holds the box; "
-                 "clearances for laser kerf; wood nested on 880 x 450, white = cut, red = engrave; mm; "
+                 "clearances for laser kerf; slots 3.1; wood nested on 880 x 450 with spares, white = cut, red = engrave; mm; "
                  "physical validation pending")
     c.setAuthor("Project II / P2-SKIN-RING6-01")
     for fn in (lambda: page_overview(c, fig_dir), lambda: page_section(c, fig_dir), lambda: page_wood(c, fig_dir),
