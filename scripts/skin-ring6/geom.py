@@ -209,9 +209,72 @@ def part_board(name: str) -> dict:
     return {"outline": rect(LENS[i], W), "holes": [], "w": LENS[i], "h": W, "engrave": eng}
 
 
-def part_skin(name: str) -> dict:
+# 表皮记号：硅胶不一定能刻字，改在边上切小缺口（用户 2026-11-01）。方口 = A 面（外表皮），
+# 圆口 = B 面（内表皮），口的个数 = 编号。缺口都放在装好以后看不见或不显眼的地方：
+# A1 / A3 在箍带底下，B1 / B3 贴着芯、在两块 P 板之间，B2 在箱子最里面靠墙的角上，
+# A2 在箱子正面的下沿。缺口那一头朝单元端头（A2 朝下、B2 靠墙），顺带标了方向。
+MARK_SQ = (1.5, 2.0)          # 方口：宽 × 深
+MARK_R = 1.25                 # 圆口：半圆半径
+MARK_PITCH = {"sq": 3.0, "rd": 4.0}
+
+
+def _skin_len(name: str) -> float:
     x0, x1 = {**SKIN_A, **SKIN_B}[name]
-    return {"outline": rect(x1 - x0, W), "holes": [], "w": x1 - x0, "h": W}
+    return x1 - x0
+
+
+# 名称：(口形, 个数, 在哪条边, 一排缺口的中心)。"long" = y = 0 那条长边，中心是局部 x；
+# "end" = x = 长度那条短边，中心是 y。
+SKIN_MARKS = {
+    "A1": ("sq", 1, "long", HOOP_S[0]),                                  # 墙段 s = x，压在上箍带底下
+    "A2": ("sq", 2, "end", W / 2),                                       # 正面下沿
+    "A3": ("sq", 3, "long", _skin_len("A3") - (UNIT_H - HOOP_S[1])),     # 墙段末端 = 单元下端，压在下箍带底下
+    "B1": ("rd", 1, "long", PLATE_S[0] + 8.0),                           # 上 P 板下面一点，贴着芯
+    "B2": ("rd", 2, "long", 8.0),                                        # 台面底下，靠墙那个角
+    "B3": ("rd", 3, "long", PLATE_S[1] - 8.0 - S_C5_TOP),                # 下 P 板上面一点，贴着芯
+}
+
+
+def _mark_span(shape: str, k: int) -> float:
+    w = MARK_SQ[0] if shape == "sq" else 2 * MARK_R
+    return (k - 1) * MARK_PITCH[shape] + w
+
+
+for _nm in ("A1", "A3"):
+    _sh, _k, _, _c = SKIN_MARKS[_nm]
+    _s = _c if _nm == "A1" else UNIT_H - (_skin_len(_nm) - _c)
+    assert abs(_s - HOOP_S[0 if _nm == "A1" else 1]) + _mark_span(_sh, _k) / 2 <= HOOP_W / 2 - 1.0, \
+        f"{_nm} 的缺口要整排压在箍带底下，两边各留 1"
+assert PLATE_S[0] + T_BOARD / 2 + 1 < SKIN_MARKS["B1"][3] - _mark_span("rd", 1) / 2, "B1 的缺口在上 P 板下面"
+assert SKIN_MARKS["B3"][3] + S_C5_TOP + _mark_span("rd", 3) / 2 < PLATE_S[1] - T_BOARD / 2 - 1, "B3 的缺口在下 P 板上面"
+
+
+def _mark_pts(shape: str, k: int, c: float, edge: str, w: float) -> list[tuple[float, float]]:
+    """一排缺口的顶点，按所在边的走向排好（长边 x 增大，短边 y 增大）。"""
+    pts = []
+    for i in range(k):
+        m = c + (i - (k - 1) / 2) * MARK_PITCH[shape]
+        if shape == "sq":
+            a, d = MARK_SQ[0] / 2, MARK_SQ[1]
+            seg = [(m - a, 0.0), (m - a, d), (m + a, d), (m + a, 0.0)]
+        else:
+            seg = [(m + MARK_R * math.cos(t), MARK_R * math.sin(t))
+                   for t in (math.pi * (1 - j / 10) for j in range(11))]
+        # seg 里第一个数是沿边的位置，第二个是往零件里的深度
+        pts += [(u, d) for u, d in seg] if edge == "long" else [(w - d, u) for u, d in seg]
+    return pts
+
+
+def part_skin(name: str) -> dict:
+    """表皮零件：52 宽的矩形，边上切几个小缺口当记号（箍带 S 不切）。"""
+    w = _skin_len(name)
+    shape, k, edge, c = SKIN_MARKS[name]
+    marks = _mark_pts(shape, k, c, edge, w)
+    if edge == "long":
+        pts = [(0.0, 0.0)] + marks + [(w, 0.0), (w, W), (0.0, W)]
+    else:
+        pts = [(0.0, 0.0), (w, 0.0)] + marks + [(w, W), (0.0, W)]
+    return {"outline": pts, "holes": [], "w": w, "h": W}
 
 
 def rib_outline_rs() -> list[tuple[float, float]]:
@@ -296,10 +359,12 @@ def parts_catalog() -> dict:
         "C5": dict(part_board("C5"), qty=6, mat="wood", label="C5", note="下端板，与 C1 同尺寸"),
         "RIB": dict(part_rib(), qty=6, mat="wood", label="R 托", note="沿墙内侧，托住台面和底面"),
         "PLATE": dict(part_plate(), qty=2, mat="wood", label="P 六边形板", note="上下各一"),
-        "A1": dict(part_skin("A1"), qty=12, mat="skin", label="A1 / A3", note="外表面，跨 H1 / H4"),
+        "A1": dict(part_skin("A1"), qty=6, mat="skin", label="A1", note="外表面，上段墙 + 台面，跨 H1"),
         "A2": dict(part_skin("A2"), qty=6, mat="skin", label="A2", note="箱子正面外"),
-        "B1": dict(part_skin("B1"), qty=12, mat="skin", label="B1 / B3", note="墙段内表面"),
+        "A3": dict(part_skin("A3"), qty=6, mat="skin", label="A3", note="外表面，底面 + 下段墙，跨 H4"),
+        "B1": dict(part_skin("B1"), qty=6, mat="skin", label="B1", note="上段墙内表面"),
         "B2": dict(part_skin("B2"), qty=6, mat="skin", label="B2", note="箱内，跨 H2 / H3"),
+        "B3": dict(part_skin("B3"), qty=6, mat="skin", label="B3", note="下段墙内表面"),
         "HOOP": dict(part_hoop(), qty=2, mat="skin", label="S 箍带", note="上下两道"),
     }
 
@@ -371,13 +436,13 @@ def _nest_wood() -> list[list[tuple]]:
 
 def _nest_skin() -> list[tuple]:
     """一张 600 × 400：六排 52 宽的表皮，最下面两条箍带。"""
-    w = {k: part_skin(k)["w"] for k in ("A1", "A2", "B1", "B2")}
+    w = {k: part_skin(k)["w"] for k in ("A1", "A2", "A3", "B1", "B2", "B3")}
     rows = [["A1"] * 4 + ["A2"] * 2,
-            ["A1"] * 4 + ["A2"] * 2,
-            ["A1"] * 4 + ["B1"],
+            ["A1"] * 2 + ["A3"] * 2 + ["A2"] * 2,
+            ["A3"] * 4 + ["B1"],
             ["B2"] * 4,
             ["B2"] * 2 + ["B1"] * 4,
-            ["B1"] * 7 + ["A2"] * 2]
+            ["B1"] + ["B3"] * 6 + ["A2"] * 2]
     out = []
     for r, keys in enumerate(rows):
         _row(out, keys, M, M + r * (W + G), w, G)
