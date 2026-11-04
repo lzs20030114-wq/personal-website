@@ -488,7 +488,7 @@
     },
     "tags": [
       { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
-      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+      { "label": { "en": "Design", "zh": "设计" }, "variant": "neutral" }
     ]
   },
   {
@@ -504,7 +504,7 @@
     },
     "tags": [
       { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
-      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+      { "label": { "en": "Design", "zh": "设计" }, "variant": "neutral" }
     ]
   },
   {
@@ -536,7 +536,7 @@
     },
     "tags": [
       { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
-      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+      { "label": { "en": "Design", "zh": "设计" }, "variant": "neutral" }
     ]
   },
   {
@@ -568,7 +568,7 @@
     },
     "tags": [
       { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
-      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+      { "label": { "en": "Tools", "zh": "工具" }, "variant": "neutral" }
     ]
   },
   {
@@ -584,7 +584,7 @@
     },
     "tags": [
       { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
-      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+      { "label": { "en": "Design", "zh": "设计" }, "variant": "neutral" }
     ]
   },
   {
@@ -600,7 +600,7 @@
     },
     "tags": [
       { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
-      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+      { "label": { "en": "Performance", "zh": "性能" }, "variant": "neutral" }
     ]
   },
   {
