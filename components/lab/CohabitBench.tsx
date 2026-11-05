@@ -5,7 +5,7 @@ import { useBenchLang, useLabText } from './LabLanguage';
 import { LabControlLabel } from './LabControlLabel';
 import { LabFold } from './LabCtl';
 import { tableTopFor } from '../../src/lib/space/cohabit-solid';
-import { CASE_SCENES, CASE_SEED, COHABIT, CohabitSim, PACE_DEMO, FACE_MODES, GUIDE_TARGETS, SPACE_MODES, TRIGGER_MODES, nearestNode, populateCohabit, type CaseScene, type GuideTarget, type Cat, type FaceMode, type SpaceMode, type TriggerMode, type Visitor } from '../../src/lib/space/cohabit';
+import { CASE_ROOM, CASE_SCENES, CASE_SEED, COHABIT, CohabitSim, PACE_DEMO, FACE_MODES, GUIDE_TARGETS, SPACE_MODES, TRIGGER_MODES, nearestNode, populateCohabit, type CaseScene, type GuideTarget, type Cat, type FaceMode, type SpaceMode, type TriggerMode, type Visitor } from '../../src/lib/space/cohabit';
 import { PLAN, RESPONSES, type ResponseMode } from '../../src/lib/space/unit-activation';
 import type { CatPose } from '../../src/lib/space/cat-rules';
 import { H, W, canvasToRoom, drawPlan, readPalette, type Palette, type PlanPerson } from './planDraw';
@@ -347,7 +347,7 @@ export function CohabitBench({
     const posture = trigger === 'posture';
     // 「正文对照」场景：同一个种子、不开场，按对照的人数与猫数布置（与 runCohabit 同一份 populateCohabit）
     const sc = sceneRef.current && sceneRef.current.trigger === trigger && sceneRef.current.grid === grid ? sceneRef.current : null;
-    const sim = new CohabitSim({ trigger, grid, space, mode, goal, look, threshold, fade, auto, clearance: clearanceOpt, lane: clearanceOpt !== null, faces: faceMode === 'bands', guide: { target: guideTarget }, cat: posture ? { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid } : undefined, social: posture, catFloor: posture, ...(sc ? { seed: CASE_SEED, opening: false } : { pace: PACE_DEMO, ...(posture ? { unit: 'square' as const, cover: 'room' as const } : {}) }) });
+    const sim = new CohabitSim({ trigger, grid, space, mode, goal, look, threshold, fade, auto, clearance: clearanceOpt, lane: clearanceOpt !== null, faces: faceMode === 'bands', guide: { target: guideTarget }, cat: posture ? { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid } : undefined, social: posture, catFloor: posture, ...(sc ? { seed: CASE_SEED, opening: false, ...(posture ? CASE_ROOM : {}) } : { pace: PACE_DEMO, ...(posture ? { unit: 'square' as const, cover: 'room' as const } : {}) }) });
     if (sc) populateCohabit(sim, sc.people, sc.cats);
     caseAcc.current = 0;
     sim.setSpeed(speed);

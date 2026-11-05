@@ -109,7 +109,7 @@ export const HOIST = {
 } as const;
 
 /** 演示的场面：六位访客两只猫 = 对照研究的中档（案例页对照图的三档之一） */
-export const SCENE = { people: 6, cats: 2, seed: 11 } as const;
+export const SCENE = { people: 6, cats: 3, seed: 11 } as const;
 
 export interface BandTrajectory {
   n: number;

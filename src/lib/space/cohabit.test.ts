@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CASE_ROOM,
   CASE_SCENES,
   CASE_SEED,
   COHABIT,
@@ -1457,7 +1458,7 @@ describe('案例页对照场景（Lab 2-14「正文对照」，2026-10-25）', (
     const seconds = 20;
     for (const c of [CASE_SCENES[0], CASE_SCENES[2]]) {
       const posture = c.trigger === 'posture';
-      const opts = { trigger: c.trigger, grid: c.grid, faces: true, seed: CASE_SEED, cat: posture ? { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid } : undefined, social: posture, catFloor: posture };
+      const opts = { trigger: c.trigger, grid: c.grid, faces: true, seed: CASE_SEED, cat: posture ? { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid } : undefined, social: posture, catFloor: posture, ...(posture ? CASE_ROOM : {}) };
       const off = runCohabit({ ...opts, people: c.people, cats: c.cats, seconds });
       // 台架额外显式传的开关（CohabitBench 建仿真那一行）：默认值必须与离线对照的模块默认相同
       const bench = { mode: 'follow' as const, goal: true, look: PLAN.ATTENTION.look, threshold: PLAN.DEMO.threshold, fade: PLAN.DEMO.fade, auto: true, clearance: PLAN.ATTENTION.clearance, lane: true, guide: { target: COHABIT.GUIDE.target } };

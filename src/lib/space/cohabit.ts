@@ -104,13 +104,15 @@ export const TRIGGER_MODES = [
  *   trace：起点（单元跟随痕迹）在 4×4 下的对照，scripts/cohabit/compare.mjs 300 32 3 1 4 1 - trace
  *   crowd3 / 6 / 12：现行规则的三档客流，与 scripts/cohabit/case-compare.mjs 的 SCENES 同（守门对 cohabit-compare.data.json）
  * 格数 8 = COHABIT.SEATS.GRID（「走 · 站 · 坐」规则只有 8×8）。
+ * 2026-11-05 作者拍板：对照按 Lab 2-15 的配置重跑（方台 · 铺满 · 桌子 · 错身 · 演示节奏，见 CASE_ROOM），
+ * 标准场景改 6 人 3 猫 + 12 人 5 猫（猫多一些），3 人 1 猫留作低客流一端。
  */
 export const CASE_SEED = 101;
 export const CASE_SCENES = [
   { key: 'trace', trigger: 'trace', grid: 4, people: 3, cats: 1, zh: '起点 · 痕迹 4×4 · 3 人 1 猫', en: 'Starting rule · trace 4×4 · 3 people, 1 cat', btnZh: '起点 · 痕迹', btnEn: 'Starting rule' },
   { key: 'crowd3', trigger: 'posture', grid: 8, people: 3, cats: 1, zh: '3 人 1 猫', en: '3 people, 1 cat', btnZh: '3 人 1 猫', btnEn: '3 people, 1 cat' },
-  { key: 'crowd6', trigger: 'posture', grid: 8, people: 6, cats: 2, zh: '6 人 2 猫', en: '6 people, 2 cats', btnZh: '6 人 2 猫', btnEn: '6 people, 2 cats' },
-  { key: 'crowd12', trigger: 'posture', grid: 8, people: 12, cats: 3, zh: '12 人 3 猫', en: '12 people, 3 cats', btnZh: '12 人 3 猫', btnEn: '12 people, 3 cats' },
+  { key: 'crowd6', trigger: 'posture', grid: 8, people: 6, cats: 3, zh: '6 人 3 猫', en: '6 people, 3 cats', btnZh: '6 人 3 猫', btnEn: '6 people, 3 cats' },
+  { key: 'crowd12', trigger: 'posture', grid: 8, people: 12, cats: 5, zh: '12 人 5 猫', en: '12 people, 5 cats', btnZh: '12 人 5 猫', btnEn: '12 people, 5 cats' },
 ] as const satisfies readonly { key: string; trigger: TriggerMode; grid: number; people: number; cats: number; zh: string; en: string; btnZh: string; btnEn: string }[];
 export type CaseScene = (typeof CASE_SCENES)[number];
 
@@ -128,7 +130,7 @@ export const COHABIT = {
   /** 人数上限：6 → 12（作者 2026-10-08「人多档取 12 人」；Hirsch 等 2025 那家猫咖 60 m² 的厅同时最多 14 位，按面积
    *  换到这间 44 m² 约 10 位，12 位略挤于它） */
   MAX_PEOPLE: 12,
-  MAX_CATS: 3,
+  MAX_CATS: 5,
   /** 人对人的三档距离（m）：42 国近体距离调查（日志 2026-07-27）；猫咖访客彼此是陌生人 ⇒ 用 stranger */
   PERSON_D: { stranger: 1.35, familiar: 0.92, close: 0.32 },
   /** 猫对人：Mertens & Turner 1988 的 1 m 档（日志 2026-07-28）；0.78 是「人不理猫时猫在 1 m 外的时间占比」，
@@ -1051,6 +1053,12 @@ export const PACE_DEMO: VisitorPace = {
   sitP: 0.35,
   sit: { min: 60, max: 180 },
 };
+
+/**
+ * 案例页对照与 Lab 2-15 共用的房间配置（2026-11-05 作者拍板「对照按现在的配置重跑」）：方台 · 64 台铺满整间房
+ * （桌子与错身随之打开）· 演示节奏。「走 · 站 · 坐」规则的场景都按它跑；起点那档（痕迹 4×4）不用。
+ */
+export const CASE_ROOM = { unit: 'square', cover: 'room', pace: PACE_DEMO } as const satisfies Pick<CohabitOpts, 'unit' | 'cover' | 'pace'>;
 
 export class CohabitSim {
   readonly layout: PlanLayout;

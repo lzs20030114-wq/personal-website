@@ -1,4 +1,4 @@
-// 案例页「对照结果」那张图的数据（FIG.06）：Lab 2-14 最终配置——「走 · 站 · 坐」规则 · 只收挡路的带 · 访客有身体、结伴 ·
+// 案例页「对照结果」那张图的数据（FIG.06）：与 Lab 2-15 同一份配置（2026-11-05 起：方台 · 64 台铺满整间房 · 坐下落桌子 · 错身 · 演示节奏 PACE_DEMO）——「走 · 站 · 坐」规则 · 只收挡路的带 · 访客有身体、结伴 ·
 // 猫按 Mertens & Turner 1988 标定且能下地（上台几率随人数中等升高）。三个场景 × 两种引导 × 三档空间 × N 种子，记十二个读数；
 // 置换检验与效应量照 guide-study.mjs。用法：node scripts/cohabit/case-compare.mjs [seconds=300] [seeds=32] src/lib/space/cohabit-compare.data.json
 import { writeFileSync } from 'node:fs';
@@ -9,7 +9,8 @@ import { cohenD, mean, permP, sd } from './stats.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const [seconds = 300, seeds = 32] = process.argv.slice(2, 4).map(Number);
 const out = process.argv[4];
-const SCENES = [{ people: 3, cats: 1 }, { people: 6, cats: 2 }, { people: 12, cats: 3 }];
+// 2026-11-05 作者拍板：标准场景 6 人 3 猫 + 12 人 5 猫（猫多一些）；3 人 1 猫留作低客流一端
+const SCENES = [{ people: 3, cats: 1 }, { people: 6, cats: 3 }, { people: 12, cats: 5 }];
 const GUIDES = [{ key: 'meet', guide: { target: 'meet' } }, { key: 'sidew', guide: { target: 'side', whole: true } }];
 const SPACES = ['live', 'fixed', 'empty'];
 const METRICS = {
@@ -32,7 +33,7 @@ try {
       for (const space of SPACES) {
         runs[space] = [];
         for (let s = 1; s <= seeds; s++)
-          runs[space].push(m.runCohabit({ trigger: 'posture', space, seed: 100 + s, seconds, people: sc.people, cats: sc.cats, faces: true, guide: g.guide, cat: patch, social: true, catFloor: true }));
+          runs[space].push(m.runCohabit({ trigger: 'posture', ...m.CASE_ROOM, space, seed: 100 + s, seconds, people: sc.people, cats: sc.cats, faces: true, guide: g.guide, cat: patch, social: true, catFloor: true }));
       }
       const metrics = {};
       for (const [k, f] of Object.entries(METRICS)) {

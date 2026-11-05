@@ -5,7 +5,7 @@ import data from '../../../src/lib/space/cohabit-compare.data.json';
 import type { Lang } from '../../../src/lib/site/case-reincarnation';
 
 /**
- * 项目二「对照结果」那张图（FIG.05）：Lab 2-14 最终配置下三档空间的读数。
+ * 项目二「对照结果」那张图（FIG.05）：三档空间的读数。2026-11-05 起按 Lab 2-15 的房间跑（方台 · 铺满 · 桌子，CASE_ROOM）。
  *
  * 数据 = `src/lib/space/cohabit-compare.data.json`，由 `scripts/cohabit/case-compare.mjs` 真跑出来
  * （三个场景 × 两种引导 × 三档空间 × 32 个种子，每场 300 s），图与数表读的是同一份文件。
@@ -51,7 +51,7 @@ const UI = {
     n: (n: number) => `${n} 个种子`,
     table: '数表',
     note: (s: number, n: number) =>
-      `每场 ${s} 秒，${n} 个种子取均值。8×8，走 · 站 · 坐，只收挡路的带。条 = 均值，须 = ±1 标准差，点 = 单个种子。基准行末的星号 = 会动的单元对它的双侧置换检验（*** p<.001 · ** <.01 · * <.05）。数字只在这套规则下成立。`,
+      `每场 ${s} 秒，${n} 个种子取均值。实验 2-15 那间房，8×8 方台铺满，人坐下落桌子，走 · 站 · 坐，只收挡路的带。条 = 均值，须 = ±1 标准差，点 = 单个种子。基准行末的星号 = 会动的单元对它的双侧置换检验（*** p<.001 · ** <.01 · * <.05）。数字只在这套规则下成立。`,
     th: { metric: '读数', scene: '场景' },
   },
   en: {
@@ -72,7 +72,7 @@ const UI = {
     n: (n: number) => `${n} seeds`,
     table: 'Table',
     note: (s: number, n: number) =>
-      `${s} s per run, mean of ${n} seeds. 8×8, walk · stand · sit, only the strips in the way retract. Bar = mean, whisker = ±1 SD, dot = one seed. The stars at the end of a baseline row are the two-sided permutation test of live units against that baseline (*** p<.001 · ** <.01 · * <.05). The numbers hold only under this rule set.`,
+      `${s} s per run, mean of ${n} seeds. The Lab 2-15 room, 8×8 square units filling it, a table comes down when someone sits, walk · stand · sit, only the strips in the way retract. Bar = mean, whisker = ±1 SD, dot = one seed. The stars at the end of a baseline row are the two-sided permutation test of live units against that baseline (*** p<.001 · ** <.01 · * <.05). The numbers hold only under this rule set.`,
     th: { metric: 'Reading', scene: 'Scene' },
   },
 } as const;

@@ -2,6 +2,7 @@
   "framework": "nextjs",
   "git": {
     "deploymentEnabled": {
+      "claude/project-two-review-1xpm7w": false,
       "claude/drawing-project-page-12ykhq": false,
       "claude/lab2-15-unit-morphology-oehn57": false,
       "claude/gracious-babbage-tzimfe": false,

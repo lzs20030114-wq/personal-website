@@ -9,11 +9,12 @@ describe('cohabit-compare.data.json', () => {
   const SPACES = ['live', 'fixed', 'empty'] as const;
   const METRICS = ['warmthS', 'touchS', 'settled', 'detour'] as const;
 
+  // 2026-11-05 作者拍板：标准场景 6 人 3 猫 + 12 人 5 猫，3 人 1 猫留作低客流一端；按 2-15 的房间（CASE_ROOM）跑
   it('三个场景 × 两种引导，场景按客流从少到多', () => {
     expect(data.scenes.map((s) => [s.people, s.cats])).toEqual([
       [3, 1],
-      [6, 2],
-      [12, 3],
+      [6, 3],
+      [12, 5],
     ]);
     for (const s of data.scenes) expect(s.guides.map((g) => g.key)).toEqual(['meet', 'sidew']);
   });
