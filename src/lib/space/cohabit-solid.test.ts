@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DUAL, DUAL_STOWED, SHELTER, UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, dualUnitSpec, membraneIndexAt, shelterBands, shelterClear, shelterToward, unitFormPlan, UNIT_FORM_ODDS, BRIDGE_BASE, DOOR_BASE, DOOR_EPS, FRAMES, SHELL, bakeUnitShell, shellCoverVerts, shellGoreVerts, shellJoins, bandVertsAt, bakeBandKeys, bakeHanger, bakeUnitKeys, bakeUnitMech, FURN_ERGO, HOIST, STEADY, TABLE_TOP, bandTop, clipToReel, doorFrame, isDoorFrame, pickUnitBands, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_CUT, UNIT_ORDER, UNIT_SHAPE, UNIT_STORED, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
+import { COFFEE, UNIT_COFFEE_DEFS, UNIT_COFFEE_OPTS, coffeeToward, DUAL, DUAL_STOWED, SHELTER, UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, dualUnitSpec, membraneIndexAt, shelterBands, shelterClear, shelterToward, unitFormPlan, UNIT_FORM_ODDS, BRIDGE_BASE, DOOR_BASE, DOOR_EPS, FRAMES, SHELL, bakeUnitShell, shellCoverVerts, shellGoreVerts, shellJoins, bandVertsAt, bakeBandKeys, bakeHanger, bakeUnitKeys, bakeUnitMech, FURN_ERGO, HOIST, STEADY, TABLE_TOP, bandTop, clipToReel, doorFrame, isDoorFrame, pickUnitBands, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_CUT, UNIT_ORDER, UNIT_SHAPE, UNIT_STORED, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
 import type { BandTrajectory } from './cohabit-solid';
 import { planLayout } from './unit-activation';
 import { FIGURE, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
@@ -814,7 +814,7 @@ describe('单元铺满整间房（cover: room，2026-10-27 作者「单元兼作
     expect(rig.y).toBeCloseTo(rigYForTop(rig, traj, TABLE_TOP.stand), 9);
   });
 
-  it('当桌子的几个高度：茶几在资料的 0.40–0.45 之内、吊带下端离地还有一截，餐桌比餐椅座面高 0.27–0.30', () => {
+  it('当桌子的几个高度：茶几 0.5 m（作者 11-05 定）、吊带下端离地还有一截，餐桌比餐椅座面高 0.27–0.30', () => {
     const hang = (rig.s * (traj.footY - traj.platformTopY)) / UNITS_PER_M; // 台面到吊带最下端
     for (const top of Object.values(TABLE_TOP)) {
       const foot = top - hang;
@@ -824,9 +824,8 @@ describe('单元铺满整间房（cover: room，2026-10-27 作者「单元兼作
     }
     // 台面到吊带最下端：台厚 0.15 m · 七段谱时 0.48 m（茶几只能落到 0.49）；6.5 cm 台面 · 结构贴底后约 0.23 m
     expect(hang).toBeLessThan(0.25);
-    expect(TABLE_TOP.sofaFront).toBeGreaterThanOrEqual(0.4);
-    expect(TABLE_TOP.sofaFront).toBeLessThanOrEqual(0.45);
-    expect(TABLE_TOP.sofaFront).toBeLessThanOrEqual(FURN_ERGO.sofa.seatH); // 与座面齐或略低
+    // 茶几兼猫台：0.5 m（作者 2026-11-05；资料 0.40–0.45 与座面齐或略低是原先 0.42 的依据，这里有意高一点、给猫一级 0.5 m 的台阶）
+    expect(TABLE_TOP.sofaFront).toBe(0.5);
     expect(TABLE_TOP.chair - FURN_ERGO.chair.seatH).toBeGreaterThanOrEqual(0.27);
     expect(TABLE_TOP.chair - FURN_ERGO.chair.seatH).toBeLessThanOrEqual(0.3);
   });
@@ -1081,6 +1080,92 @@ describe('按用途定形：有顶的一台（2026-10-30，形态方案 §11）'
       // 膜按上下两块对位：两个结构的带记着上台中心
       expect(face.upperMid).toBeCloseTo(dualUnitSpec(UNIT_SHAPE.k[0], true, true).a0 + (dualUnitSpec(UNIT_SHAPE.k[0], true, true).fs - 1) / 2, 9);
       expect(face.mid).toBeCloseTo(dualUnitSpec(UNIT_SHAPE.k[0], true, true).b0 + (dualUnitSpec(UNIT_SHAPE.k[0], true, true).fs - 1) / 2, 9);
+    },
+    180_000,
+  );
+
+  it('茶几猫台的谱：kUp / lift 省略时与原谱逐位相同；三档自由总量一样（芯一样长）；上台比下台小、节数省下来作垫', () => {
+    for (const k of UNIT_SHAPE.k) for (const [up, lo] of [[true, true], [false, true], [true, false]] as const) {
+      const a = dualUnitSpec(k, up, lo);
+      const b = dualUnitSpec(k, up, lo, DUAL.mid, k, 0);
+      expect(b.spec).toEqual(a.spec);
+      expect([b.a0, b.b0, b.fs, b.fsUp]).toEqual([a.a0, a.b0, a.fs, a.fs]);
+    }
+    const free = new Set<number>();
+    UNIT_SHAPE.k.forEach((k, i) => {
+      const d = dualUnitSpec(k, true, true, DUAL.mid, Math.min(COFFEE.kUp, k), COFFEE.lift[i]);
+      expect(d.fsUp).toBeLessThanOrEqual(d.fs);
+      free.add(d.spec.filter((q) => q[0] === 'f').reduce((x, q) => x + q[1], 0));
+      expect(d.spec.reduce((x, q) => x + q[1], 0)).toBe(UNIT_CUT);
+    });
+    expect(free.size).toBe(1);
+    expect(free.has(dualUnitSpec(UNIT_SHAPE.k[0], true, true).spec.filter((q) => q[0] === 'f').reduce((x, q) => x + q[1], 0))).toBe(true);
+    expect(UNIT_COFFEE_DEFS).toHaveLength(6);
+    expect(UNIT_COFFEE_OPTS).toHaveLength(6);
+  });
+
+  it('茶几猫台朝哪：沙发座位的桌子那台给出台心朝那张沙发的方位角，餐椅的桌子与别的台给 null', () => {
+    const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', space: 'live', seed: 1 });
+    const rects = sim.furn!.rects;
+    let sofa = 0;
+    for (const u of sim.layout.units) {
+      const t = coffeeToward(u, sim.seats, rects);
+      const s = sim.seats.find((q) => q.table === u.i);
+      if (!s || rects[s.furn].kind !== 'sofa') {
+        expect(t).toBeNull();
+        continue;
+      }
+      sofa++;
+      const r = rects[s.furn];
+      expect(t).toBeCloseTo(Math.atan2(r.cy - u.y, r.cx - u.x), 12);
+    }
+    expect(sofa).toBeGreaterThan(0);
+  });
+
+  it(
+    '茶几猫台烘出来：上台三档同高（≤ 1 cm）、比下台高 COFFEE.rise、挑出约 0.22 m；下台与平台同高；键全锁；带顶同高',
+    () => {
+      const pick = [0, 2, 3];
+      const [face, corner, faceLo] = new UnitBaker(
+        pick.map((i) => UNIT_COFFEE_DEFS[i]),
+        FRAMES,
+        pick.map((i) => UNIT_COFFEE_OPTS[i]),
+      ).runAll();
+      const flat = trajs;
+      const rig = rigFor(squarePlanLayout(planLayout(COHABIT.SEATS.GRID, RING.RADIUS_DEF, 'room')), flat[0]);
+      const m = (px: number): number => (px * SOLID.SCALE * rig.s) / UNITS_PER_M;
+      const F = FRAMES.form - 1;
+      const n = UNIT_CUT;
+      // 一块台：离芯超过一半挑出那几节的平均高度（帧里的 y）与挑出
+      const plate = (tr: BandTrajectory, k: number, up: boolean): { y: number; reach: number } => {
+        const d = dualUnitSpec(UNIT_SHAPE.k[k], true, true, DUAL.mid, Math.min(COFFEE.kUp, UNIT_SHAPE.k[k]), COFFEE.lift[k]);
+        const i0 = up ? d.a0 : d.b0;
+        const ns = up ? d.fsUp : d.fs;
+        const f = tr.frames[F];
+        let rx = 0;
+        for (let i = i0; i < i0 + ns; i++) rx = Math.max(rx, f[i]);
+        let sy = 0;
+        let c = 0;
+        for (let i = i0; i < i0 + ns; i++)
+          if (f[i] > 0.5 * rx) {
+            sy += f[n + i] - f[2 * n - 1];
+            c++;
+          }
+        return { y: sy / c, reach: m(rx) };
+      };
+      const a = plate(face, 0, true);
+      const c = plate(corner, 2, true);
+      expect(Math.abs(m(a.y - c.y))).toBeLessThan(0.01);
+      // 下台与平台同一档同高（±0.3 装置单位）
+      expect(Math.abs(face.footY - face.platformTopY - (flat[0].footY - flat[0].platformTopY))).toBeLessThan(0.3);
+      const riseM = Math.abs(m(a.y - plate(face, 0, false).y));
+      expect(Math.abs(riseM - COFFEE.rise)).toBeLessThan(0.02);
+      expect(a.reach).toBeGreaterThan(0.2);
+      expect(a.reach).toBeLessThan(0.24);
+      for (const tr of [face, corner, faceLo]) expect(tr.locks[F]!.every((v) => v === 1)).toBe(true);
+      let dTop = 0;
+      for (let k = 0; k < face.frames.length; k++) for (const tr of [corner, faceLo]) dTop = Math.max(dTop, Math.abs(bandTop(tr, k) - bandTop(face, k)));
+      expect(dTop).toBeLessThan(1e-9);
     },
     180_000,
   );

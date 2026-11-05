@@ -1000,3 +1000,13 @@ master 上 10-30 另一条线做了 §14.17–§14.21：平台改成结构贴底
 - 84 次检验未校正，p 在 .01–.05 的当方向读。
 
 **待作者**：正文改写稿的读感；下一轮规则（形进代价）计划 = 项目二_2-15单元形态方案.md §12。
+
+## 17. 茶几 + 猫台（2026-11-05，作者「B · 上台 k28 · 餐椅保留 · 不挡 · 上 3D 改规则」）
+
+设计、线稿、实测与对照全在 项目二_2-15单元形态方案.md §14–14.1。这里只记代码改了哪：
+
+- `cohabit-solid.dualUnitSpec` 加 `kUp` / `lift`（省略逐位不变，守门核对 27 种组合）；`COFFEE`、`UNIT_COFFEE_DEFS/OPTS`、`coffeeToward`；`catPlacement` 加 `perch`；`TABLE_TOP.sofaFront` 0.42 → 0.50。
+- `cohabit.ts`：`CohabitOpts.perch`（默认关）、`perchOf` / `isPerch` / `arrivedAt`；`startClimb` 对茶几猫台免 `jumpUpS`；`guideStep` 沙发座位改引到茶几那台。
+- 2-15：`makeSim` 开 `perch`；轨道 9–11 / 12–14 = 茶几猫台两块都成 / 只成下台；台面高度、机构、猫的高度按这组走。2-14 自由演示开 `perch`（正文对照四钮仍关）。
+- 守门：cohabit-solid +3（谱逐位不变与自由总量 · 朝向 · 烘出来上台三档同高 ≤ 1 cm、比下台高 0.58 ± 0.02、挑出 0.20–0.24、键全锁、带顶同高），cohabit +3（猫台归属 · 沙发座位引到茶几、餐椅不变 · perch 关着逐位不变）；TABLE_TOP 那条改口径。
+- 读数：引导走完翻倍，共温不变（形态方案 §14.1 的表）。

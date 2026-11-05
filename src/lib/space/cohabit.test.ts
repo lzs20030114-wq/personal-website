@@ -1470,3 +1470,57 @@ describe('案例页对照场景（Lab 2-14「正文对照」，2026-10-25）', (
     }
   });
 });
+
+describe('茶几 + 猫台（perch，2026-11-05 形态方案 §14）', () => {
+  const room = (perch: boolean, seed = 1) =>
+    new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', space: 'live', seed, opening: false, faces: true, social: true, catFloor: true, cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid }, perch });
+
+  it('猫台 = 沙发座位的桌子那台；餐椅座位没有；perch 关着时一律没有', () => {
+    const on = room(true);
+    const off = room(false);
+    let sofa = 0;
+    for (const s of on.seats) {
+      const kind = on.furn!.rects[s.furn].kind;
+      if (kind === 'sofa' && s.table >= 0) {
+        expect(on.perchOf(s)).toBe(s.table);
+        expect(on.isPerch(s.table)).toBe(true);
+        sofa++;
+      } else expect(on.perchOf(s)).toBe(-1);
+      expect(off.perchOf(s)).toBe(-1);
+    }
+    expect(sofa).toBeGreaterThan(0);
+  });
+
+  it('坐在沙发上：空间把猫引到他的茶几那台，猫走到、记一次到达；坐在餐椅上照旧引到座位前方那台', () => {
+    for (const seed of [1, 2]) {
+      const sim = room(true, seed);
+      const seat = sim.seats.find((s) => sim.perchOf(s) >= 0)!;
+      const target = sim.perchOf(seat);
+      const p = sim.addPerson(seat.x, seat.y)!;
+      expect(p.seated).toBe(true);
+      p.mode = 'manual';
+      const far = sim.layout.units.reduce((a, u) => (Math.hypot(u.x - seat.x, u.y - seat.y) > Math.hypot(a.x - seat.x, a.y - seat.y) ? u : a));
+      const cat = sim.addCat(far)!;
+      let arrived = -1;
+      for (let t = 0; t < 600 && arrived < 0; t += 1 / 30) {
+        sim.step(1 / 30);
+        for (const g of sim.guides) if (g.kind === 'sit') expect(g.path[g.path.length - 1]).toBe(target);
+        if (cat.unit && cat.unit.i === target) arrived = t;
+      }
+      expect(arrived).toBeGreaterThan(0);
+      expect(sim.catArrivals).toBeGreaterThanOrEqual(1);
+    }
+    const sim = room(true);
+    const chair = sim.seats.find((s) => sim.furn!.rects[s.furn].kind === 'chair')!;
+    const p = sim.addPerson(chair.x, chair.y)!;
+    p.mode = 'manual';
+    sim.addCat(sim.layout.units[0]);
+    for (let t = 0; t < 30; t += 1 / 30) sim.step(1 / 30);
+    for (const g of sim.guides) if (g.kind === 'sit') expect(g.path[g.path.length - 1]).toBe(chair.meet);
+  });
+
+  it('perch 关着时与不传逐位相同（研究、对照图不变）', () => {
+    const run = (perch?: boolean) => runCohabit({ trigger: 'posture', ...CASE_ROOM, ...(perch === undefined ? {} : { perch }), space: 'live', seed: 101, seconds: 60, people: 6, cats: 3, faces: true, guide: { target: 'meet' }, cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid }, social: true, catFloor: true });
+    expect(run(false)).toEqual(run());
+  });
+});

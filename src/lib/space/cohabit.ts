@@ -1014,6 +1014,13 @@ export interface CohabitOpts {
    * 画面上让走着的那个往旁边让开（`drawPos`），模型里的距离照旧按格线上的位置算。省略 = 单元铺满整间房时开，否则关（研究与案例页对照图逐位不变）
    */
   squeeze?: boolean;
+  /**
+   * 茶几 + 猫台（2026-11-05，作者「B · 上台 k28 · 上 3D 改规则」，形态方案 §14）：沙发座位的桌子那台同时是猫台——
+   * 立体里落成两个结构，下台 0.5 m 茶几、上台在背向沙发的半圈。规则上两件事：坐在沙发上的人引猫，目标改成他的茶几那台
+   * （原来是座位前方 1.0–1.5 m 的那台；餐椅那几座不变）；地面上的猫上这台不付 jumpUpS（下台 0.5 m 低于那条 1.1 m 的线，
+   * 上台再 0.58 m，两级都不用一次跳 1 m）。省略 = 关（研究与案例页对照图逐位不变）。只在 tables 开着时起作用
+   */
+  perch?: boolean;
   /** 访客的节奏（站多久、看猫多久、去不去坐、坐多久）：省略 = COHABIT.VISITOR / SEATS 那几个演示值（研究与案例页对照图用的）；部分覆盖逐项替换 */
   pace?: Partial<VisitorPace>;
 }
@@ -1106,6 +1113,8 @@ export class CohabitSim {
   readonly tables: boolean;
   /** 错身（CohabitOpts.squeeze） */
   readonly squeeze: boolean;
+  /** 茶几 + 猫台（CohabitOpts.perch） */
+  readonly perch: boolean;
   readonly tableBy: Int16Array;
   tableSeat = 0;
   tableReady = 0;
@@ -1194,6 +1203,7 @@ export class CohabitSim {
     this.heldR5 = new Uint8Array(n);
     this.tables = opts.tables ?? opts.cover === 'room';
     this.squeeze = opts.squeeze ?? opts.cover === 'room';
+    this.perch = !!opts.perch && this.tables;
     this.tableBy = new Int16Array(n).fill(-1);
     this.wallScratch = new Uint8Array(n);
     this.faces = opts.faces ?? false;
@@ -3004,8 +3014,7 @@ export class CohabitSim {
       c.phaseTime = 0;
       this.keepSupport(c);
       // 「走 · 站 · 坐」：落到了某个正坐着的人座位前方那台
-      const at = c.unit.i;
-      if (this.seats.some((q) => q.meet === at && this.people.some((v) => v.seated && v.seat === q.i))) this.catArrivals++;
+      if (this.arrivedAt(c.unit.i)) this.catArrivals++;
     }
     if (c.state === 'approach' && w.state !== 'walk' && c.approaching !== null) {
       // 到了台面边缘：这段靠近算安稳停留
@@ -3283,9 +3292,23 @@ export class CohabitSim {
     return g ? this.layout.units[g.path[0]] : null;
   }
 
-  /** 去台下准备跳上去：从家具上借道只等 prepare，从地面直接跳多等 jumpUpS */
+  /** 茶几 + 猫台（perch 开着）：这个座位的猫台 = 沙发座位的桌子那台；没有 = −1 */
+  perchOf(seat: Seat): number {
+    if (!this.perch || !this.furn || seat.table < 0) return -1;
+    return this.furn.rects[seat.furn].kind === 'sofa' ? seat.table : -1;
+  }
+  /** 第 u 台是不是某个沙发座位的茶几猫台 */
+  isPerch(u: number): boolean {
+    return this.perch && this.seats.some((q) => this.perchOf(q) === u);
+  }
+  /** 猫落到这台算不算「到了坐着的人那里」（catArrivals）：座位前方那台，perch 开着时沙发座位改算茶几猫台 */
+  private arrivedAt(at: number): boolean {
+    return this.seats.some((q) => (this.perchOf(q) >= 0 ? this.perchOf(q) : q.meet) === at && this.people.some((v) => v.seated && v.seat === q.i));
+  }
+
+  /** 去台下准备跳上去：从家具上借道只等 prepare，从地面直接跳多等 jumpUpS（茶几猫台不付：下台只有 0.5 m） */
   private startClimb(c: Cat, u: PlanUnit): void {
-    const viaFurniture = !!this.furn && this.furn.rects.some((r) => rectDist(r, u.x, u.y) < this.layout.platR + 0.1);
+    const viaFurniture = (!!this.furn && this.furn.rects.some((r) => rectDist(r, u.x, u.y) < this.layout.platR + 0.1)) || this.isPerch(u.i);
     c.climb = { unit: u, need: this.cat.prepare + (viaFurniture ? 0 : this.cat.jumpUpS), wait: 0 };
     c.walker.pushTarget({ x: u.x, y: u.y });
     c.state = 'wait';
@@ -3317,8 +3340,7 @@ export class CohabitSim {
         c.phaseTime = 0;
         w.place(cl.unit.x, cl.unit.y);
         this.keepSupport(c);
-        const at = cl.unit.i;
-        if (this.seats.some((q) => q.meet === at && this.people.some((v) => v.seated && v.seat === q.i))) this.catArrivals++;
+        if (this.arrivedAt(cl.unit.i)) this.catArrivals++;
         return;
       }
       if (cl.wait <= cl.need + this.cat.waitMax && (ready || this.space === 'live')) return;
@@ -3603,7 +3625,9 @@ export class CohabitSim {
       const near = this.cats.find((c) => c.unit && c.unit.i === seat.meet && p.watching === c.id);
       // 满了 sideAfter 就一直引向座位旁边那台（直到起身），否则猫一挪开又被引回座位前方那台、来回打转
       p.meetHeld = near || p.meetHeld >= g.sideAfter ? p.meetHeld + this.lastDt : 0;
-      const meet = g.target === 'side' || (g.target === 'meetThenSide' && p.meetHeld >= g.sideAfter) ? seat.side : seat.meet;
+      // 茶几 + 猫台（perch）：坐在沙发上的人引猫到自己的茶几那台
+      const perch = this.perchOf(seat);
+      const meet = perch >= 0 ? perch : g.target === 'side' || (g.target === 'meetThenSide' && p.meetHeld >= g.sideAfter) ? seat.side : seat.meet;
       let best: { c: Cat; path: number[] } | null = null;
       for (const c of this.cats) {
         if (!free(c)) continue;

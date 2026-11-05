@@ -24,6 +24,11 @@ import {
   SHELTER,
   UNIT_DUAL_DEFS,
   UNIT_DUAL_OPTS,
+  UNIT_COFFEE_DEFS,
+  UNIT_COFFEE_OPTS,
+  COFFEE,
+  coffeeToward,
+  shelterBands,
   bakedGet,
   bakedKey,
   bakedPut,
@@ -229,6 +234,7 @@ function makeSim(space: SpaceMode, seed: number): CohabitSim {
     cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid },
     guide: COHABIT.GUIDE,
     pace: PACE_DEMO,
+    perch: true,
   });
   const half = sim.layout.fieldM / 2;
   const sizes = partySizes(SCENE.people);
@@ -356,6 +362,9 @@ export function CohabitSpaceBench({
     let paths: BandPaths[] | null = null;
     const DUAL_BOTH = 3;
     const DUAL_LOWER = 6;
+    // 9–11 = 茶几猫台两块都成、12–14 = 只成下台（与两个结构那组一起烘，排在它后面）
+    const COFFEE_BOTH = 9;
+    const COFFEE_LOWER = 12;
     let rig: Rig = rigFor(layout, pre);
     setHud((h) => ({ ...h, side: platformSide(rig), total: layout.units.length }));
     {
@@ -473,7 +482,7 @@ export function CohabitSpaceBench({
         R.addMesh(`shell-${id}-c`, sh.cover);
         R.addMesh(`shell-${id}-g`, sh.gore);
       }
-      bakeGroup(UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, () => {}, takeDual);
+      bakeGroup([...UNIT_DUAL_DEFS, ...UNIT_COFFEE_DEFS], [...UNIT_DUAL_OPTS, ...UNIT_COFFEE_OPTS], () => {}, takeDual);
     };
 
     // ── 两组轨迹都在后台线程里烘（cohabit-bake.worker.ts，2026-10-31 轻量化：平台三档原先在主线程上分片烘）：
@@ -619,6 +628,8 @@ export function CohabitSpaceBench({
     const planSet = new Uint8Array(layout.units.length);
     const dropSerial = new Int32Array(layout.units.length);
     const roofToward = new Float32Array(layout.units.length);
+    // 茶几猫台（COFFEE，2026-11-05）：沙发座位的桌子那台落成两个结构；coffeeOn = 1 时 roofToward = 台心朝沙发
+    const coffeeOn = new Uint8Array(layout.units.length);
     const orders: (readonly number[])[] = layout.units.map(() => UNIT_ORDER);
     let roofed = 0;
 
@@ -674,11 +685,13 @@ export function CohabitSpaceBench({
           if (deg <= 1e-4) {
             planSet[u] = 0;
             roofOn[u] = 0;
+            coffeeOn[u] = 0;
             orders[u] = UNIT_ORDER;
           } else if (!planSet[u]) {
             planSet[u] = 1;
             // 第几次落下照数（与两层那组烘没烘完无关），抽签只看种子、第几台、第几次
             const serial = dropSerial[u]++;
+            const coffee = dualReady && sim.perch && sim.furn ? coffeeToward(layout.units[u], sim.seats, sim.furn.rects) : null;
             const plan =
               dualReady && sim.furn
                 ? unitFormPlan({
@@ -693,7 +706,13 @@ export function CohabitSpaceBench({
                     count: BANDS,
                   })
                 : null;
-            if (plan && plan.bands) {
+            if (coffee !== null) {
+              const bands = shelterBands(coffee, BANDS);
+              roofOn[u] = 1;
+              coffeeOn[u] = 1;
+              roofToward[u] = coffee;
+              orders[u] = UNIT_ORDER.map((t, j) => (bands[j] ? COFFEE_BOTH : COFFEE_LOWER) + t);
+            } else if (plan && plan.bands) {
               const bands = plan.bands;
               roofOn[u] = 1;
               roofToward[u] = plan.toward ?? NaN;
@@ -701,7 +720,7 @@ export function CohabitSpaceBench({
             }
           }
           const roof = roofOn[u] === 1;
-          if (roof) {
+          if (roof && !coffeeOn[u]) {
             tableWant[u] = SHELTER.lowerTop;
             roofed++;
           }
@@ -723,7 +742,7 @@ export function CohabitSpaceBench({
           const reel = pickUnitBands(u, deg, sim.bandOpen, tracks, paths as BandPaths[], cursors, frameOf, order);
           const reelTop = bandTop(tracks[order[0]], reel);
           // 机构：上夹环在带顶（reel 那一帧）、下夹环在钉住端、芯在两者之间（按帧缓存的一份）；吊杆从天花方板下沿（y 0）拉到上夹环法兰顶
-          const mk = (roof ? DUAL_BOTH : 0) * FRAME_KEY + reel;
+          const mk = (coffeeOn[u] ? COFFEE_BOTH : roof ? DUAL_BOTH : 0) * FRAME_KEY + reel;
           let mp = mechPlaces.get(mk);
           if (!mp) mechPlaces.set(mk, (mp = []));
           mp.push(at(c, 0, top));
@@ -880,17 +899,20 @@ export function CohabitSpaceBench({
         const support = sim.space === 'empty' ? [] : sim.supportOf(c);
         const formed = band !== null && support.length > 0 && support.every((u) => sim.act.degree[u.i] >= 1 - 1e-3);
         // 有顶的一台：猫坐进有顶那半边，头转过去看敞开那一侧（整圈两层没有朝向，照平台的摆法）
-        const roof = formed && support.length === 1 && roofOn[support[0].i] && !Number.isNaN(roofToward[support[0].i]) ? roofToward[support[0].i] : undefined;
-        const pl = catPlacement({ x: c.walker.x, y: c.walker.y, heading: c.walker.heading, state: c.state }, support, formed, mo.speed > MOVING.cat, layout, band ?? { R: 0 }, roof);
+        const one = formed && support.length === 1 ? support[0].i : -1;
+        const perchAt = one >= 0 && coffeeOn[one] ? { toward: roofToward[one] } : undefined;
+        const roof = !perchAt && one >= 0 && roofOn[one] && !Number.isNaN(roofToward[one]) ? roofToward[one] : undefined;
+        const pl = catPlacement({ x: c.walker.x, y: c.walker.y, heading: c.walker.heading, state: c.state }, support, formed, mo.speed > MOVING.cat, layout, band ?? { R: 0 }, roof, perchAt);
         const k = pl.pose === 'walk' ? Math.floor(frac(mo.dist / CAT.STRIDE) * WALK_FRAMES.cat) % WALK_FRAMES.cat : 0;
         const key = `c-${pl.pose}-${pl.tail}-${pl.bend.toFixed(3)}-${k}|${look.coat}`;
         const r = rigOf(key, () => catRig({ unit: UNITS_PER_M, pose: pl.pose, tail: pl.tail, bend: pl.bend, phase: k / WALK_FRAMES.cat, coat: look.coat }));
-        // 台上的猫站在自己那台的台面上（各台高度不同；两层的是下台）；跨台时按走到几成在两台之间插值
+        // 台上的猫站在自己那台的台面上（各台高度不同；两层的是下台，茶几猫台是上台）；跨台时按走到几成在两台之间插值
+        const catTop = (i: number): number => tableTop[i] + (coffeeOn[i] ? COFFEE.rise : 0);
         const under =
           support.length === 2 && pl.t !== undefined
-            ? tableTop[support[0].i] + (tableTop[support[1].i] - tableTop[support[0].i]) * pl.t
+            ? catTop(support[0].i) + (catTop(support[1].i) - catTop(support[0].i)) * pl.t
             : support.length
-              ? Math.max(...support.map((u) => tableTop[u.i]))
+              ? Math.max(...support.map((u) => catTop(u.i)))
               : TABLE_TOP.stand;
         const footY = pl.onPlatform ? ROOM.FLOOR_Y - under * UNITS_PER_M - pl.lift * UNITS_PER_M : ROOM.FLOOR_Y;
         placeBoth(cats, r, key, look.coat, (tone) => catColor(tone, look), pl.x * UNITS_PER_M, footY, pl.y * UNITS_PER_M, figureYaw(pl.heading), clampHeadYaw(pl.headTurn, CAT_HEAD_YAW_MAX));
@@ -962,6 +984,7 @@ export function CohabitSpaceBench({
       resetBandCursors(cursors);
       tableTop.fill(TABLE_TOP.stand);
       roofOn.fill(0);
+      coffeeOn.fill(0);
       planSet.fill(0);
       dropSerial.fill(0);
       orders.fill(UNIT_ORDER);

@@ -485,13 +485,14 @@ export function dualUnitSpec(k: number, upper: boolean, lower: boolean, mid: num
 export const DUAL_STOWED = (HOIST.stowed * (UNIT_BAND - 1)) / (UNIT_CUT - 1);
 
 /** 两个结构的三档引擎定义与烘焙选项（台面按下面那块量、膜按上下两块对位、收起压紧） */
-function dualTiers(upper: boolean, tag: string): { defs: RingUnitDef[]; opts: BakeOpts[] } {
+function dualTiers(upper: boolean, tag: string, kUp?: number, lift?: readonly number[]): { defs: RingUnitDef[]; opts: BakeOpts[] } {
   const defs: RingUnitDef[] = [];
   const opts: BakeOpts[] = [];
   UNIT_TIERS.forEach((t, i) => {
-    const d = dualUnitSpec(UNIT_SHAPE.k[i], upper, true);
+    const k = UNIT_SHAPE.k[i];
+    const d = dualUnitSpec(k, upper, true, DUAL.mid, kUp === undefined ? k : Math.min(kUp, k), lift?.[i] ?? 0);
     defs.push({ ...t, key: `${t.key}-${tag}`, spec: d.spec });
-    opts.push({ ref: [d.b0, d.b0 + d.fs], stowed: DUAL_STOWED, structs: [{ start: d.b0, fs: d.fs }, { start: d.a0, fs: d.fs }] });
+    opts.push({ ref: [d.b0, d.b0 + d.fs], stowed: DUAL_STOWED, structs: [{ start: d.b0, fs: d.fs }, { start: d.a0, fs: d.fsUp }] });
   });
   return { defs, opts };
 }
@@ -502,6 +503,26 @@ export const UNIT_DUAL_DEFS: readonly RingUnitDef[] = [...DUAL_BOTH.defs, ...DUA
 export const UNIT_DUAL_OPTS: readonly BakeOpts[] = [...DUAL_BOTH.opts, ...DUAL_LOWER.opts];
 
 /**
+ * 茶几 + 小一圈猫台（2026-11-05，作者「B · 上台选 ③ k28 · 不挡 · 上 3D 改规则」，形态方案 §14）：沙发座位的桌子那台
+ * 落成两个结构。下台整圈 = 0.5 m 茶几（TABLE_TOP.sofaFront），上台只在背向沙发的那半圈、二十条带同一个 k（kUp 28，俯视近圆，
+ * 挑出 0.22 m，与现行两层台几乎一样宽、四个角切掉）。上台比下台小时三档上台不自动同高，lift 按档标定把它们拉平
+ * （`scripts/cohabit/coffee-draft.mjs`：边档 8、角档 25 节，三档上台顶差 ≤ 5 mm）。
+ */
+export const COFFEE = {
+  kUp: 28,
+  lift: [0, 8, 25],
+  /** 上台顶比下台顶高多少（m，三档同；守门用引擎现算核对） */
+  rise: 0.58,
+  /** 猫在上台上坐 / 蜷的那一圈离立杆中心（m）：挂带线 0.122 + 上台挑出 0.22 的一半 */
+  catR: 0.23,
+} as const;
+const COFFEE_BOTH = dualTiers(true, 'coffee', COFFEE.kUp, COFFEE.lift);
+const COFFEE_LOWER = dualTiers(false, 'coffee-lower', COFFEE.kUp, COFFEE.lift);
+/** 茶几那组：三档各一条「两块都成」、三档各一条「只成下台」（[0..2] = 两块，[3..5] = 只成下台） */
+export const UNIT_COFFEE_DEFS: readonly RingUnitDef[] = [...COFFEE_BOTH.defs, ...COFFEE_LOWER.defs];
+export const UNIT_COFFEE_OPTS: readonly BakeOpts[] = [...COFFEE_BOTH.opts, ...COFFEE_LOWER.opts];
+
+/**
  * 有顶的一台（形态方案 §11.3；作者 10-30 让模型按建议定：两个结构、上台盖背向座位的那半圈）。落在哪见 shelterToward。
  * - lowerTop：下台台面离地 0.90 m = 站上比例模型坐在 0.43 m 的沙发上眼睛的高度（约 1.17 m）减去猫坐着时眼睛离台面的高度
  *   （约 0.27 m，figure.ts 的方块猫）：猫坐在下台上，眼睛与坐着的人齐平。上台顶 1.48 m，比站着的人的眼睛（约 1.57 m）低，
@@ -510,6 +531,14 @@ export const UNIT_DUAL_OPTS: readonly BakeOpts[] = [...DUAL_BOTH.opts, ...DUAL_L
  * - catIn：猫坐在有顶那半边、离分界多深（弧度）：坐在敞开那半边的旁边，头转过去看座位，不隔着立杆。
  */
 export const SHELTER = { lowerTop: 0.9, under: 0.9 - 0.065, catIn: (25 * Math.PI) / 180 } as const;
+
+/** 茶几猫台朝哪：第 u 台是某个沙发座位的桌子时返回台心朝那张沙发的平面方位角，否则 null（上台盖背向它的半圈） */
+export function coffeeToward(u: { i: number; x: number; y: number }, seats: readonly { furn: number; table: number }[], rects: readonly Pick<FurnRect, 'cx' | 'cy' | 'kind'>[]): number | null {
+  const s = seats.find((q) => q.table === u.i && rects[q.furn].kind === 'sofa');
+  if (!s) return null;
+  const r = rects[s.furn];
+  return Math.atan2(r.cy - u.y, r.cx - u.x);
+}
 
 /** 有顶的一台二十条带各成什么：朝 toward（平面方位角，台心 → 座位）那半圈只成下台（0），背后那半圈两块都成（1） */
 export function shelterBands(toward: number, count: number = SQUARE.COUNT): Uint8Array {
@@ -1027,12 +1056,12 @@ export interface Rig {
  * - chair 0.74：配餐椅（座面 0.45）——桌面比座面高 0.27–0.30 是通行的桌椅高差。台面 6.5 cm 厚（UNIT_SHAPE）、台底 0.67，
  *   比座面高 0.22，腿伸得进去；餐椅那台的台边仍按 COHABIT.TABLE 落在膝盖前面（那条是台面 0.15 厚、腿进不去时定的，
  *   改不改成盖住大腿由作者定，见形态方案 §10.2）；
- * - sofaFront 0.42：沙发正前方当茶几——资料要与座面齐或略低（0.40–0.45），座面 0.43。台面 0.15 厚、台面下吊着 0.48 m
- *   的布时只能落到 0.49；薄台（2026-10-29）与结构贴底（10-30）以后台面下只剩一小截，落得下来。
+ * - sofaFront 0.50：沙发正前方当茶几（作者 2026-11-05「茶几 0.5 m」，原 0.42 按资料 0.40–0.45 与座面齐或略低）。
+ *   这台同时是猫台（COFFEE）：0.5 m 也是猫用得最多的跳高（Sicuto de Oliveira 等 2015：0.5 m 的箱待得最久、1.0 m 没猫用）。
  * 哪一台当谁的桌子、什么时候落由平面模型定（COHABIT.TABLE、CohabitSim.tableBy），这里只管高度。
  * 原来铺满时钉在 1.43 m（场地布局那个高度，接近站姿肩高），哪种桌子都不是。
  */
-export const TABLE_TOP = { stand: 1.05, chair: 0.74, sofaFront: 0.42 } as const;
+export const TABLE_TOP = { stand: 1.05, chair: 0.74, sofaFront: 0.5 } as const;
 
 /**
  * 台面换高度的速度（m/s）：取市面上电动升降桌的快档 80 mm/s（常见 30–50 mm/s，见厂商参数；Lee 等 2019 用的 IKEA Bekant 是
@@ -1585,8 +1614,10 @@ export function catPlacement(
   layout: Pick<PlanLayout, 'mastR'>,
   ring: { R: number },
   roofToward?: number,
+  /** 茶几猫台（COFFEE）：猫在上台背向座位那半圈正中，toward = 台心朝沙发的方位角 */
+  perch?: { toward: number },
 ): CatPlace {
-  const R = ring.R;
+  const R = perch ? COFFEE.catR : ring.R;
   const floorPose = (): CatPose => {
     if (c.state === 'lie') return 'lie';
     if (c.state === 'sit' || c.state === 'wait' || c.state === 'held') return 'sit';
@@ -1608,10 +1639,10 @@ export function catPlacement(
     const u = support[0];
     const dx = c.x - u.x, dy = c.y - u.y;
     const atCore = Math.hypot(dx, dy) < layout.mastR + 0.02;
-    const look = roofToward ?? c.heading;
+    const look = perch ? perch.toward : roofToward ?? c.heading;
     const anchor = atCore ? look : Math.atan2(dy, dx);
-    // 有顶的一台：绕过敞开那半圈的分界再往里 catIn（离座位方向 90° + catIn）
-    const th = roofToward !== undefined ? roofToward - Math.PI / 2 - SHELTER.catIn : anchor - RING_SIDE;
+    // 有顶的一台：绕过敞开那半圈的分界再往里 catIn（离座位方向 90° + catIn）；茶几猫台：上台背向座位那半圈正中
+    const th = perch ? perch.toward + Math.PI : roofToward !== undefined ? roofToward - Math.PI / 2 - SHELTER.catIn : anchor - RING_SIDE;
     const facing = th + Math.PI / 2;
     const pose: CatPose = c.state === 'lie' ? 'curl' : moving && (c.state === 'walk' || c.state === 'retreat') ? 'walk' : 'sit';
     const turn = Math.atan2(Math.sin(look - facing), Math.cos(look - facing));
