@@ -178,6 +178,12 @@ export const COHABIT = {
      *  没有实测数，模块默认 1 = 不启用；研究里做敏感性扫描 */
     crowdTolMul: 1,
     /**
+     * 有顶处的停留代价（2026-11-05 形态方案 §12 第 2 步）：猫在茶几猫台（perch，上台背向沙发、下面是檐下）上时，
+     * 能忍的秒数乘这个数。方向有出处——有藏身处的猫更常主动走向人、有得选时把时间多给躲藏处（Kry & Casey 2007 的
+     * Hide & Perch 箱、Ellis 等 2017，形态方案 §13）——幅度没有实测，研究里扫 1 / 1.5 / 2。模块默认 1 = 不启用
+     */
+    roofTolMul: 1,
+    /**
      * 猫能下地（`catFloor` 开着时：会动 / 钉死两档的猫也能下地，作者 2026-10-08）。每次「去哪」的决定（换格、退开）先选层：
      * 上台的几率 = logistic(upBias + upCrowd · n)，n = 猫 1.5 m 内的访客数。方向来自 Hirsch 等 2025（同一家猫咖：客流高
      * 时猫多在层架上、客流低时地面与家具偏多），幅度没有实测——upBias 按「钉死档（= 有固定层架的普通猫咖）· 6 人时
@@ -1021,6 +1027,12 @@ export interface CohabitOpts {
    * 上台再 0.58 m，两级都不用一次跳 1 m）。省略 = 关（研究与案例页对照图逐位不变）。只在 tables 开着时起作用
    */
   perch?: boolean;
+  /**
+   * 引到了就不再抢（2026-11-05 查明：茶几猫台上的猫离开，44 次里 37 次是被另一个坐着的人的引路抢走，忍耐一次都没用上）：
+   * 猫已经停在某个正坐着的人的引路终点（座位前方那台，perch 开着时沙发座位是茶几猫台）上，别的座位不再引它。
+   * 省略 = 关（研究与对照图逐位不变）
+   */
+  holdArrived?: boolean;
   /** 访客的节奏（站多久、看猫多久、去不去坐、坐多久）：省略 = COHABIT.VISITOR / SEATS 那几个演示值（研究与案例页对照图用的）；部分覆盖逐项替换 */
   pace?: Partial<VisitorPace>;
 }
@@ -1115,9 +1127,13 @@ export class CohabitSim {
   readonly squeeze: boolean;
   /** 茶几 + 猫台（CohabitOpts.perch） */
   readonly perch: boolean;
+  /** 引到了就不再抢（CohabitOpts.holdArrived） */
+  readonly holdArrived: boolean;
   readonly tableBy: Int16Array;
   tableSeat = 0;
   tableReady = 0;
+  /** 茶几猫台（perch）：猫停在落成了的茶几猫台上的猫·秒（perch 关着时恒 0） */
+  perchStay = 0;
   /** 触发档；「走 · 站 · 坐」下的家具、座位，空间此刻铺的路，累计「猫到了坐着的人座位前方那台」次数 */
   readonly trigger: TriggerMode;
   /** 家具清单（可加减、拖动；「走 · 站 · 坐」默认 = 标准布置）与由它算出的占位 / 座位 */
@@ -1204,6 +1220,7 @@ export class CohabitSim {
     this.tables = opts.tables ?? opts.cover === 'room';
     this.squeeze = opts.squeeze ?? opts.cover === 'room';
     this.perch = !!opts.perch && this.tables;
+    this.holdArrived = !!opts.holdArrived;
     this.tableBy = new Int16Array(n).fill(-1);
     this.wallScratch = new Uint8Array(n);
     this.faces = opts.faces ?? false;
@@ -3025,7 +3042,8 @@ export class CohabitSim {
     if (c.state === 'sit' || c.state === 'lie') c.settledTime += dt;
     if (c.mode !== 'auto') return;
 
-    const tol = att ? this.cat.tolerateAttended : this.cat.tolerate;
+    // 有顶处（茶几猫台）能忍得更久：roofTolMul
+    const tol = (att ? this.cat.tolerateAttended : this.cat.tolerate) * (this.perch && this.isPerch(c.unit!.i) ? this.cat.roofTolMul : 1);
     // K2：忍够了就退到离人最远的邻格
     if (cost && c.tolerated > tol && c.state !== 'retreat') {
       const nb = this.neighboursOf(c.unit!);
@@ -3564,6 +3582,7 @@ export class CohabitSim {
    * 会打到人的——它落不下来）；落不落仍过 R5、仍可被路过的人收带让路（与别的单元同一套空间规则）。
    */
   private tableStep(inputs: Float64Array, thr: number, dt: number): void {
+    if (this.perch) for (const c of this.cats) if (c.unit && !c.transfer && this.isPerch(c.unit.i) && this.act.degree[c.unit.i] >= COHABIT.WALL_AT) this.perchStay += dt;
     const prev = Int16Array.from(this.tableBy);
     this.tableBy.fill(-1);
     const users: { u: number; furn: number }[] = [];
@@ -3601,6 +3620,9 @@ export class CohabitSim {
     const offer = (u: number) => {
       inputs[u] = Math.max(inputs[u], thr);
     };
+    // holdArrived：已经停在某个坐着的人引路终点上的猫先记成被占（别的座位不来抢）
+    if (this.holdArrived)
+      for (const c of this.cats) if (c.unit && !c.transfer && this.arrivedAt(c.unit.i)) taken.add(c.id);
     // catFloor 开着时地面上的猫也引（没在准备跳上别的台）：从离它最近、落得下来的那台起铺
     const free = (c: Cat) => !taken.has(c.id) && (!!c.unit || (this.catFloor && !c.climb)) && c.mode !== 'held' && c.latency <= 0;
     const startOf = (c: Cat): number => {
@@ -3628,6 +3650,8 @@ export class CohabitSim {
       // 茶几 + 猫台（perch）：坐在沙发上的人引猫到自己的茶几那台
       const perch = this.perchOf(seat);
       const meet = perch >= 0 ? perch : g.target === 'side' || (g.target === 'meetThenSide' && p.meetHeld >= g.sideAfter) ? seat.side : seat.meet;
+      // holdArrived：终点上已经有猫了，这个人不再引第二只
+      if (this.holdArrived && this.cats.some((c) => c.unit && !c.transfer && c.unit.i === meet)) continue;
       let best: { c: Cat; path: number[] } | null = null;
       for (const c of this.cats) {
         if (!free(c)) continue;
@@ -3786,6 +3810,7 @@ export class CohabitSim {
       minGap: this.minGap,
       tableSeat: this.tableSeat,
       tableReady: this.tableReady,
+      perchStay: this.perchStay,
     };
   }
 }
@@ -3822,6 +3847,8 @@ export interface CohabitSummary {
   /** 桌子（COHABIT.TABLE）：坐在有桌子可落的座位上的人·秒 · 其中桌子已经落到位的人·秒（tables 关着时恒 0） */
   tableSeat: number;
   tableReady: number;
+  /** 茶几猫台（perch）：猫停在落成了的茶几猫台上的猫·秒 */
+  perchStay: number;
 }
 
 export interface RunOpts extends CohabitOpts {
