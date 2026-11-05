@@ -1,0 +1,446 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2240" height="1180" viewBox="0 0 2240 1180">
+<rect width="2240" height="1180" fill="#f6f3ec"/>
+<text x="36.0" y="42.0" font-family="Noto Sans CJK SC, sans-serif" font-size="20" fill="#2b2a27" text-anchor="start" font-weight="600">茶几 + 小一圈猫台：坐下时落的那台落成两层（线稿 · 2026-11-05）</text>
+<text x="36.0" y="66.0" font-family="Noto Sans CJK SC, sans-serif" font-size="12" fill="#8a877f" text-anchor="start" font-weight="400">截面是真引擎终态（一条 338 节的布、两个结构，键与 2-15 现行平台同一组），按 2-15 的缩放换成米。整台按下台台面 = 0.5 m 落位（2-15 的升降已能做到）。</text>
+<text x="36.0" y="84.0" font-family="Noto Sans CJK SC, sans-serif" font-size="12" fill="#8a877f" text-anchor="start" font-weight="400">下台整圈 = 人的茶几；上台只在背向座位的那半圈，下面是猫能钻的檐下、上面是猫能趴的台。沙发前缘到茶几前缘 0.38 m。人、猫、沙发只作比例参考。蓝 = 上台，灰 = 下台，橙 = 锁定键。</text>
+<text x="36.0" y="116.0" font-family="Noto Sans CJK SC, sans-serif" font-size="14" fill="#2b2a27" text-anchor="start" font-weight="600">A　侧视（剖面过立杆、沿座位朝向）</text>
+<text x="36.0" y="150.0" font-family="Noto Sans CJK SC, sans-serif" font-size="13" fill="#8a877f" text-anchor="start" font-weight="600">上台同大（现行）</text>
+<line x1="70.0" y1="467.3" x2="432.7" y2="467.3" stroke="#2b2a27" stroke-width="1.2"/>
+<line x1="70.0" y1="467.3" x2="74.0" y2="467.3" stroke="#8a877f" stroke-width="0.8"/>
+<text x="67.0" y="471.3" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#8a877f" text-anchor="end" font-weight="400">0.0</text>
+<line x1="70.0" y1="446.8" x2="74.0" y2="446.8" stroke="#8a877f" stroke-width="0.8"/>
+<text x="67.0" y="450.8" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#8a877f" text-anchor="end" font-weight="400">0.1</text>
+<line x1="70.0" y1="426.3" x2="74.0" y2="426.3" stroke="#8a877f" stroke-width="0.8"/>
+<text x="67.0" y="430.3" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#8a877f" text-anchor="end" font-weight="400">0.2</text>
+<line x1="70.0" y1="405.8" x2="74.0" y2="405.8" stroke="#8a877f" stroke-width="0.8"/>
+<text x="67.0" y="409.8" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#8a877f" text-anchor="end" font-weight="400">0.3</text>
+<line x1="70.0" y1="385.3" x2="74.0" y2="385.3" stroke="#8a877f" stroke-width="0.8"/>
+<text x="67.0" y="389.3" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#8a877f" text-anchor="end" font-weight="400">0.4</text>
+<line x1="70.0" y1="364.8" x2="74.0" y2="364.8" stroke="#8a877f" stroke-width="0.8"/>
+<text x="67.0" y="368.8" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#8a877f" text-anchor="end" font-weight="400">0.5</text>
+<line x1="70.0" y1="344.3" x2="74.0" y2="344.3" stroke="#8a877f" stroke-width="0.8"/>
+<text x="67.0" y="348.3" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#8a877f" text-anchor="end" font-weight="400">0.6</text>
+<line x1="70.0" y1="323.8" x2="74.0" y2="323.8" stroke="#8a877f" stroke-width="0.8"/>
+<text x="67.0" y="327.8" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#8a877f" text-anchor="end" font-weight="400">0.7</text>
+<line x1="70.0" y1="303.3" x2="74.0" y2="303.3" stroke="#8a877f" stroke-width="0.8"/>
+<text x="67.0" y="307.3" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#8a877f" text-anchor="end" font-weight="400">0.8</text>
+<line x1="70.0" y1="282.8" x2="74.0" y2="282.8" stroke="#8a877f" stroke-width="0.8"/>
+<text x="67.0" y="286.8" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#8a877f" text-anchor="end" font-weight="400">0.9</text>
+<line x1="70.0" y1="262.3" x2="74.0" y2="262.3" stroke="#8a877f" stroke-width="0.8"/>
+<text x="67.0" y="266.3" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#8a877f" text-anchor="end" font-weight="400">1.0</text>
+<line x1="70.0" y1="241.8" x2="74.0" y2="241.8" stroke="#8a877f" stroke-width="0.8"/>
+<text x="67.0" y="245.8" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#8a877f" text-anchor="end" font-weight="400">1.1</text>
+<line x1="70.0" y1="221.3" x2="74.0" y2="221.3" stroke="#8a877f" stroke-width="0.8"/>
+<text x="67.0" y="225.3" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#8a877f" text-anchor="end" font-weight="400">1.2</text>
+<line x1="70.0" y1="200.8" x2="74.0" y2="200.8" stroke="#8a877f" stroke-width="0.8"/>
+<text x="67.0" y="204.8" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#8a877f" text-anchor="end" font-weight="400">1.3</text>
+<line x1="70.0" y1="180.3" x2="74.0" y2="180.3" stroke="#8a877f" stroke-width="0.8"/>
+<text x="67.0" y="184.3" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#8a877f" text-anchor="end" font-weight="400">1.4</text>
+<rect x="74.1" y="379.1" width="123.0" height="88.2" fill="#e6dfd2" stroke="#8a877f" stroke-width="1" opacity="1"/>
+<rect x="74.1" y="293.0" width="24.6" height="174.3" fill="#e6dfd2" stroke="#8a877f" stroke-width="1" opacity="1"/>
+<rect x="104.8" y="350.4" width="88.2" height="28.7" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="184.8" y="375.0" width="24.6" height="80.0" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="184.8" y="454.9" width="41.0" height="12.3" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="98.7" y="252.0" width="45.1" height="102.5" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="102.8" y="202.8" width="39.0" height="45.1" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="135.6" y="323.8" width="61.5" height="16.4" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<line x1="346.6" y1="170.0" x2="346.6" y2="384.4" stroke="#8a877f" stroke-width="1" stroke-dasharray="5 3"/>
+<line x1="321.5" y1="170.0" x2="321.5" y2="378.3" stroke="#2b2a27" stroke-width="1.1"/>
+<line x1="371.7" y1="170.0" x2="371.7" y2="378.3" stroke="#2b2a27" stroke-width="1.1"/>
+<polyline points="321.5,351.2 321.5,352.4 321.5,353.6 321.5,354.9 321.5,356.1 321.5,357.3 321.5,358.5 321.5,359.8 321.5,361.0 321.5,362.2 321.5,363.4 321.5,364.6 316.0,364.7 314.4,364.7 312.7,364.7 311.0,364.7 309.5,364.7 307.9,364.7 306.1,364.7 304.3,364.8 302.9,364.8 301.0,364.8 299.2,364.8 297.6,364.8 296.0,364.8 294.5,364.8 292.6,364.8 290.7,364.8 289.3,364.8 287.7,364.8 285.9,364.9 284.4,364.9 282.9,364.9 281.1,364.9 279.4,364.9 277.6,364.9 275.0,364.9 275.0,366.6 275.0,368.3 275.0,369.9 275.0,371.6 275.0,373.3 275.0,375.0 275.0,376.6 275.0,378.3 277.6,378.3 279.4,378.3 281.1,378.3 282.8,378.3 284.3,378.3 285.9,378.2 287.6,378.2 289.2,378.2 290.7,378.2 292.5,378.2 294.4,378.2 295.9,378.2 297.5,378.2 299.1,378.2 300.9,378.2 302.8,378.1 304.3,378.1 306.0,378.1 307.8,378.1 309.4,378.1 310.9,378.1 312.6,378.1 314.3,378.1 315.9,378.1 321.5,378.0 321.5,379.2 321.5,380.4 321.5,381.6 321.5,382.8 321.5,384.0 321.5,385.2 321.5,386.4 321.5,387.5 321.5,388.7 321.5,389.9 321.5,391.1" fill="none" stroke="#2b2a27" stroke-width="1.5" stroke-linejoin="round" />
+<line x1="321.5" y1="364.6" x2="321.5" y2="378.0" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="312.7" y1="364.7" x2="312.6" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="307.9" y1="364.7" x2="307.8" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="304.3" y1="364.8" x2="304.3" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="299.2" y1="364.8" x2="299.1" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="294.5" y1="364.8" x2="294.4" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="289.3" y1="364.8" x2="289.2" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="285.9" y1="364.9" x2="285.9" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="281.1" y1="364.9" x2="281.1" y2="378.3" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="275.0" y1="364.9" x2="275.0" y2="378.3" stroke="#d9782d" stroke-width="0.7"/>
+<polyline points="371.7,351.2 371.7,352.4 371.7,353.6 371.7,354.9 371.7,356.1 371.7,357.3 371.7,358.5 371.7,359.8 371.7,361.0 371.7,362.2 371.7,363.4 371.7,364.6 377.2,364.7 378.9,364.7 380.5,364.7 382.2,364.7 383.7,364.7 385.3,364.7 387.2,364.7 388.9,364.8 390.4,364.8 392.2,364.8 394.0,364.8 395.6,364.8 397.2,364.8 398.7,364.8 400.6,364.8 402.5,364.8 404.0,364.8 405.5,364.8 407.3,364.9 408.8,364.9 410.3,364.9 412.1,364.9 413.8,364.9 415.6,364.9 418.2,364.9 418.2,366.6 418.2,368.3 418.2,369.9 418.2,371.6 418.2,373.3 418.2,375.0 418.2,376.6 418.2,378.3 415.6,378.3 413.9,378.3 412.1,378.3 410.4,378.3 408.9,378.3 407.4,378.2 405.6,378.2 404.0,378.2 402.6,378.2 400.7,378.2 398.8,378.2 397.3,378.2 395.7,378.2 394.1,378.2 392.3,378.2 390.4,378.1 388.9,378.1 387.2,378.1 385.4,378.1 383.8,378.1 382.3,378.1 380.6,378.1 378.9,378.1 377.3,378.1 371.7,378.0 371.7,379.2 371.7,380.4 371.7,381.6 371.7,382.8 371.7,384.0 371.7,385.2 371.7,386.4 371.7,387.5 371.7,388.7 371.7,389.9 371.7,391.1" fill="none" stroke="#2b2a27" stroke-width="1.5" stroke-linejoin="round" />
+<line x1="371.7" y1="364.6" x2="371.7" y2="378.0" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="380.5" y1="364.7" x2="380.6" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="385.3" y1="364.7" x2="385.4" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="388.9" y1="364.8" x2="388.9" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="394.0" y1="364.8" x2="394.1" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="398.7" y1="364.8" x2="398.8" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="404.0" y1="364.8" x2="404.0" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="407.3" y1="364.9" x2="407.4" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="412.1" y1="364.9" x2="412.1" y2="378.3" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="418.2" y1="364.9" x2="418.2" y2="378.3" stroke="#d9782d" stroke-width="0.7"/>
+<polyline points="371.7,231.9 371.7,233.1 371.7,234.3 371.7,235.5 371.7,236.8 371.7,238.0 371.7,239.2 371.7,240.4 371.7,241.6 371.7,242.9 371.7,244.1 371.7,245.3 377.2,245.3 378.9,245.4 380.5,245.4 382.2,245.4 383.7,245.4 385.3,245.4 387.2,245.4 388.9,245.4 390.4,245.4 392.2,245.4 394.1,245.4 395.6,245.5 397.2,245.5 398.7,245.5 400.6,245.5 402.5,245.5 404.0,245.5 405.5,245.5 407.3,245.5 408.8,245.5 410.3,245.5 412.1,245.6 413.8,245.6 415.6,245.6 418.2,245.6 418.2,247.3 418.2,248.9 418.2,250.6 418.2,252.3 418.2,254.0 418.2,255.6 418.2,257.3 418.2,259.0 415.6,259.0 413.9,259.0 412.1,258.9 410.4,258.9 408.9,258.9 407.4,258.9 405.6,258.9 404.0,258.9 402.6,258.9 400.7,258.9 398.8,258.9 397.3,258.9 395.7,258.8 394.1,258.8 392.3,258.8 390.4,258.8 388.9,258.8 387.2,258.8 385.4,258.8 383.8,258.8 382.3,258.8 380.6,258.8 378.9,258.7 377.3,258.7 371.7,258.7 371.7,259.9 371.7,261.1 371.7,262.3 371.7,263.5 371.7,264.7 371.7,265.8 371.7,267.0 371.7,268.2 371.7,269.4 371.7,270.6 371.7,271.8" fill="none" stroke="#2f7486" stroke-width="1.5" stroke-linejoin="round" />
+<line x1="371.7" y1="245.3" x2="371.7" y2="258.7" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="380.5" y1="245.4" x2="380.6" y2="258.8" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="385.3" y1="245.4" x2="385.4" y2="258.8" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="388.9" y1="245.4" x2="388.9" y2="258.8" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="394.1" y1="245.4" x2="394.1" y2="258.8" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="398.7" y1="245.5" x2="398.8" y2="258.9" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="404.0" y1="245.5" x2="404.0" y2="258.9" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="407.3" y1="245.5" x2="407.4" y2="258.9" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="412.1" y1="245.6" x2="412.1" y2="258.9" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="418.2" y1="245.6" x2="418.2" y2="259.0" stroke="#d9782d" stroke-width="0.7"/>
+<text x="319.5" y="256.2" font-family="Noto Sans CJK SC, sans-serif" font-size="9" fill="#8a877f" text-anchor="end" font-weight="400">布贴立杆</text>
+<rect x="287.7" y="344.3" width="16.4" height="20.5" fill="#ffffff" stroke="#2b2a27" stroke-width="1" opacity="1"/>
+<rect x="380.9" y="325.8" width="32.8" height="39.0" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="376.8" y="312.5" width="20.5" height="17.4" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="390.7" y="305.9" width="4.5" height="6.6" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="378.4" y="305.9" width="4.5" height="6.6" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="411.6" y="358.6" width="16.4" height="6.1" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="374.5" y="220.8" width="41.0" height="24.6" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="384.7" y="204.4" width="20.5" height="16.4" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<line x1="420.3" y1="364.8" x2="434.3" y2="364.8" stroke="#8a877f" stroke-width="0.8" stroke-dasharray="2 2"/>
+<text x="437.3" y="368.8" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#8a877f" text-anchor="start" font-weight="400">茶几 0.50</text>
+<line x1="420.3" y1="245.4" x2="434.3" y2="245.4" stroke="#2f7486" stroke-width="0.8" stroke-dasharray="2 2"/>
+<text x="437.3" y="249.4" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#2f7486" text-anchor="start" font-weight="400">上台 1.08</text>
+<text x="36.0" y="493.3" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#2f7486" text-anchor="start" font-weight="400">上台挑出 0.23 m（下台 0.23）</text>
+<text x="36.0" y="509.3" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#2b2a27" text-anchor="start" font-weight="400">檐下净空 0.52 m · 上台顶 1.08 m</text>
+<text x="36.0" y="525.3" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#2b2a27" text-anchor="start" font-weight="400">人（躯干）到上台中段 1.22 m</text>
+<text x="36.0" y="541.3" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#8a877f" text-anchor="start" font-weight="400">键 20/20 · 成形途中最大自交环 2 节</text>
+<text x="581.0" y="150.0" font-family="Noto Sans CJK SC, sans-serif" font-size="13" fill="#2f7486" text-anchor="start" font-weight="600">上台 k28</text>
+<line x1="615.0" y1="467.3" x2="977.7" y2="467.3" stroke="#2b2a27" stroke-width="1.2"/>
+<rect x="619.1" y="379.1" width="123.0" height="88.2" fill="#e6dfd2" stroke="#8a877f" stroke-width="1" opacity="1"/>
+<rect x="619.1" y="293.0" width="24.6" height="174.3" fill="#e6dfd2" stroke="#8a877f" stroke-width="1" opacity="1"/>
+<rect x="649.9" y="350.4" width="88.2" height="28.7" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="729.8" y="375.0" width="24.6" height="80.0" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="729.8" y="454.9" width="41.0" height="12.3" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="643.7" y="252.0" width="45.1" height="102.5" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="647.8" y="202.8" width="39.0" height="45.1" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="680.6" y="323.8" width="61.5" height="16.4" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<line x1="891.6" y1="170.0" x2="891.6" y2="384.4" stroke="#8a877f" stroke-width="1" stroke-dasharray="5 3"/>
+<line x1="866.5" y1="170.0" x2="866.5" y2="378.3" stroke="#2b2a27" stroke-width="1.1"/>
+<line x1="916.7" y1="170.0" x2="916.7" y2="378.3" stroke="#2b2a27" stroke-width="1.1"/>
+<polyline points="866.5,351.2 866.5,352.4 866.5,353.6 866.5,354.9 866.5,356.1 866.5,357.3 866.5,358.5 866.5,359.8 866.5,361.0 866.5,362.2 866.5,363.4 866.5,364.6 861.0,364.7 859.4,364.7 857.7,364.7 856.0,364.7 854.5,364.7 852.9,364.7 851.1,364.7 849.3,364.8 847.9,364.8 846.0,364.8 844.2,364.8 842.6,364.8 841.0,364.8 839.5,364.8 837.6,364.8 835.7,364.8 834.3,364.8 832.7,364.8 830.9,364.9 829.4,364.9 827.9,364.9 826.1,364.9 824.4,364.9 822.6,364.9 820.0,364.9 820.0,366.6 820.0,368.3 820.0,369.9 820.0,371.6 820.0,373.3 820.0,375.0 820.0,376.6 820.0,378.3 822.6,378.3 824.4,378.3 826.1,378.3 827.8,378.3 829.3,378.3 830.9,378.2 832.6,378.2 834.2,378.2 835.7,378.2 837.5,378.2 839.4,378.2 840.9,378.2 842.5,378.2 844.1,378.2 845.9,378.2 847.8,378.1 849.3,378.1 851.0,378.1 852.8,378.1 854.4,378.1 855.9,378.1 857.6,378.1 859.3,378.1 860.9,378.1 866.5,378.0 866.5,379.2 866.5,380.4 866.5,381.6 866.5,382.8 866.5,384.0 866.5,385.2 866.5,386.4 866.5,387.5 866.5,388.7 866.5,389.9 866.5,391.1" fill="none" stroke="#2b2a27" stroke-width="1.5" stroke-linejoin="round" />
+<line x1="866.5" y1="364.6" x2="866.5" y2="378.0" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="857.7" y1="364.7" x2="857.6" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="852.9" y1="364.7" x2="852.8" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="849.3" y1="364.8" x2="849.3" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="844.2" y1="364.8" x2="844.1" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="839.5" y1="364.8" x2="839.4" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="834.3" y1="364.8" x2="834.2" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="830.9" y1="364.9" x2="830.9" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="826.1" y1="364.9" x2="826.1" y2="378.3" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="820.0" y1="364.9" x2="820.0" y2="378.3" stroke="#d9782d" stroke-width="0.7"/>
+<polyline points="916.7,351.2 916.7,352.4 916.7,353.6 916.7,354.9 916.7,356.1 916.7,357.3 916.7,358.5 916.7,359.8 916.7,361.0 916.7,362.2 916.7,363.4 916.7,364.6 922.2,364.7 923.9,364.7 925.5,364.7 927.2,364.7 928.7,364.7 930.3,364.7 932.2,364.7 933.9,364.8 935.4,364.8 937.2,364.8 939.0,364.8 940.6,364.8 942.2,364.8 943.7,364.8 945.6,364.8 947.5,364.8 949.0,364.8 950.5,364.8 952.3,364.9 953.8,364.9 955.3,364.9 957.1,364.9 958.8,364.9 960.6,364.9 963.2,364.9 963.2,366.6 963.2,368.3 963.2,369.9 963.2,371.6 963.2,373.3 963.2,375.0 963.2,376.6 963.2,378.3 960.6,378.3 958.9,378.3 957.1,378.3 955.4,378.3 953.9,378.3 952.4,378.2 950.6,378.2 949.0,378.2 947.6,378.2 945.7,378.2 943.8,378.2 942.3,378.2 940.7,378.2 939.1,378.2 937.3,378.2 935.4,378.1 933.9,378.1 932.2,378.1 930.4,378.1 928.8,378.1 927.3,378.1 925.6,378.1 923.9,378.1 922.3,378.1 916.7,378.0 916.7,379.2 916.7,380.4 916.7,381.6 916.7,382.8 916.7,384.0 916.7,385.2 916.7,386.4 916.7,387.5 916.7,388.7 916.7,389.9 916.7,391.1" fill="none" stroke="#2b2a27" stroke-width="1.5" stroke-linejoin="round" />
+<line x1="916.7" y1="364.6" x2="916.7" y2="378.0" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="925.5" y1="364.7" x2="925.6" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="930.3" y1="364.7" x2="930.4" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="933.9" y1="364.8" x2="933.9" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="939.0" y1="364.8" x2="939.1" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="943.7" y1="364.8" x2="943.8" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="949.0" y1="364.8" x2="949.0" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="952.3" y1="364.9" x2="952.4" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="957.1" y1="364.9" x2="957.1" y2="378.3" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="963.2" y1="364.9" x2="963.2" y2="378.3" stroke="#d9782d" stroke-width="0.7"/>
+<polyline points="916.7,232.8 916.7,234.0 916.7,235.2 916.7,236.4 916.7,237.6 916.7,238.7 916.7,239.9 916.7,241.1 916.7,242.3 916.7,243.5 916.7,244.6 916.7,245.8 922.6,245.8 924.2,245.9 925.6,245.9 927.4,245.9 929.0,245.9 930.6,245.9 932.2,245.9 934.1,245.9 936.0,245.9 937.6,245.9 939.1,245.9 940.9,246.0 942.4,246.0 944.1,246.0 945.6,246.0 947.6,246.0 949.2,246.0 950.8,246.0 952.4,246.0 954.0,246.0 955.7,246.0 957.2,246.1 958.9,246.1 961.8,246.1 961.8,247.8 961.8,249.4 961.8,251.1 961.8,252.8 961.9,254.4 961.9,256.1 961.9,257.8 961.9,259.5 958.9,259.4 957.3,259.4 955.8,259.4 954.1,259.4 952.4,259.4 950.8,259.4 949.3,259.4 947.7,259.4 945.7,259.4 944.1,259.4 942.5,259.4 940.9,259.3 939.2,259.3 937.7,259.3 936.1,259.3 934.1,259.3 932.2,259.3 930.7,259.3 929.0,259.3 927.5,259.3 925.7,259.3 924.2,259.2 922.7,259.2 916.7,259.2 916.7,260.3 916.7,261.5 916.7,262.6 916.7,263.8 916.7,264.9 916.7,266.1 916.7,267.2 916.7,268.4 916.7,269.5 916.7,270.7 916.7,271.8" fill="none" stroke="#2f7486" stroke-width="1.5" stroke-linejoin="round" />
+<line x1="916.7" y1="245.8" x2="916.7" y2="259.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="925.6" y1="245.9" x2="925.7" y2="259.3" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="929.0" y1="245.9" x2="929.0" y2="259.3" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="934.1" y1="245.9" x2="934.1" y2="259.3" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="939.1" y1="245.9" x2="939.2" y2="259.3" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="942.4" y1="246.0" x2="942.5" y2="259.4" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="947.6" y1="246.0" x2="947.7" y2="259.4" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="952.4" y1="246.0" x2="952.4" y2="259.4" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="955.7" y1="246.0" x2="955.8" y2="259.4" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="961.8" y1="246.1" x2="961.9" y2="259.5" stroke="#d9782d" stroke-width="0.7"/>
+<text x="864.5" y="256.7" font-family="Noto Sans CJK SC, sans-serif" font-size="9" fill="#8a877f" text-anchor="end" font-weight="400">布贴立杆</text>
+<rect x="832.7" y="344.3" width="16.4" height="20.5" fill="#ffffff" stroke="#2b2a27" stroke-width="1" opacity="1"/>
+<rect x="925.1" y="325.8" width="32.8" height="39.0" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="921.0" y="312.5" width="20.5" height="17.4" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="935.0" y="305.9" width="4.5" height="6.6" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="922.7" y="305.9" width="4.5" height="6.6" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="955.9" y="358.6" width="16.4" height="6.1" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="918.8" y="221.3" width="41.0" height="24.6" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="929.0" y="204.9" width="20.5" height="16.4" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<line x1="965.3" y1="364.8" x2="979.3" y2="364.8" stroke="#8a877f" stroke-width="0.8" stroke-dasharray="2 2"/>
+<text x="982.3" y="368.8" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#8a877f" text-anchor="start" font-weight="400">茶几 0.50</text>
+<line x1="963.9" y1="245.9" x2="977.9" y2="245.9" stroke="#2f7486" stroke-width="0.8" stroke-dasharray="2 2"/>
+<text x="980.9" y="249.9" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#2f7486" text-anchor="start" font-weight="400">上台 1.08</text>
+<text x="581.0" y="493.3" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#2f7486" text-anchor="start" font-weight="400">上台挑出 0.22 m（下台 0.23）</text>
+<text x="581.0" y="509.3" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#2b2a27" text-anchor="start" font-weight="400">檐下净空 0.51 m · 上台顶 1.08 m</text>
+<text x="581.0" y="525.3" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#2b2a27" text-anchor="start" font-weight="400">人（躯干）到上台中段 1.21 m</text>
+<text x="581.0" y="541.3" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#8a877f" text-anchor="start" font-weight="400">键 20/20 · 成形途中最大自交环 2 节</text>
+<text x="1126.0" y="150.0" font-family="Noto Sans CJK SC, sans-serif" font-size="13" fill="#2f7486" text-anchor="start" font-weight="600">上台 k24</text>
+<line x1="1160.0" y1="467.3" x2="1522.7" y2="467.3" stroke="#2b2a27" stroke-width="1.2"/>
+<rect x="1164.1" y="379.1" width="123.0" height="88.2" fill="#e6dfd2" stroke="#8a877f" stroke-width="1" opacity="1"/>
+<rect x="1164.1" y="293.0" width="24.6" height="174.3" fill="#e6dfd2" stroke="#8a877f" stroke-width="1" opacity="1"/>
+<rect x="1194.8" y="350.4" width="88.2" height="28.7" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="1274.8" y="375.0" width="24.6" height="80.0" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="1274.8" y="454.9" width="41.0" height="12.3" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="1188.7" y="252.0" width="45.1" height="102.5" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="1192.8" y="202.8" width="39.0" height="45.1" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="1225.6" y="323.8" width="61.5" height="16.4" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<line x1="1436.6" y1="170.0" x2="1436.6" y2="384.4" stroke="#8a877f" stroke-width="1" stroke-dasharray="5 3"/>
+<line x1="1411.5" y1="170.0" x2="1411.5" y2="378.3" stroke="#2b2a27" stroke-width="1.1"/>
+<line x1="1461.7" y1="170.0" x2="1461.7" y2="378.3" stroke="#2b2a27" stroke-width="1.1"/>
+<polyline points="1411.5,351.2 1411.5,352.4 1411.5,353.6 1411.5,354.9 1411.5,356.1 1411.5,357.3 1411.5,358.5 1411.5,359.8 1411.5,361.0 1411.5,362.2 1411.5,363.4 1411.5,364.6 1406.0,364.7 1404.4,364.7 1402.7,364.7 1401.0,364.7 1399.5,364.7 1397.9,364.7 1396.1,364.7 1394.3,364.8 1392.9,364.8 1391.0,364.8 1389.2,364.8 1387.6,364.8 1386.0,364.8 1384.5,364.8 1382.6,364.8 1380.7,364.8 1379.3,364.8 1377.7,364.8 1375.9,364.9 1374.4,364.9 1372.9,364.9 1371.1,364.9 1369.4,364.9 1367.6,364.9 1365.0,364.9 1365.0,366.6 1365.0,368.3 1365.0,369.9 1365.0,371.6 1365.0,373.3 1365.0,375.0 1365.0,376.6 1365.0,378.3 1367.6,378.3 1369.4,378.3 1371.1,378.3 1372.8,378.3 1374.3,378.3 1375.9,378.2 1377.6,378.2 1379.2,378.2 1380.7,378.2 1382.5,378.2 1384.4,378.2 1385.9,378.2 1387.5,378.2 1389.1,378.2 1390.9,378.2 1392.8,378.1 1394.3,378.1 1396.0,378.1 1397.8,378.1 1399.4,378.1 1400.9,378.1 1402.6,378.1 1404.3,378.1 1405.9,378.1 1411.5,378.0 1411.5,379.2 1411.5,380.4 1411.5,381.6 1411.5,382.8 1411.5,384.0 1411.5,385.2 1411.5,386.4 1411.5,387.5 1411.5,388.7 1411.5,389.9 1411.5,391.1" fill="none" stroke="#2b2a27" stroke-width="1.5" stroke-linejoin="round" />
+<line x1="1411.5" y1="364.6" x2="1411.5" y2="378.0" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1402.7" y1="364.7" x2="1402.6" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1397.9" y1="364.7" x2="1397.8" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1394.3" y1="364.8" x2="1394.3" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1389.2" y1="364.8" x2="1389.1" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1384.5" y1="364.8" x2="1384.4" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1379.3" y1="364.8" x2="1379.2" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1375.9" y1="364.9" x2="1375.9" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1371.1" y1="364.9" x2="1371.1" y2="378.3" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1365.0" y1="364.9" x2="1365.0" y2="378.3" stroke="#d9782d" stroke-width="0.7"/>
+<polyline points="1461.7,351.2 1461.7,352.4 1461.7,353.6 1461.7,354.9 1461.7,356.1 1461.7,357.3 1461.7,358.5 1461.7,359.8 1461.7,361.0 1461.7,362.2 1461.7,363.4 1461.7,364.6 1467.2,364.7 1468.9,364.7 1470.5,364.7 1472.2,364.7 1473.7,364.7 1475.3,364.7 1477.2,364.7 1478.9,364.8 1480.4,364.8 1482.2,364.8 1484.0,364.8 1485.6,364.8 1487.2,364.8 1488.7,364.8 1490.6,364.8 1492.5,364.8 1494.0,364.8 1495.5,364.8 1497.3,364.9 1498.8,364.9 1500.3,364.9 1502.1,364.9 1503.8,364.9 1505.6,364.9 1508.2,364.9 1508.2,366.6 1508.2,368.3 1508.2,369.9 1508.2,371.6 1508.2,373.3 1508.2,375.0 1508.2,376.6 1508.2,378.3 1505.6,378.3 1503.9,378.3 1502.1,378.3 1500.4,378.3 1498.9,378.3 1497.4,378.2 1495.6,378.2 1494.0,378.2 1492.6,378.2 1490.7,378.2 1488.8,378.2 1487.3,378.2 1485.7,378.2 1484.1,378.2 1482.3,378.2 1480.4,378.1 1478.9,378.1 1477.2,378.1 1475.4,378.1 1473.8,378.1 1472.3,378.1 1470.6,378.1 1468.9,378.1 1467.3,378.1 1461.7,378.0 1461.7,379.2 1461.7,380.4 1461.7,381.6 1461.7,382.8 1461.7,384.0 1461.7,385.2 1461.7,386.4 1461.7,387.5 1461.7,388.7 1461.7,389.9 1461.7,391.1" fill="none" stroke="#2b2a27" stroke-width="1.5" stroke-linejoin="round" />
+<line x1="1461.7" y1="364.6" x2="1461.7" y2="378.0" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1470.5" y1="364.7" x2="1470.6" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1475.3" y1="364.7" x2="1475.4" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1478.9" y1="364.8" x2="1478.9" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1484.0" y1="364.8" x2="1484.1" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1488.7" y1="364.8" x2="1488.8" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1494.0" y1="364.8" x2="1494.0" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1497.3" y1="364.9" x2="1497.4" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1502.1" y1="364.9" x2="1502.1" y2="378.3" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1508.2" y1="364.9" x2="1508.2" y2="378.3" stroke="#d9782d" stroke-width="0.7"/>
+<polyline points="1461.7,238.8 1461.7,239.9 1461.7,241.0 1461.7,242.1 1461.7,243.2 1461.7,244.3 1461.7,245.4 1461.7,246.5 1461.7,247.6 1461.7,248.7 1467.6,248.7 1469.1,248.7 1470.8,248.7 1472.4,248.8 1474.3,248.8 1475.9,248.8 1477.3,248.8 1479.3,248.8 1480.9,248.8 1482.5,248.8 1484.2,248.8 1485.9,248.8 1487.6,248.8 1489.0,248.8 1490.5,248.8 1492.7,248.8 1494.0,248.8 1495.9,248.8 1497.3,248.8 1500.1,248.8 1500.1,250.5 1500.1,252.2 1500.1,253.9 1500.1,255.5 1500.1,257.2 1500.1,258.9 1500.1,260.5 1500.1,262.2 1497.3,262.2 1495.9,262.2 1494.1,262.2 1492.7,262.2 1490.5,262.2 1489.1,262.2 1487.6,262.2 1486.0,262.2 1484.2,262.2 1482.5,262.2 1480.9,262.2 1479.4,262.2 1477.3,262.2 1475.9,262.1 1474.3,262.1 1472.4,262.1 1470.8,262.1 1469.1,262.1 1467.7,262.1 1461.7,262.1 1461.7,263.2 1461.7,264.3 1461.7,265.4 1461.7,266.5 1461.7,267.5 1461.7,268.6 1461.7,269.7 1461.7,270.8 1461.7,271.9" fill="none" stroke="#2f7486" stroke-width="1.5" stroke-linejoin="round" />
+<line x1="1461.7" y1="248.7" x2="1461.7" y2="262.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1469.1" y1="248.7" x2="1469.1" y2="262.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1472.4" y1="248.8" x2="1472.4" y2="262.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1477.3" y1="248.8" x2="1477.3" y2="262.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1480.9" y1="248.8" x2="1480.9" y2="262.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1484.2" y1="248.8" x2="1484.2" y2="262.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1487.6" y1="248.8" x2="1487.6" y2="262.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1492.7" y1="248.8" x2="1492.7" y2="262.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1495.9" y1="248.8" x2="1495.9" y2="262.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1500.1" y1="248.8" x2="1500.1" y2="262.2" stroke="#d9782d" stroke-width="0.7"/>
+<text x="1409.5" y="259.5" font-family="Noto Sans CJK SC, sans-serif" font-size="9" fill="#8a877f" text-anchor="end" font-weight="400">布贴立杆</text>
+<rect x="1377.7" y="344.3" width="16.4" height="20.5" fill="#ffffff" stroke="#2b2a27" stroke-width="1" opacity="1"/>
+<rect x="1466.4" y="325.8" width="32.8" height="39.0" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="1462.3" y="312.5" width="20.5" height="17.4" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="1476.2" y="305.9" width="4.5" height="6.6" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="1463.9" y="305.9" width="4.5" height="6.6" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="1497.2" y="358.6" width="16.4" height="6.1" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="1460.4" y="224.2" width="41.0" height="24.6" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="1470.6" y="207.8" width="20.5" height="16.4" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<line x1="1510.3" y1="364.8" x2="1524.3" y2="364.8" stroke="#8a877f" stroke-width="0.8" stroke-dasharray="2 2"/>
+<text x="1527.3" y="368.8" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#8a877f" text-anchor="start" font-weight="400">茶几 0.50</text>
+<line x1="1502.1" y1="248.8" x2="1516.1" y2="248.8" stroke="#2f7486" stroke-width="0.8" stroke-dasharray="2 2"/>
+<text x="1519.1" y="252.8" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#2f7486" text-anchor="start" font-weight="400">上台 1.07</text>
+<text x="1126.0" y="493.3" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#2f7486" text-anchor="start" font-weight="400">上台挑出 0.19 m（下台 0.23）</text>
+<text x="1126.0" y="509.3" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#2b2a27" text-anchor="start" font-weight="400">檐下净空 0.50 m · 上台顶 1.07 m</text>
+<text x="1126.0" y="525.3" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#2b2a27" text-anchor="start" font-weight="400">人（躯干）到上台中段 1.20 m</text>
+<text x="1126.0" y="541.3" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#8a877f" text-anchor="start" font-weight="400">键 20/20 · 成形途中最大自交环 2 节</text>
+<text x="1671.0" y="150.0" font-family="Noto Sans CJK SC, sans-serif" font-size="13" fill="#2f7486" text-anchor="start" font-weight="600">上台 k20</text>
+<line x1="1705.0" y1="467.3" x2="2067.7" y2="467.3" stroke="#2b2a27" stroke-width="1.2"/>
+<rect x="1709.1" y="379.1" width="123.0" height="88.2" fill="#e6dfd2" stroke="#8a877f" stroke-width="1" opacity="1"/>
+<rect x="1709.1" y="293.0" width="24.6" height="174.3" fill="#e6dfd2" stroke="#8a877f" stroke-width="1" opacity="1"/>
+<rect x="1739.8" y="350.4" width="88.2" height="28.7" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="1819.8" y="375.0" width="24.6" height="80.0" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="1819.8" y="454.9" width="41.0" height="12.3" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="1733.7" y="252.0" width="45.1" height="102.5" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="1737.8" y="202.8" width="39.0" height="45.1" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="1770.6" y="323.8" width="61.5" height="16.4" fill="#7d6f86" stroke="none" stroke-width="0" opacity="1"/>
+<line x1="1981.6" y1="170.0" x2="1981.6" y2="384.4" stroke="#8a877f" stroke-width="1" stroke-dasharray="5 3"/>
+<line x1="1956.5" y1="170.0" x2="1956.5" y2="378.3" stroke="#2b2a27" stroke-width="1.1"/>
+<line x1="2006.7" y1="170.0" x2="2006.7" y2="378.3" stroke="#2b2a27" stroke-width="1.1"/>
+<polyline points="1956.5,351.2 1956.5,352.4 1956.5,353.6 1956.5,354.9 1956.5,356.1 1956.5,357.3 1956.5,358.5 1956.5,359.8 1956.5,361.0 1956.5,362.2 1956.5,363.4 1956.5,364.6 1951.0,364.7 1949.4,364.7 1947.7,364.7 1946.0,364.7 1944.5,364.7 1942.9,364.7 1941.1,364.7 1939.3,364.8 1937.9,364.8 1936.0,364.8 1934.2,364.8 1932.6,364.8 1931.0,364.8 1929.5,364.8 1927.6,364.8 1925.7,364.8 1924.3,364.8 1922.7,364.8 1920.9,364.9 1919.4,364.9 1917.9,364.9 1916.1,364.9 1914.4,364.9 1912.6,364.9 1910.0,364.9 1910.0,366.6 1910.0,368.3 1910.0,369.9 1910.0,371.6 1910.0,373.3 1910.0,375.0 1910.0,376.6 1910.0,378.3 1912.6,378.3 1914.4,378.3 1916.1,378.3 1917.8,378.3 1919.3,378.3 1920.9,378.2 1922.6,378.2 1924.2,378.2 1925.7,378.2 1927.5,378.2 1929.4,378.2 1930.9,378.2 1932.5,378.2 1934.1,378.2 1935.9,378.2 1937.8,378.1 1939.3,378.1 1941.0,378.1 1942.8,378.1 1944.4,378.1 1945.9,378.1 1947.6,378.1 1949.3,378.1 1950.9,378.1 1956.5,378.0 1956.5,379.2 1956.5,380.4 1956.5,381.6 1956.5,382.8 1956.5,384.0 1956.5,385.2 1956.5,386.4 1956.5,387.5 1956.5,388.7 1956.5,389.9 1956.5,391.1" fill="none" stroke="#2b2a27" stroke-width="1.5" stroke-linejoin="round" />
+<line x1="1956.5" y1="364.6" x2="1956.5" y2="378.0" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1947.7" y1="364.7" x2="1947.6" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1942.9" y1="364.7" x2="1942.8" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1939.3" y1="364.8" x2="1939.3" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1934.2" y1="364.8" x2="1934.1" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1929.5" y1="364.8" x2="1929.4" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1924.3" y1="364.8" x2="1924.2" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1920.9" y1="364.9" x2="1920.9" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1916.1" y1="364.9" x2="1916.1" y2="378.3" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="1910.0" y1="364.9" x2="1910.0" y2="378.3" stroke="#d9782d" stroke-width="0.7"/>
+<polyline points="2006.7,351.2 2006.7,352.4 2006.7,353.6 2006.7,354.9 2006.7,356.1 2006.7,357.3 2006.7,358.5 2006.7,359.8 2006.7,361.0 2006.7,362.2 2006.7,363.4 2006.7,364.6 2012.2,364.7 2013.9,364.7 2015.5,364.7 2017.2,364.7 2018.7,364.7 2020.3,364.7 2022.2,364.7 2023.9,364.8 2025.4,364.8 2027.2,364.8 2029.0,364.8 2030.6,364.8 2032.2,364.8 2033.7,364.8 2035.6,364.8 2037.5,364.8 2039.0,364.8 2040.5,364.8 2042.3,364.9 2043.8,364.9 2045.3,364.9 2047.1,364.9 2048.8,364.9 2050.6,364.9 2053.2,364.9 2053.2,366.6 2053.2,368.3 2053.2,369.9 2053.2,371.6 2053.2,373.3 2053.2,375.0 2053.2,376.6 2053.2,378.3 2050.6,378.3 2048.9,378.3 2047.1,378.3 2045.4,378.3 2043.9,378.3 2042.4,378.2 2040.6,378.2 2039.0,378.2 2037.6,378.2 2035.7,378.2 2033.8,378.2 2032.3,378.2 2030.7,378.2 2029.1,378.2 2027.3,378.2 2025.4,378.1 2023.9,378.1 2022.2,378.1 2020.4,378.1 2018.8,378.1 2017.3,378.1 2015.6,378.1 2013.9,378.1 2012.3,378.1 2006.7,378.0 2006.7,379.2 2006.7,380.4 2006.7,381.6 2006.7,382.8 2006.7,384.0 2006.7,385.2 2006.7,386.4 2006.7,387.5 2006.7,388.7 2006.7,389.9 2006.7,391.1" fill="none" stroke="#2b2a27" stroke-width="1.5" stroke-linejoin="round" />
+<line x1="2006.7" y1="364.6" x2="2006.7" y2="378.0" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="2015.5" y1="364.7" x2="2015.6" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="2020.3" y1="364.7" x2="2020.4" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="2023.9" y1="364.8" x2="2023.9" y2="378.1" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="2029.0" y1="364.8" x2="2029.1" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="2033.7" y1="364.8" x2="2033.8" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="2039.0" y1="364.8" x2="2039.0" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="2042.3" y1="364.9" x2="2042.4" y2="378.2" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="2047.1" y1="364.9" x2="2047.1" y2="378.3" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="2053.2" y1="364.9" x2="2053.2" y2="378.3" stroke="#d9782d" stroke-width="0.7"/>
+<polyline points="2006.7,243.6 2006.7,244.6 2006.7,245.5 2006.7,246.5 2006.7,247.4 2006.7,248.4 2006.7,249.3 2006.7,250.3 2006.7,251.2 2013.2,251.2 2014.7,251.2 2016.4,251.2 2018.0,251.2 2019.4,251.3 2021.3,251.3 2023.0,251.3 2024.8,251.3 2026.4,251.3 2028.0,251.3 2029.7,251.3 2031.4,251.3 2032.6,251.3 2034.6,251.3 2036.3,251.3 2039.0,251.3 2039.0,253.0 2039.0,254.7 2039.0,256.3 2039.0,258.0 2039.0,259.7 2039.0,261.3 2039.0,263.0 2039.0,264.7 2036.3,264.7 2034.7,264.7 2032.6,264.7 2031.4,264.7 2029.7,264.7 2028.0,264.7 2026.4,264.7 2024.9,264.7 2023.0,264.6 2021.3,264.6 2019.4,264.6 2018.1,264.6 2016.4,264.6 2014.7,264.6 2013.2,264.6 2006.7,264.6 2006.7,265.5 2006.7,266.5 2006.7,267.4 2006.7,268.3 2006.7,269.3 2006.7,270.2 2006.7,271.1 2006.7,272.0" fill="none" stroke="#2f7486" stroke-width="1.5" stroke-linejoin="round" />
+<line x1="2006.7" y1="251.2" x2="2006.7" y2="264.6" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="2014.7" y1="251.2" x2="2014.7" y2="264.6" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="2018.0" y1="251.2" x2="2018.1" y2="264.6" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="2019.4" y1="251.3" x2="2019.4" y2="264.6" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="2023.0" y1="251.3" x2="2023.0" y2="264.6" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="2026.4" y1="251.3" x2="2026.4" y2="264.7" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="2029.7" y1="251.3" x2="2029.7" y2="264.7" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="2031.4" y1="251.3" x2="2031.4" y2="264.7" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="2034.6" y1="251.3" x2="2034.7" y2="264.7" stroke="#d9782d" stroke-width="0.7"/>
+<line x1="2039.0" y1="251.3" x2="2039.0" y2="264.7" stroke="#d9782d" stroke-width="0.7"/>
+<text x="1954.5" y="262.0" font-family="Noto Sans CJK SC, sans-serif" font-size="9" fill="#8a877f" text-anchor="end" font-weight="400">布贴立杆</text>
+<rect x="1922.7" y="344.3" width="16.4" height="20.5" fill="#ffffff" stroke="#2b2a27" stroke-width="1" opacity="1"/>
+<rect x="2008.1" y="325.8" width="32.8" height="39.0" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="2004.0" y="312.5" width="20.5" height="17.4" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="2017.9" y="305.9" width="4.5" height="6.6" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="2005.6" y="305.9" width="4.5" height="6.6" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="2038.8" y="358.6" width="16.4" height="6.1" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="2002.4" y="226.6" width="41.0" height="24.6" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<rect x="2012.6" y="210.2" width="20.5" height="16.4" fill="#56684a" stroke="none" stroke-width="0" opacity="1"/>
+<line x1="2055.3" y1="364.8" x2="2069.3" y2="364.8" stroke="#8a877f" stroke-width="0.8" stroke-dasharray="2 2"/>
+<text x="2072.3" y="368.8" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#8a877f" text-anchor="start" font-weight="400">茶几 0.50</text>
+<line x1="2041.1" y1="251.2" x2="2055.1" y2="251.2" stroke="#2f7486" stroke-width="0.8" stroke-dasharray="2 2"/>
+<text x="2058.1" y="255.2" font-family="Noto Sans CJK SC, sans-serif" font-size="10" fill="#2f7486" text-anchor="start" font-weight="400">上台 1.05</text>
+<text x="1671.0" y="493.3" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#2f7486" text-anchor="start" font-weight="400">上台挑出 0.16 m（下台 0.23）</text>
+<text x="1671.0" y="509.3" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#2b2a27" text-anchor="start" font-weight="400">檐下净空 0.49 m · 上台顶 1.05 m</text>
+<text x="1671.0" y="525.3" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#2b2a27" text-anchor="start" font-weight="400">人（躯干）到上台中段 1.18 m</text>
+<text x="1671.0" y="541.3" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#8a877f" text-anchor="start" font-weight="400">键 20/20 · 成形途中最大自交环 2 节</text>
+<text x="36.0" y="579.3" font-family="Noto Sans CJK SC, sans-serif" font-size="14" fill="#2b2a27" text-anchor="start" font-weight="600">B　俯视（座位在左；方台按面 / 边 / 角三档挑出凑成方，上台二十条带同一个 k 时近圆）</text>
+<polygon points="421.0,734.7 475.4,735.3 475.4,760.8 419.6,743.3" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="419.5,743.8 475.4,762.6 475.4,794.1 415.5,751.5" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="415.2,752.0 475.4,796.6 453.8,818.3 409.1,758.1" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="408.6,758.4 451.2,818.3 419.8,818.3 401.0,762.3" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="400.4,762.5 417.9,818.3 392.4,818.3 391.9,763.8" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="391.3,763.8 390.8,818.3 365.3,818.3 382.8,762.5" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="382.2,762.3 363.4,818.3 332.0,818.3 374.6,758.4" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="374.1,758.1 329.4,818.3 307.8,796.6 368.0,752.0" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="367.7,751.5 307.8,794.1 307.8,762.6 363.7,743.8" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="363.6,743.3 307.8,760.8 307.8,735.3 362.2,734.7" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="362.2,734.2 307.8,733.6 307.8,708.1 363.6,725.6" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="363.7,725.1 307.8,706.3 307.8,674.8 367.7,717.4" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="368.0,716.9 307.8,672.3 329.4,650.6 374.1,710.8" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="374.6,710.5 332.0,650.6 363.4,650.6 382.2,706.6" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="382.8,706.4 365.3,650.6 390.8,650.6 391.3,705.1" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="391.9,705.1 392.4,650.6 417.9,650.6 400.4,706.4" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="401.0,706.6 419.8,650.6 451.2,650.6 408.6,710.5" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="409.1,710.8 453.8,650.6 475.4,672.3 415.2,716.9" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="415.5,717.4 475.4,674.8 475.4,706.3 419.5,725.1" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="419.6,725.6 475.4,708.1 475.4,733.6 421.0,734.2" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="421.0,734.7 475.4,735.3 475.4,760.8 419.6,743.3" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="419.5,743.8 475.4,762.6 475.4,794.1 415.5,751.5" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="415.2,752.0 475.4,796.6 453.8,818.3 409.1,758.1" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="408.6,758.4 451.2,818.3 419.8,818.3 401.0,762.3" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="400.4,762.5 417.9,818.3 392.4,818.3 391.9,763.8" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="391.9,705.1 392.4,650.6 417.9,650.6 400.4,706.4" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="401.0,706.6 419.8,650.6 451.2,650.6 408.6,710.5" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="409.1,710.8 453.8,650.6 475.4,672.3 415.2,716.9" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="415.5,717.4 475.4,674.8 475.4,706.3 419.5,725.1" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="419.6,725.6 475.4,708.1 475.4,733.6 421.0,734.2" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<circle cx="391.6" cy="734.5" r="29.4" fill="#f6f3ec" stroke="#8a877f" stroke-width="0.8"/>
+<rect x="72.6" y="650.5" width="144.0" height="168.0" fill="#e6dfd2" stroke="#8a877f" stroke-width="1" opacity="1"/>
+<rect x="108.6" y="686.5" width="100.8" height="96.0" fill="#7d6f86" stroke="none" stroke-width="0" opacity="0.85"/>
+<text x="144.6" y="738.5" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#fff" text-anchor="middle" font-weight="400">人</text>
+<circle cx="332.3" cy="753.7" r="9.6" fill="#fff" stroke="#2b2a27" stroke-width="1"/>
+<polyline points="427.2,690.4 431.9,694.7 436.1,699.4 439.7,704.6 442.7,710.1 445.1,715.9 446.8,722.0 447.9,728.2 448.2,734.5 447.9,740.7 446.8,746.9 445.1,753.0 442.7,758.8 439.7,764.3 436.1,769.5 431.9,774.2 427.2,778.5" fill="none" stroke="#56684a" stroke-width="48" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.85"/>
+<text x="36.0" y="871.7" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#8a877f" text-anchor="start" font-weight="400">上台外缘离立杆 0.49 m（下台方的半边 0.35 m）</text>
+<text x="36.0" y="887.7" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#8a877f" text-anchor="start" font-weight="400">上台是绕立杆的半圈，能用的宽度 = 挑出 0.23 m（趴着的猫身宽约 0.20 m，蜷成一团约 0.35 m）</text>
+<text x="36.0" y="903.7" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#8a877f" text-anchor="start" font-weight="400">与现行两层台相同：方的半圈，角上最宽</text>
+<polygon points="966.0,734.7 1020.4,735.3 1020.4,760.8 964.6,743.3" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="964.5,743.8 1020.4,762.6 1020.4,794.1 960.5,751.5" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="960.2,752.0 1020.4,796.6 998.8,818.3 954.1,758.1" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="953.6,758.4 996.2,818.3 964.8,818.3 946.0,762.3" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="945.4,762.5 962.9,818.3 937.4,818.3 936.9,763.8" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="936.3,763.8 935.8,818.3 910.3,818.3 927.8,762.5" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="927.2,762.3 908.4,818.3 877.0,818.3 919.6,758.4" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="919.1,758.1 874.4,818.3 852.8,796.6 913.0,752.0" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="912.7,751.5 852.8,794.1 852.8,762.6 908.7,743.8" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="908.6,743.3 852.8,760.8 852.8,735.3 907.2,734.7" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="907.2,734.2 852.8,733.6 852.8,708.1 908.6,725.6" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="908.7,725.1 852.8,706.3 852.8,674.8 912.7,717.4" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="913.0,716.9 852.8,672.3 874.4,650.6 919.1,710.8" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="919.6,710.5 877.0,650.6 908.4,650.6 927.2,706.6" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="927.8,706.4 910.3,650.6 935.8,650.6 936.3,705.1" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="936.9,705.1 937.4,650.6 962.9,650.6 945.4,706.4" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="946.0,706.6 964.8,650.6 996.2,650.6 953.6,710.5" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="954.1,710.8 998.8,650.6 1020.4,672.3 960.2,716.9" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="960.5,717.4 1020.4,674.8 1020.4,706.3 964.5,725.1" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="964.6,725.6 1020.4,708.1 1020.4,733.6 966.0,734.2" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="966.0,734.7 1018.9,735.3 1015.1,759.1 964.6,743.3" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="964.5,743.8 1014.6,760.6 1003.6,782.1 960.5,751.5" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="960.2,752.0 1002.7,783.5 985.6,800.5 954.1,758.1" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="953.6,758.4 984.3,801.5 962.8,812.4 946.0,762.3" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="945.4,762.5 961.2,812.9 937.4,816.7 936.9,763.8" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="936.9,705.1 937.4,652.2 961.2,656.0 945.4,706.4" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="946.0,706.6 962.8,656.5 984.3,667.4 953.6,710.5" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="954.1,710.8 985.6,668.4 1002.7,685.4 960.2,716.9" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="960.5,717.4 1003.6,686.8 1014.6,708.3 964.5,725.1" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="964.6,725.6 1015.1,709.8 1018.9,733.6 966.0,734.2" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<circle cx="936.6" cy="734.5" r="29.4" fill="#f6f3ec" stroke="#8a877f" stroke-width="0.8"/>
+<rect x="617.6" y="650.5" width="144.0" height="168.0" fill="#e6dfd2" stroke="#8a877f" stroke-width="1" opacity="1"/>
+<rect x="653.6" y="686.5" width="100.8" height="96.0" fill="#7d6f86" stroke="none" stroke-width="0" opacity="0.85"/>
+<text x="689.6" y="738.5" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#fff" text-anchor="middle" font-weight="400">人</text>
+<circle cx="877.3" cy="753.7" r="9.6" fill="#fff" stroke="#2b2a27" stroke-width="1"/>
+<polyline points="971.2,690.6 975.9,694.8 980.1,699.5 983.8,704.6 986.8,710.1 989.3,715.9 991.0,722.0 992.1,728.2 992.4,734.5 992.1,740.7 991.0,746.9 989.3,753.0 986.8,758.8 983.8,764.3 980.1,769.4 975.9,774.1 971.2,778.3" fill="none" stroke="#56684a" stroke-width="48" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.85"/>
+<text x="581.0" y="871.7" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#2f7486" text-anchor="start" font-weight="400">上台外缘离立杆 0.34 m（下台方的半边 0.35 m）</text>
+<text x="581.0" y="887.7" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#8a877f" text-anchor="start" font-weight="400">上台是绕立杆的半圈，能用的宽度 = 挑出 0.22 m（趴着的猫身宽约 0.20 m，蜷成一团约 0.35 m）</text>
+<text x="581.0" y="903.7" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#8a877f" text-anchor="start" font-weight="400">近圆的半圈，比方的少了四个角</text>
+<polygon points="1511.0,734.7 1565.4,735.3 1565.4,760.8 1509.6,743.3" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1509.5,743.8 1565.4,762.6 1565.4,794.1 1505.5,751.5" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1505.2,752.0 1565.4,796.6 1543.8,818.3 1499.1,758.1" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1498.6,758.4 1541.2,818.3 1509.8,818.3 1491.0,762.3" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1490.4,762.5 1507.9,818.3 1482.4,818.3 1481.9,763.8" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1481.3,763.8 1480.8,818.3 1455.3,818.3 1472.8,762.5" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1472.2,762.3 1453.4,818.3 1422.0,818.3 1464.6,758.4" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1464.1,758.1 1419.4,818.3 1397.8,796.6 1458.0,752.0" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1457.7,751.5 1397.8,794.1 1397.8,762.6 1453.7,743.8" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1453.6,743.3 1397.8,760.8 1397.8,735.3 1452.2,734.7" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1452.2,734.2 1397.8,733.6 1397.8,708.1 1453.6,725.6" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1453.7,725.1 1397.8,706.3 1397.8,674.8 1457.7,717.4" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1458.0,716.9 1397.8,672.3 1419.4,650.6 1464.1,710.8" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1464.6,710.5 1422.0,650.6 1453.4,650.6 1472.2,706.6" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1472.8,706.4 1455.3,650.6 1480.8,650.6 1481.3,705.1" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1481.9,705.1 1482.4,650.6 1507.9,650.6 1490.4,706.4" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1491.0,706.6 1509.8,650.6 1541.2,650.6 1498.6,710.5" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1499.1,710.8 1543.8,650.6 1565.4,672.3 1505.2,716.9" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1505.5,717.4 1565.4,674.8 1565.4,706.3 1509.5,725.1" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1509.6,725.6 1565.4,708.1 1565.4,733.6 1511.0,734.2" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1511.0,734.7 1555.9,735.2 1552.5,756.7 1509.6,743.3" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="1509.5,743.8 1552.0,758.1 1542.1,777.5 1505.5,751.5" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="1505.2,752.0 1541.3,778.7 1525.9,794.1 1499.1,758.1" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="1498.6,758.4 1524.7,795.0 1505.3,804.9 1491.0,762.3" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="1490.4,762.5 1503.8,805.3 1482.3,808.7 1481.9,763.8" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="1481.9,705.1 1482.3,660.2 1503.8,663.6 1490.4,706.4" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="1491.0,706.6 1505.3,664.0 1524.7,673.9 1498.6,710.5" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="1499.1,710.8 1525.9,674.8 1541.3,690.2 1505.2,716.9" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="1505.5,717.4 1542.1,691.4 1552.0,710.8 1509.5,725.1" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="1509.6,725.6 1552.5,712.2 1555.9,733.7 1511.0,734.2" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<circle cx="1481.6" cy="734.5" r="29.4" fill="#f6f3ec" stroke="#8a877f" stroke-width="0.8"/>
+<rect x="1162.6" y="650.5" width="144.0" height="168.0" fill="#e6dfd2" stroke="#8a877f" stroke-width="1" opacity="1"/>
+<rect x="1198.6" y="686.5" width="100.8" height="96.0" fill="#7d6f86" stroke="none" stroke-width="0" opacity="0.85"/>
+<text x="1234.6" y="738.5" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#fff" text-anchor="middle" font-weight="400">人</text>
+<circle cx="1422.3" cy="753.7" r="9.6" fill="#fff" stroke="#2b2a27" stroke-width="1"/>
+<polyline points="1510.8,691.6 1515.8,695.5 1520.3,699.9 1524.2,704.9 1527.4,710.2 1530.0,716.0 1531.9,722.0 1533.1,728.2 1533.4,734.5 1533.1,740.7 1531.9,746.9 1530.0,752.9 1527.4,758.7 1524.2,764.0 1520.3,769.0 1515.8,773.4 1510.8,777.3" fill="none" stroke="#56684a" stroke-width="48" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.85"/>
+<text x="1126.0" y="871.7" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#2f7486" text-anchor="start" font-weight="400">上台外缘离立杆 0.31 m（下台方的半边 0.35 m）</text>
+<text x="1126.0" y="887.7" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#d9782d" text-anchor="start" font-weight="400">上台是绕立杆的半圈，能用的宽度 = 挑出 0.19 m（趴着的猫身宽约 0.20 m，蜷成一团约 0.35 m）</text>
+<text x="1126.0" y="903.7" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#d9782d" text-anchor="start" font-weight="400">比猫身还窄，只能顺着趴，蜷不下</text>
+<polygon points="2056.0,734.7 2110.4,735.3 2110.4,760.8 2054.6,743.3" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="2054.5,743.8 2110.4,762.6 2110.4,794.1 2050.5,751.5" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="2050.2,752.0 2110.4,796.6 2088.8,818.3 2044.1,758.1" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="2043.6,758.4 2086.2,818.3 2054.8,818.3 2036.0,762.3" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="2035.4,762.5 2052.9,818.3 2027.4,818.3 2026.9,763.8" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="2026.3,763.8 2025.8,818.3 2000.3,818.3 2017.8,762.5" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="2017.2,762.3 1998.4,818.3 1967.0,818.3 2009.6,758.4" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="2009.1,758.1 1964.4,818.3 1942.8,796.6 2003.0,752.0" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="2002.7,751.5 1942.8,794.1 1942.8,762.6 1998.7,743.8" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1998.6,743.3 1942.8,760.8 1942.8,735.3 1997.2,734.7" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1997.2,734.2 1942.8,733.6 1942.8,708.1 1998.6,725.6" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="1998.7,725.1 1942.8,706.3 1942.8,674.8 2002.7,717.4" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="2003.0,716.9 1942.8,672.3 1964.4,650.6 2009.1,710.8" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="2009.6,710.5 1967.0,650.6 1998.4,650.6 2017.2,706.6" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="2017.8,706.4 2000.3,650.6 2025.8,650.6 2026.3,705.1" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="2026.9,705.1 2027.4,650.6 2052.9,650.6 2035.4,706.4" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="2036.0,706.6 2054.8,650.6 2086.2,650.6 2043.6,710.5" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="2044.1,710.8 2088.8,650.6 2110.4,672.3 2050.2,716.9" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="2050.5,717.4 2110.4,674.8 2110.4,706.3 2054.5,725.1" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="2054.6,725.6 2110.4,708.1 2110.4,733.6 2056.0,734.2" fill="#ddd6c8" stroke="#8a877f" stroke-width="0.7" stroke-linejoin="round" fill-opacity="1"/>
+<polygon points="2056.0,734.7 2093.8,735.1 2090.7,754.6 2054.6,743.3" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="2054.5,743.8 2090.3,755.9 2081.4,773.4 2050.5,751.5" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="2050.2,752.0 2080.6,774.5 2066.6,788.4 2044.1,758.1" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="2043.6,758.4 2065.6,789.2 2048.0,798.1 2036.0,762.3" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="2035.4,762.5 2046.7,798.6 2027.3,801.6 2026.9,763.8" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="2026.9,705.1 2027.3,667.3 2046.7,670.3 2035.4,706.4" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="2036.0,706.6 2048.0,670.8 2065.6,679.7 2043.6,710.5" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="2044.1,710.8 2066.6,680.5 2080.6,694.4 2050.2,716.9" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="2050.5,717.4 2081.4,695.5 2090.3,713.0 2054.5,725.1" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<polygon points="2054.6,725.6 2090.7,714.3 2093.8,733.8 2056.0,734.2" fill="#2f7486" stroke="#2f7486" stroke-width="0.7" stroke-linejoin="round" fill-opacity="0.45"/>
+<circle cx="2026.6" cy="734.5" r="29.4" fill="#f6f3ec" stroke="#8a877f" stroke-width="0.8"/>
+<rect x="1707.6" y="650.5" width="144.0" height="168.0" fill="#e6dfd2" stroke="#8a877f" stroke-width="1" opacity="1"/>
+<rect x="1743.6" y="686.5" width="100.8" height="96.0" fill="#7d6f86" stroke="none" stroke-width="0" opacity="0.85"/>
+<text x="1779.6" y="738.5" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#fff" text-anchor="middle" font-weight="400">人</text>
+<circle cx="1967.3" cy="753.7" r="9.6" fill="#fff" stroke="#2b2a27" stroke-width="1"/>
+<polyline points="2050.9,692.7 2056.1,696.2 2060.8,700.4 2065.0,705.1 2068.5,710.4 2071.2,716.0 2073.3,722.0 2074.5,728.2 2074.9,734.5 2074.5,740.7 2073.3,746.9 2071.2,752.9 2068.5,758.5 2065.0,763.8 2060.8,768.5 2056.1,772.7 2050.9,776.2" fill="none" stroke="#56684a" stroke-width="48" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.85"/>
+<text x="1671.0" y="871.7" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#2f7486" text-anchor="start" font-weight="400">上台外缘离立杆 0.28 m（下台方的半边 0.35 m）</text>
+<text x="1671.0" y="887.7" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#d9782d" text-anchor="start" font-weight="400">上台是绕立杆的半圈，能用的宽度 = 挑出 0.16 m（趴着的猫身宽约 0.20 m，蜷成一团约 0.35 m）</text>
+<text x="1671.0" y="903.7" font-family="Noto Sans CJK SC, sans-serif" font-size="11" fill="#d9782d" text-anchor="start" font-weight="400">比猫身还窄，只能顺着趴，蜷不下</text>
+</svg>

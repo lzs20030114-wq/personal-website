@@ -447,27 +447,38 @@ export const UNIT_ORDER: readonly number[] = buildSquareOrder();
  */
 export const DUAL = { mid: 32 } as const;
 
-/** 两个结构的谱：upper / lower = 上 / 下那块扣不扣键；a0 / b0 = 上 / 下结构段的起点（引擎节点下标），fs = 结构段节数。mid 省略 = DUAL.mid */
-export function dualUnitSpec(k: number, upper: boolean, lower: boolean, mid: number = DUAL.mid): { spec: SkinSpec; a0: number; b0: number; fs: number } {
+/**
+ * 两个结构的谱：upper / lower = 上 / 下那块扣不扣键；a0 / b0 = 上 / 下结构段的起点（引擎节点下标），fs = 下结构段节数、fsUp = 上结构段节数。
+ * mid 省略 = DUAL.mid。kUp = 上台的键（省略 = k，上下同大，逐位是 2026-10-31 那副谱）：比 k 小时上台挑得近、上结构段短，
+ * 省下的节数作为垫加在上台上方，自由总量不变（芯一样长，一台二十条带仍共用一个上夹环）。lift = 从上台上方那段垫挪多少节到两块之间
+ * （上台比下台小时三档上台不再自动同高，按档标定把它们拉平；省略 = 0）。2026-11-05 茶几 + 小一圈猫台的线稿用（形态方案 §14）
+ */
+export function dualUnitSpec(k: number, upper: boolean, lower: boolean, mid: number = DUAL.mid, kUp: number = k, lift: number = 0): { spec: SkinSpec; a0: number; b0: number; fs: number; fsUp: number } {
   const h = UNIT_SHAPE.h;
   const iso = SQUARE.ISO;
   const fsMax = Math.max(...UNIT_SHAPE.k.map((kk) => squareSeg(kk, h)[1]));
   const fs = squareSeg(k, h)[1];
-  const seg = (on: boolean): SkinSeg => (on ? squareSeg(k, h) : ['f', fs, []]);
+  const fsUp = squareSeg(kUp, h)[1];
+  if (fsUp > fs) throw new Error(`上台不能比下台大：kUp=${kUp} k=${k}`);
+  const segLo: SkinSeg = lower ? squareSeg(k, h) : ['f', fs, []];
+  const segUp: SkinSeg = upper ? squareSeg(kUp, h) : ['f', fsUp, []];
   const pad = fsMax - fs;
+  const padUp = pad + (fs - fsUp) - lift;
+  const padMid = pad + lift;
+  if (lift < 0 || padUp < 0) throw new Error(`lift 超出上台上方那段垫：lift=${lift} padUp=${padUp + lift}`);
   const tail = UNIT_SHAPE.tail + Math.round((pad * SKIN.R1) / 2);
   // 两块之间：没有垫时一整段贴合 mid；有垫时 [贴合 ISO | 垫 | 贴合 mid − ISO]（垫两侧都隔一段 ISO，离两块结构都 ≥ 16 节）
   // （mid 少于 2·ISO 时靠下台那段隔离贴合跟着变短；逐位解耦要 mid ≥ 29，DUAL.mid 与守门管，这里只量排得下排不下——线稿脚本拿更短的 mid 量两块能靠多近）
-  const between: SkinSeg[] = pad > 0 ? [['g', iso], ['f', pad, []], ['g', mid - iso]] : [['g', mid]];
-  const head: SkinSeg[] = pad > 0 ? [['f', pad, []], ['g', iso]] : [];
-  const used = 2 * fs + 2 * pad + (pad > 0 ? iso : 0) + mid + tail;
+  const between: SkinSeg[] = padMid > 0 ? [['g', iso], ['f', padMid, []], ['g', mid - iso]] : [['g', mid]];
+  const head: SkinSeg[] = padUp > 0 ? [['f', padUp, []], ['g', iso]] : [];
+  const used = fs + fsUp + padMid + padUp + (padUp > 0 ? iso : 0) + mid + tail;
   const lead = UNIT_CUT - used;
-  if (lead < SQUARE.LEAD_MIN || mid < iso) throw new Error(`两个结构的带排不下：k=${k} lead=${lead} mid=${mid}`);
-  const raw: SkinSeg[] = ([['g', lead], ...head, seg(upper), ...between, seg(lower), ['g', tail]] as SkinSeg[]).filter((x) => x[1] > 0);
-  const a0 = lead + (pad > 0 ? pad + iso : 0);
-  const b0 = a0 + fs + (pad > 0 ? mid + pad : mid);
+  if (lead < SQUARE.LEAD_MIN || mid < iso) throw new Error(`两个结构的带排不下：k=${k} kUp=${kUp} lead=${lead} mid=${mid}`);
+  const raw: SkinSeg[] = ([['g', lead], ...head, segUp, ...between, segLo, ['g', tail]] as SkinSeg[]).filter((x) => x[1] > 0);
+  const a0 = lead + (padUp > 0 ? padUp + iso : 0);
+  const b0 = a0 + fsUp + (padMid > 0 ? mid + padMid : mid);
   if (raw.reduce((x, y) => x + y[1], 0) !== UNIT_CUT) throw new Error('两个结构的带长不等于 UNIT_CUT');
-  return { spec: raw, a0, b0, fs };
+  return { spec: raw, a0, b0, fs, fsUp };
 }
 
 /** 两个结构的带收起时压多紧：按节数比例压得比平台紧，收起时那团与平台一样长（落下那一刻不突然变长） */
