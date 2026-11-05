@@ -180,16 +180,16 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
     tw: 480,
     cols: 3,
     caption: {
-      zh: '前排沙发上两位访客坐下又起身，面前那台落下当茶几再收回（实验 2-15，局部）',
-      en: 'Two visitors on the front sofa sit down and later stand, and the unit in front of them comes down as a coffee table and goes back up (Lab 2-15, detail)',
+      zh: '沙发前的那台落成茶几猫台：下台是茶几，上台只在背向沙发的半圈，给猫（实验 2-15，局部）',
+      en: 'The unit in front of a sofa comes down as a coffee table with a cat platform: the lower level is the table, the upper level covers only the half facing away from the sofa, for cats (Lab 2-15, detail)',
     },
     frames: [
-      { file: 't011_00', t: { zh: '0:11.0', en: '0:11.0' }, note: { zh: '两人走到沙发前，面前的单元还收在天花板下', en: 'two visitors reach the sofa, the unit in front of it still stowed under the ceiling' } },
-      { file: 't011_45', t: { zh: '0:11.5', en: '0:11.5' }, note: { zh: '坐下，面前那台沿芯落下', en: 'they sit, and the unit in front comes down its core' } },
-      { file: 't011_90', t: { zh: '0:11.9', en: '0:11.9' }, note: { zh: '落到茶几高度，收缩成形', en: 'at coffee-table height it contracts and forms' } },
-      { file: 't012_50', t: { zh: '0:12.5', en: '0:12.5' }, note: { zh: '茶几成形', en: 'the coffee table has formed' } },
-      { file: 't140_80', t: { zh: '2:20.8', en: '2:20.8' }, note: { zh: '两人起身，桌子往上收。左边沙发上的人身边那台抽中了整圈两层', en: 'they stand, and the table rises. The unit beside the visitor on the left sofa came down as two levels all round' } },
-      { file: 't142_60', t: { zh: '2:22.6', en: '2:22.6' }, note: { zh: '收回天花板下', en: 'back under the ceiling' } },
+      { file: 't009_80', t: { zh: '0:09.8', en: '0:09.8' }, note: { zh: '两人走到前排沙发前，面前的单元还收在天花板下', en: 'two visitors reach the front sofa, the unit in front of it still stowed under the ceiling' } },
+      { file: 't010_25', t: { zh: '0:10.3', en: '0:10.3' }, note: { zh: '坐下，面前那台沿芯落下', en: 'they sit, and the unit in front comes down its core' } },
+      { file: 't012_00', t: { zh: '0:12.0', en: '0:12.0' }, note: { zh: '落到 0.5 m 成形：下台当茶几，背面多出半圈上台', en: 'at 0.5 m it forms: the lower level is the coffee table, with a half-ring upper level at the back' } },
+      { file: 't132_00', t: { zh: '2:12', en: '2:12' }, note: { zh: '右边沙发前的茶几猫台：一只猫停在上台上，旁边坐着人', en: 'the coffee-table unit by the right-hand sofa: a cat rests on the upper level beside a seated visitor' } },
+      { file: 't236_50', t: { zh: '3:56.5', en: '3:56.5' }, note: { zh: '那位访客起身，这一台往上收', en: 'the visitor stands, and the unit rises' } },
+      { file: 't240_00', t: { zh: '4:00', en: '4:00' }, note: { zh: '收回天花板下，猫回到地面', en: 'back under the ceiling, and the cat is on the floor' } },
     ],
   },
   // FIG.10 · 两种用法（Lab 2-15 侧视）
@@ -200,10 +200,10 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
     h: 536,
     tw: 1008,
     caption: {
-      zh: '侧视剖面（实验 2-15，第 100 秒）。沙发前落成茶几的单元台面离地 0.42 m。给猫落的三台这一刻都抽中了半圈有顶的两层（下台 0.90 m），猫坐在其中一台的下台上。其余单元收在天花板下',
-      en: 'Side section (Lab 2-15, at 100 s). Units that came down as coffee tables in front of the sofas sit 0.42 m above the floor. The three units lowered for cats all drew two levels roofed over half (the lower at 0.90 m), and a cat sits on the lower platform of one of them. The rest are stowed under the ceiling',
+      zh: '侧视剖面（实验 2-15，第 188 秒）。左：沙发前的茶几猫台，下台 0.50 m 当茶几，上台再高 0.58 m，只在背向沙发的半圈。中间两台是给猫的平台（1.05 m），一只猫站在其中一台上。右：整圈两层（0.90 / 1.48 m）。其余单元收在天花板下',
+      en: 'Side section (Lab 2-15, at 188 s). Left: the coffee-table unit by a sofa, its lower level at 0.50 m as the table and its upper level 0.58 m higher over the half facing away from the sofa. The two in the middle are cat platforms at 1.05 m, with a cat standing on one. Right: two levels all round (0.90 / 1.48 m). The rest are stowed under the ceiling',
     },
-    frames: [{ file: 't100-side', t: { zh: '1:40 · 侧视', en: '1:40 · side view' } }],
+    frames: [{ file: 't188-side', t: { zh: '3:08 · 侧视', en: '3:08 · side view' } }],
   },
 
   // ─── 项目一（轮回机器）─────────────────────────────────────────────────────

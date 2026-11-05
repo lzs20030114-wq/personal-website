@@ -918,6 +918,13 @@ export function CohabitSpaceBench({
         placeBoth(cats, r, key, look.coat, (tone) => catColor(tone, look), pl.x * UNITS_PER_M, footY, pl.y * UNITS_PER_M, figureYaw(pl.heading), clampHeadYaw(pl.headTurn, CAT_HEAD_YAW_MAX));
       });
       drawBatches(cats);
+      // 截图脚本读（scripts/case-frames/capture.mjs 的 room-cycle）：此刻有猫停着的、落成了的茶几猫台，与此刻在当桌子的台。只在变了时写
+      {
+        const perchNow = sim.cats.filter((c) => c.unit && !c.transfer && coffeeOn[c.unit.i] && sim.act.degree[c.unit.i] >= 1 - 1e-3).map((c) => c.unit!.i).sort((x, y) => x - y).join(',');
+        if (canvas.dataset.perch !== perchNow) canvas.dataset.perch = perchNow;
+        const tablesNow = Array.from(sim.tableBy, (f, u) => (f >= 0 ? u : -1)).filter((u) => u >= 0).join(',');
+        if (canvas.dataset.tables !== tablesNow) canvas.dataset.tables = tablesNow;
+      }
       // 膜：半透明，实体（带子、立杆、人、猫、家具）都画完之后再画；整台的按视深从远到近
       if (sim.space !== 'empty' && trajs) {
         const M = cam.matrix;

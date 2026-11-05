@@ -186,14 +186,26 @@ async function advanceTo(b, read, target, { webgl, frames = 6, dt } = {}) {
   return v;
 }
 
+/** 2-15：停住 / 开跑台架（「运转」那个勾）。停着时推帧不推进仿真；runningRef 在点击处理里同步改，不用等一帧 */
+async function pauseSim(b, sel, paused) {
+  const on = await setCheck(b, sel, '/^\\s*run\\s*$|^\\s*运转\\s*$/i', !paused);
+  if (on === null) throw new Error('2-15 找不到「运转」勾选');
+}
+
 /** 2-15 的仿真时钟：轨迹烘完之后，每帧（dt 50 ms）推进 0.05 s，按帧数算到指定时刻；快进时不画，到点画一帧 */
 function simClock(b) {
   let t = 0;
   return {
-    async to(T) {
+    async to(T, quiet = false) {
       const n = Math.round((T - t) / 0.05);
       await b.noDraw(true);
       if (n > 0) await b.frames(n, 50, 60);
+      if (quiet) {
+        // 只推进不画（画布上的 data-* 在每帧的渲染里写，noDraw 只停 WebGL 的绘制调用，读得到最新的）
+        await b.noDraw(false);
+        t += Math.max(0, n) * 0.05;
+        return t;
+      }
       await b.noDraw(false);
       t += Math.max(0, n) * 0.05;
       await b.frames(1, 0.001);
@@ -310,23 +322,41 @@ const SETS = {
       });
     }
   },
-  // FIG.09 · Lab 2-15 前排沙发：两人 11.1 s 坐下、140.3 s 起身，面前那台（单元 45）落下当茶几再收回。
-  // 仿真每帧固定 50 ms（MAX_SIM_DT），所以按帧数算时刻；这两个时刻用 Node 直跑同一配置（同一种子、同一步长）核过
+  // FIG.09 · Lab 2-15 前排沙发：9.9 s 两位访客坐下，面前那台落成茶几猫台（下台茶几、上台半圈给猫）；之后等到第一次有猫停在
+  // 某台茶几猫台上截一张，再等那台不再当桌子（人起身）截起身与收回两张。台架和 Node 直跑在几十秒后会分叉（原因没查清），
+  // 所以后半段不按预先算好的时刻截，按台架自己写在画布上的 data-perch / data-tables 等事件发生（2026-11-05）。
+  // 开跑前先停住台架（pauseSim）：等烘焙、拉近镜头时推的那些 1 ms 小帧不再推进仿真
   'room-cycle': async (b) => {
     const sel = await openBench(b, '2-15');
+    await pauseSim(b, sel, true);
     await waitBake(b, sel);
     await zoomTo(b, sel, 262, 335, 3, 0.001);
+    await pauseSim(b, sel, false);
     const clock = simClock(b);
-    for (const T of [11, 11.45, 11.9, 12.5, 140.8, 142.6]) {
-      const t = await clock.to(T);
-      await save('room-cycle', `t${t.toFixed(2).replace('.', '_').padStart(6, '0')}`, await b.shot(`${sel}.querySelector('canvas')`), { thumb: 480 });
-    }
+    const shot = async (t) => save('room-cycle', `t${t.toFixed(2).replace('.', '_').padStart(6, '0')}`, await b.shot(`${sel}.querySelector('canvas')`), { thumb: 480 });
+    for (const T of [9.8, 10.25, 12]) await shot(await clock.to(T));
+    const ds = (k) => b.ev(`${sel}.querySelector('canvas').dataset.${k} || ''`);
+    // 等到有猫停在茶几猫台上（最多到 600 s），停稳 1 s 再截
+    let t = 12;
+    let perch = '';
+    while (t < 600 && !(perch = await ds('perch'))) t = await clock.to(t + 1, true);
+    if (!perch) throw new Error('600 s 内没有猫停到茶几猫台上');
+    const unit = perch.split(',')[0];
+    await shot(await clock.to(t + 1));
+    // 等那台不再当桌子（坐着的人起身），截起身后 0.5 s 与 4 s
+    t += 1;
+    while (t < 900 && (await ds('tables')).split(',').includes(unit)) t = await clock.to(t + 0.5, true);
+    await shot(await clock.to(t + 0.5));
+    await shot(await clock.to(t + 4));
+    console.log(`  猫台单元 ${unit}`);
   },
   // FIG.10 · Lab 2-15 侧视剖面：t = 100 s，沙发前的茶几高度与猫待的台面高度落在同一张剖面上
   'two-uses': async (b) => {
     const sel = await openBench(b, '2-15', '2-15', ['Side']);
+    await pauseSim(b, sel, true);
     await waitBake(b, sel);
-    const t = await simClock(b).to(100);
+    await pauseSim(b, sel, false);
+    const t = await simClock(b).to(Number(process.env.TWO_T ?? 188));
     await save('two-uses', `t${Math.round(t)}-side`, await b.shot(`${sel}.querySelector('.lab-fig')`), { crop: [0.03, 0.27, 0.97, 0.67], thumb: 1008 });
   },
   // 首页项目二卡片封面（MAPPING §76，不进案例页）：Lab 2-15 默认场景，拉近两档，仿真 100 s（两张沙发上有人坐着、面前那台
@@ -334,13 +364,15 @@ const SETS = {
   // 约 8%，所以主体要收在中间。取画布底部 3:2 那块（顶上是一片收着的单元，裁掉；底下坐着的人留全），存 1200 × 800 webp
   'home-cover': async (b) => {
     const sel = await openBench(b, '2-15');
+    await pauseSim(b, sel, true);
     await waitBake(b, sel);
     for (let i = 0; i < 2; i++) {
       await b.ev(`[...${sel}.querySelectorAll('button')].find(x=>x.textContent.trim()==='+').click()`);
       await b.frames(1, 0.001);
     }
     await b.frames(20, 0.001);
-    await simClock(b).to(Number(process.env.COVER_T ?? 100));
+    await pauseSim(b, sel, false);
+    await simClock(b).to(Number(process.env.COVER_T ?? 188));
     const png = await b.shot(`${sel}.querySelector('canvas')`);
     const m = await sharp(png).metadata();
     const h = Math.round(m.width / 1.5);
