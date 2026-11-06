@@ -32,7 +32,7 @@ const HOME_PROJECTS = [
     img: '/home/cover-reincarnation-machine.webp',
     title: null,
     intro:
-      'A desk-sized machine that is born, ages and dies in about eight minutes, then wakes in the same body with a different personality. Whoever got to know it in one life has to learn its responses again in the next.',
+      'A desk-sized machine that is born, ages and dies in eight to nine minutes, then starts over in the same body with a different personality. Whoever got to know it in one life has to learn its responses again in the next.',
   },
   // 项目二尚未定名（pool title 仍是 "Project II"），卡片题用描述名；2026-10-04 作者拍板由稿内的 "Spatial simulation"
   // 改为能体现物种的 "Cross-species space"（与 lab-index / log-facets 同步）。定名后删 title 覆写即回内容池。
@@ -44,7 +44,7 @@ const HOME_PROJECTS = [
     img: '/home/cover-project-ii.webp',
     title: 'Cross-species space',
     intro:
-      'Ceiling-hung fabric units in a simulated cat café drop down as platforms. When a visitor sits down, units lower into a path for the nearest cat. With six or more visitors, people spent more time beside cats than with fixed shelving.',
+      'Ceiling-hung fabric units in a simulated cat café drop down as platforms. When a visitor sits, units lower into a path for the nearest cat. In the round-unit run, six or more visitors stayed by cats longer than with fixed shelving.',
   },
   {
     slug: 'project-iii',
@@ -101,7 +101,7 @@ export function buildCards(works: HomeWorkInput[]): HomeCard[] {
       // 未发稿项目的 summary 是「待盘点」占位，不上主页；稿内占位串原样（作者来写）
       thesis: wip ? `[${p.kicker} thesis · author to write]` : w.summary,
       intro: p.intro,
-      role: wip ? 'Role · to be written' : w.role.join(' · '),
+      role: wip ? '' : w.role.join(' · '),
     };
   });
 }

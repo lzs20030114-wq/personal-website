@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 import { AM, BL, BLOCK_UI, DIM, G } from '../../src/lib/site/case-reincarnation';
+import { SHOW_PENDING } from '../../src/lib/site/pending';
 
 /**
  * 占位插槽系统——把展示逻辑总框架的图目录固化为可视的、带状态的插槽。
@@ -71,6 +72,8 @@ export function FigSlot({
   alt?: string;
   lang?: SlotLang;
 }) {
+  // 没有素材的占位框只给作者看（src/lib/site/pending.ts）
+  if (!src && !SHOW_PENDING) return null;
   return (
     <figure className={`cs-figure${size === 'wide' ? ' cs-figure--wide' : ''}`}>
       <div className={`cs-figure__frame${src ? ' cs-figure__frame--shot' : ''}`} style={{ aspectRatio: ratio }}>
@@ -119,6 +122,7 @@ export function VideoSlot({
   src?: string;
   lang?: SlotLang;
 }) {
+  if (!src && !SHOW_PENDING) return null;
   return (
     <figure className="cs-video">
       <div className="cs-video__frame">
@@ -221,6 +225,7 @@ export function InteractiveSlot({
  * 作者的待办一律走它，模型不代填。
  */
 export function Todo({ children, lang = 'zh' }: { children: ReactNode; lang?: SlotLang }) {
+  if (!SHOW_PENDING) return null;
   return (
     <div className="cs-todo">
       <span className="cs-todo__tag">{BLOCK_UI[lang].todo}</span>
@@ -247,7 +252,7 @@ export function ProcessAside({
     <aside className="cs-aside">
       <span className="cs-aside__k">{BLOCK_UI[lang].process}</span>
       {children}
-      {pend ? <p className="cs-aside__pend">{pend}</p> : null}
+      {pend && SHOW_PENDING ? <p className="cs-aside__pend">{pend}</p> : null}
     </aside>
   );
 }

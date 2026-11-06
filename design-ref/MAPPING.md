@@ -2207,3 +2207,14 @@ planDraw 的猫分支去掉注意力圈，增加支撑、落点外圈与单元�
 - **内容：只留名字和联系方式**。首版按作者简历写了页头导语 + 肖像 + 经历五行 + 「这个网站」（SITE_SPEC §4 的 colophon 段）+ 联系，作者看截图后拍板：「不用写这么复杂，这些东西之前全都有，只写联系方式就 OK，再写这么多有点画蛇添足」——自我介绍与经历在首页 03 About 屏，项目在案例页。现在页面 = `About` 眉题 + 名字大标题 + 邮箱、所在地两行；**电话不上站**；colophon 段随之取消。
 - 样式 `app/(site)/about/about.css`：页头与日志页标头同一套间距（72 / 44，下缘发丝线），联系两行左 112px mono 标签、右正文；<640 标签落到上方。整页（顶栏 + 正文 + 页脚）撑满一屏、页脚贴底：`.about-language-root` 做成纵向 flex、`main` 吃掉剩余高度、这一页的页脚去掉 96px 上边距。顶栏与页脚内宽跟日志页一样收到 1320（`dark-chrome.css` 那条规则加上 `.about-language-root`），左缘与正文对齐。
 - **验证**：类型检查干净；`src/lib/site` 测试 205 项除 `log.test.ts`「文件内容 = serializeEntries 的输出」外全过——那条是本机 `core.autocrlf=true` 把 entries.json 签出成 CRLF，与本次无关（Linux 上构建不受影响）。本地 1440 宽与手机宽中英两侧看过，无横向溢出。
+
+## 83. 全站回看：占位不上线 · 过时与矛盾的说法改掉（2026-11-06，用户「根据这一次的回看反思，网站里有什么需要改的，过时的、落后的、矛盾的都改」）
+
+起因是同日为面试做的一轮全站回看（对外可见的占位、站内自相矛盾、与现状不符的说法）。只改呈现与站方框架字，作者正文的事实一条没动、待补项一条没代填。
+
+- **占位只给作者看**：新模块 `src/lib/site/pending.ts` 的 `SHOW_PENDING`（`NODE_ENV !== 'production'`，或构建时设 `NEXT_PUBLIC_SHOW_PENDING=1`）。线上不渲染：`<Todo>` / `IntentNote`（项目一 5 处）、没有 `src` 的 `<FigSlot>`（项目一 10 处：N02 N03 N10–N13 N15 N16 N19 N20）、没有 `src` 的 V.60 视频位（两个案例页）、`<ProcessAside pend>`（项目一的「待确认……作者未确认读过」那句）。`npm run dev` 本地照常显示，作者补稿时看得到。MDX 一字不动，插槽编号与顺序守门照旧；两张都是占位的并置块剩空网格，`.cs-figs--pair:empty { display: none }`。**代价**：设计稿（Case-Screens / case-01-dark）里的「斜纹占位框 + 状态签」在线上看不到了，素材到位后填 `src` 即出现；想回到旧做法改 `SHOW_PENDING` 一处。
+- **主图题注去掉「[stand-in] / [顶替] · 待拍摄 / 待供图」**：项目一「Lab 1-5 full assembly, running live in the browser」，项目二同式；首页卡片角标「stand-in · bench still」→「bench still」。作者供图后删 `liveHero` 一支仍回占位块（§45 的做法不变）。
+- **说法对齐**：首页项目一卡片「about eight minutes … then wakes」→「eight to nine minutes … then starts over」（案例页口径是八到九分钟；10-29 拍板正文不写「醒来」这类拟人说法）；V.60 题注「约 8 分钟」同改。首页项目二卡片「With six or more visitors…」→「In the round-unit run, six or more visitors…」（该结论是圆台配置下跑的，换方台后未重跑，案例页已写明）。项目一角色「Electronics & firmware / 电子与固件」→「Sensing & electronics planning / 传感与电子方案」（同页「进展」写着 ESP32 固件未写、驱动未标定，原写法自相矛盾）。项目二「设计立场」那句补注 9.6 是用现行代码重跑的数、10-07 日志当时是 10.2，结论相同。
+- **编辑稿口吻退出正文**：人格示意台注删「实拍对比（N06）待拍摄」；衰老曲线注「数值待作者提供」→「具体数值还没定，图只画趋势」；首页项目三卡片「Role · to be written」不再显示（未发稿时角色行留空）；项目三筹备页主图框「[in preparation] hero image · to shoot」→「In preparation」。
+- **没动、留给作者的**：技术参数里「肌腱电机是否装齐」「对应哪一版底座」两行仍标待确认（实物已寄出，事实只有作者知道）；/lab 与首页实验区里项目三「Benches to come」一组（三个主项目地位同等，按 IA 保留）；日志里的历史待核对表注（历史记录，不改）；About 屏「Now I do user research…」的时态与毕业 / 毕设年份（§81 按简历写，作者核对）。
+- **验证**：`npm run build`（1421 项测试 + vite + next）全过；生产服务 + 无头 Chromium：项目一页 `.cs-todo` / 占位框 / pend / 视频位均为 0、两个空并置块高 0，首页 1366 × 768 三张主项目卡悬停介绍完整、无 pageerror。

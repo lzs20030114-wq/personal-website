@@ -92,7 +92,7 @@ export function WorkInPreparation({ entry }: { entry: WorkEntry }) {
             <figure className="cs-fig" data-rv>
               <div className="cs-stage">
                 <div className="cs-stage__ph">
-                  <Pick en="[in preparation] hero image · to shoot" zh="[筹备中] 主图 · 待拍摄" />
+                  <Pick en="In preparation" zh="筹备中" />
                 </div>
                 <div className="cs-stage__vignette" />
                 <span className="cs-corner cs-corner--tl" />

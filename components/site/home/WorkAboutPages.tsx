@@ -83,7 +83,7 @@ function WorkCard({ t, c, cur, on, focusable, vars, onEnter }: CardProps) {
                   backgroundPosition: t.imgPos === 'top' ? 'center top' : undefined,
                 }}
               />
-              {t.caseSlug ? <span className="hs-card__stamp">stand-in · bench still</span> : null}
+              {t.caseSlug ? <span className="hs-card__stamp">bench still</span> : null}
             </>
           ) : (
             <span className="hs-card__wip">
