@@ -656,3 +656,8 @@ body:has(.cs) .ld-header__in, .cs .ld-footer__in { max-width: 1240px; }
 .cs-rings__num { font: 400 10.5px var(--cs-mono); fill: var(--cs-dim); }
 @media (max-width: 900px) { .cs-rings__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 480px) { .cs-rings__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* 2026-11-06：占位框在线上不渲染（src/lib/site/pending.ts），两张都是占位的并置块会剩一个空网格 */
+.cs-figs--pair:empty {
+  display: none;
+}

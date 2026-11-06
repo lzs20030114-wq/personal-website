@@ -1710,7 +1710,7 @@ planDraw 的猫分支去掉注意力圈，增加支撑、落点外圈与单元�
 
 ## 60. 其他作品详情页（2026-10-25，用户「英文你来帮我定吧 · 正式名在源文件里找、英文名你翻译 · 合作者署名源文件写了就写、没写就不写 · 先做详情页」）
 
-**稿里没有，站方增补。** 作者清单（根目录 作品集旧作_整合清单_2026-10-25.md）的 14 项里，有图的 11 项接进内容池并各有一页；Hidden Stone、The Slice 只有简历文字，ARCHIEE 照片归属待确认，三项暂不上（The Slice 2026-11-06 补上，§83）。素材怎么转、逐张来源见 其他作品_素材整理.md。
+**稿里没有，站方增补。** 作者清单（根目录 作品集旧作_整合清单_2026-10-25.md）的 14 项里，有图的 11 项接进内容池并各有一页；Hidden Stone、The Slice 只有简历文字，ARCHIEE 照片归属待确认，三项暂不上（The Slice 2026-11-06 补上，§84）。素材怎么转、逐张来源见 其他作品_素材整理.md。
 
 - **地址**：`/work/<slug>`，与主项目同一条路由（`generateStaticParams` 合并两个池，`dynamicParams=false` 不变）。这样首页卡片「展开成详情页 / 返回收回到卡片」的转场（§48）、深色顶栏、EN / 中切换、访客统计都直接复用，只多一个页面分支。slug 不许和主项目撞，守门里卡。
 - **模板**：照「筹备中」页的做法，全部用 `.cs-*` 类（首屏 + 主图框 + 元数据条 + 正文列 + 下一件 + 页脚），新组件只有 `components/site/OtherWorkPage.tsx`，新样式十来行（`.os-*`，在 case-dark.css 末尾）。**不套案例页模板**（SITE_SPEC §4）：没有视频席位、AI 披露席位，不算「案例 0N / 03」。目录栏第二版起有（§60.1）。标题比案例页小一档（名字最长 45 个字符，120px 会把主图框挤没）。
@@ -2208,6 +2208,17 @@ planDraw 的猫分支去掉注意力圈，增加支撑、落点外圈与单元�
 - 样式 `app/(site)/about/about.css`：页头与日志页标头同一套间距（72 / 44，下缘发丝线），联系两行左 112px mono 标签、右正文；<640 标签落到上方。整页（顶栏 + 正文 + 页脚）撑满一屏、页脚贴底：`.about-language-root` 做成纵向 flex、`main` 吃掉剩余高度、这一页的页脚去掉 96px 上边距。顶栏与页脚内宽跟日志页一样收到 1320（`dark-chrome.css` 那条规则加上 `.about-language-root`），左缘与正文对齐。
 - **验证**：类型检查干净；`src/lib/site` 测试 205 项除 `log.test.ts`「文件内容 = serializeEntries 的输出」外全过——那条是本机 `core.autocrlf=true` 把 entries.json 签出成 CRLF，与本次无关（Linux 上构建不受影响）。本地 1440 宽与手机宽中英两侧看过，无横向溢出。
 
-## 83. 其他作品补上 The Slice（2026-11-06，用户交来课程 PPT 与任务书「按照我们之前的做法补到网站上」）
+## 83. 全站回看：占位不上线 · 过时与矛盾的说法改掉（2026-11-06，用户「根据这一次的回看反思，网站里有什么需要改的，过时的、落后的、矛盾的都改」）
+
+起因是同日为面试做的一轮全站回看（对外可见的占位、站内自相矛盾、与现状不符的说法）。只改呈现与站方框架字，作者正文的事实一条没动、待补项一条没代填。
+
+- **占位只给作者看**：新模块 `src/lib/site/pending.ts` 的 `SHOW_PENDING`（`NODE_ENV !== 'production'`，或构建时设 `NEXT_PUBLIC_SHOW_PENDING=1`）。线上不渲染：`<Todo>` / `IntentNote`（项目一 5 处）、没有 `src` 的 `<FigSlot>`（项目一 10 处：N02 N03 N10–N13 N15 N16 N19 N20）、没有 `src` 的 V.60 视频位（两个案例页）、`<ProcessAside pend>`（项目一的「待确认……作者未确认读过」那句）。`npm run dev` 本地照常显示，作者补稿时看得到。MDX 一字不动，插槽编号与顺序守门照旧；两张都是占位的并置块剩空网格，`.cs-figs--pair:empty { display: none }`。**代价**：设计稿（Case-Screens / case-01-dark）里的「斜纹占位框 + 状态签」在线上看不到了，素材到位后填 `src` 即出现；想回到旧做法改 `SHOW_PENDING` 一处。
+- **主图题注去掉「[stand-in] / [顶替] · 待拍摄 / 待供图」**：项目一「Lab 1-5 full assembly, running live in the browser」，项目二同式；首页卡片角标「stand-in · bench still」→「bench still」。作者供图后删 `liveHero` 一支仍回占位块（§45 的做法不变）。
+- **说法对齐**：首页项目一卡片「about eight minutes … then wakes」→「eight to nine minutes … then starts over」（案例页口径是八到九分钟；10-29 拍板正文不写「醒来」这类拟人说法）；V.60 题注「约 8 分钟」同改。首页项目二卡片「With six or more visitors…」→「In the round-unit run, six or more visitors…」（该结论是圆台配置下跑的，换方台后未重跑，案例页已写明）。项目一角色「Electronics & firmware / 电子与固件」→「Sensing & electronics planning / 传感与电子方案」（同页「进展」写着 ESP32 固件未写、驱动未标定，原写法自相矛盾）。项目二「设计立场」那句补注 9.6 是用现行代码重跑的数、10-07 日志当时是 10.2，结论相同。
+- **编辑稿口吻退出正文**：人格示意台注删「实拍对比（N06）待拍摄」；衰老曲线注「数值待作者提供」→「具体数值还没定，图只画趋势」；首页项目三卡片「Role · to be written」不再显示（未发稿时角色行留空）；项目三筹备页主图框「[in preparation] hero image · to shoot」→「In preparation」。
+- **没动、留给作者的**：技术参数里「肌腱电机是否装齐」「对应哪一版底座」两行仍标待确认（实物已寄出，事实只有作者知道）；/lab 与首页实验区里项目三「Benches to come」一组（三个主项目地位同等，按 IA 保留）；日志里的历史待核对表注（历史记录，不改）；About 屏「Now I do user research…」的时态与毕业 / 毕设年份（§81 按简历写，作者核对）。
+- **验证**：`npm run build`（1421 项测试 + vite + next）全过；生产服务 + 无头 Chromium：项目一页 `.cs-todo` / 占位框 / pend / 视频位均为 0、两个空并置块高 0，首页 1366 × 768 三张主项目卡悬停介绍完整、无 pageerror。
+
+## 84. 其他作品补上 The Slice（2026-11-06，用户交来课程 PPT 与任务书「按照我们之前的做法补到网站上」）
 
 照 §60 与 §60.1 的做法，组件、路由、schema 零改动：内容池 `content/other/works.json` 加一件（`/work/the-slice`，「建筑与构造」组，排 B365 之后，这一组变 3 件，仍是一屏），图 24 张在 `public/other/the-slice/`，脚本 `scripts/other-works/build_slice.py`（PPT 按压缩包读，不解压落盘）。正文来自图版文字与任务书节选，错字改动、逐张来源、年份与获奖的存疑点见 其他作品_素材整理.md「The Slice」。

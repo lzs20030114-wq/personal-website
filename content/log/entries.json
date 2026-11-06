@@ -1,5 +1,481 @@
 [
   {
+    "id": "log-2026-10-31-3322549222392122",
+    "date": "2026-10-31",
+    "lead": {
+      "en": "Reduced the About page to contact details and removed the AI disclosure from the site.",
+      "zh": "About 页只留联系方式，站上不再放 AI 披露声明。"
+    },
+    "body": {
+      "en": "- The author decided the site will not carry a disclosure statement, so the disclosure blocks at the end of case pages and on the About page were removed.\n- The About page now uses the same dark frame as the log page and shows only name, email and location on one screen.\n- The self-introduction on the homepage About screen was rewritten from the CV, and the portrait was replaced with a drawing supplied by the author.",
+      "zh": "- 作者决定站上不写披露声明，案例页末尾和 About 页的 AI 披露区一并删除。\n- About 页换成与日志页同一套深色外壳，只留名字、邮箱、所在地，一屏放下。\n- 首页介绍屏的自我介绍按简历重写，肖像换成作者交来的画。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Writing", "zh": "写作" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-30-2384450774601799",
+    "date": "2026-10-30",
+    "lead": {
+      "en": "Put the earlier form studies to use in the room: the unit next to a seated person now forms two levels.",
+      "zh": "让之前的形态研究用进房间：坐着的人身边那台落成上下两层。"
+    },
+    "body": {
+      "en": "- The author pointed out that the room only ever used flat platforms, and the earlier form studies should not go to waste. Each of experiments 2-1 to 2-14 was checked for what it could do in the room. Only the \"pouch\" shape had no use.\n- Used the two-structures-on-one-strip study (2-3): the whole 338-node strip is let out and forms two 6.5 cm square platforms about 0.5 m apart. The lower one sits at 0.90 m, so a cat sitting on it has its eyes level with a seated person. The half facing the person forms only the lower platform; the back half forms both, giving the cat a roof.\n- The first version only triggered at the end of the path that leads a cat to a seat, and in 600 seconds it never happened. Any unit within 1.5 m of a seated person now qualifies, which gives 11–22 two-level units per run.\n- The author asked whether the shapes could simply be random. The rules decide who a unit serves; chance decides which shape it takes (flat, half-roofed or fully two-level). The unit serving as a table still follows the furniture height.\n- Computing the two-level sequences took about 20 seconds, so it moved to a background thread. The next day the computation was also stopped once a strip settled, cutting the wait before the simulation starts from 15.9 to 8.3 s.",
+      "zh": "- 作者指出房间里只用到了平台，之前做的形态研究不能浪费。逐台核对 2-1 到 2-14 在房间里能管什么，真正用不上的只有「袋」。\n- 用上 2-3 的「一条带两个结构」：338 节布全部铺出去，成两块相隔约 0.5 m 的 6.5 cm 方台。下台高 0.90 m，猫坐上去眼睛与坐着的人齐平；朝人的半圈只成下台，背后半圈成两层，给猫一个顶。\n- 首版只在「把猫引到座位前」那条路的终点触发，600 秒里一次都没出现。改为离坐着的人 1.5 m 内的台都可以，每场出现 11–22 次。\n- 作者问能不能随机。改成规则决定这台给谁用，随机决定成哪种形（平台 / 半圈两层 / 整圈两层）；当桌子的那台仍按家具定高。\n- 两层的轨迹要算约 20 秒，挪到后台线程；次日又让布带停稳后不再继续算，仿真开跑前的等待从 15.9 s 降到 8.3 s。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "image",
+        "src": "/log/2026-10-30-room-two-uses-side.webp",
+        "alt": {
+          "en": "Side section of the room: on the left a unit lowered as a coffee table in front of the sofa; on the right two units formed as two levels beside a seated visitor.",
+          "zh": "房间侧剖：左边沙发前落下当茶几的一台，右边坐着的访客身边落成上下两层的两台。"
+        },
+        "caption": {
+          "en": "Side section of the room: on the left a unit lowered as a coffee table in front of the sofa; on the right two units formed as two levels beside a seated visitor.",
+          "zh": "房间侧剖：左边沙发前落下当茶几的一台，右边坐着的访客身边落成上下两层的两台。"
+        },
+        "width": 1008,
+        "height": 536
+      }
+    ]
+  },
+  {
+    "id": "log-2026-10-30-14010244095177",
+    "date": "2026-10-30",
+    "lead": {
+      "en": "Added the mechanical parts from the Blender model to the web model, and gave the units an outer skin that can be switched off.",
+      "zh": "把 Blender 里的机构件加进网页模型，并给单元做了一层可开关的外皮。"
+    },
+    "body": {
+      "en": "- Each unit on the web now shows its upper and lower clamp rings, the telescopic hanging rod, the telescopic core and the struts of the bonds, which turn orange when locked. The default scene costs about 1 ms of main-thread time per frame.\n- The author pointed out that the green fabric and the translucent membrane were only placeholders from the design stage. Made a continuous, opaque outer skin, on by default; switching it off shows the strips again.\n- Tried four cool colours first; the author asked for a warm one. Among the warm options, bronze and champagne read as wood and sandstone was too loud, so it settled on a matte warm grey.\n- With the skin on, the strips and bonds inside are not drawn, which cuts the triangle count from about 490,000 to 280,000.",
+      "zh": "- 网页上每台画出上下夹环、伸缩吊杆、伸缩芯和键的撑杆，键扣上时显示橙色。默认场景每帧主线程约 1 ms。\n- 作者指出绿色的布和半透明膜只是设计阶段的临时状态。新做一层连续、不透明的外皮，默认打开，关掉可以看回里面的布带。\n- 先试了四种冷色，作者看后要暖色；暖色里古铜和香槟读成木头，砂岩太抢眼，定为哑光暖灰。\n- 外皮开着时不画里面的布带和键，三角形从约 49 万降到 28 万。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "3D", "zh": "立体" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-30-1235405075404162",
+    "date": "2026-10-30",
+    "lead": {
+      "en": "Removed the redundant fabric tube under each platform and fixed the strips that broke apart in mid-air when giving way.",
+      "zh": "去掉方台下面那截多余的布筒，并修好为人让路的布带碎在半空的问题。"
+    },
+    "body": {
+      "en": "- Looking at the Blender renders, the author found both end mechanisms too bulky and a leftover length of fabric hanging below each platform. The old layout split the spare fabric above and below the platform; it now sits entirely above, with the bond map unchanged. The fabric below the platform went from 0.29 to 0.16 m.\n- A strip that gave way to a person used the same frames as the whole unit rising and falling, so when fully withdrawn it collapsed upward into a lump and its lower end floated free. It now follows the engine's own straightening-and-return pass, and all strips of a unit share one upper clamp ring; spare fabric winds onto a reel inside the ring.\n- Added a test that both ends of every strip stay attached at every moment. The clamp rings were also slimmed to narrow inner and outer rings with six spokes.",
+      "zh": "- 作者看 Blender 渲染指出两头机构太笨重，台面下还挂着一截多余的布。原来的排法把多余的布上下各放一半；改为全部放到平台上方，键的排布一颗不动。台面下那截布从 0.29 m 缩到 0.16 m。\n- 让路的布带原来与整台升降共用一套帧，收到底就往上压成一团，下端脱离夹环漂在半空。改为走引擎自己的收直回程，一台所有布带共用一个上夹环，多出的布卷进夹环里的收布轴。\n- 加了测试：任何时刻每条布带上下两端都连着。夹环同时改轻，换成窄的内外圈加六根辐条。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "3D", "zh": "立体" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-30-326020523515327",
+    "date": "2026-10-30",
+    "lead": {
+      "en": "Added a Drawing and Painting group to other works, with its own page.",
+      "zh": "在其他作品里新增「绘画」组和它的详情页。"
+    },
+    "body": {
+      "en": "- The author sent 24 images in three batches: sketches, colour studies, line drawings, digital paintings and model photos. Photos were cropped, and a painting on an easel was straightened from its four corners.\n- The first layout stacked the images in one long column. It was changed to equal-height rows that fill the width without cropping, which shortened the page from 17,728 to 6,382 px.\n- At the author's request there are no captions under the images and no year for now. Seven group names no longer fit on one line, so the group index on the homepage was tightened.",
+      "zh": "- 作者分三批交来 24 张：素描、色彩、线描、数字绘画和模型照片。照片裁掉桌面地板，画架上那幅按四角拉正。\n- 首版是一张接一张往下排，改成各节等高成行、排满不裁图，整页从 17,728 px 缩到 6,382 px。\n- 按作者要求图下不写字、年份暂不写。七个组名一行放不下，首页的组名目录收紧一档。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Design", "zh": "设计" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-29-4226529399150659",
+    "date": "2026-10-29",
+    "lead": {
+      "en": "Modelled and animated the unit's mechanism in Blender to test whether it makes physical sense.",
+      "zh": "在 Blender 里给单元补上机构并做成动画，检验它在实物上说不说得通。"
+    },
+    "body": {
+      "en": "- The shape of every strip and whether each bond is locked come frame by frame from the same engine the site uses. Blender only adds the mechanism: a ceiling housing, a telescopic hanging rod, upper and lower clamp rings, a telescopic core between them, and bonds as telescopic locking struts.\n- Rendered three videos: one full cycle of a square platform, four bond maps on the same mechanism, and the same strip switching from a platform to a passage.\n- Modelling exposed a problem. The passage map is held open by 31 bonds that span the empty cavity; built as solid struts, the cavity fills with a row of rods (second image). The web view never drew those bonds, so it went unnoticed. How a passage should work is left to the author.\n- The reading of the mechanism and its dimensions are modelling assumptions awaiting the author's confirmation.",
+      "zh": "- 每一帧布带的形状、每颗键扣没扣，都由站上同一份引擎算出后导入；Blender 里只补机构：天花机箱、伸缩吊杆、上下夹环、两环之间的伸缩芯，键做成伸缩锁止撑杆。\n- 出了三段视频：方台一个完整循环、四张键谱共用一套机构、同一条布从平台换成通道。\n- 建模时发现一个问题：通道那张键谱靠 31 颗跨过空腔的键撑开，做成实体后空腔里是一排杆子（图二）。网页上一直没画这些键，所以没暴露。通道怎么成立留给作者定。\n- 机构的读法与尺寸都是建模假设，待作者确认。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "3D", "zh": "立体" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "image",
+        "src": "/log/2026-10-29-unit-blender-formed.webp",
+        "alt": {
+          "en": "Blender render of one unit after forming, with clamp rings, hanging rod and bond struts.",
+          "zh": "Blender 渲染：成形后的一台单元，带夹环、吊杆和键的撑杆。"
+        },
+        "caption": {
+          "en": "Blender render of one unit after forming, with clamp rings, hanging rod and bond struts.",
+          "zh": "Blender 渲染：成形后的一台单元，带夹环、吊杆和键的撑杆。"
+        },
+        "width": 1600,
+        "height": 900
+      },
+      {
+        "kind": "image",
+        "src": "/log/2026-10-29-unit-blender-channel-bonds.webp",
+        "alt": {
+          "en": "The passage map with all its bonds drawn: the cavity is filled by struts that cross it.",
+          "zh": "通道那张键谱把键全部画出来：空腔被跨过去的撑杆填满。"
+        },
+        "caption": {
+          "en": "The passage map with all its bonds drawn: the cavity is filled by struts that cross it.",
+          "zh": "通道那张键谱把键全部画出来：空腔被跨过去的撑杆填满。"
+        },
+        "width": 1600,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "id": "log-2026-10-29-1025707231186851",
+    "date": "2026-10-29",
+    "lead": {
+      "en": "Cut the platform thickness in the 3D room from 15 cm to 6.5 cm, lowering the coffee tables with it.",
+      "zh": "把立体演示的台面从 15 cm 减到 6.5 cm，茶几高度随之降下来。"
+    },
+    "body": {
+      "en": "- A 0.15 m platform was too thick to serve as a table. With the box height reduced, the bond lengths for the three positions around the square were recalibrated.\n- Fabric is still pre-cut to the longest bond map, 338 nodes. The author asked for the unused part to be stored rather than cut off.\n- The coffee table dropped from 0.49 to 0.42 m, inside the 0.40–0.45 m given in the literature, and the space between a dining seat and the platform underside grew by 8 cm for the legs.\n- The same day a second round of the form plan ran the earlier sections and combinations at the room's actual size. The author decided to do only the thinner platform first.",
+      "zh": "- 0.15 m 厚的台面当桌子太厚。箱高减小后，方台面、边、角三档的键长重新标定。\n- 布仍按最长的一张键谱预裁 338 节；平台用不到的部分按作者要求收起来，不剪掉。\n- 茶几从 0.49 m 降到 0.42 m，落进资料给的 0.40–0.45 m；餐椅座面到台底多出 8 cm 放腿。\n- 同日写了形态方案第二轮，把之前的截面与组合按房间的实际尺寸真跑一遍。作者决定先只做台面变薄这一步。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-29-1536599851722179",
+    "date": "2026-10-29",
+    "lead": {
+      "en": "Restructured the Project I case page to put the research question ahead of how the machine was built.",
+      "zh": "重构项目一案例页，把篇幅从机构搭建拉回研究主旨。"
+    },
+    "body": {
+      "en": "- First brought it up to date with August to October: added a section on the behaviour engine, rewrote the four personalities after the October reclassification, described the structure from the latest model and the handover drawings, and corrected an error saying the rack pushed the arch crown (it pushes the inner foot).\n- The author found most of the page was about building the mechanism, with too little on the point of the project. It was reordered: research question, physical form, the course of one session, four personalities, method and progress, construction, reflection.\n- Design changes, steering, structural calculation and other build details went into a \"Making notes\" section that is collapsed by default. Construction fell from about 58% to 24% of the visible text.\n- At the author's request, anthropomorphic wording such as \"wakes up\" or \"is afraid of people\" was replaced with descriptions of movement.",
+      "zh": "- 先按 8–10 月的进展补齐：新增行为引擎一节，四种性格按 10 月重分改写，结构按最新模型和交接图册重写，原文「齿条推拱顶」的错误改为推内侧脚。\n- 作者看后指出大半篇幅在讲机构怎么搭，主旨反而少。重排为研究问题 → 实体与外形 → 一场实验的经过 → 四种性格 → 方法与进展 → 身体构造 → 反思。\n- 方案修改、转向、结构计算等制作细节收进默认折叠的「制作记录」，可见正文里构造部分从约 58% 降到 24%。\n- 按作者要求，「脾气」改为「性格」，去掉「醒来」「怕人」这类拟人说法，改为描述动作。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Writing", "zh": "写作" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-28-3677321155112420",
+    "date": "2026-10-28",
+    "lead": {
+      "en": "Rewrote the Project II case page around the latest changes and turned the unit section into frame-by-frame strips.",
+      "zh": "按最近的改动重写项目二案例页，单元一节改成从实验台截下的分镜。"
+    },
+    "body": {
+      "en": "- The text now covers five recent changes: units stay stowed under the ceiling, the room uses square platforms, 64 units fill the room, units double as tables, and a seated person brings a table down.\n- The section on the space became \"How a unit is made and moves\", from one strip up to a whole room. Structural demos that had been spread over three sections were gathered here.\n- Each demo is now a strip of screenshots from the same experiment at several moments, like a comic, each frame numbered with a reading and one line of explanation. Eight strips; live 3D benches in the text went from three to one.\n- A capture script controls the clock and random numbers, so every run produces the same frames. The comparison results are marked as coming from the earlier set-up (round platforms, no tables).",
+      "zh": "- 正文补上五件新事：单元平时收在天花下、房间里用方台、64 台铺满整间房、单元兼作桌子、人坐下时面前那台落下当桌子。\n- 「空间本体」一节改为「单元的构成与运动」，从一条带讲到一间房；原先散在三节里的结构演示收进这一节。\n- 结构演示改成分镜：同一台实验在几个时刻的截图排成一排，像漫画一样，每格有编号、读数和一句说明。共八组，正文里的实时 3D 台架从三台减到一台。\n- 截图脚本接管时钟和随机数，每次截到同样的画面。对照结果注明来自旧配置（圆台、没有桌子）。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Writing", "zh": "写作" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-28-583129396749615",
+    "date": "2026-10-28",
+    "lead": {
+      "en": "Made visitors in the demo move about more, and put the plan bench and the 3D room in the same room.",
+      "zh": "让演示里的访客更常走动，并让平面台架与立体演示用同一间房。"
+    },
+    "body": {
+      "en": "- Measured first: visitors sat 64% of the time, stood still 28% and walked only 5.6%, moving once every 75 seconds. This came from three demo values; the literature gives no figure for how often café visitors move.\n- Made pace an option. The study and the case-page comparison keep the old values; the demo uses shorter stands and walking rises to about 14%.\n- The free demo on the plan bench (2-14) now uses square platforms, fills the room and lowers tables, matching the 3D room (2-15). The four comparison presets for the case page keep their original set-up.\n- Once the room was full, aisles were so narrow that a few standing people could cut off every route. Added squeezing past: where no unit is down around a crossing, a walking person can edge past someone standing. Failed route plans in the fixed-unit condition fell from 1,223 to 41, and the author asked for people to sit longer.",
+      "zh": "- 先量：访客 64% 的时间坐着、28% 原地站、只有 5.6% 在走，约 75 秒才挪一次。原因是三个演示值，资料里没有访客多久挪一次的数据。\n- 把节奏做成选项：研究和案例页对照照旧，演示站得短一些，走动升到约 14%。\n- 平面台架 2-14 的自由演示改用方台、铺满房间、落桌子，与立体演示 2-15 同一套家具；案例页用的四个对照档保持原配置。\n- 铺满后过道太窄，几个站着的人就能把路切断。加了错身：交叉点四周没有单元落下时，走着的人可以从站着的人身边侧身过去。固定单元那档路线规划失败从 1,223 次降到 41 次；同时按作者要求让人坐久一点。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-28-2632121194495462",
+    "date": "2026-10-28",
+    "lead": {
+      "en": "Tracked down the lag on the homepage and lab page and made seven optimisations.",
+      "zh": "排查首页和实验页的卡顿，做了七处优化。"
+    },
+    "body": {
+      "en": "- Measured before changing anything: main-thread time, frame intervals and the source of long tasks, using a headless browser on a production build.\n- The biggest cost was letters widening and thickening through a CSS transition, which created a new font instance and re-laid out the whole page every frame. A script now steps it in 48 levels, and the moving letters and glow sit in isolated layers so they no longer drag 700-odd grid cells into each layout.\n- Dropped frames while sweeping the mouse over the opening screen fell from 20–28 to 6–7, and lab page script time on load from 1,419 to 903 ms. Screenshots before and after were compared pixel by pixel.\n- In this headless environment 3D rendering runs in software and is slow every frame, so those numbers were not trusted. Deferring off-screen benches would touch too much and was left for the author to decide.",
+      "zh": "- 先量后改：在生产构建上用无头浏览器量主线程耗时、帧间隔和长任务的来源。\n- 最大的开销是字变宽变粗用了 CSS 过渡，每一帧都新建一次字体实例、重排整页。改成脚本按帧推进、分 48 档；会动的字和光斑各放进一层隔开，不再牵动七百多个格子重排。\n- 首屏扫鼠标掉帧从 20–28 次降到 6–7 次，实验页载入脚本从 1,419 ms 降到 903 ms；改前改后截图逐像素比对，画面不变。\n- 本机无头环境的 3D 走软件渲染、每帧都慢，这部分数字不当真；离屏台架延后加载改动面太大，留给作者定。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Performance", "zh": "性能" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-28-2044752521482330",
+    "date": "2026-10-28",
+    "lead": {
+      "en": "Finished the homepage Work and About screens from the author's feedback on the live site.",
+      "zh": "按作者看线上的反馈收尾首页「作品」和「介绍」两屏。"
+    },
+    "body": {
+      "en": "- Fixed the left and right buttons on the Work screen not responding: the card area extends 40 px for the hover effect and covered them.\n- Cards on the opening screen now open on click instead of after hovering; tiles near the pointer shrink when they tilt, so they no longer overlap.\n- The two main project covers were recaptured from the live benches, and every card got its own short hover description, sized against a 1366×768 screen.\n- The words in the About statement now widen near the pointer, as on the opening screen, and the group marks under the cards now also appear at MacBook screen height.",
+      "zh": "- 修了作品屏左右按钮点不动：卡片区为悬停动效多伸出的 40 px 把按钮盖住了。\n- 首屏作品格由悬停自动展开改为点击展开；鼠标附近方块转斜时改为缩小，不再互相压住。\n- 两张主项目封面改从实时台架截取定帧，每张卡的悬停介绍逐张写，长度按 1366×768 的屏幕实测。\n- 介绍屏的宣言也跟着鼠标变宽变粗，与首屏一致；MacBook 的屏幕高度下也能看到卡片下方的组印记。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Design", "zh": "设计" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-27-1808859712891592",
+    "date": "2026-10-27",
+    "lead": {
+      "en": "Set the rule that when a person sits down, the unit in front of them lowers to become a table.",
+      "zh": "定下「人坐下，面前那台落下当桌子」的规则。"
+    },
+    "body": {
+      "en": "- The author asked that units should not come down at random. Only a seated person triggers a table.\n- Which unit is fixed by geometry: in front of the person, covering the seat's centre line, not over furniture and not above anyone's head. In front of a sofa it is a coffee table 0.30–0.46 m from the front edge, the usual furniture spacing; in front of a dining chair the edge stops at the knees, within reach of the hands.\n- When it moves: it lowers as someone sits, rises when the last person stands, and does not change height while in use. Speed dropped to 0.08 m/s, the fast setting of an electric standing desk. This follows Lee et al. (2019), who found automatic desks disturb least when they move between tasks.\n- Two dining chairs faced the gap between two units and could reach neither; they were turned to face one. Over four 300-second runs, the table was in place 100% of the time someone sat in a seat that has one.",
+      "zh": "- 作者要求单元不是随便落，要有依据。只有坐着的人会触发桌子。\n- 哪一台按几何定死：在人面前、盖住座位中线、不压家具、不在别人头顶。沙发前是茶几，台边离沙发前缘 0.30–0.46 m（家居通行尺寸）；餐椅前台边落在膝盖前，手够得着。\n- 什么时候动：坐下那一刻落，最后一个人起身才收，有人用着不变高度；速度降到电动升降桌的快档 0.08 m/s。依据是 Lee 等 2019 年对自动升降桌的研究：在人换事的间隙动最不打扰。\n- 两把餐椅原位正对两台之间的缝，一台都够不着，改为侧过来正对一台。4 场各 300 秒实测，坐在有桌子的座位上时桌子 100% 到位。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-27-444409839356426",
+    "date": "2026-10-27",
+    "lead": {
+      "en": "Spread the 64 units over the whole room and enlarged the square platforms so they can serve as tables.",
+      "zh": "让 64 个单元铺满整间房，方台放大到能当桌子用。"
+    },
+    "body": {
+      "en": "- The 8×8 grid had only covered the middle of the room. The 6.64 m square room is now cut into 64 cells with a unit at each centre; the number of units stays the same and the platform grows from 0.50 to 0.69 m across.\n- With larger cells the old furniture layout trapped the space behind the sofas, so it was rearranged with sofas and chairs along the walls, still ten seats.\n- Sofas and dining chairs were rebuilt to Chinese furniture and body-size standards (QB/T 1952.1, GB/T 10000), for example seat heights of 0.43 and 0.45 m. Units lower to a height that suits who they serve: 1.05 m for standing, lower in front of chairs and sofas.\n- In a short comparison all readings fell, even for the empty room; most of it comes from furniture moving to the walls and the larger grid.",
+      "zh": "- 原来的 8×8 只占房间中部。改为把 6.64 m 见方的房间切成 64 格、每格中心一台，单元数不变，方台边长从 0.50 m 放大到 0.69 m。\n- 格子变大后，旧的家具摆法会把沙发背后围死，按新格子重排为沙发夹椅子靠墙，仍是 10 个座位。\n- 沙发、餐椅按家具与人体尺寸国标（QB/T 1952.1、GB/T 10000）重建，比如座高 0.43 m 与 0.45 m。单元按给谁用落到不同高度：站立 1.05 m，椅子和沙发前更低。\n- 小样本对照里各项读数都下降，连空房间也降，大半来自家具靠墙和格子变大。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-27-2053938127237130",
+    "date": "2026-10-27",
+    "lead": {
+      "en": "Fixed three causes of strips breaking and shaking in the 3D room.",
+      "zh": "修掉立体演示里布带破裂和抖动的三个原因。"
+    },
+    "body": {
+      "en": "- A fully withdrawn strip twitched every four frames: when its target equalled its current value it fell into the \"lower again\" branch. It now stops once it arrives.\n- Strips jumped between keyframes in three places. Added denser keyframes and a straight hanging transition, and gave forming and returning separate paths with a cursor that remembers which one a strip is on. Jumps over 15 cm went from 269 to 0.\n- The membrane is no longer stretched across an opening made for a person. After the fix the case-page comparison was rerun; means moved by less than 1.5% and the conclusions held.",
+      "zh": "- 收回到底的布带每四帧抖一下：目标等于当前值时落进了「落回」分支。改为到位就停。\n- 取帧在三处跳变。加密关键帧、补上直垂的过渡帧，成形和回程各走一条路，用游标记住这条带正在哪条路上；超过 15 cm 的跳变从 269 次降到 0。\n- 为人让开的口子不再拉膜。修好后重跑案例页的对照数据，均值变化不到 1.5%，结论不变。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "3D", "zh": "立体" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-27-2603486527208778",
+    "date": "2026-10-27",
+    "lead": {
+      "en": "Studied the studio 4aC's work and used it to redesign the layout and motion of the five homepage screens.",
+      "zh": "研究 4aC 的作品，据此改首页五屏的排版与动效。"
+    },
+    "body": {
+      "en": "- Went through all 146 projects on 4aC's website and summarised nineteen techniques, each with its source, where it could go on this site and what it would cost.\n- Revised the site rules accordingly: motion is graded in three levels, each page may use one strong block of project colour, and Chinese titles can be drawn as separate vector graphics.\n- The first round only changed the typeface, and the author pointed out that the composition had not changed. The second round gave each screen one large word, trying several options as injected styles and choosing from screenshots before writing code.\n- The opening screen follows the version the author chose on a design canvas: a fine 28×15 grid with one character per cell, letters that widen and thicken under the pointer, and works placed around the text with a margin.",
+      "zh": "- 把 4aC 网站上 146 个项目逐张看过，总结出十九种做法，每种写明出处、能放到站上哪里、代价是什么。\n- 据此修订站点规范：动效分三级，每页可以有一块高色度的项目色面，中文标题可以单独做成矢量图形。\n- 第一轮只换了字体，作者指出构图没变。第二轮改成每屏一个大字，先注入样式试几种、截图挑定再写代码。\n- 首屏按作者在设计画布里选定的方案：28×15 的细线格，标语一字一格，鼠标扫过字变宽变粗，作品贴着字留一圈空白。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Research", "zh": "调研" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-26-487720547776666",
+    "date": "2026-10-26",
+    "lead": {
+      "en": "Mapped each output of the behaviour engine to one of the machine's seven motors, as groundwork for firmware.",
+      "zh": "把行为引擎的输出一一对应到真机的七个电机，为写固件做准备。"
+    },
+    "body": {
+      "en": "- Listed seven driven axes: one stepper per tendon (three), two servos for the small tentacles, one stepper driving the five rings, and the turntable motor. Sound and light are listed separately.\n- Traced each motor's model and transmission back to the original project conversations, and labelled every item by evidence: model fact, earlier hardware plan, derived, or still to calibrate.\n- Experiment 1-6 gained a linked debug view: it shows how far and in which direction each motor should turn at this moment, and each axis can be dragged by hand.\n- Stated the limits: the page is not connected to hardware and shows simulated values, not measurements. Spool radius, servo end points and turntable limits still need to be calibrated on the real machine.",
+      "zh": "- 整理出七个主动轴：三根肌腱各一台步进电机、两只小触手的舵机、一台带动五环的步进电机、一台转台电机；声音和灯单列。\n- 每个电机的型号和传动方式从原始项目对话里逐条找出处，并标明证据等级：模型事实、历史方案、推导、待标定。\n- 实验 1-6 加了联动调试：能看到每个电机此刻要转多少、往哪个方向，也能手动单独拖一根轴。\n- 写清界限：网页没有接硬件，显示的是仿真值不是实测；卷线半径、舵机端点、转台限位还要在实物上标定。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Electronics", "zh": "电子" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-26-622099719908547",
+    "date": "2026-10-26",
+    "lead": {
+      "en": "Fixed how the site displays on Mac and Safari.",
+      "zh": "修好网站在 Mac 和 Safari 上的显示问题。"
+    },
+    "body": {
+      "en": "- The homepage layout is now chosen by window width alone. \"Reduce motion\" only switches off animation and no longer swaps in a different layout.\n- When an older Safari cannot run the scripts, the page falls back to plain readable content instead of a black screen.\n- Lab benches run by default regardless of the reduce-motion setting, and a large blank area below the footer was removed.",
+      "zh": "- 首页版式改为只按窗口宽度决定；「减弱动态效果」只关动画，不再换成另一种版式。\n- 旧版 Safari 脚本跑不起来时，页面退回能读的文档流，不再一片黑。\n- 实验台默认运转，不随减弱动态效果停掉；修掉页脚下面的大段空白。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Design", "zh": "设计" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-25-4247519503237322",
+    "date": "2026-10-25",
+    "lead": {
+      "en": "Produced an assembly booklet with drawings for the physical machine sent to the portfolio agency.",
+      "zh": "为寄给作品集机构的实物做了一份带图纸的装配图册。"
+    },
+    "body": {
+      "en": "- Every drawing is rendered directly from the 3D model: three views, exploded view, parts list, assembly order, the five rings, the breathing drive, motor positions, small tentacles and base.\n- Found that the model still used a crank and connecting rod, while the machine had switched to a rack and pinion in August. Working the rack travel back from the gear teeth gives 91–94% of the inner foot's travel on each ring, so the booklet shows the rack pushing the inner foot and marks it \"to be confirmed\".\n- The author corrected the tendon routing: each line enters a window in the end plate, crosses the axis into the notch on the opposite side of the guide block, and returns to the same side of the next plate; window and notch are exactly 180° apart. The drawings were redone from measurements of the model; the routing in the web simulation is a simplification.\n- For the second version the author asked to cut behaviour, electronics and firmware and keep only how to assemble it: 16 pages became 12, and motors and spools missing from the model were drawn into the mounts left for them.",
+      "zh": "- 图全部由 3D 模型直接渲染：三视图、爆炸图、零件清单、装配顺序、五环、呼吸传动、电机位置、小触手和底座。\n- 查出模型里还是曲柄连杆，而实物 8 月已换成齿轮齿条。用齿数反算齿条行程，正好是五环内侧脚全行程的 91–94%，图册按「齿条推内侧脚」画，并标「待确认」。\n- 作者纠正了肌腱穿法：线进端板窗口后越过轴线压进对面导块的槽口，再回到下一片端板的同一侧，窗口和槽口正好差 180°。按模型逐件测量重画；网页模拟里的走法是简化。\n- 第二版按作者要求删掉行为、电子、固件，只讲怎么装：16 页减到 12 页，模型里没有的电机和绕线轮按留好的安装框补画。"
+    },
+    "tags": [
+      { "label": { "en": "Machine", "zh": "机器" }, "variant": "outline" },
+      { "label": { "en": "Mechanical", "zh": "机械" }, "variant": "neutral" }
+    ],
+    "blocks": [
+      {
+        "kind": "image",
+        "src": "/log/2026-10-25-handover-explode.webp",
+        "alt": {
+          "en": "Exploded view of the machine rendered from the model.",
+          "zh": "由模型渲染的整机爆炸图。"
+        },
+        "caption": {
+          "en": "Exploded view of the machine rendered from the model.",
+          "zh": "由模型渲染的整机爆炸图。"
+        },
+        "width": 1600,
+        "height": 1333
+      },
+      {
+        "kind": "image",
+        "src": "/log/2026-10-25-handover-tendon-route.webp",
+        "alt": {
+          "en": "Section through the large tentacle showing how each tendon crosses the axis between end plate and guide block.",
+          "zh": "大触手剖面：每根肌腱在端板与导块之间越过轴线的走法。"
+        },
+        "caption": {
+          "en": "Section through the large tentacle showing how each tendon crosses the axis between end plate and guide block.",
+          "zh": "大触手剖面：每根肌腱在端板与导块之间越过轴线的走法。"
+        },
+        "width": 1500,
+        "height": 560
+      }
+    ]
+  },
+  {
+    "id": "log-2026-10-25-1850869620597687",
+    "date": "2026-10-25",
+    "lead": {
+      "en": "Switched the units in the 3D room to square platforms and made the plan model check contact against square platforms.",
+      "zh": "立体演示里的单元改用方形平台，平面模型也按方台判断会不会碰到人。"
+    },
+    "body": {
+      "en": "- The author corrected the direction: round rings only demonstrate how a unit forms; what goes into rooms is the square platform, and future tables and shelves will be square too.\n- The 64 units use the square ring's bond maps for the face, edge and corner positions. They were scaled so that the square's inscribed circle matches the old round platform, keeping the area a cat can stand on the same.\n- Contact with people is now judged strip by strip, with three new rules: wait if a cat's platform would hit a standing person, don't stand at a crossing blocked by a platform corner, and step away if a corner that cannot retract pushes into someone.\n- An unexpected result: with square platforms the fixed-unit condition fits only 12 units, detours shrink, and people stayed beside cats longer than with moving units (943 vs 812 s, p = 0.081). The case-page chart still uses round-platform numbers; whether to rerun it is the author's call.",
+      "zh": "- 作者纠正方向：圆环只用来演示成形过程，房间里实际用方台，以后的桌子和架子也用方的。\n- 64 台换成方形环那套面、边、角三档键谱，尺寸放大到方台的内切圆正好等于原来的圆台，猫能站的面积不变。\n- 碰人改按每条布带判断，加了三条：猫要上的台会顶到人就先等、被台角堵住的交叉点不站人、被收不回的台角顶到的人挪开。\n- 对照里出了意外：换成方台后，固定不动那档只落得下 12 台，绕路变少，人在猫身边停留反而比会动的单元多（943 对 812 秒，p = 0.081）。案例页对照图仍是圆台的数，要不要重跑由作者定。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Simulation", "zh": "仿真" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-25-834956551464550",
+    "date": "2026-10-25",
+    "lead": {
+      "en": "Rebuilt the people and cats in the experiments in a blocky style and fixed four modelling errors in the old ones.",
+      "zh": "重做实验里的人和猫，改成方块风，并修掉旧模型的四处建模错误。"
+    },
+    "body": {
+      "en": "- Errors in the old models: back feet with toes pointing backwards, shins sinking into the seat when sitting, shin and foot faces flickering against each other, and cats passing through the central rod on a platform.\n- People now have a skeleton with joint proportions from Drillis and Contini (1966) and box-shaped parts, in standing, walking and sitting poses; the sitting pose is solved against the seat. Cats on a platform are arranged around the rod.\n- The style borrows the friendliness of pixel games (flat faces, low large eyes, parts in separate colours), but the models are original and keep real human and cat sizes.\n- Two days later added seven cat coats and twelve outfits, dealt out randomly each run with no repeats in the same scene.",
+      "zh": "- 旧模型的错误：后脚脚尖朝后、坐下时小腿插进座面、小腿和脚的面重叠闪烁、猫在台上穿过中间的立杆。\n- 人按 Drillis 与 Contini（1966）的关节比例搭骨架，再挂长方体零件，有站、走、坐三种姿势，坐姿按家具座面算；猫在台上绕立杆排开。\n- 风格学像素游戏的可爱办法（扁脸、低位大眼、分块上色），但模型是自己做的，尺寸仍按真人和家猫。\n- 两天后加了七种猫的花色和十二套人的穿着，每一场随机发，同一场不重样。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "3D", "zh": "立体" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-25-1789055661116995",
+    "date": "2026-10-25",
+    "lead": {
+      "en": "Removed the membranes connecting separate units; skin now exists only within a single unit.",
+      "zh": "删掉单元之间的连接膜，蒙皮只留在一个单元内部。"
+    },
+    "body": {
+      "en": "- Looking at a screenshot of experiment 2-13, the author pointed out that two separate units were joined by a sheet of fabric out of nowhere, which was not intended.\n- Removed the cross-unit fabric from the unit relations and unit combinations experiments (2-9, 2-13), along with its description.\n- Added a test so that no connecting surface between units can be added again.",
+      "zh": "- 作者看实验 2-13 的截图指出：两个分开的单元之间凭空连着一片布，这不是想要的。\n- 删掉单元关系、单元组合两台实验（2-9、2-13）里跨单元的布及相关说明。\n- 加了测试，以后不许再加单元之间的连接面。"
+    },
+    "tags": [
+      { "label": { "en": "Space", "zh": "空间" }, "variant": "outline" },
+      { "label": { "en": "Concept", "zh": "概念" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-25-1090579003175942",
+    "date": "2026-10-25",
+    "lead": {
+      "en": "Regrouped older works by category and gave each its own page.",
+      "zh": "把旧作品按类别重新分组，每件都有了自己的详情页。"
+    },
+    "body": {
+      "en": "- From a list of 14 older works supplied by the author, 11 went into the homepage Work section, in five groups of one screen each that slide sideways.\n- Each work has a page told in sections, with images replaced by the originals. Clicking an image enlarges it on the page instead of opening a new window.",
+      "zh": "- 作者交来 14 项旧作清单，11 件接进首页作品区，分五组，每组一屏、左右切换。\n- 每件一个详情页，分节叙述，图换成原件；点图在页内放大，不再新开窗口。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Design", "zh": "设计" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-25-4295933000642556",
+    "date": "2026-10-25",
+    "lead": {
+      "en": "Unified the colour rules across the site so that colour only distinguishes projects.",
+      "zh": "统一全站配色规则：颜色只用来区分项目。"
+    },
+    "body": {
+      "en": "- Labs and log entries were coloured by solver type; they are now coloured by project, with each project colour registered in one place.\n- Collected scattered colour variables into a single source and removed two generations of retired styles. Computed styles of about 14,000 elements across eight pages were identical before and after.\n- The log page switched to the same dark header, footer and type as the lab page, with language now chosen in the header. Focus rings and control borders on dark surfaces were raised to 3:1 contrast.",
+      "zh": "- 实验台和日志原来按内核类型上色，改为按项目上色，项目色只在一处登记。\n- 把散在各处的颜色变量收成一份，删掉两代已退役的样式；改前改后八页约一万四千个元素的计算样式逐项一致。\n- 日志页换成与实验页同一套深色顶栏、页脚和字体，语言改在顶栏切换；深色面上的焦点环和控件边框对比度提到 3:1。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Design", "zh": "设计" }, "variant": "neutral" }
+    ]
+  },
+  {
+    "id": "log-2026-10-25-2811391157198449",
+    "date": "2026-10-25",
+    "lead": {
+      "en": "Reorganised the control panels of every lab bench around what each control does.",
+      "zh": "按控制逻辑重排所有实验台的控制面板。"
+    },
+    "body": {
+      "en": "- Every control name used to pop up an explanation that covered the row above. All explanations moved into the side notes, and hovering a control highlights its entry.\n- Panels now follow one order: what to solve is always visible, a second row holds only playback, model parameters fold away, and view controls sit in the bottom bar.\n- Only duplicates were removed; every setting is still there, some inside the fold. Visible groups dropped from 14 to 5 on experiment 2-10 and from 16 to 7 on 2-14.",
+      "zh": "- 原来每个控件名都会弹出说明，浮框盖住上一排按钮。说明全部收进说明栏，悬停控件时点亮对应那一条。\n- 面板统一顺序：「解什么」常显，第二层只留播放，模型参数折叠起来，视角放到底栏。\n- 只删重复的控件，所有档位一个不少，有的收进折叠里。常显组数如 2-10 从 14 组减到 5 组、2-14 从 16 组减到 7 组。"
+    },
+    "tags": [
+      { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
+      { "label": { "en": "Design", "zh": "设计" }, "variant": "neutral" }
+    ]
+  },
+  {
     "id": "log-2026-10-24-688312168132846",
     "date": "2026-10-24",
     "lead": {
@@ -12,7 +488,7 @@
     },
     "tags": [
       { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
-      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+      { "label": { "en": "Design", "zh": "设计" }, "variant": "neutral" }
     ]
   },
   {
@@ -28,7 +504,7 @@
     },
     "tags": [
       { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
-      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+      { "label": { "en": "Design", "zh": "设计" }, "variant": "neutral" }
     ]
   },
   {
@@ -60,7 +536,7 @@
     },
     "tags": [
       { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
-      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+      { "label": { "en": "Design", "zh": "设计" }, "variant": "neutral" }
     ]
   },
   {
@@ -92,7 +568,7 @@
     },
     "tags": [
       { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
-      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+      { "label": { "en": "Tools", "zh": "工具" }, "variant": "neutral" }
     ]
   },
   {
@@ -108,7 +584,7 @@
     },
     "tags": [
       { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
-      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+      { "label": { "en": "Design", "zh": "设计" }, "variant": "neutral" }
     ]
   },
   {
@@ -124,7 +600,7 @@
     },
     "tags": [
       { "label": { "en": "Site", "zh": "网站" }, "variant": "outline" },
-      { "label": { "en": "Docs", "zh": "文档" }, "variant": "neutral" }
+      { "label": { "en": "Performance", "zh": "性能" }, "variant": "neutral" }
     ]
   },
   {

@@ -15,6 +15,8 @@ vi.mock('../../../../src/lib/studio/repo', async (original) => ({
   loadPool: vi.fn(), publishFiles: vi.fn(),
 }));
 const baseline = getLogEntries().slice(0, 2);
+// 夹具取池里最新两条；它们若带图，仓库名单里就得有这些图（与真实 loadPool 一致），否则发布按「图片不存在」被拒。
+const baselineImages = baseline.flatMap((e) => (e.blocks ?? []).flatMap((b) => b.kind === 'image' ? [b.src.slice('/log/'.length)] : []));
 const withoutId = ({ id: _id, ...entry }: LogEntry): LogEntry => entry;
 const request = (body: unknown) => new Request('https://example.test/api/studio/publish', {
   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
@@ -25,7 +27,7 @@ beforeEach(() => {
   vi.stubEnv('STUDIO_PASSWORD', 'test-only-password');
   vi.stubEnv('STUDIO_SECRET', 'test-only-secret');
   session.token = signSession('test-only-secret', Date.now() + 60000);
-  vi.mocked(loadPool).mockResolvedValue({ entries: baseline, sha: 'sha-current', source: 'github', images: [] });
+  vi.mocked(loadPool).mockResolvedValue({ entries: baseline, sha: 'sha-current', source: 'github', images: baselineImages });
   vi.mocked(publishFiles).mockResolvedValue({ mode: 'github', url: null, files: 1, entriesSha: 'sha-published' });
 });
 afterEach(() => vi.unstubAllEnvs());
