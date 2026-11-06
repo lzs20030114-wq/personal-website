@@ -2222,3 +2222,11 @@ planDraw 的猫分支去掉注意力圈，增加支撑、落点外圈与单元�
 ## 84. 其他作品补上 The Slice（2026-11-06，用户交来课程 PPT 与任务书「按照我们之前的做法补到网站上」）
 
 照 §60 与 §60.1 的做法，组件、路由、schema 零改动：内容池 `content/other/works.json` 加一件（`/work/the-slice`，「建筑与构造」组，排 B365 之后，这一组变 3 件，仍是一屏），图 24 张在 `public/other/the-slice/`，脚本 `scripts/other-works/build_slice.py`（PPT 按压缩包读，不解压落盘）。正文来自图版文字与任务书节选，错字改动、逐张来源、年份与获奖的存疑点见 其他作品_素材整理.md「The Slice」。
+
+## 85. 获奖与论文按后期简历改（2026-11-06，作者「奖项按我后来给你的简历为准……花园节按后期简历……合著论文是被录用的，网站上也改一下」）
+
+只改内容池 `content/other/works.json`，组件与 schema 不动（`page.recognition` 是既有字段，页上显示为「记录」）：
+- **The Slice**：§84 照旧版简历写的「新质点银奖 + HKDADC 一等奖」改为「2025 新质点设计奖铜奖」。HKDADC 一等奖（环境空间）后期简历没写是哪件作品，先撤下，待作者说明归属。
+- **Under-Cane**：加「2025 新质点设计奖银奖」。
+- **Co-Evolving Kitchen**：六处引文「会议论文稿（2025）」改为「第十七届环境—行为研究国际会议（EBRA 2026）录用」，「记录」一栏加合著论文录用一条。英文写 the 17th Environment-Behavior Research Association conference (EBRA 2026)，会议正式英文名作者未给，待核。
+- Radicepura / Hidden Stone 不在站上，时间按后期简历记入 作品集旧作_整合清单 文末。

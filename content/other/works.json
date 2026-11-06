@@ -152,6 +152,12 @@
             ]
           }
         ],
+        "recognition": [
+          {
+            "en": "Co-authored paper accepted to EBRA 2026, the 17th Environment-Behavior Research Association conference",
+            "zh": "合著论文被第十七届环境—行为研究国际会议（EBRA 2026）录用"
+          }
+        ],
         "sections": [
           {
             "heading": {
@@ -170,8 +176,8 @@
                   "为探讨这个问题，我们设计并实现了一个名为“Co-Evolving Kitchen”的智能台面原型。它采集并学习用户的烹饪动作，主动转动台面以预先迎合用户的下一个动作，目标是为老年人和下肢行动不便的人提供连贯顺畅的烹饪体验。"
                 ],
                 "source": {
-                  "en": "Jia, Chen, Dong, Lu, Jing, Li, Hu, Chen, Fang, Yan and Xu, “Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment”, conference paper manuscript (2025)",
-                  "zh": "Jia、Chen、Dong、Lu、Jing、Li、Hu、Chen、Fang、Yan、Xu，《Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment》，会议论文稿（2025）"
+                  "en": "Jia, Chen, Dong, Lu, Jing, Li, Hu, Chen, Fang, Yan and Xu, “Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment”, accepted to the 17th Environment-Behavior Research Association conference (EBRA 2026)",
+                  "zh": "Jia、Chen、Dong、Lu、Jing、Li、Hu、Chen、Fang、Yan、Xu，《Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment》，第十七届环境—行为研究国际会议（EBRA 2026）录用"
                 }
               },
               {
@@ -210,8 +216,8 @@
                   "反馈：这一模块用来应对预测系统本身可能带来的“人机信任”和“失去主动权”问题。它以增强现实（AR）作为关键介入，在台面真正转动之前，系统先用 AR 给出“预期反馈”。这种“视觉协商”把“黑箱”式的 AI 预测变成透明的人机对话，最终闭合控制回路。"
                 ],
                 "source": {
-                  "en": "Jia, Chen, Dong, Lu, Jing, Li, Hu, Chen, Fang, Yan and Xu, “Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment”, conference paper manuscript (2025)",
-                  "zh": "Jia、Chen、Dong、Lu、Jing、Li、Hu、Chen、Fang、Yan、Xu，《Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment》，会议论文稿（2025）"
+                  "en": "Jia, Chen, Dong, Lu, Jing, Li, Hu, Chen, Fang, Yan and Xu, “Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment”, accepted to the 17th Environment-Behavior Research Association conference (EBRA 2026)",
+                  "zh": "Jia、Chen、Dong、Lu、Jing、Li、Hu、Chen、Fang、Yan、Xu，《Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment》，第十七届环境—行为研究国际会议（EBRA 2026）录用"
                 }
               }
             ],
@@ -255,8 +261,8 @@
                   "第三，为了把“隐性知识”客观地转成“显性逻辑”，我们对数据集做了离线 K-Means 聚类分析。分析采用“核心特征 + 辅助特征”的匹配逻辑，让设计者在系统里保留一定的“可解释性”和“可介入性”。"
                 ],
                 "source": {
-                  "en": "Jia, Chen, Dong, Lu, Jing, Li, Hu, Chen, Fang, Yan and Xu, “Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment”, conference paper manuscript (2025), “Use of Visual Materials” (excerpts)",
-                  "zh": "Jia、Chen、Dong、Lu、Jing、Li、Hu、Chen、Fang、Yan、Xu，《Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment》，会议论文稿（2025），“Use of Visual Materials”一节（节选）"
+                  "en": "Jia, Chen, Dong, Lu, Jing, Li, Hu, Chen, Fang, Yan and Xu, “Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment”, accepted to the 17th Environment-Behavior Research Association conference (EBRA 2026), “Use of Visual Materials” (excerpts)",
+                  "zh": "Jia、Chen、Dong、Lu、Jing、Li、Hu、Chen、Fang、Yan、Xu，《Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment》，第十七届环境—行为研究国际会议（EBRA 2026）录用，“Use of Visual Materials”一节（节选）"
                 }
               }
             ],
@@ -316,8 +322,8 @@
                   "训练 LSTM 时，我们先要应对原型研究里常见的数据稀缺。我们从 10 道典型的中国菜谱中整理出 12 类动作，构成一个聚焦的数据集。为了尽量用好这些数据，我们采用滑动窗口方法，得到 356 组输入序列与目标的配对。这一做法实现了“四步历史”策略，即根据前四个动作预测第五个，专门用来让模型从必然有限的数据集中学到稳健的行为模式。"
                 ],
                 "source": {
-                  "en": "Jia, Chen, Dong, Lu, Jing, Li, Hu, Chen, Fang, Yan and Xu, “Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment”, conference paper manuscript (2025)",
-                  "zh": "Jia、Chen、Dong、Lu、Jing、Li、Hu、Chen、Fang、Yan、Xu，《Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment》，会议论文稿（2025）"
+                  "en": "Jia, Chen, Dong, Lu, Jing, Li, Hu, Chen, Fang, Yan and Xu, “Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment”, accepted to the 17th Environment-Behavior Research Association conference (EBRA 2026)",
+                  "zh": "Jia、Chen、Dong、Lu、Jing、Li、Hu、Chen、Fang、Yan、Xu，《Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment》，第十七届环境—行为研究国际会议（EBRA 2026）录用"
                 }
               }
             ],
@@ -350,8 +356,8 @@
                   "在实时控制层面，当 LSTM 模型预测到用户意图即将改变（例如“洗菜结束（1.1）”之后将是“切菜（2.0）”），系统逻辑立即输出一个布尔触发信号，激活 Grasshopper 中的“变化驱动模块”，执行台面转动或吊柜调节。Grasshopper 再把更新后的网格数据同步回 Meta Quest 3 头显，形成一致的增强现实（AR）呈现，让用户即时看到与自己被预测的意图相对应的空间反馈。"
                 ],
                 "source": {
-                  "en": "Jia, Chen, Dong, Lu, Jing, Li, Hu, Chen, Fang, Yan and Xu, “Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment”, conference paper manuscript (2025)",
-                  "zh": "Jia、Chen、Dong、Lu、Jing、Li、Hu、Chen、Fang、Yan、Xu，《Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment》，会议论文稿（2025）"
+                  "en": "Jia, Chen, Dong, Lu, Jing, Li, Hu, Chen, Fang, Yan and Xu, “Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment”, accepted to the 17th Environment-Behavior Research Association conference (EBRA 2026)",
+                  "zh": "Jia、Chen、Dong、Lu、Jing、Li、Hu、Chen、Fang、Yan、Xu，《Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment》，第十七届环境—行为研究国际会议（EBRA 2026）录用"
                 }
               },
               {
@@ -424,8 +430,8 @@
                   "虽然验证了这一行为响应框架的可行性，研究仍有几处局限，需要更严格的实证支撑。第一，研究缺少定量评估，如模型准确率、任务表现对比和行为效率指标，因此难以证明系统相对非预测环境的优势。第二，训练数据集规模和行为多样性都有限，来自少数几次重复示范，行为范围窄，可能削弱模型的泛化能力并增加过拟合风险。第三，没有来自老年人或其他用户群体的数据，限制了框架在人群差异上的适用性。最后，受控的实验室环境和 ZED 相机的感知限制，影响了生态效度。"
                 ],
                 "source": {
-                  "en": "Jia, Chen, Dong, Lu, Jing, Li, Hu, Chen, Fang, Yan and Xu, “Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment”, conference paper manuscript (2025)",
-                  "zh": "Jia、Chen、Dong、Lu、Jing、Li、Hu、Chen、Fang、Yan、Xu，《Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment》，会议论文稿（2025）"
+                  "en": "Jia, Chen, Dong, Lu, Jing, Li, Hu, Chen, Fang, Yan and Xu, “Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment”, accepted to the 17th Environment-Behavior Research Association conference (EBRA 2026)",
+                  "zh": "Jia、Chen、Dong、Lu、Jing、Li、Hu、Chen、Fang、Yan、Xu，《Co-Evolving Kitchen: A Predictive AI-driven Methodology for Translating Embodied Action into Adaptive Environment》，第十七届环境—行为研究国际会议（EBRA 2026）录用"
                 }
               }
             ],
@@ -1178,6 +1184,12 @@
                 "zh": "刘东雷"
               }
             ]
+          }
+        ],
+        "recognition": [
+          {
+            "en": "Silver Award, 2025 Xinzhidian Design Award",
+            "zh": "2025 新质点设计奖银奖"
           }
         ],
         "sections": [
@@ -2300,12 +2312,8 @@
         ],
         "recognition": [
           {
-            "en": "Silver Award, 2025 Xinzhidian Design Award",
-            "zh": "2025 新质点设计奖银奖"
-          },
-          {
-            "en": "First Prize, Environmental Space, HKDADC Hong Kong Digital Art & Design Competition, Spring 2025",
-            "zh": "HKDADC 香港数字艺术设计大赛一等奖（环境空间，2025 春季赛）"
+            "en": "Bronze Award, 2025 Xinzhidian Design Award",
+            "zh": "2025 新质点设计奖铜奖"
           }
         ],
         "sections": [
