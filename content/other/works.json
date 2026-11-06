@@ -2242,6 +2242,432 @@
       }
     },
     {
+      "title": "The Slice",
+      "group": "architecture-construction",
+      "year": "2023–24",
+      "context": "Studio course · Professional Design 4",
+      "line": "Competition brief: Adaptive Reuse x Placemaking",
+      "intro": "An abandoned twelfth-century monastery near Madrid, reused as a community centre. One large plane, held up by four hidden cores, turns the open courtyards into rooms and gives the building a new public ground on top.",
+      "slug": "the-slice",
+      "zh": {
+        "title": "The Slice",
+        "context": "专业设计（四）",
+        "line": "课程选题：NEA 竞赛 Adaptive Reuse x Placemaking"
+      },
+      "image": {
+        "src": "/other/the-slice/01-cover.webp",
+        "width": 2000,
+        "height": 1125,
+        "caption": {
+          "en": "The raised plane laid over the monastery, with the church ruins on the left and openings cut for the stairs",
+          "zh": "抬起的平面盖在修道院上，左边是教堂遗迹，平面上开洞通向楼梯"
+        }
+      },
+      "page": {
+        "credits": [
+          {
+            "role": {
+              "en": "Team",
+              "zh": "成员"
+            },
+            "names": [
+              {
+                "en": "Zihao Ni",
+                "zh": "倪子皓"
+              },
+              {
+                "en": "Zishuo Li",
+                "zh": "李梓硕"
+              }
+            ]
+          },
+          {
+            "role": {
+              "en": "Instructors",
+              "zh": "指导教师"
+            },
+            "names": [
+              {
+                "en": "Yi Du",
+                "zh": "杜异"
+              },
+              {
+                "en": "Yan Huang",
+                "zh": "黄艳"
+              }
+            ]
+          }
+        ],
+        "recognition": [
+          {
+            "en": "Silver Award, 2025 Xinzhidian Design Award",
+            "zh": "2025 新质点设计奖银奖"
+          },
+          {
+            "en": "First Prize, Environmental Space, HKDADC Hong Kong Digital Art & Design Competition, Spring 2025",
+            "zh": "HKDADC 香港数字艺术设计大赛一等奖（环境空间，2025 春季赛）"
+          }
+        ],
+        "sections": [
+          {
+            "heading": {
+              "en": "An abandoned monastery",
+              "zh": "一座废弃的修道院"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "The competition invites entrants to explore the principles of adaptive reuse of heritage at the monastery of Pelayos in Madrid, Spain, and to give an old structure new life. The task is to turn this old building into a lively community centre that stays busy in summer and stays active in winter.",
+                  "Surroundings: the monastery stands near a reservoir, a favourite summer retreat for the people of Madrid.",
+                  "History and present use: the monastery was founded in the twelfth century. It is more than an architectural ruin. It is also a treasured landmark for the local community, which still often holds events here."
+                ],
+                "zh": [
+                  "竞赛邀请大家在西班牙马德里的佩拉约斯修道院中，探索在建筑中实施遗产活化利用的原则，为古老的结构注入新的生命。参赛者的任务是将这座古老的建筑转变为一个充满活力的社区中心，不仅在繁忙的夏季保持热闹，而且在冬季也能保持活跃。",
+                  "周围环境：修道院坐落在一个水库附近，水库是马德里居民最喜欢的避暑胜地。",
+                  "历史与现代用途：修道院始建于12世纪，它不仅仅是一个建筑遗迹，还是当地社区的珍贵地标。直至今天当地社区也常常在此举办活动。"
+                ],
+                "source": {
+                  "en": "Course brief for Professional Design 4, 30 October 2023, pp. 3–5",
+                  "zh": "《专业设计（4）课程作业》任务书，2023.10.30，第 3–5 页"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/the-slice/02-elevation-shadow.webp",
+                "width": 2552,
+                "height": 518,
+                "caption": {
+                  "en": "Elevation with the shadow of the new plane falling across the old walls",
+                  "zh": "立面，新平面的影子落在旧墙上"
+                }
+              }
+            ]
+          },
+          {
+            "heading": {
+              "en": "One plane, two halves",
+              "zh": "一张平面，把空间分成两半"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "The project began with the aim of renovating and reviving the monastery, drawing on contemporary tastes and public needs to give it new functions and new energy.",
+                  "Given local conditions in Spain, the project sets out to meet, in terms of function, the needs of its two main groups, local residents and visitors. A large plane, “The Slice”, is placed on top of the original monastery and divides the existing space in two. The plane is like a lifted piece of ground, both ceiling and floor. It separates the monastery’s historical character from its physical use, which protects the original building and keeps its historical and tourist value, while meeting the community’s need for something modern and practical.",
+                  "The monastery will be used mainly by local residents and visitors, so the design aims to create an open, diverse and changeable public space for the community, while keeping part of the original architectural character."
+                ],
+                "zh": [
+                  "项目的初始目的为改造和活化修道院，结合当代社会审美和大众需求，赋予修道院新的功能和活力。",
+                  "结合西班牙当地实际状况，项目旨在从功能的角度满足当地社区居民和游客这两大主要群体的需求。在原修道院的基础上置入一个大的平面“The Slice”，将原有空间一分为二，这个平面犹如抬起的地面，但它既是天花也是地板，将修道院的历史属性和物理属性相分离，达到既保护原有建筑，保留历史价值和观光属性，又满足当地社区对于现代化和实用化的需求。",
+                  "修道院的主要使用人群为当地社区居民和游客，因此设计希望打造一个开放的多元的可变的社区公共活动空间同时保留部分原始建筑风貌。"
+                ],
+                "source": {
+                  "en": "Board, “Concept”",
+                  "zh": "图版「CONCEPT」"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/the-slice/03-under-the-plane.webp",
+                "width": 2000,
+                "height": 1125,
+                "caption": {
+                  "en": "The monastery with the plane lifted off. New rooms stand in the old walls around the cloister",
+                  "zh": "揭开平面后的修道院，新的房间立在回廊四周的旧墙里"
+                }
+              },
+              {
+                "src": "/other/the-slice/04-exploded.webp",
+                "width": 1228,
+                "height": 2160,
+                "caption": {
+                  "en": "Exploded view. From the top: roof plane, load-bearing column, solid and hollow cores, stairs, partition walls, furniture, paving and steps, the original building",
+                  "zh": "爆炸图，从上到下依次是屋顶平面、承重柱、实心与空心支撑筒、楼梯、隔断墙、家具、铺地台阶、原建筑"
+                }
+              }
+            ]
+          },
+          {
+            "heading": {
+              "en": "A roof on four cores",
+              "zh": "四处支撑筒抬起的屋顶"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "The “roof” is lifted by four large support cores hidden inside the building. Its edges cantilever out and grow thinner, so it seems to float, light and thin. The raised plane becomes one large roof for the whole monastery, and what used to be open to the sky becomes interior space with new functions."
+                ],
+                "zh": [
+                  "“屋顶”由藏在建筑内部的四处大型支撑筒所抬起。边缘出挑，并变薄，形成一种轻薄悬浮的感觉，撑起的平面成为了整个修道院的大屋顶，原先露天的部分变为室内空间，并被赋予新的功能。"
+                ],
+                "source": {
+                  "en": "Board, “Route”",
+                  "zh": "图版「ROUTE」"
+                }
+              }
+            ],
+            "layout": "pair",
+            "figures": [
+              {
+                "src": "/other/the-slice/05-axon-north.webp",
+                "width": 2070,
+                "height": 1588,
+                "caption": {
+                  "en": "Axonometric in dotted line, with the plane drawn solid over the old building",
+                  "zh": "虚线轴测，平面用实线压在旧建筑上"
+                }
+              },
+              {
+                "src": "/other/the-slice/06-axon-south.webp",
+                "width": 2601,
+                "height": 1609,
+                "caption": {
+                  "en": "The same drawing seen from the other side, with the stair cores showing darkest",
+                  "zh": "同一张图换到另一侧看，楼梯筒的线最密"
+                }
+              },
+              {
+                "src": "/other/the-slice/07-axon-roof.webp",
+                "width": 3138,
+                "height": 1708,
+                "caption": {
+                  "en": "Closer view of the roof plane, its sloped areas and the stairs running up through it",
+                  "zh": "屋顶平面近看，可见坡地和穿过平面的楼梯"
+                }
+              }
+            ]
+          },
+          {
+            "heading": {
+              "en": "Plans and elevations",
+              "zh": "平面与立面"
+            },
+            "layout": "pair",
+            "figures": [
+              {
+                "src": "/other/the-slice/08-plan-ground.webp",
+                "width": 2239,
+                "height": 1702,
+                "caption": {
+                  "en": "Ground plan, with the new stair cores drawn in heavy line",
+                  "zh": "平面图，新加的楼梯筒用粗线"
+                }
+              },
+              {
+                "src": "/other/the-slice/09-plan-roof.webp",
+                "width": 2482,
+                "height": 1698,
+                "caption": {
+                  "en": "The outline of the raised roof drawn over the plan",
+                  "zh": "抬起的屋顶轮廓叠在平面上"
+                }
+              },
+              {
+                "src": "/other/the-slice/10-elevation-east.webp",
+                "width": 3252,
+                "height": 1214,
+                "caption": {
+                  "en": "East elevation",
+                  "zh": "东立面"
+                }
+              },
+              {
+                "src": "/other/the-slice/11-elevation-west.webp",
+                "width": 3253,
+                "height": 1206,
+                "caption": {
+                  "en": "West elevation",
+                  "zh": "西立面"
+                }
+              },
+              {
+                "src": "/other/the-slice/12-elevation-north.webp",
+                "width": 3238,
+                "height": 1206,
+                "caption": {
+                  "en": "North elevation",
+                  "zh": "北立面"
+                }
+              },
+              {
+                "src": "/other/the-slice/13-elevation-south.webp",
+                "width": 2919,
+                "height": 891,
+                "caption": {
+                  "en": "South elevation",
+                  "zh": "南立面"
+                }
+              }
+            ]
+          },
+          {
+            "heading": {
+              "en": "Under the plane",
+              "zh": "平面之下"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "Columns set in the dining and lounge areas divide the space into different scales and degrees of openness, for different kinds of social use.",
+                  "Stairs are placed inside the structural cores and connect the levels above and below the plane."
+                ],
+                "zh": [
+                  "餐厅和休息区内设立柱子，分隔空间尺度，形成不同开放程度的空间类型，满足不同社交需求。",
+                  "楼梯置于建筑支撑筒内，联通平面上下。"
+                ],
+                "source": {
+                  "en": "Board, “Interior”",
+                  "zh": "图版「INTERIOR」"
+                }
+              }
+            ],
+            "layout": "pair",
+            "figures": [
+              {
+                "src": "/other/the-slice/23-plan-render.webp",
+                "width": 2000,
+                "height": 1125,
+                "caption": {
+                  "en": "Plan view with the roof removed. Rooms, furniture and stair cores sit inside the old walls",
+                  "zh": "去掉屋顶的俯视，房间、家具和楼梯筒都在旧墙之内"
+                }
+              },
+              {
+                "src": "/other/the-slice/14-hall.webp",
+                "width": 2000,
+                "height": 1125,
+                "caption": {
+                  "en": "Multi-purpose hall, in the former cloister. Light falls through slots in the roof",
+                  "zh": "多功能大厅，原来是回廊，光从屋顶的缝里落下"
+                }
+              },
+              {
+                "src": "/other/the-slice/15-dining.webp",
+                "width": 2000,
+                "height": 1125,
+                "caption": {
+                  "en": "Dining bar",
+                  "zh": "餐吧"
+                }
+              },
+              {
+                "src": "/other/the-slice/16-open-dining.webp",
+                "width": 2000,
+                "height": 1125,
+                "caption": {
+                  "en": "Open dining bar",
+                  "zh": "开放餐吧"
+                }
+              },
+              {
+                "src": "/other/the-slice/17-bar.webp",
+                "width": 2000,
+                "height": 1125,
+                "caption": {
+                  "en": "Bar counter",
+                  "zh": "吧台"
+                }
+              },
+              {
+                "src": "/other/the-slice/18-lounge.webp",
+                "width": 2000,
+                "height": 1125,
+                "caption": {
+                  "en": "Lounge",
+                  "zh": "休息室"
+                }
+              },
+              {
+                "src": "/other/the-slice/19-passage.webp",
+                "width": 2000,
+                "height": 1125,
+                "caption": {
+                  "en": "Passage, with the remains of a vault overhead",
+                  "zh": "过廊，头顶是残留的拱顶"
+                }
+              },
+              {
+                "src": "/other/the-slice/20-stair.webp",
+                "width": 2000,
+                "height": 1125,
+                "caption": {
+                  "en": "Second stair, climbing toward the roof",
+                  "zh": "第二楼梯，往屋顶上走"
+                }
+              }
+            ]
+          },
+          {
+            "heading": {
+              "en": "A new ground on the roof",
+              "zh": "屋顶上的新地面"
+            },
+            "texts": [
+              {
+                "original": "zh",
+                "en": [
+                  "Above the roof, a large platform forms naturally, with ramps and railings. The big slope faces north on one side, with its back to the sun, and east on the other, toward the community. With the platform’s advantage the ramps are wide enough for people to sit on the ground.",
+                  "Slopes facing several directions on the roof form places to rest and encourage people to stay.",
+                  "Raising the roof turns what was outdoor space into interior space and at the same time makes a new roof space. People’s line of sight rises with it, which brings a very different feeling. From above the roof you can see the community in the distance."
+                ],
+                "zh": [
+                  "屋顶之上自然成为一个大平台，并设有坡道和护栏。大斜坡一面朝向北背对太阳，一面向东直面社区的方向，借平台的优势坡道宽大，可供人们席地而坐。",
+                  "屋顶设立多朝向的坡地，形成休息区，加强人停留欲望。",
+                  "抬高的屋顶在把原室外空间编为室内的同时创造了新的屋顶空间，人的视线也随之抬升，带来截然不同的感受，屋顶之上便可望到远处的社区。"
+                ],
+                "source": {
+                  "en": "Board, “Route”, “Interior” and “Sight line”",
+                  "zh": "图版「ROUTE」「INTERIOR」「SIGHT LINE」"
+                }
+              }
+            ],
+            "figures": [
+              {
+                "src": "/other/the-slice/21-roof-slopes.webp",
+                "width": 2000,
+                "height": 1125,
+                "caption": {
+                  "en": "Roof slopes, with the church ruins beyond and a stair coming up on the right",
+                  "zh": "屋顶坡地，远处是教堂遗迹，右边是上来的楼梯"
+                }
+              },
+              {
+                "src": "/other/the-slice/22-sight-lines.webp",
+                "width": 1553,
+                "height": 216,
+                "caption": {
+                  "en": "Sight lines rising with the roof, drawn over the elevations. Cropped from the board",
+                  "zh": "视线随屋顶抬升，画在立面上，从图版裁出"
+                }
+              }
+            ]
+          },
+          {
+            "heading": {
+              "en": "The final board",
+              "zh": "最终图版"
+            },
+            "figures": [
+              {
+                "src": "/other/the-slice/24-board.webp",
+                "width": 4288,
+                "height": 1516,
+                "caption": {
+                  "en": "The A1 board, dated 13 November 2023 to 20 January 2024. Its collage at top left includes site reference photographs",
+                  "zh": "A1 图版，日期 2023.11.13–2024.1.20，左上的拼贴里有场地参考照片"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "title": "House for a Family of Five",
       "group": "architecture-construction",
       "year": "2023",
