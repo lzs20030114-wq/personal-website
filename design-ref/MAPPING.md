@@ -2226,7 +2226,7 @@ planDraw 的猫分支去掉注意力圈，增加支撑、落点外圈与单元�
 ## 85. 获奖与论文按后期简历改（2026-11-06，作者「奖项按我后来给你的简历为准……花园节按后期简历……合著论文是被录用的，网站上也改一下」）
 
 只改内容池 `content/other/works.json`，组件与 schema 不动（`page.recognition` 是既有字段，页上显示为「记录」）：
-- **The Slice**：§84 照旧版简历写的「新质点银奖 + HKDADC 一等奖」改为「2025 新质点设计奖铜奖」。HKDADC 一等奖（环境空间）后期简历没写是哪件作品，先撤下，待作者说明归属。
+- **The Slice**：§84 照旧版简历写的「新质点银奖 + HKDADC 一等奖」改为「2025 新质点设计奖铜奖」。同日作者确认 HKDADC 一等奖归 The Slice，按后期简历写作「2025 第四届香港数字艺术设计大赛一等奖（环境空间）」挂回。
 - **Under-Cane**：加「2025 新质点设计奖银奖」。
-- **Co-Evolving Kitchen**：六处引文「会议论文稿（2025）」改为「第十七届环境—行为研究国际会议（EBRA 2026）录用」，「记录」一栏加合著论文录用一条。英文写 the 17th Environment-Behavior Research Association conference (EBRA 2026)，会议正式英文名作者未给，待核。
+- **Co-Evolving Kitchen**：六处引文「会议论文稿（2025）」改为「第十七届环境—行为研究国际会议（EBRA 2026）录用」，「记录」一栏加合著论文录用一条。英文用该系列的正式名称 the 17th International Conference on Environment-Behavior Studies (EBRA 2026)（中国建筑学会环境行为学术委员会主办，第 15 届 2022 北京交大、第 16 届 2024 南京大学）。
 - Radicepura / Hidden Stone 不在站上，时间按后期简历记入 作品集旧作_整合清单 文末。
