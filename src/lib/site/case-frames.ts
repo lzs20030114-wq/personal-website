@@ -14,7 +14,7 @@
 
 export type Bi = { en: string; zh: string };
 
-export type FrameProject = 'project-ii' | 'reincarnation-machine';
+export type FrameProject = 'letting-agent' | 'reincarnation-machine';
 
 export interface Frame {
   /** 文件名（不带扩展名），在 public/work/<project>/frames/<set>/ 下 */
@@ -45,14 +45,14 @@ export interface FrameSet {
 }
 
 export function frameSrc(set: string, file: string, thumb = false): string {
-  const project = CASE_FRAMES[set]?.project ?? 'project-ii';
+  const project = CASE_FRAMES[set]?.project ?? 'letting-agent';
   return `/work/${project}/frames/${set}/${file}${thumb ? '-s' : ''}.webp`;
 }
 
 export const CASE_FRAMES: Record<string, FrameSet> = {
   // FIG.02 · 方法：一位访客坐下，猫被一步一步引到座位前方那台（Lab 2-14 默认场景，平面）
   'plan-sit': {
-    project: 'project-ii',
+    project: 'letting-agent',
     lab: '2-14',
     w: 900,
     h: 894,
@@ -75,7 +75,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
   },
   // FIG.03 · 一条带：四张键谱同一次收缩（Lab 2-1）
   'strip-forming': {
-    project: 'project-ii',
+    project: 'letting-agent',
     lab: '2-1',
     w: 1552,
     h: 783,
@@ -96,7 +96,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
   },
   // FIG.05 · 形态的连续：十二条带目录渐变（Lab 2-4，正视，终态）
   'series-gradient': {
-    project: 'project-ii',
+    project: 'letting-agent',
     lab: '2-4',
     hash: '2-4-gradient',
     w: 1552,
@@ -110,7 +110,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
   },
   // FIG.06 · 裂成两片台：十条带（Lab 2-4 捏分，正视）
   'series-split': {
-    project: 'project-ii',
+    project: 'letting-agent',
     lab: '2-4',
     hash: '2-4-split',
     w: 1552,
@@ -132,7 +132,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
   },
   // FIG.07 · 绕成一圈（Lab 2-5 整环同形 · 阶梯方箱，轴测）
   'ring-forming': {
-    project: 'project-ii',
+    project: 'letting-agent',
     lab: '2-5',
     hash: '2-5-single',
     w: 621,
@@ -153,7 +153,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
   },
   // FIG.08 · 由圆到方（Lab 2-7 整环平，五种轮廓，高角度俯视，终态）
   'round-to-square': {
-    project: 'project-ii',
+    project: 'letting-agent',
     lab: '2-7',
     hash: '2-7-flat',
     w: 683,
@@ -173,7 +173,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
   },
   // FIG.09 · 在房间里（Lab 2-15，前排沙发，放大）：落下、成形、收回
   'room-cycle': {
-    project: 'project-ii',
+    project: 'letting-agent',
     lab: '2-15',
     w: 1016,
     h: 754,
@@ -194,7 +194,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
   },
   // FIG.10 · 两种用法（Lab 2-15 侧视）
   'two-uses': {
-    project: 'project-ii',
+    project: 'letting-agent',
     lab: '2-15',
     w: 1008,
     h: 536,

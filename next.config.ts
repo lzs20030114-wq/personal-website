@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/demo", destination: "/demo/index.html", permanent: false },
+      // 项目二 2026-11-07 定名 Letting Agent，slug 由 project-ii 改为 letting-agent；旧链接（含 #锚点）转到新址。
+      // 用临时转址：浏览器不缓存，名字万一再改不会留下死缓存。
+      { source: "/work/project-ii", destination: "/work/letting-agent", permanent: false },
     ];
   },
 

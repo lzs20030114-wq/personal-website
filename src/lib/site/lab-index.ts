@@ -73,7 +73,7 @@ export const LAB_INDEX: readonly LabGroup[] = [
   },
   {
     key: "project-ii",
-    label: "Project II — Cross-species space",
+    label: "Project II — Letting Agent",
     sub: "Lab 2-1 – 2-15 · shape-changing units and the behaviour that moves them",
     segments: [
       {

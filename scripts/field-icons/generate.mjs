@@ -31,7 +31,7 @@ try {
 await writeFile(resolve(review, 'manifest.json'), JSON.stringify(field.pool, null, 2) + '\n');
 
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const projectNames = { 'project-i': '项目 I · 轮回机器', 'project-ii': '项目 II · 跨物种空间', 'project-iii': '项目 III · 睡眠研究', 'other-work': '其他工作 · 智能床', 'this-site': '本站', about: '个人介绍' };
+const projectNames = { 'project-i': '项目 I · 轮回机器', 'project-ii': '项目 II · Letting Agent', 'project-iii': '项目 III · 睡眠研究', 'other-work': '其他工作 · 智能床', 'this-site': '本站', about: '个人介绍' };
 const kindNames = { project: '主项目', lab: '实验', log: '工作日志', other: '其他工作', about: '个人介绍' };
 const tiles = field.pool.map(item => {
   const { ink, surface } = fieldColors(item.project, item.kind);

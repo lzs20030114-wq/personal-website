@@ -34,15 +34,15 @@ const HOME_PROJECTS = [
     intro:
       'A desk-sized machine that is born, ages and dies in eight to nine minutes, then starts over in the same body with a different personality. Whoever got to know it in one life has to learn its responses again in the next.',
   },
-  // 项目二尚未定名（pool title 仍是 "Project II"），卡片题用描述名；2026-10-04 作者拍板由稿内的 "Spatial simulation"
-  // 改为能体现物种的 "Cross-species space"（与 lab-index / log-facets 同步）。定名后删 title 覆写即回内容池。
+  // 2026-11-07 作者定名 Letting Agent：卡片题回到内容池（此前的描述名 "Spatial simulation" →
+  // "Cross-species space" 覆写已删）。
   {
-    slug: 'project-ii',
+    slug: 'letting-agent',
     kicker: 'Project II',
     tone: TONE_V,
     // Lab 2-15 人猫同台，仿真约 160 s：有人坐下、面前的单元落成桌子、猫在台上
-    img: '/home/cover-project-ii.webp',
-    title: 'Cross-species space',
+    img: '/home/cover-letting-agent.webp',
+    title: null,
     intro:
       'Ceiling-hung fabric units in a simulated cat café drop down as platforms. When a visitor sits, units lower into a path for the nearest cat. In the round-unit run, six or more visitors stayed by cats longer than with fixed shelving.',
   },
@@ -249,7 +249,7 @@ const COVERS: Record<string, string> = { 'project-i': '1-4', 'project-ii': '2-9'
 /** lab-index 的分组 key（project-i）→ 项目路由 slug（/work/[slug]）。 */
 const GROUP_SLUG: Record<string, string> = {
   'project-i': 'reincarnation-machine',
-  'project-ii': 'project-ii',
+  'project-ii': 'letting-agent',
 };
 
 /**
@@ -297,7 +297,7 @@ export function buildLabGroups(cards: HomeCard[]): HomeLabGroup[] {
 /** 泳道：保留稿内四条；新增项目三独立归属，避免与智能床实习混读。Lab 仍单列。 */
 const LANES = [
   { keys: ['Machine'], label: 'Reincarnation Machine', ink: 'var(--g700)' },
-  { keys: ['Space'], label: 'Cross-species space', ink: 'var(--p700)' },
+  { keys: ['Space'], label: 'Letting Agent', ink: 'var(--p700)' },
   { keys: ['Sleep research'], label: 'Sleep research', ink: TONE_S.ink },
   { keys: ['Lab'], label: 'Lab benches', ink: 'var(--ink)' },
   { keys: ['Sleep', 'Site'], label: 'Smart Bed · site', ink: 'oklch(0.5 0.02 200)' }, // 配色 v2：苔色带上加深一档
@@ -436,10 +436,10 @@ export interface HomeField {
   entries: number;
 }
 
-/** 作品路由名与日志/Lab 的项目组名只有项目一不同。 */
+/** 作品路由名（slug）与日志/Lab 的项目组名（project-i / project-ii）不同，在这里对上。 */
 const FIELD_PROJECT_BY_SLUG: Record<string, FieldProject> = {
   'reincarnation-machine': 'project-i',
-  'project-ii': 'project-ii',
+  'letting-agent': 'project-ii',
   'project-iii': 'project-iii',
 };
 const FIELD_NEUTRAL: Tone = { ink: 'var(--n700)', hi: 'var(--n200)' };

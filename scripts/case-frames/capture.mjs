@@ -16,7 +16,7 @@ import { openBrowser } from './cdp.mjs';
 const BASE = process.env.BASE ?? 'http://localhost:3100';
 // 组 → 项目（图放在哪个目录）；没列的是项目二
 const PROJECT_OF = { 'form-views': 'reincarnation-machine', breath: 'reincarnation-machine', hand: 'reincarnation-machine', startle: 'reincarnation-machine' };
-const outDir = (set) => `public/work/${PROJECT_OF[set] ?? 'project-ii'}/frames`;
+const outDir = (set) => `public/work/${PROJECT_OF[set] ?? 'letting-agent'}/frames`;
 // HUD 与 Lab 1-6 的逐轴标号（M1–M7）一律藏起；手的标记圈（.lab-hand）留着，它是画面的一部分
 const HIDE_HUD = `.lab-hud,.actuator-markers{visibility:hidden!important}`;
 
@@ -345,8 +345,8 @@ const SETS = {
     const m = await sharp(png).metadata();
     const h = Math.round(m.width / 1.5);
     const top = Math.round((m.height - h) * Number(process.env.COVER_Y ?? 1));
-    await sharp(png).extract({ left: 0, top, width: m.width, height: h }).resize({ width: 1200, height: 800 }).webp({ quality: 84 }).toFile('public/home/cover-project-ii.webp');
-    console.log(`  home/cover-project-ii.webp  1200×800（画布 ${m.width}×${m.height}，上沿 ${top}）`);
+    await sharp(png).extract({ left: 0, top, width: m.width, height: h }).resize({ width: 1200, height: 800 }).webp({ quality: 84 }).toFile('public/home/cover-letting-agent.webp');
+    console.log(`  home/cover-letting-agent.webp  1200×800（画布 ${m.width}×${m.height}，上沿 ${top}）`);
   },
   // ─── 项目一 ───
   // N04 · Lab 1-5 停在全开（中间轴 0°），四个固定视角：外形三视 + 轴测。按内容自动取景（四个视角里机身落在画框不同位置）

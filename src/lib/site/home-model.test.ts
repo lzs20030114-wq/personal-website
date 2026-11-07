@@ -40,7 +40,7 @@ describe('主页数据派生（home-model）', () => {
   it('三个项目卡指向内容池里真实存在的路由名单', () => {
     const slugs = getAllWork().map((w) => w.slug);
     const cs = cards();
-    expect(cs.map((c) => c.slug)).toEqual(['reincarnation-machine', 'project-ii', 'project-iii']);
+    expect(cs.map((c) => c.slug)).toEqual(['reincarnation-machine', 'letting-agent', 'project-iii']);
     cs.forEach((c) => expect(slugs).toContain(c.slug));
     // 未发稿的项目不上主图、不拿「待盘点」占位当简介
     const wip = cs.find((c) => c.slug === 'project-iii')!;
@@ -53,7 +53,7 @@ describe('主页数据派生（home-model）', () => {
     const groups = buildLabGroups(cards());
     const nos = groups.flatMap((g) => g.segs.flatMap((s) => s.benches.map((b) => b.no)));
     expect(nos).toEqual(LAB_BENCHES.map((b) => b.no));
-    expect(groups.map((g) => g.slug)).toEqual(['reincarnation-machine', 'project-ii', 'project-iii']);
+    expect(groups.map((g) => g.slug)).toEqual(['reincarnation-machine', 'letting-agent', 'project-iii']);
     expect(groups[2].count).toBe(0);
     // 「Case study」链接指向的 slug 必须是真实路由
     const slugs = getAllWork().map((w) => w.slug);

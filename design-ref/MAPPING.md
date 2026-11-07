@@ -2230,3 +2230,11 @@ planDraw 的猫分支去掉注意力圈，增加支撑、落点外圈与单元�
 - **Under-Cane**：加「2025 新质点设计奖银奖」。
 - **Co-Evolving Kitchen**：六处引文「会议论文稿（2025）」改为「第十七届环境—行为研究国际会议（EBRA 2026）录用」，「记录」一栏加合著论文录用一条。英文用该系列的正式名称 the 17th International Conference on Environment-Behavior Studies (EBRA 2026)（中国建筑学会环境行为学术委员会主办，第 15 届 2022 北京交大、第 16 届 2024 南京大学）。
 - Radicepura / Hidden Stone 不在站上，时间按后期简历记入 作品集旧作_整合清单 文末。
+
+## 86. 项目二定名 Letting Agent（2026-11-07，作者拍板「那就直接 letting agent 吧，章名不保留，你去改名吧」）
+
+命名过程与理由记在 项目二_展示逻辑总框架.md §14（结清 D11），这里只记站上改了什么。
+
+- **路由**：slug `project-ii` → `letting-agent`。`content/work/project-ii/` → `content/work/letting-agent/`（frontmatter `title` 与 `zh.title` 都写 `Letting Agent`，中文侧不译）；分镜图 `public/work/project-ii/` → `public/work/letting-agent/`（`case-frames.ts` 的 `FrameProject` 跟改、截图脚本 `scripts/case-frames/capture.mjs` 的落盘目录跟改）；首页封面 `cover-project-ii.webp` → `cover-letting-agent.webp`。旧路由 `/work/project-ii` 在 `next.config.ts` 里临时转址（307，浏览器不缓存）。
+- **名字**：此前所有描述名「Cross-species space / 跨物种空间」的覆写删掉，回到内容池的 title——首页 Work 卡片（`home-model.ts` 的 `title` 覆写）、案例页「下一个案例」卡（`NEXT_TITLE` 整张表删掉）、日志项目组标签（`Project II · Letting Agent` / `项目二 · Letting Agent`）、Log 泳道、首屏方块场的项目标签（`field-visuals.ts`）、/lab 分组名与项目头（`lab-index.ts`、`LabChrome`、`LabIndex`）。中英对照表里「跨物种空间」两条删掉，Lab 分组名那条改成 `项目二 — Letting Agent`。首屏图标生成脚本 `scripts/field-icons/generate.mjs` 的项目名表跟改（`design-ref/home-field-icons/manifest.json` 是它的旧产物，下次重出图标时自然更新）。三条守门测试里写死的 slug 名单跟改（`home-model.test.ts` 两处、`other-works.test.ts` 一处）。
+- **不改的**：日志 / Lab / 首页的项目组 key 仍是 `project-ii`（`GROUP_SLUG` 与 `FIELD_PROJECT_BY_SLUG` 两张映射表把它对到新 slug，与项目一 `project-i` ↔ `reincarnation-machine` 同一做法）；设计 token 名 `project-ii`；「Project II / 项目二」这类编号字样；`design-ref/` 里的稿与 manifest；历史日志里写过的旧描述名（是记录）。

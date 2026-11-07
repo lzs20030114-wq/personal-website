@@ -54,8 +54,8 @@ export const PROJECT_GROUPS: readonly ProjectGroup[] = [
   },
   {
     key: 'project-ii',
-    // 项目二尚未定名，这里给的是描述而非标题（作者定名后连同 /work 页一并改）。
-    label: { en: 'Project II · Cross-species Space', zh: '项目二 · 跨物种空间' },
+    // 2026-11-07 作者定名 Letting Agent（中英同用英文名）；组 key 仍是 project-ii，作品 slug 是 letting-agent。
+    label: { en: 'Project II · Letting Agent', zh: '项目二 · Letting Agent' },
     short: { en: 'Project II', zh: '项目二' },
     buckets: ['Space'],
     accent: 'var(--accent-2)',

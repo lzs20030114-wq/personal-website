@@ -266,7 +266,6 @@ export const LAB_PAGE_COPY: readonly (readonly [string, string])[] = [
   ["live", "运行中"],
   ["solving…", "求解中…"],
   ["Reincarnation Machine", "轮回机器"],
-  ["Cross-species space", "跨物种空间"],
   ["two linkage kernels", "两套连杆内核"],
   ["two linkage kernels and a behaviour engine", "两套连杆内核与一个行为引擎"],
   ["shape-changing units and the behaviour that moves them", "会变形的单元，以及驱动它的行为"],

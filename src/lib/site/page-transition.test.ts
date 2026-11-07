@@ -49,7 +49,7 @@ describe('chooseForm', () => {
   const home = loc('/');
   const homeWork = loc('/', '#work');
   const c1 = loc('/work/reincarnation-machine');
-  const c2 = loc('/work/project-ii');
+  const c2 = loc('/work/letting-agent');
   const lab = loc('/lab');
   const lab15 = loc('/lab', '#lab1-5');
   const log = loc('/archive');
@@ -121,7 +121,7 @@ describe('header and backdrop', () => {
   it('keeps the header still only between pages that share the same header', () => {
     expect(keepsHeader('swap', c1, lab)).toBe(true);
     expect(keepsHeader('morph', c1, lab)).toBe(true);
-    expect(keepsHeader('next', c1, loc('/work/project-ii'))).toBe(true);
+    expect(keepsHeader('next', c1, loc('/work/letting-agent'))).toBe(true);
     // 日志页与 about 也是深色顶栏（2026-10-25 / 2026-10-31 起），平级换页同样钉住
     expect(keepsHeader('swap', lab, loc('/archive'))).toBe(true);
     expect(keepsHeader('swap', loc('/archive'), about)).toBe(true);

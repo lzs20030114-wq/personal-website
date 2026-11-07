@@ -12,7 +12,7 @@ import { useLabText } from './LabLanguage';
  * LabWorkspace / LabPanel；这里只管稿里的「页面级」那一圈，数据全部来自 lab-index。
  */
 
-const PROJECT_TITLE = ['Reincarnation Machine', 'Cross-species space'] as const;
+const PROJECT_TITLE = ['Reincarnation Machine', 'Letting Agent'] as const;
 const countOf = (n: number, zh: boolean) => (zh ? `${n} 项实验` : `${n} ${n === 1 ? 'bench' : 'benches'}`);
 
 const benchCount = (g: (typeof LAB_INDEX)[number]) => g.segments.reduce((a, s) => a + s.benches.length, 0);
@@ -60,7 +60,7 @@ export function LabIntro() {
   );
 }
 
-const PROJECT_SLUG = ['reincarnation-machine', 'project-ii'] as const;
+const PROJECT_SLUG = ['reincarnation-machine', 'letting-agent'] as const;
 
 /** 项目分组头（稿：2px 墨线 + 编号 + 标题 + 副题 ‖ 台数 + 案例链接）。 */
 export function LabProjectRule({ i }: { i: 0 | 1 }) {

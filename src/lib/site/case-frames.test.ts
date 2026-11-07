@@ -17,7 +17,7 @@ function setsIn(file: string): string[] {
   const body = readFileSync(join(process.cwd(), file), 'utf8');
   return [...body.matchAll(/<FrameStrip\b[^>]*?\bset="([^"]+)"/g)].map((m) => m[1]);
 }
-const PROJECTS: FrameProject[] = ['project-ii', 'reincarnation-machine'];
+const PROJECTS: FrameProject[] = ['letting-agent', 'reincarnation-machine'];
 
 describe('案例页分镜', () => {
   for (const project of PROJECTS) {

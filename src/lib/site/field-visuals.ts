@@ -7,7 +7,7 @@ export type FieldProject = 'project-i' | 'project-ii' | 'project-iii' | 'other-w
 /** Home project hues (G / V / S), with quieter tints for other work and the site. */
 export const FIELD_PROJECTS: Record<FieldProject, { label: string; ink: string; surface: string; muted: string }> = {
   'project-i': { label: 'Reincarnation Machine', ink: '#bed5ae', surface: '#21342c', muted: '#88a18e' },
-  'project-ii': { label: 'Cross-species space', ink: '#c2b6db', surface: '#2b283d', muted: '#9990b2' },
+  'project-ii': { label: 'Letting Agent', ink: '#c2b6db', surface: '#2b283d', muted: '#9990b2' },
   'project-iii': { label: 'Sleep research', ink: '#afced9', surface: '#20323c', muted: '#829fab' },
   'other-work': { label: 'Smart Bed', ink: '#b9ceca', surface: '#243535', muted: '#889e9c' },
   'this-site': { label: 'This site', ink: '#c8cbc0', surface: '#2a3030', muted: '#969f99' },

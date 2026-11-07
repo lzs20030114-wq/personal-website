@@ -155,7 +155,7 @@ describe('Work 页分组（buildWorkGroups）', () => {
     const other = getOtherWorks();
     const groups = buildWorkGroups(cards(), other, getLogEntries());
     expect(groups[0].key).toBe('selected');
-    expect(groups[0].tiles.map((t) => t.caseSlug)).toEqual(['reincarnation-machine', 'project-ii', 'project-iii']);
+    expect(groups[0].tiles.map((t) => t.caseSlug)).toEqual(['reincarnation-machine', 'letting-agent', 'project-iii']);
     expect(groups.slice(1).map((g) => g.key)).toEqual(other.groups.map((g) => g.key));
     expect(groups.slice(1).reduce((s, g) => s + g.tiles.length, 0)).toBe(other.works.length);
     expect(groups.map((g) => g.n)).toEqual(groups.map((_, i) => String(i + 1).padStart(2, '0')));
