@@ -165,8 +165,10 @@ const LINK_COLOR: Record<EventKind, [number, number, number]> = {
 /** 仿真单帧封顶（与 Lab 2-14 台架同）：切后台回来不炸 */
 const MAX_SIM_DT = 0.05;
 /** 时间倍速（2026-10-27 作者「立体模拟也加上时间倍数，比如 8 倍、10 倍、20 倍」）：每帧的仿真时长 = 实际帧长（封顶 MAX_SIM_DT）× 倍速，
- *  按 MAX_SIM_DT 一段一段推（×1 时就是原来那一次调用，逐位不变）。仿真每秒约 8 ms，×20 时每秒真实时间约 0.16 s 的 CPU */
-const TIME_SCALES = [1, 8, 10, 20] as const;
+ *  按 MAX_SIM_DT 一段一段推（×1 时就是原来那一次调用，逐位不变）。
+ *  2026-11-08 加 ×40 / ×60（作者「加更高的时间倍数档」：访客一坐 10–30 分钟，×20 下坐一回也要 30–90 s）。
+ *  实测 6 人 4 猫每仿真秒约 5.5 ms ⇒ ×60 时每秒真实时间约 0.33 s 的 CPU */
+const TIME_SCALES = [1, 8, 10, 20, 40, 60] as const;
 const TIME_DEF = 1;
 /** 烘轨迹时每帧给的主线程预算（ms） */
 const BAKE_BUDGET_MS = 12;
