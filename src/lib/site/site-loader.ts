@@ -6,25 +6,34 @@
  *
  * - 底色从第一帧就在（首页 = 纸，其余 = 夜色，与将要出现的页面同色，退场时看不出一块布被撤走）；
  *   中间那组方格与读数晚 `APPEAR_MS` 才淡入——快的载入（缓存、好网速）根本看不见它。
- * - 就绪 = 页面登记过的事都做完（首页登记 `home`：打包脚本接管、首屏能显示）+ 字体到了（最多等到 `FONT_CAP_MS`）。
+ * - 就绪 = 页面解析完（DOMContentLoaded）+ 页面登记过的事都做完。**只有登记过事的页面（首页）才另等正文字体**
+ *   Archivo（最多到 `FONT_CAP_MS`）：首页的字本来就要等打包脚本接管才露面，顺带等字体几乎不多花时间，
+ *   换来大字不会先回退再跳一下。其余页面的正文服务端已经渲染好，解析完就退，不为字体盖住能读的字
+ *   （首版内页也等字体，实测慢网下直接打开案例页时正文多盖 1.6 s——正是「加载门」的代价，撤掉）。
+ *   只等 Archivo 一套，不等 document.fonts.ready：后者会被晚到的小字体拖住。
  *   **不等 3D 模型、不等后几屏的图、不等详情页的预载**：那些在进站之后的空闲时间里继续下载（`SitePreload`）。
- * - 一旦露过面，至少停 `MIN_SHOWN_MS` 再退，免得一闪而过；总上限 `HARD_CAP_MS`，脚本出错也不会一直盖着。
- * - 进度条与读数是真的步骤（页面 → 字体 → 脚本），不编百分比。
+ * - 一旦露过面（晚于出现时刻 `SHOWN_GRACE_MS` 以上，读数已经看得清），至少停 `MIN_SHOWN_MS` 再退，免得一闪而过；
+ *   刚开始淡入就就绪的，直接快速淡出，不为「别闪」多等。总上限 `HARD_CAP_MS`，脚本出错也不会一直盖着。
+ * - 进度条与读数是真的步骤（页面 →（首页）字体 → 脚本），不编百分比。
  *
  * 控制器是一段内联脚本（ES5，不经打包器，放在 <body> 最前面），在打包脚本到达之前就开始计时；
+ * 不用补停留时，退场就在报告就绪的那一次调用里同步发生：首页在 layout effect 里报告，首屏亮出与入场编排因此和原来一样
+ * 落在水合的同一次提交里（排进 setTimeout 实测要等水合剩下的活跑完，4G 下首屏晚 0.2–0.4 s）；
  * 页面通过 `window.__sl` 登记 / 报告就绪 / 等它退场。React 侧只用下面两个函数，没有内联脚本时（单测、`/studio`）立即放行。
  */
 
 export const SITE_LOADER = {
-  /** 方格与读数淡入前的等待（ms）：载入快于它就什么也看不见 */
-  APPEAR_MS: 280,
-  /** 露过面之后至少停多久再退（ms），免得一闪而过 */
-  MIN_SHOWN_MS: 600,
+  /** 方格与读数淡入前的等待（ms）：载入快于它就什么也看不见（实测 4G 下首页打包脚本约在脚本开始后 0.6 s 接管，取 0.7 s 让 4G 看不见它） */
+  APPEAR_MS: 700,
+  /** 开始淡入后这么久之内就绪，算「还没看清」：直接快速淡出（ms） */
+  SHOWN_GRACE_MS: 120,
+  /** 看清了之后至少停多久再退（ms），免得一闪而过（首版 600，实测在 4G 下让首页多等约 0.3 s） */
+  MIN_SHOWN_MS: 400,
   /** 退场淡出（ms） */
   FADE_MS: 450,
   /** 读数还没露面就退：底色淡出（ms） */
   QUICK_FADE_MS: 180,
-  /** 字体最多等多久（ms，从脚本开始算）；过了就让字体随后换上，不再拦 */
+  /** 首页最多为字体等多久（ms，从脚本开始算）；过了就让字体随后换上，不再拦 */
   FONT_CAP_MS: 3500,
   /** 无论如何到这一刻都退场（ms） */
   HARD_CAP_MS: 15000,
@@ -54,12 +63,12 @@ export const SITE_LOADER_STEPS = {
 
 /**
  * 退场时机（纯函数，内联脚本里同一套算式）：
- * 读数还没露面（now < 出现时刻）→ 立即退、快速淡出；露过面 → 补足最短停留再退。
+ * 读数还没看清（now < 出现时刻 + 宽限）→ 立即退、快速淡出；看清了 → 补足最短停留再退。
  * 时刻都从脚本开始算。
  */
 export function exitPlan(now: number): { wait: number; fade: number } {
-  const { APPEAR_MS, MIN_SHOWN_MS, FADE_MS, QUICK_FADE_MS } = SITE_LOADER;
-  if (now < APPEAR_MS) return { wait: 0, fade: QUICK_FADE_MS };
+  const { APPEAR_MS, SHOWN_GRACE_MS, MIN_SHOWN_MS, FADE_MS, QUICK_FADE_MS } = SITE_LOADER;
+  if (now < APPEAR_MS + SHOWN_GRACE_MS) return { wait: 0, fade: QUICK_FADE_MS };
   return { wait: Math.max(0, APPEAR_MS + MIN_SHOWN_MS - now), fade: FADE_MS };
 }
 
@@ -84,20 +93,22 @@ d.setAttribute(${JSON.stringify(SITE_LOADER_ATTR)},'on');
 if(lang==='zh'){el.setAttribute('lang','zh');el.setAttribute('aria-label','\\u6b63\\u5728\\u8f7d\\u5165');}
 var bar=el.querySelector('[data-sl-bar]'),lbl=el.querySelector('[data-sl-step]');
 function pending(){var n=0;for(var k in needs)if(needs[k]===1)n++;return n;}
-function paint(){var total=2,got=(dcl?1:0)+(fonts?1:0);for(var k in needs){total++;if(needs[k]===2)got++;}
+function anyNeed(){for(var k in needs)return true;return false;}
+function paint(){var wf=anyNeed(),total=wf?2:1,got=(dcl?1:0)+(wf&&fonts?1:0);for(var k in needs){total++;if(needs[k]===2)got++;}
 if(bar)bar.style.transform='scaleX('+(got/total)+')';
-if(lbl)lbl.textContent=!dcl?T.page:!fonts?T.type:pending()?T.script:T.done;}
+if(lbl)lbl.textContent=!dcl?T.page:wf&&!fonts?T.type:pending()?T.script:T.done;}
 function finish(){if(done)return;sl.done=done=true;paint();var now=Date.now()-t0,wait=0,fade=${S.QUICK_FADE_MS};
-if(now>=${S.APPEAR_MS}){wait=Math.max(0,${S.APPEAR_MS + S.MIN_SHOWN_MS}-now);fade=${S.FADE_MS};}
-setTimeout(function(){d.style.setProperty('--sl-fade',fade+'ms');d.setAttribute(${JSON.stringify(SITE_LOADER_ATTR)},'out');
+if(now>=${S.APPEAR_MS + S.SHOWN_GRACE_MS}){wait=Math.max(0,${S.APPEAR_MS + S.MIN_SHOWN_MS}-now);fade=${S.FADE_MS};}
+function exit(){d.style.setProperty('--sl-fade',fade+'ms');d.setAttribute(${JSON.stringify(SITE_LOADER_ATTR)},'out');
 var list=cbs;cbs=[];for(var i=0;i<list.length;i++){try{list[i]();}catch(e){setTimeout(function(){throw e;});}}
-setTimeout(function(){d.removeAttribute(${JSON.stringify(SITE_LOADER_ATTR)});d.style.removeProperty('--sl-fade');if(!d.getAttribute('style'))d.removeAttribute('style');el.style.display='none';},fade+40);},wait);}
-function check(){paint();if(done||!dcl)return;if(!fonts&&Date.now()-t0<${S.FONT_CAP_MS})return;if(pending())return;finish();}
+setTimeout(function(){d.removeAttribute(${JSON.stringify(SITE_LOADER_ATTR)});d.style.removeProperty('--sl-fade');if(!d.getAttribute('style'))d.removeAttribute('style');el.style.display='none';},fade+40);}
+if(wait>0)setTimeout(exit,wait);else exit();}
+function check(){paint();if(done||!dcl)return;if(pending())return;if(anyNeed()&&!fonts&&Date.now()-t0<${S.FONT_CAP_MS})return;finish();}
 function fontsDone(){if(!fonts){fonts=true;check();}}
-try{if(document.fonts&&document.fonts.load)document.fonts.load('400 1em "Archivo Variable"');}catch(e){}
+var face=null;try{if(document.fonts&&document.fonts.load)face=document.fonts.load('400 1em "Archivo Variable"');}catch(e){}
+if(face&&face.then)face.then(fontsDone,fontsDone);else fontsDone();
 function onDcl(){dcl=true;paint();
-var f=document.fonts;if(f&&f.ready){w.requestAnimationFrame(function(){w.requestAnimationFrame(function(){f.ready.then(fontsDone,fontsDone);});});}else fontsDone();
-setTimeout(check,Math.max(0,${S.FONT_CAP_MS}-(Date.now()-t0))+10);}
+setTimeout(check,Math.max(0,${S.FONT_CAP_MS}-(Date.now()-t0))+10);check();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',onDcl);else onDcl();
 setTimeout(finish,${S.HARD_CAP_MS});
 w.addEventListener('pageshow',function(e){if(e.persisted&&!done)finish();});

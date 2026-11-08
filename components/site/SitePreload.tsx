@@ -79,6 +79,8 @@ export function SitePreload() {
     const queue = preloadQueue(window.location.pathname);
     if (!queue.length) return;
 
+    // 先把每一页的小件（路由数据、脚本、样式，合计约 0.5 MB）都拉完，再拉大件 3D 网格（1.5 MB）：
+    // 慢网下网格要下好几秒，排在前面会让后面那一页的脚本迟迟轮不上（实测点项目二时它还在下项目一的网格）
     const run = async () => {
       for (const target of queue) {
         await idle();
@@ -89,10 +91,10 @@ export function SitePreload() {
         }
         await idle();
         await prefetchPageAssets(target.path).catch(() => {});
-        for (const url of target.meshes) {
-          await idle();
-          await fetchMeshBuffer(url).catch(() => {});
-        }
+      }
+      for (const url of queue.flatMap((t) => t.meshes)) {
+        await idle();
+        await fetchMeshBuffer(url).catch(() => {});
       }
     };
     afterLoader(() => {

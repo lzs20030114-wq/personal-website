@@ -45,7 +45,7 @@ function harness(opts: { path?: string; lang?: string; noFonts?: boolean; loadin
     },
     getElementById: (id: string) => (id === SITE_LOADER_ID ? el : null),
     addEventListener: (ev: string, fn: () => void) => (listeners[ev] ??= []).push(fn),
-    fonts: opts.noFonts ? undefined : { ready: fontsReady, load: () => fontsReady },
+    fonts: opts.noFonts ? undefined : { load: () => fontsReady },
   };
   const win = {
     requestAnimationFrame: (fn: () => void) => timers.push({ at: now, fn }),
@@ -84,12 +84,12 @@ function harness(opts: { path?: string; lang?: string; noFonts?: boolean; loadin
 }
 
 describe('首次载入页的退场时机（MAPPING §87）', () => {
-  it('读数还没露面就就绪：立即快速淡出；露过面：补足最短停留', () => {
+  it('读数还没看清就就绪：立即快速淡出；看清了：补足最短停留', () => {
+    const { APPEAR_MS, SHOWN_GRACE_MS, MIN_SHOWN_MS } = SITE_LOADER;
     expect(exitPlan(100)).toEqual({ wait: 0, fade: SITE_LOADER.QUICK_FADE_MS });
-    expect(exitPlan(SITE_LOADER.APPEAR_MS + 100)).toEqual({
-      wait: SITE_LOADER.MIN_SHOWN_MS - 100,
-      fade: SITE_LOADER.FADE_MS,
-    });
+    expect(exitPlan(APPEAR_MS + SHOWN_GRACE_MS - 1)).toEqual({ wait: 0, fade: SITE_LOADER.QUICK_FADE_MS });
+    const t = APPEAR_MS + SHOWN_GRACE_MS + 10;
+    expect(exitPlan(t)).toEqual({ wait: APPEAR_MS + MIN_SHOWN_MS - t, fade: SITE_LOADER.FADE_MS });
     expect(exitPlan(5000)).toEqual({ wait: 0, fade: SITE_LOADER.FADE_MS });
   });
 
@@ -119,16 +119,17 @@ describe('首次载入页的内联控制器', () => {
     expect(h.el.style.display).toBe('none');
   });
 
-  it('内页：等字体到了就退；读数没露面时快速淡出，淡完把自己藏起来', async () => {
+  it('内页（没登记要等的事）：页面解析完就退，不为字体盖住能读的正文；读数没露面时快速淡出，淡完把自己藏起来', async () => {
     const h = harness({ path: '/work/x' });
     let entered = 0;
     h.sl.then(() => entered++);
-    h.dcl();
+    expect(h.step.textContent).toBe(SITE_LOADER_STEPS.en.page);
     await h.advance(50);
-    expect(h.step.textContent).toBe(SITE_LOADER_STEPS.en.type);
-    h.resolveFonts();
+    expect(h.sl.done).toBe(false);
+    h.dcl(); // 字体始终没到
     await h.advance(120);
     expect(h.sl.done).toBe(true);
+    expect(h.bar.style.transform).toBe('scaleX(1)'); // 内页只有「页面」一步
     expect(h.attrs[SITE_LOADER_ATTR]).toBe('out');
     expect(entered).toBe(1);
     expect(h.style['--sl-fade']).toBe(`${SITE_LOADER.QUICK_FADE_MS}ms`);
@@ -157,17 +158,33 @@ describe('首次载入页的内联控制器', () => {
     expect(h.style['--sl-fade']).toBe(`${SITE_LOADER.FADE_MS}ms`);
   });
 
-  it('读数刚露面就就绪：补足最短停留再淡出，不一闪而过', async () => {
+  it('读数看清了才就绪：补足最短停留再淡出，不一闪而过', async () => {
+    const { APPEAR_MS, SHOWN_GRACE_MS, MIN_SHOWN_MS } = SITE_LOADER;
+    const at = APPEAR_MS + SHOWN_GRACE_MS + 30;
     const h = harness({ path: '/' });
     h.sl.need('home');
     h.dcl();
     h.resolveFonts();
-    await h.advance(400);
+    await h.advance(at);
     h.sl.ready('home');
-    await h.advance(401);
+    await h.advance(at + 1);
     expect(h.attrs[SITE_LOADER_ATTR]).toBe('on');
-    await h.advance(SITE_LOADER.APPEAR_MS + SITE_LOADER.MIN_SHOWN_MS + 1);
+    await h.advance(APPEAR_MS + MIN_SHOWN_MS + 1);
     expect(h.attrs[SITE_LOADER_ATTR]).toBe('out');
+    expect(h.style['--sl-fade']).toBe(`${SITE_LOADER.FADE_MS}ms`);
+  });
+
+  it('读数刚开始淡入就就绪：不为「别闪」多等，直接快速淡出', async () => {
+    const at = SITE_LOADER.APPEAR_MS + SITE_LOADER.SHOWN_GRACE_MS - 20;
+    const h = harness({ path: '/' });
+    h.sl.need('home');
+    h.dcl();
+    h.resolveFonts();
+    await h.advance(at);
+    h.sl.ready('home');
+    await h.advance(at + 1);
+    expect(h.attrs[SITE_LOADER_ATTR]).toBe('out');
+    expect(h.style['--sl-fade']).toBe(`${SITE_LOADER.QUICK_FADE_MS}ms`);
   });
 
   it('DOMContentLoaded 之后才登记的事不算（只认页面里内联登记的）', async () => {
@@ -179,9 +196,11 @@ describe('首次载入页的内联控制器', () => {
     expect(h.sl.done).toBe(true);
   });
 
-  it('字体迟迟不到：最多等到上限就退，字体随后再换上', async () => {
-    const h = harness({ path: '/work/x' });
+  it('首页：脚本接管了、字体迟迟不到：最多等到上限就退，字体随后再换上', async () => {
+    const h = harness({ path: '/' });
+    h.sl.need('home');
     h.dcl();
+    h.sl.ready('home');
     await h.advance(SITE_LOADER.FONT_CAP_MS - 50);
     expect(h.sl.done).toBe(false);
     await h.advance(SITE_LOADER.FONT_CAP_MS + 50);
@@ -199,9 +218,11 @@ describe('首次载入页的内联控制器', () => {
     expect(h.sl.done).toBe(true);
   });
 
-  it('没有 document.fonts 的浏览器：不等字体', async () => {
-    const h = harness({ path: '/work/x', noFonts: true });
+  it('没有 document.fonts 的浏览器：首页也不等字体', async () => {
+    const h = harness({ path: '/', noFonts: true });
+    h.sl.need('home');
     h.dcl();
+    h.sl.ready('home');
     await h.advance(10);
     expect(h.sl.done).toBe(true);
   });

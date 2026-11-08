@@ -41,7 +41,7 @@
   align-items: center;
   gap: 16px;
   opacity: 0;
-  animation: sl-in 0.32s ease-out 280ms forwards;
+  animation: sl-in 0.32s ease-out 700ms forwards; /* = SITE_LOADER.APPEAR_MS */
 }
 @keyframes sl-in {
   to {
@@ -90,7 +90,7 @@
 .sl__cell i {
   background: var(--sl-lit);
   opacity: 0;
-  animation: sl-lit 1.92s cubic-bezier(0.4, 0, 0.2, 1) calc(280ms + var(--k) * 240ms) infinite;
+  animation: sl-lit 1.92s cubic-bezier(0.4, 0, 0.2, 1) calc(700ms + var(--k) * 240ms) infinite;
 }
 @keyframes sl-lit {
   0%,
