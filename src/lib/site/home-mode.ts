@@ -8,11 +8,21 @@
  *   Safari 低于 16.4 读不懂打包后的语法（Next 自带代码里有类静态块），整包脚本不执行，
  *   内联脚本先探一下这几样语法，读不懂就直接走文档流，不再停在一片黑底上。
  * - 打包脚本正常起跑后由 HomeScroll 接管同一个属性（窗口宽窄变化、客户端跳转回首页）。
+ * - 2026-11-08（MAPPING §87）：语法读得懂时，再做两件事——向载入页登记「首页」（打包脚本接管后由 HomeScroll 报告就绪），
+ *   并在 <html> 上挂 `data-hs-hold`：后几屏的封面与日志图先不拉，首屏就绪后由 HomeScroll 摘掉。
+ *   慢网下这十几张图（约 640 KB）原先和首屏要的脚本、字体一起下载，首屏要多等好几秒。
+ *   打包脚本挂了（上面那条退回文档流的分支）也一并摘掉、报告就绪，图照常出来、载入页不会一直盖着。
  */
 
 export const HOME_FLOW_QUERY = '(max-width: 1023px)';
 export const HOME_REDUCE_QUERY = '(prefers-reduced-motion: reduce)';
 export const HOME_MODE_ATTR = 'data-hs';
+/** 后几屏的图先不拉（CSS 认这个属性，见 home.css），首屏就绪后摘掉 */
+export const HOME_HOLD_ATTR = 'data-hs-hold';
+/** 首页向载入页登记的那件事（src/lib/site/site-loader.ts） */
+export const HOME_LOADER_KEY = 'home';
+/** HomeScroll 接管之后立刻挂在 .hs-root 上（首屏亮出要等载入页退场，退回文档流的检查认这个，不认 .hs-ready） */
+export const HOME_LIVE_ATTR = 'data-hs-live';
 export type HomeMode = 'paged' | 'flow';
 
 /** 打包脚本跑完 `load` 之后多久还没接管（`.hs-ready`），就判定它挂了、退回文档流 */
@@ -43,6 +53,10 @@ export function prefersReducedMotion(): boolean {
  */
 export const HOME_BOOT_SCRIPT = `(function(){var d=document.documentElement,ok=true;try{new Function('class A{static{}};var o={};o?.a;o.b??=1;');}catch(e){ok=false;}var flow=!ok||!window.matchMedia||window.matchMedia(${JSON.stringify(
   HOME_FLOW_QUERY,
-)}).matches;d.setAttribute(${JSON.stringify(HOME_MODE_ATTR)},flow?'flow':'paged');if(!ok)return;window.addEventListener('load',function(){setTimeout(function(){var r=document.querySelector('.hs-root');if(r&&!/(^|\\s)hs-ready(\\s|$)/.test(r.className))d.setAttribute(${JSON.stringify(
-  HOME_MODE_ATTR,
-)},'flow');},${HOME_BOOT_GRACE_MS});});})();`;
+)}).matches;d.setAttribute(${JSON.stringify(HOME_MODE_ATTR)},flow?'flow':'paged');if(!ok)return;d.setAttribute(${JSON.stringify(
+  HOME_HOLD_ATTR,
+)},'');if(window.__sl)window.__sl.need(${JSON.stringify(HOME_LOADER_KEY)});window.addEventListener('load',function(){setTimeout(function(){var r=document.querySelector('.hs-root');if(r&&!/(^|\\s)hs-ready(\\s|$)/.test(r.className)&&!r.hasAttribute(${JSON.stringify(
+  HOME_LIVE_ATTR,
+)})){d.setAttribute(${JSON.stringify(HOME_MODE_ATTR)},'flow');d.removeAttribute(${JSON.stringify(HOME_HOLD_ATTR)});if(window.__sl)window.__sl.ready(${JSON.stringify(
+  HOME_LOADER_KEY,
+)});}},${HOME_BOOT_GRACE_MS});});})();`;

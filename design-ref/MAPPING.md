@@ -2239,3 +2239,30 @@ planDraw 的猫分支去掉注意力圈，增加支撑、落点外圈与单元�
 - **名字**：此前所有描述名「Cross-species space / 跨物种空间」的覆写删掉，回到内容池的 title——首页 Work 卡片（`home-model.ts` 的 `title` 覆写）、案例页「下一个案例」卡（`NEXT_TITLE` 整张表删掉）、日志项目组标签（`Project II · Letting Agent` / `项目二 · Letting Agent`）、Log 泳道、首屏方块场的项目标签（`field-visuals.ts`）、/lab 分组名与项目头（`lab-index.ts`、`LabChrome`、`LabIndex`）。中英对照表里「跨物种空间」两条删掉，Lab 分组名那条改成 `项目二 — Letting Agent`。首屏图标生成脚本 `scripts/field-icons/generate.mjs` 的项目名表跟改（`design-ref/home-field-icons/manifest.json` 是它的旧产物，下次重出图标时自然更新）。三条守门测试里写死的 slug 名单跟改（`home-model.test.ts` 两处、`other-works.test.ts` 一处）。
 - **不改的**：日志 / Lab / 首页的项目组 key 仍是 `project-ii`（`GROUP_SLUG` 与 `FIELD_PROJECT_BY_SLUG` 两张映射表把它对到新 slug，与项目一 `project-i` ↔ `reincarnation-machine` 同一做法）；设计 token 名 `project-ii`；「Project II / 项目二」这类编号字样；`design-ref/` 里的稿与 manifest；历史日志里写过的旧描述名（是记录）。
 - **验证**：typecheck 干净；`npm run build`（vitest 110 个文件 1421 项 + vite + next）过，`/work/letting-agent` 进 SSG 名单。生产构建 + 无头 Chromium：`/work/letting-agent` 中英两侧 h1 都是 Letting Agent、页面标题「Letting Agent — Portfolio」；`/work/project-ii#log` 307 落到 `/work/letting-agent#log`（锚点保留）；项目一页「下一个案例」卡、/lab 中英两侧、/archive 项目筛选、首页卡片与封面都换成新名，首页不再有旧 href；五路由零 pageerror。/archive 里仍能搜到一处「Cross-species Space」，是 2026-10-04 那条日志正文里写的「站上描述名改为……」，属记录、不改。
+
+## 87. 首次载入页 · 首页首屏瘦身 · 详情页空闲预载（2026-11-08，用户「进网站之前要先卡一会儿，点进项目详情页还要卡一会儿……可不可以提前加载，先弹出一个加载页，有一点动效，告诉他正在加载，加载完了再进去」）
+
+**先量再改**（生产构建 + 无头 Chromium；本机 HTTP/2 代理接在 `next start` 前面，模拟 Vercel 的协议；两档网络：慢 = 往返 300 ms · 2 Mbit/s，约等于从国内连 Vercel；4G = 往返 60 ms · 9 Mbit/s）。查出三件事，与「加载页」本身无关，都是站自己造成的：
+
+1. **首页慢网下空着一片格子约 8 秒**：首屏的字在打包脚本接管前是藏着的（§67 的做法），而脚本要和后几屏的约 15 张封面 / 日志图（约 640 KB，首屏根本看不见）一起抢带宽；首屏右下「Open the lab」按钮又在视口预取里把整个实验室连带下载（约 650 KB 压缩后，含 2.1 MB 的「跳过成形」终态字典）。字体排在 CSS 后面才开始下，比字晚到约 2 秒——字先用回退字体出来再跳一下。
+2. **点进项目一详情页，主图空着 10 秒**：主图那台整机要两份 3D 网格（2.6 MB），点下去之后才开始下载；Vercel 不压缩 `application/octet-stream`，原样发。页面自己的脚本（约 280 KB 压缩后）也是点下去才下载，转场要等它，点下去 1.2–1.4 s 才开始动。
+3. **项目二详情页白拉 2.1 MB**：正文那台立体带（2-2）静态引用了「跳过成形」的终态字典，而正文里的台架根本没有那个勾选。
+
+**改了什么**：
+
+- **首次载入页**（`components/site/SiteLoader.tsx` + `app/site-loader.css` + 控制器 `src/lib/site/site-loader.ts`）。一段内联 ES5 控制器放在 `<body>` 最前面，打包脚本到达之前就计时：
+  - 只在整页载入时出现，站内跳转从不出现；**不让人多等**——只盖住页面本来就没准备好的那段：首页 = 打包脚本接管（启动脚本向它登记 `home`，HomeScroll 报告就绪）+ 字体；其余页 = 字体（最多 3.5 s，`FONT_CAP_MS`）。**不等 3D 模型、不等后几屏的图、不等详情页预载。**
+  - 底色从第一帧就在，与将要出现的页面同色（首页 / 隐私页 = 纸，其余 = 夜色），退场只淡出；中间那组方格与读数晚 280 ms 才淡入（`APPEAR_MS`）——快的载入看不见它；露过面之后至少停 600 ms（`MIN_SHOWN_MS`），免得一闪而过；总上限 15 s（`HARD_CAP_MS`），脚本挂了也不会一直盖着。
+  - 画面：名字一行 + 一排四格 + 一根发丝进度线 + 一行读数。四格 = 首页方块场的四种格子（项目 · 台架 · 日志 · 其他作品，右上角记号与图例同一套），依次亮起又暗回去，是方块场「亮格」的同一个动作；不用项目色（颜色只表示项目）。进度只按做完的真实步骤走（页面 → 字体 → 脚本），读数写当前那一步，偏好中文时用中文（读 `site-lang`）。文字用系统字——等的正是网络字体。动画只动 opacity / transform，主线程忙着解析脚本时照样顺滑。减弱动态效果下方格静止。
+  - 首页入场编排改为**载入页开始退场时**才放（与它的淡出叠在一起）；首屏亮出（`.hs-ready`）同时挪到那一刻。HomeScroll 接管后立刻在 `.hs-root` 上挂 `data-hs-live`，启动脚本「打包脚本挂了就退回文档流」的检查改认它（`.hs-ready` 现在会晚一点到）。经客户端跳转回首页时载入页早已不在，一切与原来一样。
+- **首页首屏瘦身**：
+  - 后几屏的图先不拉：启动脚本在 `<html>` 上挂 `data-hs-hold`，`home.css` 用一条 `!important` 规则把 Work 封面、日志主图与缩略图的 `background-image` 压成 none；首屏亮出时摘掉（脚本挂了的退回分支也会摘）。首屏方块场的图标是 mask，不受影响。
+  - 首屏「Open the lab」两处 `prefetch={false}`：指针移上去时 PageTransitions 照样预热（§48 已有的悬停预取）。
+- **详情页空闲预载**（`components/site/SitePreload.tsx` + 规则 `src/lib/site/site-preload.ts`）：载入页退场 1.5 s 后（让首屏编排与后几屏的图先走），在空闲时间里一件一件来——项目一、项目二依次：① `router.prefetch` ② 拉一份这页的 HTML（静态页，压缩后约 70 KB），从里面读出 `/_next/static/` 下的脚本与样式文件名，没下载过的以 `<link rel="prefetch">` 交给浏览器（Safari 没有 prefetch，退回低优先级 fetch），只进 HTTP 缓存 ③ 项目一的两份 3D 网格进共享缓存。省流量或 2G 档不做；不预载自己所在的那一页；没预载完就点进去，页面照常自己下载。
+  - **试过、撤掉的做法**：从首页 `import()` 案例页用到的模块来「预热」。实测 Turbopack 会把同一个模块按「从哪一页加载」打进不同的文件（同一个 LifeCycle，首页 import 得到 `275n…js`，案例页要的是 `3t5y…js`），预热下载的是另一份，点进去照样要下载；只有页面 HTML 里写的才是它真正要的文件名。
+- **3D 网格下载**（`src/lib/linkage/mesh-fetch.ts`）：整机与触手两份网格改走一个按 URL 记的共享缓存（Lab 1-3 / 1-4 / 1-5 / 1-6、案例页主图、首页预载共用，同一次会话只下载一次）；构建时 `scripts/copy-assets.mjs` 另存 `.bin.gz`（2.55 → 1.52 MB），浏览器先拉 .gz 用 DecompressionStream 解开，不支持、取不到、或中间哪层已替我们解过压（开头不是 gzip 魔数）都退回原文件。消费者发现数据不完整（截断）时 `forgetMeshBuffer` 丢掉这份，下一次重新下载——原来触手那条「失败后可重试」的守门因此仍成立。主图在网格到之前读数位写「Loading 3D model… / 载入三维模型…」，不再是一个空框。
+- **「跳过成形」终态字典按需载入**（`components/lab/skinTerminal.ts`）：仍随站点代码打包、走同一条代码分块（§37 的做法不变：不另发 JSON、不用 Web Crypto、不在访客设备上求解），只是改成第一次要用时 `import()`；/lab 上带控制条的皮肤台架挂上后在空闲时先把它拉下来，勾选时仍只读内存。案例页与 /lab 的首次载入因此都不再带这 2.1 MB。
+
+**与既有规范的取舍**（已写进 SITE_SPEC §1）：SITE_REVIEW §C.2 把「加载门」列为净损失——它反对的是**额外**的等待；这里的规则是只把原本的空白换成有反馈的等待，并同时把等待压短。例外一条：开着脚本时，内页服务端已渲染好的正文会被盖到字体就绪为止（最多 3.5 s，换来不出现回退字体再跳一下）；没有脚本的抓取与截图不受影响。
+
+**测量的一个坑**：自签证书的 HTTPS 代理配 `--ignore-certificate-errors` 时，Chrome **不缓存**这个源的任何响应，预取的文件点进去照样重下——看起来像预载没用。改用 `--ignore-certificate-errors-spki-list=<公钥哈希>`，证书算作可信，缓存正常。

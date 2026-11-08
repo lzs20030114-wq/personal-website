@@ -10,6 +10,7 @@ import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import { MACHINE_BASE_FRAME, machineBaseGeometry, splitMachineFrame } from '../../src/lib/linkage/machine-base';
 import { FlatRenderer, bakeIndexed, bakeRuledPoints, bakeSkinned, type CellFrame } from '../../src/lib/linkage/gl3d';
 import { loadTentacleMeshes, tentacleCellFrame } from '../../src/lib/linkage/tentacle3d-render';
+import { fetchMeshBuffer, forgetMeshBuffer } from '../../src/lib/linkage/mesh-fetch';
 import { CriticallyDamped } from '../../src/lib/linkage/motion';
 import { armFrame, armPoint, armPolyline, idleContraction } from '../../src/lib/linkage/machine-arm';
 import { type ActuatorTargets, BehaviorEngine, type EngineState, HAND, type HandMode } from '../../src/lib/linkage/behavior/engine';
@@ -675,6 +676,8 @@ export function MachineBench({
   const [saAmp, setSaAmp] = useState(Math.round((SMALLARM_IDLE.amp * 180) / Math.PI));
   const [saFreq, setSaFreq] = useState<number>(SMALLARM_IDLE.freq);
   const [hud, setHud] = useState({ err: 0, apex: 0, ring: 2, folding: true, note: '' });
+  // 实体网格还在路上：读数位写「载入三维模型…」，不让画框看起来是空的（MAPPING §87；首页空闲时多半已经预载好，一闪即过）
+  const [meshWait, setMeshWait] = useState(true);
   // —— 行为档（Lab 1-6）的面板状态；behavior 不开时这些都不出现在界面上
   const [lifeRate, setLifeRate] = useState<number>(LIFE_RATE_DEFAULT);
   const [firstK, setFirstK] = useState<PersonaKey>('A');
@@ -789,11 +792,8 @@ export function MachineBench({
     let disposed = false;
     // 主页预览层据此等模型真正载入再交叉淡化（ZonePage PreviewLayer）
     canvas.dataset.benchLoading = 'mesh';
-    fetch(MACHINE_MESH_URL)
-      .then((res) => {
-        if (!res.ok) throw new Error(`mesh 请求失败（HTTP ${res.status}）`);
-        return res.arrayBuffer();
-      })
+    // 共享缓存：同一页 / 同一次会话里只下载一次，首页空闲时可能已经预载过（MAPPING §87）
+    fetchMeshBuffer(MACHINE_MESH_URL)
       .then((buf) => {
         if (disposed) return;
         const need = Math.max(
@@ -822,12 +822,15 @@ export function MachineBench({
         }
         ready = true;
         delete canvas.dataset.benchLoading;
+        setMeshWait(false);
         setHud((h) => ({ ...h, note: '' }));
       })
       .catch((error: unknown) => {
+        forgetMeshBuffer(MACHINE_MESH_URL); // 截断的下载不留在共享缓存里，下一次挂载重新下载（卸载了也要丢）
         if (disposed) return;
         const msg = error instanceof Error ? error.message : 'mesh 载入失败';
         delete canvas.dataset.benchLoading;
+        setMeshWait(false);
         setHud((h) => ({ ...h, note: msg }));
         canvas.setAttribute('aria-label', `3D preview incomplete: ${msg}`);
       });
@@ -2870,6 +2873,8 @@ export function MachineBench({
             <>
               {hud.note ? (
                 <div className="dim">{tx('3D preview unavailable')}</div>
+              ) : meshWait ? (
+                <div className="dim">{tx('Loading 3D model…')}</div>
               ) : debugMode === 'manual' && debugCommand ? (
                 <div className="dim">{B.sound} {debugCommand.soundOn ? `● ${Math.round(debugCommand.soundHz)} Hz` : '○'} · {B.light} {Math.round(debugCommand.lightLevel * 100)}%</div>
               ) : bhud ? (
@@ -2889,6 +2894,8 @@ export function MachineBench({
             <div className="dim">
               {hud.note
                 ? tx('3D preview unavailable')
+                : meshWait
+                ? tx('Loading 3D model…')
                 : `${tx('apex')}(S${hud.ring + 1}) ${hud.apex.toFixed(1)} mm · ${tx('err')} ${hud.err.toFixed(2)} · ${
                     run ? (hud.folding ? L.going.fold : L.going.open) : L.drive.slider
                   }`}
