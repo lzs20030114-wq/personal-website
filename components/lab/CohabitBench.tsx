@@ -198,7 +198,7 @@ function sceneOf(sim: CohabitSim, showTrace: boolean, selected = -1) {
     furniture: sim.furn
       ? {
           rects: sim.furn.rects,
-          seats: sim.seats.map((q) => ({ x: q.x, y: q.y, meet: q.meet, taken: sim.people.some((v) => v.seat === q.i) })),
+          seats: sim.seats.map((q) => ({ x: q.x, y: q.y, meet: sim.guideTarget(q, 'meet'), taken: sim.people.some((v) => v.seat === q.i) })),
           selected,
         }
       : null,

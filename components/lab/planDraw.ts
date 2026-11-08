@@ -95,7 +95,7 @@ export interface PlanScene {
    *  收回的带画成缺口（半径退到芯上）；猫身下护住的带不另标（猫就画在那儿）。省略 = 整圈。 */
   bands?: { open: Float32Array; hold: Uint8Array; count: number } | null;
   /** 「走 · 站 · 坐」（Lab 2-14，加法式；省略 = 旧画法逐位不变）：家具是地面上独立的一层（画在单元底下，靠背在朝向的
-   *  反侧，selected = 正被选中 / 拖动的那件加亮）与座位点；meet = 各座位前方那台（紫点线圈，有人坐时加重）；
+   *  反侧，selected = 正被选中 / 拖动的那件加亮）与座位点；meet = 各座位前方那台（紫点线圈，有人坐时加重；−1 = 此刻没有落得下来的，不画）；
    *  guides = 空间此刻铺的路（绿虚线串起单元中心：坐着 = 一路到座位前方那台，站定 = 只一步） */
   furniture?: {
     rects: readonly { x0: number; x1: number; y0: number; y1: number; face: readonly [number, number]; tilted?: true; cx?: number; cy?: number; hu?: number; hv?: number }[];
@@ -577,6 +577,7 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
     ctx.strokeStyle = pal.accent2;
     ctx.setLineDash([2, 3]);
     for (const q of s.furniture.seats) {
+      if (q.meet < 0) continue; // 此刻前方一台都落不下来（retarget）
       const u = L.units[q.meet];
       ctx.globalAlpha = q.taken ? 0.95 : 0.4;
       ctx.lineWidth = q.taken ? 1.6 : 0.9;
