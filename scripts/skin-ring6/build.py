@@ -733,7 +733,7 @@ def page_nest(c):
         return oytop - h * sc
 
     wy = sheet(G.NEST_WOOD[0], G.SHEET_WOOD, 26, 352, sheet_title("木板：", G.NEST_WOOD[0], SPARES),
-               "wood_880x450.dxf / .svg")
+               "wood_880x450.dxf / .svg / .dwg")
     sheet(G.NEST_SKIN, G.SHEET_SKIN, 346, 352, sheet_title("表皮：", G.NEST_SKIN), "skin_600x400.dxf / .svg")
     # 图例
     ly = wy - 7
@@ -749,7 +749,8 @@ def page_nest(c):
         f"1. 文件单位 mm，导入比例 1:1，先量一下 C1 长 {n(G.L1)}、宽 {n(G.W)}，对上再切。",
         "2. 白色线全部切穿，红色线雕刻。红线是零件编号和托上指向单元顶端的箭头，"
         "功率调低刻出看得见的浅线就行，不要刻穿。",
-        "3. DXF 里白线在图层 CUT（颜色 7），红线在图层 ENGRAVE（颜色 1）。有的软件在白底上把颜色 7 显示成黑色，"
+        "3. DXF 和 DWG 里白线在图层 CUT（颜色 7），红线在图层 ENGRAVE（颜色 1）。木板另有一份同内容的 DWG，"
+        "AutoCAD 2000 格式、单位 mm。有的软件在白底上把颜色 7 显示成黑色，"
         "按图层分就不会错。SVG 里是 #FFFFFF 和 #FF0000，画布背景设成黑色只为看得见白线。",
         "4. 表皮文件只有白线，全部切穿，没有雕刻。零件边上的小缺口是记号（方口 = A 面，圆口 = B 面，个数 = 编号），"
         "照切即可。含氯材料（氯丁橡胶、PVC）不能激光切，提供片材成分让店里确认。",
