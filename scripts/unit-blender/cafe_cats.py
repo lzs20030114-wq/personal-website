@@ -67,8 +67,8 @@ def skeleton(pose, phase=0.0, tail='relaxed'):
                       ((0.022, 0, 0.222), (0.046, 0.046, 0.05)), ((0.038, 0, 0.262), (0.034, 0.035, 0.04))]
         S['head'] = ((0.058, 0, 0.312), 0.05)
         S['legs'] = [
-            ('front', 1, [(0.03, 0.03, 0.2), (0.045, 0.03, 0.12), (0.062, 0.03, 0.04), (0.082, 0.03, 0.011)]),
-            ('front', -1, [(0.03, -0.03, 0.2), (0.045, -0.03, 0.12), (0.062, -0.03, 0.04), (0.082, -0.03, 0.011)]),
+            ('front', 1, [(0.05, 0.031, 0.19), (0.07, 0.031, 0.115), (0.086, 0.03, 0.04), (0.104, 0.03, 0.011)]),
+            ('front', -1, [(0.05, -0.031, 0.19), (0.07, -0.031, 0.115), (0.086, -0.03, 0.04), (0.104, -0.03, 0.011)]),
             # 后腿折起：大腿贴在身侧，后掌落在前掌旁边
             ('hind', 1, [(-0.07, 0.05, 0.09), (-0.01, 0.06, 0.06), (-0.075, 0.052, 0.025), (0.0, 0.05, 0.011)]),
             ('hind', -1, [(-0.07, -0.05, 0.09), (-0.01, -0.06, 0.06), (-0.075, -0.052, 0.025), (0.0, -0.05, 0.011)]),
@@ -315,6 +315,8 @@ def paint(mo, coat, S, head_turn, seed=0.0):
         w = 1.0
         if hl.length < 0.075:
             w = 0.35 if hl.x > 0.01 else 0.55
+            if hl.z > 0.015:
+                w = 0.3                      # 头顶的毛短一点：耳朵才立得出来
         if v.co.z < 0.03:
             w = 0.4
         g.add([v.index], w, 'REPLACE')
@@ -447,10 +449,10 @@ def make_cat(c, coll, name, unit_center=None, detail=1.0):
     # 耳朵、眼睛、鼻子（猫自身系，跟身子一起弯、一起摆）
     bm = bmesh.new()
     for sg in (1, -1):
-        base = hc + R @ V((-0.006, sg * 0.026, 0.035))
-        out = (R @ V((0.1, sg * 0.75, -0.25))).normalized()
-        up = (R @ V((0.05, sg * 0.5, 1.0))).normalized()
-        _cone_ear(bm, base, out, up, w=0.034, h=0.031, t=0.009)
+        base = hc + R @ V((-0.004, sg * 0.027, 0.03))
+        out = (R @ V((0.12, sg * 0.8, -0.2))).normalized()
+        up = (R @ V((0.06, sg * 0.42, 1.0))).normalized()
+        _cone_ear(bm, base, out, up, w=0.042, h=0.058, t=0.01)
     me = bpy.data.meshes.new(f'{name}·耳')
     bm.to_mesh(me)
     bm.free()
@@ -463,7 +465,7 @@ def make_cat(c, coll, name, unit_center=None, detail=1.0):
     me.materials.append(_simple('猫耳·内', (0.86, 0.62, 0.6), rough=0.6))
     me.polygons.foreach_set('use_smooth', np.zeros(len(me.polygons), dtype=bool))
     sub = ears.modifiers.new('圆', 'SUBSURF')
-    sub.levels = sub.render_levels = 2
+    sub.levels = sub.render_levels = 1
     # 眼睛
     eyes = []
     for k, sg in enumerate((1, -1)):

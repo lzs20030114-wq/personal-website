@@ -293,6 +293,16 @@ def make_shell(name, body, mask, offset, coll, mat, smooth_iter=6, thick=0.003, 
     if small:
         bmesh.ops.delete(bm, geom=small, context='FACES')
         bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+    # 边缘（领口、袖口、裤脚）是按面挑出来的，一级一级的锯齿：沿边界把顶点向两侧邻点拉平几轮
+    bnd = [v for v in bm.verts if v.is_boundary]
+    for _ in range(14):
+        moved = {}
+        for v in bnd:
+            nb = [e.other_vert(v) for e in v.link_edges if e.is_boundary]
+            if len(nb) == 2:
+                moved[v] = v.co * 0.5 + (nb[0].co + nb[1].co) * 0.25
+        for v, c in moved.items():
+            v.co = c
     me = bpy.data.meshes.new(name)
     bm.to_mesh(me)
     bm.free()
@@ -305,10 +315,37 @@ def make_shell(name, body, mask, offset, coll, mat, smooth_iter=6, thick=0.003, 
     sm = ob.modifiers.new('磨平', 'SMOOTH')
     sm.factor = smooth_k
     sm.iterations = smooth_iter
+    # 边缘一圈不外推、往里两圈逐渐推满：衣服的边贴回皮肤，领口、袖口不留缝（缝里看得见身体被遮掉那一块的锯齿边）
+    rings = {}
+    me2 = ob.data
+    edge_v = set()
+    from collections import defaultdict
+    cnt = defaultdict(int)
+    for p in me2.polygons:
+        for e in p.edge_keys:
+            cnt[e] += 1
+    for e, c in cnt.items():
+        if c == 1:
+            edge_v.update(e)
+    nbr = defaultdict(set)
+    for e in me2.edges:
+        a, b = e.vertices
+        nbr[a].add(b)
+        nbr[b].add(a)
+    front = set(edge_v)
+    for r in range(3):
+        for v in front:
+            rings.setdefault(v, r)
+        front = {w for v in front for w in nbr[v] if w not in rings}
+    g = ob.vertex_groups.new(name='外推量')
+    for v in me2.vertices:
+        r = rings.get(v.index)
+        g.add([v.index], 1.0 if r is None else (0.1, 0.4, 0.75)[r], 'REPLACE')
     d = ob.modifiers.new('外推', 'DISPLACE')
     d.direction = 'NORMAL'
     d.strength = offset
     d.mid_level = 0.0
+    d.vertex_group = '外推量'
     am = ob.modifiers.new('Armature', 'ARMATURE')
     so = ob.modifiers.new('厚度', 'SOLIDIFY')
     so.thickness = thick
