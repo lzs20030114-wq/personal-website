@@ -11,7 +11,7 @@ for (const seed of seeds) {
   const sim = new C.CohabitSim({ trigger: 'posture', grid: C.COHABIT.SEATS.GRID, unit: 'square', cover: 'room', space: 'live', seed, opening: false, auto: true, faces: true, social: true, catFloor: true, cat: { ...C.COHABIT.CAT_MT, ...C.COHABIT.CAT_LEVELS.mid }, guide: C.COHABIT.GUIDE, pace: C.PACE_DEMO });
   const half = sim.layout.fieldM / 2;
   C.partySizes(SCENE.people).forEach((sz, i, a) => { const ang = (i / a.length) * 2 * Math.PI + 0.3; sim.addParty(Math.cos(ang) * half * 0.6, Math.sin(ang) * half * 0.6, sz); });
-  for (let i = 0; i < SCENE.cats; i++) sim.addCat(sim.layout.units[(i * 5) % sim.layout.units.length]);
+  C.scatterCats(sim, SCENE.cats, seed);
   const n = sim.layout.units.length;
   const tableUnits = new Set(sim.seats.map((s) => s.table).filter((t) => t >= 0));
   const set = new Uint8Array(n), serial = new Int32Array(n), form = new Array(n).fill('flat');

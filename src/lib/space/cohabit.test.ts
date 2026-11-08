@@ -22,6 +22,7 @@ import {
   platformClear,
   populateCohabit,
   runCohabit,
+  scatterCats,
   shortestPath,
   rectDist,
   squarePlanLayout,
@@ -1663,5 +1664,40 @@ describe('案例页对照场景（Lab 2-14「正文对照」，2026-10-25）', (
       for (let t = 0; t < seconds; t += 1 / 30) sim.step(1 / 30);
       expect(sim.summary()).toEqual(off);
     }
+  });
+});
+
+describe('标准场景 6 人 4 猫（2026-11-08）', () => {
+  const mk = (space: 'live' | 'fixed' | 'empty', seed: number) =>
+    new CohabitSim({ trigger: 'posture', grid: 8, unit: 'square', cover: 'room', space, seed, opening: false, social: true, catFloor: true, cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid }, pace: PACE_DEMO });
+  it('猫的上限放得下标准场景', () => {
+    expect(COHABIT.MAX_CATS).toBeGreaterThanOrEqual(4);
+  });
+  it('scatterCats：按种子放 n 只、彼此离开 ≥ 2 个格距、同一种子逐位相同、三档空间同一份落点', () => {
+    for (const seed of [11, 12, 101, 132]) {
+      const a = mk('live', seed);
+      scatterCats(a, 4, seed);
+      expect(a.cats.length).toBe(4);
+      const pts = a.cats.map((c) => [c.walker.x, c.walker.y]);
+      for (let i = 0; i < 4; i++) for (let j = 0; j < i; j++) expect(Math.hypot(pts[i][0] - pts[j][0], pts[i][1] - pts[j][1])).toBeGreaterThanOrEqual(2 * a.layout.pitchM - 1e-6);
+      const b = mk('empty', seed);
+      scatterCats(b, 4, seed);
+      expect(b.cats.map((c) => [c.walker.x, c.walker.y])).toEqual(pts);
+    }
+    const c = mk('live', 11);
+    scatterCats(c, 4, 12);
+    const d = mk('live', 11);
+    scatterCats(d, 4, 11);
+    expect(c.cats.map((k) => k.walker.x)).not.toEqual(d.cats.map((k) => k.walker.x));
+  });
+  it('不再挤在房间上部：32 个种子里四只猫至少占三个象限的场次过半', () => {
+    let spread = 0;
+    for (let seed = 101; seed <= 132; seed++) {
+      const sim = mk('live', seed);
+      scatterCats(sim, 4, seed);
+      const q = new Set(sim.cats.map((c) => `${c.walker.x > 0 ? 1 : 0}${c.walker.y > 0 ? 1 : 0}`));
+      if (q.size >= 3) spread++;
+    }
+    expect(spread).toBeGreaterThan(16);
   });
 });

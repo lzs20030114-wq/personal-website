@@ -108,8 +108,8 @@ export const HOIST = {
   ceilGap: 2,
 } as const;
 
-/** 演示的场面：六位访客两只猫 = 对照研究的中档（案例页对照图的三档之一） */
-export const SCENE = { people: 6, cats: 2, seed: 11 } as const;
+/** 演示的场面 = 标准场景：六位访客四只猫（作者 2026-11-08；此前 6 人 2 猫 = 案例页对照图的中档）。猫按种子散放（scatterCats） */
+export const SCENE = { people: 6, cats: 4, seed: 11 } as const;
 
 export interface BandTrajectory {
   n: number;

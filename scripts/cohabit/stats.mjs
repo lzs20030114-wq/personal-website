@@ -46,3 +46,38 @@ export function permP(a, b, n = 20000, seed = 20261007) {
 export function stars(p) {
   return p < 0.001 ? '***' : p < 0.01 ? '**' : p < 0.05 ? '*' : 'n.s.';
 }
+/**
+ * 配对的双侧置换检验（符号翻转）：同一个种子下 a、b 两组各一场，H0 = 差值关于 0 对称；返回 p（下限 1/(N+1)）。
+ * 引导开 / 关在同一个种子、同一份起始布置上比，差值只来自引导本身，比把两组混在一起重分灵敏得多。
+ */
+export function permPairedP(a, b, n = 20000, seed = 20261108) {
+  const d = b.map((x, i) => x - a[i]);
+  const obs = Math.abs(mean(d));
+  const r = rng(seed);
+  let hit = 0;
+  for (let k = 0; k < n; k++) {
+    let s = 0;
+    for (const x of d) s += r() < 0.5 ? -x : x;
+    if (Math.abs(s / d.length) >= obs - 1e-12) hit++;
+  }
+  return (hit + 1) / (n + 1);
+}
+/** 配对效应量 dz = 差值均值 / 差值标准差 */
+export function pairedDz(a, b) {
+  const d = b.map((x, i) => x - a[i]);
+  const s = sd(d);
+  return s > 0 ? mean(d) / s : 0;
+}
+/** 差值均值的 95% 自助法区间（带种子，逐位可复现） */
+export function pairedCI(a, b, n = 10000, seed = 20261109) {
+  const d = b.map((x, i) => x - a[i]);
+  const r = rng(seed);
+  const ms = [];
+  for (let k = 0; k < n; k++) {
+    let s = 0;
+    for (let i = 0; i < d.length; i++) s += d[Math.floor(r() * d.length)];
+    ms.push(s / d.length);
+  }
+  ms.sort((x, y) => x - y);
+  return [ms[Math.floor(0.025 * n)], ms[Math.floor(0.975 * n)]];
+}

@@ -128,7 +128,8 @@ export const COHABIT = {
   /** 人数上限：6 → 12（作者 2026-10-08「人多档取 12 人」；Hirsch 等 2025 那家猫咖 60 m² 的厅同时最多 14 位，按面积
    *  换到这间 44 m² 约 10 位，12 位略挤于它） */
   MAX_PEOPLE: 12,
-  MAX_CATS: 3,
+  /** 猫数上限：3 → 8（作者 2026-11-08 把标准场景改成 6 人 4 猫，「把猫的上限放开」） */
+  MAX_CATS: 8,
   /** 人对人的三档距离（m）：42 国近体距离调查（日志 2026-07-27）；猫咖访客彼此是陌生人 ⇒ 用 stranger */
   PERSON_D: { stranger: 1.35, familiar: 0.92, close: 0.32 },
   /** 猫对人：Mertens & Turner 1988 的 1 m 档（日志 2026-07-28）；0.78 是「人不理猫时猫在 1 m 外的时间占比」，
@@ -4032,4 +4033,34 @@ export function populateCohabit(sim: CohabitSim, nP: number, nC: number): void {
     else sim.addPerson(x, y);
   }
   for (let i = 0; i < nC; i++) sim.addCat(sim.layout.units[(i * 5) % sim.layout.units.length]);
+}
+
+/**
+ * 标准场景（2026-11-08 起 6 人 4 猫，`SCENE`）的猫怎么放：按种子在单元里挑 nC 台，彼此离开 ≥ 2 个格距（挑不出就
+ * 放宽到 1 个格距、再不行不限）。populateCohabit 把猫固定放在第 0、5、10… 台——房间上部那一两排——猫一多、
+ * 场次一短，读数就带着出发点的偏差（2026-11-08 量过：6 人 2 猫 300 s，固定出发点下新旧家具布置差 25%，随机
+ * 出发点下差 13%）。populateCohabit 不动：案例页对照图（cohabit-compare.data.json）按它跑。
+ */
+export function scatterCats(sim: CohabitSim, nC: number, seed: number): void {
+  let s = (seed * 2654435761) >>> 0 || 1;
+  const rnd = () => {
+    s = (Math.imul(s, 1103515245) + 12345) >>> 0;
+    return s / 4294967296;
+  };
+  const units = sim.layout.units.slice();
+  for (let i = units.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [units[i], units[j]] = [units[j], units[i]];
+  }
+  const pitch = sim.layout.pitchM;
+  for (const gap of [2 * pitch - 1e-6, pitch - 1e-6, 0]) {
+    const picked: PlanUnit[] = [];
+    for (const u of units) {
+      if (picked.length >= nC) break;
+      if (picked.every((q) => Math.hypot(q.x - u.x, q.y - u.y) >= gap)) picked.push(u);
+    }
+    if (picked.length < nC && gap > 0) continue;
+    for (const u of picked) sim.addCat(u);
+    return;
+  }
 }
