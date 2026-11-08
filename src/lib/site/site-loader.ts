@@ -45,9 +45,12 @@ export const SITE_LOADER_ATTR = 'data-sl';
 export const SITE_LOADER_THEME_ATTR = 'data-sl-theme';
 export const SITE_LOADER_ID = 'site-loader';
 
-/** 浅底页（首页与隐私页），其余是夜色深底页（MAPPING §46） */
+/**
+ * 浅底页（首页与隐私页），其余是夜色深底页（MAPPING §46）。
+ * 隐私页按整段地址比，不按前缀：/privacy/xxx 这类打错的地址是 404，404 是深色页（2026-11-08，MAPPING §88）。
+ */
 export function loaderTheme(pathname: string): 'paper' | 'night' {
-  return pathname === '/' || pathname.startsWith('/privacy') ? 'paper' : 'night';
+  return pathname === '/' || pathname === '/privacy' || pathname === '/privacy/' ? 'paper' : 'night';
 }
 
 /** 不出载入页的路由：编辑后台 */
@@ -88,7 +91,7 @@ w.__sl=sl;
 if(!el||path.indexOf('/studio')===0){sl.done=done=true;if(el)el.style.display='none';return;}
 var lang='en';try{if(localStorage.getItem('site-lang')==='zh')lang='zh';}catch(e){}
 var T=${steps}[lang];
-d.setAttribute(${JSON.stringify(SITE_LOADER_THEME_ATTR)},(path==='/'||path.indexOf('/privacy')===0)?'paper':'night');
+d.setAttribute(${JSON.stringify(SITE_LOADER_THEME_ATTR)},(path==='/'||path==='/privacy'||path==='/privacy/')?'paper':'night');
 d.setAttribute(${JSON.stringify(SITE_LOADER_ATTR)},'on');
 if(lang==='zh'){el.setAttribute('lang','zh');el.setAttribute('aria-label','\\u6b63\\u5728\\u8f7d\\u5165');}
 var bar=el.querySelector('[data-sl-bar]'),lbl=el.querySelector('[data-sl-step]');

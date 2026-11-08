@@ -20,7 +20,8 @@ import { langAttr } from '../../src/lib/site/lang';
  * 阅读进度（稿 `data-readbar`）：顶栏下缘 1.5px 绿线，宽度 = 页面滚动进度；直接写 style，
  * 不进 React 状态（滚动期间每帧一次，走 state 会整栏重渲）。
  */
-export function DarkHeader({ active, readbar = false }: { active: 'work' | 'lab' | 'log' | 'about'; readbar?: boolean }) {
+// active 省略 = 哪一项都不高亮（404 页用；2026-11-08，MAPPING §88）
+export function DarkHeader({ active, readbar = false }: { active?: 'work' | 'lab' | 'log' | 'about'; readbar?: boolean }) {
   const { lang, setLang } = useCaseLangControl();
   const zh = lang === 'zh';
   const [scrolled, setScrolled] = useState(false);

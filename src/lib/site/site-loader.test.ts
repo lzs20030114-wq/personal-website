@@ -96,6 +96,10 @@ describe('首次载入页的退场时机（MAPPING §87）', () => {
   it('底色跟着将要出现的页面：首页与隐私页是纸，其余是夜色；编辑后台不出载入页', () => {
     expect(loaderTheme('/')).toBe('paper');
     expect(loaderTheme('/privacy')).toBe('paper');
+    // 打错的地址是 404，404 是深色页：只认整段的 /privacy，不认前缀
+    expect(loaderTheme('/privacy/x')).toBe('night');
+    expect(loaderTheme('/privacyx')).toBe('night');
+    expect(loaderTheme('/no-such-page')).toBe('night');
     expect(loaderTheme('/work/reincarnation-machine')).toBe('night');
     expect(loaderTheme('/lab')).toBe('night');
     expect(loaderSkips('/studio')).toBe(true);
@@ -110,6 +114,12 @@ describe('首次载入页的内联控制器', () => {
     expect(h.attrs[SITE_LOADER_THEME_ATTR]).toBe('night');
     expect(h.step.textContent).toBe(SITE_LOADER_STEPS.en.page);
     expect(harness({ path: '/' }).attrs[SITE_LOADER_THEME_ATTR]).toBe('paper');
+  });
+
+  it('内联脚本的底色判定与 loaderTheme 一致（两份写法，守门卡它们不分叉）', () => {
+    for (const path of ['/', '/privacy', '/privacy/', '/privacy/x', '/privacyx', '/lab', '/about', '/work/x', '/no-such-page']) {
+      expect(harness({ path }).attrs[SITE_LOADER_THEME_ATTR], path).toBe(loaderTheme(path));
+    }
   });
 
   it('编辑后台：不盖、直接算退场完成', () => {

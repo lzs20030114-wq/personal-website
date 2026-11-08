@@ -1,0 +1,46 @@
+/* 404（MAPPING §88）：与 /about 同一套深色外壳。页头复用 .ld-meta / .ld-lede；大字与首页 .hs-h2--big 同一种细窄字（字重 280 · 字宽 72%）；
+   颜色只用 --ld-* 与 .pg-dark 的语义 token。 */
+
+/* 内容只有几行：整页（顶栏 + 正文 + 页脚）撑满一屏，页脚贴底（about.css 同一做法）。
+   大字按屏高收（27vh），1024 × 768 到 1920 × 1080 七种桌面视口都一屏放下、不出滚动条 */
+.nf-language-root { display: flex; flex-direction: column; min-height: 100vh; min-height: 100svh; }
+.nf-language-root > main { flex: 1 0 auto; }
+.nf-language-root .ld-footer { margin-top: 0; }
+.nf-language-root :is(.ld-header__in, .ld-footer__in) { max-width: 1320px; }
+
+.nf { padding-bottom: 56px; }
+
+.nf-head { display: flex; flex-direction: column; gap: 20px; padding: 56px 0 40px; border-bottom: var(--hair); }
+.nf-path { max-width: 100%; overflow-wrap: anywhere; color: var(--ld-cream); }
+.nf-path::before { content: '·'; margin-right: 12px; color: var(--ld-mute); }
+
+.nf-code {
+  margin: 0 0 4px; font-weight: 280; font-stretch: 72%;
+  font-size: clamp(120px, min(24vw, 27vh), 300px); line-height: 0.8; letter-spacing: -0.035em;
+  color: var(--ld-cream); padding-bottom: 0.04em;
+}
+.nf-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* 三个去处：发丝线分格，与 /about 联系方式、首页信息格同一种分隔 */
+.nf-go { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: var(--hair); }
+.nf-go li + li { border-left: var(--hair); }
+.pg-dark .nf-go a { display: grid; gap: 10px; padding: 28px 24px 32px; color: var(--ld-cream); }
+.nf-go li:first-child a { padding-left: 0; }
+.nf-go__i { font: 400 12px var(--ld-mono); color: var(--ld-mute); }
+.nf-go__t { display: flex; align-items: baseline; gap: 12px; font-size: clamp(24px, 2.4vw, 32px); font-weight: 500; letter-spacing: -0.02em; line-height: 1.1; }
+.nf-go__arrow { font-weight: 400; color: var(--ld-g); transition: transform 0.18s ease; }
+.nf-go__n { font-size: 14px; line-height: 1.5; color: var(--ld-mute); }
+@media (hover: hover) and (pointer: fine) {
+  .pg-dark .nf-go a:hover { color: var(--ld-cream); }
+  .nf-go a:hover .nf-go__arrow { transform: translateX(4px); }
+}
+
+@media (max-width: 719px) {
+  .nf-head { padding-top: 44px; }
+  .nf-go { grid-template-columns: minmax(0, 1fr); }
+  .nf-go li + li { border-left: 0; border-top: var(--hair); }
+  .pg-dark .nf-go a { padding: 22px 0 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nf-go__arrow { transition: none; }
+}
