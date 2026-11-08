@@ -281,7 +281,7 @@ export const LAB_PAGE_COPY: readonly (readonly [string, string])[] = [
   ["Figures", "人与猫"],
   ["Spaces", "空间"],
   ["Pace", "节奏"],
-  ["Visitors stand still 3–12 s, go to sit at about one stop in three and sit 60–180 s; watching a cat still takes 10–30 s. Demonstration values: no study gives how often café visitors move or how long they sit. The case study comparison and the case buttons keep 8–45 s, one stop in two and 90–240 s", "访客原地站 3–12 秒，下一站约三次里有一次去坐，一坐 60–180 秒；看猫仍站 10–30 秒。都是演示值：没有资料给出猫咖访客多久挪一次、一次坐多久。案例页对照图与正文对照四钮仍用 8–45 秒、一半去坐、90–240 秒"],
+  ["Visitors stand still 3–12 s, go to sit at about one stop in three and then sit 10–30 minutes; watching a cat still takes 10–30 s. No study measures how long cat café visitors sit; cafés sell 30–60 minute slots and many visitors book one to two hours, so one visit holds two or three sittings. The case study comparison and the case buttons keep 8–45 s, one stop in two and 90–240 s", "访客原地站 3–12 秒，下一站约三次里有一次去坐，一坐 10–30 分钟；看猫仍站 10–30 秒。没有研究量过猫咖访客一次坐多久，店家一般按 30–60 分钟计时，也常有人订 1–2 小时，所以一次到访坐两三回。案例页对照图与正文对照四钮仍用 8–45 秒、一半去坐、90–240 秒"],
   ["Time", "时间"],
   ["×1 / ×8 / ×10 / ×20 playback; the simulation is stepped in 0.05 s pieces, so faster playback runs the same rules", "×1 / ×8 / ×10 / ×20 倍速播放；仿真按 0.05 秒一段推进，快放跑的是同一套规则"],
   ["Tables", "桌子"],

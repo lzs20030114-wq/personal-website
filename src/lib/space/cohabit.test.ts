@@ -1287,6 +1287,8 @@ describe('cohabit · 方形单元（unit: square，Lab 2-15，作者 2026-10-25�
       let walk = 0;
       let seated = 0;
       let all = 0;
+      let standUps = 0;
+      const was = new Map<number, boolean>();
       for (let t = 0; t < 300; t += 1 / 30) {
         sim.step(1 / 30);
         for (const p of sim.people) {
@@ -1294,25 +1296,33 @@ describe('cohabit · 方形单元（unit: square，Lab 2-15，作者 2026-10-25�
           all++;
           if (p.seated) seated++;
           else if (p.walker.state === 'walk' && p.moving) walk++;
+          if (was.get(p.id) && !p.seated) standUps++;
+          was.set(p.id, p.seated);
         }
       }
-      return { walk: walk / all, seated: seated / all, summary: sim.summary() };
+      return { walk: walk / all, seated: seated / all, standUps, summary: sim.summary() };
     };
 
-    // 2026-10-28 坐的时长 40–120 → 60–180 s（作者「可以坐久一点」），铺满整间房时又能错身走到座位：台架那套坐着的比例回到与研究那套相近
-    it('省略 = 研究那一套（逐位不变），台架那一套走得更多、坐着的比例与研究那套相近', () => {
+    // 2026-11-08 作者「猫咖里的真实顾客不应该是只坐三分钟的」：台架那套一坐 10–30 分钟（此前 60–180 s）。
+    // 一场 300 s 里坐下的人一个都不起身；研究那套（90–240 s）照旧有人起身
+    it('省略 = 研究那一套（逐位不变）；台架那一套一坐 10–30 分钟：300 s 里坐下就不起身、坐着的比例更高', () => {
       const def = run();
       const study = run(PACE_STUDY);
       expect(study.summary).toEqual(def.summary);
+      expect(PACE_DEMO.sit).toEqual({ min: 600, max: 1800 });
       const demo = run(PACE_DEMO);
-      expect(demo.walk).toBeGreaterThan(def.walk * 1.3);
-      expect(Math.abs(demo.seated - def.seated)).toBeLessThan(0.1);
+      expect(def.standUps).toBeGreaterThan(0);
+      expect(demo.standUps).toBe(0);
+      expect(demo.seated).toBeGreaterThan(def.seated);
     }, 60_000);
   });
 
   describe('错身（squeeze，2026-10-28 作者确认「两侧单元都收在天花板上时，人可以侧身错过」）', () => {
+    // 节奏钉在立这条守门时的那一套（一坐 60–180 s）：错身管的是「起身后能不能走回座位」，2026-11-08 起台架一坐 10–30 分钟，
+    // 240 s 里几乎没人起身，用现行节奏就量不出这件事
+    const SQUEEZE_PACE = { ...PACE_DEMO, sit: { min: 60, max: 180 } };
     const make = (space: 'live' | 'fixed' | 'empty', squeeze?: boolean, seed = 5) => {
-      const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', ...(squeeze === undefined ? {} : { squeeze }), space, seed, auto: true, faces: true, social: true, catFloor: true, cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid }, guide: COHABIT.GUIDE, pace: PACE_DEMO });
+      const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', ...(squeeze === undefined ? {} : { squeeze }), space, seed, auto: true, faces: true, social: true, catFloor: true, cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid }, guide: COHABIT.GUIDE, pace: SQUEEZE_PACE });
       const half = sim.layout.fieldM / 2;
       partySizes(6).forEach((sz, i, a) => {
         const t = (i / a.length) * 2 * Math.PI + 0.3;
