@@ -6,8 +6,8 @@
   仿真给的（逐位照搬）：64 台单元各在什么高度、成什么形（平台 / 当桌子 / 两层）、每条带取哪一帧、外皮的几何（台架同一套
     shellCoverVerts / shellGoreVerts）、上下夹环与芯的位置；家具的位置与朝向（人体工学那一套）；每个人的位置、姿态（坐 / 站 / 走）、
     坐姿的关节、看着哪只猫；猫的位置、朝向、头转、姿态、台上绕立杆弯的半径。
-  布景（效果图加的，不是仿真的输出）：房间的窗、门、地板与灯；人的长相、衣服的样子；三个手势（伸手摸白猫、伸手摸三花、
-    拿逗猫棒逗狸花，狸花的头因此转向逗猫棒）；桌上的杯碟、植物、猫碗。
+  布景（效果图加的，不是仿真的输出）：房间的窗、门、地板与灯；人画成风格化的模型小人（无五官、不画衣服，每人一种低饱和的单色，作者 11-08 定）；
+    三个手势（摸茶几上的猫、举手机拍、拿逗猫棒逗有顶台里的猫，那只猫的头因此转向羽毛）；桌上的杯碟、植物、猫碗。
 机构件（天花方板、上下夹环、伸缩吊杆、芯）与单元建模 A 镜头同一套（import build_scene），只换了材质。
 """
 
@@ -21,7 +21,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import build_scene as bs  # noqa: E402  模块顶层按 argv[0] 读入 cafe.json（meta 里有同样的尺寸量）
-import cafe_people as cp  # noqa: E402
+import cafe_figures as cf  # noqa: E402
 import cafe_cats as cc  # noqa: E402
 
 V = mathutils.Vector
@@ -730,22 +730,16 @@ def wand(coll, M, wrist, tip, feather):
 
 
 def build_people(top):
+    """人：风格化的模型小人（cafe_figures），姿态照仿真的骨架，三个手势照 stage_gestures"""
     coll = bs.new_coll('访客', top)
-    tcoll = bs.new_coll('人体模板（不渲染）', top)
-    female = lambda st: st.get('hair') in ('long', 'bun', 'ponytail') or st.get('bottom') == 'skirt'
-    T = {sex: cp.Template(sex, tcoll) for sex in ('male', 'female')}
-    for sex in T:
-        cp.prepare_hide(T[sex], [P['outfit']['style'] for P in D['people'] if ('female' if female(P['outfit']['style']) else 'male') == sex])
     ges = stage_gestures()
     for P in D['people']:
-        st = P['outfit']['style']
         if P['watchCat'] is not None and P['watchCat'] >= 0:
             P['lookAt'] = tuple(cat_head(D['cats'][P['watchCat']]))
         g = ges.get(P['k'])
         if g and 'lookAt' in g:
             P['lookAt'] = g['lookAt']
-        cp.make_person(T['female' if female(st) else 'male'], P, coll, f"访客{P['k'] + 1:02d}·{P['pose']}", gesture=g)
-    tcoll.hide_render = True
+        cf.make_figure(P, coll, f"访客{P['k'] + 1:02d}·{P['pose']}", gesture=g)
     return coll
 
 
