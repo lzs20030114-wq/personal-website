@@ -22,8 +22,8 @@ import {
 import { SQUARE } from '../../src/lib/space/skin-square.ts';
 import { SKIN } from '../../src/lib/space/skin-unit.ts';
 import { FIGURE, ROOM } from '../../src/lib/space/skin-grid.ts';
-import { CAT_HEAD_YAW_MAX, clampHeadYaw, humanRig, humanSkeleton, strideOf } from '../../src/lib/space/figure.ts';
-import { COATS, OUTFITS, dealLooks } from '../../components/lab/figurePalette.ts';
+import { CAT_HEAD_YAW_MAX, clampHeadYaw, figureParts, humanRig, humanSkeleton, strideOf } from '../../src/lib/space/figure.ts';
+import { COATS, OUTFITS, dealLooks, personColor } from '../../components/lab/figurePalette.ts';
 
 const [MODE = 'scan', OUT = 'cafe.json', PEOPLE = '6', CATS = '2', SEED = '11', T_ARG = '240'] = process.argv.slice(2);
 const N_PEOPLE = Number(PEOPLE), N_CATS = Number(CATS), SEED_N = Number(SEED), T = Number(T_ARG);
@@ -327,6 +327,17 @@ const people = sim.people.map((p, k) => {
   const P = (j) => place([j[0] * H, -j[1] * H, j[2] * H], yaw, 1, x * U, ROOM.FLOOR_Y, y * U);
   const pivot = place(rigH.pivot, yaw, 1, x * U, ROOM.FLOOR_Y, y * U);
   const headRel = clampHeadYaw(p.walker.gaze - heading);
+  // 台架同一副方块人（figure.ts），按穿着表上色，世界坐标（Blender 系、米）：效果图里的人就画它
+  const blocks = figureParts({
+    height: H, style: outfit.style, pose, phase, lean,
+    seat: seatSpec && { top: seatSpec.top * H, front: seatSpec.front * H, back: seatSpec.back * H, thick: seatSpec.thick * H, backTop: seatSpec.backTop * H },
+    x: x * U, z: y * U, footY: ROOM.FLOOR_Y, yaw: figureYaw(heading), headYaw: headRel,
+  }).map((pt) => {
+    const v = pt.mesh.verts;
+    const verts = [];
+    for (let k = 0; k < v.length; k += 3) verts.push(R(v[k] / U), R(v[k + 2] / U), R((ROOM.FLOOR_Y - v[k + 1]) / U));
+    return { tone: pt.tone, color: personColor(pt.tone, variant)[1], verts, idx: Array.from(pt.mesh.idx) };
+  });
   // 视线（平面方位角）：身子朝向 + 头转（夹在 ±75°）；看着的猫在哪也给出来，Blender 那边让头对着它
   const gaze = heading + headRel;
   const watchCat = p.watching !== null && p.watching !== undefined ? sim.cats.findIndex((c) => c.id === p.watching) : -1;
@@ -334,6 +345,7 @@ const people = sim.people.map((p, k) => {
     k, pose, phase: R(phase, 3), lean, x: R(x), y: R(y), heading: R(heading), gaze: R(gaze), watchCat,
     party: p.party ?? null, seated: !!seat, seatFurn: seat ? seat.furn : null, seatTable: seat ? seat.table ?? null : null,
     outfit: { name: outfit.name, style: outfit.style, colors: outfit.colors, variant },
+    blocks,
     joints: {
       legs: sk.legs.map((l) => ({ hip: P(l.hip), knee: P(l.knee), ankle: P(l.ankle), pitch: R(l.pitch), out: R(l.out) })),
       arms: sk.arms.map((a) => ({ shoulder: P(a.shoulder), elbow: P(a.elbow), wrist: P(a.wrist) })),
