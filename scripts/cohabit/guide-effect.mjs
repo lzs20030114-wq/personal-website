@@ -11,6 +11,7 @@
 //   catPatch：覆盖猫的常量做敏感性，例 '{"upBias":1.5}'（接在 CAT_MT + CAT_LEVELS.mid 之后）
 //   pacePatch：覆盖访客节奏（接在 PACE_DEMO 之后），例 '{"sit":{"min":300,"max":900}}'
 //   环境变量 SEED0：种子从 SEED0 + 1 起（默认 100 ⇒ 101…100+seeds），分几段并行跑再合并用
+//   环境变量 ARMS：只跑这几档（逗号分隔，例 'guided,off'，敏感性分析用；streams 开着时各档互不影响，挑着跑与全跑逐位相同）
 //   环境变量 OPTS：接在每一档的仿真选项之后（JSON），例 '{"streams":false,"retarget":false,"seatRetry":false}'
 //     = 规则审阅（§14.29）之前的口径，分步重跑时一件一件打开（§14.30）
 // 读数「坐着的共温 / 共触」= 共温 / 共触秒数里人坐着的那部分（审阅第 6 条：共触里有不少是人路过猫身边）
@@ -28,7 +29,7 @@ const catPatch = args[5] && args[5] !== '-' ? JSON.parse(args[5]) : {};
 const pacePatch = args[6] ? JSON.parse(args[6]) : {};
 const seed0 = Number(process.env.SEED0 ?? 100);
 const optsPatch = process.env.OPTS ? JSON.parse(process.env.OPTS) : {};
-const ARMS = [
+const ALL_ARMS = [
   { key: 'guided', zh: '会动 · 引导开（座位前方）', space: 'live', goal: true, guide: { target: 'meet' } },
   { key: 'sidew', zh: '会动 · 引导开（座位旁边 · 整条路）', space: 'live', goal: true, guide: { target: 'side', whole: true } },
   { key: 'off', zh: '会动 · 引导关', space: 'live', goal: false, guide: { target: 'meet' } },
@@ -36,6 +37,7 @@ const ARMS = [
   { key: 'fixed', zh: '钉死', space: 'fixed', goal: true, guide: { target: 'meet' } },
   { key: 'empty', zh: '空房间', space: 'empty', goal: true, guide: { target: 'meet' } },
 ];
+const ARMS = process.env.ARMS ? ALL_ARMS.filter((a) => process.env.ARMS.split(',').includes(a.key)) : ALL_ARMS;
 const METRICS = {
   warmthS: { zh: '共温 s', f: (r) => r.ledger.seconds.warmth },
   touchS: { zh: '共触 s', f: (r) => r.ledger.seconds.touch },
@@ -78,7 +80,8 @@ try {
       out.diffs[`${k}:${on}-${base}`] = { diff: d, rel: mean(b) ? d / mean(b) : null, p, dz: pairedDz(b, v[on]), ci };
       return `${on}−${base} ${d >= 0 ? '+' : ''}${d.toFixed(1)}（${mean(b) ? ((100 * d) / mean(b)).toFixed(0) : '—'}%，95% [${ci[0].toFixed(1)}, ${ci[1].toFixed(1)}]，p ${p.toFixed(4)} ${stars(p)}，dz ${pairedDz(b, v[on]).toFixed(2)}）`;
     };
-    console.log(`${M.zh.padEnd(12)} ${row}\n    ${diff('guided')}\n    ${diff('sidew')}\n    ${diff('off', 'offNT')}`);
+    const has = (k) => ARMS.some((a) => a.key === k);
+    console.log(`${M.zh.padEnd(12)} ${row}` + (has('guided') && has('off') ? `\n    ${diff('guided')}` : '') + (has('sidew') && has('off') ? `\n    ${diff('sidew')}` : '') + (has('off') && has('offNT') ? `\n    ${diff('off', 'offNT')}` : ''));
   }
   if (jsonOut) writeFileSync(jsonOut, JSON.stringify(out));
 } finally {
