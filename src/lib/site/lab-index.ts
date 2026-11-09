@@ -139,7 +139,7 @@ export const LAB_INDEX: readonly LabGroup[] = [
           // 2026-10-21：同一套仿真放进 Lab 2-8 那间房，立体看——作者「老师也说我们缺一个直接演示立体空间里单元改变空间和其中的动物的直观演示」
           { no: "2-15", title: "People and cats together, in 3D", kernel: "3d", description: 'The Lab 2-14 simulation in the Lab 2-8 room: sixty-four square units, filling the room, descend, retract and give way over visitors and cats.', meta: '8×8 · 6 visitors · 2 cats · WebGL', kind: 'WebGL · two species', verb: 'drag to orbit' },
           // 2026-11-09：老师建议做 2×2 / 3×3 的小样（项目二_小样方案.md）：同一种方台、同一个格距，按脚本演一个用途场景，不跑仿真
-          { no: "2-16", title: "Small studies, 2×2 and 3×3", kernel: "3d", description: 'Small patches of the Lab 2-15 room, each staging one use on a script: a coffee table with a cat shelf, a shared cavity, giving way at a crossing, a cat led step by step.', meta: '4 studies · scripted · WebGL', kind: 'WebGL · scripted', verb: 'drag to orbit' },
+          { no: "2-16", title: "Small studies, 2×2 and 3×3", kernel: "3d", description: 'Small patches of the Lab 2-15 room, each staging one use on a script: a coffee table with a cat shelf, a shared cavity, giving way, a cat led over, a ramp, a shelf under a counter, a low then high step.', meta: '7 studies · scripted · WebGL', kind: 'WebGL · scripted', verb: 'drag to orbit' },
         ],
       },
     ],

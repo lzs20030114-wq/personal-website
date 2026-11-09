@@ -269,7 +269,7 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     key: 'vignette',
     zh: '小样',
     en: 'Small studies',
-    // 编制 = 四个小样（2026-11-09 第一批，项目二_小样方案.md §3）；按脚本演，没有别的档
+    // 编制 = 七个小样（2026-11-09 两批，项目二_小样方案.md §3、§8）；按脚本演，没有别的档
     plans: VIGNETTES.map((v) => ({ key: v.key, label: v.zh })),
     axes: [],
   },

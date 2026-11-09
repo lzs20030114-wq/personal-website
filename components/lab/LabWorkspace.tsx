@@ -8,6 +8,7 @@ import { LabHelp, type LabHelpApi, type LabHelpEntry } from './LabHelp';
 import { LabViewDockSlot } from './LabCtl';
 import { CAMERA_COMMAND, type CameraCommand } from './labCameraInput';
 import { LAB_BENCHES, LAB_INDEX, labAccent } from '../../src/lib/site/lab-index';
+import { normalizedLabHash } from './planHash';
 import { BlockRail, BlockView } from '../site/LogBody';
 import type { Bilingual, LogBlock } from '../../src/lib/site/log-schema';
 
@@ -16,7 +17,31 @@ const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(ma
 const SPEC_ROWS = 4;
 const cap = (s: string, lang: string) => (lang === 'zh' || !s ? s : s[0].toUpperCase() + s.slice(1));
 const NOOP_CURSOR = { show: (_verb: string) => {}, move: (_x: number, _y: number) => {}, hide: () => {} };
-const Workspace = createContext({ expanded: null as string | null, expand: (_id: string | null) => {}, detailWidth: 296, resizeDetails: (_width: number) => {}, cursor: NOOP_CURSOR });
+type OpenHow = 'smooth' | 'instant' | false;
+const Workspace = createContext({ expanded: null as string | null, expand: (_id: string | null) => {}, detailWidth: 296, resizeDetails: (_width: number) => {}, cursor: NOOP_CURSOR,
+  open: LAB_BENCHES[0].no as string, openBench: (_no: string, _how?: OpenHow) => {} });
+/**
+ * 一次只展开一台（2026-11-09，用户「不要一下十五六个一起全展示，有的可以折叠……观众同时也只能看一个」）：
+ * 其余台架只留一行标题，台架本体不挂载（不跑、不占 WebGL 上下文）；展开另一台时上一台收起并释放画布。
+ * 目录、页内 #lab 链接、地址栏哈希都走 openBench。
+ */
+export const useLabOpen = () => useContext(Workspace).openBench;
+const BENCH_NOS = new Set(LAB_BENCHES.map(b => b.no));
+/** 哈希里指的是哪一台（旧编号先换成新号；带编制的 #lab2-16-tea 也认） */
+export function benchOfHash(hash: string): string | null {
+  const no = /^#lab([12]-\d+)(?:-[a-z][a-z0-9]*)?$/.exec(normalizedLabHash(hash))?.[1];
+  return no && BENCH_NOS.has(no) ? no : null;
+}
+/**
+ * 首帧展开哪一台：服务端与水合时一律第一台（与服务端 HTML 一致）；客户端换页进来（页面 DOM 里还没有工作区）
+ * 直接按哈希——从主页实验预览飞进来的转场要在新页第一帧就找到那一台的画框（MAPPING §48）。
+ */
+function initialOpen(): string {
+  // 语言覆盖守门要把每一台都渲出来查（LabLanguage.test），只有它会设这个开关
+  if ((globalThis as { __labOpenAll?: boolean }).__labOpenAll) return '*';
+  if (typeof window === 'undefined' || document.querySelector('.lab-workspace')) return LAB_BENCHES[0].no;
+  return benchOfHash(window.location.hash) ?? LAB_BENCHES[0].no;
+}
 /** 目录读位（LabIndex 量出来）→ 工作区顶部的「1-1 / 2-12」读数与收起后的刻度竖条。 */
 const NavActive = createContext((_no: string) => {});
 export const useLabNavActive = () => useContext(NavActive);
@@ -61,6 +86,27 @@ export function LabWorkspace({ index, children }: { index: ReactNode; children: 
   const [navWidth, setNavWidth] = useState(208);
   const [detailWidth, setDetailWidth] = useState(296);
   const [expanded, expand] = useState<string | null>(null);
+  const [open, setOpen] = useState<string>(initialOpen);
+  // 展开后把那一台滚到顶栏下（上面那台同时收起，位置要等这一帧排好才准）
+  const pendingScroll = useRef<{ no: string; how: Exclude<OpenHow, false> } | null>(null);
+  const openBench = useCallback((no: string, how: OpenHow = 'smooth') => {
+    if (!BENCH_NOS.has(no)) return;
+    pendingScroll.current = how ? { no, how: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : how } : null;
+    setOpen(no);
+    // 同一台已经开着：没有重排，直接滚
+    if (how) requestAnimationFrame(() => {
+      const p = pendingScroll.current;
+      if (!p || p.no !== no) return;
+      pendingScroll.current = null;
+      document.getElementById(`lab${no}`)?.scrollIntoView({ behavior: p.how, block: 'start' });
+    });
+  }, []);
+  useLayoutEffect(() => {
+    const p = pendingScroll.current;
+    if (!p || p.no !== open) return;
+    pendingScroll.current = null;
+    document.getElementById(`lab${open}`)?.scrollIntoView({ behavior: p.how, block: 'start' });
+  }, [open]);
   const [ready, setReady] = useState(false);
   const [active, setActive] = useState<string>(LAB_BENCHES[0].no);
   const cursorEl = useRef<HTMLDivElement>(null);
@@ -82,12 +128,39 @@ export function LabWorkspace({ index, children }: { index: ReactNode; children: 
     } catch { /* Private browsing still has a usable layout. */ }
     if (window.innerWidth < 1100) setNavOpen(false);
     setReady(true);
+    // 直链（含旧编号与带编制的）：展开那一台；滚动由 LegacyLabHash 管
+    const fromHash = benchOfHash(window.location.hash);
+    if (fromHash) setOpen(fromHash);
   }, []);
+  // 页内一切指向 #lab… 的链接（目录、刻度竖条、开头区芯片、规格里的交叉引用）先展开那一台，再滚过去；
+  // 地址栏改哈希 / 前进后退同理
+  useEffect(() => {
+    const click = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = e.target instanceof Element ? e.target.closest<HTMLAnchorElement>('a[href*="#lab"]') : null;
+      if (!a || a.origin !== window.location.origin || a.pathname !== window.location.pathname) return;
+      const no = benchOfHash(a.hash);
+      if (!no) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (window.innerWidth < 1100 && a.closest('#lab-directory')) {
+        setNavOpen(false);
+        directoryButton.current?.focus({ preventScroll: true });
+      }
+      window.history.pushState(null, '', a.hash);
+      openBench(no);
+    };
+    const hash = () => { const no = benchOfHash(window.location.hash); if (no) openBench(no, 'instant'); };
+    document.addEventListener('click', click, true);
+    window.addEventListener('hashchange', hash);
+    window.addEventListener('popstate', hash);
+    return () => { document.removeEventListener('click', click, true); window.removeEventListener('hashchange', hash); window.removeEventListener('popstate', hash); };
+  }, [openBench]);
   useEffect(() => {
     if (!ready) return;
     try { localStorage.setItem('lab-layout-v1', JSON.stringify({ nav: navWidth, details: detailWidth })); } catch { /* Optional preference. */ }
   }, [navWidth, detailWidth, ready]);
-  return <Workspace.Provider value={{ expanded, expand, detailWidth, resizeDetails: setDetailWidth, cursor }}><NavActive.Provider value={setActive}>
+  return <Workspace.Provider value={{ expanded, expand, detailWidth, resizeDetails: setDetailWidth, cursor, open, openBench }}><NavActive.Provider value={setActive}>
     <div className="lab-workspace" data-nav-open={navOpen || undefined} style={{ '--lab-nav-width': `${navWidth}px`, '--lab-detail-width': `${detailWidth}px` } as CSSProperties}>
       <div className="lab-workspace-grid">
         <aside className="lab-sidebar" aria-label={tx("实验目录")}>
@@ -99,17 +172,7 @@ export function LabWorkspace({ index, children }: { index: ReactNode; children: 
               </button>
               <span className="lab-directory-count" aria-hidden>{active} / {LAST_NO}</span>
             </div>
-            <div id="lab-directory" hidden={!navOpen} onClick={e => {
-              const link = e.target instanceof Element ? e.target.closest<HTMLAnchorElement>('a[href]') : null;
-              if (window.innerWidth < 1100 && link && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
-                setNavOpen(false);
-                directoryButton.current?.focus({ preventScroll: true });
-                // Collapsing the mobile directory changes the target's document position.
-                requestAnimationFrame(() => document.getElementById(link.hash.slice(1))?.scrollIntoView({
-                  behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start',
-                }));
-              }
-            }}>
+            <div id="lab-directory" hidden={!navOpen}>
               {index}
               {customWidths && <button type="button" className="lab-layout-reset" title={tx("恢复目录与说明的默认宽度")} aria-label={tx("恢复默认宽度")} onClick={() => {
                 setNavWidth(208); setDetailWidth(296);
@@ -144,9 +207,36 @@ function visibleCamera(root: HTMLElement | null) {
  */
 export type LabAttachments = { title: Bilingual; blocks: LogBlock[] };
 
-export function LabPanel({ no, title, description, lede, specs, accent, kind, verb, children, notes, attachments, defaultDetails = true }: {
+type LabPanelProps = {
   no: string; title: string; description: string; lede: string; specs: [string, string][]; accent: string; kind: string; verb: string; children: ReactNode; notes?: ReactNode; attachments?: LabAttachments; defaultDetails?: boolean;
-}) {
+};
+
+/** 一台台架：展开着就整台挂上，收起时只留一行标题（点它展开，上一台随之收起） */
+export function LabPanel(props: LabPanelProps) {
+  const { open } = useContext(Workspace);
+  return open === props.no || open === '*' ? <LabPanelOpen {...props} /> : <LabPanelFolded {...props} />;
+}
+
+function LabPanelFolded({ no, title, description, accent, kind }: LabPanelProps) {
+  const lang = useBenchLang();
+  const tx = useLabText(lang);
+  const { openBench } = useContext(Workspace);
+  return <div className="lab-panel-anchor" id={`lab${no}`}>
+    <section className="lab-panel" data-lab-panel={no} data-folded style={{ '--lab-tone': accent } as CSSProperties}>
+      <button type="button" className="lab-panel-fold" aria-expanded={false} aria-controls={`lab${no}`} onClick={() => {
+        window.history.pushState(null, '', `#lab${no}`);
+        openBench(no);
+      }}>
+        <span className="lab-panel-number"><span className="lab-panel-no" style={{ color: 'var(--lab-tone)' }}>{tx("LAB")} {no}</span><span className="lab-panel-dash" aria-hidden /><span className="lab-panel-kind">{tx(kind)}</span></span>
+        <span className="lab-panel-fold__title" id={`lab-title-${no}`}>{tx(title)}</span>
+        <span className="lab-panel-fold__desc">{tx(description)}</span>
+        <span className="lab-panel-fold__open" aria-hidden>{lang === 'zh' ? '展开' : 'Open'}<i>↓</i></span>
+      </button>
+    </section>
+  </div>;
+}
+
+function LabPanelOpen({ no, title, description, lede, specs, accent, kind, verb, children, notes, attachments, defaultDetails = true }: LabPanelProps) {
   const lang = useBenchLang();
   const tx = useLabText(lang);
   const workspace = useContext(Workspace);
@@ -350,6 +440,18 @@ export function LabPanel({ no, title, description, lede, specs, accent, kind, ve
     const a = node.animate([{ clipPath: `inset(${r.top}px ${window.innerWidth - r.right}px ${window.innerHeight - r.bottom}px ${r.left}px)` }, { clipPath: 'inset(0 0 0 0)' }], { duration: 760, easing: 'cubic-bezier(.76,0,.24,1)' });
     return () => a.cancel();
   }, [expanded]);
+  // 收起（卸载）时把这一台的 WebGL 上下文还给浏览器：一页同时最多 16 个，等垃圾回收不够快（与主页实验预览同一做法）
+  useEffect(() => {
+    const node = stage.current;
+    return () => {
+      const canvases = node ? Array.from(node.querySelectorAll('canvas')) : [];
+      queueMicrotask(() => {
+        if (node?.isConnected) return;
+        // 画 2D 的画布要 'webgl' 会拿到 null，不受影响；站上的 3D 台架都是 gl3d 的 'webgl'
+        for (const c of canvases) c.getContext('webgl')?.getExtension('WEBGL_lose_context')?.loseContext();
+      });
+    };
+  }, []);
   const cameraCommand = (command: CameraCommand) => visibleCamera(stage.current)?.dispatchEvent(new CustomEvent(CAMERA_COMMAND, { detail: command }));
   return <div ref={anchor} className="lab-panel-anchor" id={`lab${no}`} style={expanded ? { height: placeholder } : undefined}>
     <LabActivity.Provider value={!workspace.expanded || expanded}>

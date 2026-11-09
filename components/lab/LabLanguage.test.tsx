@@ -15,6 +15,9 @@ vi.mock('../site/CaseLang', async original => ({
 }));
 vi.mock('next/navigation', () => ({ usePathname: () => '/lab' }));
 
+// /lab 一次只展开一台（LabWorkspace）；语言覆盖要查每一台的界面，这里让它们全部展开
+(globalThis as { __labOpenAll?: boolean }).__labOpenAll = true;
+
 describe('Lab language coverage', () => {
   it('translates every registered study and directory group into Chinese', () => {
     const translate = (text: string) => labUiText('zh', labPageText('zh', text));
@@ -46,6 +49,22 @@ describe('Lab language coverage', () => {
     }));
     expect(html.match(/[\u4e00-\u9fff]+/g)).toBeNull();
     expect(html).toContain('Forming study');
+  });
+
+  it('folds every bench but one by default, and folded rows are translated too', () => {
+    (globalThis as { __labOpenAll?: boolean }).__labOpenAll = false;
+    try {
+      preference.lang = 'zh';
+      const zh = renderToStaticMarkup(createElement(LabPage));
+      expect(zh.match(/data-lab-panel=/g)).toHaveLength(LAB_BENCHES.length);
+      expect(zh.match(/data-folded/g)).toHaveLength(LAB_BENCHES.length - 1);
+      expect(zh).toContain('展开');
+      preference.lang = 'en';
+      const en = renderToStaticMarkup(createElement(LabPage));
+      expect(en.replace(/中文/g, '').replace(/>中</g, '><').match(/[\u4e00-\u9fff]+/g)).toBeNull();
+    } finally {
+      (globalThis as { __labOpenAll?: boolean }).__labOpenAll = true;
+    }
   });
 
   it('keeps the Chinese directory, instructions and controls in Chinese', () => {

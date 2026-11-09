@@ -65,7 +65,7 @@ export const LAB_UI_COPY: readonly (readonly [string, string])[] = [
   ["实验 2-16 / 项目二", "Lab 2-16 / Project II"],
   ["小样 · 2×2 与 3×3", "Small studies, 2×2 and 3×3"],
   ["WebGL · 按脚本", "WebGL · scripted"],
-  ["4 个小样 · 按脚本 · WebGL", "4 studies · scripted · WebGL"],
+  ["7 个小样 · 按脚本 · WebGL", "7 studies · scripted · WebGL"],
   ["人猫同台 · 立体", "People and cats together, in 3D"],
   ["WebGL · 两个物种", "WebGL · two species"],
   ["8×8 · 6 位访客 · 2 只猫 · WebGL", "8×8 · 6 visitors · 2 cats · WebGL"],

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { COHABIT, bandAngle, furnRect } from './cohabit';
-import { FRAMES, TrajectoryBaker, UNITS_PER_M, UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, UNIT_TIERS, rigFor } from './cohabit-solid';
+import { FRAMES, TrajectoryBaker, UNITS_PER_M, UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, UNIT_TIERS, liftTrajectory, rigFor } from './cohabit-solid';
 import { SOLID } from './skin-solid';
 import { planLayout } from './unit-activation';
 import { RING } from './skin-ring';
-import { GIVE, TOPS, catRingAngle, UPPER_ABOVE, VIGNETTES, VignetteSim, catAt, keysAt, pathAt, unitRamp, vignetteLayout, vignetteScript } from './cohabit-vignette';
+import { GIVE, RAMP_RISE, STEP_RISE, TOPS, catRingAngle, ringSpot, UPPER_ABOVE, VIGNETTES, VignetteSim, catAt, keysAt, pathAt, unitRamp, vignetteLayout, vignetteScript } from './cohabit-vignette';
 
 const BANDS = COHABIT.FACES.BANDS;
 
@@ -167,4 +167,79 @@ describe('cohabit-vignette · 2×2 / 3×3 小样', () => {
     },
     120_000,
   );
+});
+
+describe('cohabit-vignette · 第二批（续坡 / 站桌下给猫一层 / 先低后高）', () => {
+  it('续坡：每台最低那条带不抬，前两台的高边接上后一台的台面（齐平到 1 cm）', () => {
+    const s = vignetteScript('ramp');
+    const used = s.units.filter((u): u is NonNullable<typeof u> => !!u);
+    expect(used).toHaveLength(3);
+    const [a, b, c] = [...used].sort((x, y) => x.top - y.top);
+    for (const u of [a, b]) expect(Math.min(...u.form!.lift!)).toBe(0);
+    expect(a.top + Math.max(...a.form!.lift!)).toBeCloseTo(b.top, 2);
+    expect(b.top + Math.max(...b.form!.lift!)).toBeCloseTo(c.top, 2);
+    expect(c.top).toBe(TOPS.stand);
+    expect(Math.max(...a.form!.lift!)).toBeCloseTo(RAMP_RISE, 2);
+  });
+
+  it('先低后高：朝 +x 的半圈抬 STEP_RISE、另一半不抬，高的那半与旁边那台同高', () => {
+    const s = vignetteScript('step');
+    const a = s.units.find((u) => u?.form?.lift)!;
+    const lift = a.form!.lift!;
+    for (let j = 0; j < BANDS; j++) expect(lift[j]).toBe(Math.cos(bandAngle(j)) > 0 ? STEP_RISE : 0);
+    expect(a.top + STEP_RISE).toBeCloseTo(TOPS.stand, 9);
+  });
+
+  it('站桌下给猫一层：整圈两层，上台台面 = 站着用的 1.05 m，下台离地 0.47 m、钉住端在地面以上', () => {
+    const s = vignetteScript('counter');
+    const t = s.units.find((u) => u?.form?.bands)!;
+    expect([...t.form!.bands!].every((b) => b === 1)).toBe(true);
+    expect(t.top + UPPER_ABOVE).toBeCloseTo(TOPS.stand, 9);
+    expect(t.top - 0.225).toBeGreaterThan(0.2); // 下台到钉住端约 0.225 m（cohabit-solid 两层台实测）
+  });
+
+  it('猫沿一台的一圈挪位时不穿过立杆（ringSpot 之间的弦离台心比芯远）', () => {
+    const l = vignetteLayout(2);
+    const u = { x: 0, y: 0 };
+    const a = ringSpot(u, (150 * Math.PI) / 180);
+    const b = ringSpot(u, (60 * Math.PI) / 180);
+    const mid = Math.hypot((a.x + b.x) / 2, (a.y + b.y) / 2);
+    expect(mid).toBeGreaterThan(l.mastR + 0.02);
+  });
+
+  it('liftTrajectory：结构以上整体上移、钉住端不动、收在天花下的帧不抬', () => {
+    const traj = new TrajectoryBaker(UNIT_TIERS[2]).preview();
+    // preview 只有两帧，造一条够长的假轨迹走一遍各段
+    const n = traj.n;
+    const counts = FRAMES;
+    const total = counts.form + counts.retract + counts.hoist + (counts.bridge ?? 0) + (counts.door ?? 0);
+    const fake = { ...traj, frames: Array.from({ length: total }, () => Float64Array.from(traj.frames[0])), formActive: 10, retractActive: 10 };
+    const d = 5;
+    const up = liftTrajectory(fake, d);
+    const formed = counts.form - 1;
+    const tail = fake.mid + fake.midHalf;
+    expect(up.frames[formed][n + 0] - fake.frames[formed][n + 0]).toBeCloseTo(d, 12);
+    expect(up.frames[formed][n + tail - 1] - fake.frames[formed][n + tail - 1]).toBeCloseTo(d, 12);
+    expect(up.frames[formed][2 * n - 1]).toBe(fake.frames[formed][2 * n - 1]);
+    expect(up.frames[counts.form + counts.retract]).toBe(fake.frames[counts.form + counts.retract]); // 收起态
+    expect(up.platformTopY).toBe(fake.platformTopY);
+    expect(liftTrajectory(fake, 0)).toBe(fake);
+  });
+});
+
+describe('cohabit-vignette · 人和猫不撞', () => {
+  it('地上的猫离房间里的人至少 0.35 m（身体半径 0.22 加猫身）', () => {
+    for (const v of VIGNETTES) {
+      const sim = new VignetteSim(v.key);
+      for (let t = 0; t < sim.script.duration; t += 0.1) {
+        sim.step(0.1);
+        for (const p of sim.people)
+          for (const c of sim.cats) {
+            if (sim.supportOf(c).length || (c.h ?? 0) > 0.3) continue;
+            if (Math.abs(p.walker.x) > sim.layout.roomM / 2 + 0.1) continue;
+            expect(Math.hypot(p.walker.x - c.walker.x, p.walker.y - c.walker.y), `${v.key} @ ${sim.t.toFixed(1)}`).toBeGreaterThan(0.35);
+          }
+      }
+    }
+  });
 });

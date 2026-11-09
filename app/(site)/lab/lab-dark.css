@@ -97,6 +97,33 @@
 /* ── 台架面板 ── */
 .lab-panel-anchor { margin-top: 0; scroll-margin-top: 76px; }
 .lab-panel { padding: 44px 0 8px; border-bottom: 0; }
+/* 收起的台架（2026-11-09 一次只展开一台）：一行标题，点开整台挂上；上一台随之收起。
+   字号与展开时的题头同一套，只是标题小一档、简介一行，右侧「展开 ↓」；悬停时编号色线从左边长出来 */
+.lab-workspace .lab-panel[data-folded] { padding: 0; }
+.lab-workspace .lab-panel-fold { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'no open' 'title open' 'desc open'; align-items: center; gap: 6px 32px; width: 100%; padding: 18px 0 18px 0; border: 0; border-top: 1px solid oklch(0.95 0.032 120 / 0.1); background: none; color: var(--ld-cream); font: inherit; text-align: left; cursor: pointer; transition: padding-left 0.35s var(--ld-eo, ease), background 0.2s; }
+.lab-workspace .lab-panel-fold::before { content: ''; position: absolute; left: 0; top: 18px; bottom: 18px; width: 2px; background: var(--lab-tone); transform: scaleY(0); transform-origin: top; transition: transform 0.35s var(--ld-eo, ease); }
+.lab-workspace .lab-panel-fold:hover, .lab-workspace .lab-panel-fold:focus-visible { padding-left: 16px; background: oklch(0.95 0.032 120 / 0.03); }
+.lab-workspace .lab-panel-fold:hover::before, .lab-workspace .lab-panel-fold:focus-visible::before { transform: scaleY(1); }
+.lab-workspace .lab-panel-fold:focus-visible { outline: 1px solid var(--lab-tone); outline-offset: 3px; }
+.lab-workspace .lab-panel-fold .lab-panel-number { grid-area: no; display: flex; align-items: center; gap: 10px; white-space: nowrap; font: 500 12px var(--ld-mono); }
+.lab-panel-fold__title { grid-area: title; font-size: clamp(18px, 1.5vw, 21px); font-weight: 600; line-height: 1.15; letter-spacing: -0.02em; }
+.lab-panel-fold__desc { grid-area: desc; max-width: 70ch; overflow: hidden; font-size: 14px; line-height: 1.5; color: var(--ld-soft); white-space: nowrap; text-overflow: ellipsis; }
+.lab-panel-fold__open { grid-area: open; display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--ld-control); font: 500 12px var(--ld-mono); color: var(--ld-cream); transition: background 0.2s, color 0.2s; }
+.lab-panel-fold__open i { font-style: normal; transition: transform 0.3s var(--ld-eo, ease); }
+.lab-workspace .lab-panel-fold:hover .lab-panel-fold__open { background: var(--ld-cream); color: var(--ld-paper); }
+.lab-workspace .lab-panel-fold:hover .lab-panel-fold__open i { transform: translateY(2px); }
+/* 刚展开的那一台：从标题往下铺开（只动不透明度与位移，不量高度） */
+.lab-workspace .lab-panel:not([data-folded]) .lab-panel-body { animation: lab-unfold 0.5s var(--ld-eo, ease) backwards; }
+@keyframes lab-unfold { from { opacity: 0; transform: translateY(-8px); } }
+@media (prefers-reduced-motion: reduce) {
+  .lab-workspace .lab-panel-fold, .lab-workspace .lab-panel-fold::before, .lab-panel-fold__open i { transition: none; }
+  .lab-workspace .lab-panel:not([data-folded]) .lab-panel-body { animation: none; }
+}
+@media (max-width: 720px) {
+  .lab-workspace .lab-panel-fold { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'no' 'title' 'desc' 'open'; }
+  .lab-panel-fold__desc { white-space: normal; }
+  .lab-panel-fold__open { justify-self: start; }
+}
 .lab-workspace .lab-panel-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px 32px; padding: 0 0 18px; }
 .lab-workspace .lab-panel-number { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; white-space: nowrap; font: 500 12px var(--ld-mono); letter-spacing: 0; text-transform: none; }
 .lab-panel-dash { flex: none; width: 16px; height: 1px; background: oklch(0.95 0.032 120 / 0.3); }

@@ -760,6 +760,37 @@ export interface BandPaths {
   toFwd: Int16Array;
 }
 
+/**
+ * 把一条带的台面整体抬高 d（引擎单位，向上为正；2026-11-09 小样的续坡与「先低后高」，项目二_小样方案.md §3）。
+ * 不另解物理：形态方案 §2.1 量过，配平偏移就是纯平移（形状差 ≤ 0.005 px），所以抬高 = 结构及其以上的节点一起上移 d，
+ * 结构下面那截布（尾段，贴着芯）从结构底拉到钉住端，成一截贴芯的直布；钉住端不动，带顶多出来的那截照旧卷进上夹环
+ * （pickUnitBands 取同一台里最低的带顶当夹环，抬高过的带顶在它上面）。
+ * 抬多少随这一帧成形到几成：正向帧按走到协议的几成、回程倒过来、升降与过渡帧不抬、让路帧全抬（让路从成形态开始）。
+ * 台面基准（platformTopY）不变：一台里总有一条不抬的带，整台按它落位。
+ */
+export function liftTrajectory(traj: BandTrajectory, d: number, frames: FrameCounts = FRAMES): BandTrajectory {
+  if (d === 0) return traj;
+  const n = traj.n;
+  const tail = Math.min(n - 2, traj.mid + traj.midHalf);
+  const doorBase = frames.form + frames.retract + frames.hoist + (frames.bridge ?? 0);
+  const weight = (k: number): number => {
+    if (k < frames.form) return Math.min(1, k / Math.max(1, traj.formActive));
+    if (k < frames.form + frames.retract) return 1 - Math.min(1, (k - frames.form) / Math.max(1, traj.retractActive));
+    return k >= doorBase ? 1 : 0;
+  };
+  const out = traj.frames.map((f, k) => {
+    const w = weight(k);
+    if (w <= 0) return f;
+    const g = Float64Array.from(f);
+    const dd = d * w;
+    for (let i = 0; i < tail; i++) g[n + i] += dd;
+    // 尾段：结构底那一节跟着抬 dd，到钉住端渐变到 0（贴芯的直布被拉长）
+    for (let i = tail; i < n; i++) g[n + i] += (dd * (n - 1 - i)) / (n - 1 - tail);
+    return g;
+  });
+  return { ...traj, frames: out };
+}
+
 export function bandPaths(traj: BandTrajectory, frames: FrameCounts = FRAMES): BandPaths {
   const straight = frames.form + frames.retract - 1;
   const base = frames.form + frames.retract + frames.hoist;

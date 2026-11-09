@@ -67,6 +67,7 @@ import {
   bakeUnitKeys,
   bakeUnitMech,
   bakeUnitShell,
+  liftTrajectory,
   SHELL_END_LOW,
   platesMesh,
   platformBand,
@@ -440,7 +441,7 @@ export function CohabitSpaceBench({
       const reel = Math.floor(key / (FRAME_KEY * FRAME_KEY)) - 1;
       const tr = tracks[tier];
       // 同一组轨迹（平台三档 / 两层六条）带顶同高，按这条自己那组量上夹环
-      const reelPy = reel >= 0 ? bandTop(tr, reel) : undefined;
+      const reelPy = reel >= 0 ? bandTop(tracks[baseOf(tier)], reel) : undefined;
       const m = bakeBand(tr, frame, topoOf(tr.n), reelPy);
       R.addMesh(`band-${key}-a`, m.a);
       R.addMesh(`band-${key}-b`, m.b);
@@ -583,6 +584,8 @@ export function CohabitSpaceBench({
       worker = null;
       if (disposed || !trajs) return;
       tracks = [...trajs, ...list];
+      liftIdx.clear();
+      liftBase.clear();
       paths = tracks.map((t) => bandPaths(t));
       dualReady = true;
       canvas.dataset.roof = 'ready'; // 截图脚本等它（scripts/case-frames/capture.mjs）：烘完之前两层的台还照平台落
@@ -691,6 +694,26 @@ export function CohabitSpaceBench({
       setHud((h) => ({ ...h, side: platformSide(rig), total: U, field: roomM }));
     };
     let roofed = 0;
+    // 抬高过的带（liftTrajectory）按（原轨迹, 抬多少毫米）缓存，接在 tracks 后面当新的轨迹用
+    const liftIdx = new Map<string, number>();
+    /** 抬高过的轨迹 → 它从哪一条抬来的（夹环、带顶按原来那条量）；其余就是它自己 */
+    const liftBase = new Map<number, number>();
+    const baseOf = (i: number): number => liftBase.get(i) ?? i;
+    const liftedTrack = (base: number, liftM: number): number => {
+      const q = Math.round(liftM * 1000);
+      if (q <= 0 || !paths) return base;
+      const key = `${base}|${q}`;
+      let i = liftIdx.get(key);
+      if (i === undefined) {
+        const t = liftTrajectory(tracks[base], ((q / 1000) * UNITS_PER_M) / (rig.s * SOLID.SCALE));
+        i = tracks.length;
+        tracks.push(t);
+        paths.push(bandPaths(t));
+        liftIdx.set(key, i);
+        liftBase.set(i, base);
+      }
+      return i;
+    };
 
     // 膜的摆放（本帧收集、实体画完后再画）
     let skinStowed: MeshPlace[] = [];
@@ -773,6 +796,9 @@ export function CohabitSpaceBench({
               roofToward[u] = plan.toward ?? NaN;
               orders[u] = UNIT_ORDER.map((t, j) => (bands[j] ? DUAL_BOTH : DUAL_LOWER) + t);
             }
+            // 小样的续坡 / 先低后高：平台三档，各条带的台面各抬一点（liftTrajectory，纯平移）
+            const lift = (plan as { lift?: readonly number[] } | null)?.lift;
+            if (lift && !(plan && plan.bands)) orders[u] = UNIT_ORDER.map((t, j) => liftedTrack(t, lift[j]));
           }
           const roof = roofOn[u] === 1;
           if (roof) {
@@ -796,7 +822,8 @@ export function CohabitSpaceBench({
           let allFormed = true;
           // 每条带取哪一帧、上夹环在哪（让路的带走引擎的收直回程，多出来的布卷进夹环；见 pickUnitBands）
           const reel = pickUnitBands(u, deg, sim.bandOpen, tracks, paths as BandPaths[], cursors, frameOf, order);
-          const reelTop = bandTop(tracks[order[0]], reel);
+          // 上夹环的高度按没抬高的那条带量（抬高过的带顶在它上面，多出来的那截卷进夹环）
+          const reelTop = bandTop(tracks[baseOf(order[0])], reel);
           // 机构：上夹环在带顶（reel 那一帧）、下夹环在钉住端、芯在两者之间（按帧缓存的一份）；吊杆从天花方板下沿（y 0）拉到上夹环法兰顶
           const mk = (roof ? DUAL_BOTH : 0) * FRAME_KEY + reel;
           let mp = mechPlaces.get(mk);
@@ -811,9 +838,11 @@ export function CohabitSpaceBench({
             if (k !== STEADY.formed) allFormed = false;
           }
           // 整台一份网格只有平台有（两层的逐条摆：同时最多四五台，同一条轨迹同一帧的带子仍合成一次画）
-          if (allStowed && !roof) stowedPlaces.push(at(c, 0, top));
-          else if (allStraight && !roof) straightPlaces.push(at(c, 0, top));
-          else if (allFormed && !roof) formedPlaces.push(at(c, 0, top));
+          // 整台一份的网格只有平台三档按标准排法时才对得上（两层的、带子各抬一点的都逐条摆）
+          const plain = order === UNIT_ORDER;
+          if (allStowed && plain) stowedPlaces.push(at(c, 0, top));
+          else if (allStraight && plain) straightPlaces.push(at(c, 0, top));
+          else if (allFormed && plain) formedPlaces.push(at(c, 0, top));
           else {
             // 蒙皮开着时，带子与键只在有门的单元里画（从门口看得见里面）；其余全包在皮里
             let door = false;
@@ -910,7 +939,10 @@ export function CohabitSpaceBench({
       }
       // 人：走（步态按走过的路程推相位）/ 站 / 坐（按这张家具的座面解出来；看着猫时前倾）；头随视线转，夹在 ±75°
       const people = new Map<string, Batch>();
+      // 小样的场地只有两三格：还没走进房间（或已经走出去）的人和猫不画，免得站在地板外面的空处
+      const inRoom = (x: number, y: number): boolean => !vignette || (Math.abs(x) < roomM / 2 + 0.12 && Math.abs(y) < roomM / 2 + 0.12);
       for (const p of sim.people) {
+        if (!inRoom(p.walker.x, p.walker.y)) continue;
         const variant = lookOf(p, looks.people);
         const style = outfitOf(variant).style;
         const sk = styleKey(style);
@@ -950,6 +982,9 @@ export function CohabitSpaceBench({
       const band = trajs ? platformBand(rig, trajs) : null;
       const cats = new Map<string, Batch>();
       sim.cats.forEach((c) => {
+        // 小样：带子烘完才开演，之前台子还收着，猫不画（不然它悬在台子该在的高度上）
+        if (vignette && !dualReady) return;
+        if (!inRoom(c.walker.x, c.walker.y)) return;
         const look = coatOf(lookOf(c, looks.cats));
         const mo = track(c, c.walker.x, c.walker.y);
         const support = sim.space === 'empty' ? [] : sim.supportOf(c);
@@ -1184,7 +1219,7 @@ export function CohabitSpaceBench({
           <div className="lab-ctl__row lab-ctl__solve">
             {vignette ? (
               <div className="grp">
-                <LabControlLabel help={['四个小样：茶几兼猫台（3×3）、两台连成一条腔（2×2）、交叉点让路（2×2）、一步一步引过来（3×3）。', 'Four small studies: coffee table and cat shelf (3×3), two units forming one cavity (2×2), giving way at a crossing (2×2), leading a cat step by step (3×3).']}>{vt.pick}</LabControlLabel>
+                <LabControlLabel help={['七个小样：茶几兼猫台（3×3）、两台连成一条腔（2×2）、交叉点让路（2×2）、一步一步引过来（3×3）、续坡（3×3）、站桌下给猫一层（2×2）、先低后高（2×2）。', 'Seven small studies: coffee table and cat shelf (3×3), two units forming one cavity (2×2), giving way at a crossing (2×2), leading a cat step by step (3×3), a ramp up (3×3), a shelf under the standing counter (2×2), low half then high half (2×2).']}>{vt.pick}</LabControlLabel>
                 <span className="seg">
                   {VIGNETTES.map((v) => (
                     <button key={v.key} type="button" className={v.key === vigKey ? 'active' : undefined} onClick={() => setVigKey(v.key)}>

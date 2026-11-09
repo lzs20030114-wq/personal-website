@@ -16,6 +16,9 @@ const PLAN = {
   cavity: [[1, 'axon'], [16, 'axon'], [26, 'axon'], [26, 'front']],
   giveway: [[1, 'axon'], [5, 'axon'], [10, 'axon'], [10, 'top'], [16, 'axon']],
   guide: [[1, 'axon'], [17, 'axon'], [28, 'axon'], [44, 'axon'], [44, 'top'], [60, 'axon']],
+  ramp: [[16, 'axon'], [16, 'front'], [21, 'axon'], [30, 'axon']],
+  counter: [[22, 'axon'], [22, 'front']],
+  step: [[18, 'axon'], [21, 'axon'], [28, 'axon']],
 };
 const FPS = 60;
 mkdirSync(out, { recursive: true });
