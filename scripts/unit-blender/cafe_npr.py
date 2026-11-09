@@ -1,6 +1,10 @@
 """把 cafe_passes.py 出的通道画成线稿图版的底图（E1 的密排线 + E11 的点缀色，暖色调）。
 
-python3 scripts/unit-blender/cafe_npr.py <通道目录> <机位> <单元画法 render|accent> <输出.png> [调色 warm]
+python3 scripts/unit-blender/cafe_npr.py <通道目录> <机位> <单元画法 render|accent> <输出.png> [画法 v1|v2]
+
+v1 = 第一轮（11-09 试画）：线一律墨色，只分粗细两档。
+v2 = 第二轮：线分五档粗细和颜色（单元轮廓赤陶色最重 · 物体轮廓暖深棕 · 面的转折 · 纹理 · 收着的单元），
+     远处的线随深度变淡变细，地面只铺一层很淡的底，排线点画都退到浅色。
 
 单元画法：
   render  单元外皮用照常渲染的那张底图（作者 11-09：单元外皮的渲染效果挺好），其余全是线；
@@ -12,6 +16,7 @@ import numpy as np
 from PIL import Image
 
 D, K, UNIT, OUT = sys.argv[1:5]
+STYLE = sys.argv[5] if len(sys.argv) > 5 else 'v1'
 meta = json.load(open(f'{D}/{K}_cam.json'))
 idx = np.load(f'{D}/{K}_idx.npy')
 N = np.load(f'{D}/{K}_n.npy').astype(np.float32)
@@ -176,104 +181,205 @@ dark = np.clip(0.55 - 0.65 * lam, 0, 1)   # 0 = 迎光的面，1 = 背光
 up = N[:, :, 2]
 is_ = lambda *names: np.isin(cat, [C[n] for n in names])
 
-# ---------------------------------------------------------------- 画
-img = np.ones((H2, W2, 3), np.float32) * PAL['paper']
-
-def paint(mask, color, alpha=1.0):
-    a = (mask.astype(np.float32) * alpha)[..., None]
-    img[:] = img * (1 - a) + color * a
-
+# 植物的茎穿出了墙（建模时没管），墙外那截不画
+_leaf = np.isin(cat, [C['leaf']])
+stray = _leaf & ((np.abs(WX) > 3.33) | (np.abs(WY) > 3.33))
+cat[stray] = 0; bg |= stray
 floor = is_('floor')
 wall = is_('wall')
 unit_shell = is_('shell')
 unit_mech = is_('mech', 'plate')
 up_units = is_('shell_up', 'mech_up', 'plate_up')
 leaf = is_('leaf')
-# 植物的茎穿出了墙（建模时没管），墙外那截不画
-stray = leaf & ((np.abs(WX) > 3.33) | (np.abs(WY) > 3.33))
-img[stray] = PAL['paper']; leaf &= ~stray; cat[stray] = 0; bg |= stray
 
-# 地面：木板缝（沿世界 x）+ 很淡的砂色底
-paint(floor, PAL['sand'], 0.55)
-boards = world_lines(WY, 0.16, 1.1) * floor
-paint(boards > 0, PAL['soft'], 1.0)
-img[:] = img * (1 - (boards * 0.0)[..., None])
-paint(floor, PAL['soft'], 0)  # 占位，保持顺序清楚
-# 地面上的点画：越靠墙越密（墙根一圈暗）
-if True:
+
+def draw_v1():
+    global img
+    # ---------------------------------------------------------------- 画
+    img = np.ones((H2, W2, 3), np.float32) * PAL['paper']
+
+    def paint(mask, color, alpha=1.0):
+        a = (mask.astype(np.float32) * alpha)[..., None]
+        img[:] = img * (1 - a) + color * a
+
+
+    # 地面：木板缝（沿世界 x）+ 很淡的砂色底
+    paint(floor, PAL['sand'], 0.55)
+    boards = world_lines(WY, 0.16, 1.1) * floor
+    paint(boards > 0, PAL['soft'], 1.0)
+    img[:] = img * (1 - (boards * 0.0)[..., None])
+    paint(floor, PAL['soft'], 0)  # 占位，保持顺序清楚
+    # 地面上的点画：越靠墙越密（墙根一圈暗）
+    if True:
+        half = 3.319
+        wd = np.minimum(half - np.abs(WX), half - np.abs(WY))
+        dens = np.clip(0.42 - wd * 0.42, 0, 0.42) * floor
+        paint(stipple(dens, 5, 1.05) > 0.5, PAL['ctx'])
+
+    # 墙：背光的面排竖线；切到的墙顶涂实
+    wall_top = wall & (up > 0.8) & (WZ > 3.0)
+    wall_face = wall & ~wall_top
+    vh = hatch(0, 9, 1.2) * (wall_face & (dark > 0.35))
+    paint(vh > 0.3, PAL['soft'])
+    paint(wall_top, PAL['poche'])
+    paint(is_('frame'), PAL['ink'])
+    door = is_('door')
+    paint(door & (hatch(90, 6, 1.2) > 0.3), PAL['ctx'])
+
+    # 窗洞里：天空排横线（E11 那种）；房间外面（轴测图的四周）留纸色
+    inside = (np.abs(WX) < 3.6) & (np.abs(WY) < 3.6)
+    if meta['ortho']:
+        sky = np.zeros_like(bg)
+    else:
+        sky = bg
+    paint(sky & (hatch(90, 7, 1.3) > 0.3), PAL['sky'])
+
+    # 天花（透视、剖面）：留白，线形灯涂实
+    paint(is_('light'), PAL['ink'])
+
+    # 沙发布面：点画，背光面密；顶面很疏
+    sofa = is_('sofa', 'chair_pad')
+    sd = np.where(up > 0.7, 0.10, 0.18 + 0.5 * dark) * sofa
+    paint(stipple(sd.astype(np.float32), 5, 1.1) > 0.5, PAL['ctx'])
+    paint(is_('sofa_leg'), PAL['ink'])
+    chair = is_('chair')
+    paint(chair & (hatch(45, 6, 1.3) > 0.3) & (dark > 0.25), PAL['ctx'])
+
+    # 小物：植物用点缀色
+    if UNIT == 'render':
+        paint(leaf, PAL['coral'], 0.85)
+        paint(leaf & (dark > 0.45), PAL['coral_d'], 0.6)
+    else:
+        paint(leaf & (hatch(60, 5, 1.1) > 0.3), PAL['ctx'])
+    paint(is_('soil') & (stipple(np.full((H2, W2), 0.6, np.float32), 4, 1.0) > 0.5), PAL['ink'])
+    paint(is_('pot') & (hatch(0, 5, 1.2) > 0.3), PAL['ctx'])
+    paint(is_('liquid'), PAL['ctx'])
+
+    # 收着的单元（透视 / 剖面里才有）：只描很淡的线，不填
+    # 落下来的单元
+    if UNIT == 'render':
+        beauty = np.asarray(Image.open(f'{D}/{K}_beauty.png').convert('RGB'), np.float32) / 255
+        beauty = np.repeat(np.repeat(beauty, SS, 0), SS, 1)[:H2, :W2]
+        m = (unit_shell | unit_mech)[..., None]
+        img[:] = np.where(m, beauty, img)
+    else:
+        tone = np.clip(0.15 + 0.85 * (1 - np.clip(lam, 0, 1)), 0, 1)
+        col = PAL['unit_l'][None, None] * (1 - tone[..., None]) + PAL['unit'][None, None] * tone[..., None]
+        img[:] = np.where(unit_shell[..., None], col, img)
+        paint(unit_mech, PAL['faint'], 0.6)
+
+    # ---------------------------------------------------------------- 线
+    def draw_lines(mask, color, r):
+        m = dilate(mask, r) if r > 0 else mask
+        paint(m, color)
+
+    ctx_cat = ~(unit_shell | unit_mech | up_units | leaf) & ~bg
+    # 轮廓（前后遮挡）比转折重一档；单元最重
+    draw_lines((e_cr | e_id) & ctx_cat & ~sil, PAL['ctx'], 0)
+    draw_lines(sil & ctx_cat, PAL['ink'], 1)
+    draw_lines((e_id | e_cr | e_dep) & up_units, PAL['faint'], 0)
+    draw_lines((e_id | e_cr | e_dep) & leaf, PAL['coral_d'] if UNIT == 'render' else PAL['ctx'], 0)
+    if UNIT == 'render':
+        draw_lines(sil & (unit_shell | unit_mech), PAL['ink'], 1)
+    else:
+        draw_lines((e_cr | e_id) & (unit_shell | unit_mech) & ~sil, PAL['coral_d'], 0)
+        draw_lines(sil & (unit_shell | unit_mech), PAL['ink'], 1)
+
+
+
+
+# ---------------------------------------------------------------- 第二轮画法
+V2 = dict(
+    paper=hexc('#F5EFE4'), wash=hexc('#EDE2CE'), cut=hexc('#4E2A20'),
+    near=hexc('#45342B'), mid=hexc('#7E6858'), far=hexc('#C4B39E'), tex=hexc('#D3C2AB'), tex_d=hexc('#AD9883'),
+    unit_line=hexc('#9E3F28'), unit_crease=hexc('#CF7457'), unit_l=hexc('#F5D2C2'), unit_d=hexc('#E3906F'),
+    mech=hexc('#EADFD1'), mech_line=hexc('#B4907B'), stowed=hexc('#CBB3A2'), sky=hexc('#E6C3B2'),
+    plant=hexc('#8F8C6E'), frame=hexc('#8A7363'),
+)
+# 线宽（终稿像素；通道是 2 倍，画的时候乘 SS）
+LW = dict(unit_sil=2.3, unit_crease=0.75, ctx_sil=1.45, ctx_sil_far=0.85, ctx_crease=0.6, stowed=0.6, plant=0.6, mech=0.7)
+
+
+def draw_v2():
+    from scipy import ndimage
+    im = np.ones((H2, W2, 3), np.float32) * V2['paper']
+
+    def paint(mask, color, alpha=1.0):
+        a = (np.asarray(mask, np.float32) * alpha)[..., None]
+        im[:] = im * (1 - a) + np.asarray(color, np.float32) * a
+
+    def stroke(mask, width_px, color):
+        """按距离场画线：width_px 与 color 可以是逐像素的数组（取最近那个边像素的值），线边抗锯齿"""
+        if not mask.any():
+            return
+        dist, (iy, ix) = ndimage.distance_transform_edt(~mask, return_indices=True)
+        w = width_px if np.isscalar(width_px) else width_px[iy, ix]
+        a = np.clip(w * SS / 2 + 0.5 - dist, 0, 1)
+        col = color if np.ndim(color) == 1 else color[iy, ix]
+        im[:] = im * (1 - a[..., None]) + np.asarray(col, np.float32) * a[..., None]
+
+    # 深度：0 = 最近，1 = 最远（按画面里的分布取 2% / 98%）
+    zv = Z[~bg]
+    z0, z1 = np.percentile(zv, 2), np.percentile(zv, 98)
+    dn = np.clip((Z - z0) / max(z1 - z0, 1e-6), 0, 1)
+
+    # 面：地面一层淡底 + 木板细缝 + 墙根点画；墙只有背光面一层很淡的竖线；切到的墙顶涂实
+    paint(floor, V2['wash'], 0.8)
+    paint(world_lines(WY, 0.16, 0.9) * floor > 0.35, V2['tex'])
     half = 3.319
     wd = np.minimum(half - np.abs(WX), half - np.abs(WY))
-    dens = np.clip(0.42 - wd * 0.42, 0, 0.42) * floor
-    paint(stipple(dens, 5, 1.05) > 0.5, PAL['ctx'])
+    paint(stipple(np.clip(0.30 - wd * 0.35, 0, 0.30) * floor, 5, 1.0) > 0.5, V2['tex_d'])
+    wall_top = wall & (up > 0.8) & (WZ > 3.0)
+    wall_face = wall & ~wall_top
+    paint((hatch(0, 11, 1.0) > 0.35) & wall_face & (dark > 0.45), V2['tex'])
+    paint(wall_top, V2['cut'])
+    paint(is_('frame'), V2['frame'])
+    paint(is_('door') & (hatch(90, 7, 1.0) > 0.35), V2['tex_d'])
+    if not meta['ortho']:
+        paint(bg & (hatch(90, 8, 1.1) > 0.35), V2['sky'])
+    paint(is_('light'), V2['mid'])
+    sofa = is_('sofa', 'chair_pad')
+    paint(stipple((np.where(up > 0.7, 0.04, 0.08 + 0.22 * dark) * sofa).astype(np.float32), 5, 1.0) > 0.5, V2['tex_d'])
+    paint(is_('sofa_leg'), V2['mid'])
+    paint(is_('chair') & (hatch(45, 7, 1.0) > 0.35) & (dark > 0.3), V2['tex_d'])
+    paint(is_('soil') & (stipple(np.full((H2, W2), 0.5, np.float32), 4, 1.0) > 0.5), V2['mid'])
+    paint(is_('pot') & (hatch(0, 6, 1.0) > 0.35), V2['tex'])
+    paint(is_('liquid'), V2['mid'])
 
-# 墙：背光的面排竖线；切到的墙顶涂实
-wall_top = wall & (up > 0.8) & (WZ > 3.0)
-wall_face = wall & ~wall_top
-vh = hatch(0, 9, 1.2) * (wall_face & (dark > 0.35))
-paint(vh > 0.3, PAL['soft'])
-paint(wall_top, PAL['poche'])
-paint(is_('frame'), PAL['ink'])
-door = is_('door')
-paint(door & (hatch(90, 6, 1.2) > 0.3), PAL['ctx'])
+    # 单元：A 版贴渲染，B 版涂赤陶色（背光面深一档）；机构件浅底
+    if UNIT == 'render':
+        beauty = np.asarray(Image.open(f'{D}/{K}_beauty.png').convert('RGB'), np.float32) / 255
+        beauty = np.repeat(np.repeat(beauty, SS, 0), SS, 1)[:H2, :W2]
+        m = (unit_shell | unit_mech)[..., None]
+        im[:] = np.where(m, beauty, im)
+    else:
+        tone = np.clip(0.1 + 0.9 * (1 - np.clip(lam, 0, 1)), 0, 1)[..., None]
+        col = V2['unit_l'] * (1 - tone) + V2['unit_d'] * tone
+        im[:] = np.where(unit_shell[..., None], col, im)
+        paint(unit_mech, V2['mech'])
 
-# 窗洞里：天空排横线（E11 那种）；房间外面（轴测图的四周）留纸色
-inside = (np.abs(WX) < 3.6) & (np.abs(WY) < 3.6)
-if meta['ortho']:
-    sky = np.zeros_like(bg)
+    # 线：远处的物体轮廓变淡变细
+    ctx = ~(unit_shell | unit_mech | up_units | leaf) & ~bg
+    ctx_col = V2['near'][None, None] * (1 - 0.75 * dn[..., None]) + V2['far'][None, None] * (0.75 * dn[..., None])
+    ctx_w = LW['ctx_sil'] * (1 - dn) + LW['ctx_sil_far'] * dn
+    stroke((e_cr | e_id) & ctx & ~sil, LW['ctx_crease'], V2['mid'] * 0.5 + V2['far'] * 0.5)
+    stroke(sil & ctx, ctx_w, ctx_col)
+    # 收着的单元：只描外轮廓，越远越淡（挤在天花远处会成一片噪点）
+    st_col = V2['stowed'][None, None] * (1 - 0.6 * dn[..., None]) + V2['paper'][None, None] * (0.6 * dn[..., None])
+    stroke(sil & up_units, LW['stowed'], st_col)
+    stroke((e_id | e_cr | e_dep) & leaf, LW['plant'], V2['plant'])
+    unit = unit_shell | unit_mech
+    stroke((e_cr | e_id) & unit_mech & ~sil, LW['mech'], V2['mech_line'])
+    if UNIT != 'render':
+        stroke((e_cr | e_id) & unit_shell & ~sil, LW['unit_crease'], V2['unit_crease'])
+    stroke(sil & unit, LW['unit_sil'], V2['unit_line'])
+    return im
+
+
+if STYLE == 'v2':
+    img = draw_v2()
 else:
-    sky = bg
-paint(sky & (hatch(90, 7, 1.3) > 0.3), PAL['sky'])
-
-# 天花（透视、剖面）：留白，线形灯涂实
-paint(is_('light'), PAL['ink'])
-
-# 沙发布面：点画，背光面密；顶面很疏
-sofa = is_('sofa', 'chair_pad')
-sd = np.where(up > 0.7, 0.10, 0.18 + 0.5 * dark) * sofa
-paint(stipple(sd.astype(np.float32), 5, 1.1) > 0.5, PAL['ctx'])
-paint(is_('sofa_leg'), PAL['ink'])
-chair = is_('chair')
-paint(chair & (hatch(45, 6, 1.3) > 0.3) & (dark > 0.25), PAL['ctx'])
-
-# 小物：植物用点缀色
-if UNIT == 'render':
-    paint(leaf, PAL['coral'], 0.85)
-    paint(leaf & (dark > 0.45), PAL['coral_d'], 0.6)
-else:
-    paint(leaf & (hatch(60, 5, 1.1) > 0.3), PAL['ctx'])
-paint(is_('soil') & (stipple(np.full((H2, W2), 0.6, np.float32), 4, 1.0) > 0.5), PAL['ink'])
-paint(is_('pot') & (hatch(0, 5, 1.2) > 0.3), PAL['ctx'])
-paint(is_('liquid'), PAL['ctx'])
-
-# 收着的单元（透视 / 剖面里才有）：只描很淡的线，不填
-# 落下来的单元
-if UNIT == 'render':
-    beauty = np.asarray(Image.open(f'{D}/{K}_beauty.png').convert('RGB'), np.float32) / 255
-    beauty = np.repeat(np.repeat(beauty, SS, 0), SS, 1)[:H2, :W2]
-    m = (unit_shell | unit_mech)[..., None]
-    img[:] = np.where(m, beauty, img)
-else:
-    tone = np.clip(0.15 + 0.85 * (1 - np.clip(lam, 0, 1)), 0, 1)
-    col = PAL['unit_l'][None, None] * (1 - tone[..., None]) + PAL['unit'][None, None] * tone[..., None]
-    img[:] = np.where(unit_shell[..., None], col, img)
-    paint(unit_mech, PAL['faint'], 0.6)
-
-# ---------------------------------------------------------------- 线
-def draw_lines(mask, color, r):
-    m = dilate(mask, r) if r > 0 else mask
-    paint(m, color)
-
-ctx_cat = ~(unit_shell | unit_mech | up_units | leaf) & ~bg
-# 轮廓（前后遮挡）比转折重一档；单元最重
-draw_lines((e_cr | e_id) & ctx_cat & ~sil, PAL['ctx'], 0)
-draw_lines(sil & ctx_cat, PAL['ink'], 1)
-draw_lines((e_id | e_cr | e_dep) & up_units, PAL['faint'], 0)
-draw_lines((e_id | e_cr | e_dep) & leaf, PAL['coral_d'] if UNIT == 'render' else PAL['ctx'], 0)
-if UNIT == 'render':
-    draw_lines(sil & (unit_shell | unit_mech), PAL['ink'], 1)
-else:
-    draw_lines((e_cr | e_id) & (unit_shell | unit_mech) & ~sil, PAL['coral_d'], 0)
-    draw_lines(sil & (unit_shell | unit_mech), PAL['ink'], 1)
+    draw_v1()
 
 # ---------------------------------------------------------------- 缩回终稿分辨率
 im = Image.fromarray((np.clip(img, 0, 1) * 255).astype(np.uint8))

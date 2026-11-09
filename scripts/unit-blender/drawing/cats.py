@@ -380,8 +380,38 @@ def cat_svg(cat, T, sc, style='pencil', coat='tabby', ink='#2b2723', seed=1, uid
         out.append(f'<path d="{d_of(to_screen(T, outer))}Z" fill="{ink}"/>')
         return ''.join(out)
     if style == 'line':
-        fill = '#fbf8f2'
-        out.append(f'<path d="{d_of(to_screen(T, outer))}Z" fill="{fill}" stroke="{ink}" stroke-width="{max(0.9, 0.11 * sc):.2f}" stroke-linejoin="round"/>')
+        fill = {'black': ink, 'tabby': '#E6D7C4'}.get(coat, '#FBF8F2')
+        if coat == 'black':
+            out.append(f'<path d="{d_of(to_screen(T, outer))}Z" fill="{ink}" stroke="{ink}" stroke-width="{max(0.9, 0.11 * sc):.2f}" stroke-linejoin="round"/>')
+            for g in cat.dark:
+                c = g.centroid
+                out.append(f'<circle cx="{T(c.x, c.y)[0]:.2f}" cy="{T(c.x, c.y)[1]:.2f}" r="{max(0.6, 0.35 * sc):.2f}" fill="#E8C36A"/>')
+            return ''.join(out)
+        out.append(f'<path d="{d_of(to_screen(T, outer))}Z" fill="{fill}"/>')
+        if coat == 'cow':
+            rng2 = random.Random(seed * 7 + 3)
+            mnx, mny, mxx, mxy = ol.bounds
+            for _ in range(3):
+                px, py = rng2.uniform(mnx + 3, mxx - 3), rng2.uniform(mny + 4, mxy - 4)
+                blob = ell(px, py, rng2.uniform(3.5, 6.5), rng2.uniform(2.5, 4.5), rng2.uniform(0, 180)).intersection(ol)
+                if not blob.is_empty and blob.geom_type == 'Polygon':
+                    out.append(f'<path d="{d_of(to_screen(T, list(blob.exterior.coords)))}Z" fill="{ink}"/>')
+        if coat == 'tabby':
+            for p in cat.prims:
+                if p.kind not in ('body', 'tail'):
+                    continue
+                ax = p.axis; nx_, ny_ = -ax[1], ax[0]
+                g = p.shape.intersection(ol)
+                if g.is_empty:
+                    continue
+                for k in range(-3, 4):
+                    cx_, cy_ = p.center[0] + ax[0] * k * 3.2, p.center[1] + ax[1] * k * 3.2
+                    seg = LineString([(cx_ - nx_ * 9, cy_ - ny_ * 9), (cx_ + nx_ * 9, cy_ + ny_ * 9)]).intersection(g)
+                    for sg in getattr(seg, 'geoms', [seg]):
+                        if sg.is_empty or sg.geom_type != 'LineString':
+                            continue
+                        out.append(f'<path d="{d_of(to_screen(T, list(sg.coords)))}" fill="none" stroke="#A88A6E" stroke-width="{max(0.5, 0.09 * sc):.2f}" stroke-linecap="round"/>')
+        out.append(f'<path d="{d_of(to_screen(T, outer))}Z" fill="none" stroke="{ink}" stroke-width="{max(0.9, 0.11 * sc):.2f}" stroke-linejoin="round"/>')
         for pts, w in cat.lines:
             if w < 0.5:
                 continue

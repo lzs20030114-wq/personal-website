@@ -115,6 +115,27 @@ def section_camera():
     return ob
 
 
+def axo_zoom_camera(k):
+    """A1：H4 同一个轴测角度，只框 y < 0 那半间房（四台落下的单元、两只猫、四个人）"""
+    name = 'A1·轴测·半间房'
+    if name in bpy.data.objects:
+        return bpy.data.objects[name]
+    src = cams['H4']
+    cd = bpy.data.cameras.new(name)
+    cd.type = 'ORTHO'
+    cd.ortho_scale = 6.3
+    cd.clip_start = 0.1
+    cd.clip_end = 200
+    ob = bpy.data.objects.new(name, cd)
+    ob.rotation_euler = src.rotation_euler
+    bpy.data.collections['灯光与机位'].objects.link(ob)
+    bpy.context.view_layer.update()
+    fwd = -(src.matrix_world.to_3x3() @ Vector((0, 0, 1)))
+    target = Vector((-0.45, -1.5, 0.55))
+    ob.location = target - fwd.normalized() * 40
+    return ob
+
+
 def section_prep(y0):
     """朝相机那侧（y > y0）整个在外的不画，跨线的切掉 y > y0 那半"""
     saved = []
@@ -191,7 +212,7 @@ def plain_tree():
 
 
 for k in SHOTS:
-    cam = section_camera() if k == 'S2' else cams[k]
+    cam = section_camera() if k == 'S2' else (axo_zoom_camera(k) if k == 'A1' else cams[k])
     sc.camera = cam
     axon = cam.data.type == 'ORTHO'
     for c in near_cut:

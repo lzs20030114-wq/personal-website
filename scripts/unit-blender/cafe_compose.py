@@ -2,7 +2,10 @@
 猫是二维的画（铅笔 / 线稿 / 黑剪影），按台面上的落点和机位缩放；挡在人猫前面的东西按深度盖回来。
 轴测图另在地面上用点线标出收着的单元的落脚格。
 
-python3 scripts/unit-blender/cafe_compose.py <通道目录> <机位> <底图.png> <cafe.json> <猫的画法 pencil|line|silhouette> <输出.png>
+python3 scripts/unit-blender/cafe_compose.py <通道目录> <机位> <底图.png> <cafe.json> <猫的画法 pencil|line|silhouette> <输出.png> [v1|v2]
+
+v2（第二轮）：只有在跟猫打交道的人（摸猫、拍猫、逗猫）画实的剪影，颜色是暖深棕不是纯黑；其余坐着的人画成白底线描剪影，
+走路、站着说话的人不画——画面上的人少了一大半，单元重新成为主角。
 （人与猫的画法模块在 scripts/unit-blender/drawing/）
 """
 import json, math, os, subprocess, sys, tempfile
@@ -16,6 +19,8 @@ import poses  # noqa: E402
 import cats as catlib  # noqa: E402
 
 D, K, BASE, JS, CATSTYLE, OUT = sys.argv[1:7]
+STYLE = sys.argv[7] if len(sys.argv) > 7 else 'v1'
+ROLE = {}  # 人 → 'key'（摸猫 / 拍猫 / 逗猫）
 meta = json.load(open(f'{D}/{K}_cam.json'))
 d = json.load(open(JS))
 base = Image.open(BASE).convert('RGB')
@@ -156,6 +161,8 @@ def stage():
     pairs = sorted((p['pose'] != 'sit', dist(p, c), p['k'], ci) for ci, c in enumerate(cats) if c['z'] > 0.6
                    for p in people if p['watchCat'] == ci and dist(p, c) < 2.2 and p['k'] not in pet and p['k'] not in photo)
     wand = {pairs[0][2]: pairs[0][3]} if pairs else {}
+    for kk in list(pet) + list(photo) + list(wand):
+        ROLE[kk] = 'key'
     hair = ['short', 'long', 'bun', 'bob', 'pony', 'curly']
     for p in people:
         k = p['k']
@@ -240,6 +247,27 @@ def poly_mask(geom, ss=3):
     return m, x0, y0
 
 
+def poly_outline(geom, width, ss=3):
+    """shapely 形的外轮廓线 → 遮罩（与 poly_mask 同一套坐标）"""
+    from shapely.geometry import box
+    geom = geom.intersection(box(-4, -4, W + 4, H + 4))
+    if geom.is_empty:
+        return np.zeros((1, 1), np.float32), 0, 0
+    minx, miny, maxx, maxy = geom.bounds
+    x0, y0 = int(math.floor(minx)) - 3, int(math.floor(miny)) - 3
+    w, h = int(math.ceil(maxx)) - x0 + 5, int(math.ceil(maxy)) - y0 + 5
+    im = Image.new('L', (w * ss, h * ss), 0)
+    dr = ImageDraw.Draw(im)
+    polys = [geom] if geom.geom_type == 'Polygon' else list(getattr(geom, 'geoms', []))
+    for pg in polys:
+        if pg.geom_type != 'Polygon' or pg.is_empty:
+            continue
+        pts = [((x - x0) * ss, (y - y0) * ss) for x, y in pg.exterior.coords]
+        dr.line(pts + [pts[0]], fill=255, width=max(1, int(round(width * ss))), joint='curve')
+    return np.asarray(im.resize((w, h), Image.BOX), np.float32) / 255, x0, y0
+
+
+V2C = dict(key=(58, 43, 35), ghost_fill=(245, 239, 228), ghost_line=(140, 120, 104), foot=(196, 178, 158))
 canvas = np.asarray(base, np.float32).copy()
 
 
@@ -279,7 +307,7 @@ if meta['ortho']:
                 dr.line([(p0[0] * 2, p0[1] * 2), (p1[0] * 2, p1[1] * 2)], fill=255, width=2)
     m = np.asarray(ov.resize((W, H), Image.BOX), np.float32) / 255 * (cbase == 1)
     a = (m * 0.75)[..., None]
-    canvas[:] = canvas * (1 - a) + np.array((150, 134, 118), np.float32) * a
+    canvas[:] = canvas * (1 - a) + np.array(V2C['foot'] if STYLE == 'v2' else (150, 134, 118), np.float32) * a
 
 # 1b) 剖透视：剖切面涂实（墙、地坪、天花、切到的单元外皮），地坪以下画地面
 if SEC_Y is not None:
@@ -341,9 +369,14 @@ if SEC_Y is not None:
 
 # 2) 人
 people = stage()
+# 远的先画、近的后画：两个实剪影叠在一起时，近的那个带着纸色细边压在远的上面
+people.sort(key=lambda t: -cam(np.array([d['people'][t[0]]['x'], d['people'][t[0]]['y'], 1.0]))[2])
 for k, b, pl in people:
     p = d['people'][k]
     if SEC_Y is not None and p['y'] > SEC_Y + 0.15:
+        continue
+    role = ROLE.get(k, 'sit' if p['pose'] == 'sit' else 'other')
+    if STYLE == 'v2' and role == 'other':
         continue
     # 离相机不到 1.2 m 或在画面外的人不画（会被画框切掉大半个身子）
     fx_, fy_, fd_ = cam(np.array([p['x'], p['y'], 1.0]))
@@ -380,7 +413,17 @@ for k, b, pl in people:
         mm = mm[:sub.shape[0], :sub.shape[1]]
         sub[mm > 0] = np.minimum(sub[mm > 0], z)
     zf[zf > 1e8] = ps[0][1]
-    put(m, x0, y0, INK, zf)
+    if STYLE == 'v2' and role != 'key':
+        # 白底线描剪影：像 E7 / E9 里的人，读得出在那儿坐着，但不压画面
+        put(m, x0, y0, V2C['ghost_fill'], zf)
+        om, ox, oy = poly_outline(shape, 1.15)
+        zo = np.full(om.shape, ps[0][1], np.float32)
+        put(om, ox, oy, V2C['ghost_line'], zo)
+    else:
+        if STYLE == 'v2':
+            om, ox, oy = poly_outline(shape, 2.2)
+            put(om, ox, oy, V2C['ghost_fill'], np.full(om.shape, ps[0][1], np.float32))
+        put(m, x0, y0, V2C['key'] if STYLE == 'v2' else INK, zf)
 
 # 3) 猫：二维画，按台面落点 + 机位缩放，朝向决定画正面还是侧面、要不要左右翻
 # 这一刻：被逗的那只（狸花）抬爪，茶几上的揣手趴着或正面坐着，两层台里的侧面或正面坐着
@@ -410,7 +453,7 @@ for ci, c in enumerate(cats):
     T = lambda x, y, b0=b0, sx=sx, vx=vx, vy=vy, flip=flip, cxm=cxm: (b0[0] + flip * (x - cxm) * sx + y * vx, b0[1] + y * vy)
     coat = {'tabby': 'tabby', 'cow': 'cow', 'black': 'black'}.get(c['coat'], 'tabby')
     sc = max(sx, 0.4)
-    svg = catlib.cat_svg(cat, T, sc, style=CATSTYLE, coat=coat, seed=ci + 3, uid=f'k{ci}', ink='#1d1916')
+    svg = catlib.cat_svg(cat, T, sc, style=CATSTYLE, coat=coat, seed=ci + 3, uid=f'k{ci}', ink=('#4A372D' if STYLE == 'v2' else '#1d1916'))
     zc = cam(B + np.array([0, 0, 0.12]))[2]
     svg_parts.append((zc, svg))
 
@@ -429,6 +472,16 @@ if svg_parts:
             # 被台面挡住的那部分不藏掉，淡淡地透出来（图纸里画被遮挡物的惯例），猫是这张图要看的
             a = (a * np.where(vis, 1.0, 0.32))[..., None]
             canvas[:] = canvas * (1 - a) + im[:, :, :3] * 255 * a
+
+# 局部图（A1）：画到四边自己淡出到纸色，不让画框把单元和人切成碎块
+if os.environ.get('FADE'):
+    yy_, xx_ = np.mgrid[0:H, 0:W].astype(np.float32)
+    u = np.abs(xx_ - W / 2) / (W / 2); v_ = np.abs(yy_ - H / 2) / (H / 2)
+    r = (u ** 4 + v_ ** 4) ** 0.25
+    t = np.clip((r - 0.74) / 0.24, 0, 1)
+    t = (t * t * (3 - 2 * t))[..., None]
+    paper = np.array((245, 239, 228), np.float32)
+    canvas[:] = canvas * (1 - t) + paper * t
 
 Image.fromarray(np.clip(canvas, 0, 255).astype(np.uint8)).save(OUT)
 print('COMPOSE', K, CATSTYLE, OUT)
