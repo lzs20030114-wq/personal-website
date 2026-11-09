@@ -4,7 +4,7 @@ import { FRAMES, TrajectoryBaker, UNITS_PER_M, UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, U
 import { SOLID } from './skin-solid';
 import { planLayout } from './unit-activation';
 import { RING } from './skin-ring';
-import { GIVE, TOPS, UPPER_ABOVE, VIGNETTES, VignetteSim, catAt, keysAt, pathAt, unitRamp, vignetteLayout, vignetteScript } from './cohabit-vignette';
+import { GIVE, TOPS, catRingAngle, UPPER_ABOVE, VIGNETTES, VignetteSim, catAt, keysAt, pathAt, unitRamp, vignetteLayout, vignetteScript } from './cohabit-vignette';
 
 const BANDS = COHABIT.FACES.BANDS;
 
@@ -65,7 +65,7 @@ describe('cohabit-vignette · 2×2 / 3×3 小样', () => {
     }
   });
 
-  it('坐着的人头顶上没有落着的单元（落下的台不压人），家具上方的台不落', () => {
+  it('脚本里会落下的台都不压在家具上', () => {
     for (const v of VIGNETTES) {
       const sim = new VignetteSim(v.key);
       const rects = sim.furn?.rects ?? [];
@@ -115,6 +115,13 @@ describe('cohabit-vignette · 2×2 / 3×3 小样', () => {
         }
       }
     expect(open).toBeGreaterThanOrEqual(4);
+    // 猫身下的带不收：猫坐的那台，离猫方位 60° 以内的带一条都没收
+    const cat = sim.cats[0];
+    const on = sim.supportOf(cat)[0];
+    for (let j = 0; j < BANDS; j++) {
+      const d = catRingAngle(cat.walker.heading) - bandAngle(j);
+      if (Math.abs(Math.atan2(Math.sin(d), Math.cos(d))) < Math.PI / 3) expect(sim.bandOpen[on.i * BANDS + j]).toBe(0);
+    }
     expect(open).toBeLessThan(BANDS * 4 / 2);
     // 片尾：人早走了，带全落回
     for (let t = 11; t < sim.script.duration - 0.2; t += 0.05) sim.step(0.05);

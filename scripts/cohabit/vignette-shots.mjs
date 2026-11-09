@@ -32,12 +32,13 @@ try {
     for (let i = 0; i < 400; i++) {
       await b.frames(2);
       const txt = await b.ev(`${el}.querySelector('.lab-hud.br')?.innerText ?? ''`);
-      if (/\/ \d+ s/.test(txt)) break;
+      if (/\/ \d+ s/i.test(txt)) break;
       await b.sleep(250);
     }
     // 脚本时间从台架 HUD 读（烘轨迹时主循环已经在推帧，开演那一刻不是 0）；要截的时刻已经过了就跳到下一轮
-    const hudT = async () => Number(((await b.ev(`${el}.querySelector('.lab-hud.br')?.innerText ?? ''`)).match(/(\d+) \/ (\d+)/) ?? [0, 0, 1]).slice(1, 3).join('|').split('|')[0]);
-    const dur = Number(((await b.ev(`${el}.querySelector('.lab-hud.br')?.innerText ?? ''`)).match(/\/ (\d+)/) ?? [0, 60])[1]);
+    const hudText = () => b.ev(`${el}.querySelector('.lab-hud.br')?.innerText ?? ''`);
+    const hudT = async () => Number((await hudText()).match(/(\d+) \//)?.[1] ?? 0);
+    const dur = Number((await hudText()).match(/\/ (\d+)/)?.[1] ?? 60);
     for (const [at, view] of shots) {
       const now = await hudT();
       const n = Math.max(0, Math.round((((at - now - 0.5) % dur) + dur) % dur * FPS));

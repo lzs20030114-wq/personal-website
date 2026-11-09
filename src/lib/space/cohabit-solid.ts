@@ -1573,7 +1573,7 @@ export interface CatPlace {
 }
 
 /** 台上的猫坐在环上什么方位：离「它要看的方向」绕回 55°，身子顺着环、头再转过去看（不必扭满 90°） */
-const RING_SIDE = (55 * Math.PI) / 180;
+export const RING_SIDE = (55 * Math.PI) / 180;
 
 /**
  * 猫站在哪、怎么摆（2026-10-25 人与猫重做时取代 catSpot）。平面模型把猫当一个点：坐着时在单元中心（芯心），

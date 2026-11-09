@@ -13,12 +13,13 @@
  * 第一批四个（方案 §3），全部只用 2-15 已经烘好的两组轨迹（平台三档、两个结构六条）：
  *   tea     3×3 · 沙发前那台：靠沙发的半圈只成下台当茶几（0.42 m），背后半圈两块都成，上台给猫（2-3、2-6、2-14 桌子规则）
  *   cavity  2×2 · 两台整圈两层相邻，两块之间的空连成一条腔，两只猫各坐一头，朝坐着的人（2-3、2-13 合腔）
- *   giveway 2×2 · 四台围着一个过道交叉点，人走进来站一会儿再走，只收挡着他的那几条带（2-6 半台、2-14 只收挡路的带）
+ *   giveway 2×2 · 四台围着一个过道交叉点，人走进来站一会儿再走，只收挡路的那几条带（2-6 半台、2-14 只收挡路的带）
  *   guide   3×3 · 坐下以后单元一步一步落，把猫从房间那头引过来，拐一个弯；落着的只有猫脚下与下一步（2-9 错相、2-14 引路）
  */
 import { PLAN, planLayout, type PlanLayout, type PlanUnit } from './unit-activation';
 import { RING } from './skin-ring';
 import { COHABIT, bandAngle, furnKind, furnRect, squarePlanLayout, type FurnRect, type FurnSpec, type Link, type SpaceMode } from './cohabit';
+import { RING_SIDE } from './cohabit-solid';
 
 const BANDS = COHABIT.FACES.BANDS;
 
@@ -87,7 +88,12 @@ export const TEA_GAP = 0.38;
 /** 单元落下（升降 + 成形）与收回各用几秒：升降 3 s、成形 5 s；收回反过来 */
 export const RAMP = { drop: 3, form: 5, unform: 4, hoist: 3 } as const;
 /** 让路：人身子半径加多少余量（m，2-14 的让位默认 0.15）、往前看几秒（收回 2 s + 1 s 余量） */
-export const GIVE = { clear: 0.15, ahead: 3, open: COHABIT.FACES.open, close: COHABIT.FACES.close } as const;
+export const GIVE = { clear: 0.15, ahead: 3, open: COHABIT.FACES.open, close: COHABIT.FACES.close, catHalf: Math.PI / 3 } as const;
+
+/** 台上坐在台心的猫在一圈的哪个方位（与 cohabit-solid catPlacement 同一条：离它看的方向绕回 RING_SIDE） */
+export function catRingAngle(heading: number): number {
+  return heading - RING_SIDE;
+}
 
 /** 小样的场地：从 2-15 那间房的 8×8 取格距、平台与芯的尺寸，场地缩到 n×n 格（房间 = n 个格距见方） */
 export function vignetteLayout(n: number): PlanLayout {
@@ -389,7 +395,8 @@ function givewayScript(l: PlanLayout): VignetteScript {
   const half = l.roomM / 2;
   const units: (UnitScript | null)[] = Array.from({ length: n * n }, () => ({ deg: ALWAYS, top: TOPS.stand }));
   const A = cell(n, p, 0, 0);
-  const cat: CatBeat[] = [{ t: 0, x: A.x, y: A.y, heading: Math.PI / 4, on: [A.i], state: 'sit' }];
+  // 猫坐在左后那台背向交叉点的那一侧（方位 225°），朝着交叉点那一角留给人让路
+  const cat: CatBeat[] = [{ t: 0, x: A.x, y: A.y, heading: (225 * Math.PI) / 180 + RING_SIDE, on: [A.i], state: 'sit' }];
   return {
     n,
     duration: 26,
@@ -412,9 +419,9 @@ function givewayScript(l: PlanLayout): VignetteScript {
     cats: [cat],
     beats: [
       { t: 0, zh: '四台都落着，台面 1.05 m。中间是一个过道交叉点，方台的角离它只有 0.10 m', en: 'All four units are down at 1.05 m. A corner of each square shelf comes within 0.10 m of the crossing in the middle' },
-      { t: 3, zh: '一位访客走过来。挡着他的带提前收回、平贴在立杆上，开出一条过道', en: 'A visitor approaches. The bands in his way retract ahead of him and lie flat on the posts, opening an aisle' },
-      { t: 7.5, zh: '他站在交叉点上看猫。四台各收回朝着他的那一角，其余照旧落着', en: 'He stands at the crossing watching the cat; each unit pulls back only the corner facing him' },
-      { t: 14, zh: '他往下走出去，身后的带落回原位', en: 'He walks out the other side; the bands behind him come back down' },
+      { t: 3, zh: '一位访客走过来。挡路的带提前收回、平贴在立杆上，开出一条过道', en: 'A visitor approaches. The bands in the way retract ahead of the visitor and lie flat on the posts, opening an aisle' },
+      { t: 7.5, zh: '访客站在交叉点上看猫。四台各收回朝着访客的那一角，其余照旧落着', en: 'The visitor stands at the crossing watching the cat; each unit pulls back only the corner facing the visitor' },
+      { t: 14, zh: '访客从另一边走出去，身后的带落回原位', en: 'The visitor walks out the other side; the bands behind come back down' },
     ],
     giveWay: true,
   };
@@ -440,7 +447,8 @@ function guideScript(l: PlanLayout): VignetteScript {
   units[C.i] = { deg: unitRamp(19, 41), top: TOPS.stand };
   units[D.i] = { deg: unitRamp(30, 55), form: halfRoof(toward), top: TOPS.lower };
   const enter: [number, number] = [half + 0.3, S.y - 0.5];
-  const front: [number, number] = [S.x - 0.05, S.y - 0.45];
+  // 椅子前站的位置：离座位前方那台的台边留出身子（落下后人起身从这里走，不擦着下台）
+  const front: [number, number] = [S.x - 0.05, S.y - 0.4];
   const look = Math.atan2(S.y - D.y, S.x - D.x);
   // 猫从有顶那台下地的位置：台左侧外缘外一点
   const down: [number, number] = [D.x - l.platR - 0.12, D.y];
@@ -643,7 +651,14 @@ export class VignetteSim implements SpaceSimLike {
         const cx = Math.cos(ang), cy = Math.sin(ang);
         const ax = u.x + cx * l.mastR, ay = u.y + cy * l.mastR;
         const bx = u.x + cx * reach[j], by = u.y + cy * reach[j];
-        const want = samples.some((q) => segDist(q.x, q.y, ax, ay, bx, by) < lim) ? 1 : 0;
+        // 猫身下的带不收（与 2-14 同一条：COHABIT.FACES 护住猫身下那几条）
+        const underCat = this.cats.some((c, k) => {
+          const on = this.catOn[k];
+          if (!on || on.length !== 1 || on[0] !== u.i) return false;
+          const d = catRingAngle(c.walker.heading) - ang;
+          return Math.abs(Math.atan2(Math.sin(d), Math.cos(d))) < GIVE.catHalf;
+        });
+        const want = !underCat && samples.some((q) => segDist(q.x, q.y, ax, ay, bx, by) < lim) ? 1 : 0;
         const i = u.i * BANDS + j;
         const o = this.bandOpen[i];
         if (dt <= 0) this.bandOpen[i] = want;
