@@ -15,6 +15,7 @@ import { MECH } from '../../src/lib/space/unit-mechanism';
 import type { RingUnitDef } from '../../src/lib/space/skin-ring';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import type { Vec3 } from '../../src/lib/linkage/solver3d';
+import { VIGNETTES, VignetteSim, type SpaceSimLike, type VignetteKey } from '../../src/lib/space/cohabit-vignette';
 import { COHABIT, CohabitSim, PACE_DEMO, SPACE_MODES, bandAngle, partySizes, scatterCats, type EventKind, type SpaceMode } from '../../src/lib/space/cohabit';
 import { FIGURE, RING_GRID_AXON, ROOM, ringGridViewMatrix, type RingGridView } from '../../src/lib/space/skin-grid';
 import { CAT, CAT_HEAD_YAW_MAX, clampHeadYaw, catRig, humanRig, strideOf, styleKey, type Rig as BodyRig, type Tone } from '../../src/lib/space/figure';
@@ -169,6 +170,28 @@ const MAX_SIM_DT = 0.05;
  *  2026-11-08 加 ×40 / ×60（作者「加更高的时间倍数档」：访客一坐 10–30 分钟，×20 下坐一回也要 30–90 s）。
  *  实测 6 人 4 猫每仿真秒约 5.5 ms ⇒ ×60 时每秒真实时间约 0.33 s 的 CPU */
 const TIME_SCALES = [1, 8, 10, 20, 40, 60] as const;
+/** 小样一段 26–68 s，不需要那么快 */
+const VIG_TIME_SCALES = [1, 2, 4] as const;
+const VIG_COPY = {
+  zh: {
+    title: '小样 · 2×2 / 3×3',
+    sub: (name: string, n: number, side: number) => `${name} · ${n}×${n} · 场地 ${side.toFixed(2)} m 见方 · 与实验 2-15 同一种方台、同一个格距`,
+    hint: '拖拽旋转 · 按脚本演，不跑仿真：哪一台什么时候落、成什么形、人和猫在哪都是写好的 · 设计提案，不是研究结果',
+    baking: (p: number) => `算带子轨迹 ${Math.round(p * 100)}%（平台与两层两组）`,
+    clock: (t: number, d: number) => `${Math.floor(t)} / ${d} s`,
+    pick: '小样',
+    aria: '从实验 2-15 那间房里取 2×2 或 3×3 的一小块，同一种方台按脚本落下成形，演一个人与猫的小场景',
+  },
+  en: {
+    title: 'Small studies · 2×2 / 3×3',
+    sub: (name: string, n: number, side: number) => `${name} · ${n}×${n} · ${side.toFixed(2)} m square · the Lab 2-15 square unit at the same spacing`,
+    hint: 'Drag to orbit · scripted, not simulated: when each unit descends, what it forms, and where people and cats are, are all written in advance · a design proposal, not a research result',
+    baking: (p: number) => `baking band trajectories ${Math.round(p * 100)}% (flat and two-level)`,
+    clock: (t: number, d: number) => `${Math.floor(t)} / ${d} s`,
+    pick: 'study',
+    aria: 'A 2×2 or 3×3 patch cut from the Lab 2-15 room; the same square units descend and form on a script to stage one small scene with a visitor and cats',
+  },
+} as const;
 const TIME_DEF = 1;
 /** 烘轨迹时每帧给的主线程预算（ms） */
 const BAKE_BUDGET_MS = 12;
@@ -253,6 +276,7 @@ interface Api {
   step: (dt: number) => void;
   redraw: () => void;
   setSpace: (m: SpaceMode) => void;
+  setVignette: (k: VignetteKey) => void;
   restart: () => void;
   viewTo: (k: ViewKey) => void;
   viewHome: () => void;
@@ -264,7 +288,10 @@ export function CohabitSpaceBench({
   controls = true,
   workspace = false,
   lang: explicitLang,
+  vignette = false,
 }: {
+  /** 小样模式（Lab 2-16，2026-11-09）：不跑仿真，按 cohabit-vignette 的脚本演 2×2 / 3×3 的小场地；画法与 2-15 一行不改 */
+  vignette?: boolean;
   active?: boolean;
   onLight?: boolean;
   controls?: boolean;
@@ -282,10 +309,14 @@ export function CohabitSpaceBench({
   const timeRef = useRef<number>(TIME_DEF);
   const [timeScale, setTimeScale] = useState<number>(TIME_DEF);
   const [space, setSpace] = useState<SpaceMode>('live');
+  const [vigKey, setVigKey] = useState<VignetteKey>('tea');
   const shellRef = useRef(true);
   const [shell, setShell] = useState(true);
   const [view, setView] = useState<ViewKey>('axon');
-  const [hud, setHud] = useState<{ t: number; formed: number; total: number; counts: Record<EventKind, number>; bake: number; note: string; side: number; roomH: number; roofed: number }>({
+  const [hud, setHud] = useState<{ t: number; formed: number; total: number; counts: Record<EventKind, number>; bake: number; note: string; side: number; roomH: number; roofed: number; beat: { zh: string; en: string } | null; dur: number; field: number }>({
+    field: 0,
+    beat: null,
+    dur: 0,
     roofed: 0,
     t: 0,
     formed: 0,
@@ -301,13 +332,18 @@ export function CohabitSpaceBench({
     const canvas = canvasRef.current;
     if (!canvas) return;
     // 默认运转（2026-10-26 用户拍板：Lab 默认勾选运转，不随「减弱动态效果」关掉，MAPPING §68）
-    const preset = planFromHash('2-15', SPACE_MODES.map((m) => m.key)) as SpaceMode | null;
+    const preset = vignette ? null : (planFromHash('2-15', SPACE_MODES.map((m) => m.key)) as SpaceMode | null);
     let spaceKey: SpaceMode = preset ?? 'live';
     if (preset) setSpace(preset);
+    const vigPreset = vignette ? (planFromHash('2-16', VIGNETTES.map((v) => v.key)) as VignetteKey | null) : null;
+    let vigKeyNow: VignetteKey = vigPreset ?? 'tea';
+    if (vigPreset) setVigKey(vigPreset);
     let seed = SCENE.seed;
-    let sim = makeSim(spaceKey, seed);
-    const layout = sim.layout;
-    const roomM = layout.roomM;
+    // 小样：按脚本演（VignetteSim），读数与 CohabitSim 同一个形状
+    const newSim = (): SpaceSimLike => (vignette ? new VignetteSim(vigKeyNow) : makeSim(spaceKey, seed));
+    let sim: SpaceSimLike = newSim();
+    let layout = sim.layout;
+    let roomM = layout.roomM;
 
     let viewKey: ViewKey = 'axon';
     const cam = new OrbitCamera({
@@ -334,8 +370,11 @@ export function CohabitSpaceBench({
     const IDENT = { ux: 1, uy: 0, uz: 0, ex: 0, ey: 1, ez: 0, fx: 0, fy: 0, fz: 1, o: { x: 0, y: 0, z: 0 } };
 
     // ── 静件：房间、家具（随仿真重建）────────────────────────────────────────
-    const room = roomMesh(roomM);
-    R.addMesh('room', bakeIndexed(room.verts, room.idx));
+    const bakeRoom = (): void => {
+      const room = roomMesh(roomM);
+      R.addMesh('room', bakeIndexed(room.verts, room.idx));
+    };
+    bakeRoom();
     const bakeFurniture = (): void => {
       const f = sim.furn ? boxesMesh(furnitureBoxes(sim.furn.rects)) : null;
       R.addMesh('furniture', f ? bakeIndexed(f.verts, f.idx) : new Float32Array(0));
@@ -359,7 +398,11 @@ export function CohabitSpaceBench({
     const DUAL_BOTH = 3;
     const DUAL_LOWER = 6;
     let rig: Rig = rigFor(layout, pre);
-    setHud((h) => ({ ...h, side: platformSide(rig), total: layout.units.length }));
+    setHud((h) => ({ ...h, side: platformSide(rig), total: layout.units.length, field: roomM }));
+    const bakePlates = (): void => {
+      const plates = platesMesh(rig);
+      R.addMesh('plates', bakeIndexed(plates.verts, plates.idx));
+    };
     {
       const flat = UNIT_ORDER.map(() => 0);
       const preLow = decimateTrajectory(pre, STOWED_STRIDE);
@@ -370,15 +413,14 @@ export function CohabitSpaceBench({
       const preShell = bakeUnitShell([preLow], 1, flat, SHELL_END_LOW);
       R.addMesh('shell-stowed-c', preShell.cover);
       R.addMesh('shell-stowed-g', preShell.gore);
-      const plates = platesMesh(rig);
-      R.addMesh('plates', bakeIndexed(plates.verts, plates.idx));
+      bakePlates();
     }
     // 立杆随单元伸缩（作者「中间这根棍子也得缩上去」）：下端跟着布束底走，哪一帧变了哪一帧重烘，静止时不重传
-    const postBottoms = new Float32Array(layout.units.length).fill(-1);
-    const postNext = new Float32Array(layout.units.length);
+    let postBottoms = new Float32Array(layout.units.length).fill(-1);
+    let postNext = new Float32Array(layout.units.length);
     // 每台此刻的台面高度（米，离地）：朝它要去的高度匀速走（TABLE_MOVE m/s）；收在天花下时直接换成目标，落下来就是对的高度
-    const tableTop = new Float32Array(layout.units.length).fill(TABLE_TOP.stand);
-    const tableWant = new Float32Array(layout.units.length);
+    let tableTop = new Float32Array(layout.units.length).fill(TABLE_TOP.stand);
+    let tableWant = new Float32Array(layout.units.length);
     let tableT = 0;
     const syncPosts = (): void => {
       let dirty = false;
@@ -475,7 +517,10 @@ export function CohabitSpaceBench({
         R.addMesh(`shell-${id}-c`, sh.cover);
         R.addMesh(`shell-${id}-g`, sh.gore);
       }
-      bakeGroup(UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, () => {}, takeDual);
+      bakeP = 0;
+      bakeGroup(UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, (p) => {
+        bakeP = p;
+      }, takeDual);
     };
 
     // ── 两组轨迹都在后台线程里烘（cohabit-bake.worker.ts，2026-10-31 轻量化：平台三档原先在主线程上分片烘）：
@@ -533,6 +578,7 @@ export function CohabitSpaceBench({
       }
     }
     const takeDual = (list: BandTrajectory[]): void => {
+      bakeP = 1;
       worker?.terminate(); // 两组都烘完了，线程不再留着
       worker = null;
       if (disposed || !trajs) return;
@@ -611,17 +657,39 @@ export function CohabitSpaceBench({
     };
 
     // 每条带在成形段两条路上走到哪一格（stepBandCursor：涨走正向路、退走回程路，反向时跳到另一条路上形状最近的格）
-    const cursors = bandCursors(layout.units.length * BANDS);
-    const frameOf = new Int32Array(layout.units.length * BANDS);
+    let cursors = bandCursors(layout.units.length * BANDS);
+    let frameOf = new Int32Array(layout.units.length * BANDS);
     // 每台落下时抽的形（unitFormPlan）：当桌子的那台照平台；给猫落的在 平台 / 有顶的一台 / 整圈两层 里抽一种。
     // 排法在开始落下那一刻定、收回天花之前不换（作者 10-06「换形先收回再落」）。roofOn = 两层（有顶的或整圈的）；
     // roofToward = 有顶的那台敞开那半圈朝哪（整圈两层是 NaN）；dropSerial = 这台第几次落下（抽签用）；
     // orders[u][j] = 这台第 j 条带取哪条轨迹（平台 = UNIT_ORDER；两层 = 两块都成 / 只成下台那三档）
-    const roofOn = new Uint8Array(layout.units.length);
-    const planSet = new Uint8Array(layout.units.length);
-    const dropSerial = new Int32Array(layout.units.length);
-    const roofToward = new Float32Array(layout.units.length);
-    const orders: (readonly number[])[] = layout.units.map(() => UNIT_ORDER);
+    let roofOn = new Uint8Array(layout.units.length);
+    let planSet = new Uint8Array(layout.units.length);
+    let dropSerial = new Int32Array(layout.units.length);
+    let roofToward = new Float32Array(layout.units.length);
+    let orders: (readonly number[])[] = layout.units.map(() => UNIT_ORDER);
+    /** 换了场地（小样换一个）：按新的格数重摆所有逐台的东西 */
+    const relayout = (): void => {
+      layout = sim.layout;
+      roomM = layout.roomM;
+      const U = layout.units.length;
+      rig = rigFor(layout, trajs ? trajs[0] : pre);
+      postBottoms = new Float32Array(U).fill(-1);
+      postNext = new Float32Array(U);
+      tableTop = new Float32Array(U).fill(TABLE_TOP.stand);
+      tableWant = new Float32Array(U);
+      cursors = bandCursors(U * BANDS);
+      frameOf = new Int32Array(U * BANDS);
+      roofOn = new Uint8Array(U);
+      planSet = new Uint8Array(U);
+      dropSerial = new Int32Array(U);
+      roofToward = new Float32Array(U);
+      orders = layout.units.map(() => UNIT_ORDER);
+      bakeRoom();
+      bakePlates();
+      cam.retarget(COHABIT_PIVOT, cohabitCamScale(roomM, viewKey as RingGridView));
+      setHud((h) => ({ ...h, side: platformSide(rig), total: U, field: roomM }));
+    };
     let roofed = 0;
 
     // 膜的摆放（本帧收集、实体画完后再画）
@@ -658,7 +726,8 @@ export function CohabitSpaceBench({
         const at = (c: { x: number; z: number }, yaw: number, y: number): MeshPlace => ({ yaw, x: c.x, y, z: c.z, s: rig.s });
         // 这一帧每台该落到哪个高度：平面模型此刻把它当谁的桌子（COHABIT.TABLE、sim.tableBy）就落到那件家具的桌子高度，其余落到站着用的高度
         tableWant.fill(TABLE_TOP.stand);
-        if (sim.furn) for (let u = 0; u < layout.units.length; u++) if (sim.tableBy[u] >= 0) tableWant[u] = tableTopFor(sim.furn.rects[sim.tableBy[u]]);
+        if (sim.topOf) for (let u = 0; u < layout.units.length; u++) tableWant[u] = sim.topOf(u);
+        else if (sim.furn) for (let u = 0; u < layout.units.length; u++) if (sim.tableBy[u] >= 0) tableWant[u] = tableTopFor(sim.furn.rects[sim.tableBy[u]]);
         const dtT = Math.max(0, Math.min(0.1 * timeRef.current, sim.t - tableT));
         tableT = sim.t;
         // 正坐着的人的座位（有顶的一台朝离它最近的那个人敞开）
@@ -681,8 +750,11 @@ export function CohabitSpaceBench({
             planSet[u] = 1;
             // 第几次落下照数（与两层那组烘没烘完无关），抽签只看种子、第几台、第几次
             const serial = dropSerial[u]++;
-            const plan =
-              dualReady && sim.furn
+            const plan = !dualReady
+              ? null
+              : sim.formOf
+                ? sim.formOf(u)
+                : sim.furn
                 ? unitFormPlan({
                     seed,
                     unit: u,
@@ -704,7 +776,8 @@ export function CohabitSpaceBench({
           }
           const roof = roofOn[u] === 1;
           if (roof) {
-            tableWant[u] = SHELTER.lowerTop;
+            // 小样的台面高度由脚本给（茶几那台的下台 0.42 m），不按 2-15 给猫的两层台的 0.90 m
+            if (!sim.topOf) tableWant[u] = SHELTER.lowerTop;
             roofed++;
           }
           const order = orders[u];
@@ -888,13 +961,14 @@ export function CohabitSpaceBench({
         const key = `c-${pl.pose}-${pl.tail}-${pl.bend.toFixed(3)}-${k}|${look.coat}`;
         const r = rigOf(key, () => catRig({ unit: UNITS_PER_M, pose: pl.pose, tail: pl.tail, bend: pl.bend, phase: k / WALK_FRAMES.cat, coat: look.coat }));
         // 台上的猫站在自己那台的台面上（各台高度不同；两层的是下台）；跨台时按走到几成在两台之间插值
-        const under =
+        const under = c.h !== undefined ? c.h :
           support.length === 2 && pl.t !== undefined
             ? tableTop[support[0].i] + (tableTop[support[1].i] - tableTop[support[0].i]) * pl.t
             : support.length
               ? Math.max(...support.map((u) => tableTop[u.i]))
               : TABLE_TOP.stand;
-        const footY = pl.onPlatform ? ROOM.FLOOR_Y - under * UNITS_PER_M - pl.lift * UNITS_PER_M : ROOM.FLOOR_Y;
+        // 地面上的猫照旧踩地；小样里正在跳上跳下的猫按脚本给的高度（c.h），2-15 的猫没有 h，逐位不变
+        const footY = pl.onPlatform ? ROOM.FLOOR_Y - under * UNITS_PER_M - pl.lift * UNITS_PER_M : ROOM.FLOOR_Y - (c.h ?? 0) * UNITS_PER_M;
         placeBoth(cats, r, key, look.coat, (tone) => catColor(tone, look), pl.x * UNITS_PER_M, footY, pl.y * UNITS_PER_M, figureYaw(pl.heading), clampHeadYaw(pl.headTurn, CAT_HEAD_YAW_MAX));
       });
       drawBatches(cats);
@@ -924,10 +998,12 @@ export function CohabitSpaceBench({
     let lastHud = '';
     const pushHud = (): void => {
       const s = sim.summary();
-      const key = `${Math.floor(s.t)}|${s.formed}|${roofed}|${s.ledger.counts.gaze}|${s.ledger.counts.warmth}|${s.ledger.counts.touch}|${s.ledger.counts.pass}|${trajs ? 1 : Math.round(bakeP * 20)}`;
+      const ready = vignette ? (dualReady ? 1 : trajs ? 0.5 + bakeP / 2 : bakeP / 2) : trajs ? 1 : bakeP;
+      const beat = sim instanceof VignetteSim ? sim.beat() : null;
+      const key = `${Math.floor(s.t)}|${s.formed}|${roofed}|${s.ledger.counts.gaze}|${s.ledger.counts.warmth}|${s.ledger.counts.touch}|${s.ledger.counts.pass}|${Math.round(ready * 20)}|${beat ? beat.t : ''}`;
       if (key === lastHud) return;
       lastHud = key;
-      setHud((h) => ({ ...h, t: s.t, formed: s.formed, roofed, counts: { ...s.ledger.counts }, bake: trajs ? 1 : bakeP }));
+      setHud((h) => ({ ...h, t: s.t, formed: s.formed, roofed, counts: { ...s.ledger.counts }, bake: ready, beat, dur: sim instanceof VignetteSim ? sim.script.duration : 0 }));
     };
 
     bakeGroup(
@@ -944,7 +1020,8 @@ export function CohabitSpaceBench({
     );
 
     const step = (dt: number): void => {
-      if (trajs && runningRef.current) {
+      // 小样要两组轨迹都烘完才开演（茶几、腔、有顶的台都是两层的）
+      if (trajs && (!vignette || dualReady) && runningRef.current) {
         let left = Math.min(MAX_SIM_DT, dt) * timeRef.current;
         while (left > 1e-9) {
           const h = Math.min(MAX_SIM_DT, left);
@@ -958,7 +1035,9 @@ export function CohabitSpaceBench({
     };
 
     const rebuild = (): void => {
-      sim = makeSim(spaceKey, seed);
+      const before = layout;
+      sim = newSim();
+      if (sim.layout.units.length !== before.units.length || sim.layout.roomM !== before.roomM) relayout();
       looks = newLooks();
       bakeFurniture();
       resetBandCursors(cursors);
@@ -981,6 +1060,10 @@ export function CohabitSpaceBench({
       },
       restart: () => {
         seed += 1;
+        rebuild();
+      },
+      setVignette: (k) => {
+        vigKeyNow = k;
         rebuild();
       },
       viewTo: (k) => {
@@ -1047,40 +1130,81 @@ export function CohabitSpaceBench({
     apiRef.current?.setSpace(space);
   }, [space]);
 
+  // 小样：换一个 = 换场地重摆（首次由主 effect 建）
+  const vigRef = useRef<VignetteKey | null>(null);
+  useEffect(() => {
+    if (!vignette) return;
+    if (vigRef.current === null) {
+      vigRef.current = vigKey;
+      return;
+    }
+    if (vigRef.current === vigKey) return;
+    vigRef.current = vigKey;
+    apiRef.current?.setVignette(vigKey);
+  }, [vigKey, vignette]);
+
   const goView = useCallback((k: ViewKey) => {
     setView(k);
     apiRef.current?.viewTo(k);
   }, []);
 
-  const canvas = <canvas ref={canvasRef} width={1400} height={1040} aria-label={t.aria} />;
-  const kicker = tx('Lab 2-15 / Project II');
+  const vt = VIG_COPY[lang];
+  const vigMeta = VIGNETTES.find((v) => v.key === vigKey)!;
+  const canvas = <canvas ref={canvasRef} width={1400} height={1040} aria-label={vignette ? vt.aria : t.aria} />;
+  const kicker = tx(vignette ? 'Lab 2-16 / Project II' : 'Lab 2-15 / Project II');
   return (
     <div className={`lab-wrap${onLight ? ' on-light' : ''}${workspace && controls ? ' solid-workbench' : ''}`}>
       <div className="lab-fig">
         {workspace && controls ? <div className="solid-map">{canvas}</div> : canvas}
         <div className="lab-hud tl">
           <div style={{ color: 'var(--accent-2)' }}>{kicker}</div>
-          <div>{t.title}</div>
-          <div className="dim">{t.sub(hud.side, hud.roomH)}</div>
+          <div>{vignette ? vt.title : t.title}</div>
+          <div className="dim">{vignette ? vt.sub(lang === 'zh' ? vigMeta.zh : vigMeta.en, vigMeta.n, hud.field) : t.sub(hud.side, hud.roomH)}</div>
         </div>
-        <div className="lab-hud br">
-          <div className="dim">{hud.bake < 1 ? t.baking(hud.bake) : t.line(hud.t, hud.formed, hud.total, hud.counts, hud.roofed)}</div>
-        </div>
-        <div className="lab-hud bl dim">{hud.note ? tx('3D preview unavailable') : controls ? t.hintCtl : t.hint}</div>
+        {vignette ? (
+          <div className="lab-hud br" style={{ maxWidth: '46%', textAlign: 'right' }}>
+            {hud.bake < 1 ? (
+              <div className="dim">{vt.baking(hud.bake)}</div>
+            ) : (
+              <>
+                <div className="dim">{vt.clock(hud.t, hud.dur)}</div>
+                <div>{hud.beat ? (lang === 'zh' ? hud.beat.zh : hud.beat.en) : ''}</div>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="lab-hud br">
+            <div className="dim">{hud.bake < 1 ? t.baking(hud.bake) : t.line(hud.t, hud.formed, hud.total, hud.counts, hud.roofed)}</div>
+          </div>
+        )}
+        <div className="lab-hud bl dim" style={vignette ? { maxWidth: '46%' } : undefined}>{hud.note ? tx('3D preview unavailable') : vignette ? vt.hint : controls ? t.hintCtl : t.hint}</div>
       </div>
       {controls ? (
         <div className="lab-ctl lab-ctl--tiered">
           <div className="lab-ctl__row lab-ctl__solve">
-            <div className="grp">
-              <LabControlLabel help={['三档对照：会动的单元 / 单元钉死（偶数行落着）/ 空房间。', 'Three spaces to compare: live units, units fixed (even rows formed), an empty room.']}>{t.space}</LabControlLabel>
-              <span className="seg">
-                {SPACE_MODES.map((m) => (
-                  <button key={m.key} type="button" className={m.key === space ? 'active' : undefined} onClick={() => setSpace(m.key)}>
-                    {lang === 'zh' ? m.zh : m.en}
-                  </button>
-                ))}
-              </span>
-            </div>
+            {vignette ? (
+              <div className="grp">
+                <LabControlLabel help={['四个小样：茶几兼猫台（3×3）、两台连成一条腔（2×2）、交叉点让路（2×2）、一步一步引过来（3×3）。', 'Four small studies: coffee table and cat shelf (3×3), two units forming one cavity (2×2), giving way at a crossing (2×2), leading a cat step by step (3×3).']}>{vt.pick}</LabControlLabel>
+                <span className="seg">
+                  {VIGNETTES.map((v) => (
+                    <button key={v.key} type="button" className={v.key === vigKey ? 'active' : undefined} onClick={() => setVigKey(v.key)}>
+                      {lang === 'zh' ? v.zh : v.en}
+                    </button>
+                  ))}
+                </span>
+              </div>
+            ) : (
+              <div className="grp">
+                <LabControlLabel help={['三档对照：会动的单元 / 单元钉死（偶数行落着）/ 空房间。', 'Three spaces to compare: live units, units fixed (even rows formed), an empty room.']}>{t.space}</LabControlLabel>
+                <span className="seg">
+                  {SPACE_MODES.map((m) => (
+                    <button key={m.key} type="button" className={m.key === space ? 'active' : undefined} onClick={() => setSpace(m.key)}>
+                      {lang === 'zh' ? m.zh : m.en}
+                    </button>
+                  ))}
+                </span>
+              </div>
+            )}
           </div>
           <div className="lab-ctl__row">
             <div className="grp">
@@ -1116,7 +1240,7 @@ export function CohabitSpaceBench({
             <div className="grp">
               <LabControlLabel help={['仿真播放倍速。', 'Simulation playback rate.']}>{t.time}</LabControlLabel>
               <span className="seg">
-                {TIME_SCALES.map((k) => (
+                {(vignette ? VIG_TIME_SCALES : TIME_SCALES).map((k) => (
                   <button
                     key={k}
                     type="button"

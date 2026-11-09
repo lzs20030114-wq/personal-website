@@ -32,6 +32,10 @@ const LOADERS: Record<string, () => Promise<ComponentType<PreviewProps>>> = {
   '2-13': () => import('../lab/SkinComboBench').then(m => m.SkinComboBench),
   '2-14': () => import('../lab/CohabitBench').then(m => m.CohabitBench),
   '2-15': () => import('../lab/CohabitSpaceBench').then(m => m.CohabitSpaceBench),
+  // 小样：同一台 CohabitSpaceBench，换成脚本驱动（/lab 上 2-16 就是 <CohabitSpaceBench vignette />）
+  '2-16': () => import('../lab/CohabitSpaceBench').then(m => function VignettePreview(p: PreviewProps) {
+    return <m.CohabitSpaceBench {...p} vignette />;
+  }),
 };
 const PREVIEWS: Record<string, ComponentType<PreviewProps>> = Object.fromEntries(
   Object.entries(LOADERS).map(([no, load]) => [no, dynamic(load, { loading })]),

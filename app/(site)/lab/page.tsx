@@ -461,6 +461,21 @@ export default function LabPage() {
           <CohabitSpaceBench workspace />
         </Bench>
 
+        <Bench
+          no="2-16"
+          lede="Small studies, as the teacher suggested: a 2×2 or 3×3 patch cut from the Lab 2-15 room, with the same square units at the same 0.83 m spacing, each staging one use. Which unit comes down when, what it forms, and where the visitor and the cats are, are written in a script, not simulated: the room's rules were written for the whole room and would say little in a patch two or three units across. These are design proposals; the research counts are still those of Lab 2-14 and 2-15. All four use only shapes already baked for Lab 2-15."
+          specs={[
+            ['Studies', 'Coffee table and cat shelf (3×3): the unit in front of the sofa forms only its lower platform on the half facing the sofa, a coffee table at 0.42 m, and both platforms on the back half, so a cat sits on the upper one at 1.00 m facing the visitor · Two units, one cavity (2×2): two units form two full levels side by side and the gaps between their platforms join into one cavity about 0.83 m long; two cats, one at each end · Giving way at a crossing (2×2): four platforms at 1.05 m around one aisle crossing; a visitor walks in, stands, walks out, and only the bands in the way retract · Leading a cat step by step (3×3): after the visitor sits, units come down one step at a time and round a corner; only the one under the cat and the next are down; the last forms roofed over the back half, open toward the seat'],
+            ['Room', 'n × 0.83 m square (1.66 m or 2.49 m), the same pitch, platform (0.69 m square, 6.5 cm thick), bands, mechanism and skin as Lab 2-15'],
+            ['Heights', 'Standing platform 1.05 m · coffee table 0.42 m, upper platform above it 1.00 m · two-level lower platform 0.90 m, 0.52 m clear to the upper one'],
+            ['Driver', 'A script, looped: unit descent (3 s to working height, 5 s to form), visitor paths and seats, cat positions and poses, jumps up and down. Giving way is worked out from the visitor’s path the way Lab 2-14 does it: a band retracts when it comes within body radius + 0.15 m of where the visitor is or will be in the next 3 s'],
+            ['Basis', 'Plan for these studies, which earlier labs each one draws on, and what still needs the author: 项目二_小样方案.md'],
+            ['Limit', 'Scripted, not simulated; nothing here is counted. Cats jumping up and down are drawn as a short lift, not a jump. Three more studies (ramp, a layer under the dining table, low half then high half) need band shapes not yet baked'],
+          ]}
+        >
+          <CohabitSpaceBench workspace vignette />
+        </Bench>
+
         <LabProjectEmpty />
         </LabWorkspace>
       </div>

@@ -31,7 +31,7 @@ export const LAB_ICONS: Record<string, string> = {
   '1-1': 'linkage', '1-2': 'arch', '1-3': 'tendon', '1-4': 'shell', '1-5': 'assembly', '1-6': 'behavior',
   '2-1': 'strip', '2-2': 'solid-strip', '2-3': 'dual-strip', '2-4': 'series', '2-5': 'cylinder',
   '2-6': 'layers', '2-7': 'square-ring', '2-8': 'array', '2-9': 'between', '2-10': 'walk',
-  '2-11': 'crowd', '2-12': 'cat', '2-13': 'joined', '2-14': 'together', '2-15': 'together-3d',
+  '2-11': 'crowd', '2-12': 'cat', '2-13': 'joined', '2-14': 'together', '2-15': 'together-3d', '2-16': 'together-3d',
 };
 
 /** New entries remain eligible without hand-editing the homepage. Existing records were reviewed individually. */
