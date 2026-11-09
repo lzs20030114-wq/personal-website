@@ -5,7 +5,10 @@ import type { Metadata } from 'next';
 import '@fontsource-variable/archivo/wdth.css';
 import './globals.css';
 import './page-transitions.css';
+import './site-loader.css';
 import { PageTransitions } from '../components/site/PageTransitions';
+import { SiteLoader } from '../components/site/SiteLoader';
+import { SitePreload } from '../components/site/SitePreload';
 import { VisitTracker } from '../components/site/VisitTracker';
 
 export const metadata: Metadata = {
@@ -20,10 +23,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     ? Boolean(process.env.STUDIO_PASSWORD && process.env.VISITOR_SUPABASE_URL && process.env.VISITOR_SUPABASE_SERVICE_ROLE_KEY)
     : !process.env.VERCEL && process.env.VISITOR_LOCAL_ENABLED === '1';
   return (
-    // 首页启动脚本在水合前往 <html> 上写 data-hs（MAPPING §67），不算水合不一致
+    // 首页启动脚本在水合前往 <html> 上写 data-hs（MAPPING §67）、载入页控制器写 data-sl（§87），不算水合不一致
     <html lang="en" suppressHydrationWarning>
       <body>
+        {/* 首次载入页：必须是 body 里第一样东西——控制器要在页面内容（含首页启动脚本）之前就位（MAPPING §87） */}
+        <SiteLoader />
         <PageTransitions />
+        {/* 读者停在页面上时，空闲时间里预载主项目详情页（路由数据、客户端代码、3D 网格；MAPPING §87） */}
+        <SitePreload />
         <VisitTracker enabled={visitorTrackingEnabled} />
         {children}
       </body>

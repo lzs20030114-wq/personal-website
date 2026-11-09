@@ -2,7 +2,12 @@
 // 真实扫描网格（tentacle3d-mesh.bin，106k 三角）是 3D 台架「真实形态」的载荷——
 // vite 台架经 ?url 打包进 public/demo/assets/<hash>.bin（构建产物、gitignore），
 // 站内组件需要稳定 URL，故在 dev/build 前复制一份到 public/mesh/（同样 gitignore）。
-import { mkdirSync, copyFileSync, existsSync } from 'node:fs';
+//
+// 2026-11-08（MAPPING §87）：每份另存一个 gzip 版（<name>.bin.gz，约小一半：2.6 MB → 1.4 MB）。
+// Vercel 只压缩它认得的文本类 MIME，application/octet-stream 原样发；站内 fetchMeshBuffer 先拉 .gz、
+// 在浏览器里用 DecompressionStream 解开，不支持的浏览器退回原文件。原文件照旧保留（src/demo 台架与回退都用它）。
+import { mkdirSync, copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { gzipSync, constants } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -21,5 +26,7 @@ for (const [from, to] of jobs) {
   }
   mkdirSync(dirname(dst), { recursive: true });
   copyFileSync(src, dst);
-  console.log(`[copy-assets] ${from} → ${to}`);
+  const gz = gzipSync(readFileSync(src), { level: constants.Z_BEST_COMPRESSION });
+  writeFileSync(`${dst}.gz`, gz);
+  console.log(`[copy-assets] ${from} → ${to}（+ .gz ${(gz.length / 1024).toFixed(0)} KB）`);
 }

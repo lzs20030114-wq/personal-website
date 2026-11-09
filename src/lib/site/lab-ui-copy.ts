@@ -312,7 +312,8 @@ export const LAB_UI_COPY: readonly (readonly [string, string])[] = [
   ["拖动", "drag"],
   ["回接", "release"],
   ["误差", "err"],
-  ["三维预览暂不可用", "3D preview unavailable"]
+  ["三维预览暂不可用", "3D preview unavailable"],
+  ["载入三维模型…", "Loading 3D model…"]
 ];
 const toEnglish = new Map(LAB_UI_COPY);
 const toChinese = new Map(LAB_UI_COPY.map(([zh, en]) => [en.toLowerCase(), zh]));

@@ -41,21 +41,30 @@ describe('触手 CPU 网格缓存', () => {
     });
   });
 
-  it.each(['network', 'http', 'truncated'] as const)('%s 失败后清缓存，所有等待者拒绝且下一次可重试', async (kind) => {
+  // 下载走共享层（mesh-fetch.ts，2026-11-08）：先拉 .gz，.gz 网络出错 / 非 2xx 时同一次里退回原文件。
+  // 所以一轮失败 = 两个地址都失败（network / http 各 2 次请求）；截断 = .gz 拿到 4 个字节（不是 gzip 魔数，原样用）。
+  it.each([
+    ['network', 2],
+    ['http', 2],
+    ['truncated', 1],
+  ] as const)('%s 失败后清缓存，所有等待者拒绝且下一次可重试', async (kind, firstRound) => {
     vi.resetModules();
     const { loadTentacleMeshes } = await import('./tentacle3d-render');
-    const fetcher = vi.fn();
-    if (kind === 'network') fetcher.mockRejectedValueOnce(new Error('offline'));
-    else fetcher.mockResolvedValueOnce(kind === 'http'
-      ? new Response(null, { status: 503 }) : response(new ArrayBuffer(4)));
-    fetcher.mockResolvedValueOnce(response(asset()));
+    let broken = true;
+    const fetcher = vi.fn((_url: string): Promise<Response> => {
+      if (!broken) return Promise.resolve(response(asset()));
+      if (kind === 'network') return Promise.reject(new Error('offline'));
+      return Promise.resolve(kind === 'http' ? new Response(null, { status: 503 }) : response(new ArrayBuffer(4)));
+    });
     vi.stubGlobal('fetch', fetcher);
     const first = loadTentacleMeshes();
     const second = loadTentacleMeshes();
     const failed = await Promise.allSettled([first, second]);
     expect(failed.map((r) => r.status)).toEqual(['rejected', 'rejected']);
+    expect(fetcher).toHaveBeenCalledTimes(firstRound);
+    broken = false;
     expect(await loadTentacleMeshes()).toHaveLength(MESH_GROUPS.length);
-    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(fetcher).toHaveBeenCalledTimes(firstRound + 1);
   });
 });
 

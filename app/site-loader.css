@@ -1,0 +1,167 @@
+/* 首次载入页（components/site/SiteLoader.tsx · src/lib/site/site-loader.ts，MAPPING §87）。
+   只在 <html data-sl> 时出现（内联控制器写）；没有脚本就永远不出现。
+   底色与将要出现的页面同色（纸 / 夜色），退场只淡出、不位移；动画只动 opacity 与 transform，
+   打包脚本在主线程上解析、水合的时候照样顺滑。
+   文字用系统字：等的正是网络字体，用它会在载入页里先回退再换一次。 */
+.sl {
+  --sl-bg: var(--ld-paper);
+  --sl-ink: var(--ld-cream);
+  --sl-mute: var(--ld-mute);
+  --sl-line: oklch(0.9 0.02 160 / 0.16);
+  --sl-dim: oklch(0.9 0.02 160 / 0.05);
+  --sl-lit: oklch(0.9 0.02 160 / 0.17);
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: none;
+  place-items: center;
+  background: var(--sl-bg);
+  color: var(--sl-ink);
+}
+:root[data-sl-theme='paper'] .sl {
+  --sl-bg: var(--paper);
+  --sl-ink: var(--ink);
+  --sl-mute: var(--n600);
+  --sl-line: oklch(0.235 0.025 215 / 0.14);
+  --sl-dim: oklch(0.235 0.025 215 / 0.05);
+  --sl-lit: oklch(0.235 0.025 215 / 0.15);
+}
+:root[data-sl] .sl {
+  display: grid;
+}
+:root[data-sl='out'] .sl {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--sl-fade, 0.45s) ease;
+}
+
+.sl__in {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  opacity: 0;
+  animation: sl-in 0.32s ease-out 700ms forwards; /* = SITE_LOADER.APPEAR_MS */
+}
+@keyframes sl-in {
+  to {
+    opacity: 1;
+  }
+}
+
+.sl__name {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  white-space: nowrap;
+}
+.sl__name b {
+  font: 600 14px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  letter-spacing: -0.01em;
+}
+.sl__name span,
+.sl__step {
+  font: 400 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  color: var(--sl-mute);
+}
+
+/* 一行四格，格线与首页方块场同一种发丝线 */
+.sl__cells {
+  display: flex;
+  border-left: 1px solid var(--sl-line);
+}
+.sl__cell {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--sl-line);
+  border-left: 0;
+}
+.sl__cell::before,
+.sl__cell i {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 2px;
+  background: var(--sl-dim);
+}
+/* 亮格：依次亮起又暗回去（方块场的「亮格」同一个动作） */
+.sl__cell i {
+  background: var(--sl-lit);
+  opacity: 0;
+  animation: sl-lit 1.92s cubic-bezier(0.4, 0, 0.2, 1) calc(700ms + var(--k) * 240ms) infinite;
+}
+@keyframes sl-lit {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  18%,
+  42% {
+    opacity: 1;
+  }
+  68% {
+    opacity: 0;
+  }
+}
+/* 右上角类型记号：项目 = 实心方块 · 台架 = 空心方块 · 日志 = 两条短线 · 其他作品 = 圆点（与首页图例一致） */
+.sl__cell::after {
+  content: '';
+  position: absolute;
+  right: 7px;
+  top: 7px;
+  box-sizing: border-box;
+  width: 5px;
+  height: 5px;
+  background: var(--sl-ink);
+  opacity: 0.75;
+}
+.sl__cell[data-kind='lab']::after {
+  background: none;
+  border: 1px solid var(--sl-ink);
+}
+.sl__cell[data-kind='log']::after {
+  width: 6px;
+  height: 3px;
+  background: none;
+  border-top: 1px solid var(--sl-ink);
+  border-bottom: 1px solid var(--sl-ink);
+}
+.sl__cell[data-kind='other']::after {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+}
+
+/* 进度：页面 → 字体 → 脚本，只按做完的步数走（控制器写 transform） */
+.sl__bar {
+  width: 121px;
+  height: 1px;
+  background: var(--sl-line);
+  overflow: hidden;
+}
+.sl__bar span {
+  display: block;
+  height: 100%;
+  background: var(--sl-ink);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.1, 1);
+}
+.sl__step {
+  margin: 0;
+  min-height: 11px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sl__cell i {
+    animation: none;
+  }
+  .sl__cell[data-kind='project'] i {
+    opacity: 1;
+  }
+  .sl__bar span {
+    transition: none;
+  }
+}
