@@ -22,8 +22,8 @@ import {
 import { SQUARE } from '../../src/lib/space/skin-square.ts';
 import { SKIN } from '../../src/lib/space/skin-unit.ts';
 import { FIGURE, ROOM } from '../../src/lib/space/skin-grid.ts';
-import { CAT_HEAD_YAW_MAX, clampHeadYaw, figureParts, humanRig, humanSkeleton, strideOf } from '../../src/lib/space/figure.ts';
-import { COATS, OUTFITS, dealLooks, personColor } from '../../components/lab/figurePalette.ts';
+import { CAT, CAT_HEAD_YAW_MAX, catRig, clampHeadYaw, figureParts, humanRig, humanSkeleton, placeRigParts, strideOf } from '../../src/lib/space/figure.ts';
+import { COATS, OUTFITS, catColor, dealLooks, personColor } from '../../components/lab/figurePalette.ts';
 
 const [MODE = 'scan', OUT = 'cafe.json', PEOPLE = '6', CATS = '2', SEED = '11', T_ARG = '240'] = process.argv.slice(2);
 const N_PEOPLE = Number(PEOPLE), N_CATS = Number(CATS), SEED_N = Number(SEED), T = Number(T_ARG);
@@ -360,7 +360,22 @@ const cats = sim.cats.map((c, k) => {
   const look = COATS[lookC.get(c)];
   const { pl, support, under, roof } = catNow(c);
   const footZ = pl.onPlatform ? under + pl.lift : 0;
+  // 台架同一副方块猫（figure.ts 的 catRig，与 CohabitSpaceBench 同一组参数），世界坐标（Blender 系、米）。
+  // 每块标明挂在身子上还是头上，并给出头的枢轴：Blender 那边的逗猫棒要让头转向羽毛，只转头上的块
+  const footY = ROOM.FLOOR_Y - footZ * U;
+  const rig = catRig({ unit: U, pose: pl.pose, tail: pl.tail, bend: pl.bend, phase: pl.pose === 'walk' ? frac(motion.get(c).dist / CAT.STRIDE) : 0, coat: look.coat });
+  const yaw = figureYaw(pl.heading);
+  const toB = (x, y, z) => [R(x / U), R(z / U), R((ROOM.FLOOR_Y - y) / U)];
+  const blocks = placeRigParts(rig, pl.x * U, footY, pl.y * U, yaw, clampHeadYaw(pl.headTurn, CAT_HEAD_YAW_MAX)).map((pt, i) => {
+    const v = pt.mesh.verts;
+    const verts = [];
+    for (let k = 0; k < v.length; k += 3) verts.push(...toB(v[k], v[k + 1], v[k + 2]));
+    return { tone: pt.tone, on: rig.parts[i].on, color: catColor(pt.tone, look)[1], verts, idx: Array.from(pt.mesh.idx) };
+  });
+  const pc = Math.cos(yaw), ps = Math.sin(yaw);
+  const headPivot = toB(rig.pivot[0] * pc - rig.pivot[2] * ps + pl.x * U, rig.pivot[1] + footY, rig.pivot[0] * ps + rig.pivot[2] * pc + pl.y * U);
   return {
+    blocks, headPivot, headYawMax: R(CAT_HEAD_YAW_MAX),
     k, coat: look.coat, coatName: look.name, colors: Object.fromEntries(Object.entries(look.colors).map(([kk, v]) => [kk, v[1]])), state: c.state, pose: pl.pose, tail: pl.tail, bend: R(pl.bend), onPlatform: pl.onPlatform,
     x: R(pl.x), y: R(pl.y), z: R(footZ), heading: R(pl.heading), headTurn: R(clampHeadYaw(pl.headTurn, CAT_HEAD_YAW_MAX)),
     support: support.map((u) => ({ i: u.i, x: R(u.x), y: R(u.y) })), roofToward: roof === undefined ? null : R(roof),

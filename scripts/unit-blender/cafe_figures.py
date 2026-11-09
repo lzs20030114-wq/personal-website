@@ -1,11 +1,13 @@
-"""Lab 2-15 效果图里的人：台架同一副方块人（2026-11-08，作者「人偶太难看，还原网页里看到的那种方块人」）。
+"""Lab 2-15 效果图里的人与猫：台架同一副方块人、方块猫（2026-11-08，作者「人偶太难看，还原网页里看到的那种方块人」
+「猫也换成网页里那种方块猫」）。
 
-几何不在这里建：cafe-export.mjs 用站上的 figureParts（src/lib/space/figure.ts）把每个人原样导出——零件、比例、坐姿、
-看猫时前倾、头转、穿着与配色（figurePalette）全是台架那一份，世界坐标、米。这里只做两件事：
+几何不在这里建：cafe-export.mjs 用站上的 figureParts / catRig（src/lib/space/figure.ts）把每个人、每只猫原样导出——零件、
+比例、坐姿、看猫时前倾、头转、穿着与花色（figurePalette）、猫在台上绕立杆弯全是台架那一份，世界坐标、米。这里只做三件事：
   1. 按颜色建网格、上材质（台架是平涂的块，这里给哑光的漆面，块的边稍微倒一点角）；
   2. 手势（摸猫、拿手机、拿逗猫棒；布景，不是仿真的输出）：方块人每一块都是独立的小盒子，把一条胳膊上的块
      （上臂、前臂、手、袖上的条纹）按离仿真骨架的哪一节最近认出来，整块地转到手势要的位置——上臂绕肩转、
-     前臂与手跟着肘走；肩到腕仍是仿真的上臂、前臂长度（两节 IK），别的块一块不动。
+     前臂与手跟着肘走；肩到腕仍是仿真的上臂、前臂长度（两节 IK），别的块一块不动；
+  3. 逗猫棒前的那只猫（布景）：头上的块整块绕头的枢轴转向羽毛，转角仍夹在台架的 ±90° 以内，身子一块不动。
 """
 
 import bpy
@@ -52,7 +54,7 @@ def block_material(color, tone):
     m.use_nodes = True
     p = m.node_tree.nodes['Principled BSDF']
     p.inputs['Base Color'].default_value = (*srgb(color), 1)
-    p.inputs['Roughness'].default_value = {'eye': 0.25, 'shine': 0.2, 'frame': 0.3}.get(tone, 0.6)
+    p.inputs['Roughness'].default_value = {'eye': 0.25, 'shine': 0.2, 'frame': 0.3, 'iris': 0.3, 'iris2': 0.3, 'nose': 0.45}.get(tone, 0.6)
     p.inputs['Coat Weight'].default_value = 0.12
     if tone == 'shine':
         p.inputs['Emission Color'].default_value = (*srgb(color), 1)
@@ -138,16 +140,68 @@ def make_block_person(P, coll, name, gesture=None):
                 else:
                     R = np.array((wr - el).rotation_difference(wr2 - el2).to_matrix())
                     v[sel] = (R @ (v[sel] - np.array(el)).T).T + np.array(el2)
-        me = bpy.data.meshes.new(f"{name}·{part['tone']}")
-        me.from_pydata(v.tolist(), [], idx.tolist())
-        me.validate()
-        me.materials.append(block_material(part['color'], part['tone']))
-        ob = bpy.data.objects.new(f"{name}·{part['tone']}", me)
-        coll.objects.link(ob)
-        ob.parent = root
-        if part['tone'] not in ('eye', 'shine', 'frame'):
-            bv = ob.modifiers.new('倒角', 'BEVEL')
-            bv.width = 0.002
-            bv.segments = 2
-            bv.limit_method = 'ANGLE'
+        _block_obj(part, v, idx, coll, name, root)
+    return root
+
+
+_SHARP = ('eye', 'shine', 'frame', 'iris', 'iris2')
+
+
+def _block_obj(part, v, idx, coll, name, root, bevel=0.002):
+    """一组同色的块 → 一个物体（块的边稍微倒一点角；眼睛、高光、镜框这类小块不倒）"""
+    nm = f"{name}·{part['tone']}" + ('·头' if part.get('on') == 'head' else '')
+    me = bpy.data.meshes.new(nm)
+    me.from_pydata(v.tolist(), [], idx.tolist())
+    me.validate()
+    me.materials.append(block_material(part['color'], part['tone']))
+    ob = bpy.data.objects.new(nm, me)
+    coll.objects.link(ob)
+    ob.parent = root
+    if part['tone'] not in _SHARP:
+        bv = ob.modifiers.new('倒角', 'BEVEL')
+        bv.width = bevel
+        bv.segments = 2
+        bv.limit_method = 'ANGLE'
+    return ob
+
+
+def _wrap(a):
+    return math.atan2(math.sin(a), math.cos(a))
+
+
+def cat_head(C):
+    """猫头在哪（世界，米）：头上那些块的包围盒中心与顶面高度"""
+    v = np.concatenate([np.asarray(p['verts'], dtype=np.float64).reshape(-1, 3) for p in C['blocks'] if p['on'] == 'head'])
+    lo, hi = v.min(0), v.max(0)
+    return V(((lo + hi) / 2).tolist()), float(hi[2])
+
+
+def _face_angle(C):
+    """头此刻朝哪（平面方位角）：枢轴 → 鼻头那一块"""
+    pv = np.array(C['headPivot'])
+    nose = [p for p in C['blocks'] if p['on'] == 'head' and p['tone'] == 'nose']
+    v = np.asarray(nose[0]['verts'], dtype=np.float64).reshape(-1, 3).mean(0)
+    return math.atan2(v[1] - pv[1], v[0] - pv[0])
+
+
+def make_block_cat(C, coll, name, look_at=None, lift=0.0):
+    """一只猫：C['blocks'] = 台架方块猫的零件（按颜色、按身子 / 头分组，世界坐标）。
+    look_at：让头转向这一点（布景）；转角相对脖子那一截仍夹在 ±headYawMax。lift：整只猫抬一点（台上的猫离开外皮）"""
+    root = bpy.data.objects.new(name, None)
+    coll.objects.link(root)
+    pv = np.array(C['headPivot'])
+    R = None
+    if look_at is not None:
+        cur = _face_angle(C)
+        neck = cur - C['headTurn']  # 头转 = 相对脖子那一截（台上弯的猫，脖子方向不是身子的 heading）
+        want = math.atan2(look_at[1] - pv[1], look_at[0] - pv[0])
+        rel = max(-C['headYawMax'], min(C['headYawMax'], _wrap(want - neck)))
+        R = np.array(mathutils.Matrix.Rotation(_wrap(neck + rel - cur), 3, 'Z'))
+    for part in C['blocks']:
+        v = np.asarray(part['verts'], dtype=np.float64).reshape(-1, 3)
+        idx = np.asarray(part['idx'], dtype=np.int64).reshape(-1, 3)
+        if R is not None and part['on'] == 'head':
+            v = (R @ (v - pv).T).T + pv
+        v = v + np.array((0.0, 0.0, lift))
+        _block_obj(part, v, idx, coll, name, root, bevel=0.0015)
     return root

@@ -6,7 +6,8 @@
   仿真给的（逐位照搬）：64 台单元各在什么高度、成什么形（平台 / 当桌子 / 两层）、每条带取哪一帧、外皮的几何（台架同一套
     shellCoverVerts / shellGoreVerts）、上下夹环与芯的位置；家具的位置与朝向（人体工学那一套）；每个人的位置、姿态（坐 / 站 / 走）、
     坐姿的关节、看着哪只猫；猫的位置、朝向、头转、姿态、台上绕立杆弯的半径。
-  布景（效果图加的，不是仿真的输出）：房间的窗、门、地板与灯；人画成台架同一副方块人（作者 11-08 定）；
+  布景（效果图加的，不是仿真的输出）：房间的窗、门、地板与灯；人与猫画成台架同一副方块人、方块猫（作者 11-08 定，
+    几何由 cafe-export 用站上 figure.ts 原样导出）；
     三个手势（摸茶几上的猫、举手机拍、拿逗猫棒逗有顶台里的猫，那只猫的头因此转向羽毛）；桌上的杯碟、植物、猫碗。
 机构件（天花方板、上下夹环、伸缩吊杆、芯）与单元建模 A 镜头同一套（import build_scene），只换了材质。
 """
@@ -22,7 +23,6 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import build_scene as bs  # noqa: E402  模块顶层按 argv[0] 读入 cafe.json（meta 里有同样的尺寸量）
 import cafe_figures as cf  # noqa: E402
-import cafe_cats as cc  # noqa: E402
 
 V = mathutils.Vector
 D = bs.D
@@ -590,11 +590,8 @@ def build_units(top, M):
 
 # ---------------------------------------------------------------- 人、猫与手势（布景）
 def cat_head(c):
-    """猫头大概在哪（世界，米）：手势与视线对着它"""
-    h = c['heading']
-    lift = {'sit': 0.31, 'stand': 0.27, 'walk': 0.27, 'lie': 0.19, 'curl': 0.08}[c['pose']]
-    fwd = {'sit': 0.06, 'stand': 0.19, 'walk': 0.19, 'lie': 0.17, 'curl': 0.05}[c['pose']]
-    return V((c['x'] + math.cos(h) * fwd, c['y'] + math.sin(h) * fwd, c['z'] + lift))
+    """猫头中心在哪（世界，米）：手势与视线对着它（方块猫头上那些块的包围盒中心）"""
+    return cf.cat_head(c)[0]
 
 
 GESTURES = {}
@@ -625,9 +622,10 @@ def stage_gestures():
         if not cand:
             continue
         p = min(cand, key=lambda p: dist(p, c))
-        hd = cat_head(c)
+        hd, top = cf.cat_head(c)
         to_p = V((p['x'] - hd.x, p['y'] - hd.y, 0)).normalized()
-        wrist = hd + to_p * 0.07 + V((0, 0, 0.03))
+        # 手腕在头顶上方、略偏向人那一侧；手掌顺着前臂往前，搭在头顶
+        wrist = V((hd.x, hd.y, top)) + to_p * 0.06 + V((0, 0, 0.045))
         right = right_of(p)
         side = 'R' if V((c['x'] - p['x'], c['y'] - p['y'], 0)).dot(right) > 0 else 'L'
         elbow = V((p['x'], p['y'], 0.6)) + (hd - V((p['x'], p['y'], 0))) * 0.4 + right * (0.2 if side == 'R' else -0.2)
@@ -675,9 +673,13 @@ def stage_gestures():
         sh_z = 1.02 if sit else 1.4
         wrist = base + d * (0.34 if sit else 0.38) + right * 0.12 + V((0, 0, sh_z - 0.12))
         elbow = base + d * 0.12 + right * 0.24 + V((0, 0, sh_z - 0.32))
-        # 羽毛：在猫眼前（朝人那一侧）15 cm、略低于眼
-        feather = hd - d * 0.16 + V((0, 0, -0.04))
-        tip = feather + V((0, 0, 0.3)) - d * 0.05
+        # 羽毛：在猫跟前（朝人那一侧）13 cm、往背离立杆的一侧偏 10 cm、低于脸，不挡脸；猫的头因此侧过去看它
+        mast = V((c['support'][0]['x'], c['support'][0]['y'], 0))
+        aside = V((-d.y, d.x, 0))
+        if aside.dot(V((c['x'], c['y'], 0)) - mast) < 0:
+            aside = -aside
+        feather = hd - d * 0.13 + aside * 0.10 + V((0, 0, -0.09))
+        tip = feather + V((0, 0, 0.3)) - d * 0.05 + aside * 0.04
         out[p['k']] = {f'wrist.{side}': tuple(wrist), f'elbow.{side}': tuple(elbow), f'hand.{side}': tuple((tip - wrist).normalized()),
                        'wand': (tuple(wrist), tuple(tip), tuple(feather)), 'kind': 'wand', 'cat': ci}
         GESTURES[f'look{ci}'] = tuple(feather)
@@ -744,19 +746,10 @@ def build_people(top):
 
 
 def build_cats(top):
+    """猫：台架同一副方块猫（cafe-export 用 catRig 导出，台上绕立杆弯的也在里面）；逗猫棒前那只的头转向羽毛（布景）"""
     coll = bs.new_coll('猫', top)
     for k, c in enumerate(D['cats']):
-        c = dict(c)
-        if f'look{k}' in GESTURES:
-            fx, fy, _ = GESTURES[f'look{k}']
-            want = math.atan2(fy - c['y'], fx - c['x'])
-            rel = math.atan2(math.sin(want - c['heading']), math.cos(want - c['heading']))
-            c['headTurn'] = max(-1.5, min(1.5, rel))
-        center = None
-        if c['onPlatform'] and c['support']:
-            center = (c['support'][0]['x'], c['support'][0]['y'], 0)
-            c['z'] = c['z'] + 0.006
-        cc.make_cat(c, coll, f"猫{k + 1}·{c['coat']}", unit_center=center, detail=1.3)
+        cf.make_block_cat(c, coll, f"猫{k + 1}·{c['coatName']}", look_at=GESTURES.get(f'look{k}'), lift=0.004 if c['onPlatform'] else 0.0)
     return coll
 
 
