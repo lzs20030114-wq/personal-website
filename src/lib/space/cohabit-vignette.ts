@@ -261,7 +261,8 @@ function teaScript(l: PlanLayout): VignetteScript {
   const toward = -Math.PI / 2; // 敞开那半圈（只成下台 = 茶几）朝沙发
   const upper = TOPS.tea + UPPER_ABOVE;
   const units: (UnitScript | null)[] = Array.from({ length: n * n }, () => null);
-  units[T.i] = { deg: unitRamp(8, 33), form: halfRoof(toward), top: TOPS.tea };
+  // 桌子先落（2026-11-10 作者「人坐在桌前，当桌子用的单元没有先降下来」）：访客一进门就开始落，落好了人才坐下
+  units[T.i] = { deg: unitRamp(2.5, 33), form: halfRoof(toward), top: TOPS.tea };
   units[R.i] = { deg: ALWAYS, top: upper };
   const enter: [number, number] = [l.roomM / 2 + 0.25, sofaY + 0.15];
   const front: [number, number] = [S.x, S.y + 0.42];
@@ -277,14 +278,14 @@ function teaScript(l: PlanLayout): VignetteScript {
         path: [
           [0, ...enter],
           [2, ...enter],
-          [6, ...front],
-          [7, ...front],
+          [9, ...front],
+          [10.5, ...front],
           [28, ...front],
           [29, ...front],
           [33, ...enter],
           [46, ...enter],
         ],
-        sit: [7, 28, seat],
+        sit: [10.5, 28, seat],
         watch: [[17, 28, 0]],
       },
     ],
@@ -304,8 +305,8 @@ function teaScript(l: PlanLayout): VignetteScript {
     ],
     beats: [
       { t: 0, zh: '猫在右下那台上（台面 1.00 m）。其余单元收在天花板下', en: 'The cat rests on the lower-right unit (top 1.00 m); the rest are stowed at the ceiling' },
-      { t: 2, zh: '一位访客走进来，坐到沙发上', en: 'A visitor comes in and sits on the sofa' },
-      { t: 8, zh: '沙发前那台落下：朝沙发的半圈只成下台，当茶几（0.42 m）；背后的半圈上下两块都成', en: 'The unit in front of the sofa descends: the half facing the sofa forms only the lower shelf, a coffee table at 0.42 m; the back half forms both shelves' },
+      { t: 2, zh: '一位访客走进来，朝沙发走。沙发前那台先落下：朝沙发的半圈只成下台，当茶几（0.42 m）；背后的半圈上下两块都成', en: 'A visitor comes in and heads for the sofa. The unit in front of the sofa descends first: the half facing the sofa forms only the lower shelf, a coffee table at 0.42 m; the back half forms both shelves' },
+      { t: 10.5, zh: '茶几落好了，访客坐到沙发上', en: 'With the table in place, the visitor sits on the sofa' },
       { t: 17, zh: '猫走到上台（1.00 m），坐下看着坐着的人。两人眼睛差不多一样高，隔着茶几约 1.3 m', en: 'The cat crosses onto the upper shelf (1.00 m) and sits facing the visitor, eyes at about the same height, some 1.3 m apart across the table' },
       { t: 28, zh: '人起身离开，猫回到原来那台', en: 'The visitor gets up and leaves; the cat goes back' },
       { t: 33, zh: '没人坐了，茶几那台收回天花板下', en: 'With no one seated, the table unit retracts to the ceiling' },
@@ -620,8 +621,8 @@ function counterScript(l: PlanLayout): VignetteScript {
   const B = cell(n, p, 0, 1); // 旁边一台平台，与上台同高
   const low = TOPS.stand - UPPER_ABOVE;
   const units: (UnitScript | null)[] = Array.from({ length: n * n }, () => null);
-  units[T.i] = { deg: unitRamp(4, 36), form: fullTwoLevel(), top: low };
-  units[B.i] = { deg: unitRamp(4, 36), top: TOPS.stand };
+  units[T.i] = { deg: unitRamp(1.5, 36), form: fullTwoLevel(), top: low }; // 台子先落，落好了人才走到台前
+  units[B.i] = { deg: unitRamp(1.5, 36), top: TOPS.stand };
   // 人站在站桌左前方、面朝台子（轴测机位从右前方看，站在台子正前方会把台子挡住）
   const stand: [number, number] = [T.x - 0.18, T.y + l.platR + 0.33];
   const enter: [number, number] = [half + 0.3, stand[1] + 0.02];
@@ -654,8 +655,8 @@ function counterScript(l: PlanLayout): VignetteScript {
         path: [
           [0, ...enter],
           [1, ...enter],
-          [4.5, ...stand],
-          [4.8, stand[0], stand[1] - 0.002],
+          [9.5, ...stand],
+          [9.8, stand[0], stand[1] - 0.002],
           [30, stand[0], stand[1] - 0.002],
           [33.5, ...enter],
           [46, ...enter],
@@ -666,8 +667,8 @@ function counterScript(l: PlanLayout): VignetteScript {
     cats: [cat],
     beats: [
       { t: 0, zh: '两台收在天花板下', en: 'Both units are stowed at the ceiling' },
-      { t: 1, zh: '一位访客走过来站住', en: 'A visitor walks up and stops' },
-      { t: 4, zh: '面前两台落下：左边那台整圈两层，上台 1.05 m 当站着用的台面，下台 0.47 m；右边那台平台，与上台同高', en: 'The two units in front come down: the left one forms two levels all round, the upper at 1.05 m as a standing counter and the lower at 0.47 m; the right one is a platform level with the upper' },
+      { t: 1, zh: '一位访客走过来。他要去的那两台先落下：左边那台整圈两层，上台 1.05 m 当站着用的台面，下台 0.47 m；右边那台平台，与上台同高', en: 'A visitor walks in. The two units ahead come down first: the left one forms two levels all round, the upper at 1.05 m as a standing counter and the lower at 0.47 m; the right one is a platform level with the upper' },
+      { t: 9.5, zh: '台面落好了，访客走到台前站住', en: 'With the counter in place, the visitor walks up and stops' },
       { t: 15, zh: '一只猫跳上下台，在台面底下趴着，正对着站着的人', en: 'A cat hops onto the lower level and lies under the counter, facing the visitor' },
       { t: 30, zh: '人走开，猫跳下来，两台收回', en: 'The visitor leaves, the cat jumps down, the units retract' },
     ],

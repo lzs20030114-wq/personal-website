@@ -242,4 +242,17 @@ describe('cohabit-vignette · 人和猫不撞', () => {
       }
     }
   });
+  it('当桌子用的单元先落好，人才坐下 / 走到台前（2026-11-10）', () => {
+    // 茶几：访客坐下那一刻，茶几那台已经成形到底
+    const tea = vignetteScript('tea');
+    const table = tea.units.find((u) => u?.top === TOPS.tea)!;
+    const sitAt = tea.people[0].sit![0];
+    expect(keysAt(table.deg, sitAt)).toBe(1);
+    expect(keysAt(table.deg, sitAt - 3)).toBeLessThan(1); // 也没早到人还没进门就落好
+    // 站桌：访客停在台前那一刻（路线里第一个停住的点），面前两台都已成形
+    const counter = vignetteScript('counter');
+    const path = counter.people[0].path;
+    const stopAt = path.find((p, k) => k > 1 && Math.hypot(p[1] - path[k - 1][1], p[2] - path[k - 1][2]) > 0.5)![0];
+    for (const u of counter.units) if (u) expect(keysAt(u.deg, stopAt)).toBe(1);
+  });
 });
