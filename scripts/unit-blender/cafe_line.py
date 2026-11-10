@@ -56,6 +56,74 @@ PALETTES = {
     'violet': dict(paper='#EFEDF3', room='#F8F7FB', floor='#E6E2F0', sky='#EBF2DA', ink='#1C1F39', far='#7A7C9A', tex='#A3A4BD',
                    unit_line='#39258C', unit='#8362ED', unit_top='#A791FA', unit_under='#553ABA', unit_seam='#E1D7FF',
                    mech='#F8F7FB', furn='#FFFFFF', fig='#FFFFFF', hair='#1C1F39', cut='#1C1F39', stow='#C2C2D6', shadow='#1C1F39'),
+
+    # ================= 第三轮之后（2026-11-10）：作者要从「双色印刷」和「芥黄色底」这两套再发展 =================
+    # ---- 从双色印刷发展：全图只有两个专色，没有黑。线、头发、剖切面是第一个颜色，落下的单元是第二个颜色
+    # 蓝 + 橙
+    'riso_blue': dict(paper='#F4EFE3', room='#F4EFE3', floor='#ECE4D6', sky='#DCE3F1', ink='#27419A', far='#7F8FC4', tex='#9DAAD3',
+                      unit_line='#27419A', unit='#FF6B3D', unit_top='#FF8C63', unit_under='#D94A22', unit_seam='#27419A',
+                      mech='#F4EFE3', furn='#FFFFFF', fig='#FFFFFF', hair='#27419A', cut='#27419A', stow='#B4BEDD', shadow='#27419A'),
+    # 墨绿 + 黄
+    'riso_green': dict(paper='#F3F0E2', room='#F3F0E2', floor='#EAE8D6', sky='#E1EDD6', ink='#1D5645', far='#7FA596', tex='#9FBBAF',
+                       unit_line='#1D5645', unit='#FFD91A', unit_top='#FFE55C', unit_under='#D9B000', unit_seam='#1D5645',
+                       mech='#F3F0E2', furn='#FFFFFF', fig='#FFFFFF', hair='#1D5645', cut='#1D5645', stow='#B5CCC2', shadow='#1D5645'),
+    # 红线 + 天蓝：线是红的（红线图），单元是冷的
+    'riso_red': dict(paper='#F6F1E7', room='#F6F1E7', floor='#F0E8DC', sky='#D9ECF3', ink='#C2311F', far='#DD8E82', tex='#E3A79D',
+                     unit_line='#C2311F', unit='#58BFE0', unit_top='#86D3EC', unit_under='#2F9CC2', unit_seam='#C2311F',
+                     mech='#F6F1E7', furn='#FFFFFF', fig='#FFFFFF', hair='#C2311F', cut='#C2311F', stow='#EABFB7', shadow='#C2311F'),
+    # 紫 + 青柠：站上项目二的紫当线，青柠给单元
+    'riso_lime': dict(paper='#F2F0E8', room='#F2F0E8', floor='#E9E6DE', sky='#E4E0F2', ink='#3A2A8C', far='#8D83C4', tex='#A9A1D3',
+                      unit_line='#3A2A8C', unit='#C5EE4F', unit_top='#D9F884', unit_under='#9CC62A', unit_seam='#3A2A8C',
+                      mech='#F2F0E8', furn='#FFFFFF', fig='#FFFFFF', hair='#3A2A8C', cut='#3A2A8C', stow='#C1BBE0', shadow='#3A2A8C'),
+    # 三色：蓝线 + 粉单元 + 黄地面；粉压在黄上的地方（单元朝下的面）是橙红
+    'riso_three': dict(paper='#F6F1E4', room='#F6F1E4', floor='#FFEC80', sky='#D5E2F4', ink='#2B459F', far='#8493CC', tex='#7F92D6',
+                       unit_line='#2B459F', unit='#FF5C9E', unit_top='#FF86B7', unit_under='#F2552E', unit_seam='#2B459F',
+                       mech='#F6F1E4', furn='#FFFFFF', fig='#FFFFFF', hair='#2B459F', cut='#2B459F', stow='#B8C2E4', shadow='#2B459F'),
+
+    # 蓝 + 橙，家具压一层线的浅色：白只留给人，人不再和沙发混在一起
+    'riso_blue_tint': dict(paper='#F4EFE3', room='#F4EFE3', floor='#ECE4D6', sky='#DCE3F1', ink='#27419A', far='#7F8FC4', tex='#9DAAD3',
+                           unit_line='#27419A', unit='#FF6B3D', unit_top='#FF8C63', unit_under='#D94A22', unit_seam='#27419A',
+                           mech='#F4EFE3', furn='#E3E7F3', fig='#FFFFFF', hair='#27419A', cut='#27419A', stow='#B4BEDD', shadow='#27419A'),
+
+    # ---- 从芥黄色底发展：颜色不给单元，给一整块底；图本身是黑白的，单元靠黑白反差跳出来
+    # 钴蓝底
+    'ground_blue': dict(paper='#2748D6', room='#FBF8F1', floor='#EEEFF4', sky='#B9C6F5', ink='#16181D', far='#72757D', tex='#A2A4AB',
+                        unit_line='#16181D', unit='#22252B', unit_top='#343840', unit_under='#0F1114', unit_seam='#FBF8F1',
+                        mech='#FBF8F1', furn='#FFFFFF', fig='#FFFFFF', hair='#16181D', cut='#16181D', stow='#B9BBC2', shadow='#16181D'),
+    # 朱红底
+    'ground_red': dict(paper='#E8442B', room='#FCF8F1', floor='#F3ECE3', sky='#F6C7BB', ink='#1C1917', far='#78726C', tex='#A8A199',
+                       unit_line='#1C1917', unit='#292524', unit_top='#3A3533', unit_under='#131110', unit_seam='#FCF8F1',
+                       mech='#FCF8F1', furn='#FFFFFF', fig='#FFFFFF', hair='#1C1917', cut='#1C1917', stow='#BEB7AE', shadow='#1C1917'),
+    # 芥黄底，单元也是芥黄：外面的颜色落进屋里
+    'ground_echo': dict(paper='#E8B531', room='#FBF8F0', floor='#F1ECE0', sky='#F6DFA0', ink='#1E1C19', far='#7B766C', tex='#A6A092',
+                        unit_line='#1E1C19', unit='#E8B531', unit_top='#F3C851', unit_under='#C18F12', unit_seam='#8C6A0F',
+                        mech='#FBF8F0', furn='#FFFFFF', fig='#FFFFFF', hair='#1E1C19', cut='#1E1C19', stow='#BDB7A8', shadow='#1E1C19'),
+    # 钴蓝底，单元也是钴蓝
+    'ground_echo_blue': dict(paper='#2748D6', room='#FBF8F1', floor='#EEEFF4', sky='#B9C6F5', ink='#16181D', far='#72757D', tex='#A2A4AB',
+                             unit_line='#16181D', unit='#2748D6', unit_top='#4D69E8', unit_under='#1A31A6', unit_seam='#C9D3FA',
+                             mech='#FBF8F1', furn='#FFFFFF', fig='#FFFFFF', hair='#16181D', cut='#16181D', stow='#B9BBC2', shadow='#16181D'),
+    # 地面涂色：底不在屋外，在脚下。白的家具和人站在一块芥黄的地面上
+    'ground_floor': dict(paper='#F4F1EA', room='#FDFBF6', floor='#F0BE3A', sky='#E7E3D8', ink='#1E1C19', far='#7B766C', tex='#B98A12',
+                         unit_line='#1E1C19', unit='#2A2724', unit_top='#3B3733', unit_under='#141210', unit_seam='#FDFBF6',
+                         mech='#FDFBF6', furn='#FFFFFF', fig='#FFFFFF', hair='#1E1C19', cut='#1E1C19', stow='#BDB7A8', shadow='#1E1C19'),
+    # 粉底 + 墨绿：底是粉的，线和单元从黑换成墨绿
+    'ground_pink': dict(paper='#F3A9BA', room='#FCF9F2', floor='#F3EEE4', sky='#F9D5DD', ink='#173F35', far='#6F8C83', tex='#9DB3AB',
+                        unit_line='#173F35', unit='#1B4A3E', unit_top='#2A6253', unit_under='#0E2B24', unit_seam='#FCF9F2',
+                        mech='#FCF9F2', furn='#FFFFFF', fig='#FFFFFF', hair='#173F35', cut='#173F35', stow='#B7C7C1', shadow='#173F35'),
+
+    # ---- 两套合起来：两个专色，其中一个铺成底
+    # 青绿底 + 粉：双色印刷那两个颜色，线的颜色铺到屋外
+    'field_teal': dict(paper='#0E5F6E', room='#F5F0E3', floor='#EFE2D9', sky='#A5CDCE', ink='#0E5F6E', far='#6FA3AA', tex='#8DB7BB',
+                       unit_line='#0E5F6E', unit='#FF5A6E', unit_top='#FF8493', unit_under='#D93B55', unit_seam='#0E5F6E',
+                       mech='#F5F0E3', furn='#FFFFFF', fig='#FFFFFF', hair='#0E5F6E', cut='#093F4A', stow='#A9CBCB', shadow='#0E5F6E'),
+    # 蓝底 + 橙：蓝 + 橙那一套（家具压浅蓝），线的蓝铺到屋外。和 riso_blue_tint 是同一套颜色的两种用法：整间房的图用这个，局部用那个
+    'field_blue': dict(paper='#27419A', room='#F4EFE3', floor='#ECE4D6', sky='#AEBBE3', ink='#27419A', far='#7F8FC4', tex='#9DAAD3',
+                       unit_line='#27419A', unit='#FF6B3D', unit_top='#FF8C63', unit_under='#D94A22', unit_seam='#27419A',
+                       mech='#F4EFE3', furn='#E3E7F3', fig='#FFFFFF', hair='#27419A', cut='#1A2D73', stow='#B4BEDD', shadow='#27419A'),
+    # 墨绿底 + 朱红：深色的底，屋里是亮的，单元一个朱红
+    'field_dark': dict(paper='#1C3B33', room='#F6F2E8', floor='#ECE7DA', sky='#A9BFB6', ink='#1C3B33', far='#74908A', tex='#A0B5AE',
+                       unit_line='#9E2416', unit='#F25A3C', unit_top='#FF7A5C', unit_under='#C93A22', unit_seam='#FFD0C2',
+                       mech='#F6F2E8', furn='#FFFFFF', fig='#FFFFFF', hair='#1C3B33', cut='#11251F', stow='#B9C8C2', shadow='#1C3B33'),
 }
 
 HM = 1.70
