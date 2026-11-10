@@ -173,8 +173,10 @@ const MAX_SIM_DT = 0.05;
  *  2026-11-08 加 ×40 / ×60（作者「加更高的时间倍数档」：访客一坐 10–30 分钟，×20 下坐一回也要 30–90 s）。
  *  实测 6 人 4 猫每仿真秒约 5.5 ms ⇒ ×60 时每秒真实时间约 0.33 s 的 CPU */
 const TIME_SCALES = [1, 8, 10, 20, 40, 60] as const;
-/** 小样一段 26–68 s，不需要那么快 */
-const VIG_TIME_SCALES = [1, 2, 4] as const;
+/** 小样一段 26–68 s。2026-11-10 作者「给每一个小样的时间加速倍数都提高」：档位 ×1 / ×2 / ×4 → ×1 … ×16，
+ *  开场默认 ×4（一段 7–17 s 演完）。脚本按时间取值、与步长无关，快了只是少画几帧 */
+const VIG_TIME_SCALES = [1, 2, 4, 8, 16] as const;
+const VIG_TIME_DEF = 4;
 const VIG_COPY = {
   zh: {
     title: '小样 · 2×2 / 3×3',
@@ -309,8 +311,8 @@ export function CohabitSpaceBench({
   const apiRef = useRef<Api | null>(null);
   const runningRef = useRef(true);
   const [running, setRunning] = useState(true);
-  const timeRef = useRef<number>(TIME_DEF);
-  const [timeScale, setTimeScale] = useState<number>(TIME_DEF);
+  const timeRef = useRef<number>(vignette ? VIG_TIME_DEF : TIME_DEF);
+  const [timeScale, setTimeScale] = useState<number>(vignette ? VIG_TIME_DEF : TIME_DEF);
   const [space, setSpace] = useState<SpaceMode>('live');
   const [vigKey, setVigKey] = useState<VignetteKey>('tea');
   const shellRef = useRef(true);

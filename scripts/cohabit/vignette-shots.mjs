@@ -38,6 +38,10 @@ try {
       if (/\/ \d+ s/i.test(txt)) break;
       await b.sleep(250);
     }
+    // 台架开场默认 ×4（2026-11-10）；下面按 ×1 换算帧数，先切回 ×1
+    const slow = await b.ev(`(()=>{const x=[...${el}.querySelectorAll('button')].find(x=>x.textContent.trim()==='×1');x&&x.click();return !!x})()`);
+    if (!slow) console.log('  (没找到 ×1 按钮，截到的时刻会偏)');
+    await b.frames(1);
     // 脚本时间从台架 HUD 读（烘轨迹时主循环已经在推帧，开演那一刻不是 0）；要截的时刻已经过了就跳到下一轮
     const hudText = () => b.ev(`${el}.querySelector('.lab-hud.br')?.innerText ?? ''`);
     const hudT = async () => Number((await hudText()).match(/(\d+) \//)?.[1] ?? 0);
