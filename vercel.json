@@ -2,6 +2,7 @@
   "framework": "nextjs",
   "git": {
     "deploymentEnabled": {
+      "claude/intelligent-keller-dml682": false,
       "claude/cat-cafe-furniture-layout-tgk6d9": false,
       "claude/gifted-curie-6md3jg": false,
       "claude/optimistic-cori-a75prw": false,

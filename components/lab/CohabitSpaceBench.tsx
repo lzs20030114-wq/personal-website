@@ -15,6 +15,8 @@ import { MECH } from '../../src/lib/space/unit-mechanism';
 import type { RingUnitDef } from '../../src/lib/space/skin-ring';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import type { Vec3 } from '../../src/lib/linkage/solver3d';
+import { COHABIT_BAKE_URL, unpackTrajectories } from '../../src/lib/space/cohabit-bake-format';
+import { fetchMeshBuffer, forgetMeshBuffer } from '../../src/lib/linkage/mesh-fetch';
 import { VIGNETTES, VignetteSim, type SpaceSimLike, type VignetteKey } from '../../src/lib/space/cohabit-vignette';
 import { COHABIT, CohabitSim, PACE_DEMO, SPACE_MODES, bandAngle, partySizes, scatterCats, type EventKind, type SpaceMode } from '../../src/lib/space/cohabit';
 import { FIGURE, RING_GRID_AXON, ROOM, ringGridViewMatrix, type RingGridView } from '../../src/lib/space/skin-grid';
@@ -521,7 +523,7 @@ export function CohabitSpaceBench({
       bakeP = 0;
       bakeGroup(UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, (p) => {
         bakeP = p;
-      }, takeDual);
+      }, takeDual, COHABIT_BAKE_URL.dual);
     };
 
     // ── 两组轨迹都在后台线程里烘（cohabit-bake.worker.ts，2026-10-31 轻量化：平台三档原先在主线程上分片烘）：
@@ -547,19 +549,43 @@ export function CohabitSpaceBench({
       };
       tick();
     };
-    function bakeGroup(defs: readonly RingUnitDef[], opts: readonly BakeOpts[] | undefined, progress: (p: number) => void, done: (list: BandTrajectory[]) => void): void {
+    // 2026-11-10：构建时已经把两组轨迹算好存成文件（scripts/cohabit-bake/generate.mjs）。先取文件、同时后台线程照旧现算，
+    // 谁先到用谁——网快的一两秒就开演，文件取不到（或键对不上）的照旧等现算。此前只有现算一条路，三十来秒里
+    // Lab 2-16 的小样不开演、画面里没有人也没有猫。
+    function bakeGroup(defs: readonly RingUnitDef[], opts: readonly BakeOpts[] | undefined, progress: (p: number) => void, done: (list: BandTrajectory[]) => void, url?: string): void {
       const key = bakedKey(defs, FRAMES);
       const cached = bakedGet(key);
       if (cached) return done(cached);
+      let settled = false;
       const finish = (list: BandTrajectory[]): void => {
-        if (disposed) return;
+        if (disposed || settled) return;
+        settled = true;
         bakedPut(key, list);
         done(list);
       };
+      if (url)
+        fetchMeshBuffer(url)
+          .then((buf) => {
+            if (disposed || settled) return;
+            const list = unpackTrajectories(buf, key);
+            forgetMeshBuffer(url); // 解出来的轨迹另有缓存（bakedPut），原始字节不留着
+            if (!list) return;
+            // 现算的那一份不要了：线程正埋头算这一组，停掉它，下一组另起
+            jobId++;
+            worker?.terminate();
+            worker = null;
+            if (idleId !== null) window.cancelIdleCallback?.(idleId);
+            if (idleTimer !== null) clearTimeout(idleTimer);
+            idleId = idleTimer = null;
+            finish(list);
+          })
+          .catch(() => {
+            /* 取不到就等现算 */
+          });
       const fallback = (): void => {
         worker?.terminate();
         worker = null;
-        if (!disposed) bakeOnIdle(new UnitBaker(defs, FRAMES, opts), finish, progress);
+        if (!disposed && !settled) bakeOnIdle(new UnitBaker(defs, FRAMES, opts), finish, progress);
       };
       if (typeof Worker === 'undefined') return fallback();
       try {
@@ -1052,6 +1078,7 @@ export function CohabitSpaceBench({
         render();
         pushHud();
       },
+      COHABIT_BAKE_URL.tiers,
     );
 
     const step = (dt: number): void => {
