@@ -16,7 +16,7 @@ import { COHABIT, CohabitSim, PACE_DEMO, bandAngle, partySizes } from '../../src
 import {
   FRAMES, SHELTER, SHELL_END_LOW, STEADY, STOWED_STRIDE, TABLE_MOVE, TABLE_TOP, UNITS_PER_M, UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, UNIT_ORDER, UNIT_TIERS,
   UnitBaker, DOOR_EPS, bandCursors, bandPaths, bandTop, bakeUnitShell, catPlacement, decimateTrajectory, figureYaw,
-  pickUnitBands, platformBand, rigFor, rigYForTop, seatSpecOf, shellCoverVerts, shellGoreVerts, shellJoins, tableTopFor, unitDrop, unitFootY,
+  furnitureBoxes, pickUnitBands, platformBand, rigFor, rigYForTop, seatSpecOf, shellCoverVerts, shellGoreVerts, shellJoins, tableTopFor, unitDrop, unitFootY,
   unitFormPlan, unitTopY,
 } from '../../src/lib/space/cohabit-solid.ts';
 import { SQUARE } from '../../src/lib/space/skin-square.ts';
@@ -387,6 +387,11 @@ const furniture = (sim.furn?.rects ?? []).map((r, i) => ({
   i, kind: r.kind, x0: R(r.x0), x1: R(r.x1), y0: R(r.y0), y1: R(r.y1), cx: R(r.cx), cy: R(r.cy), face: r.face, ergo: !!r.ergo,
 }));
 const seats = sim.seats.map((st, i) => ({ i, x: R(st.x), y: R(st.y), face: st.face, furn: st.furn, table: st.table ?? null }));
+// 家具的立体块（台架同一套 furnitureBoxes：沙发 = 靠背 + 两扶手 + 底座 + 坐垫，餐椅 = 四腿 + 座板 + 靠背），给线稿用。
+// c = 块心（Blender 系、米）；h = 半尺寸（块自身的 x、平面进深、高）；rot = [c, s]：块自身 (lx, ly) → 世界 (cx + lx·c + ly·s, cy − lx·s + ly·c)
+const furnBoxes = (sim.furn?.rects ?? []).flatMap((r, i) =>
+  furnitureBoxes([r], U).map((b) => ({ furn: i, kind: r.kind, c: toB(b.cx, b.cy, b.cz), h: [R(b.hx / U), R(b.hz / U), R(b.hy / U)], rot: b.rot ? [R(b.rot.c, 6), R(b.rot.s, 6)] : null })),
+);
 const occupied = new Set(sim.people.filter((p) => p.seated && p.seat !== null).map((p) => p.seat));
 
 const out = {
@@ -402,6 +407,7 @@ const out = {
   people,
   cats,
   furniture,
+  furnBoxes,
   seats: seats.map((st) => ({ ...st, occupied: occupied.has(st.i) })),
   doors: [[R(-layout.roomM / 2), 0], [R(layout.roomM / 2), 0]],
 };
