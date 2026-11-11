@@ -128,7 +128,8 @@ export const COHABIT = {
   /** 人数上限：6 → 12（作者 2026-10-08「人多档取 12 人」；Hirsch 等 2025 那家猫咖 60 m² 的厅同时最多 14 位，按面积
    *  换到这间 44 m² 约 10 位，12 位略挤于它） */
   MAX_PEOPLE: 12,
-  MAX_CATS: 3,
+  /** 猫数上限：3 → 8（作者 2026-11-08 把标准场景改成 6 人 4 猫，「把猫的上限放开」） */
+  MAX_CATS: 8,
   /** 人对人的三档距离（m）：42 国近体距离调查（日志 2026-07-27）；猫咖访客彼此是陌生人 ⇒ 用 stranger */
   PERSON_D: { stranger: 1.35, familiar: 0.92, close: 0.32 },
   /** 猫对人：Mertens & Turner 1988 的 1 m 档（日志 2026-07-28）；0.78 是「人不理猫时猫在 1 m 外的时间占比」，
@@ -251,28 +252,54 @@ export const COHABIT = {
       { kind: 'chair', at: [0, 3.5], face: [0, -1] },
     ],
     /**
-     * 单元铺满整间房时的标准布置（cover: 'room'，2026-10-27）：at = 新格距（房间 / 8 = 0.83 m）的倍数。
-     * 旧布置按旧格距排，搬到新格子上沙发前缘离交叉点 0.04 m（站不了人），上下两排座位只好共用 y = 0 那排入口、两两占位。
-     * 照旧布置的同一条规则重排：前缘离前一排交叉点约 0.27 m、每个座位有自己的入口。沙发两两夹一把椅子靠上下两面墙
-     * （背后离墙 0.6 m），仍是四张沙发 + 两把椅子 = 10 座、点对称、两门之间的横向过道留空；中间那片全是单元。
+     * 单元铺满整间房时的标准布置（cover: 'room'）：at = 格距（房间 / 8 = 0.83 m）的倍数，face 可斜放。2026-11-08 重排（作者「有点松散，
+     * 不太符合正常猫咖」+「增加椅子和沙发的数量，并多样化它们的角度」）——旧布置是 10-27 按「前缘离交叉点 0.27 m、每座一个入口」排的：
+     * 四张沙发各自对着一张茶几、背后离墙 0.6 m，两把餐椅侧放在房间中间，看不出组。新布置照三条资料排（出处见 项目二_人猫同台lab.md §14.26）：
+     *   - 座位成组、围着桌子坐，不沿墙排成一排也不散放单件：Sommer 与 Ross 1958 在一间老年病房的日间室把沿墙一排的椅子
+     *     改成围小桌的小组，短暂与持续的交谈都变多（Osmond 1957 把前者叫离心式、后者叫向心式座位）。
+     *   - 会客组靠墙、中间留给猫和走动：猫咖案例普遍把客席放在周边，中间是猫的活动区与猫爬架（Meow Parlour 沿墙卡座 + 中央木树；
+     *     恵比寿 2009 年那家「客席は隅っこ」）。
+     *   - 走动绕着组走、不穿过组：主通道约 0.8–0.9 m（HGTV「3 英尺」、Coohom「30–36 英寸」，都是行业惯例），格距 0.83 m 正好
+     *     一条；两扇门口各留一格缓冲。
+     * 排法（点对称，左上 = 右下转 180°，右上 = 左下）：
+     *   - 左上：转角 L 形会客区——两张双人沙发分别靠上墙、左墙，共用转角前那一台（−1.5, −1.5 格）当茶几，4 座。
+     *   - 右上：右墙一张双人沙发 + 一张斜放 45° 的单人沙发，两件共用一台茶几（1.5, −1.5 格），3 座；墙角一张靠墙二人桌
+     *     （两把餐椅隔最外一排的单元对坐，那台当餐桌），2 座。
+     *   - 中间：一张小桌配一把面朝房间中心的餐椅（−0.5, −0.5 格那台当桌子），1 座。
+     *   六张双人沙发 + 两张单人沙发 + 六把餐椅 = 20 座（原来 10 座），茶几 0.42 m、餐桌 0.74 m 两种桌高都在。
+     * 格子定死的几件：沙发背后离墙 0.48 m（茶几规则要台边离沙发前缘 ≤ 0.46 m，台心又只能在格心，贴墙放茶几就远到 0.88 m）；
+     * L 形两张沙发之间的墙角围出一个人到不了的交叉点（furnishRoom 按死角处理，真实店里那个角放猫爬架）；
+     * 二人桌两把餐椅、中间那把餐椅的椅心正好落在格心（离桌心 0.83 m，台边离靠背 0.70 m）——再近一点就把旁边的交叉点挤成站不了人。
+     * 代价（§14.26 实测）：座位多了、人坐得散，按「人 × 猫」成对累加的共温比旧布置少（6 人 2 猫 655 → 488 s），由作者定取舍。
      */
     FURNITURE_ROOM: [
-      { kind: 'sofa', at: [-1.5, -2.8], face: [0, 1] },
-      { kind: 'sofa', at: [1.5, -2.8], face: [0, 1] },
-      { kind: 'sofa', at: [1.5, 2.8], face: [0, -1] },
-      { kind: 'sofa', at: [-1.5, 2.8], face: [0, -1] },
-      // 餐椅（2026-10-27 第二版，作者「人坐下面前那台落下当桌子，要有相应规则」）：原来摆在两张沙发之间（0, ±2.64 格）、
-      // 面朝两台之间的缝，按 COHABIT.TABLE 一台都用不上（最近的两台斜在前方，台边离靠背面 0.82 m、座位中线在台面外 7 cm）。
-      // 挪到中间那片、侧过来朝 ±x：正对一台的中线（横向偏 2 cm），台边离靠背面 0.685 m，落在 0.615–0.712 的窗口中间；
-      // 椅子本身压在另一台下面（人坐着时那台不落），前缘离交叉点 0.14 m 以外，入口仍是自己的。仍点对称
-      { kind: 'chair', at: [-0.48, -1.48], face: [1, 0] },
-      { kind: 'chair', at: [0.48, 1.48], face: [-1, 0] },
+      // 左上：转角 L 形会客区，两张双人沙发共用茶几（单元 −1.5, −1.5 格；台边离沙发前缘 0.45 m）
+      { kind: 'sofa', at: [-1.5, -2.944212], face: [0, 1] },
+      { kind: 'sofa', at: [-2.944212, -1.5], face: [1, 0] },
+      // 右上：右墙双人沙发 + 斜放 45° 的单人沙发，共用茶几（单元 1.5, −1.5 格）。单人沙发朝着台角：台角离前缘 0.38 m
+      { kind: 'sofa', at: [2.944212, -1.5], face: [-1, 0] },
+      { kind: 'armchair', at: [0.415479, -2.584521], face: [Math.SQRT1_2, Math.SQRT1_2] },
+      // 右上墙角：靠墙二人桌（桌 = 单元 2.5, −3.5 格），两把餐椅左右对坐
+      { kind: 'chair', at: [1.501701, -3.5], face: [1, 0] },
+      { kind: 'chair', at: [3.498299, -3.5], face: [-1, 0] },
+      // 中间：一张小桌（单元 −0.5, −0.5 格）配一把餐椅，坐的人面朝房间中心
+      { kind: 'chair', at: [-1.498299, -0.5], face: [1, 0] },
+      // 右下 = 左上转 180°
+      { kind: 'sofa', at: [1.5, 2.944212], face: [0, -1] },
+      { kind: 'sofa', at: [2.944212, 1.5], face: [-1, 0] },
+      // 左下 = 右上转 180°
+      { kind: 'sofa', at: [-2.944212, 1.5], face: [1, 0] },
+      { kind: 'armchair', at: [-0.415479, 2.584521], face: [-Math.SQRT1_2, -Math.SQRT1_2] },
+      { kind: 'chair', at: [-1.501701, 3.5], face: [-1, 0] },
+      { kind: 'chair', at: [-3.498299, 3.5], face: [1, 0] },
+      { kind: 'chair', at: [1.498299, 0.5], face: [-1, 0] },
     ],
     /** 尺寸（m）：w 沿宽、d 进深；seats = 座位离中线的偏移；座位点 = 坐着的人躯干中心 = 家具中心往前 SEAT_IN
      *  （负 = 往靠背那边：人靠着靠背坐，躯干在靠背前约 0.25 m；首版取 +0.1 等于坐在沙发前沿，2026-10-07 改正） */
     KINDS: {
       sofa: { w: 1.4, d: 0.8, seats: [-0.35, 0.35] },
       chair: { w: 0.75, d: 0.75, seats: [0] },
+      armchair: { w: 0.75, d: 0.75, seats: [0] },
     },
     SEAT_IN: -0.15,
     /**
@@ -286,6 +313,10 @@ export const COHABIT = {
     KINDS_ERGO: {
       sofa: { w: 1.4, d: 0.8, seats: [-0.29, 0.29], seatIn: -0.08, back: 0.12 },
       chair: { w: 0.5, d: 0.52, seats: [0], seatIn: -0.1, back: 0.12 },
+      // 单人沙发（扶手椅，2026-11-08 加：作者「增加椅子和沙发的数量，多样化它们的角度」）：与双人沙发同一副做法——座高 0.43、
+      // 座深 0.60（靠背 0.20）、扶手 0.12 宽，外形 0.80 见方 ⇒ 扶手之间 0.56（QB/T 1952.1 单人座前宽 ≥ 0.48）；配茶几，
+      // 能和双人沙发共用一张茶几，斜着围过去成一组
+      armchair: { w: 0.8, d: 0.8, seats: [0], seatIn: -0.08, back: 0.12 },
     },
     /** 家具离墙、彼此之间至少留多远（m） */
     GAP: 0.05,
@@ -312,7 +343,8 @@ export const COHABIT = {
    *     离靠背面 ≥ 臀膝距男性第 95 百分位 0.595 + 0.02，≤ 上肢前伸长女性第 5 百分位 0.712（不探身也够得着台边）——CHAIR_EDGE。
    *     2026-10-29 立体那边台面改成 6.5 cm（cohabit-solid UNIT_SHAPE），台底 0.67、比座面高 0.22，腿已经伸得进；这条没跟着改，
    *     台边仍落在膝盖前。改成盖住大腿要连餐椅的摆位一起动，由作者定（项目二_2-15单元形态方案.md §9）。
-   *   - 同一台只给一件家具：一张沙发两个座位共用正前方那一台（它正好在两座中间）；两件家具都合格时先到先得（placeSeats 按件号）。
+   *   - 同一台只给同一种家具（桌高相同）：一张沙发两个座位共用正前方那一台（它正好在两座中间）；L 形的两张沙发共用转角那台茶几、
+   *     二人桌的两把餐椅共用中间那台（2026-11-08 起，此前是一台只给一件家具）。沙发与餐椅要的高度不同，不共用，先到先得（placeSeats 按件号）。
    *
    * 谁：只有坐着的人（「走 · 站 · 坐」里坐 = 全力）。站着、走着不触发。
    *
@@ -499,12 +531,21 @@ export interface FurnRect {
   ergo?: true;
   cx: number;
   cy: number;
+  /** 外接的轴对齐框（斜放的家具 = 四个角的外包；正放的就是占位本身） */
   x0: number;
   x1: number;
   y0: number;
   y1: number;
+  /** 朝向（单位向量；斜放时任意角度） */
   face: readonly [number, number];
+  /** 斜放（朝向不是上下左右四个之一）：判定一律按带朝向的矩形算，hu = 半宽（沿与朝向垂直的方向）、hv = 半进深（沿朝向） */
+  tilted?: true;
+  hu?: number;
+  hv?: number;
 }
+
+/** 地面上的一块占位：正放只用外接框；斜放另带朝向与半宽、半进深（FurnRect 的子集，单元一侧的判定也用它） */
+export type FurnBox = Pick<FurnRect, 'x0' | 'x1' | 'y0' | 'y1'> & Partial<Pick<FurnRect, 'tilted' | 'cx' | 'cy' | 'face' | 'hu' | 'hv'>>;
 
 /** 房间里的家具：rects = 地面上的占位；nodeOff = 这个交叉点站不了人（在家具里）。家具上方的单元照常在（独立一层） */
 export interface Furnishing {
@@ -529,26 +570,131 @@ export interface Seat {
   side: number;
   /** 坐下时落下来当桌子的那台（COHABIT.TABLE；−1 = 没有合格的，或不是人体工学那套家具） */
   table: number;
+  /** retarget：meet / side 的候选，按挑 meet / side 时的先后排好（第一台就是 meet / side）；引导时取第一台此刻落得下来的 */
+  meets: readonly number[];
+  sides: readonly number[];
 }
 
-/** 点到轴对齐矩形的距离 */
-function rectDist(r: FurnRect, x: number, y: number): number {
-  return Math.hypot(Math.max(r.x0 - x, 0, x - r.x1), Math.max(r.y0 - y, 0, y - r.y1));
-}
-/** 轴对齐线段（过道边）到矩形的距离 = 两个盒子之间的距离 */
-function segRectDist(r: FurnRect, ax: number, ay: number, bx: number, by: number): number {
-  const dx = Math.max(0, r.x0 - Math.max(ax, bx), Math.min(ax, bx) - r.x1);
-  const dy = Math.max(0, r.y0 - Math.max(ay, by), Math.min(ay, by) - r.y1);
-  return Math.hypot(dx, dy);
+/** 斜放家具的局部坐标：u = 沿宽（与朝向垂直，t = (−fy, fx)）、v = 沿朝向 */
+function furnLocal(r: FurnBox, x: number, y: number): [number, number] {
+  const [fx, fy] = r.face!;
+  const dx = x - r.cx!;
+  const dy = y - r.cy!;
+  return [-fy * dx + fx * dy, fx * dx + fy * dy];
 }
 
-/** 一件家具在地面上的占位 */
+/** 点到家具占位的距离（正放 = 轴对齐矩形，算式与 2026-11-08 之前逐位相同；斜放 = 带朝向的矩形） */
+export function rectDist(r: FurnBox, x: number, y: number): number {
+  if (!r.tilted) return Math.hypot(Math.max(r.x0 - x, 0, x - r.x1), Math.max(r.y0 - y, 0, y - r.y1));
+  const [u, v] = furnLocal(r, x, y);
+  return Math.hypot(Math.max(Math.abs(u) - r.hu!, 0), Math.max(Math.abs(v) - r.hv!, 0));
+}
+
+/** 点到线段的距离 */
+function pointSegDist(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
+  const vx = bx - ax;
+  const vy = by - ay;
+  const L2 = vx * vx + vy * vy;
+  const t = L2 > 0 ? Math.max(0, Math.min(1, ((px - ax) * vx + (py - ay) * vy) / L2)) : 0;
+  return Math.hypot(px - (ax + vx * t), py - (ay + vy * t));
+}
+
+/** 线段（过道边）到家具占位的距离：正放 = 两个轴对齐盒子之间的距离（旧算式）；斜放 = 线段与带朝向矩形之间的最短距离 */
+function segRectDist(r: FurnBox, ax: number, ay: number, bx: number, by: number): number {
+  if (!r.tilted) {
+    const dx = Math.max(0, r.x0 - Math.max(ax, bx), Math.min(ax, bx) - r.x1);
+    const dy = Math.max(0, r.y0 - Math.max(ay, by), Math.min(ay, by) - r.y1);
+    return Math.hypot(dx, dy);
+  }
+  const [au, av] = furnLocal(r, ax, ay);
+  const [bu, bv] = furnLocal(r, bx, by);
+  const hu = r.hu!;
+  const hv = r.hv!;
+  // 线段与矩形相交 ⇒ 0（Liang–Barsky 裁剪）
+  let t0 = 0;
+  let t1 = 1;
+  const du = bu - au;
+  const dv = bv - av;
+  const clip = (p: number, q: number) => {
+    if (p === 0) return q >= 0;
+    const t = q / p;
+    if (p < 0) {
+      if (t > t1) return false;
+      if (t > t0) t0 = t;
+    } else {
+      if (t < t0) return false;
+      if (t < t1) t1 = t;
+    }
+    return true;
+  };
+  if (clip(-du, au + hu) && clip(du, hu - au) && clip(-dv, av + hv) && clip(dv, hv - av) && t0 <= t1) return 0;
+  const box = (u: number, v: number) => Math.hypot(Math.max(Math.abs(u) - hu, 0), Math.max(Math.abs(v) - hv, 0));
+  let d = Math.min(box(au, av), box(bu, bv));
+  for (const [cu, cv] of [[-hu, -hv], [hu, -hv], [hu, hv], [-hu, hv]]) d = Math.min(d, pointSegDist(cu, cv, au, av, bu, bv));
+  return d;
+}
+
+/** 一块占位在方向 (ax, ay)（单位向量）上的投影半长 */
+function boxExtent(r: FurnBox, ax: number, ay: number): number {
+  if (!r.tilted) return (Math.abs(ax) * (r.x1 - r.x0) + Math.abs(ay) * (r.y1 - r.y0)) / 2;
+  const [fx, fy] = r.face!;
+  return r.hu! * Math.abs(-fy * ax + fx * ay) + r.hv! * Math.abs(fx * ax + fy * ay);
+}
+function boxCenter(r: FurnBox): [number, number] {
+  return r.tilted ? [r.cx!, r.cy!] : [(r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2];
+}
+
+/** 两块占位是否叠上（彼此留 gap）。两块都正放 = 旧的轴对齐判法；有斜放的按分离轴判（四条轴：两块各自的宽向与朝向） */
+export function boxesOverlap(r: FurnBox, q: FurnBox, gap: number): boolean {
+  if (!r.tilted && !q.tilted) return r.x0 < q.x1 + gap && q.x0 < r.x1 + gap && r.y0 < q.y1 + gap && q.y0 < r.y1 + gap;
+  const [rcx, rcy] = boxCenter(r);
+  const [qcx, qcy] = boxCenter(q);
+  const axes: [number, number][] = [[1, 0], [0, 1]];
+  for (const b of [r, q]) if (b.tilted) axes.push([-b.face![1], b.face![0]], [b.face![0], b.face![1]]);
+  for (const [ax, ay] of axes) {
+    const sep = Math.abs((rcx - qcx) * ax + (rcy - qcy) * ay) - boxExtent(r, ax, ay) - boxExtent(q, ax, ay);
+    if (sep >= gap) return false;
+  }
+  return true;
+}
+
+/** (x, y) 落在这块占位里 */
+export function boxContains(r: FurnBox, x: number, y: number): boolean {
+  if (!r.tilted) return x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1;
+  const [u, v] = furnLocal(r, x, y);
+  return Math.abs(u) <= r.hu! && Math.abs(v) <= r.hv!;
+}
+
+/** 朝向转一个角（弧度，平面 y 向下：正角 = 屏幕上顺时针）；转完落回正方向时取整成 (0, ±1) / (±1, 0) */
+export function turnFace(face: readonly [number, number], rad: number): [number, number] {
+  const c = Math.cos(rad);
+  const s = Math.sin(rad);
+  let x = face[0] * c - face[1] * s;
+  let y = face[0] * s + face[1] * c;
+  const n = Math.hypot(x, y);
+  x /= n;
+  y /= n;
+  if (Math.abs(x) < 1e-9) return [0, Math.sign(y)];
+  if (Math.abs(y) < 1e-9) return [Math.sign(x), 0];
+  return [x, y];
+}
+
+/** 一件家具在地面上的占位。正放（朝上下左右）与此前逐位相同；斜放另记朝向（单位化）、半宽、半进深 */
 export function furnRect(f: FurnSpec): FurnRect {
   const k = furnKind(f);
-  const alongX = f.face[0] === 0; // 面朝 ±y ⇒ 宽沿 x
-  const hw = (alongX ? k.w : k.d) / 2;
-  const hd = (alongX ? k.d : k.w) / 2;
-  return { kind: f.kind, ...(f.ergo ? { ergo: true as const } : {}), cx: f.x, cy: f.y, x0: f.x - hw, x1: f.x + hw, y0: f.y - hd, y1: f.y + hd, face: f.face };
+  if (f.face[0] === 0 || f.face[1] === 0) {
+    const alongX = f.face[0] === 0; // 面朝 ±y ⇒ 宽沿 x
+    const hw = (alongX ? k.w : k.d) / 2;
+    const hd = (alongX ? k.d : k.w) / 2;
+    return { kind: f.kind, ...(f.ergo ? { ergo: true as const } : {}), cx: f.x, cy: f.y, x0: f.x - hw, x1: f.x + hw, y0: f.y - hd, y1: f.y + hd, face: f.face };
+  }
+  const n = Math.hypot(f.face[0], f.face[1]);
+  const face: [number, number] = [f.face[0] / n, f.face[1] / n];
+  const hu = k.w / 2;
+  const hv = k.d / 2;
+  const ex = hu * Math.abs(face[1]) + hv * Math.abs(face[0]);
+  const ey = hu * Math.abs(face[0]) + hv * Math.abs(face[1]);
+  return { kind: f.kind, ...(f.ergo ? { ergo: true as const } : {}), cx: f.x, cy: f.y, x0: f.x - ex, x1: f.x + ex, y0: f.y - ey, y1: f.y + ey, face, tilted: true, hu, hv };
 }
 
 /**
@@ -574,6 +720,14 @@ export function furnishRoom(l: PlanLayout, specs: readonly FurnSpec[] = standard
   // 单元铺满整间房：外侧一圈交叉点就在墙上，站不了人、也不从那儿走（门另有门道接到里面一圈）
   if (l.cover === 'room')
     for (let r = 0; r <= n; r++) for (let c = 0; c <= n; c++) if (r === 0 || c === 0 || r === n || c === n) nodeOff[r * (n + 1) + c] = 1;
+  // 死角：四邻全被家具或墙封住的单个交叉点（如转角 L 形沙发背后那一格墙角）人到不了，按家具占位算——真实店里放猫爬架或绿植。
+  // 只认孤立的一个点；更大的围死区域仍由 furnitureFits 拒绝（家具不许把一块地面挡死）
+  const off = (c: number, r: number) => c < 0 || r < 0 || c > n || r > n || nodeOff[r * (n + 1) + c] === 1;
+  const dead: number[] = [];
+  if (rects.length)
+    for (let r = 0; r <= n; r++)
+      for (let c = 0; c <= n; c++) if (!off(c, r) && off(c - 1, r) && off(c + 1, r) && off(c, r - 1) && off(c, r + 1)) dead.push(r * (n + 1) + c);
+  for (const k of dead) nodeOff[k] = 1;
   return { rects, nodeOff };
 }
 
@@ -782,18 +936,20 @@ export function placeSeats(l: PlanLayout, g: AisleGraph): Seat[] {
       const cand = l.units
         .map((u) => ({ u, d: Math.hypot(u.x - x, u.y - y), c: Math.hypot(u.x, u.y), front: (u.x - x) * r.face[0] + (u.y - y) * r.face[1] > 0 }))
         .sort((a, b) => Math.round(a.d * 1e6) - Math.round(b.d * 1e6) || a.c - b.c);
-      const pick =
-        cand.find((q) => q.front && q.d >= COHABIT.CAT_NEAR && q.d < COHABIT.BAND.far && !corner(q.u)) ??
-        cand.find((q) => q.front && q.d >= COHABIT.CAT_NEAR) ??
-        cand[0];
+      const inBand = (q: (typeof cand)[number]) => q.front && q.d >= COHABIT.CAT_NEAR && q.d < COHABIT.BAND.far && !corner(q.u);
+      const pick = cand.find(inBand) ?? cand.find((q) => q.front && q.d >= COHABIT.CAT_NEAR) ?? cand[0];
       const headR = l.platR + PLAN.BODY_R;
       // 方台：四个角比 platR 远，按每条带的长度问「盖不盖到头顶」；圆台照旧比芯距
       const clear = (q: { u: PlanUnit; d: number }) => (l.bandReach ? !unitReaches(l, q.u, x, y, PLAN.BODY_R) : q.d > headR);
       const side = cand.find((q) => clear(q) && !corner(q.u)) ?? cand.find((q) => clear(q)) ?? cand[cand.length - 1];
-      seats.push({ i: seats.length, furn: fi, slot, x, y, face: r.face, node, meet: pick.u.i, side: side.u.i, table: -1 });
+      // 候选：同一条挑法的全部合格台（面前 1.0–1.5 m 不取入口四角 / 不盖自己头顶的近台），meet / side 本身排第一
+      const list = (first: number, ok: (q: (typeof cand)[number]) => boolean) => [first, ...cand.filter((q) => ok(q) && q.u.i !== first).map((q) => q.u.i)];
+      const meets = list(pick.u.i, inBand);
+      const sides = [...new Set([side.u.i, ...cand.filter((q) => clear(q) && !corner(q.u) && q.d < COHABIT.BAND.far).map((q) => q.u.i), ...cand.filter((q) => clear(q) && q.d < COHABIT.BAND.far).map((q) => q.u.i)])];
+      seats.push({ i: seats.length, furn: fi, slot, x, y, face: r.face, node, meet: pick.u.i, side: side.u.i, table: -1, meets, sides });
     });
   });
-  // 桌子要等所有座位点都定了才能挑（不许盖到任何一个座位上的人的头顶）；同一台只给一件家具，按件号先到先得
+  // 桌子要等所有座位点都定了才能挑（不许盖到任何一个座位上的人的头顶）；同一台只给同一种家具（桌高相同），不同种按件号先到先得
   const owner = new Map<number, number>();
   for (const s of seats) {
     const u = tableFor(l, f.rects, seats, s, owner);
@@ -805,9 +961,19 @@ export function placeSeats(l: PlanLayout, g: AisleGraph): Seat[] {
 }
 
 /** 方台落到桌子高度时会不会压到家具：台面（全落的方形，半边 platR）与家具占位按轴对齐矩形判，留 gap */
-export function platformClear(l: Pick<PlanLayout, 'platR'>, u: { x: number; y: number }, rects: readonly Pick<FurnRect, 'x0' | 'x1' | 'y0' | 'y1'>[], gap: number = COHABIT.TABLE.FURN_GAP): boolean {
+export function platformClear(l: Pick<PlanLayout, 'platR'>, u: { x: number; y: number }, rects: readonly FurnBox[], gap: number = COHABIT.TABLE.FURN_GAP): boolean {
   const h = l.platR + gap;
-  return rects.every((r) => u.x + h <= r.x0 || u.x - h >= r.x1 || u.y + h <= r.y0 || u.y - h >= r.y1);
+  return rects.every((r) => {
+    if (!r.tilted) return u.x + h <= r.x0 || u.x - h >= r.x1 || u.y + h <= r.y0 || u.y - h >= r.y1;
+    // 斜放：方台（轴对齐、半边 platR）与带朝向的矩形按分离轴判，留 gap
+    const plat: FurnBox = { x0: u.x - l.platR, x1: u.x + l.platR, y0: u.y - l.platR, y1: u.y + l.platR };
+    return !boxesOverlap(plat, r, gap);
+  });
+}
+
+/** 一件家具要的桌子高度类：餐椅 = 餐桌，双人沙发、单人沙发 = 茶几。同一类的家具能共用一台（高度相同） */
+export function tableClass(kind: FurnKind): 'dining' | 'coffee' {
+  return kind === 'chair' ? 'dining' : 'coffee';
 }
 
 /**
@@ -827,12 +993,15 @@ export function tableFor(l: PlanLayout, rects: readonly FurnRect[], seats: reado
   let be = Infinity;
   for (const u of l.units) {
     const o = owner.get(u.i);
-    if (o !== undefined && o !== s.furn) continue;
+    if (o !== undefined && o !== s.furn && tableClass(rects[o].kind) !== tableClass(r.kind)) continue;
     const along = (u.x - s.x) * fx + (u.y - s.y) * fy;
     const lat = Math.abs(-(u.x - s.x) * fy + (u.y - s.y) * fx);
-    if (along <= 0 || lat >= l.platR) continue;
-    const edge = along - l.platR; // 座位点到台面近边
-    if (r.kind === 'sofa') {
+    // 方台（轴对齐）沿座位朝向、沿横向的投影半长：正放 = platR；斜放 45° 时是台角，platR·√2
+    const ext = l.platR * (Math.abs(fx) + Math.abs(fy));
+    if (along <= 0 || lat >= ext) continue;
+    const edge = along - ext; // 座位点到台面近边（沿座位中线）
+    if (r.kind !== 'chair') {
+      // 双人沙发、单人沙发 = 茶几
       const gap = edge - front;
       if (gap < T.SOFA_GAP[0] || gap > T.SOFA_GAP[1]) continue;
     } else {
@@ -1014,6 +1183,33 @@ export interface CohabitOpts {
   squeeze?: boolean;
   /** 访客的节奏（站多久、看猫多久、去不去坐、坐多久）：省略 = COHABIT.VISITOR / SEATS 那几个演示值（研究与案例页对照图用的）；部分覆盖逐项替换 */
   pace?: Partial<VisitorPace>;
+  /*
+   * 2026-11-08 规则审阅（项目二_人猫同台lab.md §14.29）改掉的四处，各自一个开关。省略 = 单元铺满整间房时开（Lab 2-14 自由演示、
+   * 2-15、标准场景研究），否则关 ⇒ 案例页对照图与「正文对照」四钮（场地居中）逐位不变。
+   */
+  /**
+   * 第 5 条 · 每个访客、每只猫各用一串随机数（种子由场次种子与它的编号定）。关着时所有人和猫共用一串：引导开 / 关两档只要有一只猫
+   * 做了不同的决定，后面所有访客的站、坐、去哪都跟着换一批随机数，同种子配对只配上了开头一段。开着时空间不同造成的差别照样在，
+   * 访客自己的随机安排两档相同。不改任何规则。
+   */
+  streams?: boolean;
+  /**
+   * 第 1 条 · 引导每一步都现挑去哪台：座位前方 / 旁边的候选里，第一台此刻不盖任何坐着的人头顶的（它落得下来）；一台都没有就不引。
+   * 关着时每个座位固定一台，而 20 座的标准布置里 16 座的前方那台盖着邻座的头，邻座一有人它就落不下来，猫被这次引导占着、
+   * 最后一步却到不了（审阅时量到坐着引猫的步里 51% 指向这种台）。
+   */
+  retarget?: boolean;
+  /**
+   * 第 3 条 · 同伴没坐上（座被抢、门口等太久另选了路、猫占着的台盖在座位头顶）：每次站着停满一段（pace.pause）就再找一次领头
+   * 座位附近（PARTY_SEAT 以内）的空座。关着时只在领头去坐那一刻派一次座，没坐上就在领头身边站满整段。
+   */
+  seatRetry?: boolean;
+  /**
+   * 第 10 条 · R5 只拦「加了它，本来有路的人就没路」的那台。关着时只要此刻有人没路，这一步所有要成墙的单元都被钉在墙线以下——
+   * 而坐着的人面前的桌子一落成墙（桌子带在用、收不了），他的入口常被桌子与家具围住，判成「没路」（他起身桌子就收，并没有被困住），
+   * 于是他坐着的整段里房间一台新的都落不下来（猫只上落满的台）。2026-11-08 量到：标准场景会动档 37% 的时间步是这样。
+   */
+  exitDiff?: boolean;
 }
 
 /** 访客的节奏：站着停多久 · 看猫站多久 · 下一站去看猫的几率 · 下一站去坐的几率 · 坐多久（秒） */
@@ -1043,13 +1239,17 @@ export const PACE_STUDY: VisitorPace = {
  * 2026-10-28 作者「可以坐久一点」：一坐 40–120 → 60–180 s，同时单元铺满整间房时开了错身（CohabitOpts.squeeze）。
  * 实测（6 人 2 猫 · 4 种子 × 600 s，会动 / 钉死 / 空房间）：坐着 62% / 59% / 62%，走 11% / 14% / 12%；
  * 错身关着时同一节奏是 54% / 25% / 44%——钉死与空房间里人大半时间被站着的人堵在原地。
- * 只给台架的自由演示；研究、案例页对照图与 2-14 的「正文对照」四钮仍用 PACE_STUDY（否则正文引用的读数会跟着变）。
+ * 2026-11-08 作者「猫咖里的真实顾客不应该是只坐三分钟的」：一坐 60–180 s → 10–30 分钟（600–1800 s）。没有研究量过猫咖
+ * 访客一次坐多久；能查到的只有店家的计时规矩——一次预约 30–60 分钟、也常订 1–2 小时（Hirsch 等 2025 那家店一天约 59 位
+ * 顾客，没写停留时长）。10–30 分钟 = 一次 30–60 分钟的到访里坐两三回、中间起身看猫走动几分钟；站着停与看猫的时长不动。
+ * 研究的标准场景（6 人 4 猫，scripts/cohabit/guide-effect.mjs）也用这一套。
+ * 只给台架的自由演示与新的标准场景研究；案例页对照图与 2-14 的「正文对照」四钮仍用 PACE_STUDY（否则正文引用的读数会跟着变）。
  */
 export const PACE_DEMO: VisitorPace = {
   ...PACE_STUDY,
   pause: { min: 3, max: 12 },
   sitP: 0.35,
-  sit: { min: 60, max: 180 },
+  sit: { min: 600, max: 1800 },
 };
 
 export class CohabitSim {
@@ -1098,6 +1298,11 @@ export class CohabitSim {
   readonly tables: boolean;
   /** 错身（CohabitOpts.squeeze） */
   readonly squeeze: boolean;
+  /** 规则审阅那四处（CohabitOpts.streams / retarget / seatRetry / exitDiff） */
+  readonly streams: boolean;
+  readonly retarget: boolean;
+  readonly seatRetry: boolean;
+  readonly exitDiff: boolean;
   readonly tableBy: Int16Array;
   tableSeat = 0;
   tableReady = 0;
@@ -1109,6 +1314,9 @@ export class CohabitSim {
   seats: Seat[];
   guides: Guide[] = [];
   catArrivals = 0;
+  /** 共温 / 共触里人坐着的那部分（人·猫·秒；审阅第 6 条：共触里有不少是人路过猫身边） */
+  seatedWarmth = 0;
+  seatedTouch = 0;
   guide: GuideCfg;
   /** 猫的常量（构造时从 COHABIT.CAT + opts.cat 拷一份） */
   readonly cat: CatCfg;
@@ -1126,6 +1334,11 @@ export class CohabitSim {
   private nextId = 1;
   private readonly seed: number;
   private readonly rng: () => number;
+  /** streams 开着时每个访客 / 每只猫自己那串（按编号）；cur = 此刻在替谁做决定（null = 共用那串） */
+  private readonly actorRng = new Map<number, () => number>();
+  private cur: (() => number) | null = null;
+  /** 此刻盖在某个坐着的人头顶的单元（stepSpace 里算；retarget 挑引导目标时避开） */
+  private readonly overSeated: Uint8Array;
   private readonly inputsBuf: Float64Array;
   private readonly catInputsBuf: Float64Array;
   private readonly pairs = new Map<string, PairState>();
@@ -1186,6 +1399,11 @@ export class CohabitSim {
     this.heldR5 = new Uint8Array(n);
     this.tables = opts.tables ?? opts.cover === 'room';
     this.squeeze = opts.squeeze ?? opts.cover === 'room';
+    this.streams = opts.streams ?? opts.cover === 'room';
+    this.retarget = opts.retarget ?? opts.cover === 'room';
+    this.seatRetry = opts.seatRetry ?? opts.cover === 'room';
+    this.exitDiff = opts.exitDiff ?? opts.cover === 'room';
+    this.overSeated = new Uint8Array(n);
     this.tableBy = new Int16Array(n).fill(-1);
     this.wallScratch = new Uint8Array(n);
     this.faces = opts.faces ?? false;
@@ -1216,14 +1434,25 @@ export class CohabitSim {
   }
 
   /** R5：这组墙之下每个在场访客都还有路到门（「走 · 站 · 坐」按 nodeOf；痕迹档走 everyoneHasExit，逐位不变） */
-  private exitOk(wall: Uint8Array, planWall: Uint8Array | null): boolean {
-    if (!this.furn) return everyoneHasExit(this.layout, this.graph, this.people.map((p) => p.walker), wall, planWall);
+  private exitOk(wall: Uint8Array, planWall: Uint8Array | null, only: readonly boolean[] | null = null): boolean {
+    if (!this.furn) return everyoneHasExit(this.layout, this.graph, this.people.filter((_, i) => !only || only[i]).map((p) => p.walker), wall, planWall);
     const doors = new Set(this.graph.door);
-    for (const p of this.people) {
-      if (!p.walker.present) continue;
+    for (let i = 0; i < this.people.length; i++) {
+      const p = this.people[i];
+      if (!p.walker.present || (only && !only[i])) continue;
       if (!shortestPath(this.layout, this.graph, this.nodeOf(p), doors, wall, planWall)) return false;
     }
     return true;
+  }
+
+  /** 这组墙之下每个访客（按 people 的顺序）有没有路到门（exitDiff 用：加墙之前谁本来就有路） */
+  private exitsOf(wall: Uint8Array, planWall: Uint8Array | null): boolean[] {
+    const doors = new Set(this.graph.door);
+    return this.people.map((p) => {
+      if (!p.walker.present) return false;
+      const from = this.furn ? this.nodeOf(p) : nearestNode(this.graph, p.walker.x, p.walker.y);
+      return !!shortestPath(this.layout, this.graph, from, doors, wall, planWall);
+    });
   }
 
   // ── 空间三档 ──────────────────────────────────────────────────────────────
@@ -1314,6 +1543,8 @@ export class CohabitSim {
       py = this.graph.nodes[k].y;
     }
     const id = this.nextId++;
+    const prevCur = this.cur;
+    this.cur = this.openStream(id, 'person', this.people.length) ?? prevCur;
     const walker = new Walker(this.speed, this.seed + id * 7919);
     walker.lookAround = this.look;
     walker.place(px, py);
@@ -1348,6 +1579,7 @@ export class CohabitSim {
     // 「走 · 站 · 坐」：放在空座上 = 直接坐下
     const s = this.seatAt(px, py);
     if (s >= 0 && this.seatFree(s, v)) this.sitDown(v, s);
+    this.cur = prevCur;
     return v;
   }
 
@@ -1409,7 +1641,7 @@ export class CohabitSim {
   /** (x,y) 落在哪件家具上；没有 = −1 */
   furnitureAt(x: number, y: number): number {
     if (!this.furn) return -1;
-    return this.furn.rects.findIndex((r) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1);
+    return this.furn.rects.findIndex((r) => boxContains(r, x, y));
   }
 
   /**
@@ -1423,10 +1655,7 @@ export class CohabitSim {
     for (let a = 0; a < rects.length; a++) {
       const r = rects[a];
       if (r.x0 < -half || r.x1 > half || r.y0 < -half || r.y1 > half) return false;
-      for (let b = 0; b < a; b++) {
-        const q = rects[b];
-        if (r.x0 < q.x1 + G && q.x0 < r.x1 + G && r.y0 < q.y1 + G && q.y0 < r.y1 + G) return false;
-      }
+      for (let b = 0; b < a; b++) if (boxesOverlap(r, rects[b], G)) return false;
     }
     const f = furnishRoom(this.layout, specs);
     const g: AisleGraph = { ...this.graph, furn: f };
@@ -1481,12 +1710,26 @@ export class CohabitSim {
     if (this.space === 'fixed') this.applySpace();
   }
 
-  /** 搬一件家具到 (x,y)（朝向自动朝房间中线：上半边朝下、下半边朝上——标准布置就是这个规矩）；摆不下 = false、原地不动 */
+  /**
+   * 搬一件家具到 (x,y)，朝向不变（2026-11-08 起：标准布置有斜放、四个方向都有，不再按「上半边朝下、下半边朝上」自动翻；
+   * 转朝向用 rotateFurniture）；摆不下 = false、原地不动
+   */
   moveFurniture(i: number, x: number, y: number): boolean {
     const f = this.furniture[i];
     if (!f) return false;
     const next = this.furniture.slice();
-    next[i] = { ...f, x, y, face: y < 0 ? [0, 1] : [0, -1] };
+    next[i] = { ...f, x, y };
+    if (!this.furnitureFits(next)) return false;
+    this.refurnish(next, i);
+    return true;
+  }
+
+  /** 一件家具原地转一个角（弧度，正 = 屏幕上顺时针）；转完摆不下 = false、不动 */
+  rotateFurniture(i: number, rad: number): boolean {
+    const f = this.furniture[i];
+    if (!f) return false;
+    const next = this.furniture.slice();
+    next[i] = { ...f, face: turnFace(f.face, rad) };
     if (!this.furnitureFits(next)) return false;
     this.refurnish(next, i);
     return true;
@@ -1535,6 +1778,7 @@ export class CohabitSim {
   addCat(at?: PlanUnit | { x: number; y: number }): Cat | null {
     if (this.cats.length >= COHABIT.MAX_CATS) return null;
     const id = this.nextId++;
+    this.openStream(id, 'cat', this.cats.length);
     const walker = new Walker(this.cat.speed, this.seed + id * 104729);
     walker.lookAround = false;
     let unit: PlanUnit | null = null;
@@ -1545,8 +1789,11 @@ export class CohabitSim {
       y = at?.y ?? 0;
     } else {
       unit = at && 'i' in at ? at : nearestUnit(this.layout, at?.x ?? 0, at?.y ?? 0);
-      if (this.space === 'fixed' && this.act.degree[unit.i] < 1) {
-        const f = this.layout.units.filter((u) => this.act.degree[u.i] >= 1);
+      if (this.space === 'fixed' && (this.act.degree[unit.i] < 1 || this.cats.some((k) => k.unit === unit))) {
+        // 钉死档：挪到最近一台落着的；先挑上面还没有猫的（审阅第 8 条：原先几只猫会挪到同一台上、开场叠在一起），都有猫了才不挑
+        const down = this.layout.units.filter((u) => this.act.degree[u.i] >= 1);
+        const empty = down.filter((u) => !this.cats.some((k) => k.unit === u));
+        const f = empty.length ? empty : down;
         if (f.length) unit = f.reduce((b, u) => (Math.hypot(u.x - unit!.x, u.y - unit!.y) < Math.hypot(b.x - unit!.x, b.y - unit!.y) ? u : b), f[0]);
       }
       x = unit.x;
@@ -1616,6 +1863,8 @@ export class CohabitSim {
     this.ledger = emptyLedger();
     this.pairs.clear();
     this.catArrivals = 0;
+    this.seatedWarmth = 0;
+    this.seatedTouch = 0;
     for (const v of this.people) {
       v.detour = 0;
       v.straight = 0;
@@ -1927,8 +2176,25 @@ export class CohabitSim {
 
   // ── 读数 ──────────────────────────────────────────────────────────────────
 
+  /** 抽一个随机数：streams 开着且此刻在替某个访客 / 某只猫做决定时用它自己那串，否则用共用那串（关着时逐位同旧口径） */
+  private rand(): number {
+    return (this.cur ?? this.rng)();
+  }
+
+  /**
+   * streams：给编号 id 开一串自己的随机数。种子只看场次种子、是访客还是猫、它是第几个访客 / 第几只猫——同种子各档同一个人
+   * 拿到同一串，多放一只猫也不改访客那几串。
+   */
+  private openStream(id: number, kind: 'person' | 'cat', index: number): (() => number) | null {
+    if (!this.streams) return null;
+    const salt = (kind === 'person' ? 0x2545f491 : 0x68e31da4) ^ Math.imul(index + 1, 0x85ebca6b);
+    const r = makeRng((Math.imul(this.seed, 0x9e3779b1) ^ salt ^ 0x5bd1e995) >>> 0);
+    this.actorRng.set(id, r);
+    return r;
+  }
+
   private pick(r: { min: number; max: number }): number {
-    return r.min + this.rng() * (r.max - r.min);
+    return r.min + this.rand() * (r.max - r.min);
   }
 
   get keepOutM(): number {
@@ -1993,7 +2259,7 @@ export class CohabitSim {
     if (c.passiveIn > 0) return null;
     c.passiveIn = 1;
     const q = this.stillVisitor(c);
-    if (!q || this.rng() >= this.cat.passiveP) return null;
+    if (!q || this.rand() >= this.cat.passiveP) return null;
     return q;
   }
 
@@ -2039,9 +2305,17 @@ export class CohabitSim {
       const h = Math.min(MAX_SUB_DT, left);
       left -= h;
       if (this.social) this.rebuildOcc();
-      for (const p of this.people) this.stepPerson(p, h);
+      for (const p of this.people) {
+        this.cur = this.actorRng.get(p.id) ?? null;
+        this.stepPerson(p, h);
+      }
+      this.cur = null;
       if (this.social) this.socialReadings(h);
-      for (const c of this.cats) this.stepCat(c, h);
+      for (const c of this.cats) {
+        this.cur = this.actorRng.get(c.id) ?? null;
+        this.stepCat(c, h);
+      }
+      this.cur = null;
       this.account(h);
       this.t += h;
     }
@@ -2209,16 +2483,16 @@ export class CohabitSim {
     if (crowded) goal = this.farthestNode(from, p);
     else {
       // 「走 · 站 · 坐」：有空座时按几率去坐（起身的这一程不再坐回去）
-      if (this.seats.length && !rising && this.rng() < this.pace.sitP) {
+      if (this.seats.length && !rising && this.rand() < this.pace.sitP) {
         const free = this.seats.filter((q) => this.seatFree(q.i, p));
         if (free.length) {
-          const q = free[Math.floor(this.rng() * free.length)];
+          const q = free[Math.floor(this.rand() * free.length)];
           seat = q.i;
           goal = q.node;
         }
       }
-      if (goal < 0 && this.cats.length && this.rng() < this.pace.toCatP) {
-        const c = this.cats[Math.floor(this.rng() * this.cats.length)];
+      if (goal < 0 && this.cats.length && this.rand() < this.pace.toCatP) {
+        const c = this.cats[Math.floor(this.rand() * this.cats.length)];
         goal = this.spotNear(c, w.x, w.y, from);
         watch = c.id;
       }
@@ -2359,7 +2633,7 @@ export class CohabitSim {
     const inner: number[] = [];
     for (let r = 1; r < n; r++) for (let c = 1; c < n; c++) inner.push(r * (n + 1) + c);
     const pool = inner.filter((i) => i !== not && !(this.furn && this.furn.nodeOff[i]));
-    return pool[Math.floor(this.rng() * pool.length)];
+    return pool[Math.floor(this.rand() * pool.length)];
   }
 
   /** 离其他访客最远的交叉点（停留代价高了往哪走：G5） */
@@ -2502,6 +2776,9 @@ export class CohabitSim {
     let bd = Infinity;
     for (let i = 0; i < g.door[0]; i++) {
       if (g.furn && g.furn.nodeOff[i]) continue;
+      // 钉死档：落着的方台四角正对的交叉点站不了人（§14.8）——放人 / 起身时也不往那儿放（2026-11-08 补：
+      // 此前开场把人放到这种点上，前后两台钉死、身后站着同伴，挤不出去，要等到这一站停完）
+      if (this.fixedCorners && this.fixedCorners[i]) continue;
       if (this.nodeTaken(i, me)) continue;
       const d = Math.hypot(g.nodes[i].x - x, g.nodes[i].y - y);
       if (d < bd) {
@@ -2576,7 +2853,7 @@ export class CohabitSim {
       const far = Math.max(...pool.map((r) => r.d));
       pool = pool.filter((r) => r.d >= far - 1e-9);
     }
-    if (!score) return pool[Math.floor(this.rng() * pool.length)].k;
+    if (!score) return pool[Math.floor(this.rand() * pool.length)].k;
     return pool.reduce((b, r) => (score(r.k) < score(b.k) ? r : b), pool[0]).k;
   }
 
@@ -2618,7 +2895,7 @@ export class CohabitSim {
       const far = Math.max(...pool.map((r) => r.d));
       pool = pool.filter((r) => r.d >= far - 1e-9);
     }
-    return pool[Math.floor(this.rng() * pool.length)].seats;
+    return pool[Math.floor(this.rand() * pool.length)].seats;
   }
 
   /** 规划时绕开的点：被猫护住的交叉点 + 别人站着（没在走）的身体 */
@@ -2849,12 +3126,12 @@ export class CohabitSim {
     let goal = -1;
     let watch: number | null = null;
     let seats: number[] | null = null;
-    if (this.seats.length && !rising && this.rng() < this.pace.sitP) {
+    if (this.seats.length && !rising && this.rand() < this.pace.sitP) {
       seats = this.seatsForParty(p, party.length);
       if (seats) goal = this.seats[seats[0]].node;
     }
-    if (goal < 0 && this.cats.length && this.rng() < this.pace.toCatP) {
-      const c = this.cats[Math.floor(this.rng() * this.cats.length)];
+    if (goal < 0 && this.cats.length && this.rand() < this.pace.toCatP) {
+      const c = this.cats[Math.floor(this.rand() * this.cats.length)];
       // 看猫的站位：猫 1.5 m 以内能站的点；同档里离猫近、再稍偏离自己近的
       const cands = this.standCands(p, -1, c.walker.x, c.walker.y, COHABIT.BAND.far);
       goal = this.pickSpot(cands, p, party.length, (k) => {
@@ -2885,6 +3162,22 @@ export class CohabitSim {
       return Math.hypot(n.x - x, n.y - y) + (c ? 0.5 * Math.hypot(n.x - c.walker.x, n.y - c.walker.y) : 0);
     });
     return k >= 0 ? k : this.freeNodeNear(x, y, q.id);
+  }
+
+  /** seatRetry：领头座位 PARTY_SEAT 以内、此刻能坐（seatFree、入口没人站）的空座里离领头座位最近的那个；没有 = −1 */
+  private mateSeat(q: Visitor, leaderSeat: number): number {
+    const A = this.seats[leaderSeat];
+    let best = -1;
+    let bd = Infinity;
+    for (const b of this.seats) {
+      if (b.i === leaderSeat || !this.seatFree(b.i, q) || this.nodeTaken(b.node, q)) continue;
+      const d = Math.hypot(b.x - A.x, b.y - A.y);
+      if (d <= COHABIT.SOCIAL.PARTY_SEAT && d < bd) {
+        bd = d;
+        best = b.i;
+      }
+    }
+    return best;
   }
 
   /** 叫一个同伴去 goal：坐着就先起身（入口被别人站着就算了，等下一次 followSocial 再来） */
@@ -2923,6 +3216,12 @@ export class CohabitSim {
     const near = atSeat ? 1.3 : COHABIT.SOCIAL.PARTY_D;
     if (Math.hypot(q.walker.x - cx, q.walker.y - cy) <= near + 1e-6) {
       q.watching = L.watching;
+      // seatRetry：领头已经坐下、自己没坐上——找领头座位附近的空座，找不到就站满一段（pace.pause）再找
+      if (this.seatRetry && L.seated && L.seat !== null) {
+        const k = this.mateSeat(q, L.seat);
+        if (k >= 0) this.sendMate(q, this.seats[k].node, L.watching, k);
+        else q.pause = this.pick(this.pace.pause);
+      }
       return;
     }
     const goal = this.mateSpot(q, cx, cy, near, L.watching);
@@ -2997,7 +3296,7 @@ export class CohabitSim {
       this.keepSupport(c);
       // 「走 · 站 · 坐」：落到了某个正坐着的人座位前方那台
       const at = c.unit.i;
-      if (this.seats.some((q) => q.meet === at && this.people.some((v) => v.seated && v.seat === q.i))) this.catArrivals++;
+      if (this.people.some((v) => v.seated && v.seat !== null && this.guideTarget(this.seats[v.seat], 'meet') === at)) this.catArrivals++;
     }
     if (c.state === 'approach' && w.state !== 'walk' && c.approaching !== null) {
       // 到了台面边缘：这段靠近算安稳停留
@@ -3036,9 +3335,9 @@ export class CohabitSim {
     if (c.homing && this.homeStep(c, dt)) return;
     // K3：有人站着看它、潜伏期过了 ⇒ 按几率靠过去（旧口径只挪到本台边缘；approachTravel = 1 时沿落着的台走过去）
     if (att && c.latency <= 0 && c.state !== 'approach' && c.phaseTime >= 1) {
-      if (this.rng() < this.cat.approachP) {
+      if (this.rand() < this.cat.approachP) {
         if (this.cat.approachTravel > 0) {
-          const stop = this.cat.approachMid > 0 && this.rng() < this.cat.approachMid ? this.cat.passiveD : PLAN.BODY_R + this.cat.bodyR;
+          const stop = this.cat.approachMid > 0 && this.rand() < this.cat.approachMid ? this.cat.passiveD : PLAN.BODY_R + this.cat.bodyR;
           // catFloor：落着（或正往下落）的台送不到离他 stop 处 ⇒ 下地走过去（与空房间同一条规则）
           if (this.catFloor && this.homeSearch(c, att.walker.x, att.walker.y, stop, true).err > this.cat.platformSlack) {
             this.goDown(c);
@@ -3080,8 +3379,8 @@ export class CohabitSim {
     if (c.state === 'sit' && c.phaseTime >= this.cat.sit) {
       // 「走 · 站 · 坐」：坐满了、旁边有一台空间刚递过来的（落着、没别的猫占着）⇒ 按同样的几率挪过去，不走才卧下（R3：走不走仍是猫的事）
       const offered = this.offeredNext(c);
-      if (offered.length && this.rng() < this.cat.roamP) {
-        c.pending = offered[Math.floor(this.rng() * offered.length)];
+      if (offered.length && this.rand() < this.cat.roamP) {
+        c.pending = offered[Math.floor(this.rand() * offered.length)];
         c.waited = 0;
         c.state = 'wait';
         return;
@@ -3091,7 +3390,7 @@ export class CohabitSim {
     } else if ((c.state === 'lie' && c.phaseTime >= this.cat.lie) || (c.state === 'retreat' && c.phaseTime >= this.cat.sit) || (c.state === 'approach' && c.phaseTime >= this.cat.sit * 2)) {
       const roam = c.state === 'approach' ? this.cat.roamAfterApproach : this.cat.roamP;
       c.approaching = null;
-      if (this.rng() < roam) {
+      if (this.rand() < roam) {
         // catFloor：这次去处选在地面（几率 = 1 − 上台几率）⇒ 跳下去，按地面的规矩挑去处
         if (this.catFloor && !this.levelUp(c)) {
           this.goDown(c);
@@ -3107,7 +3406,7 @@ export class CohabitSim {
           // 「走 · 站 · 坐」：优先走空间递过来的那一台
           const offered = this.offeredNext(c).filter((u) => ok.includes(u));
           const pool = offered.length ? offered : ok;
-          c.pending = pool[Math.floor(this.rng() * pool.length)];
+          c.pending = pool[Math.floor(this.rand() * pool.length)];
           c.waited = 0;
           c.state = 'wait';
           return;
@@ -3205,7 +3504,7 @@ export class CohabitSim {
     let n = 0;
     for (const v of this.people) if (v.walker.present && Math.hypot(v.walker.x - c.walker.x, v.walker.y - c.walker.y) < COHABIT.BAND.far) n++;
     const p = 1 / (1 + Math.exp(-(this.cat.upBias + this.cat.upCrowd * n)));
-    return this.rng() < p;
+    return this.rand() < p;
   }
 
   /** 跳下台：放开脚下（会动档里那台随之收回），身体留在原地的地面上 */
@@ -3238,8 +3537,8 @@ export class CohabitSim {
   private floorRoam(c: Cat): void {
     const half = this.floorHalf();
     for (let k = 0; k < 8; k++) {
-      const x = (this.rng() * 2 - 1) * half;
-      const y = (this.rng() * 2 - 1) * half;
+      const x = (this.rand() * 2 - 1) * half;
+      const y = (this.rand() * 2 - 1) * half;
       if (c.latency > 0 && this.nearestVisitor(x, y).d < COHABIT.CAT_NEAR) continue;
       c.walker.pushTarget({ x, y });
       c.state = 'walk';
@@ -3310,7 +3609,7 @@ export class CohabitSim {
         w.place(cl.unit.x, cl.unit.y);
         this.keepSupport(c);
         const at = cl.unit.i;
-        if (this.seats.some((q) => q.meet === at && this.people.some((v) => v.seated && v.seat === q.i))) this.catArrivals++;
+        if (this.people.some((v) => v.seated && v.seat !== null && this.guideTarget(this.seats[v.seat], 'meet') === at)) this.catArrivals++;
         return;
       }
       if (cl.wait <= cl.need + this.cat.waitMax && (ready || this.space === 'live')) return;
@@ -3347,8 +3646,8 @@ export class CohabitSim {
       let by = w.y;
       let bd = -1;
       for (let k = 0; k < 12; k++) {
-        const x = (this.rng() * 2 - 1) * half;
-        const y = (this.rng() * 2 - 1) * half;
+        const x = (this.rand() * 2 - 1) * half;
+        const y = (this.rand() * 2 - 1) * half;
         const d = this.nearestVisitor(x, y).d;
         if (d > bd) {
           bd = d;
@@ -3364,10 +3663,10 @@ export class CohabitSim {
       return;
     }
     if (att && c.latency <= 0 && c.state !== 'approach' && c.phaseTime >= 1) {
-      if (this.rng() < this.cat.approachP) {
+      if (this.rand() < this.cat.approachP) {
         const ang = Math.atan2(att.walker.y - w.y, att.walker.x - w.x);
         // 一部分停在 passiveD（不接触），其余走到跟前；approachMid = 0 时不多抽随机数（旧口径逐位不变）
-        const stop = this.cat.approachMid > 0 && this.rng() < this.cat.approachMid ? this.cat.passiveD : PLAN.BODY_R + this.cat.bodyR;
+        const stop = this.cat.approachMid > 0 && this.rand() < this.cat.approachMid ? this.cat.passiveD : PLAN.BODY_R + this.cat.bodyR;
         const d = Math.hypot(att.walker.x - w.x, att.walker.y - w.y) - stop;
         w.pushTarget({ x: w.x + Math.cos(ang) * Math.max(0, d), y: w.y + Math.sin(ang) * Math.max(0, d) });
         c.state = 'approach';
@@ -3395,7 +3694,7 @@ export class CohabitSim {
     if (c.state === 'sit' && c.phaseTime >= this.cat.sit) {
       // catFloor · 「走 · 站 · 坐」 · 会动的单元：坐满了、空间为它递下来一台 ⇒ 按换格的几率跳上去（与台上的猫「优先走递过来的那台」同一条）
       const off = levels && this.space === 'live' ? this.offeredUp(c) : null;
-      if (off && this.upCands(c).includes(off) && this.rng() < this.cat.roamP) {
+      if (off && this.upCands(c).includes(off) && this.rand() < this.cat.roamP) {
         this.startClimb(c, off);
         return;
       }
@@ -3404,20 +3703,20 @@ export class CohabitSim {
     } else if ((c.state === 'lie' && c.phaseTime >= this.cat.lie) || (c.state !== 'lie' && c.state !== 'sit' && c.phaseTime >= this.cat.sit * 2)) {
       const roam = c.state === 'approach' ? this.cat.roamAfterApproach : this.cat.roamP;
       c.approaching = null;
-      if (this.rng() < roam) {
+      if (this.rand() < roam) {
         // catFloor：这次去处选在台上 ⇒ 递过来的那台优先，否则身边能上的台里挑一台（潜伏期里不挑离人 1 m 以内的）
         if (levels && this.levelUp(c)) {
           const cands = this.upCands(c).filter((u) => c.latency <= 0 || this.nearestVisitor(u.x, u.y).d >= COHABIT.CAT_NEAR);
           const off = this.offeredUp(c);
-          const pick = off && cands.includes(off) ? off : cands.length ? cands[Math.floor(this.rng() * cands.length)] : null;
+          const pick = off && cands.includes(off) ? off : cands.length ? cands[Math.floor(this.rand() * cands.length)] : null;
           if (pick) {
             this.startClimb(c, pick);
             return;
           }
         }
         for (let k = 0; k < 8; k++) {
-          const x = (this.rng() * 2 - 1) * half;
-          const y = (this.rng() * 2 - 1) * half;
+          const x = (this.rand() * 2 - 1) * half;
+          const y = (this.rand() * 2 - 1) * half;
           if (c.latency > 0 && this.nearestVisitor(x, y).d < COHABIT.CAT_NEAR) continue;
           w.pushTarget({ x, y });
           c.state = 'walk';
@@ -3450,9 +3749,14 @@ export class CohabitSim {
     }
     // 「走 · 站 · 坐」：坐着的人头顶那几台（平台伸进身体圈）不落、已经落下的也收回——两种让路方式都一样，
     // 不按「已经落下的不算」豁免：人坐下时头就在那儿，只收带也收不干净（芯还在）
+    this.overSeated.fill(0);
     for (const p of this.people) {
       if (!p.seated) continue;
-      for (const u of this.layout.units) if (this.overHead(u, p.walker.x, p.walker.y)) this.blocked[u.i] = 1;
+      for (const u of this.layout.units)
+        if (this.overHead(u, p.walker.x, p.walker.y)) {
+          this.blocked[u.i] = 1;
+          this.overSeated[u.i] = 1;
+        }
     }
     // 方台：猫要落脚 / 跳上去的那台会被护住、带收不了，它若会顶到旁边站着的人（台角正对交叉点），空间先不落——
     // 猫等不到会另选（Lab 2-12「等落点成形最多等多久，空间不给就另选」）。圆台没有这一条，旧口径不动
@@ -3515,9 +3819,11 @@ export class CohabitSim {
     }
     rising.sort((a, b) => inputs[b] - inputs[a]);
     this.heldR5.fill(0);
+    // exitDiff：只看加之前还有路的人（加之前就没路的人——如坐着、面前桌子已落成墙的——这一台加不加都一样，不拿他拦）
+    const had = this.exitDiff && rising.length ? this.exitsOf(this.wallScratch, planWall) : null;
     for (const u of rising) {
       this.wallScratch[u] = 1;
-      if (!this.exitOk(this.wallScratch, planWall)) {
+      if (!this.exitOk(this.wallScratch, planWall, had)) {
         this.wallScratch[u] = 0;
         this.act.degree[u] = COHABIT.WALL_AT - 1e-3;
         this.heldR5[u] = 1;
@@ -3543,16 +3849,25 @@ export class CohabitSim {
       if (s.table < 0) continue;
       users.push({ u: s.table, furn: s.furn });
       this.tableSeat += dt;
-      if (this.act.degree[s.table] >= COHABIT.WALL_AT && prev[s.table] === s.furn) this.tableReady += dt;
+      if (this.act.degree[s.table] >= COHABIT.WALL_AT && prev[s.table] >= 0 && this.sameTable(prev[s.table], s.furn)) this.tableReady += dt;
     }
     // 先给上一步就要着它的那件家具，再按先后给别的
     users.sort((a, b) => Number(prev[b.u] === b.furn) - Number(prev[a.u] === a.furn));
     for (const { u, furn } of users) {
       if (this.blocked[u]) continue;
-      if (this.tableBy[u] >= 0 && this.tableBy[u] !== furn) continue;
-      this.tableBy[u] = furn;
+      if (this.tableBy[u] >= 0) {
+        // 已经归了别的家具：同一种（桌高相同，如二人桌对坐的两把餐椅）就一起用，不同种不给
+        if (!this.sameTable(this.tableBy[u], furn)) continue;
+      } else this.tableBy[u] = furn;
       inputs[u] = Math.max(inputs[u], thr);
     }
+  }
+
+  /** 两件家具能不能共用一张桌子：桌高同一类（tableClass；cohabit-solid tableTopFor 按它定高） */
+  private sameTable(a: number, b: number): boolean {
+    if (a === b) return true;
+    const r = this.furn?.rects;
+    return !!r && !!r[a] && !!r[b] && tableClass(r[a].kind) === tableClass(r[b].kind);
   }
 
   /**
@@ -3565,6 +3880,17 @@ export class CohabitSim {
    * 落不落仍过 R5；走不走仍是猫的事（它优先走递过来的那台，见 offeredNext）。
    */
   private lastDt = 0;
+
+  /**
+   * 引导引向哪台：retarget 关着 = 座位固定的 meet / side（旧口径）；开着 = 候选里第一台此刻不盖任何坐着的人头顶的
+   * （overSeated，stepSpace 每步现算），一台都没有 = −1。HUD 与平面画法的「座位前方那台」也读它。
+   */
+  guideTarget(seat: Seat, kind: 'meet' | 'side'): number {
+    if (!this.retarget) return kind === 'meet' ? seat.meet : seat.side;
+    for (const u of kind === 'meet' ? seat.meets : seat.sides) if (!this.overSeated[u]) return u;
+    return -1;
+  }
+
   private guideStep(inputs: Float64Array, thr: number): void {
     const S = COHABIT.SEATS;
     const taken = new Set<number>();
@@ -3592,10 +3918,12 @@ export class CohabitSim {
       const seat = this.seats[p.seat];
       // 引到哪台（COHABIT.GUIDE）：座位前方 / 座位旁边 / 先到前方那台、看着满 sideAfter 秒再到旁边那台
       const g = this.guide;
-      const near = this.cats.find((c) => c.unit && c.unit.i === seat.meet && p.watching === c.id);
+      const front = this.guideTarget(seat, 'meet');
+      const near = front >= 0 && this.cats.find((c) => c.unit && c.unit.i === front && p.watching === c.id);
       // 满了 sideAfter 就一直引向座位旁边那台（直到起身），否则猫一挪开又被引回座位前方那台、来回打转
       p.meetHeld = near || p.meetHeld >= g.sideAfter ? p.meetHeld + this.lastDt : 0;
-      const meet = g.target === 'side' || (g.target === 'meetThenSide' && p.meetHeld >= g.sideAfter) ? seat.side : seat.meet;
+      const meet = g.target === 'side' || (g.target === 'meetThenSide' && p.meetHeld >= g.sideAfter) ? this.guideTarget(seat, 'side') : front;
+      if (meet < 0) continue; // retarget：前方 / 旁边一台都落不下来——这次不引，不占着猫
       let best: { c: Cat; path: number[] } | null = null;
       for (const c of this.cats) {
         if (!free(c)) continue;
@@ -3689,6 +4017,8 @@ export class CohabitSim {
             }
             if (st.active[kind]) {
               this.ledger.seconds[kind] += dt;
+              if (p.seated && kind === 'warmth') this.seatedWarmth += dt;
+              else if (p.seated && kind === 'touch') this.seatedTouch += dt;
               this.links.push({ x1: w.x, y1: w.y, x2: c.walker.x, y2: c.walker.y, kind });
             }
           } else {
@@ -3748,6 +4078,8 @@ export class CohabitSim {
       seated,
       seatedTime,
       catArrivals: this.catArrivals,
+      seatedWarmth: this.seatedWarmth,
+      seatedTouch: this.seatedTouch,
       guides: this.guides.length,
       parties: new Set(this.people.map((p) => p.party)).size,
       walkTime: this.walkTime,
@@ -3782,6 +4114,9 @@ export interface CohabitSummary {
   seated: number;
   seatedTime: number;
   catArrivals: number;
+  /** 共温 / 共触秒数里人坐着的那部分（人·猫·秒） */
+  seatedWarmth: number;
+  seatedTouch: number;
   guides: number;
   /** social：几组人 · 访客走着的人·秒 · 两个站着 / 走着的人身体中心离得最近的那一刻（m；social 关着时恒 ∞） */
   parties: number;
@@ -3846,4 +4181,34 @@ export function populateCohabit(sim: CohabitSim, nP: number, nC: number): void {
     else sim.addPerson(x, y);
   }
   for (let i = 0; i < nC; i++) sim.addCat(sim.layout.units[(i * 5) % sim.layout.units.length]);
+}
+
+/**
+ * 标准场景（2026-11-08 起 6 人 4 猫，`SCENE`）的猫怎么放：按种子在单元里挑 nC 台，彼此离开 ≥ 2 个格距（挑不出就
+ * 放宽到 1 个格距、再不行不限）。populateCohabit 把猫固定放在第 0、5、10… 台——房间上部那一两排——猫一多、
+ * 场次一短，读数就带着出发点的偏差（2026-11-08 量过：6 人 2 猫 300 s，固定出发点下新旧家具布置差 25%，随机
+ * 出发点下差 13%）。populateCohabit 不动：案例页对照图（cohabit-compare.data.json）按它跑。
+ */
+export function scatterCats(sim: CohabitSim, nC: number, seed: number): void {
+  let s = (seed * 2654435761) >>> 0 || 1;
+  const rnd = () => {
+    s = (Math.imul(s, 1103515245) + 12345) >>> 0;
+    return s / 4294967296;
+  };
+  const units = sim.layout.units.slice();
+  for (let i = units.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [units[i], units[j]] = [units[j], units[i]];
+  }
+  const pitch = sim.layout.pitchM;
+  for (const gap of [2 * pitch - 1e-6, pitch - 1e-6, 0]) {
+    const picked: PlanUnit[] = [];
+    for (const u of units) {
+      if (picked.length >= nC) break;
+      if (picked.every((q) => Math.hypot(q.x - u.x, q.y - u.y) >= gap)) picked.push(u);
+    }
+    if (picked.length < nC && gap > 0) continue;
+    for (const u of picked) sim.addCat(u);
+    return;
+  }
 }

@@ -58,7 +58,7 @@ import { bandTriIndex, bandVerts } from '../linkage/skin';
 import type { Vec3 } from '../linkage/solver3d';
 import { MM_PER_UNIT, RIG_ANCHOR_Y, RIG_SCALE, RING_GRID_FIT, RING_GRID_PIVOT_Y, ROOM, roomBoxesBySpan, viewFitBySpan, type RingGridView } from './skin-grid';
 import type { PlanLayout } from './unit-activation';
-import { COHABIT, SQUARE_SCALE, bandAngle, platformClear, type FurnRect } from './cohabit';
+import { COHABIT, SQUARE_SCALE, bandAngle, platformClear, type FurnBox, type FurnRect } from './cohabit';
 import type { CatPose, CatTail, SeatSpec } from './figure';
 
 /** 一米 = 多少世界单位（由「人 = 1.70 m = 215 单位」定） */
@@ -108,8 +108,8 @@ export const HOIST = {
   ceilGap: 2,
 } as const;
 
-/** 演示的场面：六位访客两只猫 = 对照研究的中档（案例页对照图的三档之一） */
-export const SCENE = { people: 6, cats: 2, seed: 11 } as const;
+/** 演示的场面 = 标准场景：六位访客四只猫（作者 2026-11-08；此前 6 人 2 猫 = 案例页对照图的中档）。猫按种子散放（scatterCats） */
+export const SCENE = { people: 6, cats: 4, seed: 11 } as const;
 
 export interface BandTrajectory {
   n: number;
@@ -517,7 +517,7 @@ export function shelterToward(
   l: Pick<PlanLayout, 'platR'>,
   u: { x: number; y: number },
   seated: readonly { x: number; y: number }[],
-  rects: readonly Pick<FurnRect, 'x0' | 'x1' | 'y0' | 'y1' | 'kind' | 'ergo'>[],
+  rects: readonly (FurnBox & Pick<FurnRect, 'kind' | 'ergo'>)[],
   far: number = COHABIT.BAND.far,
 ): number | null {
   let best: { x: number; y: number } | null = null;
@@ -538,7 +538,7 @@ export function shelterToward(
 export function shelterClear(
   l: Pick<PlanLayout, 'platR'>,
   u: { x: number; y: number },
-  rects: readonly Pick<FurnRect, 'x0' | 'x1' | 'y0' | 'y1' | 'kind' | 'ergo'>[],
+  rects: readonly (FurnBox & Pick<FurnRect, 'kind' | 'ergo'>)[],
 ): boolean {
   return platformClear(
     l,
@@ -593,7 +593,7 @@ export function unitFormPlan(o: {
   at: { x: number; y: number };
   /** 正坐着的人的座位点 */
   seated: readonly { x: number; y: number }[];
-  rects: readonly Pick<FurnRect, 'x0' | 'x1' | 'y0' | 'y1' | 'kind' | 'ergo'>[];
+  rects: readonly (FurnBox & Pick<FurnRect, 'kind' | 'ergo'>)[];
   /** 这台是某个座位的桌子那台 */
   tableUnit: boolean;
   count?: number;
@@ -758,6 +758,37 @@ export interface BandPaths {
   /** 正向路第 i 格在回程路上形状最近的那一格；toFwd 反之 */
   toRet: Int16Array;
   toFwd: Int16Array;
+}
+
+/**
+ * 把一条带的台面整体抬高 d（引擎单位，向上为正；2026-11-09 小样的续坡与「先低后高」，项目二_小样方案.md §3）。
+ * 不另解物理：形态方案 §2.1 量过，配平偏移就是纯平移（形状差 ≤ 0.005 px），所以抬高 = 结构及其以上的节点一起上移 d，
+ * 结构下面那截布（尾段，贴着芯）从结构底拉到钉住端，成一截贴芯的直布；钉住端不动，带顶多出来的那截照旧卷进上夹环
+ * （pickUnitBands 取同一台里最低的带顶当夹环，抬高过的带顶在它上面）。
+ * 抬多少随这一帧成形到几成：正向帧按走到协议的几成、回程倒过来、升降与过渡帧不抬、让路帧全抬（让路从成形态开始）。
+ * 台面基准（platformTopY）不变：一台里总有一条不抬的带，整台按它落位。
+ */
+export function liftTrajectory(traj: BandTrajectory, d: number, frames: FrameCounts = FRAMES): BandTrajectory {
+  if (d === 0) return traj;
+  const n = traj.n;
+  const tail = Math.min(n - 2, traj.mid + traj.midHalf);
+  const doorBase = frames.form + frames.retract + frames.hoist + (frames.bridge ?? 0);
+  const weight = (k: number): number => {
+    if (k < frames.form) return Math.min(1, k / Math.max(1, traj.formActive));
+    if (k < frames.form + frames.retract) return 1 - Math.min(1, (k - frames.form) / Math.max(1, traj.retractActive));
+    return k >= doorBase ? 1 : 0;
+  };
+  const out = traj.frames.map((f, k) => {
+    const w = weight(k);
+    if (w <= 0) return f;
+    const g = Float64Array.from(f);
+    const dd = d * w;
+    for (let i = 0; i < tail; i++) g[n + i] += dd;
+    // 尾段：结构底那一节跟着抬 dd，到钉住端渐变到 0（贴芯的直布被拉长）
+    for (let i = tail; i < n; i++) g[n + i] += (dd * (n - 1 - i)) / (n - 1 - tail);
+    return g;
+  });
+  return { ...traj, frames: out };
 }
 
 export function bandPaths(traj: BandTrajectory, frames: FrameCounts = FRAMES): BandPaths {
@@ -1388,6 +1419,8 @@ export function bandTopology(n: number): SolidTopology {
 export interface Box {
   cx: number; cy: number; cz: number;
   hx: number; hy: number; hz: number;
+  /** 绕竖轴转（斜放的家具）：块自身的 (lx, lz) → 世界 (cx + lx·c + lz·s, cz − lx·s + lz·c)。省略 = 轴对齐 */
+  rot?: { c: number; s: number };
 }
 
 /** 家具（米 → 世界）：座面一块（离地 0.45 m、厚 0.08）+ 靠背一块（在人背后那条边上，高 0.85 m、厚 0.1） */
@@ -1408,12 +1441,22 @@ export const FURN_ERGO = {
 /** 家具最高处离地（米）：人体工学那套按 FURN_ERGO 的靠背高，旧那套按 FURN.backH */
 export function furnitureTop(r: Pick<FurnRect, 'kind' | 'ergo'>): number {
   if (!r.ergo) return FURN.backH;
-  return r.kind === 'sofa' ? FURN_ERGO.sofa.backH : FURN_ERGO.chair.backH;
+  return r.kind === 'chair' ? FURN_ERGO.chair.backH : FURN_ERGO.sofa.backH;
 }
 
 /** 家具的一块：局部坐标（u 沿宽、v 沿进深从靠背边量起、z 离地高，米）→ 世界盒 */
 function furnBlock(r: FurnRect, u0: number, u1: number, v0: number, v1: number, z0: number, z1: number, unit: number): Box {
   const [fx, fy] = r.face;
+  if (r.tilted) {
+    // 斜放：块在家具自身坐标系里摆（u 沿宽、v 沿进深），再整体绕竖轴转到朝向上。块自身 x 轴 = −t、z 轴 = 朝向（行列式 +1，三角形绕序不翻）
+    const w = 2 * r.hu!;
+    const d = 2 * r.hv!;
+    const uc = (u0 + u1) / 2 - w / 2;
+    const vc = (v0 + v1) / 2 - d / 2;
+    const cx = r.cx - fy * uc + fx * vc;
+    const cy = r.cy + fx * uc + fy * vc;
+    return { cx: cx * unit, cy: ROOM.FLOOR_Y - ((z0 + z1) / 2) * unit, cz: cy * unit, hx: ((u1 - u0) / 2) * unit, hy: ((z1 - z0) / 2) * unit, hz: ((v1 - v0) / 2) * unit, rot: { c: fy, s: fx } };
+  }
   const facesY = Math.abs(fy) > Math.abs(fx);
   const w = facesY ? r.x1 - r.x0 : r.y1 - r.y0;
   const d = facesY ? r.y1 - r.y0 : r.x1 - r.x0;
@@ -1432,9 +1475,10 @@ function furnBlock(r: FurnRect, u0: number, u1: number, v0: number, v1: number, 
 function ergoBoxes(r: FurnRect, unit: number): Box[] {
   const [fx, fy] = r.face;
   const facesY = Math.abs(fy) > Math.abs(fx);
-  const w = facesY ? r.x1 - r.x0 : r.y1 - r.y0;
-  const d = facesY ? r.y1 - r.y0 : r.x1 - r.x0;
-  if (r.kind === 'sofa') {
+  const w = r.tilted ? 2 * r.hu! : facesY ? r.x1 - r.x0 : r.y1 - r.y0;
+  const d = r.tilted ? 2 * r.hv! : facesY ? r.y1 - r.y0 : r.x1 - r.x0;
+  if (r.kind !== 'chair') {
+    // 双人沙发与单人沙发同一副做法（单人沙发只是窄：0.80 宽，扶手之间 0.56）
     const S = FURN_ERGO.sofa;
     const base = S.seatH - S.cushionT;
     return [
@@ -1464,6 +1508,14 @@ export function furnitureBoxes(rects: readonly FurnRect[], unit: number = UNITS_
       out.push(...ergoBoxes(r, unit));
       continue;
     }
+    if (r.tilted) {
+      // 旧那套家具斜放（台架上转了朝向）：座面一块 + 靠背一块，按自身坐标系摆再转
+      const w = 2 * r.hu!;
+      const d = 2 * r.hv!;
+      out.push(furnBlock(r, 0, w, 0, d, FURN.seatH - FURN.seatT, FURN.seatH, unit));
+      out.push(furnBlock(r, 0, w, 0, FURN.backT, 0, FURN.backH, unit));
+      continue;
+    }
     const w = r.x1 - r.x0;
     const d = r.y1 - r.y0;
     const seatTop = ROOM.FLOOR_Y - FURN.seatH * unit;
@@ -1489,17 +1541,17 @@ export function figureYaw(heading: number): number {
  * 座面（米，相对座位点沿坐着的人的朝向量）：给 figure 的坐姿用——小人按它解出腿怎么放，保证小腿让开座面前缘、
  * 臀贴座面、背不进靠背。座位点 = 平面模型的 seat.x/y（坐下时人就摆在这里）。
  */
-export function seatSpecOf(r: Pick<FurnRect, 'kind' | 'ergo' | 'cx' | 'cy' | 'x0' | 'x1' | 'y0' | 'y1' | 'face'>, seat: { x: number; y: number }): SeatSpec {
+export function seatSpecOf(r: Pick<FurnRect, 'kind' | 'ergo' | 'cx' | 'cy' | 'x0' | 'x1' | 'y0' | 'y1' | 'face' | 'tilted' | 'hv'>, seat: { x: number; y: number }): SeatSpec {
   const [fx, fy] = r.face;
-  const depth = Math.abs(fy) > Math.abs(fx) ? r.y1 - r.y0 : r.x1 - r.x0;
+  const depth = r.tilted ? 2 * r.hv! : Math.abs(fy) > Math.abs(fx) ? r.y1 - r.y0 : r.x1 - r.x0;
   const along = (seat.x - r.cx) * fx + (seat.y - r.cy) * fy; // 座位点在家具中心前方多少
   if (r.ergo) {
-    const e = r.kind === 'sofa' ? FURN_ERGO.sofa : FURN_ERGO.chair;
+    const e = r.kind === 'chair' ? FURN_ERGO.chair : FURN_ERGO.sofa;
     return {
       top: e.seatH,
       front: depth / 2 - along,
       back: along - (-depth / 2 + e.backT),
-      thick: r.kind === 'sofa' ? FURN_ERGO.sofa.cushionT : FURN_ERGO.chair.seatT,
+      thick: r.kind === 'chair' ? FURN_ERGO.chair.seatT : FURN_ERGO.sofa.cushionT,
       backTop: e.backH,
     };
   }
@@ -1552,7 +1604,7 @@ export interface CatPlace {
 }
 
 /** 台上的猫坐在环上什么方位：离「它要看的方向」绕回 55°，身子顺着环、头再转过去看（不必扭满 90°） */
-const RING_SIDE = (55 * Math.PI) / 180;
+export const RING_SIDE = (55 * Math.PI) / 180;
 
 /**
  * 猫站在哪、怎么摆（2026-10-25 人与猫重做时取代 catSpot）。平面模型把猫当一个点：坐着时在单元中心（芯心），
@@ -1617,7 +1669,19 @@ export const COHABIT_PIVOT = { x: 0, y: RING_GRID_PIVOT_Y, z: 0 } as const;
 
 /** 几块长方体拼成一份网格（房间 / 家具 / 立杆：静件，烘一次） */
 export function boxesMesh(boxes: readonly Box[]): { verts: Float32Array; idx: Uint32Array } {
-  const parts = boxes.map((b) => boxVerts(b.cx, b.cy, b.cz, b.hx, b.hy, b.hz));
+  const parts = boxes.map((b) => {
+    if (!b.rot) return boxVerts(b.cx, b.cy, b.cz, b.hx, b.hy, b.hz);
+    // 绕竖轴转：先在原点烘，再按 rot 转、平移到中心
+    const m = boxVerts(0, b.cy, 0, b.hx, b.hy, b.hz);
+    const { c, s } = b.rot;
+    for (let k = 0; k < m.verts.length; k += 3) {
+      const lx = m.verts[k];
+      const lz = m.verts[k + 2];
+      m.verts[k] = b.cx + lx * c + lz * s;
+      m.verts[k + 2] = b.cz - lx * s + lz * c;
+    }
+    return m;
+  });
   return concatMeshes(parts);
 }
 

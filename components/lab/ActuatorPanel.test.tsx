@@ -18,7 +18,14 @@ const count = (html: string, cls: string) => html.split(`class="${cls}"`).length
 describe('Lab 1-6 实时输出面板', () => {
   it('/lab 上只有 Lab 1-6 挂面板，每个通道一行', () => {
     preference.lang = 'en';
-    const html = renderToStaticMarkup(createElement(LabPage));
+    // /lab 一次只展开一台（LabWorkspace）；这条要查所有台架里只有 1-6 挂面板，让它们全部展开
+    (globalThis as { __labOpenAll?: boolean }).__labOpenAll = true;
+    let html: string;
+    try {
+      html = renderToStaticMarkup(createElement(LabPage));
+    } finally {
+      (globalThis as { __labOpenAll?: boolean }).__labOpenAll = false;
+    }
     expect(count(html, 'mb-out')).toBe(1);
     expect(count(html, 'mb-out__row')).toBe(READOUT_CHANNELS.length);
     const at = html.indexOf('class="mb-out"');

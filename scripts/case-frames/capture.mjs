@@ -14,9 +14,11 @@ import sharp from 'sharp';
 import { openBrowser } from './cdp.mjs';
 
 const BASE = process.env.BASE ?? 'http://localhost:3100';
+/** 首页项目二封面截在仿真第几秒（home-cover；挑图过程见那一组的注释） */
+const COVER_T_DEF = 130;
 // 组 → 项目（图放在哪个目录）；没列的是项目二
 const PROJECT_OF = { 'form-views': 'reincarnation-machine', breath: 'reincarnation-machine', hand: 'reincarnation-machine', startle: 'reincarnation-machine' };
-const outDir = (set) => `public/work/${PROJECT_OF[set] ?? 'project-ii'}/frames`;
+const outDir = (set) => `public/work/${PROJECT_OF[set] ?? 'letting-agent'}/frames`;
 // HUD 与 Lab 1-6 的逐轴标号（M1–M7）一律藏起；手的标记圈（.lab-hand）留着，它是画面的一部分
 const HIDE_HUD = `.lab-hud,.actuator-markers{visibility:hidden!important}`;
 
@@ -299,10 +301,12 @@ const SETS = {
     }
   },
   // FIG.02 · Lab 2-14 默认场景（1 位访客 1 只猫，「走 · 站 · 坐」规则，8×8 方台铺满）：坐下后猫被一步一步引过来。
-  // 仿真按帧推（每帧 50 ms），从挂载起就用同一个步长，所以每次截到同一场
+  // 仿真按帧推（每帧 50 ms），从挂载起就用同一个步长，所以每次截到同一场。2026-11-08 按规则审阅后的规则重截（§14.30）：
+  // 69.9 s 坐下（餐椅，桌子 = 单元 36）→ 猫走了三步后两次下地 → 280.8 s 回到台上 → 287.5 s 到座位前方那台（44）→ 289 s 上桌子（36）。
+  // 这些时刻用 Node 按台架同一配置直跑核过
   'plan-sit': async (b) => {
     const sel = await openBench(b, '2-14');
-    for (const t of [0, 16, 60, 160, 200, 220, 240, 270]) {
+    for (const t of [0, 71, 100, 160, 175, 283, 288, 300]) {
       await advanceTo(b, () => readTime(b, sel), t, { frames: 10, dt: 50 });
       await save('plan-sit', `t${String(t).padStart(3, '0')}`, await b.shot(`${sel}.querySelector('.lab-fig')`), {
         crop: [0.08, 0.14, 0.92, 0.7],
@@ -310,27 +314,30 @@ const SETS = {
       });
     }
   },
-  // FIG.09 · Lab 2-15 前排沙发：两人 11.1 s 坐下、140.3 s 起身，面前那台（单元 45）落下当茶几再收回。
-  // 仿真每帧固定 50 ms（MAX_SIM_DT），所以按帧数算时刻；这两个时刻用 Node 直跑同一配置（同一种子、同一步长）核过
+  // FIG.09 · Lab 2-15 左边那张双人沙发（家具 9）：同组两人 8.85 s 坐下、1220.35 s 起身，面前那台（单元 42）落下当茶几再收回。
+  // 仿真每帧固定 50 ms（MAX_SIM_DT），所以按帧数算时刻；这两个时刻用 Node 直跑同一配置（同一种子、同一步长）核过。
+  // 2026-11-08 重截（§14.30）：一坐 10–30 分钟，起身要到 20 分钟后；此前是前排沙发 11.1 s / 140.3 s、单元 45
   'room-cycle': async (b) => {
     const sel = await openBench(b, '2-15');
     await waitBake(b, sel);
-    await zoomTo(b, sel, 262, 335, 3, 0.001);
+    await zoomTo(b, sel, 155, 330, 3, 0.001);
     const clock = simClock(b);
-    for (const T of [11, 11.45, 11.9, 12.5, 140.8, 142.6]) {
+    for (const T of [8.75, 9.2, 9.65, 10.25, 1220.85, 1222.65]) {
       const t = await clock.to(T);
       await save('room-cycle', `t${t.toFixed(2).replace('.', '_').padStart(6, '0')}`, await b.shot(`${sel}.querySelector('canvas')`), { thumb: 480 });
     }
   },
-  // FIG.10 · Lab 2-15 侧视剖面：t = 100 s，沙发前的茶几高度与猫待的台面高度落在同一张剖面上
+  // FIG.10 · Lab 2-15 正视剖面：t = 100 s，沙发前的茶几高度与猫待的台面高度落在同一张剖面上。
+  // 2026-11-08 由侧视改正视：20 座布置下三张茶几在侧视里都被沙发靠背挡住（§14.30）
   'two-uses': async (b) => {
-    const sel = await openBench(b, '2-15', '2-15', ['Side']);
+    const sel = await openBench(b, '2-15', '2-15', ['Front']);
     await waitBake(b, sel);
     const t = await simClock(b).to(100);
-    await save('two-uses', `t${Math.round(t)}-side`, await b.shot(`${sel}.querySelector('.lab-fig')`), { crop: [0.03, 0.27, 0.97, 0.67], thumb: 1008 });
+    await save('two-uses', `t${Math.round(t)}-front`, await b.shot(`${sel}.querySelector('.lab-fig')`), { crop: [0.03, 0.27, 0.97, 0.67], thumb: 1008 });
   },
-  // 首页项目二卡片封面（MAPPING §76，不进案例页）：Lab 2-15 默认场景，拉近两档，仿真 100 s（两张沙发上有人坐着、面前那台
-  // 落成桌子，右边一只猫在落成的台上；2026-10-30 在 40–280 s 里每 30 s 截一张挑的）。卡片图层比卡宽 20%（视差用），两侧各裁掉
+  // 首页项目二卡片封面（MAPPING §76，不进案例页）：Lab 2-15 默认场景，拉近两档。2026-11-08 第二次重截（规则审阅后，§14.30）：
+  // 在 130 / 200 / 260 / 350 s 四张里挑了 130 s（三组人坐着、面前的桌子落下，一只三花猫站在房间中间一排落下的台上）。
+  // 同日早些时候按 6 人 4 猫、一坐 10–30 分钟、20 座布置截的是 200 s；再此前是 100 s（2026-10-30 在 40–280 s 里每 30 s 截一张挑的）。卡片图层比卡宽 20%（视差用），两侧各裁掉
   // 约 8%，所以主体要收在中间。取画布底部 3:2 那块（顶上是一片收着的单元，裁掉；底下坐着的人留全），存 1200 × 800 webp
   'home-cover': async (b) => {
     const sel = await openBench(b, '2-15');
@@ -340,13 +347,19 @@ const SETS = {
       await b.frames(1, 0.001);
     }
     await b.frames(20, 0.001);
-    await simClock(b).to(Number(process.env.COVER_T ?? 100));
-    const png = await b.shot(`${sel}.querySelector('canvas')`);
-    const m = await sharp(png).metadata();
-    const h = Math.round(m.width / 1.5);
-    const top = Math.round((m.height - h) * Number(process.env.COVER_Y ?? 1));
-    await sharp(png).extract({ left: 0, top, width: m.width, height: h }).resize({ width: 1200, height: 800 }).webp({ quality: 84 }).toFile('public/home/cover-project-ii.webp');
-    console.log(`  home/cover-project-ii.webp  1200×800（画布 ${m.width}×${m.height}，上沿 ${top}）`);
+    // COVER_T 可给逗号分隔的几个时刻（挑图用）：几张都写进 COVER_OUT 目录，不动 public/home
+    const times = String(process.env.COVER_T ?? COVER_T_DEF).split(',').map(Number);
+    const clock = simClock(b);
+    for (const T of times) {
+      await clock.to(T);
+      const png = await b.shot(`${sel}.querySelector('canvas')`);
+      const m = await sharp(png).metadata();
+      const h = Math.round(m.width / 1.5);
+      const top = Math.round((m.height - h) * Number(process.env.COVER_Y ?? 1));
+      const file = times.length > 1 ? join(process.env.COVER_OUT ?? '.', `cover-t${T}.webp`) : 'public/home/cover-letting-agent.webp';
+      await sharp(png).extract({ left: 0, top, width: m.width, height: h }).resize({ width: 1200, height: 800 }).webp({ quality: 84 }).toFile(file);
+      console.log(`  ${file}  1200×800（画布 ${m.width}×${m.height}，上沿 ${top}）`);
+    }
   },
   // ─── 项目一 ───
   // N04 · Lab 1-5 停在全开（中间轴 0°），四个固定视角：外形三视 + 轴测。按内容自动取景（四个视角里机身落在画框不同位置）

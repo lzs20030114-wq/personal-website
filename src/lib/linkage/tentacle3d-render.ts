@@ -2,6 +2,7 @@ import { bakeIndexed, bakeSkinned, type CellFrame } from './gl3d';
 import type { Vec3 } from './solver3d';
 import { GUIDE3, ROOTB3, SPINE3, TENTACLE3D } from './tentacle3d-data';
 import { MESH_GROUPS } from './tentacle3d-shape';
+import { fetchMeshBuffer, forgetMeshBuffer, MESH_URL } from './mesh-fetch';
 
 /** 当前帧的局部刚架；原点引用活体节点，只在本次绘制中复用。 */
 export function tentacleCellFrame(nodes: ReadonlyArray<Readonly<Vec3>>, i: number): CellFrame {
@@ -40,14 +41,14 @@ interface TentacleMesh {
 
 let meshPromise: Promise<readonly TentacleMesh[]> | undefined;
 
+/** 触手真实扫描网格（prebuild 由 scripts/copy-assets.mjs 复制，另有 .gz 版） */
+export const TENTACLE_MESH_URL = MESH_URL.tentacle;
+
 /** 固定资产与烘焙规则随本模块版本更新；并发挂载只下载/烘焙一次，失败不缓存。 */
 export function loadTentacleMeshes(): Promise<readonly TentacleMesh[]> {
   if (!meshPromise) {
-    meshPromise = fetch('/mesh/tentacle3d-mesh.bin')
-      .then((response) => {
-        if (!response.ok) throw new Error(`3D mesh 请求失败（HTTP ${response.status}）`);
-        return response.arrayBuffer();
-      })
+    // 下载走共享缓存（先拉 gzip 版；首页空闲时可能已经预载过，MAPPING §87）
+    meshPromise = fetchMeshBuffer(TENTACLE_MESH_URL)
       .then((buf) => {
         const need = Math.max(...MESH_GROUPS.flatMap((g) => [
           g.vOff + g.verts * 3 * Float32Array.BYTES_PER_ELEMENT,
@@ -68,6 +69,7 @@ export function loadTentacleMeshes(): Promise<readonly TentacleMesh[]> {
       })
       .catch((error: unknown) => {
         meshPromise = undefined;
+        forgetMeshBuffer(TENTACLE_MESH_URL); // 截断的下载不留在共享缓存里，下一次重新下载
         throw error;
       });
   }

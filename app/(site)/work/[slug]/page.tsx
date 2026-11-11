@@ -184,7 +184,7 @@ const SLOT_COPY: Record<string, { lab?: string; en: SlotCopy; zh: SlotCopy }> = 
       heroCap: 'Lab 1-5 整机活件，在浏览器里实时运行',
     },
   },
-  'project-ii': {
+  'letting-agent': {
     lab: '2-15',
     en: {
       video: 'Simulation video, the cat café scenario',
@@ -208,11 +208,6 @@ const SLOT_COPY: Record<string, { lab?: string; en: SlotCopy; zh: SlotCopy }> = 
 const SLOT_COPY_FALLBACK: { lab?: string; en: SlotCopy; zh: SlotCopy } = {
   en: { video: 'Project video — to be supplied', heroLabel: 'hero image · to be supplied', heroDesc: 'Hero image' },
   zh: { video: '项目视频——待供', heroLabel: '主图 · 待供图', heroDesc: '主图' },
-};
-
-/** 「下一个案例」卡上的名字：项目 II 尚未定名，沿用主页卡片的描述名（home-model.ts 里同一处覆写，定名后一并删）。 */
-const NEXT_TITLE: Record<string, { en: string; zh: string }> = {
-  'project-ii': { en: 'Cross-species space', zh: '跨物种空间' },
 };
 
 /** 首屏元数据条（稿 dl）：我的角色 / 工具 / 时间 / 状态；状态一列只有写了 progress 的项目才有。 */
@@ -299,7 +294,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
   // 先判断筹备页，再载入本项目的构件；动态客户端边界位于各项目的 *-dynamic.tsx。
   const project = slug === 'reincarnation-machine'
     ? await import('../../../../components/site/case/machine-components')
-    : slug === 'project-ii'
+    : slug === 'letting-agent'
       ? await import('../../../../components/site/case/space-components')
       : null;
   const Hero = project?.CaseHero;
@@ -309,14 +304,13 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
   // 主图暂用活台架顶替的项目（作者供图后删掉对应的一支即回占位块）：
   // 项目 01 = Lab 1-5 整机（与主页预览位同一件）· 项目 II = Lab 2-8 4×4 环阵列
   // （九台里只有它带真实尺度——房、人、十六片吊在天花下的平台）
-  const liveHero = slug === 'reincarnation-machine' || slug === 'project-ii';
+  const liveHero = slug === 'reincarnation-machine' || slug === 'letting-agent';
   const sc = SLOT_COPY[slug] ?? SLOT_COPY_FALLBACK;
   const heroId = (l: SlotLang) => sc[l].heroId ?? (l === 'zh' ? '图 01' : 'Fig. 01');
   const year = entry.date.slice(0, 4);
   const nextOrder = (entry.order ?? 0) + 1;
   const next = getRoutableWork().find((w) => w.order === nextOrder);
-  const nextTitle = (l: SlotLang) =>
-    next ? NEXT_TITLE[next.slug]?.[l] ?? (l === 'zh' ? next.zh?.title ?? next.title : next.title) : '';
+  const nextTitle = (l: SlotLang) => (next ? (l === 'zh' ? next.zh?.title ?? next.title : next.title) : '');
   const progress0 = (l: SlotLang) => (l === 'zh' ? entry.zh?.progress?.[0] : undefined) ?? entry.progress?.[0];
 
   const indexEn = [OPENING_TITLE.en, ...extractChapterTitles(entry.body)];

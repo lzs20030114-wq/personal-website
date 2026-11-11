@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DUAL, DUAL_STOWED, SHELTER, UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, dualUnitSpec, membraneIndexAt, shelterBands, shelterClear, shelterToward, unitFormPlan, UNIT_FORM_ODDS, BRIDGE_BASE, DOOR_BASE, DOOR_EPS, FRAMES, SHELL, bakeUnitShell, shellCoverVerts, shellGoreVerts, shellJoins, bandVertsAt, bakeBandKeys, bakeHanger, bakeUnitKeys, bakeUnitMech, FURN_ERGO, HOIST, STEADY, TABLE_TOP, bandTop, clipToReel, doorFrame, isDoorFrame, pickUnitBands, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_CUT, UNIT_ORDER, UNIT_SHAPE, UNIT_STORED, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
+import { DUAL, DUAL_STOWED, SHELTER, UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, dualUnitSpec, membraneIndexAt, shelterBands, shelterClear, shelterToward, unitFormPlan, UNIT_FORM_ODDS, BRIDGE_BASE, DOOR_BASE, DOOR_EPS, FRAMES, SHELL, bakeUnitShell, shellCoverVerts, shellGoreVerts, shellJoins, bandVertsAt, bakeBandKeys, boxesMesh, bakeHanger, bakeUnitKeys, bakeUnitMech, FURN_ERGO, HOIST, STEADY, TABLE_TOP, bandTop, clipToReel, doorFrame, isDoorFrame, pickUnitBands, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_CUT, UNIT_ORDER, UNIT_SHAPE, UNIT_STORED, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
 import type { BandTrajectory } from './cohabit-solid';
 import { planLayout } from './unit-activation';
 import { FIGURE, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
@@ -12,7 +12,7 @@ import { SKIN, createSkinUnit, renderSmooth } from './skin-unit';
 import { CAT_COATS, catMesh, figureMesh, styleKey as styleKeyOf, type HumanStyle } from './figure';
 import { OUTFITS } from '../../../components/lab/figurePalette';
 import { partBox } from './mesh-shell';
-import { COHABIT, CohabitSim, SQUARE_SCALE, bandAngle, squarePlanLayout, type FurnRect } from './cohabit';
+import { COHABIT, CohabitSim, SQUARE_SCALE, bandAngle, furnRect, rectDist, squarePlanLayout, type FurnRect } from './cohabit';
 
 /**
  * 守门：Lab 2-15 立体演示的几何胶水。它不解新物理，错法是尺度错、帧取错、外形错——都不报错，只看着「差不多」。
@@ -869,7 +869,7 @@ describe('单元铺满整间房（cover: room，2026-10-27 作者「单元兼作
     const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', space: 'live', seed: 1 });
     const furn = sim.furn!;
     const boxes = furnitureBoxes(furn.rects);
-    expect(sim.seats).toHaveLength(10);
+    expect(sim.seats).toHaveLength(20);
     for (const seat of sim.seats) {
       const sp = seatSpecOf(furn.rects[seat.furn], seat);
       expect(sp.front).toBeGreaterThan(0.34);
@@ -889,25 +889,52 @@ describe('人体工学那套家具（2026-10-27）', () => {
     const E = FURN_ERGO;
     expect(E.sofa.seatH).toBeGreaterThanOrEqual(0.37); // QB/T 1952.1 座前高 0.37–0.48
     expect(E.sofa.seatH).toBeLessThanOrEqual(0.48);
-    const sofaD = sofa.y1 - sofa.y0;
+    const depthOf = (r: typeof sofa) => (r.face[0] === 0 ? r.y1 - r.y0 : r.x1 - r.x0);
+    const widthOf = (r: typeof sofa) => (r.face[0] === 0 ? r.x1 - r.x0 : r.y1 - r.y0);
+    const sofaD = depthOf(sofa);
     expect(sofaD - E.sofa.backT).toBeGreaterThanOrEqual(0.48); // 座深 0.48–0.60
     expect(sofaD - E.sofa.backT).toBeLessThanOrEqual(0.6);
-    expect(sofa.x1 - sofa.x0 - 2 * E.sofa.armW).toBeGreaterThanOrEqual(0.96); // 双人座前宽 ≥ 0.96
+    expect(widthOf(sofa) - 2 * E.sofa.armW).toBeGreaterThanOrEqual(0.96); // 双人座前宽 ≥ 0.96
     expect(E.chair.seatH).toBeGreaterThanOrEqual(0.43); // 餐椅 0.43–0.46
     expect(E.chair.seatH).toBeLessThanOrEqual(0.46);
-    expect(chair.y1 - chair.y0 - E.chair.backT).toBeLessThan(0.5);
+    expect(depthOf(chair) - E.chair.backT).toBeLessThan(0.5);
   });
-  it('沙发五块、椅子六块（四腿 + 座板 + 靠背），都在家具占位里、离地不穿地', () => {
+  it('沙发、单人沙发五块，椅子六块（四腿 + 座板 + 靠背），都在家具占位里（斜放的按带朝向的占位量）、离地不穿地', () => {
+    expect(rects.some((r) => r.tilted)).toBe(true);
+    expect(rects.some((r) => r.kind === 'armchair')).toBe(true);
     for (const r of rects) {
       const bs = furnitureBoxes([r]);
-      expect(bs).toHaveLength(r.kind === 'sofa' ? 5 : 6);
+      expect(bs).toHaveLength(r.kind === 'chair' ? 6 : 5);
       for (const b of bs) {
-        expect((b.cx - b.hx) / UNITS_PER_M).toBeGreaterThanOrEqual(r.x0 - 1e-9);
-        expect((b.cx + b.hx) / UNITS_PER_M).toBeLessThanOrEqual(r.x1 + 1e-9);
-        expect((b.cz - b.hz) / UNITS_PER_M).toBeGreaterThanOrEqual(r.y0 - 1e-9);
-        expect((b.cz + b.hz) / UNITS_PER_M).toBeLessThanOrEqual(r.y1 + 1e-9);
         expect(b.cy + b.hy).toBeLessThanOrEqual(ROOM.FLOOR_Y + 1e-9);
+        // 块在平面上的四个角都落在家具占位里
+        const c = b.rot?.c ?? 1;
+        const s = b.rot?.s ?? 0;
+        for (const [lx, lz] of [[-b.hx, -b.hz], [b.hx, -b.hz], [b.hx, b.hz], [-b.hx, b.hz]]) {
+          const x = (b.cx + lx * c + lz * s) / UNITS_PER_M;
+          const z = (b.cz - lx * s + lz * c) / UNITS_PER_M;
+          expect(rectDist(r, x, z), `${r.kind} 块角 (${x.toFixed(3)}, ${z.toFixed(3)})`).toBeLessThan(1e-9);
+        }
       }
+    }
+  });
+  it('斜放：45° 的单人沙发，块拼出来的外形与正放的那件转过去逐点相同（只差一个绕竖轴的转动）', () => {
+    const a = furnRect({ kind: 'armchair', x: 0.3, y: -0.4, face: [0, 1], ergo: true });
+    const b = furnRect({ kind: 'armchair', x: 0.3, y: -0.4, face: [Math.SQRT1_2, Math.SQRT1_2], ergo: true });
+    expect(b.tilted).toBe(true);
+    const ma = boxesMesh(furnitureBoxes([a]));
+    const mb = boxesMesh(furnitureBoxes([b]));
+    expect(mb.verts.length).toBe(ma.verts.length);
+    // 正放 (0,1) → 斜放 (√½, √½)：平面上绕家具中心转 −45°（y 向下的平面里逆时针）
+    const th = -Math.PI / 4;
+    const cx = 0.3 * UNITS_PER_M;
+    const cz = -0.4 * UNITS_PER_M;
+    for (let k = 0; k < ma.verts.length; k += 3) {
+      const dx = ma.verts[k] - cx;
+      const dz = ma.verts[k + 2] - cz;
+      expect(mb.verts[k]).toBeCloseTo(cx + dx * Math.cos(th) - dz * Math.sin(th), 3); // 网格是 Float32
+      expect(mb.verts[k + 1]).toBeCloseTo(ma.verts[k + 1], 3);
+      expect(mb.verts[k + 2]).toBeCloseTo(cz + dx * Math.sin(th) + dz * Math.cos(th), 3);
     }
   });
 });
@@ -944,7 +971,12 @@ describe('坐着的人与家具', () => {
           for (let k = 0; k < m.verts.length; k += 3) {
             const [x, y, z] = [m.verts[k], m.verts[k + 1], m.verts[k + 2]];
             for (const b of boxes) {
-              const inside = Math.abs(x - b.cx) < b.hx - tol && Math.abs(y - b.cy) < b.hy - tol && Math.abs(z - b.cz) < b.hz - tol;
+              // 斜放的块先转回块自身坐标系再比
+              const c = b.rot?.c ?? 1;
+              const sn = b.rot?.s ?? 0;
+              const lx = (x - b.cx) * c - (z - b.cz) * sn;
+              const lz = (x - b.cx) * sn + (z - b.cz) * c;
+              const inside = Math.abs(lx) < b.hx - tol && Math.abs(y - b.cy) < b.hy - tol && Math.abs(lz) < b.hz - tol;
               if (inside) expect.fail(`座位 ${seat.i}${lean ? ' 前倾' : ''} 插进家具（${styleKeyOf(style)}）`);
             }
           }

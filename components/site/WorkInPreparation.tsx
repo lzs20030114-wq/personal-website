@@ -24,7 +24,7 @@ const ZH_ORDINAL = ['一', '二', '三', '四'];
 /** 「案例 03 / 03」里的分母 = 主项目数（2026-10-04 起为 3）。 */
 const TOTAL = String(MAIN_PROJECTS).padStart(2, '0');
 
-/** 案例页正文里 log 的落点：项目组 key 与 work slug 同名的（现为 project-ii）才数得出来。 */
+/** 案例页正文里 log 的落点：项目组 key 与 work slug 同名的才数得出来（项目一、二的 slug 与组 key 不同名，但都已发稿，不走这页）。 */
 function logCountFor(slug: string): { count: number; since: string } | null {
   const mine = getLogEntries().filter((e) => projectOf(e) === slug);
   if (mine.length === 0) return null;

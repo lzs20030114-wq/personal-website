@@ -813,8 +813,11 @@ export function FieldPage({
         >
           The projects ↓
         </button>
+        {/* 不在视口里预取：实验室一预取就连带下载约 650 KB（压缩后）的台架代码与终态数据，
+            首屏用不上，慢网下与首屏抢带宽（2026-11-08 载入排查，MAPPING §87）。指针移上去时 PageTransitions 照样预热。 */}
         <Link
           href="/lab"
+          prefetch={false}
           className="hs-fx__btn hs-fx__btn--line"
           data-g
           data-c={T.lab.c0}
@@ -882,7 +885,7 @@ export function FieldPage({
           <button type="button" className="hs-fx__btn hs-fx__btn--solid" onClick={onWork}>
             The projects ↓
           </button>
-          <Link href="/lab" className="hs-fx__btn hs-fx__btn--line">
+          <Link href="/lab" prefetch={false} className="hs-fx__btn hs-fx__btn--line">
             Open the lab ↗
           </Link>
         </div>

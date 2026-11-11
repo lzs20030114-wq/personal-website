@@ -35,13 +35,12 @@ export const LAB_UI_COPY: readonly (readonly [string, string])[] = [
   ["三维内核", "3D kernel"],
   ["可交互", "Interactive"],
   ["项目一 — 轮回机器", "Project I — Reincarnation machine"],
-  ["项目二 — 跨物种空间", "Project II — Cross-species space"],
+  ["项目二 — Letting Agent", "Project II — Letting Agent"],
   ["项目一", "Project I"],
   ["项目二", "Project II"],
   ["轮回机器", "Reincarnation machine"],
-  ["跨物种空间", "Cross-species space"],
   ["实验 1-1 – 1-6 · 两种连杆内核与一个行为引擎", "Lab 1-1 – 1-6 · two linkage kernels and a behaviour engine"],
-  ["实验 2-1 – 2-15 · 会变形的单元，以及驱动它的行为", "Lab 2-1 – 2-15 · shape-changing units and the behaviour that moves them"],
+  ["实验 2-1 – 2-16 · 会变形的单元，以及驱动它的行为", "Lab 2-1 – 2-16 · shape-changing units and the behaviour that moves them"],
   ["一条带", "One band"],
   ["一排", "A row"],
   ["一圈", "A ring"],
@@ -61,8 +60,12 @@ export const LAB_UI_COPY: readonly (readonly [string, string])[] = [
   ["实验 2-9 · 二、三、四、九个单元之间的关系", "Lab 2-9 · what two, three, four, nine units can be to each other"],
   ["实验 2-10 – 2-12 · 行为与单元响应", "Lab 2-10 – 2-12 · behaviour reaching the units"],
   ["实验 2-13 · 平台的高低连接", "Lab 2-13 · platforms joined high to low"],
-  ["实验 2-14 – 2-15 · 人与猫同一间房，循环闭合 · 2-14 可以重跑案例页的对照", "Lab 2-14 – 2-15 · people and cats in one room, with the loop closed · 2-14 reruns the case study comparison"],
+  ["实验 2-14 – 2-16 · 人与猫同一间房，循环闭合 · 2-14 可以重跑案例页的对照 · 2-16 小样", "Lab 2-14 – 2-16 · people and cats in one room, with the loop closed · 2-14 reruns the case study comparison · 2-16 small studies"],
   ["实验 2-15 / 项目二", "Lab 2-15 / Project II"],
+  ["实验 2-16 / 项目二", "Lab 2-16 / Project II"],
+  ["小样 · 2×2 与 3×3", "Small studies, 2×2 and 3×3"],
+  ["WebGL · 按脚本", "WebGL · scripted"],
+  ["7 个小样 · 按脚本 · WebGL", "7 studies · scripted · WebGL"],
   ["人猫同台 · 立体", "People and cats together, in 3D"],
   ["WebGL · 两个物种", "WebGL · two species"],
   ["8×8 · 6 位访客 · 2 只猫 · WebGL", "8×8 · 6 visitors · 2 cats · WebGL"],
@@ -313,7 +316,8 @@ export const LAB_UI_COPY: readonly (readonly [string, string])[] = [
   ["拖动", "drag"],
   ["回接", "release"],
   ["误差", "err"],
-  ["三维预览暂不可用", "3D preview unavailable"]
+  ["三维预览暂不可用", "3D preview unavailable"],
+  ["载入三维模型…", "Loading 3D model…"]
 ];
 const toEnglish = new Map(LAB_UI_COPY);
 const toChinese = new Map(LAB_UI_COPY.map(([zh, en]) => [en.toLowerCase(), zh]));

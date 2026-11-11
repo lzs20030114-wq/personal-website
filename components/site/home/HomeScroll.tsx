@@ -13,7 +13,15 @@ import { FieldPage } from './FieldPage';
 import { AboutPage, WorkPage } from './WorkAboutPages';
 import { ZonePage } from './ZonePage';
 import { HOME_ZONE_KEY, pageTransitionActive } from '../pageTransitionState';
-import { HOME_FLOW_QUERY, HOME_REDUCE_QUERY, setHomeMode } from '../../../src/lib/site/home-mode';
+import {
+  HOME_FLOW_QUERY,
+  HOME_HOLD_ATTR,
+  HOME_LIVE_ATTR,
+  HOME_LOADER_KEY,
+  HOME_REDUCE_QUERY,
+  setHomeMode,
+} from '../../../src/lib/site/home-mode';
+import { afterLoader, loaderReady } from '../../../src/lib/site/site-loader';
 
 const EO = 'cubic-bezier(.2,.7,.1,1)';
 const EIO = 'cubic-bezier(.76,0,.24,1)';
@@ -445,16 +453,28 @@ export function HomeScroll({ work, groups, log, field }: HomeScrollProps) {
     setHomeMode(flow() ? 'flow' : 'paged');
     setFlowMode(flow());
     applyPages();
-    setReady(true);
+    // 已接管：启动脚本的「打包脚本挂了就退回文档流」检查认这个（首屏亮出要等载入页，.hs-ready 会晚一点）
+    root.setAttribute(HOME_LIVE_ATTR, '');
     const hash = window.location.hash;
+    const deep = hash === '#work' || hash === '#about' || hash === '#lab' || hash === '#log';
     if (hash === '#work') jump(1);
     else if (hash === '#about') jump(2);
     else if (hash === '#lab') jump(3, 'lab');
     else if (hash === '#log') jump(3, 'log');
-    else if (!arriving) choreo(0, 120);
     syncFlowPosition();
+    // 首屏亮出、后几屏的图放行、入场编排：等首次载入页开始退场再做（MAPPING §87），编排与它的淡出叠在一起；
+    // 经客户端跳转回到首页时载入页早已不在，这里同步执行，与原来一样
+    const releaseHold = () => document.documentElement.removeAttribute(HOME_HOLD_ATTR);
+    const cancelEnter = afterLoader(() => {
+      releaseHold();
+      setReady(true);
+      if (!deep && !arriving) choreo(0, 120);
+    });
+    loaderReady(HOME_LOADER_KEY);
 
     return () => {
+      cancelEnter();
+      releaseHold();
       clearTimeout(rvT);
       cancelAnimationFrame(flowRaf);
       io?.disconnect();

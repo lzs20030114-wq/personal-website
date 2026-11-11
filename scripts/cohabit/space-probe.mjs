@@ -9,14 +9,14 @@ const seconds = Number(process.argv[2] ?? 300);
 const seed = Number(process.argv[3] ?? 11);
 const server = await createServer({ server: { middlewareMode: true }, logLevel: 'silent', appType: 'custom' });
 try {
-  const { COHABIT, CohabitSim, partySizes } = await server.ssrLoadModule('/src/lib/space/cohabit.ts');
+  const { COHABIT, CohabitSim, partySizes, scatterCats } = await server.ssrLoadModule('/src/lib/space/cohabit.ts');
   const { SCENE, FRAMES, STEADY, TrajectoryBaker, bandFrame } = await server.ssrLoadModule('/src/lib/space/cohabit-solid.ts');
   const traj = new TrajectoryBaker().runAll();
   const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, space: 'live', seed, opening: false, auto: true, faces: true, social: true, catFloor: true, cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid }, guide: COHABIT.GUIDE });
   const half = sim.layout.fieldM / 2;
   const sizes = partySizes(SCENE.people);
   sizes.forEach((sz, i) => { const a = (i / sizes.length) * 2 * Math.PI + 0.3; sim.addParty(Math.cos(a) * half * 0.6, Math.sin(a) * half * 0.6, sz); });
-  for (let i = 0; i < SCENE.cats; i++) sim.addCat(sim.layout.units[(i * 5) % sim.layout.units.length]);
+  scatterCats(sim, SCENE.cats, seed);
   const BANDS = COHABIT.FACES.BANDS;
   const N = sim.layout.units.length;
   const fPrev = new Float32Array(N * BANDS);

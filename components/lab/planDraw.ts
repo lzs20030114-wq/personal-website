@@ -95,10 +95,10 @@ export interface PlanScene {
    *  收回的带画成缺口（半径退到芯上）；猫身下护住的带不另标（猫就画在那儿）。省略 = 整圈。 */
   bands?: { open: Float32Array; hold: Uint8Array; count: number } | null;
   /** 「走 · 站 · 坐」（Lab 2-14，加法式；省略 = 旧画法逐位不变）：家具是地面上独立的一层（画在单元底下，靠背在朝向的
-   *  反侧，selected = 正被选中 / 拖动的那件加亮）与座位点；meet = 各座位前方那台（紫点线圈，有人坐时加重）；
+   *  反侧，selected = 正被选中 / 拖动的那件加亮）与座位点；meet = 各座位前方那台（紫点线圈，有人坐时加重；−1 = 此刻没有落得下来的，不画）；
    *  guides = 空间此刻铺的路（绿虚线串起单元中心：坐着 = 一路到座位前方那台，站定 = 只一步） */
   furniture?: {
-    rects: readonly { x0: number; x1: number; y0: number; y1: number; face: readonly [number, number] }[];
+    rects: readonly { x0: number; x1: number; y0: number; y1: number; face: readonly [number, number]; tilted?: true; cx?: number; cy?: number; hu?: number; hv?: number }[];
     seats: readonly { x: number; y: number; meet: number; taken: boolean }[];
     selected?: number;
   } | null;
@@ -339,6 +339,38 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
   if (s.furniture) {
     s.furniture.rects.forEach((r, fi) => {
       const sel = s.furniture!.selected === fi;
+      if (r.tilted) {
+        // 斜放：转过角度的四边形（角不倒圆），靠背 = 朝向反侧那条边往里收一点
+        const [fx, fy] = r.face;
+        const tx = -fy;
+        const ty = fx;
+        const hu = r.hu!;
+        const hv = r.hv!;
+        const pt = (u: number, v: number): [number, number] => [X(r.cx! + tx * u + fx * v), Y(r.cy! + ty * u + fy * v)];
+        const quad = [pt(-hu, -hv), pt(hu, -hv), pt(hu, hv), pt(-hu, hv)];
+        ctx.fillStyle = pal.ink;
+        ctx.globalAlpha = 0.1;
+        ctx.beginPath();
+        quad.forEach(([qx, qy], k) => (k ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy)));
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = sel ? pal.accent : pal.ink;
+        ctx.globalAlpha = sel ? 0.95 : 0.55;
+        ctx.lineWidth = sel ? 1.8 : 0.9;
+        ctx.stroke();
+        ctx.strokeStyle = pal.ink;
+        const k = Math.min(hu, hv) * 2 * 0.18;
+        const inset = 3 / sc;
+        const [a0, a1] = pt(-hu + inset, -hv + k);
+        const [b0, b1] = pt(hu - inset, -hv + k);
+        ctx.globalAlpha = 0.6;
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.moveTo(a0, a1);
+        ctx.lineTo(b0, b1);
+        ctx.stroke();
+        return;
+      }
       const x = X(r.x0);
       const y = Y(r.y0);
       const w = (r.x1 - r.x0) * sc;
@@ -545,6 +577,7 @@ export function drawPlan(ctx: CanvasRenderingContext2D, s: PlanScene, pal: Palet
     ctx.strokeStyle = pal.accent2;
     ctx.setLineDash([2, 3]);
     for (const q of s.furniture.seats) {
+      if (q.meet < 0) continue; // 此刻前方一台都落不下来（retarget）
       const u = L.units[q.meet];
       ctx.globalAlpha = q.taken ? 0.95 : 0.4;
       ctx.lineWidth = q.taken ? 1.6 : 0.9;

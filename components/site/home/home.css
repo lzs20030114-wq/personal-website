@@ -522,6 +522,10 @@
    ② 首帧：JS 接管前不显示编排元素（避免 SSR 终态一闪再从头播）。
    ③ 窄屏（或脚本没跑起来）回落常规文档流；减弱动态效果只去动画、版式不变（MAPPING §6 / §67；稿本身只有桌面）。 */
 :where(:root[data-hs="paged"]) .hs-root:not(.hs-ready) [data-a] { visibility: hidden; }
+/* ④ 首屏就绪前不拉后几屏的图（2026-11-08 载入排查，MAPPING §87）：Work 封面、日志主图与缩略图。
+   属性由首页启动脚本挂、HomeScroll 在首屏亮出时摘（脚本挂了的退回分支也会摘）；
+   要压过元素上的内联 background-image，只能 !important。首屏方块场的图标是 mask，不受影响。 */
+:root[data-hs-hold] :is(.hs-card__img, .hs-feat__img, .hs-entry__thumb) { background-image: none !important; }
 
 .hs-pv__live { display: flex; align-items: center; justify-content: center; }
 .hs-pv__live { position: absolute; inset: 14px; pointer-events: none; }

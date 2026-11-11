@@ -35,7 +35,7 @@ import {
 } from '../../src/lib/space/skin-unit';
 import { useBenchLoop } from './useBenchLoop';
 import { attachLabCamera } from './labCameraInput';
-import { requestSkinTerminal } from './skinTerminal';
+import { requestSkinTerminal, warmSkinTerminal } from './skinTerminal';
 
 /**
  * Lab.07 · 项目二第二台：皮肤单元立体带（用户 2026-08-19 立项「也是这四个，
@@ -559,6 +559,8 @@ export function SkinSolidBench({
   // 跳过成形：直接读取发布前的终态，保持可旋转的模型，不补跑物理。
   const [skip, setSkip] = useState(false);
   const skipRef = useRef(false);
+  // 终态字典改为第一次要用时才载入（MAPPING §87）：有控制条（才有「跳过成形」）的台架挂上后在空闲时先拉下来，勾选时仍只读内存
+  useEffect(() => (controls ? warmSkinTerminal() : undefined), [controls]);
   const [bonds, setBonds] = useState(true);
   const [persp, setPersp] = useState(false);
   const [speed, setSpeed] = useState(1);

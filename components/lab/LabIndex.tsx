@@ -8,7 +8,6 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type MouseEvent,
 } from "react";
 import { LAB_INDEX, labAccent, labAnchor } from "../../src/lib/site/lab-index";
 import { useLabNavActive } from './LabWorkspace';
@@ -24,13 +23,13 @@ import { useLabNavActive } from './LabWorkspace';
  * - **滑动标记**：左侧 2px 竖标随当前项滑动（transform + height 过渡，颜色随内核绿/紫），
  *   不是逐项各自亮灭——目录像一台仪表在读页面。
  * - **进度线**：右缘双线里靠内那条按页面滚动进度从上往下长（scaleY，零布局）。
- * - **点击平滑跳转**：scrollIntoView smooth + pushState 写哈希（与 `#lab1-1` 锚点同一套，
- *   分享地址不变）；reduced-motion 下交给浏览器原生跳转。
+ * - **点击跳转**：交给 LabWorkspace 的页内 #lab 链接处理（2026-11-09 起一次只展开一台：先展开那一台、上一台收起，
+ *   再平滑滚过去 + pushState 写哈希；reduced-motion 直接跳）。
  * - **入场**：各行按序 stagger 淡入（CSS 动画，`--i` 定延时；reduced-motion 停）。
  * 窄屏（<1280）由 CSS 收成一条可换行的芯片带，标记与进度线不画（见 globals.css .lab-index）。
  */
 const READ_LINE = 0.3;
-const PROJECT_TITLE = ["Reincarnation Machine", "Cross-species space"];
+const PROJECT_TITLE = ["Reincarnation Machine", "Letting Agent"];
 
 interface Row {
   no: string;
@@ -112,16 +111,6 @@ export function LabIndex() {
     return () => ro.disconnect();
   }, [active, lang]);
 
-  const onJump = (e: MouseEvent<HTMLAnchorElement>, no: string): void => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)
-      return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const el = document.getElementById(labAnchor(no));
-    if (!el) return;
-    e.preventDefault();
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
-    window.history.pushState(null, "", `#${labAnchor(no)}`);
-  };
 
   const activeRow = rows.find((r) => r.no === active) ?? rows[0];
   const activeIdx = Math.max(
@@ -206,7 +195,6 @@ export function LabIndex() {
                         if (el) itemRefs.current.set(b.no, el);
                         else itemRefs.current.delete(b.no);
                       }}
-                      onClick={(e) => onJump(e, b.no)}
                     >
                       <span className="lab-index__no">{b.no}</span>
                       <span className="lab-index__title">{tx(b.title)}</span>

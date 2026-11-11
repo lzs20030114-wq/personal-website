@@ -14,7 +14,7 @@
 
 export type Bi = { en: string; zh: string };
 
-export type FrameProject = 'project-ii' | 'reincarnation-machine';
+export type FrameProject = 'letting-agent' | 'reincarnation-machine';
 
 export interface Frame {
   /** 文件名（不带扩展名），在 public/work/<project>/frames/<set>/ 下 */
@@ -45,37 +45,37 @@ export interface FrameSet {
 }
 
 export function frameSrc(set: string, file: string, thumb = false): string {
-  const project = CASE_FRAMES[set]?.project ?? 'project-ii';
+  const project = CASE_FRAMES[set]?.project ?? 'letting-agent';
   return `/work/${project}/frames/${set}/${file}${thumb ? '-s' : ''}.webp`;
 }
 
 export const CASE_FRAMES: Record<string, FrameSet> = {
   // FIG.02 · 方法：一位访客坐下，猫被一步一步引到座位前方那台（Lab 2-14 默认场景，平面）
   'plan-sit': {
-    project: 'project-ii',
+    project: 'letting-agent',
     lab: '2-14',
     w: 900,
     h: 894,
     tw: 560,
     cols: 4,
     caption: {
-      zh: '一位访客、一只猫的一场（实验 2-14，平面）。实心圆是坐着的人，绿色虚线是空间给猫铺的路，紫色点线框是座位前方那台',
-      en: 'One visitor and one cat (Lab 2-14, plan). A filled circle is a seated person, the green dashes are the route the space lays for the cat, and the dotted purple square is the unit in front of the seat',
+      zh: '一位访客、一只猫的一场（实验 2-14，平面）。实心圆是坐着的人，绿色虚线是空间给猫铺的路，紫色点线框是座位前方那台。猫走不走、什么时候下地，由猫自己决定',
+      en: 'One visitor and one cat (Lab 2-14, plan). A filled circle is a seated person, the green dashes are the route the space lays for the cat, and the dotted purple square is the unit in front of the seat. Whether the cat follows, and when it goes down to the floor, is up to the cat',
     },
     frames: [
       { file: 't000', t: { zh: '0:00', en: '0:00' }, note: { zh: '访客在走，猫在左上角的台上', en: 'the visitor walks, the cat is on a unit in the top-left corner' } },
-      { file: 't016', t: { zh: '0:16', en: '0:16' }, note: { zh: '坐下，面前那台落成茶几（42 cm），猫脚下铺出第一步', en: 'sits down, the unit in front becomes a coffee table (42 cm) and the first step is laid from the cat' } },
-      { file: 't060', t: { zh: '1:00', en: '1:00' }, note: { zh: '猫沿着递过来的台一步一步走', en: 'the cat walks along the units offered, one at a time' } },
-      { file: 't160', t: { zh: '2:40', en: '2:40' }, note: { zh: '路在右上角拐下来', en: 'the route turns down at the top right' } },
-      { file: 't200', t: { zh: '3:20', en: '3:20' }, note: { zh: '猫往座位这边下来', en: 'the cat comes down towards the seat' } },
-      { file: 't220', t: { zh: '3:40', en: '3:40' }, note: { zh: '离座位前方那台还差一步', en: 'one step from the unit in front of the seat' } },
-      { file: 't240', t: { zh: '4:00', en: '4:00' }, note: { zh: '猫到了座位前方那台', en: 'the cat reaches the unit in front of the seat' } },
-      { file: 't270', t: { zh: '4:30', en: '4:30' }, note: { zh: '访客起身离开，桌子收回，猫下了台', en: 'the visitor leaves, the table goes up, the cat has come down off the units' } },
+      { file: 't071', t: { zh: '1:11', en: '1:11' }, note: { zh: '在中间那把餐椅上坐下，面前那台落成餐桌（74 cm），猫脚下铺出第一步', en: 'sits on the dining chair in the middle, the unit in front becomes a table (74 cm) and the first step is laid from the cat' } },
+      { file: 't100', t: { zh: '1:40', en: '1:40' }, note: { zh: '猫沿着递过来的台走了两步', en: 'the cat has walked two of the units offered' } },
+      { file: 't160', t: { zh: '2:40', en: '2:40' }, note: { zh: '猫自己跳下了地，空间把它身边那台落下，等它跳回来', en: 'the cat jumps down to the floor on its own, and the space lowers the unit beside it for it to climb back' } },
+      { file: 't175', t: { zh: '2:55', en: '2:55' }, note: { zh: '猫在地上走到另一头，从那里上了台，路改从这里铺', en: 'the cat crosses the room on the floor and climbs up at the far end, and the route is laid again from there' } },
+      { file: 't283', t: { zh: '4:43', en: '4:43' }, note: { zh: '又下了一次地之后，猫回到访客身后那台，路绕到他面前那台还要三步', en: 'after one more trip to the floor the cat is back on the unit behind the visitor, three steps from the unit in front of him' } },
+      { file: 't288', t: { zh: '4:48', en: '4:48' }, note: { zh: '猫到了座位前方那台', en: 'the cat reaches the unit in front of the seat' } },
+      { file: 't300', t: { zh: '5:00', en: '5:00' }, note: { zh: '猫又挪上了桌子，就在访客面前', en: 'the cat then steps onto the table, right in front of the visitor' } },
     ],
   },
   // FIG.03 · 一条带：四张键谱同一次收缩（Lab 2-1）
   'strip-forming': {
-    project: 'project-ii',
+    project: 'letting-agent',
     lab: '2-1',
     w: 1552,
     h: 783,
@@ -96,7 +96,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
   },
   // FIG.05 · 形态的连续：十二条带目录渐变（Lab 2-4，正视，终态）
   'series-gradient': {
-    project: 'project-ii',
+    project: 'letting-agent',
     lab: '2-4',
     hash: '2-4-gradient',
     w: 1552,
@@ -110,7 +110,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
   },
   // FIG.06 · 裂成两片台：十条带（Lab 2-4 捏分，正视）
   'series-split': {
-    project: 'project-ii',
+    project: 'letting-agent',
     lab: '2-4',
     hash: '2-4-split',
     w: 1552,
@@ -132,7 +132,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
   },
   // FIG.07 · 绕成一圈（Lab 2-5 整环同形 · 阶梯方箱，轴测）
   'ring-forming': {
-    project: 'project-ii',
+    project: 'letting-agent',
     lab: '2-5',
     hash: '2-5-single',
     w: 621,
@@ -153,7 +153,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
   },
   // FIG.08 · 由圆到方（Lab 2-7 整环平，五种轮廓，高角度俯视，终态）
   'round-to-square': {
-    project: 'project-ii',
+    project: 'letting-agent',
     lab: '2-7',
     hash: '2-7-flat',
     w: 683,
@@ -171,39 +171,39 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
       { file: 'o5', t: { zh: '方', en: 'square' } },
     ],
   },
-  // FIG.09 · 在房间里（Lab 2-15，前排沙发，放大）：落下、成形、收回
+  // FIG.09 · 在房间里（Lab 2-15，左边那张双人沙发，放大）：落下、成形、收回。2026-11-08 按规则审阅后的规则重截（§14.30）
   'room-cycle': {
-    project: 'project-ii',
+    project: 'letting-agent',
     lab: '2-15',
     w: 1016,
     h: 754,
     tw: 480,
     cols: 3,
     caption: {
-      zh: '前排沙发上两位访客坐下又起身，面前那台落下当茶几再收回（实验 2-15，局部）',
-      en: 'Two visitors on the front sofa sit down and later stand, and the unit in front of them comes down as a coffee table and goes back up (Lab 2-15, detail)',
+      zh: '左边那张双人沙发上，同组两位访客坐下，面前那台落下当茶几；二十分钟后两人起身，桌子收回（实验 2-15，局部）',
+      en: 'Two visitors in one party sit down on the left-hand sofa and the unit in front of them comes down as a coffee table; twenty minutes later they stand and it goes back up (Lab 2-15, detail)',
     },
     frames: [
-      { file: 't011_00', t: { zh: '0:11.0', en: '0:11.0' }, note: { zh: '两人走到沙发前，面前的单元还收在天花板下', en: 'two visitors reach the sofa, the unit in front of it still stowed under the ceiling' } },
-      { file: 't011_45', t: { zh: '0:11.5', en: '0:11.5' }, note: { zh: '坐下，面前那台沿芯落下', en: 'they sit, and the unit in front comes down its core' } },
-      { file: 't011_90', t: { zh: '0:11.9', en: '0:11.9' }, note: { zh: '落到茶几高度，收缩成形', en: 'at coffee-table height it contracts and forms' } },
-      { file: 't012_50', t: { zh: '0:12.5', en: '0:12.5' }, note: { zh: '茶几成形', en: 'the coffee table has formed' } },
-      { file: 't140_80', t: { zh: '2:20.8', en: '2:20.8' }, note: { zh: '两人起身，桌子往上收。左边沙发上的人身边那台抽中了整圈两层', en: 'they stand, and the table rises. The unit beside the visitor on the left sofa came down as two levels all round' } },
-      { file: 't142_60', t: { zh: '2:22.6', en: '2:22.6' }, note: { zh: '收回天花板下', en: 'back under the ceiling' } },
+      { file: 't008_75', t: { zh: '0:08.8', en: '0:08.8' }, note: { zh: '两人走到沙发前，面前的单元还收在天花板下', en: 'two visitors reach the sofa, the unit in front of it still stowed under the ceiling' } },
+      { file: 't009_20', t: { zh: '0:09.2', en: '0:09.2' }, note: { zh: '坐下，面前那台沿芯落下', en: 'they sit, and the unit in front comes down its core' } },
+      { file: 't009_65', t: { zh: '0:09.7', en: '0:09.7' }, note: { zh: '落到茶几高度，收缩成形', en: 'at coffee-table height it contracts and forms' } },
+      { file: 't010_25', t: { zh: '0:10.3', en: '0:10.3' }, note: { zh: '茶几成形', en: 'the coffee table has formed' } },
+      { file: 't1220_85', t: { zh: '20:20.9', en: '20:20.9' }, note: { zh: '两人坐了二十分钟后起身，桌子往上收', en: 'after twenty minutes they stand, and the table rises' } },
+      { file: 't1222_65', t: { zh: '20:22.7', en: '20:22.7' }, note: { zh: '收回天花板下，一只橘猫在两人脚边的地上', en: 'back under the ceiling, with a ginger cat on the floor at their feet' } },
     ],
   },
-  // FIG.10 · 两种用法（Lab 2-15 侧视）
+  // FIG.10 · 两种用法（Lab 2-15 正视；2026-11-08 由侧视改正视，20 座布置下侧视里的茶几都被沙发靠背挡住）
   'two-uses': {
-    project: 'project-ii',
+    project: 'letting-agent',
     lab: '2-15',
     w: 1008,
     h: 536,
     tw: 1008,
     caption: {
-      zh: '侧视剖面（实验 2-15，第 100 秒）。沙发前落成茶几的单元台面离地 0.42 m。给猫落的三台这一刻都抽中了半圈有顶的两层（下台 0.90 m），猫坐在其中一台的下台上。其余单元收在天花板下',
-      en: 'Side section (Lab 2-15, at 100 s). Units that came down as coffee tables in front of the sofas sit 0.42 m above the floor. The three units lowered for cats all drew two levels roofed over half (the lower at 0.90 m), and a cat sits on the lower platform of one of them. The rest are stowed under the ceiling',
+      zh: '正视剖面（实验 2-15，第 100 秒）。中间偏左那台落成了茶几，台面离地 0.42 m。给猫落的三台成了上下两层（下台 0.90 m），两只猫坐在下台上。其余单元收在天花板下',
+      en: 'Front section (Lab 2-15, at 100 s). The unit left of centre came down as a coffee table, 0.42 m above the floor. The three units lowered for cats formed two levels (the lower at 0.90 m), and two cats sit on the lower platforms. The rest are stowed under the ceiling',
     },
-    frames: [{ file: 't100-side', t: { zh: '1:40 · 侧视', en: '1:40 · side view' } }],
+    frames: [{ file: 't100-front', t: { zh: '1:40 · 正视', en: '1:40 · front view' } }],
   },
 
   // ─── 项目一（轮回机器）─────────────────────────────────────────────────────

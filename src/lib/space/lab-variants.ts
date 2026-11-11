@@ -22,6 +22,7 @@ import { CLUSTER_PLANS, CLUSTER_RELATIONS, CLUSTER_TIMINGS } from './unit-cluste
 import { COMBO_FAMILIES, COMBO_PLANS, COMBO_SPACINGS } from './unit-combo';
 import { PATHS, PLAN, READINGS, RESPONSES } from './unit-activation';
 import { LAYER_OUTLINES, LAYER_JOINS, LAYER_MORPHS } from './skin-layers';
+import { VIGNETTES } from './cohabit-vignette';
 
 export interface VariantOption {
   key: string;
@@ -261,6 +262,15 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     en: 'People and cats together, in 3D',
     // 编制 = 空间三档（与 2-14 同一份对照）；规则钉死「走 · 站 · 坐」、格数钉死 8×8（作者 2026-10-21「立体演示用 8×8」），不另开档
     plans: SPACE_MODES.map((m) => ({ key: m.key, label: m.zh })),
+    axes: [],
+  },
+  {
+    no: '2-16',
+    key: 'vignette',
+    zh: '小样',
+    en: 'Small studies',
+    // 编制 = 七个小样（2026-11-09 两批，项目二_小样方案.md §3、§8）；按脚本演，没有别的档
+    plans: VIGNETTES.map((v) => ({ key: v.key, label: v.zh })),
     axes: [],
   },
 ];

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- 站点图标（MAPPING §88）：夜色方块 + 首页方块场里 objects / spaces 两个色块（深色页上的项目色 G400 / P300），另两格是方块场的细线格 -->
+  <rect width="32" height="32" rx="6" fill="#03161f"/>
+  <rect x="17.5" y="5.5" width="9" height="9" rx="1.2" fill="none" stroke="#495857" stroke-width="1"/>
+  <rect x="5.5" y="17.5" width="9" height="9" rx="1.2" fill="none" stroke="#495857" stroke-width="1"/>
+  <rect x="5" y="5" width="10" height="10" rx="1.2" fill="#7ab27b"/>
+  <rect x="17" y="17" width="10" height="10" rx="1.2" fill="#c9bff4"/>
+</svg>

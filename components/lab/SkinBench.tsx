@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import { SKIN_UNITS, skinSiteOpts } from '../../src/lib/space/skin-data';
 import { SKIN, createSkinUnit, renderSmooth, type SkinUnit } from '../../src/lib/space/skin-unit';
 import { useBenchLoop } from './useBenchLoop';
-import { requestSkinTerminal } from './skinTerminal';
+import { requestSkinTerminal, warmSkinTerminal } from './skinTerminal';
 
 /**
  * Lab.06 · 项目二第一台：收缩张紧外皮单元（skin_sim_v7_final.py 的目录图，活体版）。
@@ -121,6 +121,8 @@ export function SkinBench({
   // 跳过成形：直接加载预计算终态并停住，不在浏览器补跑协议。
   const [skip, setSkip] = useState(false);
   const skipRef = useRef(false);
+  // 终态字典改为第一次要用时才载入（MAPPING §87）：有控制条（才有「跳过成形」）的台架挂上后在空闲时先拉下来，勾选时仍只读内存
+  useEffect(() => (controls ? warmSkinTerminal() : undefined), [controls]);
   const [bonds, setBonds] = useState(true);
   const [hud, setHud] = useState<{ r: number; step: number; locked: number; phase: keyof (typeof COPY)['zh']['phase'] }>({
     r: SKIN.R0,
