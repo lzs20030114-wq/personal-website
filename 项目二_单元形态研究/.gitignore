@@ -1,0 +1,2 @@
+# 线稿的 SVG 每张 1–4 MB，按 scripts/unit-forms/atlas.mjs 可重出，只进 PNG
+*.svg
