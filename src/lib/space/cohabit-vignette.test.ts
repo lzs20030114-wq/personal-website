@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { COHABIT, bandAngle, furnRect } from './cohabit';
+import { DESIGN, SOURCES, heightToward, riseLimit, type Source } from './cohabit-design';
 import { FRAMES, TrajectoryBaker, UNITS_PER_M, UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, UNIT_TIERS, liftTrajectory, rigFor } from './cohabit-solid';
 import { SOLID } from './skin-solid';
 import { planLayout } from './unit-activation';
 import { RING } from './skin-ring';
-import { GIVE, RAMP_RISE, STEP_RISE, TOPS, catRingAngle, ringSpot, UPPER_ABOVE, VIGNETTES, VignetteSim, catAt, keysAt, pathAt, unitRamp, vignetteLayout, vignetteScript } from './cohabit-vignette';
+import { GIVE, TOPS, catRingAngle, ringSpot, UPPER_ABOVE, VIGNETTES, VignetteSim, catAt, keysAt, pathAt, unitRamp, vignetteLayout, vignetteScript } from './cohabit-vignette';
+import { RING_SIDE, TABLE_TOP } from './cohabit-solid';
 
 const BANDS = COHABIT.FACES.BANDS;
 
@@ -42,7 +44,7 @@ describe('cohabit-vignette · 2×2 / 3×3 小样', () => {
     expect(keysAt(r, 40)).toBe(0);
   });
 
-  it('四个小样都能从头放到尾：程度在 [0, 1]、人坐着时在座位上、猫脚下的台已经成形', () => {
+  it('六个小样都能从头放到尾：程度在 [0, 1]、人坐着时在座位上、猫脚下的台已经成形', () => {
     for (const v of VIGNETTES) {
       const sim = new VignetteSim(v.key);
       const s = sim.script;
@@ -85,12 +87,13 @@ describe('cohabit-vignette · 2×2 / 3×3 小样', () => {
     const s = vignetteScript('tea');
     const sofa = furnRect(s.furniture[0]);
     const l = vignetteLayout(3);
-    const t = s.units.findIndex((u) => u?.top === TOPS.tea);
+    const t = s.units.findIndex((u) => u?.design.role === 'table');
+    expect(s.units[t]!.design.top).toBe(TOPS.tea);
     const T = l.units[t];
     const gap = T.y - l.platR - sofa.y1;
     expect(gap).toBeGreaterThanOrEqual(COHABIT.TABLE.SOFA_GAP[0]);
     expect(gap).toBeLessThanOrEqual(COHABIT.TABLE.SOFA_GAP[1]);
-    const bands = s.units[t]!.form!.bands!;
+    const bands = s.units[t]!.design.form.bands!;
     for (let j = 0; j < BANDS; j++) {
       const towardSofa = Math.sin(bandAngle(j)) < 0; // 沙发在 −y
       expect(bands[j]).toBe(towardSofa ? 0 : 1);
@@ -129,13 +132,20 @@ describe('cohabit-vignette · 2×2 / 3×3 小样', () => {
     expect(GIVE.ahead).toBeGreaterThan(0);
   });
 
-  it('引路：任何时刻落着（或在落）的单元不超过猫脚下与下一步，再加上正在收回的那一台', () => {
+  it('引路：除了桌子，任何时刻落着（或在落）的单元不超过猫脚下、下一步与正在收回的那一台；下一步在猫走上前一台之后才落', () => {
     const sim = new VignetteSim('guide');
+    const table = sim.script.units.findIndex((u) => u?.design.role === 'table');
     for (let t = 0; t < sim.script.duration; t += 0.1) {
       sim.step(0.1);
-      const down = [...sim.act.degree].filter((d) => d > 0).length;
+      const down = [...sim.act.degree].filter((d, i) => d > 0 && i !== table).length;
       expect(down).toBeLessThanOrEqual(3);
     }
+    // 2-14 一次只落一步：第二步开始落的时刻，猫已经在第一步上
+    const s = vignetteScript('guide');
+    const steps = s.units.map((u, i) => ({ u, i })).filter((x) => x.u?.design.role === 'step');
+    const start2 = steps[1].u!.deg[0][0];
+    const on = catAt(s.cats[0], start2).on;
+    expect(on).toContain(steps[0].i);
   });
 
   it('猫的一段：跨台时位置插值，跳上跳下时高度插值', () => {
@@ -169,33 +179,102 @@ describe('cohabit-vignette · 2×2 / 3×3 小样', () => {
   );
 });
 
-describe('cohabit-vignette · 第二批（续坡 / 站桌下给猫一层 / 先低后高）', () => {
-  it('续坡：每台最低那条带不抬，前两台的高边接上后一台的台面（齐平到 1 cm）', () => {
-    const s = vignetteScript('ramp');
-    const used = s.units.filter((u): u is NonNullable<typeof u> => !!u);
-    expect(used).toHaveLength(3);
-    const [a, b, c] = [...used].sort((x, y) => x.top - y.top);
-    for (const u of [a, b]) expect(Math.min(...u.form!.lift!)).toBe(0);
-    expect(a.top + Math.max(...a.form!.lift!)).toBeCloseTo(b.top, 2);
-    expect(b.top + Math.max(...b.form!.lift!)).toBeCloseTo(c.top, 2);
-    expect(c.top).toBe(TOPS.stand);
-    expect(Math.max(...a.form!.lift!)).toBeCloseTo(RAMP_RISE, 2);
+describe('cohabit-vignette · 每台的形由对应函数给（2026-11-16）', () => {
+  it('每个小样的每一台都带对应函数给的形、一个标签、至少一样用到的研究；标签在一个小样里不重复', () => {
+    for (const v of VIGNETTES) {
+      const sim = new VignetteSim(v.key);
+      const tags = sim.tags();
+      expect(tags.length).toBeGreaterThan(0);
+      expect(new Set(tags.map((t) => t.tag)).size).toBe(tags.length);
+      for (const t of tags) {
+        expect(t.design.uses.length, `${v.key} ${t.tag}`).toBeGreaterThan(0);
+        expect(sim.formOf(t.u)).toBe(t.design.form);
+        expect(sim.topOf(t.u)).toBe(t.design.top);
+      }
+    }
   });
 
-  it('先低后高：朝 +x 的半圈抬 STEP_RISE、另一半不抬，高的那半与旁边那台同高', () => {
+  it('六个小样合起来用上了之前研究里除方形环三档以外的每一样（方形环三档每台都用）', () => {
+    const used = new Set<Source>();
+    for (const v of VIGNETTES) for (const t of new VignetteSim(v.key).tags()) t.design.uses.forEach((u) => used.add(u));
+    for (const k of Object.keys(SOURCES) as Source[]) if (k !== 'square') expect(used.has(k), k).toBe(true);
+  });
+
+  it('坐下引猫：桌子按 2-14 的规则落在椅子前面（餐桌高），座位前方那台离座位 1.0–1.5 m', () => {
+    const s = vignetteScript('guide');
+    const l = vignetteLayout(3);
+    const seat = new VignetteSim('guide').seats[0];
+    const byRole = (r: string) => s.units.map((u, i) => ({ u, i })).filter((x) => x.u?.design.role === r);
+    const [table] = byRole('table');
+    expect(table.u!.design.top).toBe(TABLE_TOP.chair);
+    expect(table.i).toBe(5); // (1, 2)：椅子正前方那台
+    const [meet] = byRole('meet');
+    const d = Math.hypot(l.units[meet.i].x - seat.x, l.units[meet.i].y - seat.y);
+    expect(d).toBeGreaterThanOrEqual(1.0); // 座位前方那台：离座位 1.0–1.5 m（规则总表 1.2）
+    expect(d).toBeLessThanOrEqual(1.5);
+    expect(meet.u!.design.top).toBe(TOPS.lower);
+    expect(meet.u!.design.form.bands!.reduce((a, b) => a + b, 0)).toBe(BANDS / 2);
+  });
+
+  it('坐下引猫：第一步低的那一端 0.42 m，每道接缝两边一样高，最后接上座位前方那台的下层；每台高差都在它能抬的范围里', () => {
+    const s = vignetteScript('guide');
+    const l = vignetteLayout(3);
+    const path = s.units.map((u, i) => ({ u: u!, i })).filter((x) => x.u && (x.u.design.role === 'step' || x.u.design.role === 'meet'));
+    // 按路的先后（落下的时刻）排
+    path.sort((a, b) => a.u.deg[0][0] - b.u.deg[0][0]);
+    expect(path).toHaveLength(3);
+    const first = path[0].u.design;
+    expect(first.slope!.from).toBeCloseTo(DESIGN.LOW, 12);
+    expect(first.come).toBe(0);
+    for (let k = 1; k < path.length; k++) {
+      const a = l.units[path[k - 1].i];
+      const b = l.units[path[k].i];
+      const hA = heightToward(path[k - 1].u.design, Math.atan2(b.y - a.y, b.x - a.x));
+      const hB = heightToward(path[k].u.design, Math.atan2(a.y - b.y, a.x - b.x));
+      expect(Math.abs(hA - hB)).toBeLessThan(1e-9);
+    }
+    for (const { u } of path.slice(0, -1)) {
+      const sl = u.design.slope!;
+      expect(Math.abs(sl.to - sl.from)).toBeLessThanOrEqual(riseLimit(sl.inDir, sl.outDir) + 1e-9);
+    }
+  });
+
+  it('猫在台上的高度就是它所在那一处的台面（斜台、一半高一半低都按位置取）', () => {
+    for (const v of VIGNETTES) {
+      const s = vignetteScript(v.key);
+      const l = vignetteLayout(s.n);
+      for (const beats of s.cats)
+        for (const b of beats) {
+          if (b.on.length !== 1 || b.h === undefined) continue;
+          const u = l.units[b.on[0]];
+          const d = s.units[b.on[0]]!.design;
+          const r = Math.hypot(b.x - u.x, b.y - u.y);
+          if (r < l.mastR + 0.02 || d.open !== null) continue; // 在芯心（按朝向摆）或两层（下层平）的不量
+          const th = Math.atan2(b.y - u.y, b.x - u.x) - RING_SIDE;
+          expect(b.h, `${v.key} @ ${b.t}`).toBeCloseTo(heightToward(d, th), 9);
+        }
+    }
+  });
+
+  it('先低后高：朝邻台的半圈抬一台能抬的高差、另一半不抬，高的那半与邻台齐平', () => {
     const s = vignetteScript('step');
-    const a = s.units.find((u) => u?.form?.lift)!;
-    const lift = a.form!.lift!;
-    for (let j = 0; j < BANDS; j++) expect(lift[j]).toBe(Math.cos(bandAngle(j)) > 0 ? STEP_RISE : 0);
-    expect(a.top + STEP_RISE).toBeCloseTo(TOPS.stand, 9);
+    const a = s.units.find((u) => u?.design.role === 'stair')!.design;
+    const b = s.units.find((u) => u?.design.role === 'flush')!.design;
+    const lift = a.form.lift!;
+    const rise = a.stair!.high - a.stair!.low;
+    expect(rise).toBeLessThanOrEqual(DESIGN.RISE + 0.01 + 1e-12);
+    for (let j = 0; j < BANDS; j++) expect(lift[j]).toBeCloseTo(Math.cos(bandAngle(j)) > 0 ? rise : 0, 12);
+    expect(b.top).toBeCloseTo(a.stair!.high, 12);
+    expect(a.stair!.high).toBeCloseTo(TOPS.stand, 9);
   });
 
-  it('站桌下给猫一层：整圈两层，上台台面 = 站着用的 1.05 m，下台离地 0.47 m、钉住端在地面以上', () => {
+  it('站桌下给猫一层：整圈两层，上层台面 = 站着用的 1.05 m，下层离地 0.47 m、钉住端在地面以上；邻台与上层齐平', () => {
     const s = vignetteScript('counter');
-    const t = s.units.find((u) => u?.form?.bands)!;
-    expect([...t.form!.bands!].every((b) => b === 1)).toBe(true);
+    const t = s.units.find((u) => u?.design.role === 'counter')!.design;
+    expect([...t.form.bands!].every((b) => b === 1)).toBe(true);
     expect(t.top + UPPER_ABOVE).toBeCloseTo(TOPS.stand, 9);
     expect(t.top - 0.225).toBeGreaterThan(0.2); // 下台到钉住端约 0.225 m（cohabit-solid 两层台实测）
+    expect(s.units.find((u) => u?.design.role === 'flush')!.design.top).toBeCloseTo(TOPS.stand, 9);
   });
 
   it('猫沿一台的一圈挪位时不穿过立杆（ringSpot 之间的弦离台心比芯远）', () => {
@@ -245,7 +324,7 @@ describe('cohabit-vignette · 人和猫不撞', () => {
   it('当桌子用的单元先落好，人才坐下 / 走到台前（2026-11-10）', () => {
     // 茶几：访客坐下那一刻，茶几那台已经成形到底
     const tea = vignetteScript('tea');
-    const table = tea.units.find((u) => u?.top === TOPS.tea)!;
+    const table = tea.units.find((u) => u?.design.role === 'table')!;
     const sitAt = tea.people[0].sit![0];
     expect(keysAt(table.deg, sitAt)).toBe(1);
     expect(keysAt(table.deg, sitAt - 3)).toBeLessThan(1); // 也没早到人还没进门就落好
@@ -254,5 +333,9 @@ describe('cohabit-vignette · 人和猫不撞', () => {
     const path = counter.people[0].path;
     const stopAt = path.find((p, k) => k > 1 && Math.hypot(p[1] - path[k - 1][1], p[2] - path[k - 1][2]) > 0.5)![0];
     for (const u of counter.units) if (u) expect(keysAt(u.deg, stopAt)).toBe(1);
+    // 坐下引猫：访客坐下那一刻，桌子那台已经成形到底
+    const guide = vignetteScript('guide');
+    const gt = guide.units.find((u) => u?.design.role === 'table')!;
+    expect(keysAt(gt.deg, guide.people[0].sit![0])).toBe(1);
   });
 });

@@ -12,18 +12,17 @@ const out = process.argv[2] ?? 'vignette-shots';
 const only = process.argv.slice(3);
 /** 每个小样截哪几秒（脚本时间）与哪个视角 */
 const PLAN = {
-  tea: [[1, 'axon'], [7, 'axon'], [12, 'axon'], [22, 'axon'], [22, 'front'], [22, 'side']],
+  guide: [[8, 'axon'], [18, 'axon'], [26, 'axon'], [32, 'axon'], [47, 'axon'], [47, 'front'], [47, 'side'], [62, 'axon']],
+  tea: [[1, 'axon'], [12, 'axon'], [22, 'axon'], [22, 'front'], [22, 'side']],
   cavity: [[1, 'axon'], [16, 'axon'], [26, 'axon'], [26, 'front']],
-  giveway: [[1, 'axon'], [5, 'axon'], [10, 'axon'], [10, 'top'], [16, 'axon']],
-  guide: [[1, 'axon'], [17, 'axon'], [28, 'axon'], [44, 'axon'], [44, 'top'], [60, 'axon']],
-  ramp: [[16, 'axon'], [16, 'front'], [21, 'axon'], [30, 'axon']],
   counter: [[6, 'axon'], [11, 'axon'], [22, 'axon'], [22, 'front']],
   step: [[18, 'axon'], [21, 'axon'], [28, 'axon']],
+  giveway: [[1, 'axon'], [5, 'axon'], [10, 'axon'], [10, 'top'], [16, 'axon']],
 };
 const FPS = 60;
 mkdirSync(out, { recursive: true });
 
-const b = await openBrowser({ width: 1440, height: 1100, scale: 1 });
+const b = await openBrowser({ width: 1440, height: 1500, scale: 1 });
 try {
   for (const [key, shots] of Object.entries(PLAN)) {
     if (only.length && !only.includes(key)) continue;
@@ -63,6 +62,12 @@ try {
       writeFileSync(f, png);
       console.log(f, '|', hud.replace(/\n/g, ' · '));
     }
+    // 整台（画面 + 台上标签 + 下方图例）一张，看标签与图例对得上
+    await b.ev(`${el}.querySelector('.lab-wrap').scrollIntoView({block:'start'})`);
+    await b.frames(2);
+    const whole = await b.shot(`${el}.querySelector('.lab-wrap')`);
+    await b.ev(`${el}.scrollIntoView({block:'center'})`);
+    writeFileSync(join(out, `${key}-whole.png`), whole);
   }
   if (b.logs.length) console.log('page errors:', b.logs);
 } finally {

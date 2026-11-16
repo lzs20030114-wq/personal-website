@@ -10,17 +10,34 @@
  * Lab 2-15 的台架（CohabitSpaceBench）照常读它画，带子轨迹、机构件、蒙皮、人和猫的方块模型一行不改。
  * 多出来的三样只有脚本给：每台成什么形（`formOf`）、台面落到多高（`topOf`）、猫此刻离地多高（`cat.h`，站上台的上层时用）。
  *
- * 第一批四个（方案 §3），全部只用 2-15 已经烘好的两组轨迹（平台三档、两个结构六条）：
- *   tea     3×3 · 沙发前那台：靠沙发的半圈只成下台当茶几（0.42 m），背后半圈两块都成，上台给猫（2-3、2-6、2-14 桌子规则）
- *   cavity  2×2 · 两台整圈两层相邻，两块之间的空连成一条腔，两只猫各坐一头，朝坐着的人（2-3、2-13 合腔）
- *   giveway 2×2 · 四台围着一个过道交叉点，人走进来站一会儿再走，只收挡路的那几条带（2-6 半台、2-14 只收挡路的带）
- *   guide   3×3 · 坐下以后单元一步一步落，把猫从房间那头引过来，拐一个弯；落着的只有猫脚下与下一步（2-9 错相、2-14 引路）
+ * 2026-11-16 起每台的形由 cohabit-design 给（项目二_形态与组合的连接.md §5）：脚本说这台在这件事里做什么，函数按之前的研究给形、
+ * 记下用上了哪几台研究，台架按它挂标签、列图例。六个小样（全部只用 2-15 已经烘好的两组轨迹：平台三档、两个结构六条）：
+ *   guide   3×3 · 坐下，把地上的猫引过来：桌子 + 路上两步（朝下一台斜、接缝齐平）+ 座位前方那台（两层，上层盖背后半圈）——
+ *           平面模型的读数原样交给 designUnit，与 2-15 立体以后要接的是同一个函数（2-3 · 2-6 · 2-9 · 2-13 · 2-14）
+ *   tea     3×3 · 茶几兼猫台：朝沙发那半圈只成下层当茶几，背后半圈两块都成，邻台与上层齐平（2-3 · 2-6 · 2-9 · 2-14）
+ *   cavity  2×2 · 两台整圈两层相邻，两块之间的空连成一条腔，两只猫各坐一头（2-3 · 2-13）
+ *   counter 2×2 · 站桌：整圈两层，上层当站着用的台面、下层给猫，邻台与上层齐平（2-3 · 2-9）
+ *   step    2×2 · 先低后高：一半低一半高，邻台与高的那半齐平（2-6 · 2-13）
+ *   giveway 2×2 · 四台围着一个过道交叉点，人走过时只收挡路的带（2-6 · 2-14）
  */
 import { PLAN, planLayout, type PlanLayout, type PlanUnit } from './unit-activation';
 import { RING } from './skin-ring';
-import { COHABIT, bandAngle, furnKind, furnRect, squarePlanLayout, type FurnRect, type FurnSpec, type Link, type SpaceMode } from './cohabit';
-import { RING_SIDE } from './cohabit-solid';
-import { liftOf } from './cohabit-design';
+import { COHABIT, bandAngle, furnKind, furnRect, squarePlanLayout, tableFor, type FurnRect, type FurnSpec, type Link, type SpaceMode } from './cohabit';
+import { RING_SIDE, TABLE_TOP } from './cohabit-solid';
+import {
+  DESIGN,
+  aisleDesign,
+  cavityDesign,
+  counterDesign,
+  designUnit,
+  flushDesign,
+  heightToward,
+  liftOf,
+  stairDesign,
+  teaShelfDesign,
+  type DesignSim,
+  type UnitDesign,
+} from './cohabit-design';
 
 const BANDS = COHABIT.FACES.BANDS;
 
@@ -79,11 +96,8 @@ export interface SpaceSimLike {
 }
 
 // ── 尺寸 ─────────────────────────────────────────────────────────────────────────
-/**
- * 两个结构的带：上台台面比下台台面高多少（m）。2-15 的两层台下台 0.90、上台顶 1.48（人猫同台lab §14.24），差 0.58；
- * 茶几 0.42 时上台 1.00。守门按烘好的轨迹现量核对（cohabit-vignette.test.ts）。
- */
-export const UPPER_ABOVE = 0.58;
+/** 两个结构的带：上台台面比下台台面高多少（m）。数在 cohabit-design 的 DESIGN.UPPER（守门按烘好的轨迹现量核对） */
+export const UPPER_ABOVE = DESIGN.UPPER;
 /** 台面高度（m）：站着用的平台、沙发前的茶几、两层台的下台——都与 2-15 同一组数 */
 export const TOPS = { stand: 1.05, tea: 0.42, lower: 0.9 } as const;
 /** 茶几台边离沙发前缘（m）：COHABIT.TABLE.SOFA_GAP 0.30–0.46 取中 */
@@ -193,8 +207,10 @@ export interface Beat {
 }
 interface UnitScript {
   deg: Keys;
-  form?: UnitForm;
-  top: number;
+  /** 这台的形：一律由 cohabit-design 给（不在脚本里手写） */
+  design: UnitDesign;
+  /** 台上的标签（图例按它对上） */
+  tag: string;
 }
 export interface VignetteScript {
   n: number;
@@ -206,15 +222,6 @@ export interface VignetteScript {
   beats: readonly Beat[];
   /** 让路：按人的路线现算哪些带收回（giveway 用） */
   giveWay?: boolean;
-}
-
-/** 有顶的一台（两个结构）：朝 toward 那半圈只成下台，背后半圈两块都成——与 2-15 的 shelterBands 同一条规则 */
-export function halfRoof(toward: number): UnitForm {
-  return { bands: Uint8Array.from({ length: BANDS }, (_, j) => (Math.cos(bandAngle(j) - toward) < 0 ? 1 : 0)), toward };
-}
-/** 整圈两层（两块都成，没有朝向） */
-export function fullTwoLevel(): UnitForm {
-  return { bands: new Uint8Array(BANDS).fill(1), toward: null };
 }
 
 /** 座位点（与 cohabit placeSeats 同一个算法：沿家具宽偏 o、沿朝向缩进 seatIn） */
@@ -230,21 +237,165 @@ export function seatPoints(specs: readonly FurnSpec[]): SimSeat[] {
   return out;
 }
 
-// ── 四个小样 ───────────────────────────────────────────────────────────────────────
-export type VignetteKey = 'tea' | 'cavity' | 'giveway' | 'guide' | 'ramp' | 'counter' | 'step';
+// ── 六个小样 ───────────────────────────────────────────────────────────────────────
+/*
+ * 2026-11-16 起（作者「先把我们之前做的那么多工作，就是建立的那个联系，给它联系到那个小样里面去，让我这个小样里能看得出来
+ * 是用上我这些之前做的那么多工作的」）：每台成什么形不再在脚本里手写，一律交给 cohabit-design——先说这台在这件事里做什么
+ * （桌子 / 路上的一步 / 座位前方那台 / 站桌 / 接上邻台 / 合腔 / 先低后高 / 让路），再由它按之前的研究给形，并记下用上了哪几台研究
+ * （design.uses），台架按它挂标签、列图例。脚本只管人、猫与时刻。
+ */
+export type VignetteKey = 'guide' | 'tea' | 'cavity' | 'counter' | 'step' | 'giveway';
 export const VIGNETTES = [
+  { key: 'guide', n: 3, zh: '坐下，把地上的猫引过来', en: 'Sitting down draws a cat up from the floor' },
   { key: 'tea', n: 3, zh: '茶几兼猫台', en: 'Coffee table and cat shelf' },
   { key: 'cavity', n: 2, zh: '两台连成一条腔', en: 'Two units, one cavity' },
-  { key: 'giveway', n: 2, zh: '交叉点让路', en: 'Giving way at a crossing' },
-  { key: 'guide', n: 3, zh: '一步一步引过来', en: 'Leading a cat step by step' },
-  { key: 'ramp', n: 3, zh: '续坡', en: 'A ramp up' },
   { key: 'counter', n: 2, zh: '站桌下给猫一层', en: 'A shelf under the standing counter' },
   { key: 'step', n: 2, zh: '先低后高', en: 'Low half, then high half' },
+  { key: 'giveway', n: 2, zh: '交叉点让路', en: 'Giving way at a crossing' },
 ] as const satisfies readonly { key: VignetteKey; n: number; zh: string; en: string }[];
 
 /** 3×3 / 2×2 的格心坐标（行优先，与 vignetteLayout 同序） */
 function cell(n: number, p: number, r: number, c: number): { i: number; x: number; y: number } {
   return { i: r * n + c, x: (c - (n - 1) / 2) * p, y: (r - (n - 1) / 2) * p };
+}
+/** 一台的脚本：程度时间表 + 对应函数给的形 + 台上标签 */
+function unitOf(deg: Keys, design: UnitDesign, tag: string): UnitScript {
+  return { deg, design, tag };
+}
+/** 猫在一台上坐在环的方位角 th 那里：脚本的平面点（ringSpot）与离地高度（那一处的台面，斜台按位置取） */
+function onRing(u: { i: number; x: number; y: number }, d: UnitDesign, th: number, t: number, state: CatBeat['state'], heading: number): CatBeat {
+  const at = ringSpot(u, th);
+  return { t, x: at.x, y: at.y, heading, on: [u.i], state, h: heightToward(d, th) };
+}
+const m2 = (v: number): string => v.toFixed(2);
+
+/**
+ * 坐下，把地上的猫引过来（3×3）。2-15 里最常见的一件事（坐下引猫的路 600 s 里 61–95 条，大半从地面上的猫开始），
+ * 这里把它整件演一遍：平面模型此刻给出的读数（谁坐着、哪台是他的桌子、空间给哪只猫铺了哪条路）原样交给 designUnit，
+ * 桌子、路上两步、座位前方那台各自的形都是它算的——与 2-15 立体以后要接的是同一个函数。
+ * 路在房间中间、下面不压家具，所以第一步低的那一端能落到 0.42 m。
+ */
+function guideScript(l: PlanLayout): VignetteScript {
+  const n = 3;
+  const p = l.pitchM;
+  const half = l.roomM / 2;
+  const chair = furnKind({ kind: 'chair', ergo: true });
+  const furniture: FurnSpec[] = [{ kind: 'chair', x: cell(n, p, 2, 2).x, y: half - chair.d / 2 - 0.08, face: [0, -1], ergo: true }];
+  const rects = furniture.map(furnRect);
+  const seats = seatPoints(furniture);
+  const S = seats[0];
+  // 桌子那台：2-14 / 2-15 的桌子规则按几何定（在人面前、台面盖住座位中线、不压家具……）
+  const tIdx = tableFor(l, rects, seats, S);
+  const T = l.units[tIdx >= 0 ? tIdx : cell(n, p, 1, 2).i];
+  const A = cell(n, p, 2, 0); // 第一步（猫从它西边的地面跳上来）
+  const B = cell(n, p, 2, 1); // 第二步，在这里拐向座位
+  const M = cell(n, p, 1, 1); // 座位前方那台（离座位 1.0–1.5 m，守门核对）
+  const catStart = { x: -half - 0.02, y: A.y };
+  const path = [A.i, B.i, M.i];
+  // 平面模型此刻的读数：访客坐着、桌子那台归他、猫在地上、空间给猫铺了这条路——2-15 的 CohabitSim 给的就是这几样
+  const tableBy = new Array<number>(n * n).fill(-1);
+  tableBy[T.i] = 0;
+  const snap: DesignSim = {
+    layout: l,
+    tableBy,
+    furn: { rects },
+    seats,
+    people: [{ id: 0, seated: true, seat: 0 }],
+    cats: [{ id: 0, unit: null, state: 'walk', walker: catStart }],
+    guides: [{ kind: 'sit', person: 0, cat: 0, path }],
+  };
+  const formed: (UnitDesign | null)[] = new Array(n * n).fill(null);
+  for (const u of [T.i, ...path]) formed[u] = designUnit(snap, u, formed);
+  const dT = formed[T.i]!;
+  const dA = formed[A.i]!;
+  const dB = formed[B.i]!;
+  const dM = formed[M.i]!;
+  // 时刻：桌子先落（2026-11-10 作者「桌子先落」），猫走到了再落下一步（2-14 一次只落一步），身后那台随即收回
+  const tT = 2.5;
+  const sit = tT + RAMP.drop + RAMP.form;
+  const t1 = 13;
+  const on1 = t1 + RAMP.drop + RAMP.form + 0.5; // 猫跳上第一步
+  const t2 = on1 + 0.5;
+  const x2 = t2 + RAMP.drop + RAMP.form + 3; // 走过第一道接缝（第二步成形以后才开始跨，跨 2.5 s）
+  const t3 = x2 + 0.5;
+  const x3 = t3 + RAMP.drop + RAMP.form + 3; // 走进座位前方那台
+  const leave = x3 + 16;
+  const units: (UnitScript | null)[] = Array.from({ length: n * n }, () => null);
+  units[T.i] = unitOf(unitRamp(tT, leave + 0.5), dT, 'A');
+  units[A.i] = unitOf(unitRamp(t1, x2 + 3), dA, 'B');
+  units[B.i] = unitOf(unitRamp(t2, x3 + 3), dB, 'C');
+  units[M.i] = unitOf(unitRamp(t3, leave + 5), dM, 'D');
+  const enter: [number, number] = [half + 0.3, S.y - 0.5];
+  const front: [number, number] = [S.x - 0.05, S.y - 0.4];
+  const W = Math.PI;
+  const E = 0;
+  const N = -Math.PI / 2;
+  const down: [number, number] = [M.x - l.platR - 0.12, M.y];
+  const cat: CatBeat[] = [
+    { t: 0, x: catStart.x, y: catStart.y, heading: N, on: [], state: 'lie', h: 0 },
+    { t: on1 - 3, x: catStart.x, y: catStart.y, heading: E, on: [], state: 'sit', h: 0 },
+    { t: on1 - 0.6, x: catStart.x, y: catStart.y, heading: E, on: [], state: 'walk', h: 0 },
+    // 跳上第一步低的那一端（西边，0.42 m），沿环的南边走到东边高的那一端
+    onRing(A, dA, W, on1, 'walk', N),
+    onRing(A, dA, (3 * Math.PI) / 4, on1 + 0.7, 'walk', N),
+    onRing(A, dA, Math.PI / 2, on1 + 1.4, 'walk', E),
+    onRing(A, dA, Math.PI / 4, on1 + 2.1, 'walk', E),
+    onRing(A, dA, E, on1 + 2.8, 'sit', E),
+    onRing(A, dA, E, x2 - 2.6, 'sit', E),
+    // 跨过第一道接缝：两边一样高
+    { t: x2 - 2.5, x: A.x, y: A.y, heading: E, on: [A.i, B.i], state: 'walk', h: heightToward(dA, E) },
+    { t: x2, x: B.x, y: B.y, heading: E, on: [A.i, B.i], state: 'walk', h: heightToward(dB, W) },
+    onRing(B, dB, W, x2 + 0.1, 'walk', N),
+    onRing(B, dB, (-3 * Math.PI) / 4, x2 + 0.8, 'walk', N),
+    onRing(B, dB, N, x2 + 1.5, 'sit', N),
+    onRing(B, dB, N, x3 - 2.6, 'sit', N),
+    { t: x3 - 2.5, x: B.x, y: B.y, heading: N, on: [B.i, M.i], state: 'walk', h: heightToward(dB, N) },
+    { t: x3, x: M.x, y: M.y, heading: N, on: [B.i, M.i], state: 'walk', h: dM.top },
+    // 座位前方那台：坐进有顶那半边（台架按敞开那半圈的方向摆），下层 0.90 m
+    { t: x3 + 0.1, x: M.x, y: M.y, heading: N, on: [M.i], state: 'sit', h: dM.top },
+    { t: leave + 3.4, x: M.x, y: M.y, heading: N, on: [M.i], state: 'sit', h: dM.top },
+    { t: leave + 3.8, x: down[0] + 0.12, y: down[1], heading: W, on: [], state: 'walk', h: dM.top },
+    { t: leave + 4.2, x: down[0], y: down[1], heading: W, on: [], state: 'walk', h: 0 },
+    { t: leave + 6.5, x: catStart.x, y: down[1], heading: W, on: [], state: 'walk', h: 0 },
+    { t: leave + 7.5, x: catStart.x, y: catStart.y, heading: Math.PI / 2, on: [], state: 'walk', h: 0 },
+    { t: leave + 7.6, x: catStart.x, y: catStart.y, heading: N, on: [], state: 'lie', h: 0 },
+  ];
+  const sA = dA.slope!;
+  const sB = dB.slope!;
+  return {
+    n,
+    duration: leave + 12,
+    furniture,
+    units,
+    people: [
+      {
+        path: [
+          [0, ...enter],
+          [tT - 0.5, ...enter],
+          [sit - 1, ...front],
+          [sit, ...front],
+          [leave, ...front],
+          [leave + 0.5, ...front],
+          [leave + 3.5, ...enter],
+          [leave + 12, ...enter],
+        ],
+        sit: [sit, leave, 0],
+        watch: [[sit + 1, leave, 0]],
+      },
+    ],
+    cats: [cat],
+    beats: [
+      { t: 0, zh: '猫在地上，房间西边。单元都收在天花板下', en: 'The cat is on the floor by the west wall; every unit is stowed at the ceiling' },
+      { t: tT - 0.5, zh: `一位访客走进来。他要坐的椅子前面那台先落下当桌子（${m2(dT.top)} m）`, en: `A visitor comes in. The unit in front of the chair comes down first as a table (${m2(dT.top)} m)` },
+      { t: sit, zh: '桌子落好了，访客坐下，看着地上的猫', en: 'With the table in place, the visitor sits and watches the cat on the floor' },
+      { t: t1, zh: `空间给猫铺第一步：靠猫那一侧低（${m2(sA.from)} m），朝下一台那侧高（${m2(sA.to)} m）`, en: `The room lays the first step: low on the cat’s side (${m2(sA.from)} m), high toward the next unit (${m2(sA.to)} m)` },
+      { t: on1, zh: '猫跳上低的那一端，沿坡走上去', en: 'The cat hops onto the low end and walks up the slope' },
+      { t: t2, zh: `第二步落下，在这一台拐向座位，从 ${m2(sB.from)} m 升到 ${m2(sB.to)} m。接缝两边一样高，猫不用跳`, en: `The second step comes down and turns toward the seat, rising from ${m2(sB.from)} to ${m2(sB.to)} m; the seams are level, so the cat need not jump` },
+      { t: t3, zh: `最后一台落成两层：下层 ${m2(dM.top)} m，猫坐上去眼睛与坐着的人一样高；上层盖住背向座位的半圈`, en: `The last unit forms two levels: the lower at ${m2(dM.top)} m puts a sitting cat at the visitor’s eye height; the upper covers the half facing away from the seat` },
+      { t: x3, zh: '猫走进有顶的那半边坐下，转头看着人。身后两台收回', en: 'The cat settles under the roof and turns to watch the visitor; the two units behind it retract' },
+      { t: leave, zh: '人起身离开，桌子收回；猫跳下来回到地上，最后那台也收回', en: 'The visitor leaves and the table retracts; the cat jumps down and the last unit goes up too' },
+    ],
+  };
 }
 
 function teaScript(l: PlanLayout): VignetteScript {
@@ -255,16 +406,18 @@ function teaScript(l: PlanLayout): VignetteScript {
   const sofa = furnKind({ kind: 'sofa', ergo: true });
   // 沙发朝 +y、靠房间后半：前缘离茶几台边 TEA_GAP
   const sofaY = T.y - l.platR - TEA_GAP - sofa.d / 2;
-  const furniture: FurnSpec[] = [{ kind: 'sofa', x: 0, y: sofaY, face: [0, 1], ergo: true }];
+  const face: readonly [number, number] = [0, 1];
+  const furniture: FurnSpec[] = [{ kind: 'sofa', x: 0, y: sofaY, face, ergo: true }];
   const seats = seatPoints(furniture);
   const seat = 0; // 右边那个座位（离猫近）
   const S = seats[seat];
-  const toward = -Math.PI / 2; // 敞开那半圈（只成下台 = 茶几）朝沙发
-  const upper = TOPS.tea + UPPER_ABOVE;
+  const dT = teaShelfDesign(face);
+  const dR = flushDesign(dT);
+  const upper = dR.top;
   const units: (UnitScript | null)[] = Array.from({ length: n * n }, () => null);
   // 桌子先落（2026-11-10 作者「人坐在桌前，当桌子用的单元没有先降下来」）：访客一进门就开始落，落好了人才坐下
-  units[T.i] = { deg: unitRamp(2.5, 33), form: halfRoof(toward), top: TOPS.tea };
-  units[R.i] = { deg: ALWAYS, top: upper };
+  units[T.i] = unitOf(unitRamp(2.5, 33), dT, 'A');
+  units[R.i] = unitOf(ALWAYS, dR, 'B');
   const enter: [number, number] = [l.roomM / 2 + 0.25, sofaY + 0.15];
   const front: [number, number] = [S.x, S.y + 0.42];
   const toCat = Math.atan2(R.y - S.y, R.x - S.x);
@@ -305,10 +458,10 @@ function teaScript(l: PlanLayout): VignetteScript {
       ],
     ],
     beats: [
-      { t: 0, zh: '猫在右下那台上（台面 1.00 m）。其余单元收在天花板下', en: 'The cat rests on the lower-right unit (top 1.00 m); the rest are stowed at the ceiling' },
-      { t: 2, zh: '一位访客走进来，朝沙发走。沙发前那台先落下：朝沙发的半圈只成下台，当茶几（0.42 m）；背后的半圈上下两块都成', en: 'A visitor comes in and heads for the sofa. The unit in front of the sofa descends first: the half facing the sofa forms only the lower shelf, a coffee table at 0.42 m; the back half forms both shelves' },
+      { t: 0, zh: `猫在右下那台上（台面 ${m2(upper)} m）。其余单元收在天花板下`, en: `The cat rests on the lower-right unit (top ${m2(upper)} m); the rest are stowed at the ceiling` },
+      { t: 2, zh: `一位访客走进来，朝沙发走。沙发前那台先落下：朝沙发的半圈只成下层，当茶几（${m2(dT.top)} m）；背后的半圈上下两块都成`, en: `A visitor comes in and heads for the sofa. The unit in front of the sofa descends first: the half facing the sofa forms only the lower platform, a coffee table at ${m2(dT.top)} m; the back half forms both` },
       { t: 10.5, zh: '茶几落好了，访客坐到沙发上', en: 'With the table in place, the visitor sits on the sofa' },
-      { t: 17, zh: '猫走到上台（1.00 m），坐下看着坐着的人。两人眼睛差不多一样高，隔着茶几约 1.3 m', en: 'The cat crosses onto the upper shelf (1.00 m) and sits facing the visitor, eyes at about the same height, some 1.3 m apart across the table' },
+      { t: 17, zh: `猫走到上层（${m2(upper)} m），坐下看着坐着的人。两边的台面齐平，猫走过去不用跳`, en: `The cat crosses onto the upper platform (${m2(upper)} m), level with its own, and sits facing the visitor` },
       { t: 28, zh: '人起身离开，猫回到原来那台', en: 'The visitor gets up and leaves; the cat goes back' },
       { t: 33, zh: '没人坐了，茶几那台收回天花板下', en: 'With no one seated, the table unit retracts to the ceiling' },
     ],
@@ -326,13 +479,16 @@ function cavityScript(l: PlanLayout): VignetteScript {
   const chairY = half - chair.d / 2 - 0.08;
   const furniture: FurnSpec[] = [{ kind: 'chair', x: 0, y: chairY, face: [0, -1], ergo: true }];
   const S = seatPoints(furniture)[0];
+  const dA = cavityDesign();
+  const dB = cavityDesign();
+  const low = dA.top;
   const units: (UnitScript | null)[] = Array.from({ length: n * n }, () => null);
-  units[A.i] = { deg: unitRamp(8, 40), form: fullTwoLevel(), top: TOPS.lower };
-  units[B.i] = { deg: unitRamp(8, 40), form: fullTwoLevel(), top: TOPS.lower };
+  units[A.i] = unitOf(unitRamp(8, 40), dA, 'A');
+  units[B.i] = unitOf(unitRamp(8, 40), dB, 'B');
   const look = (u: { x: number; y: number }): number => Math.atan2(S.y - u.y, S.x - u.x);
   const enter: [number, number] = [half + 0.3, 0.1];
   const front: [number, number] = [S.x + 0.05, S.y - 0.35];
-  // 猫从右边进来，走到右后那台前面跳上下台，穿过腔走到左后那台
+  // 猫从右边进来，走到右后那台前面跳上下层，穿过腔走到左后那台
   const edgeB: [number, number] = [B.x + 0.05, B.y + l.platR + 0.12];
   const edgeA: [number, number] = [A.x - 0.05, A.y + l.platR + 0.12];
   const cat1: CatBeat[] = [
@@ -340,14 +496,14 @@ function cavityScript(l: PlanLayout): VignetteScript {
     { t: 15, x: half + 0.6, y: edgeB[1], heading: Math.PI, on: [], state: 'walk', h: 0 },
     { t: 17.5, x: edgeB[0], y: edgeB[1], heading: Math.PI, on: [], state: 'walk', h: 0 },
     { t: 18, x: edgeB[0], y: edgeB[1], heading: -Math.PI / 2, on: [], state: 'sit', h: 0 },
-    { t: 18.4, x: edgeB[0], y: edgeB[1] - 0.12, heading: -Math.PI / 2, on: [], state: 'walk', h: TOPS.lower },
+    { t: 18.4, x: edgeB[0], y: edgeB[1] - 0.12, heading: -Math.PI / 2, on: [], state: 'walk', h: low },
     { t: 18.5, x: B.x, y: B.y, heading: Math.PI, on: [B.i], state: 'sit' },
     { t: 19, x: B.x, y: B.y, heading: Math.PI, on: [B.i, A.i], state: 'walk' },
     { t: 22, x: A.x, y: A.y, heading: Math.PI, on: [B.i, A.i], state: 'walk' },
     { t: 22.1, x: A.x, y: A.y, heading: look(A), on: [A.i], state: 'sit' },
     // 人 33–36 s 起身走出去，猫等人走出房间再下地，不和人走同一段路
     { t: 36.6, x: A.x, y: A.y, heading: look(A), on: [A.i], state: 'sit' },
-    { t: 37, x: edgeA[0], y: edgeA[1] - 0.12, heading: Math.PI / 2, on: [], state: 'walk', h: TOPS.lower },
+    { t: 37, x: edgeA[0], y: edgeA[1] - 0.12, heading: Math.PI / 2, on: [], state: 'walk', h: low },
     { t: 37.4, x: edgeA[0], y: edgeA[1], heading: Math.PI / 2, on: [], state: 'walk', h: 0 },
     { t: 38.1, x: edgeA[0], y: edgeA[1] + 0.25, heading: 0, on: [], state: 'walk', h: 0 },
     { t: 41.6, x: half + 0.6, y: edgeA[1] + 0.25, heading: 0, on: [], state: 'walk', h: 0 },
@@ -357,10 +513,10 @@ function cavityScript(l: PlanLayout): VignetteScript {
     { t: 21, x: half + 0.6, y: edgeB[1] + 0.2, heading: Math.PI, on: [], state: 'walk', h: 0 },
     { t: 23, x: edgeB[0] + 0.1, y: edgeB[1], heading: Math.PI, on: [], state: 'walk', h: 0 },
     { t: 23.4, x: edgeB[0] + 0.1, y: edgeB[1], heading: -Math.PI / 2, on: [], state: 'sit', h: 0 },
-    { t: 23.8, x: edgeB[0] + 0.1, y: edgeB[1] - 0.12, heading: -Math.PI / 2, on: [], state: 'walk', h: TOPS.lower },
+    { t: 23.8, x: edgeB[0] + 0.1, y: edgeB[1] - 0.12, heading: -Math.PI / 2, on: [], state: 'walk', h: low },
     { t: 23.9, x: B.x, y: B.y, heading: look(B), on: [B.i], state: 'sit' },
     { t: 36.2, x: B.x, y: B.y, heading: look(B), on: [B.i], state: 'sit' },
-    { t: 36.6, x: edgeB[0], y: edgeB[1] - 0.12, heading: Math.PI / 2, on: [], state: 'walk', h: TOPS.lower },
+    { t: 36.6, x: edgeB[0], y: edgeB[1] - 0.12, heading: Math.PI / 2, on: [], state: 'walk', h: low },
     { t: 37, x: edgeB[0], y: edgeB[1], heading: Math.PI / 2, on: [], state: 'walk', h: 0 },
     { t: 39.5, x: half + 0.6, y: edgeB[1] + 0.2, heading: 0, on: [], state: 'walk', h: 0 },
   ];
@@ -389,8 +545,8 @@ function cavityScript(l: PlanLayout): VignetteScript {
     beats: [
       { t: 0, zh: '两台收在天花板下', en: 'Both units are stowed at the ceiling' },
       { t: 3, zh: '一位访客坐到餐椅上，面朝里面那两台', en: 'A visitor sits on the chair, facing the two units' },
-      { t: 8, zh: '两台落下，整圈上下两层：下台 0.90 m，两块之间空 0.51 m；两台之间的空接成一条腔，长约 0.83 m', en: 'Both units descend as two full levels: lower shelf at 0.90 m, 0.51 m clear above it; the two gaps join into one cavity about 0.83 m long' },
-      { t: 17.5, zh: '一只猫跳上右边那台的下层，从腔里穿过去，坐到左边那台', en: 'A cat jumps onto the lower shelf on the right, walks through the cavity and settles on the left' },
+      { t: 8, zh: `两台落下，整圈上下两层：下层 ${m2(low)} m，上层 ${m2(low + DESIGN.UPPER)} m；两台之间的空接成一条腔，长约 ${m2(p)} m`, en: `Both units descend as two full levels: lower ${m2(low)} m, upper ${m2(low + DESIGN.UPPER)} m; the two gaps join into one cavity about ${m2(p)} m long` },
+      { t: 17.5, zh: '一只猫跳上右边那台的下层，从腔里穿过去，坐到左边那台', en: 'A cat jumps onto the lower platform on the right, walks through the cavity and settles on the left' },
       { t: 23, zh: '第二只猫上到右边那台。两只猫各在一头，都朝着坐着的人', en: 'A second cat takes the right-hand unit; one cat at each end, both facing the visitor' },
       { t: 33, zh: '人起身离开，猫下地走开，两台收回', en: 'The visitor leaves, the cats jump down and go, the units retract' },
     ],
@@ -401,7 +557,8 @@ function givewayScript(l: PlanLayout): VignetteScript {
   const n = 2;
   const p = l.pitchM;
   const half = l.roomM / 2;
-  const units: (UnitScript | null)[] = Array.from({ length: n * n }, () => ({ deg: ALWAYS, top: TOPS.stand }));
+  const tags = ['A', 'B', 'C', 'D'];
+  const units: (UnitScript | null)[] = Array.from({ length: n * n }, (_, i) => unitOf(ALWAYS, aisleDesign(), tags[i]));
   const A = cell(n, p, 0, 0);
   // 猫坐在左后那台背向交叉点的那一侧（方位 225°），朝着交叉点那一角留给人让路
   const cat: CatBeat[] = [{ t: 0, x: A.x, y: A.y, heading: (225 * Math.PI) / 180 + RING_SIDE, on: [A.i], state: 'sit' }];
@@ -426,96 +583,12 @@ function givewayScript(l: PlanLayout): VignetteScript {
     ],
     cats: [cat],
     beats: [
-      { t: 0, zh: '四台都落着，台面 1.05 m。中间是一个过道交叉点，方台的角离它只有 0.10 m', en: 'All four units are down at 1.05 m. A corner of each square shelf comes within 0.10 m of the crossing in the middle' },
+      { t: 0, zh: `四台都落着，台面 ${m2(TABLE_TOP.stand)} m。中间是一个过道交叉点，方台的角离它只有 0.10 m`, en: `All four units are down at ${m2(TABLE_TOP.stand)} m. A corner of each square platform comes within 0.10 m of the crossing in the middle` },
       { t: 3, zh: '一位访客走过来。挡路的带提前收回、平贴在立杆上，开出一条过道', en: 'A visitor approaches. The bands in the way retract ahead of the visitor and lie flat on the posts, opening an aisle' },
       { t: 7.5, zh: '访客站在交叉点上看猫。四台各收回朝着访客的那一角，其余照旧落着', en: 'The visitor stands at the crossing watching the cat; each unit pulls back only the corner facing the visitor' },
       { t: 14, zh: '访客从另一边走出去，身后的带落回原位', en: 'The visitor walks out the other side; the bands behind come back down' },
     ],
     giveWay: true,
-  };
-}
-
-function guideScript(l: PlanLayout): VignetteScript {
-  const n = 3;
-  const p = l.pitchM;
-  const half = l.roomM / 2;
-  const A = cell(n, p, 0, 0); // 猫的家（左上）
-  const B = cell(n, p, 0, 1);
-  const C = cell(n, p, 0, 2); // 拐弯处（右上）
-  const D = cell(n, p, 1, 2); // 座位前方那台（右中），有顶的一台
-  const chair = furnKind({ kind: 'chair', ergo: true });
-  const chairY = half - chair.d / 2 - 0.08;
-  const furniture: FurnSpec[] = [{ kind: 'chair', x: D.x, y: chairY, face: [0, -1], ergo: true }];
-  const S = seatPoints(furniture)[0];
-  const toward = Math.atan2(S.y - D.y, S.x - D.x);
-  const units: (UnitScript | null)[] = Array.from({ length: n * n }, () => null);
-  // 落着的只有猫脚下与下一步（2-14 引路一次只落一步）；最后猫下地走回家，家那台重新落下
-  units[A.i] = { deg: [[0, 1], [19, 1], [19 + RAMP.unform, COHABIT.WALL_AT], [19 + RAMP.unform + RAMP.hoist, 0], [55, 0], [55 + RAMP.drop, COHABIT.WALL_AT], [55 + RAMP.drop + RAMP.form, 1]], top: TOPS.stand };
-  units[B.i] = { deg: unitRamp(8, 30), top: TOPS.stand };
-  units[C.i] = { deg: unitRamp(19, 41), top: TOPS.stand };
-  units[D.i] = { deg: unitRamp(30, 55), form: halfRoof(toward), top: TOPS.lower };
-  const enter: [number, number] = [half + 0.3, S.y - 0.5];
-  // 椅子前站的位置：离座位前方那台的台边留出身子（落下后人起身从这里走，不擦着下台）
-  const front: [number, number] = [S.x - 0.05, S.y - 0.4];
-  const look = Math.atan2(S.y - D.y, S.x - D.x);
-  // 猫从有顶那台下地的位置：台左侧外缘外一点
-  const down: [number, number] = [D.x - l.platR - 0.12, D.y];
-  const home: [number, number] = [A.x, A.y + l.platR + 0.12];
-  const cat: CatBeat[] = [
-    { t: 0, x: A.x, y: A.y, heading: 0, on: [A.i], state: 'lie' },
-    { t: 15.5, x: A.x, y: A.y, heading: 0, on: [A.i], state: 'sit' },
-    { t: 16, x: A.x, y: A.y, heading: 0, on: [A.i, B.i], state: 'walk' },
-    { t: 18.5, x: B.x, y: B.y, heading: 0, on: [A.i, B.i], state: 'walk' },
-    { t: 18.6, x: B.x, y: B.y, heading: 0, on: [B.i], state: 'sit' },
-    { t: 27, x: B.x, y: B.y, heading: 0, on: [B.i, C.i], state: 'walk' },
-    { t: 29.5, x: C.x, y: C.y, heading: 0, on: [B.i, C.i], state: 'walk' },
-    { t: 29.6, x: C.x, y: C.y, heading: Math.PI / 2, on: [C.i], state: 'sit' },
-    { t: 38, x: C.x, y: C.y, heading: Math.PI / 2, on: [C.i, D.i], state: 'walk' },
-    { t: 40.5, x: D.x, y: D.y, heading: Math.PI / 2, on: [C.i, D.i], state: 'walk' },
-    { t: 40.6, x: D.x, y: D.y, heading: look, on: [D.i], state: 'sit' },
-    { t: 52.5, x: D.x, y: D.y, heading: look, on: [D.i], state: 'sit' },
-    { t: 52.9, x: down[0] + 0.12, y: down[1], heading: Math.PI, on: [], state: 'walk', h: TOPS.lower },
-    { t: 53.3, x: down[0], y: down[1], heading: Math.PI, on: [], state: 'walk', h: 0 },
-    { t: 56.5, x: home[0], y: down[1], heading: Math.PI, on: [], state: 'walk', h: 0 },
-    { t: 58, x: home[0], y: home[1], heading: -Math.PI / 2, on: [], state: 'walk', h: 0 },
-    { t: 58.1, x: home[0], y: home[1], heading: -Math.PI / 2, on: [], state: 'sit', h: 0 },
-    { t: 63.4, x: home[0], y: home[1], heading: -Math.PI / 2, on: [], state: 'sit', h: 0 },
-    { t: 63.9, x: home[0], y: home[1] - 0.12, heading: -Math.PI / 2, on: [], state: 'walk', h: TOPS.stand },
-    { t: 64, x: A.x, y: A.y, heading: 0, on: [A.i], state: 'sit' },
-    { t: 66, x: A.x, y: A.y, heading: 0, on: [A.i], state: 'lie' },
-  ];
-  return {
-    n,
-    duration: 68,
-    furniture,
-    units,
-    people: [
-      {
-        path: [
-          [0, ...enter],
-          [2, ...enter],
-          [5.5, ...front],
-          [6, ...front],
-          [51.5, ...front],
-          [52, ...front],
-          [55, ...enter],
-          [68, ...enter],
-        ],
-        sit: [6, 51.5, 0],
-        watch: [[16, 51.5, 0]],
-      },
-    ],
-    cats: [cat],
-    beats: [
-      { t: 0, zh: '猫在左上那台上，离椅子最远', en: 'The cat is on the upper-left unit, the farthest from the chair' },
-      { t: 2, zh: '一位访客坐到右下的椅子上', en: 'A visitor sits on the chair at the lower right' },
-      { t: 8, zh: '空间朝猫递过去一步：猫旁边那台落下', en: 'The room offers the cat one step: the unit next to it descends' },
-      { t: 16, zh: '猫走过去。身后那台收回，下一台落下——落着的只有猫脚下与下一步', en: 'The cat steps across. The unit behind it retracts and the next one descends; only the one under the cat and the next are ever down' },
-      { t: 27, zh: '在拐角那台转过来，朝座位走', en: 'It turns at the corner unit, toward the seat' },
-      { t: 30, zh: '最后一步落成有顶的一台：下台 0.90 m，敞开那半圈朝着坐着的人', en: 'The last step forms as a roofed unit: lower shelf at 0.90 m, the open half facing the visitor' },
-      { t: 40.5, zh: '猫坐进有顶那半边，转头看着人', en: 'The cat settles under the roof and turns to watch the visitor' },
-      { t: 52, zh: '人起身离开，猫下地走回去，原来那台重新落下接它', en: 'The visitor leaves; the cat jumps down and walks back, and its home unit comes down for it' },
-    ],
   };
 }
 
@@ -526,100 +599,19 @@ export function ringSpot(u: { x: number; y: number }, th: number): { x: number; 
   const a = th + RING_SIDE;
   return { x: u.x + 0.15 * Math.cos(a), y: u.y + 0.15 * Math.sin(a) };
 }
-/** 续坡：每台沿 +x 升多少（m）；一台之内最多能升约 0.39 m（形态方案 §4），取 0.35 */
-export const RAMP_RISE = 0.35;
-/** 先低后高：一台里朝 +x 的半圈比另一半高多少（m） */
-export const STEP_RISE = 0.4;
-
-function rampScript(l: PlanLayout): VignetteScript {
-  const n = 3;
-  const p = l.pitchM;
-  const half = l.roomM / 2;
-  const A = cell(n, p, 1, 0);
-  const B = cell(n, p, 1, 1);
-  const C = cell(n, p, 1, 2);
-  const chair = furnKind({ kind: 'chair', ergo: true });
-  const furniture: FurnSpec[] = [{ kind: 'chair', x: C.x, y: half - chair.d / 2 - 0.08, face: [0, -1], ergo: true }];
-  const S = seatPoints(furniture)[0];
-  // 每台沿 +x 升 RAMP_RISE：A 0.35 → 0.70、B 0.70 → 1.05、C 平在 1.05，两条接缝齐平
-  const rise = (): UnitForm => ({ bands: null, toward: null, lift: liftOf((a) => (RAMP_RISE * (1 + Math.cos(a))) / 2) });
-  const lowA = TOPS.stand - 2 * RAMP_RISE;
-  const units: (UnitScript | null)[] = Array.from({ length: n * n }, () => null);
-  units[A.i] = { deg: unitRamp(7, 44), form: rise(), top: lowA };
-  units[B.i] = { deg: unitRamp(7, 44), form: rise(), top: lowA + RAMP_RISE };
-  units[C.i] = { deg: unitRamp(7, 44), top: TOPS.stand };
-  const enter: [number, number] = [half + 0.3, S.y - 0.5];
-  const front: [number, number] = [S.x - 0.05, S.y - 0.4];
-  const look = Math.atan2(S.y - C.y, S.x - C.x);
-  const home: [number, number] = [A.x, half - 0.3];
-  const edgeA: [number, number] = [A.x, A.y + l.platR + 0.12];
-  const onA = ringSpot(A, Math.PI / 2);
-  const onC = ringSpot(C, Math.PI / 2);
-  const hA = lowA + RAMP_RISE / 2;
-  const hB = lowA + (3 * RAMP_RISE) / 2;
-  const down: [number, number] = [C.x - 0.35, C.y + l.platR + 0.12];
-  const cat: CatBeat[] = [
-    { t: 0, x: home[0], y: home[1], heading: -Math.PI / 2, on: [], state: 'sit', h: 0 },
-    { t: 14, x: home[0], y: home[1], heading: -Math.PI / 2, on: [], state: 'walk', h: 0 },
-    { t: 16, x: edgeA[0], y: edgeA[1], heading: -Math.PI / 2, on: [], state: 'sit', h: 0 },
-    { t: 16.6, x: edgeA[0], y: edgeA[1], heading: -Math.PI / 2, on: [], state: 'walk', h: 0 },
-    { t: 17, x: onA.x, y: onA.y, heading: 0, on: [], state: 'walk', h: hA },
-    { t: 17.1, x: onA.x, y: onA.y, heading: 0, on: [A.i], state: 'sit', h: hA },
-    { t: 17.8, x: A.x, y: A.y, heading: 0, on: [A.i, B.i], state: 'walk', h: hA },
-    { t: 20.3, x: B.x, y: B.y, heading: 0, on: [A.i, B.i], state: 'walk', h: hB },
-    { t: 20.4, x: B.x, y: B.y, heading: 0, on: [B.i, C.i], state: 'walk', h: hB },
-    { t: 22.9, x: C.x, y: C.y, heading: 0, on: [B.i, C.i], state: 'walk', h: TOPS.stand },
-    { t: 23, x: onC.x, y: onC.y, heading: look, on: [C.i], state: 'sit' },
-    { t: 41, x: onC.x, y: onC.y, heading: look, on: [C.i], state: 'sit' },
-    { t: 41.4, x: down[0], y: down[1] - 0.12, heading: Math.PI, on: [], state: 'walk', h: TOPS.stand },
-    { t: 41.9, x: down[0], y: down[1], heading: Math.PI, on: [], state: 'walk', h: 0 },
-    { t: 46, x: home[0], y: home[1], heading: Math.PI, on: [], state: 'walk', h: 0 },
-    { t: 46.1, x: home[0], y: home[1], heading: -Math.PI / 2, on: [], state: 'sit', h: 0 },
-  ];
-  return {
-    n,
-    duration: 54,
-    furniture,
-    units,
-    people: [
-      {
-        path: [
-          [0, ...enter],
-          [2, ...enter],
-          [5.5, ...front],
-          [6, ...front],
-          [40, ...front],
-          [40.5, ...front],
-          [43.5, ...enter],
-          [54, ...enter],
-        ],
-        sit: [6, 40, 0],
-        watch: [[17, 40, 0]],
-      },
-    ],
-    cats: [cat],
-    beats: [
-      { t: 0, zh: '猫在地上。中间一排三台收在天花板下', en: 'The cat is on the floor; the three units in the middle row are stowed' },
-      { t: 2, zh: '一位访客坐到右边的椅子上', en: 'A visitor sits on the chair at the right' },
-      { t: 7, zh: '三台一起落下，前两台各沿一个方向升 0.35 m，接缝齐平：0.35 → 0.70 → 1.05 m', en: 'The three units descend together; the first two each rise 0.35 m in one direction, level at both seams: 0.35 → 0.70 → 1.05 m' },
-      { t: 15, zh: '抬高的带子，台面下多出来的那截布贴着立杆拉直，不在台下垂着', en: 'Under a raised band, the extra cloth runs straight down the post instead of hanging under the platform' },
-      { t: 16.5, zh: '猫从最低那一端跳上来（约半米），沿坡走上去，不用一下跳到 1.05 m', en: 'The cat hops on at the low end (about half a metre) and walks up the slope instead of jumping straight to 1.05 m' },
-      { t: 23, zh: '在最高那台坐下，朝着坐着的人', en: 'It settles on the top unit, facing the seated visitor' },
-      { t: 40, zh: '人起身离开，猫跳下来，三台收回', en: 'The visitor leaves, the cat jumps down, the units retract' },
-    ],
-  };
-}
 
 function counterScript(l: PlanLayout): VignetteScript {
   const n = 2;
   const p = l.pitchM;
   const half = l.roomM / 2;
   const T = cell(n, p, 0, 0); // 站桌（整圈两层）
-  const B = cell(n, p, 0, 1); // 旁边一台平台，与上台同高
-  const low = TOPS.stand - UPPER_ABOVE;
+  const B = cell(n, p, 0, 1); // 旁边一台平台，与上层同高
+  const dT = counterDesign();
+  const dB = flushDesign(dT);
+  const low = dT.top;
   const units: (UnitScript | null)[] = Array.from({ length: n * n }, () => null);
-  units[T.i] = { deg: unitRamp(1.5, 36), form: fullTwoLevel(), top: low }; // 台子先落，落好了人才走到台前
-  units[B.i] = { deg: unitRamp(1.5, 36), top: TOPS.stand };
+  units[T.i] = unitOf(unitRamp(1.5, 36), dT, 'A'); // 台子先落，落好了人才走到台前
+  units[B.i] = unitOf(unitRamp(1.5, 36), dB, 'B');
   // 人站在站桌左前方、面朝台子（轴测机位从右前方看，站在台子正前方会把台子挡住）
   const stand: [number, number] = [T.x - 0.18, T.y + l.platR + 0.33];
   const enter: [number, number] = [half + 0.3, stand[1] + 0.02];
@@ -664,9 +656,9 @@ function counterScript(l: PlanLayout): VignetteScript {
     cats: [cat],
     beats: [
       { t: 0, zh: '两台收在天花板下', en: 'Both units are stowed at the ceiling' },
-      { t: 1, zh: '一位访客走过来。他要去的那两台先落下：左边那台整圈两层，上台 1.05 m 当站着用的台面，下台 0.47 m；右边那台平台，与上台同高', en: 'A visitor walks in. The two units ahead come down first: the left one forms two levels all round, the upper at 1.05 m as a standing counter and the lower at 0.47 m; the right one is a platform level with the upper' },
+      { t: 1, zh: `一位访客走过来。他要去的那两台先落下：左边那台整圈两层，上层 ${m2(low + DESIGN.UPPER)} m 当站着用的台面，下层 ${m2(low)} m；右边那台平台，与上层同高`, en: `A visitor walks in. The two units ahead come down first: the left one forms two levels all round, the upper at ${m2(low + DESIGN.UPPER)} m as a standing counter and the lower at ${m2(low)} m; the right one is a platform level with the upper` },
       { t: 9.5, zh: '台面落好了，访客走到台前站住', en: 'With the counter in place, the visitor walks up and stops' },
-      { t: 15, zh: '一只猫跳上下台，在台面底下趴着，正对着站着的人', en: 'A cat hops onto the lower level and lies under the counter, facing the visitor' },
+      { t: 15, zh: '一只猫跳上下层，在台面底下趴着，正对着站着的人', en: 'A cat hops onto the lower level and lies under the counter, facing the visitor' },
       { t: 30, zh: '人走开，猫跳下来，两台收回', en: 'The visitor leaves, the cat jumps down, the units retract' },
     ],
   };
@@ -682,32 +674,38 @@ function stepScript(l: PlanLayout): VignetteScript {
   // 椅子在右边那台前面（放在中间会挡住左边那台）
   const furniture: FurnSpec[] = [{ kind: 'chair', x: B.x, y: half - chair.d / 2 - 0.08, face: [0, -1], ergo: true }];
   const S = seatPoints(furniture)[0];
-  const low = TOPS.stand - STEP_RISE;
+  // 高的那半朝邻台（+x）：与邻台齐平接上；低的那半 = 高的减去一台能抬的高差
+  const dA = stairDesign(0, TABLE_TOP.stand - DESIGN.RISE - 0.01, TABLE_TOP.stand);
+  const dB = flushDesign(dA);
   const units: (UnitScript | null)[] = Array.from({ length: n * n }, () => null);
-  units[A.i] = { deg: unitRamp(6, 38), form: { bands: null, toward: null, lift: liftOf((a) => (Math.cos(a) > 0 ? STEP_RISE : 0)) }, top: low };
-  units[B.i] = { deg: unitRamp(6, 38), top: TOPS.stand };
+  units[A.i] = unitOf(unitRamp(6, 38), dA, 'A');
+  units[B.i] = unitOf(unitRamp(6, 38), dB, 'B');
   const enter: [number, number] = [half + 0.3, 0.1];
   const front: [number, number] = [S.x + 0.05, S.y - 0.35];
-  const lowSpot = ringSpot(A, (150 * Math.PI) / 180);
-  const highSpot = ringSpot(A, (60 * Math.PI) / 180);
+  const lowTh = (150 * Math.PI) / 180;
+  const highTh = (60 * Math.PI) / 180;
+  const lowSpot = ringSpot(A, lowTh);
+  const highSpot = ringSpot(A, highTh);
   const onB = ringSpot(B, (110 * Math.PI) / 180);
   const look = Math.atan2(S.y - B.y, S.x - B.x);
   const home: [number, number] = [A.x - 0.15, half - 0.2];
   const jumpFrom: [number, number] = [A.x - 0.2, A.y + l.platR + 0.12];
+  const hLow = heightToward(dA, lowTh);
+  const hHigh = heightToward(dA, highTh);
   const cat: CatBeat[] = [
     { t: 0, x: home[0], y: home[1], heading: -Math.PI / 2, on: [], state: 'sit', h: 0 },
     { t: 14, x: home[0], y: home[1], heading: -Math.PI / 2, on: [], state: 'walk', h: 0 },
     { t: 16, x: jumpFrom[0], y: jumpFrom[1], heading: -Math.PI / 2, on: [], state: 'sit', h: 0 },
     { t: 16.6, x: jumpFrom[0], y: jumpFrom[1], heading: -Math.PI / 2, on: [], state: 'walk', h: 0 },
-    { t: 17, x: lowSpot.x, y: lowSpot.y, heading: 0, on: [], state: 'walk', h: low },
-    { t: 17.1, x: lowSpot.x, y: lowSpot.y, heading: 0, on: [A.i], state: 'sit', h: low },
-    { t: 19.5, x: lowSpot.x, y: lowSpot.y, heading: 0, on: [A.i], state: 'walk', h: low },
-    { t: 20.5, x: highSpot.x, y: highSpot.y, heading: 0, on: [A.i], state: 'sit', h: TOPS.stand },
-    { t: 22.5, x: A.x, y: A.y, heading: 0, on: [A.i, B.i], state: 'walk', h: TOPS.stand },
-    { t: 24.5, x: B.x, y: B.y, heading: 0, on: [A.i, B.i], state: 'walk', h: TOPS.stand },
+    { t: 17, x: lowSpot.x, y: lowSpot.y, heading: 0, on: [], state: 'walk', h: hLow },
+    { t: 17.1, x: lowSpot.x, y: lowSpot.y, heading: 0, on: [A.i], state: 'sit', h: hLow },
+    { t: 19.5, x: lowSpot.x, y: lowSpot.y, heading: 0, on: [A.i], state: 'walk', h: hLow },
+    { t: 20.5, x: highSpot.x, y: highSpot.y, heading: 0, on: [A.i], state: 'sit', h: hHigh },
+    { t: 22.5, x: A.x, y: A.y, heading: 0, on: [A.i, B.i], state: 'walk', h: hHigh },
+    { t: 24.5, x: B.x, y: B.y, heading: 0, on: [A.i, B.i], state: 'walk', h: dB.top },
     { t: 24.6, x: onB.x, y: onB.y, heading: look, on: [B.i], state: 'sit' },
     { t: 35, x: onB.x, y: onB.y, heading: look, on: [B.i], state: 'sit' },
-    { t: 35.4, x: B.x - 0.2, y: B.y + l.platR, heading: Math.PI / 2, on: [], state: 'walk', h: TOPS.stand },
+    { t: 35.4, x: B.x - 0.2, y: B.y + l.platR, heading: Math.PI / 2, on: [], state: 'walk', h: dB.top },
     { t: 35.9, x: B.x - 0.2, y: B.y + l.platR + 0.12, heading: Math.PI / 2, on: [], state: 'walk', h: 0 },
     { t: 40, x: home[0], y: home[1], heading: Math.PI, on: [], state: 'walk', h: 0 },
     { t: 40.1, x: home[0], y: home[1], heading: -Math.PI / 2, on: [], state: 'sit', h: 0 },
@@ -737,7 +735,7 @@ function stepScript(l: PlanLayout): VignetteScript {
     beats: [
       { t: 0, zh: '两台收在天花板下，猫在地上', en: 'Both units are stowed; the cat is on the floor' },
       { t: 1, zh: '一位访客坐到椅子上', en: 'A visitor sits on the chair' },
-      { t: 6, zh: '左边那台落下，一半低（0.65 m）一半高（1.05 m）；右边那台与高的那半同高', en: 'The left unit comes down half low (0.65 m) and half high (1.05 m); the right one matches the high half' },
+      { t: 6, zh: `左边那台落下，一半低（${m2(hLow)} m）一半高（${m2(hHigh)} m）；右边那台与高的那半齐平`, en: `The left unit comes down half low (${m2(hLow)} m) and half high (${m2(hHigh)} m); the right one is level with the high half` },
       { t: 16.5, zh: '猫先跳上低的那半，停一下', en: 'The cat first hops onto the low half and pauses' },
       { t: 19.5, zh: '再上到高的那半，走到右边那台坐下，朝着坐着的人', en: 'Then it steps up to the high half, crosses to the right-hand unit and settles facing the visitor' },
       { t: 34, zh: '人起身离开，猫跳下来，两台收回', en: 'The visitor leaves, the cat jumps down, the units retract' },
@@ -749,20 +747,18 @@ export function vignetteScript(key: VignetteKey): VignetteScript {
   const n = VIGNETTES.find((v) => v.key === key)!.n;
   const l = vignetteLayout(n);
   switch (key) {
+    case 'guide':
+      return guideScript(l);
     case 'tea':
       return teaScript(l);
     case 'cavity':
       return cavityScript(l);
-    case 'giveway':
-      return givewayScript(l);
-    case 'guide':
-      return guideScript(l);
-    case 'ramp':
-      return rampScript(l);
     case 'counter':
       return counterScript(l);
     case 'step':
       return stepScript(l);
+    case 'giveway':
+      return givewayScript(l);
   }
 }
 
@@ -922,11 +918,18 @@ export class VignetteSim implements SpaceSimLike {
   }
 
   formOf(u: number): UnitForm {
-    return this.script.units[u]?.form ?? { bands: null, toward: null };
+    return this.script.units[u]?.design.form ?? { bands: null, toward: null };
   }
 
   topOf(u: number): number {
-    return this.script.units[u]?.top ?? TOPS.stand;
+    return this.script.units[u]?.design.top ?? TOPS.stand;
+  }
+
+  /** 每台的标签与形（台架挂标签、列图例；按标签排） */
+  tags(): { u: number; tag: string; design: UnitDesign }[] {
+    const out: { u: number; tag: string; design: UnitDesign }[] = [];
+    this.script.units.forEach((s, u) => s && out.push({ u, tag: s.tag, design: s.design }));
+    return out.sort((a, b) => a.tag.localeCompare(b.tag));
   }
 
   /** 此刻的旁白 */

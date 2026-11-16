@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useBenchLang, useLabText } from './LabLanguage';
 import { LabControlLabel } from './LabControlLabel';
 import { attachLabCamera } from './labCameraInput';
@@ -17,7 +17,9 @@ import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import type { Vec3 } from '../../src/lib/linkage/solver3d';
 import { COHABIT_BAKE_URL, unpackTrajectories } from '../../src/lib/space/cohabit-bake-format';
 import { fetchMeshBuffer, forgetMeshBuffer } from '../../src/lib/linkage/mesh-fetch';
-import { VIGNETTES, VignetteSim, type SpaceSimLike, type VignetteKey } from '../../src/lib/space/cohabit-vignette';
+import { VIGNETTES, VignetteSim, vignetteLayout, vignetteScript, type SpaceSimLike, type VignetteKey } from '../../src/lib/space/cohabit-vignette';
+import { DESIGN, SOURCES, formText, roleName, type Source, type UnitDesign } from '../../src/lib/space/cohabit-design';
+import { logicalToCss, projectLogical } from '../../src/lib/linkage/machine-behavior';
 import { COHABIT, CohabitSim, PACE_DEMO, SPACE_MODES, bandAngle, partySizes, scatterCats, type EventKind, type SpaceMode } from '../../src/lib/space/cohabit';
 import { FIGURE, RING_GRID_AXON, ROOM, ringGridViewMatrix, type RingGridView } from '../../src/lib/space/skin-grid';
 import { CAT, CAT_HEAD_YAW_MAX, clampHeadYaw, catRig, humanRig, strideOf, styleKey, type Rig as BodyRig, type Tone } from '../../src/lib/space/figure';
@@ -181,20 +183,24 @@ const VIG_COPY = {
   zh: {
     title: '小样 · 2×2 / 3×3',
     sub: (name: string, n: number, side: number) => `${name} · ${n}×${n} · 场地 ${side.toFixed(2)} m 见方 · 与实验 2-15 同一种方台、同一个格距`,
-    hint: '拖拽旋转 · 按脚本演，不跑仿真：哪一台什么时候落、成什么形、人和猫在哪都是写好的 · 设计提案，不是研究结果',
+    hint: '拖拽旋转 · 按脚本演，不跑仿真：人和猫在哪、哪一台什么时候落是写好的；每台成什么形由对应函数按之前的研究给出 · 设计提案，不是研究结果',
     baking: (p: number) => `算带子轨迹 ${Math.round(p * 100)}%（平台与两层两组）`,
     clock: (t: number, d: number) => `${Math.floor(t)} / ${d} s`,
     pick: '小样',
     aria: '从实验 2-15 那间房里取 2×2 或 3×3 的一小块，同一种方台按脚本落下成形，演一个人与猫的小场景',
+    legend: '每台在这件事里做什么、成什么形、用上了之前哪几台研究（形由对应函数给，与 2-15 以后要接的是同一个）',
+    every: (s: string) => `每一台都用：${s}`,
   },
   en: {
     title: 'Small studies · 2×2 / 3×3',
     sub: (name: string, n: number, side: number) => `${name} · ${n}×${n} · ${side.toFixed(2)} m square · the Lab 2-15 square unit at the same spacing`,
-    hint: 'Drag to orbit · scripted, not simulated: when each unit descends, what it forms, and where people and cats are, are all written in advance · a design proposal, not a research result',
+    hint: 'Drag to orbit · scripted, not simulated: where the visitor and cats go and when each unit descends are written in advance; each unit’s shape is worked out from the earlier labs by one function · a design proposal, not a research result',
     baking: (p: number) => `baking band trajectories ${Math.round(p * 100)}% (flat and two-level)`,
     clock: (t: number, d: number) => `${Math.floor(t)} / ${d} s`,
     pick: 'study',
     aria: 'A 2×2 or 3×3 patch cut from the Lab 2-15 room; the same square units descend and form on a script to stage one small scene with a visitor and cats',
+    legend: 'What each unit does here, the shape it takes, and which earlier labs that shape comes from (shapes come from the same function Lab 2-15 will use)',
+    every: (s: string) => `Every unit uses: ${s}`,
   },
 } as const;
 const TIME_DEF = 1;
@@ -314,7 +320,9 @@ export function CohabitSpaceBench({
   const timeRef = useRef<number>(vignette ? VIG_TIME_DEF : TIME_DEF);
   const [timeScale, setTimeScale] = useState<number>(vignette ? VIG_TIME_DEF : TIME_DEF);
   const [space, setSpace] = useState<SpaceMode>('live');
-  const [vigKey, setVigKey] = useState<VignetteKey>('tea');
+  const [vigKey, setVigKey] = useState<VignetteKey>('guide');
+  /** 小样的台上标签（每帧按台面此刻的高度投到画布上） */
+  const tagsRef = useRef<HTMLDivElement | null>(null);
   const shellRef = useRef(true);
   const [shell, setShell] = useState(true);
   const [view, setView] = useState<ViewKey>('axon');
@@ -341,7 +349,7 @@ export function CohabitSpaceBench({
     let spaceKey: SpaceMode = preset ?? 'live';
     if (preset) setSpace(preset);
     const vigPreset = vignette ? (planFromHash('2-16', VIGNETTES.map((v) => v.key)) as VignetteKey | null) : null;
-    let vigKeyNow: VignetteKey = vigPreset ?? 'tea';
+    let vigKeyNow: VignetteKey = vigPreset ?? 'guide';
     if (vigPreset) setVigKey(vigPreset);
     let seed = SCENE.seed;
     // 小样：按脚本演（VignetteSim），读数与 CohabitSim 同一个形状
@@ -426,6 +434,8 @@ export function CohabitSpaceBench({
     // 每台此刻的台面高度（米，离地）：朝它要去的高度匀速走（TABLE_MOVE m/s）；收在天花下时直接换成目标，落下来就是对的高度
     let tableTop = new Float32Array(layout.units.length).fill(TABLE_TOP.stand);
     let tableWant = new Float32Array(layout.units.length);
+    /** 小样：每台台面此刻的世界 y（标签挂在它上方；placeTags 读） */
+    let tagY: number[] = [];
     let tableT = 0;
     const syncPosts = (): void => {
       let dirty = false;
@@ -709,6 +719,7 @@ export function CohabitSpaceBench({
       postNext = new Float32Array(U);
       tableTop = new Float32Array(U).fill(TABLE_TOP.stand);
       tableWant = new Float32Array(U);
+      tagY = [];
       cursors = bandCursors(U * BANDS);
       frameOf = new Int32Array(U * BANDS);
       roofOn = new Uint8Array(U);
@@ -845,6 +856,8 @@ export function CohabitSpaceBench({
           // 台面高度按哪条轨迹量：平台按平台；两层的按下台（两组轨迹的钉住端不在同一处，各按各的）
           const workY = rigYForTop(rig, tracks[order[0]], tableTop[u]);
           const top = unitTopY(rig, drop, workY);
+          // 小样的标签：台面此刻在哪个高度（落下途中跟着走）
+          if (vignette) tagY[u] = ROOM.FLOOR_Y - tableTop[u] * UNITS_PER_M + (top - workY);
           let allStowed = true;
           let allStraight = true;
           let allFormed = true;
@@ -1058,6 +1071,32 @@ export function CohabitSpaceBench({
       }
     };
 
+    /**
+     * 小样的台上标签：每台一个字母，挂在台面上方（两层的挂在上层上方、斜的挂在最高处上方），随台子落下、收回走；
+     * 与 gl3d 同一个投影（projectLogical → 画布 CSS 像素），台子收着时不显示。
+     */
+    const placeTags = (): void => {
+      const root = tagsRef.current;
+      if (!root || !vignette) return;
+      const cr = canvas.getBoundingClientRect();
+      const rr = root.getBoundingClientRect();
+      const view = { m: cam.matrix, pivot: cam.pivotPoint, scale: cam.viewScale, pan: cam.pan, persp: 0 };
+      for (const el of root.querySelectorAll<HTMLElement>('[data-u]')) {
+        const u = Number(el.dataset.u);
+        const d = u < sim.act.degree.length ? sim.act.degree[u] : 0;
+        const y0 = tagY[u];
+        if (!dualReady || d <= 0.02 || y0 === undefined || !rig.cells[u]) {
+          el.style.opacity = '0';
+          continue;
+        }
+        const above = Number(el.dataset.above) || 0;
+        const c = rig.cells[u];
+        const q = logicalToCss(projectLogical(view, { x: c.x, y: y0 - (above + 0.16) * UNITS_PER_M, z: c.z }), cr.width, cr.height);
+        el.style.transform = `translate(${(cr.left - rr.left + q.x).toFixed(1)}px, ${(cr.top - rr.top + q.y).toFixed(1)}px) translate(-50%, -100%)`;
+        el.style.opacity = String(Math.min(1, d * 2.5));
+      }
+    };
+
     let lastHud = '';
     const pushHud = (): void => {
       const s = sim.summary();
@@ -1095,6 +1134,7 @@ export function CohabitSpaceBench({
       }
       cam.tick(dt);
       render();
+      placeTags();
       pushHud();
     };
 
@@ -1214,12 +1254,36 @@ export function CohabitSpaceBench({
 
   const vt = VIG_COPY[lang];
   const vigMeta = VIGNETTES.find((v) => v.key === vigKey)!;
+  // 小样的标签与图例：每台在这件事里做什么、成什么形、用上了哪几台研究（形由 cohabit-design 给，见 cohabit-vignette）
+  const vigTags = useMemo(() => {
+    if (!vignette) return [];
+    const s = vignetteScript(vigKey);
+    const half = vignetteLayout(s.n).platR;
+    const rows: { u: number; tag: string; design: UnitDesign; above: number; half: number }[] = [];
+    s.units.forEach((x, u) => {
+      if (!x) return;
+      const d = x.design;
+      const above = d.open !== null ? DESIGN.UPPER + DESIGN.PLATE : d.form.lift ? Math.max(...d.form.lift) : 0;
+      rows.push({ u, tag: x.tag, design: d, above, half });
+    });
+    return rows.sort((a, b) => a.tag.localeCompare(b.tag));
+  }, [vignette, vigKey]);
+  const srcLine = (k: Source): string => `${SOURCES[k].lab} · ${lang === 'zh' ? SOURCES[k].zh : SOURCES[k].en}`;
   const canvas = <canvas ref={canvasRef} width={1400} height={1040} aria-label={vignette ? vt.aria : t.aria} />;
   const kicker = tx(vignette ? 'Lab 2-16 / Project II' : 'Lab 2-15 / Project II');
   return (
     <div className={`lab-wrap${onLight ? ' on-light' : ''}${workspace && controls ? ' solid-workbench' : ''}`}>
       <div className="lab-fig">
         {workspace && controls ? <div className="solid-map">{canvas}</div> : canvas}
+        {vignette ? (
+          <div ref={tagsRef} className="vig-tags" aria-hidden="true">
+            {vigTags.map((r) => (
+              <span key={`${vigKey}-${r.u}`} data-u={r.u} data-above={r.above.toFixed(3)} style={{ opacity: 0 }}>
+                {r.tag}
+              </span>
+            ))}
+          </div>
+        ) : null}
         <div className="lab-hud tl">
           <div style={{ color: 'var(--accent-2)' }}>{kicker}</div>
           <div>{vignette ? vt.title : t.title}</div>
@@ -1243,12 +1307,35 @@ export function CohabitSpaceBench({
         )}
         <div className="lab-hud bl dim" style={vignette ? { maxWidth: '46%' } : undefined}>{hud.note ? tx('3D preview unavailable') : vignette ? vt.hint : controls ? t.hintCtl : t.hint}</div>
       </div>
+      {vignette ? (
+        <div className="vig-legend">
+          <div className="vig-legend__head">{vt.legend}</div>
+          <ol>
+            {vigTags.map((r) => (
+              <li key={`${vigKey}-${r.u}`}>
+                <b className="vig-legend__tag">{r.tag}</b>
+                <div>
+                  <div>
+                    {roleName(r.design, lang)} <span className="vig-legend__form">· {formText(r.design, lang, r.half)}</span>
+                  </div>
+                  {r.design.uses.map((k) => (
+                    <div key={k} className="vig-legend__src">
+                      {srcLine(k)}
+                    </div>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ol>
+          <div className="vig-legend__foot">{vt.every(srcLine('square'))}</div>
+        </div>
+      ) : null}
       {controls ? (
         <div className="lab-ctl lab-ctl--tiered">
           <div className="lab-ctl__row lab-ctl__solve">
             {vignette ? (
               <div className="grp">
-                <LabControlLabel help={['七个小样：茶几兼猫台（3×3）、两台连成一条腔（2×2）、交叉点让路（2×2）、一步一步引过来（3×3）、续坡（3×3）、站桌下给猫一层（2×2）、先低后高（2×2）。', 'Seven small studies: coffee table and cat shelf (3×3), two units forming one cavity (2×2), giving way at a crossing (2×2), leading a cat step by step (3×3), a ramp up (3×3), a shelf under the standing counter (2×2), low half then high half (2×2).']}>{vt.pick}</LabControlLabel>
+                <LabControlLabel help={['六个小样：坐下，把地上的猫引过来（3×3）、茶几兼猫台（3×3）、两台连成一条腔（2×2）、站桌下给猫一层（2×2）、先低后高（2×2）、交叉点让路（2×2）。每台的形由对应函数按之前的研究给出，台上的字母对图例。', 'Six small studies: sitting down draws a cat up from the floor (3×3), coffee table and cat shelf (3×3), two units forming one cavity (2×2), a shelf under the standing counter (2×2), low half then high half (2×2), giving way at a crossing (2×2). Each unit’s shape is worked out from the earlier labs by one function; the letters on the units match the legend.']}>{vt.pick}</LabControlLabel>
                 <span className="seg">
                   {VIGNETTES.map((v) => (
                     <button key={v.key} type="button" className={v.key === vigKey ? 'active' : undefined} onClick={() => setVigKey(v.key)}>
