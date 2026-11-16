@@ -1,0 +1,139 @@
+[
+ {
+  "seed": 12,
+  "t0": 555.333,
+  "steps": [
+   {
+    "u": 29,
+    "role": "step",
+    "floor": 0.42,
+    "top": 0.42,
+    "slope": {
+     "inDir": -0.519,
+     "from": 0.422,
+     "outDir": 3.142,
+     "to": 0.582
+    },
+    "open": null,
+    "come": 0,
+    "jump": 0.422
+   },
+   {
+    "u": 30,
+    "role": "step",
+    "floor": 0.705,
+    "top": 0.705,
+    "slope": {
+     "inDir": 3.142,
+     "from": 0.745,
+     "outDir": 1.571,
+     "to": 0.94
+    },
+    "open": null,
+    "come": 0.422,
+    "jump": 0.323
+   },
+   {
+    "u": 38,
+    "role": "meet",
+    "floor": 0.705,
+    "top": 0.9,
+    "slope": null,
+    "open": 1.19,
+    "come": 0.94,
+    "jump": -0.04
+   }
+  ]
+ },
+ {
+  "seed": 11,
+  "t0": 654.533,
+  "steps": [
+   {
+    "u": 19,
+    "role": "step",
+    "floor": 0.42,
+    "top": 0.42,
+    "slope": {
+     "inDir": -1.933,
+     "from": 0.432,
+     "outDir": 0,
+     "to": 0.552
+    },
+    "open": null,
+    "come": 0,
+    "jump": 0.432
+   },
+   {
+    "u": 12,
+    "role": "step",
+    "floor": 0.885,
+    "top": 0.885,
+    "slope": {
+     "inDir": -2.948,
+     "from": 0.885,
+     "outDir": 0,
+     "to": 0.889
+    },
+    "open": null,
+    "come": 0,
+    "jump": 0.885
+   },
+   {
+    "u": 13,
+    "role": "step",
+    "floor": 0.705,
+    "top": 0.705,
+    "slope": {
+     "inDir": 3.036,
+     "from": 0.705,
+     "outDir": 0,
+     "to": 0.77
+    },
+    "open": null,
+    "come": 0,
+    "jump": 0.705
+   },
+   {
+    "u": 14,
+    "role": "step",
+    "floor": 0.705,
+    "top": 0.757,
+    "slope": {
+     "inDir": 3.142,
+     "from": 0.77,
+     "outDir": 1.571,
+     "to": 0.835
+    },
+    "open": null,
+    "come": 0.77,
+    "jump": 0
+   },
+   {
+    "u": 22,
+    "role": "step",
+    "floor": 0.515,
+    "top": 0.835,
+    "slope": {
+     "inDir": -1.571,
+     "from": 0.835,
+     "outDir": 1.571,
+     "to": 0.9
+    },
+    "open": null,
+    "come": 0.835,
+    "jump": 0
+   },
+   {
+    "u": 30,
+    "role": "meet",
+    "floor": 0.705,
+    "top": 0.9,
+    "slope": null,
+    "open": 1.254,
+    "come": 0.9,
+    "jump": 0
+   }
+  ]
+ }
+]

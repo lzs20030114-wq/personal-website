@@ -20,6 +20,7 @@ import { PLAN, planLayout, type PlanLayout, type PlanUnit } from './unit-activat
 import { RING } from './skin-ring';
 import { COHABIT, bandAngle, furnKind, furnRect, squarePlanLayout, type FurnRect, type FurnSpec, type Link, type SpaceMode } from './cohabit';
 import { RING_SIDE } from './cohabit-solid';
+import { liftOf } from './cohabit-design';
 
 const BANDS = COHABIT.FACES.BANDS;
 
@@ -518,12 +519,8 @@ function guideScript(l: PlanLayout): VignetteScript {
   };
 }
 
-/** 每条带抬多少：按带的方位角给，再整体减掉最小的那条（一台里总有一条不抬，整台按它落位） */
-export function liftOf(fn: (angle: number) => number): number[] {
-  const v = Array.from({ length: BANDS }, (_, j) => Math.max(0, fn(bandAngle(j))));
-  const lo = Math.min(...v);
-  return v.map((x) => x - lo);
-}
+/** 每条带抬多少：与 2-15 路上的一步同一个函数（cohabit-design） */
+export { liftOf };
 /** 猫坐在一台的一圈上方位角 th 那里：给 catPlacement 的平面点（离台心 0.15 m，方向 = th + RING_SIDE，见 cohabit-solid） */
 export function ringSpot(u: { x: number; y: number }, th: number): { x: number; y: number } {
   const a = th + RING_SIDE;
