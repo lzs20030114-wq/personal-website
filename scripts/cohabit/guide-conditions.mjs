@@ -1,9 +1,10 @@
 /**
- * 「把猫引向人」这条规则的条件各占多少时间（2026-11-17，项目二_输入到输出的规则.md §17）。
+ * 「把猫引向人」这条规则的条件各占多少时间（2026-11-17，项目二_输入到输出的规则.md §17.4；11-18 加「猫被谁看着」，§9）。
  *
  * 2-15 的配置实跑。每一步对每位坐着的人归一类：
  *   没有落得下的终点 · 没有能来的猫（再分：都被别人引着 / 刚退开 / 正要跳上别的台）· 有猫但找不到路 · 正在引 · 猫已经到了终点
- * 另外按「一次坐下」数：这一回坐着有没有等到猫走到座位前方那台、等了多久；被引的猫当时在做什么；
+ * 另外按「一次坐下」数：这一回坐着有没有等到猫走到座位前方那台、等了多久；被引的猫当时在做什么、正被谁看着
+ *（被人看着的猫坐卧节奏停住，「坐满 3 s 一半几率接递过来的台」走不到）；所有猫有多少时间被人看着；
  * 几位坐着的人同时没有猫可引时，猫归了谁。
  *
  * 用法：node scripts/cohabit/guide-conditions.mjs [秒数=1800] [种子=11,12,13,14,15,16,17,18]
@@ -20,6 +21,8 @@ const sec = { seated: 0, noTarget: 0, noCatGuided: 0, noCatLatency: 0, noCatClim
 const catDoing = {}; // 被引着（还没到）的猫此刻的状态 → 秒
 const catWhere = { unit: 0, floor: 0 };
 const toward = { same: 0, other: 0 }; // 被引的猫正在靠近的是引它的那个人，还是别人
+const watched = { same: 0, other: 0, none: 0, latency: 0 }; // 被引的猫此刻被谁看着（刚退开的 30 s 里不算被看着）
+const catTime = { all: 0, attended: 0, latency: 0, unit: 0 }; // 所有猫：被人看着 / 刚退开 / 在台上 的时间
 const sits = []; // 每一回坐下：{ len, firstGuide, arrive }
 const pathLen = {};
 let seatsNoTargetEver = 0;
@@ -79,6 +82,8 @@ for (const seed of seeds) {
         catDoing[c.state] = (catDoing[c.state] ?? 0) + dt;
         if (c.state === 'approach') toward[c.approaching === p.id ? 'same' : 'other'] += dt;
         catWhere[c.unit ? 'unit' : 'floor'] += dt;
+        const a = sim.attendingOf(c);
+        watched[c.latency > 0 ? 'latency' : !a ? 'none' : a.id === p.id ? 'same' : 'other'] += dt;
         continue;
       }
       // 没在引：是没有能来的猫，还是有猫找不到路
@@ -89,6 +94,12 @@ for (const seed of seeds) {
       else if (cand.some((c) => c.latency > 0)) sec.noCatLatency += dt;
       else if (cand.some((c) => !c.unit && c.climb)) sec.noCatClimb += dt;
       else sec.noCatOther += dt;
+    }
+    for (const c of sim.cats) {
+      catTime.all += dt;
+      if (c.unit) catTime.unit += dt;
+      if (c.latency > 0) catTime.latency += dt;
+      else if (sim.attendingOf(c)) catTime.attended += dt;
     }
     for (const g of sim.guides) if (g.kind === 'sit' && t % 1 < dt) pathLen[g.path.length] = (pathLen[g.path.length] ?? 0) + 1;
   }
@@ -118,6 +129,8 @@ console.log(`\n二、正在被引的猫此刻在做什么（共 ${Math.round(gTo
 for (const [k, v] of Object.entries(catDoing).sort((a, b) => b[1] - a[1])) console.log(`  ${k.padEnd(10)} ${((100 * v) / gTot).toFixed(1)}%`);
 console.log(`  在台上 ${((100 * catWhere.unit) / gTot).toFixed(1)}% · 在地面 ${((100 * catWhere.floor) / gTot).toFixed(1)}%`);
 console.log(`  其中正在靠近：引它的那个人 ${((100 * toward.same) / gTot).toFixed(1)}% · 别的人 ${((100 * toward.other) / gTot).toFixed(1)}%`);
+console.log(`  其中此刻被人看着：引它的那个人 ${((100 * watched.same) / gTot).toFixed(1)}% · 别的人 ${((100 * watched.other) / gTot).toFixed(1)}% · 没人看着 ${((100 * watched.none) / gTot).toFixed(1)}% · 刚退开 ${((100 * watched.latency) / gTot).toFixed(1)}%`);
+console.log(`\n二之二、所有猫的时间（共 ${Math.round(catTime.all)} 猫·秒）：被人看着 ${((100 * catTime.attended) / catTime.all).toFixed(1)}% · 刚退开的 30 s 里 ${((100 * catTime.latency) / catTime.all).toFixed(1)}% · 在台上 ${((100 * catTime.unit) / catTime.all).toFixed(1)}%`);
 const done = sits.filter((e) => e.len > 30);
 const got = done.filter((e) => e.arrive !== null);
 const guided = done.filter((e) => e.firstGuide !== null);
