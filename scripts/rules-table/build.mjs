@@ -31,7 +31,6 @@ const STATUS = {
   opt: '研究里可切',
   ctrl: '对照用',
   old: '早一版',
-  draft: '草案',
   text: '只在正文或调研里',
   none: '明确没有',
 };
@@ -124,7 +123,7 @@ tr.grp td small { color: var(--mute); font-weight: 400; margin-left: 6px; }
 .pill.now { background: var(--accent-soft); border-color: transparent; color: var(--ink); }
 .pill.none { border-style: dashed; }
 .pill.solid, .pill.vig, .pill.opt, .pill.ctrl { color: var(--ink); }
-.pill.old, .pill.draft, .pill.text { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
+.pill.old, .pill.text { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
 tr.is-none td.name, tr.is-none td.body { color: var(--mute); }
 .empty { padding: 28px 12px; color: var(--mute); }
 @media (max-width: 760px) {
@@ -149,7 +148,7 @@ tr.is-none td.name, tr.is-none td.body { color: var(--mute); }
 <div class="wrap">
   <header>
     <h1>Letting Agent 规则表</h1>
-    <p>项目二写过的规则都在这一张表里，共 ${rows.length} 条。按两类排：人和猫自身的规则，单元怎么感知、理解、干预。每条标了数从哪来、现在在哪一版里。</p>
+    <p>人和猫这一类关系写过的规则都在这一张表里，共 ${rows.length} 条。按两类排：人和猫自身的规则，单元怎么感知、理解、干预。每条标了数从哪来、现在在哪一版里。</p>
   </header>
 
   <div class="answer">
@@ -166,7 +165,7 @@ tr.is-none td.name, tr.is-none td.body { color: var(--mute); }
       <ul>
         <li>只在 2-15 立体层：${count((r) => r.status === 'solid')} 条。只在小样：${count((r) => r.status === 'vig')} 条。</li>
         <li>研究里可切或对照用：${count((r) => r.status === 'opt' || r.status === 'ctrl')} 条。</li>
-        <li>早一版（痕迹、Lab 2-12）：${count((r) => r.status === 'old')} 条。草案（人鸟）：${count((r) => r.status === 'draft')} 条。</li>
+        <li>早一版（痕迹、Lab 2-12）：${count((r) => r.status === 'old')} 条。</li>
         <li>只在正文或调研里：${count((r) => r.status === 'text')} 条。明确没有的：${count((r) => r.status === 'none')} 条。</li>
       </ul>
     </section>
@@ -176,6 +175,7 @@ tr.is-none td.name, tr.is-none td.body { color: var(--mute); }
         <li>行为条文 C1–C8、H3–H4 和矩阵九格的原稿。不在仓库里，只按案例页的描述对过。</li>
         <li>单元怎么成形（键谱、收缩、锁键）。那是结构引擎的规则，只列了一行指路。</li>
         <li>场地数据和实现上的约定（家具坐标、一步之内的先后、随机数）。</li>
+        <li>人狗、人与野生动物两类关系。最后只做人和猫，这两类不再列。</li>
       </ul>
     </section>
   </div>
