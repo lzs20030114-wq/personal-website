@@ -1210,6 +1210,21 @@ export interface CohabitOpts {
    * 于是他坐着的整段里房间一台新的都落不下来（猫只上落满的台）。2026-11-08 量到：标准场景会动档 37% 的时间步是这样。
    */
   exitDiff?: boolean;
+  /**
+   * 感知层（2026-11-18，`cohabit-sense.ts`）：空间每一步做决定时读的人和猫换成传感器给得出的那一份（位置误差、被挡丢失、
+   * 头朝向误差，读不到的意图换成看得见的量）。人和猫自己的行为、记账仍按真值。省略 = 空间读真值（此前的口径，逐位不变）。
+   */
+  sense?: SpaceSense;
+}
+
+/**
+ * 感知层的接口：每一步空间做决定之前 `observe` 一次，空间这一步读 `seenPeople` / `seenCats`（与 sim.people / sim.cats
+ * 同序、同 id；读不到的字段由实现换掉，空间写回的字段落到哪里也由实现决定）。
+ */
+export interface SpaceSense {
+  observe(sim: CohabitSim, dt: number): void;
+  seenPeople(): Visitor[];
+  seenCats(): Cat[];
 }
 
 /** 访客的节奏：站着停多久 · 看猫站多久 · 下一站去看猫的几率 · 下一站去坐的几率 · 坐多久（秒） */
@@ -1304,6 +1319,8 @@ export class CohabitSim {
   readonly seatRetry: boolean;
   readonly exitDiff: boolean;
   readonly tableBy: Int16Array;
+  /** 感知层（opts.sense）；null = 空间读真值 */
+  private readonly sense: SpaceSense | null;
   tableSeat = 0;
   tableReady = 0;
   /** 触发档；「走 · 站 · 坐」下的家具、座位，空间此刻铺的路，累计「猫到了坐着的人座位前方那台」次数 */
@@ -1407,6 +1424,7 @@ export class CohabitSim {
     this.tableBy = new Int16Array(n).fill(-1);
     this.wallScratch = new Uint8Array(n);
     this.faces = opts.faces ?? false;
+    this.sense = opts.sense ?? null;
     this.bandOpen = new Float32Array(n * BANDS);
     this.bandWant = new Uint8Array(n * BANDS);
     this.bandHold = new Uint8Array(n * BANDS);
@@ -2327,7 +2345,37 @@ export class CohabitSim {
       this.field.decay(dt, this.decay);
       this.catField.decay(dt, this.decay);
     }
-    this.stepSpace(dt);
+    if (!this.sense) {
+      this.stepSpace(dt);
+      return;
+    }
+    // 感知层：空间这一步读传感器给的那一份，做完换回真值（人和猫的行为、记账不受影响）
+    this.sense.observe(this, dt);
+    const people = this.people;
+    const cats = this.cats;
+    this.people = this.sense.seenPeople();
+    this.cats = this.sense.seenCats();
+    try {
+      this.stepSpace(dt);
+    } finally {
+      this.people = people;
+      this.cats = cats;
+    }
+  }
+
+  /** 此刻有没有一条已经成墙的带（按它现在的收回程度）伸进 (x, y) 半径 r 以内（感知层量「带碰到人」用；不改任何状态） */
+  bandTouch(x: number, y: number, r: number): boolean {
+    if (!this.faces || this.space !== 'live') return false;
+    const reach = (this.layout.reachMax ?? this.layout.platR) + r;
+    for (const u of this.layout.units) {
+      if (Math.hypot(u.x - x, u.y - y) > reach) continue;
+      for (let j = 0; j < BANDS; j++) {
+        if (!this.bandWall[u.i * BANDS + j]) continue;
+        const [ax, ay, bx, by] = this.bandSeg(u, j);
+        if (segDist(x, y, ax, ay, bx, by) < r) return true;
+      }
+    }
+    return false;
   }
 
   // ── 访客 ──────────────────────────────────────────────────────────────────
