@@ -274,6 +274,9 @@ export function SenseBench({
       scale: senseFitScale(sim.layout.roomM, 'axon'),
       mode: 'turntable',
       upAxis: 'z',
+      // 横拖要让模型跟着手转（往右拖，近处那一侧往右走），与 Y 朝上那几台台架一致；
+      // 相机的 Z 朝上转盘按默认正号环绕时近处那一侧往左走（2026-11-19 作者「拖动是反的」）。竖拖不用翻。
+      yawPerPx: -0.008,
       zoomMin: 0.6,
       zoomMax: 3,
     });
