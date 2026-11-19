@@ -5,6 +5,8 @@
  * 理由全部来自 src/lib/space/cohabit-reasons.ts（核对脚本 io-audit 用的同一份）。
  * 同日第二版：版式照规则表（scripts/rules-table）那套；读数每行加最近 90 s 的走势条，画面上方加四个总数，
  * 点单元的说明改成卡片。
+ * 第三版（同日，用户「排版紧凑点，信息少点放」）：四个总数撤掉，读数一行一条（编号 · 判定 · 谁 · 此刻几条 · 走势），
+ * 感知、干预与累计次数点开一行才出现；单元说明卡只在点选时出现。
  * 打包：node scripts/rules-viz/build.mjs <out.html>
  */
 import { COHABIT, CohabitSim, PACE_DEMO, partySizes, scatterCats, tableClass, type Cat, type Visitor } from '../../src/lib/space/cohabit';
@@ -24,6 +26,8 @@ interface RowDef {
   kind: Kind;
   /** 理解一栏的判定（第 7 节是那条读不到的关系本身） */
   verdict: string;
+  /** 判定相同的两行用它分开（只在行内小字里出现） */
+  tag?: string;
   see: string;
   act: string;
 }
@@ -36,17 +40,17 @@ const ROWS: RowDef[] = [
   { row: 'catMove', mark: '⑤', part: 4, kind: 'rel', verdict: '猫的位置变更', see: '猫有了新的目标台，不读这次移动相对人是远离还是接近', act: '目标台约 0.7 s 落满' },
   { row: 'table', mark: '桌', part: 5, kind: 'base', verdict: '需要桌子', see: '人坐到座位上', act: '桌子台落到桌高' },
   { row: 'foot', mark: '脚', part: 5, kind: 'base', verdict: '台被猫占用', see: '猫在一台上', act: '保持落下，猫离开后收回' },
-  { row: 'overHead', mark: '×', part: 5, kind: 'check', verdict: '与人的身体冲突', see: '要落的台会伸到坐着的人头顶上方', act: '不落，已落的收回' },
-  { row: 'press', mark: '×', part: 5, kind: 'check', verdict: '与人的身体冲突', see: '猫的目标台没落过一半，台角会碰到站着的人', act: '暂不落，猫等待' },
+  { row: 'overHead', mark: '×', part: 5, kind: 'check', verdict: '与人的身体冲突', tag: '头顶', see: '要落的台会伸到坐着的人头顶上方', act: '不落，已落的收回' },
+  { row: 'press', mark: '×', part: 5, kind: 'check', verdict: '与人的身体冲突', tag: '台角', see: '猫的目标台没落过一半，台角会碰到站着的人', act: '暂不落，猫等待' },
   { row: 'r5', mark: '×', part: 5, kind: 'check', verdict: '会困住人', see: '一台落成墙，会使原本有路的人无路到门', act: '停在墙线以下' },
   { row: 'gapApproachOther', mark: '?', part: 7, kind: 'gap', verdict: '引导中的猫正在向别人移动', see: '不在输入里', act: '继续引导' },
   { row: 'gapWatchedOther', mark: '?', part: 7, kind: 'gap', verdict: '引导中的猫正被别人注视', see: '不在输入里', act: '继续递台' },
 ];
 const ROW_OF = new Map(ROWS.map((r) => [r.row, r]));
 const PART_TITLE: Record<number, [string, string]> = {
-  4: ['第 4 节', '感知 → 理解 → 干预'],
-  5: ['第 5 节', '与人猫关系无关的规则'],
-  7: ['第 7 节', '单元读不到的关系'],
+  4: ['第 4 节', '人猫关系'],
+  5: ['第 5 节', '与关系无关'],
+  7: ['第 7 节', '读不到的关系'],
 };
 
 // ── 仿真 ──────────────────────────────────────────────────────────────────────────
@@ -145,20 +149,7 @@ const rowsEl = $<HTMLDivElement>('#rows');
 const detailEl = $<HTMLDivElement>('#detail');
 const clockEl = $<HTMLSpanElement>('#clock');
 const playBtn = $<HTMLButtonElement>('#play');
-const stat = {
-  rules: $<HTMLElement>('#stRules'),
-  units: $<HTMLElement>('#stUnits'),
-  seat: $<HTMLElement>('#stSeat'),
-  guide: $<HTMLElement>('#stGuide'),
-};
 
-// 平面图的房间是正方形，700 × 520 的画布左右各空一大块；只取中间 CW 宽，房间就占满画框
-const CW = 560;
-const OFF = (W - CW) / 2;
-const dpr = Math.min(2, window.devicePixelRatio || 1);
-canvas.width = Math.round(CW * dpr);
-canvas.height = Math.round(H * dpr);
-const ctx = canvas.getContext('2d')!;
 
 interface Pal extends Palette {
   amber: string;
@@ -175,6 +166,16 @@ const kindInk = (k: Kind, p: Pal) => (k === 'check' ? p.warn : k === 'gap' ? p.a
 
 let seed = 11;
 let sim = newSim(seed);
+// 平面图的房间是正方形、居中，700 × 520 的画布四周都空着；只取房间外再留 30 px（门两侧的斜线与名字）的那一块正方形
+const CROP = (() => {
+  const { sc } = frame(sim.layout.roomM);
+  const half = (sc * sim.layout.roomM) / 2 + 30;
+  return { w: 2 * half, x: W / 2 - half, y: H / 2 - half };
+})();
+const dpr = Math.min(2, window.devicePixelRatio || 1);
+canvas.width = Math.round(CROP.w * dpr);
+canvas.height = Math.round(CROP.w * dpr);
+const ctx = canvas.getContext('2d')!;
 let speed = 4;
 let running = true;
 let hover: RuleRow | null = null;
@@ -229,14 +230,17 @@ function who(h: RuleHit): string {
 interface RowEl {
   el: HTMLElement;
   now: HTMLElement;
-  total: HTMLElement;
+  /** 收着时的一行：第一条是谁对谁，多的写「另 N 条」 */
   who: HTMLElement;
+  /** 展开后：全部的谁与累计次数 */
+  chips: HTMLElement;
+  total: HTMLElement;
   spark: HTMLCanvasElement;
 }
 const rowEls = new Map<RuleRow, RowEl>();
 const partEls = new Map<number, HTMLElement>();
-const SPW = 96;
-const SPH = 22;
+const SPW = 60;
+const SPH = 14;
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -262,24 +266,23 @@ function buildRows() {
     b.setAttribute('aria-pressed', 'false');
     const mark = el('span', 'mark', markText(r.mark));
     mark.setAttribute('aria-hidden', 'true');
-    const body = el('span', 'body');
-    body.append(el('span', 'verdict', r.verdict));
-    const flow = el('span', 'flow');
-    if (r.kind === 'gap') flow.append(el('span', 'k', '单元'), el('span', 'v', r.see), el('span', 'k', '现行处理'), el('span', 'v', r.act));
-    else flow.append(el('span', 'k', '感知'), el('span', 'v', r.see), el('span', 'k', '干预'), el('span', 'v', r.act));
+    const verdict = el('span', 'verdict', r.verdict);
+    if (r.tag) verdict.append(el('small', '', r.tag));
     const whoEl = el('span', 'who');
-    body.append(flow, whoEl);
-    const meter = el('span', 'meter');
+    const now = el('b', 'now', '0');
     const spark = el('canvas', 'spark');
     spark.width = SPW * dpr;
     spark.height = SPH * dpr;
     spark.setAttribute('aria-hidden', 'true');
-    const nums = el('span', 'nums');
-    const now = el('b', 'now', '0');
-    const total = el('small', 'tot', '累计 0');
-    nums.append(now, total);
-    meter.append(spark, nums);
-    b.append(mark, body, meter);
+    // 点开才出现的部分
+    const more = el('span', 'more');
+    const flow = el('span', 'flow');
+    if (r.kind === 'gap') flow.append(el('span', 'k', '单元'), el('span', 'v', r.see), el('span', 'k', '现行处理'), el('span', 'v', r.act));
+    else flow.append(el('span', 'k', '感知'), el('span', 'v', r.see), el('span', 'k', '干预'), el('span', 'v', r.act));
+    const chips = el('span', 'chips');
+    const total = el('span', 'tot', '累计 0 次');
+    more.append(flow, chips, total);
+    b.append(mark, verdict, whoEl, now, spark, more);
     b.addEventListener('mouseenter', () => (hover = r.row));
     b.addEventListener('mouseleave', () => (hover = null));
     b.addEventListener('focus', () => (hover = r.row));
@@ -289,7 +292,7 @@ function buildRows() {
       for (const [k, x] of rowEls) x.el.setAttribute('aria-pressed', String(k === pinned));
     });
     rowsEl.appendChild(b);
-    rowEls.set(r.row, { el: b, now, total, who: whoEl, spark });
+    rowEls.set(r.row, { el: b, now, who: whoEl, chips, total, spark });
   }
 }
 buildRows();
@@ -355,10 +358,10 @@ function updatePanel() {
     e.el.classList.toggle('on', on);
     e.el.classList.toggle('focus', f === r.row);
     e.now.textContent = String(list.length);
-    e.total.textContent = `累计 ${totals.get(r.row) ?? 0}`;
-    const shown = r.row === 'foot' ? [] : list.slice(0, 3);
-    e.who.replaceChildren(...shown.map((h) => el('span', 'chip', who(h))));
-    if (r.row !== 'foot' && list.length > shown.length) e.who.append(el('span', 'more', `另 ${list.length - shown.length} 条`));
+    e.total.textContent = `累计 ${totals.get(r.row) ?? 0} 次`;
+    const named = r.row === 'foot' ? [] : list;
+    e.who.textContent = named.length ? who(named[0]) + (named.length > 1 ? `　另 ${named.length - 1} 条` : '') : '';
+    if (e.el.getAttribute('aria-pressed') === 'true') e.chips.replaceChildren(...named.slice(0, 8).map((h) => el('span', 'chip', who(h))));
     drawSpark(e.spark, hist.get(r.row)!, r.kind, on);
   }
   for (const [p, c] of partEls) {
@@ -367,15 +370,6 @@ function updatePanel() {
   }
   const t = Math.floor(sim.t);
   clockEl.textContent = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
-  // 四个总数
-  let ruleOn = 0;
-  for (const r of ROWS) if (byRow.has(r.row)) ruleOn++;
-  let down = 0;
-  for (let u = 0; u < sim.layout.units.length; u++) if (sim.act.degree[u] > 0.01) down++;
-  stat.rules.textContent = `${ruleOn}`;
-  stat.units.textContent = `${down}`;
-  stat.seat.textContent = `${sim.people.filter((p) => p.seated).length}/${sim.people.length}`;
-  stat.guide.textContent = `${sim.guides.filter((g) => g.kind === 'sit').length}`;
   if (picked !== null) renderDetail(picked);
 }
 
@@ -391,16 +385,26 @@ const REASON_NAME: Record<string, [string, string]> = {
   climb: ['⑤', '猫要跳上的台'],
 };
 
+let detailKey = '';
 function renderDetail(u: number | null) {
+  detailEl.hidden = u === null;
   if (u === null) {
-    detailEl.replaceChildren(el('p', 'hint', '点画面里任何一台单元，这里写出它此刻为什么落、被什么拦着。'));
+    detailEl.replaceChildren();
+    detailKey = '';
     return;
   }
   const why = unitReasons(sim)[u];
   const deg = sim.act.degree[u];
   const state = deg >= 1 - 1e-9 ? '落满' : deg > 1e-6 ? `落到 ${Math.round(deg * 100)}%` : '收着';
   const head = el('div', 'd-head');
-  head.append(el('b', 'd-title', `第 ${u + 1} 台`), el('span', `pill ${deg >= 1 - 1e-9 ? 'pill--on' : deg > 1e-6 ? 'pill--mid' : ''}`, state));
+  const close = el('button', 'd-close', '×');
+  close.type = 'button';
+  close.setAttribute('aria-label', '关掉说明');
+  close.addEventListener('click', () => {
+    picked = null;
+    renderDetail(null);
+  });
+  head.append(el('b', 'd-title', `第 ${u + 1} 台`), el('span', `pill ${deg >= 1 - 1e-9 ? 'pill--on' : deg > 1e-6 ? 'pill--mid' : ''}`, state), close);
   const list = el('ul', 'd-list');
   for (const r of why) {
     const [m, name] = REASON_NAME[r.kind];
@@ -417,6 +421,10 @@ function renderDetail(u: number | null) {
     }
   }
   if (!list.childElementCount) list.append(el('li', 'd-none', '没有落下的理由'));
+  // 面板每 120 ms 刷一次；内容没变就不换节点，免得关闭按钮在按下与松开之间被换掉
+  const key = `${u}|${state}|${list.textContent}`;
+  if (key === detailKey) return;
+  detailKey = key;
   detailEl.replaceChildren(head, list);
 }
 
@@ -531,7 +539,7 @@ function drawOverlay() {
 }
 
 function paint() {
-  ctx.setTransform(dpr, 0, 0, dpr, -OFF * dpr, 0);
+  ctx.setTransform(dpr, 0, 0, dpr, -CROP.x * dpr, -CROP.y * dpr);
   drawPlan(ctx, sceneOf(sim) as Parameters<typeof drawPlan>[1], pal);
   drawOverlay();
 }
@@ -604,8 +612,8 @@ $<HTMLButtonElement>('#restart').addEventListener('click', () => {
 });
 canvas.addEventListener('click', (ev) => {
   const rect = canvas.getBoundingClientRect();
-  const cx = ((ev.clientX - rect.left) / rect.width) * CW + OFF;
-  const cy = ((ev.clientY - rect.top) / rect.height) * H;
+  const cx = ((ev.clientX - rect.left) / rect.width) * CROP.w + CROP.x;
+  const cy = ((ev.clientY - rect.top) / rect.height) * CROP.w + CROP.y;
   const { sc, ox, oy } = frame(sim.layout.roomM);
   const x = (cx - ox) / sc;
   const y = (cy - oy) / sc;
