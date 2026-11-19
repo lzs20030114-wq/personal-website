@@ -1,0 +1,210 @@
+<title>Letting Agent 规则读数</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* 版式：与规则表同一套（站上 /lab 深色外壳）。第三版（同日，用户「排版紧凑点，信息少点放」）：
+   题头一行、播放控件并进题头；左边只剩平面图与一行图例；右边读数一行一条（编号 · 判定 · 谁 · 此刻几条 · 走势），
+   点一行才展开感知与干预；点一台单元，说明卡出在读数最下面。宽屏时整页装进一屏。
+   颜色：第 4 节用项目二的紫，第 5 节三道检查用莲粉，第 7 节读不到的关系用琥珀，桌子与猫脚下用奶白。 */
+:root {
+  --bg: oklch(0.19 0.032 228);       /* 夜色 */
+  --panel: oklch(0.235 0.026 220);   /* 浮起一档 */
+  --panel-2: oklch(0.27 0.024 214);
+  --fig: oklch(0.215 0.036 232);     /* 平面图底 */
+  --ink: oklch(0.95 0.032 120);      /* 奶白 G100 */
+  --soft: oklch(0.82 0.03 160);
+  --mute: oklch(0.68 0.028 175);
+  --line: oklch(0.95 0.032 120 / 0.11);
+  --line-2: oklch(0.95 0.032 120 / 0.22);
+  --control: oklch(0.95 0.032 120 / 0.4);
+  --accent: oklch(0.83 0.075 294);   /* 项目二 P300 */
+  --accent-bg: oklch(0.83 0.075 294 / 0.09);
+  --rose: oklch(0.72 0.12 356);
+  --rose-bg: oklch(0.72 0.12 356 / 0.1);
+  --amber: oklch(0.83 0.12 85);
+  --amber-bg: oklch(0.83 0.12 85 / 0.08);
+  --g: oklch(0.71 0.098 145);        /* 平面图里人的视野与路，照站上 */
+  --n500: oklch(0.66 0.045 170);
+  --display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --sans: 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: oklch(0.965 0.01 115); --panel: oklch(0.99 0.005 115); --panel-2: oklch(0.94 0.012 118); --fig: oklch(0.985 0.006 115);
+    --ink: oklch(0.235 0.025 215); --soft: oklch(0.36 0.025 205); --mute: oklch(0.5 0.022 200);
+    --line: oklch(0.235 0.025 215 / 0.12); --line-2: oklch(0.235 0.025 215 / 0.24); --control: oklch(0.235 0.025 215 / 0.45);
+    --accent: oklch(0.42 0.09 282); --accent-bg: oklch(0.42 0.09 282 / 0.07);
+    --rose: oklch(0.52 0.14 2); --rose-bg: oklch(0.52 0.14 2 / 0.07);
+    --amber: oklch(0.52 0.11 70); --amber-bg: oklch(0.7 0.12 80 / 0.12);
+    --g: oklch(0.42 0.088 178); --n500: oklch(0.55 0.02 190);
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: oklch(0.965 0.01 115); --panel: oklch(0.99 0.005 115); --panel-2: oklch(0.94 0.012 118); --fig: oklch(0.985 0.006 115);
+  --ink: oklch(0.235 0.025 215); --soft: oklch(0.36 0.025 205); --mute: oklch(0.5 0.022 200);
+  --line: oklch(0.235 0.025 215 / 0.12); --line-2: oklch(0.235 0.025 215 / 0.24); --control: oklch(0.235 0.025 215 / 0.45);
+  --accent: oklch(0.42 0.09 282); --accent-bg: oklch(0.42 0.09 282 / 0.07);
+  --rose: oklch(0.52 0.14 2); --rose-bg: oklch(0.52 0.14 2 / 0.07);
+  --amber: oklch(0.52 0.11 70); --amber-bg: oklch(0.7 0.12 80 / 0.12);
+  --g: oklch(0.42 0.088 178); --n500: oklch(0.55 0.02 190);
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 13.5px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+p { margin: 0; }
+.wrap { max-width: 1360px; margin: 0 auto; padding-block: 18px 24px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* 题头：一行，控件靠右 */
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding-bottom: 12px; border-bottom: 1px solid var(--line-2); }
+h1 { margin: 0; display: flex; align-items: baseline; gap: 10px; line-height: 1; white-space: nowrap; }
+.h1-en { font-family: var(--display); font-stretch: 68%; font-weight: 300; font-size: 32px; letter-spacing: -0.005em; }
+.h1-zh { font-weight: 700; font-size: 17px; }
+.tag-proto { font: 11px/1.3 var(--mono); letter-spacing: 0.04em; color: var(--mute); }
+.tag-proto b { color: var(--accent); font-weight: 500; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; }
+.clock { font: 500 17px/1 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; margin-right: 4px; }
+.seg { display: inline-flex; border: 1px solid var(--control); border-radius: 3px; overflow: hidden; }
+.seg button + button { border-left: 1px solid var(--control); }
+.bar button { font: 500 11.5px/1 var(--mono); color: var(--ink); background: transparent; border: 0; padding: 6px 9px; cursor: pointer; min-height: 28px; }
+.bar > button { border: 1px solid var(--control); border-radius: 3px; }
+.bar button:hover { background: var(--panel-2); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+#play[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
+.bar button:focus-visible, .row:focus-visible, canvas:focus-visible, .d-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px; margin-top: 14px; align-items: start; }
+
+/* 左：平面图 + 一行图例 */
+.inst { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); background: var(--panel); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+#planWrap { background: var(--fig); --paper: var(--fig); --accent: var(--g); --accent-2: oklch(0.83 0.075 294); }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) #planWrap { --accent-2: oklch(0.42 0.09 282); } }
+:root[data-theme="light"] #planWrap { --accent-2: oklch(0.42 0.09 282); }
+/* 画布只截房间那块正方形。宽屏时整页装进一屏：画布边长取剩下的高度，再按窗口宽封顶 */
+canvas#plan { display: block; width: min(620px, 48vw, calc(100svh - 150px)); min-width: 300px; height: auto; aspect-ratio: 1; cursor: crosshair; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 7px 10px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--mute); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend .hint { margin-left: auto; }
+.dot { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; font: 700 9px/1 var(--mono); color: var(--panel); }
+.dot--rel { background: var(--accent); }
+.dot--base { background: var(--ink); }
+.dot--check { background: var(--rose); }
+
+/* 右：读数，一行一条 */
+.readout { min-width: 0; }
+.part { display: flex; align-items: baseline; gap: 8px; padding: 12px 2px 5px; border-bottom: 1px solid var(--line-2); font: 11px/1.3 var(--mono); letter-spacing: 0.04em; color: var(--mute); }
+.part:first-child { padding-top: 0; }
+.part-t { font-family: var(--sans); font-weight: 700; font-size: 13px; letter-spacing: 0; color: var(--ink); }
+.part-c { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+.row { --k: var(--accent); --k-bg: var(--accent-bg);
+  display: grid; grid-template-columns: 20px max-content minmax(0, 1fr) 26px 60px; gap: 0 10px; align-items: center;
+  width: 100%; text-align: left; font: inherit; color: var(--ink); background: transparent; cursor: pointer;
+  border: 0; border-left: 2px solid transparent; border-bottom: 1px solid var(--line); padding: 6px 8px 6px 6px; min-height: 34px;
+  transition: background-color 160ms ease, border-color 160ms ease, opacity 160ms ease; }
+.row.k-base { --k: var(--ink); --k-bg: color-mix(in oklch, var(--ink) 6%, transparent); }
+.row.k-check { --k: var(--rose); --k-bg: var(--rose-bg); }
+.row.k-gap { --k: var(--amber); --k-bg: var(--amber-bg); }
+.row:not(.on) { opacity: 0.55; }
+.row.on { background: var(--k-bg); border-left-color: var(--k); opacity: 1; }
+.row.focus, .row[aria-pressed="true"] { opacity: 1; outline: 1px solid var(--k); outline-offset: -1px; }
+@media (hover: hover) and (pointer: fine) { .row:hover { opacity: 1; } }
+
+.mark { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--k); color: var(--k); font: 700 10.5px/1 var(--mono); }
+.row.on .mark { background: var(--k); color: var(--bg); }
+.verdict { font-weight: 700; font-size: 13.5px; white-space: nowrap; }
+.verdict small { font-weight: 400; font-size: 11.5px; color: var(--mute); margin-left: 6px; }
+.row.on .verdict { color: var(--k); }
+.row.k-base.on .verdict { color: var(--ink); }
+.who { font: 11.5px/1.3 var(--mono); color: var(--soft); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.now { font: 500 15px/1 var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.row.on .now { color: var(--k); }
+.row.k-base.on .now { color: var(--ink); }
+.spark { width: 60px; height: 14px; display: block; }
+
+/* 点一行才展开：感知、干预、全部的谁、累计 */
+.more { display: none; grid-column: 2 / -1; padding: 6px 0 2px; gap: 3px; }
+.row[aria-pressed="true"] .more { display: grid; }
+.row[aria-pressed="true"] .who { visibility: hidden; }
+.flow { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1px 10px; font-size: 12px; color: var(--soft); line-height: 1.5; }
+.flow .k { font: 10.5px/1.6 var(--mono); color: var(--mute); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; padding-top: 2px; }
+.chips:empty { display: none; }
+.chip { font: 500 11px/1.3 var(--mono); padding: 2px 6px; border-radius: 3px; background: var(--panel); border: 1px solid var(--line-2); color: var(--ink); }
+.tot { font: 10.5px/1.4 var(--mono); color: var(--mute); }
+
+/* 点一台单元：说明卡出在读数最下面 */
+.detail { margin-top: 12px; border: 1px solid var(--line-2); border-radius: 4px; background: var(--panel); padding: 9px 11px; }
+.detail[hidden] { display: none; }
+.d-head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.d-title { font: 600 13px/1 var(--mono); }
+.pill { font: 500 10.5px/1 var(--mono); padding: 3px 7px; border-radius: 999px; border: 1px solid var(--line-2); color: var(--mute); }
+.pill--on { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+.pill--mid { border-style: dashed; color: var(--soft); }
+.d-close { margin-left: auto; font: 500 14px/1 var(--mono); color: var(--mute); background: transparent; border: 0; padding: 2px 6px; cursor: pointer; }
+.d-close:hover { color: var(--ink); }
+.d-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.d-list li { display: grid; grid-template-columns: 18px minmax(0, auto) 1fr; gap: 8px; align-items: baseline; font-size: 12.5px; }
+.d-mark { font: 700 11px/1 var(--mono); color: var(--accent); text-align: center; }
+.d-who { font: 11.5px/1.3 var(--mono); color: var(--soft); }
+.d-block .d-mark, .d-block .d-name { color: var(--rose); }
+.d-none { color: var(--mute); grid-template-columns: 1fr !important; }
+
+@media (max-width: 1080px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .inst { position: static; }
+  canvas#plan { width: 100%; min-width: 0; max-width: 640px; margin: 0 auto; }
+}
+@media (max-width: 560px) {
+  .wrap { padding-block: 14px 32px; }
+  .bar { margin-left: 0; }
+  .legend .hint { margin-left: 0; }
+  .row { grid-template-columns: 20px minmax(0, 1fr) 24px; gap: 2px 8px; }
+  .verdict { white-space: normal; }
+  .who { grid-column: 2 / -1; grid-row: 2; }
+  .row[aria-pressed="true"] .who { display: none; }
+  .spark { display: none; }
+  .flow { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .row { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1><span class="h1-en">Letting Agent</span><span class="h1-zh">规则读数</span></h1>
+    <p class="tag-proto"><b>原型</b> · Lab 2-15 平面仿真 · 6 人 4 猫</p>
+    <div class="bar">
+      <b class="clock" id="clock" aria-label="仿真时间">00:00</b>
+      <button id="play" type="button" aria-pressed="false">暂停</button>
+      <span class="seg" role="group" aria-label="倍速">
+        <button type="button" data-speed="1" aria-pressed="false">×1</button>
+        <button type="button" data-speed="4" aria-pressed="true">×4</button>
+        <button type="button" data-speed="10" aria-pressed="false">×10</button>
+      </span>
+      <button id="restart" type="button">换一场</button>
+    </div>
+  </header>
+
+  <div class="app">
+    <section class="inst" aria-label="平面仿真">
+      <div id="planWrap"><canvas id="plan" width="484" height="484" aria-label="平面仿真与规则标注，点一台单元看它此刻的理由"></canvas></div>
+      <div class="legend">
+        <span><i class="dot dot--rel">3</i>第 4 节</span>
+        <span><i class="dot dot--base">桌</i>桌子</span>
+        <span><i class="dot dot--check">×</i>被拦下</span>
+        <span>数字 = 访客，字母 = 猫</span>
+        <span class="hint">点单元看理由</span>
+      </div>
+    </section>
+
+    <section class="readout" aria-label="感知、理解、干预读数">
+      <div id="rows"></div>
+      <div class="detail" id="detail" aria-live="polite" hidden></div>
+    </section>
+  </div>
+</div>
+<script>/*__JS__*/</script>

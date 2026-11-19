@@ -20,7 +20,7 @@ import { fetchMeshBuffer, forgetMeshBuffer } from '../../src/lib/linkage/mesh-fe
 import { VIGNETTES, VignetteSim, vignetteLayout, vignetteScript, type SpaceSimLike, type VignetteKey } from '../../src/lib/space/cohabit-vignette';
 import { DESIGN, SOURCES, formText, roleName, type Source, type UnitDesign } from '../../src/lib/space/cohabit-design';
 import { logicalToCss, projectLogical } from '../../src/lib/linkage/machine-behavior';
-import { COHABIT, CohabitSim, PACE_DEMO, SPACE_MODES, bandAngle, partySizes, scatterCats, type EventKind, type SpaceMode } from '../../src/lib/space/cohabit';
+import { COHABIT, CohabitSim, SPACE_MODES, bandAngle, type EventKind, type SpaceMode } from '../../src/lib/space/cohabit';
 import { FIGURE, RING_GRID_AXON, ROOM, ringGridViewMatrix, type RingGridView } from '../../src/lib/space/skin-grid';
 import { CAT, CAT_HEAD_YAW_MAX, clampHeadYaw, catRig, humanRig, strideOf, styleKey, type Rig as BodyRig, type Tone } from '../../src/lib/space/figure';
 import {
@@ -38,6 +38,7 @@ import {
   type BakeReply,
   SCENE,
   STEADY,
+  standardSceneSim,
   STOWED_STRIDE,
   TABLE_MOVE,
   TABLE_TOP,
@@ -245,35 +246,9 @@ const COPY = {
   },
 } as const;
 
-/**
- * 与案例页对照图同一份配置（scripts/cohabit/case-compare.mjs），多两条：单元是方形的（`unit: 'square'`）；
- * 64 台铺满整间房（`cover: 'room'`，2026-10-27，格距 0.60 → 0.83 m、台子随之放大，家具按新格子重排）。放人放猫照 runCohabit 的摆法
- */
+/** 标准场景（cohabit-solid 的 standardSceneSim，与 Lab 2-14「放一场 6 人 4 猫」同一份） */
 function makeSim(space: SpaceMode, seed: number): CohabitSim {
-  const sim = new CohabitSim({
-    trigger: 'posture',
-    grid: COHABIT.SEATS.GRID,
-    unit: 'square',
-    cover: 'room',
-    space,
-    seed,
-    opening: false,
-    auto: true,
-    faces: true,
-    social: true,
-    catFloor: true,
-    cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid },
-    guide: COHABIT.GUIDE,
-    pace: PACE_DEMO,
-  });
-  const half = sim.layout.fieldM / 2;
-  const sizes = partySizes(SCENE.people);
-  sizes.forEach((sz, i) => {
-    const a = (i / sizes.length) * 2 * Math.PI + 0.3;
-    sim.addParty(Math.cos(a) * half * 0.6, Math.sin(a) * half * 0.6, sz);
-  });
-  scatterCats(sim, SCENE.cats, seed);
-  return sim;
+  return standardSceneSim(space, seed);
 }
 
 /** 步态相位分几格（每格一份静态网格，画面上看不出跳格） */

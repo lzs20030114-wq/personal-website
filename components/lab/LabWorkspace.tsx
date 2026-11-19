@@ -5,7 +5,7 @@ import { useBenchLang, useLabText } from './LabLanguage';
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { LabActivity } from './LabActivity';
 import { LabHelp, type LabHelpApi, type LabHelpEntry } from './LabHelp';
-import { LabViewDockSlot } from './LabCtl';
+import { LabReadoutSlot, LabViewDockSlot } from './LabCtl';
 import { CAMERA_COMMAND, type CameraCommand } from './labCameraInput';
 import { LAB_BENCHES, LAB_INDEX, labAccent } from '../../src/lib/site/lab-index';
 import { normalizedLabHash } from './planHash';
@@ -209,6 +209,8 @@ export type LabAttachments = { title: Bilingual; blocks: LogBlock[] };
 
 type LabPanelProps = {
   no: string; title: string; description: string; lede: string; specs: [string, string][]; accent: string; kind: string; verb: string; children: ReactNode; notes?: ReactNode; attachments?: LabAttachments; defaultDetails?: boolean;
+  /** 说明栏里放规则读数（2026-11-19，Lab 2-14）：栏顶出「读数 / 说明」两页，读数在前；台架用 LabReadout 把读数送进来 */
+  readout?: boolean;
 };
 
 /** 一台台架：展开着就整台挂上，收起时只留一行标题（点它展开，上一台随之收起） */
@@ -236,7 +238,7 @@ function LabPanelFolded({ no, title, description, accent, kind }: LabPanelProps)
   </div>;
 }
 
-function LabPanelOpen({ no, title, description, lede, specs, accent, kind, verb, children, notes, attachments, defaultDetails = true }: LabPanelProps) {
+function LabPanelOpen({ no, title, description, lede, specs, accent, kind, verb, children, notes, attachments, defaultDetails = true, readout = false }: LabPanelProps) {
   const lang = useBenchLang();
   const tx = useLabText(lang);
   const workspace = useContext(Workspace);
@@ -258,6 +260,10 @@ function LabPanelOpen({ no, title, description, lede, specs, accent, kind, verb,
   const detailsScroll = useRef<HTMLDivElement>(null);
   // 底栏的视角位：台架用 LabViewDock 把视角预设搬到这里（LabCtl）
   const [viewDock, setViewDock] = useState<HTMLDivElement | null>(null);
+  // 说明栏的两页（只在有读数的面板）：读数在前；读数的位置给台架用 LabReadout 送进来（LabCtl）
+  const [tab, setTab] = useState<'readout' | 'notes'>('readout');
+  const [readoutEl, setReadoutEl] = useState<HTMLDivElement | null>(null);
+  const showReadout = readout && tab === 'readout';
   const helpApi = useMemo<LabHelpApi>(() => ({
     set(id, entry) {
       setHelps(prev => {
@@ -270,7 +276,8 @@ function LabPanelOpen({ no, title, description, lede, specs, accent, kind, verb,
     // 点开的那一条钉住：点开会展开说明栏、版面一动指针就「离开」了控件名，不能因此把高亮清掉；指向另一个控件名才换
     focus(id, how = 'point') {
       if (!id) { setHelpOn(prev => (prev?.open ? prev : null)); return; }
-      if (how === 'open') { setHelpOn({ id, open: true }); setDetails(true); return; }
+      // 点开一个控件名：说明在「说明」那一页，有读数的面板先翻过去
+      if (how === 'open') { setHelpOn({ id, open: true }); setDetails(true); setTab('notes'); return; }
       setHelpOn(prev => (prev?.open && prev.id === id ? prev : { id, open: false }));
     },
     entryId: id => `lab-help-${no}-${id.replace(/[^a-zA-Z0-9_-]/g, '')}`,
@@ -316,7 +323,8 @@ function LabPanelOpen({ no, title, description, lede, specs, accent, kind, verb,
   const maxDetails = clamp(Math.floor(panelWidth - 652), 260, 400);
   const appliedDetailWidth = Math.min(workspace.detailWidth, maxDetails);
   useEffect(() => {
-    if (window.innerWidth < 1100 && !['2-6', '2-10', '2-11', '2-12', '2-13'].includes(no)) setDetails(false);
+    // 窄屏默认收起说明栏；有读数的面板不收（读数就是这台要看的东西）
+    if (window.innerWidth < 1100 && !readout && !['2-6', '2-10', '2-11', '2-12', '2-13'].includes(no)) setDetails(false);
     const node = stage.current;
     if (!node) return;
     const update = () => setHasCamera(!!visibleCamera(node));
@@ -457,6 +465,7 @@ function LabPanelOpen({ no, title, description, lede, specs, accent, kind, verb,
     <LabActivity.Provider value={!workspace.expanded || expanded}>
     <LabHelp.Provider value={helpApi}>
     <LabViewDockSlot.Provider value={viewDock}>
+    <LabReadoutSlot.Provider value={readout ? (details && showReadout ? readoutEl : null) : undefined}>
       <section ref={root} className="lab-panel" data-lab-panel={no} data-expanded={expanded || undefined} data-details={details || undefined}
         role={expanded ? 'dialog' : undefined} aria-modal={expanded || undefined} aria-labelledby={`lab-title-${no}`}
         style={{ '--lab-tone': accent, '--lab-detail-width': `${appliedDetailWidth}px`, ...(figureHeight === null ? {} : { '--lab-figure-height': `${figureHeight}px` }) } as CSSProperties}
@@ -467,8 +476,8 @@ function LabPanelOpen({ no, title, description, lede, specs, accent, kind, verb,
           <div className="lab-panel-number"><span className="lab-panel-no" style={{ color: 'var(--lab-tone)' }}>{tx("LAB")} {no}</span><span className="lab-panel-dash" aria-hidden /><span className="lab-panel-kind">{tx(kind)}</span></div>
           <div className="lab-panel-title"><h2 id={`lab-title-${no}`}>{tx(title)}</h2><p>{tx(description)}</p></div>
           <div className="lab-panel-actions">
-            <button type="button" className="lab-notes-toggle" aria-pressed={details} aria-controls={`lab-details-${no}`} onClick={() => setDetails(!details)}><span className="lab-check" data-on={details || undefined} aria-hidden />{tx("Notes")}</button>
-            {attachments && <button type="button" className="lab-attach-toggle" aria-controls={`lab-details-${no}`} onClick={() => { setDetails(true); requestAnimationFrame(() => attachRail.current?.scrollIntoView({ block: 'nearest' })); }}>{lang === 'zh' ? '附件' : 'Attachments'}<span className="lab-attach-n">{attachments.blocks.length}</span></button>}
+            <button type="button" className="lab-notes-toggle" aria-pressed={details} aria-controls={`lab-details-${no}`} onClick={() => setDetails(!details)}><span className="lab-check" data-on={details || undefined} aria-hidden />{readout ? (lang === 'zh' ? '读数与说明' : 'Readout & notes') : tx("Notes")}</button>
+            {attachments && <button type="button" className="lab-attach-toggle" aria-controls={`lab-details-${no}`} onClick={() => { setDetails(true); setTab('notes'); requestAnimationFrame(() => attachRail.current?.scrollIntoView({ block: 'nearest' })); }}>{lang === 'zh' ? '附件' : 'Attachments'}<span className="lab-attach-n">{attachments.blocks.length}</span></button>}
             <button ref={expandButton} type="button" className="lab-expand" aria-label={`${tx(expanded ? '恢复' : '放大')} ${tx('Lab')} ${no}`} onClick={toggleExpand}>{expanded ? tx('Restore ↙') : tx('Expand ↗')}</button>
           </div>
         </header>
@@ -495,8 +504,16 @@ function LabPanelOpen({ no, title, description, lede, specs, accent, kind, verb,
           </div>
           <div className="lab-detail-divider" hidden={!details}><Splitter label={`${tx('Lab')} ${no} ${tx('说明宽度')}`} value={appliedDetailWidth} min={260} max={maxDetails} change={workspace.resizeDetails} reverse controls={`lab-details-${no}`} /></div>
           <aside className="lab-details" id={`lab-details-${no}`} hidden={!details} aria-label={`${tx('Lab')} ${no} ${tx('说明与规格')}`}>
-            <div className="lab-details-head"><span>{tx("About this study")}</span></div>
+            {readout ? (
+              <div className="lab-details-head lab-details-tabs" role="group" aria-label={lang === 'zh' ? '说明栏内容' : 'Side panel content'}>
+                <button type="button" aria-pressed={tab === 'readout'} onClick={() => setTab('readout')}>{lang === 'zh' ? '规则读数' : 'Rule readout'}</button>
+                <button type="button" aria-pressed={tab === 'notes'} onClick={() => setTab('notes')}>{tx("About this study")}</button>
+              </div>
+            ) : <div className="lab-details-head"><span>{tx("About this study")}</span></div>}
             <div ref={detailsScroll} className="lab-details-scroll" tabIndex={0}>
+              {showReadout && <div ref={setReadoutEl} className="lab-readout-slot" />}
+              {/* 读数那一页不渲染说明（不包一层：说明栏的样式按直接子元素写，别的台架 DOM 要逐个相同） */}
+              {!showReadout && <>
               {notes && <div>{notes}</div>}
               <p className="lab-description">{tx(lede)}</p>
               <h3 className="lab-sr-only">{tx("Specifications")}</h3>
@@ -513,6 +530,7 @@ function LabPanelOpen({ no, title, description, lede, specs, accent, kind, verb,
                     requestAnimationFrame(() => attachView.current?.scrollIntoView({ block: 'nearest', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));
                   }} />
               </div>}
+              </>}
             </div>
           </aside>
         </div>
@@ -520,6 +538,7 @@ function LabPanelOpen({ no, title, description, lede, specs, accent, kind, verb,
           <BlockView id={`lab-attach-${no}`} viewRef={attachView} blocks={attachments.blocks} lang={lang} openAt={attachAt} onClose={() => setAttachAt(null)} />
         </div>}
       </section>
+    </LabReadoutSlot.Provider>
     </LabViewDockSlot.Provider>
     </LabHelp.Provider>
     </LabActivity.Provider>

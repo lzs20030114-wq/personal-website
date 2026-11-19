@@ -3,12 +3,20 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useBenchLang, useLabText } from './LabLanguage';
 import { LabControlLabel } from './LabControlLabel';
-import { LabFold } from './LabCtl';
-import { tableTopFor } from '../../src/lib/space/cohabit-solid';
+import { LabFold, LabReadout, useLabReadoutSlot } from './LabCtl';
+import { standardSceneSim, tableTopFor } from '../../src/lib/space/cohabit-solid';
+import { ruleReadout, type RuleHit, type RuleRow } from '../../src/lib/space/cohabit-reasons';
+import { ReadoutLabels, ReadoutTracker, readoutSnapshot, unitCard, type ReadoutSnap, type UnitCard } from '../../src/lib/space/cohabit-readout';
+import { RuleReadout } from './RuleReadout';
+import { drawRuleOverlay, unitAt } from './ruleOverlay';
 import { CASE_SCENES, CASE_SEED, COHABIT, CohabitSim, PACE_DEMO, FACE_MODES, GUIDE_TARGETS, SPACE_MODES, TRIGGER_MODES, nearestNode, populateCohabit, type CaseScene, type GuideTarget, type Cat, type FaceMode, type SpaceMode, type TriggerMode, type Visitor } from '../../src/lib/space/cohabit';
 import { PLAN, RESPONSES, type ResponseMode } from '../../src/lib/space/unit-activation';
 import type { CatPose } from '../../src/lib/space/cat-rules';
 import { H, W, canvasToRoom, drawPlan, readPalette, type Palette, type PlanPerson } from './planDraw';
+
+/** 规则读数（2026-11-19）：面板每隔这么久刷一次（ms）；「放一场 6 人 4 猫」先跑这么久的仿真时间（s），一打开就有东西可看 */
+const READOUT_EVERY_MS = 120;
+const READOUT_WARM_S = 90;
 import { planFromHash } from './planHash';
 import { useBenchLoop } from './useBenchLoop';
 
@@ -20,6 +28,9 @@ import { useBenchLoop } from './useBenchLoop';
  * 让路两档（2026-10-07 作者「人穿过只收相对的两个面」）：只收挡路的带 = 挡人的带各自收回到芯上（默认）；整个单元 = 2-11 的让位闸。
  * 规则两档（2026-10-07 作者「座位做据点，人分走 / 站 / 坐三种状态」+「先以 8×8 设计，座位摆在空间中间」）：
  * 「走 · 站 · 坐」（默认，8×8，标准布置）= 走着不触发、站定看猫给一步、坐着一步步把猫引到座位前方那台；痕迹（旧）= 上一版口径，留作对照。
+ * 规则读数（2026-11-19，项目二_规则可视化方案.md §10）：面板给了 readout 时（LabReadoutSlot），说明栏里出「感知 → 理解 → 干预」读数，
+ * 平面图上每台正在落的单元标出对应的规则、细线连到引起它的人或猫；读法 = cohabit-reasons.ts（与核对脚本同一份），
+ * 数据 = cohabit-readout.ts，面板 = RuleReadout.tsx，标注 = ruleOverlay.ts。读数一直记账，只在说明栏停在读数那一页时画。
  */
 /** 2026-11-08 加 ×40 / ×60（访客一坐 10–30 分钟）；这台按 0.404 s 一段推，6 人 4 猫每仿真秒约 1.8 ms */
 const TIME_SCALES = [1, 3, 8, 10, 20, 40, 60] as const;
@@ -254,6 +265,24 @@ export function CohabitBench({
   const lang = useBenchLang(explicitLang);
   const tx = useLabText(lang);
   const t = COPY[lang];
+  // 规则读数：undefined = 这台面板没有读数；null = 有，但说明栏收着或在「说明」那一页（照常记账、不画）
+  const readoutSlot = useLabReadoutSlot();
+  const showReadoutRef = useRef(false);
+  showReadoutRef.current = !!readoutSlot;
+  const langRef = useRef(lang);
+  langRef.current = lang;
+  const labelsRef = useRef(new ReadoutLabels());
+  const trackerRef = useRef(new ReadoutTracker());
+  const hitsRef = useRef<RuleHit[]>([]);
+  const hoverRef = useRef<RuleRow | null>(null);
+  const pinnedRef = useRef<RuleRow | null>(null);
+  const [pinned, setPinned] = useState<RuleRow | null>(null);
+  const pickedRef = useRef<number | null>(null);
+  const [readout, setReadout] = useState<{ snap: ReadoutSnap | null; card: UnitCard | null }>({ snap: null, card: null });
+  const readoutAt = useRef(0);
+  /** 「放一场 6 人 4 猫」：下一次重建用标准场景（cohabit-solid 的 standardSceneSim，与 Lab 2-15 同一份） */
+  const standardRef = useRef(false);
+  const [standardRun, setStandardRun] = useState(0);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const simRef = useRef<CohabitSim | null>(null);
@@ -316,7 +345,61 @@ export function CohabitBench({
     const pal = palRef.current;
     if (!canvas || !sim || !pal) return;
     const ctx = canvas.getContext('2d');
-    if (ctx) drawPlan(ctx, sceneOf(sim, traceRef.current, selRef.current), pal);
+    if (!ctx) return;
+    drawPlan(ctx, sceneOf(sim, traceRef.current, selRef.current), pal);
+    if (showReadoutRef.current && readoutLive(sim))
+      drawRuleOverlay(ctx, sim, { hits: hitsRef.current, focus: hoverRef.current ?? pinnedRef.current, picked: pickedRef.current, labels: labelsRef.current, lang: langRef.current }, pal);
+  };
+
+  /** 读数只对「走 · 站 · 坐」规则、会动的单元有效（ruleReadout 在钉死与空房间下返回空） */
+  const readoutLive = (sim: CohabitSim) => sim.trigger === 'posture' && sim.space === 'live';
+
+  /** 算一次读数并记账（仿真推进之后、或场面刚换） */
+  const readRules = (sim: CohabitSim) => {
+    labelsRef.current.sync(sim);
+    hitsRef.current = readoutLive(sim) ? ruleReadout(sim) : [];
+    trackerRef.current.account(hitsRef.current, sim.t);
+  };
+
+  /** 交给面板的快照（说明栏停在读数那一页时才算） */
+  const pushReadout = () => {
+    const sim = simRef.current;
+    if (!sim || !showReadoutRef.current) return;
+    const lng = langRef.current;
+    const u = pickedRef.current;
+    setReadout({
+      snap: readoutSnapshot(hitsRef.current, trackerRef.current, sim, labelsRef.current, lng),
+      card: u !== null && readoutLive(sim) ? unitCard(sim, hitsRef.current, u, labelsRef.current, lng) : null,
+    });
+    readoutAt.current = performance.now();
+  };
+
+  const pickUnit = (u: number | null) => {
+    pickedRef.current = u;
+    pushReadout();
+    if (!runningRef.current) paint();
+  };
+
+  /** 「放一场 6 人 4 猫」：规则、格数、空间与开关回到默认，下一次重建用标准场景 */
+  const runStandard = () => {
+    sceneRef.current = null;
+    setSceneKey(null);
+    standardRef.current = true;
+    setTrigger('posture');
+    setGrid(COHABIT.SEATS.GRID);
+    setSpace('live');
+    setFaceMode('bands');
+    setMode('follow');
+    setGoal(true);
+    setLook(PLAN.ATTENTION.look);
+    setClearOn(true);
+    setClearance(PLAN.ATTENTION.clearance);
+    setThreshold(PLAN.DEMO.threshold);
+    setFade(PLAN.DEMO.fade);
+    setSpeed(COHABIT.VISITOR.speed);
+    setAuto(true);
+    setGuideTarget(COHABIT.GUIDE.target);
+    setStandardRun((n) => n + 1);
   };
 
   /** 按案例页对照的场景重开一场：规则、格数、人数、猫数、种子照对照，影响结果的开关回到默认（引导取座位前方那台 = 正文报的那组数） */
@@ -354,17 +437,33 @@ export function CohabitBench({
     const posture = trigger === 'posture';
     // 「正文对照」场景：同一个种子、不开场，按对照的人数与猫数布置（与 runCohabit 同一份 populateCohabit）
     const sc = sceneRef.current && sceneRef.current.trigger === trigger && sceneRef.current.grid === grid ? sceneRef.current : null;
-    const sim = new CohabitSim({ trigger, grid, space, mode, goal, look, threshold, fade, auto, clearance: clearanceOpt, lane: clearanceOpt !== null, faces: faceMode === 'bands', guide: { target: guideTarget }, cat: posture ? { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid } : undefined, social: posture, catFloor: posture, ...(sc ? { seed: CASE_SEED, opening: false } : { pace: PACE_DEMO, ...(posture ? { unit: 'square' as const, cover: 'room' as const } : {}) }) });
+    // 「放一场 6 人 4 猫」：与 Lab 2-15 同一份标准场景（同一个种子、同一套人和猫）
+    const std = standardRef.current && !sc && trigger === 'posture';
+    standardRef.current = false;
+    const sim = std ? standardSceneSim('live') : new CohabitSim({ trigger, grid, space, mode, goal, look, threshold, fade, auto, clearance: clearanceOpt, lane: clearanceOpt !== null, faces: faceMode === 'bands', guide: { target: guideTarget }, cat: posture ? { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid } : undefined, social: posture, catFloor: posture, ...(sc ? { seed: CASE_SEED, opening: false } : { pace: PACE_DEMO, ...(posture ? { unit: 'square' as const, cover: 'room' as const } : {}) }) });
     if (sc) populateCohabit(sim, sc.people, sc.cats);
     caseAcc.current = 0;
     sim.setSpeed(speed);
     simRef.current = sim;
+    // 规则读数：名字、累计、走势随一场重来；标准场景先跑 90 s 仿真时间，一打开就有人坐着、猫在被引
+    labelsRef.current.reset();
+    trackerRef.current.reset(sim.t);
+    pickedRef.current = null;
+    if (std) {
+      const dt = 1 / 30;
+      for (let k = 0; k < READOUT_WARM_S / dt; k++) {
+        sim.step(dt);
+        if (k % 15 === 0) readRules(sim);
+      }
+    }
+    readRules(sim);
+    pushReadout();
     heldRef.current = null;
     furnRef.current = null;
     select(-1);
     paint();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [grid, trigger, sceneRun]);
+  }, [grid, trigger, sceneRun, standardRun]);
   // 对照场景下改了影响结果的开关：这一场不再是对照里的那一场
   useEffect(() => {
     if (!sceneRef.current) return;
@@ -374,6 +473,8 @@ export function CohabitBench({
   }, [faceMode, mode, goal, look, clearOn, clearance, threshold, fade, speed, auto, guideTarget]);
   useEffect(() => {
     simRef.current?.setSpace(space);
+    if (simRef.current) readRules(simRef.current);
+    pushReadout();
     paint();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [space]);
@@ -452,6 +553,9 @@ export function CohabitBench({
           }
         }
       }
+      // 规则读数：每帧算一次（约 0.08 ms），停着时人被拖动也照样读得到
+      readRules(sim);
+      if (showReadoutRef.current && performance.now() - readoutAt.current > READOUT_EVERY_MS) pushReadout();
       paint();
       const s = sim.summary();
       const key = `${Math.floor(s.t)}|${s.formed}|${s.people}|${s.cats}|${s.ledger.counts.gaze}|${s.ledger.counts.warmth}|${s.ledger.counts.touch}|${s.ledger.counts.pass}|${s.heldR5}|${sim.faces ? s.bandsOpen : '-'}|${s.seated}|${s.guides}|${s.catArrivals}`;
@@ -501,6 +605,8 @@ export function CohabitBench({
     } else {
       // 添加人物只走控制条按钮（master 2026-10-07）
       select(-1);
+      // 规则读数：点一台单元看它为什么落（点空地 = 关掉那张卡）
+      if (showReadoutRef.current) pickUnit(unitAt(sim, x, y));
     }
     paint();
   };
@@ -539,6 +645,11 @@ export function CohabitBench({
     if (sim && canvas && fh) {
       furnRef.current = null;
       // 点家具没拖动 = 只选中；点座位不再放人（添加人物只走按钮，master 2026-10-07）
+      // 单元挂在家具上方：没拖动就松开时，照旧选中家具，同时把那里的单元放进读数的单元卡
+      if (!fh.moved && showReadoutRef.current) {
+        const { x, y } = canvasToRoom(canvas, e.clientX, e.clientY, sim.layout.roomM);
+        pickUnit(unitAt(sim, x, y));
+      }
       if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
       setCursor('grab');
       paint();
@@ -660,8 +771,30 @@ export function CohabitBench({
     </div>
   );
 
+  const readoutStatus = trigger !== 'posture' ? 'trace' : space !== 'live' ? 'still' : 'ok';
   return (
     <div ref={wrapRef} className={`lab-wrap${onLight ? ' on-light' : ''}${workspace ? ' walk-workbench' : ''}`}>
+      <LabReadout>
+        <RuleReadout
+          lang={lang}
+          snap={readout.snap}
+          status={readoutStatus}
+          pinned={pinned}
+          card={readout.card}
+          onHover={(row) => {
+            hoverRef.current = row;
+            if (!runningRef.current) paint();
+          }}
+          onPin={(row) => {
+            const next = pinnedRef.current === row ? null : row;
+            pinnedRef.current = next;
+            setPinned(next);
+            if (!runningRef.current) paint();
+          }}
+          onCloseCard={() => pickUnit(null)}
+          onScene={runStandard}
+        />
+      </LabReadout>
       <div className="lab-fig">
         <div className="walk-map" style={workspace ? undefined : { display: 'contents' }}>
           <canvas
