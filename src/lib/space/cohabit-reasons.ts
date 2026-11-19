@@ -20,7 +20,7 @@ function usesTable(sim: CohabitSim, u: number, furn: number): boolean {
   return !!r && !!r[owner] && !!r[furn] && tableClass(r[owner].kind) === tableClass(r[furn].kind);
 }
 
-/** 文档第 4、5 节让单元落下的六个理由（桌子 · 引猫路上的一步 · 人面前那台 · 站着给一步 · 猫脚下 · 猫要去 / 要跳上的台） */
+/** 文档第 4、5 节让单元落下的六个理由（桌子 · 引猫路上的一步 · 座位前方那台 · 站着给一步 · 猫脚下 · 猫要去 / 要跳上的台） */
 export type UnitReasonKind = 'table' | 'step' | 'meet' | 'offer' | 'foot' | 'go' | 'climb';
 
 export interface UnitReason {
@@ -130,7 +130,7 @@ export function bandRequesters(sim: CohabitSim, u: number, j: number): Visitor[]
 
 /** 文档第 4 节五行、第 5 节、第 7 节里此刻成立的一条 */
 export type RuleRow =
-  /** 第 4 节：① 人走过 · ② 人站住看着台上的猫 · ③ 人坐下、猫还远 · ④ 猫到了人面前那台 · ⑤ 猫要换地方 */
+  /** 第 4 节：① 路过 · ② 站立注视 · ③ 落座、猫未到座位前方那台 · ④ 相遇 · ⑤ 猫的位置变更 */
   | 'pass' | 'stand' | 'seatFar' | 'met' | 'catMove'
   /** 第 5 节：桌子 · 猫脚下 · 盖着坐着的人头顶 · 台角会顶到站着的人 · R5 */
   | 'table' | 'foot' | 'overHead' | 'press' | 'r5'

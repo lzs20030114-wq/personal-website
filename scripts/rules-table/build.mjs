@@ -28,6 +28,11 @@ const inline = (s) =>
   esc(s)
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+// 表格一格里的「<br>」= 一条规则一行
+const cell = (s) => {
+  const parts = s.split('<br>');
+  return parts.length > 1 ? parts.map((x) => `<span class="ln">${inline(x.trim())}</span>`).join('') : inline(s);
+};
 const cells = (line) => line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
 
 const html = [];
@@ -64,7 +69,7 @@ for (let i = 0; i < lines.length; ) {
       .map(
         (r) =>
           '<tr>' +
-          r.map((c, k) => `<td${head[k] ? ` data-label="${esc(head[k])}"` : ''}${k === 0 ? ' class="first"' : ''}>${inline(c)}</td>`).join('') +
+          r.map((c, k) => `<td${head[k] ? ` data-label="${esc(head[k])}"` : ''}${k === 0 ? ' class="first"' : ''}>${cell(c)}</td>`).join('') +
           '</tr>',
       )
       .join('');
@@ -136,6 +141,8 @@ table.cols6 { min-width: 980px; }
 table.cols5 { min-width: 760px; }
 thead th { text-align: left; font-size: 12.5px; font-weight: 600; color: var(--mute); padding: 10px 12px 7px; border-bottom: 1px solid var(--line); background: var(--band); vertical-align: bottom; }
 tbody td { vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.ln { display: block; }
+.ln + .ln { margin-top: 5px; }
 tbody tr:last-child td { border-bottom: 0; }
 table.lead td.first { font-weight: 650; white-space: nowrap; }
 table.lead.cols6 td.first { font-size: 17px; color: var(--accent); }

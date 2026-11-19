@@ -22,24 +22,24 @@ interface RowDef {
 }
 
 const ROWS: RowDef[] = [
-  { row: 'pass', mark: '①', part: 4, see: '人在走，经过猫或单元旁边', mean: '路过，不算一次相遇', act: '不落台，只把挡路的几条带收开' },
-  { row: 'stand', mark: '②', part: 4, see: '人站住，看着台上的一只猫满 3 秒', mean: '对这只猫有兴趣，想看近一点', act: '猫旁边离人更近的一台落下，只给一次' },
-  { row: 'seatFar', mark: '③', part: 4, see: '人坐下了，能来的猫还在远处', mean: '要待一阵，愿意和猫相处，猫还远', act: '只落猫的下一步，一步一步引到人面前那台' },
-  { row: 'met', mark: '④', part: 4, see: '人坐着，猫已经在他面前那台', mean: '相遇成了，两边都待得住', act: '不再落新台，这台留着' },
-  { row: 'catMove', mark: '⑤', part: 4, see: '猫要换地方', mean: '猫自己要走，不分躲还是靠近', act: '它要去的那台约 0.7 秒落满' },
-  { row: 'table', mark: '桌', part: 5, see: '人坐到座位上', mean: '要一张桌子', act: '面前那台落到桌子高度' },
-  { row: 'foot', mark: '脚', part: 5, see: '猫在一台上', mean: '这台有猫用着', act: '一直落着，猫走开才收' },
-  { row: 'overHead', mark: '×', part: 5, see: '要落的台会伸到坐着的人头顶', mean: '会压到人', act: '不落，落着的收回' },
-  { row: 'press', mark: '×', part: 5, see: '猫要去的台，台角会顶到站着的人', mean: '会碰到人', act: '先不落，猫等' },
-  { row: 'r5', mark: '×', part: 5, see: '一台落成墙，会让人没路到门', mean: '会把人困住', act: '停在墙线以下' },
-  { row: 'gapApproachOther', mark: '?', part: 7, see: '被引的猫正在靠近别的人', mean: '单元读不出', act: '照样往坐着的人面前引' },
-  { row: 'gapWatchedOther', mark: '?', part: 7, see: '被引的猫正被别的人看着，不会挪', mean: '单元读不出', act: '照样递台' },
+  { row: 'pass', mark: '①', part: 4, see: '人在行走，路线经过单元', mean: '路过，不构成相遇', act: '不落台，收开挡路的带' },
+  { row: 'stand', mark: '②', part: 4, see: '人站着注视台上一只静止的猫，满 3 秒', mean: '站立注视，对象是这只猫', act: '猫相邻、离人更近的一台落下，每次站定一次' },
+  { row: 'seatFar', mark: '③', part: 4, see: '人坐着，可引导的猫不在座位前方那台', mean: '落座，猫未到座位前方那台', act: '只落猫的下一步，逐台引到座位前方那台' },
+  { row: 'met', mark: '④', part: 4, see: '人坐着，引导中的猫已在座位前方那台', mean: '相遇，人猫相距 1.0–1.5 米', act: '不再落新台，该台保持落下' },
+  { row: 'catMove', mark: '⑤', part: 4, see: '猫有了新的目标台', mean: '猫的位置变更，不读相对人的远近', act: '目标台约 0.7 秒落满' },
+  { row: 'table', mark: '桌', part: 5, see: '人坐到座位上', mean: '需要桌子', act: '桌子台落到桌高' },
+  { row: 'foot', mark: '脚', part: 5, see: '猫在一台上', mean: '台被猫占用', act: '保持落下，猫离开后收回' },
+  { row: 'overHead', mark: '×', part: 5, see: '要落的台会伸到坐着的人头顶上方', mean: '与人的身体冲突', act: '不落，已落的收回' },
+  { row: 'press', mark: '×', part: 5, see: '猫的目标台，台角会碰到站着的人', mean: '与人的身体冲突', act: '暂不落，猫等待' },
+  { row: 'r5', mark: '×', part: 5, see: '一台落成墙会使人无路到门', mean: '会困住人', act: '停在墙线以下' },
+  { row: 'gapApproachOther', mark: '?', part: 7, see: '引导中的猫正在向别人移动', mean: '不在输入里', act: '继续引导' },
+  { row: 'gapWatchedOther', mark: '?', part: 7, see: '引导中的猫正被别人注视', mean: '不在输入里', act: '继续递台' },
 ];
 const ROW_OF = new Map(ROWS.map((r) => [r.row, r]));
 const PART_TITLE: Record<number, string> = {
-  4: '第 4 节 · 单元看到的人猫关系',
-  5: '第 5 节 · 不看关系也要做的',
-  7: '第 7 节 · 单元读不出、照样在做的',
+  4: '第 4 节 · 感知 → 理解 → 干预',
+  5: '第 5 节 · 与人猫关系无关的规则',
+  7: '第 7 节 · 单元读不到的关系',
 };
 
 // ── 仿真 ──────────────────────────────────────────────────────────────────────────
@@ -177,9 +177,9 @@ function who(h: RuleHit): string {
     const left = g ? g.path.length - (c && c.unit ? 1 : 0) : 0;
     return `${ps[0]} 引${cs[0]} · 还差 ${left} 台`;
   }
-  if (h.row === 'stand') return `${ps[0]} 看着${cs[0]}`;
-  if (h.row === 'gapApproachOther') return `${cs[0]} 被${ps[0]}引着，正走向${ps[1]}`;
-  if (h.row === 'gapWatchedOther') return `${cs[0]} 被${ps[0]}引着，${ps[1]}正看着它`;
+  if (h.row === 'stand') return `${ps[0]} 注视${cs[0]}`;
+  if (h.row === 'gapApproachOther') return `${cs[0]} 由${ps[0]}引导，正向${ps[1]}移动`;
+  if (h.row === 'gapWatchedOther') return `${cs[0]} 由${ps[0]}引导，正被${ps[1]}注视`;
   const named = [ps.join('、'), cs.join('、')].filter(Boolean).join(' · ');
   return named || `${h.units.length} 台`;
 }
@@ -250,7 +250,7 @@ function updatePanel() {
 
 function unitDetail(u: number): string {
   const why = unitReasons(sim)[u];
-  const name: Record<string, string> = { table: '桌子', step: '引猫：路上的一步', meet: '引猫：人面前那台', offer: '站着给一步', foot: '猫脚下', go: '猫要去的台', climb: '猫要跳上的台' };
+  const name: Record<string, string> = { table: '桌子', step: '引猫：路上的一步', meet: '引猫：座位前方那台', offer: '站着给一步', foot: '猫脚下', go: '猫要去的台', climb: '猫要跳上的台' };
   const deg = sim.act.degree[u];
   const state = deg >= 1 - 1e-9 ? '落满' : deg > 1e-6 ? `落到 ${Math.round(deg * 100)}%` : '收着';
   const blocks = hits.filter((h) => (h.row === 'overHead' || h.row === 'press' || h.row === 'r5') && h.units.includes(u)).map((h) => ROW_OF.get(h.row)!.see);
