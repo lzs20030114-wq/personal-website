@@ -74,7 +74,7 @@ export const LAB_INDEX: readonly LabGroup[] = [
   {
     key: "project-ii",
     label: "Project II — Letting Agent",
-    sub: "Lab 2-1 – 2-16 · shape-changing units and the behaviour that moves them",
+    sub: "Lab 2-1 – 2-17 · shape-changing units and the behaviour that moves them",
     segments: [
       {
         n: "Ⅰ",
@@ -133,13 +133,15 @@ export const LAB_INDEX: readonly LabGroup[] = [
       {
         n: "Ⅷ",
         label: "Together",
-        sub: "Lab 2-14 – 2-16 · people and cats in one room, with the loop closed · 2-14 reruns the case study comparison · 2-16 small studies",
+        sub: "Lab 2-14 – 2-17 · people and cats in one room, with the loop closed · 2-14 reruns the case study comparison · 2-16 small studies · 2-17 how the room senses them",
         benches: [
           { no: "2-14", title: "People and cats together", kernel: "2d", description: 'Visitors walk, stand or sit; resident cats live on the units. Sitting down leads a cat over, and the four encounter events are counted.', meta: '2 rules · 3 spaces · 4 events · canvas', kind: 'Canvas · two species', verb: 'drag a body' },
           // 2026-10-21：同一套仿真放进 Lab 2-8 那间房，立体看——作者「老师也说我们缺一个直接演示立体空间里单元改变空间和其中的动物的直观演示」
           { no: "2-15", title: "People and cats together, in 3D", kernel: "3d", description: 'The Lab 2-14 simulation in the Lab 2-8 room: sixty-four square units, filling the room, descend, retract and give way over visitors and cats.', meta: '8×8 · 6 visitors · 2 cats · WebGL', kind: 'WebGL · two species', verb: 'drag to orbit' },
           // 2026-11-09：老师建议做 2×2 / 3×3 的小样（项目二_小样方案.md）：同一种方台、同一个格距，按脚本演一个用途场景，不跑仿真
           { no: "2-16", title: "Small studies, 2×2 and 3×3", kernel: "3d", description: 'Small patches of the Lab 2-15 room, each staging one thing the room does: a cat drawn up from the floor to a seat, a coffee table with a cat shelf, a shared cavity, a shelf under a counter, a low then high step, giving way. Each unit’s shape comes from the earlier labs, named in the legend.', meta: '6 studies · scripted · WebGL', kind: 'WebGL · scripted', verb: 'drag to orbit' },
+          // 2026-11-19：感知层（项目二_感知层.md）——作者「把它做立体的：一些平面视图，旁边生成一个用点抽象的立体模型」
+          { no: "2-17", title: "How the space knows where people and cats are", kernel: "2d", description: 'Left, what four cameras in the upper corners see, drawn as points and lines; right, the 3D model abstracted from them, with people as point skeletons and cats as a few points. Scheme B places each body from its distances to four fixed points.', meta: '2 schemes · 4 camera layouts · canvas', kind: 'Canvas · sensing', verb: 'drag to orbit' },
         ],
       },
     ],

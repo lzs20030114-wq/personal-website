@@ -27,6 +27,7 @@ import { CatPlanBench, CatPlanNotes } from '../../../components/lab/CatPlanBench
 import { CohabitBench, CohabitNotes } from '../../../components/lab/CohabitBench';
 import { CohabitSpaceBench } from '../../../components/lab/CohabitSpaceBench';
 import { SkinComboBench } from '../../../components/lab/SkinComboBench';
+import { SenseBench } from '../../../components/lab/SenseBench';
 
 export const metadata = { title: 'The lab' };
 
@@ -474,6 +475,20 @@ export default function LabPage() {
           ]}
         >
           <CohabitSpaceBench workspace vignette />
+        </Bench>
+
+        <Bench
+          no="2-17"
+          lede="How the room knows where the visitors and cats are. Scheme A: cameras in the upper corners record the room, and the four images on the left are drawn as points and lines, one point for each joint. A point seen by two or more cameras can be placed in 3D; a point seen by only one is known only to lie on that camera’s sight line; a point inside a frame but behind a unit, a piece of furniture or another person is not seen. The 3D model on the right is rebuilt from those readings alone. Scheme B is shown as a principle only: each person and cat carries one point whose distances to four fixed points give its position, and a person’s facing is read from the body. The scene is the Lab 2-15 room with the same six visitors and four cats."
+          specs={[
+            ['Scene', 'Lab 2-15 room (6.64 m square, 3.74 m high), 64 square units, 20 seats, 6 visitors and 4 cats · visitor pace from the study set (a sitting lasts 1.5–4 minutes) so that people move about · the simulation itself still uses true positions; how the guide fares once the room reads these sensors instead is in 项目二_感知层.md'],
+            ['Cameras', '3.4 m up, below the stowed units, 100° × 70° field, aimed at the room centre · four layouts: two on one wall, two in opposite corners, four corners, corners plus wall midpoints (the four extra ones are drawn on the right only) · in the study, four corners kept standing people in view of two cameras 96% of the time and cats on the floor 81%'],
+            ['Points', 'People: fifteen points (head, nose, neck, shoulders, elbows, wrists, hips, knees, ankles) from the site’s 1.70 m figure; cats: seven points (head, neck, back, rump, two on the tail, feet) · whether a point is seen is judged every 0.1 s against the same occluders as the study: the units at their current height, the furniture and other people’s bodies · the nose counts as seen only when the camera is within 60° of where the person is looking'],
+            ['Error', 'A point seen by two or more cameras: ±0.04 m; seen by one: drawn as a short stretch along that sight line, ±0.05 m across it; errors drift slowly (0.6 s time constant) instead of jumping from frame to frame · scheme B: ±0.10 m with three or four fixed points in direct line, ±0.18 m with two, ±0.30 m otherwise; a distance measured through a body reads 0.35 m long; facing ±8° · all error figures are modelling assumptions'],
+            ['Limit', 'Only what the sensors read is drawn; following the same person from frame to frame, telling bodies apart and reading standing, sitting or where someone looks from the joints are assumed to work. The four images are drawn from the model, not rendered from real cameras'],
+          ]}
+        >
+          <SenseBench workspace />
         </Bench>
 
         <LabProjectEmpty />

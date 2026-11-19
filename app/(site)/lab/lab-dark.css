@@ -188,7 +188,7 @@
 }
 .lab-workspace .lab-stage .lab-ctl--tiered .lab-ctl__row { padding: 0; border: 0; }
 .lab-workspace .lab-stage .lab-ctl--tiered .lab-ctl__row::before { flex: none; font: 400 11px var(--ld-mono); color: var(--ld-mute); }
-:is([data-lab-panel='2-6'], [data-lab-panel='2-10'], [data-lab-panel='2-11'], [data-lab-panel='2-12'], [data-lab-panel='2-13'], [data-lab-panel='2-15']) .lab-ctl--tiered .lab-ctl__row::before { align-self: flex-start; }
+:is([data-lab-panel='2-6'], [data-lab-panel='2-10'], [data-lab-panel='2-11'], [data-lab-panel='2-12'], [data-lab-panel='2-13'], [data-lab-panel='2-15'], [data-lab-panel='2-17']) .lab-ctl--tiered .lab-ctl__row::before { align-self: flex-start; }
 .lab-workspace .lab-stage .lab-ctl__solve::before { content: 'Solve'; }
 .lab-workspace .lab-stage .lab-ctl__row:not(.lab-ctl__solve)::before { content: 'View'; }
 .lab-language-root[data-lang='zh'] .lab-ctl__solve::before { content: '解什么'; }
@@ -228,16 +228,16 @@
 .lab-language-root[data-lang='en'] .lab-workspace .lab-stage .lab-ctl .seg button::first-letter { text-transform: uppercase; }
 /* 「解什么 / 怎么看」两层：层名占左侧一栏，折行的控件组对齐到同一条竖线，不再折回层名底下；两层之间一道发丝线。
    侧栏式台架（控件竖排在图旁）有自己的版式，不吃这一条。 */
-.lab-workspace .lab-panel:not(:is([data-lab-panel='2-6'], [data-lab-panel='2-10'], [data-lab-panel='2-11'], [data-lab-panel='2-12'], [data-lab-panel='2-13'], [data-lab-panel='2-14'], [data-lab-panel='2-15'])) .lab-stage .lab-ctl--tiered .lab-ctl__row {
+.lab-workspace .lab-panel:not(:is([data-lab-panel='2-6'], [data-lab-panel='2-10'], [data-lab-panel='2-11'], [data-lab-panel='2-12'], [data-lab-panel='2-13'], [data-lab-panel='2-14'], [data-lab-panel='2-15'], [data-lab-panel='2-17'])) .lab-stage .lab-ctl--tiered .lab-ctl__row {
   position: relative; padding-left: 64px; column-gap: 28px;
 }
-.lab-workspace .lab-panel:not(:is([data-lab-panel='2-6'], [data-lab-panel='2-10'], [data-lab-panel='2-11'], [data-lab-panel='2-12'], [data-lab-panel='2-13'], [data-lab-panel='2-14'], [data-lab-panel='2-15'])) .lab-stage .lab-ctl--tiered .lab-ctl__row::before {
+.lab-workspace .lab-panel:not(:is([data-lab-panel='2-6'], [data-lab-panel='2-10'], [data-lab-panel='2-11'], [data-lab-panel='2-12'], [data-lab-panel='2-13'], [data-lab-panel='2-14'], [data-lab-panel='2-15'], [data-lab-panel='2-17'])) .lab-stage .lab-ctl--tiered .lab-ctl__row::before {
   position: absolute; left: 0; top: 7px; width: 56px;
 }
-.lab-workspace .lab-panel:not(:is([data-lab-panel='2-6'], [data-lab-panel='2-10'], [data-lab-panel='2-11'], [data-lab-panel='2-12'], [data-lab-panel='2-13'], [data-lab-panel='2-14'], [data-lab-panel='2-15'])) .lab-stage .lab-ctl--tiered .lab-ctl__row + .lab-ctl__row {
+.lab-workspace .lab-panel:not(:is([data-lab-panel='2-6'], [data-lab-panel='2-10'], [data-lab-panel='2-11'], [data-lab-panel='2-12'], [data-lab-panel='2-13'], [data-lab-panel='2-14'], [data-lab-panel='2-15'], [data-lab-panel='2-17'])) .lab-stage .lab-ctl--tiered .lab-ctl__row + .lab-ctl__row {
   padding-top: 12px; border-top: 1px solid oklch(0.95 0.032 120 / 0.08);
 }
-.lab-workspace .lab-panel:not(:is([data-lab-panel='2-6'], [data-lab-panel='2-10'], [data-lab-panel='2-11'], [data-lab-panel='2-12'], [data-lab-panel='2-13'], [data-lab-panel='2-14'], [data-lab-panel='2-15'])) .lab-stage .lab-ctl--tiered .lab-ctl__row + .lab-ctl__row::before { top: 19px; }
+.lab-workspace .lab-panel:not(:is([data-lab-panel='2-6'], [data-lab-panel='2-10'], [data-lab-panel='2-11'], [data-lab-panel='2-12'], [data-lab-panel='2-13'], [data-lab-panel='2-14'], [data-lab-panel='2-15'], [data-lab-panel='2-17'])) .lab-stage .lab-ctl--tiered .lab-ctl__row + .lab-ctl__row::before { top: 19px; }
 
 /* 说明栏「控件」一节：与规格同一种列表；被指着的那一条左侧一道色条、字提亮 */
 .lab-controls-help { margin-top: 22px; }

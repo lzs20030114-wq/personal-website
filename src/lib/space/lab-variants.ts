@@ -273,6 +273,21 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     plans: VIGNETTES.map((v) => ({ key: v.key, label: v.zh })),
     axes: [],
   },
+  {
+    no: '2-17',
+    key: 'sense',
+    zh: '空间怎么知道人和猫在哪',
+    en: 'How the space knows where people and cats are',
+    // 编制 = 方案 A 的四种摄像头布置 + 方案 B（2026-11-19，项目二_感知层.md §10）；「叠上真实位置」是开关不是档
+    plans: [
+      { key: 'adjacent2', label: '同墙两台' },
+      { key: 'diagonal2', label: '对角两台' },
+      { key: 'corners4', label: '四个上角' },
+      { key: 'all8', label: '四角 + 墙中点' },
+      { key: 'tag', label: 'B 量距离' },
+    ],
+    axes: [],
+  },
 ];
 
 /**
