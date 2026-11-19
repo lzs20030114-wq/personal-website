@@ -141,7 +141,7 @@ export const LAB_INDEX: readonly LabGroup[] = [
           // 2026-11-09：老师建议做 2×2 / 3×3 的小样（项目二_小样方案.md）：同一种方台、同一个格距，按脚本演一个用途场景，不跑仿真
           { no: "2-16", title: "Small studies, 2×2 and 3×3", kernel: "3d", description: 'Small patches of the Lab 2-15 room, each staging one thing the room does: a cat drawn up from the floor to a seat, a coffee table with a cat shelf, a shared cavity, a shelf under a counter, a low then high step, giving way. Each unit’s shape comes from the earlier labs, named in the legend.', meta: '6 studies · scripted · WebGL', kind: 'WebGL · scripted', verb: 'drag to orbit' },
           // 2026-11-19：感知层（项目二_感知层.md）——作者「把它做立体的：一些平面视图，旁边生成一个用点抽象的立体模型」
-          { no: "2-17", title: "How the space knows where people and cats are", kernel: "2d", description: 'Left, what four cameras in the upper corners see, drawn as points and lines; right, the 3D model abstracted from them, with people as point skeletons and cats as a few points. Scheme B places each body from its distances to four fixed points.', meta: '2 schemes · 4 camera layouts · canvas', kind: 'Canvas · sensing', verb: 'drag to orbit' },
+          { no: "2-17", title: "How the space knows where people and cats are", kernel: "2d", description: 'Left, what the cameras in the upper corners see, drawn as points and lines; right, the 3D model rebuilt from them, with people as point skeletons and cats as a few points, and what each is read to be doing. Ordinary or depth cameras; scheme B solves each body from its distances to four fixed points.', meta: '3 ways to read · 4 camera layouts · canvas', kind: 'Canvas · sensing', verb: 'drag to orbit' },
         ],
       },
     ],

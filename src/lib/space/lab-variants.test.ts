@@ -594,11 +594,15 @@ const FROZEN = [
   '2-16:counter',
   '2-16:step',
   '2-16:giveway',
-  // Ⅷ 同台 · 感知层（Lab 2-17，2026-11-19：A 四种摄像头布置 + B）
-  '2-17:adjacent2',
-  '2-17:diagonal2',
-  '2-17:corners4',
-  '2-17:all8',
+  // Ⅷ 同台 · 感知层（Lab 2-17，2026-11-19：A 普通摄像头 / 深度相机各四种布置 + B）
+  '2-17:rgb.adjacent2',
+  '2-17:rgb.diagonal2',
+  '2-17:rgb.corners4',
+  '2-17:rgb.all8',
+  '2-17:depth.adjacent2',
+  '2-17:depth.diagonal2',
+  '2-17:depth.corners4',
+  '2-17:depth.all8',
   '2-17:tag',
 ];
 
@@ -608,16 +612,16 @@ describe('lab-variants · 项目二台架差分清单', () => {
     expect(new Set(LAB_VARIANTS.map((b) => b.key)).size).toBe(LAB_VARIANTS.length);
   });
 
-  it('779 种离散组合逐条与冻结清单相同（多层台原 50 组各保留五档圆方；2-14 = 痕迹 36 + 「走 · 站 · 坐」 12 × 引导 3；2-15 = 空间 3；2-16 = 小样 6；2-17 = 摄像头布置 4 + 方案 B）', () => {
+  it('783 种离散组合逐条与冻结清单相同（多层台原 50 组各保留五档圆方；2-14 = 痕迹 36 + 「走 · 站 · 坐」 12 × 引导 3；2-15 = 空间 3；2-16 = 小样 6；2-17 = 两种摄像头 × 四种布置 + 方案 B）', () => {
     const combos = allCombos();
-    expect(combos.length).toBe(779);
+    expect(combos.length).toBe(783);
     expect(combos).toEqual(FROZEN.flatMap(id => id.startsWith('2-6:')
       ? ['m0', 'm1', 'm2', 'm3', 'm4'].map(m => `${id}:${m}`) : [id]));
   });
 
   it('各台组合数保留全部旧档，多层台有 250 种轮廓和连接分布组合', () => {
     const per = Object.fromEntries(LAB_VARIANTS.map((b) => [b.no, benchCombos(b).length]));
-    expect(per).toEqual({ '2-1': 1, '2-2': 1, '2-3': 3, '2-4': 4, '2-5': 11, '2-6': 250, '2-7': 22, '2-8': 5, '2-9': 160, '2-10': 72, '2-11': 12, '2-12': 24, '2-13': 128, '2-14': 72, '2-15': 3, '2-16': 6, '2-17': 5 });
+    expect(per).toEqual({ '2-1': 1, '2-2': 1, '2-3': 3, '2-4': 4, '2-5': 11, '2-6': 250, '2-7': 22, '2-8': 5, '2-9': 160, '2-10': 72, '2-11': 12, '2-12': 24, '2-13': 128, '2-14': 72, '2-15': 3, '2-16': 6, '2-17': 9 });
   });
 
   it('组合 id 唯一（同名档不会在清单里被折叠掉）', () => {

@@ -12,7 +12,7 @@ import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import { COHABIT, CohabitSim, PACE_STUDY, partySizes, scatterCats } from '../../src/lib/space/cohabit';
 import { furnitureScene, type CamLayout, type OBox } from '../../src/lib/space/cohabit-sense';
 import { SCENE, TABLE_TOP, tableTopFor } from '../../src/lib/space/cohabit-solid';
-import { SenseObserver, type SenseView } from '../../src/lib/space/sense-observer';
+import { SenseObserver, type CamKind, type SenseView } from '../../src/lib/space/sense-observer';
 import {
   PIVOT,
   RIGHT,
@@ -58,10 +58,12 @@ const COPY = {
   zh: {
     aria: '左边是房间四个上角的摄像头各自拍到的画面，人和猫画成点和线；右边是从这些画面抽象出的立体模型，可以拖动旋转',
     title: '空间怎么知道人和猫在哪',
-    subA: '方案 A · 四台摄像头 · 从画面重建立体位置',
-    subB: '方案 B · 量到固定点的距离 · 定出位置与朝向',
+    subA: '方案 A · 普通摄像头 · 两台以上看见的点交出立体位置，再读人在做什么',
+    subD: '方案 A · 深度相机 · 一台看见就量得到远近，再读人在做什么',
+    subB: '方案 B · 量到四个固定点的距离 · 解出位置与高度',
     scheme: '方案',
-    schemeA: 'A 摄像头',
+    schemeA: 'A 普通摄像头',
+    schemeD: 'A 深度相机',
     schemeB: 'B 量距离',
     layout: '摄像头',
     truth: '叠上真实位置',
@@ -69,20 +71,24 @@ const COPY = {
     reset: '重来',
     time: '时间',
     view: '视角',
-    statA: (tri: number, kp: number) => (kp ? `站着的人 ${Math.round((100 * tri) / kp)}% 的点定得住` : '没有站着的人'),
-    lineA: (cs: number, c: number, t: number) => `猫被看见 ${cs} / ${c} · ${t.toFixed(0)} s`,
-    statB: (ok: number, n: number) => `${ok} / ${n} 个身体能直视三个以上固定点`,
-    lineB: (t: number) => `误差 ±0.10–0.30 m · 朝向 ±8° · ${t.toFixed(0)} s`,
-    legendA: '实心点 = 两台以上看见，定得住 · 空心点加一小段 = 只有一台看见，只知道在那条视线上 · 画面里的粉色空心点 = 在画面里却被挡住，立体里粉色 × = 挡在哪 · 指针停在谁身上画谁的视线，可拖动旋转',
-    legendB: '菱形 = 固定点 · 实线 = 直接量到 · 粉色虚线 = 隔着身体量，读长了 · 圆 = 误差范围 · 短线 = 读到的身体朝向 · 指针停在谁身上画谁的距离',
+    statA: (right: number, known: number, n: number) => `读对在做什么 ${right} / ${n}${known < n ? `（${n - known} 个看不清）` : ''}`,
+    lineA: (tri: number, kp: number, cs: number, c: number, t: number) =>
+      `${kp ? `站着的人 ${Math.round((100 * tri) / kp)}% 的点定得住` : '没有站着的人'} · 猫被看见 ${cs} / ${c} · ${t.toFixed(0)} s`,
+    statB: (err: number) => `解出的位置平均差 ${err.toFixed(2)} m`,
+    lineB: (flag: number, right: number, known: number, t: number) => `${flag} 个身体四段对不上 · 坐 / 站读对 ${right} / ${known} · ${t.toFixed(0)} s`,
+    legendA: '实心点 = 两台以上看见、交得出位置 · 空心点加一小段 = 只有一台看见，只知道在那条视线上 · 画面里的粉色空心点 = 在画面里却被挡住，立体里粉色 × = 挡在哪 · 名字下面一行是读到的在做什么，读错了是粉色 · 指针停在谁身上画谁的视线，可拖动旋转',
+    legendD: '实心点 = 深度相机量到了远近（一台就够）· 画面里的空心点 = 超出测距，只剩彩色画面里一个点 · 空心点加一小段 = 只有一条视线 · 粉色空心点 / × = 被挡住 · 名字下面一行是读到的在做什么，读错了是粉色 · 指针停在谁身上画谁的视线',
+    legendB: '菱形 = 固定点 · 每段距离是一个球，弧 = 它在解出那一高度上的截面，几段弧交在一点就是位置 · 粉色虚线 = 其实隔着身体、读长了 · 粉圈 = 四段对不上 · 短线 = 读到的身体朝向 · 勾上「叠上真实位置」看差多少',
   },
   en: {
     aria: 'Left: what each camera in the four upper corners of the room sees, with people and cats drawn as points and lines. Right: the 3D model abstracted from those views, which can be dragged to rotate.',
     title: 'How the space knows where people and cats are',
-    subA: 'Scheme A · four cameras · 3D positions rebuilt from the images',
-    subB: 'Scheme B · distances to fixed points · position and facing',
+    subA: 'Scheme A · ordinary cameras · points seen by two or more are placed in 3D, then read for what people are doing',
+    subD: 'Scheme A · depth cameras · one camera measures how far a point is, then read for what people are doing',
+    subB: 'Scheme B · distances to four fixed points · position and height solved',
     scheme: 'Scheme',
     schemeA: 'A · cameras',
+    schemeD: 'A · depth cameras',
     schemeB: 'B · ranging',
     layout: 'Cameras',
     truth: 'Overlay true position',
@@ -90,12 +96,14 @@ const COPY = {
     reset: 'Restart',
     time: 'Time',
     view: 'View',
-    statA: (tri: number, kp: number) => (kp ? `${Math.round((100 * tri) / kp)}% of standing people’s points fixed` : 'nobody standing'),
-    lineA: (cs: number, c: number, t: number) => `cats seen ${cs} / ${c} · ${t.toFixed(0)} s`,
-    statB: (ok: number, n: number) => `${ok} / ${n} bodies in direct line of three or more fixed points`,
-    lineB: (t: number) => `error ±0.10–0.30 m · facing ±8° · ${t.toFixed(0)} s`,
-    legendA: 'Solid point = seen by two or more cameras, fixed · hollow point with a short line = seen by one, known only to lie on that sight line · pink hollow point in an image = in frame but blocked; pink × in 3D = where it is blocked · hover a body to draw its sight lines, drag to rotate',
-    legendB: 'Diamond = fixed point · solid line = measured directly · pink dashed line = measured through a body, reads long · circle = error range · short line = body facing as read · hover a body to draw its distances',
+    statA: (right: number, known: number, n: number) => `activity read right ${right} / ${n}${known < n ? ` (${n - known} unclear)` : ''}`,
+    lineA: (tri: number, kp: number, cs: number, c: number, t: number) =>
+      `${kp ? `${Math.round((100 * tri) / kp)}% of standing people’s points fixed` : 'nobody standing'} · cats seen ${cs} / ${c} · ${t.toFixed(0)} s`,
+    statB: (err: number) => `solved positions off by ${err.toFixed(2)} m on average`,
+    lineB: (flag: number, right: number, known: number, t: number) => `${flag} bodies with disagreeing distances · sitting / standing read right ${right} / ${known} · ${t.toFixed(0)} s`,
+    legendA: 'Solid point = seen by two or more cameras and placed · hollow point with a short line = seen by one, known only to lie on that sight line · pink hollow point in an image = in frame but blocked; pink × in 3D = where it is blocked · the line under each name is the activity read, pink when wrong · hover a body to draw its sight lines, drag to rotate',
+    legendD: 'Solid point = the depth camera measured how far it is (one camera is enough) · hollow point in an image = beyond depth range, only a point in the colour image · hollow point with a short line = one sight line only · pink hollow point / × = blocked · the line under each name is the activity read, pink when wrong · hover a body to draw its sight lines',
+    legendB: 'Diamond = fixed point · each distance is a sphere; an arc = its section at the solved height, and where the arcs meet is the position · pink dashed = actually through a body, reads long · pink ring = the four distances disagree · short line = body facing as read · tick Overlay true position to see the gap',
   },
 } as const;
 
@@ -154,6 +162,7 @@ export function SenseBench({
   const furnRef = useRef<{ key: unknown; boxes: OBox[] }>({ key: null, boxes: [] });
   const seedRef = useRef<number>(SCENE.seed);
   const viewRef = useRef<SenseView>('camera');
+  const kindRef = useRef<CamKind>('rgb');
   const layoutRef = useRef<CamLayout>('corners4');
   const truthRef = useRef(false);
   const runningRef = useRef(true);
@@ -165,13 +174,14 @@ export function SenseBench({
   const focusRef = useRef<{ key: string | null; t: number }>({ key: null, t: 0 });
   const dragRef = useRef<{ id: number; sx: number; sy: number; moved: boolean } | null>(null);
   const [view, setView] = useState<SenseView>('camera');
+  const [kind, setKind] = useState<CamKind>('rgb');
   const [layout, setLayout] = useState<CamLayout>('corners4');
   const [truth, setTruth] = useState(false);
   const [running, setRunning] = useState(true);
   const [timeScale, setTimeScale] = useState<number>(1);
   const [viewKey, setViewKey] = useState<SenseViewKey>('axon');
   const [cursor, setCursor] = useState<'default' | 'grab' | 'grabbing' | 'pointer'>('default');
-  const [hud, setHud] = useState({ standTri: 0, standKp: 0, catsSeen: 0, cats: 0, losOk: 0, bodies: 0, t: 0 });
+  const [hud, setHud] = useState({ standTri: 0, standKp: 0, catsSeen: 0, cats: 0, losOk: 0, bodies: 0, readRight: 0, readKnown: 0, flagged: 0, tagErr: 0, tagRight: 0, tagKnown: 0, t: 0 });
 
   const frameOf = (): SenseFrame | null => {
     const sim = simRef.current;
@@ -210,7 +220,7 @@ export function SenseBench({
   /** 新开一场：同一个种子从头跑，先跑 WARMUP 秒 */
   const rebuild = () => {
     const sim = buildSim(seedRef.current);
-    const obs = new SenseObserver(sim.layout.roomM, layoutRef.current, seedRef.current);
+    const obs = new SenseObserver(sim.layout.roomM, layoutRef.current, seedRef.current, kindRef.current);
     const dt = 1 / 20;
     for (let s = 0; s < WARMUP; s += dt) sim.step(dt);
     obs.update(sim, dt);
@@ -243,11 +253,14 @@ export function SenseBench({
     if (!ctx) return;
     ctx.scale(dpr, dpr);
     palRef.current = solidPalette(readPalette(wrap));
-    const preset = planFromHash('2-17', ['camera', 'tag', ...LAYOUTS.map((l) => l.key.toLowerCase())]);
+    const preset = planFromHash('2-17', ['camera', 'rgb', 'depth', 'tag', ...LAYOUTS.map((l) => l.key.toLowerCase())]);
     if (preset === 'tag') {
       viewRef.current = 'tag';
       setView('tag');
-    } else if (preset && preset !== 'camera') {
+    } else if (preset === 'depth') {
+      kindRef.current = 'depth';
+      setKind('depth');
+    } else if (preset && preset !== 'camera' && preset !== 'rgb') {
       const l = LAYOUTS.find((x) => x.key.toLowerCase() === preset)!.key;
       layoutRef.current = l;
       setLayout(l);
@@ -309,7 +322,7 @@ export function SenseBench({
       }
       paint();
       const s = obs.stats();
-      const key = `${s.standTri}|${s.standKp}|${s.catsSeen}|${s.cats}|${s.losOk}|${s.bodies}|${Math.floor(sim.t)}`;
+      const key = `${s.standTri}|${s.standKp}|${s.catsSeen}|${s.cats}|${s.readRight}|${s.readKnown}|${s.flagged}|${s.tagErr.toFixed(2)}|${s.tagRight}|${s.tagKnown}|${s.bodies}|${Math.floor(sim.t)}`;
       if (key !== lastHud.current) {
         lastHud.current = key;
         setHud({ ...s, t: sim.t });
@@ -373,9 +386,19 @@ export function SenseBench({
     if (!runningRef.current) paint();
   };
 
-  const pickScheme = (v: SenseView) => {
+  const pickScheme = (v: SenseView, k: CamKind = kindRef.current) => {
     viewRef.current = v;
     setView(v);
+    if (k !== kindRef.current) {
+      kindRef.current = k;
+      setKind(k);
+      const sim = simRef.current;
+      const obs = obsRef.current;
+      if (sim && obs) {
+        obs.setKind(k);
+        obs.update(sim, 0);
+      }
+    }
     paint();
   };
   const pickLayout = (l: CamLayout) => {
@@ -411,13 +434,13 @@ export function SenseBench({
         <div className="lab-hud tl">
           <div style={{ color: 'var(--accent)' }}>{tx('Lab 2-17 / Project II')}</div>
           <div>{t.title}</div>
-          <div className="dim">{isA ? t.subA : t.subB}</div>
+          <div className="dim">{isA ? (kind === 'depth' ? t.subD : t.subA) : t.subB}</div>
         </div>
         <div className="lab-hud br">
-          <div className="num" data-sense-stat>{isA ? t.statA(hud.standTri, hud.standKp) : t.statB(hud.losOk, hud.bodies)}</div>
-          <div className="dim">{isA ? t.lineA(hud.catsSeen, hud.cats, hud.t) : t.lineB(hud.t)}</div>
+          <div className="num" data-sense-stat>{isA ? t.statA(hud.readRight, hud.readKnown, hud.bodies) : t.statB(hud.tagErr)}</div>
+          <div className="dim">{isA ? t.lineA(hud.standTri, hud.standKp, hud.catsSeen, hud.cats, hud.t) : t.lineB(hud.flagged, hud.tagRight, hud.tagKnown, hud.t)}</div>
         </div>
-        <div className="lab-hud bl dim">{isA ? t.legendA : t.legendB}</div>
+        <div className="lab-hud bl dim">{isA ? (kind === 'depth' ? t.legendD : t.legendA) : t.legendB}</div>
       </div>
       {controls ? (
         <div className="lab-ctl lab-ctl--tiered">
@@ -425,16 +448,19 @@ export function SenseBench({
             <div className="grp">
               <LabControlLabel
                 help={[
-                  'A：房间上角的摄像头拍画面，两台以上同时看见的点能定出立体位置，只有一台看见的点只知道在那条视线上。B：每个人、每只猫身上一个点，量到四个固定点的距离定位置，人还读身体朝哪；隔着别人的身体量会读长。两种只换读法，场景不变。',
-                  'A: cameras in the upper corners record images; a point seen by two or more cameras can be placed in 3D, a point seen by one is known only to lie on that sight line. B: one point on each person and cat; its distances to four fixed points give its position, and for people the body’s facing is read too; measuring through someone else’s body reads long. Switching only changes how the space reads; the scene stays the same.',
+                  'A 普通摄像头：房间上角的摄像头拍画面，两台以上同时看见的点交出立体位置，只有一台看见的点只知道在那条视线上。A 深度相机：每台还量得到点有多远，一台看见就定得住，但只在 0.5–5.5 m 以内、视场也窄一些。两种摄像头都从解出来的关键点读人在做什么：胯和头的高度分站和坐，一秒里挪了多远分走和站，脸朝哪（看得见脸时）或两肩朝哪定视线，视线 ±25°、3 m 以内的猫算在看。B：每个人、每只猫身上一个点，量到四个固定点的距离，用最小二乘解出位置和高度；隔着身体量的那段读长，四段就对不上，但看不出是哪一段。几种只换读法，场景不变。',
+                  'A · cameras: cameras in the upper corners record images; a point seen by two or more is placed in 3D, a point seen by one is known only to lie on that sight line. A · depth cameras: each camera also measures how far the point is, so one camera is enough, but only from 0.5 to 5.5 m and with a narrower view. Both read what people are doing from the solved points: hip and head height tell standing from sitting, how far the body moved in a second tells walking, the face (when seen) or the shoulders give where someone looks, and a cat within ±25° and 3 m of that counts as watched. B: one point on each person and cat; its distances to four fixed points are solved by least squares for position and height; a distance measured through a body reads long and the four stop agreeing, but which one is wrong cannot be told. The scene stays the same when switching.',
                 ]}
                 lang={lang}
               >
                 {t.scheme}
               </LabControlLabel>
               <span className="seg">
-                <button type="button" className={isA ? 'active' : undefined} onClick={() => pickScheme('camera')}>
+                <button type="button" className={isA && kind === 'rgb' ? 'active' : undefined} onClick={() => pickScheme('camera', 'rgb')}>
                   {t.schemeA}
+                </button>
+                <button type="button" className={isA && kind === 'depth' ? 'active' : undefined} onClick={() => pickScheme('camera', 'depth')}>
+                  {t.schemeD}
                 </button>
                 <button type="button" className={!isA ? 'active' : undefined} onClick={() => pickScheme('tag')}>
                   {t.schemeB}

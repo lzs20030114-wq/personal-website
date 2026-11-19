@@ -2,7 +2,7 @@ import { SENSE_GEOM, unitOccluders, type Camera, type Cyl, type OBox } from '../
 import type { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import type { PlanLayout } from '../../src/lib/space/unit-activation';
 import type { ObservedBody, SenseObserver, SenseView } from '../../src/lib/space/sense-observer';
-import { CAT_LINKS, PERSON_LINKS, camProject, hitPoint, type P3 } from '../../src/lib/space/sense-view';
+import { CAT_LINKS, DEPTH, PERSON_LINKS, camProject, hitPoint, type P3 } from '../../src/lib/space/sense-view';
 import type { Palette } from './planDraw';
 
 /**
@@ -223,8 +223,10 @@ function drawCamView(ctx: CanvasRenderingContext2D, f: SenseFrame, pal: Palette,
   const n = f.layout.n;
   for (let i = 0; i <= n; i++)
     for (let j = 0; j <= n; j++) {
-      const p = P({ x: -half + (i * f.layout.roomM) / n, y: -half + (j * f.layout.roomM) / n, z: 0 });
-      if (p) dot(ctx, p.x, p.y, 0.8, alpha(pal.muted, 0.6));
+      const g = { x: -half + (i * f.layout.roomM) / n, y: -half + (j * f.layout.roomM) / n, z: 0 };
+      const p = P(g);
+      const far = f.obs.kind === 'depth' && Math.hypot(g.x - cam.x, g.y - cam.y, cam.z) > DEPTH.far;
+      if (p) dot(ctx, p.x, p.y, 0.8, alpha(pal.muted, far ? 0.2 : 0.6));
     }
   // 家具（顶面）
   for (const b of f.furn) {
@@ -251,9 +253,20 @@ function drawCamView(ctx: CanvasRenderingContext2D, f: SenseFrame, pal: Palette,
     let y0 = Infinity;
     let x1 = -Infinity;
     let y1 = -Infinity;
+    const depthKind = f.obs.kind === 'depth';
     pts.forEach((p, k) => {
       if (!p) return;
-      if (seen[k]) {
+      if (seen[k] && depthKind) {
+        // 深度相机：测距以内的点实心（有深度），超出的只剩彩色画面里的一个点（空心）
+        const d = Math.hypot(b.truth[k].x - cam.x, b.truth[k].y - cam.y, b.truth[k].z - cam.z);
+        const inR = d >= DEPTH.near && d <= DEPTH.far;
+        if (inR) dot(ctx, p.x, p.y, hot ? 2.2 : 1.7, col);
+        else dot(ctx, p.x, p.y, hot ? 2.2 : 1.7, null, alpha(col, 0.8), 0.9);
+        x0 = Math.min(x0, p.x);
+        y0 = Math.min(y0, p.y);
+        x1 = Math.max(x1, p.x);
+        y1 = Math.max(y1, p.y);
+      } else if (seen[k]) {
         dot(ctx, p.x, p.y, hot ? 2.2 : 1.7, col);
         x0 = Math.min(x0, p.x);
         y0 = Math.min(y0, p.y);
@@ -280,7 +293,7 @@ function drawCamView(ctx: CanvasRenderingContext2D, f: SenseFrame, pal: Palette,
   ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1);
   ctx.fillStyle = pal.warn;
   ctx.font = '10px ui-monospace, monospace';
-  ctx.fillText(`A${ci + 1}`, r.x + 5, r.y + 12);
+  ctx.fillText(`A${ci + 1}${f.obs.kind === 'depth' ? (f.lang === 'zh' ? ' · 深度' : ' · depth') : ''}`, r.x + 5, r.y + 12);
 }
 
 // ───────────────────────────────────────────────────────────── 方案 B：俯视，量到固定点的距离
@@ -319,9 +332,9 @@ function drawTagPlan(ctx: CanvasRenderingContext2D, f: SenseFrame, pal: Palette,
   }
   const focus = f.obs.bodies.find((b) => bodyKey(b) === shownKey(f));
   if (focus) {
+    // 每段距离 = 一个球；这里画它在解出那一高度上的截面圆，几个圆交在哪就是解出的位置
     f.obs.anchors.forEach((a, i) => {
-      const dz = focus.tag.z - a.z;
-      const rH = Math.sqrt(Math.max(0, focus.ranges[i] ** 2 - dz * dz));
+      const rH = sectionR(focus.ranges[i], focus.tagEst.z - a.z);
       ctx.beginPath();
       ctx.arc(X(a.x), Y(a.y), rH * sc, 0, Math.PI * 2);
       ctx.setLineDash(focus.los[i] ? [] : [4, 3]);
@@ -330,12 +343,13 @@ function drawTagPlan(ctx: CanvasRenderingContext2D, f: SenseFrame, pal: Palette,
       ctx.stroke();
       ctx.setLineDash([]);
     });
+    if (f.truth) dot(ctx, X(focus.tag.x), Y(focus.tag.y), 3, null, alpha(pal.muted, 0.9), 1.2);
   }
   for (const b of f.obs.bodies) {
     const col = colorOf(b, pal);
     const x = X(b.tagEst.x);
     const y = Y(b.tagEst.y);
-    dot(ctx, x, y, Math.max(3, b.sd * 2 * sc), alpha(col, 0.12), alpha(col, 0.5), 0.8);
+    if (!b.consistent) dot(ctx, x, y, 4.5, null, alpha(pal.warn, 0.9), 1);
     dot(ctx, x, y, 2.4, col);
     if (b.kind === 'person') line(ctx, { x, y }, { x: x + Math.cos(b.headingEst) * 0.4 * sc, y: y + Math.sin(b.headingEst) * 0.4 * sc }, col, 1.3);
     if (bodyKey(b) === shownKey(f)) dot(ctx, x, y, 0.32 * sc, null, pal.ink, 1);
@@ -365,49 +379,95 @@ function diamond(ctx: CanvasRenderingContext2D, x: number, y: number, r: number,
   ctx.fill();
 }
 
-/** B 的左列下半：选中的那个身体量到四个固定点的距离（条长按距离），被身体挡住的那条读长、画虚线；人再加一个朝向盘 */
+/** 球（半径 r）在离球心竖直 dz 处的截面圆半径 */
+const sectionR = (r: number, dz: number): number => Math.sqrt(Math.max(0, r * r - dz * dz));
+
+const POSTURE_ZH: Record<string, string> = { walk: '走', stand: '站', sit: '坐', lie: '趴', unknown: '看不清' };
+const POSTURE_EN: Record<string, string> = { walk: 'walk', stand: 'stand', sit: 'sit', lie: 'lie', unknown: 'unclear' };
+const PLACE_ZH: Record<string, string> = { floor: '地上', furniture: '家具上', unit: '台上', unknown: '' };
+const PLACE_EN: Record<string, string> = { floor: 'floor', furniture: 'on furniture', unit: 'on a unit', unknown: '' };
+
+/** 读到的在做什么，写成一行：人「站 · 看猫 2 2.4 s」，猫「坐 · 台上」 */
+export function doingText(b: ObservedBody, bodies: readonly ObservedBody[], lang: 'zh' | 'en', d = b.read): string {
+  const zh = lang === 'zh';
+  // 方案 B 读不到猫的姿势：只写在哪
+  const parts = d.posture === 'unknown' && d.place !== 'unknown' && b.kind === 'cat' ? [] : [(zh ? POSTURE_ZH : POSTURE_EN)[d.posture]];
+  if (b.kind === 'person') {
+    if (d.lean) parts.push(zh ? '前倾' : 'lean');
+    if (d.watching !== null) {
+      const c = bodies.find((x) => x.kind === 'cat' && x.id === d.watching);
+      const name = c ? (zh ? `猫 ${c.n}` : `C${c.n}`) : zh ? '猫' : 'a cat';
+      const t = d === b.read && b.watchFor >= 0.5 ? ` ${b.watchFor.toFixed(1)} s` : '';
+      parts.push(zh ? `看着${name}${t}` : `→ ${name}${t}`);
+    }
+  } else if (d.place !== 'unknown') parts.push((zh ? PLACE_ZH : PLACE_EN)[d.place]);
+  return parts.join(' · ');
+}
+
+/** B 的左列下半：选中的那个身体量到四个固定点的距离、解出来对不对得上、高度读成坐还是站；人再加一个朝向盘 */
 function drawRanges(ctx: CanvasRenderingContext2D, f: SenseFrame, pal: Palette, b: ObservedBody): void {
   const zh = f.lang === 'zh';
   const col = colorOf(b, pal);
   const x0 = LEFT.x;
-  let y = PLAN.y + PLAN.size + 22;
+  let y = PLAN.y + PLAN.size + 20;
   ctx.font = '10px ui-monospace, monospace';
   ctx.fillStyle = col;
-  ctx.fillText(zh ? `${bodyLabel(b, f.lang)} · 到四个固定点的距离` : `${bodyLabel(b, f.lang)} · distance to each fixed point`, x0, y);
-  y += 16;
+  ctx.fillText(zh ? `${bodyLabel(b, f.lang)} · 量到四个固定点` : `${bodyLabel(b, f.lang)} · four distances`, x0, y);
+  y += 15;
   const maxR = Math.hypot(f.layout.roomM, f.layout.roomM, SENSE_GEOM.ceiling);
-  const barW = LEFT.w - 64;
+  const barW = LEFT.w - 82;
+  ctx.font = '9px ui-monospace, monospace';
   f.obs.anchors.forEach((_, i) => {
     const r = b.ranges[i];
     const los = b.los[i];
     diamond(ctx, x0 + 4, y - 3, 4, pal.ink);
     ctx.fillStyle = pal.ink;
-    ctx.font = '9px ui-monospace, monospace';
     ctx.fillText(String(i + 1), x0 + 11, y);
-    const bx = x0 + 22;
+    const bx = x0 + 20;
     line(ctx, { x: bx, y: y - 3 }, { x: bx + barW, y: y - 3 }, alpha(pal.muted, 0.25), 1);
     line(ctx, { x: bx, y: y - 3 }, { x: bx + (barW * Math.min(r, maxR)) / maxR, y: y - 3 }, los ? col : pal.warn, 2.2, los ? [] : [3, 2]);
     ctx.fillStyle = los ? alpha(pal.ink, 0.85) : pal.warn;
-    ctx.fillText(`${r.toFixed(2)} m`, bx + barW + 4, y);
-    if (!los) {
-      ctx.fillStyle = pal.warn;
-      ctx.fillText(zh ? '隔着身体，读长了' : 'through a body, reads long', bx, y + 11);
-      y += 11;
-    }
-    y += 18;
+    ctx.fillText(`${r.toFixed(2)}`, bx + barW + 3, y);
+    const e = b.resid[i];
+    ctx.fillStyle = Math.abs(e) > 0.12 ? pal.warn : alpha(pal.muted, 0.95);
+    ctx.fillText(`${e >= 0 ? '+' : '−'}${Math.abs(e).toFixed(2)}`, bx + barW + 32, y);
+    y += 14;
   });
-  ctx.fillStyle = alpha(pal.ink, 0.7);
-  ctx.font = '9px ui-monospace, monospace';
-  ctx.fillText(zh ? `定出的点 ±${b.sd.toFixed(2)} m` : `fixed to ±${b.sd.toFixed(2)} m`, x0, y + 2);
+  ctx.fillStyle = alpha(pal.muted, 0.95);
+  ctx.fillText(zh ? '距离 m · 残差 m · 虚线 = 其实隔着身体' : 'distance m · residual m · dashed = through a body', x0, y);
+  y += 16;
+  ctx.fillStyle = b.consistent ? alpha(pal.ink, 0.85) : pal.warn;
+  ctx.fillText(
+    b.consistent ? (zh ? '四段对得上' : 'the four distances agree') : zh ? '四段对不上：有一段读长了' : 'the four disagree: one reads long',
+    x0,
+    y,
+  );
+  y += 13;
+  if (!b.consistent) {
+    ctx.fillStyle = alpha(pal.muted, 0.95);
+    ctx.fillText(zh ? '（看得出有错，看不出是哪一段）' : '(an error shows, not which one)', x0, y);
+    y += 13;
+  }
+  const err = Math.hypot(b.tagEst.x - b.tag.x, b.tagEst.y - b.tag.y, b.tagEst.z - b.tag.z);
+  ctx.fillStyle = alpha(pal.ink, 0.85);
+  const like = b.kind === 'person' ? (zh ? ` · 像${b.tagHeightSit ? '坐' : '站'}` : ` · looks ${b.tagHeightSit ? 'seated' : 'standing'}`) : '';
+  ctx.fillText(zh ? `解出高度 ${b.tagEst.z.toFixed(2)} m${like}` : `height ${b.tagEst.z.toFixed(2)} m${like}`, x0, y);
+  y += 13;
+  ctx.fillStyle = b.tagOk === false ? pal.warn : alpha(pal.ink, 0.85);
+  const how = b.kind === 'person' ? (zh ? '（坐不坐看座位压力）' : ' (seat pad for sitting)') : zh ? '（在哪台看称重）' : ' (load cell for the unit)';
+  ctx.fillText((zh ? '读成 ' : 'read: ') + doingText(b, f.obs.bodies, f.lang, b.tagRead) + how, x0, y);
+  y += 13;
+  ctx.fillStyle = alpha(pal.muted, 0.95);
+  ctx.fillText(zh ? `与真实位置差 ${err.toFixed(2)} m` : `${err.toFixed(2)} m from the true position`, x0, y);
   if (b.kind !== 'person') return;
   // 朝向盘：真朝向（淡虚线）与读到的（实线）
-  y += 22;
+  y += 20;
   ctx.fillStyle = col;
   ctx.font = '10px ui-monospace, monospace';
   ctx.fillText(zh ? '读到的朝向（身体）' : 'facing read (body)', x0, y);
-  const cx = x0 + 34;
-  const cy = y + 40;
-  const R = 28;
+  const cx = x0 + 30;
+  const cy = y + 34;
+  const R = 24;
   dot(ctx, cx, cy, R, null, alpha(pal.muted, 0.5), 1);
   for (let k = 0; k < 8; k++) {
     const a = (k / 8) * Math.PI * 2;
@@ -514,7 +574,25 @@ function draw3D(ctx: CanvasRenderingContext2D, f: SenseFrame, pal: Palette, occ:
           ctx.font = '9px ui-monospace, monospace';
           ctx.fillText(`${b.ranges[i].toFixed(2)} m`, (pa.x + pb.x) / 2 + 3, (pa.y + pb.y) / 2 - 2);
         }
+        // 这一段距离的球在解出那一高度上的截面，只画解出位置附近的一段弧：四段弧交在一点 = 对得上
+        const rH = sectionR(b.ranges[i], b.tagEst.z - a.z);
+        const th = Math.atan2(b.tagEst.y - a.y, b.tagEst.x - a.x);
+        ctx.beginPath();
+        for (let s2 = -12; s2 <= 12; s2++) {
+          const q = P({ x: a.x + Math.cos(th + s2 * 0.03) * rH, y: a.y + Math.sin(th + s2 * 0.03) * rH, z: b.tagEst.z });
+          if (s2 === -12) ctx.moveTo(q.x, q.y);
+          else ctx.lineTo(q.x, q.y);
+        }
+        ctx.setLineDash(los ? [] : [3, 2]);
+        ctx.strokeStyle = los ? alpha(colorOf(b, pal), 0.8) : pal.warn;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        ctx.setLineDash([]);
       });
+      if (f.truth) {
+        const q = P(b.tag);
+        dot(ctx, q.x, q.y, 3.2, null, alpha(pal.muted, 0.95), 1.2);
+      }
     }
     f.obs.anchors.forEach((a, i) => {
       const p = P(a);
@@ -533,12 +611,13 @@ function draw3D(ctx: CanvasRenderingContext2D, f: SenseFrame, pal: Palette, occ:
     const hot = bodyKey(b) === shownKey(f);
     if (f.view === 'camera') {
       const pts = b.est.map(P);
-      for (const [a, c] of linksOf(b)) if (b.fix[a] !== 'none' && b.fix[c] !== 'none') line(ctx, pts[a], pts[c], alpha(col, b.fix[a] === 'tri' && b.fix[c] === 'tri' ? 0.95 : 0.45), hot ? 1.8 : 1.3);
+      const fixed = (k: number) => b.fix[k] === 'tri' || b.fix[k] === 'depth';
+      for (const [a, c] of linksOf(b)) if (b.fix[a] !== 'none' && b.fix[c] !== 'none') line(ctx, pts[a], pts[c], alpha(col, fixed(a) && fixed(c) ? 0.95 : 0.45), hot ? 1.8 : 1.3);
       b.est.forEach((p, k) => {
         const s = pts[k];
-        if (b.fix[k] === 'tri') dot(ctx, s.x, s.y, hot ? 3 : 2.4, col);
+        if (fixed(k)) dot(ctx, s.x, s.y, hot ? 3 : 2.4, col);
         else if (b.fix[k] === 'ray') {
-          const d = b.ray[k]!;
+          const d = b.ray[k]!.d;
           const a = P({ x: p.x - d.x * 0.3, y: p.y - d.y * 0.3, z: p.z - d.z * 0.3 });
           const e = P({ x: p.x + d.x * 0.3, y: p.y + d.y * 0.3, z: p.z + d.z * 0.3 });
           line(ctx, a, e, alpha(col, 0.7), 1.4);
@@ -552,15 +631,14 @@ function draw3D(ctx: CanvasRenderingContext2D, f: SenseFrame, pal: Palette, occ:
         ctx.fillText('?', s.x - 3, s.y + 4);
       }
       const head = pts[0];
-      ctx.fillStyle = alpha(col, hot ? 1 : 0.75);
-      ctx.font = '9px ui-monospace, monospace';
-      ctx.fillText(bodyLabel(b, f.lang), head.x + 6, head.y - 6);
+      label(ctx, f, pal, b, head.x + 6, head.y - 6, hot, b.read, b.readOk);
     } else {
       const t = b.tagEst;
       const ring: { x: number; y: number }[] = [];
+      const rr = b.consistent ? 0.12 : 0.25;
       for (let k = 0; k <= 24; k++) {
         const a = (k / 24) * Math.PI * 2;
-        ring.push(P({ x: t.x + Math.cos(a) * b.sd * 2, y: t.y + Math.sin(a) * b.sd * 2, z: t.z }));
+        ring.push(P({ x: t.x + Math.cos(a) * rr, y: t.y + Math.sin(a) * rr, z: t.z }));
       }
       ctx.beginPath();
       ring.forEach((p, k) => (k ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
@@ -577,12 +655,40 @@ function draw3D(ctx: CanvasRenderingContext2D, f: SenseFrame, pal: Palette, occ:
         const e = P({ x: t.x + Math.cos(b.headingEst) * 0.45, y: t.y + Math.sin(b.headingEst) * 0.45, z: t.z });
         line(ctx, s, e, col, 1.6);
       }
-      ctx.fillStyle = alpha(col, hot ? 1 : 0.75);
-      ctx.font = '9px ui-monospace, monospace';
-      ctx.fillText(bodyLabel(b, f.lang), s.x + 6, s.y - 6);
+      label(ctx, f, pal, b, s.x + 6, s.y - 6, hot, b.tagRead, b.tagOk);
     }
   }
   ctx.restore();
+}
+
+/** 身体旁的两行字：名字 + 读到的在做什么；读错了用粉色，指针停着的那个另写真实的 */
+function label(ctx: CanvasRenderingContext2D, f: SenseFrame, pal: Palette, b: ObservedBody, x: number, y: number, hot: boolean, d: ObservedBody['read'], ok: boolean | null): void {
+  const col = colorOf(b, pal);
+  const name = bodyLabel(b, f.lang);
+  const txt = doingText(b, f.obs.bodies, f.lang, d);
+  // 别画出右边那一块：放不下就挪到点的左边
+  const fit = (w: number) => (x + w > RIGHT.x + RIGHT.w - 4 ? Math.max(RIGHT.x + 4, RIGHT.x + RIGHT.w - 4 - w) : x);
+  if (!hot) {
+    // 不是指针停着的那个：名字与读数写成一行小字，免得一群人挤在一起时字叠成一片
+    ctx.font = '9px ui-monospace, monospace';
+    x = fit(ctx.measureText(`${name} ${txt}`).width);
+    ctx.fillStyle = alpha(col, 0.8);
+    ctx.fillText(name, x, y);
+    ctx.fillStyle = ok === false ? pal.warn : alpha(pal.ink, 0.62);
+    if (txt) ctx.fillText(txt, x + ctx.measureText(name + ' ').width, y);
+    return;
+  }
+  ctx.font = '10px ui-monospace, monospace';
+  const really = ok === false ? (f.lang === 'zh' ? '实为 ' : 'really ') + doingText(b, f.obs.bodies, f.lang, b.real) : '';
+  x = fit(Math.max(ctx.measureText(txt).width, ctx.measureText(really).width));
+  ctx.fillStyle = col;
+  ctx.fillText(name, x, y);
+  ctx.fillStyle = ok === false ? pal.warn : alpha(pal.ink, 0.95);
+  ctx.fillText(txt, x, y + 12);
+  if (ok === false) {
+    ctx.fillStyle = alpha(pal.muted, 0.95);
+    ctx.fillText(really, x, y + 24);
+  }
 }
 
 export function drawSense(ctx: CanvasRenderingContext2D, f: SenseFrame, pal: Palette): void {

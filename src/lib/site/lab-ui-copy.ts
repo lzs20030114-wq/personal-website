@@ -69,7 +69,7 @@ export const LAB_UI_COPY: readonly (readonly [string, string])[] = [
   ["实验 2-17 / 项目二", "Lab 2-17 / Project II"],
   ["空间怎么知道人和猫在哪", "How the space knows where people and cats are"],
   ["画布 · 感知", "Canvas · sensing"],
-  ["2 种方案 · 4 种摄像头布置 · 画布", "2 schemes · 4 camera layouts · canvas"],
+  ["3 种读法 · 4 种摄像头布置 · 画布", "3 ways to read · 4 camera layouts · canvas"],
   ["人猫同台 · 立体", "People and cats together, in 3D"],
   ["WebGL · 两个物种", "WebGL · two species"],
   ["8×8 · 6 位访客 · 2 只猫 · WebGL", "8×8 · 6 visitors · 2 cats · WebGL"],

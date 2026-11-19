@@ -55,11 +55,13 @@ export interface PersonPose {
   pose: 'stand' | 'walk' | 'sit';
   /** 步态相位 0–1（只对 walk 有用） */
   phase?: number;
+  /** 坐着看猫时前倾（与 2-15 的方块人同一个开关） */
+  lean?: boolean;
 }
 
 /** 人的 15 个关键点。坐着时把胯放在座位点上（平面模型里坐着的人在座位点 = 躯干那一处） */
 export function personKeypoints(p: PersonPose, height: number = PERSON_H): P3[] {
-  const sk = humanSkeleton(p.pose, { phase: p.phase ?? 0, seat: defaultSeat(1) });
+  const sk = humanSkeleton(p.pose, { phase: p.phase ?? 0, seat: defaultSeat(1), lean: p.pose === 'sit' && !!p.lean });
   const [lL, lR] = sk.legs;
   const [aL, aR] = sk.arms;
   const shMid = mid(aL.shoulder, aR.shoulder);
@@ -100,7 +102,7 @@ export function catKeypoints(c: CatPoseIn): P3[] {
 }
 
 /** 摄像头的三根轴：朝前（向下俯 pitch）、画面右、画面上 */
-function camAxes(cam: Camera): { f: V3; r: V3; u: V3 } {
+export function camAxes(cam: Camera): { f: V3; r: V3; u: V3 } {
   const cy = Math.cos(cam.yaw);
   const sy = Math.sin(cam.yaw);
   const cp = Math.cos(cam.pitch);
@@ -124,6 +126,15 @@ export function camProject(cam: Camera, p: P3): { u: number; v: number; front: b
   const dr = d[0] * r[0] + d[1] * r[1] + d[2] * r[2];
   const du = d[0] * u[0] + d[1] * u[1] + d[2] * u[2];
   return { u: dr / df / Math.tan(cam.hfov / 2), v: du / df / Math.tan(cam.vfov / 2), front: true, depth: df };
+}
+
+/**
+ * 深度相机：与普通摄像头同一个位置与朝向，视场窄一些、只在一段距离以内量得到深（建模假设，取常见飞行时间深度相机
+ * 远距档的量级：视场 75° × 65°，0.5–5.5 m，随机误差约 1.5 cm + 距离的 0.4%）。超出测距的点仍在彩色画面里，退回成一条视线。
+ */
+export const DEPTH = { HFOV: (75 * Math.PI) / 180, VFOV: (65 * Math.PI) / 180, near: 0.5, far: 5.5, sd0: 0.015, sdK: 0.004 } as const;
+export function depthCams(cams: readonly Camera[]): Camera[] {
+  return cams.map((c) => ({ ...c, hfov: DEPTH.HFOV, vfov: DEPTH.VFOV }));
 }
 
 /** 看得见：在画面框里、视线没被挡（owner = 这个人自己的身体不算挡） */
