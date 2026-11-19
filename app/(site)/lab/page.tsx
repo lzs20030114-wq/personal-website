@@ -69,6 +69,7 @@ function Bench({
   notes,
   attachments,
   defaultDetails,
+  readout,
 }: {
   no: string;
   lede: string;
@@ -77,9 +78,11 @@ function Bench({
   notes?: ReactNode;
   attachments?: LabAttachments;
   defaultDetails?: boolean;
+  /** 说明栏里放规则读数（目前只有 2-14） */
+  readout?: boolean;
 }) {
   const { title, description, kind, verb } = labBench(no);
-  return <LabPanel no={no} title={title} description={description} accent={labAccent(no)} kind={kind} verb={verb} lede={lede} specs={specs} notes={notes} attachments={attachments} defaultDetails={defaultDetails}>{children}</LabPanel>;
+  return <LabPanel no={no} title={title} description={description} accent={labAccent(no)} kind={kind} verb={verb} lede={lede} specs={specs} notes={notes} attachments={attachments} defaultDetails={defaultDetails} readout={readout}>{children}</LabPanel>;
 }
 
 export default function LabPage() {
@@ -412,6 +415,7 @@ export default function LabPage() {
 
         <Bench
           no="2-14"
+          readout
           notes={<CohabitNotes />}
           lede="Visitors walk the floor; resident cats live on the units and can jump down to the floor. In the default rule the room is the one drawn in Lab 2-15: sixty-four square units fill it, and six two-seat sofas, two armchairs set at an angle and six dining chairs give twenty seats. Walking triggers nothing, standing still to watch a cat lays one step for it, and sitting down leads a cat step by step to the unit in front of the seat and brings the unit before the seat down as a table. Visitors have bodies and most come in pairs. Formed units are walls for people and footing for cats, and a unit that would trap someone holds back. Four encounter events are counted as they happen."
           specs={[
@@ -432,6 +436,7 @@ export default function LabPage() {
             ['Sources', '1.35 m and 0.92 m stranger and acquaintance distances (Sorokowska et al. 2017, 42 countries) · 1.0–1.2 m between waiting strangers (Küpper & Seyfried 2023) · parties (Moussaïd et al. 2010) · 1 m cat band and 78% reference (Mertens & Turner 1988) · cats on high levels (Hirsch et al. 2025) · jump cost (Sicuto de Oliveira et al. 2015)'],
             ['Limit', 'Timings, sitting times and the 1/3 approach chance are demonstration values; how much more a cat prefers platforms when it is crowded is not measured (three settings are run); no invitation gesture, so the empty event is not counted'],
             ['Case study runs', 'Rerun the case study scenes: the starting rule (trace, 4×4, 3 people, 1 cat) and the current rule with 3 / 6 / 12 visitors and 1 / 2 / 3 cats · seed 101 of the comparison’s 32, fixed 1/30 s step, so a run here equals that seed offline · the case study reports the mean of all 32 · links #lab2-14-trace, -crowd3, -crowd6, -crowd12'],
+            ['Rule readout', 'The side panel lists the rules in sections 4, 5 and 7 of the rules document (person and cat · regardless of the relation · not read) and lights the ones that hold at this moment, with who they concern, how many times each has held and the last 90 s of simulated time · the plan marks each unit coming down with its rule and a line to the person or cat behind it · click a unit to see why it is down or held · one source: cohabit-reasons.ts, the same code the offline audit uses · walk / stand / sit rule with live units only'],
           ]}
         >
           <CohabitBench workspace />

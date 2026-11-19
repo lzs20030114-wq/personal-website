@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { LabFold, LabViewDock, LabViewDockSlot } from './LabCtl';
+import { LabFold, LabReadout, LabReadoutSlot, LabViewDock, LabViewDockSlot } from './LabCtl';
 import { helpName } from './LabHelp';
 
 describe('helpName：说明栏只列控件名，去掉跟在后面的读数', () => {
@@ -35,5 +35,15 @@ describe('LabFold：默认收起的折叠组', () => {
     expect(html).not.toMatch(/\sopen/);
     expect(html).toContain('<summary>模型参数</summary>');
     expect(html).toContain('<button type="button">x</button>');
+  });
+});
+
+describe('LabReadout：规则读数只画进说明栏', () => {
+  const r = <LabReadout><span>rows</span></LabReadout>;
+  it('面板没有读数：什么都不画（不在画面下方多出一块）', () => {
+    expect(renderToStaticMarkup(r)).toBe('');
+  });
+  it('有读数但说明栏收着或在「说明」那一页：不画', () => {
+    expect(renderToStaticMarkup(<LabReadoutSlot.Provider value={null}>{r}</LabReadoutSlot.Provider>)).toBe('');
   });
 });

@@ -58,7 +58,7 @@ import { bandTriIndex, bandVerts } from '../linkage/skin';
 import type { Vec3 } from '../linkage/solver3d';
 import { MM_PER_UNIT, RIG_ANCHOR_Y, RIG_SCALE, RING_GRID_FIT, RING_GRID_PIVOT_Y, ROOM, roomBoxesBySpan, viewFitBySpan, type RingGridView } from './skin-grid';
 import type { PlanLayout } from './unit-activation';
-import { COHABIT, SQUARE_SCALE, bandAngle, platformClear, type FurnBox, type FurnRect } from './cohabit';
+import { COHABIT, CohabitSim, PACE_DEMO, SQUARE_SCALE, bandAngle, partySizes, platformClear, scatterCats, type FurnBox, type FurnRect, type SpaceMode } from './cohabit';
 import type { CatPose, CatTail, SeatSpec } from './figure';
 
 /** 一米 = 多少世界单位（由「人 = 1.70 m = 215 单位」定） */
@@ -110,6 +110,38 @@ export const HOIST = {
 
 /** 演示的场面 = 标准场景：六位访客四只猫（作者 2026-11-08；此前 6 人 2 猫 = 案例页对照图的中档）。猫按种子散放（scatterCats） */
 export const SCENE = { people: 6, cats: 4, seed: 11 } as const;
+
+/**
+ * 标准场景的仿真（Lab 2-15 与 Lab 2-14「放一场 6 人 4 猫」共用这一份，2026-11-19）：与案例页对照图同一份配置
+ * （scripts/cohabit/case-compare.mjs），多两条：单元是方形的（`unit: 'square'`）；64 台铺满整间房（`cover: 'room'`）。
+ * 放人照 runCohabit 的摆法（各组沿一圈分开），猫按种子散放。
+ */
+export function standardSceneSim(space: SpaceMode = 'live', seed: number = SCENE.seed): CohabitSim {
+  const sim = new CohabitSim({
+    trigger: 'posture',
+    grid: COHABIT.SEATS.GRID,
+    unit: 'square',
+    cover: 'room',
+    space,
+    seed,
+    opening: false,
+    auto: true,
+    faces: true,
+    social: true,
+    catFloor: true,
+    cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid },
+    guide: COHABIT.GUIDE,
+    pace: PACE_DEMO,
+  });
+  const half = sim.layout.fieldM / 2;
+  const sizes = partySizes(SCENE.people);
+  sizes.forEach((sz, i) => {
+    const a = (i / sizes.length) * 2 * Math.PI + 0.3;
+    sim.addParty(Math.cos(a) * half * 0.6, Math.sin(a) * half * 0.6, sz);
+  });
+  scatterCats(sim, SCENE.cats, seed);
+  return sim;
+}
 
 export interface BandTrajectory {
   n: number;

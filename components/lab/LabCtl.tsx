@@ -41,3 +41,20 @@ export function LabViewDock({ children, off = false }: { children: ReactNode; of
   if (off || slot === null) return null;
   return slot ? createPortal(children, slot) : <div className="grp">{children}</div>;
 }
+
+/**
+ * 说明栏里给规则读数留的位置（2026-11-19，Lab 2-14，项目二_规则可视化方案.md §10）。LabPanel 给了 `readout` 才提供。
+ * undefined = 这台面板没有读数（台架不出读数，也不在画面上加标注）；
+ * null = 有读数，但说明栏收着或停在「说明」那一页（台架照常记账，只是不画）；
+ * 元素 = 读数画进这里。照 LabViewDock 的做法：台架里渲染，用 createPortal 送进说明栏，读数与仿真在同一棵 React 树里。
+ */
+export const LabReadoutSlot = createContext<HTMLElement | null | undefined>(undefined);
+
+export function useLabReadoutSlot(): HTMLElement | null | undefined {
+  return useContext(LabReadoutSlot);
+}
+
+export function LabReadout({ children }: { children: ReactNode }) {
+  const slot = useContext(LabReadoutSlot);
+  return slot ? createPortal(children, slot) : null;
+}
