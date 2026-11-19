@@ -9,6 +9,8 @@
  * 11-19 加两项：正文第 4 节五行的前提逐条核对（② 站着给一步、③④ 坐着引猫在给着 / 引着的每一步前提都成立吗；
  * ① 每次带开始收开是谁请求的：走着的人、只有站着的人、只有坐着的人），以及单元与带落、收一次各要几秒（第 6 节的数）。
  *
+ * 理由与带的请求人取自 src/lib/space/cohabit-reasons.ts（网页上的规则读数用同一份）。
+ *
  * 用法：node scripts/cohabit/io-audit.mjs [秒数=600] [种子,逗号分隔=11,12,13,14]
  */
 import { createServer } from 'vite';
@@ -16,34 +18,12 @@ import { createServer } from 'vite';
 const server = await createServer({ root: process.cwd(), server: { middlewareMode: true, hmr: false }, logLevel: 'silent', appType: 'custom' });
 const C = await server.ssrLoadModule('/src/lib/space/cohabit.ts');
 const S = await server.ssrLoadModule('/src/lib/space/cohabit-solid.ts');
+const R = await server.ssrLoadModule('/src/lib/space/cohabit-reasons.ts');
 const T = Number(process.argv[2] ?? 600);
 const seeds = (process.argv[3] ?? '11,12,13,14').split(',').map(Number);
 const BANDS = C.COHABIT.FACES.BANDS;
 const REASONS = ['table', 'step', 'meet', 'offer', 'foot', 'go', 'climb'];
 const NAME = { table: '桌子', step: '引猫：路上的一步', meet: '引猫：座位前方那台', offer: '站着给一步', foot: '猫脚下', go: '猫要去的台', climb: '猫要跳上的台' };
-
-/** 点到线段的距离（与 cohabit.ts 的 segDist 同式） */
-function segD(px, py, ax, ay, bx, by) {
-  const dx = bx - ax, dy = by - ay;
-  const L = dx * dx + dy * dy;
-  const t = L > 0 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / L)) : 0;
-  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
-}
-
-/** 走着的人前方那段路线（照 requestBands：步速 × 收带时长 + 余量，截在路点折线上），返回线段列表 */
-function corridor(w) {
-  const ahead = w.speed / C.COHABIT.FACES.open + C.COHABIT.FACES.ahead;
-  const pts = [{ x: w.x, y: w.y }];
-  let left = ahead, px = w.x, py = w.y;
-  for (const wp of w.route) {
-    const d = Math.hypot(wp.x - px, wp.y - py);
-    if (d <= left) { pts.push({ x: wp.x, y: wp.y }); left -= d; px = wp.x; py = wp.y; }
-    else { pts.push({ x: px + ((wp.x - px) * left) / d, y: py + ((wp.y - py) * left) / d }); break; }
-  }
-  const segs = [];
-  for (let k = 1; k < pts.length; k++) segs.push([pts[k - 1], pts[k]]);
-  return segs;
-}
 
 /**
  * 「猫要去的台」在猫决定以后的 1 s 预备里按进度落（请求 = 等了多久 ÷ 预备时长）：猫刚决定的那一步请求是 0，
@@ -123,22 +103,13 @@ for (const seed of seeds) {
       }
     }
     // 带开始收开：是谁请求的（身边 0.37 m 以内，或走着的人前方的路线上）
-    const margin = sim.marginM;
     for (let i = 0; i < sim.bandOpen.length; i++) {
       if (!(prevOpen[i] <= 1e-9 && sim.bandOpen[i] > 1e-9)) continue;
       rel.bandStarts++;
-      const u = sim.layout.units[(i / BANDS) | 0];
-      const [ax, ay, bx, by] = sim.bandSeg(u, i % BANDS, true);
       let walk = false, still = false, seated = false;
-      for (const p of sim.people) {
-        const w = p.walker;
-        if (!w.present) continue;
-        const moving = w.state === 'walk' && p.mode !== 'held';
-        const body = segD(w.x, w.y, ax, ay, bx, by) < margin;
-        const onRoute = moving && corridor(w).some(([a, b]) => segD(bx, by, a.x, a.y, b.x, b.y) < margin);
-        if (!body && !onRoute) continue;
+      for (const p of R.bandRequesters(sim, (i / BANDS) | 0, i % BANDS)) {
         if (p.seated) seated = true;
-        else if (moving) walk = true;
+        else if (p.walker.state === 'walk' && p.mode !== 'held') walk = true;
         else still = true;
       }
       if (walk) rel.bandByWalk++;
@@ -169,25 +140,7 @@ for (const seed of seeds) {
       if (bandDownAt[i] >= 0 && o <= 1e-9) { bandCloseT.push(sim.t - bandDownAt[i]); bandDownAt[i] = -1; }
     }
     // 这一步每台各有哪些理由（只读仿真对外的状态，照文档第 4、5 节的写法重算，不读 stepSpace 里面的量）
-    const why = Array.from({ length: n }, () => new Set());
-    for (let u = 0; u < n; u++) if (sim.tableBy[u] >= 0) why[u].add('table');
-    for (const g of sim.guides) {
-      if (g.kind === 'stand') {
-        why[g.path[1]].add('offer');
-        continue;
-      }
-      const cat = sim.cats.find((c) => c.id === g.cat);
-      const first = cat.unit ? 1 : 0;
-      const last = g.path.length - 1;
-      const to = sim.guide.whole ? last : first;
-      for (let k = first; k <= to && k <= last; k++) why[g.path[k]].add(k === last ? 'meet' : 'step');
-    }
-    for (const c of sim.cats) {
-      if (c.climb) why[c.climb.unit.i].add('climb');
-      if (!c.unit) continue;
-      for (const u of sim.supportOf(c)) why[u.i].add('foot');
-      if (c.pending) why[c.pending.i].add('go');
-    }
+    const why = R.unitReasons(sim).map((rs) => new Set(rs.map((r) => r.kind)));
     const seated = sim.people.filter((p) => p.seated && p.seat !== null);
     const standing = sim.people.filter((p) => !p.seated && p.walker.present);
     for (let u = 0; u < n; u++) {

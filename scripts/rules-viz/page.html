@@ -1,0 +1,109 @@
+<title>Letting Agent 规则读数</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* 布局：左边是 2-14 那张平面图（站上同一份画法），右边一块读数——行就是规则文档第 4、5、7 节，
+   三格写感知 · 理解 · 干预；此刻成立的行亮起，下面写是谁对谁。整页照 /lab 的深色外壳取色，只用一种深色。 */
+:root {
+  color-scheme: dark;
+  --bg: oklch(0.19 0.032 228);      /* /lab 夜色 */
+  --panel: oklch(0.25 0.022 212);   /* 夜色上浮起一档 */
+  --fig: oklch(0.22 0.042 235);     /* 台架画框底 */
+  --ink: oklch(0.95 0.032 120);     /* 奶白 G100 */
+  --mute: oklch(0.7 0.03 168);
+  --line: oklch(0.95 0.032 120 / 0.14);
+  --control: oklch(0.95 0.032 120 / 0.4);
+  --p2: oklch(0.83 0.075 294);      /* 项目二的颜色（深底亮紫 P300） */
+  --g: oklch(0.71 0.098 145);
+  --rose: oklch(0.72 0.12 356);
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans: 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 14px; line-height: 1.6; }
+.wrap { max-width: 1320px; margin: 0 auto; padding-block: 24px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header .meta { font-family: var(--mono); font-size: 11.5px; color: var(--mute); letter-spacing: 0.04em; }
+header h1 { font-size: 24px; line-height: 1.3; margin: 6px 0 6px; font-weight: 700; text-wrap: balance; }
+header p { margin: 0; color: var(--mute); max-width: 72ch; }
+.grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 6fr); gap: 20px; margin-top: 20px; align-items: start; }
+.fig { background: var(--fig); border: 1px solid var(--line); min-width: 0; }
+#planWrap { --ink: oklch(0.95 0.032 120); --accent: oklch(0.71 0.098 145); --accent-2: oklch(0.83 0.075 294); --n500: oklch(0.66 0.045 170); --paper: oklch(0.22 0.042 235); --rose: oklch(0.72 0.12 356); }
+canvas { display: block; width: 100%; height: auto; aspect-ratio: 700 / 520; cursor: crosshair; }
+.ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 12px; }
+.ctl .sep { flex: 1; }
+.ctl button { font: inherit; color: var(--ink); background: transparent; border: 1px solid var(--control); padding: 4px 10px; cursor: pointer; }
+.ctl button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.ctl button:focus-visible, .row:focus-visible { outline: 2px solid var(--p2); outline-offset: 2px; }
+.ctl .clock { color: var(--mute); font-variant-numeric: tabular-nums; }
+.legend { padding: 0 12px 12px; color: var(--mute); font-size: 12px; }
+.legend b { font-family: var(--mono); color: var(--ink); font-weight: 600; }
+#detail { padding: 10px 12px; border-top: 1px solid var(--line); font-size: 13px; min-height: 2.6em; }
+.panel { background: var(--panel); border: 1px solid var(--line); min-width: 0; }
+.panel .head { display: grid; grid-template-columns: 26px 1fr 1fr 1fr 58px; gap: 10px; padding: 10px 12px 8px; font-family: var(--mono); font-size: 11px; color: var(--mute); letter-spacing: 0.04em; border-bottom: 1px solid var(--line); }
+.part { padding: 12px 12px 4px; font-family: var(--mono); font-size: 11px; color: var(--mute); letter-spacing: 0.04em; }
+.row { display: grid; grid-template-columns: 26px 1fr 1fr 1fr 58px; gap: 4px 10px; width: 100%; text-align: left; font: inherit; color: var(--mute); background: transparent; border: 0; border-top: 1px solid var(--line); padding: 8px 12px; cursor: pointer; transition: background-color 160ms ease, color 160ms ease; }
+.row .mark { font-family: var(--mono); font-size: 15px; font-weight: 600; line-height: 1.3; }
+.row .cell { font-size: 12.5px; line-height: 1.45; min-width: 0; }
+.row .cell i { display: none; }
+.row .count { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.row .count b { display: block; font-size: 15px; font-weight: 600; }
+.row .count small { font-size: 10.5px; }
+.row .list { grid-column: 2 / 6; font-family: var(--mono); font-size: 11px; color: var(--p2); min-height: 0; }
+.row .list:empty { display: none; }
+.row.on { color: var(--ink); }
+.row.on .mark { color: var(--p2); }
+.row.part5.on .mark { color: var(--ink); }
+.row[data-row="overHead"].on .mark, .row[data-row="press"].on .mark, .row[data-row="r5"].on .mark { color: var(--rose); }
+.row.part7 { font-style: normal; }
+.row.part7.on { color: var(--ink); }
+.row.part7.on .mark { color: var(--rose); }
+.row.hover { background: oklch(0.83 0.075 294 / 0.08); }
+@media (hover: hover) and (pointer: fine) { .row:hover { background: oklch(0.83 0.075 294 / 0.06); } }
+.note { margin-top: 20px; color: var(--mute); font-size: 12.5px; max-width: 90ch; }
+.note b { color: var(--ink); font-weight: 500; }
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+  .panel .head { display: none; }
+  .row { grid-template-columns: 26px 1fr 52px; }
+  .row .cell { grid-column: 2 / 3; }
+  .row .cell i { display: inline; font-style: normal; font-family: var(--mono); font-size: 10.5px; color: var(--mute); margin-right: 6px; }
+  .row .count { grid-column: 3; grid-row: 1; }
+  .row .list { grid-column: 2 / 4; }
+}
+@media (prefers-reduced-motion: reduce) { .row { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="meta">原型 · 不是站上页面 · 2-15 同一份平面仿真（6 人 4 猫、20 座）</div>
+    <h1>单元此刻在感知什么、怎么理解、做了什么</h1>
+    <p>左边是 Lab 2-14 那张平面图，画法与站上同一份。单元旁的编号说明它为什么落，细线连到引起它的人或猫。右边每一行是规则文档的一条，此刻成立的亮起，下面写是谁对谁。鼠标移到一行上，画面只留那一行；点画面里的一台单元，下面写它此刻的理由。</p>
+  </header>
+
+  <div class="grid">
+    <div class="fig">
+      <div id="planWrap"><canvas id="plan" width="700" height="520" aria-label="2-15 平面仿真与规则标注"></canvas></div>
+      <div class="ctl">
+        <button id="play" type="button" aria-pressed="false">暂停</button>
+        <span>倍速</span>
+        <button type="button" data-speed="1" aria-pressed="false">×1</button>
+        <button type="button" data-speed="4" aria-pressed="true">×4</button>
+        <button type="button" data-speed="10" aria-pressed="false">×10</button>
+        <span class="sep"></span>
+        <span class="clock">仿真 <span id="clock">00:00</span></span>
+        <button id="restart" type="button">换一场</button>
+      </div>
+      <div class="legend"><b>① ② ③ ④ ⑤</b> 第 4 节五种人猫关系 · <b>桌</b> 桌子 · <b>×</b> 有理由却被拦（粉）· 实线连到坐着或站着的人，虚线连到走过的人 · 数字是访客，字母是猫 · 紫环 = 落满的台，绿虚线 = 空间为猫铺的路</div>
+      <div id="detail">点画面里任何一台单元，这里写出它此刻为什么落、被什么拦着。</div>
+    </div>
+
+    <div class="panel" aria-label="感知、理解、干预读数">
+      <div class="head"><span></span><span>感知</span><span>理解</span><span>干预</span><span style="text-align:right">此刻</span></div>
+      <div id="rows"></div>
+    </div>
+  </div>
+
+  <p class="note"><b>读法从哪来。</b>每一台为什么落、哪一行成立，全部由 <code>src/lib/space/cohabit-reasons.ts</code> 现算，核对脚本 <code>io-audit.mjs</code> 用的是同一份：八场各 30 分钟里，每一次落下都对得上一行。第 7 节那两行是单元读不出来的人猫关系，单元照样在引猫、递台，这里把它们标出来，看得见输入的边界。</p>
+</div>
+<script>/*__JS__*/</script>
