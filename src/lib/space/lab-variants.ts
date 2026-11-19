@@ -61,6 +61,14 @@ export interface BenchVariants {
 
 // ── 各台的编制／排布表（wrapper 从这里取；顺序 = 控制条上的顺序，首项 = 默认）────────
 
+/** Lab 2-17 方案 A 的摄像头布置（键与 cohabit-sense 的 CamLayout 同名） */
+export const SENSE_LAYOUTS = [
+  { key: 'adjacent2', label: '同墙两台' },
+  { key: 'diagonal2', label: '对角两台' },
+  { key: 'corners4', label: '四个上角' },
+  { key: 'all8', label: '四角 + 墙中点' },
+] as const;
+
 /** Lab.09 序列：Lab.08 目录渐变 + Lab.12 捏分十级（2026-09-03 合并） */
 export const SERIES_PLANS = [
   { key: 'gradient', label: '目录渐变' },
@@ -271,6 +279,19 @@ export const LAB_VARIANTS: readonly BenchVariants[] = [
     en: 'Small studies',
     // 编制 = 七个小样（2026-11-09 两批，项目二_小样方案.md §3、§8）；按脚本演，没有别的档
     plans: VIGNETTES.map((v) => ({ key: v.key, label: v.zh })),
+    axes: [],
+  },
+  {
+    no: '2-17',
+    key: 'sense',
+    zh: '空间怎么知道人和猫在哪',
+    en: 'How the space knows where people and cats are',
+    // 编制 = 方案 A 普通摄像头 / 深度相机各四种布置 + 方案 B（2026-11-19，项目二_感知层.md §10）；「叠上真实位置」是开关不是档
+    plans: [
+      { key: 'rgb', label: 'A 普通摄像头', sub: { axis: '摄像头', options: SENSE_LAYOUTS } },
+      { key: 'depth', label: 'A 深度相机', sub: { axis: '摄像头', options: SENSE_LAYOUTS } },
+      { key: 'tag', label: 'B 量距离' },
+    ],
     axes: [],
   },
 ];

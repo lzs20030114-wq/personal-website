@@ -27,6 +27,7 @@ import { CatPlanBench, CatPlanNotes } from '../../../components/lab/CatPlanBench
 import { CohabitBench, CohabitNotes } from '../../../components/lab/CohabitBench';
 import { CohabitSpaceBench } from '../../../components/lab/CohabitSpaceBench';
 import { SkinComboBench } from '../../../components/lab/SkinComboBench';
+import { SenseBench } from '../../../components/lab/SenseBench';
 
 export const metadata = { title: 'The lab' };
 
@@ -479,6 +480,22 @@ export default function LabPage() {
           ]}
         >
           <CohabitSpaceBench workspace vignette />
+        </Bench>
+
+        <Bench
+          no="2-17"
+          lede="How the room knows where the visitors and cats are, and what they are doing. Scheme A uses cameras in the upper corners; the images on the left are drawn as points and lines, one point for each joint. With ordinary cameras a point seen by two or more is placed where their sight lines meet, and a point seen by one is known only to lie on its sight line. Depth cameras also measure how far a point is, so one camera is enough within their range. The 3D model on the right is rebuilt from those readings alone, and the line under each name is what is read from it: standing, walking or sitting, leaning in, which cat someone is watching; for a cat, standing, sitting or lying and on which surface. Pink means read wrong, checked against the simulation. Scheme B is shown as a principle: one point on each person and cat, its distances to four fixed points solved by least squares for position and height. The scene is the Lab 2-15 room with the same six visitors and four cats."
+          specs={[
+            ['Scene', 'Lab 2-15 room (6.64 m square, 3.74 m high), 64 square units, 20 seats, 6 visitors and 4 cats · visitor pace from the study set (a sitting lasts 1.5–4 minutes) so that people move about · the simulation itself still uses true positions; the sensing study measures how the guide fares once the room reads these sensors instead'],
+            ['Cameras', '3.4 m up, below the stowed units, aimed at the room centre · ordinary cameras 100° × 70°; depth cameras 75° × 65° and measure depth from 0.5 to 5.5 m (the order of a common time-of-flight depth camera in its far mode) · four layouts: two on one wall, two in opposite corners, four corners, corners plus wall midpoints (the four extra ones are drawn on the right only)'],
+            ['Points', 'People: fifteen points (head, nose, neck, shoulders, elbows, wrists, hips, knees, ankles) from the site’s 1.70 m figure; cats: seven points (head, neck, back, rump, two on the tail, feet) · whether a point is seen is judged every 0.1 s against the same occluders as the study: the units at their current height, the furniture and other people’s bodies · the nose counts as seen only when the camera is within 60° of where the person is looking'],
+            ['Solving', 'Ordinary cameras: each camera that sees a point gives a sight line with a 0.005 rad detection error (about 5 pixels); two or more lines are met by least squares; with one line the point is kept on it nearest its last position · depth cameras: two or more still meet sight lines (angles are more precise than depth); with one camera the measured depth places the point (error 1.5 cm + 0.4% of the distance) · scheme B: four distances, each with a 0.08 m error and 0.35 m too long when measured through a body (other people’s or the wearer’s own), solved by Gauss–Newton least squares for position and height; the mirror solution above the fixed points is dropped · errors drift slowly (0.6 s time constant) · all error figures are modelling assumptions'],
+            ['Reading', 'People: hips below 0.71 m (or the head below 1.40 m when the hips are not placed) = sitting; moving over 0.3 m/s in the last second = walking; seated with the neck 12° ahead of the hips = leaning in; where someone looks comes from the face when a camera sees it (±12°) or else from the shoulders (±25°), and a cat within 3 m and ±25° of it counts as watched, the same rule as the simulation · cats: the surface under the cat is looked up in the room (floor, furniture top, or a formed unit at its current height), then rump, head and neck heights above it tell standing, sitting and lying · scheme B: sitting is read from the seat pads and the unit a cat is on from the load cells; the solved height alone is shown for comparison'],
+            ['Measured', '4 runs × 600 s, read every 0.5 s · ordinary cameras: standing people’s points placed 65–66% (two cameras), 91% (four corners), 97% (corners and midpoints); placed points off by 2–4 cm (median) · depth cameras: with two cameras 77–79% (one camera is enough), with four or eight about the same as ordinary cameras · reading: sitting / standing / walking right about 96% for every layout; which cat someone watches right about 66% with two cameras, 82–83% with four, 86–87% with eight, depth or not; cats’ posture right 93–98% when seen · scheme B: position off by 0.08 m (median) when all four distances are direct, 0.21 m with one through a body, 0.29 m with two; at least one is through a body 77% of the time; one long distance shows as disagreement only 41% of the time; height alone tells sitting from standing 74% of the time'],
+            ['Limit', 'Only what the sensors read is drawn; following the same person from frame to frame and telling bodies apart are assumed to work, and joints are assumed detected wherever they are in view (a real detector also misses and mislabels joints, which depth helps with and this model does not count); depth is taken at the joint, not at the body’s surface. The images are drawn from the model, not rendered from real cameras'],
+          ]}
+        >
+          <SenseBench workspace />
         </Bench>
 
         <LabProjectEmpty />

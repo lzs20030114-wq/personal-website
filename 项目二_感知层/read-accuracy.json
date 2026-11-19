@@ -1,0 +1,216 @@
+{
+  "seconds": 600,
+  "seeds": 4,
+  "sampleEvery": 0.5,
+  "results": {
+    "rgb.adjacent2": {
+      "located": {
+        "standing": 66.1,
+        "seated": 46.3,
+        "cats": 39.3
+      },
+      "errMedian": 0.039,
+      "errP90": 0.074,
+      "person": {
+        "unclear": 14.2,
+        "posture": 96.3,
+        "watching": 65.6,
+        "both": 65.1
+      },
+      "cat": {
+        "unclear": 42.8,
+        "posture": 92.9,
+        "place": 98,
+        "both": 92.8
+      }
+    },
+    "rgb.diagonal2": {
+      "located": {
+        "standing": 64.6,
+        "seated": 46,
+        "cats": 36.6
+      },
+      "errMedian": 0.04,
+      "errP90": 0.07,
+      "person": {
+        "unclear": 10.4,
+        "posture": 97,
+        "watching": 66.7,
+        "both": 66.6
+      },
+      "cat": {
+        "unclear": 46.6,
+        "posture": 94.3,
+        "place": 99,
+        "both": 94.2
+      }
+    },
+    "rgb.corners4": {
+      "located": {
+        "standing": 90.9,
+        "seated": 75.8,
+        "cats": 73.2
+      },
+      "errMedian": 0.03,
+      "errP90": 0.055,
+      "person": {
+        "unclear": 0.2,
+        "posture": 96.5,
+        "watching": 82.6,
+        "both": 80.8
+      },
+      "cat": {
+        "unclear": 13.1,
+        "posture": 96,
+        "place": 98.6,
+        "both": 95.8
+      }
+    },
+    "rgb.all8": {
+      "located": {
+        "standing": 97.1,
+        "seated": 82.9,
+        "cats": 85.6
+      },
+      "errMedian": 0.021,
+      "errP90": 0.042,
+      "person": {
+        "unclear": 0.1,
+        "posture": 96.5,
+        "watching": 87.4,
+        "both": 85.2
+      },
+      "cat": {
+        "unclear": 3,
+        "posture": 97.7,
+        "place": 99.2,
+        "both": 97.7
+      }
+    },
+    "depth.adjacent2": {
+      "located": {
+        "standing": 78.7,
+        "seated": 56.5,
+        "cats": 51.5
+      },
+      "errMedian": 0.038,
+      "errP90": 0.072,
+      "person": {
+        "unclear": 8,
+        "posture": 96.2,
+        "watching": 65.1,
+        "both": 64.7
+      },
+      "cat": {
+        "unclear": 34,
+        "posture": 94.5,
+        "place": 98.6,
+        "both": 94.3
+      }
+    },
+    "depth.diagonal2": {
+      "located": {
+        "standing": 77,
+        "seated": 55.1,
+        "cats": 47.8
+      },
+      "errMedian": 0.039,
+      "errP90": 0.069,
+      "person": {
+        "unclear": 10.8,
+        "posture": 96.4,
+        "watching": 66.1,
+        "both": 65.9
+      },
+      "cat": {
+        "unclear": 38.1,
+        "posture": 95.7,
+        "place": 99.1,
+        "both": 95.5
+      }
+    },
+    "depth.corners4": {
+      "located": {
+        "standing": 94.8,
+        "seated": 74.1,
+        "cats": 72.8
+      },
+      "errMedian": 0.03,
+      "errP90": 0.055,
+      "person": {
+        "unclear": 4.8,
+        "posture": 96.3,
+        "watching": 81.6,
+        "both": 79.9
+      },
+      "cat": {
+        "unclear": 14.5,
+        "posture": 96.4,
+        "place": 98.8,
+        "both": 96.2
+      }
+    },
+    "depth.all8": {
+      "located": {
+        "standing": 97.7,
+        "seated": 82.8,
+        "cats": 83.9
+      },
+      "errMedian": 0.023,
+      "errP90": 0.048,
+      "person": {
+        "unclear": 0.5,
+        "posture": 96.4,
+        "watching": 86.4,
+        "both": 84.2
+      },
+      "cat": {
+        "unclear": 3.3,
+        "posture": 96.1,
+        "place": 98.7,
+        "both": 96
+      }
+    },
+    "tag": {
+      "horizontal": {
+        "0": {
+          "n": 10569,
+          "median": 0.081,
+          "p90": 0.147
+        },
+        "1": {
+          "n": 18542,
+          "median": 0.209,
+          "p90": 0.3
+        },
+        "2": {
+          "n": 17289,
+          "median": 0.293,
+          "p90": 0.4
+        }
+      },
+      "height": {
+        "0": {
+          "median": 0.054,
+          "p90": 0.134
+        },
+        "1": {
+          "median": 0.221,
+          "p90": 0.349
+        },
+        "2": {
+          "median": 0.327,
+          "p90": 0.496
+        }
+      },
+      "flagged": {
+        "0": 4.7,
+        "1": 41.1,
+        "2": 18.1
+      },
+      "sitByHeightRight": 74.3,
+      "postureRight": 96.6,
+      "catPlaceRight": 96.1
+    }
+  }
+}
