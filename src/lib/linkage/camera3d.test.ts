@@ -158,6 +158,24 @@ describe('OrbitCamera · 转盘模式（2026-08-20 用户拍板「模仿 Rhino�
     expect(up.y).toBeLessThan(0); // Z 朝上 = 屏幕上方（y 负）
   });
 
+  it('横拖方向：y、z 两种世界里往右拖，近处那一侧都往右走（模型跟着手转）', () => {
+    // 深度大 = 近（gl3d 深度测试 LESS 作用在 −depth 上）
+    const nearShift = (c: OrbitCamera, zUp: boolean): number => {
+      const m = c.matrix;
+      const h = zUp ? Math.hypot(m[6], m[7]) : Math.hypot(m[6], m[8]);
+      const near = zUp ? { x: m[6] / h, y: m[7] / h, z: 0 } : { x: m[6] / h, y: 0, z: m[8] / h };
+      const x0 = c.project(near).x;
+      c.pointerDown(1, 0, 0);
+      c.pointerMove(1, 20, 0);
+      c.pointerUp(1);
+      return c.project(near).x - x0;
+    };
+    expect(nearShift(cam0({ mode: 'turntable', pitch0: -0.34, yaw0: -0.62 }), false)).toBeGreaterThan(0); // Lab 2-2 等
+    expect(
+      nearShift(cam0({ mode: 'turntable', upAxis: 'z', roll0: -1.053336, pitch0: 0.735843, yaw0: 0.867459 }), true),
+    ).toBeGreaterThan(0); // Lab 1-4
+  });
+
   it('setOrientation 吸附：带侧倾的姿态被投到最近无侧倾姿态（预设 slerp 过渡路径）', () => {
     const rolled = cam0({ roll0: 0.3, pitch0: 0.5, yaw0: 0.7 }).matrix; // trackball 原样出带 roll 矩阵
     const c = cam0({ mode: 'turntable' });

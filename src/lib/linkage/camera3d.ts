@@ -187,7 +187,10 @@ export class OrbitCamera {
    *  竖拖俯仰（钳位）——两者在竖直拖拽上公式一致，手感连续。 */
   rotate(dxPx: number, dyPx: number): void {
     if (this.o.mode === 'turntable') {
-      this._yaw += dxPx * this.o.yawPerPx;
+      // 横拖 = 模型跟着手转（往右拖，近处那一侧往右走）。z 朝上的式子里环绕角正向
+      // 让近处往左走，与 y 朝上相反，故取负号（2026-11-19/20 作者「拖动是反的」，
+      // Lab 1-4 与 2-17 一起翻）。
+      this._yaw += dxPx * this.o.yawPerPx * (this.o.upAxis === 'z' ? -1 : 1);
       this._pitch = Math.max(
         -PITCH_MAX,
         Math.min(PITCH_MAX, this._pitch - dyPx * this.o.pitchPerPx),
