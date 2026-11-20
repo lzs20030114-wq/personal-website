@@ -22,6 +22,7 @@ import linework as LW  # noqa: E402
 import linefig as LF  # noqa: E402
 import poses  # noqa: E402
 import cats as catlib  # noqa: E402
+import paint as PT  # noqa: E402
 from ishi import Body, v, norm  # noqa: E402
 
 # ---------------------------------------------------------------- 线型表（终稿 2400 px 宽时的像素）
@@ -125,6 +126,108 @@ PALETTES = {
                        unit_line='#9E2416', unit='#F25A3C', unit_top='#FF7A5C', unit_under='#C93A22', unit_seam='#FFD0C2',
                        mech='#F6F2E8', furn='#FFFFFF', fig='#FFFFFF', hair='#1C3B33', cut='#11251F', stow='#B9C8C2', shadow='#1C3B33'),
 }
+
+
+# ================= 第四轮（2026-11-20）：作者「两套合起来可以；颜色还是老套，多出几套，不要只平涂，试渐变、纹理、颜色内的变化、混色」
+# 面的上色走 drawing/paint.py（配色里多一项 fx），线、人、剖切面的外形不变。没有 fx 的配色一行不变。
+def _with(base, **kw):
+    d = dict(PALETTES[base]) if isinstance(base, str) else dict(base)
+    fx = dict(d.get('fx') or {})
+    fx.update(kw.pop('fx', {}))
+    d.update(kw)
+    d['fx'] = fx
+    return d
+
+
+# ---- 技法：同一组颜色（9-2 蓝底 + 橙）换六种上色法，只看技法本身
+_BLUE, _ORANGE, _CREAM = '#27419A', '#FF6B3D', '#F4EFE3'
+PALETTES.update({
+    't_flat': _with('field_blue', fx=dict(shade='tint')),
+    # 渐变：底从上往下加深；单元从台脚到台面由朱红走到琥珀；地面近处暖、远处冷
+    't_grad': _with('field_blue', fx=dict(
+        ground=('y', '#3B57C2', '#162563'), room=('y', '#F8F3EA', '#EDEBF2'), floor=('dist', '#F2E3CF', '#E3E3EF', 3.5, 11.0),
+        unit=('z', '#F0461F', '#FFB347', 0.15, 1.5), sky=('y', '#C9D3F2', '#8FA2DE'), cut=('y', '#1D3180', '#0A1235'))),
+    # 纹理：颜色不变，加油墨颗粒、纸纹，底是一团一团慢慢起伏的蓝
+    't_grain': _with('field_blue', fx=dict(ground=('cloud', '#2F4CB0', '#1E3384', 0.22), grain=0.9, paper_grain=0.9)),
+    # 网点：底用网点从上到下变密；单元朝下的面、地上的影子用蓝网点
+    't_dots': _with('field_blue', fx=dict(
+        ground=('ht', _BLUE, '#6B80CF', ('y', 0.15, 1.0), 5.0, 15), shade=('ht', _BLUE, 2.6, 45, 0.42),
+        shadow=True, plates=[dict(what='shadow', ink=_BLUE, cover=0.55, ht=(3.2, 45))])),
+    # 叠印 + 错版：单元的橙是单独一版，压在下面的颜色上（正片叠底），对线稿错开 3 像素；影子是一版半透明的蓝
+    't_over': _with('field_blue', unit=_CREAM, fx=dict(
+        unit=_CREAM, shade='flat', shadow=True, grain=0.5,
+        plates=[dict(what='shadow', ink='#7F90D4', cover=0.9, grain=0.6),
+                dict(what='unit', ink=_ORANGE, cover=0.95, shift=(5.0, -3.5), grain=0.6),
+                dict(what='furn', ink='#C9D1EE', cover=0.75, shift=(-2.5, 1.5))])),
+    # 颜色随用途：同一个橙按台面高低分四档（沙发茶几最浅、给猫的平台最深），底和地面在颜色里起伏
+    't_use': _with('field_blue', fx=dict(
+        unit_by={'table:sofa': '#FFB894', 'table:chair': '#FF8D5C', 'cat:half': '#FF6430', 'cat:flat': '#E8401C'},
+        ground=('cloud', '#2C47A8', '#213887', 0.35), floor=('cloud', '#EFE6D7', '#E6DCCB', 0.05))),
+})
+
+
+# ---- 新配色八套：做法仍是「两套合起来」（线的颜色那一家铺到屋外当底，单元一个强调色），颜色换掉，面不只平涂
+def _pal(**kw):
+    base = dict(fig='#FFFFFF', unit_top=kw.get('unit'), unit_under=kw.get('unit'), mech=kw.get('room'), hair=kw.get('ink'),
+                shadow=kw.get('ink'), unit_seam=kw.get('ink'))
+    base.update(kw)
+    return base
+
+
+PALETTES.update({
+    # 1 丁香紫 + 酸黄绿：底从浅丁香到深紫往下压；单元由台脚的黄绿走到台面的浅柠檬；朝下的面压紫色网点，混出橄榄色
+    'n_lilac': _pal(paper='#7563C9', room='#F4F2F8', floor='#ECE8F4', sky='#CFC6F0', ink='#2E2470', far='#8C84BE', tex='#ADA6D4',
+                    unit_line='#2E2470', unit='#D2F04B', furn='#E2DCF4', cut='#2A1F66', stow='#C3BCE2',
+                    fx=dict(ground=('y', '#A190EA', '#45369F'), unit=('z', '#AEDB14', '#EEFC9A', 0.2, 1.5),
+                            floor=('dist', '#F1ECF7', '#E0D9F0', 3.5, 11.0), shade=('ht', '#2E2470', 2.6, 45, 0.38),
+                            cut=('y', '#3A2D85', '#1E1650'), grain=0.6, paper_grain=0.5)),
+    # 2 黄昏：底是傍晚的天，上面丁香、下面桃色；单元群青，往上提亮；影子是一版半透明的淡紫
+    'n_dusk': _pal(paper='#E9A890', room='#FBF6F0', floor='#F4E9E1', sky='#D9C3E6', ink='#3B1D46', far='#9A86A2', tex='#BDAEC2',
+                   unit_line='#18207A', unit='#2C3FE0', unit_seam='#9AAAFF', furn='#F1E1E6', cut='#3B1D46', stow='#D8C9D2', shadow='#3B1D46',
+                   fx=dict(ground=('y', '#A598DC', '#F8B796'), sky=('y', '#C2B5EA', '#F6C9B0'), unit=('z', '#1F31C4', '#6377FF', 0.2, 1.5),
+                           cut=('y', '#4A2758', '#2B1233'), shadow=True, plates=[dict(what='shadow', ink='#C6B6E6', cover=0.9, grain=0.5)],
+                           grain=0.5, paper_grain=0.5)),
+    # 3 鼠尾草绿 + 电光蓝：底是一团一团起伏的灰绿；单元一个很亮的蓝，朝下的面压深蓝网点；影子用墨绿网点
+    'n_sage': _pal(paper='#A3B38F', room='#F3F3EC', floor='#E7E9DC', sky='#D6DDC8', ink='#26331F', far='#86917C', tex='#A9B29E',
+                   unit_line='#14209A', unit='#2747FF', unit_seam='#A6B6FF', furn='#DDE3CF', cut='#26331F', stow='#C5CCB8',
+                   fx=dict(ground=('cloud', '#AEBE98', '#8FA27A', 0.3), shade=('ht', '#0B1460', 2.4, 45, 0.5), shadow=True,
+                           plates=[dict(what='shadow', ink='#26331F', cover=0.55, ht=(3.0, 45))], cut=('y', '#33422A', '#1A2414'),
+                           grain=0.7, paper_grain=0.6)),
+    # 4 奶油黄 + 覆盆子：底中间亮、四周沉；单元按用途从浅粉（沙发前的茶几）到酒红（给猫的平台）
+    'n_butter': _pal(paper='#F1DC8A', room='#FFFBF1', floor='#F7EDD5', sky='#F7E7B5', ink='#4A1426', far='#A67F89', tex='#C4A3AB',
+                     unit_line='#4A1426', unit='#C2245A', unit_seam='#FFD3DF', furn='#F6E7C7', cut='#4A1426', stow='#E2D3B4',
+                     fx=dict(ground=('rad', '#F8EAB0', '#E6C054', 0.5, 0.45, 0.75),
+                             unit_by={'table:sofa': '#F58BA8', 'table:chair': '#E5507F', 'cat:half': '#BD2257', 'cat:flat': '#8C1440'},
+                             cut=('y', '#5C1A30', '#3A0E1C'), grain=0.5, paper_grain=0.5)),
+    # 5 酞青绿单色：全图一个绿从深到浅，单元是这个绿最亮的那一档，从下往上变浅
+    'n_phthalo': _pal(paper='#0F4A42', room='#EEF5F0', floor='#E0ECE5', sky='#B6D6CC', ink='#0B3A35', far='#6E918B', tex='#9CB6B1',
+                      unit_line='#0B3A35', unit='#2CE0B2', furn='#CFE3DA', cut='#072723', stow='#B9D0C9',
+                      fx=dict(ground=('ang', '#18705F', '#082C27', 60), unit=('z', '#0FAE89', '#86F7D2', 0.2, 1.5),
+                              floor=('dist', '#E7F1EB', '#D3E5DC', 3.5, 11.0), cut=('y', '#0E443D', '#041A17'), grain=0.6, paper_grain=0.4)),
+    # 6 三色叠印：孔版的蓝、荧光粉、黄三个墨。地面是一版黄，单元是一版粉加一版黄（错开），影子是一版蓝——
+    #    重叠的地方混出橙红、绿，错开的边上露出单色
+    'n_trio': _pal(paper='#0078BF', room='#F7F3EA', floor='#F7F3EA', sky='#BFE0F2', ink='#0078BF', far='#7FB5DA', tex='#9CC7E3',
+                   unit_line='#00578C', unit='#F7F3EA', unit_seam='#0078BF', furn='#F7F3EA', cut='#005A92', stow='#B5D4EA',
+                   fx=dict(ground=('cloud', '#1A86C8', '#0066A6', 0.25), unit='#F7F3EA', shade='flat', shadow=True,
+                           cut=('y', '#0A6AA6', '#00436E'), grain=0.3, paper_grain=0.5,
+                           plates=[dict(what='floor', ink='#FFE800', cover=0.5, grain=0.25),
+                                   dict(what='furn', ink='#0078BF', cover=0.16, shift=(-2.0, 1.5)),
+                                   dict(what='shadow', ink='#0078BF', cover=0.55, grain=0.25),
+                                   dict(what='unit', ink='#FF48B0', cover=0.95, shift=(4.0, -3.0), grain=0.2),
+                                   dict(what='unit', ink='#FFE800', cover=0.7, shift=(-2.5, 2.0), grain=0.2)])),
+    # 7 深靛夜 + 霓虹渐变：房间是暗的，底四周更暗；单元从台脚的橙走到台面的品红
+    'n_night': _pal(paper='#121633', room='#1D2250', floor='#232A5C', sky='#0B0E24', ink='#E8E5F7', far='#8A8FC2', tex='#4A5290',
+                    unit_line='#FFE1EA', unit='#FF5A7A', unit_seam='#7A1238', mech='#2E3570', furn='#2A3168', fig='#F3F0FF', fig_line='#121633',
+                    hair='#121633', cut='#C9C4F0', stow='#3A4280', shadow='#0B0E24',
+                    fx=dict(ground=('rad', '#2E3478', '#0B0E24', 0.5, 0.5, 0.8), unit=('z', '#FF6A2B', '#FF3DA8', 0.2, 1.5),
+                            floor=('dist', '#2F3672', '#1C2150', 3.5, 11.0), cut=('y', '#D6D1F5', '#9C95D6'), grain=0.6, paper_grain=0.3)),
+    # 8 钴蓝 + 镀铬：单元是一段一段明暗相间的银（镀铬的反光），底是钴蓝
+    'n_chrome': _pal(paper='#2E45D8', room='#F5F6F8', floor='#ECEEF3', sky='#C8D0F5', ink='#13204F', far='#7A84A8', tex='#A3AAC4',
+                     unit_line='#13204F', unit='#C8CED9', furn='#E3E7F0', cut='#18257A', stow='#C0C6D6',
+                     fx=dict(ground=('y', '#3E58EA', '#1C2F9E'),
+                             unit=('stops', ('z', None, None, 0.18, 1.55), ['#4A5263', '#C9D0DB', '#F8FAFD', '#8E97AA', '#E9EDF3', '#5B6477', '#F2F5F9']),
+                             cut=('y', '#22339A', '#0F1A5C'), grain=0.4, paper_grain=0.4)),
+})
 
 HM = 1.70
 UP = np.array([0.0, 0.0, 1.0])
@@ -723,7 +826,10 @@ class Plate:
             far = rr['z'] > self.far_z
             g = 'inner' if cls == 'frame' else 'tex'
             put(g, 'ink', rr['xy'][~far]); put(DOWN[g], 'far', rr['xy'][far])
+        fx = pal.get('fx')
         for seg, oid, ckey in self.hatches():
+            if ckey == 'shadow' and fx and fx.get('shadow'):
+                continue                    # 影子改由叠印的那一版画（paint.py）
             rr = LW.trace(buf, seg, own=oid, by_id=True, min_px=0.6)
             put('tex', ckey, rr['xy'])
         dashed = col.pop(('tex', 'grid'), [])
@@ -731,15 +837,35 @@ class Plate:
         W, H = cam.W, cam.H
         s = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">',
              f'<rect width="{W}" height="{H}" fill="{pal["paper"]}"/>']
+        if fx:
+            # 线也可以是渐变：配色里的某几个键换成 SVG 的线性渐变（按画面的几成给起止点）
+            pal = dict(pal)
+            defs = []
+            for key, (c0, c1, x1, y1, x2, y2) in (fx.get('inks') or {}).items():
+                gid = f'g_{key}'
+                defs.append(f'<linearGradient id="{gid}" gradientUnits="userSpaceOnUse" x1="{x1 * W:.1f}" y1="{y1 * H:.1f}" x2="{x2 * W:.1f}" y2="{y2 * H:.1f}">'
+                            f'<stop offset="0" stop-color="{c0}"/><stop offset="1" stop-color="{c1}"/></linearGradient>')
+                pal[key] = f'url(#{gid})'
+            img, cut_img = self._paint(pal, fx, objs)
+            if cut_img is not None:
+                defs.append(f'<pattern id="cutpat" patternUnits="userSpaceOnUse" x="0" y="0" width="{W}" height="{H}">'
+                            f'<image width="{W}" height="{H}" href="{PT.data_uri(cut_img)}"/></pattern>')
+                pal['cut'] = 'url(#cutpat)'
+            if defs:
+                s.append('<defs>' + ''.join(defs) + '</defs>')
+            s.append(f'<image x="0" y="0" width="{W}" height="{H}" href="{PT.data_uri(img)}"/>')
         # ---- 面的底色
         fills, shades = {}, {}
         for o, _, _ in objs:
+            if fx:
+                break
             c = dict(floor=pal['floor'], wall=pal['room'], ceil=pal['room'], furn=pal['furn'], unit=pal['unit'], mech=pal['mech'], stow=pal['room']).get(o.cls)
             fills[o.id] = LW.hexrgb(c)
             if o.cls == 'unit':
                 shades[(o.id, 1)] = LW.hexrgb(pal['unit_top']); shades[(o.id, 2)] = LW.hexrgb(pal['unit_under'])
-        s.append(LW.fill_image(buf, fills, default=LW.hexrgb(pal['sky']) if self.view == 'S' else None, shades=shades))
-        if self.view == 'S':
+        if not fx:
+            s.append(LW.fill_image(buf, fills, default=LW.hexrgb(pal['sky']) if self.view == 'S' else None, shades=shades))
+        if self.view == 'S' and not fx:
             # 房间以外（剖切面外廓以外）盖回纸色，窗洞里才是窗外的颜色
             h, t, C = sc.half, WALL_T, sc.ceil
             L = h + t
@@ -800,8 +926,52 @@ class Plate:
                         continue
                     x, y, _ = cam.px(loop)
                     s.append(LW.polygon(np.c_[x, y], pal['cut'], pal['cut'], 0.6 * k))
+        if fx and fx.get('paper_grain'):
+            s.append(PT.paper_grain_filter(W, H, fx['paper_grain']))
         s.append('</svg>')
         return ''.join(s)
+
+    # ---- 面不只平涂（paint.py）：准备每个像素是谁、房间以外在哪、影子在哪
+    def _paint(self, pal, fx, objs):
+        from PIL import Image, ImageDraw
+        buf, cam, sc, ss = self.buf, self.cam, self.sc, self.ss
+        H2, W2 = buf.ids.shape
+        cls_of = {o.id: o.cls for o, _, _ in objs}
+        role = {u['i']: u.get('role', '') for u in sc.D['units']}
+        role_of = {o.id: role.get(o.tag, '') for o, _, _ in objs if o.cls == 'unit'}
+
+        def raster(polys):
+            im = Image.new('L', (W2, H2), 0)
+            dr = ImageDraw.Draw(im)
+            for pts in polys:
+                dr.polygon([(float(x) * ss, float(y) * ss) for x, y in pts], fill=255)
+            return np.asarray(im, np.float32) / 255.0
+
+        masks = {}
+        if self.view == 'S':
+            h, t, C = sc.half, WALL_T, sc.ceil
+            L = h + t
+            cxp = self.cut[1]
+            q = np.array([(cxp, -L, -SLAB_T), (cxp, L, -SLAB_T), (cxp, L, C + SLAB_T), (cxp, -L, C + SLAB_T)], float)
+            x, y, _ = cam.px(q)
+            inside = raster([np.c_[x, y]]) > 0.5
+            masks['out'] = ~inside
+            masks['sky'] = inside & (buf.ids < 0)
+        else:
+            masks['out'] = buf.ids < 0
+        # 影子：与排线影子同一块地方（台面越高挪得越远），只落在看得见的地面上
+        r = 0.345
+        polys = []
+        for u in sc.D['units']:
+            if u['drop'] < 0.5 or not self.keeps(u['x'], u['y']):
+                continue
+            ox, oy = (0.10, 0.42) if self.view == 'S' else (-0.34, -0.26)
+            cx_, cy_ = u['x'] + u['table'] * ox, u['y'] + u['table'] * oy
+            q = np.array([(cx_ - r, cy_ - r, 0), (cx_ + r, cy_ - r, 0), (cx_ + r, cy_ + r, 0), (cx_ - r, cy_ + r, 0)], float)
+            x, y, _ = cam.px(q)
+            polys.append(np.c_[x, y])
+        masks['shadow'] = raster(polys) * (buf.ids == sc.floor.id)
+        return PT.paint(buf, cls_of, role_of, fx, pal, masks)
 
     def _clip_svg(self, svg, clip, uid):
         if clip is None:
