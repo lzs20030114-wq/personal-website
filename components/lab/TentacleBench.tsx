@@ -19,6 +19,7 @@ import { FlatRenderer, type CellFrame } from '../../src/lib/linkage/gl3d';
 import { loadTentacleMeshes, tentacleCellFrame } from '../../src/lib/linkage/tentacle3d-render';
 import { CriticallyDamped } from '../../src/lib/linkage/motion';
 import { useBenchLoop } from './useBenchLoop';
+import { LabPause } from './LabCtl';
 import { attachLabCamera } from './labCameraInput';
 
 /**
@@ -90,6 +91,8 @@ export function TentacleBench({
   const [link, setLink] = useState(0);
   const linkRef = useRef(0);
   const [hud, setHud] = useState({ err: 0, zoom: 1, note: '' });
+  const pausedRef = useRef(false);
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -215,11 +218,14 @@ export function TentacleBench({
 
     const step = (dt: number): void => {
       if (!renderer) return;
-      cam.tick(dt);
-      muscles.forEach((m, k) => {
-        if (m.update(dt)) applyContraction3(sim.solver, sim.tendons[k], m.value);
-      });
-      sim.solver.step(dt, TENTACLE3D.sweeps);
+      // 暂停：慢转、肌肉、物理一起定格；画面照画（拖动视角仍然可用）
+      if (!pausedRef.current) {
+        cam.tick(dt);
+        muscles.forEach((m, k) => {
+          if (m.update(dt)) applyContraction3(sim.solver, sim.tendons[k], m.value);
+        });
+        sim.solver.step(dt, TENTACLE3D.sweeps);
+      }
       render();
       const err = sim.solver.maxError();
       const zoom = cam.zoom;
@@ -295,6 +301,9 @@ export function TentacleBench({
       </div>
       {controls ? (
         <div className="lab-ctl">
+          <div className="grp lab-play">
+            <LabPause lang={lang} paused={paused} onChange={(p) => { pausedRef.current = p; setPaused(p); }} />
+          </div>
           <div className="grp">
             <LabControlLabel help={["分别调整三条肌腱的收缩量，改变触手弯向。", "Adjust three tendon contractions to bend the arm."]} lang={lang}>{tx("肌腱")}</LabControlLabel>
             {[0, 1, 2].map((k) => (
@@ -347,6 +356,8 @@ export function TentacleBench({
                 setLink(0);
                 linkRef.current = 0;
                 apiRef.current?.home();
+                pausedRef.current = false;
+                setPaused(false);
               }}
             >
               {tx("重置")}

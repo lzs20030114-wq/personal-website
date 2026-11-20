@@ -58,3 +58,31 @@ export function LabReadout({ children }: { children: ReactNode }) {
   const slot = useContext(LabReadoutSlot);
   return slot ? createPortal(children, slot) : null;
 }
+
+/**
+ * 暂停按钮（2026-11-20，用户「需要模拟、要展现运动的 lab 加一个暂停按钮，一摁就停在那一瞬间的运动状态」）。
+ * 全站台架共用一颗：摁下 = 定格在这一帧（仿真、动画、物理松弛一并停住，视角仍可拖），再摁 = 从这一帧接着走。
+ * 取代原来的「运转」勾选框——两者管的是同一件事，并排放会自相矛盾。
+ */
+export function LabPause({ paused, onChange, disabled, lang: explicitLang }: {
+  paused: boolean;
+  onChange: (paused: boolean) => void;
+  disabled?: boolean;
+  lang?: 'zh' | 'en';
+}) {
+  const ctx = useBenchLang();
+  const lang = explicitLang ?? ctx;
+  const label = paused ? (lang === 'zh' ? '继续' : 'Resume') : (lang === 'zh' ? '暂停' : 'Pause');
+  return (
+    <button
+      type="button"
+      className={`lab-pause${paused ? ' active' : ''}`}
+      aria-pressed={paused}
+      disabled={disabled}
+      onClick={() => onChange(!paused)}
+    >
+      <span className="lab-pause__icon" aria-hidden="true">{paused ? '▶' : '❚❚'}</span>
+      {label}
+    </button>
+  );
+}

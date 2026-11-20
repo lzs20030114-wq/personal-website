@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useBenchLang, useLabText } from './LabLanguage';
 import { LabControlLabel } from './LabControlLabel';
 import { attachLabCamera } from './labCameraInput';
-import { LabViewDock } from './LabCtl';
+import { LabViewDock, LabPause } from './LabCtl';
 import { planFromHash } from './planHash';
 import { useBenchLoop } from './useBenchLoop';
 import { DARK_A, DARK_B, LITE_A, LITE_B, MEM_DARK, MEM_LITE, RAIL_DARK, RAIL_LITE, ROOM_DARK, ROOM_LITE } from './SkinSolidBench';
@@ -1334,17 +1334,7 @@ export function CohabitSpaceBench({
           </div>
           <div className="lab-ctl__row">
             <div className="grp">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={running}
-                  onChange={(e) => {
-                    runningRef.current = e.target.checked;
-                    setRunning(e.target.checked);
-                  }}
-                />
-                {t.run}
-              </label>
+              <LabPause lang={lang} paused={!running} onChange={(p) => { runningRef.current = !p; setRunning(!p); }} />
               <button type="button" onClick={() => { apiRef.current?.restart(); runningRef.current = true; setRunning(true); }}>
                 {t.reset}
               </button>

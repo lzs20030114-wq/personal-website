@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useBenchLang, useLabText } from './LabLanguage';
 import { LabControlLabel } from './LabControlLabel';
-import { LabViewDock } from './LabCtl';
+import { LabViewDock, LabPause } from './LabCtl';
 import { attachLabCamera } from './labCameraInput';
 import { planFromHash } from './planHash';
 import { readPalette, type Palette } from './planDraw';
@@ -502,17 +502,7 @@ export function SenseBench({
           </div>
           <div className="lab-ctl__row">
             <div className="grp">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={running}
-                  onChange={(e) => {
-                    runningRef.current = e.target.checked;
-                    setRunning(e.target.checked);
-                  }}
-                />
-                {t.run}
-              </label>
+              <LabPause lang={lang} paused={!running} onChange={(p) => { runningRef.current = !p; setRunning(!p); }} />
               <button
                 type="button"
                 onClick={() => {

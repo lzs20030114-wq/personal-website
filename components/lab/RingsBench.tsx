@@ -21,7 +21,7 @@ import {
 } from '../../src/lib/linkage/shell3d';
 import { useBenchLoop } from './useBenchLoop';
 import { attachLabCamera } from './labCameraInput';
-import { LabFold, LabViewDock } from './LabCtl';
+import { LabFold, LabPause, LabViewDock } from './LabCtl';
 
 /**
  * Lab.04 五环立体台架（Lab-Modernist 稿暗色版，逐项对稿）。
@@ -189,7 +189,6 @@ const SKIN_IDX = bandTriIndex(SKIN_SAMPLES);
 const COPY = {
   zh: {
     display: '显示',
-    breathe: '呼吸',
     persp: '透视',
     skin: '遮罩',
     skinAria: '遮罩透明度：0 全透明，1 不透明',
@@ -206,7 +205,6 @@ const COPY = {
   },
   en: {
     display: 'Display',
-    breathe: 'Breathe',
     persp: 'Perspective',
     skin: 'Skin',
     skinAria: 'Skin opacity: 0 clear, 1 solid',
@@ -573,18 +571,8 @@ export function RingsBench({
         sideControls ? (
         <div className="lab-ctl">
           <div className="grp">
-            {sideControls ? <LabControlLabel help={["开启自动开合，或切换透视显示。", "Toggle automatic motion or perspective."]} lang={lang}>{L.display}</LabControlLabel> : null}
-            <label>
-              <input
-                type="checkbox"
-                checked={breathe}
-                onChange={(e) => {
-                  setBreathe(e.target.checked);
-                  apiRef.current?.setBreathe(e.target.checked);
-                }}
-              />
-              {L.breathe}
-            </label>
+            {sideControls ? <LabControlLabel help={["暂停或继续开合，或切换透视显示。", "Pause or resume the motion, or toggle perspective."]} lang={lang}>{L.display}</LabControlLabel> : null}
+            <LabPause lang={lang} paused={!breathe} onChange={(p) => { setBreathe(!p); apiRef.current?.setBreathe(!p); }} />
             <label>
               <input
                 type="checkbox"
@@ -677,17 +665,7 @@ export function RingsBench({
         // 面板精简（2026-10-25，LabCtl）：开合与相位一组常显；透视 / 遮罩收进「更多」；视角到底栏（「归位」在底栏）
         <div className="lab-ctl">
           <div className="grp lab-play">
-            <label>
-              <input
-                type="checkbox"
-                checked={breathe}
-                onChange={(e) => {
-                  setBreathe(e.target.checked);
-                  apiRef.current?.setBreathe(e.target.checked);
-                }}
-              />
-              {L.breathe}
-            </label>
+            <LabPause lang={lang} paused={!breathe} onChange={(p) => { setBreathe(!p); apiRef.current?.setBreathe(!p); }} />
             <LabControlLabel help={["暂停自动运转，手动查看运动周期中的位置。", "Pause automatic motion and choose a position in the cycle."]} lang={lang}>
               {tx(L.phase)}
               {sideControls ? <b className="v">{phase.toFixed(1)}°</b> : null}

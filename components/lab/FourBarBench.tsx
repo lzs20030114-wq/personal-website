@@ -8,6 +8,7 @@ import { CRANK, N, THETA0, createCrankRocker } from '../../src/lib/linkage/prese
 import { buildTracePath } from '../../src/lib/linkage/trace';
 import type { Point } from '../../src/lib/linkage/types';
 import { useBenchLoop } from './useBenchLoop';
+import { LabPause } from './LabCtl';
 
 /**
  * Lab.01 四杆台架（Lab-Modernist 稿的暗色 HUD 版）。
@@ -40,6 +41,8 @@ export function FourBarBench({
     render: () => void;
     step: (dt: number) => void;
   } | null>(null);
+  const pausedRef = useRef(false);
+  const [paused, setPaused] = useState(false);
   const [hud, setHud] = useState({ theta: 0, omega: 0, err: 0, mode: 'idle' });
   // 重置 = 整台重建（solver / controller / 轨迹一起回到首帧）。SVG 台架没有 GL 资源，重建即可
   const [resetKey, setResetKey] = useState(0);
@@ -136,6 +139,7 @@ export function FourBarBench({
     };
 
     const step = (dt: number): void => {
+      if (pausedRef.current) return; // 暂停：定格在这一帧（画面不变，不必重画）
       ctl.frame(dt);
       const p = solver.nodes[N.P];
       const last = tracePts[tracePts.length - 1];
@@ -180,6 +184,7 @@ export function FourBarBench({
         role="img"
         aria-label={tx("Grashof 曲柄摇杆台架；拖任意自由节点驱动")}
         onPointerDown={(ev) => {
+          if (pausedRef.current) return;
           const p = toVB(ev);
           if (p && stateRef.current?.ctl.pointerDown(ev.pointerId, p.x, p.y)) {
             try {
@@ -212,7 +217,8 @@ export function FourBarBench({
       {controls ? (
         <div className="lab-ctl">
           <div className="grp lab-play">
-            <button type="button" onClick={() => setResetKey((k) => k + 1)}>
+            <LabPause lang={lang} paused={paused} onChange={(p) => { pausedRef.current = p; setPaused(p); }} />
+            <button type="button" onClick={() => { pausedRef.current = false; setPaused(false); setResetKey((k) => k + 1); }}>
               {tx("重置")}
             </button>
           </div>

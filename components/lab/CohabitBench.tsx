@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useBenchLang, useLabText } from './LabLanguage';
 import { LabControlLabel } from './LabControlLabel';
-import { LabFold, LabReadout, useLabReadoutSlot } from './LabCtl';
+import { LabFold, LabReadout, useLabReadoutSlot, LabPause } from './LabCtl';
 import { standardSceneSim, tableTopFor } from '../../src/lib/space/cohabit-solid';
 import { ruleReadout, type RuleHit, type RuleRow } from '../../src/lib/space/cohabit-reasons';
 import { ReadoutLabels, ReadoutTracker, readoutSnapshot, unitCard, type ReadoutSnap, type UnitCard } from '../../src/lib/space/cohabit-readout';
@@ -990,17 +990,7 @@ export function CohabitBench({
           </div>
           <div className="lab-ctl__row walk-playback">
             <div className="grp lab-play">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={running}
-                  onChange={(e) => {
-                    runningRef.current = e.target.checked;
-                    setRunning(e.target.checked);
-                  }}
-                />
-                {t.run}
-              </label>
+              <LabPause lang={lang} paused={!running} onChange={(p) => { runningRef.current = !p; setRunning(!p); }} />
               <label>
                 <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} />
                 {t.auto}

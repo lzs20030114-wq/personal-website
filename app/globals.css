@@ -1704,6 +1704,21 @@ button.log-heat__cell {
   color: var(--paper);
   border-color: var(--accent);
 }
+/* 暂停按钮（LabCtl 的 LabPause）：图标 + 字，宽度按「暂停 / 继续」较长的那个留，摁下时不跳 */
+.lab-ctl button.lab-pause {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 7.5em;
+}
+.lab-pause__icon {
+  display: inline-block;
+  width: 1.1em;
+  font-size: 0.85em;
+  letter-spacing: -0.12em;
+  text-align: center;
+}
 .lab-ctl .seg {
   display: flex;
 }

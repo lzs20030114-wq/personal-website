@@ -3,7 +3,7 @@
 import { useBenchLang, useLabText } from './LabLanguage';
 
 import { LabControlLabel } from './LabControlLabel';
-import { LabFold } from './LabCtl';
+import { LabFold, LabPause } from './LabCtl';
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { PATHS, PLAN, PlanSim, READINGS, RESPONSES, keepOut, type PathKey, type Reading, type ResponseMode } from '../../src/lib/space/unit-activation';
@@ -576,17 +576,7 @@ export function WalkPlanBench({
           </div>
           <div className="lab-ctl__row walk-playback">
             <div className="grp lab-play">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={running}
-                  onChange={(e) => {
-                    runningRef.current = e.target.checked;
-                    setRunning(e.target.checked);
-                  }}
-                />
-                {t.run}
-              </label>
+              <LabPause lang={lang} paused={!running} onChange={(p) => { runningRef.current = !p; setRunning(!p); }} />
               <label>
                 <input
                   type="checkbox"

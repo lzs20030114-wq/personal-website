@@ -3,7 +3,7 @@
 import { useBenchLang, useLabText } from './LabLanguage';
 
 import { LabControlLabel } from './LabControlLabel';
-import { LabFold } from './LabCtl';
+import { LabFold, LabPause } from './LabCtl';
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { CROWD, CrowdSim } from '../../src/lib/space/crowd-plan';
@@ -523,17 +523,7 @@ export function CrowdPlanBench({
           </div>
           <div className="lab-ctl__row walk-playback">
             <div className="grp lab-play">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={running}
-                  onChange={(e) => {
-                    runningRef.current = e.target.checked;
-                    setRunning(e.target.checked);
-                  }}
-                />
-                {t.run}
-              </label>
+              <LabPause lang={lang} paused={!running} onChange={(p) => { runningRef.current = !p; setRunning(!p); }} />
               <label>
                 <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} />
                 {t.auto}

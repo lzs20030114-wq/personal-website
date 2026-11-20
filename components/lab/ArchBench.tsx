@@ -24,6 +24,7 @@ import {
 import { LinkageController } from '../../src/lib/linkage/controller';
 import type { Point } from '../../src/lib/linkage/types';
 import { useBenchLoop } from './useBenchLoop';
+import { LabPause } from './LabCtl';
 
 /**
  * Lab.02 S4 拱环台架（暗色 HUD 版）。画法照搬 src/demo/arch.ts：
@@ -71,6 +72,8 @@ export function ArchBench({
   const t = COPY[lang];
   const svgRef = useRef<SVGSVGElement | null>(null);
   const stateRef = useRef<{ solver: ReturnType<typeof createArch>; ctl: LinkageController; step: (dt: number) => void } | null>(null);
+  const pausedRef = useRef(false);
+  const [paused, setPaused] = useState(false);
   const [hud, setHud] = useState({ phi: 0, apex: 0, err: 0, mode: 'idle' });
   // 重置 = 整台重建（solver / controller / 定步累加器回到首帧）。SVG 台架没有 GL 资源，重建即可
   const [resetKey, setResetKey] = useState(0);
@@ -160,6 +163,7 @@ export function ArchBench({
     // 定步积分：累加器按 ARCH_STEP_DT 推进，每子步后跑 archStopPass
     let acc = 0;
     const step = (dt: number): void => {
+      if (pausedRef.current) return; // 暂停：定格在这一帧（画面不变，不必重画）
       acc = Math.min(acc + dt, ARCH_STEP_DT * 8);
       while (acc >= ARCH_STEP_DT) {
         ctl.frame(ARCH_STEP_DT);
@@ -202,6 +206,7 @@ export function ArchBench({
         role="img"
         aria-label={t.aria}
         onPointerDown={(ev) => {
+          if (pausedRef.current) return;
           const p = toVB(ev);
           const state = stateRef.current;
           if (p && state && nearestArchHandleWithin(state.solver, p.x, p.y) && state.ctl.pointerDown(ev.pointerId, p.x, p.y)) {
@@ -235,7 +240,8 @@ export function ArchBench({
       {controls ? (
         <div className="lab-ctl">
           <div className="grp lab-play">
-            <button type="button" onClick={() => setResetKey((k) => k + 1)}>
+            <LabPause lang={lang} paused={paused} onChange={(p) => { pausedRef.current = p; setPaused(p); }} />
+            <button type="button" onClick={() => { pausedRef.current = false; setPaused(false); setResetKey((k) => k + 1); }}>
               {tx("重置")}
             </button>
           </div>

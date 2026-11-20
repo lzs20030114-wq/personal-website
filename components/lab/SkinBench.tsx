@@ -3,7 +3,7 @@
 import { useBenchLang, useLabText } from './LabLanguage';
 
 import { LabControlLabel } from './LabControlLabel';
-import { LabFold } from './LabCtl';
+import { LabFold, LabPause } from './LabCtl';
 
 import { useEffect, useRef, useState } from 'react';
 import { SKIN_UNITS, skinSiteOpts } from '../../src/lib/space/skin-data';
@@ -427,17 +427,7 @@ export function SkinBench({
       {controls ? (
         <div className="lab-ctl">
           <div className="grp lab-play">
-            <label>
-              <input
-                type="checkbox"
-                checked={running}
-                onChange={(e) => {
-                  runningRef.current = e.target.checked;
-                  setRunning(e.target.checked);
-                }}
-              />
-              {tx("运转")}
-            </label>
+            <LabPause lang={lang} paused={!running} onChange={(p) => { runningRef.current = !p; setRunning(!p); }} />
             <label title={tx("直接载入已算好的成形状态；取消勾选可从头观看成形过程")}>
               <input
                 type="checkbox"

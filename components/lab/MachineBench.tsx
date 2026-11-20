@@ -3,7 +3,7 @@
 import { useBenchLang, useLabText } from './LabLanguage';
 
 import { LabControlLabel } from './LabControlLabel';
-import { LabFold, LabViewDock } from './LabCtl';
+import { LabFold, LabPause, LabViewDock } from './LabCtl';
 
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
@@ -854,6 +854,10 @@ export function MachineBench({
 
     // 默认运转（2026-10-26 用户拍板：Lab 默认勾选运转，不随「减弱动态效果」关掉，MAPPING §68）
     let running = spin;
+    // 暂停（LabPause）：整台定格——五环、大小触手的物理与引擎一起停在这一帧；视角照拖。
+    // 与 running 同进退（running 只管曲柄自己转不转，关掉时触手原本还会松弛到静止，那不是「停在那一瞬间」）。
+    // 相位滑块在暂停中照样能用：只追五环，不动触手
+    let frozen = !spin;
     if (debugEnabled) setRun(running);
     let dir: 1 | -1 = MACHINE_DIR;
     let omegaNow = MACHINE_OMEGA;
@@ -1276,6 +1280,7 @@ export function MachineBench({
       armClock = s.armClock;
       armManual = s.armManual;
       running = s.running;
+      frozen = !s.running;
       dir = s.dir;
       omegaNow = s.omega;
       setRun(s.running);
@@ -1387,7 +1392,7 @@ export function MachineBench({
       }
       const tg = eng.targets();
       // 呼吸 → 曲柄：限速追，每子步 ≤1°（machine-behavior.ts 的 §6.2 实测）
-      followBreath(machine, tg.breath.s, dt);
+      if (!frozen) followBreath(machine, tg.breath.s, dt);
       // 臂：抽象指令 → 三腱目标，之后照旧走肌肉的临界阻尼限速
       // 台架开着肌腱轴深卷（惊跳会用到）
       const c = tendonContractions(tg.arm, { deep: true });
@@ -1506,13 +1511,17 @@ export function MachineBench({
           );
         }
       }
-      muscles.forEach((m, k) => {
-        if (m.update(dt)) applyContraction3(arm.solver, arm.tendons[k], m.value);
-      });
-      arm.solver.step(dt, TENTACLE3D.sweeps);
+      // 暂停：触手的肌肉与物理不推进（手动调试档不受暂停影响）
+      const hold = frozen && !manual;
+      if (!hold) {
+        muscles.forEach((m, k) => {
+          if (m.update(dt)) applyContraction3(arm.solver, arm.tendons[k], m.value);
+        });
+        arm.solver.step(dt, TENTACLE3D.sweeps);
+      }
       if (tg) {
         // 行为档：触须 = 引擎给的基角 + 反射（波形仍是 startleSwing）。死了就没有反射
-        smallArms.forEach((sa, k) => {
+        if (!hold) smallArms.forEach((sa, k) => {
           driveSmallArm(sa, manual ? manual.feelersDeg[k] * Math.PI / 180 : feelerAngle(tg.feelers[k]));
           stepSmallArm(sa, dt);
         });
@@ -1576,7 +1585,7 @@ export function MachineBench({
         // 受惊（点击）叠加在待机之上，且**暂停时也生效**——戳它就该有反应，
         // 波形过了寿命就停止覆盖，暂停态回到「保持不动」。
         if (running) saClock += dt;
-        smallArms.forEach((sa, k) => {
+        if (!hold) smallArms.forEach((sa, k) => {
           if (running) saBase[k] = idleSwing(saClock, k, saAmpNow, saFreqNow);
           const st = saStartle[k];
           if (Number.isFinite(st.t)) {
@@ -1655,11 +1664,13 @@ export function MachineBench({
       step,
       setPhase: (deg) => {
         running = false;
+        frozen = true;
         targetTheta = thetaAtStroke(deg / PHASE_MAX);
       },
       setRun: (on) => {
         if (manualCommand) return;
         running = on;
+        frozen = !on;
       },
       setOmega: (w) => {
         omegaNow = w;
@@ -1701,6 +1712,7 @@ export function MachineBench({
         targetTheta = machine.theta;
         acc = 0;
         running = spin;
+        frozen = !spin;
         dir = MACHINE_DIR;
         omegaNow = MACHINE_OMEGA;
         armManual = false;
@@ -2112,6 +2124,7 @@ export function MachineBench({
         behaviorPointerDown(e, px, py);
         return;
       }
+      if (frozen) return; // 暂停中不受惊：定格就是定格
       const k = hitSmallArm(px, py, BENCH_INPUT.smallArmHitPx);
       if (k === null) return;
       // 甩开方向 = 点击落在摆平面哪一侧的**反面**（侧别见 clickSide）。
@@ -2268,18 +2281,15 @@ export function MachineBench({
   );
   const runCtl = (
     <>
-        <label>
-          <input
-            type="checkbox"
-            checked={run}
-            disabled={debugMode === 'manual'}
-            onChange={(e) => {
-              setRun(e.target.checked);
-              apiRef.current?.setRun(e.target.checked);
-            }}
-          />
-          {L.run}
-        </label>
+        <LabPause
+          lang={lang}
+          paused={!run}
+          disabled={debugMode === 'manual'}
+          onChange={(p) => {
+            setRun(!p);
+            apiRef.current?.setRun(!p);
+          }}
+        />
     </>
   );
   const perspCtl = (

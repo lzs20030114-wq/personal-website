@@ -3,7 +3,7 @@
 import { useBenchLang, useLabText } from './LabLanguage';
 
 import { LabControlLabel } from './LabControlLabel';
-import { LabFold, LabViewDock } from './LabCtl';
+import { LabFold, LabViewDock, LabPause } from './LabCtl';
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { OrbitCamera } from '../../src/lib/linkage/camera3d';
@@ -1440,17 +1440,7 @@ export function SkinSolidBench({
   const viewGroups = (
     <>
       <div className="grp lab-play">
-        <label>
-          <input
-            type="checkbox"
-            checked={running}
-            onChange={(e) => {
-              runningRef.current = e.target.checked;
-              setRunning(e.target.checked);
-            }}
-          />
-          {tx("运转")}
-        </label>
+        <LabPause lang={lang} paused={!running} onChange={(p) => { runningRef.current = !p; setRunning(!p); }} />
         <label title={tx("直接载入已算好的成形状态；取消勾选可从头观看成形过程")}>
           <input
             type="checkbox"
