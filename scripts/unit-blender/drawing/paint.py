@@ -220,7 +220,7 @@ class Ctx:
 
 
 # ---------------------------------------------------------------- 一整张底图
-def paint(buf, cls_of, role_of, fx, pal, masks, seed=11):
+def paint(buf, cls_of, role_of, fx, pal, masks, seed=11, scene=None):
     """缓冲 → 一张不透明的 RGB 底图（终稿分辨率，PNG）+ 剖切面用的纹理图。
 
     cls_of：{编号: 类别}；role_of：{单元编号: 用途}；masks：额外的遮罩（缓冲分辨率）——
@@ -265,6 +265,15 @@ def paint(buf, cls_of, role_of, fx, pal, masks, seed=11):
     # 人、猫的那块（矢量会盖住，这里只防漏边）
     put((ids >= 10000) & ~masks['out'], pal['fig'])
 
+    # ---- 物体上的颜色跟着光走（light.py）：明暗缓冲里存的是压成整数的法向，朝上 / 朝下由法向现算
+    lit = bool(fx.get('light') or fx.get('mat'))
+    if lit:
+        import light as LT
+        nrm, nok = LT.decode_normals(shade)
+        up_px, down_px = nok & (nrm[..., 2] > 0.5), nok & (nrm[..., 2] < -0.35)
+    else:
+        up_px, down_px = shade == 1, shade == 2
+
     # ---- 单元：按用途换色（没给就是 unit），再分朝上 / 朝下
     um = (cls_px == names.index('unit')) & ~masks['out']
     if um.any():
@@ -278,8 +287,8 @@ def paint(buf, cls_of, role_of, fx, pal, masks, seed=11):
                 f = ctx.field(spec)
                 img[m] = f[m]
                 done |= m
-        sh = fx.get('shade', 'tint')
-        top, under = um & (shade == 1), um & (shade == 2)
+        sh = fx.get('shade', 'flat' if lit else 'tint')
+        top, under = um & up_px, um & down_px
         if sh == 'tint':
             img[top] = img[top] + (1 - img[top]) * 0.22
             img[under] = img[under] * 0.80
@@ -293,6 +302,9 @@ def paint(buf, cls_of, role_of, fx, pal, masks, seed=11):
         elif sh == 'flat':
             pass
         filled |= um
+
+    if lit:
+        img = _light_layer(img, ctx, fx, pal, cls_px, names, masks, nrm, nok, scene or {}, seed)
 
     # ---- 油墨颗粒：只给上了颜色的面，颜色越深越看得出；纸色的墙和地面几乎不受影响
     g = float(fx.get('grain', 0))
@@ -341,6 +353,148 @@ def paint(buf, cls_of, role_of, fx, pal, masks, seed=11):
             f = f * (1 + g * 0.05 * n[..., None])
         cut_img = Image.fromarray((np.clip(f, 0, 1) * 255 + 0.5).astype(np.uint8), 'RGB').resize((buf.cam.W, buf.cam.H), Image.LANCZOS)
     return out, cut_img
+
+
+def _light_layer(img, ctx, fx, pal, cls_px, names, masks, nrm, nok, scene, seed):
+    """材质（只改明度）→ 冷暖两套颜色之间的明暗 + 太阳的光斑和影子 → 墙角压暗。见 light.py 的说明"""
+    import light as LT
+    lt = fx.get('light') or {}
+    mt = fx.get('mat') or {}
+    H, W = ctx.H, ctx.W
+    cam = ctx.cam
+    room = nok & ~masks['out'] & (cls_px >= 0)
+    if not room.any():
+        return img
+    idx = np.nonzero(room)
+    P, n = ctx.P[idx], nrm[idx]
+    cls = cls_px[idx]
+    ppm = (cam.k / np.maximum(ctx.dist[idx], 1e-3)) if cam.persp else np.full(len(P), cam.k, np.float32)
+    rgb = img[idx]
+
+    # ---- 材质：在 OKLab 的明度上加减
+    amt = float(mt.get('amount', 1.0))
+    if mt and amt > 0:
+        lab = to_lab(rgb)
+        dl = np.zeros(len(P), np.float32)
+        ci = {c: names.index(c) for c in names}
+        fl = mt.get('floor')
+        m = (cls == ci['floor']) & (n[:, 2] > 0.5)          # 只贴在朝上的地面上（楼板的侧面不贴，不然纹理会被拉成竖条）
+        if fl and m.any():
+            if fl[0] == 'oak':
+                along, pitch, off = scene.get('floor', ('x', 0.14, 0.0))
+                dl[m] = LT.mat_oak(P[m], along, pitch, off, ppm[m])
+            elif fl[0] == 'terrazzo':
+                d, chip, hue = LT.mat_terrazzo(P[m], ppm[m])
+                dl[m] = d
+                chips = fl[1] if len(fl) > 1 else ['#C9BFAE', '#8E8577', '#E9E2D4', '#B8775A']
+                cl = np.stack([to_lab(hex3(c)) for c in chips])
+                k = np.minimum((hue * len(chips)).astype(int), len(chips) - 1)
+                lab_m = lab[m]
+                lab_m = lab_m + (cl[k] - lab_m) * (chip[:, None] * 0.85)
+                lab[m] = lab_m
+        for cname, key in (('wall', 'wall'), ('ceil', 'wall'), ('stow', None)):
+            spec = mt.get(key) if key else None
+            m = cls == ci[cname]
+            if spec and m.any() and spec[0] == 'lime':
+                dl[m] = LT.mat_lime(P[m], ppm[m])
+        fu = mt.get('furn')
+        m = cls == ci['furn']
+        if fu and m.any():
+            dl[m] = LT.mat_linen(P[m], n[m], ppm[m]) if fu[0] == 'linen' else LT.mat_boucle(P[m], ppm[m])
+        un = mt.get('unit')
+        m = cls == ci['unit']
+        if un and m.any():
+            if un[0] == 'rib':
+                dl[m] = LT.mat_rib(P[m], n[m], ppm[m])
+            elif un[0] == 'satin':
+                # 缎面：没有纹理，朝向变一点颜色就亮一截（一条斜着的高光带），在下面打光时处理，这里只给一点很慢的起伏
+                dl[m] = 0.012 * (LT.noise3(P[m], 0.3, 91) - 0.5)
+        me = mt.get('mech')
+        m = cls == ci['mech']
+        if me and m.any():
+            dl[m] = LT.mat_brushed(P[m], n[m], ppm[m])
+        lab[:, 0] += amt * dl
+        rgb = from_lab(lab)
+
+    # ---- 明暗（每一层都能单独关掉，见 light.py 的说明）
+    if lt:
+        cool = hex3(lt.get('cool', pal.get('far', '#7F8FC4')))
+        warm = hex3(lt.get('warm', '#FFE2B8'))
+        mul = lambda c, k: c * (1 - np.clip(k, 0, 1)[:, None] * (1 - cool))            # 压一层冷色的墨（正片叠底）
+        scr = lambda c, k: 1 - (1 - c) * (1 - np.clip(k, 0, 1)[:, None] * warm)        # 罩一层暖光（滤色）
+        F = np.asarray(lt.get('fill', (-0.45, -0.75, 0.55)), np.float32); F /= np.linalg.norm(F)
+        # ① 朝向：朝着天光来的方向（窗户、上方）的面偏暖偏亮，背着的面偏冷偏暗——中间朝向的面就是配色给的颜色
+        fc, fw = lt.get('face', (0.0, 0.0))
+        if fc or fw:
+            av = 0.5 + 0.5 * (n @ F)
+            rgb = mul(rgb, fc * np.clip((0.62 - av) / 0.62, 0, 1) ** 0.9)
+            rgb = scr(rgb, fw * np.clip((av - 0.62) / 0.38, 0, 1))
+        # ② 面里的渐变：墙和家具竖着的面越往下越深（贴地的地方暗），房间离窗户越远越暗
+        gk = float(lt.get('ground', 0))
+        if gk:
+            vert = np.abs(n[:, 2]) < 0.5
+            zr = np.where(cls == names.index('furn'), 0.85, 1.6)
+            g = (1 - np.clip(P[:, 2] / zr, 0, 1)) ** 1.6
+            rgb = mul(rgb, gk * g * vert * np.isin(cls, [names.index('wall'), names.index('furn')]))
+        wk = float(lt.get('window', 0))
+        if wk:
+            h = scene.get('half', 3.32)
+            dwin = np.minimum(P[:, 1] + h, P[:, 0] + h)            # 到 −Y、−X 两面有窗的墙的距离
+            wl = np.exp(-np.clip(dwin, 0, None) / float(lt.get('window_m', 2.4)))
+            rgb = scr(rgb, wk * 0.55 * wl)
+            rgb = mul(rgb, wk * 0.6 * (1 - wl))
+        # ③ 太阳：从窗户斜着照进来的光斑（暖），光斑里有单元、家具、人、猫的影子；光斑以外稍微压暗一点，光斑才跳出来
+        sk = float(lt.get('sun_k', 0))
+        if sk and lt.get('sun') is not None:
+            Ls = np.asarray(lt['sun'], np.float32); Ls /= np.linalg.norm(Ls)
+            sund = np.clip(n @ Ls, 0, 1)
+            if scene.get('meshes'):
+                # occlude='room'：墙和天花也挡光，只有窗户里进来的几块光斑；'objects'：只有单元、家具、人、猫挡光（轴测图常用的那种日照）
+                meshes = list(scene['meshes'] if lt.get('occlude', 'room') == 'room' else scene.get('objects', scene['meshes']))
+                meshes += list(scene.get('figs', [])) if lt.get('figs', True) else []
+                vis = LT.shadow_vis(P, n, meshes, Ls, scene['LW'], soft=float(lt.get('soft', 0.05)),
+                                    center=scene.get('center', (0, 0, 1.5)), span=scene.get('span', 11.0))
+            else:
+                vis = np.ones(len(P), np.float32)
+            sun = vis * np.clip((sund - 0.02) / 0.25, 0, 1)
+            sun = sun * sun * (3 - 2 * sun)
+            rgb = mul(rgb, float(lt.get('sun_dim', 0.18)) * (1 - sun))
+            rgb = scr(rgb, sk * sun * (0.55 + 0.45 * sund))
+        else:
+            Ls = np.asarray(lt.get('sun', F), np.float32); Ls /= np.linalg.norm(Ls)
+            vis = np.ones(len(P), np.float32)
+        # 缎面的单元：朝光与朝镜头之间的那个方向上亮一条
+        if (mt.get('unit') or (None,))[0] == 'satin':
+            m = cls == names.index('unit')
+            if m.any():
+                Vd = (cam.eye[None, :] - P[m]) if cam.persp else np.broadcast_to(-cam.f, P[m].shape)
+                Vd = Vd / np.linalg.norm(Vd, axis=1, keepdims=True)
+                Hh = Vd + Ls[None, :]; Hh /= np.linalg.norm(Hh, axis=1, keepdims=True)
+                spec = np.clip((n[m] * Hh).sum(1), 0, 1) ** 14 * (0.4 + 0.6 * vis[m])
+                rgb[m] = rgb[m] + (1 - rgb[m]) * (0.5 * spec[:, None])
+        # ④ 墙角、物体贴地处压暗（同一层冷色墨）
+        ak = float(lt.get('ao', 0.0))
+        if ak > 0:
+            keepd = ctx.buf.ids < 10000
+            dist = np.where(keepd, ctx.dist, np.nan)
+            ao = _ao(dist, keepd & ~masks['out'], float(lt.get('ao_px', 22)) * ctx.ss * getattr(ctx, 'kq', 1.0))
+            rgb = mul(rgb, ak * ao[idx])
+    img = img.copy()
+    img[idx] = np.clip(rgb, 0, 1)
+    return img
+
+
+def _ao(dist, keep, sigma):
+    """深度缓冲的反锐化（Luft 等 2006）：人和猫那几块平面形状不算在深度里（不然它们周围会出一圈暗边）"""
+    from scipy import ndimage
+    ok = np.isfinite(dist)
+    far = np.nanmax(np.where(ok, dist, np.nan)) * 1.15 if ok.any() else 1.0
+    d = np.where(ok, dist, 0).astype(np.float32)
+    w = ok.astype(np.float32)
+    g = ndimage.gaussian_filter(d, sigma, mode='nearest') / np.maximum(ndimage.gaussian_filter(w, sigma, mode='nearest'), 1e-4)
+    rel = (g - np.where(ok, dist, far)) / np.maximum(np.where(ok, dist, far), 1e-3)
+    dark = np.clip(-rel * 10.0, 0, 1) ** 0.75
+    return np.where(keep & ok, dark, 0).astype(np.float32)
 
 
 def data_uri(im, fmt='PNG'):

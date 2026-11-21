@@ -23,6 +23,7 @@ import linefig as LF  # noqa: E402
 import poses  # noqa: E402
 import cats as catlib  # noqa: E402
 import paint as PT  # noqa: E402
+import light as LT  # noqa: E402
 from ishi import Body, v, norm  # noqa: E402
 
 # ---------------------------------------------------------------- 线型表（终稿 2400 px 宽时的像素）
@@ -228,6 +229,86 @@ PALETTES.update({
                              unit=('stops', ('z', None, None, 0.18, 1.55), ['#4A5263', '#C9D0DB', '#F8FAFD', '#8E97AA', '#E9EDF3', '#5B6477', '#F2F5F9']),
                              cut=('y', '#22339A', '#0F1A5C'), grain=0.4, paper_grain=0.4)),
 })
+
+
+# ================= 第四轮之二（2026-11-21）：作者「不光背景上有渐变，图板内部、物体上的颜色也可以渐变、加纹理、加肌理，做得有格调一些」
+# 面的颜色跟着光走（drawing/light.py）：下午的太阳从 −Y 那面墙的窗户斜着照进来，物体朝窗的面暖、背着的面冷，
+# 地上有窗格的光斑和单元、家具、人、猫的影子；材质贴在三维里：橡木地板、石灰墙、亚麻沙发、针织外皮。
+_SUN = (-0.30, -0.85, 1.0)
+_FILL = (-0.45, -0.75, 0.55)
+
+
+def _lit(base, light=None, mat=None, **fxkw):
+    lt = dict(sun=_SUN, fill=_FILL, face=(0.32, 0.28), ground=0.25, window=0.22, window_m=2.4, sun_k=0.32, sun_dim=0.34,
+              occlude='objects', soft=0.05, ao=0.45, ao_px=22)
+    lt.update(light or {})
+    mt = dict(floor=('oak',), wall=('lime',), furn=('linen',), unit=('rib',), mech=('brushed',), amount=1.0)
+    mt.update(mat or {})
+    fx = dict(light=lt, mat=mt, hatch=('floor',), plates=[])     # 水磨石地面没有板缝：那几套写 hatch=()
+    fx.update(fxkw)
+    return _with(base, fx=fx)
+
+
+# 燕麦 + 赤陶：屋外是线的那一家深苔绿，屋里是石灰的暖白墙、橡木地板、燕麦色亚麻沙发，单元一个赤陶色（针织外皮），影子蓝灰
+PALETTES['n_oat'] = _pal(paper='#3A4634', room='#F3EDE3', floor='#D9C3A5', sky='#CBD5C2', ink='#2B2A25', far='#8D877B', tex='#B5A792',
+                         unit_line='#5A1E0C', unit='#C4572F', unit_seam='#F5C9AE', furn='#EDDDC4', cut='#26301F', stow='#CEC3B2',
+                         mech='#EEE9E0', fig='#FFFFFF', hair='#2B2A25', shadow='#2B2A25',
+                         fx=dict(ground=('y', '#56644A', '#2A3424'), unit=('z', '#A63E1D', '#DE8350', 0.2, 1.5),
+                                 sky=('y', '#DCE3D2', '#B7C4AC'), cut=('y', '#33402B', '#1A2214'), grain=0.45, paper_grain=0.45))
+# 雾灰 + 钴蓝：浅的石色底，石墨线，屋里是灰白的墙和水磨石地面，沙发是圈绒，单元一个钴蓝（缎面，有一条高光）
+PALETTES['n_stone'] = _pal(paper='#D9D4C9', room='#EFEDE8', floor='#D8D4CC', sky='#E4E7EA', ink='#26272B', far='#8A8A8C', tex='#B0ADA6',
+                           unit_line='#0E1C6B', unit='#2A48D8', unit_seam='#A9B8FF', furn='#F1EEE7', cut='#2B2C31', stow='#C9C6BF',
+                           mech='#EFEDE8', fig='#FFFFFF', hair='#26272B', shadow='#26272B',
+                           fx=dict(ground=('cloud', '#DDD8CE', '#CBC5B9', 0.3), unit=('z', '#1C35B8', '#4F6CF2', 0.2, 1.5),
+                                   cut=('y', '#3A3B42', '#1C1D22'), grain=0.4, paper_grain=0.55))
+
+PALETTES.update({
+    # M1 黄昏 + 光与材质
+    'm_dusk': _lit('n_dusk', light=dict(cool='#A496D6', warm='#FFD3A6'), floor='#EEDFD3'),
+    # M2 丁香紫 + 黄绿 + 光与材质
+    'm_lilac': _lit('n_lilac', light=dict(cool='#9F95D6', warm='#F6FFD0')),
+    # M3 燕麦 + 赤陶 + 光与材质（这一套是为材质配的颜色）
+    'm_oat': _lit('n_oat', light=dict(cool='#93A3B8', warm='#FFE2B6')),
+    # M4 蓝底 + 橙（9-2）+ 光与材质：地面换水磨石，沙发换圈绒，单元换缎面
+    'm_blue': _lit('field_blue', light=dict(cool='#8E9CD6', warm='#FFE6C2'),
+                   mat=dict(floor=('terrazzo', ['#C9C3B6', '#7F8FC4', '#FFFFFF', '#FF8D5C']), furn=('boucle',), unit=('satin',)),
+                   grain=0.4, paper_grain=0.45, hatch=()),
+    # M5 雾灰 + 钴蓝 + 光与材质
+    'm_stone': _lit('n_stone', light=dict(cool='#9AA2B6', warm='#FFF0D8'),
+                    mat=dict(floor=('terrazzo', ['#BDB8AE', '#8C8880', '#F4F2EC', '#5F6E9E']), furn=('boucle',), unit=('satin',)), hatch=()),
+    # 窗户里进来的光斑（墙和天花也挡光）：给 M3 做对照
+    'm_oat_win': _lit('n_oat', light=dict(cool='#93A3B8', warm='#FFE2B6', occlude='room', sun=(-0.30, -0.85, 0.72), sun_k=0.55,
+                                          sun_dim=0.10, window=0.3)),
+})
+
+
+def _stage(base, k, **light):
+    """逐层叠加：k = 1 平涂 · 2 朝向的冷暖 · 3 面里的渐变 · 4 太阳和影子 · 5 墙角压暗 · 6 材质（base 是 m_* 那一套）"""
+    d = PALETTES[base]
+    fx = dict(d['fx'])
+    lt = dict(fx['light'])
+    if k == 1:
+        fx.pop('light'); fx.pop('mat')
+        return dict(d, fx=fx)
+    if k < 3:
+        lt.update(ground=0, window=0)
+    if k < 4:
+        lt.update(sun_k=0)
+    if k < 5:
+        lt.update(ao=0)
+    lt.update(light)
+    fx['light'] = lt
+    if k < 6:
+        fx['mat'] = {}
+    return dict(d, fx=fx)
+
+
+for _b in ('m_oat', 'm_dusk'):
+    for _k in range(1, 7):
+        PALETTES[f'{_b}_s{_k}'] = _stage(_b, _k)
+# 材质单看：同一套 M3，地面 / 沙发 / 单元换另一种
+PALETTES['m_oat_alt'] = _lit('n_oat', light=dict(cool='#93A3B8', warm='#FFE2B6'),
+                             mat=dict(floor=('terrazzo', ['#D2C7B4', '#9A8C76', '#F6F1E8', '#B8593A']), furn=('boucle',), unit=('satin',)), hatch=())
 
 HM = 1.70
 UP = np.array([0.0, 0.0, 1.0])
@@ -742,9 +823,19 @@ class Plate:
         if cam.persp:
             objs = [(o, *LW.clip_mesh(V, T, *cam.near_plane())) for o, V, T in objs]
         buf = LW.Buffers(cam, ss)
+        fx0 = pal.get('fx') or {}
+        lit = bool(fx0.get('light') or fx0.get('mat'))
         for o, V, T in objs:
             shade = None
-            if o.cls in ('unit', 'furn'):
+            if lit and len(T):
+                # 物体上的颜色跟着光走（drawing/light.py）：每个三角形的法向（翻到朝着相机的那一侧）压成一个整数
+                n = np.cross(V[T[:, 1]] - V[T[:, 0]], V[T[:, 2]] - V[T[:, 0]])
+                n /= np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
+                cen = V[T].mean(1)
+                tc = (cam.eye - cen) if cam.persp else np.broadcast_to(-cam.f, cen.shape)
+                n = n * np.where(np.einsum('ij,ij->i', n, tc) < 0, -1.0, 1.0)[:, None]
+                shade = LT.encode_normals(n)
+            elif o.cls in ('unit', 'furn'):
                 # 面朝上 = 1、朝下 = 2、朝侧 = 0（按朝着相机的那一面算，不依赖三角形绕向）
                 n = np.cross(V[T[:, 1]] - V[T[:, 0]], V[T[:, 2]] - V[T[:, 0]])
                 n /= np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
@@ -827,9 +918,14 @@ class Plate:
             g = 'inner' if cls == 'frame' else 'tex'
             put(g, 'ink', rr['xy'][~far]); put(DOWN[g], 'far', rr['xy'][far])
         fx = pal.get('fx')
+        keep_h = fx.get('hatch') if fx else None          # 只留哪几类排线：'floor'（木板缝）、'wall'、'shadow'；不写 = 都留
         for seg, oid, ckey in self.hatches():
-            if ckey == 'shadow' and fx and fx.get('shadow'):
-                continue                    # 影子改由叠印的那一版画（paint.py）
+            if ckey == 'shadow' and fx and (fx.get('shadow') or fx.get('light')):
+                continue                    # 影子改由叠印的那一版画（paint.py），或由太阳的影子贴图画（light.py）
+            if keep_h is not None and ckey != 'grid':
+                kind = 'shadow' if ckey == 'shadow' else ('floor' if oid == sc.floor.id else 'wall')
+                if kind not in keep_h:
+                    continue
             rr = LW.trace(buf, seg, own=oid, by_id=True, min_px=0.6)
             put('tex', ckey, rr['xy'])
         dashed = col.pop(('tex', 'grid'), [])
@@ -971,7 +1067,22 @@ class Plate:
             x, y, _ = cam.px(q)
             polys.append(np.c_[x, y])
         masks['shadow'] = raster(polys) * (buf.ids == sc.floor.id)
-        return PT.paint(buf, cls_of, role_of, fx, pal, masks)
+        scene = None
+        if fx.get('light') or fx.get('mat'):
+            # 影子贴图用整间房（不切、不藏：剖切面另一侧的墙和窗也挡光 / 透光），人和猫用台架那副方块挡光
+            meshes = [(o.V, o.T) for o in sc.objs if o.cls != 'stow']
+            objects = [(o.V, o.T) for o in sc.objs if o.cls in ('unit', 'furn', 'mech')]
+            figs = []
+            for p in sc.D['people']:
+                for b in p['blocks']:
+                    figs.append((np.array(b['verts'], float).reshape(-1, 3), np.array(b['idx']).reshape(-1, 3)))
+            for c in sc.D['cats']:
+                for b in c['blocks']:
+                    figs.append((np.array(b['verts'], float).reshape(-1, 3), np.array(b['idx']).reshape(-1, 3)))
+            h = sc.half
+            board = ('x', HATCH['mid'], -h + HATCH['mid'] / 2) if self.view == 'S' else ('y', HATCH['mid'], -h + HATCH['mid'] / 2)
+            scene = dict(meshes=meshes, figs=figs, floor=board, LW=LW, center=(0.0, 0.0, sc.ceil / 2), span=2 * (h + WALL_T) * 1.65, half=h, objects=objects)
+        return PT.paint(buf, cls_of, role_of, fx, pal, masks, scene=scene)
 
     def _clip_svg(self, svg, clip, uid):
         if clip is None:
