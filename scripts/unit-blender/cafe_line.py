@@ -310,6 +310,101 @@ for _b in ('m_oat', 'm_dusk'):
 PALETTES['m_oat_alt'] = _lit('n_oat', light=dict(cool='#93A3B8', warm='#FFE2B6'),
                              mat=dict(floor=('terrazzo', ['#D2C7B4', '#9A8C76', '#F6F1E8', '#B8593A']), furn=('boucle',), unit=('satin',)), hatch=())
 
+
+# ================= 第四轮之三（2026-11-21）：作者看了「物体上的颜色」：不要影子（平面化就是要去掉物体的真实感），
+# 渐变也不是像画素描那样去表现体积，要的是颜色里的渐变，像做拼贴画：每个物体当成从一张渐变纸上剪下来的一块。
+# 上色在 drawing/paint.py 的 _piece_layer：一块里所有的面同一道渐变，方向按块随机、只取渐变纸上的一段，和光无关；没有影子。
+def _collage(base, pieces, common=None, **fxkw):
+    pc = {}
+    for c, sp in pieces.items():
+        d = dict(common or {})
+        d.update(sp)
+        pc[c] = d
+    fx = dict(pieces=pc, shade='flat', plates=[], hatch=('floor',))
+    fx.update(fxkw)
+    return _with(base, fx=fx)
+
+
+def _pv(pieces, **over):
+    """同一组纸，每一类都改几个参数（over 里写给哪几类都一样的那些）"""
+    return {c: dict(sp, **over) for c, sp in pieces.items()}
+
+
+# 黄昏那一族的纸：墙和地是桃色到淡紫，家具是浅粉、浅紫、杏色，单元是群青到紫、到天蓝
+_DUSK_PAPER = dict(
+    floor=dict(pairs=[('#F3DFD2', '#E2D8F1')], ang=[24]),
+    wall=dict(pairs=[('#F7E2D7', '#E2D4F2'), ('#F1D6D4', '#FAEFE6'), ('#E7DBF4', '#F8E5DA')], span=0.7),
+    ceil=dict(pairs=[('#EEE1EE', '#F8ECE4')]),
+    furn=dict(pairs=[('#F0CED5', '#FBF1E9'), ('#D9CEF3', '#F8EFF4'), ('#F7DEC4', '#F1CCD8')], span=0.6),
+    unit=dict(pairs=[('#1C31D0', '#7C62F6'), ('#2344E4', '#63A8FF'), ('#3124C0', '#C66BE6')], span=0.75),
+    mech=dict(pairs=[('#FCF7F1', '#EEE5EF')]),
+    stow=dict(pairs=[('#EDE0E9', '#F7EDE9')]),
+)
+_SHEET_ANG = dict(floor=24, wall=90, ceil=0, furn=125, unit=35, mech=90, stow=0)
+
+PALETTES.update({
+    # 对照：平涂，没有影子
+    'k0': _with('n_dusk', fx=dict(shade='flat', plates=[], hatch=('floor',), unit='#2C3FE0', floor='#F4E9E1', room='#FBF6F0', furn='#F1E1E6')),
+    # K1 一块一张纸：每块各自一道渐变，方向各不相同，只取渐变纸上的一段
+    'k1': _collage('n_dusk', _DUSK_PAPER),
+    # K2 同一张大纸：同一类东西从同一张渐变纸上剪下来，方向一致，颜色跨过几块连着走
+    'k2': _collage('n_dusk', {c: dict(sp, sheet=True, ang=[_SHEET_ANG[c]]) for c, sp in _DUSK_PAPER.items()}),
+    # K3 颗粒渐变：渐变用两种颜色的颗粒抖出来，近看一粒一粒，远看是渐变
+    'k3': _collage('n_dusk', _pv(_DUSK_PAPER, grain=0.85)),
+    # K4 色带：渐变压成四档，像丝网印刷
+    'k4': _collage('n_dusk', _pv(_DUSK_PAPER, steps=4)),
+    # K5 错位剪贴：颜色对线稿各自错开几像素，边上留一圈纸白
+    'k5': _collage('n_dusk', _pv(_DUSK_PAPER, shift=4.0, edge=1.6)),
+    # K6 网点：渐变换成网点，点越往一头越大
+    'k6': _collage('n_dusk', _pv(_DUSK_PAPER, tex='ht', ht=(4.2, 45))),
+})
+
+# ---- 五套配色，都用同一个组合：一块一张纸 + 颗粒 + 错开一点、留纸边（K1 + K3 + K5，各减一档）
+_MIX = dict(grain=0.5, shift=3.0, edge=1.2)
+_LILAC_PAPER = dict(
+    floor=dict(pairs=[('#ECE6F5', '#F5F0E4')], ang=[24]),
+    wall=dict(pairs=[('#E5DEF6', '#F6F2FA'), ('#DCD2F2', '#EEF4D8'), ('#F1ECF9', '#E0D8F4')], span=0.7),
+    ceil=dict(pairs=[('#ECE6F6', '#F6F3FA')]),
+    furn=dict(pairs=[('#D8CEF2', '#F4F0FA'), ('#E8E2F7', '#E2F0C4'), ('#CEC3EE', '#EDE7F8')], span=0.6),
+    unit=dict(pairs=[('#A6D418', '#F0FB9C'), ('#7DC62C', '#D6F258'), ('#C2E638', '#FFF2A6')], span=0.75),
+    mech=dict(pairs=[('#F7F5FA', '#ECE8F4')]),
+    stow=dict(pairs=[('#E2DDF0', '#F1EEF7')]),
+)
+_BLUE_PAPER = dict(
+    floor=dict(pairs=[('#EFE5D4', '#E2E4F2')], ang=[24]),
+    wall=dict(pairs=[('#F6EEE0', '#E0E5F4'), ('#E9E1D0', '#F7F2E8'), ('#DCE2F4', '#F5ECDE')], span=0.7),
+    ceil=dict(pairs=[('#EEEAE4', '#F6F1E8')]),
+    furn=dict(pairs=[('#D7DEF5', '#F6F1E6'), ('#C7D2F0', '#EEF0F8'), ('#E6E8F6', '#F3DAC8')], span=0.6),
+    unit=dict(pairs=[('#FF5A2E', '#FFB04A'), ('#F0432A', '#FF8FA2'), ('#FF7838', '#FFD27A')], span=0.75),
+    mech=dict(pairs=[('#F7F3EA', '#E9E6EE')]),
+    stow=dict(pairs=[('#D8DDEE', '#ECEEF5')]),
+)
+_OAT_PAPER = dict(
+    floor=dict(pairs=[('#E2CAAB', '#EEDBC2')], ang=[24]),
+    wall=dict(pairs=[('#F4EDE2', '#E1E7D7'), ('#EEE5D6', '#F7F2EA'), ('#E5EADB', '#F3E8DB')], span=0.7),
+    ceil=dict(pairs=[('#EEE9E0', '#F6F2EA')]),
+    furn=dict(pairs=[('#EADAC1', '#F6EDE0'), ('#E1D1BB', '#F0DFD4'), ('#DADFCC', '#F2EBDF')], span=0.6),
+    unit=dict(pairs=[('#B2442A', '#E88A5A'), ('#9C3922', '#D9A15E'), ('#C8553A', '#F2A98A')], span=0.75),
+    mech=dict(pairs=[('#F2EEE6', '#E6E2D9')]),
+    stow=dict(pairs=[('#DDD6C8', '#EDE7DC')]),
+)
+_BUTTER_PAPER = dict(
+    floor=dict(pairs=[('#F8ECD0', '#F6DFDD')], ang=[24]),
+    wall=dict(pairs=[('#FFF7E6', '#F8E1E1'), ('#FAEED3', '#FFFAF0'), ('#F5E4E6', '#FCF1DA')], span=0.7),
+    ceil=dict(pairs=[('#FBF3E6', '#FFF9EF')]),
+    furn=dict(pairs=[('#F5E1BF', '#FDF4E6'), ('#F3D4D4', '#FCF1E4'), ('#F8E9C6', '#F2D1DA')], span=0.6),
+    unit=dict(pairs=[('#B61D54', '#F27A9B'), ('#8A1440', '#E24C76'), ('#C82A5E', '#FF9E7A')], span=0.75),
+    mech=dict(pairs=[('#FFF9EE', '#F4EBDD')]),
+    stow=dict(pairs=[('#EEE2CC', '#F8F1E2')]),
+)
+PALETTES.update({
+    'c_dusk': _collage('n_dusk', _DUSK_PAPER, _MIX),
+    'c_lilac': _collage('n_lilac', _LILAC_PAPER, _MIX),
+    'c_blue': _collage('field_blue', _BLUE_PAPER, _MIX, grain=0.4, paper_grain=0.45),
+    'c_oat': _collage('n_oat', _OAT_PAPER, _MIX),
+    'c_butter': _collage('n_butter', _BUTTER_PAPER, _MIX),
+})
+
 HM = 1.70
 UP = np.array([0.0, 0.0, 1.0])
 WALL_T = 0.24

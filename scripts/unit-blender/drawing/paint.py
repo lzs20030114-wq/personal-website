@@ -29,6 +29,7 @@ fx 里每一类面给一个「色」，色可以是：
             shift 是这一版相对线稿错开的像素（终稿），就是孔版印刷对不准的那几毫米
   shadow  ：给了就不再画排线的影子，影子改由 plates 里 what='shadow' 那一版画
   cut     ：剖切面的色（同上的写法），用图案填进剖切面的外形
+  pieces  ：拼贴式的渐变（2026-11-21）：每块东西当成从一张渐变纸上剪下来的，方向按块随机、和光无关，见 _piece_layer
 """
 import base64, io, math
 import numpy as np
@@ -305,6 +306,8 @@ def paint(buf, cls_of, role_of, fx, pal, masks, seed=11, scene=None):
 
     if lit:
         img = _light_layer(img, ctx, fx, pal, cls_px, names, masks, nrm, nok, scene or {}, seed)
+    if fx.get('pieces'):
+        img = _piece_layer(img, ctx, fx, pal, cls_of, masks, seed)
 
     # ---- 油墨颗粒：只给上了颜色的面，颜色越深越看得出；纸色的墙和地面几乎不受影响
     g = float(fx.get('grain', 0))
@@ -481,6 +484,129 @@ def _light_layer(img, ctx, fx, pal, cls_px, names, masks, nrm, nok, scene, seed)
             rgb = mul(rgb, ak * ao[idx])
     img = img.copy()
     img[idx] = np.clip(rgb, 0, 1)
+    return img
+
+
+def _h(oid, k, seed):
+    """每一块、每一项一个固定的随机数（0–1），同一张图每次出来都一样"""
+    x = (int(oid) * 2654435761 + int(k) * 40503 + int(seed) * 97) & 0xFFFFFFFF
+    x ^= x >> 15; x = (x * 2246822519) & 0xFFFFFFFF; x ^= x >> 13; x = (x * 3266489917) & 0xFFFFFFFF; x ^= x >> 16
+    return x / 4294967295.0
+
+
+def _piece_layer(img, ctx, fx, pal, cls_of, masks, seed):
+    """拼贴式的渐变（第四轮之三，2026-11-21）：每个物体当成从一张渐变纸上剪下来的一块。
+
+    渐变是这张纸自己的颜色，和光、朝向、体积都没有关系：一块里所有的面同一道渐变（不分朝上朝侧），
+    方向按块随机，只取渐变纸上的一段；同一类东西可以从同一张大纸上剪（sheet）。没有影子。
+    fx['pieces'] = {类别: dict(pairs=[(色0, 色1), …], ang=[角度…], span=最短取多长 0–1, sheet=False,
+                               grain=颗粒 0–1, steps=色带档数, tex=None|'ht'|'mottle', shift=错开多少像素（终稿）, edge=纸边宽（终稿像素）)}
+    类别：floor / wall / ceil / furn / unit / mech / stow。纸边和错开露出的缝用 fx['gap']（默认房间的纸色）。"""
+    from scipy import ndimage
+    spec_all = fx['pieces']
+    buf = ctx.buf
+    ids = buf.ids
+    H, W = ids.shape
+    ss, kq = ctx.ss, getattr(ctx, 'kq', 1.0)
+    paper = hex3(fx.get('gap') or pal.get('room', '#FFFFFF'))
+    out = masks['out']
+    lab = np.where((ids >= 0) & (ids < 10000), ids + 1, 0)
+    sl = ndimage.find_objects(lab)
+    items = []
+    for oid, c in cls_of.items():
+        if c not in spec_all or oid >= len(sl) or sl[oid] is None:
+            continue
+        s = sl[oid]
+        m = (ids[s] == oid) & ~out[s]
+        if not m.any():
+            continue
+        d = ctx.dist[s][m]
+        items.append((float(np.nanmean(d)) if np.isfinite(d).any() else 0.0, oid, c, s, m))
+    if not items:
+        return img
+    img = img.copy()
+    # 一张图共用的颗粒（终稿一个像素一粒）
+    rng = np.random.default_rng(seed + 77)
+    g0 = rng.random((H // ss + 2, W // ss + 2)).astype(np.float32)
+    grain = np.repeat(np.repeat(g0, ss, 0), ss, 1)[:H, :W]
+    # 同一张大纸剪的那几类：先求整类的外框
+    sheet_box = {}
+    for _, oid, c, s, m in items:
+        if spec_all[c].get('sheet'):
+            y0, y1, x0, x1 = s[0].start, s[0].stop, s[1].start, s[1].stop
+            b = sheet_box.get(c)
+            sheet_box[c] = (y0, y1, x0, x1) if b is None else (min(b[0], y0), max(b[1], y1), min(b[2], x0), max(b[3], x1))
+    # 错开会露出底下的纸：先把这些块的位置铺成纸色
+    for _, oid, c, s, m in items:
+        if spec_all[c].get('shift'):
+            img[s][m] = paper
+    # 远的先贴、近的后贴：错开以后近的盖在远的上面
+    for d, oid, c, s, m in sorted(items, key=lambda t: -t[0]):
+        sp = spec_all[c]
+        pairs = sp.get('pairs') or [(pal.get(c, '#888888'),) * 2]
+        k = int(_h(oid, 1, seed) * len(pairs)) % len(pairs)
+        c0, c1 = pairs[k]
+        angs = sp.get('ang')
+        if sp.get('sheet'):
+            ang = (angs or [30])[0]
+        elif angs:
+            ang = angs[int(_h(oid, 2, seed) * len(angs)) % len(angs)]
+        else:
+            ang = _h(oid, 2, seed) * 360
+        sh = float(sp.get('shift', 0)) * ss * kq
+        dx = int(round((_h(oid, 3, seed) * 2 - 1) * sh)); dy = int(round((_h(oid, 4, seed) * 2 - 1) * sh))
+        pad = max(abs(dx), abs(dy)) + 2
+        y0, y1, x0, x1 = s[0].start, s[0].stop, s[1].start, s[1].stop
+        Y0, Y1, X0, X1 = max(0, y0 + dy), min(H, y1 + dy), max(0, x0 + dx), min(W, x1 + dx)
+        if Y1 <= Y0 or X1 <= X0:
+            continue
+        mm = m[(Y0 - dy - y0):(Y1 - dy - y0), (X0 - dx - x0):(X1 - dx - x0)]
+        win = (slice(Y0, Y1), slice(X0, X1))
+        Yg, Xg = np.mgrid[Y0:Y1, X0:X1].astype(np.float32)
+        if sp.get('sheet'):
+            by0, by1, bx0, bx1 = sheet_box[c]
+            by0 += dy; by1 += dy; bx0 += dx; bx1 += dx
+        else:
+            by0, by1, bx0, bx1 = y0 + dy, y1 + dy, x0 + dx, x1 + dx
+        a = math.radians(ang)
+        ca, sa = math.cos(a), -math.sin(a)                # 角度 0 = 从左到右，90 = 从下到上
+        proj = (Xg - bx0) * ca + (Yg - by0) * sa
+        corners = [(0, 0), (bx1 - bx0, 0), (0, by1 - by0), (bx1 - bx0, by1 - by0)]
+        cp = [cx * ca + cy * sa for cx, cy in corners]
+        t = (proj - min(cp)) / max(max(cp) - min(cp), 1.0)
+        span = float(sp.get('span', 1.0))
+        if span < 1.0 and not sp.get('sheet'):
+            L = span + (1 - span) * _h(oid, 5, seed)
+            lo = (1 - L) * _h(oid, 6, seed)
+            t = lo + t * L
+        if sp.get('flip') and _h(oid, 7, seed) < 0.5:
+            t = 1 - t
+        g = float(sp.get('grain', 0))
+        if g > 0:
+            t = t + (grain[win] - 0.5) * g
+            t = (t - 0.5) * (1 + 3 * g) + 0.5
+        t = np.clip(t, 0, 1)
+        n = int(sp.get('steps', 0))
+        if n > 1:
+            t = np.floor(np.clip(t, 0, 0.9999) * n) / (n - 1)
+        tex = sp.get('tex')
+        if tex == 'ht':
+            cell, hang = sp.get('ht', (4.0, 45))
+            dots = halftone(t, cell * ss * kq, hang, Xg, Yg)
+            col = mix(c0, c1, dots)
+        else:
+            col = mix(c0, c1, t)
+            if tex == 'mottle':
+                cl = value_noise(Y1 - Y0, X1 - X0, 0.06 * W, seed=int(_h(oid, 8, seed) * 9999), octaves=3)
+                lab_ = to_lab(col)
+                lab_[..., 0] += float(sp.get('mottle', 0.05)) * (cl - 0.5)
+                col = from_lab(lab_)
+        e = float(sp.get('edge', 0)) * ss * kq
+        if e >= 0.5:
+            inner = ndimage.binary_erosion(mm, iterations=max(1, int(round(e))))
+            col = np.where((mm & ~inner)[..., None], paper[None, None, :], col)
+        sub = img[win]
+        sub[mm] = col[mm]
     return img
 
 
