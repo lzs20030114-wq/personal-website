@@ -5,7 +5,7 @@ import { FRAMES, TrajectoryBaker, UNITS_PER_M, UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, U
 import { SOLID } from './skin-solid';
 import { planLayout } from './unit-activation';
 import { RING } from './skin-ring';
-import { GIVE, TOPS, catRingAngle, ringSpot, UPPER_ABOVE, VIGNETTES, VignetteSim, catAt, keysAt, pathAt, unitRamp, vignetteLayout, vignetteScript } from './cohabit-vignette';
+import { GIVE, TOPS, catRingAngle, ringSpot, UPPER_ABOVE, STILL_SCENES, VIGNETTES, VignetteSim, catAt, keysAt, pathAt, unitRamp, vignetteLayout, vignetteScript } from './cohabit-vignette';
 import { RING_SIDE, TABLE_TOP } from './cohabit-solid';
 
 const BANDS = COHABIT.FACES.BANDS;
@@ -337,5 +337,27 @@ describe('cohabit-vignette · 人和猫不撞', () => {
     const guide = vignetteScript('guide');
     const gt = guide.units.find((u) => u?.design.role === 'table')!;
     expect(keysAt(gt.deg, guide.people[0].sit![0])).toBe(1);
+  });
+});
+
+describe('cohabit-vignette · 只用于出静帧的场景（2026-11-23）', () => {
+  it('不在 Lab 2-16 的列表里，键只含小写字母与数字（哈希认得）', () => {
+    for (const v of STILL_SCENES) {
+      expect(VIGNETTES.map((x): string => x.key)).not.toContain(v.key);
+      expect(v.key).toMatch(/^[a-z][a-z0-9]*$/);
+      expect(vignetteScript(v.key).n).toBe(v.n);
+    }
+  });
+
+  it('stillguide：桌子与猫的第一步都在坐下那一刻才开始落，猫等着的时候坐着', () => {
+    const s = vignetteScript('stillguide');
+    const sit = s.people[0].sit![0];
+    const down = s.units.filter((u) => u && keysAt(u.deg, sit + 1) > 0);
+    expect(down.length).toBe(2);
+    for (const u of s.units) if (u) expect(keysAt(u.deg, sit - 0.01)).toBe(0);
+    expect(catAt(s.cats[0], sit).state).toBe('sit');
+    // 其余与 guide 同一条路、同一组形
+    const g = vignetteScript('guide');
+    expect(s.units.map((u) => u?.design.role ?? null)).toEqual(g.units.map((u) => u?.design.role ?? null));
   });
 });

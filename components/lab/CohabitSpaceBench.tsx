@@ -18,7 +18,7 @@ import { OrbitCamera } from '../../src/lib/linkage/camera3d';
 import type { Vec3 } from '../../src/lib/linkage/solver3d';
 import { COHABIT_BAKE_URL, unpackTrajectories } from '../../src/lib/space/cohabit-bake-format';
 import { fetchMeshBuffer, forgetMeshBuffer } from '../../src/lib/linkage/mesh-fetch';
-import { VIGNETTES, VignetteSim, vignetteLayout, vignetteScript, type SpaceSimLike, type VignetteKey } from '../../src/lib/space/cohabit-vignette';
+import { STILL_SCENES, VIGNETTES, VignetteSim, vignetteLayout, vignetteScript, type SpaceSimLike, type VignetteKey } from '../../src/lib/space/cohabit-vignette';
 import { DESIGN, SOURCES, formText, roleName, type Source, type UnitDesign } from '../../src/lib/space/cohabit-design';
 import { logicalToCss, projectLogical } from '../../src/lib/linkage/machine-behavior';
 import { ruleReadout, unitReasons, type RuleHit, type RuleRow } from '../../src/lib/space/cohabit-reasons';
@@ -345,7 +345,7 @@ export function CohabitSpaceBench({
     const preset = vignette ? null : (planFromHash('2-15', SPACE_MODES.map((m) => m.key)) as SpaceMode | null);
     let spaceKey: SpaceMode = preset ?? 'live';
     if (preset) setSpace(preset);
-    const vigPreset = vignette ? (planFromHash('2-16', VIGNETTES.map((v) => v.key)) as VignetteKey | null) : null;
+    const vigPreset = vignette ? (planFromHash('2-16', [...VIGNETTES, ...STILL_SCENES].map((v) => v.key)) as VignetteKey | null) : null;
     let vigKeyNow: VignetteKey = vigPreset ?? 'guide';
     if (vigPreset) setVigKey(vigPreset);
     let seed = SCENE.seed;
@@ -1339,7 +1339,7 @@ export function CohabitSpaceBench({
   }, []);
 
   const vt = VIG_COPY[lang];
-  const vigMeta = VIGNETTES.find((v) => v.key === vigKey)!;
+  const vigMeta = [...VIGNETTES, ...STILL_SCENES].find((v) => v.key === vigKey)!;
   // 小样的标签与图例：每台在这件事里做什么、成什么形、用上了哪几台研究（形由 cohabit-design 给，见 cohabit-vignette）
   const vigTags = useMemo(() => {
     if (!vignette) return [];

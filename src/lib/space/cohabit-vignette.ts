@@ -244,7 +244,7 @@ export function seatPoints(specs: readonly FurnSpec[]): SimSeat[] {
  * （桌子 / 路上的一步 / 座位前方那台 / 站桌 / 接上邻台 / 合腔 / 先低后高 / 让路），再由它按之前的研究给形，并记下用上了哪几台研究
  * （design.uses），台架按它挂标签、列图例。脚本只管人、猫与时刻。
  */
-export type VignetteKey = 'guide' | 'tea' | 'cavity' | 'counter' | 'step' | 'giveway';
+export type VignetteKey = 'guide' | 'tea' | 'cavity' | 'counter' | 'step' | 'giveway' | 'stillguide';
 export const VIGNETTES = [
   { key: 'guide', n: 3, zh: '坐下，把地上的猫引过来', en: 'Sitting down draws a cat up from the floor' },
   { key: 'tea', n: 3, zh: '茶几兼猫台', en: 'Coffee table and cat shelf' },
@@ -252,6 +252,13 @@ export const VIGNETTES = [
   { key: 'counter', n: 2, zh: '站桌下给猫一层', en: 'A shelf under the standing counter' },
   { key: 'step', n: 2, zh: '先低后高', en: 'Low half, then high half' },
   { key: 'giveway', n: 2, zh: '交叉点让路', en: 'Giving way at a crossing' },
+] as const satisfies readonly { key: VignetteKey; n: number; zh: string; en: string }[];
+/**
+ * 只用来出静帧线稿的场景（scripts/moments，2026-11-23）：不进 Lab 2-16 的按钮与差分清单，用 /lab#lab2-16-<键> 打开。
+ * 与上面六个的差别是时刻照规则文档排（项目二_输入到输出的规则.md §4、§5），不为演示好看挪先后。
+ */
+export const STILL_SCENES = [
+  { key: 'stillguide', n: 3, zh: '坐下那一刻桌子落下，同时给地上的猫落第一步', en: 'On sitting, the table comes down and the first step is laid for the cat' },
 ] as const satisfies readonly { key: VignetteKey; n: number; zh: string; en: string }[];
 
 /** 3×3 / 2×2 的格心坐标（行优先，与 vignetteLayout 同序） */
@@ -275,7 +282,7 @@ const m2 = (v: number): string => v.toFixed(2);
  * 桌子、路上两步、座位前方那台各自的形都是它算的——与 2-15 立体以后要接的是同一个函数。
  * 路在房间中间、下面不压家具，所以第一步低的那一端能落到 0.42 m。
  */
-function guideScript(l: PlanLayout): VignetteScript {
+function guideScript(l: PlanLayout, byRule = false): VignetteScript {
   const n = 3;
   const p = l.pitchM;
   const half = l.roomM / 2;
@@ -311,9 +318,10 @@ function guideScript(l: PlanLayout): VignetteScript {
   const dB = formed[B.i]!;
   const dM = formed[M.i]!;
   // 时刻：桌子先落（2026-11-10 作者「桌子先落」），猫走到了再落下一步（2-14 一次只落一步），身后那台随即收回
-  const tT = 2.5;
-  const sit = tT + RAMP.drop + RAMP.form;
-  const t1 = 13;
+  // byRule（静帧用）：桌子在坐下那一刻落（§5），猫的第一步也在坐下那一步落（§4 ③），猫等着的时候坐着
+  const tT = byRule ? 6 : 2.5;
+  const sit = byRule ? tT : tT + RAMP.drop + RAMP.form;
+  const t1 = byRule ? sit : 13;
   const on1 = t1 + RAMP.drop + RAMP.form + 0.5; // 猫跳上第一步
   const t2 = on1 + 0.5;
   const x2 = t2 + RAMP.drop + RAMP.form + 3; // 走过第一道接缝（第二步成形以后才开始跨，跨 2.5 s）
@@ -332,7 +340,7 @@ function guideScript(l: PlanLayout): VignetteScript {
   const N = -Math.PI / 2;
   const down: [number, number] = [M.x - l.platR - 0.12, M.y];
   const cat: CatBeat[] = [
-    { t: 0, x: catStart.x, y: catStart.y, heading: N, on: [], state: 'lie', h: 0 },
+    { t: 0, x: catStart.x, y: catStart.y, heading: byRule ? E : N, on: [], state: byRule ? 'sit' : 'lie', h: 0 },
     { t: on1 - 3, x: catStart.x, y: catStart.y, heading: E, on: [], state: 'sit', h: 0 },
     { t: on1 - 0.6, x: catStart.x, y: catStart.y, heading: E, on: [], state: 'walk', h: 0 },
     // 跳上第一步低的那一端（西边，0.42 m），沿环的南边走到东边高的那一端
@@ -371,7 +379,7 @@ function guideScript(l: PlanLayout): VignetteScript {
       {
         path: [
           [0, ...enter],
-          [tT - 0.5, ...enter],
+          [byRule ? 1.5 : tT - 0.5, ...enter],
           [sit - 1, ...front],
           [sit, ...front],
           [leave, ...front],
@@ -386,9 +394,16 @@ function guideScript(l: PlanLayout): VignetteScript {
     cats: [cat],
     beats: [
       { t: 0, zh: '猫在地上，房间西边。单元都收在天花板下', en: 'The cat is on the floor by the west wall; every unit is stowed at the ceiling' },
-      { t: tT - 0.5, zh: `一位访客走进来。他要坐的椅子前面那台先落下当桌子（${m2(dT.top)} m）`, en: `A visitor comes in. The unit in front of the chair comes down first as a table (${m2(dT.top)} m)` },
-      { t: sit, zh: '桌子落好了，访客坐下，看着地上的猫', en: 'With the table in place, the visitor sits and watches the cat on the floor' },
-      { t: t1, zh: `空间给猫铺第一步：靠猫那一侧低（${m2(sA.from)} m），朝下一台那侧高（${m2(sA.to)} m）`, en: `The room lays the first step: low on the cat’s side (${m2(sA.from)} m), high toward the next unit (${m2(sA.to)} m)` },
+      ...(byRule
+        ? [
+            { t: 1.5, zh: '一位访客走进来，走向椅子。走着的时候没有单元落下', en: 'A visitor comes in and walks to the chair. Nothing comes down while the visitor is walking' },
+            { t: sit, zh: `访客坐下。这一刻椅子前面那台落下当桌子（${m2(dT.top)} m），同时给地上的猫落第一步`, en: `The visitor sits. At that moment the unit in front of the chair comes down as a table (${m2(dT.top)} m) and the first step is laid for the cat on the floor` },
+          ]
+        : [
+            { t: tT - 0.5, zh: `一位访客走进来。他要坐的椅子前面那台先落下当桌子（${m2(dT.top)} m）`, en: `A visitor comes in. The unit in front of the chair comes down first as a table (${m2(dT.top)} m)` },
+            { t: sit, zh: '桌子落好了，访客坐下，看着地上的猫', en: 'With the table in place, the visitor sits and watches the cat on the floor' },
+          ]),
+      { t: t1 + (byRule ? 0.01 : 0), zh: `空间给猫铺第一步：靠猫那一侧低（${m2(sA.from)} m），朝下一台那侧高（${m2(sA.to)} m）`, en: `The room lays the first step: low on the cat’s side (${m2(sA.from)} m), high toward the next unit (${m2(sA.to)} m)` },
       { t: on1, zh: '猫跳上低的那一端，沿坡走上去', en: 'The cat hops onto the low end and walks up the slope' },
       { t: t2, zh: `第二步落下，在这一台拐向座位，从 ${m2(sB.from)} m 升到 ${m2(sB.to)} m。接缝两边一样高，猫不用跳`, en: `The second step comes down and turns toward the seat, rising from ${m2(sB.from)} to ${m2(sB.to)} m; the seams are level, so the cat need not jump` },
       { t: t3, zh: `最后一台落成两层：下层 ${m2(dM.top)} m，猫坐上去眼睛与坐着的人一样高；上层盖住背向座位的半圈`, en: `The last unit forms two levels: the lower at ${m2(dM.top)} m puts a sitting cat at the visitor’s eye height; the upper covers the half facing away from the seat` },
@@ -744,7 +759,7 @@ function stepScript(l: PlanLayout): VignetteScript {
 }
 
 export function vignetteScript(key: VignetteKey): VignetteScript {
-  const n = VIGNETTES.find((v) => v.key === key)!.n;
+  const n = [...VIGNETTES, ...STILL_SCENES].find((v) => v.key === key)!.n;
   const l = vignetteLayout(n);
   switch (key) {
     case 'guide':
@@ -759,6 +774,8 @@ export function vignetteScript(key: VignetteKey): VignetteScript {
       return stepScript(l);
     case 'giveway':
       return givewayScript(l);
+    case 'stillguide':
+      return guideScript(l, true);
   }
 }
 
