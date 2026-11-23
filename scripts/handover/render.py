@@ -51,14 +51,15 @@ def fit_cam(verts, az, el, W, H, margin=0.06, pad_px=None):
     center = cx * r + cy * u + cz * f
     return Cam(az, el, W, H, s, center)
 
-def render(items, cam, ss=2, crease_deg=32, light=(0.35, -0.55, 0.75), bg=(255, 255, 255),
-           line_w=1.0, shade=True):
-    """items: [(verts N×3, tris M×3, fill RGB, part_key[, ink RGB])]。返回 PIL.Image（RGB）。"""
+def buffers(items, cam, ss=2, crease_deg=32, depth_tol=2.5):
+    """光栅化 + 找线，不上色：返回 dict（都是 ss 倍分辨率的 H×W 数组）。
+    hit 有没有东西 · part 件号（-1 = 背景）· n 朝相机的法向 · edge 轮廓与深度跳变 · crease 折痕 · inks 各件墨色 · sc 这一分辨率的相机。
+    render() 用它上色；别的出图脚本（scripts/moments/line.py）拿它自己合成黑白线稿。depth_tol 的单位随模型（交接图册是 mm）。"""
     W, H = cam.W * ss, cam.H * ss
     sc = Cam.__new__(Cam); sc.__dict__.update(cam.__dict__); sc.W, sc.H, sc.s = W, H, cam.s * ss
-    tri_xyz, face_n, face_part, fills, inks = [], [], [], [], []
+    tri_xyz, face_n, face_part, inks = [], [], [], []
     for pi, it in enumerate(items):
-        v, t, fill = it[0], it[1], it[2]
+        v, t = it[0], it[1]
         inks.append(it[4] if len(it) > 4 and it[4] is not None else tuple(INK))
         q = sc.proj(v).astype(np.float32)
         tri_xyz.append(q[t].reshape(-1, 9))
@@ -66,7 +67,6 @@ def render(items, cam, ss=2, crease_deg=32, light=(0.35, -0.55, 0.75), bg=(255, 
         n = np.cross(a, b); ln = np.linalg.norm(n, axis=1, keepdims=True); ln[ln == 0] = 1
         face_n.append(n / ln)
         face_part.append(np.full(len(t), pi, np.int32))
-        fills.append(fill)
     tri_xyz = np.ascontiguousarray(np.vstack(tri_xyz), np.float32)
     face_n = np.vstack(face_n); face_part = np.concatenate(face_part)
     ids = np.arange(len(tri_xyz), dtype=np.int32)
@@ -81,6 +81,38 @@ def render(items, cam, ss=2, crease_deg=32, light=(0.35, -0.55, 0.75), bg=(255, 
     vdir = -sc.f
     nd = n @ vdir
     n = np.where((nd < 0)[..., None], -n, n)
+    # ---- 线
+    zf = np.where(hit, zb, 1e9)
+    edge = np.zeros((H, W), bool); crease = np.zeros((H, W), bool)
+    cosc = math.cos(math.radians(crease_deg))
+    for dy, dx in ((0, 1), (1, 0), (1, 1), (1, -1)):
+        p2 = _nb(part, dy, dx, -1); z2 = _nb(zf, dy, dx, 1e9); n2 = _nb(n, dy, dx, 0.0)
+        diff_part = (p2 != part)
+        e = diff_part & (hit | (p2 >= 0))
+        jump = (~diff_part) & hit & (np.abs(z2 - zf) > depth_tol)  # 同一件内的遮挡跳变
+        dot = np.sum(n * n2, axis=-1)
+        cr = (~diff_part) & hit & (dot < cosc) & ~jump
+        edge |= e | jump
+        crease |= cr
+    return dict(hit=hit, part=part, n=n, edge=edge, crease=crease, inks=inks, sc=sc, W=W, H=H)
+
+def _nb(a, dy, dx, fillv):
+    """整幅平移一格（取邻居），移出去的边填 fillv"""
+    H, W = a.shape[:2]
+    out = np.full_like(a, fillv)
+    ys = slice(max(dy, 0), H + min(dy, 0)); yd = slice(max(-dy, 0), H + min(-dy, 0))
+    xs = slice(max(dx, 0), W + min(dx, 0)); xd = slice(max(-dx, 0), W + min(-dx, 0))
+    out[yd, xd] = a[ys, xs]
+    return out
+
+def render(items, cam, ss=2, crease_deg=32, light=(0.35, -0.55, 0.75), bg=(255, 255, 255),
+           line_w=1.0, shade=True):
+    """items: [(verts N×3, tris M×3, fill RGB, part_key[, ink RGB])]。返回 PIL.Image（RGB）。"""
+    B = buffers(items, cam, ss, crease_deg)
+    hit, part, n, edge, crease, inks = B['hit'], B['part'], B['n'], B['edge'], B['crease'], B['inks']
+    W, H = B['W'], B['H']
+    nb = _nb
+    fills = [it[2] for it in items]
     L = np.array(light, float); L /= np.linalg.norm(L)
     lam = np.clip(n @ L, 0, 1)
     col = np.array(fills, np.float32)[np.where(hit, part, 0)]
@@ -90,26 +122,6 @@ def render(items, cam, ss=2, crease_deg=32, light=(0.35, -0.55, 0.75), bg=(255, 
     else:
         img = col
     img = np.where(hit[..., None], img, np.array(bg, np.float32))
-    # ---- 线
-    def nb(a, dy, dx, fillv):
-        out = np.full_like(a, fillv)
-        ys = slice(max(dy, 0), H + min(dy, 0)); yd = slice(max(-dy, 0), H + min(-dy, 0))
-        xs = slice(max(dx, 0), W + min(dx, 0)); xd = slice(max(-dx, 0), W + min(-dx, 0))
-        out[yd, xd] = a[ys, xs]
-        return out
-    zf = np.where(hit, zb, 1e9)
-    edge = np.zeros((H, W), bool); crease = np.zeros((H, W), bool)
-    cosc = math.cos(math.radians(crease_deg))
-    depth_tol = 2.5  # mm：同一件内的遮挡跳变
-    for dy, dx in ((0, 1), (1, 0), (1, 1), (1, -1)):
-        p2 = nb(part, dy, dx, -1); z2 = nb(zf, dy, dx, 1e9); n2 = nb(n, dy, dx, 0.0)
-        diff_part = (p2 != part)
-        e = diff_part & (hit | (p2 >= 0))
-        jump = (~diff_part) & hit & (np.abs(z2 - zf) > depth_tol)
-        dot = np.sum(n * n2, axis=-1)
-        cr = (~diff_part) & hit & (dot < cosc) & ~jump
-        edge |= e | jump
-        crease |= cr
     if line_w > 1:
         from PIL import ImageFilter
         em = Image.fromarray((edge * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(3))
