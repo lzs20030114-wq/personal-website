@@ -480,6 +480,49 @@ PALETTES.update({
     'r_lilac': _collage('n_lilac', _pos_rule(paper=_LILAC_ONE), _ONE),
 })
 
+# ---- 相邻色（2026-11-23，作者「配色如果不是撞色呢，比如用色环的相邻色」）：仍用 R3 跟着位置走，
+# 整张图只用色环上相邻的一段色相（约 60–90°），屋外的底、线、房间、单元都在这一段里；
+# 层次不靠色相对比，靠深浅和浓淡：房间最浅最灰，家具浅一档，单元最深最浓，线是这一段里最深的颜色。
+def _ana(g0, g1, ink, cut, sky, far, tex, uline, papers):
+    base = _pal(paper=g1, room=papers['wall']['pairs'][0][0], floor=papers['floor']['pairs'][0][0], sky=sky, ink=ink,
+                far=far, tex=tex, unit_line=uline, unit=papers['unit']['pairs'][0][0], furn=papers['furn']['pairs'][0][0],
+                cut=cut, stow=papers['stow']['pairs'][0][0],
+                fx=dict(ground=('y', g0, g1), cut=('y', cut, cut), grain=0.5, paper_grain=0.5))
+    return _collage(base, _pos_rule(paper=papers), _ONE)
+
+
+def _paper7(floor, wall, ceil, furn, unit, mech, stow):
+    return dict(floor=dict(pairs=[floor]), wall=dict(pairs=[wall]), ceil=dict(pairs=[ceil]), furn=dict(pairs=[furn]),
+                unit=dict(pairs=[unit]), mech=dict(pairs=[mech]), stow=dict(pairs=[stow]))
+
+
+PALETTES.update({
+    # P6 暖：黄 → 橙 → 红
+    'a_warm': _ana('#F6CB80', '#E8854F', '#5A1E0E', '#4A180C', '#F9DDB8', '#B07A62', '#D9A98E', '#7A1F0F',
+                   _paper7(('#FBEFD6', '#F8DCCB'), ('#FCF2DC', '#F9DFD0'), ('#FCF4E4', '#FAE6DA'), ('#F6DDB0', '#F2C3AE'),
+                           ('#F5A21B', '#D93A1E'), ('#FFF8EC', '#FCEDE4'), ('#F5E2C6', '#F1D2C2'))),
+    # P7 冷：青绿 → 蓝
+    'a_cool': _ana('#A6DAD3', '#4774C2', '#0F2E4A', '#0B2238', '#C7E6EC', '#6F93A8', '#9DBACB', '#0B2A55',
+                   _paper7(('#E3F3EE', '#E0E8F6'), ('#E9F6F2', '#E5ECF8'), ('#EEF7F5', '#EBF0F9'), ('#C7E6DE', '#C6D5F0'),
+                           ('#11A38C', '#1F4FD6'), ('#F5FBF9', '#F1F5FC'), ('#D5EAE5', '#D3DDF0'))),
+    # P8 紫 → 品红 → 粉
+    'a_magenta': _ana('#CDB0EE', '#EE9FC2', '#3A1240', '#2C0C31', '#E3CFF2', '#9E7FA8', '#C3A8CB', '#4A1050',
+                      _paper7(('#EFE6F7', '#F8E3EC'), ('#F2EAF9', '#FAE8EF'), ('#F5EFFA', '#FBEEF2'), ('#DCCBF1', '#F3CBDC'),
+                              ('#7A3BE0', '#E0337E'), ('#FAF7FC', '#FDF4F7'), ('#E4D8F0', '#F1DAE3'))),
+    # P9 黄绿 → 绿 → 青
+    'a_green': _ana('#D3E592', '#55A891', '#173826', '#10291C', '#DDEDC0', '#7E9A84', '#A7BCA9', '#123F2A',
+                    _paper7(('#F1F5DD', '#DFF1EA'), ('#F4F7E4', '#E5F4EE'), ('#F6F8EA', '#EAF5F1'), ('#DCE8B4', '#BFE2D3'),
+                            ('#8DBE1A', '#0E8F78'), ('#FAFBF2', '#F2F9F6'), ('#E4EBCB', '#D2E6DD'))),
+    # P10 蓝 → 靛 → 紫
+    'a_violet': _ana('#AEBDF2', '#7C61C9', '#1A1650', '#120F3B', '#CFD8F6', '#7F80B4', '#A8A8D2', '#151A6E',
+                     _paper7(('#E6ECFA', '#ECE5F8'), ('#EAEFFB', '#EFE9F9'), ('#EFF2FC', '#F2EEFA'), ('#CBD6F4', '#D8CAF1'),
+                             ('#2453E6', '#7C3FE4'), ('#F6F8FE', '#F7F4FD'), ('#D8DFF3', '#DFD6F0'))),
+    # P11 赭 → 赤陶 → 玫瑰棕（浓度压低的一段暖色）
+    'a_earth': _ana('#DCBE92', '#BA7862', '#3E2418', '#2E1A11', '#EAD8C2', '#A3826F', '#C8AE9C', '#5A2A18',
+                    _paper7(('#F2E7D3', '#F0DED6'), ('#F6EEE0', '#F3E4DD'), ('#F7F1E6', '#F5EAE4'), ('#E6D2B0', '#E3C3B6'),
+                            ('#C98A2E', '#A8432E'), ('#FBF7F0', '#F9F2EE'), ('#E9DCC6', '#E6D2CA'))),
+})
+
 HM = 1.70
 UP = np.array([0.0, 0.0, 1.0])
 WALL_T = 0.24
