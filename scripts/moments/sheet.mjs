@@ -65,7 +65,7 @@ const html = `<!doctype html><meta charset="utf-8"><style>
 </style>
 ${rows.map((r) => `<section><div class="rule"><div><div class="no mono">${r.no}</div><h2>${r.title}</h2></div><dl><dt class="mono">理解</dt><dd>${r.judge}</dd></dl>${r.count ? `<dl><dt class="mono">实跑 30 分钟</dt><dd>${r.count}</dd></dl>` : '<span></span>'}</div>
 <div class="row">${r.panels.map((p, i) => `<figure><img src="${uri(p.img)}">${keyplan(side(p.img))}<figcaption><b><i class="mono">${String(i + 1).padStart(2, '0')}</i>${p.stage}</b>${p.cap}</figcaption></figure>`).join('')}</div></section>`).join('')}
-<footer><span><i class="sw" style="background:${MID};border:1.5px solid ${INK}"></i>触发的人或猫</span><span><i class="sw" style="background:${TONE};border:1.5px solid ${INK}"></i>被调动的单元（让路时是收回的带）</span><span><i class="sw" style="border:1px solid ${MID}"></i>其余落着的单元</span><span><i class="sw" style="border-top:1.5px dashed ${INK};height:0"></i>视线</span><span>地面一格 0.83 m。单元平时收在天花板下，画面只取到 2.4 m 高</span></footer>`;
+<footer><span><i class="sw" style="background:${MID};border:1.5px solid ${INK}"></i>触发的人或猫</span><span><i class="sw" style="background:${TONE};border:1.5px solid ${INK}"></i>被调动的单元（让路时是收回的带）</span><span><i class="sw" style="border:1px solid ${MID}"></i>其余落着的单元</span><span><i class="sw" style="border-top:1.5px dashed ${INK};height:0"></i>视线</span><span><i class="sw" style="border:1.5px dashed ${INK}"></i>本来要落、没有落的台</span><span>地面一格 0.83 m。单元平时收在天花板下，画面只取到 2.4 m 高</span></footer>`;
 const br = await chromium.launch();
 const pg = await br.newPage({ viewport: { width: 1200, height: 900 }, deviceScaleFactor: Number(width) / 1200 });
 await pg.setContent(html);

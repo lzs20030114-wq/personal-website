@@ -244,7 +244,7 @@ export function seatPoints(specs: readonly FurnSpec[]): SimSeat[] {
  * （桌子 / 路上的一步 / 座位前方那台 / 站桌 / 接上邻台 / 合腔 / 先低后高 / 让路），再由它按之前的研究给形，并记下用上了哪几台研究
  * （design.uses），台架按它挂标签、列图例。脚本只管人、猫与时刻。
  */
-export type VignetteKey = 'guide' | 'tea' | 'cavity' | 'counter' | 'step' | 'giveway' | 'stillguide';
+export type VignetteKey = 'guide' | 'tea' | 'cavity' | 'counter' | 'step' | 'giveway' | 'stillguide' | 'stillwatch' | 'stillhead' | 'stillcorner';
 export const VIGNETTES = [
   { key: 'guide', n: 3, zh: '坐下，把地上的猫引过来', en: 'Sitting down draws a cat up from the floor' },
   { key: 'tea', n: 3, zh: '茶几兼猫台', en: 'Coffee table and cat shelf' },
@@ -259,6 +259,9 @@ export const VIGNETTES = [
  */
 export const STILL_SCENES = [
   { key: 'stillguide', n: 3, zh: '坐下那一刻桌子落下，同时给地上的猫落第一步', en: 'On sitting, the table comes down and the first step is laid for the cat' },
+  { key: 'stillwatch', n: 3, zh: '站着看猫满 3 秒，猫旁边朝人的一台落下；猫换台，要去的台先落', en: 'Three seconds of standing and watching lowers a unit beside the cat; when the cat moves on, its target comes down first' },
+  { key: 'stillhead', n: 3, zh: '猫要去的台在坐着的人头顶上方：不落', en: 'The cat’s target is over a seated visitor’s head: it stays up' },
+  { key: 'stillcorner', n: 3, zh: '猫要去的台的角会碰到站着的人：暂不落', en: 'A corner of the cat’s target would touch a standing visitor: it waits' },
 ] as const satisfies readonly { key: VignetteKey; n: number; zh: string; en: string }[];
 
 /** 3×3 / 2×2 的格心坐标（行优先，与 vignetteLayout 同序） */
@@ -758,6 +761,181 @@ function stepScript(l: PlanLayout): VignetteScript {
   };
 }
 
+// ── 只用于出静帧的三个场景（STILL_SCENES）：时刻照规则文档 §4、§5 排 ──────────────────────────
+/** 开场就落着、t1 开始收的那台（猫离开后收回） */
+function heldUntil(t1: number): Keys {
+  return [[0, 1], [t1, 1], [t1 + RAMP.unform, COHABIT.WALL_AT], [t1 + RAMP.unform + RAMP.hoist, 0]];
+}
+/** 猫从 A 台跨到相邻的 B 台（两台一样高）：t 起跨 2.5 s，落在 B 上朝 A 的那一侧 */
+function crossBeats(A: { i: number; x: number; y: number }, B: { i: number; x: number; y: number }, dB: UnitDesign, t: number): CatBeat[] {
+  const dir = Math.atan2(B.y - A.y, B.x - A.x);
+  return [
+    { t, x: A.x, y: A.y, heading: dir, on: [A.i, B.i], state: 'walk', h: dB.top },
+    { t: t + 2.5, x: B.x, y: B.y, heading: dir, on: [A.i, B.i], state: 'walk', h: dB.top },
+    onRing(B, dB, dir + Math.PI, t + 2.6, 'walk', dir),
+  ];
+}
+/** 没有人引猫时的读数：三个场景里猫待的台都按「猫待着」定形（1.05 m 的平台），站着给的一步按 offer */
+function restSnap(l: PlanLayout, n: number, rects: FurnRect[], seats: SimSeat[], guides: DesignSim['guides'], home: number, table = -1, seated = false): DesignSim {
+  const tableBy = new Array<number>(n * n).fill(-1);
+  if (table >= 0) tableBy[table] = 0;
+  return { layout: l, tableBy, furn: { rects }, seats, people: [{ id: 0, seated, seat: seated ? 0 : null }], cats: [{ id: 0, unit: l.units[home], state: 'sit', walker: l.units[home] }], guides };
+}
+
+/**
+ * §4 ②：人站着、注视一只在台上不动的猫满 3 s → 猫的相邻台里离这人最近、比猫更近的一台落下；
+ * §4 ⑤：猫有了新的目标台 → 目标台先落，猫随后移过去；猫离开的台收回。
+ */
+function watchStill(l: PlanLayout): VignetteScript {
+  const n = 3;
+  const p = l.pitchM;
+  const half = l.roomM / 2;
+  const H = cell(n, p, 0, 0); // 猫待的台
+  const O = cell(n, p, 1, 0); // 站着给的一步
+  const N = cell(n, p, 1, 1); // 猫后来要去的台
+  const stand: [number, number] = [p / 2, p / 2]; // 过道交叉点（不挨着要落的台）
+  const enter: [number, number] = [half + 0.3, p / 2];
+  const snap = restSnap(l, n, [], [], [{ kind: 'stand', person: 0, cat: 0, path: [H.i, O.i] }], H.i);
+  const formed: (UnitDesign | null)[] = new Array(n * n).fill(null);
+  for (const u of [H.i, O.i, N.i]) formed[u] = designUnit(snap, u, formed);
+  const dH = formed[H.i]!, dO = formed[O.i]!, dN = formed[N.i]!;
+  const arrive = 5;
+  const tO = arrive + 3; // 站定注视满 3 s（规则文档 §4 ②）
+  const xO = tO + RAMP.drop + RAMP.form + 1; // 猫跨到给的那台
+  const go = xO + 6; // 人走开
+  const tN = go + 6; // 猫的新目标
+  const xN = tN + RAMP.drop + RAMP.form + 0.5;
+  const toP = (u: { x: number; y: number }) => Math.atan2(stand[1] - u.y, stand[0] - u.x);
+  const units: (UnitScript | null)[] = Array.from({ length: n * n }, () => null);
+  units[H.i] = unitOf(heldUntil(xO + 3.5), dH, 'A');
+  units[O.i] = unitOf(unitRamp(tO, xN + 3.5), dO, 'B');
+  units[N.i] = unitOf(unitRamp(tN), dN, 'C');
+  const cat: CatBeat[] = [
+    onRing(H, dH, toP(H), 0, 'sit', toP(H)),
+    onRing(H, dH, toP(H), xO - 0.1, 'walk', Math.PI / 2),
+    ...crossBeats(H, O, dO, xO),
+    onRing(O, dO, toP(O), xO + 3.4, 'sit', toP(O)),
+    onRing(O, dO, toP(O), xN - 0.1, 'walk', 0),
+    ...crossBeats(O, N, dN, xN),
+    onRing(N, dN, Math.PI / 4, xN + 3.4, 'sit', Math.PI / 4),
+  ];
+  return {
+    n,
+    duration: xN + 12,
+    furniture: [],
+    units,
+    people: [{ path: [[0, ...enter], [1.5, ...enter], [arrive, ...stand], [go, ...stand], [go + 3.5, ...enter], [xN + 12, ...enter]], watch: [[arrive, go, 0]] }],
+    cats: [cat],
+    beats: [
+      { t: 0, zh: '一只猫在一台上坐着', en: 'A cat sits on a unit' },
+      { t: arrive, zh: '一位访客站住，注视这只猫', en: 'A visitor stops and watches the cat' },
+      { t: tO, zh: '注视满 3 s：猫的相邻台里离这位访客最近的一台落下', en: 'After 3 s of watching, the neighbouring unit nearest the visitor comes down' },
+      { t: xO, zh: '猫走不走由猫的规则决定。这一次它走了过去，原来那台收回', en: 'Whether the cat moves is the cat’s rule. This time it crosses, and the unit it left retracts' },
+      { t: tN, zh: '猫有了新的目标台：目标台先落下', en: 'The cat picks a new target: the target comes down first' },
+      { t: xN, zh: '猫移过去，身后那台收回', en: 'The cat moves over and the unit behind it retracts' },
+    ],
+  };
+}
+
+/** §5：要落的台会伸到坐着的人头顶上方 → 不落。猫等不到，另选目标（§4 ⑤：10 s 内上不去另选） */
+function headStill(l: PlanLayout): VignetteScript {
+  const n = 3;
+  const p = l.pitchM;
+  const half = l.roomM / 2;
+  const chair = furnKind({ kind: 'chair', ergo: true });
+  const furniture: FurnSpec[] = [{ kind: 'chair', x: cell(n, p, 2, 2).x, y: half - chair.d / 2 - 0.08, face: [0, -1], ergo: true }];
+  const rects = furniture.map(furnRect);
+  const seats = seatPoints(furniture);
+  const S = seats[0];
+  const tIdx = tableFor(l, rects, seats, S);
+  const T = l.units[tIdx >= 0 ? tIdx : cell(n, p, 1, 2).i];
+  const C = cell(n, p, 2, 1); // 猫待的台
+  const N = cell(n, p, 1, 1); // 另选的目标
+  const snap = restSnap(l, n, rects, seats, [], C.i, T.i, true);
+  const formed: (UnitDesign | null)[] = new Array(n * n).fill(null);
+  for (const u of [T.i, C.i, N.i]) formed[u] = designUnit(snap, u, formed);
+  const dT = formed[T.i]!, dC = formed[C.i]!, dN = formed[N.i]!;
+  const sit = 6;
+  const want = 14; // 猫想去坐着的人头顶上方那台
+  const tN = want + 10; // 10 s 内上不去，另选目标（规则文档 §4 ⑤）
+  const xN = tN + RAMP.drop + RAMP.form + 0.5;
+  const leave = xN + 10;
+  const units: (UnitScript | null)[] = Array.from({ length: n * n }, () => null);
+  units[T.i] = unitOf(unitRamp(sit, leave + 0.5), dT, 'A');
+  units[C.i] = unitOf(heldUntil(xN + 3.5), dC, 'B');
+  units[N.i] = unitOf(unitRamp(tN), dN, 'C');
+  const enter: [number, number] = [half + 0.3, S.y - 0.5];
+  const front: [number, number] = [S.x - 0.05, S.y - 0.4];
+  const cat: CatBeat[] = [
+    onRing(C, dC, Math.PI, 0, 'sit', Math.PI),
+    onRing(C, dC, 0, want, 'sit', 0), // 转到朝那台的一侧等着
+    onRing(C, dC, 0, tN, 'sit', -Math.PI / 2),
+    onRing(C, dC, -Math.PI / 2, xN - 0.1, 'walk', -Math.PI / 2),
+    ...crossBeats(C, N, dN, xN),
+    onRing(N, dN, Math.PI / 4, xN + 3.4, 'sit', Math.PI / 4),
+  ];
+  return {
+    n,
+    duration: leave + 6,
+    furniture,
+    units,
+    people: [{ path: [[0, ...enter], [1.5, ...enter], [sit - 1, ...front], [sit, ...front], [leave, ...front], [leave + 0.5, ...front], [leave + 3.5, ...enter], [leave + 6, ...enter]], sit: [sit, leave, 0] }],
+    cats: [cat],
+    beats: [
+      { t: 0, zh: '一只猫在一台上坐着', en: 'A cat sits on a unit' },
+      { t: sit, zh: `一位访客坐下，面前那台落下当桌子（${m2(dT.top)} m）`, en: `A visitor sits and the unit in front comes down as a table (${m2(dT.top)} m)` },
+      { t: want, zh: '猫的目标台在坐着的人头顶上方：这一台不落，猫等着', en: 'The cat’s target is over the seated visitor’s head: it stays up and the cat waits' },
+      { t: tN, zh: '上不去，猫另选目标：那一台落下', en: 'Unable to get on, the cat picks another target, which comes down' },
+      { t: xN, zh: '猫移过去，身后那台收回', en: 'The cat moves over and the unit behind it retracts' },
+    ],
+  };
+}
+
+/** §5：猫的目标台未落过一半、台角会碰到站着的人 → 暂不落，猫等待；人走开以后落下 */
+function cornerStill(l: PlanLayout): VignetteScript {
+  const n = 3;
+  const p = l.pitchM;
+  const half = l.roomM / 2;
+  const K = cell(n, p, 0, 1); // 猫待的台
+  const N = cell(n, p, 1, 1); // 目标台：它的一个角正对着人站的交叉点
+  const stand: [number, number] = [p / 2, p / 2];
+  const enter: [number, number] = [half + 0.3, p / 2];
+  const snap = restSnap(l, n, [], [], [], K.i);
+  const formed: (UnitDesign | null)[] = new Array(n * n).fill(null);
+  for (const u of [K.i, N.i]) formed[u] = designUnit(snap, u, formed);
+  const dK = formed[K.i]!, dN = formed[N.i]!;
+  const arrive = 5;
+  const want = 8; // 猫想去目标台
+  const go = 13; // 人走开
+  const tN = go + 2; // 人离开那一角，目标台落下
+  const xN = tN + RAMP.drop + RAMP.form + 0.5;
+  const units: (UnitScript | null)[] = Array.from({ length: n * n }, () => null);
+  units[K.i] = unitOf(heldUntil(xN + 3.5), dK, 'A');
+  units[N.i] = unitOf(unitRamp(tN), dN, 'B');
+  const cat: CatBeat[] = [
+    onRing(K, dK, -Math.PI / 2, 0, 'sit', Math.PI / 2),
+    onRing(K, dK, Math.PI / 2, want, 'sit', Math.PI / 2), // 走到朝目标台的一侧等着
+    onRing(K, dK, Math.PI / 2, xN - 0.1, 'walk', Math.PI / 2),
+    ...crossBeats(K, N, dN, xN),
+    onRing(N, dN, Math.PI / 4, xN + 3.4, 'sit', Math.PI / 4),
+  ];
+  return {
+    n,
+    duration: xN + 12,
+    furniture: [],
+    units,
+    people: [{ path: [[0, ...enter], [1.5, ...enter], [arrive, ...stand], [go, ...stand], [go + 3.5, ...enter], [xN + 12, ...enter]] }],
+    cats: [cat],
+    beats: [
+      { t: 0, zh: '一只猫在一台上坐着', en: 'A cat sits on a unit' },
+      { t: arrive, zh: '一位访客站在过道交叉点上', en: 'A visitor stands at an aisle crossing' },
+      { t: want, zh: '猫的目标台有一个角会碰到站着的人：暂不落，猫等待', en: 'A corner of the cat’s target would touch the standing visitor: it waits, and so does the cat' },
+      { t: tN, zh: '人走开，目标台落下', en: 'The visitor walks away and the target comes down' },
+      { t: xN, zh: '猫移过去，身后那台收回', en: 'The cat moves over and the unit behind it retracts' },
+    ],
+  };
+}
+
 export function vignetteScript(key: VignetteKey): VignetteScript {
   const n = [...VIGNETTES, ...STILL_SCENES].find((v) => v.key === key)!.n;
   const l = vignetteLayout(n);
@@ -776,6 +954,12 @@ export function vignetteScript(key: VignetteKey): VignetteScript {
       return givewayScript(l);
     case 'stillguide':
       return guideScript(l, true);
+    case 'stillwatch':
+      return watchStill(l);
+    case 'stillhead':
+      return headStill(l);
+    case 'stillcorner':
+      return cornerStill(l);
   }
 }
 

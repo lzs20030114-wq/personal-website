@@ -360,4 +360,22 @@ describe('cohabit-vignette · 只用于出静帧的场景（2026-11-23）', () =
     const g = vignetteScript('guide');
     expect(s.units.map((u) => u?.design.role ?? null)).toEqual(g.units.map((u) => u?.design.role ?? null));
   });
+
+  it('stillwatch / stillhead / stillcorner：脚本走得通，猫在台上时那台落着，没落的那台整场不落', () => {
+    for (const key of ['stillwatch', 'stillhead', 'stillcorner'] as const) {
+      const s = vignetteScript(key);
+      for (let t = 0; t < s.duration; t += 0.25) {
+        const c = catAt(s.cats[0], t);
+        for (const u of c.on) expect(keysAt(s.units[u]!.deg, t), `${key} @ ${t} 台 ${u}`).toBeGreaterThan(0.99);
+      }
+      const sim = new VignetteSim(key);
+      for (let i = 0; i < 400; i++) sim.step(0.25);
+    }
+    // 坐着的人头顶上方那台（2,2）、与它相对的检查：整场不落
+    expect(vignetteScript('stillhead').units[2 * 3 + 2]).toBeNull();
+    // 站着的人在目标台的角上时，目标台还没开始落
+    const c = vignetteScript('stillcorner');
+    const go = c.people[0].path[3][0];
+    expect(keysAt(c.units[1 * 3 + 1]!.deg, go)).toBe(0);
+  });
 });
