@@ -523,6 +523,75 @@ PALETTES.update({
                             ('#C98A2E', '#A8432E'), ('#FBF7F0', '#F9F2EE'), ('#E9DCC6', '#E6D2CA'))),
 })
 
+# ---- 邻近色（2026-11-23 第二次，作者纠正：上一版 P6–P11 只是一种色相分深浅，本质还是单色。
+# 邻近色是色环上挨着的三种色相：蓝的邻近是绿和紫，黄的邻近是绿和橙，绿的邻近是黄和蓝，红的邻近是紫和橙）。
+# 规律仍是 R3 跟着位置走。两种分法：
+# 做法一 颜色沿房间走过三种色相：单元、家具、房间都按位置从一种色相走到中间色相、再走到另一种（stops 三色）；
+# 做法二 一类东西一种色相：单元用中间色相，家具用一侧的邻近色，墙地天花用另一侧的邻近色。
+def _mid(sp):
+    return sp['stops'][len(sp['stops']) // 2] if sp.get('stops') else sp['pairs'][0][0]
+
+
+def _hue3(ground, ink, cut, sky, far, tex, uline, papers):
+    base = _pal(paper=ground, room=_mid(papers['wall']), floor=_mid(papers['floor']), sky=sky, ink=ink,
+                far=far, tex=tex, unit_line=uline, unit=_mid(papers['unit']), furn=_mid(papers['furn']),
+                cut=cut, stow=_mid(papers['stow']),
+                fx=dict(ground=ground, cut=cut, grain=0.5, paper_grain=0.5))
+    return _collage(base, _pos_rule(paper=papers), _ONE)
+
+
+def _stops7(floor, wall, ceil, furn, unit, mech, stow):
+    return {c: dict(stops=list(v)) for c, v in
+            dict(floor=floor, wall=wall, ceil=ceil, furn=furn, unit=unit, mech=mech, stow=stow).items()}
+
+
+_HUE_INK = dict(
+    blue=('#7F95E0', '#1A1D4E', '#14173E', '#CBD6F6', '#7D86B8', '#A6AED4', '#14206E'),
+    yellow=('#E9B93A', '#3B2A0A', '#2C1F06', '#F6E4A8', '#A8945F', '#CDB98A', '#5A3A08'),
+    green=('#59B07A', '#123122', '#0C2418', '#CDE9D5', '#76968A', '#A3BBAE', '#0F3D24'),
+    red=('#E36A5E', '#3A0E20', '#2C0918', '#F5D0D0', '#A77D86', '#CBA6AE', '#5E0E22'),
+)
+PALETTES.update({
+    # 做法一 · 颜色沿房间走过三种色相
+    # 蓝：绿 → 蓝 → 紫
+    'h_blue': _hue3(*_HUE_INK['blue'], _stops7(
+        ('#DDF1E6', '#DEE6FA', '#EAE0FA'), ('#E3F4EA', '#E3EAFB', '#EEE5FB'), ('#EAF7EF', '#EAEFFC', '#F2ECFC'),
+        ('#C4E8D5', '#C8D5F5', '#DDCBF5'), ('#1FA87A', '#2D5BE3', '#8A4BE2'), ('#F3FBF6', '#F2F5FE', '#F7F3FE'),
+        ('#D3EBDE', '#D5DEF4', '#E2D7F4'))),
+    # 黄：绿 → 黄 → 橙
+    'h_yellow': _hue3(*_HUE_INK['yellow'], _stops7(
+        ('#EAF3D6', '#FAF0CC', '#FADFC8'), ('#EFF6DF', '#FBF3D8', '#FBE5D3'), ('#F4F9E8', '#FDF7E4', '#FDEDE0'),
+        ('#D9EBB5', '#F6E3A0', '#F8C9A2'), ('#6DB22E', '#F2BE16', '#F2701E'), ('#F8FCF0', '#FEFBEF', '#FEF5EE'),
+        ('#E2EDC7', '#F3E7BC', '#F3D6BE'))),
+    # 绿：黄 → 绿 → 蓝
+    'h_green': _hue3(*_HUE_INK['green'], _stops7(
+        ('#F9F0CE', '#DDF1E1', '#DDE7F8'), ('#FBF4DA', '#E3F4E6', '#E3EBF9'), ('#FDF8E6', '#EBF7ED', '#EBF0FB'),
+        ('#F4E4A4', '#C2E5CB', '#C5D5F2'), ('#E5BD12', '#2FA65C', '#2B6AD8'), ('#FEFBF0', '#F3FBF5', '#F2F6FD'),
+        ('#F1E5BC', '#D0E8D6', '#D3DEF2'))),
+    # 红：紫 → 红 → 橙
+    'h_red': _hue3(*_HUE_INK['red'], _stops7(
+        ('#EEE2F8', '#FADFDF', '#FCE8D2'), ('#F2E8FA', '#FBE5E5', '#FDEDDB'), ('#F6EFFC', '#FCEDED', '#FEF3E6'),
+        ('#DCC6F0', '#F5C3C3', '#F8D5AD'), ('#8B3BD0', '#E0323C', '#F2861C'), ('#FAF6FD', '#FEF6F6', '#FFF9F1'),
+        ('#E3D4F0', '#F2D2D2', '#F3DFC6'))),
+    # 做法二 · 一类东西一种色相：单元 = 中间色相，家具 = 一侧邻近色，墙地天花 = 另一侧邻近色
+    # 蓝：单元蓝、家具绿、房间紫
+    'hc_blue': _hue3(*_HUE_INK['blue'], _paper7(
+        ('#E9DFFA', '#F1EAFC'), ('#EDE4FB', '#F4EEFC'), ('#F2ECFC', '#F7F3FD'), ('#BEE5CE', '#D4EEDF'),
+        ('#2350DE', '#4F5BEA'), ('#F7F3FE', '#FBF9FE'), ('#DED2F4', '#E9E1F7'))),
+    # 黄：单元黄、家具绿、房间橙
+    'hc_yellow': _hue3(*_HUE_INK['yellow'], _paper7(
+        ('#FBE2CC', '#FDEBDB'), ('#FCE7D5', '#FDF0E3'), ('#FDEEE0', '#FEF5EC'), ('#D6EAB2', '#E6F2CE'),
+        ('#F0B814', '#F5CB3A'), ('#FEF5EE', '#FFFAF6'), ('#F4D9C1', '#F8E5D3'))),
+    # 绿：单元绿、家具黄、房间蓝
+    'hc_green': _hue3(*_HUE_INK['green'], _paper7(
+        ('#DCE6F8', '#E7EEFB'), ('#E2EAF9', '#ECF1FB'), ('#EAF0FB', '#F2F6FD'), ('#F3E2A0', '#F8EDC2'),
+        ('#25A058', '#3CB46B'), ('#F2F6FD', '#F8FAFE'), ('#D2DDF2', '#DFE7F6'))),
+    # 红：单元红、家具紫、房间橙
+    'hc_red': _hue3(*_HUE_INK['red'], _paper7(
+        ('#FCE6CF', '#FDEEDF'), ('#FDEBD8', '#FEF2E6'), ('#FEF0E2', '#FEF6EE'), ('#DBC4F0', '#E8DAF6'),
+        ('#DD2E3A', '#E9505A'), ('#FFF7EF', '#FFFBF7'), ('#F4DCC2', '#F8E5D3'))),
+})
+
 HM = 1.70
 UP = np.array([0.0, 0.0, 1.0])
 WALL_T = 0.24
