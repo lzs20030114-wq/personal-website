@@ -412,6 +412,13 @@ body:has(.lab-panel[data-expanded]) .ld-header { visibility: hidden; }
 /* Lab 2-16 小样：台上的字母标签（每帧按台面高度投影）+ 画面下方的图例（这台做什么 · 成什么形 · 用上了哪几台研究） */
 .vig-tags { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 2; }
 .vig-tags span { position: absolute; left: 0; top: 0; min-width: 18px; padding: 1px 5px; border: 1px solid var(--lab-tone); border-radius: 2px; background: #09171ee6; color: var(--ld-cream); font: 600 11px/1.3 var(--ld-mono); text-align: center; will-change: transform, opacity; }
+/* Lab 2-15 台上的规则记号（2026-11-23）：与读数行同一个记号与颜色；最近一条触发（或悬停的那条）那台亮着 */
+.rule-tags span { min-width: 16px; padding: 0 4px; font-size: 10px; transition: opacity .2s ease; }
+.rule-tags span[data-kind="base"] { border-color: var(--ld-cream); }
+.rule-tags span[data-kind="check"] { border-color: var(--rose); color: var(--rose); }
+.rule-tags span[data-hot] { background: var(--lab-tone); color: var(--ld-paper); box-shadow: 0 0 0 3px #09171e99; }
+.rule-tags span[data-hot][data-kind="base"] { background: var(--ld-cream); }
+@media (prefers-reduced-motion: reduce) { .rule-tags span { transition: none; } }
 .vig-legend { margin: 0; padding: 10px 14px 12px; border-top: 1px solid var(--lab-line, oklch(0.95 0.032 120 / 0.1)); color: var(--ld-soft); font: 11px/1.55 var(--ld-mono); }
 .vig-legend__head { color: var(--ld-mute); font-size: 10px; margin-bottom: 6px; }
 .vig-legend ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px 18px; }

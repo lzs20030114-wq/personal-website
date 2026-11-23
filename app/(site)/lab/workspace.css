@@ -472,4 +472,15 @@
 .rr-card li[data-kind="check"] > span:first-of-type { color: var(--rose); }
 .rr-card__who { font: 10.5px/1.35 var(--ld-mono); color: var(--n700); }
 .rr-card__none { display: block !important; color: var(--n600); }
+/* 最近触发（2026-11-23）：刚被调动的那几次，每条三句「感知 → 理解 → 干预」，新的在前 */
+.rr-feed { margin: 0 0 8px; }
+.rr-feed h4 { display: flex; align-items: baseline; gap: 6px; margin: 0; padding: 0 2px 4px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 24%, transparent); font-size: 12px; font-weight: 700; color: var(--ink); }
+.rr-feed h4 em { margin-left: auto; font: 10px/1.3 var(--ld-mono); font-style: normal; white-space: nowrap; color: var(--n600); }
+.rr-feed ol { display: grid; margin: 0; padding: 0; list-style: none; }
+.rr-feed li { display: grid; grid-template-columns: 14px auto minmax(0, 1fr); gap: 0 7px; align-items: baseline; padding: 5px 4px 5px 2px; border-bottom: 1px solid var(--lab-line); font-size: 11px; line-height: 1.45; color: var(--n700); }
+.rr-feed li:first-child { background: color-mix(in srgb, var(--rr-k) 9%, transparent); color: var(--ink); }
+.rr-feed li > .rr-dot { grid-row: 1 / span 3; align-self: start; margin-top: 1px; }
+.rr-feed li small { margin-left: 6px; font: 10px/1 var(--ld-mono); color: var(--n600); font-variant-numeric: tabular-nums; }
+.rr-feed__verdict { font-weight: 600; color: var(--rr-k); }
+.rr-feed li[data-kind="base"] .rr-feed__verdict { color: var(--ink); }
 @media (prefers-reduced-motion: reduce) { .rr-row { transition: none; } }

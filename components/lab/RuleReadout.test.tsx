@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import LabPage from '../../app/(site)/lab/page';
 import { RuleReadout } from './RuleReadout';
 import { ruleReadout } from '../../src/lib/space/cohabit-reasons';
-import { READOUT_ROWS, ReadoutLabels, ReadoutTracker, readoutSnapshot, unitCard } from '../../src/lib/space/cohabit-readout';
+import { READOUT_ROWS, ReadoutLabels, ReadoutTracker, feedText, readoutSnapshot, unitCard } from '../../src/lib/space/cohabit-readout';
 import { standardSceneSim } from '../../src/lib/space/cohabit-solid';
 
 const preference = vi.hoisted(() => ({ lang: 'en' as 'en' | 'zh' }));
@@ -18,7 +18,7 @@ const count = (html: string, needle: string) => html.split(needle).length - 1;
 const noop = () => {};
 
 describe('Lab 2-14 说明栏的规则读数', () => {
-  it('/lab 上只有 2-14 的说明栏有「读数 / 说明」两页，读数在前', () => {
+  it('/lab 上只有 2-14 与 2-15 的说明栏有「读数 / 说明」两页，读数在前', () => {
     preference.lang = 'en';
     (globalThis as { __labOpenAll?: boolean }).__labOpenAll = true;
     let html: string;
@@ -27,11 +27,13 @@ describe('Lab 2-14 说明栏的规则读数', () => {
     } finally {
       (globalThis as { __labOpenAll?: boolean }).__labOpenAll = false;
     }
-    expect(count(html, 'lab-details-tabs')).toBe(1);
-    expect(count(html, 'class="lab-readout-slot"')).toBe(1);
-    const panel = html.slice(html.indexOf('data-lab-panel="2-14"'), html.indexOf('data-lab-panel="2-15"'));
-    expect(panel).toContain('lab-details-tabs');
-    expect(panel).toMatch(/aria-pressed="true"[^>]*>Rule readout/);
+    expect(count(html, 'lab-details-tabs')).toBe(2);
+    expect(count(html, 'class="lab-readout-slot"')).toBe(2);
+    for (const [a, b] of [['2-14', '2-15'], ['2-15', '2-16']]) {
+      const panel = html.slice(html.indexOf(`data-lab-panel="${a}"`), html.indexOf(`data-lab-panel="${b}"`));
+      expect(panel).toContain('lab-details-tabs');
+      expect(panel).toMatch(/aria-pressed="true"[^>]*>Rule readout/);
+    }
   });
 
   it('每一行都画出来，成立的亮起，钉住那一行展开感知与干预，单元卡写理由', { timeout: 30_000 }, () => {
@@ -69,5 +71,26 @@ describe('Lab 2-14 说明栏的规则读数', () => {
       expect(html).toContain('class="rr-status"');
       expect(html).toContain('放一场 6 人 4 猫');
     }
+  });
+  it('最近触发：每条三句「感知 → 理解 → 干预」，新的在前；不给 onScene 就不出「放一场」，立体台架换成台面记号的提示', () => {
+    const L = new ReadoutLabels();
+    L.sync({ people: [{ id: 1 }], cats: [{ id: 5 }] } as never);
+    for (const lang of ['zh', 'en'] as const) {
+      const feed = [
+        feedText({ id: 2, t: 61, unit: 3, kind: 'step', person: 1, cat: 5 }, L, lang),
+        feedText({ id: 1, t: 40, unit: 7, kind: 'table', person: 1 }, L, lang),
+      ];
+      const html = renderToStaticMarkup(
+        <RuleReadout lang={lang} snap={null} status="ok" pinned={null} card={null} onHover={noop} onPin={noop} onCloseCard={noop} feed={feed} pickable={false} />,
+      );
+      expect(count(html, 'class="rr-feed"')).toBe(1);
+      expect(html.indexOf(feed[0].act)).toBeLessThan(html.indexOf(feed[1].act));
+      for (const f of feed) for (const x of [f.see, f.verdict, f.act, f.clock]) expect(html).toContain(x);
+      expect(html).not.toContain('rr-scene');
+      expect(html).toContain(lang === 'zh' ? '台面上的记号' : 'The mark above a platform');
+      expect(html).not.toMatch(/undefined|NaN/);
+    }
+    const empty = renderToStaticMarkup(<RuleReadout lang="zh" snap={null} status="ok" pinned={null} card={null} onHover={noop} onPin={noop} onCloseCard={noop} feed={[]} />);
+    expect(empty).toContain('还没有新的触发');
   });
 });

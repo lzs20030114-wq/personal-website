@@ -5,8 +5,8 @@ import { useBenchLang, useLabText } from './LabLanguage';
 import { LabControlLabel } from './LabControlLabel';
 import { LabFold, LabReadout, useLabReadoutSlot } from './LabCtl';
 import { standardSceneSim, tableTopFor } from '../../src/lib/space/cohabit-solid';
-import { ruleReadout, type RuleHit, type RuleRow } from '../../src/lib/space/cohabit-reasons';
-import { ReadoutLabels, ReadoutTracker, readoutSnapshot, unitCard, type ReadoutSnap, type UnitCard } from '../../src/lib/space/cohabit-readout';
+import { ruleReadout, unitReasons, type RuleHit, type RuleRow } from '../../src/lib/space/cohabit-reasons';
+import { ReadoutFeed, ReadoutLabels, ReadoutTracker, feedText, readoutSnapshot, unitCard, type FeedText, type ReadoutSnap, type UnitCard } from '../../src/lib/space/cohabit-readout';
 import { RuleReadout } from './RuleReadout';
 import { drawRuleOverlay, unitAt } from './ruleOverlay';
 import { CASE_SCENES, CASE_SEED, COHABIT, CohabitSim, PACE_DEMO, FACE_MODES, GUIDE_TARGETS, SPACE_MODES, TRIGGER_MODES, nearestNode, populateCohabit, type CaseScene, type GuideTarget, type Cat, type FaceMode, type SpaceMode, type TriggerMode, type Visitor } from '../../src/lib/space/cohabit';
@@ -273,12 +273,15 @@ export function CohabitBench({
   langRef.current = lang;
   const labelsRef = useRef(new ReadoutLabels());
   const trackerRef = useRef(new ReadoutTracker());
+  /** 最近触发（新的在前）；悬停其中一条时画面圈出那一台 */
+  const feedRef = useRef(new ReadoutFeed());
+  const feedUnitRef = useRef<number | null>(null);
   const hitsRef = useRef<RuleHit[]>([]);
   const hoverRef = useRef<RuleRow | null>(null);
   const pinnedRef = useRef<RuleRow | null>(null);
   const [pinned, setPinned] = useState<RuleRow | null>(null);
   const pickedRef = useRef<number | null>(null);
-  const [readout, setReadout] = useState<{ snap: ReadoutSnap | null; card: UnitCard | null }>({ snap: null, card: null });
+  const [readout, setReadout] = useState<{ snap: ReadoutSnap | null; card: UnitCard | null; feed: FeedText[] }>({ snap: null, card: null, feed: [] });
   const readoutAt = useRef(0);
   /** 「放一场 6 人 4 猫」：下一次重建用标准场景（cohabit-solid 的 standardSceneSim，与 Lab 2-15 同一份） */
   const standardRef = useRef(false);
@@ -348,7 +351,7 @@ export function CohabitBench({
     if (!ctx) return;
     drawPlan(ctx, sceneOf(sim, traceRef.current, selRef.current), pal);
     if (showReadoutRef.current && readoutLive(sim))
-      drawRuleOverlay(ctx, sim, { hits: hitsRef.current, focus: hoverRef.current ?? pinnedRef.current, picked: pickedRef.current, labels: labelsRef.current, lang: langRef.current }, pal);
+      drawRuleOverlay(ctx, sim, { hits: hitsRef.current, focus: hoverRef.current ?? pinnedRef.current, picked: feedUnitRef.current ?? pickedRef.current, labels: labelsRef.current, lang: langRef.current }, pal);
   };
 
   /** 读数只对「走 · 站 · 坐」规则、会动的单元有效（ruleReadout 在钉死与空房间下返回空） */
@@ -359,6 +362,7 @@ export function CohabitBench({
     labelsRef.current.sync(sim);
     hitsRef.current = readoutLive(sim) ? ruleReadout(sim) : [];
     trackerRef.current.account(hitsRef.current, sim.t);
+    if (readoutLive(sim)) feedRef.current.account(sim.t, unitReasons(sim), hitsRef.current);
   };
 
   /** 交给面板的快照（说明栏停在读数那一页时才算） */
@@ -370,6 +374,7 @@ export function CohabitBench({
     setReadout({
       snap: readoutSnapshot(hitsRef.current, trackerRef.current, sim, labelsRef.current, lng),
       card: u !== null && readoutLive(sim) ? unitCard(sim, hitsRef.current, u, labelsRef.current, lng) : null,
+      feed: feedRef.current.list.map((e) => feedText(e, labelsRef.current, lng)),
     });
     readoutAt.current = performance.now();
   };
@@ -448,6 +453,8 @@ export function CohabitBench({
     // 规则读数：名字、累计、走势随一场重来；标准场景先跑 90 s 仿真时间，一打开就有人坐着、猫在被引
     labelsRef.current.reset();
     trackerRef.current.reset(sim.t);
+    feedRef.current.reset();
+    feedUnitRef.current = null;
     pickedRef.current = null;
     if (std) {
       const dt = 1 / 30;
@@ -793,6 +800,11 @@ export function CohabitBench({
           }}
           onCloseCard={() => pickUnit(null)}
           onScene={runStandard}
+          feed={readout.feed}
+          onFeedHover={(u) => {
+            feedUnitRef.current = u;
+            if (!runningRef.current) paint();
+          }}
         />
       </LabReadout>
       <div className="lab-fig">

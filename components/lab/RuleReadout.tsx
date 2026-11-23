@@ -9,6 +9,7 @@ import {
   type ReadoutLang,
   type ReadoutPart,
   type ReadoutRowSnap,
+  type FeedText,
   type ReadoutSnap,
   type UnitCard,
 } from '../../src/lib/space/cohabit-readout';
@@ -45,6 +46,10 @@ const COPY = {
     trace: '这套读数只对「走 · 站 · 坐」规则。「痕迹（旧）」规则按地面痕迹落单元，规则文档第 4 节说的不是它。',
     still: '钉死、空房间两档的单元不按规则动，没有读数。切回「会动」就有。',
     spark: '最近 90 秒仿真时间里每秒成立几条',
+    feed: '最近触发',
+    feedFlow: ['感知', '理解', '干预'] as const,
+    feedNone: '还没有新的触发',
+    pick3d: '台面上的记号 = 这台为什么落',
   },
   en: {
     lit: (n: number) => `${n} holding now`,
@@ -67,6 +72,10 @@ const COPY = {
     trace: 'The readout covers the walk, stand, sit rule only. The earlier trace rule brings units down by floor traces, which section 4 of the rules document does not describe.',
     still: 'In the fixed and empty settings the units do not follow the rules, so there is nothing to read. Switch back to live units.',
     spark: 'How many held at each second over the last 90 s of simulated time',
+    feed: 'Just triggered',
+    feedFlow: ['Sense', 'Read as', 'Act'] as const,
+    feedNone: 'Nothing new yet',
+    pick3d: 'The mark above a platform says why it is down',
   },
 } as const;
 
@@ -151,7 +160,16 @@ export function RuleReadout({
   onPin,
   onCloseCard,
   onScene,
+  feed,
+  onFeedHover,
+  pickable = true,
 }: {
+  /** 最近触发（新的在前）：每条「感知 → 理解 → 干预」三句；不给就不画这一块 */
+  feed?: readonly FeedText[];
+  /** 悬停一条最近触发：画面里圈出那一台（null = 放开） */
+  onFeedHover?: (unit: number | null) => void;
+  /** 画面能不能点单元看说明卡（立体台架不能点，提示换成台面记号的说明） */
+  pickable?: boolean;
   lang: ReadoutLang;
   snap: ReadoutSnap | null;
   /** ok = 有读数 · trace = 痕迹（旧）规则 · still = 钉死 / 空房间 */
@@ -161,7 +179,8 @@ export function RuleReadout({
   onHover: (row: RuleRow | null) => void;
   onPin: (row: RuleRow) => void;
   onCloseCard: () => void;
-  onScene: () => void;
+  /** 「放一场 6 人 4 猫」；不给就不出这个钮（Lab 2-15 开场就是这一场） */
+  onScene?: () => void;
 }) {
   const t = COPY[lang];
   const lit = snap ? snap.partOn[4] + snap.partOn[5] + snap.partOn[7] : 0;
@@ -170,7 +189,7 @@ export function RuleReadout({
     <div className="rule-readout" lang={lang === 'zh' ? 'zh' : undefined}>
       <div className="rr-head">
         <span className="rr-lit">{status === 'ok' ? t.lit(lit) : ' '}</span>
-        <button type="button" className="rr-scene" title={t.sceneHint} onClick={onScene}>{t.scene}</button>
+        {onScene && <button type="button" className="rr-scene" title={t.sceneHint} onClick={onScene}>{t.scene}</button>}
       </div>
       {status !== 'ok' ? (
         <p className="rr-status">{status === 'trace' ? t.trace : t.still}</p>
@@ -182,6 +201,33 @@ export function RuleReadout({
             ))}
             <span>{t.names}</span>
           </p>
+          {feed && (
+            <section className="rr-feed" aria-label={t.feed} aria-live="polite">
+              <h4><b>{t.feed}</b><em>{t.feedFlow.join(' → ')}</em></h4>
+              {feed.length ? (
+                <ol>
+                  {feed.map((f) => (
+                    <li
+                      key={f.id}
+                      data-kind={f.kind}
+                      onMouseEnter={() => onFeedHover?.(f.unit)}
+                      onMouseLeave={() => onFeedHover?.(null)}
+                    >
+                      <i className="rr-dot" data-kind={f.kind}>{f.mark}</i>
+                      <span className="rr-k">{t.feedFlow[0]}</span>
+                      <span>{f.see}<small>{f.clock}</small></span>
+                      <span className="rr-k">{t.feedFlow[1]}</span>
+                      <span className="rr-feed__verdict">{f.verdict}</span>
+                      <span className="rr-k">{t.feedFlow[2]}</span>
+                      <span>{f.act}</span>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="rr-pick">{t.feedNone}</p>
+              )}
+            </section>
+          )}
           {card ? (
             <div className="rr-card" aria-live="polite">
               <div className="rr-card__head">
@@ -200,7 +246,7 @@ export function RuleReadout({
               </ul>
             </div>
           ) : (
-            <p className="rr-pick">{t.pick}</p>
+            <p className="rr-pick">{pickable ? t.pick : t.pick3d}</p>
           )}
           {snap && parts.map((p) => {
             const rows = snap.rows.filter((r) => r.def.part === p);

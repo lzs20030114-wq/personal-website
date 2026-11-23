@@ -7,7 +7,7 @@
  * 原型 scripts/rules-viz/proto.ts 是这一份的前身（版式与读法照它，搬上站时按说明栏的宽度收成一行一条）。
  */
 import type { CohabitSim } from './cohabit';
-import { unitReasons, type RuleHit, type RuleRow, type UnitReasonKind } from './cohabit-reasons';
+import { unitReasons, type RuleHit, type RuleRow, type UnitReason, type UnitReasonKind } from './cohabit-reasons';
 
 export type ReadoutLang = 'zh' | 'en';
 /** rel = 第 4 节的人猫关系 · base = 第 5 节桌子与猫脚下 · check = 第 5 节三道检查 · gap = 第 7 节读不到的关系 */
@@ -323,4 +323,169 @@ export function unitState(degree: number, lang: ReadoutLang): string {
   if (degree >= 1 - 1e-9) return lang === 'zh' ? '落满' : 'fully down';
   if (degree > 1e-6) return lang === 'zh' ? `落到 ${Math.round(degree * 100)}%` : `${Math.round(degree * 100)}% down`;
   return lang === 'zh' ? '收着' : 'stowed';
+}
+
+// ── 最近触发（2026-11-23）：一次新出现的理由 = 一条「感知 → 理解 → 干预」 ─────────────────────────────
+// 上面的读数是「此刻成立的状态」；这里记的是「刚刚被调动的那一次」：哪一台、因为看到了什么、认定成什么、怎么动。
+// 只记会让单元动起来的六个理由与三道检查；猫脚下那台不记（猫站上去以后台保持落下，是结果不是触发）。
+
+/** 被调动的是哪一样：六个让单元落下的理由（猫脚下除外）或三道检查之一 */
+export type FeedKind = Exclude<UnitReasonKind, 'foot'> | 'overHead' | 'press' | 'r5';
+
+export interface FeedEntry {
+  /** 发号，越大越新 */
+  id: number;
+  /** 仿真时间（s） */
+  t: number;
+  unit: number;
+  kind: FeedKind;
+  person?: number;
+  cat?: number;
+}
+
+/** 面板上留几条 */
+export const READOUT_FEED_N = 3;
+
+const FEED_ROW: Record<FeedKind, RuleRow> = {
+  table: 'table', step: 'seatFar', meet: 'met', offer: 'stand', go: 'catMove', climb: 'catMove',
+  overHead: 'overHead', press: 'press', r5: 'r5',
+};
+
+export class ReadoutFeed {
+  /** 新的在前，最多 READOUT_FEED_N 条 */
+  readonly list: FeedEntry[] = [];
+  private live = new Set<string>();
+  private seeded = false;
+  private next = 1;
+
+  reset(): void {
+    this.list.length = 0;
+    this.live = new Set();
+    this.seeded = false;
+  }
+
+  /**
+   * 每推进一次仿真调一次。why = unitReasons(sim)，hits = ruleReadout(sim)（调用处本来就算了，不再算一遍）。
+   * reset 之后的第一次只记下此刻已有的理由、不出条目（「放一场」先跑了 90 秒，开场那一刻的理由不算刚被调动）。
+   */
+  account(t: number, why: readonly (readonly UnitReason[])[], hits: readonly RuleHit[]): void {
+    const keys = new Set<string>();
+    const fresh: Omit<FeedEntry, 'id'>[] = [];
+    const add = (key: string, e: Omit<FeedEntry, 'id'>) => {
+      keys.add(key);
+      if (!this.live.has(key)) fresh.push(e);
+    };
+    for (let u = 0; u < why.length; u++)
+      for (const r of why[u]) {
+        if (r.kind === 'foot') continue;
+        add(`${u}|${r.kind}|${r.person ?? ''}|${r.cat ?? ''}`, { t, unit: u, kind: r.kind, person: r.person, cat: r.cat });
+      }
+    for (const h of hits) {
+      if (h.row !== 'overHead' && h.row !== 'press' && h.row !== 'r5') continue;
+      add(readoutKey(h), { t, unit: h.units[0], kind: h.row, person: h.people[0], cat: h.cats[0] });
+    }
+    this.live = keys;
+    if (!this.seeded) {
+      this.seeded = true;
+      return;
+    }
+    for (const e of fresh) this.list.unshift({ ...e, id: this.next++ });
+    if (this.list.length > READOUT_FEED_N) this.list.length = READOUT_FEED_N;
+  }
+}
+
+export interface FeedText {
+  id: number;
+  unit: number;
+  mark: string;
+  kind: ReadoutKind;
+  /** 仿真时间 m:ss */
+  clock: string;
+  see: string;
+  verdict: string;
+  act: string;
+}
+
+const clockOf = (t: number): string => {
+  const s = Math.max(0, Math.floor(t));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+};
+
+/** 一条写成三句：单元看到了什么 · 认定成什么（规则文档第 4、5 节的判定）· 哪一台怎么动 */
+export function feedText(e: FeedEntry, labels: ReadoutLabels, lang: ReadoutLang): FeedText {
+  const zh = lang === 'zh';
+  const P = e.person !== undefined ? labels.person(e.person, lang) : zh ? '有人' : 'someone';
+  const C = e.cat !== undefined ? labels.cat(e.cat, lang) : zh ? '猫' : 'a cat';
+  const N = zh ? `第 ${e.unit + 1} 台` : `Unit ${e.unit + 1}`;
+  const def = READOUT_ROW_OF.get(FEED_ROW[e.kind])!;
+  const v = def[lang];
+  const see: Record<FeedKind, string> = zh
+    ? {
+        table: `${P} 坐下`,
+        step: `${P} 坐着，${C} 未到座位前方那台`,
+        meet: `${P} 坐着，${C} 下一步到座位前方那台`,
+        offer: `${P} 站着注视 ${C} 满 3 s`,
+        go: `${C} 有了新的目标台`,
+        climb: `${C} 要从地面跳上一台`,
+        overHead: `要落的台会伸到 ${P} 头顶上方`,
+        press: `台角会碰到站着的 ${P}`,
+        r5: '落成墙会使有人无路到门',
+      }
+    : {
+        table: `${P} sits down`,
+        step: `${P} is seated, ${C} is not yet in front of the seat`,
+        meet: `${P} is seated, ${C} is one step from the seat`,
+        offer: `${P} stands watching ${C} for 3 s`,
+        go: `${C} has a new target unit`,
+        climb: `${C} is about to jump up from the floor`,
+        overHead: `The unit would reach over ${P}’s head`,
+        press: `Its corner would hit ${P}, standing`,
+        r5: 'A wall here would leave someone without a way out',
+      };
+  const act: Record<FeedKind, string> = zh
+    ? {
+        table: `${N} 落到桌高`,
+        step: `${N} 落下，作 ${C} 的下一步`,
+        meet: `${N}（座位前方那台）落下`,
+        offer: `${N} 落下，给 ${C} 一步`,
+        go: `${N} 约 0.7 s 落满`,
+        climb: `${N} 约 0.7 s 落满`,
+        overHead: `${N} 不落`,
+        press: `${N} 暂不落，${C} 等待`,
+        r5: `${N} 停在墙线以下`,
+      }
+    : {
+        table: `${N} comes down to table height`,
+        step: `${N} comes down as ${C}’s next step`,
+        meet: `${N}, in front of the seat, comes down`,
+        offer: `${N} comes down as one step for ${C}`,
+        go: `${N} is fully down in about 0.7 s`,
+        climb: `${N} is fully down in about 0.7 s`,
+        overHead: `${N} does not come down`,
+        press: `${N} waits, and so does ${C}`,
+        r5: `${N} is held below the wall line`,
+      };
+  return {
+    id: e.id,
+    unit: e.unit,
+    mark: def.mark[lang],
+    kind: def.kind,
+    clock: clockOf(e.t),
+    see: see[e.kind],
+    verdict: v.tag ? `${v.verdict} · ${v.tag}` : v.verdict,
+    act: act[e.kind],
+  };
+}
+
+/** 台上那枚记号用哪个理由（一台几个理由时按这个先后取一个） */
+const MARK_ORDER: readonly UnitReasonKind[] = ['table', 'meet', 'step', 'offer', 'climb', 'go', 'foot'];
+
+/** 每台此刻挂哪枚记号（没有理由 = null）：立体台架挂在台面上方，与读数行同一个记号 */
+export function unitMarks(why: readonly (readonly UnitReason[])[], lang: ReadoutLang): ({ mark: string; kind: ReadoutKind; row: RuleRow } | null)[] {
+  return why.map((rs) => {
+    if (!rs.length) return null;
+    const k = MARK_ORDER.find((m) => rs.some((r) => r.kind === m)) ?? rs[0].kind;
+    const def = READOUT_ROW_OF.get(READOUT_REASONS[k].row)!;
+    return { mark: def.mark[lang], kind: def.kind, row: def.row };
+  });
 }

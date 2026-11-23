@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ruleReadout, type RuleHit, type RuleRow } from './cohabit-reasons';
-import { READOUT_HIST, READOUT_PARTS, READOUT_REASONS, READOUT_ROWS, ReadoutLabels, ReadoutTracker, readoutSnapshot, unitCard, unitState } from './cohabit-readout';
+import { ruleReadout, unitReasons, type RuleHit, type RuleRow, type UnitReason } from './cohabit-reasons';
+import { READOUT_FEED_N, READOUT_HIST, READOUT_PARTS, READOUT_REASONS, READOUT_ROWS, ReadoutFeed, ReadoutLabels, ReadoutTracker, feedText, readoutSnapshot, unitCard, unitMarks, unitState, type FeedKind } from './cohabit-readout';
 import { standardSceneSim } from './cohabit-solid';
 
 /** cohabit-reasons 的 RuleRow 全部（类型在运行时不存在，这里抄一份；少一行或多一行守门就红） */
@@ -100,4 +100,66 @@ describe('cohabit-readout · 规则读数的数据', () => {
     expect(unitState(0.42, 'en')).toBe('42% down');
     expect(unitState(0, 'en')).toBe('stowed');
   });
+});
+
+describe('cohabit-readout · 最近触发', () => {
+  it('reset 后第一次只记下已有的理由；之后新出现的才出条目，新的在前、最多留 READOUT_FEED_N 条', () => {
+    const F = new ReadoutFeed();
+    const why = (n: number, list: [number, UnitReason][]) => {
+      const out: UnitReason[][] = Array.from({ length: n }, () => []);
+      for (const [u, r] of list) out[u].push(r);
+      return out;
+    };
+    F.account(0, why(8, [[1, { kind: 'table', person: 1 }]]), []);
+    expect(F.list).toHaveLength(0);
+    // 已有的不再记；猫脚下不记；新的桌子、新的一步各记一条
+    F.account(1, why(8, [[1, { kind: 'table', person: 1 }], [2, { kind: 'foot', cat: 5 }], [3, { kind: 'step', person: 1, cat: 5 }]]), []);
+    expect(F.list.map((e) => e.kind)).toEqual(['step']);
+    F.account(2, why(8, [[4, { kind: 'go', cat: 5 }]]), [hit('overHead', [2], [5], [6])]);
+    expect(F.list.map((e) => e.kind)).toEqual(['overHead', 'go', 'step'].slice(0, READOUT_FEED_N));
+    expect(F.list[0].id).toBeGreaterThan(F.list[1].id);
+    // 消失后再出现算新的一次
+    F.account(3, why(8, []), []);
+    F.account(4, why(8, [[3, { kind: 'step', person: 1, cat: 5 }]]), []);
+    expect(F.list[0]).toMatchObject({ kind: 'step', unit: 3, t: 4 });
+  });
+
+  it('每一种都写得出三句，中英两份，字里没有分号与破折号，英文里不混中文；记号与读数行一致', () => {
+    const L = new ReadoutLabels();
+    L.sync({ people: [{ id: 1 }], cats: [{ id: 5 }] } as never);
+    const kinds: FeedKind[] = ['table', 'step', 'meet', 'offer', 'go', 'climb', 'overHead', 'press', 'r5'];
+    for (const kind of kinds)
+      for (const lang of ['zh', 'en'] as const) {
+        const f = feedText({ id: 1, t: 75, unit: 9, kind, person: 1, cat: 5 }, L, lang);
+        expect(f.clock).toBe('1:15');
+        for (const s of [f.see, f.verdict, f.act]) {
+          expect(s, `${kind} ${lang}`).toBeTruthy();
+          expect(s).not.toMatch(/[；;]|——|—/);
+          if (lang === 'en') expect(s, `${kind} 英文里混了中文`).not.toMatch(/[一-鿿]/);
+        }
+        expect(f.act).toContain(lang === 'zh' ? '第 10 台' : 'Unit 10');
+      }
+    const marks = unitMarks([[], [{ kind: 'foot', cat: 5 }, { kind: 'table', person: 1 }], [{ kind: 'step', person: 1, cat: 5 }]], 'zh');
+    expect(marks[0]).toBeNull();
+    expect(marks[1]).toMatchObject({ mark: '桌', row: 'table' });
+    expect(marks[2]).toMatchObject({ mark: '3', row: 'seatFar' });
+  });
+
+  it('标准场景里跑一段：出得了条目，条目指向的台确实因为那个理由要落', () => {
+    const sim = standardSceneSim('live');
+    const F = new ReadoutFeed();
+    let checked = 0;
+    for (let k = 0; k < 120 * 30; k++) {
+      sim.step(1 / 30);
+      if (k % 10) continue;
+      const why = unitReasons(sim);
+      const before = F.list[0]?.id ?? 0;
+      F.account(sim.t, why, ruleReadout(sim));
+      const e = F.list[0];
+      if (!e || e.id === before || e.kind === 'overHead' || e.kind === 'press' || e.kind === 'r5') continue;
+      expect(why[e.unit].some((r) => r.kind === e.kind)).toBe(true);
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(3);
+  }, 30_000);
 });

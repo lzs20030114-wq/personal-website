@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useBenchLang, useLabText } from './LabLanguage';
 import { LabControlLabel } from './LabControlLabel';
 import { attachLabCamera } from './labCameraInput';
-import { LabViewDock } from './LabCtl';
+import { LabReadout, LabViewDock, useLabReadoutSlot } from './LabCtl';
+import { RuleReadout } from './RuleReadout';
 import { planFromHash } from './planHash';
 import { useBenchLoop } from './useBenchLoop';
 import { DARK_A, DARK_B, LITE_A, LITE_B, MEM_DARK, MEM_LITE, RAIL_DARK, RAIL_LITE, ROOM_DARK, ROOM_LITE } from './SkinSolidBench';
@@ -20,6 +21,8 @@ import { fetchMeshBuffer, forgetMeshBuffer } from '../../src/lib/linkage/mesh-fe
 import { VIGNETTES, VignetteSim, vignetteLayout, vignetteScript, type SpaceSimLike, type VignetteKey } from '../../src/lib/space/cohabit-vignette';
 import { DESIGN, SOURCES, formText, roleName, type Source, type UnitDesign } from '../../src/lib/space/cohabit-design';
 import { logicalToCss, projectLogical } from '../../src/lib/linkage/machine-behavior';
+import { ruleReadout, unitReasons, type RuleHit, type RuleRow } from '../../src/lib/space/cohabit-reasons';
+import { ReadoutFeed, ReadoutLabels, ReadoutTracker, feedText, readoutSnapshot, unitMarks, type FeedText, type ReadoutSnap } from '../../src/lib/space/cohabit-readout';
 import { COHABIT, CohabitSim, SPACE_MODES, bandAngle, type EventKind, type SpaceMode } from '../../src/lib/space/cohabit';
 import { FIGURE, RING_GRID_AXON, ROOM, ringGridViewMatrix, type RingGridView } from '../../src/lib/space/skin-grid';
 import { CAT, CAT_HEAD_YAW_MAX, clampHeadYaw, catRig, humanRig, strideOf, styleKey, type Rig as BodyRig, type Tone } from '../../src/lib/space/figure';
@@ -298,6 +301,25 @@ export function CohabitSpaceBench({
   const [vigKey, setVigKey] = useState<VignetteKey>('guide');
   /** 小样的台上标签（每帧按台面此刻的高度投到画布上） */
   const tagsRef = useRef<HTMLDivElement | null>(null);
+  /**
+   * 规则读数（2026-11-23，与 Lab 2-14 同一套：cohabit-reasons 读理由、cohabit-readout 出读数与最近触发、RuleReadout 画）。
+   * 面板给了 readout 时说明栏里出读数；画面上每台正在落的单元头顶挂一枚记号（与读数行同一个），最近触发的那一台亮一下。
+   * 案例页主图、首页预览没有这个插槽，逐位不变。
+   */
+  const readoutSlot = useLabReadoutSlot();
+  const showReadoutRef = useRef(false);
+  showReadoutRef.current = !!readoutSlot && !vignette;
+  /** 读数一直记账（说明栏收着或在「说明」那一页时也记，翻回来时累计与最近触发接得上），只在读数那一页显示时画 */
+  const hasReadoutRef = useRef(false);
+  hasReadoutRef.current = readoutSlot !== undefined && !vignette;
+  const langRef = useRef(lang);
+  langRef.current = lang;
+  const ruleTagsRef = useRef<HTMLDivElement | null>(null);
+  const focusRowRef = useRef<RuleRow | null>(null);
+  const pinnedRowRef = useRef<RuleRow | null>(null);
+  const [pinnedRow, setPinnedRow] = useState<RuleRow | null>(null);
+  const feedUnitRef = useRef<number | null>(null);
+  const [readout, setReadout] = useState<{ snap: ReadoutSnap | null; feed: FeedText[] }>({ snap: null, feed: [] });
   const shellRef = useRef(true);
   const [shell, setShell] = useState(true);
   const [view, setView] = useState<ViewKey>('axon');
@@ -832,7 +854,7 @@ export function CohabitSpaceBench({
           const workY = rigYForTop(rig, tracks[order[0]], tableTop[u]);
           const top = unitTopY(rig, drop, workY);
           // 小样的标签：台面此刻在哪个高度（落下途中跟着走）
-          if (vignette) tagY[u] = ROOM.FLOOR_Y - tableTop[u] * UNITS_PER_M + (top - workY);
+          tagY[u] = ROOM.FLOOR_Y - tableTop[u] * UNITS_PER_M + (top - workY);
           let allStowed = true;
           let allStraight = true;
           let allFormed = true;
@@ -1072,6 +1094,91 @@ export function CohabitSpaceBench({
       }
     };
 
+    // ── 规则读数（只在 /lab 的面板给了读数插槽时算；小样不算） ──
+    const labels = new ReadoutLabels();
+    const tracker = new ReadoutTracker(sim.t);
+    const feed = new ReadoutFeed();
+    let hits: RuleHit[] = [];
+    let marks: ReturnType<typeof unitMarks> = [];
+    /** 最近一条触发是哪一次、什么时候（墙钟）出现的：出现后 3 s 内那台的记号亮着 */
+    let feedTop = 0;
+    let feedTopAt = 0;
+    let readoutAt = 0;
+    const ruleLive = (): boolean => sim instanceof CohabitSim && sim.space === 'live';
+    const readRules = (): void => {
+      if (!(sim instanceof CohabitSim)) return;
+      labels.sync(sim);
+      if (!ruleLive()) {
+        hits = [];
+        marks = [];
+        tracker.account(hits, sim.t);
+        return;
+      }
+      const why = unitReasons(sim);
+      hits = ruleReadout(sim);
+      marks = unitMarks(why, langRef.current);
+      tracker.account(hits, sim.t);
+      feed.account(sim.t, why, hits);
+      const top = feed.list[0]?.id ?? 0;
+      if (top !== feedTop) {
+        feedTop = top;
+        feedTopAt = performance.now();
+      }
+    };
+    const pushReadout = (): void => {
+      if (!(sim instanceof CohabitSim)) return;
+      const lng = langRef.current;
+      setReadout({ snap: readoutSnapshot(hits, tracker, sim, labels, lng), feed: feed.list.map((e) => feedText(e, labels, lng)) });
+      readoutAt = performance.now();
+    };
+    const resetRules = (): void => {
+      labels.reset();
+      tracker.reset(sim.t);
+      feed.reset();
+      hits = [];
+      marks = [];
+      feedTop = 0;
+    };
+    /**
+     * 台上的规则记号：每台正在落的单元头顶一枚（与读数行同一个记号），挂在台面上方（两层的挂在上台上方）；
+     * 读数里悬停或钉住一行时只留这一行的；悬停一条最近触发、或最近一条触发出现后 3 s 内，那一台的记号亮着。
+     */
+    const placeRuleTags = (): void => {
+      const root = ruleTagsRef.current;
+      if (!root) return;
+      const on = showReadoutRef.current && ruleLive() && trajs !== null;
+      root.style.display = on ? '' : 'none';
+      if (!on) return;
+      const cr = canvas.getBoundingClientRect();
+      const rr = root.getBoundingClientRect();
+      const view = { m: cam.matrix, pivot: cam.pivotPoint, scale: cam.viewScale, pan: cam.pan, persp: 0 };
+      const focus = focusRowRef.current ?? pinnedRowRef.current;
+      const now = performance.now();
+      const hot = feedUnitRef.current ?? (feedTop && now - feedTopAt < 3000 ? feed.list[0]?.unit ?? null : null);
+      const els = root.children;
+      for (let u = 0; u < els.length; u++) {
+        const el = els[u] as HTMLElement;
+        const mk = marks[u];
+        const d = u < sim.act.degree.length ? sim.act.degree[u] : 0;
+        const y0 = tagY[u];
+        if (!mk || d <= 0.02 || y0 === undefined || !rig.cells[u]) {
+          el.style.opacity = '0';
+          continue;
+        }
+        if (el.textContent !== mk.mark) el.textContent = mk.mark;
+        if (el.dataset.kind !== mk.kind) el.dataset.kind = mk.kind;
+        const isHot = hot === u;
+        if (isHot) el.dataset.hot = '1';
+        else delete el.dataset.hot;
+        const above = roofOn[u] === 1 ? DESIGN.UPPER + DESIGN.PLATE : 0;
+        const c = rig.cells[u];
+        const q = logicalToCss(projectLogical(view, { x: c.x, y: y0 - (above + 0.16) * UNITS_PER_M, z: c.z }), cr.width, cr.height);
+        el.style.transform = `translate(${(cr.left - rr.left + q.x).toFixed(1)}px, ${(cr.top - rr.top + q.y).toFixed(1)}px) translate(-50%, -100%)`;
+        const dim = focus !== null && focus !== mk.row && !isHot;
+        el.style.opacity = String(Math.min(1, d * 2.5) * (dim ? 0.15 : 1));
+      }
+    };
+
     let lastHud = '';
     const pushHud = (): void => {
       const s = sim.summary();
@@ -1110,6 +1217,9 @@ export function CohabitSpaceBench({
       cam.tick(dt);
       render();
       placeTags();
+      if (hasReadoutRef.current) readRules();
+      placeRuleTags();
+      if (showReadoutRef.current && performance.now() - readoutAt > 120) pushReadout();
       pushHud();
     };
 
@@ -1125,6 +1235,7 @@ export function CohabitSpaceBench({
       planSet.fill(0);
       dropSerial.fill(0);
       orders.fill(UNIT_ORDER);
+      resetRules();
       lastHud = '';
       render();
       pushHud();
@@ -1248,6 +1359,31 @@ export function CohabitSpaceBench({
   const kicker = tx(vignette ? 'Lab 2-16 / Project II' : 'Lab 2-15 / Project II');
   return (
     <div className={`lab-wrap${onLight ? ' on-light' : ''}${workspace && controls ? ' solid-workbench' : ''}`}>
+      {!vignette && (
+        <LabReadout>
+          <RuleReadout
+            lang={lang}
+            snap={readout.snap}
+            status={space === 'live' ? 'ok' : 'still'}
+            pinned={pinnedRow}
+            card={null}
+            pickable={false}
+            onHover={(row) => {
+              focusRowRef.current = row;
+            }}
+            onPin={(row) => {
+              const next = pinnedRowRef.current === row ? null : row;
+              pinnedRowRef.current = next;
+              setPinnedRow(next);
+            }}
+            onCloseCard={() => undefined}
+            feed={readout.feed}
+            onFeedHover={(u) => {
+              feedUnitRef.current = u;
+            }}
+          />
+        </LabReadout>
+      )}
       <div className="lab-fig">
         {workspace && controls ? <div className="solid-map">{canvas}</div> : canvas}
         {vignette ? (
@@ -1256,6 +1392,13 @@ export function CohabitSpaceBench({
               <span key={`${vigKey}-${r.u}`} data-u={r.u} data-above={r.above.toFixed(3)} style={{ opacity: 0 }}>
                 {r.tag}
               </span>
+            ))}
+          </div>
+        ) : null}
+        {readoutSlot !== undefined && !vignette ? (
+          <div ref={ruleTagsRef} className="vig-tags rule-tags" aria-hidden="true">
+            {Array.from({ length: hud.total }, (_, u) => (
+              <span key={u} style={{ opacity: 0 }} />
             ))}
           </div>
         ) : null}
