@@ -28,8 +28,10 @@ from ishi import Body, v, norm  # noqa: E402
 
 # ---------------------------------------------------------------- 线型表（终稿 2400 px 宽时的像素）
 # 五档，相邻两档 1.6 倍。每一档只给一类东西；远处的物体整体降一档（不是连续变细）。
-GRADE = dict(cut=3.2, unit=2.0, obj=1.25, inner=0.78, tex=0.48)
-DOWN = dict(cut='cut', unit='obj', obj='inner', inner='tex', tex='tex')
+GRADE = dict(cut=3.2, unit=2.0, obj=1.25, inner=0.78, tex=0.48, hair=0.30)
+DOWN = dict(cut='cut', unit='obj', obj='inner', inner='tex', tex='hair', hair='hair')
+# 第五轮（黑白为主）多出的一档 hair 只给纹理（木纹、拼缝）；旧配色不用它。旧配色里 tex 降档还是 tex（见 _DOWN_OLD）
+_DOWN_OLD = dict(DOWN, tex='tex')
 # 排线间距三档（米）
 HATCH = dict(dense=0.07, mid=0.14, wide=0.28)
 
@@ -592,6 +594,102 @@ PALETTES.update({
         ('#DD2E3A', '#E9505A'), ('#FFF7EF', '#FFFBF7'), ('#F4DCC2', '#F8E5D3'))),
 })
 
+
+# ================= 第五轮（2026-11-23）：作者「颜色存在感太强，作品集里不好排。以黑白为主，颜色清淡、面积小；
+# 颜色的变化没了，用纹理、质感补回来；线再多几个层次」
+# 线：用途分得更细（_BW_LINES），近 / 中 / 远三层灰（只在剖透视里分），多一档 hair 只给木纹和拼缝；单元的外轮廓仍是最重的黑。
+# 面：全是白，纹理是平的一层墨（paint.py 的 _tone_layer）：墙是稀的点，沙发是密一点的点，地面是矢量的板缝、接头和木纹。
+# 颜色：只给单元，且只给一小块（整台淡色 / 只给猫的台 / 只给台面 / 只给线）。没有影子，没有明暗。
+_BW_LINES = dict(
+    unit=('unit', ['#161514']),                                   # 单元外轮廓：全图最重
+    unit_in=('inner', ['#161514']),                               # 单元里前面压后面的线
+    seam=('tex', ['#8C8881', '#A19D96', '#B7B3AC']),              # 单元外皮上的缝
+    furn=('obj', ['#2B2927', '#55524E', '#86827C']),              # 家具外轮廓
+    furn_in=('inner', ['#6E6A65', '#8C8881', '#ACA8A1']),         # 家具里面的线
+    room=('inner', ['#55524E', '#7A7671', '#A09C95']),            # 墙地天花的交线、墙的边
+    mech=('inner', ['#2B2927', '#55524E', '#86827C']),            # 吊杆、夹环的外轮廓
+    mech_in=('tex', ['#6E6A65', '#8C8881', '#ACA8A1']),           # 吊杆的节
+    stow=('tex', ['#B3AFA8']),                                    # 收着的单元
+    frame=('inner', ['#55524E', '#7A7671', '#A09C95']),           # 窗框
+    mullion=('tex', ['#86827C', '#A09C95', '#B7B3AC']),           # 窗棂
+    board=('tex', ['#A9A59E', '#BBB7B0', '#CBC7C1']),             # 地板缝
+    joint=('hair', ['#9E9A93', '#B3AFA8', '#C6C2BB']),            # 地板接头
+    grain=('hair', ['#B5B1AA', '#C6C2BC', '#D5D2CC']),            # 木纹
+)
+_CAT_GRAY = {'#E6D7C4': '#E6E3DE', '#A88A6E': '#8C8881', '#E8C36A': '#BDB9B2', '#FBF8F2': '#FFFFFF'}
+# 纹理（终稿 2400 宽的像素）
+_T_WALL = [('dots', '#7A7671', 6.0, 0.6, 0.75)]                  # 墙、天花：稀的点（石灰墙）
+_T_WALL_FAINT = [('dots', '#8C8881', 7.0, 0.55, 0.6)]
+_T_FABRIC = [('dots', '#4A4744', 3.6, 0.72)]                       # 沙发、单人沙发：密一点、匀的点（布面）
+_T_FABRIC_FAINT = [('dots', '#6E6A65', 4.4, 0.6)]
+_T_FABRIC_SCREEN = [('screen', '#55524E', 0.30, 4.0, 45)]          # 沙发：规整的网点，一档中灰
+_T_TWILL = [('lines', '#55524E', 3.0, 45, 0.5)]                    # 沙发：45° 细斜线（斜纹布）
+_T_CHAIR = [('lines', '#B3AFA8', 3.2, 0, 0.4)]                    # 椅子（木）：竖向细线（角度 0 = 线是竖的）
+
+
+def _bw(tone=None, unit='#FFFFFF', shade='flat', lines=None, floor='boards', grain=1, fig_tone=None, unit_by=None, **over):
+    pal = dict(paper='#FAF9F6', room='#FFFFFF', floor='#FFFFFF', sky='#F3F2EF', ink='#1C1B19', far='#8C8881', tex='#B3AFA8',
+               unit_line='#161514', unit=unit, unit_top=unit, unit_under=unit, unit_seam='#8C8881',
+               mech='#FFFFFF', furn='#FFFFFF', fig='#FFFFFF', hair='#2B2927', cut='#1C1B19', stow='#B3AFA8', shadow='#161514',
+               cat_recolor=_CAT_GRAY,
+               bw=dict(lines=dict(_BW_LINES, **(lines or {})), floor=floor, grain=grain, z=(9.6, 11.2)),
+               fx=dict(shade=shade, tone=tone or {}, paper_grain=0.3))
+    if fig_tone:
+        pal['fig_tone'] = fig_tone
+    if unit_by:
+        pal['fx']['unit_by'] = unit_by
+    pal.update(over)
+    return pal
+
+
+_TEX_A = dict(wall=_T_WALL, ceil=_T_WALL, sofa=_T_FABRIC, armchair=_T_FABRIC, chair=_T_CHAIR)
+PALETTES.update({
+    # 只换线：面全白、没有纹理（和第三轮的「黑白」比，只看线的层次）
+    'bw_line': _bw(),
+    # 一 · 大关系三种（单元都是白的）
+    # 高调：墙稀点、沙发密点、地面木纹，整张图很浅
+    'bw_v1': _bw(_TEX_A),
+    # 头发不用全黑（全图最大的几块黑都是头发）：压成深灰
+    'bw_v1g': _bw(_TEX_A, hair='#6E6A65'),
+    # 剖切面三种：涂黑（上面几张）/ 中灰 / 45° 斜线
+    'bw_cut_gray': _bw(_TEX_A, hair='#6E6A65', cut='#86827C'),
+    'bw_cut_lines': _bw(_TEX_A, hair='#6E6A65', cut='#3A3835'),
+})
+_CUT_LINES = ('lines', '#3A3835', '#FFFFFF', 4.5, 45, 0.9)
+PALETTES['bw_cut_lines']['fx']['cut'] = _CUT_LINES
+
+
+def _bwk(tone=_TEX_A, **kw):
+    """第五轮建议的底子：头发深灰、剖切面 45° 斜线"""
+    pal = _bw(tone, hair='#6E6A65', cut='#3A3835', **kw)
+    pal['fx']['cut'] = _CUT_LINES
+    return pal
+
+
+# 纹理三套（大关系都按高调）：点画 / 线 / 网点
+_T_WALL_LINES = [('lines', '#B3AFA8', 5.0, 0, 0.4)]                # 墙：竖向细线（屏幕上的竖线就是房间里的竖线）
+_T_CEIL_LINES = [('lines', '#C6C2BB', 5.0, 90, 0.35)]
+PALETTES.update({
+    'bw_t1': _bwk(),
+    'bw_t2': _bwk(dict(wall=_T_WALL_LINES, ceil=_T_CEIL_LINES, sofa=_T_TWILL, armchair=_T_TWILL, chair=[('lines', '#B3AFA8', 3.2, 90, 0.4)])),
+    'bw_t3': _bwk(dict(wall=[('screen', '#8C8881', 0.07, 4.5, 45)], ceil=[('screen', '#8C8881', 0.05, 4.5, 45)],
+                       sofa=[('screen', '#55524E', 0.22, 3.6, 45)], armchair=[('screen', '#55524E', 0.22, 3.6, 45)], chair=_T_CHAIR), floor='seams'),
+    # 大关系（纹理都是点画）：高调 = bw_t1；地面压一档灰；家具压一档灰
+    'bw_v2': _bwk(dict(wall=_T_WALL_FAINT, ceil=_T_WALL_FAINT, sofa=_T_FABRIC_FAINT, armchair=_T_FABRIC_FAINT, chair=_T_CHAIR, floor=[('flat', '#E2DFD9')])),
+    'bw_v3': _bwk(dict(wall=_T_WALL_FAINT, ceil=_T_WALL_FAINT, sofa=[('dots', '#3A3835', 2.5, 0.78)], armchair=[('dots', '#3A3835', 2.5, 0.78)], chair=_T_CHAIR)),
+})
+
+# 二 · 颜色放在哪：只给单元，淡、面积小（K1 → K4 面积从大到小）。两种淡色：淡橙（P3 那个橙冲淡）、淡蓝
+_PALE = dict(o=('#F6D8C8', '#C9603C'), b=('#D9E2F5', '#3F5DB3'))
+for _k, (_f, _l) in _PALE.items():
+    PALETTES.update({
+        f'bw_k1{_k}': _bwk(unit=_f),                                                  # 整台淡色
+        f'bw_k2{_k}': _bwk(unit_by={'cat:half': _f, 'cat:flat': _f}),                 # 只给猫的台
+        f'bw_k3{_k}': _bwk(shade=('top', _f)),                                        # 只给台面
+        f'bw_k4{_k}': _bwk(lines=dict(unit=('unit', [_l]), unit_in=('inner', [_l]))),  # 只给线
+    })
+    PALETTES[f'bw_k3{_k}']['bw']['top_nz'] = 0.12     # 台面连同芯旁边收拢的那一圈布一起算
+
 HM = 1.70
 UP = np.array([0.0, 0.0, 1.0])
 WALL_T = 0.24
@@ -764,6 +862,33 @@ class Scene:
                 mo.lines.append(('mast_ring', np.c_[x + 0.0305 * np.cos(a), y + 0.0305 * np.sin(a), np.full(25, z)], True))
                 z -= 0.42
             self.mech[u['i']] = mo
+
+
+
+# ---------------------------------------------------------------- 第五轮（黑白为主）用到的小工具
+def _lum(c):
+    """颜色的亮度（0–1），给同一档线排先后：浅的先画、深的压在上面"""
+    if not isinstance(c, str) or not c.startswith('#'):
+        return 0.5
+    r, g, b = (int(c[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def _fig_tone(pal, k):
+    """人身上哪几块换填色：配色里的 fig_tone 是一串 {区域: 颜色}，按人的编号轮着取"""
+    ft = pal.get('fig_tone')
+    if not ft:
+        return {}
+    return dict(ft[k % len(ft)])
+
+
+def _recolor(svg, m):
+    """猫的花色换成灰：按颜色逐个替换"""
+    if not m:
+        return svg
+    for a, b in m.items():
+        svg = svg.replace(a, b)
+    return svg
 
 
 # ================================================================ 人和猫
@@ -1097,6 +1222,120 @@ class Plate:
                     out.append((seg((x - r, yy, 0), (x + r, yy, 0)), sc.floor.id, 'shadow'))
         return out
 
+    # ---- 黑白为主（第五轮，2026-11-23）：线按用途分档、按远近分三层灰，排线换成地板的木纹
+    def _lines_bw(self, objs, put, bw):
+        """bw['lines'] = {用途: (档, [近, 中, 远] 三个灰)}（只给一个灰就不分远近）。
+        远近只在剖透视里分：离相机 < z[0] 是近、< z[1] 是中、再远是远；远的那层再降一档。返回虚线（收着的单元在地上的那一格）"""
+        cam, buf, sc = self.cam, self.buf, self.sc
+        L = bw['lines']
+        z1, z2 = bw.get('z', (9.6, 11.2)) if cam.persp else (1e9, 1e9)
+        dashed = []
+
+        def emit(role, xy, z=None):
+            if not len(xy) or role not in L:
+                return
+            grade, cols = L[role]
+            if len(cols) == 1 or z is None:
+                put(grade, cols[0], xy)
+                return
+            b = np.where(z < z1, 0, np.where(z < z2, 1, 2))
+            for i in range(3):
+                m = b == i
+                if m.any():
+                    put(DOWN[grade] if i == 2 else grade, cols[i], xy[m])
+
+        for o, V, T in objs:
+            S, kind = LW.features(V, T, cam)
+            r = LW.trace(buf, S, own=o.id)
+            xy, p, z = r['xy'], r['prof'], r['z']
+            if o.cls in ('floor', 'ceil', 'wall'):
+                emit('room', xy, z)
+            elif o.cls == 'furn':
+                emit('furn', xy[p], z[p]); emit('furn_in', xy[~p], z[~p])
+            elif o.cls == 'unit':
+                jump = r['jump'] > 0.07
+                emit('unit', xy[p], z[p]); emit('unit_in', xy[~p & jump], z[~p & jump])
+            elif o.cls == 'mech':
+                emit('mech', xy[p], z[p]); emit('mech_in', xy[~p], z[~p])
+            elif o.cls == 'stow':
+                emit('stow', xy, z)
+            for cls, pts, on_face in o.lines:
+                seg = np.stack([pts[:-1], pts[1:]], 1)
+                if self.cut is not None:
+                    seg, _ = LW.clip_segs(seg, *self.cut)
+                rr = LW.trace(buf, seg, own=o.id, by_id=on_face, min_px=0.6)
+                emit(dict(seam='seam', stow_ring='stow').get(cls, 'mech_in'), rr['xy'], rr['z'])
+        for cls, pts, wall in sc.frames:
+            if wall in getattr(self, 'near_walls', ()):
+                continue
+            seg = np.stack([pts[:-1], pts[1:]], 1)
+            if self.cut is not None:
+                seg, _ = LW.clip_segs(seg, *self.cut)
+            rr = LW.trace(buf, seg, own=-9, tol=0.05)
+            emit('frame' if cls == 'frame' else 'mullion', rr['xy'], rr['z'])
+        for seg, oid, role in self.hatches_bw(bw):
+            rr = LW.trace(buf, seg, own=oid, by_id=True, min_px=0.4)
+            if role == 'grid':
+                if len(rr['xy']):
+                    dashed.append(rr['xy'])
+            else:
+                emit(role, rr['xy'], rr['z'])
+        return dashed
+
+    def hatches_bw(self, bw):
+        """地板：板缝（与第三轮同一套位置，14 cm 一块）+ 每一条板错开的接头 + 板里一两道木纹；没有影子。
+        bw['floor'] = 'boards'（缝 + 接头 + 木纹）/ 'seams'（只有缝）/ None。收着的单元在轴测的地上仍是一格虚线"""
+        sc = self.sc
+        h = sc.half
+        out = []
+        fid = sc.floor.id
+        mode = bw.get('floor', 'boards')
+        pitch = HATCH['mid']
+        S = self.view == 'S'
+        # 板的方向：剖透视里顺着进深（沿 x），轴测里沿 y（与前几轮一样）
+        P = (lambda a, c: (a, c, 0.0)) if S else (lambda a, c: (c, a, 0.0))
+        rng = np.random.default_rng(int(bw.get('seed', 5)))
+        cs = np.arange(-h + pitch / 2, h, pitch)            # 缝的位置（横向）
+        if mode:
+            for c in cs:
+                out.append((np.array([[P(-h, c), P(h, c)]], float), fid, 'board'))
+        if mode == 'boards':
+            edges = np.r_[-h, cs, h]
+            grain = int(bw.get('grain', 1))
+            for c0, c1 in zip(edges[:-1], edges[1:]):
+                if c1 - c0 < 0.04:
+                    continue
+                a = -h - rng.uniform(0, 1.6)
+                while a < h:
+                    b = a + rng.uniform(0.9, 1.9)
+                    if a > -h:
+                        out.append((np.array([[P(a, c0), P(a, c1)]], float), fid, 'joint'))
+                    # 木纹：一块板里一两道细线，只走一段，微微弯
+                    for _ in range(grain):
+                        if rng.random() < 0.25:
+                            continue
+                        lo, hi = max(a, -h) + 0.05, min(b, h) - 0.05
+                        if hi - lo < 0.3:
+                            continue
+                        s0 = rng.uniform(lo, lo + (hi - lo) * 0.4)
+                        s1 = rng.uniform(s0 + (hi - lo) * 0.35, hi)
+                        t = np.linspace(s0, s1, max(3, int((s1 - s0) / 0.05)))
+                        off = c0 + (c1 - c0) * rng.uniform(0.25, 0.75)
+                        ph, amp, wl = rng.uniform(0, 6.3), (c1 - c0) * rng.uniform(0.04, 0.12), rng.uniform(0.5, 1.2)
+                        cc = off + amp * np.sin(ph + 2 * np.pi * (t - s0) / wl)
+                        pts = np.array([P(x, y) for x, y in zip(t, cc)], float)
+                        out.append((np.stack([pts[:-1], pts[1:]], 1), fid, 'grain'))
+                    a = b
+        if self.view == 'A':
+            r0 = 0.345
+            for u in sc.D['units']:
+                if u['drop'] >= 0.5:
+                    continue
+                x, y = u['x'], u['y']
+                sq = np.array([(x - r0, y - r0, 0), (x + r0, y - r0, 0), (x + r0, y + r0, 0), (x - r0, y + r0, 0), (x - r0, y - r0, 0)], float)
+                out.append((np.stack([sq[:-1], sq[1:]], 1), fid, 'grid'))
+        return out
+
     def render(self, pal):
         cam, ss, sc = self.cam, self.ss, self.sc
         D = sc.D
@@ -1124,7 +1363,7 @@ class Plate:
                 cen = V[T].mean(1)
                 tc = (cam.eye - cen) if cam.persp else np.broadcast_to(-cam.f, cen.shape)
                 nz = n[:, 2] * np.sign(np.einsum('ij,ij->i', n, tc))
-                shade = np.where(nz > 0.5, 1, np.where(nz < -0.35, 2, 0))
+                shade = np.where(nz > (pal.get('bw') or {}).get('top_nz', 0.5), 1, np.where(nz < -0.35, 2, 0))
             buf.add(V, T, o.id, shade)
 
         # ---- 人和猫先占深度（他们挡住身后的线；被前面的东西挡住的部分不画）
@@ -1144,8 +1383,8 @@ class Plate:
             masks = [buf.add_flat(r.poly, r.key * pl.hm, base + p['k']) for r in R]
             far = zc > self.far_z
             w = GRADE['inner' if far else 'obj'] * k
-            draw = (lambda clip, b=b, pl=pl, lay=lay, w=w, far=far:
-                    LF.draw(b, pl, b.fit, ink=pal['far'] if far else pal.get('fig_line', pal['ink']), paper=pal['fig'], w=w, clip=clip, lay=lay, tone={'hair': pal['far'] if far else pal['hair']})[0])
+            draw = (lambda clip, b=b, pl=pl, lay=lay, w=w, far=far, p=p:
+                    LF.draw(b, pl, b.fit, ink=pal['far'] if far else pal.get('fig_line', pal['ink']), paper=pal['fig'], w=w, clip=clip, lay=lay, tone={**_fig_tone(pal, p['k']), 'hair': pal['far'] if far else pal['hair']})[0])
             flats.append((zc, draw, total, [m for m in masks if m]))
         for c in D['cats']:
             if not self.keeps(c['x'], c['y']):
@@ -1153,7 +1392,7 @@ class Plate:
             art, shape, zc = cat_art(c, cam, c['k'] in wand_cats)
             m = buf.add_flat(shape, zc, base + 500 + c['k'])
             far = zc > self.far_z
-            draw = (lambda clip, art=art, c=c, far=far: self._clip_svg(art(pal['far'] if far else pal.get('fig_line', pal['ink']), c['k'] + 3), clip, f'cc{c["k"]}'))
+            draw = (lambda clip, art=art, c=c, far=far: self._clip_svg(_recolor(art(pal['far'] if far else pal.get('fig_line', pal['ink']), c['k'] + 3), pal.get('cat_recolor')), clip, f'cc{c["k"]}'))
             flats.append((zc, draw, shape, [m] if m else []))
         buf.done()
         self.buf = buf
@@ -1165,52 +1404,57 @@ class Plate:
             if len(xy):
                 col.setdefault((grade, color), []).append(xy)
 
-        for o, V, T in objs:
-            S, kind = LW.features(V, T, cam)
-            r = LW.trace(buf, S, own=o.id)
-            xy, p, far = r['xy'], r['prof'], r['z'] > self.far_z
-            ink = lambda f: np.where(f, 1, 0)
-            if o.cls in ('floor', 'ceil', 'wall'):
-                put('inner', 'ink', xy[~far]); put('tex', 'far', xy[far])
-            elif o.cls == 'furn':
-                put('obj', 'ink', xy[p & ~far]); put('inner', 'ink', xy[~p & ~far])
-                put('inner', 'far', xy[p & far]); put('tex', 'far', xy[~p & far])
-            elif o.cls == 'unit':
-                # 外轮廓最重；里面只留前面压后面的线（落差 7 cm 以上），带与带之间那些几毫米的台阶不画——那是缝，另有细线
-                jump = r['jump'] > 0.07
-                put('unit', 'unit_line', xy[p]); put('inner', 'unit_line', xy[~p & jump])
-            elif o.cls == 'mech':
-                put('inner', 'ink', xy[p & ~far]); put('tex', 'ink', xy[~p & ~far]); put('tex', 'far', xy[far])
-            elif o.cls == 'stow':
-                put('tex', 'stow', xy)
-            for cls, pts, on_face in o.lines:
+        bw = pal.get('bw')
+        if bw:
+            dashed = self._lines_bw(objs, put, bw)
+        else:
+            for o, V, T in objs:
+                S, kind = LW.features(V, T, cam)
+                r = LW.trace(buf, S, own=o.id)
+                xy, p, far = r['xy'], r['prof'], r['z'] > self.far_z
+                ink = lambda f: np.where(f, 1, 0)
+                if o.cls in ('floor', 'ceil', 'wall'):
+                    put('inner', 'ink', xy[~far]); put('tex', 'far', xy[far])
+                elif o.cls == 'furn':
+                    put('obj', 'ink', xy[p & ~far]); put('inner', 'ink', xy[~p & ~far])
+                    put('inner', 'far', xy[p & far]); put('tex', 'far', xy[~p & far])
+                elif o.cls == 'unit':
+                    # 外轮廓最重；里面只留前面压后面的线（落差 7 cm 以上），带与带之间那些几毫米的台阶不画——那是缝，另有细线
+                    jump = r['jump'] > 0.07
+                    put('unit', 'unit_line', xy[p]); put('inner', 'unit_line', xy[~p & jump])
+                elif o.cls == 'mech':
+                    put('inner', 'ink', xy[p & ~far]); put('tex', 'ink', xy[~p & ~far]); put('tex', 'far', xy[far])
+                elif o.cls == 'stow':
+                    put('tex', 'stow', xy)
+                for cls, pts, on_face in o.lines:
+                    seg = np.stack([pts[:-1], pts[1:]], 1)
+                    if self.cut is not None:
+                        seg, _ = LW.clip_segs(seg, *self.cut)
+                    rr = LW.trace(buf, seg, own=o.id, by_id=on_face, min_px=0.6)
+                    put('tex', dict(seam='unit_seam', stow_ring='stow').get(cls, 'ink'), rr['xy'])
+            for cls, pts, wall in sc.frames:
+                if wall in getattr(self, 'near_walls', ()):
+                    continue
                 seg = np.stack([pts[:-1], pts[1:]], 1)
                 if self.cut is not None:
                     seg, _ = LW.clip_segs(seg, *self.cut)
-                rr = LW.trace(buf, seg, own=o.id, by_id=on_face, min_px=0.6)
-                put('tex', dict(seam='unit_seam', stow_ring='stow').get(cls, 'ink'), rr['xy'])
-        for cls, pts, wall in sc.frames:
-            if wall in getattr(self, 'near_walls', ()):
-                continue
-            seg = np.stack([pts[:-1], pts[1:]], 1)
-            if self.cut is not None:
-                seg, _ = LW.clip_segs(seg, *self.cut)
-            rr = LW.trace(buf, seg, own=-9, tol=0.05)
-            far = rr['z'] > self.far_z
-            g = 'inner' if cls == 'frame' else 'tex'
-            put(g, 'ink', rr['xy'][~far]); put(DOWN[g], 'far', rr['xy'][far])
+                rr = LW.trace(buf, seg, own=-9, tol=0.05)
+                far = rr['z'] > self.far_z
+                g = 'inner' if cls == 'frame' else 'tex'
+                put(g, 'ink', rr['xy'][~far]); put(_DOWN_OLD[g], 'far', rr['xy'][far])
+            fx = pal.get('fx')
+            keep_h = fx.get('hatch') if fx else None          # 只留哪几类排线：'floor'（木板缝）、'wall'、'shadow'；不写 = 都留
+            for seg, oid, ckey in self.hatches():
+                if ckey == 'shadow' and fx and (fx.get('shadow') or fx.get('light')):
+                    continue                    # 影子改由叠印的那一版画（paint.py），或由太阳的影子贴图画（light.py）
+                if keep_h is not None and ckey != 'grid':
+                    kind = 'shadow' if ckey == 'shadow' else ('floor' if oid == sc.floor.id else 'wall')
+                    if kind not in keep_h:
+                        continue
+                rr = LW.trace(buf, seg, own=oid, by_id=True, min_px=0.6)
+                put('tex', ckey, rr['xy'])
+            dashed = col.pop(('tex', 'grid'), [])
         fx = pal.get('fx')
-        keep_h = fx.get('hatch') if fx else None          # 只留哪几类排线：'floor'（木板缝）、'wall'、'shadow'；不写 = 都留
-        for seg, oid, ckey in self.hatches():
-            if ckey == 'shadow' and fx and (fx.get('shadow') or fx.get('light')):
-                continue                    # 影子改由叠印的那一版画（paint.py），或由太阳的影子贴图画（light.py）
-            if keep_h is not None and ckey != 'grid':
-                kind = 'shadow' if ckey == 'shadow' else ('floor' if oid == sc.floor.id else 'wall')
-                if kind not in keep_h:
-                    continue
-            rr = LW.trace(buf, seg, own=oid, by_id=True, min_px=0.6)
-            put('tex', ckey, rr['xy'])
-        dashed = col.pop(('tex', 'grid'), [])
 
         W, H = cam.W, cam.H
         s = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">',
@@ -1277,12 +1521,14 @@ class Plate:
                             continue
             s.append(draw(clip))
         # ---- 场景的线（画在人和猫上面：被他们挡住的线在找线时已经去掉了）
-        for grade in ('tex', 'inner', 'obj', 'unit'):
-            for (g, c), parts in col.items():
-                if g == grade:
-                    s.append(LW.stroke(np.vstack(parts), pal[c], GRADE[g] * k))
+        for grade in (('hair',) if bw else ()) + ('tex', 'inner', 'obj', 'unit'):
+            groups = [(g, c) for (g, c) in col if g == grade]
+            if bw:
+                groups.sort(key=lambda gc: -_lum(pal.get(gc[1], gc[1])))
+            for g, c in groups:
+                s.append(LW.stroke(np.vstack(col[(g, c)]), pal.get(c, c), GRADE[g] * k))
         if dashed:
-            s.append(LW.stroke(np.vstack(dashed), pal['stow'], GRADE['tex'] * k * 1.25, dash=f'{5 * k:.1f} {4 * k:.1f}', cap='butt'))
+            s.append(LW.stroke(np.vstack(dashed), pal['stow'], GRADE['tex'] * k * (bw.get('grid_w', 1.25) if bw else 1.25), dash=f'{5 * k:.1f} {4 * k:.1f}', cap='butt'))
         # ---- 轴测里不画的那两面墙：在地上留一圈脚印
         if self.view == 'A':
             h, t = sc.half, WALL_T
@@ -1292,7 +1538,7 @@ class Plate:
                 x0, x1, y0, y1 = foot[name]
                 q = np.array([(x0, y0, 0), (x1, y0, 0), (x1, y1, 0), (x0, y1, 0)], float)
                 x, y, _ = cam.px(q)
-                s.append(LW.polygon(np.c_[x, y], pal['floor'], pal['ink'], GRADE['inner'] * k))
+                s.append(LW.polygon(np.c_[x, y], pal['floor'], bw['lines']['room'][1][0] if bw else pal['ink'], GRADE['inner'] * k))
         # ---- 剖切面
         if self.cut is not None:
             n, d = self.cut
@@ -1364,7 +1610,8 @@ class Plate:
             h = sc.half
             board = ('x', HATCH['mid'], -h + HATCH['mid'] / 2) if self.view == 'S' else ('y', HATCH['mid'], -h + HATCH['mid'] / 2)
             scene = dict(meshes=meshes, figs=figs, floor=board, LW=LW, center=(0.0, 0.0, sc.ceil / 2), span=2 * (h + WALL_T) * 1.65, half=h, objects=objects)
-        return PT.paint(buf, cls_of, role_of, fx, pal, masks, scene=scene)
+        kinds = {o.id: o.tag for o, _, _ in objs if o.cls == 'furn'}
+        return PT.paint(buf, cls_of, role_of, fx, pal, masks, scene=scene, kinds=kinds)
 
     def _clip_svg(self, svg, clip, uid):
         if clip is None:

@@ -169,6 +169,11 @@ class Ctx:
             labs = np.stack([to_lab(hex3(c)) for c in cols])
             a, b = labs[seg], labs[seg + 1]
             return from_lab(a + (b - a) * f[..., None])
+        if kind == 'lines':
+            # 平行线：('lines', 墨, 底, 间距, 角度, 线宽)，间距线宽是终稿像素
+            ink, bg, pitch, ang, lw = spec[1:6]
+            k = self.ss * getattr(self, 'kq', 1.0)
+            return mix(bg, ink, _line_screen(self.X, self.Y, pitch * k, ang, lw * k))
         if kind == 'ht':
             ink, bg, cover, cell, ang = spec[1:6]
             cov = self.field(cover)
@@ -221,7 +226,7 @@ class Ctx:
 
 
 # ---------------------------------------------------------------- 一整张底图
-def paint(buf, cls_of, role_of, fx, pal, masks, seed=11, scene=None):
+def paint(buf, cls_of, role_of, fx, pal, masks, seed=11, scene=None, kinds=None):
     """缓冲 → 一张不透明的 RGB 底图（终稿分辨率，PNG）+ 剖切面用的纹理图。
 
     cls_of：{编号: 类别}；role_of：{单元编号: 用途}；masks：额外的遮罩（缓冲分辨率）——
@@ -300,9 +305,16 @@ def paint(buf, cls_of, role_of, fx, pal, masks, seed=11, scene=None):
             ink3 = hex3(ink)
             mm = under
             img[mm] = img[mm] * (1 - dots[mm, None] * (1 - ink3))
+        elif isinstance(sh, tuple) and sh[0] == 'top':
+            # 只给台面上色（第五轮）：朝上的面换成这个颜色，其余的面保持单元的底色
+            img[top] = hex3(sh[1])
         elif sh == 'flat':
             pass
         filled |= um
+
+    # ---- 黑白的纹理（第五轮）：每一类（家具按种类）一层平的墨，正片叠底；和光、朝向无关
+    if fx.get('tone'):
+        img = _tone_layer(img, ctx, fx['tone'], cls_of, kinds or {}, masks, seed)
 
     if lit:
         img = _light_layer(img, ctx, fx, pal, cls_px, names, masks, nrm, nok, scene or {}, seed)
@@ -356,6 +368,93 @@ def paint(buf, cls_of, role_of, fx, pal, masks, seed=11, scene=None):
             f = f * (1 + g * 0.05 * n[..., None])
         cut_img = Image.fromarray((np.clip(f, 0, 1) * 255 + 0.5).astype(np.uint8), 'RGB').resize((buf.cam.W, buf.cam.H), Image.LANCZOS)
     return out, cut_img
+
+
+def _line_screen(X, Y, pitch, ang, lw):
+    a = math.radians(ang)
+    u = (X * math.cos(a) + Y * math.sin(a)) / pitch
+    d = np.abs(u - np.round(u)) * pitch
+    return np.clip(lw / 2 - d + 0.5, 0, 1).astype(np.float32)
+
+
+def _tone_layer(img, ctx, tone, cls_of, kinds, masks, seed):
+    """tone = {类别 或 家具种类 或 'out': [做法, …]}，做法（像素都按终稿 2400 宽写）：
+      ('flat', 色)                         平涂一层
+      ('stipple', 墨, 密度, 半径)          随机的点：每个终稿像素落一个点的几率、点的半径
+      ('dots', 墨, 格, 半径, 几率)         点画：一格一个点、在格里随机挪
+      ('screen', 墨, 覆盖, 格, 角度)       网点
+      ('lines', 墨, 间距, 角度, 线宽)      平行线
+    都是画面上的平的纹理（不跟着朝向、光变），按墨的颜色正片叠底。"""
+    from scipy import ndimage
+    buf = ctx.buf
+    ids = buf.ids
+    H, W = ids.shape
+    ss, kq = ctx.ss, getattr(ctx, 'kq', 1.0)
+    out = masks['out']
+    lut = {}
+    for oid, c in cls_of.items():
+        key = kinds.get(oid) if kinds.get(oid) in tone else c
+        if key in tone:
+            lut.setdefault(key, []).append(oid)
+    regions = {}
+    for key, oids in lut.items():
+        regions[key] = np.isin(ids, oids) & ~out
+    if 'out' in tone:
+        regions['out'] = out
+    if 'sky' in tone and 'sky' in masks:
+        regions['sky'] = masks['sky'] & ~out
+    img = img.copy()
+    for n, (key, m) in enumerate(sorted(regions.items())):
+        if not m.any():
+            continue
+        for j, spec in enumerate(tone[key]):
+            kind = spec[0]
+            if kind == 'flat':
+                img[m] = hex3(spec[1])
+                continue
+            ink = hex3(spec[1])
+            if kind == 'stipple':
+                dens, r = float(spec[2]), float(spec[3])
+                rng = np.random.default_rng(seed * 131 + n * 17 + j)
+                Hf, Wf = H // ss + 1, W // ss + 1
+                pts = rng.random((Hf, Wf)) < dens
+                imp = np.zeros((H, W), np.float32)
+                yy, xx = np.nonzero(pts)
+                yy = np.clip(yy * ss + rng.integers(0, ss, len(yy)), 0, H - 1)
+                xx = np.clip(xx * ss + rng.integers(0, ss, len(xx)), 0, W - 1)
+                imp[yy, xx] = 1.0
+                R = max(r * ss * kq, 0.5)
+                g = int(math.ceil(R + 1))
+                ky, kx = np.mgrid[-g:g + 1, -g:g + 1]
+                ker = np.clip(R - np.sqrt(kx * kx + ky * ky) + 0.5, 0, 1).astype(np.float32)
+                cov = np.clip(ndimage.convolve(imp, ker, mode='constant'), 0, 1)
+            elif kind == 'dots':
+                # 点画：一格一个点、在格里随机挪（比纯随机的点匀，像手点的），p = 这一格有没有点的几率
+                cell, r, prob = float(spec[2]), float(spec[3]), float(spec[4]) if len(spec) > 4 else 1.0
+                rng = np.random.default_rng(seed * 131 + n * 17 + j)
+                c = cell * ss * kq
+                ny, nx = int(H / c) + 2, int(W / c) + 2
+                gy, gx = np.mgrid[0:ny, 0:nx].astype(np.float32)
+                keep = rng.random((ny, nx)) < prob
+                yy = ((gy + 0.1 + 0.8 * rng.random((ny, nx))) * c)[keep]
+                xx = ((gx + 0.1 + 0.8 * rng.random((ny, nx))) * c)[keep]
+                ok = (yy < H) & (xx < W)
+                imp = np.zeros((H, W), np.float32)
+                np.add.at(imp, (yy[ok].astype(int), xx[ok].astype(int)), 1.0)
+                R = max(r * ss * kq, 0.5)
+                g = int(math.ceil(R + 1))
+                ky, kx = np.mgrid[-g:g + 1, -g:g + 1]
+                ker = np.clip(R - np.sqrt(kx * kx + ky * ky) + 0.5, 0, 1).astype(np.float32)
+                cov = np.clip(ndimage.convolve(imp, ker, mode='constant'), 0, 1)
+            elif kind == 'screen':
+                cov = halftone(np.full((H, W), float(spec[2]), np.float32), float(spec[3]) * ss * kq, float(spec[4]), ctx.X, ctx.Y)
+            elif kind == 'lines':
+                cov = _line_screen(ctx.X, ctx.Y, float(spec[2]) * ss * kq, float(spec[3]), float(spec[4]) * ss * kq)
+            else:
+                raise ValueError(f'不认得的纹理：{spec!r}')
+            c = cov[m][:, None]
+            img[m] = img[m] * (1 - c * (1 - ink))
+    return img
 
 
 def _light_layer(img, ctx, fx, pal, cls_px, names, masks, nrm, nok, scene, seed):
