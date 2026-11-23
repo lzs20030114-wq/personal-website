@@ -494,6 +494,20 @@ def _h(oid, k, seed):
     return x / 4294967295.0
 
 
+def _ramp(stops, t):
+    """几个颜色等距排成一条，t 0–1 → 颜色（OKLab 里插值，同 mix）"""
+    n = len(stops) - 1
+    if n < 1:
+        return mix(stops[0], stops[0], t)
+    tt = np.clip(t, 0, 1) * n
+    k = np.minimum(np.floor(tt).astype(int), n - 1)
+    out = None
+    for i in range(n):
+        ci = mix(stops[i], stops[i + 1], tt - i)
+        out = ci if out is None else np.where((k == i)[..., None], ci, out)
+    return out
+
+
 def _piece_layer(img, ctx, fx, pal, cls_of, masks, seed):
     """拼贴式的渐变（第四轮之三，2026-11-21）：每个物体当成从一张渐变纸上剪下来的一块。
 
@@ -532,7 +546,9 @@ def _piece_layer(img, ctx, fx, pal, cls_of, masks, seed):
     # 同一张大纸剪的那几类：先求整类的外框
     sheet_box = {}
     for _, oid, c, s, m in items:
-        if spec_all[c].get('sheet'):
+        if spec_all[c].get('sheet') == 'image':
+            sheet_box[c] = (0, H, 0, W)                    # 整张图一张纸
+        elif spec_all[c].get('sheet'):
             y0, y1, x0, x1 = s[0].start, s[0].stop, s[1].start, s[1].stop
             b = sheet_box.get(c)
             sheet_box[c] = (y0, y1, x0, x1) if b is None else (min(b[0], y0), max(b[1], y1), min(b[2], x0), max(b[3], x1))
@@ -574,8 +590,27 @@ def _piece_layer(img, ctx, fx, pal, cls_of, masks, seed):
         corners = [(0, 0), (bx1 - bx0, 0), (0, by1 - by0), (bx1 - bx0, by1 - by0)]
         cp = [cx * ca + cy * sa for cx, cy in corners]
         t = (proj - min(cp)) / max(max(cp) - min(cp), 1.0)
+        pos = sp.get('pos')
+        if pos:
+            # 颜色跟着物体在房间里的位置走（第四轮之四，2026-11-23）：沿房间里的一条轴，从 lo 到 hi 取 0–1。
+            # 'piece' = 一块按自己的中心取一个数，块里再叠一点同一个方向的渐变（inner）；'pixel' = 每个像素按自己的位置取
+            ax, ay = pos.get('axis', (1.0, -1.0))
+            nrm = math.hypot(ax, ay) or 1.0
+            ax, ay = ax / nrm, ay / nrm
+            lo_, hi_ = pos.get('range', (-4.0, 4.0))
+            inner = float(pos.get('inner', 0.0))
+            if pos.get('mode', 'piece') == 'pixel':
+                src = (slice(Y0 - dy, Y1 - dy), slice(X0 - dx, X1 - dx))
+                Pw = ctx.P[src]
+                tw = (Pw[..., 0] * ax + Pw[..., 1] * ay - lo_) / (hi_ - lo_)
+                tw = np.where(np.isfinite(tw), tw, 0.5)
+            else:
+                Pm = ctx.P[s][m]
+                cw = np.nanmean(Pm[:, 0]) * ax + np.nanmean(Pm[:, 1]) * ay if np.isfinite(Pm[:, :2]).any() else 0.5 * (lo_ + hi_)
+                tw = (cw - lo_) / (hi_ - lo_)
+            t = np.clip(tw, 0, 1) + inner * (t - 0.5)
         span = float(sp.get('span', 1.0))
-        if span < 1.0 and not sp.get('sheet'):
+        if span < 1.0 and not sp.get('sheet') and not pos:
             L = span + (1 - span) * _h(oid, 5, seed)
             lo = (1 - L) * _h(oid, 6, seed)
             t = lo + t * L
@@ -584,7 +619,8 @@ def _piece_layer(img, ctx, fx, pal, cls_of, masks, seed):
         g = float(sp.get('grain', 0))
         if g > 0:
             t = t + (grain[win] - 0.5) * g
-            t = (t - 0.5) * (1 + 3 * g) + 0.5
+            if sp.get('stretch', not pos):
+                t = (t - 0.5) * (1 + 3 * g) + 0.5
         t = np.clip(t, 0, 1)
         n = int(sp.get('steps', 0))
         if n > 1:
@@ -594,13 +630,15 @@ def _piece_layer(img, ctx, fx, pal, cls_of, masks, seed):
             cell, hang = sp.get('ht', (4.0, 45))
             dots = halftone(t, cell * ss * kq, hang, Xg, Yg)
             col = mix(c0, c1, dots)
+        elif sp.get('stops'):
+            col = _ramp(sp['stops'], t)                    # 不止两色：沿着 t 排成一条
         else:
             col = mix(c0, c1, t)
-            if tex == 'mottle':
-                cl = value_noise(Y1 - Y0, X1 - X0, 0.06 * W, seed=int(_h(oid, 8, seed) * 9999), octaves=3)
-                lab_ = to_lab(col)
-                lab_[..., 0] += float(sp.get('mottle', 0.05)) * (cl - 0.5)
-                col = from_lab(lab_)
+        if tex == 'mottle':
+            cl = value_noise(Y1 - Y0, X1 - X0, 0.06 * W, seed=int(_h(oid, 8, seed) * 9999), octaves=3)
+            lab_ = to_lab(col)
+            lab_[..., 0] += float(sp.get('mottle', 0.05)) * (cl - 0.5)
+            col = from_lab(lab_)
         e = float(sp.get('edge', 0)) * ss * kq
         if e >= 0.5:
             inner = ndimage.binary_erosion(mm, iterations=max(1, int(round(e))))

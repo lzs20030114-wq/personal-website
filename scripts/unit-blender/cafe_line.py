@@ -405,6 +405,81 @@ PALETTES.update({
     'c_butter': _collage('n_butter', _BUTTER_PAPER, _MIX),
 })
 
+# ================= 第四轮之四（2026-11-23）：作者看了「拼贴式渐变」：颜色要整体一点、渐变要有规律，
+# 不能一个物体一个方向（十个物体十来个方向，乱）。四种有规律的排法，都只用一套颜色、每类一对：
+# 同一个方向（每块各自一道渐变，方向全图一样）· 整张图一张纸（同一张纸从左到右剪满全图）·
+# 颜色跟着物体在房间里的位置走（沿房间的一条对角线，房间一头暖一头冷）· 位置走法再压成色带。
+_DUSK_ONE = dict(
+    floor=dict(pairs=[('#F4DED0', '#E1D8F2')]),
+    wall=dict(pairs=[('#F8E3D6', '#E3D6F3')]),
+    ceil=dict(pairs=[('#F6E7E0', '#EAE1F4')]),
+    furn=dict(pairs=[('#EFCDCB', '#D5CAF1')]),
+    unit=dict(pairs=[('#1C3AD8', '#9A5CF2')]),
+    mech=dict(pairs=[('#FCF5EF', '#F0E9F6')]),
+    stow=dict(pairs=[('#F2E3DE', '#E8E0F2')]),
+)
+_ONE = dict(grain=0.45, edge=1.0)
+_ROOM_CLS = ('floor', 'wall', 'ceil')
+# 房间的一条对角线：世界 (1, −1)，在轴测和正视里都是画面上的左右；房间半宽 3.32 m，对角线上 ±4.7
+_POS_AX = (1.0, -1.0)
+
+
+def _pos_rule(steps=0, inner=0.7, paper=None):
+    out = {}
+    for c, sp in (paper or _DUSK_ONE).items():
+        mode = 'pixel' if c in _ROOM_CLS else 'piece'
+        d = dict(sp, pos=dict(axis=_POS_AX, range=(-4.2, 4.2), mode=mode, inner=0.0 if mode == 'pixel' else inner), ang=[180])
+        if steps:
+            d['steps'] = steps
+        out[c] = d
+    return out
+
+
+PALETTES.update({
+    # R1 同一个方向：每块各自一道渐变，方向全图一样（从右到左）
+    'r1': _collage('n_dusk', {c: dict(sp, ang=[180]) for c, sp in _DUSK_ONE.items()}, _ONE),
+    # R2 整张图一张纸：每一类一张和整张图一样大的纸，方向全一样，颜色跨过所有的块连着走
+    'r2': _collage('n_dusk', {c: dict(sp, ang=[180], sheet='image') for c, sp in _DUSK_ONE.items()}, _ONE),
+    # R3 跟着位置走：颜色按物体在房间里的位置（沿一条对角线）取；墙和地每个像素按自己的位置取，物体按中心取、块里再叠一点同方向的渐变
+    'r3': _collage('n_dusk', _pos_rule(), _ONE),
+    # R4 位置走法压成五档色带
+    'r4': _collage('n_dusk', _pos_rule(steps=5), _ONE),
+})
+
+# ---- 跟着位置走（R3）换到另外三套配色：每类一对颜色，房间一头暖一头冷，单元是唯一的高色度
+_BLUE_ONE = dict(
+    floor=dict(pairs=[('#F1E6D3', '#DEE3F4')]),
+    wall=dict(pairs=[('#F6EDDF', '#DCE2F5')]),
+    ceil=dict(pairs=[('#F4EEE5', '#E6E9F6')]),
+    furn=dict(pairs=[('#E9DBC4', '#C8D2F1')]),
+    unit=dict(pairs=[('#FF4A28', '#FFB548')]),
+    mech=dict(pairs=[('#F8F3EA', '#ECEDF5')]),
+    stow=dict(pairs=[('#EFE6D8', '#E0E4F2')]),
+)
+_OAT_ONE = dict(
+    floor=dict(pairs=[('#E6D0B2', '#E1E4D4')]),
+    wall=dict(pairs=[('#F4EADC', '#E3E8D9')]),
+    ceil=dict(pairs=[('#F2ECE2', '#E9ECE1')]),
+    furn=dict(pairs=[('#E6D1B5', '#D3DAC4')]),
+    unit=dict(pairs=[('#A63A22', '#E79C5E')]),
+    mech=dict(pairs=[('#F4EFE6', '#E8E6DC')]),
+    stow=dict(pairs=[('#E9DFCF', '#DFE2D4')]),
+)
+_LILAC_ONE = dict(
+    floor=dict(pairs=[('#EDE5F5', '#F1F2DE')]),
+    wall=dict(pairs=[('#E8E0F6', '#F1F3DF')]),
+    ceil=dict(pairs=[('#F0EBF7', '#F4F4E8')]),
+    furn=dict(pairs=[('#D6CCF2', '#E5EEC6')]),
+    unit=dict(pairs=[('#8CC00E', '#E9F88C')]),
+    mech=dict(pairs=[('#F7F5FA', '#EEF0E4')]),
+    stow=dict(pairs=[('#E6E0F1', '#EEF0E2')]),
+)
+PALETTES.update({
+    'r_blue': _collage('field_blue', _pos_rule(paper=_BLUE_ONE), _ONE, paper_grain=0.45),
+    'r_oat': _collage('n_oat', _pos_rule(paper=_OAT_ONE), _ONE),
+    'r_lilac': _collage('n_lilac', _pos_rule(paper=_LILAC_ONE), _ONE),
+})
+
 HM = 1.70
 UP = np.array([0.0, 0.0, 1.0])
 WALL_T = 0.24
