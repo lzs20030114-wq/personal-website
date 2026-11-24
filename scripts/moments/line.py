@@ -13,6 +13,7 @@
 用法：python scripts/moments/line.py <几何前缀（不带扩展名）> <out.png> '<json 选项>'
 选项：n 场地几格见方 · az / el 机位 · w / h 出图像素 · crop [x0,y0,x1,y1]（按整幅 0–1 裁）
       units [[行,列]…] 被调动的单元 · bands true = 只标各台收回的带 · ghosts [[行,列]…] 没落的单元
+      hide ['people' | 'cats' | 'furn'…] 这一格不画的东西 · hide_units [[行,列]…] 不画的单元（讲单元自己的动作时用）
       trigger 'people' | 'cats' | 'both' | 'none' · gaze true = 人到猫画一条视线 · fit_n 按几格见方的场地定比例尺
 """
 import json, math, sys
@@ -129,6 +130,21 @@ def main():
     SS = 2
     meta, calls = load(prefix)
     kinds, people, cats, pitch = classify(calls, n)
+    allv = np.vstack([c['v'] for c in calls])      # 取景按全部东西定：藏掉几样以后画面不跟着挪
+    hide = set(opt.get('hide', []))
+    hide_units = {tuple(u) for u in opt.get('hide_units', [])}
+
+    def hidden(k):
+        if k == 'furn':
+            return 'furn' in hide
+        if isinstance(k, tuple):
+            return (k[0] == 'person' and 'people' in hide) or (k[0] == 'cat' and 'cats' in hide) or (k[0] == 'unit' and k[1:] in hide_units)
+        return False
+
+    keep = [i for i, k in enumerate(kinds) if not hidden(k)]
+    calls, kinds = [calls[i] for i in keep], [kinds[i] for i in keep]
+    people = [] if 'people' in hide else people
+    cats = [] if 'cats' in hide else cats
     half = (n - 1) / 2
     axis = lambda row, col: ((col - half) * pitch, -(row - half) * pitch)
     foc_units = {tuple(u) for u in opt.get('units', [])}
@@ -156,7 +172,6 @@ def main():
     tone = np.array([foc_part[i] and near(calls[i]['lite'], np.vstack([SKIN, BAND[:2]])) for i in range(np_)] + [False])
 
     items = [(c['v'], np.arange(len(c['v'])).reshape(-1, 3), (255, 255, 255), i) for i, c in enumerate(calls)]
-    allv = np.vstack([c['v'] for c in calls])
     fitv = allv
     if opt.get('fit_n'):  # 小场地按大场地的比例尺画（同一张图版里 2×2 与 3×3 的人一样大）
         hw = allv[:, 0].max() + (opt['fit_n'] - n) / 2 * pitch
