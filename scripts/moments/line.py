@@ -8,9 +8,11 @@
   · 被调动的单元 = 黑线 + 浅灰底；让路时只标收回的那几条带；
   · 本来要落、没落的单元（三道检查）= 虚线框；
   · 地面画出格线（一格 = 一台单元）。
-画面上不写字：编号、说明与平面小图由排版那一层放（scripts/moments/sheet.mjs），作品集里可以另排。
+画面上不写字：编号、说明、平面小图与落下 / 收回 / 路线这些记号由排版那一层放（scripts/moments/sheet.mjs，
+11-25 作者要「图上的引导」后加，用这里写出去的投影数据画），作品集里可以另排。
 
 用法：python scripts/moments/line.py <几何前缀（不带扩展名）> <out.png> '<json 选项>'
+      python scripts/moments/line.py --plate <plate.json> <几何目录> <出图目录>   按图版里每格的 geo / opt 一次出完
 选项：n 场地几格见方 · az / el 机位 · w / h 出图像素 · crop [x0,y0,x1,y1]（按整幅 0–1 裁）
       units [[行,列]…] 被调动的单元 · bands true = 只标各台收回的带 · ghosts [[行,列]…] 没落的单元
       hide ['people' | 'cats' | 'furn'…] 这一格不画的东西 · hide_units [[行,列]…] 不画的单元（讲单元自己的动作时用）
@@ -123,8 +125,7 @@ def dashed(draw, p, q, w, fill, dash=22, gap=16):
         s = e + gap
 
 
-def main():
-    prefix, out, opt = sys.argv[1], sys.argv[2], json.loads(sys.argv[3]) if len(sys.argv) > 3 else {}
+def render(prefix, out, opt):
     n = opt.get('n', 3)
     W, H = opt.get('w', 1500), opt.get('h', 1900)
     SS = 2
@@ -266,11 +267,45 @@ def main():
     down = sorted({k[1:] for i, k in enumerate(kinds) if is_unit(k) and rad[i] > 0 and calls[i]['v'][:, 2].min() < floor + 0.55 * span})
     furn = [[float(c['v'][:, 0].min()), float(c['v'][:, 1].min()), float(c['v'][:, 0].max()), float(c['v'][:, 1].max())] for c, k in zip(calls, kinds) if k == 'furn']
     marked = sorted({k[1:] for i, k in enumerate(kinds) if foc_part[i]})
+    # 图上的记号由排版那一层画（sheet.mjs）：这里把投影（正轴测，是仿射的）与人、猫、每台单元的包围盒写出去
+    ox, oy = (int(crop[0] * W), int(crop[1] * H)) if crop else (0, 0)
+    camd = dict(r=[float(x) for x in cam.r], u=[float(x) for x in cam.u], c=[float(x) for x in cam.c], s=float(cam.s),
+                W=W, H=H, ox=ox, oy=oy, floor=float(floor), m=float(pitch / 0.83))
+    box = lambda f: dict(lo=[float(x) for x in f['lo']], hi=[float(x) for x in f['hi']])
+    ub = {}
+    for i, k in enumerate(kinds):
+        if is_unit(k) and rad[i] > 0:
+            ub.setdefault(k[1:], []).append(calls[i]['v'])
+    unitd = {}
+    for rc, vs in ub.items():
+        vv = np.vstack(vs)
+        ux, uy = axis(*rc)
+        rr = np.hypot(vv[:, 0] - ux, vv[:, 1] - uy)
+        wide = vv[rr > 0.85 * rr.max()]
+        unitd['%d,%d' % rc] = dict(lo=[float(x) for x in vv.min(0)], hi=[float(x) for x in vv.max(0)], reach=float(rr.max()),
+                                   plat=float(wide[:, 2].max()))
     json.dump(
         dict(size=[W, H], crop=crop, hud=meta.get('hud'), n=n, pitch=pitch, room=float(max(allv[:, 0].max(), allv[:, 1].max())),
-             down=down, marked=marked, ghosts=ghosts, furn=furn, bands=bool(opt.get('bands')), anchors=anchors),
+             down=down, marked=marked, ghosts=ghosts, furn=furn, bands=bool(opt.get('bands')), anchors=anchors,
+             gaze=bool(opt.get('gaze') and people and cats), cam=camd, people=[box(f) for f in people], cats=[box(f) for f in cats], units=unitd),
         open(str(Path(out).with_suffix('.json')), 'w'), ensure_ascii=False)
     print(out, f'{len(calls)} 件 · 人 {len(people)} 猫 {len(cats)} · 格距 {pitch:.1f} · 落着 {len(down)} 台')
+
+
+def _one(job):
+    render(*job)
+
+
+def main():
+    if sys.argv[1] == '--plate':
+        from multiprocessing import Pool
+        plate, geo, outdir = json.load(open(sys.argv[2], encoding='utf-8')), Path(sys.argv[3]), Path(sys.argv[4])
+        outdir.mkdir(parents=True, exist_ok=True)
+        jobs = [(str(geo / pn['geo']), str(outdir / pn['img']), pn.get('opt', {})) for s in plate['sections'] for r in s['rows'] for pn in r['panels']]
+        with Pool(4) as pool:
+            pool.map(_one, jobs)
+    else:
+        render(sys.argv[1], sys.argv[2], json.loads(sys.argv[3]) if len(sys.argv) > 3 else {})
 
 
 if __name__ == '__main__':
