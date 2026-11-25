@@ -260,7 +260,7 @@ export const VIGNETTES = [
 export const STILL_SCENES = [
   { key: 'stillguide', n: 3, zh: '坐下那一刻桌子落下，同时给地上的猫落第一步', en: 'On sitting, the table comes down and the first step is laid for the cat' },
   { key: 'stillwatch', n: 3, zh: '站着看猫满 3 秒，猫旁边朝人的一台落下；猫换台，要去的台先落', en: 'Three seconds of standing and watching lowers a unit beside the cat; when the cat moves on, its target comes down first' },
-  { key: 'stillhead', n: 3, zh: '猫要去的台在坐着的人头顶上方：不落', en: 'The cat’s target is over a seated visitor’s head: it stays up' },
+  { key: 'stillhead', n: 3, zh: '猫朝坐着的人靠近：人头顶上方那台不落，猫停在旁边那台', en: 'A cat approaches a seated visitor: the unit over the visitor’s head stays up and the cat stops beside the seat' },
   { key: 'stillcorner', n: 3, zh: '猫要去的台的角会碰到站着的人：暂不落', en: 'A corner of the cat’s target would touch a standing visitor: it waits' },
 ] as const satisfies readonly { key: VignetteKey; n: number; zh: string; en: string }[];
 
@@ -837,7 +837,11 @@ function watchStill(l: PlanLayout): VignetteScript {
   };
 }
 
-/** §5：要落的台会伸到坐着的人头顶上方 → 不落。猫等不到，另选目标（§4 ⑤：10 s 内上不去另选） */
+/**
+ * §5：要落的台会伸到坐着的人头顶上方 → 不落。
+ * 猫沿着台朝坐着的人靠近（§2「接近人」，目标台逐台先落 = §4 ⑤），到旁边那台已经挨着人；再往前一台在人头顶上方，不落，
+ * 猫停在旁边那台（仿真里要再近就下地走过去，这里不演）。11-25 作者指出原例子（猫本来就在旁边、又被挪到斜对角）说不通，改成这个。
+ */
 function headStill(l: PlanLayout): VignetteScript {
   const n = 3;
   const p = l.pitchM;
@@ -849,44 +853,41 @@ function headStill(l: PlanLayout): VignetteScript {
   const S = seats[0];
   const tIdx = tableFor(l, rects, seats, S);
   const T = l.units[tIdx >= 0 ? tIdx : cell(n, p, 1, 2).i];
-  const C = cell(n, p, 2, 1); // 猫待的台
-  const N = cell(n, p, 1, 1); // 另选的目标
-  const snap = restSnap(l, n, rects, seats, [], C.i, T.i, true);
+  const W = cell(n, p, 2, 0); // 猫原来待的台：与座位同一排，隔着一台
+  const C = cell(n, p, 2, 1); // 座位旁边那台：猫走到这里就挨着人了；再往前 (2,2) 在人头顶上方，整场不落
+  const snap = restSnap(l, n, rects, seats, [], W.i, T.i, true);
   const formed: (UnitDesign | null)[] = new Array(n * n).fill(null);
-  for (const u of [T.i, C.i, N.i]) formed[u] = designUnit(snap, u, formed);
-  const dT = formed[T.i]!, dC = formed[C.i]!, dN = formed[N.i]!;
+  for (const u of [T.i, W.i, C.i]) formed[u] = designUnit(snap, u, formed);
+  const dT = formed[T.i]!, dW = formed[W.i]!, dC = formed[C.i]!;
   const sit = 6;
-  const want = 14; // 猫想去坐着的人头顶上方那台
-  const tN = want + 10; // 10 s 内上不去，另选目标（规则文档 §4 ⑤）
-  const xN = tN + RAMP.drop + RAMP.form + 0.5;
-  const leave = xN + 10;
+  const tC = 14; // 猫朝人靠近：目标台先落
+  const xC = tC + RAMP.drop + RAMP.form + 0.5;
+  const leave = xC + 22;
   const units: (UnitScript | null)[] = Array.from({ length: n * n }, () => null);
   units[T.i] = unitOf(unitRamp(sit, leave + 0.5), dT, 'A');
-  units[C.i] = unitOf(heldUntil(xN + 3.5), dC, 'B');
-  units[N.i] = unitOf(unitRamp(tN), dN, 'C');
+  units[W.i] = unitOf(heldUntil(xC + 3.5), dW, 'B');
+  units[C.i] = unitOf(unitRamp(tC), dC, 'C');
   const enter: [number, number] = [half + 0.3, S.y - 0.5];
   const front: [number, number] = [S.x - 0.05, S.y - 0.4];
+  const toS = Math.atan2(S.y - C.y, S.x - C.x);
   const cat: CatBeat[] = [
-    onRing(C, dC, Math.PI, 0, 'sit', Math.PI),
-    onRing(C, dC, 0, want, 'sit', 0), // 转到朝那台的一侧等着
-    onRing(C, dC, 0, tN, 'sit', -Math.PI / 2),
-    onRing(C, dC, -Math.PI / 2, xN - 0.1, 'walk', -Math.PI / 2),
-    ...crossBeats(C, N, dN, xN),
-    onRing(N, dN, Math.PI / 4, xN + 3.4, 'sit', Math.PI / 4),
+    onRing(W, dW, 0, 0, 'sit', 0),
+    onRing(W, dW, 0, xC - 0.1, 'walk', 0),
+    ...crossBeats(W, C, dC, xC),
+    onRing(C, dC, toS, xC + 3.4, 'sit', toS),
   ];
   return {
     n,
     duration: leave + 6,
     furniture,
     units,
-    people: [{ path: [[0, ...enter], [1.5, ...enter], [sit - 1, ...front], [sit, ...front], [leave, ...front], [leave + 0.5, ...front], [leave + 3.5, ...enter], [leave + 6, ...enter]], sit: [sit, leave, 0] }],
+    people: [{ path: [[0, ...enter], [1.5, ...enter], [sit - 1, ...front], [sit, ...front], [leave, ...front], [leave + 0.5, ...front], [leave + 3.5, ...enter], [leave + 6, ...enter]], sit: [sit, leave, 0], watch: [[sit + 1, leave, 0]] }],
     cats: [cat],
     beats: [
       { t: 0, zh: '一只猫在一台上坐着', en: 'A cat sits on a unit' },
       { t: sit, zh: `一位访客坐下，面前那台落下当桌子（${m2(dT.top)} m）`, en: `A visitor sits and the unit in front comes down as a table (${m2(dT.top)} m)` },
-      { t: want, zh: '猫的目标台在坐着的人头顶上方：这一台不落，猫等着', en: 'The cat’s target is over the seated visitor’s head: it stays up and the cat waits' },
-      { t: tN, zh: '上不去，猫另选目标：那一台落下', en: 'Unable to get on, the cat picks another target, which comes down' },
-      { t: xN, zh: '猫移过去，身后那台收回', en: 'The cat moves over and the unit behind it retracts' },
+      { t: tC, zh: '猫朝坐着的人靠近：目标台先落下', en: 'The cat approaches the seated visitor: its target comes down first' },
+      { t: xC, zh: '猫到了座位旁边那台。再往前一台在人头顶上方：不落', en: 'The cat reaches the unit beside the seat. The next one is over the visitor’s head: it stays up' },
     ],
   };
 }
