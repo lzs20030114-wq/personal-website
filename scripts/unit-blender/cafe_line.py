@@ -28,8 +28,8 @@ from ishi import Body, v, norm  # noqa: E402
 
 # ---------------------------------------------------------------- 线型表（终稿 2400 px 宽时的像素）
 # 五档，相邻两档 1.6 倍。每一档只给一类东西；远处的物体整体降一档（不是连续变细）。
-GRADE = dict(cut=3.2, unit=2.0, obj=1.25, inner=0.78, tex=0.48, hair=0.30)
-DOWN = dict(cut='cut', unit='obj', obj='inner', inner='tex', tex='hair', hair='hair')
+GRADE = dict(cut=3.2, unit=2.0, unit_m=1.6, obj=1.25, inner=0.78, tex=0.48, hair=0.30)
+DOWN = dict(cut='cut', unit='obj', unit_m='obj', obj='inner', inner='tex', tex='hair', hair='hair')
 # 第五轮（黑白为主）多出的一档 hair 只给纹理（木纹、拼缝）；旧配色不用它。旧配色里 tex 降档还是 tex（见 _DOWN_OLD）
 _DOWN_OLD = dict(DOWN, tex='tex')
 # 排线间距三档（米）
@@ -601,8 +601,9 @@ PALETTES.update({
 # 面：全是白，纹理是平的一层墨（paint.py 的 _tone_layer）：墙是稀的点，沙发是密一点的点，地面是矢量的板缝、接头和木纹。
 # 颜色：只给单元，且只给一小块（整台淡色 / 只给猫的台 / 只给台面 / 只给线）。没有影子，没有明暗。
 _BW_LINES = dict(
-    unit=('unit', ['#161514']),                                   # 单元外轮廓：全图最重
-    unit_in=('inner', ['#161514']),                               # 单元里前面压后面的线
+    unit=(('unit', 'unit_m', 'obj'), ['#161514']),                # 单元外轮廓：全图最重；剖透视里按远近 2.0 / 1.6 / 1.25
+    unit_in=(('inner', 'inner', 'tex'), ['#161514']),             # 单元里前面压后面的线
+    unit_crease=('inner', ['#55524E']),                           # 台面顶面和侧面的交线
     seam=('tex', ['#8C8881', '#A19D96', '#B7B3AC']),              # 单元外皮上的缝
     furn=('obj', ['#2B2927', '#55524E', '#86827C']),              # 家具外轮廓
     furn_in=('inner', ['#6E6A65', '#8C8881', '#ACA8A1']),         # 家具里面的线
@@ -632,7 +633,7 @@ def _bw(tone=None, unit='#FFFFFF', shade='flat', lines=None, floor='boards', gra
                unit_line='#161514', unit=unit, unit_top=unit, unit_under=unit, unit_seam='#8C8881',
                mech='#FFFFFF', furn='#FFFFFF', fig='#FFFFFF', hair='#2B2927', cut='#1C1B19', stow='#B3AFA8', shadow='#161514',
                cat_recolor=_CAT_GRAY,
-               bw=dict(lines=dict(_BW_LINES, **(lines or {})), floor=floor, grain=grain, z=(9.6, 11.2)),
+               bw=dict(lines=dict(_BW_LINES, **(lines or {})), floor=floor, grain=grain, z=(9.6, 11.2), trace=True),
                fx=dict(shade=shade, tone=tone or {}, paper_grain=0.3))
     if fig_tone:
         pal['fig_tone'] = fig_tone
@@ -872,6 +873,32 @@ def _lum(c):
         return 0.5
     r, g, b = (int(c[i:i + 2], 16) / 255 for i in (1, 3, 5))
     return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def _rdp(pts, eps):
+    """折线化简（Ramer–Douglas–Peucker）：偏离不超过 eps 像素的点去掉，线更顺"""
+    if eps <= 0 or len(pts) < 3:
+        return pts
+    keep = np.zeros(len(pts), bool)
+    keep[0] = keep[-1] = True
+    stack = [(0, len(pts) - 1)]
+    while stack:
+        a, b = stack.pop()
+        if b <= a + 1:
+            continue
+        p, q = pts[a], pts[b]
+        d = q - p
+        L = math.hypot(d[0], d[1])
+        seg = pts[a + 1:b]
+        if L < 1e-9:
+            dist = np.hypot(seg[:, 0] - p[0], seg[:, 1] - p[1])
+        else:
+            dist = np.abs(d[0] * (seg[:, 1] - p[1]) - d[1] * (seg[:, 0] - p[0])) / L
+        i = int(np.argmax(dist))
+        if dist[i] > eps:
+            keep[a + 1 + i] = True
+            stack.append((a, a + 1 + i)); stack.append((a + 1 + i, b))
+    return pts[keep]
 
 
 def _fig_tone(pal, k):
@@ -1235,14 +1262,18 @@ class Plate:
             if not len(xy) or role not in L:
                 return
             grade, cols = L[role]
-            if len(cols) == 1 or z is None:
-                put(grade, cols[0], xy)
+            grades = list(grade) if isinstance(grade, tuple) else [grade, grade, DOWN[grade]]
+            if len(cols) == 1:
+                cols = cols * 3
+            if z is None or (not isinstance(grade, tuple) and len(L[role][1]) == 1):
+                put(grades[0], cols[0], xy)
                 return
+            z = np.broadcast_to(np.asarray(z, float), (len(xy),))
             b = np.where(z < z1, 0, np.where(z < z2, 1, 2))
             for i in range(3):
                 m = b == i
                 if m.any():
-                    put(DOWN[grade] if i == 2 else grade, cols[i], xy[m])
+                    put(grades[i], cols[i], xy[m])
 
         for o, V, T in objs:
             S, kind = LW.features(V, T, cam)
@@ -1253,8 +1284,9 @@ class Plate:
             elif o.cls == 'furn':
                 emit('furn', xy[p], z[p]); emit('furn_in', xy[~p], z[~p])
             elif o.cls == 'unit':
-                jump = r['jump'] > 0.07
-                emit('unit', xy[p], z[p]); emit('unit_in', xy[~p & jump], z[~p & jump])
+                if not bw.get('trace'):
+                    jump = r['jump'] > 0.07
+                    emit('unit', xy[p], z[p]); emit('unit_in', xy[~p & jump], z[~p & jump])
             elif o.cls == 'mech':
                 emit('mech', xy[p], z[p]); emit('mech_in', xy[~p], z[~p])
             elif o.cls == 'stow':
@@ -1273,6 +1305,9 @@ class Plate:
                 seg, _ = LW.clip_segs(seg, *self.cut)
             rr = LW.trace(buf, seg, own=-9, tol=0.05)
             emit('frame' if cls == 'frame' else 'mullion', rr['xy'], rr['z'])
+        if bw.get('trace'):
+            for role, pl, zr in self._trace_units(objs, bw):
+                emit(role, np.c_[pl[:-1], pl[1:]], zr)
         for seg, oid, role in self.hatches_bw(bw):
             rr = LW.trace(buf, seg, own=oid, by_id=True, min_px=0.4)
             if role == 'grid':
@@ -1281,6 +1316,135 @@ class Plate:
             else:
                 emit(role, rr['xy'], rr['z'])
         return dashed
+
+    def _trace_units(self, objs, bw):
+        """单元的线：面画完以后沿单元在画面上实际占的那块区域描（第五轮，2026-11-25）。
+
+        以前单元的外轮廓从三维网格的边上取，二十条带子各自的轮廓边在画面上几乎重合又错开一点，叠成一道又粗又毛的黑边。
+        现在：① 编号缓冲里每个单元占的像素，按深度再分成几块（同一个单元里前后差 > jump 米的地方断开，比如台面压在芯前面）；
+        ② 每一块的边界用等值线描成一条连续的折线（先轻轻模糊，线是顺的）；
+        ③ 边界的每一段看外面是谁：外面更近 = 这段边是挡在前面的东西的，不画；外面是同一个单元更远的那块 = 单元里的线；
+           其他 = 单元的外轮廓。返回 [(用途, (n, 2) 终稿像素)]"""
+        import contour as CT
+        from scipy import ndimage
+        buf, cam = self.buf, self.cam
+        ss = buf.ss
+        ids = buf.ids
+        unit_ids = [o.id for o, _, _ in objs if o.cls == 'unit']
+        if not unit_ids:
+            return []
+        U = np.isin(ids, unit_ids)
+        if not U.any():
+            return []
+        key = buf.zk
+        ok = np.isfinite(key)
+        Z = np.where(ok, cam.zof(np.where(ok, key, -1.0 if cam.persp else 0.0)), np.inf)
+        jump = float(bw.get('jump', 0.2))
+        # ① 断开：同一个单元里相邻像素深度差大于 jump、或两个单元相邻，把远的那个像素划掉
+        cut = np.zeros_like(U)
+        for dy, dx in ((0, 1), (1, 0)):
+            a = (slice(0, ids.shape[0] - dy), slice(0, ids.shape[1] - dx))
+            b = (slice(dy, None), slice(dx, None))
+            both = U[a] & U[b]
+            with np.errstate(invalid='ignore'):
+                diff = both & ((ids[a] != ids[b]) | (np.abs(Z[a] - Z[b]) > jump))
+            far_a = diff & (Z[a] > Z[b]); far_b = diff & ~far_a
+            cut[a] |= far_a; cut[b] |= far_b
+        lab, n = ndimage.label(U & ~cut)
+        # 划掉的像素并回最近的那一块
+        if n == 0:
+            return []
+        idx = ndimage.distance_transform_edt(lab == 0, return_distances=False, return_indices=True)
+        full = np.where(U, lab[idx[0], idx[1]], 0)
+        out = []
+        sig = float(bw.get('trace_blur', 1.0 if cam.persp else 0.7)) * ss / 2
+        H, W = ids.shape
+        objs_slices = ndimage.find_objects(full)
+        for r, sl in enumerate(objs_slices, start=1):
+            if sl is None:
+                continue
+            y0, y1 = max(sl[0].start - 4, 0), min(sl[0].stop + 4, H)
+            x0, x1 = max(sl[1].start - 4, 0), min(sl[1].stop + 4, W)
+            m = (full[y0:y1, x0:x1] == r)
+            if m.sum() < 6 * ss * ss:
+                continue
+            f = ndimage.gaussian_filter(m.astype(np.float64), sig)
+            rid = ids[y0:y1, x0:x1][m]
+            uid = int(np.bincount(rid[rid >= 0]).argmax()) if (rid >= 0).any() else -1
+            zin = float(np.median(Z[y0:y1, x0:x1][m]))
+            # 台面：朝上的那一面在这一块里的边界（台面顶面和侧面的交线）。只取够长、够顺的几段
+            if bw.get('crease') and buf.shade is not None:
+                up = m & (buf.shade[y0:y1, x0:x1] == 1)
+                up = ndimage.binary_opening(up, iterations=max(1, ss))
+                lab_up, nu = ndimage.label(up)
+                if nu:
+                    sizes = ndimage.sum(up, lab_up, range(1, nu + 1))
+                    keep = np.isin(lab_up, 1 + np.nonzero(sizes >= 40 * ss * ss)[0])
+                    fu = ndimage.gaussian_filter(keep.astype(np.float64), sig * 1.6)
+                    # 只留贴着台面边沿的那一段（离这一块的外缘不超过 rim 米）：绕到芯根部的那一圈是收拢的布，画出来是一串锯齿
+                    dt = ndimage.distance_transform_edt(m)
+                    ppm_b = float(cam.ppm(zin)) * ss
+                    rim_px = float(bw.get('rim', 0.12)) * ppm_b
+                    min_px = float(bw.get('crease_min', 10.0)) * ss
+                    for pl in CT.polylines(fu, 0.5):
+                        if len(pl) < 6:
+                            continue
+                        mid = (pl[:-1] + pl[1:]) / 2
+                        t = pl[1:] - pl[:-1]
+                        nrm = np.c_[t[:, 1], -t[:, 0]]
+                        nrm /= np.maximum(np.hypot(nrm[:, 0], nrm[:, 1]), 1e-9)[:, None]
+                        po = mid + nrm * (1.6 * ss / 2 + 0.8)
+                        pn = mid - nrm * (1.6 * ss / 2 + 0.8)
+                        pi = np.clip(np.round(po[:, 1]).astype(int), 0, f.shape[0] - 1); pj = np.clip(np.round(po[:, 0]).astype(int), 0, f.shape[1] - 1)
+                        qi = np.clip(np.round(pn[:, 1]).astype(int), 0, f.shape[0] - 1); qj = np.clip(np.round(pn[:, 0]).astype(int), 0, f.shape[1] - 1)
+                        # 两侧都还在这一块里（一侧顶面、一侧侧面）才是折线；贴着外轮廓的那段已经有外轮廓了
+                        mi = np.clip(np.round(mid[:, 1]).astype(int), 0, f.shape[0] - 1); mj = np.clip(np.round(mid[:, 0]).astype(int), 0, f.shape[1] - 1)
+                        inside = m[pi, pj] & m[qi, qj] & (keep[pi, pj] != keep[qi, qj]) & (dt[mi, mj] <= rim_px)
+                        k = 0
+                        while k < len(inside):
+                            e = k
+                            while e + 1 < len(inside) and inside[e + 1] == inside[k]:
+                                e += 1
+                            if inside[k]:
+                                pts = pl[k:e + 2]
+                                if np.sum(np.hypot(*np.diff(pts, axis=0).T)) >= min_px:
+                                    out.append(('unit_crease', np.c_[(pts[:, 0] + x0 + 0.5) / ss, (pts[:, 1] + y0 + 0.5) / ss], zin))
+                            k = e + 1
+            for pl in CT.polylines(f, 0.5):
+                if len(pl) < 3:
+                    continue
+                # 每一小段：法向朝外（模糊图变小的一侧）取外面一点、里面一点
+                mid = (pl[:-1] + pl[1:]) / 2
+                t = pl[1:] - pl[:-1]
+                nrm = np.c_[t[:, 1], -t[:, 0]]
+                nrm /= np.maximum(np.hypot(nrm[:, 0], nrm[:, 1]), 1e-9)[:, None]
+                probe = mid + nrm * 0.8
+                pi = np.clip(np.round(probe[:, 1]).astype(int), 0, f.shape[0] - 1)
+                pj = np.clip(np.round(probe[:, 0]).astype(int), 0, f.shape[1] - 1)
+                flip = f[pi, pj] > 0.5
+                nrm[flip] *= -1
+                po = mid + nrm * (1.6 * ss / 2 + 0.8)
+                pin = mid - nrm * (1.6 * ss / 2 + 0.8)
+                oi = np.clip(np.round(po[:, 1]).astype(int) + y0, 0, H - 1); oj = np.clip(np.round(po[:, 0]).astype(int) + x0, 0, W - 1)
+                ii = np.clip(np.round(pin[:, 1]).astype(int) + y0, 0, H - 1); ij = np.clip(np.round(pin[:, 0]).astype(int) + x0, 0, W - 1)
+                z_in = np.where(full[ii, ij] == r, Z[ii, ij], zin)
+                z_out = Z[oi, oj]
+                nearer = z_out < z_in - 0.03
+                same = (ids[oi, oj] == uid) & (full[oi, oj] != r)
+                role = np.where(nearer, 0, np.where(same, 2, 1))      # 0 不画 · 1 外轮廓 · 2 单元里的线
+                # 按用途切成几段
+                k = 0
+                while k < len(role):
+                    e = k
+                    while e + 1 < len(role) and role[e + 1] == role[k]:
+                        e += 1
+                    if role[k]:
+                        pts = pl[k:e + 2]
+                        if len(pts) >= 2:
+                            xy = _rdp(np.c_[(pts[:, 0] + x0 + 0.5) / ss, (pts[:, 1] + y0 + 0.5) / ss], float(bw.get('trace_rdp', 0.3)))
+                            out.append(('unit' if role[k] == 1 else 'unit_in', xy, zin))
+                    k = e + 1
+        return out
 
     def hatches_bw(self, bw):
         """地板：板缝（与第三轮同一套位置，14 cm 一块）+ 每一条板错开的接头 + 板里一两道木纹；没有影子。
@@ -1521,7 +1685,7 @@ class Plate:
                             continue
             s.append(draw(clip))
         # ---- 场景的线（画在人和猫上面：被他们挡住的线在找线时已经去掉了）
-        for grade in (('hair',) if bw else ()) + ('tex', 'inner', 'obj', 'unit'):
+        for grade in (('hair', 'tex', 'inner', 'obj', 'unit_m', 'unit') if bw else ('tex', 'inner', 'obj', 'unit')):
             groups = [(g, c) for (g, c) in col if g == grade]
             if bw:
                 groups.sort(key=lambda gc: -_lum(pal.get(gc[1], gc[1])))
