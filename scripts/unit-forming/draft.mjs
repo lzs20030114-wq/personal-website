@@ -6,6 +6,9 @@
 // UNIT_TIERS[2]，换成米的那条链与台架相同）：夹环相距、上夹环下降多少、挑出、台厚、台面高度、每颗键在台上的位置、收起时多长。
 // **中间的形是示意**（作者 11-26「现实里布在扣上的时候会起各种褶皱，给它美化一下，变成比较平滑的过程」）：按布长不变画的一族
 // 光滑曲线（见 idealFrame），引擎里的褶皱、键在芯缩到一半时就同一步扣上这两件事不画，图注里写明。
+// **第三版**（作者 11-26「减少图面上的说明性文字，增加图像本身的说明性，靠符号、图形、像漫画一样的解释替代语言」）：
+// 副题、脚注、成句的说明全部拿掉，换成一套符号（空心框 = 会动的一端、实心框加斜线 = 不动的一端、空心点加虚线 = 一对还没扣、
+// 实心点加实线 = 扣上、两道短横 = 等长、淡虚框加箭头 = 从哪儿动到哪儿、圆圈 = 放大看一对点）。图上只留步名、构件名与尺寸数字。
 // 第一版（中间各步照引擎原样画）在 git 历史里：提交 3b032c7 的 draft.mjs。
 //
 // 用法：node scripts/unit-forming/draft.mjs [输出目录=项目二_成形过程]
@@ -262,13 +265,37 @@ const arrow = (x1, y1, x2, y2, o = {}) => {
 };
 const dotAt = (x, y, o = {}) => `<circle cx="${f1(x)}" cy="${f1(y)}" r="${o.r ?? 3}" fill="${o.fill ?? PAPER}" stroke="${o.stroke ?? INK}" stroke-width="${o.w ?? 1.2}"/>`;
 
-// ───────────────────────────────────────────────────────────── B 配对 → 靠拢 → 扣上（原理）
+// ───────────────────────────────────────────────────────────── 符号
+/** 一对点：locked = 实心点 + 实线（扣上），否则空心点 + 虚线（还没扣）。横放，x 起点、w 间距 */
+function keyIcon(x, y, w, locked, o = {}) {
+  const v = o.vertical;
+  const x2 = v ? x : x + w, y2 = v ? y + w : y;
+  return (
+    (locked ? L(x, y, x2, y2, { stroke: KEY, w: o.w ?? 2.6, cap: 'round' }) : L(x, y, x2, y2, { stroke: KEY, w: 1, dash: '3 3' })) +
+    dotAt(x, y, { r: o.r ?? 3.2, stroke: KEY, fill: locked ? KEY : PAPER }) + dotAt(x2, y2, { r: o.r ?? 3.2, stroke: KEY, fill: locked ? KEY : PAPER })
+  );
+}
+/** 扣上那一下：几道放射的小短线 */
+const spark = (x, y, r = 10, angles = [-1.0, -0.35, 0.3]) =>
+  angles.map((a) => L(x + Math.cos(a) * r * 0.45, y + Math.sin(a) * r * 0.45, x + Math.cos(a) * r, y + Math.sin(a) * r, { stroke: KEY, w: 1.3, cap: 'round' })).join('');
+/** 等长记号：线上两道短横 */
+const cong = (x, y, vertical = false) =>
+  [-2.5, 2.5].map((d) => (vertical ? L(x - 5, y + d, x + 5, y + d, { stroke: INK, w: 1.2 }) : L(x + d, y - 5, x + d, y + 5, { stroke: INK, w: 1.2 }))).join('');
+/** 放长 ←→ / 缩短 →← */
+const growIcon = (x, y, len, col) => arrow(x, y, x - len / 2, y, { stroke: col, w: 1.2, head: 5 }) + arrow(x, y, x + len / 2, y, { stroke: col, w: 1.2, head: 5 });
+const shrinkIcon = (x, y, len, col) => arrow(x - len / 2, y, x - 2.5, y, { stroke: col, w: 1.2, head: 5 }) + arrow(x + len / 2, y, x + 2.5, y, { stroke: col, w: 1.2, head: 5 });
+/** 不动：框下的几道斜线 */
+const hatch = (x, y, w, k = 4) => Array.from({ length: k }, (_, i) => L(x + (i * w) / (k - 1), y, x + (i * w) / (k - 1) - 7, y + 9, { stroke: INK, w: 1 })).join('');
+const tag = (W, H) => T(W - 30, H - 18, '示意 · 尺寸为引擎实测', { size: 10.5, fill: MUTE, anchor: 'end' });
+const head = (letter, title) => T(40, 46, `${letter}　${title}`, { size: 22, bold: true });
+
+// ───────────────────────────────────────────────────────────── B 键怎么把布折成台（原理）
 function panelB() {
   const K = 500;
-  const W = 1500, H = 1030;
-  const F = R1; // 台面这一段布长
+  const W = 1500, H = 960;
+  const F = R1;
   const LOW = S_STRAIGHT * LOW_FRAC, UP = S_STRAIGHT - LOW;
-  const yBase = 880;
+  const yBase = 850;
   /** 直线版：口宽 m 的一道折（台面 / 台底是两条直线，端面竖着） */
   const fold = (m) => {
     const R = Math.sqrt(Math.max(0, F * F - ((m - H_KEY) / 2) ** 2));
@@ -278,32 +305,32 @@ function panelB() {
     return { m, R, a, b, c, d, top: ya + UP, seats };
   };
   const stages = [
-    { x: 250, f: fold(L_LOBE), no: '①', t: '配对', d: '布上哪两点要扣在一起' },
-    { x: 640, f: fold(L_LOBE * 0.66), no: '②', t: '两端靠拢', d: '中间的布没处去，往外折' },
-    { x: 930, f: fold(L_LOBE * 0.34), no: '③', t: '每一对越来越近', d: '' },
-    { x: 1220, f: fold(H_KEY), no: '④', t: '扣上', d: '每一对相距一个键长，定住' },
+    { x: 150, f: fold(L_LOBE), no: '①', t: '配对' },
+    { x: 560, f: fold(L_LOBE * 0.66), no: '②', t: '挤出' },
+    { x: 880, f: fold(L_LOBE * 0.34), no: '③', t: '靠拢' },
+    { x: 1200, f: fold(H_KEY), no: '④', t: '扣上' },
   ];
   const X = (st, x) => st.x + x * K;
   const Y = (y) => yBase - y * K;
-  let g = '';
-  g += T(40, 46, 'B　配对 → 靠拢 → 扣上', { size: 22, bold: true });
-  g += T(40, 72, '一条带上的十对点（十颗键）怎么把一段平的布变成一块台。只讲原理：直线代表布，左边灰条代表芯，布的两头固定在芯的两端。', { size: 12.5, fill: MUTE });
+  let g = head('B', '键怎么把布折成台');
 
   // 跨四步的连线：上端、a、b、c、d 各自去了哪儿
   const link = (pick, o = {}) => P(stages.map((st) => { const q = pick(st.f); return [X(st, q[0]), Y(q[1])]; }), { stroke: o.stroke ?? HAIR, w: o.w ?? 1, dash: o.dash ?? '2 4' });
   g += link((f) => [0, f.top]) + link((f) => f.a) + link((f) => f.b) + link((f) => f.c) + link((f) => f.d);
   g += link(() => [0, 0], { dash: '0' });
 
+  const PICK = 5; // 放大看哪一对
   stages.forEach((st, k) => {
     const f = st.f;
     const px = (q) => [X(st, q[0]), Y(q[1])];
-    // 芯：一根随步骤变短的灰条
+    // 芯：一根随步骤变短的灰条；上一步的长度留一截虚框
+    if (k > 0) g += `<rect x="${st.x - 16}" y="${f1(Y(stages[k - 1].f.top))}" width="8" height="${f1((stages[k - 1].f.top - f.top) * K)}" fill="none" stroke="${HAIR}" stroke-width="0.9" stroke-dasharray="3 3"/>`;
     g += `<rect x="${st.x - 16}" y="${f1(Y(f.top))}" width="8" height="${f1(f.top * K)}" fill="${SOFT}" stroke="${INK}" stroke-width="0.9"/>`;
     // 布
     g += P([px([0, f.top]), px(f.a)], { stroke: MUTE, w: 2 });
     g += P([px(f.d), px([0, 0])], { stroke: MUTE, w: 2 });
     // 键：① 弧，②③ 还没扣上的虚线，④ 扣上的实线
-    f.seats.forEach(([u, v], i) => {
+    f.seats.forEach(([u, v]) => {
       const [x1, y1] = px(u), [x2, y2] = px(v);
       if (k === 0) { const r = (y2 - y1) / 2; g += `<path d="M${f1(x1 + 5)} ${f1(y1)}A${f1(r)} ${f1(r)} 0 0 1 ${f1(x2 + 5)} ${f1(y2)}" fill="none" stroke="${KEY}" stroke-width="1.2"/>`; }
       else if (k < 3) g += L(x1, y1, x2, y2, { stroke: KEY, w: 1, dash: '3 3' });
@@ -312,53 +339,70 @@ function panelB() {
     g += P([px(f.a), px(f.b)], { stroke: GREEN, w: 4, cap: 'butt' });
     g += P([px(f.c), px(f.d)], { stroke: GREEN_L, w: 4, cap: 'butt' });
     g += P([px(f.b), px(f.c)], { stroke: INK, w: 4, cap: 'butt' });
-    f.seats.forEach(([u, v]) => { g += dotAt(...px(u), { r: 2.2, stroke: KEY, w: 1.1 }) + dotAt(...px(v), { r: 2.2, stroke: KEY, w: 1.1 }); });
-    // 两头：上端会动（空心），下端不动（实心 + 斜线）
+    f.seats.forEach(([u, v]) => { g += dotAt(...px(u), { r: 2.2, stroke: KEY, w: 1.1, fill: k === 3 ? KEY : PAPER }) + dotAt(...px(v), { r: 2.2, stroke: KEY, w: 1.1, fill: k === 3 ? KEY : PAPER }); });
+    // 两头：上端会动（空心框 + 箭头），下端不动（实心框 + 斜线）
+    if (k > 0) {
+      const yPrev = Y(stages[k - 1].f.top);
+      g += `<rect x="${st.x - 20}" y="${f1(yPrev - 5)}" width="26" height="10" fill="none" stroke="${MUTE}" stroke-width="1" stroke-dasharray="3 3"/>`;
+      g += arrow(st.x + 20, yPrev, st.x + 20, Y(f.top) - 2, { stroke: INK, w: 1.3, head: 7 });
+    }
     g += `<rect x="${st.x - 20}" y="${f1(Y(f.top) - 5)}" width="26" height="10" fill="${PAPER}" stroke="${INK}" stroke-width="1.4"/>`;
-    g += `<rect x="${st.x - 20}" y="${f1(Y(0) - 5)}" width="26" height="10" fill="${INK}"/>`;
-    for (let i = 0; i < 4; i++) g += L(st.x - 20 + i * 9, Y(0) + 7, st.x - 27 + i * 9, Y(0) + 16, { stroke: INK, w: 1 });
+    g += `<rect x="${st.x - 20}" y="${f1(Y(0) - 5)}" width="26" height="10" fill="${INK}"/>` + hatch(st.x - 16, Y(0) + 7, 22);
+    // 往外挤的箭头
+    if (k === 1 || k === 2) g += arrow(px(f.b)[0] + 10, Y((f.b[1] + f.c[1]) / 2), px(f.b)[0] + 38, Y((f.b[1] + f.c[1]) / 2), { stroke: INK, w: 1.3, head: 7 });
     // a b c d
     const lab = (q, ch, dx, dy) => T(px(q)[0] + dx, px(q)[1] + dy, ch, { size: 13, bold: true, anchor: 'middle', halo: true });
     if (k === 0) g += lab(f.a, 'a', -30, 4) + lab(f.b, 'b', -30, 2) + lab(f.c, 'c', -30, 8) + lab(f.d, 'd', -30, 4);
-    else g += lab(f.a, 'a', -30, 4) + lab(f.b, 'b', 13, -4) + lab(f.c, 'c', 13, 13) + lab(f.d, 'd', -30, 4);
+    if (k === 3) g += lab(f.a, 'a', -30, 2) + lab(f.b, 'b', 13, -4) + lab(f.c, 'c', 13, 13) + lab(f.d, 'd', -30, 8);
     // 步名
-    g += T(st.x - 20, 126, `${st.no} ${st.t}`, { size: 15, bold: true });
-    if (st.d) g += T(st.x - 20, 146, st.d, { size: 12, fill: MUTE });
-    if (k > 0) g += arrow(st.x - 3, Y(f.top) - 34, st.x - 3, Y(f.top) - 12, { stroke: INK });
+    g += T(st.x - 20, 112, `${st.no} ${st.t}`, { size: 16, bold: true });
+    // 放大看一对点
+    if (k >= 1) {
+      const [u, v] = f.seats[PICK];
+      const [sx, sy1] = px(u), [, sy2] = px(v);
+      const r = 46, bx = st.x + 150, by = Y(f.a[1]) - 96 - (k === 1 ? 40 : 0);
+      const gap = [0, 58, 40, 24][k];
+      g += L(sx, sy1, sx, sy2, { stroke: KEY, w: k === 3 ? 3.4 : 1.8, dash: k === 3 ? undefined : '3 3' });
+      g += `<circle cx="${f1(sx)}" cy="${f1(sy1)}" r="7" fill="none" stroke="${INK}" stroke-width="0.9"/>` + `<circle cx="${f1(sx)}" cy="${f1(sy2)}" r="7" fill="none" stroke="${INK}" stroke-width="0.9"/>`;
+      g += L(sx + 3, sy1 - 7, bx - 14, by + r - 3, { stroke: INK, w: 0.8 });
+      g += `<circle cx="${bx}" cy="${f1(by)}" r="${r}" fill="${PAPER}" stroke="${INK}" stroke-width="1.1"/>`;
+      g += L(bx - 34, by - gap / 2, bx + 34, by - gap / 2, { stroke: GREEN, w: 4 }) + L(bx - 34, by + gap / 2, bx + 34, by + gap / 2, { stroke: GREEN_L, w: 4 });
+      g += keyIcon(bx, by - gap / 2, gap, k === 3, { vertical: true, r: 4, w: 3.4 });
+      if (k < 3) g += arrow(bx - 20, by - gap / 2 + 6, bx - 20, by - 3, { stroke: INK, w: 1.1, head: 5 }) + arrow(bx - 20, by + gap / 2 - 6, bx - 20, by + 3, { stroke: INK, w: 1.1, head: 5 });
+      else g += spark(bx + 9, by, 20, [-0.7, 0, 0.7]);
+    }
   });
-  // ① 的分段名
+  // ①：最大一对的半跨 —— ④：挑出。两处打同一个等长记号
   {
     const st = stages[0], f = st.f;
-    const lx = st.x - 52;
-    const seg = (y1, y2, name, o = {}) => {
-      g += P([[lx + 6, Y(y1) + 2], [lx, Y(y1) + 2], [lx, Y(y2) - 2], [lx + 6, Y(y2) - 2]], { stroke: MUTE, w: 0.8, cap: 'butt' });
-      g += T(lx - 8, (Y(y1) + Y(y2)) / 2 + 4, name, { size: 12.5, anchor: 'end', fill: o.fill ?? INK, bold: !!o.bold });
-    };
-    seg(f.top, f.a[1], '贴着芯');
-    seg(f.a[1], f.b[1], '台面', { fill: GREEN, bold: true });
-    seg(f.b[1], f.c[1], '端面', { bold: true });
-    seg(f.c[1], f.d[1], '台底', { fill: GREEN, bold: true });
-    seg(f.d[1], 0, '贴着芯');
-    g += T(st.x + 16, Y(f.top) + 4, '上端：随芯缩短往下走', { size: 12, anchor: 'start', fill: MUTE });
-    g += T(st.x - 40, Y(0) + 36, '下端：不动', { size: 12, fill: MUTE });
-    // 最大那一对的半跨
-    const r = (f.a[1] - f.d[1]) / 2 * K;
     const ymid = Y((f.a[1] + f.d[1]) / 2);
-    g += dimH(st.x + 5, st.x + 5 + (SEAT.length ? (f.seats[0][0][1] - f.seats[0][1][1]) / 2 * K : r), ymid, '最大一对的半跨', { stroke: INK, fill: INK });
+    const r = ((f.seats[0][0][1] - f.seats[0][1][1]) / 2) * K;
+    g += L(st.x + 5, ymid, st.x + 5 + r, ymid, { stroke: INK, w: 1.4 }) + L(st.x + 5 + r, ymid - 5, st.x + 5 + r, ymid + 5, { stroke: INK, w: 1.4 });
+    g += `<rect x="${f1(st.x + 5 + r / 2 - 8)}" y="${f1(ymid - 7)}" width="16" height="14" fill="${PAPER}"/>` + cong(st.x + 5 + r / 2, ymid);
+    const s4 = stages[3], f4 = s4.f;
+    const x1 = X(s4, f4.a[0]), x2 = X(s4, f4.b[0]), yy = Y(f4.d[1]) + 26;
+    g += L(x1, yy, x2, yy, { stroke: INK, w: 1.4 }) + L(x1, yy - 5, x1, yy + 5, { stroke: INK, w: 1.4 }) + L(x2, yy - 5, x2, yy + 5, { stroke: INK, w: 1.4 });
+    g += `<rect x="${f1((x1 + x2) / 2 - 8)}" y="${f1(yy - 7)}" width="16" height="14" fill="${PAPER}"/>` + cong((x1 + x2) / 2, yy);
+    g += T((x1 + x2) / 2, yy + 22, `${f2(read.reach)} m`, { size: 12.5, anchor: 'middle' });
+    g += T(x2 + 24, Y((f4.b[1] + f4.c[1]) / 2) + 5, `${f1(H_KEY * 100)} cm`, { size: 12.5 });
+    // 上端一共下降多少
+    g += T(s4.x + 30, (Y(stages[0].f.top) + Y(f4.top)) / 2, '', {});
   }
-  // ④ 的读法
+  // 图例：只用符号
   {
-    const st = stages[3], f = st.f;
-    const px = (q) => [X(st, q[0]), Y(q[1])];
-    g += dimH(px(f.a)[0], px(f.b)[0], px(f.a)[1] - 30, '挑出 = 最大一对的半跨', { stroke: INK, fill: INK });
-    g += T((px(f.a)[0] + px(f.b)[0]) / 2, px(f.d)[1] + 24, `十颗键，每颗 ${f1(H_KEY * 100)} cm`, { size: 12.5, fill: KEY, anchor: 'middle' });
-    g += T(px(f.b)[0] + 14, px(f.b)[1] + 14, '台', { size: 14, bold: true, fill: GREEN });
+    const y = H - 44;
+    let x = 40;
+    const item = (draw, w, label) => { g += draw(x, y); g += T(x + w + 8, y + 4, label, { size: 12 }); x += w + 8 + label.length * 13 + 34; };
+    item((x0, y0) => `<path d="M${x0} ${y0 + 6}A14 14 0 0 1 ${x0 + 28} ${y0 + 6}" fill="none" stroke="${KEY}" stroke-width="1.2"/>` + dotAt(x0, y0 + 6, { r: 3, stroke: KEY }) + dotAt(x0 + 28, y0 + 6, { r: 3, stroke: KEY }), 28, '配成一对');
+    item((x0, y0) => keyIcon(x0, y0, 28, false), 28, '还没扣');
+    item((x0, y0) => keyIcon(x0, y0, 28, true), 28, '扣上');
+    item((x0, y0) => `<rect x="${x0}" y="${y0 - 5}" width="26" height="10" fill="${PAPER}" stroke="${INK}" stroke-width="1.4"/>`, 26, '会动的一端');
+    item((x0, y0) => `<rect x="${x0}" y="${y0 - 5}" width="26" height="10" fill="${INK}"/>` + hatch(x0 + 4, y0 + 7, 22), 26, '不动的一端');
+    item((x0, y0) => `<rect x="${x0 + 9}" y="${y0 - 9}" width="8" height="18" fill="${SOFT}" stroke="${INK}" stroke-width="0.9"/>`, 26, '芯');
+    item((x0, y0) => L(x0, y0, x0 + 9, y0, { stroke: GREEN, w: 4 }) + L(x0 + 9, y0, x0 + 18, y0, { stroke: INK, w: 4 }) + L(x0 + 18, y0, x0 + 27, y0, { stroke: GREEN_L, w: 4 }), 27, '台面 · 端面 · 台底');
+    item((x0, y0) => L(x0, y0, x0 + 26, y0, { stroke: INK, w: 1.4 }) + cong(x0 + 13, y0), 26, '等长');
   }
-  // ②③ 之间的小提示
-  g += T(stages[1].x + 110, Y(stages[1].f.a[1]) - 14, '虚线 = 这一对此刻相距多远', { size: 11.5, fill: KEY, halo: true });
-  const by = H - 54;
-  g += T(40, by, `这台方台的角档：最大一对隔 ${jOuter - iOuter} 节布，半跨 ${f2(read.halfSpan)} m，挑出 ${f2(read.reach)} m；上端一共下降 ${f2(read.topDrop)} m。换一组配对（哪两点、扣多长），同一条布折成另一个形。`, { size: 12.5 });
-  g += T(40, by + 24, '示意：布画成直线，夹具、芯的构造都不画。挑出、键长、下降量是引擎实测。', { size: 11.5, fill: MUTE });
+  g += tag(W, H);
   return { W, H, svg: sheet(W, H, g) };
 }
 
@@ -373,44 +417,42 @@ function bandOf(fr, toXY, o = {}) {
   return g;
 }
 
-// ───────────────────────────────────────────────────────────── A 成形叠在一张剖面里
+// ───────────────────────────────────────────────────────────── A 一条带从筒到台（叠画）
 function panelA() {
   const K = 560;
-  const W = 980, H = 1040;
-  const ax = 210;
+  const W = 820, H = 1020;
+  const ax = 230;
   const hTop = read.foot + read.hang0 + 0.1;
-  const y0 = 150;
+  const y0 = 110;
   const yOf = (h) => y0 + (hTop - h) * K;
   const toXY = ([x, y]) => [ax + (ST_R + x) * K, yOf(y)];
-  let g = '';
-  g += T(40, 46, 'A　成形叠在一张剖面里', { size: 22, bold: true });
-  g += T(40, 72, '一条带（沿对角线剖开的右半边）从落到工位到成台，八个时刻叠画，由浅到深。点线 = 布上 a b c d 四个点走过的路。', { size: 12.5, fill: MUTE });
+  let g = head('A', '一条带从筒到台');
 
   const ss = [0, 0.16, 0.32, 0.48, 0.64, 0.8, 0.92, 1];
   const frames = ss.map(idealFrame);
   const f0 = frames[0], fN = frames[frames.length - 1];
   const yTop0 = yOf(f0.topH), yTop1 = yOf(fN.topH), yFoot = yOf(read.foot);
   const cw = ST_R * K;
+  const shade = (k) => { const t = k / (frames.length - 1), c = Math.round(212 - t * 110); return `rgb(${c},${c - 4},${c - 12})`; };
   // 芯轴与芯
-  g += L(ax, y0 - 26, ax, yFoot + 44, { stroke: MUTE, w: 0.8, dash: '10 3 2 3' });
+  g += L(ax, y0 - 20, ax, yFoot + 40, { stroke: MUTE, w: 0.8, dash: '10 3 2 3' });
   g += `<rect x="${ax - 6}" y="${f1(yTop0)}" width="12" height="${f1(yTop1 - yTop0)}" fill="none" stroke="${HAIR}" stroke-width="1" stroke-dasharray="3 3"/>`;
   g += `<rect x="${ax - 6}" y="${f1(yTop1)}" width="12" height="${f1(yFoot - yTop1)}" fill="${SOFT}" stroke="${INK}" stroke-width="1"/>`;
-  // 四个点走过的路
-  for (const key of ['a', 'b', 'c', 'd']) {
+  // b、c 走过的路（带箭头）；a 沿着芯往下
+  for (const key of ['b', 'c']) {
     const path = [];
     for (let k = 0; k <= 80; k++) path.push(toXY(idealFrame(k / 80)[key]));
-    g += P(path, { stroke: INK, w: 0.9, dash: '1 3.4' });
+    g += P(path.slice(0, -3), { stroke: INK, w: 0.9, dash: '1 3.4' });
+    const e = path[path.length - 4], q = path[path.length - 9];
+    g += arrow(q[0], q[1], e[0], e[1], { stroke: INK, w: 1, head: 6 });
   }
   // 八个时刻
   frames.forEach((fr, k) => {
-    const last = k === frames.length - 1;
-    const t = k / (frames.length - 1);
-    const c = Math.round(212 - t * 110);
-    const col = `rgb(${c},${c - 4},${c - 12})`;
-    if (last) return;
+    if (k === frames.length - 1) return;
+    const col = shade(k), t = k / (frames.length - 1);
     g += bandOf(fr, toXY, { stroke: col, w: 1.2 + t * 0.5, keys: k === frames.length - 2 ? 'open' : 'none' });
-    g += L(ax - 12, yOf(fr.topH), ax + cw + 4, yOf(fr.topH), { stroke: col, w: 2.2 }); // 上夹环此刻的位置
-    for (const key of ['a', 'b', 'c', 'd']) g += dotAt(...toXY(fr[key]), { r: 2.3, stroke: col });
+    g += `<rect x="${ax - 12}" y="${f1(yOf(fr.topH) - 3)}" width="${f1(cw + 16)}" height="7" fill="${PAPER}" stroke="${col}" stroke-width="1.2"/>`;
+    for (const key of ['a', 'b', 'c']) g += dotAt(...toXY(fr[key]), { r: 2.3, stroke: col });
   });
   // 成形后：分段上色
   const parts = lobeParts(fN);
@@ -419,45 +461,46 @@ function panelA() {
   g += P(parts.top.map(toXY), { stroke: GREEN, w: 3.4, cap: 'butt' }) + P(parts.bottom.map(toXY), { stroke: GREEN_L, w: 3.4, cap: 'butt' }) + P(parts.end.map(toXY), { stroke: INK, w: 3.4, cap: 'butt' });
   for (const [key, dx, dy] of [['a', -14, -6], ['b', 13, -6], ['c', 13, 16], ['d', -14, 16]]) {
     g += dotAt(...toXY(fN[key]), { r: 3.2, fill: INK });
-    g += T(toXY(fN[key])[0] + dx, toXY(fN[key])[1] + dy, key, { size: 13.5, bold: true, anchor: 'middle' });
+    g += T(toXY(fN[key])[0] + dx, toXY(fN[key])[1] + dy, key, { size: 13.5, bold: true, anchor: 'middle', halo: true });
   }
-  for (const [key, dx] of [['a', 14], ['b', 14], ['c', 14]]) g += T(toXY(f0[key])[0] + dx, toXY(f0[key])[1] + 4, key, { size: 12.5, fill: MUTE, bold: true });
-  // 夹环
+  for (const key of ['a', 'b', 'c']) g += T(toXY(f0[key])[0] + 14, toXY(f0[key])[1] + 4, key, { size: 12.5, fill: MUTE, bold: true });
+  g += spark(toXY(fN.b)[0] + 8, (toXY(fN.b)[1] + toXY(fN.c)[1]) / 2, 20, [-0.7, 0, 0.7]);
+  // 两个夹环：上面的会动（空心 → 实心），下面的不动
   g += `<rect x="${ax - 12}" y="${f1(yTop1 - 3)}" width="${f1(cw + 16)}" height="7" fill="${INK}"/>`;
-  g += `<rect x="${ax - 12}" y="${f1(yFoot - 4)}" width="${f1(cw + 16)}" height="7" fill="${INK}"/>`;
-  for (let k = 0; k < 6; k++) g += L(ax - 12 + k * 14, yFoot + 6, ax - 20 + k * 14, yFoot + 16, { stroke: INK, w: 1 });
-  g += T(ax + cw + 12, yFoot + 18, '下夹环不动', { size: 12 });
-  g += T(ax + cw + 12, yTop0 + 4, '上夹环', { size: 12, fill: MUTE });
-  g += arrow(ax - 34, yTop0 + 8, ax - 34, yTop1 - 10, { stroke: INK });
-  g += `<text transform="translate(${ax - 42} ${f1((yTop0 + yTop1) / 2)}) rotate(-90)" font-size="12.5" fill="${INK}" text-anchor="middle" ${FONT}>上夹环下降 ${f2(read.topDrop)} m（芯缩短这么多）</text>`;
-  g += dimV(ax - 86, yTop0, yFoot, `落到工位时 ${f2(read.hang0)} m`);
-  g += dimV(ax - 34, yTop1, yFoot, `成形后 ${f2(read.hang1)} m`, { stroke: INK, fill: INK });
-  g += T(ax + 4, y0 - 34, '芯轴', { size: 11.5, fill: MUTE });
-  // 说明
-  const nx = 660;
-  const notes = [
-    { a: toXY(frames[0].at(frames[0].total * 0.2)), y: yTop0 + 150, t: '落到工位', d: ['布垂着，中段略鼓'] },
-    { a: toXY(frames[3].at(frames[3].total * 0.3)), y: yTop0 + 330, t: '芯缩短，布长不变', d: ['a 顺着芯往下滑，d 不动', '夹在中间的布被挤出去'] },
-    { a: toXY(frames[6].b), y: yTop1 + 40, t: '上下两层靠拢', d: ['每一对点相距一个键长时', '键扣上（橙色）'] },
-    { a: [toXY(fN.b)[0] + 4, (toXY(fN.b)[1] + toXY(fN.c)[1]) / 2], y: yFoot - 30, t: '平台', d: [`挑出 ${f2(read.reach)} m，厚 ${f1(H_KEY * 100)} cm`, `台面离地 ${f2(read.top)} m`] },
-  ];
-  for (const nt of notes) {
-    g += P([[nt.a[0] + 6, nt.a[1]], [nx - 30, nt.y - 5], [nx - 10, nt.y - 5]], { stroke: MUTE, w: 0.8 });
-    g += T(nx, nt.y, nt.t, { size: 14, bold: true });
-    nt.d.forEach((d, i) => (g += T(nx, nt.y + 19 + i * 17, d, { size: 12, fill: MUTE })));
+  g += `<rect x="${ax - 12}" y="${f1(yFoot - 4)}" width="${f1(cw + 16)}" height="7" fill="${INK}"/>` + hatch(ax - 6, yFoot + 6, cw + 4, 6);
+  g += T(ax + cw + 14, yTop0 + 4, '上夹环', { size: 12.5, fill: MUTE });
+  g += T(ax + cw + 14, yFoot + 5, '下夹环', { size: 12.5 });
+  g += T(ax + 6, y0 - 26, '芯', { size: 12.5, fill: MUTE });
+  // 尺寸：只留数字
+  g += arrow(ax - 38, yTop0, ax - 38, yTop1 - 3, { stroke: INK, w: 1.4, head: 8 });
+  g += `<text transform="translate(${ax - 46} ${f1((yTop0 + yTop1) / 2)}) rotate(-90)" font-size="13" fill="${INK}" text-anchor="middle" ${FONT}>${f2(read.topDrop)} m</text>`;
+  g += dimV(ax - 96, yTop0, yFoot, `${f2(read.hang0)} m`);
+  g += dimV(ax - 38, yTop1 + 6, yFoot, `${f2(read.hang1)} m`, { stroke: INK, fill: INK });
+  const xa = toXY(fN.a)[0], xb = toXY(fN.b)[0], yd = toXY(fN.d)[1];
+  g += dimH(xa, xb, yd + 30, `${f2(read.reach)} m`, { stroke: INK, fill: INK, below: true });
+  g += T(xb + 34, (toXY(fN.b)[1] + toXY(fN.c)[1]) / 2 + 4, `${f1(H_KEY * 100)} cm`, { size: 12.5 });
+  // 图例：先后（由浅到深）与一对点的两种状态
+  {
+    const y = H - 44;
+    frames.forEach((_, k) => (g += L(40 + k * 9, y - 8, 40 + k * 9, y + 8, { stroke: k === frames.length - 1 ? INK : shade(k), w: 2 })));
+    g += arrow(40, y + 17, 40 + 7 * 9, y + 17, { stroke: MUTE, w: 1, head: 5 });
+    g += T(124, y + 4, '先 → 后', { size: 12 });
+    g += keyIcon(220, y, 28, false) + T(258, y + 4, '还没扣', { size: 12 });
+    g += keyIcon(338, y, 28, true) + T(376, y + 4, '扣上', { size: 12 });
+    g += L(440, y, 470, y, { stroke: INK, w: 0.9, dash: '1 3.4' }) + T(478, y + 4, '布上一点走过的路', { size: 12 });
   }
-  g += T(40, H - 20, '示意：起止的尺寸是引擎实测，中间各步按布长不变画成光滑的形（引擎里布会起褶，键在芯缩到一半时就同一步扣上，这里不画）。', { size: 11.5, fill: MUTE });
+  g += tag(W, H);
   return { W, H, svg: sheet(W, H, g) };
 }
 
-// ───────────────────────────────────────────────────────────── D 六个时刻挂在同一条天花线下
+// ───────────────────────────────────────────────────────────── D 从天花下到平台（六个时刻）
 function panelD() {
   const K = 150;
-  const xL = 200, dx = 212;
-  const xs = Array.from({ length: 6 }, (_, i) => xL + 90 + i * dx);
-  const xR = xs[5] + 130;
-  const W = xR + 120;
-  const yCeil = 200;
+  const xL = 150, dx = 212;
+  const xs = Array.from({ length: 6 }, (_, i) => xL + 100 + i * dx);
+  const xR = xs[5] + 150;
+  const W = xR + 110;
+  const yCeil = 150;
   const yOf = (h) => yCeil + (CEIL - h) * K;
   const yFloor = yOf(0);
   const footDev = -film[0].y[n - 1] * 100;
@@ -465,38 +508,44 @@ function panelD() {
   const dropFoot = (d) => mOf(grid.ROOM.FLOOR_Y - unitFootY(rig, footDev, d));
   const D_MID = 0.55, S4 = 0.42, S5 = 0.8;
   const fr3 = idealFrame(0), fr4 = idealFrame(S4), fr5 = idealFrame(S5), fr6 = idealFrame(1);
-  // 六个时刻：上下夹环的高度
   const M = [
-    { top: dropTop(0), foot: dropFoot(0), no: '①', t: '收在天花下', d: '布折成一叠' },
-    { top: dropTop(D_MID), foot: dropFoot(D_MID), no: '②', t: '降下来', d: '边降边展开' },
-    { top: fr3.topH, foot: read.foot, no: '③', t: '展开成筒', d: '落到工位' },
-    { top: fr4.topH, foot: read.foot, no: '④', t: '芯缩短', d: '布往外鼓' },
-    { top: fr5.topH, foot: read.foot, no: '⑤', t: '上下两层靠拢', d: '每一对点快够着' },
-    { top: fr6.topH, foot: read.foot, no: '⑥', t: '键扣上，成平台', d: `挑出 ${f2(read.reach)} m` },
+    { top: dropTop(0), foot: dropFoot(0), no: '①', t: '收着' },
+    { top: dropTop(D_MID), foot: dropFoot(D_MID), no: '②', t: '降下' },
+    { top: fr3.topH, foot: read.foot, no: '③', t: '成筒' },
+    { top: fr4.topH, foot: read.foot, no: '④', t: '芯缩短' },
+    { top: fr5.topH, foot: read.foot, no: '⑤', t: '靠拢' },
+    { top: fr6.topH, foot: read.foot, no: '⑥', t: '扣上' },
   ];
-  let g = '';
-  g += T(40, 46, 'D　六个时刻挂在同一条天花线下', { size: 22, bold: true });
-  g += T(40, 72, '同一台单元沿对角线剖开，从左到右六个时刻；纵向是真实高度（米）。两条横穿的线 = 上、下夹环的高度。', { size: 12.5, fill: MUTE });
-  g += T(40, 91, '前三步两个夹环一起往下、越拉越开；后三步下夹环不动，只有上夹环往下走，布被挤出去成台。', { size: 12.5, fill: MUTE });
+  let g = head('D', '从天花下到平台');
 
   // 天花、地面、台面高度
   g += L(xL, yCeil, xR, yCeil, { stroke: INK, w: 2 });
   for (let x = xL; x < xR; x += 12) g += L(x, yCeil, x + 7, yCeil - 8, { stroke: INK, w: 0.7 });
   g += L(xL, yFloor, xR, yFloor, { stroke: INK, w: 2 });
-  g += T(xL - 10, yCeil + 4, `天花 ${f2(CEIL)}`, { size: 12, anchor: 'end' });
-  g += T(xL - 10, yFloor + 4, '地面 0', { size: 12, anchor: 'end' });
-  g += L(xL, yOf(read.top), xR, yOf(read.top), { stroke: HAIR, w: 0.9, dash: '5 4' });
-  g += T(xL - 10, yOf(read.top) + 4, `台面 ${f2(read.top)}`, { size: 12, anchor: 'end', fill: GREEN });
+  g += T(xL - 10, yCeil + 4, `${f2(CEIL)} m`, { size: 12, anchor: 'end' });
+  g += T(xL - 10, yFloor + 4, '0', { size: 12, anchor: 'end' });
+  g += L(xL, yOf(read.top), xR, yOf(read.top), { stroke: GREEN, w: 0.9, dash: '5 4' });
+  g += T(xL - 10, yOf(read.top) + 4, `${f2(read.top)} m`, { size: 12, anchor: 'end', fill: GREEN });
   // 两条夹环线
-  g += P(M.map((m, i) => [xs[i], yOf(m.top)]).concat([[xR, yOf(M[5].top)]]), { stroke: MUTE, w: 1 });
-  g += P(M.map((m, i) => [xs[i], yOf(m.foot)]).concat([[xR, yOf(M[5].foot)]]), { stroke: MUTE, w: 1 });
-  g += T(xR + 8, yOf(M[5].top) + 4, '上夹环', { size: 12.5, bold: true });
-  g += T(xR + 8, yOf(M[5].foot) + 4, '下夹环', { size: 12.5, bold: true });
+  g += P(M.map((m, i) => [xs[i], yOf(m.top)]).concat([[xR, yOf(M[5].top)]]), { stroke: HAIR, w: 1 });
+  g += P(M.map((m, i) => [xs[i], yOf(m.foot)]).concat([[xR, yOf(M[5].foot)]]), { stroke: HAIR, w: 1 });
+  g += T(xR + 8, yOf(M[5].top) + 4, '上夹环', { size: 12.5 });
+  g += T(xR + 8, yOf(M[5].foot) + 4, '下夹环', { size: 12.5 });
 
-  // 每个时刻：吊杆（空心）· 芯（实线）· 两个夹环 · 布
   const hw = ST_R * K;
   M.forEach((m, i) => {
     const cx = xs[i], yT = yOf(m.top), yF = yOf(m.foot);
+    // 上一刻两个夹环在哪儿（淡虚框）→ 这一刻（箭头）；不动的那个打斜线
+    if (i > 0) {
+      const pT = yOf(M[i - 1].top), pF = yOf(M[i - 1].foot);
+      g += `<rect x="${f1(cx - hw - 3)}" y="${f1(pT - 2)}" width="${f1(2 * hw + 6)}" height="5" fill="none" stroke="${MUTE}" stroke-width="0.9" stroke-dasharray="3 2.5"/>`;
+      const ext = hw + (i <= 1 ? pleats(m.top, m.foot, 6)[1][0] : [0, 0, fr3.R, fr4.R, 0, 0][i]) * K;
+      g += arrow(cx + (i <= 3 ? ext : hw) + 14, pT, cx + (i <= 3 ? ext : hw) + 14, yT - 1, { stroke: INK, w: 1.3, head: 7 });
+      if (Math.abs(pF - yF) > 2) {
+        g += `<rect x="${f1(cx - hw - 3)}" y="${f1(pF - 3)}" width="${f1(2 * hw + 6)}" height="5" fill="none" stroke="${MUTE}" stroke-width="0.9" stroke-dasharray="3 2.5"/>`;
+        g += arrow(cx - ext - 14, pF, cx - ext - 14, yF - 1, { stroke: INK, w: 1.3, head: 7 });
+      } else g += hatch(cx - hw + 2, yF + 4, 2 * hw - 2, 5);
+    }
     g += `<rect x="${f1(cx - 4)}" y="${yCeil}" width="8" height="${f1(Math.max(0, yT - yCeil))}" fill="${PAPER}" stroke="${INK}" stroke-width="0.9"/>`;
     g += L(cx, yT, cx, yF, { stroke: INK, w: 2.2 });
     const draw = (line, o = {}) => { let u = ''; for (const side of [1, -1]) u += P(line.map(([x, y]) => [cx + side * (ST_R + x) * K, yOf(y)]), { stroke: INK, w: 1.5, ...o }); return u; };
@@ -511,49 +560,55 @@ function panelD() {
           g += `<path d="${[...pr.top, ...pr.end, ...pr.bottom].map((q, j) => `${j ? 'L' : 'M'}${f1(toXY(q)[0])} ${f1(toXY(q)[1])}`).join('')}Z" fill="${GREEN}" opacity="0.22"/>`;
         }
         g += bandOf(fr, toXY, { w: 1.5, keys: i === 4 ? 'open' : i === 5 ? 'locked' : 'none', keyW: 1.3 });
+        if (i === 3 || i === 4) { const yt = yOf(fr.at(fr.total / 2)[1]), xe = cx + side * ((ST_R + fr.R) * K + 6); g += arrow(xe, yt, xe + side * 20, yt, { stroke: INK, w: 1.3, head: 7 }); }
+        if (i === 5) g += spark(cx + side * ((ST_R + fr.R) * K + 5), yOf(fr.at(fr.total / 2)[1]), 16, side > 0 ? [-0.7, 0, 0.7] : [Math.PI - 0.7, Math.PI, Math.PI + 0.7]);
       }
     }
     g += `<rect x="${f1(cx - hw - 3)}" y="${f1(yT - 2)}" width="${f1(2 * hw + 6)}" height="5" fill="${INK}"/>`;
     g += `<rect x="${f1(cx - hw - 3)}" y="${f1(yF - 3)}" width="${f1(2 * hw + 6)}" height="5" fill="${INK}"/>`;
-    g += T(cx, yCeil - 50, `${m.no} ${m.t}`, { size: 14, bold: true, anchor: 'middle' });
-    g += T(cx, yCeil - 31, m.d, { size: 12, fill: MUTE, anchor: 'middle' });
+    g += T(cx, yCeil - 28, `${m.no} ${m.t}`, { size: 15, bold: true, anchor: 'middle' });
   });
-  // 动作箭头
-  const ar = (x, y1, y2) => arrow(x, y1, x, y2, { stroke: INK, w: 1.1 });
-  g += ar(xs[1] + 46, yOf(M[1].top) + 6, yOf(M[1].top) + 44) + ar(xs[1] + 46, yOf(M[1].foot) - 30, yOf(M[1].foot) + 8);
-  for (const i of [3, 4]) {
-    g += ar(xs[i] + hw + 12, yOf(M[i].top) - 30, yOf(M[i].top) - 4);
-    const fr = i === 3 ? fr4 : fr5;
-    const yt = yOf(fr.at(fr.total / 2)[1]);
-    for (const side of [1, -1]) g += arrow(xs[i] + side * ((ST_R + fr.R) * K + 6), yt, xs[i] + side * ((ST_R + fr.R) * K + 24), yt, { stroke: INK, w: 1.1 });
-  }
-  // 尺寸
-  g += T(xs[0] - 42, yOf((M[0].top + M[0].foot) / 2) + 22, `收着时 ${f2(M[0].top - M[0].foot)} m 长`, { size: 11.5, fill: MUTE, anchor: 'end' });
-  g += dimV(xs[2] - 58, yOf(M[2].top), yOf(M[2].foot), `夹环相距 ${f2(read.hang0)} m`);
-  g += dimV(xs[5] + 92, yOf(M[5].top), yOf(M[5].foot), `${f2(read.hang1)} m`, { side: 1 });
+  // 尺寸：只留数字
+  g += T(xs[0] - 44, yOf((M[0].top + M[0].foot) / 2) + 4, `${f2(M[0].top - M[0].foot)} m`, { size: 12, fill: MUTE, anchor: 'end' });
+  g += dimV(xs[2] - 84, yOf(M[2].top), yOf(M[2].foot), `${f2(read.hang0)} m`);
+  g += dimV(xs[5] + 134, yOf(M[5].top), yOf(M[5].foot), `${f2(read.hang1)} m`, { side: 1 });
+  g += dimH(xs[5] + hw, xs[5] + (ST_R + fr6.R) * K, yOf(read.top) - 14, `${f2(read.reach)} m`);
 
-  // 下方：谁在动
-  const ry = yFloor + 44, rh = 24, gap = 8;
-  const rows = [
-    { name: '吊杆', bars: [[0, 5, '放长', INK]] },
-    { name: '芯', bars: [[0, 2, '放长', INK], [2, 5, '缩短', INK, true]] },
-    { name: '键', bars: [[0, 4.72, '松着', MUTE, false, true], [4.72, 5, '扣上', KEY, true]] },
-  ];
+  // 下方：谁在动（只用符号）
+  const ry = yFloor + 40, rh = 26, gap = 8;
   const xi = (v) => { const i = Math.floor(v), f = v - i; return i >= 5 ? xs[5] : lerp(xs[i], xs[i + 1], f); };
+  const rows = [
+    { name: '吊杆', sample: (x, y) => `<rect x="${x - 4}" y="${y - 10}" width="8" height="20" fill="${PAPER}" stroke="${INK}" stroke-width="0.9"/>`, bars: [[0, 5, 'grow']] },
+    { name: '芯', sample: (x, y) => L(x, y - 10, x, y + 10, { stroke: INK, w: 2.2 }), bars: [[0, 2, 'grow'], [2, 5, 'shrink']] },
+    { name: '键', sample: (x, y) => keyIcon(x, y - 7, 14, true, { vertical: true, r: 2.6, w: 2 }), bars: [[0, 4.72, 'open'], [4.72, 5, 'locked']] },
+  ];
   rows.forEach((r, k) => {
-    const y = ry + k * (rh + gap);
-    g += T(xL - 10, y + rh / 2 + 4, r.name, { size: 12.5, anchor: 'end', bold: true });
-    for (const [a, b, label, col, solid, dashed] of r.bars) {
-      const x1 = xi(a) + (a > 0 ? 3 : -30), x2 = xi(b) + (b >= 5 ? 30 : -3);
-      g += `<rect x="${f1(x1)}" y="${y}" width="${f1(x2 - x1)}" height="${rh}" fill="${solid ? col : PAPER}" stroke="${col}" stroke-width="1" ${dashed ? 'stroke-dasharray="4 3"' : ''}/>`;
-      g += T((x1 + x2) / 2, y + rh / 2 + 4.5, label, { size: 12, anchor: 'middle', fill: solid ? PAPER : col });
+    const y = ry + k * (rh + gap), yc = y + rh / 2;
+    g += r.sample(xL + 22, yc) + T(xL - 10, yc + 4, r.name, { size: 12.5, anchor: 'end', bold: true });
+    for (const [a, b, kind] of r.bars) {
+      const x1 = xi(a) + (a > 0 ? 3 : -30), x2 = xi(b) + (b >= 5 ? 30 : -3), xc = (x1 + x2) / 2;
+      const solid = kind === 'shrink' || kind === 'locked', col = kind === 'locked' ? KEY : kind === 'open' ? MUTE : INK;
+      g += `<rect x="${f1(x1)}" y="${y}" width="${f1(x2 - x1)}" height="${rh}" fill="${solid ? col : PAPER}" stroke="${col}" stroke-width="1" ${kind === 'open' ? 'stroke-dasharray="4 3"' : ''}/>`;
+      if (kind === 'grow') for (const xx of a === 0 && b === 5 ? [xi(1), xi(2.5), xi(4)] : [xc]) g += growIcon(xx, yc, 44, INK);
+      if (kind === 'shrink') for (const xx of [xi(3), xi(4)]) g += shrinkIcon(xx, yc, 44, PAPER);
+      if (kind === 'open') for (const xx of [xi(1), xi(2.5), xi(4)]) g += keyIcon(xx - 12, yc, 24, false, { r: 2.8 });
+      if (kind === 'locked') g += L(xc - 11, yc, xc + 11, yc, { stroke: PAPER, w: 2.4, cap: 'round' }) + dotAt(xc - 11, yc, { r: 3, stroke: PAPER, fill: PAPER }) + dotAt(xc + 11, yc, { r: 3, stroke: PAPER, fill: PAPER });
     }
   });
-  for (const x of xs) g += L(x, yFloor, x, ry + 3 * (rh + gap) - gap, { stroke: HAIR, w: 0.8, dash: '2 4' });
-  const fy = ry + 3 * (rh + gap) + 22;
-  g += T(xL - 60, fy, '吊杆一直在放长。前三步芯也放长，整台往下走、布被拉开；后三步芯缩短的量等于吊杆放长的量，所以下夹环停在原处。', { size: 12.5 });
-  g += T(xL - 60, fy + 24, '示意：各时刻的高度、夹环相距、挑出取台架与引擎的实测；收着时的褶、中间各步的形按布长不变画成光滑的；吊杆、夹环、芯的样子是建模假设。', { size: 11.5, fill: MUTE });
-  return { W, H: fy + 50, svg: null, body: g };
+  for (const x of xs) g += L(x, yFloor, x, ry - 4, { stroke: HAIR, w: 0.8, dash: '2 4' });
+  // 图例
+  {
+    const y = ry + 3 * (rh + gap) + 26;
+    g += growIcon(xL + 22, y, 40, INK) + T(xL + 50, y + 4, '放长', { size: 12 });
+    g += shrinkIcon(xL + 132, y, 40, INK) + T(xL + 160, y + 4, '缩短', { size: 12 });
+    g += keyIcon(xL + 220, y, 26, false) + T(xL + 256, y + 4, '还没扣', { size: 12 });
+    g += keyIcon(xL + 326, y, 26, true) + T(xL + 362, y + 4, '扣上', { size: 12 });
+    g += `<rect x="${xL + 420}" y="${y - 3}" width="30" height="5" fill="none" stroke="${MUTE}" stroke-width="0.9" stroke-dasharray="3 2.5"/>` + arrow(xL + 458, y - 8, xL + 458, y + 8, { stroke: INK, w: 1.3, head: 6 }) + T(xL + 470, y + 4, '从上一刻的位置动到这里', { size: 12 });
+    g += `<rect x="${xL + 660}" y="${y - 3}" width="30" height="5" fill="${INK}"/>` + hatch(xL + 664, y + 4, 24, 4) + T(xL + 700, y + 4, '不动', { size: 12 });
+  }
+  const H = ry + 3 * (rh + gap) + 60;
+  g += tag(W, H);
+  return { W, H, svg: null, body: g };
 }
 
 const A = panelA();
