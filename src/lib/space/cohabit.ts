@@ -1057,6 +1057,10 @@ export interface Visitor {
   ignores: boolean;
   /** 节奏里给了 attend 时：坐着的这一段（看猫 / 不看猫）还剩多久（s），到 0 就换另一段 */
   attendLeft: number;
+  /** attend.near / activities.near：上一步在 near 以内的猫（按 cats 里的序号记位） */
+  nearCats: number;
+  /** 节奏里给了 activities 时：坐着此刻在做什么（null = 没坐着） */
+  activity: 'cat' | 'talk' | 'phone' | null;
   /** 坐着时：被引来的猫已经在座位前方那台上、他也看着它，累计了多久（s；meetThenSide 用） */
   meetHeld: number;
   /** social 开着时：同组编号（单人 = 自己的 id；组里排在最前的在场者是领头）、这一程要去的交叉点（−1 = 没有）、
@@ -1240,7 +1244,23 @@ export interface VisitorPace {
    * 坐着的人看猫与不看猫交替（秒）：坐下先看 look 那么久，再有 away 那么久不看（面朝座位的朝向、不转头，即 Visitor.ignores），如此往复。
    * 省略 = 坐着时一直看 3 m 内最近的那只猫（旧口径，逐位不变）。站着看猫不受它影响。
    */
-  attend?: { look: { min: number; max: number }; away: { min: number; max: number } };
+  attend?: {
+    look: { min: number; max: number };
+    away: { min: number; max: number };
+    /** 有猫来到这么近（m）以内（上一步还在外面）：正在不看的人立刻转去看它，重新计一段「看」。省略 = 只按时长交替 */
+    near?: number;
+  };
+  /**
+   * 试验（2026-11-27，没有实测支撑）：坐着的人在几种活动之间切换，给了它就不用 attend。看猫（cat）时才算注视；
+   * 和同伴说话（talk，同组有人坐着才有，面朝同伴）与看手机（phone）都不看猫。一段做完按权重 w 抽下一种，时长取 dur；
+   * 坐下先看猫；near 同 attend.near。权重与时长都是试验值，见 PACE_ACTIVITIES_TRIAL。
+   */
+  activities?: {
+    near?: number;
+    cat: { w: number; dur: { min: number; max: number } };
+    talk: { w: number; dur: { min: number; max: number } };
+    phone: { w: number; dur: { min: number; max: number } };
+  };
 }
 
 /** 研究与案例页对照图用的那一套（COHABIT.VISITOR / SEATS 原值，模块默认） */
@@ -1271,13 +1291,39 @@ export const PACE_STUDY: VisitorPace = {
  * 逐只跟拍的数：44.4% 的时间没有任何人与猫互动，只看或逗 29.0% + 摸 23.2% = 52.2%。按它标定（scripts/cohabit/calibrate-attend.mjs，
  * 标准场景 · 8 种子 × 1800 s，扫不看一段的平均时长）：105 s → 52.6%，120 → 50.6%，135 → 49.3%，150 → 47.3%；取 105（50–160 s）。
  * 每一段多长没有实测，是演示值；比例有出处。猫那组数不用重标：calibrate-mt 本来就是按「不理猫 / 主动互动」两种条件分别标的。
+ * 同日作者「先看再不看、如此交替，有点太死板」：加一条——有猫来到 1.5 m 内（上一步还在外面），正在不看的人立刻转去看它、
+ * 重新计一段「看」（attend.near）。标定也改到钉死档（Hirsch 那家店是固定层架的普通猫咖，与 calibrate-levels 同一个口径）：
+ * 只按时长交替时钉死档是 50.8%（会动 · 引导开 52.6%）；加了这条以后猫来得频繁，看 30–90 s 时把不看拉到平均 200 s 也有 55.1%，
+ * 所以连「看一段」一起调：看 20–60 s、不看 70–200 s → 51.8%（8 种子 × 1800 s）。
  */
 export const PACE_DEMO: VisitorPace = {
   ...PACE_STUDY,
   pause: { min: 3, max: 12 },
   sitP: 0.35,
   sit: { min: 600, max: 1800 },
-  attend: { look: { min: 30, max: 90 }, away: { min: 50, max: 160 } },
+  attend: { look: { min: 20, max: 60 }, away: { min: 70, max: 200 }, near: COHABIT.BAND.far },
+};
+
+/**
+ * 试验用的节奏（2026-11-27，作者「第三个做法试验性质地去做」）：坐着的人在看猫、和同伴说话、看手机之间切换。
+ * 没有猫咖访客时间分配的实测，三种活动的时长与权重都是试验值，只有两处有来由：整体比例仍按 Hirsch 等 2025 的
+ * 「一只猫约 52% 的时间有人理」调（calibrate-attend.mjs 的 activities 一档）；两人交谈时看手机约占一成
+ * （Vanden Abeele 等 2019：100 对学生各谈 10 分钟，62 对里有人用手机，用的那些中位 99 s）。
+ * 钉死档标定（8 种子 × 1800 s）：看猫的权重 2.2 / 1 / 0.3 / 0.1 / 0.05 → 猫有人理 79% / 75% / 67% / 55% / 54%。权重压到 0.05 才接近 52%：
+ * 坐下先看、猫来到 1.5 m 内就看，这两样已经占了大半，自己想起来去看猫的份额几乎不剩。
+ * 台架与标准场景研究不用它，只给对照脚本比三种写法。
+ */
+export const PACE_ACTIVITIES_TRIAL: VisitorPace = {
+  ...PACE_STUDY,
+  pause: PACE_DEMO.pause,
+  sitP: PACE_DEMO.sitP,
+  sit: PACE_DEMO.sit,
+  activities: {
+    near: COHABIT.BAND.far,
+    cat: { w: 0.05, dur: { min: 20, max: 90 } },
+    talk: { w: 1, dur: { min: 30, max: 150 } },
+    phone: { w: 0.25, dur: { min: 20, max: 100 } },
+  },
 };
 
 export class CohabitSim {
@@ -1604,6 +1650,8 @@ export class CohabitSim {
       offered: false,
       ignores: false,
       attendLeft: 0,
+      nearCats: 0,
+      activity: null,
       meetHeld: 0,
       party: party ?? id,
       goalNode: -1,
@@ -1660,7 +1708,9 @@ export class CohabitSim {
     p.legFrom = null;
     p.pause = this.pick(this.pace.sit);
     // 坐下先看猫一段（attend 没给时不碰 ignores：标定脚本直接设它）
-    if (this.pace.attend) {
+    p.nearCats = 0;
+    if (this.pace.activities) this.startActivity(p, 'cat');
+    else if (this.pace.attend) {
       p.ignores = false;
       p.attendLeft = this.pickAttend(p, this.pace.attend.look);
     }
@@ -1672,7 +1722,8 @@ export class CohabitSim {
     p.seat = null;
     p.seated = false;
     p.watching = null;
-    if (this.pace.attend) p.ignores = false;
+    if (this.pace.attend || this.pace.activities) p.ignores = false;
+    p.activity = null;
     return node;
   }
 
@@ -1680,14 +1731,39 @@ export class CohabitSim {
    * 坐着看猫 / 不看猫的时长另用一串随机数（种子只看场次种子与这是第几个访客）：开不开 attend，访客自己那串（站多久、去哪、
    * 坐多久）抽到的数都一样，同种子的两档能配对比。
    */
-  private pickAttend(p: Visitor, r: { min: number; max: number }): number {
+  private attendRand(p: Visitor): number {
     let g = this.attendRng.get(p.id);
     if (!g) {
       const index = Math.max(0, this.people.indexOf(p));
       g = makeRng((Math.imul(this.seed, 0x9e3779b1) ^ 0x3c6ef372 ^ Math.imul(index + 1, 0xc2b2ae35)) >>> 0);
       this.attendRng.set(p.id, g);
     }
-    return r.min + g() * (r.max - r.min);
+    return g();
+  }
+
+  private pickAttend(p: Visitor, r: { min: number; max: number }): number {
+    return r.min + this.attendRand(p) * (r.max - r.min);
+  }
+
+  /** 同组里另一位坐着的人（activities 的「和同伴说话」要有他） */
+  private seatedMate(p: Visitor): Visitor | null {
+    return this.people.find((q) => q !== p && q.party === p.party && q.seated && q.walker.present) ?? null;
+  }
+
+  /** activities：开始一种活动（看猫才算注视） */
+  private startActivity(p: Visitor, a: 'cat' | 'talk' | 'phone'): void {
+    const acts = this.pace.activities!;
+    p.activity = a;
+    p.ignores = a !== 'cat';
+    p.attendLeft = this.pickAttend(p, acts[a].dur);
+  }
+
+  /** activities：一段做完，按权重抽下一种（没有坐着的同伴就不抽「说话」） */
+  private nextActivity(p: Visitor): 'cat' | 'talk' | 'phone' {
+    const acts = this.pace.activities!;
+    const talk = this.seatedMate(p) ? acts.talk.w : 0;
+    const r = this.attendRand(p) * (acts.cat.w + talk + acts.phone.w);
+    return r < acts.cat.w ? 'cat' : r < acts.cat.w + talk ? 'talk' : 'phone';
   }
 
   // ── 家具（独立一层：可加减、拖动；标准布置随时能回去）─────────────────────
@@ -2429,14 +2505,38 @@ export class CohabitSim {
       if (this.layout.bandReach && p.mode === 'auto' && !p.seated && p.seat === null && halted && w.present && this.pressed(p)) this.stepAside(p);
       if (p.mode === 'auto') this.wander(p, dt);
       // 坐着：看 3 m 内最近的那只猫（身子跟着转）；没有猫就面朝座位的朝向。节奏里给了 attend 时看一段、不看一段交替
-      if (this.pace.attend && !p.seated) p.ignores = false; // 不看猫只在坐着时：没经 standUp 离座的（座位被挪走等）也在这儿复位
+      if ((this.pace.attend || this.pace.activities) && !p.seated) {
+        p.ignores = false; // 不看猫只在坐着时：没经 standUp 离座的（座位被挪走等）也在这儿复位
+        p.activity = null;
+      }
       if (p.seated && p.seat !== null) {
         const at = this.pace.attend;
-        if (at) {
+        const acts = this.pace.activities;
+        if (at || acts) {
+          // 有猫来到 near 以内（上一步还在外面）：正在不看的人转去看它
+          const nearD = acts ? acts.near : at!.near;
+          let arrived = false;
+          if (nearD !== undefined) {
+            let mask = 0;
+            for (let i = 0; i < this.cats.length; i++) {
+              const c = this.cats[i];
+              if (Math.hypot(c.walker.x - w.x, c.walker.y - w.y) < nearD) mask |= 1 << i;
+            }
+            arrived = (mask & ~p.nearCats) !== 0;
+            p.nearCats = mask;
+          }
           p.attendLeft -= dt;
-          if (p.attendLeft <= 0) {
-            p.ignores = !p.ignores;
-            p.attendLeft = this.pickAttend(p, p.ignores ? at.away : at.look);
+          if (acts) {
+            if (p.activity === null || (arrived && p.activity !== 'cat')) this.startActivity(p, 'cat');
+            else if (p.attendLeft <= 0) this.startActivity(p, this.nextActivity(p));
+          } else if (at) {
+            if (arrived && p.ignores) {
+              p.ignores = false;
+              p.attendLeft = this.pickAttend(p, at.look);
+            } else if (p.attendLeft <= 0) {
+              p.ignores = !p.ignores;
+              p.attendLeft = this.pickAttend(p, p.ignores ? at.away : at.look);
+            }
           }
         }
         let best: Cat | null = null;
@@ -2451,7 +2551,8 @@ export class CohabitSim {
         p.watching = best ? best.id : null;
         if (!best) {
           const f = this.seats[p.seat].face;
-          w.heading = Math.atan2(f[1], f[0]);
+          const mate = p.activity === 'talk' ? this.seatedMate(p) : null;
+          w.heading = mate ? Math.atan2(mate.walker.y - w.y, mate.walker.x - w.x) : Math.atan2(f[1], f[0]);
         }
       }
       // 看猫：站着时视线锁住那只猫（专注驻留，C4）

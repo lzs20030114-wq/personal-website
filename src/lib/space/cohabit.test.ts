@@ -16,6 +16,7 @@ import {
   furnRect,
   furnishRoom,
   nearestNode,
+  PACE_ACTIVITIES_TRIAL,
   PACE_DEMO,
   PACE_STUDY,
   partySizes,
@@ -1325,7 +1326,7 @@ describe('cohabit · 方形单元（unit: square，Lab 2-15，作者 2026-10-25�
     // 目标值（猫约 52% 的时间有人理，Hirsch 等 2025）由 scripts/cohabit/calibrate-attend.mjs 现跑核对，这里只卡机制
     it('坐着的人看猫与不看猫交替：没给 attend 时几乎一直看，给了以后看猫的时间降到三到五成；不看只发生在坐着时', () => {
       const { attend, ...always } = PACE_DEMO;
-      expect(attend).toEqual({ look: { min: 30, max: 90 }, away: { min: 50, max: 160 } });
+      expect(attend).toEqual({ look: { min: 20, max: 60 }, away: { min: 70, max: 200 }, near: COHABIT.BAND.far });
       const measure = (pace: typeof PACE_DEMO) => {
         const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', space: 'live', seed: 11, opening: false, auto: true, faces: true, social: true, catFloor: true, cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid }, guide: COHABIT.GUIDE, pace });
         const half = sim.layout.fieldM / 2;
@@ -1358,10 +1359,67 @@ describe('cohabit · 方形单元（unit: square，Lab 2-15，作者 2026-10-25�
       const on = measure(PACE_DEMO);
       expect(off.look).toBeGreaterThan(0.85);
       expect(off.switches).toBe(0);
-      expect(on.look).toBeGreaterThan(0.25);
+      expect(on.look).toBeGreaterThan(0.15);
       expect(on.look).toBeLessThan(0.55);
       expect(on.switches).toBeGreaterThan(20);
       expect(on.awayStanding).toBe(0);
+    }, 60_000);
+
+    // 同日作者「先看再不看、如此交替，有点太死板」：有猫来到 near 以内，正在不看的人立刻转去看它
+    it('有猫来到 1.5 m 内：正在不看的人转去看它；没给 near 时不转', () => {
+      const run = (near?: number) => {
+        const pace = { ...PACE_DEMO, attend: { look: { min: 1, max: 1 }, away: { min: 1000, max: 1000 }, ...(near === undefined ? {} : { near }) } };
+        const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', space: 'empty', seed: 3, opening: false, auto: false, social: true, catFloor: true, cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid }, pace });
+        const seat = sim.seats[0];
+        const v = sim.addPerson(seat.x, seat.y)!;
+        expect(v.seated).toBe(true);
+        for (let t = 0; t < 3; t += 1 / 30) sim.step(1 / 30);
+        expect(v.ignores).toBe(true); // 看了 1 s，进了不看的一段
+        const cat = sim.addCat({ x: seat.x + seat.face[0] * 1.0, y: seat.y + seat.face[1] * 1.0 })!;
+        cat.mode = 'held'; // 钉在原地：只看人的反应
+        sim.step(1 / 30);
+        return v;
+      };
+      const on = run(COHABIT.BAND.far);
+      expect(on.ignores).toBe(false);
+      expect(on.watching).not.toBeNull();
+      const off = run();
+      expect(off.ignores).toBe(true);
+      expect(off.watching).toBeNull();
+    });
+
+    // 同日「第三个做法试验性质地去做」：坐着的人在看猫 / 和同伴说话 / 看手机之间切换（PACE_ACTIVITIES_TRIAL），只卡机制
+    it('试验：三种活动——坐着的人总在做其中一种，只有看猫算注视，独自来的人不会「和同伴说话」，站着的人没有活动', () => {
+      const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', space: 'live', seed: 11, opening: false, auto: true, faces: true, social: true, catFloor: true, cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid }, guide: COHABIT.GUIDE, pace: PACE_ACTIVITIES_TRIAL });
+      const half = sim.layout.fieldM / 2;
+      partySizes(6).forEach((sz, i, a) => {
+        const t = (i / a.length) * 2 * Math.PI + 0.3;
+        sim.addParty(Math.cos(t) * half * 0.6, Math.sin(t) * half * 0.6, sz);
+      });
+      scatterCats(sim, 4, 11);
+      const size = new Map<number, number>();
+      for (const p of sim.people) size.set(p.party, (size.get(p.party) ?? 0) + 1);
+      const seen = new Set<string>();
+      let bad = 0;
+      for (let t = 0; t < 600; t += 1 / 30) {
+        sim.step(1 / 30);
+        for (const p of sim.people) {
+          if (!p.walker.present) continue;
+          if (!p.seated) {
+            if (p.activity !== null || p.ignores) bad++;
+            continue;
+          }
+          if (p.activity === null) bad++;
+          else {
+            seen.add(p.activity);
+            if (p.ignores !== (p.activity !== 'cat')) bad++;
+            if (p.activity === 'talk' && size.get(p.party) === 1) bad++;
+            if (p.activity !== 'cat' && p.watching !== null) bad++;
+          }
+        }
+      }
+      expect(bad).toBe(0);
+      expect([...seen].sort()).toEqual(['cat', 'phone', 'talk']);
     }, 60_000);
   });
 
