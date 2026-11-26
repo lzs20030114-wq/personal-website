@@ -2,7 +2,7 @@
 //   B  配对 → 靠拢 → 扣上：一条带摊平（十道弧 = 哪两点配成一对），中间两步两端靠拢，最后扣成台。只讲原理，不画实际构造
 //   D  六个时刻挂在同一条天花线下：收在天花下 → 降下来 → 展开成筒 → 芯缩短 → 上下两层靠拢 → 键扣上成平台
 //   A  成形叠在一张剖面里：八个时刻由浅到深，a b c d 四个点走过的路
-//   E  胶卷：十帧从左往右排开，上排是整台单元的立体（二十条带、面 / 边 / 角三档凑成方台），下排是同一刻的剖面
+//   E  从左到右十个时刻（作者说的「像胶卷一样」是比喻，只取「时间从左往右排」）：上排是整台单元的立体（二十条带、面 / 边 / 角三档凑成方台），下排是同一刻的剖面
 //      （照案例页实验 2-1 / 2-5 那两组分镜的排法，换成线稿）
 // 画的是 Lab 2-15 那台方台的角档。**起止的尺寸是引擎与台架的实测**（现跑 createSkinUnit + advance，键谱 = cohabit-solid 的
 // UNIT_TIERS[2]，换成米的那条链与台架相同）：夹环相距、上夹环下降多少、挑出、台厚、台面高度、每颗键在台上的位置、收起时多长。
@@ -217,26 +217,30 @@ function lobe(m, p, L) {
 /**
  * 成形进度 s（0 = 落到工位，1 = 平台）时的一条带，单位米：x = 离带子站位多远，y = 离地高度。
  * 两个夹环的距离在实测的起止之间线性走；贴着芯的两段布拉直（到最后被压短一点）；其余那段布长不变，口越收越窄、形由圆到方。
- * 面 / 边 / 角三档各有自己的挑出（R1t）与键的位置，口宽的进度、瓣底的高度一律跟角档走，三档同时成台。
+ * 面 / 边 / 角三档各有自己的挑出（R1t）与键的位置，口宽与瓣底的高度三档相同，三档同时成台。
  */
 function idealOf(R1t, seats) {
-  const Lt = 2 * R1t + H_KEY, M0t = read.hang0 - (read.band - Lt);
+  const Lt = 2 * R1t + H_KEY;
   return (s) => {
     const D = lerp(read.hang0, read.hang1, s);
-    const mc = Math.max(H_KEY, D - S_STRAIGHT); // 角档的口宽
-    const g = clamp01((M0 - mc) / (M0 - H_KEY));
-    const m = lerp(M0t, H_KEY, g);
-    const yd = read.foot + LOW_FRAC * (D - mc);
+    const m = Math.max(H_KEY, D - S_STRAIGHT); // 口宽：三档相同
+    const g = clamp01((M0 - m) / (M0 - H_KEY));
+    // 键还远的时候，每条带多出来的布一样多（带长、夹环相距都相同），鼓得一样大，整台是个圆灯笼；
+    // 越靠近扣上，各档的键才把多余的布留在芯上，鼓出去的那段收到自己的长度，圆才变成方
+    const w = clamp01((g - 0.25) / 0.6), wS = w * w * (3 - 2 * w);
+    const Le = lerp(L_LOBE, Lt, wS);
+    const yd = read.foot + LOW_FRAC * (D - m);
     const ym = yd + m / 2;
     const p = 2 * Math.pow(20, g * g);
-    const lb = lobe(m, p, Lt);
+    const lb = lobe(m, p, Le);
+    const R1e = (Le - H_KEY) / 2;
     const abs = ([x, y]) => [x, ym + y];
     const topH = read.foot + D;
     return {
-      s, D, m, R: lb.R, R1: R1t, topH, footH: read.foot, locked: m <= H_KEY + 1e-9,
+      s, D, m, R: lb.R, R1: R1e, topH, footH: read.foot, locked: m <= H_KEY + 1e-9,
       line: [[0, topH], [0, yd + m], ...lb.pts.map(abs), [0, yd], [0, read.foot]],
-      a: abs(lb.at(0)), b: abs(lb.at(R1t)), c: abs(lb.at(lb.total - R1t)), d: abs(lb.at(lb.total)),
-      seats: seats.map((sg) => [abs(lb.at(sg)), abs(lb.at(lb.total - sg))]),
+      a: abs(lb.at(0)), b: abs(lb.at(R1e)), c: abs(lb.at(lb.total - R1e)), d: abs(lb.at(lb.total)),
+      seats: seats.map((sg) => [abs(lb.at((sg * R1e) / R1t)), abs(lb.at(lb.total - (sg * R1e) / R1t))]),
       at: (sg) => abs(lb.at(sg)), total: lb.total,
     };
   };
@@ -619,26 +623,27 @@ function panelD() {
   return { W, H, svg: null, body: g };
 }
 
-// ───────────────────────────────────────────────────────────── E 胶卷：一帧一帧排开（上排立体，下排同一刻的剖面）
+// ───────────────────────────────────────────────────────────── E 从左到右十个时刻（上排立体，下排同一刻的剖面）
 function panelE() {
   const N = 10;
-  const cellW = 204, x0 = 96;
-  const W = x0 + N * cellW + 60;
+  const cellW = 196, x0 = 150;
+  const W = x0 + N * cellW + 40;
   const K3 = 150; // 立体那排：px / m
-  const az = (38 * Math.PI) / 180, el = (24 * Math.PI) / 180;
+  const az = (38 * Math.PI) / 180, el = (22 * Math.PI) / 180;
   const ca = Math.cos(az), sa = Math.sin(az), ce = Math.cos(el), se = Math.sin(el);
   const proj = ([X, Y, Z]) => { const x1 = X * ca - Z * sa, z1 = X * sa + Z * ca; return [x1, -(Y * ce - z1 * se), z1 * ce + Y * se]; };
-  const LIGHT = (() => { const v = [-0.45, 0.8, 0.4], l = Math.hypot(...v); return v.map((c) => c / l); })();
+  const unitV = (v) => { const l = Math.hypot(...v) || 1; return v.map((c) => c / l); };
+  const VIEW = [sa * ce, se, ca * ce]; // 朝观者
+  const LIGHT = unitV([VIEW[0] - 0.55 * ca, VIEW[1] + 0.9, VIEW[2] + 0.55 * sa]); // 观者左上方来的光
   const COUNT = sq.SQUARE.COUNT, ORDER = sq.buildSquareOrder(COUNT);
   const HWID = mOf(sq.SQUARE.DEPTH * rig.s) / 2;
   const footDev = -film[0].y[n - 1] * 100;
   const dropTop = (d) => mOf(grid.ROOM.FLOOR_Y - unitTopY(rig, d));
   const dropFoot = (d) => mOf(grid.ROOM.FLOOR_Y - unitFootY(rig, footDev, d));
-  /** 十帧：前三帧落下（程度 d），后七帧成形（进度 s） */
+  /** 十个时刻：前三个落下（程度 d），后七个成形（进度 s） */
   const FR = [{ d: 0 }, { d: 0.4 }, { d: 0.75 }, { s: 0 }, { s: 0.2 }, { s: 0.4 }, { s: 0.6 }, { s: 0.8 }, { s: 0.93 }, { s: 1 }];
   const GROUPS = [['①', '收着', 0, 0], ['②', '降下', 1, 2], ['③', '成筒', 3, 3], ['④', '芯缩短', 4, 6], ['⑤', '靠拢', 7, 8], ['⑥', '扣上', 9, 9]];
-  const NL = 26;
-  /** 这一帧三档各自的剖面（等数的点）、上下夹环的高度、台面那段的点序范围 */
+  const NL = 30;
   const stateOf = (f) => {
     if (f.d != null) {
       const top = dropTop(f.d), foot = dropFoot(f.d), pl = pleats(top, foot, 6);
@@ -649,68 +654,69 @@ function panelE() {
     const face = frs.map((fr) => [1, 1 + Math.round((fr.R1 / fr.total) * NL)]);
     return { top: frs[0].topH, foot: read.foot, prof, face, locked: frs[2].locked, frs };
   };
-  const shadeOf = (base, nrm) => { const k = 0.8 + 0.2 * Math.abs(nrm[0] * LIGHT[0] + nrm[1] * LIGHT[1] + nrm[2] * LIGHT[2]); return `rgb(${base.map((c) => Math.round(c * k)).join(',')})`; };
-  const normal = (a, b, c) => { const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]]; const q = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]]; const l = Math.hypot(...q) || 1; return q.map((x) => x / l); };
-  const BAND = [252, 251, 248], SKINC = [226, 221, 211], TOPC = [196, 224, 208], ROD = [240, 237, 230];
+  const normal = (a, b, c) => { const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]]; return unitV([u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]]); };
+  const shadeOf = (base, w) => {
+    let nn = normal(w[0], w[1], w[2]);
+    if (nn[0] * VIEW[0] + nn[1] * VIEW[1] + nn[2] * VIEW[2] < 0) nn = nn.map((c) => -c);
+    const k = 0.66 + 0.34 * Math.max(0, nn[0] * LIGHT[0] + nn[1] * LIGHT[1] + nn[2] * LIGHT[2]);
+    return `rgb(${base.map((c) => Math.round(c * k)).join(',')})`;
+  };
+  const CLOTH = [252, 250, 245], TOPC = [176, 214, 194], ROD = [246, 243, 236];
   /** 一台单元的全部面片（米），按远近排好 */
   function unit3d(st) {
     const items = [];
-    const quad = (w, fill, o = {}) => { const s2 = w.map(proj); items.push({ s2, d: s2.reduce((a, q) => a + q[2], 0) / s2.length + (o.bias ?? 0), fill: o.flat ? fill : shadeOf(fill, normal(w[0], w[1], w[2])), stroke: o.stroke }); };
+    const quad = (w, fill, o = {}) => { const s2 = w.map(proj); items.push({ s2, d: s2.reduce((a, q) => a + q[2], 0) / s2.length + (o.bias ?? 0), fill: o.flat ? `rgb(${fill.join(',')})` : shadeOf(fill, w) }); };
     const at = (j, i, t) => { const th = sq.squareAngle(j, COUNT), [x, y] = st.prof[ORDER[j]][i], r = ST_R + x; return [r * Math.cos(th) - t * Math.sin(th), y, r * Math.sin(th) + t * Math.cos(th)]; };
     const NP = st.prof[0].length;
     for (let j = 0; j < COUNT; j++) {
       const k = (j + 1) % COUNT, fc = st.face?.[ORDER[j]];
       for (let i = 0; i < NP - 1; i++) {
         const onTop = st.locked && fc && i >= fc[0] && i < fc[1];
-        quad([at(j, i, -HWID), at(j, i + 1, -HWID), at(j, i + 1, HWID), at(j, i, HWID)], onTop ? TOPC : BAND, { bias: 0.004 });
-        for (const t of [-HWID, HWID]) { const s2 = [at(j, i, t), at(j, i + 1, t)].map(proj); items.push({ s2, d: (s2[0][2] + s2[1][2]) / 2 + 0.008, line: true }); }
-        quad([at(j, i, HWID), at(j, i + 1, HWID), at(k, i + 1, -HWID), at(k, i, -HWID)], onTop ? [214, 232, 221] : SKINC);
+        const base = onTop ? TOPC : CLOTH;
+        quad([at(j, i, -HWID), at(j, i + 1, -HWID), at(j, i + 1, HWID), at(j, i, HWID)], base, { bias: 0.002 });
+        quad([at(j, i, HWID), at(j, i + 1, HWID), at(k, i + 1, -HWID), at(k, i, -HWID)], base.map((c) => c * 0.965));
+        // 带子的两条边：细线
+        for (const t of [-HWID, HWID]) { const s2 = [at(j, i, t), at(j, i + 1, t)].map(proj); items.push({ s2, d: (s2[0][2] + s2[1][2]) / 2 + 0.006, line: true }); }
       }
     }
-    // 两个夹环（深色短筒）与吊杆
-    const ring = (r, y1, y2, fill, o) => { for (let a = 0; a < 20; a++) { const t0 = (a / 20) * 2 * Math.PI, t1 = ((a + 1) / 20) * 2 * Math.PI; quad([[r * Math.cos(t0), y1, r * Math.sin(t0)], [r * Math.cos(t1), y1, r * Math.sin(t1)], [r * Math.cos(t1), y2, r * Math.sin(t1)], [r * Math.cos(t0), y2, r * Math.sin(t0)]], fill, o); } };
-    ring(ST_R + 0.014, st.top - 0.035, st.top + 0.012, [34, 34, 34], { flat: true, bias: 0.02 });
-    ring(ST_R + 0.014, st.foot - 0.02, st.foot + 0.028, [34, 34, 34], { flat: true, bias: 0.02 });
-    for (let y = st.top + 0.012; y < CEIL - 1e-6; y += 0.25) ring(0.028, y, Math.min(CEIL, y + 0.25), ROD, {});
+    const ring = (r, y1, y2, fill, o) => { for (let a = 0; a < 24; a++) { const t0 = (a / 24) * 2 * Math.PI, t1 = ((a + 1) / 24) * 2 * Math.PI; quad([[r * Math.cos(t0), y1, r * Math.sin(t0)], [r * Math.cos(t1), y1, r * Math.sin(t1)], [r * Math.cos(t1), y2, r * Math.sin(t1)], [r * Math.cos(t0), y2, r * Math.sin(t0)]], fill, o); } };
+    ring(ST_R + 0.012, st.top - 0.03, st.top + 0.014, [34, 34, 34], { flat: true, bias: 0.02 });
+    ring(ST_R + 0.012, st.foot - 0.016, st.foot + 0.028, [34, 34, 34], { flat: true, bias: 0.02 });
+    for (let y = st.top + 0.014; y < CEIL - 1e-6; y += 0.3) ring(0.026, y, Math.min(CEIL, y + 0.3), ROD, {});
     items.sort((p, q) => p.d - q.d);
     return items;
   }
-  let g = head('E', '一帧一帧');
-  // 胶卷：上下两条黑边 + 齿孔 + 帧号
-  const yFilm = 92, band = 24;
-  const yCell = yFilm + band, cellH = 468;
-  const yCeil3 = yCell + 34; // 天花那块板的屏幕 y（芯轴处）
-  g += `<rect x="${x0 - 14}" y="${yFilm}" width="${N * cellW + 28}" height="${band}" fill="${INK}"/><rect x="${x0 - 14}" y="${yCell + cellH}" width="${N * cellW + 28}" height="${band}" fill="${INK}"/>`;
-  for (let x = x0 - 4; x < x0 + N * cellW + 4; x += 25.5) g += `<rect x="${f1(x)}" y="${yFilm + 7}" width="13" height="10" rx="2.5" fill="${PAPER}"/><rect x="${f1(x)}" y="${yCell + cellH + 7}" width="13" height="10" rx="2.5" fill="${PAPER}"/>`;
-  g += `<rect x="${x0 - 14}" y="${yCell}" width="${N * cellW + 28}" height="${cellH}" fill="#fff" opacity="0.55"/>`;
+  let g = head('E', '从左到右：一台单元成形');
+  const yCeil = 118; // 天花线
+  const o = proj([0, CEIL, 0]);
+  const yFoot3 = yCeil + (proj([0, read.foot, 0])[1] - o[1]) * K3; // 成形那几帧下夹环在屏幕上的高度
+  // 天花：一条通长的线
+  g += L(x0 - 20, yCeil, x0 + N * cellW + 10, yCeil, { stroke: INK, w: 2 });
+  for (let x = x0 - 20; x < x0 + N * cellW + 6; x += 12) g += L(x, yCeil, x + 7, yCeil - 8, { stroke: INK, w: 0.7 });
   FR.forEach((f, i) => {
     const cx = x0 + i * cellW + cellW / 2;
-    if (i > 0) g += L(x0 + i * cellW, yCell, x0 + i * cellW, yCell + cellH, { stroke: INK, w: 1 });
     const st = stateOf(f);
-    // 屏幕原点：芯轴上天花那一点
-    const o = proj([0, CEIL, 0]);
-    const S = ([sx, sy]) => [cx + (sx - o[0]) * K3, yCeil3 + (sy - o[1]) * K3];
-    // 天花方板（只画轮廓）
-    const hp = 0.3;
-    g += P([[-hp, CEIL, -hp], [hp, CEIL, -hp], [hp, CEIL, hp], [-hp, CEIL, hp]].map((q) => S(proj(q))), { stroke: INK, w: 1, close: true, fill: PAPER });
-    for (const it of unit3d(st)) {
-      const d = it.s2.map((q, k) => `${k ? 'L' : 'M'}${f1(S(q)[0])} ${f1(S(q)[1])}`).join('');
-      g += it.line ? `<path d="${d}" fill="none" stroke="${INK}" stroke-width="0.45" stroke-linecap="round"/>` : `<path d="${d}Z" fill="${it.fill}" stroke="${it.fill}" stroke-width="0.5" stroke-linejoin="round"/>`;
-    }
-    g += T(x0 + i * cellW + 8, yFilm + 17, String(i + 1).padStart(2, '0'), { size: 11, fill: PAPER });
+    const S = ([sx, sy]) => [cx + (sx - o[0]) * K3, yCeil + (sy - o[1]) * K3];
+    const items = unit3d(st);
+    const path = (it, close) => it.s2.map((q, k) => `${k ? 'L' : 'M'}${f1(S(q)[0])} ${f1(S(q)[1])}`).join('') + (close ? 'Z' : '');
+    // 先整体描一圈墨线（垫在底下 = 外轮廓），再铺面，最后是带子的细边
+    g += `<g fill="${INK}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round">${items.filter((it) => !it.line).map((it) => `<path d="${path(it, true)}"/>`).join('')}</g>`;
+    for (const it of items) g += it.line ? `<path d="${path(it, false)}" fill="none" stroke="#8a847a" stroke-width="0.4" stroke-linecap="round"/>` : `<path d="${path(it, true)}" fill="${it.fill}" stroke="${it.fill}" stroke-width="0.6" stroke-linejoin="round"/>`;
+    if (st.locked) { const tip = S(proj([(ST_R + st.frs[2].R) * Math.cos(sq.squareAngle(ORDER.indexOf(2), COUNT)), read.top - read.thick / 2, (ST_R + st.frs[2].R) * Math.sin(sq.squareAngle(ORDER.indexOf(2), COUNT))])); void tip; }
   });
-  // 立体那排左边：一米的比例尺
-  { const yb = yCell + cellH - 26; g += L(x0 - 40, yb, x0 - 40, yb - K3 * ce, { stroke: INK, w: 1.2 }) + L(x0 - 44, yb, x0 - 36, yb, { stroke: INK, w: 1.2 }) + L(x0 - 44, yb - K3 * ce, x0 - 36, yb - K3 * ce, { stroke: INK, w: 1.2 }); g += `<text transform="translate(${x0 - 48} ${f1(yb - (K3 * ce) / 2)}) rotate(-90)" font-size="11.5" fill="${INK}" text-anchor="middle" ${FONT}>1 m</text>`; }
+  // 比例尺与台面高度
+  { const yb = yFoot3 + 6, hpx = K3 * ce, xb = x0 - 58; g += L(xb, yb, xb, yb - hpx, { stroke: INK, w: 1.2 }) + L(xb - 4, yb, xb + 4, yb, { stroke: INK, w: 1.2 }) + L(xb - 4, yb - hpx, xb + 4, yb - hpx, { stroke: INK, w: 1.2 }); g += `<text transform="translate(${xb - 8} ${f1(yb - hpx / 2)}) rotate(-90)" font-size="12" fill="${INK}" text-anchor="middle" ${FONT}>1 m</text>`; }
 
-  // 下排：同一刻沿对角线的剖面（镜头跟着单元走，下夹环落在同一条线上）
-  const K2 = 190;
-  const yBase = yCell + cellH + band + 46 + read.hang0 * K2;
-  g += L(x0 - 14, yBase + 3, x0 + N * cellW + 14, yBase + 3, { stroke: HAIR, w: 1 });
+  // 下排：同一刻沿对角线的剖面（下夹环落在同一条线上）
+  const K2 = 180;
+  const yBase = Math.round(yFoot3 + 96 + read.hang0 * K2);
+  g += L(x0 - 20, yBase + 3, x0 + N * cellW + 10, yBase + 3, { stroke: HAIR, w: 1 });
   FR.forEach((f, i) => {
     const cx = x0 + i * cellW + cellW / 2;
     const st = stateOf(f);
     const yOf = (h) => yBase - (h - st.foot) * K2;
     const hw = ST_R * K2;
+    g += L(cx, yFoot3 + 46, cx, yOf(st.top) - 12, { stroke: HAIR, w: 0.8, dash: '2 4' }); // 上下两排对上
     g += L(cx, yOf(st.top), cx, yBase, { stroke: INK, w: 2 });
     for (const side of [1, -1]) {
       const toXY = ([x, y]) => [cx + side * (ST_R + x) * K2, yOf(y)];
@@ -726,15 +732,15 @@ function panelE() {
     g += `<rect x="${f1(cx - hw - 3)}" y="${f1(yBase - 3)}" width="${f1(2 * hw + 6)}" height="5" fill="${INK}"/>`;
     if (f.s != null) g += hatch(cx - hw + 2, yBase + 5, 2 * hw - 2, 5);
   });
-  // 步名：一个括号管几帧
-  const yG = yBase + 40;
+  // 步名：一个括号管几个时刻；最底下一根从左到右的箭头
+  const yG = yBase + 44;
   for (const [no, name, a, b] of GROUPS) {
-    const x1 = x0 + a * cellW + 10, x2 = x0 + (b + 1) * cellW - 10;
+    const x1 = x0 + a * cellW + 14, x2 = x0 + (b + 1) * cellW - 14;
     g += P([[x1, yG - 6], [x1, yG], [x2, yG], [x2, yG - 6]], { stroke: INK, w: 1.1, cap: 'butt' });
-    g += T((x1 + x2) / 2, yG + 22, `${no} ${name}`, { size: 14, bold: true, anchor: 'middle' });
+    g += T((x1 + x2) / 2, yG + 23, `${no} ${name}`, { size: 14.5, bold: true, anchor: 'middle' });
   }
-  const H = Math.ceil(yG + 64);
-  g += keyIcon(40, H - 22, 26, false) + T(76, H - 18, '还没扣', { size: 12 }) + keyIcon(146, H - 22, 26, true) + T(182, H - 18, '扣上', { size: 12 });
+  const H = Math.ceil(yG + 78);
+  g += keyIcon(40, H - 24, 26, false) + T(76, H - 20, '还没扣', { size: 12 }) + keyIcon(146, H - 24, 26, true) + T(182, H - 20, '扣上', { size: 12 });
   g += tag(W, H);
   return { W, H, svg: sheet(W, H, g) };
 }
@@ -744,9 +750,9 @@ const B = panelB();
 const D0 = panelD();
 const D = { W: D0.W, H: D0.H, svg: sheet(D0.W, D0.H, D0.body) };
 const E = panelE();
-const files = [['forming-a-strobe', A], ['forming-b-unrolled', B], ['forming-d-timeline', D], ['forming-e-film', E]];
-// 胶卷那张两万多个面片，SVG 近 2 MB，只留 PNG
-for (const [name, p] of files) if (name !== 'forming-e-film') writeFileSync(join(OUT, `${name}.svg`), p.svg);
+const files = [['forming-a-strobe', A], ['forming-b-unrolled', B], ['forming-d-timeline', D], ['forming-e-sequence', E]];
+// E 那张几万个面片，SVG 好几 MB，只留 PNG
+for (const [name, p] of files) if (name !== 'forming-e-sequence') writeFileSync(join(OUT, `${name}.svg`), p.svg);
 try {
   const require = createRequire(import.meta.url);
   const { chromium } = require('playwright');
