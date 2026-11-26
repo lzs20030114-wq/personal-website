@@ -58,7 +58,7 @@ import { bandTriIndex, bandVerts } from '../linkage/skin';
 import type { Vec3 } from '../linkage/solver3d';
 import { MM_PER_UNIT, RIG_ANCHOR_Y, RIG_SCALE, RING_GRID_FIT, RING_GRID_PIVOT_Y, ROOM, roomBoxesBySpan, viewFitBySpan, type RingGridView } from './skin-grid';
 import type { PlanLayout } from './unit-activation';
-import { COHABIT, CohabitSim, PACE_DEMO, SQUARE_SCALE, bandAngle, partySizes, platformClear, scatterCats, type FurnBox, type FurnRect, type SpaceMode } from './cohabit';
+import { COHABIT, CohabitSim, PACE_DEMO, SQUARE_SCALE, bandAngle, partySizes, platformClear, scatterCats, type FurnBox, type FurnRect, type SpaceMode, type VisitorPace } from './cohabit';
 import type { CatPose, CatTail, SeatSpec } from './figure';
 
 /** 一米 = 多少世界单位（由「人 = 1.70 m = 215 单位」定） */
@@ -116,7 +116,7 @@ export const SCENE = { people: 6, cats: 4, seed: 11 } as const;
  * （scripts/cohabit/case-compare.mjs），多两条：单元是方形的（`unit: 'square'`）；64 台铺满整间房（`cover: 'room'`）。
  * 放人照 runCohabit 的摆法（各组沿一圈分开），猫按种子散放。
  */
-export function standardSceneSim(space: SpaceMode = 'live', seed: number = SCENE.seed): CohabitSim {
+export function standardSceneSim(space: SpaceMode = 'live', seed: number = SCENE.seed, pace: VisitorPace = PACE_DEMO): CohabitSim {
   const sim = new CohabitSim({
     trigger: 'posture',
     grid: COHABIT.SEATS.GRID,
@@ -131,7 +131,7 @@ export function standardSceneSim(space: SpaceMode = 'live', seed: number = SCENE
     catFloor: true,
     cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid },
     guide: COHABIT.GUIDE,
-    pace: PACE_DEMO,
+    pace,
   });
   const half = sim.layout.fieldM / 2;
   const sizes = partySizes(SCENE.people);

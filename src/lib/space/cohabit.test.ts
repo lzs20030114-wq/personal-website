@@ -1320,6 +1320,49 @@ describe('cohabit · 方形单元（unit: square，Lab 2-15，作者 2026-10-25�
       expect(demo.standUps).toBe(0);
       expect(demo.seated).toBeGreaterThan(def.seated);
     }, 60_000);
+
+    // 2026-11-27 作者「人不应该 99% 的时间都看着猫」：坐着的人看一段、不看一段（VisitorPace.attend）。
+    // 目标值（猫约 52% 的时间有人理，Hirsch 等 2025）由 scripts/cohabit/calibrate-attend.mjs 现跑核对，这里只卡机制
+    it('坐着的人看猫与不看猫交替：没给 attend 时几乎一直看，给了以后看猫的时间降到三到五成；不看只发生在坐着时', () => {
+      const { attend, ...always } = PACE_DEMO;
+      expect(attend).toEqual({ look: { min: 30, max: 90 }, away: { min: 50, max: 160 } });
+      const measure = (pace: typeof PACE_DEMO) => {
+        const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', space: 'live', seed: 11, opening: false, auto: true, faces: true, social: true, catFloor: true, cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid }, guide: COHABIT.GUIDE, pace });
+        const half = sim.layout.fieldM / 2;
+        partySizes(6).forEach((sz, i, a) => {
+          const t = (i / a.length) * 2 * Math.PI + 0.3;
+          sim.addParty(Math.cos(t) * half * 0.6, Math.sin(t) * half * 0.6, sz);
+        });
+        scatterCats(sim, 4, 11);
+        let seated = 0;
+        let looking = 0;
+        let awayStanding = 0;
+        let switches = 0;
+        const was = new Map<number, boolean>();
+        for (let t = 0; t < 600; t += 1 / 30) {
+          sim.step(1 / 30);
+          for (const p of sim.people) {
+            if (!p.walker.present) continue;
+            if (!p.seated && p.ignores) awayStanding++;
+            if (p.seated) {
+              seated++;
+              if (p.watching !== null) looking++;
+              if (was.has(p.id) && was.get(p.id) !== p.ignores) switches++;
+              was.set(p.id, p.ignores);
+            } else was.delete(p.id);
+          }
+        }
+        return { look: looking / seated, awayStanding, switches };
+      };
+      const off = measure(always as typeof PACE_DEMO);
+      const on = measure(PACE_DEMO);
+      expect(off.look).toBeGreaterThan(0.85);
+      expect(off.switches).toBe(0);
+      expect(on.look).toBeGreaterThan(0.25);
+      expect(on.look).toBeLessThan(0.55);
+      expect(on.switches).toBeGreaterThan(20);
+      expect(on.awayStanding).toBe(0);
+    }, 60_000);
   });
 
   describe('错身（squeeze，2026-10-28 作者确认「两侧单元都收在天花板上时，人可以侧身错过」）', () => {

@@ -1055,6 +1055,8 @@ export interface Visitor {
   offered: boolean;
   /** 不理猫（Mertens & Turner 1988 的「被动」条件：人坐着看书、不看猫）——坐着时不转头看猫。默认 false */
   ignores: boolean;
+  /** 节奏里给了 attend 时：坐着的这一段（看猫 / 不看猫）还剩多久（s），到 0 就换另一段 */
+  attendLeft: number;
   /** 坐着时：被引来的猫已经在座位前方那台上、他也看着它，累计了多久（s；meetThenSide 用） */
   meetHeld: number;
   /** social 开着时：同组编号（单人 = 自己的 id；组里排在最前的在场者是领头）、这一程要去的交叉点（−1 = 没有）、
@@ -1234,6 +1236,11 @@ export interface VisitorPace {
   toCatP: number;
   sitP: number;
   sit: { min: number; max: number };
+  /**
+   * 坐着的人看猫与不看猫交替（秒）：坐下先看 look 那么久，再有 away 那么久不看（面朝座位的朝向、不转头，即 Visitor.ignores），如此往复。
+   * 省略 = 坐着时一直看 3 m 内最近的那只猫（旧口径，逐位不变）。站着看猫不受它影响。
+   */
+  attend?: { look: { min: number; max: number }; away: { min: number; max: number } };
 }
 
 /** 研究与案例页对照图用的那一套（COHABIT.VISITOR / SEATS 原值，模块默认） */
@@ -1259,12 +1266,18 @@ export const PACE_STUDY: VisitorPace = {
  * 顾客，没写停留时长）。10–30 分钟 = 一次 30–60 分钟的到访里坐两三回、中间起身看猫走动几分钟；站着停与看猫的时长不动。
  * 研究的标准场景（6 人 4 猫，scripts/cohabit/guide-effect.mjs）也用这一套。
  * 只给台架的自由演示与新的标准场景研究；案例页对照图与 2-14 的「正文对照」四钮仍用 PACE_STUDY（否则正文引用的读数会跟着变）。
+ * 2026-11-27 作者「人不应该 99% 的时间都看着猫」：坐着的人看猫一段（30–90 s）、不看一段（50–160 s）交替（attend）。此前坐着的人
+ * 一直看 3 m 内最近的猫，标准场景里猫 90% 的时间有人理，几乎总按 Mertens 与 Turner「人主动互动」那组数走。目标取 Hirsch 等 2025
+ * 逐只跟拍的数：44.4% 的时间没有任何人与猫互动，只看或逗 29.0% + 摸 23.2% = 52.2%。按它标定（scripts/cohabit/calibrate-attend.mjs，
+ * 标准场景 · 8 种子 × 1800 s，扫不看一段的平均时长）：105 s → 52.6%，120 → 50.6%，135 → 49.3%，150 → 47.3%；取 105（50–160 s）。
+ * 每一段多长没有实测，是演示值；比例有出处。猫那组数不用重标：calibrate-mt 本来就是按「不理猫 / 主动互动」两种条件分别标的。
  */
 export const PACE_DEMO: VisitorPace = {
   ...PACE_STUDY,
   pause: { min: 3, max: 12 },
   sitP: 0.35,
   sit: { min: 600, max: 1800 },
+  attend: { look: { min: 30, max: 90 }, away: { min: 50, max: 160 } },
 };
 
 export class CohabitSim {
@@ -1353,6 +1366,8 @@ export class CohabitSim {
   private readonly rng: () => number;
   /** streams 开着时每个访客 / 每只猫自己那串（按编号）；cur = 此刻在替谁做决定（null = 共用那串） */
   private readonly actorRng = new Map<number, () => number>();
+  /** 坐着看猫 / 不看猫的时长用的那几串（pickAttend） */
+  private readonly attendRng = new Map<number, () => number>();
   private cur: (() => number) | null = null;
   /** 此刻盖在某个坐着的人头顶的单元（stepSpace 里算；retarget 挑引导目标时避开） */
   private readonly overSeated: Uint8Array;
@@ -1588,6 +1603,7 @@ export class CohabitSim {
       offer: null,
       offered: false,
       ignores: false,
+      attendLeft: 0,
       meetHeld: 0,
       party: party ?? id,
       goalNode: -1,
@@ -1643,6 +1659,11 @@ export class CohabitSim {
     p.offered = false;
     p.legFrom = null;
     p.pause = this.pick(this.pace.sit);
+    // 坐下先看猫一段（attend 没给时不碰 ignores：标定脚本直接设它）
+    if (this.pace.attend) {
+      p.ignores = false;
+      p.attendLeft = this.pickAttend(p, this.pace.attend.look);
+    }
   }
 
   /** 起身：放开座位，返回入口交叉点（下一程从这儿出发） */
@@ -1651,7 +1672,22 @@ export class CohabitSim {
     p.seat = null;
     p.seated = false;
     p.watching = null;
+    if (this.pace.attend) p.ignores = false;
     return node;
+  }
+
+  /**
+   * 坐着看猫 / 不看猫的时长另用一串随机数（种子只看场次种子与这是第几个访客）：开不开 attend，访客自己那串（站多久、去哪、
+   * 坐多久）抽到的数都一样，同种子的两档能配对比。
+   */
+  private pickAttend(p: Visitor, r: { min: number; max: number }): number {
+    let g = this.attendRng.get(p.id);
+    if (!g) {
+      const index = Math.max(0, this.people.indexOf(p));
+      g = makeRng((Math.imul(this.seed, 0x9e3779b1) ^ 0x3c6ef372 ^ Math.imul(index + 1, 0xc2b2ae35)) >>> 0);
+      this.attendRng.set(p.id, g);
+    }
+    return r.min + g() * (r.max - r.min);
   }
 
   // ── 家具（独立一层：可加减、拖动；标准布置随时能回去）─────────────────────
@@ -2392,8 +2428,17 @@ export class CohabitSim {
       const halted = w.state !== 'walk' || p.yieldFor > 0 || p.waitFor > 0; // 站着，或在让路 / 等门（停在原地）
       if (this.layout.bandReach && p.mode === 'auto' && !p.seated && p.seat === null && halted && w.present && this.pressed(p)) this.stepAside(p);
       if (p.mode === 'auto') this.wander(p, dt);
-      // 坐着：看 3 m 内最近的那只猫（身子跟着转）；没有猫就面朝座位的朝向
+      // 坐着：看 3 m 内最近的那只猫（身子跟着转）；没有猫就面朝座位的朝向。节奏里给了 attend 时看一段、不看一段交替
+      if (this.pace.attend && !p.seated) p.ignores = false; // 不看猫只在坐着时：没经 standUp 离座的（座位被挪走等）也在这儿复位
       if (p.seated && p.seat !== null) {
+        const at = this.pace.attend;
+        if (at) {
+          p.attendLeft -= dt;
+          if (p.attendLeft <= 0) {
+            p.ignores = !p.ignores;
+            p.attendLeft = this.pickAttend(p, p.ignores ? at.away : at.look);
+          }
+        }
         let best: Cat | null = null;
         let bd: number = p.ignores ? -1 : COHABIT.GAZE_D;
         for (const c of this.cats) {
