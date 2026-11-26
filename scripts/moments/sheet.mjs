@@ -185,7 +185,7 @@ function overlay(d, notes, cssW) {
  *  { k:'cand', cells:[[行,列]…] } 候选 / 将要落的台（点线框）· { k:'ring', at, r:[米…], label? } 以某点为心的距离圈 ·
  *  { k:'step', at:[行,列], n } 引猫的第几步（写在那一格的角上）· 右下角 1 m 比例尺 */
 let planUid = 0;
-function keyplan(d, notes, attrs = 'class="key"', big = 0) {
+function keyplan(d, notes, attrs = 'class="key"', big = 0, pose = 'stand') {
   const { n, pitch: p } = d;
   const g = geom(d);
   const m = d.cam.m;
@@ -255,21 +255,34 @@ function keyplan(d, notes, attrs = 'class="key"', big = 0) {
     }
   }
   // 没落的台与人的身体重叠的那一块
-  if (big) d.ghosts.forEach(([r, c], gi) => {
-    const [x, y] = at(r, c);
-    defs += `<clipPath id="${id}g${gi}"><rect x="${x - h}" y="${y - h}" width="${2 * h}" height="${2 * h}"/></clipPath>`;
-    for (const a of d.anchors.people) s += `<circle clip-path="url(#${id}g${gi})" cx="${a.c[0]}" cy="${-a.c[1]}" r="${bodyR}" fill="${INK}"/>`;
-  });
-  const dot = (a, r) => `<circle cx="${a.c[0]}" cy="${-a.c[1]}" r="${r}" fill="${a.trigger ? MID : '#fff'}" ${big && d.ghosts.length ? 'fill-opacity="0.55"' : ''} stroke="${a.trigger ? INK : MID}" stroke-width="${(a.trigger ? 4 : 2.4) * u}"/>`;
-  for (const a of d.anchors.people) s += dot(a, bodyR);
-  for (const a of d.anchors.cats) s += dot(a, catR);
+  // 没落的台与人的身体重叠的那一块：斜线
+  if (big && d.ghosts.length) {
+    defs += `<pattern id="${id}h" patternUnits="userSpaceOnUse" width="${f1(3.4 * px)}" height="${f1(3.4 * px)}" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="${f1(3.4 * px)}" stroke="${INK}" stroke-width="${f1(1.7 * px)}"/></pattern>`;
+    d.ghosts.forEach(([r, c], gi) => {
+      const [x, y] = at(r, c);
+      defs += `<clipPath id="${id}g${gi}"><rect x="${x - h}" y="${y - h}" width="${2 * h}" height="${2 * h}"/></clipPath>`;
+      for (const a of d.anchors.people) s += `<circle clip-path="url(#${id}g${gi})" cx="${a.c[0]}" cy="${-a.c[1]}" r="${bodyR}" fill="url(#${id}h)" stroke="${INK}" stroke-width="${3 * u}"/>`;
+    });
+  }
+  // 人 = 小人图标（走 / 站 / 坐按这一章），猫 = 猫头；触发的涂黑、其余涂灰。放大的平面图另画一圈身体的真实占地（⌀0.44 m）
+  const put = (kind, a, hgt) => {
+    const box = kind === 'cat' ? 24 : 28, k = hgt / box;
+    return `<g transform="translate(${f1(a.c[0] - 12 * k)} ${f1(-a.c[1] - (box / 2) * k)}) scale(${k.toFixed(4)})">${glyph(kind, a.trigger ? INK : DIM, true)}</g>`;
+  };
+  for (const a of d.anchors.people) {
+    if (big) s += `<circle cx="${a.c[0]}" cy="${-a.c[1]}" r="${bodyR}" fill="none" stroke="${a.trigger ? INK : MID}" stroke-width="${2 * u}" stroke-dasharray="${2 * u} ${4.5 * u}" stroke-linecap="round"/>`;
+    s += put(pose === 'walk' || pose === 'sit' ? pose : 'stand', a, p * (big ? 0.5 : 0.62));
+  }
+  for (const a of d.anchors.cats) s += put('cat', a, p * (big ? 0.3 : 0.4));
   for (const nt of notes ?? []) {
     if ((nt.k === 'down' || nt.k === 'up') && nt.u) {
       const [x, y] = at(nt.u[0], nt.u[1]);
       const t = p * (big ? 0.12 : 0.15), dy = nt.k === 'up' ? -1 : 1;
       s += `<polygon points="${x - t},${y - dy * t * 0.8} ${x + t},${y - dy * t * 0.8} ${x},${y + dy * t * 0.9}" fill="${INK}"/>`;
     } else if (nt.k === 'x') {
-      const [x, y] = xy(nt.at), t = p * 0.17;
+      let [x, y] = xy(nt.at), t = p * 0.17;
+      // 放大的平面图里人正好在这台正下方：✕ 让到台的左上角，不压在小人上
+      if (big && d.anchors.people.some((a) => Math.hypot(a.c[0] - x, -a.c[1] - y) < p * 0.3)) { x -= h * 0.6; y -= h * 0.6; t = p * 0.1; }
       const dd = `M${x - t} ${y - t}L${x + t} ${y + t}M${x + t} ${y - t}L${x - t} ${y + t}`;
       s += (big ? `<path d="${dd}" stroke="#fff" stroke-width="${11 * u}" fill="none" stroke-linecap="round"/>` : '') + `<path d="${dd}" stroke="${INK}" stroke-width="${4.5 * u}" fill="none"/>`;
     } else if (nt.k === 'clash' && !big) {
@@ -301,16 +314,24 @@ function keyplan(d, notes, attrs = 'class="key"', big = 0) {
   return `<svg ${attrs} viewBox="${-V} ${-V} ${2 * V} ${2 * V + extra}"><defs>${defs}</defs>${s}</svg>`;
 }
 
-/** 人的三种状态与单元的小图标（方块人，与线稿里的人同一种画法） */
-function icon(kind, sz = 26) {
-  const st = `fill="none" stroke="${INK}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="square"`;
-  const body = {
-    stand: `<rect x="9" y="1" width="6" height="6"/><rect x="8" y="8" width="8" height="9"/><path d="M10 17V27M14 17V27"/>`,
-    walk: `<rect x="9" y="1" width="6" height="6"/><rect x="8" y="8" width="8" height="9"/><path d="M10 17L5.5 27M14 17L18.5 27M8 10L4.5 15M16 10L19.5 15"/>`,
-    sit: `<rect x="7" y="3" width="6" height="6"/><rect x="6" y="10" width="8" height="8"/><path d="M8 18H18V27M3 9V27M3 19.5H13M13 19.5V27"/>`,
-    unit: `<path d="M12 0V13M3 2H21"/><rect x="4" y="13" width="16" height="4.5"/><path d="M2 27H22" stroke-dasharray="2 2"/>`,
+/** 图标（11-26 作者：平面上的人用公共标识那种小人，猫用一个圆加两只三角耳朵；用图标代替成段的解释）。
+ *  小人画在 24 × 28 的格子里、猫头在 24 × 24 的格子里，都是实心剪影；halo = 垫一圈白边，压在别的线上也分得开。 */
+const DIM = '#b4b4b4';
+function glyph(kind, fill = INK, halo = false) {
+  const a = `fill="${fill}"` + (halo ? ` stroke="#fff" stroke-width="1.5" paint-order="stroke" stroke-linejoin="round"` : '');
+  const chair = `fill="${DIM}"`;
+  return {
+    stand: `<circle cx="12" cy="4" r="3.4" ${a}/><path d="M8.6 8.6h6.8a2.4 2.4 0 0 1 2.4 2.4v6.6h-2v-5.4h-.7V27.4h-2.5v-8.6h-1.2v8.6H8.9V12.2h-.7v5.4h-2V11a2.4 2.4 0 0 1 2.4-2.4z" ${a}/>`,
+    walk: `<circle cx="12.6" cy="4" r="3.4" ${a}/><path d="M9.4 8.6h5.6a2 2 0 0 1 1.9 1.3l2.6 6-1.8.9-2-4.2v4.6l3.6 9.6-2.5.9-3.6-8.6-3.3 8.8-2.5-.9 3-9.4v-5.2l-2.6 4.4-1.8-1 3.4-6.2a2 2 0 0 1 2-1z" ${a}/>`,
+    sit: `<rect x="2.6" y="8" width="1.5" height="19.4" ${chair}/><rect x="2.6" y="19.6" width="11.4" height="1.5" ${chair}/><rect x="12.5" y="19.6" width="1.5" height="7.8" ${chair}/>` +
+      `<circle cx="9.4" cy="4.4" r="3.3" ${a}/><path d="M7.4 8.8h4a2.2 2.2 0 0 1 2.2 2.2v4h4.6a2 2 0 0 1 2 2v10.4h-2.8v-8.6H8.6a2 2 0 0 1-2-2V11a2.2 2.2 0 0 1 .8-2.2z" ${a}/>`,
+    cat: `<path d="M4.4 12.6 5.2 2.6 11 7.2a8 8 0 0 1 2 0L18.8 2.6l.8 10a7.9 7.9 0 1 1-15.2 0z" ${a}/>`,
+    unit: `<g fill="none" stroke="${INK}" stroke-width="1.5"><path d="M12 0V13M3 2H21"/><rect x="4" y="13" width="16" height="4.5"/><path d="M2 27H22" stroke-dasharray="2 2"/></g>`,
   }[kind];
-  return `<svg width="${sz}" height="${sz * 28 / 24}" viewBox="0 0 24 28" ${st}>${body}</svg>`;
+}
+function icon(kind, sz = 26, fill = INK) {
+  const hgt = kind === 'cat' ? 24 : 28;
+  return `<svg width="${sz}" height="${f1((sz * hgt) / 24)}" viewBox="0 0 24 ${hgt}">${glyph(kind, fill)}</svg>`;
 }
 
 /** 版头的关系图：列 = 前提 + 人的三种状态，行 = 单元不妨碍人 / 单元落下的台；节点 = 那一行的平面小图；箭头 = 前提 */
@@ -348,30 +369,42 @@ function mapSvg(m, rows) {
   for (const [no, [x, y]] of Object.entries(pos)) {
     const r = rows[no];
     const pn = r.panels[r.thumb ?? 1];
-    s += keyplan(side(pn.img), pn.notes, `x="${x - T / 2}" y="${y - T / 2}" width="${T}" height="${T}"`);
+    s += keyplan(side(pn.img), pn.notes, `x="${x - T / 2}" y="${y - T / 2}" width="${T}" height="${T}"`, 0, r._pose);
     s += `<text x="${x - T / 2}" y="${y - T / 2 - 7}" font-size="10" fill="${INK}"><tspan class="mono" fill="#888">${no}</tspan> ${r.short}</text>`;
   }
   return `<svg class="map" viewBox="0 0 ${Wd} 252">${s}</svg>`;
 }
 
+/** 图例：一格一个图标，下面一两个字（11-26 作者：用图标代替开头成段的解释） */
 const legend = () => {
-  const sv = (inner, w = 26) => `<svg width="${w}" height="16" viewBox="0 0 ${w} 16" fill="none" stroke="${INK}" stroke-width="1.2">${inner}</svg>`;
+  const sv = (inner, w = 26, hgt = 22) => `<svg width="${w}" height="${hgt}" viewBox="0 0 ${w} ${hgt}" fill="none" stroke="${INK}" stroke-width="1.2">${inner}</svg>`;
+  const pair = (fill) => `<span class="pair">${icon('stand', 15, fill)}${icon('cat', 12, fill)}</span>`;
   const items = [
-    [`<i class="sw" style="background:${MID};border:1.5px solid ${INK}"></i>`, '触发的人或猫'],
-    [`<i class="sw" style="background:${TONE};border:1.5px solid ${INK}"></i>`, '被调动的单元'],
-    [sv(`<path d="M8 1V10"/><polygon points="8,15 5,9 11,9" fill="${INK}" stroke="none"/><path d="M19 15V6"/><polygon points="19,1 16,7 22,7" fill="${INK}" stroke="none"/>`), '落下 · 收回'],
-    [sv(`<rect x="2" y="2" width="13" height="12" stroke-dasharray="3 2.4"/><path d="M5 5L12 11M12 5L5 11" stroke-width="1.6"/>`, 18), '本来要落、不落'],
-    [sv(`<path d="M1 12Q9 -2 21 9" stroke-dasharray="3.5 2.6"/><polygon points="24,12 18,10.5 21.5,6.5" fill="${INK}" stroke="none"/>`), '将要去（实线 = 已走过）'],
-    [sv(`<path d="M1 8H25" stroke-dasharray="4 3"/>`), '视线'],
-    [sv(`<rect x="2" y="2" width="13" height="12" stroke-dasharray="1.2 2.6" stroke-linecap="round"/>`, 18), '平面图：候选 / 将要落的台'],
-    [sv(`<circle cx="9" cy="8" r="6" stroke="${MID}"/><path d="M9 8V2A6 6 0 0 1 15 8Z" fill="${INK}" stroke="none"/>`, 18), '平面图：台与身体重叠的部分'],
-    [sv(`<circle cx="8" cy="8" r="5.2"/><path d="M8 4.6V8H10.8"/>`, 16), '时长'],
+    [pair(INK), '触发'],
+    [pair(DIM), '在场'],
+    [sv(`<rect x="5" y="3" width="16" height="16" fill="${TONE}" stroke-width="1.8"/>`), '被调动的台'],
+    [sv(`<rect x="5" y="3" width="16" height="16" fill="#ececec" stroke="${MID}"/>`), '落着的台'],
+    [sv(`<circle cx="13" cy="11" r="1.6" fill="${PALE}" stroke="none"/>`), '收着的台'],
+    [sv(`<path d="M13 2V13"/><polygon points="13,20 9.6,12 16.4,12" fill="${INK}" stroke="none"/>`), '落下'],
+    [sv(`<path d="M13 20V9"/><polygon points="13,2 9.6,10 16.4,10" fill="${INK}" stroke="none"/>`), '收回'],
+    [sv(`<rect x="5" y="3" width="16" height="16" stroke-dasharray="3 2.4"/><path d="M9 7L17 15M17 7L9 15" stroke-width="1.7"/>`), '不落'],
+    [sv(`<rect x="5" y="3" width="16" height="16" stroke-dasharray="1.2 2.8" stroke-linecap="round"/>`), '将要落'],
+    [sv(`<defs><pattern id="lgh" patternUnits="userSpaceOnUse" width="3.4" height="3.4" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="3.4" stroke="${INK}" stroke-width="1.6"/></pattern></defs><circle cx="13" cy="11" r="8" stroke="${MID}" stroke-dasharray="1.2 2.6" stroke-linecap="round"/><path d="M13 11V3A8 8 0 0 1 21 11Z" fill="url(#lgh)"/>`), '与身体重叠'],
+    [sv(`<path d="M2 17Q11 -3 21 12" stroke-dasharray="3.5 2.6"/><polygon points="24,16 18,14 21.6,10" fill="${INK}" stroke="none"/>`), '将要去'],
+    [sv(`<path d="M2 17Q11 -3 21 12"/><polygon points="24,16 18,14 21.6,10" fill="${INK}" stroke="none"/>`), '已走过'],
+    [sv(`<path d="M1 11H25" stroke-dasharray="4 3"/>`), '视线'],
+    [sv(`<circle cx="13" cy="11" r="6.4"/><path d="M13 6.6V11H16.6"/>`), '时长'],
+    [sv(`<circle cx="13" cy="11" r="6.6"/><text x="13" y="14.6" font-size="10" text-anchor="middle" fill="${INK}" stroke="none" class="mono">1</text>`), '引猫第几步'],
   ];
-  return `<div class="legend">${items.map(([g, t]) => `<span>${g}${t}</span>`).join('')}</div>`;
+  return `<div class="legend">${items.map(([g, t]) => `<span>${g}<em>${t}</em></span>`).join('')}</div>`;
 };
+/** 目的：坐着的人与台上的猫相距 1.0–1.5 m */
+const goal = () => `<svg class="goal" viewBox="0 0 200 58" width="200" height="58"><g transform="translate(6 4) scale(1.75)">${glyph('sit')}</g>` +
+  `<rect x="128" y="34" width="60" height="7" fill="${TONE}" stroke="${INK}" stroke-width="1.4"/><path d="M158 41V58" stroke="${INK}" stroke-width="1.2"/><g transform="translate(146 9) scale(1)">${glyph('cat')}</g>` +
+  `<path d="M52 20H140M52 16V24M140 16V24" fill="none" stroke="${INK}" stroke-width="1.1"/><text x="96" y="14" font-size="10.5" text-anchor="middle" class="mono" fill="${INK}">1.0–1.5 m</text></svg>`;
 
 const rowsByNo = {};
-for (const s of plate.sections) for (const r of s.rows) rowsByNo[r.no] = r;
+for (const s of plate.sections) for (const r of s.rows) { r._pose = s.icon; rowsByNo[r.no] = r; }
 
 const row = (r) => {
   const cols = r.cols ?? 3;
@@ -389,8 +422,8 @@ const row = (r) => {
     const idn = `${r.no}-${i + 1}`;
     const cap = `<figcaption><i class="mono">${i + 1}</i><b>${p.stage}</b><span>${p.cap}</span></figcaption>`;
     // 平面上的关系为主的行：线稿上不放小图，平面图放大排在线稿下面、说明在它右边
-    if (big) return `<figure><div class="shot" data-id="${idn}"><img src="${uri(p.img)}">${overlay(d, p.notes, cssW)}</div><div class="under">${keyplan(d, p.notes, `class="plan" data-id="${idn}-plan"`, planPx)}${cap}</div></figure>`;
-    return `<figure><div class="shot" data-id="${idn}"><img src="${uri(p.img)}">${overlay(d, p.notes, cssW)}${keyplan(d, p.notes)}</div>${cap}</figure>`;
+    if (big) return `<figure><div class="shot" data-id="${idn}"><img src="${uri(p.img)}">${overlay(d, p.notes, cssW)}</div><div class="under">${keyplan(d, p.notes, `class="plan" data-id="${idn}-plan"`, planPx, r._pose)}${cap}</div></figure>`;
+    return `<figure><div class="shot" data-id="${idn}"><img src="${uri(p.img)}">${overlay(d, p.notes, cssW)}${keyplan(d, p.notes, 'class="key"', 0, r._pose)}</div>${cap}</figure>`;
   }).join('')}</div></article>`;
 };
 
@@ -400,13 +433,15 @@ const html = `<!doctype html><meta charset="utf-8"><style>
   header{display:grid;grid-template-columns:1fr 2fr;column-gap:22px;padding-bottom:26px;align-items:start}
   h1{font-size:25px;line-height:1.3;font-weight:600;margin:0 0 12px}
   .lede{font-size:12px;line-height:1.75;color:#444;margin:0 0 18px}
-  .legend{display:grid;grid-template-columns:1fr;row-gap:7px;font-size:10.5px;color:#444;border-top:1px solid ${PALE};padding-top:12px}
-  .legend span{display:flex;align-items:center;gap:9px}
-  .legend svg,.legend .sw{flex:none}
-  .legend span>:first-child{width:28px}
-  .legend .sw{width:15px!important;margin-right:13px}
+  .goal{display:block;margin:2px 0 16px}
+  .legend{display:grid;grid-template-columns:repeat(5,1fr);gap:10px 4px;border-top:1px solid ${PALE};padding-top:12px}
+  .legend>span{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .legend svg{display:block}
+  .legend .pair{display:flex;align-items:flex-end;gap:3px;height:22px}
+  .legend em{font-style:normal;font-size:9.5px;color:#444;white-space:nowrap}
   .sw{display:inline-block;width:15px;height:11px;box-sizing:border-box}
   .map{display:block;width:100%;height:auto;font-family:inherit}
+  section>h2 svg{flex:none}
   section>h2{display:flex;align-items:center;gap:12px;font-size:13px;font-weight:600;letter-spacing:.12em;margin:0;padding:8px 0;border-top:2.5px solid ${INK}}
   section>h2 span{font-weight:400;letter-spacing:0;font-size:11.5px;color:#555;margin-left:6px}
   article{border-top:1px solid ${INK};padding:11px 0 26px}
@@ -434,7 +469,7 @@ const html = `<!doctype html><meta charset="utf-8"><style>
   figcaption b{font-weight:600;letter-spacing:.12em;color:${INK};margin-right:12px;font-size:11px}
   footer{border-top:1px solid ${INK};padding-top:10px;font-size:10.5px;color:#666}
 </style>
-<header><div><h1>${plate.title}</h1><p class="lede">${plate.lede}</p>${legend()}</div>
+<header><div><h1>${plate.title}</h1>${goal()}${legend()}</div>
 <div>${mapSvg(plate.map, rowsByNo)}</div></header>
 ${plate.sections.map((s) => `<section><h2>${icon(s.icon, 20)}${s.name}<span>${s.note}</span></h2>${s.rows.map(row).join('')}</section>`).join('')}
 <footer>地面一格 0.83 m。01 行画到天花板，其余各行只取到 2.4 m 高。</footer>`;
