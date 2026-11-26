@@ -4,12 +4,13 @@
 //
 // plate.json：{ title, lede, map: { cols, icons, counts, bands, nodes: { 行号: [列, 带] }, edges: [[从, 到, 'under'?]] },
 //               sections: [{ name, icon, note, rows: [row..] }] }
-//   row = { no, short, title, judge?, count?, needs?: ['01'..], cols?: 3, thumb?: 1, key?: 'r'（平面小图放右下角）, panels: [{ img, geo, opt, stage, cap, notes }] }
+//   row = { no, short, title, judge?, count?, needs?: ['01'..], cols?: 3, thumb?: 1, plan?: 'big'（平面图放大，排在线稿下面）, panels: [{ img, geo, opt, stage, cap, notes }] }
 //   geo / opt 是 line.py --plate 用的；notes 是这一层画在线稿上的记号（见 NOTE 一节）。
 // 版式（2026-11-23 作者「学术一点、像竞赛图版、清新一些」；11-24「要有叙事逻辑」；
 //       11-25「减少文字，多加图上的引导和图形说明，不读字也看得懂每组图的目的」）：
 //   版头 = 一句目的 + 记号图例 + 一张关系图（人的状态 × 单元做什么，每个节点是那一行「干预」格的平面小图，箭头 = 前提）；
-//   每行 = 行号与标题 + 几格线稿；每格左上角一张平面小图，格下一行短说明；格与格之间一个箭头表示先后。
+//   每行 = 行号与标题 + 几格线稿；每格左下角一张平面小图，格下一行短说明；格与格之间一个箭头表示先后。
+//   平面上的关系为主的行（让路 · 台角 · 注视 · 头顶 · 引猫）平面图放大排在线稿下面，按真实尺寸画（见 keyplan）。
 //   记号只有六种：▼ 落下 · ▲ 收回 · ✕ 不落 · 弧线 / 折线 = 移动（虚线 = 将要去、实线 = 已经走过）· 虚直线 = 视线 · 小钟 = 时长。
 //   线稿上不写句子，只有数（0.74 m、3 s）。
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -153,7 +154,7 @@ function overlay(d, notes, cssW) {
       const L = Math.hypot(b[0] - c[0], b[1] - c[1]) || 1;
       const e = [b[0] - ((b[0] - c[0]) / L) * 4 * k, b[1] - ((b[1] - c[1]) / L) * 4 * k];
       s += `<path d="M${f1(a[0])} ${f1(a[1])}Q${f1(c[0])} ${f1(c[1])} ${f1(e[0])} ${f1(e[1])}" fill="none" stroke="${INK}" stroke-width="${f1(sw)}"${nt.dash ? ` stroke-dasharray="${f1(4.5 * k)} ${f1(3.5 * k)}"` : ''}/>` + head(b, c);
-    } else if (nt.k === 'step') {
+    } else if (nt.k === 'step' && !nt.planOnly) {
       const c = g.P(g.W(nt.at));
       s += `<circle cx="${f1(c[0])}" cy="${f1(c[1])}" r="${f1(6.6 * k)}" fill="#fff" stroke="${INK}" stroke-width="${f1(sw)}"/><text x="${f1(c[0])}" y="${f1(c[1] + 3.4 * k)}" font-size="${f1(9.5 * k)}" text-anchor="middle" class="mono" fill="${INK}">${nt.n}</text>`;
     } else if (nt.k === 'tag') {
@@ -177,27 +178,55 @@ function overlay(d, notes, cssW) {
   return `<svg class="ov" viewBox="0 0 ${iw} ${ih}">${s}</svg>`;
 }
 
-/** 平面小图：行 0 在上。世界单位（一格 = pitch）。线稿上的记号在这里再画一遍（落下 ▼ · 收回 ▲ · 不落 ✕ · 路线 · 视线） */
-function keyplan(d, notes, attrs = 'class="key"') {
+/** 平面图：行 0 在上。世界单位（一格 = pitch）。线稿上的记号在这里再画一遍（落下 ▼ · 收回 ▲ · 不落 ✕ · 路线 · 视线）。
+ *  big = 放大时的版面像素（0 = 画在线稿角上的小图）。放大的平面图按真实尺寸画（11-26 作者：步数、让人、头顶重叠这些
+ *  是平面上的关系，轴测里看不准，平面图要放大、多担信息）：台面 0.69 m、人的身体 ⌀0.44 m、落着的台填浅灰、
+ *  没落的台与身体重叠的那一块涂黑、让路时收回的带画成台面的缺口，另有只画在平面上的记号：
+ *  { k:'cand', cells:[[行,列]…] } 候选 / 将要落的台（点线框）· { k:'ring', at, r:[米…], label? } 以某点为心的距离圈 ·
+ *  { k:'step', at:[行,列], n } 引猫的第几步（写在那一格的角上）· 右下角 1 m 比例尺 */
+let planUid = 0;
+function keyplan(d, notes, attrs = 'class="key"', big = 0) {
   const { n, pitch: p } = d;
   const g = geom(d);
+  const m = d.cam.m;
   const R = (n / 2) * p + p * 0.14;
+  const V = R + p * (big ? 0.16 : 0.08);
+  const id = `kp${planUid++}`;
   const has = (list, r, c) => list.some((u) => u[0] === r && u[1] === c);
   const at = (r, c) => [(c - (n - 1) / 2) * p, (r - (n - 1) / 2) * p];
   const lim = R - p * 0.05;
   const xy = (spec) => { const w = g.W(spec); return [Math.max(-lim, Math.min(lim, w[0])), Math.max(-lim, Math.min(lim, -w[1]))]; };
-  const u = p / 100; // 平面小图里的线宽单位
+  const u = big ? ((2 * V) / big) * 0.34 : p / 100; // 线宽单位：放大时按版面像素定（1u ≈ 0.34 px）
+  const px = big ? (2 * V) / big : 0;               // 一个版面像素合多少世界单位
+  const h = big ? 0.345 * m : p * 0.4;              // 台面半边长
+  const bodyR = big ? 0.22 * m : p * 0.15, catR = big ? 0.1 * m : p * 0.085;
+  const text = (x, y, t, anchor = 'start', sz = 8.5) => `<text x="${f1(x)}" y="${f1(y)}" font-size="${f1(sz * px)}" text-anchor="${anchor}" class="mono" fill="${INK}" stroke="#fff" stroke-width="${f1(2.6 * px)}" paint-order="stroke" stroke-linejoin="round">${t}</text>`;
+  let defs = `<clipPath id="${id}r"><rect x="${-R}" y="${-R}" width="${2 * R}" height="${2 * R}"/></clipPath>`;
   let s = `<rect x="${-R}" y="${-R}" width="${2 * R}" height="${2 * R}" fill="#fff" stroke="${MID}" stroke-width="${2.2 * u}"/>`;
-  for (const f of d.furn) s += `<rect x="${f[0]}" y="${-f[3]}" width="${f[2] - f[0]}" height="${f[3] - f[1]}" fill="none" stroke="${PALE}" stroke-width="${2.2 * u}"/>`;
+  for (const f of d.furn) s += `<rect x="${f[0]}" y="${-f[3]}" width="${f[2] - f[0]}" height="${f[3] - f[1]}" fill="none" stroke="${big ? MID : PALE}" stroke-width="${2.2 * u}"/>`;
   for (let r = 0; r < n; r++)
     for (let c = 0; c < n; c++) {
       const [x, y] = at(r, c);
-      const h = p * 0.4;
       const box = (extra) => `<rect x="${x - h}" y="${y - h}" width="${2 * h}" height="${2 * h}" ${extra}/>`;
       if (has(d.marked, r, c) && !d.bands) s += box(`fill="${TONE}" stroke="${INK}" stroke-width="${4.5 * u}"`);
-      else if (has(d.down, r, c)) s += box(`fill="none" stroke="${MID}" stroke-width="${2.2 * u}"`);
+      else if (has(d.down, r, c)) s += box(`fill="${big ? '#ececec' : 'none'}" stroke="${MID}" stroke-width="${2.2 * u}"`);
       else if (has(d.ghosts, r, c)) s += box(`fill="none" stroke="${INK}" stroke-width="${2.8 * u}" stroke-dasharray="${9 * u} ${7 * u}"`);
       else s += `<circle cx="${x}" cy="${y}" r="${p * 0.04}" fill="${PALE}"/>`;
+      // 让路时收回的带：台面上朝那几个方位的缺口
+      const ang = (d.retracted?.[`${r},${c}`] ?? []).slice().sort((a, b) => a - b);
+      if (ang.length) {
+        defs += `<clipPath id="${id}u${r}${c}"><rect x="${x - h - 3 * u}" y="${y - h - 3 * u}" width="${2 * h + 6 * u}" height="${2 * h + 6 * u}"/></clipPath>`;
+        const runs = [];
+        for (const a of ang) (runs.length && a - runs[runs.length - 1][1] <= 20 ? (runs[runs.length - 1][1] = a) : runs.push([a, a]));
+        if (runs.length > 1 && runs[0][0] + 360 - runs[runs.length - 1][1] <= 20) { runs[0][0] = runs.pop()[0] - 360; }
+        for (const [a0, a1] of runs) {
+          const pts = [[x, y]];
+          for (let a = a0 - 9; a <= a1 + 9 + 1e-6; a += 6) pts.push([x + Math.cos((a * Math.PI) / 180) * p * 0.7, y + Math.sin((a * Math.PI) / 180) * p * 0.7]);
+          // 缺口涂白，两条切边描黑
+          s += `<g clip-path="url(#${id}u${r}${c})"><polygon points="${pts.map((q) => `${f1(q[0])},${f1(q[1])}`).join(' ')}" fill="#fff"/>` +
+            (big ? [pts[1], pts[pts.length - 1]] : []).map((q) => `<line x1="${x}" y1="${y}" x2="${f1(q[0])}" y2="${f1(q[1])}" stroke="${INK}" stroke-width="${3.4 * u}"/>`).join('') + '</g>';
+        }
+      }
     }
   const ln = (a, b, dash, w = 3) => `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${INK}" stroke-width="${w * u}"${dash ? ` stroke-dasharray="${8 * u} ${6 * u}"` : ''}/>`;
   const hd = (tip, from, sz = 15) => {
@@ -206,20 +235,18 @@ function keyplan(d, notes, attrs = 'class="key"') {
     const b = [tip[0] - ux * sz * u, tip[1] - uy * sz * u], w = sz * 0.45 * u;
     return `<polygon points="${tip[0]},${tip[1]} ${b[0] - uy * w},${b[1] + ux * w} ${b[0] + uy * w},${b[1] - ux * w}" fill="${INK}"/>`;
   };
+  // 只画在平面上的：候选台、距离圈
+  for (const nt of notes ?? []) {
+    if (nt.k === 'cand') {
+      for (const [r, c] of nt.cells) { const [x, y] = at(r, c); s += `<rect x="${x - h}" y="${y - h}" width="${2 * h}" height="${2 * h}" fill="none" stroke="${INK}" stroke-width="${2.2 * u}" stroke-dasharray="${2.5 * u} ${6 * u}" stroke-linecap="round"/>`; }
+    } else if (nt.k === 'ring' && big) {
+      const [x, y] = xy(nt.at);
+      nt.r.forEach((rm) => { s += `<circle clip-path="url(#${id}r)" cx="${x}" cy="${y}" r="${rm * m}" fill="none" stroke="${INK}" stroke-width="${2.2 * u}" stroke-dasharray="${7 * u} ${6 * u}"/>`; });
+    }
+  }
   if (d.gaze && d.people.length && d.cats.length) s += ln(xy('p0'), xy('c0'), true, 2.4);
   for (const nt of notes ?? []) {
-    if (nt.k === 'down' || nt.k === 'up' || nt.k === 'spread') {
-      if (nt.k === 'spread' || !nt.u) continue;
-      const [x, y] = at(nt.u[0], nt.u[1]);
-      const t = p * 0.15, dy = nt.k === 'up' ? -1 : 1;
-      s += `<polygon points="${x - t},${y - dy * t * 0.8} ${x + t},${y - dy * t * 0.8} ${x},${y + dy * t * 0.9}" fill="${INK}"/>`;
-    } else if (nt.k === 'x') {
-      const [x, y] = xy(nt.at), t = p * 0.17;
-      s += `<path d="M${x - t} ${y - t}L${x + t} ${y + t}M${x + t} ${y - t}L${x - t} ${y + t}" stroke="${INK}" stroke-width="${4.5 * u}" fill="none"/>`;
-    } else if (nt.k === 'clash') {
-      const [x, y] = xy(nt.at);
-      s += `<circle cx="${x}" cy="${y}" r="${p * 0.11}" fill="none" stroke="${INK}" stroke-width="${3.4 * u}"/>`;
-    } else if (nt.k === 'dim') {
+    if (nt.k === 'dim') {
       s += ln(xy(nt.a), xy(nt.b), false, 2.4);
     } else if (nt.k === 'walk' || nt.k === 'hop') {
       const q = (nt.k === 'hop' ? [nt.a, nt.b] : nt.pts).map(xy);
@@ -227,11 +254,51 @@ function keyplan(d, notes, attrs = 'class="key"') {
       s += hd(q[q.length - 1], q[q.length - 2]);
     }
   }
-  const dot = (a, r) => `<circle cx="${a.c[0]}" cy="${-a.c[1]}" r="${r}" fill="${a.trigger ? MID : '#fff'}" stroke="${a.trigger ? INK : MID}" stroke-width="${(a.trigger ? 4 : 2.4) * u}"/>`;
-  for (const a of d.anchors.people) s += dot(a, p * 0.15);
-  for (const a of d.anchors.cats) s += dot(a, p * 0.085);
-  const V = R + p * 0.08;
-  return `<svg ${attrs} viewBox="${-V} ${-V} ${2 * V} ${2 * V}">${s}</svg>`;
+  // 没落的台与人的身体重叠的那一块
+  if (big) d.ghosts.forEach(([r, c], gi) => {
+    const [x, y] = at(r, c);
+    defs += `<clipPath id="${id}g${gi}"><rect x="${x - h}" y="${y - h}" width="${2 * h}" height="${2 * h}"/></clipPath>`;
+    for (const a of d.anchors.people) s += `<circle clip-path="url(#${id}g${gi})" cx="${a.c[0]}" cy="${-a.c[1]}" r="${bodyR}" fill="${INK}"/>`;
+  });
+  const dot = (a, r) => `<circle cx="${a.c[0]}" cy="${-a.c[1]}" r="${r}" fill="${a.trigger ? MID : '#fff'}" ${big && d.ghosts.length ? 'fill-opacity="0.55"' : ''} stroke="${a.trigger ? INK : MID}" stroke-width="${(a.trigger ? 4 : 2.4) * u}"/>`;
+  for (const a of d.anchors.people) s += dot(a, bodyR);
+  for (const a of d.anchors.cats) s += dot(a, catR);
+  for (const nt of notes ?? []) {
+    if ((nt.k === 'down' || nt.k === 'up') && nt.u) {
+      const [x, y] = at(nt.u[0], nt.u[1]);
+      const t = p * (big ? 0.12 : 0.15), dy = nt.k === 'up' ? -1 : 1;
+      s += `<polygon points="${x - t},${y - dy * t * 0.8} ${x + t},${y - dy * t * 0.8} ${x},${y + dy * t * 0.9}" fill="${INK}"/>`;
+    } else if (nt.k === 'x') {
+      const [x, y] = xy(nt.at), t = p * 0.17;
+      const dd = `M${x - t} ${y - t}L${x + t} ${y + t}M${x + t} ${y - t}L${x - t} ${y + t}`;
+      s += (big ? `<path d="${dd}" stroke="#fff" stroke-width="${11 * u}" fill="none" stroke-linecap="round"/>` : '') + `<path d="${dd}" stroke="${INK}" stroke-width="${4.5 * u}" fill="none"/>`;
+    } else if (nt.k === 'clash' && !big) {
+      const [x, y] = xy(nt.at);
+      s += `<circle cx="${x}" cy="${y}" r="${p * 0.11}" fill="none" stroke="${INK}" stroke-width="${3.4 * u}"/>`;
+    } else if (nt.k === 'step' && big) {
+      const [x, y] = at(nt.at[0], nt.at[1]), q = h - 7.5 * px;
+      s += `<circle cx="${f1(x - q)}" cy="${f1(y - q)}" r="${f1(5.6 * px)}" fill="#fff" stroke="${INK}" stroke-width="${2.6 * u}"/>` + `<text x="${f1(x - q)}" y="${f1(y - q + 2.9 * px)}" font-size="${f1(8 * px)}" text-anchor="middle" class="mono" fill="${INK}">${nt.n}</text>`;
+    } else if (nt.k === 'ring' && big && nt.label) {
+      const [x, y] = xy(nt.at), rr = nt.r[nt.r.length - 1] * m, a = ((nt.la ?? 215) * Math.PI) / 180;
+      s += text(x + Math.cos(a) * rr + (nt.dx ?? 0) * px, y + Math.sin(a) * rr + (nt.dy ?? -4) * px, nt.label, nt.anchor ?? 'middle');
+    } else if (nt.k === 'dim' && big && nt.label) {
+      const a = xy(nt.a), b = xy(nt.b);
+      s += text((a[0] + b[0]) / 2 + 5 * px, (a[1] + b[1]) / 2 - 4 * px, nt.label);
+    } else if (nt.k === 'tag' && big && nt.plan !== false && nt.at !== 'gaze') {
+      const [x, y] = xy(nt.at);
+      s += text(x + 9 * px, y - 7 * px, nt.label);
+    } else if (nt.k === 'tag' && big && nt.at === 'gaze') {
+      const a = xy('p0'), b = xy('c0');
+      s += text((a[0] + b[0]) / 2 + 6 * px, (a[1] + b[1]) / 2 + 10 * px, nt.label);
+    }
+  }
+  let extra = 0;
+  if (big) { // 比例尺：画在框外的右下角
+    extra = 13 * px;
+    const x1 = R, y1 = V + 8 * px;
+    s += `<path d="M${f1(x1 - m)} ${f1(y1 - 3 * px)}V${f1(y1)}H${f1(x1)}V${f1(y1 - 3 * px)}" fill="none" stroke="${INK}" stroke-width="${2.6 * u}"/>` + text(x1 - m - 5 * px, y1 + 1 * px, '1 m', 'end', 7.5);
+  }
+  return `<svg ${attrs} viewBox="${-V} ${-V} ${2 * V} ${2 * V + extra}"><defs>${defs}</defs>${s}</svg>`;
 }
 
 /** 人的三种状态与单元的小图标（方块人，与线稿里的人同一种画法） */
@@ -296,6 +363,8 @@ const legend = () => {
     [sv(`<rect x="2" y="2" width="13" height="12" stroke-dasharray="3 2.4"/><path d="M5 5L12 11M12 5L5 11" stroke-width="1.6"/>`, 18), '本来要落、不落'],
     [sv(`<path d="M1 12Q9 -2 21 9" stroke-dasharray="3.5 2.6"/><polygon points="24,12 18,10.5 21.5,6.5" fill="${INK}" stroke="none"/>`), '将要去（实线 = 已走过）'],
     [sv(`<path d="M1 8H25" stroke-dasharray="4 3"/>`), '视线'],
+    [sv(`<rect x="2" y="2" width="13" height="12" stroke-dasharray="1.2 2.6" stroke-linecap="round"/>`, 18), '平面图：候选 / 将要落的台'],
+    [sv(`<circle cx="9" cy="8" r="6" stroke="${MID}"/><path d="M9 8V2A6 6 0 0 1 15 8Z" fill="${INK}" stroke="none"/>`, 18), '平面图：台与身体重叠的部分'],
     [sv(`<circle cx="8" cy="8" r="5.2"/><path d="M8 4.6V8H10.8"/>`, 16), '时长'],
   ];
   return `<div class="legend">${items.map(([g, t]) => `<span>${g}${t}</span>`).join('')}</div>`;
@@ -312,10 +381,16 @@ const row = (r) => {
     r.count ? `<span><i class="mono">30 分钟</i>${r.count}</span>` : '',
     r.needs?.length ? `<span><i class="mono">前提</i><b class="mono">${r.needs.join(' · ')}</b></span>` : '',
   ].join('');
+  const big = r.plan === 'big';
+  const planPx = cols > 3 ? 146 : 190;
   return `<article><div class="rule"><span class="no mono">${r.no}</span><h3>${r.title}</h3><div class="meta">${meta}</div></div>
-<div class="row${r.key === 'r' ? ' kr' : ''}" style="--n:${cols};--key:${cols > 3 ? 62 : 78}px">${r.panels.map((p, i) => {
+<div class="row${big ? ' big' : ''}" style="--n:${cols};--key:${cols > 3 ? 62 : 78}px;--plan:${planPx}px">${r.panels.map((p, i) => {
     const d = side(p.img);
-    return `<figure><div class="shot" data-id="${r.no}-${i + 1}"><img src="${uri(p.img)}">${overlay(d, p.notes, cssW)}${keyplan(d, p.notes)}</div><figcaption><i class="mono">${i + 1}</i><b>${p.stage}</b>${p.cap}</figcaption></figure>`;
+    const idn = `${r.no}-${i + 1}`;
+    const cap = `<figcaption><i class="mono">${i + 1}</i><b>${p.stage}</b><span>${p.cap}</span></figcaption>`;
+    // 平面上的关系为主的行：线稿上不放小图，平面图放大排在线稿下面、说明在它右边
+    if (big) return `<figure><div class="shot" data-id="${idn}"><img src="${uri(p.img)}">${overlay(d, p.notes, cssW)}</div><div class="under">${keyplan(d, p.notes, `class="plan" data-id="${idn}-plan"`, planPx)}${cap}</div></figure>`;
+    return `<figure><div class="shot" data-id="${idn}"><img src="${uri(p.img)}">${overlay(d, p.notes, cssW)}${keyplan(d, p.notes)}</div>${cap}</figure>`;
   }).join('')}</div></article>`;
 };
 
@@ -347,7 +422,12 @@ const html = `<!doctype html><meta charset="utf-8"><style>
   .shot img{display:block;width:100%;height:auto}
   .ov{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible}
   .key{position:absolute;left:0;bottom:0;width:var(--key,78px);height:var(--key,78px);background:#fff;padding:6px 6px 0 0}
-  .row.kr .key{left:auto;right:0;padding:6px 0 0 6px}
+  .under{display:grid;grid-template-columns:var(--plan) 1fr;column-gap:14px;align-items:start;border-top:1px solid ${PALE};margin-top:6px;padding-top:9px}
+  .plan{display:block;width:var(--plan);height:auto}
+  .row.big figcaption{border:0;margin:0;padding:2px 0 0}
+  .row.big figcaption b{display:inline-block;margin-bottom:5px}
+  .row.big figcaption span{display:block}
+  .row.big figure:not(:last-child)::after{top:32%}
   figure:not(:last-child)::after{content:"";position:absolute;right:-${GAP / 2 + 5}px;top:44%;width:10px;height:10px;border-top:1.2px solid ${MID};border-right:1.2px solid ${MID};transform:rotate(45deg) scale(.8)}
   figcaption{border-top:1px solid ${PALE};margin-top:6px;padding-top:7px;font-size:11.5px;line-height:1.6;color:#333}
   figcaption i{color:#999;margin-right:8px;font-size:11px}
@@ -365,7 +445,7 @@ await pg.waitForTimeout(300);
 writeFileSync(resolve(out), await (await pg.$('body')).screenshot());
 if (panelsOut) {
   mkdirSync(panelsOut, { recursive: true });
-  for (const el of await pg.$$('.shot')) writeFileSync(join(panelsOut, (await el.getAttribute('data-id')) + '.png'), await el.screenshot());
+  for (const el of await pg.$$('.shot, .plan')) writeFileSync(join(panelsOut, (await el.getAttribute('data-id')) + '.png'), await el.screenshot());
 }
 await br.close();
 console.log(out);

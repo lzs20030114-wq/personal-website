@@ -284,10 +284,18 @@ def render(prefix, out, opt):
         wide = vv[rr > 0.85 * rr.max()]
         unitd['%d,%d' % rc] = dict(lo=[float(x) for x in vv.min(0)], hi=[float(x) for x in vv.max(0)], reach=float(rr.max()),
                                    plat=float(wide[:, 2].max()))
+    # 让路时收回的带各朝哪个方位（平面图坐标：x 向右、y 向下），平面图上画成台面的缺口
+    retr = {}
+    if opt.get('bands'):
+        for i, k in enumerate(kinds):
+            if foc_part[i] and near(calls[i]['lite'], BAND[:2]):
+                ux, uy = axis(k[1], k[2])
+                c = calls[i]['v'].mean(0)
+                retr.setdefault('%d,%d' % k[1:], []).append(round(math.degrees(math.atan2(-(c[1] - uy), c[0] - ux)), 1))
     json.dump(
         dict(size=[W, H], crop=crop, hud=meta.get('hud'), n=n, pitch=pitch, room=float(max(allv[:, 0].max(), allv[:, 1].max())),
              down=down, marked=marked, ghosts=ghosts, furn=furn, bands=bool(opt.get('bands')), anchors=anchors,
-             gaze=bool(opt.get('gaze') and people and cats), cam=camd, people=[box(f) for f in people], cats=[box(f) for f in cats], units=unitd),
+             gaze=bool(opt.get('gaze') and people and cats), retracted=retr, cam=camd, people=[box(f) for f in people], cats=[box(f) for f in cats], units=unitd),
         open(str(Path(out).with_suffix('.json')), 'w'), ensure_ascii=False)
     print(out, f'{len(calls)} 件 · 人 {len(people)} 猫 {len(cats)} · 格距 {pitch:.1f} · 落着 {len(down)} 台')
 
