@@ -831,7 +831,7 @@ export function CohabitSpaceBench({
                     rects: sim.furn.rects,
                     tableUnit: sim.tableBy[u] >= 0 || sim.seats.some((st) => st.table === u),
                     // 此刻正当桌子落下的茶几那台：能成就落成茶几兼猫台（先为猫落下、后来才当桌子的，形不换，照旧是平台）
-                    tea: sim.tableBy[u] >= 0 ? teaShelfToward(layout, layout.units[u], sim.seats, sim.furn.rects) : null,
+                    tea: sim.tableBy[u] >= 0 ? teaShelfToward(layout.units[u], sim.seats, sim.furn.rects) : null,
                     count: BANDS,
                   })
                 : null;

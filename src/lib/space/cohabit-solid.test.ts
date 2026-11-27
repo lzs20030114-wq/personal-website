@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DUAL, DUAL_STOWED, SHELTER, UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, dualUnitSpec, membraneIndexAt, shelterBands, shelterClear, shelterToward, teaShelfToward, TEA_SHELF, DUAL_RISE, unitFormPlan, UNIT_FORM_ODDS, BRIDGE_BASE, DOOR_BASE, DOOR_EPS, FRAMES, SHELL, bakeUnitShell, shellCoverVerts, shellGoreVerts, shellJoins, bandVertsAt, bakeBandKeys, boxesMesh, bakeHanger, bakeUnitKeys, bakeUnitMech, FURN_ERGO, HOIST, STEADY, TABLE_TOP, bandTop, clipToReel, doorFrame, isDoorFrame, pickUnitBands, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_CUT, UNIT_ORDER, UNIT_SHAPE, UNIT_STORED, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
+import { DUAL, DUAL_STOWED, SHELTER, UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, dualUnitSpec, membraneIndexAt, shelterBands, shelterClear, shelterToward, teaShelfToward, DUAL_RISE, unitFormPlan, UNIT_FORM_ODDS, BRIDGE_BASE, DOOR_BASE, DOOR_EPS, FRAMES, SHELL, bakeUnitShell, shellCoverVerts, shellGoreVerts, shellJoins, bandVertsAt, bakeBandKeys, boxesMesh, bakeHanger, bakeUnitKeys, bakeUnitMech, FURN_ERGO, HOIST, STEADY, TABLE_TOP, bandTop, clipToReel, doorFrame, isDoorFrame, pickUnitBands, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_CUT, UNIT_ORDER, UNIT_SHAPE, UNIT_STORED, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
 import type { BandTrajectory } from './cohabit-solid';
 import { planLayout } from './unit-activation';
 import { FIGURE, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
@@ -1259,7 +1259,7 @@ describe('给猫落的台随机成形（2026-10-30 第二轮）', () => {
     for (const t of tables) {
       const u = sim.layout.units[t];
       const users = sim.seats.filter((s) => s.table === t);
-      const toward = teaShelfToward(sim.layout, u, sim.seats, rects);
+      const toward = teaShelfToward(u, sim.seats, rects);
       if (users.some((s) => rects[s.furn].kind === 'chair')) {
         expect(toward, `餐桌那台 ${t}`).toBeNull();
         continue;
@@ -1272,7 +1272,7 @@ describe('给猫落的台随机成形（2026-10-30 第二轮）', () => {
       expect([...bands].reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(11);
       for (const s of users) {
         const a = Math.atan2(s.y - u.y, s.x - u.x);
-        expect(Math.cos(a - (toward as number))).toBeGreaterThan(Math.cos(TEA_SHELF.spread) - 1e-9);
+        expect(Math.cos(a - (toward as number))).toBeGreaterThan(0);
         let near = 0;
         for (let j = 1; j < SQUARE.COUNT; j++) if (Math.cos(bandAngle(j) - a) > Math.cos(bandAngle(near) - a)) near = j;
         expect(bands[near]).toBe(0);
@@ -1290,9 +1290,9 @@ describe('给猫落的台随机成形（2026-10-30 第二轮）', () => {
     // 座位分在台的两边：哪半圈盖上台都会盖到一个人面前，不成
     const far = furnRect({ kind: 'sofa', x: 9, y: 9, face: [1, 0], ergo: true });
     const u0 = { x: 0, y: 0, i: 0 };
-    expect(teaShelfToward(sim.layout, u0, [{ x: 1.3, y: 0, table: 0, furn: 0 }, { x: -1.3, y: 0, table: 0, furn: 0 }], [far])).toBeNull();
-    expect(teaShelfToward(sim.layout, u0, [{ x: 1.3, y: 0.2, table: 0, furn: 0 }, { x: 1.3, y: -0.2, table: 0, furn: 0 }], [far])).toBeCloseTo(0, 9);
-    expect(teaShelfToward(sim.layout, u0, [{ x: 1.3, y: 0, table: 3, furn: 0 }], [far])).toBeNull();
+    expect(teaShelfToward(u0, [{ x: 1.3, y: 0, table: 0, furn: 0 }, { x: -1.3, y: 0, table: 0, furn: 0 }], [far])).toBeNull();
+    expect(teaShelfToward(u0, [{ x: 1.3, y: 0.2, table: 0, furn: 0 }, { x: 1.3, y: -0.2, table: 0, furn: 0 }], [far])).toBeCloseTo(0, 9);
+    expect(teaShelfToward(u0, [{ x: 1.3, y: 0, table: 3, furn: 0 }], [far])).toBeNull();
   });
 
   it('2-15 标准布置：座位的桌子那台全被排除，其余给猫的台里两层放得下的不少于四十台', () => {

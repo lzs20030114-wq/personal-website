@@ -587,15 +587,12 @@ export function shelterClear(
  * 给猫——人用下层、猫用上层，就是平面模型记的「共用单元」（CohabitSim.coUse）在立体里的样子。
  * 返回敞开那半圈朝哪（平面方位角），不成返回 null：
  *   - 只有茶几（用这台的座位全是沙发 / 单人沙发）；餐桌那台照旧是平台（0.74 m 的桌面上再加一层，上台 1.32 m 挡在对坐的两人之间）；
- *   - 敞开那半圈朝用这台的座位所占方位的正中；每个座位都要在敞开那半圈里、离分界至少半条带（偏离正中 ≤ spread = 81°），
- *     否则有人面前的茶几上方会被上台盖住——标准布置的四张茶几偏离 58° / 74°，都成；
- *   - 上台底面不碰下面的家具（桌子那台本来就不压家具，这里再核一次）。
- * 只读平面模型定好的东西（哪台是谁的桌子），规则一条不加；spread 是站方按带的宽度取的，待作者定。
+ *   - 敞开那半圈朝用这台的座位所占方位的正中；座位分在台的两边、哪半圈都装不下的不成（上台会盖到一个人面前）。
+ *     标准布置的四张茶几都成。
+ * 只读平面模型定好的东西（哪台是谁的桌子），规则一条不加，也没有另取的数。桌子那台本来就不压家具（COHABIT.TABLE），不用再核上台。
  */
-export const TEA_SHELF = { spread: (81 * Math.PI) / 180 } as const;
 
 export function teaShelfToward(
-  l: Pick<PlanLayout, 'platR'>,
   u: { x: number; y: number; i: number },
   seats: readonly Pick<Seat, 'x' | 'y' | 'table' | 'furn'>[],
   rects: readonly (FurnBox & Pick<FurnRect, 'kind' | 'ergo'>)[],
@@ -614,9 +611,7 @@ export function teaShelfToward(
     }
   }
   const span = 2 * Math.PI - gap;
-  if (span / 2 > TEA_SHELF.spread) return null;
-  const under = TABLE_TOP.sofaFront + DUAL_RISE - 0.065;
-  if (!platformClear(l, u, rects.filter((r) => furnitureTop(r) > under - 0.02))) return null;
+  if (span >= Math.PI - 1e-9) return null;
   const mid = start + span / 2;
   return Math.atan2(Math.sin(mid), Math.cos(mid));
 }
