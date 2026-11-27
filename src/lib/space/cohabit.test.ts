@@ -1423,6 +1423,52 @@ describe('cohabit · 方形单元（unit: square，Lab 2-15，作者 2026-10-25�
     }, 60_000);
   });
 
+  describe('猫的休息 / 醒着两层节奏（试验，2026-11-27 作者「猫自己的节奏不会那么快吧」）', () => {
+    const REST = { restMin: 660, restMax: 1980, awakeMin: 780, awakeMax: 2340 };
+    const run = (rest: boolean) => {
+      const sim = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', space: 'live', seed: 11, opening: false, auto: true, faces: true, social: true, catFloor: true, cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid, ...(rest ? REST : {}) }, guide: COHABIT.GUIDE, pace: PACE_DEMO });
+      const half = sim.layout.fieldM / 2;
+      partySizes(6).forEach((sz, i, a) => {
+        const t = (i / a.length) * 2 * Math.PI + 0.3;
+        sim.addParty(Math.cos(t) * half * 0.6, Math.sin(t) * half * 0.6, sz);
+      });
+      scatterCats(sim, 8, 11);
+      let restSteps = 0;
+      let all = 0;
+      let movedResting = 0;
+      let notLying = 0;
+      const at = new Map<number, { x: number; y: number }>();
+      for (let t = 0; t < 600; t += 1 / 30) {
+        sim.step(1 / 30);
+        for (const c of sim.cats) {
+          all++;
+          if (!c.resting) {
+            at.delete(c.id);
+            continue;
+          }
+          restSteps++;
+          if (c.state !== 'lie') notLying++;
+          const was = at.get(c.id);
+          if (was && Math.hypot(c.walker.x - was.x, c.walker.y - was.y) > 1e-9) movedResting++;
+          at.set(c.id, { x: c.walker.x, y: c.walker.y });
+        }
+      }
+      return { share: restSteps / all, movedResting, notLying };
+    };
+    it('默认不启用：没有猫进入休息', () => {
+      expect(COHABIT.CAT.restMax).toBe(0);
+      expect(COHABIT.CAT_MT).not.toHaveProperty('restMax');
+      expect(run(false).share).toBe(0);
+    }, 60_000);
+    it('启用后：休息的猫卧着、位置不动，休息占的时间在两成到七成之间', () => {
+      const r = run(true);
+      expect(r.share).toBeGreaterThan(0.2);
+      expect(r.share).toBeLessThan(0.7);
+      expect(r.movedResting).toBe(0);
+      expect(r.notLying).toBe(0);
+    }, 60_000);
+  });
+
   describe('错身（squeeze，2026-10-28 作者确认「两侧单元都收在天花板上时，人可以侧身错过」）', () => {
     // 节奏钉在立这条守门时的那一套（一坐 60–180 s）：错身管的是「起身后能不能走回座位」，2026-11-08 起台架一坐 10–30 分钟，
     // 240 s 里几乎没人起身，用现行节奏就量不出这件事

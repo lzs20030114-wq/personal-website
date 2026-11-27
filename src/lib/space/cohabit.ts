@@ -177,6 +177,15 @@ export const COHABIT = {
      *  没有实测数，模块默认 1 = 不启用；研究里做敏感性扫描 */
     crowdTolMul: 1,
     /**
+     * 休息与醒着两层节奏（2026-11-27 试验，默认 0 = 不启用，逐位不变）：猫在「醒着」与「休息」之间交替，各取 min–max（s）。
+     * 休息 = 卧着不动：不靠近人、不接递过来的台、不换位置；人在 1 m 内忍够了照旧退开，退开即醒。醒着 = 原有的全部规则
+     * （Mertens 与 Turner 那组数是对醒着的猫标的）。时长另用一串随机数。
+     */
+    restMin: 0,
+    restMax: 0,
+    awakeMin: 0,
+    awakeMax: 0,
+    /**
      * 猫能下地（`catFloor` 开着时：会动 / 钉死两档的猫也能下地，作者 2026-10-08）。每次「去哪」的决定（换格、退开）先选层：
      * 上台的几率 = logistic(upBias + upCrowd · n)，n = 猫 1.5 m 内的访客数。方向来自 Hirsch 等 2025（同一家猫咖：客流高
      * 时猫多在层架上、客流低时地面与家具偏多），幅度没有实测——upBias 按「钉死档（= 有固定层架的普通猫咖）· 6 人时
@@ -1085,6 +1094,9 @@ export interface Cat {
   id: number;
   walker: Walker;
   mode: BodyMode;
+  /** CatCfg.restMax > 0 时：正在休息；这一段（休息 / 醒着）还剩多久（s） */
+  resting: boolean;
+  restLeft: number;
   /** 脚下单元（空房间档为 null：猫在地面） */
   unit: PlanUnit | null;
   /** 下一落点（等它成形） */
@@ -1414,6 +1426,8 @@ export class CohabitSim {
   private readonly actorRng = new Map<number, () => number>();
   /** 坐着看猫 / 不看猫的时长用的那几串（pickAttend） */
   private readonly attendRng = new Map<number, () => number>();
+  /** 猫休息 / 醒着的时长用的那几串（restRand） */
+  private readonly restRng = new Map<number, () => number>();
   private cur: (() => number) | null = null;
   /** 此刻盖在某个坐着的人头顶的单元（stepSpace 里算；retarget 挑引导目标时避开） */
   private readonly overSeated: Uint8Array;
@@ -1951,10 +1965,65 @@ export class CohabitSim {
       presentTime: 0,
       settledTime: 0,
       transfers: 0,
+      resting: false,
+      restLeft: 0,
     };
     this.cats.push(c);
     if (unit) this.keepSupport(c);
+    if (this.cat.restMax > 0) {
+      // 开场：按两段各占多少时间抽它此刻在哪一段，这一段已经过了一部分
+      const rest = (this.cat.restMin + this.cat.restMax) / 2;
+      const awake = (this.cat.awakeMin + this.cat.awakeMax) / 2;
+      c.resting = this.restRand(c) < rest / (rest + awake);
+      c.restLeft = this.restRand(c) * this.pickRest(c, c.resting);
+      if (c.resting) c.state = 'lie';
+    }
     return c;
+  }
+
+  /** 休息 / 醒着的时长用的那几串随机数（种子只看场次种子与这是第几只猫）：开不开它，猫自己那串抽到的数都一样 */
+  private restRand(c: Cat): number {
+    let g = this.restRng.get(c.id);
+    if (!g) {
+      const index = Math.max(0, this.cats.indexOf(c));
+      g = makeRng((Math.imul(this.seed, 0x9e3779b1) ^ 0x1b873593 ^ Math.imul(index + 1, 0xcc9e2d51)) >>> 0);
+      this.restRng.set(c.id, g);
+    }
+    return g();
+  }
+
+  private pickRest(c: Cat, resting: boolean): number {
+    const lo = resting ? this.cat.restMin : this.cat.awakeMin;
+    const hi = resting ? this.cat.restMax : this.cat.awakeMax;
+    return lo + this.restRand(c) * (hi - lo);
+  }
+
+  /**
+   * 休息这一层：到点就在休息 / 醒着之间换（正在靠近、退开、上台途中的等它停下再休息）。返回 true = 这一步它在休息，
+   * 后面的靠近、被动靠近、换位置都不做。退开（K2）在它之前判，退开了就算醒。
+   */
+  private restStep(c: Cat, dt: number): boolean {
+    if (!(this.cat.restMax > 0)) return false;
+    if (c.resting && c.state === 'retreat') {
+      c.resting = false;
+      c.restLeft = this.pickRest(c, false);
+    }
+    c.restLeft -= dt;
+    if (c.restLeft <= 0) {
+      if (c.resting) {
+        c.resting = false;
+        c.restLeft = this.pickRest(c, false);
+        c.state = 'sit';
+        c.phaseTime = 0;
+      } else if (!c.homing && !c.climb && !c.pending && !c.transfer && c.state !== 'approach' && c.state !== 'retreat') {
+        c.resting = true;
+        c.restLeft = this.pickRest(c, true);
+        c.approaching = null;
+      }
+    }
+    if (!c.resting) return false;
+    c.state = 'lie';
+    return true;
   }
 
   /** social：放一组（领头放在 (x,y) 附近，同伴站在离他 PARTY_D 以内的空交叉点）；返回放下的人 */
@@ -2444,6 +2513,11 @@ export class CohabitSim {
       for (const c of this.cats) {
         this.cur = this.actorRng.get(c.id) ?? null;
         this.stepCat(c, h);
+        // 休息着的猫这一步退开了（K2）：当场算醒
+        if (c.resting && c.state === 'retreat') {
+          c.resting = false;
+          c.restLeft = this.pickRest(c, false);
+        }
       }
       this.cur = null;
       this.account(h);
@@ -3527,6 +3601,7 @@ export class CohabitSim {
     }
     // 台上靠近走在半路：接着走（不再掷骰）
     if (c.homing && this.homeStep(c, dt)) return;
+    if (this.restStep(c, dt)) return;
     // K3：有人站着看它、潜伏期过了 ⇒ 按几率靠过去（旧口径只挪到本台边缘；approachTravel = 1 时沿落着的台走过去）
     if (att && c.latency <= 0 && c.state !== 'approach' && c.phaseTime >= 1) {
       if (this.rand() < this.cat.approachP) {
@@ -3856,6 +3931,7 @@ export class CohabitSim {
       c.phaseTime = 0;
       return;
     }
+    if (this.restStep(c, dt)) return;
     if (att && c.latency <= 0 && c.state !== 'approach' && c.phaseTime >= 1) {
       if (this.rand() < this.cat.approachP) {
         const ang = Math.atan2(att.walker.y - w.y, att.walker.x - w.x);
