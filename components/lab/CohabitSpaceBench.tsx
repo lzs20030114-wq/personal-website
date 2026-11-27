@@ -30,6 +30,8 @@ import {
   COHABIT_PIVOT,
   FRAMES,
   SHELTER,
+  DUAL_RISE,
+  teaShelfToward,
   UNIT_DUAL_DEFS,
   UNIT_DUAL_OPTS,
   bakedGet,
@@ -219,10 +221,10 @@ const COPY = {
     title: '人猫同台 · 立体',
     sub: (side: number, roomH: number) => `8×8 · 方台边长 ${side.toFixed(2)} m · 房高 ${roomH.toFixed(2)} m · ${SCENE.people} 位访客 · ${SCENE.cats} 只猫`,
     hint: '拖拽旋转 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回、给人让路 · 控制在实验室',
-    hintCtl: '拖拽旋转 · 空间三档对照 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回，挡路的带各自收回 · 给猫落的台随机成平台、半圈有顶的两层或整圈两层，坐着的人身边那台多半是有顶的、朝那个人敞开 · 当桌子的台照家具定高 · 蒙皮可关掉看里面的带子与键 · 带子形状取自引擎烘好的关键帧 · 访客的穿着与猫的花色每一场随机、不重样',
+    hintCtl: '拖拽旋转 · 空间三档对照 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回，挡路的带各自收回 · 给猫落的台随机成平台、半圈有顶的两层或整圈两层，坐着的人身边那台多半是有顶的、朝那个人敞开 · 当桌子的台照家具定高，沙发前的茶几背后半圈多一层给猫 · 蒙皮可关掉看里面的带子与键 · 带子形状取自引擎烘好的关键帧 · 访客的穿着与猫的花色每一场随机、不重样',
     baking: (p: number) => `算带子轨迹 ${Math.round(p * 100)}%`,
-    line: (t: number, formed: number, total: number, c: Record<EventKind, number>, roofed: number) =>
-      `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · 成形 ${formed} / ${total}${roofed ? ` · 有顶的台 ${roofed}` : ''} · 共视 ${c.gaze} · 共温 ${c.warmth} · 共触 ${c.touch} · 交接 ${c.pass}`,
+    line: (t: number, formed: number, total: number, c: Record<EventKind, number>, roofed: number, coUse: number) =>
+      `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · 成形 ${formed} / ${total}${roofed ? ` · 有顶的台 ${roofed}` : ''} · 共视 ${c.gaze} · 共温 ${c.warmth} · 共触 ${c.touch} · 交接 ${c.pass} · 共用单元 ${coUse}`,
     aria: '一间房里 8×8 个方形的收缩张紧外皮单元平时收在天花下，六位访客在地上走、站、坐，四只猫在方台上；单元按人猫同台的规则落下成形、收回，挡路的带各自收回',
     space: '空间',
     shell: '蒙皮',
@@ -235,10 +237,10 @@ const COPY = {
     title: 'People and cats together, in 3D',
     sub: (side: number, roomH: number) => `8×8 · square platform ${side.toFixed(2)} m · room ${roomH.toFixed(2)} m high · ${SCENE.people} visitors · ${SCENE.cats} cats`,
     hint: 'Drag to orbit · units rest stowed at the ceiling, then descend, form, retract and give way under the Lab 2-14 rules · controls in the lab',
-    hintCtl: 'Drag to orbit · three spaces to compare · units rest stowed at the ceiling, then descend and form under the Lab 2-14 rules, bands in the way retract on their own · a unit lowered for a cat takes one of three forms at random (flat, two levels roofed over half, or two levels all round), and beside a seated visitor it is usually roofed at the back and open toward that visitor · units used as tables keep the height set by the furniture · turn the skin off to see the bands and keys inside · band shapes come from baked engine keyframes · outfits and coats are dealt at random each run, no two alike',
+    hintCtl: 'Drag to orbit · three spaces to compare · units rest stowed at the ceiling, then descend and form under the Lab 2-14 rules, bands in the way retract on their own · a unit lowered for a cat takes one of three forms at random (flat, two levels roofed over half, or two levels all round), and beside a seated visitor it is usually roofed at the back and open toward that visitor · units used as tables keep the height set by the furniture, and a coffee table gets an upper shelf for a cat over its back half · turn the skin off to see the bands and keys inside · band shapes come from baked engine keyframes · outfits and coats are dealt at random each run, no two alike',
     baking: (p: number) => `baking band trajectory ${Math.round(p * 100)}%`,
-    line: (t: number, formed: number, total: number, c: Record<EventKind, number>, roofed: number) =>
-      `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · formed ${formed} / ${total}${roofed ? ` · roofed ${roofed}` : ''} · co-gaze ${c.gaze} · co-warmth ${c.warmth} · contact ${c.touch} · crossing ${c.pass}`,
+    line: (t: number, formed: number, total: number, c: Record<EventKind, number>, roofed: number, coUse: number) =>
+      `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · formed ${formed} / ${total}${roofed ? ` · roofed ${roofed}` : ''} · co-gaze ${c.gaze} · co-warmth ${c.warmth} · contact ${c.touch} · crossing ${c.pass} · shared unit ${coUse}`,
     aria: 'A room with an 8×8 field of square contracting-skin units stowed at the ceiling; six visitors walk, stand and sit on the floor, four cats live on the square platforms; units descend, form and retract under the cohabitation rules and bands in the way retract on their own',
     space: 'space',
     shell: 'skin',
@@ -323,11 +325,12 @@ export function CohabitSpaceBench({
   const shellRef = useRef(true);
   const [shell, setShell] = useState(true);
   const [view, setView] = useState<ViewKey>('axon');
-  const [hud, setHud] = useState<{ t: number; formed: number; total: number; counts: Record<EventKind, number>; bake: number; note: string; side: number; roomH: number; roofed: number; beat: { zh: string; en: string } | null; dur: number; field: number }>({
+  const [hud, setHud] = useState<{ t: number; formed: number; total: number; counts: Record<EventKind, number>; bake: number; note: string; side: number; roomH: number; roofed: number; coUse: number; beat: { zh: string; en: string } | null; dur: number; field: number }>({
     field: 0,
     beat: null,
     dur: 0,
     roofed: 0,
+    coUse: 0,
     t: 0,
     formed: 0,
     total: COHABIT.SEATS.GRID * COHABIT.SEATS.GRID,
@@ -705,6 +708,8 @@ export function CohabitSpaceBench({
     let planSet = new Uint8Array(layout.units.length);
     let dropSerial = new Int32Array(layout.units.length);
     let roofToward = new Float32Array(layout.units.length);
+    // 茶几兼猫台（teaShelfToward，2026-11-28）：沙发前的茶几那台落下时，朝座位那半圈只成下台、背后半圈两块都成，猫站上台
+    let teaOn = new Uint8Array(layout.units.length);
     let orders: (readonly number[])[] = layout.units.map(() => UNIT_ORDER);
     /** 换了场地（小样换一个）：按新的格数重摆所有逐台的东西 */
     const relayout = (): void => {
@@ -723,6 +728,7 @@ export function CohabitSpaceBench({
       planSet = new Uint8Array(U);
       dropSerial = new Int32Array(U);
       roofToward = new Float32Array(U);
+      teaOn = new Uint8Array(U);
       orders = layout.units.map(() => UNIT_ORDER);
       bakeRoom();
       bakePlates();
@@ -804,6 +810,7 @@ export function CohabitSpaceBench({
           if (deg <= 1e-4) {
             planSet[u] = 0;
             roofOn[u] = 0;
+            teaOn[u] = 0;
             orders[u] = UNIT_ORDER;
           } else if (!planSet[u]) {
             planSet[u] = 1;
@@ -823,6 +830,8 @@ export function CohabitSpaceBench({
                     seated,
                     rects: sim.furn.rects,
                     tableUnit: sim.tableBy[u] >= 0 || sim.seats.some((st) => st.table === u),
+                    // 此刻正当桌子落下的茶几那台：能成就落成茶几兼猫台（先为猫落下、后来才当桌子的，形不换，照旧是平台）
+                    tea: sim.tableBy[u] >= 0 ? teaShelfToward(layout, layout.units[u], sim.seats, sim.furn.rects) : null,
                     count: BANDS,
                   })
                 : null;
@@ -830,6 +839,7 @@ export function CohabitSpaceBench({
               const bands = plan.bands;
               roofOn[u] = 1;
               roofToward[u] = plan.toward ?? NaN;
+              teaOn[u] = (plan as { form?: string }).form === 'tea' ? 1 : 0;
               orders[u] = UNIT_ORDER.map((t, j) => (bands[j] ? DUAL_BOTH : DUAL_LOWER) + t);
             }
             // 小样的续坡 / 先低后高：平台三档，各条带的台面各抬一点（liftTrajectory，纯平移）
@@ -839,8 +849,13 @@ export function CohabitSpaceBench({
           const roof = roofOn[u] === 1;
           if (roof) {
             // 小样的台面高度由脚本给（茶几那台的下台 0.42 m），不按 2-15 给猫的两层台的 0.90 m
-            if (!sim.topOf) tableWant[u] = SHELTER.lowerTop;
-            roofed++;
+            // 茶几兼猫台的下台就是茶几：有人用着按家具定高；人走了、猫还在上面时停在原来的高度，不动
+            if (sim.topOf) roofed++;
+            else if (teaOn[u]) tableWant[u] = sim.furn && sim.tableBy[u] >= 0 ? tableTopFor(sim.furn.rects[sim.tableBy[u]]) : tableTop[u];
+            else {
+              tableWant[u] = SHELTER.lowerTop;
+              roofed++;
+            }
           }
           const order = orders[u];
           // 整束布的高度跟单元的升降程度走；让路的带走收直回程、按上夹环截（pickUnitBands）；立杆下端跟布束底
@@ -1034,11 +1049,13 @@ export function CohabitSpaceBench({
         const key = `c-${pl.pose}-${pl.tail}-${pl.bend.toFixed(3)}-${k}|${look.coat}`;
         const r = rigOf(key, () => catRig({ unit: UNITS_PER_M, pose: pl.pose, tail: pl.tail, bend: pl.bend, phase: k / WALK_FRAMES.cat, coat: look.coat }));
         // 台上的猫站在自己那台的台面上（各台高度不同；两层的是下台）；跨台时按走到几成在两台之间插值
+        // 茶几兼猫台：猫站的是上台（下台是人的茶几）
+        const catTop = (i: number): number => tableTop[i] + (teaOn[i] ? DUAL_RISE : 0);
         const under = c.h !== undefined ? c.h :
           support.length === 2 && pl.t !== undefined
-            ? tableTop[support[0].i] + (tableTop[support[1].i] - tableTop[support[0].i]) * pl.t
+            ? catTop(support[0].i) + (catTop(support[1].i) - catTop(support[0].i)) * pl.t
             : support.length
-              ? Math.max(...support.map((u) => tableTop[u.i]))
+              ? Math.max(...support.map((u) => catTop(u.i)))
               : TABLE_TOP.stand;
         // 地面上的猫照旧踩地；小样里正在跳上跳下的猫按脚本给的高度（c.h），2-15 的猫没有 h，逐位不变
         const footY = pl.onPlatform ? ROOM.FLOOR_Y - under * UNITS_PER_M - pl.lift * UNITS_PER_M : ROOM.FLOOR_Y - (c.h ?? 0) * UNITS_PER_M;
@@ -1184,10 +1201,11 @@ export function CohabitSpaceBench({
       const s = sim.summary();
       const ready = vignette ? (dualReady ? 1 : trajs ? 0.5 + bakeP / 2 : bakeP / 2) : trajs ? 1 : bakeP;
       const beat = sim instanceof VignetteSim ? sim.beat() : null;
-      const key = `${Math.floor(s.t)}|${s.formed}|${roofed}|${s.ledger.counts.gaze}|${s.ledger.counts.warmth}|${s.ledger.counts.touch}|${s.ledger.counts.pass}|${Math.round(ready * 20)}|${beat ? beat.t : ''}`;
+      const coUse = sim instanceof CohabitSim ? sim.coUse.count : 0;
+      const key = `${Math.floor(s.t)}|${s.formed}|${roofed}|${coUse}|${s.ledger.counts.gaze}|${s.ledger.counts.warmth}|${s.ledger.counts.touch}|${s.ledger.counts.pass}|${Math.round(ready * 20)}|${beat ? beat.t : ''}`;
       if (key === lastHud) return;
       lastHud = key;
-      setHud((h) => ({ ...h, t: s.t, formed: s.formed, roofed, counts: { ...s.ledger.counts }, bake: ready, beat, dur: sim instanceof VignetteSim ? sim.script.duration : 0 }));
+      setHud((h) => ({ ...h, t: s.t, formed: s.formed, roofed, coUse, counts: { ...s.ledger.counts }, bake: ready, beat, dur: sim instanceof VignetteSim ? sim.script.duration : 0 }));
     };
 
     bakeGroup(
@@ -1420,7 +1438,7 @@ export function CohabitSpaceBench({
           </div>
         ) : (
           <div className="lab-hud br">
-            <div className="dim">{hud.bake < 1 ? t.baking(hud.bake) : t.line(hud.t, hud.formed, hud.total, hud.counts, hud.roofed)}</div>
+            <div className="dim">{hud.bake < 1 ? t.baking(hud.bake) : t.line(hud.t, hud.formed, hud.total, hud.counts, hud.roofed, hud.coUse)}</div>
           </div>
         )}
         <div className="lab-hud bl dim" style={vignette ? { maxWidth: '46%' } : undefined}>{hud.note ? tx('3D preview unavailable') : vignette ? vt.hint : controls ? t.hintCtl : t.hint}</div>

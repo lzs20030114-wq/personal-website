@@ -58,7 +58,7 @@ import { bandTriIndex, bandVerts } from '../linkage/skin';
 import type { Vec3 } from '../linkage/solver3d';
 import { MM_PER_UNIT, RIG_ANCHOR_Y, RIG_SCALE, RING_GRID_FIT, RING_GRID_PIVOT_Y, ROOM, roomBoxesBySpan, viewFitBySpan, type RingGridView } from './skin-grid';
 import type { PlanLayout } from './unit-activation';
-import { COHABIT, CohabitSim, PACE_DEMO, SQUARE_SCALE, bandAngle, partySizes, platformClear, scatterCats, type FurnBox, type FurnRect, type SpaceMode, type VisitorPace } from './cohabit';
+import { COHABIT, CohabitSim, PACE_DEMO, SQUARE_SCALE, bandAngle, partySizes, platformClear, scatterCats, tableClass, type FurnBox, type FurnRect, type Seat, type SpaceMode, type VisitorPace } from './cohabit';
 import type { CatPose, CatTail, SeatSpec } from './figure';
 
 /** 一米 = 多少世界单位（由「人 = 1.70 m = 215 单位」定） */
@@ -478,6 +478,8 @@ export const UNIT_ORDER: readonly number[] = buildSquareOrder();
  * 两块 6.5 cm 方台的键与平台同一组（UNIT_SHAPE.k）。
  */
 export const DUAL = { mid: 32 } as const;
+/** 两个结构的带：上台台面比下台台面高多少（m）。2-15 的两层台下台 0.90、上台台面 1.48（人猫同台lab §14.24）；小样的守门按烘好的轨迹现量核对 */
+export const DUAL_RISE = 0.58;
 
 /** 两个结构的谱：upper / lower = 上 / 下那块扣不扣键；a0 / b0 = 上 / 下结构段的起点（引擎节点下标），fs = 结构段节数。mid 省略 = DUAL.mid */
 export function dualUnitSpec(k: number, upper: boolean, lower: boolean, mid: number = DUAL.mid): { spec: SkinSpec; a0: number; b0: number; fs: number } {
@@ -580,6 +582,46 @@ export function shelterClear(
 }
 
 /**
+ * 茶几兼猫台（作者 2026-11-28「可以一起做」；形与小样 2-16 的同名那个相同，cohabit-design teaShelfDesign）：
+ * 沙发前的茶几那台落下时，朝座位那半圈只成下台当茶几（TABLE_TOP.sofaFront），背后那半圈两块都成，上台（下台 + DUAL_RISE = 1.00 m）
+ * 给猫——人用下层、猫用上层，就是平面模型记的「共用单元」（CohabitSim.coUse）在立体里的样子。
+ * 返回敞开那半圈朝哪（平面方位角），不成返回 null：
+ *   - 只有茶几（用这台的座位全是沙发 / 单人沙发）；餐桌那台照旧是平台（0.74 m 的桌面上再加一层，上台 1.32 m 挡在对坐的两人之间）；
+ *   - 敞开那半圈朝用这台的座位所占方位的正中；每个座位都要在敞开那半圈里、离分界至少半条带（偏离正中 ≤ spread = 81°），
+ *     否则有人面前的茶几上方会被上台盖住——标准布置的四张茶几偏离 58° / 74°，都成；
+ *   - 上台底面不碰下面的家具（桌子那台本来就不压家具，这里再核一次）。
+ * 只读平面模型定好的东西（哪台是谁的桌子），规则一条不加；spread 是站方按带的宽度取的，待作者定。
+ */
+export const TEA_SHELF = { spread: (81 * Math.PI) / 180 } as const;
+
+export function teaShelfToward(
+  l: Pick<PlanLayout, 'platR'>,
+  u: { x: number; y: number; i: number },
+  seats: readonly Pick<Seat, 'x' | 'y' | 'table' | 'furn'>[],
+  rects: readonly (FurnBox & Pick<FurnRect, 'kind' | 'ergo'>)[],
+): number | null {
+  const users = seats.filter((s) => s.table === u.i);
+  if (!users.length || users.some((s) => !rects[s.furn] || tableClass(rects[s.furn].kind) !== 'coffee')) return null;
+  // 这些座位所占方位的正中：按方位角排一圈，最大的那个空档对面那段弧的中点
+  const a = users.map((s) => Math.atan2(s.y - u.y, s.x - u.x)).sort((p, q) => p - q);
+  let gap = -1;
+  let start = a[0];
+  for (let k = 0; k < a.length; k++) {
+    const next = k + 1 < a.length ? a[k + 1] : a[0] + 2 * Math.PI;
+    if (next - a[k] > gap) {
+      gap = next - a[k];
+      start = next;
+    }
+  }
+  const span = 2 * Math.PI - gap;
+  if (span / 2 > TEA_SHELF.spread) return null;
+  const under = TABLE_TOP.sofaFront + DUAL_RISE - 0.065;
+  if (!platformClear(l, u, rects.filter((r) => furnitureTop(r) > under - 0.02))) return null;
+  const mid = start + span / 2;
+  return Math.atan2(Math.sin(mid), Math.cos(mid));
+}
+
+/**
  * 给猫落的那台成哪种形（2026-10-30 第二轮，作者「随机出现各种形态也 ok，不需要精确的设计好每一种的出现」→「你自己 review，觉得 ok 就做」）。
  * 规则管这台给谁用，随机管成哪种：
  *   - 当桌子的那台（任何一个座位的 Seat.table）不随机，照旧按家具定高的平台（茶几 0.42 / 餐桌 0.74 是按人体尺寸定的，抽了就用不了；
@@ -590,7 +632,7 @@ export function shelterClear(
  * 几率是演示值（资料里没有对应的数），写在 UNIT_FORM_ODDS。用仿真的种子 + 第几台 + 这台第几次落下抽（不动仿真自己的随机数流，
  * 平面模型逐位不变；同一个种子画面一样，案例页截图对得上）。两层的下台都在 SHELTER.lowerTop（上台顶 1.48 m 比站着的人的眼睛低）。
  */
-export type UnitForm = 'flat' | 'half' | 'full';
+export type UnitForm = 'flat' | 'half' | 'full' | 'tea';
 export const UNIT_FORM_ODDS = {
   /** 落在正坐着的人的共温带里 */
   near: { half: 0.6, full: 0.15 },
@@ -628,9 +670,12 @@ export function unitFormPlan(o: {
   rects: readonly (FurnBox & Pick<FurnRect, 'kind' | 'ergo'>)[];
   /** 这台是某个座位的桌子那台 */
   tableUnit: boolean;
+  /** 这台此刻正当桌子落下、并且能落成茶几兼猫台（teaShelfToward 给得出方位）：敞开那半圈朝哪。不给 = 桌子照旧是平台 */
+  tea?: number | null;
   count?: number;
 }): UnitFormPlan {
   const flat: UnitFormPlan = { form: 'flat', toward: null, bands: null };
+  if (o.tea !== undefined && o.tea !== null) return { form: 'tea', toward: o.tea, bands: shelterBands(o.tea, o.count ?? SQUARE.COUNT) };
   if (o.tableUnit || !shelterClear(o.layout, o.at, o.rects)) return flat;
   const toward = shelterToward(o.layout, o.at, o.seated, o.rects);
   const odds = toward !== null ? UNIT_FORM_ODDS.near : UNIT_FORM_ODDS.other;

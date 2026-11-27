@@ -1709,6 +1709,63 @@ describe('cohabit · 方形单元（unit: square，Lab 2-15，作者 2026-10-25�
       expect(tableFor(l, all, [], seat, owner)).toBe(-1);
     });
 
+    it('共用单元（2026-11-28）：猫停在已落成某位坐着的人桌子的那台上，逐对记、满 2 s 才记一次；两个人共用一张桌子各记一次；不进四类事件', () => {
+      const sim = quiet();
+      const sofa = sim.seats.filter((s) => sim.furn!.rects[s.furn].kind === 'sofa');
+      const [s1, s2] = sofa.filter((s) => s.table === sofa[0].table && s.furn === sofa[0].furn);
+      expect(s1 && s2).toBeTruthy();
+      const u = s1.table;
+      const sit = (q: Seat, party?: number) => {
+        const g = sim.graph.nodes[q.node];
+        const v = sim.addPerson(g.x, g.y, party)!;
+        sim.hold('person', v.id, q.x, q.y);
+        sim.release('person', v.id);
+        return v;
+      };
+      const a = sit(s1);
+      const b = sit(s2, a.party);
+      expect(a.seated && b.seated).toBe(true);
+      const dt = 1 / 30;
+      for (let t = 0; t < 3; t += dt) sim.step(dt);
+      expect(sim.act.degree[u]).toBe(1);
+      expect(sim.summary().coUseCount).toBe(0);
+      const cat = sim.addCat(sim.layout.units[u])!;
+      // 另算一遍：逐对连续满 MIN_S.warmth 才记一次、之后按秒累计
+      const hold = new Map<number, number>();
+      let count = 0;
+      let seconds = 0;
+      let shared = 0;
+      for (let t = 0; t < 60; t += dt) {
+        sim.step(dt);
+        for (const p of [a, b]) {
+          if (sim.sharing(p, cat)) {
+            shared += dt;
+            const h = (hold.get(p.id) ?? 0) + dt;
+            if (h >= COHABIT.MIN_S.warmth && h - dt < COHABIT.MIN_S.warmth) count++;
+            if (h >= COHABIT.MIN_S.warmth) seconds += dt;
+            hold.set(p.id, h);
+          } else hold.set(p.id, 0);
+        }
+        // 不满 2 s 不记
+        if (t < COHABIT.MIN_S.warmth - 2 * dt) expect(sim.coUse.count).toBe(0);
+      }
+      const s = sim.summary();
+      expect(shared).toBeGreaterThan(2 * COHABIT.MIN_S.warmth);
+      expect(s.coUseCount).toBe(count);
+      expect(s.coUseCount).toBeGreaterThanOrEqual(2); // 两个人各记一次
+      expect(s.coUseCount % 2).toBe(0);
+      expect(s.coUseSeconds).toBeCloseTo(seconds, 6);
+      expect(s.coUseSeconds).toBeGreaterThan(0);
+      expect(Object.keys(s.ledger.counts).sort()).toEqual(['gaze', 'pass', 'touch', 'warmth']);
+      // 人起身：这台不再是谁的桌子，猫还在上面也不算
+      sim.hold('person', a.id, a.walker.x, a.walker.y + 1);
+      sim.hold('person', b.id, b.walker.x, b.walker.y + 1);
+      sim.step(dt);
+      expect(sim.sharing(a, cat) || sim.sharing(b, cat)).toBe(false);
+      sim.resetLedger();
+      expect(sim.coUse).toEqual({ count: 0, seconds: 0 });
+    });
+
     it('家具挪了桌子跟着重算：把餐椅拖离任何一台的合格位置，它就没有桌子', () => {
       const sim = quiet();
       const ci = sim.furniture.findIndex((f) => f.kind === 'chair');

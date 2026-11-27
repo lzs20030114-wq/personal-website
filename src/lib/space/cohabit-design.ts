@@ -15,7 +15,7 @@
  */
 import { COHABIT, bandAngle, type FurnRect, type Guide } from './cohabit';
 import type { PlanLayout } from './unit-activation';
-import { SHELTER, TABLE_TOP, furnitureBoxes, shelterBands, shelterClear, tableTopFor, type Box } from './cohabit-solid';
+import { DUAL_RISE, SHELTER, TABLE_TOP, furnitureBoxes, shelterBands, shelterClear, tableTopFor, type Box } from './cohabit-solid';
 import { ROOM } from './skin-grid';
 
 const BANDS = COHABIT.FACES.BANDS;
@@ -26,7 +26,7 @@ const BANDS = COHABIT.FACES.BANDS;
  * - RISE：一台从一侧到对侧台面最多差多少（m）。每条带配平偏移 ±0.20 m，正对邻台的那条带在 ±9°，形态方案 §4 量的 0.39 m；
  * - PLATE：台厚 6.5 cm（UNIT_SHAPE h16）；CLEAR：台底离下面的家具至少留多少（m）。
  */
-export const DESIGN = { LOW: TABLE_TOP.sofaFront, RISE: 0.39, PLATE: 0.065, CLEAR: 0.02, UPPER: 0.58 } as const;
+export const DESIGN = { LOW: TABLE_TOP.sofaFront, RISE: 0.39, PLATE: 0.065, CLEAR: 0.02, UPPER: DUAL_RISE } as const;
 /*
  * UPPER：两层的上层台面比下层台面高多少（m）。2-15 的两层台下层 0.90、上层台面 1.48（人猫同台lab §14.24），差 0.58；
  * 小样的守门按烘好的轨迹现量核对（cohabit-vignette.test.ts）。

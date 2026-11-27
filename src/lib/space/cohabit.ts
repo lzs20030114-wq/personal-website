@@ -1136,6 +1136,8 @@ export interface Ledger {
 interface PairState {
   active: Record<EventKind, boolean>;
   hold: Record<EventKind, number>;
+  /** 共用单元（CohabitSim.coUse）：这一对此刻连续共用了多久、记上了没有 */
+  share: { hold: number; active: boolean };
 }
 
 export interface Link {
@@ -1394,6 +1396,12 @@ export class CohabitSim {
   private readonly sense: SpaceSense | null;
   tableSeat = 0;
   tableReady = 0;
+  /**
+   * 共用单元（作者 2026-11-28 定）：一台单元已经落成某位坐着的人的桌子，同时有猫停在这台上。
+   * 按人和猫逐对记（两个人共用一张桌子就各记一次），连续满 MIN_S.warmth（与共温同一个最短时长）才记一次，之后按秒累计。
+   * 只是多记一项，不进四类事件的 ledger，不改任何规则；tables 关着时恒 0。
+   */
+  coUse = { count: 0, seconds: 0 };
   /** 触发档；「走 · 站 · 坐」下的家具、座位，空间此刻铺的路，累计「猫到了坐着的人座位前方那台」次数 */
   readonly trigger: TriggerMode;
   /** 家具清单（可加减、拖动；「走 · 站 · 坐」默认 = 标准布置）与由它算出的占位 / 座位 */
@@ -2064,6 +2072,7 @@ export class CohabitSim {
     this.catArrivals = 0;
     this.seatedWarmth = 0;
     this.seatedTouch = 0;
+    this.coUse = { count: 0, seconds: 0 };
     for (const v of this.people) {
       v.detour = 0;
       v.straight = 0;
@@ -4259,8 +4268,20 @@ export class CohabitSim {
         const key = `${p.id}:${c.id}`;
         let st = this.pairs.get(key);
         if (!st) {
-          st = { active: { gaze: false, warmth: false, touch: false, pass: false }, hold: { gaze: 0, warmth: 0, touch: 0, pass: 0 } };
+          st = { active: { gaze: false, warmth: false, touch: false, pass: false }, hold: { gaze: 0, warmth: 0, touch: 0, pass: 0 }, share: { hold: 0, active: false } };
           this.pairs.set(key, st);
+        }
+        // 共用单元：p 坐着、他那张桌子已经落好（这台此刻归他那件家具或同一类的），c 停在这台上
+        if (this.sharing(p, c)) {
+          st.share.hold += dt;
+          if (!st.share.active && st.share.hold >= K.MIN_S.warmth) {
+            st.share.active = true;
+            this.coUse.count++;
+          }
+          if (st.share.active) this.coUse.seconds += dt;
+        } else {
+          st.share.hold = 0;
+          st.share.active = false;
         }
         const dx = c.walker.x - w.x;
         const dy = c.walker.y - w.y;
@@ -4298,6 +4319,15 @@ export class CohabitSim {
         }
       }
     }
+  }
+
+  /** 共用单元的判定（coUse）：这台已落成 p 的桌子，c 停在这台上（走着穿过的不算） */
+  sharing(p: Visitor, c: Cat): boolean {
+    if (!p.seated || p.seat === null || !c.unit || c.walker.state === 'walk') return false;
+    const s = this.seats[p.seat];
+    const u = s.table;
+    if (u < 0 || c.unit.i !== u) return false;
+    return this.tableBy[u] >= 0 && this.sameTable(this.tableBy[u], s.furn) && this.act.degree[u] >= 1 - 1e-9;
   }
 
   // ── 读数汇总 ──────────────────────────────────────────────────────────────
@@ -4356,6 +4386,8 @@ export class CohabitSim {
       minGap: this.minGap,
       tableSeat: this.tableSeat,
       tableReady: this.tableReady,
+      coUseCount: this.coUse.count,
+      coUseSeconds: this.coUse.seconds,
     };
   }
 }
@@ -4395,6 +4427,9 @@ export interface CohabitSummary {
   /** 桌子（COHABIT.TABLE）：坐在有桌子可落的座位上的人·秒 · 其中桌子已经落到位的人·秒（tables 关着时恒 0） */
   tableSeat: number;
   tableReady: number;
+  /** 共用单元：一台已落成某位坐着的人的桌子、同时有猫停在这台上，逐对记的次数与人·猫·秒（CohabitSim.coUse） */
+  coUseCount: number;
+  coUseSeconds: number;
 }
 
 export interface RunOpts extends CohabitOpts {

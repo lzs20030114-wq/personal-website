@@ -14,6 +14,7 @@
 //   环境变量 ARMS：只跑这几档（逗号分隔，例 'guided,off'，敏感性分析用；streams 开着时各档互不影响，挑着跑与全跑逐位相同）
 //   环境变量 OPTS：接在每一档的仿真选项之后（JSON），例 '{"streams":false,"retarget":false,"seatRetry":false}'
 //     = 规则审阅（§14.29）之前的口径，分步重跑时一件一件打开（§14.30）
+// 读数「共用单元」= 一台已落成某位坐着的人的桌子、同时有猫停在这台上，逐对记（CohabitSim.coUse，2026-11-28）
 // 读数「坐着的共温 / 共触」= 共温 / 共触秒数里人坐着的那部分（审阅第 6 条：共触里有不少是人路过猫身边）
 import { writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -43,6 +44,8 @@ const METRICS = {
   touchS: { zh: '共触 s', f: (r) => r.ledger.seconds.touch },
   seatedWarmthS: { zh: '坐着的共温 s', f: (r) => r.seatedWarmth },
   seatedTouchS: { zh: '坐着的共触 s', f: (r) => r.seatedTouch },
+  coUseS: { zh: '共用单元 s', f: (r) => r.coUseSeconds },
+  coUseN: { zh: '共用单元 次', f: (r) => r.coUseCount },
   gazeN: { zh: '共视 次', f: (r) => r.ledger.counts.gaze },
   arrivals: { zh: '猫到座位前方那台 次', f: (r) => r.catArrivals },
   onTop: { zh: '猫在台上 %', f: (r) => 100 * (1 - r.catFloorShare) },
