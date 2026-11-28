@@ -192,7 +192,7 @@ export function stepDesign(o: {
 
 /**
  * 座位前方那台（猫被引到这里陪坐着的人）：两层，敞开那半圈朝座位、上层盖背后那半圈，下层 0.90 m（SHELTER.lowerTop）——
- * 原来按 60% 的几率抽（UNIT_FORM_ODDS），这里改成只要下面放得下（shelterClear）就是它；放不下的仍是 1.05 m 的平台。
+ * 10-30 那版按 60% 的几率抽（11-28 起 2-15 不再抽签），这里是只要下面放得下（shelterClear）就是它；放不下的仍是 1.05 m 的平台。
  */
 export function meetDesign(
   l: Pick<PlanLayout, 'platR'>,

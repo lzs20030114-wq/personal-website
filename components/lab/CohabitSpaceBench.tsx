@@ -31,13 +31,12 @@ import {
   FRAMES,
   SHELTER,
   DUAL_RISE,
-  teaShelfToward,
+  shelterBands,
   UNIT_DUAL_DEFS,
   UNIT_DUAL_OPTS,
   bakedGet,
   bakedKey,
   bakedPut,
-  unitFormPlan,
   type BakeJob,
   type BakeOpts,
   type BakeReply,
@@ -126,9 +125,9 @@ import {
  * 默认开。开着时：静止态的单元只画外皮（带子、键、带间的膜都在皮里面，不画）；有带子在让路的单元，门那里接缝片张开，
  * 带子与键照画，从门口看得见里面。关掉 = 回到结构视图（带子 + 键 + 半透明的膜）。
  *
- * **按用途定形（2026-10-30）**：当桌子的那台按家具定高，给猫落的那台在三种形里随机抽一种（cohabit-solid `unitFormPlan` /
- * `UNIT_FORM_ODDS`）：平台、有顶的一台（338 节布全部铺出去成上下两块方台，上台只盖半圈）、整圈两层；下台 0.90 m 给猫。
- * 落在坐着的人身边 1.5 m 内的那台多半落成有顶的、敞开那半圈朝那个人，猫坐进有顶那半边看他。两组轨迹（平台三档、两层六条，
+ * **按用途定形（2026-11-28 改）**：当桌子的那台按家具定高；落在坐着的人身边 1.5 m 内的台成有顶的一台（338 节布全部铺出去成
+ * 上下两块方台，上台只盖半圈，下台 0.90 m 给猫，敞开那半圈朝那个人，猫坐进有顶那半边看他）；别处的台只成平台
+ * （cohabit-solid `unitFormPlan`，平面模型用同一个判断记在 `CohabitSim.roofed`）。两组轨迹（平台三档、两层六条，
  * 都带让路回程与键）在后台线程里烘（cohabit-bake.worker.ts），两层那组烘完之前全照平台落。抽签用仿真的种子，不动仿真的随机数，
  * 平面模型逐位不变。两层的单元逐条摆（不进整台网格），上夹环、芯、吊杆、键、外皮都按它自己那组轨迹（`orders[u]`）取。
  *
@@ -221,7 +220,7 @@ const COPY = {
     title: '人猫同台 · 立体',
     sub: (side: number, roomH: number) => `8×8 · 方台边长 ${side.toFixed(2)} m · 房高 ${roomH.toFixed(2)} m · ${SCENE.people} 位访客 · ${SCENE.cats} 只猫`,
     hint: '拖拽旋转 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回、给人让路 · 控制在实验室',
-    hintCtl: '拖拽旋转 · 空间三档对照 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回，挡路的带各自收回 · 空间铺给猫的那一步落成半圈有顶的两层、朝那个人敞开，猫更愿意走过去；其余给猫落的台随机成平台、半圈有顶的两层或整圈两层 · 当桌子的台照家具定高，沙发前的茶几背后半圈多一层给猫 · 蒙皮可关掉看里面的带子与键 · 带子形状取自引擎烘好的关键帧 · 访客的穿着与猫的花色每一场随机、不重样',
+    hintCtl: '拖拽旋转 · 空间三档对照 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回，挡路的带各自收回 · 坐着的人身边的台给猫多成一层（半圈有顶的两层、朝那个人敞开），猫更愿意走过去；别处的台只成平台 · 当桌子的台照家具定高，沙发前的茶几背后半圈多一层给猫 · 蒙皮可关掉看里面的带子与键 · 带子形状取自引擎烘好的关键帧 · 访客的穿着与猫的花色每一场随机、不重样',
     baking: (p: number) => `算带子轨迹 ${Math.round(p * 100)}%`,
     line: (t: number, formed: number, total: number, c: Record<EventKind, number>, roofed: number, coUse: number) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · 成形 ${formed} / ${total}${roofed ? ` · 有顶的台 ${roofed}` : ''} · 共视 ${c.gaze} · 共温 ${c.warmth} · 共触 ${c.touch} · 交接 ${c.pass} · 共用单元 ${coUse}`,
@@ -237,7 +236,7 @@ const COPY = {
     title: 'People and cats together, in 3D',
     sub: (side: number, roomH: number) => `8×8 · square platform ${side.toFixed(2)} m · room ${roomH.toFixed(2)} m high · ${SCENE.people} visitors · ${SCENE.cats} cats`,
     hint: 'Drag to orbit · units rest stowed at the ceiling, then descend, form, retract and give way under the Lab 2-14 rules · controls in the lab',
-    hintCtl: 'Drag to orbit · three spaces to compare · units rest stowed at the ceiling, then descend and form under the Lab 2-14 rules, bands in the way retract on their own · a step the room lays for a cat comes down with two levels, roofed at the back and open toward the visitor, and cats are more willing to move onto it; other units lowered for a cat take one of three forms at random (flat, two levels roofed over half, or two levels all round) · units used as tables keep the height set by the furniture, and a coffee table gets an upper shelf for a cat over its back half · turn the skin off to see the bands and keys inside · band shapes come from baked engine keyframes · outfits and coats are dealt at random each run, no two alike',
+    hintCtl: 'Drag to orbit · three spaces to compare · units rest stowed at the ceiling, then descend and form under the Lab 2-14 rules, bands in the way retract on their own · a unit that comes down beside a seated visitor gets a second level for the cat, roofed at the back and open toward that visitor, and cats are more willing to move onto it; units elsewhere are flat platforms · units used as tables keep the height set by the furniture, and a coffee table gets an upper shelf for a cat over its back half · turn the skin off to see the bands and keys inside · band shapes come from baked engine keyframes · outfits and coats are dealt at random each run, no two alike',
     baking: (p: number) => `baking band trajectory ${Math.round(p * 100)}%`,
     line: (t: number, formed: number, total: number, c: Record<EventKind, number>, roofed: number, coUse: number) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · formed ${formed} / ${total}${roofed ? ` · roofed ${roofed}` : ''} · co-gaze ${c.gaze} · co-warmth ${c.warmth} · contact ${c.touch} · crossing ${c.pass} · shared unit ${coUse}`,
@@ -700,13 +699,12 @@ export function CohabitSpaceBench({
     // 每条带在成形段两条路上走到哪一格（stepBandCursor：涨走正向路、退走回程路，反向时跳到另一条路上形状最近的格）
     let cursors = bandCursors(layout.units.length * BANDS);
     let frameOf = new Int32Array(layout.units.length * BANDS);
-    // 每台落下时抽的形（unitFormPlan）：当桌子的那台照平台；给猫落的在 平台 / 有顶的一台 / 整圈两层 里抽一种。
-    // 排法在开始落下那一刻定、收回天花之前不换（作者 10-06「换形先收回再落」）。roofOn = 两层（有顶的或整圈的）；
-    // roofToward = 有顶的那台敞开那半圈朝哪（整圈两层是 NaN）；dropSerial = 这台第几次落下（抽签用）；
+    // 每台落下时的形（平面模型定，CohabitSim.roofed）：坐着的人身边的台给猫多成一层，别处只成平台。
+    // 排法在开始落下那一刻定、收回天花之前不换（作者 10-06「换形先收回再落」）。roofOn = 两层；
+    // roofToward = 有顶的那台敞开那半圈朝哪（小样的整圈两层是 NaN）；
     // orders[u][j] = 这台第 j 条带取哪条轨迹（平台 = UNIT_ORDER；两层 = 两块都成 / 只成下台那三档）
     let roofOn = new Uint8Array(layout.units.length);
     let planSet = new Uint8Array(layout.units.length);
-    let dropSerial = new Int32Array(layout.units.length);
     let roofToward = new Float32Array(layout.units.length);
     // 茶几兼猫台（teaShelfToward，2026-11-28）：沙发前的茶几那台落下时，朝座位那半圈只成下台、背后半圈两块都成，猫站上台
     let teaOn = new Uint8Array(layout.units.length);
@@ -726,7 +724,6 @@ export function CohabitSpaceBench({
       frameOf = new Int32Array(U * BANDS);
       roofOn = new Uint8Array(U);
       planSet = new Uint8Array(U);
-      dropSerial = new Int32Array(U);
       roofToward = new Float32Array(U);
       teaOn = new Uint8Array(U);
       orders = layout.units.map(() => UNIT_ORDER);
@@ -795,8 +792,6 @@ export function CohabitSpaceBench({
         else if (sim.furn) for (let u = 0; u < layout.units.length; u++) if (sim.tableBy[u] >= 0) tableWant[u] = tableTopFor(sim.furn.rects[sim.tableBy[u]]);
         const dtT = Math.max(0, Math.min(0.1 * timeRef.current, sim.t - tableT));
         tableT = sim.t;
-        // 正坐着的人的座位（有顶的一台朝离它最近的那个人敞开）
-        const seated = sim.people.filter((p) => p.seated && p.seat !== null).map((p) => sim.seats[p.seat as number]);
         roofed = 0;
         for (let u = 0; u < layout.units.length; u++) {
           const c = rig.cells[u];
@@ -814,29 +809,14 @@ export function CohabitSpaceBench({
             orders[u] = UNIT_ORDER;
           } else if (!planSet[u]) {
             planSet[u] = 1;
-            // 第几次落下照数（与两层那组烘没烘完无关），抽签只看种子、第几台、第几次
-            const serial = dropSerial[u]++;
+            // 成什么形由平面模型定（CohabitSim.roofed，cohabit-solid unitFormPlan 的判断）：坐着的人身边的台给猫多成一层，别处只成平台
             const plan = !dualReady
               ? null
               : sim.formOf
                 ? sim.formOf(u)
-                : sim.furn
-                ? unitFormPlan({
-                    seed,
-                    unit: u,
-                    serial,
-                    layout,
-                    at: layout.units[u],
-                    seated,
-                    rects: sim.furn.rects,
-                    tableUnit: sim.tableBy[u] >= 0 || sim.seats.some((st) => st.table === u),
-                    // 此刻正当桌子落下的茶几那台：能成就落成茶几兼猫台（先为猫落下、后来才当桌子的，形不换，照旧是平台）
-                    tea: sim.tableBy[u] >= 0 ? teaShelfToward(layout.units[u], sim.seats, sim.furn.rects) : null,
-                    // 平面模型定了这台是铺给猫的有顶的一步（猫更愿意走过去的就是它）：照着落
-                    roof: sim instanceof CohabitSim && sim.roofed[u] ? sim.roofFace[u] : null,
-                    count: BANDS,
-                  })
-                : null;
+                : sim instanceof CohabitSim && sim.roofed[u]
+                  ? { form: sim.roofed[u] === 2 ? 'tea' : 'half', toward: sim.roofFace[u], bands: shelterBands(sim.roofFace[u], BANDS) }
+                  : null;
             if (plan && plan.bands) {
               const bands = plan.bands;
               roofOn[u] = 1;
@@ -1253,7 +1233,6 @@ export function CohabitSpaceBench({
       tableTop.fill(TABLE_TOP.stand);
       roofOn.fill(0);
       planSet.fill(0);
-      dropSerial.fill(0);
       orders.fill(UNIT_ORDER);
       resetRules();
       lastHud = '';

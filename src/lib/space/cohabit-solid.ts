@@ -45,8 +45,8 @@
  * 分界取平面模型「对人成墙」那条线（`COHABIT.WALL_AT`）：落到位的直筒已经挡人，两边口径一致。
  * 立杆也随单元伸缩（作者同日补「中间这根棍子也得缩上去」）：下端跟着布束底走（`unitFootY`），收起时只剩
  * 天花下一小截；天花上的方板仍是静件。
- * 第二阶段「成什么」现在有三种（2026-10-30 按用途定形，形态方案 §11）：平台（方形环平档那只方箱，桌子都是它），
- * 与给猫落的台随机抽到的上下两层（DUAL / unitFormPlan：上台只盖半圈，或整圈两层）。
+ * 第二阶段「成什么」（unitFormPlan，2026-11-28）：平台（方形环平档那只方箱），坐着的人身边的台给猫多成一层
+ * （DUAL：上台只盖半圈；沙发前的茶几是茶几兼猫台）。
  */
 import type { RingUnitDef } from './skin-ring';
 import { SQUARE, SQUARE_TIERS, buildSquareOrder, buildSquareUnits, squareHalfSide, squareSeg, squareStructureAt, SQUARE_REACH } from './skin-square';
@@ -132,7 +132,7 @@ export function standardSceneSim(space: SpaceMode = 'live', seed: number = SCENE
     cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid },
     guide: COHABIT.GUIDE,
     pace,
-    roof: roofClear,
+    roof: roofToward,
   });
   const half = sim.layout.fieldM / 2;
   const sizes = partySizes(SCENE.people);
@@ -583,14 +583,6 @@ export function shelterClear(
 }
 
 /**
- * 这一台落得成有顶的两层吗（交给平面模型的 CohabitOpts.roof，2026-11-28）：不是任何座位的桌子那台，下面的家具不比下台底面高。
- * 与 unitFormPlan 里「不成两层」的两条是同一个判断。
- */
-export function roofClear(u: { x: number; y: number; i: number }, sim: Pick<CohabitSim, 'layout' | 'seats' | 'furn'>): boolean {
-  return !sim.seats.some((s) => s.table === u.i) && shelterClear(sim.layout, u, sim.furn ? sim.furn.rects : []);
-}
-
-/**
  * 茶几兼猫台（作者 2026-11-28「可以一起做」；形与小样 2-16 的同名那个相同，cohabit-design teaShelfDesign）：
  * 沙发前的茶几那台落下时，朝座位那半圈只成下台当茶几（TABLE_TOP.sofaFront），背后那半圈两块都成，上台（下台 + DUAL_RISE = 1.00 m）
  * 给猫——人用下层、猫用上层，就是平面模型记的「共用单元」（CohabitSim.coUse）在立体里的样子。
@@ -626,47 +618,26 @@ export function teaShelfToward(
 }
 
 /**
- * 给猫落的那台成哪种形（2026-10-30 第二轮，作者「随机出现各种形态也 ok，不需要精确的设计好每一种的出现」→「你自己 review，觉得 ok 就做」）。
- * 规则管这台给谁用，随机管成哪种：
- *   - 当桌子的那台（任何一个座位的 Seat.table）不随机，照旧按家具定高的平台（茶几 0.42 / 餐桌 0.74 是按人体尺寸定的，抽了就用不了；
- *     排除整个座位的桌子那台，不只此刻的：有人后来坐下，那台要当桌子，而一台落下后形不换）；
- *   - 下面的家具比下台底面高的不成两层（shelterClear）；
- *   - 其余给猫落的台在 平台 / 有顶的一台（上台盖半圈）/ 整圈两层 里抽一种。落在正坐着的人共温带里的（shelterToward 给得出方位），
- *     抽中有顶的几率高、敞开那半圈朝那个人；别处有顶的那半圈朝方台四条边之一随机（沿一条中线分，正好十条带对十条带）。
- * 几率是演示值（资料里没有对应的数），写在 UNIT_FORM_ODDS。用仿真的种子 + 第几台 + 这台第几次落下抽（不动仿真自己的随机数流，
- * 平面模型逐位不变；同一个种子画面一样，案例页截图对得上）。两层的下台都在 SHELTER.lowerTop（上台顶 1.48 m 比站着的人的眼睛低）。
+ * 一台落下时成哪种形（2026-11-28，作者「人周围能够碰触到的单元更吸引猫，其他单元都是通道形式的和平台形式的」；
+ * 取代 10-30 的抽签）：
+ *   - 此刻正当茶几落下的那台：茶几兼猫台（teaShelfToward 给得出方位的）；餐桌那台只成平台；
+ *   - 落在一位正坐着的人共温带里（台心离座位 ≤ 1.5 m，shelterToward）、下面的家具不碍事的：上台盖背向他的半圈，
+ *     下台 SHELTER.lowerTop，猫坐进有顶那半边；
+ *   - 是某个座位的桌子那台、此刻没当桌子的：平台（以后有人坐下它要当桌子，而一台落下后形不换）；
+ *   - 其余：平台。猫走的路、猫自己待的台都是它。
+ * 没有随机，也不读种子。平面模型用同一个判断记「这台给猫多成了一层」（roofToward → CohabitSim.roofed），猫更愿意走过去。
  */
-export type UnitForm = 'flat' | 'half' | 'full' | 'tea';
-export const UNIT_FORM_ODDS = {
-  /** 落在正坐着的人的共温带里 */
-  near: { half: 0.6, full: 0.15 },
-  /** 其余给猫落的台 */
-  other: { half: 0.2, full: 0.1 },
-} as const;
+export type UnitForm = 'flat' | 'half' | 'tea';
 
 export interface UnitFormPlan {
   form: UnitForm;
-  /** 有顶的一台：敞开那半圈朝的平面方位角（猫坐进有顶那半边、头转向它）；其余 null */
+  /** 敞开那半圈朝的平面方位角（有顶的一台：猫坐进有顶那半边、头转向它）；平台为 null */
   toward: number | null;
   /** 二十条带各成什么：1 = 两块都成、0 = 只成下台；平台为 null */
   bands: Uint8Array | null;
 }
 
-/** 整数混合（Math.imul + 无符号移位，各版本 Node 逐位相同） → [0, 1) */
-function formDraw(seed: number, unit: number, serial: number, salt: number): number {
-  let h = Math.imul(seed | 0, 0x9e3779b1) ^ Math.imul(unit + 1, 0x85ebca77) ^ Math.imul(serial + 1, 0xc2b2ae3d) ^ Math.imul(salt + 1, 0x27d4eb2f);
-  h = Math.imul(h ^ (h >>> 16), 0x7feb352d);
-  h = Math.imul(h ^ (h >>> 15), 0x846ca68b);
-  h ^= h >>> 16;
-  return (h >>> 0) / 4294967296;
-}
-
 export function unitFormPlan(o: {
-  seed: number;
-  /** 第几台 */
-  unit: number;
-  /** 这台第几次落下（从 0 数） */
-  serial: number;
   layout: Pick<PlanLayout, 'platR'>;
   at: { x: number; y: number };
   /** 正坐着的人的座位点 */
@@ -676,24 +647,30 @@ export function unitFormPlan(o: {
   tableUnit: boolean;
   /** 这台此刻正当桌子落下、并且能落成茶几兼猫台（teaShelfToward 给得出方位）：敞开那半圈朝哪。不给 = 桌子照旧是平台 */
   tea?: number | null;
-  /** 平面模型定了这台这次落成有顶的（CohabitSim.roofed，空间铺给猫的那一步）：敞开那半圈朝哪。不给 = 照下面的抽 */
-  roof?: number | null;
   count?: number;
 }): UnitFormPlan {
-  const flat: UnitFormPlan = { form: 'flat', toward: null, bands: null };
-  if (o.tea !== undefined && o.tea !== null) return { form: 'tea', toward: o.tea, bands: shelterBands(o.tea, o.count ?? SQUARE.COUNT) };
-  if (o.tableUnit || !shelterClear(o.layout, o.at, o.rects)) return flat;
-  if (o.roof !== undefined && o.roof !== null) return { form: 'half', toward: o.roof, bands: shelterBands(o.roof, o.count ?? SQUARE.COUNT) };
-  const toward = shelterToward(o.layout, o.at, o.seated, o.rects);
-  const odds = toward !== null ? UNIT_FORM_ODDS.near : UNIT_FORM_ODDS.other;
-  const r = formDraw(o.seed, o.unit, o.serial, 0);
   const n = o.count ?? SQUARE.COUNT;
-  if (r < odds.half) {
-    const dir = toward ?? (Math.floor(formDraw(o.seed, o.unit, o.serial, 1) * 4) * Math.PI) / 2;
-    return { form: 'half', toward: dir, bands: shelterBands(dir, n) };
-  }
-  if (r < odds.half + odds.full) return { form: 'full', toward: null, bands: new Uint8Array(n).fill(1) };
-  return flat;
+  if (o.tea !== undefined && o.tea !== null) return { form: 'tea', toward: o.tea, bands: shelterBands(o.tea, n) };
+  const toward = o.tableUnit ? null : shelterToward(o.layout, o.at, o.seated, o.rects);
+  if (toward === null) return { form: 'flat', toward: null, bands: null };
+  return { form: 'half', toward, bands: shelterBands(toward, n) };
+}
+
+/**
+ * 交给平面模型的 CohabitOpts.roof：这一台此刻开始落下，给猫多成的那一层敞开那半圈朝哪，只成平台 = null。
+ * 就是 unitFormPlan 的判断，读的全是平面模型里的东西（谁坐着、哪台是谁的桌子、家具）。
+ */
+export function roofToward(u: { x: number; y: number; i: number }, sim: Pick<CohabitSim, 'layout' | 'seats' | 'furn' | 'people' | 'tableBy'>): number | null {
+  const rects = sim.furn ? sim.furn.rects : [];
+  const seated = sim.people.filter((p) => p.seated && p.seat !== null).map((p) => sim.seats[p.seat as number]);
+  return unitFormPlan({
+    layout: sim.layout,
+    at: u,
+    seated,
+    rects,
+    tableUnit: sim.tableBy[u.i] >= 0 || sim.seats.some((s) => s.table === u.i),
+    tea: sim.tableBy[u.i] >= 0 ? teaShelfToward(u, sim.seats, rects) : null,
+  }).toward;
 }
 
 /** 已经烘好的三档轨迹（同一页面里换路由、重挂台架时直接拿，不重烘） */

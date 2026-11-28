@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DUAL, DUAL_STOWED, SHELTER, UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, dualUnitSpec, membraneIndexAt, shelterBands, shelterClear, shelterToward, teaShelfToward, roofClear, standardSceneSim, DUAL_RISE, unitFormPlan, UNIT_FORM_ODDS, BRIDGE_BASE, DOOR_BASE, DOOR_EPS, FRAMES, SHELL, bakeUnitShell, shellCoverVerts, shellGoreVerts, shellJoins, bandVertsAt, bakeBandKeys, boxesMesh, bakeHanger, bakeUnitKeys, bakeUnitMech, FURN_ERGO, HOIST, STEADY, TABLE_TOP, bandTop, clipToReel, doorFrame, isDoorFrame, pickUnitBands, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_CUT, UNIT_ORDER, UNIT_SHAPE, UNIT_STORED, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
+import { DUAL, DUAL_STOWED, SHELTER, UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, dualUnitSpec, membraneIndexAt, shelterBands, shelterClear, shelterToward, teaShelfToward, roofToward, standardSceneSim, DUAL_RISE, unitFormPlan, BRIDGE_BASE, DOOR_BASE, DOOR_EPS, FRAMES, SHELL, bakeUnitShell, shellCoverVerts, shellGoreVerts, shellJoins, bandVertsAt, bakeBandKeys, boxesMesh, bakeHanger, bakeUnitKeys, bakeUnitMech, FURN_ERGO, HOIST, STEADY, TABLE_TOP, bandTop, clipToReel, doorFrame, isDoorFrame, pickUnitBands, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_CUT, UNIT_ORDER, UNIT_SHAPE, UNIT_STORED, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
 import type { BandTrajectory } from './cohabit-solid';
 import { planLayout } from './unit-activation';
 import { FIGURE, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
@@ -1182,73 +1182,44 @@ describe('按用途定形：有顶的一台（2026-10-30，形态方案 §11）'
   });
 });
 
-describe('给猫落的台随机成形（2026-10-30 第二轮）', () => {
+describe('一台落下时成什么形（2026-11-28：坐着的人身边的台给猫多成一层，别处只成平台）', () => {
   const l = { platR: 0.35 };
   const u = { x: 0, y: 0 };
   const chair = { x0: 0.2, x1: 0.8, y0: -0.3, y1: 0.3, kind: 'chair' as const, ergo: true as const };
-  const base = { seed: 11, unit: 7, serial: 0, layout: l, at: u, seated: [] as { x: number; y: number }[], rects: [], tableUnit: false };
+  const base = { layout: l, at: u, seated: [] as { x: number; y: number }[], rects: [], tableUnit: false };
 
-  it('当桌子的那台、压在椅背上方的那台永远是平台', () => {
-    for (let s = 0; s < 200; s++) {
-      expect(unitFormPlan({ ...base, serial: s, tableUnit: true }).form).toBe('flat');
-      expect(unitFormPlan({ ...base, serial: s, rects: [chair] }).form).toBe('flat');
-      expect(unitFormPlan({ ...base, serial: s, seated: [{ x: 0, y: 1.2 }], rects: [chair] }).form).toBe('flat');
-    }
+  it('当桌子的那台、压在椅背上方的那台是平台', () => {
+    expect(unitFormPlan({ ...base, tableUnit: true }).form).toBe('flat');
+    expect(unitFormPlan({ ...base, tableUnit: true, seated: [{ x: 0, y: 1.2 }] }).form).toBe('flat');
+    expect(unitFormPlan({ ...base, rects: [chair] }).form).toBe('flat');
+    expect(unitFormPlan({ ...base, seated: [{ x: 0, y: 1.2 }], rects: [chair] }).form).toBe('flat');
     expect(shelterClear(l, u, [chair])).toBe(false);
     expect(shelterClear(l, u, [{ ...chair, kind: 'sofa' as const }])).toBe(true);
   });
 
-  it('同样的种子、第几台、第几次落下抽出同一种；不碰 Math.random（仿真的随机数流不动）', () => {
+  it('坐着的人 1.5 m 内：上台盖背向他的半圈、正好十条带对十条带；别处只成平台；不抽签', () => {
     const real = Math.random;
     Math.random = () => {
       throw new Error('不该用 Math.random');
     };
     try {
-      for (let s = 0; s < 50; s++) {
-        const a = unitFormPlan({ ...base, serial: s });
-        const b = unitFormPlan({ ...base, serial: s });
-        expect(a.form).toBe(b.form);
-        expect(a.toward).toBe(b.toward);
+      const near = unitFormPlan({ ...base, seated: [{ x: 0, y: 1.2 }] });
+      expect(near.form).toBe('half');
+      expect(near.toward).toBeCloseTo(Math.PI / 2, 12);
+      expect([...(near.bands as Uint8Array)].reduce((a, b) => a + b, 0)).toBe(10);
+      for (let j = 0; j < SQUARE.COUNT; j++) expect(near.bands![j]).toBe(Math.cos(bandAngle(j) - (near.toward as number)) < 0 ? 1 : 0);
+      // 两个人都在 1.5 m 内：朝近的那个
+      expect(unitFormPlan({ ...base, seated: [{ x: 0, y: 1.2 }, { x: -1.0, y: 0 }] }).toward).toBeCloseTo(Math.PI, 12);
+      // 没有人坐着、人在 1.5 m 外：平台
+      for (const seated of [[], [{ x: 0, y: 1.6 }], [{ x: 3, y: 3 }]]) {
+        const p = unitFormPlan({ ...base, seated });
+        expect(p.form).toBe('flat');
+        expect(p.toward).toBeNull();
+        expect(p.bands).toBeNull();
       }
     } finally {
       Math.random = real;
     }
-    const forms = new Set(Array.from({ length: 40 }, (_, s) => unitFormPlan({ ...base, serial: s }).form));
-    expect(forms.size).toBe(3);
-  });
-
-  it('抽到各形的频率与 UNIT_FORM_ODDS 相符（共温带里 / 别处两套）', () => {
-    for (const [near, odds] of [
-      [true, UNIT_FORM_ODDS.near],
-      [false, UNIT_FORM_ODDS.other],
-    ] as const) {
-      const n = 4000;
-      const c: Record<string, number> = { flat: 0, half: 0, full: 0 };
-      for (let i = 0; i < n; i++) c[unitFormPlan({ ...base, seed: 3 + (i % 7), unit: i % 64, serial: Math.floor(i / 64), seated: near ? [{ x: 0, y: 1.2 }] : [] }).form]++;
-      expect(c.half / n).toBeCloseTo(odds.half, 1);
-      expect(c.full / n).toBeCloseTo(odds.full, 1);
-      expect(c.flat / n).toBeCloseTo(1 - odds.half - odds.full, 1);
-    }
-  });
-
-  it('有顶的一台：共温带里朝那个人敞开；别处朝四条边之一、正好十条带对十条带；整圈两层二十条全是两块', () => {
-    const dirs = new Set<number>();
-    for (let s = 0; s < 400; s++) {
-      const near = unitFormPlan({ ...base, serial: s, seated: [{ x: 0, y: 1.2 }] });
-      if (near.form === 'half') expect(near.toward).toBeCloseTo(Math.PI / 2, 12);
-      const p = unitFormPlan({ ...base, serial: s });
-      if (p.form === 'half') {
-        const k = (p.toward as number) / (Math.PI / 2);
-        expect(Math.abs(k - Math.round(k))).toBeLessThan(1e-12);
-        dirs.add(Math.round(k));
-        expect([...(p.bands as Uint8Array)].reduce((a, b) => a + b, 0)).toBe(10);
-        for (let j = 0; j < SQUARE.COUNT; j++) expect(p.bands![j]).toBe(Math.cos(bandAngle(j) - (p.toward as number)) < 0 ? 1 : 0);
-      } else if (p.form === 'full') {
-        expect(p.toward).toBeNull();
-        expect([...(p.bands as Uint8Array)].every((b) => b === 1)).toBe(true);
-      } else expect(p.bands).toBeNull();
-    }
-    expect(dirs).toEqual(new Set([0, 1, 2, 3]));
   });
 
   it('茶几兼猫台（2026-11-28）：标准布置四张茶几都成，敞开那半圈盖住用它的每个座位；餐桌那台不成；座位分在两边的不成', () => {
@@ -1278,11 +1249,11 @@ describe('给猫落的台随机成形（2026-10-30 第二轮）', () => {
         expect(bands[near]).toBe(0);
       }
       // 给了方位，桌子那台就落成这种形；不给照旧是平台
-      const plan = unitFormPlan({ ...base, unit: t, layout: sim.layout, at: u, rects, tableUnit: true, tea: toward });
+      const plan = unitFormPlan({ ...base, layout: sim.layout, at: u, rects, tableUnit: true, tea: toward });
       expect(plan.form).toBe('tea');
       expect(plan.toward).toBe(toward);
       expect([...(plan.bands as Uint8Array)]).toEqual([...bands]);
-      expect(unitFormPlan({ ...base, unit: t, layout: sim.layout, at: u, rects, tableUnit: true, tea: null }).form).toBe('flat');
+      expect(unitFormPlan({ ...base, layout: sim.layout, at: u, rects, tableUnit: true, tea: null }).form).toBe('flat');
     }
     expect(tea).toBe(4);
     // 上台台面 = 茶几 + DUAL_RISE = 1.00 m，低于坐在沙发上的人的眼睛（约 1.17 m）
@@ -1295,52 +1266,55 @@ describe('给猫落的台随机成形（2026-10-30 第二轮）', () => {
     expect(teaShelfToward(u0, [{ x: 1.3, y: 0, table: 3, furn: 0 }], [far])).toBeNull();
   });
 
-  it('有顶的台（2026-11-28）：空间铺给猫的那一步落成有顶的，猫更愿意走过去；不给 roof 就没有有顶的台', () => {
+  it('平面模型记的与立体定的是同一个判断：一台开始落下时定，收回天花才清；不给 roof 就全是平台', () => {
     // 几率 = 0.5 × 282 / 170 = 0.83
     expect(COHABIT.CAT.roamP * COHABIT.CAT.roofPull).toBeCloseTo(0.83, 2);
     const sim = standardSceneSim('live', 3);
     const U = sim.layout.units.length;
     const dt = 1 / 30;
-    let set = 0;
+    const kinds = [0, 0, 0];
     const prev = new Uint8Array(U);
-    for (let t = 0; t < 400; t += dt) {
+    const prevDeg = new Float64Array(U);
+    for (let t = 0; t < 600; t += dt) {
       sim.step(dt);
+      const seated = sim.people.filter((p) => p.seated && p.seat !== null).map((p) => sim.seats[p.seat as number]);
       for (let u = 0; u < U; u++) {
-        if (sim.roofed[u] && !prev[u]) {
-          set++;
-          // 定下的那一刻：这台是某条引导铺的一步，落得成两层（不是桌子那台、下面的家具不碍事），敞开那半圈朝那条引导的人
-          // （一台可以同时在两条引导的路上，朝其中一条的人）
+        const deg = sim.act.degree[u];
+        if (prevDeg[u] <= 1e-4 && deg > 1e-4) {
+          // 开始落下的那一步：就是 roofToward 此刻的回答
           const at = sim.layout.units[u];
-          const faces = sim.guides
-            .filter((k) => k.path.includes(u))
-            .map((k) => sim.people.find((v) => v.id === k.person)!)
-            .map((p) => Math.atan2(p.walker.y - at.y, p.walker.x - at.x));
-          expect(faces.length, `第 ${u} 台`).toBeGreaterThan(0);
-          expect(roofClear(at, sim)).toBe(true);
-          expect(faces.some((a) => Math.abs(a - sim.roofFace[u]) < 1e-6)).toBe(true);
-        }
-        // 形在开始落下时定，收回天花才清
-        if (!sim.roofed[u] && prev[u]) expect(sim.act.degree[u]).toBeLessThanOrEqual(1e-4);
+          const face = roofToward(at, sim);
+          kinds[sim.roofed[u]]++;
+          expect(sim.roofed[u] > 0).toBe(face !== null);
+          if (face !== null) expect(sim.roofFace[u]).toBe(face);
+          if (sim.roofed[u] === 2) {
+            // 正当茶几：用它的座位是沙发 / 单人沙发
+            expect(sim.tableBy[u]).toBeGreaterThanOrEqual(0);
+            expect(teaShelfToward(at, sim.seats, sim.furn!.rects)).toBe(face);
+          } else if (sim.roofed[u] === 1) {
+            // 坐着的人 1.5 m 内、不是谁的桌子那台、下面的家具不碍事
+            expect(seated.some((s) => Math.hypot(s.x - at.x, s.y - at.y) <= COHABIT.BAND.far + 1e-9)).toBe(true);
+            expect(sim.seats.some((s) => s.table === u)).toBe(false);
+            expect(shelterClear(sim.layout, at, sim.furn!.rects)).toBe(true);
+          } else if (sim.tableBy[u] < 0 && !sim.seats.some((s) => s.table === u) && shelterClear(sim.layout, at, sim.furn!.rects)) {
+            // 平台：1.5 m 内没有人坐着
+            expect(seated.some((s) => Math.hypot(s.x - at.x, s.y - at.y) <= COHABIT.BAND.far + 1e-9)).toBe(false);
+          }
+        } else if (deg > 1e-4) expect(sim.roofed[u], `第 ${u} 台落着时形不换`).toBe(prev[u]); // 形在开始落下时定，收回天花才清
+        else expect(sim.roofed[u]).toBe(0);
         prev[u] = sim.roofed[u];
+        prevDeg[u] = deg;
       }
     }
-    expect(set).toBeGreaterThan(5);
-    // 立体层照着落：给了方位就是有顶的一台；桌子那台、下面家具碍事的仍是平台
-    const rects = sim.furn!.rects;
-    const free = sim.layout.units.find((u) => roofClear(u, sim))!;
-    const plan = unitFormPlan({ ...base, unit: free.i, layout: sim.layout, at: free, rects, tableUnit: false, roof: 1.2 });
-    expect(plan.form).toBe('half');
-    expect(plan.toward).toBe(1.2);
-    expect([...(plan.bands as Uint8Array)]).toEqual([...shelterBands(1.2)]);
-    const table = sim.layout.units[sim.seats.find((s) => s.table >= 0)!.table];
-    expect(roofClear(table, sim)).toBe(false);
-    expect(unitFormPlan({ ...base, unit: table.i, layout: sim.layout, at: table, rects, tableUnit: true, roof: 1.2 }).form).toBe('flat');
+    // 三种都出现过：平台、坐着的人身边有顶的一台、茶几兼猫台
+    expect(kinds[0]).toBeGreaterThan(5);
+    expect(kinds[1]).toBeGreaterThan(0);
+    expect(kinds[2]).toBeGreaterThan(0);
     // 不给 roof：一台都不记
     const off = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', seed: 3, opening: false, auto: true, faces: true, social: true, catFloor: true, cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid }, guide: COHABIT.GUIDE });
     populateCohabit(off, 6, 0);
     scatterCats(off, 4, 3);
     for (let t = 0; t < 120; t += dt) off.step(dt);
-    expect(off.guides.length + off.summary().catArrivals).toBeGreaterThan(0);
     expect([...off.roofed].some((v) => v)).toBe(false);
   });
 
@@ -1349,7 +1323,7 @@ describe('给猫落的台随机成形（2026-10-30 第二轮）', () => {
     const tables = new Set(sim.seats.map((s) => s.table).filter((t) => t >= 0));
     expect(tables.size).toBeGreaterThan(0);
     for (const t of tables)
-      for (let s = 0; s < 30; s++) expect(unitFormPlan({ ...base, unit: t, serial: s, layout: sim.layout, at: sim.layout.units[t], rects: sim.furn!.rects, tableUnit: true }).form).toBe('flat');
+      expect(unitFormPlan({ ...base, layout: sim.layout, at: sim.layout.units[t], rects: sim.furn!.rects, tableUnit: true }).form).toBe('flat');
     const ok = sim.layout.units.filter((q) => !tables.has(q.i) && shelterClear(sim.layout, q, sim.furn!.rects));
     expect(ok.length).toBeGreaterThanOrEqual(40);
   });

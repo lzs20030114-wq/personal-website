@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { useBenchLang, useLabText } from './LabLanguage';
 import { LabControlLabel } from './LabControlLabel';
 import { LabFold, LabReadout, useLabReadoutSlot } from './LabCtl';
-import { roofClear, standardSceneSim, tableTopFor } from '../../src/lib/space/cohabit-solid';
+import { roofToward, standardSceneSim, tableTopFor } from '../../src/lib/space/cohabit-solid';
 import { ruleReadout, unitReasons, type RuleHit, type RuleRow } from '../../src/lib/space/cohabit-reasons';
 import { ReadoutFeed, ReadoutLabels, ReadoutTracker, feedText, readoutSnapshot, unitCard, type FeedText, type ReadoutSnap, type UnitCard } from '../../src/lib/space/cohabit-readout';
 import { RuleReadout } from './RuleReadout';
@@ -445,7 +445,7 @@ export function CohabitBench({
     // 「放一场 6 人 4 猫」：与 Lab 2-15 同一份标准场景（同一个种子、同一套人和猫）
     const std = standardRef.current && !sc && trigger === 'posture';
     standardRef.current = false;
-    const sim = std ? standardSceneSim('live') : new CohabitSim({ trigger, grid, space, mode, goal, look, threshold, fade, auto, clearance: clearanceOpt, lane: clearanceOpt !== null, faces: faceMode === 'bands', guide: { target: guideTarget }, cat: posture ? { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid } : undefined, social: posture, catFloor: posture, ...(sc ? { seed: CASE_SEED, opening: false } : { pace: PACE_DEMO, ...(posture ? { unit: 'square' as const, cover: 'room' as const, roof: roofClear } : {}) }) });
+    const sim = std ? standardSceneSim('live') : new CohabitSim({ trigger, grid, space, mode, goal, look, threshold, fade, auto, clearance: clearanceOpt, lane: clearanceOpt !== null, faces: faceMode === 'bands', guide: { target: guideTarget }, cat: posture ? { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid } : undefined, social: posture, catFloor: posture, ...(sc ? { seed: CASE_SEED, opening: false } : { pace: PACE_DEMO, ...(posture ? { unit: 'square' as const, cover: 'room' as const, roof: roofToward } : {}) }) });
     if (sc) populateCohabit(sim, sc.people, sc.cats);
     caseAcc.current = 0;
     sim.setSpeed(speed);

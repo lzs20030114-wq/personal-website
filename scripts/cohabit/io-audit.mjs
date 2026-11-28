@@ -51,7 +51,7 @@ const bandCloseT = [];
 const median = (a) => (a.length ? [...a].sort((x, y) => x - y)[a.length >> 1] : NaN);
 const bad = (o, k) => { o[k] = (o[k] ?? 0) + 1; };
 const drops = Object.fromEntries(REASONS.map((r) => [r, 0]));
-const forms = {}; // 理由 → { flat, half, full }
+const forms = {}; // 理由 → { flat, half, tea }
 let dropsNoReason = 0;
 const stallBy = {};
 const samples = [];
@@ -67,7 +67,6 @@ for (const seed of seeds) {
   const n = sim.layout.units.length;
   const prev = Float64Array.from(sim.act.degree);
   const prevOpen = Float32Array.from(sim.bandOpen);
-  const serial = new Int32Array(n);
   const dt = 1 / 30;
   // 落 / 收计时：-1 = 没在计
   const riseAt = new Float64Array(n).fill(-1);
@@ -172,16 +171,13 @@ for (const seed of seeds) {
           }
         }
       }
-      // 一次落下的开头：按理由记数，并照 2-15 台架的写法抽一次形
+      // 一次落下的开头：按理由记数，并照 2-15 的写法定一次形
       if (prev[u] <= 1e-4 && d > 1e-4) {
         const r = REASONS.find((k) => why[u].has(k));
         if (!r) dropsNoReason++;
         else {
           drops[r]++;
           const plan = S.unitFormPlan({
-            seed,
-            unit: u,
-            serial: serial[u]++,
             layout: sim.layout,
             at: sim.layout.units[u],
             seated: seated.map((p) => sim.seats[p.seat]),
@@ -189,7 +185,7 @@ for (const seed of seeds) {
             tableUnit: sim.tableBy[u] >= 0 || sim.seats.some((st) => st.table === u),
             count: BANDS,
           });
-          (forms[r] ??= { flat: 0, half: 0, full: 0 })[plan.form]++;
+          (forms[r] ??= { flat: 0, half: 0, tea: 0 })[plan.form]++;
         }
       }
       prev[u] = d;
@@ -228,10 +224,10 @@ console.log(`  其中不是让路请求的          ${total.bandOpenNoWant}`);
 console.log('\n四、痕迹');
 console.log(`  人的痕迹场整场最大值        ${total.traceMax}`);
 console.log(`  猫的痕迹场整场最大值        ${total.catTraceMax}`);
-console.log(`\n五、每个理由各触发几次落下（${seeds.length} 个种子合计 / 平均每场），以及 2-15 的抽签给它们成了什么形`);
+console.log(`\n五、每个理由各触发几次落下（${seeds.length} 个种子合计 / 平均每场），以及 2-15 给它们成了什么形`);
 for (const r of REASONS) {
-  const f = forms[r] ?? { flat: 0, half: 0, full: 0 };
-  console.log(`  ${NAME[r].padEnd(12, '　')} ${String(drops[r]).padStart(4)} / ${(drops[r] / seeds.length).toFixed(1).padStart(5)}    平台 ${f.flat} · 半圈有顶的两层 ${f.half} · 整圈两层 ${f.full}`);
+  const f = forms[r] ?? { flat: 0, half: 0, tea: 0 };
+  console.log(`  ${NAME[r].padEnd(12, '　')} ${String(drops[r]).padStart(4)} / ${(drops[r] / seeds.length).toFixed(1).padStart(5)}    平台 ${f.flat} · 半圈有顶的两层 ${f.half} · 茶几兼猫台 ${f.tea}`);
 }
 console.log('\n六、正文第 4 节五行的前提（11-19 加）');
 console.log(`  ② 站着给一步：在给着的 人·步 ${rel.standSteps}，前提不成立的 ${rel.standBad}`, rel.standBad ? JSON.stringify(rel.standBadWhy) : '');
