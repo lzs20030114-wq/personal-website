@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DUAL, DUAL_STOWED, SHELTER, UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, dualUnitSpec, membraneIndexAt, shelterBands, shelterClear, shelterToward, teaShelfToward, DUAL_RISE, unitFormPlan, UNIT_FORM_ODDS, BRIDGE_BASE, DOOR_BASE, DOOR_EPS, FRAMES, SHELL, bakeUnitShell, shellCoverVerts, shellGoreVerts, shellJoins, bandVertsAt, bakeBandKeys, boxesMesh, bakeHanger, bakeUnitKeys, bakeUnitMech, FURN_ERGO, HOIST, STEADY, TABLE_TOP, bandTop, clipToReel, doorFrame, isDoorFrame, pickUnitBands, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_CUT, UNIT_ORDER, UNIT_SHAPE, UNIT_STORED, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
+import { DUAL, DUAL_STOWED, SHELTER, UNIT_DUAL_DEFS, UNIT_DUAL_OPTS, dualUnitSpec, membraneIndexAt, shelterBands, shelterClear, shelterToward, teaShelfToward, roofClear, standardSceneSim, DUAL_RISE, unitFormPlan, UNIT_FORM_ODDS, BRIDGE_BASE, DOOR_BASE, DOOR_EPS, FRAMES, SHELL, bakeUnitShell, shellCoverVerts, shellGoreVerts, shellJoins, bandVertsAt, bakeBandKeys, boxesMesh, bakeHanger, bakeUnitKeys, bakeUnitMech, FURN_ERGO, HOIST, STEADY, TABLE_TOP, bandTop, clipToReel, doorFrame, isDoorFrame, pickUnitBands, rigYForTop, tableTopFor, bandCursors, bandPaths, membraneIndex, membraneJoins, resetBandCursors, stepBandCursor, TrajectoryBaker, UNITS_PER_M, UNIT_BAND, UNIT_CUT, UNIT_ORDER, UNIT_SHAPE, UNIT_STORED, UNIT_TIERS, UnitBaker, bakeBand, bakeMembrane, bakeUnit, bakeUnitSkin, bandFrame, bandTopology, catPlacement, figureYaw, furnitureBoxes, hoistProfile, platesMesh, platformBand, platformSide, postsMesh, rigFor, roomMesh, seatSpecOf, unitDrop, unitFootY, unitTopY } from './cohabit-solid';
 import type { BandTrajectory } from './cohabit-solid';
 import { planLayout } from './unit-activation';
 import { FIGURE, RIG_ANCHOR_Y, ROOM, ringOuter } from './skin-grid';
@@ -12,7 +12,7 @@ import { SKIN, createSkinUnit, renderSmooth } from './skin-unit';
 import { CAT_COATS, catMesh, figureMesh, styleKey as styleKeyOf, type HumanStyle } from './figure';
 import { OUTFITS } from '../../../components/lab/figurePalette';
 import { partBox } from './mesh-shell';
-import { COHABIT, CohabitSim, SQUARE_SCALE, bandAngle, furnRect, rectDist, squarePlanLayout, type FurnRect } from './cohabit';
+import { COHABIT, CohabitSim, SQUARE_SCALE, populateCohabit, scatterCats, bandAngle, furnRect, rectDist, squarePlanLayout, type FurnRect } from './cohabit';
 
 /**
  * 守门：Lab 2-15 立体演示的几何胶水。它不解新物理，错法是尺度错、帧取错、外形错——都不报错，只看着「差不多」。
@@ -1293,6 +1293,55 @@ describe('给猫落的台随机成形（2026-10-30 第二轮）', () => {
     expect(teaShelfToward(u0, [{ x: 1.3, y: 0, table: 0, furn: 0 }, { x: -1.3, y: 0, table: 0, furn: 0 }], [far])).toBeNull();
     expect(teaShelfToward(u0, [{ x: 1.3, y: 0.2, table: 0, furn: 0 }, { x: 1.3, y: -0.2, table: 0, furn: 0 }], [far])).toBeCloseTo(0, 9);
     expect(teaShelfToward(u0, [{ x: 1.3, y: 0, table: 3, furn: 0 }], [far])).toBeNull();
+  });
+
+  it('有顶的台（2026-11-28）：空间铺给猫的那一步落成有顶的，猫更愿意走过去；不给 roof 就没有有顶的台', () => {
+    // 几率 = 0.5 × 282 / 170 = 0.83
+    expect(COHABIT.CAT.roamP * COHABIT.CAT.roofPull).toBeCloseTo(0.83, 2);
+    const sim = standardSceneSim('live', 3);
+    const U = sim.layout.units.length;
+    const dt = 1 / 30;
+    let set = 0;
+    const prev = new Uint8Array(U);
+    for (let t = 0; t < 400; t += dt) {
+      sim.step(dt);
+      for (let u = 0; u < U; u++) {
+        if (sim.roofed[u] && !prev[u]) {
+          set++;
+          // 定下的那一刻：这台是某条引导铺的一步，落得成两层（不是桌子那台、下面的家具不碍事），敞开那半圈朝那条引导的人
+          // （一台可以同时在两条引导的路上，朝其中一条的人）
+          const at = sim.layout.units[u];
+          const faces = sim.guides
+            .filter((k) => k.path.includes(u))
+            .map((k) => sim.people.find((v) => v.id === k.person)!)
+            .map((p) => Math.atan2(p.walker.y - at.y, p.walker.x - at.x));
+          expect(faces.length, `第 ${u} 台`).toBeGreaterThan(0);
+          expect(roofClear(at, sim)).toBe(true);
+          expect(faces.some((a) => Math.abs(a - sim.roofFace[u]) < 1e-6)).toBe(true);
+        }
+        // 形在开始落下时定，收回天花才清
+        if (!sim.roofed[u] && prev[u]) expect(sim.act.degree[u]).toBeLessThanOrEqual(1e-4);
+        prev[u] = sim.roofed[u];
+      }
+    }
+    expect(set).toBeGreaterThan(5);
+    // 立体层照着落：给了方位就是有顶的一台；桌子那台、下面家具碍事的仍是平台
+    const rects = sim.furn!.rects;
+    const free = sim.layout.units.find((u) => roofClear(u, sim))!;
+    const plan = unitFormPlan({ ...base, unit: free.i, layout: sim.layout, at: free, rects, tableUnit: false, roof: 1.2 });
+    expect(plan.form).toBe('half');
+    expect(plan.toward).toBe(1.2);
+    expect([...(plan.bands as Uint8Array)]).toEqual([...shelterBands(1.2)]);
+    const table = sim.layout.units[sim.seats.find((s) => s.table >= 0)!.table];
+    expect(roofClear(table, sim)).toBe(false);
+    expect(unitFormPlan({ ...base, unit: table.i, layout: sim.layout, at: table, rects, tableUnit: true, roof: 1.2 }).form).toBe('flat');
+    // 不给 roof：一台都不记
+    const off = new CohabitSim({ trigger: 'posture', grid: COHABIT.SEATS.GRID, unit: 'square', cover: 'room', seed: 3, opening: false, auto: true, faces: true, social: true, catFloor: true, cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid }, guide: COHABIT.GUIDE });
+    populateCohabit(off, 6, 0);
+    scatterCats(off, 4, 3);
+    for (let t = 0; t < 120; t += dt) off.step(dt);
+    expect(off.guides.length + off.summary().catArrivals).toBeGreaterThan(0);
+    expect([...off.roofed].some((v) => v)).toBe(false);
   });
 
   it('2-15 标准布置：座位的桌子那台全被排除，其余给猫的台里两层放得下的不少于四十台', () => {

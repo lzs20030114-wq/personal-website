@@ -206,6 +206,12 @@ export const COHABIT = {
     lie: CAT_DEMO.lieSeconds,
     /** 卧完有多大几率换一格（演示值） */
     roamP: 0.5,
+    /**
+     * 有顶的台：猫坐满后，旁边递过来的台里有有顶的，走过去的几率乘这个比值（0.5 × 1.66 = 0.83）。
+     * 出处：Parrales Zambrano 等 2024（Centro Sur 8(3):145–165），30 只同处一室的收容所猫，箱子被用 282 次、层板 170 次。
+     * 只有 CohabitOpts.roof 给了才起作用（作者 2026-11-28「用 0.83 写」）。
+     */
+    roofPull: 282 / 170,
     /** 等落点成形最多等多久（s），空间不给就另选 */
     waitMax: 10,
   },
@@ -1220,6 +1226,12 @@ export interface CohabitOpts {
    */
   retarget?: boolean;
   /**
+   * 有顶的台（2026-11-28）：空间铺给猫的那一步（坐着的人引路的、站定的人给的）落成有顶的两层台，猫更愿意走过去（cat.roofPull）。
+   * 这个函数回答「这一台落得成有顶的吗」，由立体层给（cohabit-solid 的 roofClear：不是桌子那台、下面的家具不碍事）。
+   * 不给 = 没有有顶的台，逐位不变。
+   */
+  roof?: (u: PlanUnit, sim: CohabitSim) => boolean;
+  /**
    * 第 3 条 · 同伴没坐上（座被抢、门口等太久另选了路、猫占着的台盖在座位头顶）：每次站着停满一段（pace.pause）就再找一次领头
    * 座位附近（PARTY_SEAT 以内）的空座。关着时只在领头去坐那一刻派一次座，没坐上就在领头身边站满整段。
    */
@@ -1392,6 +1404,10 @@ export class CohabitSim {
   readonly seatRetry: boolean;
   readonly exitDiff: boolean;
   readonly tableBy: Int16Array;
+  /** 有顶的台（CohabitOpts.roof）：roofed = 这台这次落下是有顶的（开始落下时定，收回天花才清）；roofFace = 敞开那半圈朝哪（朝它为之铺路的那个人） */
+  private readonly roof: ((u: PlanUnit, sim: CohabitSim) => boolean) | null;
+  readonly roofed: Uint8Array;
+  readonly roofFace: Float64Array;
   /** 感知层（opts.sense）；null = 空间读真值 */
   private readonly sense: SpaceSense | null;
   tableSeat = 0;
@@ -1505,6 +1521,9 @@ export class CohabitSim {
     this.exitDiff = opts.exitDiff ?? opts.cover === 'room';
     this.overSeated = new Uint8Array(n);
     this.tableBy = new Int16Array(n).fill(-1);
+    this.roof = opts.roof ?? null;
+    this.roofed = new Uint8Array(n);
+    this.roofFace = new Float64Array(n);
     this.wallScratch = new Uint8Array(n);
     this.faces = opts.faces ?? false;
     this.sense = opts.sense ?? null;
@@ -3656,9 +3675,12 @@ export class CohabitSim {
     // 节奏：坐 → 卧 → （一半几率）换一格
     if (c.state === 'sit' && c.phaseTime >= this.cat.sit) {
       // 「走 · 站 · 坐」：坐满了、旁边有一台空间刚递过来的（落着、没别的猫占着）⇒ 按同样的几率挪过去，不走才卧下（R3：走不走仍是猫的事）
+      // 递过来的台里有有顶的：去有顶的那台，几率乘 roofPull
       const offered = this.offeredNext(c);
-      if (offered.length && this.rand() < this.cat.roamP) {
-        c.pending = offered[Math.floor(this.rand() * offered.length)];
+      const roofed = offered.filter((u) => this.roofed[u.i]);
+      const pool = roofed.length ? roofed : offered;
+      if (offered.length && this.rand() < (roofed.length ? this.cat.roamP * this.cat.roofPull : this.cat.roamP)) {
+        c.pending = pool[Math.floor(this.rand() * pool.length)];
         c.waited = 0;
         c.state = 'wait';
         return;
@@ -3973,7 +3995,7 @@ export class CohabitSim {
     if (c.state === 'sit' && c.phaseTime >= this.cat.sit) {
       // catFloor · 「走 · 站 · 坐」 · 会动的单元：坐满了、空间为它递下来一台 ⇒ 按换格的几率跳上去（与台上的猫「优先走递过来的那台」同一条）
       const off = levels && this.space === 'live' ? this.offeredUp(c) : null;
-      if (off && this.upCands(c).includes(off) && this.rand() < this.cat.roamP) {
+      if (off && this.upCands(c).includes(off) && this.rand() < (this.roofed[off.i] ? this.cat.roamP * this.cat.roofPull : this.cat.roamP)) {
         this.startClimb(c, off);
         return;
       }
@@ -4173,8 +4195,15 @@ export class CohabitSim {
   private guideStep(inputs: Float64Array, thr: number): void {
     const S = COHABIT.SEATS;
     const taken = new Set<number>();
-    const offer = (u: number) => {
+    // 有顶的台：收回天花的清掉；铺给猫的那一步还收着时定下这次落成有顶的，敞开那半圈朝这个人
+    if (this.roof) for (let u = 0; u < this.roofed.length; u++) if (this.act.degree[u] <= 1e-4) this.roofed[u] = 0;
+    const offer = (u: number, p: Visitor) => {
       inputs[u] = Math.max(inputs[u], thr);
+      if (this.roof && this.act.degree[u] <= 1e-4 && this.roof(this.layout.units[u], this)) {
+        const at = this.layout.units[u];
+        this.roofed[u] = 1;
+        this.roofFace[u] = Math.atan2(p.walker.y - at.y, p.walker.x - at.x);
+      }
     };
     // catFloor 开着时地面上的猫也引（没在准备跳上别的台）：从离它最近、落得下来的那台起铺
     const free = (c: Cat) => !taken.has(c.id) && (!!c.unit || (this.catFloor && !c.climb)) && c.mode !== 'held' && c.latency <= 0;
@@ -4216,7 +4245,7 @@ export class CohabitSim {
       taken.add(best.c.id);
       // whole 关：每次只落下一步；whole 开：从猫脚下到目标一路都落（被猫一台一台走过去）。地面上的猫：第一步 = 它要跳上去的那台
       const first = best.c.unit ? 1 : 0;
-      if (best.path.length > first) for (let k = first; k < (this.guide.whole ? best.path.length : first + 1); k++) offer(best.path[k]);
+      if (best.path.length > first) for (let k = first; k < (this.guide.whole ? best.path.length : first + 1); k++) offer(best.path[k], p);
       this.guides.push({ kind: 'sit', person: p.id, cat: best.c.id, path: best.path });
     }
     for (const p of this.people) {
@@ -4229,7 +4258,7 @@ export class CohabitSim {
           continue;
         }
         taken.add(c.id);
-        offer(p.offer.unit);
+        offer(p.offer.unit, p);
         this.guides.push({ kind: 'stand', person: p.id, cat: c.id, path: [p.offer.from, p.offer.unit] });
         continue;
       }
@@ -4251,7 +4280,7 @@ export class CohabitSim {
       p.offered = true;
       p.offer = { cat: c.id, from: c.unit!.i, unit: pick.i };
       taken.add(c.id);
-      offer(pick.i);
+      offer(pick.i, p);
       this.guides.push({ kind: 'stand', person: p.id, cat: c.id, path: [c.unit!.i, pick.i] });
     }
   }

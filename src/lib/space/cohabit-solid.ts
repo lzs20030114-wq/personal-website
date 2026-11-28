@@ -132,6 +132,7 @@ export function standardSceneSim(space: SpaceMode = 'live', seed: number = SCENE
     cat: { ...COHABIT.CAT_MT, ...COHABIT.CAT_LEVELS.mid },
     guide: COHABIT.GUIDE,
     pace,
+    roof: roofClear,
   });
   const half = sim.layout.fieldM / 2;
   const sizes = partySizes(SCENE.people);
@@ -582,6 +583,14 @@ export function shelterClear(
 }
 
 /**
+ * 这一台落得成有顶的两层吗（交给平面模型的 CohabitOpts.roof，2026-11-28）：不是任何座位的桌子那台，下面的家具不比下台底面高。
+ * 与 unitFormPlan 里「不成两层」的两条是同一个判断。
+ */
+export function roofClear(u: { x: number; y: number; i: number }, sim: Pick<CohabitSim, 'layout' | 'seats' | 'furn'>): boolean {
+  return !sim.seats.some((s) => s.table === u.i) && shelterClear(sim.layout, u, sim.furn ? sim.furn.rects : []);
+}
+
+/**
  * 茶几兼猫台（作者 2026-11-28「可以一起做」；形与小样 2-16 的同名那个相同，cohabit-design teaShelfDesign）：
  * 沙发前的茶几那台落下时，朝座位那半圈只成下台当茶几（TABLE_TOP.sofaFront），背后那半圈两块都成，上台（下台 + DUAL_RISE = 1.00 m）
  * 给猫——人用下层、猫用上层，就是平面模型记的「共用单元」（CohabitSim.coUse）在立体里的样子。
@@ -667,11 +676,14 @@ export function unitFormPlan(o: {
   tableUnit: boolean;
   /** 这台此刻正当桌子落下、并且能落成茶几兼猫台（teaShelfToward 给得出方位）：敞开那半圈朝哪。不给 = 桌子照旧是平台 */
   tea?: number | null;
+  /** 平面模型定了这台这次落成有顶的（CohabitSim.roofed，空间铺给猫的那一步）：敞开那半圈朝哪。不给 = 照下面的抽 */
+  roof?: number | null;
   count?: number;
 }): UnitFormPlan {
   const flat: UnitFormPlan = { form: 'flat', toward: null, bands: null };
   if (o.tea !== undefined && o.tea !== null) return { form: 'tea', toward: o.tea, bands: shelterBands(o.tea, o.count ?? SQUARE.COUNT) };
   if (o.tableUnit || !shelterClear(o.layout, o.at, o.rects)) return flat;
+  if (o.roof !== undefined && o.roof !== null) return { form: 'half', toward: o.roof, bands: shelterBands(o.roof, o.count ?? SQUARE.COUNT) };
   const toward = shelterToward(o.layout, o.at, o.seated, o.rects);
   const odds = toward !== null ? UNIT_FORM_ODDS.near : UNIT_FORM_ODDS.other;
   const r = formDraw(o.seed, o.unit, o.serial, 0);

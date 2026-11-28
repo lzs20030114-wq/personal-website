@@ -221,7 +221,7 @@ const COPY = {
     title: '人猫同台 · 立体',
     sub: (side: number, roomH: number) => `8×8 · 方台边长 ${side.toFixed(2)} m · 房高 ${roomH.toFixed(2)} m · ${SCENE.people} 位访客 · ${SCENE.cats} 只猫`,
     hint: '拖拽旋转 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回、给人让路 · 控制在实验室',
-    hintCtl: '拖拽旋转 · 空间三档对照 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回，挡路的带各自收回 · 给猫落的台随机成平台、半圈有顶的两层或整圈两层，坐着的人身边那台多半是有顶的、朝那个人敞开 · 当桌子的台照家具定高，沙发前的茶几背后半圈多一层给猫 · 蒙皮可关掉看里面的带子与键 · 带子形状取自引擎烘好的关键帧 · 访客的穿着与猫的花色每一场随机、不重样',
+    hintCtl: '拖拽旋转 · 空间三档对照 · 单元平时收在天花下，按实验 2-14 的规则落下成形、收回，挡路的带各自收回 · 空间铺给猫的那一步落成半圈有顶的两层、朝那个人敞开，猫更愿意走过去；其余给猫落的台随机成平台、半圈有顶的两层或整圈两层 · 当桌子的台照家具定高，沙发前的茶几背后半圈多一层给猫 · 蒙皮可关掉看里面的带子与键 · 带子形状取自引擎烘好的关键帧 · 访客的穿着与猫的花色每一场随机、不重样',
     baking: (p: number) => `算带子轨迹 ${Math.round(p * 100)}%`,
     line: (t: number, formed: number, total: number, c: Record<EventKind, number>, roofed: number, coUse: number) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · 成形 ${formed} / ${total}${roofed ? ` · 有顶的台 ${roofed}` : ''} · 共视 ${c.gaze} · 共温 ${c.warmth} · 共触 ${c.touch} · 交接 ${c.pass} · 共用单元 ${coUse}`,
@@ -237,7 +237,7 @@ const COPY = {
     title: 'People and cats together, in 3D',
     sub: (side: number, roomH: number) => `8×8 · square platform ${side.toFixed(2)} m · room ${roomH.toFixed(2)} m high · ${SCENE.people} visitors · ${SCENE.cats} cats`,
     hint: 'Drag to orbit · units rest stowed at the ceiling, then descend, form, retract and give way under the Lab 2-14 rules · controls in the lab',
-    hintCtl: 'Drag to orbit · three spaces to compare · units rest stowed at the ceiling, then descend and form under the Lab 2-14 rules, bands in the way retract on their own · a unit lowered for a cat takes one of three forms at random (flat, two levels roofed over half, or two levels all round), and beside a seated visitor it is usually roofed at the back and open toward that visitor · units used as tables keep the height set by the furniture, and a coffee table gets an upper shelf for a cat over its back half · turn the skin off to see the bands and keys inside · band shapes come from baked engine keyframes · outfits and coats are dealt at random each run, no two alike',
+    hintCtl: 'Drag to orbit · three spaces to compare · units rest stowed at the ceiling, then descend and form under the Lab 2-14 rules, bands in the way retract on their own · a step the room lays for a cat comes down with two levels, roofed at the back and open toward the visitor, and cats are more willing to move onto it; other units lowered for a cat take one of three forms at random (flat, two levels roofed over half, or two levels all round) · units used as tables keep the height set by the furniture, and a coffee table gets an upper shelf for a cat over its back half · turn the skin off to see the bands and keys inside · band shapes come from baked engine keyframes · outfits and coats are dealt at random each run, no two alike',
     baking: (p: number) => `baking band trajectory ${Math.round(p * 100)}%`,
     line: (t: number, formed: number, total: number, c: Record<EventKind, number>, roofed: number, coUse: number) =>
       `t ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · formed ${formed} / ${total}${roofed ? ` · roofed ${roofed}` : ''} · co-gaze ${c.gaze} · co-warmth ${c.warmth} · contact ${c.touch} · crossing ${c.pass} · shared unit ${coUse}`,
@@ -832,6 +832,8 @@ export function CohabitSpaceBench({
                     tableUnit: sim.tableBy[u] >= 0 || sim.seats.some((st) => st.table === u),
                     // 此刻正当桌子落下的茶几那台：能成就落成茶几兼猫台（先为猫落下、后来才当桌子的，形不换，照旧是平台）
                     tea: sim.tableBy[u] >= 0 ? teaShelfToward(layout.units[u], sim.seats, sim.furn.rects) : null,
+                    // 平面模型定了这台是铺给猫的有顶的一步（猫更愿意走过去的就是它）：照着落
+                    roof: sim instanceof CohabitSim && sim.roofed[u] ? sim.roofFace[u] : null,
                     count: BANDS,
                   })
                 : null;
