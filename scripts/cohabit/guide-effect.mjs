@@ -14,7 +14,9 @@
 //   环境变量 ARMS：只跑这几档（逗号分隔，例 'guided,off'，敏感性分析用；streams 开着时各档互不影响，挑着跑与全跑逐位相同）
 //   环境变量 OPTS：接在每一档的仿真选项之后（JSON），例 '{"streams":false,"retarget":false,"seatRetry":false}'
 //     = 规则审阅（§14.29）之前的口径，分步重跑时一件一件打开（§14.30）
-//   环境变量 ROOF=0：关掉「坐着的人身边的台给猫多成一层、猫更愿意走过去」（CohabitOpts.roof，2026-11-28 起标准场景开着）
+//   环境变量 ROOF：给猫多成一层的台放在哪（猫的特性各档相同：去这样的台的几率 × roofPull；CohabitOpts.roof）
+//     不设 = 放在坐着的人身边（现行，cohabit-solid roofToward）；path = 放在空间铺给猫的那一步上（对照用，站上没有这一档）；
+//     0 = 不放，全是平台
 // 读数「共用单元」= 一台已落成某位坐着的人的桌子、同时有猫停在这台上，逐对记（CohabitSim.coUse，2026-11-28）
 // 读数「坐着的共温 / 共触」= 共温 / 共触秒数里人坐着的那部分（审阅第 6 条：共触里有不少是人路过猫身边）
 import { writeFileSync } from 'node:fs';
@@ -56,7 +58,23 @@ const METRICS = {
 const server = await createServer({ root, configFile: false, server: { middlewareMode: true, watch: null }, appType: 'custom', logLevel: 'error' });
 try {
   const m = await server.ssrLoadModule('/src/lib/space/cohabit.ts');
-  const roof = process.env.ROOF === '0' ? {} : { roof: (await server.ssrLoadModule('/src/lib/space/cohabit-solid.ts')).roofToward };
+  const solid = await server.ssrLoadModule('/src/lib/space/cohabit-solid.ts');
+  // 对照：有顶的台放在路上。空间此刻铺给猫的那一步（坐着的人引路的下一步 / 整条路、站定的人给的一步），
+  // 不是谁的桌子那台、下面家具不碍事的，落成有顶的，朝那个人敞开
+  const onPath = (u, sim) => {
+    if (sim.seats.some((s) => s.table === u.i) || !solid.shelterClear(sim.layout, u, sim.furn ? sim.furn.rects : [])) return null;
+    for (const g of sim.guides) {
+      const c = sim.cats.find((k) => k.id === g.cat);
+      const first = c && c.unit ? 1 : 0;
+      const steps = g.kind === 'sit' && sim.guide.whole ? g.path.slice(first) : g.path.slice(first, first + 1);
+      if (!steps.includes(u.i)) continue;
+      const p = sim.people.find((v) => v.id === g.person);
+      return p ? Math.atan2(p.walker.y - u.y, p.walker.x - u.x) : null;
+    }
+    return null;
+  };
+  const place = process.env.ROOF ?? 'near';
+  const roof = place === '0' ? {} : { roof: place === 'path' ? onPath : solid.roofToward };
   const cat = { ...m.COHABIT.CAT_MT, ...m.COHABIT.CAT_LEVELS.mid, ...catPatch };
   const runs = Object.fromEntries(ARMS.map((a) => [a.key, []]));
   const t0 = Date.now();
@@ -72,7 +90,7 @@ try {
     }
   }
   const out = { seconds, seeds, seed0, people, cats, catPatch, pacePatch, optsPatch, arms: {}, diffs: {} };
-  console.log(`${people} 人 ${cats} 猫 · ${seconds} s · ${seeds} 种子 · 猫 ${JSON.stringify(catPatch)} · 节奏 ${JSON.stringify(pacePatch)} · 选项 ${JSON.stringify(optsPatch)}${process.env.ROOF === '0' ? ' · 全是平台' : ''} · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+  console.log(`${people} 人 ${cats} 猫 · ${seconds} s · ${seeds} 种子 · 猫 ${JSON.stringify(catPatch)} · 节奏 ${JSON.stringify(pacePatch)} · 选项 ${JSON.stringify(optsPatch)}${place === '0' ? ' · 全是平台' : place === 'path' ? ' · 有顶的台放在路上' : ''} · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
   for (const [k, M] of Object.entries(METRICS)) {
     const v = Object.fromEntries(ARMS.map((a) => [a.key, runs[a.key].map(M.f)]));
     out.arms[k] = Object.fromEntries(ARMS.map((a) => [a.key, { mean: mean(v[a.key]), sd: sd(v[a.key]), v: v[a.key] }]));
