@@ -50,30 +50,69 @@ export function frameSrc(set: string, file: string, thumb = false): string {
 }
 
 export const CASE_FRAMES: Record<string, FrameSet> = {
-  // FIG.02 · 方法：一位访客坐下，猫被一步一步引到座位前方那台（Lab 2-14 默认场景，平面）
-  'plan-sit': {
+  // FIG.02–04 · 方法：什么规则让单元动作（2026-11-28 换下原来的 plan-sit）。三组取自决定性瞬间图版的 03 / 05 / 08 三行
+  // （scripts/moments，带记号的单格 + 同一刻的平面图拼成一张；线稿上只有记号和数，没有句子）。按人的状态排：行走 · 站着 · 坐着。
+  // 图由静帧场景出（cohabit-vignette 的 STILL_SCENES），不是某台台架的截图，不带「去实验室」。
+  'rule-walk': {
     project: 'letting-agent',
-    lab: '2-14',
-    w: 900,
-    h: 894,
-    tw: 560,
-    cols: 4,
+    w: 692,
+    h: 980,
+    tw: 520,
     caption: {
-      zh: '一位访客、一只猫的一场（实验 2-14，平面）。实心圆是坐着的人，绿色虚线是空间给猫铺的路，紫色点线框是座位前方那台。猫走不走、什么时候下地，由猫自己决定',
-      en: 'One visitor and one cat (Lab 2-14, plan). A filled circle is a seated person, the green dashes are the route the space lays for the cat, and the dotted purple square is the unit in front of the seat. Whether the cat follows, and when it goes down to the floor, is up to the cat',
+      zh: '人在行走，路线经过落着的单元。单元不为路过的人落台，只收回挡路的带，人过去后带落回。上面是线稿，下面是同一刻的平面，灰块是落着的台。',
+      en: 'A person walking, on a route that passes units already down. No unit comes down for someone passing by; only the bands in the way retract, and they return once the person has passed. Line drawing above, plan of the same moment below; grey squares are units that are down.',
+    },
+    sub: {
+      zh: '虚线箭头是将要走的路，实线是已经走过的，竖箭头是带收回与落回，点线圈是身体占的地方。标准场景 30 分钟里，这条规则落台 0 次。',
+      en: 'Dashed arrow: the route ahead. Solid line: the route walked. Vertical arrows: bands retracting and returning. Dotted circle: the space the body takes. In 30 minutes of the standard scene this rule lowers no unit.',
     },
     frames: [
-      { file: 't000', t: { zh: '0:00', en: '0:00' }, note: { zh: '访客在走，猫在左上角的台上', en: 'the visitor walks, the cat is on a unit in the top-left corner' } },
-      { file: 't071', t: { zh: '1:11', en: '1:11' }, note: { zh: '在中间那把餐椅上坐下，面前那台落成餐桌（74 cm），猫脚下铺出第一步', en: 'sits on the dining chair in the middle, the unit in front becomes a table (74 cm) and the first step is laid from the cat' } },
-      { file: 't100', t: { zh: '1:40', en: '1:40' }, note: { zh: '猫沿着递过来的台走了两步', en: 'the cat has walked two of the units offered' } },
-      { file: 't160', t: { zh: '2:40', en: '2:40' }, note: { zh: '猫自己跳下了地，空间把它身边那台落下，等它跳回来', en: 'the cat jumps down to the floor on its own, and the space lowers the unit beside it for it to climb back' } },
-      { file: 't175', t: { zh: '2:55', en: '2:55' }, note: { zh: '猫在地上走到另一头，从那里上了台，路改从这里铺', en: 'the cat crosses the room on the floor and climbs up at the far end, and the route is laid again from there' } },
-      { file: 't283', t: { zh: '4:43', en: '4:43' }, note: { zh: '又下了一次地之后，猫回到访客身后那台，路绕到他面前那台还要三步', en: 'after one more trip to the floor the cat is back on the unit behind the visitor, three steps from the unit in front of him' } },
-      { file: 't288', t: { zh: '4:48', en: '4:48' }, note: { zh: '猫到了座位前方那台', en: 'the cat reaches the unit in front of the seat' } },
-      { file: 't300', t: { zh: '5:00', en: '5:00' }, note: { zh: '猫又挪上了桌子，就在访客面前', en: 'the cat then steps onto the table, right in front of the visitor' } },
+      { file: 's1', t: { zh: '感知', en: 'Sense' }, note: { zh: '路线上有落着的台', en: 'units that are down lie on the route' } },
+      { file: 's2', t: { zh: '干预', en: 'Act' }, note: { zh: '只收挡路的带：离人 0.37 m 以内的，和前方路线上的', en: 'only the bands in the way retract: those within 0.37 m of the person and those on the route ahead' } },
+      { file: 's3', t: { zh: '作用', en: 'Effect' }, note: { zh: '人通过，带落回', en: 'the person passes and the bands come back down' } },
     ],
   },
-  // FIG.03 · 一条带：四张键谱同一次收缩（Lab 2-1）
+  'rule-stand': {
+    project: 'letting-agent',
+    w: 692,
+    h: 982,
+    tw: 520,
+    caption: {
+      zh: '人站着，注视台上的一只猫。满 3 秒，单元在猫相邻的台里朝这个人落一台，猫多一个离他更近的落脚处。去不去由猫决定。',
+      en: 'A person standing, looking at a cat on a unit. After 3 seconds one of the units next to the cat comes down on the side toward that person, giving the cat a place closer to them. Whether it goes is up to the cat.',
+    },
+    sub: {
+      zh: '虚线是视线，点线框是可以落的相邻台，粗框与向下的三角是这次落下的台，向上的三角是猫离开后收回的台，弧线箭头是猫的移动。标准场景里人多数时间坐着，30 分钟里这条规则落台 0.3 次。',
+      en: 'Dashed line: the gaze. Dotted squares: neighbouring units that could come down. Heavy square with a downward triangle: the unit lowered this time. Upward triangle: the unit that retracts after the cat leaves. Curved arrow: the cat moving. People in the standard scene sit most of the time, so this rule lowers 0.3 units in 30 minutes.',
+    },
+    frames: [
+      { file: 's1', t: { zh: '感知', en: 'Sense' }, note: { zh: '注视满 3 秒', en: 'the gaze has held for 3 seconds' } },
+      { file: 's2', t: { zh: '干预', en: 'Act' }, note: { zh: '朝他落一台', en: 'one unit comes down toward the person' } },
+      { file: 's3', t: { zh: '作用', en: 'Effect' }, note: { zh: '猫多一个更近的落脚处，移过去后原来那台收回', en: 'the cat has a closer place to stand; once it moves, the unit it left retracts' } },
+    ],
+  },
+  'rule-sit': {
+    project: 'letting-agent',
+    w: 508,
+    h: 744,
+    tw: 508,
+    cols: 4,
+    caption: {
+      zh: '人坐着，猫还没到他面前。单元在猫与座位前方那台之间取一串相邻的台，只落猫的下一步，猫踏上后再落下一步，身后那台收回，直到猫到座位前方那台，人猫相距 1.0–1.5 m。每一步走不走由猫决定。',
+      en: 'A person seated, with the cat not yet in front of them. Between the cat and the unit in front of the seat the room takes a chain of neighbouring units and lowers only the cat’s next step; when the cat steps on, the next one comes down and the one behind retracts, until the cat is on the unit in front of the seat, 1.0–1.5 m from the person. Each step is the cat’s to take or not.',
+    },
+    sub: {
+      zh: '带数字的圈是引猫的第几步，点线框是将要落的台，粗框与向下的三角是这一步落下的台，向上的三角是收回，两道弧是距座位 1.0 与 1.5 m。标准场景 30 分钟里，路上的一步落 260 次，座位前方那台落 33 次。这三组图只画单元什么时候、在哪儿落，台都画成平台，成什么形见「单元的构成与运动」。',
+      en: 'Numbered circles: the steps laid for the cat. Dotted squares: units about to come down. Heavy square with a downward triangle: the unit lowered at this step. Upward triangle: a unit retracting. The two arcs: 1.0 and 1.5 m from the seat. In 30 minutes of the standard scene a step on the way comes down 260 times and the unit in front of the seat 33 times. These three figures show only when and where units come down; every unit is drawn as a flat platform, and the forms are in the section on the unit.',
+    },
+    frames: [
+      { file: 's1', t: { zh: '感知', en: 'Sense' }, note: { zh: '人坐着，猫在地上', en: 'the person is seated, the cat is on the floor' } },
+      { file: 's2', t: { zh: '干预', en: 'Act' }, note: { zh: '只落猫的下一步', en: 'only the cat’s next step comes down' } },
+      { file: 's3', t: { zh: '作用', en: 'Effect' }, note: { zh: '猫踏上一步，再落下一步', en: 'the cat steps on and the next step comes down' } },
+      { file: 's4', t: { zh: '相遇', en: 'Meeting' }, note: { zh: '猫到他面前那台，相距 1.2 m，路上的台收回', en: 'the cat is on the unit in front of the person, 1.2 m away, and the units on the way retract' } },
+    ],
+  },
+  // FIG.05 · 一条带：四张键谱同一次收缩（Lab 2-1）
   'strip-forming': {
     project: 'letting-agent',
     lab: '2-1',
@@ -94,7 +133,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
       { file: 's1500', t: { zh: '步 1500', en: 'step 1500' }, note: { zh: '芯停住，布被拉紧', en: 'the core holds and the fabric is pulled taut' } },
     ],
   },
-  // FIG.05 · 形态的连续：十二条带目录渐变（Lab 2-4，正视，终态）
+  // FIG.07 · 形态的连续：十二条带目录渐变（Lab 2-4，正视，终态）
   'series-gradient': {
     project: 'letting-agent',
     lab: '2-4',
@@ -108,7 +147,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
     },
     frames: [{ file: 's1500', t: { zh: '步 1500', en: 'step 1500' } }],
   },
-  // FIG.06 · 裂成两片台：十条带（Lab 2-4 捏分，正视）
+  // FIG.08 · 裂成两片台：十条带（Lab 2-4 捏分，正视）
   'series-split': {
     project: 'letting-agent',
     lab: '2-4',
@@ -130,7 +169,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
       { file: 's1500', t: { zh: '步 1500', en: 'step 1500' }, note: { zh: '终态', en: 'final state' } },
     ],
   },
-  // FIG.07 · 绕成一圈（Lab 2-5 整环同形 · 阶梯方箱，轴测）
+  // FIG.09 · 绕成一圈（Lab 2-5 整环同形 · 阶梯方箱，轴测）
   'ring-forming': {
     project: 'letting-agent',
     lab: '2-5',
@@ -151,7 +190,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
       { file: 's1500', t: { zh: '步 1500', en: 'step 1500' }, note: { zh: '一圈平台', en: 'a ring-shaped platform' } },
     ],
   },
-  // FIG.08 · 由圆到方（Lab 2-7 整环平，五种轮廓，高角度俯视，终态）
+  // FIG.10 · 由圆到方（Lab 2-7 整环平，五种轮廓，高角度俯视，终态）
   'round-to-square': {
     project: 'letting-agent',
     lab: '2-7',
@@ -171,7 +210,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
       { file: 'o5', t: { zh: '方', en: 'square' } },
     ],
   },
-  // FIG.09 · 在房间里（Lab 2-15，左边那张双人沙发，放大）：落下、成形、收回。2026-11-08 按规则审阅后的规则重截（§14.30）
+  // FIG.11 · 在房间里（Lab 2-15，左边那张双人沙发，放大）：落下、成形、收回。2026-11-08 按规则审阅后的规则重截（§14.30）
   'room-cycle': {
     project: 'letting-agent',
     lab: '2-15',
@@ -192,7 +231,7 @@ export const CASE_FRAMES: Record<string, FrameSet> = {
       { file: 't1222_65', t: { zh: '20:22.7', en: '20:22.7' }, note: { zh: '收回天花板下，一只橘猫在两人脚边的地上', en: 'back under the ceiling, with a ginger cat on the floor at their feet' } },
     ],
   },
-  // FIG.10 · 两种用法（Lab 2-15 正视；2026-11-08 由侧视改正视，20 座布置下侧视里的茶几都被沙发靠背挡住）
+  // FIG.12 · 两种用法（Lab 2-15 正视；2026-11-08 由侧视改正视，20 座布置下侧视里的茶几都被沙发靠背挡住）
   'two-uses': {
     project: 'letting-agent',
     lab: '2-15',

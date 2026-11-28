@@ -94,7 +94,11 @@ The simulation operates at the scale of minutes, and its modeled variables are r
 
 The spatial layer lowers units for a purpose. In the human–cat case the purpose is to bring people and cats together, and which units descend follows the person's state. Walking triggers nothing and leaves no trace. Standing still for three seconds while looking at a cat lays one step toward that cat. Sitting down leads the nearest cat along the units present, one step at a time, to the unit 1.0–1.5 m in front of the seat, and another unit, the one directly in front of the seat, comes down at the same moment as that person's table. A cat reads nothing but unit states. After three seconds on a unit with another offered beside it, it moves or stays by its own odds. When a person approaches a unit that has descended, only the strips facing them retract, like a door opening, and the rest stay down (Fig. 02). [→ Log 2026-10-07](/archive#log-2026-10-07-3966303388841958)
 
-<FrameStrip id="FIG.02" set="plan-sit" />
+<FrameStrip id="FIG.02" set="rule-walk" />
+
+<FrameStrip id="FIG.03" set="rule-stand" />
+
+<FrameStrip id="FIG.04" set="rule-sit" />
 
 The space changes only the cost of each position and gives no orders to anyone, and this position is written as five rules. The spatial layer outputs nothing but the state of each unit, never the position or goal of any individual. An individual reads only two numbers from the space, whether it can pass here and whether it can stay here. Where to go remains the individual's own decision, made by its own behavioral rules. Whether the space has met its purpose is judged by outcome alone, counted in the four interaction events. At every moment every individual has at least one passable route from where it stands to an exit, and a unit that would cut that route does not descend. The earlier utility framework, in which each component computed its own utility and objectives could conflict, was not implemented and is listed under Open questions.
 
@@ -144,11 +148,11 @@ The interaction medium is the ceiling. Four criteria governed the selection of t
 
 The basic part of a unit is a strip of fabric hanging from the ceiling with a core running down its middle. When the core contracts the fabric has slack, and bonds laid out on the fabric in advance catch the slack and fasten it in pairs. Where the bonds fasten decides the shape. A strip has a single degree of freedom, the contraction ℓ, and no actuated members, so the shape is written into the bond map, and the same contraction protocol with a different bond map gives a different shape. The protocol runs 1,500 steps. In the first 900 the core shortens from 0.95 of the fabric length to 0.30 (the pocket only to 0.66) and bonds fasten in order of span, longest first. In the last 600 the core holds still and the fabric is pulled taut and smoothed. Four bond maps give four shapes, a pocket, a bulb flange, a straight ledge and a stepped box (Fig. 03). The final state is a path-dependent numerical solution. Bonds lock one by one in order, each step follows from the last, there is no closed formula, and the same input gives the same result every time. [→ Log 2026-08-17](/archive#log-2026-08-17-1)
 
-<FrameStrip id="FIG.03" set="strip-forming" />
+<FrameStrip id="FIG.05" set="strip-forming" />
 
 Giving the section a thickness and extruding it in depth makes a solid strip, and the four bond maps grow their four shapes in the same contraction run (Fig. 04).
 
-<InteractiveSlot id="FIG.04" caption="Four morphologies from one contraction degree of freedom, the structural engine running live" status="可现产" lab="2-2" verb="four morphologies · one protocol">
+<InteractiveSlot id="FIG.06" caption="Four morphologies from one contraction degree of freedom, the structural engine running live" status="可现产" lab="2-2" verb="four morphologies · one protocol">
   <SkinSolidFigure />
 </InteractiveSlot>
 
@@ -156,21 +160,21 @@ Giving the section a thickness and extruding it in depth makes a solid strip, an
 
 Bond maps can be adjusted in small steps. Across twelve strips each bond map changes by one small step, going from the bulb flange to the stepped box, and every strip is actually solved, not interpolated between two drawings (Fig. 05). A second series of ten strips starts from one solid box and cuts a gap into its middle a little further at each step, until the last one splits into an upper and a lower slab with the bottom of the gap on the core. The way this series looks partway through forming was designed as well. Bonds fasten wherever enough fabric has arrived first, so the box grows out one step at a time, and every frame during forming is a shallower box (Fig. 06). [→ Log 2026-08-29](/archive#log-2026-08-29-1)
 
-<FrameStrip id="FIG.05" set="series-gradient" />
+<FrameStrip id="FIG.07" set="series-gradient" />
 
-<FrameStrip id="FIG.06" set="series-split" />
+<FrameStrip id="FIG.08" set="series-split" />
 
 ### Around a ring
 
 Twenty narrow strips standing in a ring around a vertical axis make one unit. All twenty use the same bond map and fasten the same ledge in the same contraction run, the ledges join into a ring-shaped platform, and a semi-transparent fabric membrane closes the gaps between strips (Fig. 07). With the same bond map, the same starting state and no random term in the engine, the bench solves one strip and places it at twenty angles. [→ Log 2026-08-23](/archive#log-2026-08-23-2)
 
-<FrameStrip id="FIG.07" set="ring-forming" />
+<FrameStrip id="FIG.09" set="ring-forming" />
 
 ### From round to square
 
 How far a strip reaches out is set by its bond map. When the twenty strips reach different distances, the outline seen from above changes. With the strips at the four corners reaching furthest and those at the middle of each side reaching least, the ring becomes a square platform, which needs bond maps of only three depths by position. The outline goes from round to square in five steps, with the thickness of the platform unchanged and only the reach of each strip varying (Fig. 08). The round rings are used to work out and show how a form is made. The units used in the room are square, and tables and shelves will be square as well.
 
-<FrameStrip id="FIG.08" set="round-to-square" />
+<FrameStrip id="FIG.10" set="round-to-square" />
 
 ### Releasing and forming again
 
@@ -180,7 +184,7 @@ Bonds can also be released. On withdrawal they come undone in the reverse of the
 
 Lab 2-15 puts these units into a room 6.64 m square and 3.74 m high, sixty-four of them on an 8×8 grid that fills it, 0.83 m apart, each square platform 0.69 m on a side. A unit is normally stowed under the ceiling, its fabric gathered against the ceiling plate and its core drawn up. When the rules call for it, it first comes down the core to working height and then contracts and forms. When a person approaches a unit that has come down, the strips in their way retract one by one and open a gap at the edge of the platform. When it is no longer needed the unit goes back the way it came, straightens, and is stowed under the ceiling again (Fig. 09). [→ Log 2026-10-23](/archive#log-2026-10-23-4235513318147732)
 
-<FrameStrip id="FIG.09" set="room-cycle" />
+<FrameStrip id="FIG.11" set="room-cycle" />
 
 ### One unit, two uses
 
@@ -188,7 +192,7 @@ A formed unit is a surface for a cat to rest and walk on, and a wall for a perso
 
 The other units come down for the cats. The rules decide only whom a unit serves, and the form it takes is drawn at random. As a single platform it stops at 1.05 m, close to standing elbow height. As two levels it lets out the whole length of fabric. The lower platform is 0.90 m above the floor, so a cat sitting on it has its eyes at about 1.17 m, level with a seated person's. The upper top is at 1.48 m, below a standing person's eyes, and covers half the ring or all of it, so the cat on the lower platform has a roof over its head. A unit within 1.5 m of a seated person usually comes down as two levels, with its open half facing that person. The four platform heights, 0.42, 0.74, 0.90 and 1.05 m, all lie between 0.4 and 1.2 m, where the body heights of the two species overlap, and the cat's platform and the person's table come from the same set of units.
 
-<FrameStrip id="FIG.10" set="two-uses" />
+<FrameStrip id="FIG.12" set="two-uses" />
 
 ### Scale and assumptions
 
@@ -206,7 +210,7 @@ Cats settle for about as long on either device, and longer than in the empty roo
 
 Contact is the cat's own decision. With guidance switched to the unit beside the seat, lowering the whole path at once, co-touch at twelve people exceeds fixed shelving, 443 seconds against 337, and matches or slightly trails the empty room. The two guidances lean different ways. The unit in front of the seat raises co-warmth, the unit beside the seat raises co-touch, and one guidance can only lean one way, a direct consequence of the two distance bands excluding each other. The tests were not corrected for multiple comparisons, and differences with p between .01 and .05 are read as direction only.
 
-<CompareChart id="FIG.11" />
+<CompareChart id="FIG.13" />
 
 ## Technical implementation
 
