@@ -57,7 +57,7 @@ const stallBy = {};
 const samples = [];
 
 for (const seed of seeds) {
-  const sim = new C.CohabitSim({ trigger: 'posture', grid: C.COHABIT.SEATS.GRID, unit: 'square', cover: 'room', space: 'live', seed, opening: false, auto: true, faces: true, social: true, catFloor: true, cat: { ...C.COHABIT.CAT_MT, ...C.COHABIT.CAT_LEVELS.mid }, guide: C.COHABIT.GUIDE, pace: C.PACE_DEMO });
+  const sim = new C.CohabitSim({ trigger: 'posture', grid: C.COHABIT.SEATS.GRID, unit: 'square', cover: 'room', space: 'live', seed, opening: false, auto: true, faces: true, social: true, catFloor: true, cat: { ...C.COHABIT.CAT_MT, ...C.COHABIT.CAT_LEVELS.mid }, guide: C.COHABIT.GUIDE, pace: C.PACE_DEMO, roof: S.roofToward });
   const half = sim.layout.fieldM / 2;
   C.partySizes(S.SCENE.people).forEach((sz, i, a) => {
     const ang = (i / a.length) * 2 * Math.PI + 0.3;
@@ -177,15 +177,9 @@ for (const seed of seeds) {
         if (!r) dropsNoReason++;
         else {
           drops[r]++;
-          const plan = S.unitFormPlan({
-            layout: sim.layout,
-            at: sim.layout.units[u],
-            seated: seated.map((p) => sim.seats[p.seat]),
-            rects: sim.furn.rects,
-            tableUnit: sim.tableBy[u] >= 0 || sim.seats.some((st) => st.table === u),
-            count: BANDS,
-          });
-          (forms[r] ??= { flat: 0, half: 0, tea: 0 })[plan.form]++;
+          // 成什么形读平面模型此刻定下的（CohabitSim.roofed：0 平台 / 1 有顶的半边 / 2 茶几兼猫台），2-15 照它落
+          const form = ['flat', 'half', 'tea'][sim.roofed[u]];
+          (forms[r] ??= { flat: 0, half: 0, tea: 0 })[form]++;
         }
       }
       prev[u] = d;
